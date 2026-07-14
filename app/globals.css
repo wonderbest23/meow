@@ -4461,6 +4461,7 @@ a { color: inherit; text-decoration: none; }
 
 @media (max-width: 760px) {
   .support-chat-widget { right: 16px; bottom: 24px; left: auto; }
+  body:has(.project-page) .support-chat-widget { bottom: calc(92px + env(safe-area-inset-bottom)); }
   .support-chat-panel { width: 100%; height: min(620px, calc(100svh - 82px)); }
   .support-chat-panel { width: calc(100vw - 24px); }
   .support-chat-toggle { width: 56px; min-width: 56px; height: 56px; }
