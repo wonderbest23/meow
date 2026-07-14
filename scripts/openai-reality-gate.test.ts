@@ -91,6 +91,23 @@ async function main() {
     assert.equal(fetchCount, 1);
     assert.equal(accepted.model, "gpt-5.6-sol");
     assert.equal(accepted.reviewStatus, "automated_review");
+
+    fetchCount = 0;
+    globalThis.fetch = async () => {
+      fetchCount += 1;
+      return new Response(JSON.stringify({
+        output_text: JSON.stringify({
+          problem: "너무 짧음",
+          day21Goal: "첫 21일 동안 고객 문제와 실제 지출을 확인하고, 가격이 공개된 제안과 완료 증거를 남겨 다음 실행 여부를 판단할 수 있는 기준을 확정합니다.",
+        }),
+      }), { status: 200, headers: { "Content-Type": "application/json" } });
+    };
+
+    const partiallyAccepted = await generateStageArtifact(project, 0, undefined, runtimeConfig);
+    assert.equal(fetchCount, 1, "부족한 필드 하나 때문에 전체 AI 응답을 다시 생성하면 안 됩니다.");
+    assert.equal(partiallyAccepted.model, "gpt-5.6-sol");
+    assert.notEqual(partiallyAccepted.content.problem, "너무 짧음");
+    assert.equal(String(partiallyAccepted.content.day21Goal).includes("완료 증거"), true);
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -501,7 +501,22 @@ async function generateWithOpenAI(
     .join("");
   if (!outputText) throw new Error("OPENAI_EMPTY_OUTPUT");
   try {
-    return validateStageContent(stageIndex, JSON.parse(outputText));
+    const parsed = JSON.parse(outputText) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("JSON 객체가 아닙니다.");
+    }
+    const supplied = parsed as Record<string, unknown>;
+    let candidate = validateStageContent(stageIndex, baselineDraft);
+    let acceptedFields = 0;
+    for (const key of requiredFields) {
+      if (!(key in supplied)) continue;
+      const result = stageContentSchemas[stageIndex].safeParse({ ...candidate, [key]: supplied[key] });
+      if (!result.success) continue;
+      candidate = result.data as Record<string, unknown>;
+      acceptedFields += 1;
+    }
+    if (acceptedFields === 0) throw new Error("검수 기준을 통과한 필드가 없습니다.");
+    return candidate;
   } catch (error) {
     const detail = error instanceof Error ? error.message.slice(0, 500) : "JSON 또는 필수 항목 오류";
     throw new Error(`OPENAI_INVALID_OUTPUT:${detail}`);
