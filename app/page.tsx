@@ -2370,7 +2370,7 @@ function ProjectWorkspace({
               </div>
             )}
             {serverProject && activeStage === 0 && (setupRequired || showSavedSetup) && <BusinessSetupPanel project={serverProject} onSaved={(project) => { setServerProject(project); setShowSavedSetup(true); }} onComplete={() => { setShowSavedSetup(false); window.setTimeout(() => document.querySelector(".service-workflow")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} />}
-            {serverProject && activeStage === 0 && !setupRequired && !showSavedSetup && !latestArtifact && <button className="edit-saved-setup" onClick={() => setShowSavedSetup(true)}><Calculator /> 저장한 사업 조건 수정</button>}
+            {serverProject && activeStage === 0 && !setupRequired && !showSavedSetup && <button className="edit-saved-setup" onClick={() => setShowSavedSetup(true)}><Calculator /> 사업 조건·손익 다시 계산</button>}
             {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>{locationAnalysisNeeded ? "시장 근거·입지 자료 추가" : "고객·시장 근거와 사업계획서 추가"} <em>선택사항</em></span><ChevronDown /></summary><MarketPlanPanel project={serverProject} onSaved={setServerProject} /></details>}
             {serverProject && activeStage === 1 && !latestArtifact && locationAnalysisNeeded && <details className="optional-stage-tools"><summary><span>지역별 공공데이터 확인 <em>선택사항</em></span><ChevronDown /></summary><RegionalCoveragePanel project={serverProject} /></details>}
             {serverProject && activeStage === 4 && !latestArtifact && <LandingBuilderPanel project={serverProject} />}
