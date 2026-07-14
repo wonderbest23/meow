@@ -176,6 +176,11 @@ try {
     }
   }
 
+  await page.waitForSelector('.questionnaire-number-fields input[aria-label="질문 시작 예산"]');
+  await setInputValue(page, '.questionnaire-number-fields input[aria-label="질문 시작 예산"]', "180");
+  await setInputValue(page, '.questionnaire-number-fields input[aria-label="질문 주당 사용할 시간"]', "9");
+  await clickButtonByText(page, "결과 확인하기");
+
   await waitForText(page, "찾기 완료");
   await clickButtonByText(page, "추천 사업 보기");
   await page.waitForSelector(".opportunity-card");
@@ -301,17 +306,24 @@ try {
     await page.$eval(".business-setup-panel .next-setup", (button) => button.click());
   }
   await page.$eval(".business-setup-panel .save-setup", (button) => button.click());
-  await page.waitForSelector(".financial-result-hero", { timeout: 20_000 });
-  report.businessSetup = await page.evaluate(() => ({
-    breakEven: document.querySelector(".financial-result-hero > div:first-child strong")?.textContent?.trim(),
-    fundingNeed: document.querySelector(".financial-result-hero > div:nth-child(2) strong")?.textContent?.trim(),
-    requirementCount: document.querySelectorAll(".compliance-summary details").length,
-  }));
+  await page.waitForSelector(".generate-real-artifact:not(:disabled)", { timeout: 20_000 });
+  report.businessSetup = await page.evaluate(async () => {
+    const projectId = localStorage.getItem("venture-project-id");
+    const response = await fetch(`/api/projects/${projectId}`, { cache: "no-store" });
+    const payload = await response.json();
+    return {
+      breakEven: payload.project.businessAssessment?.financial.breakEvenRevenue,
+      fundingNeed: payload.project.businessAssessment?.financial.totalFundingNeed,
+      requirementCount: payload.project.businessAssessment?.requirements.length ?? 0,
+      availableCash: payload.project.businessSetup?.financial.availableCash,
+    };
+  });
 
   for (let stageIndex = 0; stageIndex < 6; stageIndex += 1) {
     const stageTitle = await page.$eval(".stage-heading h2", (node) => node.textContent?.trim() ?? "");
     console.error(`[E2E] ${stageIndex + 1}/6 ${stageTitle}`);
     if (stageIndex === 1) {
+      await page.$eval(".optional-stage-tools:first-of-type > summary", (summary) => summary.click());
       await page.waitForSelector(".market-plan-panel");
       await setInputValue(page, ".market-form-grid label:nth-child(2) input", "테스트 상권 점포 현황");
       await setInputValue(page, ".market-form-grid label:nth-child(3) input", "점포 수");
@@ -355,6 +367,7 @@ try {
           sectionCount: document.querySelectorAll(".plan-section-list details").length,
         };
       });
+      await page.$eval(".optional-stage-tools:nth-of-type(2) > summary", (summary) => summary.click());
       await page.waitForSelector(".regional-coverage-panel:not(.loading)");
       report.regionalCoverage = await page.evaluate(() => ({
         title: document.querySelector(".regional-coverage-panel > header h3")?.textContent?.trim(),
@@ -459,6 +472,7 @@ try {
       if (publicState.overflow > 1) report.horizontalOverflow.push(`공개 랜딩: ${publicState.overflow}px`);
     }
     if (stageIndex === 5) {
+      await page.$eval(".optional-stage-tools:first-of-type > summary", (summary) => summary.click());
       await page.waitForSelector(".operations-panel:not(.loading)");
       await page.$eval(".operations-tabs button:nth-child(2)", (button) => button.click());
       await setInputValue(page, ".quote-form label:nth-child(1) input", "E2E 공급처");
@@ -539,6 +553,7 @@ try {
         };
       });
 
+      await page.$eval(".optional-stage-tools:nth-of-type(2) > summary", (summary) => summary.click());
       await page.waitForSelector(".execution-loop-panel:not(.loading)");
       await page.$eval(".execution-tabs button:nth-child(2)", (button) => button.click());
       await setInputValue(page, ".experiment-basic label:nth-child(1) input", "E2E 실제 판매 실험");
@@ -678,9 +693,10 @@ try {
       report.revisionVersion = 2;
     }
 
-    await page.$$eval(".stage-task-list > button", (buttons) => {
-      buttons.forEach((button) => button.click());
-    });
+    for (let taskIndex = 0; taskIndex < 3; taskIndex += 1) {
+      await page.waitForSelector(".stage-task-list > button.current");
+      await page.$eval(".stage-task-list > button.current", (button) => button.click());
+    }
     await page.waitForFunction(() =>
       [...document.querySelectorAll(".stage-task-list > button")].every(
         (button) => button.getAttribute("aria-pressed") === "true",

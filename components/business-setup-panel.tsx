@@ -114,6 +114,9 @@ export function BusinessSetupPanel({
   onSaved: (project: ProjectRecord) => void;
 }) {
   const suggested = inferBusinessArchetype(project.opportunity);
+  const initialBudgetWon = typeof project.stages[0]?.inputs.budgetWon === "number"
+    ? project.stages[0].inputs.budgetWon
+    : null;
   const [setup, setSetup] = useState<BusinessSetup>(() => {
     if (project.businessSetup) return project.businessSetup;
     const blank = emptyBusinessSetup(suggested);
@@ -121,6 +124,7 @@ export function BusinessSetupPanel({
       String(project.opportunity.sector ?? ""),
       String(project.opportunity.title ?? ""),
     ].filter(Boolean);
+    if (initialBudgetWon !== null) blank.financial.availableCash = initialBudgetWon;
     return blank;
   });
   const [assessment, setAssessment] = useState<BusinessAssessment | null>(
@@ -135,6 +139,9 @@ export function BusinessSetupPanel({
     () => calculateFinancialAnalysis(setup.financial),
     [setup.financial],
   );
+  const fundingDifference = assessment
+    ? setup.financial.availableCash - assessment.financial.totalFundingNeed
+    : 0;
 
   const stepIndex = steps.findIndex((item) => item.id === step);
   const next = () => setStep(steps[Math.min(steps.length - 1, stepIndex + 1)].id);
@@ -239,6 +246,13 @@ export function BusinessSetupPanel({
               <div className="financial-result-hero">
                 <div><small>월 손익분기점</small><strong>{won(assessment.financial.breakEvenRevenue)}</strong><span>{assessment.financial.breakEvenUnits === null ? "판매 구조 수정 필요" : `월 ${assessment.financial.breakEvenUnits.toLocaleString("ko-KR")}건 판매`}</span></div>
                 <div><small>총 필요자금</small><strong>{won(assessment.financial.totalFundingNeed)}</strong><span>초기 투자 + {setup.financial.workingCapitalMonths}개월 운전자금</span></div>
+              </div>
+              <div className={`funding-comparison ${fundingDifference < 0 ? "shortage" : "enough"}`}>
+                <div><small>내가 입력한 시작 예산</small><strong>{won(setup.financial.availableCash)}</strong></div>
+                <div><small>{fundingDifference < 0 ? "현재 부족한 금액" : "필요자금 제외 후 남는 금액"}</small><strong>{won(Math.abs(fundingDifference))}</strong></div>
+                <p>{fundingDifference < 0
+                  ? "지금 계획대로 시작하려면 비용을 줄이거나 부족한 자금을 마련해야 합니다."
+                  : "입력한 비용 기준으로는 시작 예산 안에서 운영 준비가 가능합니다."}</p>
               </div>
               <div className="financial-result-grid">
                 <article><small>건당 공헌이익</small><strong>{won(assessment.financial.contributionPerUnit)}</strong><span>마진율 {assessment.financial.contributionMarginRate}%</span></article>

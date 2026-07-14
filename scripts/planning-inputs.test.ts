@@ -17,6 +17,7 @@ const input = {
 };
 const opportunity = createDirectOpportunity(input);
 assert.equal(opportunity.oneLiner, input.idea);
+assert.equal(opportunity.title, input.idea.slice(0, -1));
 assert.equal(opportunity.capital, "소액");
 assert.equal(opportunity.evidenceStatus, "hypothesis");
 assert.equal(opportunity.match, 100);
@@ -29,6 +30,14 @@ const constraints: PlanningConstraints = {
   idea: input.idea,
 };
 assert.equal(isPlanningConstraints(constraints), true);
+
+const questionnaireConstraints: PlanningConstraints = {
+  budgetWon: 1_800_000,
+  availableHoursPerWeek: 9,
+  notes: "8개 질문 완료 후 직접 입력",
+  source: "questionnaire",
+};
+assert.equal(isPlanningConstraints(questionnaireConstraints), true);
 
 const stageInputs = stageInputSchemas[0].parse(createInitialStageInputs(opportunity, constraints));
 assert.equal(stageInputs.budgetWon, 2_500_000);

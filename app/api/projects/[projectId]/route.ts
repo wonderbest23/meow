@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
-import { getProject, persistenceMode } from "../../../../lib/project-repository";
+import { deleteProject, getProject, persistenceMode } from "../../../../lib/project-repository";
 
 export async function GET(
   _request: Request,
@@ -23,6 +23,35 @@ export async function GET(
         error: {
           code: "PROJECT_LOAD_FAILED",
           message: error instanceof Error ? error.message : "프로젝트를 불러오지 못했습니다.",
+          retryable: true,
+        },
+      },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(
+  _request: Request,
+  context: { params: Promise<{ projectId: string }> },
+) {
+  try {
+    const { projectId } = await context.params;
+    const identity = await requireGuestIdentity();
+    const deleted = await deleteProject(projectId, identity.hash);
+    if (!deleted) {
+      return NextResponse.json(
+        { error: { code: "PROJECT_NOT_FOUND", message: "삭제할 프로젝트를 찾을 수 없습니다.", retryable: false } },
+        { status: 404 },
+      );
+    }
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error: {
+          code: "PROJECT_DELETE_FAILED",
+          message: error instanceof Error ? error.message : "프로젝트를 삭제하지 못했습니다.",
           retryable: true,
         },
       },

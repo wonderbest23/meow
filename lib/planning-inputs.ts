@@ -5,7 +5,7 @@ export type PlanningConstraints = {
   budgetWon: number;
   availableHoursPerWeek: number;
   notes: string;
-  source: "conversation" | "direct";
+  source: "questionnaire" | "conversation" | "direct";
   idea?: string;
 };
 
@@ -26,14 +26,14 @@ export function isPlanningConstraints(value: unknown): value is PlanningConstrai
     Number.isFinite(candidate.availableHoursPerWeek) &&
     candidate.availableHoursPerWeek >= 1 &&
     typeof candidate.notes === "string" &&
-    (candidate.source === "conversation" || candidate.source === "direct")
+    (candidate.source === "questionnaire" || candidate.source === "conversation" || candidate.source === "direct")
   );
 }
 
 function directTitle(idea: string) {
   const normalized = idea.trim().replace(/\s+/g, " ");
   const firstSentence = normalized.split(/[.!?\n]/)[0]?.trim() || normalized;
-  return firstSentence.length > 42 ? `${firstSentence.slice(0, 42)}...` : firstSentence;
+  return firstSentence;
 }
 
 export function createDirectOpportunity(input: DirectPlanInput): RankedOpportunity {

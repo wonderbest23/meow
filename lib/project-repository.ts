@@ -238,6 +238,28 @@ export async function getProject(
   };
 }
 
+export async function deleteProject(
+  projectId: string,
+  guestTokenHash: string,
+): Promise<boolean> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const project = demoStore.get(projectId);
+    if (!project || project.guestTokenHash !== guestTokenHash) return false;
+    return demoStore.delete(projectId);
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .select("id")
+    .maybeSingle();
+  if (error) throw error;
+  return Boolean(data);
+}
+
 export async function saveLaunchMissionWorkspace(
   projectId: string,
   guestTokenHash: string,

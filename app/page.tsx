@@ -41,6 +41,7 @@ import {
   Target,
   ThumbsDown,
   TrendingUp,
+  Trash2,
   Undo2,
   Users,
   X,
@@ -64,8 +65,9 @@ import {
   type RankedOpportunity,
 } from "../lib/opportunity-engine";
 import type { ManualPreferences } from "../lib/idea-generator";
-import type { ProjectRecord } from "../lib/service-domain";
+import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
+import { archetypeLabels, legalFormLabels, workplaceLabels } from "../lib/business/domain";
 import { MarketPlanPanel } from "../components/market-plan-panel";
 import { LandingBuilderPanel } from "../components/landing-builder-panel";
 import { OperationsPanel } from "../components/operations-panel";
@@ -112,7 +114,7 @@ type Screen =
 type CapitalFilter = "전체" | "소액" | "중간" | "높음";
 
 const resumableScreens: Screen[] = ["start", "direct", "assessment", "conversation", "profile", "explore"];
-const directScreens: Screen[] = [...resumableScreens, "sample", "delivery"];
+const directScreens: Screen[] = [...resumableScreens, "project", "sample", "delivery"];
 
 function emptyConversationDraft() {
   return { step: 0, responses: ["", "", "", ""], budgetManwon: "", availableHoursPerWeek: "" };
@@ -366,7 +368,7 @@ function StartChoice({
             <ArrowRight />
           </button>
         </div>
-        <div className="start-privacy"><ShieldCheck /><span>주민등록번호나 상세 주소는 입력하지 마세요.</span></div>
+        <div className="start-privacy"><ShieldCheck /><span><strong>입력 내용은 맞춤 추천·문서 생성·프로젝트 저장에 사용됩니다.</strong> 인공지능 연결 시 생성에 필요한 내용이 OpenAI로 전송됩니다. 주민등록번호, 상세 주소, 계좌번호는 입력하지 마세요.</span></div>
       </section>
     </main>
   );
@@ -596,20 +598,54 @@ function Assessment({
   answers: AssessmentAnswers;
   setAnswers: (answers: AssessmentAnswers) => void;
   onExit: () => void;
-  onComplete: (answers: AssessmentAnswers) => void;
+  onComplete: (answers: AssessmentAnswers, constraints: PlanningConstraints) => void;
 }) {
   const [step, setStep] = useState(Math.min(Object.keys(answers).length, coreQuestions.length - 1));
+  const [showConstraints, setShowConstraints] = useState(false);
+  const [budgetManwon, setBudgetManwon] = useState("");
+  const [availableHoursPerWeek, setAvailableHoursPerWeek] = useState("");
   const question = coreQuestions[step];
   const selected = answers[question.id];
+  const budget = Number(budgetManwon);
+  const hours = Number(availableHoursPerWeek);
+  const constraintsReady = budgetManwon !== "" && availableHoursPerWeek !== ""
+    && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000
+    && Number.isFinite(hours) && hours >= 1 && hours <= 100;
 
   const choose = (optionId: string) => {
     const next = { ...answers, [question.id]: optionId };
     setAnswers(next);
     window.setTimeout(() => {
-      if (step === coreQuestions.length - 1) onComplete(next);
+      if (step === coreQuestions.length - 1) setShowConstraints(true);
       else setStep((current) => current + 1);
     }, 260);
   };
+
+  if (showConstraints) {
+    return (
+      <main className="assessment-page">
+        <Header onHome={onExit} />
+        <div className="assessment-progress"><span style={{ width: "100%" }} /></div>
+        <section className="assessment-content assessment-constraints">
+          <div className="assessment-nav"><button onClick={() => setShowConstraints(false)}><ArrowLeft /> 이전</button><span>마지막</span></div>
+          <div className="question-intro">
+            <p>추천을 실제로 실행할 수 있는 범위로 줄입니다.</p>
+            <h1>예산과 시간을 정확히 알려주세요.</h1>
+          </div>
+          <div className="questionnaire-number-fields">
+            <label><span>시작 예산</span><div><input aria-label="질문 시작 예산" type="number" inputMode="numeric" min="0" max="1000000" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} /><em>만원</em></div><small>아직 없다면 0을 입력해도 됩니다.</small></label>
+            <label><span>주당 사용할 시간</span><div><input aria-label="질문 주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} /><em>시간</em></div><small>현실적으로 꾸준히 쓸 수 있는 시간을 적어주세요.</small></label>
+          </div>
+          <PrimaryButton disabled={!constraintsReady} onClick={() => onComplete(answers, {
+            budgetWon: Math.round(budget * 10_000),
+            availableHoursPerWeek: Math.round(hours),
+            notes: "8개 질문 완료 후 사용자가 직접 입력한 실행 조건",
+            source: "questionnaire",
+          })}>결과 확인하기 <ArrowRight /></PrimaryButton>
+        </section>
+      </main>
+    );
+  }
 
   return (
     <main className="assessment-page">
@@ -1027,7 +1063,7 @@ const launchStages = [
     period: "1일차",
     title: "프로젝트의 기준을 맞춰요",
     description: "결제 정보와 선택한 기회를 확인하고, 21일 동안 함께 만들 결과물의 우선순위를 정합니다.",
-    tasks: ["선택한 사업 기회 최종 확인", "자동 시작 질문 확인", "보유 자료와 참고 주소 제출"],
+    tasks: ["선택한 사업 기회 확인", "입력한 예산·시간 확인", "자료가 없어도 진행할 수 있는지 확인"],
     output: "사업 실행 요약서",
   },
   {
@@ -1763,6 +1799,135 @@ function StageWorkProduct({
   );
 }
 
+const artifactFieldLabels: Record<string, string> = {
+  problem: "고객이 겪는 문제",
+  customer: "첫 고객",
+  valueProposition: "제공할 핵심 가치",
+  constraints: "입력한 실행 조건",
+  validationPlan: "첫 검증 계획",
+  day21Goal: "21일 뒤 목표",
+  businessReadiness: "사업 준비 상태",
+  primaryCustomer: "핵심 고객",
+  jobs: "고객이 해결하려는 일",
+  pains: "고객의 불편",
+  currentAlternatives: "현재 사용하는 대안",
+  evidence: "확인된 근거",
+  interviewScript: "고객에게 물을 질문",
+  unknowns: "아직 확인할 내용",
+  tiers: "상품 구성",
+  unitEconomics: "한 건 판매 손익",
+  breakEvenCustomers: "월 손익분기 고객 수",
+  breakEvenRevenueWon: "월 손익분기 매출",
+  monthlyFixedCostWon: "월 고정비",
+  initialInvestmentWon: "초기 투자비",
+  recommendedWorkingCapitalWon: "권장 운전자금",
+  totalFundingNeedWon: "전체 필요자금",
+  scenarios: "상황별 예상",
+  financialWarnings: "숫자 확인사항",
+  monthlyGoalCustomers: "월 목표 고객 수",
+  assumptions: "확인이 필요한 가정",
+  pricingTests: "가격 검증 방법",
+  nameCandidates: "이름 후보",
+  promise: "고객에게 할 약속",
+  slogans: "한 줄 문구 후보",
+  tone: "말투와 분위기",
+  keywords: "핵심 단어",
+  prohibitedClaims: "사용하면 안 되는 표현",
+  selectionGuide: "이름 선택 방법",
+  usageExamples: "사용 예시",
+  blocks: "판매 페이지 내용",
+  contact: "문의 방법",
+  legalNotice: "필수 안내 문구",
+  launchDate: "첫 공개일",
+  outreachScripts: "첫 연락 문구",
+  channelPlan: "고객을 만날 경로",
+  weeklyMetrics: "매주 확인할 숫자",
+  supportProgramChecklist: "지원사업 준비 항목",
+  next30Days: "앞으로 30일 일정",
+  decisionCriteria: "계속·수정·중단 기준",
+  budgetWon: "시작 예산",
+  availableHoursPerWeek: "주당 사용 시간",
+  mustAvoid: "피해야 할 조건",
+  existingAssets: "이미 가진 자원",
+  firstScope: "처음 제공할 범위",
+  excludedScope: "이번에 하지 않을 범위",
+  archetype: "사업 유형",
+  legalForm: "사업자 형태",
+  workplaceType: "사업장 형태",
+  region: "사업 지역",
+  requiredActions: "필수 확인 절차",
+  hardBlockCount: "판매 전 해결할 문제 수",
+  name: "이름",
+  priceWon: "가격",
+  outcome: "받게 되는 결과",
+  method: "방법",
+  value: "연락처",
+};
+
+const artifactStringLabels: Record<string, string> = {
+  ...archetypeLabels,
+  ...legalFormLabels,
+  ...workplaceLabels,
+};
+
+function artifactLabel(key: string) {
+  return artifactFieldLabels[key] ?? key.replace(/([a-z])([A-Z])/g, "$1 $2");
+}
+
+function artifactNumber(key: string, value: number) {
+  if (key === "availableHoursPerWeek") return `주 ${value.toLocaleString("ko-KR")}시간`;
+  return /(Won|Price|Cost|Revenue|Funding|Investment|Contribution|budget)/i.test(key)
+    ? `${Math.round(value).toLocaleString("ko-KR")}원`
+    : value.toLocaleString("ko-KR");
+}
+
+function ArtifactValue({ value, fieldKey }: { value: unknown; fieldKey: string }) {
+  if (value === null || value === undefined || value === "") return <p className="artifact-empty-value">아직 확인되지 않았어요.</p>;
+  if (typeof value === "string") return <p>{artifactStringLabels[value] ?? value}</p>;
+  if (typeof value === "number") return <strong className="artifact-number">{artifactNumber(fieldKey, value)}</strong>;
+  if (typeof value === "boolean") return <strong>{value ? "해당함" : "해당하지 않음"}</strong>;
+  if (Array.isArray(value)) {
+    if (!value.length) return <p className="artifact-empty-value">아직 입력된 내용이 없어요.</p>;
+    if (value.every((item) => typeof item !== "object" || item === null)) {
+      return <ul>{value.map((item, index) => <li key={`${fieldKey}-${index}`}>{String(item)}</li>)}</ul>;
+    }
+    return <div className="artifact-object-list">{value.map((item, index) => <article key={`${fieldKey}-${index}`}><ArtifactValue value={item} fieldKey={`${fieldKey}-${index}`} /></article>)}</div>;
+  }
+  if (typeof value === "object") {
+    return (
+      <dl className="artifact-data-list">
+        {Object.entries(value as Record<string, unknown>).map(([key, item]) => (
+          <div key={key}><dt>{artifactLabel(key)}</dt><dd><ArtifactValue value={item} fieldKey={key} /></dd></div>
+        ))}
+      </dl>
+    );
+  }
+  return <p>{String(value)}</p>;
+}
+
+function ArtifactContentPreview({ artifact, stageIndex }: { artifact: ArtifactRecord; stageIndex: number }) {
+  return (
+    <section className="real-artifact-preview" aria-label={`${launchStages[stageIndex].output} 실제 생성 결과`}>
+      <header>
+        <div><span><FileText /></span><div><small>실제 생성 결과 · {artifact.version}판</small><h3>{launchStages[stageIndex].output}</h3></div></div>
+        <em><Sparkles /> 인공지능 활용</em>
+      </header>
+      <p className="artifact-ai-notice">입력한 정보로 만든 초안입니다. 금액·법적 요건·시장 수치는 아래 확인 항목을 거쳐 직접 승인해야 합니다.</p>
+      <div className="artifact-content-grid">
+        {Object.entries(artifact.content).map(([key, value]) => (
+          <section key={key}><h4>{artifactLabel(key)}</h4><ArtifactValue value={value} fieldKey={key} /></section>
+        ))}
+      </div>
+      {(artifact.assumptions.length > 0 || artifact.sources.length > 0) && (
+        <footer>
+          {artifact.assumptions.length > 0 && <div><strong>확인이 필요한 가정</strong>{artifact.assumptions.map((item) => <p key={item}>{item}</p>)}</div>}
+          {artifact.sources.length > 0 && <div><strong>사용한 출처</strong>{artifact.sources.map((source) => <a key={`${source.url}-${source.title}`} href={source.url} target="_blank" rel="noreferrer">{source.title} <ExternalLink /></a>)}</div>}
+        </footer>
+      )}
+    </section>
+  );
+}
+
 function buildStageInput(
   stageIndex: number,
   opportunity: RankedOpportunity,
@@ -1852,10 +2017,13 @@ function ProjectWorkspace({
   const [serviceError, setServiceError] = useState("");
   const [latestJob, setLatestJob] = useState<GenerationJobRecord | null>(null);
   const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
+  const [showSavedSetup, setShowSavedSetup] = useState(false);
+  const [deletingProject, setDeletingProject] = useState(false);
   const current = launchStages[activeStage];
   const completedStages = activeStage;
   const progress = Math.round((completedStages / launchStages.length) * 100);
   const allCurrentChecked = current.tasks.every((_, index) => checked[`${activeStage}-${index}`]);
+  const firstUncheckedTaskIndex = current.tasks.findIndex((_, index) => !checked[`${activeStage}-${index}`]);
   const currentServerStage = serverProject?.stages[activeStage];
   const latestArtifact = currentServerStage?.artifacts[0];
   const confirmedBudgetWon = typeof serverProject?.stages[0]?.inputs.budgetWon === "number"
@@ -1877,11 +2045,26 @@ function ProjectWorkspace({
     approved: "승인 완료",
     failed: "다시 시도 필요",
   };
+  const focusTitle = setupRequired
+    ? "사업 조건과 비용부터 입력하세요"
+    : !latestArtifact
+      ? `${current.output} 초안을 만드세요`
+      : !allCurrentChecked
+        ? "생성된 결과를 읽고 세 가지만 확인하세요"
+        : "확인이 끝났어요. 다음 단계로 이동하세요";
+  const focusDescription = setupRequired
+    ? "화면에 보이는 한 단계씩 입력하면 손익분기점과 필수 절차를 계산합니다."
+    : !latestArtifact
+      ? "추가 내용은 선택사항입니다. 입력한 조건만으로도 초안을 만들 수 있어요."
+      : !allCurrentChecked
+        ? "실제 생성 결과를 먼저 읽은 뒤 아래 확인 항목을 차례로 누르세요."
+        : "마지막 승인 버튼을 누르면 현재 결과를 저장하고 다음 단계가 열립니다.";
 
   useEffect(() => {
     setStageNote("");
     setRevisionText("");
     setServiceError("");
+    setShowSavedSetup(false);
   }, [activeStage]);
 
   useEffect(() => {
@@ -1918,11 +2101,23 @@ function ProjectWorkspace({
 
   const toggleTask = (index: number) => {
     const key = `${activeStage}-${index}`;
-    setChecked((currentChecked) => ({ ...currentChecked, [key]: !currentChecked[key] }));
+    setChecked((currentChecked) => {
+      const nextChecked = { ...currentChecked, [key]: !currentChecked[key] };
+      if (currentChecked[key]) {
+        current.tasks.forEach((_, laterIndex) => {
+          if (laterIndex > index) delete nextChecked[`${activeStage}-${laterIndex}`];
+        });
+      }
+      return nextChecked;
+    });
   };
 
   const moveToChecklist = () => {
     document.getElementById("stage-checklist")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const moveToArtifact = () => {
+    document.querySelector(".real-artifact-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const moveToRevision = () => {
@@ -1939,6 +2134,25 @@ function ProjectWorkspace({
     if (!response.ok) throw new Error(payload.error?.message ?? "프로젝트를 불러오지 못했습니다.");
     setServerProject(payload.project);
     return payload.project as ProjectRecord;
+  };
+
+  const deleteCurrentProject = async () => {
+    if (!serverProject || deletingProject) return;
+    if (!window.confirm("이 프로젝트와 생성한 문서를 모두 삭제할까요? 삭제 후에는 되돌릴 수 없습니다.")) return;
+    setDeletingProject(true);
+    setServiceError("");
+    try {
+      const response = await fetch(`/api/projects/${serverProject.id}`, { method: "DELETE" });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message ?? "프로젝트를 삭제하지 못했습니다.");
+      if (window.localStorage.getItem("venture-project-id") === serverProject.id) {
+        window.localStorage.removeItem("venture-project-id");
+      }
+      onHome();
+    } catch (error) {
+      setServiceError(error instanceof Error ? error.message : "프로젝트를 삭제하지 못했습니다.");
+      setDeletingProject(false);
+    }
   };
 
   const generateServerArtifact = async () => {
@@ -2079,25 +2293,25 @@ function ProjectWorkspace({
         <div className="stage-layout">
           <article className="current-stage-card">
             <div className="stage-heading"><span>{String(activeStage + 1).padStart(2, "0")}</span><div><small>{current.period} · 현재 단계</small><h2>{current.title}</h2><p>{current.description}</p></div></div>
-            {serverProject && activeStage === 0 && <BusinessSetupPanel project={serverProject} onSaved={setServerProject} />}
-            {serverProject && activeStage === 1 && <MarketPlanPanel project={serverProject} onSaved={setServerProject} />}
-            {serverProject && activeStage === 1 && <RegionalCoveragePanel project={serverProject} />}
-            {serverProject && activeStage === 4 && <LandingBuilderPanel project={serverProject} />}
-            {serverProject && activeStage === 5 && <OperationsPanel project={serverProject} onSaved={setServerProject} />}
-            {serverProject && activeStage === 5 && <ExecutionLoopPanel project={serverProject} onSaved={setServerProject} />}
-            {serverProject && activeStage === 5 && <QualityAssurancePanel project={serverProject} onSaved={setServerProject} />}
-            {serverProject && activeStage === 5 && <GrantMatcherPanel project={serverProject} onSaved={setServerProject} />}
-            {serverProject && (
+            {serverProject && <section className="focus-action-banner"><span>지금 할 일</span><div><strong>{focusTitle}</strong><p>{focusDescription}</p></div><em>{setupRequired ? "입력" : !latestArtifact ? "생성" : !allCurrentChecked ? "검토" : "승인"}</em></section>}
+            {activeStage === 0 && confirmedBudgetWon !== null && confirmedHoursPerWeek !== null && (
+              <div className="confirmed-planning-inputs" aria-label="입력한 기획 조건">
+                <p><CheckCircle2 /><strong>처음 입력한 실행 조건</strong></p>
+                <div>
+                  <span><small>시작 예산</small><strong>{Math.round(confirmedBudgetWon / 10_000).toLocaleString("ko-KR")}만원</strong></span>
+                  <span><small>사용 가능 시간</small><strong>주당 {confirmedHoursPerWeek}시간</strong></span>
+                </div>
+              </div>
+            )}
+            {serverProject && activeStage === 0 && (setupRequired || showSavedSetup) && <BusinessSetupPanel project={serverProject} onSaved={(project) => { setServerProject(project); setShowSavedSetup(false); }} />}
+            {serverProject && activeStage === 0 && !setupRequired && !showSavedSetup && !latestArtifact && <button className="edit-saved-setup" onClick={() => setShowSavedSetup(true)}><Calculator /> 저장한 사업 조건 수정</button>}
+            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>시장 근거·입지 자료 추가 <em>선택사항</em></span><ChevronDown /></summary><MarketPlanPanel project={serverProject} onSaved={setServerProject} /></details>}
+            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>지역별 공공데이터 확인 <em>선택사항</em></span><ChevronDown /></summary><RegionalCoveragePanel project={serverProject} /></details>}
+            {serverProject && activeStage === 4 && !latestArtifact && <LandingBuilderPanel project={serverProject} />}
+            {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>운영 계획 직접 바꾸기 <em>선택사항</em></span><ChevronDown /></summary><OperationsPanel project={serverProject} onSaved={setServerProject} /></details>}
+            {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>추가 운영 도구 열기 <em>선택사항</em></span><ChevronDown /></summary><ExecutionLoopPanel project={serverProject} onSaved={setServerProject} /><QualityAssurancePanel project={serverProject} onSaved={setServerProject} /><GrantMatcherPanel project={serverProject} onSaved={setServerProject} /></details>}
+            {serverProject && !setupRequired && (
               <section className="service-workflow">
-                {activeStage === 0 && confirmedBudgetWon !== null && confirmedHoursPerWeek !== null && (
-                  <div className="confirmed-planning-inputs" aria-label="입력한 기획 조건">
-                    <p><CheckCircle2 /><strong>입력한 조건이 첫 기획에 반영됐어요</strong></p>
-                    <div>
-                      <span><small>시작 예산</small><strong>{Math.round(confirmedBudgetWon / 10_000).toLocaleString("ko-KR")}만원</strong></span>
-                      <span><small>사용 가능 시간</small><strong>주당 {confirmedHoursPerWeek}시간</strong></span>
-                    </div>
-                  </div>
-                )}
                 <div className="step-by-step-guide" aria-label="현재 단계 진행 방법">
                   <div className={reviewStep >= 1 ? "active" : ""}><span>{reviewStep > 1 ? <Check /> : "1"}</span><p><strong>정보 확인</strong><small>조건을 적고 초안을 만들어요</small></p></div>
                   <i />
@@ -2115,7 +2329,7 @@ function ProjectWorkspace({
                   <button className="generate-real-artifact" disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "먼저 위에서 사업 조건과 손익분기점을 계산해주세요" : serviceAction === "saving" ? "입력 내용을 안전하게 저장 중..." : serviceAction === "generating" ? "맞춤 초안을 만들고 있어요..." : <><Sparkles /> 이 정보로 초안 만들기 <ArrowRight /></>}</button>
                 ) : (
                   <div className="artifact-review-actions">
-                    <div className="review-ready"><CheckCircle2 /><p><strong>검토할 초안이 준비됐어요</strong><small>아래 내용을 읽고 체크리스트를 완료해주세요.</small></p><button onClick={moveToChecklist}>검토하러 가기 <ArrowDown /></button></div>
+                    <div className="review-ready"><CheckCircle2 /><p><strong>검토할 초안이 준비됐어요</strong><small>실제 생성된 결과부터 읽고 확인 항목을 차례로 눌러주세요.</small></p><button onClick={moveToArtifact}>결과 읽기 <ArrowDown /></button></div>
                     <details><summary>전문가용 원본 자료 보기</summary><pre>{JSON.stringify(latestArtifact.content, null, 2)}</pre></details>
                     <label><span>수정하고 싶은 점 <em>선택사항</em></span><textarea value={revisionText} onChange={(event) => setRevisionText(event.target.value)} placeholder="예: 가격 근거를 더 쉽게 설명하고, 직장인 고객 사례를 추가해주세요." /><small>{revisionText.trim().length}/10자 이상 입력하면 수정본을 만들 수 있어요.</small></label>
                     <div><button disabled={revisionText.trim().length < 10 || serviceAction !== "idle"} onClick={reviseServerArtifact}><RefreshCw /> {serviceAction === "revising" ? "요청을 반영하는 중..." : "수정 요청 보내기"}</button><button className="approve-real-artifact" disabled={!allCurrentChecked || serviceAction !== "idle"} onClick={approveServerArtifact}><CheckCircle2 /> {serviceAction === "approving" ? "다음 단계를 준비 중..." : allCurrentChecked ? "확인 완료 · 다음 단계로" : "먼저 아래 항목을 확인해주세요"}</button></div>
@@ -2123,18 +2337,24 @@ function ProjectWorkspace({
                 )}
               </section>
             )}
-            <StageWorkProduct stage={activeStage} opportunity={opportunity} price={price} setPrice={setPrice} brandChoice={brandChoice} setBrandChoice={setBrandChoice} onRegenerate={generateServerArtifact} onRequestRevision={moveToRevision} isWorking={serviceAction !== "idle"} />
-            <div className="stage-task-list" id="stage-checklist">
+            {latestArtifact ? <ArtifactContentPreview artifact={latestArtifact} stageIndex={activeStage} /> : !serverProject ? <StageWorkProduct stage={activeStage} opportunity={opportunity} price={price} setPrice={setPrice} brandChoice={brandChoice} setBrandChoice={setBrandChoice} onRegenerate={generateServerArtifact} onRequestRevision={moveToRevision} isWorking={serviceAction !== "idle"} /> : null}
+            {(latestArtifact || !serverProject) && <div className="stage-task-list" id="stage-checklist">
               <div><strong>하나씩 확인해주세요</strong><span>{current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length} / {current.tasks.length} 확인</span></div>
               <p className="checklist-help">내용을 읽고 이해했다면 항목을 눌러 체크하세요. 언제든 다시 해제할 수 있어요.</p>
-              {current.tasks.map((task, index) => <button key={task} aria-pressed={Boolean(checked[`${activeStage}-${index}`])} className={checked[`${activeStage}-${index}`] ? "checked" : ""} onClick={() => toggleTask(index)}><span>{checked[`${activeStage}-${index}`] ? <Check /> : index + 1}</span><strong>{task}</strong><em>{checked[`${activeStage}-${index}`] ? "확인됨" : "눌러서 확인"}</em></button>)}
-            </div>
-            <div className="stage-output"><PackageCheck /><div><small>이 단계가 끝나면</small><strong>{current.output}</strong>이 완성됩니다.</div></div>
+              {current.tasks.map((task, index) => {
+                const isChecked = Boolean(checked[`${activeStage}-${index}`]);
+                const isCurrent = firstUncheckedTaskIndex === index;
+                const isVisible = firstUncheckedTaskIndex === -1 || index <= firstUncheckedTaskIndex;
+                if (!isVisible) return null;
+                return <button key={task} aria-pressed={isChecked} className={`${isChecked ? "checked" : ""} ${isCurrent ? "current" : ""}`} onClick={() => toggleTask(index)}><span>{isChecked ? <Check /> : index + 1}</span><strong>{task}</strong><em>{isChecked ? "확인됨" : "확인하고 다음"}</em></button>;
+              })}
+            </div>}
+            {(latestArtifact || !serverProject) && <div className="stage-output"><PackageCheck /><div><small>이 단계가 끝나면</small><strong>{current.output}</strong>이 완성됩니다.</div></div>}
             {!serverProject && <button className="complete-stage" disabled={!allCurrentChecked} onClick={() => activeStage < launchStages.length - 1 ? setActiveStage((stage) => stage + 1) : setDelivered(true)}>{activeStage === launchStages.length - 1 && allCurrentChecked ? "최종 납품함 열기" : allCurrentChecked ? "이 단계 완료하고 다음으로" : "할 일을 모두 확인해주세요"} <ArrowRight /></button>}
           </article>
           <aside className="project-side-panel">
-            <section><div className="panel-title"><Sparkles /><div><strong>생성 작업 상태</strong><small>실제 서버 상태를 표시합니다</small></div></div><div className="generation-status"><span className={serviceAction !== "idle" ? "running" : ""} /><p><strong>{current.output}</strong><small>{serviceAction === "saving" ? "입력 저장 중" : serviceAction === "generating" || serviceAction === "revising" || serviceAction === "retrying" ? "결과 생성 중" : latestArtifact ? `버전 ${latestArtifact.version} 검토 가능` : currentServerStage?.status === "failed" ? `생성 실패 · 시도 ${latestJob?.attempt ?? 0}/3` : "입력 대기"}</small></p><em>{currentServerStage?.status ?? "demo"}</em></div></section>
-            {serverProject && <ServiceOpsPanel project={serverProject} />}
+            <section><div className="panel-title"><Sparkles /><div><strong>생성 작업 상태</strong><small>현재 할 일만 간단히 표시합니다</small></div></div><div className="generation-status"><span className={serviceAction !== "idle" ? "running" : ""} /><p><strong>{current.output}</strong><small>{serviceAction === "saving" ? "입력 저장 중" : serviceAction === "generating" || serviceAction === "revising" || serviceAction === "retrying" ? "결과 생성 중" : latestArtifact ? `${latestArtifact.version}판 검토 가능` : currentServerStage?.status === "failed" ? `생성 실패 · 시도 ${latestJob?.attempt ?? 0}/3` : "입력 대기"}</small></p><em>{stageStatusLabel[currentServerStage?.status ?? "not_started"]}</em></div></section>
+            {serverProject && <details className="project-technical-details"><summary>저장·생성 상태 자세히</summary><ServiceOpsPanel project={serverProject} /><button className="project-delete-button" disabled={deletingProject} onClick={deleteCurrentProject}><Trash2 /> {deletingProject ? "삭제하는 중..." : "이 프로젝트 삭제"}</button></details>}
             <section><div className="panel-title"><FileText /><div><strong>승인된 문서</strong><small>단계 승인 후 여기에 쌓입니다</small></div></div>{serverProject ? serverProject.stages.filter((stage) => stage.approvedArtifactId).map((stage) => <button className="project-doc" key={stage.id}><span><FileText /></span><div><strong>{launchStages[stage.stageIndex].output}</strong><small>{stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.version ?? 1}판 · 승인 완료</small></div><ArrowRight /></button>) : activeStage === 0 ? <p className="empty-doc">첫 단계 완료 후 문서가 생성됩니다.</p> : launchStages.slice(0, activeStage).map((stage) => <button className="project-doc" key={stage.output}><span><FileText /></span><div><strong>{stage.output}</strong><small>화면 확인용 문서</small></div><ArrowRight /></button>)}</section>
             <section className="help-panel"><CircleHelp /><div><strong>다음 행동이 헷갈리나요?</strong><p>현재 단계의 체크리스트로 이동해 하나씩 확인하면 자동으로 다음 행동을 안내합니다.</p><button onClick={moveToChecklist}>현재 할 일 보기</button></div></section>
           </aside>
@@ -2159,10 +2379,12 @@ export default function Page() {
   const [draftLoaded, setDraftLoaded] = useState(false);
   const mounted = useRef(false);
 
-  const navigate = useCallback((next: Screen, options?: { replace?: boolean }) => {
+  const navigate = useCallback((next: Screen, options?: { replace?: boolean; projectId?: string }) => {
     const url = new URL(window.location.href);
     if (next === "home") url.searchParams.delete("view");
     else url.searchParams.set("view", next);
+    if (next === "project" && options?.projectId) url.searchParams.set("project", options.projectId);
+    else if (next !== "project") url.searchParams.delete("project");
     const method = options?.replace ? "replaceState" : "pushState";
     window.history[method]({ screen: next }, "", `${url.pathname}${url.search}${url.hash}`);
     setScreen(next);
@@ -2220,8 +2442,13 @@ export default function Page() {
   }, [screen]);
 
   useEffect(() => {
-    if (new URL(window.location.href).searchParams.get("view") === "delivery") return;
-    const projectId = window.localStorage.getItem("venture-project-id");
+    const currentUrl = new URL(window.location.href);
+    const requestedView = currentUrl.searchParams.get("view");
+    if (requestedView && requestedView !== "project") return;
+    const linkedProjectId = requestedView === "project"
+      ? currentUrl.searchParams.get("project")
+      : null;
+    const projectId = linkedProjectId ?? window.localStorage.getItem("venture-project-id");
     if (!projectId) return;
     void fetch(`/api/projects/${projectId}`, { cache: "no-store" })
       .then(async (response) => {
@@ -2231,10 +2458,12 @@ export default function Page() {
       .then((payload: { project: ProjectRecord }) => {
         setServerProject(payload.project);
         setSelectedProject(payload.project.opportunity as unknown as RankedOpportunity);
-        navigate("project", { replace: true });
+        window.localStorage.setItem("venture-project-id", payload.project.id);
+        navigate("project", { replace: true, projectId: payload.project.id });
       })
       .catch(() => {
-        window.localStorage.removeItem("venture-project-id");
+        if (!linkedProjectId) window.localStorage.removeItem("venture-project-id");
+        navigate("start", { replace: true });
       });
   }, [navigate]);
 
@@ -2247,8 +2476,9 @@ export default function Page() {
     setPlanningConstraints(null);
     navigate("assessment");
   };
-  const complete = (completedAnswers: AssessmentAnswers) => {
+  const complete = (completedAnswers: AssessmentAnswers, constraints: PlanningConstraints) => {
     setProfile(calculateProfile(completedAnswers));
+    setPlanningConstraints(constraints);
     navigate("profile");
   };
   const completeConversation = (inference: NarrativeInference) => {
@@ -2275,7 +2505,7 @@ export default function Page() {
   const openPaidProject = async (project: ProjectRecord) => {
     setServerProject(project);
     window.localStorage.setItem("venture-project-id", project.id);
-    navigate("project");
+    navigate("project", { projectId: project.id });
   };
   const startOpportunity = async (
     opportunity: RankedOpportunity,
