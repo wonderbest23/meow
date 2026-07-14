@@ -855,14 +855,13 @@ function OpportunityCard({
   onSave: () => void;
   onExclude: () => void;
 }) {
-  const characterAxis = item.founder[0] ?? "opportunity";
+  const founderCategory = founderLabels[item.founder[0] ?? "opportunity"];
   return (
     <article className={`opportunity-card ${item.color} ${state === "saved" ? "saved" : ""}`}>
       <div className="op-card-top">
-        <span>{item.sector}</span>
-        {state === "saved" && <strong><Check /> 저장됨</strong>}
+        <div className="op-card-categories"><span>{item.sector}</span><span>{founderCategory}</span></div>
+        {state === "saved" && <strong>저장됨</strong>}
       </div>
-      <div className="op-character"><img src={founderCharacterImages[characterAxis]} alt="" /><span>{founderLabels[characterAxis]}</span></div>
       <h3>{item.title}</h3>
       <p className="op-line">{item.oneLiner}</p>
       <div className="op-meta">
@@ -871,9 +870,9 @@ function OpportunityCard({
         <span><small>수익 방식</small><strong>{item.revenue}</strong></span>
       </div>
       <div className="op-actions">
-        <button className={state === "saved" ? "active" : ""} aria-label={state === "saved" ? "저장 취소" : "사업 저장"} title={state === "saved" ? "저장 취소" : "사업 저장"} onClick={onSave}><Heart /></button>
-        <button aria-label="추천에서 제외" title="추천에서 제외" onClick={onExclude}><ThumbsDown /></button>
-        <button className="op-start-preview" onClick={onOpen}>시작하기 <ArrowRight /></button>
+        <button className={state === "saved" ? "active" : ""} onClick={onSave}>{state === "saved" ? "저장 취소" : "저장"}</button>
+        <button onClick={onExclude}>관심 없음</button>
+        <button className="op-start-preview" onClick={onOpen}>시작하기</button>
       </div>
     </article>
   );
@@ -993,18 +992,21 @@ function Explore({
     <main className="explore-page">
       <Header onHome={onHome} />
       <section className="explore-head">
-        <div>
+        <div className="explore-head-copy">
           <span className="section-label">맞춤 추천</span>
-          <h1>어떤 사업이<br /><em>마음에 드세요?</em></h1>
+          <h1>내게 맞는 사업을 골라보세요</h1>
           <p>관심 있는 사업을 저장하거나 자세히 살펴보세요.</p>
+          <div className="explore-profile-tags" aria-label="나의 창업 성향">
+            <span>나의 창업 성향</span>
+            <strong>{founderInterpretations[profile.topFounder[0]].title}</strong>
+          </div>
         </div>
-        <figure className="explore-character"><img src={founderCharacterImages[profile.topFounder[0]]} alt={`${founderInterpretations[profile.topFounder[0]].title} 성향 캐릭터`} /><figcaption><small>나의 창업 성향</small><strong>{founderInterpretations[profile.topFounder[0]].title}</strong></figcaption></figure>
         <div className="explore-head-actions">
           <div className="mode-tabs" aria-label="추천 방식">
             <button className={mode === "dna" ? "active" : ""} onClick={() => { setMode("dna"); setSector(""); }}>맞춤 추천</button>
             <button className={mode === "manual" ? "active" : ""} onClick={() => { setMode("manual"); setCapital("전체"); setSector(""); }}>조건 변경</button>
           </div>
-          <button className="regenerate-button" title="새 추천 받기" aria-label="새 추천 받기" onClick={regenerate}><RefreshCw /></button>
+          <button className="regenerate-button" onClick={regenerate}>추천 다시 받기</button>
         </div>
       </section>
 
@@ -1021,11 +1023,9 @@ function Explore({
 
       <section className="explore-tools">
         {mode === "dna" ? (
-          <div className="capital-tabs">
-            {(["전체", "소액", "중간", "높음"] as CapitalFilter[]).map((value) => <button className={capital === value ? "active" : ""} key={value} onClick={() => setCapital(value)}>{value === "전체" ? "모든 자본 규모" : `${value} 자본`}</button>)}
-          </div>
+          <label><select aria-label="시작 자본" value={capital} onChange={(event) => setCapital(event.target.value as CapitalFilter)}>{(["전체", "소액", "중간", "높음"] as CapitalFilter[]).map((value) => <option key={value} value={value}>{value === "전체" ? "모든 자본 규모" : `${value} 자본`}</option>)}</select></label>
         ) : null}
-        <label><select aria-label="사업 분야" value={sector} onChange={(event) => setSector(event.target.value)}><option value="">모든 분야</option>{availableSectors.map((value) => <option key={value}>{value}</option>)}</select><ChevronDown /></label>
+        <label><select aria-label="사업 분야" value={sector} onChange={(event) => setSector(event.target.value)}><option value="">모든 분야</option>{availableSectors.map((value) => <option key={value}>{value}</option>)}</select></label>
       </section>
 
       <section className="opportunity-grid">
@@ -1035,8 +1035,8 @@ function Explore({
           </div>
         ))}
       </section>
-      {!ranked.length && <div className="empty-results"><Compass /><h3>이 조건의 기회를 모두 살펴봤어요</h3><p>필터를 넓히거나 제외한 아이디어를 다시 불러와보세요.</p><button onClick={() => { setCapital("전체"); setSector(""); setFeedback({}); }}>전체 기회 다시 보기</button></div>}
-      {ranked.length > 4 && <button className="more-opportunities" onClick={() => setShowAll(!showAll)}>{showAll ? "추천 접기" : `추천 ${ranked.length - 4}개 더 보기`} <ChevronDown /></button>}
+      {!ranked.length && <div className="empty-results"><h3>이 조건의 기회를 모두 살펴봤어요</h3><p>필터를 넓히거나 제외한 아이디어를 다시 불러와보세요.</p><button onClick={() => { setCapital("전체"); setSector(""); setFeedback({}); }}>전체 기회 다시 보기</button></div>}
+      {ranked.length > 4 && <button className="more-opportunities" onClick={() => setShowAll(!showAll)}>{showAll ? "추천 접기" : `추천 ${ranked.length - 4}개 더 보기`}</button>}
 
       {selected && (
         <div className="detail-backdrop" onClick={() => setSelected(null)}>
