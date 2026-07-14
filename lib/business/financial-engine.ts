@@ -101,8 +101,13 @@ export function calculateFinancialAnalysis(input: FinancialInput): FinancialAnal
   if (input.vatTaxable && !input.priceIncludesVat) {
     warnings.push("판매가가 부가세 별도입니다. 고객 표시가격과 세금계산서 발행 기준을 확인하세요.");
   }
-  if (input.initial.contingency < initialInvestment * 0.05) {
-    warnings.push("예비비가 초기 투자비의 5% 미만입니다. 공사·장비·오픈 지연 위험을 반영하세요.");
+  const contingencyRiskBase =
+    input.initial.interior +
+    input.initial.equipment +
+    input.initial.initialInventory +
+    input.initial.licensesAndRegistration;
+  if (contingencyRiskBase > 0 && input.initial.contingency < contingencyRiskBase * 0.05) {
+    warnings.push("예비비가 공사·장비·재고·인허가 준비비의 5% 미만입니다. 실제 견적 변동과 시작 지연 위험을 반영하세요.");
   }
 
   return {

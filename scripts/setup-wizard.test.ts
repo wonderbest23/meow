@@ -6,6 +6,7 @@ import {
   setupQuestionIds,
   withSetupValue,
 } from "../lib/business/setup-wizard";
+import { assessBusinessSetup } from "../lib/business/korea-rules";
 
 const digital = emptyBusinessSetup("digital_service");
 const digitalQuestions = setupQuestionIds(digital);
@@ -34,5 +35,10 @@ assert.equal(normalized.adjusted, true);
 assert.equal(normalized.setup.financial.initial.equipment, 0);
 assert.equal(normalized.setup.financial.initial.contingency, 0);
 assert.equal(normalized.setup.financial.initial.launchMarketing, 200_000);
+assert.equal(
+  assessBusinessSetup(normalized.setup).financial.warnings.some((warning) => warning.includes("예비비")),
+  false,
+  "디지털 사업의 홍보비만으로 공사·장비용 예비비 경고가 생기면 안 됩니다.",
+);
 
 console.log("setup-wizard.test.ts passed");
