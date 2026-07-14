@@ -4996,6 +4996,11 @@ body:has(.guided-action-bar) .support-chat-widget { bottom: calc(96px + env(safe
   .explore-tools { margin: 0 15px 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
   .explore-tools label { min-width: 0; width: 100%; }
   .explore-tools label:only-child { grid-column: 1/-1; }
+  body:has(.explore-page) .support-chat-widget:not(.open) { position: absolute; top: 9px; right: 62px; bottom: auto; }
+  body:has(.explore-page) .support-chat-toggle { width: 44px; min-width: 44px; height: 40px; border-color: #dce2df; border-radius: 7px; background: #fff; color: #4f5d56; box-shadow: none; }
+  body:has(.explore-page) .support-chat-toggle:hover { background: #f6f8f7; color: #08775a; box-shadow: none; transform: none; }
+  body:has(.explore-page) .support-chat-toggle > svg { display: none; }
+  body:has(.explore-page) .support-chat-toggle::after { content: "문의"; font-size: 11px; font-weight: 750; }
   .opportunity-grid { padding: 0 15px; }
   .opportunity-card { min-height: 0; padding: 20px 17px; }
   .opportunity-card h3 { margin-top: 16px; font-size: 19px; }
