@@ -71,7 +71,7 @@ import {
 import type { ManualPreferences } from "../lib/idea-generator";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
-import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
+import { archetypeLabels, emptyBusinessSetup, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { inferBusinessArchetype } from "../lib/business/router";
 import { MarketPlanPanel } from "../components/market-plan-panel";
 import { LandingBuilderPanel } from "../components/landing-builder-panel";
@@ -2314,6 +2314,8 @@ function ProjectWorkspace({
   const packageReady = Boolean(
     serverProject
     && serverProject.stages.every((stage) => Boolean(stage.approvedArtifactId))
+    && serverProject.businessSetup
+    && serverProject.businessAssessment
     && serverProject.businessPlan
     && serverProject.operationsPackage
     && serverProject.executionAnalysis
@@ -2580,6 +2582,7 @@ function ProjectWorkspace({
     try {
       let workingProject = serverProject;
       let workingOpportunity = (workingProject.opportunity as unknown as RankedOpportunity);
+      let setupChanged = false;
       const nextPrice = refinement?.priceWon ?? (typeof workingProject.stages[2]?.inputs.basePriceWon === "number" ? workingProject.stages[2].inputs.basePriceWon : price);
       const nextBrand = refinement?.brandName ?? (typeof workingProject.stages[3]?.inputs.selectedName === "string" ? workingProject.stages[3].inputs.selectedName : brandChoice);
 
@@ -2592,6 +2595,31 @@ function ProjectWorkspace({
         const updatePayload = await readProjectPayload(updateResponse, "사업 기본정보를 수정하지 못했습니다.");
         workingProject = updatePayload.project as ProjectRecord;
         workingOpportunity = workingProject.opportunity as unknown as RankedOpportunity;
+        setServerProject(workingProject);
+      }
+
+      if (!workingProject.businessSetup || refinement) {
+        const stageBudget = workingProject.stages[0]?.inputs.budgetWon;
+        const availableCash = typeof stageBudget === "number"
+          ? stageBudget
+          : workingOpportunity.capital === "소액" ? 1000000 : workingOpportunity.capital === "중간" ? 10000000 : 50000000;
+        const setup = workingProject.businessSetup
+          ? structuredClone(workingProject.businessSetup)
+          : emptyBusinessSetup(inferBusinessArchetype(workingOpportunity));
+        setup.financial.sellingPrice = nextPrice;
+        setup.financial.availableCash = availableCash;
+        setup.sectorKeywords = `${workingOpportunity.title} ${workingOpportunity.oneLiner}`.split(/\s+/).filter(Boolean).slice(0, 6);
+        setup.onlineSales = setup.archetype === "ecommerce" || setup.archetype === "digital_service";
+        setup.handlesPersonalData = setup.handlesPersonalData || setup.onlineSales;
+        const setupResponse = await fetch(`/api/projects/${workingProject.id}/setup`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(setup),
+        });
+        const setupPayload = await readProjectPayload(setupResponse, "추천 비용과 사업 조건을 저장하지 못했습니다.");
+        workingProject = setupPayload.project as ProjectRecord;
+        workingOpportunity = workingProject.opportunity as unknown as RankedOpportunity;
+        setupChanged = true;
         setServerProject(workingProject);
       }
 
@@ -2610,7 +2638,16 @@ function ProjectWorkspace({
           refinement?.note ?? "",
         );
         if (refinement && stageIndex === 1) inputs = { ...inputs, primaryCustomer: refinement.customer };
-        if (refinement && stageIndex === 2) inputs = { ...inputs, basePriceWon: refinement.priceWon, variableCostWon: Math.round(refinement.priceWon * 0.2) };
+        if (stageIndex === 2 && workingProject.businessAssessment) {
+          const financial = workingProject.businessAssessment.financial;
+          inputs = {
+            ...inputs,
+            basePriceWon: financial.grossPrice,
+            variableCostWon: financial.variableCostPerUnit,
+            monthlyFixedCostWon: financial.monthlyFixedCost,
+            monthlyRevenueGoalWon: financial.grossPrice * (workingProject.businessSetup?.financial.targetMonthlyUnits ?? 10),
+          };
+        }
         if (refinement && stageIndex === 3) inputs = { ...inputs, preferredNames: [refinement.brandName], selectedName: refinement.brandName };
         if (refinement && stageIndex === 4) inputs = { ...inputs, headline: refinement.oneLiner };
 
@@ -2660,7 +2697,7 @@ function ProjectWorkspace({
         }
       }
 
-      if (force || !workingProject.businessPlan) {
+      if (force || setupChanged || !workingProject.businessPlan) {
         setInstantBuild({ status: "building", step: 7, message: "사업계획서를 완성하고 있어요.", mode: force ? "refine" : "initial", error: "" });
         const response = await fetch(`/api/projects/${workingProject.id}/business-plan`, { method: "POST" });
         workingProject = (await readProjectPayload(response, "사업계획서를 만들지 못했습니다.")).project as ProjectRecord;
@@ -2680,15 +2717,15 @@ function ProjectWorkspace({
         setServerProject(workingProject);
       };
 
-      if (force || !workingProject.operationsPackage) {
+      if (force || setupChanged || !workingProject.operationsPackage) {
         setInstantBuild({ status: "building", step: 8, message: "운영 준비서를 정리하고 있어요.", mode: force ? "refine" : "initial", error: "" });
         await saveGeneratedWorkspace("operations", "workspace", "운영 준비서를 만들지 못했습니다.");
       }
-      if (force || !workingProject.executionAnalysis) {
+      if (force || setupChanged || !workingProject.executionAnalysis) {
         setInstantBuild({ status: "building", step: 9, message: "단계별 실행 보고서를 정리하고 있어요.", mode: force ? "refine" : "initial", error: "" });
         await saveGeneratedWorkspace("execution-loop", "workspace", "실행 보고서를 만들지 못했습니다.");
       }
-      if (force || !workingProject.grantPackage) {
+      if (force || setupChanged || !workingProject.grantPackage) {
         setInstantBuild({ status: "building", step: 10, message: "지원사업 신청 초안을 정리하고 있어요.", mode: force ? "refine" : "initial", error: "" });
         await saveGeneratedWorkspace("grants", "workspace", "지원사업 초안을 만들지 못했습니다.");
       }

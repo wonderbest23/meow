@@ -22,12 +22,15 @@ export function inferBusinessArchetype(opportunity: OpportunityLike): BusinessAr
   ].map((value) => String(value ?? "")).join(" ");
   const regulation = typeof opportunity.regulation === "number" ? opportunity.regulation : 0;
 
+  const clearlyDigital = /(SaaS|플랫폼|구독|데이터|AI|온라인\s*(?:서비스|도구|솔루션)|소프트웨어|자동화|앱)|(?:예약|문의|고객|업무).*(?:정리|관리|자동)/i.test(text);
+  if (clearlyDigital) return "digital_service";
+
   if (regulation >= 65 || regulatedKeywords.some((keyword) => text.includes(keyword))) {
     return "regulated";
   }
   if (/(제조|제품|키트|렌탈|장비|소재|공장)/.test(text)) return "manufacturing";
   if (/(커머스|쇼핑|판매|공동구매|마켓|유통|중고|거래 네트워크)/.test(text)) return "ecommerce";
   if (/(팝업|공간|매장|오프라인|체험|스튜디오)/.test(text)) return "local_retail";
-  if (/(SaaS|플랫폼|구독|데이터|AI|온라인|소프트웨어)/i.test(text)) return "digital_service";
+  if (/(온라인|디지털)/i.test(text)) return "digital_service";
   return "professional_service";
 }

@@ -53,9 +53,14 @@ assert.equal(
   inferBusinessArchetype({ model: "상담 서비스", sector: "약국·돌봄", regulation: 78 }),
   "regulated",
 );
+assert.equal(
+  inferBusinessArchetype({ model: "온라인 서비스", oneLiner: "혼자 운영하는 미용실의 예약 문의를 자동으로 정리합니다.", regulation: 20 }),
+  "digital_service",
+  "규제 업종 고객을 돕는 업무 도구는 실제 제공 방식에 따라 온라인 서비스로 분류해야 합니다.",
+);
 
 console.log(JSON.stringify({
-  passed: 12,
+  passed: 13,
   sample: {
     monthlyFixedCost: analysis.monthlyFixedCost,
     contributionPerUnit: analysis.contributionPerUnit,
