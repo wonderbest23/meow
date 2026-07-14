@@ -411,17 +411,17 @@ function StartChoice({
           <button className="recommended-mode" onClick={onQuestionnaire}>
             <span className="start-mode-icon"><CheckCircle2 /></span>
             <span><em>가장 쉬워요</em><strong>질문으로 찾기</strong><small>{questionnaireProgress ? `${Math.min(questionnaireProgress + 1, coreQuestions.length)}번째 질문부터 이어서` : "두 가지 중 하나씩, 8번만 선택"}</small></span>
-            <b>시작하기 <ArrowRight /></b>
+            <span className="start-mode-action" aria-hidden="true"><ArrowRight /></span>
           </button>
           <button className="direct-mode" onClick={onDirect}>
             <span className="start-mode-icon"><BriefcaseBusiness /></span>
             <span><strong>내 아이디어로 바로 기획</strong><small>아이디어가 이미 있을 때</small></span>
-            <b>시작하기 <ArrowRight /></b>
+            <span className="start-mode-action" aria-hidden="true"><ArrowRight /></span>
           </button>
           <button className="conversation-mode" onClick={onConversation}>
             <span className="start-mode-icon"><MessageCircle /></span>
             <span><strong>내 경험을 적으며 찾기</strong><small>{conversationInProgress ? "작성하던 내용 이어서" : "하고 싶은 일이 아직 막연할 때"}</small></span>
-            <b>시작하기 <ArrowRight /></b>
+            <span className="start-mode-action" aria-hidden="true"><ArrowRight /></span>
           </button>
         </div>
         <details className="start-privacy"><summary><ShieldCheck /> 입력 정보 이용 안내 <ChevronDown /></summary><p>입력 내용은 맞춤 추천과 문서 생성에만 사용합니다. 주민등록번호, 상세 주소, 계좌번호는 입력하지 마세요. <a href="/privacy" target="_blank" rel="noreferrer">개인정보 안내</a> · <a href="/ai-notice" target="_blank" rel="noreferrer">인공지능 처리 안내</a></p></details>
