@@ -69,6 +69,32 @@ const stageContentSchemas = [
   }).passthrough(),
 ] as const;
 
+const stageAIFieldKeys = [
+  ["problem", "customer", "valueProposition", "constraints", "validationPlan", "day21Goal"],
+  ["primaryCustomer", "jobs", "pains", "currentAlternatives", "evidence", "interviewScript", "unknowns"],
+  ["tiers", "unitEconomics", "breakEvenCustomers", "assumptions", "pricingTests"],
+  ["nameCandidates", "promise", "slogans", "tone", "prohibitedClaims", "selectionGuide", "usageExamples"],
+  ["blocks", "contact", "legalNotice"],
+  ["launchDate", "outreachScripts", "channelPlan", "weeklyMetrics", "next30Days", "decisionCriteria"],
+] as const;
+
+function selectFields(value: Record<string, unknown>, keys: readonly string[]) {
+  return Object.fromEntries(keys.filter((key) => key in value).map((key) => [key, value[key]]));
+}
+
+function priorArtifactSummary(content: Record<string, unknown>) {
+  return selectFields(content, [
+    "problem",
+    "customer",
+    "valueProposition",
+    "primaryCustomer",
+    "tiers",
+    "recommendedOffer",
+    "nameCandidates",
+    "promise",
+  ]);
+}
+
 function validateStageContent(stageIndex: number, value: unknown) {
   const schema = stageContentSchemas[stageIndex];
   if (!schema) throw new Error("STAGE_SCHEMA_NOT_FOUND");
@@ -416,6 +442,9 @@ async function generateWithOpenAI(
   const apiKey = runtimeConfig?.apiKey ?? process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
   const model = runtimeConfig?.model ?? process.env.OPENAI_MODEL ?? "gpt-5.6-sol";
+  const baselineDraft = fallbackContent(project, stageIndex);
+  const requiredFields = stageAIFieldKeys[stageIndex];
+  if (!requiredFields) throw new Error("STAGE_SCHEMA_NOT_FOUND");
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
     headers: {
@@ -426,13 +455,13 @@ async function generateWithOpenAI(
       model,
       store: false,
       reasoning: { effort: "low" },
-      max_output_tokens: 6_000,
+      max_output_tokens: 3_500,
       text: { format: { type: "json_object" } },
       input: [
         {
           role: "system",
           content:
-            "당신은 한국에서 실제로 실행할 사업 초안을 작성하는 선임 사업전략가입니다. 이 작업은 소설·광고 창작이 아닙니다. 사용자 입력, 저장된 계산, 연결된 원문만 완료 사실로 사용할 수 있습니다. 고객 인터뷰·설문·판매·매출·시장규모·성장률·경력·수상·특허·제휴·후기를 절대 만들어내지 마세요. 모델의 기억이나 일반 상식을 최신 한국 시장의 확정 수치로 쓰지 마세요. 근거가 없으면 반드시 검증할 가정, 목표 또는 추가 확인 필요로 표현하고 미래형·조건형 문장을 사용하세요. 가격과 손익은 businessAssessment의 계산값을 그대로 유지하고 임의의 업종 평균으로 바꾸지 마세요. baselineDraft의 모든 핵심 필드와 안전 문구를 유지하면서 사업별 고객·제공범위·운영순서·중단기준을 구체화하세요. 과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사와 인터넷 주소를 금지합니다. 소비자가 유료로 받은 뒤 실행할 수 있을 만큼 상세히 작성하되 확인되지 않은 내용을 그럴듯하게 채워 분량을 늘리지 마세요. 반드시 설명이나 마크다운 없이 유효한 JSON 객체 하나만 출력하세요.",
+            "당신은 한국에서 실제로 실행할 사업 초안을 작성하는 선임 사업전략가입니다. 이 작업은 소설·광고 창작이 아닙니다. 사용자 입력, 저장된 계산, 연결된 원문만 완료 사실로 사용할 수 있습니다. 고객 인터뷰·설문·판매·매출·시장규모·성장률·경력·수상·특허·제휴·후기를 절대 만들어내지 마세요. 모델의 기억이나 일반 상식을 최신 한국 시장의 확정 수치로 쓰지 마세요. 근거가 없으면 반드시 검증할 가정, 목표 또는 추가 확인 필요로 표현하고 미래형·조건형 문장을 사용하세요. 가격과 손익은 businessAssessment의 계산값을 그대로 유지하고 임의의 업종 평균으로 바꾸지 마세요. 기본 초안의 나머지 안전 항목은 서버가 자동으로 유지하므로 요청한 필수 필드만 간결하게 보강하고, 기본 초안 전체를 반복하거나 새로운 최상위 필드를 추가하지 마세요. 과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사와 인터넷 주소를 금지합니다. 반드시 설명이나 마크다운 없이 유효한 JSON 객체 하나만 출력하세요.",
         },
         {
           role: "user",
@@ -443,18 +472,20 @@ async function generateWithOpenAI(
             stageInputs: project.stages[stageIndex].inputs,
             businessSetup: project.businessSetup,
             businessAssessment: project.businessAssessment,
-            baselineDraft: fallbackContent(project, stageIndex),
+            requiredFields,
+            baselineDraft: selectFields(baselineDraft, requiredFields),
             priorApprovedArtifacts: project.stages
               .slice(0, stageIndex)
               .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.content)
-              .filter(Boolean),
+              .filter((content): content is Record<string, unknown> => Boolean(content))
+              .map(priorArtifactSummary),
             revisionInstruction,
             currentDraft,
           }),
         },
       ],
     }),
-    signal: AbortSignal.timeout(60_000),
+    signal: AbortSignal.timeout(90_000),
   });
   if (!response.ok) {
     throw new Error(`OPENAI_${response.status}`);
