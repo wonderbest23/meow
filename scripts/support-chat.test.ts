@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 async function main() {
   process.env.PERSISTENCE_MODE = "demo-memory";
 
+  const { findSupportFaq, supportFaqCategories } = await import("../lib/support-chat/faq");
+
   const {
     getAdminChat,
     getCustomerChat,
@@ -11,6 +13,11 @@ async function main() {
     sendCustomerMessage,
     setConversationStatus,
   } = await import("../lib/support-chat/repository");
+
+  assert.equal(supportFaqCategories.length, 7);
+  assert.equal(findSupportFaq("다음 버튼이 안 눌려요")?.id, "error-disabled");
+  assert.equal(findSupportFaq("도메인 비용이 궁금해요")?.id, "landing-domain");
+  assert.equal(findSupportFaq("완전히 무관한 문장입니다"), null);
 
   const guest = `support-test-${crypto.randomUUID()}`;
   const otherGuest = `support-test-${crypto.randomUUID()}`;

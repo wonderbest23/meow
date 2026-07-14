@@ -409,7 +409,7 @@ function StartChoice({
         <div className="start-mode-cards">
           <button className="recommended-mode" onClick={onQuestionnaire}>
             <span className="start-mode-icon"><CheckCircle2 /></span>
-            <span><em>가장 쉬워요</em><strong>간단한 질문으로 찾기</strong><small>{questionnaireProgress ? `${Math.min(questionnaireProgress + 1, coreQuestions.length)}번째 질문부터 이어서` : "두 가지 중 하나씩, 8번만 선택"}</small></span>
+            <span><em>가장 쉬워요</em><strong>질문으로 찾기</strong><small>{questionnaireProgress ? `${Math.min(questionnaireProgress + 1, coreQuestions.length)}번째 질문부터 이어서` : "두 가지 중 하나씩, 8번만 선택"}</small></span>
             <b>시작하기 <ArrowRight /></b>
           </button>
           <button className="direct-mode" onClick={onDirect}>
