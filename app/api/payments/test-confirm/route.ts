@@ -7,6 +7,7 @@ import {
 } from "../../../../lib/payments/repository";
 import { recordServiceAudit } from "../../../../lib/service-audit/repository";
 import { ensurePaidStarterLanding } from "../../../../lib/landing/auto-publish";
+import { attachProjectToUser } from "../../../../lib/account-auth";
 
 export async function POST(request: Request) {
   try {
@@ -31,6 +32,7 @@ export async function POST(request: Request) {
       },
       testPaid: true,
     });
+    if (identity.userId) await attachProjectToUser(result.project.id, identity.userId);
     const starterLanding = await ensurePaidStarterLanding(result.project, identity.hash).catch(() => null);
     await recordServiceAudit({
       projectId: result.project.id,

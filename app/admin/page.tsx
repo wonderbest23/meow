@@ -1,6 +1,7 @@
 "use client";
 
-import { CheckCircle2, Headphones, LogOut, MessageCircle, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, Headphones, LogOut, MessageCircle, RefreshCw, Send, Settings } from "lucide-react";
+import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { SupportChat, SupportConversation } from "../../lib/support-chat/repository";
 
@@ -180,7 +181,7 @@ export default function AdminSupportPage() {
     <main className="admin-support-page">
       <header className="admin-support-header">
         <div><span><Headphones /></span><div><strong>홈페이지·이용 문의 관리</strong><small>고객 문의와 답변 현황</small></div></div>
-        <button type="button" onClick={logout}><LogOut /> 로그아웃</button>
+        <div><Link className="admin-settings-link" href="/admin/legal"><Settings /> 운영 설정</Link><button type="button" onClick={logout}><LogOut /> 로그아웃</button></div>
       </header>
       <div className="admin-support-workspace">
         <aside className="admin-conversation-list">

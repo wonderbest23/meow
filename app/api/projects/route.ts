@@ -31,6 +31,7 @@ export async function POST(request: Request) {
         initialStageInputs: input.initialStageInputs,
       },
       identity.hash,
+      identity.userId,
     );
     const starterLanding = await ensurePaidStarterLanding(project, identity.hash).catch(() => null);
     return NextResponse.json(

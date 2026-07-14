@@ -28,6 +28,7 @@
     "test:openai": "tsx scripts/openai-session.test.ts",
     "test:missions": "tsx scripts/launch-missions.test.ts",
     "test:support": "tsx scripts/support-chat.test.ts",
+    "test:legal": "tsx scripts/platform-legal.test.ts",
     "test:delivery": "node scripts/delivery-demo.test.mjs",
     "test:paid-quality": "tsx scripts/paid-report-quality.test.ts",
     "test:actual-scenario": "node --env-file-if-exists=.env.local --import tsx scripts/run-actual-scenario.ts",

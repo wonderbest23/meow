@@ -94,6 +94,7 @@ export function persistenceMode() {
 export async function createProject(
   input: ProjectCreateInput,
   guestTokenHash: string,
+  ownerId?: string | null,
 ): Promise<ProjectRecord> {
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -154,6 +155,7 @@ export async function createProject(
       payment_status: input.paymentStatus,
       package_price: input.packagePrice ?? 990000,
       guest_token_hash: guestTokenHash,
+      owner_id: ownerId ?? null,
       status: "active",
     })
     .select()

@@ -29,6 +29,9 @@ a { color: inherit; text-decoration: none; }
 .site-header nav a { opacity: .78; }
 .site-header nav a:hover { opacity: 1; color: var(--green); }
 .header-actions { display: flex; align-items: center; gap: 10px; }
+.account-link { min-height: 39px; padding: 0 11px; border: 1px solid #d7dfda; border-radius: 8px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; }
+.site-header.light .account-link { border-color: #ffffff3d; background: #ffffff12; }
+.account-link svg { width: 15px; }
 .login-status { color: inherit; opacity: .7; font-size: 12px; font-weight: 700; }
 .openai-settings-trigger { width: 39px; height: 39px; padding: 0; border: 1px solid #d7dfda; border-radius: 8px; background: white; color: #345247; display: grid; place-items: center; position: relative; cursor: pointer; }
 .openai-settings-trigger.light { border-color: #ffffff3d; background: #ffffff12; color: white; }
@@ -3862,6 +3865,206 @@ a { color: inherit; text-decoration: none; }
 .home-footer-notice strong { font-size: 12px; }
 .home-footer-notice p { margin: 9px 0 18px; color: #8fa198; font-size: 10px; line-height: 1.7; }
 .home-footer-notice small { color: #65776e; font-size: 9px; }
+.home-business-info { margin: 9px 0 12px; color: #a8bab1; display: grid; gap: 3px; font-size: 10px; line-height: 1.55; }
+
+/* Platform legal, account and launch readiness */
+.platform-legal-page { min-height: 100vh; background: #f4f6f4; }
+.platform-legal-header { height: 72px; padding: 0 max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid #dce3df; background: white; display: flex; align-items: center; justify-content: space-between; }
+.platform-legal-header img { width: 142px; display: block; }
+.platform-legal-header > a:last-child { display: flex; align-items: center; gap: 6px; color: #506158; font-size: 12px; font-weight: 700; }
+.platform-legal-header svg { width: 15px; }
+.platform-legal-layout { width: min(1120px, calc(100% - 48px)); margin: 0 auto; padding: 42px 0 80px; display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 42px; align-items: start; }
+.platform-legal-layout > aside { position: sticky; top: 24px; }
+.platform-legal-layout > aside > strong { display: block; margin-bottom: 11px; color: #75827b; font-size: 10px; }
+.platform-legal-layout > aside nav { border-top: 1px solid #d9e0dc; display: grid; }
+.platform-legal-layout > aside a { min-height: 44px; padding: 0 10px; border-bottom: 1px solid #d9e0dc; color: #5f6d66; display: flex; align-items: center; font-size: 12px; }
+.platform-legal-layout > aside a.active { border-left: 3px solid #0b805e; background: white; color: #124d3b; font-weight: 800; }
+.platform-legal-document { border: 1px solid #dce3df; border-radius: 8px; background: white; overflow: hidden; }
+.platform-legal-document > header { padding: 46px 50px 38px; border-bottom: 1px solid #e2e7e4; background: #fbfcfb; }
+.platform-legal-document > header > span { color: #0c7456; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; }
+.platform-legal-document > header > span svg { width: 16px; }
+.platform-legal-document h1 { margin: 14px 0 10px; font-size: 34px; letter-spacing: 0; }
+.platform-legal-document > header p { max-width: 680px; margin: 0 0 15px; color: #617068; font-size: 14px; line-height: 1.7; }
+.platform-legal-document > header small { color: #8a958f; font-size: 10px; }
+.platform-legal-draft { margin: 28px 50px 0; padding: 15px 17px; border: 1px solid #e5d7ab; border-radius: 7px; background: #fffbee; }
+.platform-legal-draft strong { font-size: 13px; }
+.platform-legal-draft p { margin: 4px 0 0; color: #786a41; font-size: 11px; line-height: 1.6; }
+.platform-legal-document > section { margin: 0 50px; padding: 32px 0; border-bottom: 1px solid #e7ebe8; }
+.platform-legal-document > section h2 { margin: 0 0 14px; font-size: 17px; letter-spacing: 0; }
+.platform-legal-document > section p, .platform-legal-document > section li { color: #4f5f57; font-size: 13px; line-height: 1.85; }
+.platform-legal-document > section p { margin: 8px 0; }
+.platform-legal-document > section ul { margin: 0; padding-left: 20px; }
+.platform-legal-document > footer { padding: 28px 50px 36px; background: #f8faf9; }
+.platform-legal-document > footer strong { font-size: 12px; }
+.platform-legal-document > footer div { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+.platform-legal-document > footer a { min-height: 34px; padding: 0 10px; border: 1px solid #d4ddd8; border-radius: 6px; background: white; color: #416156; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; }
+.platform-legal-document > footer svg { width: 12px; }
+
+.account-loading { min-height: 100vh; display: grid; place-items: center; color: #66746d; }
+.account-page { min-height: 100vh; background: #f2f5f3; }
+.account-page > header { height: 72px; padding: 0 max(24px, calc((100vw - 1080px) / 2)); border-bottom: 1px solid #dbe3de; background: white; display: flex; align-items: center; justify-content: space-between; }
+.account-page > header img { width: 142px; display: block; }
+.account-page > header > a:last-child { display: flex; align-items: center; gap: 6px; color: #52635a; font-size: 12px; font-weight: 700; }
+.account-page > header svg { width: 15px; }
+.account-auth-shell { width: min(980px, calc(100% - 48px)); min-height: calc(100vh - 72px); margin: auto; padding: 70px 0; display: grid; grid-template-columns: minmax(0, .85fr) minmax(400px, 1fr); gap: 84px; align-items: center; }
+.account-auth-copy > span { width: 46px; height: 46px; border-radius: 8px; background: #163e31; color: #dfff6b; display: grid; place-items: center; }
+.account-auth-copy > span svg { width: 22px; }
+.account-auth-copy h1 { margin: 22px 0 16px; font-size: 42px; line-height: 1.3; letter-spacing: 0; white-space: pre-line; }
+.account-auth-copy p { max-width: 390px; margin: 0; color: #6e7d75; font-size: 13px; line-height: 1.8; }
+.account-auth-shell > form { padding: 30px; border: 1px solid #d8e0dc; border-radius: 8px; background: white; box-shadow: 0 18px 50px #1835290d; display: grid; gap: 16px; }
+.account-auth-shell > form > header { padding-bottom: 18px; border-bottom: 1px solid #e5e9e7; display: grid; gap: 3px; }
+.account-auth-shell > form > header span { color: #19805f; font-size: 10px; font-weight: 800; }
+.account-auth-shell > form > header strong { font-size: 20px; }
+.account-auth-shell > form > label { display: grid; gap: 7px; }
+.account-auth-shell > form > label > span { color: #526259; font-size: 11px; font-weight: 800; }
+.account-auth-shell > form > label > div { height: 48px; padding: 0 12px; border: 1px solid #cbd7d1; border-radius: 7px; display: flex; align-items: center; gap: 9px; }
+.account-auth-shell > form > label > div:focus-within { border-color: #11805e; box-shadow: 0 0 0 3px #11805e12; }
+.account-auth-shell > form > label svg { width: 16px; color: #7c8a83; }
+.account-auth-shell input { min-width: 0; width: 100%; border: 0; outline: 0; }
+.account-consents { padding: 13px; border: 1px solid #dde5e1; border-radius: 7px; background: #f8faf9; display: grid; gap: 9px; }
+.account-consents label { display: flex; align-items: flex-start; gap: 8px; color: #586860; font-size: 11px; line-height: 1.5; }
+.account-consents input { width: 16px; height: 16px; flex: 0 0 auto; accent-color: #087353; }
+.account-consents a { color: #075c45; font-weight: 800; text-decoration: underline; }
+.account-submit { min-height: 50px; border: 0; border-radius: 7px; background: #163e31; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; cursor: pointer; }
+.account-submit:disabled { opacity: .42; cursor: not-allowed; }
+.account-submit svg { width: 17px; }
+.account-form-message, .account-message { margin: 0; padding: 10px 12px; border-radius: 6px; background: #eef6f2; color: #2c654f; font-size: 11px; line-height: 1.55; }
+.account-auth-shell form > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.account-auth-shell form > footer button { padding: 0; border: 0; background: none; color: #66766e; font-size: 10px; cursor: pointer; }
+.account-dashboard { width: min(980px, calc(100% - 48px)); margin: auto; padding: 58px 0 90px; }
+.account-welcome { padding-bottom: 32px; border-bottom: 1px solid #d6dfda; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
+.account-welcome > span { width: 46px; height: 46px; border-radius: 8px; background: #e3f4ec; color: #087353; display: grid; place-items: center; }
+.account-welcome > span svg { width: 22px; }
+.account-welcome small { color: #16805f; font-size: 10px; font-weight: 800; }
+.account-welcome h1 { margin: 2px 0; font-size: 27px; }
+.account-welcome p { margin: 0; color: #75827b; font-size: 11px; }
+.account-welcome button { height: 38px; padding: 0 11px; border: 1px solid #cfd9d4; border-radius: 6px; background: white; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.account-welcome button svg { width: 14px; }
+.account-projects { margin-top: 34px; }
+.account-projects > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+.account-projects > header strong { font-size: 18px; }
+.account-projects > header p { margin: 5px 0 0; color: #738078; font-size: 11px; }
+.account-projects > header > a { min-height: 40px; padding: 0 12px; border-radius: 7px; background: #173d31; color: white; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; }
+.account-projects > header svg { width: 14px; }
+.account-projects > div { margin-top: 16px; border-top: 1px solid #dbe2de; }
+.account-projects > div > a { min-height: 78px; padding: 12px 10px; border-bottom: 1px solid #dbe2de; display: grid; grid-template-columns: 40px 1fr 20px; gap: 13px; align-items: center; }
+.account-projects > div > a:hover { background: white; }
+.account-projects > div > a > span { width: 40px; height: 40px; border-radius: 7px; background: #e7efeb; color: #255745; display: grid; place-items: center; }
+.account-projects > div > a svg { width: 18px; }
+.account-projects > div > a > svg { width: 15px; color: #8a958f; }
+.account-projects > div > a div { min-width: 0; display: grid; gap: 4px; }
+.account-projects > div > a strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
+.account-projects > div > a small { color: #7a8780; font-size: 10px; }
+.account-empty { margin-top: 16px; padding: 45px 20px; border: 1px dashed #cbd6d0; border-radius: 8px; color: #68766f; text-align: center; }
+.account-empty svg { width: 28px; }
+.account-empty strong { display: block; margin: 11px 0 4px; color: #34483f; font-size: 14px; }
+.account-empty p { margin: 0; font-size: 11px; }
+
+.checkout-agreements { padding: 0 !important; border-radius: 8px !important; overflow: hidden; }
+.checkout-agreements .agreement { border: 0; border-radius: 0; }
+.checkout-agreements > div { padding: 15px 26px 20px; border-top: 1px solid #e3e8e5; display: grid; gap: 11px; }
+.checkout-agreements > div label { display: flex; align-items: flex-start; gap: 8px; color: #5e6d65; font-size: 11px; line-height: 1.5; }
+.checkout-agreements > div input { width: 16px; height: 16px; flex: 0 0 auto; accent-color: #087353; }
+.checkout-agreements a { color: #075c45; font-weight: 800; text-decoration: underline; }
+.checkout-blocked { padding: 13px; border: 1px solid #e4d4ad; border-radius: 7px; background: #fffbee; color: #756641; display: flex; gap: 9px; align-items: flex-start; }
+.checkout-blocked svg { width: 18px; flex: 0 0 auto; }
+.checkout-blocked p { margin: 0; font-size: 11px; line-height: 1.55; }
+.checkout-blocked strong, .checkout-blocked a { display: block; color: #54471f; }
+.checkout-blocked a { margin-top: 3px; text-decoration: underline; font-weight: 800; }
+.delivery-ai-disclosure { width: min(1132px, calc(100% - 48px)); margin: 18px auto 0; padding: 13px 16px; border: 1px solid #d8e3dd; border-radius: 8px; background: #f5faf7; display: flex; align-items: center; gap: 10px; }
+.delivery-ai-disclosure > svg { width: 18px; color: #087353; flex: 0 0 auto; }
+.delivery-ai-disclosure p { margin: 0; flex: 1; color: #5a6c62; font-size: 10px; line-height: 1.55; }
+.delivery-ai-disclosure strong { color: #234b3b; }
+.delivery-ai-disclosure a { color: #075c45; font-size: 10px; font-weight: 800; white-space: nowrap; text-decoration: underline; }
+
+.admin-support-header > div:last-child { display: flex; align-items: center; gap: 8px; }
+.admin-support-header > div:last-child > button, .admin-settings-link { height: 36px; padding: 0 11px; border: 1px solid #d3dcd7; border-radius: 6px; background: white; color: #53635b; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.admin-support-header > div:last-child svg, .admin-settings-link svg { width: 14px; }
+.admin-legal-page { min-height: 100vh; padding-bottom: 80px; background: #f2f5f3; }
+.admin-legal-page > header { height: 68px; padding: 0 max(24px, calc((100vw - 1040px) / 2)); border-bottom: 1px solid #d6dfda; background: white; display: flex; align-items: center; justify-content: space-between; }
+.admin-legal-page > header > div { display: flex; align-items: center; gap: 14px; }
+.admin-legal-page > header img { width: 126px; }
+.admin-legal-page > header span { padding-left: 13px; border-left: 1px solid #d9e0dc; display: grid; gap: 2px; }
+.admin-legal-page > header strong { font-size: 13px; }
+.admin-legal-page > header small { color: #7b8982; font-size: 9px; }
+.admin-legal-page > header nav { display: flex; gap: 5px; }
+.admin-legal-page > header nav a { min-height: 34px; padding: 0 10px; border-radius: 6px; color: #66756e; display: flex; align-items: center; font-size: 10px; font-weight: 700; }
+.admin-legal-page > header nav a.active { background: #e8f2ed; color: #0c684e; }
+.admin-readiness { width: min(1040px, calc(100% - 48px)); margin: 34px auto 18px; padding: 18px 20px; border: 1px solid; border-radius: 8px; display: flex; gap: 12px; align-items: flex-start; }
+.admin-readiness.ready { border-color: #bcd8ca; background: #eff8f3; color: #236348; }
+.admin-readiness.blocked { border-color: #e5d6aa; background: #fffbee; color: #75643a; }
+.admin-readiness > svg { width: 22px; flex: 0 0 auto; }
+.admin-readiness strong { font-size: 14px; }
+.admin-readiness p { margin: 5px 0 0; font-size: 11px; line-height: 1.55; }
+.admin-legal-page > form { width: min(1040px, calc(100% - 48px)); margin: auto; display: grid; gap: 14px; }
+.admin-legal-page > form > section { border: 1px solid #d8e0dc; border-radius: 8px; background: white; overflow: hidden; }
+.admin-legal-page > form > section > header { padding: 20px 22px 15px; border-bottom: 1px solid #e3e8e5; }
+.admin-legal-page > form > section > header h2 { margin: 0; font-size: 16px; }
+.admin-legal-page > form > section > header p { margin: 5px 0 0; color: #77847d; font-size: 10px; }
+.admin-legal-page > form > section > div { padding: 20px 22px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
+.admin-legal-page > form label { min-width: 0; display: grid; gap: 7px; }
+.admin-legal-page > form label.wide { grid-column: 1 / -1; }
+.admin-legal-page > form label > span { color: #4f6057; font-size: 10px; font-weight: 800; }
+.admin-legal-page input:not([type="checkbox"]), .admin-legal-page textarea { width: 100%; padding: 10px 11px; border: 1px solid #cbd6d0; border-radius: 6px; outline: 0; resize: vertical; font: inherit; font-size: 12px; line-height: 1.55; }
+.admin-legal-page input:not([type="checkbox"]) { min-height: 44px; }
+.admin-legal-page input:focus, .admin-legal-page textarea:focus { border-color: #16805f; box-shadow: 0 0 0 3px #16805f12; }
+.admin-legal-page label small { color: #89948e; font-size: 9px; }
+.admin-legal-confirm > label { min-height: 64px; padding: 14px 22px; border-bottom: 1px solid #e5e9e7; display: flex !important; grid-template-columns: none; align-items: flex-start; gap: 10px !important; }
+.admin-legal-confirm > label input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #087353; }
+.admin-legal-confirm > label span { display: grid; gap: 4px; }
+.admin-legal-confirm > label strong { color: #33473d; font-size: 12px; }
+.admin-legal-confirm a { color: #075c45; display: flex; align-items: center; gap: 4px; font-weight: 800; }
+.admin-legal-confirm a svg { width: 11px; }
+.admin-legal-actions { padding: 16px 18px; border: 1px solid #d6dfda; border-radius: 8px; background: white; display: flex; align-items: center; justify-content: space-between; gap: 20px; position: sticky; bottom: 12px; box-shadow: 0 15px 40px #18352912; }
+.admin-legal-actions > div { display: grid; gap: 4px; }
+.admin-legal-actions p { margin: 0; color: #2b6a51; font-size: 11px; }
+.admin-legal-actions a { color: #52655b; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; }
+.admin-legal-actions a svg { width: 11px; }
+.admin-legal-actions > button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 7px; background: #173d31; color: white; display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; cursor: pointer; }
+.admin-legal-actions > button svg { width: 15px; }
+
+@media (max-width: 720px) {
+  .account-link { width: 39px; padding: 0; justify-content: center; font-size: 0; }
+  .platform-legal-header, .account-page > header { height: 62px; padding: 0 18px; }
+  .platform-legal-header img, .account-page > header img { width: 124px; }
+  .platform-legal-layout { width: 100%; padding: 0 0 50px; grid-template-columns: 1fr; gap: 0; }
+  .platform-legal-layout > aside { position: static; padding: 13px 18px; border-bottom: 1px solid #dce3df; background: white; overflow-x: auto; }
+  .platform-legal-layout > aside > strong { display: none; }
+  .platform-legal-layout > aside nav { width: max-content; border: 0; display: flex; gap: 5px; }
+  .platform-legal-layout > aside a { min-height: 34px; padding: 0 10px; border: 1px solid #d9e0dc; border-radius: 6px; white-space: nowrap; }
+  .platform-legal-layout > aside a.active { border-left-width: 1px; border-color: #16805f; }
+  .platform-legal-document { border: 0; border-radius: 0; }
+  .platform-legal-document > header { padding: 34px 20px 28px; }
+  .platform-legal-document h1 { font-size: 27px; }
+  .platform-legal-draft { margin: 20px 18px 0; }
+  .platform-legal-document > section { margin: 0 20px; padding: 26px 0; }
+  .platform-legal-document > footer { padding: 24px 20px 34px; }
+  .account-auth-shell { width: 100%; min-height: auto; padding: 38px 18px 60px; grid-template-columns: 1fr; gap: 30px; }
+  .account-auth-copy h1 { font-size: 31px; }
+  .account-auth-copy p { font-size: 12px; }
+  .account-auth-shell > form { padding: 23px 18px; }
+  .account-dashboard { width: 100%; padding: 34px 18px 70px; }
+  .account-welcome { grid-template-columns: 42px 1fr; }
+  .account-welcome > button { grid-column: 1 / -1; width: 100%; justify-content: center; }
+  .account-welcome h1 { font-size: 21px; }
+  .account-projects > header { align-items: flex-start; }
+  .account-projects > header > a { font-size: 0; width: 40px; padding: 0; justify-content: center; flex: 0 0 auto; }
+  .checkout-agreements > div { padding: 14px 17px 18px; }
+  .delivery-ai-disclosure { width: calc(100% - 36px); align-items: flex-start; flex-wrap: wrap; }
+  .delivery-ai-disclosure p { flex-basis: calc(100% - 30px); }
+  .delivery-ai-disclosure a { margin-left: 28px; }
+  .admin-support-header > div:last-child .admin-settings-link { width: 36px; padding: 0; justify-content: center; font-size: 0; }
+  .admin-legal-page > header { height: auto; min-height: 64px; padding: 10px 14px; align-items: flex-start; gap: 12px; }
+  .admin-legal-page > header img { width: 112px; }
+  .admin-legal-page > header span { display: none; }
+  .admin-legal-page > header nav { flex-wrap: wrap; justify-content: flex-end; }
+  .admin-readiness, .admin-legal-page > form { width: calc(100% - 28px); }
+  .admin-readiness { margin-top: 20px; }
+  .admin-legal-page > form > section > div { grid-template-columns: 1fr; padding: 17px 16px 20px; }
+  .admin-legal-page > form label.wide { grid-column: auto; }
+  .admin-legal-actions { padding: 12px; align-items: stretch; flex-direction: column; }
+  .admin-legal-actions > button { justify-content: center; }
+}
 
 @media (max-width: 900px) {
   .simple-home .hero-shell { height: clamp(740px, calc(100svh + 20px), 800px); min-height: 740px; max-height: 800px; }

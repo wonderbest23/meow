@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireGuestIdentity } from "../../../../lib/api-auth";
+import { requireAuthenticatedIdentity } from "../../../../lib/api-auth";
 import { createPaymentOrderSchema } from "../../../../lib/payments/domain";
 import {
   createPaymentOrder,
@@ -7,6 +7,9 @@ import {
 } from "../../../../lib/payments/repository";
 import { tossConfigured } from "../../../../lib/payments/toss-client";
 import { paymentsEnabled } from "../../../../lib/payments/config";
+import { evaluatePlatformLaunchReadiness } from "../../../../lib/platform-legal/domain";
+import { getPlatformLegalSettings } from "../../../../lib/platform-legal/repository";
+import { authConfigured } from "../../../../lib/account-auth";
 
 export async function POST(request: Request) {
   try {
@@ -22,10 +25,21 @@ export async function POST(request: Request) {
         { status: 409 },
       );
     }
-    const input = createPaymentOrderSchema.parse(await request.json());
-    const identity = await requireGuestIdentity();
     const tossReady = tossConfigured();
     const persistence = paymentPersistenceMode();
+    const legalSettings = await getPlatformLegalSettings();
+    const readiness = evaluatePlatformLaunchReadiness(legalSettings, {
+      authConfigured: authConfigured(),
+      paymentsConfigured: tossReady && persistence === "supabase",
+    });
+    if (!readiness.paymentAllowed) {
+      return NextResponse.json(
+        { error: { code: "PAID_LAUNCH_BLOCKED", message: `정식 결제 준비가 완료되지 않았습니다: ${readiness.missing.join(", ")}`, retryable: false } },
+        { status: 503 },
+      );
+    }
+    const input = createPaymentOrderSchema.parse(await request.json());
+    const identity = await requireAuthenticatedIdentity();
     if (process.env.NODE_ENV === "production" && (!tossReady || persistence !== "supabase")) {
       return NextResponse.json(
         {
@@ -60,6 +74,9 @@ export async function POST(request: Request) {
       { status: 201 },
     );
   } catch (error) {
+    if (error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED") {
+      return NextResponse.json({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "결제 전에 로그인해주세요.", retryable: false } }, { status: 401 });
+    }
     return NextResponse.json(
       {
         error: {

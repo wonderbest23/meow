@@ -3,7 +3,7 @@ import { opportunitySnapshotSchema } from "../service-domain";
 
 export const PACKAGE_AMOUNT = 990_000;
 export const PACKAGE_NAME = "21일 창업 실행 과정";
-export const TERMS_VERSION = "2026-07-12";
+export const TERMS_VERSION = "2026-07-14";
 
 export const paymentMethodSchema = z.enum(["CARD", "TOSSPAY", "TRANSFER"]);
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
@@ -17,6 +17,7 @@ export const createPaymentOrderSchema = z.object({
     privacy: z.literal(true),
     refund: z.literal(true),
     aiLimitations: z.literal(true),
+    digitalSupply: z.literal(true),
   }),
 });
 

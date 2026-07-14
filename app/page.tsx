@@ -30,6 +30,7 @@ import {
   LockKeyhole,
   Maximize2,
   MessageCircle,
+  UserRound,
   PackageCheck,
   Printer,
   ReceiptText,
@@ -172,6 +173,7 @@ function Header({
         </nav>
       )}
       <div className="header-actions">
+        <a className="account-link" href="/account"><UserRound /> 내 작업</a>
         <OpenAISettings light={light} />
         {onStart && <button className="small-start" onClick={onStart}>시작하기 <ArrowRight size={15} /></button>}
       </div>
@@ -204,6 +206,13 @@ function Home({
   onStart: () => void;
   onPreview: () => void;
 }) {
+  const [businessInfo, setBusinessInfo] = useState<{
+    operatorName: string; representativeName: string; businessRegistrationNumber: string; mailOrderSalesNumber: string;
+    businessAddress: string; supportEmail: string; supportPhone: string; hostingProvider: string;
+  } | null>(null);
+  useEffect(() => {
+    void fetch("/api/platform/readiness", { cache: "no-store" }).then((response) => response.json()).then((data) => setBusinessInfo(data.business ?? null)).catch(() => undefined);
+  }, []);
   const deliverables = [
     "사업 실행 요약서",
     "고객·시장 진단서",
@@ -321,8 +330,8 @@ function Home({
 
       <footer className="home-footer">
         <div><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /><p>경험에서 사업 기회를 찾고, 근거와 실행 순서까지 만드는 창업 실행 서비스</p></div>
-        <nav aria-label="하단 안내"><a href="#how">진행 방식</a><a href="#deliverables">결과물</a><a href="#evidence">근거 기준</a><a href="#price">베타 이용</a></nav>
-        <div className="home-footer-notice"><strong>이용 안내</strong><p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다. 전문 자격이 필요한 판단은 관련 기관 또는 전문가에게 문의하세요.</p><small>© 2026 오늘창업</small></div>
+        <nav aria-label="하단 안내"><a href="/business-info">사업자 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
+        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>통신판매업 {businessInfo.mailOrderSalesNumber}</span><span>{businessInfo.businessAddress}</span><span>{businessInfo.supportPhone} · {businessInfo.supportEmail}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><small>© 2026 오늘창업</small></div>
       </footer>
     </main>
   );
@@ -368,7 +377,7 @@ function StartChoice({
             <ArrowRight />
           </button>
         </div>
-        <div className="start-privacy"><ShieldCheck /><span><strong>입력 내용은 맞춤 추천·문서 생성·프로젝트 저장에 사용됩니다.</strong> 인공지능 연결 시 생성에 필요한 내용이 OpenAI로 전송됩니다. 주민등록번호, 상세 주소, 계좌번호는 입력하지 마세요.</span></div>
+        <div className="start-privacy"><ShieldCheck /><span><strong>입력 내용은 맞춤 추천·문서 생성·프로젝트 저장에 사용됩니다.</strong> 인공지능 연결 시 생성에 필요한 내용이 OpenAI로 전송됩니다. 주민등록번호, 상세 주소, 계좌번호는 입력하지 마세요. <a href="/privacy" target="_blank" rel="noreferrer">개인정보 안내</a> · <a href="/ai-notice" target="_blank" rel="noreferrer">인공지능·국외 처리 안내</a></span></div>
       </section>
     </main>
   );
@@ -941,9 +950,29 @@ function Checkout({
   onSuccess: (project: ProjectRecord) => Promise<void>;
 }) {
   const [agreed, setAgreed] = useState(false);
+  const [agreementItems, setAgreementItems] = useState({ service: false, privacy: false, refund: false, aiLimitations: false, digitalSupply: false });
+  const [launchReadiness, setLaunchReadiness] = useState<{ paymentAllowed: boolean; missing: string[] } | null>(null);
+  const [accountReady, setAccountReady] = useState<boolean | null>(null);
   const [method, setMethod] = useState("card");
   const [paying, setPaying] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+
+  useEffect(() => {
+    void Promise.all([
+      fetch("/api/platform/readiness", { cache: "no-store" }).then((response) => response.json()),
+      fetch("/api/auth/session", { cache: "no-store" }).then((response) => response.json()),
+    ]).then(([readinessPayload, accountPayload]) => {
+      setLaunchReadiness(readinessPayload.readiness);
+      setAccountReady(Boolean(accountPayload.authenticated));
+    }).catch(() => {
+      setLaunchReadiness({ paymentAllowed: false, missing: ["출시 준비 상태 확인"] });
+      setAccountReady(false);
+    });
+  }, []);
+
+  useEffect(() => {
+    setAgreed(Object.values(agreementItems).every(Boolean));
+  }, [agreementItems]);
 
   const pay = async () => {
     if (!agreed || paying) return;
@@ -958,10 +987,7 @@ function Checkout({
           founderProfile,
           method: method === "toss" ? "TOSSPAY" : method === "transfer" ? "TRANSFER" : "CARD",
           terms: {
-            service: true,
-            privacy: true,
-            refund: true,
-            aiLimitations: true,
+            ...agreementItems,
           },
         }),
       });
@@ -1035,7 +1061,18 @@ function Checkout({
                 <button className={method === "transfer" ? "active" : ""} onClick={() => setMethod("transfer")}><Building2 /><span><strong>계좌이체</strong><small>현금영수증 가능</small></span><i>{method === "transfer" && <Check />}</i></button>
               </div>
             </section>
-            <label className="agreement"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><strong>필수 약관에 모두 동의합니다.</strong><small>서비스 제공 범위, 환불 정책, 인공지능 생성 결과물의 한계를 확인했습니다.</small></span><ArrowRight /></label>
+            <section className="checkout-agreements">
+              <label className="agreement agreement-all"><input type="checkbox" checked={agreed} onChange={(event) => setAgreementItems({ service: event.target.checked, privacy: event.target.checked, refund: event.target.checked, aiLimitations: event.target.checked, digitalSupply: event.target.checked })} /><span><strong>필수 항목에 모두 동의합니다.</strong><small>각 문서를 열어 실제 제공 조건을 확인할 수 있습니다.</small></span></label>
+              <div>
+                <label><input type="checkbox" checked={agreementItems.service} onChange={(event) => setAgreementItems((current) => ({ ...current, service: event.target.checked }))} /><span><a href="/terms" target="_blank" rel="noreferrer">이용약관</a> 동의</span></label>
+                <label><input type="checkbox" checked={agreementItems.privacy} onChange={(event) => setAgreementItems((current) => ({ ...current, privacy: event.target.checked }))} /><span><a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a> 동의</span></label>
+                <label><input type="checkbox" checked={agreementItems.aiLimitations} onChange={(event) => setAgreementItems((current) => ({ ...current, aiLimitations: event.target.checked }))} /><span><a href="/ai-notice" target="_blank" rel="noreferrer">인공지능·국외 처리 안내</a> 확인</span></label>
+                <label><input type="checkbox" checked={agreementItems.refund} onChange={(event) => setAgreementItems((current) => ({ ...current, refund: event.target.checked }))} /><span><a href="/refund" target="_blank" rel="noreferrer">취소·환불 기준</a> 동의</span></label>
+                <label><input type="checkbox" checked={agreementItems.digitalSupply} onChange={(event) => setAgreementItems((current) => ({ ...current, digitalSupply: event.target.checked }))} /><span>결제 직후 디지털 결과물 공급이 시작됨을 확인</span></label>
+              </div>
+            </section>
+            {accountReady === false && <div className="checkout-blocked"><LockKeyhole /><p><strong>결제 전에 로그인이 필요합니다.</strong><a href="/account">로그인 또는 회원가입</a></p></div>}
+            {launchReadiness && !launchReadiness.paymentAllowed && <div className="checkout-blocked"><ShieldCheck /><p><strong>아직 정식 결제를 준비하고 있습니다.</strong>{launchReadiness.missing.join(" · ")}</p></div>}
             <div className="checkout-security"><LockKeyhole /><p>카드·계좌 정보는 저장하지 않습니다. 서버가 주문금액과 결제사 승인 결과를 다시 대조한 뒤 프로젝트를 생성합니다.</p></div>
           </div>
           <aside className="order-summary">
@@ -1047,7 +1084,7 @@ function Checkout({
             <div className="price-line"><span>전체 서비스 금액</span><strong>900,000원</strong></div>
             <div className="price-line"><span>부가세</span><strong>90,000원</strong></div>
             <div className="total-line"><span>총 결제금액</span><strong>990,000<small>원</small></strong></div>
-            <button className="pay-button" disabled={!agreed || paying} onClick={pay}>{paying ? <><span className="pay-spinner" /> 안전한 결제창 준비 중...</> : <>990,000원 결제하기 <ArrowRight /></>}</button>
+            <button className="pay-button" disabled={!agreed || paying || accountReady !== true || launchReadiness?.paymentAllowed !== true} onClick={pay}>{paying ? <><span className="pay-spinner" /> 안전한 결제창 준비 중...</> : <>990,000원 결제하기 <ArrowRight /></>}</button>
             {paymentError && <div className="payment-error"><CircleHelp /> {paymentError}<button onClick={pay}>다시 시도</button></div>}
             <p><ShieldCheck /> 서버 금액 검증 · 중복 결제 방지</p>
           </aside>
@@ -1543,6 +1580,7 @@ function FinalDelivery({
     <main className={`delivery-page ${demo ? "sample-delivery" : "user-delivery"}`}>
       <Header onHome={onHome} />
       {demo && <section className="sample-preview-bar"><div><span><Eye /> 실제 제공 화면 예시 · 가상 사업 사례</span><strong>완료 후 사용자가 보는 화면과 같은 구조입니다.</strong></div>{onStart && <button onClick={onStart}>내 사업 무료로 시작하기 <ArrowRight /></button>}</section>}
+      <div className="delivery-ai-disclosure"><Sparkles /><p><strong>생성형 인공지능 초안이 포함된 결과물입니다.</strong> 출처·금액·인허가 조건은 각 문서의 확인 표시와 공식 원문을 기준으로 최종 확인하세요.</p><a href="/ai-notice" target="_blank" rel="noreferrer">처리 안내 보기</a></div>
       <section className="delivery-content" id={demo ? "sample-result-details" : "delivery-result-details"}>
         <div className="delivery-main">
           <section className={`final-report-viewer ${activeReport === "launch" ? "mission-mode" : ""}`}>
@@ -2444,10 +2482,8 @@ export default function Page() {
   useEffect(() => {
     const currentUrl = new URL(window.location.href);
     const requestedView = currentUrl.searchParams.get("view");
-    if (requestedView && requestedView !== "project") return;
-    const linkedProjectId = requestedView === "project"
-      ? currentUrl.searchParams.get("project")
-      : null;
+    if (requestedView !== "project") return;
+    const linkedProjectId = currentUrl.searchParams.get("project");
     const projectId = linkedProjectId ?? window.localStorage.getItem("venture-project-id");
     if (!projectId) return;
     void fetch(`/api/projects/${projectId}`, { cache: "no-store" })

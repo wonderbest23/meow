@@ -18,6 +18,8 @@ const expectedTables = [
   "service_audit_logs",
   "support_conversations",
   "support_messages",
+  "platform_legal_settings",
+  "account_consents",
 ] as const;
 
 let cachedClient: SupabaseClient | null | undefined;
