@@ -27,6 +27,7 @@ type ProjectCreateInput = {
   founderProfile: Record<string, unknown>;
   paymentStatus: "pending" | "test_paid" | "paid";
   packagePrice?: number;
+  initialStageInputs?: Record<string, unknown>;
 };
 
 type DemoStore = Map<string, ProjectRecord & { guestTokenHash: string }>;
@@ -102,8 +103,10 @@ export async function createProject(
       id: crypto.randomUUID(),
       projectId,
       stageIndex,
-      status: stageIndex === 0 ? "collecting_input" : "not_started",
-      inputs: {},
+      status: stageIndex === 0
+        ? input.initialStageInputs ? "ready_to_generate" : "collecting_input"
+        : "not_started",
+      inputs: stageIndex === 0 ? input.initialStageInputs ?? {} : {},
       inputVersion: 1,
       approvedArtifactId: null,
       approvedAt: null,
@@ -160,7 +163,10 @@ export async function createProject(
   const stageRows = Array.from({ length: 6 }, (_, stageIndex) => ({
     project_id: projectRow.id,
     stage_index: stageIndex,
-    status: stageIndex === 0 ? "collecting_input" : "not_started",
+    status: stageIndex === 0
+      ? input.initialStageInputs ? "ready_to_generate" : "collecting_input"
+      : "not_started",
+    inputs: stageIndex === 0 ? input.initialStageInputs ?? {} : {},
   }));
   const { error: stageError } = await supabase.from("project_stages").insert(stageRows);
   if (stageError) throw stageError;

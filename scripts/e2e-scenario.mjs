@@ -135,8 +135,8 @@ try {
   });
   if (
     report.startFlow.path !== "?view=start" ||
-    report.startFlow.heading !== "둘중 하나를 선택하세요!" ||
-    report.startFlow.choiceCount !== 2 ||
+    report.startFlow.heading !== "시작 방법을 선택하세요!" ||
+    report.startFlow.choiceCount !== 3 ||
     !report.startFlow.logoLoaded ||
     report.startFlow.overflow > 1
   ) {

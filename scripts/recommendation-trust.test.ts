@@ -31,6 +31,15 @@ const particleWithAmount = inferProfileFromNarrative([
 ]);
 assert.equal(particleWithAmount.budget, "약 200만원");
 
+const structuredPlanning = inferProfileFromNarrative(
+  ["예산은 잘 모르겠지만 온라인으로 작게 시작하고 싶습니다."],
+  { budgetWon: 3_500_000, availableHoursPerWeek: 12 },
+);
+assert.equal(structuredPlanning.budget, "약 350만원");
+assert.equal(structuredPlanning.budgetWon, 3_500_000);
+assert.equal(structuredPlanning.availableTime, "주당 12시간");
+assert.equal(structuredPlanning.availableHoursPerWeek, 12);
+
 const pool = generateOpportunityPool(1);
 assert.ok(pool.length > 0);
 assert.ok(pool.every((item) => item.market === 0 && item.novelty === 0));

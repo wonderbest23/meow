@@ -87,10 +87,20 @@ import { createPaidReportDemoItems } from "../lib/delivery/demo-package";
 import { downloadBusinessDocuments, type DownloadFormat } from "../lib/delivery/client-download";
 import type { GenerationJobRecord } from "../lib/service-audit/domain";
 import { createLandingDraft, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
+import {
+  createDirectOpportunity,
+  createFounderProfilePayload,
+  createInitialStageInputs,
+  isPlanningConstraints,
+  mergeStageInputs,
+  type DirectPlanInput,
+  type PlanningConstraints,
+} from "../lib/planning-inputs";
 
 type Screen =
   | "home"
   | "start"
+  | "direct"
   | "assessment"
   | "conversation"
   | "profile"
@@ -101,23 +111,31 @@ type Screen =
   | "delivery";
 type CapitalFilter = "전체" | "소액" | "중간" | "높음";
 
-const resumableScreens: Screen[] = ["start", "assessment", "conversation", "profile", "explore"];
+const resumableScreens: Screen[] = ["start", "direct", "assessment", "conversation", "profile", "explore"];
 const directScreens: Screen[] = [...resumableScreens, "sample", "delivery"];
 
+function emptyConversationDraft() {
+  return { step: 0, responses: ["", "", "", ""], budgetManwon: "", availableHoursPerWeek: "" };
+}
+
 function readConversationDraft() {
-  if (typeof window === "undefined") return { step: 0, responses: ["", "", "", ""] };
+  if (typeof window === "undefined") return emptyConversationDraft();
   try {
     const parsed = JSON.parse(window.localStorage.getItem("venture-conversation-draft") ?? "null") as {
       step?: number;
       responses?: string[];
+      budgetManwon?: string | number;
+      availableHoursPerWeek?: string | number;
     } | null;
-    if (!parsed?.responses || parsed.responses.length !== 4) return { step: 0, responses: ["", "", "", ""] };
+    if (!parsed?.responses || parsed.responses.length !== 4) return emptyConversationDraft();
     return {
       step: Math.min(Math.max(parsed.step ?? 0, 0), 3),
       responses: parsed.responses.map((response) => typeof response === "string" ? response : ""),
+      budgetManwon: parsed.budgetManwon === undefined ? "" : String(parsed.budgetManwon),
+      availableHoursPerWeek: parsed.availableHoursPerWeek === undefined ? "" : String(parsed.availableHoursPerWeek),
     };
   } catch {
-    return { step: 0, responses: ["", "", "", ""] };
+    return emptyConversationDraft();
   }
 }
 
@@ -309,12 +327,14 @@ function Home({
 }
 
 function StartChoice({
+  onDirect,
   onQuestionnaire,
   onConversation,
   onBack,
   questionnaireProgress,
   conversationInProgress,
 }: {
+  onDirect: () => void;
   onQuestionnaire: () => void;
   onConversation: () => void;
   onBack: () => void;
@@ -327,9 +347,14 @@ function StartChoice({
       <section className="start-choice-content">
         <button className="start-back" onClick={onBack}><ArrowLeft /> 처음으로</button>
         <div className="start-choice-heading">
-          <h1>둘중 하나를<br className="start-heading-break" /> 선택하세요!</h1>
+          <h1>시작 방법을<br className="start-heading-break" /> 선택하세요!</h1>
         </div>
         <div className="start-mode-cards">
+          <button className="direct-mode" onClick={onDirect}>
+            <BriefcaseBusiness />
+            <span><strong>아이디어로 바로 기획</strong><small>아이디어·예산·시간 직접 입력</small></span>
+            <ArrowRight />
+          </button>
           <button onClick={onQuestionnaire}>
             <CheckCircle2 />
             <span><strong>질문으로 찾기</strong><small>{questionnaireProgress ? `${Math.min(questionnaireProgress + 1, coreQuestions.length)}번부터 이어서 하기` : "8개의 간단한 선택"}</small></span>
@@ -342,6 +367,82 @@ function StartChoice({
           </button>
         </div>
         <div className="start-privacy"><ShieldCheck /><span>주민등록번호나 상세 주소는 입력하지 마세요.</span></div>
+      </section>
+    </main>
+  );
+}
+
+function DirectPlanning({
+  onBack,
+  onStart,
+}: {
+  onBack: () => void;
+  onStart: (input: DirectPlanInput) => Promise<void>;
+}) {
+  const [idea, setIdea] = useState("");
+  const [budgetManwon, setBudgetManwon] = useState("");
+  const [availableHoursPerWeek, setAvailableHoursPerWeek] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const budget = Number(budgetManwon);
+  const hours = Number(availableHoursPerWeek);
+  const validBudget = budgetManwon !== "" && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000;
+  const validHours = availableHoursPerWeek !== "" && Number.isFinite(hours) && hours >= 1 && hours <= 100;
+  const canStart = idea.trim().length >= 10 && validBudget && validHours && !busy;
+
+  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canStart) return;
+    setBusy(true);
+    setError("");
+    try {
+      await onStart({
+        idea: idea.trim(),
+        budgetWon: Math.round(budget * 10_000),
+        availableHoursPerWeek: Math.round(hours),
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "기획을 시작하지 못했습니다.");
+      setBusy(false);
+    }
+  };
+
+  return (
+    <main className="conversation-page direct-planning-page">
+      <Header onHome={onBack} />
+      <section className="direct-planning-shell">
+        <button className="start-back" onClick={onBack}><ArrowLeft /> 시작 방법</button>
+        <header>
+          <span>내 아이디어로 시작</span>
+          <h1>하고 싶은 사업을<br />바로 기획해보세요.</h1>
+          <p>추천 목록을 거치지 않고 입력한 사업으로 실행 프로젝트를 만듭니다.</p>
+        </header>
+        <form onSubmit={submit} data-testid="direct-planning-form">
+          <label className="direct-idea-field">
+            <span>하고 싶은 사업</span>
+            <textarea
+              value={idea}
+              onChange={(event) => setIdea(event.target.value)}
+              placeholder="예: 동네 소상공인의 상품 사진과 소개 문구를 만들어주는 월 구독 서비스를 하고 싶어요."
+              minLength={10}
+              maxLength={1000}
+              required
+            />
+            <small>{idea.trim().length < 10 ? `${10 - idea.trim().length}자만 더 적어주세요` : "입력한 아이디어를 그대로 기획에 반영합니다"}</small>
+          </label>
+          <div className="direct-number-fields">
+            <label>
+              <span>시작 예산</span>
+              <div><input aria-label="시작 예산" type="number" inputMode="numeric" min="0" max="1000000" step="1" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} required /><em>만원</em></div>
+            </label>
+            <label>
+              <span>주당 사용할 시간</span>
+              <div><input aria-label="주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} required /><em>시간</em></div>
+            </label>
+          </div>
+          <button className="direct-start-button" disabled={!canStart}>{busy ? "프로젝트 만드는 중..." : "이 아이디어로 바로 기획"} <ArrowRight /></button>
+          {error && <p className="direct-plan-error" role="alert">{error}</p>}
+        </form>
       </section>
     </main>
   );
@@ -368,9 +469,9 @@ const conversationPrompts = [
   },
   {
     label: "현실 조건",
-    question: "사업에 사용할 수 있는 예산과 시간, 피하고 싶은 일을 알려주세요.",
-    help: "구체적일수록 현실적인 기회를 찾을 수 있어요. 온라인·오프라인 선호도 함께 적어주세요.",
-    placeholder: "예: 예산은 300만원 정도, 하루 3시간 가능해요. 재고가 많은 사업과 반복적인 전화 영업은 피하고 온라인 중심이면 좋아요.",
+    question: "사업을 시작할 때 피하고 싶은 일이나 운영 방식은 무엇인가요?",
+    help: "예산과 시간은 아래 숫자로 정확히 입력합니다. 여기에는 재고, 영업, 온라인·오프라인 선호를 적어주세요.",
+    placeholder: "예: 재고가 많은 사업과 반복적인 전화 영업은 피하고 온라인 중심으로 시작하고 싶어요.",
   },
 ];
 
@@ -386,16 +487,27 @@ function ConversationDiscovery({
   const initialDraft = useMemo(readConversationDraft, []);
   const [step, setStep] = useState(initialDraft.step);
   const [responses, setResponses] = useState<string[]>(initialDraft.responses);
+  const [budgetManwon, setBudgetManwon] = useState(initialDraft.budgetManwon);
+  const [availableHoursPerWeek, setAvailableHoursPerWeek] = useState(initialDraft.availableHoursPerWeek);
   const [review, setReview] = useState<NarrativeInference | null>(null);
   const prompt = conversationPrompts[step];
+  const finalStep = step === conversationPrompts.length - 1;
   const responseLength = responses[step].trim().length;
-  const canContinue = responseLength >= minimumConversationResponseLength;
+  const budget = Number(budgetManwon);
+  const hours = Number(availableHoursPerWeek);
+  const hasValidBudget = budgetManwon !== "" && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000;
+  const hasValidHours = availableHoursPerWeek !== "" && Number.isFinite(hours) && hours >= 1 && hours <= 100;
+  const hasRequiredNumbers = hasValidBudget && hasValidHours;
+  const canContinue = responseLength >= minimumConversationResponseLength && (!finalStep || hasRequiredNumbers);
   const remainingCharacters = Math.max(minimumConversationResponseLength - responseLength, 0);
   const update = (value: string) => setResponses((current) => current.map((response, index) => index === step ? value : response));
 
   const next = () => {
     if (step < conversationPrompts.length - 1) setStep((current) => current + 1);
-    else setReview(inferProfileFromNarrative(responses));
+    else setReview(inferProfileFromNarrative(responses, {
+      budgetWon: Math.round(budget * 10_000),
+      availableHoursPerWeek: Math.round(hours),
+    }));
   };
 
   const handleKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
@@ -405,8 +517,8 @@ function ConversationDiscovery({
   };
 
   useEffect(() => {
-    window.localStorage.setItem("venture-conversation-draft", JSON.stringify({ step, responses }));
-  }, [step, responses]);
+    window.localStorage.setItem("venture-conversation-draft", JSON.stringify({ step, responses, budgetManwon, availableHoursPerWeek }));
+  }, [availableHoursPerWeek, budgetManwon, step, responses]);
 
   const finish = () => {
     if (!review) return;
@@ -452,8 +564,20 @@ function ConversationDiscovery({
             aria-describedby="conversation-input-hint"
             maxLength={1000}
           />
+          {finalStep && (
+            <div className="planning-number-fields">
+              <label>
+                <span>시작 예산</span>
+                <div><input aria-label="대화 시작 예산" type="number" inputMode="numeric" min="0" max="1000000" step="1" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} required /><em>만원</em></div>
+              </label>
+              <label>
+                <span>주당 사용할 시간</span>
+                <div><input aria-label="대화 주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} required /><em>시간</em></div>
+              </label>
+            </div>
+          )}
           <div className="narrative-input-meta" id="conversation-input-hint" aria-live="polite">
-            <span className={canContinue ? "ready" : ""}>{canContinue ? "Enter를 누르면 다음으로 이동합니다" : `${remainingCharacters}자만 더 적어주세요`}</span>
+            <span className={canContinue ? "ready" : ""}>{canContinue ? "Enter를 누르면 다음으로 이동합니다" : remainingCharacters ? `${remainingCharacters}자만 더 적어주세요` : finalStep && !hasRequiredNumbers ? "예산과 주당 시간을 입력해주세요" : "입력을 확인해주세요"}</span>
             <span>{responses[step].length} / 1,000</span>
           </div>
         </div>
@@ -1734,6 +1858,12 @@ function ProjectWorkspace({
   const allCurrentChecked = current.tasks.every((_, index) => checked[`${activeStage}-${index}`]);
   const currentServerStage = serverProject?.stages[activeStage];
   const latestArtifact = currentServerStage?.artifacts[0];
+  const confirmedBudgetWon = typeof serverProject?.stages[0]?.inputs.budgetWon === "number"
+    ? serverProject.stages[0].inputs.budgetWon
+    : null;
+  const confirmedHoursPerWeek = typeof serverProject?.stages[0]?.inputs.availableHoursPerWeek === "number"
+    ? serverProject.stages[0].inputs.availableHoursPerWeek
+    : null;
   const betaAccess = serverProject?.packagePrice === 0;
   const setupRequired = activeStage === 0 && Boolean(serverProject) && !serverProject?.businessAssessment;
   const reviewStep = !latestArtifact ? 1 : allCurrentChecked ? 3 : 2;
@@ -1821,10 +1951,15 @@ function ProjectWorkspace({
     setServiceError("");
     try {
       setServiceAction("saving");
+      const stageInputs = mergeStageInputs(
+        buildStageInput(activeStage, opportunity, price, brandChoice, stageNote),
+        currentServerStage?.inputs ?? {},
+        stageNote,
+      );
       const inputResponse = await fetch(`/api/projects/${serverProject.id}/stages/${activeStage}/inputs`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildStageInput(activeStage, opportunity, price, brandChoice, stageNote)),
+        body: JSON.stringify(stageInputs),
       });
       const inputPayload = await inputResponse.json();
       if (!inputResponse.ok) throw new Error(inputPayload.error?.message ?? "입력을 저장하지 못했습니다.");
@@ -1954,6 +2089,15 @@ function ProjectWorkspace({
             {serverProject && activeStage === 5 && <GrantMatcherPanel project={serverProject} onSaved={setServerProject} />}
             {serverProject && (
               <section className="service-workflow">
+                {activeStage === 0 && confirmedBudgetWon !== null && confirmedHoursPerWeek !== null && (
+                  <div className="confirmed-planning-inputs" aria-label="입력한 기획 조건">
+                    <p><CheckCircle2 /><strong>입력한 조건이 첫 기획에 반영됐어요</strong></p>
+                    <div>
+                      <span><small>시작 예산</small><strong>{Math.round(confirmedBudgetWon / 10_000).toLocaleString("ko-KR")}만원</strong></span>
+                      <span><small>사용 가능 시간</small><strong>주당 {confirmedHoursPerWeek}시간</strong></span>
+                    </div>
+                  </div>
+                )}
                 <div className="step-by-step-guide" aria-label="현재 단계 진행 방법">
                   <div className={reviewStep >= 1 ? "active" : ""}><span>{reviewStep > 1 ? <Check /> : "1"}</span><p><strong>정보 확인</strong><small>조건을 적고 초안을 만들어요</small></p></div>
                   <i />
@@ -2009,6 +2153,7 @@ export default function Page() {
   const [answers, setAnswers] = useState<AssessmentAnswers>({});
   const [profile, setProfile] = useState<FounderProfile>(() => calculateProfile({}));
   const [feedback, setFeedback] = useState<OpportunityFeedback>({});
+  const [planningConstraints, setPlanningConstraints] = useState<PlanningConstraints | null>(null);
   const [selectedProject, setSelectedProject] = useState<RankedOpportunity | null>(null);
   const [serverProject, setServerProject] = useState<ProjectRecord | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
@@ -2027,10 +2172,11 @@ export default function Page() {
     try {
       const saved = window.localStorage.getItem("venture-dna");
       if (saved) {
-        const parsed = JSON.parse(saved) as { answers?: AssessmentAnswers; profile?: FounderProfile; feedback?: OpportunityFeedback };
+        const parsed = JSON.parse(saved) as { answers?: AssessmentAnswers; profile?: FounderProfile; feedback?: OpportunityFeedback; planningConstraints?: unknown };
         if (parsed.answers) setAnswers(parsed.answers);
         if (parsed.profile) setProfile(parsed.profile);
         if (parsed.feedback) setFeedback(parsed.feedback);
+        if (isPlanningConstraints(parsed.planningConstraints)) setPlanningConstraints(parsed.planningConstraints);
       }
     } catch {
       // A broken local draft should never block the assessment.
@@ -2041,8 +2187,8 @@ export default function Page() {
 
   useEffect(() => {
     if (!draftLoaded) return;
-    window.localStorage.setItem("venture-dna", JSON.stringify({ answers, profile, feedback }));
-  }, [answers, draftLoaded, profile, feedback]);
+    window.localStorage.setItem("venture-dna", JSON.stringify({ answers, profile, feedback, planningConstraints }));
+  }, [answers, draftLoaded, profile, feedback, planningConstraints]);
 
   useEffect(() => {
     const screenFromLocation = () => {
@@ -2098,6 +2244,7 @@ export default function Page() {
 
   const startQuestionnaire = () => {
     setFeedback({});
+    setPlanningConstraints(null);
     navigate("assessment");
   };
   const complete = (completedAnswers: AssessmentAnswers) => {
@@ -2108,11 +2255,20 @@ export default function Page() {
     setAnswers({});
     setFeedback({});
     setProfile(inference.profile);
+    if (inference.budgetWon !== null && inference.availableHoursPerWeek !== null) {
+      setPlanningConstraints({
+        budgetWon: inference.budgetWon,
+        availableHoursPerWeek: inference.availableHoursPerWeek,
+        notes: inference.planningNotes,
+        source: "conversation",
+      });
+    }
     navigate("profile");
   };
   const restartDiscovery = () => {
     setAnswers({});
     setFeedback({});
+    setPlanningConstraints(null);
     window.localStorage.removeItem("venture-conversation-draft");
     navigate("start");
   };
@@ -2121,12 +2277,20 @@ export default function Page() {
     window.localStorage.setItem("venture-project-id", project.id);
     navigate("project");
   };
-  const startOpportunity = async (opportunity: RankedOpportunity) => {
+  const startOpportunity = async (
+    opportunity: RankedOpportunity,
+    constraintOverride?: PlanningConstraints | null,
+  ) => {
+    const activeConstraints = constraintOverride ?? planningConstraints;
     setSelectedProject(opportunity);
     const response = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ opportunity, founderProfile: profile }),
+      body: JSON.stringify({
+        opportunity,
+        founderProfile: createFounderProfilePayload(profile, activeConstraints),
+        initialStageInputs: activeConstraints ? createInitialStageInputs(opportunity, activeConstraints) : undefined,
+      }),
     });
     const payload = await response.json();
     if (response.status === 403 && payload.error?.code === "PAYMENT_REQUIRED") {
@@ -2142,10 +2306,26 @@ export default function Page() {
     await openPaidProject(payload.project);
   };
 
+  const startDirectPlanning = async (input: DirectPlanInput) => {
+    const opportunity = createDirectOpportunity(input);
+    const constraints: PlanningConstraints = {
+      budgetWon: input.budgetWon,
+      availableHoursPerWeek: input.availableHoursPerWeek,
+      notes: `사용자가 직접 입력한 사업 아이디어: ${input.idea}`,
+      source: "direct",
+      idea: input.idea,
+    };
+    setAnswers({});
+    setFeedback({});
+    setPlanningConstraints(constraints);
+    await startOpportunity(opportunity, constraints);
+  };
+
   if (screen === "start") {
     const conversationInProgress = readConversationDraft().responses.some((response) => response.trim().length > 0);
-    return <StartChoice questionnaireProgress={Object.keys(answers).length} conversationInProgress={conversationInProgress} onQuestionnaire={startQuestionnaire} onConversation={() => navigate("conversation")} onBack={() => navigate("home")} />;
+    return <StartChoice questionnaireProgress={Object.keys(answers).length} conversationInProgress={conversationInProgress} onDirect={() => navigate("direct")} onQuestionnaire={startQuestionnaire} onConversation={() => navigate("conversation")} onBack={() => navigate("home")} />;
   }
+  if (screen === "direct") return <DirectPlanning onBack={() => navigate("start")} onStart={startDirectPlanning} />;
   if (screen === "assessment") return <Assessment answers={answers} setAnswers={setAnswers} onExit={() => navigate("start")} onComplete={complete} />;
   if (screen === "conversation") return <ConversationDiscovery onBack={() => navigate("start")} onComplete={completeConversation} />;
   if (screen === "profile") return <ProfileResult profile={profile} onExplore={() => navigate("explore")} onRestart={restartDiscovery} />;

@@ -22,6 +22,7 @@
     "test:ops": "tsx scripts/service-ops.test.ts",
     "test:grants": "tsx scripts/grant-matcher.test.ts",
     "test:trust": "tsx scripts/recommendation-trust.test.ts",
+    "test:planning": "tsx scripts/planning-inputs.test.ts",
     "test:career": "tsx scripts/career-connector.test.ts",
     "test:generation": "tsx scripts/stage-generator.test.ts",
     "test:openai": "tsx scripts/openai-session.test.ts",

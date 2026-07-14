@@ -137,6 +137,7 @@ export const createProjectSchema = z.object({
   opportunity: opportunitySnapshotSchema,
   founderProfile: z.record(z.string(), z.unknown()).default({}),
   paymentStatus: z.enum(["pending", "test_paid", "paid"]).default("test_paid"),
+  initialStageInputs: stageInputSchemas[0].optional(),
 });
 
 export const revisionRequestSchema = z.object({

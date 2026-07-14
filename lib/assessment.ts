@@ -363,9 +363,12 @@ export type NarrativeInference = {
   profile: FounderProfile;
   signals: string[];
   budget: string;
+  budgetWon: number | null;
   availableTime: string;
+  availableHoursPerWeek: number | null;
   preferredMode: string;
   caveat: string;
+  planningNotes: string;
 };
 
 const negativeNarrativePatterns = [
@@ -418,7 +421,10 @@ function parseKoreanNumber(raw: string) {
   return total + (digit ?? 0);
 }
 
-export function inferProfileFromNarrative(responses: string[]): NarrativeInference {
+export function inferProfileFromNarrative(
+  responses: string[],
+  structured?: { budgetWon?: number | null; availableHoursPerWeek?: number | null },
+): NarrativeInference {
   const text = responses.join(" ").toLowerCase();
   const riasec = Object.fromEntries(riasecAxes.map((axis) => [axis, 42])) as Record<RiasecAxis, number>;
   const founder = Object.fromEntries(founderAxes.map((axis) => [axis, 42])) as Record<FounderAxis, number>;
@@ -444,14 +450,16 @@ export function inferProfileFromNarrative(responses: string[]): NarrativeInferen
   const timeMatch = text.match(new RegExp(`(?:하루|주당|일주일).{0,10}?(${numberToken})\\s*시간`));
   const budgetNumber = budgetMatch ? parseKoreanNumber(budgetMatch[1]) : null;
   const budgetUnit = budgetMatch?.[2]?.replace(/\s/g, "") ?? "만";
-  const budgetInManwon = budgetNumber === null
+  const parsedBudgetInManwon = budgetNumber === null
     ? null
     : budgetUnit.startsWith("만")
       ? budgetNumber
       : budgetNumber >= 10_000
         ? Math.round(budgetNumber / 10_000)
         : budgetNumber;
-  const availableHours = timeMatch ? parseKoreanNumber(timeMatch[1]) : null;
+  const budgetWon = structured?.budgetWon ?? (parsedBudgetInManwon === null ? null : parsedBudgetInManwon * 10_000);
+  const budgetInManwon = budgetWon === null ? null : Math.round(budgetWon / 10_000);
+  const availableHours = structured?.availableHoursPerWeek ?? (timeMatch ? parseKoreanNumber(timeMatch[1]) : null);
   const preferredMode = /오프라인|매장|현장/.test(text)
     ? /온라인|인터넷|디지털/.test(text)
       ? "온라인과 오프라인 혼합"
@@ -474,11 +482,18 @@ export function inferProfileFromNarrative(responses: string[]): NarrativeInferen
       ...topRiasec.slice(0, 2).map((axis) => riasecLabels[axis]),
     ],
     budget: budgetInManwon === null ? "예산 정보가 명확하지 않음" : `약 ${budgetInManwon.toLocaleString("ko-KR")}만원`,
-    availableTime: availableHours === null ? "투입 시간 정보가 명확하지 않음" : `하루 또는 주당 ${availableHours}시간`,
+    budgetWon,
+    availableTime: availableHours === null
+      ? "투입 시간 정보가 명확하지 않음"
+      : structured?.availableHoursPerWeek !== undefined
+        ? `주당 ${availableHours}시간`
+        : `하루 또는 주당 ${availableHours}시간`,
+    availableHoursPerWeek: availableHours,
     preferredMode,
     caveat:
       matchedSignals < 3
         ? "구체적인 경험과 행동 표현이 적어 초기 해석의 확신이 낮습니다."
         : "반복해서 나타난 표현을 중심으로 초기 프로필을 구성했습니다.",
+    planningNotes: responses.map((response, index) => `${index + 1}. ${response.trim()}`).join("\n"),
   };
 }

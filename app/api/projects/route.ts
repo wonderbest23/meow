@@ -28,6 +28,7 @@ export async function POST(request: Request) {
         founderProfile: input.founderProfile,
         paymentStatus: "test_paid",
         packagePrice: betaAccess ? 0 : 990000,
+        initialStageInputs: input.initialStageInputs,
       },
       identity.hash,
     );

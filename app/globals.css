@@ -587,6 +587,13 @@ a { color: inherit; text-decoration: none; }
 .narrative-input textarea { width: 100%; min-height: 220px; padding: 22px; border: 1px solid #d9e1dc; border-radius: 14px; background: white; color: var(--ink); font-size: 16px; line-height: 1.8; resize: vertical; outline: none; transition: border .2s, box-shadow .2s; }
 .narrative-input textarea:focus { border-color: var(--green); box-shadow: 0 0 0 4px #00a87812; }
 .narrative-input textarea::placeholder { color: #a2aba6; }
+.planning-number-fields, .direct-number-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+.planning-number-fields > label, .direct-number-fields > label, .direct-idea-field { display: grid; gap: 7px; }
+.planning-number-fields label > span, .direct-number-fields label > span, .direct-idea-field > span { color: #44584e; font-size: 12px; font-weight: 800; }
+.planning-number-fields label > div, .direct-number-fields label > div { min-height: 48px; padding: 0 13px; border: 1px solid #d4ded8; border-radius: 8px; background: white; display: flex; align-items: center; gap: 8px; }
+.planning-number-fields input, .direct-number-fields input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 16px; font-weight: 700; }
+.planning-number-fields em, .direct-number-fields em { color: #718078; font-size: 12px; font-style: normal; white-space: nowrap; }
+.planning-number-fields label > div:focus-within, .direct-number-fields label > div:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px #00a87812; }
 .narrative-input-meta { min-height: 22px; margin-top: 7px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #89958e; font-size: 11px; }
 .narrative-input-meta > span:first-child { color: #69776f; }
 .narrative-input-meta > span.ready { color: #087353; font-weight: 700; }
@@ -619,6 +626,21 @@ a { color: inherit; text-decoration: none; }
 .review-actions { display: grid; grid-template-columns: 1fr 1.4fr; gap: 9px; margin-top: 18px; }
 .review-actions > button:first-child { border: 1px solid #dbe2dd; border-radius: 10px; background: white; font-weight: 700; cursor: pointer; }
 
+.direct-planning-shell { width: min(720px, calc(100% - 48px)); margin: 0 auto; padding: 36px 0 80px; }
+.direct-planning-shell > header { margin: 54px 0 30px; }
+.direct-planning-shell > header > span { color: var(--green-dark); font-size: 12px; font-weight: 800; }
+.direct-planning-shell > header h1 { margin: 8px 0 10px; font-size: 36px; line-height: 1.35; letter-spacing: 0; }
+.direct-planning-shell > header p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
+.direct-planning-shell form { display: grid; gap: 18px; }
+.direct-idea-field textarea { width: 100%; min-height: 180px; padding: 18px; border: 1px solid #d4ded8; border-radius: 8px; background: white; color: var(--ink); font-size: 16px; line-height: 1.75; resize: vertical; outline: 0; }
+.direct-idea-field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px #00a87812; }
+.direct-idea-field textarea::placeholder { color: #9da8a2; }
+.direct-idea-field small { color: #75847c; font-size: 11px; }
+.direct-start-button { min-height: 54px; border: 0; border-radius: 8px; background: var(--green); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 800; cursor: pointer; }
+.direct-start-button svg { width: 18px; }
+.direct-start-button:disabled { opacity: .38; cursor: not-allowed; }
+.direct-plan-error { margin: -6px 0 0; color: #b42318; font-size: 12px; text-align: center; }
+
 @media (max-width: 620px) {
   .start-choice-content, .conversation-content, .understanding-review { padding-left: 18px; padding-right: 18px; }
   .start-choice-heading { margin-top: 35px; }.start-choice-heading h1 { font-size: 31px; }
@@ -627,8 +649,12 @@ a { color: inherit; text-decoration: none; }
   .start-mode-cards { grid-template-columns: 1fr; }.start-mode-cards > button { min-height: 445px; padding: 25px 22px; }
   .conversation-bubble { margin-top: 38px; }.conversation-bubble h1 { font-size: 25px; }.conversation-bubble > span { width: 40px; height: 40px; }
   .narrative-input textarea { min-height: 250px; font-size: 15px; }
+  .planning-number-fields, .direct-number-fields { grid-template-columns: 1fr; }
   .understanding-grid { grid-template-columns: 1fr; }
   .review-actions { grid-template-columns: 1fr; }.review-actions > button { min-height: 52px; }
+  .direct-planning-shell { width: calc(100% - 36px); padding-top: 28px; }
+  .direct-planning-shell > header { margin-top: 40px; }
+  .direct-planning-shell > header h1 { font-size: 29px; }
 }
 
 /* Simplified discovery flow */
@@ -1699,6 +1725,13 @@ a { color: inherit; text-decoration: none; }
 .payment-error { margin-top: 10px; padding: 10px; border-radius: 7px; background: #4a211d; color: #ffd0c8; display: flex; align-items: center; gap: 6px; font-size: 11px; }
 .payment-error svg { width: 15px; }.payment-error button { margin-left: auto; border: 0; background: white; border-radius: 5px; padding: 5px 7px; font-size: 9px; font-weight: 700; }
 .service-workflow { margin: 24px 0 10px; padding: 18px; border: 1px solid #cfdcd5; border-radius: 12px; background: #f1f8f4; }
+.confirmed-planning-inputs { margin-bottom: 18px; padding: 13px 14px; border: 1px solid #c6d9ce; border-radius: 8px; background: #fff; }
+.confirmed-planning-inputs > p { margin: 0 0 11px; display: flex; align-items: center; gap: 7px; color: #315c49; font-size: 11px; }
+.confirmed-planning-inputs > p svg { width: 16px; height: 16px; color: var(--green); }
+.confirmed-planning-inputs > div { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: #e3ebe6; }
+.confirmed-planning-inputs > div > span { padding: 9px 11px; display: grid; gap: 3px; background: #f8fbf9; }
+.confirmed-planning-inputs small { color: #74837b; font-size: 9px; }
+.confirmed-planning-inputs span strong { color: #172e24; font-size: 13px; }
 .service-workflow-head, .service-workflow-head > div { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .service-workflow-head > div { justify-content: flex-start; }
 .service-state { width: 9px; height: 9px; border-radius: 50%; background: #9ca7a1; }
@@ -1732,6 +1765,7 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 620px) {
   .artifact-review-actions > div { grid-template-columns: 1fr; }
   .service-workflow-head { align-items: flex-start; }
+  .confirmed-planning-inputs > div { grid-template-columns: 1fr; }
 }
 
 /* Clear, step-by-step project navigation */
