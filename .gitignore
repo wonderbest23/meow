@@ -1,0 +1,10 @@
+.env
+.env.local
+.env.*.local
+.next/
+node_modules/
+*.tsbuildinfo
+artifacts/
+tmp/
+supabase/.branches/
+supabase/.temp/
