@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  renderDeliveryZip,
+  packageDeliveryZip,
   renderDocx,
   renderPdf,
   type BusinessDocument,
@@ -44,14 +44,38 @@ export async function POST(request: Request) {
     const baseName = safeFileName(payload.documents.length === 1
       ? payload.documents[0].title
       : `${payload.project.title}-전체-출시-문서`);
-    const fontResponse = await fetch(new URL("/fonts/NanumGothic-Regular.ttf", request.url));
-    if (!fontResponse.ok) throw new Error(`DOCUMENT_FONT_UNAVAILABLE:${fontResponse.status}`);
-    const fontData = new Uint8Array(await fontResponse.arrayBuffer());
-    const body = payload.format === "pdf"
-      ? await renderPdf(payload.documents, payload.project, fontData)
-      : payload.format === "docx"
-        ? await renderDocx(payload.documents, payload.project, fontData)
-        : await renderDeliveryZip(payload.documents, payload.project, fontData);
+    let body: Buffer;
+    if (payload.format === "zip") {
+      const endpoint = new URL("/api/delivery/document", request.url);
+      const sharedPayload = { project: payload.project, documents: payload.documents };
+      const [pdfResponse, docxResponse] = await Promise.all([
+        fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...sharedPayload, format: "pdf" }),
+        }),
+        fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...sharedPayload, format: "docx" }),
+        }),
+      ]);
+      if (!pdfResponse.ok || !docxResponse.ok) {
+        throw new Error(`DOCUMENT_ARCHIVE_PART_FAILED:${pdfResponse.status}:${docxResponse.status}`);
+      }
+      body = await packageDeliveryZip(
+        new Uint8Array(await pdfResponse.arrayBuffer()),
+        new Uint8Array(await docxResponse.arrayBuffer()),
+        payload.project,
+      );
+    } else {
+      const fontResponse = await fetch(new URL("/fonts/NanumGothic-Regular.ttf", request.url));
+      if (!fontResponse.ok) throw new Error(`DOCUMENT_FONT_UNAVAILABLE:${fontResponse.status}`);
+      const fontData = new Uint8Array(await fontResponse.arrayBuffer());
+      body = payload.format === "pdf"
+        ? await renderPdf(payload.documents, payload.project, fontData)
+        : await renderDocx(payload.documents, payload.project, fontData);
+    }
     const contentType = payload.format === "pdf"
       ? "application/pdf"
       : payload.format === "docx"

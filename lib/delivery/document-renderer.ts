@@ -439,9 +439,21 @@ export async function renderDeliveryZip(
   project: DocumentProjectMeta,
   fontData?: DeliveryFontData,
 ): Promise<Buffer> {
+  const [pdf, docx] = await Promise.all([
+    renderPdf(documents, project, fontData),
+    renderDocx(documents, project, fontData),
+  ]);
+  return packageDeliveryZip(pdf, docx, project);
+}
+
+export async function packageDeliveryZip(
+  pdf: Buffer | Uint8Array,
+  docx: Buffer | Uint8Array,
+  project: DocumentProjectMeta,
+): Promise<Buffer> {
   const archive = new JSZip();
   const combinedName = safeFileName(`${project.title}-전체-창업-실행-문서`);
-  archive.file(`00_${combinedName}.pdf`, await renderPdf(documents, project, fontData));
-  archive.file(`00_${combinedName}.docx`, await renderDocx(documents, project, fontData));
-  return await archive.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 8 } });
+  archive.file(`00_${combinedName}.pdf`, pdf);
+  archive.file(`00_${combinedName}.docx`, docx);
+  return await archive.generateAsync({ type: "nodebuffer", compression: "STORE" });
 }
