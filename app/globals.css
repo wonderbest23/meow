@@ -638,19 +638,38 @@ a { color: inherit; text-decoration: none; }
 .review-actions > button:first-child { border: 1px solid #dbe2dd; border-radius: 10px; background: white; font-weight: 700; cursor: pointer; }
 
 .direct-planning-shell { width: min(720px, calc(100% - 48px)); margin: 0 auto; padding: 36px 0 80px; }
-.direct-planning-shell > header { margin: 54px 0 30px; }
+.direct-step-progress { margin-top: 42px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+.direct-step-progress > span { color: #62736a; font-size: 12px; font-weight: 800; }
+.direct-step-progress > div { width: min(240px, 55%); display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.direct-step-progress i { height: 4px; border-radius: 2px; background: #dce4df; transition: background .2s; }
+.direct-step-progress i.active { background: var(--green); }
+.direct-planning-shell > header { margin: 26px 0 30px; }
 .direct-planning-shell > header > span { color: var(--green-dark); font-size: 12px; font-weight: 800; }
 .direct-planning-shell > header h1 { margin: 8px 0 10px; font-size: 36px; line-height: 1.35; letter-spacing: 0; }
 .direct-planning-shell > header p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.7; }
 .direct-planning-shell form { display: grid; gap: 18px; }
+.direct-step-panel { min-height: 244px; animation: direct-step-in .25s ease both; }
 .direct-idea-field textarea { width: 100%; min-height: 180px; padding: 18px; border: 1px solid #d4ded8; border-radius: 8px; background: white; color: var(--ink); font-size: 16px; line-height: 1.75; resize: vertical; outline: 0; }
 .direct-idea-field textarea:focus { border-color: var(--green); box-shadow: 0 0 0 3px #00a87812; }
 .direct-idea-field textarea::placeholder { color: #9da8a2; }
 .direct-idea-field small { color: #75847c; font-size: 11px; }
+.direct-single-number { display: grid; gap: 18px; }
+.direct-single-number > label { display: grid; gap: 7px; }
+.direct-single-number > label > span { color: #44584e; font-size: 12px; font-weight: 800; }
+.direct-single-number > label > div { min-height: 58px; padding: 0 16px; border: 1px solid #d4ded8; border-radius: 8px; background: white; display: flex; align-items: center; gap: 8px; }
+.direct-single-number > label > div:focus-within { border-color: var(--green); box-shadow: 0 0 0 3px #00a87812; }
+.direct-single-number input { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 19px; font-weight: 800; }
+.direct-single-number em { color: #718078; font-size: 13px; font-style: normal; white-space: nowrap; }
+.direct-single-number small { color: #75847c; font-size: 11px; }
+.direct-quick-options { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.direct-quick-options button { min-height: 52px; padding: 8px; border: 1px solid #d4ded8; border-radius: 8px; background: white; color: #405248; font-size: 13px; font-weight: 750; cursor: pointer; }
+.direct-quick-options button:hover { border-color: #99b8a8; }
+.direct-quick-options button.active { border-color: var(--green); background: #eaf8f3; color: var(--green-dark); box-shadow: inset 0 0 0 1px var(--green); }
 .direct-start-button { min-height: 54px; border: 0; border-radius: 8px; background: var(--green); color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15px; font-weight: 800; cursor: pointer; }
 .direct-start-button svg { width: 18px; }
 .direct-start-button:disabled { opacity: .38; cursor: not-allowed; }
 .direct-plan-error { margin: -6px 0 0; color: #b42318; font-size: 12px; text-align: center; }
+@keyframes direct-step-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 
 @media (max-width: 620px) {
   .start-choice-content, .conversation-content, .understanding-review { padding-left: 18px; padding-right: 18px; }
@@ -665,8 +684,15 @@ a { color: inherit; text-decoration: none; }
   .understanding-grid { grid-template-columns: 1fr; }
   .review-actions { grid-template-columns: 1fr; }.review-actions > button { min-height: 52px; }
   .direct-planning-shell { width: calc(100% - 36px); padding-top: 28px; }
-  .direct-planning-shell > header { margin-top: 40px; }
+  .direct-step-progress { margin-top: 30px; }
+  .direct-planning-shell > header { margin-top: 22px; }
   .direct-planning-shell > header h1 { font-size: 29px; }
+  .direct-step-panel { min-height: 262px; }
+  .direct-quick-options { grid-template-columns: 1fr 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .direct-step-panel { animation: none; }
 }
 
 /* Simplified discovery flow */

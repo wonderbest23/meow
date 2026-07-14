@@ -48,7 +48,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyPreference,
   calculateProfile,
@@ -390,6 +390,7 @@ function DirectPlanning({
   onBack: () => void;
   onStart: (input: DirectPlanInput) => Promise<void>;
 }) {
+  const [step, setStep] = useState<0 | 1 | 2>(0);
   const [idea, setIdea] = useState("");
   const [budgetManwon, setBudgetManwon] = useState("");
   const [availableHoursPerWeek, setAvailableHoursPerWeek] = useState("");
@@ -397,13 +398,19 @@ function DirectPlanning({
   const [error, setError] = useState("");
   const budget = Number(budgetManwon);
   const hours = Number(availableHoursPerWeek);
+  const validIdea = idea.trim().length >= 5;
   const validBudget = budgetManwon !== "" && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000;
   const validHours = availableHoursPerWeek !== "" && Number.isFinite(hours) && hours >= 1 && hours <= 100;
-  const canStart = idea.trim().length >= 10 && validBudget && validHours && !busy;
+  const canContinue = step === 0 ? validIdea : step === 1 ? validBudget : validHours;
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canStart) return;
+    if (!canContinue || busy) return;
+    if (step < 2) {
+      setStep((step + 1) as 1 | 2);
+      setError("");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -418,40 +425,61 @@ function DirectPlanning({
     }
   };
 
+  const goBack = () => {
+    if (busy) return;
+    if (step === 0) onBack();
+    else setStep((step - 1) as 0 | 1);
+  };
+
+  const stepCopy = [
+    { label: "아이디어", title: "어떤 사업을\n하고 싶으세요?", description: "완벽하게 정리하지 않아도 괜찮아요. 떠오른 생각 그대로 적어주세요." },
+    { label: "예산", title: "얼마로\n시작할까요?", description: "지금 준비된 금액을 알려주세요. 예산이 아직 없다면 0원으로 시작해도 됩니다." },
+    { label: "시간", title: "일주일에 얼마나\n할 수 있나요?", description: "현실적으로 꾸준히 사용할 수 있는 시간을 선택해주세요." },
+  ][step];
+
   return (
     <main className="conversation-page direct-planning-page">
       <Header onHome={onBack} />
       <section className="direct-planning-shell">
-        <button className="start-back" onClick={onBack}><ArrowLeft /> 시작 방법</button>
+        <button className="start-back" onClick={goBack}><ArrowLeft /> {step === 0 ? "시작 방법" : "이전 질문"}</button>
+        <div className="direct-step-progress" aria-label={`전체 3단계 중 ${step + 1}단계`}>
+          <span>{step + 1} / 3</span>
+          <div>{[0, 1, 2].map((index) => <i key={index} className={index <= step ? "active" : ""} />)}</div>
+        </div>
         <header>
-          <span>내 아이디어로 시작</span>
-          <h1>하고 싶은 사업을<br />바로 기획해보세요.</h1>
-          <p>추천 목록을 거치지 않고 입력한 사업으로 실행 프로젝트를 만듭니다.</p>
+          <span>{stepCopy.label}</span>
+          <h1>{stepCopy.title.split("\n").map((line, index) => <Fragment key={line}>{index > 0 && <br />}{line}</Fragment>)}</h1>
+          <p>{stepCopy.description}</p>
         </header>
         <form onSubmit={submit} data-testid="direct-planning-form">
-          <label className="direct-idea-field">
-            <span>하고 싶은 사업</span>
-            <textarea
-              value={idea}
-              onChange={(event) => setIdea(event.target.value)}
-              placeholder="예: 동네 소상공인의 상품 사진과 소개 문구를 만들어주는 월 구독 서비스를 하고 싶어요."
-              minLength={10}
-              maxLength={1000}
-              required
-            />
-            <small>{idea.trim().length < 10 ? `${10 - idea.trim().length}자만 더 적어주세요` : "입력한 아이디어를 그대로 기획에 반영합니다"}</small>
-          </label>
-          <div className="direct-number-fields">
-            <label>
-              <span>시작 예산</span>
-              <div><input aria-label="시작 예산" type="number" inputMode="numeric" min="0" max="1000000" step="1" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} required /><em>만원</em></div>
-            </label>
-            <label>
-              <span>주당 사용할 시간</span>
-              <div><input aria-label="주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} required /><em>시간</em></div>
-            </label>
+          <div className="direct-step-panel" key={step}>
+            {step === 0 && <label className="direct-idea-field">
+              <span>하고 싶은 사업</span>
+              <textarea
+                autoFocus
+                value={idea}
+                onChange={(event) => setIdea(event.target.value)}
+                placeholder="예: 반려동물 사진으로 달력을 만들어 판매하고 싶어요."
+                minLength={5}
+                maxLength={1000}
+                required
+              />
+              <small>{idea.trim().length < 5 ? `${5 - idea.trim().length}자만 더 적어주세요` : "좋아요. 이 생각을 바탕으로 구체화할게요."}</small>
+            </label>}
+            {step === 1 && <div className="direct-single-number">
+              <div className="direct-quick-options" aria-label="예산 빠른 선택">
+                {[0, 100, 300, 1000].map((amount) => <button type="button" className={budgetManwon === String(amount) ? "active" : ""} key={amount} onClick={() => setBudgetManwon(String(amount))}>{amount === 0 ? "0원" : `${amount.toLocaleString("ko-KR")}만원`}</button>)}
+              </div>
+              <label><span>직접 입력</span><div><input autoFocus aria-label="시작 예산" type="number" inputMode="numeric" min="0" max="1000000" step="1" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} placeholder="0" required /><em>만원</em></div><small>사업 준비에 실제로 사용할 수 있는 금액을 입력하세요.</small></label>
+            </div>}
+            {step === 2 && <div className="direct-single-number">
+              <div className="direct-quick-options" aria-label="시간 빠른 선택">
+                {[5, 10, 20, 40].map((amount) => <button type="button" className={availableHoursPerWeek === String(amount) ? "active" : ""} key={amount} onClick={() => setAvailableHoursPerWeek(String(amount))}>주 {amount}시간</button>)}
+              </div>
+              <label><span>직접 입력</span><div><input autoFocus aria-label="주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} placeholder="10" required /><em>시간</em></div><small>평일과 주말을 합친 일주일 기준입니다.</small></label>
+            </div>}
           </div>
-          <button className="direct-start-button" disabled={!canStart}>{busy ? "프로젝트 만드는 중..." : "이 아이디어로 바로 기획"} <ArrowRight /></button>
+          <button className="direct-start-button" disabled={!canContinue || busy}>{busy ? "프로젝트 만드는 중..." : step === 0 ? "다음: 예산" : step === 1 ? "다음: 시간" : "이 아이디어로 기획 시작"} <ArrowRight /></button>
           {error && <p className="direct-plan-error" role="alert">{error}</p>}
         </form>
       </section>
