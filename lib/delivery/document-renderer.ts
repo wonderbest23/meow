@@ -443,12 +443,5 @@ export async function renderDeliveryZip(
   const combinedName = safeFileName(`${project.title}-전체-창업-실행-문서`);
   archive.file(`00_${combinedName}.pdf`, await renderPdf(documents, project, fontData));
   archive.file(`00_${combinedName}.docx`, await renderDocx(documents, project, fontData));
-  for (let index = 0; index < documents.length; index += 1) {
-    const document = documents[index];
-    const prefix = String(index + 1).padStart(2, "0");
-    const name = safeFileName(document.title);
-    archive.file(`${prefix}_${name}.pdf`, await renderPdf([document], project, fontData));
-    archive.file(`${prefix}_${name}.docx`, await renderDocx([document], project, fontData));
-  }
   return await archive.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 8 } });
 }

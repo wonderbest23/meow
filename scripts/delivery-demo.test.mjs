@@ -356,7 +356,12 @@ try {
   if (!documentXml?.includes("손익분기") || !documentXml.includes("49,000원")) throw new Error("Word 본문에 상세 결과가 없습니다.");
   const packageZip = await JSZip.loadAsync(generated.zip);
   const packageFiles = Object.keys(packageZip.files);
-  if (packageFiles.length !== 6 || packageFiles.some((name) => name.endsWith(".md"))) throw new Error(`ZIP 구성 오류 ${packageFiles.join(", ")}`);
+  if (
+    packageFiles.length !== 2 ||
+    packageFiles.filter((name) => name.endsWith(".pdf")).length !== 1 ||
+    packageFiles.filter((name) => name.endsWith(".docx")).length !== 1 ||
+    packageFiles.some((name) => name.endsWith(".md"))
+  ) throw new Error(`ZIP 구성 오류 ${packageFiles.join(", ")}`);
 
   console.log(JSON.stringify({ passed: true, ...result, documentPanel, documentPreview, desktopLayout, expertConsultation, customerGuide, guidedMissionCount, firstMissionId, secondMissionId, recoveredMissionId, spaceQuoteCount, brandStudio, deckBytes: deckBytes.length, pdfPageCount, documentBytes: Object.fromEntries(Object.entries(generated).map(([key, value]) => [key, value.length])) }, null, 2));
 } finally {
