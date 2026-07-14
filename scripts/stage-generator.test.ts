@@ -38,11 +38,33 @@ async function main() {
   );
   assert.equal((sparseArtifacts[1].content.unknowns as unknown[]).length >= 3, true);
   assert.equal((sparseArtifacts[2].content.assumptions as unknown[]).length >= 3, true);
+  assert.equal(sparseArtifacts[2].reviewStatus, "automated_review");
+  assert.equal(sparseArtifacts[3].reviewStatus, "automated_review");
   const landingBlocks = sparseArtifacts[4].content.blocks as Array<Record<string, unknown>>;
   const faqBlock = landingBlocks.find((block) => block.type === "faq");
   assert.equal((faqBlock?.items as unknown[]).length >= 4, true);
   assert.equal(String(sparseArtifacts[4].content.legalNotice).length >= 60, true);
   assert.equal((sparseArtifacts[5].content.channelPlan as unknown[]).length >= 2, true);
+  assert.deepEqual(sparseArtifacts.map((artifact) => artifact.reviewStatus), Array(6).fill("automated_review"));
+
+  project.opportunity = {
+    ...project.opportunity,
+    title: "창업해주는플랫폼",
+    oneLiner: "창업해주는플랫폼",
+    customer: "첫 기획 단계에서 확인할 초기 고객",
+  };
+  project.stages[1].inputs = {
+    primaryCustomer: "첫 기획 단계에서 확인할 초기 고객",
+    problemStatement: "창업해주는플랫폼",
+    interviewNotes: [],
+    evidenceUrls: [],
+    unknowns: ["실제 지불 의사", "구매 결정자", "구매 빈도"],
+  };
+  const recoveredCustomerDraft = await generateStageArtifact(project, 1);
+  assert.equal(String(recoveredCustomerDraft.content.primaryCustomer).includes("예비 창업자"), true);
+  assert.equal((recoveredCustomerDraft.content.pains as string[]).every((item) => item.length >= 15), true);
+  assert.equal(JSON.stringify(recoveredCustomerDraft.content).includes("창업자이"), false);
+  assert.equal(recoveredCustomerDraft.reviewStatus, "automated_review");
   console.log("stage-generator.test.ts passed");
 }
 

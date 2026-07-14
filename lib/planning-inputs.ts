@@ -112,10 +112,19 @@ export function mergeStageInputs(
   const existingNotes = typeof existing.notes === "string" ? existing.notes.trim() : "";
   const newNotes = addedNotes.trim();
   const mergedNotes = [...new Set([existingNotes, newNotes].filter(Boolean))].join("\n");
+  const meaningfulExisting = Object.fromEntries(
+    Object.entries(existing).filter(([key, value]) => {
+      if (value === undefined || value === null || value === "") return false;
+      if (Array.isArray(value) && value.length === 0) return false;
+      if (key === "primaryCustomer" && typeof value === "string" && /(첫 기획|초기 목표|확인할.*고객)/.test(value)) return false;
+      if ((key === "problemStatement" || key === "coreOutcome") && typeof value === "string" && value.trim().length < 15) return false;
+      return true;
+    }),
+  );
 
   return {
     ...generated,
-    ...existing,
+    ...meaningfulExisting,
     ...(mergedNotes ? { notes: mergedNotes } : {}),
   };
 }

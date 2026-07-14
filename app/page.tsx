@@ -100,6 +100,7 @@ import {
   type DirectPlanInput,
   type PlanningConstraints,
 } from "../lib/planning-inputs";
+import { deriveAutoDraftContext } from "../lib/auto-draft";
 
 type Screen =
   | "home"
@@ -1129,7 +1130,7 @@ const launchStages = [
     period: "1일차",
     title: "프로젝트의 기준을 맞춰요",
     description: "결제 정보와 선택한 기회를 확인하고, 21일 동안 함께 만들 결과물의 우선순위를 정합니다.",
-    tasks: ["선택한 사업 기회 확인", "입력한 예산·시간 확인", "자료가 없어도 진행할 수 있는지 확인"],
+    tasks: ["AI가 만든 사업 실행 요약서 확인"],
     output: "사업 실행 요약서",
   },
   {
@@ -1137,7 +1138,7 @@ const launchStages = [
     period: "2~4일차",
     title: "누구의 어떤 문제인지 선명하게 만들어요",
     description: "가정으로 남아 있는 고객 문제를 인터뷰 질문과 시장 자료로 검증합니다.",
-    tasks: ["핵심 고객 한 문장으로 정의", "고객 인터뷰 질문 검토", "경쟁 대안과 시장 근거 확인"],
+    tasks: ["AI가 만든 고객·시장 초안 확인"],
     output: "고객·시장 진단서",
   },
   {
@@ -1145,7 +1146,7 @@ const launchStages = [
     period: "5~8일차",
     title: "실제로 살 수 있는 상품으로 바꿔요",
     description: "고객의 문제를 가장 작게 해결하는 첫 상품과 가격, 손익 기준을 설계합니다.",
-    tasks: ["3단계 상품 구성 선택", "추천 가격과 원가 입력", "첫 매출 목표 고객 수 확인"],
+    tasks: ["AI가 제안한 상품·가격 초안 확인"],
     output: "상품 구성표·손익 시트",
   },
   {
@@ -1153,7 +1154,7 @@ const launchStages = [
     period: "9~12일차",
     title: "고객이 이해할 언어를 만들어요",
     description: "이름보다 먼저 고객에게 할 약속과 다른 점을 정하고 한 줄 소개 문구로 발전시킵니다.",
-    tasks: ["핵심 문구 방향 선택", "고객에게 보여줄 이름 후보 검토", "표현 방식과 쓰면 안 되는 표현 확인"],
+    tasks: ["AI가 제안한 이름·소개 문구 확인"],
     output: "이름·소개 문구 모음",
   },
   {
@@ -1161,7 +1162,7 @@ const launchStages = [
     period: "13~17일차",
     title: "첫 고객을 만날 페이지를 열어요",
     description: "문제, 해결책, 가격, 자주 묻는 질문과 문의 행동이 연결된 휴대전화용 판매 페이지를 제작합니다.",
-    tasks: ["첫 화면 문구와 신청 버튼 승인", "상품·가격 영역 확인", "문의 입력칸과 휴대전화 화면 시험"],
+    tasks: ["AI가 만든 판매 페이지 초안 확인"],
     output: "공개 가능한 판매 페이지",
   },
   {
@@ -1169,10 +1170,19 @@ const launchStages = [
     period: "18~21일차",
     title: "작게 공개하고 실제 반응을 확인해요",
     description: "큰 광고비를 쓰기 전에 잠재 고객에게 제안하고 다음 개선점을 수집합니다.",
-    tasks: ["첫 고객 10명 목록 만들기", "제안 메시지 발송", "반응 기록과 30일 계획 확정"],
+    tasks: ["AI가 만든 첫 공개 계획 확인"],
     output: "첫 공개 문서·30일 실행안",
   },
 ];
+
+const automaticDraftItems = [
+  ["사업 방향", "예산·시간 반영", "21일 실행 범위"],
+  ["첫 고객 가설", "고객 문제", "인터뷰 질문"],
+  ["상품 3가지", "권장 가격", "손익분기점"],
+  ["이름 후보", "한 줄 소개", "사용 금지 표현"],
+  ["첫 화면 문구", "상품·가격", "문의·필수 안내"],
+  ["첫 연락 문구", "고객 만날 경로", "30일 일정"],
+] as const;
 
 const paidReportDemoOpportunity: RankedOpportunity = {
   id: "paid-report-demo-pet-safety",
@@ -1873,15 +1883,20 @@ const artifactFieldLabels: Record<string, string> = {
   constraints: "입력한 실행 조건",
   validationPlan: "첫 검증 계획",
   day21Goal: "21일 뒤 목표",
+  automaticDecisions: "AI가 먼저 정한 시작 원칙",
   businessReadiness: "사업 준비 상태",
   primaryCustomer: "핵심 고객",
   jobs: "고객이 해결하려는 일",
   pains: "고객의 불편",
   currentAlternatives: "현재 사용하는 대안",
   evidence: "확인된 근거",
+  evidencePlan: "근거를 확인하는 방법",
   interviewScript: "고객에게 물을 질문",
   unknowns: "아직 확인할 내용",
+  decisionRule: "계속·수정·중단 기준",
+  nextActions: "바로 할 일",
   tiers: "상품 구성",
+  recommendedOffer: "가장 먼저 제안할 상품",
   unitEconomics: "한 건 판매 손익",
   breakEvenCustomers: "월 손익분기 고객 수",
   breakEvenRevenueWon: "월 손익분기 매출",
@@ -1894,6 +1909,8 @@ const artifactFieldLabels: Record<string, string> = {
   monthlyGoalCustomers: "월 목표 고객 수",
   assumptions: "확인이 필요한 가정",
   pricingTests: "가격 검증 방법",
+  pricingRationale: "이 가격을 제안한 이유",
+  priceChangeRules: "가격을 바꾸는 기준",
   nameCandidates: "이름 후보",
   promise: "고객에게 할 약속",
   slogans: "한 줄 문구 후보",
@@ -1902,9 +1919,13 @@ const artifactFieldLabels: Record<string, string> = {
   prohibitedClaims: "사용하면 안 되는 표현",
   selectionGuide: "이름 선택 방법",
   usageExamples: "사용 예시",
+  recommendedDirection: "우선 추천 이름·문구",
+  candidateReasons: "이름 후보별 이유",
+  nameReviewChecklist: "최종 이름 확인 순서",
   blocks: "판매 페이지 내용",
   contact: "문의 방법",
   legalNotice: "필수 안내 문구",
+  publishingChecklist: "공개 전 자동 점검",
   launchDate: "첫 공개일",
   outreachScripts: "첫 연락 문구",
   channelPlan: "고객을 만날 경로",
@@ -1912,6 +1933,8 @@ const artifactFieldLabels: Record<string, string> = {
   supportProgramChecklist: "지원사업 준비 항목",
   next30Days: "앞으로 30일 일정",
   decisionCriteria: "계속·수정·중단 기준",
+  messageUsageGuide: "첫 연락 문구 사용법",
+  launchRiskPlan: "반응이 없거나 문제가 생길 때",
   budgetWon: "시작 예산",
   availableHoursPerWeek: "주당 사용 시간",
   mustAvoid: "피해야 할 조건",
@@ -1929,6 +1952,10 @@ const artifactFieldLabels: Record<string, string> = {
   outcome: "받게 되는 결과",
   method: "방법",
   value: "연락처",
+  reason: "추천 이유",
+  includedScope: "포함 범위",
+  completionCriteria: "완료 기준",
+  usage: "사용 예시",
 };
 
 const artifactStringLabels: Record<string, string> = {
@@ -2002,6 +2029,7 @@ function buildStageInput(
   brandChoice: string,
   note: string,
 ) {
+  const autoDraft = deriveAutoDraftContext(opportunity as unknown as Record<string, unknown>);
   const budgetWon =
     opportunity.capital === "소액" ? 1000000 : opportunity.capital === "중간" ? 10000000 : 50000000;
   const inputs = [
@@ -2015,14 +2043,14 @@ function buildStageInput(
       notes: note,
     },
     {
-      primaryCustomer: opportunity.customer,
-      problemStatement: opportunity.oneLiner,
+      primaryCustomer: autoDraft.customer,
+      problemStatement: autoDraft.problem,
       interviewNotes: [],
       evidenceUrls: [],
       unknowns: ["실제 지불 의사", "구매 결정자", "구매 빈도"],
     },
     {
-      coreOutcome: opportunity.oneLiner,
+      coreOutcome: autoDraft.coreOutcome,
       deliveryMethod: opportunity.model,
       basePriceWon: price,
       variableCostWon: Math.round(price * 0.2),
@@ -2035,16 +2063,16 @@ function buildStageInput(
       preferredKeywords: ["명확한", "신뢰할 수 있는", "실행 중심"],
       prohibitedKeywords: ["무조건", "완벽 보장"],
       tone: "실용적인",
-      preferredNames: brandChoice ? [brandChoice] : [],
+      preferredNames: brandChoice ? [brandChoice] : autoDraft.nameCandidates,
       selectedName: brandChoice || undefined,
       legalNameCheckRequired: true,
     },
     {
-      headline: opportunity.oneLiner,
-      subheadline: "현재 상황을 진단하고 가장 작은 실행부터 함께 만듭니다.",
-      callToAction: "무료 진단 신청",
+      headline: autoDraft.headline,
+      subheadline: autoDraft.subheadline,
+      callToAction: autoDraft.callToAction,
       contactMethod: "신청폼",
-      contactValue: "https://venture-dna.kr/contact",
+      contactValue: "판매 페이지 신청폼",
       proofItems: [],
       faq: [],
       legalNotice: "상담과 생성 결과는 사업 성과를 보장하지 않습니다.",
@@ -2076,7 +2104,10 @@ function ProjectWorkspace({
   const [activeStage, setActiveStage] = useState(serverProject?.activeStage ?? 0);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
   const [delivered, setDelivered] = useState(serverProject?.status === "completed");
-  const [price, setPrice] = useState(opportunity.capital === "소액" ? 290000 : opportunity.capital === "중간" ? 790000 : 1490000);
+  const [price, setPrice] = useState(
+    serverProject?.businessSetup?.financial.sellingPrice
+      ?? (opportunity.capital === "소액" ? 290000 : opportunity.capital === "중간" ? 790000 : 1490000),
+  );
   const [brandChoice, setBrandChoice] = useState("");
   const [revisionText, setRevisionText] = useState("");
   const [serviceAction, setServiceAction] = useState<"idle" | "saving" | "generating" | "approving" | "revising" | "retrying">("idle");
@@ -2102,7 +2133,6 @@ function ProjectWorkspace({
   const setupRequired = activeStage === 0 && Boolean(serverProject) && !serverProject?.businessAssessment;
   const projectArchetype = serverProject?.businessSetup?.archetype ?? inferBusinessArchetype(opportunity);
   const locationAnalysisNeeded = needsPhysicalLocationAnalysis(projectArchetype);
-  const reviewStep = !latestArtifact ? 1 : allCurrentChecked ? 3 : 2;
   const stageStatusLabel: Record<string, string> = {
     not_started: "아직 시작 전",
     collecting_input: "정보 입력 중",
@@ -2116,16 +2146,16 @@ function ProjectWorkspace({
   const focusTitle = setupRequired
     ? "사업 조건과 비용부터 입력하세요"
     : !latestArtifact
-      ? `${current.output} 초안을 만드세요`
+      ? `AI가 ${current.output} 초안을 먼저 만들어요`
       : !allCurrentChecked
-        ? "생성된 결과를 읽고 세 가지만 확인하세요"
+        ? "만들어진 초안을 보고 한 번만 확인하세요"
         : "확인이 끝났어요. 다음 단계로 이동하세요";
   const focusDescription = setupRequired
     ? "화면에 보이는 한 단계씩 입력하면 손익분기점과 필수 절차를 계산합니다."
     : !latestArtifact
-      ? "처음 입력한 아이디어·예산·시간과 저장된 사업 조건으로 바로 만듭니다."
+      ? "추가 입력은 필요 없습니다. 처음 입력한 아이디어·예산·시간과 저장된 사업 조건을 자동으로 반영합니다."
       : !allCurrentChecked
-        ? "실제 생성 결과를 먼저 읽은 뒤 아래 확인 항목을 차례로 누르세요."
+        ? "마음에 들면 그대로 사용하고, 원하는 경우에만 수정 요청을 남기면 됩니다."
         : "마지막 승인 버튼을 누르면 현재 결과를 저장하고 다음 단계가 열립니다.";
 
   useEffect(() => {
@@ -2371,47 +2401,46 @@ function ProjectWorkspace({
             )}
             {serverProject && activeStage === 0 && (setupRequired || showSavedSetup) && <BusinessSetupPanel project={serverProject} onSaved={(project) => { setServerProject(project); setShowSavedSetup(true); }} onComplete={() => { setShowSavedSetup(false); window.setTimeout(() => document.querySelector(".service-workflow")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} />}
             {serverProject && activeStage === 0 && !setupRequired && !showSavedSetup && <button className="edit-saved-setup" onClick={() => setShowSavedSetup(true)}><Calculator /> 사업 조건·손익 다시 계산</button>}
-            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>{locationAnalysisNeeded ? "시장 근거·입지 자료 추가" : "고객·시장 근거와 사업계획서 추가"} <em>선택사항</em></span><ChevronDown /></summary><MarketPlanPanel project={serverProject} onSaved={setServerProject} /></details>}
-            {serverProject && activeStage === 1 && !latestArtifact && locationAnalysisNeeded && <details className="optional-stage-tools"><summary><span>지역별 공공데이터 확인 <em>선택사항</em></span><ChevronDown /></summary><RegionalCoveragePanel project={serverProject} /></details>}
+            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>가지고 있는 근거가 있다면 추가 <em>안 해도 됨</em></span><ChevronDown /></summary><MarketPlanPanel project={serverProject} onSaved={setServerProject} /></details>}
+            {serverProject && activeStage === 1 && !latestArtifact && locationAnalysisNeeded && <details className="optional-stage-tools"><summary><span>지역 자료가 있다면 추가 <em>안 해도 됨</em></span><ChevronDown /></summary><RegionalCoveragePanel project={serverProject} /></details>}
             {serverProject && activeStage === 4 && !latestArtifact && <LandingBuilderPanel project={serverProject} />}
             {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>운영 계획 직접 바꾸기 <em>선택사항</em></span><ChevronDown /></summary><OperationsPanel project={serverProject} onSaved={setServerProject} /></details>}
             {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>추가 운영 도구 열기 <em>선택사항</em></span><ChevronDown /></summary><ExecutionLoopPanel project={serverProject} onSaved={setServerProject} /><QualityAssurancePanel project={serverProject} onSaved={setServerProject} /><GrantMatcherPanel project={serverProject} onSaved={setServerProject} /></details>}
             {serverProject && !setupRequired && (
               <section className="service-workflow">
                 <div className="step-by-step-guide" aria-label="현재 단계 진행 방법">
-                  <div className={reviewStep >= 1 ? "active" : ""}><span>{reviewStep > 1 ? <Check /> : "1"}</span><p><strong>초안 만들기</strong><small>처음 입력한 내용으로 만들어요</small></p></div>
+                  <div className="active"><span>{latestArtifact ? <Check /> : "1"}</span><p><strong>AI 초안 만들기</strong><small>추가 입력 없이 자동 작성</small></p></div>
                   <i />
-                  <div className={reviewStep >= 2 ? "active" : ""}><span>{reviewStep > 2 ? <Check /> : "2"}</span><p><strong>내용 검토</strong><small>결과와 체크리스트를 확인해요</small></p></div>
-                  <i />
-                  <div className={reviewStep >= 3 ? "active" : ""}><span>3</span><p><strong>승인하고 이동</strong><small>완료하면 다음 단계로 가요</small></p></div>
+                  <div className={latestArtifact ? "active" : ""}><span>2</span><p><strong>그대로 사용 또는 수정</strong><small>한 번 확인하면 다음 단계</small></p></div>
                 </div>
+                {!latestArtifact && <div className="automatic-draft-scope"><div><Sparkles /><p><small>AI가 알아서 채웁니다</small><strong>지금 더 입력할 내용은 없습니다</strong></p></div><ul>{automaticDraftItems[activeStage].map((item) => <li key={item}><Check /> {item}</li>)}</ul></div>}
                 <div className="service-workflow-head">
-                  <div><span className={`service-state ${currentServerStage?.status ?? "not_started"}`} /><p><strong>{latestArtifact ? "초안이 준비됐어요" : "입력한 내용으로 바로 만들 수 있어요"}</strong><small>{stageStatusLabel[currentServerStage?.status ?? "not_started"]} · 처음 입력한 내용 자동 반영</small></p></div>
+                  <div><span className={`service-state ${currentServerStage?.status ?? "not_started"}`} /><p><strong>{latestArtifact ? "초안이 준비됐어요" : "버튼 한 번이면 초안이 완성돼요"}</strong><small>{stageStatusLabel[currentServerStage?.status ?? "not_started"]} · 처음 입력한 내용 자동 반영</small></p></div>
                   {latestArtifact && <em>결과물 {latestArtifact.version}판</em>}
                 </div>
                 {serviceError && <div className="service-error"><CircleHelp /> <span>{serviceError}</span><button disabled={serviceAction !== "idle" || (!canRetryGeneration && currentServerStage?.status === "failed")} onClick={handleGenerationRecovery}>{currentServerStage?.status === "failed" ? (canRetryGeneration ? `다시 시도 (${latestJob?.attempt ?? 0}/3)` : "재시도 한도 초과") : "다시 시도"}</button></div>}
                 {!latestArtifact ? (
-                  <button className="generate-real-artifact" disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "먼저 위에서 사업 조건과 손익분기점을 계산해주세요" : serviceAction === "saving" ? "처음 입력한 내용을 불러오는 중..." : serviceAction === "generating" ? "맞춤 초안을 만들고 있어요..." : <><Sparkles /> 바로 초안 만들기 <ArrowRight /></>}</button>
+                  <button className="generate-real-artifact" disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "먼저 위에서 사업 조건과 손익분기점을 계산해주세요" : serviceAction === "saving" ? "처음 입력한 내용을 불러오는 중..." : serviceAction === "generating" ? "맞춤 초안을 만들고 있어요..." : <><Sparkles /> AI가 초안 만들기 <ArrowRight /></>}</button>
                 ) : (
                   <div className="artifact-review-actions">
-                    <div className="review-ready"><CheckCircle2 /><p><strong>검토할 초안이 준비됐어요</strong><small>실제 생성된 결과부터 읽고 확인 항목을 차례로 눌러주세요.</small></p><button onClick={moveToArtifact}>결과 읽기 <ArrowDown /></button></div>
+                    <div className="review-ready"><CheckCircle2 /><p><strong>AI가 먼저 만든 초안이 준비됐어요</strong><small>그대로 사용하거나, 원하는 부분만 수정 요청하면 됩니다.</small></p><button onClick={moveToArtifact}>초안 보기 <ArrowDown /></button></div>
                     <details><summary>전문가용 원본 자료 보기</summary><pre>{JSON.stringify(latestArtifact.content, null, 2)}</pre></details>
                     <label><span>수정하고 싶은 점 <em>선택사항</em></span><textarea value={revisionText} onChange={(event) => setRevisionText(event.target.value)} placeholder="예: 가격 근거를 더 쉽게 설명하고, 직장인 고객 사례를 추가해주세요." /><small>{revisionText.trim().length}/10자 이상 입력하면 수정본을 만들 수 있어요.</small></label>
-                    <div><button disabled={revisionText.trim().length < 10 || serviceAction !== "idle"} onClick={reviseServerArtifact}><RefreshCw /> {serviceAction === "revising" ? "요청을 반영하는 중..." : "수정 요청 보내기"}</button><button className="approve-real-artifact" disabled={!allCurrentChecked || serviceAction !== "idle"} onClick={approveServerArtifact}><CheckCircle2 /> {serviceAction === "approving" ? "다음 단계를 준비 중..." : allCurrentChecked ? "확인 완료 · 다음 단계로" : "먼저 아래 항목을 확인해주세요"}</button></div>
+                    <div><button disabled={revisionText.trim().length < 10 || serviceAction !== "idle"} onClick={reviseServerArtifact}><RefreshCw /> {serviceAction === "revising" ? "요청을 반영하는 중..." : "원하는 부분만 수정"}</button><button className="approve-real-artifact" disabled={!allCurrentChecked || serviceAction !== "idle"} onClick={approveServerArtifact}><CheckCircle2 /> {serviceAction === "approving" ? "다음 단계를 준비 중..." : allCurrentChecked ? "이 초안 사용 · 다음 단계" : "아래에서 초안을 한 번 확인해주세요"}</button></div>
                   </div>
                 )}
               </section>
             )}
             {latestArtifact ? <ArtifactContentPreview artifact={latestArtifact} stageIndex={activeStage} /> : !serverProject ? <StageWorkProduct stage={activeStage} opportunity={opportunity} price={price} setPrice={setPrice} brandChoice={brandChoice} setBrandChoice={setBrandChoice} onRegenerate={generateServerArtifact} onRequestRevision={moveToRevision} isWorking={serviceAction !== "idle"} /> : null}
             {(latestArtifact || !serverProject) && <div className="stage-task-list" id="stage-checklist">
-              <div><strong>하나씩 확인해주세요</strong><span>{current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length} / {current.tasks.length} 확인</span></div>
-              <p className="checklist-help">내용을 읽고 이해했다면 항목을 눌러 체크하세요. 언제든 다시 해제할 수 있어요.</p>
+              <div><strong>마지막으로 한 번만 확인</strong><span>{current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length} / {current.tasks.length}</span></div>
+              <p className="checklist-help">초안의 방향이 괜찮다면 아래 버튼을 누르세요. 세부 내용은 나중에도 수정할 수 있습니다.</p>
               {current.tasks.map((task, index) => {
                 const isChecked = Boolean(checked[`${activeStage}-${index}`]);
                 const isCurrent = firstUncheckedTaskIndex === index;
                 const isVisible = firstUncheckedTaskIndex === -1 || index <= firstUncheckedTaskIndex;
                 if (!isVisible) return null;
-                return <button key={task} aria-pressed={isChecked} className={`${isChecked ? "checked" : ""} ${isCurrent ? "current" : ""}`} onClick={() => toggleTask(index)}><span>{isChecked ? <Check /> : index + 1}</span><strong>{task}</strong><em>{isChecked ? "확인됨" : "확인하고 다음"}</em></button>;
+                return <button key={task} aria-pressed={isChecked} className={`${isChecked ? "checked" : ""} ${isCurrent ? "current" : ""}`} onClick={() => toggleTask(index)}><span>{isChecked ? <Check /> : index + 1}</span><strong>{task}</strong><em>{isChecked ? "사용하기로 선택" : "이 초안 사용"}</em></button>;
               })}
             </div>}
             {(latestArtifact || !serverProject) && <div className="stage-output"><PackageCheck /><div><small>이 단계가 끝나면</small><strong>{current.output}</strong>이 완성됩니다.</div></div>}
@@ -2425,8 +2454,8 @@ function ProjectWorkspace({
           </aside>
         </div>
         <div className="mobile-sticky-action" aria-live="polite">
-          <div><small>현재 할 일</small><strong>{!serverProject ? `체크리스트 확인 · ${current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length}/${current.tasks.length}` : !latestArtifact ? "맞춤 초안 만들기" : !allCurrentChecked ? `내용 확인하기 · ${current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length}/${current.tasks.length}` : "확인 완료, 다음 단계로 이동"}</strong></div>
-          {!serverProject ? <button disabled={!allCurrentChecked} onClick={() => activeStage < launchStages.length - 1 ? setActiveStage((stage) => stage + 1) : setDelivered(true)}>다음 <ArrowRight /></button> : !latestArtifact ? <button disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "사업 조건·손익 계산 먼저" : serviceAction === "idle" ? "초안 만들기" : "처리 중..."}</button> : !allCurrentChecked ? <button onClick={moveToChecklist}>확인하기 <ArrowDown /></button> : <button disabled={serviceAction !== "idle"} onClick={approveServerArtifact}>{serviceAction === "idle" ? "승인하고 다음" : "처리 중..."}</button>}
+          <div><small>현재 할 일</small><strong>{!serverProject ? `초안 확인 · ${current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length}/${current.tasks.length}` : !latestArtifact ? "AI 초안 만들기" : !allCurrentChecked ? "이 초안 사용할지 확인" : "다음 단계로 이동"}</strong></div>
+          {!serverProject ? <button disabled={!allCurrentChecked} onClick={() => activeStage < launchStages.length - 1 ? setActiveStage((stage) => stage + 1) : setDelivered(true)}>다음 <ArrowRight /></button> : !latestArtifact ? <button disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "사업 조건·손익 계산 먼저" : serviceAction === "idle" ? "AI 초안" : "처리 중..."}</button> : !allCurrentChecked ? <button onClick={moveToChecklist}>초안 확인 <ArrowDown /></button> : <button disabled={serviceAction !== "idle"} onClick={approveServerArtifact}>{serviceAction === "idle" ? "사용하고 다음" : "처리 중..."}</button>}
         </div>
       </section>
     </main>

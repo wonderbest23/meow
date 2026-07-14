@@ -56,4 +56,21 @@ assert.equal(mergedStageInputs.budgetWon, 2_500_000);
 assert.equal(mergedStageInputs.availableHoursPerWeek, 15);
 assert.equal(mergedStageInputs.notes, "직접 입력한 사업 아이디어\n평일 저녁에만 운영");
 
+const replacedPlaceholderInputs = mergeStageInputs(
+  {
+    primaryCustomer: "사업 준비가 막막한 예비 창업자",
+    problemStatement: "사업 아이디어 이후의 실행 순서를 혼자 정하기 어렵습니다.",
+    preferredNames: ["오늘창업", "시작설계"],
+  },
+  {
+    primaryCustomer: "첫 기획 단계에서 확인할 초기 고객",
+    problemStatement: "창업플랫폼",
+    preferredNames: [],
+  },
+  "",
+);
+assert.equal(replacedPlaceholderInputs.primaryCustomer, "사업 준비가 막막한 예비 창업자");
+assert.equal(replacedPlaceholderInputs.problemStatement, "사업 아이디어 이후의 실행 순서를 혼자 정하기 어렵습니다.");
+assert.deepEqual(replacedPlaceholderInputs.preferredNames, ["오늘창업", "시작설계"]);
+
 console.log("planning-inputs.test.ts passed");

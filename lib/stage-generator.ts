@@ -4,6 +4,7 @@ import {
   inspectStageArtifact,
   stageQualityRevisionInstruction,
 } from "./quality/stage-artifact";
+import { deriveAutoDraftContext } from "./auto-draft";
 import { z } from "zod";
 
 const stageInstructions = [
@@ -93,14 +94,18 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
   const stage = project.stages[stageIndex];
   const inputs = stage.inputs;
   const title = String(opportunity.title ?? project.title);
-  const customer = String(inputs.primaryCustomer ?? opportunity.customer ?? "초기 목표 고객");
-  const oneLiner = String(opportunity.oneLiner ?? "");
+  const autoDraft = deriveAutoDraftContext(opportunity);
+  const inputCustomer = String(inputs.primaryCustomer ?? "");
+  const customer = inputCustomer && !/(첫 기획|초기 목표|확인할.*고객)/.test(inputCustomer)
+    ? inputCustomer
+    : autoDraft.customer;
+  const oneLiner = autoDraft.idea;
 
   if (stageIndex === 0) {
     return {
-      problem: `${oneLiner} 현재 고객은 관련 자료를 메신저, 사진첩, 수첩처럼 서로 다른 곳에 보관해 다시 찾고 활용하기 어렵습니다. 첫 단계에서는 기술 개발보다 실제로 반복되는 기록 손실과 현재 해결 비용을 확인합니다.`,
+      problem: `${autoDraft.problem} 첫 단계에서는 완성된 서비스를 만들기보다 이 문제가 실제로 반복되는지, 고객이 현재 어떤 대안에 시간과 돈을 쓰는지 확인합니다.`,
       customer,
-      valueProposition: `${customer} 고객이 가진 흩어진 자료를 한 번에 정리하고, 다음에 해야 할 행동까지 확인 가능한 형태로 돌려줍니다. ${String(opportunity.model ?? "맞춤 서비스")} 방식의 핵심 결과 한 가지를 대표자가 수동으로 제공해 사용 의사와 지불 의사를 먼저 검증합니다.`,
+      valueProposition: `${autoDraft.coreOutcome} ${autoDraft.promise} 첫 검증에서는 핵심 결과 한 가지만 직접 제공해 사용 의사와 지불 의사를 먼저 확인합니다.`,
       constraints: {
         budgetWon: number(inputs.budgetWon, 0),
         availableHoursPerWeek: number(inputs.availableHoursPerWeek, 10),
@@ -123,26 +128,45 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
         : { status: "사업 설정 입력 필요" },
       validationPlan: `${String(opportunity.firstTest ?? "잠재 고객 10명을 인터뷰합니다.")} 인터뷰에서는 최근에 문제를 겪은 날짜, 사용한 대안, 실제 지출, 포기한 행동을 기록합니다. 이후 같은 범위와 가격을 공개한 제안 10건을 보내고 최소 3건의 결제 또는 명확한 거절 이유를 확보합니다.`,
       day21Goal: "고객 인터뷰 10건, 가격이 공개된 제안 10건, 유료 주문 3건을 확보합니다. 동시에 포함·제외 범위, 환불 기준, 건당 원가, 판매 페이지, 다음 30일 중단·계속 기준을 문서로 확정합니다.",
+      automaticDecisions: [
+        "첫 21일에는 완성된 시스템을 개발하지 않고 대표자가 직접 제공할 수 있는 핵심 결과 한 가지로 고객 반응을 확인합니다.",
+        "처음 입력한 예산을 넘는 사무실, 채용과 광고 계약은 손익분기 고객 수와 첫 결제가 확인될 때까지 진행하지 않습니다.",
+        "사용자가 아직 모르는 비용과 시장 수치는 추천값 또는 가정으로 표시하고 실제 견적과 공식 원문이 생기면 자동 계산을 다시 갱신합니다.",
+        "첫 고객의 반복 문제, 지불 의사와 대표자 작업시간 중 하나라도 확인되지 않으면 기능을 늘리지 않고 고객 또는 제공 범위를 먼저 수정합니다.",
+      ],
     };
   }
   if (stageIndex === 1) {
     const interviewNotes = Array.isArray(inputs.interviewNotes) ? inputs.interviewNotes : [];
+    const suppliedProblem = typeof inputs.problemStatement === "string" ? inputs.problemStatement.trim() : "";
+    const primaryProblem = suppliedProblem.length >= 15
+      ? suppliedProblem
+      : `${autoDraft.problem} 현재 문장은 초기 가설이며 실제 고객 대화로 확인해야 합니다.`;
     return {
       primaryCustomer: customer,
       jobs: [
-        `${customer} 고객이 흩어진 자료를 잃어버리기 전에 한곳에 모읍니다.`,
-        "필요한 순간에 검색해 다시 사용할 수 있는 형태로 정리합니다.",
-        "가족이나 동료에게 맥락과 사용법을 빠르게 전달합니다.",
-        "중요한 기록에서 다음 행동과 확인할 사항을 놓치지 않습니다.",
+        "대상 고객이 원하는 결과와 현재 문제를 빠르고 분명하게 정리합니다.",
+        "현재 사용하는 대안보다 시간, 비용 또는 불확실성을 줄이는 방법을 선택합니다.",
+        "큰 비용이나 긴 계약 전에 가장 작은 범위로 결과의 품질을 확인합니다.",
+        "확인한 결과를 다시 사용하고 다음 행동으로 자연스럽게 이어갑니다.",
       ],
       pains: [
-        String(inputs.problemStatement ?? oneLiner),
-        "사진·메모·대화가 서로 다른 앱에 있어 필요한 자료를 찾는 데 시간이 듭니다.",
-        "정리 기준이 사람마다 달라 다른 가족이나 동료가 기록을 이어받기 어렵습니다.",
-        "기록을 모으는 데서 끝나고 실제 행동이나 반복 사용으로 연결되지 않습니다.",
+        primaryProblem,
+        "현재 대안의 가격, 소요 시간과 결과 품질을 한눈에 비교하기 어렵습니다.",
+        "어디까지 제공되는지와 완료 기준이 불분명하면 예상보다 많은 돈과 시간을 쓰게 됩니다.",
+        "문제가 반복되어도 믿고 다시 사용할 수 있는 간단한 해결 순서가 없습니다.",
       ],
-      currentAlternatives: ["사진첩과 메신저 검색", "노션·클라우드 폴더 직접 정리", "가족에게 구두로 전달", "정리를 미루거나 필요한 순간 다시 질문"],
+      currentAlternatives: ["검색과 무료 도구로 직접 해결", "지인이나 온라인 커뮤니티에 질문", "전문가나 기존 업체에 일부만 의뢰", "결정을 미루고 기존 방식 유지"],
       evidence: interviewNotes.length ? interviewNotes : ["고객 인터뷰 원문과 최근 행동 기록이 아직 필요합니다."],
+      evidencePlan: [
+        `최근 30일 안에 문제를 경험한 ${customer} 후보 5명을 찾아 같은 질문으로 대화하고 답변을 원문 그대로 기록합니다.`,
+        "문제를 마지막으로 겪은 날짜, 당시 사용한 대안, 실제 지출액과 해결에 걸린 시간을 서로 다른 칸에 기록합니다.",
+        "가격과 제공 범위를 공개한 같은 제안을 10명에게 보여주고 결제, 보류, 거절과 그 이유를 구분해 남깁니다.",
+        "경쟁 서비스의 홍보 문구가 아니라 실제 가격표, 포함 범위, 후기의 반복 불만과 환불 조건을 원문 링크와 함께 저장합니다.",
+        "인터뷰 참여자의 이름과 연락처는 결과 문서에서 분리하고, 동의받지 않은 개인정보와 민감정보는 근거 자료에 넣지 않습니다.",
+        "각 인터뷰가 끝난 날에 반복해서 등장한 문제와 예외 사례를 구분하고, 대표자의 해석보다 고객이 실제로 사용한 표현을 우선 남깁니다.",
+        "첫 유료 주문이 생기면 약속한 결과, 실제 작업시간, 추가 요청, 환불 가능성을 주문별로 기록해 상품·가격 단계의 원가 계산에 반영합니다.",
+      ],
       interviewScript: [
         "이 문제를 마지막으로 겪은 상황을 처음부터 들려주세요.",
         "현재 어떤 방법으로 해결하며 얼마의 비용과 시간을 쓰나요?",
@@ -161,20 +185,36 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
         3,
         5,
       ),
+      decisionRule: "가격을 공개한 제안 10건 중 결제 또는 구체적인 구매 약속이 3건 이상이고, 같은 문제가 최근 행동과 실제 지출에서 반복되면 현재 고객과 상품 가설을 유지합니다. 반응이 1~2건이면 제공 범위와 가격을 한 번 수정하고, 반응이 없으면 고객 또는 문제 가설을 바꿉니다.",
+      nextActions: [
+        `오늘: ${customer} 후보를 찾을 수 있는 지인, 커뮤니티와 기존 연락처에서 인터뷰 대상 10명을 목록으로 만듭니다.`,
+        "내일: 목록의 첫 5명에게 판매 제안이 아니라 최근 경험을 듣기 위한 20분 대화를 요청하고 가능한 시간을 확정합니다.",
+        "3일 안: 같은 질문으로 인터뷰를 진행하고 문제 발생일, 현재 대안, 실제 비용과 가장 불편한 순간을 원문으로 기록합니다.",
+        "4일째: 반복된 문제와 구매 조건을 표로 묶고, 한 번도 언급되지 않은 기능은 첫 상품 범위에서 제외합니다.",
+        "5일째: 가장 자주 나온 문제 하나를 해결하는 가격 공개 제안을 10명에게 보내 결제, 보류와 거절 이유를 비교합니다.",
+      ],
     };
   }
   if (stageIndex === 2) {
     const verified = project.businessAssessment?.financial;
-    const price = number(inputs.basePriceWon, 290000);
+    const price = verified?.grossPrice ?? number(inputs.basePriceWon, 290000);
     const variableCost = number(inputs.variableCostWon, Math.round(price * 0.2));
     const fixedCost = number(inputs.monthlyFixedCostWon, 1000000);
     const contribution = Math.max(1, price - variableCost);
     return {
       tiers: [
-        { name: "입문형", priceWon: Math.round(price * 0.45), outcome: "문제 진단과 실행 방향" },
-        { name: "핵심형", priceWon: price, outcome: inputs.coreOutcome ?? "핵심 결과 완성" },
-        { name: "맞춤형", priceWon: Math.round(price * 2.2), outcome: "맞춤 실행과 후속 관리" },
+        { name: autoDraft.offerTiers[0].name, priceWon: Math.round(price * 0.45), outcome: autoDraft.offerTiers[0].outcome },
+        { name: autoDraft.offerTiers[1].name, priceWon: price, outcome: String(inputs.coreOutcome ?? autoDraft.offerTiers[1].outcome) },
+        { name: autoDraft.offerTiers[2].name, priceWon: Math.round(price * 2.2), outcome: autoDraft.offerTiers[2].outcome },
       ],
+      recommendedOffer: {
+        name: autoDraft.offerTiers[1].name,
+        priceWon: price,
+        reason: "첫 고객이 실제 결과를 확인할 만큼 충분한 범위를 제공하면서도, 처음부터 개발 대행이나 장기 운영까지 떠안지 않도록 핵심 결과만 묶은 기준 상품입니다.",
+        includedScope: `${autoDraft.offerTiers[1].outcome}, 시작 조건 확인, 결과 초안, 범위 안 수정 1회와 다음 행동 안내를 포함합니다.`,
+        excludedScope: "확인되지 않은 성과 보장, 무제한 수정, 별도 시스템 개발, 광고비와 외부 전문가 비용은 포함하지 않습니다.",
+        completionCriteria: "합의한 결과물이 전달되고 고객이 포함 범위와 다음 행동을 확인하면 완료로 봅니다. 새로운 요청은 기존 완료와 분리해 다시 견적합니다.",
+      },
       unitEconomics: verified
         ? {
             priceWon: verified.grossPrice,
@@ -193,6 +233,18 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
       scenarios: verified?.scenarios ?? [],
       financialWarnings: verified?.warnings ?? [],
       monthlyGoalCustomers: Math.ceil(number(inputs.monthlyRevenueGoalWon, 5000000) / price),
+      pricingRationale: [
+        `기준 가격 ${price.toLocaleString("ko-KR")}원은 저장된 손익 계산의 실제 판매가를 그대로 사용했으며, 임의의 업종 평균으로 바꾸지 않았습니다.`,
+        `고객 한 명당 남는 금액은 ${Math.round(verified?.contributionPerUnit ?? contribution).toLocaleString("ko-KR")}원으로 계산하며, 실제 작업시간과 외주비가 늘면 가격 또는 범위를 다시 조정합니다.`,
+        `월 손익분기 고객 수는 ${verified?.breakEvenUnits ?? Math.ceil(fixedCost / contribution)}명입니다. 이 수를 달성하기 전에는 고정비가 큰 사무실, 채용과 대규모 광고를 추가하지 않습니다.`,
+        "세 가지 가격은 기능을 임의로 잘게 나누기 위한 것이 아니라, 진단만 필요한 고객·핵심 결과가 필요한 고객·맞춤 지원이 필요한 고객의 구매 목적을 구분하기 위한 가설입니다.",
+        "첫 10건에서는 할인율보다 결제 이유, 제외 요청, 실제 작업시간과 수정 횟수를 기록하고 그 근거로 다음 가격을 한 번만 바꿉니다.",
+      ],
+      priceChangeRules: [
+        "예상보다 작업시간과 수정 요청이 많이 발생하면 가격을 바로 올리기 전에 포함 범위를 줄이고 완료 기준을 더 분명하게 안내합니다.",
+        "가격을 공개한 제안 10건 중 문의는 있지만 결제가 없으면 고객이 꼭 원하는 결과만 남겨 기준 상품의 범위와 가격을 한 번 수정합니다.",
+        "결제는 발생하지만 고객당 남는 금액이 0원 이하이면 판매를 늘리지 않고 원가, 외주 방식과 환불 조건을 먼저 다시 계산합니다.",
+      ],
       assumptions: mergeStringLists(
         inputs.assumptions,
         [
@@ -216,16 +268,13 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
   }
   if (stageIndex === 3) {
     const keywords = Array.isArray(inputs.preferredKeywords) ? inputs.preferredKeywords : ["명확함", "신뢰", "실행"];
+    const preferredNames = Array.isArray(inputs.preferredNames)
+      ? inputs.preferredNames.filter((item): item is string => typeof item === "string" && item.trim().length > 0)
+      : [];
     return {
-      nameCandidates: [
-        `${title.split(" ").slice(0, 2).join(" ")} 랩`,
-        `${title.split(" ").slice(0, 2).join(" ")} 프로젝트`,
-        `모두의 ${title.split(" ")[0]}`,
-        `이어봄 ${title.split(" ")[0]}`,
-        `${title.split(" ")[0]} 아카이브`,
-      ],
-      promise: `${customer} 고객이 흩어진 기록을 다시 찾고 다른 사람과 이어 쓸 수 있는 실행 자료로 바꾸도록 돕습니다. 저장 자체보다 실제 재사용과 다음 행동이 확인되는 결과를 약속합니다.`,
-      slogans: [`${title}의 새로운 기준`, "복잡한 기록을 이어 쓰는 지식으로", "오늘의 경험이 내일의 방법이 되도록", "사라지기 전에 기록하고, 필요할 때 꺼내 쓰세요", "모으는 기록에서 움직이는 기록으로"],
+      nameCandidates: [...new Set([...preferredNames, ...autoDraft.nameCandidates])].slice(0, 5),
+      promise: `${autoDraft.promise} 이름보다 고객이 받는 결과와 사용 조건을 먼저 설명하고, 확인되지 않은 성과는 약속하지 않습니다.`,
+      slogans: autoDraft.slogans,
       tone: inputs.tone ?? "실용적인",
       keywords,
       prohibitedClaims: ["무조건 성공", "업계 1위", "완벽 보장", ...(Array.isArray(inputs.prohibitedKeywords) ? inputs.prohibitedKeywords : [])],
@@ -235,16 +284,30 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
         "판매 페이지에서는 확인되지 않은 인공지능 정확도나 성과 수치를 사용하지 않습니다.",
         "제안서와 견적서에서는 브랜드명보다 결과물·수정 횟수·납기·개인정보 범위를 먼저 명시합니다.",
       ],
+      recommendedDirection: {
+        name: autoDraft.nameCandidates[0],
+        slogan: autoDraft.slogans[0],
+        reason: "처음 듣는 사람도 사업의 주제와 시작을 돕는 서비스라는 점을 빠르게 이해할 수 있어 첫 검증용 이름으로 추천합니다. 최종 확정 전에는 반드시 검색과 상표 확인을 거칩니다.",
+        usage: `${autoDraft.nameCandidates[0]} | ${autoDraft.slogans[0]}`,
+      },
+      candidateReasons: autoDraft.nameCandidates.map((name, index) => `${name}: ${index === 0 ? "서비스 목적이 바로 이해되는 우선 후보" : index === 1 ? "기획과 실행 구조를 강조하는 실용적 후보" : index === 2 ? "초보자의 부담을 낮추는 친근한 후보" : index === 3 ? "오늘 바로 시작한다는 행동성을 강조한 후보" : "도움을 받는 서비스라는 점이 쉬운 후보"}입니다.`),
+      nameReviewChecklist: [
+        "포털과 사회관계망에서 정확히 같은 이름과 비슷한 발음의 서비스를 검색하고 결과 화면과 검색일을 저장합니다.",
+        "특허정보검색서비스에서 제공할 상품·서비스와 관련된 분류를 확인하고 같은 이름과 유사 표장을 함께 찾습니다.",
+        "전화로 이름을 한 번 말했을 때 상대가 정확히 받아 적는지, 검색어를 다시 묻지 않는지 최소 5명에게 확인합니다.",
+        "현재 첫 상품뿐 아니라 앞으로 추가할 상품에도 사용할 수 있는지, 특정 지역이나 기능에 지나치게 묶이지 않는지 검토합니다.",
+        "최종 이름을 고르기 전 사용할 인터넷 주소와 사회관계망 계정의 사용 가능 여부를 확인하고 실제 확보 전에는 확정으로 표시하지 않습니다.",
+      ],
     };
   }
   if (stageIndex === 4) {
-    const defaultLegalNotice = "자동 정리 결과는 원문과 고객 검수를 거친 뒤 사용해야 하며 특정 성과를 보장하지 않습니다. 개인정보 수집 목적, 처리 범위, 보유 기간과 삭제 방법은 신청 전에 별도 동의받고 공개해야 합니다.";
+    const defaultLegalNotice = "인공지능이 만든 초안은 사용자 입력과 확인 가능한 자료를 바탕으로 하며 특정 성과를 보장하지 않습니다. 개인정보 수집 목적, 처리 범위, 보유 기간과 삭제 방법은 신청 전에 별도 동의받고 공개해야 합니다.";
     const suppliedLegalNotice = typeof inputs.legalNotice === "string" ? inputs.legalNotice.trim() : "";
     const defaultFaq = [
-      { question: "어떤 자료부터 맡길 수 있나요?", answer: "첫 상품에서는 사진, 메모, 음성 전사처럼 합의한 한 종류의 자료만 받습니다. 민감정보와 원본 보관 기간은 접수 전에 별도 안내합니다." },
-      { question: "인공지능이 내용을 임의로 만들지는 않나요?", answer: "원문에 없는 사실은 확정 내용으로 추가하지 않고 확인이 필요한 항목으로 표시합니다. 납품 전에 고객이 원문과 결과를 대조합니다." },
-      { question: "수정은 몇 번 가능한가요?", answer: "기본 상품은 범위 안에서 1회 수정을 포함합니다. 새로운 자료 추가나 구조 변경은 별도 범위와 금액을 먼저 안내합니다." },
-      { question: "개인정보와 원본은 언제 삭제하나요?", answer: "수집 목적과 보유 기간에 동의받고 납품·검수 종료 후 약정한 날짜에 삭제합니다. 삭제 완료 기록을 고객에게 전달합니다." },
+      { question: "무엇을 먼저 알려주면 되나요?", answer: `${autoDraft.customer}의 현재 상황과 원하는 결과를 알려주면 됩니다. 처음에는 완벽한 자료가 없어도 초안을 만들 수 있습니다.` },
+      { question: "인공지능이 내용을 임의로 만들지는 않나요?", answer: "입력에 없는 사실과 시장 수치는 확정 내용으로 추가하지 않고 가정 또는 확인 필요로 표시합니다. 사용 전 직접 검토하고 수정할 수 있습니다." },
+      { question: "초안이 마음에 들지 않으면 수정할 수 있나요?", answer: "기본 범위 안에서 원하는 부분을 수정 요청할 수 있습니다. 새로운 기능이나 제공 범위가 추가되면 일정과 비용을 먼저 안내합니다." },
+      { question: "개인정보는 어떻게 처리하나요?", answer: "수집 목적과 보유 기간에 동의받은 정보만 사용하고 약정한 기간이 끝나면 삭제합니다. 민감정보는 꼭 필요한 경우가 아니면 입력하지 않습니다." },
     ];
     const suppliedFaq = Array.isArray(inputs.faq)
       ? inputs.faq.filter((item): item is { question: string; answer: string } => {
@@ -256,22 +319,30 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
     const faq = [...suppliedFaq, ...defaultFaq.filter((item) => !suppliedFaq.some((supplied) => supplied.question === item.question))].slice(0, Math.max(4, suppliedFaq.length));
     return {
       blocks: [
-        { type: "hero", headline: inputs.headline ?? oneLiner, subheadline: inputs.subheadline ?? "흩어진 기록을 다시 찾고 이어 쓸 수 있는 실행 자료로 정리합니다. 먼저 한 종류의 자료와 한 가지 결과만 작게 맡겨보세요.", cta: inputs.callToAction ?? "첫 기록 진단 신청" },
-        { type: "problem", title: "기록은 많은데 필요할 때 찾기 어렵나요?", body: `${oneLiner} 사진, 대화, 수첩에 흩어진 경험은 정리 기준이 없으면 다른 사람이 이어받기 어렵고 실제 행동으로 연결되지 않습니다.` },
-        { type: "solution", title: "원문을 확인하고 재사용 구조로 정리합니다", body: `${String(opportunity.model ?? "맞춤 방식")}으로 자료 수집, 사실 확인, 분류, 다음 행동 제안, 고객 검수 순서로 진행합니다. 원문에 없는 내용은 확인 필요로 표시합니다.` },
-        { type: "process", title: "진행 순서", items: ["자료 종류와 제외정보 확인", "견적·보유기간·수정범위 확정", "초안 제작과 원문 대조", "고객 검수와 최종 납품", "원본 삭제 또는 반환 기록"] },
-        { type: "offer", title: "첫 상품에 포함되는 것", items: ["자료 최대 30건 정리", "핵심 내용 분류", "다음 행동 확인표", "인쇄용 PDF와 수정 가능한 워드 문서", "범위 내 수정 1회"] },
+        { type: "hero", headline: inputs.headline ?? autoDraft.headline, subheadline: inputs.subheadline ?? autoDraft.subheadline, cta: inputs.callToAction ?? autoDraft.callToAction },
+        { type: "problem", title: "이 문제 때문에 시작을 미루고 있나요?", body: `${autoDraft.problem} 고객이 현재 사용하는 대안과 실제로 포기하는 행동을 확인한 뒤 해결 범위를 정합니다.` },
+        { type: "solution", title: "가장 필요한 결과부터 작게 제공합니다", body: `${autoDraft.coreOutcome} ${String(opportunity.model ?? "맞춤 방식")}을 기준으로 포함 범위, 가격, 완료 기준과 다음 행동을 먼저 안내합니다.` },
+        { type: "process", title: "진행 순서", items: ["현재 상황과 원하는 결과 확인", "포함·제외 범위와 가격 확인", "첫 초안 제작", "고객 검토와 수정", "최종 결과와 다음 행동 전달"] },
+        { type: "offer", title: autoDraft.offerTiers[1].name, items: [autoDraft.offerTiers[1].outcome, "제공 범위와 제외 범위 안내", "완료 기준과 예상 일정", "범위 안 수정 1회", "다음 행동 확인표"] },
         { type: "pricing", title: "결제 전 확정하는 조건", items: ["총금액과 부가세", "자료 수와 형식", "납기", "수정 횟수", "원본 보유·삭제일", "취소·환불 기준"] },
         ...(Array.isArray(inputs.proofItems) && inputs.proofItems.length
           ? [{ type: "proof", title: "확인 가능한 근거", items: inputs.proofItems }]
           : [{ type: "proof", title: "공개 전 확보할 근거", items: ["익명 처리한 결과물 예시", "작업 단계별 확인표", "개인정보 삭제 기록", "실제 고객 동의를 받은 후기"] }]),
         { type: "faq", items: faq },
-        { type: "cta", headline: "전체 시스템을 만들기 전에 한 번의 실제 주문부터 검증하세요", button: inputs.callToAction ?? "첫 기록 진단 신청" },
+        { type: "cta", headline: "큰 비용을 쓰기 전에 첫 고객의 실제 반응부터 확인하세요", button: inputs.callToAction ?? autoDraft.callToAction },
       ],
       contact: { method: inputs.contactMethod ?? "신청폼", value: inputs.contactValue ?? "" },
       legalNotice: suppliedLegalNotice.length >= 60
         ? suppliedLegalNotice
         : [suppliedLegalNotice, defaultLegalNotice].filter(Boolean).join(" "),
+      publishingChecklist: [
+        "첫 화면에서 누구의 어떤 문제를 해결하는지, 고객이 받는 결과와 누를 버튼을 휴대전화 한 화면 안에서 확인합니다.",
+        "상품 가격, 포함 범위, 제외 범위, 예상 일정과 수정 횟수가 신청 전에 보이는지 실제 고객의 입장에서 다시 읽습니다.",
+        "문의 입력칸은 꼭 필요한 정보만 받고 개인정보 수집 목적, 보유 기간, 삭제 방법과 동의 여부를 함께 표시합니다.",
+        "후기와 성과 수치는 동의와 원문 증거가 있는 내용만 사용하고, 시험용 문구와 확인되지 않은 숫자는 공개 전에 제거합니다.",
+        "신청 버튼을 직접 눌러 문의가 저장되는지, 운영자가 알림을 받고 답변할 수 있는지 휴대전화와 컴퓨터에서 각각 시험합니다.",
+        "취소·환불 조건, 사업자 정보와 연락 방법을 하단에서 확인하고 실제 결제를 받기 전 판매자 고지사항을 최종 검토합니다.",
+      ],
     };
   }
   return {
@@ -308,6 +379,22 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
       "가격을 공개한 제안 10건 중 결제 3건 이상이면 같은 고객군에서 계속합니다.",
       "건당 공헌이익이 양수이고 대표자 작업시간이 목표 안에 들어와야 자동화 투자를 검토합니다.",
       "개인정보 삭제·환불·원문 대조 중 하나라도 반복 누락되면 판매를 중지하고 절차를 수정합니다.",
+    ],
+    messageUsageGuide: [
+      "첫 연락은 판매 문구를 길게 보내지 말고 상대가 최근에 문제를 겪었는지 확인하는 한 문장과 20분 대화 요청만 보냅니다.",
+      "답장이 없으면 이틀 뒤 한 번만 다시 연락하고, 두 번째에도 답이 없으면 거절로 기록한 뒤 반복 메시지를 보내지 않습니다.",
+      "인터뷰가 끝난 사람에게만 확인된 문제와 첫 상품 범위를 보내며 가격, 일정과 환불 조건을 숨기지 않고 같은 문장으로 제안합니다.",
+      "보류한 고객에게는 할인부터 제시하지 않고 망설인 이유가 가격, 신뢰, 시기 또는 제공 범위 중 무엇인지 한 가지만 묻습니다.",
+      "연락처와 대화 기록은 동의한 목적에만 사용하고 공개 문서에는 이름, 전화번호와 민감한 경험을 익명 처리합니다.",
+      "매주 접촉 수, 응답 수, 인터뷰 수, 가격 제안 수와 결제 수를 같은 표에 기록해 메시지가 아니라 실제 구매 흐름이 개선되는지 확인합니다.",
+    ],
+    launchRiskPlan: [
+      "10명에게 연락해 인터뷰 응답이 2명 미만이면 메시지를 늘리기 전에 고객 조건과 연락 경로가 맞는지 먼저 수정합니다.",
+      "인터뷰에서는 문제가 반복되지만 가격 제안에 반응이 없으면 필수 결과만 남겨 상품 범위를 줄이고 가격을 한 번 다시 시험합니다.",
+      "결제는 생기지만 작업시간과 수정 요청 때문에 고객당 이익이 남지 않으면 판매를 늘리지 않고 완료 기준과 추가 비용을 분리합니다.",
+      "환불, 개인정보 또는 약속한 결과 누락이 한 건이라도 발생하면 신규 판매를 멈추고 원인을 기록한 뒤 절차를 수정하고 재시험합니다.",
+      "30일 동안 유료 반응이 없거나 대표자가 가능한 시간 안에 제공할 수 없다면 광고비를 쓰지 않고 고객, 문제 또는 제공 방식을 변경합니다.",
+      "매주 마지막 날에는 성공 사례만 보지 않고 무응답, 거절, 중도 이탈과 환불 이유를 함께 검토합니다. 다음 주에는 가장 많이 반복된 실패 원인 한 가지만 고쳐 같은 조건으로 다시 시험합니다.",
     ],
   };
 }
