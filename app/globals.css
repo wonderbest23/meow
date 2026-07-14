@@ -587,7 +587,9 @@ a { color: inherit; text-decoration: none; }
 .narrative-input textarea { width: 100%; min-height: 220px; padding: 22px; border: 1px solid #d9e1dc; border-radius: 14px; background: white; color: var(--ink); font-size: 16px; line-height: 1.8; resize: vertical; outline: none; transition: border .2s, box-shadow .2s; }
 .narrative-input textarea:focus { border-color: var(--green); box-shadow: 0 0 0 4px #00a87812; }
 .narrative-input textarea::placeholder { color: #a2aba6; }
-.narrative-input > span { position: absolute; right: 15px; bottom: 12px; color: #99a39d; font-size: 11px; }
+.narrative-input-meta { min-height: 22px; margin-top: 7px; display: flex; align-items: center; justify-content: space-between; gap: 12px; color: #89958e; font-size: 11px; }
+.narrative-input-meta > span:first-child { color: #69776f; }
+.narrative-input-meta > span.ready { color: #087353; font-weight: 700; }
 .writing-tips { margin: 13px 0 25px; padding: 14px 16px; border-radius: 10px; background: #edf5f1; display: flex; align-items: flex-start; gap: 9px; }
 .writing-tips svg { width: 17px; color: var(--green-dark); flex: 0 0 auto; }
 .writing-tips p { color: #61736a; font-size: 12px; line-height: 1.65; margin: 0; }

@@ -439,7 +439,8 @@ export function inferProfileFromNarrative(responses: string[]): NarrativeInferen
   const topRiasec = [...riasecAxes].sort((a, b) => riasec[b] - riasec[a]).slice(0, 3);
   const topFounder = [...founderAxes].sort((a, b) => founder[b] - founder[a]).slice(0, 3);
   const numberToken = "[0-9,]+|[영공일이삼사오육칠팔구한두세네다섯여섯일곱여덟아홉십백천]+";
-  const budgetMatch = text.match(new RegExp(`(?:예산|자금|투자).{0,16}?(${numberToken})\\s*(만\\s*원?|원)?`));
+  const budgetPrefix = "(?:(?:으로는|으로|은|는|이|가)\\s*|[\\s,:]+|(?=[0-9]))(?:약|대략|최대|최소)?\\s*";
+  const budgetMatch = text.match(new RegExp(`(?:예산|자금|투자)${budgetPrefix}(${numberToken})\\s*(만\\s*원?|원)?`));
   const timeMatch = text.match(new RegExp(`(?:하루|주당|일주일).{0,10}?(${numberToken})\\s*시간`));
   const budgetNumber = budgetMatch ? parseKoreanNumber(budgetMatch[1]) : null;
   const budgetUnit = budgetMatch?.[2]?.replace(/\s/g, "") ?? "만";

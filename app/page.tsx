@@ -46,7 +46,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyPreference,
   calculateProfile,
@@ -374,6 +374,8 @@ const conversationPrompts = [
   },
 ];
 
+const minimumConversationResponseLength = 5;
+
 function ConversationDiscovery({
   onBack,
   onComplete,
@@ -386,11 +388,20 @@ function ConversationDiscovery({
   const [responses, setResponses] = useState<string[]>(initialDraft.responses);
   const [review, setReview] = useState<NarrativeInference | null>(null);
   const prompt = conversationPrompts[step];
+  const responseLength = responses[step].trim().length;
+  const canContinue = responseLength >= minimumConversationResponseLength;
+  const remainingCharacters = Math.max(minimumConversationResponseLength - responseLength, 0);
   const update = (value: string) => setResponses((current) => current.map((response, index) => index === step ? value : response));
 
   const next = () => {
     if (step < conversationPrompts.length - 1) setStep((current) => current + 1);
     else setReview(inferProfileFromNarrative(responses));
+  };
+
+  const handleKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+    event.preventDefault();
+    if (canContinue) next();
   };
 
   useEffect(() => {
@@ -409,7 +420,7 @@ function ConversationDiscovery({
         <Header onHome={onBack} />
         <section className="understanding-review">
           <button className="start-back" onClick={() => setReview(null)}><ArrowLeft /> 답변 수정</button>
-          <div className="review-heading"><h1>입력한 내용을 확인하세요</h1><p>다른 내용이 있으면 답변을 수정할 수 있어요.</p></div>
+          <div className="review-heading"><h1>입력한 내용을 확인하세요</h1><p>내용이 맞으면 바로 추천 결과로 이동할 수 있어요.</p></div>
           <div className="understanding-card">
             <div className="understanding-grid">
               <div><small>강점</small><div>{review.signals.slice(0, 3).map((signal) => <span key={signal}>{signal}</span>)}</div></div>
@@ -432,10 +443,21 @@ function ConversationDiscovery({
         <div className="assessment-nav"><button onClick={() => step ? setStep(step - 1) : onBack()}><ArrowLeft /> 이전</button><span>{step + 1} <i>/ {conversationPrompts.length}</i></span></div>
         <div className="conversation-bubble"><span><Sparkles /></span><div><small>{prompt.label}</small><h1>{prompt.question}</h1><p>{prompt.help}</p></div></div>
         <div className="narrative-input">
-          <textarea autoFocus value={responses[step]} onChange={(event) => update(event.target.value)} placeholder={prompt.placeholder} maxLength={1000} />
-          <span>{responses[step].length} / 1,000</span>
+          <textarea
+            autoFocus
+            value={responses[step]}
+            onChange={(event) => update(event.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={prompt.placeholder}
+            aria-describedby="conversation-input-hint"
+            maxLength={1000}
+          />
+          <div className="narrative-input-meta" id="conversation-input-hint" aria-live="polite">
+            <span className={canContinue ? "ready" : ""}>{canContinue ? "Enter를 누르면 다음으로 이동합니다" : `${remainingCharacters}자만 더 적어주세요`}</span>
+            <span>{responses[step].length} / 1,000</span>
+          </div>
         </div>
-        <PrimaryButton onClick={next} disabled={responses[step].trim().length < 20}>{step === conversationPrompts.length - 1 ? "결과 확인" : "다음"} <ArrowRight /></PrimaryButton>
+        <PrimaryButton onClick={next} disabled={!canContinue}>{step === conversationPrompts.length - 1 ? "입력 내용 확인" : "다음"} <ArrowRight /></PrimaryButton>
       </section>
     </main>
   );
