@@ -34,6 +34,21 @@ function keyHint(apiKey: string) {
   return `••••${apiKey.slice(-4)}`;
 }
 
+async function providerErrorSummary(response: Response) {
+  const payload = await response.clone().json().catch(() => null) as {
+    error?: { code?: unknown; type?: unknown; message?: unknown };
+  } | null;
+  const code = [payload?.error?.code, payload?.error?.type]
+    .find((value): value is string => typeof value === "string" && value.trim().length > 0);
+  const message = typeof payload?.error?.message === "string"
+    ? payload.error.message
+        .replace(/sk-[A-Za-z0-9_-]+/g, "[API key]")
+        .replace(/\b(?:org|proj)_[A-Za-z0-9_-]+\b/g, "[project]")
+        .slice(0, 240)
+    : "";
+  return [code, message].filter(Boolean).join(" · ") || `HTTP ${response.status}`;
+}
+
 function activeSession(guestHash: string) {
   const session = sessions.get(guestHash);
   if (!session) return null;
@@ -131,11 +146,12 @@ export async function runOpenAISmokeTest(config: OpenAIRuntimeConfig) {
   }
 
   if (!response.ok) {
+    const providerReason = await providerErrorSummary(response);
     if (response.status === 401) {
       throw new OpenAIConnectionError("OPENAI_KEY_INVALID", "OpenAI 연결키(API 키)가 만료되었거나 유효하지 않습니다.", 401);
     }
     if (response.status === 403 || response.status === 404) {
-      throw new OpenAIConnectionError("OPENAI_MODEL_UNAVAILABLE", "이 키로 선택한 모델을 생성에 사용할 수 없습니다.", 403);
+      throw new OpenAIConnectionError("OPENAI_MODEL_UNAVAILABLE", `이 키로 선택한 모델을 생성에 사용할 수 없습니다. OpenAI 응답: ${providerReason}`, 403);
     }
     if (response.status === 429) {
       throw new OpenAIConnectionError("OPENAI_RATE_LIMITED", "OpenAI 사용 한도 또는 요청 제한을 확인해주세요.", 429);
@@ -197,14 +213,15 @@ export async function validateOpenAIConnection(apiKey: string, model: string) {
   }
 
   if (response.ok) return;
+  const providerReason = await providerErrorSummary(response);
   if (response.status === 401) {
     throw new OpenAIConnectionError("OPENAI_KEY_INVALID", "유효하지 않은 OpenAI 연결키(API 키)입니다.", 401);
   }
   if (response.status === 403) {
-    throw new OpenAIConnectionError("OPENAI_KEY_FORBIDDEN", "이 키에는 선택한 모델을 사용할 권한이 없습니다.", 403);
+    throw new OpenAIConnectionError("OPENAI_KEY_FORBIDDEN", `이 키에는 선택한 모델을 사용할 권한이 없습니다. OpenAI 응답: ${providerReason}`, 403);
   }
   if (response.status === 404) {
-    throw new OpenAIConnectionError("OPENAI_MODEL_UNAVAILABLE", "선택한 모델을 이 프로젝트에서 사용할 수 없습니다.", 400);
+    throw new OpenAIConnectionError("OPENAI_MODEL_UNAVAILABLE", `선택한 모델을 이 프로젝트에서 사용할 수 없습니다. OpenAI 응답: ${providerReason}`, 400);
   }
   if (response.status === 429) {
     throw new OpenAIConnectionError("OPENAI_RATE_LIMITED", "OpenAI 사용 한도 또는 요청 제한을 확인해주세요.", 429);
