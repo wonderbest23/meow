@@ -206,7 +206,7 @@ export function BusinessSetupPanel({
       </div>
       {error && <div className="setup-error"><AlertTriangle /> {error}</div>}
       <div className="setup-live-total"><span>현재까지 계산된 필요자금</span><strong>{won(preview.totalFundingNeed)}</strong><small>처음 입력한 예산 {won(setup.financial.availableCash)}</small></div>
-      <footer className="setup-wizard-actions"><button onClick={() => setQuestionIndex(Math.max(0, safeIndex - 1))} disabled={saving || safeIndex === 0}><ArrowLeft /> 이전</button><button className="setup-unknown-button" onClick={useUnknown} disabled={saving}><CircleHelp /> 모르겠음으로 다음</button><button className="next-setup" onClick={next} disabled={saving}>{saving ? "계산 중..." : safeIndex === questions.length - 1 ? <><CircleDollarSign /> 손익 계산하기</> : <>다음 <ChevronRight /></>}</button></footer>
+      <footer className="setup-wizard-actions"><button onClick={() => setQuestionIndex(Math.max(0, safeIndex - 1))} disabled={saving || safeIndex === 0}><ArrowLeft /> 이전</button><button className="setup-unknown-button" onClick={useUnknown} disabled={saving}><CircleHelp /> 모르겠음</button><button className="next-setup" onClick={next} disabled={saving}>{saving ? "계산 중..." : safeIndex === questions.length - 1 ? <>계산하기 <CircleDollarSign /></> : <>다음 <ChevronRight /></>}</button></footer>
     </section>
   );
 }

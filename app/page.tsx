@@ -36,6 +36,7 @@ import {
   ReceiptText,
   RefreshCw,
   Rocket,
+  Search,
   Save,
   ShieldCheck,
   Sparkles,
@@ -48,7 +49,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { Fragment, type KeyboardEvent as ReactKeyboardEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyPreference,
   calculateProfile,
@@ -57,6 +58,7 @@ import {
   founderLabels,
   inferProfileFromNarrative,
   type AssessmentAnswers,
+  type FounderAxis,
   type FounderProfile,
   type NarrativeInference,
 } from "../lib/assessment";
@@ -78,7 +80,6 @@ import { RegionalCoveragePanel } from "../components/regional-coverage-panel";
 import { QualityAssurancePanel } from "../components/quality-assurance-panel";
 import { GrantMatcherPanel } from "../components/grant-matcher-panel";
 import { ServiceOpsPanel } from "../components/service-ops-panel";
-import { OpenAISettings } from "../components/openai-settings";
 import { HomeHeroScene, HomeResearchEvidence } from "../components/home-hero-scene";
 import { BeginnerMissionRoadmap } from "../components/beginner-mission-roadmap";
 import { DeliveryDocumentPreview } from "../components/delivery-document-preview";
@@ -119,6 +120,22 @@ type CapitalFilter = "전체" | "소액" | "중간" | "높음";
 const resumableScreens: Screen[] = ["start", "direct", "assessment", "conversation", "profile", "explore"];
 const directScreens: Screen[] = [...resumableScreens, "project", "sample", "delivery"];
 
+const founderCharacterImages: Record<FounderAxis, string> = {
+  opportunity: "/archetypes/opportunity.png",
+  customer: "/archetypes/customer.png",
+  creation: "/archetypes/creation.png",
+  execution: "/archetypes/execution.png",
+  uncertainty: "/archetypes/uncertainty.png",
+  scale: "/archetypes/scale.png",
+};
+
+const assessmentOptionIcons: Record<string, React.ReactNode> = {
+  make: <PackageCheck />, discover: <Search />, energy: <Users />, system: <ClipboardCheck />,
+  change: <Heart />, original: <Sparkles />, talk: <MessageCircle />, map: <BarChart3 />,
+  prototype: <FlaskConical />, pitch: <TrendingUp />, craft: <Gift />, repeat: <Layers3 />,
+  experiment: <Rocket />, evidence: <ShieldCheck />, close: <Users />, platform: <Zap />,
+};
+
 function emptyConversationDraft() {
   return { step: 0, responses: ["", "", "", ""], budgetManwon: "", availableHoursPerWeek: "" };
 }
@@ -134,7 +151,7 @@ function readConversationDraft() {
     } | null;
     if (!parsed?.responses || parsed.responses.length !== 4) return emptyConversationDraft();
     return {
-      step: Math.min(Math.max(parsed.step ?? 0, 0), 3),
+      step: Math.min(Math.max(parsed.step ?? 0, 0), 5),
       responses: parsed.responses.map((response) => typeof response === "string" ? response : ""),
       budgetManwon: parsed.budgetManwon === undefined ? "" : String(parsed.budgetManwon),
       availableHoursPerWeek: parsed.availableHoursPerWeek === undefined ? "" : String(parsed.availableHoursPerWeek),
@@ -175,8 +192,7 @@ function Header({
         </nav>
       )}
       <div className="header-actions">
-        <a className="account-link" href="/account"><UserRound /> 내 작업</a>
-        <OpenAISettings light={light} />
+        <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /><span>마이페이지</span></a>
         {onStart && <button className="small-start" onClick={onStart}>시작하기 <ArrowRight size={15} /></button>}
       </div>
     </header>
@@ -198,6 +214,32 @@ function PrimaryButton({
     <button className={`primary-cta ${dark ? "dark" : ""}`} onClick={onClick} disabled={disabled}>
       {children}
     </button>
+  );
+}
+
+function GuidedActionBar({
+  onBack,
+  onUnknown,
+  onNext,
+  nextLabel = "다음",
+  nextDisabled = false,
+  busy = false,
+}: {
+  onBack: () => void;
+  onUnknown?: () => void;
+  onNext: () => void;
+  nextLabel?: string;
+  nextDisabled?: boolean;
+  busy?: boolean;
+}) {
+  return (
+    <footer className="guided-action-bar">
+      <div>
+        <button type="button" className="guided-back" aria-label="이전" title="이전" onClick={onBack} disabled={busy}><ArrowLeft /><span>이전</span></button>
+        {onUnknown ? <button type="button" className="guided-unknown" onClick={onUnknown} disabled={busy}><CircleHelp /> 모르겠음</button> : <span />}
+        <button type="button" className="guided-next" onClick={onNext} disabled={nextDisabled || busy}>{nextLabel} <ArrowRight /></button>
+      </div>
+    </footer>
   );
 }
 
@@ -360,26 +402,28 @@ function StartChoice({
       <section className="start-choice-content">
         <button className="start-back" onClick={onBack}><ArrowLeft /> 처음으로</button>
         <div className="start-choice-heading">
-          <h1>시작 방법을<br className="start-heading-break" /> 선택하세요!</h1>
+          <span>3가지 중 하나만 고르면 돼요</span>
+          <h1>어떻게 시작할까요?</h1>
+          <p>가장 쉬운 방법을 먼저 준비했어요.</p>
         </div>
         <div className="start-mode-cards">
-          <button className="direct-mode" onClick={onDirect}>
-            <BriefcaseBusiness />
-            <span><strong>아이디어로 바로 기획</strong><small>아이디어·예산·시간 직접 입력</small></span>
-            <ArrowRight />
+          <button className="recommended-mode" onClick={onQuestionnaire}>
+            <span className="start-mode-icon"><CheckCircle2 /></span>
+            <span><em>가장 쉬워요</em><strong>간단한 질문으로 찾기</strong><small>{questionnaireProgress ? `${Math.min(questionnaireProgress + 1, coreQuestions.length)}번째 질문부터 이어서` : "두 가지 중 하나씩, 8번만 선택"}</small></span>
+            <b>시작하기 <ArrowRight /></b>
           </button>
-          <button onClick={onQuestionnaire}>
-            <CheckCircle2 />
-            <span><strong>질문으로 찾기</strong><small>{questionnaireProgress ? `${Math.min(questionnaireProgress + 1, coreQuestions.length)}번부터 이어서 하기` : "8개의 간단한 선택"}</small></span>
-            <ArrowRight />
+          <button className="direct-mode" onClick={onDirect}>
+            <span className="start-mode-icon"><BriefcaseBusiness /></span>
+            <span><strong>내 아이디어로 바로 기획</strong><small>아이디어가 이미 있을 때</small></span>
+            <b>시작하기 <ArrowRight /></b>
           </button>
           <button className="conversation-mode" onClick={onConversation}>
-            <MessageCircle />
-            <span><strong>대화로 찾기</strong><small>{conversationInProgress ? "작성하던 내용 이어서 하기" : "경험과 관심사를 직접 입력"}</small></span>
-            <ArrowRight />
+            <span className="start-mode-icon"><MessageCircle /></span>
+            <span><strong>내 경험을 적으며 찾기</strong><small>{conversationInProgress ? "작성하던 내용 이어서" : "하고 싶은 일이 아직 막연할 때"}</small></span>
+            <b>시작하기 <ArrowRight /></b>
           </button>
         </div>
-        <div className="start-privacy"><ShieldCheck /><span><strong>입력 내용은 맞춤 추천·문서 생성·프로젝트 저장에 사용됩니다.</strong> 인공지능 연결 시 생성에 필요한 내용이 OpenAI로 전송됩니다. 주민등록번호, 상세 주소, 계좌번호는 입력하지 마세요. <a href="/privacy" target="_blank" rel="noreferrer">개인정보 안내</a> · <a href="/ai-notice" target="_blank" rel="noreferrer">인공지능·국외 처리 안내</a></span></div>
+        <details className="start-privacy"><summary><ShieldCheck /> 입력 정보 이용 안내 <ChevronDown /></summary><p>입력 내용은 맞춤 추천과 문서 생성에만 사용합니다. 주민등록번호, 상세 주소, 계좌번호는 입력하지 마세요. <a href="/privacy" target="_blank" rel="noreferrer">개인정보 안내</a> · <a href="/ai-notice" target="_blank" rel="noreferrer">인공지능 처리 안내</a></p></details>
       </section>
     </main>
   );
@@ -405,25 +449,40 @@ function DirectPlanning({
   const validHours = availableHoursPerWeek !== "" && Number.isFinite(hours) && hours >= 1 && hours <= 100;
   const canContinue = step === 0 ? validIdea : step === 1 ? validBudget : validHours;
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const startProject = async (nextBudget: number, nextHours: number) => {
+    setBusy(true);
+    setError("");
+    try {
+      await onStart({
+        idea: idea.trim(),
+        budgetWon: Math.round(nextBudget * 10_000),
+        availableHoursPerWeek: Math.round(nextHours),
+      });
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "기획을 시작하지 못했습니다.");
+      setBusy(false);
+    }
+  };
+
+  const advance = async () => {
     if (!canContinue || busy) return;
     if (step < 2) {
       setStep((step + 1) as 1 | 2);
       setError("");
       return;
     }
-    setBusy(true);
-    setError("");
-    try {
-      await onStart({
-        idea: idea.trim(),
-        budgetWon: Math.round(budget * 10_000),
-        availableHoursPerWeek: Math.round(hours),
-      });
-    } catch (caught) {
-      setError(caught instanceof Error ? caught.message : "기획을 시작하지 못했습니다.");
-      setBusy(false);
+    await startProject(budget, hours);
+  };
+
+  const useRecommended = () => {
+    if (step === 1) {
+      setBudgetManwon("0");
+      setStep(2);
+      return;
+    }
+    if (step === 2) {
+      setAvailableHoursPerWeek("10");
+      void startProject(budget, 10);
     }
   };
 
@@ -443,7 +502,6 @@ function DirectPlanning({
     <main className="conversation-page direct-planning-page">
       <Header onHome={onBack} />
       <section className="direct-planning-shell">
-        <button className="start-back" onClick={goBack}><ArrowLeft /> {step === 0 ? "시작 방법" : "이전 질문"}</button>
         <div className="direct-step-progress" aria-label={`전체 3단계 중 ${step + 1}단계`}>
           <span>{step + 1} / 3</span>
           <div>{[0, 1, 2].map((index) => <i key={index} className={index <= step ? "active" : ""} />)}</div>
@@ -453,7 +511,7 @@ function DirectPlanning({
           <h1>{stepCopy.title.split("\n").map((line, index) => <Fragment key={line}>{index > 0 && <br />}{line}</Fragment>)}</h1>
           <p>{stepCopy.description}</p>
         </header>
-        <form onSubmit={submit} data-testid="direct-planning-form">
+        <form onSubmit={(event) => event.preventDefault()} data-testid="direct-planning-form">
           <div className="direct-step-panel" key={step}>
             {step === 0 && <label className="direct-idea-field">
               <span>하고 싶은 사업</span>
@@ -481,10 +539,17 @@ function DirectPlanning({
               <label><span>직접 입력</span><div><input autoFocus aria-label="주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} placeholder="10" required /><em>시간</em></div><small>평일과 주말을 합친 일주일 기준입니다.</small></label>
             </div>}
           </div>
-          <button className="direct-start-button" disabled={!canContinue || busy}>{busy ? "프로젝트 만드는 중..." : step === 0 ? "다음: 예산" : step === 1 ? "다음: 시간" : "이 아이디어로 기획 시작"} <ArrowRight /></button>
           {error && <p className="direct-plan-error" role="alert">{error}</p>}
         </form>
       </section>
+      <GuidedActionBar
+        onBack={goBack}
+        onUnknown={step === 0 ? undefined : useRecommended}
+        onNext={() => void advance()}
+        nextDisabled={!canContinue}
+        busy={busy}
+        nextLabel={busy ? "프로젝트 만드는 중" : step < 2 ? "다음" : "기획 시작"}
+      />
     </main>
   );
 }
@@ -531,30 +596,43 @@ function ConversationDiscovery({
   const [budgetManwon, setBudgetManwon] = useState(initialDraft.budgetManwon);
   const [availableHoursPerWeek, setAvailableHoursPerWeek] = useState(initialDraft.availableHoursPerWeek);
   const [review, setReview] = useState<NarrativeInference | null>(null);
-  const prompt = conversationPrompts[step];
-  const finalStep = step === conversationPrompts.length - 1;
-  const responseLength = responses[step].trim().length;
+  const totalSteps = conversationPrompts.length + 2;
+  const textStep = step < conversationPrompts.length;
+  const budgetStep = step === conversationPrompts.length;
+  const prompt = conversationPrompts[Math.min(step, conversationPrompts.length - 1)];
+  const responseLength = textStep ? responses[step].trim().length : 0;
   const budget = Number(budgetManwon);
   const hours = Number(availableHoursPerWeek);
   const hasValidBudget = budgetManwon !== "" && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000;
   const hasValidHours = availableHoursPerWeek !== "" && Number.isFinite(hours) && hours >= 1 && hours <= 100;
-  const hasRequiredNumbers = hasValidBudget && hasValidHours;
-  const canContinue = responseLength >= minimumConversationResponseLength && (!finalStep || hasRequiredNumbers);
+  const canContinue = textStep ? responseLength >= minimumConversationResponseLength : budgetStep ? hasValidBudget : hasValidHours;
   const remainingCharacters = Math.max(minimumConversationResponseLength - responseLength, 0);
   const update = (value: string) => setResponses((current) => current.map((response, index) => index === step ? value : response));
 
   const next = () => {
-    if (step < conversationPrompts.length - 1) setStep((current) => current + 1);
+    if (step < totalSteps - 1) setStep((current) => current + 1);
     else setReview(inferProfileFromNarrative(responses, {
       budgetWon: Math.round(budget * 10_000),
       availableHoursPerWeek: Math.round(hours),
     }));
   };
 
-  const handleKeyDown = (event: ReactKeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
-    event.preventDefault();
-    if (canContinue) next();
+  const skip = () => {
+    if (textStep) {
+      setResponses((current) => current.map((response, index) => index === step ? "아직 잘 모르겠어요." : response));
+      setStep((current) => current + 1);
+      return;
+    }
+    if (budgetStep) {
+      setBudgetManwon("0");
+      setStep((current) => current + 1);
+      return;
+    }
+    setAvailableHoursPerWeek("10");
+    setReview(inferProfileFromNarrative(responses, {
+      budgetWon: Math.round((hasValidBudget ? budget : 0) * 10_000),
+      availableHoursPerWeek: 10,
+    }));
   };
 
   useEffect(() => {
@@ -591,39 +669,26 @@ function ConversationDiscovery({
   return (
     <main className="conversation-page">
       <Header onHome={onBack} />
-      <div className="assessment-progress"><span style={{ width: `${((step + 1) / conversationPrompts.length) * 100}%` }} /></div>
+      <div className="assessment-progress"><span style={{ width: `${((step + 1) / totalSteps) * 100}%` }} /></div>
       <section className="conversation-content">
-        <div className="assessment-nav"><button onClick={() => step ? setStep(step - 1) : onBack()}><ArrowLeft /> 이전</button><span>{step + 1} <i>/ {conversationPrompts.length}</i></span></div>
-        <div className="conversation-bubble"><span><Sparkles /></span><div><small>{prompt.label}</small><h1>{prompt.question}</h1><p>{prompt.help}</p></div></div>
+        <div className="guided-step-count"><span>{step + 1} / {totalSteps}</span></div>
+        <div className="conversation-bubble"><span>{textStep ? <Sparkles /> : budgetStep ? <CircleDollarSign /> : <CalendarDays />}</span><div><small>{textStep ? prompt.label : budgetStep ? "시작 예산" : "사용할 시간"}</small><h1>{textStep ? prompt.question : budgetStep ? "얼마로 시작할까요?" : "일주일에 몇 시간을 쓸 수 있나요?"}</h1><p>{textStep ? prompt.help : budgetStep ? "모르면 0원으로 시작해도 괜찮아요." : "모르면 주 10시간을 기준으로 추천할게요."}</p></div></div>
         <div className="narrative-input">
-          <textarea
+          {textStep ? <textarea
             autoFocus
             value={responses[step]}
             onChange={(event) => update(event.target.value)}
-            onKeyDown={handleKeyDown}
             placeholder={prompt.placeholder}
             aria-describedby="conversation-input-hint"
             maxLength={1000}
-          />
-          {finalStep && (
-            <div className="planning-number-fields">
-              <label>
-                <span>시작 예산</span>
-                <div><input aria-label="대화 시작 예산" type="number" inputMode="numeric" min="0" max="1000000" step="1" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} required /><em>만원</em></div>
-              </label>
-              <label>
-                <span>주당 사용할 시간</span>
-                <div><input aria-label="대화 주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} required /><em>시간</em></div>
-              </label>
-            </div>
-          )}
+          /> : <div className="planning-number-fields single"><label><span>{budgetStep ? "시작 예산" : "주당 사용할 시간"}</span><div><input autoFocus aria-label={budgetStep ? "대화 시작 예산" : "대화 주당 사용할 시간"} type="number" inputMode="numeric" min={budgetStep ? "0" : "1"} max={budgetStep ? "1000000" : "100"} step="1" value={budgetStep ? budgetManwon : availableHoursPerWeek} onChange={(event) => budgetStep ? setBudgetManwon(event.target.value) : setAvailableHoursPerWeek(event.target.value)} required /><em>{budgetStep ? "만원" : "시간"}</em></div></label></div>}
           <div className="narrative-input-meta" id="conversation-input-hint" aria-live="polite">
-            <span className={canContinue ? "ready" : ""}>{canContinue ? "Enter를 누르면 다음으로 이동합니다" : remainingCharacters ? `${remainingCharacters}자만 더 적어주세요` : finalStep && !hasRequiredNumbers ? "예산과 주당 시간을 입력해주세요" : "입력을 확인해주세요"}</span>
-            <span>{responses[step].length} / 1,000</span>
+            <span className={canContinue ? "ready" : ""}>{canContinue ? "좋아요. 아래 다음 버튼을 눌러주세요." : textStep && remainingCharacters ? `${remainingCharacters}자만 더 적어주세요` : "숫자를 입력하거나 모르겠음을 눌러주세요."}</span>
+            {textStep && <span>{responses[step].length} / 1,000</span>}
           </div>
         </div>
-        <PrimaryButton onClick={next} disabled={!canContinue}>{step === conversationPrompts.length - 1 ? "입력 내용 확인" : "다음"} <ArrowRight /></PrimaryButton>
       </section>
+      <GuidedActionBar onBack={() => step ? setStep(step - 1) : onBack()} onUnknown={skip} onNext={next} nextDisabled={!canContinue} nextLabel={step === totalSteps - 1 ? "입력 내용 확인" : "다음"} />
     </main>
   );
 }
@@ -641,47 +706,71 @@ function Assessment({
 }) {
   const [step, setStep] = useState(Math.min(Object.keys(answers).length, coreQuestions.length - 1));
   const [showConstraints, setShowConstraints] = useState(false);
+  const [constraintStep, setConstraintStep] = useState<0 | 1>(0);
   const [budgetManwon, setBudgetManwon] = useState("");
   const [availableHoursPerWeek, setAvailableHoursPerWeek] = useState("");
   const question = coreQuestions[step];
   const selected = answers[question.id];
   const budget = Number(budgetManwon);
   const hours = Number(availableHoursPerWeek);
-  const constraintsReady = budgetManwon !== "" && availableHoursPerWeek !== ""
-    && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000
-    && Number.isFinite(hours) && hours >= 1 && hours <= 100;
+  const budgetReady = budgetManwon !== "" && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000;
+  const hoursReady = availableHoursPerWeek !== "" && Number.isFinite(hours) && hours >= 1 && hours <= 100;
 
   const choose = (optionId: string) => {
-    const next = { ...answers, [question.id]: optionId };
-    setAnswers(next);
-    window.setTimeout(() => {
-      if (step === coreQuestions.length - 1) setShowConstraints(true);
-      else setStep((current) => current + 1);
-    }, 260);
+    setAnswers({ ...answers, [question.id]: optionId });
   };
+
+  const nextQuestion = () => {
+    if (!selected) return;
+    if (step === coreQuestions.length - 1) {
+      setConstraintStep(0);
+      setShowConstraints(true);
+    } else setStep((current) => current + 1);
+  };
+
+  const skipQuestion = () => {
+    const next = { ...answers };
+    delete next[question.id];
+    setAnswers(next);
+    if (step === coreQuestions.length - 1) {
+      setConstraintStep(0);
+      setShowConstraints(true);
+    } else setStep((current) => current + 1);
+  };
+
+  const finishAssessment = (finalBudget: number, finalHours: number) => onComplete(answers, {
+    budgetWon: Math.round(finalBudget * 10_000),
+    availableHoursPerWeek: Math.round(finalHours),
+    notes: "8개 질문 완료 후 사용자가 직접 입력한 실행 조건",
+    source: "questionnaire",
+  });
 
   if (showConstraints) {
     return (
       <main className="assessment-page">
         <Header onHome={onExit} />
-        <div className="assessment-progress"><span style={{ width: "100%" }} /></div>
+        <div className="assessment-progress"><span style={{ width: `${((coreQuestions.length + constraintStep + 1) / (coreQuestions.length + 2)) * 100}%` }} /></div>
         <section className="assessment-content assessment-constraints">
-          <div className="assessment-nav"><button onClick={() => setShowConstraints(false)}><ArrowLeft /> 이전</button><span>마지막</span></div>
+          <div className="guided-step-count"><span>마지막 {constraintStep + 1} / 2</span></div>
           <div className="question-intro">
-            <p>추천을 실제로 실행할 수 있는 범위로 줄입니다.</p>
-            <h1>예산과 시간을 정확히 알려주세요.</h1>
+            <p>추천을 현실적인 범위로 맞출게요.</p>
+            <h1>{constraintStep === 0 ? "시작 예산은 얼마인가요?" : "일주일에 몇 시간을 쓸 수 있나요?"}</h1>
           </div>
-          <div className="questionnaire-number-fields">
-            <label><span>시작 예산</span><div><input aria-label="질문 시작 예산" type="number" inputMode="numeric" min="0" max="1000000" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} /><em>만원</em></div><small>아직 없다면 0을 입력해도 됩니다.</small></label>
-            <label><span>주당 사용할 시간</span><div><input aria-label="질문 주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} /><em>시간</em></div><small>현실적으로 꾸준히 쓸 수 있는 시간을 적어주세요.</small></label>
+          <div className="questionnaire-number-fields single">
+            {constraintStep === 0 ? <label><span>시작 예산</span><div><input autoFocus aria-label="질문 시작 예산" type="number" inputMode="numeric" min="0" max="1000000" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} /><em>만원</em></div><small>아직 정하지 않았다면 ‘모르겠음’을 눌러도 됩니다.</small></label>
+              : <label><span>주당 사용할 시간</span><div><input autoFocus aria-label="질문 주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} /><em>시간</em></div><small>모르면 주 10시간을 기준으로 추천합니다.</small></label>}
           </div>
-          <PrimaryButton disabled={!constraintsReady} onClick={() => onComplete(answers, {
-            budgetWon: Math.round(budget * 10_000),
-            availableHoursPerWeek: Math.round(hours),
-            notes: "8개 질문 완료 후 사용자가 직접 입력한 실행 조건",
-            source: "questionnaire",
-          })}>결과 확인하기 <ArrowRight /></PrimaryButton>
         </section>
+        <GuidedActionBar
+          onBack={() => constraintStep === 0 ? setShowConstraints(false) : setConstraintStep(0)}
+          onUnknown={() => {
+            if (constraintStep === 0) { setBudgetManwon("0"); setConstraintStep(1); }
+            else { setAvailableHoursPerWeek("10"); finishAssessment(budgetReady ? budget : 0, 10); }
+          }}
+          onNext={() => constraintStep === 0 ? setConstraintStep(1) : finishAssessment(budget, hours)}
+          nextDisabled={constraintStep === 0 ? !budgetReady : !hoursReady}
+          nextLabel={constraintStep === 0 ? "다음" : "결과 보기"}
+        />
       </main>
     );
   }
@@ -691,10 +780,7 @@ function Assessment({
       <Header onHome={onExit} />
       <div className="assessment-progress"><span style={{ width: `${((step + 1) / coreQuestions.length) * 100}%` }} /></div>
       <section className="assessment-content">
-        <div className="assessment-nav">
-          <button onClick={() => step ? setStep(step - 1) : onExit()}><ArrowLeft /> 이전</button>
-          <span>{step + 1} <i>/ {coreQuestions.length}</i></span>
-        </div>
+        <div className="guided-step-count"><span>{step + 1} / {coreQuestions.length}</span></div>
         <div className="question-intro">
           <p>{question.context}</p>
           <h1>{question.title}</h1>
@@ -702,7 +788,7 @@ function Assessment({
         <div className="choice-pair">
           {question.options.map((option, index) => (
             <button key={option.id} className={selected === option.id ? "selected" : ""} onClick={() => choose(option.id)}>
-              <span className="choice-letter">{String.fromCharCode(65 + index)}</span>
+              <span className="choice-letter">{assessmentOptionIcons[option.id] ?? String.fromCharCode(65 + index)}</span>
               <h2>{option.title}</h2>
               <p>{option.description}</p>
               <i>{selected === option.id ? <Check /> : <ArrowRight />}</i>
@@ -711,6 +797,12 @@ function Assessment({
           <b className="choice-or">또는</b>
         </div>
       </section>
+      <GuidedActionBar
+        onBack={() => step ? setStep(step - 1) : onExit()}
+        onUnknown={skipQuestion}
+        onNext={nextQuestion}
+        nextDisabled={!selected}
+      />
     </main>
   );
 }
@@ -732,16 +824,17 @@ function ProfileResult({
     <main className="profile-page">
       <Header onHome={onRestart} />
       <section className="profile-simple">
-        <span className="complete-label"><Check /> 찾기 완료</span>
-        <h1><em>{leadInterpretation.title}</em>와<br /><em>{secondInterpretation.title}</em> 성향이 강해요.</h1>
-        <p>{leadInterpretation.strength} {secondInterpretation.strength}</p>
+        <div className="profile-result-hero">
+          <div><span className="complete-label"><Check /> 성향 찾기 완료</span><h1>당신은<br /><em>{leadInterpretation.title}</em>예요.</h1><p>{leadInterpretation.strength}</p><span className="profile-second-type">함께 나타난 성향 · {secondInterpretation.title}</span></div>
+          <figure className={`founder-character character-${lead}`}><img src={founderCharacterImages[lead]} alt={`${leadInterpretation.title} 성향 캐릭터`} /><i /><i /></figure>
+        </div>
         <div className="profile-strengths">
           {profile.topFounder.map((axis) => (
             <article key={axis}><CheckCircle2 /><span><small>나의 강점</small><strong>{founderLabels[axis]}</strong></span></article>
           ))}
         </div>
         <div className="profile-caution"><ShieldCheck /><span><small>시작할 때 주의할 점</small><strong>{leadInterpretation.watchout}</strong></span></div>
-        <PrimaryButton onClick={onExplore}>추천 사업 보기 <ArrowRight /></PrimaryButton>
+        <PrimaryButton onClick={onExplore}>내 사업 찾기 시작 <ArrowRight /></PrimaryButton>
         <button className="restart-text" onClick={onRestart}><RefreshCw /> 다시 답하기</button>
       </section>
     </main>
@@ -761,12 +854,14 @@ function OpportunityCard({
   onSave: () => void;
   onExclude: () => void;
 }) {
+  const characterAxis = item.founder[0] ?? "opportunity";
   return (
     <article className={`opportunity-card ${item.color} ${state === "saved" ? "saved" : ""}`}>
       <div className="op-card-top">
         <span>{item.sector}</span>
         {state === "saved" && <strong><Check /> 저장됨</strong>}
       </div>
+      <div className="op-character"><img src={founderCharacterImages[characterAxis]} alt="" /><span>{founderLabels[characterAxis]}</span></div>
       <h3>{item.title}</h3>
       <p className="op-line">{item.oneLiner}</p>
       <div className="op-meta">
@@ -777,7 +872,7 @@ function OpportunityCard({
       <div className="op-actions">
         <button className={state === "saved" ? "active" : ""} aria-label={state === "saved" ? "저장 취소" : "사업 저장"} title={state === "saved" ? "저장 취소" : "사업 저장"} onClick={onSave}><Heart /></button>
         <button aria-label="추천에서 제외" title="추천에서 제외" onClick={onExclude}><ThumbsDown /></button>
-        <button onClick={onOpen}>자세히 <ArrowRight /></button>
+        <button className="op-start-preview" onClick={onOpen}>시작하기 <ArrowRight /></button>
       </div>
     </article>
   );
@@ -902,6 +997,7 @@ function Explore({
           <h1>어떤 사업이<br /><em>마음에 드세요?</em></h1>
           <p>관심 있는 사업을 저장하거나 자세히 살펴보세요.</p>
         </div>
+        <figure className="explore-character"><img src={founderCharacterImages[profile.topFounder[0]]} alt={`${founderInterpretations[profile.topFounder[0]].title} 성향 캐릭터`} /><figcaption><small>나의 창업 성향</small><strong>{founderInterpretations[profile.topFounder[0]].title}</strong></figcaption></figure>
         <div className="explore-head-actions">
           <div className="mode-tabs" aria-label="추천 방식">
             <button className={mode === "dna" ? "active" : ""} onClick={() => { setMode("dna"); setSector(""); }}>맞춤 추천</button>
@@ -2115,6 +2211,7 @@ function ProjectWorkspace({
   const [latestJob, setLatestJob] = useState<GenerationJobRecord | null>(null);
   const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
   const [showSavedSetup, setShowSavedSetup] = useState(false);
+  const [artifactExpanded, setArtifactExpanded] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
   const current = launchStages[activeStage];
   const completedStages = activeStage;
@@ -2162,6 +2259,7 @@ function ProjectWorkspace({
     setRevisionText("");
     setServiceError("");
     setShowSavedSetup(false);
+    setArtifactExpanded(false);
   }, [activeStage]);
 
   useEffect(() => {
@@ -2214,7 +2312,8 @@ function ProjectWorkspace({
   };
 
   const moveToArtifact = () => {
-    document.querySelector(".real-artifact-preview")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setArtifactExpanded(true);
+    window.setTimeout(() => document.querySelector(".artifact-preview-details")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
 
   const moveToRevision = () => {
@@ -2377,10 +2476,8 @@ function ProjectWorkspace({
       <section className="project-workspace">
         <header className="project-topbar"><div><span>내 프로젝트</span><strong>{opportunity.title}</strong></div><button onClick={onHome}>나가기</button></header>
         <nav className="mobile-stepper" aria-label="프로젝트 진행 단계">
-          <div><strong>{activeStage + 1}단계 / {launchStages.length}단계</strong><span>{current.name}</span></div>
-          <div>
-            {launchStages.map((stage, index) => <button key={stage.name} aria-current={index === activeStage ? "step" : undefined} disabled={index > activeStage} className={`${index === activeStage ? "active" : ""} ${index < activeStage ? "done" : ""}`} onClick={() => setActiveStage(index)}><span>{index < activeStage ? <Check /> : index + 1}</span><small>{stage.name}</small></button>)}
-          </div>
+          <div><span>{activeStage + 1} / {launchStages.length}</span><strong>{current.name}</strong><em>{current.period}</em></div>
+          <i><b style={{ width: `${((activeStage + 1) / launchStages.length) * 100}%` }} /></i>
         </nav>
         <div className="project-overview">
           <div><span className="project-status">진행 중 · {current.period}</span><p>21일 창업 실행 과정</p><h1>{opportunity.title}</h1><div><span><CalendarDays /> 목표 공개일 7월 31일</span><span><BriefcaseBusiness /> {opportunity.model}</span></div></div>
@@ -2431,7 +2528,7 @@ function ProjectWorkspace({
                 )}
               </section>
             )}
-            {latestArtifact ? <ArtifactContentPreview artifact={latestArtifact} stageIndex={activeStage} /> : !serverProject ? <StageWorkProduct stage={activeStage} opportunity={opportunity} price={price} setPrice={setPrice} brandChoice={brandChoice} setBrandChoice={setBrandChoice} onRegenerate={generateServerArtifact} onRequestRevision={moveToRevision} isWorking={serviceAction !== "idle"} /> : null}
+            {latestArtifact ? <details className="artifact-preview-details" open={artifactExpanded} onToggle={(event) => setArtifactExpanded(event.currentTarget.open)}><summary><span><Eye /><strong>완성된 초안 내용 보기</strong><small>필요할 때만 펼쳐보세요</small></span><ChevronDown /></summary><ArtifactContentPreview artifact={latestArtifact} stageIndex={activeStage} /></details> : !serverProject ? <StageWorkProduct stage={activeStage} opportunity={opportunity} price={price} setPrice={setPrice} brandChoice={brandChoice} setBrandChoice={setBrandChoice} onRegenerate={generateServerArtifact} onRequestRevision={moveToRevision} isWorking={serviceAction !== "idle"} /> : null}
             {(latestArtifact || !serverProject) && <div className="stage-task-list" id="stage-checklist">
               <div><strong>마지막으로 한 번만 확인</strong><span>{current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length} / {current.tasks.length}</span></div>
               <p className="checklist-help">초안의 방향이 괜찮다면 아래 버튼을 누르세요. 세부 내용은 나중에도 수정할 수 있습니다.</p>
