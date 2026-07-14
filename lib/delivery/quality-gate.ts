@@ -365,7 +365,7 @@ export function evaluateDeliveryDocument(
   return {
     score,
     status: failed.some((check) => check.blocking) ? "needs_work" : "ready",
-    label: failed.some((check) => check.blocking) ? "내용 보강 필요" : "납품 기준 통과",
+    label: failed.some((check) => check.blocking) ? "초안 완성 · 확인 메모 있음" : "초안 내용 확인 완료",
     metrics,
     checks,
     issues: failed.map((check) => check.label),
@@ -424,7 +424,7 @@ export function evaluateDeliveryPackage(
   const verifiedSourceCount = Math.max(0, ...documents.map((document) => document.quality.verifiedSourceCount));
   const checks = [
     { id: "documents", label: "10종 결과물 존재", passed: allPresent && documents.length === 10, detail: `${documents.filter((document) => document.source !== "missing").length}/10개 생성` },
-    { id: "depth", label: "문서별 내용 기준", passed: allReady, detail: allReady ? "모든 문서가 각기 다른 납품 기준을 통과했습니다." : `${documents.filter((document) => document.quality.status !== "ready").length}개 문서 보강 필요` },
+    { id: "depth", label: "문서별 내용 기준", passed: allReady, detail: allReady ? "모든 문서가 각기 다른 내용 기준을 통과했습니다." : `${documents.filter((document) => document.quality.status !== "ready").length}개 문서에 나중에 확인할 메모가 있습니다.` },
     { id: "financial", label: "숫자 일치", passed: financial.passed, detail: financial.detail },
     { id: "identity", label: "문서 식별자 일치", passed: uniqueIds, detail: uniqueIds ? "중복되거나 빠진 문서 번호가 없습니다." : "중복 문서 번호가 있습니다." },
     { id: "demo", label: "시험용 자료 제거", passed: noDemo, detail: noDemo ? "실제 결과물에 시험용 문구가 없습니다." : "시험용 자료가 실제 결과물에 포함되어 있습니다." },
@@ -444,7 +444,7 @@ export function evaluateDeliveryPackage(
   return {
     score,
     status,
-    label: status === "ready" ? "AI 납품 검수 통과" : status === "conditional" ? "문서 완성 · 근거 추가 권장" : "자동 보강 필요",
+    label: status === "ready" ? "전체 초안 확인 완료" : status === "conditional" ? "문서 완성 · 근거 추가 권장" : "전체 초안 완성 · 확인 메모 있음",
     readyCount: documents.filter((document) => document.quality.status === "ready").length,
     totalCount: documents.length,
     blockerCount,
@@ -467,7 +467,7 @@ export function packageQualityMarkdown(quality: DeliveryPackageQuality) {
     "",
     "| 확인 항목 | 결과 | 설명 |",
     "| --- | --- | --- |",
-    ...quality.checks.map((check) => `| ${escapeTable(check.label)} | ${check.passed ? "통과" : "보강 필요"} | ${escapeTable(check.detail)} |`),
+    ...quality.checks.map((check) => `| ${escapeTable(check.label)} | ${check.passed ? "확인" : "추가 확인"} | ${escapeTable(check.detail)} |`),
     "",
     "## 읽을 때 기억할 점",
     "",

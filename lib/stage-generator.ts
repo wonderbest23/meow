@@ -403,9 +403,10 @@ async function generateWithOpenAI(
   project: ProjectRecord,
   stageIndex: number,
   revisionInstruction?: string,
-  runtimeConfig?: OpenAIRuntimeConfig | null,
+  runtimeConfig?: OpenAIRuntimeConfig | null | false,
   currentDraft?: Record<string, unknown>,
 ) {
+  if (runtimeConfig === false) return null;
   const apiKey = runtimeConfig?.apiKey ?? process.env.OPENAI_API_KEY;
   if (!apiKey) return null;
   const model = runtimeConfig?.model ?? process.env.OPENAI_MODEL ?? "gpt-5.6-sol";
@@ -469,21 +470,24 @@ export async function generateStageArtifact(
   project: ProjectRecord,
   stageIndex: number,
   revisionInstruction?: string,
-  runtimeConfig?: OpenAIRuntimeConfig | null,
+  runtimeConfig?: OpenAIRuntimeConfig | null | false,
 ): Promise<Omit<ArtifactRecord, "id" | "projectId" | "stageId" | "stageIndex" | "version" | "createdAt"> & { model: string }> {
   let aiContent: Record<string, unknown> | null = null;
   let autoRewritten = false;
+  let fallbackReason = "";
   try {
     aiContent = await generateWithOpenAI(project, stageIndex, revisionInstruction, runtimeConfig);
   } catch (error) {
-    if (!(error instanceof Error) || !error.message.startsWith("OPENAI_INVALID_OUTPUT")) throw error;
-    aiContent = await generateWithOpenAI(
-      project,
-      stageIndex,
-      [revisionInstruction, "첫 응답이 필수 항목 또는 JSON 형식을 충족하지 못했습니다. 모든 필수 항목을 충분한 분량으로 다시 작성하세요."].filter(Boolean).join("\n"),
-      runtimeConfig,
-    ).catch(() => null);
-    autoRewritten = Boolean(aiContent);
+    fallbackReason = error instanceof Error ? error.message : "OPENAI_GENERATION_FAILED";
+    if (error instanceof Error && error.message.startsWith("OPENAI_INVALID_OUTPUT")) {
+      aiContent = await generateWithOpenAI(
+        project,
+        stageIndex,
+        [revisionInstruction, "첫 응답이 필수 항목 또는 JSON 형식을 충족하지 못했습니다. 모든 필수 항목을 충분한 분량으로 다시 작성하세요."].filter(Boolean).join("\n"),
+        runtimeConfig,
+      ).catch(() => null);
+      autoRewritten = Boolean(aiContent);
+    }
   }
   let content = aiContent ?? validateStageContent(stageIndex, fallbackContent(project, stageIndex));
   let artifactQuality = inspectStageArtifact(project, stageIndex, content);
@@ -511,12 +515,13 @@ export async function generateStageArtifact(
   ].filter((value): value is string => typeof value === "string");
   return {
     model: aiContent
-      ? runtimeConfig?.model ?? process.env.OPENAI_MODEL ?? "gpt-5.6-sol"
+      ? (runtimeConfig ? runtimeConfig.model : process.env.OPENAI_MODEL) ?? "gpt-5.6-sol"
       : "deterministic-fallback-v1",
     schemaVersion: "2.0",
     content,
     explanations: [
       "사용자가 저장한 단계 입력과 이전 승인 결과물을 우선 반영했습니다.",
+      ...(fallbackReason ? ["인공지능 연결이 원활하지 않아 검증된 기본 생성 방식으로 초안을 완성했습니다."] : []),
       aiContent
         ? `AI 자동 납품 검수 ${artifactQuality.score}점${autoRewritten ? " · 부족 항목을 자동으로 한 번 보강했습니다." : " · 첫 생성본이 기준을 통과했습니다."}`
         : "인공지능 연결키가 없어 확인 가능한 계산과 기본 양식을 사용해 초안을 생성했습니다.",

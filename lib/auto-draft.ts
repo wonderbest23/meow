@@ -31,6 +31,21 @@ function usableCustomer(value: string) {
   return value.length >= 4 && !/(첫 기획|초기 목표|확인할.*고객|고객 검증 후)/.test(value);
 }
 
+function inferCustomerFromIdea(idea: string, shortTitle: string) {
+  const normalized = idea.replace(/[.!?].*$/, "").trim();
+  const audiencePatterns = [
+    /^(.{2,40}?)을\s*위한\s+/,
+    /^(.{2,40}?)를\s*위한\s+/,
+    /^(.{2,40}?)에게\s+/,
+    /^(.{2,40}?)의\s+[^.]{2,40}?(?:을|를)\s+/,
+  ];
+  for (const pattern of audiencePatterns) {
+    const candidate = normalized.match(pattern)?.[1]?.trim();
+    if (candidate && !/(서비스|사업|아이디어|플랫폼|기능)$/.test(candidate)) return candidate;
+  }
+  return `${shortTitle}의 필요성을 느끼는 초기 고객`;
+}
+
 export function deriveAutoDraftContext(opportunity: OpportunityLike): AutoDraftContext {
   const title = text(opportunity.title, "새 사업");
   const idea = text(opportunity.oneLiner, title);
@@ -71,7 +86,7 @@ export function deriveAutoDraftContext(opportunity: OpportunityLike): AutoDraftC
 
   const customer = usableCustomer(suppliedCustomer)
     ? suppliedCustomer
-    : `${shortTitle}의 필요성을 느끼지만 무엇부터 시작할지 정하지 못한 초기 고객`;
+    : inferCustomerFromIdea(idea, shortTitle);
   return {
     title,
     shortTitle,

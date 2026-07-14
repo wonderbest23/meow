@@ -262,6 +262,38 @@ export async function deleteProject(
   return Boolean(data);
 }
 
+export async function updateProjectOpportunity(
+  projectId: string,
+  guestTokenHash: string,
+  updates: { customer?: string; oneLiner?: string },
+): Promise<ProjectRecord> {
+  const supabase = getServerSupabase();
+  const project = await getProject(projectId, guestTokenHash);
+  if (!project) throw new Error("PROJECT_NOT_FOUND");
+  const opportunity = {
+    ...project.opportunity,
+    ...(updates.customer ? { customer: updates.customer } : {}),
+    ...(updates.oneLiner ? { oneLiner: updates.oneLiner } : {}),
+  };
+
+  if (!supabase) {
+    const stored = demoStore.get(projectId)!;
+    stored.opportunity = clone(opportunity);
+    stored.updatedAt = new Date().toISOString();
+    return clone(stored);
+  }
+
+  const { error } = await supabase
+    .from("projects")
+    .update({ opportunity })
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash);
+  if (error) throw error;
+  const updated = await getProject(projectId, guestTokenHash);
+  if (!updated) throw new Error("PROJECT_NOT_FOUND");
+  return updated;
+}
+
 export async function saveLaunchMissionWorkspace(
   projectId: string,
   guestTokenHash: string,

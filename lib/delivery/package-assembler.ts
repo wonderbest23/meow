@@ -472,7 +472,7 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
       qualityReason: contentReady
         ? businessReady ? null : businessReadinessReason(project, item.id)
         : `최종 납품 최소 기준 미달 · 자동 납품 검수: ${quality.issues.slice(0, 3).join(", ")}`,
-      versionLabel: contentReady ? item.versionLabel : "내용 보강 필요",
+      versionLabel: contentReady ? item.versionLabel : "자동 생성 초안",
     };
   });
   const deliveryQuality = evaluateDeliveryPackage(

@@ -272,7 +272,7 @@ export function generateBusinessPlan(
     "",
     `생성일: ${new Date().toLocaleDateString("ko-KR")}`,
     `작성 구조: 2026 창업지원포털(K-Startup)의 고객 문제 · 해결 방법 · 성장 전략 · 팀 구성 순서`,
-    `제출 준비도: ${readinessScore}% · ${submissionReady ? "제출 전 최종 원문 대조 필요" : "제출 불가"}`,
+    `작성 준비도: ${readinessScore}% · ${submissionReady ? "공식 제출 전 최종 원문 대조 필요" : "작성 초안 완성 · 공식 제출 전 추가 확인 필요"}`,
     "",
     "> 이 문서는 공식 한글 문서 양식(HWPX)에 옮기기 전 작성 초안입니다. 공고별 원본 서식과 증빙목록을 대체하지 않습니다.",
     "",
