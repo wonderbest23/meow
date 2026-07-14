@@ -175,6 +175,15 @@ export function needsPhysicalLocationAnalysis(archetype: BusinessArchetype) {
 }
 
 export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup {
+  const inferredFinancialFields = [
+    "sellingPrice",
+    "targetMonthlyUnits",
+    "launchMarketing",
+    "accounting",
+    "software",
+    "fixedMarketing",
+    ...(archetype === "professional_service" ? ["laborPerUnit"] : []),
+  ];
   return {
     archetype,
     legalForm: "undecided",
@@ -186,7 +195,7 @@ export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup 
     handlesPersonalData: ["digital_service", "ecommerce"].includes(archetype),
     importsOrExports: false,
     sectorKeywords: [],
-    unknownFields: [],
+    unknownFields: inferredFinancialFields,
     financial: {
       sellingPrice: archetype === "ecommerce" ? 39000 : 290000,
       priceIncludesVat: true,
@@ -224,7 +233,7 @@ export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup 
         materialsOrPurchase: archetype === "ecommerce" ? 15_000 : 0,
         packaging: archetype === "ecommerce" ? 1_000 : 0,
         shipping: archetype === "ecommerce" ? 3_500 : 0,
-        laborPerUnit: 0,
+        laborPerUnit: archetype === "professional_service" ? 120_000 : 0,
         pgFeeRate: 3.3,
         platformFeeRate: 0,
         returnAndWasteRate: archetype === "ecommerce" ? 5 : 0,

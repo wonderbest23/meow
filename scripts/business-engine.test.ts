@@ -26,6 +26,12 @@ const lossAnalysis = calculateFinancialAnalysis(lossMaking);
 assert.equal(lossAnalysis.breakEvenUnits, null, "공헌이익이 음수이면 BEP를 계산하면 안 됩니다.");
 assert.ok(lossAnalysis.warnings.some((warning) => warning.includes("판매할수록 손실")));
 
+const professional = emptyBusinessSetup("professional_service");
+const professionalAnalysis = calculateFinancialAnalysis(professional.financial);
+assert.ok(professional.financial.unitVariable.laborPerUnit > 0, "전문 서비스는 건당 작업비 추천값이 필요합니다.");
+assert.ok(professionalAnalysis.contributionMarginRate < 60, "작업비가 빠진 과도한 기본 이익률을 보여주면 안 됩니다.");
+assert.ok(professional.unknownFields.includes("laborPerUnit"), "추천 작업비는 확인 전 임시값으로 표시해야 합니다.");
+
 ecommerce.onlineSales = true;
 ecommerce.handlesPersonalData = true;
 const ecommerceAssessment = assessBusinessSetup(ecommerce);

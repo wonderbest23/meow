@@ -81,7 +81,7 @@ export function recommendedSetupValue(setup: BusinessSetup, id: string): string 
     materialsOrPurchase: archetype === "ecommerce" ? 15_000 : archetype === "manufacturing" ? 30_000 : 0,
     packaging: archetype === "ecommerce" || archetype === "manufacturing" ? 1_000 : 0,
     shipping: archetype === "ecommerce" || archetype === "manufacturing" ? 3_500 : 0,
-    laborPerUnit: 0,
+    laborPerUnit: archetype === "professional_service" ? 120_000 : 0,
   };
   return recommendations[id] ?? 0;
 }

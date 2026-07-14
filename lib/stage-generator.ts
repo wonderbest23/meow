@@ -425,8 +425,8 @@ async function generateWithOpenAI(
     body: JSON.stringify({
       model,
       store: false,
-      reasoning: { effort: "high" },
-      max_output_tokens: 12_000,
+      reasoning: { effort: "low" },
+      max_output_tokens: 6_000,
       text: { format: { type: "json_object" } },
       input: [
         {
@@ -454,6 +454,7 @@ async function generateWithOpenAI(
         },
       ],
     }),
+    signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) {
     throw new Error(`OPENAI_${response.status}`);

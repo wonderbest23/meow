@@ -101,6 +101,9 @@ export function calculateFinancialAnalysis(input: FinancialInput): FinancialAnal
   if (input.vatTaxable && !input.priceIncludesVat) {
     warnings.push("판매가가 부가세 별도입니다. 고객 표시가격과 세금계산서 발행 기준을 확인하세요.");
   }
+  if (variable.laborPerUnit === 0) {
+    warnings.push("고객 한 명당 대표자 작업시간·외주비가 0원입니다. 실제 작업비를 확인하기 전 이익률은 임시값입니다.");
+  }
   const contingencyRiskBase =
     input.initial.interior +
     input.initial.equipment +

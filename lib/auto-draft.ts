@@ -28,7 +28,8 @@ function conciseTitle(value: string) {
 }
 
 function usableCustomer(value: string) {
-  return value.length >= 4 && !/(첫 기획|초기 목표|확인할.*고객|고객 검증 후)/.test(value);
+  return value.length >= 4
+    && !/(첫 기획|초기 목표|확인할.*고객|고객 검증 후|개인.?공공|개인·공공|누구나|모든 사람|전체 고객)/.test(value);
 }
 
 function inferCustomerFromIdea(idea: string, shortTitle: string) {
@@ -43,7 +44,7 @@ function inferCustomerFromIdea(idea: string, shortTitle: string) {
     const candidate = normalized.match(pattern)?.[1]?.trim();
     if (candidate && !/(서비스|사업|아이디어|플랫폼|기능)$/.test(candidate)) return candidate;
   }
-  return `${shortTitle}의 필요성을 느끼는 초기 고객`;
+  return `'${shortTitle}' 문제를 최근 경험한 초기 고객`;
 }
 
 export function deriveAutoDraftContext(opportunity: OpportunityLike): AutoDraftContext {
@@ -92,9 +93,9 @@ export function deriveAutoDraftContext(opportunity: OpportunityLike): AutoDraftC
     shortTitle,
     idea,
     customer,
-    problem: `${customer}에게는 ${idea}와 관련된 선택 기준, 예상 비용과 첫 실행 순서가 흩어져 있어 결정을 미루게 되는 문제가 있습니다.`,
-    coreOutcome: `${idea}를 실제로 시험할 수 있도록 필요한 범위, 가격과 실행 순서를 하나의 초안으로 받습니다.`,
-    promise: `${customer}이 복잡한 준비 과정을 줄이고 가장 필요한 결과부터 확인하도록 돕습니다. 입력에 없는 사실은 가정으로 표시하고 실제 반응으로 수정합니다.`,
+    problem: `주요 고객은 ${customer}입니다. 이 고객은 '${shortTitle}' 관련 해결책을 찾을 때 선택 기준, 예상 비용과 첫 실행 순서가 흩어져 있어 결정을 미루기 쉽습니다.`,
+    coreOutcome: `'${shortTitle}' 사업을 작은 범위에서 시험할 수 있도록 필요한 범위, 가격과 실행 순서를 하나의 초안으로 받습니다.`,
+    promise: `주요 고객이 복잡한 준비 과정을 줄이고 가장 필요한 결과부터 확인하도록 돕습니다. 입력에 없는 사실은 가정으로 표시하고 실제 반응으로 수정합니다.`,
     offerTiers: [
       { name: `${shortTitle} 빠른 진단`, outcome: "현재 문제와 적합성, 가장 작은 시작 범위 확인" },
       { name: `${shortTitle} 핵심 실행`, outcome: "고객이 기대하는 대표 결과와 다음 행동 제공" },
@@ -102,14 +103,14 @@ export function deriveAutoDraftContext(opportunity: OpportunityLike): AutoDraftC
     ],
     nameCandidates: [`${shortTitle} 시작`, `${shortTitle} 한걸음`, `${shortTitle} 플랜`, `오늘의 ${shortTitle}`, `${shortTitle} 도움`],
     slogans: [
-      `${idea}를 가장 쉬운 첫 실행으로`,
-      `${customer}을 위한 명확한 시작`,
+      `${shortTitle}, 가장 쉬운 첫 실행으로`,
+      `주요 고객을 위한 명확한 시작`,
       "복잡한 준비를 줄이고 필요한 결과부터",
       "오늘 확인하고 바로 시작하는 방법",
       "작게 시험하고 근거로 키우는 사업",
     ],
     headline: idea,
-    subheadline: `${customer}을 위해 필요한 범위와 가격을 먼저 정리하고, 가장 작은 실행부터 시작합니다.`,
+    subheadline: `주요 고객에게 필요한 범위와 가격을 먼저 정리하고, 가장 작은 실행부터 시작합니다.`,
     callToAction: "첫 초안 받아보기",
   };
 }
