@@ -4,6 +4,10 @@ import {
   inspectStageArtifact,
   stageQualityRevisionInstruction,
 } from "./quality/stage-artifact";
+import {
+  businessRealityRevisionInstruction,
+  inspectBusinessReality,
+} from "./quality/business-reality";
 import { deriveAutoDraftContext } from "./auto-draft";
 import { z } from "zod";
 
@@ -134,6 +138,7 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
         "사용자가 아직 모르는 비용과 시장 수치는 추천값 또는 가정으로 표시하고 실제 견적과 공식 원문이 생기면 자동 계산을 다시 갱신합니다.",
         "첫 고객의 반복 문제, 지불 의사와 대표자 작업시간 중 하나라도 확인되지 않으면 기능을 늘리지 않고 고객 또는 제공 범위를 먼저 수정합니다.",
       ],
+      deliveryDefinition: "이 단계의 완료는 사업 성공을 뜻하지 않습니다. 누구에게 어떤 결과를 얼마의 범위로 시험할지, 쓰지 않을 비용과 중단 기준이 문서에 남고 다음 21일 동안 실행할 인터뷰·가격 제안·증거 수집 순서가 정해진 상태를 뜻합니다.",
     };
   }
   if (stageIndex === 1) {
@@ -343,6 +348,7 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
         "신청 버튼을 직접 눌러 문의가 저장되는지, 운영자가 알림을 받고 답변할 수 있는지 휴대전화와 컴퓨터에서 각각 시험합니다.",
         "취소·환불 조건, 사업자 정보와 연락 방법을 하단에서 확인하고 실제 결제를 받기 전 판매자 고지사항을 최종 검토합니다.",
       ],
+      trustPolicy: "판매 페이지는 아직 확인되지 않은 시장 수치, 고객 반응과 성과를 홍보 문구로 사용하지 않습니다. 공개 전에는 실제 연락 방법, 제공 범위, 총금액, 일정, 수정·환불 조건과 개인정보 처리 안내를 운영자가 직접 확인하며, 확보되지 않은 후기와 인증은 확인 필요 상태로 남깁니다.",
     };
   }
   return {
@@ -419,11 +425,14 @@ async function generateWithOpenAI(
     body: JSON.stringify({
       model,
       store: false,
+      reasoning: { effort: "high" },
+      max_output_tokens: 12_000,
+      text: { format: { type: "json_object" } },
       input: [
         {
           role: "system",
           content:
-            "당신은 한국 초보 창업자의 실행을 돕는 제품 전략가입니다. 과장하거나 성공을 보장하지 마세요. 입력에 없는 사실과 시장 수치를 만들지 말고, 근거가 없으면 assumption 또는 unknown으로 표시하세요. 짧은 요약문이 아니라 소비자가 유료로 받은 뒤 그대로 실행할 수 있는 상세 문서를 만드세요. 각 핵심 문자열은 이유와 행동을 포함한 완성 문장으로, 목록은 중복 없이 충분한 개수로 작성하고 담당자·기한·비용 산식·완료 증거·중단 기준을 가능한 필드 안에 구체적으로 담으세요. 반드시 유효한 JSON 객체만 출력하세요.",
+            "당신은 한국에서 실제로 실행할 사업 초안을 작성하는 선임 사업전략가입니다. 이 작업은 소설·광고 창작이 아닙니다. 사용자 입력, 저장된 계산, 연결된 원문만 완료 사실로 사용할 수 있습니다. 고객 인터뷰·설문·판매·매출·시장규모·성장률·경력·수상·특허·제휴·후기를 절대 만들어내지 마세요. 모델의 기억이나 일반 상식을 최신 한국 시장의 확정 수치로 쓰지 마세요. 근거가 없으면 반드시 검증할 가정, 목표 또는 추가 확인 필요로 표현하고 미래형·조건형 문장을 사용하세요. 가격과 손익은 businessAssessment의 계산값을 그대로 유지하고 임의의 업종 평균으로 바꾸지 마세요. baselineDraft의 모든 핵심 필드와 안전 문구를 유지하면서 사업별 고객·제공범위·운영순서·중단기준을 구체화하세요. 과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사와 인터넷 주소를 금지합니다. 소비자가 유료로 받은 뒤 실행할 수 있을 만큼 상세히 작성하되 확인되지 않은 내용을 그럴듯하게 채워 분량을 늘리지 마세요. 반드시 설명이나 마크다운 없이 유효한 JSON 객체 하나만 출력하세요.",
         },
         {
           role: "user",
@@ -434,6 +443,7 @@ async function generateWithOpenAI(
             stageInputs: project.stages[stageIndex].inputs,
             businessSetup: project.businessSetup,
             businessAssessment: project.businessAssessment,
+            baselineDraft: fallbackContent(project, stageIndex),
             priorApprovedArtifacts: project.stages
               .slice(0, stageIndex)
               .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.content)
@@ -472,6 +482,7 @@ export async function generateStageArtifact(
   revisionInstruction?: string,
   runtimeConfig?: OpenAIRuntimeConfig | null | false,
 ): Promise<Omit<ArtifactRecord, "id" | "projectId" | "stageId" | "stageIndex" | "version" | "createdAt"> & { model: string }> {
+  const baselineContent = validateStageContent(stageIndex, fallbackContent(project, stageIndex));
   let aiContent: Record<string, unknown> | null = null;
   let autoRewritten = false;
   let fallbackReason = "";
@@ -487,44 +498,70 @@ export async function generateStageArtifact(
         runtimeConfig,
       ).catch(() => null);
       autoRewritten = Boolean(aiContent);
+      if (aiContent) fallbackReason = "";
     }
   }
-  let content = aiContent ?? validateStageContent(stageIndex, fallbackContent(project, stageIndex));
+  let content = aiContent
+    ? validateStageContent(stageIndex, { ...baselineContent, ...aiContent })
+    : baselineContent;
+  let usedAI = Boolean(aiContent);
   let artifactQuality = inspectStageArtifact(project, stageIndex, content);
-  if (aiContent && !artifactQuality.passed) {
+  let realityReview = inspectBusinessReality(project, content);
+  if (usedAI && (!artifactQuality.passed || !realityReview.passed)) {
     const revised = await generateWithOpenAI(
       project,
       stageIndex,
-      [revisionInstruction, stageQualityRevisionInstruction(artifactQuality)].filter(Boolean).join("\n\n"),
+      [
+        revisionInstruction,
+        !artifactQuality.passed ? stageQualityRevisionInstruction(artifactQuality) : "",
+        !realityReview.passed ? businessRealityRevisionInstruction(realityReview) : "",
+      ].filter(Boolean).join("\n\n"),
       runtimeConfig,
       content,
     ).catch(() => null);
     if (revised) {
-      const revisedQuality = inspectStageArtifact(project, stageIndex, revised);
-      if (revisedQuality.score >= artifactQuality.score) {
-        content = revised;
+      const completedRevision = validateStageContent(stageIndex, { ...baselineContent, ...revised });
+      const revisedQuality = inspectStageArtifact(project, stageIndex, completedRevision);
+      const revisedReality = inspectBusinessReality(project, completedRevision);
+      if (revisedReality.passed && revisedQuality.score >= artifactQuality.score) {
+        content = completedRevision;
         artifactQuality = revisedQuality;
+        realityReview = revisedReality;
         autoRewritten = true;
       }
     }
   }
+  if (usedAI && (!realityReview.passed || !artifactQuality.passed)) {
+    content = baselineContent;
+    usedAI = false;
+    fallbackReason = realityReview.passed ? "OPENAI_QUALITY_GATE_FAILED" : "OPENAI_REALITY_GATE_FAILED";
+    artifactQuality = inspectStageArtifact(project, stageIndex, content);
+    realityReview = inspectBusinessReality(project, content);
+  }
+  const resolvedModel = usedAI
+    ? (runtimeConfig ? runtimeConfig.model : process.env.OPENAI_MODEL) ?? "gpt-5.6-sol"
+    : "deterministic-fallback-v1";
   const inputs = project.stages[stageIndex].inputs;
   const sourceUrls = [
     ...(Array.isArray(inputs.referenceUrls) ? inputs.referenceUrls : []),
     ...(Array.isArray(inputs.evidenceUrls) ? inputs.evidenceUrls : []),
   ].filter((value): value is string => typeof value === "string");
   return {
-    model: aiContent
-      ? (runtimeConfig ? runtimeConfig.model : process.env.OPENAI_MODEL) ?? "gpt-5.6-sol"
-      : "deterministic-fallback-v1",
+    model: resolvedModel,
     schemaVersion: "2.0",
     content,
     explanations: [
+      usedAI
+        ? `생성 방식: OpenAI API · ${resolvedModel}`
+        : "생성 방식: 규칙 기반 안전 초안 · OpenAI API 미적용",
       "사용자가 저장한 단계 입력과 이전 승인 결과물을 우선 반영했습니다.",
-      ...(fallbackReason ? ["인공지능 연결이 원활하지 않아 검증된 기본 생성 방식으로 초안을 완성했습니다."] : []),
-      aiContent
+      ...(fallbackReason ? ["OpenAI 응답을 그대로 사용할 수 없어 출처 없는 사실을 만들지 않는 기본 초안으로 전환했습니다."] : []),
+      usedAI
         ? `AI 자동 납품 검수 ${artifactQuality.score}점${autoRewritten ? " · 부족 항목을 자동으로 한 번 보강했습니다." : " · 첫 생성본이 기준을 통과했습니다."}`
-        : "인공지능 연결키가 없어 확인 가능한 계산과 기본 양식을 사용해 초안을 생성했습니다.",
+        : "확인 가능한 사용자 입력과 저장된 계산만 사용해 초안을 생성했습니다.",
+      realityReview.passed
+        ? "사실성 검수: 출처 없는 실적·시장 수치·고객 후기·경력·성과 보장 표현이 없습니다."
+        : `사실성 검수에서 남은 확인 항목: ${realityReview.issues.map((issue) => issue.message).join(" / ")}`,
       artifactQuality.passed
         ? "문서별 필수 항목·분량·숫자 일치 기준을 통과했습니다."
         : `자동 검수에서 남은 보강 항목: ${artifactQuality.issues.join(" / ")}`,

@@ -13,6 +13,8 @@
     "lint": "tsc --noEmit",
     "test:business": "tsx scripts/business-engine.test.ts",
     "test:auto-draft": "tsx scripts/auto-draft.test.ts",
+    "test:reality": "tsx scripts/business-reality.test.ts",
+    "test:openai-reality": "tsx scripts/openai-reality-gate.test.ts",
     "test:setup-wizard": "tsx scripts/setup-wizard.test.ts",
     "test:market": "tsx scripts/market-plan.test.ts",
     "test:landing": "tsx scripts/landing-domain.test.ts",

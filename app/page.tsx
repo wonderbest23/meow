@@ -1475,6 +1475,29 @@ function FinalDelivery({
   const approvedMarketArtifact = serverProject?.stages[1]?.artifacts.find((artifact) => artifact.id === serverProject.stages[1].approvedArtifactId);
   const artifactCustomer = typeof approvedMarketArtifact?.content.primaryCustomer === "string" ? approvedMarketArtifact.content.primaryCustomer : "";
   const resolvedCustomer = artifactCustomer || deriveAutoDraftContext(opportunity).customer;
+  const approvedArtifacts = serverProject?.stages
+    .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId))
+    .filter((artifact): artifact is ArtifactRecord => Boolean(artifact)) ?? [];
+  const aiGeneratedCount = approvedArtifacts.filter((artifact) => artifact.explanations.some((item) => item.includes("생성 방식: OpenAI API"))).length;
+  const generationModel = approvedArtifacts
+    .flatMap((artifact) => artifact.explanations)
+    .map((item) => item.match(/생성 방식: OpenAI API · (.+)$/)?.[1])
+    .find((model): model is string => Boolean(model));
+  const generationMode = demo ? "sample" : aiGeneratedCount === 6 ? "ai" : aiGeneratedCount > 0 ? "mixed" : "fallback";
+  const generationTitle = generationMode === "ai"
+    ? `OpenAI API 핵심 초안 6단계 고도화 완료${generationModel ? ` · ${generationModel}` : ""}`
+    : generationMode === "mixed"
+      ? `OpenAI API ${aiGeneratedCount}/6단계 적용`
+      : generationMode === "sample"
+        ? "화면 확인용 가상 사례"
+        : "규칙 기반 안전 초안 · OpenAI API 미적용";
+  const generationDescription = generationMode === "ai"
+    ? "사업 전용 생성 규칙과 사실성 검수를 통과했습니다. 계획서·발표자료는 승인 초안과 저장된 계산을 다시 조립하며, 출처·인허가는 연결된 원문을 기준으로 최종 확인하세요."
+    : generationMode === "mixed"
+      ? "일부 단계만 OpenAI로 생성되었습니다. 나머지는 사용자 입력과 저장된 계산만 사용하는 안전 초안입니다."
+      : generationMode === "sample"
+        ? "실제 사업 판단에 사용할 수 없는 화면 구성 예시입니다."
+        : "허구의 실적과 시장 수치를 만들지 않는 기본 초안입니다. AI 고도화가 적용된 결과로 오해하지 마세요.";
   const [landingPreview, setLandingPreview] = useState(false);
   const [fundingBreakdownOpen, setFundingBreakdownOpen] = useState(false);
   const [activeReport, setActiveReport] = useState<"summary" | "business" | "market" | "landing" | "launch" | "documents">("summary");
@@ -1808,14 +1831,14 @@ function FinalDelivery({
     <main className={`delivery-page ${demo ? "sample-delivery" : "user-delivery"}`}>
       <Header onHome={onHome} />
       {demo && <section className="sample-preview-bar"><div><span><Eye /> 실제 제공 화면 예시 · 가상 사업 사례</span><strong>완료 후 사용자가 보는 화면과 같은 구조입니다.</strong></div>{onStart && <button onClick={onStart}>내 사업 무료로 시작하기 <ArrowRight /></button>}</section>}
-      <div className="delivery-ai-disclosure"><Sparkles /><p><strong>생성형 인공지능 초안이 포함된 결과물입니다.</strong> 출처·금액·인허가 조건은 각 문서의 확인 표시와 공식 원문을 기준으로 최종 확인하세요.</p><a href="/ai-notice" target="_blank" rel="noreferrer">처리 안내 보기</a></div>
+      <div className={`delivery-ai-disclosure ${generationMode}`}><ShieldCheck /><p><strong>{generationTitle}</strong> {generationDescription}</p><a href="/ai-notice" target="_blank" rel="noreferrer">처리 안내 보기</a></div>
       <section className="delivery-content" id={demo ? "sample-result-details" : "delivery-result-details"}>
         <div className="delivery-main">
           <section className={`final-report-viewer ${activeReport === "launch" ? "mission-mode" : ""}`}>
             <header className="final-report-chrome">
               <div aria-hidden="true"><i /><i /><i /></div>
               <span><Sparkles /> {resolvedBrandName} 맞춤 사업 실행 보고서</span>
-              <em><i /> 초안 준비됨</em>
+              <em><i /> {generationMode === "ai" ? "AI 고도화" : generationMode === "sample" ? "화면 예시" : "안전 초안"}</em>
             </header>
             <aside className="final-report-sidebar">
               <header><small>최종 결과</small><strong>{resolvedBrandName}</strong></header>

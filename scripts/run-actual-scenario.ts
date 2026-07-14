@@ -249,13 +249,14 @@ async function generateAndApproveStage(
     "deterministic-fallback-v1",
   );
   const generated = await generateStageArtifact(project, stageIndex, undefined, null);
-  const { model: _model, ...artifactInput } = generated;
+  const { model, ...artifactInput } = generated;
   const artifact = await finishGeneration(
     projectId,
     stageIndex,
     guestTokenHash,
     job.id,
     artifactInput,
+    model,
   );
   const current = required(await getProject(projectId, guestTokenHash), "프로젝트를 읽지 못했습니다.");
   const [landing, legalSnapshots] = await Promise.all([

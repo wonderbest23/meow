@@ -1,4 +1,5 @@
 import type { ProjectRecord } from "../service-domain";
+import { inspectBusinessReality } from "../quality/business-reality";
 import { deliveryDocumentMetrics } from "./metrics";
 
 export type DeliveryVerificationStatus = "verified" | "input_based" | "assumption_based";
@@ -345,6 +346,14 @@ export function evaluateDeliveryDocument(
   const metrics = deliveryDocumentMetrics(document);
   const evidence = evidenceForDocument(document.id, collectEvidence(project));
   const verifiedSourceCount = evidence.filter((row) => row.status === "verified").length;
+  const realityReview = document.source === "server_package"
+    ? inspectBusinessReality(project, {
+        documentLines: bodyMarkdown
+          .split("\n")
+          .map((line) => line.replace(/https?:\/\/[^\s)\]}>"']+/gi, "[연결된 원문]").trim())
+          .filter(Boolean),
+      })
+    : { passed: true, issues: [] };
   const checks = [
     { id: "characters", label: `실행 설명 ${standard.minCharacters.toLocaleString("ko-KR")}자 이상`, passed: bodyMetrics.characters >= standard.minCharacters, blocking: true },
     { id: "sections", label: `핵심 항목 ${standard.minSections}개 이상`, passed: bodyMetrics.sections >= standard.minSections, blocking: true },
@@ -353,6 +362,14 @@ export function evaluateDeliveryDocument(
     { id: "demo", label: "시험용 자료 없음", passed: !/(?:example\.com|화면\s*예시|가상\s*사례|테스트\s*후보)/i.test(document.markdown), blocking: true },
     { id: "sources", label: "출처·확인 상태 표시", passed: document.markdown.includes("## 출처와 확인 상태"), blocking: true },
     { id: "facts", label: "사실·계산·가정 구분", passed: document.markdown.includes("검증할 가정") && document.markdown.includes("추가 확인 필요"), blocking: true },
+    {
+      id: "reality",
+      label: realityReview.passed
+        ? "허구 실적·출처 없는 시장 수치 없음"
+        : `사실성 확인 필요: ${realityReview.issues.slice(0, 2).map((issue) => issue.message).join(", ")}`,
+      passed: realityReview.passed,
+      blocking: true,
+    },
   ];
   const failed = checks.filter((check) => !check.passed);
   const score = Math.max(0, Math.round(100 - failed.filter((check) => check.blocking).length * 13 - failed.filter((check) => !check.blocking).length * 4));

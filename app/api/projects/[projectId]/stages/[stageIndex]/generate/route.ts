@@ -59,13 +59,14 @@ export async function POST(
       metadata: { attempt: job.attempt, model },
     });
     const generated = await generateStageArtifact(project, stageIndex, undefined, openAIConfig);
-    const { model: _generatedModel, ...artifactInput } = generated;
+    const { model: generatedModel, ...artifactInput } = generated;
     const artifact = await finishGeneration(
       projectId,
       stageIndex,
       identity.hash,
       job.id,
       artifactInput,
+      generatedModel,
     );
     await recordServiceAudit({
       projectId,
@@ -76,9 +77,9 @@ export async function POST(
       resourceId: artifact.id,
       status: "success",
       detail: `${stageIndex + 1}단계 결과물 생성에 성공했습니다.`,
-      metadata: { attempt: job.attempt, version: artifact.version },
+      metadata: { attempt: job.attempt, version: artifact.version, model: generatedModel },
     });
-    return NextResponse.json({ jobId: job.id, status: "succeeded", artifact });
+    return NextResponse.json({ jobId: job.id, status: "succeeded", artifact, generation: { model: generatedModel } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "결과물 생성에 실패했습니다.";
     const code = message.startsWith("OPENAI_") ? message : "GENERATION_FAILED";

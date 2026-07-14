@@ -693,6 +693,7 @@ export async function finishGeneration(
   guestTokenHash: string,
   jobId: string,
   artifact: Omit<ArtifactRecord, "id" | "projectId" | "stageId" | "stageIndex" | "version" | "createdAt">,
+  actualModel?: string,
 ): Promise<ArtifactRecord> {
   const supabase = getServerSupabase();
   const project = await getProject(projectId, guestTokenHash);
@@ -715,6 +716,7 @@ export async function finishGeneration(
     const job = demoJobStore.get(jobId);
     if (job) {
       job.status = "succeeded";
+      if (actualModel) job.model = actualModel;
       job.artifactId = created.id;
       job.finishedAt = new Date().toISOString();
     }
@@ -742,6 +744,7 @@ export async function finishGeneration(
     supabase.from("project_stages").update({ status: "ready_for_review" }).eq("id", stage.id),
     supabase.from("generation_jobs").update({
       status: "succeeded",
+      ...(actualModel ? { model: actualModel } : {}),
       artifact_id: data.id,
       finished_at: new Date().toISOString(),
     }).eq("id", jobId),
