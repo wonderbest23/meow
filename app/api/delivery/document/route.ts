@@ -44,11 +44,14 @@ export async function POST(request: Request) {
     const baseName = safeFileName(payload.documents.length === 1
       ? payload.documents[0].title
       : `${payload.project.title}-전체-출시-문서`);
+    const fontResponse = await fetch(new URL("/fonts/NanumGothic-Regular.ttf", request.url));
+    if (!fontResponse.ok) throw new Error(`DOCUMENT_FONT_UNAVAILABLE:${fontResponse.status}`);
+    const fontData = new Uint8Array(await fontResponse.arrayBuffer());
     const body = payload.format === "pdf"
-      ? await renderPdf(payload.documents, payload.project)
+      ? await renderPdf(payload.documents, payload.project, fontData)
       : payload.format === "docx"
-        ? await renderDocx(payload.documents, payload.project)
-        : await renderDeliveryZip(payload.documents, payload.project);
+        ? await renderDocx(payload.documents, payload.project, fontData)
+        : await renderDeliveryZip(payload.documents, payload.project, fontData);
     const contentType = payload.format === "pdf"
       ? "application/pdf"
       : payload.format === "docx"

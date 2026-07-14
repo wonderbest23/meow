@@ -225,7 +225,17 @@ function coverBlocks(document: BusinessDocument, project: DocumentProjectMeta, f
   ];
 }
 
-export async function renderDocx(documents: BusinessDocument[], project: DocumentProjectMeta): Promise<Buffer> {
+type DeliveryFontData = Buffer | Uint8Array;
+
+function deliveryFontData(fontData?: DeliveryFontData) {
+  return fontData ? Buffer.from(fontData) : readFileSync(pdfFontPath());
+}
+
+export async function renderDocx(
+  documents: BusinessDocument[],
+  project: DocumentProjectMeta,
+  fontData?: DeliveryFontData,
+): Promise<Buffer> {
   const children = documents.flatMap((document, index) => [
     ...coverBlocks(document, project, index === 0),
     ...docxBlocks(document),
@@ -234,7 +244,7 @@ export async function renderDocx(documents: BusinessDocument[], project: Documen
     creator: "창업 실행 캔버스",
     title: documents.length === 1 ? documents[0].title : `${project.title} 전체 창업 실행 문서`,
     description: "한국 초보 창업자를 위한 실행 문서",
-    fonts: [{ name: docxFont, data: readFileSync(pdfFontPath()) }],
+    fonts: [{ name: docxFont, data: deliveryFontData(fontData) }],
     numbering: {
       config: [{
         reference: "delivery-numbering",
@@ -269,7 +279,7 @@ export async function renderDocx(documents: BusinessDocument[], project: Documen
 type Pdf = InstanceType<typeof PDFDocument>;
 
 function pdfFontPath() {
-  return path.join(process.cwd(), "assets", "fonts", "NanumGothic-Regular.ttf");
+  return path.join(process.cwd(), "public", "fonts", "NanumGothic-Regular.ttf");
 }
 
 function pdfEnsureSpace(doc: Pdf, height: number) {
@@ -388,14 +398,20 @@ function pdfCover(doc: Pdf, document: BusinessDocument, project: DocumentProject
   doc.addPage();
 }
 
-export async function renderPdf(documents: BusinessDocument[], project: DocumentProjectMeta): Promise<Buffer> {
+export async function renderPdf(
+  documents: BusinessDocument[],
+  project: DocumentProjectMeta,
+  fontData?: DeliveryFontData,
+): Promise<Buffer> {
   return await new Promise<Buffer>((resolve, reject) => {
-    const doc = new PDFDocument({ size: "A4", font: pdfFontPath(), margins: { top: 62, right: 54, bottom: 72, left: 54 }, bufferPages: true, info: { Title: documents.length === 1 ? documents[0].title : `${project.title} 전체 창업 실행 문서`, Author: "창업 실행 캔버스" } });
+    const font = deliveryFontData(fontData);
+    // PDFKit accepts font buffers here, although its public option type only declares paths.
+    const doc = new PDFDocument({ size: "A4", font: font as unknown as string, margins: { top: 62, right: 54, bottom: 72, left: 54 }, bufferPages: true, info: { Title: documents.length === 1 ? documents[0].title : `${project.title} 전체 창업 실행 문서`, Author: "창업 실행 캔버스" } });
     const chunks: Buffer[] = [];
     doc.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
     doc.on("error", reject);
     doc.on("end", () => resolve(Buffer.concat(chunks)));
-    doc.registerFont("Nanum", pdfFontPath());
+    doc.registerFont("Nanum", font);
 
     documents.forEach((document, index) => {
       pdfCover(doc, document, project, index === 0);
@@ -418,17 +434,21 @@ function safeFileName(value: string) {
   return value.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-").slice(0, 80);
 }
 
-export async function renderDeliveryZip(documents: BusinessDocument[], project: DocumentProjectMeta): Promise<Buffer> {
+export async function renderDeliveryZip(
+  documents: BusinessDocument[],
+  project: DocumentProjectMeta,
+  fontData?: DeliveryFontData,
+): Promise<Buffer> {
   const archive = new JSZip();
   const combinedName = safeFileName(`${project.title}-전체-창업-실행-문서`);
-  archive.file(`00_${combinedName}.pdf`, await renderPdf(documents, project));
-  archive.file(`00_${combinedName}.docx`, await renderDocx(documents, project));
+  archive.file(`00_${combinedName}.pdf`, await renderPdf(documents, project, fontData));
+  archive.file(`00_${combinedName}.docx`, await renderDocx(documents, project, fontData));
   for (let index = 0; index < documents.length; index += 1) {
     const document = documents[index];
     const prefix = String(index + 1).padStart(2, "0");
     const name = safeFileName(document.title);
-    archive.file(`${prefix}_${name}.pdf`, await renderPdf([document], project));
-    archive.file(`${prefix}_${name}.docx`, await renderDocx([document], project));
+    archive.file(`${prefix}_${name}.pdf`, await renderPdf([document], project, fontData));
+    archive.file(`${prefix}_${name}.docx`, await renderDocx([document], project, fontData));
   }
   return await archive.generateAsync({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 8 } });
 }
