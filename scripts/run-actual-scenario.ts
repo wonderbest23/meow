@@ -281,6 +281,7 @@ async function main() {
     handlesPersonalData: true,
     importsOrExports: false,
     sectorKeywords: ["가족 기록", "인터뷰", "콘텐츠 제작"],
+    unknownFields: [],
     financial: {
       sellingPrice: 390_000,
       priceIncludesVat: true,

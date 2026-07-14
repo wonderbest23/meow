@@ -68,7 +68,8 @@ import {
 import type { ManualPreferences } from "../lib/idea-generator";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
-import { archetypeLabels, legalFormLabels, workplaceLabels } from "../lib/business/domain";
+import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
+import { inferBusinessArchetype } from "../lib/business/router";
 import { MarketPlanPanel } from "../components/market-plan-panel";
 import { LandingBuilderPanel } from "../components/landing-builder-panel";
 import { OperationsPanel } from "../components/operations-panel";
@@ -2077,7 +2078,6 @@ function ProjectWorkspace({
   const [delivered, setDelivered] = useState(serverProject?.status === "completed");
   const [price, setPrice] = useState(opportunity.capital === "소액" ? 290000 : opportunity.capital === "중간" ? 790000 : 1490000);
   const [brandChoice, setBrandChoice] = useState("");
-  const [stageNote, setStageNote] = useState("");
   const [revisionText, setRevisionText] = useState("");
   const [serviceAction, setServiceAction] = useState<"idle" | "saving" | "generating" | "approving" | "revising" | "retrying">("idle");
   const [serviceError, setServiceError] = useState("");
@@ -2100,6 +2100,8 @@ function ProjectWorkspace({
     : null;
   const betaAccess = serverProject?.packagePrice === 0;
   const setupRequired = activeStage === 0 && Boolean(serverProject) && !serverProject?.businessAssessment;
+  const projectArchetype = serverProject?.businessSetup?.archetype ?? inferBusinessArchetype(opportunity);
+  const locationAnalysisNeeded = needsPhysicalLocationAnalysis(projectArchetype);
   const reviewStep = !latestArtifact ? 1 : allCurrentChecked ? 3 : 2;
   const stageStatusLabel: Record<string, string> = {
     not_started: "아직 시작 전",
@@ -2121,13 +2123,12 @@ function ProjectWorkspace({
   const focusDescription = setupRequired
     ? "화면에 보이는 한 단계씩 입력하면 손익분기점과 필수 절차를 계산합니다."
     : !latestArtifact
-      ? "추가 내용은 선택사항입니다. 입력한 조건만으로도 초안을 만들 수 있어요."
+      ? "처음 입력한 아이디어·예산·시간과 저장된 사업 조건으로 바로 만듭니다."
       : !allCurrentChecked
         ? "실제 생성 결과를 먼저 읽은 뒤 아래 확인 항목을 차례로 누르세요."
         : "마지막 승인 버튼을 누르면 현재 결과를 저장하고 다음 단계가 열립니다.";
 
   useEffect(() => {
-    setStageNote("");
     setRevisionText("");
     setServiceError("");
     setShowSavedSetup(false);
@@ -2187,8 +2188,7 @@ function ProjectWorkspace({
   };
 
   const moveToRevision = () => {
-    const selector = latestArtifact ? ".artifact-review-actions textarea" : ".service-workflow > label textarea";
-    const input = document.querySelector<HTMLTextAreaElement>(selector);
+    const input = document.querySelector<HTMLTextAreaElement>(".artifact-review-actions textarea");
     input?.scrollIntoView({ behavior: "smooth", block: "center" });
     window.setTimeout(() => input?.focus(), 350);
   };
@@ -2232,9 +2232,9 @@ function ProjectWorkspace({
     try {
       setServiceAction("saving");
       const stageInputs = mergeStageInputs(
-        buildStageInput(activeStage, opportunity, price, brandChoice, stageNote),
+        buildStageInput(activeStage, opportunity, price, brandChoice, ""),
         currentServerStage?.inputs ?? {},
-        stageNote,
+        "",
       );
       const inputResponse = await fetch(`/api/projects/${serverProject.id}/stages/${activeStage}/inputs`, {
         method: "PATCH",
@@ -2369,30 +2369,29 @@ function ProjectWorkspace({
                 </div>
               </div>
             )}
-            {serverProject && activeStage === 0 && (setupRequired || showSavedSetup) && <BusinessSetupPanel project={serverProject} onSaved={(project) => { setServerProject(project); setShowSavedSetup(false); }} />}
+            {serverProject && activeStage === 0 && (setupRequired || showSavedSetup) && <BusinessSetupPanel project={serverProject} onSaved={(project) => { setServerProject(project); setShowSavedSetup(true); }} onComplete={() => { setShowSavedSetup(false); window.setTimeout(() => document.querySelector(".service-workflow")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} />}
             {serverProject && activeStage === 0 && !setupRequired && !showSavedSetup && !latestArtifact && <button className="edit-saved-setup" onClick={() => setShowSavedSetup(true)}><Calculator /> 저장한 사업 조건 수정</button>}
-            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>시장 근거·입지 자료 추가 <em>선택사항</em></span><ChevronDown /></summary><MarketPlanPanel project={serverProject} onSaved={setServerProject} /></details>}
-            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>지역별 공공데이터 확인 <em>선택사항</em></span><ChevronDown /></summary><RegionalCoveragePanel project={serverProject} /></details>}
+            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>{locationAnalysisNeeded ? "시장 근거·입지 자료 추가" : "고객·시장 근거와 사업계획서 추가"} <em>선택사항</em></span><ChevronDown /></summary><MarketPlanPanel project={serverProject} onSaved={setServerProject} /></details>}
+            {serverProject && activeStage === 1 && !latestArtifact && locationAnalysisNeeded && <details className="optional-stage-tools"><summary><span>지역별 공공데이터 확인 <em>선택사항</em></span><ChevronDown /></summary><RegionalCoveragePanel project={serverProject} /></details>}
             {serverProject && activeStage === 4 && !latestArtifact && <LandingBuilderPanel project={serverProject} />}
             {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>운영 계획 직접 바꾸기 <em>선택사항</em></span><ChevronDown /></summary><OperationsPanel project={serverProject} onSaved={setServerProject} /></details>}
             {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>추가 운영 도구 열기 <em>선택사항</em></span><ChevronDown /></summary><ExecutionLoopPanel project={serverProject} onSaved={setServerProject} /><QualityAssurancePanel project={serverProject} onSaved={setServerProject} /><GrantMatcherPanel project={serverProject} onSaved={setServerProject} /></details>}
             {serverProject && !setupRequired && (
               <section className="service-workflow">
                 <div className="step-by-step-guide" aria-label="현재 단계 진행 방법">
-                  <div className={reviewStep >= 1 ? "active" : ""}><span>{reviewStep > 1 ? <Check /> : "1"}</span><p><strong>정보 확인</strong><small>조건을 적고 초안을 만들어요</small></p></div>
+                  <div className={reviewStep >= 1 ? "active" : ""}><span>{reviewStep > 1 ? <Check /> : "1"}</span><p><strong>초안 만들기</strong><small>처음 입력한 내용으로 만들어요</small></p></div>
                   <i />
                   <div className={reviewStep >= 2 ? "active" : ""}><span>{reviewStep > 2 ? <Check /> : "2"}</span><p><strong>내용 검토</strong><small>결과와 체크리스트를 확인해요</small></p></div>
                   <i />
                   <div className={reviewStep >= 3 ? "active" : ""}><span>3</span><p><strong>승인하고 이동</strong><small>완료하면 다음 단계로 가요</small></p></div>
                 </div>
                 <div className="service-workflow-head">
-                  <div><span className={`service-state ${currentServerStage?.status ?? "not_started"}`} /><p><strong>{latestArtifact ? "초안이 준비됐어요" : "먼저 정보를 확인해주세요"}</strong><small>{stageStatusLabel[currentServerStage?.status ?? "not_started"]} · 자동 저장 프로젝트</small></p></div>
+                  <div><span className={`service-state ${currentServerStage?.status ?? "not_started"}`} /><p><strong>{latestArtifact ? "초안이 준비됐어요" : "입력한 내용으로 바로 만들 수 있어요"}</strong><small>{stageStatusLabel[currentServerStage?.status ?? "not_started"]} · 처음 입력한 내용 자동 반영</small></p></div>
                   {latestArtifact && <em>결과물 {latestArtifact.version}판</em>}
                 </div>
-                <label><span>추가로 알려줄 내용 <em>선택사항</em></span><textarea value={stageNote} onChange={(event) => setStageNote(event.target.value)} placeholder="예: 예산은 100만 원이고, 평일 저녁에만 운영할 수 있어요." /><small>잘 모르겠다면 비워두어도 됩니다. 기본 정보로 초안을 만들어드려요.</small></label>
                 {serviceError && <div className="service-error"><CircleHelp /> <span>{serviceError}</span><button disabled={serviceAction !== "idle" || (!canRetryGeneration && currentServerStage?.status === "failed")} onClick={handleGenerationRecovery}>{currentServerStage?.status === "failed" ? (canRetryGeneration ? `다시 시도 (${latestJob?.attempt ?? 0}/3)` : "재시도 한도 초과") : "다시 시도"}</button></div>}
                 {!latestArtifact ? (
-                  <button className="generate-real-artifact" disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "먼저 위에서 사업 조건과 손익분기점을 계산해주세요" : serviceAction === "saving" ? "입력 내용을 안전하게 저장 중..." : serviceAction === "generating" ? "맞춤 초안을 만들고 있어요..." : <><Sparkles /> 이 정보로 초안 만들기 <ArrowRight /></>}</button>
+                  <button className="generate-real-artifact" disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "먼저 위에서 사업 조건과 손익분기점을 계산해주세요" : serviceAction === "saving" ? "처음 입력한 내용을 불러오는 중..." : serviceAction === "generating" ? "맞춤 초안을 만들고 있어요..." : <><Sparkles /> 바로 초안 만들기 <ArrowRight /></>}</button>
                 ) : (
                   <div className="artifact-review-actions">
                     <div className="review-ready"><CheckCircle2 /><p><strong>검토할 초안이 준비됐어요</strong><small>실제 생성된 결과부터 읽고 확인 항목을 차례로 눌러주세요.</small></p><button onClick={moveToArtifact}>결과 읽기 <ArrowDown /></button></div>

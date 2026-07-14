@@ -112,6 +112,7 @@ export const businessSetupSchema = z.object({
   handlesPersonalData: z.boolean(),
   importsOrExports: z.boolean(),
   sectorKeywords: z.array(z.string().trim().min(1).max(50)).max(30),
+  unknownFields: z.array(z.string().trim().min(1).max(80)).max(50).default([]),
   financial: financialInputSchema,
 });
 
@@ -169,6 +170,10 @@ export type BusinessAssessment = {
   rulesVersion: string;
 };
 
+export function needsPhysicalLocationAnalysis(archetype: BusinessArchetype) {
+  return ["local_retail", "manufacturing", "regulated"].includes(archetype);
+}
+
 export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup {
   return {
     archetype,
@@ -181,6 +186,7 @@ export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup 
     handlesPersonalData: ["digital_service", "ecommerce"].includes(archetype),
     importsOrExports: false,
     sectorKeywords: [],
+    unknownFields: [],
     financial: {
       sellingPrice: archetype === "ecommerce" ? 39000 : 290000,
       priceIncludesVat: true,
@@ -193,11 +199,11 @@ export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup 
         keyMoney: 0,
         brokerage: 0,
         interior: 0,
-        equipment: 1_000_000,
+        equipment: ["local_retail", "manufacturing", "regulated"].includes(archetype) ? 1_000_000 : 0,
         initialInventory: archetype === "ecommerce" ? 3_000_000 : 0,
-        licensesAndRegistration: 200_000,
-        launchMarketing: 1_000_000,
-        contingency: 1_000_000,
+        licensesAndRegistration: ["manufacturing", "regulated"].includes(archetype) ? 200_000 : 0,
+        launchMarketing: archetype === "digital_service" ? 200_000 : 500_000,
+        contingency: ["local_retail", "manufacturing", "regulated"].includes(archetype) ? 1_000_000 : 0,
         other: 0,
       },
       monthlyFixed: {
@@ -207,9 +213,9 @@ export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup 
         employerInsuranceRate: 11,
         accounting: 100_000,
         software: 150_000,
-        utilitiesAndTelecom: 100_000,
+        utilitiesAndTelecom: needsPhysicalLocationAnalysis(archetype) ? 100_000 : 0,
         businessInsurance: 0,
-        fixedMarketing: 500_000,
+        fixedMarketing: archetype === "digital_service" ? 200_000 : 500_000,
         loanInterest: 0,
         depreciation: 0,
         other: 0,

@@ -1,6 +1,6 @@
 import type { ProjectRecord } from "../service-domain";
 import type { MarketAnalysis, MarketWorkspace } from "../market/domain";
-import { archetypeLabels, legalFormLabels, workplaceLabels } from "../business/domain";
+import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../business/domain";
 
 export type PlanFactStatus = "confirmed" | "calculated" | "assumption" | "unknown";
 
@@ -62,6 +62,8 @@ export function generateBusinessPlan(
   const setup = project.businessSetup;
   const assessment = project.businessAssessment;
   const financial = assessment?.financial;
+  const locationRelevant = setup ? needsPhysicalLocationAnalysis(setup.archetype) : true;
+  const unknownFinancialLabels = (setup?.unknownFields ?? []).map((id) => id);
   const selectedLocation = workspace.locations.find(
     (candidate) => candidate.id === marketAnalysis.selectedLocationId,
   );
@@ -103,6 +105,7 @@ export function generateBusinessPlan(
       ? ["문제·고객·상품 단계 승인 결과"]
       : []),
     ...(!financial ? ["입력 근거가 있는 손익·사업비 계산"] : []),
+    ...(unknownFinancialLabels.length ? [`추천값으로 임시 계산한 비용 ${unknownFinancialLabels.length}개 실제 확인`] : []),
     ...(!founderCapability ? ["대표자와 팀의 관련 경험·역량 증빙"] : []),
     ...(assessment?.hardBlockCount ? ["인허가 고위험 확인 완료"] : []),
     ...(containsDemoData ? ["화면 시험용·예시 자료 제거"] : []),
@@ -188,12 +191,13 @@ export function generateBusinessPlan(
     {
       id: "funding",
       title: "6. 사업비 집행계획",
-      status: financial ? "calculated" : "unknown",
+      status: financial && unknownFinancialLabels.length === 0 ? "calculated" : financial ? "assumption" : "unknown",
       content: financial ? [
         `초기 투자비: ${formatWon(financial.initialInvestment)}`,
         `권장 운전자금: ${formatWon(financial.recommendedWorkingCapital)}`,
         `총 필요자금: ${formatWon(financial.totalFundingNeed)}`,
         `월 고정비: ${formatWon(financial.monthlyFixedCost)}`,
+        ...(unknownFinancialLabels.length ? [`추천값으로 임시 계산한 항목 ${unknownFinancialLabels.length}개는 실제 견적 확인이 필요합니다.`] : []),
         "정부지원금과 자기부담금은 비목·산출근거·집행시기로 나누어 공식 양식에 옮겨야 합니다.",
       ] : ["비목별 사업비, 산출근거, 정부지원금·자기부담금 구분이 필요합니다."],
       sources: [],
@@ -219,7 +223,7 @@ export function generateBusinessPlan(
         `현재 제출 차단 항목: ${blockingItems.length ? blockingItems.join(" / ") : "없음"}`,
         selectedLocation
           ? `입지 참고값: ${selectedLocation.name} · 월 점유비 ${formatWon(selectedLocationScore?.monthlyOccupancyCost)} · 입력 기반 점수 ${selectedLocationScore?.totalScore ?? "미산정"}`
-          : "오프라인 사업이라면 입지·임대차·건축물 용도 확인이 필요합니다.",
+          : locationRelevant ? "오프라인 사업이므로 입지·임대차·건축물 용도 확인이 필요합니다." : "온라인 중심 사업이므로 상권·입지 비교는 적용하지 않습니다. 사업자등록 주소의 사용 가능 여부만 별도로 확인합니다.",
         `핵심 위험: ${text(opportunity.risk)}`,
         ...(assessment?.requirements.map((item) => `[${item.severity === "required" ? "필수" : item.severity === "verify" ? "확인 필요" : "진행 차단"}] ${item.title}`) ?? []),
       ],

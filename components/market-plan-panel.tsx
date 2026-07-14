@@ -17,6 +17,8 @@ import {
   Trash2,
 } from "lucide-react";
 import type { BusinessPlanDocument } from "../lib/business-plan/generator";
+import { needsPhysicalLocationAnalysis } from "../lib/business/domain";
+import { inferBusinessArchetype } from "../lib/business/router";
 import {
   emptyMarketWorkspace,
   evidenceSourceTypes,
@@ -91,6 +93,8 @@ export function MarketPlanPanel({
   project: ProjectRecord;
   onSaved: (project: ProjectRecord) => void;
 }) {
+  const archetype = project.businessSetup?.archetype ?? inferBusinessArchetype(project.opportunity);
+  const locationRelevant = needsPhysicalLocationAnalysis(archetype);
   const [tab, setTab] = useState<Tab>(project.businessPlan ? "plan" : "evidence");
   const [workspace, setWorkspace] = useState<MarketWorkspace>(
     project.marketWorkspace ?? emptyMarketWorkspace(),
@@ -278,13 +282,13 @@ export function MarketPlanPanel({
   return (
     <section className="market-plan-panel" id="market-plan-panel">
       <header>
-        <div><span><Database /></span><div><small>1단계 · 근거를 확인하는 창업</small><h3>시장 근거·입지·사업계획서</h3><p>출처 없는 숫자를 만들지 않고 실제 조사값과 공식 자료를 한곳에 연결합니다.</p></div></div>
-        <em>{workspace.evidence.length}개 근거 · {workspace.locations.length}개 후보</em>
+        <div><span><Database /></span><div><small>1단계 · 근거를 확인하는 창업</small><h3>{locationRelevant ? "시장 근거·입지·사업계획서" : "고객·시장 근거와 사업계획서"}</h3><p>{locationRelevant ? "실제 조사값과 공식 자료, 입지 후보를 한곳에 연결합니다." : "온라인 사업에 필요한 고객·경쟁·시장 근거만 정리합니다. 입지 비교는 생략합니다."}</p></div></div>
+        <em>{workspace.evidence.length}개 근거{locationRelevant ? ` · ${workspace.locations.length}개 후보` : ""}</em>
       </header>
 
-      <nav className="market-plan-tabs" aria-label="시장 검증 메뉴">
+      <nav className={`market-plan-tabs ${locationRelevant ? "" : "without-location"}`} aria-label="시장 검증 메뉴">
         <button className={tab === "evidence" ? "active" : ""} onClick={() => setTab("evidence")}><Database /> 시장 근거</button>
-        <button className={tab === "location" ? "active" : ""} onClick={() => setTab("location")}><MapPin /> 입지 비교</button>
+        {locationRelevant && <button className={tab === "location" ? "active" : ""} onClick={() => setTab("location")}><MapPin /> 입지 비교</button>}
         <button className={tab === "plan" ? "active" : ""} onClick={() => setTab("plan")}><FileText /> 사업계획서</button>
       </nav>
 
@@ -294,10 +298,10 @@ export function MarketPlanPanel({
         <div className="market-panel-body">
           <div className="official-source-links">
             <strong>공식 원문 바로가기</strong>
-            <a href="https://golmok.seoul.go.kr/" target="_blank" rel="noreferrer">서울시 상권분석 <ExternalLink /></a>
+            {locationRelevant && <a href="https://golmok.seoul.go.kr/" target="_blank" rel="noreferrer">서울시 상권분석 <ExternalLink /></a>}
             <a href="https://sgis.kostat.go.kr/" target="_blank" rel="noreferrer">통계지리정보서비스 <ExternalLink /></a>
             <a href="https://kosis.kr/" target="_blank" rel="noreferrer">국가통계포털 <ExternalLink /></a>
-            <a href="https://www.data.go.kr/data/15012005/openapi.do" target="_blank" rel="noreferrer">소상공인시장진흥공단 상가업소 자료 <ExternalLink /></a>
+            {locationRelevant && <a href="https://www.data.go.kr/data/15012005/openapi.do" target="_blank" rel="noreferrer">소상공인시장진흥공단 상가업소 자료 <ExternalLink /></a>}
           </div>
           <div className="market-form-grid">
             <label><span>근거 종류</span><select value={evidenceDraft.sourceType} onChange={(event) => setEvidenceDraft((current) => ({ ...current, sourceType: event.target.value as MarketEvidence["sourceType"] }))}>{evidenceSourceTypes.map((item) => <option key={item} value={item}>{sourceLabels[item]}</option>)}</select></label>
@@ -328,7 +332,7 @@ export function MarketPlanPanel({
         </div>
       )}
 
-      {tab === "location" && (
+      {tab === "location" && locationRelevant && (
         <div className="market-panel-body">
           <div className="location-warning"><AlertTriangle /><p><strong>점수가 임대 계약을 대신하지 않습니다.</strong> 건축물 용도·등기부·업종 인허가·현장 상태를 확인하지 않으면 추천하지 않습니다.</p></div>
           <div className="market-form-grid location-form">
@@ -397,7 +401,7 @@ export function MarketPlanPanel({
         </div>
       )}
 
-      <footer className="market-panel-footer"><div><strong>공식 자료 자동 조회 상태</strong><span>상가업소 자료 {analysis.connectorStatus.sbizStoreApi === "configured" ? "연결됨" : "연결키 필요"}</span><span>국가통계포털 {analysis.connectorStatus.kosisApi === "configured" ? "연결됨" : "연결키 필요"}</span><span>서울시 자료 {analysis.connectorStatus.seoulOpenData === "configured" ? "연결됨" : "연결키 필요"}</span></div><button disabled={busy !== "idle"} onClick={save}>{busy === "saving" ? <LoaderCircle className="spin" /> : <Save />} 근거·입지 저장</button></footer>
+      <footer className="market-panel-footer"><div><strong>공식 자료 자동 조회 상태</strong>{locationRelevant && <span>상가업소 자료 {analysis.connectorStatus.sbizStoreApi === "configured" ? "연결됨" : "연결키 필요"}</span>}<span>국가통계포털 {analysis.connectorStatus.kosisApi === "configured" ? "연결됨" : "연결키 필요"}</span>{locationRelevant && <span>서울시 자료 {analysis.connectorStatus.seoulOpenData === "configured" ? "연결됨" : "연결키 필요"}</span>}</div><button disabled={busy !== "idle"} onClick={save}>{busy === "saving" ? <LoaderCircle className="spin" /> : <Save />} {locationRelevant ? "근거·입지 저장" : "시장 근거 저장"}</button></footer>
     </section>
   );
 }
