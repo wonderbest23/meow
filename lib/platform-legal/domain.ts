@@ -33,6 +33,7 @@ export const platformLegalSettingsSchema = z.object({
   legalReviewConfirmed: z.boolean(),
   openAiRegionConfirmed: z.boolean(),
   infrastructureRegionConfirmed: z.boolean(),
+  authEmailDeliveryConfirmed: z.boolean(),
 });
 
 export type PlatformLegalSettings = z.infer<typeof platformLegalSettingsSchema>;
@@ -68,6 +69,7 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   legalReviewConfirmed: false,
   openAiRegionConfirmed: false,
   infrastructureRegionConfirmed: false,
+  authEmailDeliveryConfirmed: false,
 };
 
 const requiredFields: Array<{ key: keyof PlatformLegalSettings; label: string }> = [
@@ -108,6 +110,7 @@ export function evaluatePlatformLaunchReadiness(
     .map(({ label }) => label);
   if (!settings.openAiRegionConfirmed) missing.push("OpenAI 실제 처리 지역 확인");
   if (!settings.infrastructureRegionConfirmed) missing.push("Supabase·Cloudflare 처리 지역 확인");
+  if (!settings.authEmailDeliveryConfirmed) missing.push("가입·계정복구 메일 실사용 확인");
   if (!settings.legalReviewConfirmed) missing.push("운영자 최종 검토 확인");
   if (!options.authConfigured) missing.push("로그인·계정 복구 설정");
 

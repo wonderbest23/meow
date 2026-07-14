@@ -23,6 +23,7 @@ const complete = platformLegalSettingsSchema.parse({
   infrastructureCountries: "싱가포르, 대한민국, 미국",
   openAiRegionConfirmed: true,
   infrastructureRegionConfirmed: true,
+  authEmailDeliveryConfirmed: true,
   legalReviewConfirmed: true,
 });
 
