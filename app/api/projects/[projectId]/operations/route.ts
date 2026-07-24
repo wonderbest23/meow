@@ -6,6 +6,8 @@ import {
   createOperationsWorkspace,
   generateOperationsPackage,
 } from "../../../../../lib/operations/engine";
+import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
+import { getOpenAIRuntimeConfig } from "../../../../../lib/openai/session-config";
 import {
   getProject,
   saveOperationsWorkspace,
@@ -45,7 +47,16 @@ export async function PUT(
     if (!project) throw new Error("PROJECT_NOT_FOUND");
     const workspace = operationsWorkspaceSchema.parse(await request.json());
     const assessment = assessOperations(workspace);
-    const operationsPackage = generateOperationsPackage(project, workspace, assessment);
+    const generatedPackage = generateOperationsPackage(project, workspace, assessment);
+    const operationsPackage = {
+      ...generatedPackage,
+      markdown: await enrichDocumentNarrative(
+        project,
+        "operations",
+        generatedPackage.markdown,
+        getOpenAIRuntimeConfig(identity.hash),
+      ),
+    };
     const updatedProject = await saveOperationsWorkspace(
       projectId,
       identity.hash,

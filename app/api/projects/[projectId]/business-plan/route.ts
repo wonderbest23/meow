@@ -3,6 +3,8 @@ import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { generateBusinessPlan } from "../../../../../lib/business-plan/generator";
 import { analyzeLocations } from "../../../../../lib/market/location-engine";
 import { emptyMarketWorkspace } from "../../../../../lib/market/domain";
+import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
+import { getOpenAIRuntimeConfig } from "../../../../../lib/openai/session-config";
 import {
   getProject,
   saveBusinessPlan,
@@ -20,8 +22,15 @@ export async function POST(
     const workspace = project.marketWorkspace ?? emptyMarketWorkspace();
     const analysis = project.marketAnalysis ?? analyzeLocations(workspace);
     const plan = generateBusinessPlan(project, workspace, analysis);
-    const updatedProject = await saveBusinessPlan(projectId, identity.hash, plan);
-    return NextResponse.json({ project: updatedProject, plan });
+    const enrichedMarkdown = await enrichDocumentNarrative(
+      project,
+      "plan",
+      plan.markdown,
+      getOpenAIRuntimeConfig(identity.hash),
+    );
+    const enrichedPlan = { ...plan, markdown: enrichedMarkdown };
+    const updatedProject = await saveBusinessPlan(projectId, identity.hash, enrichedPlan);
+    return NextResponse.json({ project: updatedProject, plan: enrichedPlan });
   } catch (error) {
     const message = error instanceof Error ? error.message : "사업계획서를 생성하지 못했습니다.";
     return NextResponse.json(

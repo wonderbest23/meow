@@ -6,6 +6,8 @@ import {
   createGrantWorkspace,
   generateGrantPackage,
 } from "../../../../../lib/grants/engine";
+import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
+import { getOpenAIRuntimeConfig } from "../../../../../lib/openai/session-config";
 import {
   getProject,
   saveGrantWorkspace,
@@ -45,7 +47,16 @@ export async function PUT(
     if (!project) throw new Error("PROJECT_NOT_FOUND");
     const workspace = grantWorkspaceSchema.parse(await request.json());
     const analysis = analyzeGrants(project, workspace);
-    const grantPackage = generateGrantPackage(project, workspace, analysis);
+    const generatedPackage = generateGrantPackage(project, workspace, analysis);
+    const grantPackage = {
+      ...generatedPackage,
+      markdown: await enrichDocumentNarrative(
+        project,
+        "grants",
+        generatedPackage.markdown,
+        getOpenAIRuntimeConfig(identity.hash),
+      ),
+    };
     const updatedProject = await saveGrantWorkspace(
       projectId,
       identity.hash,
