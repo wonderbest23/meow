@@ -56,17 +56,36 @@ const fabricated = {
   oneLiner: "이미 시장 규모 3조원을 확보한 검증된 사업으로 업계 1위가 보장됩니다.",
 };
 
+let lastRequestBody: unknown = null;
 function mockFetch(ideas: unknown[]) {
-  globalThis.fetch = (async () =>
-    new Response(JSON.stringify({ output_text: JSON.stringify({ ideas }) }), {
+  lastRequestBody = null;
+  globalThis.fetch = (async (_url: unknown, init?: { body?: string }) => {
+    lastRequestBody = init?.body ? JSON.parse(init.body) : null;
+    return new Response(JSON.stringify({ output_text: JSON.stringify({ ideas }) }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
-    })) as typeof fetch;
+    });
+  }) as unknown as typeof fetch;
 }
 
 async function main() {
   const originalFetch = globalThis.fetch;
   try {
+    // 0) 다양성 강제: 매 요청마다 넓은 좌표계에서 서로 다른 분야가 배정된다.
+    mockFetch([validA, validB]);
+    await proposeIdeas(profile, undefined, runtimeConfig, 8);
+    const message = (lastRequestBody as { input?: Array<{ role: string; content: string }> }).input?.find(
+      (item) => item.role === "user",
+    );
+    const userPayload = JSON.parse(message?.content ?? "{}") as { assignedSectors?: string[] };
+    assert.ok(Array.isArray(userPayload.assignedSectors), "요청에 배정 분야가 포함돼야 합니다.");
+    assert.equal(userPayload.assignedSectors?.length, 8, "요청한 개수만큼 분야가 배정돼야 합니다.");
+    assert.equal(
+      new Set(userPayload.assignedSectors).size,
+      8,
+      "배정 분야는 서로 겹치지 않아야 합니다(다양성).",
+    );
+
     // 1) 정상 후보 → Opportunity 형태로 정규화된다.
     mockFetch([validA, validB]);
     const pool = await proposeIdeas(profile, undefined, runtimeConfig);
