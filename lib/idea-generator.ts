@@ -331,3 +331,23 @@ export function generateOpportunityPool(
     };
   });
 }
+
+// 하이브리드 제안 엔진이 LLM을 현실·규제에 붙들어 두기 위한 참고 지식(216 라이브러리에서 추출).
+// LLM은 이 목록을 "영감·현실성 앵커"로만 쓰고 새로운 도메인·조합을 만들 수 있다.
+export const ideaDomainReference = domains.map((domain) => ({
+  sector: domain.sector,
+  subject: domain.subject,
+  regulation: domain.regulation,
+  customers: domain.customers,
+}));
+
+export const ideaMechanismReference = mechanisms.map((mechanism) => ({
+  model: mechanism.model,
+  channel: mechanism.channel,
+  capital: mechanism.capital,
+  revenue: mechanism.revenue,
+}));
+
+export const opportunityColors = [
+  "sage", "steel", "apricot", "moss", "violet", "rose", "lime", "sky", "navy", "sand", "amber", "peach",
+] as const;

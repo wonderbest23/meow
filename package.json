@@ -40,6 +40,7 @@
     "test:refinement": "tsx scripts/refinement-studio.test.ts",
     "test:document-editor": "tsx scripts/document-editor.test.ts",
     "test:ai-narrative": "tsx scripts/ai-narrative.test.ts",
+    "test:idea-proposer": "tsx scripts/idea-proposer.test.ts",
     "test:document-production": "node --env-file-if-exists=.env.local --import tsx scripts/document-draft-production-smoke.ts",
     "test:openai": "tsx scripts/openai-session.test.ts",
     "test:missions": "tsx scripts/launch-missions.test.ts",

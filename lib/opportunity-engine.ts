@@ -133,15 +133,14 @@ function diversify(items: RankedOpportunity[]) {
   return result;
 }
 
-export function rankOpportunities(
+export function rankOpportunityPool(
+  pool: Opportunity[],
   profile: FounderProfile,
   feedback: OpportunityFeedback = {},
   filters: OpportunityFilters = {},
-  seed = 1,
-  preferences?: ManualPreferences,
   preferenceSignals: OpportunityPreferenceSignal[] = [],
 ): RankedOpportunity[] {
-  const ranked = generateOpportunityPool(seed, preferences)
+  const ranked = pool
     .filter((opportunity) => feedback[opportunity.id] !== "excluded")
     .filter((opportunity) => !filters.sector || opportunity.sector === filters.sector)
     .filter(
@@ -158,4 +157,21 @@ export function rankOpportunities(
     ...diversified.filter((opportunity) => feedback[opportunity.id] === "saved"),
     ...diversified.filter((opportunity) => feedback[opportunity.id] !== "saved"),
   ];
+}
+
+export function rankOpportunities(
+  profile: FounderProfile,
+  feedback: OpportunityFeedback = {},
+  filters: OpportunityFilters = {},
+  seed = 1,
+  preferences?: ManualPreferences,
+  preferenceSignals: OpportunityPreferenceSignal[] = [],
+): RankedOpportunity[] {
+  return rankOpportunityPool(
+    generateOpportunityPool(seed, preferences),
+    profile,
+    feedback,
+    filters,
+    preferenceSignals,
+  );
 }
