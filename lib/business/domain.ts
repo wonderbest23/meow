@@ -188,7 +188,7 @@ export function emptyBusinessSetup(archetype: BusinessArchetype): BusinessSetup 
     archetype,
     legalForm: "undecided",
     workplaceType: archetype === "local_retail" ? "commercial_lease" : archetype === "manufacturing" ? "factory" : "home",
-    region: "서울특별시",
+    region: "지역 미정",
     detailedLocation: "",
     employeeCount: 0,
     onlineSales: archetype === "ecommerce",

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { SupportChatWidget } from "../components/support-chat-widget";
-import "./globals.css";
+import "@puckeditor/core/puck.css";
+import "./release-20260716.css";
 
 export const metadata: Metadata = {
   title: "오늘창업 | 나만의 사업 가능성 탐색",

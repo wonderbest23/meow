@@ -21,6 +21,15 @@ import type { QualityAudit } from "./quality/domain";
 import type { GrantAnalysis, GrantPackage, GrantWorkspace } from "./grants/domain";
 import type { LaunchMissionWorkspace } from "./launch-missions/domain";
 import type { GenerationJobRecord } from "./service-audit/domain";
+import type {
+  DraftPackageRun,
+  DraftRefinementInput,
+  ProjectRefinementVersion,
+} from "./draft-package/domain";
+import type { PresentationDeckDrafts } from "./delivery/presentation-deck";
+import type { DeliveryDocumentId, DocumentDrafts } from "./delivery/document-drafts";
+import { appendRefinementVersion, refinementInputFromProject } from "./refinement/domain";
+import { PACKAGE_AMOUNT } from "./payments/domain";
 
 type ProjectCreateInput = {
   opportunity: Record<string, unknown>;
@@ -118,7 +127,7 @@ export async function createProject(
       title: input.opportunity.title as string,
       status: "active",
       paymentStatus: input.paymentStatus,
-      packagePrice: input.packagePrice ?? 990000,
+      packagePrice: input.packagePrice ?? PACKAGE_AMOUNT,
       activeStage: 0,
       opportunity: input.opportunity,
       founderProfile: input.founderProfile,
@@ -137,6 +146,10 @@ export async function createProject(
       grantPackage: null,
       launchMissionWorkspace: null,
       qualityAudit: null,
+      draftPackageRun: null,
+      refinementHistory: [],
+      presentationDecks: null,
+      documentDrafts: null,
       stages,
       createdAt: now,
       updatedAt: now,
@@ -153,7 +166,7 @@ export async function createProject(
       opportunity: input.opportunity,
       founder_profile: input.founderProfile,
       payment_status: input.paymentStatus,
-      package_price: input.packagePrice ?? 990000,
+      package_price: input.packagePrice ?? PACKAGE_AMOUNT,
       guest_token_hash: guestTokenHash,
       owner_id: ownerId ?? null,
       status: "active",
@@ -234,6 +247,10 @@ export async function getProject(
       projectMetadata.launchMissionWorkspace ??
       null,
     qualityAudit: projectRow.quality_audit ?? null,
+    draftPackageRun: (projectMetadata.draftPackageRun as DraftPackageRun | null | undefined) ?? null,
+    refinementHistory: (projectMetadata.refinementHistory as ProjectRefinementVersion[] | undefined) ?? [],
+    presentationDecks: (projectMetadata.presentationDecks as PresentationDeckDrafts | null | undefined) ?? null,
+    documentDrafts: (projectMetadata.documentDrafts as DocumentDrafts | null | undefined) ?? null,
     stages: (stageRows ?? []).map((row) => mapStage(row, artifacts)),
     createdAt: projectRow.created_at,
     updatedAt: projectRow.updated_at,
@@ -327,6 +344,306 @@ export async function saveLaunchMissionWorkspace(
   const updated = await getProject(projectId, guestTokenHash);
   if (!updated) throw new Error("PROJECT_NOT_FOUND");
   return updated;
+}
+
+export async function saveDraftPackageRun(
+  projectId: string,
+  guestTokenHash: string,
+  run: DraftPackageRun,
+): Promise<DraftPackageRun> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demoStore.get(projectId);
+    if (!stored || stored.guestTokenHash !== guestTokenHash) throw new Error("PROJECT_NOT_FOUND");
+    stored.draftPackageRun = clone(run);
+    stored.updatedAt = new Date().toISOString();
+    return clone(run);
+  }
+
+  const { data: metadataRow, error: metadataError } = await supabase
+    .from("projects")
+    .select("metadata")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (metadataError) throw metadataError;
+  if (!metadataRow) throw new Error("PROJECT_NOT_FOUND");
+  const metadata = (metadataRow.metadata ?? {}) as Record<string, unknown>;
+  const { error } = await supabase
+    .from("projects")
+    .update({ metadata: { ...metadata, draftPackageRun: run } })
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash);
+  if (error) throw error;
+  return run;
+}
+
+export async function saveRefinementVersion(
+  projectId: string,
+  guestTokenHash: string,
+  nextInput: DraftRefinementInput,
+  runId: string,
+  source: ProjectRefinementVersion["source"],
+): Promise<ProjectRefinementVersion[]> {
+  const supabase = getServerSupabase();
+  const project = await getProject(projectId, guestTokenHash);
+  if (!project) throw new Error("PROJECT_NOT_FOUND");
+  const history = appendRefinementVersion(
+    project.refinementHistory ?? [],
+    refinementInputFromProject(project),
+    nextInput,
+    runId,
+    source,
+  );
+
+  if (!supabase) {
+    const stored = demoStore.get(projectId)!;
+    stored.refinementHistory = clone(history);
+    stored.updatedAt = new Date().toISOString();
+    return clone(history);
+  }
+
+  const { data: metadataRow, error: metadataError } = await supabase
+    .from("projects")
+    .select("metadata")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (metadataError) throw metadataError;
+  if (!metadataRow) throw new Error("PROJECT_NOT_FOUND");
+  const metadata = (metadataRow.metadata ?? {}) as Record<string, unknown>;
+  const { error } = await supabase
+    .from("projects")
+    .update({ metadata: { ...metadata, refinementHistory: history } })
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash);
+  if (error) throw error;
+  return history;
+}
+
+export async function updateRefinementVersionStatus(
+  projectId: string,
+  guestTokenHash: string,
+  runId: string,
+  status: ProjectRefinementVersion["status"],
+) {
+  if (!runId) return [];
+  const supabase = getServerSupabase();
+  const project = await getProject(projectId, guestTokenHash);
+  if (!project) throw new Error("PROJECT_NOT_FOUND");
+  const history = (project.refinementHistory ?? []).map((version) => (
+    version.runId === runId ? { ...version, status } : version
+  ));
+
+  if (!supabase) {
+    const stored = demoStore.get(projectId)!;
+    stored.refinementHistory = clone(history);
+    stored.updatedAt = new Date().toISOString();
+    return clone(history);
+  }
+
+  const { data: metadataRow, error: metadataError } = await supabase
+    .from("projects")
+    .select("metadata")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (metadataError) throw metadataError;
+  if (!metadataRow) throw new Error("PROJECT_NOT_FOUND");
+  const metadata = (metadataRow.metadata ?? {}) as Record<string, unknown>;
+  const { error } = await supabase
+    .from("projects")
+    .update({ metadata: { ...metadata, refinementHistory: history } })
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash);
+  if (error) throw error;
+  return history;
+}
+
+export async function savePresentationDecks(
+  projectId: string,
+  guestTokenHash: string,
+  decks: PresentationDeckDrafts,
+): Promise<PresentationDeckDrafts> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demoStore.get(projectId);
+    if (!stored || stored.guestTokenHash !== guestTokenHash) throw new Error("PROJECT_NOT_FOUND");
+    stored.presentationDecks = clone(decks);
+    stored.updatedAt = new Date().toISOString();
+    return clone(decks);
+  }
+
+  const { data: metadataRow, error: metadataError } = await supabase
+    .from("projects")
+    .select("metadata")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (metadataError) throw metadataError;
+  if (!metadataRow) throw new Error("PROJECT_NOT_FOUND");
+  const metadata = (metadataRow.metadata ?? {}) as Record<string, unknown>;
+  const { error } = await supabase
+    .from("projects")
+    .update({ metadata: { ...metadata, presentationDecks: decks } })
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash);
+  if (error) throw error;
+  return decks;
+}
+
+export async function saveDocumentDrafts(
+  projectId: string,
+  guestTokenHash: string,
+  drafts: DocumentDrafts,
+): Promise<DocumentDrafts> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demoStore.get(projectId);
+    if (!stored || stored.guestTokenHash !== guestTokenHash) throw new Error("PROJECT_NOT_FOUND");
+    stored.documentDrafts = clone(drafts);
+    stored.updatedAt = new Date().toISOString();
+    return clone(drafts);
+  }
+
+  const { data: metadataRow, error: metadataError } = await supabase
+    .from("projects")
+    .select("metadata")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (metadataError) throw metadataError;
+  if (!metadataRow) throw new Error("PROJECT_NOT_FOUND");
+  const metadata = (metadataRow.metadata ?? {}) as Record<string, unknown>;
+  const { error } = await supabase
+    .from("projects")
+    .update({ metadata: { ...metadata, documentDrafts: drafts } })
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash);
+  if (error) throw error;
+  return drafts;
+}
+
+const stageDocumentIds: Partial<Record<number, DeliveryDocumentId>> = {
+  0: "brief",
+  1: "market",
+  2: "pricing",
+  3: "brand",
+  4: "landing",
+  5: "launch",
+};
+
+function demoReadyDocumentIds(project: ProjectRecord) {
+  const ids = project.stages.flatMap((stage) => {
+    const id = stageDocumentIds[stage.stageIndex];
+    return id && stage.approvedArtifactId ? [id] : [];
+  });
+  if (project.businessPlan) ids.push("plan");
+  if (project.operationsPackage) ids.push("operations");
+  if (project.executionAnalysis) ids.push("execution");
+  if (project.grantPackage) ids.push("grants");
+  return ids;
+}
+
+export async function getProjectDocumentDrafts(
+  projectId: string,
+  guestTokenHash: string,
+): Promise<DocumentDrafts | null> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const project = demoStore.get(projectId);
+    if (!project || project.guestTokenHash !== guestTokenHash) return null;
+    return clone(project.documentDrafts ?? {});
+  }
+  const { data, error } = await supabase
+    .from("projects")
+    .select("metadata")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const metadata = (data.metadata ?? {}) as Record<string, unknown>;
+  return clone((metadata.documentDrafts as DocumentDrafts | undefined) ?? {});
+}
+
+export async function getProjectDocumentEditState(
+  projectId: string,
+  guestTokenHash: string,
+): Promise<{ drafts: DocumentDrafts; readyDocumentIds: DeliveryDocumentId[] } | null> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const project = demoStore.get(projectId);
+    if (!project || project.guestTokenHash !== guestTokenHash) return null;
+    return { drafts: clone(project.documentDrafts ?? {}), readyDocumentIds: demoReadyDocumentIds(project) };
+  }
+  const { data: projectRow, error: projectError } = await supabase
+    .from("projects")
+    .select("metadata,business_plan,operations_package,execution_analysis,grant_package")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (projectError) throw projectError;
+  if (!projectRow) return null;
+  const { data: stageRows, error: stageError } = await supabase
+    .from("project_stages")
+    .select("stage_index,approved_artifact_id")
+    .eq("project_id", projectId);
+  if (stageError) throw stageError;
+  const readyDocumentIds = (stageRows ?? []).flatMap((stage) => {
+    const id = stageDocumentIds[stage.stage_index];
+    return id && stage.approved_artifact_id ? [id] : [];
+  });
+  if (projectRow.business_plan) readyDocumentIds.push("plan");
+  if (projectRow.operations_package) readyDocumentIds.push("operations");
+  if (projectRow.execution_analysis) readyDocumentIds.push("execution");
+  if (projectRow.grant_package) readyDocumentIds.push("grants");
+  const metadata = (projectRow.metadata ?? {}) as Record<string, unknown>;
+  return {
+    drafts: clone((metadata.documentDrafts as DocumentDrafts | undefined) ?? {}),
+    readyDocumentIds,
+  };
+}
+
+export async function updateDraftPackageRun(
+  projectId: string,
+  guestTokenHash: string,
+  runId: string,
+  update: (run: DraftPackageRun) => DraftPackageRun,
+): Promise<DraftPackageRun> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demoStore.get(projectId);
+    if (!stored || stored.guestTokenHash !== guestTokenHash) throw new Error("PROJECT_NOT_FOUND");
+    const current = stored.draftPackageRun;
+    if (!current) throw new Error("DRAFT_PACKAGE_RUN_NOT_FOUND");
+    if (current.id !== runId) throw new Error("DRAFT_PACKAGE_RUN_REPLACED");
+    const next = update(clone(current));
+    stored.draftPackageRun = clone(next);
+    stored.updatedAt = new Date().toISOString();
+    return next;
+  }
+
+  const { data: metadataRow, error: metadataError } = await supabase
+    .from("projects")
+    .select("metadata")
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash)
+    .maybeSingle();
+  if (metadataError) throw metadataError;
+  if (!metadataRow) throw new Error("PROJECT_NOT_FOUND");
+  const metadata = (metadataRow.metadata ?? {}) as Record<string, unknown>;
+  const current = metadata.draftPackageRun as DraftPackageRun | null | undefined;
+  if (!current) throw new Error("DRAFT_PACKAGE_RUN_NOT_FOUND");
+  if (current.id !== runId) throw new Error("DRAFT_PACKAGE_RUN_REPLACED");
+  const next = update(current);
+  const { error } = await supabase
+    .from("projects")
+    .update({ metadata: { ...metadata, draftPackageRun: next } })
+    .eq("id", projectId)
+    .eq("guest_token_hash", guestTokenHash);
+  if (error) throw error;
+  return next;
 }
 
 export async function saveBusinessSetup(

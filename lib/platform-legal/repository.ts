@@ -1,5 +1,6 @@
 import { getServerSupabase } from "../persistence";
 import {
+  applyCurrentPlatformPolicy,
   defaultPlatformLegalSettings,
   platformLegalSettingsSchema,
   type PlatformLegalSettings,
@@ -15,7 +16,11 @@ function envSettings(): PlatformLegalSettings {
     operatorName: process.env.PLATFORM_OPERATOR_NAME,
     representativeName: process.env.PLATFORM_REPRESENTATIVE_NAME,
     businessRegistrationNumber: process.env.PLATFORM_BUSINESS_NUMBER,
+    mailOrderStatus: process.env.PLATFORM_MAIL_ORDER_STATUS,
     mailOrderSalesNumber: process.env.PLATFORM_MAIL_ORDER_NUMBER,
+    mailOrderExemptionReason: process.env.PLATFORM_MAIL_ORDER_EXEMPTION_REASON,
+    internetDomainName: process.env.PLATFORM_INTERNET_DOMAIN,
+    hostServerLocation: process.env.PLATFORM_HOST_SERVER_LOCATION,
     businessAddress: process.env.PLATFORM_BUSINESS_ADDRESS,
     supportEmail: process.env.PLATFORM_SUPPORT_EMAIL,
     supportPhone: process.env.PLATFORM_SUPPORT_PHONE,
@@ -36,7 +41,7 @@ function isMissingTable(error: { code?: string; message?: string } | null) {
 
 export async function getPlatformLegalSettings(): Promise<PlatformLegalSettings> {
   const supabase = getServerSupabase();
-  if (!supabase) return globalThis.__venturePlatformLegalSettings ?? envSettings();
+  if (!supabase) return applyCurrentPlatformPolicy(globalThis.__venturePlatformLegalSettings ?? envSettings());
   const { data, error } = await supabase
     .from("platform_legal_settings")
     .select("settings")
@@ -45,7 +50,7 @@ export async function getPlatformLegalSettings(): Promise<PlatformLegalSettings>
   if (isMissingTable(error)) return envSettings();
   if (error) throw error;
   if (!data?.settings) return envSettings();
-  return platformLegalSettingsSchema.parse({ ...envSettings(), ...(data.settings as Record<string, unknown>) });
+  return applyCurrentPlatformPolicy(platformLegalSettingsSchema.parse({ ...envSettings(), ...(data.settings as Record<string, unknown>) }));
 }
 
 export async function savePlatformLegalSettings(settings: PlatformLegalSettings): Promise<PlatformLegalSettings> {

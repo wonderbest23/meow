@@ -25,6 +25,24 @@ async function main() {
   assert.equal(artifact.sources.length, 1);
   assert.equal(artifact.sources[0].url, "https://www.kosis.kr/");
 
+  const originalFetch = globalThis.fetch;
+  try {
+    globalThis.fetch = async () => new Response(
+      JSON.stringify({ error: { code: "rate_limit_exceeded" } }),
+      { status: 429, headers: { "content-type": "application/json" } },
+    );
+    await assert.rejects(
+      () => generateStageArtifact(project, 0, undefined, {
+        apiKey: "sk-test-production-key",
+        model: "gpt-5.6-sol",
+        source: "environment",
+      }),
+      /OPENAI_429/,
+    );
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
   project.stages[1].inputs = { unknowns: ["첫 구매 의사"] };
   project.stages[2].inputs = { assumptions: ["첫 달에는 소개 고객이 중심입니다."] };
   project.stages[4].inputs = {

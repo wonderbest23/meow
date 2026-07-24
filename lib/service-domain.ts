@@ -14,6 +14,9 @@ import type {
 import type { QualityAudit } from "./quality/domain";
 import type { GrantAnalysis, GrantPackage, GrantWorkspace } from "./grants/domain";
 import type { LaunchMissionWorkspace } from "./launch-missions/domain";
+import type { DraftPackageRun, ProjectRefinementVersion } from "./draft-package/domain";
+import type { PresentationDeckDrafts } from "./delivery/presentation-deck";
+import type { DocumentDrafts } from "./delivery/document-drafts";
 
 export const stageStatuses = [
   "not_started",
@@ -198,6 +201,10 @@ export type ProjectRecord = {
   grantPackage: GrantPackage | null;
   launchMissionWorkspace?: LaunchMissionWorkspace | null;
   qualityAudit?: QualityAudit | null;
+  draftPackageRun?: DraftPackageRun | null;
+  refinementHistory?: ProjectRefinementVersion[];
+  presentationDecks?: PresentationDeckDrafts | null;
+  documentDrafts?: DocumentDrafts | null;
   stages: ProjectStageRecord[];
   createdAt: string;
   updatedAt: string;

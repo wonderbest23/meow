@@ -9,6 +9,7 @@ import {
   inspectBusinessReality,
 } from "./quality/business-reality";
 import { deriveAutoDraftContext } from "./auto-draft";
+import { planningConstraintsFromFounderProfile } from "./planning-inputs";
 import { z } from "zod";
 
 const stageInstructions = [
@@ -119,12 +120,85 @@ function mergeStringLists(value: unknown, defaults: string[], minimum: number, m
   return [...new Set([...supplied, ...defaults])].slice(0, Math.max(minimum, supplied.length));
 }
 
+function applyDirectDraftConsistency(
+  project: ProjectRecord,
+  stageIndex: number,
+  source: Record<string, unknown>,
+) {
+  const constraints = planningConstraintsFromFounderProfile(project.founderProfile);
+  if (!constraints || constraints.source !== "direct" || !constraints.directDraft) return source;
+  const draft = constraints.directDraft;
+  const customer = String(project.opportunity.customer);
+  if (stageIndex === 0) {
+    const problem = draft.problem.length >= 80
+      ? draft.problem
+      : `${draft.problem} 이 내용은 아직 검증 전 가설이며 최근 고객 행동, 현재 대안과 실제 지불 의사를 확인해 유지·수정 여부를 판단합니다.`;
+    const valueProposition = `${draft.coreOutcome} ${draft.offerDescription} 첫 고객에게는 ${draft.firstScope}`;
+    return {
+      ...source,
+      problem,
+      customer,
+      valueProposition,
+      constraints: {
+        ...(source.constraints && typeof source.constraints === "object"
+          ? source.constraints as Record<string, unknown>
+          : {}),
+        budgetWon: constraints.budgetWon,
+        availableHoursPerWeek: constraints.availableHoursPerWeek,
+        firstScope: draft.firstScope,
+      },
+    };
+  }
+  if (stageIndex === 1) {
+    const pains = Array.isArray(source.pains)
+      ? source.pains.filter((item): item is string => typeof item === "string")
+      : [];
+    return {
+      ...source,
+      primaryCustomer: customer,
+      pains: [draft.problem, ...pains.filter((item) => item !== draft.problem)].slice(0, Math.max(3, pains.length)),
+    };
+  }
+  if (stageIndex === 2) {
+    const tiers = Array.isArray(source.tiers)
+      ? source.tiers.map((item) => item && typeof item === "object" ? { ...item as Record<string, unknown> } : item)
+      : [];
+    if (tiers[1] && typeof tiers[1] === "object") {
+      tiers[1] = {
+        ...tiers[1] as Record<string, unknown>,
+        name: draft.offerName,
+        outcome: draft.coreOutcome,
+        ...(draft.priceHypothesisWon ? { priceWon: draft.priceHypothesisWon } : {}),
+      };
+    }
+    const recommendedOffer = source.recommendedOffer && typeof source.recommendedOffer === "object"
+      ? source.recommendedOffer as Record<string, unknown>
+      : {};
+    return {
+      ...source,
+      tiers,
+      recommendedOffer: {
+        ...recommendedOffer,
+        name: draft.offerName,
+        outcome: draft.coreOutcome,
+        includedScope: draft.offerDescription,
+        ...(draft.priceHypothesisWon ? { priceWon: draft.priceHypothesisWon } : {}),
+      },
+    };
+  }
+  return source;
+}
+
 function fallbackContent(project: ProjectRecord, stageIndex: number) {
   const opportunity = project.opportunity;
   const stage = project.stages[stageIndex];
   const inputs = stage.inputs;
   const title = String(opportunity.title ?? project.title);
   const autoDraft = deriveAutoDraftContext(opportunity);
+  const planningConstraints = planningConstraintsFromFounderProfile(project.founderProfile);
+  const directDraft = planningConstraints?.source === "direct"
+    ? planningConstraints.directDraft
+    : undefined;
   const inputCustomer = String(inputs.primaryCustomer ?? "");
   const customer = inputCustomer && !/(첫 기획|초기 목표|확인할.*고객)/.test(inputCustomer)
     ? inputCustomer
@@ -133,15 +207,15 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
 
   if (stageIndex === 0) {
     return {
-      problem: `${autoDraft.problem} 첫 단계에서는 완성된 서비스를 만들기보다 이 문제가 실제로 반복되는지, 고객이 현재 어떤 대안에 시간과 돈을 쓰는지 확인합니다.`,
+      problem: `${directDraft?.problem ?? autoDraft.problem} 첫 단계에서는 완성된 서비스를 만들기보다 이 문제가 실제로 반복되는지, 고객이 현재 어떤 대안에 시간과 돈을 쓰는지 확인합니다.`,
       customer,
-      valueProposition: `${autoDraft.coreOutcome} ${autoDraft.promise} 첫 검증에서는 핵심 결과 한 가지만 직접 제공해 사용 의사와 지불 의사를 먼저 확인합니다.`,
+      valueProposition: `${directDraft?.coreOutcome ?? autoDraft.coreOutcome} ${directDraft?.offerDescription ?? autoDraft.promise} 첫 검증에서는 핵심 결과 한 가지만 직접 제공해 사용 의사와 지불 의사를 먼저 확인합니다.`,
       constraints: {
         budgetWon: number(inputs.budgetWon, 0),
         availableHoursPerWeek: number(inputs.availableHoursPerWeek, 10),
         mustAvoid: inputs.mustAvoid ?? [],
         existingAssets: inputs.existingAssets ?? [],
-        firstScope: "한 종류의 고객, 한 가지 입력 자료, 한 가지 결과물만 다룹니다.",
+        firstScope: directDraft?.firstScope ?? "한 종류의 고객, 한 가지 입력 자료, 한 가지 결과물만 다룹니다.",
         excludedScope: "자동화 앱 개발, 대규모 광고, 검증되지 않은 성과 보장은 첫 21일 범위에서 제외합니다.",
       },
       businessReadiness: project.businessSetup
@@ -172,7 +246,7 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
     const suppliedProblem = typeof inputs.problemStatement === "string" ? inputs.problemStatement.trim() : "";
     const primaryProblem = suppliedProblem.length >= 15
       ? suppliedProblem
-      : `${autoDraft.problem} 현재 문장은 초기 가설이며 실제 고객 대화로 확인해야 합니다.`;
+      : `${directDraft?.problem ?? autoDraft.problem} 현재 문장은 초기 가설이며 실제 고객 대화로 확인해야 합니다.`;
     return {
       primaryCustomer: customer,
       jobs: [
@@ -235,14 +309,14 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
     return {
       tiers: [
         { name: autoDraft.offerTiers[0].name, priceWon: Math.round(price * 0.45), outcome: autoDraft.offerTiers[0].outcome },
-        { name: autoDraft.offerTiers[1].name, priceWon: price, outcome: String(inputs.coreOutcome ?? autoDraft.offerTiers[1].outcome) },
+        { name: directDraft?.offerName ?? autoDraft.offerTiers[1].name, priceWon: price, outcome: String(inputs.coreOutcome ?? directDraft?.coreOutcome ?? autoDraft.offerTiers[1].outcome) },
         { name: autoDraft.offerTiers[2].name, priceWon: Math.round(price * 2.2), outcome: autoDraft.offerTiers[2].outcome },
       ],
       recommendedOffer: {
-        name: autoDraft.offerTiers[1].name,
+        name: directDraft?.offerName ?? autoDraft.offerTiers[1].name,
         priceWon: price,
         reason: "첫 고객이 실제 결과를 확인할 만큼 충분한 범위를 제공하면서도, 처음부터 개발 대행이나 장기 운영까지 떠안지 않도록 핵심 결과만 묶은 기준 상품입니다.",
-        includedScope: `${autoDraft.offerTiers[1].outcome}, 시작 조건 확인, 결과 초안, 범위 안 수정 1회와 다음 행동 안내를 포함합니다.`,
+        includedScope: `${directDraft?.offerDescription ?? autoDraft.offerTiers[1].outcome}, 시작 조건 확인, 결과 초안, 범위 안 수정 1회와 다음 행동 안내를 포함합니다.`,
         excludedScope: "확인되지 않은 성과 보장, 무제한 수정, 별도 시스템 개발, 광고비와 외부 전문가 비용은 포함하지 않습니다.",
         completionCriteria: "합의한 결과물이 전달되고 고객이 포함 범위와 다음 행동을 확인하면 완료로 봅니다. 새로운 요청은 기존 완료와 분리해 다시 견적합니다.",
       },
@@ -445,48 +519,55 @@ async function generateWithOpenAI(
   const baselineDraft = fallbackContent(project, stageIndex);
   const requiredFields = stageAIFieldKeys[stageIndex];
   if (!requiredFields) throw new Error("STAGE_SCHEMA_NOT_FOUND");
-  const response = await fetch("https://api.openai.com/v1/responses", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      model,
-      store: false,
-      reasoning: { effort: "low" },
-      max_output_tokens: 3_500,
-      text: { format: { type: "json_object" } },
-      input: [
-        {
-          role: "system",
-          content:
-            "당신은 한국에서 실제로 실행할 사업 초안을 작성하는 선임 사업전략가입니다. 이 작업은 소설·광고 창작이 아닙니다. 사용자 입력, 저장된 계산, 연결된 원문만 완료 사실로 사용할 수 있습니다. 고객 인터뷰·설문·판매·매출·시장규모·성장률·경력·수상·특허·제휴·후기를 절대 만들어내지 마세요. 모델의 기억이나 일반 상식을 최신 한국 시장의 확정 수치로 쓰지 마세요. 근거가 없으면 반드시 검증할 가정, 목표 또는 추가 확인 필요로 표현하고 미래형·조건형 문장을 사용하세요. 가격과 손익은 businessAssessment의 계산값을 그대로 유지하고 임의의 업종 평균으로 바꾸지 마세요. 기본 초안의 나머지 안전 항목은 서버가 자동으로 유지하므로 요청한 필수 필드만 간결하게 보강하고, 기본 초안 전체를 반복하거나 새로운 최상위 필드를 추가하지 마세요. 과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사와 인터넷 주소를 금지합니다. 반드시 설명이나 마크다운 없이 유효한 JSON 객체 하나만 출력하세요.",
-        },
-        {
-          role: "user",
-          content: JSON.stringify({
-            task: stageInstructions[stageIndex],
-            opportunity: project.opportunity,
-            founderProfile: project.founderProfile,
-            stageInputs: project.stages[stageIndex].inputs,
-            businessSetup: project.businessSetup,
-            businessAssessment: project.businessAssessment,
-            requiredFields,
-            baselineDraft: selectFields(baselineDraft, requiredFields),
-            priorApprovedArtifacts: project.stages
-              .slice(0, stageIndex)
-              .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.content)
-              .filter((content): content is Record<string, unknown> => Boolean(content))
-              .map(priorArtifactSummary),
-            revisionInstruction,
-            currentDraft,
-          }),
-        },
-      ],
-    }),
-    signal: AbortSignal.timeout(90_000),
-  });
+  let response: Response;
+  try {
+    response = await fetch("https://api.openai.com/v1/responses", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model,
+        store: false,
+        reasoning: { effort: "low" },
+        max_output_tokens: stageIndex === 5 ? 6_000 : 3_500,
+        text: { format: { type: "json_object" } },
+        input: [
+          {
+            role: "system",
+            content:
+              "당신은 한국에서 실제로 실행할 사업 초안을 작성하는 선임 사업전략가입니다. 이 작업은 소설·광고 창작이 아닙니다. 사용자 입력, 저장된 계산, 연결된 원문만 완료 사실로 사용할 수 있습니다. 고객 인터뷰·설문·판매·매출·시장규모·성장률·경력·수상·특허·제휴·후기를 절대 만들어내지 마세요. 모델의 기억이나 일반 상식을 최신 한국 시장의 확정 수치로 쓰지 마세요. 근거가 없으면 반드시 검증할 가정, 목표 또는 추가 확인 필요로 표현하고 미래형·조건형 문장을 사용하세요. 가격과 손익은 businessAssessment의 계산값을 그대로 유지하고 임의의 업종 평균으로 바꾸지 마세요. 기본 초안의 나머지 안전 항목은 서버가 자동으로 유지하므로 요청한 필수 필드만 간결하게 보강하고, 기본 초안 전체를 반복하거나 새로운 최상위 필드를 추가하지 마세요. 과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사와 인터넷 주소를 금지합니다. 반드시 설명이나 마크다운 없이 유효한 JSON 객체 하나만 출력하세요.",
+          },
+          {
+            role: "user",
+            content: JSON.stringify({
+              task: stageInstructions[stageIndex],
+              opportunity: project.opportunity,
+              founderProfile: project.founderProfile,
+              stageInputs: project.stages[stageIndex].inputs,
+              businessSetup: project.businessSetup,
+              businessAssessment: project.businessAssessment,
+              requiredFields,
+              baselineDraft: selectFields(baselineDraft, requiredFields),
+              priorApprovedArtifacts: project.stages
+                .slice(0, stageIndex)
+                .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.content)
+                .filter((content): content is Record<string, unknown> => Boolean(content))
+                .map(priorArtifactSummary),
+              revisionInstruction,
+              currentDraft,
+            }),
+          },
+        ],
+      }),
+      signal: AbortSignal.timeout(stageIndex === 5 ? 150_000 : 90_000),
+    });
+  } catch (error) {
+    throw new Error(error instanceof Error && error.name === "TimeoutError"
+      ? "OPENAI_TIMEOUT"
+      : "OPENAI_UNAVAILABLE");
+  }
   if (!response.ok) {
     throw new Error(`OPENAI_${response.status}`);
   }
@@ -533,24 +614,37 @@ export async function generateStageArtifact(
   let aiContent: Record<string, unknown> | null = null;
   let autoRewritten = false;
   let fallbackReason = "";
+  const requiresAI = runtimeConfig !== false
+    && Boolean(runtimeConfig?.apiKey ?? process.env.OPENAI_API_KEY);
   try {
     aiContent = await generateWithOpenAI(project, stageIndex, revisionInstruction, runtimeConfig);
   } catch (error) {
     fallbackReason = error instanceof Error ? error.message : "OPENAI_GENERATION_FAILED";
     if (error instanceof Error && error.message.startsWith("OPENAI_INVALID_OUTPUT")) {
-      aiContent = await generateWithOpenAI(
-        project,
-        stageIndex,
-        [revisionInstruction, "첫 응답이 필수 항목 또는 JSON 형식을 충족하지 못했습니다. 모든 필수 항목을 충분한 분량으로 다시 작성하세요."].filter(Boolean).join("\n"),
-        runtimeConfig,
-      ).catch(() => null);
-      autoRewritten = Boolean(aiContent);
-      if (aiContent) fallbackReason = "";
+      try {
+        aiContent = await generateWithOpenAI(
+          project,
+          stageIndex,
+          [revisionInstruction, "첫 응답이 필수 항목 또는 JSON 형식을 충족하지 못했습니다. 모든 필수 항목을 충분한 분량으로 다시 작성하세요."].filter(Boolean).join("\n"),
+          runtimeConfig,
+        );
+        autoRewritten = Boolean(aiContent);
+        if (aiContent) fallbackReason = "";
+      } catch (retryError) {
+        fallbackReason = retryError instanceof Error ? retryError.message : "OPENAI_GENERATION_FAILED";
+        if (requiresAI) throw retryError;
+      }
+    } else if (requiresAI) {
+      throw error;
     }
   }
   let content = aiContent
     ? validateStageContent(stageIndex, { ...baselineContent, ...aiContent })
     : baselineContent;
+  content = validateStageContent(
+    stageIndex,
+    applyDirectDraftConsistency(project, stageIndex, content),
+  );
   let usedAI = Boolean(aiContent);
   let artifactQuality = inspectStageArtifact(project, stageIndex, content);
   let realityReview = inspectBusinessReality(project, content);
@@ -567,7 +661,10 @@ export async function generateStageArtifact(
       content,
     ).catch(() => null);
     if (revised) {
-      const completedRevision = validateStageContent(stageIndex, { ...baselineContent, ...revised });
+      const completedRevision = validateStageContent(
+        stageIndex,
+        applyDirectDraftConsistency(project, stageIndex, { ...baselineContent, ...revised }),
+      );
       const revisedQuality = inspectStageArtifact(project, stageIndex, completedRevision);
       const revisedReality = inspectBusinessReality(project, completedRevision);
       if (revisedReality.passed && revisedQuality.score >= artifactQuality.score) {
@@ -579,9 +676,10 @@ export async function generateStageArtifact(
     }
   }
   if (usedAI && (!realityReview.passed || !artifactQuality.passed)) {
+    fallbackReason = realityReview.passed ? "OPENAI_QUALITY_GATE_FAILED" : "OPENAI_REALITY_GATE_FAILED";
+    if (requiresAI) throw new Error(fallbackReason);
     content = baselineContent;
     usedAI = false;
-    fallbackReason = realityReview.passed ? "OPENAI_QUALITY_GATE_FAILED" : "OPENAI_REALITY_GATE_FAILED";
     artifactQuality = inspectStageArtifact(project, stageIndex, content);
     realityReview = inspectBusinessReality(project, content);
   }

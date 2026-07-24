@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle2, Headphones, LogOut, MessageCircle, RefreshCw, Send, Settings } from "lucide-react";
+import { Banknote, CheckCircle2, Headphones, LogOut, MessageCircle, RefreshCw, Send, Settings } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import type { SupportChat, SupportConversation } from "../../lib/support-chat/repository";
@@ -181,7 +181,7 @@ export default function AdminSupportPage() {
     <main className="admin-support-page">
       <header className="admin-support-header">
         <div><span><Headphones /></span><div><strong>홈페이지·이용 문의 관리</strong><small>고객 문의와 답변 현황</small></div></div>
-        <div><Link className="admin-settings-link" href="/admin/legal"><Settings /> 운영 설정</Link><button type="button" onClick={logout}><LogOut /> 로그아웃</button></div>
+        <div><Link className="admin-settings-link" href="/admin/payments"><Banknote /> 입금 주문</Link><Link className="admin-settings-link" href="/admin/legal"><Settings /> 운영 설정</Link><button type="button" onClick={logout}><LogOut /> 로그아웃</button></div>
       </header>
       <div className="admin-support-workspace">
         <aside className="admin-conversation-list">
@@ -218,7 +218,7 @@ export default function AdminSupportPage() {
               </div>
               <form onSubmit={sendReply}>
                 {error && <p>{error}</p>}
-                <div><textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={3} maxLength={2000} placeholder="고객에게 보낼 답변을 입력하세요" /><button type="submit" disabled={busy || !reply.trim()} aria-label="답장 보내기" title="보내기"><Send /></button></div>
+                <div><textarea value={reply} onChange={(event) => setReply(event.target.value)} rows={3} maxLength={2000} placeholder="고객에게 보낼 답변을 입력하세요" /><button type="submit" disabled={busy || !reply.trim()} aria-label="답장 보내기" title="보내기">보내기</button></div>
               </form>
             </>
           )}

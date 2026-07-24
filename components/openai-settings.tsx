@@ -150,7 +150,7 @@ export function OpenAISettings({ light = false }: { light?: boolean }) {
           <section className="openai-settings-dialog" role="dialog" aria-modal="true" aria-labelledby="openai-settings-title">
             <header>
               <div><span><KeyRound /></span><div><small>인공지능 연결 설정</small><h2 id="openai-settings-title">OpenAI 연결</h2></div></div>
-              <button aria-label="설정 닫기" title="닫기" onClick={closeDialog} disabled={busy !== "idle"}><X /></button>
+              <button aria-label="설정 닫기" title="닫기" onClick={closeDialog} disabled={busy !== "idle"}>닫기</button>
             </header>
 
             <div className={`openai-connection-status ${status.connected ? "connected" : "disconnected"}`}>

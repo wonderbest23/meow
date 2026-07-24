@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {
+  createLandingPageData,
+  landingPageDataSchema,
+  type LandingPageData,
+} from "./page-data";
 
 const shortText = z.string().trim().min(1).max(120);
 const bodyText = z.string().trim().min(1).max(1000);
@@ -7,7 +12,16 @@ const landingImage = z.string().trim().max(900_000).refine(
   "이미지는 https 주소 또는 업로드한 이미지여야 합니다.",
 );
 
-export const landingTemplateIds = ["service", "local", "product", "class"] as const;
+export const landingTemplateIds = [
+  "service",
+  "local",
+  "product",
+  "class",
+  "tech",
+  "creator",
+  "wellness",
+  "editorial",
+] as const;
 export type LandingTemplateId = (typeof landingTemplateIds)[number];
 
 export const landingDraftSchema = z.object({
@@ -22,6 +36,7 @@ export const landingDraftSchema = z.object({
   logoImageUrl: landingImage.default(""),
   heroImageUrl: landingImage.default(""),
   heroImageAlt: z.string().trim().max(200).default(""),
+  pageData: landingPageDataSchema.nullable().default(null),
   heroLabel: z.string().trim().max(80).default("지금 사전 신청을 받고 있어요"),
   headline: z.string().trim().min(5).max(120),
   subheadline: z.string().trim().min(5).max(300),
@@ -115,9 +130,45 @@ export const landingTemplateOptions: Array<{
     backgroundTone: "cream",
     heroImageUrl: "https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=1800&q=82",
   },
+  {
+    id: "tech",
+    name: "앱·플랫폼",
+    description: "기술 서비스·구독·소프트웨어",
+    accentColor: "#0f766e",
+    backgroundTone: "dark",
+    heroImageUrl: "https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&w=1800&q=82",
+  },
+  {
+    id: "creator",
+    name: "작가·전문가",
+    description: "포트폴리오·콘텐츠·개인 브랜드",
+    accentColor: "#c03f55",
+    backgroundTone: "white",
+    heroImageUrl: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1800&q=82",
+  },
+  {
+    id: "wellness",
+    name: "뷰티·웰니스",
+    description: "케어·건강·라이프스타일",
+    accentColor: "#7d5a50",
+    backgroundTone: "cream",
+    heroImageUrl: "https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=1800&q=82",
+  },
+  {
+    id: "editorial",
+    name: "브랜드 스토리",
+    description: "브랜드 소개·제작 철학·스튜디오",
+    accentColor: "#232323",
+    backgroundTone: "white",
+    heroImageUrl: "https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1800&q=82",
+  },
 ];
 
 export function inferLandingTemplate(sector: string): LandingTemplateId {
+  if (/(앱|플랫폼|소프트웨어|SaaS|인공지능|AI|데이터|개발)/i.test(sector)) return "tech";
+  if (/(콘텐츠|디자인|작가|사진|영상|크리에이터|마케팅)/.test(sector)) return "creator";
+  if (/(뷰티|웰니스|건강|헬스|피부|테라피|마사지)/.test(sector)) return "wellness";
+  if (/(브랜드|스튜디오|에이전시|제작)/.test(sector)) return "editorial";
   if (/(쇼핑|상품|유통|커머스|제조|판매)/.test(sector)) return "product";
   if (/(교육|수업|체험|클래스|코칭)/.test(sector)) return "class";
   if (/(매장|공방|외식|카페|지역|방문|미용|네일|식당|음식점|베이커리|숙박|스튜디오|세탁|수리|운동|피트니스|필라테스|요가)/.test(sector)) return "local";
@@ -129,13 +180,24 @@ export function applyLandingTemplate(
   templateId: LandingTemplateId,
 ): LandingDraft {
   const template = landingTemplateOptions.find((item) => item.id === templateId) ?? landingTemplateOptions[0];
-  return {
+  const next = {
     ...draft,
     templateId,
     accentColor: template.accentColor,
     backgroundTone: template.backgroundTone,
     heroImageUrl: template.heroImageUrl,
     heroImageAlt: draft.heroImageAlt || `${draft.businessName} 대표 이미지`,
+  };
+  return {
+    ...next,
+    pageData: createLandingPageData(next, templateId),
+  };
+}
+
+export function ensureLandingPageData(draft: LandingDraft): LandingDraft & { pageData: LandingPageData } {
+  return {
+    ...draft,
+    pageData: draft.pageData ?? createLandingPageData(draft, draft.templateId),
   };
 }
 
@@ -257,7 +319,7 @@ export function createLandingDraft(input: {
 }): LandingDraft {
   const templateId = inferLandingTemplate(input.sector ?? "");
   const template = landingTemplateOptions.find((item) => item.id === templateId) ?? landingTemplateOptions[0];
-  return {
+  const draft: LandingDraft = {
     slug: slugify(input.title),
     businessName: input.title,
     pageMode: "lead_validation",
@@ -266,6 +328,7 @@ export function createLandingDraft(input: {
     logoImageUrl: "",
     heroImageUrl: template.heroImageUrl,
     heroImageAlt: `${input.title} 대표 이미지`,
+    pageData: null,
     heroLabel: "지금 첫 고객을 모집하고 있어요",
     headline: input.oneLiner || `${input.title}, 가장 작은 실행부터 시작하세요`,
     subheadline: `${input.customer || "고객"}에게 필요한 결과를 ${input.model || "맞춤 방식"}으로 검증합니다.`,
@@ -317,5 +380,9 @@ export function createLandingDraft(input: {
     hostingProvider: "오늘창업",
     refundPolicy: "",
     termsUrl: "",
+  };
+  return {
+    ...draft,
+    pageData: createLandingPageData(draft, templateId),
   };
 }

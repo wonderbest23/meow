@@ -3,6 +3,7 @@
 import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "react";
 import { ArrowRight, Check, ChevronDown, LoaderCircle, ShieldCheck } from "lucide-react";
 import { landingCollectedItems, type LandingDraft } from "../lib/landing/domain";
+import { LandingBlocksRenderer } from "./landing-blocks";
 
 function getVisitorId() {
   const key = "venture-landing-visitor";
@@ -105,7 +106,7 @@ export function PublicLandingClient({
         <button onClick={moveToForm}>{config.ctaLabel}</button>
       </nav>
 
-      <section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
+      {config.pageData ? <LandingBlocksRenderer data={config.pageData} /> : <><section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
         <div className="public-landing-hero-copy">
           <span>{config.heroLabel}</span>
           <h1>{config.headline}</h1>
@@ -134,9 +135,9 @@ export function PublicLandingClient({
           <header><small>궁금한 점</small><h2>자주 묻는 질문</h2></header>
           <div>{config.faq.map((item) => <details key={item.question}><summary>{item.question}<ChevronDown /></summary><p>{item.answer}</p></details>)}</div>
         </section>
-      )}
+      )}</>}
 
-      <section className={`public-lead-section ${config.leadCaptureEnabled ? "" : "brochure"}`} ref={formRef}>
+      <section id="landing-contact" className={`public-lead-section ${config.leadCaptureEnabled ? "" : "brochure"}`} ref={formRef}>
         <div><small>신청하기</small><h2>{config.ctaLabel}</h2><p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p></div>
         {!config.leadCaptureEnabled ? (
           <div className="public-lead-ready"><ShieldCheck /><h3>홈페이지가 먼저 준비되었습니다</h3><p>사업자 연락처와 개인정보 문의 정보를 확인한 뒤 신청폼을 켤 수 있습니다.</p></div>

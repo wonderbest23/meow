@@ -159,7 +159,15 @@ const project: ProjectRecord = {
   updatedAt: new Date().toISOString(),
 };
 const plan = generateBusinessPlan(project, workspace, analysis);
-assert.equal(plan.sections.length, 8);
+assert.equal(plan.sections.length, 6);
+assert.ok(plan.markdown.includes("# 제출용 본문"));
+assert.ok(plan.markdown.includes("## 1. 문제 인식(Problem)"));
+assert.ok(plan.markdown.includes("## 2. 실현 가능성(Solution)"));
+assert.ok(plan.markdown.includes("## 3. 성장전략(Scale-up)"));
+assert.ok(plan.markdown.includes("## 4. 팀 구성(Team)"));
+assert.ok(plan.markdown.includes("사업비 집행 계획"));
+assert.ok(plan.markdown.includes("# 참고 부록 · 제출본에서 분리"));
+assert.ok(plan.markdown.indexOf("# 참고 부록") > plan.markdown.indexOf("# 제출용 본문"));
 assert.ok(plan.markdown.includes("서울시 상권분석서비스"));
 assert.ok(plan.markdown.includes("비용 효율 후보"));
 assert.ok(plan.readinessScore > 0);

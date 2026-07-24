@@ -4,11 +4,19 @@ import {
   getPublishedLandingBySlug,
   recordLandingEvent,
 } from "../../../../../../lib/landing/repository";
+import { enforceRateLimit } from "../../../../../../lib/rate-limit";
 
 export async function POST(
   request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
+  // Lenient cap: real visitors fire a handful of analytics events; this only stops flooding.
+  const limited = await enforceRateLimit("public-event", request, {
+    limit: 120,
+    windowMs: 60_000,
+    message: "요청이 너무 잦습니다.",
+  });
+  if (limited) return limited;
   try {
     const { slug } = await context.params;
     const published = await getPublishedLandingBySlug(slug);

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { paymentsEnabled } from "../../../../lib/payments/config";
-import { tossConfigured } from "../../../../lib/payments/toss-client";
+import { manualTransferPaymentConfigured } from "../../../../lib/payments/manual-transfer";
 import {
   evaluatePlatformLaunchReadiness,
   platformLegalSettingsSchema,
@@ -25,7 +25,7 @@ async function authorized() {
 function readiness(settings: Awaited<ReturnType<typeof getPlatformLegalSettings>>) {
   return evaluatePlatformLaunchReadiness(settings, {
     authConfigured: Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
-    paymentsConfigured: paymentsEnabled() && tossConfigured(),
+    paymentsConfigured: paymentsEnabled() && manualTransferPaymentConfigured(),
   });
 }
 

@@ -9,6 +9,21 @@ import {
   type DeliveryDocumentQuality,
   type DeliveryPackageQuality,
 } from "./quality-gate";
+import { buildDeliveryFactRegistry, summarizeDeliveryFacts, type DeliveryFactSummary } from "./fact-registry";
+import { enrichDeliveryMainBody } from "./body-enricher";
+import type { DocumentDraft } from "./document-drafts";
+import {
+  sanitizeBusinessReality,
+  type BusinessRealitySanitization,
+} from "../quality/business-reality";
+
+export type DeliveryUseStatus = "ready" | "verify" | "needs_input";
+
+export type DeliveryClaimSummary = {
+  checkedDocuments: number;
+  safeDocuments: number;
+  convertedClaims: number;
+};
 
 export type DeliveryItem = {
   id: string;
@@ -21,9 +36,14 @@ export type DeliveryItem = {
   generatedAt: string | null;
   markdown: string;
   complete: boolean;
+  businessReady?: boolean;
   contentReady?: boolean;
+  useStatus?: DeliveryUseStatus;
+  useStatusLabel?: string;
+  openIssueCount?: number;
   qualityReason?: string | null;
   quality?: DeliveryDocumentQuality;
+  claimSafety?: BusinessRealitySanitization;
 };
 
 const fieldLabels: Record<string, string> = {
@@ -218,7 +238,20 @@ const valueLabels: Record<string, string> = {
   customer: "고객",
   channel: "고객을 만나는 경로",
   price: "가격",
+  "kr-grants-v1": "한국 지원사업 작성 기준 1판",
+  "[required]": "[필수]",
+  "[verify]": "[확인 필요]",
+  BEP: "손익분기점",
+  CAC: "고객 1명 확보비용",
+  SOP: "업무 절차서",
+  "FIRST OFFER": "첫 상품",
 };
+
+export function localizeDeliveryText(text: string) {
+  return Object.entries(valueLabels)
+    .sort(([left], [right]) => right.length - left.length)
+    .reduce((result, [internalValue, label]) => result.replaceAll(internalValue, label), text);
+}
 
 const moneyKeys = new Set([
   "budgetWon",
@@ -268,7 +301,7 @@ function displayScalar(value: string | number | boolean, key?: string) {
   if (key === "archetype" && value in archetypeLabels) return archetypeLabels[value as keyof typeof archetypeLabels];
   if (key === "legalForm" && value in legalFormLabels) return legalFormLabels[value as keyof typeof legalFormLabels];
   if (key === "workplaceType" && value in workplaceLabels) return workplaceLabels[value as keyof typeof workplaceLabels];
-  return valueLabels[value] ?? value;
+  return valueLabels[value] ?? localizeDeliveryText(value);
 }
 
 function markdownArrayObject(
@@ -350,8 +383,31 @@ const definitions = [
   { id: "plan", title: "근거 기반 사업계획서", type: "시장·입지·재무·인허가 통합", stageIndex: null },
   { id: "operations", title: "영업 운영 준비서", type: "조달·업무 절차·고객 응대·영업 시작 점검", stageIndex: null },
   { id: "execution", title: "실행 결과 검증 보고서", type: "가정·구매 흐름·고객 한 명을 얻는 비용·실제 손익분기점", stageIndex: null },
-  { id: "grants", title: "공공지원사업 매칭·신청 초안", type: "공고 자격 판정·신청 문단", stageIndex: null },
+  { id: "grants", title: "공공지원사업 신청서 본문 작성본", type: "공고별 문제인식·실현가능성·성장전략·팀·사업비", stageIndex: null },
 ] as const;
+
+const evidenceCriticalDocuments = new Set(["market", "pricing", "plan", "operations", "execution", "grants"]);
+
+function resolveUseStatus(
+  itemId: string,
+  contentReady: boolean,
+  businessReady: boolean,
+  quality: DeliveryDocumentQuality,
+) {
+  if (!contentReady) {
+    return { useStatus: "needs_input" as const, useStatusLabel: "추가 자료 필요", openIssueCount: quality.issues.length };
+  }
+  const verificationNeeded = evidenceCriticalDocuments.has(itemId) && quality.verificationStatus !== "verified";
+  const openIssueCount = Number(!businessReady) + Number(verificationNeeded);
+  if (openIssueCount > 0) {
+    return {
+      useStatus: "verify" as const,
+      useStatusLabel: `${openIssueCount}가지 사실 확인 후 사용`,
+      openIssueCount,
+    };
+  }
+  return { useStatus: "ready" as const, useStatusLabel: "바로 사용 가능", openIssueCount: 0 };
+}
 
 function businessReadinessReason(project: ProjectRecord, itemId: string) {
   if (itemId === "plan" && !project.businessPlan?.submissionReady) {
@@ -376,6 +432,8 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
   qualityStatus: string | null;
   qualityScore: number | null;
   deliveryQuality: DeliveryPackageQuality;
+  factSummary: DeliveryFactSummary;
+  claimSummary: DeliveryClaimSummary;
 } {
   const rawItems = definitions.map((definition) => {
     if (definition.id === "plan" && project.businessPlan) {
@@ -389,7 +447,8 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
         approvedArtifactId: null,
         generatedAt: project.businessPlan.generatedAt,
         markdown: project.businessPlan.markdown,
-        complete: project.businessPlan.submissionReady,
+        complete: true,
+        businessReady: project.businessPlan.submissionReady,
       };
     }
     if (definition.id === "operations" && project.operationsPackage) {
@@ -403,7 +462,8 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
         approvedArtifactId: null,
         generatedAt: project.operationsPackage.generatedAt,
         markdown: project.operationsPackage.markdown,
-        complete: project.operationsAssessment?.hardBlockers.length === 0,
+        complete: true,
+        businessReady: project.operationsAssessment?.hardBlockers.length === 0,
       };
     }
     if (definition.id === "execution" && project.executionAnalysis) {
@@ -417,7 +477,8 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
         approvedArtifactId: null,
         generatedAt: project.executionAnalysis.generatedAt,
         markdown: markdownFromArtifact(project.executionAnalysis),
-        complete: project.executionAnalysis.confidenceScore >= 50,
+        complete: true,
+        businessReady: project.executionAnalysis.confidenceScore >= 50,
       };
     }
     if (definition.id === "grants" && project.grantPackage) {
@@ -431,7 +492,8 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
         approvedArtifactId: null,
         generatedAt: project.grantPackage.generatedAt,
         markdown: project.grantPackage.markdown,
-        complete: (project.grantAnalysis?.eligibleCount ?? 0) > 0,
+        complete: true,
+        businessReady: (project.grantAnalysis?.eligibleCount ?? 0) > 0,
       };
     }
     if (definition.stageIndex !== null) {
@@ -453,22 +515,34 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
       complete: false,
     };
   });
-  const items = rawItems.map((item) => {
+  const items: DeliveryItem[] = rawItems.map((item): DeliveryItem => {
     if (item.source === "missing") {
       const quality = evaluateDeliveryDocument(project, item, item.markdown);
-      return { ...item, contentReady: false, qualityReason: "승인된 원본이 없습니다.", quality };
+      return {
+        ...item,
+        contentReady: false,
+        qualityReason: "승인된 원본이 없습니다.",
+        quality,
+        ...resolveUseStatus(item.id, false, false, quality),
+      };
     }
-    const bodyMarkdown = enhanceDeliveryBody(project, item.id, item.markdown);
-    const markdown = appendDeliveryAssurance(project, item.id, bodyMarkdown);
+    const enrichedMarkdown = enrichDeliveryMainBody(project, item.id, item.markdown);
+    const generatedBodyMarkdown = enhanceDeliveryBody(project, item.id, enrichedMarkdown);
+    const claimSafety = sanitizeBusinessReality(project, generatedBodyMarkdown);
+    const bodyMarkdown = claimSafety.text;
+    const markdown = localizeDeliveryText(appendDeliveryAssurance(project, item.id, bodyMarkdown));
     const quality = evaluateDeliveryDocument(project, { ...item, markdown }, bodyMarkdown);
     const contentReady = quality.status === "ready";
-    const businessReady = item.complete;
+    const businessReady = item.businessReady ?? item.complete;
+    const useStatus = resolveUseStatus(item.id, contentReady, businessReady, quality);
     return {
       ...item,
       markdown,
-      complete: item.complete && contentReady,
+      complete: contentReady,
       contentReady,
       quality,
+      claimSafety,
+      ...useStatus,
       qualityReason: contentReady
         ? businessReady ? null : businessReadinessReason(project, item.id)
         : `최종 납품 최소 기준 미달 · 자동 납품 검수: ${quality.issues.slice(0, 3).join(", ")}`,
@@ -479,6 +553,13 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
     project,
     items.map((item) => ({ ...item, quality: item.quality as DeliveryDocumentQuality })),
   );
+  const factSummary = summarizeDeliveryFacts(buildDeliveryFactRegistry(project));
+  const checkedItems = items.filter((item) => item.source !== "missing");
+  const claimSummary = {
+    checkedDocuments: checkedItems.length,
+    safeDocuments: checkedItems.filter((item) => (item.claimSafety?.changedCount ?? 0) === 0).length,
+    convertedClaims: checkedItems.reduce((sum, item) => sum + (item.claimSafety?.changedCount ?? 0), 0),
+  };
   return {
     items,
     completeCount: items.filter((item) => item.complete).length,
@@ -486,6 +567,8 @@ export function assembleDeliveryPackage(project: ProjectRecord): {
     qualityStatus: deliveryQuality.status,
     qualityScore: deliveryQuality.score,
     deliveryQuality,
+    factSummary,
+    claimSummary,
   };
 }
 
@@ -514,4 +597,31 @@ export function buildDeliveryDownload(
         ...pack.items.map((item) => [`## ${item.title}`, "", item.markdown].join("\n")),
       ].join("\n\n---\n\n");
   return { body, pack };
+}
+
+export function applyDeliveryDocumentDraft(
+  project: ProjectRecord,
+  item: DeliveryItem,
+  draft: DocumentDraft | undefined,
+): DeliveryItem {
+  if (!draft?.markdown.trim()) return item;
+  const claimSafety = sanitizeBusinessReality(project, draft.markdown.trim());
+  const markdown = claimSafety.text;
+  const quality = evaluateDeliveryDocument(project, { ...item, markdown }, markdown);
+  const contentReady = quality.status === "ready";
+  const businessReady = item.businessReady ?? item.complete;
+  return {
+    ...item,
+    markdown,
+    generatedAt: draft.updatedAt,
+    versionLabel: `${draft.versions.at(-1)?.version ?? 1}차 수정본`,
+    contentReady,
+    complete: contentReady,
+    quality,
+    claimSafety,
+    ...resolveUseStatus(item.id, contentReady, businessReady, quality),
+    qualityReason: contentReady
+      ? businessReady ? null : item.qualityReason
+      : `수정본 자동 점검: ${quality.issues.slice(0, 3).join(", ")}`,
+  };
 }

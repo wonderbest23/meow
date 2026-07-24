@@ -3,7 +3,13 @@ import assert from "node:assert/strict";
 async function main() {
   process.env.PERSISTENCE_MODE = "demo-memory";
 
-  const { findSupportFaq, supportFaqCategories } = await import("../lib/support-chat/faq");
+  const {
+    findSupportFaq,
+    findSupportFaqCandidates,
+    findSupportFaqKeywordMatches,
+    supportFaqCategories,
+    supportKnowledgeText,
+  } = await import("../lib/support-chat/faq");
 
   const {
     getAdminChat,
@@ -18,6 +24,23 @@ async function main() {
   assert.equal(findSupportFaq("다음 버튼이 안 눌려요")?.id, "error-disabled");
   assert.equal(findSupportFaq("도메인 비용이 궁금해요")?.id, "landing-domain");
   assert.equal(findSupportFaq("완전히 무관한 문장입니다"), null);
+  assert.equal(
+    findSupportFaqCandidates("창을 닫으면 자료 제작도 취소되나요?", 1)[0]?.id,
+    "project-background",
+  );
+  assert.deepEqual(
+    findSupportFaqKeywordMatches("자료 제작 중 창을 닫으면 취소되나요?", 3).map((item) => item.id),
+    ["project-background"],
+  );
+  assert.equal(findSupportFaqKeywordMatches("세금 신고와 세무사 연결도 해주나요?", 1)[0]?.id, "error-scope");
+  assert.deepEqual(
+    findSupportFaqKeywordMatches("로그인 안 하고 휴대폰 작업을 PC에서 볼 수 있나요?", 3).map((item) => item.id),
+    ["account-other-device", "account-guest"],
+  );
+  assert.match(supportKnowledgeText("카드로 결제할 수 있나요?"), /카드와 토스페이먼츠 결제는 아직 제공하지 않습니다/);
+  assert.match(supportKnowledgeText("PPT를 수정할 수 있나요?"), /저장한 내용은 내려받는 PPTX에도 반영됩니다/);
+  assert.match(supportKnowledgeText("제작 후 단순 변심 환불이 되나요?"), /단순 변심 환불이 제한됩니다/);
+  assert.match(supportKnowledgeText("결과물이 계약과 다르면 환불되나요?"), /법정 예외/);
 
   const guest = `support-test-${crypto.randomUUID()}`;
   const otherGuest = `support-test-${crypto.randomUUID()}`;

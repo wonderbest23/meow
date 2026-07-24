@@ -3,6 +3,7 @@ import { z } from "zod";
 import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccountSession } from "../../../../lib/account-auth";
 import { getServerSupabase } from "../../../../lib/persistence";
 import { PLATFORM_POLICY_VERSION } from "../../../../lib/platform-legal/domain";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 const schema = z.object({
   email: z.string().trim().email().max(200),
@@ -13,6 +14,12 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit("auth-register", request, {
+    limit: 5,
+    windowMs: 60 * 60_000,
+    message: "가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+  });
+  if (limited) return limited;
   try {
     const input = schema.parse(await request.json());
     const origin = new URL(request.url).origin;

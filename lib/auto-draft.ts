@@ -88,6 +88,34 @@ export function deriveAutoDraftContext(opportunity: OpportunityLike): AutoDraftC
   const customer = usableCustomer(suppliedCustomer)
     ? suppliedCustomer
     : inferCustomerFromIdea(idea, shortTitle);
+  const videoSubscription = /(숏폼|영상).*(구독|정기|제작|촬영|편집)|(?:구독|정기|제작|촬영|편집).*(숏폼|영상)/.test(`${title} ${idea}`);
+  if (videoSubscription) {
+    return {
+      title,
+      shortTitle,
+      idea,
+      customer,
+      problem: `${customer}는 홍보 영상을 꾸준히 올려야 하지만 직접 기획·촬영·편집할 시간이 부족하고, 매번 외주업체를 찾으면 비용과 결과를 예측하기 어렵습니다.`,
+      coreOutcome: "매달 약속한 편수의 숏폼 영상을 기획·촬영·편집해 바로 게시할 수 있는 파일로 받습니다.",
+      promise: "먼저 샘플 1편으로 영상 스타일과 작업 방식을 확인한 뒤, 월 단위로 필요한 편수만 선택할 수 있게 합니다.",
+      offerTiers: [
+        { name: "샘플 영상 1편", outcome: "한 번의 기획·촬영·편집으로 영상 스타일과 작업 방식 확인" },
+        { name: "월 4편 기본 구독", outcome: "주 1회 게시할 수 있는 숏폼 영상 4편 정기 제작" },
+        { name: "월 8편 성장 구독", outcome: "월간 기획표와 숏폼 영상 8편, 반응 확인표 제공" },
+      ],
+      nameCandidates: ["가게한컷", "마포숏폼", "사장님영상", "매장한편", "동네숏폼"],
+      slogans: [
+        "매주 올릴 홍보 영상, 촬영부터 편집까지 한 번에",
+        "바쁜 사장님을 위한 정기 숏폼 제작",
+        "한 편 먼저 확인하고 필요한 만큼 구독하세요",
+        "우리 가게 이야기를 짧고 분명한 영상으로",
+        "홍보 영상을 미루지 않게 만드는 월간 제작팀",
+      ],
+      headline: "매주 올릴 홍보 영상, 촬영부터 편집까지 맡기세요.",
+      subheadline: `${customer}를 위해 샘플 1편부터 월 4편·8편 구독까지 필요한 만큼 제작합니다.`,
+      callToAction: "샘플 영상 상담하기",
+    };
+  }
   return {
     title,
     shortTitle,

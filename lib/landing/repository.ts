@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "../persistence";
 import { getProject } from "../project-repository";
 import {
+  ensureLandingPageData,
   landingDraftSchema,
   landingPublicationIssues,
   type LandingDraft,
@@ -11,6 +12,10 @@ import {
   type LandingSiteRecord,
   type LandingVersion,
 } from "./domain";
+
+function parseLandingDraft(value: unknown): LandingDraft {
+  return ensureLandingPageData(landingDraftSchema.parse(value));
+}
 
 type DemoLandingStore = {
   sites: Map<string, LandingSiteRecord>;
@@ -57,10 +62,10 @@ function demoWithMetrics(site: LandingSiteRecord): LandingSiteRecord {
   const leads = demo.leads.filter((lead) => lead.siteId === site.id).length;
   return {
     ...clone(site),
-    draft: landingDraftSchema.parse(site.draft),
+    draft: parseLandingDraft(site.draft),
     versions: site.versions.map((version) => ({
       ...clone(version),
-      config: landingDraftSchema.parse(version.config),
+      config: parseLandingDraft(version.config),
     })),
     metrics: metrics(pageViews, ctaClicks, leads),
   };
@@ -89,7 +94,7 @@ async function mapSupabaseSite(
   const versions: LandingVersion[] = (versionRows ?? []).map((version) => ({
     id: version.id,
     version: version.version,
-    config: landingDraftSchema.parse(version.config),
+    config: parseLandingDraft(version.config),
     createdAt: version.created_at,
     publishedAt: version.published_at,
   }));
@@ -98,7 +103,7 @@ async function mapSupabaseSite(
     projectId: row.project_id as string,
     slug: row.slug as string,
     status: row.status as LandingSiteRecord["status"],
-    draft: landingDraftSchema.parse(row.draft),
+    draft: parseLandingDraft(row.draft),
     publishedVersion: (row.published_version as number | null) ?? null,
     versions,
     customDomain: (row.custom_domain as string | null) ?? null,
@@ -175,7 +180,7 @@ export async function saveLandingDraft(
   input: LandingDraft,
 ): Promise<LandingSiteRecord> {
   await requireProject(projectId, guestTokenHash);
-  const draft = landingDraftSchema.parse(input);
+  const draft = parseLandingDraft(input);
   const supabase = getServerSupabase();
   if (!supabase) {
     const slugOwner = demo.slugIndex.get(draft.slug);
@@ -268,6 +273,32 @@ export async function publishLanding(
   return (await getLandingForProject(projectId, guestTokenHash))!;
 }
 
+export async function setLandingCustomDomain(
+  projectId: string,
+  guestTokenHash: string,
+  customDomain: string | null,
+): Promise<LandingSiteRecord> {
+  const site = await getLandingForProject(projectId, guestTokenHash);
+  if (!site) throw new Error("LANDING_NOT_FOUND");
+  const normalized = customDomain?.trim().toLowerCase() || null;
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.sites.get(site.id)!;
+    stored.customDomain = normalized;
+    stored.updatedAt = new Date().toISOString();
+    return demoWithMetrics(stored);
+  }
+  const { error } = await supabase
+    .from("landing_sites")
+    .update({ custom_domain: normalized })
+    .eq("id", site.id);
+  if (error) {
+    if (error.code === "23505") throw new Error("CUSTOM_DOMAIN_TAKEN");
+    throw error;
+  }
+  return (await getLandingForProject(projectId, guestTokenHash))!;
+}
+
 export async function rollbackLanding(
   projectId: string,
   guestTokenHash: string,
@@ -333,7 +364,41 @@ export async function getPublishedLandingBySlug(
   if (versionError) throw versionError;
   return {
     site: await mapSupabaseSite(supabase, data),
-    config: landingDraftSchema.parse(version.config),
+    config: parseLandingDraft(version.config),
+  };
+}
+
+export async function getPublishedLandingByCustomDomain(
+  hostname: string,
+): Promise<{ site: LandingSiteRecord; config: LandingDraft } | null> {
+  const normalized = hostname.trim().toLowerCase().replace(/:\d+$/, "");
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const site = [...demo.sites.values()].find(
+      (item) => item.customDomain === normalized && item.status === "published",
+    );
+    if (!site || site.publishedVersion === null) return null;
+    const version = site.versions.find((item) => item.version === site.publishedVersion);
+    return version ? { site: demoWithMetrics(site), config: clone(version.config) } : null;
+  }
+  const { data, error } = await supabase
+    .from("landing_sites")
+    .select("*")
+    .eq("custom_domain", normalized)
+    .eq("status", "published")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data || data.published_version === null) return null;
+  const { data: version, error: versionError } = await supabase
+    .from("landing_versions")
+    .select("*")
+    .eq("site_id", data.id)
+    .eq("version", data.published_version)
+    .single();
+  if (versionError) throw versionError;
+  return {
+    site: await mapSupabaseSite(supabase, data),
+    config: parseLandingDraft(version.config),
   };
 }
 

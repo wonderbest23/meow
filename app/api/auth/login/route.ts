@@ -1,10 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccountSession } from "../../../../lib/account-auth";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 const schema = z.object({ email: z.string().trim().email().max(200), password: z.string().min(8).max(200) });
 
 export async function POST(request: Request) {
+  const limited = await enforceRateLimit("auth-login", request, {
+    limit: 10,
+    windowMs: 5 * 60_000,
+    message: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+  });
+  if (limited) return limited;
   try {
     const input = schema.parse(await request.json());
     const previousGuestHash = await currentGuestHash();

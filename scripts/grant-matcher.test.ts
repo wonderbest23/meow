@@ -78,7 +78,13 @@ async function main() {
   assert.ok(analysis.conditionalCount > 0);
 
   const grantPackage = generateGrantPackage(fixture, workspace, analysis);
-  assert.ok(grantPackage.markdown.includes("공공지원사업 매칭·신청 초안"));
+  assert.ok(grantPackage.markdown.includes("공공지원사업 신청서 본문 작성본"));
+  assert.ok(grantPackage.markdown.includes("# 제출용 신청서 본문"));
+  assert.ok(grantPackage.markdown.includes("문제 인식(Problem)"));
+  assert.ok(grantPackage.markdown.includes("실현 가능성(Solution)"));
+  assert.ok(grantPackage.markdown.includes("성장전략(Scale-up)"));
+  assert.ok(grantPackage.markdown.includes("팀 구성(Team)"));
+  assert.ok(grantPackage.markdown.includes("정부지원사업비 집행 계획 초안"));
   assert.ok(grantPackage.sections.length > 0);
 
   const guestTokenHash = "guest-hash-grant-test";
@@ -108,7 +114,8 @@ async function main() {
   const delivery = assembleDeliveryPackage(saved);
   const grantItem = delivery.items.find((item) => item.id === "grants");
   assert.ok(grantItem, "공공지원 초안은 납품 패키지에 포함되어야 합니다.");
-  assert.equal(grantItem.complete, false, "외부 자격 검증 전 지원사업 초안을 완료로 집계하면 안 됩니다.");
+  assert.equal(grantItem.complete, true, "자격 확인과 별개로 신청서 본문 파일은 완성되어야 합니다.");
+  assert.equal(grantItem.businessReady, false, "외부 자격 검증 전에는 실제 신청 가능 상태로 표시하면 안 됩니다.");
   assert.ok(grantItem?.markdown.includes("공공지원사업"));
 
   console.log("grant-matcher.test.ts passed");

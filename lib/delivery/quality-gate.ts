@@ -1,5 +1,6 @@
 import type { ProjectRecord } from "../service-domain";
 import { inspectBusinessReality } from "../quality/business-reality";
+import { buildDeliveryFactRegistry, type DeliveryFactStatus } from "./fact-registry";
 import { deliveryDocumentMetrics } from "./metrics";
 
 export type DeliveryVerificationStatus = "verified" | "input_based" | "assumption_based";
@@ -55,16 +56,16 @@ const standards: Record<string, {
   minTables: number;
   requiredTerms: string[];
 }> = {
-  brief: { minCharacters: 900, minSections: 6, minTables: 0, requiredTerms: ["고객", "검증", "완료"] },
-  market: { minCharacters: 1_050, minSections: 7, minTables: 1, requiredTerms: ["고객", "대안", "근거", "확인"] },
-  pricing: { minCharacters: 1_100, minSections: 7, minTables: 1, requiredTerms: ["가격", "손익", "가정", "원"] },
-  brand: { minCharacters: 850, minSections: 6, minTables: 0, requiredTerms: ["이름", "소개", "금지"] },
-  landing: { minCharacters: 1_450, minSections: 8, minTables: 0, requiredTerms: ["고객", "가격", "신청", "개인정보"] },
-  launch: { minCharacters: 1_400, minSections: 7, minTables: 1, requiredTerms: ["30일", "완료", "중단", "결제"] },
-  plan: { minCharacters: 2_300, minSections: 8, minTables: 2, requiredTerms: ["시장", "사업비", "팀", "출처"] },
-  operations: { minCharacters: 1_900, minSections: 6, minTables: 2, requiredTerms: ["환불", "개인정보", "증빙", "영업"] },
-  execution: { minCharacters: 1_300, minSections: 6, minTables: 1, requiredTerms: ["전환", "실제", "다음", "신뢰"] },
-  grants: { minCharacters: 1_500, minSections: 5, minTables: 1, requiredTerms: ["공고", "자격", "증빙", "제출"] },
+  brief: { minCharacters: 1_400, minSections: 8, minTables: 2, requiredTerms: ["고객", "검증", "완료", "범위", "중단"] },
+  market: { minCharacters: 1_800, minSections: 10, minTables: 3, requiredTerms: ["고객", "대안", "근거", "확인", "가격"] },
+  pricing: { minCharacters: 1_800, minSections: 10, minTables: 4, requiredTerms: ["가격", "손익", "가정", "원", "시나리오"] },
+  brand: { minCharacters: 1_400, minSections: 9, minTables: 2, requiredTerms: ["이름", "소개", "금지", "상표", "사용"] },
+  landing: { minCharacters: 1_800, minSections: 12, minTables: 1, requiredTerms: ["고객", "가격", "신청", "개인정보", "환불"] },
+  launch: { minCharacters: 2_000, minSections: 10, minTables: 4, requiredTerms: ["30일", "완료", "중단", "결제", "담당"] },
+  plan: { minCharacters: 4_000, minSections: 12, minTables: 5, requiredTerms: ["제출용 본문", "문제 인식", "실현 가능성", "성장전략", "팀 구성", "사업비", "출처"] },
+  operations: { minCharacters: 2_300, minSections: 10, minTables: 4, requiredTerms: ["환불", "개인정보", "증빙", "영업", "사고"] },
+  execution: { minCharacters: 1_800, minSections: 10, minTables: 3, requiredTerms: ["전환", "실제", "다음", "신뢰", "원가"] },
+  grants: { minCharacters: 4_800, minSections: 12, minTables: 5, requiredTerms: ["제출용 신청서 본문", "문제 인식", "실현 가능성", "성장전략", "팀 구성", "사업비", "공고", "증빙"] },
 };
 
 const dataCriticalDocuments = new Set(["market", "pricing", "plan", "operations", "execution", "grants"]);
@@ -150,19 +151,14 @@ function evidenceForDocument(documentId: string, rows: EvidenceRow[]) {
 }
 
 function factLedger(project: ProjectRecord) {
-  const setup = project.businessSetup;
-  const financial = project.businessAssessment?.financial;
-  const rows: Array<[string, string, string, string]> = [
-    ["사업명", String(project.opportunity.title ?? project.title), "사용자 입력", "프로젝트에서 입력한 사업명"],
-    ["목표 고객", String(project.opportunity.customer ?? "추가 입력 필요"), "사용자 입력", "추천 후 사용자가 선택한 고객"],
-    ["사업 지역", setup?.region ?? "추가 입력 필요", setup ? "사용자 입력" : "추가 확인", "사업 조건 입력"],
-    ["사업자 형태", setup?.legalForm ?? "추가 입력 필요", setup?.legalForm && setup.legalForm !== "undecided" ? "사용자 입력" : "추가 확인", "사업 조건 입력"],
-    ["첫 상품 판매가", formatWon(financial?.grossPrice), financial ? "자동 계산" : "추가 확인", "저장된 가격과 세금 조건"],
-    ["건당 변동비", formatWon(financial?.variableCostPerUnit), financial ? "자동 계산" : "추가 확인", "재료·수수료·작업비 입력"],
-    ["건당 남는 금액", formatWon(financial?.contributionPerUnit), financial ? "자동 계산" : "추가 확인", "판매가 - 세금 - 건당 변동비"],
-    ["월 손익분기점", financial?.breakEvenUnits === null || financial?.breakEvenUnits === undefined ? "추가 입력 필요" : `${financial.breakEvenUnits}건`, financial ? "자동 계산" : "추가 확인", "월 고정비 ÷ 건당 남는 금액"],
-    ["총 필요자금", formatWon(financial?.totalFundingNeed), financial ? "자동 계산" : "추가 확인", "초기 준비비 + 운전자금"],
-  ];
+  const statusLabel: Record<DeliveryFactStatus, string> = {
+    verified: "공식 원문 확인",
+    user_input: "사용자 입력",
+    calculated: "자동 계산",
+    assumption: "검증할 가정",
+    needs_input: "추가 확인",
+  };
+  const rows = buildDeliveryFactRegistry(project);
   return [
     "## 공통 숫자와 작성 기준",
     "",
@@ -170,8 +166,12 @@ function factLedger(project: ProjectRecord) {
     "",
     "| 항목 | 현재 값 | 상태 | 산출·입력 근거 |",
     "| --- | ---: | --- | --- |",
-    ...rows.map((row) => `| ${row.map(escapeTable).join(" | ")} |`),
+    ...rows.map((row) => `| ${[row.label, row.value, statusLabel[row.status], row.source].map(escapeTable).join(" | ")} |`),
   ].join("\n");
+}
+
+function mainDocumentBody(markdown: string) {
+  return markdown.split(/^# 참고 부록/m, 1)[0].trim();
 }
 
 function evidenceLedger(rows: EvidenceRow[]) {
@@ -299,7 +299,13 @@ export function enhanceDeliveryBody(
       "표본이 작으면 성공·실패로 단정하지 않습니다. 실제 결제와 원본 증빙이 늘어날수록 신뢰도와 다음 행동이 자동으로 바뀝니다.",
     ].join("\n"));
   }
-  return [markdown.trim(), ...support].join("\n\n---\n\n");
+  if (support.length === 0) return markdown.trim();
+  return [
+    markdown.trim(),
+    "# 참고 부록 · 실행 및 검증 안내",
+    "> 아래 내용은 결과물을 실행하고 사실을 확인하기 위한 참고자료입니다. 제출용 본문이나 고객용 원고에 그대로 복사하지 않습니다.",
+    ...support,
+  ].join("\n\n---\n\n");
 }
 
 export function appendDeliveryAssurance(
@@ -309,6 +315,13 @@ export function appendDeliveryAssurance(
 ) {
   const evidence = evidenceForDocument(documentId, collectEvidence(project));
   const parts = [markdown.trim()];
+  if (!markdown.includes("# 참고 부록")) {
+    parts.push([
+      "# 참고 부록 · 출처 및 검토",
+      "",
+      "> 아래 내용은 사실 확인과 최종 검수를 위한 참고자료이며 제출용 본문과 분리합니다.",
+    ].join("\n"));
+  }
   parts.push(evidenceLedger(evidence));
   parts.push([
     "## 이 문서를 안전하게 사용하는 법",
@@ -342,23 +355,22 @@ export function evaluateDeliveryDocument(
     };
   }
   const standard = standards[document.id] ?? standards.brief;
-  const bodyMetrics = deliveryDocumentMetrics({ markdown: bodyMarkdown });
+  const mainBody = mainDocumentBody(bodyMarkdown);
+  const bodyMetrics = deliveryDocumentMetrics({ markdown: mainBody });
   const metrics = deliveryDocumentMetrics(document);
   const evidence = evidenceForDocument(document.id, collectEvidence(project));
   const verifiedSourceCount = evidence.filter((row) => row.status === "verified").length;
-  const realityReview = document.source === "server_package"
-    ? inspectBusinessReality(project, {
-        documentLines: bodyMarkdown
-          .split("\n")
-          .map((line) => line.replace(/https?:\/\/[^\s)\]}>"']+/gi, "[연결된 원문]").trim())
-          .filter(Boolean),
-      })
-    : { passed: true, issues: [] };
+  const realityReview = inspectBusinessReality(project, {
+    documentLines: mainBody
+      .split("\n")
+      .map((line) => line.replace(/https?:\/\/[^\s)\]}>"']+/gi, "[연결된 원문]").trim())
+      .filter(Boolean),
+  });
   const checks = [
-    { id: "characters", label: `실행 설명 ${standard.minCharacters.toLocaleString("ko-KR")}자 이상`, passed: bodyMetrics.characters >= standard.minCharacters, blocking: true },
-    { id: "sections", label: `핵심 항목 ${standard.minSections}개 이상`, passed: bodyMetrics.sections >= standard.minSections, blocking: true },
-    { id: "tables", label: `계산·근거 표 ${standard.minTables}개 이상`, passed: metrics.tables >= standard.minTables, blocking: true },
-    ...standard.requiredTerms.map((term) => ({ id: `term-${term}`, label: `${term} 내용 포함`, passed: document.markdown.includes(term), blocking: true })),
+    { id: "characters", label: `실제 본문 ${standard.minCharacters.toLocaleString("ko-KR")}자 이상`, passed: bodyMetrics.characters >= standard.minCharacters, blocking: true },
+    { id: "sections", label: `본문 핵심 항목 ${standard.minSections}개 이상`, passed: bodyMetrics.sections >= standard.minSections, blocking: true },
+    { id: "tables", label: `본문 계산·근거 표 ${standard.minTables}개 이상`, passed: bodyMetrics.tables >= standard.minTables, blocking: true },
+    ...standard.requiredTerms.map((term) => ({ id: `term-${term}`, label: `본문에 ${term} 내용 포함`, passed: mainBody.includes(term), blocking: true })),
     { id: "demo", label: "시험용 자료 없음", passed: !/(?:example\.com|화면\s*예시|가상\s*사례|테스트\s*후보)/i.test(document.markdown), blocking: true },
     { id: "sources", label: "출처·확인 상태 표시", passed: document.markdown.includes("## 출처와 확인 상태"), blocking: true },
     { id: "facts", label: "사실·계산·가정 구분", passed: document.markdown.includes("검증할 가정") && document.markdown.includes("추가 확인 필요"), blocking: true },

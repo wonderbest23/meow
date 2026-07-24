@@ -7,9 +7,13 @@ import {
 } from "../project-repository";
 import type { ProjectRecord } from "../service-domain";
 import {
+  MANUAL_TRANSFER_DEPOSIT_HOURS,
+} from "./manual-transfer";
+import {
   PACKAGE_AMOUNT,
   PACKAGE_NAME,
   TERMS_VERSION,
+  type CashReceiptType,
   type PaymentMethod,
   type PaymentOrder,
   type PaymentOrderStatus,
@@ -41,6 +45,8 @@ function mapOrder(row: Record<string, unknown>): PaymentOrder {
     amount: row.amount as number,
     currency: row.currency as "KRW",
     orderName: row.order_name as string,
+    ownerId: (row.owner_id as string | null) ?? null,
+    customerEmail: (row.customer_email as string | null) ?? null,
     method: row.method as PaymentMethod,
     status: row.status as PaymentOrderStatus,
     providerStatus: (row.provider_status as string | null) ?? null,
@@ -55,6 +61,14 @@ function mapOrder(row: Record<string, unknown>): PaymentOrder {
     failureMessage: (row.failure_message as string | null) ?? null,
     expiresAt: row.expires_at as string,
     confirmedAt: (row.confirmed_at as string | null) ?? null,
+    depositorName: (row.depositor_name as string | null) ?? null,
+    customerPhone: (row.customer_phone as string | null) ?? null,
+    cashReceiptType: (row.cash_receipt_type as CashReceiptType | null) ?? null,
+    cashReceiptIdentifier: (row.cash_receipt_identifier as string | null) ?? null,
+    cashReceiptStatus: (row.cash_receipt_status as PaymentOrder["cashReceiptStatus"] | null) ?? "not_requested",
+    cashReceiptIssuedAt: (row.cash_receipt_issued_at as string | null) ?? null,
+    depositReportedAt: (row.deposit_reported_at as string | null) ?? null,
+    adminNote: (row.admin_note as string | null) ?? null,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,
   };
@@ -66,9 +80,17 @@ export function paymentPersistenceMode() {
 
 export async function createPaymentOrder(input: {
   guestTokenHash: string;
+  ownerId: string | null;
+  customerEmail: string | null;
   opportunity: Record<string, unknown>;
   founderProfile: Record<string, unknown>;
   method: PaymentMethod;
+  customer?: {
+    depositorName: string;
+    phone: string;
+    cashReceiptType: CashReceiptType;
+    cashReceiptIdentifier: string;
+  };
 }): Promise<PaymentOrder> {
   const now = new Date();
   const order: PaymentOrder = {
@@ -78,8 +100,10 @@ export async function createPaymentOrder(input: {
     amount: PACKAGE_AMOUNT,
     currency: "KRW",
     orderName: PACKAGE_NAME,
+    ownerId: input.ownerId,
+    customerEmail: input.customerEmail,
     method: input.method,
-    status: "created",
+    status: input.method === "TRANSFER" ? "awaiting_deposit" : "created",
     providerStatus: null,
     paymentKey: null,
     projectId: null,
@@ -90,8 +114,16 @@ export async function createPaymentOrder(input: {
     rawResponse: null,
     failureCode: null,
     failureMessage: null,
-    expiresAt: new Date(now.getTime() + 30 * 60_000).toISOString(),
+    expiresAt: new Date(now.getTime() + (input.method === "TRANSFER" ? MANUAL_TRANSFER_DEPOSIT_HOURS * 60 * 60_000 : 30 * 60_000)).toISOString(),
     confirmedAt: null,
+    depositorName: input.customer?.depositorName ?? null,
+    customerPhone: input.customer?.phone ?? null,
+    cashReceiptType: input.customer?.cashReceiptType ?? null,
+    cashReceiptIdentifier: input.customer?.cashReceiptType === "NONE" ? null : input.customer?.cashReceiptIdentifier ?? null,
+    cashReceiptStatus: input.customer ? "requested" : "not_requested",
+    cashReceiptIssuedAt: null,
+    depositReportedAt: null,
+    adminNote: null,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };
@@ -109,6 +141,8 @@ export async function createPaymentOrder(input: {
       amount: order.amount,
       currency: order.currency,
       order_name: order.orderName,
+      owner_id: order.ownerId,
+      customer_email: order.customerEmail,
       method: order.method,
       status: order.status,
       opportunity: order.opportunity,
@@ -116,6 +150,11 @@ export async function createPaymentOrder(input: {
       terms_version: order.termsVersion,
       terms_agreed_at: order.termsAgreedAt,
       expires_at: order.expiresAt,
+      depositor_name: order.depositorName,
+      customer_phone: order.customerPhone,
+      cash_receipt_type: order.cashReceiptType,
+      cash_receipt_identifier: order.cashReceiptIdentifier,
+      cash_receipt_status: order.cashReceiptStatus,
     })
     .select()
     .single();
@@ -188,6 +227,7 @@ export async function completePaymentOrder(input: {
         paymentStatus: input.testPaid ? "test_paid" : "paid",
       },
       stored.guestTokenHash,
+      stored.ownerId,
     );
     Object.assign(stored, {
       status: "done" as const,
@@ -292,6 +332,142 @@ export async function syncPaymentFromProvider(
       status === "canceled" ? "refunded" : "paid",
     );
   }
+  return mapOrder(data);
+}
+
+export async function listManualTransferOrders(): Promise<PaymentOrder[]> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return [...demo.orders.values()]
+      .filter((order) => order.method === "TRANSFER")
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .map(clone);
+  }
+  const { data, error } = await supabase
+    .from("payment_orders")
+    .select("*")
+    .eq("method", "TRANSFER")
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) throw error;
+  return (data ?? []).map(mapOrder);
+}
+
+export async function reportManualTransferDeposit(orderId: string, guestTokenHash: string): Promise<PaymentOrder> {
+  const order = await getPaymentOrder(orderId, guestTokenHash);
+  if (!order || order.method !== "TRANSFER") throw new Error("PAYMENT_ORDER_NOT_FOUND");
+  if (order.status === "done") return order;
+  if (Date.parse(order.expiresAt) <= Date.now()) throw new Error("PAYMENT_ORDER_EXPIRED");
+  if (!["awaiting_deposit", "deposit_reported"].includes(order.status)) throw new Error("PAYMENT_ORDER_NOT_REPORTABLE");
+  const now = new Date().toISOString();
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.orders.get(orderId)!;
+    stored.status = "deposit_reported";
+    stored.depositReportedAt = now;
+    stored.updatedAt = now;
+    return clone(stored);
+  }
+  const { data, error } = await supabase.from("payment_orders").update({
+    status: "deposit_reported",
+    deposit_reported_at: now,
+  }).eq("order_id", orderId).eq("guest_token_hash", guestTokenHash).select().single();
+  if (error) throw error;
+  return mapOrder(data);
+}
+
+export async function completeManualTransferOrder(order: PaymentOrder, adminNote: string): Promise<{ order: PaymentOrder; project: ProjectRecord }> {
+  if (order.method !== "TRANSFER") throw new Error("MANUAL_TRANSFER_ONLY");
+  if (order.status === "done" && order.projectId) return completePaymentOrder({ order, provider: order.rawResponse ?? {}, testPaid: false });
+  if (!["awaiting_deposit", "deposit_reported"].includes(order.status)) throw new Error("PAYMENT_ORDER_NOT_CONFIRMABLE");
+  if (Date.parse(order.expiresAt) <= Date.now()) throw new Error("PAYMENT_ORDER_EXPIRED");
+  const provider = {
+    paymentKey: `manual_${order.orderId}`,
+    orderId: order.orderId,
+    status: "MANUAL_CONFIRMED",
+    method: "계좌이체",
+    confirmedBy: "admin",
+    adminNote,
+    approvedAt: new Date().toISOString(),
+  };
+  const completed = await completePaymentOrder({ order, provider, testPaid: false });
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.orders.get(order.orderId);
+    if (stored) stored.adminNote = adminNote || null;
+  } else {
+    await supabase.from("payment_orders").update({ admin_note: adminNote || null }).eq("order_id", order.orderId);
+  }
+  return {
+    order: (await getPaymentOrder(order.orderId, order.guestTokenHash)) ?? completed.order,
+    project: completed.project,
+  };
+}
+
+export async function cancelManualTransferOrder(orderId: string, adminNote: string): Promise<PaymentOrder> {
+  const order = await getPaymentOrder(orderId);
+  if (!order || order.method !== "TRANSFER") throw new Error("PAYMENT_ORDER_NOT_FOUND");
+  if (order.status === "done" || order.status === "refunded") throw new Error("PAID_ORDER_CANNOT_BE_CANCELED");
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.orders.get(orderId)!;
+    stored.status = "canceled";
+    stored.adminNote = adminNote || null;
+    stored.updatedAt = new Date().toISOString();
+    return clone(stored);
+  }
+  const { data, error } = await supabase.from("payment_orders").update({
+    status: "canceled",
+    admin_note: adminNote || null,
+  }).eq("order_id", orderId).select().single();
+  if (error) throw error;
+  return mapOrder(data);
+}
+
+export async function refundManualTransferOrder(orderId: string, adminNote: string): Promise<PaymentOrder> {
+  const order = await getPaymentOrder(orderId);
+  if (!order || order.method !== "TRANSFER") throw new Error("PAYMENT_ORDER_NOT_FOUND");
+  if (order.status !== "done" || !order.projectId) throw new Error("PAYMENT_ORDER_NOT_REFUNDABLE");
+  if (adminNote.trim().length < 5) throw new Error("REFUND_EXCEPTION_REASON_REQUIRED");
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.orders.get(orderId)!;
+    stored.status = "refunded";
+    stored.adminNote = adminNote || null;
+    stored.updatedAt = new Date().toISOString();
+    await updateProjectPaymentStatus(order.projectId, "refunded");
+    return clone(stored);
+  }
+  const { data, error } = await supabase.from("payment_orders").update({
+    status: "refunded",
+    admin_note: adminNote || null,
+  }).eq("order_id", orderId).select().single();
+  if (error) throw error;
+  await updateProjectPaymentStatus(order.projectId, "refunded");
+  return mapOrder(data);
+}
+
+export async function markManualCashReceiptIssued(orderId: string, adminNote: string): Promise<PaymentOrder> {
+  const order = await getPaymentOrder(orderId);
+  if (!order || order.method !== "TRANSFER") throw new Error("PAYMENT_ORDER_NOT_FOUND");
+  if (order.status !== "done") throw new Error("CASH_RECEIPT_PAYMENT_NOT_CONFIRMED");
+  if (order.cashReceiptStatus !== "requested") throw new Error("CASH_RECEIPT_NOT_REQUESTED");
+  const now = new Date().toISOString();
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.orders.get(orderId)!;
+    stored.cashReceiptStatus = "issued";
+    stored.cashReceiptIssuedAt = now;
+    stored.adminNote = adminNote || stored.adminNote;
+    stored.updatedAt = now;
+    return clone(stored);
+  }
+  const { data, error } = await supabase.from("payment_orders").update({
+    cash_receipt_status: "issued",
+    cash_receipt_issued_at: now,
+    admin_note: adminNote || order.adminNote,
+  }).eq("order_id", orderId).select().single();
+  if (error) throw error;
   return mapOrder(data);
 }
 

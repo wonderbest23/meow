@@ -4,6 +4,7 @@ import { createProject, persistenceMode } from "../../../lib/project-repository"
 import { createProjectSchema } from "../../../lib/service-domain";
 import { paymentsEnabled } from "../../../lib/payments/config";
 import { ensurePaidStarterLanding } from "../../../lib/landing/auto-publish";
+import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 
 export async function POST(request: Request) {
   try {
@@ -27,7 +28,7 @@ export async function POST(request: Request) {
         opportunity: input.opportunity,
         founderProfile: input.founderProfile,
         paymentStatus: "test_paid",
-        packagePrice: betaAccess ? 0 : 990000,
+        packagePrice: betaAccess ? 0 : PACKAGE_AMOUNT,
         initialStageInputs: input.initialStageInputs,
       },
       identity.hash,

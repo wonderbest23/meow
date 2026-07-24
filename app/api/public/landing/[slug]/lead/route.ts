@@ -5,6 +5,7 @@ import {
   createLandingLead,
   getPublishedLandingBySlug,
 } from "../../../../../../lib/landing/repository";
+import { enforceRateLimit } from "../../../../../../lib/rate-limit";
 
 const requestSchema = landingLeadSchema.and(z.object({
   website: z.string().max(0).default(""),
@@ -14,6 +15,12 @@ export async function POST(
   request: Request,
   context: { params: Promise<{ slug: string }> },
 ) {
+  const limited = await enforceRateLimit("public-lead", request, {
+    limit: 10,
+    windowMs: 10 * 60_000,
+    message: "신청이 너무 잦습니다. 잠시 후 다시 시도해주세요.",
+  });
+  if (limited) return limited;
   try {
     const { slug } = await context.params;
     const published = await getPublishedLandingBySlug(slug);

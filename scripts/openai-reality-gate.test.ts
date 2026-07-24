@@ -72,11 +72,12 @@ async function main() {
       }), { status: 200, headers: { "Content-Type": "application/json" } });
     };
 
-    const rejected = await generateStageArtifact(project, 0, undefined, runtimeConfig);
+    await assert.rejects(
+      () => generateStageArtifact(project, 0, undefined, runtimeConfig),
+      /OPENAI_REALITY_GATE_FAILED/,
+      "출처 없는 완료 실적은 운영 모드에서 납품으로 넘어가면 안 됩니다.",
+    );
     assert.equal(fetchCount, 2, "위험한 첫 응답은 한 번 수정 요청해야 합니다.");
-    assert.equal(rejected.model, "deterministic-fallback-v1");
-    assert.equal(JSON.stringify(rejected.content).includes("12명 중 8명"), false);
-    assert.equal(rejected.explanations.some((item) => item.includes("OpenAI 응답을 그대로 사용할 수 없어")), true);
 
     fetchCount = 0;
     globalThis.fetch = async () => {

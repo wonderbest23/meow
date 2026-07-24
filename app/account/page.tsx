@@ -1,8 +1,9 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bookmark, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import type { OpportunityPreferenceRecord } from "../../lib/opportunity-preferences/domain";
 
 type Mode = "login" | "register" | "recover" | "reset";
 type AccountProject = { id: string; title: string; status: string; paymentStatus: string; activeStage: number; updatedAt: string };
@@ -26,8 +27,26 @@ export default function AccountPage() {
   const [recoveryTokens, setRecoveryTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [savedIdeas, setSavedIdeas] = useState<OpportunityPreferenceRecord[]>([]);
+  const [deletingIdea, setDeletingIdea] = useState("");
 
-  const loadSession = async () => setSession(await payload<SessionState>(await fetch("/api/auth/session", { cache: "no-store" })));
+  const loadSession = async () => {
+    const nextSession = await payload<SessionState>(await fetch("/api/auth/session", { cache: "no-store" }));
+    setSession(nextSession);
+    if (!nextSession.authenticated) {
+      setSavedIdeas([]);
+      return;
+    }
+    try {
+      const preferences = await payload<{ preferences: OpportunityPreferenceRecord[] }>(
+        await fetch("/api/opportunities/preferences", { cache: "no-store" }),
+      );
+      setSavedIdeas(preferences.preferences.filter((preference) => preference.state === "saved"));
+    } catch (error) {
+      setSavedIdeas([]);
+      setMessage(error instanceof Error ? error.message : "저장한 사업을 불러오지 못했습니다.");
+    }
+  };
 
   useEffect(() => {
     const hash = new URLSearchParams(window.location.hash.slice(1));
@@ -75,18 +94,40 @@ export default function AccountPage() {
   };
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" }); setSession({ authenticated: false, email: null, projects: [] }); setMessage("로그아웃했습니다.");
+    await fetch("/api/auth/logout", { method: "POST" }); setSession({ authenticated: false, email: null, projects: [] }); setSavedIdeas([]); setMessage("로그아웃했습니다.");
+  };
+
+  const removeSavedIdea = async (opportunityKey: string) => {
+    if (deletingIdea) return;
+    setDeletingIdea(opportunityKey);
+    setMessage("");
+    try {
+      await payload(
+        await fetch(`/api/opportunities/preferences?key=${encodeURIComponent(opportunityKey)}`, {
+          method: "DELETE",
+        }),
+      );
+      setSavedIdeas((current) =>
+        current.filter((preference) => preference.opportunityKey !== opportunityKey),
+      );
+      setMessage("저장 목록에서 삭제했습니다.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "저장한 사업을 삭제하지 못했습니다.");
+    } finally {
+      setDeletingIdea("");
+    }
   };
 
   if (!session) return <main className="account-loading">계정 정보를 확인하는 중입니다.</main>;
 
   return (
     <main className="account-page">
-      <header><Link href="/"><img src="/today-startup-logo.png" alt="오늘창업" /></Link><Link href="/"><ArrowLeft /> 홈으로</Link></header>
+      <header><Link href="/"><img src="/today-startup-logo-2026.png" alt="오늘창업" /></Link><Link href="/"><ArrowLeft /> 홈으로</Link></header>
       {session.authenticated ? (
         <section className="account-dashboard">
           <div className="account-welcome"><span><CheckCircle2 /></span><div><small>내 계정</small><h1>작업을 이어서 시작하세요</h1><p>{session.email}</p></div><button onClick={logout}><LogOut /> 로그아웃</button></div>
-          <div className="account-projects"><header><div><strong>저장된 사업</strong><p>로그인한 다른 기기에서도 같은 주소로 이어갈 수 있습니다.</p></div><Link href="/?view=start">새 사업 시작 <ArrowRight /></Link></header>{session.projects.length === 0 ? <div className="account-empty"><BriefcaseBusiness /><strong>아직 계정에 연결된 사업이 없습니다.</strong><p>새 사업을 시작하거나, 기존 작업을 만든 브라우저에서 로그인하면 자동으로 연결됩니다.</p></div> : <div>{session.projects.map((project) => <Link key={project.id} href={`/?view=project&project=${project.id}`}><span><BriefcaseBusiness /></span><div><strong>{project.title}</strong><small>{project.activeStage + 1}단계 · {new Date(project.updatedAt).toLocaleDateString("ko-KR")} 수정</small></div><ArrowRight /></Link>)}</div>}</div>
+          <div className="account-saved-ideas"><header><div><strong>저장한 사업 아이디어</strong><p>추천 화면에서 저장한 아이디어를 다시 비교하고 시작할 수 있습니다.</p></div><Link href="/?view=explore">아이디어 찾기 <ArrowRight /></Link></header>{savedIdeas.length === 0 ? <div className="account-empty"><Bookmark /><strong>아직 저장한 사업 아이디어가 없습니다.</strong><p>마음에 드는 추천에서 저장을 누르면 여기에 보관됩니다.</p></div> : <div>{savedIdeas.map((preference) => <article key={preference.opportunityKey}><Link href={`/?view=explore&saved=${encodeURIComponent(preference.opportunityKey)}`}><span><Bookmark /></span><div><small>{preference.opportunity.sector}</small><strong>{preference.opportunity.title}</strong><p>{preference.opportunity.oneLiner}</p></div><ArrowRight /></Link><button aria-label={`${preference.opportunity.title} 저장 취소`} disabled={deletingIdea === preference.opportunityKey} onClick={() => void removeSavedIdea(preference.opportunityKey)}>삭제</button></article>)}</div>}</div>
+          <div className="account-projects"><header><div><strong>진행 중인 사업</strong><p>실행을 시작한 사업과 완성 중인 문서를 이어서 볼 수 있습니다.</p></div><Link href="/?view=start">새 사업 시작 <ArrowRight /></Link></header>{session.projects.length === 0 ? <div className="account-empty"><BriefcaseBusiness /><strong>아직 계정에 연결된 사업이 없습니다.</strong><p>새 사업을 시작하거나, 기존 작업을 만든 브라우저에서 로그인하면 자동으로 연결됩니다.</p></div> : <div>{session.projects.map((project) => <Link key={project.id} href={`/?view=project&project=${project.id}`}><span><BriefcaseBusiness /></span><div><strong>{project.title}</strong><small>{project.activeStage + 1}단계 · {new Date(project.updatedAt).toLocaleDateString("ko-KR")} 수정</small></div><ArrowRight /></Link>)}</div>}</div>
           {message && <p className="account-message">{message}</p>}
         </section>
       ) : (

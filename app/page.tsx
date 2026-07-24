@@ -16,12 +16,13 @@ import {
   Calculator,
   CircleDollarSign,
   CircleHelp,
+  Clock3,
   ClipboardCheck,
   Compass,
-  CreditCard,
   Download,
   ExternalLink,
   Eye,
+  FileSpreadsheet,
   FileText,
   FlaskConical,
   Heart,
@@ -31,8 +32,10 @@ import {
   LockKeyhole,
   Maximize2,
   MessageCircle,
+  PanelLeft,
   UserRound,
   PackageCheck,
+  Presentation,
   Printer,
   ReceiptText,
   RefreshCw,
@@ -52,7 +55,6 @@ import {
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  applyPreference,
   calculateProfile,
   coreQuestions,
   founderInterpretations,
@@ -68,10 +70,11 @@ import {
   type OpportunityFeedback,
   type RankedOpportunity,
 } from "../lib/opportunity-engine";
-import type { ManualPreferences } from "../lib/idea-generator";
+import type { OpportunityPreferenceRecord } from "../lib/opportunity-preferences/domain";
+import { normalizeGeneratedOpportunity, type ManualPreferences } from "../lib/idea-generator";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
-import { archetypeLabels, emptyBusinessSetup, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
+import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { inferBusinessArchetype } from "../lib/business/router";
 import { MarketPlanPanel } from "../components/market-plan-panel";
 import { LandingBuilderPanel } from "../components/landing-builder-panel";
@@ -84,17 +87,55 @@ import { ServiceOpsPanel } from "../components/service-ops-panel";
 import { HomeHeroScene, HomeResearchEvidence } from "../components/home-hero-scene";
 import { BeginnerMissionRoadmap } from "../components/beginner-mission-roadmap";
 import { DeliveryDocumentPreview } from "../components/delivery-document-preview";
-import { LandingQuickEditor } from "../components/landing-quick-editor";
 import {
+  DocumentEditorStudio,
+  type DocumentQuickBlock,
+} from "../components/document-editor-studio";
+import { LandingQuickEditor } from "../components/landing-quick-editor";
+import { LandingBlocksRenderer } from "../components/landing-blocks";
+import {
+  PresentationEditorPanel,
+  type PresentationAssistResult,
+} from "../components/presentation-editor-panel";
+import { ProjectRefinementStudio } from "../components/project-refinement-studio";
+import {
+  applyDeliveryDocumentDraft,
   assembleDeliveryPackage,
   type DeliveryItem,
 } from "../lib/delivery/package-assembler";
-import { createPaidReportDemoItems } from "../lib/delivery/demo-package";
-import { downloadBusinessDocuments, type DownloadFormat } from "../lib/delivery/client-download";
-import type { GenerationJobRecord } from "../lib/service-audit/domain";
-import { createLandingDraft, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
 import {
-  createDirectOpportunity,
+  appendDocumentDraftVersion,
+  isDeliveryDocumentId,
+  type DocumentDraftVersion,
+  type DocumentDrafts,
+} from "../lib/delivery/document-drafts";
+import { createPaidReportDemoItems } from "../lib/delivery/demo-package";
+import {
+  createBusinessDocumentsBlob,
+  downloadBusinessDocuments,
+  saveDownloadBlob,
+  type DownloadFormat,
+} from "../lib/delivery/client-download";
+import {
+  applyPresentationDraft,
+  buildPresentationSlides,
+  type PresentationDeckDrafts,
+  type PresentationDeckInput,
+  type PresentationDeckType,
+  type PresentationSlide,
+  type PresentationSlideOverride,
+} from "../lib/delivery/presentation-deck";
+import { buildTwelveMonthForecast } from "../lib/delivery/financial-model";
+import type { GenerationJobRecord } from "../lib/service-audit/domain";
+import {
+  createLandingDraft,
+  ensureLandingPageData,
+  landingDraftSchema,
+  type LandingDraft,
+  type LandingSiteRecord,
+} from "../lib/landing/domain";
+import { createLandingPageData } from "../lib/landing/page-data";
+import {
   createFounderProfilePayload,
   createInitialStageInputs,
   isPlanningConstraints,
@@ -103,6 +144,19 @@ import {
   type PlanningConstraints,
 } from "../lib/planning-inputs";
 import { deriveAutoDraftContext } from "../lib/auto-draft";
+import {
+  draftPackageStepDefinitions,
+  type DraftPackageRun,
+  type DraftRefinementInput,
+} from "../lib/draft-package/domain";
+import { refinementInputFromProject } from "../lib/refinement/domain";
+import {
+  CUSTOM_HOMEPAGE_FROM_AMOUNT,
+  PACKAGE_AMOUNT,
+  PACKAGE_LIST_AMOUNT,
+  PACKAGE_NAME,
+} from "../lib/payments/domain";
+import { mailOrderStatusLabels, type MailOrderStatus } from "../lib/platform-legal/domain";
 
 type Screen =
   | "home"
@@ -112,14 +166,218 @@ type Screen =
   | "conversation"
   | "profile"
   | "explore"
+  | "preview"
   | "checkout"
   | "project"
   | "sample"
   | "delivery";
-type CapitalFilter = "전체" | "소액" | "중간" | "높음";
 
-const resumableScreens: Screen[] = ["start", "direct", "assessment", "conversation", "profile", "explore"];
-const directScreens: Screen[] = [...resumableScreens, "project", "sample", "delivery"];
+type SampleView = "summary" | "presentation" | "landing";
+type SampleReturnScreen = "home" | "preview" | "checkout";
+
+type DirectPlanResult = {
+  opportunity: RankedOpportunity;
+  draft: NonNullable<PlanningConstraints["directDraft"]>;
+  generation: NonNullable<PlanningConstraints["draftGeneration"]>;
+};
+
+type DirectPlanJobReference = {
+  id: string;
+  proof: string;
+  createdAt: string;
+  input: DirectPlanInput;
+};
+
+type DirectPlanApiPayload = Partial<DirectPlanResult> & {
+  job?: {
+    id: string;
+    proof?: string;
+    status: string;
+    createdAt?: string;
+  };
+  result?: DirectPlanResult;
+  error?: { code?: string; message?: string };
+};
+
+const directPlanJobStorageKey = "venture-direct-plan-job";
+const directGenerationStages = [
+  { from: 0, label: "아이디어 핵심 정리" },
+  { from: 24, label: "고객과 첫 상품 설계" },
+  { from: 49, label: "예산·시간에 맞는 범위 점검" },
+  { from: 74, label: "초안 저장과 마지막 확인" },
+] as const;
+
+function readDirectPlanJob() {
+  try {
+    const raw = window.localStorage.getItem(directPlanJobStorageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<DirectPlanJobReference>;
+    if (
+      typeof parsed.id !== "string"
+      || typeof parsed.proof !== "string"
+      || typeof parsed.createdAt !== "string"
+      || !parsed.input
+    ) return null;
+    return parsed as DirectPlanJobReference;
+  } catch {
+    return null;
+  }
+}
+
+function estimateDirectPlanProgress(startedAt: string) {
+  const elapsed = Math.max(0, Date.now() - Date.parse(startedAt));
+  if (elapsed < 1_500) return 8 + Math.floor(elapsed / 300);
+  if (elapsed < 6_000) return 14 + Math.floor((elapsed - 1_500) / 300);
+  if (elapsed < 16_000) return 29 + Math.floor((elapsed - 6_000) / 420);
+  if (elapsed < 30_000) return 53 + Math.floor((elapsed - 16_000) / 600);
+  return Math.min(92, 76 + Math.floor((elapsed - 30_000) / 2_000));
+}
+
+function directPlanResultFromPayload(payload: DirectPlanApiPayload) {
+  const candidate = payload.result ?? payload;
+  if (!candidate.opportunity || !candidate.draft || !candidate.generation) return null;
+  return {
+    opportunity: candidate.opportunity,
+    draft: candidate.draft,
+    generation: candidate.generation,
+  } satisfies DirectPlanResult;
+}
+
+const resumableScreens: Screen[] = ["start", "direct", "assessment", "conversation", "profile", "explore", "preview"];
+const directScreens: Screen[] = [...resumableScreens, "checkout", "project", "sample", "delivery"];
+
+async function fetchWithTransientRetry(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  attempts = 3,
+) {
+  let lastError: unknown;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      const response = await fetch(input, init);
+      if (response.ok || ![502, 503, 504].includes(response.status) || attempt === attempts - 1) {
+        return response;
+      }
+      await response.body?.cancel().catch(() => undefined);
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts - 1) throw error;
+    }
+    await new Promise((resolve) => window.setTimeout(resolve, 500 * (attempt + 1)));
+  }
+  throw lastError instanceof Error ? lastError : new Error("서버 연결을 다시 확인해주세요.");
+}
+
+function formatDeckPreviewMoney(value: number) {
+  if (Math.abs(value) >= 100_000_000) return `${(value / 100_000_000).toFixed(1).replace(/\.0$/, "")}억원`;
+  if (Math.abs(value) >= 10_000) return `${Math.round(value / 10_000).toLocaleString("ko-KR")}만원`;
+  return `${Math.round(value).toLocaleString("ko-KR")}원`;
+}
+
+const presentationDeckMeta: Record<PresentationDeckType, {
+  title: string;
+  type: string;
+  description: string;
+  pageCount: number;
+  slides: string[];
+}> = {
+  intro: {
+    title: "사업소개서",
+    type: "고객·파트너 설명용 파워포인트(PPTX)",
+    description: "이 사업이 누구의 어떤 문제를 어떻게 해결하고, 무엇을 판매하는지 한 번에 설명합니다.",
+    pageCount: 12,
+    slides: ["표지", "한눈에 보기", "고객 문제", "해결 방식", "첫 상품", "고객과 이용 장면", "시장 근거", "수익 구조", "첫 시장 진입", "차별점", "운영과 위험", "다음 대화"],
+  },
+  ir: {
+    title: "투자제안서(IR)",
+    type: "투자자·지원기관 제안용 파워포인트(PPTX)",
+    description: "시장 크기, 경쟁 구도, 검증 지표, 단위 경제성, 팀, 투자금 사용처와 달성 목표를 투자 심사 흐름으로 정리합니다.",
+    pageCount: 16,
+    slides: ["표지", "투자 핵심", "문제와 시점", "해결책", "TAM·SAM·SOM", "사업 모델", "검증 지표", "경쟁 구도", "시장 진입", "성장 구조", "재무 시나리오", "팀", "투자 요청", "달성 목표", "위험과 실사", "투자 대화"],
+  },
+};
+
+function PresentationSlideCanvas({
+  slide,
+  input,
+  index,
+  total,
+}: {
+  slide: PresentationSlide;
+  input: PresentationDeckInput;
+  index: number;
+  total: number;
+}) {
+  const page = String(index + 1).padStart(2, "0");
+  const isBookend = slide.kind === "cover" || slide.kind === "closing";
+  const financialMonths = slide.monthlyForecast ?? [];
+  const maximumMonthlyProfit = Math.max(1, ...financialMonths.map((month) => Math.abs(month.operatingProfitBeforeTaxWon)));
+  const annualFinancialRevenue = financialMonths.reduce((sum, month) => sum + month.grossRevenueWon, 0);
+  const annualFinancialProfit = financialMonths.reduce((sum, month) => sum + month.operatingProfitBeforeTaxWon, 0);
+
+  return <section
+    className={`deck-slide-preview kind-${slide.kind} ${input.deckType === "ir" ? "ir-deck" : ""} ${slide.dark ? "dark" : ""}`}
+    data-slide-index={index}
+    data-slide-kind={slide.kind}
+    style={{ "--deck-accent": input.accentColor } as React.CSSProperties}
+  >
+    {slide.kind === "cover" ? <>
+      <div className="deck-preview-cover-rule" />
+      <div className="deck-preview-cover-copy"><small>{slide.eyebrow}</small><h2>{slide.title}</h2><p>{slide.lead}</p><span>{slide.supporting}</span></div>
+      <strong className="deck-preview-cover-mark">{input.deckType === "ir" ? "IR" : "BI"}</strong>
+    </> : slide.kind === "closing" ? <>
+      <div className="deck-preview-closing-copy"><small>{slide.eyebrow}</small><h2>{slide.title}</h2><p>{slide.statement}</p><i /><strong>{input.brandName}</strong><span>{slide.supporting}</span></div>
+    </> : <>
+      <header className="deck-preview-heading"><small>{slide.eyebrow}</small><span>{page}</span><h2>{slide.title}</h2></header>
+      <div className="deck-preview-content">
+        {slide.chart ? <div className="deck-preview-chart">
+          <strong>{slide.chart.title}</strong>
+          <div>{slide.chart.items.map((item) => {
+            const maximum = slide.chart?.preset === "fit" ? 100 : Math.max(1, ...slide.chart!.items.map((chartItem) => chartItem.value));
+            return <article key={item.label}><span>{item.label}</span><i><b style={{ width: `${Math.max(0, Math.min(100, item.value / maximum * 100))}%` }} /></i><em>{Math.round(item.value).toLocaleString("ko-KR")}{slide.chart?.unit}</em></article>;
+          })}</div>
+          <p>{slide.chart.sourceNote}</p>
+        </div> : <>
+          {slide.kind === "statement" && <div className="deck-preview-statement"><b>“</b><strong>{slide.statement}</strong><i /><p>{slide.supporting}</p></div>}
+          {slide.kind === "split" && <div className="deck-preview-split"><aside><small>핵심</small><strong>{slide.lead}</strong>{slide.note && <p>{slide.note}</p>}</aside><div>{slide.points?.map((point, pointIndex) => <article key={`${slide.id}-${point.label}`}><span>{String(pointIndex + 1).padStart(2, "0")}</span><strong>{point.label}</strong><p>{point.detail}</p></article>)}</div></div>}
+          {slide.kind === "process" && <><p className="deck-preview-lead">{slide.lead}</p><div className="deck-preview-process">{slide.steps?.map((step, stepIndex) => <article key={`${slide.id}-${step.title}`}><b>{String(stepIndex + 1).padStart(2, "0")}</b><i /><strong>{step.title}</strong><p>{step.detail}</p></article>)}</div></>}
+          {slide.kind === "metrics" && <><p className="deck-preview-lead">{slide.lead}</p><div className="deck-preview-metrics">{slide.metrics?.map((metric) => <article key={`${slide.id}-${metric.label}`}><small>{metric.label}</small><strong>{metric.value}</strong><p>{metric.note}</p></article>)}</div></>}
+          {slide.kind === "evidence" && <><p className="deck-preview-lead">{slide.lead}</p><div className="deck-preview-evidence">{slide.sources?.map((source, sourceIndex) => <article key={`${slide.id}-${source.title}`}><span>{String(sourceIndex + 1).padStart(2, "0")}</span><strong>{source.title}</strong><em>{source.status}</em></article>)}</div>{slide.note && <p className="deck-preview-note">{slide.note}</p>}</>}
+          {slide.kind === "timeline" && <><p className="deck-preview-lead">{slide.lead}</p><div className="deck-preview-timeline">{slide.steps?.map((step, stepIndex) => <article key={`${slide.id}-${step.title}`} className={stepIndex === 0 ? "active" : ""}><strong>{step.title}</strong><i /><p>{step.detail}</p></article>)}</div>{slide.note && <p className="deck-preview-timeline-note">{slide.note}</p>}</>}
+          {slide.kind === "funding" && <div className="deck-preview-funding"><aside><small>현재 필요 자금</small><strong>{slide.lead}</strong><p>{slide.note}</p></aside><div>{slide.points?.map((point) => <article key={`${slide.id}-${point.label}`}><strong>{point.label}</strong><p>{point.detail}</p></article>)}</div></div>}
+          {slide.kind === "thesis" && <div className="deck-preview-thesis"><p>{slide.lead}</p><div>{slide.metrics?.map((metric) => <article key={`${slide.id}-${metric.label}`}><small>{metric.label}</small><strong>{metric.value}</strong><span>{metric.note}</span></article>)}</div>{slide.note && <em>{slide.note}</em>}</div>}
+          {slide.kind === "market" && <div className="deck-preview-market"><p>{slide.lead}</p><div>{slide.marketTiers?.map((tier) => <article key={tier.label}><b>{tier.label}</b><small>{tier.name}</small><strong>{tier.value}</strong><span>{tier.formula}</span><em>{tier.status}</em></article>)}</div>{slide.note && <footer>{slide.note}</footer>}</div>}
+          {slide.kind === "matrix" && <div className="deck-preview-matrix"><p>{slide.lead}</p><div role="table"><header role="row">{slide.matrix?.columns.map((column, columnIndex) => <strong role="columnheader" key={`${slide.id}-${column}`}>{columnIndex === slide.matrix!.columns.length - 1 && <i />}{column}</strong>)}</header>{slide.matrix?.rows.map((row) => <article role="row" key={`${slide.id}-${row.label}`}><b role="rowheader">{row.label}</b>{row.values.map((value, valueIndex) => <span role="cell" className={valueIndex === row.values.length - 1 ? "ours" : ""} key={`${row.label}-${value}`}>{value}</span>)}</article>)}</div>{slide.matrix?.note && <em>{slide.matrix.note}</em>}</div>}
+          {slide.kind === "financial" && (financialMonths.length === 12 ? <div className="deck-preview-financial-chart"><p>{slide.lead}</p><div className="deck-preview-financial-chart-body"><section><header><strong>월별 영업손익</strong><span>단위 · 만원</span></header><div className="deck-financial-bars">{financialMonths.map((month) => <article key={`${slide.id}-${month.month}`}><i><b className={month.operatingProfitBeforeTaxWon < 0 ? "loss" : ""} style={{ height: `${Math.max(5, Math.abs(month.operatingProfitBeforeTaxWon) / maximumMonthlyProfit * 100)}%` }} /></i><strong>{Math.round(month.operatingProfitBeforeTaxWon / 10_000).toLocaleString("ko-KR")}</strong><span>{month.month.replace(/^\d{4}년\s*/, "")}</span></article>)}</div></section><aside><span><small>12개월 매출</small><strong>{formatDeckPreviewMoney(annualFinancialRevenue)}</strong><em>부가세 포함</em></span><span><small>12개월 영업손익</small><strong className={annualFinancialProfit < 0 ? "loss" : ""}>{formatDeckPreviewMoney(annualFinancialProfit)}</strong><em>세전·입력값 기준</em></span><span><small>첫 월 흑자</small><strong>{financialMonths.find((month) => month.operatingProfitBeforeTaxWon >= 0)?.month ?? "미도달"}</strong><em>월 영업손익 0원 이상</em></span></aside></div>{slide.note && <em>{slide.note}</em>}</div> : <div className="deck-preview-financial"><p>{slide.lead}</p><div><header><span>시나리오</span><span>월 판매</span><span>연환산 매출</span><span>연환산 영업손익</span></header>{slide.financialScenarios && slide.financialScenarios.length > 0 ? slide.financialScenarios.map((scenario) => <article key={`${slide.id}-${scenario.name}`}><strong>{scenario.name}</strong><span>{scenario.monthlyUnits.toLocaleString("ko-KR")}건</span><span>{formatDeckPreviewMoney(scenario.netRevenue * 12)}</span><b className={scenario.operatingProfitBeforeTax < 0 ? "loss" : ""}>{formatDeckPreviewMoney(scenario.operatingProfitBeforeTax * 12)}</b></article>) : <article className="empty"><strong>입력 필요</strong><span>판매량</span><span>매출</span><b>영업손익</b></article>}</div>{slide.note && <em>{slide.note}</em>}</div>)}
+          {slide.kind === "team" && <div className="deck-preview-team"><aside><small>대표자·팀의 실행 근거</small><strong>{slide.lead}</strong><span>{slide.note}</span></aside><div>{slide.points?.map((point, pointIndex) => <article key={`${slide.id}-${point.label}`}><b>{String(pointIndex + 1).padStart(2, "0")}</b><strong>{point.label}</strong><p>{point.detail}</p></article>)}</div></div>}
+          {slide.kind === "ask" && <div className="deck-preview-ask"><aside><small>이번 요청</small><strong>{slide.lead}</strong><p>{slide.supporting}</p><span>{slide.note}</span></aside><div className="deck-preview-ask-body"><section><small>자금 사용처</small>{slide.fundingUses && slide.fundingUses.length > 0 ? slide.fundingUses.map((item) => <p key={`${slide.id}-${item.label}`}><span>{item.label}</span><strong>{formatDeckPreviewMoney(item.amountWon)}</strong></p>) : <p><span>사용처</span><strong>확정 필요</strong></p>}</section><section><small>달성 목표</small>{slide.points?.map((point) => <p key={`${slide.id}-${point.label}`}><span>{point.label}</span><strong>{point.detail}</strong></p>)}</section></div></div>}
+        </>}
+      </div>
+    </>}
+    {!isBookend && <footer><span>{input.brandName} · {input.deckType === "ir" ? "INVESTOR RELATIONS" : "BUSINESS INTRODUCTION"}</span><em>{page} / {String(total).padStart(2, "0")}</em></footer>}
+    {isBookend && <em className="deck-preview-bookend-page">{page} / {String(total).padStart(2, "0")}</em>}
+  </section>;
+}
+
+function PresentationSlideThumbnail({ slide, index }: { slide: PresentationSlide; index: number }) {
+  return <span className={`presentation-thumbnail-art kind-${slide.kind} ${slide.dark ? "dark" : ""}`}>
+    <i />
+    <small>{slide.eyebrow}</small>
+    <strong>{slide.title}</strong>
+    <em>{String(index + 1).padStart(2, "0")}</em>
+  </span>;
+}
+
+function editablePresentationValue(slide: PresentationSlide): PresentationSlideOverride {
+  return {
+    title: slide.title,
+    ...(slide.lead !== undefined ? { lead: slide.lead } : {}),
+    ...(slide.statement !== undefined ? { statement: slide.statement } : {}),
+    ...(slide.supporting !== undefined ? { supporting: slide.supporting } : {}),
+    ...(slide.note !== undefined ? { note: slide.note } : {}),
+    chartPreset: slide.chart?.preset ?? null,
+  };
+}
 
 const founderCharacterImages: Record<FounderAxis, string> = {
   opportunity: "/archetypes/opportunity.png",
@@ -165,7 +423,7 @@ function readConversationDraft() {
 function Logo({ onClick }: { onClick: () => void }) {
   return (
     <button className="brand" onClick={onClick} aria-label="오늘창업 홈으로">
-      <img className="brand-logo" src="/today-startup-logo.png" alt="오늘창업" width="2200" height="650" />
+      <img className="brand-logo" src="/today-startup-logo-2026.png" alt="오늘창업" width="1600" height="520" />
     </button>
   );
 }
@@ -189,12 +447,12 @@ function Header({
           <a href="#how">진행 방식</a>
           <a href="#deliverables">결과물</a>
           <a href="#evidence">근거 기준</a>
-          <a href="#price">베타 이용</a>
+          <a href="#price">이용 안내</a>
         </nav>
       )}
       <div className="header-actions">
         <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /><span>마이페이지</span></a>
-        {onStart && <button className="small-start" onClick={onStart}>시작하기 <ArrowRight size={15} /></button>}
+        {onStart && <button className="small-start" onClick={onStart}>시작하기</button>}
       </div>
     </header>
   );
@@ -219,14 +477,12 @@ function PrimaryButton({
 }
 
 function GuidedActionBar({
-  onBack,
   onUnknown,
   onNext,
   nextLabel = "다음",
   nextDisabled = false,
   busy = false,
 }: {
-  onBack: () => void;
   onUnknown?: () => void;
   onNext: () => void;
   nextLabel?: string;
@@ -235,12 +491,28 @@ function GuidedActionBar({
 }) {
   return (
     <footer className="guided-action-bar">
-      <div>
-        <button type="button" className="guided-back" aria-label="이전" title="이전" onClick={onBack} disabled={busy}><ArrowLeft /><span>이전</span></button>
-        {onUnknown ? <button type="button" className="guided-unknown" onClick={onUnknown} disabled={busy}><CircleHelp /> 모르겠음</button> : <span />}
-        <button type="button" className="guided-next" onClick={onNext} disabled={nextDisabled || busy}>{nextLabel} <ArrowRight /></button>
+      <div className={onUnknown ? undefined : "single-action"}>
+        {onUnknown && <button type="button" className="guided-unknown" onClick={onUnknown} disabled={busy}>모르겠음</button>}
+        <button type="button" className="guided-next" onClick={onNext} disabled={nextDisabled || busy}>{nextLabel}</button>
       </div>
     </footer>
+  );
+}
+
+function GuidedTopBar({
+  onBack,
+  progressLabel,
+  busy = false,
+}: {
+  onBack: () => void;
+  progressLabel: string;
+  busy?: boolean;
+}) {
+  return (
+    <div className="guided-top-row">
+      <button type="button" className="guided-top-back" onClick={onBack} disabled={busy}>이전으로</button>
+      <span className="guided-top-progress">{progressLabel}</span>
+    </div>
   );
 }
 
@@ -253,10 +525,18 @@ function Home({
 }) {
   const [businessInfo, setBusinessInfo] = useState<{
     operatorName: string; representativeName: string; businessRegistrationNumber: string; mailOrderSalesNumber: string;
+    mailOrderStatus: MailOrderStatus; internetDomainName: string;
     businessAddress: string; supportEmail: string; supportPhone: string; hostingProvider: string;
   } | null>(null);
+  const [paymentAllowed, setPaymentAllowed] = useState(false);
   useEffect(() => {
-    void fetch("/api/platform/readiness", { cache: "no-store" }).then((response) => response.json()).then((data) => setBusinessInfo(data.business ?? null)).catch(() => undefined);
+    void fetch("/api/platform/readiness", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((data) => {
+        setBusinessInfo(data.business ?? null);
+        setPaymentAllowed(data.readiness?.paymentAllowed === true);
+      })
+      .catch(() => undefined);
   }, []);
   const deliverables = [
     "사업 실행 요약서",
@@ -269,7 +549,21 @@ function Home({
     "영업 운영 준비서",
     "실행 결과 검증 보고서",
     "공공지원사업 신청 초안",
+    "사업소개서 파워포인트",
+    "투자제안서(IR) 파워포인트",
   ];
+  const requestCustomHomepage = () => {
+    window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
+      detail: {
+        message: [
+          "[맞춤 홈페이지 제작 상담]",
+          `기본 제작비: ${CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터`,
+          "자동 제작 홈페이지보다 세밀한 디자인이나 예약·결제 기능이 필요합니다.",
+          "원하는 내용: ",
+        ].join("\n"),
+      },
+    }));
+  };
 
   return (
     <main className="new-home simple-home">
@@ -280,11 +574,11 @@ function Home({
           <div className="home-hero-copy">
             <span className="section-label">직업 탐색부터 사업 실행까지</span>
             <h1>나에게 맞는 일,<br />사업으로 시작하세요.</h1>
-            <p>대화로 가능성을 찾고, 근거가 있는 실행 계획까지 만듭니다.</p>
+            <p>완벽하지 않아도 괜찮습니다. 아이디어만 들고 오세요. 함께 가능성을 확인하고, 바로 시작할 수 있는 방법과 계획을 만들어드립니다.</p>
             <div className="home-hero-actions">
-              <button className="conversation-choice" onClick={onStart} aria-label="나에게 맞는 사업 찾기 시작"><strong>시작하기</strong><ArrowRight /></button>
+              <button className="conversation-choice" onClick={onStart} aria-label="나에게 맞는 사업 찾기 시작"><strong>시작하기</strong></button>
             </div>
-            <p className="home-hero-assurance"><ShieldCheck /> 베타 기간에는 모든 기능을 결제 없이 이용합니다.</p>
+            <p className="home-hero-assurance"><ShieldCheck /> 사업 아이디어 찾기는 무료 · 결과물 제작은 선택</p>
           </div>
         </section>
         <a className="home-scroll-hint" href="#how"><ArrowDown /> 아래에서 제공 범위 확인</a>
@@ -293,8 +587,8 @@ function Home({
       <HomeResearchEvidence />
 
       <section className="home-proof-bar" aria-label="서비스 구성 요약">
-        <div><strong>무료</strong><span>전체 기능 베타 이용</span></div>
-        <div><strong>10종</strong><span>단계별 사업 실행 결과물</span></div>
+        <div><strong>무료</strong><span>사업 아이디어 탐색</span></div>
+        <div><strong>12종</strong><span>문서 10종과 발표자료 2종</span></div>
         <div><strong>21일</strong><span>초보자용 실행 일정</span></div>
         <div><strong>PDF·워드·PPTX</strong><span>바로 쓰는 문서 형식</span></div>
       </section>
@@ -318,9 +612,9 @@ function Home({
           <div className="home-deliverables-copy">
             <span>최종 결과물</span>
             <h2>시작하면 무엇을 받는지<br />처음부터 분명하게</h2>
-            <p>진행 단계가 끝날 때마다 결과물을 확인하고 수정합니다. 완성 문서는 PDF와 워드로, 사업소개서는 파워포인트로 받을 수 있습니다.</p>
+            <p>진행 단계가 끝날 때마다 결과물을 확인하고 수정합니다. 실행 문서는 PDF와 워드로, 사업소개서와 투자제안서는 파워포인트로 받을 수 있습니다.</p>
             <ul>{deliverables.map((item) => <li key={item}><Check /> {item}</li>)}</ul>
-            <button className="home-sample-preview" onClick={onPreview}><Eye /> 완성 결과 예시 보기 <ArrowRight /></button>
+            <button className="home-sample-preview" onClick={onPreview}>완성 결과 예시 보기</button>
           </div>
         </div>
       </section>
@@ -343,24 +637,32 @@ function Home({
       <section className="home-price" id="price">
         <div className="home-price-inner">
           <div className="home-price-copy">
-            <span>베타 테스트</span>
-            <h2>결제 없이 모든 기능을<br />직접 확인하세요</h2>
-            <p>정식 결제 기능을 추가하기 전까지 추천, 21일 실행 과정, 판매 페이지와 문서 제작을 모두 무료로 테스트할 수 있습니다.</p>
-            <div><ShieldCheck /><span><strong>현재 전체 기능 무료</strong><small>카드나 계좌 정보를 입력하지 않습니다</small></span></div>
+            <span>이용 안내</span>
+            <h2>아이디어는 무료로 찾고,<br />실행 자료가 필요할 때만 신청하세요</h2>
+            <p>사업자등록 없이 추천 사업을 살펴볼 수 있습니다. 마음에 드는 사업을 고른 뒤에만 전체 결과물 제작을 신청합니다.</p>
+            <div><ShieldCheck /><span><strong>무료 탐색에는 결제 정보가 필요하지 않습니다</strong><small>결과물 제작 신청은 계좌이체로 진행합니다</small></span></div>
           </div>
-          <article className="home-price-panel">
-            <header><span>21일 창업 실행 과정</span><h3>베타 전체 기능 이용</h3><p>테스트 기간 한정</p></header>
-            <strong className="home-price-number">무료</strong>
-            <ul>
-              <li><Check /> 단계 완료에 따라 실행 결과물 10종</li>
-              <li><Check /> 판매 페이지 제작·수정·전체 화면 미리보기</li>
-              <li><Check /> PDF·워드·파워포인트 문서</li>
-              <li><Check /> 사업자·세무·인허가·지원사업 실행 안내</li>
-              <li><Check /> 단계별 승인과 수정 요청</li>
-            </ul>
-            <button onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
-            <small>결제 정보 입력 없음</small>
-          </article>
+          <div className="home-price-options">
+            <article className="home-price-panel">
+              <header><span>맞춤 사업 실행 파일</span><h3>전체 결과물 자동 제작</h3><p>{paymentAllowed ? "계좌이체 신청 가능" : businessInfo?.mailOrderStatus === "preparing" ? "통신판매업 신고 준비 중" : "정식 판매 준비 중"}</p></header>
+              <div className="home-price-value"><span><s>{PACKAGE_LIST_AMOUNT.toLocaleString("ko-KR")}원</s><em>베타 할인가</em></span><strong className="home-price-number">{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></strong></div>
+              <ul>
+                <li><Check /> 결제 전 사업 초안·발표자료·판매 페이지 미리보기</li>
+                <li><Check /> 실행 문서 10종과 발표자료 2종</li>
+                <li><Check /> 기본 홈페이지 자동 제작·직접 수정</li>
+                <li><Check /> PDF·워드·파워포인트 내려받기</li>
+                <li><Check /> 21일 실행 일정과 단계별 안내</li>
+                <li><Check /> 인공지능 초안 수정·다시 만들기</li>
+              </ul>
+              <button onClick={onStart}>무료 초안부터 보기 <ArrowRight /></button>
+              <small>{paymentAllowed ? "결과물 제작 신청 시 계좌이체" : "판매자 정보 확인 후 계좌이체가 열립니다"}</small>
+            </article>
+            <article className="home-custom-price">
+              <span><MessageCircle /></span>
+              <div><small>선택 서비스</small><strong>맞춤 홈페이지 제작</strong><p>디자인과 추가 기능을 상담한 뒤 범위와 일정을 확정합니다.</p></div>
+              <div><strong>{CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터</strong><button type="button" onClick={requestCustomHomepage}>상담하기 <ArrowRight /></button></div>
+            </article>
+          </div>
         </div>
       </section>
 
@@ -368,6 +670,8 @@ function Home({
         <div><span>자주 묻는 질문</span><h2 id="home-faq-title">시작 전에 확인하세요</h2></div>
         <div>
           <details><summary>사업 아이디어가 없어도 시작할 수 있나요?<ChevronDown /></summary><p>네. 지금까지의 경험, 관심사, 가능한 시간과 자본을 바탕으로 현실적인 후보부터 찾습니다.</p></details>
+          <details><summary>사업자등록을 해야 아이디어를 볼 수 있나요?<ChevronDown /></summary><p>아니요. 아이디어 탐색과 추천 확인은 사업자등록 없이 무료로 이용할 수 있습니다. 전체 결과물 제작을 신청할 때만 로그인과 결제 절차가 필요합니다.</p></details>
+          <details><summary>언제 비용을 내나요?<ChevronDown /></summary><p>추천 사업을 고른 뒤 사업 초안, 발표자료 3장과 판매 페이지를 무료로 미리봅니다. PDF·워드·PPTX 다운로드나 홈페이지 공개를 선택할 때만 계좌이체로 신청합니다.</p></details>
           <details><summary>결과가 성공을 보장하나요?<ChevronDown /></summary><p>아닙니다. 추천과 문서는 실행을 위한 초안입니다. 시장 반응은 고객 인터뷰와 실제 결제로 확인하며, 세무·법률·인허가의 최종 판단은 공식 기관이나 전문가 확인이 필요합니다.</p></details>
           <details><summary>문서를 직접 수정할 수 있나요?<ChevronDown /></summary><p>판매 페이지는 화면에서 직접 수정하고 전체 화면으로 확인할 수 있습니다. 문서는 워드로 내려받아 이어서 편집할 수 있습니다.</p></details>
         </div>
@@ -375,8 +679,8 @@ function Home({
 
       <footer className="home-footer">
         <div><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /><p>경험에서 사업 기회를 찾고, 근거와 실행 순서까지 만드는 창업 실행 서비스</p></div>
-        <nav aria-label="하단 안내"><a href="/business-info">사업자 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
-        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>통신판매업 {businessInfo.mailOrderSalesNumber}</span><span>{businessInfo.businessAddress}</span><span>{businessInfo.supportPhone} · {businessInfo.supportEmail}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><small>© 2026 오늘창업</small></div>
+        <nav aria-label="하단 안내"><a href="/business-info">사업자·통신판매 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
+        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><small>© 2026 오늘창업</small></div>
       </footer>
     </main>
   );
@@ -397,6 +701,11 @@ function StartChoice({
   questionnaireProgress: number;
   conversationInProgress: boolean;
 }) {
+  const [directPlanPending, setDirectPlanPending] = useState(false);
+  useEffect(() => {
+    setDirectPlanPending(Boolean(readDirectPlanJob()));
+  }, []);
+
   return (
     <main className="start-choice-page">
       <Header onHome={onBack} />
@@ -415,7 +724,7 @@ function StartChoice({
           </button>
           <button className="direct-mode" onClick={onDirect}>
             <span className="start-mode-icon"><BriefcaseBusiness /></span>
-            <span><strong>내 아이디어로 바로 기획</strong><small>아이디어가 이미 있을 때</small></span>
+            <span><strong>내 아이디어로 바로 기획</strong><small>{directPlanPending ? "사업 초안 만드는 중 · 이어서 확인" : "아이디어가 이미 있을 때"}</small></span>
             <span className="start-mode-action" aria-hidden="true"><ArrowRight /></span>
           </button>
           <button className="conversation-mode" onClick={onConversation}>
@@ -432,10 +741,10 @@ function StartChoice({
 
 function DirectPlanning({
   onBack,
-  onStart,
+  onComplete,
 }: {
   onBack: () => void;
-  onStart: (input: DirectPlanInput) => Promise<void>;
+  onComplete: (input: DirectPlanInput, result: DirectPlanResult) => Promise<void>;
 }) {
   const [step, setStep] = useState<0 | 1 | 2>(0);
   const [idea, setIdea] = useState("");
@@ -443,22 +752,127 @@ function DirectPlanning({
   const [availableHoursPerWeek, setAvailableHoursPerWeek] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [job, setJob] = useState<DirectPlanJobReference | null>(null);
+  const [progress, setProgress] = useState(0);
+  const [connectionNote, setConnectionNote] = useState("");
   const budget = Number(budgetManwon);
   const hours = Number(availableHoursPerWeek);
   const validIdea = idea.trim().length >= 5;
   const validBudget = budgetManwon !== "" && Number.isFinite(budget) && budget >= 0 && budget <= 1_000_000;
   const validHours = availableHoursPerWeek !== "" && Number.isFinite(hours) && hours >= 1 && hours <= 100;
   const canContinue = step === 0 ? validIdea : step === 1 ? validBudget : validHours;
+  const activeGenerationStage = directGenerationStages.reduce(
+    (active, stageDefinition, index) => progress >= stageDefinition.from ? index : active,
+    0,
+  );
+
+  useEffect(() => {
+    const restored = readDirectPlanJob();
+    if (!restored) return;
+    setIdea(restored.input.idea);
+    setBudgetManwon(String(Math.round(restored.input.budgetWon / 10_000)));
+    setAvailableHoursPerWeek(String(restored.input.availableHoursPerWeek));
+    setStep(2);
+    setProgress(estimateDirectPlanProgress(restored.createdAt));
+    setBusy(true);
+    setJob(restored);
+  }, []);
+
+  useEffect(() => {
+    if (!busy) return;
+    const startedAt = job?.createdAt ?? new Date().toISOString();
+    const update = () => setProgress((current) => Math.max(current, estimateDirectPlanProgress(startedAt)));
+    update();
+    const timer = window.setInterval(update, 500);
+    return () => window.clearInterval(timer);
+  }, [busy, job?.createdAt]);
+
+  useEffect(() => {
+    if (!job) return;
+    let active = true;
+    const wait = (milliseconds: number) => new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+    const poll = async () => {
+      while (active) {
+        try {
+          const response = await fetch(
+            `/api/opportunities/direct-plan?jobId=${encodeURIComponent(job.id)}&proof=${encodeURIComponent(job.proof)}`,
+            { cache: "no-store" },
+          );
+          const payload = await response.json() as DirectPlanApiPayload;
+          if (!response.ok) {
+            if ([502, 503, 504].includes(response.status)) {
+              setConnectionNote("서버 연결을 다시 확인하고 있어요. 제작 작업은 그대로 유지됩니다.");
+              await wait(2_500);
+              continue;
+            }
+            window.localStorage.removeItem(directPlanJobStorageKey);
+            throw new Error(payload.error?.message ?? "저장된 초안 작업을 불러오지 못했어요.");
+          }
+          setConnectionNote("");
+          const result = directPlanResultFromPayload(payload);
+          if (result) {
+            window.localStorage.removeItem(directPlanJobStorageKey);
+            setProgress(100);
+            await wait(650);
+            if (active) await onComplete(job.input, result);
+            return;
+          }
+          if (payload.job?.status === "error" || payload.error) {
+            window.localStorage.removeItem(directPlanJobStorageKey);
+            throw new Error(payload.error?.message ?? "사업 초안 제작이 잠시 멈췄어요.");
+          }
+          await wait(1_300);
+        } catch (caught) {
+          if (!active) return;
+          setError(caught instanceof Error ? caught.message : "사업 초안 제작 상태를 확인하지 못했어요.");
+          setBusy(false);
+          setJob(null);
+          return;
+        }
+      }
+    };
+    void poll();
+    return () => {
+      active = false;
+    };
+  }, [job]);
 
   const startProject = async (nextBudget: number, nextHours: number) => {
+    const input: DirectPlanInput = {
+      idea: idea.trim(),
+      budgetWon: Math.round(nextBudget * 10_000),
+      availableHoursPerWeek: Math.round(nextHours),
+    };
     setBusy(true);
+    setProgress(8);
     setError("");
+    setConnectionNote("");
     try {
-      await onStart({
-        idea: idea.trim(),
-        budgetWon: Math.round(nextBudget * 10_000),
-        availableHoursPerWeek: Math.round(nextHours),
+      const response = await fetch("/api/opportunities/direct-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
       });
+      const payload = await response.json() as DirectPlanApiPayload;
+      if (!response.ok) throw new Error(payload.error?.message ?? "AI 사업 초안을 만들지 못했습니다.");
+      const immediateResult = directPlanResultFromPayload(payload);
+      if (immediateResult) {
+        setProgress(100);
+        await new Promise((resolve) => window.setTimeout(resolve, 450));
+        await onComplete(input, immediateResult);
+        return;
+      }
+      if (!payload.job?.id || !payload.job.proof || !payload.job.createdAt) {
+        throw new Error("서버 초안 작업 번호를 확인하지 못했어요.");
+      }
+      const nextJob: DirectPlanJobReference = {
+        id: payload.job.id,
+        proof: payload.job.proof,
+        createdAt: payload.job.createdAt,
+        input,
+      };
+      window.localStorage.setItem(directPlanJobStorageKey, JSON.stringify(nextJob));
+      setJob(nextJob);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "기획을 시작하지 못했습니다.");
       setBusy(false);
@@ -488,7 +902,10 @@ function DirectPlanning({
   };
 
   const goBack = () => {
-    if (busy) return;
+    if (busy) {
+      onBack();
+      return;
+    }
     if (step === 0) onBack();
     else setStep((step - 1) as 0 | 1);
   };
@@ -503,53 +920,85 @@ function DirectPlanning({
     <main className="conversation-page direct-planning-page">
       <Header onHome={onBack} />
       <section className="direct-planning-shell">
-        <div className="direct-step-progress" aria-label={`전체 3단계 중 ${step + 1}단계`}>
-          <span>{step + 1} / 3</span>
+        <GuidedTopBar onBack={goBack} progressLabel={busy ? "초안 제작 중" : `${step + 1} / 3`} />
+        {!busy && <div className="direct-step-progress" aria-label={`전체 3단계 중 ${step + 1}단계`}>
           <div>{[0, 1, 2].map((index) => <i key={index} className={index <= step ? "active" : ""} />)}</div>
-        </div>
-        <header>
-          <span>{stepCopy.label}</span>
-          <h1>{stepCopy.title.split("\n").map((line, index) => <Fragment key={line}>{index > 0 && <br />}{line}</Fragment>)}</h1>
-          <p>{stepCopy.description}</p>
-        </header>
-        <form onSubmit={(event) => event.preventDefault()} data-testid="direct-planning-form">
-          <div className="direct-step-panel" key={step}>
-            {step === 0 && <label className="direct-idea-field">
-              <span>하고 싶은 사업</span>
-              <textarea
-                autoFocus
-                value={idea}
-                onChange={(event) => setIdea(event.target.value)}
-                placeholder="예: 반려동물 사진으로 달력을 만들어 판매하고 싶어요."
-                minLength={5}
-                maxLength={1000}
-                required
-              />
-              <small>{idea.trim().length < 5 ? `${5 - idea.trim().length}자만 더 적어주세요` : "좋아요. 이 생각을 바탕으로 구체화할게요."}</small>
-            </label>}
-            {step === 1 && <div className="direct-single-number">
-              <div className="direct-quick-options" aria-label="예산 빠른 선택">
-                {[0, 100, 300, 1000].map((amount) => <button type="button" className={budgetManwon === String(amount) ? "active" : ""} key={amount} onClick={() => setBudgetManwon(String(amount))}>{amount === 0 ? "0원" : `${amount.toLocaleString("ko-KR")}만원`}</button>)}
+        </div>}
+        {busy ? (
+          <section className="direct-generation-status" role="status" aria-live="polite">
+            <span className="direct-generation-icon"><LoaderCircle className="spin" /></span>
+            <h1>아이디어를 사업 초안으로<br />바꾸고 있어요</h1>
+            <p>입력한 예산과 시간을 반영해 첫 고객, 상품과 시작 범위를 정리합니다.</p>
+            <div className="direct-generation-meter" role="progressbar" aria-label="사업 초안 제작 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}>
+              <strong>{progress}<small>%</small></strong>
+              <span><i style={{ width: `${progress}%` }} /></span>
+            </div>
+            <div className="direct-generation-steps">
+              {directGenerationStages.map((stageDefinition, index) => {
+                const completed = progress >= 100 || index < activeGenerationStage;
+                const current = !completed && index === activeGenerationStage;
+                return (
+                  <span className={completed ? "complete" : current ? "active" : ""} key={stageDefinition.label}>
+                    {completed ? <Check /> : current ? <LoaderCircle className="spin" /> : <Clock3 />}
+                    {stageDefinition.label}
+                  </span>
+                );
+              })}
+            </div>
+            <small className="direct-generation-resume">
+              <ShieldCheck />
+              {job
+                ? "이 화면을 나가거나 닫아도 서버에서 계속 만들어요. 다시 방문하면 진행 상태부터 이어서 보여드립니다."
+                : "서버 작업을 안전하게 시작하고 있어요. 잠시만 기다리면 화면을 나가도 된다는 안내로 바뀝니다."}
+            </small>
+            {connectionNote && <small className="direct-generation-connection">{connectionNote}</small>}
+          </section>
+        ) : (
+          <>
+            <header>
+              <span>{stepCopy.label}</span>
+              <h1>{stepCopy.title.split("\n").map((line, index) => <Fragment key={line}>{index > 0 && <br />}{line}</Fragment>)}</h1>
+              <p>{stepCopy.description}</p>
+            </header>
+            <form onSubmit={(event) => event.preventDefault()} data-testid="direct-planning-form">
+              <div className="direct-step-panel" key={step}>
+                {step === 0 && <label className="direct-idea-field">
+                  <span>하고 싶은 사업</span>
+                  <textarea
+                    autoFocus
+                    value={idea}
+                    onChange={(event) => setIdea(event.target.value)}
+                    placeholder="예: 반려동물 사진으로 달력을 만들어 판매하고 싶어요."
+                    minLength={5}
+                    maxLength={1000}
+                    required
+                  />
+                  <small>{idea.trim().length < 5 ? `${5 - idea.trim().length}자만 더 적어주세요` : "좋아요. 이 생각을 바탕으로 구체화할게요."}</small>
+                </label>}
+                {step === 1 && <div className="direct-single-number">
+                  <div className="direct-quick-options" aria-label="예산 빠른 선택">
+                    {[0, 100, 300, 1000].map((amount) => <button type="button" className={budgetManwon === String(amount) ? "active" : ""} key={amount} onClick={() => setBudgetManwon(String(amount))}>{amount === 0 ? "0원" : `${amount.toLocaleString("ko-KR")}만원`}</button>)}
+                  </div>
+                  <label><span>직접 입력</span><div><input autoFocus aria-label="시작 예산" type="number" inputMode="numeric" min="0" max="1000000" step="1" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} placeholder="0" required /><em>만원</em></div><small>사업 준비에 실제로 사용할 수 있는 금액을 입력하세요.</small></label>
+                </div>}
+                {step === 2 && <div className="direct-single-number">
+                  <div className="direct-quick-options" aria-label="시간 빠른 선택">
+                    {[5, 10, 20, 40].map((amount) => <button type="button" className={availableHoursPerWeek === String(amount) ? "active" : ""} key={amount} onClick={() => setAvailableHoursPerWeek(String(amount))}>주 {amount}시간</button>)}
+                  </div>
+                  <label><span>직접 입력</span><div><input autoFocus aria-label="주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} placeholder="10" required /><em>시간</em></div><small>평일과 주말을 합친 일주일 기준입니다.</small></label>
+                </div>}
               </div>
-              <label><span>직접 입력</span><div><input autoFocus aria-label="시작 예산" type="number" inputMode="numeric" min="0" max="1000000" step="1" value={budgetManwon} onChange={(event) => setBudgetManwon(event.target.value)} placeholder="0" required /><em>만원</em></div><small>사업 준비에 실제로 사용할 수 있는 금액을 입력하세요.</small></label>
-            </div>}
-            {step === 2 && <div className="direct-single-number">
-              <div className="direct-quick-options" aria-label="시간 빠른 선택">
-                {[5, 10, 20, 40].map((amount) => <button type="button" className={availableHoursPerWeek === String(amount) ? "active" : ""} key={amount} onClick={() => setAvailableHoursPerWeek(String(amount))}>주 {amount}시간</button>)}
-              </div>
-              <label><span>직접 입력</span><div><input autoFocus aria-label="주당 사용할 시간" type="number" inputMode="numeric" min="1" max="100" step="1" value={availableHoursPerWeek} onChange={(event) => setAvailableHoursPerWeek(event.target.value)} placeholder="10" required /><em>시간</em></div><small>평일과 주말을 합친 일주일 기준입니다.</small></label>
-            </div>}
-          </div>
-          {error && <p className="direct-plan-error" role="alert">{error}</p>}
-        </form>
+              {error && <p className="direct-plan-error" role="alert">{error}</p>}
+            </form>
+          </>
+        )}
       </section>
       <GuidedActionBar
-        onBack={goBack}
-        onUnknown={step === 0 ? undefined : useRecommended}
+        onUnknown={busy || step === 0 ? undefined : useRecommended}
         onNext={() => void advance()}
         nextDisabled={!canContinue}
         busy={busy}
-        nextLabel={busy ? "프로젝트 만드는 중" : step < 2 ? "다음" : "기획 시작"}
+        nextLabel={busy ? `초안 만드는 중 · ${progress}%` : step < 2 ? "다음" : "기획 시작"}
       />
     </main>
   );
@@ -661,7 +1110,9 @@ function ConversationDiscovery({
               <div><small>사용할 수 있는 시간</small><strong>{review.availableTime}</strong></div>
             </div>
           </div>
-          <div className="review-actions"><button onClick={() => setReview(null)}>수정하기</button><PrimaryButton onClick={finish}>추천 결과 보기 <ArrowRight /></PrimaryButton></div>
+          <div className="mobile-confirm-action">
+            <div className="review-actions"><button onClick={() => setReview(null)}>수정하기</button><PrimaryButton onClick={finish}>추천 결과 보기 <ArrowRight /></PrimaryButton></div>
+          </div>
         </section>
       </main>
     );
@@ -672,7 +1123,7 @@ function ConversationDiscovery({
       <Header onHome={onBack} />
       <div className="assessment-progress"><span style={{ width: `${((step + 1) / totalSteps) * 100}%` }} /></div>
       <section className="conversation-content">
-        <div className="guided-step-count"><span>{step + 1} / {totalSteps}</span></div>
+        <GuidedTopBar onBack={() => step ? setStep(step - 1) : onBack()} progressLabel={`${step + 1} / ${totalSteps}`} />
         <div className="conversation-bubble"><span>{textStep ? <Sparkles /> : budgetStep ? <CircleDollarSign /> : <CalendarDays />}</span><div><small>{textStep ? prompt.label : budgetStep ? "시작 예산" : "사용할 시간"}</small><h1>{textStep ? prompt.question : budgetStep ? "얼마로 시작할까요?" : "일주일에 몇 시간을 쓸 수 있나요?"}</h1><p>{textStep ? prompt.help : budgetStep ? "모르면 0원으로 시작해도 괜찮아요." : "모르면 주 10시간을 기준으로 추천할게요."}</p></div></div>
         <div className="narrative-input">
           {textStep ? <textarea
@@ -689,7 +1140,7 @@ function ConversationDiscovery({
           </div>
         </div>
       </section>
-      <GuidedActionBar onBack={() => step ? setStep(step - 1) : onBack()} onUnknown={skip} onNext={next} nextDisabled={!canContinue} nextLabel={step === totalSteps - 1 ? "입력 내용 확인" : "다음"} />
+      <GuidedActionBar onUnknown={skip} onNext={next} nextDisabled={!canContinue} nextLabel={step === totalSteps - 1 ? "입력 내용 확인" : "다음"} />
     </main>
   );
 }
@@ -752,7 +1203,7 @@ function Assessment({
         <Header onHome={onExit} />
         <div className="assessment-progress"><span style={{ width: `${((coreQuestions.length + constraintStep + 1) / (coreQuestions.length + 2)) * 100}%` }} /></div>
         <section className="assessment-content assessment-constraints">
-          <div className="guided-step-count"><span>마지막 {constraintStep + 1} / 2</span></div>
+          <GuidedTopBar onBack={() => constraintStep === 0 ? setShowConstraints(false) : setConstraintStep(0)} progressLabel={`마지막 ${constraintStep + 1} / 2`} />
           <div className="question-intro">
             <p>추천을 현실적인 범위로 맞출게요.</p>
             <h1>{constraintStep === 0 ? "시작 예산은 얼마인가요?" : "일주일에 몇 시간을 쓸 수 있나요?"}</h1>
@@ -763,7 +1214,6 @@ function Assessment({
           </div>
         </section>
         <GuidedActionBar
-          onBack={() => constraintStep === 0 ? setShowConstraints(false) : setConstraintStep(0)}
           onUnknown={() => {
             if (constraintStep === 0) { setBudgetManwon("0"); setConstraintStep(1); }
             else { setAvailableHoursPerWeek("10"); finishAssessment(budgetReady ? budget : 0, 10); }
@@ -781,25 +1231,28 @@ function Assessment({
       <Header onHome={onExit} />
       <div className="assessment-progress"><span style={{ width: `${((step + 1) / coreQuestions.length) * 100}%` }} /></div>
       <section className="assessment-content">
-        <div className="guided-step-count"><span>{step + 1} / {coreQuestions.length}</span></div>
+        <GuidedTopBar onBack={() => step ? setStep(step - 1) : onExit()} progressLabel={`${step + 1} / ${coreQuestions.length}`} />
         <div className="question-intro">
           <p>{question.context}</p>
           <h1>{question.title}</h1>
         </div>
         <div className="choice-pair">
           {question.options.map((option, index) => (
-            <button key={option.id} className={selected === option.id ? "selected" : ""} onClick={() => choose(option.id)}>
+            <button
+              key={option.id}
+              className={selected === option.id ? "selected" : ""}
+              aria-pressed={selected === option.id}
+              onClick={() => choose(option.id)}
+            >
               <span className="choice-letter">{assessmentOptionIcons[option.id] ?? String.fromCharCode(65 + index)}</span>
-              <h2>{option.title}</h2>
-              <p>{option.description}</p>
-              <i>{selected === option.id ? <Check /> : <ArrowRight />}</i>
+              <span className="choice-copy"><h2>{option.title}</h2><p>{option.description}</p></span>
+              <i className="choice-check" aria-hidden="true"><Check /></i>
             </button>
           ))}
           <b className="choice-or">또는</b>
         </div>
       </section>
       <GuidedActionBar
-        onBack={() => step ? setStep(step - 1) : onExit()}
         onUnknown={skipQuestion}
         onNext={nextQuestion}
         nextDisabled={!selected}
@@ -835,7 +1288,17 @@ function ProfileResult({
           ))}
         </div>
         <div className="profile-caution"><ShieldCheck /><span><small>시작할 때 주의할 점</small><strong>{leadInterpretation.watchout}</strong></span></div>
-        <PrimaryButton onClick={onExplore}>내 사업 찾기 시작 <ArrowRight /></PrimaryButton>
+        <div className="mobile-confirm-action profile-confirm-action">
+          <div><PrimaryButton onClick={onExplore}>내 사업 찾기 시작 <ArrowRight /></PrimaryButton></div>
+        </div>
+        <p className="profile-research-note">
+          참고 근거: <a href="https://pubmed.ncbi.nlm.nih.gov/21133557/" target="_blank" rel="noreferrer">Holland 직업흥미 모형</a>
+          <span aria-hidden="true"> · </span>
+          <a href="https://doi.org/10.1111/j.1744-6570.2005.00672.x" target="_blank" rel="noreferrer">개인-직무 적합성 연구</a>
+          <span aria-hidden="true"> · </span>
+          <a href="https://pubmed.ncbi.nlm.nih.gov/16316279/" target="_blank" rel="noreferrer">창업 자기효능감 연구</a>
+          <br />위 연구 개념을 참고해 8개 답변을 간단히 분류한 안내 결과이며, 표준화된 심리검사나 사업 성공 예측은 아닙니다.
+        </p>
         <button className="restart-text" onClick={onRestart}><RefreshCw /> 다시 답하기</button>
       </section>
     </main>
@@ -845,17 +1308,20 @@ function ProfileResult({
 function OpportunityCard({
   item,
   state,
+  pending,
   onOpen,
   onSave,
   onExclude,
 }: {
   item: RankedOpportunity;
   state?: "saved" | "excluded";
+  pending?: boolean;
   onOpen: () => void;
   onSave: () => void;
   onExclude: () => void;
 }) {
   const founderCategory = founderLabels[item.founder[0] ?? "opportunity"];
+  const summary = item.oneLiner.trim().match(/^.*?[.!?](?=\s|$)/)?.[0] ?? item.oneLiner.trim();
   return (
     <article className={`opportunity-card ${item.color} ${state === "saved" ? "saved" : ""}`}>
       <div className="op-card-top">
@@ -863,16 +1329,16 @@ function OpportunityCard({
         {state === "saved" && <strong>저장됨</strong>}
       </div>
       <h3>{item.title}</h3>
-      <p className="op-line">{item.oneLiner}</p>
+      <p className="op-line">{summary}</p>
       <div className="op-meta">
         <span><small>시작 비용</small><strong>{item.capital}</strong></span>
         <span><small>시험 기간</small><strong>{item.launchTime}</strong></span>
         <span><small>수익 방식</small><strong>{item.revenue}</strong></span>
       </div>
       <div className="op-actions">
-        <button className={state === "saved" ? "active" : ""} onClick={onSave}>{state === "saved" ? "저장 취소" : "저장"}</button>
-        <button onClick={onExclude}>관심 없음</button>
-        <button className="op-start-preview" onClick={onOpen}>시작하기</button>
+        <button disabled={pending} className={state === "saved" ? "active" : ""} onClick={onSave}>{pending ? "저장 중" : state === "saved" ? "저장 취소" : "저장"}</button>
+        <button disabled={pending} onClick={onExclude}>관심 없음</button>
+        <button className="op-start-preview" onClick={onOpen}>선택하기 <ArrowRight /></button>
       </div>
     </article>
   );
@@ -880,14 +1346,12 @@ function OpportunityCard({
 
 function Explore({
   profile,
-  setProfile,
   feedback,
   setFeedback,
   onHome,
   onStartOpportunity,
 }: {
   profile: FounderProfile;
-  setProfile: (profile: FounderProfile) => void;
   feedback: OpportunityFeedback;
   setFeedback: (feedback: OpportunityFeedback) => void;
   onHome: () => void;
@@ -895,17 +1359,28 @@ function Explore({
 }) {
   const [mode, setMode] = useState<"dna" | "manual">("dna");
   const [generationSeed, setGenerationSeed] = useState(120726);
-  const [capital, setCapital] = useState<CapitalFilter>("전체");
-  const [sector, setSector] = useState("");
   const [manual, setManual] = useState<ManualPreferences>({
     budget: "100만원 이하",
     time: "주말·저녁",
     channel: "제한 없음",
     customer: "제한 없음",
   });
+  const [manualDraft, setManualDraft] = useState<ManualPreferences>(manual);
+  const [showConditions, setShowConditions] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshNotice, setRefreshNotice] = useState("");
+  const refreshTimerRef = useRef<number | null>(null);
+  const noticeTimerRef = useRef<number | null>(null);
   const [selected, setSelected] = useState<RankedOpportunity | null>(null);
   const [startingOpportunityId, setStartingOpportunityId] = useState("");
   const [startError, setStartError] = useState("");
+  const [preferenceRecords, setPreferenceRecords] = useState<OpportunityPreferenceRecord[]>([]);
+  const [preferencePending, setPreferencePending] = useState<Record<string, boolean>>({});
+  const [preferenceError, setPreferenceError] = useState("");
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
+  const [preferencesAuthenticated, setPreferencesAuthenticated] = useState(false);
+  const [clearingExcluded, setClearingExcluded] = useState(false);
 
   useEffect(() => {
     if (!selected) return;
@@ -925,55 +1400,197 @@ function Explore({
   }, [selected]);
   const [showAll, setShowAll] = useState(false);
   useEffect(() => {
-    setGenerationSeed(Date.now() % 100000000);
+    let active = true;
+    void fetch("/api/opportunities/preferences", { cache: "no-store" })
+      .then(async (response) => {
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error?.message ?? "저장한 사업을 불러오지 못했습니다.");
+        return payload as { preferences: OpportunityPreferenceRecord[]; authenticated: boolean };
+      })
+      .then((payload) => {
+        if (!active) return;
+        const syncedFeedback = Object.fromEntries(
+          payload.preferences.map((preference) => [preference.opportunityKey, preference.state]),
+        ) as OpportunityFeedback;
+        setPreferenceRecords(payload.preferences);
+        setPreferencesAuthenticated(payload.authenticated);
+        setFeedback(syncedFeedback);
+        setPreferenceError("");
+      })
+      .catch((error) => {
+        if (!active) return;
+        setPreferenceError(error instanceof Error ? error.message : "저장 기능을 준비하지 못했습니다.");
+      })
+      .finally(() => {
+        if (active) setPreferencesLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, [setFeedback]);
+  useEffect(() => {
+    if (!preferencesLoaded) return;
+    const savedKey = new URL(window.location.href).searchParams.get("saved");
+    if (!savedKey) return;
+    const savedPreference = preferenceRecords.find(
+      (preference) =>
+        preference.opportunityKey === savedKey && preference.state === "saved",
+    );
+    if (savedPreference) setSelected(savedPreference.opportunity);
+  }, [preferenceRecords, preferencesLoaded]);
+  useEffect(() => () => {
+    if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
   }, []);
   const allRanked = useMemo(
     () =>
       rankOpportunities(
         profile,
         feedback,
-        { capital },
+        {},
         generationSeed,
         mode === "manual" ? manual : undefined,
+        preferenceRecords.map((preference) => ({
+          state: preference.state,
+          opportunity: preference.opportunity,
+        })),
       ),
-    [profile, feedback, capital, generationSeed, mode, manual],
+    [profile, feedback, generationSeed, mode, manual, preferenceRecords],
   );
-  const availableSectors = useMemo(
-    () => [...new Set(allRanked.map((item) => item.sector))],
-    [allRanked],
-  );
-  const ranked = sector ? allRanked.filter((item) => item.sector === sector) : allRanked;
+  const ranked = allRanked;
   const visible = showAll ? ranked : ranked.slice(0, 4);
-  const regenerate = () => {
-    setGenerationSeed((current) => current + 7919);
-    setSector("");
-    setShowAll(false);
-    setFeedback({});
+  const savedPreferences = useMemo(
+    () => preferenceRecords.filter((preference) => preference.state === "saved"),
+    [preferenceRecords],
+  );
+  const excludedPreferences = useMemo(
+    () => preferenceRecords.filter((preference) => preference.state === "excluded"),
+    [preferenceRecords],
+  );
+
+  const showRefreshNotice = (message: string) => {
+    setRefreshNotice(message);
+    if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
+    noticeTimerRef.current = window.setTimeout(() => setRefreshNotice(""), 3600);
   };
 
-  const react = (item: RankedOpportunity, action: "saved" | "excluded") => {
+  const refreshRecommendations = (kind: "reset" | "conditions") => {
+    if (refreshing) return;
+    if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
+    setShowConditions(false);
+    setRefreshNotice("");
+    setRefreshing(true);
+    refreshTimerRef.current = window.setTimeout(() => {
+      if (kind === "reset") {
+        const defaults: ManualPreferences = { budget: "100만원 이하", time: "주말·저녁", channel: "제한 없음", customer: "제한 없음" };
+        setMode("dna");
+        setManual(defaults);
+        setManualDraft(defaults);
+      } else {
+        setMode("manual");
+        setManual(manualDraft);
+      }
+      setGenerationSeed((current) => current + 7919);
+      setShowAll(false);
+      setRefreshing(false);
+      showRefreshNotice(kind === "reset" ? "저장과 관심 없음을 반영해 새 추천을 준비했어요." : "선택한 조건과 저장 내용을 반영해 추천을 바꿨어요.");
+    }, 650);
+  };
+
+  const react = async (item: RankedOpportunity, action: "saved" | "excluded") => {
+    if (preferencePending[item.id]) return;
     const isUndo = feedback[item.id] === action;
+    const previousFeedback = { ...feedback };
+    const previousRecords = [...preferenceRecords];
     const next = { ...feedback };
     if (isUndo) delete next[item.id];
     else next[item.id] = action;
     setFeedback(next);
-    let nextProfile = profile;
-    const previous = feedback[item.id];
-    if (previous) {
-      nextProfile = applyPreference(
-        nextProfile,
-        { riasec: item.riasec, founder: item.founder },
-        previous === "saved" ? -1 : 1,
+    setPreferenceError("");
+    setPreferencePending((current) => ({ ...current, [item.id]: true }));
+    if (isUndo) {
+      setPreferenceRecords((current) =>
+        current.filter((preference) => preference.opportunityKey !== item.id),
       );
+    } else {
+      const now = new Date().toISOString();
+      setPreferenceRecords((current) => [
+        {
+          opportunityKey: item.id,
+          state: action,
+          opportunity: item,
+          createdAt:
+            current.find((preference) => preference.opportunityKey === item.id)?.createdAt ?? now,
+          updatedAt: now,
+        },
+        ...current.filter((preference) => preference.opportunityKey !== item.id),
+      ]);
     }
-    if (!isUndo) {
-      nextProfile = applyPreference(
-        nextProfile,
-        { riasec: item.riasec, founder: item.founder },
-        action === "saved" ? 1 : -1,
-      );
+    try {
+      const response = isUndo
+        ? await fetch(`/api/opportunities/preferences?key=${encodeURIComponent(item.id)}`, {
+            method: "DELETE",
+          })
+        : await fetch("/api/opportunities/preferences", {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ state: action, opportunity: item }),
+          });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message ?? "저장 상태를 변경하지 못했습니다.");
+      if (!isUndo && payload.preference) {
+        setPreferenceRecords((current) => [
+          payload.preference as OpportunityPreferenceRecord,
+          ...current.filter((preference) => preference.opportunityKey !== item.id),
+        ]);
+      }
+      if (isUndo) showRefreshNotice("저장을 취소했어요.");
+      else if (action === "saved") {
+        showRefreshNotice(
+          preferencesAuthenticated
+            ? "내 계정에 저장했어요. 마이페이지에서 다시 볼 수 있어요."
+            : "이 브라우저에 저장했어요. 로그인하면 계정으로 옮겨집니다.",
+        );
+      } else showRefreshNotice("관심 없음을 반영했어요. 다음 추천에서도 제외됩니다.");
+    } catch (error) {
+      setFeedback(previousFeedback);
+      setPreferenceRecords(previousRecords);
+      setPreferenceError(error instanceof Error ? error.message : "저장 상태를 변경하지 못했습니다.");
+    } finally {
+      setPreferencePending((current) => {
+        const nextPending = { ...current };
+        delete nextPending[item.id];
+        return nextPending;
+      });
     }
-    setProfile(nextProfile);
+  };
+
+  const clearExcludedPreferences = async () => {
+    if (clearingExcluded || !excludedPreferences.length) return;
+    const previousFeedback = { ...feedback };
+    const previousRecords = [...preferenceRecords];
+    const nextFeedback = { ...feedback };
+    for (const preference of excludedPreferences) delete nextFeedback[preference.opportunityKey];
+    setFeedback(nextFeedback);
+    setPreferenceRecords((current) =>
+      current.filter((preference) => preference.state !== "excluded"),
+    );
+    setPreferenceError("");
+    setClearingExcluded(true);
+    try {
+      const response = await fetch("/api/opportunities/preferences?state=excluded", {
+        method: "DELETE",
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message ?? "관심 없음 기록을 초기화하지 못했습니다.");
+      showRefreshNotice("관심 없음 기록을 지웠어요. 다시 추천에 포함됩니다.");
+    } catch (error) {
+      setFeedback(previousFeedback);
+      setPreferenceRecords(previousRecords);
+      setPreferenceError(error instanceof Error ? error.message : "관심 없음 기록을 초기화하지 못했습니다.");
+    } finally {
+      setClearingExcluded(false);
+    }
   };
 
   const startOpportunity = async (opportunity: RankedOpportunity) => {
@@ -1002,59 +1619,88 @@ function Explore({
           </div>
         </div>
         <div className="explore-head-actions">
-          <div className="mode-tabs" aria-label="추천 방식">
-            <button className={mode === "dna" ? "active" : ""} onClick={() => { setMode("dna"); setSector(""); }}>맞춤 추천</button>
-            <button className={mode === "manual" ? "active" : ""} onClick={() => { setMode("manual"); setCapital("전체"); setSector(""); }}>조건 변경</button>
-          </div>
-          <button className="regenerate-button" onClick={regenerate}>추천 다시 받기</button>
+          <button className="explore-saved-button" aria-expanded={showSaved} onClick={() => setShowSaved((current) => !current)}><Save /> 저장한 사업 {savedPreferences.length}</button>
+          <button
+            className="explore-condition-button"
+            aria-expanded={showConditions}
+            onClick={() => {
+              setManualDraft(manual);
+              setShowConditions((current) => !current);
+              setRefreshNotice("");
+            }}
+          >조건 바꾸기</button>
+          <button className="regenerate-button" disabled={refreshing} onClick={() => refreshRecommendations("reset")}><RefreshCw /> {refreshing ? "추천 고르는 중" : "추천 다시 받기"}</button>
         </div>
       </section>
 
-      {mode === "manual" && (
-        <section className="manual-finder">
-          <div className="manual-fields">
-            <label><span>시작 예산</span><select value={manual.budget} onChange={(event) => setManual({ ...manual, budget: event.target.value as ManualPreferences["budget"] })}><option>100만원 이하</option><option>100~1,000만원</option><option>1,000만원 이상</option><option>제한 없음</option></select></label>
-            <label><span>투입 시간</span><select value={manual.time} onChange={(event) => setManual({ ...manual, time: event.target.value as ManualPreferences["time"] })}><option>주말·저녁</option><option>부업</option><option>전업</option><option>제한 없음</option></select></label>
-            <label><span>운영 방식</span><select value={manual.channel} onChange={(event) => setManual({ ...manual, channel: event.target.value as ManualPreferences["channel"] })}><option>온라인</option><option>오프라인</option><option>혼합</option><option>제한 없음</option></select></label>
-            <label><span>주요 고객</span><select value={manual.customer} onChange={(event) => setManual({ ...manual, customer: event.target.value as ManualPreferences["customer"] })}><option>개인</option><option>기업</option><option>공공·지역</option><option>제한 없음</option></select></label>
-          </div>
+      {showSaved && (
+        <section className="explore-saved-list" aria-label="저장한 사업 목록">
+          <header><div><strong>저장한 사업</strong><small>{preferencesAuthenticated ? "내 계정에 저장되어 다른 기기에서도 볼 수 있어요." : "이 브라우저에 보관되며, 로그인하면 계정으로 옮겨집니다."}</small></div><button aria-label="저장한 사업 목록 닫기" onClick={() => setShowSaved(false)}>닫기</button></header>
+          {savedPreferences.length ? <div>{savedPreferences.map((preference) => <div key={preference.opportunityKey}><button onClick={() => setSelected(preference.opportunity)}><span>{preference.opportunity.sector}</span><strong>{preference.opportunity.title}</strong><ArrowRight /></button><button aria-label={`${preference.opportunity.title} 저장 취소`} disabled={preferencePending[preference.opportunityKey]} onClick={() => void react(preference.opportunity, "saved")}>삭제</button></div>)}</div> : <p>추천 카드에서 <b>저장</b>을 누르면 여기에 모아둘 수 있어요.</p>}
+          {excludedPreferences.length > 0 && <footer><span>관심 없음 {excludedPreferences.length}개는 다음 추천에서 제외 중이에요.</span><button disabled={clearingExcluded} onClick={() => void clearExcludedPreferences()}>{clearingExcluded ? "처리 중" : "다시 추천에 포함"}</button></footer>}
         </section>
       )}
 
-      <section className="explore-tools">
-        {mode === "dna" ? (
-          <label><select aria-label="시작 자본" value={capital} onChange={(event) => setCapital(event.target.value as CapitalFilter)}>{(["전체", "소액", "중간", "높음"] as CapitalFilter[]).map((value) => <option key={value} value={value}>{value === "전체" ? "모든 자본 규모" : `${value} 자본`}</option>)}</select></label>
-        ) : null}
-        <label><select aria-label="사업 분야" value={sector} onChange={(event) => setSector(event.target.value)}><option value="">모든 분야</option>{availableSectors.map((value) => <option key={value}>{value}</option>)}</select></label>
-      </section>
-
-      <section className="opportunity-grid">
-        {visible.map((item) => (
-          <div className="op-card-wrap" key={item.id}>
-            <OpportunityCard item={item} state={feedback[item.id]} onOpen={() => setSelected(item)} onSave={() => react(item, "saved")} onExclude={() => react(item, "excluded")} />
+      {showConditions && (
+        <section className="manual-finder" aria-label="추천 조건 바꾸기">
+          <header><div><strong>필요한 조건만 선택하세요</strong><small>선택을 마치면 아래 버튼으로 한 번에 반영됩니다.</small></div><button aria-label="조건 닫기" onClick={() => setShowConditions(false)}>닫기</button></header>
+          <div className="manual-fields">
+            <label><span>시작 예산</span><select aria-label="시작 예산" value={manualDraft.budget} onChange={(event) => setManualDraft({ ...manualDraft, budget: event.target.value as ManualPreferences["budget"] })}><option>100만원 이하</option><option>100~1,000만원</option><option>1,000만원 이상</option><option>제한 없음</option></select></label>
+            <label><span>투입 시간</span><select aria-label="투입 시간" value={manualDraft.time} onChange={(event) => setManualDraft({ ...manualDraft, time: event.target.value as ManualPreferences["time"] })}><option>주말·저녁</option><option>부업</option><option>전업</option><option>제한 없음</option></select></label>
+            <label><span>운영 방식</span><select aria-label="운영 방식" value={manualDraft.channel} onChange={(event) => setManualDraft({ ...manualDraft, channel: event.target.value as ManualPreferences["channel"] })}><option>온라인</option><option>오프라인</option><option>혼합</option><option>제한 없음</option></select></label>
+            <label><span>주요 고객</span><select aria-label="주요 고객" value={manualDraft.customer} onChange={(event) => setManualDraft({ ...manualDraft, customer: event.target.value as ManualPreferences["customer"] })}><option>개인</option><option>기업</option><option>공공·지역</option><option>제한 없음</option></select></label>
           </div>
-        ))}
-      </section>
-      {!ranked.length && <div className="empty-results"><h3>이 조건의 기회를 모두 살펴봤어요</h3><p>필터를 넓히거나 제외한 아이디어를 다시 불러와보세요.</p><button onClick={() => { setCapital("전체"); setSector(""); setFeedback({}); }}>전체 기회 다시 보기</button></div>}
-      {ranked.length > 4 && <button className="more-opportunities" onClick={() => setShowAll(!showAll)}>{showAll ? "추천 접기" : `추천 ${ranked.length - 4}개 더 보기`}</button>}
+          <footer className="manual-finder-actions"><button onClick={() => setShowConditions(false)}>취소</button><button onClick={() => refreshRecommendations("conditions")}>이 조건으로 추천 보기 <ArrowRight /></button></footer>
+        </section>
+      )}
+
+      {refreshing ? (
+        <section className="recommendation-refresh-state" aria-live="polite"><LoaderCircle className="spin" /><strong>새 추천을 고르고 있어요</strong><span>성향과 선택한 조건을 다시 확인하고 있습니다.</span></section>
+      ) : (
+        <>
+          {refreshNotice && <div className="recommendation-updated" role="status"><CheckCircle2 /> {refreshNotice}</div>}
+          {preferenceError && <div className="recommendation-save-error" role="alert"><CircleHelp /> {preferenceError}</div>}
+          <section className="opportunity-grid" key={generationSeed}>
+            {visible.map((item) => (
+              <div className="op-card-wrap" key={item.id}>
+                <OpportunityCard item={item} state={feedback[item.id]} pending={preferencePending[item.id]} onOpen={() => setSelected(item)} onSave={() => void react(item, "saved")} onExclude={() => void react(item, "excluded")} />
+              </div>
+            ))}
+          </section>
+          {!ranked.length && <div className="empty-results"><h3>추천을 모두 살펴봤어요</h3><p>새 추천을 받아 다른 사업을 확인해보세요.</p><button onClick={() => refreshRecommendations("reset")}>추천 다시 받기</button></div>}
+          {ranked.length > 4 && <button className="more-opportunities" onClick={() => setShowAll(!showAll)}>{showAll ? "추천 접기" : `추천 ${ranked.length - 4}개 더 보기`}</button>}
+        </>
+      )}
 
       {selected && (
         <div className="detail-backdrop" onClick={() => setSelected(null)}>
           <article className="op-detail" role="dialog" aria-modal="true" aria-labelledby="opportunity-detail-title" onClick={(event) => event.stopPropagation()}>
-            <button autoFocus className="detail-close" aria-label="상세 팝업 닫기" onClick={() => setSelected(null)}><X /></button>
+            <button autoFocus className="detail-close" aria-label="상세 팝업 닫기" onClick={() => setSelected(null)}>닫기</button>
             <div className="op-detail-scroll">
-              <span className="detail-sector">{selected.sector} · {selected.model}</span>
-              <h2 id="opportunity-detail-title">{selected.title}</h2>
-              <p className="detail-lead">{selected.oneLiner}</p>
-              <section className="first-test"><FlaskConical /><div><small>돈을 쓰기 전 첫 검증</small><strong>{selected.firstTest}</strong></div></section>
-              <section><h3>필요한 준비</h3><div className="skill-tags">{selected.skills.map((skill) => <span key={skill}>{skill}</span>)}</div></section>
-              <section className="risk-box"><ShieldCheck /><div><small>먼저 확인할 위험</small><p>{selected.risk}</p><em>{selected.caution}</em></div></section>
+              <header className="op-detail-hero">
+                <span className="detail-sector">{selected.sector} · {selected.model}</span>
+                <section className="op-detail-name-section">
+                  <small className="op-detail-field-label">사업명</small>
+                  <h2 id="opportunity-detail-title">{selected.title}</h2>
+                </section>
+                <section className="op-detail-description-section">
+                  <small className="op-detail-field-label">사업 설명</small>
+                  <p className="detail-lead">{selected.oneLiner}</p>
+                </section>
+              </header>
+              <details className="detail-more-info">
+                <summary><span><CircleHelp /><span><strong>더 자세히 보기</strong><small>처음 해볼 일과 준비 내용을 확인할 수 있어요.</small></span></span><ChevronDown /></summary>
+                <div>
+                  <section className="first-test detail-first-step"><Sparkles /><div><small>처음 해볼 일</small><strong>{selected.firstTest}</strong></div></section>
+                  <section><h3>필요한 준비</h3><div className="skill-tags">{selected.skills.map((skill) => <span key={skill}>{skill}</span>)}</div></section>
+                  <section className="risk-box"><ShieldCheck /><div><small>시작 전에 확인할 점</small><p>{selected.risk}</p><em>{selected.caution}</em></div></section>
+                </div>
+              </details>
             </div>
             <div className="op-detail-footer">
-              <div className="detail-actions detail-actions-stacked">
-                <button onClick={() => { react(selected, "excluded"); setSelected(null); }}><ThumbsDown /> 내 방향과 달라요</button>
-                <button className={feedback[selected.id] === "saved" ? "saved" : ""} onClick={() => react(selected, "saved")}><Heart /> {feedback[selected.id] === "saved" ? "저장했어요" : "기회 저장"}</button>
-                <button className="start-opportunity" disabled={Boolean(startingOpportunityId)} onClick={() => void startOpportunity(selected)}><Rocket /> {startingOpportunityId === selected.id ? "프로젝트 준비 중..." : "이 사업으로 시작하기"} <ArrowRight /></button>
+              <div className="detail-decision"><span>이 사업이 마음에 드나요?</span><strong>무료 초안을 먼저 확인하고 결정할 수 있어요.</strong></div>
+              <div className="detail-actions detail-actions-stacked detail-actions-single">
+                <button className="start-opportunity" disabled={Boolean(startingOpportunityId)} onClick={() => void startOpportunity(selected)}>{startingOpportunityId === selected.id ? <><LoaderCircle className="spin" /> 시작 준비 중...</> : <>시작하기 <ArrowRight /></>}</button>
                 {startError && <p className="op-start-error" role="alert">{startError}</p>}
               </div>
             </div>
@@ -1069,20 +1715,31 @@ function Checkout({
   opportunity,
   founderProfile,
   onBack,
-  onSuccess,
+  onSample,
 }: {
   opportunity: RankedOpportunity;
   founderProfile: FounderProfile;
   onBack: () => void;
-  onSuccess: (project: ProjectRecord) => Promise<void>;
+  onSample: () => void;
 }) {
   const [agreed, setAgreed] = useState(false);
-  const [agreementItems, setAgreementItems] = useState({ service: false, privacy: false, refund: false, aiLimitations: false, digitalSupply: false });
+  const [agreementItems, setAgreementItems] = useState({
+    service: false,
+    privacy: false,
+    refund: false,
+    aiLimitations: false,
+    digitalSupply: false,
+    personalizedDigitalNoRefund: false,
+  });
   const [launchReadiness, setLaunchReadiness] = useState<{ paymentAllowed: boolean; missing: string[] } | null>(null);
   const [accountReady, setAccountReady] = useState<boolean | null>(null);
-  const [method, setMethod] = useState("card");
+  const [depositorName, setDepositorName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [cashReceiptType, setCashReceiptType] = useState<"PERSONAL" | "BUSINESS" | "NONE">("PERSONAL");
+  const [cashReceiptIdentifier, setCashReceiptIdentifier] = useState("");
   const [paying, setPaying] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [checkoutStep, setCheckoutStep] = useState<1 | 2 | 3>(1);
 
   useEffect(() => {
     void Promise.all([
@@ -1101,8 +1758,20 @@ function Checkout({
     setAgreed(Object.values(agreementItems).every(Boolean));
   }, [agreementItems]);
 
+  const transferDetailsComplete = Boolean(
+    depositorName.trim()
+    && customerPhone.trim()
+    && (cashReceiptType === "NONE" || cashReceiptIdentifier.trim()),
+  );
+  const checkoutSteps = ["상품 확인", "입금 정보", "계좌 신청"] as const;
+  const moveCheckoutStep = (next: 1 | 2 | 3) => {
+    setCheckoutStep(next);
+    setPaymentError("");
+    window.requestAnimationFrame(() => document.querySelector(".checkout-wizard-heading")?.scrollIntoView({ behavior: "smooth", block: "start" }));
+  };
+
   const pay = async () => {
-    if (!agreed || paying) return;
+    if (!agreed || paying || !depositorName.trim() || !customerPhone.trim()) return;
     setPaying(true);
     setPaymentError("");
     try {
@@ -1112,7 +1781,13 @@ function Checkout({
         body: JSON.stringify({
           opportunity,
           founderProfile,
-          method: method === "toss" ? "TOSSPAY" : method === "transfer" ? "TRANSFER" : "CARD",
+          method: "TRANSFER",
+          customer: {
+            depositorName,
+            phone: customerPhone,
+            cashReceiptType,
+            cashReceiptIdentifier: cashReceiptType === "NONE" ? "" : cashReceiptIdentifier,
+          },
           terms: {
             ...agreementItems,
           },
@@ -1121,47 +1796,7 @@ function Checkout({
       const orderPayload = await orderResponse.json();
       if (!orderResponse.ok) throw new Error(orderPayload.error?.message ?? "결제 주문을 만들지 못했습니다.");
       window.localStorage.setItem("venture-pending-order", JSON.stringify(orderPayload.order));
-      if (orderPayload.paymentMode === "development_test") {
-        const testResponse = await fetch("/api/payments/test-confirm", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ orderId: orderPayload.order.orderId }),
-        });
-        const testPayload = await testResponse.json();
-        if (!testResponse.ok) throw new Error(testPayload.error?.message ?? "테스트 결제를 완료하지 못했습니다.");
-        window.localStorage.removeItem("venture-pending-order");
-        await onSuccess(testPayload.project);
-        return;
-      }
-      if (!orderPayload.clientKey) throw new Error("결제 클라이언트 키가 없습니다.");
-      const { loadTossPayments, ANONYMOUS } = await import("@tosspayments/tosspayments-sdk");
-      const payment = (await loadTossPayments(orderPayload.clientKey)).payment({ customerKey: ANONYMOUS });
-      const common = {
-        amount: { currency: "KRW" as const, value: orderPayload.order.amount },
-        orderId: orderPayload.order.orderId,
-        orderName: orderPayload.order.orderName,
-        successUrl: `${window.location.origin}/payment/success`,
-        failUrl: `${window.location.origin}/payment/fail`,
-      };
-      if (method === "transfer") {
-        await payment.requestPayment({
-          ...common,
-          method: "TRANSFER",
-          transfer: { cashReceipt: { type: "소득공제" }, useEscrow: false },
-        });
-      } else {
-        await payment.requestPayment({
-          ...common,
-          method: "CARD",
-          card: {
-            useEscrow: false,
-            flowMode: method === "toss" ? "DIRECT" : "DEFAULT",
-            easyPay: method === "toss" ? "TOSSPAY" : undefined,
-            useCardPoint: false,
-            useAppCardOnly: false,
-          },
-        });
-      }
+      window.location.href = `/payment/transfer?orderId=${encodeURIComponent(orderPayload.order.orderId)}`;
     } catch (error) {
       setPaymentError(error instanceof Error ? error.message : "프로젝트 생성에 실패했습니다.");
       setPaying(false);
@@ -1171,52 +1806,197 @@ function Checkout({
   return (
     <main className="checkout-page">
       <Header onHome={onBack} />
-      <section className="checkout-shell">
-        <button className="start-back" onClick={onBack}><ArrowLeft /> 기회 상세로 돌아가기</button>
-        <div className="checkout-heading"><span className="section-label">사업 실행 시작</span><h1>아이디어를 실행 가능한<br />사업으로 만들어볼게요.</h1><p>결제가 확인되면 선택한 기회를 기준으로 21일 프로젝트가 즉시 생성됩니다.</p></div>
-        <div className="checkout-layout">
-          <div className="checkout-form">
-            <section>
-              <div className="checkout-section-title"><span>01</span><div><h2>선택한 사업 기회</h2><p>이 기회를 중심으로 프로젝트 결과물이 맞춤 구성됩니다.</p></div></div>
+      <section className="checkout-shell checkout-wizard-shell">
+        <button className="start-back" onClick={onBack}><ArrowLeft /> 초안 미리보기로 돌아가기</button>
+        <header className="checkout-wizard-heading">
+          <span className="section-label">결제 신청</span>
+          <h1>한 단계씩 진행할게요</h1>
+          <p>현재 화면의 내용만 확인하고 아래 다음 버튼을 누르세요.</p>
+          <ol aria-label="결제 진행 단계">
+            {checkoutSteps.map((label, index) => {
+              const step = (index + 1) as 1 | 2 | 3;
+              return <li key={label} className={checkoutStep === step ? "current" : checkoutStep > step ? "done" : ""} aria-current={checkoutStep === step ? "step" : undefined}><i>{checkoutStep > step ? <Check /> : step}</i><span>{label}</span></li>;
+            })}
+          </ol>
+        </header>
+
+        <section className={`checkout-wizard-card step-${checkoutStep}`} data-checkout-step={checkoutStep}>
+          {checkoutStep === 1 && <div className="checkout-step-content">
+            <div className="checkout-section-title"><span>01</span><div><h2>신청할 사업을 확인하세요</h2><p>이 사업을 기준으로 전체 자료를 제작합니다.</p></div></div>
+            <div className="checkout-step-main">
               <div className="chosen-opportunity"><span>{opportunity.sector}</span><h3>{opportunity.title}</h3><p>{opportunity.oneLiner}</p><div><em>적합도 {opportunity.match}%</em><em>{opportunity.model}</em><em>예상 검증 {opportunity.launchTime}</em></div></div>
-            </section>
-            <section>
-              <div className="checkout-section-title"><span>02</span><div><h2>결제 수단</h2><p>토스페이먼츠 결제창에서 카드·간편결제·계좌이체를 안전하게 처리합니다.</p></div></div>
-              <div className="payment-methods">
-                <button className={method === "card" ? "active" : ""} onClick={() => setMethod("card")}><CreditCard /><span><strong>신용·체크카드</strong><small>모든 국내 카드</small></span><i>{method === "card" && <Check />}</i></button>
-                <button className={method === "toss" ? "active" : ""} onClick={() => setMethod("toss")}><span className="toss-symbol">toss</span><span><strong>토스페이</strong><small>간편하게 결제</small></span><i>{method === "toss" && <Check />}</i></button>
-                <button className={method === "transfer" ? "active" : ""} onClick={() => setMethod("transfer")}><Building2 /><span><strong>계좌이체</strong><small>현금영수증 가능</small></span><i>{method === "transfer" && <Check />}</i></button>
+              <div className="checkout-package-quick"><span><FileText /><strong>문서 10종</strong></span><span><Presentation /><strong>발표자료 2종</strong></span><span><Eye /><strong>판매페이지</strong></span></div>
+              <button type="button" className="checkout-sample-button light" onClick={onSample}><Eye /><span><small>결제하기 전에</small><strong>완성 결과 예시 보기</strong></span><ArrowRight /></button>
+              <div className="checkout-step-total"><span><small>부가세 포함</small><strong>총 결제금액</strong></span><b>{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></b></div>
+            </div>
+          </div>}
+
+          {checkoutStep === 2 && <div className="checkout-step-content">
+            <div className="checkout-section-title"><span>02</span><div><h2>입금 정보를 입력하세요</h2><p>실제 입금 내역과 확인할 정보입니다.</p></div></div>
+            <div className="checkout-step-main">
+              <div className="manual-transfer-form">
+                <div className="manual-transfer-method"><Building2 /><span><strong>카카오뱅크 계좌이체</strong><small>관리자가 실제 입금 내역을 확인한 뒤 자료 제작을 시작합니다.</small></span><i><Check /></i></div>
+                <label><span>입금자명</span><input aria-label="입금자명" value={depositorName} onChange={(event) => setDepositorName(event.target.value)} maxLength={40} placeholder="통장에 표시될 이름" /></label>
+                <label><span>연락받을 휴대전화</span><input aria-label="연락받을 휴대전화" value={customerPhone} onChange={(event) => { setCustomerPhone(event.target.value); if (cashReceiptType === "PERSONAL" && !cashReceiptIdentifier) setCashReceiptIdentifier(event.target.value); }} inputMode="tel" maxLength={20} placeholder="010-0000-0000" /></label>
+                <fieldset><legend>현금영수증</legend><div><button type="button" className={cashReceiptType === "PERSONAL" ? "active" : ""} onClick={() => { setCashReceiptType("PERSONAL"); setCashReceiptIdentifier(customerPhone); }}>소득공제용</button><button type="button" className={cashReceiptType === "BUSINESS" ? "active" : ""} onClick={() => { setCashReceiptType("BUSINESS"); setCashReceiptIdentifier(""); }}>지출증빙용</button><button type="button" className={cashReceiptType === "NONE" ? "active" : ""} onClick={() => { setCashReceiptType("NONE"); setCashReceiptIdentifier(""); }}>번호 없이 발급</button></div><small>사업자가 없어도 괜찮습니다. 개인은 소득공제용을 선택할 수 있고, 번호를 남기지 않아도 입금 확인 후 현금영수증을 발급합니다.</small></fieldset>
+                {cashReceiptType !== "NONE" && <label className="wide"><span>{cashReceiptType === "PERSONAL" ? "발급용 휴대전화" : "발급용 사업자등록번호"}</span><input aria-label={cashReceiptType === "PERSONAL" ? "발급용 휴대전화" : "발급용 사업자등록번호"} value={cashReceiptIdentifier} onChange={(event) => setCashReceiptIdentifier(event.target.value)} inputMode="numeric" maxLength={30} placeholder={cashReceiptType === "PERSONAL" ? "010-0000-0000" : "000-00-00000"} /><small>{cashReceiptType === "BUSINESS" && "사업자가 없는 개인 사용자는 소득공제용을 선택하면 됩니다."}</small></label>}
               </div>
-            </section>
-            <section className="checkout-agreements">
-              <label className="agreement agreement-all"><input type="checkbox" checked={agreed} onChange={(event) => setAgreementItems({ service: event.target.checked, privacy: event.target.checked, refund: event.target.checked, aiLimitations: event.target.checked, digitalSupply: event.target.checked })} /><span><strong>필수 항목에 모두 동의합니다.</strong><small>각 문서를 열어 실제 제공 조건을 확인할 수 있습니다.</small></span></label>
+            </div>
+          </div>}
+
+          {checkoutStep === 3 && <div className="checkout-step-content">
+            <div className="checkout-section-title"><span>03</span><div><h2>필수 내용을 확인하세요</h2><p>모두 동의하면 계좌번호 화면으로 이동합니다.</p></div></div>
+            <div className="checkout-step-main checkout-final-step">
+              <section className="checkout-agreements">
+              <label className="agreement agreement-all"><input type="checkbox" checked={agreed} onChange={(event) => setAgreementItems({ service: event.target.checked, privacy: event.target.checked, refund: event.target.checked, aiLimitations: event.target.checked, digitalSupply: event.target.checked, personalizedDigitalNoRefund: event.target.checked })} /><span><strong>필수 항목에 모두 동의합니다.</strong><small>각 문서를 열어 실제 제공 조건을 확인할 수 있습니다.</small></span></label>
               <div>
                 <label><input type="checkbox" checked={agreementItems.service} onChange={(event) => setAgreementItems((current) => ({ ...current, service: event.target.checked }))} /><span><a href="/terms" target="_blank" rel="noreferrer">이용약관</a> 동의</span></label>
                 <label><input type="checkbox" checked={agreementItems.privacy} onChange={(event) => setAgreementItems((current) => ({ ...current, privacy: event.target.checked }))} /><span><a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a> 동의</span></label>
                 <label><input type="checkbox" checked={agreementItems.aiLimitations} onChange={(event) => setAgreementItems((current) => ({ ...current, aiLimitations: event.target.checked }))} /><span><a href="/ai-notice" target="_blank" rel="noreferrer">인공지능·국외 처리 안내</a> 확인</span></label>
                 <label><input type="checkbox" checked={agreementItems.refund} onChange={(event) => setAgreementItems((current) => ({ ...current, refund: event.target.checked }))} /><span><a href="/refund" target="_blank" rel="noreferrer">취소·환불 기준</a> 동의</span></label>
-                <label><input type="checkbox" checked={agreementItems.digitalSupply} onChange={(event) => setAgreementItems((current) => ({ ...current, digitalSupply: event.target.checked }))} /><span>결제 직후 디지털 결과물 공급이 시작됨을 확인</span></label>
+                <label><input type="checkbox" checked={agreementItems.digitalSupply} onChange={(event) => setAgreementItems((current) => ({ ...current, digitalSupply: event.target.checked }))} /><span>관리자가 입금을 확인하면 디지털 결과물 제작이 시작됨을 확인</span></label>
+                <label className="digital-no-refund"><input type="checkbox" checked={agreementItems.personalizedDigitalNoRefund} onChange={(event) => setAgreementItems((current) => ({ ...current, personalizedDigitalNoRefund: event.target.checked }))} /><span><strong>맞춤 제작 시작 후 단순 변심 환불 제한에 동의</strong><small>입금 확인 즉시 내 입력을 바탕으로 인공지능 호출과 문서·발표자료·판매 페이지 제작이 시작됩니다. 제작이 시작되면 생성 비용이 발생하고 다른 사람에게 재판매할 수 없는 맞춤 결과물이 만들어지므로 단순 변심에 따른 환불이 제한됩니다. 다만 결과물 미제공, 계약과 다른 제공 또는 중대한 하자 등 법에서 보장하는 권리는 그대로 유지됩니다.</small></span></label>
               </div>
-            </section>
-            {accountReady === false && <div className="checkout-blocked"><LockKeyhole /><p><strong>결제 전에 로그인이 필요합니다.</strong><a href="/account">로그인 또는 회원가입</a></p></div>}
-            {launchReadiness && !launchReadiness.paymentAllowed && <div className="checkout-blocked"><ShieldCheck /><p><strong>아직 정식 결제를 준비하고 있습니다.</strong>{launchReadiness.missing.join(" · ")}</p></div>}
-            <div className="checkout-security"><LockKeyhole /><p>카드·계좌 정보는 저장하지 않습니다. 서버가 주문금액과 결제사 승인 결과를 다시 대조한 뒤 프로젝트를 생성합니다.</p></div>
-          </div>
-          <aside className="order-summary">
-            <span className="package-label">21일 창업 실행 과정</span>
-            <h2>창업 실행 문서와 단계별 안내</h2>
-            <div className="package-includes">
-              {["인공지능 맞춤 시작 안내", "고객·시장 확인 보고서", "상품 구성과 가격 설계", "이름과 한 줄 소개 문구", "판매 페이지 제작", "첫 고객 확인 실행안"].map((item) => <span key={item}><CheckCircle2 /> {item}</span>)}
+              </section>
+              {accountReady === false && <div className="checkout-blocked"><LockKeyhole /><p><strong>결제 전에 로그인이 필요합니다.</strong><a href="/account">로그인 또는 회원가입</a></p></div>}
+              {launchReadiness && !launchReadiness.paymentAllowed && <div className="checkout-blocked"><ShieldCheck /><p><strong>현재 계좌이체 신청을 준비하고 있습니다.</strong>판매 준비 확인이 끝난 뒤 신청할 수 있어요. 궁금한 점은 상담으로 문의해주세요.</p></div>}
+              <div className="checkout-final-total"><span><small>{PACKAGE_NAME} · 부가세 포함</small><strong>신청 금액</strong></span><b>{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></b></div>
+              <div className="checkout-security"><LockKeyhole /><p>신청 후 카카오뱅크 계좌번호와 정확한 입금금액을 보여드려요. 관리자 입금 확인 전에는 제작이 시작되지 않으며, 확인 후 맞춤 제작이 시작되면 단순 변심 환불이 제한됩니다.</p></div>
+              <div className="checkout-final-disclaimer"><CircleHelp /><p><strong>결제 전 확인해주세요.</strong>제공 자료는 사업 기획과 실행 준비를 돕는 초안이며 사업 성공, 수익, 투자 유치 또는 지원사업 선정을 보장하지 않습니다. 최종 사업 결정과 실행은 이용자가 판단하며, 인허가·세무·법률·계약·시장 수치는 공식 기관이나 전문가에게 다시 확인해주세요. <a href="/terms" target="_blank" rel="noreferrer">이용약관 보기</a></p></div>
             </div>
-            <div className="price-line"><span>전체 서비스 금액</span><strong>900,000원</strong></div>
-            <div className="price-line"><span>부가세</span><strong>90,000원</strong></div>
-            <div className="total-line"><span>총 결제금액</span><strong>990,000<small>원</small></strong></div>
-            <button className="pay-button" disabled={!agreed || paying || accountReady !== true || launchReadiness?.paymentAllowed !== true} onClick={pay}>{paying ? <><span className="pay-spinner" /> 안전한 결제창 준비 중...</> : <>990,000원 결제하기 <ArrowRight /></>}</button>
-            {paymentError && <div className="payment-error"><CircleHelp /> {paymentError}<button onClick={pay}>다시 시도</button></div>}
-            <p><ShieldCheck /> 서버 금액 검증 · 중복 결제 방지</p>
-          </aside>
+          </div>}
+        </section>
+
+        <div className="checkout-wizard-actions">
+          <div>
+            {checkoutStep > 1 && <button type="button" className="checkout-previous" onClick={() => moveCheckoutStep((checkoutStep - 1) as 1 | 2)}><ArrowLeft /> 이전</button>}
+            {checkoutStep === 1 && <button type="button" className="checkout-next" onClick={() => moveCheckoutStep(2)}>다음: 입금 정보 <ArrowRight /></button>}
+            {checkoutStep === 2 && <button type="button" className="checkout-next" disabled={!transferDetailsComplete} onClick={() => moveCheckoutStep(3)}>다음: 필수 확인 <ArrowRight /></button>}
+            {checkoutStep === 3 && <button className="pay-button" disabled={!agreed || paying || !transferDetailsComplete || accountReady !== true || launchReadiness?.paymentAllowed !== true} onClick={pay}>{paying ? <><span className="pay-spinner" /> 신청 준비 중...</> : <>계좌이체 신청하기 <ArrowRight /></>}</button>}
+          </div>
+          {checkoutStep === 2 && !transferDetailsComplete && <p className="checkout-step-help">입금자명, 휴대전화와 현금영수증 정보를 입력하면 다음 버튼이 켜집니다.</p>}
+          {checkoutStep === 3 && !agreed && <p className="checkout-step-help">필수 항목에 모두 동의하면 신청 버튼이 켜집니다.</p>}
         </div>
+        {paymentError && <div className="payment-error checkout-payment-error"><CircleHelp /> {paymentError}<button onClick={pay}>다시 시도</button></div>}
       </section>
+    </main>
+  );
+}
+
+function PurchasePreview({
+  opportunity,
+  constraints,
+  onBack,
+  onUnlock,
+  onSample,
+}: {
+  opportunity: RankedOpportunity;
+  constraints: PlanningConstraints | null;
+  onBack: () => void;
+  onUnlock: () => Promise<void>;
+  onSample: (view?: SampleView) => void;
+}) {
+  const draft = useMemo(() => deriveAutoDraftContext(opportunity), [opportunity]);
+  const directDraft = constraints?.source === "direct" ? constraints.directDraft : undefined;
+  const [unlocking, setUnlocking] = useState(false);
+  const [unlockError, setUnlockError] = useState("");
+  const budgetLabel = constraints ? `${constraints.budgetWon.toLocaleString("ko-KR")}원` : "아직 입력되지 않음";
+  const timeLabel = constraints ? `주 ${constraints.availableHoursPerWeek.toLocaleString("ko-KR")}시간` : "아직 입력되지 않음";
+
+  const unlock = async () => {
+    if (unlocking) return;
+    setUnlocking(true);
+    setUnlockError("");
+    try {
+      await onUnlock();
+    } catch (error) {
+      setUnlockError(error instanceof Error ? error.message : "결제 화면을 준비하지 못했습니다.");
+      setUnlocking(false);
+    }
+  };
+
+  return (
+    <main className="purchase-preview-page">
+      <Header onHome={onBack} />
+      <section className="purchase-preview-shell">
+        <button className="start-back" onClick={onBack}><ArrowLeft /> 다른 사업 보기</button>
+        <header className="purchase-preview-heading">
+          <div>
+            <span><BadgeCheck /> 맞춤 분석 완료</span>
+            <h1>사업 초안이 완성됐어요</h1>
+            <p>입력한 조건을 바탕으로 첫 고객, 첫 상품과 현실적인 시작 범위를 하나의 실행안으로 정리했습니다.</p>
+            <ul className="purchase-preview-ready-list">
+              <li><Check /> 예산·시간 반영</li>
+              <li><Check /> 첫 상품 설계</li>
+              <li><Check /> 검증 순서 구성</li>
+            </ul>
+          </div>
+          <aside aria-label="완성된 초안 안내">
+            <span><CheckCircle2 /></span>
+            <div><small>RESULT READY</small><strong>맞춤 사업 실행 초안</strong><em>결제 전 공개본</em></div>
+          </aside>
+        </header>
+
+        <nav className="purchase-preview-tabs" aria-label="초안 종류">
+          <button className="active" type="button"><FileText /> 사업 초안</button>
+          <button type="button" onClick={() => onSample("presentation")}><Presentation /> 발표자료</button>
+          <button type="button" onClick={() => onSample("landing")}><Eye /> 판매페이지</button>
+        </nav>
+
+        <section className="purchase-preview-stage">
+          <article className="purchase-plan-paper">
+            <header>
+              <div><span>오늘창업 맞춤 분석</span><small>BUSINESS STARTER BRIEF</small></div>
+              <em><Check /> 초안 완성</em>
+            </header>
+            <div className="purchase-plan-title">
+              <small>추천 사업명</small>
+              <h2>{opportunity.title}</h2>
+              <p className="purchase-plan-lead">{opportunity.oneLiner}</p>
+            </div>
+            <dl className="purchase-plan-facts">
+              <div><dt>시작 예산</dt><dd>{budgetLabel}</dd></div>
+              <div><dt>주당 실행 시간</dt><dd>{timeLabel}</dd></div>
+              <div><dt>첫 운영 방식</dt><dd>{opportunity.model}</dd></div>
+              <div>
+                <dt>{directDraft?.priceHypothesisWon ? "제안 시작 가격" : "수익 방식"}</dt>
+                <dd>{directDraft?.priceHypothesisWon ? `${directDraft.priceHypothesisWon.toLocaleString("ko-KR")}원` : opportunity.revenue}</dd>
+              </div>
+            </dl>
+            <section><span>01</span><div><small>첫 고객과 해결할 문제</small><h3>{draft.customer}</h3><p>{directDraft?.problem ?? draft.problem}</p></div></section>
+            <section><span>02</span><div><small>처음 판매할 상품</small><h3>{directDraft?.offerName ?? draft.offerTiers[1].name}</h3><p>{directDraft ? `${directDraft.offerDescription} ${directDraft.coreOutcome}` : `${draft.offerTiers[1].outcome}. ${draft.coreOutcome}`}</p></div></section>
+            {directDraft && <section><span>03</span><div><small>예산과 시간에 맞춘 첫 범위</small><h3>처음에는 여기까지만 만듭니다</h3><p>{directDraft.firstScope}</p></div></section>}
+            <section><span>{directDraft ? "04" : "03"}</span><div><small>첫 반응을 확인하는 방법</small><h3>작게 시험하고 반응으로 고칩니다</h3><p>{opportunity.firstTest}</p></div></section>
+            <aside className="purchase-plan-review-note">
+              <ShieldCheck />
+              <div>
+                <strong>{directDraft ? "결정 전에 확인할 내용" : "아직 확정하지 않은 값"}</strong>
+                {directDraft
+                  ? <ul>{directDraft.assumptions.map((assumption) => <li key={assumption}>{assumption}</li>)}</ul>
+                  : <p>시장 규모, 실제 경쟁 가격, 인허가와 최종 판매가는 전체 제작에서 공식 자료와 사용자 확인값을 반영합니다.</p>}
+              </div>
+            </aside>
+            <footer>
+              <div><small>다음 단계</small><strong>이 초안을 기준으로 문서 10종과 발표자료 2종을 제작합니다.</strong></div>
+              <button className="purchase-paper-pay-button" disabled={unlocking} onClick={() => void unlock()}><LockKeyhole /> {unlocking ? "결제 화면 준비 중" : "전체 결과물 제작하기"} <ArrowRight /></button>
+            </footer>
+          </article>
+        </section>
+
+        <section className="purchase-unlock-band">
+          <div><span>다음 단계</span><h2>이 초안을 실제 사업 자료로 확장하세요</h2><p>문서 10종, 발표자료 2종, PDF·워드·PPTX 다운로드와 홈페이지 공개가 포함됩니다.</p></div>
+          <div className="purchase-unlock-actions">
+            <button type="button" className="purchase-sample-button" onClick={() => onSample("summary")}><Eye /> 완성 결과 예시 먼저 보기</button>
+            <button className="preview-unlock-button" disabled={unlocking} onClick={() => void unlock()}>{unlocking ? <><LoaderCircle className="spin" /> 결제 화면 준비 중</> : <>결제하기 · {PACKAGE_AMOUNT.toLocaleString("ko-KR")}원 <ArrowRight /></>}</button>
+          </div>
+          {unlockError && <p className="purchase-unlock-error"><CircleHelp /> {unlockError}</p>}
+        </section>
+      </section>
+
+      <div className={`purchase-preview-mobile-action${unlockError ? " has-error" : ""}`}>
+        {unlockError && <p className="purchase-mobile-unlock-error" role="alert"><CircleHelp /> {unlockError}</p>}
+        <button disabled={unlocking} onClick={() => void unlock()}><LockKeyhole /> {unlocking ? "결제 화면 준비 중" : <>결제하기 <b>{PACKAGE_AMOUNT.toLocaleString("ko-KR")}원</b></>} <ArrowRight /></button>
+      </div>
     </main>
   );
 }
@@ -1326,7 +2106,7 @@ function createFinalLandingDraft(
     legalNotice: opportunity.caution,
     sector: opportunity.sector,
   });
-  return {
+  const finalDraft: LandingDraft = {
     ...draft,
     businessName: brandChoice || opportunity.title,
     heroLabel: demo ? "서울 서북권 첫 이용자 모집" : draft.heroLabel,
@@ -1362,89 +2142,100 @@ function createFinalLandingDraft(
     businessRegistrationNumber: demo ? "123-45-67890" : draft.businessRegistrationNumber,
     mailOrderSalesNumber: demo ? "제2026-서울은평-0000호" : draft.mailOrderSalesNumber,
   };
+  return {
+    ...finalDraft,
+    pageData: createLandingPageData(finalDraft, finalDraft.templateId),
+  };
 }
-
-type DraftRefinementInput = {
-  brandName: string;
-  customer: string;
-  oneLiner: string;
-  priceWon: number;
-  note: string;
-};
 
 function InstantDraftBuilder({
   opportunity,
-  step,
-  message,
-  mode,
+  run,
   error,
+  connectionMessage,
   onRetry,
   onHome,
 }: {
   opportunity: RankedOpportunity;
-  step: number;
-  message: string;
-  mode: "initial" | "refine";
+  run: DraftPackageRun | null;
   error: string;
+  connectionMessage: string;
   onRetry: () => void;
   onHome: () => void;
 }) {
-  const progress = Math.max(4, Math.min(100, Math.round((step / 10) * 100)));
-  const outputs = ["사업 방향", "상품·가격", "사업계획서", "판매 페이지", "실행 자료"];
+  const completedSteps = run?.completedSteps ?? 0;
+  const totalSteps = run?.totalSteps ?? draftPackageStepDefinitions.length;
+  const progress = Math.max(run?.status === "complete" ? 100 : 3, Math.min(100, Math.round((completedSteps / totalSteps) * 100)));
+  const steps = run?.steps ?? draftPackageStepDefinitions.map((item) => ({
+    ...item,
+    status: "waiting" as const,
+    startedAt: null,
+    completedAt: null,
+  }));
+  const mode = run?.mode ?? "initial";
+  const waitingForAI = run?.status === "waiting";
+  const reconnecting = Boolean(connectionMessage);
+  const currentStepIndex = Math.min(
+    Math.max(run?.currentStep ?? completedSteps, 0),
+    Math.max(totalSteps - 1, 0),
+  );
+  const currentStep = steps[currentStepIndex] ?? steps[0];
+  const nextStep = steps.slice(currentStepIndex + 1).find((step) => step.status !== "complete") ?? null;
+  const currentStepNumber = Math.min(totalSteps, currentStepIndex + 1);
+  const currentAction = waitingForAI
+    ? "서버 연결을 기다리고 있어요"
+    : reconnecting
+      ? "진행 화면을 다시 연결하고 있어요"
+      : mode === "refine"
+        ? `${currentStep?.label ?? "자료"}을 다시 다듬고 있어요`
+        : `${currentStep?.label ?? "자료"}을 만들고 있어요`;
   return (
     <main className="instant-draft-page">
       <Header onHome={onHome} />
       <section className="instant-draft-card">
-        <div className="instant-draft-mark">{error ? <CircleHelp /> : <LoaderCircle className="spin" />}</div>
-        <small>{mode === "refine" ? "전체 초안 수정" : "맞춤 사업 초안 자동 생성"}</small>
-        <h1>{error ? "초안을 만드는 중 잠시 멈췄어요" : mode === "refine" ? "수정 내용을 모든 문서에 반영하고 있어요" : "아이디어만으로 전체 초안을 만들고 있어요"}</h1>
-        <p>{error || message || `${opportunity.title}에 맞는 결과물을 준비하고 있습니다.`}</p>
-        {!error && <div className="instant-draft-progress"><i><b style={{ width: `${progress}%` }} /></i><span>{progress}%</span></div>}
-        <div className="instant-draft-output-list">
-          {outputs.map((output, index) => <span key={output} className={step >= (index + 1) * 2 ? "done" : ""}>{step >= (index + 1) * 2 ? <Check /> : index + 1}<strong>{output}</strong></span>)}
-        </div>
-        {error ? <button className="instant-draft-retry" onClick={onRetry}><RefreshCw /> 다시 이어서 만들기</button> : <div className="instant-draft-note"><Sparkles /><span><strong>추가 입력은 필요하지 않습니다</strong><small>모르는 값은 합리적인 가정으로 채우고 결과 화면에서 나중에 바꿀 수 있어요.</small></span></div>}
+        <header className="instant-draft-heading" aria-live="polite">
+          <small>{error ? "제작 상태 확인" : reconnecting ? "자동 재연결 중" : waitingForAI ? "서버 자동 재시도" : mode === "refine" ? "전체 초안 수정" : "맞춤 사업 자료 제작"}</small>
+          <h1>{error ? "자료 제작이 잠시 멈췄어요" : currentAction}</h1>
+          <p>{error || connectionMessage || run?.message || `${opportunity.title}에 맞는 제작 순서를 준비하고 있습니다.`}</p>
+        </header>
+
+        {error ? (
+          <div className="instant-draft-error-panel">
+            <span><CircleHelp /></span>
+            <small>확인이 필요한 자료</small>
+            <strong>{currentStep?.label ?? "현재 자료"}</strong>
+            <button className="instant-draft-retry" onClick={onRetry}><RefreshCw /> 멈춘 단계부터 다시 만들기</button>
+          </div>
+        ) : (
+          <>
+            <div className={`instant-draft-visual ${waitingForAI || reconnecting ? "waiting" : ""}`} key={currentStep?.key ?? "preparing"} aria-hidden="true">
+              <i className="instant-draft-sheet sheet-back"><FileText /></i>
+              <i className="instant-draft-sheet sheet-middle"><FileText /></i>
+              <div className="instant-draft-document">
+                <div><span><FileText /></span><em>{currentStepNumber} / {totalSteps}</em></div>
+                <small>{waitingForAI ? "자동 재시도 대기" : reconnecting ? "서버 제작 계속 진행 중" : "현재 제작 중"}</small>
+                <strong>{currentStep?.label ?? "사업 자료"}</strong>
+                <p>{currentStep?.description ?? "사업에 필요한 내용을 정리하고 있어요."}</p>
+                <i /><i /><i />
+                <b />
+              </div>
+            </div>
+
+            <div className="instant-draft-progress-card">
+              <div><strong>{progress}%</strong><span>{completedSteps}개 완료</span></div>
+              <i role="progressbar" aria-label="전체 자료 제작 진행률" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><b style={{ width: `${progress}%` }} /></i>
+              <div className="instant-draft-stage-cue">
+                <span className="current">{waitingForAI ? <Clock3 /> : reconnecting ? <RefreshCw /> : <LoaderCircle className="spin" />}<small>현재</small><strong>{currentStep?.label ?? "준비 중"}</strong></span>
+                {nextStep && <><ArrowRight /><span><small>다음</small><strong>{nextStep.label}</strong></span></>}
+              </div>
+            </div>
+
+            <div className="instant-draft-away-notice"><CheckCircle2 /><span><strong>{reconnecting ? "화면 연결이 끊겨도 서버 제작은 중단되지 않습니다" : waitingForAI ? "이 화면에서 기다리거나 다시 시작할 필요가 없습니다" : "화면을 닫아도 제작은 계속됩니다"}</strong><small>{reconnecting ? "자동으로 다시 연결해 최신 진행률이나 완성 결과를 불러옵니다." : waitingForAI ? "서버가 연결 상태를 확인해 자동으로 재개합니다. 같은 브라우저로 돌아오면 최신 진행 상황을 보여드려요." : "같은 브라우저로 다시 들어오면 현재 진행 상황부터 이어서 보여드려요."}</small></span></div>
+            <div className="instant-draft-note">{waitingForAI ? <RefreshCw /> : <Sparkles />}<span><strong>{waitingForAI ? "연결이 가능해지면 서버가 자동으로 재개해요" : "보통 8~15분 정도 걸려요"}</strong><small>{waitingForAI ? "완료 전까지 진행 상태를 안전하게 보관합니다." : "완료되면 바로 수정하고 내려받을 수 있는 결과 화면으로 전환됩니다."}</small></span></div>
+          </>
+        )}
       </section>
     </main>
-  );
-}
-
-function DraftRefinementPanel({
-  initialBrandName,
-  initialCustomer,
-  initialOneLiner,
-  initialPrice,
-  onRefine,
-}: {
-  initialBrandName: string;
-  initialCustomer: string;
-  initialOneLiner: string;
-  initialPrice: number;
-  onRefine: (input: DraftRefinementInput) => Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
-  const [brandName, setBrandName] = useState(initialBrandName);
-  const [customer, setCustomer] = useState(initialCustomer);
-  const [oneLiner, setOneLiner] = useState(initialOneLiner);
-  const [priceWon, setPriceWon] = useState(initialPrice);
-  const [note, setNote] = useState("");
-  const valid = brandName.trim().length >= 2 && customer.trim().length >= 2 && oneLiner.trim().length >= 10 && priceWon >= 1000;
-
-  return (
-    <section className={`draft-refinement-panel ${open ? "open" : ""}`}>
-      <header>
-        <div><span><Sparkles /></span><div><small>초안은 이미 완성됐어요</small><strong>필요한 부분만 간단히 바꾸세요</strong><p>수정하지 않아도 모든 결과물을 바로 볼 수 있습니다.</p></div></div>
-        <button onClick={() => setOpen((current) => !current)}>{open ? "닫기" : "기본정보 수정"} <ChevronDown /></button>
-      </header>
-      {open && <div className="draft-refinement-form">
-        <label><span>사업 이름</span><input value={brandName} maxLength={100} onChange={(event) => setBrandName(event.target.value)} /></label>
-        <label><span>주요 고객</span><input value={customer} maxLength={300} onChange={(event) => setCustomer(event.target.value)} /></label>
-        <label className="wide"><span>한 줄 소개</span><textarea value={oneLiner} maxLength={1000} rows={3} onChange={(event) => setOneLiner(event.target.value)} /></label>
-        <label><span>첫 상품 가격</span><input type="number" min="1000" step="1000" value={priceWon} onChange={(event) => setPriceWon(Math.max(0, Number(event.target.value) || 0))} /><small>{priceWon.toLocaleString("ko-KR")}원</small></label>
-        <label className="wide"><span>추가로 바꾸고 싶은 점 <em>선택</em></span><textarea value={note} maxLength={1000} rows={3} onChange={(event) => setNote(event.target.value)} placeholder="예: 직장인 고객에게 더 친근한 말투로 바꿔주세요." /></label>
-        <div className="draft-refinement-actions"><p><CheckCircle2 /> 입력한 내용은 사업계획서, 판매 페이지 원고와 전체 문서에 함께 반영됩니다.</p><button disabled={!valid} onClick={() => void onRefine({ brandName: brandName.trim(), customer: customer.trim(), oneLiner: oneLiner.trim(), priceWon, note: note.trim() })}><RefreshCw /> 전체 초안 다시 만들기</button></div>
-      </div>}
-    </section>
   );
 }
 
@@ -1456,7 +2247,11 @@ function FinalDelivery({
   demo = false,
   onHome,
   onStart,
+  sampleActionLabel,
+  sampleView = "summary",
+  onCloseSample,
   onRefine,
+  onProjectUpdated,
 }: {
   opportunity: RankedOpportunity;
   price: number;
@@ -1465,7 +2260,11 @@ function FinalDelivery({
   demo?: boolean;
   onHome: () => void;
   onStart?: () => void;
-  onRefine?: (input: DraftRefinementInput) => Promise<void>;
+  sampleActionLabel?: string;
+  sampleView?: SampleView;
+  onCloseSample?: () => void;
+  onRefine?: (input: DraftRefinementInput, source?: "edit" | "restore") => Promise<void>;
+  onProjectUpdated?: (project: ProjectRecord) => void;
 }) {
   const savedStageBrand = typeof serverProject?.stages[3]?.inputs.selectedName === "string"
     ? serverProject.stages[3].inputs.selectedName
@@ -1475,6 +2274,7 @@ function FinalDelivery({
   const approvedMarketArtifact = serverProject?.stages[1]?.artifacts.find((artifact) => artifact.id === serverProject.stages[1].approvedArtifactId);
   const artifactCustomer = typeof approvedMarketArtifact?.content.primaryCustomer === "string" ? approvedMarketArtifact.content.primaryCustomer : "";
   const resolvedCustomer = artifactCustomer || deriveAutoDraftContext(opportunity).customer;
+  const refinementInput = serverProject ? refinementInputFromProject(serverProject) : null;
   const approvedArtifacts = serverProject?.stages
     .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId))
     .filter((artifact): artifact is ArtifactRecord => Boolean(artifact)) ?? [];
@@ -1498,9 +2298,13 @@ function FinalDelivery({
       : generationMode === "sample"
         ? "실제 사업 판단에 사용할 수 없는 화면 구성 예시입니다."
         : "허구의 실적과 시장 수치를 만들지 않는 기본 초안입니다. AI 고도화가 적용된 결과로 오해하지 마세요.";
-  const [landingPreview, setLandingPreview] = useState(false);
+  const [landingPreview, setLandingPreview] = useState(demo && sampleView === "landing");
   const [fundingBreakdownOpen, setFundingBreakdownOpen] = useState(false);
-  const [activeReport, setActiveReport] = useState<"summary" | "business" | "market" | "landing" | "launch" | "documents">("summary");
+  const [activeReport, setActiveReport] = useState<"summary" | "business" | "market" | "landing" | "launch" | "documents">(
+    sampleView === "presentation" ? "documents" : sampleView,
+  );
+  const [mobileReportMenuOpen, setMobileReportMenuOpen] = useState(false);
+  const reportMainRef = useRef<HTMLDivElement>(null);
   const [landingDraft, setLandingDraft] = useState<LandingDraft>(() =>
     createFinalLandingDraft(opportunity, resolvedBrandName, price, demo),
   );
@@ -1508,8 +2312,29 @@ function FinalDelivery({
   const [landingMessage, setLandingMessage] = useState("");
   const [landingSite, setLandingSite] = useState<LandingSiteRecord | null>(null);
   const [documentPreview, setDocumentPreview] = useState<DeliveryItem | null>(null);
+  const [documentEditorId, setDocumentEditorId] = useState<string | null>(null);
+  const [documentDrafts, setDocumentDrafts] = useState<DocumentDrafts>({});
+  const [presentationPreview, setPresentationPreview] = useState<PresentationDeckType | null>(demo && sampleView === "presentation" ? "intro" : null);
+  const [presentationSlideIndex, setPresentationSlideIndex] = useState(0);
+  const [presentationDrafts, setPresentationDrafts] = useState<PresentationDeckDrafts>({});
+  const [presentationEditorOpen, setPresentationEditorOpen] = useState(false);
+  const [presentationEditorValue, setPresentationEditorValue] = useState<PresentationSlideOverride>({ title: "" });
+  const [presentationAssistResult, setPresentationAssistResult] = useState<PresentationAssistResult | null>(null);
+  const [presentationEditorAction, setPresentationEditorAction] = useState<"idle" | "saving" | "spellcheck" | "improve" | "market">("idle");
+  const [presentationEditorMessage, setPresentationEditorMessage] = useState("");
+  const [marketResearchAction, setMarketResearchAction] = useState<"idle" | "researching">("idle");
+  const [marketResearchMessage, setMarketResearchMessage] = useState("");
   const [documentDownload, setDocumentDownload] = useState("");
   const [documentMessage, setDocumentMessage] = useState("");
+  const closeSampleOverlay = useCallback((overlay: "landing" | "presentation") => {
+    if (overlay === "landing") setLandingPreview(false);
+    else {
+      setPresentationPreview(null);
+      setPresentationSlideIndex(0);
+      setPresentationEditorOpen(false);
+    }
+    if (demo && onCloseSample) onCloseSample();
+  }, [demo, onCloseSample]);
   const deliveryIcons = {
     brief: Target,
     market: Users,
@@ -1522,6 +2347,18 @@ function FinalDelivery({
     execution: TrendingUp,
     grants: BadgeCheck,
   } as const;
+  const deliveryFriendlyCopy: Record<string, { title: string; description: string }> = {
+    brief: { title: "내 사업 한눈에 보기", description: "무엇을 누구에게 어떻게 팔지 한눈에 정리한 파일" },
+    market: { title: "고객과 시장 확인하기", description: "고객이 겪는 문제와 지금 사용 중인 다른 해결 방법" },
+    pricing: { title: "상품 가격과 예상 수익", description: "상품별 가격, 필요한 비용과 손익분기점" },
+    brand: { title: "사업 이름과 소개 문구", description: "추천 이름, 한 줄 소개와 고객에게 쓸 표현" },
+    landing: { title: "홈페이지에 넣을 글", description: "휴대전화에서 보는 홈페이지의 전체 글" },
+    launch: { title: "첫 고객을 찾는 30일 계획", description: "날짜별로 할 일과 확인할 목표" },
+    plan: { title: "사업계획서", description: "시장, 수익, 운영 방법과 필요한 자금" },
+    operations: { title: "사업 운영 방법", description: "준비물, 업무 순서와 고객 응대 방법" },
+    execution: { title: "판매 결과와 다음 계획", description: "판매 과정과 비용을 확인하고 다음에 바꿀 점" },
+    grants: { title: "정부 지원사업 신청서 초안", description: "지원사업 양식에 맞춰 작성한 신청 내용" },
+  };
   const deliveryPack = useMemo(
     () => serverProject ? assembleDeliveryPackage(serverProject) : demo ? {
       items: paidReportDemoItems,
@@ -1548,11 +2385,70 @@ function FinalDelivery({
         generatedAt: "2026-07-14T09:30:00.000Z",
         engineVersion: "paid-delivery-quality-v2",
       },
+      factSummary: {
+        total: 14,
+        verified: 0,
+        userInput: 5,
+        calculated: 4,
+        assumptions: 4,
+        needsInput: 1,
+      },
+      claimSummary: {
+        checkedDocuments: paidReportDemoItems.length,
+        safeDocuments: paidReportDemoItems.length,
+        convertedClaims: 0,
+      },
     } : null,
     [demo, serverProject],
   );
   const deliveryQuality = deliveryPack?.deliveryQuality;
-  const paidAmount = serverProject?.packagePrice ?? 990000;
+  const deliveryFactSummary = deliveryPack?.factSummary;
+  const deliveryItems = useMemo(() => (deliveryPack?.items ?? []).map((item) => {
+    if (!isDeliveryDocumentId(item.id)) return item;
+    const draft = documentDrafts[item.id];
+    if (!draft) return item;
+    if (serverProject) return applyDeliveryDocumentDraft(serverProject, item, draft);
+    return {
+      ...item,
+      markdown: draft.markdown,
+      generatedAt: draft.updatedAt,
+      versionLabel: `${draft.versions.at(-1)?.version ?? 1}차 수정본`,
+    };
+  }), [deliveryPack, documentDrafts, serverProject]);
+  const deliveryClaimSummary = useMemo(() => ({
+    checkedDocuments: deliveryItems.filter((item) => item.source !== "missing").length,
+    safeDocuments: deliveryItems.filter((item) => item.source !== "missing" && (item.claimSafety?.changedCount ?? 0) === 0).length,
+    convertedClaims: deliveryItems.reduce((sum, item) => sum + (item.claimSafety?.changedCount ?? 0), 0),
+  }), [deliveryItems]);
+  const documentEditorItem = documentEditorId
+    ? deliveryItems.find((item) => item.id === documentEditorId) ?? null
+    : null;
+  const deliveryItemIndex = new Map(deliveryItems.map((item, index) => [item.id, index]));
+  const deliveryGroups = [
+    {
+      id: "start",
+      eyebrow: "사업을 시작할 때",
+      title: "처음 바로 사용하는 파일",
+      description: "사업 내용과 가격을 확인하고, 이름·홈페이지·첫 30일 계획을 살펴보세요.",
+      itemIds: ["brief", "pricing", "brand", "landing", "launch"],
+    },
+    {
+      id: "submit",
+      eyebrow: "다른 사람에게 설명할 때",
+      title: "소개하거나 신청할 때 쓰는 파일",
+      description: "사업소개서, 투자제안서, 사업계획서와 정부 지원사업 신청서가 들어 있습니다.",
+      itemIds: ["plan", "grants"],
+    },
+    {
+      id: "operate",
+      eyebrow: "사업을 운영할 때",
+      title: "비용과 운영을 확인하는 파일",
+      description: "고객·시장 정보, 업무 방법, 판매 결과와 12개월 예상 수익을 확인하세요.",
+      itemIds: ["market", "operations", "execution"],
+    },
+  ].map((group) => ({ ...group, items: group.itemIds.map((id) => deliveryItems.find((item) => item.id === id)).filter((item): item is DeliveryItem => Boolean(item)) }));
+  const resultCount = deliveryItems.length + 3;
+  const paidAmount = serverProject?.packagePrice ?? PACKAGE_AMOUNT;
   const betaAccess = serverProject?.packagePrice === 0;
   const financial = serverProject?.businessAssessment?.financial;
   const savedStagePrice = typeof serverProject?.stages[2]?.inputs.basePriceWon === "number"
@@ -1638,6 +2534,42 @@ function FinalDelivery({
       status: "추천 단계 참고자료",
       note: "사업 지역과 조건을 정한 뒤 최신 원문을 다시 확인하세요.",
     }));
+  const documentQuickBlocks: DocumentQuickBlock[] = [];
+  if (sellingPrice || monthlyFixedCost || totalFundingNeed) {
+    documentQuickBlocks.push({
+      id: "saved-financials",
+      label: "저장된 사업 숫자표",
+      description: "현재 프로젝트의 가격·고정비·준비자금을 같은 값으로 넣습니다.",
+      markdown: [
+        "### 저장된 사업 숫자",
+        "",
+        "| 항목 | 현재 저장값 | 확인 상태 |",
+        "| --- | ---: | --- |",
+        `| 첫 상품 판매가 | ${sellingPrice ? `${sellingPrice.toLocaleString("ko-KR")}원` : "추가 입력 필요"} | 프로젝트 저장값 |`,
+        `| 월 고정비 | ${monthlyFixedCost ? `${monthlyFixedCost.toLocaleString("ko-KR")}원` : "추가 입력 필요"} | 프로젝트 저장값 |`,
+        `| 월 손익분기 판매량 | ${breakEvenUnits ? `${breakEvenUnits.toLocaleString("ko-KR")}건` : "추가 입력 필요"} | 자동 계산 |`,
+        `| 총 필요 준비자금 | ${totalFundingNeed ? `${totalFundingNeed.toLocaleString("ko-KR")}원` : "추가 입력 필요"} | 자동 계산 |`,
+      ].join("\n"),
+    });
+  }
+  if (marketSources.length > 0) {
+    const sourceRows = marketSources.slice(0, 8).map((source, index) => {
+      const clean = (value: string) => value.replaceAll("|", "\\|").replace(/\s+/g, " ").trim();
+      return `| E${String(index + 1).padStart(2, "0")} | ${clean(source.title)} | ${clean(source.status)} | ${source.url ? `[원문](${source.url})` : "내부 기록"} |`;
+    });
+    documentQuickBlocks.push({
+      id: "saved-evidence",
+      label: "저장된 시장 근거표",
+      description: "시장 확인에 저장된 자료만 출처 주소와 함께 넣습니다.",
+      markdown: [
+        "### 연결된 시장 근거",
+        "",
+        "| 번호 | 자료 | 확인 상태 | 원문 |",
+        "| --- | --- | --- | --- |",
+        ...sourceRows,
+      ].join("\n"),
+    });
+  }
   const reportTabs = [
     { id: "summary" as const, label: "사업 요약", icon: FileText },
     { id: "business" as const, label: "상품·손익", icon: BarChart3 },
@@ -1648,13 +2580,43 @@ function FinalDelivery({
   ];
   const activeReportTab = reportTabs.find((tab) => tab.id === activeReport) ?? reportTabs[0];
   const ActiveReportIcon = activeReportTab.icon;
+  const activeReportIndex = reportTabs.findIndex((tab) => tab.id === activeReport);
+  const selectReport = (tabId: typeof reportTabs[number]["id"]) => {
+    setActiveReport(tabId);
+    setMobileReportMenuOpen(false);
+    if (typeof window !== "undefined" && window.innerWidth <= 900) {
+      window.requestAnimationFrame(() => {
+        const target = reportMainRef.current;
+        if (!target) return;
+        const stickyOffset = document.querySelector<HTMLElement>(".sample-preview-bar")?.getBoundingClientRect().height ?? 0;
+        window.scrollTo({
+          top: Math.max(0, target.getBoundingClientRect().top + window.scrollY - stickyOffset - 10),
+          behavior: "smooth",
+        });
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!mobileReportMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMobileReportMenuOpen(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [mobileReportMenuOpen]);
 
   useEffect(() => {
     let cancelled = false;
     if (demo) {
       try {
         const saved = window.localStorage.getItem("venture-paid-report-landing-demo");
-        if (saved) setLandingDraft(JSON.parse(saved) as LandingDraft);
+        if (saved) setLandingDraft(ensureLandingPageData(landingDraftSchema.parse(JSON.parse(saved))));
       } catch {
         window.localStorage.removeItem("venture-paid-report-landing-demo");
       }
@@ -1677,6 +2639,38 @@ function FinalDelivery({
   }, [demo, serverProject]);
 
   useEffect(() => {
+    setPresentationEditorOpen(false);
+    setPresentationAssistResult(null);
+    setPresentationEditorMessage("");
+    if (!demo) {
+      setPresentationDrafts(serverProject?.presentationDecks ?? {});
+      return;
+    }
+    try {
+      const saved = window.localStorage.getItem("venture-presentation-drafts-demo-v1");
+      setPresentationDrafts(saved ? JSON.parse(saved) as PresentationDeckDrafts : {});
+    } catch {
+      window.localStorage.removeItem("venture-presentation-drafts-demo-v1");
+      setPresentationDrafts({});
+    }
+  }, [demo, serverProject?.id]);
+
+  useEffect(() => {
+    setDocumentEditorId(null);
+    if (!demo) {
+      setDocumentDrafts(serverProject?.documentDrafts ?? {});
+      return;
+    }
+    try {
+      const saved = window.localStorage.getItem("venture-document-drafts-demo-v1");
+      setDocumentDrafts(saved ? JSON.parse(saved) as DocumentDrafts : {});
+    } catch {
+      window.localStorage.removeItem("venture-document-drafts-demo-v1");
+      setDocumentDrafts({});
+    }
+  }, [demo, serverProject?.id]);
+
+  useEffect(() => {
     if (demo || resolvedBrandName === opportunity.title) return;
     setLandingDraft((current) => current.businessName === opportunity.title ? {
       ...current,
@@ -1686,12 +2680,31 @@ function FinalDelivery({
   }, [demo, opportunity.title, resolvedBrandName]);
 
   useEffect(() => {
-    if (!landingPreview && !documentPreview) return;
+    if (!landingPreview && !documentPreview && !presentationPreview && !documentEditorId) return;
     const previousOverflow = document.body.style.overflow;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        setLandingPreview(false);
+        if (documentEditorId) {
+          setDocumentEditorId(null);
+          return;
+        }
+        if (presentationEditorOpen) {
+          setPresentationEditorOpen(false);
+          return;
+        }
+        if (presentationPreview) {
+          closeSampleOverlay("presentation");
+          return;
+        }
+        if (landingPreview) {
+          closeSampleOverlay("landing");
+          return;
+        }
         setDocumentPreview(null);
+      } else if (presentationPreview && !presentationEditorOpen && event.key === "ArrowRight") {
+        setPresentationSlideIndex((current) => Math.min(current + 1, presentationDeckMeta[presentationPreview].pageCount - 1));
+      } else if (presentationPreview && !presentationEditorOpen && event.key === "ArrowLeft") {
+        setPresentationSlideIndex((current) => Math.max(current - 1, 0));
       }
     };
     document.body.style.overflow = "hidden";
@@ -1700,7 +2713,7 @@ function FinalDelivery({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [documentPreview, landingPreview]);
+  }, [closeSampleOverlay, documentEditorId, documentPreview, landingPreview, presentationEditorOpen, presentationPreview]);
 
   const updateLandingDraft = (next: LandingDraft) => {
     setLandingDraft(next);
@@ -1780,9 +2793,403 @@ function FinalDelivery({
     sample: demo,
   };
 
+  const founderProfileRecord = serverProject?.founderProfile ?? {};
+  const founderStrengthsForDeck = (
+    Array.isArray(founderProfileRecord.topFounder) ? founderProfileRecord.topFounder : []
+  ).map((axis) => typeof axis === "string" && axis in founderLabels ? founderLabels[axis as FounderAxis] : null)
+    .filter((label): label is string => Boolean(label));
+  const founderExperienceForDeck = ["careerSummary", "experience", "teamCapabilities", "founderCapability"]
+    .map((key) => founderProfileRecord[key])
+    .find((value): value is string => typeof value === "string" && value.trim().length >= 10) ?? "";
+  const rawInvestmentAsk = founderProfileRecord.investmentAskWon;
+  const investmentAskWon = typeof rawInvestmentAsk === "number" && Number.isFinite(rawInvestmentAsk) && rawInvestmentAsk > 0
+    ? rawInvestmentAsk
+    : null;
+  const deckFundingUses = [
+    ...initialFundingLines.map((item) => ({ label: item.label, amountWon: item.amount })),
+    ...(workingCapital > 0 ? [{ label: `${workingCapitalMonths}개월 운전자금`, amountWon: workingCapital }] : []),
+  ].sort((a, b) => b.amountWon - a.amountWon).slice(0, 4);
+  const demoScenarioBaseUnits = setupFinancial?.targetMonthlyUnits ?? 30;
+  const demoVariableCost = Math.round(sellingPrice * 0.28);
+  const deckFinancialScenarios = financial?.scenarios.map((scenario) => ({
+    name: scenario.name,
+    monthlyUnits: scenario.monthlyUnits,
+    netRevenue: scenario.netRevenue,
+    operatingProfitBeforeTax: scenario.operatingProfitBeforeTax,
+  })) ?? (demo ? [
+    { name: "보수적", monthlyUnits: Math.max(1, Math.round(demoScenarioBaseUnits * 0.6)) },
+    { name: "기준", monthlyUnits: demoScenarioBaseUnits },
+    { name: "공격적", monthlyUnits: Math.max(1, Math.round(demoScenarioBaseUnits * 1.5)) },
+  ].map((scenario) => {
+    const netRevenue = Math.round(sellingPrice / 1.1 * scenario.monthlyUnits);
+    return {
+      ...scenario,
+      netRevenue,
+      operatingProfitBeforeTax: netRevenue - demoVariableCost * scenario.monthlyUnits - monthlyFixedCost,
+    };
+  }) : []);
+  const monthlyForecast = buildTwelveMonthForecast({
+    priceWon: sellingPrice,
+    variableCostPerUnit: financial?.variableCostPerUnit ?? (demo ? demoVariableCost : null),
+    monthlyFixedCostWon: monthlyFixedCost || null,
+    targetMonthlyUnits: setupFinancial?.targetMonthlyUnits ?? (demo ? demoScenarioBaseUnits : null),
+    initialInvestmentWon: initialInvestment || null,
+  });
+
+  const presentationPayload = (deckType: PresentationDeckType): PresentationDeckInput => ({
+    deckType,
+    brandName: resolvedBrandName,
+    slogan: serverProject?.launchMissionWorkspace?.brand.slogan || landingDraft.subheadline || opportunity.oneLiner,
+    title: opportunity.title,
+    oneLiner: opportunity.oneLiner,
+    customer: resolvedCustomer,
+    model: opportunity.model,
+    revenue: opportunity.revenue,
+    priceWon: sellingPrice,
+    risk: opportunity.risk,
+    accentColor: landingDraft.accentColor,
+    sector: opportunity.sector,
+    stage: opportunity.stage,
+    launchTime: opportunity.launchTime,
+    firstTest: opportunity.firstTest,
+    matchScore: opportunity.match ?? null,
+    marketScore: opportunity.market ?? null,
+    feasibilityScore: opportunity.feasibility ?? null,
+    monthlyFixedCostWon: monthlyFixedCost || null,
+    breakEvenUnits,
+    totalFundingNeedWon: totalFundingNeed,
+    targetMonthlyUnits: setupFinancial?.targetMonthlyUnits ?? null,
+    variableCostPerUnit: financial?.variableCostPerUnit ?? (demo ? demoVariableCost : null),
+    contributionPerUnit: financial?.contributionPerUnit ?? (demo ? Math.round(sellingPrice / 1.1) - demoVariableCost : null),
+    contributionMarginRate: financial?.contributionMarginRate ?? (demo ? 69.2 : null),
+    breakEvenRevenueWon: financial?.breakEvenRevenue ?? (demo && breakEvenUnits !== null ? Math.ceil(breakEvenUnits) * sellingPrice : null),
+    initialInvestmentWon: initialInvestment || null,
+    runwayMonths: financial?.runwayMonths ?? (demo ? workingCapitalMonths : null),
+    investmentAskWon,
+    financialScenarios: deckFinancialScenarios,
+    monthlyForecast: monthlyForecast.months,
+    fundingUses: deckFundingUses,
+    marketEvidence: savedMarketEvidence.length > 0 ? savedMarketEvidence.map((evidence) => ({
+      metric: evidence.metric,
+      value: evidence.value,
+      numericValue: evidence.numericValue,
+      unit: evidence.unit,
+      region: evidence.region,
+      sourceName: evidence.sourceName,
+      verification: evidence.verification === "verified" ? "verified" : evidence.verification === "user_supplied" ? "user_supplied" : "unverified",
+      ...(evidence.sourceUrl ? { url: evidence.sourceUrl } : {}),
+      ...(evidence.observedAt ? { observedAt: evidence.observedAt } : {}),
+    })) : demo ? [{
+      metric: "서비스 가능 고객 가정",
+      value: "5만",
+      numericValue: 50_000,
+      unit: "가구",
+      region: "서울 일부 생활권",
+      sourceName: "화면 검증용 가상 입력",
+      verification: "example",
+      observedAt: "2026-07-14",
+    }] : [],
+    teamSize: serverProject?.grantWorkspace?.teamSize ?? (demo ? 2 : serverProject?.businessSetup ? Math.max(1, serverProject.businessSetup.employeeCount) : null),
+    founderStrengths: founderStrengthsForDeck.length > 0 ? founderStrengthsForDeck : demo ? ["고객 공감", "실행 지속", "구조 운영"] : [],
+    founderExperience: founderExperienceForDeck,
+    evidenceSources: marketSources.slice(0, 6).map((source) => ({
+      title: source.title,
+      status: source.status,
+      ...(source.url ? { url: source.url } : {}),
+      ...(source.date ? { observedAt: source.date } : {}),
+    })),
+    traction: {
+      interviews: serverProject?.executionAnalysis?.totals.interviews ?? (demo ? 12 : 0),
+      proposals: serverProject?.executionAnalysis?.totals.proposals ?? (demo ? 5 : 0),
+      purchases: serverProject?.executionAnalysis?.totals.purchases ?? (demo ? 3 : 0),
+      revenueWon: serverProject?.executionAnalysis?.totals.revenue ?? (demo ? sellingPrice * 3 : 0),
+      confidenceScore: serverProject?.executionAnalysis?.confidenceScore ?? (demo ? 72 : 0),
+    },
+  });
+
+  const financialWorkbookPayload = () => ({
+    brandName: resolvedBrandName,
+    businessTitle: opportunity.title,
+    priceWon: sellingPrice,
+    variableCostPerUnit: financial?.variableCostPerUnit ?? (demo ? demoVariableCost : null),
+    monthlyFixedCostWon: monthlyFixedCost || null,
+    targetMonthlyUnits: setupFinancial?.targetMonthlyUnits ?? (demo ? demoScenarioBaseUnits : null),
+    initialInvestmentWon: initialInvestment || null,
+    totalFundingNeedWon: totalFundingNeed,
+    fundingUses: deckFundingUses,
+    evidenceSources: marketSources.slice(0, 30).map((source) => ({
+      title: source.title,
+      status: source.status,
+      ...(source.url ? { url: source.url } : {}),
+      ...(source.date && /^\d{4}-\d{2}-\d{2}$/.test(source.date) ? { observedAt: source.date } : {}),
+    })),
+    startDate: new Date().toISOString().slice(0, 10),
+  });
+
+  const requestFinancialWorkbook = async () => {
+    const response = await fetch("/api/delivery/financial-workbook", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(financialWorkbookPayload()),
+    });
+    if (response.ok) return response.blob();
+    const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+    throw new Error(payload?.error?.message ?? "12개월 손익 엑셀을 만들지 못했습니다.");
+  };
+
+  const downloadFinancialWorkbook = async () => {
+    setDocumentDownload("financial-xlsx");
+    setDocumentMessage("수정 가능한 12개월 손익 엑셀을 만들고 있습니다.");
+    try {
+      const workbook = await requestFinancialWorkbook();
+      saveDownloadBlob(workbook, `${resolvedBrandName}-12개월-손익계획.xlsx`);
+      setDocumentMessage("입력값을 바꾸면 자동 계산되는 12개월 손익 엑셀을 만들었습니다.");
+    } catch (error) {
+      setDocumentMessage(error instanceof Error ? error.message : "12개월 손익 엑셀을 만들지 못했습니다.");
+    } finally {
+      setDocumentDownload("");
+    }
+  };
+
+  const researchMarketEvidence = async () => {
+    if (demo) {
+      setMarketResearchMessage("예시 화면에서는 실제 검색을 실행하지 않습니다. 내 사업으로 시작하면 공식 원문을 찾을 수 있습니다.");
+      return;
+    }
+    if (!serverProject) return;
+    setMarketResearchAction("researching");
+    setMarketResearchMessage("통계청·공공데이터 등 공식 원문을 찾고 있습니다. 1~2분 정도 걸릴 수 있습니다.");
+    try {
+      const response = await fetch(`/api/projects/${serverProject.id}/market/research`, { method: "POST" });
+      const payload = await response.json() as { project?: ProjectRecord; addedCount?: number; error?: { message?: string } };
+      if (!response.ok || !payload.project) throw new Error(payload.error?.message ?? "공식 시장 근거를 찾지 못했습니다.");
+      onProjectUpdated?.(payload.project);
+      setMarketResearchMessage(`공식 원문이 인용된 시장 근거 ${payload.addedCount ?? 0}개를 연결했습니다. 외부 제출 전 수치와 기준일을 원문에서 한 번 더 확인하세요.`);
+    } catch (error) {
+      setMarketResearchMessage(error instanceof Error ? error.message : "공식 시장 근거를 찾지 못했습니다.");
+    } finally {
+      setMarketResearchAction("idle");
+    }
+  };
+
+  const persistPresentationDrafts = async (next: PresentationDeckDrafts) => {
+    if (demo) {
+      window.localStorage.setItem("venture-presentation-drafts-demo-v1", JSON.stringify(next));
+      setPresentationDrafts(next);
+      return;
+    }
+    if (!serverProject) throw new Error("저장할 프로젝트를 찾을 수 없습니다.");
+    const response = await fetch(`/api/projects/${serverProject.id}/presentations`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decks: next }),
+    });
+    const payload = await response.json() as { decks?: PresentationDeckDrafts; error?: { message?: string } };
+    if (!response.ok || !payload.decks) throw new Error(payload.error?.message ?? "발표자료 수정본을 저장하지 못했습니다.");
+    setPresentationDrafts(payload.decks);
+  };
+
+  const savePresentationSlide = async (deckType: PresentationDeckType, slideId: string) => {
+    setPresentationEditorAction("saving");
+    setPresentationEditorMessage("수정 내용을 저장하고 있습니다.");
+    try {
+      const currentDeck = presentationDrafts[deckType];
+      const next: PresentationDeckDrafts = {
+        ...presentationDrafts,
+        [deckType]: {
+          slides: { ...(currentDeck?.slides ?? {}), [slideId]: presentationEditorValue },
+          updatedAt: new Date().toISOString(),
+        },
+      };
+      await persistPresentationDrafts(next);
+      setPresentationAssistResult(null);
+      setPresentationEditorMessage("저장했습니다. 내려받는 PPTX에도 같은 내용이 들어갑니다.");
+    } catch (error) {
+      setPresentationEditorMessage(error instanceof Error ? error.message : "수정 내용을 저장하지 못했습니다.");
+    } finally {
+      setPresentationEditorAction("idle");
+    }
+  };
+
+  const resetPresentationSlide = async (deckType: PresentationDeckType, slideId: string) => {
+    setPresentationEditorAction("saving");
+    setPresentationEditorMessage("원래 초안으로 되돌리고 있습니다.");
+    try {
+      const nextSlides = { ...(presentationDrafts[deckType]?.slides ?? {}) };
+      delete nextSlides[slideId];
+      const next: PresentationDeckDrafts = {
+        ...presentationDrafts,
+        [deckType]: { slides: nextSlides, updatedAt: new Date().toISOString() },
+      };
+      await persistPresentationDrafts(next);
+      const baseInput = presentationPayload(deckType);
+      const baseSlide = buildPresentationSlides(baseInput).find((slide) => slide.id === slideId);
+      if (baseSlide) setPresentationEditorValue(editablePresentationValue(baseSlide));
+      setPresentationAssistResult(null);
+      setPresentationEditorMessage("처음 만들어진 문구로 되돌렸습니다.");
+    } catch (error) {
+      setPresentationEditorMessage(error instanceof Error ? error.message : "원래 문구로 되돌리지 못했습니다.");
+    } finally {
+      setPresentationEditorAction("idle");
+    }
+  };
+
+  const requestPresentationAssist = async (mode: "spellcheck" | "improve" | "market", deckType: PresentationDeckType, slideId: string) => {
+    setPresentationEditorAction(mode);
+    setPresentationEditorMessage(mode === "market" ? "저장된 출처를 확인하고 있습니다." : "문장을 검토하고 있습니다.");
+    setPresentationAssistResult(null);
+    try {
+      const fields = Object.fromEntries(
+        Object.entries(presentationEditorValue).filter(([key, value]) => key !== "chartPreset" && typeof value === "string"),
+      );
+      const response = await fetch("/api/presentations/assist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          mode,
+          deckType,
+          slideId,
+          fields,
+          business: {
+            title: opportunity.title,
+            customer: resolvedCustomer,
+            model: opportunity.model,
+            revenue: opportunity.revenue,
+            sector: opportunity.sector,
+          },
+          evidenceSources: presentationPayload(deckType).evidenceSources,
+        }),
+      });
+      const payload = await response.json() as { result?: PresentationAssistResult; error?: { message?: string } };
+      if (!response.ok || !payload.result) throw new Error(payload.error?.message ?? "문장 제안을 받지 못했습니다.");
+      setPresentationAssistResult(payload.result);
+      setPresentationEditorMessage("제안을 확인한 뒤 적용해주세요. 아직 원문은 바뀌지 않았습니다.");
+    } catch (error) {
+      setPresentationEditorMessage(error instanceof Error ? error.message : "문장을 검토하지 못했습니다.");
+    } finally {
+      setPresentationEditorAction("idle");
+    }
+  };
+
+  const persistDocumentAction = async (input: Record<string, unknown>) => {
+    if (demo) {
+      if (!isDeliveryDocumentId(String(input.documentId))) throw new Error("수정할 문서를 찾지 못했습니다.");
+      const documentId = String(input.documentId) as keyof DocumentDrafts;
+      const next = { ...documentDrafts };
+      if (input.action === "reset") {
+        delete next[documentId];
+      } else if (input.action === "restore") {
+        const version = next[documentId]?.versions.find((item) => item.id === input.versionId);
+        if (!version) throw new Error("되돌릴 수정본을 찾지 못했습니다.");
+        next[documentId] = appendDocumentDraftVersion(next[documentId], version.markdown, `${version.version}차 수정본으로 되돌림`);
+      } else {
+        next[documentId] = appendDocumentDraftVersion(next[documentId], String(input.markdown ?? ""), String(input.summary ?? "문서 내용 수정"));
+      }
+      window.localStorage.setItem("venture-document-drafts-demo-v1", JSON.stringify(next));
+      setDocumentDrafts(next);
+      return;
+    }
+    if (!serverProject) throw new Error("저장할 프로젝트를 찾을 수 없습니다.");
+    const response = await fetchWithTransientRetry(`/api/projects/${serverProject.id}/documents`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const payload = await response.json() as { drafts?: DocumentDrafts; error?: { message?: string } };
+    if (!response.ok || !payload.drafts) throw new Error(payload.error?.message ?? "문서 수정본을 저장하지 못했습니다.");
+    setDocumentDrafts(payload.drafts);
+  };
+
+  const saveDocumentDraft = async (markdown: string, summary: string) => {
+    if (!documentEditorItem || !isDeliveryDocumentId(documentEditorItem.id)) throw new Error("수정할 문서를 찾지 못했습니다.");
+    await persistDocumentAction({ action: "save", documentId: documentEditorItem.id, markdown, summary });
+    setDocumentMessage(`${documentEditorItem.title} 수정본을 저장했습니다. PDF·워드와 전체 묶음에도 반영됩니다.`);
+  };
+
+  const restoreDocumentDraft = async (version: DocumentDraftVersion) => {
+    if (!documentEditorItem || !isDeliveryDocumentId(documentEditorItem.id)) throw new Error("수정할 문서를 찾지 못했습니다.");
+    await persistDocumentAction({ action: "restore", documentId: documentEditorItem.id, versionId: version.id });
+  };
+
+  const resetDocumentDraft = async () => {
+    if (!documentEditorItem || !isDeliveryDocumentId(documentEditorItem.id)) throw new Error("수정할 문서를 찾지 못했습니다.");
+    await persistDocumentAction({ action: "reset", documentId: documentEditorItem.id });
+  };
+
+  const requestPresentationDeck = async (deckType: PresentationDeckType) => {
+    let response: Response | null = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      response = await fetch("/api/delivery/deck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...presentationPayload(deckType), edits: presentationDrafts[deckType] }),
+      });
+      if (response.ok) return response.blob();
+      if (![502, 503, 504].includes(response.status) || attempt === 1) break;
+      await new Promise((resolve) => window.setTimeout(resolve, 500));
+    }
+    const payload = await response?.json().catch(() => null) as { error?: { message?: string } } | null;
+    throw new Error(payload?.error?.message ?? `${presentationDeckMeta[deckType].title}를 만들지 못했습니다. 잠시 뒤 다시 시도해 주세요.`);
+  };
+
+  const downloadPresentation = async (deckType: PresentationDeckType) => {
+    const meta = presentationDeckMeta[deckType];
+    setDocumentDownload(`${deckType}-pptx`);
+    setDocumentMessage(`${meta.title} 파워포인트를 만들고 있습니다.`);
+    try {
+      const blob = await requestPresentationDeck(deckType);
+      saveDownloadBlob(blob, `${resolvedBrandName}-${deckType === "intro" ? "사업소개서" : "투자제안서-IR"}-초안.pptx`);
+      setDocumentMessage(`${meta.pageCount}장 ${meta.title} 파워포인트(PPTX)를 만들었습니다.`);
+    } catch (error) {
+      setDocumentMessage(error instanceof Error ? error.message : `${meta.title}를 만들지 못했습니다.`);
+    } finally {
+      setDocumentDownload("");
+    }
+  };
+
+  const downloadAllResults = async () => {
+    if (!deliveryPack) return;
+    setDocumentDownload("all-results-zip");
+    setDocumentMessage("실행 문서, 발표자료와 손익 엑셀을 한 번에 묶고 있습니다.");
+    try {
+      const documents = deliveryItems.map(({ id, title, type, versionLabel, markdown }) => ({ id, title, type, versionLabel, markdown }));
+      const [documentArchive, jszipModule] = await Promise.all([
+        createBusinessDocumentsBlob({ format: "zip", project: documentProject, documents }),
+        import("jszip"),
+      ]);
+      setDocumentMessage("실행 문서를 묶었습니다. 사업소개서 파워포인트를 만들고 있습니다.");
+      const introDeck = await requestPresentationDeck("intro");
+      setDocumentMessage("사업소개서를 만들었습니다. 투자제안서 파워포인트를 만들고 있습니다.");
+      const irDeck = await requestPresentationDeck("ir");
+      setDocumentMessage("투자제안서를 만들었습니다. 12개월 손익 엑셀을 만들고 있습니다.");
+      const financialWorkbook = await requestFinancialWorkbook();
+      const archive = await jszipModule.default.loadAsync(await documentArchive.arrayBuffer());
+      archive.file(`${resolvedBrandName}-사업소개서-초안.pptx`, await introDeck.arrayBuffer());
+      archive.file(`${resolvedBrandName}-투자제안서-IR-초안.pptx`, await irDeck.arrayBuffer());
+      archive.file(`${resolvedBrandName}-12개월-손익계획.xlsx`, await financialWorkbook.arrayBuffer());
+      archive.file("파일-안내.txt", [
+        `${resolvedBrandName} 전체 사업 자료`,
+        "",
+        "- 전체 실행 문서: PDF와 수정 가능한 워드",
+        "- 사업소개서: 고객·파트너 설명용 PPTX 12장",
+        "- 투자제안서(IR): 투자자·지원기관 제안용 PPTX 16장",
+        "- 12개월 손익계획: 입력값과 계산식이 연결된 엑셀(XLSX) 5개 시트",
+        "",
+        "수치·출처·대표자·연락처는 외부 공유 전에 최종 확인하세요.",
+      ].join("\n"));
+      const bundle = await archive.generateAsync({ type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } });
+      saveDownloadBlob(bundle, `${resolvedBrandName}-전체-사업자료.zip`);
+      setDocumentMessage("실행 문서, 사업소개서, 투자제안서와 12개월 손익 엑셀을 전체 묶음으로 만들었습니다.");
+    } catch (error) {
+      setDocumentMessage(error instanceof Error ? error.message : "전체 결과물 묶음을 만들지 못했습니다.");
+    } finally {
+      setDocumentDownload("");
+    }
+  };
+
   const downloadDocuments = async (format: DownloadFormat, item?: DeliveryItem) => {
     if (!deliveryPack) return;
-    const target = item ? [item] : deliveryPack.items;
+    const target = item ? [item] : deliveryItems;
     const key = `${item?.id ?? "all"}-${format}`;
     setDocumentDownload(key);
     setDocumentMessage(`${format === "pdf" ? "인쇄용 문서(PDF)" : format === "docx" ? "수정 가능한 워드 문서" : "전체 문서 묶음(ZIP)"}을 만들고 있습니다.`);
@@ -1804,13 +3211,13 @@ function FinalDelivery({
     const receiptBody = [
       betaAccess ? "# 베타 이용 확인서" : "# 결제 영수증",
       "",
-      `- 상품: 21일 창업 실행 과정`,
+      `- 상품: ${PACKAGE_NAME}`,
       `- ${betaAccess ? "이용 금액" : "결제 금액"}: ${paidAmount.toLocaleString("ko-KR")}원`,
-      `- ${betaAccess ? "이용 상태" : "결제 상태"}: ${betaAccess ? "베타 무료 이용" : demo ? "결제완료 예시" : serverProject?.paymentStatus === "paid" ? "토스 승인" : "개발 테스트 승인"}`,
+      `- ${betaAccess ? "이용 상태" : "결제 상태"}: ${betaAccess ? "베타 무료 이용" : demo ? "결제완료 예시" : serverProject?.paymentStatus === "paid" ? "계좌입금 확인" : "개발 테스트 승인"}`,
       `- ${betaAccess ? "이용 번호" : "주문 번호"}: ${demo ? "VNT-20260713-1024" : serverProject?.id ?? "확인 필요"}`,
       `- 프로젝트: ${opportunity.title}`,
       "",
-      betaAccess ? "> 베타 테스트 기간에 결제 없이 이용한 프로젝트입니다." : demo ? "> 이 영수증은 화면 확인용 예시이며 실제 거래 확인 자료가 아닙니다." : "> 실제 카드전표는 결제사 내역에서 확인하세요.",
+      betaAccess ? "> 베타 테스트 기간에 결제 없이 이용한 프로젝트입니다." : demo ? "> 이 영수증은 화면 확인용 예시이며 실제 거래 확인 자료가 아닙니다." : "> 계좌이체 내역은 이용 은행에서, 현금영수증 발급 상태는 주문 화면에서 확인하세요.",
     ].join("\n");
     setDocumentDownload("receipt-pdf");
     try {
@@ -1830,29 +3237,44 @@ function FinalDelivery({
   return (
     <main className={`delivery-page ${demo ? "sample-delivery" : "user-delivery"}`}>
       <Header onHome={onHome} />
-      {demo && <section className="sample-preview-bar"><div><span><Eye /> 실제 제공 화면 예시 · 가상 사업 사례</span><strong>완료 후 사용자가 보는 화면과 같은 구조입니다.</strong></div>{onStart && <button onClick={onStart}>내 사업 무료로 시작하기 <ArrowRight /></button>}</section>}
+      {demo && <section className="sample-preview-bar"><div><span><Eye /> 실제 제공 화면 예시 · 가상 사업 사례</span><strong>완료 후 사용자가 보는 화면과 같은 구조입니다.</strong></div>{onStart && <button className="sample-return-button" onClick={onStart}>{sampleActionLabel ?? "내 사업 무료로 시작하기"} <ArrowRight /></button>}</section>}
       <div className={`delivery-ai-disclosure ${generationMode}`}><ShieldCheck /><p><strong>{generationTitle}</strong> {generationDescription}</p><a href="/ai-notice" target="_blank" rel="noreferrer">처리 안내 보기</a></div>
       <section className="delivery-content" id={demo ? "sample-result-details" : "delivery-result-details"}>
         <div className="delivery-main">
           <section className={`final-report-viewer ${activeReport === "launch" ? "mission-mode" : ""}`}>
             <header className="final-report-chrome">
               <div aria-hidden="true"><i /><i /><i /></div>
+              <button className="mobile-report-menu-trigger" type="button" aria-expanded={mobileReportMenuOpen} onClick={() => setMobileReportMenuOpen(true)}><PanelLeft /> 목차</button>
               <span><Sparkles /> {resolvedBrandName} 맞춤 사업 실행 보고서</span>
               <em><i /> {generationMode === "ai" ? "AI 고도화" : generationMode === "sample" ? "화면 예시" : "안전 초안"}</em>
             </header>
-            <aside className="final-report-sidebar">
-              <header><small>최종 결과</small><strong>{resolvedBrandName}</strong></header>
+            <button className={`mobile-report-backdrop ${mobileReportMenuOpen ? "open" : ""}`} type="button" aria-label="결과 목차 닫기" onClick={() => setMobileReportMenuOpen(false)} />
+            <aside className={`final-report-sidebar ${mobileReportMenuOpen ? "mobile-open" : ""}`} aria-label="결과 목차">
+              <header><span><small>최종 결과</small><strong>{resolvedBrandName}</strong></span><button className="mobile-report-sidebar-close" type="button" aria-label="결과 목차 닫기" onClick={() => setMobileReportMenuOpen(false)}>닫기</button></header>
               <nav aria-label="최종 보고서 목차">
                 {reportTabs.map((tab, index) => {
                   const Icon = tab.icon;
-                  return <button key={tab.id} aria-label={tab.label} data-report-tab={tab.id} className={activeReport === tab.id ? "active" : ""} onClick={() => setActiveReport(tab.id)}><Icon /><span><b>{tab.label}</b><small>{tab.id === "launch" ? "선택 · 결과물과 별도" : `${index + 1}단계${tab.id === "documents" ? " · 최종" : ""}`}</small></span>{activeReport === tab.id && <Check />}</button>;
+                  return <button key={tab.id} aria-label={tab.label} data-report-tab={tab.id} className={activeReport === tab.id ? "active" : ""} onClick={() => selectReport(tab.id)}><Icon /><span><b>{tab.label}</b><small>{tab.id === "launch" ? "선택 · 결과물과 별도" : `${index + 1}단계${tab.id === "documents" ? " · 최종" : ""}`}</small></span>{activeReport === tab.id && <Check />}</button>;
                 })}
               </nav>
-              <div className="final-report-sidebar-status"><span><CheckCircle2 /> 전체 초안 생성</span><strong>{deliveryPack?.items.length ?? 0}개</strong><small>지금 열고 내려받을 수 있어요</small></div>
+              <div className="final-report-sidebar-status"><span><CheckCircle2 /> 전체 초안 생성</span><strong>{resultCount}개</strong><small>문서 10종과 발표자료 2종</small></div>
             </aside>
-            <div className="final-report-main">
+            <div className="final-report-main" ref={reportMainRef}>
               <header><div><span><ActiveReportIcon /> 맞춤 사업 실행 보고서</span><h2>{activeReportTab.label}</h2></div><em><i /> 준비됨</em></header>
-              {activeReport === "summary" && !demo && onRefine && <DraftRefinementPanel initialBrandName={resolvedBrandName} initialCustomer={resolvedCustomer} initialOneLiner={opportunity.oneLiner} initialPrice={sellingPrice} onRefine={onRefine} />}
+              <div className="mobile-report-progress" aria-label={`결과 ${activeReportIndex + 1}/${reportTabs.length}단계`}>
+                <button type="button" onClick={() => setMobileReportMenuOpen(true)}><PanelLeft /><span><small>결과 목차</small><strong>{activeReportIndex + 1}. {activeReportTab.label}</strong></span><ArrowRight /></button>
+                <i><b style={{ width: `${((activeReportIndex + 1) / reportTabs.length) * 100}%` }} /></i>
+              </div>
+              {activeReport === "summary" && !demo && onRefine && serverProject && refinementInput && <ProjectRefinementStudio
+                projectId={serverProject.id}
+                initialInput={refinementInput}
+                history={serverProject.refinementHistory ?? []}
+                evidence={serverProject.marketWorkspace?.evidence ?? []}
+                marketResearching={marketResearchAction === "researching"}
+                marketMessage={marketResearchMessage}
+                onResearchMarket={researchMarketEvidence}
+                onApply={onRefine}
+              />}
               <article className="report-sheet">
               {activeReport === "summary" && <>
                 <h3>{resolvedBrandName}</h3>
@@ -1886,6 +3308,7 @@ function FinalDelivery({
                 <div className="report-title-row"><Users /><div><small>시장 확인</small><h3>확인된 수요와 아직 모르는 점</h3></div></div>
                 <p className="report-lead">시장 규모 숫자보다 실제 고객이 최근 어떻게 해결했고 얼마를 지출했는지를 우선 근거로 사용합니다.</p>
                 <div className="evidence-summary"><strong>{verifiedEvidenceCount}</strong><span>검증 근거</span><i /><strong>{opportunity.match}%</strong><span>창업자 적합도</span><i /><strong>{opportunity.feasibility}%</strong><span>실행 가능성</span></div>
+                <section className="market-auto-research"><div><Search /><span><small>공식 원문 자동 연결</small><strong>내 사업에 맞는 시장 근거 찾기</strong><p>통계청·공공데이터·정부기관 원문을 검색해 출처와 함께 저장합니다.</p></span></div><button disabled={marketResearchAction === "researching"} onClick={() => void researchMarketEvidence()}>{marketResearchAction === "researching" ? <><LoaderCircle className="spin" /> 찾는 중</> : <><Search /> 공식 근거 찾기</>}</button>{marketResearchMessage && <footer role="status"><CircleHelp /> {marketResearchMessage}</footer>}</section>
                 <ol className="report-evidence-list"><li><span>01</span><div><strong>반복되는 응급 공백</strong><p>{demo ? "보호자 인터뷰 12명 중 8명이 최근 6개월 안에 급한 돌봄 요청 경험이 있다고 답한 예시입니다." : "저장된 고객 인터뷰와 시장 근거를 결과물에서 확인하세요."}</p></div></li><li><span>02</span><div><strong>현재 대안의 신뢰 문제</strong><p>지인 부탁과 공개 커뮤니티는 빠르지만 신원·책임 범위가 불명확하다는 가설을 우선 검증합니다.</p></div></li><li><span>03</span><div><strong>아직 확인할 것</strong><p>야간 추가요금, 사고 대응 책임, 생활권별 파트너 확보 비용은 실제 유료 연결에서 측정해야 합니다.</p></div></li></ol>
                 <section className="market-source-panel"><header><ExternalLink /><div><small>문장에 사용한 자료</small><h4>출처와 확인 상태</h4></div><em>{marketSources.length}개</em></header>{marketSources.length > 0 ? <div className="market-source-list">{marketSources.map((source, index) => <article key={`${source.title}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><div><strong>{source.title}</strong><p>{source.note}</p><small>{source.source} · {source.date}</small></div><em>{source.status}</em>{source.url ? <a href={source.url} target="_blank" rel="noreferrer" aria-label={`${source.title} 원문 열기`}><ExternalLink /></a> : <i>내부 기록</i>}</article>)}</div> : <div className="market-source-empty"><CircleHelp /><p><strong>아직 저장된 출처가 없습니다.</strong> 위 문장은 가설이며, 시장 자료를 추가하기 전까지 확정 근거로 사용하지 않습니다.</p></div>}</section>
               </>}
@@ -1896,12 +3319,15 @@ function FinalDelivery({
                   message={landingMessage}
                   published={demo || landingSite?.status === "published"}
                   publicPath={demo ? `/launch/${landingDraft.slug}` : landingSite ? `/launch/${landingSite.slug}` : ""}
+                  projectId={serverProject?.id ?? null}
+                  customDomain={landingSite?.customDomain ?? ""}
                   demo={demo}
                   onChange={updateLandingDraft}
                   onReset={resetLandingDraft}
                   onSave={() => void saveLandingFromReport(false)}
                   onPublish={() => void saveLandingFromReport(true)}
                   onPreview={() => setLandingPreview(true)}
+                  onSiteUpdated={setLandingSite}
                 />
               </>}
               {activeReport === "launch" && <>
@@ -1919,56 +3345,139 @@ function FinalDelivery({
                   sellingPrice={sellingPrice}
                   demo={demo}
                   onLogoCreated={applyLogoToHomepage}
-                  onGoToDocuments={() => setActiveReport("documents")}
+                  onGoToDocuments={() => selectReport("documents")}
                 />
               </>}
               {activeReport === "documents" && <>
-                <section className="delivery-gift-hero"><div className="delivery-gift-mark"><Gift /><i><Sparkles /></i></div><div><small>당신의 사업 시작 상자</small><h3>{resolvedBrandName}의 첫 실행 자료가 준비되었습니다</h3><p>아이디어를 바탕으로 사업계획서, 판매 페이지와 실행 자료를 먼저 완성했습니다.</p><span><CheckCircle2 /> 모든 초안 지금 이용 가능</span></div><aside><strong>{deliveryPack?.items.length ?? 0}</strong><small>개 결과물 준비</small><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("zip")}><Download /> 한 번에 받기</button></aside></section>
-                <div className="delivery-section-heading"><div className="report-title-row"><PackageCheck /><div><small>6단계 · 최종</small><h3>결과물 열기와 내려받기</h3></div></div><div className="delivery-package-actions"><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("pdf")}><FileText /> 전체 PDF</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("docx")}><BookOpen /> 전체 워드</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("zip")}><Download /> 전체 받기</button></div></div>
+                <section className="delivery-gift-hero"><div className="delivery-gift-mark"><Gift /><i><Sparkles /></i></div><div><small>내 사업 파일 모음</small><h3>{resolvedBrandName}의 사업 시작 파일이 준비되었습니다</h3><p>사업계획서, 홈페이지 글, 발표자료와 수정 가능한 12개월 예상 수익 엑셀을 한곳에 모았습니다.</p><span><CheckCircle2 /> 파일 생성 완료 · 확인할 내용도 함께 표시했어요</span></div><aside><strong>{resultCount}</strong><small>개 파일 준비</small><button disabled={Boolean(documentDownload)} onClick={() => void downloadAllResults()}><Download /> 한 번에 받기</button></aside></section>
+                <div className="delivery-section-heading"><div className="report-title-row"><PackageCheck /><div><small>마지막 단계</small><h3>파일을 열거나 내려받으세요</h3></div></div><div className="delivery-package-actions"><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("pdf")}><FileText /> 전체 PDF</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("docx")}><BookOpen /> 전체 워드</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadAllResults()}><Download /> 전체 받기</button></div></div>
                 <p className="report-lead"><strong>이곳이 마지막 단계입니다.</strong> 실행 도우미를 완료하지 않아도 아래 결과물은 그대로 열고 내려받을 수 있습니다.</p>
+                {deliveryFactSummary && <div className="delivery-fact-summary" aria-label="파일에 사용된 내용 요약"><span><CheckCircle2 /><strong>{deliveryFactSummary.verified + deliveryFactSummary.userInput}</strong> 내가 입력한 내용</span><span><BarChart3 /><strong>{deliveryFactSummary.calculated}</strong> 자동 계산된 숫자</span><span><CircleHelp /><strong>{deliveryFactSummary.assumptions + deliveryFactSummary.needsInput}</strong> 나중에 확인할 내용</span></div>}
+                <div className={`delivery-claim-safety ${deliveryClaimSummary.convertedClaims > 0 ? "changed" : "safe"}`} aria-label="허위 실적 자동 점검 결과">
+                  <span><ShieldCheck /></span>
+                  <div><strong>사실성 자동 점검 완료</strong><p>{deliveryClaimSummary.convertedClaims > 0 ? `근거가 확인되지 않은 완료 표현 ${deliveryClaimSummary.convertedClaims}개를 ‘확인 필요’ 문장으로 바꿨어요.` : "완료 실적은 저장된 실행 기록이나 증빙이 있을 때만 사실로 표시됩니다."}</p></div>
+                  <em>{deliveryClaimSummary.safeDocuments}/{deliveryClaimSummary.checkedDocuments} 문서 이상 없음</em>
+                </div>
                 {deliveryQuality && <details className="delivery-quality-panel conditional">
                   <summary><span><ShieldCheck /></span><div><small>선택 확인</small><strong>나중에 확인할 점 보기</strong><p>초안 이용과 내려받기에는 영향을 주지 않습니다.</p></div><em>{deliveryQuality.actions.length}개</em></summary>
                   <div>{deliveryQuality.checks.map((check) => <article key={check.id} className={check.passed ? "passed" : "needs-work"}><i>{check.passed ? <Check /> : <CircleHelp />}</i><span><strong>{check.label}</strong><small>{check.detail}</small></span></article>)}</div>
                   {deliveryQuality.actions.length > 0 && <footer><CircleHelp /><p><strong>지금 하지 않아도 됩니다.</strong> 실제 영업이나 공식 제출 전에 한 가지씩 확인하세요.</p></footer>}
                 </details>}
                 {documentMessage && <p className="delivery-document-status" role="status">{documentMessage}</p>}
-                <div className="deliverable-list">
-                  {(deliveryPack?.items ?? []).map((item, index) => {
-                    const Icon = deliveryIcons[item.id as keyof typeof deliveryIcons] ?? FileText;
-                    return <article key={item.id} className={item.quality?.status === "needs_work" ? "needs-work" : ""} style={{ "--delivery-index": index } as React.CSSProperties}><span className="delivery-doc-icon"><Icon /></span><div className="delivery-document-summary"><small>{String(index + 1).padStart(2, "0")} · {item.complete ? "초안 완성" : item.contentReady ? "초안 완성 · 나중에 사실 확인" : item.quality?.label ?? "생성 필요"}</small><strong>{item.title}</strong><p>{item.type}</p>{item.quality && <span>{item.quality.metrics.estimatedPages}쪽 예상 · {item.quality.verificationLabel}</span>}{item.qualityReason && <span className="document-readiness-note">{item.qualityReason}</span>}</div><div className="delivery-document-actions"><button onClick={() => setDocumentPreview(item)}><Maximize2 /> 열기</button><button title="인쇄용 PDF 받기" aria-label={`${item.title} 인쇄용 PDF 받기`} disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("pdf", item)}><FileText /></button><button title="수정용 워드 받기" aria-label={`${item.title} 수정용 워드 받기`} disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("docx", item)}><BookOpen /></button></div></article>;
-                  })}
+                <div className="delivery-result-groups">
+                  {deliveryGroups.map((group) => <section className={`delivery-result-group group-${group.id}`} key={group.id} aria-labelledby={`delivery-group-${group.id}`}>
+                    <header><small>{group.eyebrow}</small><h4 id={`delivery-group-${group.id}`}>{group.title}</h4><p>{group.description}</p></header>
+                    {group.id === "submit" && <section className="presentation-deliverables" aria-labelledby="presentation-deliverables-title">
+                      <header><div><small>발표용 파일</small><h4 id="presentation-deliverables-title">사업을 소개하는 발표자료 2개</h4><p>사업소개서는 고객·협력사에게, 투자제안서는 투자자에게 보여주는 파일입니다.</p></div><span><Presentation /> 파일 2개</span></header>
+                      <div>{(["intro", "ir"] as const).map((deckType) => {
+                        const meta = presentationDeckMeta[deckType];
+                        const statusLabel = demo
+                          ? "예시 파일 · 글 수정 가능"
+                          : deckType === "intro" ? "사업 소개용 · 글 수정 가능" : verifiedEvidenceCount > 0 ? "투자자 설명용 · 글 수정 가능" : "투자자 설명용 · 시장 자료 확인 필요";
+                        return <article className={`presentation-deliverable-card ${deckType}`} key={deckType}>
+                          <div className="presentation-cover-mini"><small>{deckType === "intro" ? "사업소개서" : "투자제안서"}</small><strong>{resolvedBrandName}</strong><span>{meta.title}</span><em>{meta.pageCount}장</em></div>
+                          <div className="presentation-deliverable-copy"><small>{statusLabel}</small><h5>{meta.title}</h5><p>{meta.description}</p><span>{meta.type}</span></div>
+                          <div className="presentation-deliverable-actions"><button onClick={() => { setPresentationSlideIndex(0); setPresentationPreview(deckType); }}><Eye /> 전체 미리보기</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadPresentation(deckType)}>{documentDownload === `${deckType}-pptx` ? <LoaderCircle className="spin" /> : <Download />} 파워포인트 받기</button></div>
+                        </article>;
+                      })}</div>
+                    </section>}
+                    {group.id === "operate" && <section className="financial-workbook-deliverable" aria-labelledby="financial-workbook-title"><span><FileSpreadsheet /></span><div><small>{monthlyForecast.isCalculated ? "내 숫자로 자동 계산됨" : "예상 판매량을 확인해주세요"}</small><h5 id="financial-workbook-title">12개월 예상 수익 엑셀</h5><p>가격, 비용과 판매량을 바꾸면 매달 예상 매출과 남는 돈이 자동으로 다시 계산됩니다.</p><em>한눈에 보기 · 월별 매출과 비용 · 예상 자금</em></div><button disabled={Boolean(documentDownload)} onClick={() => void downloadFinancialWorkbook()}>{documentDownload === "financial-xlsx" ? <LoaderCircle className="spin" /> : <Download />} 엑셀 받기</button></section>}
+                    <div className="deliverable-list">
+                      {group.items.map((item) => {
+                        const index = deliveryItemIndex.get(item.id) ?? 0;
+                        const Icon = deliveryIcons[item.id as keyof typeof deliveryIcons] ?? FileText;
+                        const friendlyCopy = deliveryFriendlyCopy[item.id] ?? { title: item.title, description: item.type };
+                        const statusLabel = demo ? "예시 파일" : item.useStatus === "ready" ? "바로 사용할 수 있어요" : item.useStatus === "needs_input" ? "내용을 더 넣어야 해요" : "확인할 내용이 있어요";
+                        return <article key={item.id} className={`${item.quality?.status === "needs_work" ? "needs-work" : ""} status-${item.useStatus ?? "verify"}`} style={{ "--delivery-index": index } as React.CSSProperties}><span className="delivery-doc-icon"><Icon /></span><div className="delivery-document-summary"><small>{String(index + 1).padStart(2, "0")} · {statusLabel}</small><strong>{friendlyCopy.title}</strong><p>{friendlyCopy.description}</p>{item.quality && <span>{item.quality.metrics.estimatedPages}쪽 예상 · {item.quality.verificationLabel}</span>}{item.qualityReason && <span className="document-readiness-note">{item.qualityReason}</span>}</div><div className="delivery-document-actions"><button className="document-edit-primary" onClick={() => setDocumentEditorId(item.id)}>수정</button><button onClick={() => setDocumentPreview(item)}>열기</button><button title="인쇄용 PDF 받기" aria-label={`${friendlyCopy.title} 인쇄용 PDF 받기`} disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("pdf", item)}>PDF 받기</button><button title="수정용 워드 받기" aria-label={`${friendlyCopy.title} 수정용 워드 받기`} disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("docx", item)}>워드 받기</button></div></article>;
+                      })}
+                    </div>
+                  </section>)}
                 </div>
-                <div className="delivery-receipt-row"><div><ReceiptText /><span><small>{betaAccess ? "베타 이용 정보" : "결제 내역"}</small><strong>{betaAccess ? "무료 이용" : `${paidAmount.toLocaleString("ko-KR")}원`} · {demo ? "결제완료 예시" : serverProject?.paymentStatus === "paid" ? "토스 승인" : "테스트 승인"}</strong></span></div><nav><button disabled={documentDownload === "receipt-pdf"} onClick={() => void downloadReceipt()}>{documentDownload === "receipt-pdf" ? "문서 제작 중" : betaAccess ? "이용 확인서(PDF)" : "영수증(PDF)"}</button><button title="화면 인쇄" aria-label="화면 인쇄" onClick={() => window.print()}><Printer /></button></nav></div>
+                <div className="delivery-receipt-row"><div><ReceiptText /><span><small>{betaAccess ? "베타 이용 정보" : "결제 내역"}</small><strong>{betaAccess ? "무료 이용" : `${paidAmount.toLocaleString("ko-KR")}원`} · {demo ? "결제완료 예시" : serverProject?.paymentStatus === "paid" ? "계좌입금 확인" : "테스트 승인"}</strong></span></div><nav><button disabled={documentDownload === "receipt-pdf"} onClick={() => void downloadReceipt()}>{documentDownload === "receipt-pdf" ? "문서 제작 중" : betaAccess ? "이용 확인서(PDF)" : "결제 확인서(PDF)"}</button><button title="화면 인쇄" aria-label="화면 인쇄" onClick={() => window.print()}>인쇄</button></nav></div>
               </>}
               </article>
             </div>
           </section>
+          <nav className={`mobile-report-actions ${activeReport === "launch" ? "mission-hidden" : ""}`} aria-label="결과 단계 이동">
+            <button type="button" disabled={activeReportIndex <= 0} onClick={() => activeReportIndex > 0 && selectReport(reportTabs[activeReportIndex - 1].id)}><ArrowLeft /><span>이전</span></button>
+            <button className="mobile-report-actions-menu" type="button" onClick={() => setMobileReportMenuOpen(true)}><PanelLeft /><span>목차</span></button>
+            <button className="mobile-report-actions-next" type="button" disabled={activeReportIndex >= reportTabs.length - 1} onClick={() => activeReportIndex < reportTabs.length - 1 && selectReport(reportTabs[activeReportIndex + 1].id)}><span>{activeReportIndex >= reportTabs.length - 1 ? "마지막 단계" : "다음"}</span>{activeReportIndex < reportTabs.length - 1 && <ArrowRight />}</button>
+          </nav>
         </div>
       </section>
 
       {landingPreview && (
         <div className="landing-fullscreen-preview" role="dialog" aria-modal="true" aria-label="판매 페이지 전체화면 미리보기">
-          <header className="landing-preview-toolbar"><div><span><i /> 편집본 미리보기</span><p>버튼과 신청폼은 화면 확인용이며 실제 접수되지 않습니다.</p></div><button title="미리보기 닫기" aria-label="미리보기 닫기" onClick={() => setLandingPreview(false)}><X /></button></header>
+          <header className="landing-preview-toolbar"><div><span><i /> 편집본 미리보기</span><p>버튼과 신청폼은 화면 확인용이며 실제 접수되지 않습니다.</p></div><button title="미리보기 닫기" aria-label="미리보기 닫기" onClick={() => closeSampleOverlay("landing")}>닫기</button></header>
           <div className={`public-landing tone-${landingDraft.backgroundTone} template-${landingDraft.templateId}`} style={{ "--landing-accent": landingDraft.accentColor } as React.CSSProperties}>
             <nav className="public-landing-nav"><span className="public-landing-brand">{landingDraft.logoImageUrl ? <img src={landingDraft.logoImageUrl} alt={`${landingDraft.businessName} 로고`} /> : <i>{landingDraft.businessName.replaceAll(" ", "").slice(0, 2)}</i>}<strong>{landingDraft.businessName}</strong></span><button onClick={() => document.querySelector(".landing-fullscreen-preview .public-lead-section")?.scrollIntoView({ behavior: "smooth" })}>{landingDraft.ctaLabel}</button></nav>
-            <section className={`public-landing-hero ${landingDraft.heroImageUrl ? "with-image" : "without-image"}`} style={landingDraft.heroImageUrl ? { backgroundImage: `url(${landingDraft.heroImageUrl})` } : undefined} aria-label={landingDraft.heroImageAlt}>
+            {landingDraft.pageData ? <LandingBlocksRenderer data={landingDraft.pageData} /> : <><section className={`public-landing-hero ${landingDraft.heroImageUrl ? "with-image" : "without-image"}`} style={landingDraft.heroImageUrl ? { backgroundImage: `url(${landingDraft.heroImageUrl})` } : undefined} aria-label={landingDraft.heroImageAlt}>
               <div className="public-landing-hero-copy"><span>{landingDraft.heroLabel}</span><h1>{landingDraft.headline}</h1><p>{landingDraft.subheadline}</p><button onClick={() => document.querySelector(".landing-fullscreen-preview .public-lead-section")?.scrollIntoView({ behavior: "smooth" })}>{landingDraft.ctaLabel}<ArrowRight /></button><small><ShieldCheck /> {landingDraft.leadCaptureEnabled ? "신청 정보는 안내 목적으로만 사용됩니다." : "현재는 사업 소개만 공개되어 있습니다."}</small></div>
             </section>
             <section className="public-offer-band"><div><small>첫 상품</small><h2>{landingDraft.offerTitle}</h2><p>{landingDraft.offerDescription}</p></div><strong>{landingDraft.priceLabel}</strong><ul>{landingDraft.benefits.slice(0, 3).map((benefit) => <li key={benefit.title}><Check /> {benefit.title}</li>)}</ul></section>
             <section className="public-benefits"><header><small>진행 방식</small><h2>처음부터 복잡하게 시작하지 않습니다</h2></header><div>{landingDraft.benefits.map((benefit, index) => <article key={`${benefit.title}-${index}`}><span>{String(index + 1).padStart(2, "0")}</span><h3>{benefit.title}</h3><p>{benefit.description}</p></article>)}</div></section>
             {landingDraft.proofItems.length > 0 && <section className="public-proof"><header><small>확인 근거</small><h2>확인할 수 있는 근거</h2></header><div>{landingDraft.proofItems.map((item) => <p key={item}><Check /> {item}</p>)}</div></section>}
-            {landingDraft.faq.length > 0 && <section className="public-faq"><header><small>자주 묻는 내용</small><h2>자주 묻는 질문</h2></header><div>{landingDraft.faq.map((item) => <details key={item.question}><summary>{item.question}<ChevronDown /></summary><p>{item.answer}</p></details>)}</div></section>}
-            <section className={`public-lead-section ${landingDraft.leadCaptureEnabled ? "" : "brochure"}`}><div><small>신청 시작</small><h2>{landingDraft.ctaLabel}</h2><p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p></div>{landingDraft.leadCaptureEnabled ? <form className="preview-lead-form" onSubmit={(event) => event.preventDefault()}><label><span>이름</span><input placeholder="성함 또는 닉네임" /></label>{landingDraft.collectEmail && <label><span>이메일</span><input type="email" placeholder="name@company.kr" /></label>}{landingDraft.collectPhone && <label><span>전화번호</span><input type="tel" placeholder="010-0000-0000" /></label>}<label className="preview-consent"><input type="checkbox" /><span>개인정보 수집·이용 동의</span></label><button type="button">{landingDraft.ctaLabel}<ArrowRight /></button><small>미리보기에서는 신청이 전송되지 않습니다.</small></form> : <div className="public-lead-ready"><ShieldCheck /><h3>홈페이지가 먼저 준비되었습니다</h3><p>사업자 연락처와 개인정보 문의 정보를 확인한 뒤 신청폼을 켤 수 있습니다.</p></div>}</section>
+            {landingDraft.faq.length > 0 && <section className="public-faq"><header><small>자주 묻는 내용</small><h2>자주 묻는 질문</h2></header><div>{landingDraft.faq.map((item) => <details key={item.question}><summary>{item.question}<ChevronDown /></summary><p>{item.answer}</p></details>)}</div></section>}</>}
+            <section id="landing-contact" className={`public-lead-section ${landingDraft.leadCaptureEnabled ? "" : "brochure"}`}><div><small>신청 시작</small><h2>{landingDraft.ctaLabel}</h2><p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p></div>{landingDraft.leadCaptureEnabled ? <form className="preview-lead-form" onSubmit={(event) => event.preventDefault()}><label><span>이름</span><input placeholder="성함 또는 닉네임" /></label>{landingDraft.collectEmail && <label><span>이메일</span><input type="email" placeholder="name@company.kr" /></label>}{landingDraft.collectPhone && <label><span>전화번호</span><input type="tel" placeholder="010-0000-0000" /></label>}<label className="preview-consent"><input type="checkbox" /><span>개인정보 수집·이용 동의</span></label><button type="button">{landingDraft.ctaLabel}<ArrowRight /></button><small>미리보기에서는 신청이 전송되지 않습니다.</small></form> : <div className="public-lead-ready"><ShieldCheck /><h3>홈페이지가 먼저 준비되었습니다</h3><p>사업자 연락처와 개인정보 문의 정보를 확인한 뒤 신청폼을 켤 수 있습니다.</p></div>}</section>
             <footer className="public-landing-footer"><div className="public-footer-brand"><span>{landingDraft.logoImageUrl ? <img src={landingDraft.logoImageUrl} alt="" /> : landingDraft.businessName.replaceAll(" ", "").slice(0, 2)}</span><strong>{landingDraft.businessName}</strong></div><div className="public-business-information"><p>대표자 {landingDraft.businessRepresentative || "등록 전"}</p><p>사업장 {landingDraft.businessAddress || "등록 전"}</p><p>전화 {landingDraft.businessPhone || landingDraft.businessContact || "등록 전"}</p><p>이메일 {landingDraft.businessEmail || "등록 전"}</p><p>사업자등록번호 {landingDraft.businessRegistrationNumber || "등록 전"}</p><p>통신판매업 {landingDraft.mailOrderSalesNumber || "해당 시 등록"}</p></div>{landingDraft.pageMode === "transaction" && <p>교환·환불: {landingDraft.refundPolicy || "공개 전 입력"}</p>}<p>{landingDraft.legalNotice}</p>{landingDraft.leadCaptureEnabled && <small>개인정보 문의 {landingDraft.privacyContact || "공개 전 입력 필요"}</small>}<small>호스팅 제공자 {landingDraft.hostingProvider} · © {new Date().getFullYear()} {landingDraft.businessName}</small></footer>
           </div>
         </div>
       )}
 
+      {presentationPreview && (() => {
+        const meta = presentationDeckMeta[presentationPreview];
+        const input = presentationPayload(presentationPreview);
+        const slides = applyPresentationDraft(buildPresentationSlides(input), presentationDrafts[presentationPreview], input);
+        const activeIndex = Math.min(presentationSlideIndex, slides.length - 1);
+        const activeSlide = slides[activeIndex];
+        const selectSlide = (index: number) => {
+          setPresentationSlideIndex(index);
+          setPresentationEditorOpen(false);
+          setPresentationAssistResult(null);
+          setPresentationEditorMessage("");
+        };
+        const selectPrevious = () => selectSlide(Math.max(activeIndex - 1, 0));
+        const selectNext = () => selectSlide(Math.min(activeIndex + 1, slides.length - 1));
+        const hasFitChart = [input.matchScore, input.marketScore, input.feasibilityScore].filter((value) => value !== null).length >= 2;
+        const hasTractionChart = input.traction.interviews + input.traction.proposals + input.traction.purchases > 0;
+        return <div className={`presentation-preview ${presentationPreview === "ir" ? "ir-preview" : ""}`} role="dialog" aria-modal="true" aria-label={`${meta.title} 전체 미리보기`}>
+          <header><div><small>전체 슬라이드 미리보기</small><strong>{meta.title}</strong><span>{meta.type} · {meta.pageCount}장</span></div><nav><button disabled={Boolean(documentDownload)} onClick={() => void downloadPresentation(presentationPreview)}>{documentDownload === `${presentationPreview}-pptx` ? "PPTX 준비 중" : "PPTX 받기"}</button><button title="미리보기 닫기" aria-label="발표자료 미리보기 닫기" onClick={() => closeSampleOverlay("presentation")}>닫기</button></nav></header>
+          <div className={`presentation-preview-body ${presentationEditorOpen ? "editor-open" : ""}`}>
+            <aside className="presentation-thumbnail-rail"><header><strong>전체 {slides.length}장</strong><span>보고 싶은 장을 선택하세요</span></header><div>{slides.map((slide, index) => <button className={index === activeIndex ? "active" : ""} key={slide.id} onClick={() => selectSlide(index)} aria-label={`${index + 1}쪽 ${slide.title}`} aria-current={index === activeIndex ? "page" : undefined}><PresentationSlideThumbnail slide={slide} index={index} /><span><b>{String(index + 1).padStart(2, "0")}</b><strong>{slide.title}</strong></span></button>)}</div></aside>
+            <main className="presentation-preview-stage">
+              <div className="presentation-stage-toolbar"><div><small>{activeSlide.eyebrow}</small><strong>{activeSlide.title}</strong></div><nav><button onClick={() => { setPresentationEditorValue(editablePresentationValue(activeSlide)); setPresentationAssistResult(null); setPresentationEditorMessage(""); setPresentationEditorOpen(true); }}><FileText /> 문구 수정</button><span><b>{activeIndex + 1}</b> / {slides.length}</span></nav></div>
+              <div className="presentation-stage-canvas"><PresentationSlideCanvas slide={activeSlide} input={input} index={activeIndex} total={slides.length} /></div>
+              <footer className="presentation-stage-navigation"><button disabled={activeIndex === 0} onClick={selectPrevious}><ArrowLeft /> 이전 장</button><p><ShieldCheck /><span><strong>확인된 정보만 반영</strong> 저장된 고객·가격·비용·근거를 사용하며, 없는 수치는 ‘확인 필요’로 표시합니다.</span></p><button disabled={activeIndex === slides.length - 1} onClick={selectNext}>다음 장 <ArrowRight /></button></footer>
+            </main>
+            {presentationEditorOpen && <PresentationEditorPanel
+              slide={activeSlide}
+              value={presentationEditorValue}
+              assistResult={presentationAssistResult}
+              busy={presentationEditorAction}
+              message={presentationEditorMessage}
+              hasFitChart={hasFitChart}
+              hasTractionChart={hasTractionChart}
+              onChange={setPresentationEditorValue}
+              onAssist={(mode) => void requestPresentationAssist(mode, presentationPreview, activeSlide.id)}
+              onApplyAssist={() => {
+                if (!presentationAssistResult) return;
+                setPresentationEditorValue((current) => ({ ...current, ...presentationAssistResult.fields }));
+                setPresentationAssistResult(null);
+                setPresentationEditorMessage("제안을 편집창에 반영했습니다. 저장하기를 눌러 확정해주세요.");
+              }}
+              onSave={() => void savePresentationSlide(presentationPreview, activeSlide.id)}
+              onReset={() => void resetPresentationSlide(presentationPreview, activeSlide.id)}
+              onClose={() => setPresentationEditorOpen(false)}
+            />}
+          </div>
+        </div>;
+      })()}
+
       {documentPreview && (
         <div className="delivery-document-preview" role="dialog" aria-modal="true" aria-label={`${documentPreview.title} 전체 미리보기`}>
           <header>
             <div><strong>{documentPreview.title}</strong></div>
-            <nav><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("pdf", documentPreview)}><FileText /> 인쇄용 문서(PDF)</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("docx", documentPreview)}><BookOpen /> 수정용 워드 문서</button><button className="document-preview-close" title="문서 미리보기 닫기" aria-label="문서 미리보기 닫기" onClick={() => setDocumentPreview(null)}><X /></button></nav>
+            <nav><button onClick={() => { setDocumentEditorId(documentPreview.id); setDocumentPreview(null); }}>내용 수정</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("pdf", documentPreview)}>인쇄용 문서(PDF)</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("docx", documentPreview)}>수정용 워드 문서</button><button className="document-preview-close" title="문서 미리보기 닫기" aria-label="문서 미리보기 닫기" onClick={() => setDocumentPreview(null)}>닫기</button></nav>
           </header>
           <div className="document-preview-scroll">
             <section className="document-preview-cover"><span>창업 실행 캔버스</span><h1>{documentPreview.title}</h1><p>{documentPreview.type}</p><dl><div><dt>프로젝트</dt><dd>{landingDraft.businessName || opportunity.title}</dd></div><div><dt>목표 고객</dt><dd>{resolvedCustomer}</dd></div>{documentPreview.quality && <><div><dt>내용 확인</dt><dd>{documentPreview.quality.label}</dd></div><div><dt>근거 상태</dt><dd>{documentPreview.quality.verificationLabel}</dd></div></>}</dl>{demo && <aside>화면 검증용 가상 사례이며 실제 사업 판단에 사용할 수 없습니다.</aside>}</section>
@@ -1976,6 +3485,17 @@ function FinalDelivery({
           </div>
         </div>
       )}
+      {documentEditorItem && isDeliveryDocumentId(documentEditorItem.id) && <DocumentEditorStudio
+        item={documentEditorItem}
+        draft={documentDrafts[documentEditorItem.id]}
+        projectId={serverProject?.id}
+        demo={demo}
+        quickBlocks={documentQuickBlocks}
+        onSave={saveDocumentDraft}
+        onRestore={restoreDocumentDraft}
+        onReset={resetDocumentDraft}
+        onClose={() => setDocumentEditorId(null)}
+      />}
     </main>
   );
 }
@@ -2084,7 +3604,7 @@ function StageWorkProduct({
       <div className="work-product-head"><div><span>첫 고객 확보 도구</span><h3>첫 고객 확보 실행 자료</h3></div><button disabled={isWorking} onClick={onRegenerate}><RefreshCw /> 문구 다시 쓰기</button></div>
       <div className="sales-message"><small>1:1 제안 메시지</small><p>{outreachMessage}</p><button onClick={async () => { await navigator.clipboard.writeText(outreachMessage); setCopied(true); window.setTimeout(() => setCopied(false), 1600); }}>{copied ? <><Check /> 복사 완료</> : "문구 복사"}</button></div>
       <div className="launch-channels"><article><span>01</span><strong>직접 제안</strong><p>기존 지인 10명에게 고객 대화 요청</p><em>목표 응답 5명</em></article><article><span>02</span><strong>문제 정보 글</strong><p>고객이 검색하는 질문을 정보 글 3개로 발행</p><em>목표 문의 3건</em></article><article><span>03</span><strong>협력 제안</strong><p>같은 고객을 만나는 비경쟁 사업자 5곳에 제안</p><em>목표 상담 2건</em></article></div>
-      <div className="support-ready"><Building2 /><div><small>지원사업 준비도</small><strong>사업요약·고객문제·수익모델 초안 준비 완료</strong><p>아래 공공지원사업 매칭에서 공고 자격을 판정하고 신청 초안을 받을 수 있습니다.</p></div><span>매칭 가능</span></div>
+      <div className="support-ready"><Building2 /><div><small>지원사업 작성 상태</small><strong>문제인식·실현가능성·성장전략·팀·사업비 본문 작성</strong><p>공고별 자격을 비교하고 공식 양식에 옮겨 쓸 신청서 본문을 한 번에 만듭니다.</p></div><span>본문 제공</span></div>
     </section>
   );
 }
@@ -2330,9 +3850,14 @@ function ProjectWorkspace({
   const [showSavedSetup, setShowSavedSetup] = useState(false);
   const [artifactExpanded, setArtifactExpanded] = useState(false);
   const [deletingProject, setDeletingProject] = useState(false);
-  const [instantBuild, setInstantBuild] = useState<{ status: "idle" | "building" | "error" | "done"; step: number; message: string; mode: "initial" | "refine"; error: string }>({ status: "idle", step: 0, message: "", mode: "initial", error: "" });
+  const [instantBuild, setInstantBuild] = useState<{ status: "idle" | "building" | "error" | "done"; run: DraftPackageRun | null; error: string; connectionMessage: string }>({
+    status: "idle",
+    run: serverProject?.draftPackageRun ?? null,
+    error: "",
+    connectionMessage: "",
+  });
   const instantBuildStartedRef = useRef(false);
-  const lastBuildRequestRef = useRef<{ force: boolean; refinement?: DraftRefinementInput }>({ force: false });
+  const lastBuildRequestRef = useRef<{ force: boolean; refinement?: DraftRefinementInput; refinementSource?: "edit" | "restore" }>({ force: false });
   const effectiveOpportunity = (serverProject?.opportunity as unknown as RankedOpportunity | undefined) ?? opportunity;
   const packageReady = Boolean(
     serverProject
@@ -2455,7 +3980,7 @@ function ProjectWorkspace({
 
   const refreshProject = async () => {
     if (!serverProject) return null;
-    const response = await fetch(`/api/projects/${serverProject.id}`, { cache: "no-store" });
+    const response = await fetchWithTransientRetry(`/api/projects/${serverProject.id}`, { cache: "no-store" });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error?.message ?? "프로젝트를 불러오지 못했습니다.");
     setServerProject(payload.project);
@@ -2590,177 +4115,85 @@ function ProjectWorkspace({
     }
   };
 
-  const runInstantDraftPackage = useCallback(async (force: boolean, refinement?: DraftRefinementInput) => {
+  const runInstantDraftPackage = useCallback(async (force: boolean, refinement?: DraftRefinementInput, refinementSource: "edit" | "restore" = "edit") => {
     if (!serverProject || instantBuildStartedRef.current) return;
     instantBuildStartedRef.current = true;
-    lastBuildRequestRef.current = { force, refinement };
-    setInstantBuild({ status: "building", step: 0, message: force ? "바꾼 기본정보를 정리하고 있어요." : "처음 입력한 아이디어를 정리하고 있어요.", mode: force ? "refine" : "initial", error: "" });
-
-    const readProjectPayload = async (response: Response, fallback: string) => {
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message ?? fallback);
-      return payload;
-    };
+    lastBuildRequestRef.current = { force, refinement, refinementSource };
+    setInstantBuild((current) => ({ status: "building", run: current.run, error: "", connectionMessage: "" }));
 
     try {
-      let workingProject = serverProject;
-      let workingOpportunity = (workingProject.opportunity as unknown as RankedOpportunity);
-      let setupChanged = false;
-      const nextPrice = refinement?.priceWon ?? (typeof workingProject.stages[2]?.inputs.basePriceWon === "number" ? workingProject.stages[2].inputs.basePriceWon : price);
-      const nextBrand = refinement?.brandName ?? (typeof workingProject.stages[3]?.inputs.selectedName === "string" ? workingProject.stages[3].inputs.selectedName : brandChoice);
-
-      if (refinement) {
-        const updateResponse = await fetch(`/api/projects/${workingProject.id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ customer: refinement.customer, oneLiner: refinement.oneLiner }),
-        });
-        const updatePayload = await readProjectPayload(updateResponse, "사업 기본정보를 수정하지 못했습니다.");
-        workingProject = updatePayload.project as ProjectRecord;
-        workingOpportunity = workingProject.opportunity as unknown as RankedOpportunity;
-        setServerProject(workingProject);
+      const response = await fetchWithTransientRetry(`/api/projects/${serverProject.id}/draft-package`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ force, refinement, refinementSource }),
+      });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message ?? "자료 제작을 시작하지 못했습니다.");
+      if (payload.packageReady && !payload.run) {
+        const projectResponse = await fetchWithTransientRetry(`/api/projects/${serverProject.id}`, { cache: "no-store" });
+        const projectPayload = await projectResponse.json();
+        if (!projectResponse.ok) throw new Error(projectPayload.error?.message ?? "완성된 자료를 불러오지 못했습니다.");
+        setServerProject(projectPayload.project as ProjectRecord);
+        setInstantBuild({ status: "done", run: null, error: "", connectionMessage: "" });
+      } else {
+        setInstantBuild({ status: "building", run: (payload.run as DraftPackageRun | null) ?? null, error: "", connectionMessage: "" });
       }
-
-      if (!workingProject.businessSetup || refinement) {
-        const stageBudget = workingProject.stages[0]?.inputs.budgetWon;
-        const availableCash = typeof stageBudget === "number"
-          ? stageBudget
-          : workingOpportunity.capital === "소액" ? 1000000 : workingOpportunity.capital === "중간" ? 10000000 : 50000000;
-        const setup = workingProject.businessSetup
-          ? structuredClone(workingProject.businessSetup)
-          : emptyBusinessSetup(inferBusinessArchetype(workingOpportunity));
-        setup.financial.sellingPrice = nextPrice;
-        setup.financial.availableCash = availableCash;
-        setup.sectorKeywords = `${workingOpportunity.title} ${workingOpportunity.oneLiner}`.split(/\s+/).filter(Boolean).slice(0, 6);
-        setup.onlineSales = setup.archetype === "ecommerce" || setup.archetype === "digital_service";
-        setup.handlesPersonalData = setup.handlesPersonalData || setup.onlineSales;
-        const setupResponse = await fetch(`/api/projects/${workingProject.id}/setup`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(setup),
-        });
-        const setupPayload = await readProjectPayload(setupResponse, "추천 비용과 사업 조건을 저장하지 못했습니다.");
-        workingProject = setupPayload.project as ProjectRecord;
-        workingOpportunity = workingProject.opportunity as unknown as RankedOpportunity;
-        setupChanged = true;
-        setServerProject(workingProject);
-      }
-
-      const revisionInstruction = refinement
-        ? [`사업 이름은 '${refinement.brandName}', 주요 고객은 '${refinement.customer}', 첫 상품 가격은 ${refinement.priceWon.toLocaleString("ko-KR")}원으로 반영해주세요.`, refinement.note].filter(Boolean).join(" ")
-        : "";
-
-      for (let stageIndex = 0; stageIndex < launchStages.length; stageIndex += 1) {
-        setInstantBuild({ status: "building", step: stageIndex + 1, message: `현재 만드는 자료: ${launchStages[stageIndex].output}`, mode: force ? "refine" : "initial", error: "" });
-        const stage = workingProject.stages[stageIndex];
-        if (!force && stage.approvedArtifactId) continue;
-
-        let inputs = mergeStageInputs(
-          buildStageInput(stageIndex, workingOpportunity, nextPrice, nextBrand, refinement?.note ?? ""),
-          stage.inputs,
-          refinement?.note ?? "",
-        );
-        if (refinement && stageIndex === 1) inputs = { ...inputs, primaryCustomer: refinement.customer };
-        if (stageIndex === 2 && workingProject.businessAssessment) {
-          const financial = workingProject.businessAssessment.financial;
-          inputs = {
-            ...inputs,
-            basePriceWon: financial.grossPrice,
-            variableCostWon: financial.variableCostPerUnit,
-            monthlyFixedCostWon: financial.monthlyFixedCost,
-            monthlyRevenueGoalWon: financial.grossPrice * (workingProject.businessSetup?.financial.targetMonthlyUnits ?? 10),
-          };
-        }
-        if (refinement && stageIndex === 3) inputs = { ...inputs, preferredNames: [refinement.brandName], selectedName: refinement.brandName };
-        if (refinement && stageIndex === 4) inputs = { ...inputs, headline: refinement.oneLiner };
-
-        const inputResponse = await fetch(`/api/projects/${workingProject.id}/stages/${stageIndex}/inputs`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(inputs),
-        });
-        await readProjectPayload(inputResponse, `${launchStages[stageIndex].output}의 기본정보를 저장하지 못했습니다.`);
-
-        const currentArtifactId = stage.artifacts[0]?.id;
-        const generationResponse = force && currentArtifactId
-          ? await fetch(`/api/projects/${workingProject.id}/stages/${stageIndex}/revise`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ artifactId: currentArtifactId, instruction: revisionInstruction }),
-            })
-          : await fetch(`/api/projects/${workingProject.id}/stages/${stageIndex}/generate`, { method: "POST" });
-        const generationPayload = await readProjectPayload(generationResponse, `${launchStages[stageIndex].output}을 만들지 못했습니다.`);
-        const artifactId = generationPayload.artifact?.id as string | undefined;
-        if (!artifactId) throw new Error(`${launchStages[stageIndex].output} 생성 결과를 찾지 못했습니다.`);
-
-        const approvalResponse = await fetch(`/api/projects/${workingProject.id}/stages/${stageIndex}/approve`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ artifactId }),
-        });
-        const approvalPayload = await readProjectPayload(approvalResponse, `${launchStages[stageIndex].output}을 저장하지 못했습니다.`);
-        workingProject = approvalPayload.project as ProjectRecord;
-        workingOpportunity = workingProject.opportunity as unknown as RankedOpportunity;
-        setServerProject(workingProject);
-
-        if (!force && stageIndex === 1) {
-          const approved = workingProject.stages[1].artifacts.find((artifact) => artifact.id === workingProject.stages[1].approvedArtifactId);
-          const suggestedCustomer = typeof approved?.content.primaryCustomer === "string" ? approved.content.primaryCustomer.trim() : "";
-          if (suggestedCustomer.length >= 2 && suggestedCustomer !== workingOpportunity.customer) {
-            const customerResponse = await fetch(`/api/projects/${workingProject.id}`, {
-              method: "PATCH",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ customer: suggestedCustomer }),
-            });
-            const customerPayload = await readProjectPayload(customerResponse, "AI가 제안한 첫 고객을 저장하지 못했습니다.");
-            workingProject = customerPayload.project as ProjectRecord;
-            workingOpportunity = workingProject.opportunity as unknown as RankedOpportunity;
-            setServerProject(workingProject);
-          }
-        }
-      }
-
-      if (force || setupChanged || !workingProject.businessPlan) {
-        setInstantBuild({ status: "building", step: 7, message: "사업계획서를 완성하고 있어요.", mode: force ? "refine" : "initial", error: "" });
-        const response = await fetch(`/api/projects/${workingProject.id}/business-plan`, { method: "POST" });
-        workingProject = (await readProjectPayload(response, "사업계획서를 만들지 못했습니다.")).project as ProjectRecord;
-        setServerProject(workingProject);
-      }
-
-      const saveGeneratedWorkspace = async (path: "operations" | "execution-loop" | "grants", key: "workspace", fallback: string) => {
-        const getResponse = await fetch(`/api/projects/${workingProject.id}/${path}`, { cache: "no-store" });
-        const generated = await readProjectPayload(getResponse, fallback);
-        const putResponse = await fetch(`/api/projects/${workingProject.id}/${path}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(generated[key]),
-        });
-        const saved = await readProjectPayload(putResponse, fallback);
-        workingProject = saved.project as ProjectRecord;
-        setServerProject(workingProject);
-      };
-
-      if (force || setupChanged || !workingProject.operationsPackage) {
-        setInstantBuild({ status: "building", step: 8, message: "운영 준비서를 정리하고 있어요.", mode: force ? "refine" : "initial", error: "" });
-        await saveGeneratedWorkspace("operations", "workspace", "운영 준비서를 만들지 못했습니다.");
-      }
-      if (force || setupChanged || !workingProject.executionAnalysis) {
-        setInstantBuild({ status: "building", step: 9, message: "단계별 실행 보고서를 정리하고 있어요.", mode: force ? "refine" : "initial", error: "" });
-        await saveGeneratedWorkspace("execution-loop", "workspace", "실행 보고서를 만들지 못했습니다.");
-      }
-      if (force || setupChanged || !workingProject.grantPackage) {
-        setInstantBuild({ status: "building", step: 10, message: "지원사업 신청 초안을 정리하고 있어요.", mode: force ? "refine" : "initial", error: "" });
-        await saveGeneratedWorkspace("grants", "workspace", "지원사업 초안을 만들지 못했습니다.");
-      }
-
-      setServerProject(workingProject);
-      setInstantBuild({ status: "done", step: 10, message: "전체 초안이 준비되었습니다.", mode: force ? "refine" : "initial", error: "" });
     } catch (error) {
-      setInstantBuild((current) => ({ ...current, status: "error", error: error instanceof Error ? error.message : "전체 초안을 만들지 못했습니다." }));
+      const message = error instanceof Error ? error.message : "전체 자료를 만들지 못했습니다.";
+      setInstantBuild((current) => message === "Failed to fetch"
+        ? { ...current, status: "building", error: "", connectionMessage: "진행 화면 연결을 다시 확인하고 있습니다. 서버 제작은 계속됩니다." }
+        : { ...current, status: "error", error: message, connectionMessage: "" });
     } finally {
       instantBuildStartedRef.current = false;
     }
-  }, [brandChoice, price, serverProject, setServerProject]);
+  }, [serverProject, setServerProject]);
+
+  useEffect(() => {
+    if (!serverProject || instantBuild.status !== "building") return;
+    let cancelled = false;
+
+    const poll = async () => {
+      try {
+        const response = await fetch(`/api/projects/${serverProject.id}/draft-package`, { cache: "no-store" });
+        const payload = await response.json();
+        if (!response.ok) throw new Error(payload.error?.message ?? "제작 상태를 불러오지 못했습니다.");
+        if (cancelled) return;
+        const run = (payload.run as DraftPackageRun | null) ?? null;
+        if (run?.status === "error") {
+          setInstantBuild({ status: "error", run, error: run.error || "자료 제작이 중단되었습니다.", connectionMessage: "" });
+          return;
+        }
+        setInstantBuild({ status: "building", run, error: "", connectionMessage: "" });
+        if (payload.packageReady && (!run || run.status === "complete")) {
+          const projectResponse = await fetchWithTransientRetry(`/api/projects/${serverProject.id}`, { cache: "no-store" });
+          const projectPayload = await projectResponse.json();
+          if (!projectResponse.ok) throw new Error(projectPayload.error?.message ?? "완성된 자료를 불러오지 못했습니다.");
+          if (cancelled) return;
+          setServerProject(projectPayload.project as ProjectRecord);
+          setInstantBuild({ status: "done", run, error: "", connectionMessage: "" });
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setInstantBuild((current) => ({
+            ...current,
+            status: "building",
+            error: "",
+            connectionMessage: "진행 화면 연결을 다시 확인하고 있습니다. 서버 제작은 계속됩니다.",
+          }));
+        }
+      }
+    };
+
+    void poll();
+    const timer = window.setInterval(
+      () => void poll(),
+      instantBuild.run?.status === "waiting" ? 30_000 : 2500,
+    );
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [instantBuild.status, instantBuild.run?.status, serverProject?.id, setServerProject]);
 
   useEffect(() => {
     if (!serverProject || packageReady || instantBuild.status !== "idle" || instantBuildStartedRef.current) return;
@@ -2768,22 +4201,22 @@ function ProjectWorkspace({
   }, [instantBuild.status, packageReady, runInstantDraftPackage, serverProject]);
 
   if (serverProject && (instantBuild.status === "building" || instantBuild.status === "error" || !packageReady)) {
-    return <InstantDraftBuilder opportunity={effectiveOpportunity} step={instantBuild.step} message={instantBuild.message} mode={instantBuild.mode} error={instantBuild.error} onRetry={() => { const request = lastBuildRequestRef.current; void runInstantDraftPackage(request.force, request.refinement); }} onHome={onHome} />;
+    return <InstantDraftBuilder opportunity={effectiveOpportunity} run={instantBuild.run} error={instantBuild.error} connectionMessage={instantBuild.connectionMessage} onRetry={() => { const request = lastBuildRequestRef.current; void runInstantDraftPackage(request.force, request.refinement, request.refinementSource); }} onHome={onHome} />;
   }
 
   if (serverProject && packageReady) {
-    return <FinalDelivery opportunity={effectiveOpportunity} price={price} brandChoice={brandChoice} serverProject={serverProject} onHome={onHome} onRefine={(input) => runInstantDraftPackage(true, input)} />;
+    return <FinalDelivery opportunity={effectiveOpportunity} price={price} brandChoice={brandChoice} serverProject={serverProject} onHome={onHome} onRefine={(input, source) => runInstantDraftPackage(true, input, source)} onProjectUpdated={setServerProject} />;
   }
 
   if (delivered) {
-    return <FinalDelivery opportunity={opportunity} price={price} brandChoice={brandChoice} serverProject={serverProject} onHome={onHome} />;
+    return <FinalDelivery opportunity={opportunity} price={price} brandChoice={brandChoice} serverProject={serverProject} onHome={onHome} onProjectUpdated={setServerProject} />;
   }
 
   return (
     <main className="project-page">
       <aside className="project-sidebar">
         <Logo onClick={onHome} />
-        <div className="payment-complete"><CheckCircle2 /><span><small>{betaAccess ? "이용 상태 · 베타 테스트" : `결제 상태 · ${serverProject?.paymentStatus === "test_paid" ? "개발 테스트" : "토스 승인"}`}</small><strong>{betaAccess ? "결제 없이 모든 기능 이용 중" : `${(serverProject?.packagePrice ?? 990000).toLocaleString("ko-KR")}원 결제 완료`}</strong></span></div>
+        <div className="payment-complete"><CheckCircle2 /><span><small>{betaAccess ? "이용 상태 · 베타 테스트" : `결제 상태 · ${serverProject?.paymentStatus === "test_paid" ? "개발 테스트" : "계좌입금 확인"}`}</small><strong>{betaAccess ? "결제 없이 모든 기능 이용 중" : `${(serverProject?.packagePrice ?? PACKAGE_AMOUNT).toLocaleString("ko-KR")}원 입금 확인 완료`}</strong></span></div>
         <nav>
           {launchStages.map((stage, index) => <button key={stage.name} className={`${index === activeStage ? "active" : ""} ${index < activeStage ? "done" : ""}`} onClick={() => index <= activeStage && setActiveStage(index)}><span>{index < activeStage ? <Check /> : index + 1}</span><div><strong>{stage.name}</strong><small>{stage.period}</small></div></button>)}
         </nav>
@@ -2796,7 +4229,7 @@ function ProjectWorkspace({
           <i><b style={{ width: `${((activeStage + 1) / launchStages.length) * 100}%` }} /></i>
         </nav>
         <div className="project-overview">
-          <div><span className="project-status">진행 중 · {current.period}</span><p>21일 창업 실행 과정</p><h1>{opportunity.title}</h1><div><span><CalendarDays /> 목표 공개일 7월 31일</span><span><BriefcaseBusiness /> {opportunity.model}</span></div></div>
+          <div><span className="project-status">진행 중 · {current.period}</span><p>{PACKAGE_NAME}</p><h1>{opportunity.title}</h1><div><span><CalendarDays /> 목표 공개일 7월 31일</span><span><BriefcaseBusiness /> {opportunity.model}</span></div></div>
           <div className="project-progress"><strong>{progress}<small>%</small></strong><span>전체 진행률</span><i><b style={{ width: `${progress}%` }} /></i></div>
         </div>
         <div className="stage-layout">
@@ -2884,14 +4317,23 @@ export default function Page() {
   const [selectedProject, setSelectedProject] = useState<RankedOpportunity | null>(null);
   const [serverProject, setServerProject] = useState<ProjectRecord | null>(null);
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const [sampleReturnScreen, setSampleReturnScreen] = useState<SampleReturnScreen>("home");
+  const [sampleView, setSampleView] = useState<SampleView>("summary");
   const mounted = useRef(false);
 
-  const navigate = useCallback((next: Screen, options?: { replace?: boolean; projectId?: string }) => {
+  const navigate = useCallback((next: Screen, options?: { replace?: boolean; projectId?: string; sampleReturn?: SampleReturnScreen; sampleView?: SampleView }) => {
     const url = new URL(window.location.href);
     if (next === "home") url.searchParams.delete("view");
     else url.searchParams.set("view", next);
     if (next === "project" && options?.projectId) url.searchParams.set("project", options.projectId);
     else if (next !== "project") url.searchParams.delete("project");
+    if (next === "sample") {
+      url.searchParams.set("returnTo", options?.sampleReturn ?? "home");
+      url.searchParams.set("sampleView", options?.sampleView ?? "summary");
+    } else {
+      url.searchParams.delete("returnTo");
+      url.searchParams.delete("sampleView");
+    }
     const method = options?.replace ? "replaceState" : "pushState";
     window.history[method]({ screen: next }, "", `${url.pathname}${url.search}${url.hash}`);
     setScreen(next);
@@ -2907,6 +4349,17 @@ export default function Page() {
         if (parsed.feedback) setFeedback(parsed.feedback);
         if (isPlanningConstraints(parsed.planningConstraints)) setPlanningConstraints(parsed.planningConstraints);
       }
+      const selected = window.localStorage.getItem("venture-selected-opportunity");
+      if (selected) setSelectedProject(normalizeGeneratedOpportunity(JSON.parse(selected) as RankedOpportunity));
+      const currentUrl = new URL(window.location.href);
+      const linkedSampleReturn = currentUrl.searchParams.get("returnTo");
+      const savedSampleReturn = window.localStorage.getItem("venture-sample-return");
+      const resolvedSampleReturn = linkedSampleReturn ?? savedSampleReturn;
+      if (resolvedSampleReturn === "preview" || resolvedSampleReturn === "checkout") setSampleReturnScreen(resolvedSampleReturn);
+      const linkedSampleView = currentUrl.searchParams.get("sampleView");
+      const savedSampleView = window.localStorage.getItem("venture-sample-view");
+      const resolvedSampleView = linkedSampleView ?? savedSampleView;
+      if (resolvedSampleView === "presentation" || resolvedSampleView === "landing") setSampleView(resolvedSampleView);
     } catch {
       // A broken local draft should never block the assessment.
     } finally {
@@ -2949,13 +4402,18 @@ export default function Page() {
   }, [screen]);
 
   useEffect(() => {
+    if (!draftLoaded || selectedProject || (screen !== "preview" && screen !== "checkout")) return;
+    navigate("explore", { replace: true });
+  }, [draftLoaded, navigate, screen, selectedProject]);
+
+  useEffect(() => {
     const currentUrl = new URL(window.location.href);
     const requestedView = currentUrl.searchParams.get("view");
     if (requestedView !== "project") return;
     const linkedProjectId = currentUrl.searchParams.get("project");
     const projectId = linkedProjectId ?? window.localStorage.getItem("venture-project-id");
     if (!projectId) return;
-    void fetch(`/api/projects/${projectId}`, { cache: "no-store" })
+    void fetchWithTransientRetry(`/api/projects/${projectId}`, { cache: "no-store" })
       .then(async (response) => {
         if (!response.ok) throw new Error("저장된 프로젝트를 불러오지 못했습니다.");
         return response.json();
@@ -3004,7 +4462,9 @@ export default function Page() {
     setAnswers({});
     setFeedback({});
     setPlanningConstraints(null);
+    setSelectedProject(null);
     window.localStorage.removeItem("venture-conversation-draft");
+    window.localStorage.removeItem("venture-selected-opportunity");
     navigate("start");
   };
   const openPaidProject = async (project: ProjectRecord) => {
@@ -3014,17 +4474,30 @@ export default function Page() {
   };
   const startOpportunity = async (
     opportunity: RankedOpportunity,
-    constraintOverride?: PlanningConstraints | null,
   ) => {
-    const activeConstraints = constraintOverride ?? planningConstraints;
-    setSelectedProject(opportunity);
+    const normalized = normalizeGeneratedOpportunity(opportunity);
+    setSelectedProject(normalized);
+    window.localStorage.setItem("venture-selected-opportunity", JSON.stringify(normalized));
+    navigate("preview");
+  };
+
+  const unlockSelectedProject = async () => {
+    if (!selectedProject) throw new Error("미리볼 사업을 다시 선택해주세요.");
+    const readinessResponse = await fetch("/api/platform/readiness", { cache: "no-store" });
+    if (readinessResponse.ok) {
+      const readinessPayload = await readinessResponse.json() as { paymentsRequired?: boolean };
+      if (readinessPayload.paymentsRequired === true) {
+        navigate("checkout");
+        return;
+      }
+    }
     const response = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        opportunity,
-        founderProfile: createFounderProfilePayload(profile, activeConstraints),
-        initialStageInputs: activeConstraints ? createInitialStageInputs(opportunity, activeConstraints) : undefined,
+        opportunity: selectedProject,
+        founderProfile: createFounderProfilePayload(profile, planningConstraints),
+        initialStageInputs: planningConstraints ? createInitialStageInputs(selectedProject, planningConstraints) : undefined,
       }),
     });
     const payload = await response.json();
@@ -3041,32 +4514,56 @@ export default function Page() {
     await openPaidProject(payload.project);
   };
 
-  const startDirectPlanning = async (input: DirectPlanInput) => {
-    const opportunity = createDirectOpportunity(input);
+  const completeDirectPlanning = async (input: DirectPlanInput, result: DirectPlanResult) => {
+    const opportunity = result.opportunity;
     const constraints: PlanningConstraints = {
       budgetWon: input.budgetWon,
       availableHoursPerWeek: input.availableHoursPerWeek,
-      notes: `사용자가 직접 입력한 사업 아이디어: ${input.idea}`,
+      notes: [
+        `사용자가 직접 입력한 사업 아이디어: ${input.idea}`,
+        `AI가 구체화한 첫 고객: ${opportunity.customer}`,
+        `AI가 구체화한 첫 상품: ${result.draft.offerName} - ${result.draft.offerDescription}`,
+        `AI가 정한 첫 제작 범위: ${result.draft.firstScope}`,
+        result.draft.priceHypothesisWon ? `AI가 제안한 첫 가격 가정: ${result.draft.priceHypothesisWon.toLocaleString("ko-KR")}원` : "",
+      ].join("\n"),
       source: "direct",
       idea: input.idea,
+      directDraft: result.draft,
+      draftGeneration: result.generation,
     };
     setAnswers({});
     setFeedback({});
     setPlanningConstraints(constraints);
-    await startOpportunity(opportunity, constraints);
+    await startOpportunity(opportunity);
+  };
+
+  const openSample = (returnTo: SampleReturnScreen, view: SampleView = "summary") => {
+    setSampleReturnScreen(returnTo);
+    setSampleView(view);
+    window.localStorage.setItem("venture-sample-return", returnTo);
+    window.localStorage.setItem("venture-sample-view", view);
+    navigate("sample", { sampleReturn: returnTo, sampleView: view });
+  };
+
+  const returnFromSample = () => {
+    const target = sampleReturnScreen === "home" || selectedProject ? sampleReturnScreen : "home";
+    window.localStorage.removeItem("venture-sample-return");
+    window.localStorage.removeItem("venture-sample-view");
+    navigate(target);
   };
 
   if (screen === "start") {
     const conversationInProgress = readConversationDraft().responses.some((response) => response.trim().length > 0);
     return <StartChoice questionnaireProgress={Object.keys(answers).length} conversationInProgress={conversationInProgress} onDirect={() => navigate("direct")} onQuestionnaire={startQuestionnaire} onConversation={() => navigate("conversation")} onBack={() => navigate("home")} />;
   }
-  if (screen === "direct") return <DirectPlanning onBack={() => navigate("start")} onStart={startDirectPlanning} />;
+  if (screen === "direct") return <DirectPlanning onBack={() => navigate("start")} onComplete={completeDirectPlanning} />;
   if (screen === "assessment") return <Assessment answers={answers} setAnswers={setAnswers} onExit={() => navigate("start")} onComplete={complete} />;
   if (screen === "conversation") return <ConversationDiscovery onBack={() => navigate("start")} onComplete={completeConversation} />;
   if (screen === "profile") return <ProfileResult profile={profile} onExplore={() => navigate("explore")} onRestart={restartDiscovery} />;
-  if (screen === "checkout" && selectedProject) return <Checkout opportunity={selectedProject} founderProfile={profile} onBack={() => navigate("explore")} onSuccess={openPaidProject} />;
+  if (screen === "preview" && selectedProject) return <PurchasePreview opportunity={selectedProject} constraints={planningConstraints} onBack={() => navigate("explore")} onUnlock={unlockSelectedProject} onSample={(view) => openSample("preview", view)} />;
+  if (screen === "checkout" && selectedProject) return <Checkout opportunity={selectedProject} founderProfile={createFounderProfilePayload(profile, planningConstraints)} onBack={() => navigate("preview")} onSample={() => openSample("checkout", "summary")} />;
   if (screen === "project" && selectedProject) return <ProjectWorkspace opportunity={selectedProject} serverProject={serverProject} setServerProject={setServerProject} onHome={() => navigate("home")} />;
-  if (screen === "sample" || screen === "delivery") return <FinalDelivery opportunity={paidReportDemoOpportunity} price={49000} brandChoice="곁봄" serverProject={null} demo onHome={() => navigate("home")} onStart={() => navigate("start")} />;
-  if (screen === "explore") return <Explore profile={profile} setProfile={setProfile} feedback={feedback} setFeedback={setFeedback} onHome={() => navigate("home")} onStartOpportunity={startOpportunity} />;
-  return <Home onStart={() => navigate("start")} onPreview={() => navigate("sample")} />;
+  if (screen === "sample" || screen === "delivery") return <FinalDelivery opportunity={paidReportDemoOpportunity} price={49000} brandChoice="곁봄" serverProject={null} demo onHome={returnFromSample} onStart={sampleReturnScreen === "home" ? () => navigate("start") : returnFromSample} sampleActionLabel={sampleReturnScreen === "checkout" ? "결제 화면으로 돌아가기" : sampleReturnScreen === "preview" ? "내 초안으로 돌아가기" : undefined} sampleView={sampleView} onCloseSample={sampleReturnScreen === "home" ? undefined : returnFromSample} />;
+  if (screen === "explore") return <Explore profile={profile} feedback={feedback} setFeedback={setFeedback} onHome={() => navigate("home")} onStartOpportunity={startOpportunity} />;
+  return <Home onStart={() => navigate("start")} onPreview={() => openSample("home", "summary")} />;
 }

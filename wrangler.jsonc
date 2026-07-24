@@ -1,9 +1,27 @@
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "today-startup",
-  "main": ".open-next/worker.js",
+  "main": "cloudflare-worker.ts",
   "workers_dev": true,
   "preview_urls": true,
+  "routes": [
+    {
+      "pattern": "oneulstart.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.oneulstart.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "connect.oneulstart.com",
+      "custom_domain": true
+    },
+    {
+      "pattern": "*/*",
+      "zone_name": "oneulstart.com"
+    }
+  ],
   "compatibility_date": "2026-07-14",
   "compatibility_flags": [
     "nodejs_compat",
@@ -13,7 +31,20 @@
     "region": "aws:us-east-1"
   },
   "vars": {
-    "OPENAI_MODEL": "gpt-5.6-sol"
+    "OPENAI_MODEL": "gpt-5.6-sol",
+    "PAYMENTS_ENABLED": "true",
+    "PLATFORM_OPERATOR_NAME": "제이피미디어",
+    "PLATFORM_REPRESENTATIVE_NAME": "김홍",
+    "PLATFORM_BUSINESS_NUMBER": "186-17-01752",
+    "PLATFORM_MAIL_ORDER_STATUS": "preparing",
+    "PLATFORM_INTERNET_DOMAIN": "oneulstart.com",
+    "PLATFORM_HOST_SERVER_LOCATION": "Cloudflare 글로벌 네트워크",
+    "PLATFORM_BUSINESS_ADDRESS": "서울특별시 마포구 독막로6길9",
+    "MANUAL_TRANSFER_BANK_NAME": "카카오뱅크",
+    "MANUAL_TRANSFER_ACCOUNT_NUMBER": "3333-01-4982733",
+    "MANUAL_TRANSFER_ACCOUNT_HOLDER": "김주홍",
+    "CLOUDFLARE_ZONE_ID": "b8bca144e4ce0ddd7ba6a375271d5c39",
+    "CLOUDFLARE_SAAS_CNAME_TARGET": "connect.oneulstart.com"
   },
   "assets": {
     "directory": ".open-next/assets",
@@ -23,6 +54,18 @@
     {
       "binding": "WORKER_SELF_REFERENCE",
       "service": "today-startup"
+    }
+  ],
+  "workflows": [
+    {
+      "name": "today-startup-draft-package",
+      "binding": "DRAFT_PACKAGE_WORKFLOW",
+      "class_name": "DraftPackageWorkflow"
+    },
+    {
+      "name": "today-startup-direct-plan",
+      "binding": "DIRECT_PLAN_WORKFLOW",
+      "class_name": "DirectPlanWorkflow"
     }
   ],
   "observability": {

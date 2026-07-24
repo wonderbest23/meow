@@ -2,12 +2,20 @@ import assert from "node:assert/strict";
 import {
   applyLandingTemplate,
   createLandingDraft,
+  ensureLandingPageData,
   inferLandingTemplate,
   landingDraftSchema,
   landingEventSchema,
   landingLeadSchema,
   landingPublicationIssues,
+  landingTemplateOptions,
 } from "../lib/landing/domain";
+import { normalizeLandingHostname } from "../lib/landing/custom-domain";
+import {
+  createLandingPageData,
+  landingPageDataSchema,
+  syncLandingPageData,
+} from "../lib/landing/page-data";
 
 const draft = createLandingDraft({
   title: "초보 창업 테스트",
@@ -30,8 +38,32 @@ assert.equal(landingPublicationIssues({ ...publishable, privacyContact: "privacy
 assert.equal(inferLandingTemplate("온라인 교육"), "class");
 assert.equal(inferLandingTemplate("동네 미용실"), "local");
 assert.equal(inferLandingTemplate("화장품 제조 판매"), "product");
+assert.equal(inferLandingTemplate("인공지능 구독 플랫폼"), "tech");
+assert.equal(inferLandingTemplate("작가 포트폴리오"), "creator");
+assert.equal(landingTemplateOptions.length, 8);
 assert.equal(applyLandingTemplate(publishable, "product").templateId, "product");
 assert.ok(applyLandingTemplate(publishable, "product").heroImageUrl.includes("images.unsplash.com"));
+assert.ok(publishable.pageData);
+
+const templateLayouts = landingTemplateOptions.map((template) => (
+  createLandingPageData(publishable, template.id).content.map((component) => component.type).join(",")
+));
+assert.equal(new Set(templateLayouts).size, landingTemplateOptions.length);
+
+const upgradedLegacyDraft = ensureLandingPageData({ ...publishable, pageData: null });
+assert.equal(upgradedLegacyDraft.pageData.content[0]?.type, "HeroSection");
+
+const updatedPageData = syncLandingPageData(
+  upgradedLegacyDraft.pageData,
+  { ...publishable, headline: "바뀐 첫 화면 제목입니다" },
+  ["headline"],
+);
+assert.equal(updatedPageData.content[0]?.props.title, "바뀐 첫 화면 제목입니다");
+
+assert.equal(landingPageDataSchema.safeParse({
+  root: { props: {} },
+  content: [{ type: "RawHtml", props: { html: "<script>alert(1)</script>" } }],
+}).success, false);
 
 const brochure = {
   ...publishable,
@@ -117,8 +149,12 @@ assert.equal(landingEventSchema.safeParse({
   analyticsConsent: true,
 }).success, false);
 
+assert.equal(normalizeLandingHostname("https://WWW.MyBrand.com/path"), "www.mybrand.com");
+assert.throws(() => normalizeLandingHostname("mybrand.com"), /CUSTOM_DOMAIN_WWW_REQUIRED/);
+assert.throws(() => normalizeLandingHostname("www.oneulstart.com"), /CUSTOM_DOMAIN_INVALID/);
+
 console.log(JSON.stringify({
-  passed: 19,
+  passed: 30,
   sample: {
     slug: draft.slug,
     contact: draft.collectEmail ? "email" : "phone",

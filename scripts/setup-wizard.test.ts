@@ -9,6 +9,7 @@ import {
 import { assessBusinessSetup } from "../lib/business/korea-rules";
 
 const digital = emptyBusinessSetup("digital_service");
+assert.equal(digital.region, "지역 미정");
 const digitalQuestions = setupQuestionIds(digital);
 assert.equal(digitalQuestions.includes("deposit"), false);
 assert.equal(digitalQuestions.includes("interior"), false);
@@ -20,8 +21,10 @@ const soho = withSetupValue(digital, "workplaceType", "soho");
 assert.equal(setupQuestionIds(soho).includes("rent"), true);
 assert.equal(setupQuestionIds(soho).includes("interior"), false);
 
-const unknown = markSetupFieldUnknown(digital, "software", true);
-assert.deepEqual(unknown.unknownFields, ["software"]);
+const known = markSetupFieldUnknown(digital, "software", false);
+assert.equal(known.unknownFields.includes("software"), false);
+const unknown = markSetupFieldUnknown(known, "software", true);
+assert.equal(unknown.unknownFields.includes("software"), true);
 
 const legacy = emptyBusinessSetup("digital_service");
 legacy.financial.initial.equipment = 1_000_000;

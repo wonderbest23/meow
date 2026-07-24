@@ -8,19 +8,30 @@ import {
   Image as ImageIcon,
   Maximize2,
   MessageCircle,
+  PanelsTopLeft,
   RefreshCw,
   Rocket,
   Save,
   ShieldCheck,
   Store,
 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { useState } from "react";
 import {
   applyLandingTemplate,
   landingTemplateOptions,
   type LandingDraft,
 } from "../lib/landing/domain";
+import { CUSTOM_HOMEPAGE_FROM_AMOUNT } from "../lib/payments/domain";
+import type { LandingSiteRecord } from "../lib/landing/domain";
+import { createLandingPageData, syncLandingPageData } from "../lib/landing/page-data";
+import { LandingDomainConnector } from "./landing-domain-connector";
 import { LandingMediaField } from "./landing-media-field";
+
+const LandingVisualBuilder = dynamic(
+  () => import("./landing-visual-builder").then((module) => module.LandingVisualBuilder),
+  { ssr: false },
+);
 
 type EditorStep = "design" | "content" | "business";
 type EditorAction = "idle" | "saving" | "saved" | "publishing";
@@ -31,34 +42,50 @@ export function LandingQuickEditor({
   message,
   published,
   publicPath,
+  projectId,
+  customDomain,
   demo,
   onChange,
   onReset,
   onSave,
   onPublish,
   onPreview,
+  onSiteUpdated,
 }: {
   draft: LandingDraft;
   action: EditorAction;
   message: string;
   published: boolean;
   publicPath: string;
+  projectId: string | null;
+  customDomain: string;
   demo: boolean;
   onChange: (draft: LandingDraft) => void;
   onReset: () => void;
   onSave: () => void;
   onPublish: () => void;
   onPreview: () => void;
+  onSiteUpdated: (site: LandingSiteRecord) => void;
 }) {
   const [step, setStep] = useState<EditorStep>("design");
+  const [builderOpen, setBuilderOpen] = useState(false);
   const busy = action === "saving" || action === "publishing";
-  const update = (patch: Partial<LandingDraft>) => onChange({ ...draft, ...patch });
+  const update = (patch: Partial<LandingDraft>) => {
+    const next = { ...draft, ...patch };
+    const pageData = patch.pageData ?? syncLandingPageData(
+      draft.pageData ?? createLandingPageData(draft, draft.templateId),
+      next,
+      Object.keys(patch),
+    );
+    onChange({ ...next, pageData });
+  };
   const requestExpertBuild = () => {
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
       detail: {
         message: [
           "[전문 홈페이지 제작 상담]",
           `사업명: ${draft.businessName || "아직 정하지 않음"}`,
+          `기본 제작비: ${CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터`,
           "현재 자동 제작된 홈페이지를 바탕으로 전문 디자인과 추가 기능 제작 상담을 받고 싶습니다.",
           "원하는 내용: ",
         ].join("\n"),
@@ -71,7 +98,7 @@ export function LandingQuickEditor({
       <header className="landing-quick-heading">
         <div className="report-title-row"><Globe2 /><div><small>홈페이지 제작비 포함</small><h3>내 사업 홈페이지</h3></div></div>
         <div className="landing-report-actions">
-          <button title="추천 설정으로 되돌리기" aria-label="추천 설정으로 되돌리기" onClick={onReset}><RefreshCw /></button>
+          <button title="추천 설정으로 되돌리기" aria-label="추천 설정으로 되돌리기" onClick={onReset}>처음 설정</button>
           <button className="landing-fullscreen-trigger" onClick={onPreview}><Maximize2 /> 전체화면</button>
           <button className="preview-primary landing-publish-primary" disabled={busy} onClick={onPublish}><Rocket /> {action === "publishing" ? "공개 중" : published ? "수정하고 공개" : "저장하고 공개"}</button>
         </div>
@@ -104,6 +131,11 @@ export function LandingQuickEditor({
               </button>
             ))}
           </div>
+          <section className="landing-advanced-edit-callout">
+            <span><PanelsTopLeft /></span>
+            <div><small>더 자유롭게 만들기</small><strong>섹션을 직접 추가하고 순서를 바꾸세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있습니다.</p></div>
+            <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
+          </section>
           <div className="landing-media-grid">
             <LandingMediaField label="대표 이미지" description="첫 화면을 채우는 사진입니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => update({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} />
             <LandingMediaField label="로고" description="없으면 사업 이름으로 깔끔하게 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => update({ logoImageUrl })} />
@@ -148,10 +180,13 @@ export function LandingQuickEditor({
             {draft.pageMode === "transaction" && <label className="wide"><span>이용약관 주소</span><input type="url" value={draft.termsUrl} onChange={(event) => update({ termsUrl: event.target.value })} placeholder="https://로 시작하는 약관 주소" /></label>}
             <label className="wide"><span>무료 주소 끝부분</span><div className="slug-input"><em>/launch/</em><input value={draft.slug} onChange={(event) => update({ slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} /></div></label>
           </div>
-          <section className="landing-domain-shop">
-            <div><Globe2 /><span><strong>나만의 도메인은 별도 구매</strong><p>원하는 `.com`·`.kr` 주소를 구매한 뒤 연결을 요청하세요. 홈페이지 제작·운영 주소는 이미 포함되어 있습니다.</p></span></div>
-            <nav><a href="https://domain.gabia.com/" target="_blank" rel="noreferrer">가비아에서 검색 <ExternalLink /></a><a href="https://www.hosting.kr/domain" target="_blank" rel="noreferrer">호스팅케이알에서 검색 <ExternalLink /></a><a href="https://www.cafe24.com/?controller=product_domain" target="_blank" rel="noreferrer">카페24에서 검색 <ExternalLink /></a></nav>
-          </section>
+          <LandingDomainConnector
+            projectId={projectId}
+            initialCustomDomain={customDomain}
+            published={published}
+            demo={demo}
+            onSiteUpdated={onSiteUpdated}
+          />
         </div>
       )}
 
@@ -163,9 +198,21 @@ export function LandingQuickEditor({
 
       <section className="landing-expert-build">
         <span><Headphones /></span>
-        <div><small>선택 제작 서비스</small><strong>전문업체를 통해 사이트 제작하기</strong><p>자동 제작본보다 세밀한 디자인이나 예약·결제 같은 추가 기능이 필요하면 상담 후 범위와 비용을 먼저 안내합니다.</p></div>
+        <div><small>선택 제작 서비스 · {CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터</small><strong>맞춤 홈페이지 제작 요청</strong><p>자동 제작본보다 세밀한 디자인이나 예약·결제 같은 추가 기능이 필요하면 상담 후 범위와 비용을 먼저 안내합니다.</p></div>
         <button type="button" onClick={requestExpertBuild}>1:1 제작 상담 <MessageCircle /></button>
       </section>
+
+      {builderOpen && (
+        <LandingVisualBuilder
+          data={draft.pageData ?? createLandingPageData(draft, draft.templateId)}
+          businessName={draft.businessName}
+          onClose={() => setBuilderOpen(false)}
+          onSave={(pageData) => {
+            update({ pageData });
+            setBuilderOpen(false);
+          }}
+        />
+      )}
     </section>
   );
 }

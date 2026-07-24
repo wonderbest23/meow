@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   BarChart3,
   Check,
@@ -10,6 +11,7 @@ import {
   Globe2,
   LoaderCircle,
   MonitorSmartphone,
+  PanelsTopLeft,
   RefreshCcw,
   Rocket,
   Save,
@@ -23,7 +25,14 @@ import {
   type LandingSiteRecord,
 } from "../lib/landing/domain";
 import type { ProjectRecord } from "../lib/service-domain";
+import { createLandingPageData, syncLandingPageData } from "../lib/landing/page-data";
+import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingMediaField } from "./landing-media-field";
+
+const LandingVisualBuilder = dynamic(
+  () => import("./landing-visual-builder").then((module) => module.LandingVisualBuilder),
+  { ssr: false },
+);
 
 type Action = "idle" | "loading" | "saving" | "publishing" | "rolling-back";
 
@@ -34,12 +43,26 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
   const [action, setAction] = useState<Action>("loading");
   const [message, setMessage] = useState("");
   const [mode, setMode] = useState<"edit" | "preview" | "leads" | "versions">("edit");
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const publicPath = site?.status === "published" ? `/launch/${site.slug}` : null;
   const publicUrl = useMemo(() => {
     if (!publicPath || typeof window === "undefined") return publicPath;
     return `${window.location.origin}${publicPath}`;
   }, [publicPath]);
+
+  const updateDraft = (patch: Partial<LandingDraft>) => {
+    if (!draft) return;
+    const next = { ...draft, ...patch };
+    setDraft({
+      ...next,
+      pageData: patch.pageData ?? syncLandingPageData(
+        draft.pageData ?? createLandingPageData(draft, draft.templateId),
+        next,
+        Object.keys(patch),
+      ),
+    });
+  };
 
   const load = async () => {
     setAction("loading");
@@ -147,7 +170,6 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
 
       <nav className="landing-builder-tabs">
         <button className={mode === "edit" ? "active" : ""} onClick={() => setMode("edit")}><MonitorSmartphone /> 내용 편집</button>
-        <button className={mode === "preview" ? "active" : ""} onClick={() => setMode("preview")}><Globe2 /> 미리보기</button>
         <button className={mode === "leads" ? "active" : ""} onClick={() => { setMode("leads"); void load(); }}><Check /> 신청 목록</button>
         <button className={mode === "versions" ? "active" : ""} onClick={() => setMode("versions")}><Clock3 /> 발행 기록</button>
       </nav>
@@ -159,30 +181,35 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
           <section className="landing-edit-section landing-template-section">
             <div className="landing-section-title"><span>01</span><div><strong>업종별 디자인과 이미지</strong><p>마음에 드는 틀 하나를 고른 뒤 내 사진과 로고로 바꾸세요.</p></div></div>
             <div className="landing-template-grid">{landingTemplateOptions.map((template) => <button key={template.id} className={draft.templateId === template.id ? "active" : ""} onClick={() => setDraft(applyLandingTemplate(draft, template.id))}><span style={{ backgroundImage: `url(${template.heroImageUrl})` }}><i style={{ background: template.accentColor }} /></span><b>{template.name}</b><small>{template.description}</small>{draft.templateId === template.id && <em><Check /> 선택됨</em>}</button>)}</div>
-            <div className="landing-media-grid"><LandingMediaField label="대표 이미지" description="첫 화면에 크게 표시됩니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => setDraft({ ...draft, heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} /><LandingMediaField label="로고" description="없으면 사업 이름으로 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => setDraft({ ...draft, logoImageUrl })} /></div>
+            <section className="landing-advanced-edit-callout">
+              <span><PanelsTopLeft /></span>
+              <div><small>자유 편집</small><strong>필요한 섹션만 골라 직접 구성하세요</strong><p>첫 화면, 장점, 사진, 이용 과정과 상품 섹션을 추가하고 끌어서 순서를 바꿀 수 있습니다.</p></div>
+              <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
+            </section>
+            <div className="landing-media-grid"><LandingMediaField label="대표 이미지" description="첫 화면에 크게 표시됩니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => updateDraft({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} /><LandingMediaField label="로고" description="없으면 사업 이름으로 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => updateDraft({ logoImageUrl })} /></div>
           </section>
 
           <section className="landing-edit-section">
             <div className="landing-section-title"><span>02</span><div><strong>공개 주소와 첫 화면</strong><p>방문자가 5초 안에 누구를 위한 무엇인지 이해해야 합니다.</p></div></div>
             <div className="landing-form-grid">
               <label><span>페이지 목적</span><select value={draft.pageMode} onChange={(event) => setDraft({ ...draft, pageMode: event.target.value as LandingDraft["pageMode"] })}><option value="lead_validation">상담·수요 검증</option><option value="transaction">결제·청약 판매</option></select></label>
-              <label><span>고객에게 보여줄 이름</span><input value={draft.businessName} onChange={(event) => setDraft({ ...draft, businessName: event.target.value })} placeholder="예: 이어봄" /></label>
+              <label><span>고객에게 보여줄 이름</span><input value={draft.businessName} onChange={(event) => updateDraft({ businessName: event.target.value })} placeholder="예: 이어봄" /></label>
               <label><span>공개 주소 끝부분</span><div className="slug-input"><em>/launch/</em><input value={draft.slug} onChange={(event) => setDraft({ ...draft, slug: event.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} placeholder="영문 소문자 예: ieobom" /></div><small>인터넷 주소에 들어가므로 영문 소문자와 숫자만 사용할 수 있습니다.</small></label>
-              <label className="wide"><span>첫 화면 핵심 문구</span><textarea value={draft.headline} onChange={(event) => setDraft({ ...draft, headline: event.target.value })} placeholder="누구의 어떤 문제를 어떻게 해결하는지 한 문장으로 적으세요." /></label>
-              <label className="wide"><span>핵심 문구 아래 설명</span><textarea value={draft.subheadline} onChange={(event) => setDraft({ ...draft, subheadline: event.target.value })} placeholder="제공 범위, 진행 기간, 고객이 받는 결과를 구체적으로 적으세요." /></label>
-              <label><span>신청 버튼</span><input value={draft.ctaLabel} onChange={(event) => setDraft({ ...draft, ctaLabel: event.target.value })} /></label>
+              <label className="wide"><span>첫 화면 핵심 문구</span><textarea value={draft.headline} onChange={(event) => updateDraft({ headline: event.target.value })} placeholder="누구의 어떤 문제를 어떻게 해결하는지 한 문장으로 적으세요." /></label>
+              <label className="wide"><span>핵심 문구 아래 설명</span><textarea value={draft.subheadline} onChange={(event) => updateDraft({ subheadline: event.target.value })} placeholder="제공 범위, 진행 기간, 고객이 받는 결과를 구체적으로 적으세요." /></label>
+              <label><span>신청 버튼</span><input value={draft.ctaLabel} onChange={(event) => updateDraft({ ctaLabel: event.target.value })} /></label>
               <label><span>대표 색상</span><div className="color-input"><input type="color" value={draft.accentColor} onChange={(event) => setDraft({ ...draft, accentColor: event.target.value })} /><input value={draft.accentColor} onChange={(event) => setDraft({ ...draft, accentColor: event.target.value })} /></div></label>
               <label><span>배경 스타일</span><select value={draft.backgroundTone} onChange={(event) => setDraft({ ...draft, backgroundTone: event.target.value as LandingDraft["backgroundTone"] })}><option value="cream">따뜻한 크림</option><option value="white">선명한 화이트</option><option value="dark">집중형 다크</option></select></label>
-              <label><span>가격 표시</span><input value={draft.priceLabel} onChange={(event) => setDraft({ ...draft, priceLabel: event.target.value })} /></label>
+              <label><span>가격 표시</span><input value={draft.priceLabel} onChange={(event) => updateDraft({ priceLabel: event.target.value })} /></label>
             </div>
           </section>
 
           <section className="landing-edit-section">
             <div className="landing-section-title"><span>03</span><div><strong>고객이 받는 가치</strong><p>확인되지 않은 성과를 약속하지 말고 실제 제공 내용을 적습니다.</p></div></div>
-            <div className="landing-benefit-editor">{draft.benefits.map((benefit, index) => <article key={index}><span>{index + 1}</span><input value={benefit.title} onChange={(event) => setDraft({ ...draft, benefits: draft.benefits.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item) })} /><textarea value={benefit.description} onChange={(event) => setDraft({ ...draft, benefits: draft.benefits.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item) })} /></article>)}</div>
+            <div className="landing-benefit-editor">{draft.benefits.map((benefit, index) => <article key={index}><span>{index + 1}</span><input value={benefit.title} onChange={(event) => updateDraft({ benefits: draft.benefits.map((item, itemIndex) => itemIndex === index ? { ...item, title: event.target.value } : item) })} /><textarea value={benefit.description} onChange={(event) => updateDraft({ benefits: draft.benefits.map((item, itemIndex) => itemIndex === index ? { ...item, description: event.target.value } : item) })} /></article>)}</div>
             <div className="landing-form-grid">
-              <label><span>제안 제목</span><input value={draft.offerTitle} onChange={(event) => setDraft({ ...draft, offerTitle: event.target.value })} /></label>
-              <label className="wide"><span>제안 설명</span><textarea value={draft.offerDescription} onChange={(event) => setDraft({ ...draft, offerDescription: event.target.value })} /></label>
+              <label><span>제안 제목</span><input value={draft.offerTitle} onChange={(event) => updateDraft({ offerTitle: event.target.value })} /></label>
+              <label className="wide"><span>제안 설명</span><textarea value={draft.offerDescription} onChange={(event) => updateDraft({ offerDescription: event.target.value })} /></label>
             </div>
           </section>
 
@@ -225,10 +252,7 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
       {mode === "preview" && (
         <div className="landing-preview-wrap">
           <div className={`landing-mini-preview tone-${draft.backgroundTone}`} style={{ "--preview-accent": draft.accentColor } as React.CSSProperties}>
-            <nav><strong>{draft.businessName}</strong><span>{draft.ctaLabel}</span></nav>
-            <div className="mini-hero"><section><small>{draft.heroLabel}</small><h2>{draft.headline}</h2><p>{draft.subheadline}</p><button>{draft.ctaLabel} <ChevronRight /></button></section><aside><small>첫 상품</small><strong>{draft.offerTitle}</strong><p>{draft.offerDescription}</p><em>{draft.priceLabel}</em></aside></div>
-            <div className="mini-benefits">{draft.benefits.map((item, index) => <article key={item.title}><span>0{index + 1}</span><strong>{item.title}</strong><p>{item.description}</p></article>)}</div>
-            <div className="mini-form"><strong>{draft.ctaLabel}</strong><p>이름과 연락처를 입력하고 개인정보 수집·이용에 동의합니다.</p><button>{draft.ctaLabel}</button></div>
+            <LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} />
           </div>
         </div>
       )}
@@ -253,6 +277,18 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
         <button className="save-landing" disabled={action !== "idle"} onClick={saveOnly}>{action === "saving" ? <LoaderCircle className="spin" /> : <Save />} 초안 저장</button>
         <button className="publish-landing" disabled={action !== "idle"} onClick={publish}>{action === "publishing" ? <LoaderCircle className="spin" /> : <Rocket />} {site?.status === "published" ? "새 버전 발행" : "지금 공개하기"}</button>
       </footer>
+
+      {builderOpen && (
+        <LandingVisualBuilder
+          data={draft.pageData ?? createLandingPageData(draft, draft.templateId)}
+          businessName={draft.businessName}
+          onClose={() => setBuilderOpen(false)}
+          onSave={(pageData) => {
+            updateDraft({ pageData });
+            setBuilderOpen(false);
+          }}
+        />
+      )}
     </section>
   );
 }

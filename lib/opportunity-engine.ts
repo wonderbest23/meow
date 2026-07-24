@@ -11,6 +11,11 @@ import {
 
 export type OpportunityFeedback = Record<string, "saved" | "excluded">;
 
+export type OpportunityPreferenceSignal = {
+  state: "saved" | "excluded";
+  opportunity: Pick<Opportunity, "id" | "sector" | "model" | "riasec" | "founder">;
+};
+
 export type RankedOpportunity = Opportunity & {
   match: number;
   reasons: string[];
@@ -32,10 +37,31 @@ function average(values: number[]) {
   return values.reduce((sum, value) => sum + value, 0) / Math.max(values.length, 1);
 }
 
+function preferenceAffinity(
+  opportunity: Opportunity,
+  signals: OpportunityPreferenceSignal[],
+) {
+  const adjustment = signals.reduce((sum, signal) => {
+    if (signal.opportunity.id === opportunity.id) return sum;
+    const founderOverlap = opportunity.founder.filter((axis) =>
+      signal.opportunity.founder.includes(axis),
+    ).length;
+    const riasecOverlap = opportunity.riasec.filter((axis) =>
+      signal.opportunity.riasec.includes(axis),
+    ).length;
+    const sectorMatch = opportunity.sector === signal.opportunity.sector ? 2 : 0;
+    const modelMatch = opportunity.model === signal.opportunity.model ? 2 : 0;
+    const similarity = founderOverlap * 2 + riasecOverlap + sectorMatch + modelMatch;
+    return sum + (signal.state === "saved" ? similarity : -similarity);
+  }, 0);
+  return Math.max(-12, Math.min(12, adjustment));
+}
+
 function rankOne(
   opportunity: Opportunity,
   profile: FounderProfile,
   feedback: OpportunityFeedback,
+  signals: OpportunityPreferenceSignal[],
 ): RankedOpportunity {
   const interestFit = average(opportunity.riasec.map((axis) => profile.riasec[axis]));
   const founderFit = average(opportunity.founder.map((axis) => profile.founder[axis]));
@@ -43,9 +69,15 @@ function rankOne(
   const capitalPenalty = opportunity.capital === "높음" ? 7 : opportunity.capital === "중간" ? 2 : 0;
   const regulationPenalty = opportunity.regulation * 0.05;
   const feedbackBoost = feedback[opportunity.id] === "saved" ? 4 : 0;
+  const affinityBoost = preferenceAffinity(opportunity, signals);
   const match = Math.max(
     0,
-    Math.min(100, Math.round(personalFit + feedbackBoost - capitalPenalty - regulationPenalty)),
+    Math.min(
+      100,
+      Math.round(
+        personalFit + feedbackBoost + affinityBoost - capitalPenalty - regulationPenalty,
+      ),
+    ),
   );
 
   const strongestRiasec = [...opportunity.riasec].sort(
@@ -107,6 +139,7 @@ export function rankOpportunities(
   filters: OpportunityFilters = {},
   seed = 1,
   preferences?: ManualPreferences,
+  preferenceSignals: OpportunityPreferenceSignal[] = [],
 ): RankedOpportunity[] {
   const ranked = generateOpportunityPool(seed, preferences)
     .filter((opportunity) => feedback[opportunity.id] !== "excluded")
@@ -117,8 +150,12 @@ export function rankOpportunities(
         filters.capital === "전체" ||
         opportunity.capital === filters.capital,
     )
-    .map((opportunity) => rankOne(opportunity, profile, feedback))
+    .map((opportunity) => rankOne(opportunity, profile, feedback, preferenceSignals))
     .sort((a, b) => b.match - a.match);
 
-  return diversify(ranked);
+  const diversified = diversify(ranked);
+  return [
+    ...diversified.filter((opportunity) => feedback[opportunity.id] === "saved"),
+    ...diversified.filter((opportunity) => feedback[opportunity.id] !== "saved"),
+  ];
 }

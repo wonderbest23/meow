@@ -77,6 +77,51 @@ export async function claimGuestProjects(userId: string, previousGuestHash: stri
   }
   const { error } = await supabase.from("projects").update({ guest_token_hash: userHash }).eq("owner_id", userId);
   if (error) throw error;
+
+  const preferenceFilters = [`owner_id.eq.${userId}`];
+  if (previousGuestHash && previousGuestHash !== userHash) {
+    preferenceFilters.push(`guest_token_hash.eq.${previousGuestHash}`);
+  }
+  const preferenceRows = await supabase
+    .from("opportunity_preferences")
+    .select("opportunity_key,preference,opportunity,created_at,updated_at")
+    .or(preferenceFilters.join(","))
+    .order("updated_at", { ascending: false });
+  if (preferenceRows.error) throw preferenceRows.error;
+
+  const latestByOpportunity = new Map<string, Record<string, unknown>>();
+  for (const row of preferenceRows.data ?? []) {
+    const key = row.opportunity_key as string;
+    if (!latestByOpportunity.has(key)) latestByOpportunity.set(key, row);
+  }
+  if (latestByOpportunity.size) {
+    const { error: upsertError } = await supabase.from("opportunity_preferences").upsert(
+      [...latestByOpportunity.values()].map((row) => ({
+        owner_id: userId,
+        guest_token_hash: userHash,
+        opportunity_key: row.opportunity_key,
+        preference: row.preference,
+        opportunity: row.opportunity,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+      })),
+      { onConflict: "guest_token_hash,opportunity_key" },
+    );
+    if (upsertError) throw upsertError;
+  }
+  if (previousGuestHash && previousGuestHash !== userHash) {
+    const { error: guestDeleteError } = await supabase
+      .from("opportunity_preferences")
+      .delete()
+      .eq("guest_token_hash", previousGuestHash);
+    if (guestDeleteError) throw guestDeleteError;
+  }
+  const { error: ownerCleanupError } = await supabase
+    .from("opportunity_preferences")
+    .delete()
+    .eq("owner_id", userId)
+    .neq("guest_token_hash", userHash);
+  if (ownerCleanupError) throw ownerCleanupError;
 }
 
 export async function attachProjectToUser(projectId: string, userId: string) {

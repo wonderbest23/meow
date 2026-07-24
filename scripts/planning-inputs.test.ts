@@ -17,10 +17,23 @@ const input = {
 };
 const opportunity = createDirectOpportunity(input);
 assert.equal(opportunity.oneLiner, input.idea);
-assert.equal(opportunity.title, input.idea.slice(0, -1));
+assert.equal(opportunity.title, "상품 사진과 소개 문구를 만들어주는 월 구독");
+assert.equal(opportunity.customer, "동네 소상공인");
+assert.equal(opportunity.model, "월 구독 제작");
+assert.equal(opportunity.revenue, "월 구독료 + 추가 제작비");
 assert.equal(opportunity.capital, "소액");
 assert.equal(opportunity.evidenceStatus, "hypothesis");
 assert.equal(opportunity.match, 100);
+
+const videoSubscription = createDirectOpportunity({
+  idea: "마포구 1인 자영업자를 위한 숏폼 홍보 영상 월 구독 제작 서비스",
+  budgetWon: 3_000_000,
+  availableHoursPerWeek: 20,
+});
+assert.equal(videoSubscription.title, "숏폼 홍보 영상 구독 제작");
+assert.equal(videoSubscription.customer, "마포구 1인 자영업자");
+assert.equal(videoSubscription.model, "월 구독 제작");
+assert.match(videoSubscription.firstTest, /샘플 영상 1편/);
 
 const constraints: PlanningConstraints = {
   budgetWon: input.budgetWon,

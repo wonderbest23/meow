@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import JSZip from "jszip";
 import { assessBusinessSetup } from "../lib/business/korea-rules";
 import { emptyBusinessSetup, type BusinessArchetype } from "../lib/business/domain";
 import { generateBusinessPlan } from "../lib/business-plan/generator";
 import { assembleDeliveryPackage } from "../lib/delivery/package-assembler";
+import { renderDocx, renderPdf } from "../lib/delivery/document-renderer";
 import { analyzeExecutionLoop, createExecutionWorkspace } from "../lib/execution-loop/engine";
 import { analyzeGrants, createGrantWorkspace, generateGrantPackage } from "../lib/grants/engine";
 import { analyzeLocations } from "../lib/market/location-engine";
@@ -321,16 +323,56 @@ async function main() {
   delete process.env.OPENAI_API_KEY;
   try {
     const reports = [];
+    let renderedSubmission: { pdfBytes: number; docxBytes: number; documents: number } | null = null;
     for (const scenario of scenarios) {
       const project = await completeProject(scenario);
       const pack = assembleDeliveryPackage(project);
       assert.equal(pack.items.length, 10, `${scenario.id}: 결과물 10종이 필요합니다.`);
       assert.ok(pack.items.every((item) => item.source !== "missing"), `${scenario.id}: 누락된 결과물이 있습니다.`);
       assert.ok(pack.items.every((item) => item.contentReady), `${scenario.id}: 문서별 납품 기준을 통과하지 못했습니다. ${pack.items.filter((item) => !item.contentReady).map((item) => `${item.title}(${item.qualityReason} · ${item.quality?.metrics.characters}자/${item.quality?.metrics.sections}항목/${item.quality?.metrics.tables}표)`).join(" / ")}`);
+      assert.ok(pack.items.every((item) => item.useStatus && item.useStatusLabel), `${scenario.id}: 결과물 사용 상태가 누락됐습니다.`);
+      assert.equal(pack.items.find((item) => item.id === "market")?.useStatus, "verify", `${scenario.id}: 원문 확인 전 시장 문서는 사실 확인 상태여야 합니다.`);
+      assert.ok(pack.factSummary.total >= 10 && pack.factSummary.calculated >= 5, `${scenario.id}: 공통 사실 장부가 충분하지 않습니다.`);
       assert.ok(pack.items.every((item) => item.markdown.includes("## 출처와 확인 상태")), `${scenario.id}: 출처 장부가 누락됐습니다.`);
       assert.ok(pack.items.every((item) => item.markdown.includes("검증할 가정")), `${scenario.id}: 사실 상태 설명이 누락됐습니다.`);
+      const planDocument = pack.items.find((item) => item.id === "plan");
+      const grantDocument = pack.items.find((item) => item.id === "grants");
+      assert.ok(planDocument?.markdown.includes("# 제출용 본문"), `${scenario.id}: 사업계획서 제출용 본문이 없습니다.`);
+      assert.ok(grantDocument?.markdown.includes("# 제출용 신청서 본문"), `${scenario.id}: 지원사업 신청서 제출용 본문이 없습니다.`);
+      assert.ok((grantDocument?.quality?.metrics.characters ?? 0) >= 4_800, `${scenario.id}: 지원사업 신청서 본문 분량이 부족합니다.`);
+      assert.ok((grantDocument?.quality?.metrics.tables ?? 0) >= 5, `${scenario.id}: 지원사업 신청서의 계산·비교표가 부족합니다.`);
+      assert.ok((planDocument?.markdown.indexOf("# 참고 부록") ?? -1) > (planDocument?.markdown.indexOf("# 제출용 본문") ?? 0), `${scenario.id}: 사업계획서 준비 안내가 제출 본문보다 먼저 나옵니다.`);
+      assert.ok((grantDocument?.markdown.indexOf("# 참고 부록") ?? -1) > (grantDocument?.markdown.indexOf("# 제출용 신청서 본문") ?? 0), `${scenario.id}: 지원사업 준비 안내가 제출 본문보다 먼저 나옵니다.`);
       assert.equal(pack.deliveryQuality.blockerCount, 0, `${scenario.id}: 패키지 자동 검수 차단 항목이 있습니다. ${pack.deliveryQuality.actions.join(" / ")}`);
       assert.ok(pack.deliveryQuality.score >= 80, `${scenario.id}: 자동 검수 점수가 80점 미만입니다.`);
+      if (!renderedSubmission && planDocument && grantDocument) {
+        const documents = [planDocument, grantDocument].map((item) => ({
+          id: item.id,
+          title: item.title,
+          type: item.type,
+          versionLabel: item.versionLabel,
+          markdown: item.markdown,
+        }));
+        const documentProject = {
+          title: scenario.title,
+          sector: scenario.archetype,
+          model: scenario.model,
+          customer: scenario.customer,
+          generatedAt: new Date().toISOString(),
+          sample: false,
+        };
+        const [pdf, docx] = await Promise.all([
+          renderPdf(documents, documentProject),
+          renderDocx(documents, documentProject),
+        ]);
+        assert.equal(pdf.subarray(0, 4).toString(), "%PDF", `${scenario.id}: 제출용 PDF 생성에 실패했습니다.`);
+        assert.equal(docx[0], 0x50, `${scenario.id}: 제출용 Word 생성에 실패했습니다.`);
+        const docxArchive = await JSZip.loadAsync(docx);
+        const documentXml = await docxArchive.file("word/document.xml")?.async("text");
+        assert.ok(documentXml?.includes("제출용 신청서 본문"), `${scenario.id}: Word에 지원사업 제출 본문이 없습니다.`);
+        assert.ok(documentXml?.includes("정부지원사업비 집행 계획"), `${scenario.id}: Word에 사업비 집행 계획이 없습니다.`);
+        renderedSubmission = { pdfBytes: pdf.length, docxBytes: docx.length, documents: documents.length };
+      }
       reports.push({
         scenario: scenario.id,
         score: pack.deliveryQuality.score,
@@ -341,7 +383,7 @@ async function main() {
         pages: pack.items.reduce((sum, item) => sum + (item.quality?.metrics.estimatedPages ?? 0), 0),
       });
     }
-    console.log(JSON.stringify({ passed: true, reports }, null, 2));
+    console.log(JSON.stringify({ passed: true, reports, renderedSubmission }, null, 2));
   } finally {
     if (previousKey) process.env.OPENAI_API_KEY = previousKey;
   }

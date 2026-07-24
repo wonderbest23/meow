@@ -268,19 +268,6 @@ export function BeginnerMissionRoadmap({
   const progressPercent = requiredMissions.length ? Math.round((doneCount / requiredMissions.length) * 100) : 0;
   const dependenciesDone = (mission: LaunchMission) => missionDependenciesDone(mission, workspace);
   const currentMission = nextReadyRequiredMission(missions, workspace);
-  const nextMission = currentMission
-    ? nextReadyRequiredMission(missions, {
-        ...workspace,
-        missionProgress: {
-          ...workspace.missionProgress,
-          [currentMission.id]: {
-            ...progressForMission(workspace, currentMission.id),
-            status: "done",
-            updatedAt: workspace.updatedAt,
-          },
-        },
-      })
-    : null;
   const readyQuotes = workspace.spaceQuotes.filter(quoteIsContractReady);
   const recommendedQuote = [...readyQuotes].sort((a, b) => quoteMonthlyTotal(a) - quoteMonthlyTotal(b))[0];
 
@@ -455,6 +442,7 @@ export function BeginnerMissionRoadmap({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          deckType: "intro",
           businessName: workspace.brand.brandName || brandName || opportunity.title,
           slogan: workspace.brand.slogan,
           businessDescription: `${opportunity.oneLiner} 고객: ${opportunity.customer}. 방식: ${opportunity.model}.`,
@@ -514,7 +502,7 @@ export function BeginnerMissionRoadmap({
       downloadBlob(await response.blob(), `${workspace.brand.brandName || opportunity.title}-사업소개서-초안.pptx`);
       const deckMission = missions.find((mission) => mission.id === "pitch-deck");
       if (deckMission) updateMissionProgress(deckMission, { status: "doing", evidence: `${workspace.brand.brandName || opportunity.title}-사업소개서-초안.pptx · 자동 생성본 사실검토 필요` });
-      setMessage("10장 사업소개서 파워포인트 파일(PPTX)을 만들었습니다. 미확인 수치와 인터뷰 근거를 대조한 뒤 미션을 완료하세요.");
+      setMessage("12장 사업소개서 파워포인트 파일(PPTX)을 만들었습니다. 미확인 수치와 인터뷰 근거를 대조한 뒤 미션을 완료하세요.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "사업소개서 파워포인트를 만들지 못했습니다.");
     } finally {
@@ -593,29 +581,35 @@ export function BeginnerMissionRoadmap({
     );
   };
 
+  const extraTools = (
+    <details className="mission-extra-tools" open={activeView !== "today" ? true : undefined}>
+      <summary><Wrench /> 전체 일정과 추가 도구 <ChevronRight /></summary>
+      <nav className="mission-view-tabs" aria-label="실행 일정 화면">
+        <button className={activeView === "today" ? "active" : ""} onClick={() => setActiveView("today")}><Target /> 한 단계씩</button>
+        <button className={activeView === "roadmap" ? "active" : ""} onClick={() => setActiveView("roadmap")}><CalendarDays /> 전체 일정</button>
+        <button className={activeView === "space" ? "active" : ""} onClick={() => setActiveView("space")}><Building2 /> 사업장 비교</button>
+        <button className={activeView === "support" ? "active" : ""} onClick={() => setActiveView("support")}><Wrench /> 로고·홈페이지</button>
+      </nav>
+      <footer><button className="mission-save" onClick={() => void saveWorkspace()} disabled={saveState === "saving"}><Save /> {saveState === "saving" ? "저장 중" : saveState === "saved" ? "저장됨" : "추가 도구 입력 저장"}</button></footer>
+    </details>
+  );
+
   return (
     <section className="beginner-mission-cockpit">
       <header className="mission-cockpit-head">
         <div>
           <span className="section-label">선택 실행 도우미</span>
-          <h3>{currentMission ? "필요할 때 한 가지씩 진행하세요" : "실행 확인을 모두 마쳤습니다"}</h3>
-          <p>하지 않아도 최종 결과물은 그대로 열고 받을 수 있습니다. 실제 영업 전 필요한 확인만 따로 표시합니다.</p>
+          <h3>{currentMission ? "지금은 한 단계만 따라 하세요" : "실행 확인을 모두 마쳤습니다"}</h3>
+          <p>실행 도우미는 선택사항입니다. 하지 않아도 완성된 파일은 그대로 이용할 수 있어요.</p>
         </div>
         <div className="mission-head-progress">
           <span><strong>{progressPercent}%</strong><small>실행 확인 {doneCount}/{requiredMissions.length}</small></span>
           <i><b style={{ width: `${progressPercent}%` }} /></i>
-          <button className="mission-save" onClick={() => void saveWorkspace()} disabled={saveState === "saving"}><Save /> {saveState === "saving" ? "저장 중" : saveState === "saved" ? "저장됨" : "입력 저장"}</button>
+          <button className="mission-results-shortcut" onClick={onGoToDocuments}>완성 파일 보기 <ChevronRight /></button>
         </div>
       </header>
 
-      <section className="mission-optional-banner"><Sparkles /><div><strong>보고서와 최종 파일은 이미 완성되어 있습니다.</strong><p>이 화면은 사업을 실제로 시작할 때 놓치지 않도록 돕는 별도 도구입니다.</p></div><button onClick={onGoToDocuments}>결과물 먼저 보기 <ChevronRight /></button></section>
-
-      <nav className="mission-view-tabs" aria-label="실행 일정 화면">
-        <button className={activeView === "today" ? "active" : ""} onClick={() => setActiveView("today")}><Target /> 오늘 1개</button>
-        <button className={activeView === "roadmap" ? "active" : ""} onClick={() => setActiveView("roadmap")}><CalendarDays /> 전체 일정</button>
-        <button className={activeView === "space" ? "active" : ""} onClick={() => setActiveView("space")}><Building2 /> 사업장 비교</button>
-        <button className={activeView === "support" ? "active" : ""} onClick={() => setActiveView("support")}><Wrench /> 로고·홈페이지</button>
-      </nav>
+      {activeView !== "today" && extraTools}
 
       {message && <div className="mission-message" role="status">{message}</div>}
 
@@ -624,7 +618,6 @@ export function BeginnerMissionRoadmap({
           {currentMission ? (
             <GuidedMission
               mission={currentMission}
-              nextMission={nextMission}
               workspace={workspace}
               dependenciesDone={dependenciesDone(currentMission)}
               saveState={saveState}
@@ -731,7 +724,7 @@ export function BeginnerMissionRoadmap({
             <section className="ai-logo-maker"><div className="ai-logo-copy"><span><Sparkles /></span><div><small>OpenAI 연결 시 사용</small><h5>내 사업에 맞는 새 로고 만들기</h5><p>글자 없이 홈페이지에 쓰기 좋은 정사각형 심벌을 만듭니다.</p></div></div><label><span>원하는 느낌</span><input value={logoDirection} maxLength={300} onChange={(event) => setLogoDirection(event.target.value)} placeholder="예: 따뜻하지만 유아적이지 않고, 믿을 수 있는 느낌" /></label><button disabled={logoState !== "idle"} onClick={() => void generateAiLogo()}>{logoState === "generating" ? <LoaderCircle className="spin" /> : <Sparkles />} {logoState === "generating" ? "로고 만드는 중" : "AI로 새 시안 만들기"}</button>{generatedLogo && <div className="ai-logo-result"><img src={generatedLogo} alt="인공지능이 만든 로고 시안" /><div><strong>새 시안이 준비되었습니다</strong><p>홈페이지에 적용한 뒤 판매 페이지에서 다시 바꿀 수 있습니다.</p></div><button disabled={logoState !== "idle"} onClick={() => void applyAiLogo()}><Check /> 이 로고 사용</button></div>}{logoMessage && <p className="ai-logo-message" role="status">{logoMessage}</p>}</section>
           </section>
 
-          <section className="deck-builder-row"><span><Presentation /></span><div><small>기본 제공 사업소개서</small><strong>10장 사업소개서 자동 제작</strong><p>문제·해결·상품·시장·수익·30일 실행·위험·협력 요청 구조로 만듭니다.</p></div><button onClick={() => void downloadDeck()} disabled={deckState === "building"}>{deckState === "building" ? "제작 중" : "파워포인트(PPTX) 만들기"} <Download /></button></section>
+          <section className="deck-builder-row"><span><Presentation /></span><div><small>기본 제공 사업소개서</small><strong>12장 사업소개서 자동 제작</strong><p>고객 문제·해결 방식·상품·시장 근거·수익·첫 시장 진입·위험·다음 대화까지 정리합니다.</p></div><button onClick={() => void downloadDeck()} disabled={deckState === "building"}>{deckState === "building" ? "제작 중" : "파워포인트(PPTX) 만들기"} <Download /></button></section>
 
           <section className="support-option-section">
             <header><div><span className="section-label">선택 홈페이지 제작</span><h4>자동 제작본을 더 정교하게 맡기기</h4><p>로고, 이미지, 화면 구성과 추가 기능이 필요할 때만 제작 범위를 정해 요청합니다.</p></div><button onClick={() => void downloadDesignBrief()}><FileText /> 제작 요청서 워드</button></header>
@@ -754,6 +747,7 @@ export function BeginnerMissionRoadmap({
           </section>
         </div>
       )}
+      {activeView === "today" && extraTools}
     </section>
   );
 }
@@ -764,7 +758,6 @@ function MoneyInput({ label, value, onChange }: { label: string; value: number; 
 
 function GuidedMission({
   mission,
-  nextMission,
   workspace,
   dependenciesDone,
   saveState,
@@ -772,7 +765,6 @@ function GuidedMission({
   onFinish,
 }: {
   mission: LaunchMission;
-  nextMission: LaunchMission | null;
   workspace: LaunchMissionWorkspace;
   dependenciesDone: boolean;
   saveState: "idle" | "saving" | "saved";
@@ -781,68 +773,73 @@ function GuidedMission({
 }) {
   const progress = progressForMission(workspace, mission.id);
   const hasEvidence = Boolean(progress.evidence.trim());
+  const [step, setStep] = useState(0);
+  const actionCount = mission.actions.length;
+  const recordStep = step === actionCount;
+  const totalSteps = actionCount + 1;
+
+  useEffect(() => setStep(0), [mission.id]);
 
   return (
     <div className="mission-guided-layout">
-      <section className="mission-guided-card" data-mission-id={mission.id}>
+      <section className="mission-guided-card" data-mission-id={mission.id} data-guided-step={step + 1}>
         <header>
           <div>
-            <span>{mission.stopGate ? <ShieldCheck /> : <Target />}{mission.period} · {missionRequirementLabel(mission)}</span>
+            <span>{mission.stopGate ? <ShieldCheck /> : <Target />} 실행 항목 {Math.min(step + 1, totalSteps)}/{totalSteps}</span>
             <h4>{mission.title}</h4>
-            <p>{mission.summary}</p>
+            <p>{recordStep ? "끝낸 내용을 간단히 남기면 다음 할 일로 넘어갑니다." : mission.summary}</p>
           </div>
           <em><Clock3 /> 약 {mission.estimatedMinutes}분</em>
         </header>
 
+        <div className="mission-substep-progress" aria-label={`${totalSteps}단계 중 ${step + 1}단계`}><i><b style={{ width: `${((step + 1) / totalSteps) * 100}%` }} /></i><span>{recordStep ? "마지막 · 완료 기록" : `${step + 1}단계 · 하나씩 따라 하기`}</span></div>
+
         {!dependenciesDone && <div className="mission-locked"><AlertTriangle /> 먼저 해야 할 일을 완료해야 이 단계가 열립니다.</div>}
 
-        {mission.id === "customer-evidence" && (
-          <section className="mission-customer-guide">
-            <div className="mission-why"><CircleHelp /><p><strong>왜 최근 해결 방법을 보나요?</strong><span>“살 것 같아요”라는 예상보다 실제로 어떻게 해결했는지를 알면, 필요 없는 기능과 지출을 줄일 수 있기 때문입니다. 고객을 이미 알고 있어야 한다는 뜻은 아닙니다.</span></p></div>
-            <div className="mission-evidence-options">
-              <button type="button" className={progress.note.includes("아는 사람 1명") ? "active" : ""} onClick={() => onChange({ note: "선택한 방법: 아는 사람 1명에게 짧게 물어보기" })}><Users /><span><strong>아는 사람 1명</strong><small>짧게 한 번 묻기</small></span></button>
-              <button type="button" className={progress.note.includes("공개 후기") ? "active" : ""} onClick={() => onChange({ note: "선택한 방법: 공개 후기에서 비슷한 사례 찾아보기" })}><Search /><span><strong>공개 후기 보기</strong><small>연락할 사람 없어도 가능</small></span></button>
-              <button type="button" className={progress.evidence.includes("현재 확인할 사람이 없음") ? "active" : ""} onClick={() => onChange({ evidence: "현재 확인할 사람이 없음 · 첫 문의가 생기면 보완", note: "지금은 건너뛰고 실제 문의가 생긴 뒤 해결 방법과 지출 여부를 확인하기로 함" })}><ChevronRight /><span><strong>지금은 건너뛰기</strong><small>결과물에는 영향 없음</small></span></button>
-            </div>
+        {!recordStep ? (
+          <section className="mission-single-action">
+            <small>지금 할 일</small>
+            <div><b>{step + 1}</b><strong>{mission.actions[step]}</strong></div>
+            {mission.id === "customer-evidence" && step === 0 && (
+              <div className="mission-customer-guide">
+                <div className="mission-evidence-options">
+                  <button type="button" className={progress.note.includes("아는 사람 1명") ? "active" : ""} onClick={() => onChange({ note: "선택한 방법: 아는 사람 1명에게 짧게 물어보기" })}><Users /><span><strong>아는 사람 1명에게 묻기</strong><small>짧게 한 번이면 충분해요</small></span></button>
+                  <button type="button" className={progress.note.includes("공개 후기") ? "active" : ""} onClick={() => onChange({ note: "선택한 방법: 공개 후기에서 비슷한 사례 찾아보기" })}><Search /><span><strong>공개 후기 찾아보기</strong><small>연락할 사람이 없어도 가능해요</small></span></button>
+                  <button type="button" className={progress.evidence.includes("현재 확인할 사람이 없음") ? "active" : ""} onClick={() => onChange({ evidence: "현재 확인할 사람이 없음 · 첫 문의가 생기면 보완", note: "지금은 건너뛰고 실제 문의가 생긴 뒤 해결 방법과 지출 여부를 확인하기로 함" })}><ChevronRight /><span><strong>지금은 건너뛰기</strong><small>완성 파일에는 영향이 없어요</small></span></button>
+                </div>
+                <details className="mission-why-more"><summary><CircleHelp /> 왜 이 확인이 필요한가요? <ChevronRight /></summary><p>예상 답변보다 고객이 실제로 사용한 방법을 보면 필요 없는 기능과 지출을 줄일 수 있습니다. 고객을 미리 알고 있어야 한다는 뜻은 아닙니다.</p></details>
+              </div>
+            )}
+          </section>
+        ) : (
+          <section className="mission-evidence">
+            <label htmlFor={`mission-evidence-${mission.id}`}><small>마지막 단계</small><strong>{mission.completionEvidence}</strong></label>
+            <input
+              id={`mission-evidence-${mission.id}`}
+              value={progress.evidence}
+              placeholder="문서명, 확인 날짜나 인터넷 주소를 적어주세요"
+              onChange={(event) => onChange({ evidence: event.target.value })}
+            />
+            <textarea
+              value={progress.note}
+              placeholder="결정하거나 바꾼 내용이 있다면 짧게 적어주세요 (선택)"
+              onChange={(event) => onChange({ note: event.target.value })}
+            />
+            {!hasEvidence && <p className="mission-evidence-help"><CircleHelp /> 아직 자료가 없다면 이전 단계로 돌아가거나, 나중에 다시 이어서 할 수 있어요.</p>}
           </section>
         )}
 
-        <section className="mission-guided-actions">
-          <small>지금은 이것 하나만</small>
-          <ol><li><b>1</b><span>{mission.actions[0]}</span></li></ol>
-          {mission.actions.length > 1 && <details><summary>그다음 순서 {mission.actions.length - 1}개 보기 <ChevronRight /></summary><ol>{mission.actions.slice(1).map((action, index) => <li key={action}><b>{index + 2}</b><span>{action}</span></li>)}</ol></details>}
-        </section>
-
-        <section className="mission-evidence">
-          <label htmlFor={`mission-evidence-${mission.id}`}><small>끝낸 뒤 기록하기 · 결과물 다운로드와 무관</small><strong>{mission.completionEvidence}</strong></label>
-          <input
-            id={`mission-evidence-${mission.id}`}
-            value={progress.evidence}
-            placeholder="문서명, 접수번호, 확인일 또는 인터넷 주소"
-            onChange={(event) => onChange({ evidence: event.target.value })}
-          />
-          <textarea
-            value={progress.note}
-            placeholder="수정하거나 결정한 내용을 간단히 적으세요. 다음 단계에도 저장됩니다."
-            onChange={(event) => onChange({ note: event.target.value })}
-          />
-        </section>
-
         <footer>
-          <span className={hasEvidence ? "ready" : "waiting"}>
-            {hasEvidence ? <FileCheck2 /> : <AlertTriangle />}
-            {hasEvidence ? (mission.id === "customer-evidence" ? "선택 내용 저장 가능" : "확인 자료 입력됨 · 완료하면 자동 저장") : (mission.id === "customer-evidence" ? "방법을 고르거나 메모를 남겨주세요" : "확인 자료를 입력해야 완료할 수 있어요")}
-          </span>
-          <button className="mission-complete" disabled={!dependenciesDone || saveState === "saving"} onClick={onFinish}>
-            {saveState === "saving" ? <>저장 중</> : mission.id === "customer-evidence" ? <>저장하고 다음으로 <ChevronRight /></> : <>완료하고 다음 할 일 <ChevronRight /></>}
-          </button>
+          {step > 0 ? <button className="mission-step-back" type="button" onClick={() => setStep((current) => Math.max(0, current - 1))}>이전</button> : <span>완성 파일과는 별도로 진행돼요.</span>}
+          {!recordStep ? (
+            <button className="mission-step-next" type="button" disabled={!dependenciesDone} onClick={() => setStep((current) => Math.min(actionCount, current + 1))}>다음 <ChevronRight /></button>
+          ) : (
+            <button className="mission-complete" disabled={!dependenciesDone || !hasEvidence || saveState === "saving"} onClick={onFinish}>
+              {saveState === "saving" ? <>저장 중</> : <>완료하고 다음 할 일 <ChevronRight /></>}
+            </button>
+          )}
         </footer>
       </section>
-
-      <aside className="mission-next-step">
-        <small>원할 때 이어서</small>
-        {nextMission ? <><strong>{nextMission.title}</strong><p>현재 입력을 저장한 뒤 자동으로 이 단계가 열립니다.</p></> : <><strong>최종 결과물 확인</strong><p>보고서와 문서를 열거나 PDF·워드로 받을 수 있습니다.</p></>}
-      </aside>
     </div>
   );
 }

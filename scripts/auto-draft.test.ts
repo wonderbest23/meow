@@ -44,4 +44,17 @@ assert.equal(sentenceIdea.problem.includes("습니다.와"), false);
 assert.equal(sentenceIdea.coreOutcome.includes("습니다.를"), false);
 assert.equal(sentenceIdea.problem.includes("오래된 공동주택의 에너지"), true);
 
+const videoSubscription = deriveAutoDraftContext({
+  title: "숏폼 홍보 영상 구독 제작",
+  oneLiner: "마포구 1인 자영업자를 위한 숏폼 홍보 영상 월 구독 제작 서비스",
+  customer: "마포구 1인 자영업자",
+  model: "월 구독 제작",
+});
+
+assert.equal(videoSubscription.customer, "마포구 1인 자영업자");
+assert.equal(videoSubscription.offerTiers[1].name, "월 4편 기본 구독");
+assert.match(videoSubscription.problem, /직접 기획·촬영·편집할 시간이 부족/);
+assert.match(videoSubscription.headline, /홍보 영상/);
+assert.equal(videoSubscription.callToAction, "샘플 영상 상담하기");
+
 console.log("auto-draft.test.ts passed");

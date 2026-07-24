@@ -1,10 +1,12 @@
 import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { createLegalDocument, evaluatePlatformLaunchReadiness, type LegalDocumentType } from "../lib/platform-legal/domain";
+import { paymentsEnabled } from "../lib/payments/config";
+import { manualTransferPaymentConfigured } from "../lib/payments/manual-transfer";
 import { getPlatformLegalSettings } from "../lib/platform-legal/repository";
 
 const labels: Record<LegalDocumentType, string> = {
-  business: "사업자 정보",
+  business: "사업자·통신판매 정보",
   privacy: "개인정보처리방침",
   ai: "인공지능·국외 처리",
   terms: "이용약관",
@@ -24,13 +26,13 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
   const document = createLegalDocument(type, settings);
   const readiness = evaluatePlatformLaunchReadiness(settings, {
     authConfigured: Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
-    paymentsConfigured: false,
+    paymentsConfigured: paymentsEnabled() && manualTransferPaymentConfigured(),
   });
 
   return (
     <main className="platform-legal-page">
       <header className="platform-legal-header">
-        <Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo.png" alt="오늘창업" /></Link>
+        <Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026.png" alt="오늘창업" /></Link>
         <Link href="/"><ArrowLeft /> 홈으로</Link>
       </header>
       <div className="platform-legal-layout">
@@ -40,12 +42,12 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
         </aside>
         <article className="platform-legal-document">
           <header>
-            <span><ShieldCheck /> {readiness.ready ? "운영 정보 확인됨" : "정식 판매 준비 중"}</span>
+            <span><ShieldCheck /> {readiness.ready ? "운영 정보 확인됨" : readiness.siteOpen ? "신고용 사이트 공개 중" : "사이트 공개 정보 준비 중"}</span>
             <h1>{document.title}</h1>
             <p>{document.summary}</p>
             <small>시행일 {document.effectiveDate || "입력 예정"}</small>
           </header>
-          {!readiness.ready && <div className="platform-legal-draft"><strong>아직 유료 판매 전입니다.</strong><p>실제 대표자·사업자 정보와 OpenAI 처리 지역을 관리자가 확인하기 전에는 결제가 열리지 않습니다.</p></div>}
+          {!readiness.ready && <div className="platform-legal-draft"><strong>{readiness.siteOpen ? "사이트와 무료 체험은 정상 공개 중입니다." : "신고용 공개 정보를 준비하고 있습니다."}</strong><p>통신판매업 신고번호 또는 면제 근거와 실제 운영 정보를 확인하기 전에는 유료 결제만 제한됩니다.</p></div>}
           {document.sections.map((section) => (
             <section key={section.title}>
               <h2>{section.title}</h2>

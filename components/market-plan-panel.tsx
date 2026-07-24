@@ -324,7 +324,7 @@ export function MarketPlanPanel({
                 <span className={`verification ${item.verification}`}>{item.verification === "verified" ? "원문 확인" : item.verification === "user_supplied" ? "직접 조사" : "확인 필요"}</span>
                 <div><small>{sourceLabels[item.sourceType]} · {item.observedAt}</small><strong>{item.title}</strong><p>{item.metric}: {item.value} {item.unit}</p><em>{item.sourceName} · {item.region || "지역 미지정"}</em></div>
                 {item.sourceUrl && <a href={item.sourceUrl} target="_blank" rel="noreferrer" aria-label="원문 열기"><ExternalLink /></a>}
-                <button aria-label="근거 삭제" onClick={() => setWorkspace((current) => ({ ...current, evidence: current.evidence.filter((evidence) => evidence.id !== item.id) }))}><Trash2 /></button>
+                <button aria-label="근거 삭제" onClick={() => setWorkspace((current) => ({ ...current, evidence: current.evidence.filter((evidence) => evidence.id !== item.id) }))}>삭제</button>
               </article>
             ))}
             {!workspace.evidence.length && <p className="empty-market-list">아직 저장할 시장 근거가 없습니다. 공식 원문이나 실제 조사 결과부터 추가해주세요.</p>}
@@ -376,7 +376,7 @@ export function MarketPlanPanel({
                   <p>월 임차비 {won(score?.monthlyOccupancyCost ?? 0)} · 매출 대비 {score?.occupancyCostRate ?? "—"}%</p>
                   <small>근거 완성도 {score?.evidenceCompleteness ?? 0}%</small>
                   {score?.warnings.slice(0, 2).map((warning) => <p className="score-warning" key={warning}>{warning}</p>)}
-                  <div><button onClick={() => setWorkspace((current) => ({ ...current, selectedLocationId: candidate.id }))}>{workspace.selectedLocationId === candidate.id ? <><Check /> 선택됨</> : "이 후보 선택"}</button><button aria-label="후보 삭제" onClick={() => setWorkspace((current) => ({ ...current, locations: current.locations.filter((item) => item.id !== candidate.id), selectedLocationId: current.selectedLocationId === candidate.id ? null : current.selectedLocationId }))}><Trash2 /></button></div>
+                  <div><button onClick={() => setWorkspace((current) => ({ ...current, selectedLocationId: candidate.id }))}>{workspace.selectedLocationId === candidate.id ? "선택됨" : "이 후보 선택"}</button><button aria-label="후보 삭제" onClick={() => setWorkspace((current) => ({ ...current, locations: current.locations.filter((item) => item.id !== candidate.id), selectedLocationId: current.selectedLocationId === candidate.id ? null : current.selectedLocationId }))}>삭제</button></div>
                 </article>
               );
             })}

@@ -73,7 +73,7 @@ export function LandingMediaField({
       </div>
       <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void choose(event.target.files?.[0])} />
       <button type="button" onClick={() => inputRef.current?.click()} disabled={loading}><Upload /> {loading ? "처리 중" : "이미지 선택"}</button>
-      {value && <button type="button" className="remove" title={`${label} 삭제`} aria-label={`${label} 삭제`} onClick={() => onChange("")}><X /></button>}
+      {value && <button type="button" className="remove" title={`${label} 삭제`} aria-label={`${label} 삭제`} onClick={() => onChange("")}>삭제</button>}
     </section>
   );
 }
