@@ -4237,99 +4237,18 @@ function ProjectWorkspace({
     return <FinalDelivery opportunity={opportunity} price={price} brandChoice={brandChoice} serverProject={serverProject} onHome={onHome} onProjectUpdated={setServerProject} />;
   }
 
+  // 데모/프로젝트 미생성 세션: 6단계 워크스페이스 대신 완성된 결과물 미리보기를 보여준다.
+  // 실제 결제 프로젝트는 위(InstantDraftBuilder/FinalDelivery)에서 이미 처리되므로 이 경로는 데모 전용이다.
   return (
-    <main className="project-page">
-      <aside className="project-sidebar">
-        <Logo onClick={onHome} />
-        <div className="payment-complete"><CheckCircle2 /><span><small>{betaAccess ? "이용 상태 · 베타 테스트" : `결제 상태 · ${serverProject?.paymentStatus === "test_paid" ? "개발 테스트" : "계좌입금 확인"}`}</small><strong>{betaAccess ? "결제 없이 모든 기능 이용 중" : `${(serverProject?.packagePrice ?? PACKAGE_AMOUNT).toLocaleString("ko-KR")}원 입금 확인 완료`}</strong></span></div>
-        <nav>
-          {launchStages.map((stage, index) => <button key={stage.name} className={`${index === activeStage ? "active" : ""} ${index < activeStage ? "done" : ""}`} onClick={() => index <= activeStage && setActiveStage(index)}><span>{index < activeStage ? <Check /> : index + 1}</span><div><strong>{stage.name}</strong><small>{stage.period}</small></div></button>)}
-        </nav>
-        <div className="automation-card"><span><Zap /></span><div><small>자동 진행 지원</small><strong>창업 실행 자동화</strong><p>24시간 저장 · 생성 · 다시 시도</p></div><RefreshCw /></div>
-      </aside>
-      <section className="project-workspace">
-        <header className="project-topbar"><div><span>내 프로젝트</span><strong>{opportunity.title}</strong></div><button onClick={onHome}>나가기</button></header>
-        <nav className="mobile-stepper" aria-label="프로젝트 진행 단계">
-          <div><span>{activeStage + 1} / {launchStages.length}</span><strong>{current.name}</strong><em>{current.period}</em></div>
-          <i><b style={{ width: `${((activeStage + 1) / launchStages.length) * 100}%` }} /></i>
-        </nav>
-        <div className="project-overview">
-          <div><span className="project-status">진행 중 · {current.period}</span><p>{PACKAGE_NAME}</p><h1>{opportunity.title}</h1><div><span><CalendarDays /> 목표 공개일 7월 31일</span><span><BriefcaseBusiness /> {opportunity.model}</span></div></div>
-          <div className="project-progress"><strong>{progress}<small>%</small></strong><span>전체 진행률</span><i><b style={{ width: `${progress}%` }} /></i></div>
-        </div>
-        <div className="stage-layout">
-          <article className="current-stage-card">
-            <div className="stage-heading"><span>{String(activeStage + 1).padStart(2, "0")}</span><div><small>{current.period} · 현재 단계</small><h2>{current.title}</h2><p>{current.description}</p></div></div>
-            {serverProject && <section className="focus-action-banner"><span>지금 할 일</span><div><strong>{focusTitle}</strong><p>{focusDescription}</p></div><em>{setupRequired ? "입력" : !latestArtifact ? "생성" : !allCurrentChecked ? "검토" : "승인"}</em></section>}
-            {activeStage === 0 && confirmedBudgetWon !== null && confirmedHoursPerWeek !== null && (
-              <div className="confirmed-planning-inputs" aria-label="입력한 기획 조건">
-                <p><CheckCircle2 /><strong>처음 입력한 실행 조건</strong></p>
-                <div>
-                  <span><small>시작 예산</small><strong>{Math.round(confirmedBudgetWon / 10_000).toLocaleString("ko-KR")}만원</strong></span>
-                  <span><small>사용 가능 시간</small><strong>주당 {confirmedHoursPerWeek}시간</strong></span>
-                </div>
-              </div>
-            )}
-            {serverProject && activeStage === 0 && (setupRequired || showSavedSetup) && <BusinessSetupPanel project={serverProject} onSaved={(project) => { setServerProject(project); setShowSavedSetup(true); }} onComplete={() => { setShowSavedSetup(false); window.setTimeout(() => document.querySelector(".service-workflow")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50); }} />}
-            {serverProject && activeStage === 0 && !setupRequired && !showSavedSetup && <button className="edit-saved-setup" onClick={() => setShowSavedSetup(true)}><Calculator /> 사업 조건·손익 다시 계산</button>}
-            {serverProject && activeStage === 1 && !latestArtifact && <details className="optional-stage-tools"><summary><span>가지고 있는 근거가 있다면 추가 <em>안 해도 됨</em></span><ChevronDown /></summary><MarketPlanPanel project={serverProject} onSaved={setServerProject} /></details>}
-            {serverProject && activeStage === 1 && !latestArtifact && locationAnalysisNeeded && <details className="optional-stage-tools"><summary><span>지역 자료가 있다면 추가 <em>안 해도 됨</em></span><ChevronDown /></summary><RegionalCoveragePanel project={serverProject} /></details>}
-            {serverProject && activeStage === 4 && !latestArtifact && <LandingBuilderPanel project={serverProject} />}
-            {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>운영 계획 직접 바꾸기 <em>선택사항</em></span><ChevronDown /></summary><OperationsPanel project={serverProject} onSaved={setServerProject} /></details>}
-            {serverProject && activeStage === 5 && !latestArtifact && <details className="optional-stage-tools"><summary><span>추가 운영 도구 열기 <em>선택사항</em></span><ChevronDown /></summary><ExecutionLoopPanel project={serverProject} onSaved={setServerProject} /><QualityAssurancePanel project={serverProject} onSaved={setServerProject} /><GrantMatcherPanel project={serverProject} onSaved={setServerProject} /></details>}
-            {serverProject && !setupRequired && (
-              <section className="service-workflow">
-                <div className="step-by-step-guide" aria-label="현재 단계 진행 방법">
-                  <div className="active"><span>{latestArtifact ? <Check /> : "1"}</span><p><strong>AI 초안 만들기</strong><small>추가 입력 없이 자동 작성</small></p></div>
-                  <i />
-                  <div className={latestArtifact ? "active" : ""}><span>2</span><p><strong>그대로 사용 또는 수정</strong><small>한 번 확인하면 다음 단계</small></p></div>
-                </div>
-                {!latestArtifact && <div className="automatic-draft-scope"><div><Sparkles /><p><small>AI가 알아서 채웁니다</small><strong>지금 더 입력할 내용은 없습니다</strong></p></div><ul>{automaticDraftItems[activeStage].map((item) => <li key={item}><Check /> {item}</li>)}</ul></div>}
-                <div className="service-workflow-head">
-                  <div><span className={`service-state ${currentServerStage?.status ?? "not_started"}`} /><p><strong>{latestArtifact ? "초안이 준비됐어요" : "버튼 한 번이면 초안이 완성돼요"}</strong><small>{stageStatusLabel[currentServerStage?.status ?? "not_started"]} · 처음 입력한 내용 자동 반영</small></p></div>
-                  {latestArtifact && <em>결과물 {latestArtifact.version}판</em>}
-                </div>
-                {serviceError && <div className="service-error"><CircleHelp /> <span>{serviceError}</span><button disabled={serviceAction !== "idle" || (!canRetryGeneration && currentServerStage?.status === "failed")} onClick={handleGenerationRecovery}>{currentServerStage?.status === "failed" ? (canRetryGeneration ? `다시 시도 (${latestJob?.attempt ?? 0}/3)` : "재시도 한도 초과") : "다시 시도"}</button></div>}
-                {!latestArtifact ? (
-                  <button className="generate-real-artifact" disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "먼저 위에서 사업 조건과 손익분기점을 계산해주세요" : serviceAction === "saving" ? "처음 입력한 내용을 불러오는 중..." : serviceAction === "generating" ? "맞춤 초안을 만들고 있어요..." : <><Sparkles /> AI가 초안 만들기 <ArrowRight /></>}</button>
-                ) : (
-                  <div className="artifact-review-actions">
-                    <div className="review-ready"><CheckCircle2 /><p><strong>AI가 먼저 만든 초안이 준비됐어요</strong><small>그대로 사용하거나, 원하는 부분만 수정 요청하면 됩니다.</small></p><button onClick={moveToArtifact}>초안 보기 <ArrowDown /></button></div>
-                    <details><summary>전문가용 원본 자료 보기</summary><pre>{JSON.stringify(latestArtifact.content, null, 2)}</pre></details>
-                    <label><span>수정하고 싶은 점 <em>선택사항</em></span><textarea value={revisionText} onChange={(event) => setRevisionText(event.target.value)} placeholder="예: 가격 근거를 더 쉽게 설명하고, 직장인 고객 사례를 추가해주세요." /><small>{revisionText.trim().length}/10자 이상 입력하면 수정본을 만들 수 있어요.</small></label>
-                    <div><button disabled={revisionText.trim().length < 10 || serviceAction !== "idle"} onClick={reviseServerArtifact}><RefreshCw /> {serviceAction === "revising" ? "요청을 반영하는 중..." : "원하는 부분만 수정"}</button><button className="approve-real-artifact" disabled={!allCurrentChecked || serviceAction !== "idle"} onClick={approveServerArtifact}><CheckCircle2 /> {serviceAction === "approving" ? "다음 단계를 준비 중..." : allCurrentChecked ? "이 초안 사용 · 다음 단계" : "아래에서 초안을 한 번 확인해주세요"}</button></div>
-                  </div>
-                )}
-              </section>
-            )}
-            {latestArtifact ? <details className="artifact-preview-details" open={artifactExpanded} onToggle={(event) => setArtifactExpanded(event.currentTarget.open)}><summary><span><Eye /><strong>완성된 초안 내용 보기</strong><small>필요할 때만 펼쳐보세요</small></span><ChevronDown /></summary><ArtifactContentPreview artifact={latestArtifact} stageIndex={activeStage} /></details> : !serverProject ? <StageWorkProduct stage={activeStage} opportunity={opportunity} price={price} setPrice={setPrice} brandChoice={brandChoice} setBrandChoice={setBrandChoice} onRegenerate={generateServerArtifact} onRequestRevision={moveToRevision} isWorking={serviceAction !== "idle"} /> : null}
-            {(latestArtifact || !serverProject) && <div className="stage-task-list" id="stage-checklist">
-              <div><strong>마지막으로 한 번만 확인</strong><span>{current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length} / {current.tasks.length}</span></div>
-              <p className="checklist-help">초안의 방향이 괜찮다면 아래 버튼을 누르세요. 세부 내용은 나중에도 수정할 수 있습니다.</p>
-              {current.tasks.map((task, index) => {
-                const isChecked = Boolean(checked[`${activeStage}-${index}`]);
-                const isCurrent = firstUncheckedTaskIndex === index;
-                const isVisible = firstUncheckedTaskIndex === -1 || index <= firstUncheckedTaskIndex;
-                if (!isVisible) return null;
-                return <button key={task} aria-pressed={isChecked} className={`${isChecked ? "checked" : ""} ${isCurrent ? "current" : ""}`} onClick={() => toggleTask(index)}><span>{isChecked ? <Check /> : index + 1}</span><strong>{task}</strong><em>{isChecked ? "사용하기로 선택" : "이 초안 사용"}</em></button>;
-              })}
-            </div>}
-            {(latestArtifact || !serverProject) && <div className="stage-output"><PackageCheck /><div><small>이 단계가 끝나면</small><strong>{current.output}</strong>이 완성됩니다.</div></div>}
-            {!serverProject && <button className="complete-stage" disabled={!allCurrentChecked} onClick={() => activeStage < launchStages.length - 1 ? setActiveStage((stage) => stage + 1) : setDelivered(true)}>{activeStage === launchStages.length - 1 && allCurrentChecked ? "최종 납품함 열기" : allCurrentChecked ? "이 단계 완료하고 다음으로" : "할 일을 모두 확인해주세요"} <ArrowRight /></button>}
-          </article>
-          <aside className="project-side-panel">
-            <section><div className="panel-title"><Sparkles /><div><strong>생성 작업 상태</strong><small>현재 할 일만 간단히 표시합니다</small></div></div><div className="generation-status"><span className={serviceAction !== "idle" ? "running" : ""} /><p><strong>{current.output}</strong><small>{serviceAction === "saving" ? "입력 저장 중" : serviceAction === "generating" || serviceAction === "revising" || serviceAction === "retrying" ? "결과 생성 중" : latestArtifact ? `${latestArtifact.version}판 검토 가능` : currentServerStage?.status === "failed" ? `생성 실패 · 시도 ${latestJob?.attempt ?? 0}/3` : "입력 대기"}</small></p><em>{stageStatusLabel[currentServerStage?.status ?? "not_started"]}</em></div></section>
-            {serverProject && <details className="project-technical-details"><summary>저장·생성 상태 자세히</summary><ServiceOpsPanel project={serverProject} /><button className="project-delete-button" disabled={deletingProject} onClick={deleteCurrentProject}><Trash2 /> {deletingProject ? "삭제하는 중..." : "이 프로젝트 삭제"}</button></details>}
-            <section><div className="panel-title"><FileText /><div><strong>승인된 문서</strong><small>단계 승인 후 여기에 쌓입니다</small></div></div>{serverProject ? serverProject.stages.filter((stage) => stage.approvedArtifactId).map((stage) => <button className="project-doc" key={stage.id}><span><FileText /></span><div><strong>{launchStages[stage.stageIndex].output}</strong><small>{stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.version ?? 1}판 · 승인 완료</small></div><ArrowRight /></button>) : activeStage === 0 ? <p className="empty-doc">첫 단계 완료 후 문서가 생성됩니다.</p> : launchStages.slice(0, activeStage).map((stage) => <button className="project-doc" key={stage.output}><span><FileText /></span><div><strong>{stage.output}</strong><small>화면 확인용 문서</small></div><ArrowRight /></button>)}</section>
-            <section className="help-panel"><CircleHelp /><div><strong>다음 행동이 헷갈리나요?</strong><p>현재 단계의 체크리스트로 이동해 하나씩 확인하면 자동으로 다음 행동을 안내합니다.</p><button onClick={moveToChecklist}>현재 할 일 보기</button></div></section>
-          </aside>
-        </div>
-        <div className="mobile-sticky-action" aria-live="polite">
-          <div><small>현재 할 일</small><strong>{!serverProject ? `초안 확인 · ${current.tasks.filter((_, index) => checked[`${activeStage}-${index}`]).length}/${current.tasks.length}` : !latestArtifact ? "AI 초안 만들기" : !allCurrentChecked ? "이 초안 사용할지 확인" : "다음 단계로 이동"}</strong></div>
-          {!serverProject ? <button disabled={!allCurrentChecked} onClick={() => activeStage < launchStages.length - 1 ? setActiveStage((stage) => stage + 1) : setDelivered(true)}>다음 <ArrowRight /></button> : !latestArtifact ? <button disabled={serviceAction !== "idle" || setupRequired} onClick={generateServerArtifact}>{setupRequired ? "사업 조건·손익 계산 먼저" : serviceAction === "idle" ? "AI 초안" : "처리 중..."}</button> : !allCurrentChecked ? <button onClick={moveToChecklist}>초안 확인 <ArrowDown /></button> : <button disabled={serviceAction !== "idle"} onClick={approveServerArtifact}>{serviceAction === "idle" ? "사용하고 다음" : "처리 중..."}</button>}
-        </div>
-      </section>
-    </main>
+    <FinalDelivery
+      opportunity={effectiveOpportunity}
+      price={price}
+      brandChoice={brandChoice}
+      serverProject={null}
+      demo
+      onHome={onHome}
+      onProjectUpdated={setServerProject}
+    />
   );
 }
 
