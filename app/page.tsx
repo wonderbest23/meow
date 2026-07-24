@@ -591,7 +591,7 @@ function Home({
       <section className="home-proof-bar" aria-label="서비스 구성 요약">
         <div><strong>무료</strong><span>사업 아이디어 탐색</span></div>
         <div><strong>12종</strong><span>문서 10종과 발표자료 2종</span></div>
-        <div><strong>21일</strong><span>초보자용 실행 일정</span></div>
+        <div><strong>즉시</strong><span>결제 후 완성본 자동 제작</span></div>
         <div><strong>PDF·워드·PPTX</strong><span>바로 쓰는 문서 형식</span></div>
       </section>
 
@@ -653,7 +653,7 @@ function Home({
                 <li><Check /> 실행 문서 10종과 발표자료 2종</li>
                 <li><Check /> 기본 홈페이지 자동 제작·직접 수정</li>
                 <li><Check /> PDF·워드·파워포인트 내려받기</li>
-                <li><Check /> 21일 실행 일정과 단계별 안내</li>
+                <li><Check /> 단계별 진행 없이 완성본 한 번에 제공</li>
                 <li><Check /> 인공지능 초안 수정·다시 만들기</li>
               </ul>
               <button onClick={onStart}>무료 초안부터 보기 <ArrowRight /></button>
@@ -2310,9 +2310,9 @@ function FinalDelivery({
     .find((model): model is string => Boolean(model));
   const generationMode = demo ? "sample" : aiGeneratedCount === 6 ? "ai" : aiGeneratedCount > 0 ? "mixed" : "fallback";
   const generationTitle = generationMode === "ai"
-    ? `OpenAI API 핵심 초안 6단계 고도화 완료${generationModel ? ` · ${generationModel}` : ""}`
+    ? `OpenAI API 핵심 문서 6종 고도화 완료${generationModel ? ` · ${generationModel}` : ""}`
     : generationMode === "mixed"
-      ? `OpenAI API ${aiGeneratedCount}/6단계 적용`
+      ? `OpenAI API 핵심 문서 ${aiGeneratedCount}/6종 적용`
       : generationMode === "sample"
         ? "화면 확인용 가상 사례"
         : "규칙 기반 안전 초안 · OpenAI API 미적용";

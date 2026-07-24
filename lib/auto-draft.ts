@@ -80,7 +80,7 @@ export function deriveAutoDraftContext(opportunity: OpportunityLike): AutoDraftC
         "생각을 오늘 실행할 사업으로 바꿉니다",
       ],
       headline: "아이디어만 알려주세요. 실행 가능한 사업 초안을 먼저 만들어드립니다.",
-      subheadline: "예산과 가능한 시간을 반영해 상품, 가격, 손익, 사업 문서와 첫 고객 실행 순서를 한 단계씩 제안합니다.",
+      subheadline: "예산과 가능한 시간을 반영해 상품, 가격, 손익, 사업 문서와 실행 순서를 담은 기획안을 한 번에 만들어드립니다.",
       callToAction: "내 사업 초안 만들기",
     };
   }
