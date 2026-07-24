@@ -67,11 +67,13 @@ import {
 } from "../lib/assessment";
 import {
   rankOpportunities,
+  rankOpportunityPool,
   type OpportunityFeedback,
   type RankedOpportunity,
 } from "../lib/opportunity-engine";
 import type { OpportunityPreferenceRecord } from "../lib/opportunity-preferences/domain";
 import { normalizeGeneratedOpportunity, type ManualPreferences } from "../lib/idea-generator";
+import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
@@ -1359,6 +1361,8 @@ function Explore({
 }) {
   const [mode, setMode] = useState<"dna" | "manual">("dna");
   const [generationSeed, setGenerationSeed] = useState(120726);
+  // 하이브리드 제안: LLM이 프로필 맞춤 새 아이디어를 생성하면 이 풀을 쓰고, 없으면 라이브러리로 폴백한다.
+  const [llmPool, setLlmPool] = useState<Opportunity[] | null>(null);
   const [manual, setManual] = useState<ManualPreferences>({
     budget: "100만원 이하",
     time: "주말·저녁",
@@ -1442,21 +1446,42 @@ function Explore({
     if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
     if (noticeTimerRef.current) window.clearTimeout(noticeTimerRef.current);
   }, []);
-  const allRanked = useMemo(
-    () =>
-      rankOpportunities(
-        profile,
-        feedback,
-        {},
-        generationSeed,
-        mode === "manual" ? manual : undefined,
-        preferenceRecords.map((preference) => ({
-          state: preference.state,
-          opportunity: preference.opportunity,
-        })),
-      ),
-    [profile, feedback, generationSeed, mode, manual, preferenceRecords],
-  );
+  useEffect(() => {
+    let active = true;
+    void fetch("/api/opportunities/discover", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({ profile, preferences: mode === "manual" ? manual : undefined }),
+    })
+      .then((response) => response.json())
+      .then((payload: { pool?: Opportunity[] }) => {
+        if (!active) return;
+        setLlmPool(Array.isArray(payload.pool) && payload.pool.length > 0 ? payload.pool : null);
+      })
+      .catch(() => {
+        if (active) setLlmPool(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [profile, mode, manual, generationSeed]);
+  const allRanked = useMemo(() => {
+    const preferenceSignals = preferenceRecords.map((preference) => ({
+      state: preference.state,
+      opportunity: preference.opportunity,
+    }));
+    return llmPool && llmPool.length > 0
+      ? rankOpportunityPool(llmPool, profile, feedback, {}, preferenceSignals)
+      : rankOpportunities(
+          profile,
+          feedback,
+          {},
+          generationSeed,
+          mode === "manual" ? manual : undefined,
+          preferenceSignals,
+        );
+  }, [profile, feedback, generationSeed, mode, manual, preferenceRecords, llmPool]);
   const ranked = allRanked;
   const visible = showAll ? ranked : ranked.slice(0, 4);
   const savedPreferences = useMemo(
