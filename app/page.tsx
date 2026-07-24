@@ -3425,7 +3425,6 @@ function FinalDelivery({
           </section>
           <nav className={`mobile-report-actions ${activeReport === "launch" ? "mission-hidden" : ""}`} aria-label="결과 단계 이동">
             <button type="button" disabled={activeReportIndex <= 0} onClick={() => activeReportIndex > 0 && selectReport(reportTabs[activeReportIndex - 1].id)}><ArrowLeft /><span>이전</span></button>
-            <button className="mobile-report-actions-menu" type="button" onClick={() => setMobileReportMenuOpen(true)}><PanelLeft /><span>목차</span></button>
             <button className="mobile-report-actions-next" type="button" disabled={activeReportIndex >= reportTabs.length - 1} onClick={() => activeReportIndex < reportTabs.length - 1 && selectReport(reportTabs[activeReportIndex + 1].id)}><span>{activeReportIndex >= reportTabs.length - 1 ? "마지막 단계" : "다음"}</span>{activeReportIndex < reportTabs.length - 1 && <ArrowRight />}</button>
           </nav>
         </div>
