@@ -2003,6 +2003,12 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .mobile-report-progress strong { overflow: hidden; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
   .mobile-report-progress > i { height: 3px; border-radius: 999px; background: #e5e8eb; overflow: hidden; }
   .mobile-report-progress > i > b { height: 100%; border-radius: inherit; background: #1b64da; display: block; transition: width .25s ease; }
+  /* Mobile: the stacked headers repeated "this is an example" and the section title
+     several times. Keep the blue sample bar (example + CTA) and the progress bar (section
+     + progress) as the single source of each, and drop the duplicates below. */
+  .sample-delivery .delivery-ai-disclosure { display: none; }
+  .final-report-main > header { display: none; }
+  .sample-delivery .final-report-chrome > em { display: none; }
   .mobile-report-actions { min-height: 72px; padding: 9px 12px calc(9px + env(safe-area-inset-bottom)); border-top: 1px solid #d1d6db; background: #fffffff2; backdrop-filter: blur(14px); position: fixed; z-index: 110; inset: auto 0 0; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 10px; box-shadow: 0 -10px 30px #191f2814; }
   .mobile-report-actions > button { min-width: 0; min-height: 48px; padding: 0 12px; border: 1px solid #d1d6db; border-radius: 7px; background: #fff; color: #333d4b; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; font-weight: 850; cursor: pointer; }
   .mobile-report-actions > button svg { width: 16px; }
@@ -7554,6 +7560,8 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
     grid-template-columns: minmax(74px, auto) minmax(150px, 1fr);
     gap: 8px;
   }
+  /* First step has no "이전" button, so let the single primary action fill the bar. */
+  .mission-guided-card > footer:not(:has(.mission-step-back)) { grid-template-columns: minmax(0, 1fr); }
   .beginner-mission-cockpit:has(.mission-extra-tools[open]) .mission-guided-card > footer { display: none; }
   .mission-guided-card > footer > span { font-size: 9px; line-height: 1.4; }
   .mission-step-back { padding: 0 12px; }

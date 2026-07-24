@@ -830,7 +830,7 @@ function GuidedMission({
         )}
 
         <footer>
-          {step > 0 ? <button className="mission-step-back" type="button" onClick={() => setStep((current) => Math.max(0, current - 1))}>이전</button> : <span>완성 파일과는 별도로 진행돼요.</span>}
+          {step > 0 && <button className="mission-step-back" type="button" onClick={() => setStep((current) => Math.max(0, current - 1))}>이전</button>}
           {!recordStep ? (
             <button className="mission-step-next" type="button" disabled={!dependenciesDone} onClick={() => setStep((current) => Math.min(actionCount, current + 1))}>다음 <ChevronRight /></button>
           ) : (
