@@ -453,7 +453,7 @@ function Header({
         </nav>
       )}
       <div className="header-actions">
-        <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /><span>마이페이지</span></a>
+        <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /></a>
         {onStart && <button className="small-start" onClick={onStart}>시작하기</button>}
       </div>
     </header>
@@ -3269,7 +3269,7 @@ function FinalDelivery({
           <section className={`final-report-viewer ${activeReport === "launch" ? "mission-mode" : ""}`}>
             <header className="final-report-chrome">
               <div aria-hidden="true"><i /><i /><i /></div>
-              <button className="mobile-report-menu-trigger" type="button" aria-expanded={mobileReportMenuOpen} onClick={() => setMobileReportMenuOpen(true)}><PanelLeft /> 목차</button>
+              <button className="mobile-report-menu-trigger" type="button" aria-label="목차" title="목차" aria-expanded={mobileReportMenuOpen} onClick={() => setMobileReportMenuOpen(true)}><PanelLeft /></button>
               <span><Sparkles /> {resolvedBrandName} 맞춤 사업 실행 보고서</span>
               <em><i /> {generationMode === "ai" ? "AI 고도화" : generationMode === "sample" ? "화면 예시" : "안전 초안"}</em>
             </header>

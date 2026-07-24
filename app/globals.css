@@ -27,7 +27,7 @@ a { color: inherit; text-decoration: none; }
 .site-header nav a { opacity: .78; }
 .site-header nav a:hover { opacity: 1; color: var(--green); }
 .header-actions { display: flex; align-items: center; gap: 10px; }
-.account-link { min-height: 39px; padding: 0 11px; border: 1px solid #d1d6db; border-radius: 8px; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; }
+.account-link { width: 39px; min-height: 39px; padding: 0; border: 1px solid #d1d6db; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
 .site-header.light .account-link { border-color: #ffffff3d; background: #ffffff12; }
 .account-link svg { width: 15px; }
 .login-status { color: inherit; opacity: .7; font-size: 12px; font-weight: 700; }
@@ -1981,7 +1981,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .final-report-viewer { grid-template-columns: minmax(0, 1fr); grid-template-rows: 52px minmax(0, 1fr); grid-template-areas: "chrome" "main"; }
   .final-report-chrome { grid-template-columns: auto minmax(0, 1fr) auto; }
   .final-report-chrome > div { display: none; }
-  .mobile-report-menu-trigger { min-width: 72px; min-height: 36px; padding: 0 10px; border: 1px solid #d1d6db; border-radius: 6px; background: #fff; color: #1b64da; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 11px; font-weight: 850; cursor: pointer; }
+  .mobile-report-menu-trigger { width: 36px; min-width: 36px; min-height: 36px; padding: 0; border: 1px solid #d1d6db; border-radius: 6px; background: #fff; color: #1b64da; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 850; cursor: pointer; }
   .mobile-report-menu-trigger svg { width: 16px; }
   .mobile-report-backdrop { position: fixed; z-index: 309; inset: 0; border: 0; background: #1013188f; opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .2s ease, visibility .2s ease; }
   .mobile-report-backdrop.open { display: block; opacity: 1; visibility: visible; pointer-events: auto; }
@@ -2038,7 +2038,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .delivery-package-actions button { justify-content: center; }
   .delivery-package-actions button:last-child { grid-column: 1/-1; }
   .final-report-chrome { min-height: 52px; padding: 0 10px; gap: 7px; }
-  .mobile-report-menu-trigger { min-width: 66px; padding: 0 8px; }
+  .mobile-report-menu-trigger { width: 34px; min-width: 34px; padding: 0; }
   .final-report-chrome > span { font-size: 9px; }
   .final-report-chrome > em { padding: 5px 6px; font-size: 8px; }
   .final-report-sidebar { padding: 16px 13px calc(16px + env(safe-area-inset-bottom)); }
@@ -7887,6 +7887,15 @@ button svg,
 .public-landing-hero-copy button svg,
 .preview-lead-form button svg {
   display: none !important;
+}
+
+/* These two are intentionally icon-only (text removed), so re-show their icons
+   despite the global "buttons use text, not icons" rule above. */
+.account-link svg,
+.mobile-report-menu-trigger svg {
+  display: inline-block !important;
+  width: 18px;
+  height: 18px;
 }
 
 button > span:has(> svg:only-child),
