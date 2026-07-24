@@ -2600,8 +2600,8 @@ function FinalDelivery({
     { id: "business" as const, label: "상품·손익", icon: BarChart3 },
     { id: "market" as const, label: "시장 확인", icon: Users },
     { id: "landing" as const, label: "판매 페이지", icon: Layers3 },
-    { id: "launch" as const, label: "실행 도우미", icon: CalendarDays },
     { id: "documents" as const, label: "최종 결과물", icon: PackageCheck },
+    { id: "launch" as const, label: "실행 도우미", icon: CalendarDays },
   ];
   const activeReportTab = reportTabs.find((tab) => tab.id === activeReport) ?? reportTabs[0];
   const ActiveReportIcon = activeReportTab.icon;
@@ -3376,7 +3376,7 @@ function FinalDelivery({
               {activeReport === "documents" && <>
                 <section className="delivery-gift-hero"><div className="delivery-gift-mark"><Gift /><i><Sparkles /></i></div><div><small>내 사업 파일 모음</small><h3>{resolvedBrandName}의 사업 시작 파일이 준비되었습니다</h3><p>사업계획서, 홈페이지 글, 발표자료와 수정 가능한 12개월 예상 수익 엑셀을 한곳에 모았습니다.</p><span><CheckCircle2 /> 파일 생성 완료 · 확인할 내용도 함께 표시했어요</span></div><aside><strong>{resultCount}</strong><small>개 파일 준비</small><button disabled={Boolean(documentDownload)} onClick={() => void downloadAllResults()}><Download /> 한 번에 받기</button></aside></section>
                 <div className="delivery-section-heading"><div className="report-title-row"><PackageCheck /><div><small>마지막 단계</small><h3>파일을 열거나 내려받으세요</h3></div></div><div className="delivery-package-actions"><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("pdf")}><FileText /> 전체 PDF</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadDocuments("docx")}><BookOpen /> 전체 워드</button><button disabled={Boolean(documentDownload)} onClick={() => void downloadAllResults()}><Download /> 전체 받기</button></div></div>
-                <p className="report-lead"><strong>이곳이 마지막 단계입니다.</strong> 실행 도우미를 완료하지 않아도 아래 결과물은 그대로 열고 내려받을 수 있습니다.</p>
+                <p className="report-lead"><strong>여기까지가 핵심 단계예요.</strong> 이어지는 실행 도우미는 사업 시작을 돕는 선택 과정이며, 완료하지 않아도 위 결과물은 그대로 열고 내려받을 수 있습니다.</p>
                 {deliveryFactSummary && <div className="delivery-fact-summary" aria-label="파일에 사용된 내용 요약"><span><CheckCircle2 /><strong>{deliveryFactSummary.verified + deliveryFactSummary.userInput}</strong> 내가 입력한 내용</span><span><BarChart3 /><strong>{deliveryFactSummary.calculated}</strong> 자동 계산된 숫자</span><span><CircleHelp /><strong>{deliveryFactSummary.assumptions + deliveryFactSummary.needsInput}</strong> 나중에 확인할 내용</span></div>}
                 <div className={`delivery-claim-safety ${deliveryClaimSummary.convertedClaims > 0 ? "changed" : "safe"}`} aria-label="허위 실적 자동 점검 결과">
                   <span><ShieldCheck /></span>
@@ -3425,7 +3425,7 @@ function FinalDelivery({
           </section>
           <nav className={`mobile-report-actions ${activeReport === "launch" ? "mission-hidden" : ""}`} aria-label="결과 단계 이동">
             <button type="button" disabled={activeReportIndex <= 0} onClick={() => activeReportIndex > 0 && selectReport(reportTabs[activeReportIndex - 1].id)}><ArrowLeft /><span>이전</span></button>
-            <button className="mobile-report-actions-next" type="button" disabled={activeReportIndex >= reportTabs.length - 1} onClick={() => activeReportIndex < reportTabs.length - 1 && selectReport(reportTabs[activeReportIndex + 1].id)}><span>{activeReportIndex >= reportTabs.length - 1 ? "마지막 단계" : "다음"}</span>{activeReportIndex < reportTabs.length - 1 && <ArrowRight />}</button>
+            <button className="mobile-report-actions-next" type="button" disabled={activeReportIndex >= reportTabs.length - 1} onClick={() => activeReportIndex < reportTabs.length - 1 && selectReport(reportTabs[activeReportIndex + 1].id)}><span>{activeReportIndex >= reportTabs.length - 1 ? "마지막 단계" : reportTabs[activeReportIndex + 1]?.id === "launch" ? "실행 도우미(선택)" : "다음"}</span>{activeReportIndex < reportTabs.length - 1 && <ArrowRight />}</button>
           </nav>
         </div>
       </section>
