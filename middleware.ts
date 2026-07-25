@@ -16,7 +16,9 @@ function withSecurityHeaders(response: NextResponse) {
   return response;
 }
 
-export async function proxy(request: NextRequest) {
+// Edge middleware. Cloudflare(OpenNext)는 Edge 미들웨어만 지원하므로 Next 16의
+// Node 전용 proxy.ts 대신 이 파일을 사용한다. 세션 검증은 Web Crypto 기반이라 Edge에서 동작한다.
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Default-deny gate for the admin API surface. Even if a new /api/admin/* route
