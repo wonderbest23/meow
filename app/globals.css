@@ -8729,6 +8729,30 @@ body {
   grid-template-columns: minmax(0, 1fr);
 }
 
+/* 맞춤 분석 완료 헤더: 어두운 배경에서 텍스트 대비 확보 + 완성 애니메이션 */
+.purchase-preview-heading {
+  color: #fff;
+  animation: purchase-result-reveal .5s ease both, purchase-complete-glow 1.9s .55s ease-out 1;
+}
+.purchase-preview-heading h1 { color: #fff; }
+.purchase-preview-heading > div > span {
+  color: #8bbcff;
+  animation: purchase-badge-pop .55s .12s cubic-bezier(.2, .8, .2, 1) both;
+}
+.purchase-preview-heading p { color: #c3cbd5; }
+.purchase-preview-ready-list li { animation: purchase-ready-in .45s ease both; }
+.purchase-preview-ready-list li:nth-child(1) { animation-delay: .30s; }
+.purchase-preview-ready-list li:nth-child(2) { animation-delay: .44s; }
+.purchase-preview-ready-list li:nth-child(3) { animation-delay: .58s; }
+@keyframes purchase-badge-pop { 0% { opacity: 0; transform: scale(.82); } 60% { transform: scale(1.06); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes purchase-ready-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes purchase-complete-glow { 0% { box-shadow: 0 20px 50px #191f281f; } 32% { box-shadow: 0 22px 66px #8bbcff4d; } 100% { box-shadow: 0 20px 50px #191f281f; } }
+@media (prefers-reduced-motion: reduce) {
+  .purchase-preview-heading,
+  .purchase-preview-heading > div > span,
+  .purchase-preview-ready-list li { animation: none; }
+}
+
 .purchase-preview-tabs {
   box-shadow: 0 8px 22px rgba(25, 31, 40, .07);
 }
