@@ -4721,7 +4721,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .home-price-panel > button { width: 100%; min-height: 54px; border: 0; border-radius: 7px; background: var(--lime); color: #202632; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; cursor: pointer; }
 .home-price-panel > button svg { width: 17px; }
 .home-price-panel > small { margin-top: 11px; color: #6b7684; display: block; text-align: center; font-size: 10px; }
-.home-custom-price { padding: 18px; border: 1px solid #ffffff24; border-radius: 8px; background: #ffffff0b; display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+.home-custom-price { padding: 18px; border: 1px solid #ffffff24; border-radius: 8px; background: #ffffff0b; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
 .home-custom-price > span { width: 38px; height: 38px; border-radius: 7px; background: #8bbcff; color: #202632; display: grid; place-items: center; }
 .home-custom-price > span svg { width: 18px; }
 .home-custom-price > div:nth-child(2) { min-width: 0; display: grid; gap: 3px; }
@@ -5150,7 +5150,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .home-price { padding: 74px 18px; }
   .home-price-panel { padding: 27px 20px; }
   .home-price-number { font-size: 34px; }
-  .home-custom-price { grid-template-columns: 36px minmax(0, 1fr); }
+  .home-custom-price { grid-template-columns: minmax(0, 1fr); }
   .home-custom-price > span { width: 36px; height: 36px; }
   .home-custom-price > div:last-child { grid-column: 1 / -1; padding-top: 4px; display: flex; align-items: center; justify-content: space-between; }
   .home-custom-price button { min-height: 38px; padding: 0 12px; }

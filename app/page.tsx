@@ -575,7 +575,7 @@ function Home({
         <section className="simple-home-choice">
           <div className="home-hero-copy">
             <span className="section-label">직업 탐색부터 사업 실행까지</span>
-            <h1>나에게 맞는 일,<br />사업으로 시작하세요.</h1>
+            <h1>아이디어를 현실로,<br />오늘창업</h1>
             <p>완벽하지 않아도 괜찮습니다. 아이디어만 들고 오세요. 함께 가능성을 확인하고, 바로 시작할 수 있는 방법과 계획을 만들어드립니다.</p>
             <div className="home-hero-actions">
               <button className="conversation-choice" onClick={onStart} aria-label="나에게 맞는 사업 찾기 시작"><strong>시작하기</strong></button>
