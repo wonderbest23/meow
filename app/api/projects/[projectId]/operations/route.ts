@@ -54,7 +54,7 @@ export async function PUT(
         project,
         "operations",
         generatedPackage.markdown,
-        resolveLLMConfig(identity.hash),
+        resolveLLMConfig(identity.hash, "anthropic"),
       ),
     };
     const updatedProject = await saveOperationsWorkspace(

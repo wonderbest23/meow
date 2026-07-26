@@ -4,7 +4,7 @@ import { generateBusinessPlan } from "../../../../../lib/business-plan/generator
 import { analyzeLocations } from "../../../../../lib/market/location-engine";
 import { emptyMarketWorkspace } from "../../../../../lib/market/domain";
 import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
-import { resolveLLMConfig } from "../../../../../lib/llm/config";
+import { resolveLLMConfig, resolveAlternateLLMConfig } from "../../../../../lib/llm/config";
 import {
   getProject,
   saveBusinessPlan,
@@ -22,12 +22,17 @@ export async function POST(
     const workspace = project.marketWorkspace ?? emptyMarketWorkspace();
     const analysis = project.marketAnalysis ?? analyzeLocations(workspace);
     const plan = generateBusinessPlan(project, workspace, analysis);
-    const enrichedMarkdown = await enrichDocumentNarrative(
-      project,
-      "plan",
-      plan.markdown,
-      resolveLLMConfig(identity.hash),
-    );
+    // 사업계획서(유료 핵심 문서)는 두 모델이 상호보완한다:
+    // 1) 서술에 강한 Claude 우선으로 문장을 다듬고,
+    // 2) 다른 모델(있으면)이 한 번 더 교차로 다듬어 품질을 끌어올린다.
+    const primaryConfig = resolveLLMConfig(identity.hash, "anthropic");
+    let enrichedMarkdown = await enrichDocumentNarrative(project, "plan", plan.markdown, primaryConfig);
+    const secondaryConfig = primaryConfig
+      ? resolveAlternateLLMConfig(identity.hash, primaryConfig.provider)
+      : null;
+    if (secondaryConfig) {
+      enrichedMarkdown = await enrichDocumentNarrative(project, "plan", enrichedMarkdown, secondaryConfig);
+    }
     const enrichedPlan = { ...plan, markdown: enrichedMarkdown };
     const updatedProject = await saveBusinessPlan(projectId, identity.hash, enrichedPlan);
     return NextResponse.json({ project: updatedProject, plan: enrichedPlan });
