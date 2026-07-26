@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { proposeIdeas } from "../lib/discovery/idea-proposer";
-import type { OpenAIRuntimeConfig } from "../lib/openai/session-config";
+import type { LLMConfig } from "../lib/llm/complete";
 import type { FounderProfile } from "../lib/assessment";
 
 const profile: FounderProfile = {
@@ -12,7 +12,8 @@ const profile: FounderProfile = {
   answered: 30,
 };
 
-const runtimeConfig: OpenAIRuntimeConfig = { apiKey: "sk-test-only", model: "gpt-5.6-sol", source: "session" };
+const openaiConfig: LLMConfig = { provider: "openai", apiKey: "sk-test-only", model: "gpt-5.6-sol" };
+const anthropicConfig: LLMConfig = { provider: "anthropic", apiKey: "sk-ant-test", model: "claude-sonnet-5" };
 
 const validA = {
   title: "동네 세탁 구독",
@@ -68,12 +69,24 @@ function mockFetch(ideas: unknown[]) {
   }) as unknown as typeof fetch;
 }
 
+// Claude(Anthropic)는 messages API라 응답 형태가 다르다.
+function mockAnthropicFetch(ideas: unknown[]) {
+  lastRequestBody = null;
+  globalThis.fetch = (async (_url: unknown, init?: { body?: string }) => {
+    lastRequestBody = init?.body ? JSON.parse(init.body) : null;
+    return new Response(
+      JSON.stringify({ content: [{ type: "text", text: JSON.stringify({ ideas }) }] }),
+      { status: 200, headers: { "Content-Type": "application/json" } },
+    );
+  }) as unknown as typeof fetch;
+}
+
 async function main() {
   const originalFetch = globalThis.fetch;
   try {
     // 0) 다양성 강제: 매 요청마다 넓은 좌표계에서 서로 다른 분야가 배정된다.
     mockFetch([validA, validB]);
-    await proposeIdeas(profile, undefined, runtimeConfig, 8);
+    await proposeIdeas(profile, undefined, openaiConfig, 8);
     const message = (lastRequestBody as { input?: Array<{ role: string; content: string }> }).input?.find(
       (item) => item.role === "user",
     );
@@ -88,7 +101,7 @@ async function main() {
 
     // 1) 정상 후보 → Opportunity 형태로 정규화된다.
     mockFetch([validA, validB]);
-    const pool = await proposeIdeas(profile, undefined, runtimeConfig);
+    const pool = await proposeIdeas(profile, undefined, openaiConfig);
     assert.equal(pool.length, 2, "유효한 후보 2개가 모두 반환돼야 합니다.");
     assert.equal(pool[0].id, "llm-0");
     assert.equal(pool[0].market, 0, "시장 점수는 미검증(0)이어야 합니다.");
@@ -98,18 +111,18 @@ async function main() {
 
     // 2) 허위 후보는 폐기하고 나머지는 유지한다.
     mockFetch([validA, fabricated, validB]);
-    const filtered = await proposeIdeas(profile, undefined, runtimeConfig);
+    const filtered = await proposeIdeas(profile, undefined, openaiConfig);
     assert.equal(filtered.length, 2, "허위 후보를 뺀 2개만 남아야 합니다.");
     assert.ok(!filtered.some((item) => item.title === "허위 시장 사업"), "지어낸 시장 수치 후보는 폐기돼야 합니다.");
 
     // 3) 같은 분야 중복은 제거된다.
     mockFetch([validA, { ...validB, sector: validA.sector, title: "같은 분야 다른 이름" }]);
-    const deduped = await proposeIdeas(profile, undefined, runtimeConfig);
+    const deduped = await proposeIdeas(profile, undefined, openaiConfig);
     assert.equal(deduped.length, 0, "분야가 겹쳐 유효 후보가 2개 미만이면 빈 풀로 폴백해야 합니다.");
 
     // 4) 통과 후보가 2개 미만이면 빈 풀(라이브러리 폴백).
     mockFetch([validA]);
-    const tooFew = await proposeIdeas(profile, undefined, runtimeConfig);
+    const tooFew = await proposeIdeas(profile, undefined, openaiConfig);
     assert.equal(tooFew.length, 0, "후보가 2개 미만이면 빈 풀을 반환해야 합니다.");
 
     // 5) 키 없음 → 호출 없이 빈 풀.
@@ -121,6 +134,19 @@ async function main() {
     const noKey = await proposeIdeas(profile, undefined, null);
     assert.equal(noKey.length, 0);
     assert.equal(called, false, "키가 없으면 OpenAI를 호출하지 않아야 합니다.");
+
+    // 6) Claude(Anthropic) 프로바이더로도 동일하게 동작한다.
+    mockAnthropicFetch([validA, validB]);
+    const viaClaude = await proposeIdeas(profile, undefined, anthropicConfig);
+    assert.equal(viaClaude.length, 2, "Claude 응답도 동일하게 정규화돼야 합니다.");
+    assert.ok(
+      Array.isArray((lastRequestBody as { messages?: unknown[] }).messages),
+      "Anthropic 호출은 messages API 형태여야 합니다.",
+    );
+    assert.ok(
+      typeof (lastRequestBody as { system?: string }).system === "string",
+      "Anthropic 호출에 system 프롬프트가 있어야 합니다.",
+    );
   } finally {
     globalThis.fetch = originalFetch;
   }

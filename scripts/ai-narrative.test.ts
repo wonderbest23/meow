@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { enrichDocumentNarrative } from "../lib/delivery/ai-narrative";
-import type { OpenAIRuntimeConfig } from "../lib/openai/session-config";
+import type { LLMConfig } from "../lib/llm/complete";
 import type { ProjectRecord } from "../lib/service-domain";
 
 const project = {
@@ -36,10 +36,10 @@ const project = {
   updatedAt: new Date().toISOString(),
 } as unknown as ProjectRecord;
 
-const runtimeConfig: OpenAIRuntimeConfig = {
+const runtimeConfig: LLMConfig = {
+  provider: "openai",
   apiKey: "sk-test-only",
   model: "gpt-5.6-sol",
-  source: "session",
 };
 
 // 강화 대상 문단 하나 + 반드시 보존돼야 하는 제목·표·숫자·출처 라인.

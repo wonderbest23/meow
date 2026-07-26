@@ -7,7 +7,7 @@ import {
   generateGrantPackage,
 } from "../../../../../lib/grants/engine";
 import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
-import { getOpenAIRuntimeConfig } from "../../../../../lib/openai/session-config";
+import { resolveLLMConfig } from "../../../../../lib/llm/config";
 import {
   getProject,
   saveGrantWorkspace,
@@ -54,7 +54,7 @@ export async function PUT(
         project,
         "grants",
         generatedPackage.markdown,
-        getOpenAIRuntimeConfig(identity.hash),
+        resolveLLMConfig(identity.hash),
       ),
     };
     const updatedProject = await saveGrantWorkspace(

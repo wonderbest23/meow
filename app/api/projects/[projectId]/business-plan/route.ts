@@ -4,7 +4,7 @@ import { generateBusinessPlan } from "../../../../../lib/business-plan/generator
 import { analyzeLocations } from "../../../../../lib/market/location-engine";
 import { emptyMarketWorkspace } from "../../../../../lib/market/domain";
 import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
-import { getOpenAIRuntimeConfig } from "../../../../../lib/openai/session-config";
+import { resolveLLMConfig } from "../../../../../lib/llm/config";
 import {
   getProject,
   saveBusinessPlan,
@@ -26,7 +26,7 @@ export async function POST(
       project,
       "plan",
       plan.markdown,
-      getOpenAIRuntimeConfig(identity.hash),
+      resolveLLMConfig(identity.hash),
     );
     const enrichedPlan = { ...plan, markdown: enrichedMarkdown };
     const updatedProject = await saveBusinessPlan(projectId, identity.hash, enrichedPlan);

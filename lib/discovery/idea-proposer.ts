@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Opportunity } from "../../data/opportunities";
-import type { OpenAIRuntimeConfig } from "../openai/session-config";
+import { completeJson, type LLMConfig } from "../llm/complete";
 import {
   founderLabels,
   riasecLabels,
@@ -161,64 +161,20 @@ function buildPrompt(
 export async function proposeIdeas(
   profile: FounderProfile,
   preferences: OpportunityProposalOptions["preferences"],
-  runtimeConfig: OpenAIRuntimeConfig | null,
+  config: LLMConfig | null,
   count = 8,
 ): Promise<Opportunity[]> {
-  if (!runtimeConfig?.apiKey) return [];
-  const model = runtimeConfig.model || process.env.OPENAI_MODEL || "gpt-5.6-sol";
-  let response: Response;
-  try {
-    response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${runtimeConfig.apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        store: false,
-        reasoning: { effort: "medium" },
-        max_output_tokens: 6_000,
-        text: { format: { type: "json_object" } },
-        input: [
-          {
-            role: "system",
-            content:
-              "당신은 한국의 초보 창업가를 위한 사업 발굴 전략가입니다. 사용자 프로필에 맞춰 매번 새롭고 현실적인 사업 아이디어를 제안합니다. 확인되지 않은 사실·수치·성과를 절대 지어내지 말고, 반드시 설명 없이 유효한 JSON 객체 하나만 출력하세요.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify(buildPrompt(profile, preferences, pickDistinct(SECTOR_UNIVERSE, count))),
-          },
-        ],
-      }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(120_000),
-    });
-  } catch {
-    return [];
-  }
-  if (!response.ok) return [];
-  const payload = (await response.json().catch(() => null)) as {
-    output_text?: string;
-    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-  } | null;
-  if (!payload) return [];
-  const outputText =
-    payload.output_text ??
-    payload.output
-      ?.flatMap((item) => item.content ?? [])
-      .filter((item) => item.type === "output_text" && typeof item.text === "string")
-      .map((item) => item.text)
-      .join("");
-  if (!outputText) return [];
-
-  let ideas: unknown;
-  try {
-    ideas = (JSON.parse(outputText) as { ideas?: unknown }).ideas;
-  } catch {
-    return [];
-  }
+  if (!config?.apiKey) return [];
+  const parsed = await completeJson(config, {
+    system:
+      "당신은 한국의 초보 창업가를 위한 사업 발굴 전략가입니다. 사용자 프로필에 맞춰 매번 새롭고 현실적인 사업 아이디어를 제안합니다. 확인되지 않은 사실·수치·성과를 절대 지어내지 마세요.",
+    user: JSON.stringify(buildPrompt(profile, preferences, pickDistinct(SECTOR_UNIVERSE, count))),
+    maxOutputTokens: 6_000,
+    effort: "medium",
+    timeoutMs: 120_000,
+  });
+  if (!parsed) return [];
+  const ideas = parsed.ideas;
   if (!Array.isArray(ideas)) return [];
 
   const seenSectors = new Set<string>();

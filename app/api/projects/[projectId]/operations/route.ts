@@ -7,7 +7,7 @@ import {
   generateOperationsPackage,
 } from "../../../../../lib/operations/engine";
 import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
-import { getOpenAIRuntimeConfig } from "../../../../../lib/openai/session-config";
+import { resolveLLMConfig } from "../../../../../lib/llm/config";
 import {
   getProject,
   saveOperationsWorkspace,
@@ -54,7 +54,7 @@ export async function PUT(
         project,
         "operations",
         generatedPackage.markdown,
-        getOpenAIRuntimeConfig(identity.hash),
+        resolveLLMConfig(identity.hash),
       ),
     };
     const updatedProject = await saveOperationsWorkspace(

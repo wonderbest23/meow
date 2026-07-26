@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
-import { getOpenAIRuntimeConfig } from "../../../../lib/openai/session-config";
+import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { proposeIdeas } from "../../../../lib/discovery/idea-proposer";
 import type { FounderProfile } from "../../../../lib/assessment";
 import type { ManualPreferences } from "../../../../lib/idea-generator";
@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const pool = await proposeIdeas(
       profile as unknown as FounderProfile,
       preferences as ManualPreferences | undefined,
-      getOpenAIRuntimeConfig(identity.hash),
+      resolveLLMConfig(identity.hash),
     );
     return privateJson({ pool, source: pool.length > 0 ? "ai" : "library" });
   } catch (error) {
