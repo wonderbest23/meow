@@ -1,5 +1,6 @@
 import type { ProjectRecord } from "../service-domain";
 import { completeJson, type LLMConfig } from "../llm/complete";
+import { resolveLLMConfig, resolveAlternateLLMConfig } from "../llm/config";
 import { sanitizeBusinessReality } from "../quality/business-reality";
 
 // 서술 강화 대상에서 제외할 구조적 라인(제목·목록·표·인용·코드펜스).
@@ -124,4 +125,26 @@ export async function enrichDocumentNarrative(
   if (safety.changedCount > 0) return markdown;
 
   return rebuilt;
+}
+
+/**
+ * 두 모델이 문서를 상호보완한다: 서술에 강한 Claude 우선으로 다듬고,
+ * 다른 모델(있으면)이 한 번 더 교차로 다듬어 품질을 끌어올린다.
+ * 키가 하나뿐이면 그 모델만, 둘 다 없으면 원문(규칙 기반)을 그대로 반환한다.
+ */
+export async function enrichDocumentNarrativeCrossModel(
+  project: ProjectRecord,
+  documentId: string,
+  markdown: string,
+  guestHash: string,
+): Promise<string> {
+  const primaryConfig = resolveLLMConfig(guestHash, "anthropic");
+  let enriched = await enrichDocumentNarrative(project, documentId, markdown, primaryConfig);
+  const secondaryConfig = primaryConfig
+    ? resolveAlternateLLMConfig(guestHash, primaryConfig.provider)
+    : null;
+  if (secondaryConfig) {
+    enriched = await enrichDocumentNarrative(project, documentId, enriched, secondaryConfig);
+  }
+  return enriched;
 }
