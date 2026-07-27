@@ -1,4 +1,5 @@
 import { marked, type Token, type Tokens } from "marked";
+import { subsetTrueType } from "./font-subset";
 
 type PdfDocumentInput = {
   title: string;
@@ -411,9 +412,11 @@ export function renderLightweightPdf(documents: PdfDocumentInput[], project: Pdf
   const objects = new PdfObjects();
   const catalogId = objects.reserve();
   const pagesId = objects.reserve();
-  const fontFileId = objects.add(stream(`/Length1 ${font.data.length}`, font.data));
-  const descriptorId = objects.add(`<< /Type /FontDescriptor /FontName /NanumGothic /Flags 32 /FontBBox [${font.bbox.map((value) => font.pdfMetric(value)).join(" ")}] /ItalicAngle 0 /Ascent ${font.pdfMetric(font.ascent)} /Descent ${font.pdfMetric(font.descent)} /CapHeight ${font.pdfMetric(font.ascent)} /StemV 80 /FontFile2 ${fontFileId} 0 R >>`);
   const usedGlyphs = [...layout.unicodeByGlyph.keys()].sort((left, right) => left - right);
+  // 실제 쓰인 글리프만 담은 서브셋을 임베드한다(4MB → 수백KB). 실패 시 전체 폰트로 폴백.
+  const embeddedFont = subsetTrueType(font.data, usedGlyphs) ?? font.data;
+  const fontFileId = objects.add(stream(`/Length1 ${embeddedFont.length}`, embeddedFont));
+  const descriptorId = objects.add(`<< /Type /FontDescriptor /FontName /NanumGothic /Flags 32 /FontBBox [${font.bbox.map((value) => font.pdfMetric(value)).join(" ")}] /ItalicAngle 0 /Ascent ${font.pdfMetric(font.ascent)} /Descent ${font.pdfMetric(font.descent)} /CapHeight ${font.pdfMetric(font.ascent)} /StemV 80 /FontFile2 ${fontFileId} 0 R >>`);
   const widths = usedGlyphs.map((glyph) => `${glyph} [${font.pdfMetric(font.width(glyph))}]`).join(" ");
   const cidFontId = objects.add(`<< /Type /Font /Subtype /CIDFontType2 /BaseFont /NanumGothic /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor ${descriptorId} 0 R /DW 1000 /W [${widths}] /CIDToGIDMap /Identity >>`);
   const unicodeId = objects.add(stream("", toUnicodeCmap(layout.unicodeByGlyph)));
