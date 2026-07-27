@@ -22,6 +22,7 @@ import { marked, type Token, type Tokens } from "marked";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderLightweightPdf } from "./lightweight-pdf";
+import { subsetTrueType, glyphIdsForText } from "./font-subset";
 
 export type BusinessDocument = {
   id: string;
@@ -231,6 +232,27 @@ function deliveryFontData(fontData?: DeliveryFontData) {
   return fontData ? Buffer.from(fontData) : readFileSync(deliveryFontPath());
 }
 
+// NanumGothic으로 렌더되는 모든 텍스트를 모은다(서브셋 커버리지의 상한 집합).
+// 본문은 마크다운에 있고, 나머지는 표지·바닥글 고정 라벨과 프로젝트/문서 필드다.
+// 코드스팬은 Consolas로 렌더되므로 NanumGothic 커버리지 대상이 아니다.
+function collectDeliveryText(documents: BusinessDocument[], project: DocumentProjectMeta): string {
+  const parts: string[] = [
+    // 표지·바닥글·메타에서 쓰는 고정 라벨(coverBlocks/footer/Document)
+    "창업 실행 캔버스 프로젝트 목표 고객 수익 방식 문서 버전 생성일 전체 창업 실행 문서 한국 초보 창업자를 위한 실행 문서 년 월 일",
+    // 숫자·영문·문장부호 안전망
+    "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,·|()[]{}<>-–—:;/%~!?\"'`@#&*+=₩$…“”‘’",
+    project.title,
+    project.customer,
+    project.model,
+    project.sector,
+    new Date(project.generatedAt).toLocaleDateString("ko-KR"),
+  ];
+  for (const document of documents) {
+    parts.push(document.title, document.type, document.versionLabel, document.markdown);
+  }
+  return parts.join("\n");
+}
+
 export async function renderDocx(
   documents: BusinessDocument[],
   project: DocumentProjectMeta,
@@ -240,11 +262,14 @@ export async function renderDocx(
     ...coverBlocks(document, project, index === 0),
     ...docxBlocks(document),
   ]);
+  // 실제 쓰인 글리프만 담은 서브셋을 임베드한다(4MB → 수백KB). 실패 시 전체 폰트로 폴백.
+  const fullFont = deliveryFontData(fontData);
+  const embeddedFont = subsetTrueType(fullFont, glyphIdsForText(fullFont, collectDeliveryText(documents, project))) ?? fullFont;
   const doc = new Document({
     creator: "창업 실행 캔버스",
     title: documents.length === 1 ? documents[0].title : `${project.title} 전체 창업 실행 문서`,
     description: "한국 초보 창업자를 위한 실행 문서",
-    fonts: [{ name: docxFont, data: deliveryFontData(fontData) }],
+    fonts: [{ name: docxFont, data: embeddedFont }],
     numbering: {
       config: [{
         reference: "delivery-numbering",
