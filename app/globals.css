@@ -5697,7 +5697,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .presentation-preview > header button:last-child { width: 34px; padding: 0; border-radius: 50%; }
 .presentation-preview > header button:disabled { opacity: .55; cursor: wait; }
 .presentation-preview > header svg { width: 14px; }
-.presentation-preview-body { min-width: 0; min-height: 0; padding: 16px; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 16px; overflow: hidden; }
+.presentation-preview-body { min-width: 0; min-height: 0; padding: 16px; display: grid; grid-template-columns: 264px minmax(0, 1fr); gap: 16px; overflow: hidden; }
 .presentation-preview-body.editor-open { grid-template-columns: 205px minmax(0, 1fr) 340px; }
 .presentation-thumbnail-rail { min-width: 0; min-height: 0; border: 1px solid #d1d6db; border-radius: 7px; background: white; display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; }
 .presentation-thumbnail-rail > header { padding: 14px; border-bottom: 1px solid #e5e8eb; display: grid; gap: 2px; }
