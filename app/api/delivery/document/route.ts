@@ -67,6 +67,15 @@ export async function POST(request: Request) {
       project: DocumentProjectMeta;
       documents: BusinessDocument[];
     };
+    // 개별 문서 상한(20개·각 500KB) 위에 합산 총량 상한을 둔다. 실제 산출물은
+    // 이보다 훨씬 작으므로 오탐 없이 병리적 대용량 입력만 OOM 대신 명확히 거부한다.
+    const totalMarkdown = payload.documents.reduce((sum, document) => sum + document.markdown.length, 0);
+    if (totalMarkdown > 3_000_000) {
+      return NextResponse.json(
+        { error: { code: "DOCUMENT_TOO_LARGE", message: "문서 전체 분량이 너무 커 생성할 수 없습니다. 문서 수나 길이를 줄여주세요." } },
+        { status: 413 },
+      );
+    }
     const baseName = safeFileName(payload.documents.length === 1
       ? payload.documents[0].title
       : `${payload.project.title}-전체-출시-문서`);
