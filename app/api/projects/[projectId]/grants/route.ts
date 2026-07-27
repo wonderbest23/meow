@@ -6,8 +6,7 @@ import {
   createGrantWorkspace,
   generateGrantPackage,
 } from "../../../../../lib/grants/engine";
-import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
-import { resolveLLMConfig } from "../../../../../lib/llm/config";
+import { enrichDocumentNarrativeCrossModel } from "../../../../../lib/delivery/ai-narrative";
 import {
   getProject,
   saveGrantWorkspace,
@@ -50,11 +49,11 @@ export async function PUT(
     const generatedPackage = generateGrantPackage(project, workspace, analysis);
     const grantPackage = {
       ...generatedPackage,
-      markdown: await enrichDocumentNarrative(
+      markdown: await enrichDocumentNarrativeCrossModel(
         project,
         "grants",
         generatedPackage.markdown,
-        resolveLLMConfig(identity.hash, "anthropic"),
+        identity.hash,
       ),
     };
     const updatedProject = await saveGrantWorkspace(

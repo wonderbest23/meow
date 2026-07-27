@@ -6,8 +6,7 @@ import {
   createOperationsWorkspace,
   generateOperationsPackage,
 } from "../../../../../lib/operations/engine";
-import { enrichDocumentNarrative } from "../../../../../lib/delivery/ai-narrative";
-import { resolveLLMConfig } from "../../../../../lib/llm/config";
+import { enrichDocumentNarrativeCrossModel } from "../../../../../lib/delivery/ai-narrative";
 import {
   getProject,
   saveOperationsWorkspace,
@@ -50,11 +49,11 @@ export async function PUT(
     const generatedPackage = generateOperationsPackage(project, workspace, assessment);
     const operationsPackage = {
       ...generatedPackage,
-      markdown: await enrichDocumentNarrative(
+      markdown: await enrichDocumentNarrativeCrossModel(
         project,
         "operations",
         generatedPackage.markdown,
-        resolveLLMConfig(identity.hash, "anthropic"),
+        identity.hash,
       ),
     };
     const updatedProject = await saveOperationsWorkspace(

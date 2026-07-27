@@ -2,6 +2,9 @@ import PptxGenJS from "pptxgenjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { requireGuestIdentity } from "../../../../lib/api-auth";
+import { resolveLLMConfig, resolveAlternateLLMConfig } from "../../../../lib/llm/config";
+import { enrichDeckNarrative } from "../../../../lib/delivery/deck-narrative";
 import {
   applyPresentationDraft,
   buildPresentationSlides,
@@ -571,7 +574,8 @@ function renderSlide(pptx: PptxGenJS, input: PresentationDeckInput, item: Presen
   }
 }
 
-function buildDeck(input: DeckInput) {
+// 슬라이드를 이미 조립한 상태로 받아 PPTX로 렌더한다(사용자 수동편집은 여기서 최종 반영).
+function renderDeck(input: DeckInput, slides: PresentationSlide[]) {
   const deckInput: PresentationDeckInput = input;
   const edits: PresentationDeckDraft | undefined = input.edits;
   const accent = input.deckType === "ir" ? "2D5BFF" : cleanHex(input.accentColor);
@@ -582,9 +586,24 @@ function buildDeck(input: DeckInput) {
   pptx.subject = input.deckType === "intro" ? `${input.title} 사업소개서` : `${input.title} 투자제안서(IR)`;
   pptx.title = `${input.brandName} ${input.deckType === "intro" ? "사업소개서" : "투자제안서(IR)"}`;
   pptx.theme = { headFontFace: BODY_FONT, bodyFontFace: BODY_FONT };
-  applyPresentationDraft(buildPresentationSlides(deckInput), edits, deckInput)
+  applyPresentationDraft(slides, edits, deckInput)
     .forEach((slide, index) => renderSlide(pptx, deckInput, slide, index + 1, accent));
   return pptx;
+}
+
+// 발표자료 서술을 두 모델이 상호보완한다(사업계획서와 동일 패턴):
+// 1) 서술에 강한 Claude 우선으로 슬라이드 문장을 다듬고,
+// 2) 다른 모델(있으면)이 한 번 더 교차로 다듬는다. 키·검증 실패 시 원본 슬라이드 유지.
+async function buildDeck(input: DeckInput, guestHash: string) {
+  const deckInput: PresentationDeckInput = input;
+  let slides = buildPresentationSlides(deckInput);
+  const primaryConfig = resolveLLMConfig(guestHash, "anthropic");
+  slides = await enrichDeckNarrative(deckInput, slides, primaryConfig);
+  const secondaryConfig = primaryConfig
+    ? resolveAlternateLLMConfig(guestHash, primaryConfig.provider)
+    : null;
+  if (secondaryConfig) slides = await enrichDeckNarrative(deckInput, slides, secondaryConfig);
+  return renderDeck(input, slides);
 }
 
 export async function POST(request: Request) {
@@ -596,7 +615,9 @@ export async function POST(request: Request) {
   if (limited) return limited;
   try {
     const input = deckRequestSchema.parse(await request.json());
-    const output = await buildDeck(input).write({ outputType: "nodebuffer", compression: true });
+    const identity = await requireGuestIdentity();
+    const deck = await buildDeck(input, identity.hash);
+    const output = await deck.write({ outputType: "nodebuffer", compression: true });
     const body = output instanceof Uint8Array ? output : new Uint8Array(output as ArrayBuffer);
     const responseBody = body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer;
     const deckName = input.deckType === "intro" ? "사업소개서" : "투자제안서-IR";
