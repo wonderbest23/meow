@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import SectionWizard from "../../SectionWizard";
 import { type PlanSectionStatus } from "../../../../lib/plan-builder/blueprint";
-import { loadPlan, planStatuses } from "../../../../lib/plan-builder/plan-store";
+import { planStatuses, hydrateFromServer } from "../../../../lib/plan-builder/plan-store";
 
 // Phase 2~4: 섹션 질문 위저드 라우트 /plan/[chapterId]/[sectionId]
 export default function SectionPage() {
@@ -15,10 +15,16 @@ export default function SectionPage() {
   const [planType, setPlanType] = useState("창업 초기 · 사업계획서");
 
   useEffect(() => {
-    const s = loadPlan();
-    setStatuses(planStatuses(s));
-    if (s.title) setPlanTitle(s.title);
-    if (s.planType) setPlanType(s.planType);
+    let alive = true;
+    hydrateFromServer().then((s) => {
+      if (!alive) return;
+      setStatuses(planStatuses(s));
+      if (s.title) setPlanTitle(s.title);
+      if (s.planType) setPlanType(s.planType);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   return (

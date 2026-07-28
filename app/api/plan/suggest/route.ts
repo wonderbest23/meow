@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { completeText } from "../../../../lib/llm/complete";
+import { requireGuestIdentity } from "../../../../lib/api-auth";
 
 export const runtime = "nodejs";
 
@@ -52,7 +53,8 @@ export async function POST(req: Request) {
   if (!question) return NextResponse.json({ suggestions: [], source: "empty" });
   const count = Math.min(Math.max(body.count ?? 4, 2), 6);
 
-  const config = resolveLLMConfig("", "anthropic");
+  const identity = await requireGuestIdentity();
+  const config = resolveLLMConfig(identity.hash, "anthropic");
   if (!config) {
     return NextResponse.json({ suggestions: fallbackSuggest(question), source: "fallback" });
   }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PLAN_BLUEPRINT, totalSections, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
-import { loadPlan, planStatuses, assembleSections } from "../../lib/plan-builder/plan-store";
+import { planStatuses, assembleSections, hydrateFromServer } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -47,12 +47,18 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [title, setTitle] = useState(planTitle);
   const [exporting, setExporting] = useState<"pdf" | "docx" | null>(null);
 
-  // 생성된 섹션 상태·본문을 스토어에서 로드(클라이언트)
+  // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
   useEffect(() => {
-    const s = loadPlan();
-    setStoreStatuses(planStatuses(s));
-    setAssembled(assembleSections(s));
-    if (s.title) setTitle(s.title);
+    let alive = true;
+    hydrateFromServer().then((s) => {
+      if (!alive) return;
+      setStoreStatuses(planStatuses(s));
+      setAssembled(assembleSections(s));
+      if (s.title) setTitle(s.title);
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
 
   // 스토어에 생성된 게 있으면 스토어 우선, 없으면 데모 prop

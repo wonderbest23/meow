@@ -38,6 +38,7 @@ export function loadPlan(): PlanState {
 /** 플랜 유형(+제목) 설정 — 시작 플로우에서 새 플랜 시작 */
 export function startNewPlan(title: string, planType: string) {
   persist({ title: title || EMPTY.title, planType, sections: {} });
+  void pushToServer();
 }
 
 function persist(state: PlanState) {
@@ -53,12 +54,48 @@ export function saveSection(key: string, markdown: string, html: string) {
   const state = loadPlan();
   state.sections[key] = { markdown, html, generatedAt: new Date().toISOString() };
   persist(state);
+  void pushToServer();
 }
 
 export function setPlanTitle(title: string) {
   const state = loadPlan();
   state.title = title;
   persist(state);
+  void pushToServer();
+}
+
+// ── 서버 동기화 (로컬 캐시 + 서버 저장; Supabase 미설정 시 서버는 메모리 폴백) ──
+
+/** 현재 로컬 상태를 서버에 저장(fire-and-forget) */
+export async function pushToServer(): Promise<void> {
+  if (typeof window === "undefined") return;
+  try {
+    await fetch("/api/plan/state", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(loadPlan()),
+    });
+  } catch {
+    // 오프라인/실패 시 로컬만 유지
+  }
+}
+
+/** 서버에서 상태를 불러와 로컬에 반영(서버 우선). 로그인/기기 전환 후 이어쓰기용. */
+export async function hydrateFromServer(): Promise<PlanState> {
+  if (typeof window === "undefined") return loadPlan();
+  try {
+    const res = await fetch("/api/plan/state", { cache: "no-store" });
+    if (res.ok) {
+      const server = (await res.json()) as PlanState;
+      const hasServerData = server && (Object.keys(server.sections || {}).length > 0 || (server.title && server.title !== "새 플랜"));
+      if (hasServerData) {
+        persist({ title: server.title, planType: server.planType || EMPTY.planType, sections: server.sections || {} });
+      }
+    }
+  } catch {
+    // 서버 실패 → 로컬 캐시 사용
+  }
+  return loadPlan();
 }
 
 /** 섹션 상태 맵 (생성된 것 = done) */

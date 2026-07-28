@@ -3,6 +3,7 @@ import { marked } from "marked";
 import { PLAN_BLUEPRINT } from "../../../../lib/plan-builder/blueprint";
 import { generateSection } from "../../../../lib/plan-builder/section-generator";
 import { resolveLLMConfig } from "../../../../lib/llm/config";
+import { requireGuestIdentity } from "../../../../lib/api-auth";
 
 export const runtime = "nodejs";
 
@@ -23,7 +24,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown section" }, { status: 400 });
   }
 
-  const config = resolveLLMConfig("", "anthropic");
+  const identity = await requireGuestIdentity();
+  const config = resolveLLMConfig(identity.hash, "anthropic");
   const { markdown, source } = await generateSection(config, {
     chapter,
     section,
