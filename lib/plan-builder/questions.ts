@@ -317,6 +317,128 @@ const SWOT_GROUPS: QuestionGroup[] = [
   },
 ];
 
+// ───────── 챕터 3: 목표 ─────────
+const OBJECTIVES_GROUPS: QuestionGroup[] = [
+  {
+    id: "primary",
+    label: "핵심 목표",
+    questions: [
+      { id: "horizon", q: "언제까지의 목표를 세우시나요?", input: { kind: "single", options: ["3개월", "6개월", "1년", "3년"] } },
+      { id: "main_goals", q: "가장 중요한 목표는 무엇인가요?", help: "2~3개. 'AI 추천'으로 후보를 받아보세요.", input: { kind: "multi", options: [], max: 3 }, aiSuggest: true },
+      { id: "measure", q: "목표 달성을 무엇으로 측정하나요?", help: "매출·고객수·재구매율 등 숫자로 확인 가능한 지표.", input: { kind: "multi", options: ["매출액", "고객 수", "주문 건수", "재구매율", "손익분기 도달", "인지도·팔로워"], max: 4 } },
+      { id: "target_number", q: "구체적인 목표 수치가 있나요?", help: "예: 6개월 내 월 매출 300만원. 없으면 비워두세요.", input: { kind: "text", placeholder: "예: 6개월 내 월 30건 / 월 매출 150만원", long: false }, optional: true },
+    ],
+  },
+  {
+    id: "secondary",
+    label: "부차 목표와 제약",
+    questions: [
+      { id: "sub_goals", q: "그 다음으로 중요한 목표는?", help: "여력이 될 때 추진할 항목.", input: { kind: "multi", options: [], max: 3 }, aiSuggest: true, optional: true },
+      { id: "constraint", q: "목표 달성에 가장 큰 걸림돌은 무엇인가요?", help: "자금·시간·인력·기술 등.", input: { kind: "single", options: ["자금 부족", "시간 부족", "인력 부족", "경험·기술 부족", "고객 확보"] } },
+    ],
+  },
+];
+
+// ───────── 챕터 4: 사업 전략 ─────────
+
+// 4.1 상품 전략
+const STRATEGY_PRODUCT_GROUPS: QuestionGroup[] = [
+  {
+    id: "core",
+    label: "상품 방향",
+    questions: [
+      { id: "uvp", q: "우리 상품의 핵심 가치 제안은 한 문장으로?", help: "고객이 이걸 사야 하는 이유.", input: { kind: "text", placeholder: "예: 급할 때 30분 안에 검증된 돌봄을 연결", long: true }, aiSuggest: true },
+      { id: "improve_plan", q: "앞으로 상품을 어떻게 개선할 계획인가요?", help: "고객 피드백 반영 방식 등.", input: { kind: "text", placeholder: "예: 첫 10건 후 포함 범위 재조정", long: true }, aiSuggest: true },
+      { id: "expand", q: "추가 상품·라인업 확장 계획이 있나요?", input: { kind: "yesno" } },
+      { id: "expand_what", q: "어떤 상품을 추가할 예정인가요?", input: { kind: "text", placeholder: "예: 정기 구독형 돌봄", long: false }, showWhen: { qid: "expand", equals: "yes" } },
+    ],
+  },
+];
+
+// 4.2 유통 전략
+const STRATEGY_DIST_GROUPS: QuestionGroup[] = [
+  {
+    id: "channel",
+    label: "판매·전달 경로",
+    questions: [
+      { id: "channels", q: "고객에게 어떤 경로로 판매하나요?", help: "해당하는 것을 모두 고르세요.", input: { kind: "multi", options: ["오프라인 매장", "자체 웹사이트·앱", "오픈마켓·플랫폼", "전화·메신저 주문", "방문·출장", "제휴처 통한 판매"] } },
+      { id: "main_channel", q: "그중 가장 중요한 경로는?", input: { kind: "text", placeholder: "예: 지역 커뮤니티 통한 직접 문의", long: false } },
+      { id: "delivery", q: "상품·서비스는 어떻게 전달되나요?", help: "배송·방문·현장이용 등.", input: { kind: "text", placeholder: "예: 파트너가 고객 자택 방문", long: true } },
+      { id: "coverage", q: "서비스 가능 범위는 어디까지인가요?", input: { kind: "single", options: ["동네·생활권", "시·군 단위", "전국", "온라인 전국·해외"] } },
+    ],
+  },
+];
+
+// 4.3 가격 전략
+const STRATEGY_PRICE_GROUPS: QuestionGroup[] = [
+  {
+    id: "method",
+    label: "가격 책정",
+    questions: [
+      { id: "pricing_method", q: "가격을 어떤 방식으로 정하나요?", input: { kind: "single", options: ["원가 + 마진", "경쟁사 기준", "고객 가치 기준", "구독·정액제", "아직 미정"] } },
+      { id: "cost_known", q: "원가(변동비)를 계산해보셨나요?", help: "1건 판매 시 실제 나가는 돈.", input: { kind: "yesno" } },
+      { id: "unit_cost", q: "1건당 변동비는 얼마인가요?", help: "재료비·인건비·수수료 등 합계.", input: { kind: "text", placeholder: "예: 35,000원", long: false }, showWhen: { qid: "cost_known", equals: "yes" } },
+      { id: "discount", q: "할인·프로모션 계획이 있나요?", input: { kind: "yesno" } },
+      { id: "discount_plan", q: "어떤 할인을 계획하나요?", help: "첫 이용·재구매·묶음 등.", input: { kind: "text", placeholder: "예: 첫 이용 20% 할인", long: false }, showWhen: { qid: "discount", equals: "yes" } },
+    ],
+  },
+];
+
+// 4.4 홍보 전략
+const STRATEGY_PROMO_GROUPS: QuestionGroup[] = [
+  {
+    id: "channels",
+    label: "홍보 채널",
+    questions: [
+      { id: "promo_channels", q: "어떤 채널로 알릴 계획인가요?", help: "고객이 실제 있는 곳 위주로.", input: { kind: "multi", options: ["인스타그램", "네이버 검색·블로그", "지역 커뮤니티·맘카페", "유튜브·숏폼", "오프라인 전단·간판", "지인·입소문", "제휴처 소개"] } },
+      { id: "message", q: "홍보 핵심 메시지는 무엇인가요?", help: "한 문장. AI 추천 가능.", input: { kind: "text", placeholder: "예: 급할 때도, 믿을 수 있는 돌봄", long: true }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "budget",
+    label: "예산과 측정",
+    questions: [
+      { id: "has_promo_budget", q: "홍보 예산을 정하셨나요?", input: { kind: "yesno" } },
+      { id: "promo_budget", q: "월 홍보 예산은 얼마인가요?", input: { kind: "text", placeholder: "예: 월 20만원", long: false }, showWhen: { qid: "has_promo_budget", equals: "yes" } },
+      { id: "promo_measure", q: "홍보 효과를 어떻게 확인하나요?", help: "문의 수·유입 경로 질문 등.", input: { kind: "text", placeholder: "예: 신규 문의 시 유입 경로를 항상 기록", long: true }, aiSuggest: true },
+    ],
+  },
+];
+
+// 4.5 인력 전략
+const STRATEGY_PEOPLE_GROUPS: QuestionGroup[] = [
+  {
+    id: "structure",
+    label: "인력 구성",
+    questions: [
+      { id: "who_works", q: "실제 업무는 누가 수행하나요?", input: { kind: "multi", options: ["대표자 직접", "직원(정규)", "아르바이트·파트타임", "프리랜서·외주", "협력 파트너"] } },
+      { id: "need_hire", q: "추가 인력이 필요한 시점이 있나요?", input: { kind: "yesno" } },
+      { id: "hire_when", q: "언제, 어떤 역할이 필요한가요?", input: { kind: "text", placeholder: "예: 월 50건 넘으면 파트타임 1명", long: false }, showWhen: { qid: "need_hire", equals: "yes" } },
+    ],
+  },
+  {
+    id: "manage",
+    label: "관리와 문화",
+    questions: [
+      { id: "how_manage", q: "인력의 품질·신뢰를 어떻게 관리하나요?", help: "검증·교육·평가 방식.", input: { kind: "text", placeholder: "예: 신원 확인 후 사고 대응 교육 이수 필수", long: true }, aiSuggest: true },
+      { id: "pay_structure", q: "보상 방식은 어떻게 되나요?", input: { kind: "single", options: ["시급·일급", "월급", "건당 지급", "수익 배분", "아직 미정"] } },
+    ],
+  },
+];
+
+// 4.6 출구 전략
+const STRATEGY_EXIT_GROUPS: QuestionGroup[] = [
+  {
+    id: "exit",
+    label: "장기 방향",
+    questions: [
+      { id: "exit_goal", q: "장기적으로 이 사업을 어떻게 하고 싶으신가요?", input: { kind: "single", options: ["오래 직접 운영", "규모 키워 매각", "투자 유치 후 성장", "가족·직원에게 승계", "아직 생각 안 해봄"] } },
+      { id: "exit_when", q: "그 시점을 언제로 보시나요?", input: { kind: "single", options: ["3년 내", "5년 내", "10년 이상", "정하지 않음"] }, optional: true },
+      { id: "exit_prep", q: "그 목표를 위해 지금부터 준비할 것은?", help: "기록·재무 투명성·시스템화 등.", input: { kind: "text", placeholder: "예: 처음부터 매출·비용 기록을 체계적으로 관리", long: true }, aiSuggest: true },
+    ],
+  },
+];
+
 const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "overview/summary": SUMMARY_GROUPS,
   "overview/problem": PROBLEM_GROUPS,
@@ -329,6 +451,13 @@ const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "market/personas": PERSONAS_GROUPS,
   "market/competitors": COMPETITORS_GROUPS,
   "market/swot": SWOT_GROUPS,
+  "objectives/corporate": OBJECTIVES_GROUPS,
+  "strategy/product": STRATEGY_PRODUCT_GROUPS,
+  "strategy/distribution": STRATEGY_DIST_GROUPS,
+  "strategy/price": STRATEGY_PRICE_GROUPS,
+  "strategy/promotion": STRATEGY_PROMO_GROUPS,
+  "strategy/people": STRATEGY_PEOPLE_GROUPS,
+  "strategy/exit": STRATEGY_EXIT_GROUPS,
 };
 
 export function questionsForSection(key: string, sectionTitle: string): QuestionGroup[] {
