@@ -439,6 +439,135 @@ const STRATEGY_EXIT_GROUPS: QuestionGroup[] = [
   },
 ];
 
+// ───────── 챕터 5: 자금 ─────────
+const FUNDING_GROUPS: QuestionGroup[] = [
+  {
+    id: "need",
+    label: "필요 자금",
+    questions: [
+      { id: "needs_funding", q: "창업·운영에 외부 자금이 필요한가요?", help: "자기자본만으로 가능하면 '아니오'.", input: { kind: "yesno" } },
+      { id: "amount", q: "얼마가 필요한가요?", help: "대략적인 총액.", input: { kind: "single", options: ["1천만원 미만", "1천만~3천만원", "3천만~1억원", "1억원 이상"] }, showWhen: { qid: "needs_funding", equals: "yes" } },
+      { id: "use_of_funds", q: "그 자금을 어디에 쓸 계획인가요?", help: "해당하는 것을 모두 고르세요.", input: { kind: "multi", options: ["시설·인테리어", "장비·비품", "초기 재고·재료", "인건비", "마케팅·홍보", "운영 예비자금", "개발·외주"] }, showWhen: { qid: "needs_funding", equals: "yes" } },
+      { id: "self_fund", q: "자기자본은 얼마나 준비되어 있나요?", help: "대략적인 금액.", input: { kind: "text", placeholder: "예: 2,000만원", long: false }, optional: true },
+    ],
+  },
+  {
+    id: "source",
+    label: "조달 방법",
+    questions: [
+      { id: "sources", q: "어떤 방법으로 자금을 마련할 계획인가요?", input: { kind: "multi", options: ["자기자본", "정부지원사업", "정책자금·대출", "가족·지인", "투자 유치", "크라우드펀딩"] } },
+      { id: "gov_program", q: "정부지원사업을 알아보셨나요?", help: "예비창업패키지·소상공인 지원 등.", input: { kind: "yesno" } },
+      { id: "gov_detail", q: "어떤 사업을 준비 중인가요?", input: { kind: "text", placeholder: "예: 예비창업패키지 2026", long: false }, showWhen: { qid: "gov_program", equals: "yes" } },
+    ],
+  },
+];
+
+// ───────── 챕터 6: 재무 계획 ─────────
+
+// 6.1 매출
+const FIN_REVENUE_GROUPS: QuestionGroup[] = [
+  {
+    id: "streams",
+    label: "매출원",
+    questions: [
+      { id: "revenue_streams", q: "매출이 발생하는 방식은 무엇인가요?", input: { kind: "multi", options: ["1회성 판매", "정기 구독·회원", "시간·건당 요금", "중개 수수료", "광고·제휴 수익"] } },
+      { id: "unit_price", q: "1건(1인) 평균 판매 금액은 얼마인가요?", help: "숫자만 적어도 됩니다.", input: { kind: "text", placeholder: "예: 49,000원", long: false } },
+      { id: "monthly_volume", q: "월 몇 건 정도를 예상하시나요?", help: "첫 3개월 기준 보수적으로.", input: { kind: "text", placeholder: "예: 월 20건", long: false } },
+      { id: "growth", q: "매출이 어떻게 늘어날 것으로 보시나요?", input: { kind: "single", options: ["천천히 안정 성장", "초기 느리다 후반 가속", "계절 영향 큼", "예측 어려움"] } },
+    ],
+  },
+];
+
+// 6.2 인건비
+const FIN_STAFF_GROUPS: QuestionGroup[] = [
+  {
+    id: "labor",
+    label: "인건비",
+    questions: [
+      { id: "has_staff_cost", q: "인건비가 발생하나요?", help: "대표자 급여, 직원, 파트너 지급 포함.", input: { kind: "yesno" } },
+      { id: "staff_monthly", q: "월 인건비는 대략 얼마인가요?", input: { kind: "text", placeholder: "예: 월 150만원", long: false }, showWhen: { qid: "has_staff_cost", equals: "yes" } },
+      { id: "staff_type", q: "어떤 형태로 지급하나요?", input: { kind: "multi", options: ["대표자 급여", "정규 직원 급여", "시급·일급", "건당 지급", "외주비"] }, showWhen: { qid: "has_staff_cost", equals: "yes" } },
+      { id: "owner_pay", q: "대표자 인건비를 계획에 포함하셨나요?", help: "빠뜨리면 실제 수익이 과대평가됩니다.", input: { kind: "yesno" } },
+    ],
+  },
+];
+
+// 6.3 비용
+const FIN_EXPENSE_GROUPS: QuestionGroup[] = [
+  {
+    id: "fixed",
+    label: "고정비",
+    questions: [
+      { id: "fixed_items", q: "매달 고정적으로 나가는 비용은?", input: { kind: "multi", options: ["임대료", "관리비·공과금", "통신비", "보험료", "구독 서비스·도구", "세무·회계", "대출 상환"] } },
+      { id: "fixed_total", q: "월 고정비 합계는 대략 얼마인가요?", input: { kind: "text", placeholder: "예: 월 80만원", long: false } },
+    ],
+  },
+  {
+    id: "variable",
+    label: "변동비",
+    questions: [
+      { id: "variable_items", q: "판매할 때마다 나가는 비용은?", input: { kind: "multi", options: ["재료·원가", "포장·배송비", "결제 수수료", "플랫폼 수수료", "파트너 지급액", "소모품"] } },
+      { id: "variable_per_unit", q: "1건당 변동비는 얼마인가요?", input: { kind: "text", placeholder: "예: 35,000원", long: false } },
+    ],
+  },
+];
+
+// 6.4 자산
+const FIN_ASSET_GROUPS: QuestionGroup[] = [
+  {
+    id: "assets",
+    label: "보유·구매 자산",
+    questions: [
+      { id: "needs_assets", q: "사업에 필요한 시설·장비가 있나요?", input: { kind: "yesno" } },
+      { id: "asset_items", q: "어떤 자산이 필요한가요?", input: { kind: "multi", options: ["매장·사무 공간", "인테리어", "주방·생산 장비", "차량", "컴퓨터·IT 장비", "소프트웨어·시스템"] }, showWhen: { qid: "needs_assets", equals: "yes" } },
+      { id: "asset_cost", q: "초기 투자 금액은 대략 얼마인가요?", input: { kind: "text", placeholder: "예: 3,000만원", long: false }, showWhen: { qid: "needs_assets", equals: "yes" } },
+      { id: "asset_own", q: "이미 보유한 자산이 있나요?", help: "있으면 초기 비용이 줄어듭니다.", input: { kind: "text", placeholder: "예: 차량, 노트북 보유", long: false }, optional: true },
+    ],
+  },
+];
+
+// 6.5 자금 조달·손익
+const FIN_FINANCING_GROUPS: QuestionGroup[] = [
+  {
+    id: "breakeven",
+    label: "손익분기",
+    questions: [
+      { id: "knows_breakeven", q: "손익분기점을 계산해보셨나요?", help: "고정비 ÷ (판매가 - 변동비) = 필요 판매 건수.", input: { kind: "yesno" } },
+      { id: "breakeven_value", q: "월 몇 건을 팔아야 손익분기인가요?", input: { kind: "text", placeholder: "예: 월 28건", long: false }, showWhen: { qid: "knows_breakeven", equals: "yes" } },
+      { id: "breakeven_when", q: "언제쯤 손익분기에 도달할 것으로 보시나요?", input: { kind: "single", options: ["3개월 내", "6개월 내", "1년 내", "1년 이상", "예측 어려움"] } },
+    ],
+  },
+  {
+    id: "cashflow",
+    label: "자금 운용",
+    questions: [
+      { id: "runway", q: "매출이 없어도 몇 개월을 버틸 수 있나요?", help: "운전자금 기준.", input: { kind: "single", options: ["3개월 미만", "3~6개월", "6~12개월", "1년 이상"] } },
+      { id: "risk_plan", q: "예상보다 매출이 부진하면 어떻게 대응하시겠어요?", help: "비용 축소·가격 조정·방향 전환 등.", input: { kind: "text", placeholder: "예: 홍보비 중단 후 기존 고객 재구매에 집중", long: true }, aiSuggest: true },
+    ],
+  },
+];
+
+// ───────── 챕터 7: 요약 ─────────
+const EXEC_SUMMARY_GROUPS: QuestionGroup[] = [
+  {
+    id: "pitch",
+    label: "한 줄 요약",
+    questions: [
+      { id: "elevator", q: "이 사업을 한 문장으로 소개한다면?", help: "'AI 추천'으로 후보를 받아 다듬어보세요.", input: { kind: "text", placeholder: "예: 급할 때 검증된 돌봄을 30분 안에 연결하는 서비스", long: true }, aiSuggest: true },
+      { id: "why_now", q: "왜 지금 이 사업을 해야 하나요?", help: "시장 변화·기회의 타이밍.", input: { kind: "text", placeholder: "예: 1인 가구 증가로 돌봄 공백이 늘고 있음", long: true }, aiSuggest: true },
+      { id: "why_us", q: "왜 우리가 잘할 수 있나요?", help: "경험·네트워크·차별점.", input: { kind: "text", placeholder: "예: 지역 파트너 네트워크를 이미 확보", long: true }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "next",
+    label: "다음 단계",
+    questions: [
+      { id: "next_actions", q: "앞으로 30일 안에 할 일은 무엇인가요?", help: "가장 중요한 실행 항목.", input: { kind: "multi", options: [], max: 5 }, aiSuggest: true },
+      { id: "ask", q: "이 계획서를 누구에게, 무엇을 위해 보여주시나요?", input: { kind: "single", options: ["정부지원사업 신청", "투자자·대출 심사", "동업자·팀 설득", "내부 정리용"] } },
+    ],
+  },
+];
+
 const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "overview/summary": SUMMARY_GROUPS,
   "overview/problem": PROBLEM_GROUPS,
@@ -458,6 +587,13 @@ const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "strategy/promotion": STRATEGY_PROMO_GROUPS,
   "strategy/people": STRATEGY_PEOPLE_GROUPS,
   "strategy/exit": STRATEGY_EXIT_GROUPS,
+  "funding/requirements": FUNDING_GROUPS,
+  "financials/revenue": FIN_REVENUE_GROUPS,
+  "financials/staffing": FIN_STAFF_GROUPS,
+  "financials/expenses": FIN_EXPENSE_GROUPS,
+  "financials/assets": FIN_ASSET_GROUPS,
+  "financials/financing": FIN_FINANCING_GROUPS,
+  "summary/executive": EXEC_SUMMARY_GROUPS,
 };
 
 export function questionsForSection(key: string, sectionTitle: string): QuestionGroup[] {
