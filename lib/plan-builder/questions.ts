@@ -200,6 +200,123 @@ const STRUCTURE_GROUPS: QuestionGroup[] = [
   },
 ];
 
+// ───────── 챕터 2: 고객과 시장 ─────────
+
+// 2.1 상품·서비스 — 상품/서비스 분기 → 각 구성·가격
+const PRODUCTS_GROUPS: QuestionGroup[] = [
+  {
+    id: "lineup",
+    label: "제공 구성",
+    questions: [
+      { id: "offer_type", q: "무엇을 제공하나요?", help: "해당하는 것을 모두 고르세요.", input: { kind: "multi", options: ["상품(물건)", "서비스(무형)", "구독·멤버십", "디지털 콘텐츠"] } },
+      { id: "main_offer", q: "가장 대표적인 상품·서비스는 무엇인가요?", help: "첫 판매로 밀 하나를 적어주세요.", input: { kind: "text", placeholder: "예: 당일 60분 방문 돌봄", long: false }, aiSuggest: true },
+      { id: "offer_detail", q: "그 구성에 무엇이 포함되나요?", help: "포함/제외를 명확히 하면 계획서 설득력이 올라갑니다.", input: { kind: "text", placeholder: "예: 급여·물·배변정리·사진3장 포함 / 투약 제외", long: true } },
+    ],
+  },
+  {
+    id: "price",
+    label: "가격",
+    questions: [
+      { id: "has_price", q: "가격을 정하셨나요?", input: { kind: "yesno" } },
+      { id: "price_value", q: "대표 상품의 가격은 얼마인가요?", help: "숫자만 적어도 됩니다.", input: { kind: "text", placeholder: "예: 49,000원", long: false }, showWhen: { qid: "has_price", equals: "yes" } },
+      { id: "price_basis", q: "그 가격의 근거는 무엇인가요?", help: "원가·경쟁가·고객 지불의사 등.", input: { kind: "single", options: ["원가 기반", "경쟁 가격 참고", "고객 지불의사 조사", "아직 근거 미확보"] }, showWhen: { qid: "has_price", equals: "yes" } },
+      { id: "price_plan", q: "가격은 어떻게 정할 계획인가요?", help: "정하지 않았다면 방향만 적어주세요.", input: { kind: "text", placeholder: "예: 원가 계산 후 경쟁가와 비교해 시험", long: true }, showWhen: { qid: "has_price", equals: "no" }, aiSuggest: true },
+    ],
+  },
+];
+
+// 2.2 시장 세그먼트 — 세분화 기준(지리·행동) + 우선순위
+const SEGMENTS_GROUPS: QuestionGroup[] = [
+  {
+    id: "basis",
+    label: "세분화 기준",
+    questions: [
+      { id: "seg_basis", q: "고객을 어떤 기준으로 나눌 수 있나요?", help: "해당하는 기준을 모두 고르세요.", input: { kind: "multi", options: ["지역(생활권·도시)", "연령·성별", "소득 수준", "이용 목적·상황", "구매 빈도", "사업자/개인"] } },
+      { id: "segments", q: "구체적인 고객 그룹을 적어주세요.", help: "2~4개 그룹. 'AI 추천'으로 후보를 받아보세요.", input: { kind: "multi", options: [], max: 4 }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "priority",
+    label: "우선순위",
+    questions: [
+      { id: "first_target", q: "가장 먼저 공략할 그룹은 어디인가요?", help: "초기 자원은 한 곳에 집중해야 합니다.", input: { kind: "text", placeholder: "예: 마포·서대문 1인 반려가구", long: false } },
+      { id: "why_first", q: "그 그룹을 먼저 선택한 이유는?", help: "접근성·문제 강도·지불의사 등.", input: { kind: "text", placeholder: "예: 문제 빈도가 높고 직접 만날 경로가 있음", long: true }, aiSuggest: true },
+      { id: "market_size_known", q: "이 그룹의 규모를 파악하셨나요?", help: "조사한 수치가 있으면 '예'.", input: { kind: "yesno" } },
+      { id: "market_size", q: "파악한 규모와 출처를 적어주세요.", help: "근거가 없는 수치는 계획서에서 '검증 필요'로 표기됩니다.", input: { kind: "text", placeholder: "예: 통계청 2025 기준 마포구 1인가구 약 O만 세대", long: true }, showWhen: { qid: "market_size_known", equals: "yes" } },
+    ],
+  },
+];
+
+// 2.3 핵심 고객(페르소나) — 인구통계·동기·두려움
+const PERSONAS_GROUPS: QuestionGroup[] = [
+  {
+    id: "who",
+    label: "대표 고객 프로필",
+    questions: [
+      { id: "age", q: "주 고객의 연령대는?", input: { kind: "multi", options: ["10~20대", "30대", "40대", "50대", "60대 이상"] } },
+      { id: "situation", q: "어떤 상황에 있는 사람인가요?", help: "직업·가구형태·생활패턴 등.", input: { kind: "text", placeholder: "예: 야근이 잦은 1인 가구 직장인", long: false }, aiSuggest: true },
+      { id: "budget", q: "이 고객의 예산 수준은?", input: { kind: "single", options: ["가격 민감(저예산)", "보통", "품질 우선(고예산)", "상황에 따라 다름"] } },
+    ],
+  },
+  {
+    id: "motive",
+    label: "구매 동기와 장벽",
+    questions: [
+      { id: "motivation", q: "이 고객이 우리를 찾는 결정적 이유는?", help: "'AI 추천'으로 후보를 받아 다듬어보세요.", input: { kind: "text", placeholder: "예: 급할 때 당장 맡길 곳이 필요해서", long: true }, aiSuggest: true },
+      { id: "fear", q: "구매를 망설이게 하는 걱정은 무엇인가요?", help: "신뢰·가격·품질·사고 등.", input: { kind: "multi", options: [], max: 4 }, aiSuggest: true },
+      { id: "channel", q: "이 고객은 주로 어디서 정보를 얻나요?", help: "마케팅 채널 선택의 근거가 됩니다.", input: { kind: "multi", options: ["검색(네이버·구글)", "인스타그램", "유튜브", "지역 커뮤니티·맘카페", "지인 추천", "오프라인 간판·전단"] } },
+    ],
+  },
+];
+
+// 2.4 경쟁 분석 — 직접·간접 경쟁 + 차별점
+const COMPETITORS_GROUPS: QuestionGroup[] = [
+  {
+    id: "landscape",
+    label: "경쟁 구도",
+    questions: [
+      { id: "comp_types", q: "고객이 우리 대신 선택할 수 있는 대안은?", help: "유형으로 골라주세요(실명은 근거 확인 후 본문에 반영).", input: { kind: "multi", options: [], max: 5 }, aiSuggest: true },
+      { id: "knows_competitors", q: "구체적인 경쟁 업체를 조사하셨나요?", help: "직접 확인한 곳이 있으면 '예'.", input: { kind: "yesno" } },
+      { id: "competitor_notes", q: "조사한 내용을 적어주세요.", help: "가격·서비스 범위·강점 등 확인한 사실만.", input: { kind: "text", placeholder: "예: 인근 A업체 시간당 O원, 예약제만 운영", long: true }, showWhen: { qid: "knows_competitors", equals: "yes" } },
+    ],
+  },
+  {
+    id: "position",
+    label: "우리의 위치",
+    questions: [
+      { id: "differentiator", q: "경쟁 대비 우리만의 차별점은?", help: "고객이 체감할 수 있는 것으로.", input: { kind: "text", placeholder: "예: 당일 연결 + 완료 기록 제공", long: true }, aiSuggest: true },
+      { id: "gap", q: "경쟁자들이 못 채우는 빈틈은 무엇인가요?", help: "시장 기회 포인트.", input: { kind: "text", placeholder: "예: 긴급 상황 대응이 되는 곳이 없음", long: true }, aiSuggest: true },
+    ],
+  },
+];
+
+// 2.5 SWOT — 4분면 각각 다중선택(AI 추천)
+const SWOT_GROUPS: QuestionGroup[] = [
+  {
+    id: "internal",
+    label: "내부 요인",
+    questions: [
+      { id: "strengths", q: "우리의 강점은 무엇인가요?", help: "경험·네트워크·기술·입지 등. AI 추천 가능.", input: { kind: "multi", options: [], max: 5 }, aiSuggest: true },
+      { id: "weaknesses", q: "솔직한 약점은 무엇인가요?", help: "자금·인력·인지도 등. 정직하게 적을수록 계획이 튼튼해집니다.", input: { kind: "multi", options: [], max: 5 }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "external",
+    label: "외부 요인",
+    questions: [
+      { id: "opportunities", q: "우리에게 유리한 시장 변화·기회는?", input: { kind: "multi", options: [], max: 5 }, aiSuggest: true },
+      { id: "threats", q: "위협이 될 수 있는 요인은?", help: "경쟁 심화·규제·경기 등.", input: { kind: "multi", options: [], max: 5 }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "action",
+    label: "대응 방향",
+    questions: [
+      { id: "swot_action", q: "약점·위협에 어떻게 대응할 계획인가요?", help: "한두 가지 구체적 대응책.", input: { kind: "text", placeholder: "예: 초기엔 지역 한정 운영으로 인력 부담 최소화", long: true }, aiSuggest: true },
+    ],
+  },
+];
+
 const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "overview/summary": SUMMARY_GROUPS,
   "overview/problem": PROBLEM_GROUPS,
@@ -207,6 +324,11 @@ const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "overview/ip": IP_GROUPS,
   "overview/achievements": ACHIEVEMENT_GROUPS,
   "overview/structure": STRUCTURE_GROUPS,
+  "market/products": PRODUCTS_GROUPS,
+  "market/segments": SEGMENTS_GROUPS,
+  "market/personas": PERSONAS_GROUPS,
+  "market/competitors": COMPETITORS_GROUPS,
+  "market/swot": SWOT_GROUPS,
 };
 
 export function questionsForSection(key: string, sectionTitle: string): QuestionGroup[] {
