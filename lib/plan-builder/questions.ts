@@ -101,8 +101,112 @@ function defaultGroups(sectionTitle: string): QuestionGroup[] {
   ];
 }
 
+// 1.2 문제와 해결 — 문제 정의(AI추천 다중선택) → 각 문제의 해결 방식
+const PROBLEM_GROUPS: QuestionGroup[] = [
+  {
+    id: "problem",
+    label: "고객이 겪는 문제",
+    questions: [
+      { id: "problems", q: "목표 고객이 겪는 대표적인 문제는 무엇인가요?", help: "가장 자주 마주치는 어려움을 고르거나 'AI 추천'으로 후보를 받아보세요.", input: { kind: "multi", options: [], max: 4 }, aiSuggest: true },
+      { id: "problem_freq", q: "이 문제는 얼마나 자주 발생하나요?", help: "반복성이 높을수록 사업 기회가 큽니다.", input: { kind: "single", options: ["매일·매주 반복", "월 1~2회", "가끔·비정기", "아직 확인 못함"] } },
+      { id: "current_alt", q: "고객은 지금 이 문제를 어떻게 해결하고 있나요?", help: "현재 대안(경쟁 상대)을 적어주세요. 사람·도구·직접 해결 모두 포함.", input: { kind: "text", placeholder: "예: 지인 부탁, 검색 후 개별 문의", long: true }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "solution",
+    label: "우리의 해결 방식",
+    questions: [
+      { id: "solutions", q: "우리는 이 문제를 어떤 방식으로 해결하나요?", help: "핵심 해결책을 고르거나 AI 추천을 받아 다듬어보세요.", input: { kind: "multi", options: [], max: 4 }, aiSuggest: true },
+      { id: "why_better", q: "기존 대안보다 나은 점은 무엇인가요?", help: "속도·가격·신뢰·편의 등 구체적으로.", input: { kind: "text", placeholder: "예: 당일 연결과 완료 기록 제공", long: true } },
+    ],
+  },
+];
+
+// 1.3 미션·비전·가치 — 창업 스토리 분기 + 가치 다중선택 + 비전 AI추천
+const MISSION_GROUPS: QuestionGroup[] = [
+  {
+    id: "purpose",
+    label: "존재 이유",
+    questions: [
+      { id: "has_story", q: "창업하게 된 특별한 계기나 스토리가 있나요?", help: "개인적 경험에서 출발했다면 '예'.", input: { kind: "yesno" } },
+      { id: "story", q: "그 계기를 간단히 들려주세요.", help: "실제 경험은 계획서에 설득력을 더합니다.", input: { kind: "text", placeholder: "예: 반려동물을 맡길 곳이 없어 곤란했던 경험에서 시작", long: true }, showWhen: { qid: "has_story", equals: "yes" } },
+      { id: "purpose", q: "이 사업이 존재하는 이유를 한 문장으로 적는다면?", help: "'AI 추천'으로 후보 문장을 받아 다듬어보세요.", input: { kind: "text", placeholder: "예: 급할 때도 믿을 수 있는 돌봄을 연결합니다", long: true }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "values",
+    label: "핵심 가치",
+    questions: [
+      { id: "values", q: "우리가 지키려는 핵심 가치는 무엇인가요?", help: "3~5개를 고르세요.", input: { kind: "multi", options: ["신뢰", "정확", "품질", "존중", "도전", "책임", "투명", "속도", "지속가능"], max: 5 } },
+    ],
+  },
+  {
+    id: "vision",
+    label: "비전",
+    questions: [
+      { id: "vision", q: "3~5년 뒤 어떤 모습이 되길 바라나요?", help: "장기 목표. 'AI 추천'으로 후보를 받아보세요.", input: { kind: "text", placeholder: "예: 우리 지역에서 가장 신뢰받는 돌봄 연결 서비스", long: true }, aiSuggest: true },
+    ],
+  },
+];
+
+// 1.4 지식재산 — 보유 여부 분기 → 유형별 상세
+const IP_GROUPS: QuestionGroup[] = [
+  {
+    id: "ip",
+    label: "지식재산 보유",
+    questions: [
+      { id: "has_ip", q: "보호하고 싶은 기술·브랜드·데이터가 있나요?", help: "특허·상표·노하우·데이터베이스 등 무형 자산 포함.", input: { kind: "yesno" } },
+      { id: "ip_types", q: "어떤 유형인가요?", help: "해당하는 것을 모두 고르세요.", input: { kind: "multi", options: ["상표(브랜드명·로고)", "특허·실용신안", "영업비밀·노하우", "데이터베이스", "디자인권", "저작물(콘텐츠·소프트웨어)"] }, showWhen: { qid: "has_ip", equals: "yes" } },
+      { id: "ip_status", q: "현재 권리 상태는?", help: "출원·등록 여부를 알려주세요.", input: { kind: "single", options: ["아직 준비 전", "출원 준비 중", "출원 완료", "등록 완료"] }, showWhen: { qid: "has_ip", equals: "yes" } },
+      { id: "ip_moat", q: "이 자산이 경쟁 우위에 어떻게 기여하나요?", help: "모방이 어려운 이유를 적어주세요.", input: { kind: "text", placeholder: "예: 축적된 검증 데이터로 매칭 정확도가 높아짐", long: true }, showWhen: { qid: "has_ip", equals: "yes" }, aiSuggest: true },
+      { id: "ip_plan", q: "앞으로 어떤 보호 조치를 계획하고 있나요?", help: "지금 없더라도 계획을 적으면 됩니다.", input: { kind: "text", placeholder: "예: 상표 출원 후 계약서에 비밀유지 조항 추가", long: true }, showWhen: { qid: "has_ip", equals: "no" }, optional: true },
+    ],
+  },
+];
+
+// 1.5 주요 성과 — 운영 여부 분기(성과 vs 준비 단계)
+const ACHIEVEMENT_GROUPS: QuestionGroup[] = [
+  {
+    id: "traction",
+    label: "지금까지의 성과",
+    questions: [
+      { id: "has_traction", q: "지금까지 이룬 성과가 있나요?", help: "매출·고객·시제품·제휴·수상 등 무엇이든.", input: { kind: "yesno" } },
+      { id: "traction_types", q: "어떤 성과인가요?", help: "해당하는 것을 모두 고르세요.", input: { kind: "multi", options: ["실제 판매·매출 발생", "고객 확보", "시제품·MVP 완성", "제휴·협약 체결", "수상·선정 이력", "투자 유치"] }, showWhen: { qid: "has_traction", equals: "yes" } },
+      { id: "traction_detail", q: "가장 의미 있는 성과를 구체적으로 알려주세요.", help: "숫자가 있으면 함께 적어주세요(검증 가능한 값만).", input: { kind: "text", placeholder: "예: 시범 운영으로 유료 고객 8명 확보", long: true }, showWhen: { qid: "has_traction", equals: "yes" } },
+      { id: "prep_progress", q: "현재까지 준비한 것들을 알려주세요.", help: "시장 조사, 인터뷰, 공간 계약 등 준비 단계도 성과입니다.", input: { kind: "text", placeholder: "예: 고객 인터뷰 12건 완료, 입지 후보 3곳 조사", long: true }, showWhen: { qid: "has_traction", equals: "no" }, aiSuggest: true },
+    ],
+  },
+];
+
+// 1.6 조직·지분 — 형태·구성원·지분
+const STRUCTURE_GROUPS: QuestionGroup[] = [
+  {
+    id: "team",
+    label: "구성원",
+    questions: [
+      { id: "team_size", q: "현재 함께하는 사람은 몇 명인가요?", help: "대표자 포함.", input: { kind: "single", options: ["1인(대표자만)", "2~3명", "4~9명", "10명 이상"] } },
+      { id: "has_cofounder", q: "공동 창업자가 있나요?", help: "지분을 나누는 동업자가 있으면 '예'.", input: { kind: "yesno" } },
+      { id: "equity_split", q: "지분은 어떻게 나눌 계획인가요?", help: "정해지지 않았다면 방향만 적어도 됩니다.", input: { kind: "text", placeholder: "예: 대표 70% / 공동창업자 30%", long: false }, showWhen: { qid: "has_cofounder", equals: "yes" } },
+      { id: "roles", q: "핵심 역할은 어떻게 나뉘나요?", help: "누가 무엇을 맡는지 적어주세요.", input: { kind: "text", placeholder: "예: 대표-운영·고객, 파트너-제작", long: true }, aiSuggest: true },
+    ],
+  },
+  {
+    id: "hiring",
+    label: "인력 계획",
+    questions: [
+      { id: "will_hire", q: "1년 안에 채용 계획이 있나요?", input: { kind: "yesno" } },
+      { id: "hire_roles", q: "어떤 역할을 채용할 예정인가요?", help: "우선순위가 높은 역할부터.", input: { kind: "text", placeholder: "예: 매장 운영 파트타임 2명", long: false }, showWhen: { qid: "will_hire", equals: "yes" } },
+    ],
+  },
+];
+
 const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "overview/summary": SUMMARY_GROUPS,
+  "overview/problem": PROBLEM_GROUPS,
+  "overview/mission": MISSION_GROUPS,
+  "overview/ip": IP_GROUPS,
+  "overview/achievements": ACHIEVEMENT_GROUPS,
+  "overview/structure": STRUCTURE_GROUPS,
 };
 
 export function questionsForSection(key: string, sectionTitle: string): QuestionGroup[] {

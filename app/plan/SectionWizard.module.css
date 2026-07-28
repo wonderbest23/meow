@@ -65,18 +65,19 @@
   border-radius: 13px;
   display: grid;
   place-items: center;
-  color: #7e93ab;
-  background: transparent;
+  color: #c3d3df;
+  background: rgba(255, 255, 255, 0.04);
   border: 0;
   cursor: pointer;
   transition: 0.16s;
 }
 .railBtn svg {
-  width: 21px;
-  height: 21px;
+  display: block !important; /* 전역 CSS의 svg 숨김 규칙을 이 화면에서 무력화 */
+  width: 22px;
+  height: 22px;
 }
 .railBtn:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.12);
   color: #fff;
 }
 .railBtn.on {
