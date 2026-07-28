@@ -1,0 +1,471 @@
+/* 플랜 개요 화면 — 챕터 밴드 (오늘창업 블루). 앱 토큰(--blue 등) 위에 구축. */
+
+.page {
+  min-height: 100vh;
+  background: var(--surface-muted, #f2f4f6);
+  color: var(--text-strong, #191f28);
+  font-family: inherit;
+  padding: 22px 16px 48px;
+}
+.frame {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* 앱 프레임: 아이콘 레일 + 본문 (위저드와 골격 통일) */
+.app {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  background: var(--surface, #fff);
+  border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(20, 32, 64, 0.1);
+  overflow: hidden;
+  min-height: 760px;
+}
+.main {
+  min-width: 0;
+  padding: 26px 30px 40px;
+}
+
+/* icon rail */
+.rail {
+  background: #0e1e30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 0;
+}
+.railLogo {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(150deg, var(--blue, #3182f6), #7f9bff);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 18px rgba(47, 87, 244, 0.5);
+}
+.railBtn {
+  width: 44px;
+  height: 44px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  color: #7e93ab;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition: 0.16s;
+}
+.railBtn svg {
+  width: 21px;
+  height: 21px;
+}
+.railBtn:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+}
+.railBtn.railOn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.railSpring {
+  flex: 1;
+}
+.railLock {
+  color: #f4b740;
+}
+@media (max-width: 720px) {
+  .app {
+    grid-template-columns: 52px minmax(0, 1fr);
+  }
+  .main {
+    padding: 18px 14px 28px;
+  }
+}
+
+/* 상단 바 */
+.bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 8px;
+}
+.barLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.back {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 1px solid var(--border-soft, #e5e8eb);
+  background: var(--surface, #fff);
+  color: var(--text-body, #4e5968);
+  cursor: pointer;
+  font-size: 18px;
+  display: grid;
+  place-items: center;
+}
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+}
+.title span {
+  font-weight: 500;
+  color: var(--text-muted, #8b95a1);
+}
+
+/* 진행 미터 스트립 */
+.meters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  padding: 18px 4px 20px;
+  border-bottom: 1px solid var(--border-soft, #e5e8eb);
+  margin-bottom: 20px;
+}
+.meter {
+  padding: 0 26px;
+  position: relative;
+}
+.meter:first-child {
+  padding-left: 4px;
+}
+.meter + .meter::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 1px;
+  background: var(--border-soft, #e5e8eb);
+}
+.meterLabel {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: var(--text-muted, #8b95a1);
+  text-transform: uppercase;
+}
+.meterRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 8px;
+}
+.meterValue {
+  font-size: 15px;
+  font-weight: 800;
+}
+.segs {
+  display: flex;
+  gap: 4px;
+}
+.segs i {
+  width: 22px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-muted, #e5e8eb);
+}
+.segs i.on {
+  background: var(--blue, #3182f6);
+}
+.segs i.ok {
+  background: #16b877;
+}
+.spring {
+  flex: 1;
+}
+
+/* 툴바 */
+.tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+.seg {
+  display: inline-flex;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 12px;
+  padding: 4px;
+  gap: 4px;
+}
+.seg button {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, #8b95a1);
+  font: inherit;
+  font-weight: 800;
+  font-size: 13.5px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.seg button.segOn {
+  background: var(--text-strong, #191f28);
+  color: #fff;
+}
+
+/* 문서 보기 */
+.docView {
+  display: flex;
+  flex-direction: column;
+}
+.exportBar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--surface-soft, #f7f8fa);
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+.exportInfo {
+  font-size: 13.5px;
+  color: var(--text-body, #4e5968);
+  margin-right: auto;
+}
+.exportInfo b {
+  color: var(--blue, #3182f6);
+}
+.exportBtn {
+  border: 1px solid var(--blue, #3182f6);
+  background: var(--blue, #3182f6);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.exportBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.docEmpty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-muted, #8b95a1);
+  font-size: 14px;
+}
+.docSection {
+  padding: 22px 24px;
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 16px;
+  margin-bottom: 16px;
+  background: var(--surface, #fff);
+}
+.docCrumb {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--blue, #3182f6);
+  margin-bottom: 4px;
+}
+.docTitle {
+  margin: 0 0 12px;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+}
+.docBody {
+  font-size: 14.5px;
+  line-height: 1.7;
+  color: var(--text-strong, #191f28);
+}
+.docBody :global(h1) {
+  font-size: 20px;
+  font-weight: 800;
+  margin: 20px 0 10px;
+}
+.docBody :global(h2) {
+  font-size: 17px;
+  font-weight: 800;
+  margin: 20px 0 8px;
+}
+.docBody :global(h3) {
+  font-size: 15px;
+  font-weight: 800;
+  margin: 16px 0 6px;
+}
+.docBody :global(p) {
+  margin: 0 0 12px;
+}
+.docBody :global(ul),
+.docBody :global(ol) {
+  margin: 0 0 12px;
+  padding-left: 20px;
+}
+.docBody :global(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0 18px;
+  font-size: 13px;
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 10px;
+  overflow: hidden;
+}
+.docBody :global(th),
+.docBody :global(td) {
+  border-bottom: 1px solid var(--border-soft, #e5e8eb);
+  padding: 9px 12px;
+  text-align: left;
+  vertical-align: top;
+}
+.docBody :global(th) {
+  background: var(--surface-soft, #f7f8fa);
+  font-weight: 800;
+  font-size: 12px;
+}
+
+/* 챕터 밴드 */
+.plan {
+  display: flex;
+  flex-direction: column;
+}
+.band {
+  position: relative;
+  display: grid;
+  grid-template-columns: 190px minmax(0, 1fr);
+  align-items: center;
+  gap: 22px;
+  padding: 22px 24px;
+  border-radius: 18px;
+  background: var(--bandBg);
+}
+.band + .band {
+  margin-top: 28px;
+}
+.chapNo {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  color: var(--bandAccent);
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+.chapName {
+  margin: 4px 0 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.4px;
+  color: var(--text-strong, #191f28);
+}
+.chapName b {
+  display: block;
+  font-weight: 800;
+}
+.nodes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 560px;
+  margin-left: auto;
+}
+.node {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 18px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 0.14s ease;
+  background: color-mix(in srgb, var(--bandAccent) 14%, var(--surface, #fff));
+  border: 1px solid color-mix(in srgb, var(--bandAccent) 24%, transparent);
+}
+.node:hover {
+  transform: translateX(4px);
+}
+.node:focus-visible {
+  outline: 2px solid var(--blue, #3182f6);
+  outline-offset: 2px;
+}
+.nodeNum {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 12.5px;
+  font-weight: 800;
+  flex: 0 0 auto;
+  background: var(--surface, #fff);
+  color: var(--bandAccent);
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 1px 2px rgba(20, 32, 64, 0.08);
+}
+.nodeLabel {
+  font-weight: 700;
+  font-size: 14.5px;
+  color: var(--text-strong, #191f28);
+}
+.nodeTime {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--text-muted, #8b95a1);
+  font-variant-numeric: tabular-nums;
+}
+.node.done {
+  background: var(--bandAccent);
+  border-color: var(--bandAccent);
+}
+.node.done .nodeLabel {
+  color: #fff;
+}
+.node.done .nodeNum {
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--bandAccent);
+}
+.node.done .nodeTime {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.conn {
+  position: absolute;
+  right: 90px;
+  bottom: -24px;
+  width: 60px;
+  height: 36px;
+  color: var(--blue, #3182f6);
+  opacity: 0.55;
+  pointer-events: none;
+  z-index: 2;
+}
+.conn svg {
+  width: 100%;
+  height: 100%;
+}
+
+@media (max-width: 860px) {
+  .band {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: 18px;
+  }
+  .nodes {
+    max-width: none;
+  }
+  .conn {
+    display: none;
+  }
+  .meters {
+    gap: 14px 0;
+  }
+}
