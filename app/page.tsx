@@ -708,13 +708,18 @@ function StartChoice({
     setDirectPlanPending(Boolean(readDirectPlanJob()));
   }, []);
 
+  // Consolidated to two entry points (have-an-idea vs. discover-by-questions). The
+  // free-text "experience" discovery overlapped with the questionnaire, so it is hidden
+  // for now — flip this to true to bring the card (and its still-wired flow) back.
+  const showConversationMode = false;
+
   return (
     <main className="start-choice-page">
       <Header onHome={onBack} />
       <section className="start-choice-content">
         <button className="start-back" onClick={onBack}><ArrowLeft /> 처음으로</button>
         <div className="start-choice-heading">
-          <span>3가지 중 하나만 고르면 돼요</span>
+          <span>{showConversationMode ? "3가지" : "두 가지"} 중 하나만 고르면 돼요</span>
           <h1>어떻게 시작할까요?</h1>
           <p>가장 쉬운 방법을 먼저 준비했어요.</p>
         </div>
@@ -729,11 +734,13 @@ function StartChoice({
             <span><strong>내 아이디어로 바로 기획</strong><small>{directPlanPending ? "사업 초안 만드는 중 · 이어서 확인" : "아이디어가 이미 있을 때"}</small></span>
             <span className="start-mode-action" aria-hidden="true"><ArrowRight /></span>
           </button>
-          <button className="conversation-mode" onClick={onConversation}>
-            <span className="start-mode-icon"><MessageCircle /></span>
-            <span><strong>내 경험을 적으며 찾기</strong><small>{conversationInProgress ? "작성하던 내용 이어서" : "하고 싶은 일이 아직 막연할 때"}</small></span>
-            <span className="start-mode-action" aria-hidden="true"><ArrowRight /></span>
-          </button>
+          {showConversationMode && (
+            <button className="conversation-mode" onClick={onConversation}>
+              <span className="start-mode-icon"><MessageCircle /></span>
+              <span><strong>내 경험을 적으며 찾기</strong><small>{conversationInProgress ? "작성하던 내용 이어서" : "하고 싶은 일이 아직 막연할 때"}</small></span>
+              <span className="start-mode-action" aria-hidden="true"><ArrowRight /></span>
+            </button>
+          )}
         </div>
         <details className="start-privacy"><summary><ShieldCheck /> 입력 정보 이용 안내 <ChevronDown /></summary><p>입력 내용은 맞춤 추천과 문서 생성에만 사용합니다. 주민등록번호, 상세 주소, 계좌번호는 입력하지 마세요. <a href="/privacy" target="_blank" rel="noreferrer">개인정보 안내</a> · <a href="/ai-notice" target="_blank" rel="noreferrer">인공지능 처리 안내</a></p></details>
       </section>
