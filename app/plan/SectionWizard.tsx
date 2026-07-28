@@ -163,29 +163,33 @@ export default function SectionWizard({
             <button className={`${styles.railBtn} ${styles.railLock}`} title="업그레이드">{RAIL_ICONS.lock}</button>
           </nav>
 
-          {/* chapter nav */}
+          {/* chapter nav — 레퍼런스 스타일 */}
           <nav className={styles.nav} aria-label="챕터">
-            <h2 className={styles.navTitle}>{planTitle}</h2>
-            <div className={styles.navPlan}>{planType}</div>
+            <button className={styles.navTop} onClick={onBack}>플랜 개요</button>
+            <div className={styles.navTabs}>
+              <button className={`${styles.navTab} ${styles.navTabOn}`} type="button">목차</button>
+              <button className={styles.navTab} type="button" title="준비 중">맞춤 요소</button>
+            </div>
             {PLAN_BLUEPRINT.map((ch, ci) => {
               const open = ch.id === chapter.id;
-              const doneInCh = ch.sections.filter((s) => statuses[sectionKey(ch.id, s.id)] === "done").length;
               return (
                 <div key={ch.id} className={`${styles.chap} ${open ? styles.open : ""}`}>
                   <button className={styles.ch} onClick={() => onNavigateSection?.(ch.id, ch.sections[0].id)}>
-                    <span className={styles.cnum}>{ci + 1}</span>
                     <span className={styles.cname}>{ch.title}</span>
-                    <span className={styles.cv}>{doneInCh}/{ch.sections.length}</span>
+                    <span className={styles.cnum}>{ci + 1}</span>
                   </button>
                   <div className={styles.secs}>
-                    {ch.sections.map((s) => {
+                    {ch.sections.map((s, si) => {
                       const sk = sectionKey(ch.id, s.id);
                       const done = statuses[sk] === "done";
                       const active = ch.id === chapter.id && s.id === section.id;
                       return (
                         <button key={s.id} className={`${styles.sec} ${done ? styles.done : ""} ${active ? styles.on : ""}`} onClick={() => onNavigateSection?.(ch.id, s.id)}>
-                          <span className={styles.secDot}>{done && <Check n={10} />}</span>
-                          {s.title}
+                          <span className={styles.secLabel}>
+                            <span className={styles.secNo}>{ci + 1}.{si + 1}</span>
+                            {s.title}
+                          </span>
+                          <span className={styles.secDot}>{done && <Check n={11} />}</span>
                         </button>
                       );
                     })}

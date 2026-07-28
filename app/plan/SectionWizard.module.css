@@ -90,114 +90,163 @@
   color: #f4b740;
 }
 
-/* chapter nav */
+/* chapter nav — 레퍼런스 스타일 */
 .nav {
   background: var(--wz-nav);
   color: #fff;
   overflow-y: auto;
-  padding: 20px 0;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
-.navTitle {
-  margin: 0 20px 4px;
-  font-size: 15px;
+.navTop {
+  width: 100%;
+  border: 0;
+  background: rgba(255, 255, 255, 0.07);
+  color: #fff;
+  font: inherit;
   font-weight: 800;
-  letter-spacing: -0.2px;
+  font-size: 14px;
+  padding: 14px;
+  border-radius: 12px;
+  cursor: pointer;
+  text-align: center;
 }
-.navPlan {
-  margin: 0 20px 18px;
-  font-size: 11px;
-  color: var(--wz-nav-ink);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  font-weight: 700;
+.navTop:hover {
+  background: rgba(255, 255, 255, 0.12);
 }
+.navTabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.16);
+  border-radius: 12px;
+  padding: 5px;
+  margin-bottom: 4px;
+}
+.navTab {
+  border: 0;
+  background: transparent;
+  color: #b6c6d2;
+  font: inherit;
+  font-weight: 800;
+  font-size: 12.5px;
+  padding: 9px;
+  border-radius: 9px;
+  cursor: pointer;
+}
+.navTab.navTabOn {
+  background: #f4b740;
+  color: #10233a;
+}
+/* 챕터 = 큰 버튼(이름 좌·번호 우) */
 .chap {
-  border-top: 1px solid var(--wz-nav-line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.045);
+}
+.chap.open {
+  background: transparent;
 }
 .ch {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 20px;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 16px;
   cursor: pointer;
   background: transparent;
   border: 0;
   width: 100%;
   text-align: left;
 }
-.cnum {
-  width: 22px;
-  height: 22px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.08);
-  display: grid;
-  place-items: center;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--wz-nav-ink);
-  flex: 0 0 auto;
+.chap.open > .ch {
+  background: #2c6b5e;
+  border-radius: 10px;
 }
 .cname {
-  font-size: 13.5px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 800;
   flex: 1;
-  color: var(--wz-nav-ink);
+  color: #eaf1f5;
 }
-.cv {
-  color: var(--wz-nav-ink);
-  font-size: 11px;
-  font-weight: 700;
+.chap.open > .ch .cname {
+  color: #fff;
 }
-.chap.open .cname {
+.cnum {
+  font-size: 18px;
+  font-weight: 800;
+  color: #f4b740;
+  font-variant-numeric: tabular-nums;
+}
+.chap.open > .ch .cnum {
   color: #fff;
 }
 .secs {
   display: none;
-  padding: 0 0 8px;
+  padding: 6px 0 2px;
 }
 .chap.open .secs {
   display: block;
 }
+/* 섹션 = "1.1 — 이름" 좌 · 체크 우 */
 .sec {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 9px 20px 9px 52px;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
   cursor: pointer;
-  font-size: 13px;
-  color: var(--wz-nav-ink);
+  font-size: 13.5px;
+  color: #c7d5df;
   transition: 0.12s;
   background: transparent;
   border: 0;
   width: 100%;
   text-align: left;
+  border-radius: 8px;
+}
+.secLabel {
+  flex: 1;
+  min-width: 0;
+}
+.secNo {
+  color: #8ba2b8;
+  font-weight: 700;
+  margin-right: 6px;
+  font-variant-numeric: tabular-nums;
 }
 .sec:hover {
   color: #fff;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 255, 255, 0.05);
+}
+.sec.on {
+  color: #fff;
+  font-weight: 800;
+  background: rgba(47, 87, 244, 0.28);
+}
+.sec.on .secNo {
+  color: #cdd9ff;
 }
 .secDot {
-  width: 16px;
-  height: 16px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
   border: 1.6px solid var(--wz-nav-line);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
+  color: #8ba2b8;
 }
 .secDot svg {
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
   color: #fff;
 }
 .sec.done .secDot {
   background: var(--wz-ok);
   border-color: var(--wz-ok);
-}
-.sec.on {
-  color: #fff;
-  font-weight: 700;
-  background: linear-gradient(90deg, rgba(47, 87, 244, 0.28), transparent);
 }
 .sec.on .secDot {
   border-color: #7f9bff;
