@@ -235,6 +235,18 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           <div className={styles.spring} />
         </div>
 
+        {/* 다 채운 사람에게 마지막 단계 — 발표자료 */}
+        {doneCount > 0 && doneCount === total && (
+          <button type="button" className={styles.finale} onClick={onOpenDocument}>
+            <span className={styles.finaleIcon} aria-hidden="true">📊</span>
+            <span className={styles.finaleBody}>
+              <b>{total}개 섹션을 모두 채우셨습니다</b>
+              <span>이제 이 내용으로 사업 제안서(PPT)를 만들 수 있어요. 문서 화면에서 바로 받으실 수 있습니다.</span>
+            </span>
+            <span className={styles.finaleGo}>제안서 만들기 →</span>
+          </button>
+        )}
+
         <ConsistencyPanel issues={issues} onOpenSection={onOpenSection} />
 
         {/* 구조 / 문서 전환 */}

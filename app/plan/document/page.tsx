@@ -28,7 +28,8 @@ export default function PlanDocumentPage() {
     setSections((prev) => prev.map((s) => (s.key === key ? { ...s, markdown: md, html: nextHtml } : s)));
     setSavedKey(key);
   }
-  const [exporting, setExporting] = useState<"pdf" | "docx" | null>(null);
+  const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
+  const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -58,6 +59,46 @@ export default function PlanDocumentPage() {
     }
     return [...map.entries()];
   }, [sections]);
+
+  /** 완성한 계획서로 발표용 PPT를 만든다(결제 확인은 서버가 한다). */
+  async function handleDeck() {
+    if (!sections.length) return;
+    setExporting("pptx");
+    setDeckError(null);
+    try {
+      const state = loadState();
+      const plan = activePlan(state);
+      const res = await fetch("/api/plan/deck", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          businessName: state.business.name || title,
+          businessDescription: state.business.description,
+          planType,
+          sections: sections.map((a) => ({ chapterTitle: a.chapterTitle, sectionTitle: a.sectionTitle, markdown: a.markdown })),
+          allAnswers: plan?.answers ?? {},
+        }),
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => ({}))) as { message?: string };
+        setDeckError(data.message ?? "발표자료를 만들지 못했습니다.");
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title} 사업 제안서.pptx`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      setDeckError("발표자료를 만들지 못했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
+      setExporting(null);
+    }
+  }
 
   async function handleExport(format: "pdf" | "docx") {
     if (!sections.length) return;
@@ -103,10 +144,14 @@ export default function PlanDocumentPage() {
           <button className={`${styles.exportBtn} ${styles.ghost}`} disabled={!sections.length || exporting !== null} onClick={() => handleExport("docx")}>
             {exporting === "docx" ? "내보내는 중…" : "Word 내보내기"}
           </button>
+          <button className={`${styles.exportBtn} ${styles.ghost}`} disabled={!sections.length || exporting !== null} onClick={handleDeck}>
+            {exporting === "pptx" ? "만드는 중…" : "📊 발표자료(PPT)"}
+          </button>
           <button className={styles.exportBtn} disabled={!sections.length || exporting !== null} onClick={() => handleExport("pdf")}>
             {exporting === "pdf" ? "내보내는 중…" : "PDF 내보내기"}
           </button>
         </div>
+        {deckError ? <p className={styles.deckError}>{deckError}</p> : null}
 
         {!ready ? null : sections.length === 0 ? (
           <div className={styles.empty}>

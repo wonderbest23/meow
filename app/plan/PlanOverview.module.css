@@ -583,3 +583,66 @@
   font-size: 11px;
   line-height: 1;
 }
+
+/* 완주 후 마지막 단계 — 발표자료 */
+.finale {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 18px;
+  width: 100%;
+  text-align: left;
+  border: 1.5px solid var(--blue, #3182f6);
+  border-radius: 16px;
+  background: linear-gradient(120deg, #eef4ff, var(--surface, #fff) 65%);
+  padding: 20px 22px;
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: transform 0.16s, box-shadow 0.16s;
+  box-shadow: 0 10px 26px rgba(20, 32, 64, 0.08);
+}
+.finale:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 18px 40px rgba(20, 32, 64, 0.14);
+}
+.finaleIcon {
+  font-size: 28px;
+  line-height: 1;
+}
+.finaleBody {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+.finaleBody b {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-strong, #191f28);
+}
+.finaleBody span {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-body, #4e5968);
+}
+.finaleGo {
+  flex: none;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--blue, #3182f6);
+  border-radius: 10px;
+  padding: 12px 18px;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .finale {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .finaleGo {
+    text-align: center;
+  }
+}

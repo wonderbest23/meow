@@ -279,3 +279,10 @@
   max-width: 100%;
   height: auto;
 }
+
+/* 발표자료 생성 실패 안내 */
+.deckError {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #c33d55;
+}
