@@ -3,12 +3,19 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { FileDown, FileText, Presentation, LayoutGrid } from "lucide-react";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection } from "../../../lib/plan-builder/plan-store";
+import { chaptersForType } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import InlineDocEditor from "../InlineDocEditor";
+import wiz from "../SectionWizard.module.css";
 import styles from "./PlanDocument.module.css";
 
-/** /plan/document — 생성된 섹션을 하나의 문서로 조립해 보여주고 내보낸다. */
+/**
+ * /plan/document — 생성된 섹션을 하나의 문서로 조립해 보여주고 내보낸다.
+ * 레퍼런스 문서 화면의 골격을 따른다: 좌측 어두운 목차(위저드와 동일 모듈) +
+ * 큰 제목/세그먼트 헤더 + 번호 붙은 섹션 헤딩(1.1식)이 흐르는 문서 캔버스.
+ */
 export default function PlanDocumentPage() {
   const router = useRouter();
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
@@ -16,18 +23,6 @@ export default function PlanDocumentPage() {
   const [planType, setPlanType] = useState("");
   const [savedKey, setSavedKey] = useState<string | null>(null);
   const [failedKey, setFailedKey] = useState<string | null>(null);
-
-  /** 문서에서 고친 내용을 저장한다. 원본은 마크다운이므로 되돌려 담는다. */
-  function saveEdit(key: string, nextHtml: string) {
-    const md = htmlToMarkdown(nextHtml);
-    if (!md.trim()) return;
-    if (!saveSection(key, md, nextHtml)) {
-      setFailedKey(key);
-      return;
-    }
-    setSections((prev) => prev.map((s) => (s.key === key ? { ...s, markdown: md, html: nextHtml } : s)));
-    setSavedKey(key);
-  }
   const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
   const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -49,7 +44,16 @@ export default function PlanDocumentPage() {
     };
   }, []);
 
-  // 목차용: 챕터별 그룹
+  /** 섹션 키 → "1.1" 번호 (플랜 유형의 챕터 순서를 따른다) */
+  const numbering = useMemo(() => {
+    const map = new Map<string, { num: string; chapterNum: number }>();
+    chaptersForType(planType || undefined).forEach((ch, ci) => {
+      ch.sections.forEach((s, si) => map.set(`${ch.id}/${s.id}`, { num: `${ci + 1}.${si + 1}`, chapterNum: ci + 1 }));
+    });
+    return map;
+  }, [planType]);
+
+  // 챕터별 그룹 (문서 흐름·목차 공용)
   const grouped = useMemo(() => {
     const map = new Map<string, typeof sections>();
     for (const s of sections) {
@@ -59,6 +63,22 @@ export default function PlanDocumentPage() {
     }
     return [...map.entries()];
   }, [sections]);
+
+  function scrollToSection(key: string) {
+    document.getElementById(`sec-${key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  /** 문서에서 고친 내용을 저장한다. 원본은 마크다운이므로 되돌려 담는다. */
+  function saveEdit(key: string, nextHtml: string) {
+    const md = htmlToMarkdown(nextHtml);
+    if (!md.trim()) return;
+    if (!saveSection(key, md, nextHtml)) {
+      setFailedKey(key);
+      return;
+    }
+    setSections((prev) => prev.map((s) => (s.key === key ? { ...s, markdown: md, html: nextHtml } : s)));
+    setSavedKey(key);
+  }
 
   /** 완성한 계획서로 발표용 PPT를 만든다(결제 확인은 서버가 한다). */
   async function handleDeck() {
@@ -132,82 +152,123 @@ export default function PlanDocumentPage() {
     }
   }
 
+  const busy = exporting !== null || !sections.length;
+
   return (
-    <div className={styles.page}>
-      <div className={styles.frame}>
-        <div className={styles.bar}>
-          <button className={styles.back} onClick={() => router.push("/plan/overview")} aria-label="개요로">←</button>
-          <h1 className={styles.title}>
-            문서 보기 <span>· {title}</span>
-          </h1>
-          <div className={styles.spring} />
-          <button className={`${styles.exportBtn} ${styles.ghost}`} disabled={!sections.length || exporting !== null} onClick={() => handleExport("docx")}>
-            {exporting === "docx" ? "내보내는 중…" : "Word 내보내기"}
-          </button>
-          <button className={`${styles.exportBtn} ${styles.ghost}`} disabled={!sections.length || exporting !== null} onClick={handleDeck}>
-            {exporting === "pptx" ? "만드는 중…" : "발표자료(PPT)"}
-          </button>
-          <button className={styles.exportBtn} disabled={!sections.length || exporting !== null} onClick={() => handleExport("pdf")}>
-            {exporting === "pdf" ? "내보내는 중…" : "PDF 내보내기"}
-          </button>
-        </div>
-        {deckError ? <p className={styles.deckError}>{deckError}</p> : null}
-
-        {!ready ? null : sections.length === 0 ? (
-          <div className={styles.empty}>
-            <p className={styles.emptyTitle}>아직 생성된 내용이 없어요</p>
-            <p className={styles.emptyDesc}>개요에서 섹션을 열고 질문에 답하면 이곳에 문서가 쌓입니다.</p>
-            <Link href="/plan/overview" className={styles.emptyBtn}>개요로 가기</Link>
-          </div>
-        ) : (
-          <div className={styles.layout}>
-            {/* 목차 */}
-            <aside className={styles.toc}>
-              <div className={styles.tocHead}>목차 · {sections.length}개 섹션</div>
-              {grouped.map(([chapter, list]) => (
-                <div key={chapter}>
-                  <div className={styles.tocChapter}>{chapter}</div>
-                  {list.map((s) => (
-                    <button
-                      key={s.key}
-                      className={styles.tocItem}
-                      onClick={() => document.getElementById(`sec-${s.key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                    >
-                      {s.sectionTitle}
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </aside>
-
-            {/* 문서 */}
-            <article className={styles.doc}>
-              <header className={styles.docHeader}>
-                <h2 className={styles.docTitle}>{title}</h2>
-                <div className={styles.docSub}>
-                  {planType}
-                  {planType && " · "}
-                  {new Date().toLocaleDateString("ko-KR")} 기준 · {sections.length}개 섹션
-                </div>
-              </header>
-
-              {sections.map((s) => (
-                <section key={s.key} id={`sec-${s.key.replace("/", "-")}`} className={styles.section}>
-                  <div className={styles.secCrumb}>{s.chapterTitle}</div>
-                  <h3 className={styles.secTitle}>{s.sectionTitle}</h3>
-                  {/* 문서 화면에서도 바로 고칠 수 있다 — 위저드로 되돌아갈 필요가 없다 */}
-                  <div className={styles.body}>
-                    <InlineDocEditor
-                      html={s.html}
-                      status={failedKey === s.key ? "failed" : savedKey === s.key ? "saved" : "idle"}
-                      onChange={(nextHtml) => saveEdit(s.key, nextHtml)}
-                    />
+    <div className={`${wiz.page} ${styles.page}`}>
+      <div className={wiz.frame}>
+        <div className={styles.app}>
+          {/* 좌측 목차 — 위저드와 동일한 어두운 내비 모듈을 그대로 쓴다 */}
+          <nav className={wiz.nav} aria-label="문서 목차">
+            <button className={wiz.navTop} onClick={() => router.push("/plan/overview")}>플랜 개요</button>
+            {grouped.map(([chapterTitle, list]) => {
+              const chapterNum = numbering.get(list[0]?.key ?? "")?.chapterNum;
+              return (
+                <div key={chapterTitle} className={`${wiz.chap} ${wiz.open}`}>
+                  <button className={wiz.ch} onClick={() => list[0] && scrollToSection(list[0].key)}>
+                    <span className={wiz.cname}>{chapterTitle}</span>
+                    {chapterNum ? <span className={wiz.cnum}>{chapterNum}</span> : null}
+                  </button>
+                  <div className={wiz.secs}>
+                    {list.map((s) => (
+                      <button key={s.key} className={wiz.sec} onClick={() => scrollToSection(s.key)}>
+                        <span className={wiz.secLabel}>
+                          {numbering.has(s.key) ? <span className={wiz.secNo}>{numbering.get(s.key)!.num}</span> : null}
+                          {s.sectionTitle}
+                        </span>
+                      </button>
+                    ))}
                   </div>
-                </section>
-              ))}
-            </article>
-          </div>
-        )}
+                </div>
+              );
+            })}
+          </nav>
+
+          {/* 본문 */}
+          <section className={styles.main}>
+            <header className={styles.mhead}>
+              <div className={styles.routeHeader}>
+                <h1 className={styles.routeTitle}>
+                  {title}
+                  <span>사업계획서 문서</span>
+                </h1>
+              </div>
+              <div className={styles.toolbar}>
+                {/* 레퍼런스의 Structural/Document View 세그먼트 */}
+                <div className={styles.seg} role="tablist" aria-label="보기 전환">
+                  <button type="button" onClick={() => router.push("/plan/overview")}>
+                    <LayoutGrid size={13} /> 구조 보기
+                  </button>
+                  <button type="button" className={styles.segOn}>
+                    <FileText size={13} /> 문서 보기
+                  </button>
+                </div>
+                <div className={styles.spring} />
+                <button className={styles.tool} disabled={busy} onClick={() => handleExport("docx")} title="Word로 내려받기">
+                  <FileText size={14} /> {exporting === "docx" ? "내보내는 중…" : "Word"}
+                </button>
+                <button className={styles.tool} disabled={busy} onClick={handleDeck} title="발표자료(PPT) 만들기">
+                  <Presentation size={14} /> {exporting === "pptx" ? "만드는 중…" : "PPT"}
+                </button>
+                <button className={`${styles.tool} ${styles.toolPrimary}`} disabled={busy} onClick={() => handleExport("pdf")} title="PDF로 내려받기">
+                  <FileDown size={14} /> {exporting === "pdf" ? "내보내는 중…" : "PDF"}
+                </button>
+              </div>
+              {deckError ? <p className={styles.deckError}>{deckError}</p> : null}
+            </header>
+
+            <div className={styles.canvas}>
+              {!ready ? null : sections.length === 0 ? (
+                <div className={styles.empty}>
+                  <p className={styles.emptyTitle}>아직 생성된 내용이 없어요</p>
+                  <p className={styles.emptyDesc}>개요에서 섹션을 열고 질문에 답하면 이곳에 문서가 쌓입니다.</p>
+                  <Link href="/plan/overview" className={styles.emptyBtn}>개요로 가기</Link>
+                </div>
+              ) : (
+                <article className={styles.paper}>
+                  <header className={styles.docHeader}>
+                    <h2 className={styles.docTitle}>{title}</h2>
+                    <div className={styles.docSub}>
+                      {planType}
+                      {planType && " · "}
+                      {new Date().toLocaleDateString("ko-KR")} 기준 · {sections.length}개 섹션
+                    </div>
+                  </header>
+
+                  {grouped.map(([chapterTitle, list]) => {
+                    const chapterNum = numbering.get(list[0]?.key ?? "")?.chapterNum;
+                    return (
+                      <div key={chapterTitle} className={styles.chapter}>
+                        <div className={styles.chapterHead}>
+                          {chapterNum ? <span className={styles.chapterNum}>{chapterNum}</span> : null}
+                          <h3 className={styles.chapterName}>{chapterTitle}</h3>
+                        </div>
+
+                        {list.map((s) => (
+                          <section key={s.key} id={`sec-${s.key.replace("/", "-")}`} className={styles.section}>
+                            {/* 레퍼런스 헤딩 행: 강조 대시 + 제목 + 우측 번호 */}
+                            <div className={styles.secHead}>
+                              <i className={styles.secDash} aria-hidden="true" />
+                              <h4 className={styles.secTitle}>{s.sectionTitle}</h4>
+                              {numbering.has(s.key) ? <span className={styles.secNum}>{numbering.get(s.key)!.num}</span> : null}
+                            </div>
+                            <div className={styles.body}>
+                              <InlineDocEditor
+                                html={s.html}
+                                status={failedKey === s.key ? "failed" : savedKey === s.key ? "saved" : "idle"}
+                                onChange={(nextHtml) => saveEdit(s.key, nextHtml)}
+                              />
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </article>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   );
