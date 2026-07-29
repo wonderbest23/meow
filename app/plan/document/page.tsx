@@ -1,0 +1,144 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { hydrateFromServer, assembleSections, activePlan } from "../../../lib/plan-builder/plan-store";
+import styles from "./PlanDocument.module.css";
+
+/** /plan/document — 생성된 섹션을 하나의 문서로 조립해 보여주고 내보낸다. */
+export default function PlanDocumentPage() {
+  const router = useRouter();
+  const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
+  const [title, setTitle] = useState("사업계획서");
+  const [planType, setPlanType] = useState("");
+  const [exporting, setExporting] = useState<"pdf" | "docx" | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    hydrateFromServer().then((s) => {
+      if (!alive) return;
+      setSections(assembleSections(s));
+      const p = activePlan(s);
+      if (p) {
+        setTitle(p.title);
+        setPlanType(p.planType);
+      }
+      setReady(true);
+    });
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  // 목차용: 챕터별 그룹
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof sections>();
+    for (const s of sections) {
+      const list = map.get(s.chapterTitle) ?? [];
+      list.push(s);
+      map.set(s.chapterTitle, list);
+    }
+    return [...map.entries()];
+  }, [sections]);
+
+  async function handleExport(format: "pdf" | "docx") {
+    if (!sections.length) return;
+    setExporting(format);
+    try {
+      const res = await fetch("/api/plan/document", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          format,
+          sections: sections.map((a) => ({ chapterTitle: a.chapterTitle, sectionTitle: a.sectionTitle, markdown: a.markdown })),
+        }),
+      });
+      if (!res.ok) throw new Error("export failed");
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${title}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("내보내기에 실패했습니다. 생성된 섹션이 있는지 확인해주세요.");
+    } finally {
+      setExporting(null);
+    }
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.frame}>
+        <div className={styles.bar}>
+          <button className={styles.back} onClick={() => router.push("/plan/overview")} aria-label="개요로">←</button>
+          <h1 className={styles.title}>
+            문서 보기 <span>· {title}</span>
+          </h1>
+          <div className={styles.spring} />
+          <button className={`${styles.exportBtn} ${styles.ghost}`} disabled={!sections.length || exporting !== null} onClick={() => handleExport("docx")}>
+            {exporting === "docx" ? "내보내는 중…" : "Word 내보내기"}
+          </button>
+          <button className={styles.exportBtn} disabled={!sections.length || exporting !== null} onClick={() => handleExport("pdf")}>
+            {exporting === "pdf" ? "내보내는 중…" : "PDF 내보내기"}
+          </button>
+        </div>
+
+        {!ready ? null : sections.length === 0 ? (
+          <div className={styles.empty}>
+            <p className={styles.emptyTitle}>아직 생성된 내용이 없어요</p>
+            <p className={styles.emptyDesc}>개요에서 섹션을 열고 질문에 답하면 이곳에 문서가 쌓입니다.</p>
+            <Link href="/plan/overview" className={styles.emptyBtn}>개요로 가기</Link>
+          </div>
+        ) : (
+          <div className={styles.layout}>
+            {/* 목차 */}
+            <aside className={styles.toc}>
+              <div className={styles.tocHead}>목차 · {sections.length}개 섹션</div>
+              {grouped.map(([chapter, list]) => (
+                <div key={chapter}>
+                  <div className={styles.tocChapter}>{chapter}</div>
+                  {list.map((s) => (
+                    <button
+                      key={s.key}
+                      className={styles.tocItem}
+                      onClick={() => document.getElementById(`sec-${s.key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                    >
+                      {s.sectionTitle}
+                    </button>
+                  ))}
+                </div>
+              ))}
+            </aside>
+
+            {/* 문서 */}
+            <article className={styles.doc}>
+              <header className={styles.docHeader}>
+                <h2 className={styles.docTitle}>{title}</h2>
+                <div className={styles.docSub}>
+                  {planType}
+                  {planType && " · "}
+                  {new Date().toLocaleDateString("ko-KR")} 기준 · {sections.length}개 섹션
+                </div>
+              </header>
+
+              {sections.map((s) => (
+                <section key={s.key} id={`sec-${s.key.replace("/", "-")}`} className={styles.section}>
+                  <div className={styles.secCrumb}>{s.chapterTitle}</div>
+                  <h3 className={styles.secTitle}>{s.sectionTitle}</h3>
+                  <div className={styles.body} dangerouslySetInnerHTML={{ __html: s.html }} />
+                </section>
+              ))}
+            </article>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

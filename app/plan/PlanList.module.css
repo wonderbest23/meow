@@ -168,6 +168,39 @@
   font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.3px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.renameBtn {
+  font-size: 13px;
+  color: var(--text-muted, #8b95a1);
+  opacity: 0;
+  cursor: pointer;
+  padding: 2px 5px;
+  border-radius: 6px;
+  transition: 0.14s;
+}
+.card:hover .renameBtn {
+  opacity: 1;
+}
+.renameBtn:hover {
+  background: var(--surface-soft, #f7f8fa);
+  color: var(--blue, #3182f6);
+}
+.titleInput {
+  width: 100%;
+  border: 1.5px solid var(--blue, #3182f6);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--text-strong, #191f28);
+  background: var(--surface, #fff);
+}
+.titleInput:focus {
+  outline: none;
 }
 .progressRow {
   display: flex;

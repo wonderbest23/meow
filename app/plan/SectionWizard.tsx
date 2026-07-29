@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PLAN_BLUEPRINT, sectionKey, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
 import {
   questionsForSection,
@@ -9,7 +9,7 @@ import {
   type QuestionGroup,
   type QuestionDef,
 } from "../../lib/plan-builder/questions";
-import { saveSection, loadState, businessContext, priorSectionsSummary } from "../../lib/plan-builder/plan-store";
+import { saveSection, loadState, businessContext, priorSectionsSummary, activePlan } from "../../lib/plan-builder/plan-store";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -60,6 +60,24 @@ export default function SectionWizard({
   const [generating, setGenerating] = useState(false);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [genSource, setGenSource] = useState<"ai" | "fallback" | null>(null);
+  const [editingMd, setEditingMd] = useState<string | null>(null);
+  const [savedMd, setSavedMd] = useState<string>("");
+
+  // 이미 생성된 섹션이면 저장된 본문을 불러와 보여준다.
+  useEffect(() => {
+    const p = activePlan();
+    const stored = p?.sections[key];
+    if (stored) {
+      setGeneratedHtml(stored.html);
+      setSavedMd(stored.markdown);
+      setGenSource("ai");
+    } else {
+      setGeneratedHtml(null);
+      setSavedMd("");
+      setGenSource(null);
+    }
+    setEditingMd(null);
+  }, [key]);
 
   const setAnswer = (qid: string, v: unknown) => setAnswers((prev) => ({ ...prev, [qid]: v }));
   const toggleMulti = (qid: string, opt: string) =>
@@ -122,10 +140,37 @@ export default function SectionWizard({
       const data = (await res.json()) as { markdown?: string; html?: string; source?: "ai" | "fallback" };
       setGeneratedHtml(data.html ?? "<p>생성에 실패했습니다.</p>");
       setGenSource(data.source ?? null);
-      if (data.markdown && data.html) saveSection(key, data.markdown, data.html);
+      if (data.markdown && data.html) {
+        saveSection(key, data.markdown, data.html);
+        setSavedMd(data.markdown);
+      }
       onComplete?.(chapter.id, section.id, answers);
     } catch {
       setGeneratedHtml("<p>생성 중 오류가 발생했습니다.</p>");
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  /** 직접 수정한 마크다운을 저장 (HTML은 서버에서 다시 렌더) */
+  async function saveEdited() {
+    const md = (editingMd ?? "").trim();
+    if (!md) return;
+    setGenerating(true);
+    try {
+      const res = await fetch("/api/plan/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ markdown: md }),
+      });
+      const data = (await res.json()) as { html?: string };
+      const html = data.html ?? md.replace(/\n/g, "<br>");
+      saveSection(key, md, html);
+      setSavedMd(md);
+      setGeneratedHtml(html);
+      setEditingMd(null);
+    } catch {
+      alert("저장에 실패했습니다.");
     } finally {
       setGenerating(false);
     }
@@ -209,7 +254,17 @@ export default function SectionWizard({
             </div>
 
             <div className={styles.mbody}>
-              {generatedHtml ? (
+              {editingMd !== null ? (
+                <>
+                  <span className={styles.genBadge}>✏️ 직접 편집 (마크다운)</span>
+                  <textarea
+                    className={styles.mdEditor}
+                    value={editingMd}
+                    onChange={(e) => setEditingMd(e.target.value)}
+                    spellCheck={false}
+                  />
+                </>
+              ) : generatedHtml ? (
                 <>
                   <span className={styles.genBadge}>{genSource === "ai" ? "✨ AI 생성 본문" : "초안(키 미설정 · 폴백)"}</span>
                   <div className={styles.genDoc} dangerouslySetInnerHTML={{ __html: generatedHtml }} />
@@ -250,8 +305,21 @@ export default function SectionWizard({
             </div>
 
             <div className={styles.foot}>
-              {generatedHtml ? (
-                <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 다시 편집</button>
+              {editingMd !== null ? (
+                <>
+                  <button className={styles.btn} onClick={() => setEditingMd(null)}>취소</button>
+                  <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={saveEdited}>
+                    {generating ? "저장 중…" : "저장"}
+                  </button>
+                </>
+              ) : generatedHtml ? (
+                <>
+                  <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
+                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)}>✏️ 직접 편집</button>
+                  <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={handleGenerate}>
+                    {generating ? "생성 중…" : "🔄 다시 생성"}
+                  </button>
+                </>
               ) : (
                 <>
                   <button className={styles.btn} onClick={onBack}>← 이전</button>

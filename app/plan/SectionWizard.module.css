@@ -593,6 +593,24 @@
   font-weight: 800;
   font-size: 12px;
 }
+.mdEditor {
+  width: 100%;
+  min-height: 420px;
+  border: 1.5px solid var(--wz-line);
+  background: var(--wz-panel2);
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--wz-ink);
+  resize: vertical;
+}
+.mdEditor:focus {
+  outline: 2px solid var(--wz-brand);
+  outline-offset: 1px;
+}
+
 .genBadge {
   display: inline-flex;
   align-items: center;

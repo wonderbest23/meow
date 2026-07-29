@@ -10,6 +10,7 @@ export default function PlanOverviewPage() {
     <PlanOverview
       onBack={() => router.push("/plan")}
       onOpenSection={(chapterId, sectionId) => router.push(`/plan/${chapterId}/${sectionId}`)}
+      onOpenDocument={() => router.push("/plan/document")}
     />
   );
 }

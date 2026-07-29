@@ -218,6 +218,12 @@
   color: #fff;
 }
 
+.docCount {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-muted, #8b95a1);
+}
+
 /* 문서 보기 */
 .docView {
   display: flex;

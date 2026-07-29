@@ -4,13 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { totalSections } from "../../lib/plan-builder/blueprint";
-import { hydrateFromServer, setActivePlan, deletePlan, type PlanState } from "../../lib/plan-builder/plan-store";
+import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanList.module.css";
 
 /** 내 플랜 목록(대시보드) — 사업 요약 + 플랜 카드 */
 export default function PlanList() {
   const router = useRouter();
   const [state, setState] = useState<PlanState | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [draftTitle, setDraftTitle] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -36,6 +38,23 @@ export default function PlanList() {
   function openPlan(id: string) {
     setActivePlan(id);
     router.push("/plan/overview");
+  }
+
+  function startRename(e: React.MouseEvent, id: string, title: string) {
+    e.stopPropagation();
+    setEditingId(id);
+    setDraftTitle(title);
+  }
+
+  function commitRename(id: string) {
+    const next = draftTitle.trim();
+    if (next) {
+      renamePlan(id, next);
+      setState((prev) =>
+        prev ? { ...prev, plans: prev.plans.map((p) => (p.id === id ? { ...p, title: next } : p)) } : prev,
+      );
+    }
+    setEditingId(null);
   }
 
   function removePlan(e: React.MouseEvent, id: string, title: string) {
@@ -92,7 +111,37 @@ export default function PlanList() {
                     <span className={styles.cardType}>{p.planType}</span>
                     {isActive && <span className={styles.activeBadge}>작업 중</span>}
                   </div>
-                  <h3 className={styles.cardTitle}>{p.title}</h3>
+                  {editingId === p.id ? (
+                    <input
+                      className={styles.titleInput}
+                      value={draftTitle}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      onBlur={() => commitRename(p.id)}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter") commitRename(p.id);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                    />
+                  ) : (
+                    <h3 className={styles.cardTitle}>
+                      {p.title}
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className={styles.renameBtn}
+                        title="이름 변경"
+                        onClick={(e) => startRename(e, p.id, p.title)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") startRename(e as unknown as React.MouseEvent, p.id, p.title);
+                        }}
+                      >
+                        ✎
+                      </span>
+                    </h3>
+                  )}
                   <div className={styles.progressRow}>
                     <span className={styles.bar}>
                       <span className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`} style={{ width: `${pct}%` }} />

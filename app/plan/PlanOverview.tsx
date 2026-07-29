@@ -37,15 +37,15 @@ export interface PlanOverviewProps {
   onOpenSection?: (chapterId: string, sectionId: string) => void;
   /** 뒤로 */
   onBack?: () => void;
+  /** 문서 보기 화면으로 */
+  onOpenDocument?: () => void;
   planTitle?: string;
 }
 
-export default function PlanOverview({ statuses: propStatuses = {}, onOpenSection, onBack, planTitle = "새 플랜" }: PlanOverviewProps) {
-  const [view, setView] = useState<"structure" | "document">("structure");
+export default function PlanOverview({ statuses: propStatuses = {}, onOpenSection, onBack, onOpenDocument, planTitle = "새 플랜" }: PlanOverviewProps) {
   const [storeStatuses, setStoreStatuses] = useState<Record<string, PlanSectionStatus>>({});
   const [assembled, setAssembled] = useState<ReturnType<typeof assembleSections>>([]);
   const [title, setTitle] = useState(planTitle);
-  const [exporting, setExporting] = useState<"pdf" | "docx" | null>(null);
 
   // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
   useEffect(() => {
@@ -64,32 +64,6 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
 
   // 스토어에 생성된 게 있으면 스토어 우선, 없으면 데모 prop
   const statuses = Object.keys(storeStatuses).length ? storeStatuses : propStatuses;
-
-  async function handleExport(format: "pdf" | "docx") {
-    if (!assembled.length) return;
-    setExporting(format);
-    try {
-      const res = await fetch("/api/plan/document", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title, format, sections: assembled.map((a) => ({ chapterTitle: a.chapterTitle, sectionTitle: a.sectionTitle, markdown: a.markdown })) }),
-      });
-      if (!res.ok) throw new Error("export failed");
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      alert("내보내기에 실패했습니다. 생성된 섹션이 있는지 확인해주세요.");
-    } finally {
-      setExporting(null);
-    }
-  }
 
   const { doneCount, total, pct } = useMemo(() => {
     const total = totalSections();
@@ -156,48 +130,16 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           <div className={styles.spring} />
         </div>
 
-        {/* 구조 / 문서 토글 */}
+        {/* 구조 / 문서 전환 */}
         <div className={styles.tools}>
           <div className={styles.seg}>
-            <button type="button" className={view === "structure" ? styles.segOn : ""} onClick={() => setView("structure")}>
-              🧭 구조 보기
-            </button>
-            <button type="button" className={view === "document" ? styles.segOn : ""} onClick={() => setView("document")}>
-              📄 문서 보기
-            </button>
+            <button type="button" className={styles.segOn}>🧭 구조 보기</button>
+            <button type="button" onClick={onOpenDocument}>📄 문서 보기</button>
           </div>
+          <span className={styles.docCount}>생성 완료 {assembled.length}개</span>
         </div>
 
-        {/* 문서 보기: 조립 문서 + 내보내기 */}
-        {view === "document" && (
-          <div className={styles.docView}>
-            <div className={styles.exportBar}>
-              <div className={styles.exportInfo}>
-                생성된 섹션 <b>{assembled.length}</b>개 · {title}
-              </div>
-              <button className={styles.exportBtn} disabled={!assembled.length || exporting !== null} onClick={() => handleExport("pdf")}>
-                {exporting === "pdf" ? "내보내는 중…" : "PDF 내보내기"}
-              </button>
-              <button className={styles.exportBtn} disabled={!assembled.length || exporting !== null} onClick={() => handleExport("docx")}>
-                {exporting === "docx" ? "내보내는 중…" : "Word 내보내기"}
-              </button>
-            </div>
-            {assembled.length === 0 ? (
-              <div className={styles.docEmpty}>아직 생성된 섹션이 없습니다. 구조 보기에서 섹션을 열어 답변하고 생성해보세요.</div>
-            ) : (
-              assembled.map((a) => (
-                <section key={a.key} className={styles.docSection}>
-                  <div className={styles.docCrumb}>{a.chapterTitle}</div>
-                  <h2 className={styles.docTitle}>{a.sectionTitle}</h2>
-                  <div className={styles.docBody} dangerouslySetInnerHTML={{ __html: a.html }} />
-                </section>
-              ))
-            )}
-          </div>
-        )}
-
         {/* 챕터 밴드 */}
-        {view === "structure" && (
         <div className={styles.plan}>
           {PLAN_BLUEPRINT.map((chapter, ci) => {
             const tone = TONES[chapter.tone] ?? TONES[1];
@@ -240,7 +182,6 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             );
           })}
         </div>
-        )}
         </div>
        </div>
       </div>
