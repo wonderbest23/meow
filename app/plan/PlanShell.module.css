@@ -1,0 +1,95 @@
+/* 플랜 빌더 공통 셸 — 고정 아이콘 레일 + 콘텐츠 영역.
+   /plan 이하 모든 화면이 이 레일을 공유한다(레퍼런스와 동일한 구조). */
+
+.shell {
+  min-height: 100vh;
+  background: var(--surface-muted, #f2f4f6);
+  color: var(--text-strong, #191f28);
+  display: flex;
+}
+
+/* 고정 레일 */
+.rail {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: 68px;
+  background: #0e1e30;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 18px 0;
+  z-index: 40;
+}
+.logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(150deg, var(--blue, #3182f6), #7f9bff);
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-weight: 800;
+  font-size: 17px;
+  margin-bottom: 14px;
+  box-shadow: 0 8px 18px rgba(47, 87, 244, 0.5);
+  text-decoration: none;
+}
+.railBtn {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  color: #c3d3df;
+  background: rgba(255, 255, 255, 0.04);
+  border: 0;
+  cursor: pointer;
+  transition: 0.16s;
+  text-decoration: none;
+}
+.railBtn svg {
+  width: 22px;
+  height: 22px;
+  display: block !important;
+}
+.railBtn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+.railBtn.on {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.spring {
+  flex: 1;
+}
+.lock {
+  color: #f4b740;
+}
+
+/* 콘텐츠 영역 (레일 폭만큼 밀어냄) */
+.content {
+  flex: 1;
+  min-width: 0;
+  margin-left: 68px;
+}
+
+@media (max-width: 720px) {
+  .rail {
+    width: 56px;
+  }
+  .content {
+    margin-left: 56px;
+  }
+  .railBtn {
+    width: 42px;
+    height: 42px;
+  }
+  .logo {
+    width: 36px;
+    height: 36px;
+  }
+}

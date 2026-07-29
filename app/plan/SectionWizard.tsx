@@ -20,13 +20,6 @@ const Check = ({ n = 11 }: { n?: number }) => (
   </svg>
 );
 
-const RAIL_ICONS: Record<string, React.ReactElement> = {
-  home: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /><path d="M9.5 20v-6h5v6" /></svg>),
-  plan: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5" /><path d="M9.5 13h6M9.5 16.5h6" /></svg>),
-  help: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 21 12Z" /></svg>),
-  team: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path d="M16 5.2a3.2 3.2 0 0 1 0 6M18 19a5.5 5.5 0 0 0-3-4.9" /></svg>),
-  lock: (<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>),
-};
 
 function isAnswered(q: QuestionDef, v: unknown): boolean {
   if (v == null) return false;
@@ -162,16 +155,6 @@ export default function SectionWizard({
     <div className={styles.page}>
       <div className={styles.frame}>
         <div className={styles.app}>
-          {/* icon rail */}
-          <nav className={styles.rail} aria-label="주요 메뉴">
-            <div className={styles.logo}>오</div>
-            <button className={styles.railBtn} title="홈" onClick={onBack}>{RAIL_ICONS.home}</button>
-            <button className={`${styles.railBtn} ${styles.on}`} title="플랜">{RAIL_ICONS.plan}</button>
-            <button className={styles.railBtn} title="도움말">{RAIL_ICONS.help}</button>
-            <button className={styles.railBtn} title="팀">{RAIL_ICONS.team}</button>
-            <div className={styles.railSpring} />
-            <button className={`${styles.railBtn} ${styles.railLock}`} title="업그레이드">{RAIL_ICONS.lock}</button>
-          </nav>
 
           {/* chapter nav — 레퍼런스 스타일 */}
           <nav className={styles.nav} aria-label="챕터">

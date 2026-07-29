@@ -108,25 +108,6 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     <div className={styles.page}>
       <div className={styles.frame}>
        <div className={styles.app}>
-        <nav className={styles.rail} aria-label="주요 메뉴">
-          <div className={styles.railLogo}>오</div>
-          <button className={styles.railBtn} title="홈" onClick={onBack} aria-label="홈">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 10.5 12 3l9 7.5" /><path d="M5 9.5V20h14V9.5" /><path d="M9.5 20v-6h5v6" /></svg>
-          </button>
-          <button className={`${styles.railBtn} ${styles.railOn}`} title="플랜" aria-label="플랜">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5" /><path d="M9.5 13h6M9.5 16.5h6" /></svg>
-          </button>
-          <button className={styles.railBtn} title="도움말" aria-label="도움말">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 21 12Z" /></svg>
-          </button>
-          <button className={styles.railBtn} title="팀" aria-label="팀">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path d="M16 5.2a3.2 3.2 0 0 1 0 6M18 19a5.5 5.5 0 0 0-3-4.9" /></svg>
-          </button>
-          <div className={styles.railSpring} />
-          <button className={`${styles.railBtn} ${styles.railLock}`} title="업그레이드" aria-label="업그레이드">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>
-          </button>
-        </nav>
         <div className={styles.main}>
         <div className={styles.bar}>
           <div className={styles.barLeft}>
