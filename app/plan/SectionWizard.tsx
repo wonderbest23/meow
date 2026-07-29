@@ -33,6 +33,38 @@ const Check = ({ n = 11 }: { n?: number }) => (
 );
 
 
+/**
+ * 컨테이너를 부드럽게 스크롤한다.
+ * 네이티브 smooth는 환경에 따라 무시되므로 직접 그린다(동작 보장).
+ */
+function scrollToElement(container: HTMLElement, el: HTMLElement) {
+  const cr = container.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  const raw = container.scrollTop + (er.top - cr.top) - (container.clientHeight - er.height) / 2;
+  const target = Math.max(0, Math.min(raw, container.scrollHeight - container.clientHeight));
+  const start = container.scrollTop;
+  const delta = target - start;
+  const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduce || Math.abs(delta) < 4) {
+    container.scrollTop = target;
+    return;
+  }
+  const duration = Math.min(620, 240 + Math.abs(delta) * 0.45);
+  const t0 = performance.now();
+  let done = false;
+  const step = (now: number) => {
+    const p = Math.min(1, (now - t0) / duration);
+    container.scrollTop = start + delta * (1 - Math.pow(1 - p, 3)); // easeOutCubic
+    if (p < 1) requestAnimationFrame(step);
+    else done = true;
+  };
+  requestAnimationFrame(step);
+  // 탭이 백그라운드면 rAF가 돌지 않는다 — 애니메이션은 없더라도 목표 위치에는 도달시킨다
+  window.setTimeout(() => {
+    if (!done) container.scrollTop = target;
+  }, duration + 150);
+}
+
 function isAnswered(q: QuestionDef, v: unknown): boolean {
   if (v == null) return false;
   if (q.input.kind === "multi") return Array.isArray(v) && v.length > 0;
@@ -79,6 +111,9 @@ export default function SectionWizard({
   // 플랜 전체 답변 스냅샷 — 재무 입력이 다른 섹션에 흩어져 있어 함께 필요하다.
   // 렌더 중 저장소를 읽으면 서버 렌더와 어긋나므로 진입 후 상태로 채운다.
   const [planAnswers, setPlanAnswers] = useState<Record<string, Record<string, unknown>>>({});
+  // 생성을 시도했는데 빈 필수 항목이 있을 때만 빨갛게 표시한다(처음부터 겁주지 않는다)
+  const [showMissing, setShowMissing] = useState(false);
+  const bodyRef = useRef<HTMLDivElement>(null);
 
   // 섹션 진입 시: 저장된 답변 복원 + 이미 생성된 본문이 있으면 표시
   useEffect(() => {
@@ -97,6 +132,7 @@ export default function SectionWizard({
       setGenSource(null);
     }
     setEditingMd(null);
+    setShowMissing(false);
   }, [key]);
 
   // 답변 변경 시 자동 저장(디바운스) — 새로고침·이동해도 유실되지 않게
@@ -261,6 +297,39 @@ export default function SectionWizard({
   );
 
   const complete = answeredReq >= totalReq;
+
+  /** 아직 답하지 않은 필수 질문 id — 화면 순서대로 */
+  const missingIds = useMemo(() => {
+    const out: string[] = [];
+    for (const g of groups) {
+      for (const q of g.questions) {
+        if (q.optional || !isVisible(q, answers)) continue;
+        if (!isAnswered(q, answers[q.id])) out.push(q.id);
+      }
+    }
+    return out;
+  }, [groups, answers]);
+
+  /** 다 채웠으면 생성, 아니면 첫 빈 항목으로 데려간다. */
+  function attemptGenerate() {
+    if (complete) {
+      setShowMissing(false);
+      void handleGenerate();
+      return;
+    }
+    setShowMissing(true);
+    const first = missingIds[0];
+    if (!first) return;
+    // 표시가 반영된 뒤 이동한다 (rAF는 백그라운드 탭에서 멈추므로 타이머를 쓴다)
+    window.setTimeout(() => {
+      const container = bodyRef.current;
+      const el = container?.querySelector<HTMLElement>(`[data-qid="${first}"]`);
+      if (!container || !el) return;
+      scrollToElement(container, el);
+      el.querySelector<HTMLElement>("input, textarea, button")?.focus({ preventScroll: true });
+    }, 0);
+  }
+
   const C = 2 * Math.PI * 15.5;
 
   return (
@@ -317,7 +386,7 @@ export default function SectionWizard({
               </div>
             </div>
 
-            <div className={styles.mbody}>
+            <div className={styles.mbody} ref={bodyRef}>
               {editingMd === null && !generatedHtml && !generating && (
                 <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
               )}
@@ -347,8 +416,15 @@ export default function SectionWizard({
                   <div key={g.id} className={styles.group}>
                     <div className={styles.gl}><span className={styles.gi}>◆</span>{g.label}</div>
                     {g.questions.filter((q) => isVisible(q, answers)).map((q) => (
-                      <div key={q.id} className={styles.q}>
-                        <div className={styles.qq}>{q.q}</div>
+                      <div
+                        key={q.id}
+                        data-qid={q.id}
+                        className={`${styles.q} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""}`}
+                      >
+                        <div className={styles.qq}>
+                          {q.q}
+                          {showMissing && missingIds.includes(q.id) && <span className={styles.needTag}>입력이 필요합니다</span>}
+                        </div>
                         {q.help && <div className={styles.qh}>{q.help}</div>}
                         {renderInput(q, answers[q.id], suggestions[q.id], { setAnswer, toggleMulti, styles })}
                         {q.aiSuggest && (
@@ -397,8 +473,12 @@ export default function SectionWizard({
                 <>
                   <button className={styles.btn} onClick={onBack}>← 이전</button>
                   <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => { setAnswers({}); setSuggestions({}); saveAnswers(key, {}); }}>초기화</button>
-                  <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={!complete || generating} onClick={handleGenerate}>
-                    {generating ? "생성 중…" : "완료하고 생성 →"}
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimary} ${!complete ? styles.btnWaiting : ""}`}
+                    disabled={generating}
+                    onClick={attemptGenerate}
+                  >
+                    {generating ? "생성 중…" : complete ? "완료하고 생성 →" : `${totalReq - answeredReq}개 남음`}
                   </button>
                 </>
               )}
@@ -421,7 +501,7 @@ export default function SectionWizard({
                 const pg = perGroup[g.id] ?? { done: 0, total: 0 };
                 const filled = pg.total > 0 && pg.done >= pg.total;
                 return (
-                  <li key={g.id} className={filled ? styles.filled : ""}>
+                  <li key={g.id} className={`${filled ? styles.filled : ""} ${showMissing && !filled ? styles.trackMissing : ""}`}>
                     <span className={styles.tdot}>{filled && <Check />}</span>
                     <span className={styles.tn}>{g.label}</span>
                     <span className={styles.tc}>{pg.done}/{pg.total}</span>
@@ -429,8 +509,12 @@ export default function SectionWizard({
                 );
               })}
             </ul>
-            <button className={styles.finish} disabled={!complete || generating || !!generatedHtml} onClick={handleGenerate}>
-              <Check n={16} /> {generatedHtml ? "생성 완료" : "완료하고 생성"}
+            <button
+              className={`${styles.finish} ${!complete && !generatedHtml ? styles.finishWaiting : ""}`}
+              disabled={generating || !!generatedHtml}
+              onClick={attemptGenerate}
+            >
+              <Check n={16} /> {generatedHtml ? "생성 완료" : complete ? "완료하고 생성" : `${totalReq - answeredReq}개 더 답하기`}
             </button>
           </aside>
         </div>

@@ -18,7 +18,20 @@ function Select({
   onChange: (v: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  // 아래 공간이 부족하면 위로 펼친다 — 창 밖으로 나가 선택하지 못하는 일이 없게
+  const [dropUp, setDropUp] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+
+  function toggle() {
+    setOpen((wasOpen) => {
+      if (!wasOpen && ref.current) {
+        const r = ref.current.getBoundingClientRect();
+        const below = window.innerHeight - r.bottom;
+        setDropUp(below < 280 && r.top > below);
+      }
+      return !wasOpen;
+    });
+  }
 
   useEffect(() => {
     if (!open) return;
@@ -41,7 +54,7 @@ function Select({
       <button
         type="button"
         className={`${styles.selectBtn} ${open ? styles.open : ""} ${value ? "" : styles.placeholder}`}
-        onClick={() => setOpen((v) => !v)}
+        onClick={toggle}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
@@ -49,7 +62,7 @@ function Select({
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
       </button>
       {open && (
-        <div className={styles.menu} role="listbox">
+        <div className={`${styles.menu} ${dropUp ? styles.menuUp : ""}`} role="listbox">
           {options.map((opt) => (
             <button
               key={opt}

@@ -34,7 +34,10 @@
   border-radius: 24px;
   box-shadow: var(--wz-shadow);
   overflow: hidden;
-  height: 820px;
+  /* 창 높이에 맞춘 앱 셸 — 각 열이 내부에서 스크롤된다 */
+  height: calc(100vh - 62px);
+  min-height: 560px;
+  max-height: 900px;
 }
 
 /* icon rail */
@@ -95,6 +98,7 @@
 .nav {
   background: var(--wz-nav);
   color: #fff;
+  min-height: 0;
   overflow-y: auto;
   padding: 16px 14px;
   display: flex;
@@ -258,6 +262,8 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
+  /* 그리드 자식의 기본 min-height:auto를 풀어야 .mbody의 스크롤이 살아난다 */
+  min-height: 0;
   background: var(--wz-panel);
 }
 .mhead {
@@ -330,7 +336,9 @@
 .mbody {
   padding: 22px 30px 30px;
   overflow-y: auto;
+  overscroll-behavior: contain;
   flex: 1;
+  min-height: 0;
 }
 .group {
   margin-bottom: 28px;
@@ -658,6 +666,7 @@
   background: var(--wz-panel2);
   border-left: 1px solid var(--wz-line);
   padding: 22px 20px;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -823,4 +832,64 @@
   min-width: 440px;
   max-width: 100%;
   height: auto;
+}
+
+/* 미입력 필수 항목 — 생성을 시도했을 때만 표시한다 */
+.qMissing {
+  position: relative;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-left: -14px;
+  margin-right: -14px;
+  background: #fff6f7;
+  box-shadow: inset 3px 0 0 #d6455d;
+  animation: needAttention 0.45s ease-out;
+}
+.needTag {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #c33d55;
+  background: #fdecef;
+  border-radius: 999px;
+  padding: 3px 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+@keyframes needAttention {
+  0% { background: #ffe6ea; }
+  100% { background: #fff6f7; }
+}
+
+/* 아직 다 못 채운 상태의 생성 버튼 — 막지 않고 남은 개수를 알려준다 */
+.btnWaiting {
+  background: var(--wz-panel2);
+  color: var(--wz-muted);
+  box-shadow: inset 0 0 0 1px var(--wz-line);
+}
+.btnWaiting:hover {
+  color: var(--wz-brand);
+  box-shadow: inset 0 0 0 1px var(--wz-brand);
+}
+.finishWaiting {
+  background: var(--wz-panel2);
+  color: var(--wz-muted);
+  box-shadow: inset 0 0 0 1px var(--wz-line);
+}
+.finishWaiting:hover {
+  color: var(--wz-brand);
+  box-shadow: inset 0 0 0 1px var(--wz-brand);
+}
+
+/* 트래커에서 덜 채운 항목 */
+.trackMissing .tn,
+.trackMissing .tc {
+  color: #c33d55;
+}
+.trackMissing .tdot {
+  border-color: #e8909f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qMissing { animation: none; }
 }
