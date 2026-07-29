@@ -19,6 +19,8 @@ import {
   saveAnswers,
 } from "../../lib/plan-builder/plan-store";
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
+import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
+import ConsistencyPanel from "./ConsistencyPanel";
 import FinancialReview from "./FinancialReview";
 import styles from "./SectionWizard.module.css";
 
@@ -252,6 +254,12 @@ export default function SectionWizard({
     [planAnswers, key, answers, finOverrides],
   );
 
+  // 이 섹션이 걸려 있는 모순만 추린다 — 다른 챕터 이야기로 주의를 뺏지 않는다.
+  const sectionIssues = useMemo(
+    () => issuesForSection(findConsistencyIssues(reviewAnswers), key),
+    [reviewAnswers, key],
+  );
+
   const complete = answeredReq >= totalReq;
   const C = 2 * Math.PI * 15.5;
 
@@ -310,6 +318,10 @@ export default function SectionWizard({
             </div>
 
             <div className={styles.mbody}>
+              {editingMd === null && !generatedHtml && !generating && (
+                <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
+              )}
+
               {editingMd !== null ? (
                 <>
                   <span className={styles.genBadge}>✏️ 직접 편집 (마크다운)</span>

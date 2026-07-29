@@ -13,6 +13,8 @@ import {
   saveSection,
   priorSectionsSummary,
 } from "../../lib/plan-builder/plan-store";
+import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
+import ConsistencyPanel from "./ConsistencyPanel";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -59,6 +61,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [bulk, setBulk] = useState<{ done: number; total: number; current: string | null } | null>(null);
   const cancelBulk = useRef(false);
   const [title, setTitle] = useState(planTitle);
+  const [issues, setIssues] = useState<ConsistencyIssue[]>([]);
 
   // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
   useEffect(() => {
@@ -70,6 +73,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       setInProgress(new Set(answeredSectionKeys(s)));
       const p = activePlan(s);
       if (p) setTitle(p.title);
+      setIssues(findConsistencyIssues(p?.answers ?? {}));
     });
     return () => {
       alive = false;
@@ -150,6 +154,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     setStoreStatuses(planStatuses(next));
     setAssembled(assembleSections(next));
     setInProgress(new Set(answeredSectionKeys(next)));
+    setIssues(findConsistencyIssues(activePlan(next)?.answers ?? {}));
   }
 
   // 전역 순번(1-based)
@@ -205,6 +210,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           </div>
           <div className={styles.spring} />
         </div>
+
+        <ConsistencyPanel issues={issues} onOpenSection={onOpenSection} />
 
         {/* 구조 / 문서 전환 */}
         <div className={styles.tools}>
