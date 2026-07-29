@@ -157,3 +157,8 @@
   color: var(--wz-faint, #8b95a1);
   min-height: 16px;
 }
+
+.statusFail {
+  color: #c33d55;
+  font-weight: 700;
+}

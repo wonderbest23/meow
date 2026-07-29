@@ -113,7 +113,7 @@ export default function SectionWizard({
   const streamRef = useRef<HTMLDivElement>(null);
   const [editingMd, setEditingMd] = useState<string | null>(null);
   const [savedMd, setSavedMd] = useState<string>("");
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   // 재무 수치 검토에서 사용자가 고친 값 (질문 섹션이 아니라 별도 키에 저장)
   const [finOverrides, setFinOverrides] = useState<AnswerMap>({});
   // 플랜 전체 답변 스냅샷 — 재무 입력이 다른 섹션에 흩어져 있어 함께 필요하다.
@@ -300,7 +300,12 @@ export default function SectionWizard({
     const md = htmlToMarkdown(nextHtml);
     if (!md.trim() || md === savedMd) return;
     setSaveState("saving");
-    saveSection(key, md, nextHtml);
+    const ok = saveSection(key, md, nextHtml);
+    if (!ok) {
+      // 저장할 플랜이 없다 — 성공한 척하지 않는다
+      setSaveState("failed");
+      return;
+    }
     setSavedMd(md);
     setGeneratedHtml(nextHtml);
     setSaveState("saved");

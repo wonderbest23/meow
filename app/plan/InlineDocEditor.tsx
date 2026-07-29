@@ -17,7 +17,7 @@ export interface InlineDocEditorProps {
    */
   onChange: (html: string) => void;
   /** 저장 상태 표시용 */
-  status?: "idle" | "saving" | "saved";
+  status?: "idle" | "saving" | "saved" | "failed";
   /** 디바운스(ms) */
   debounceMs?: number;
 }
@@ -110,8 +110,14 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
 
       <EditorContent editor={editor} />
 
-      <div className={styles.status} aria-live="polite">
-        {status === "saving" ? "저장 중…" : status === "saved" ? "저장됨" : "글을 눌러 바로 고칠 수 있어요"}
+      <div className={`${styles.status} ${status === "failed" ? styles.statusFail : ""}`} aria-live="polite">
+        {status === "saving"
+          ? "저장 중…"
+          : status === "saved"
+            ? "저장됨"
+            : status === "failed"
+              ? "저장하지 못했습니다 — 플랜을 찾을 수 없어요. 새로고침 후 다시 시도해주세요."
+              : "글을 눌러 바로 고칠 수 있어요"}
       </div>
     </div>
   );

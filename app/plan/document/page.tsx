@@ -15,12 +15,16 @@ export default function PlanDocumentPage() {
   const [title, setTitle] = useState("사업계획서");
   const [planType, setPlanType] = useState("");
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  const [failedKey, setFailedKey] = useState<string | null>(null);
 
   /** 문서에서 고친 내용을 저장한다. 원본은 마크다운이므로 되돌려 담는다. */
   function saveEdit(key: string, nextHtml: string) {
     const md = htmlToMarkdown(nextHtml);
     if (!md.trim()) return;
-    saveSection(key, md, nextHtml);
+    if (!saveSection(key, md, nextHtml)) {
+      setFailedKey(key);
+      return;
+    }
     setSections((prev) => prev.map((s) => (s.key === key ? { ...s, markdown: md, html: nextHtml } : s)));
     setSavedKey(key);
   }
@@ -150,7 +154,7 @@ export default function PlanDocumentPage() {
                   <div className={styles.body}>
                     <InlineDocEditor
                       html={s.html}
-                      status={savedKey === s.key ? "saved" : "idle"}
+                      status={failedKey === s.key ? "failed" : savedKey === s.key ? "saved" : "idle"}
                       onChange={(nextHtml) => saveEdit(s.key, nextHtml)}
                     />
                   </div>

@@ -235,14 +235,20 @@ export function answeredSectionKeys(state?: PlanState): string[] {
 }
 
 /** 활성 플랜에 섹션 생성 결과 저장 */
-export function saveSection(key: string, markdown: string, html: string) {
+/**
+ * 섹션 본문을 저장한다.
+ * 활성 플랜이 없으면 저장할 곳이 없으므로 false를 돌려준다 —
+ * 호출부가 '저장됨'이라고 잘못 알리지 않도록.
+ */
+export function saveSection(key: string, markdown: string, html: string): boolean {
   const s = loadState();
   const p = activePlan(s);
-  if (!p) return;
+  if (!p) return false;
   p.sections[key] = { markdown, html, generatedAt: new Date().toISOString() };
   p.updatedAt = new Date().toISOString();
   persist(s);
   void pushToServer();
+  return true;
 }
 
 /**
