@@ -11,6 +11,8 @@ import {
 } from "../../lib/plan-builder/questions";
 import {
   saveSection,
+  toggleSectionLock,
+  restorePreviousSection,
   loadState,
   businessContext,
   priorSectionsSummary,
@@ -114,6 +116,10 @@ export default function SectionWizard({
   const [editingMd, setEditingMd] = useState<string | null>(null);
   const [savedMd, setSavedMd] = useState<string>("");
   const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
+  // 이 섹션을 사용자가 직접 고쳤는지 / 다시 생성으로부터 잠갔는지
+  const [edited, setEdited] = useState(false);
+  const [locked, setLocked] = useState(false);
+  const [canUndo, setCanUndo] = useState(false);
   // 재무 수치 검토에서 사용자가 고친 값 (질문 섹션이 아니라 별도 키에 저장)
   const [finOverrides, setFinOverrides] = useState<AnswerMap>({});
   // 플랜 전체 답변 스냅샷 — 재무 입력이 다른 섹션에 흩어져 있어 함께 필요하다.
@@ -134,10 +140,16 @@ export default function SectionWizard({
       setGeneratedHtml(stored.html);
       setSavedMd(stored.markdown);
       setGenSource("ai");
+      setEdited(!!stored.edited);
+      setLocked(!!stored.locked);
+      setCanUndo(!!stored.previous);
     } else {
       setGeneratedHtml(null);
       setSavedMd("");
       setGenSource(null);
+      setEdited(false);
+      setLocked(false);
+      setCanUndo(false);
     }
     setEditingMd(null);
     setShowMissing(false);
@@ -223,6 +235,36 @@ export default function SectionWizard({
     };
   }
 
+  /**
+   * 다시 생성 전에 손으로 고친 내용을 지켜준다.
+   * 잠긴 섹션은 아예 막고, 고친 흔적이 있으면 한 번 묻는다.
+   */
+  function requestRegenerate() {
+    if (locked) {
+      alert("이 섹션은 잠겨 있어 다시 생성할 수 없습니다.\n자물쇠를 풀고 다시 시도해주세요.");
+      return;
+    }
+    if (edited && !confirm("직접 고친 내용이 새로 생성한 글로 바뀝니다.\n계속할까요? (생성 후 '되돌리기'로 한 번 복구할 수 있어요)")) {
+      return;
+    }
+    void handleGenerate();
+  }
+
+  /** 잠금 토글 */
+  function onToggleLock() {
+    setLocked(toggleSectionLock(key));
+  }
+
+  /** 직전 본문으로 되돌리기 */
+  function onUndo() {
+    const restored = restorePreviousSection(key);
+    if (!restored) return;
+    setGeneratedHtml(restored.html);
+    setSavedMd(restored.markdown);
+    setEdited(true);
+    setCanUndo(false);
+  }
+
   /** 본문을 실시간으로 받아 화면에 쌓는다. */
   async function handleGenerate() {
     setGenerating(true);
@@ -278,8 +320,10 @@ export default function SectionWizard({
       if (finished?.markdown && finished.html) {
         setGeneratedHtml(finished.html);
         setGenSource(finished.source ?? null);
-        saveSection(key, finished.markdown, finished.html);
+        saveSection(key, finished.markdown, finished.html, { keepPrevious: true });
         setSavedMd(finished.markdown);
+        setEdited(false);
+        setCanUndo(!!savedMd);
         onComplete?.(chapter.id, section.id, answers);
       } else {
         setGeneratedHtml("<p>생성에 실패했습니다.</p>");
@@ -300,7 +344,7 @@ export default function SectionWizard({
     const md = htmlToMarkdown(nextHtml);
     if (!md.trim() || md === savedMd) return;
     setSaveState("saving");
-    const ok = saveSection(key, md, nextHtml);
+    const ok = saveSection(key, md, nextHtml, { edited: true });
     if (!ok) {
       // 저장할 플랜이 없다 — 성공한 척하지 않는다
       setSaveState("failed");
@@ -308,6 +352,7 @@ export default function SectionWizard({
     }
     setSavedMd(md);
     setGeneratedHtml(nextHtml);
+    setEdited(true);
     setSaveState("saved");
   }
 
@@ -385,7 +430,7 @@ export default function SectionWizard({
   function attemptGenerate() {
     if (complete) {
       setShowMissing(false);
-      void handleGenerate();
+      requestRegenerate();
       return;
     }
     setShowMissing(true);
@@ -474,7 +519,29 @@ export default function SectionWizard({
                 </>
               ) : generatedHtml ? (
                 <>
-                  <span className={styles.genBadge}>{genSource === "ai" ? "✨ AI 생성 본문" : "초안(키 미설정 · 폴백)"}</span>
+                  <div className={styles.genHead}>
+                    <span className={styles.genBadge}>
+                      {edited ? "✍️ 직접 고친 본문" : genSource === "ai" ? "✨ AI 생성 본문" : "초안(키 미설정 · 폴백)"}
+                    </span>
+                    <button
+                      type="button"
+                      className={`${styles.lockBtn} ${locked ? styles.lockOn : ""}`}
+                      onClick={onToggleLock}
+                      title={locked ? "잠금 해제 — 다시 생성이 이 글을 덮어쓸 수 있게 됩니다" : "잠그면 다시 생성이 이 글을 덮어쓰지 못합니다"}
+                    >
+                      {locked ? "🔒 잠김" : "🔓 잠그기"}
+                    </button>
+                    {canUndo && (
+                      <button type="button" className={styles.undoBtn} onClick={onUndo} title="직전 본문으로 되돌립니다">
+                        ↩︎ 되돌리기
+                      </button>
+                    )}
+                  </div>
+                  {locked && (
+                    <p className={styles.lockNote}>
+                      이 섹션은 잠겨 있습니다. 다시 생성해도 이 글은 그대로 남습니다.
+                    </p>
+                  )}
                   {/* 편집 모드가 따로 없다 — 문서가 늘 편집 가능한 상태다 */}
                   <InlineDocEditor html={generatedHtml} onChange={saveInline} status={saveState} />
                 </>
@@ -547,8 +614,13 @@ export default function SectionWizard({
                 <>
                   <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
                   <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="마크다운 원문을 직접 손봅니다">〈/〉 마크다운</button>
-                  <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={handleGenerate}>
-                    {generating ? "생성 중…" : "🔄 다시 생성"}
+                  <button
+                    className={`${styles.btn} ${styles.btnPrimary} ${locked ? styles.btnLocked : ""}`}
+                    disabled={generating}
+                    onClick={requestRegenerate}
+                    title={locked ? "잠긴 섹션입니다" : undefined}
+                  >
+                    {generating ? "생성 중…" : locked ? "🔒 잠김" : "🔄 다시 생성"}
                   </button>
                 </>
               ) : (

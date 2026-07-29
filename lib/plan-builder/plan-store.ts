@@ -9,6 +9,12 @@ export interface StoredSection {
   markdown: string;
   html: string;
   generatedAt: string;
+  /** 사용자가 직접 손댄 본문인지 — 다시 생성할 때 경고한다 */
+  edited?: boolean;
+  /** 잠금. 켜져 있으면 다시 생성이 덮어쓰지 못한다 */
+  locked?: boolean;
+  /** 덮어쓰기 직전 본문 — 한 번은 되돌릴 수 있게 */
+  previous?: { markdown: string; html: string };
 }
 
 /** 사업 정보 — 모든 플랜·섹션의 공통 맥락. 사업은 하나만 유지한다. */
@@ -240,15 +246,70 @@ export function answeredSectionKeys(state?: PlanState): string[] {
  * 활성 플랜이 없으면 저장할 곳이 없으므로 false를 돌려준다 —
  * 호출부가 '저장됨'이라고 잘못 알리지 않도록.
  */
-export function saveSection(key: string, markdown: string, html: string): boolean {
+export function saveSection(
+  key: string,
+  markdown: string,
+  html: string,
+  options?: {
+    /** 사용자가 직접 고친 저장인지 (AI 생성이면 false) */
+    edited?: boolean;
+    /** 덮어쓰기 전 본문을 되돌리기용으로 남길지 */
+    keepPrevious?: boolean;
+  },
+): boolean {
   const s = loadState();
   const p = activePlan(s);
   if (!p) return false;
-  p.sections[key] = { markdown, html, generatedAt: new Date().toISOString() };
+  const before = p.sections[key];
+  p.sections[key] = {
+    markdown,
+    html,
+    generatedAt: new Date().toISOString(),
+    edited: options?.edited ?? false,
+    // 잠금은 본문을 갈아끼워도 유지된다
+    locked: before?.locked,
+    previous:
+      options?.keepPrevious && before
+        ? { markdown: before.markdown, html: before.html }
+        : before?.previous,
+  };
   p.updatedAt = new Date().toISOString();
   persist(s);
   void pushToServer();
   return true;
+}
+
+/** 섹션 잠금 토글. 잠긴 섹션은 다시 생성이 덮어쓰지 못한다. */
+export function toggleSectionLock(key: string): boolean {
+  const s = loadState();
+  const p = activePlan(s);
+  const sec = p?.sections[key];
+  if (!p || !sec) return false;
+  sec.locked = !sec.locked;
+  p.updatedAt = new Date().toISOString();
+  persist(s);
+  void pushToServer();
+  return sec.locked;
+}
+
+/** 직전 본문으로 한 번 되돌린다. 되돌릴 게 없으면 null. */
+export function restorePreviousSection(key: string): StoredSection | null {
+  const s = loadState();
+  const p = activePlan(s);
+  const sec = p?.sections[key];
+  if (!p || !sec?.previous) return null;
+  const restored: StoredSection = {
+    markdown: sec.previous.markdown,
+    html: sec.previous.html,
+    generatedAt: new Date().toISOString(),
+    edited: true,
+    locked: sec.locked,
+  };
+  p.sections[key] = restored;
+  p.updatedAt = new Date().toISOString();
+  persist(s);
+  void pushToServer();
+  return restored;
 }
 
 /**

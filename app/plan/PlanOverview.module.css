@@ -577,3 +577,9 @@
 @media (prefers-reduced-motion: reduce) {
   .node.next { animation: none; }
 }
+
+/* 잠긴 섹션 표시 — 일괄 생성이 건너뛴다 */
+.lockTag {
+  font-size: 11px;
+  line-height: 1;
+}

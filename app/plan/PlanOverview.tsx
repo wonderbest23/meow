@@ -63,6 +63,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [title, setTitle] = useState(planTitle);
   const [type, setType] = useState<string | undefined>(undefined);
   const [issues, setIssues] = useState<ConsistencyIssue[]>([]);
+  /** 잠근 섹션 — 일괄 생성이 건너뛴다 */
+  const [lockedKeys, setLockedKeys] = useState<Set<string>>(new Set());
 
   // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
   useEffect(() => {
@@ -78,6 +80,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         setType(p.planType);
       }
       setIssues(findConsistencyIssues(p?.answers ?? {}));
+      setLockedKeys(new Set(Object.entries(p?.sections ?? {}).filter(([, v]) => v?.locked).map(([k]) => k)));
     });
     return () => {
       alive = false;
@@ -107,13 +110,13 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     for (const ch of chapters) {
       for (const s of ch.sections) {
         const key = `${ch.id}/${s.id}`;
-        if (statuses[key] !== "done" && inProgress.has(key)) {
+        if (statuses[key] !== "done" && inProgress.has(key) && !lockedKeys.has(key)) {
           out.push({ key, chapterId: ch.id, sectionId: s.id, title: s.title });
         }
       }
     }
     return out;
-  }, [statuses, inProgress, chapters]);
+  }, [statuses, inProgress, chapters, lockedKeys]);
 
   /** 답변이 있는 미생성 섹션을 순차 생성한다(앞 섹션 결과가 뒤에 반영되도록 순서 유지). */
   async function generateAll() {
@@ -163,6 +166,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     setAssembled(assembleSections(next));
     setInProgress(new Set(answeredSectionKeys(next)));
     setIssues(findConsistencyIssues(activePlan(next)?.answers ?? {}));
+    const np = activePlan(next);
+    setLockedKeys(new Set(Object.entries(np?.sections ?? {}).filter(([, v]) => v?.locked).map(([k]) => k)));
   }
 
   /** 다음에 손대야 할 섹션 — 아직 생성되지 않은 첫 섹션 */
@@ -283,6 +288,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                     const done = statuses[key] === "done";
                     const writing = !done && inProgress.has(key);
                     const isNext = key === nextKey;
+                    const isLocked = lockedKeys.has(key);
                     const num = counter;
                     return (
                       <button
@@ -294,6 +300,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                       >
                         <span className={styles.nodeNum}>{done ? <CheckIcon /> : num}</span>
                         <span className={styles.nodeLabel}>{section.title}</span>
+                        {isLocked && <span className={styles.lockTag} title="잠긴 섹션 — 일괄 생성이 건너뜁니다">🔒</span>}
                         {isNext && <span className={styles.nextTag}>여기부터</span>}
                         {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
                         <span className={styles.nodeTime}>{section.estMinutes}분</span>

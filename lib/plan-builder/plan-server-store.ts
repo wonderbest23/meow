@@ -19,7 +19,20 @@ export interface ServerPlan {
   planType: string;
   createdAt: string;
   updatedAt: string;
-  sections: Record<string, { markdown: string; html: string; generatedAt: string }>;
+  sections: Record<
+    string,
+    {
+      markdown: string;
+      html: string;
+      generatedAt: string;
+      /** 사용자가 직접 고쳤는지 */
+      edited?: boolean;
+      /** 다시 생성이 덮어쓰지 못하게 잠금 */
+      locked?: boolean;
+      /** 되돌리기용 직전 본문 */
+      previous?: { markdown: string; html: string };
+    }
+  >;
   answers: Record<string, Record<string, unknown>>;
 }
 
