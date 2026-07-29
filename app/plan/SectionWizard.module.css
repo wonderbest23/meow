@@ -94,133 +94,215 @@
   color: #f4b740;
 }
 
-/* chapter nav — 레퍼런스 스타일 */
+/* chapter nav — 레퍼런스 골격(사각 행 + 들여쓰기 이동 + 0.2s 전환)을 우리 색으로 */
 .nav {
   background: var(--wz-nav);
   color: #fff;
   min-height: 0;
   overflow-y: auto;
-  padding: 16px 14px;
+  padding: 14px 0 20px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
 }
 .navTop {
-  width: 100%;
+  width: calc(100% - 28px);
+  margin: 0 14px 14px;
   border: 0;
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background: #fff;
+  color: #10233a;
   font: inherit;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 14px;
-  padding: 14px;
-  border-radius: 12px;
+  padding: 13px;
+  border-radius: 6px;
   cursor: pointer;
   text-align: center;
+  transition: 0.2s;
 }
 .navTop:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: #eef2f6;
 }
+/* 세그먼트 — 가운데 모서리는 각지게 붙인다 */
 .navTabs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
-  background: rgba(0, 0, 0, 0.16);
-  border-radius: 12px;
-  padding: 5px;
-  margin-bottom: 4px;
+  margin: 0 14px 16px;
 }
 .navTab {
-  border: 0;
+  border: 1.5px solid rgba(255, 255, 255, 0.22);
   background: transparent;
-  color: #b6c6d2;
+  color: #cbd8e2;
   font: inherit;
-  font-weight: 800;
+  font-weight: 700;
   font-size: 12.5px;
-  padding: 9px;
-  border-radius: 9px;
+  padding: 11px 8px;
   cursor: pointer;
+  transition: 0.2s;
+}
+.navTab:first-child {
+  border-radius: 6px 0 0 6px;
+  border-right-width: 0;
+}
+.navTab:last-child {
+  border-radius: 0 6px 6px 0;
+}
+.navTab:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
 }
 .navTab.navTabOn {
   background: #f4b740;
+  border-color: #f4b740;
   color: #10233a;
 }
-/* 챕터 = 큰 버튼(이름 좌·번호 우) */
+
+/* 챕터 = 가로 전체를 채우는 사각 행 */
 .chap {
-  border-radius: 12px;
+  border-radius: 0;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.045);
-}
-.chap.open {
   background: transparent;
 }
 .ch {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px 16px;
+  /* 활성/호버 시 왼쪽으로 밀려날 자리를 미리 비워둔다 */
+  padding: 13px 18px 13px 20px;
   cursor: pointer;
   background: transparent;
   border: 0;
   width: 100%;
   text-align: left;
+  transition: 0.2s;
 }
+/* 왼쪽에서 나타나는 꺾쇠 */
+.ch::after {
+  content: "";
+  position: absolute;
+  left: 15px;
+  top: calc(50% - 6px);
+  width: 10px;
+  height: 10px;
+  border-right: 2.5px solid #fff;
+  border-top: 2.5px solid #fff;
+  transform: rotate(45deg);
+  opacity: 0;
+  transition: 0.2s;
+}
+.ch:hover,
 .chap.open > .ch {
-  background: #2c6b5e;
-  border-radius: 10px;
+  background: var(--wz-brand);
+  padding-left: 38px;
+}
+.ch:hover::after,
+.chap.open > .ch::after {
+  opacity: 1;
 }
 .cname {
   font-size: 15px;
-  font-weight: 800;
+  font-weight: 700;
   flex: 1;
   color: #eaf1f5;
+  transition: 0.2s;
 }
+.ch:hover .cname,
 .chap.open > .ch .cname {
   color: #fff;
 }
 .cnum {
-  font-size: 18px;
-  font-weight: 800;
+  font-size: 16px;
+  font-weight: 700;
   color: #f4b740;
   font-variant-numeric: tabular-nums;
+  transition: 0.2s;
 }
+.ch:hover .cnum,
 .chap.open > .ch .cnum {
   color: #fff;
 }
+
 .secs {
   display: none;
-  padding: 6px 0 2px;
+  padding: 4px 0 8px;
 }
 .chap.open .secs {
   display: block;
 }
-/* 섹션 = "1.1 — 이름" 좌 · 체크 우 */
+
+/* 섹션 = 호버하면 화살표가 자라고 글자가 밀린다 */
 .sec {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 12px 14px;
+  padding: 10px 18px 10px 34px;
   cursor: pointer;
   font-size: 13.5px;
   color: #c7d5df;
-  transition: 0.12s;
   background: transparent;
   border: 0;
   width: 100%;
   text-align: left;
-  border-radius: 8px;
+  border-radius: 0;
+  transition: 0.2s;
+}
+/* 화살표 몸통 — 호버 시 10px → 26px */
+.sec::before {
+  content: "";
+  position: absolute;
+  left: 18px;
+  top: 50%;
+  width: 10px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0.55;
+  transition: 0.2s;
+}
+.sec:hover::before,
+.sec.on::before {
+  width: 26px;
+  transition-delay: 0.1s;
+  opacity: 1;
+}
+/* 화살촉 — 몸통 끝에 붙어 함께 밀린다 (선이 아니라 화살표로 읽히게) */
+.sec::after {
+  content: "";
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-top: 3.5px solid transparent;
+  border-bottom: 3.5px solid transparent;
+  border-left: 5px solid currentColor;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: 0.2s;
+}
+.sec:hover::after,
+.sec.on::after {
+  left: 40px;
+  opacity: 1;
+  transition-delay: 0.1s;
 }
 .secLabel {
   flex: 1;
   min-width: 0;
+  transition: 0.2s;
+}
+.sec:hover .secLabel,
+.sec.on .secLabel {
+  margin-left: 18px;
 }
 .secNo {
   color: #8ba2b8;
   font-weight: 700;
   margin-right: 6px;
   font-variant-numeric: tabular-nums;
+  transition: 0.2s;
 }
 .sec:hover {
   color: #fff;
@@ -228,21 +310,22 @@
 }
 .sec.on {
   color: #fff;
-  font-weight: 800;
+  font-weight: 700;
   background: rgba(47, 87, 244, 0.28);
 }
 .sec.on .secNo {
   color: #cdd9ff;
 }
 .secDot {
-  width: 20px;
-  height: 20px;
+  width: 19px;
+  height: 19px;
   border-radius: 50%;
   border: 1.6px solid var(--wz-nav-line);
   display: grid;
   place-items: center;
   flex: 0 0 auto;
   color: #8ba2b8;
+  transition: 0.2s;
 }
 .secDot svg {
   width: 11px;
@@ -256,6 +339,55 @@
 .sec.on .secDot {
   border-color: #7f9bff;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .ch,
+  .ch::after,
+  .sec,
+  .sec::before,
+  .sec::after,
+  .secLabel {
+    transition: none;
+  }
+}
+/*
+ * globals.css:7874의 `button:not(.brand):not(.mobile-report-backdrop)`가
+ * border-radius:14px / font-weight:800 / min-height:40px 를 !important로 강제한다.
+ * 그래서 이 내비의 사각 행과 글자 굵기 위계가 전부 뭉개졌다.
+ * 특이도로는 못 이기므로 이 내비 안에서만 되돌린다(전역 규칙은 다른 화면이 쓰고 있어 건드리지 않는다).
+ */
+.page .nav .navTop {
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+}
+.page .nav .navTab {
+  border-radius: 0 !important;
+  font-weight: 700 !important;
+  min-height: 0 !important;
+}
+.page .nav .navTab:first-child {
+  border-radius: 6px 0 0 6px !important;
+}
+.page .nav .navTab:last-child {
+  border-radius: 0 6px 6px 0 !important;
+}
+.page .nav .ch {
+  border-radius: 0 !important;
+  font-weight: 400 !important;
+  min-height: 0 !important;
+}
+.page .nav .sec {
+  border-radius: 0 !important;
+  font-weight: 400 !important;
+  min-height: 0 !important;
+}
+.page .nav .sec.on {
+  font-weight: 700 !important;
+}
+.page .nav .cname {
+  font-weight: 700;
+}
+
 
 /* main form */
 .main {
