@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolvePlanAccess, FREE_SECTION_COUNT, freeSectionLabels } from "../../../../lib/plan-builder/access";
-import { PACKAGE_AMOUNT } from "../../../../lib/payments/domain";
+import { PLAN_PRODUCT_AMOUNT, PLAN_PRODUCT_NAME } from "../../../../lib/payments/plan-orders";
+import { nicepayConfigured } from "../../../../lib/payments/nicepay-client";
 
 export const runtime = "nodejs";
 
@@ -19,14 +20,16 @@ export async function GET(request: Request) {
         freeKeys: access.freeKeys,
         freeCount: FREE_SECTION_COUNT,
         freeLabels: freeSectionLabels(planType),
-        price: PACKAGE_AMOUNT,
+        price: PLAN_PRODUCT_AMOUNT,
+        productName: PLAN_PRODUCT_NAME,
+        payable: nicepayConfigured(),
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch {
     // 권한을 확인하지 못하면 잠근 쪽으로 답한다(열어주는 실수를 하지 않는다).
     return NextResponse.json(
-      { authenticated: false, email: null, paid: false, freeKeys: [], freeCount: FREE_SECTION_COUNT, freeLabels: [], price: PACKAGE_AMOUNT },
+      { authenticated: false, email: null, paid: false, freeKeys: [], freeCount: FREE_SECTION_COUNT, freeLabels: [], price: PLAN_PRODUCT_AMOUNT, productName: PLAN_PRODUCT_NAME, payable: false },
       { status: 200, headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }

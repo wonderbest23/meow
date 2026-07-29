@@ -3,7 +3,7 @@
 
 import { sectionKey, chaptersForType } from "./blueprint";
 import { getAuthenticatedUser } from "../account-auth";
-import { getServerSupabase } from "../persistence";
+import { hasPaidPlanOrder } from "../payments/plan-orders";
 
 /** 결제 없이 볼 수 있는 섹션 수 (앞에서부터) — 1.1, 1.2 */
 export const FREE_SECTION_COUNT = 2;
@@ -31,24 +31,6 @@ export function freeSectionKeys(planType?: string): string[] {
   return out;
 }
 
-/**
- * 이 사용자가 결제를 마쳤는지.
- * 완료(done) 상태의 주문이 하나라도 있으면 열린 것으로 본다.
- */
-async function hasPaidOrder(userId: string): Promise<boolean> {
-  const supabase = getServerSupabase();
-  // Supabase가 없으면(로컬 데모) 결제 확인을 할 수 없으므로 잠그지 않는다.
-  if (!supabase) return true;
-  const { data, error } = await supabase
-    .from("payment_orders")
-    .select("order_id")
-    .eq("owner_id", userId)
-    .eq("status", "done")
-    .limit(1);
-  if (error) throw error;
-  return (data?.length ?? 0) > 0;
-}
-
 /** 현재 요청자의 플랜 빌더 접근 권한 */
 export async function resolvePlanAccess(planType?: string): Promise<PlanAccess> {
   const user = await getAuthenticatedUser();
@@ -58,7 +40,7 @@ export async function resolvePlanAccess(planType?: string): Promise<PlanAccess> 
   return {
     authenticated: true,
     email: user.email ?? null,
-    paid: await hasPaidOrder(user.id),
+    paid: await hasPaidPlanOrder(user.id),
     freeKeys: freeSectionKeys(planType),
   };
 }
