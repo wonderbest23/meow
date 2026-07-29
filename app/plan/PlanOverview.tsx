@@ -134,6 +134,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             sectionId: target.sectionId,
             answers: loadAnswers(target.key),
             planTitle: plan.title,
+            planType: plan.planType,
             business: state.business,
             priorSummary: priorSectionsSummary(target.key),
             allAnswers: activePlan()?.answers ?? {},

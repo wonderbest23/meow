@@ -17,6 +17,7 @@ export async function POST(req: Request) {
     sectionId?: string;
     answers?: Record<string, unknown>;
     planTitle?: string;
+    planType?: string;
     priorSummary?: string;
     /** 플랜 전체 답변 — 재무 계산에 필요(입력이 여러 섹션에 흩어져 있음) */
     allAnswers?: Record<string, Record<string, unknown>>;
@@ -76,6 +77,7 @@ export async function POST(req: Request) {
     section,
     answers: body.answers ?? {},
     planTitle: body.planTitle,
+    planType: body.planType,
     business: body.business,
     priorSummary: body.priorSummary,
     financialsMarkdown,

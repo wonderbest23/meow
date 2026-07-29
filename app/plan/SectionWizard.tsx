@@ -219,6 +219,7 @@ export default function SectionWizard({
           sectionId: section.id,
           answers,
           planTitle,
+          planType,
           business: loadState().business,
           priorSummary: priorSectionsSummary(key),
           // 재무 입력이 여러 섹션에 흩어져 있어 전체 답변을 함께 보낸다(현재 섹션 답변·보정값 포함).

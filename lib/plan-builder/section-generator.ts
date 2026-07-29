@@ -39,6 +39,8 @@ export interface SectionGenInput {
   section: PlanSectionDef;
   answers: Record<string, unknown>;
   planTitle?: string;
+  /** 플랜 유형 — 누구에게 보여줄 문서인지에 따라 서술 관점이 달라진다 */
+  planType?: string;
   /** 시작 단계에서 입력한 사업 정보 — 모든 섹션의 공통 맥락 */
   business?: BusinessInfo;
   /** 앞 섹션 요약(일관성용, 선택) */
@@ -83,6 +85,7 @@ export function buildUserPrompt(input: SectionGenInput): string {
   const biz = formatBusiness(input.business);
   return [
     biz ? `[사업 정보]\n${biz}\n` : `사업명: ${input.planTitle ?? "(미정)"}`,
+    input.planType ? `문서 유형: ${input.planType} — 이 용도에 맞는 관점과 강조점으로 서술하세요.` : "",
     `챕터: ${input.chapter.title}`,
     `작성할 섹션: ${input.section.title}`,
     `섹션 목적: ${input.section.summary}`,

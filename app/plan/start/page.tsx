@@ -108,22 +108,83 @@ const rocket = (
 
 interface PlanType {
   id: string;
-  cat: string;
+  /** 카드에 크게 보이는 구분되는 이름 */
+  name: string;
+  /** 문서 표지에 찍히는 유형 */
   type: string;
   category: "bp" | "forecast";
-  pop: boolean;
+  /** 대표로 크게 보여줄 하나 */
+  featured?: boolean;
   tone: number;
   icon: React.ReactElement;
   desc: string;
+  /** 이런 분께 맞습니다 */
+  fits: string[];
 }
 
 const PLAN_TYPES: PlanType[] = [
-  { id: "startup-bp", cat: "창업 초기", type: "사업계획서", category: "bp", pop: true, tone: 1, icon: rocket, desc: "아이디어를 검증하고 시장 진입 전략을 세우는 창업자 필수 로드맵." },
-  { id: "growth-bp", cat: "성장·확장", type: "사업계획서", category: "bp", pop: true, tone: 2, icon: chart, desc: "운영 중인 사업의 확장·신시장 진입·자금 확보를 위한 종합 계획." },
-  { id: "detailed-fm", cat: "정밀", type: "재무 모델", category: "forecast", pop: true, tone: 3, icon: chart, desc: "다년 재무 예측으로 투자·M&A까지 대비하는 심화 분석." },
-  { id: "simple-bp", cat: "간단", type: "사업계획서", category: "bp", pop: false, tone: 4, icon: doc, desc: "가치 제안과 핵심 목표를 빠르게 정리하는 요약형." },
-  { id: "startup-ff", cat: "창업 초기", type: "재무 예측", category: "forecast", pop: false, tone: 5, icon: chart, desc: "1~5년 예측으로 아이디어를 검증하고 초기 자금을 확보." },
-  { id: "internal-bp", cat: "내부용", type: "사업계획서", category: "bp", pop: false, tone: 6, icon: doc, desc: "팀 정렬과 실행 추적을 위한 내부 전략 문서." },
+  {
+    id: "startup-bp",
+    name: "창업 초기 사업계획서",
+    type: "창업 초기 · 사업계획서",
+    category: "bp",
+    featured: true,
+    tone: 1,
+    icon: rocket,
+    desc: "아이디어를 검증하고 시장 진입 전략까지 세우는, 처음 만드는 사업계획서.",
+    fits: ["아직 문서를 만들어본 적 없는 분", "정부지원사업·대출을 준비하는 분"],
+  },
+  {
+    id: "growth-bp",
+    name: "성장·확장 사업계획서",
+    type: "성장·확장 · 사업계획서",
+    category: "bp",
+    tone: 2,
+    icon: chart,
+    desc: "이미 운영 중인 사업의 확장·신시장 진입·추가 자금 확보를 위한 계획.",
+    fits: ["매출이 나고 있는 분", "2호점·신규 라인을 준비하는 분"],
+  },
+  {
+    id: "simple-bp",
+    name: "간단 요약 계획서",
+    type: "간단 · 사업계획서",
+    category: "bp",
+    tone: 4,
+    icon: doc,
+    desc: "가치 제안과 핵심 목표만 짧게 정리하는 요약형.",
+    fits: ["먼저 방향만 잡아보려는 분", "짧게 설명할 자료가 필요한 분"],
+  },
+  {
+    id: "internal-bp",
+    name: "내부 전략 문서",
+    type: "내부용 · 사업계획서",
+    category: "bp",
+    tone: 6,
+    icon: doc,
+    desc: "외부 제출용이 아니라 팀이 같은 그림을 보고 실행을 추적하기 위한 문서.",
+    fits: ["동업자·팀과 방향을 맞추려는 분", "분기 계획을 정리하려는 분"],
+  },
+  {
+    id: "startup-ff",
+    name: "창업 재무 예측",
+    type: "창업 초기 · 재무 예측",
+    category: "forecast",
+    featured: true,
+    tone: 5,
+    icon: chart,
+    desc: "매출·비용·손익분기를 숫자로 따져 초기 자금이 얼마나 필요한지 확인.",
+    fits: ["얼마가 필요한지 계산이 필요한 분", "손익분기 시점을 알고 싶은 분"],
+  },
+  {
+    id: "detailed-fm",
+    name: "정밀 재무 모델",
+    type: "정밀 · 재무 모델",
+    category: "forecast",
+    tone: 3,
+    icon: chart,
+    desc: "다년 재무 예측으로 투자 심사·M&A까지 대비하는 심화 분석.",
+    fits: ["투자자 심사를 앞둔 분", "여러 시나리오를 비교하려는 분"],
+  },
 ];
 
 const ROLES = ["예비창업자", "사업자(운영 중)", "공동창업팀", "부업·사이드", "컨설턴트", "기타"];
@@ -184,11 +245,13 @@ export default function PlanStartPage() {
 
   function pick(pt: PlanType) {
     saveBusiness(biz);
-    createPlan(`${pt.cat} · ${pt.type}`, biz.name);
+    createPlan(pt.type, biz.name);
     router.push("/plan/overview");
   }
 
   const visible = PLAN_TYPES.filter((p) => p.category === category);
+  const featured = visible.find((p) => p.featured);
+  const others = visible.filter((p) => p !== featured);
 
   return (
     <div className={styles.page}>
@@ -296,8 +359,31 @@ export default function PlanStartPage() {
                   <button className={category === "forecast" ? styles.catOn : ""} onClick={() => setCategory("forecast")}>재무 예측</button>
                 </div>
 
+                {/* 대표 유형은 크게 — 무엇을 골라야 할지 헤매지 않게 */}
+                {featured && (
+                  <button
+                    className={styles.hero}
+                    style={{ ["--acc" as string]: (TONES[featured.tone] ?? TONES[1]).acc, ["--tint" as string]: (TONES[featured.tone] ?? TONES[1]).tint }}
+                    onClick={() => pick(featured)}
+                  >
+                    <div className={styles.heroIcon}>{featured.icon}</div>
+                    <div className={styles.heroBody}>
+                      <span className={styles.heroBadge}>가장 많이 고르는 유형</span>
+                      <h3 className={styles.heroTitle}>{featured.name}</h3>
+                      <p className={styles.desc}>{featured.desc}</p>
+                      <ul className={styles.fits}>
+                        {featured.fits.map((f) => (
+                          <li key={f}>{f}</li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className={styles.heroGo}>이 유형으로 시작 →</div>
+                  </button>
+                )}
+
+                {others.length > 0 && <div className={styles.otherLabel}>다른 유형</div>}
                 <div className={styles.grid}>
-                  {visible.map((pt) => {
+                  {others.map((pt) => {
                     const tone = TONES[pt.tone] ?? TONES[1];
                     return (
                       <button
@@ -306,18 +392,24 @@ export default function PlanStartPage() {
                         style={{ ["--acc" as string]: tone.acc, ["--tint" as string]: tone.tint }}
                         onClick={() => pick(pt)}
                       >
-                        <div className={styles.cardTop}>
-                          {pt.pop && <span className={styles.badge}>인기</span>}
-                          {pt.icon}
-                        </div>
-                        <div className={styles.cat}>{pt.cat}</div>
-                        <h3 className={styles.cardTitle}>{pt.type}</h3>
+                        <div className={styles.cardTop}>{pt.icon}</div>
+                        <h3 className={styles.cardTitle}>{pt.name}</h3>
                         <p className={styles.desc}>{pt.desc}</p>
+                        <ul className={styles.fits}>
+                          {pt.fits.map((f) => (
+                            <li key={f}>{f}</li>
+                          ))}
+                        </ul>
                         <div className={styles.go}>이 유형으로 시작 →</div>
                       </button>
                     );
                   })}
                 </div>
+
+                <p className={styles.sameNote}>
+                  어떤 유형을 고르든 <b>같은 25개 섹션</b>을 채웁니다. 유형은 문서 표지 표기와 AI가 잡는
+                  서술 관점(누구에게 보여줄 문서인지)을 정합니다. 나중에 플랜을 복제해 다른 유형으로도 만들 수 있어요.
+                </p>
 
                 <div className={styles.actions} style={{ marginTop: 18 }}>
                   <button className={styles.ghostBtn} onClick={() => setStep(1)}>← 사업 정보 수정</button>
