@@ -173,6 +173,8 @@
   gap: 8px;
 }
 .renameBtn {
+  display: inline-flex;
+  align-items: center;
   font-size: 13px;
   color: var(--text-muted, #8b95a1);
   opacity: 0;

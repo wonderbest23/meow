@@ -27,6 +27,7 @@ import InlineDocEditor from "./InlineDocEditor";
 import PlanGate from "./PlanGate";
 import { htmlToMarkdown } from "../../lib/plan-builder/html-to-markdown";
 import FinancialReview from "./FinancialReview";
+import { Sparkles, PenLine, Lock, Unlock, Undo2, RefreshCw, CodeXml } from "lucide-react";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -552,7 +553,7 @@ export default function SectionWizard({
                             {s.title}
                           </span>
                           <span className={styles.secDot}>
-                            {done ? <Check n={11} /> : paywalled ? <span className={styles.secLock}>🔒</span> : null}
+                            {done ? <Check n={11} /> : paywalled ? <Lock size={10} strokeWidth={2.4} /> : null}
                           </span>
                         </button>
                       );
@@ -592,7 +593,7 @@ export default function SectionWizard({
 
               {editingMd !== null ? (
                 <>
-                  <span className={styles.genBadge}>✏️ 직접 편집 (마크다운)</span>
+                  <span className={styles.genBadge}><CodeXml size={13} /> 직접 편집 (마크다운)</span>
                   <textarea
                     className={styles.mdEditor}
                     value={editingMd}
@@ -604,7 +605,7 @@ export default function SectionWizard({
                 <>
                   <div className={styles.genHead}>
                     <span className={styles.genBadge}>
-                      {edited ? "✍️ 직접 고친 본문" : genSource === "ai" ? "✨ AI 생성 본문" : "초안(키 미설정 · 폴백)"}
+                      {edited ? <><PenLine size={13} /> 직접 고친 본문</> : genSource === "ai" ? <><Sparkles size={13} /> AI 생성 본문</> : "초안(키 미설정 · 폴백)"}
                     </span>
                     <button
                       type="button"
@@ -612,11 +613,11 @@ export default function SectionWizard({
                       onClick={onToggleLock}
                       title={locked ? "잠금 해제 — 다시 생성이 이 글을 덮어쓸 수 있게 됩니다" : "잠그면 다시 생성이 이 글을 덮어쓰지 못합니다"}
                     >
-                      {locked ? "🔒 잠김" : "🔓 잠그기"}
+                      {locked ? <><Lock size={12} /> 잠김</> : <><Unlock size={12} /> 잠그기</>}
                     </button>
                     {canUndo && (
                       <button type="button" className={styles.undoBtn} onClick={onUndo} title="직전 본문으로 되돌립니다">
-                        ↩︎ 되돌리기
+                        <Undo2 size={12} /> 되돌리기
                       </button>
                     )}
                   </div>
@@ -630,7 +631,7 @@ export default function SectionWizard({
                 </>
               ) : generating ? (
                 <div className={styles.writing}>
-                  <span className={styles.genBadge}>✍️ {section.title} 작성 중…</span>
+                  <span className={styles.genBadge}><PenLine size={13} /> {section.title} 작성 중…</span>
                   {streamText ? (
                     <div className={styles.streamDoc} ref={streamRef}>
                       {streamText}
@@ -646,7 +647,7 @@ export default function SectionWizard({
               ) : (
                 groups.map((g: QuestionGroup) => (
                   <div key={g.id} className={styles.group}>
-                    <div className={styles.gl}><span className={styles.gi}>◆</span>{g.label}</div>
+                    <div className={styles.gl}><span className={styles.gi} aria-hidden="true" />{g.label}</div>
                     {g.questions.filter((q) => isVisible(q, answers)).map((q) => (
                       <div
                         key={q.id}
@@ -700,14 +701,14 @@ export default function SectionWizard({
               ) : generatedHtml ? (
                 <>
                   <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
-                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="마크다운 원문을 직접 손봅니다">〈/〉 마크다운</button>
+                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="마크다운 원문을 직접 손봅니다"><CodeXml size={13} /> 마크다운</button>
                   <button
                     className={`${styles.btn} ${styles.btnPrimary} ${locked ? styles.btnLocked : ""}`}
                     disabled={generating}
                     onClick={requestRegenerate}
                     title={locked ? "잠긴 섹션입니다" : undefined}
                   >
-                    {generating ? "생성 중…" : locked ? "🔒 잠김" : "🔄 다시 생성"}
+                    {generating ? "생성 중…" : locked ? <><Lock size={13} /> 잠김</> : <><RefreshCw size={13} /> 다시 생성</>}
                   </button>
                 </>
               ) : (
@@ -783,7 +784,7 @@ function AISuggest({
     <div>
       {!list && (
         <button className={styles.suggestBtn} disabled={loading} onClick={onLoad}>
-          ✨ {loading ? "추천 불러오는 중…" : "AI 추천 받기"}
+          <Sparkles size={13} /> {loading ? "추천 불러오는 중…" : "AI 추천 받기"}
         </button>
       )}
       {list && list.length > 0 && (
@@ -794,7 +795,7 @@ function AISuggest({
             </button>
           ))}
           <button className={styles.suggestBtn} disabled={loading} onClick={onLoad}>
-            ✨ {loading ? "다시 불러오는 중…" : "다른 추천 받기"}
+            <Sparkles size={12} /> {loading ? "다시 불러오는 중…" : "다른 추천 받기"}
           </button>
         </div>
       )}

@@ -2,6 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
 import styles from "../PlanCheckout.module.css";
 
 /**
@@ -17,7 +18,7 @@ export default function PlanPayResult() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.icon} aria-hidden="true">{ok ? "🎉" : "⚠️"}</div>
+        <div className={styles.icon} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
         <h1 className={styles.title}>{ok ? "결제가 완료되었습니다" : "결제를 마치지 못했습니다"}</h1>
         <p className={styles.desc}>
           {ok

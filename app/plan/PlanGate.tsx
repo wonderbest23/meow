@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { KeyRound, Lock } from "lucide-react";
 import styles from "./PlanGate.module.css";
 
 export interface PlanGateProps {
@@ -21,7 +22,7 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
   if (reason === "login_required") {
     return (
       <section className={styles.wrap} aria-label="로그인 필요">
-        <div className={styles.icon} aria-hidden="true">🔑</div>
+        <div className={styles.icon} aria-hidden="true"><KeyRound size={26} strokeWidth={1.8} /></div>
         <h2 className={styles.title}>로그인하고 시작하세요</h2>
         <p className={styles.desc}>
           작성한 내용을 계정에 저장해 어느 기기에서든 이어서 쓸 수 있습니다.
@@ -35,7 +36,7 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
 
   return (
     <section className={styles.wrap} aria-label="결제 필요">
-      <div className={styles.icon} aria-hidden="true">🔒</div>
+      <div className={styles.icon} aria-hidden="true"><Lock size={26} strokeWidth={1.8} /></div>
       <h2 className={styles.title}>
         {sectionTitle ? `'${sectionTitle}'부터는 유료입니다` : "여기부터는 유료입니다"}
       </h2>

@@ -656,3 +656,15 @@
     text-align: center;
   }
 }
+
+/* lucide 아이콘 정렬 */
+.seg button,
+.bulkBtn,
+.lockTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.lockTag {
+  color: var(--text-muted, #8b95a1);
+}

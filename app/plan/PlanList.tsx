@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, type PlanState } from "../../lib/plan-builder/plan-store";
+import { Pencil } from "lucide-react";
 import styles from "./PlanList.module.css";
 
 /** 내 플랜 목록(대시보드) — 사업 요약 + 플랜 카드 */
@@ -144,7 +145,7 @@ export default function PlanList() {
                           if (e.key === "Enter" || e.key === " ") startRename(e as unknown as React.MouseEvent, p.id, p.title);
                         }}
                       >
-                        ✎
+                        <Pencil size={12} />
                       </span>
                     </h3>
                   )}

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 /* SDK 주소만 필요하다 — 서버 전용 모듈(시크릿 사용)을 클라이언트로 끌어오지 않는다 */
 const NICEPAY_SDK_URL = "https://pay.nicepay.co.kr/v1/js/";
+import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
@@ -106,7 +107,7 @@ export default function PlanCheckout() {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.icon} aria-hidden="true">✅</div>
+          <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>이미 결제가 완료된 계정입니다</h1>
           <p className={styles.desc}>모든 섹션이 열려 있습니다.</p>
           <Link href="/plan/overview" className={styles.primary}>플랜으로 돌아가기</Link>
@@ -118,7 +119,7 @@ export default function PlanCheckout() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.icon} aria-hidden="true">🔓</div>
+        <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
         <h1 className={styles.title}>모든 섹션 열기</h1>
         <p className={styles.desc}>
           결제하면 남은 섹션을 모두 작성할 수 있고, 완성한 계획서를 PDF·Word로 내려받을 수 있습니다.

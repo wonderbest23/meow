@@ -15,6 +15,7 @@ import {
 } from "../../lib/plan-builder/plan-store";
 import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
+import { LayoutGrid, FileText, Zap, Lock } from "lucide-react";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -252,8 +253,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         {/* 구조 / 문서 전환 */}
         <div className={styles.tools}>
           <div className={styles.seg}>
-            <button type="button" className={styles.segOn}>🧭 구조 보기</button>
-            <button type="button" onClick={onOpenDocument}>📄 문서 보기</button>
+            <button type="button" className={styles.segOn}><LayoutGrid size={13} /> 구조 보기</button>
+            <button type="button" onClick={onOpenDocument}><FileText size={13} /> 문서 보기</button>
           </div>
           <span className={styles.docCount}>생성 완료 {assembled.length}개</span>
           <div className={styles.spring} />
@@ -271,7 +272,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             </div>
           ) : (
             <button type="button" className={styles.bulkBtn} onClick={generateAll} disabled={pendingKeys.length === 0}>
-              ⚡ 남은 {pendingKeys.length}개 한번에 생성
+              <Zap size={13} /> 남은 {pendingKeys.length}개 한번에 생성
             </button>
           )}
         </div>
@@ -312,7 +313,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                       >
                         <span className={styles.nodeNum}>{done ? <CheckIcon /> : num}</span>
                         <span className={styles.nodeLabel}>{section.title}</span>
-                        {isLocked && <span className={styles.lockTag} title="잠긴 섹션 — 일괄 생성이 건너뜁니다">🔒</span>}
+                        {isLocked && <span className={styles.lockTag} title="잠긴 섹션 — 일괄 생성이 건너뜁니다"><Lock size={10} strokeWidth={2.4} /></span>}
                         {isNext && <span className={styles.nextTag}>여기부터</span>}
                         {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
                         <span className={styles.nodeTime}>{section.estMinutes}분</span>

@@ -11,9 +11,14 @@
 }
 
 .icon {
-  font-size: 34px;
-  line-height: 1;
-  margin-bottom: 14px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--wz-brand-soft, #e8f3ff);
+  color: var(--wz-brand, #3182f6);
 }
 
 .title {

@@ -20,9 +20,14 @@
 }
 
 .icon {
-  font-size: 38px;
-  line-height: 1;
-  margin-bottom: 16px;
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 16px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--blue-soft, #e8f3ff);
+  color: var(--blue, #3182f6);
 }
 
 .title {

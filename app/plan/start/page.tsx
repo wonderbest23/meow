@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
+import { Sparkles } from "lucide-react";
 import styles from "./PlanStart.module.css";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -305,7 +306,7 @@ export default function PlanStartPage() {
                     />
                     <p className={styles.hint}>무엇을, 누구에게, 어떻게 제공하는지 한두 문장으로 적어주세요. 이 내용이 25개 섹션 전체의 AI 추천에 쓰입니다.</p>
                     <button className={styles.aiBtn} onClick={improveDescription} disabled={improving || biz.description.trim().length < 5}>
-                      ✨ {improving ? "다듬는 중…" : "AI로 설명 다듬기"}
+                      <Sparkles size={13} /> {improving ? "다듬는 중…" : "AI로 설명 다듬기"}
                     </button>
                   </div>
 

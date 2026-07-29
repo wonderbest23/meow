@@ -450,13 +450,11 @@
   margin-bottom: 14px;
 }
 .gi {
-  width: 24px;
-  height: 24px;
-  border-radius: 7px;
-  background: var(--wz-brand-soft);
-  display: grid;
-  place-items: center;
-  font-size: 12px;
+  width: 8px;
+  height: 8px;
+  border-radius: 3px;
+  background: var(--wz-brand);
+  transform: rotate(45deg);
 }
 .q {
   border: 1px solid var(--wz-line);
@@ -1260,4 +1258,24 @@
   .trackList li.flash {
     animation: none;
   }
+}
+
+/* lucide 아이콘 정렬 — 글줄 가운데에 붙는다 */
+.genBadge,
+.btn,
+.finish,
+.lockBtn,
+.undoBtn,
+.suggestBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.genBadge svg,
+.btn svg,
+.finish svg,
+.lockBtn svg,
+.undoBtn svg,
+.suggestBtn svg {
+  flex: 0 0 auto;
 }

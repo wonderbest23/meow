@@ -145,7 +145,7 @@ export default function PlanDocumentPage() {
             {exporting === "docx" ? "내보내는 중…" : "Word 내보내기"}
           </button>
           <button className={`${styles.exportBtn} ${styles.ghost}`} disabled={!sections.length || exporting !== null} onClick={handleDeck}>
-            {exporting === "pptx" ? "만드는 중…" : "📊 발표자료(PPT)"}
+            {exporting === "pptx" ? "만드는 중…" : "발표자료(PPT)"}
           </button>
           <button className={styles.exportBtn} disabled={!sections.length || exporting !== null} onClick={() => handleExport("pdf")}>
             {exporting === "pdf" ? "내보내는 중…" : "PDF 내보내기"}
