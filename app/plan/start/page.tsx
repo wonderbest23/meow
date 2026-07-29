@@ -31,7 +31,7 @@ interface PlanType {
   category: "bp" | "forecast";
   pop: boolean;
   tone: number;
-  icon: JSX.Element;
+  icon: React.ReactElement;
   desc: string;
 }
 
