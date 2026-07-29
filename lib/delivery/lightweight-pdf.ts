@@ -14,6 +14,8 @@ type PdfProjectInput = {
   customer: string;
   generatedAt: string;
   sample: boolean;
+  /** 표지 항목을 직접 지정(선택). 없으면 기본 항목을 쓴다. */
+  coverFields?: Array<{ label: string; value: string }>;
 };
 
 const PAGE_WIDTH = 595.28;
@@ -254,10 +256,15 @@ class PdfLayout {
     this.drawText(document.title, LEFT, 145, { size: 28, color: "18342A", width: CONTENT_WIDTH, bold: true, lineHeight: 38 });
     this.drawText(document.type, LEFT, 225, { size: 12, color: "65766F", width: CONTENT_WIDTH });
     this.rule(265);
-    const details = [
-      ["프로젝트", project.title], ["목표 고객", project.customer], ["수익 방식", project.model],
-      ["문서 버전", document.versionLabel], ["생성일", new Date(project.generatedAt).toLocaleDateString("ko-KR")],
-    ];
+    const details = project.coverFields?.length
+      ? [
+          ...project.coverFields.map((f) => [f.label, f.value] as [string, string]),
+          ["생성일", new Date(project.generatedAt).toLocaleDateString("ko-KR")] as [string, string],
+        ]
+      : [
+          ["프로젝트", project.title], ["목표 고객", project.customer], ["수익 방식", project.model],
+          ["문서 버전", document.versionLabel], ["생성일", new Date(project.generatedAt).toLocaleDateString("ko-KR")],
+        ];
     details.forEach(([label, value], index) => {
       const top = 300 + index * 35;
       this.drawText(label, LEFT, top, { size: 8, color: "65766F", width: 76 });

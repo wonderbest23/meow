@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { hydrateFromServer, assembleSections, activePlan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, assembleSections, activePlan, loadState } from "../../../lib/plan-builder/plan-store";
 import styles from "./PlanDocument.module.css";
 
 /** /plan/document — 생성된 섹션을 하나의 문서로 조립해 보여주고 내보낸다. */
@@ -53,6 +53,8 @@ export default function PlanDocumentPage() {
         body: JSON.stringify({
           title,
           format,
+          planType,
+          business: loadState().business,
           sections: sections.map((a) => ({ chapterTitle: a.chapterTitle, sectionTitle: a.sectionTitle, markdown: a.markdown })),
         }),
       });

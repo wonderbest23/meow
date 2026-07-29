@@ -2,14 +2,41 @@ import { renderPdf, renderDocx, type BusinessDocument, type DocumentProjectMeta 
 
 export const runtime = "nodejs";
 
-// 플랜 문서 내보내기 — 생성된 섹션들을 하나의 문서로 조립해 PDF/DOCX로 렌더.
+// 플랜 문서 내보내기 — 생성된 섹션들을 표지·목차와 함께 하나의 문서로 조립해 PDF/DOCX로 렌더.
 // 기존 lib/delivery 렌더러(한글 폰트 서브셋 임베드)를 그대로 재사용.
+
+type SectionInput = { chapterTitle?: string; sectionTitle?: string; markdown?: string };
+
+/**
+ * 섹션 본문의 헤딩을 두 단계 낮춘다.
+ * 문서 구조를 챕터(##) > 섹션(###) > 본문 소제목(####~)으로 맞추기 위함.
+ */
+function demoteHeadings(markdown: string): string {
+  return markdown.replace(/^(#{1,4})\s+/gm, (_m, hashes: string) => `${"#".repeat(Math.min(hashes.length + 2, 6))} `);
+}
+
+/** 챕터 순서를 유지하며 그룹화 */
+function groupByChapter(sections: SectionInput[]) {
+  const order: string[] = [];
+  const map = new Map<string, SectionInput[]>();
+  for (const s of sections) {
+    const chapter = s.chapterTitle || "본문";
+    if (!map.has(chapter)) {
+      map.set(chapter, []);
+      order.push(chapter);
+    }
+    map.get(chapter)!.push(s);
+  }
+  return order.map((chapter) => ({ chapter, items: map.get(chapter)! }));
+}
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
     title?: string;
     format?: "pdf" | "docx";
-    sections?: Array<{ chapterTitle?: string; sectionTitle?: string; markdown?: string }>;
+    sections?: SectionInput[];
+    planType?: string;
+    business?: { name?: string; description?: string; industry?: string; region?: string; stage?: string };
   };
 
   const title = (body.title || "사업계획서").slice(0, 80);
@@ -20,26 +47,56 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "no sections" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
-  // 조립: 각 섹션을 h1(섹션명) + 본문으로.
-  const assembled = sections
-    .map((s) => `# ${s.sectionTitle || "섹션"}\n\n${(s.markdown || "").trim()}`)
-    .join("\n\n");
+  const grouped = groupByChapter(sections);
+
+  // ── 목차 ──
+  const tocLines: string[] = ["## 목차", ""];
+  grouped.forEach(({ chapter, items }, ci) => {
+    tocLines.push(`**${ci + 1}. ${chapter}**`, "");
+    items.forEach((s, si) => {
+      tocLines.push(`- ${ci + 1}.${si + 1} ${s.sectionTitle || "섹션"}`);
+    });
+    tocLines.push("");
+  });
+
+  // ── 본문: 챕터(##) > 섹션(###) > 내용(####~) ──
+  const bodyLines: string[] = [];
+  grouped.forEach(({ chapter, items }, ci) => {
+    bodyLines.push(`## ${ci + 1}. ${chapter}`, "");
+    items.forEach((s, si) => {
+      bodyLines.push(`### ${ci + 1}.${si + 1} ${s.sectionTitle || "섹션"}`, "");
+      bodyLines.push(demoteHeadings((s.markdown || "").trim()), "");
+    });
+  });
+
+  // 첫 h1은 PDF 렌더러가 표지 중복으로 건너뛰므로 문서 제목을 배치한다(DOCX에서는 제목으로 표시).
+  const assembled = [`# ${title}`, "", ...tocLines, ...bodyLines].join("\n");
 
   const document: BusinessDocument = {
     id: "plan",
     title,
-    type: "사업계획서",
+    type: body.planType || "사업계획서",
     versionLabel: "초안",
     markdown: assembled,
   };
 
+  const biz = body.business ?? {};
+  const coverFields = [
+    { label: "사업명", value: biz.name || title },
+    biz.industry ? { label: "업종", value: biz.industry } : null,
+    biz.region ? { label: "지역", value: biz.region } : null,
+    biz.stage ? { label: "진행 단계", value: biz.stage } : null,
+    { label: "구성", value: `${grouped.length}개 챕터 · ${sections.length}개 섹션` },
+  ].filter((f): f is { label: string; value: string } => f !== null);
+
   const project: DocumentProjectMeta = {
-    title,
-    sector: "사업계획",
-    model: "오늘창업 플랜 빌더",
-    customer: "-",
+    title: biz.name || title,
+    sector: biz.industry || "사업계획",
+    model: body.planType || "오늘창업 플랜 빌더",
+    customer: biz.description || "-",
     generatedAt: new Date().toISOString(),
     sample: false,
+    coverFields,
   };
 
   const buffer = format === "docx" ? await renderDocx([document], project) : await renderPdf([document], project);

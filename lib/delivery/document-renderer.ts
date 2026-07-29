@@ -39,6 +39,11 @@ export type DocumentProjectMeta = {
   customer: string;
   generatedAt: string;
   sample: boolean;
+  /**
+   * 표지에 표시할 항목을 직접 지정한다(선택).
+   * 지정하지 않으면 기존 기본 항목(프로젝트·목표 고객·수익 방식·문서 버전)을 사용한다.
+   */
+  coverFields?: Array<{ label: string; value: string }>;
 };
 
 const colors = {
@@ -205,10 +210,19 @@ function coverBlocks(document: BusinessDocument, project: DocumentProjectMeta, f
       children: [new TextRun({ text: document.type, color: colors.muted, size: 23, font: docxFont })],
       spacing: { after: 700 },
     }),
-    new Paragraph({ children: [new TextRun({ text: `프로젝트  ${project.title}`, bold: true, size: 20, font: docxFont })], spacing: { after: 100 } }),
-    new Paragraph({ children: [new TextRun({ text: `목표 고객  ${project.customer}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
-    new Paragraph({ children: [new TextRun({ text: `수익 방식  ${project.model}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
-    new Paragraph({ children: [new TextRun({ text: `문서 버전  ${document.versionLabel}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
+    ...(project.coverFields?.length
+      ? project.coverFields.map((field, index) =>
+          new Paragraph({
+            children: [new TextRun({ text: `${field.label}  ${field.value}`, bold: index === 0, size: index === 0 ? 20 : 19, font: docxFont })],
+            spacing: { after: index === 0 ? 100 : 80 },
+          }),
+        )
+      : [
+          new Paragraph({ children: [new TextRun({ text: `프로젝트  ${project.title}`, bold: true, size: 20, font: docxFont })], spacing: { after: 100 } }),
+          new Paragraph({ children: [new TextRun({ text: `목표 고객  ${project.customer}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
+          new Paragraph({ children: [new TextRun({ text: `수익 방식  ${project.model}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
+          new Paragraph({ children: [new TextRun({ text: `문서 버전  ${document.versionLabel}`, size: 19, font: docxFont })], spacing: { after: 80 } }),
+        ]),
     new Paragraph({ children: [new TextRun({ text: `생성일  ${new Date(project.generatedAt).toLocaleDateString("ko-KR")}`, size: 19, font: docxFont })], spacing: { after: 500 } }),
     new Paragraph({
       children: [new TextRun({
@@ -246,6 +260,8 @@ function collectDeliveryText(documents: BusinessDocument[], project: DocumentPro
     project.model,
     project.sector,
     new Date(project.generatedAt).toLocaleDateString("ko-KR"),
+    // 커스텀 표지 항목(라벨·값)도 서브셋 대상에 포함
+    ...(project.coverFields?.flatMap((f) => [f.label, f.value]) ?? []),
   ];
   for (const document of documents) {
     parts.push(document.title, document.type, document.versionLabel, document.markdown);
