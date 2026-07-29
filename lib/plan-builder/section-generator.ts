@@ -43,6 +43,8 @@ export interface SectionGenInput {
   business?: BusinessInfo;
   /** 앞 섹션 요약(일관성용, 선택) */
   priorSummary?: string;
+  /** 계산된 재무표(마크다운) — 재무 섹션에서 산식으로 만든 확정 수치 */
+  financialsMarkdown?: string;
 }
 
 function formatBusiness(b?: BusinessInfo): string {
@@ -67,6 +69,14 @@ function buildUserPrompt(input: SectionGenInput): string {
     input.priorSummary ? `\n[앞서 작성한 섹션 요약]\n${input.priorSummary}` : "",
     "\n[이 섹션 사용자 답변]",
     formatAnswers(input.answers),
+    input.financialsMarkdown
+      ? [
+          "\n[계산된 재무 데이터 — 사용자 입력에 산식을 적용한 확정 수치]",
+          input.financialsMarkdown,
+          "\n위 재무 표는 이미 계산이 끝난 확정 자료입니다. 표를 **그대로 본문에 포함**하고, 숫자를 임의로 바꾸거나 새로 만들지 마세요.",
+          "표 앞뒤에 그 수치가 무엇을 뜻하는지, 어떤 점을 주의해야 하는지 해석을 덧붙이세요.",
+        ].join("\n")
+      : "",
     "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
     input.priorSummary
       ? "앞서 작성한 섹션과 용어·숫자·전략 방향이 어긋나지 않게 하고, 같은 내용을 그대로 반복하지 말고 이 섹션의 관점에서 이어서 쓰세요."
@@ -91,6 +101,10 @@ export function fallbackSection(input: SectionGenInput): string {
       rows.push(`| ${k} | ${val} | 확인됨 |`);
     }
     parts.push(rows.join("\n")); // 표는 한 블록으로(행 사이 단일 줄바꿈)
+  }
+  if (input.financialsMarkdown) {
+    parts.push(`## 재무 계산`);
+    parts.push(input.financialsMarkdown);
   }
   parts.push(`## 추가 정의 필요 영역`);
   parts.push(`시장 규모, 경쟁사 비교 수치, 고객 검증 데이터 등은 실제 조사·증빙이 연결될 때 확정합니다. 현재 초안에서는 가정으로만 다루며, 제출 전 실제 값으로 교체합니다.`);

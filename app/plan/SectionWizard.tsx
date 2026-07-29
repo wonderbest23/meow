@@ -156,6 +156,8 @@ export default function SectionWizard({
           planTitle,
           business: loadState().business,
           priorSummary: priorSectionsSummary(key),
+          // 재무 입력이 여러 섹션에 흩어져 있어 전체 답변을 함께 보낸다(현재 섹션 답변 포함).
+          allAnswers: { ...(activePlan()?.answers ?? {}), [key]: answers },
         }),
       });
       const data = (await res.json()) as { markdown?: string; html?: string; source?: "ai" | "fallback" };
