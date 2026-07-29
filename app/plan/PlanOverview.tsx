@@ -157,6 +157,17 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     setIssues(findConsistencyIssues(activePlan(next)?.answers ?? {}));
   }
 
+  /** 다음에 손대야 할 섹션 — 아직 생성되지 않은 첫 섹션 */
+  const nextKey = useMemo(() => {
+    for (const ch of PLAN_BLUEPRINT) {
+      for (const s of ch.sections) {
+        const key = `${ch.id}/${s.id}`;
+        if (statuses[key] !== "done") return key;
+      }
+    }
+    return null;
+  }, [statuses]);
+
   // 전역 순번(1-based)
   let counter = 0;
 
@@ -263,18 +274,20 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                     const key = `${chapter.id}/${section.id}`;
                     const done = statuses[key] === "done";
                     const writing = !done && inProgress.has(key);
+                    const isNext = key === nextKey;
                     const num = counter;
                     return (
                       <button
                         key={section.id}
                         type="button"
-                        className={`${styles.node} ${done ? styles.done : ""} ${writing ? styles.writing : ""}`}
+                        className={`${styles.node} ${done ? styles.done : ""} ${writing ? styles.writing : ""} ${isNext ? styles.next : ""}`}
                         onClick={() => onOpenSection?.(chapter.id, section.id)}
                         title={section.summary}
                       >
                         <span className={styles.nodeNum}>{done ? <CheckIcon /> : num}</span>
                         <span className={styles.nodeLabel}>{section.title}</span>
-                        {writing && <span className={styles.writingTag}>작성 중</span>}
+                        {isNext && <span className={styles.nextTag}>여기부터</span>}
+                        {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
                         <span className={styles.nodeTime}>{section.estMinutes}분</span>
                       </button>
                     );

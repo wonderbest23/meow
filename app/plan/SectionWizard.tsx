@@ -419,14 +419,14 @@ export default function SectionWizard({
                       <div
                         key={q.id}
                         data-qid={q.id}
-                        className={`${styles.q} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""}`}
+                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""}`}
                       >
                         <div className={styles.qq}>
                           {q.q}
                           {showMissing && missingIds.includes(q.id) && <span className={styles.needTag}>입력이 필요합니다</span>}
                         </div>
                         {q.help && <div className={styles.qh}>{q.help}</div>}
-                        {renderInput(q, answers[q.id], suggestions[q.id], { setAnswer, toggleMulti, styles })}
+                        {renderInput(q, answers[q.id], { setAnswer, toggleMulti, styles })}
                         {q.aiSuggest && (
                           <AISuggest
                             q={q}
@@ -561,10 +561,89 @@ function AISuggest({
   );
 }
 
+/**
+ * 정해진 보기가 없는 질문(상품 분류·문제·세그먼트 등).
+ * 예전에는 AI 추천이 오기 전까지 아무것도 없어서 손을 댈 수 없었다.
+ * 이제 직접 적어 넣을 수 있고, AI 추천은 아래에서 골라 더할 수 있다.
+ */
+function FreeChoice({
+  value,
+  multi,
+  placeholder,
+  onChange,
+  styles,
+}: {
+  value: unknown;
+  multi: boolean;
+  placeholder: string;
+  onChange: (v: unknown) => void;
+  styles: Record<string, string>;
+}) {
+  const [draft, setDraft] = useState("");
+  const picked = multi
+    ? Array.isArray(value)
+      ? (value as string[])
+      : []
+    : typeof value === "string" && value
+      ? [value]
+      : [];
+
+  function add() {
+    const t = draft.trim();
+    if (!t) return;
+    if (multi) {
+      if (!picked.includes(t)) onChange([...picked, t]);
+    } else {
+      onChange(t);
+    }
+    setDraft("");
+  }
+  function remove(v: string) {
+    if (multi) onChange(picked.filter((x) => x !== v));
+    else onChange("");
+  }
+
+  return (
+    <div className={styles.free}>
+      {picked.length > 0 && (
+        <div className={styles.freeChips}>
+          {picked.map((v) => (
+            <span key={v} className={styles.freeChip}>
+              {v}
+              <button type="button" onClick={() => remove(v)} aria-label={`${v} 빼기`}>
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      <div className={styles.freeRow}>
+        <input
+          className={styles.txt}
+          placeholder={placeholder}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              add();
+            }
+          }}
+        />
+        <button type="button" className={styles.freeAdd} onClick={add} disabled={!draft.trim()}>
+          추가
+        </button>
+      </div>
+      <p className={styles.freeHint}>
+        직접 적어 넣거나, 아래 <b>AI 추천</b>에서 골라 더할 수 있어요.
+      </p>
+    </div>
+  );
+}
+
 function renderInput(
   q: QuestionDef,
   value: unknown,
-  suggestions: string[] | undefined,
   ctx: {
     setAnswer: (qid: string, v: unknown) => void;
     toggleMulti: (qid: string, opt: string) => void;
@@ -572,9 +651,6 @@ function renderInput(
   }
 ) {
   const { setAnswer, toggleMulti, styles } = ctx;
-  // multi/single with aiSuggest and empty options → 옵션을 AI 추천으로 채움
-  const dynamicOptions =
-    (q.input.kind === "multi" || q.input.kind === "single") && q.input.options.length === 0 ? suggestions ?? [] : null;
 
   switch (q.input.kind) {
     case "yesno":
@@ -591,8 +667,10 @@ function renderInput(
         </div>
       );
     case "single": {
-      const opts = dynamicOptions ?? q.input.options;
-      if (opts.length === 0) return null;
+      const opts = q.input.options;
+      if (opts.length === 0) {
+        return <FreeChoice value={value} multi={false} placeholder="직접 입력하고 Enter" onChange={(v) => setAnswer(q.id, v)} styles={styles} />;
+      }
       return (
         <div className={styles.radio}>
           {opts.map((opt) => (
@@ -602,9 +680,11 @@ function renderInput(
       );
     }
     case "multi": {
-      const opts = dynamicOptions ?? q.input.options;
+      const opts = q.input.options;
       const arr = Array.isArray(value) ? (value as string[]) : [];
-      if (opts.length === 0) return null;
+      if (opts.length === 0) {
+        return <FreeChoice value={value} multi placeholder="직접 입력하고 Enter" onChange={(v) => setAnswer(q.id, v)} styles={styles} />;
+      }
       return (
         <div className={styles.chk}>
           {opts.map((opt) => (

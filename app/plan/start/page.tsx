@@ -219,12 +219,18 @@ export default function PlanStartPage() {
               <>
                 <div className={styles.formGrid}>
                   <div className={`${styles.field} ${styles.fieldWide}`}>
-                    <label className={styles.label} htmlFor="bizName">사업/브랜드 이름<span className={styles.req}>*</span></label>
+                    <label className={styles.label} htmlFor="bizName">
+                      사업/브랜드 이름<span className={styles.req}>*</span>
+                      {biz.name.trim() && <span className={styles.okTag}>✓</span>}
+                    </label>
                     <input id="bizName" className={styles.input} placeholder="예: 새벽커피" value={biz.name} onChange={(e) => set("name", e.target.value)} />
                   </div>
 
                   <div className={`${styles.field} ${styles.fieldWide}`}>
-                    <label className={styles.label} htmlFor="bizDesc">사업 설명<span className={styles.req}>*</span></label>
+                    <label className={styles.label} htmlFor="bizDesc">
+                      사업 설명<span className={styles.req}>*</span>
+                      {biz.description.trim().length >= 5 && <span className={styles.okTag}>✓</span>}
+                    </label>
                     <textarea
                       id="bizDesc"
                       className={styles.textarea}
@@ -261,8 +267,18 @@ export default function PlanStartPage() {
                 </div>
 
                 <div className={styles.actions}>
-                  <button className={styles.primaryBtn} disabled={!step1Ok} onClick={() => setStep(2)}>다음 →</button>
-                  {!step1Ok && <span className={styles.hint}>사업 이름과 설명을 입력하면 다음으로 넘어갑니다.</span>}
+                  <button
+                    className={`${styles.primaryBtn} ${step1Ok ? styles.ready : ""}`}
+                    disabled={!step1Ok}
+                    onClick={() => setStep(2)}
+                  >
+                    다음 → 플랜 유형 고르기
+                  </button>
+                  {!step1Ok && (
+                    <span className={styles.todo}>
+                      {!biz.name.trim() ? "사업 이름" : "사업 설명"}을 입력하면 다음으로 넘어갑니다
+                    </span>
+                  )}
                 </div>
               </>
             ) : (

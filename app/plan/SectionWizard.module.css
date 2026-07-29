@@ -836,13 +836,9 @@
 
 /* 미입력 필수 항목 — 생성을 시도했을 때만 표시한다 */
 .qMissing {
-  position: relative;
-  border-radius: 12px;
-  padding: 12px 14px;
-  margin-left: -14px;
-  margin-right: -14px;
+  border-color: #eeb3bf;
   background: #fff6f7;
-  box-shadow: inset 3px 0 0 #d6455d;
+  box-shadow: inset 3px 0 0 #d6455d, var(--wz-shadow-sm);
   animation: needAttention 0.45s ease-out;
 }
 .needTag {
@@ -892,4 +888,105 @@
 
 @media (prefers-reduced-motion: reduce) {
   .qMissing { animation: none; }
+}
+
+/* 분기 질문 — 앞 답변에 종속되어 펼쳐진다 */
+.qSub {
+  position: relative;
+  margin-left: 22px;
+  animation: subIn 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* 위 질문과 이어지는 연결선 */
+.qSub::before {
+  content: "";
+  position: absolute;
+  left: -16px;
+  top: -13px;
+  bottom: 50%;
+  width: 12px;
+  border-left: 2px solid #a9cdf5;
+  border-bottom: 2px solid #a9cdf5;
+  border-bottom-left-radius: 8px;
+  pointer-events: none;
+}
+@keyframes subIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qSub { animation: none; }
+}
+
+/* 보기가 정해지지 않은 질문 — 직접 입력 */
+.free {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.freeChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.freeChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wz-brand);
+  background: var(--wz-brand-soft);
+  border-radius: 999px;
+  padding: 7px 8px 7px 13px;
+}
+.freeChip button {
+  border: 0;
+  background: rgba(49, 130, 246, 0.14);
+  color: inherit;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1;
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.freeChip button:hover {
+  background: var(--wz-brand);
+  color: #fff;
+}
+.freeRow {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.freeRow .txt {
+  flex: 1;
+}
+.freeAdd {
+  flex: none;
+  border: 1px solid var(--wz-line);
+  background: var(--wz-panel);
+  color: var(--wz-muted);
+  font: inherit;
+  font-weight: 700;
+  font-size: 13.5px;
+  padding: 0 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.freeAdd:hover:not(:disabled) {
+  border-color: var(--wz-brand);
+  color: var(--wz-brand);
+}
+.freeAdd:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.freeHint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--wz-faint);
 }

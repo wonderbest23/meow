@@ -554,3 +554,26 @@
     gap: 14px 0;
   }
 }
+
+/* 다음에 손댈 섹션 — 어디부터 시작할지 눈에 띄게 */
+.node.next {
+  border-color: var(--bandAccent, #3358f4);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--bandAccent, #3358f4) 18%, transparent);
+  animation: nextPulse 2.2s ease-in-out infinite;
+}
+.nextTag {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--bandAccent, #3358f4);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+@keyframes nextPulse {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--bandAccent, #3358f4) 18%, transparent); }
+  50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--bandAccent, #3358f4) 6%, transparent); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node.next { animation: none; }
+}
