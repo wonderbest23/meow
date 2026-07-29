@@ -1,0 +1,227 @@
+/* 재무 수치 검토 패널 — 위저드 본문 하단에 붙는다 */
+
+.wrap {
+  margin-top: 22px;
+  border: 1px solid var(--wz-line, #e5e8eb);
+  border-radius: 16px;
+  background: var(--wz-panel, #fff);
+  padding: 20px 22px 22px;
+}
+
+.head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.title {
+  margin: 0 0 5px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--wz-ink, #191f28);
+}
+.desc {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--wz-muted, #4e5968);
+  max-width: 52ch;
+}
+.count {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--wz-brand, #3182f6);
+  background: var(--wz-brand-soft, #e8f3ff);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 경고 */
+.alert {
+  border: 1px solid #f5c6ab;
+  background: #fff6ef;
+  border-radius: 11px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: #8a4b1d;
+}
+.alert b {
+  display: block;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+.alert ul {
+  margin: 0;
+  padding-left: 17px;
+}
+
+/* 입력 행 */
+.rows {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--wz-line, #e5e8eb);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--wz-line, #e5e8eb);
+  background: var(--wz-panel, #fff);
+}
+.row:last-child {
+  border-bottom: 0;
+}
+.row.warn {
+  background: #fffaf4;
+}
+.rLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--wz-ink, #191f28);
+  min-width: 0;
+}
+.rRaw {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--wz-muted, #4e5968);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 30ch;
+}
+.rEdit {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex: none;
+}
+.input {
+  width: 132px;
+  border: 1px solid var(--wz-line, #e5e8eb);
+  border-radius: 8px;
+  padding: 7px 10px;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  /* 배경·테두리색·글자색은 전역 입력 규칙(!important)이 정하므로 여기서 지정하지 않는다 */
+}
+/* 전역 규칙이 border-color를 덮으므로 포커스는 링(box-shadow)으로 표시한다 */
+.input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--wz-brand, #3182f6);
+}
+.unit {
+  font-size: 12px;
+  color: var(--wz-muted, #4e5968);
+  min-width: 14px;
+}
+.fixed {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--wz-brand, #3182f6);
+  background: var(--wz-brand-soft, #e8f3ff);
+  border-radius: 999px;
+  padding: 3px 8px;
+}
+
+.missing {
+  margin: 11px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--wz-muted, #4e5968);
+}
+
+/* 계산 결과 */
+.out {
+  margin-top: 18px;
+  border-top: 1px dashed var(--wz-line, #e5e8eb);
+  padding-top: 16px;
+}
+.outHead {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--wz-muted, #4e5968);
+  margin-bottom: 11px;
+}
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  gap: 10px;
+}
+.card {
+  border: 1px solid var(--wz-line, #e5e8eb);
+  border-radius: 12px;
+  padding: 13px 14px;
+  background: var(--wz-panel2, #f7f8fa);
+}
+.cLabel {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--wz-muted, #4e5968);
+  margin-bottom: 5px;
+}
+.cValue {
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: var(--wz-ink, #191f28);
+  font-variant-numeric: tabular-nums;
+}
+.cSub {
+  margin-top: 4px;
+  font-size: 11.5px;
+  color: var(--wz-muted, #4e5968);
+}
+.card.pos .cValue {
+  color: #0f9d66;
+}
+.card.neg .cValue {
+  color: #d6455d;
+}
+.note {
+  margin: 11px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--wz-muted, #4e5968);
+}
+.empty {
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed var(--wz-line, #e5e8eb);
+  font-size: 12.5px;
+  color: var(--wz-muted, #4e5968);
+}
+
+@media (max-width: 720px) {
+  .head {
+    flex-direction: column;
+  }
+  .row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .rEdit {
+    justify-content: flex-end;
+  }
+  .rRaw {
+    max-width: none;
+  }
+}

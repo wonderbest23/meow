@@ -196,24 +196,98 @@ const GROWTH_MAP: Record<string, number> = {
 };
 
 /**
+ * 사용자가 검토 화면에서 고친 값을 담는 가상 섹션 키.
+ * 실제 질문 섹션이 아니라 보정값 저장 전용이므로 진행률·문서에는 포함되지 않는다.
+ */
+export const FINANCIAL_OVERRIDE_KEY = "financials/__review";
+
+/** 검토 화면에 노출할 입력 항목 정의 — 원문 답변이 어디서 왔는지 함께 알려준다. */
+export const FINANCIAL_FIELDS = [
+  { id: "unitPrice", label: "1건당 판매가", from: "financials/revenue", qid: "unit_price", unit: "원", kind: "money" },
+  { id: "startingVolume", label: "첫 달 판매 건수", from: "financials/revenue", qid: "monthly_volume", unit: "건", kind: "count" },
+  { id: "unitVariableCost", label: "1건당 변동비", from: "financials/expenses", qid: "variable_per_unit", unit: "원", kind: "money" },
+  { id: "fixedBase", label: "월 고정비(인건비 제외)", from: "financials/expenses", qid: "fixed_total", unit: "원", kind: "money" },
+  { id: "staffMonthly", label: "월 인건비", from: "financials/staffing", qid: "staff_monthly", unit: "원", kind: "money" },
+  { id: "initialInvestment", label: "초기 투자", from: "financials/assets", qid: "asset_cost", unit: "원", kind: "money" },
+] as const;
+
+export type FinancialFieldId = (typeof FINANCIAL_FIELDS)[number]["id"];
+
+export interface FinancialField {
+  id: FinancialFieldId;
+  label: string;
+  unit: string;
+  /** 사용자가 원래 적은 문장 */
+  raw: string | null;
+  /** 파싱 또는 보정으로 확정된 값 */
+  value: number | undefined;
+  /** 사용자가 검토 화면에서 직접 고친 값인지 */
+  overridden: boolean;
+  /** 값이 의심스러울 때의 안내 (단위 착오 등) */
+  warning: string | null;
+}
+
+/** 금액이 상식적인 범위를 벗어나면 단위 착오일 가능성이 높다. */
+function warnFor(kind: string, value: number | undefined, raw: string | null): string | null {
+  if (value == null) return null;
+  if (kind === "money") {
+    if (value < 1_000) return "1,000원 미만입니다. '만원'·'천원' 단위를 빠뜨리지 않았는지 확인해주세요.";
+    if (value > 100_000_000_000) return "1,000억을 넘습니다. 자릿수를 확인해주세요.";
+  }
+  if (kind === "count" && value > 1_000_000) return "월 100만 건을 넘습니다. 자릿수를 확인해주세요.";
+  if (raw && /[억만천백]/.test(raw) && value < 1_000) {
+    return "한글 단위를 인식하지 못했을 수 있습니다. 숫자로 직접 입력해주세요.";
+  }
+  return null;
+}
+
+/**
+ * 각 재무 입력이 어떻게 인식됐는지 항목별로 정리한다.
+ * 검토 화면은 이 결과를 그대로 표시하고, 사용자가 고치면 보정값으로 저장한다.
+ */
+export function describeFinancialFields(allAnswers: Record<string, Record<string, unknown>>): FinancialField[] {
+  const overrides = allAnswers?.[FINANCIAL_OVERRIDE_KEY] ?? {};
+  return FINANCIAL_FIELDS.map((f) => {
+    const rawVal = allAnswers?.[f.from]?.[f.qid];
+    const raw = typeof rawVal === "string" && rawVal.trim() ? rawVal.trim() : null;
+    const ov = parseAmount(overrides[f.id]);
+    const value = ov ?? parseAmount(rawVal);
+    return {
+      id: f.id,
+      label: f.label,
+      unit: f.unit,
+      raw,
+      value,
+      overridden: ov != null,
+      warning: ov != null ? null : warnFor(f.kind, value, raw),
+    };
+  });
+}
+
+/**
  * 재무 입력은 여러 섹션(매출·인건비·비용·자산)에 흩어져 있으므로
  * 플랜 전체 답변에서 모아 계산 입력으로 만든다.
+ * 검토 화면에서 사용자가 고친 값(보정값)이 있으면 원문 파싱값보다 우선한다.
  */
 export function collectFinancialInputs(
   allAnswers: Record<string, Record<string, unknown>>,
 ): { inputs: FinancialInputs; growthLabel: string | null; staffIncluded: boolean } {
   const get = (sectionKey: string, qid: string) => allAnswers?.[sectionKey]?.[qid];
+  const overrides = allAnswers?.[FINANCIAL_OVERRIDE_KEY] ?? {};
+  /** 보정값이 있으면 그 값을, 없으면 원문 파싱값을 쓴다. */
+  const pick = (id: FinancialFieldId, parsed: number | undefined) => parseAmount(overrides[id]) ?? parsed;
 
-  const unitPrice = parseAmount(get("financials/revenue", "unit_price"));
-  const unitVariableCost = parseAmount(get("financials/expenses", "variable_per_unit"));
-  const fixedBase = parseAmount(get("financials/expenses", "fixed_total"));
-  const staff = parseAmount(get("financials/staffing", "staff_monthly"));
-  const startingVolume = parseAmount(get("financials/revenue", "monthly_volume"));
-  const initialInvestment = parseAmount(get("financials/assets", "asset_cost"));
+  const unitPrice = pick("unitPrice", parseAmount(get("financials/revenue", "unit_price")));
+  const unitVariableCost = pick("unitVariableCost", parseAmount(get("financials/expenses", "variable_per_unit")));
+  const fixedBase = pick("fixedBase", parseAmount(get("financials/expenses", "fixed_total")));
+  const staff = pick("staffMonthly", parseAmount(get("financials/staffing", "staff_monthly")));
+  const startingVolume = pick("startingVolume", parseAmount(get("financials/revenue", "monthly_volume")));
+  const initialInvestment = pick("initialInvestment", parseAmount(get("financials/assets", "asset_cost")));
 
   const growthRaw = get("financials/revenue", "growth");
   const growthLabel = typeof growthRaw === "string" ? growthRaw : null;
-  const monthlyGrowthPct = growthLabel ? GROWTH_MAP[growthLabel] ?? 0 : 0;
+  const growthOverride = parsePercent(overrides.monthlyGrowthPct);
+  const monthlyGrowthPct = growthOverride ?? (growthLabel ? GROWTH_MAP[growthLabel] ?? 0 : 0);
 
   // 고정비 항목에 인건비가 없으므로 인건비는 별도로 더한다.
   const monthlyFixedCost =
@@ -224,6 +298,11 @@ export function collectFinancialInputs(
     growthLabel,
     staffIncluded: staff != null,
   };
+}
+
+/** 성장 양상 선택지에 대응하는 기본 월 성장률(%) — 검토 화면에서 기본값 표시용 */
+export function defaultGrowthPct(label: string | null): number {
+  return label ? GROWTH_MAP[label] ?? 0 : 0;
 }
 
 const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;

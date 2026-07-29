@@ -18,6 +18,8 @@ import {
   loadAnswers,
   saveAnswers,
 } from "../../lib/plan-builder/plan-store";
+import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
+import FinancialReview from "./FinancialReview";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -70,11 +72,18 @@ export default function SectionWizard({
   const [genSource, setGenSource] = useState<"ai" | "fallback" | null>(null);
   const [editingMd, setEditingMd] = useState<string | null>(null);
   const [savedMd, setSavedMd] = useState<string>("");
+  // 재무 수치 검토에서 사용자가 고친 값 (질문 섹션이 아니라 별도 키에 저장)
+  const [finOverrides, setFinOverrides] = useState<AnswerMap>({});
+  // 플랜 전체 답변 스냅샷 — 재무 입력이 다른 섹션에 흩어져 있어 함께 필요하다.
+  // 렌더 중 저장소를 읽으면 서버 렌더와 어긋나므로 진입 후 상태로 채운다.
+  const [planAnswers, setPlanAnswers] = useState<Record<string, Record<string, unknown>>>({});
 
   // 섹션 진입 시: 저장된 답변 복원 + 이미 생성된 본문이 있으면 표시
   useEffect(() => {
     const p = activePlan();
     setAnswers(loadAnswers(key));
+    setFinOverrides(loadAnswers(FINANCIAL_OVERRIDE_KEY));
+    setPlanAnswers(p?.answers ?? {});
     const stored = p?.sections[key];
     if (stored) {
       setGeneratedHtml(stored.html);
@@ -143,6 +152,24 @@ export default function SectionWizard({
     }
   }
 
+  /** 재무 검토에서 고친 값을 즉시 저장한다 — 생성 시 원문 파싱값보다 우선 적용된다. */
+  function setFinOverride(fieldId: string, value: string) {
+    setFinOverrides((prev) => {
+      const next = { ...prev, [fieldId]: value };
+      saveAnswers(FINANCIAL_OVERRIDE_KEY, next);
+      return next;
+    });
+  }
+
+  /** 생성 시점에 쓰는 플랜 전체 답변 — 저장소의 최신 값 + 편집 중인 답변·보정값 */
+  function mergedAnswers(): Record<string, Record<string, unknown>> {
+    return {
+      ...(activePlan()?.answers ?? {}),
+      [key]: answers,
+      [FINANCIAL_OVERRIDE_KEY]: finOverrides,
+    };
+  }
+
   async function handleGenerate() {
     setGenerating(true);
     try {
@@ -156,8 +183,8 @@ export default function SectionWizard({
           planTitle,
           business: loadState().business,
           priorSummary: priorSectionsSummary(key),
-          // 재무 입력이 여러 섹션에 흩어져 있어 전체 답변을 함께 보낸다(현재 섹션 답변 포함).
-          allAnswers: { ...(activePlan()?.answers ?? {}), [key]: answers },
+          // 재무 입력이 여러 섹션에 흩어져 있어 전체 답변을 함께 보낸다(현재 섹션 답변·보정값 포함).
+          allAnswers: mergedAnswers(),
         }),
       });
       const data = (await res.json()) as { markdown?: string; html?: string; source?: "ai" | "fallback" };
@@ -218,6 +245,12 @@ export default function SectionWizard({
     }
     return { answeredReq, totalReq, pct: totalReq ? Math.round((answeredReq / totalReq) * 100) : 100, perGroup };
   }, [groups, answers]);
+
+  // 검토 패널이 볼 답변 — 상태만으로 만들어 서버/클라이언트 첫 렌더가 일치한다.
+  const reviewAnswers = useMemo(
+    () => ({ ...planAnswers, [key]: answers, [FINANCIAL_OVERRIDE_KEY]: finOverrides }),
+    [planAnswers, key, answers, finOverrides],
+  );
 
   const complete = answeredReq >= totalReq;
   const C = 2 * Math.PI * 15.5;
@@ -324,6 +357,11 @@ export default function SectionWizard({
                     ))}
                   </div>
                 ))
+              )}
+
+              {/* 재무 챕터에서는 인식한 숫자와 계산 결과를 항상 확인할 수 있게 한다 */}
+              {chapter.id === "financials" && editingMd === null && !generatedHtml && !generating && (
+                <FinancialReview allAnswers={reviewAnswers} onOverride={setFinOverride} />
               )}
             </div>
 
