@@ -990,3 +990,54 @@
   font-size: 12px;
   color: var(--wz-faint);
 }
+
+/* 생성 본문 — 눌러서 바로 편집 */
+.genDoc[role="button"] {
+  cursor: text;
+  border-radius: 12px;
+  padding: 4px 8px;
+  margin: 0 -8px;
+  transition: background 0.14s, box-shadow 0.14s;
+}
+.genDoc[role="button"]:hover {
+  background: var(--wz-panel2);
+  box-shadow: 0 0 0 1px var(--wz-line);
+}
+.genDoc[role="button"]:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--wz-brand);
+}
+.editHint {
+  margin: 12px 0 0;
+  font-size: 12px;
+  color: var(--wz-faint);
+}
+
+/* 실시간 작성 화면 — 로딩바 대신 글이 쌓이는 모습을 보여준다 */
+.writing {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.streamDoc {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--wz-ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 2px;
+  vertical-align: text-bottom;
+  background: var(--wz-brand);
+  animation: caretBlink 1s steps(2, start) infinite;
+}
+@keyframes caretBlink {
+  to { visibility: hidden; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .caret { animation: none; }
+}

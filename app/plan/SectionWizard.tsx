@@ -104,6 +104,9 @@ export default function SectionWizard({
   const [generating, setGenerating] = useState(false);
   const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [genSource, setGenSource] = useState<"ai" | "fallback" | null>(null);
+  // 생성 중 실시간으로 쌓이는 본문
+  const [streamText, setStreamText] = useState("");
+  const streamRef = useRef<HTMLDivElement>(null);
   const [editingMd, setEditingMd] = useState<string | null>(null);
   const [savedMd, setSavedMd] = useState<string>("");
   // 재무 수치 검토에서 사용자가 고친 값 (질문 섹션이 아니라 별도 키에 저장)
@@ -146,6 +149,13 @@ export default function SectionWizard({
     const t = setTimeout(() => saveAnswers(key, answers), 500);
     return () => clearTimeout(t);
   }, [answers, key]);
+
+  // 글이 쌓이는 동안 항상 마지막 줄이 보이게
+  useEffect(() => {
+    if (!streamText) return;
+    const el = bodyRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [streamText]);
 
   const setAnswer = (qid: string, v: unknown) => setAnswers((prev) => ({ ...prev, [qid]: v }));
   const toggleMulti = (qid: string, opt: string) =>
@@ -208,8 +218,10 @@ export default function SectionWizard({
     };
   }
 
+  /** 본문을 실시간으로 받아 화면에 쌓는다. */
   async function handleGenerate() {
     setGenerating(true);
+    setStreamText("");
     try {
       const res = await fetch("/api/plan/generate", {
         method: "POST",
@@ -224,20 +236,54 @@ export default function SectionWizard({
           priorSummary: priorSectionsSummary(key),
           // 재무 입력이 여러 섹션에 흩어져 있어 전체 답변을 함께 보낸다(현재 섹션 답변·보정값 포함).
           allAnswers: mergedAnswers(),
+          stream: true,
         }),
       });
-      const data = (await res.json()) as { markdown?: string; html?: string; source?: "ai" | "fallback" };
-      setGeneratedHtml(data.html ?? "<p>생성에 실패했습니다.</p>");
-      setGenSource(data.source ?? null);
-      if (data.markdown && data.html) {
-        saveSection(key, data.markdown, data.html);
-        setSavedMd(data.markdown);
+
+      if (!res.body) throw new Error("no stream");
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let acc = "";
+      let finished: { markdown?: string; html?: string; source?: "ai" | "fallback" } | null = null;
+
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() ?? "";
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let msg: { t?: string; v?: string; markdown?: string; html?: string; source?: "ai" | "fallback" };
+          try {
+            msg = JSON.parse(line);
+          } catch {
+            continue;
+          }
+          if (msg.t === "delta" && msg.v) {
+            acc += msg.v;
+            setStreamText(acc);
+          } else if (msg.t === "done") {
+            finished = msg;
+          }
+        }
       }
-      onComplete?.(chapter.id, section.id, answers);
+
+      if (finished?.markdown && finished.html) {
+        setGeneratedHtml(finished.html);
+        setGenSource(finished.source ?? null);
+        saveSection(key, finished.markdown, finished.html);
+        setSavedMd(finished.markdown);
+        onComplete?.(chapter.id, section.id, answers);
+      } else {
+        setGeneratedHtml("<p>생성에 실패했습니다.</p>");
+      }
     } catch {
       setGeneratedHtml("<p>생성 중 오류가 발생했습니다.</p>");
     } finally {
       setGenerating(false);
+      setStreamText("");
     }
   }
 
@@ -405,12 +451,34 @@ export default function SectionWizard({
               ) : generatedHtml ? (
                 <>
                   <span className={styles.genBadge}>{genSource === "ai" ? "✨ AI 생성 본문" : "초안(키 미설정 · 폴백)"}</span>
-                  <div className={styles.genDoc} dangerouslySetInnerHTML={{ __html: generatedHtml }} />
+                  {/* 본문을 바로 눌러 고칠 수 있게 — 버튼을 찾아 누를 필요가 없다 */}
+                  <div
+                    className={styles.genDoc}
+                    role="button"
+                    tabIndex={0}
+                    title="눌러서 바로 수정"
+                    onClick={() => setEditingMd(savedMd)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") setEditingMd(savedMd);
+                    }}
+                    dangerouslySetInnerHTML={{ __html: generatedHtml }}
+                  />
+                  <p className={styles.editHint}>✏️ 본문을 누르면 바로 고칠 수 있어요.</p>
                 </>
               ) : generating ? (
-                <div className={styles.thinking}>
-                  <div className={styles.spinner} />
-                  <div>답변을 바탕으로 <b>{section.title}</b> 본문을 생성하고 있어요…</div>
+                <div className={styles.writing}>
+                  <span className={styles.genBadge}>✍️ {section.title} 작성 중…</span>
+                  {streamText ? (
+                    <div className={styles.streamDoc} ref={streamRef}>
+                      {streamText}
+                      <span className={styles.caret} aria-hidden="true" />
+                    </div>
+                  ) : (
+                    <div className={styles.thinking}>
+                      <div className={styles.spinner} />
+                      <div>답변을 정리하고 있어요…</div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 groups.map((g: QuestionGroup) => (

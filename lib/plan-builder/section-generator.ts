@@ -1,7 +1,7 @@
 // 섹션 단위 AI 생성기 — 답변을 프롬프트로 만들어 Claude/OpenAI가 그 섹션 본문(마크다운)을 생성.
 // 리얼리티 게이트 철학 유지: 근거 없는 경쟁사 실명·시장수치·인터뷰를 지어내지 않고 "추가 정의 필요"로 표기.
 
-import { completeText, type LLMConfig } from "../llm/complete";
+import { completeText, streamText, type LLMConfig } from "../llm/complete";
 import type { PlanChapterDef, PlanSectionDef } from "./blueprint";
 
 const SYSTEM_PROMPT = [
@@ -155,5 +155,24 @@ export async function generateSection(config: LLMConfig | null, input: SectionGe
   if (!text || text.trim().length < 40) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
+  return { markdown: text.trim(), source: "ai" };
+}
+
+/**
+ * 섹션 본문을 조각 단위로 흘려주며 생성한다.
+ * 실시간으로 써지는 모습을 보여주기 위한 것으로, 최종 결과는 generateSection과 같다.
+ */
+export async function streamSection(
+  config: LLMConfig | null,
+  input: SectionGenInput,
+  onDelta: (chunk: string) => void,
+): Promise<{ markdown: string; source: "ai" | "fallback" }> {
+  if (!config) return { markdown: fallbackSection(input), source: "fallback" };
+  const text = await streamText(
+    config,
+    { system: SYSTEM_PROMPT, user: buildUserPrompt(input), maxOutputTokens: 4000, effort: "medium" },
+    onDelta,
+  );
+  if (!text || text.trim().length < 40) return { markdown: fallbackSection(input), source: "fallback" };
   return { markdown: text.trim(), source: "ai" };
 }

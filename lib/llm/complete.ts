@@ -134,3 +134,98 @@ export async function completeJson(
   const text = await completeText(config, { ...params, jsonObject: true });
   return text ? parseJsonObject(text) : null;
 }
+
+/**
+ * 델타 단위로 흘려주는 스트리밍 호출.
+ * onDelta로 조각을 넘기고, 끝나면 전체 텍스트를 반환한다. 실패 시 null.
+ */
+export async function streamText(
+  config: LLMConfig,
+  params: LLMCompleteParams,
+  onDelta: (chunk: string) => void,
+): Promise<string | null> {
+  if (!config.apiKey) return null;
+  const anthropic = config.provider === "anthropic";
+
+  let response: Response;
+  try {
+    response = await fetch(
+      anthropic ? "https://api.anthropic.com/v1/messages" : "https://api.openai.com/v1/responses",
+      {
+        method: "POST",
+        headers: anthropic
+          ? { "x-api-key": config.apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" }
+          : { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify(
+          anthropic
+            ? {
+                model: config.model,
+                max_tokens: params.maxOutputTokens,
+                system: params.system,
+                messages: [{ role: "user", content: params.user }],
+                stream: true,
+              }
+            : {
+                model: config.model,
+                store: false,
+                ...(params.effort ? { reasoning: { effort: params.effort } } : {}),
+                max_output_tokens: params.maxOutputTokens,
+                input: [
+                  { role: "system", content: params.system },
+                  { role: "user", content: params.user },
+                ],
+                stream: true,
+              },
+        ),
+        cache: "no-store",
+        signal: AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      },
+    );
+  } catch {
+    return null;
+  }
+  if (!response.ok || !response.body) return null;
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let full = "";
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      // SSE는 빈 줄로 이벤트를 구분한다
+      const events = buffer.split("\n\n");
+      buffer = events.pop() ?? "";
+      for (const event of events) {
+        for (const line of event.split("\n")) {
+          if (!line.startsWith("data:")) continue;
+          const raw = line.slice(5).trim();
+          if (!raw || raw === "[DONE]") continue;
+          let payload: Record<string, unknown>;
+          try {
+            payload = JSON.parse(raw) as Record<string, unknown>;
+          } catch {
+            continue;
+          }
+          const piece = anthropic
+            ? payload.type === "content_block_delta"
+              ? ((payload.delta as { text?: string } | undefined)?.text ?? "")
+              : ""
+            : payload.type === "response.output_text.delta"
+              ? (typeof payload.delta === "string" ? payload.delta : "")
+              : "";
+          if (piece) {
+            full += piece;
+            onDelta(piece);
+          }
+        }
+      }
+    }
+  } catch {
+    return full || null;
+  }
+  return full || null;
+}
