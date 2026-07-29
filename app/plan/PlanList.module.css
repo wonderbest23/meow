@@ -242,6 +242,22 @@
   font-size: 11.5px;
   color: var(--text-muted, #8b95a1);
 }
+.copyBtn {
+  border: 0;
+  background: transparent;
+  color: var(--text-muted, #8b95a1);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.copyBtn:hover {
+  background: var(--blue-soft, #e8f3ff);
+  color: var(--blue, #3182f6);
+}
+
 .delBtn {
   border: 0;
   background: transparent;

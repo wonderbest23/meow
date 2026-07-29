@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { totalSections } from "../../lib/plan-builder/blueprint";
-import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, type PlanState } from "../../lib/plan-builder/plan-store";
+import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, type PlanState } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanList.module.css";
 
 /** 내 플랜 목록(대시보드) — 사업 요약 + 플랜 카드 */
@@ -55,6 +55,12 @@ export default function PlanList() {
       );
     }
     setEditingId(null);
+  }
+
+  function copyPlan(e: React.MouseEvent, id: string) {
+    e.stopPropagation();
+    const newId = duplicatePlan(id);
+    if (newId) setState(loadState());
   }
 
   function removePlan(e: React.MouseEvent, id: string, title: string) {
@@ -150,6 +156,18 @@ export default function PlanList() {
                   </div>
                   <div className={styles.cardFoot}>
                     <span className={styles.date}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      className={styles.copyBtn}
+                      title="이 플랜을 복제"
+                      onClick={(e) => copyPlan(e, p.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") copyPlan(e as unknown as React.MouseEvent, p.id);
+                      }}
+                    >
+                      복제
+                    </span>
                     <span
                       role="button"
                       tabIndex={0}

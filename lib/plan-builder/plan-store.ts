@@ -171,6 +171,31 @@ export function deletePlan(planId: string) {
   void pushToServer();
 }
 
+/**
+ * 플랜 복제 — 답변과 생성 결과를 그대로 가진 사본을 만든다.
+ * 유형만 바꿔 다른 형태의 계획서를 만들 때 쓴다.
+ */
+export function duplicatePlan(planId: string, options?: { title?: string; planType?: string }): string | null {
+  const s = loadState();
+  const src = s.plans.find((p) => p.id === planId);
+  if (!src) return null;
+  const now = new Date().toISOString();
+  const copy: Plan = {
+    id: newId(),
+    title: options?.title || `${src.title} (사본)`,
+    planType: options?.planType || src.planType,
+    createdAt: now,
+    updatedAt: now,
+    sections: JSON.parse(JSON.stringify(src.sections ?? {})),
+    answers: JSON.parse(JSON.stringify(src.answers ?? {})),
+  };
+  s.plans.push(copy);
+  s.activePlanId = copy.id;
+  persist(s);
+  void pushToServer();
+  return copy.id;
+}
+
 /** 플랜 이름 변경 */
 export function renamePlan(planId: string, title: string) {
   const s = loadState();
