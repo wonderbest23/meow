@@ -1,9 +1,78 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { startNewPlan, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import styles from "./PlanStart.module.css";
+
+/** 드롭다운 선택 — 레퍼런스 스타일 */
+function Select({
+  value,
+  options,
+  placeholder,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  placeholder: string;
+  onChange: (v: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div className={styles.select} ref={ref}>
+      <button
+        type="button"
+        className={`${styles.selectBtn} ${open ? styles.open : ""} ${value ? "" : styles.placeholder}`}
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        {value || placeholder}
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+      </button>
+      {open && (
+        <div className={styles.menu} role="listbox">
+          {options.map((opt) => (
+            <button
+              key={opt}
+              type="button"
+              role="option"
+              aria-selected={value === opt}
+              className={`${styles.option} ${value === opt ? styles.optionOn : ""}`}
+              onClick={() => {
+                onChange(value === opt ? "" : opt);
+                setOpen(false);
+              }}
+            >
+              {opt}
+              {value === opt && (
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round"><path d="M5 12.5 10 17l9-11" /></svg>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const TONES: Record<number, { tint: string; acc: string }> = {
   1: { tint: "#eef1ff", acc: "#3358f4" },
@@ -153,29 +222,17 @@ export default function PlanStartPage() {
 
                   <div className={styles.field}>
                     <span className={styles.label}>대표자 역할</span>
-                    <div className={styles.chips}>
-                      {ROLES.map((r) => (
-                        <button key={r} type="button" className={`${styles.chip} ${biz.role === r ? styles.chipOn : ""}`} onClick={() => set("role", biz.role === r ? "" : r)}>{r}</button>
-                      ))}
-                    </div>
+                    <Select value={biz.role} options={ROLES} placeholder="선택하세요" onChange={(v) => set("role", v)} />
                   </div>
 
                   <div className={styles.field}>
                     <span className={styles.label}>진행 단계</span>
-                    <div className={styles.chips}>
-                      {STAGES.map((s) => (
-                        <button key={s} type="button" className={`${styles.chip} ${biz.stage === s ? styles.chipOn : ""}`} onClick={() => set("stage", biz.stage === s ? "" : s)}>{s}</button>
-                      ))}
-                    </div>
+                    <Select value={biz.stage} options={STAGES} placeholder="선택하세요" onChange={(v) => set("stage", v)} />
                   </div>
 
-                  <div className={`${styles.field} ${styles.fieldWide}`}>
+                  <div className={styles.field}>
                     <span className={styles.label}>업종</span>
-                    <div className={styles.chips}>
-                      {INDUSTRIES.map((i) => (
-                        <button key={i} type="button" className={`${styles.chip} ${biz.industry === i ? styles.chipOn : ""}`} onClick={() => set("industry", biz.industry === i ? "" : i)}>{i}</button>
-                      ))}
-                    </div>
+                    <Select value={biz.industry} options={INDUSTRIES} placeholder="선택하세요" onChange={(v) => set("industry", v)} />
                   </div>
 
                   <div className={styles.field}>

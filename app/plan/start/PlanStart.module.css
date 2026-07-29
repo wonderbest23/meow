@@ -181,30 +181,90 @@
   margin-top: 6px;
   line-height: 1.5;
 }
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+/* 드롭다운 (레퍼런스 스타일) */
+.select {
+  position: relative;
 }
-.chip {
+.selectBtn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
   border: 1.5px solid var(--border-soft, #e5e8eb);
   background: var(--surface-soft, #f7f8fa);
-  color: var(--text-body, #4e5968);
+  border-radius: 12px;
+  padding: 13px 16px;
   font: inherit;
-  font-weight: 700;
-  font-size: 13px;
-  padding: 9px 14px;
-  border-radius: 999px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-strong, #191f28);
   cursor: pointer;
+  text-align: left;
   transition: 0.14s;
 }
-.chip:hover {
-  border-color: var(--blue, #3182f6);
+.selectBtn:hover {
+  border-color: color-mix(in srgb, var(--blue, #3182f6) 45%, var(--border-soft, #e5e8eb));
 }
-.chip.chipOn {
-  background: var(--blue, #3182f6);
-  border-color: var(--blue, #3182f6);
-  color: #fff;
+.selectBtn:focus-visible {
+  outline: 2px solid var(--blue, #3182f6);
+  outline-offset: 1px;
+}
+.selectBtn.placeholder {
+  color: var(--text-muted, #8b95a1);
+  font-weight: 500;
+}
+.selectBtn svg {
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted, #8b95a1);
+  flex: 0 0 auto;
+  transition: transform 0.16s;
+}
+.selectBtn.open svg {
+  transform: rotate(180deg);
+}
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(20, 32, 64, 0.14);
+  padding: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.option {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-body, #4e5968);
+  padding: 11px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.option:hover {
+  background: var(--surface-soft, #f7f8fa);
+}
+.option.optionOn {
+  background: var(--blue-soft, #e8f3ff);
+  color: var(--blue, #3182f6);
+  font-weight: 700;
+}
+.option svg {
+  width: 15px;
+  height: 15px;
 }
 .aiBtn {
   align-self: flex-start;
