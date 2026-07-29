@@ -9,7 +9,7 @@ import {
   type QuestionGroup,
   type QuestionDef,
 } from "../../lib/plan-builder/questions";
-import { saveSection } from "../../lib/plan-builder/plan-store";
+import { saveSection, loadPlan, businessContext } from "../../lib/plan-builder/plan-store";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -75,8 +75,11 @@ export default function SectionWizard({
       return { ...prev, [qid]: cur.includes(opt) ? cur.filter((o) => o !== opt) : [...cur, opt] };
     });
 
-  // 지금까지의 답변을 AI 맥락 문자열로
+  // 사업 정보 + 지금까지의 답변을 AI 맥락 문자열로
   function buildContext(): string {
+    const parts: string[] = [];
+    const biz = businessContext();
+    if (biz) parts.push(`[사업 정보]\n${biz}`);
     const lines: string[] = [];
     for (const g of groups) {
       for (const q of g.questions) {
@@ -85,7 +88,8 @@ export default function SectionWizard({
         lines.push(`- ${q.q} → ${Array.isArray(v) ? v.join(", ") : String(v)}`);
       }
     }
-    return lines.join("\n");
+    if (lines.length) parts.push(`[이 섹션에서 답한 내용]\n${lines.join("\n")}`);
+    return parts.join("\n\n");
   }
 
   async function loadSuggest(q: QuestionDef) {
@@ -111,7 +115,13 @@ export default function SectionWizard({
       const res = await fetch("/api/plan/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chapterId: chapter.id, sectionId: section.id, answers, planTitle }),
+        body: JSON.stringify({
+          chapterId: chapter.id,
+          sectionId: section.id,
+          answers,
+          planTitle,
+          business: loadPlan().business,
+        }),
       });
       const data = (await res.json()) as { markdown?: string; html?: string; source?: "ai" | "fallback" };
       setGeneratedHtml(data.html ?? "<p>생성에 실패했습니다.</p>");

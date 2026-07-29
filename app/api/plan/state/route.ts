@@ -23,9 +23,18 @@ export async function PUT(request: Request) {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
 
+  const b = (body.business ?? {}) as Partial<ServerPlanState["business"]>;
   const state: ServerPlanState = {
     title: typeof body.title === "string" ? body.title : "새 플랜",
     planType: typeof body.planType === "string" ? body.planType : "창업 초기 · 사업계획서",
+    business: {
+      name: typeof b.name === "string" ? b.name : "",
+      description: typeof b.description === "string" ? b.description : "",
+      role: typeof b.role === "string" ? b.role : "",
+      industry: typeof b.industry === "string" ? b.industry : "",
+      region: typeof b.region === "string" ? b.region : "",
+      stage: typeof b.stage === "string" ? b.stage : "",
+    },
     sections: body.sections && typeof body.sections === "object" ? body.sections : {},
   };
 

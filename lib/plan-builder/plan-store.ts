@@ -11,34 +11,93 @@ export interface StoredSection {
   generatedAt: string;
 }
 
+/** 사업 정보 — 모든 섹션 질문·AI 생성의 공통 맥락이 된다. */
+export interface BusinessProfile {
+  /** 사업/브랜드 이름 */
+  name: string;
+  /** 한두 문장 사업 설명 (AI 맥락의 핵심) */
+  description: string;
+  /** 대표자 역할 */
+  role: string;
+  /** 업종 */
+  industry: string;
+  /** 지역 */
+  region: string;
+  /** 진행 단계 */
+  stage: string;
+}
+
+export const EMPTY_BUSINESS: BusinessProfile = {
+  name: "",
+  description: "",
+  role: "",
+  industry: "",
+  region: "",
+  stage: "",
+};
+
 export interface PlanState {
   title: string;
   planType: string;
+  business: BusinessProfile;
   sections: Record<string, StoredSection>; // key = `${chapterId}/${sectionId}`
 }
 
-const EMPTY: PlanState = { title: "새 플랜", planType: "창업 초기 · 사업계획서", sections: {} };
+const EMPTY: PlanState = {
+  title: "새 플랜",
+  planType: "창업 초기 · 사업계획서",
+  business: { ...EMPTY_BUSINESS },
+  sections: {},
+};
 
 export function loadPlan(): PlanState {
-  if (typeof window === "undefined") return { ...EMPTY };
+  if (typeof window === "undefined") return { ...EMPTY, business: { ...EMPTY_BUSINESS } };
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return { ...EMPTY };
+    if (!raw) return { ...EMPTY, business: { ...EMPTY_BUSINESS } };
     const parsed = JSON.parse(raw) as Partial<PlanState>;
     return {
       title: parsed.title || EMPTY.title,
       planType: parsed.planType || EMPTY.planType,
+      business: { ...EMPTY_BUSINESS, ...(parsed.business || {}) },
       sections: parsed.sections || {},
     };
   } catch {
-    return { ...EMPTY };
+    return { ...EMPTY, business: { ...EMPTY_BUSINESS } };
   }
 }
 
-/** 플랜 유형(+제목) 설정 — 시작 플로우에서 새 플랜 시작 */
-export function startNewPlan(title: string, planType: string) {
-  persist({ title: title || EMPTY.title, planType, sections: {} });
+/** 사업 정보 + 플랜 유형으로 새 플랜 시작 */
+export function startNewPlan(business: BusinessProfile, planType: string) {
+  persist({
+    title: business.name || EMPTY.title,
+    planType,
+    business,
+    sections: {},
+  });
   void pushToServer();
+}
+
+/** 사업 정보만 갱신 (섹션 결과는 유지) */
+export function updateBusiness(business: BusinessProfile) {
+  const state = loadPlan();
+  state.business = business;
+  if (business.name) state.title = business.name;
+  persist(state);
+  void pushToServer();
+}
+
+/** AI 프롬프트에 넣을 사업 맥락 문자열 */
+export function businessContext(business?: BusinessProfile): string {
+  const b = business ?? loadPlan().business;
+  const lines: string[] = [];
+  if (b.name) lines.push(`사업명: ${b.name}`);
+  if (b.description) lines.push(`사업 설명: ${b.description}`);
+  if (b.industry) lines.push(`업종: ${b.industry}`);
+  if (b.region) lines.push(`지역: ${b.region}`);
+  if (b.role) lines.push(`대표자 역할: ${b.role}`);
+  if (b.stage) lines.push(`진행 단계: ${b.stage}`);
+  return lines.join("\n");
 }
 
 function persist(state: PlanState) {
@@ -89,7 +148,12 @@ export async function hydrateFromServer(): Promise<PlanState> {
       const server = (await res.json()) as PlanState;
       const hasServerData = server && (Object.keys(server.sections || {}).length > 0 || (server.title && server.title !== "새 플랜"));
       if (hasServerData) {
-        persist({ title: server.title, planType: server.planType || EMPTY.planType, sections: server.sections || {} });
+        persist({
+          title: server.title,
+          planType: server.planType || EMPTY.planType,
+          business: { ...EMPTY_BUSINESS, ...(server.business || {}) },
+          sections: server.sections || {},
+        });
       }
     }
   } catch {

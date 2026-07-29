@@ -16,6 +16,14 @@ export async function POST(req: Request) {
     answers?: Record<string, unknown>;
     planTitle?: string;
     priorSummary?: string;
+    business?: {
+      name?: string;
+      description?: string;
+      role?: string;
+      industry?: string;
+      region?: string;
+      stage?: string;
+    };
   };
 
   const chapter = PLAN_BLUEPRINT.find((c) => c.id === body.chapterId);
@@ -31,6 +39,7 @@ export async function POST(req: Request) {
     section,
     answers: body.answers ?? {},
     planTitle: body.planTitle,
+    business: body.business,
     priorSummary: body.priorSummary,
   });
 

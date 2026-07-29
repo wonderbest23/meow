@@ -25,25 +25,49 @@ function formatAnswers(answers: Record<string, unknown>): string {
   return lines.length ? lines.join("\n") : "(제공된 답변 없음 — 일반 구조로 작성하되 모든 수치는 '추가 정의 필요'로 표기)";
 }
 
+export interface BusinessInfo {
+  name?: string;
+  description?: string;
+  role?: string;
+  industry?: string;
+  region?: string;
+  stage?: string;
+}
+
 export interface SectionGenInput {
   chapter: PlanChapterDef;
   section: PlanSectionDef;
   answers: Record<string, unknown>;
   planTitle?: string;
+  /** 시작 단계에서 입력한 사업 정보 — 모든 섹션의 공통 맥락 */
+  business?: BusinessInfo;
   /** 앞 섹션 요약(일관성용, 선택) */
   priorSummary?: string;
 }
 
+function formatBusiness(b?: BusinessInfo): string {
+  if (!b) return "";
+  const lines: string[] = [];
+  if (b.name) lines.push(`- 사업명: ${b.name}`);
+  if (b.description) lines.push(`- 사업 설명: ${b.description}`);
+  if (b.industry) lines.push(`- 업종: ${b.industry}`);
+  if (b.region) lines.push(`- 지역: ${b.region}`);
+  if (b.role) lines.push(`- 대표자 역할: ${b.role}`);
+  if (b.stage) lines.push(`- 진행 단계: ${b.stage}`);
+  return lines.join("\n");
+}
+
 function buildUserPrompt(input: SectionGenInput): string {
+  const biz = formatBusiness(input.business);
   return [
-    `사업명: ${input.planTitle ?? "(미정)"}`,
+    biz ? `[사업 정보]\n${biz}\n` : `사업명: ${input.planTitle ?? "(미정)"}`,
     `챕터: ${input.chapter.title}`,
     `작성할 섹션: ${input.section.title}`,
     `섹션 목적: ${input.section.summary}`,
     input.priorSummary ? `\n앞선 섹션 요약:\n${input.priorSummary}` : "",
-    "\n사용자 답변:",
+    "\n[이 섹션 사용자 답변]",
     formatAnswers(input.answers),
-    "\n위 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
+    "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
   ]
     .filter(Boolean)
     .join("\n");
