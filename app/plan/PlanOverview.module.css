@@ -218,6 +218,71 @@
   color: #fff;
 }
 
+/* 일괄 생성 */
+.bulkBtn {
+  border: 0;
+  background: var(--blue, #3182f6);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  font-size: 13px;
+  padding: 11px 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(47, 87, 244, 0.28);
+  white-space: nowrap;
+}
+.bulkBtn:disabled {
+  background: var(--surface-soft, #f7f8fa);
+  color: var(--text-muted, #8b95a1);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+.bulkStatus {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 10px;
+  padding: 8px 12px;
+}
+.bulkBar {
+  width: 90px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--surface-muted, #f2f4f6);
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.bulkFill {
+  display: block;
+  height: 100%;
+  background: var(--blue, #3182f6);
+  transition: width 0.3s;
+}
+.bulkText {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--text-body, #4e5968);
+  white-space: nowrap;
+}
+.bulkCancel {
+  border: 1px solid var(--border-soft, #e5e8eb);
+  background: transparent;
+  color: var(--text-muted, #8b95a1);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 5px 10px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.bulkCancel:hover {
+  border-color: #de5f7d;
+  color: #de5f7d;
+}
+
 .docCount {
   font-size: 12.5px;
   font-weight: 700;

@@ -1,8 +1,18 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PLAN_BLUEPRINT, totalSections, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
-import { planStatuses, assembleSections, hydrateFromServer, activePlan, answeredSectionKeys } from "../../lib/plan-builder/plan-store";
+import {
+  planStatuses,
+  assembleSections,
+  hydrateFromServer,
+  activePlan,
+  answeredSectionKeys,
+  loadState,
+  loadAnswers,
+  saveSection,
+  priorSectionsSummary,
+} from "../../lib/plan-builder/plan-store";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -46,6 +56,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [storeStatuses, setStoreStatuses] = useState<Record<string, PlanSectionStatus>>({});
   const [assembled, setAssembled] = useState<ReturnType<typeof assembleSections>>([]);
   const [inProgress, setInProgress] = useState<Set<string>>(new Set());
+  const [bulk, setBulk] = useState<{ done: number; total: number; current: string | null } | null>(null);
+  const cancelBulk = useRef(false);
   const [title, setTitle] = useState(planTitle);
 
   // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
@@ -77,6 +89,68 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     }
     return { doneCount: done, total, pct: total ? Math.round((done / total) * 100) : 0 };
   }, [statuses]);
+
+  // 아직 생성되지 않았지만 답변이 있는 섹션 = 일괄 생성 대상
+  const pendingKeys = useMemo(() => {
+    const out: Array<{ key: string; chapterId: string; sectionId: string; title: string }> = [];
+    for (const ch of PLAN_BLUEPRINT) {
+      for (const s of ch.sections) {
+        const key = `${ch.id}/${s.id}`;
+        if (statuses[key] !== "done" && inProgress.has(key)) {
+          out.push({ key, chapterId: ch.id, sectionId: s.id, title: s.title });
+        }
+      }
+    }
+    return out;
+  }, [statuses, inProgress]);
+
+  /** 답변이 있는 미생성 섹션을 순차 생성한다(앞 섹션 결과가 뒤에 반영되도록 순서 유지). */
+  async function generateAll() {
+    if (pendingKeys.length === 0) return;
+    cancelBulk.current = false;
+    setBulk({ done: 0, total: pendingKeys.length, current: null });
+
+    const state = loadState();
+    const plan = activePlan(state);
+    if (!plan) {
+      setBulk(null);
+      return;
+    }
+
+    for (let i = 0; i < pendingKeys.length; i += 1) {
+      if (cancelBulk.current) break;
+      const target = pendingKeys[i];
+      setBulk({ done: i, total: pendingKeys.length, current: target.title });
+      try {
+        const res = await fetch("/api/plan/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            chapterId: target.chapterId,
+            sectionId: target.sectionId,
+            answers: loadAnswers(target.key),
+            planTitle: plan.title,
+            business: state.business,
+            priorSummary: priorSectionsSummary(target.key),
+            allAnswers: activePlan()?.answers ?? {},
+          }),
+        });
+        if (res.ok) {
+          const data = (await res.json()) as { markdown?: string; html?: string };
+          if (data.markdown && data.html) saveSection(target.key, data.markdown, data.html);
+        }
+      } catch {
+        // 실패한 섹션은 건너뛰고 계속 진행
+      }
+    }
+
+    setBulk(null);
+    // 결과 반영
+    const next = loadState();
+    setStoreStatuses(planStatuses(next));
+    setAssembled(assembleSections(next));
+    setInProgress(new Set(answeredSectionKeys(next)));
+  }
 
   // 전역 순번(1-based)
   let counter = 0;
@@ -139,6 +213,24 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             <button type="button" onClick={onOpenDocument}>📄 문서 보기</button>
           </div>
           <span className={styles.docCount}>생성 완료 {assembled.length}개</span>
+          <div className={styles.spring} />
+          {bulk ? (
+            <div className={styles.bulkStatus}>
+              <span className={styles.bulkBar}>
+                <span className={styles.bulkFill} style={{ width: `${Math.round((bulk.done / bulk.total) * 100)}%` }} />
+              </span>
+              <span className={styles.bulkText}>
+                {bulk.current ? `${bulk.current} 생성 중…` : "준비 중…"} ({bulk.done}/{bulk.total})
+              </span>
+              <button type="button" className={styles.bulkCancel} onClick={() => (cancelBulk.current = true)}>
+                중지
+              </button>
+            </div>
+          ) : (
+            <button type="button" className={styles.bulkBtn} onClick={generateAll} disabled={pendingKeys.length === 0}>
+              ⚡ 남은 {pendingKeys.length}개 한번에 생성
+            </button>
+          )}
         </div>
 
         {/* 챕터 밴드 */}
