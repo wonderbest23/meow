@@ -188,6 +188,39 @@ export function saveSection(key: string, markdown: string, html: string) {
   void pushToServer();
 }
 
+/**
+ * 앞선 섹션들의 생성 결과 요약 — 뒤 섹션 생성 시 일관성 유지용.
+ * blueprint 순서상 현재 섹션보다 앞에 있는 것만, 각 400자로 잘라 최대 6개.
+ */
+export function priorSectionsSummary(currentKey: string, state?: PlanState): string {
+  const p = activePlan(state);
+  if (!p) return "";
+  const ordered: Array<{ key: string; title: string }> = [];
+  for (const ch of PLAN_BLUEPRINT) {
+    for (const sec of ch.sections) {
+      ordered.push({ key: sectionKey(ch.id, sec.id), title: `${ch.title} · ${sec.title}` });
+    }
+  }
+  const idx = ordered.findIndex((o) => o.key === currentKey);
+  if (idx <= 0) return "";
+  const prior = ordered
+    .slice(0, idx)
+    .filter((o) => p.sections[o.key])
+    .slice(-6); // 가장 가까운 앞 섹션 6개
+  if (!prior.length) return "";
+  return prior
+    .map((o) => {
+      const md = p.sections[o.key].markdown
+        .replace(/^#+\s*/gm, "")
+        .replace(/\|/g, " ")
+        .replace(/\n{2,}/g, "\n")
+        .trim()
+        .slice(0, 400);
+      return `▸ ${o.title}\n${md}`;
+    })
+    .join("\n\n");
+}
+
 /** AI 프롬프트에 넣을 사업 맥락 문자열 */
 export function businessContext(business?: BusinessProfile): string {
   const b = business ?? loadState().business;

@@ -9,7 +9,7 @@ import {
   type QuestionGroup,
   type QuestionDef,
 } from "../../lib/plan-builder/questions";
-import { saveSection, loadState, businessContext } from "../../lib/plan-builder/plan-store";
+import { saveSection, loadState, businessContext, priorSectionsSummary } from "../../lib/plan-builder/plan-store";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -82,6 +82,8 @@ export default function SectionWizard({
       }
     }
     if (lines.length) parts.push(`[이 섹션에서 답한 내용]\n${lines.join("\n")}`);
+    const prior = priorSectionsSummary(key);
+    if (prior) parts.push(`[앞서 작성한 내용 요약]\n${prior}`);
     return parts.join("\n\n");
   }
 
@@ -114,6 +116,7 @@ export default function SectionWizard({
           answers,
           planTitle,
           business: loadState().business,
+          priorSummary: priorSectionsSummary(key),
         }),
       });
       const data = (await res.json()) as { markdown?: string; html?: string; source?: "ai" | "fallback" };

@@ -64,10 +64,13 @@ function buildUserPrompt(input: SectionGenInput): string {
     `챕터: ${input.chapter.title}`,
     `작성할 섹션: ${input.section.title}`,
     `섹션 목적: ${input.section.summary}`,
-    input.priorSummary ? `\n앞선 섹션 요약:\n${input.priorSummary}` : "",
+    input.priorSummary ? `\n[앞서 작성한 섹션 요약]\n${input.priorSummary}` : "",
     "\n[이 섹션 사용자 답변]",
     formatAnswers(input.answers),
     "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
+    input.priorSummary
+      ? "앞서 작성한 섹션과 용어·숫자·전략 방향이 어긋나지 않게 하고, 같은 내용을 그대로 반복하지 말고 이 섹션의 관점에서 이어서 쓰세요."
+      : "",
   ]
     .filter(Boolean)
     .join("\n");
