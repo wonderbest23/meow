@@ -151,3 +151,95 @@ export function flatSections(): Array<{
   }
   return out;
 }
+
+/**
+ * 플랜 유형별 섹션 구성.
+ * 값이 없는 유형(또는 예전 플랜)은 전체 25개를 쓴다.
+ * 키는 플랜에 저장되는 planType 문자열과 같아야 한다.
+ */
+export const PLAN_TYPE_SECTIONS: Record<string, string[]> = {
+  // 창업 초기·성장 확장 사업계획서는 전체 구성을 쓴다(목록에 넣지 않음).
+  "간단 · 사업계획서": [
+    "overview/summary",
+    "overview/problem",
+    "market/products",
+    "market/personas",
+    "market/competitors",
+    "objectives/corporate",
+    "strategy/promotion",
+    "financials/revenue",
+    "financials/expenses",
+    "summary/executive",
+  ],
+  "내부용 · 사업계획서": [
+    "overview/summary",
+    "overview/mission",
+    "overview/structure",
+    "market/segments",
+    "market/competitors",
+    "market/swot",
+    "objectives/corporate",
+    "strategy/product",
+    "strategy/distribution",
+    "strategy/promotion",
+    "strategy/people",
+    "summary/executive",
+  ],
+  "창업 초기 · 재무 예측": [
+    "overview/summary",
+    "market/products",
+    "market/segments",
+    "objectives/corporate",
+    "strategy/price",
+    "funding/requirements",
+    "financials/revenue",
+    "financials/staffing",
+    "financials/expenses",
+    "financials/assets",
+    "financials/financing",
+    "summary/executive",
+  ],
+  "정밀 · 재무 모델": [
+    "overview/summary",
+    "market/products",
+    "market/segments",
+    "market/competitors",
+    "objectives/corporate",
+    "strategy/price",
+    "strategy/distribution",
+    "strategy/exit",
+    "funding/requirements",
+    "financials/revenue",
+    "financials/staffing",
+    "financials/expenses",
+    "financials/assets",
+    "financials/financing",
+    "summary/executive",
+  ],
+};
+
+/** 이 유형이 포함하는 섹션 키 집합. 정의가 없으면 전체. */
+export function sectionKeysForType(planType?: string): Set<string> | null {
+  const list = planType ? PLAN_TYPE_SECTIONS[planType] : undefined;
+  return list ? new Set(list) : null;
+}
+
+/**
+ * 유형에 맞게 걸러낸 챕터 목록.
+ * 섹션이 하나도 없는 챕터는 빠지고, 챕터·섹션 순서는 원래 청사진을 따른다.
+ */
+export function chaptersForType(planType?: string): PlanChapterDef[] {
+  const keys = sectionKeysForType(planType);
+  if (!keys) return PLAN_BLUEPRINT;
+  const out: PlanChapterDef[] = [];
+  for (const ch of PLAN_BLUEPRINT) {
+    const sections = ch.sections.filter((s) => keys.has(sectionKey(ch.id, s.id)));
+    if (sections.length) out.push({ ...ch, sections });
+  }
+  return out;
+}
+
+/** 유형별 섹션 개수 */
+export function sectionCountForType(planType?: string): number {
+  return chaptersForType(planType).reduce((n, ch) => n + ch.sections.length, 0);
+}

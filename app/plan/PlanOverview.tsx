@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PLAN_BLUEPRINT, totalSections, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
+import { chaptersForType, sectionCountForType, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
 import {
   planStatuses,
   assembleSections,
@@ -61,6 +61,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [bulk, setBulk] = useState<{ done: number; total: number; current: string | null } | null>(null);
   const cancelBulk = useRef(false);
   const [title, setTitle] = useState(planTitle);
+  const [type, setType] = useState<string | undefined>(undefined);
   const [issues, setIssues] = useState<ConsistencyIssue[]>([]);
 
   // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
@@ -72,7 +73,10 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       setAssembled(assembleSections(s));
       setInProgress(new Set(answeredSectionKeys(s)));
       const p = activePlan(s);
-      if (p) setTitle(p.title);
+      if (p) {
+        setTitle(p.title);
+        setType(p.planType);
+      }
       setIssues(findConsistencyIssues(p?.answers ?? {}));
     });
     return () => {
@@ -80,24 +84,27 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     };
   }, []);
 
+  /** 이 플랜 유형이 실제로 채우는 챕터·섹션 */
+  const chapters = useMemo(() => chaptersForType(type), [type]);
+
   // 스토어에 생성된 게 있으면 스토어 우선, 없으면 데모 prop
   const statuses = Object.keys(storeStatuses).length ? storeStatuses : propStatuses;
 
   const { doneCount, total, pct } = useMemo(() => {
-    const total = totalSections();
+    const total = sectionCountForType(type);
     let done = 0;
-    for (const ch of PLAN_BLUEPRINT) {
+    for (const ch of chapters) {
       for (const s of ch.sections) {
         if (statuses[`${ch.id}/${s.id}`] === "done") done += 1;
       }
     }
     return { doneCount: done, total, pct: total ? Math.round((done / total) * 100) : 0 };
-  }, [statuses]);
+  }, [statuses, type, chapters]);
 
   // 아직 생성되지 않았지만 답변이 있는 섹션 = 일괄 생성 대상
   const pendingKeys = useMemo(() => {
     const out: Array<{ key: string; chapterId: string; sectionId: string; title: string }> = [];
-    for (const ch of PLAN_BLUEPRINT) {
+    for (const ch of chapters) {
       for (const s of ch.sections) {
         const key = `${ch.id}/${s.id}`;
         if (statuses[key] !== "done" && inProgress.has(key)) {
@@ -106,7 +113,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       }
     }
     return out;
-  }, [statuses, inProgress]);
+  }, [statuses, inProgress, chapters]);
 
   /** 답변이 있는 미생성 섹션을 순차 생성한다(앞 섹션 결과가 뒤에 반영되도록 순서 유지). */
   async function generateAll() {
@@ -160,14 +167,14 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
 
   /** 다음에 손대야 할 섹션 — 아직 생성되지 않은 첫 섹션 */
   const nextKey = useMemo(() => {
-    for (const ch of PLAN_BLUEPRINT) {
+    for (const ch of chapters) {
       for (const s of ch.sections) {
         const key = `${ch.id}/${s.id}`;
         if (statuses[key] !== "done") return key;
       }
     }
     return null;
-  }, [statuses]);
+  }, [statuses, chapters]);
 
   // 전역 순번(1-based)
   let counter = 0;
@@ -254,7 +261,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
 
         {/* 챕터 밴드 */}
         <div className={styles.plan}>
-          {PLAN_BLUEPRINT.map((chapter, ci) => {
+          {chapters.map((chapter, ci) => {
             const tone = TONES[chapter.tone] ?? TONES[1];
             return (
               <div
@@ -294,7 +301,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                     );
                   })}
                 </div>
-                {ci < PLAN_BLUEPRINT.length - 1 && <Connector />}
+                {ci < chapters.length - 1 && <Connector />}
               </div>
             );
           })}

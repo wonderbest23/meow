@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PLAN_BLUEPRINT, sectionKey, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
+import { PLAN_BLUEPRINT, chaptersForType, sectionKey, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
 import {
   questionsForSection,
   isVisible,
@@ -93,6 +93,8 @@ export default function SectionWizard({
   onNavigateSection,
   onComplete,
 }: SectionWizardProps) {
+  /** 이 유형이 채우는 챕터 — 좌측 목차에 이것만 보인다 */
+  const chapters = useMemo(() => chaptersForType(planType), [planType]);
   const chapter = PLAN_BLUEPRINT.find((c) => c.id === chapterId) ?? PLAN_BLUEPRINT[0];
   const section = chapter.sections.find((s) => s.id === sectionId) ?? chapter.sections[0];
   const key = sectionKey(chapter.id, section.id);
@@ -391,7 +393,7 @@ export default function SectionWizard({
               <button className={`${styles.navTab} ${styles.navTabOn}`} type="button">목차</button>
               <button className={styles.navTab} type="button" title="준비 중">맞춤 요소</button>
             </div>
-            {PLAN_BLUEPRINT.map((ch, ci) => {
+            {chapters.map((ch, ci) => {
               const open = ch.id === chapter.id;
               return (
                 <div key={ch.id} className={`${styles.chap} ${open ? styles.open : ""}`}>

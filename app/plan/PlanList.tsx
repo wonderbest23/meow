@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { totalSections } from "../../lib/plan-builder/blueprint";
+import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, type PlanState } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanList.module.css";
 
@@ -32,7 +32,6 @@ export default function PlanList() {
     );
   }
 
-  const total = totalSections();
   const biz = state.business;
 
   function openPlan(id: string) {
@@ -108,7 +107,8 @@ export default function PlanList() {
         ) : (
           <div className={styles.grid}>
             {state.plans.map((p) => {
-              const done = Object.keys(p.sections).length;
+              const total = sectionCountForType(p.planType);
+              const done = Object.keys(p.sections).filter((k) => k !== "financials/__review").length;
               const pct = total ? Math.round((done / total) * 100) : 0;
               const isActive = p.id === state.activePlanId;
               return (

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
+import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import styles from "./PlanStart.module.css";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -371,6 +372,7 @@ export default function PlanStartPage() {
                       <span className={styles.heroBadge}>가장 많이 고르는 유형</span>
                       <h3 className={styles.heroTitle}>{featured.name}</h3>
                       <p className={styles.desc}>{featured.desc}</p>
+                      <div className={styles.meta}>{sectionCountForType(featured.type)}개 섹션</div>
                       <ul className={styles.fits}>
                         {featured.fits.map((f) => (
                           <li key={f}>{f}</li>
@@ -395,6 +397,7 @@ export default function PlanStartPage() {
                         <div className={styles.cardTop}>{pt.icon}</div>
                         <h3 className={styles.cardTitle}>{pt.name}</h3>
                         <p className={styles.desc}>{pt.desc}</p>
+                        <div className={styles.meta}>{sectionCountForType(pt.type)}개 섹션</div>
                         <ul className={styles.fits}>
                           {pt.fits.map((f) => (
                             <li key={f}>{f}</li>
@@ -407,8 +410,8 @@ export default function PlanStartPage() {
                 </div>
 
                 <p className={styles.sameNote}>
-                  어떤 유형을 고르든 <b>같은 25개 섹션</b>을 채웁니다. 유형은 문서 표지 표기와 AI가 잡는
-                  서술 관점(누구에게 보여줄 문서인지)을 정합니다. 나중에 플랜을 복제해 다른 유형으로도 만들 수 있어요.
+                  유형에 따라 채우는 <b>섹션 구성과 개수가 다릅니다</b>. 답변은 플랜별로 남으니,
+                  나중에 플랜을 복제해 다른 유형으로 만들면 겹치는 섹션은 다시 답하지 않아도 됩니다.
                 </p>
 
                 <div className={styles.actions} style={{ marginTop: 18 }}>

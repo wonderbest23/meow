@@ -1,7 +1,7 @@
 // 플랜 빌더 클라이언트 스토어 — 사업 1개 + 플랜 여러 개 구조.
 // 로컬(localStorage) 캐시 + 서버(plan_states) 동기화.
 
-import { PLAN_BLUEPRINT, sectionKey, type PlanSectionStatus } from "./blueprint";
+import { chaptersForType, sectionKey, type PlanSectionStatus } from "./blueprint";
 
 const KEY = "oneul-plan-demo-v1";
 
@@ -253,7 +253,7 @@ export function priorSectionsSummary(currentKey: string, state?: PlanState): str
   const p = activePlan(state);
   if (!p) return "";
   const ordered: Array<{ key: string; title: string }> = [];
-  for (const ch of PLAN_BLUEPRINT) {
+  for (const ch of chaptersForType(p.planType)) {
     for (const sec of ch.sections) {
       ordered.push({ key: sectionKey(ch.id, sec.id), title: `${ch.title} · ${sec.title}` });
     }
@@ -311,7 +311,7 @@ export function assembleSections(state?: PlanState): Array<{
   const p = activePlan(state);
   const out: Array<{ key: string; chapterTitle: string; sectionTitle: string; markdown: string; html: string }> = [];
   if (!p) return out;
-  for (const chapter of PLAN_BLUEPRINT) {
+  for (const chapter of chaptersForType(p.planType)) {
     for (const section of chapter.sections) {
       const key = sectionKey(chapter.id, section.id);
       const stored = p.sections[key];
