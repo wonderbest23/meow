@@ -9,7 +9,7 @@ import {
   type QuestionGroup,
   type QuestionDef,
 } from "../../lib/plan-builder/questions";
-import { saveSection, loadPlan, businessContext } from "../../lib/plan-builder/plan-store";
+import { saveSection, loadState, businessContext } from "../../lib/plan-builder/plan-store";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -113,7 +113,7 @@ export default function SectionWizard({
           sectionId: section.id,
           answers,
           planTitle,
-          business: loadPlan().business,
+          business: loadState().business,
         }),
       });
       const data = (await res.json()) as { markdown?: string; html?: string; source?: "ai" | "fallback" };

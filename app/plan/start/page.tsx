@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { startNewPlan, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
+import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import styles from "./PlanStart.module.css";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -123,6 +123,17 @@ export default function PlanStartPage() {
   const [biz, setBiz] = useState<BusinessProfile>({ ...EMPTY_BUSINESS });
   const [category, setCategory] = useState<"bp" | "forecast">("bp");
   const [improving, setImproving] = useState(false);
+  const [hasExisting, setHasExisting] = useState(false);
+
+  // 이미 등록한 사업이 있으면 불러와서 재입력을 줄인다(사업 1개 유지)
+  useEffect(() => {
+    const s = loadState();
+    if (s.business.name) {
+      setBiz(s.business);
+      setHasExisting(true);
+      if (s.plans.length > 0) setStep(2); // 사업+플랜이 이미 있으면 유형 선택부터
+    }
+  }, []);
 
   const set = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) => setBiz((p) => ({ ...p, [k]: v }));
 
@@ -159,8 +170,9 @@ export default function PlanStartPage() {
   }
 
   function pick(pt: PlanType) {
-    startNewPlan(biz, `${pt.cat} · ${pt.type}`);
-    router.push("/plan");
+    saveBusiness(biz);
+    createPlan(`${pt.cat} · ${pt.type}`, biz.name);
+    router.push("/plan/overview");
   }
 
   const visible = PLAN_TYPES.filter((p) => p.category === category);
@@ -173,8 +185,10 @@ export default function PlanStartPage() {
             <h1 className={styles.h1}>새 플랜 만들기</h1>
             <p className={styles.lead}>
               {step === 1
-                ? <><b>먼저 사업을 알려주세요.</b> 여기 적은 내용이 이후 모든 질문과 AI 추천에 반영됩니다.</>
-                : <><b>어떤 걸 만들까요?</b> 창업 단계와 목적에 맞는 플랜을 고르면, 그에 맞는 질문만 안내해 드려요.</>}
+                ? hasExisting
+                  ? <><b>사업 정보를 확인해 주세요.</b> 수정하면 앞으로 만드는 모든 플랜에 반영됩니다.</>
+                  : <><b>먼저 사업을 알려주세요.</b> 여기 적은 내용이 이후 모든 질문과 AI 추천에 반영됩니다.</>
+                : <><b>어떤 걸 만들까요?</b> 같은 사업으로 여러 종류의 플랜을 만들 수 있어요.</>}
             </p>
 
             {/* 단계 표시 */}

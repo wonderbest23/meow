@@ -25,8 +25,9 @@ const ICONS = {
 /** /plan 이하 모든 화면이 공유하는 고정 레일 셸 */
 export default function PlanShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
-  const onPlan = pathname.startsWith("/plan") && !pathname.startsWith("/plan/start");
   const onStart = pathname.startsWith("/plan/start");
+  // 목록·개요·섹션 위저드는 '내 플랜'으로 묶어 하이라이트
+  const onPlan = !onStart && pathname.startsWith("/plan");
 
   return (
     <div className={styles.shell}>

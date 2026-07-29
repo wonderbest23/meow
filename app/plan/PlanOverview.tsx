@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PLAN_BLUEPRINT, totalSections, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
-import { planStatuses, assembleSections, hydrateFromServer } from "../../lib/plan-builder/plan-store";
+import { planStatuses, assembleSections, hydrateFromServer, activePlan } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -54,7 +54,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       if (!alive) return;
       setStoreStatuses(planStatuses(s));
       setAssembled(assembleSections(s));
-      if (s.title) setTitle(s.title);
+      const p = activePlan(s);
+      if (p) setTitle(p.title);
     });
     return () => {
       alive = false;

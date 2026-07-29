@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import SectionWizard from "../../SectionWizard";
 import { type PlanSectionStatus } from "../../../../lib/plan-builder/blueprint";
-import { planStatuses, hydrateFromServer } from "../../../../lib/plan-builder/plan-store";
+import { planStatuses, hydrateFromServer, activePlan } from "../../../../lib/plan-builder/plan-store";
 
-// Phase 2~4: 섹션 질문 위저드 라우트 /plan/[chapterId]/[sectionId]
+// 섹션 질문 위저드 라우트 /plan/[chapterId]/[sectionId]
 export default function SectionPage() {
   const params = useParams<{ chapterId: string; sectionId: string }>();
   const router = useRouter();
@@ -19,8 +19,11 @@ export default function SectionPage() {
     hydrateFromServer().then((s) => {
       if (!alive) return;
       setStatuses(planStatuses(s));
-      if (s.title) setPlanTitle(s.title);
-      if (s.planType) setPlanType(s.planType);
+      const p = activePlan(s);
+      if (p) {
+        setPlanTitle(p.title);
+        setPlanType(p.planType);
+      }
     });
     return () => {
       alive = false;
@@ -34,7 +37,7 @@ export default function SectionPage() {
       statuses={statuses}
       planTitle={planTitle}
       planType={planType}
-      onBack={() => router.push("/plan")}
+      onBack={() => router.push("/plan/overview")}
       onNavigateSection={(chapterId, sectionId) => router.push(`/plan/${chapterId}/${sectionId}`)}
       onComplete={() => {
         // 생성 완료(스토어 저장은 위저드가 처리). 개요로 돌아가면 반영됨.
