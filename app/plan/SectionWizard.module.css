@@ -1192,3 +1192,72 @@
   font-size: 9px;
   line-height: 1;
 }
+
+/*
+ * 안내 비컨 — 레퍼런스 실측값 그대로.
+ * .animate { animation: pulse 2s ease infinite }
+ * pulse: 0% scale(.95) + 링 0 / 70% scale(1.05) + 링 20px 확산·소멸 / 100% scale(.95)
+ * 색만 우리 팔레트(밝은 배경=브랜드 블루, 어두운 목차=흰색)로 바꿨다.
+ */
+@keyframes guidePulse {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 var(--beacon-ring, rgba(49, 130, 246, 0.55));
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 20px rgba(49, 130, 246, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(49, 130, 246, 0);
+  }
+}
+.beacon {
+  position: relative;
+  animation: guidePulse 2s ease infinite;
+}
+
+/* 목차용 — 라벨을 알약으로 감싸 링이 읽히게 (레퍼런스도 라벨 알약에 붙인다) */
+.beaconNav {
+  --beacon-ring: rgba(255, 255, 255, 0.45);
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  margin-left: -10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.09);
+  animation: guidePulseNav 2s ease infinite;
+}
+@keyframes guidePulseNav {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.45);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  }
+}
+
+/* 트래커 그룹이 방금 채워졌을 때 — 레퍼런스 flash-highlight (노란 배경 1초 소멸) */
+@keyframes flashHighlight {
+  0% { background-color: rgba(244, 183, 64, 0.28); }
+  100% { background-color: transparent; }
+}
+.trackList li.flash {
+  animation: flashHighlight 1s ease 1;
+  border-radius: 8px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .beacon,
+  .beaconNav,
+  .trackList li.flash {
+    animation: none;
+  }
+}

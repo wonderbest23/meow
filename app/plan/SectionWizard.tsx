@@ -443,6 +443,44 @@ export default function SectionWizard({
         ? null
         : "payment_required";
 
+  /**
+   * 안내 비컨의 대상 — 순서상 첫 미완료 섹션.
+   * 레퍼런스 방식: 다음 행동으로 이어지는 모든 클릭 지점(목차 항목·생성 버튼)에
+   * 같은 펄스를 동시에 붙이고, 상태가 바뀌면 비컨이 다음 대상으로 옮겨간다.
+   */
+  const guideKey = useMemo(() => {
+    for (const ch of chapters) {
+      for (const sec of ch.sections) {
+        const k = sectionKey(ch.id, sec.id);
+        if (statuses[k] !== "done") return k;
+      }
+    }
+    return null;
+  }, [chapters, statuses]);
+
+  // 트래커 그룹이 방금 다 채워졌을 때 한 번 번쩍 — 진행이 반영됐음을 알린다
+  const prevFilled = useRef<Set<string>>(new Set());
+  const [flashed, setFlashed] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const now = new Set<string>();
+    for (const g of groups) {
+      const pg = perGroup[g.id];
+      if (pg && pg.total > 0 && pg.done >= pg.total) now.add(g.id);
+    }
+    const fresh = [...now].filter((id) => !prevFilled.current.has(id));
+    prevFilled.current = now;
+    if (!fresh.length) return;
+    setFlashed((prev) => new Set([...prev, ...fresh]));
+    const t = setTimeout(() => {
+      setFlashed((prev) => {
+        const next = new Set(prev);
+        for (const id of fresh) next.delete(id);
+        return next;
+      });
+    }, 1000);
+    return () => clearTimeout(t);
+  }, [groups, perGroup]);
+
   const complete = answeredReq >= totalReq;
 
   /** 아직 답하지 않은 필수 질문 id — 화면 순서대로 */
@@ -506,9 +544,10 @@ export default function SectionWizard({
                       const active = ch.id === chapter.id && s.id === section.id;
                       const paywalled =
                         !!access && access.authenticated && !access.paid && !access.freeKeys.includes(sk) && !done;
+                      const guided = sk === guideKey && !paywalled;
                       return (
                         <button key={s.id} className={`${styles.sec} ${done ? styles.done : ""} ${active ? styles.on : ""}`} onClick={() => onNavigateSection?.(ch.id, s.id)}>
-                          <span className={styles.secLabel}>
+                          <span className={`${styles.secLabel} ${guided ? styles.beaconNav : ""}`}>
                             <span className={styles.secNo}>{ci + 1}.{si + 1}</span>
                             {s.title}
                           </span>
@@ -676,7 +715,7 @@ export default function SectionWizard({
                   <button className={styles.btn} onClick={onBack}>← 이전</button>
                   <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => { setAnswers({}); setSuggestions({}); saveAnswers(key, {}); }}>초기화</button>
                   <button
-                    className={`${styles.btn} ${styles.btnPrimary} ${!complete ? styles.btnWaiting : ""}`}
+                    className={`${styles.btn} ${styles.btnPrimary} ${!complete ? styles.btnWaiting : styles.beacon}`}
                     disabled={generating}
                     onClick={attemptGenerate}
                   >
@@ -703,7 +742,7 @@ export default function SectionWizard({
                 const pg = perGroup[g.id] ?? { done: 0, total: 0 };
                 const filled = pg.total > 0 && pg.done >= pg.total;
                 return (
-                  <li key={g.id} className={`${filled ? styles.filled : ""} ${showMissing && !filled ? styles.trackMissing : ""}`}>
+                  <li key={g.id} className={`${filled ? styles.filled : ""} ${showMissing && !filled ? styles.trackMissing : ""} ${flashed.has(g.id) ? styles.flash : ""}`}>
                     <span className={styles.tdot}>{filled && <Check />}</span>
                     <span className={styles.tn}>{g.label}</span>
                     <span className={styles.tc}>{pg.done}/{pg.total}</span>
@@ -712,7 +751,7 @@ export default function SectionWizard({
               })}
             </ul>
             <button
-              className={`${styles.finish} ${!complete && !generatedHtml ? styles.finishWaiting : ""}`}
+              className={`${styles.finish} ${!complete && !generatedHtml ? styles.finishWaiting : !generatedHtml && !gate ? styles.beacon : ""}`}
               disabled={generating || !!generatedHtml || !!gate}
               onClick={attemptGenerate}
             >

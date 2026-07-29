@@ -505,11 +505,22 @@
 
 /* 다음 버튼 — 조건이 채워지면 눌러야 한다는 걸 알린다 */
 .ready {
-  animation: readyPulse 2s ease-in-out infinite;
+  /* 레퍼런스 pulse 구동과 동일한 수축·팽창 + 확산 링 */
+  animation: readyPulse 2s ease infinite;
 }
 @keyframes readyPulse {
-  0%, 100% { box-shadow: 0 8px 18px rgba(47, 87, 244, 0.28); }
-  50% { box-shadow: 0 8px 18px rgba(47, 87, 244, 0.28), 0 0 0 8px rgba(49, 130, 246, 0.1); }
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 8px 18px rgba(47, 87, 244, 0.28), 0 0 0 0 rgba(49, 130, 246, 0.55);
+  }
+  70% {
+    transform: scale(1.05);
+    box-shadow: 0 8px 18px rgba(47, 87, 244, 0.28), 0 0 0 20px rgba(49, 130, 246, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 8px 18px rgba(47, 87, 244, 0.28), 0 0 0 0 rgba(49, 130, 246, 0);
+  }
 }
 .todo {
   font-size: 12.5px;
