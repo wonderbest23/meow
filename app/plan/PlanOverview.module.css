@@ -60,7 +60,7 @@
   transition: 0.16s;
 }
 .railBtn svg {
-  display: block !important; /* 전역 CSS의 svg 숨김 규칙 무력화 */
+  display: block;
   width: 22px;
   height: 22px;
 }

@@ -7871,7 +7871,9 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
   outline-color: var(--action-blue);
 }
 
-button:not(.brand):not(.mobile-report-backdrop) {
+/* 플랜 빌더(.plan-ui)는 자체 디자인 체계를 쓰므로 이 정규화에서 제외한다.
+   여기 !important가 그쪽 모듈 CSS를 전부 덮어써서 모서리·굵기 위계가 뭉개졌다. */
+button:not(.brand):not(.mobile-report-backdrop):not(.plan-ui *) {
   min-height: 40px;
   border-radius: 14px !important;
   letter-spacing: 0 !important;
@@ -7880,7 +7882,8 @@ button:not(.brand):not(.mobile-report-backdrop) {
   transform: none !important;
 }
 
-button svg,
+/* 같은 이유로 플랜 빌더의 아이콘은 숨기지 않는다 */
+button:not(.plan-ui *) svg,
 .account-link svg,
 .small-start svg,
 .home-sample-preview svg,
@@ -8360,7 +8363,9 @@ body {
   color: var(--text-strong);
 }
 
-:where(input, textarea, select) {
+/* 플랜 빌더는 제외 — 여기 !important가 입력 배경·테두리를 고정해
+   포커스 표시 같은 화면별 스타일을 막았다. */
+:where(input, textarea, select):not(.plan-ui *) {
   border-color: var(--border-soft) !important;
   background: var(--surface) !important;
   color: var(--text-strong) !important;

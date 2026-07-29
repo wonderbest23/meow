@@ -56,7 +56,7 @@
   cursor: pointer;
 }
 .railBtn svg {
-  display: block !important; /* 전역 CSS의 svg 숨김 규칙 무력화 */
+  display: block;
   width: 22px;
   height: 22px;
 }
@@ -435,7 +435,7 @@
   position: relative;
 }
 .cardTop svg {
-  display: block !important; /* 전역 `button svg { display:none }`를 이 화면에서 무력화 */
+  display: block;
   width: 40px;
   height: 40px;
   color: var(--acc);
@@ -550,7 +550,7 @@
   box-shadow: 0 4px 12px rgba(20, 32, 64, 0.1);
 }
 .heroIcon svg {
-  display: block !important; /* 전역 `button svg { display:none }`를 무력화 */
+  display: block;
   width: 27px;
   height: 27px;
 }

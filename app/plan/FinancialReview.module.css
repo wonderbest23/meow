@@ -118,12 +118,14 @@
   font-weight: 700;
   text-align: right;
   font-variant-numeric: tabular-nums;
-  /* 배경·테두리색·글자색은 전역 입력 규칙(!important)이 정하므로 여기서 지정하지 않는다 */
+  color: var(--wz-ink, #191f28);
+  background: var(--wz-panel2, #f7f8fa);
 }
-/* 전역 규칙이 border-color를 덮으므로 포커스는 링(box-shadow)으로 표시한다 */
 .input:focus {
   outline: none;
-  box-shadow: 0 0 0 2px var(--wz-brand, #3182f6);
+  border-color: var(--wz-brand, #3182f6);
+  background: var(--wz-panel, #fff);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--wz-brand, #3182f6) 22%, transparent);
 }
 .unit {
   font-size: 12px;

@@ -75,7 +75,7 @@
   transition: 0.16s;
 }
 .railBtn svg {
-  display: block !important; /* 전역 CSS의 svg 숨김 규칙을 이 화면에서 무력화 */
+  display: block;
   width: 22px;
   height: 22px;
 }
@@ -349,43 +349,6 @@
   .secLabel {
     transition: none;
   }
-}
-/*
- * globals.css:7874의 `button:not(.brand):not(.mobile-report-backdrop)`가
- * border-radius:14px / font-weight:800 / min-height:40px 를 !important로 강제한다.
- * 그래서 이 내비의 사각 행과 글자 굵기 위계가 전부 뭉개졌다.
- * 특이도로는 못 이기므로 이 내비 안에서만 되돌린다(전역 규칙은 다른 화면이 쓰고 있어 건드리지 않는다).
- */
-.page .nav .navTop {
-  border-radius: 6px !important;
-  font-weight: 700 !important;
-}
-.page .nav .navTab {
-  border-radius: 0 !important;
-  font-weight: 700 !important;
-  min-height: 0 !important;
-}
-.page .nav .navTab:first-child {
-  border-radius: 6px 0 0 6px !important;
-}
-.page .nav .navTab:last-child {
-  border-radius: 0 6px 6px 0 !important;
-}
-.page .nav .ch {
-  border-radius: 0 !important;
-  font-weight: 400 !important;
-  min-height: 0 !important;
-}
-.page .nav .sec {
-  border-radius: 0 !important;
-  font-weight: 400 !important;
-  min-height: 0 !important;
-}
-.page .nav .sec.on {
-  font-weight: 700 !important;
-}
-.page .nav .cname {
-  font-weight: 700;
 }
 
 
