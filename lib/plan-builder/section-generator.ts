@@ -45,6 +45,25 @@ export interface SectionGenInput {
   priorSummary?: string;
   /** 계산된 재무표(마크다운) — 재무 섹션에서 산식으로 만든 확정 수치 */
   financialsMarkdown?: string;
+  /**
+   * 아직 해결되지 않은 답변 충돌.
+   * 어느 쪽이 맞는지 확정되지 않았으므로 AI가 한쪽을 골라 단정하지 않도록 알려준다.
+   */
+  conflicts?: Array<{ title: string; detail: string }>;
+}
+
+/** 충돌을 프롬프트 블록으로 — 지어내지 말고 미확정임을 드러내라고 지시한다. */
+function formatConflicts(conflicts?: Array<{ title: string; detail: string }>): string {
+  if (!conflicts?.length) return "";
+  return [
+    "\n[해결되지 않은 답변 충돌]",
+    ...conflicts.map((c) => `- ${c.title}: ${c.detail}`),
+    "",
+    "위 항목은 사용자의 답변끼리 어긋나 어느 쪽이 맞는지 확정되지 않은 상태입니다.",
+    "해당 내용을 단정적으로 서술하지 마세요. 두 값(또는 두 진술)이 모두 존재한다는 사실을 밝히고 '확정 필요'로 표기하세요.",
+    "임의로 한쪽을 골라 사실처럼 쓰거나, 평균·중간값을 내어 새로운 수치를 만들지 마세요.",
+    "충돌과 무관한 내용은 평소대로 작성하세요.",
+  ].join("\n");
 }
 
 function formatBusiness(b?: BusinessInfo): string {
@@ -59,7 +78,8 @@ function formatBusiness(b?: BusinessInfo): string {
   return lines.join("\n");
 }
 
-function buildUserPrompt(input: SectionGenInput): string {
+/** 사용자 프롬프트 조립 (테스트에서 직접 확인할 수 있게 공개) */
+export function buildUserPrompt(input: SectionGenInput): string {
   const biz = formatBusiness(input.business);
   return [
     biz ? `[사업 정보]\n${biz}\n` : `사업명: ${input.planTitle ?? "(미정)"}`,
@@ -77,6 +97,7 @@ function buildUserPrompt(input: SectionGenInput): string {
           "표 앞뒤에 그 수치가 무엇을 뜻하는지, 어떤 점을 주의해야 하는지 해석을 덧붙이세요.",
         ].join("\n")
       : "",
+    formatConflicts(input.conflicts),
     "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
     input.priorSummary
       ? "앞서 작성한 섹션과 용어·숫자·전략 방향이 어긋나지 않게 하고, 같은 내용을 그대로 반복하지 말고 이 섹션의 관점에서 이어서 쓰세요."
@@ -105,6 +126,10 @@ export function fallbackSection(input: SectionGenInput): string {
   if (input.financialsMarkdown) {
     parts.push(`## 재무 계산`);
     parts.push(input.financialsMarkdown);
+  }
+  if (input.conflicts?.length) {
+    parts.push(`## 확정 필요 — 답변이 서로 어긋난 부분`);
+    parts.push(input.conflicts.map((c) => `- **${c.title}** — ${c.detail}`).join("\n"));
   }
   parts.push(`## 추가 정의 필요 영역`);
   parts.push(`시장 규모, 경쟁사 비교 수치, 고객 검증 데이터 등은 실제 조사·증빙이 연결될 때 확정합니다. 현재 초안에서는 가정으로만 다루며, 제출 전 실제 값으로 교체합니다.`);

@@ -4,6 +4,7 @@ import { PLAN_BLUEPRINT } from "../../../../lib/plan-builder/blueprint";
 import { generateSection } from "../../../../lib/plan-builder/section-generator";
 import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown } from "../../../../lib/plan-builder/financials";
+import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 
 export const runtime = "nodejs";
@@ -59,6 +60,15 @@ export async function POST(req: Request) {
     }
   }
 
+  // 미해결 충돌을 프롬프트에 함께 넘긴다 — AI가 한쪽을 골라 단정하지 않도록.
+  // 총평(요약) 섹션은 플랜 전체를 요약하므로 모든 충돌을 넘긴다.
+  let conflicts: Array<{ title: string; detail: string }> | undefined;
+  if (body.allAnswers) {
+    const all = findConsistencyIssues(body.allAnswers);
+    const relevant = sectionKey === "summary/executive" ? all : issuesForSection(all, sectionKey);
+    if (relevant.length) conflicts = relevant.map(({ title, detail }) => ({ title, detail }));
+  }
+
   const identity = await requireGuestIdentity();
   const config = resolveLLMConfig(identity.hash, "anthropic");
   const { markdown, source } = await generateSection(config, {
@@ -69,6 +79,7 @@ export async function POST(req: Request) {
     business: body.business,
     priorSummary: body.priorSummary,
     financialsMarkdown,
+    conflicts,
   });
 
   let html = "";
