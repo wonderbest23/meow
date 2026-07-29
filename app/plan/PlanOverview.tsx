@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PLAN_BLUEPRINT, totalSections, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
-import { planStatuses, assembleSections, hydrateFromServer, activePlan } from "../../lib/plan-builder/plan-store";
+import { planStatuses, assembleSections, hydrateFromServer, activePlan, answeredSectionKeys } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -45,6 +45,7 @@ export interface PlanOverviewProps {
 export default function PlanOverview({ statuses: propStatuses = {}, onOpenSection, onBack, onOpenDocument, planTitle = "새 플랜" }: PlanOverviewProps) {
   const [storeStatuses, setStoreStatuses] = useState<Record<string, PlanSectionStatus>>({});
   const [assembled, setAssembled] = useState<ReturnType<typeof assembleSections>>([]);
+  const [inProgress, setInProgress] = useState<Set<string>>(new Set());
   const [title, setTitle] = useState(planTitle);
 
   // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
@@ -54,6 +55,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       if (!alive) return;
       setStoreStatuses(planStatuses(s));
       setAssembled(assembleSections(s));
+      setInProgress(new Set(answeredSectionKeys(s)));
       const p = activePlan(s);
       if (p) setTitle(p.title);
     });
@@ -161,17 +163,19 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                     counter += 1;
                     const key = `${chapter.id}/${section.id}`;
                     const done = statuses[key] === "done";
+                    const writing = !done && inProgress.has(key);
                     const num = counter;
                     return (
                       <button
                         key={section.id}
                         type="button"
-                        className={`${styles.node} ${done ? styles.done : ""}`}
+                        className={`${styles.node} ${done ? styles.done : ""} ${writing ? styles.writing : ""}`}
                         onClick={() => onOpenSection?.(chapter.id, section.id)}
                         title={section.summary}
                       >
                         <span className={styles.nodeNum}>{done ? <CheckIcon /> : num}</span>
                         <span className={styles.nodeLabel}>{section.title}</span>
+                        {writing && <span className={styles.writingTag}>작성 중</span>}
                         <span className={styles.nodeTime}>{section.estMinutes}분</span>
                       </button>
                     );

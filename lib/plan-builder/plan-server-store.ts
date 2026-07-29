@@ -20,6 +20,7 @@ export interface ServerPlan {
   createdAt: string;
   updatedAt: string;
   sections: Record<string, { markdown: string; html: string; generatedAt: string }>;
+  answers: Record<string, Record<string, unknown>>;
 }
 
 export interface ServerPlanState {
@@ -63,6 +64,7 @@ export function normalizeState(input: Partial<ServerPlanState> | null | undefine
       createdAt: str(p?.createdAt, 40) || new Date().toISOString(),
       updatedAt: str(p?.updatedAt, 40) || new Date().toISOString(),
       sections: p?.sections && typeof p.sections === "object" ? p.sections : {},
+      answers: p?.answers && typeof p.answers === "object" ? p.answers : {},
     })),
     activePlanId: typeof input?.activePlanId === "string" ? input.activePlanId.slice(0, 60) : null,
   };

@@ -427,6 +427,21 @@
   color: var(--text-muted, #8b95a1);
   font-variant-numeric: tabular-nums;
 }
+/* 작성 중(답변만 있고 아직 생성 전) */
+.node.writing {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--bandAccent) 55%, transparent);
+}
+.writingTag {
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--bandAccent);
+  background: var(--surface, #fff);
+  border-radius: 999px;
+  padding: 3px 9px;
+  margin-left: 2px;
+}
+
 .node.done {
   background: var(--bandAccent);
   border-color: var(--bandAccent);

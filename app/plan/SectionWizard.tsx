@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PLAN_BLUEPRINT, sectionKey, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
 import {
   questionsForSection,
@@ -9,7 +9,15 @@ import {
   type QuestionGroup,
   type QuestionDef,
 } from "../../lib/plan-builder/questions";
-import { saveSection, loadState, businessContext, priorSectionsSummary, activePlan } from "../../lib/plan-builder/plan-store";
+import {
+  saveSection,
+  loadState,
+  businessContext,
+  priorSectionsSummary,
+  activePlan,
+  loadAnswers,
+  saveAnswers,
+} from "../../lib/plan-builder/plan-store";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -63,9 +71,10 @@ export default function SectionWizard({
   const [editingMd, setEditingMd] = useState<string | null>(null);
   const [savedMd, setSavedMd] = useState<string>("");
 
-  // 이미 생성된 섹션이면 저장된 본문을 불러와 보여준다.
+  // 섹션 진입 시: 저장된 답변 복원 + 이미 생성된 본문이 있으면 표시
   useEffect(() => {
     const p = activePlan();
+    setAnswers(loadAnswers(key));
     const stored = p?.sections[key];
     if (stored) {
       setGeneratedHtml(stored.html);
@@ -78,6 +87,18 @@ export default function SectionWizard({
     }
     setEditingMd(null);
   }, [key]);
+
+  // 답변 변경 시 자동 저장(디바운스) — 새로고침·이동해도 유실되지 않게
+  const hydratedKey = useRef<string | null>(null);
+  useEffect(() => {
+    // 섹션 전환 직후 첫 렌더(복원값)는 저장하지 않는다
+    if (hydratedKey.current !== key) {
+      hydratedKey.current = key;
+      return;
+    }
+    const t = setTimeout(() => saveAnswers(key, answers), 500);
+    return () => clearTimeout(t);
+  }, [answers, key]);
 
   const setAnswer = (qid: string, v: unknown) => setAnswers((prev) => ({ ...prev, [qid]: v }));
   const toggleMulti = (qid: string, opt: string) =>
@@ -323,7 +344,7 @@ export default function SectionWizard({
               ) : (
                 <>
                   <button className={styles.btn} onClick={onBack}>← 이전</button>
-                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => { setAnswers({}); setSuggestions({}); }}>초기화</button>
+                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => { setAnswers({}); setSuggestions({}); saveAnswers(key, {}); }}>초기화</button>
                   <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={!complete || generating} onClick={handleGenerate}>
                     {generating ? "생성 중…" : "완료하고 생성 →"}
                   </button>

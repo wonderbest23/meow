@@ -38,6 +38,8 @@ export interface Plan {
   createdAt: string;
   updatedAt: string;
   sections: Record<string, StoredSection>; // key = `${chapterId}/${sectionId}`
+  /** 섹션별 질문 답변 (생성 전에도 보존) */
+  answers: Record<string, Record<string, unknown>>;
 }
 
 export interface PlanState {
@@ -68,6 +70,7 @@ function migrate(parsed: Record<string, unknown>): PlanState {
       createdAt: p.createdAt || new Date().toISOString(),
       updatedAt: p.updatedAt || new Date().toISOString(),
       sections: p.sections || {},
+      answers: p.answers || {},
     }));
     return {
       business: { ...EMPTY_BUSINESS, ...((parsed.business as Partial<BusinessProfile>) || {}) },
@@ -86,6 +89,7 @@ function migrate(parsed: Record<string, unknown>): PlanState {
     createdAt: now,
     updatedAt: now,
     sections: (parsed.sections as Record<string, StoredSection>) || {},
+    answers: {},
   };
   return {
     business: { ...EMPTY_BUSINESS, ...((parsed.business as Partial<BusinessProfile>) || {}) },
@@ -140,6 +144,7 @@ export function createPlan(planType: string, title?: string): string {
     createdAt: now,
     updatedAt: now,
     sections: {},
+    answers: {},
   };
   s.plans.push(plan);
   s.activePlanId = plan.id;
@@ -175,6 +180,33 @@ export function renamePlan(planId: string, title: string) {
   p.updatedAt = new Date().toISOString();
   persist(s);
   void pushToServer();
+}
+
+/** 활성 플랜의 섹션 답변 불러오기 */
+export function loadAnswers(key: string, state?: PlanState): Record<string, unknown> {
+  const p = activePlan(state);
+  return p?.answers?.[key] ?? {};
+}
+
+/** 활성 플랜에 섹션 답변 저장 (생성 전에도 보존) */
+export function saveAnswers(key: string, answers: Record<string, unknown>) {
+  const s = loadState();
+  const p = activePlan(s);
+  if (!p) return;
+  if (!p.answers) p.answers = {};
+  p.answers[key] = answers;
+  p.updatedAt = new Date().toISOString();
+  persist(s);
+  void pushToServer();
+}
+
+/** 답변이 하나라도 있는 섹션 키 목록 (작성 중 표시용) */
+export function answeredSectionKeys(state?: PlanState): string[] {
+  const p = activePlan(state);
+  if (!p?.answers) return [];
+  return Object.entries(p.answers)
+    .filter(([, a]) => a && Object.values(a).some((v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0)))
+    .map(([k]) => k);
 }
 
 /** 활성 플랜에 섹션 생성 결과 저장 */
