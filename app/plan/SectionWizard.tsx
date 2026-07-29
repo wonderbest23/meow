@@ -21,6 +21,8 @@ import {
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
+import InlineDocEditor from "./InlineDocEditor";
+import { htmlToMarkdown } from "../../lib/plan-builder/html-to-markdown";
 import FinancialReview from "./FinancialReview";
 import styles from "./SectionWizard.module.css";
 
@@ -111,6 +113,7 @@ export default function SectionWizard({
   const streamRef = useRef<HTMLDivElement>(null);
   const [editingMd, setEditingMd] = useState<string | null>(null);
   const [savedMd, setSavedMd] = useState<string>("");
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">("idle");
   // 재무 수치 검토에서 사용자가 고친 값 (질문 섹션이 아니라 별도 키에 저장)
   const [finOverrides, setFinOverrides] = useState<AnswerMap>({});
   // 플랜 전체 답변 스냅샷 — 재무 입력이 다른 섹션에 흩어져 있어 함께 필요하다.
@@ -289,6 +292,20 @@ export default function SectionWizard({
     }
   }
 
+  /**
+   * 인라인 편집 결과를 저장한다.
+   * 원본 형식은 마크다운이므로(PDF·DOCX가 여기서 나온다) HTML을 되돌려 저장한다.
+   */
+  function saveInline(nextHtml: string) {
+    const md = htmlToMarkdown(nextHtml);
+    if (!md.trim() || md === savedMd) return;
+    setSaveState("saving");
+    saveSection(key, md, nextHtml);
+    setSavedMd(md);
+    setGeneratedHtml(nextHtml);
+    setSaveState("saved");
+  }
+
   /** 직접 수정한 마크다운을 저장 (HTML은 서버에서 다시 렌더) */
   async function saveEdited() {
     const md = (editingMd ?? "").trim();
@@ -453,19 +470,8 @@ export default function SectionWizard({
               ) : generatedHtml ? (
                 <>
                   <span className={styles.genBadge}>{genSource === "ai" ? "✨ AI 생성 본문" : "초안(키 미설정 · 폴백)"}</span>
-                  {/* 본문을 바로 눌러 고칠 수 있게 — 버튼을 찾아 누를 필요가 없다 */}
-                  <div
-                    className={styles.genDoc}
-                    role="button"
-                    tabIndex={0}
-                    title="눌러서 바로 수정"
-                    onClick={() => setEditingMd(savedMd)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") setEditingMd(savedMd);
-                    }}
-                    dangerouslySetInnerHTML={{ __html: generatedHtml }}
-                  />
-                  <p className={styles.editHint}>✏️ 본문을 누르면 바로 고칠 수 있어요.</p>
+                  {/* 편집 모드가 따로 없다 — 문서가 늘 편집 가능한 상태다 */}
+                  <InlineDocEditor html={generatedHtml} onChange={saveInline} status={saveState} />
                 </>
               ) : generating ? (
                 <div className={styles.writing}>
@@ -535,7 +541,7 @@ export default function SectionWizard({
               ) : generatedHtml ? (
                 <>
                   <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
-                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)}>✏️ 직접 편집</button>
+                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="마크다운 원문을 직접 손봅니다">〈/〉 마크다운</button>
                   <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={handleGenerate}>
                     {generating ? "생성 중…" : "🔄 다시 생성"}
                   </button>

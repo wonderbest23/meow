@@ -12,7 +12,10 @@ const planMarked = new Marked({ async: true }).use({
       if (lang !== CHART_FENCE_LANG) return false;
       const spec = parseChartSpec(text);
       // 형식이 어긋나면 원시 JSON을 노출하지 않고 조용히 지운다
-      return spec ? `<figure class="plan-chart-figure">${chartToSvg(spec)}</figure>` : "";
+      if (!spec) return "";
+      // 인라인 편집 후 마크다운으로 되돌릴 때 쓰도록 원본 스펙을 함께 심는다
+      const raw = JSON.stringify(spec).replace(/"/g, "&quot;");
+      return `<figure class="plan-chart-figure" data-chart-spec="${raw}">${chartToSvg(spec)}</figure>`;
     },
   },
 });

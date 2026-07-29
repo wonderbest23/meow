@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { hydrateFromServer, assembleSections, activePlan, loadState } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection } from "../../../lib/plan-builder/plan-store";
+import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
+import InlineDocEditor from "../InlineDocEditor";
 import styles from "./PlanDocument.module.css";
 
 /** /plan/document — 생성된 섹션을 하나의 문서로 조립해 보여주고 내보낸다. */
@@ -12,6 +14,16 @@ export default function PlanDocumentPage() {
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
   const [title, setTitle] = useState("사업계획서");
   const [planType, setPlanType] = useState("");
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+
+  /** 문서에서 고친 내용을 저장한다. 원본은 마크다운이므로 되돌려 담는다. */
+  function saveEdit(key: string, nextHtml: string) {
+    const md = htmlToMarkdown(nextHtml);
+    if (!md.trim()) return;
+    saveSection(key, md, nextHtml);
+    setSections((prev) => prev.map((s) => (s.key === key ? { ...s, markdown: md, html: nextHtml } : s)));
+    setSavedKey(key);
+  }
   const [exporting, setExporting] = useState<"pdf" | "docx" | null>(null);
   const [ready, setReady] = useState(false);
 
@@ -134,7 +146,14 @@ export default function PlanDocumentPage() {
                 <section key={s.key} id={`sec-${s.key.replace("/", "-")}`} className={styles.section}>
                   <div className={styles.secCrumb}>{s.chapterTitle}</div>
                   <h3 className={styles.secTitle}>{s.sectionTitle}</h3>
-                  <div className={styles.body} dangerouslySetInnerHTML={{ __html: s.html }} />
+                  {/* 문서 화면에서도 바로 고칠 수 있다 — 위저드로 되돌아갈 필요가 없다 */}
+                  <div className={styles.body}>
+                    <InlineDocEditor
+                      html={s.html}
+                      status={savedKey === s.key ? "saved" : "idle"}
+                      onChange={(nextHtml) => saveEdit(s.key, nextHtml)}
+                    />
+                  </div>
                 </section>
               ))}
             </article>

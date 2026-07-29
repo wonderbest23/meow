@@ -1,0 +1,159 @@
+/* 인라인 문서 편집기 — 문서가 늘 편집 가능한 상태로 보인다 */
+
+.wrap {
+  position: relative;
+}
+
+/* 편집 영역 자체는 읽는 화면과 같아야 한다 — 입력창처럼 보이면 안 된다 */
+.surface {
+  font-size: 14.5px;
+  line-height: 1.75;
+  color: var(--wz-ink, #191f28);
+  outline: none;
+  border-radius: 10px;
+  padding: 6px 10px;
+  margin: 0 -10px;
+  transition: background 0.14s, box-shadow 0.14s;
+}
+.surface:hover {
+  background: var(--wz-panel2, #f7f8fa);
+}
+.surface:focus {
+  background: transparent;
+  box-shadow: 0 0 0 1px var(--wz-line, #e5e8eb);
+}
+
+.surface h1,
+.surface h2 {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  margin: 24px 0 10px;
+}
+.surface h3 {
+  font-size: 15.5px;
+  font-weight: 800;
+  margin: 18px 0 8px;
+}
+.surface p {
+  margin: 0 0 12px;
+}
+.surface ul,
+.surface ol {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+.surface li {
+  margin-bottom: 5px;
+}
+.surface li > p {
+  margin: 0;
+}
+.surface blockquote {
+  margin: 0 0 12px;
+  padding: 8px 14px;
+  border-left: 3px solid var(--wz-brand, #3182f6);
+  background: var(--wz-panel2, #f7f8fa);
+  border-radius: 0 8px 8px 0;
+  color: var(--wz-muted, #4e5968);
+}
+.surface strong {
+  font-weight: 800;
+}
+.surface a {
+  color: var(--wz-brand, #3182f6);
+  text-decoration: underline;
+}
+.surface hr {
+  border: 0;
+  border-top: 1px solid var(--wz-line, #e5e8eb);
+  margin: 20px 0;
+}
+
+/* 표 */
+.surface table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 0 0 14px;
+  font-size: 13px;
+  table-layout: fixed;
+}
+.surface th,
+.surface td {
+  border: 1px solid var(--wz-line, #e5e8eb);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.surface th {
+  background: var(--wz-panel2, #f7f8fa);
+  font-weight: 800;
+}
+.surface .selectedCell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(49, 130, 246, 0.12);
+  pointer-events: none;
+}
+
+/* 차트는 편집 대상이 아니다 */
+.surface figure {
+  margin: 14px 0 20px;
+  padding: 10px;
+  border: 1px solid var(--wz-line, #e5e8eb);
+  border-radius: 12px;
+  background: #fff;
+  overflow-x: auto;
+}
+.surface figure svg {
+  display: block;
+  min-width: 440px;
+  max-width: 100%;
+  height: auto;
+}
+
+/* 선택 시 뜨는 서식 툴바 */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--wz-ink, #191f28);
+  border-radius: 10px;
+  padding: 4px 5px;
+  box-shadow: 0 10px 26px rgba(20, 32, 64, 0.28);
+}
+.tbBtn {
+  border: 0;
+  background: transparent;
+  color: #e5e9ef;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1;
+  padding: 7px 9px;
+  border-radius: 7px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tbBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.tbOn {
+  background: var(--wz-brand, #3182f6);
+  color: #fff;
+}
+.tbSep {
+  width: 1px;
+  height: 16px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 3px;
+}
+
+.status {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--wz-faint, #8b95a1);
+  min-height: 16px;
+}
