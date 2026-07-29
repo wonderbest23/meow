@@ -263,3 +263,19 @@
     font-size: 24px;
   }
 }
+
+/* 누적 손익 곡선 — 본문 폭에 맞춰 넣고 좁은 화면에서는 가로 스크롤 */
+.body :global(figure.plan-chart-figure) {
+  margin: 14px 0 20px;
+  padding: 10px;
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 12px;
+  background: #fff;
+  overflow-x: auto;
+}
+.body :global(figure.plan-chart-figure svg) {
+  display: block;
+  min-width: 460px;
+  max-width: 100%;
+  height: auto;
+}

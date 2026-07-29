@@ -1,6 +1,8 @@
 // 재무 자동 계산 — 사용자가 입력한 숫자로 단위경제·손익분기·12개월 손익표를 계산한다.
 // 추정이 아니라 산식으로만 계산하며, 입력이 없으면 계산하지 않고 '추가 정의 필요'로 남긴다.
 
+import { buildCumulativeChart, chartFence } from "./chart";
+
 export interface FinancialInputs {
   /** 1건(1인) 평균 판매 금액 */
   unitPrice?: number;
@@ -363,6 +365,13 @@ export function financialsToMarkdown(
     if (opts?.staffIncluded) notes.push("- 고정비에는 입력하신 월 인건비가 합산되어 있습니다.");
     notes.push("- 위 수치는 입력값에 산식을 적용한 계산 결과이며, 실제 매출·비용은 시장 상황에 따라 달라집니다.");
     parts.push(notes.join("\n"));
+
+    // 누적 손익 곡선 — 손익분기까지 걸리는 기간을 그림으로 보여준다.
+    const chart = buildCumulativeChart(r);
+    if (chart) {
+      parts.push(`### ${chart.title}`);
+      parts.push(chartFence(chart));
+    }
   }
 
   return parts.join("\n\n");

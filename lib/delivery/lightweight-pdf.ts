@@ -1,4 +1,5 @@
 import { marked, type Token, type Tokens } from "marked";
+import { CHART_FENCE_LANG, parseChartSpec, chartScale, shortWon } from "../plan-builder/chart";
 import { subsetTrueType } from "./font-subset";
 
 type PdfDocumentInput = {
@@ -320,8 +321,74 @@ class PdfLayout {
         this.page.cursor += 14;
         continue;
       }
-      if (token.type === "code") this.text(token.text, { size: 8, color: "45544E", indent: 12 });
+      if (token.type === "code") {
+        if ((token as Tokens.Code).lang === CHART_FENCE_LANG) {
+          const spec = parseChartSpec(token.text);
+          // 형식이 어긋나면 원시 JSON을 문서에 흘리지 않는다
+          if (spec) this.lineChart(spec.points, spec.breakEvenMonth);
+          continue;
+        }
+        this.text(token.text, { size: 8, color: "45544E", indent: 12 });
+      }
     }
+  }
+
+  /** 누적 손익 곡선 — 0선을 기준으로 적자·흑자 구간을 나눠 보여준다. */
+  private lineChart(points: Array<{ label: string; value: number }>, breakEvenMonth: number | null) {
+    const height = 168;
+    const padL = 54;
+    const padT = 16;
+    const padB = 20;
+    this.ensure(height + 16);
+    const top = this.page.cursor;
+    const plotW = CONTENT_WIDTH - padL - 8;
+    const plotH = height - padT - padB;
+
+    this.rect(LEFT, top, CONTENT_WIDTH, height, "FCFDFE", "E5E8EB");
+
+    const { min, max } = chartScale(points);
+    const range = max - min || 1;
+    // PDF 좌표계는 아래가 원점이므로 y를 뒤집어 계산한다
+    const px = (i: number) => LEFT + padL + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
+    const py = (v: number) => PAGE_HEIGHT - (top + padT) - plotH + ((v - min) / range) * plotH;
+
+    // 눈금선 + 축 라벨
+    for (let i = 0; i <= 4; i += 1) {
+      const value = min + (range * i) / 4;
+      const y = py(value);
+      this.page.commands.push(`q ${rgb("E9EDF2")} RG 0.6 w ${px(0).toFixed(2)} ${y.toFixed(2)} m ${px(points.length - 1).toFixed(2)} ${y.toFixed(2)} l S Q`);
+      this.drawText(shortWon(Math.round(value)), LEFT + 8, PAGE_HEIGHT - y - 3.2, { size: 6.6, color: "8B95A1", width: padL - 12 });
+    }
+
+    // 0선
+    const zero = py(0);
+    this.page.commands.push(`q ${rgb("8B95A1")} RG 1 w ${px(0).toFixed(2)} ${zero.toFixed(2)} m ${px(points.length - 1).toFixed(2)} ${zero.toFixed(2)} l S Q`);
+
+    // 곡선
+    const path = points.map((p, i) => `${px(i).toFixed(2)} ${py(p.value).toFixed(2)} ${i === 0 ? "m" : "l"}`).join(" ");
+    this.page.commands.push(`q ${rgb("3182F6")} RG 1.6 w 1 j 1 J ${path} S Q`);
+
+    // 각 점 — 적자는 붉게, 흑자는 초록으로
+    points.forEach((p, i) => {
+      const cx = px(i);
+      const cy = py(p.value);
+      this.page.commands.push(`q ${rgb(p.value < 0 ? "D6455D" : "0F9D66")} rg ${(cx - 1.4).toFixed(2)} ${(cy - 1.4).toFixed(2)} 2.8 2.8 re f Q`);
+    });
+
+    // 흑자 전환 지점
+    if (breakEvenMonth && breakEvenMonth <= points.length) {
+      const mx = px(breakEvenMonth - 1);
+      this.page.commands.push(`q ${rgb("0F9D66")} RG 0.8 w [3 2] 0 d ${mx.toFixed(2)} ${py(min).toFixed(2)} m ${mx.toFixed(2)} ${py(max).toFixed(2)} l S Q`);
+      this.drawText(`${breakEvenMonth}개월차 월 흑자 전환`, Math.min(mx + 4, LEFT + CONTENT_WIDTH - 90), top + padT, { size: 7, color: "0F9D66", width: 90, bold: true });
+    }
+
+    // x축 라벨(격월)
+    points.forEach((p, i) => {
+      if (i % 2 !== 0 && i !== points.length - 1) return;
+      this.drawText(p.label, px(i) - 8, top + height - padB + 6, { size: 6.6, color: "8B95A1", width: 24 });
+    });
+
+    this.page.cursor += height + 14;
   }
 
   private table(token: Tokens.Table) {

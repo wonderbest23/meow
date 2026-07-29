@@ -19,6 +19,7 @@ import {
   type ITableCellOptions,
 } from "docx";
 import { marked, type Token, type Tokens } from "marked";
+import { CHART_FENCE_LANG, parseChartSpec, shortWon, type ChartPoint } from "../plan-builder/chart";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderLightweightPdf } from "./lightweight-pdf";
@@ -118,6 +119,69 @@ function docxTableCell(text: string, header: boolean): TableCell {
   return new TableCell(options);
 }
 
+/** 막대 한 칸 — 공백에 음영을 넣어 길이로 크기를 표현한다(Word에 그림을 넣지 않고 그린다). */
+function barCell(width: number, fill: string, align: (typeof AlignmentType)[keyof typeof AlignmentType]): TableCell {
+  const blocks = "\u00a0".repeat(Math.max(0, Math.round(width)));
+  return new TableCell({
+    margins: { top: 40, bottom: 40, left: 60, right: 60 },
+    children: [new Paragraph({
+      alignment: align,
+      children: blocks ? [new TextRun({ text: blocks, size: 16, shading: { type: ShadingType.CLEAR, fill }, font: docxFont })] : [],
+      spacing: { after: 0 },
+    })],
+  });
+}
+
+/**
+ * 누적 손익 곡선을 Word에서 표현한다.
+ * 이미지를 넣을 수 없으므로 0을 가운데 두고 좌(적자)·우(흑자)로 뻗는 막대표로 그린다.
+ */
+function chartTable(points: ChartPoint[], breakEvenMonth: number | null): Table {
+  const peak = Math.max(1, ...points.map((p) => Math.abs(p.value)));
+  const MAX_BLOCKS = 26;
+  const label = (p: ChartPoint, i: number) =>
+    breakEvenMonth === i + 1 ? `${p.label} ◀ 월 흑자 전환` : p.label;
+
+  return new Table({
+    width: { size: 100, type: WidthType.PERCENTAGE },
+    borders: {
+      top: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+      bottom: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+      left: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+      right: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+      insideHorizontal: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+      insideVertical: { style: BorderStyle.NONE, size: 0, color: "FFFFFF" },
+    },
+    rows: points.map((p, i) => {
+      const blocks = (Math.abs(p.value) / peak) * MAX_BLOCKS;
+      const negative = p.value < 0;
+      return new TableRow({
+        children: [
+          new TableCell({
+            width: { size: 22, type: WidthType.PERCENTAGE },
+            margins: { top: 40, bottom: 40, left: 0, right: 80 },
+            children: [new Paragraph({
+              alignment: AlignmentType.RIGHT,
+              children: [new TextRun({ text: label(p, i), size: 16, color: breakEvenMonth === i + 1 ? "0F9D66" : colors.muted, bold: breakEvenMonth === i + 1, font: docxFont })],
+              spacing: { after: 0 },
+            })],
+          }),
+          barCell(negative ? blocks : 0, "F2A6B2", AlignmentType.RIGHT),
+          barCell(negative ? 0 : blocks, "9BD9BC", AlignmentType.LEFT),
+          new TableCell({
+            width: { size: 22, type: WidthType.PERCENTAGE },
+            margins: { top: 40, bottom: 40, left: 80, right: 0 },
+            children: [new Paragraph({
+              children: [new TextRun({ text: `${shortWon(p.value)}원`, size: 16, color: negative ? "B23A4E" : "0F7A52", font: docxFont })],
+              spacing: { after: 0 },
+            })],
+          }),
+        ],
+      });
+    }),
+  });
+}
+
 function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
   const blocks: Array<Paragraph | Table> = [];
   const tokens = marked.lexer(document.markdown, { gfm: true });
@@ -185,6 +249,15 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
       continue;
     }
     if (token.type === "code") {
+      if ((token as Tokens.Code).lang === CHART_FENCE_LANG) {
+        const spec = parseChartSpec(token.text);
+        // 형식이 어긋나면 원시 JSON을 문서에 흘리지 않는다
+        if (spec) {
+          blocks.push(chartTable(spec.points, spec.breakEvenMonth));
+          blocks.push(new Paragraph({ text: "", spacing: { after: 160 } }));
+        }
+        continue;
+      }
       blocks.push(new Paragraph({
         children: [new TextRun({ text: token.text, font: "Consolas", size: 18 })],
         shading: { type: ShadingType.CLEAR, fill: "F3F5F4" },

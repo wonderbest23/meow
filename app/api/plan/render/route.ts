@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { marked } from "marked";
+import { renderPlanMarkdown } from "../../../../lib/plan-builder/markdown";
 
 export const runtime = "nodejs";
 
@@ -13,7 +13,7 @@ export async function POST(req: Request) {
   }
   let html = "";
   try {
-    html = await marked.parse(markdown, { async: true });
+    html = await renderPlanMarkdown(markdown);
   } catch {
     html = markdown.replace(/\n/g, "<br>");
   }
