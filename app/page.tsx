@@ -77,6 +77,7 @@ import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
+import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
 import { MarketPlanPanel } from "../components/market-plan-panel";
 import { LandingBuilderPanel } from "../components/landing-builder-panel";
@@ -4259,6 +4260,7 @@ function ProjectWorkspace({
 }
 
 export default function Page() {
+  const router = useRouter();
   const [screen, setScreen] = useState<Screen>("home");
   const [answers, setAnswers] = useState<AssessmentAnswers>({});
   const [profile, setProfile] = useState<FounderProfile>(() => calculateProfile({}));
@@ -4515,5 +4517,7 @@ export default function Page() {
   if (screen === "project" && selectedProject) return <ProjectWorkspace opportunity={selectedProject} serverProject={serverProject} setServerProject={setServerProject} onHome={() => navigate("home")} />;
   if (screen === "sample" || screen === "delivery") return <FinalDelivery opportunity={paidReportDemoOpportunity} price={49000} brandChoice="곁봄" serverProject={null} demo onHome={returnFromSample} onStart={sampleReturnScreen === "home" ? () => navigate("start") : returnFromSample} sampleActionLabel={sampleReturnScreen === "checkout" ? "결제 화면으로 돌아가기" : sampleReturnScreen === "preview" ? "내 초안으로 돌아가기" : undefined} sampleView={sampleView} onCloseSample={sampleReturnScreen === "home" ? undefined : returnFromSample} />;
   if (screen === "explore") return <Explore profile={profile} feedback={feedback} setFeedback={setFeedback} onHome={() => navigate("home")} onStartOpportunity={startOpportunity} />;
-  return <Home onStart={() => navigate("start")} onPreview={() => openSample("home", "summary")} />;
+  // 홈의 '시작하기'는 플랜 빌더로 보낸다.
+  // 기존 진단 흐름(?view=start 이하)은 코드·경로 모두 그대로 두어 링크로 계속 들어올 수 있다.
+  return <Home onStart={() => router.push("/plan/start")} onPreview={() => openSample("home", "summary")} />;
 }
