@@ -24,6 +24,7 @@ import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
 import InlineDocEditor from "./InlineDocEditor";
+import PlanGate from "./PlanGate";
 import { htmlToMarkdown } from "../../lib/plan-builder/html-to-markdown";
 import FinancialReview from "./FinancialReview";
 import styles from "./SectionWizard.module.css";
@@ -120,6 +121,10 @@ export default function SectionWizard({
   const [edited, setEdited] = useState(false);
   const [locked, setLocked] = useState(false);
   const [canUndo, setCanUndo] = useState(false);
+  // 로그인·결제 권한 (서버 판정 결과를 받아온다)
+  const [access, setAccess] = useState<{
+    authenticated: boolean; paid: boolean; freeKeys: string[]; freeLabels: string[]; price: number;
+  } | null>(null);
   // 재무 수치 검토에서 사용자가 고친 값 (질문 섹션이 아니라 별도 키에 저장)
   const [finOverrides, setFinOverrides] = useState<AnswerMap>({});
   // 플랜 전체 답변 스냅샷 — 재무 입력이 다른 섹션에 흩어져 있어 함께 필요하다.
@@ -166,6 +171,23 @@ export default function SectionWizard({
     const t = setTimeout(() => saveAnswers(key, answers), 500);
     return () => clearTimeout(t);
   }, [answers, key]);
+
+  // 권한은 서버에 묻는다 — 화면에서 판단하지 않는다
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setAccess(d);
+      })
+      .catch(() => {
+        // 확인 실패 시엔 잠근 쪽으로 둔다
+        if (alive) setAccess({ authenticated: false, paid: false, freeKeys: [], freeLabels: [], price: 0 });
+      });
+    return () => {
+      alive = false;
+    };
+  }, [planType]);
 
   // 글이 쌓이는 동안 항상 마지막 줄이 보이게
   useEffect(() => {
@@ -412,6 +434,15 @@ export default function SectionWizard({
     [reviewAnswers, key],
   );
 
+  /** 이 섹션이 잠겨 있는지 — 서버와 같은 규칙 */
+  const gate: "login_required" | "payment_required" | null = !access
+    ? null
+    : !access.authenticated
+      ? "login_required"
+      : access.paid || access.freeKeys.includes(key)
+        ? null
+        : "payment_required";
+
   const complete = answeredReq >= totalReq;
 
   /** 아직 답하지 않은 필수 질문 id — 화면 순서대로 */
@@ -473,13 +504,17 @@ export default function SectionWizard({
                       const sk = sectionKey(ch.id, s.id);
                       const done = statuses[sk] === "done";
                       const active = ch.id === chapter.id && s.id === section.id;
+                      const paywalled =
+                        !!access && access.authenticated && !access.paid && !access.freeKeys.includes(sk) && !done;
                       return (
                         <button key={s.id} className={`${styles.sec} ${done ? styles.done : ""} ${active ? styles.on : ""}`} onClick={() => onNavigateSection?.(ch.id, s.id)}>
                           <span className={styles.secLabel}>
                             <span className={styles.secNo}>{ci + 1}.{si + 1}</span>
                             {s.title}
                           </span>
-                          <span className={styles.secDot}>{done && <Check n={11} />}</span>
+                          <span className={styles.secDot}>
+                            {done ? <Check n={11} /> : paywalled ? <span className={styles.secLock}>🔒</span> : null}
+                          </span>
                         </button>
                       );
                     })}
@@ -503,6 +538,15 @@ export default function SectionWizard({
             </div>
 
             <div className={styles.mbody} ref={bodyRef}>
+              {gate && !generatedHtml ? (
+                <PlanGate
+                  reason={gate}
+                  freeLabels={access?.freeLabels}
+                  price={access?.price}
+                  sectionTitle={section.title}
+                />
+              ) : (
+              <>
               {editingMd === null && !generatedHtml && !generating && (
                 <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
               )}
@@ -600,10 +644,14 @@ export default function SectionWizard({
               {chapter.id === "financials" && editingMd === null && !generatedHtml && !generating && (
                 <FinancialReview allAnswers={reviewAnswers} onOverride={setFinOverride} />
               )}
+              </>
+              )}
             </div>
 
             <div className={styles.foot}>
-              {editingMd !== null ? (
+              {gate && !generatedHtml ? (
+                <button className={styles.btn} onClick={onBack}>← 이전</button>
+              ) : editingMd !== null ? (
                 <>
                   <button className={styles.btn} onClick={() => setEditingMd(null)}>취소</button>
                   <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={saveEdited}>
@@ -665,7 +713,7 @@ export default function SectionWizard({
             </ul>
             <button
               className={`${styles.finish} ${!complete && !generatedHtml ? styles.finishWaiting : ""}`}
-              disabled={generating || !!generatedHtml}
+              disabled={generating || !!generatedHtml || !!gate}
               onClick={attemptGenerate}
             >
               <Check n={16} /> {generatedHtml ? "생성 완료" : complete ? "완료하고 생성" : `${totalReq - answeredReq}개 더 답하기`}

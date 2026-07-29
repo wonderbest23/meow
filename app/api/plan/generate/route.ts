@@ -6,6 +6,7 @@ import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown } from "../../../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
+import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT } from "../../../../lib/plan-builder/access";
 
 export const runtime = "nodejs";
 
@@ -70,6 +71,22 @@ export async function POST(req: Request) {
     const all = findConsistencyIssues(body.allAnswers);
     const relevant = sectionKey === "summary/executive" ? all : issuesForSection(all, sectionKey);
     if (relevant.length) conflicts = relevant.map(({ title, detail }) => ({ title, detail }));
+  }
+
+  // 화면만 가려서는 우회할 수 있으므로 생성 자체를 서버에서 막는다.
+  const access = await resolvePlanAccess(body.planType);
+  const reason = checkSectionAccess(access, sectionKey);
+  if (reason !== "ok") {
+    return NextResponse.json(
+      {
+        error: reason,
+        message:
+          reason === "login_required"
+            ? "로그인 후 이용할 수 있습니다."
+            : `무료로는 앞 ${FREE_SECTION_COUNT}개 섹션까지 작성할 수 있습니다. 이어서 쓰려면 결제가 필요합니다.`,
+      },
+      { status: reason === "login_required" ? 401 : 402 },
+    );
   }
 
   const identity = await requireGuestIdentity();
