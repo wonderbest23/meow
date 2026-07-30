@@ -15,7 +15,7 @@ import {
 } from "../../lib/plan-builder/plan-store";
 import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
-import { LayoutGrid, FileText, Zap, Lock } from "lucide-react";
+import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -32,15 +32,6 @@ const CheckIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" width={15} height={15}>
     <path d="M5 12.5 10 17l9-11" />
   </svg>
-);
-
-const Connector = () => (
-  <div className={styles.conn} aria-hidden="true">
-    <svg viewBox="0 0 60 36" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round">
-      <path d="M10 5 C 44 7, 48 16, 42 30" />
-      <path d="M34 24 l8 8 8 -6" />
-    </svg>
-  </div>
 );
 
 export interface PlanOverviewProps {
@@ -239,7 +230,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         {/* 다 채운 사람에게 마지막 단계 — 발표자료 */}
         {doneCount > 0 && doneCount === total && (
           <button type="button" className={styles.finale} onClick={onOpenDocument}>
-            <span className={styles.finaleIcon} aria-hidden="true">📊</span>
+            <span className={styles.finaleIcon} aria-hidden="true"><Presentation size={22} /></span>
             <span className={styles.finaleBody}>
               <b>{total}개 섹션을 모두 채우셨습니다</b>
               <span>이제 이 내용으로 사업 제안서(PPT)를 만들 수 있어요. 문서 화면에서 바로 받으실 수 있습니다.</span>
@@ -287,12 +278,13 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                 className={styles.band}
                 style={{ ["--bandBg" as string]: tone.bg, ["--bandAccent" as string]: tone.accent }}
               >
-                <div>
-                  <div className={styles.chapNo}>챕터 {ci + 1}</div>
-                  <h3 className={styles.chapName}>
-                    <b>{chapter.lead}</b>
-                    {chapter.rest}
-                  </h3>
+                <div className={styles.chapHead}>
+                  <span className={styles.chapNo}>{ci + 1}</span>
+                  <h3 className={styles.chapName}>{chapter.title}</h3>
+                  <span className={styles.chapCount}>
+                    {chapter.sections.filter((sec) => statuses[`${chapter.id}/${sec.id}`] === "done").length}
+                    /{chapter.sections.length}
+                  </span>
                 </div>
                 <div className={styles.nodes}>
                   {chapter.sections.map((section) => {
@@ -321,7 +313,6 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                     );
                   })}
                 </div>
-                {ci < chapters.length - 1 && <Connector />}
               </div>
             );
           })}

@@ -402,153 +402,138 @@
   font-size: 12px;
 }
 
-/* 챕터 밴드 */
+/* 챕터 밴드 — 파스텔 배경 대신 흰 패널 + 강조 번호 (문서 화면과 같은 언어) */
 .plan {
   display: flex;
   flex-direction: column;
+  gap: 14px;
 }
 .band {
-  position: relative;
-  display: grid;
-  grid-template-columns: 190px minmax(0, 1fr);
-  align-items: center;
-  gap: 22px;
-  padding: 22px 24px;
-  border-radius: 18px;
-  background: var(--bandBg);
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 16px;
+  padding: 18px 22px 20px;
 }
-.band + .band {
-  margin-top: 28px;
+.chapHead {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  margin-bottom: 14px;
 }
 .chapNo {
-  font-size: 11px;
+  font-size: 22px;
   font-weight: 800;
-  letter-spacing: 0.09em;
-  color: var(--bandAccent);
-  text-transform: uppercase;
+  color: var(--bandAccent, #3358f4);
   font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 .chapName {
-  margin: 4px 0 0;
-  font-size: 21px;
+  margin: 0;
+  font-size: 17px;
   font-weight: 800;
-  line-height: 1.15;
   letter-spacing: -0.4px;
   color: var(--text-strong, #191f28);
+  flex: 1;
+  min-width: 0;
 }
-.chapName b {
-  display: block;
+.chapCount {
+  font-size: 12px;
   font-weight: 800;
+  color: var(--text-muted, #8b95a1);
+  font-variant-numeric: tabular-nums;
 }
 .nodes {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  width: 100%;
-  max-width: 560px;
-  margin-left: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 9px;
 }
 .node {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 13px 18px;
-  border-radius: 999px;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 11px;
   cursor: pointer;
-  transition: transform 0.14s ease;
-  background: color-mix(in srgb, var(--bandAccent) 14%, var(--surface, #fff));
-  border: 1px solid color-mix(in srgb, var(--bandAccent) 24%, transparent);
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  background: var(--surface-soft, #f7f8fa);
+  border: 1px solid var(--border-soft, #e5e8eb);
+  text-align: left;
 }
 .node:hover {
-  transform: translateX(4px);
+  transform: translateY(-2px);
+  border-color: color-mix(in srgb, var(--bandAccent, #3358f4) 55%, transparent);
+  box-shadow: 0 8px 18px rgba(20, 32, 64, 0.08);
 }
 .node:focus-visible {
   outline: 2px solid var(--blue, #3182f6);
   outline-offset: 2px;
 }
 .nodeNum {
-  width: 27px;
-  height: 27px;
+  width: 25px;
+  height: 25px;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 800;
   flex: 0 0 auto;
   background: var(--surface, #fff);
-  color: var(--bandAccent);
+  color: var(--bandAccent, #3358f4);
+  border: 1px solid color-mix(in srgb, var(--bandAccent, #3358f4) 35%, transparent);
   font-variant-numeric: tabular-nums;
-  box-shadow: 0 1px 2px rgba(20, 32, 64, 0.08);
 }
 .nodeLabel {
   font-weight: 700;
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--text-strong, #191f28);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .nodeTime {
   margin-left: auto;
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: var(--text-muted, #8b95a1);
   font-variant-numeric: tabular-nums;
+  flex: 0 0 auto;
 }
 /* 작성 중(답변만 있고 아직 생성 전) */
 .node.writing {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--bandAccent) 55%, transparent);
+  border-color: color-mix(in srgb, var(--bandAccent, #3358f4) 55%, transparent);
+  background: var(--surface, #fff);
 }
 .writingTag {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 800;
-  color: var(--bandAccent);
-  background: var(--surface, #fff);
+  color: var(--bandAccent, #3358f4);
+  background: color-mix(in srgb, var(--bandAccent, #3358f4) 12%, #fff);
   border-radius: 999px;
-  padding: 3px 9px;
-  margin-left: 2px;
+  padding: 3px 8px;
+  flex: 0 0 auto;
 }
 
 .node.done {
-  background: var(--bandAccent);
-  border-color: var(--bandAccent);
-}
-.node.done .nodeLabel {
-  color: #fff;
+  background: var(--surface, #fff);
+  border-color: color-mix(in srgb, #16b877 45%, transparent);
 }
 .node.done .nodeNum {
-  background: rgba(255, 255, 255, 0.92);
-  color: var(--bandAccent);
+  background: #16b877;
+  border-color: #16b877;
+  color: #fff;
 }
-.node.done .nodeTime {
-  color: rgba(255, 255, 255, 0.78);
-}
-
-.conn {
-  position: absolute;
-  right: 90px;
-  bottom: -24px;
-  width: 60px;
-  height: 36px;
-  color: var(--blue, #3182f6);
-  opacity: 0.55;
-  pointer-events: none;
-  z-index: 2;
-}
-.conn svg {
-  width: 100%;
-  height: 100%;
+.node.done .nodeLabel {
+  color: var(--text-body, #4e5968);
 }
 
 @media (max-width: 860px) {
   .band {
-    grid-template-columns: 1fr;
-    gap: 14px;
-    padding: 18px;
+    padding: 15px 16px 16px;
   }
   .nodes {
-    max-width: none;
-  }
-  .conn {
-    display: none;
+    grid-template-columns: 1fr;
   }
   .meters {
     gap: 14px 0;
