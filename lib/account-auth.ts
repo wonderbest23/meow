@@ -32,10 +32,19 @@ const cookieOptions = {
   path: "/",
 };
 
+/** 리프레시 토큰 보관 기간 — 이 기간 동안 로그인이 유지된다. */
+const SESSION_DAYS = 30;
+
 export async function setAccountSession(session: Session) {
   const cookieStore = await cookies();
-  cookieStore.set(AUTH_ACCESS_COOKIE, session.access_token, { ...cookieOptions, maxAge: Math.max(60, session.expires_in ?? 3600) });
-  cookieStore.set(AUTH_REFRESH_COOKIE, session.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * 30 });
+  /*
+   * 액세스 쿠키에도 긴 만료를 준다.
+   * 짧게 주면(예: 1시간) 쿠키가 사라진 뒤 리프레시 토큰이 살아 있어도
+   * 갱신을 시도할 실마리가 없어 로그아웃된 것처럼 보인다.
+   * 토큰 자체의 유효기간은 JWT의 exp가 정하고, 서버가 매번 검증한다.
+   */
+  cookieStore.set(AUTH_ACCESS_COOKIE, session.access_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * SESSION_DAYS });
+  cookieStore.set(AUTH_REFRESH_COOKIE, session.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * SESSION_DAYS });
 }
 
 export async function clearAccountSession() {
@@ -50,10 +59,20 @@ export async function getAuthenticatedUser(): Promise<User | null> {
   const cookieStore = await cookies();
   const accessToken = cookieStore.get(AUTH_ACCESS_COOKIE)?.value;
   const refreshToken = cookieStore.get(AUTH_REFRESH_COOKIE)?.value;
-  if (!accessToken) return null;
+  // 둘 다 없으면 로그인한 적이 없다
+  if (!accessToken && !refreshToken) return null;
+
   const auth = createServerAuthClient();
-  const { data } = await auth.auth.getUser(accessToken);
-  if (data.user) return data.user;
+
+  if (accessToken) {
+    const { data } = await auth.auth.getUser(accessToken);
+    if (data.user) return data.user;
+  }
+
+  /*
+   * 액세스 토큰이 없거나 만료됐어도 리프레시 토큰이 살아 있으면 갱신한다.
+   * (예전에는 액세스 쿠키가 없으면 여기까지 오지 못해, 한 시간 뒤 로그아웃된 것처럼 보였다)
+   */
   if (!refreshToken) return null;
   const refreshed = await auth.auth.refreshSession({ refresh_token: refreshToken });
   if (!refreshed.data.session || !refreshed.data.user) return null;

@@ -9218,3 +9218,97 @@ body {
 .account-plan-shortcut > header {
   margin-bottom: 0;
 }
+
+/*
+ * 계정 화면을 플랜 빌더와 같은 시각 언어로 맞춘다.
+ * 기존 스타일이 남색 잉크·8px 라운드·작은 글자로 플랜 쪽(블루·10~16px 라운드)과
+ * 어긋나 "메인화면과 완전히 다른 곳"처럼 보였다. 색·모서리·글자 크기를 맞춘다.
+ */
+.account-page {
+  background: var(--surface-muted, #f2f4f6);
+}
+.account-page > header {
+  border-bottom: 1px solid var(--border-soft, #e5e8eb);
+}
+.account-auth-copy > span {
+  border-radius: 14px;
+  background: var(--blue-soft, #e8f3ff);
+  color: var(--blue, #3182f6);
+}
+.account-auth-copy h1 {
+  font-size: 38px;
+  font-weight: 800;
+  letter-spacing: -1px;
+}
+.account-auth-copy p {
+  font-size: 14px;
+  color: var(--text-body, #4e5968);
+}
+.account-auth-shell > form {
+  padding: 32px;
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 18px;
+  box-shadow: 0 20px 50px rgba(20, 32, 64, 0.08);
+  gap: 18px;
+}
+.account-auth-shell > form > header strong {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+.account-auth-shell > form > header span {
+  color: var(--blue, #3182f6);
+  font-size: 11.5px;
+  letter-spacing: 0.04em;
+}
+.account-auth-shell > form > label > span {
+  font-size: 12.5px;
+}
+.account-auth-shell > form > label > div {
+  height: 50px;
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 10px;
+  background: var(--surface, #fff);
+}
+.account-auth-shell > form > label > div:focus-within {
+  border-color: var(--blue, #3182f6);
+  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.14);
+}
+.account-consents {
+  border-radius: 10px;
+  gap: 10px;
+}
+.account-consents label {
+  font-size: 12px;
+}
+.account-consents a,
+.account-consents input {
+  accent-color: var(--blue, #3182f6);
+}
+.account-consents a {
+  color: var(--blue, #3182f6);
+}
+.account-submit {
+  min-height: 52px;
+  border-radius: 12px;
+  background: var(--blue, #3182f6);
+  font-size: 15px;
+}
+.account-submit:hover:not(:disabled) {
+  filter: brightness(1.06);
+}
+.account-form-message,
+.account-message {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--blue-soft, #e8f3ff);
+  color: var(--blue, #3182f6);
+  font-size: 12.5px;
+}
+.account-auth-shell form > footer button {
+  font-size: 12px;
+  font-weight: 700;
+}
+.account-auth-shell form > footer button:hover {
+  color: var(--blue, #3182f6);
+}

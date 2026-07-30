@@ -119,11 +119,14 @@ export default function AccountPage() {
         await payload(await fetch("/api/auth/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recoveryTokens, password }) }));
         window.history.replaceState({}, "", "/account"); setRecoveryTokens(null); setPassword(""); setPasswordConfirm(""); setMessage("새 비밀번호를 저장했습니다."); await loadSession();
       } else if (mode === "register") {
-        const result = await payload<{ authenticated: boolean; confirmationRequired: boolean }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
-        if (result.confirmationRequired) setMessage("가입 확인 메일을 보냈습니다. 메일의 링크를 열면 현재 프로젝트가 계정에 연결됩니다.");
-        else {
+        const result = await payload<{ authenticated: boolean; message?: string }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
+        // 이메일 인증 없이 가입 즉시 로그인된다
+        if (result.authenticated) {
           if (goNext()) return;
-          setMessage("계정을 만들고 현재 프로젝트를 연결했습니다."); await loadSession();
+          setMessage("계정을 만들었습니다."); await loadSession();
+        } else {
+          setMode("login"); setPassword(""); setPasswordConfirm("");
+          setMessage(result.message ?? "계정을 만들었습니다. 로그인해 주세요.");
         }
       } else {
         await payload(await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) }));
@@ -175,7 +178,7 @@ export default function AccountPage() {
         </section>
       ) : (
         <section className="account-auth-shell">
-          <div className="account-auth-copy"><span><ShieldCheck /></span><h1>{mode === "register" ? "계정을 만들고\n작업을 안전하게 보관하세요" : mode === "recover" ? "비밀번호를\n다시 설정할게요" : mode === "reset" ? "새 비밀번호를\n입력해주세요" : "어디서든\n이어서 시작하세요"}</h1><p>로그인하면 지금 만든 비회원 프로젝트가 자동으로 내 계정에 연결됩니다.</p></div>
+          <div className="account-auth-copy"><span><ShieldCheck /></span><h1>{mode === "register" ? "계정을 만들고\n작업을 안전하게 보관하세요" : mode === "recover" ? "비밀번호를\n다시 설정할게요" : mode === "reset" ? "새 비밀번호를\n입력해주세요" : "어디서든\n이어서 시작하세요"}</h1><p>{mode === "register" ? "이메일 인증 없이 바로 시작합니다. 지금 만든 작업은 계정에 그대로 연결됩니다." : "로그인하면 지금 만든 작업이 자동으로 내 계정에 연결됩니다."}</p></div>
           <form onSubmit={submit}>
             <header><span>{mode === "register" ? "회원가입" : mode === "recover" || mode === "reset" ? "계정 복구" : "로그인"}</span><strong>{mode === "register" ? "무료 계정 만들기" : mode === "recover" ? "복구 메일 받기" : mode === "reset" ? "새 비밀번호 저장" : "내 작업 불러오기"}</strong></header>
             {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
