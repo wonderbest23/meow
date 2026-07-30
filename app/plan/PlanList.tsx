@@ -5,10 +5,20 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, type PlanState } from "../../lib/plan-builder/plan-store";
-import { Pencil } from "lucide-react";
+import { Pencil, FileText, Plus } from "lucide-react";
 import styles from "./PlanList.module.css";
 
-/** 내 플랜 목록(대시보드) — 사업 요약 + 플랜 카드 */
+/** 플랜 유형 → 표지 색 (start 페이지 카드와 같은 계열) */
+const COVER_ACCENTS: Record<string, string> = {
+  "창업 초기 · 사업계획서": "#3358f4",
+  "성장·확장 · 사업계획서": "#12a58a",
+  "간단 · 사업계획서": "#de5f7d",
+  "내부용 · 사업계획서": "#6b5bdd",
+  "창업 초기 · 재무 예측": "#2f6fe0",
+  "정밀 · 재무 모델": "#2f7bd6",
+};
+
+/** 내 플랜 목록(대시보드) — 사업 요약 + 표지형 플랜 카드 */
 export default function PlanList() {
   const router = useRouter();
   const [state, setState] = useState<PlanState | null>(null);
@@ -106,84 +116,103 @@ export default function PlanList() {
             <Link href="/plan/start" className={styles.newBtn}>+ 첫 플랜 만들기</Link>
           </div>
         ) : (
-          <div className={styles.grid}>
+          <div className={styles.deck}>
             {state.plans.map((p) => {
               const total = sectionCountForType(p.planType);
               const done = Object.keys(p.sections).filter((k) => k !== "financials/__review").length;
               const pct = total ? Math.round((done / total) * 100) : 0;
               const isActive = p.id === state.activePlanId;
+              const acc = COVER_ACCENTS[p.planType] ?? "#3358f4";
               return (
-                <button key={p.id} className={`${styles.card} ${isActive ? styles.active : ""}`} onClick={() => openPlan(p.id)}>
-                  <div className={styles.cardTop}>
-                    <span className={styles.cardType}>{p.planType}</span>
-                    {isActive && <span className={styles.activeBadge}>작업 중</span>}
-                  </div>
-                  {editingId === p.id ? (
-                    <input
-                      className={styles.titleInput}
-                      value={draftTitle}
-                      autoFocus
-                      onClick={(e) => e.stopPropagation()}
-                      onChange={(e) => setDraftTitle(e.target.value)}
-                      onBlur={() => commitRename(p.id)}
-                      onKeyDown={(e) => {
-                        e.stopPropagation();
-                        if (e.key === "Enter") commitRename(p.id);
-                        if (e.key === "Escape") setEditingId(null);
-                      }}
-                    />
-                  ) : (
-                    <h3 className={styles.cardTitle}>
-                      {p.title}
+                <button
+                  key={p.id}
+                  className={styles.planCard}
+                  style={{ ["--acc" as string]: acc }}
+                  onClick={() => openPlan(p.id)}
+                >
+                  <span className={`${styles.sheet} ${isActive ? styles.sheetActive : ""}`}>
+                    <span className={styles.cover}>
+                      {isActive && <span className={styles.coverBadge}>작업 중</span>}
+                      <span className={styles.coverIcon} aria-hidden="true"><FileText /></span>
+                      {editingId === p.id ? (
+                        <input
+                          className={styles.coverInput}
+                          value={draftTitle}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={(e) => setDraftTitle(e.target.value)}
+                          onBlur={() => commitRename(p.id)}
+                          onKeyDown={(e) => {
+                            e.stopPropagation();
+                            if (e.key === "Enter") commitRename(p.id);
+                            if (e.key === "Escape") setEditingId(null);
+                          }}
+                        />
+                      ) : (
+                        <span className={styles.coverName}>
+                          {p.title}
+                          <span
+                            role="button"
+                            tabIndex={0}
+                            className={styles.renameBtn}
+                            title="이름 변경"
+                            onClick={(e) => startRename(e, p.id, p.title)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") startRename(e as unknown as React.MouseEvent, p.id, p.title);
+                            }}
+                          >
+                            <Pencil size={12} />
+                          </span>
+                        </span>
+                      )}
+                    </span>
+                    <span className={styles.strip}>
+                      <span className={styles.bar}>
+                        <span className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`} style={{ width: `${pct}%` }} />
+                      </span>
+                      <b className={styles.pct}>{pct}%</b>
+                    </span>
+                  </span>
+                  <span className={styles.cardMeta}>
+                    <span className={styles.metaType}>{p.planType}</span>
+                    <span className={styles.metaRow}>
+                      <span className={styles.date}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")}</span>
                       <span
                         role="button"
                         tabIndex={0}
-                        className={styles.renameBtn}
-                        title="이름 변경"
-                        onClick={(e) => startRename(e, p.id, p.title)}
+                        className={styles.copyBtn}
+                        title="이 플랜을 복제"
+                        onClick={(e) => copyPlan(e, p.id)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") startRename(e as unknown as React.MouseEvent, p.id, p.title);
+                          if (e.key === "Enter" || e.key === " ") copyPlan(e as unknown as React.MouseEvent, p.id);
                         }}
                       >
-                        <Pencil size={12} />
+                        복제
                       </span>
-                    </h3>
-                  )}
-                  <div className={styles.progressRow}>
-                    <span className={styles.bar}>
-                      <span className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`} style={{ width: `${pct}%` }} />
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className={styles.delBtn}
+                        onClick={(e) => removePlan(e, p.id, p.title)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") removePlan(e as unknown as React.MouseEvent, p.id, p.title);
+                        }}
+                      >
+                        삭제
+                      </span>
                     </span>
-                    <span className={styles.pct}>{done}/{total} · {pct}%</span>
-                  </div>
-                  <div className={styles.cardFoot}>
-                    <span className={styles.date}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className={styles.copyBtn}
-                      title="이 플랜을 복제"
-                      onClick={(e) => copyPlan(e, p.id)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") copyPlan(e as unknown as React.MouseEvent, p.id);
-                      }}
-                    >
-                      복제
-                    </span>
-                    <span
-                      role="button"
-                      tabIndex={0}
-                      className={styles.delBtn}
-                      onClick={(e) => removePlan(e, p.id, p.title)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") removePlan(e as unknown as React.MouseEvent, p.id, p.title);
-                      }}
-                    >
-                      삭제
-                    </span>
-                  </div>
+                  </span>
                 </button>
               );
             })}
+
+            {/* 레퍼런스의 + New Plan 점선 카드 */}
+            <Link href="/plan/start" className={styles.newCard}>
+              <span className={styles.newCardInner}>
+                <Plus size={22} />
+                새 플랜
+              </span>
+            </Link>
           </div>
         )}
       </div>

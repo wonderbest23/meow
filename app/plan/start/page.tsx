@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Star, ArrowRight } from "lucide-react";
 import styles from "./PlanStart.module.css";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -361,50 +361,33 @@ export default function PlanStartPage() {
                   <button className={category === "forecast" ? styles.catOn : ""} onClick={() => setCategory("forecast")}>재무 예측</button>
                 </div>
 
-                {/* 대표 유형은 크게 — 무엇을 골라야 할지 헤매지 않게 */}
-                {featured && (
-                  <button
-                    className={styles.hero}
-                    style={{ ["--acc" as string]: (TONES[featured.tone] ?? TONES[1]).acc, ["--tint" as string]: (TONES[featured.tone] ?? TONES[1]).tint }}
-                    onClick={() => pick(featured)}
-                  >
-                    <div className={styles.heroIcon}>{featured.icon}</div>
-                    <div className={styles.heroBody}>
-                      <span className={styles.heroBadge}>가장 많이 고르는 유형</span>
-                      <h3 className={styles.heroTitle}>{featured.name}</h3>
-                      <p className={styles.desc}>{featured.desc}</p>
-                      <div className={styles.meta}>{sectionCountForType(featured.type)}개 섹션</div>
-                      <ul className={styles.fits}>
-                        {featured.fits.map((f) => (
-                          <li key={f}>{f}</li>
-                        ))}
-                      </ul>
-                    </div>
-                    <div className={styles.heroGo}>이 유형으로 시작 →</div>
-                  </button>
-                )}
-
-                {others.length > 0 && <div className={styles.otherLabel}>다른 유형</div>}
-                <div className={styles.grid}>
-                  {others.map((pt) => {
+                {/* 표지형 카드 덱 — 레퍼런스 대시보드의 플랜 카드 구조(커버+하단 스트립+배지) */}
+                <div className={styles.deck}>
+                  {[...(featured ? [featured] : []), ...others].map((pt) => {
                     const tone = TONES[pt.tone] ?? TONES[1];
                     return (
                       <button
                         key={pt.id}
-                        className={styles.card}
+                        className={styles.planCard}
                         style={{ ["--acc" as string]: tone.acc, ["--tint" as string]: tone.tint }}
                         onClick={() => pick(pt)}
                       >
-                        <div className={styles.cardTop}>{pt.icon}</div>
-                        <h3 className={styles.cardTitle}>{pt.name}</h3>
-                        <p className={styles.desc}>{pt.desc}</p>
-                        <div className={styles.meta}>{sectionCountForType(pt.type)}개 섹션</div>
-                        <ul className={styles.fits}>
-                          {pt.fits.map((f) => (
-                            <li key={f}>{f}</li>
-                          ))}
-                        </ul>
-                        <div className={styles.go}>이 유형으로 시작 →</div>
+                        <span className={styles.sheet}>
+                          <span className={styles.cover}>
+                            {pt.featured && (
+                              <span className={styles.coverBadge}>
+                                <Star size={10} fill="currentColor" /> 가장 인기
+                              </span>
+                            )}
+                            <span className={styles.coverIcon} aria-hidden="true">{pt.icon}</span>
+                            <span className={styles.coverName}>{pt.name}</span>
+                          </span>
+                          <span className={styles.strip}>
+                            <b>{sectionCountForType(pt.type)}개 섹션</b>
+                            <ArrowRight size={14} />
+                          </span>
+                        </span>
+                        <span className={styles.cardDesc}>{pt.desc}</span>
                       </button>
                     );
                   })}
