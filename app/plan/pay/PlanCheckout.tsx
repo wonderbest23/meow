@@ -42,7 +42,7 @@ function loadSdk(): Promise<void> {
 export default function PlanCheckout() {
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
-  const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean } | null>(null);
+  const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean } | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
@@ -50,7 +50,7 @@ export default function PlanCheckout() {
     fetch("/api/plan/access")
       .then((r) => r.json())
       .then((d) => {
-        if (alive) setInfo({ price: d.price, productName: d.productName, paid: d.paid, payable: d.payable });
+        if (alive) setInfo({ price: d.price, productName: d.productName, paid: d.paid, payable: d.payable, authenticated: d.authenticated });
       })
       .catch(() => {
         if (alive) setInfo(null);
@@ -101,6 +101,20 @@ export default function PlanCheckout() {
       setMessage("결제창을 여는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.");
       started.current = false;
     }
+  }
+
+  if (info && !info.authenticated) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <h1 className={styles.title}>로그인이 필요합니다</h1>
+          <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아옵니다.</p>
+          <Link href="/account?next=%2Fplan%2Fpay" className={styles.primary}>로그인 · 회원가입</Link>
+          <Link href="/plan/overview" className={styles.back}>← 나중에 하기</Link>
+        </div>
+      </div>
+    );
   }
 
   if (info?.paid) {

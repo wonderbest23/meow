@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { KeyRound, Lock } from "lucide-react";
 import styles from "./PlanGate.module.css";
@@ -19,6 +20,10 @@ export interface PlanGateProps {
  * 실제 차단은 서버(/api/plan/generate)가 하고, 여기서는 이유와 다음 행동만 알린다.
  */
 export default function PlanGate({ reason, freeLabels = [], price, sectionTitle }: PlanGateProps) {
+  // 로그인 후 지금 보던 섹션으로 돌아오게 한다
+  const pathname = usePathname();
+  const backTo = `/account?next=${encodeURIComponent(pathname || "/plan/overview")}`;
+
   if (reason === "login_required") {
     return (
       <section className={styles.wrap} aria-label="로그인 필요">
@@ -27,7 +32,7 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
         <p className={styles.desc}>
           작성한 내용을 계정에 저장해 어느 기기에서든 이어서 쓸 수 있습니다.
         </p>
-        <Link href="/account" className={styles.primary}>
+        <Link href={backTo} className={styles.primary}>
           로그인 · 회원가입
         </Link>
       </section>

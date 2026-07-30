@@ -30,6 +30,25 @@ export default function AccountPage() {
   const [savedIdeas, setSavedIdeas] = useState<OpportunityPreferenceRecord[]>([]);
   const [deletingIdea, setDeletingIdea] = useState("");
 
+  /**
+   * 로그인 후 돌아갈 곳. 열린 리다이렉트가 되지 않게 내부 경로만 받는다.
+   * ("//evil.com", "https://…" 같은 값은 버린다)
+   */
+  const nextPath = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const raw = new URL(window.location.href).searchParams.get("next");
+    if (!raw) return null;
+    if (!raw.startsWith("/") || raw.startsWith("//")) return null;
+    return raw;
+  }, []);
+
+  /** 돌아갈 곳이 지정돼 있으면 그리로 보낸다. */
+  const goNext = () => {
+    if (!nextPath) return false;
+    window.location.assign(nextPath);
+    return true;
+  };
+
   const loadSession = async () => {
     const nextSession = await payload<SessionState>(await fetch("/api/auth/session", { cache: "no-store" }));
     setSession(nextSession);
@@ -59,11 +78,28 @@ export default function AccountPage() {
     if (accessToken && refreshToken) {
       void fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken, refreshToken }) })
         .then((response) => payload(response))
-        .then(() => { window.history.replaceState({}, "", "/account"); setMessage("이메일 확인이 완료되었습니다."); return loadSession(); })
+        .then(() => {
+          const raw = new URL(window.location.href).searchParams.get("next");
+          if (raw && raw.startsWith("/") && !raw.startsWith("//")) { window.location.assign(raw); return; }
+          window.history.replaceState({}, "", "/account"); setMessage("이메일 확인이 완료되었습니다."); return loadSession();
+        })
         .catch((error) => { setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
       return;
     }
-    void loadSession().catch((error) => { setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
+    void loadSession()
+      .then(() => {
+        // 이미 로그인돼 있는데 돌아갈 곳을 들고 왔다면 붙잡아두지 않는다
+        const raw = new URL(window.location.href).searchParams.get("next");
+        if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+          void fetch("/api/auth/session", { cache: "no-store" })
+            .then((r) => r.json())
+            .then((d: SessionState) => {
+              if (d.authenticated) window.location.assign(raw);
+            })
+            .catch(() => {});
+        }
+      })
+      .catch((error) => { setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
   }, []);
 
   const valid = useMemo(() => {
@@ -85,10 +121,16 @@ export default function AccountPage() {
       } else if (mode === "register") {
         const result = await payload<{ authenticated: boolean; confirmationRequired: boolean }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
         if (result.confirmationRequired) setMessage("가입 확인 메일을 보냈습니다. 메일의 링크를 열면 현재 프로젝트가 계정에 연결됩니다.");
-        else { setMessage("계정을 만들고 현재 프로젝트를 연결했습니다."); await loadSession(); }
+        else {
+          if (goNext()) return;
+          setMessage("계정을 만들고 현재 프로젝트를 연결했습니다."); await loadSession();
+        }
       } else {
         await payload(await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) }));
-        setPassword(""); setMessage("로그인하고 현재 프로젝트를 계정에 연결했습니다."); await loadSession();
+        setPassword("");
+        // 하던 작업으로 돌려보낸다 — 로그인만 하고 갇히지 않게
+        if (goNext()) return;
+        setMessage("로그인했습니다."); await loadSession();
       }
     } catch (error) { setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했습니다."); } finally { setBusy(false); }
   };
@@ -126,6 +168,7 @@ export default function AccountPage() {
       {session.authenticated ? (
         <section className="account-dashboard">
           <div className="account-welcome"><span><CheckCircle2 /></span><div><small>내 계정</small><h1>작업을 이어서 시작하세요</h1><p>{session.email}</p></div><button onClick={logout}><LogOut /> 로그아웃</button></div>
+          <div className="account-projects account-plan-shortcut"><header><div><strong>사업계획서 플랜</strong><p>작성 중인 사업계획서를 이어서 쓰거나 새로 시작할 수 있습니다.</p></div><Link href="/plan">내 플랜 열기 <ArrowRight /></Link></header></div>
           <div className="account-saved-ideas"><header><div><strong>저장한 사업 아이디어</strong><p>추천 화면에서 저장한 아이디어를 다시 비교하고 시작할 수 있습니다.</p></div><Link href="/?view=explore">아이디어 찾기 <ArrowRight /></Link></header>{savedIdeas.length === 0 ? <div className="account-empty"><Bookmark /><strong>아직 저장한 사업 아이디어가 없습니다.</strong><p>마음에 드는 추천에서 저장을 누르면 여기에 보관됩니다.</p></div> : <div>{savedIdeas.map((preference) => <article key={preference.opportunityKey}><Link href={`/?view=explore&saved=${encodeURIComponent(preference.opportunityKey)}`}><span><Bookmark /></span><div><small>{preference.opportunity.sector}</small><strong>{preference.opportunity.title}</strong><p>{preference.opportunity.oneLiner}</p></div><ArrowRight /></Link><button aria-label={`${preference.opportunity.title} 저장 취소`} disabled={deletingIdea === preference.opportunityKey} onClick={() => void removeSavedIdea(preference.opportunityKey)}>삭제</button></article>)}</div>}</div>
           <div className="account-projects"><header><div><strong>진행 중인 사업</strong><p>실행을 시작한 사업과 완성 중인 문서를 이어서 볼 수 있습니다.</p></div><Link href="/?view=start">새 사업 시작 <ArrowRight /></Link></header>{session.projects.length === 0 ? <div className="account-empty"><BriefcaseBusiness /><strong>아직 계정에 연결된 사업이 없습니다.</strong><p>새 사업을 시작하거나, 기존 작업을 만든 브라우저에서 로그인하면 자동으로 연결됩니다.</p></div> : <div>{session.projects.map((project) => <Link key={project.id} href={`/?view=project&project=${project.id}`}><span><BriefcaseBusiness /></span><div><strong>{project.title}</strong><small>{project.activeStage + 1}단계 · {new Date(project.updatedAt).toLocaleDateString("ko-KR")} 수정</small></div><ArrowRight /></Link>)}</div>}</div>
           {message && <p className="account-message">{message}</p>}

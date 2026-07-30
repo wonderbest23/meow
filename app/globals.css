@@ -9213,3 +9213,8 @@ body {
     background: #202632;
   }
 }
+
+/* 계정 화면 — 플랜 빌더로 가는 바로가기(로그인 후 갇히지 않게) */
+.account-plan-shortcut > header {
+  margin-bottom: 0;
+}
