@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { renderPlanMarkdown } from "../../../../lib/plan-builder/markdown";
-import { PLAN_BLUEPRINT } from "../../../../lib/plan-builder/blueprint";
+import { PLAN_BLUEPRINT, financialTableOwner } from "../../../../lib/plan-builder/blueprint";
 import { generateSection, streamSection } from "../../../../lib/plan-builder/section-generator";
 import { resolveLLMConfig } from "../../../../lib/llm/config";
-import { collectFinancialInputs, calculateFinancials, financialsToMarkdown } from "../../../../lib/plan-builder/financials";
+import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference } from "../../../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT } from "../../../../lib/plan-builder/access";
@@ -40,7 +40,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "unknown section" }, { status: 400 });
   }
 
-  // 재무 관련 섹션이면 입력값으로 표를 계산해 확정 수치로 넘긴다.
+  /*
+   * 재무 수치는 여러 섹션이 참고하지만, 표와 차트를 본문에 싣는 곳은 한 섹션뿐이다.
+   * 나머지 섹션에는 핵심 수치 요약만 넘겨 같은 표가 문서에 반복되지 않게 한다.
+   */
   const FINANCIAL_SECTIONS = new Set([
     "financials/revenue",
     "financials/expenses",
@@ -51,16 +54,21 @@ export async function POST(req: Request) {
     "summary/executive",
   ]);
   let financialsMarkdown: string | undefined;
+  let financialsReference: string | undefined;
   const sectionKey = `${chapter.id}/${section.id}`;
   if (body.allAnswers && FINANCIAL_SECTIONS.has(sectionKey)) {
     const { inputs, growthLabel, staffIncluded } = collectFinancialInputs(body.allAnswers);
     const result = calculateFinancials(inputs);
     if (result.unit || result.monthly.length) {
-      financialsMarkdown = financialsToMarkdown(result, {
-        growthLabel,
-        growthPct: inputs.monthlyGrowthPct,
-        staffIncluded,
-      });
+      if (sectionKey === financialTableOwner(body.planType)) {
+        financialsMarkdown = financialsToMarkdown(result, {
+          growthLabel,
+          growthPct: inputs.monthlyGrowthPct,
+          staffIncluded,
+        });
+      } else {
+        financialsReference = financialsToReference(result);
+      }
     }
   }
 
@@ -100,6 +108,7 @@ export async function POST(req: Request) {
     business: body.business,
     priorSummary: body.priorSummary,
     financialsMarkdown,
+    financialsReference,
     conflicts,
   };
 
@@ -143,6 +152,7 @@ export async function POST(req: Request) {
     business: body.business,
     priorSummary: body.priorSummary,
     financialsMarkdown,
+    financialsReference,
     conflicts,
   });
 

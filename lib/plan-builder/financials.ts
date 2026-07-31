@@ -376,3 +376,25 @@ export function financialsToMarkdown(
 
   return parts.join("\n\n");
 }
+
+
+/**
+ * 표·차트 없이 핵심 수치만 줄글로.
+ * 재무표를 싣는 섹션은 하나뿐이고, 나머지 섹션에는 이 요약만 넘겨
+ * 같은 표가 문서에 여러 번 반복되지 않게 한다.
+ */
+export function financialsToReference(r: FinancialResult): string {
+  const lines: string[] = [];
+  if (r.unit) {
+    lines.push(`- 판매가 ${won(r.unit.unitPrice)} / 변동비 ${won(r.unit.unitVariableCost)} / 건당 공헌이익 ${won(r.unit.contributionMargin)} (이익률 ${r.unit.contributionMarginPct}%)`);
+  }
+  if (r.breakEven) {
+    lines.push(`- 손익분기: 월 ${r.breakEven.units.toLocaleString("ko-KR")}건 (매출 ${won(r.breakEven.revenue)})`);
+  }
+  if (r.yearTotal) {
+    lines.push(`- 12개월 합계: 매출 ${won(r.yearTotal.revenue)}, 영업손익 ${won(r.yearTotal.operatingProfit)}`);
+  }
+  if (r.breakEvenMonth) lines.push(`- 월 흑자 전환: ${r.breakEvenMonth}개월차`);
+  if (r.paybackMonth) lines.push(`- 초기 투자 회수: ${r.paybackMonth}개월차`);
+  return lines.join("\n");
+}

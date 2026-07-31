@@ -243,3 +243,25 @@ export function chaptersForType(planType?: string): PlanChapterDef[] {
 export function sectionCountForType(planType?: string): number {
   return chaptersForType(planType).reduce((n, ch) => n + ch.sections.length, 0);
 }
+
+
+/**
+ * 12개월 손익표·차트를 '본문에 싣는' 섹션 하나를 고른다.
+ * 재무 수치를 참고하는 섹션은 여럿이지만, 같은 표가 문서에 반복되면
+ * 분량만 부풀고 읽는 사람은 어디가 원본인지 알 수 없다.
+ * 아래 우선순위 중 해당 플랜 유형에 실제로 있는 첫 섹션이 표의 주인이 된다.
+ */
+const FINANCIAL_TABLE_PRIORITY = [
+  "financials/financing",
+  "financials/assets",
+  "financials/expenses",
+  "financials/staffing",
+  "financials/revenue",
+];
+
+export function financialTableOwner(planType?: string): string | null {
+  const present = new Set(
+    chaptersForType(planType).flatMap((c) => c.sections.map((s) => `${c.id}/${s.id}`)),
+  );
+  return FINANCIAL_TABLE_PRIORITY.find((key) => present.has(key)) ?? null;
+}

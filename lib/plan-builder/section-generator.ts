@@ -3,6 +3,7 @@
 
 import { completeText, streamText, type LLMConfig } from "../llm/complete";
 import type { PlanChapterDef, PlanSectionDef } from "./blueprint";
+import { questionsForSection } from "./questions";
 
 const SYSTEM_PROMPT = [
   "당신은 한국에서 실제로 실행할 사업계획서의 한 섹션을 작성하는 선임 사업전략가입니다.",
@@ -45,8 +46,10 @@ export interface SectionGenInput {
   business?: BusinessInfo;
   /** 앞 섹션 요약(일관성용, 선택) */
   priorSummary?: string;
-  /** 계산된 재무표(마크다운) — 재무 섹션에서 산식으로 만든 확정 수치 */
+  /** 계산된 재무표(마크다운) — 표·차트를 본문에 싣는 '한 섹션'에만 넘긴다 */
   financialsMarkdown?: string;
+  /** 표 없이 핵심 수치만 — 다른 섹션이 같은 숫자를 인용할 때 쓴다 */
+  financialsReference?: string;
   /**
    * 아직 해결되지 않은 답변 충돌.
    * 어느 쪽이 맞는지 확정되지 않았으므로 AI가 한쪽을 골라 단정하지 않도록 알려준다.
@@ -100,6 +103,14 @@ export function buildUserPrompt(input: SectionGenInput): string {
           "표 앞뒤에 그 수치가 무엇을 뜻하는지, 어떤 점을 주의해야 하는지 해석을 덧붙이세요.",
         ].join("\n")
       : "",
+    input.financialsReference && !input.financialsMarkdown
+      ? [
+          "\n[계산된 재무 수치 — 참고용]",
+          input.financialsReference,
+          "\n이 숫자는 다른 섹션의 재무표에 이미 실려 있습니다.",
+          "본문에 표나 그래프로 다시 옮기지 말고, 필요한 값만 문장 속에서 인용하세요.",
+        ].join("\n")
+      : "",
     formatConflicts(input.conflicts),
     "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
     input.priorSummary
@@ -110,25 +121,50 @@ export function buildUserPrompt(input: SectionGenInput): string {
     .join("\n");
 }
 
+/** 받침 유무로 을/를을 고른다 — "구성을(를)" 같은 기계적 표기를 없앤다. */
+function eulReul(word: string): string {
+  const last = word.trim().slice(-1);
+  const code = last.charCodeAt(0);
+  if (code < 0xac00 || code > 0xd7a3) return "를";
+  return (code - 0xac00) % 28 === 0 ? "를" : "을";
+}
+
+/** 답변 값을 사람이 읽는 형태로 — yes/no는 예/아니오, 배열은 쉼표로 */
+function readableValue(v: unknown): string {
+  if (Array.isArray(v)) return v.map((x) => readableValue(x)).join(", ");
+  const s = String(v);
+  if (s === "yes") return "예";
+  if (s === "no") return "아니오";
+  return s;
+}
+
 /** 키가 없을 때 쓰는 결정론적 폴백 — 답변으로 구조화된 본문을 만든다(데모 동작 보장). */
 export function fallbackSection(input: SectionGenInput): string {
   const { section, answers } = input;
   const answered = Object.entries(answers).filter(([, v]) => v != null && v !== "");
   const parts: string[] = [];
   parts.push(`## ${section.title} 개요`);
-  parts.push(`이 섹션은 ${section.summary}을(를) 다룹니다. 아래 내용은 입력하신 답변을 바탕으로 정리한 초안이며, 근거가 필요한 항목은 '추가 정의 필요'로 표시했습니다.`);
+  parts.push(`이 섹션은 ${section.summary}${eulReul(section.summary)} 다룹니다. 아래 내용은 입력하신 답변을 바탕으로 정리한 초안이며, 근거가 필요한 항목은 '추가 정의 필요'로 표시했습니다.`);
   if (answered.length) {
     parts.push(`## 입력 기반 정리`);
+    // 질문 ID(needs_assets)가 아니라 사용자가 본 질문 문구를 항목명으로 쓴다
+    const labelOf = new Map(
+      questionsForSection(`${input.chapter.id}/${section.id}`, section.title)
+        .flatMap((g) => g.questions)
+        .map((q) => [q.id, q.q] as const),
+    );
     const rows = ["| 항목 | 입력 내용 | 상태 |", "| --- | --- | --- |"];
     for (const [k, v] of answered) {
-      const val = Array.isArray(v) ? v.join(", ") : String(v);
-      rows.push(`| ${k} | ${val} | 확인됨 |`);
+      rows.push(`| ${labelOf.get(k) ?? k} | ${readableValue(v)} | 확인됨 |`);
     }
     parts.push(rows.join("\n")); // 표는 한 블록으로(행 사이 단일 줄바꿈)
   }
   if (input.financialsMarkdown) {
     parts.push(`## 재무 계산`);
     parts.push(input.financialsMarkdown);
+  } else if (input.financialsReference) {
+    parts.push(`## 참고한 재무 수치`);
+    parts.push(input.financialsReference);
   }
   if (input.conflicts?.length) {
     parts.push(`## 확정 필요 — 답변이 서로 어긋난 부분`);
