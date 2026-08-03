@@ -99,7 +99,20 @@ export async function POST(req: Request) {
     coverFields,
   };
 
-  const buffer = format === "docx" ? await renderDocx([document], project) : await renderPdf([document], project);
+  /*
+   * 폰트는 정적 자산에서 HTTP로 가져와 넘긴다.
+   * 렌더러의 기본 경로는 readFileSync인데 Cloudflare Workers에는 파일시스템이
+   * 없어서, 이 인자를 빼먹으면 로컬에서는 되고 운영에서만 500이 난다.
+   * (기존 delivery 라우트와 같은 방식)
+   */
+  const fontResponse = await fetch(new URL("/fonts/NanumGothic-Regular.ttf", req.url));
+  if (!fontResponse.ok) {
+    return new Response(JSON.stringify({ error: "font unavailable" }), { status: 500, headers: { "Content-Type": "application/json" } });
+  }
+  const fontData = new Uint8Array(await fontResponse.arrayBuffer());
+  const buffer = format === "docx"
+    ? await renderDocx([document], project, fontData)
+    : await renderPdf([document], project, fontData);
   const safe = title.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-").slice(0, 60);
   // 헤더는 Latin-1만 허용 → ASCII 폴백 + RFC 5987(UTF-8)로 한글 파일명 전달
   const ascii = safe.replace(/[^\x20-\x7E]/g, "") || "plan";
