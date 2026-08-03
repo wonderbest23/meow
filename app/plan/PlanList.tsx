@@ -87,16 +87,17 @@ export default function PlanList() {
         {biz.name ? (
           <div className={styles.bizCard}>
             <div className={styles.bizMain}>
-              <div className={styles.bizLabel}>내 사업</div>
               {/* 값만 알약으로 늘어놓으면 무엇을 뜻하는지 알 수 없어 라벨을 붙인다 */}
               <dl className={styles.bizRows}>
-                <dt>사업명</dt>
-                <dd className={styles.bizNameValue}>{biz.name}</dd>
-                {biz.industry ? (<><dt>업종</dt><dd>{biz.industry}</dd></>) : null}
-                {biz.region ? (<><dt>지역</dt><dd>{biz.region}</dd></>) : null}
-                {biz.stage ? (<><dt>진행 단계</dt><dd>{biz.stage}</dd></>) : null}
-                {biz.role ? (<><dt>역할</dt><dd>{biz.role}</dd></>) : null}
-                {biz.description ? (<><dt>소개</dt><dd>{biz.description}</dd></>) : null}
+                <div className={styles.bizRow}>
+                  <dt>사업명</dt>
+                  <dd className={styles.bizNameValue}>{biz.name}</dd>
+                </div>
+                {biz.industry ? (<div className={styles.bizRow}><dt>업종</dt><dd>{biz.industry}</dd></div>) : null}
+                {biz.region ? (<div className={styles.bizRow}><dt>지역</dt><dd>{biz.region}</dd></div>) : null}
+                {biz.stage ? (<div className={styles.bizRow}><dt>진행 단계</dt><dd>{biz.stage}</dd></div>) : null}
+                {biz.role ? (<div className={styles.bizRow}><dt>역할</dt><dd>{biz.role}</dd></div>) : null}
+                {biz.description ? (<div className={styles.bizRow}><dt>소개</dt><dd>{biz.description}</dd></div>) : null}
               </dl>
             </div>
             <Link href="/plan/start" className={styles.editBtn}>사업 정보 수정</Link>

@@ -27,44 +27,35 @@
   flex: 1;
   min-width: 240px;
 }
-.bizLabel {
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--text-muted, #8b95a1);
-  text-transform: uppercase;
-  margin-bottom: 6px;
-}
-/* 라벨-값 목록 — 알약만 늘어놓으면 무슨 항목인지 읽히지 않는다 */
+/*
+ * 라벨-값 목록.
+ * 그리드로 두 칸을 나누면 구분선이 칸 경계에서 끊겨 한 줄이 두 토막으로 보였다.
+ * 줄마다 한 덩어리로 묶고 그 줄에 선을 그어 반드시 이어지게 한다.
+ */
 .bizRows {
-  display: grid;
-  grid-template-columns: max-content 1fr;
-  /* 칸 사이를 gap으로 벌리면 구분선이 그 자리에서 끊긴다 — dt의 padding으로 벌린다 */
-  column-gap: 0;
-  row-gap: 0;
   margin: 0;
-  align-items: baseline;
 }
-/* 줄마다 가는 선을 둬 어느 라벨이 어느 값인지 눈으로 끊어 읽게 한다 */
-.bizRows dt,
-.bizRows dd {
+.bizRow {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
   padding: 8px 0;
   border-top: 1px solid var(--border-soft, #e5e8eb);
 }
-.bizRows dt:first-of-type,
-.bizRows dd:first-of-type {
+.bizRow:first-child {
   border-top: 0;
   padding-top: 0;
 }
-.bizRows dt {
-  padding-right: 16px;
+.bizRow dt {
+  flex: none;
+  width: 76px;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-muted, #8b95a1);
-  white-space: nowrap;
 }
-.bizRows dd {
+.bizRow dd {
   margin: 0;
+  min-width: 0;
   font-size: 14.5px;
   font-weight: 600;
   color: var(--text-strong, #191f28);
@@ -337,8 +328,11 @@
   .bizCard {
     padding: 20px;
   }
-  .bizRows dt {
-    padding-right: 12px;
+  .bizRow {
+    gap: 12px;
+  }
+  .bizRow dt {
+    width: 66px;
   }
   /* 모바일에서도 수정 버튼은 오른쪽에 붙인다 */
   .editBtn {
