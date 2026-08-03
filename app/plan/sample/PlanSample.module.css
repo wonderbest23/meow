@@ -1,0 +1,110 @@
+/* 완성본 샘플 — 문서 화면(PlanDocument.module.css)에 얹는 차이분만 둔다.
+   골격·타이포는 실제 문서 화면 것을 그대로 쓴다. */
+
+.navTag {
+  margin: 4px 12px 14px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.cta {
+  padding: 8px 16px;
+  border-radius: 9px;
+  background: #3182f6;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.cta:hover {
+  background: #1f6fe0;
+}
+
+/* 샘플임을 문서 위에 한 번 밝힌다 */
+.banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  max-width: 860px;
+  margin: 0 auto 18px;
+  padding: 13px 16px;
+  border: 1px solid #d1e0ff;
+  border-radius: 12px;
+  background: #eff4ff;
+}
+
+.banner svg {
+  flex: none;
+  margin-top: 2px;
+  color: #3182f6;
+}
+
+.banner p {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.65;
+  color: #364a6b;
+}
+
+/* 표와 그래프가 문서 폭을 넘지 않게 */
+.body :global(table) {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+}
+
+.body :global(figure) {
+  margin: 18px 0;
+  overflow-x: auto;
+}
+
+.body :global(svg) {
+  max-width: 100%;
+  height: auto;
+}
+
+.footer {
+  max-width: 860px;
+  margin: 34px auto 0;
+  padding: 34px 26px;
+  border-radius: 16px;
+  background: #0f172a;
+  text-align: center;
+}
+
+.footer h2 {
+  margin: 0 0 8px;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  color: #ffffff;
+}
+
+.footer p {
+  margin: 0 0 20px;
+  font-size: 14.5px;
+  line-height: 1.65;
+  color: #cbd5e1;
+}
+
+.footerBtn {
+  display: inline-block;
+  padding: 13px 32px;
+  border-radius: 11px;
+  background: #3182f6;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.footerBtn:hover {
+  background: #1f6fe0;
+}

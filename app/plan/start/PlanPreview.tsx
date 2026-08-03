@@ -55,6 +55,11 @@ export default function PlanPreview({
         표와 그래프까지 넣어 PDF·Word로 내려받을 수 있게 만들어 드립니다.
       </p>
 
+      <Link href="/plan/sample" className={styles.sampleLink}>
+        완성본 샘플 문서 보기
+        <span>가상 사업체 하나로 25개 섹션을 끝까지 채운 실제 결과물</span>
+      </Link>
+
       <div className={styles.stats}>
         <div className={styles.stat}>
           <b className={styles.statNum}>{chapters.length}</b>
