@@ -490,11 +490,29 @@
   text-decoration: none;
   display: flex;
   flex-direction: column;
+  gap: 9px; /* 플랜 카드와 같은 간격 */
 }
+/* 아랫단을 맞추려고 비워 둔 자리 — 읽히지도 눌리지도 않는다 */
+.newCard .cardMeta {
+  visibility: hidden;
+  pointer-events: none;
+}
+/*
+ * 플랜 카드와 높이를 맞춘다.
+ * 표지(4:5)만 따라 하면 그 아래 진행 바만큼 짧아진다. 표지와 진행 바를
+ * 같은 구조로 두고 진행 바 자리만 비워, 화면 폭과 무관하게 같은 높이가 되게 한다.
+ */
 .newCardInner {
-  aspect-ratio: 4 / 5;
   border: 2px dashed var(--border-soft, #d5dbe2);
   border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-soft, #f7f8fa);
+  overflow: hidden;
+  transition: 0.2s;
+}
+.newCardBody {
+  aspect-ratio: 4 / 5;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -503,8 +521,10 @@
   color: var(--text-muted, #8b95a1);
   font-size: 13.5px;
   font-weight: 700;
-  background: var(--surface-soft, #f7f8fa);
-  transition: 0.2s;
+}
+.newCard .strip {
+  visibility: hidden;
+  background: transparent;
 }
 .newCard:hover .newCardInner {
   border-color: var(--blue, #3182f6);

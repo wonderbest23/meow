@@ -218,8 +218,22 @@ export default function PlanList() {
             {/* 레퍼런스의 + New Plan 점선 카드 */}
             <Link href="/plan/start" className={styles.newCard}>
               <span className={styles.newCardInner}>
-                <Plus size={22} />
-                새 플랜
+                <span className={styles.newCardBody}>
+                  <Plus size={22} />
+                  새 플랜
+                </span>
+                {/* 플랜 카드의 진행 바 자리를 그대로 비워 둔다 — 높이가 어긋나지 않게 */}
+                <span className={styles.strip} aria-hidden="true">
+                  <span className={styles.bar} />
+                  <b className={styles.pct}>&nbsp;</b>
+                </span>
+              </span>
+              {/* 플랜 카드 아래 유형·날짜 줄과 같은 높이를 비워 두 카드의 아랫단을 맞춘다 */}
+              <span className={styles.cardMeta} aria-hidden="true">
+                <span className={styles.metaType}>&nbsp;</span>
+                <span className={styles.metaRow}>
+                  <span className={styles.date}>&nbsp;</span>
+                </span>
               </span>
             </Link>
           </div>
