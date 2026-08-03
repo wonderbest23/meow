@@ -42,10 +42,14 @@ export default function AccountPage() {
     return raw;
   }, []);
 
-  /** 돌아갈 곳이 지정돼 있으면 그리로 보낸다. */
+  /*
+   * 로그인 뒤 갈 곳.
+   * next가 있으면 하던 자리로 돌려보내고, 없으면 내 플랜 목록으로 보낸다.
+   * 예전에는 next가 없을 때 이 화면(옛 계정 대시보드)에 그대로 머물러서,
+   * 로그인했는데 엉뚱한 곳에 떨어진 것처럼 보였다.
+   */
   const goNext = () => {
-    if (!nextPath) return false;
-    window.location.assign(nextPath);
+    window.location.assign(nextPath ?? "/plan");
     return true;
   };
 
