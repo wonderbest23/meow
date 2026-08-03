@@ -162,3 +162,31 @@
   color: #c33d55;
   font-weight: 700;
 }
+
+
+/*
+ * 모바일 — 표를 좁은 폭에 우겨넣지 않는다.
+ * table-layout: fixed로 화면 폭에 맞추면 12개월 손익표처럼 열이 많은 표는
+ * 한 칸이 30px도 안 돼 숫자가 세로로 쪼개진다. 표만 옆으로 밀어 본다.
+ */
+@media (max-width: 700px) {
+  .surface table {
+    display: block;
+    width: max-content;
+    max-width: 100%;
+    table-layout: auto;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .surface th,
+  .surface td {
+    white-space: nowrap;
+    padding: 7px 9px;
+  }
+  /* 줄글이 든 칸까지 한 줄로 늘어나면 표가 지나치게 넓어진다 */
+  .surface td:first-child,
+  .surface th:first-child {
+    white-space: normal;
+    min-width: 90px;
+  }
+}

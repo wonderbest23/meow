@@ -382,3 +382,28 @@
     font-size: 24px;
   }
 }
+
+/* 좁은 화면에서 내보내기 버튼이 세 줄로 흩어지던 것 — 한 줄에 담는다 */
+@media (max-width: 560px) {
+  .mhead {
+    padding: 16px 14px 12px;
+  }
+  .routeTitle {
+    font-size: 20px;
+  }
+  .toolbar {
+    gap: 6px;
+  }
+  .toolbar .spring {
+    display: none;
+  }
+  .seg {
+    flex: 1 1 100%;
+  }
+  .tool {
+    flex: 1 1 0;
+    justify-content: center;
+    padding: 10px 8px;
+    font-size: 12.5px;
+  }
+}

@@ -9312,3 +9312,33 @@ body {
 .account-auth-shell form > footer button:hover {
   color: var(--blue, #3182f6);
 }
+
+/*
+ * 모바일 최소 글자 크기 — 홈 하단 섹션.
+ * 근거 표·조사 목록·가격·사업자 정보가 데스크톱 기준 9~10px이라
+ * 휴대폰에서는 읽기 어려웠다. 히어로의 축소 목업(hero-*)은 일부러 작은
+ * 그림이므로 건드리지 않고, 실제로 읽어야 하는 글만 올린다.
+ */
+@media (max-width: 560px) {
+  .home-research-list > a em,
+  .home-research-list > a i,
+  .home-research-list > a small,
+  .home-proof-bar em,
+  .home-proof-bar span,
+  .home-evidence-table em,
+  .home-evidence-table small,
+  .home-evidence-table span,
+  .home-evidence-table b,
+  .home-price-value em,
+  .home-price-value s,
+  .home-custom-price > div:nth-child(2) small,
+  .home-custom-price > div:nth-child(2) p,
+  .home-price-panel small,
+  .home-custom-price em,
+  .home-business-info,
+  .home-footer-notice p,
+  .home-footer-notice small {
+    font-size: 11.5px;
+    line-height: 1.65;
+  }
+}
