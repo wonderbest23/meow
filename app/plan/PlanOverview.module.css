@@ -665,6 +665,7 @@
   .barLeft {
     align-items: flex-start;
     gap: 10px;
+    min-width: 0;
   }
   .back {
     width: 36px;
@@ -674,5 +675,54 @@
   .title {
     font-size: 20px;
     line-height: 1.35;
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  /*
+   * 미터 스트립 — PC에서는 한 줄로 늘어서지만 좁은 화면에서는 세로로 흩어져
+   * 회색 라벨과 숫자가 멀리 떨어지고, 칸막이 선만 남아 읽기 어려웠다.
+   * 세 칸 그리드로 묶고 라벨을 바로 위에 붙인다.
+   */
+  .meters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    padding: 14px 0 16px;
+  }
+  .meter {
+    padding: 12px 10px;
+    border-radius: 12px;
+    background: var(--surface-muted, #f2f4f6);
+  }
+  .meter:first-child {
+    padding-left: 10px;
+  }
+  .meter + .meter::before {
+    content: none; /* 칸이 나뉘었으므로 칸막이 선은 군더더기 */
+  }
+  .meterLabel {
+    font-size: 10.5px;
+    letter-spacing: 0.02em;
+    color: var(--text-body, #4e5968);
+    text-transform: none;
+    white-space: nowrap;
+  }
+  .meterRow {
+    margin-top: 6px;
+    gap: 6px;
+  }
+  .meterValue {
+    font-size: 17px;
+  }
+  /* 좁은 칸에서 눈금 막대는 숫자를 밀어낼 뿐이라 감춘다 */
+  .segs {
+    display: none;
+  }
+
+  /* 툴바가 한 줄에 안 들어가 오른쪽 글자가 잘렸다 */
+  .tools {
+    flex-wrap: wrap;
+    row-gap: 10px;
   }
 }
