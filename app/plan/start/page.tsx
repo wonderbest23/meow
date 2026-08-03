@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
+import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -200,16 +201,33 @@ export default function PlanStartPage() {
   const [category, setCategory] = useState<"bp" | "forecast">("bp");
   const [improving, setImproving] = useState(false);
   const [hasExisting, setHasExisting] = useState(false);
+  /*
+   * 플랜 빌더는 가입해야 쓸 수 있다.
+   * 예전에는 입구를 열어두고 섹션 생성 단계에서야 막았다. 그래서 로그인하지
+   * 않아도 사업 정보가 채워진 채 2단계로 넘어가 있었고(이전 방문 때 이 브라우저에
+   * 남긴 값), 한참 진행한 뒤에야 로그인하라는 말을 듣게 됐다.
+   */
+  const [authed, setAuthed] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/plan/access")
+      .then((r) => r.json())
+      .then((d) => { if (alive) setAuthed(!!d.authenticated); })
+      .catch(() => { if (alive) setAuthed(false); });
+    return () => { alive = false; };
+  }, []);
 
   // 이미 등록한 사업이 있으면 불러와서 재입력을 줄인다(사업 1개 유지)
+  // 로그인한 뒤에만 불러온다 — 로그아웃 상태에서 남의 기기 값이 채워져 보이면 안 된다
   useEffect(() => {
+    if (!authed) return;
     const s = loadState();
     if (s.business.name) {
       setBiz(s.business);
       setHasExisting(true);
       if (s.plans.length > 0) setStep(2); // 사업+플랜이 이미 있으면 유형 선택부터
     }
-  }, []);
+  }, [authed]);
 
   const set = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) => setBiz((p) => ({ ...p, [k]: v }));
 
@@ -254,6 +272,26 @@ export default function PlanStartPage() {
   const visible = PLAN_TYPES.filter((p) => p.category === category);
   const featured = visible.find((p) => p.featured);
   const others = visible.filter((p) => p !== featured);
+
+  // 로그인 확인 전에는 아무것도 단정하지 않는다(깜빡임 방지)
+  if (authed === null) {
+    return <div className={styles.page} aria-busy="true" />;
+  }
+
+  if (!authed) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.frame}>
+          <div className={styles.app}>
+            <div className={styles.main}>
+              <h1 className={styles.h1}>새 플랜 만들기</h1>
+              <PlanGate reason="login_required" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
