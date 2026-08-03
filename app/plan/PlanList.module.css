@@ -39,12 +39,25 @@
 .bizRows {
   display: grid;
   grid-template-columns: max-content 1fr;
-  column-gap: 16px;
-  row-gap: 7px;
+  /* 칸 사이를 gap으로 벌리면 구분선이 그 자리에서 끊긴다 — dt의 padding으로 벌린다 */
+  column-gap: 0;
+  row-gap: 0;
   margin: 0;
   align-items: baseline;
 }
+/* 줄마다 가는 선을 둬 어느 라벨이 어느 값인지 눈으로 끊어 읽게 한다 */
+.bizRows dt,
+.bizRows dd {
+  padding: 8px 0;
+  border-top: 1px solid var(--border-soft, #e5e8eb);
+}
+.bizRows dt:first-of-type,
+.bizRows dd:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
 .bizRows dt {
+  padding-right: 16px;
   font-size: 12.5px;
   font-weight: 600;
   color: var(--text-muted, #8b95a1);
@@ -324,9 +337,12 @@
   .bizCard {
     padding: 20px;
   }
-  .bizRows {
-    column-gap: 12px;
-    row-gap: 6px;
+  .bizRows dt {
+    padding-right: 12px;
+  }
+  /* 모바일에서도 수정 버튼은 오른쪽에 붙인다 */
+  .editBtn {
+    margin-left: auto;
   }
   .bizNameValue {
     font-size: 18px;
