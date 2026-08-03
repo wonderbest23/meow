@@ -11,3 +11,6 @@ artifacts/
 tmp/
 supabase/.branches/
 supabase/.temp/
+
+# 로컬 검증 산출물(감사 스크립트·생성된 문서)
+.tmp-final/
