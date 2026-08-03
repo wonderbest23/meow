@@ -81,7 +81,7 @@ export async function POST(req: Request) {
   // 총평(요약) 섹션은 플랜 전체를 요약하므로 모든 충돌을 넘긴다.
   let conflicts: Array<{ title: string; detail: string }> | undefined;
   if (body.allAnswers) {
-    const all = findConsistencyIssues(body.allAnswers);
+    const all = findConsistencyIssues(body.allAnswers, body.business);
     const relevant = sectionKey === "summary/executive" ? all : issuesForSection(all, sectionKey);
     if (relevant.length) conflicts = relevant.map(({ title, detail }) => ({ title, detail }));
   }

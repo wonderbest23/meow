@@ -91,10 +91,51 @@ const HORIZON_MONTHS: Record<string, number> = { "3개월": 3, "6개월": 6, "1�
  * 플랜 전체 답변에서 모순을 찾는다.
  * 답이 없는 항목은 건드리지 않는다 — 아직 안 쓴 것과 어긋난 것은 다르다.
  */
-export function findConsistencyIssues(allAnswers: Answers): ConsistencyIssue[] {
+export function findConsistencyIssues(
+  allAnswers: Answers,
+  /** 사업 정보(진행 단계 등) — 답변과 프로필이 어긋나는 것도 잡기 위해 */
+  business?: { stage?: string },
+): ConsistencyIssue[] {
   const get = (key: string, qid: string) => allAnswers?.[key]?.[qid];
   const issues: ConsistencyIssue[] = [];
   const add = (i: ConsistencyIssue) => issues.push(i);
+
+  /*
+   * 15. 진행 단계와 시작 여부가 어긋난다.
+   * 실제 사례: 사업 정보에는 '아이디어 단계'인데 답변에서 '이미 시작했고
+   * 2024년 설립'이라고 적어, AI가 어색하게 봉합한 문서가 나왔다.
+   */
+  const established = get("overview/summary", "established");
+  if (business?.stage === "아이디어 단계" && established === "yes") {
+    add({
+      id: "stage-established-mismatch",
+      severity: "conflict",
+      title: "진행 단계와 시작 여부가 어긋납니다",
+      detail: "사업 정보에는 '아이디어 단계'로 되어 있는데, 답변에서는 사업을 이미 시작했다고 하셨습니다. 사업 정보 수정에서 단계를 바꾸거나 답변을 고쳐주세요.",
+      refs: [ref("overview/summary")],
+    });
+  }
+  if ((business?.stage === "운영 중" || business?.stage === "개업 직후") && established === "no") {
+    add({
+      id: "stage-notstarted-mismatch",
+      severity: "conflict",
+      title: "진행 단계와 시작 여부가 어긋납니다",
+      detail: `사업 정보에는 '${business.stage}'인데, 답변에서는 아직 시작하지 않았다고 하셨습니다.`,
+      refs: [ref("overview/summary")],
+    });
+  }
+
+  // 16. 시작 전이라는데 실적이 있다고 한다
+  const hasTraction = get("overview/achievements", "has_traction");
+  if (established === "no" && hasTraction === "yes") {
+    add({
+      id: "traction-before-start",
+      severity: "check",
+      title: "시작 전인데 성과가 있다고 되어 있습니다",
+      detail: "'사업체를 이미 시작하셨나요?'에는 아니오라고 답하셨는데, 주요 성과에는 이룬 성과가 있다고 하셨습니다. 시범 판매·사전 예약이라면 그 성격을 답변에 적어주세요.",
+      refs: [ref("overview/summary"), ref("overview/achievements")],
+    });
+  }
 
   // 1. 상품 가격과 재무 판매가가 다르다
   const priceValue = parseAmount(get("market/products", "price_value"));
