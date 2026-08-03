@@ -43,7 +43,6 @@ export default function PlanList() {
     );
   }
 
-  const biz = state.business;
 
   function openPlan(id: string) {
     setActivePlan(id);
@@ -83,27 +82,11 @@ export default function PlanList() {
   return (
     <div className={styles.page}>
       <div className={styles.frame}>
-        {/* 사업 요약 */}
-        {biz.name ? (
-          <div className={styles.bizCard}>
-            <div className={styles.bizMain}>
-              {/* 값만 알약으로 늘어놓으면 무엇을 뜻하는지 알 수 없어 라벨을 붙인다 */}
-              <dl className={styles.bizRows}>
-                <div className={styles.bizRow}>
-                  <dt>사업명</dt>
-                  <dd className={styles.bizNameValue}>{biz.name}</dd>
-                </div>
-                {biz.industry ? (<div className={styles.bizRow}><dt>업종</dt><dd>{biz.industry}</dd></div>) : null}
-                {biz.region ? (<div className={styles.bizRow}><dt>지역</dt><dd>{biz.region}</dd></div>) : null}
-                {biz.stage ? (<div className={styles.bizRow}><dt>진행 단계</dt><dd>{biz.stage}</dd></div>) : null}
-                {biz.role ? (<div className={styles.bizRow}><dt>역할</dt><dd>{biz.role}</dd></div>) : null}
-                {biz.description ? (<div className={styles.bizRow}><dt>소개</dt><dd>{biz.description}</dd></div>) : null}
-              </dl>
-            </div>
-            <Link href="/plan/start" className={styles.editBtn}>사업 정보 수정</Link>
-          </div>
-        ) : null}
-
+        {/*
+          사업 정보는 마이페이지에 둔다.
+          플랜이 여러 개인데 목록 맨 위에 사업 카드가 하나 떠 있으면
+          어느 플랜의 정보인지 읽히지 않는다. 여기는 플랜만 늘어놓는다.
+        */}
         {/* 플랜 목록 */}
         <div className={styles.listHead}>
           <h2 className={styles.listTitle}>

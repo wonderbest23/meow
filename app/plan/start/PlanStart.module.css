@@ -798,3 +798,23 @@
     font-size: 16px;
   }
 }
+
+
+/*
+ * 모바일 — 버튼을 화면 폭에 맞추고, 안내 문구는 버튼 옆이 아니라 아래에 둔다.
+ * 옆에 두면 버튼이 눌려 문구가 두 줄로 감기고 둘 다 읽기 어려웠다.
+ */
+@media (max-width: 560px) {
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .primaryBtn {
+    width: 100%;
+    padding: 15px 20px;
+  }
+  .todo {
+    text-align: center;
+  }
+}

@@ -371,17 +371,21 @@ export default function PlanStartPage() {
                   </div>
                 </div>
 
+                {/*
+                  버튼에는 할 일만 적는다. 다음 단계 이름까지 넣으면 문구가 길어져
+                  모바일에서 두 줄로 감긴다. 아직 못 넘어가는 이유는 버튼 아래에 둔다.
+                */}
                 <div className={styles.actions}>
                   <button
                     className={`${styles.primaryBtn} ${step1Ok ? styles.ready : ""}`}
                     disabled={!step1Ok}
                     onClick={() => setStep(2)}
                   >
-                    다음 → 플랜 유형 고르기
+                    다음 단계
                   </button>
                   {!step1Ok && (
                     <span className={styles.todo}>
-                      {!biz.name.trim() ? "사업 이름" : "사업 설명"}을 입력하면 다음으로 넘어갑니다
+                      {!biz.name.trim() ? "사업 이름" : "사업 설명"}을 입력해 주세요
                     </span>
                   )}
                 </div>
