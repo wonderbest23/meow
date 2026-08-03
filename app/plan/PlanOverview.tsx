@@ -72,7 +72,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         setTitle(p.title);
         setType(p.planType);
       }
-      setIssues(findConsistencyIssues(p?.answers ?? {}));
+      setIssues(findConsistencyIssues(p?.answers ?? {}, s.business));
       setLockedKeys(new Set(Object.entries(p?.sections ?? {}).filter(([, v]) => v?.locked).map(([k]) => k)));
     });
     return () => {
@@ -158,7 +158,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     setStoreStatuses(planStatuses(next));
     setAssembled(assembleSections(next));
     setInProgress(new Set(answeredSectionKeys(next)));
-    setIssues(findConsistencyIssues(activePlan(next)?.answers ?? {}));
+    setIssues(findConsistencyIssues(activePlan(next)?.answers ?? {}, next.business));
     const np = activePlan(next);
     setLockedKeys(new Set(Object.entries(np?.sections ?? {}).filter(([, v]) => v?.locked).map(([k]) => k)));
   }

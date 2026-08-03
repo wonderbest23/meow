@@ -432,7 +432,7 @@ export default function SectionWizard({
 
   // 이 섹션이 걸려 있는 모순만 추린다 — 다른 챕터 이야기로 주의를 뺏지 않는다.
   const sectionIssues = useMemo(
-    () => issuesForSection(findConsistencyIssues(reviewAnswers), key),
+    () => issuesForSection(findConsistencyIssues(reviewAnswers, loadState().business), key),
     [reviewAnswers, key],
   );
 
