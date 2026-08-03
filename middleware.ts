@@ -12,7 +12,8 @@ const ADMIN_AUTH_EXEMPT = ["/api/admin/support/session"];
  * 토큰의 유효성은 검사하지 않는다 — Edge에서 매 요청 검증하는 값이 아니고,
  * 실제 판정은 API(resolvePlanAccess)가 이미 하고 있다.
  */
-const PLAN_PUBLIC = ["/plan/info", "/plan/pay"];
+// /plan/start는 로그인 전 미리보기를 보여준다(폼 자체는 로그인해야 열린다)
+const PLAN_PUBLIC = ["/plan/info", "/plan/pay", "/plan/start"];
 const AUTH_COOKIES = ["venture_access", "venture_refresh"];
 
 function withSecurityHeaders(response: NextResponse) {

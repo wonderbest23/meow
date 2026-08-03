@@ -29,7 +29,7 @@ const ICONS = {
  * 이용 안내는 법적 고지라 누구에게나 열려 있어야 하고,
  * 결제 화면은 자체 로그인 안내를 갖고 있다.
  */
-const PUBLIC_PATHS = ["/plan/info", "/plan/pay"];
+const PUBLIC_PATHS = ["/plan/info", "/plan/pay", "/plan/start"];
 
 /** /plan 이하 모든 화면이 공유하는 고정 레일 셸 */
 export default function PlanShell({ children }: { children: React.ReactNode }) {

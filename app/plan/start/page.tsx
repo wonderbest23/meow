@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
+import PlanPreview from "./PlanPreview";
 import styles from "./PlanStart.module.css";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -207,11 +208,16 @@ export default function PlanStartPage() {
    * 남긴 값), 한참 진행한 뒤에야 로그인하라는 말을 듣게 됐다.
    */
   const [authed, setAuthed] = useState<boolean | null>(null);
+  const [offer, setOffer] = useState<{ price?: number; freeLabels?: string[] }>({});
   useEffect(() => {
     let alive = true;
     fetch("/api/plan/access")
       .then((r) => r.json())
-      .then((d) => { if (alive) setAuthed(!!d.authenticated); })
+      .then((d) => {
+        if (!alive) return;
+        setAuthed(!!d.authenticated);
+        setOffer({ price: d.price, freeLabels: Array.isArray(d.freeLabels) ? d.freeLabels : [] });
+      })
       .catch(() => { if (alive) setAuthed(false); });
     return () => { alive = false; };
   }, []);
@@ -271,6 +277,12 @@ export default function PlanStartPage() {
   const visible = PLAN_TYPES.filter((p) => p.category === category);
   const featured = visible.find((p) => p.featured);
   const others = visible.filter((p) => p !== featured);
+
+  // 로그인 확인 전에는 아무것도 단정하지 않는다(깜빡임 방지)
+  if (authed === null) return <div className={styles.page} aria-busy="true" />;
+
+  // 로그인 전에는 무엇이 만들어지는지부터 보여준다
+  if (!authed) return <PlanPreview price={offer.price} freeLabels={offer.freeLabels} />;
 
   return (
     <div className={styles.page}>
