@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Bookmark, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, ShieldCheck, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bookmark, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { OpportunityPreferenceRecord } from "../../lib/opportunity-preferences/domain";
@@ -178,9 +178,27 @@ export default function AccountPage() {
         </section>
       ) : (
         <section className="account-auth-shell">
-          <div className="account-auth-copy"><span><ShieldCheck /></span><h1>{mode === "register" ? "계정을 만들고\n작업을 안전하게 보관하세요" : mode === "recover" ? "비밀번호를\n다시 설정할게요" : mode === "reset" ? "새 비밀번호를\n입력해주세요" : "어디서든\n이어서 시작하세요"}</h1><p>{mode === "register" ? "이메일 인증 없이 바로 시작합니다. 지금 만든 작업은 계정에 그대로 연결됩니다." : "로그인하면 지금 만든 작업이 자동으로 내 계정에 연결됩니다."}</p></div>
           <form onSubmit={submit}>
-            <header><span>{mode === "register" ? "회원가입" : mode === "recover" || mode === "reset" ? "계정 복구" : "로그인"}</span><strong>{mode === "register" ? "무료 계정 만들기" : mode === "recover" ? "복구 메일 받기" : mode === "reset" ? "새 비밀번호 저장" : "내 작업 불러오기"}</strong></header>
+            {/*
+              로그인에 필요한 건 이메일·비밀번호뿐이다.
+              예전에는 큰 히어로 문구('어디서든 이어서 시작하세요')와 카드 제목
+              ('내 작업 불러오기')이 같은 말을 두 번 했고, 모바일에서는 방패
+              아이콘이 제목 위에 덩그러니 놓였다. 제목 한 줄만 남긴다.
+            */}
+            <header>
+              <strong>
+                {mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 찾기" : mode === "reset" ? "새 비밀번호 설정" : "로그인"}
+              </strong>
+              <p>
+                {mode === "register"
+                  ? "이메일 인증 없이 바로 시작합니다."
+                  : mode === "recover"
+                    ? "가입한 이메일로 복구 링크를 보내드립니다."
+                    : mode === "reset"
+                      ? "8자 이상으로 새 비밀번호를 정해주세요."
+                      : "작성한 내용이 계정에 저장돼 어느 기기에서든 이어집니다."}
+              </p>
+            </header>
             {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
             {mode !== "recover" && <label><span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span><div><KeyRound /><input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="8자 이상" /></div></label>}
             {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><KeyRound /><input type="password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div></label>}

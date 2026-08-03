@@ -4793,15 +4793,13 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-page > header img { width: 142px; display: block; }
 .account-page > header > a:last-child { display: flex; align-items: center; gap: 6px; color: #4e5968; font-size: 12px; font-weight: 700; }
 .account-page > header svg { width: 15px; }
-.account-auth-shell { width: min(980px, calc(100% - 48px)); min-height: calc(100vh - 72px); margin: auto; padding: 70px 0; display: grid; grid-template-columns: minmax(0, .85fr) minmax(400px, 1fr); gap: 84px; align-items: center; }
-.account-auth-copy > span { width: 46px; height: 46px; border-radius: 8px; background: #202632; color: #8bbcff; display: grid; place-items: center; }
-.account-auth-copy > span svg { width: 22px; }
-.account-auth-copy h1 { margin: 22px 0 16px; font-size: 42px; line-height: 1.3; letter-spacing: 0; white-space: pre-line; }
-.account-auth-copy p { max-width: 390px; margin: 0; color: #6b7684; font-size: 13px; line-height: 1.8; }
+/* 로그인·회원가입 — 카드 하나만 가운데 둔다 (좌측 히어로 문구는 없앴다) */
+.account-auth-shell { width: min(440px, calc(100% - 32px)); min-height: calc(100vh - 72px); margin: auto; padding: 56px 0; display: grid; align-items: center; }
 .account-auth-shell > form { padding: 30px; border: 1px solid #d1d6db; border-radius: 8px; background: white; box-shadow: 0 18px 50px #2026320d; display: grid; gap: 16px; }
-.account-auth-shell > form > header { padding-bottom: 18px; border-bottom: 1px solid #e5e8eb; display: grid; gap: 3px; }
+.account-auth-shell > form > header { padding-bottom: 18px; border-bottom: 1px solid #e5e8eb; display: grid; gap: 6px; }
 .account-auth-shell > form > header span { color: #1b64da; font-size: 10px; font-weight: 800; }
-.account-auth-shell > form > header strong { font-size: 20px; }
+.account-auth-shell > form > header strong { font-size: 21px; letter-spacing: -0.4px; }
+.account-auth-shell > form > header p { margin: 0; color: #6b7684; font-size: 12.5px; line-height: 1.6; }
 .account-auth-shell > form > label { display: grid; gap: 7px; }
 .account-auth-shell > form > label > span { color: #4e5968; font-size: 11px; font-weight: 800; }
 .account-auth-shell > form > label > div { height: 48px; padding: 0 12px; border: 1px solid #b0b8c1; border-radius: 7px; display: flex; align-items: center; gap: 9px; }
@@ -4817,7 +4815,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-submit svg { width: 17px; }
 .account-form-message, .account-message { margin: 0; padding: 10px 12px; border-radius: 6px; background: #eef6ff; color: #1b64da; font-size: 11px; line-height: 1.55; }
 .account-auth-shell form > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.account-auth-shell form > footer button { padding: 0; border: 0; background: none; color: #4e5968; font-size: 10px; cursor: pointer; }
+.account-auth-shell form > footer button { padding: 0; border: 0; background: none; color: #4e5968; font-size: 12px; cursor: pointer; }
 .account-dashboard { width: min(980px, calc(100% - 48px)); margin: auto; padding: 58px 0 90px; }
 .account-welcome { padding-bottom: 32px; border-bottom: 1px solid #d1d6db; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
 .account-welcome > span { width: 46px; height: 46px; border-radius: 8px; background: #e8f3ff; color: #1b64da; display: grid; place-items: center; }
@@ -4961,10 +4959,8 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .platform-legal-draft { margin: 20px 18px 0; }
   .platform-legal-document > section { margin: 0 20px; padding: 26px 0; }
   .platform-legal-document > footer { padding: 24px 20px 34px; }
-  .account-auth-shell { width: 100%; min-height: auto; padding: 38px 18px 60px; grid-template-columns: 1fr; gap: 30px; }
-  .account-auth-copy h1 { font-size: 31px; }
-  .account-auth-copy p { font-size: 12px; }
-  .account-auth-shell > form { padding: 23px 18px; }
+  .account-auth-shell { width: 100%; min-height: auto; padding: 28px 16px 56px; }
+  .account-auth-shell > form { padding: 22px 18px; }
   .account-dashboard { width: 100%; padding: 34px 18px 70px; }
   .account-welcome { grid-template-columns: 42px 1fr; }
   .account-welcome > button { grid-column: 1 / -1; width: 100%; justify-content: center; }
@@ -9230,20 +9226,6 @@ body {
 }
 .account-page > header {
   border-bottom: 1px solid var(--border-soft, #e5e8eb);
-}
-.account-auth-copy > span {
-  border-radius: 14px;
-  background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3182f6);
-}
-.account-auth-copy h1 {
-  font-size: 38px;
-  font-weight: 800;
-  letter-spacing: -1px;
-}
-.account-auth-copy p {
-  font-size: 14px;
-  color: var(--text-body, #4e5968);
 }
 .account-auth-shell > form {
   padding: 32px;
