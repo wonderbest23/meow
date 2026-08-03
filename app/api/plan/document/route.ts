@@ -110,9 +110,17 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "font unavailable" }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
   const fontData = new Uint8Array(await fontResponse.arrayBuffer());
-  const buffer = format === "docx"
-    ? await renderDocx([document], project, fontData)
-    : await renderPdf([document], project, fontData);
+  let buffer: Buffer;
+  try {
+    buffer = format === "docx"
+      ? await renderDocx([document], project, fontData)
+      : await renderPdf([document], project, fontData);
+  } catch (error) {
+    // 큰 문서에서만 재현되는 렌더 실패를 추적하려고 원인을 로그와 응답에 남긴다
+    const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.error("plan document render failed", { format, sections: sections.length, chars: assembled.length, message });
+    return new Response(JSON.stringify({ error: "render_failed", message }), { status: 500, headers: { "Content-Type": "application/json" } });
+  }
   const safe = title.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-").slice(0, 60);
   // 헤더는 Latin-1만 허용 → ASCII 폴백 + RFC 5987(UTF-8)로 한글 파일명 전달
   const ascii = safe.replace(/[^\x20-\x7E]/g, "") || "plan";
