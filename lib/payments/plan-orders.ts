@@ -145,3 +145,39 @@ export async function hasPaidPlanOrder(userId: string): Promise<boolean> {
   if (error) throw error;
   return (data?.length ?? 0) > 0;
 }
+
+
+export interface PaymentHistoryItem {
+  orderId: string;
+  orderName: string;
+  amount: number;
+  status: string;
+  createdAt: string;
+  paidAt: string | null;
+  method: string | null;
+}
+
+/**
+ * 이 사용자의 결제 내역.
+ * 플랜 빌더뿐 아니라 이 계정으로 낸 모든 결제를 최신순으로 돌려준다.
+ */
+export async function listPaymentHistory(userId: string): Promise<PaymentHistoryItem[]> {
+  const supabase = getServerSupabase();
+  if (!supabase) return [];
+  const { data, error } = await supabase
+    .from("payment_orders")
+    .select("order_id, order_name, amount, status, created_at, confirmed_at, method")
+    .eq("owner_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(50);
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    orderId: String(row.order_id),
+    orderName: String(row.order_name ?? ""),
+    amount: Number(row.amount ?? 0),
+    status: String(row.status ?? ""),
+    createdAt: String(row.created_at ?? ""),
+    paidAt: row.confirmed_at ? String(row.confirmed_at) : null,
+    method: row.method ? String(row.method) : null,
+  }));
+}

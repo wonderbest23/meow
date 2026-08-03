@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Bookmark, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, Trash2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Bookmark, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, Receipt, Trash2 } from "lucide-react";
 import Link from "next/link";
+import type { PaymentHistoryItem } from "../../lib/payments/plan-orders";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import type { OpportunityPreferenceRecord } from "../../lib/opportunity-preferences/domain";
 
@@ -15,12 +16,46 @@ async function payload<T>(response: Response): Promise<T> {
   return data as T;
 }
 
+/** 결제 상태를 사람이 읽는 말로 */
+const PAYMENT_STATUS: Record<string, string> = {
+  created: "결제 대기",
+  confirming: "승인 중",
+  done: "결제 완료",
+  canceled: "취소됨",
+  partial_canceled: "부분 취소",
+  aborted: "중단됨",
+  expired: "기한 만료",
+  failed: "실패",
+};
+
+const REMEMBER_KEY = "oneul-remember";
+const EMAIL_KEY = "oneul-remember-email";
+
+/** 다음 방문에 되살릴 값 — 비밀번호는 절대 남기지 않는다 */
+function rememberLocally(remember: boolean, email: string) {
+  try {
+    window.localStorage.setItem(REMEMBER_KEY, remember ? "1" : "0");
+    if (remember) window.localStorage.setItem(EMAIL_KEY, email);
+    else window.localStorage.removeItem(EMAIL_KEY);
+  } catch {
+    // 저장소를 못 써도 로그인 자체에는 지장이 없다
+  }
+}
+
 export default function AccountPage() {
   const [mode, setMode] = useState<Mode>("login");
   const [session, setSession] = useState<SessionState | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
+  /*
+   * 로그인 상태 유지.
+   * 켜면 30일짜리 쿠키를, 끄면 브라우저를 닫을 때 사라지는 세션 쿠키를 받는다.
+   * 선택과 이메일은 이 브라우저에만 남긴다(비밀번호는 저장하지 않는다).
+   */
+  const [remember, setRemember] = useState(true);
+  /** 결제 내역 — 로그인한 뒤에만 불러온다 */
+  const [payments, setPayments] = useState<PaymentHistoryItem[] | null>(null);
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [aiNotice, setAiNotice] = useState(false);
@@ -58,8 +93,13 @@ export default function AccountPage() {
     setSession(nextSession);
     if (!nextSession.authenticated) {
       setSavedIdeas([]);
+      setPayments(null);
       return;
     }
+    void fetch("/api/auth/payments", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : { payments: [] }))
+      .then((d: { payments?: PaymentHistoryItem[] }) => setPayments(d.payments ?? []))
+      .catch(() => setPayments([]));
     try {
       const preferences = await payload<{ preferences: OpportunityPreferenceRecord[] }>(
         await fetch("/api/opportunities/preferences", { cache: "no-store" }),
@@ -106,6 +146,18 @@ export default function AccountPage() {
       .catch((error) => { setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
   }, []);
 
+  // 지난번 선택과 이메일을 되살린다
+  useEffect(() => {
+    try {
+      const saved = window.localStorage.getItem(REMEMBER_KEY);
+      if (saved === "0") setRemember(false);
+      const savedEmail = window.localStorage.getItem(EMAIL_KEY);
+      if (savedEmail) setEmail(savedEmail);
+    } catch {
+      // 저장소를 못 쓰면 기본값(유지 켬)으로 둔다
+    }
+  }, []);
+
   const valid = useMemo(() => {
     if (mode === "recover") return email.includes("@");
     if (mode === "reset") return password.length >= 8 && password === passwordConfirm && Boolean(recoveryTokens);
@@ -126,6 +178,7 @@ export default function AccountPage() {
         const result = await payload<{ authenticated: boolean; message?: string }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
         // 이메일 인증 없이 가입 즉시 로그인된다
         if (result.authenticated) {
+          rememberLocally(remember, email);
           if (goNext()) return;
           setMessage("계정을 만들었습니다."); await loadSession();
         } else {
@@ -133,8 +186,9 @@ export default function AccountPage() {
           setMessage(result.message ?? "계정을 만들었습니다. 로그인해 주세요.");
         }
       } else {
-        await payload(await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) }));
+        await payload(await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, remember }) }));
         setPassword("");
+        rememberLocally(remember, email);
         // 하던 작업으로 돌려보낸다 — 로그인만 하고 갇히지 않게
         if (goNext()) return;
         setMessage("로그인했습니다."); await loadSession();
@@ -176,6 +230,37 @@ export default function AccountPage() {
         <section className="account-dashboard">
           <div className="account-welcome"><span><CheckCircle2 /></span><div><small>내 계정</small><h1>작업을 이어서 시작하세요</h1><p>{session.email}</p></div><button onClick={logout}><LogOut /> 로그아웃</button></div>
           <div className="account-projects account-plan-shortcut"><header><div><strong>사업계획서 플랜</strong><p>작성 중인 사업계획서를 이어서 쓰거나 새로 시작할 수 있습니다.</p></div><Link href="/plan">내 플랜 열기 <ArrowRight /></Link></header></div>
+          <div className="account-payments">
+            <header>
+              <div>
+                <strong>결제 내역</strong>
+                <p>결제한 상품과 금액을 확인할 수 있습니다.</p>
+              </div>
+            </header>
+            {payments === null ? null : payments.length === 0 ? (
+              <div className="account-empty">
+                <Receipt />
+                <strong>아직 결제 내역이 없습니다.</strong>
+                <p>플랜 빌더를 결제하면 여기에 남습니다.</p>
+              </div>
+            ) : (
+              <table>
+                <thead>
+                  <tr><th>상품</th><th>금액</th><th>상태</th><th>일시</th></tr>
+                </thead>
+                <tbody>
+                  {payments.map((item) => (
+                    <tr key={item.orderId}>
+                      <td>{item.orderName || "-"}</td>
+                      <td className="account-payment-amount">{item.amount.toLocaleString("ko-KR")}원</td>
+                      <td><span className={`account-payment-status is-${item.status}`}>{PAYMENT_STATUS[item.status] ?? item.status}</span></td>
+                      <td>{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
           <div className="account-saved-ideas"><header><div><strong>저장한 사업 아이디어</strong><p>추천 화면에서 저장한 아이디어를 다시 비교하고 시작할 수 있습니다.</p></div><Link href="/?view=explore">아이디어 찾기 <ArrowRight /></Link></header>{savedIdeas.length === 0 ? <div className="account-empty"><Bookmark /><strong>아직 저장한 사업 아이디어가 없습니다.</strong><p>마음에 드는 추천에서 저장을 누르면 여기에 보관됩니다.</p></div> : <div>{savedIdeas.map((preference) => <article key={preference.opportunityKey}><Link href={`/?view=explore&saved=${encodeURIComponent(preference.opportunityKey)}`}><span><Bookmark /></span><div><small>{preference.opportunity.sector}</small><strong>{preference.opportunity.title}</strong><p>{preference.opportunity.oneLiner}</p></div><ArrowRight /></Link><button aria-label={`${preference.opportunity.title} 저장 취소`} disabled={deletingIdea === preference.opportunityKey} onClick={() => void removeSavedIdea(preference.opportunityKey)}>삭제</button></article>)}</div>}</div>
           <div className="account-projects"><header><div><strong>진행 중인 사업</strong><p>실행을 시작한 사업과 완성 중인 문서를 이어서 볼 수 있습니다.</p></div><Link href="/?view=start">새 사업 시작 <ArrowRight /></Link></header>{session.projects.length === 0 ? <div className="account-empty"><BriefcaseBusiness /><strong>아직 계정에 연결된 사업이 없습니다.</strong><p>새 사업을 시작하거나, 기존 작업을 만든 브라우저에서 로그인하면 자동으로 연결됩니다.</p></div> : <div>{session.projects.map((project) => <Link key={project.id} href={`/?view=project&project=${project.id}`}><span><BriefcaseBusiness /></span><div><strong>{project.title}</strong><small>{project.activeStage + 1}단계 · {new Date(project.updatedAt).toLocaleDateString("ko-KR")} 수정</small></div><ArrowRight /></Link>)}</div>}</div>
           {message && <p className="account-message">{message}</p>}
@@ -207,6 +292,12 @@ export default function AccountPage() {
             {mode !== "recover" && <label><span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span><div><KeyRound /><input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="8자 이상" /></div></label>}
             {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><KeyRound /><input type="password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div></label>}
             {mode === "register" && <div className="account-consents"><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
+            {(mode === "login" || mode === "register") && (
+              <label className="account-remember">
+                <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+                <span>로그인 상태 유지<small>끄면 브라우저를 닫을 때 로그아웃됩니다.</small></span>
+              </label>
+            )}
             {message && <p className="account-form-message">{message}</p>}
             <button className="account-submit" disabled={!valid || busy}>{busy ? "처리 중..." : mode === "register" ? "계정 만들기" : mode === "recover" ? "복구 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"} <LogIn /></button>
             <footer>{mode === "login" ? <><button type="button" onClick={() => { setMode("register"); setMessage(""); }}>처음이신가요? 회원가입</button><button type="button" onClick={() => { setMode("recover"); setMessage(""); }}>비밀번호 찾기</button></> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>

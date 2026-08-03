@@ -3,7 +3,12 @@ import { z } from "zod";
 import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccountSession } from "../../../../lib/account-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 
-const schema = z.object({ email: z.string().trim().email().max(200), password: z.string().min(8).max(200) });
+const schema = z.object({
+  email: z.string().trim().email().max(200),
+  password: z.string().min(8).max(200),
+  /** 로그인 상태 유지 — 끄면 브라우저를 닫을 때 세션이 사라진다 */
+  remember: z.boolean().optional(),
+});
 
 export async function POST(request: Request) {
   const limited = await enforceRateLimit("auth-login", request, {
@@ -15,10 +20,11 @@ export async function POST(request: Request) {
   try {
     const input = schema.parse(await request.json());
     const previousGuestHash = await currentGuestHash();
-    const result = await createServerAuthClient().auth.signInWithPassword(input);
+    const { remember = true, ...credentials } = input;
+    const result = await createServerAuthClient().auth.signInWithPassword(credentials);
     if (result.error || !result.data.session || !result.data.user) throw result.error ?? new Error("로그인 정보를 확인해주세요.");
     await claimGuestProjects(result.data.user.id, previousGuestHash);
-    await setAccountSession(result.data.session);
+    await setAccountSession(result.data.session, remember);
     return NextResponse.json({ authenticated: true, email: result.data.user.email });
   } catch (error) {
     const message = error instanceof Error && error.message.includes("not configured")

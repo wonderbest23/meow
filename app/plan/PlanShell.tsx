@@ -41,23 +41,19 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
 
   // 로그인했으면 이메일 첫 글자를 아바타로, 아니면 '로그인'이라고 읽히게 둔다
   const initial = account?.email ? account.email.trim().charAt(0).toUpperCase() : null;
-  const onStart = pathname.startsWith("/plan/start");
   const onInfo = pathname.startsWith("/plan/info");
   // 목록·개요·섹션 위저드는 '내 플랜'으로 묶어 하이라이트
-  const onPlan = !onStart && !onInfo && pathname.startsWith("/plan");
+  const onPlan = !onInfo && pathname.startsWith("/plan");
 
   return (
     <div className={styles.shell}>
       <nav className={styles.rail} aria-label="주요 메뉴">
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">오늘<br />창업</Link>
         <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">{ICONS.plan}</Link>
-        <Link href="/plan/start" className={`${styles.railBtn} ${onStart ? styles.on : ""}`} title="새 플랜 만들기" aria-label="새 플랜 만들기">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
-        </Link>
         <Link href="/plan/info" className={`${styles.railBtn} ${onInfo ? styles.on : ""}`} title="이용 안내" aria-label="이용 안내">{ICONS.help}</Link>
         <div className={styles.spring} />
         {account?.authenticated ? (
-          <Link href="/account" className={`${styles.railBtn} ${styles.me}`} title={account.email ?? "내 계정"} aria-label={`내 계정 (${account.email ?? "로그인됨"})`}>
+          <Link href="/account" className={`${styles.railBtn} ${styles.me}`} title={`마이페이지 · ${account.email ?? ""}`} aria-label={`마이페이지 (${account.email ?? "로그인됨"})`}>
             {initial ?? ICONS.team}
           </Link>
         ) : (

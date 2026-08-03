@@ -4806,6 +4806,12 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-auth-shell > form > label > div:focus-within { border-color: #1b64da; box-shadow: 0 0 0 3px #1b64da12; }
 .account-auth-shell > form > label svg { width: 16px; color: #6b7684; }
 .account-auth-shell input { min-width: 0; width: 100%; border: 0; outline: 0; }
+/* 로그인 상태 유지 */
+.account-remember { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
+.account-remember input { width: 17px; height: 17px; margin-top: 1px; flex: 0 0 auto; accent-color: #1b64da; cursor: pointer; }
+.account-remember > span { display: grid; gap: 2px; color: #333d4b; font-size: 13px; font-weight: 700; }
+.account-remember small { color: #6b7684; font-size: 11.5px; font-weight: 400; }
+
 .account-consents { padding: 13px; border: 1px solid #e5e8eb; border-radius: 7px; background: #f7f8fa; display: grid; gap: 9px; }
 .account-consents label { display: flex; align-items: flex-start; gap: 8px; color: #4e5968; font-size: 11px; line-height: 1.5; }
 .account-consents input { width: 16px; height: 16px; flex: 0 0 auto; accent-color: #1b64da; }
@@ -4826,6 +4832,22 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-welcome button { height: 38px; padding: 0 11px; border: 1px solid #d1d6db; border-radius: 6px; background: white; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
 .account-welcome button svg { width: 14px; }
 .account-projects { margin-top: 34px; }
+
+/* 결제 내역 */
+.account-payments { margin-top: 34px; }
+.account-payments table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 13px; }
+.account-payments th { padding: 9px 10px; border-bottom: 1px solid #d1d6db; color: #6b7684; font-size: 11.5px; font-weight: 700; text-align: left; }
+.account-payments td { padding: 12px 10px; border-bottom: 1px solid #e5e8eb; color: #333d4b; }
+.account-payment-amount { font-variant-numeric: tabular-nums; font-weight: 700; }
+.account-payment-status { padding: 3px 8px; border-radius: 999px; background: #f2f4f6; color: #4e5968; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.account-payment-status.is-done { background: #e7f8ef; color: #10794b; }
+.account-payment-status.is-failed, .account-payment-status.is-canceled, .account-payment-status.is-aborted, .account-payment-status.is-expired { background: #fdeceb; color: #b42318; }
+
+@media (max-width: 640px) {
+  /* 좁은 화면에서는 표를 옆으로 밀어 본다 */
+  .account-payments table { display: block; width: max-content; max-width: 100%; overflow-x: auto; }
+  .account-payments th, .account-payments td { white-space: nowrap; }
+}
 .account-saved-ideas { margin-top: 34px; }
 .account-saved-ideas > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .account-saved-ideas > header strong { font-size: 18px; }

@@ -32,25 +32,45 @@ const cookieOptions = {
   path: "/",
 };
 
-/** 리프레시 토큰 보관 기간 — 이 기간 동안 로그인이 유지된다. */
+/** 리프레시 토큰 보관 기간 — '로그인 상태 유지'를 켰을 때 이 기간 동안 유지된다. */
 const SESSION_DAYS = 30;
 
-export async function setAccountSession(session: Session) {
+/**
+ * '로그인 상태 유지' 선택을 기억하는 표식.
+ * 쿠키에서 만료 시각을 되읽을 수 없으므로, 토큰을 갱신할 때 원래 선택을
+ * 그대로 이어가려면 선택 자체를 따로 남겨야 한다.
+ */
+const REMEMBER_COOKIE = "venture_remember";
+
+export async function setAccountSession(session: Session, remember = true) {
   const cookieStore = await cookies();
+  // 유지를 끄면 만료를 주지 않는다 — 브라우저를 닫으면 사라지는 세션 쿠키가 된다
+  const life = remember ? { maxAge: 60 * 60 * 24 * SESSION_DAYS } : {};
   /*
    * 액세스 쿠키에도 긴 만료를 준다.
    * 짧게 주면(예: 1시간) 쿠키가 사라진 뒤 리프레시 토큰이 살아 있어도
    * 갱신을 시도할 실마리가 없어 로그아웃된 것처럼 보인다.
    * 토큰 자체의 유효기간은 JWT의 exp가 정하고, 서버가 매번 검증한다.
    */
-  cookieStore.set(AUTH_ACCESS_COOKIE, session.access_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * SESSION_DAYS });
-  cookieStore.set(AUTH_REFRESH_COOKIE, session.refresh_token, { ...cookieOptions, maxAge: 60 * 60 * 24 * SESSION_DAYS });
+  cookieStore.set(AUTH_ACCESS_COOKIE, session.access_token, { ...cookieOptions, ...life });
+  cookieStore.set(AUTH_REFRESH_COOKIE, session.refresh_token, { ...cookieOptions, ...life });
+  if (remember) {
+    cookieStore.set(REMEMBER_COOKIE, "1", { ...cookieOptions, httpOnly: false, ...life });
+  } else {
+    cookieStore.delete(REMEMBER_COOKIE);
+  }
+}
+
+/** 이 브라우저가 '로그인 상태 유지'로 로그인했는지 */
+export async function sessionRemembered(): Promise<boolean> {
+  return (await cookies()).get(REMEMBER_COOKIE)?.value === "1";
 }
 
 export async function clearAccountSession() {
   const cookieStore = await cookies();
   cookieStore.delete(AUTH_ACCESS_COOKIE);
   cookieStore.delete(AUTH_REFRESH_COOKIE);
+  cookieStore.delete(REMEMBER_COOKIE);
   cookieStore.delete(GUEST_COOKIE);
 }
 
@@ -76,7 +96,8 @@ export async function getAuthenticatedUser(): Promise<User | null> {
   if (!refreshToken) return null;
   const refreshed = await auth.auth.refreshSession({ refresh_token: refreshToken });
   if (!refreshed.data.session || !refreshed.data.user) return null;
-  await setAccountSession(refreshed.data.session);
+  // 갱신할 때도 처음 선택한 유지 여부를 그대로 따른다
+  await setAccountSession(refreshed.data.session, await sessionRemembered());
   return refreshed.data.user;
 }
 
