@@ -218,6 +218,9 @@ export const PLAN_TYPE_SECTIONS: Record<string, string[]> = {
     "strategy/distribution",
     "strategy/promotion",
     "strategy/people",
+    // 실행을 추적하려면 손익 숫자가 있어야 한다 — 매출·비용 두 섹션은 남긴다
+    "financials/revenue",
+    "financials/expenses",
     "summary/executive",
   ],
   "창업 초기 · 재무 예측": [
