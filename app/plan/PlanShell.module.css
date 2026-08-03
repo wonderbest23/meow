@@ -26,13 +26,17 @@
 .logo {
   width: 40px;
   height: 40px;
-  border-radius: 12px;
+  /* 아바타(원형·한 글자)로 오해받지 않도록 각진 워드마크로 둔다 */
+  border-radius: 9px;
   background: linear-gradient(150deg, var(--blue, #3182f6), #7f9bff);
   display: grid;
   place-items: center;
   color: #fff;
   font-weight: 800;
-  font-size: 17px;
+  font-size: 11px;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  text-align: center;
   margin-bottom: 14px;
   box-shadow: 0 8px 18px rgba(47, 87, 244, 0.5);
   text-decoration: none;
@@ -68,6 +72,30 @@
 }
 .lock {
   color: #f4b740;
+}
+
+/* 로그인 상태 — 이메일 첫 글자를 아바타로 */
+.me {
+  background: var(--blue, #3182f6);
+  color: #fff;
+  border-radius: 50%;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* 비로그인 상태 — 아이콘 대신 '로그인'이라고 읽히게 */
+.signIn {
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8edf5;
+}
+.signIn:hover {
+  background: rgba(255, 255, 255, 0.16);
+}
+.signInText {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 /* 콘텐츠 영역 (레일 폭만큼 밀어냄) */
