@@ -34,6 +34,8 @@ export function isSamplePlan(planId: string | null | undefined): boolean {
 export const SAMPLE_BUSINESS = {
   name: "새벽커피",
   tagline: "출근길 3분 픽업으로 완성되는 스페셜티 커피",
+  description: "출근길 직장인에게 앱으로 미리 주문받아 3분 안에 건네는 스페셜티 커피 픽업 매장입니다.",
+  role: "사업자(운영 중)",
   industry: "카페·음식점",
   region: "서울 마포구",
   stage: "운영 중",

@@ -88,14 +88,16 @@ export default function PlanList() {
           <div className={styles.bizCard}>
             <div className={styles.bizMain}>
               <div className={styles.bizLabel}>내 사업</div>
-              <h1 className={styles.bizName}>{biz.name}</h1>
-              {biz.description && <p className={styles.bizDesc}>{biz.description}</p>}
-              <div className={styles.bizMeta}>
-                {biz.industry && <span className={styles.tag}>{biz.industry}</span>}
-                {biz.region && <span className={styles.tag}>{biz.region}</span>}
-                {biz.stage && <span className={styles.tag}>{biz.stage}</span>}
-                {biz.role && <span className={styles.tag}>{biz.role}</span>}
-              </div>
+              {/* 값만 알약으로 늘어놓으면 무엇을 뜻하는지 알 수 없어 라벨을 붙인다 */}
+              <dl className={styles.bizRows}>
+                <dt>사업명</dt>
+                <dd className={styles.bizNameValue}>{biz.name}</dd>
+                {biz.industry ? (<><dt>업종</dt><dd>{biz.industry}</dd></>) : null}
+                {biz.region ? (<><dt>지역</dt><dd>{biz.region}</dd></>) : null}
+                {biz.stage ? (<><dt>진행 단계</dt><dd>{biz.stage}</dd></>) : null}
+                {biz.role ? (<><dt>역할</dt><dd>{biz.role}</dd></>) : null}
+                {biz.description ? (<><dt>소개</dt><dd>{biz.description}</dd></>) : null}
+              </dl>
             </div>
             <Link href="/plan/start" className={styles.editBtn}>사업 정보 수정</Link>
           </div>

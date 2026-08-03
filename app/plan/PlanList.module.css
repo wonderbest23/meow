@@ -35,11 +35,33 @@
   text-transform: uppercase;
   margin-bottom: 6px;
 }
-.bizName {
-  margin: 0 0 8px;
-  font-size: 26px;
+/* 라벨-값 목록 — 알약만 늘어놓으면 무슨 항목인지 읽히지 않는다 */
+.bizRows {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 16px;
+  row-gap: 7px;
+  margin: 0;
+  align-items: baseline;
+}
+.bizRows dt {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-muted, #8b95a1);
+  white-space: nowrap;
+}
+.bizRows dd {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-strong, #191f28);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.bizNameValue {
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: -0.6px;
+  letter-spacing: -0.4px;
 }
 .bizDesc {
   margin: 0 0 12px;
@@ -302,8 +324,12 @@
   .bizCard {
     padding: 20px;
   }
-  .bizName {
-    font-size: 22px;
+  .bizRows {
+    column-gap: 12px;
+    row-gap: 6px;
+  }
+  .bizNameValue {
+    font-size: 18px;
   }
 }
 
