@@ -13,7 +13,7 @@ const ICONS = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M7 3h7l5 5v13H7z" /><path d="M14 3v5h5" /><path d="M9.5 13h6M9.5 16.5h6" /></svg>
   ),
   help: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-8 8H4l1.5-4A8 8 0 1 1 21 12Z" /><path d="M9.5 10.5a2.5 2.5 0 1 1 3.2 2.4c-.8.3-1.2.8-1.2 1.6" /><path d="M11.5 17h.01" /></svg>
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8.5" /><path d="M9.9 9.6a2.2 2.2 0 1 1 2.8 2.2c-.7.2-1 .7-1 1.4v.4" /><path d="M11.7 16.4h.01" /></svg>
   ),
   team: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 19a5.5 5.5 0 0 1 11 0" /><path d="M16 5.2a3.2 3.2 0 0 1 0 6M18 19a5.5 5.5 0 0 0-3-4.9" /></svg>
@@ -45,8 +45,9 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   // 로그인했으면 이메일 첫 글자를 아바타로, 아니면 '로그인'이라고 읽히게 둔다
   const initial = account?.email ? account.email.trim().charAt(0).toUpperCase() : null;
   const onStart = pathname.startsWith("/plan/start");
+  const onInfo = pathname.startsWith("/plan/info");
   // 목록·개요·섹션 위저드는 '내 플랜'으로 묶어 하이라이트
-  const onPlan = !onStart && pathname.startsWith("/plan");
+  const onPlan = !onStart && !onInfo && pathname.startsWith("/plan");
 
   return (
     <div className={styles.shell}>
@@ -57,7 +58,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         <Link href="/plan/start" className={`${styles.railBtn} ${onStart ? styles.on : ""}`} title="새 플랜 만들기" aria-label="새 플랜 만들기">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
         </Link>
-        <Link href="/business-info" className={styles.railBtn} title="도움말" aria-label="도움말">{ICONS.help}</Link>
+        <Link href="/plan/info" className={`${styles.railBtn} ${onInfo ? styles.on : ""}`} title="이용 안내" aria-label="이용 안내">{ICONS.help}</Link>
         <div className={styles.spring} />
         {account?.authenticated ? (
           <Link href="/account" className={`${styles.railBtn} ${styles.me}`} title={account.email ?? "내 계정"} aria-label={`내 계정 (${account.email ?? "로그인됨"})`}>
