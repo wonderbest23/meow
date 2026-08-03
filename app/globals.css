@@ -6343,6 +6343,7 @@ body:has(.guided-action-bar) .support-chat-widget { bottom: calc(96px + env(safe
   .start-mode-icon { width: 44px; height: 44px; }
   .start-mode-cards > button > span strong { font-size: 15px; }
   .start-mode-cards > button > span small { font-size: 11px; }
+  .start-mode-cards > button > span:nth-child(2) > em { font-size: 11px; } /* '가장 쉬워요' 배지가 9px이었다 */
   .start-mode-action { width: 44px; height: 44px; }
   .start-mode-action svg { width: 21px; height: 21px; }
   .start-privacy { margin-top: 9px; }
@@ -9340,5 +9341,50 @@ body {
   .home-footer-notice small {
     font-size: 11.5px;
     line-height: 1.65;
+  }
+}
+
+/*
+ * 법적 고지 페이지(약관·개인정보·환불·AI·사업자정보) 모바일.
+ * 좌측 목차가 210px 고정 열이라 375px에서는 본문과 합쳐 화면을 넘겼다.
+ * 좁은 화면에서는 목차를 위로 올려 가로로 훑게 한다.
+ */
+@media (max-width: 720px) {
+  .platform-legal-layout {
+    width: calc(100% - 32px);
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+    padding: 26px 0 60px;
+  }
+  .platform-legal-layout > aside {
+    position: static;
+  }
+  .platform-legal-layout > aside nav {
+    grid-auto-flow: column;
+    grid-auto-columns: max-content;
+    overflow-x: auto;
+    border-top: 0;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .platform-legal-layout > aside a {
+    min-height: 38px;
+    padding: 0 12px;
+    border: 1px solid #d1d6db;
+    border-radius: 8px;
+    white-space: nowrap;
+    font-size: 12.5px;
+  }
+  .platform-legal-header {
+    height: 60px;
+    padding: 0 16px;
+  }
+  .platform-legal-header img {
+    width: 116px;
+  }
+  /* 시행일·원문 링크가 10px이라 읽기 어려웠다 */
+  .platform-legal-document > header small,
+  .platform-legal-document > footer a {
+    font-size: 11.5px;
   }
 }
