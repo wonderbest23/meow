@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import PlanGate from "./PlanGate";
 import styles from "./PlanShell.module.css";
 
 const ICONS = {
@@ -22,6 +23,13 @@ const ICONS = {
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><rect x="4.5" y="10.5" width="15" height="10" rx="2.2" /><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" /></svg>
   ),
 };
+
+/*
+ * 로그인 없이도 볼 수 있는 /plan 화면.
+ * 이용 안내는 법적 고지라 누구에게나 열려 있어야 하고,
+ * 결제 화면은 자체 로그인 안내를 갖고 있다.
+ */
+const PUBLIC_PATHS = ["/plan/info", "/plan/pay"];
 
 /** /plan 이하 모든 화면이 공유하는 고정 레일 셸 */
 export default function PlanShell({ children }: { children: React.ReactNode }) {
@@ -49,6 +57,15 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   // 목록·개요·섹션 위저드는 '내 플랜'으로 묶어 하이라이트
   const onPlan = !onStart && !onInfo && pathname.startsWith("/plan");
 
+  /*
+   * 로그인 관문을 셸 한 곳에 둔다.
+   * 화면마다 따로 막으면 새 화면을 추가할 때마다 빠뜨리게 되고,
+   * 실제로 /plan 목록과 /plan/overview가 열린 채로 남아 있었다.
+   * (서버 차단은 API에서 이미 하고 있고, 여기는 화면 안내다.)
+   */
+  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  const locked = account !== null && !account.authenticated && !isPublic;
+
   return (
     <div className={styles.shell}>
       <nav className={styles.rail} aria-label="주요 메뉴">
@@ -75,7 +92,13 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
           </Link>
         )}
       </nav>
-      <div className={styles.content}>{children}</div>
+      <div className={styles.content}>
+        {locked ? (
+          <div className={styles.gate}><PlanGate reason="login_required" /></div>
+        ) : (
+          children
+        )}
+      </div>
     </div>
   );
 }

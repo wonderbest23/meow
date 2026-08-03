@@ -121,3 +121,10 @@
     height: 36px;
   }
 }
+
+/* 로그인 관문 — 셸 안에서 가운데 정렬 */
+.gate {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 64px 24px;
+}

@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
-import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -272,26 +271,6 @@ export default function PlanStartPage() {
   const visible = PLAN_TYPES.filter((p) => p.category === category);
   const featured = visible.find((p) => p.featured);
   const others = visible.filter((p) => p !== featured);
-
-  // 로그인 확인 전에는 아무것도 단정하지 않는다(깜빡임 방지)
-  if (authed === null) {
-    return <div className={styles.page} aria-busy="true" />;
-  }
-
-  if (!authed) {
-    return (
-      <div className={styles.page}>
-        <div className={styles.frame}>
-          <div className={styles.app}>
-            <div className={styles.main}>
-              <h1 className={styles.h1}>새 플랜 만들기</h1>
-              <PlanGate reason="login_required" />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.page}>
