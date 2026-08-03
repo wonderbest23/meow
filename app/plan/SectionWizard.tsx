@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PLAN_BLUEPRINT, chaptersForType, sectionKey, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
-import {
+import { estimateMinutes,
   questionsForSection,
   isVisible,
   visibleRequiredCount,
@@ -573,7 +573,7 @@ export default function SectionWizard({
               <div className={styles.meters}>
                 <div className={styles.mt}><div className={styles.mtL}>유형</div><div className={styles.mtV}>전략</div></div>
                 <div className={styles.mt}><div className={styles.mtL}>상태</div><div className={styles.mtV}>{generatedHtml ? "생성 완료" : complete ? "작성 완료" : answeredReq > 0 ? "작성 중" : "시작 전"}</div></div>
-                <div className={styles.mt}><div className={styles.mtL}>예상 시간</div><div className={styles.mtV}>{section.estMinutes}분</div></div>
+                <div className={styles.mt}><div className={styles.mtL}>예상 시간</div><div className={styles.mtV}>{estimateMinutes(key, section.title, planType)}분</div></div>
                 <div className={styles.mt}><div className={styles.mtL}>진행</div><div className={styles.mtV}><span className={styles.segs}>{[0, 1, 2, 3].map((i) => (<i key={i} className={i < Math.round((pct / 100) * 4) ? styles.f : ""} />))}</span></div></div>
               </div>
             </div>

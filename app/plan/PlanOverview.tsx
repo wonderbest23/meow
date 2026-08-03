@@ -14,6 +14,7 @@ import {
   priorSectionsSummary,
 } from "../../lib/plan-builder/plan-store";
 import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
+import { estimateMinutes } from "../../lib/plan-builder/questions";
 import ConsistencyPanel from "./ConsistencyPanel";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
 import styles from "./PlanOverview.module.css";
@@ -308,7 +309,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                         {isLocked && <span className={styles.lockTag} title="잠긴 섹션 — 일괄 생성이 건너뜁니다"><Lock size={10} strokeWidth={2.4} /></span>}
                         {isNext && <span className={styles.nextTag}>여기부터</span>}
                         {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
-                        <span className={styles.nodeTime}>{section.estMinutes}분</span>
+                        <span className={styles.nodeTime}>{estimateMinutes(`${chapter.id}/${section.id}`, section.title, type)}분</span>
                       </button>
                     );
                   })}

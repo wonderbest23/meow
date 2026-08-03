@@ -23,6 +23,14 @@ export interface QuestionDef {
   showWhen?: { qid: string; equals: string | string[] };
   /** AI가 이 질문의 답안 후보를 추천(제한된 프롬프트). text/single/multi에 적합 */
   aiSuggest?: boolean;
+  /**
+   * 이 질문이 문서에서 하는 역할.
+   * core: 이 답이 없으면 섹션 본문이 성립하지 않는다.
+   * detail: 본문을 더 구체적으로 만들지만 없어도 성립한다.
+   * 생략하면 core다 — 등급을 안 매긴 질문이 조용히 사라지는 사고를 막기 위해,
+   * 빼는 쪽(detail)을 명시해야만 빠진다.
+   */
+  weight?: "core" | "detail";
 }
 
 export interface QuestionGroup {
@@ -596,6 +604,109 @@ const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "summary/executive": EXEC_SUMMARY_GROUPS,
 };
 
+
+/*
+ * 질문 등급 초안 — detail로 분류한 id만 적는다(나머지는 전부 core).
+ *
+ * 판단 기준:
+ * - 답이 본문 한 문장으로만 들어가는 서술형(problem_freq, price_basis, fear …)
+ * - "조사해보셨나요?" + "내용을 적어주세요" 쌍에서 문서 성립에 필수가 아닌 것
+ * - 손익 계산기가 이미 계산해 주는 값을 사용자에게 되묻는 것(knows_breakeven …)
+ *
+ * 인라인 weight: "detail"과 같은 뜻이다. 질문 정의가 여러 상수에 흩어져 있어
+ * 등급을 한 곳에서 훑어보며 조정할 수 있게 목록으로 둔다.
+ */
+const DETAIL_IDS = new Set<string>([
+  // overview/summary — 문서 성립에는 무엇을·누구에게·어디서면 충분하다
+  "structure",
+  "reach",
+  "product_groups",
+  "revenue_scale",
+  // overview/problem
+  "problem_freq",
+  // overview/mission — 스토리는 있으면 좋지만 미션 서술의 전제가 아니다
+  "has_story",
+  "story",
+  // overview/ip
+  "ip_moat",
+  "ip_plan",
+  // overview/achievements
+  "prep_progress",
+  // overview/structure — 요약 문서에서 팀 규모·역할이면 충분하다
+  "has_cofounder",
+  "equity_split",
+  "will_hire",
+  "hire_roles",
+  // market/products
+  "offer_detail",
+  "price_basis",
+  // market/segments
+  "seg_basis",
+  "why_first",
+  // market/personas — 상황과 동기가 핵심, 나머지는 살
+  "age",
+  "budget",
+  "fear",
+  "channel",
+  // market/competitors
+  "knows_competitors",
+  "competitor_notes",
+  "gap",
+  // market/swot
+  "swot_action",
+  // objectives/corporate
+  "target_number",
+  "sub_goals",
+  "constraint",
+  // strategy/product
+  "expand",
+  "expand_what",
+  // strategy/distribution
+  "delivery",
+  "coverage",
+  // strategy/price
+  "discount",
+  "discount_plan",
+  // strategy/promotion
+  "has_promo_budget",
+  "promo_budget",
+  "promo_measure",
+  // strategy/people
+  "how_manage",
+  "pay_structure",
+  // strategy/exit
+  "exit_when",
+  // funding/requirements
+  "self_fund",
+  "gov_program",
+  "gov_detail",
+  // financials/staffing
+  "staff_type",
+  // financials/assets
+  "asset_own",
+  // financials/financing — 손익분기는 계산기가 구한다. 사용자 추정을 되묻지 않는다
+  "knows_breakeven",
+  "breakeven_value",
+  "breakeven_when",
+]);
+
+/** 질문의 실효 등급 — 인라인 weight가 있으면 그것이, 없으면 목록이 정한다 */
+function effectiveWeight(q: QuestionDef): "core" | "detail" {
+  return q.weight ?? (DETAIL_IDS.has(q.id) ? "detail" : "core");
+}
+
+/*
+ * 재무 계산 입력 6개는 어떤 유형에서도 빠지면 안 된다.
+ * 빠지면 손익분기·12개월 표·차트가 통째로 사라진다.
+ * 실수로 detail을 달면 모듈 로드 시점에 죽는다 — 빌드·테스트에서 즉시 발각.
+ */
+const CALC_REQUIRED_IDS = ["unit_price", "monthly_volume", "variable_per_unit", "fixed_total", "staff_monthly", "asset_cost"];
+for (const id of CALC_REQUIRED_IDS) {
+  if (DETAIL_IDS.has(id)) {
+    throw new Error(`재무 계산 입력 '${id}'은 detail로 분류할 수 없습니다.`);
+  }
+}
+
 /*
  * 유형별 질문 조정.
  *
@@ -608,14 +719,17 @@ interface TypeAdjust {
   drop?: string[];
   /** optional 질문까지 모두 걷어낼지 — 짧게 끝내는 유형용 */
   requiredOnly?: boolean;
+  /** core 등급 질문만 남길지 — 요약형·재무형 문서용 */
+  coreOnly?: boolean;
   /** 이 유형에서만 추가로 묻는 질문 (섹션 키 → 질문) */
   add?: Record<string, QuestionDef[]>;
 }
 
 const TYPE_ADJUST: Record<string, TypeAdjust> = {
   "간단 · 사업계획서": {
-    // 짧게 끝나야 하는 문서라 있으면 좋은 질문은 전부 뺀다
+    // 짧게 끝나야 하는 문서 — 본문 성립에 필요한 core 질문만 남긴다
     requiredOnly: true,
+    coreOnly: true,
   },
   "성장·확장 · 사업계획서": {
     add: {
@@ -664,6 +778,7 @@ const TYPE_ADJUST: Record<string, TypeAdjust> = {
      * 할인 계획·세그먼트 선정 이유는 숫자에 반영되지 않는데 답하는 데는 시간이 든다.
      */
     drop: ["discount", "discount_plan", "why_first", "seg_basis"],
+    coreOnly: true,
   },
   "정밀 · 재무 모델": {
     // 정밀 모델은 세그먼트 근거가 예측의 전제라 남기고, 할인만 뺀다
@@ -698,7 +813,12 @@ function adjustForType(key: string, groups: QuestionGroup[], planType?: string):
   const drop = new Set(rule.drop ?? []);
   let out = groups.map((g) => ({
     ...g,
-    questions: g.questions.filter((q) => !drop.has(q.id) && !(rule.requiredOnly && q.optional)),
+    questions: g.questions.filter(
+      (q) =>
+        !drop.has(q.id) &&
+        !(rule.requiredOnly && q.optional) &&
+        !(rule.coreOnly && effectiveWeight(q) === "detail"),
+    ),
   }));
 
   const extra = rule.add?.[key];
@@ -713,6 +833,37 @@ function adjustForType(key: string, groups: QuestionGroup[], planType?: string):
 
 export function questionsForSection(key: string, sectionTitle: string, planType?: string): QuestionGroup[] {
   return adjustForType(key, SECTION_QUESTIONS[key] ?? defaultGroups(sectionTitle), planType);
+}
+
+/**
+ * 섹션 예상 시간(분) — 실제 보이는 질문 수에서 계산한다.
+ * 예전에는 blueprint에 적힌 고정값이라, 유형이 질문을 줄여도
+ * 화면은 계속 옛날 시간을 말했다. 문항당 평균 1.2분, 최소 2분.
+ */
+export function estimateMinutes(key: string, sectionTitle: string, planType?: string): number {
+  const n = questionsForSection(key, sectionTitle, planType).reduce((sum, g) => sum + g.questions.length, 0);
+  return Math.max(2, Math.ceil(n * 1.2));
+}
+
+/*
+ * 분기 무결성 — 모든 유형 조합에서, 남은 질문의 showWhen 뿌리도 함께 남아야 한다.
+ * 뿌리가 빠지면 가지 질문은 영영 보이지 않는 유령이 된다.
+ * 등급·drop 목록을 고칠 때 실수하면 여기서 모듈 로드가 실패한다.
+ */
+for (const planType of [undefined, ...Object.keys(TYPE_ADJUST)]) {
+  for (const key of Object.keys(SECTION_QUESTIONS)) {
+    const remaining = new Set(
+      adjustForType(key, SECTION_QUESTIONS[key], planType).flatMap((g) => g.questions.map((q) => q.id)),
+    );
+    for (const id of remaining) {
+      const q = SECTION_QUESTIONS[key].flatMap((g) => g.questions).find((x) => x.id === id);
+      if (q?.showWhen && !remaining.has(q.showWhen.qid)) {
+        throw new Error(
+          `[${planType ?? "기본"}] ${key}의 '${id}'는 '${q.showWhen.qid}'가 답해져야 보이는데, 그 질문이 이 유형에서 빠져 있습니다.`,
+        );
+      }
+    }
+  }
 }
 
 /** 조건부(showWhen) 평가: 현재 답변 기준으로 이 질문이 보여야 하는지 */
