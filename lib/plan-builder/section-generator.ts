@@ -101,8 +101,14 @@ export function buildUserPrompt(input: SectionGenInput): string {
       ? [
           "\n[계산된 재무 데이터 — 사용자 입력에 산식을 적용한 확정 수치]",
           input.financialsMarkdown,
-          "\n위 재무 표는 이미 계산이 끝난 확정 자료입니다. 표를 **그대로 본문에 포함**하고, 숫자를 임의로 바꾸거나 새로 만들지 마세요.",
-          "표 앞뒤에 그 수치가 무엇을 뜻하는지, 어떤 점을 주의해야 하는지 해석을 덧붙이세요.",
+          /*
+           * 예전에는 표를 '그대로 옮겨 적으라'고 시켰다. 그러면 차트 펜스가
+           * '코드펜스 금지' 규칙과 충돌해 AI가 임의로 떨어뜨리는 일이 생겼다.
+           * 표·차트는 생성이 끝난 뒤 시스템이 본문 끝에 그대로 붙이므로,
+           * AI는 해석만 쓴다.
+           */
+          "\n위 표와 그래프는 시스템이 본문 끝에 자동으로 붙입니다. 표·수치·그래프를 본문에 옮겨 적지 마세요.",
+          "당신은 이 수치가 무엇을 뜻하는지, 어떤 가정 위에 서 있는지, 무엇을 주의해야 하는지 해석만 쓰세요.",
         ].join("\n")
       : "",
     input.financialsReference && !input.financialsMarkdown
@@ -138,6 +144,18 @@ function readableValue(v: unknown): string {
   if (s === "yes") return "예";
   if (s === "no") return "아니오";
   return s;
+}
+
+/**
+ * 확정 재무 블록(표+차트)을 본문 끝에 붙인다.
+ * AI가 이미 12개월 표를 통째로 옮겨 적었다면(지시 위반) 중복을 피해 붙이지 않는다.
+ */
+export function appendFinancials(markdown: string, input: Pick<SectionGenInput, "financialsMarkdown">): string {
+  const block = input.financialsMarkdown?.trim();
+  if (!block) return markdown;
+  const aiCopied = markdown.includes("| 1월 |") && markdown.includes("| 12월 |");
+  if (aiCopied) return markdown;
+  return `${markdown}\n\n${block}`;
 }
 
 /** 키가 없을 때 쓰는 결정론적 폴백 — 답변으로 구조화된 본문을 만든다(데모 동작 보장). */
@@ -193,7 +211,7 @@ export async function generateSection(config: LLMConfig | null, input: SectionGe
   if (!text || text.trim().length < 40) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
-  return { markdown: text.trim(), source: "ai" };
+  return { markdown: appendFinancials(text.trim(), input), source: "ai" };
 }
 
 /**
@@ -212,5 +230,9 @@ export async function streamSection(
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: fallbackSection(input), source: "fallback" };
-  return { markdown: text.trim(), source: "ai" };
+  /*
+   * 스트리밍 화면에는 재무 블록이 델타로 흐르지 않지만, 최종 저장본에는 붙는다.
+   * 클라이언트는 마지막 done 페이로드의 markdown/html로 갈아끼우므로 문제없다.
+   */
+  return { markdown: appendFinancials(text.trim(), input), source: "ai" };
 }
