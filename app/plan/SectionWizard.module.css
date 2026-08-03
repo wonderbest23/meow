@@ -885,8 +885,21 @@
 @media (max-width: 820px) {
   .app {
     grid-template-columns: 1fr;
+    /*
+     * 한 열로 쌓이면 내용이 900px을 훌쩍 넘는다. height만 풀고 max-height를
+     * 남겨두는 바람에 아래가 잘린 채 스크롤도 되지 않았다(overflow: hidden).
+     */
     height: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
     border-radius: 18px;
+  }
+  /* 내부 열 스크롤도 함께 푼다 — 페이지 전체가 하나로 스크롤되게 */
+  .app .mbody,
+  .app .tracker,
+  .app .nav {
+    overflow: visible;
   }
   .rail {
     flex-direction: row;
@@ -909,6 +922,67 @@
   }
   .radio {
     grid-template-columns: 1fr;
+  }
+}
+
+/*
+ * 모바일 — 디자인은 그대로 두고 치수만 줄인다.
+ * 30px 좌우 여백과 PC용 미터 간격 때문에 본문이 화면보다 54px 넓어져
+ * 오른쪽 '진행' 눈금이 잘리고 '시작 전' 같은 값이 두 줄로 감겼다.
+ */
+@media (max-width: 560px) {
+  .mhead {
+    padding: 18px 16px 14px;
+  }
+  .mhead h1 {
+    font-size: 20px;
+  }
+  .mbody {
+    padding: 18px 16px 24px;
+  }
+  .foot {
+    padding: 14px 16px;
+  }
+
+  .meters {
+    margin-top: 14px;
+  }
+  .mt {
+    padding: 0 10px;
+    min-width: 0;
+  }
+  .mtL {
+    font-size: 9.5px;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .mtV {
+    font-size: 12.5px;
+    margin-top: 4px;
+    gap: 6px;
+    white-space: nowrap; /* '시작 전'이 두 줄로 감기던 것 */
+  }
+  .segs {
+    gap: 3px;
+  }
+  .segs i {
+    width: 10px;
+    height: 5px;
+  }
+
+  /* 버튼이 한 줄에 안 들어가면 줄을 바꾸고, 남는 자리는 나눠 갖는다 */
+  .foot {
+    flex-wrap: wrap;
+  }
+  .foot .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+    padding: 12px 14px;
+    font-size: 13.5px;
+  }
+  .btnPrimary {
+    margin-left: 0;
+    flex-basis: 100%;
   }
 }
 
