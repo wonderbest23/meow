@@ -2,6 +2,9 @@
 // 로컬(localStorage) 캐시 + 서버(plan_states) 동기화.
 
 import { chaptersForType, sectionKey, type PlanSectionStatus } from "./blueprint";
+import { SAMPLE_PLAN_ID, buildSamplePlan, isSamplePlan } from "./sample-plan";
+
+export { SAMPLE_PLAN_ID, isSamplePlan };
 
 const KEY = "oneul-plan-demo-v1";
 
@@ -159,8 +162,14 @@ export function createPlan(planType: string, title?: string): string {
   return plan.id;
 }
 
+/** 예시 플랜은 저장 대상이 아니다. 쓰기 함수는 모두 여기서 먼저 걸러진다. */
+function readOnlyPlan(planId: string | null | undefined): boolean {
+  return isSamplePlan(planId);
+}
+
 /** 작업할 플랜 전환 */
 export function setActivePlan(planId: string) {
+  if (readOnlyPlan(planId)) return;
   const s = loadState();
   if (!s.plans.some((p) => p.id === planId)) return;
   s.activePlanId = planId;
@@ -170,6 +179,7 @@ export function setActivePlan(planId: string) {
 
 /** 플랜 삭제 */
 export function deletePlan(planId: string) {
+  if (readOnlyPlan(planId)) return;
   const s = loadState();
   s.plans = s.plans.filter((p) => p.id !== planId);
   if (s.activePlanId === planId) s.activePlanId = s.plans[0]?.id ?? null;
@@ -182,6 +192,7 @@ export function deletePlan(planId: string) {
  * 유형만 바꿔 다른 형태의 계획서를 만들 때 쓴다.
  */
 export function duplicatePlan(planId: string, options?: { title?: string; planType?: string }): string | null {
+  if (readOnlyPlan(planId)) return null;
   const s = loadState();
   const src = s.plans.find((p) => p.id === planId);
   if (!src) return null;
@@ -204,6 +215,7 @@ export function duplicatePlan(planId: string, options?: { title?: string; planTy
 
 /** 플랜 이름 변경 */
 export function renamePlan(planId: string, title: string) {
+  if (readOnlyPlan(planId)) return;
   const s = loadState();
   const p = s.plans.find((x) => x.id === planId);
   if (!p) return;
@@ -412,6 +424,23 @@ export async function pushToServer(): Promise<void> {
   }
 }
 
+/*
+ * 아직 자기 플랜이 없으면 예시 플랜 한 개를 얹어 돌려준다.
+ * 목록·개요·문서 화면을 그대로 쓰면서 "무엇이 만들어지는지"를 보여주기 위해서다.
+ * localStorage에도 서버에도 저장하지 않는다 — 화면에만 존재한다.
+ */
+let samplePlanCache: Awaited<ReturnType<typeof buildSamplePlan>> | null = null;
+
+async function withSamplePlan(state: PlanState): Promise<PlanState> {
+  if (state.plans.length > 0) return state;
+  if (!samplePlanCache) samplePlanCache = await buildSamplePlan();
+  return {
+    business: { ...EMPTY_BUSINESS, ...samplePlanCache.business },
+    plans: [samplePlanCache.plan as Plan],
+    activePlanId: SAMPLE_PLAN_ID,
+  };
+}
+
 /** 서버에서 상태를 불러와 로컬에 반영(서버 우선) */
 export async function hydrateFromServer(): Promise<PlanState> {
   if (typeof window === "undefined") return loadState();
@@ -430,5 +459,5 @@ export async function hydrateFromServer(): Promise<PlanState> {
   } catch {
     // 서버 실패 → 로컬 캐시 사용
   }
-  return loadState();
+  return withSamplePlan(loadState());
 }

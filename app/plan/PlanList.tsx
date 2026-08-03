@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
-import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, type PlanState } from "../../lib/plan-builder/plan-store";
+import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { Pencil, FileText, Plus } from "lucide-react";
 import styles from "./PlanList.module.css";
 
@@ -123,6 +123,8 @@ export default function PlanList() {
               const pct = total ? Math.round((done / total) * 100) : 0;
               const isActive = p.id === state.activePlanId;
               const acc = COVER_ACCENTS[p.planType] ?? "#3358f4";
+              // 예시 플랜은 읽기 전용 — 이름 변경·복제·삭제를 걸지 않는다
+              const sample = isSamplePlan(p.id);
               return (
                 <button
                   key={p.id}
@@ -132,7 +134,11 @@ export default function PlanList() {
                 >
                   <span className={`${styles.sheet} ${isActive ? styles.sheetActive : ""}`}>
                     <span className={styles.cover}>
-                      {isActive && <span className={styles.coverBadge}>작업 중</span>}
+                      {sample ? (
+                        <span className={styles.coverBadge}>예시</span>
+                      ) : isActive ? (
+                        <span className={styles.coverBadge}>작업 중</span>
+                      ) : null}
                       <span className={styles.coverIcon} aria-hidden="true"><FileText /></span>
                       {editingId === p.id ? (
                         <input
@@ -151,7 +157,7 @@ export default function PlanList() {
                       ) : (
                         <span className={styles.coverName}>
                           {p.title}
-                          <span
+                          {sample ? null : <span
                             role="button"
                             tabIndex={0}
                             className={styles.renameBtn}
@@ -162,7 +168,7 @@ export default function PlanList() {
                             }}
                           >
                             <Pencil size={12} />
-                          </span>
+                          </span>}
                         </span>
                       )}
                     </span>
@@ -177,7 +183,7 @@ export default function PlanList() {
                     <span className={styles.metaType}>{p.planType}</span>
                     <span className={styles.metaRow}>
                       <span className={styles.date}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")}</span>
-                      <span
+                      {sample ? null : <><span
                         role="button"
                         tabIndex={0}
                         className={styles.copyBtn}
@@ -199,7 +205,7 @@ export default function PlanList() {
                         }}
                       >
                         삭제
-                      </span>
+                      </span></>}
                     </span>
                   </span>
                 </button>

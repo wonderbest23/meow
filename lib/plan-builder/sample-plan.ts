@@ -1,4 +1,9 @@
-// 로그인 전에 보여주는 완성본 샘플.
+// 예시 플랜 — 목록에 처음부터 한 개가 들어 있는 것처럼 보이게 한다.
+//
+// 빈 화면에 '플랜이 없습니다'만 있으면 무엇이 만들어지는지 알 수 없다.
+// 그래서 아직 자기 플랜이 없을 때는 이 완성본 한 부를 목록에 얹어
+// 기존 화면(목록·개요·문서)에서 그대로 열어볼 수 있게 한다.
+// 새 플랜을 만들려고 하면 이 예시와 무관하게 처음부터 시작한다.
 //
 // 가상 사업체 '새벽커피' 한 곳으로 7개 챕터 25개 섹션을 끝까지 채운 문서다.
 // 재무 챕터의 표·그래프는 실제 계산기(financials.ts)를 돌린 결과를 그대로 옮겼다.
@@ -16,13 +21,23 @@ export interface SamplePlanChapter {
   sections: SamplePlanSection[];
 }
 
+export const SAMPLE_PLAN_ID = "sample_plan";
+
+/** 고정 시각 — 매번 달라지면 목록의 "수정일"이 계속 흔들린다 */
+const SAMPLE_CREATED_AT = "2026-01-15T09:00:00.000Z";
+
+/** 이 플랜은 저장되지 않는다 — 고치거나 지우는 동작을 막는 데 쓴다 */
+export function isSamplePlan(planId: string | null | undefined): boolean {
+  return planId === SAMPLE_PLAN_ID;
+}
+
 export const SAMPLE_BUSINESS = {
   name: "새벽커피",
   tagline: "출근길 3분 픽업으로 완성되는 스페셜티 커피",
   industry: "카페·음식점",
   region: "서울 마포구",
   stage: "운영 중",
-  planType: "사업계획서",
+  planType: "창업 초기 · 사업계획서",
 };
 
 export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
@@ -30,7 +45,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
     title: "사업 개요",
     sections: [
       {
-        key: "overview/snapshot",
+        key: "overview/summary",
         title: "한눈에 보기",
         markdown: `새벽커피는 서울 마포구 합정역 도보 4분 거리에서 출근길 직장인을 대상으로 운영하는 스페셜티 커피 픽업 매장입니다. 앱으로 미리 주문하면 지정한 시각에 맞춰 준비해 두고, 매장에서는 이름만 확인하고 가져가는 구조입니다. 2025년 3월 개업해 현재 월 1,400건 내외를 판매하고 있습니다.
 
@@ -94,7 +109,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
 > 추가 정의 필요 — 상표 출원 실제 진행 여부와 유사 상표 대응 방향은 출원 후 확정합니다.`,
       },
       {
-        key: "overview/traction",
+        key: "overview/achievements",
         title: "주요 성과",
         markdown: `개업 후 10개월간의 실적입니다.
 
@@ -113,7 +128,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
 2025년 10월, 인근 오피스 3곳과 사내 공지 제휴를 맺으면서 앱 가입자가 한 달에 520명 늘었습니다. 광고비를 쓰지 않은 유입이라 획득 비용이 사실상 0원이었습니다.`,
       },
       {
-        key: "overview/team",
+        key: "overview/structure",
         title: "조직·지분",
         markdown: `현재 대표 1인과 오전 파트타임 1명으로 운영합니다.
 
@@ -173,7 +188,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
 > 추가 정의 필요 — 상주 직장인 수는 행정 통계 기반 추정치입니다. 제출 전 실측 자료로 교체합니다.`,
       },
       {
-        key: "market/persona",
+        key: "market/personas",
         title: "핵심 고객",
         markdown: `**주 고객.** 합정·상수 일대 오피스에 근무하는 20대 후반~30대 중반 직장인입니다. 출근 시각은 8시 40분에서 9시 사이에 몰려 있고, 커피는 주 4회 정도 삽니다.
 
@@ -189,7 +204,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
 **쓰지 않는 이유.** 이탈 고객 14명에게 물었을 때 가장 많은 답은 "앱 설치가 번거롭다"(6명)였습니다. 이 지점은 2026년 상반기 과제로 두고 있습니다.`,
       },
       {
-        key: "market/competition",
+        key: "market/competitors",
         title: "경쟁 분석",
         markdown: `반경 400m 안의 경쟁 매장은 9곳입니다. 이 중 실제로 오전 통근 수요를 나눠 갖는 곳은 4곳입니다.
 
@@ -230,7 +245,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
     title: "목표",
     sections: [
       {
-        key: "goals/core",
+        key: "objectives/corporate",
         title: "핵심 목표",
         markdown: `2026년 목표는 세 가지입니다. 각각 측정 가능한 숫자와 확인 시점을 붙였습니다.
 
@@ -272,7 +287,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
 **품질 기준.** 원두는 로스팅 후 7~14일 구간만 사용하고, 그 밖은 드립백으로 돌립니다. 추출 파라미터는 매일 아침 1회 교정하고 기록합니다.`,
       },
       {
-        key: "strategy/channel",
+        key: "strategy/distribution",
         title: "유통 전략",
         markdown: `**주 채널 — 자체 앱.** 전체 주문의 78%입니다. 수수료가 없고 고객 데이터를 직접 갖는다는 점에서 앞으로도 중심에 둡니다.
 
@@ -290,7 +305,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
 **2026년 신규 — 원두 온라인몰.** 원두는 이동 중 품질 저하가 없고 마진이 높습니다. 자체 웹으로 시작하고, 반응을 본 뒤 오픈마켓 입점을 검토합니다.`,
       },
       {
-        key: "strategy/pricing",
+        key: "strategy/price",
         title: "가격 전략",
         markdown: `**포지션.** 편의점보다 비싸고 프랜차이즈보다 쌉니다. 아메리카노 기준 4,500원으로, 인근 프랜차이즈(5,200원) 대비 13% 낮습니다.
 
@@ -308,7 +323,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
 **할인 정책.** 상시 할인은 하지 않습니다. 대신 지정 시각을 3분 넘겨 지연되면 다음 잔을 무료로 제공합니다 — 할인이 아니라 약속의 대가입니다.`,
       },
       {
-        key: "strategy/marketing",
+        key: "strategy/promotion",
         title: "홍보 전략",
         markdown: `**지금까지 효과가 있었던 것.** 인근 오피스 사내 공지 제휴입니다. 2025년 10월 3곳과 맺어 한 달에 520명이 가입했습니다. 광고비는 0원이었습니다.
 
@@ -363,7 +378,7 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
     title: "자금",
     sections: [
       {
-        key: "funding/needs",
+        key: "funding/requirements",
         title: "자금 소요",
         markdown: `2026년 필요 자금은 4,200만원입니다.
 
@@ -512,3 +527,65 @@ export const SAMPLE_CHAPTERS: SamplePlanChapter[] = [
     ],
   },
 ];
+
+
+/** 예시 플랜의 재무 입력 — 본문에 적힌 숫자와 같은 값이다 */
+const SAMPLE_FINANCIALS = {
+  unitPrice: 4900,
+  unitVariableCost: 1800,
+  monthlyFixedCost: 4_000_000,
+  startingVolume: 1400,
+  monthlyGrowthPct: 5,
+  initialInvestment: 26_000_000,
+};
+
+/**
+ * 예시 플랜을 스토어가 쓰는 Plan 모양으로 만든다.
+ * 재무 표와 그래프는 적어두지 않고 실제 계산기로 계산해 넣는다 —
+ * 산식이 바뀌면 예시도 같이 바뀌어야 하기 때문이다.
+ */
+export async function buildSamplePlan(): Promise<{
+  business: typeof SAMPLE_BUSINESS;
+  plan: {
+    id: string;
+    title: string;
+    planType: string;
+    createdAt: string;
+    updatedAt: string;
+    sections: Record<string, { markdown: string; html: string; generatedAt: string; locked?: boolean }>;
+    answers: Record<string, Record<string, unknown>>;
+  };
+}> {
+  const { calculateFinancials, financialsToMarkdown } = await import("./financials");
+  const { renderPlanMarkdown } = await import("./markdown");
+
+  const fin = calculateFinancials(SAMPLE_FINANCIALS);
+  const finMd = financialsToMarkdown(fin, { growthLabel: "천천히 안정 성장", growthPct: 5, staffIncluded: true });
+
+  const at = SAMPLE_CREATED_AT;
+  const sections: Record<string, { markdown: string; html: string; generatedAt: string; locked?: boolean }> = {};
+  for (const chapter of SAMPLE_CHAPTERS) {
+    for (const section of chapter.sections) {
+      const markdown = section.markdown.replace("<!--FINANCIALS-->", finMd);
+      sections[section.key] = {
+        markdown,
+        html: await renderPlanMarkdown(markdown),
+        generatedAt: at,
+        locked: true,
+      };
+    }
+  }
+
+  return {
+    business: SAMPLE_BUSINESS,
+    plan: {
+      id: SAMPLE_PLAN_ID,
+      title: "새벽커피 사업계획서 (예시)",
+      planType: SAMPLE_BUSINESS.planType,
+      createdAt: at,
+      updatedAt: at,
+      sections,
+      answers: {},
+    },
+  };
+}

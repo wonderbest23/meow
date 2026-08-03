@@ -6,6 +6,7 @@ import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Link from "@tiptap/extension-link";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
+import { ChartFigure } from "./chart-node";
 import styles from "./InlineDocEditor.module.css";
 
 export interface InlineDocEditorProps {
@@ -43,6 +44,7 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
       TableRow,
       TableHeader,
       TableCell,
+      ChartFigure,
     ],
     content: html,
     editorProps: {

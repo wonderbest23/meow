@@ -101,6 +101,8 @@
   gap: 14px;
 }
 .back {
+  /* flex 안에서 눌리면 원이 타원이 된다 — 모바일에서 42×42가 32×42로 찌그러졌다 */
+  flex: none;
   width: 42px;
   height: 42px;
   border-radius: 50%;
@@ -652,4 +654,25 @@
 }
 .lockTag {
   color: var(--text-muted, #8b95a1);
+}
+
+
+/*
+ * 모바일 헤더 — 제목이 세 줄로 감기면서 뒤로 버튼이 글 한가운데 끼어 보였다.
+ * 좁은 화면에서는 버튼을 제목 위쪽 줄에 붙이고 제목을 한 급 줄인다.
+ */
+@media (max-width: 560px) {
+  .barLeft {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .back {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+  }
+  .title {
+    font-size: 20px;
+    line-height: 1.35;
+  }
 }

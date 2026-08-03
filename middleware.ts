@@ -5,16 +5,6 @@ import { adminCookieName, resolveScope, verifyAdminSessionToken } from "./lib/su
 // the session endpoint is how an operator logs in, checks status, and logs out.
 const ADMIN_AUTH_EXEMPT = ["/api/admin/support/session"];
 
-/*
- * 플랜 빌더는 가입해야 쓸 수 있다.
- * 화면 안의 관문(PlanShell)만으로는 HTML이 그대로 내려가므로, 세션 쿠키가
- * 아예 없는 요청은 여기서 로그인 화면으로 돌려보낸다. 쿠키가 있는지만 보고
- * 토큰의 유효성은 검사하지 않는다 — Edge에서 매 요청 검증하는 값이 아니고,
- * 실제 판정은 API(resolvePlanAccess)가 이미 하고 있다.
- */
-// /plan/start는 로그인 전 미리보기를 보여준다(폼 자체는 로그인해야 열린다)
-const PLAN_PUBLIC = ["/plan/info", "/plan/pay", "/plan/start", "/plan/sample"];
-const AUTH_COOKIES = ["venture_access", "venture_refresh"];
 
 function withSecurityHeaders(response: NextResponse) {
   response.headers.set("X-Frame-Options", "DENY");
@@ -48,20 +38,6 @@ export async function middleware(request: NextRequest) {
       );
       denied.headers.set("Cache-Control", "private, no-store, max-age=0");
       return withSecurityHeaders(denied);
-    }
-  }
-
-  if (pathname === "/plan" || pathname.startsWith("/plan/")) {
-    const isPublic = PLAN_PUBLIC.some((path) => pathname === path || pathname.startsWith(`${path}/`));
-    const hasSession = AUTH_COOKIES.some((name) => request.cookies.get(name)?.value);
-    if (!isPublic && !hasSession) {
-      const login = request.nextUrl.clone();
-      login.pathname = "/account";
-      login.search = "";
-      login.searchParams.set("next", pathname + request.nextUrl.search);
-      const redirected = NextResponse.redirect(login);
-      redirected.headers.set("Cache-Control", "private, no-store, max-age=0");
-      return withSecurityHeaders(redirected);
     }
   }
 
