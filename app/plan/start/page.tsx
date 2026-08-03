@@ -185,8 +185,8 @@ const PLAN_TYPES: PlanType[] = [
     category: "forecast",
     tone: 3,
     icon: chart,
-    desc: "다년 재무 예측으로 투자 심사·M&A까지 대비하는 심화 분석.",
-    fits: ["투자자 심사를 앞둔 분", "여러 시나리오를 비교하려는 분"],
+    desc: "3년 매출·손익 예측까지 붙여 투자 심사에 대비하는 심화 분석.",
+    fits: ["투자자 심사를 앞둔 분", "3년 치 숫자가 필요한 분"],
   },
 ];
 

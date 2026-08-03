@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { renderPlanMarkdown } from "../../../../lib/plan-builder/markdown";
-import { PLAN_BLUEPRINT, financialTableOwner } from "../../../../lib/plan-builder/blueprint";
+import { PLAN_BLUEPRINT, financialTableOwner, needsMultiYear } from "../../../../lib/plan-builder/blueprint";
 import { generateSection, streamSection } from "../../../../lib/plan-builder/section-generator";
 import { resolveLLMConfig } from "../../../../lib/llm/config";
-import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference } from "../../../../lib/plan-builder/financials";
+import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "../../../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT } from "../../../../lib/plan-builder/access";
@@ -66,6 +66,11 @@ export async function POST(req: Request) {
           growthPct: inputs.monthlyGrowthPct,
           staffIncluded,
         });
+        // '정밀 재무 모델'은 카드에서 다년 예측을 약속한다 — 실제로 3년을 계산해 붙인다
+        if (needsMultiYear(body.planType)) {
+          const years = yearsToMarkdown(projectYears(inputs), { growthPct: inputs.monthlyGrowthPct });
+          if (years) financialsMarkdown = `${financialsMarkdown}\n\n${years}`;
+        }
       } else {
         financialsReference = financialsToReference(result);
       }

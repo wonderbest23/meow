@@ -158,7 +158,42 @@ export function flatSections(): Array<{
  * 키는 플랜에 저장되는 planType 문자열과 같아야 한다.
  */
 export const PLAN_TYPE_SECTIONS: Record<string, string[]> = {
-  // 창업 초기·성장 확장 사업계획서는 전체 구성을 쓴다(목록에 넣지 않음).
+  /*
+   * 창업 초기는 전체 25개를 쓴다(목록에 넣지 않는다).
+   * 아직 검증되지 않은 사업이라 '문제와 해결', '미션·비전'처럼
+   * 왜 이 사업을 하는지 설득하는 부분이 그대로 필요하다.
+   */
+
+  /*
+   * 성장·확장은 이미 굴러가는 사업이다.
+   * 창업 서사(문제와 해결, 미션·비전)를 빼고 실적·경쟁·확장 실행에 자리를 준다.
+   * 대신 '주요 성과'와 '출구 전략'이 반드시 포함된다.
+   */
+  "성장·확장 · 사업계획서": [
+    "overview/summary",
+    "overview/achievements",
+    "overview/ip",
+    "overview/structure",
+    "market/products",
+    "market/segments",
+    "market/personas",
+    "market/competitors",
+    "market/swot",
+    "objectives/corporate",
+    "strategy/product",
+    "strategy/distribution",
+    "strategy/price",
+    "strategy/promotion",
+    "strategy/people",
+    "strategy/exit",
+    "funding/requirements",
+    "financials/revenue",
+    "financials/staffing",
+    "financials/expenses",
+    "financials/assets",
+    "financials/financing",
+    "summary/executive",
+  ],
   "간단 · 사업계획서": [
     "overview/summary",
     "overview/problem",
@@ -264,4 +299,10 @@ export function financialTableOwner(planType?: string): string | null {
     chaptersForType(planType).flatMap((c) => c.sections.map((s) => `${c.id}/${s.id}`)),
   );
   return FINANCIAL_TABLE_PRIORITY.find((key) => present.has(key)) ?? null;
+}
+
+
+/** 3년 예측 표를 붙이는 유형 — 카드 설명이 '다년 예측'을 약속하는 곳만 */
+export function needsMultiYear(planType?: string): boolean {
+  return planType === "정밀 · 재무 모델";
 }

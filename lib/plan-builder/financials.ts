@@ -398,3 +398,70 @@ export function financialsToReference(r: FinancialResult): string {
   if (r.paybackMonth) lines.push(`- 초기 투자 회수: ${r.paybackMonth}개월차`);
   return lines.join("\n");
 }
+
+
+export interface YearSummary {
+  year: number;
+  volume: number;
+  revenue: number;
+  variableCost: number;
+  fixedCost: number;
+  operatingProfit: number;
+  cumulative: number;
+}
+
+/**
+ * 3년 예측.
+ * 12개월 계산과 같은 산식·같은 가정을 36개월로 늘려 연 단위로 묶는다.
+ * 새로운 가정을 끼워 넣지 않는다 — 성장률이 유지된다는 가정 하나뿐이고,
+ * 그 사실을 표 아래에 그대로 적는다.
+ */
+export function projectYears(input: FinancialInputs, years = 3): YearSummary[] {
+  const { unitPrice, unitVariableCost, monthlyFixedCost, startingVolume, monthlyGrowthPct } = input;
+  if (unitPrice == null || unitVariableCost == null || startingVolume == null || startingVolume <= 0) return [];
+  const growth = (monthlyGrowthPct ?? 0) / 100;
+  const fixed = monthlyFixedCost ?? 0;
+  const out: YearSummary[] = [];
+  let cumulative = 0;
+  for (let y = 1; y <= years; y += 1) {
+    let volume = 0, revenue = 0, variableCost = 0, fixedCost = 0;
+    for (let m = (y - 1) * 12 + 1; m <= y * 12; m += 1) {
+      const v = Math.round(startingVolume * Math.pow(1 + growth, m - 1));
+      volume += v;
+      revenue += v * unitPrice;
+      variableCost += v * unitVariableCost;
+      fixedCost += fixed;
+    }
+    const operatingProfit = revenue - variableCost - fixedCost;
+    cumulative += operatingProfit;
+    out.push({ year: y, volume, revenue, variableCost, fixedCost, operatingProfit, cumulative });
+  }
+  return out;
+}
+
+/** 3년 예측 표(마크다운) */
+export function yearsToMarkdown(rows: YearSummary[], opts?: { growthPct?: number }): string {
+  if (!rows.length) return "";
+  const head = [
+    "| 구분 | " + rows.map((r) => `${r.year}년차`).join(" | ") + " |",
+    "| --- | " + rows.map(() => "---: ").join("| ") + "|",
+  ];
+  const line = (label: string, pick: (r: YearSummary) => number, bold = false) =>
+    `| ${bold ? `**${label}**` : label} | ` +
+    rows.map((r) => (bold ? `**${won(pick(r))}**` : won(pick(r)))).join(" | ") +
+    " |";
+  return [
+    "### 3년 예측",
+    [
+      ...head,
+      `| 판매 건수 | ${rows.map((r) => `${r.volume.toLocaleString("ko-KR")}건`).join(" | ")} |`,
+      line("매출", (r) => r.revenue),
+      line("변동비", (r) => r.variableCost),
+      line("고정비", (r) => r.fixedCost),
+      line("영업손익", (r) => r.operatingProfit, true),
+      line("누적 영업손익", (r) => r.cumulative),
+    ].join("\n"),
+    `- 1년차 이후에도 월 ${opts?.growthPct ?? 0}% 성장이 이어진다는 가정 하나만 적용했습니다. 실제로는 시장 포화·인력 충원·설비 증설로 달라집니다.`,
+    "- 고정비는 3년 내내 같은 값으로 두었습니다. 인력을 늘리는 계획이 있다면 그 시점부터 다시 계산해야 합니다.",
+  ].join("\n\n");
+}

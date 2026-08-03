@@ -596,8 +596,123 @@ const SECTION_QUESTIONS: Record<string, QuestionGroup[]> = {
   "summary/executive": EXEC_SUMMARY_GROUPS,
 };
 
-export function questionsForSection(key: string, sectionTitle: string): QuestionGroup[] {
-  return SECTION_QUESTIONS[key] ?? defaultGroups(sectionTitle);
+/*
+ * 유형별 질문 조정.
+ *
+ * 같은 섹션이라도 문서의 용도가 다르면 물어야 할 것이 다르다.
+ * 예전에는 유형과 무관하게 늘 같은 질문을 던져서, 재무 예측을 고른 사람이
+ * 브랜드 톤을 답하고 있었다. 유형마다 아래 규칙으로 덜어내고 더한다.
+ */
+interface TypeAdjust {
+  /** 이 유형에서는 묻지 않는 질문 id */
+  drop?: string[];
+  /** optional 질문까지 모두 걷어낼지 — 짧게 끝내는 유형용 */
+  requiredOnly?: boolean;
+  /** 이 유형에서만 추가로 묻는 질문 (섹션 키 → 질문) */
+  add?: Record<string, QuestionDef[]>;
+}
+
+const TYPE_ADJUST: Record<string, TypeAdjust> = {
+  "간단 · 사업계획서": {
+    // 짧게 끝나야 하는 문서라 있으면 좋은 질문은 전부 뺀다
+    requiredOnly: true,
+  },
+  "성장·확장 · 사업계획서": {
+    add: {
+      "overview/achievements": [
+        {
+          id: "growth_driver",
+          q: "지금까지의 성장에서 가장 크게 작용한 것 하나는 무엇인가요?",
+          help: "채널, 제품 변경, 가격 조정, 제휴 등 실제로 숫자를 바꾼 것.",
+          input: { kind: "text", placeholder: "예: 인근 오피스 3곳과 사내 공지 제휴" },
+          aiSuggest: true,
+        },
+      ],
+      "funding/requirements": [
+        {
+          id: "expansion_trigger",
+          q: "이 자금을 집행하는 조건은 무엇인가요?",
+          help: "어떤 수치에 도달하면 쓰는지 정해두면 계획이 검증 가능해집니다.",
+          input: { kind: "text", placeholder: "예: 월 판매 1,800건을 넘기면 로스터 증설" },
+          optional: true,
+        },
+      ],
+    },
+  },
+  "내부용 · 사업계획서": {
+    add: {
+      "objectives/corporate": [
+        {
+          id: "owner_and_due",
+          q: "이 목표는 누가 언제까지 맡나요?",
+          help: "담당과 기한이 없으면 실행 문서가 되지 않습니다.",
+          input: { kind: "text", placeholder: "예: 대표 · 2026년 1분기" },
+        },
+        {
+          id: "give_up_condition",
+          q: "무엇이 안 되면 이 목표를 접거나 바꾸나요?",
+          help: "실패 조건을 미리 적어두면 붙잡고 있는 시간을 줄일 수 있습니다.",
+          input: { kind: "text", placeholder: "예: 3개월 안에 전환율이 40%를 못 넘으면 중단" },
+          optional: true,
+        },
+      ],
+    },
+  },
+  "창업 초기 · 재무 예측": {
+    /*
+     * 재무 문서에서 서술로만 쓰이는 질문은 묻지 않는다.
+     * 할인 계획·세그먼트 선정 이유는 숫자에 반영되지 않는데 답하는 데는 시간이 든다.
+     */
+    drop: ["discount", "discount_plan", "why_first", "seg_basis"],
+  },
+  "정밀 · 재무 모델": {
+    // 정밀 모델은 세그먼트 근거가 예측의 전제라 남기고, 할인만 뺀다
+    drop: ["discount", "discount_plan"],
+    add: {
+      "financials/revenue": [
+        {
+          id: "growth_ceiling",
+          q: "지금 성장률이 유지되기 어려워지는 지점은 어디인가요?",
+          help: "좌석 수, 생산 능력, 상권 인구처럼 물리적 한계를 적어주세요. 3년 예측의 신뢰도를 좌우합니다.",
+          input: { kind: "text", placeholder: "예: 현 로스터로는 월 2,600건이 한계" },
+        },
+      ],
+      "financials/expenses": [
+        {
+          id: "sensitivity_item",
+          q: "어떤 비용이 흔들리면 손익이 가장 크게 바뀌나요?",
+          help: "민감도 분석에 쓰입니다.",
+          input: { kind: "text", placeholder: "예: 원두 시세 — 10% 오르면 공헌이익 5% 감소" },
+          optional: true,
+        },
+      ],
+    },
+  },
+};
+
+/** 유형에 맞게 질문을 덜어내고 더한다. */
+function adjustForType(key: string, groups: QuestionGroup[], planType?: string): QuestionGroup[] {
+  const rule = planType ? TYPE_ADJUST[planType] : undefined;
+  if (!rule) return groups;
+
+  const drop = new Set(rule.drop ?? []);
+  let out = groups.map((g) => ({
+    ...g,
+    questions: g.questions.filter((q) => !drop.has(q.id) && !(rule.requiredOnly && q.optional)),
+  }));
+
+  const extra = rule.add?.[key];
+  if (extra?.length) {
+    out = out.length
+      ? [...out.slice(0, -1), { ...out[out.length - 1], questions: [...out[out.length - 1].questions, ...extra] }]
+      : [{ id: "type-extra", label: "추가 확인", questions: extra }];
+  }
+
+  return out.filter((g) => g.questions.length > 0);
+}
+
+export function questionsForSection(key: string, sectionTitle: string, planType?: string): QuestionGroup[] {
+  return adjustForType(key, SECTION_QUESTIONS[key] ?? defaultGroups(sectionTitle), planType);
 }
 
 /** 조건부(showWhen) 평가: 현재 답변 기준으로 이 질문이 보여야 하는지 */

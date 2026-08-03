@@ -104,7 +104,8 @@ export default function SectionWizard({
   const chapter = PLAN_BLUEPRINT.find((c) => c.id === chapterId) ?? PLAN_BLUEPRINT[0];
   const section = chapter.sections.find((s) => s.id === sectionId) ?? chapter.sections[0];
   const key = sectionKey(chapter.id, section.id);
-  const groups = useMemo(() => questionsForSection(key, section.title), [key, section.title]);
+  // 문서 유형에 따라 묻는 질문이 달라진다(재무 문서에서 브랜드 질문을 빼는 식)
+  const groups = useMemo(() => questionsForSection(key, section.title, planType), [key, section.title, planType]);
 
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});

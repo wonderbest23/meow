@@ -4,6 +4,7 @@
 import { completeText, streamText, type LLMConfig } from "../llm/complete";
 import type { PlanChapterDef, PlanSectionDef } from "./blueprint";
 import { questionsForSection } from "./questions";
+import { planTypeGuidanceBlock } from "./plan-type-guidance";
 
 const SYSTEM_PROMPT = [
   "당신은 한국에서 실제로 실행할 사업계획서의 한 섹션을 작성하는 선임 사업전략가입니다.",
@@ -88,7 +89,7 @@ export function buildUserPrompt(input: SectionGenInput): string {
   const biz = formatBusiness(input.business);
   return [
     biz ? `[사업 정보]\n${biz}\n` : `사업명: ${input.planTitle ?? "(미정)"}`,
-    input.planType ? `문서 유형: ${input.planType} — 이 용도에 맞는 관점과 강조점으로 서술하세요.` : "",
+    planTypeGuidanceBlock(input.planType),
     `챕터: ${input.chapter.title}`,
     `작성할 섹션: ${input.section.title}`,
     `섹션 목적: ${input.section.summary}`,
@@ -149,7 +150,7 @@ export function fallbackSection(input: SectionGenInput): string {
     parts.push(`## 입력 기반 정리`);
     // 질문 ID(needs_assets)가 아니라 사용자가 본 질문 문구를 항목명으로 쓴다
     const labelOf = new Map(
-      questionsForSection(`${input.chapter.id}/${section.id}`, section.title)
+      questionsForSection(`${input.chapter.id}/${section.id}`, section.title, input.planType)
         .flatMap((g) => g.questions)
         .map((q) => [q.id, q.q] as const),
     );
