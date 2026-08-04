@@ -175,16 +175,20 @@ export async function buildDeckPlan(
     .join("\n");
 
   /*
-   * 실측에서 2회 중 1회가 형식 이탈로 실패했다(간헐).
-   * 12장 구성을 다시 만드는 비용보다 사용자가 버튼을 다시 누르는 비용이
-   * 크므로, 서버에서 한 번은 조용히 재시도한다.
+   * 실측에서 2회 중 1회가 실패했고, 같은 조건 재시도도 같이 실패했다 —
+   * 원인이 응답 절단(토큰 한도)이면 같은 요청은 같은 자리에서 또 잘린다.
+   * 그래서 두 번째 시도는 조건을 바꾼다: 출력 한도를 늘리고 장수를 줄인다.
    */
-  for (let attempt = 0; attempt < 2; attempt += 1) {
+  const attempts = [
+    { maxOutputTokens: 4000, effort: "medium" as const, extra: "" },
+    { maxOutputTokens: 6000, effort: "medium" as const, extra: "\n슬라이드는 8~10장으로 줄이고, points·metrics를 슬라이드당 3개 이하로 간결하게 하세요." },
+  ];
+  for (const a of attempts) {
     const raw = await completeJson(config, {
       system: SYSTEM_PROMPT,
-      user,
-      maxOutputTokens: 4000,
-      effort: "medium",
+      user: user + a.extra,
+      maxOutputTokens: a.maxOutputTokens,
+      effort: a.effort,
     });
     const plan = raw ? normalize(raw, input.businessName) : null;
     if (plan) return plan;
