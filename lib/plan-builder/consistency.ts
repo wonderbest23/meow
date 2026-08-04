@@ -14,8 +14,8 @@ export interface ConsistencyIssue {
   title: string;
   /** 무엇이 어긋났는지 구체적으로 */
   detail: string;
-  /** 관련 섹션 — 사용자가 바로 이동할 수 있게 */
-  refs: Array<{ key: string; label: string }>;
+  /** 관련 섹션 — 사용자가 바로 이동할 수 있게. qids는 그 섹션에서 어긋난 질문(강조용). */
+  refs: Array<{ key: string; label: string; qids?: string[] }>;
 }
 
 type Answers = Record<string, Record<string, unknown>>;
@@ -28,8 +28,8 @@ const SECTION_LABEL: Record<string, string> = (() => {
   return map;
 })();
 
-function ref(key: string) {
-  return { key, label: SECTION_LABEL[key] ?? key };
+function ref(key: string, qids?: string[]) {
+  return { key, label: SECTION_LABEL[key] ?? key, qids };
 }
 
 function str(v: unknown): string | null {
@@ -112,7 +112,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "진행 단계와 시작 여부가 어긋납니다",
       detail: "사업 정보에는 '아이디어 단계'로 되어 있는데, 답변에서는 사업을 이미 시작했다고 하셨습니다. 사업 정보 수정에서 단계를 바꾸거나 답변을 고쳐주세요.",
-      refs: [ref("overview/summary")],
+      refs: [ref("overview/summary", ["established"])],
     });
   }
   if ((business?.stage === "운영 중" || business?.stage === "개업 직후") && established === "no") {
@@ -121,7 +121,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "진행 단계와 시작 여부가 어긋납니다",
       detail: `사업 정보에는 '${business.stage}'인데, 답변에서는 아직 시작하지 않았다고 하셨습니다.`,
-      refs: [ref("overview/summary")],
+      refs: [ref("overview/summary", ["established"])],
     });
   }
 
@@ -133,7 +133,7 @@ export function findConsistencyIssues(
       severity: "check",
       title: "시작 전인데 성과가 있다고 되어 있습니다",
       detail: "'사업체를 이미 시작하셨나요?'에는 아니오라고 답하셨는데, 주요 성과에는 이룬 성과가 있다고 하셨습니다. 시범 판매·사전 예약이라면 그 성격을 답변에 적어주세요.",
-      refs: [ref("overview/summary"), ref("overview/achievements")],
+      refs: [ref("overview/summary", ["established"]), ref("overview/achievements", ["has_traction"])],
     });
   }
 
@@ -146,7 +146,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "상품 가격과 재무 판매가가 다릅니다",
       detail: `상품·서비스에는 ${won(priceValue)}, 매출 계획에는 ${won(unitPrice)}${ro(won(unitPrice))} 적으셨습니다. 손익표는 매출 계획의 금액으로 계산됩니다.`,
-      refs: [ref("market/products"), ref("financials/revenue")],
+      refs: [ref("market/products", ["price_value"]), ref("financials/revenue", ["unit_price"])],
     });
   }
 
@@ -159,7 +159,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "1건당 변동비가 두 곳에서 다릅니다",
       detail: `가격 전략에는 ${won(unitCost)}, 비용에는 ${won(variablePerUnit)}${ro(won(variablePerUnit))} 적으셨습니다.`,
-      refs: [ref("strategy/price"), ref("financials/expenses")],
+      refs: [ref("strategy/price", ["unit_cost"]), ref("financials/expenses", ["variable_per_unit"])],
     });
   }
 
@@ -170,7 +170,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "팔수록 손해가 나는 구조입니다",
       detail: `판매가 ${won(unitPrice)}보다 1건당 변동비 ${won(variablePerUnit)}${iga(won(variablePerUnit))} 크거나 같습니다. 고정비를 빼기 전부터 적자라 손익분기가 존재하지 않습니다.`,
-      refs: [ref("financials/revenue"), ref("financials/expenses")],
+      refs: [ref("financials/revenue", ["unit_price"]), ref("financials/expenses", ["variable_per_unit"])],
     });
   }
 
@@ -184,7 +184,7 @@ export function findConsistencyIssues(
       severity: "check",
       title: "손익분기 건수가 계산값과 다릅니다",
       detail: `월 ${statedBreakEven.toLocaleString("ko-KR")}건으로 적으셨지만, 입력하신 판매가·변동비·고정비로 계산하면 월 ${calc.breakEven.units.toLocaleString("ko-KR")}건입니다.`,
-      refs: [ref("financials/financing"), ref("financials/revenue")],
+      refs: [ref("financials/financing", ["breakeven_value"]), ref("financials/revenue", ["unit_price"])],
     });
   }
 
@@ -198,7 +198,7 @@ export function findConsistencyIssues(
         severity: "conflict",
         title: `손익분기를 ${whenLabel}로 보셨지만 계산상 12개월 안에 도달하지 못합니다`,
         detail: "입력하신 판매량·가격·고정비로는 12개월 내내 월 적자입니다. 시점을 바꾸거나 수치를 다시 보셔야 합니다.",
-        refs: [ref("financials/financing"), ref("financials/revenue")],
+        refs: [ref("financials/financing", ["breakeven_when"]), ref("financials/revenue", ["unit_price"])],
       });
     } else if (calc.breakEvenMonth > whenLimit) {
       add({
@@ -206,7 +206,7 @@ export function findConsistencyIssues(
         severity: "check",
         title: `손익분기 시점이 계산보다 낙관적입니다`,
         detail: `${whenLabel}로 보셨지만 계산상 ${calc.breakEvenMonth}개월차에 월 흑자로 전환됩니다.`,
-        refs: [ref("financials/financing"), ref("financials/revenue")],
+        refs: [ref("financials/financing", ["breakeven_when"]), ref("financials/revenue", ["unit_price"])],
       });
     }
   }
@@ -221,7 +221,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "인력을 쓰는데 인건비가 0으로 잡혀 있습니다",
       detail: `인력 전략에 '${paidWorkers.join("·")}' 항목이 있는데 인건비는 발생하지 않는다고 답하셨습니다. 손익표에 인건비가 빠집니다.`,
-      refs: [ref("strategy/people"), ref("financials/staffing")],
+      refs: [ref("strategy/people", ["who_works"]), ref("financials/staffing", ["has_staff_cost"])],
     });
   }
 
@@ -233,7 +233,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "조직 규모와 실제 인력이 어긋납니다",
       detail: "조직에는 '1인(대표자만)'으로, 인력 전략에는 '직원(정규)'이 일한다고 적으셨습니다.",
-      refs: [ref("overview/structure"), ref("strategy/people")],
+      refs: [ref("overview/structure", ["team_size"]), ref("strategy/people", ["who_works"])],
     });
   }
 
@@ -246,7 +246,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "매출 이력이 서로 다릅니다",
       detail: "개요에는 매출이 발생한 적 없다고, 주요 성과에는 '실제 판매·매출 발생'을 이뤘다고 적으셨습니다.",
-      refs: [ref("overview/summary"), ref("overview/achievements")],
+      refs: [ref("overview/summary", ["revenue"]), ref("overview/achievements", ["traction_types"])],
     });
   }
 
@@ -259,7 +259,7 @@ export function findConsistencyIssues(
       severity: "check",
       title: "구독 상품인데 매출 방식에 구독이 없습니다",
       detail: `상품 구성은 '구독·멤버십'인데 매출 발생 방식은 ${streams.join("·")}만 선택하셨습니다.`,
-      refs: [ref("market/products"), ref("financials/revenue")],
+      refs: [ref("market/products", ["offer_type"]), ref("financials/revenue", ["revenue_streams"])],
     });
   }
 
@@ -274,7 +274,7 @@ export function findConsistencyIssues(
         severity: "check",
         title: "고객이 있는 곳과 홍보하는 곳이 겹치지 않습니다",
         detail: `고객은 ${personaChannels.join("·")}에서 정보를 얻는다고 하셨는데, 홍보는 ${promoChannels.join("·")}${ro(promoChannels[promoChannels.length - 1])} 계획하셨습니다.`,
-        refs: [ref("market/personas"), ref("strategy/promotion")],
+        refs: [ref("market/personas", ["channel"]), ref("strategy/promotion", ["promo_channels"])],
       });
     }
   }
@@ -290,7 +290,7 @@ export function findConsistencyIssues(
       severity: "check",
       title: "영업 범위가 두 곳에서 다릅니다",
       detail: `개요에는 '${reach}', 유통 전략에는 '${coverage}'로 적으셨습니다.`,
-      refs: [ref("overview/summary"), ref("strategy/distribution")],
+      refs: [ref("overview/summary", ["reach"]), ref("strategy/distribution", ["coverage"])],
     });
   }
 
@@ -309,7 +309,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "초기 투자가 조달 계획보다 큽니다",
       detail: `초기 투자는 ${won(assetCost)}인데 필요 자금은 '${amountLabel}'${ro(amountLabel)} 잡으셨습니다. 시설·장비 비용만으로 이미 넘어섭니다.`,
-      refs: [ref("funding/requirements"), ref("financials/assets")],
+      refs: [ref("funding/requirements", ["amount"]), ref("financials/assets", ["asset_cost"])],
     });
   }
 
@@ -327,7 +327,7 @@ export function findConsistencyIssues(
           calc.breakEvenMonth == null
             ? "손익분기 도달을 목표 지표로 잡으셨지만, 계산상 12개월 내내 월 적자입니다."
             : `계산상 월 흑자 전환은 ${calc.breakEvenMonth}개월차입니다.`,
-        refs: [ref("objectives/corporate"), ref("financials/revenue")],
+        refs: [ref("objectives/corporate", ["horizon", "measure"]), ref("financials/revenue", ["unit_price"])],
       });
     }
   }
@@ -341,7 +341,7 @@ export function findConsistencyIssues(
       severity: "conflict",
       title: "판매하는 상품도 서비스도 없다고 되어 있습니다",
       detail: "둘 중 하나는 있어야 사업계획서의 매출·가격·유통 내용이 성립합니다.",
-      refs: [ref("overview/summary")],
+      refs: [ref("overview/summary", ["has_products", "has_services"])],
     });
   }
 

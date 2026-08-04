@@ -53,7 +53,13 @@ export default function ConsistencyPanel({ issues, onOpenSection, compact }: Con
                       key={r.key}
                       type="button"
                       className={styles.link}
-                      onClick={() => onOpenSection(chapterId, sectionId)}
+                      onClick={() => {
+                        // 이동한 섹션에서 어긋난 질문을 빨간 테두리로 짚어주기 위한 전달
+                        try {
+                          sessionStorage.setItem("plan-conflict-focus", JSON.stringify({ key: r.key, qids: r.qids ?? [] }));
+                        } catch { /* 저장 실패해도 이동은 한다 */ }
+                        onOpenSection(chapterId, sectionId);
+                      }}
                     >
                       {r.label} 열기
                     </button>

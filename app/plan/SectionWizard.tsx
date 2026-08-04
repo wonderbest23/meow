@@ -104,6 +104,9 @@ export default function SectionWizard({
   const chapter = PLAN_BLUEPRINT.find((c) => c.id === chapterId) ?? PLAN_BLUEPRINT[0];
   const section = chapter.sections.find((s) => s.id === sectionId) ?? chapter.sections[0];
   const key = sectionKey(chapter.id, section.id);
+
+  /** 모순 패널에서 넘어온 강조 대상 질문들 — 빨간 테두리로 짚어준다 */
+  const [conflictQids, setConflictQids] = useState<string[]>([]);
   // 문서 유형에 따라 묻는 질문이 달라진다(재무 문서에서 브랜드 질문을 빼는 식)
   const groups = useMemo(() => questionsForSection(key, section.title, planType), [key, section.title, planType]);
 
@@ -142,9 +145,34 @@ export default function SectionWizard({
     setAnswers(loadAnswers(key));
     setFinOverrides(loadAnswers(FINANCIAL_OVERRIDE_KEY));
     setPlanAnswers(p?.answers ?? {});
+    // 모순 패널에서 짚고 들어왔는가 — 그렇다면 본문 대신 답변 화면을 열고 해당 질문을 강조한다
+    let conflictFocus: string[] = [];
+    try {
+      const raw = sessionStorage.getItem("plan-conflict-focus");
+      if (raw) {
+        const parsed = JSON.parse(raw) as { key?: string; qids?: string[] };
+        if (parsed.key === key && parsed.qids?.length) {
+          conflictFocus = parsed.qids;
+          // 즉시 지우면 개발 모드의 이펙트 2회 실행에서 2회차가 빈손이 되어 강조가 풀린다.
+          // 잠시 뒤에 지워 같은 마운트 안의 재실행은 같은 값을 보게 한다.
+          window.setTimeout(() => {
+            try { sessionStorage.removeItem("plan-conflict-focus"); } catch { /* 무해 */ }
+          }, 1500);
+        }
+      }
+    } catch { /* 강조 실패는 치명적이지 않다 */ }
+    setConflictQids(conflictFocus);
+    if (conflictFocus.length) {
+      window.setTimeout(() => {
+        const container = bodyRef.current;
+        const el = container?.querySelector<HTMLElement>(`[data-qid="${conflictFocus[0]}"]`);
+        if (container && el) scrollToElement(container, el);
+      }, 150);
+    }
+
     const stored = p?.sections[key];
     if (stored) {
-      setGeneratedHtml(stored.html);
+      setGeneratedHtml(conflictFocus.length ? null : stored.html);
       setSavedMd(stored.markdown);
       setGenSource("ai");
       setEdited(!!stored.edited);
@@ -655,11 +683,12 @@ export default function SectionWizard({
                       <div
                         key={q.id}
                         data-qid={q.id}
-                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""}`}
+                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? styles.qConflict : ""}`}
                       >
                         <div className={styles.qq}>
                           {q.q}
                           {showMissing && missingIds.includes(q.id) && <span className={styles.needTag}>입력이 필요합니다</span>}
+                          {conflictQids.includes(q.id) && <span className={styles.conflictTag}>여기가 어긋납니다</span>}
                         </div>
                         {q.help && <div className={styles.qh}>{q.help}</div>}
                         {renderInput(q, answers[q.id], { setAnswer, toggleMulti, styles })}

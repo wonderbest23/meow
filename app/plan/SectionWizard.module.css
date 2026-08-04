@@ -1042,6 +1042,25 @@
   100% { background: #fff6f7; }
 }
 
+/* 모순 패널에서 짚어 들어온 질문 — 빨간 테두리로 정확히 어디인지 보여준다 */
+.qConflict {
+  border: 1.5px solid #d6455d;
+  background: #fff6f7;
+  box-shadow: 0 0 0 3px rgba(214, 69, 93, 0.12), var(--wz-shadow-sm);
+  animation: needAttention 0.45s ease-out;
+}
+.conflictTag {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: #d6455d;
+  border-radius: 999px;
+  padding: 3px 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 /* 아직 다 못 채운 상태의 생성 버튼 — 막지 않고 남은 개수를 알려준다 */
 .btnWaiting {
   background: var(--wz-panel2);
