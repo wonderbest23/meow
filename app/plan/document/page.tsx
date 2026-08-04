@@ -312,7 +312,22 @@ export default function PlanDocumentPage() {
             </header>
 
             <div className={styles.canvas}>
-              {!ready ? null : sections.length === 0 ? (
+              {!ready ? (
+                /* 불러오는 동안 문서 모양 스켈레톤 — 빈 화면이면 멈춘 것처럼 보인다 */
+                <div className={styles.paper} aria-busy="true" aria-label="문서를 불러오는 중">
+                  <div className={styles.skelTitle} />
+                  <div className={styles.skelSub} />
+                  {[0, 1, 2].map((i) => (
+                    <div key={i} className={styles.skelBlock}>
+                      <div className={styles.skelHead} />
+                      <div className={styles.skelLine} />
+                      <div className={styles.skelLine} />
+                      <div className={styles.skelLineShort} />
+                    </div>
+                  ))}
+                  <p className={styles.skelNote}>문서를 불러오는 중…</p>
+                </div>
+              ) : sections.length === 0 ? (
                 <div className={styles.empty}>
                   <p className={styles.emptyTitle}>아직 생성된 내용이 없어요</p>
                   <p className={styles.emptyDesc}>개요에서 섹션을 열고 질문에 답하면 이곳에 문서가 쌓입니다.</p>
