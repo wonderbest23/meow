@@ -5,18 +5,24 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
-import { Pencil, FileText, Plus } from "lucide-react";
+import { Pencil, FileText, Plus, Rocket, TrendingUp, Landmark, ClipboardList, Users, Calculator, BarChart3 } from "lucide-react";
 import styles from "./PlanList.module.css";
 
-/** 플랜 유형 → 표지 색 (start 페이지 카드와 같은 계열) */
-const COVER_ACCENTS: Record<string, string> = {
-  "창업 초기 · 사업계획서": "#3358f4",
-  "성장·확장 · 사업계획서": "#12a58a",
-  "간단 · 사업계획서": "#de5f7d",
-  "내부용 · 사업계획서": "#6b5bdd",
-  "창업 초기 · 재무 예측": "#2f6fe0",
-  "정밀 · 재무 모델": "#2f7bd6",
+/**
+ * 유형별 시각 정체성 — 색·아이콘·짧은 라벨.
+ * 색만으로는 계획서와 재무 모델이 구별되지 않아서, 워터마크 아이콘과
+ * 표지의 짧은 라벨(칩)까지 유형마다 다르게 둔다.
+ */
+const TYPE_META: Record<string, { accent: string; Icon: typeof FileText; short: string }> = {
+  "창업 초기 · 사업계획서": { accent: "#3358f4", Icon: Rocket, short: "창업 초기" },
+  "성장·확장 · 사업계획서": { accent: "#12a58a", Icon: TrendingUp, short: "성장·확장" },
+  "정부지원 · PSST 사업계획서": { accent: "#b45309", Icon: Landmark, short: "정부지원 PSST" },
+  "간단 · 사업계획서": { accent: "#de5f7d", Icon: ClipboardList, short: "간단 요약" },
+  "내부용 · 사업계획서": { accent: "#6b5bdd", Icon: Users, short: "내부 전략" },
+  "창업 초기 · 재무 예측": { accent: "#0e7490", Icon: Calculator, short: "재무 예측" },
+  "정밀 · 재무 모델": { accent: "#334155", Icon: BarChart3, short: "재무 모델" },
 };
+const DEFAULT_META = { accent: "#3358f4", Icon: FileText, short: "사업계획서" };
 
 /** 내 플랜 목록(대시보드) — 사업 요약 + 표지형 플랜 카드 */
 export default function PlanList() {
@@ -108,7 +114,8 @@ export default function PlanList() {
               const done = Object.keys(p.sections).filter((k) => k !== "financials/__review").length;
               const pct = total ? Math.round((done / total) * 100) : 0;
               const isActive = p.id === state.activePlanId;
-              const acc = COVER_ACCENTS[p.planType] ?? "#3358f4";
+              const meta = TYPE_META[p.planType] ?? DEFAULT_META;
+              const acc = meta.accent;
               // 예시 플랜은 읽기 전용 — 이름 변경·복제·삭제를 걸지 않는다
               const sample = isSamplePlan(p.id);
               return (
@@ -125,7 +132,9 @@ export default function PlanList() {
                       ) : isActive ? (
                         <span className={styles.coverBadge}>작업 중</span>
                       ) : null}
-                      <span className={styles.coverIcon} aria-hidden="true"><FileText /></span>
+                      <span className={styles.coverIcon} aria-hidden="true"><meta.Icon /></span>
+                      <span className={styles.typeChip}>{meta.short}</span>
+                      {pct === 100 && <span className={styles.stamp} aria-label="완성됨">완성</span>}
                       {editingId === p.id ? (
                         <input
                           className={styles.coverInput}

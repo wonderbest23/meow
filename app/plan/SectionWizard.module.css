@@ -30,6 +30,8 @@
 .app {
   display: grid;
   grid-template-columns: 232px minmax(0, 1fr) 268px;
+  /* 암시적 행은 내용만큼 늘어나 목차가 잘린 채 스크롤이 안 됐다 — 행을 컨테이너에 고정 */
+  grid-template-rows: minmax(0, 1fr);
   background: var(--wz-panel);
   border-radius: 24px;
   box-shadow: var(--wz-shadow);
@@ -103,6 +105,15 @@
   padding: 14px 0 20px;
   display: flex;
   flex-direction: column;
+}
+/*
+ * 목차 항목은 눌리면 안 된다.
+ * flex 세로 컨테이너의 기본 flex-shrink:1 때문에 내용이 넘칠 때 챕터들이
+ * 균등하게 압축됐고, .chap의 overflow:hidden이 눌린 만큼 섹션을 잘라냈다.
+ * 넘치는 대신 쪼그라들어서 스크롤(overflow-y:auto)도 생기지 않았다.
+ */
+.nav > * {
+  flex-shrink: 0;
 }
 .navTop {
   width: calc(100% - 28px);

@@ -209,6 +209,18 @@ export default function PlanDocumentPage() {
 
           {/* 본문 */}
           <section className={styles.main}>
+            {/*
+              모바일에서는 좌측 목차가 통째로 숨어 '플랜 개요'로 돌아갈 길이 없었다.
+              좁은 화면 전용으로 개요 링크와 챕터 점프를 가로 스트립으로 둔다.
+            */}
+            <div className={styles.mobileNav}>
+              <button type="button" className={styles.mobileBack} onClick={() => router.push("/plan/overview")}>← 플랜 개요</button>
+              {grouped.map(([chapterTitle, list]) => (
+                <button key={chapterTitle} type="button" className={styles.mobileChap} onClick={() => list[0] && scrollToSection(list[0].key)}>
+                  {chapterTitle}
+                </button>
+              ))}
+            </div>
             <header className={styles.mhead}>
               <div className={styles.routeHeader}>
                 <h1 className={styles.routeTitle}>
