@@ -374,7 +374,7 @@
 }
 .planCard:hover .sheet {
   transform: translateY(-4px);
-  box-shadow: 0 18px 36px rgba(20, 32, 64, 0.16);
+  box-shadow: 0 22px 40px rgba(15, 22, 40, 0.28);
 }
 .sheetActive {
   box-shadow: 0 0 0 2px var(--acc, #3182f6);
@@ -383,40 +383,131 @@
   position: relative;
   aspect-ratio: 4 / 5;
   display: flex;
-  align-items: flex-end;
-  padding: 14px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 20px 18px 18px 24px; /* 왼쪽은 책등 몫 */
+  text-align: center;
+  /* 하드커버 — 딥톤 바탕 + 은은한 조명(좌상단 밝고 우하단 깊게) + 미세 결 */
   background:
-    repeating-linear-gradient(-52deg, rgba(255, 255, 255, 0.05) 0 10px, transparent 10px 26px),
-    linear-gradient(158deg, color-mix(in srgb, var(--acc, #3358f4) 88%, #fff) 0%, var(--acc, #3358f4) 52%, color-mix(in srgb, var(--acc, #3358f4) 72%, #10233a) 100%);
+    radial-gradient(120% 90% at 18% 8%, rgba(255, 255, 255, 0.14) 0%, transparent 55%),
+    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 4px),
+    linear-gradient(158deg, color-mix(in srgb, var(--acc, #1e3a6e) 86%, #fff) 0%, var(--acc, #1e3a6e) 46%, color-mix(in srgb, var(--acc, #1e3a6e) 68%, #05080f) 100%);
   overflow: hidden;
 }
-.coverIcon {
+
+/* 책등 — 왼쪽 어두운 띠와 접히는 홈 */
+.spine {
   position: absolute;
-  top: 8px;
-  right: -12px;
-  color: rgba(255, 255, 255, 0.2);
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.16) 55%, transparent 100%);
   pointer-events: none;
 }
-.coverIcon svg {
-  width: 88px;
-  height: 88px;
+.spine::after {
+  content: "";
+  position: absolute;
+  right: -1px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* 오른쪽 페이지 결 */
+.pages {
+  position: absolute;
+  right: 0;
+  top: 4px;
+  bottom: 4px;
+  width: 4px;
+  background: repeating-linear-gradient(180deg, #f2ecdf 0 2px, #cfc7b4 2px 3px);
+  border-radius: 0 2px 2px 0;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+/* 금박 이중 프레임 */
+.coverFrame {
+  position: absolute;
+  inset: 9px 8px 9px 16px;
+  border: 1px solid color-mix(in srgb, #d6b56f 55%, transparent);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.coverFrame::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border: 1px solid color-mix(in srgb, #d6b56f 26%, transparent);
+  border-radius: 4px;
+}
+
+/* 상단 원형 금테 엠블럼 */
+.emblem {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, #d6b56f 80%, transparent);
+  display: grid;
+  place-items: center;
+  color: #e6cf9a;
+  background: rgba(255, 255, 255, 0.05);
+  flex: 0 0 auto;
+}
+.emblem svg {
+  width: 20px;
+  height: 20px;
   display: block;
 }
-.coverName {
-  position: relative;
-  color: #fff;
-  font-size: 18px;
-  font-weight: 800;
-  line-height: 1.3;
-  letter-spacing: -0.4px;
-  word-break: keep-all;
-  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.14);
+
+/* 가는 장식선 — 선·다이아·선 */
+.orn {
   display: flex;
   align-items: center;
   gap: 7px;
-  flex-wrap: wrap;
+  width: 68%;
+  color: #d6b56f;
+  flex: 0 0 auto;
 }
-.coverInput {
+.orn i {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, #d6b56f 70%, transparent));
+}
+.orn i:last-child {
+  background: linear-gradient(90deg, color-mix(in srgb, #d6b56f 70%, transparent), transparent);
+}
+.orn b {
+  font-size: 7px;
+  line-height: 1;
+}
+
+/* 하단 소제목 — 금색 세리프 소문자 라벨 */
+.coverType {
+  font-family: var(--font-serif-kr), "Nanum Myeongjo", Batang, serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  color: #d6b56f;
+  flex: 0 0 auto;
+}
+
+.coverName {
+  position: relative;
+  color: #f7f2e7;
+  font-family: var(--font-serif-kr), "Nanum Myeongjo", Batang, serif;
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.35;
+  letter-spacing: -0.2px;
+  word-break: keep-all;
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+  max-width: 100%;
+}.coverInput {
   position: relative;
   width: 100%;
   border: 1.5px solid rgba(255, 255, 255, 0.85);
@@ -433,13 +524,16 @@
 }
 .coverBadge {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  background: #10233a;
-  color: #f4b740;
-  font-size: 10.5px;
+  top: 14px;
+  left: 22px;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid color-mix(in srgb, #d6b56f 50%, transparent);
+  color: #e6cf9a;
+  font-size: 10px;
   font-weight: 800;
-  padding: 5px 10px;
+  letter-spacing: 0.06em;
+  padding: 4px 9px;
   border-radius: 999px;
 }
 .coverName .renameBtn {
@@ -464,40 +558,26 @@
   text-align: right;
 }
 
-/* 유형 칩 — 표지 좌하단, 제목 위 */
-.typeChip {
-  position: absolute;
-  left: 14px;
-  bottom: 64px;
-  padding: 4px 9px;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  backdrop-filter: blur(2px);
-}
-
 /* 완성 도장 — 100%일 때 표지 가운데 */
+/* 완성 낙관 — 고서 도장처럼 우상단에 작게 */
 .stamp {
   position: absolute;
-  left: 50%;
-  top: 42%;
-  width: 86px;
-  height: 86px;
-  margin: -43px 0 0 -43px;
+  top: 16px;
+  right: 16px;
+  width: 52px;
+  height: 52px;
   display: grid;
   place-items: center;
-  border: 3px solid rgba(255, 255, 255, 0.92);
+  border: 2px solid color-mix(in srgb, #d6b56f 90%, #fff);
   border-radius: 50%;
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 21px;
+  color: #e9d3a1;
+  font-size: 13px;
   font-weight: 900;
-  letter-spacing: 0.12em;
-  transform: rotate(-12deg);
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.25);
+  letter-spacing: 0.1em;
+  transform: rotate(9deg);
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #d6b56f 35%, transparent);
   pointer-events: none;
+  z-index: 2;
 }
 
 /* 카드 아래 메타 */
@@ -578,14 +658,34 @@
     gap: 12px;
   }
   .cover {
-    padding: 10px;
+    padding: 14px 12px 12px 18px;
+    gap: 7px;
   }
   .coverName {
-    font-size: 14.5px;
+    font-size: 15px;
   }
-  .coverIcon svg {
-    width: 64px;
-    height: 64px;
+  .emblem {
+    width: 34px;
+    height: 34px;
+  }
+  .emblem svg {
+    width: 15px;
+    height: 15px;
+  }
+  .coverType {
+    font-size: 9.5px;
+    letter-spacing: 0.16em;
+  }
+  .coverFrame {
+    inset: 6px 6px 6px 13px;
+  }
+  .stamp {
+    width: 40px;
+    height: 40px;
+    top: 10px;
+    right: 10px;
+    font-size: 10.5px;
+    border-width: 1.5px;
   }
   .metaType {
     font-size: 12px;
@@ -609,7 +709,7 @@
   font-size: 34px;
   font-weight: 900;
   letter-spacing: 0.28em;
-  color: rgba(255, 255, 255, 0.22);
+  color: rgba(230, 207, 154, 0.2);
   pointer-events: none;
 }
 

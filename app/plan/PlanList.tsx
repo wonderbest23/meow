@@ -14,15 +14,16 @@ import styles from "./PlanList.module.css";
  * 표지의 짧은 라벨(칩)까지 유형마다 다르게 둔다.
  */
 const TYPE_META: Record<string, { accent: string; Icon: typeof FileText; short: string }> = {
-  "창업 초기 · 사업계획서": { accent: "#3358f4", Icon: Rocket, short: "창업 초기" },
-  "성장·확장 · 사업계획서": { accent: "#12a58a", Icon: TrendingUp, short: "성장·확장" },
-  "정부지원 · PSST 사업계획서": { accent: "#b45309", Icon: Landmark, short: "정부지원 PSST" },
-  "간단 · 사업계획서": { accent: "#de5f7d", Icon: ClipboardList, short: "간단 요약" },
-  "내부용 · 사업계획서": { accent: "#6b5bdd", Icon: Users, short: "내부 전략" },
-  "창업 초기 · 재무 예측": { accent: "#0e7490", Icon: Calculator, short: "재무 예측" },
-  "정밀 · 재무 모델": { accent: "#334155", Icon: BarChart3, short: "재무 모델" },
+  // 하드커버 딥톤 — 채도를 낮추고 어둡게, 금박 장식이 얹히는 바탕
+  "창업 초기 · 사업계획서": { accent: "#1e3a6e", Icon: Rocket, short: "창업 초기" },
+  "성장·확장 · 사업계획서": { accent: "#1d4a34", Icon: TrendingUp, short: "성장·확장" },
+  "정부지원 · PSST 사업계획서": { accent: "#5c2e22", Icon: Landmark, short: "정부지원 PSST" },
+  "간단 · 사업계획서": { accent: "#6e2f47", Icon: ClipboardList, short: "간단 요약" },
+  "내부용 · 사업계획서": { accent: "#3b3370", Icon: Users, short: "내부 전략" },
+  "창업 초기 · 재무 예측": { accent: "#14494e", Icon: Calculator, short: "재무 예측" },
+  "정밀 · 재무 모델": { accent: "#23303f", Icon: BarChart3, short: "재무 모델" },
 };
-const DEFAULT_META = { accent: "#3358f4", Icon: FileText, short: "사업계획서" };
+const DEFAULT_META = { accent: "#1e3a6e", Icon: FileText, short: "사업계획서" };
 
 /** 내 플랜 목록(대시보드) — 사업 요약 + 표지형 플랜 카드 */
 export default function PlanList() {
@@ -130,13 +131,16 @@ export default function PlanList() {
                 >
                   <span className={`${styles.sheet} ${isActive ? styles.sheetActive : ""}`}>
                     <span className={styles.cover}>
+                      <span className={styles.spine} aria-hidden="true" />
+                      <span className={styles.coverFrame} aria-hidden="true" />
+                      <span className={styles.pages} aria-hidden="true" />
                       {sample ? (
                         <span className={styles.coverBadge}>예시</span>
                       ) : isActive ? (
                         <span className={styles.coverBadge}>작업 중</span>
                       ) : null}
-                      <span className={styles.coverIcon} aria-hidden="true"><meta.Icon /></span>
-                      <span className={styles.typeChip}>{meta.short}</span>
+                      <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
+                      <span className={styles.orn} aria-hidden="true"><i /><b>◆</b><i /></span>
                       {pct === 100 && <span className={styles.stamp} aria-label="완성됨">완성</span>}
                       {editingId === p.id ? (
                         <input
@@ -169,6 +173,7 @@ export default function PlanList() {
                           </span>}
                         </span>
                       )}
+                      <span className={styles.coverType}>{meta.short}</span>
                     </span>
                     <span className={styles.strip}>
                       {pct === 0 ? (
@@ -248,11 +253,15 @@ export default function PlanList() {
                   >
                     <span className={styles.sheet}>
                       <span className={styles.cover}>
+                        <span className={styles.spine} aria-hidden="true" />
+                        <span className={styles.coverFrame} aria-hidden="true" />
+                        <span className={styles.pages} aria-hidden="true" />
                         <span className={styles.coverBadge}>샘플</span>
-                        <span className={styles.coverIcon} aria-hidden="true"><meta.Icon /></span>
-                        <span className={styles.typeChip}>{meta.short}</span>
+                        <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
+                        <span className={styles.orn} aria-hidden="true"><i /><b>◆</b><i /></span>
                         <span className={styles.sampleMark} aria-hidden="true">SAMPLE</span>
                         <span className={styles.coverName}>{p.title.replace(/^샘플 · /, "")}</span>
+                        <span className={styles.coverType}>{meta.short}</span>
                       </span>
                       <span className={styles.strip}>
                         <span className={styles.bar}><span className={`${styles.barFill} ${styles.done}`} style={{ width: "100%" }} /></span>
