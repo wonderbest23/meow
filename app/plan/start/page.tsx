@@ -215,6 +215,8 @@ export default function PlanStartPage() {
   const [donor, setDonor] = useState<{ title: string; planType: string; count: number } | null>(null);
   /** true = 기존 사업 답변 이어받기(기본), false = 처음부터 새로 */
   const [inherit, setInherit] = useState(true);
+  /** 이미 만들어 둔 유형 — 같은 사업으로 이어갈 때는 목록에서 뺀다(중복 구매 방지) */
+  const [existingTypes, setExistingTypes] = useState<Set<string>>(new Set());
   /*
    * 플랜 빌더는 가입해야 쓸 수 있다.
    * 예전에는 입구를 열어두고 섹션 생성 단계에서야 막았다. 그래서 로그인하지
@@ -245,6 +247,7 @@ export default function PlanStartPage() {
       if (s.plans.length > 0) setStep(2); // 사업+플랜이 이미 있으면 유형 선택부터
     }
     setDonor(answerDonor());
+    setExistingTypes(new Set(s.plans.filter((p) => !p.id.startsWith("sample_")).map((p) => p.planType)));
   }, [authed]);
 
   const set = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) => setBiz((p) => ({ ...p, [k]: v }));
@@ -293,7 +296,10 @@ export default function PlanStartPage() {
     router.push("/plan/overview");
   }
 
-  const visible = PLAN_TYPES.filter((p) => p.category === category);
+  // 같은 사업으로 이어갈 때는 이미 만든 유형을 숨긴다 — 같은 문서를 또 사는 건 의미가 없다
+  const hideExisting = Boolean(donor) && inherit;
+  const visible = PLAN_TYPES.filter((p) => p.category === category && !(hideExisting && existingTypes.has(p.type)));
+  const hiddenCount = hideExisting ? PLAN_TYPES.filter((p) => p.category === category && existingTypes.has(p.type)).length : 0;
   const featured = visible.find((p) => p.featured);
   const others = visible.filter((p) => p !== featured);
 
@@ -451,6 +457,11 @@ export default function PlanStartPage() {
                   <button className={category === "forecast" ? styles.catOn : ""} onClick={() => setCategory("forecast")}>재무 예측</button>
                 </div>
 
+                {hiddenCount > 0 && (
+                  <p className={styles.hiddenNote}>
+                    이미 만든 유형 {hiddenCount}개는 목록에서 뺐어요. 같은 문서를 다시 만들려면 내 플랜에서 ‘복제’를, 다른 사업으로 만들려면 위에서 ‘처음부터 새로 시작’을 선택하세요.
+                  </p>
+                )}
                 {/* 표지형 카드 덱 — 레퍼런스 대시보드의 플랜 카드 구조(커버+하단 스트립+배지) */}
                 <div className={styles.deck}>
                   {[...(featured ? [featured] : []), ...others].map((pt) => {

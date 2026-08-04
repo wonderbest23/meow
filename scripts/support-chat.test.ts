@@ -31,7 +31,7 @@ async function main() {
   assert.equal(findSupportFaqKeywordMatches("샘플 완성본을 미리 볼 수 있나요?", 1)[0]?.id, "sample-docs");
   assert.equal(findSupportFaqKeywordMatches("세금 신고와 세무사 연결도 해주나요?", 1)[0]?.id, "error-scope");
   assert.equal(findSupportFaqKeywordMatches("휴대폰 PC 같은 문서를 볼 수 있나요?", 1)[0]?.id, "account-device");
-  assert.match(supportKnowledgeText("가격이 얼마인가요?"), /정부지원 PSST 사업계획서 169,000원/);
+  assert.match(supportKnowledgeText("가격이 얼마인가요?"), /정부지원 PSST 사업계획서 149,000원/);
   assert.match(supportKnowledgeText("카드로 결제할 수 있나요?"), /나이스페이 결제창/);
   assert.match(supportKnowledgeText("제작 후 단순 변심 환불이 되나요?"), /단순 변심 환불이 제한/);
   assert.match(supportKnowledgeText("샘플 볼 수 있나요?"), /샘플 문서 3부/);

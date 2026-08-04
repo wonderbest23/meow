@@ -22,8 +22,8 @@ export const PLAN_TYPE_PRICING: Record<string, number> = {
   "창업 초기 · 재무 예측": 89_000,
   "창업 초기 · 사업계획서": 149_000,
   "성장·확장 · 사업계획서": 149_000,
-  "정밀 · 재무 모델": 169_000,
-  "정부지원 · PSST 사업계획서": 169_000,
+  "정밀 · 재무 모델": 149_000,
+  "정부지원 · PSST 사업계획서": 149_000,
 };
 export const PLAN_DEFAULT_PRICE = 149_000;
 

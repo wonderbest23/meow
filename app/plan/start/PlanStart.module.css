@@ -872,3 +872,17 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* 이미 만든 유형 숨김 안내 */
+.hiddenNote {
+  margin: 0 0 14px;
+  padding: 10px 14px;
+  background: var(--surface-soft, #f7f8fa);
+  border: 1px dashed var(--border-soft, #d5dbe2);
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-muted, #8b95a1);
+  word-break: keep-all;
+}
