@@ -17,15 +17,15 @@ export const PLAN_PRODUCT_AMOUNT = PACKAGE_AMOUNT;
  * 여기 없는 유형(과거 데이터)은 기본가로 판다.
  */
 export const PLAN_TYPE_PRICING: Record<string, number> = {
-  "간단 · 사업계획서": 29_000,
-  "내부용 · 사업계획서": 49_000,
-  "창업 초기 · 재무 예측": 49_000,
-  "창업 초기 · 사업계획서": 89_000,
-  "성장·확장 · 사업계획서": 89_000,
-  "정밀 · 재무 모델": 89_000,
-  "정부지원 · PSST 사업계획서": 99_000,
+  "간단 · 사업계획서": 49_000,
+  "내부용 · 사업계획서": 89_000,
+  "창업 초기 · 재무 예측": 89_000,
+  "창업 초기 · 사업계획서": 149_000,
+  "성장·확장 · 사업계획서": 149_000,
+  "정밀 · 재무 모델": 169_000,
+  "정부지원 · PSST 사업계획서": 169_000,
 };
-export const PLAN_DEFAULT_PRICE = 89_000;
+export const PLAN_DEFAULT_PRICE = 149_000;
 
 export function planPrice(planType?: string): number {
   return (planType && PLAN_TYPE_PRICING[planType]) || PLAN_DEFAULT_PRICE;

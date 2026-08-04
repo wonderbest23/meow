@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveBusiness, createPlan, hydrateFromServer, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
+import { saveBusiness, createPlan, hydrateFromServer, loadState, answerDonor, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
@@ -211,6 +211,10 @@ export default function PlanStartPage() {
   const [category, setCategory] = useState<"bp" | "forecast">("bp");
   const [improving, setImproving] = useState(false);
   const [hasExisting, setHasExisting] = useState(false);
+  /** 답변을 물려줄 기존 플랜 정보 (없으면 선택 UI를 숨긴다) */
+  const [donor, setDonor] = useState<{ title: string; planType: string; count: number } | null>(null);
+  /** true = 기존 사업 답변 이어받기(기본), false = 처음부터 새로 */
+  const [inherit, setInherit] = useState(true);
   /*
    * 플랜 빌더는 가입해야 쓸 수 있다.
    * 예전에는 입구를 열어두고 섹션 생성 단계에서야 막았다. 그래서 로그인하지
@@ -240,6 +244,7 @@ export default function PlanStartPage() {
       setHasExisting(true);
       if (s.plans.length > 0) setStep(2); // 사업+플랜이 이미 있으면 유형 선택부터
     }
+    setDonor(answerDonor());
   }, [authed]);
 
   const set = <K extends keyof BusinessProfile>(k: K, v: BusinessProfile[K]) => setBiz((p) => ({ ...p, [k]: v }));
@@ -284,7 +289,7 @@ export default function PlanStartPage() {
      */
     await hydrateFromServer().catch(() => {});
     saveBusiness(biz);
-    createPlan(pt.type, biz.name);
+    createPlan(pt.type, biz.name, { inheritAnswers: inherit });
     router.push("/plan/overview");
   }
 
@@ -415,6 +420,31 @@ export default function PlanStartPage() {
                   <br />
                   {biz.description}
                 </div>
+
+                {/* 기존 답변 이어받기 선택 — 이미 작성한 플랜이 있을 때만 */}
+                {donor && (
+                  <div className={styles.inheritBox}>
+                    <div className={styles.inheritHead}>이미 작성한 답변이 있어요 — 새 플랜에 어떻게 할까요?</div>
+                    <div className={styles.inheritOpts}>
+                      <button
+                        type="button"
+                        className={`${styles.inheritOpt} ${inherit ? styles.inheritOn : ""}`}
+                        onClick={() => setInherit(true)}
+                      >
+                        <b>같은 사업, 답변 이어받기</b>
+                        <span>‘{donor.title}’({donor.planType})의 답변 {donor.count}개를 그대로 가져와, 겹치는 질문은 다시 입력하지 않습니다.</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.inheritOpt} ${!inherit ? styles.inheritOn : ""}`}
+                        onClick={() => setInherit(false)}
+                      >
+                        <b>처음부터 새로 시작</b>
+                        <span>다른 사업이거나 답을 전부 새로 쓰고 싶을 때. 빈 상태로 시작합니다.</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <div className={styles.cats}>
                   <button className={category === "bp" ? styles.catOn : ""} onClick={() => setCategory("bp")}>사업계획서</button>

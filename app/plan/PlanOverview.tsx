@@ -59,10 +59,13 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   /** 잠근 섹션 — 일괄 생성이 건너뛴다 */
   const [lockedKeys, setLockedKeys] = useState<Set<string>>(new Set());
 
-  // 서버(→로컬 캐시)에서 상태·본문 하이드레이트
+  const [ready, setReady] = useState(false);
+
+  // 로컬 캐시로 즉시 채우고, 서버 하이드레이트로 조용히 갱신한다.
+  // 예전에는 서버 응답을 기다렸다가 채워서 완성 배너·진행률이 한 박자 늦게 나타났다.
   useEffect(() => {
     let alive = true;
-    hydrateFromServer().then((s) => {
+    const apply = (s: ReturnType<typeof loadState>) => {
       if (!alive) return;
       setStoreStatuses(planStatuses(s));
       setAssembled(assembleSections(s));
@@ -74,7 +77,10 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       }
       setIssues(findConsistencyIssues(p?.answers ?? {}, s.business));
       setLockedKeys(new Set(Object.entries(p?.sections ?? {}).filter(([, v]) => v?.locked).map(([k]) => k)));
-    });
+      setReady(true);
+    };
+    apply(loadState());
+    hydrateFromServer().then(apply);
     return () => {
       alive = false;
     };
@@ -177,6 +183,17 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
 
   // 전역 순번(1-based)
   let counter = 0;
+
+  // 첫 페인트 전(로컬 캐시 읽기 전)에는 빈 프레임만 — 0%→완성으로 튀는 화면 방지
+  if (!ready) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.frame}>
+          <div className={styles.app} aria-busy="true" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.page}>
