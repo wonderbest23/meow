@@ -110,12 +110,34 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
   return text || null;
 }
 
-/** provider에 맞는 모델을 호출해 원본 텍스트를 반환한다. 실패 시 null. */
-export async function completeText(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
-  if (!config.apiKey) return null;
+/**
+ * 반대 프로바이더의 환경 키. 크레딧 소진·장애처럼 "키는 있는데 호출이 실패"할 때
+ * 다른 프로바이더로 넘어가기 위한 런타임 폴백이다.
+ */
+function envAlternate(config: LLMConfig): LLMConfig | null {
+  if (config.provider === "anthropic") {
+    const key = process.env.OPENAI_API_KEY?.trim();
+    return key ? { provider: "openai", apiKey: key, model: process.env.OPENAI_MODEL?.trim() || "gpt-5.6-sol" } : null;
+  }
+  const key = process.env.ANTHROPIC_API_KEY?.trim();
+  return key ? { provider: "anthropic", apiKey: key, model: process.env.ANTHROPIC_MODEL?.trim() || "claude-sonnet-5" } : null;
+}
+
+function completeOnce(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
   return config.provider === "anthropic"
     ? anthropicComplete(config, params)
     : openaiComplete(config, params);
+}
+
+/** provider에 맞는 모델을 호출해 원본 텍스트를 반환한다. 실패하면 반대 프로바이더로 1회 폴백. */
+export async function completeText(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
+  if (!config.apiKey) return null;
+  const primary = await completeOnce(config, params);
+  if (primary) return primary;
+  const alt = envAlternate(config);
+  if (!alt) return null;
+  console.error(`[llm] ${config.provider} 실패 — ${alt.provider}(${alt.model})로 폴백`);
+  return completeOnce(alt, params);
 }
 
 /** 모델 출력에서 JSON 객체를 파싱한다. 코드펜스가 있으면 벗겨낸다. 실패 시 null. */
@@ -153,6 +175,21 @@ export async function streamText(
   onDelta: (chunk: string) => void,
 ): Promise<string | null> {
   if (!config.apiKey) return null;
+  const first = await streamOnce(config, params, onDelta);
+  if (first !== "setup_failed") return first;
+  const alt = envAlternate(config);
+  if (!alt) return null;
+  console.error(`[llm] ${config.provider} 스트림 실패 — ${alt.provider}(${alt.model})로 폴백`);
+  const second = await streamOnce(alt, params, onDelta);
+  return second === "setup_failed" ? null : second;
+}
+
+/** 1회 스트리밍 시도. 연결 자체가 실패하면(아직 아무 조각도 안 보냄) "setup_failed". */
+async function streamOnce(
+  config: LLMConfig,
+  params: LLMCompleteParams,
+  onDelta: (chunk: string) => void,
+): Promise<string | null | "setup_failed"> {
   const anthropic = config.provider === "anthropic";
 
   let response: Response;
@@ -189,10 +226,14 @@ export async function streamText(
         signal: AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS),
       },
     );
-  } catch {
-    return null;
+  } catch (err) {
+    console.error("[llm] stream fetch 실패:", err instanceof Error ? err.message : err);
+    return "setup_failed";
   }
-  if (!response.ok || !response.body) return null;
+  if (!response.ok || !response.body) {
+    console.error("[llm] stream", config.provider, response.status, (await response.text().catch(() => "")).slice(0, 300));
+    return "setup_failed";
+  }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
