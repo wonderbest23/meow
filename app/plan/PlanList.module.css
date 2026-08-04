@@ -386,25 +386,24 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 20px 18px 18px 24px; /* 왼쪽은 책등 몫 */
+  gap: 9px;
+  padding: 18px 14px 16px 20px; /* 왼쪽은 책등 몫 */
   text-align: center;
-  /* 하드커버 — 딥톤 바탕 + 은은한 조명(좌상단 밝고 우하단 깊게) + 미세 결 */
+  /* 레퍼런스풍 — 딥톤 단색에 좌상단 은은한 빛만 */
   background:
-    radial-gradient(120% 90% at 18% 8%, rgba(255, 255, 255, 0.14) 0%, transparent 55%),
-    repeating-linear-gradient(0deg, rgba(255, 255, 255, 0.015) 0 2px, transparent 2px 4px),
-    linear-gradient(158deg, color-mix(in srgb, var(--acc, #1e3a6e) 86%, #fff) 0%, var(--acc, #1e3a6e) 46%, color-mix(in srgb, var(--acc, #1e3a6e) 68%, #05080f) 100%);
+    radial-gradient(130% 100% at 20% 0%, rgba(255, 255, 255, 0.10) 0%, transparent 52%),
+    linear-gradient(168deg, color-mix(in srgb, var(--acc, #1e3a6e) 92%, #fff) 0%, var(--acc, #1e3a6e) 55%, color-mix(in srgb, var(--acc, #1e3a6e) 78%, #000) 100%);
   overflow: hidden;
 }
 
-/* 책등 — 왼쪽 어두운 띠와 접히는 홈 */
+/* 책등 — 왼쪽 접힘 홈 */
 .spine {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  width: 12px;
-  background: linear-gradient(90deg, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.16) 55%, transparent 100%);
+  width: 10px;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 0, 0, 0.12) 55%, transparent 100%);
   pointer-events: none;
 }
 .spine::after {
@@ -414,100 +413,105 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.12);
 }
 
 /* 오른쪽 페이지 결 */
 .pages {
   position: absolute;
   right: 0;
-  top: 4px;
-  bottom: 4px;
+  top: 5px;
+  bottom: 5px;
   width: 4px;
-  background: repeating-linear-gradient(180deg, #f2ecdf 0 2px, #cfc7b4 2px 3px);
+  background: repeating-linear-gradient(180deg, #f4efe4 0 2px, #d6cebc 2px 3px);
   border-radius: 0 2px 2px 0;
-  opacity: 0.9;
   pointer-events: none;
 }
 
-/* 금박 이중 프레임 */
+/* 레퍼런스에는 프레임이 없다 — 흔적만 남기고 숨김 */
 .coverFrame {
-  position: absolute;
-  inset: 9px 8px 9px 16px;
-  border: 1px solid color-mix(in srgb, #d6b56f 55%, transparent);
-  border-radius: 6px;
-  pointer-events: none;
-}
-.coverFrame::after {
-  content: "";
-  position: absolute;
-  inset: 3px;
-  border: 1px solid color-mix(in srgb, #d6b56f 26%, transparent);
-  border-radius: 4px;
+  display: none;
 }
 
-/* 상단 원형 금테 엠블럼 */
+/* 상단 엠블럼 — 흰 원 안에 커버색 아이콘 (레퍼런스의 로고 원) */
 .emblem {
-  width: 44px;
-  height: 44px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
-  border: 1.5px solid color-mix(in srgb, #d6b56f 80%, transparent);
+  background: #fdfbf6;
   display: grid;
   place-items: center;
-  color: #e6cf9a;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--acc, #1e3a6e);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
   flex: 0 0 auto;
 }
 .emblem svg {
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   display: block;
 }
 
-/* 가는 장식선 — 선·다이아·선 */
+/* 가는 흰 장식 — 선·플러리시·선 */
 .orn {
   display: flex;
   align-items: center;
-  gap: 7px;
-  width: 68%;
-  color: #d6b56f;
+  gap: 8px;
+  width: 62%;
+  color: rgba(255, 255, 255, 0.85);
   flex: 0 0 auto;
 }
 .orn i {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, #d6b56f 70%, transparent));
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65));
 }
 .orn i:last-child {
-  background: linear-gradient(90deg, color-mix(in srgb, #d6b56f 70%, transparent), transparent);
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.65), transparent);
 }
 .orn b {
-  font-size: 7px;
+  font-size: 12px;
   line-height: 1;
+  font-weight: 400;
 }
 
-/* 하단 소제목 — 금색 세리프 소문자 라벨 */
+/* 큰 띠 제목 — 어두운 가로 띠 + 위아래 가는 선 + 흰 볼드 (레퍼런스의 '론칭 비법서') */
+.band {
+  width: calc(100% + 34px); /* 표지 폭을 꽉 채운다 */
+  margin: 2px -14px 0 -20px;
+  padding: 9px 8px;
+  background: rgba(0, 0, 0, 0.26);
+  border-top: 1px solid rgba(255, 255, 255, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+  color: #fff;
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  flex: 0 0 auto;
+}
+
+/* 하단 작은 줄 — 유형 전체 이름 (레퍼런스의 저자 줄) */
 .coverType {
-  font-family: var(--font-serif-kr), "Nanum Myeongjo", Batang, serif;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.22em;
-  color: #d6b56f;
+  margin-top: 2px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.72);
   flex: 0 0 auto;
 }
 
 .coverName {
   position: relative;
-  color: #f7f2e7;
-  font-family: var(--font-serif-kr), "Nanum Myeongjo", Batang, serif;
-  font-size: 19px;
-  font-weight: 900;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
   line-height: 1.35;
   letter-spacing: -0.2px;
   word-break: keep-all;
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
   max-width: 100%;
-}.coverInput {
+  opacity: 0.95;
+}
+.coverInput {
   position: relative;
   width: 100%;
   border: 1.5px solid rgba(255, 255, 255, 0.85);
@@ -528,8 +532,8 @@
   left: 22px;
   z-index: 2;
   background: rgba(0, 0, 0, 0.35);
-  border: 1px solid color-mix(in srgb, #d6b56f 50%, transparent);
-  color: #e6cf9a;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  color: #fff;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.06em;
@@ -568,14 +572,14 @@
   height: 52px;
   display: grid;
   place-items: center;
-  border: 2px solid color-mix(in srgb, #d6b56f 90%, #fff);
+  border: 2px solid rgba(255, 255, 255, 0.9);
   border-radius: 50%;
-  color: #e9d3a1;
+  color: #fff;
   font-size: 13px;
   font-weight: 900;
   letter-spacing: 0.1em;
   transform: rotate(9deg);
-  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, #d6b56f 35%, transparent);
+  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.3);
   pointer-events: none;
   z-index: 2;
 }
@@ -658,26 +662,29 @@
     gap: 12px;
   }
   .cover {
-    padding: 14px 12px 12px 18px;
+    padding: 12px 10px 12px 16px;
     gap: 7px;
   }
   .coverName {
+    font-size: 12.5px;
+  }
+  .band {
     font-size: 15px;
+    width: calc(100% + 26px);
+    margin: 2px -10px 0 -16px;
+    padding: 7px 6px;
   }
   .emblem {
-    width: 34px;
-    height: 34px;
+    width: 40px;
+    height: 40px;
   }
   .emblem svg {
-    width: 15px;
-    height: 15px;
+    width: 18px;
+    height: 18px;
   }
   .coverType {
-    font-size: 9.5px;
-    letter-spacing: 0.16em;
-  }
-  .coverFrame {
-    inset: 6px 6px 6px 13px;
+    font-size: 9px;
+    letter-spacing: 0.05em;
   }
   .stamp {
     width: 40px;
@@ -709,7 +716,7 @@
   font-size: 34px;
   font-weight: 900;
   letter-spacing: 0.28em;
-  color: rgba(230, 207, 154, 0.2);
+  color: rgba(255, 255, 255, 0.18);
   pointer-events: none;
 }
 

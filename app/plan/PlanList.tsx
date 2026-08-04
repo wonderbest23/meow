@@ -140,7 +140,7 @@ export default function PlanList() {
                         <span className={styles.coverBadge}>작업 중</span>
                       ) : null}
                       <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
-                      <span className={styles.orn} aria-hidden="true"><i /><b>◆</b><i /></span>
+                      <span className={styles.orn} aria-hidden="true"><i /><b>❦</b><i /></span>
                       {pct === 100 && <span className={styles.stamp} aria-label="완성됨">완성</span>}
                       {editingId === p.id ? (
                         <input
@@ -173,7 +173,8 @@ export default function PlanList() {
                           </span>}
                         </span>
                       )}
-                      <span className={styles.coverType}>{meta.short}</span>
+                      <span className={styles.band}>{meta.short}</span>
+                      <span className={styles.coverType}>{p.planType}</span>
                     </span>
                     <span className={styles.strip}>
                       {pct === 0 ? (
@@ -258,10 +259,11 @@ export default function PlanList() {
                         <span className={styles.pages} aria-hidden="true" />
                         <span className={styles.coverBadge}>샘플</span>
                         <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
-                        <span className={styles.orn} aria-hidden="true"><i /><b>◆</b><i /></span>
+                        <span className={styles.orn} aria-hidden="true"><i /><b>❦</b><i /></span>
                         <span className={styles.sampleMark} aria-hidden="true">SAMPLE</span>
                         <span className={styles.coverName}>{p.title.replace(/^샘플 · /, "")}</span>
-                        <span className={styles.coverType}>{meta.short}</span>
+                        <span className={styles.band}>{meta.short}</span>
+                        <span className={styles.coverType}>{p.planType}</span>
                       </span>
                       <span className={styles.strip}>
                         <span className={styles.bar}><span className={`${styles.barFill} ${styles.done}`} style={{ width: "100%" }} /></span>
