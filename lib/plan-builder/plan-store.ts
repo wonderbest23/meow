@@ -188,13 +188,14 @@ export function setActivePlan(planId: string) {
   void pushToServer();
 }
 
-/** 플랜 삭제 */
+/** 플랜 삭제 — 서버는 병합 저장이라, 삭제는 명시적 DELETE로 알려야 지워진다. */
 export function deletePlan(planId: string) {
   if (readOnlyPlan(planId)) return;
   const s = loadState();
   s.plans = s.plans.filter((p) => p.id !== planId);
   if (s.activePlanId === planId) s.activePlanId = s.plans[0]?.id ?? null;
   persist(s);
+  void fetch(`/api/plan/state?planId=${encodeURIComponent(planId)}`, { method: "DELETE" }).catch(() => {});
   void pushToServer();
 }
 

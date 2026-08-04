@@ -174,12 +174,20 @@ export async function buildDeckPlan(
     .filter(Boolean)
     .join("\n");
 
-  const raw = await completeJson(config, {
-    system: SYSTEM_PROMPT,
-    user,
-    maxOutputTokens: 4000,
-    effort: "medium",
-  });
-  if (!raw) return null;
-  return normalize(raw, input.businessName);
+  /*
+   * 실측에서 2회 중 1회가 형식 이탈로 실패했다(간헐).
+   * 12장 구성을 다시 만드는 비용보다 사용자가 버튼을 다시 누르는 비용이
+   * 크므로, 서버에서 한 번은 조용히 재시도한다.
+   */
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const raw = await completeJson(config, {
+      system: SYSTEM_PROMPT,
+      user,
+      maxOutputTokens: 4000,
+      effort: "medium",
+    });
+    const plan = raw ? normalize(raw, input.businessName) : null;
+    if (plan) return plan;
+  }
+  return null;
 }

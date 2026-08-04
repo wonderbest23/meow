@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
-import { loadPlanState, savePlanState, normalizeState, type ServerPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { loadPlanState, savePlanState, deletePlanById, normalizeState, type ServerPlanState } from "../../../../lib/plan-builder/plan-server-store";
 
 export const runtime = "nodejs";
 
@@ -25,5 +25,15 @@ export async function PUT(request: Request) {
   }
 
   await savePlanState(identity.hash, normalizeState(body));
+  return NextResponse.json({ ok: true });
+}
+
+export async function DELETE(request: Request) {
+  const limited = await enforceRateLimit("plan-state-save", request, { limit: 60, windowMs: 60_000 });
+  if (limited) return limited;
+  const identity = await requireGuestIdentity();
+  const planId = new URL(request.url).searchParams.get("planId");
+  if (!planId) return NextResponse.json({ error: "planId required" }, { status: 400 });
+  await deletePlanById(identity.hash, planId);
   return NextResponse.json({ ok: true });
 }

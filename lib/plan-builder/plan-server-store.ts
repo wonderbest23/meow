@@ -97,8 +97,39 @@ export async function loadPlanState(ownerHash: string): Promise<ServerPlanState>
   return normalizeState(data.data as Partial<ServerPlanState>);
 }
 
+/*
+ * 병합 저장.
+ *
+ * 예전에는 클라이언트가 보낸 상태로 서버를 통째로 갈아끼웠다. 그러면
+ * 오래된 로컬 캐시를 든 브라우저(다른 기기, 오래 열린 탭)가 저장할 때마다
+ * 최신 서버 플랜이 조용히 사라진다 — 실측에서 검증 플랜 5개가 이렇게 지워졌다.
+ *
+ * 플랜은 id 기준으로 합치고, 같은 id면 updatedAt이 최신인 쪽을 남긴다.
+ * 페이로드에 없는 서버 플랜은 지우지 않는다 — 삭제는 deletePlanById로만 한다.
+ */
+function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): ServerPlanState {
+  const byId = new Map(stored.plans.map((p) => [p.id, p]));
+  for (const p of incoming.plans) {
+    const prev = byId.get(p.id);
+    if (!prev || (p.updatedAt || "") >= (prev.updatedAt || "")) byId.set(p.id, p);
+  }
+  const plans = [...byId.values()].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+  return {
+    // 사업 정보는 이름이 있는 쪽 우선(수정 화면에서 온 값), 둘 다 있으면 들어온 값
+    business: incoming.business.name ? incoming.business : stored.business.name ? stored.business : incoming.business,
+    plans,
+    activePlanId:
+      incoming.activePlanId && byId.has(incoming.activePlanId)
+        ? incoming.activePlanId
+        : stored.activePlanId && byId.has(stored.activePlanId)
+          ? stored.activePlanId
+          : plans[0]?.id ?? null,
+  };
+}
+
 export async function savePlanState(ownerHash: string, state: ServerPlanState): Promise<void> {
-  const clean = normalizeState(state);
+  const stored = await loadPlanState(ownerHash);
+  const clean = mergeStates(stored, normalizeState(state));
   const supabase = getServerSupabase();
   if (!supabase) {
     memoryStore.set(ownerHash, clean);
@@ -112,6 +143,34 @@ export async function savePlanState(ownerHash: string, state: ServerPlanState): 
       title: clean.business.name || active?.title || "새 플랜",
       plan_type: active?.planType || "창업 초기 · 사업계획서",
       data: clean,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "owner_hash" },
+  );
+}
+
+/** 플랜 삭제 — 병합 저장에서는 페이로드 누락이 삭제가 아니므로, 삭제는 이 경로로만 한다. */
+export async function deletePlanById(ownerHash: string, planId: string): Promise<void> {
+  const stored = await loadPlanState(ownerHash);
+  const plans = stored.plans.filter((p) => p.id !== planId);
+  if (plans.length === stored.plans.length) return;
+  const next: ServerPlanState = {
+    business: stored.business,
+    plans,
+    activePlanId: stored.activePlanId === planId ? plans[0]?.id ?? null : stored.activePlanId,
+  };
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    memoryStore.set(ownerHash, next);
+    return;
+  }
+  const active = next.plans.find((p) => p.id === next.activePlanId) ?? next.plans[0];
+  await supabase.from("plan_states").upsert(
+    {
+      owner_hash: ownerHash,
+      title: next.business.name || active?.title || "새 플랜",
+      plan_type: active?.planType || "창업 초기 · 사업계획서",
+      data: next,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "owner_hash" },

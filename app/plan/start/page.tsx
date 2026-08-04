@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveBusiness, createPlan, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
+import { saveBusiness, createPlan, hydrateFromServer, loadState, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
@@ -276,7 +276,13 @@ export default function PlanStartPage() {
     }
   }
 
-  function pick(pt: PlanType) {
+  async function pick(pt: PlanType) {
+    /*
+     * 만들기 전에 서버 상태를 먼저 당겨온다.
+     * 오래 열려 있던 탭의 낡은 로컬 캐시 위에서 플랜을 만들면
+     * 답변 물려받기가 옛 플랜을 보고, 저장 병합도 불필요하게 늘어난다.
+     */
+    await hydrateFromServer().catch(() => {});
     saveBusiness(biz);
     createPlan(pt.type, biz.name);
     router.push("/plan/overview");
