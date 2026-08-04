@@ -11,7 +11,8 @@ export interface ChartPoint {
 }
 
 export interface ChartSpec {
-  kind: "cumulative";
+  /** cumulative: 누적 손익 곡선 / monthly: 월별 영업손익(월 단위 흑자 시점용) */
+  kind: "cumulative" | "monthly";
   title: string;
   points: ChartPoint[];
   /** 월 단위 흑자 전환 시점 (없으면 null) */
@@ -32,6 +33,22 @@ export function buildCumulativeChart(result: FinancialResult): ChartSpec | null 
   };
 }
 
+/**
+ * 월별 영업손익 차트 — 누적 곡선과 상보적이다.
+ * 누적은 '언제 본전인지'를, 이건 '어느 달부터 매달 남는지'를 보여준다.
+ * 렌더 경로(SVG·PDF·DOCX)는 누적 차트와 동일한 기계를 그대로 쓴다.
+ */
+export function buildMonthlyProfitChart(result: FinancialResult): ChartSpec | null {
+  if (result.monthly.length < 2) return null;
+  return {
+    kind: "monthly",
+    title: "월별 영업손익",
+    points: result.monthly.map((m) => ({ label: `${m.month}월`, value: m.operatingProfit })),
+    breakEvenMonth: result.breakEvenMonth,
+    paybackMonth: null,
+  };
+}
+
 /** 마크다운에 심을 펜스 블록 */
 export function chartFence(spec: ChartSpec): string {
   return ["```" + CHART_FENCE_LANG, JSON.stringify(spec), "```"].join("\n");
@@ -41,7 +58,7 @@ export function chartFence(spec: ChartSpec): string {
 export function parseChartSpec(raw: string): ChartSpec | null {
   try {
     const parsed = JSON.parse(raw) as ChartSpec;
-    if (parsed?.kind !== "cumulative" || !Array.isArray(parsed.points) || parsed.points.length < 2) return null;
+    if ((parsed?.kind !== "cumulative" && parsed?.kind !== "monthly") || !Array.isArray(parsed.points) || parsed.points.length < 2) return null;
     if (!parsed.points.every((p) => typeof p.value === "number" && Number.isFinite(p.value))) return null;
     return parsed;
   } catch {

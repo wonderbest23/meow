@@ -148,6 +148,16 @@ const PLAN_TYPES: PlanType[] = [
     fits: ["매출이 나고 있는 분", "2호점·신규 라인을 준비하는 분"],
   },
   {
+    id: "psst-bp",
+    name: "정부지원 PSST 계획서",
+    type: "정부지원 · PSST 사업계획서",
+    category: "bp",
+    tone: 3,
+    icon: doc,
+    desc: "문제인식·실현가능성·성장전략·팀 구성 — 지원사업 심사 순서로 완성되는 문서.",
+    fits: ["예비창업·초기창업패키지를 준비하는 분", "심사 기준에 맞는 구성이 필요한 분"],
+  },
+  {
     id: "simple-bp",
     name: "간단 요약 계획서",
     type: "간단 · 사업계획서",

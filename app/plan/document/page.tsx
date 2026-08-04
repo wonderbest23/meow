@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileDown, FileText, Presentation, LayoutGrid } from "lucide-react";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection } from "../../../lib/plan-builder/plan-store";
-import { chaptersForType } from "../../../lib/plan-builder/blueprint";
+import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import InlineDocEditor from "../InlineDocEditor";
 import wiz from "../SectionWizard.module.css";
@@ -44,17 +44,34 @@ export default function PlanDocumentPage() {
     };
   }, []);
 
-  /** 섹션 키 → "1.1" 번호 (플랜 유형의 챕터 순서를 따른다) */
+  /*
+   * 문서 배치. PSST처럼 재배치가 정의된 유형은 그 순서·제목으로 묶고,
+   * 아니면 작성 챕터 그대로 묶는다. 번호(1.1식)도 배치를 따른다.
+   */
+  const arrangement = useMemo(() => documentArrangement(planType || undefined), [planType]);
+
   const numbering = useMemo(() => {
     const map = new Map<string, { num: string; chapterNum: number }>();
+    if (arrangement) {
+      arrangement.forEach((part, ci) => {
+        part.keys.forEach((k, si) => map.set(k, { num: `${ci + 1}.${si + 1}`, chapterNum: ci + 1 }));
+      });
+      return map;
+    }
     chaptersForType(planType || undefined).forEach((ch, ci) => {
       ch.sections.forEach((s, si) => map.set(`${ch.id}/${s.id}`, { num: `${ci + 1}.${si + 1}`, chapterNum: ci + 1 }));
     });
     return map;
-  }, [planType]);
+  }, [planType, arrangement]);
 
   // 챕터별 그룹 (문서 흐름·목차 공용)
   const grouped = useMemo(() => {
+    if (arrangement) {
+      const byKey = new Map(sections.map((s) => [s.key, s]));
+      return arrangement
+        .map((part) => [part.title, part.keys.map((k) => byKey.get(k)).filter((x): x is (typeof sections)[number] => !!x)] as const)
+        .filter(([, list]) => list.length > 0) as Array<[string, typeof sections]>;
+    }
     const map = new Map<string, typeof sections>();
     for (const s of sections) {
       const list = map.get(s.chapterTitle) ?? [];
@@ -62,7 +79,13 @@ export default function PlanDocumentPage() {
       map.set(s.chapterTitle, list);
     }
     return [...map.entries()];
-  }, [sections]);
+  }, [sections, arrangement]);
+
+  /** 내보내기용 — 화면과 같은 배치·같은 챕터 제목으로 보낸다 */
+  const exportSections = useMemo(
+    () => grouped.flatMap(([chapterTitle, list]) => list.map((s) => ({ chapterTitle, sectionTitle: s.sectionTitle, markdown: s.markdown }))),
+    [grouped],
+  );
 
   function scrollToSection(key: string) {
     document.getElementById(`sec-${key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -95,7 +118,7 @@ export default function PlanDocumentPage() {
           businessName: state.business.name || title,
           businessDescription: state.business.description,
           planType,
-          sections: sections.map((a) => ({ chapterTitle: a.chapterTitle, sectionTitle: a.sectionTitle, markdown: a.markdown })),
+          sections: exportSections,
           allAnswers: plan?.answers ?? {},
         }),
       });
@@ -132,7 +155,7 @@ export default function PlanDocumentPage() {
           format,
           planType,
           business: loadState().business,
-          sections: sections.map((a) => ({ chapterTitle: a.chapterTitle, sectionTitle: a.sectionTitle, markdown: a.markdown })),
+          sections: exportSections,
         }),
       });
       if (!res.ok) throw new Error("export failed");

@@ -13,6 +13,8 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   const body = (await req.json().catch(() => ({}))) as {
+    /** true면 PPTX 대신 슬라이드 구성(JSON)을 돌려준다 — 품질 검수·테스트용 */
+    planOnly?: boolean;
     businessName?: string;
     businessDescription?: string;
     planType?: string;
@@ -62,6 +64,10 @@ export async function POST(req: Request) {
       { error: "deck_failed", message: "발표자료를 만들지 못했습니다. 잠시 후 다시 시도해주세요." },
       { status: 502 },
     );
+  }
+
+  if (body.planOnly) {
+    return NextResponse.json({ plan }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   }
 
   const buffer = await renderDeckPptx(plan);

@@ -194,6 +194,31 @@ export const PLAN_TYPE_SECTIONS: Record<string, string[]> = {
     "financials/financing",
     "summary/executive",
   ],
+  /*
+   * 정부지원 제출용. 작성은 다른 유형과 같은 챕터 구조에서 하고,
+   * 완성 문서만 PSST 4부(문제인식-실현가능성-성장전략-팀 구성)로 재배치한다.
+   * 섹션 키를 그대로 쓰므로 질문·저장·답변 재사용이 전부 호환된다.
+   */
+  "정부지원 · PSST 사업계획서": [
+    "overview/summary",
+    "overview/problem",
+    "overview/structure",
+    "market/products",
+    "market/segments",
+    "market/personas",
+    "market/competitors",
+    "objectives/corporate",
+    "strategy/product",
+    "strategy/distribution",
+    "strategy/price",
+    "strategy/promotion",
+    "strategy/people",
+    "funding/requirements",
+    "financials/revenue",
+    "financials/expenses",
+    "financials/financing",
+    "summary/executive",
+  ],
   "간단 · 사업계획서": [
     "overview/summary",
     "overview/problem",
@@ -308,4 +333,39 @@ export function financialTableOwner(planType?: string): string | null {
 /** 3년 예측 표를 붙이는 유형 — 카드 설명이 '다년 예측'을 약속하는 곳만 */
 export function needsMultiYear(planType?: string): boolean {
   return planType === "정밀 · 재무 모델";
+}
+
+
+/**
+ * 완성 문서의 챕터 재배치.
+ * 정의된 유형은 문서 화면·PDF·Word에서 이 순서·이 제목으로 묶인다.
+ * 작성 화면(위저드·개요)은 원래 챕터 구조를 그대로 쓴다 — 편집기와
+ * 제출물의 구조는 달라도 된다.
+ */
+export interface DocumentArrangement {
+  title: string;
+  keys: string[];
+}
+
+const PSST_ARRANGEMENT: DocumentArrangement[] = [
+  {
+    title: "문제인식 (Problem)",
+    keys: ["overview/summary", "overview/problem", "market/segments", "market/personas"],
+  },
+  {
+    title: "실현가능성 (Solution)",
+    keys: ["market/products", "market/competitors", "strategy/product", "strategy/price", "strategy/distribution"],
+  },
+  {
+    title: "성장전략 (Scale-up)",
+    keys: ["objectives/corporate", "strategy/promotion", "funding/requirements", "financials/revenue", "financials/expenses", "financials/financing"],
+  },
+  {
+    title: "팀 구성 (Team)",
+    keys: ["overview/structure", "strategy/people", "summary/executive"],
+  },
+];
+
+export function documentArrangement(planType?: string): DocumentArrangement[] | null {
+  return planType === "정부지원 · PSST 사업계획서" ? PSST_ARRANGEMENT : null;
 }

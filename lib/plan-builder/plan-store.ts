@@ -142,10 +142,21 @@ export function saveBusiness(business: BusinessProfile) {
   void pushToServer();
 }
 
-/** 새 플랜 추가 후 활성화 → 생성된 id 반환 */
+/**
+ * 새 플랜 추가 후 활성화 → 생성된 id 반환.
+ *
+ * 답변은 가장 최근에 손댄 플랜에서 물려받는다. 같은 사업으로 유형만 바꿔
+ * 두 번째 플랜을 만들 때, 판매가·고정비·고객 같은 사실 답변을 처음부터
+ * 다시 묻지 않기 위해서다. 생성된 본문(sections)은 물려받지 않는다 —
+ * 유형이 다르면 같은 답이라도 글이 달라야 하므로 새로 생성한다.
+ */
 export function createPlan(planType: string, title?: string): string {
   const s = loadState();
   const now = new Date().toISOString();
+  const donor = s.plans
+    .filter((p) => !isSamplePlan(p.id) && Object.keys(p.answers ?? {}).length > 0)
+    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0];
+  const inherited: Plan["answers"] = donor ? JSON.parse(JSON.stringify(donor.answers)) : {};
   const plan: Plan = {
     id: newId(),
     title: title || s.business.name || "새 플랜",
@@ -153,7 +164,7 @@ export function createPlan(planType: string, title?: string): string {
     createdAt: now,
     updatedAt: now,
     sections: {},
-    answers: {},
+    answers: inherited,
   };
   s.plans.push(plan);
   s.activePlanId = plan.id;
