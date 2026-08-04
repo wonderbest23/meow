@@ -5191,7 +5191,14 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 
 /* Customer support chat */
 .support-chat-widget { position: fixed; z-index: 120; right: 28px; bottom: 38px; display: grid; justify-items: end; }
-.support-chat-toggle { width: 58px; min-width: 58px; height: 58px; padding: 0; border: 1px solid #ffffff47; border-radius: 50%; background: #202632; color: white; box-shadow: 0 14px 36px #10131852; display: grid; place-items: center; cursor: pointer; position: relative; transition: transform .18s ease, background .18s ease, box-shadow .18s ease; }
+.support-chat-toggle { width: 58px; min-width: 58px; height: 58px; padding: 0; border: 1px solid #ffffff47; border-radius: 50%; background: #202632; color: white; box-shadow: 0 14px 36px #10131852; display: grid; place-items: center; cursor: pointer; position: relative; transition: transform .18s ease, background .18s ease, box-shadow .18s ease, opacity .18s ease; opacity: 0.62; }
+.support-chat-toggle:hover, .support-chat-toggle:focus-visible { opacity: 1; }
+/* 플랜 화면에서는 본문·버튼을 가리지 않게 작게 */
+@media (max-width: 720px) {
+  .support-chat-toggle { width: 46px; min-width: 46px; height: 46px; }
+  .support-chat-toggle img { width: 40px; height: 40px; }
+  .support-chat-toggle span { display: none; }
+}
 .support-chat-toggle:hover { background: #1b64da; box-shadow: 0 18px 42px #10131866; transform: translateY(-2px); }
 .support-chat-toggle > svg { width: 23px; height: 23px; }
 .support-chat-toggle em { min-width: 20px; height: 20px; padding: 0 5px; border: 2px solid white; border-radius: 11px; background: #8bbcff; color: #202632; display: grid; place-items: center; position: absolute; top: -4px; right: -4px; font-size: 9px; font-style: normal; font-weight: 900; }

@@ -225,19 +225,9 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         </div>
 
         {/* 진행 미터 */}
+        {/* 진행률이 주인공 — 나머지 둘은 보조 지표로 가라앉힌다 */}
         <div className={styles.meters}>
-          <div className={styles.meter}>
-            <div className={styles.meterLabel}>전략 깊이</div>
-            <div className={styles.meterRow}>
-              <span className={styles.meterValue}>{doneCount >= total * 0.6 ? "높음" : doneCount > 0 ? "보통" : "낮음"}</span>
-              <span className={styles.segs}>
-                {[0, 1, 2, 3].map((i) => (
-                  <i key={i} className={i < Math.ceil((doneCount / Math.max(total, 1)) * 4) ? styles.on : ""} />
-                ))}
-              </span>
-            </div>
-          </div>
-          <div className={styles.meter}>
+          <div className={`${styles.meter} ${styles.meterPrimary}`}>
             <div className={styles.meterLabel}>진행률</div>
             <div className={styles.meterRow}>
               <span className={styles.meterValue}>{pct}%</span>
@@ -253,6 +243,17 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             <div className={styles.meterRow}>
               <span className={styles.meterValue}>
                 {doneCount} / {total}
+              </span>
+            </div>
+          </div>
+          <div className={styles.meter}>
+            <div className={styles.meterLabel}>전략 깊이</div>
+            <div className={styles.meterRow}>
+              <span className={styles.meterValue}>{doneCount >= total * 0.6 ? "높음" : doneCount > 0 ? "보통" : "낮음"}</span>
+              <span className={styles.segs}>
+                {[0, 1, 2, 3].map((i) => (
+                  <i key={i} className={i < Math.ceil((doneCount / Math.max(total, 1)) * 4) ? styles.on : ""} />
+                ))}
               </span>
             </div>
           </div>

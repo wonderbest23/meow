@@ -793,3 +793,17 @@
 .continueBanner .finaleBody span {
   color: var(--text-muted, #8b95a1);
 }
+
+
+/* 진행률 미터 — 첫 자리, 큰 숫자, 브랜드색 */
+.meterPrimary .meterValue {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--blue, #3182f6);
+  font-variant-numeric: tabular-nums;
+}
+.meterPrimary .segs i {
+  width: 26px;
+  height: 10px;
+}
