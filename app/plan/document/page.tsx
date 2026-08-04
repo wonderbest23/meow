@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileDown, FileText, Presentation, LayoutGrid } from "lucide-react";
+import { FileDown, FileText, Presentation, LayoutGrid, Maximize2, X } from "lucide-react";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
@@ -26,6 +26,11 @@ export default function PlanDocumentPage() {
   const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
   const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  /*
+   * 전체 모드 — 앱 껍데기를 걷어내고 문서만 이어서 읽는다(PDF 미리보기처럼).
+   * 편집기 없이 렌더된 HTML만 흘리므로 스크롤이 가볍고, 모바일에서 특히 유용하다.
+   */
+  const [reader, setReader] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -86,6 +91,21 @@ export default function PlanDocumentPage() {
     () => grouped.flatMap(([chapterTitle, list]) => list.map((s) => ({ chapterTitle, sectionTitle: s.sectionTitle, markdown: s.markdown }))),
     [grouped],
   );
+
+  // 전체 모드에서 배경 스크롤 잠금 + Esc로 닫기
+  useEffect(() => {
+    if (!reader) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setReader(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [reader]);
 
   function scrollToSection(key: string) {
     document.getElementById(`sec-${key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -179,6 +199,42 @@ export default function PlanDocumentPage() {
 
   return (
     <div className={`${wiz.page} ${styles.page}`}>
+      {reader && (
+        <div className={styles.reader} role="dialog" aria-label="문서 전체 화면">
+          <div className={styles.readerBar}>
+            <span className={styles.readerTitle}>{title}</span>
+            <button type="button" className={styles.readerClose} onClick={() => setReader(false)} aria-label="전체 화면 닫기">
+              <X size={16} /> 닫기
+            </button>
+          </div>
+          <div className={styles.readerScroll}>
+            <article className={styles.readerPaper}>
+              <header className={styles.docHeader}>
+                <h2 className={styles.docTitle}>{title}</h2>
+                <div className={styles.docSub}>{planType}{planType && " · "}{sections.length}개 섹션</div>
+              </header>
+              {grouped.map(([chapterTitle, list], ci) => (
+                <div key={chapterTitle} className={styles.chapter}>
+                  <div className={styles.chapterHead}>
+                    <span className={styles.chapterNum}>{ci + 1}</span>
+                    <h3 className={styles.chapterName}>{chapterTitle}</h3>
+                  </div>
+                  {list.map((sec) => (
+                    <section key={sec.key} className={styles.section}>
+                      <div className={styles.secHead}>
+                        <i className={styles.secDash} aria-hidden="true" />
+                        <h4 className={styles.secTitle}>{sec.sectionTitle}</h4>
+                        {numbering.has(sec.key) ? <span className={styles.secNum}>{numbering.get(sec.key)!.num}</span> : null}
+                      </div>
+                      <div className={styles.readerBody} dangerouslySetInnerHTML={{ __html: sec.html }} />
+                    </section>
+                  ))}
+                </div>
+              ))}
+            </article>
+          </div>
+        </div>
+      )}
       <div className={wiz.frame}>
         <div className={styles.app}>
           {/* 좌측 목차 — 위저드와 동일한 어두운 내비 모듈을 그대로 쓴다 */}
@@ -239,6 +295,9 @@ export default function PlanDocumentPage() {
                   </button>
                 </div>
                 <div className={styles.spring} />
+                <button className={styles.tool} disabled={!sections.length} onClick={() => setReader(true)} title="문서만 전체 화면으로 이어서 읽기">
+                  <Maximize2 size={14} /> 전체 화면
+                </button>
                 <button className={styles.tool} disabled={busy} onClick={() => handleExport("docx")} title="Word로 내려받기">
                   <FileText size={14} /> {exporting === "docx" ? "내보내는 중…" : "Word"}
                 </button>

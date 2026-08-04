@@ -365,12 +365,20 @@
   text-decoration: none;
 }
 
-/* 모바일 전용 목차 스트립 — 넓은 화면에서는 좌측 목차가 있으니 숨긴다 */
+/* 좁은 화면용 목차 스트립 — 좌측 목차가 있을 땐 숨긴다 */
 .mobileNav {
   display: none;
 }
 
-@media (max-width: 900px) {
+/*
+ * 태블릿(901~1080px): 위저드 공용 CSS가 이 폭에서 좌측 목차를 숨기는데,
+ * 문서 그리드는 232px+1fr 그대로라 본문이 232px 첫 칸에 구겨 넣어졌다.
+ * 목차가 사라지는 순간 그리드도 한 칸이 되어야 한다.
+ */
+@media (max-width: 1080px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
   .mobileNav {
     display: flex;
     gap: 8px;
@@ -381,6 +389,9 @@
     border-bottom: 1px solid var(--wz-line);
     background: var(--wz-panel2);
   }
+}
+
+@media (max-width: 1080px) {
   .mobileBack {
     flex: none;
     border: 0;
@@ -449,5 +460,150 @@
     justify-content: center;
     padding: 10px 8px;
     font-size: 12.5px;
+  }
+}
+
+
+/* ── 전체 모드 — 문서만 이어서 읽는 오버레이 (PDF 미리보기 느낌) ── */
+.reader {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  background: #eceff3;
+}
+
+.readerBar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--wz-ink, #191f28);
+  color: #fff;
+}
+
+.readerTitle {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.readerClose {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 7px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.readerClose:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.readerScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 12px 60px;
+}
+
+.readerPaper {
+  max-width: 860px;
+  margin: 0 auto;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 40px rgba(20, 32, 64, 0.12);
+  padding: 44px 48px 56px;
+}
+
+/* 본문 — 편집기 없이 렌더 HTML만. 표·차트는 넘치지 않게 */
+.readerBody {
+  font-size: 14.5px;
+  line-height: 1.8;
+  color: var(--wz-ink, #191f28);
+}
+
+.readerBody :global(table) {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 14px;
+  font-size: 13px;
+}
+
+.readerBody :global(th),
+.readerBody :global(td) {
+  border: 1px solid var(--wz-line, #e5e8eb);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.readerBody :global(th) {
+  background: var(--wz-panel2, #f7f8fa);
+  font-weight: 800;
+}
+
+.readerBody :global(figure.plan-chart-figure) {
+  margin: 14px 0 20px;
+  padding: 10px;
+  border: 1px solid var(--wz-line, #e5e8eb);
+  border-radius: 12px;
+  overflow-x: auto;
+}
+
+.readerBody :global(figure.plan-chart-figure svg) {
+  display: block;
+  min-width: 440px;
+  max-width: 100%;
+  height: auto;
+}
+
+.readerBody :global(h1),
+.readerBody :global(h2) {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 24px 0 10px;
+}
+
+.readerBody :global(h3) {
+  font-size: 15.5px;
+  font-weight: 800;
+  margin: 18px 0 8px;
+}
+
+.readerBody :global(p) {
+  margin: 0 0 12px;
+}
+
+.readerBody :global(ul),
+.readerBody :global(ol) {
+  margin: 0 0 12px;
+  padding-left: 22px;
+}
+
+@media (max-width: 700px) {
+  .readerScroll {
+    padding: 12px 0 48px;
+  }
+  .readerPaper {
+    border-radius: 0;
+    padding: 26px 18px 40px;
   }
 }
