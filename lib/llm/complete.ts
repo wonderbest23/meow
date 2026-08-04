@@ -45,10 +45,14 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
       cache: "no-store",
       signal: AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
-  } catch {
+  } catch (err) {
+    console.error("[llm] openai fetch 실패:", err instanceof Error ? err.message : err);
     return null;
   }
-  if (!response.ok) return null;
+  if (!response.ok) {
+    console.error("[llm] openai", response.status, (await response.text().catch(() => "")).slice(0, 300));
+    return null;
+  }
   const payload = (await response.json().catch(() => null)) as {
     output_text?: string;
     output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
@@ -87,10 +91,14 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
       cache: "no-store",
       signal: AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS),
     });
-  } catch {
+  } catch (err) {
+    console.error("[llm] anthropic fetch 실패:", err instanceof Error ? err.message : err);
     return null;
   }
-  if (!response.ok) return null;
+  if (!response.ok) {
+    console.error("[llm] anthropic", response.status, (await response.text().catch(() => "")).slice(0, 300));
+    return null;
+  }
   const payload = (await response.json().catch(() => null)) as {
     content?: Array<{ type?: string; text?: string }>;
   } | null;
