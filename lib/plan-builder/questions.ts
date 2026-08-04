@@ -481,7 +481,12 @@ const FIN_REVENUE_GROUPS: QuestionGroup[] = [
       { id: "revenue_streams", q: "매출이 발생하는 방식은 무엇인가요?", input: { kind: "multi", options: ["1회성 판매", "정기 구독·회원", "시간·건당 요금", "중개 수수료", "광고·제휴 수익"] } },
       { id: "unit_price", q: "1건(1인) 평균 판매 금액은 얼마인가요?", help: "숫자만 적어도 됩니다.", input: { kind: "text", placeholder: "예: 49,000원", long: false } },
       { id: "monthly_volume", q: "월 몇 건 정도를 예상하시나요?", help: "첫 3개월 기준 보수적으로.", input: { kind: "text", placeholder: "예: 월 20건", long: false } },
-      { id: "growth", q: "매출이 어떻게 늘어날 것으로 보시나요?", input: { kind: "single", options: ["천천히 안정 성장", "초기 느리다 후반 가속", "계절 영향 큼", "예측 어려움"] } },
+      {
+        id: "growth",
+        q: "매출이 어떻게 늘어날 것으로 보시나요?",
+        help: "괄호의 월 성장률이 12개월·3년 예측에 그대로 쓰입니다. 월 5%도 복리로는 1년에 약 1.8배입니다.",
+        input: { kind: "single", options: ["완만한 성장 (월 5%)", "빠른 성장 (월 12%)", "계절 따라 등락 (연평균 월 6%)", "보수적으로 유지 (성장 0%)"] },
+      },
     ],
   },
 ];

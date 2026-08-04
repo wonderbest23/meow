@@ -16,6 +16,12 @@ export interface FinancialInputs {
   monthlyGrowthPct?: number;
   /** 초기 투자(시설·장비 등) */
   initialInvestment?: number;
+  /**
+   * 월 판매 한계(설비·좌석·상권 등 물리적 상한).
+   * 사용자가 한계를 답해 놓고 예측이 그 위로 뚫고 올라가면
+   * 문서가 스스로 모순된다 — 성장은 이 값에서 멈춘다.
+   */
+  monthlyCapacity?: number;
 }
 
 export interface UnitEconomics {
@@ -157,9 +163,11 @@ export function calculateFinancials(input: FinancialInputs): FinancialResult {
   if (unit && startingVolume != null && startingVolume > 0) {
     const growth = (monthlyGrowthPct ?? 0) / 100;
     const fixed = monthlyFixedCost ?? 0;
+    const cap = input.monthlyCapacity;
     let cumulative = 0;
     for (let m = 1; m <= 12; m += 1) {
-      const volume = Math.round(startingVolume * Math.pow(1 + growth, m - 1));
+      const raw = Math.round(startingVolume * Math.pow(1 + growth, m - 1));
+      const volume = cap != null && cap > 0 ? Math.min(raw, cap) : raw;
       const revenue = volume * unit.unitPrice;
       const variableCost = volume * unit.unitVariableCost;
       const contribution = revenue - variableCost;
@@ -191,6 +199,13 @@ export function calculateFinancials(input: FinancialInputs): FinancialResult {
 
 /** 성장 양상 선택지 → 월 성장률 가정(%) */
 const GROWTH_MAP: Record<string, number> = {
+  // 새 라벨 — 수치를 라벨에 드러낸다. '천천히'가 실제로는 연 1.8배(월 5% 복리)라
+  // 초보 창업자가 라벨만 보고 과대 추정 문서를 만들던 것을 바로잡는다.
+  "완만한 성장 (월 5%)": 5,
+  "빠른 성장 (월 12%)": 12,
+  "계절 따라 등락 (연평균 월 6%)": 6,
+  "보수적으로 유지 (성장 0%)": 0,
+  // 옛 라벨 — 이미 저장된 답변이 계속 계산되도록 남겨둔다
   "천천히 안정 성장": 5,
   "초기 느리다 후반 가속": 12,
   "계절 영향 큼": 6,
@@ -286,6 +301,17 @@ export function collectFinancialInputs(
   const startingVolume = pick("startingVolume", parseAmount(get("financials/revenue", "monthly_volume")));
   const initialInvestment = pick("initialInvestment", parseAmount(get("financials/assets", "asset_cost")));
 
+  /*
+   * 월 판매 한계 — "냉장 진열대 기준 월 600건이 한계" 같은 자유 서술에서
+   * '건' 앞의 숫자를 뽑는다. 못 뽑으면 상한 없이 계산한다(기존 동작).
+   */
+  const ceilingRaw = get("financials/revenue", "growth_ceiling");
+  let monthlyCapacity: number | undefined;
+  if (typeof ceilingRaw === "string") {
+    const m = ceilingRaw.match(/([\d,.]+)\s*(?:천|만)?\s*건/);
+    if (m) monthlyCapacity = parseAmount(ceilingRaw.slice(0, (m.index ?? 0) + m[0].length).match(/[\d,.]+\s*(?:천|만)?\s*건$/)?.[0] ?? m[1]);
+  }
+
   const growthRaw = get("financials/revenue", "growth");
   const growthLabel = typeof growthRaw === "string" ? growthRaw : null;
   const growthOverride = parsePercent(overrides.monthlyGrowthPct);
@@ -296,7 +322,7 @@ export function collectFinancialInputs(
     fixedBase != null || staff != null ? (fixedBase ?? 0) + (staff ?? 0) : undefined;
 
   return {
-    inputs: { unitPrice, unitVariableCost, monthlyFixedCost, startingVolume, monthlyGrowthPct, initialInvestment },
+    inputs: { unitPrice, unitVariableCost, monthlyFixedCost, startingVolume, monthlyGrowthPct, initialInvestment, monthlyCapacity },
     growthLabel,
     staffIncluded: staff != null,
   };
@@ -312,7 +338,7 @@ const won = (n: number) => `${n.toLocaleString("ko-KR")}원`;
 /** 계산 결과를 마크다운 표로 — AI 생성 본문에 주입한다. */
 export function financialsToMarkdown(
   r: FinancialResult,
-  opts?: { growthLabel?: string | null; growthPct?: number; staffIncluded?: boolean },
+  opts?: { growthLabel?: string | null; growthPct?: number; staffIncluded?: boolean; monthlyCapacity?: number },
 ): string {
   const parts: string[] = [];
 
@@ -363,6 +389,9 @@ export function financialsToMarkdown(
       );
     }
     if (opts?.staffIncluded) notes.push("- 고정비에는 입력하신 월 인건비가 합산되어 있습니다.");
+    if (opts?.monthlyCapacity) {
+      notes.push(`- 답변하신 물리적 한계에 따라 월 판매를 **${opts.monthlyCapacity.toLocaleString("ko-KR")}건에서 상한**으로 두었습니다. 한계에 도달한 뒤의 성장은 설비·공간 확충이 전제입니다.`);
+    }
     notes.push("- 위 수치는 입력값에 산식을 적용한 계산 결과이며, 실제 매출·비용은 시장 상황에 따라 달라집니다.");
     parts.push(notes.join("\n"));
 
@@ -417,7 +446,7 @@ export interface YearSummary {
  * 그 사실을 표 아래에 그대로 적는다.
  */
 export function projectYears(input: FinancialInputs, years = 3): YearSummary[] {
-  const { unitPrice, unitVariableCost, monthlyFixedCost, startingVolume, monthlyGrowthPct } = input;
+  const { unitPrice, unitVariableCost, monthlyFixedCost, startingVolume, monthlyGrowthPct, monthlyCapacity } = input;
   if (unitPrice == null || unitVariableCost == null || startingVolume == null || startingVolume <= 0) return [];
   const growth = (monthlyGrowthPct ?? 0) / 100;
   const fixed = monthlyFixedCost ?? 0;
@@ -426,7 +455,8 @@ export function projectYears(input: FinancialInputs, years = 3): YearSummary[] {
   for (let y = 1; y <= years; y += 1) {
     let volume = 0, revenue = 0, variableCost = 0, fixedCost = 0;
     for (let m = (y - 1) * 12 + 1; m <= y * 12; m += 1) {
-      const v = Math.round(startingVolume * Math.pow(1 + growth, m - 1));
+      const raw = Math.round(startingVolume * Math.pow(1 + growth, m - 1));
+      const v = monthlyCapacity != null && monthlyCapacity > 0 ? Math.min(raw, monthlyCapacity) : raw;
       volume += v;
       revenue += v * unitPrice;
       variableCost += v * unitVariableCost;
@@ -440,7 +470,7 @@ export function projectYears(input: FinancialInputs, years = 3): YearSummary[] {
 }
 
 /** 3년 예측 표(마크다운) */
-export function yearsToMarkdown(rows: YearSummary[], opts?: { growthPct?: number }): string {
+export function yearsToMarkdown(rows: YearSummary[], opts?: { growthPct?: number; monthlyCapacity?: number }): string {
   if (!rows.length) return "";
   const head = [
     "| 구분 | " + rows.map((r) => `${r.year}년차`).join(" | ") + " |",
@@ -461,7 +491,9 @@ export function yearsToMarkdown(rows: YearSummary[], opts?: { growthPct?: number
       line("영업손익", (r) => r.operatingProfit, true),
       line("누적 영업손익", (r) => r.cumulative),
     ].join("\n"),
-    `- 1년차 이후에도 월 ${opts?.growthPct ?? 0}% 성장이 이어진다는 가정 하나만 적용했습니다. 실제로는 시장 포화·인력 충원·설비 증설로 달라집니다.`,
+    opts?.monthlyCapacity
+      ? `- 월 ${opts.growthPct ?? 0}% 성장을 적용하되, 답변하신 물리적 한계 **월 ${opts.monthlyCapacity.toLocaleString("ko-KR")}건**에 도달하면 그 수준에서 멈추는 것으로 계산했습니다. 그 이상은 설비·공간 확충이 전제입니다.`
+      : `- 1년차 이후에도 월 ${opts?.growthPct ?? 0}% 성장이 이어진다는 가정 하나만 적용했습니다. 실제로는 시장 포화·인력 충원·설비 증설로 달라집니다.`,
     "- 고정비는 3년 내내 같은 값으로 두었습니다. 인력을 늘리는 계획이 있다면 그 시점부터 다시 계산해야 합니다.",
   ].join("\n\n");
 }

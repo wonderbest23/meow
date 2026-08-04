@@ -31,6 +31,7 @@ export const PLAN_TYPE_GUIDANCE: Record<string, PlanTypeGuidance> = {
     avoid: [
       "실적이 있는 것처럼 읽히는 표현 — 아직 없는 숫자는 '목표'라고 못박는다",
       "시장 규모만 크게 적고 자기 몫을 말하지 않는 서술",
+      "특정 지원사업 양식(PSST 등)을 그대로 따른다는 인상 — 이 문서는 종합 초안이며, 제출 시 해당 양식으로 옮겨 담아야 한다",
     ],
   },
 

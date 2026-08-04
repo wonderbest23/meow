@@ -58,7 +58,7 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
       </p>
       {price ? (
         <div className={styles.price}>
-          {price.toLocaleString("ko-KR")}원 <span>1회 결제 · 모든 섹션 열림</span>
+          {price.toLocaleString("ko-KR")}원 <span>1회 결제 · 6개 유형 전체 열림</span>
         </div>
       ) : null}
       <Link href="/plan/pay" className={styles.primary}>

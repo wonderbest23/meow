@@ -136,13 +136,13 @@ export default function PlanCheckout() {
         <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
         <h1 className={styles.title}>모든 섹션 열기</h1>
         <p className={styles.desc}>
-          결제하면 남은 섹션을 모두 작성할 수 있고, 완성한 계획서를 PDF·Word로 내려받을 수 있습니다.
+          한 번 결제로 사업계획서 4종·재무 예측 2종 모든 유형의 전체 섹션이 열리고, 완성한 문서를 PDF·Word·발표용 PPT로 내려받을 수 있습니다.
         </p>
 
         {info ? (
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
-            <span>{info.productName} · 1회 결제</span>
+            <span>{info.productName} · 1회 결제 · 모든 유형 이용</span>
           </div>
         ) : null}
 

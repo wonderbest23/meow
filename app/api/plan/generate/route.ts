@@ -65,10 +65,11 @@ export async function POST(req: Request) {
           growthLabel,
           growthPct: inputs.monthlyGrowthPct,
           staffIncluded,
+          monthlyCapacity: inputs.monthlyCapacity,
         });
         // '정밀 재무 모델'은 카드에서 다년 예측을 약속한다 — 실제로 3년을 계산해 붙인다
         if (needsMultiYear(body.planType)) {
-          const years = yearsToMarkdown(projectYears(inputs), { growthPct: inputs.monthlyGrowthPct });
+          const years = yearsToMarkdown(projectYears(inputs), { growthPct: inputs.monthlyGrowthPct, monthlyCapacity: inputs.monthlyCapacity });
           if (years) financialsMarkdown = `${financialsMarkdown}\n\n${years}`;
         }
       } else {
