@@ -780,3 +780,16 @@
     display: none;
   }
 }
+
+
+/* 이어서 작성 배너 — 완성 배너(finale)의 차분한 변주 */
+.continueBanner {
+  background: var(--surface, #fff);
+  border: 1.5px solid var(--blue, #3182f6);
+}
+.continueBanner .finaleBody b {
+  color: var(--text-strong, #191f28);
+}
+.continueBanner .finaleBody span {
+  color: var(--text-muted, #8b95a1);
+}

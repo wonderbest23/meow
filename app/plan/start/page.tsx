@@ -459,7 +459,7 @@ export default function PlanStartPage() {
 
                 {hiddenCount > 0 && (
                   <p className={styles.hiddenNote}>
-                    이미 만든 유형 {hiddenCount}개는 목록에서 뺐어요. 같은 문서를 다시 만들려면 내 플랜에서 ‘복제’를, 다른 사업으로 만들려면 위에서 ‘처음부터 새로 시작’을 선택하세요.
+                    이미 만든 유형 {hiddenCount}개는 목록에서 뺐어요. 다른 사업으로 만들려면 위에서 ‘처음부터 새로 시작’을 선택하세요.
                   </p>
                 )}
                 {/* 표지형 카드 덱 — 레퍼런스 대시보드의 플랜 카드 구조(커버+하단 스트립+배지) */}

@@ -612,3 +612,11 @@
   color: rgba(255, 255, 255, 0.22);
   pointer-events: none;
 }
+
+
+/* 아직 손대지 않은 플랜 — 빈 진행 바 대신 상태를 글자로 */
+.notStarted {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted, #8b95a1);
+}

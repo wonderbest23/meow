@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
-import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, duplicatePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
+import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { Pencil, FileText, Plus, Rocket, TrendingUp, Landmark, ClipboardList, Users, Calculator, BarChart3 } from "lucide-react";
 import styles from "./PlanList.module.css";
 
@@ -79,12 +79,6 @@ export default function PlanList() {
       );
     }
     setEditingId(null);
-  }
-
-  function copyPlan(e: React.MouseEvent, id: string) {
-    e.stopPropagation();
-    const newId = duplicatePlan(id);
-    if (newId) setState(loadState());
   }
 
   function removePlan(e: React.MouseEvent, id: string, title: string) {
@@ -177,10 +171,16 @@ export default function PlanList() {
                       )}
                     </span>
                     <span className={styles.strip}>
-                      <span className={styles.bar}>
-                        <span className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`} style={{ width: `${pct}%` }} />
-                      </span>
-                      <b className={styles.pct}>{pct}%</b>
+                      {pct === 0 ? (
+                        <b className={styles.notStarted}>시작 전</b>
+                      ) : (
+                        <>
+                          <span className={styles.bar}>
+                            <span className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`} style={{ width: `${pct}%` }} />
+                          </span>
+                          <b className={styles.pct}>{pct === 100 ? "완성" : `${pct}%`}</b>
+                        </>
+                      )}
                     </span>
                   </span>
                   <span className={styles.cardMeta}>
@@ -188,18 +188,6 @@ export default function PlanList() {
                     <span className={styles.metaRow}>
                       <span className={styles.date}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")}</span>
                       {sample ? null : <><span
-                        role="button"
-                        tabIndex={0}
-                        className={styles.copyBtn}
-                        title="이 플랜을 복제"
-                        onClick={(e) => copyPlan(e, p.id)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") copyPlan(e as unknown as React.MouseEvent, p.id);
-                        }}
-                      >
-                        복제
-                      </span>
-                      <span
                         role="button"
                         tabIndex={0}
                         className={styles.delBtn}

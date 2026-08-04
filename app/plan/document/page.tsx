@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileDown, FileText, Presentation, LayoutGrid, Maximize2, X } from "lucide-react";
+import { FileDown, FileText, Presentation, LayoutGrid, Lock, Maximize2, X } from "lucide-react";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
@@ -27,6 +27,8 @@ export default function PlanDocumentPage() {
   const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [isSample, setIsSample] = useState(false);
+  /** 이 문서의 결제 상태 — null이면 확인 중. 잠겨 있으면 버튼에 미리 보여준다 */
+  const [access, setAccess] = useState<{ paid: boolean; price: number } | null>(null);
   /*
    * 전체 모드 — 앱 껍데기를 걷어내고 문서만 이어서 읽는다(PDF 미리보기처럼).
    * 편집기 없이 렌더된 HTML만 흘리므로 스크롤이 가볍고, 모바일에서 특히 유용하다.
@@ -43,6 +45,12 @@ export default function PlanDocumentPage() {
         setTitle(p.title);
         setPlanType(p.planType);
         setIsSample(isSamplePlan(p.id));
+        if (!isSamplePlan(p.id)) {
+          fetch(`/api/plan/access?planType=${encodeURIComponent(p.planType)}&planId=${encodeURIComponent(p.id)}`)
+            .then((r) => r.json())
+            .then((d) => { if (alive) setAccess({ paid: !!d.paid, price: Number(d.price) || 149000 }); })
+            .catch(() => {});
+        }
       }
       setReady(true);
     });
@@ -206,7 +214,15 @@ export default function PlanDocumentPage() {
     }
   }
 
+  const locked = !isSample && access !== null && !access.paid;
   const busy = exporting !== null || !sections.length || isSample;
+
+  /** 결제 전이면 서버 왕복 없이 바로 결제 화면으로 */
+  function goPay() {
+    const p = activePlan(loadState());
+    const q = p ? `?planId=${encodeURIComponent(p.id)}&planType=${encodeURIComponent(p.planType)}` : "";
+    router.push(`/plan/pay${q}`);
+  }
 
   return (
     <div className={`${wiz.page} ${styles.page}`}>
@@ -311,14 +327,19 @@ export default function PlanDocumentPage() {
                   <Maximize2 size={14} /> 전체 화면
                 </button>
                 {isSample && <span className={styles.sampleNote}>샘플은 열람 전용 — 내려받기는 내 문서에서</span>}
-                <button className={styles.tool} disabled={busy} onClick={() => handleExport("docx")} title={isSample ? "샘플은 내려받을 수 없습니다" : "Word로 내려받기"}>
-                  <FileText size={14} /> {exporting === "docx" ? "내보내는 중…" : "Word"}
+                {locked && (
+                  <span className={styles.sampleNote}>
+                    <Lock size={11} strokeWidth={2.4} /> 내려받기는 결제 후 열립니다 · {access!.price.toLocaleString("ko-KR")}원
+                  </span>
+                )}
+                <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleExport("docx"))} title={isSample ? "샘플은 내려받을 수 없습니다" : locked ? "결제 후 열립니다" : "Word로 내려받기"}>
+                  {locked ? <Lock size={13} /> : <FileText size={14} />} {exporting === "docx" ? "내보내는 중…" : "Word"}
                 </button>
-                <button className={styles.tool} disabled={busy} onClick={handleDeck} title="발표자료(PPT) 만들기">
-                  <Presentation size={14} /> {exporting === "pptx" ? "만드는 중…" : "PPT"}
+                <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleDeck())} title={locked ? "결제 후 열립니다" : "발표자료(PPT) 만들기"}>
+                  {locked ? <Lock size={13} /> : <Presentation size={14} />} {exporting === "pptx" ? "만드는 중…" : "PPT"}
                 </button>
-                <button className={`${styles.tool} ${styles.toolPrimary}`} disabled={busy} onClick={() => handleExport("pdf")} title="PDF로 내려받기">
-                  <FileDown size={14} /> {exporting === "pdf" ? "내보내는 중…" : "PDF"}
+                <button className={`${styles.tool} ${styles.toolPrimary}`} disabled={busy} onClick={() => (locked ? goPay() : handleExport("pdf"))} title={locked ? "결제 후 열립니다" : "PDF로 내려받기"}>
+                  {locked ? <Lock size={13} /> : <FileDown size={14} />} {exporting === "pdf" ? "내보내는 중…" : "PDF"}
                 </button>
               </div>
               {deckError ? <p className={styles.deckError}>{deckError}</p> : null}

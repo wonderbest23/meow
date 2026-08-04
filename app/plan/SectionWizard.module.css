@@ -982,8 +982,14 @@
   }
 
   /* 버튼이 한 줄에 안 들어가면 줄을 바꾸고, 남는 자리는 나눠 갖는다 */
+  /* 하단 고정 — 긴 질문을 스크롤하는 중에도 이전/다음이 항상 손에 닿게 */
   .foot {
     flex-wrap: wrap;
+    position: sticky;
+    bottom: 0;
+    z-index: 30;
+    background: var(--wz-panel, #fff);
+    box-shadow: 0 -8px 20px rgba(20, 32, 64, 0.07);
   }
   .foot .btn {
     flex: 1 1 auto;

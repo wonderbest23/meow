@@ -181,6 +181,19 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     return null;
   }, [statuses, chapters]);
 
+  /** 다음 섹션의 번호·제목 — 이어서 작성 배너용 */
+  const nextInfo = useMemo(() => {
+    if (!nextKey) return null;
+    let n = 0;
+    for (const ch of chapters) {
+      for (const sec of ch.sections) {
+        n += 1;
+        if (`${ch.id}/${sec.id}` === nextKey) return { chapterId: ch.id, sectionId: sec.id, num: n, title: sec.title };
+      }
+    }
+    return null;
+  }, [nextKey, chapters]);
+
   // 전역 순번(1-based)
   let counter = 0;
 
@@ -247,6 +260,20 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         </div>
 
         {/* 다 채운 사람에게 마지막 단계 — 발표자료 */}
+        {/* 작성 중이면 다음 할 일을 바로 이어준다 — 재방문 시 첫 행동이 명확해야 한다 */}
+        {doneCount < total && nextInfo && (
+          <button
+            type="button"
+            className={`${styles.finale} ${styles.continueBanner}`}
+            onClick={() => onOpenSection?.(nextInfo.chapterId, nextInfo.sectionId)}
+          >
+            <span className={styles.finaleBody}>
+              <b>{doneCount === 0 ? "첫 섹션부터 시작해 보세요" : `${total - doneCount}개 섹션이 남았습니다`}</b>
+              <span>다음 차례: {nextInfo.num}. {nextInfo.title}</span>
+            </span>
+            <span className={styles.finaleGo}>이어서 작성 →</span>
+          </button>
+        )}
         {doneCount > 0 && doneCount === total && (
           <button type="button" className={styles.finale} onClick={onOpenDocument}>
             <span className={styles.finaleIcon} aria-hidden="true"><Presentation size={22} /></span>
