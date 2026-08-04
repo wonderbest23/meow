@@ -138,6 +138,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             answers: loadAnswers(target.key),
             planTitle: plan.title,
             planType: plan.planType,
+            planId: plan.id,
             business: state.business,
             priorSummary: priorSectionsSummary(target.key),
             allAnswers: activePlan()?.answers ?? {},
@@ -282,10 +283,15 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                 <div className={styles.chapHead}>
                   <span className={styles.chapNo}>{ci + 1}</span>
                   <h3 className={styles.chapName}>{chapter.title}</h3>
-                  <span className={styles.chapCount}>
-                    {chapter.sections.filter((sec) => statuses[`${chapter.id}/${sec.id}`] === "done").length}
-                    /{chapter.sections.length}
-                  </span>
+                  {(() => {
+                    const d = chapter.sections.filter((sec) => statuses[`${chapter.id}/${sec.id}`] === "done").length;
+                    const t = chapter.sections.length;
+                    return (
+                      <span className={`${styles.chapCount} ${d === t && t > 0 ? styles.chapCountDone : ""}`}>
+                        {d === t && t > 0 ? "완료 " : ""}{d}/{t}
+                      </span>
+                    );
+                  })()}
                 </div>
                 <div className={styles.nodes}>
                   {chapter.sections.map((section) => {
@@ -309,6 +315,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                         {isLocked && <span className={styles.lockTag} title="잠긴 섹션 — 일괄 생성이 건너뜁니다"><Lock size={10} strokeWidth={2.4} /></span>}
                         {isNext && <span className={styles.nextTag}>여기부터</span>}
                         {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
+                        {done && <span className={styles.nodeDoneTag}>완료</span>}
                         <span className={styles.nodeTime}>{estimateMinutes(`${chapter.id}/${section.id}`, section.title, type)}분</span>
                       </button>
                     );

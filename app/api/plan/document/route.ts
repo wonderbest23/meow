@@ -1,4 +1,5 @@
 import { renderPdf, renderDocx, type BusinessDocument, type DocumentProjectMeta } from "../../../../lib/delivery/document-renderer";
+import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
 
 export const runtime = "nodejs";
 
@@ -36,8 +37,21 @@ export async function POST(req: Request) {
     format?: "pdf" | "docx";
     sections?: SectionInput[];
     planType?: string;
+    planId?: string;
     business?: { name?: string; description?: string; industry?: string; region?: string; stage?: string };
   };
+
+  /*
+   * 내보내기는 유료 구간이다 — 무료 초입은 '답변 작성 + 앞 2개 섹션 생성'까지.
+   * 화면만 가리면 API 직접 호출로 뚫리므로 여기서 막는다.
+   */
+  const access = await resolvePlanAccess(body.planType, typeof body.planId === "string" ? body.planId : undefined);
+  if (!access.authenticated) {
+    return new Response(JSON.stringify({ error: "login_required", message: "로그인 후 이용할 수 있습니다." }), { status: 401, headers: { "Content-Type": "application/json" } });
+  }
+  if (!access.paid) {
+    return new Response(JSON.stringify({ error: "payment_required", message: "PDF·Word 내려받기는 결제 후 이용할 수 있습니다." }), { status: 402, headers: { "Content-Type": "application/json" } });
+  }
 
   const title = (body.title || "사업계획서").slice(0, 80);
   const format = body.format === "docx" ? "docx" : "pdf";

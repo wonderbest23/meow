@@ -6576,6 +6576,9 @@ body:has(.setup-wizard-panel) .support-chat-widget.open { right: 0; bottom: 0; }
 .support-chat-conversation .support-chat-messages article > p { padding: 12px 14px; font-size: 12px; line-height: 1.65; }
 .support-answer-more { width: fit-content; min-height: 32px; padding: 0 8px; border: 1px solid #d1d6db; border-radius: 6px; background: #fff; color: #4e5968; display: flex; align-items: center; gap: 3px; cursor: pointer; font-size: 9px; }
 .support-answer-more:hover { border-color: #1b64da; color: #1b64da; }
+.support-answer-link { width: fit-content; min-height: 32px; padding: 0 10px; border-radius: 6px; background: #1b64da; color: #fff; display: flex; align-items: center; gap: 3px; font-size: 10px; font-weight: 700; text-decoration: none; }
+.support-answer-link:hover { background: #1957be; }
+.support-answer-link svg { width: 12px; }
 .support-answer-more svg { width: 12px; }
 .support-chat-form { padding: 12px max(24px, calc((100% - 880px) / 2)) calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid #e5e8eb; background: #fff; }
 .support-chat-panel .support-chat-form > .support-chat-form-heading { min-height: 25px; margin-bottom: 5px; display: flex; grid-template-columns: none; align-items: center; justify-content: space-between; gap: 10px; }

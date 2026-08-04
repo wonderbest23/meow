@@ -18,11 +18,12 @@ export async function POST(req: Request) {
     businessName?: string;
     businessDescription?: string;
     planType?: string;
+    planId?: string;
     sections?: Array<{ chapterTitle?: string; sectionTitle?: string; markdown?: string }>;
     allAnswers?: Record<string, Record<string, unknown>>;
   };
 
-  const access = await resolvePlanAccess(body.planType);
+  const access = await resolvePlanAccess(body.planType, typeof body.planId === "string" ? body.planId : undefined);
   if (!access.authenticated) {
     return NextResponse.json({ error: "login_required", message: "로그인 후 이용할 수 있습니다." }, { status: 401 });
   }

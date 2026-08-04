@@ -19,6 +19,8 @@ export async function POST(req: Request) {
     answers?: Record<string, unknown>;
     planTitle?: string;
     planType?: string;
+    /** 문서 단위 결제 판정에 필요 */
+    planId?: string;
     /** 켜면 본문을 조각 단위로 흘려준다(NDJSON) */
     stream?: boolean;
     priorSummary?: string;
@@ -88,7 +90,7 @@ export async function POST(req: Request) {
   }
 
   // 화면만 가려서는 우회할 수 있으므로 생성 자체를 서버에서 막는다.
-  const access = await resolvePlanAccess(body.planType);
+  const access = await resolvePlanAccess(body.planType, body.planId);
   const reason = checkSectionAccess(access, sectionKey);
   if (reason !== "ok") {
     return NextResponse.json(

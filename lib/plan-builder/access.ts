@@ -3,7 +3,7 @@
 
 import { sectionKey, chaptersForType } from "./blueprint";
 import { getAuthenticatedUser } from "../account-auth";
-import { hasPaidPlanOrder } from "../payments/plan-orders";
+import { paidPlanEntitlement, planPrice } from "../payments/plan-orders";
 
 /** 결제 없이 볼 수 있는 섹션 수 (앞에서부터) — 1.1, 1.2 */
 export const FREE_SECTION_COUNT = 2;
@@ -13,8 +13,14 @@ export type AccessReason = "ok" | "login_required" | "payment_required";
 export interface PlanAccess {
   authenticated: boolean;
   email: string | null;
-  /** 결제를 마쳐 전체가 열려 있는지 */
+  /** 이 플랜(planId)이 결제로 열려 있는지 — 구 전체 이용권이면 항상 true */
   paid: boolean;
+  /** 구 전체 이용권 보유 여부 */
+  allAccess: boolean;
+  /** 결제 이력이 하나라도 있는지 (샘플 노출 판단용) */
+  hasAnyPaid: boolean;
+  /** 이 유형의 가격 */
+  price: number;
   /** 무료로 열리는 섹션 키 (플랜 유형 기준 앞 2개) */
   freeKeys: string[];
 }
@@ -31,16 +37,25 @@ export function freeSectionKeys(planType?: string): string[] {
   return out;
 }
 
-/** 현재 요청자의 플랜 빌더 접근 권한 */
-export async function resolvePlanAccess(planType?: string): Promise<PlanAccess> {
+/**
+ * 현재 요청자의 플랜 빌더 접근 권한.
+ * 결제는 문서(플랜) 단위다 — planId가 있어야 그 플랜의 결제 여부를 판정한다.
+ * planId 없이 부르면 paid는 구 전체 이용권일 때만 true다.
+ */
+export async function resolvePlanAccess(planType?: string, planId?: string): Promise<PlanAccess> {
+  const price = planPrice(planType);
   const user = await getAuthenticatedUser();
   if (!user) {
-    return { authenticated: false, email: null, paid: false, freeKeys: freeSectionKeys(planType) };
+    return { authenticated: false, email: null, paid: false, allAccess: false, hasAnyPaid: false, price, freeKeys: freeSectionKeys(planType) };
   }
+  const ent = await paidPlanEntitlement(user.id);
   return {
     authenticated: true,
     email: user.email ?? null,
-    paid: await hasPaidPlanOrder(user.id),
+    paid: ent.allAccess || (planId ? ent.planIds.has(planId) : false),
+    allAccess: ent.allAccess,
+    hasAnyPaid: ent.allAccess || ent.planIds.size > 0,
+    price,
     freeKeys: freeSectionKeys(planType),
   };
 }

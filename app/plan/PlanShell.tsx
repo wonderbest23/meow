@@ -20,9 +20,25 @@ const ICONS = {
   ),
 };
 
+/**
+ * 현재 경로에서 한 단계 위로 가는 목적지.
+ * 페이지마다 제각각이던 뒤로가기를 셸이 한 위치·한 디자인으로 통일한다.
+ */
+function backTarget(pathname: string): { href: string; label: string } | null {
+  if (pathname === "/plan" || pathname === "/plan/") return null; // 목록이 뿌리
+  if (pathname.startsWith("/plan/overview")) return { href: "/plan", label: "내 플랜" };
+  if (pathname.startsWith("/plan/start")) return { href: "/plan", label: "내 플랜" };
+  if (pathname.startsWith("/plan/info")) return { href: "/plan", label: "내 플랜" };
+  if (pathname.startsWith("/plan/me")) return { href: "/plan", label: "내 플랜" };
+  if (pathname.startsWith("/plan/document")) return { href: "/plan/overview", label: "플랜 개요" };
+  if (pathname.startsWith("/plan/pay")) return { href: "/plan/overview", label: "플랜 개요" };
+  return { href: "/plan/overview", label: "플랜 개요" }; // 섹션 위저드 등
+}
+
 /** /plan 이하 모든 화면이 공유하는 고정 레일 셸 */
 export default function PlanShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
+  const back = backTarget(pathname);
 
   /*
    * 레일에 로그인 상태를 실제로 드러낸다.
@@ -68,7 +84,14 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
           </Link>
         )}
       </nav>
-      <div className={styles.content}>{children}</div>
+      <div className={styles.content}>
+        {back && (
+          <Link href={back.href} className={styles.shellBack} aria-label={`${back.label}(으)로 돌아가기`}>
+            <span aria-hidden="true">←</span> {back.label}
+          </Link>
+        )}
+        {children}
+      </div>
     </div>
   );
 }

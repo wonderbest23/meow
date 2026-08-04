@@ -4517,7 +4517,7 @@ export default function Page() {
   if (screen === "project" && selectedProject) return <ProjectWorkspace opportunity={selectedProject} serverProject={serverProject} setServerProject={setServerProject} onHome={() => navigate("home")} />;
   if (screen === "sample" || screen === "delivery") return <FinalDelivery opportunity={paidReportDemoOpportunity} price={49000} brandChoice="곁봄" serverProject={null} demo onHome={returnFromSample} onStart={sampleReturnScreen === "home" ? () => navigate("start") : returnFromSample} sampleActionLabel={sampleReturnScreen === "checkout" ? "결제 화면으로 돌아가기" : sampleReturnScreen === "preview" ? "내 초안으로 돌아가기" : undefined} sampleView={sampleView} onCloseSample={sampleReturnScreen === "home" ? undefined : returnFromSample} />;
   if (screen === "explore") return <Explore profile={profile} feedback={feedback} setFeedback={setFeedback} onHome={() => navigate("home")} onStartOpportunity={startOpportunity} />;
-  // 홈의 '시작하기'는 플랜 빌더로 보낸다.
+  // 홈의 '시작하기'는 플랜 목록으로 보낸다 — 샘플 문서가 먼저 보이고, 실제 작성 진입에서만 로그인을 요구한다.
   // 기존 진단 흐름(?view=start 이하)은 코드·경로 모두 그대로 두어 링크로 계속 들어올 수 있다.
-  return <Home onStart={() => router.push("/plan/start")} onPreview={() => openSample("home", "summary")} />;
+  return <Home onStart={() => router.push("/plan")} onPreview={() => openSample("home", "summary")} />;
 }

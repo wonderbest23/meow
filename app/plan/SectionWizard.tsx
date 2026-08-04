@@ -177,7 +177,8 @@ export default function SectionWizard({
   // 권한은 서버에 묻는다 — 화면에서 판단하지 않는다
   useEffect(() => {
     let alive = true;
-    fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}`)
+    const pid = activePlan(loadState())?.id ?? "";
+    fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(pid)}`)
       .then((r) => r.json())
       .then((d) => {
         if (alive) setAccess(d);
@@ -303,6 +304,7 @@ export default function SectionWizard({
           answers,
           planTitle,
           planType,
+          planId: activePlan(loadState())?.id,
           business: loadState().business,
           priorSummary: priorSectionsSummary(key),
           // 재무 입력이 여러 섹션에 흩어져 있어 전체 답변을 함께 보낸다(현재 섹션 답변·보정값 포함).

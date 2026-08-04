@@ -10,6 +10,27 @@ import { PACKAGE_AMOUNT, TERMS_VERSION } from "./domain";
 export const PLAN_PRODUCT_NAME = "사업계획서 플랜 빌더";
 export const PLAN_PRODUCT_AMOUNT = PACKAGE_AMOUNT;
 
+/*
+ * 문서(플랜) 1부당 가격.
+ * 결제 단위가 계정 전체 이용권에서 문서 단위로 바뀌었다 — 같은 계정이
+ * 유형·문서마다 따로 결제한다. 가격은 분량·용도 무게로 나눴다.
+ * 여기 없는 유형(과거 데이터)은 기본가로 판다.
+ */
+export const PLAN_TYPE_PRICING: Record<string, number> = {
+  "간단 · 사업계획서": 29_000,
+  "내부용 · 사업계획서": 49_000,
+  "창업 초기 · 재무 예측": 49_000,
+  "창업 초기 · 사업계획서": 89_000,
+  "성장·확장 · 사업계획서": 89_000,
+  "정밀 · 재무 모델": 89_000,
+  "정부지원 · PSST 사업계획서": 99_000,
+};
+export const PLAN_DEFAULT_PRICE = 89_000;
+
+export function planPrice(planType?: string): number {
+  return (planType && PLAN_TYPE_PRICING[planType]) || PLAN_DEFAULT_PRICE;
+}
+
 /** 결제창을 띄우기 전에 만들어 두는 주문 */
 export interface PlanOrder {
   orderId: string;
@@ -24,12 +45,15 @@ export async function createPlanOrder(input: {
   ownerId: string;
   guestTokenHash: string;
   customerEmail: string | null;
+  /** 이 결제로 열리는 플랜 — 문서 단위 결제의 연결 고리 */
+  planId: string;
+  planType: string;
 }): Promise<PlanOrder> {
   const now = new Date();
   const orderId = `PB-${now.getTime().toString(36)}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const order: PlanOrder = {
     orderId,
-    amount: PLAN_PRODUCT_AMOUNT,
+    amount: planPrice(input.planType),
     orderName: PLAN_PRODUCT_NAME,
     status: "created",
     ownerId: input.ownerId,
@@ -49,8 +73,9 @@ export async function createPlanOrder(input: {
     customer_email: input.customerEmail,
     method: "CARD",
     status: "created",
-    // 진단 흐름 전용 컬럼이라 플랜 빌더에서는 비워 둔다(NOT NULL이라 빈 객체)
-    opportunity: {},
+    // 문서 단위 권한의 연결 고리 — 어떤 플랜을 여는 결제인지 여기 남긴다
+    // (opportunity는 진단 흐름의 NOT NULL jsonb 컬럼을 재사용)
+    opportunity: { planId: input.planId, planType: input.planType },
     founder_profile: {},
     terms_version: TERMS_VERSION,
     terms_agreed_at: now.toISOString(),
@@ -131,19 +156,43 @@ export async function markPlanOrderFailed(input: {
     .eq("order_id", input.orderId);
 }
 
-/** 이 사용자가 플랜 빌더를 결제했는지 */
-export async function hasPaidPlanOrder(userId: string): Promise<boolean> {
+export interface PaidPlanEntitlement {
+  /** 구 전체 이용권(문서 연결 없는 결제) — 모든 플랜이 열린다 */
+  allAccess: boolean;
+  /** 문서 단위 결제로 열린 플랜 id들 */
+  planIds: Set<string>;
+}
+
+/**
+ * 이 사용자의 결제 권한.
+ * 문서 단위 결제(opportunity.planId 있음)는 그 플랜만 열고,
+ * 과거 전체 이용권(planId 없음)은 전부 연다 — 기존 구매자를 잠그지 않는다.
+ */
+export async function paidPlanEntitlement(userId: string): Promise<PaidPlanEntitlement> {
   const supabase = getServerSupabase();
-  if (!supabase) return true; // 로컬 데모에서는 잠그지 않는다
+  if (!supabase) return { allAccess: true, planIds: new Set() }; // 로컬 데모에서는 잠그지 않는다
   const { data, error } = await supabase
     .from("payment_orders")
-    .select("order_id")
+    .select("opportunity")
     .eq("owner_id", userId)
     .eq("order_name", PLAN_PRODUCT_NAME)
     .eq("status", "done")
-    .limit(1);
+    .limit(200);
   if (error) throw error;
-  return (data?.length ?? 0) > 0;
+  const planIds = new Set<string>();
+  let allAccess = false;
+  for (const row of data ?? []) {
+    const planId = (row.opportunity as { planId?: string } | null)?.planId;
+    if (planId) planIds.add(String(planId));
+    else allAccess = true;
+  }
+  return { allAccess, planIds };
+}
+
+/** 결제 이력이 하나라도 있는지 (샘플 노출 판단용) */
+export async function hasAnyPaidPlanOrder(userId: string): Promise<boolean> {
+  const e = await paidPlanEntitlement(userId);
+  return e.allAccess || e.planIds.size > 0;
 }
 
 

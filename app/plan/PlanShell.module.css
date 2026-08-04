@@ -128,3 +128,35 @@
   margin: 0 auto;
   padding: 64px 24px;
 }
+
+
+/*
+ * 통일 뒤로가기 — 모든 /plan 화면에서 같은 디자인, 같은 자리(좌상단 고정).
+ * 폰에서만 띄운다. PC는 각 화면의 상단 바가 이미 그 역할을 한다.
+ */
+.shellBack {
+  display: none;
+}
+@media (max-width: 720px) {
+  /* sticky — 어느 화면에서든 콘텐츠 맨 위 같은 자리에 있고, 스크롤해도 따라온다 */
+  .shellBack {
+    position: sticky;
+    top: 8px;
+    margin: 8px 0 4px 10px;
+    width: fit-content;
+    z-index: 60;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 12px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--border-soft, #d5dbe2);
+    box-shadow: 0 4px 14px rgba(20, 32, 64, 0.1);
+    font-size: 12.5px;
+    font-weight: 800;
+    color: var(--text-body, #4e5968);
+    text-decoration: none;
+    backdrop-filter: blur(6px);
+  }
+}

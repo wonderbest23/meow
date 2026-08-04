@@ -29,6 +29,8 @@ export default function PlanList() {
   const router = useRouter();
   const [state, setState] = useState<PlanState | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  /** 결제 이력이 하나라도 있으면 샘플 줄을 접는다 — 이미 실물을 갖고 있으니 */
+  const [hasAnyPaid, setHasAnyPaid] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
 
   useEffect(() => {
@@ -36,6 +38,10 @@ export default function PlanList() {
     hydrateFromServer().then((s) => {
       if (alive) setState(s);
     });
+    fetch("/api/plan/access")
+      .then((r) => r.json())
+      .then((d) => { if (alive) setHasAnyPaid(!!d.hasAnyPaid); })
+      .catch(() => {});
     return () => {
       alive = false;
     };
@@ -49,6 +55,9 @@ export default function PlanList() {
     );
   }
 
+
+  const ownPlans = state ? state.plans.filter((p) => !isSamplePlan(p.id)) : [];
+  const samples = state ? state.plans.filter((p) => isSamplePlan(p.id)) : [];
 
   function openPlan(id: string) {
     setActivePlan(id);
@@ -96,12 +105,12 @@ export default function PlanList() {
         {/* 플랜 목록 */}
         <div className={styles.listHead}>
           <h2 className={styles.listTitle}>
-            내 플랜<span>{state.plans.length}개</span>
+            내 플랜<span>{ownPlans.length}개</span>
           </h2>
           <Link href="/plan/start" className={styles.newBtn}>+ 새 플랜</Link>
         </div>
 
-        {state.plans.length === 0 ? (
+        {ownPlans.length === 0 ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>아직 만든 플랜이 없어요</p>
             <p className={styles.emptyDesc}>사업 정보를 입력하고 첫 사업계획서를 시작해보세요.</p>
@@ -109,7 +118,7 @@ export default function PlanList() {
           </div>
         ) : (
           <div className={styles.deck}>
-            {state.plans.map((p) => {
+            {ownPlans.map((p) => {
               const total = sectionCountForType(p.planType);
               const done = Object.keys(p.sections).filter((k) => k !== "financials/__review").length;
               const pct = total ? Math.round((done / total) * 100) : 0;
@@ -228,6 +237,50 @@ export default function PlanList() {
                 </span>
               </span>
             </Link>
+          </div>
+        )}
+
+        {/* 결제 전 샘플 — 어드민이 실제 AI로 만든 완성본 3부. 결제 이력이 생기면 접는다. */}
+        {!hasAnyPaid && samples.length > 0 && (
+          <div className={styles.sampleBlock}>
+            <div className={styles.listHead}>
+              <h2 className={styles.listTitle}>
+                결제 전에 완성본을 확인하세요<span>샘플 {samples.length}부</span>
+              </h2>
+            </div>
+            <div className={styles.deck}>
+              {samples.map((p) => {
+                const meta = TYPE_META[p.planType] ?? DEFAULT_META;
+                return (
+                  <button
+                    key={p.id}
+                    className={styles.planCard}
+                    style={{ ["--acc" as string]: meta.accent }}
+                    onClick={() => openPlan(p.id)}
+                  >
+                    <span className={styles.sheet}>
+                      <span className={styles.cover}>
+                        <span className={styles.coverBadge}>샘플</span>
+                        <span className={styles.coverIcon} aria-hidden="true"><meta.Icon /></span>
+                        <span className={styles.typeChip}>{meta.short}</span>
+                        <span className={styles.sampleMark} aria-hidden="true">SAMPLE</span>
+                        <span className={styles.coverName}>{p.title.replace(/^샘플 · /, "")}</span>
+                      </span>
+                      <span className={styles.strip}>
+                        <span className={styles.bar}><span className={`${styles.barFill} ${styles.done}`} style={{ width: "100%" }} /></span>
+                        <b className={styles.pct}>완성</b>
+                      </span>
+                    </span>
+                    <span className={styles.cardMeta}>
+                      <span className={styles.metaType}>{p.planType}</span>
+                      <span className={styles.metaRow}>
+                        <span className={styles.date}>실제 AI 생성 문서 · 읽기 전용</span>
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

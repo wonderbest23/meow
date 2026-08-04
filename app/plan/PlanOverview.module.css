@@ -79,11 +79,17 @@
   color: #f4b740;
 }
 @media (max-width: 720px) {
+  /* 폰에서는 카드 프레임을 접고 화면을 전부 쓴다 — 회색 띠 여백 제거 */
+  .page {
+    padding: 0 0 32px;
+  }
   .app {
-    grid-template-columns: 52px minmax(0, 1fr);
+    border-radius: 0;
+    box-shadow: none;
+    min-height: 100vh;
   }
   .main {
-    padding: 18px 14px 28px;
+    padding: 16px 14px 28px;
   }
 }
 
@@ -517,9 +523,18 @@
   flex: 0 0 auto;
 }
 
+/*
+ * 완료 노드는 회색으로 가라앉힌다 — 남은 일과 끝난 일이 색만으로 갈리게.
+ * 초록 체크는 "완료" 신호로만 남긴다.
+ */
 .node.done {
-  background: var(--surface, #fff);
-  border-color: color-mix(in srgb, #16b877 45%, transparent);
+  background: #eef1f4;
+  border-color: transparent;
+}
+.node.done:hover {
+  transform: none;
+  box-shadow: none;
+  border-color: var(--border-soft, #d5dbe2);
 }
 .node.done .nodeNum {
   background: #16b877;
@@ -527,7 +542,28 @@
   color: #fff;
 }
 .node.done .nodeLabel {
-  color: var(--text-body, #4e5968);
+  color: var(--text-muted, #8b95a1);
+  font-weight: 600;
+}
+.node.done .nodeTime {
+  visibility: hidden;
+}
+.nodeDoneTag {
+  font-size: 10px;
+  font-weight: 800;
+  color: #0f9d63;
+  background: #dcf5ea;
+  border-radius: 999px;
+  padding: 3px 8px;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+.node.done .nodeTime {
+  margin-left: 0;
+}
+/* 챕터 전부 완료 시 카운트도 완료색 */
+.chapCountDone {
+  color: #0f9d63 !important;
 }
 
 @media (max-width: 860px) {
@@ -734,5 +770,13 @@
   }
   .segs i {
     width: 8px;
+  }
+}
+
+
+/* 셸 통일 뒤로가기(≤720)가 있으니 자체 원형 버튼은 접는다 — base 정의보다 뒤에 있어야 이긴다 */
+@media (max-width: 720px) {
+  .back {
+    display: none;
   }
 }

@@ -9,18 +9,22 @@ export const runtime = "nodejs";
 // 판정은 서버(lib/plan-builder/access.ts)에서만 하고 화면은 결과만 받는다.
 
 export async function GET(request: Request) {
-  const planType = new URL(request.url).searchParams.get("planType") ?? undefined;
+  const url = new URL(request.url);
+  const planType = url.searchParams.get("planType") ?? undefined;
+  const planId = url.searchParams.get("planId") ?? undefined;
   try {
-    const access = await resolvePlanAccess(planType);
+    const access = await resolvePlanAccess(planType, planId);
     return NextResponse.json(
       {
         authenticated: access.authenticated,
         email: access.email,
         paid: access.paid,
+        allAccess: access.allAccess,
+        hasAnyPaid: access.hasAnyPaid,
         freeKeys: access.freeKeys,
         freeCount: FREE_SECTION_COUNT,
         freeLabels: freeSectionLabels(planType),
-        price: PLAN_PRODUCT_AMOUNT,
+        price: access.price,
         productName: PLAN_PRODUCT_NAME,
         payable: nicepayConfigured(),
       },
@@ -29,7 +33,7 @@ export async function GET(request: Request) {
   } catch {
     // 권한을 확인하지 못하면 잠근 쪽으로 답한다(열어주는 실수를 하지 않는다).
     return NextResponse.json(
-      { authenticated: false, email: null, paid: false, freeKeys: [], freeCount: FREE_SECTION_COUNT, freeLabels: [], price: PLAN_PRODUCT_AMOUNT, productName: PLAN_PRODUCT_NAME, payable: false },
+      { authenticated: false, email: null, paid: false, allAccess: false, hasAnyPaid: false, freeKeys: [], freeCount: FREE_SECTION_COUNT, freeLabels: [], price: PLAN_PRODUCT_AMOUNT, productName: PLAN_PRODUCT_NAME, payable: false },
       { status: 200, headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }

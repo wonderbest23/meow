@@ -2,9 +2,11 @@
 // 로컬(localStorage) 캐시 + 서버(plan_states) 동기화.
 
 import { chaptersForType, sectionKey, type PlanSectionStatus } from "./blueprint";
-import { SAMPLE_PLAN_ID, buildSamplePlan, isSamplePlan } from "./sample-plan";
+import { SAMPLE_DOCS, isSampleId } from "./samples";
 
-export { SAMPLE_PLAN_ID, isSamplePlan };
+export function isSamplePlan(planId: string | null | undefined): boolean {
+  return isSampleId(planId ?? null);
+}
 
 const KEY = "oneul-plan-demo-v1";
 
@@ -107,21 +109,43 @@ function migrate(parsed: Record<string, unknown>): PlanState {
   };
 }
 
+/** 샘플 3종을 Plan 모양으로 — 항상 목록 뒤에 붙는 읽기 전용 문서 */
+function samplePlans(): Plan[] {
+  return SAMPLE_DOCS.map((d) => ({
+    id: d.id,
+    title: d.title,
+    planType: d.planType,
+    createdAt: "2026-01-15T09:00:00.000Z",
+    updatedAt: "2026-01-15T09:00:00.000Z",
+    sections: Object.fromEntries(
+      Object.entries(d.sections).map(([k, v]) => [k, { markdown: v.markdown, html: v.html, generatedAt: "2026-01-15T09:00:00.000Z", locked: true }]),
+    ),
+    answers: {},
+  }));
+}
+
+function withSamples(state: PlanState): PlanState {
+  const own = state.plans.filter((p) => !isSamplePlan(p.id));
+  return { ...state, plans: [...own, ...samplePlans()] };
+}
+
 export function loadState(): PlanState {
-  if (typeof window === "undefined") return { ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } };
+  if (typeof window === "undefined") return withSamples({ ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } });
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return { ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } };
-    return migrate(JSON.parse(raw) as Record<string, unknown>);
+    if (!raw) return withSamples({ ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } });
+    return withSamples(migrate(JSON.parse(raw) as Record<string, unknown>));
   } catch {
-    return { ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } };
+    return withSamples({ ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } });
   }
 }
 
 function persist(state: PlanState) {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(state));
+    // 샘플은 화면에만 존재한다 — 저장소에 남기지 않는다
+    const clean = { ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) };
+    window.localStorage.setItem(KEY, JSON.stringify(clean));
   } catch {
     // ignore quota errors
   }
@@ -178,14 +202,13 @@ function readOnlyPlan(planId: string | null | undefined): boolean {
   return isSamplePlan(planId);
 }
 
-/** 작업할 플랜 전환 */
+/** 작업할 플랜 전환 — 샘플도 열람은 가능하다(저장·전송에서는 걷어낸다) */
 export function setActivePlan(planId: string) {
-  if (readOnlyPlan(planId)) return;
   const s = loadState();
   if (!s.plans.some((p) => p.id === planId)) return;
   s.activePlanId = planId;
   persist(s);
-  void pushToServer();
+  if (!isSamplePlan(planId)) void pushToServer();
 }
 
 /** 플랜 삭제 — 서버는 병합 저장이라, 삭제는 명시적 DELETE로 알려야 지워진다. */
@@ -426,31 +449,15 @@ export function assembleSections(state?: PlanState): Array<{
 export async function pushToServer(): Promise<void> {
   if (typeof window === "undefined") return;
   try {
+    const state = loadState();
     await fetch("/api/plan/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(loadState()),
+      body: JSON.stringify({ ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) }),
     });
   } catch {
     // 오프라인/실패 시 로컬만 유지
   }
-}
-
-/*
- * 아직 자기 플랜이 없으면 예시 플랜 한 개를 얹어 돌려준다.
- * 목록·개요·문서 화면을 그대로 쓰면서 "무엇이 만들어지는지"를 보여주기 위해서다.
- * localStorage에도 서버에도 저장하지 않는다 — 화면에만 존재한다.
- */
-let samplePlanCache: Awaited<ReturnType<typeof buildSamplePlan>> | null = null;
-
-async function withSamplePlan(state: PlanState): Promise<PlanState> {
-  if (state.plans.length > 0) return state;
-  if (!samplePlanCache) samplePlanCache = await buildSamplePlan();
-  return {
-    business: { ...EMPTY_BUSINESS, ...samplePlanCache.business },
-    plans: [samplePlanCache.plan as Plan],
-    activePlanId: SAMPLE_PLAN_ID,
-  };
 }
 
 /** 서버에서 상태를 불러와 로컬에 반영(서버 우선) */
@@ -462,14 +469,17 @@ export async function hydrateFromServer(): Promise<PlanState> {
       const server = migrate((await res.json()) as Record<string, unknown>);
       const local = loadState();
       // 로컬에 더 많은 플랜이 있으면(방금 만든 경우) 서버로 덮어쓰지 않고 로컬을 올린다.
-      if (local.plans.length > server.plans.length) {
+      const ownLocal = local.plans.filter((p) => !isSamplePlan(p.id));
+      if (ownLocal.length > server.plans.length) {
         void pushToServer();
       } else if (server.plans.length > 0 || server.business.name) {
+        // 샘플을 열어 둔 상태는 서버가 모른다(전송에서 걷어내므로) — 활성 선택은 로컬을 지킨다
+        if (isSamplePlan(local.activePlanId)) server.activePlanId = local.activePlanId;
         persist(server);
       }
     }
   } catch {
     // 서버 실패 → 로컬 캐시 사용
   }
-  return withSamplePlan(loadState());
+  return loadState();
 }

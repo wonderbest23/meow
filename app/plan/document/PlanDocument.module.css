@@ -642,3 +642,39 @@
 @media (prefers-reduced-motion: reduce) {
   .skelTitle, .skelSub, .skelHead, .skelLine, .skelLineShort { animation: none; }
 }
+
+
+/* 샘플 문서 표식 */
+.sampleNote {
+  font-size: 12px;
+  color: var(--wz-faint, #8b95a1);
+  white-space: nowrap;
+}
+
+.paperSample {
+  position: relative;
+}
+
+/* 문서 전체를 덮는 반복 SAMPLE 워터마크 — 내용과 함께 스크롤된다 */
+.paperSample::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='220'%3E%3Ctext x='150' y='120' text-anchor='middle' transform='rotate(-24 150 110)' font-family='Arial' font-size='40' font-weight='800' letter-spacing='6' fill='rgba(49,130,246,0.07)'%3ESAMPLE%3C/text%3E%3C/svg%3E");
+  background-size: 300px 220px;
+}
+
+/* 표기 잔재 — DOM에 남아 있어도 화면에는 안 보이게 */
+.paperMark {
+  display: none;
+}
+
+
+@media (max-width: 720px) {
+  /* 셸의 통일 뒤로가기가 있으니 중복 버튼은 접는다 */
+  .mobileBack {
+    display: none;
+  }
+}

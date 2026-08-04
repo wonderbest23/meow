@@ -294,6 +294,11 @@ export function SupportChatWidget() {
                   <article key={item.id} className={item.sender}>
                     <span>{item.sender === "customer" ? "나" : "상담 도우미"}</span>
                     <p>{item.body}</p>
+                    {item.sender === "assistant" && item.faq?.link && (
+                      <a className="support-answer-link" href={item.faq.link.href}>
+                        {item.faq.link.label} <ChevronRight />
+                      </a>
+                    )}
                     {item.sender === "assistant" && (item.faq || item.allowOperator) && (
                       <button type="button" className="support-answer-more" onClick={() => startOperatorInquiry(item.faq, item.operatorContext)}>
                         이 답변으로 해결되지 않았어요 <ChevronRight />

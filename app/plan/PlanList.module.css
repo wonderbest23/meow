@@ -569,8 +569,46 @@
 }
 
 @media (max-width: 640px) {
+  /*
+   * auto-fill(150px 최소폭)은 좁은 화면에서 1열 거대 카드로 떨어진다.
+   * 폰에서는 항상 2열 — 플랜 카드와 새 플랜 카드가 같은 칸 크기를 쓴다.
+   */
   .deck {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 14px;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
+  .cover {
+    padding: 10px;
+  }
+  .coverName {
+    font-size: 14.5px;
+  }
+  .coverIcon svg {
+    width: 64px;
+    height: 64px;
+  }
+  .metaType {
+    font-size: 12px;
+  }
+}
+
+
+/* 샘플 구획 */
+.sampleBlock {
+  margin-top: 40px;
+  padding-top: 26px;
+  border-top: 1px dashed var(--border-soft, #d5dbe2);
+}
+
+/* 표지 위 사선 워터마크 */
+.sampleMark {
+  position: absolute;
+  left: 50%;
+  top: 44%;
+  transform: translate(-50%, -50%) rotate(-24deg);
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 0.28em;
+  color: rgba(255, 255, 255, 0.22);
+  pointer-events: none;
 }

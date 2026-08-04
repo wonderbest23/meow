@@ -72,6 +72,24 @@
   filter: brightness(1.06);
 }
 
+.secondary {
+  display: inline-block;
+  margin-left: 10px;
+  background: #fff;
+  color: var(--wz-muted, #4e5968);
+  font-weight: 600;
+  font-size: 14px;
+  padding: 13px 22px;
+  border: 1px solid var(--wz-border, #d5dbe2);
+  border-radius: 10px;
+  text-decoration: none;
+  transition: 0.2s;
+}
+.secondary:hover {
+  border-color: var(--wz-brand, #3182f6);
+  color: var(--wz-brand, #3182f6);
+}
+
 .note {
   margin: 18px 0 0;
   font-size: 12px;

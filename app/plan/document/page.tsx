@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileDown, FileText, Presentation, LayoutGrid, Maximize2, X } from "lucide-react";
-import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import InlineDocEditor from "../InlineDocEditor";
@@ -26,6 +26,7 @@ export default function PlanDocumentPage() {
   const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
   const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [isSample, setIsSample] = useState(false);
   /*
    * 전체 모드 — 앱 껍데기를 걷어내고 문서만 이어서 읽는다(PDF 미리보기처럼).
    * 편집기 없이 렌더된 HTML만 흘리므로 스크롤이 가볍고, 모바일에서 특히 유용하다.
@@ -41,6 +42,7 @@ export default function PlanDocumentPage() {
       if (p) {
         setTitle(p.title);
         setPlanType(p.planType);
+        setIsSample(isSamplePlan(p.id));
       }
       setReady(true);
     });
@@ -138,6 +140,7 @@ export default function PlanDocumentPage() {
           businessName: state.business.name || title,
           businessDescription: state.business.description,
           planType,
+          planId: plan?.id,
           sections: exportSections,
           allAnswers: plan?.answers ?? {},
         }),
@@ -174,10 +177,18 @@ export default function PlanDocumentPage() {
           title,
           format,
           planType,
+          planId: activePlan(loadState())?.id,
           business: loadState().business,
           sections: exportSections,
         }),
       });
+      if (res.status === 402) {
+        const p = activePlan(loadState());
+        const q = p ? `?planId=${encodeURIComponent(p.id)}&planType=${encodeURIComponent(p.planType)}` : "";
+        alert("PDF·Word 내려받기는 결제 후 이용할 수 있습니다. 결제 화면으로 이동합니다.");
+        router.push(`/plan/pay${q}`);
+        return;
+      }
       if (!res.ok) throw new Error("export failed");
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -195,7 +206,7 @@ export default function PlanDocumentPage() {
     }
   }
 
-  const busy = exporting !== null || !sections.length;
+  const busy = exporting !== null || !sections.length || isSample;
 
   return (
     <div className={`${wiz.page} ${styles.page}`}>
@@ -208,7 +219,8 @@ export default function PlanDocumentPage() {
             </button>
           </div>
           <div className={styles.readerScroll}>
-            <article className={styles.readerPaper}>
+            <article className={`${styles.readerPaper} ${isSample ? styles.paperSample : ""}`}>
+              {isSample && <span className={styles.paperMark} aria-hidden="true">SAMPLE</span>}
               <header className={styles.docHeader}>
                 <h2 className={styles.docTitle}>{title}</h2>
                 <div className={styles.docSub}>{planType}{planType && " · "}{sections.length}개 섹션</div>
@@ -298,7 +310,8 @@ export default function PlanDocumentPage() {
                 <button className={styles.tool} disabled={!sections.length} onClick={() => setReader(true)} title="문서만 전체 화면으로 이어서 읽기">
                   <Maximize2 size={14} /> 전체 화면
                 </button>
-                <button className={styles.tool} disabled={busy} onClick={() => handleExport("docx")} title="Word로 내려받기">
+                {isSample && <span className={styles.sampleNote}>샘플은 열람 전용 — 내려받기는 내 문서에서</span>}
+                <button className={styles.tool} disabled={busy} onClick={() => handleExport("docx")} title={isSample ? "샘플은 내려받을 수 없습니다" : "Word로 내려받기"}>
                   <FileText size={14} /> {exporting === "docx" ? "내보내는 중…" : "Word"}
                 </button>
                 <button className={styles.tool} disabled={busy} onClick={handleDeck} title="발표자료(PPT) 만들기">
@@ -334,7 +347,8 @@ export default function PlanDocumentPage() {
                   <Link href="/plan/overview" className={styles.emptyBtn}>개요로 가기</Link>
                 </div>
               ) : (
-                <article className={styles.paper}>
+                <article className={`${styles.paper} ${isSample ? styles.paperSample : ""}`}>
+                  {isSample && <span className={styles.paperMark} aria-hidden="true">SAMPLE</span>}
                   <header className={styles.docHeader}>
                     <h2 className={styles.docTitle}>{title}</h2>
                     <div className={styles.docSub}>

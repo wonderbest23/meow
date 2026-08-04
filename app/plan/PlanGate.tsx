@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import { activePlan } from "../../lib/plan-builder/plan-store";
 import Link from "next/link";
 import { KeyRound, Lock } from "lucide-react";
 import styles from "./PlanGate.module.css";
@@ -35,6 +36,9 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
         <Link href={backTo} className={styles.primary}>
           로그인 · 회원가입
         </Link>
+        <Link href="/plan" className={styles.secondary}>
+          완성 샘플 먼저 보기
+        </Link>
       </section>
     );
   }
@@ -58,11 +62,18 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
       </p>
       {price ? (
         <div className={styles.price}>
-          {price.toLocaleString("ko-KR")}원 <span>1회 결제 · 6개 유형 전체 열림</span>
+          {price.toLocaleString("ko-KR")}원 <span>이 문서 1부 · 1회 결제</span>
         </div>
       ) : null}
-      <Link href="/plan/pay" className={styles.primary}>
-        결제하고 계속하기
+      <Link
+        href={(() => {
+          const p = typeof window === "undefined" ? null : activePlan();
+          const q = p ? `?planId=${encodeURIComponent(p.id)}&planType=${encodeURIComponent(p.planType)}` : "";
+          return `/plan/pay${q}`;
+        })()}
+        className={styles.primary}
+      >
+        이 문서 결제하고 계속하기
       </Link>
       <p className={styles.note}>
         지금까지 답한 내용은 그대로 남아 있습니다. 결제 후 이 화면으로 돌아오면 이어서 작성됩니다.

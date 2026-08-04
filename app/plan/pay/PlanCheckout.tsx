@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 /* SDK 주소만 필요하다 — 서버 전용 모듈(시크릿 사용)을 클라이언트로 끌어오지 않는다 */
 const NICEPAY_SDK_URL = "https://pay.nicepay.co.kr/v1/js/";
@@ -40,6 +41,10 @@ function loadSdk(): Promise<void> {
  * 승인은 returnUrl(/api/payments/plan/return)에서 서버가 처리한다.
  */
 export default function PlanCheckout() {
+  // 어느 문서를 여는 결제인지 — 관문에서 붙여 보낸다
+  const params = useSearchParams();
+  const planId = params.get("planId") ?? "";
+  const planType = params.get("planType") ?? "";
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean } | null>(null);
@@ -47,7 +52,7 @@ export default function PlanCheckout() {
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/plan/access")
+    fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(planId)}`)
       .then((r) => r.json())
       .then((d) => {
         if (alive) setInfo({ price: d.price, productName: d.productName, paid: d.paid, payable: d.payable, authenticated: d.authenticated });
@@ -66,7 +71,11 @@ export default function PlanCheckout() {
     setPhase("preparing");
     setMessage(null);
     try {
-      const res = await fetch("/api/payments/plan/prepare", { method: "POST" });
+      const res = await fetch("/api/payments/plan/prepare", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ planId, planType }),
+      });
       const data = (await res.json()) as {
         clientId?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
         error?: string; message?: string;
@@ -122,8 +131,8 @@ export default function PlanCheckout() {
       <div className={styles.page}>
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
-          <h1 className={styles.title}>이미 결제가 완료된 계정입니다</h1>
-          <p className={styles.desc}>모든 섹션이 열려 있습니다.</p>
+          <h1 className={styles.title}>이 문서는 이미 열려 있습니다</h1>
+          <p className={styles.desc}>결제가 확인되어 전체 섹션을 쓸 수 있습니다.</p>
           <Link href="/plan/overview" className={styles.primary}>플랜으로 돌아가기</Link>
         </div>
       </div>
@@ -134,15 +143,16 @@ export default function PlanCheckout() {
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
-        <h1 className={styles.title}>모든 섹션 열기</h1>
+        <h1 className={styles.title}>이 문서 전체 열기</h1>
         <p className={styles.desc}>
-          한 번 결제로 사업계획서 4종·재무 예측 2종 모든 유형의 전체 섹션이 열리고, 완성한 문서를 PDF·Word·발표용 PPT로 내려받을 수 있습니다.
+          {planType ? <b>{planType}</b> : "이 문서"} 1부의 전체 섹션이 열리고, 완성 후 PDF·Word·발표용 PPT로 내려받을 수 있습니다.
+          같은 사업으로 다른 유형을 만들 땐 답변이 그대로 이어집니다.
         </p>
 
         {info ? (
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
-            <span>{info.productName} · 1회 결제 · 모든 유형 이용</span>
+            <span>문서 1부 · 1회 결제</span>
           </div>
         ) : null}
 

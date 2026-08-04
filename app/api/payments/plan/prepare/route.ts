@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
-import { createPlanOrder, hasPaidPlanOrder, PLAN_PRODUCT_NAME } from "../../../../../lib/payments/plan-orders";
+import { createPlanOrder, paidPlanEntitlement, planPrice, PLAN_PRODUCT_NAME } from "../../../../../lib/payments/plan-orders";
 import { nicepayClientKey, nicepayConfigured } from "../../../../../lib/payments/nicepay-client";
 
 export const runtime = "nodejs";
@@ -9,7 +9,14 @@ export const runtime = "nodejs";
 // 주문번호와 금액을 서버가 먼저 정해 두고, 클라이언트에는 그것만 넘긴다.
 // (금액을 브라우저에서 만들지 않게 하려는 것)
 
-export async function POST() {
+export async function POST(request: Request) {
+  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string };
+  const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
+  const planType = typeof body.planType === "string" ? body.planType.slice(0, 120) : "";
+  if (!planId || !planType) {
+    return NextResponse.json({ error: "plan_required", message: "결제할 플랜 정보가 없습니다. 플랜 화면에서 다시 시도해주세요." }, { status: 400 });
+  }
+
   let identity: Awaited<ReturnType<typeof requireAuthenticatedIdentity>>;
   try {
     identity = await requireAuthenticatedIdentity();
@@ -28,9 +35,10 @@ export async function POST() {
     return NextResponse.json({ error: "login_required", message: "로그인 후 결제할 수 있습니다." }, { status: 401 });
   }
 
-  // 이미 결제한 사람에게 또 받지 않는다
-  if (await hasPaidPlanOrder(identity.userId)) {
-    return NextResponse.json({ error: "already_paid", message: "이미 결제가 완료된 계정입니다." }, { status: 409 });
+  // 같은 플랜에 두 번 받지 않는다 (구 전체 이용권 보유자도 마찬가지)
+  const ent = await paidPlanEntitlement(identity.userId);
+  if (ent.allAccess || ent.planIds.has(planId)) {
+    return NextResponse.json({ error: "already_paid", message: "이미 이 플랜은 열려 있습니다." }, { status: 409 });
   }
 
   try {
@@ -38,13 +46,15 @@ export async function POST() {
       ownerId: identity.userId,
       guestTokenHash: identity.hash,
       customerEmail: identity.email,
+      planId,
+      planType,
     });
     return NextResponse.json(
       {
         clientId: nicepayClientKey(),
         orderId: order.orderId,
         amount: order.amount,
-        goodsName: PLAN_PRODUCT_NAME,
+        goodsName: `${PLAN_PRODUCT_NAME} · ${planType}`.slice(0, 40),
         buyerEmail: identity.email,
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
