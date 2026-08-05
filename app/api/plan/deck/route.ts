@@ -4,6 +4,7 @@ import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
 import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { buildDeckPlan } from "../../../../lib/plan-builder/deck-plan";
 import { renderDeckPptx } from "../../../../lib/plan-builder/deck-render";
+import { pickDeckTheme } from "../../../../lib/plan-builder/deck-themes";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -71,7 +72,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ plan }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   }
 
-  const buffer = await renderDeckPptx(plan);
+  const theme = pickDeckTheme(body.planType, String(body.businessName ?? ""), String(body.businessDescription ?? ""));
+  const buffer = await renderDeckPptx(plan, theme);
   const safe = `${plan.brandName} 사업 제안서`.replace(/[\\/:*?"<>|]/g, "").trim() || "사업 제안서";
   const ascii = safe.replace(/[^\x20-\x7E]/g, "_");
 

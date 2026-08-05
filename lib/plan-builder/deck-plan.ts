@@ -63,6 +63,33 @@ const SHAPE_GUIDE = `{
   ]
 }`;
 
+/**
+ * 유형별 서사 아키타입 — 검증된 덱들의 이야기 순서를 유형마다 고정한다.
+ * (Sequoia 피치덱 구성, 국내 PSST 심사자료 순서를 규칙화)
+ */
+const ARCHETYPES: Record<string, string> = {
+  "정부지원 · PSST 사업계획서": [
+    "이 덱은 정부지원 심사용입니다. 슬라이드 순서를 반드시 다음 서사로 구성하세요:",
+    "표지 → 사업 정의(statement) → 문제인식(창업 동기·필요성) → 실현가능성(개발·준비 현황, 차별성)",
+    "→ 성장전략·비전(vision, 자금을 받으면 언제까지 무엇을 달성하는지) → 시장·고객 → 재무 → 팀·대표 역량 → 요청.",
+    "화려한 수사보다 근거와 숫자를 앞세우고, 심사위원이 검증할 수 없는 수치는 빼세요.",
+  ].join(" "),
+  "성장·확장 · 사업계획서": [
+    "이 덱은 실적 기반 확장 제안입니다. 순서: 표지 → 사업 정의(statement) → 지금까지의 실적(숫자 먼저)",
+    "→ 병목과 확장 논리 → 비전·목표(vision) → 확장 계획 → 재무 → 요청.",
+    "창업 배경 서사는 줄이고 실적→확장 인과를 또렷하게.",
+  ].join(" "),
+};
+const DEFAULT_ARCHETYPE = [
+  "슬라이드 순서는 검증된 피치덱 서사를 따르세요:",
+  "표지 → 사업 정의(statement) → 문제 → 해결 → 왜 지금인가(또는 시장) → 상품·수익 구조",
+  "→ 비전·목표(vision) → 재무 → 실행·검증 계획 → 요청.",
+].join(" ");
+
+export function archetypeFor(planType?: string): string {
+  return (planType && ARCHETYPES[planType]) || DEFAULT_ARCHETYPE;
+}
+
 /** 계획서 본문을 슬라이드 재료로 압축 (프롬프트가 너무 길어지지 않게) */
 function digestSections(
   sections: Array<{ chapterTitle: string; sectionTitle: string; markdown: string }>,
@@ -179,6 +206,9 @@ export async function buildDeckPlan(
     financial
       ? `\n[계산된 재무 수치 — 이 값만 사용하고 새로 만들지 마세요]\n${financial.map((m) => `- ${m.label}: ${m.value}${m.note ? ` (${m.note})` : ""}`).join("\n")}`
       : "",
+    "",
+    "",
+    `[서사 구성]\n${archetypeFor(input.planType)}`,
     "",
     "위 내용으로 10~12장짜리 사업 발표자료를 구성하세요.",
     "첫 장은 표지, 마지막 장은 요청·다음 단계로 하세요.",

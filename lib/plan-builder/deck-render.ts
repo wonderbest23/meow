@@ -10,22 +10,27 @@
 
 import PptxGenJS from "pptxgenjs";
 import type { DeckPlan, DeckSlide } from "./deck-plan";
+import { DEFAULT_DECK_THEME, type DeckTheme } from "./deck-themes";
 
 // 16:9 (13.33 x 7.5 인치)
 const W = 13.33;
 const H = 7.5;
 
-// 플랜 빌더와 같은 색 계열
-const BRAND = "3182F6";
-const BRAND_DEEP = "1D4ED8";
-const DARK = "0F1D33"; // 커버·클로징 바탕
+// 중립 색 — 테마와 무관하게 고정
 const INK = "191F28";
 const INK_SOFT = "4E5968";
 const MUTED = "8B95A1";
 const LINE = "E5E8EB";
-const PANEL = "F7F8FA";
 const WHITE = "FFFFFF";
-const ICE = "C9DCF8"; // 다크 위 보조 텍스트
+
+// 렌더 한 번 동안 쓰는 테마 — renderDeckPptx가 시작할 때 세팅한다.
+// (요청 단위로 인스턴스가 분리되는 환경이라 동시성 문제는 없다)
+let T: DeckTheme = DEFAULT_DECK_THEME;
+const BRAND = () => T.brand;
+const BRAND_DEEP = () => T.brandDeep;
+const DARK = () => T.dark;
+const PANEL = () => T.panel;
+const ICE = () => T.ice;
 
 // 한글이 깨지지 않는 기본 글꼴
 const FONT = "Malgun Gothic";
@@ -35,19 +40,24 @@ function softShadow(): PptxGenJS.ShadowProps {
   return { type: "outer", color: "1B2B44", opacity: 0.14, blur: 10, offset: 3, angle: 90 };
 }
 
-/** 다크 배경 위 반투명 원 장식 — 이 덱의 유일한 모티프 */
+/** 다크 배경 위 반투명 장식 — 테마마다 실루엣이 다르다(원/사각/호) */
 function darkOrnaments(pptx: PptxGenJS, slide: PptxGenJS.Slide) {
-  slide.addShape(pptx.ShapeType.ellipse, {
-    x: 9.1, y: -2.3, w: 6.4, h: 6.4,
-    fill: { color: BRAND, transparency: 86 }, line: { type: "none" },
+  // pie 같은 특수 도형은 뷰어에 따라 안 그려진다 — 원/라운드 사각만 쓰고,
+  // arc 테마는 원을 화면 밖으로 크게 밀어 "잘린 호"처럼 보이게 한다.
+  const shape = T.motif === "square" ? pptx.ShapeType.roundRect : pptx.ShapeType.ellipse;
+  const opt = T.motif === "square" ? { rectRadius: 0.5 } : {};
+  const spread = T.motif === "arc" ? 1.6 : 0; // 호 테마는 더 크게, 더 바깥으로
+  slide.addShape(shape, {
+    x: 9.1 + spread * 0.4, y: -2.3 - spread, w: 6.4 + spread, h: 6.4 + spread,
+    fill: { color: BRAND(), transparency: 84 }, line: { type: "none" }, ...opt,
   });
-  slide.addShape(pptx.ShapeType.ellipse, {
-    x: 11.2, y: 4.6, w: 4.6, h: 4.6,
-    fill: { color: BRAND, transparency: 92 }, line: { type: "none" },
+  slide.addShape(shape, {
+    x: 11.2 + spread * 0.3, y: 4.6 + spread * 0.4, w: 4.6 + spread, h: 4.6 + spread,
+    fill: { color: BRAND(), transparency: 91 }, line: { type: "none" }, ...opt,
   });
-  slide.addShape(pptx.ShapeType.ellipse, {
-    x: 10.35, y: 1.15, w: 2.5, h: 2.5,
-    fill: { color: BRAND, transparency: 74 }, line: { type: "none" },
+  slide.addShape(shape, {
+    x: 10.35 + spread * 0.5, y: 1.15, w: 2.5, h: 2.5,
+    fill: { color: BRAND(), transparency: 72 }, line: { type: "none" }, ...opt,
   });
 }
 
@@ -68,11 +78,11 @@ function heading(pptx: PptxGenJS, slide: PptxGenJS.Slide, item: DeckSlide) {
   const chipW = Math.max(1.0, 0.5 + label.length * 0.16);
   slide.addShape(pptx.ShapeType.roundRect, {
     x: 0.75, y: 0.58, w: chipW, h: 0.36,
-    fill: { color: "E8F1FE" }, line: { type: "none" }, rectRadius: 0.18,
+    fill: { color: T.chipBg }, line: { type: "none" }, rectRadius: 0.18,
   });
   slide.addText(label, {
     x: 0.75, y: 0.58, w: chipW, h: 0.36,
-    fontFace: FONT, fontSize: 11, bold: true, color: BRAND_DEEP, align: "center", charSpacing: 1.1, margin: 0,
+    fontFace: FONT, fontSize: 11, bold: true, color: BRAND_DEEP(), align: "center", charSpacing: 1.1, margin: 0,
   });
   slide.addText(item.title, {
     x: 0.75, y: 1.08, w: 11.8, h: 0.86,
@@ -83,12 +93,12 @@ function heading(pptx: PptxGenJS, slide: PptxGenJS.Slide, item: DeckSlide) {
 /** 표지 */
 function coverSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
   const slide = pptx.addSlide();
-  slide.background = { color: DARK };
+  slide.background = { color: DARK() };
   darkOrnaments(pptx, slide);
 
   slide.addText((plan.slogan || item.eyebrow).toUpperCase(), {
     x: 0.95, y: 1.62, w: 9, h: 0.34,
-    fontFace: FONT, fontSize: 13, bold: true, color: "6FA5F5", charSpacing: 1.6, margin: 0,
+    fontFace: FONT, fontSize: 13, bold: true, color: T.label, charSpacing: 1.6, margin: 0,
   });
   slide.addText(item.title || plan.brandName, {
     x: 0.92, y: 2.12, w: 10.2, h: 2.1,
@@ -97,14 +107,14 @@ function coverSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
   if (item.lead) {
     slide.addText(item.lead, {
       x: 0.95, y: 4.35, w: 8.9, h: 0.95,
-      fontFace: FONT, fontSize: 17, color: ICE, margin: 0, fit: "shrink", lineSpacingMultiple: 1.3,
+      fontFace: FONT, fontSize: 17, color: ICE(), margin: 0, fit: "shrink", lineSpacingMultiple: 1.3,
     });
   }
 
   // 하단 발표자 블록 — 원형 이니셜 + 이름/날짜
   slide.addShape(pptx.ShapeType.ellipse, {
     x: 0.95, y: 5.95, w: 0.62, h: 0.62,
-    fill: { color: BRAND }, line: { type: "none" },
+    fill: { color: BRAND() }, line: { type: "none" },
   });
   slide.addText(plan.brandName.trim().charAt(0), {
     x: 0.95, y: 5.95, w: 0.62, h: 0.62,
@@ -134,11 +144,11 @@ function pointsAsCards(pptx: PptxGenJS, slide: PptxGenJS.Slide, points: NonNulla
     });
     slide.addShape(pptx.ShapeType.ellipse, {
       x: x + 0.3, y: y + 0.32, w: 0.52, h: 0.52,
-      fill: { color: "E8F1FE" }, line: { type: "none" },
+      fill: { color: T.chipBg }, line: { type: "none" },
     });
     slide.addText(String(i + 1), {
       x: x + 0.3, y: y + 0.32, w: 0.52, h: 0.52,
-      fontFace: FONT, fontSize: 16, bold: true, color: BRAND_DEEP, align: "center", margin: 0,
+      fontFace: FONT, fontSize: 16, bold: true, color: BRAND_DEEP(), align: "center", margin: 0,
     });
     slide.addText(p.label, {
       x: x + 0.3, y: y + 1.06, w: cardW - 0.6, h: 0.62,
@@ -156,11 +166,11 @@ function pointsAsSplit(pptx: PptxGenJS, slide: PptxGenJS.Slide, item: DeckSlide,
   const points = (item.points ?? []).slice(0, 4);
   slide.addShape(pptx.ShapeType.roundRect, {
     x: 0.75, y, w: 4.55, h: 3.9,
-    fill: { color: DARK }, line: { type: "none" }, rectRadius: 0.14, shadow: softShadow(),
+    fill: { color: DARK() }, line: { type: "none" }, rectRadius: 0.14, shadow: softShadow(),
   });
   slide.addShape(pptx.ShapeType.ellipse, {
     x: 3.85, y: y + 2.6, w: 2.1, h: 2.1,
-    fill: { color: BRAND, transparency: 82 }, line: { type: "none" },
+    fill: { color: BRAND(), transparency: 82 }, line: { type: "none" },
   });
   slide.addText(item.lead ?? item.title, {
     x: 1.12, y: y + 0.42, w: 3.85, h: 3.1,
@@ -171,11 +181,11 @@ function pointsAsSplit(pptx: PptxGenJS, slide: PptxGenJS.Slide, item: DeckSlide,
     const ry = y + i * rowH;
     slide.addShape(pptx.ShapeType.ellipse, {
       x: 5.75, y: ry + rowH / 2 - 0.24, w: 0.48, h: 0.48,
-      fill: { color: "E8F1FE" }, line: { type: "none" },
+      fill: { color: T.chipBg }, line: { type: "none" },
     });
     slide.addText(String(i + 1), {
       x: 5.75, y: ry + rowH / 2 - 0.24, w: 0.48, h: 0.48,
-      fontFace: FONT, fontSize: 14, bold: true, color: BRAND_DEEP, align: "center", margin: 0,
+      fontFace: FONT, fontSize: 14, bold: true, color: BRAND_DEEP(), align: "center", margin: 0,
     });
     slide.addText(p.label, {
       x: 6.45, y: ry + rowH / 2 - 0.46, w: 6.1, h: 0.4,
@@ -201,17 +211,17 @@ function pointsAsSteps(pptx: PptxGenJS, slide: PptxGenJS.Slide, points: NonNulla
   const circleY = y + 0.15;
   slide.addShape(pptx.ShapeType.line, {
     x: 0.75 + colW / 2, y: circleY + 0.45, w: colW * (n - 1), h: 0,
-    line: { color: "BFD6F6", width: 1.5, dashType: "dash" },
+    line: { color: T.chipBg, width: 1.5, dashType: "dash" },
   });
   points.slice(0, n).forEach((p, i) => {
     const cx = 0.75 + i * colW + colW / 2;
     slide.addShape(pptx.ShapeType.ellipse, {
       x: cx - 0.45, y: circleY, w: 0.9, h: 0.9,
-      fill: { color: i === 0 ? BRAND : WHITE }, line: { color: BRAND, width: 1.5 }, shadow: softShadow(),
+      fill: { color: i === 0 ? BRAND() : WHITE }, line: { color: BRAND(), width: 1.5 }, shadow: softShadow(),
     });
     slide.addText(String(i + 1), {
       x: cx - 0.45, y: circleY, w: 0.9, h: 0.9,
-      fontFace: FONT, fontSize: 20, bold: true, color: i === 0 ? WHITE : BRAND_DEEP, align: "center", margin: 0,
+      fontFace: FONT, fontSize: 20, bold: true, color: i === 0 ? WHITE : BRAND_DEEP(), align: "center", margin: 0,
     });
     slide.addText(p.label, {
       x: 0.75 + i * colW + 0.12, y: circleY + 1.14, w: colW - 0.24, h: 0.56,
@@ -234,7 +244,7 @@ function addMetrics(pptx: PptxGenJS, slide: PptxGenJS.Slide, metrics: NonNullabl
     const x = 0.75 + i * (cardW + gap);
     slide.addShape(pptx.ShapeType.roundRect, {
       x, y, w: cardW, h: cardH,
-      fill: { color: i === 0 ? DARK : WHITE }, line: i === 0 ? { type: "none" } : { color: LINE, width: 0.75 },
+      fill: { color: i === 0 ? DARK() : WHITE }, line: i === 0 ? { type: "none" } : { color: LINE, width: 0.75 },
       rectRadius: 0.14, shadow: softShadow(),
     });
     const on = i === 0;
@@ -249,7 +259,7 @@ function addMetrics(pptx: PptxGenJS, slide: PptxGenJS.Slide, metrics: NonNullabl
     if (m.note) {
       slide.addText(m.note, {
         x: x + 0.32, y: y + (big ? 2.1 : 1.5), w: cardW - 0.64, h: 0.44,
-        fontFace: FONT, fontSize: 11.5, color: on ? ICE : INK_SOFT, margin: 0, fit: "shrink",
+        fontFace: FONT, fontSize: 11.5, color: on ? ICE() : INK_SOFT, margin: 0, fit: "shrink",
       });
     }
   });
@@ -262,7 +272,7 @@ function addMetrics(pptx: PptxGenJS, slide: PptxGenJS.Slide, metrics: NonNullabl
  */
 function bodySlide(pptx: PptxGenJS, item: DeckSlide, variant: number) {
   const slide = pptx.addSlide();
-  slide.background = { color: PANEL };
+  slide.background = { color: PANEL() };
   // 본문 캔버스 — 옅은 바탕 위 흰 판 (여백이 프레임 역할)
   slide.addShape(pptx.ShapeType.roundRect, {
     x: 0.38, y: 0.34, w: W - 0.76, h: H - 0.9,
@@ -324,7 +334,7 @@ function bodySlide(pptx: PptxGenJS, item: DeckSlide, variant: number) {
  */
 function statementSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: number, total: number) {
   const slide = pptx.addSlide();
-  slide.background = { color: BRAND_DEEP };
+  slide.background = { color: T.statement };
   // 모티프 — 밝은 원
   slide.addShape(pptx.ShapeType.ellipse, {
     x: 10.1, y: -2.6, w: 6.6, h: 6.6,
@@ -337,7 +347,7 @@ function statementSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: 
 
   slide.addText(item.eyebrow.toUpperCase(), {
     x: 0.95, y: 0.85, w: 9, h: 0.32,
-    fontFace: FONT, fontSize: 12, bold: true, color: "BAD3FA", charSpacing: 1.6, margin: 0,
+    fontFace: FONT, fontSize: 12, bold: true, color: T.ice, charSpacing: 1.6, margin: 0,
   });
   // 사업 정의 문장 — 이 덱에서 가장 큰 글자
   slide.addText(item.lead || item.title, {
@@ -359,7 +369,7 @@ function statementSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: 
       });
       slide.addText(p.label, {
         x: x + 0.28, y: 4.45, w: cardW - 0.56, h: 0.4,
-        fontFace: FONT, fontSize: 12.5, bold: true, color: BRAND_DEEP, margin: 0,
+        fontFace: FONT, fontSize: 12.5, bold: true, color: BRAND_DEEP(), margin: 0,
       });
       slide.addText(p.detail, {
         x: x + 0.28, y: 4.92, w: cardW - 0.56, h: 1.18,
@@ -370,12 +380,12 @@ function statementSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: 
   if (item.note) {
     slide.addText(item.note, {
       x: 0.95, y: 6.55, w: 11.4, h: 0.4,
-      fontFace: FONT, fontSize: 11, italic: true, color: "BAD3FA", margin: 0, fit: "shrink",
+      fontFace: FONT, fontSize: 11, italic: true, color: T.ice, margin: 0, fit: "shrink",
     });
   }
   slide.addText(`${page} / ${total}`, {
     x: 11.6, y: 7.02, w: 0.98, h: 0.24,
-    fontFace: FONT, fontSize: 9, bold: true, color: "9DBBEF", align: "right", margin: 0,
+    fontFace: FONT, fontSize: 9, bold: true, color: T.label, align: "right", margin: 0,
   });
   return slide;
 }
@@ -386,12 +396,12 @@ function statementSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: 
  */
 function visionSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: number, total: number) {
   const slide = pptx.addSlide();
-  slide.background = { color: DARK };
+  slide.background = { color: DARK() };
   darkOrnaments(pptx, slide);
 
   slide.addText(item.eyebrow.toUpperCase(), {
     x: 0.95, y: 0.85, w: 9, h: 0.32,
-    fontFace: FONT, fontSize: 12, bold: true, color: "6FA5F5", charSpacing: 1.6, margin: 0,
+    fontFace: FONT, fontSize: 12, bold: true, color: T.label, charSpacing: 1.6, margin: 0,
   });
   slide.addText(item.title, {
     x: 0.92, y: 1.4, w: 11.4, h: 0.9,
@@ -400,7 +410,7 @@ function visionSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: num
   if (item.lead) {
     slide.addText(`“${item.lead}”`, {
       x: 0.95, y: 2.5, w: 10.6, h: 1.15,
-      fontFace: FONT, fontSize: 21, bold: true, color: ICE, margin: 0, fit: "shrink", lineSpacingMultiple: 1.3,
+      fontFace: FONT, fontSize: 21, bold: true, color: ICE(), margin: 0, fit: "shrink", lineSpacingMultiple: 1.3,
     });
   }
 
@@ -422,7 +432,7 @@ function visionSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: num
       });
       slide.addText(r.a, {
         x: x + 0.28, y: 4.35, w: cardW - 0.56, h: 0.36,
-        fontFace: FONT, fontSize: 12, bold: true, color: BRAND_DEEP, margin: 0,
+        fontFace: FONT, fontSize: 12, bold: true, color: BRAND_DEEP(), margin: 0,
       });
       slide.addText(r.b, {
         x: x + 0.28, y: 4.78, w: cardW - 0.56, h: metrics.length ? 0.78 : 1.2,
@@ -447,12 +457,12 @@ function visionSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: num
 /** 마지막 슬라이드 — 요청·다음 단계 */
 function closingSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
   const slide = pptx.addSlide();
-  slide.background = { color: DARK };
+  slide.background = { color: DARK() };
   darkOrnaments(pptx, slide);
 
   slide.addText(item.eyebrow.toUpperCase(), {
     x: 0.95, y: 1.35, w: 8, h: 0.32,
-    fontFace: FONT, fontSize: 12, bold: true, color: "6FA5F5", charSpacing: 1.5, margin: 0,
+    fontFace: FONT, fontSize: 12, bold: true, color: T.label, charSpacing: 1.5, margin: 0,
   });
   slide.addText(item.title, {
     x: 0.92, y: 1.85, w: 10.4, h: 1.25,
@@ -461,7 +471,7 @@ function closingSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
   if (item.lead) {
     slide.addText(item.lead, {
       x: 0.95, y: 3.2, w: 9.4, h: 0.85,
-      fontFace: FONT, fontSize: 16, color: ICE, margin: 0, fit: "shrink", lineSpacingMultiple: 1.3,
+      fontFace: FONT, fontSize: 16, color: ICE(), margin: 0, fit: "shrink", lineSpacingMultiple: 1.3,
     });
   }
   // 다음 단계 — 번호 원 + 텍스트 행
@@ -469,7 +479,7 @@ function closingSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
     const ry = 4.35 + i * 0.72;
     slide.addShape(pptx.ShapeType.ellipse, {
       x: 0.95, y: ry, w: 0.46, h: 0.46,
-      fill: { color: BRAND }, line: { type: "none" },
+      fill: { color: BRAND() }, line: { type: "none" },
     });
     slide.addText(String(i + 1), {
       x: 0.95, y: ry, w: 0.46, h: 0.46,
@@ -477,7 +487,7 @@ function closingSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
     });
     slide.addText([
       { text: `${p.label}  `, options: { bold: true, color: WHITE } },
-      { text: p.detail, options: { color: ICE } },
+      { text: p.detail, options: { color: ICE() } },
     ], {
       x: 1.62, y: ry + 0.015, w: 10.6, h: 0.44,
       fontFace: FONT, fontSize: 13.5, margin: 0, fit: "shrink",
@@ -491,7 +501,8 @@ function closingSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
 }
 
 /** 슬라이드 구성을 PPTX 바이트로 */
-export async function renderDeckPptx(plan: DeckPlan): Promise<Buffer> {
+export async function renderDeckPptx(plan: DeckPlan, theme: DeckTheme = DEFAULT_DECK_THEME): Promise<Buffer> {
+  T = theme;
   const pptx = new PptxGenJS();
   pptx.defineLayout({ name: "PLAN16x9", width: W, height: H });
   pptx.layout = "PLAN16x9";
