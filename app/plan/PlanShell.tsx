@@ -78,10 +78,6 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
     <div className={styles.shell}>
       <nav className={`${styles.rail} ${railHidden ? styles.railOff : ""}`} aria-label="주요 메뉴">
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">오늘<br />창업</Link>
-        <button type="button" className={styles.railBtn} onClick={toggleRail} title="메뉴 접기" aria-label="메뉴 접기">
-          <span className={styles.foldIcon} aria-hidden="true">«</span>
-          <span className={styles.railLabel}>메뉴 접기</span>
-        </button>
         <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">
           {ICONS.plan}<span className={styles.railLabel}>내 플랜</span>
         </Link>
@@ -106,11 +102,15 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
           </Link>
         )}
       </nav>
-      {railHidden && (
-        <button type="button" className={styles.railOpen} onClick={toggleRail} aria-label="메뉴 펼치기" title="메뉴 펼치기">
-          »
-        </button>
-      )}
+      <button
+        type="button"
+        className={`${styles.railToggle} ${railHidden ? styles.railToggleOff : ""}`}
+        onClick={toggleRail}
+        aria-label={railHidden ? "메뉴 펼치기" : "메뉴 접기"}
+        title={railHidden ? "메뉴 펼치기" : "메뉴 접기"}
+      >
+        {railHidden ? "»" : "«"}
+      </button>
       <div className={`${styles.content} ${railHidden ? styles.contentWide : ""}`}>
         {back && (
           <Link href={back.href} className={styles.shellBack} aria-label={`${back.label}(으)로 돌아가기`}>

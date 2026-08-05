@@ -208,56 +208,60 @@
 .rail {
   transition: transform 0.22s ease;
 }
-/* 접힘 — 본문은 전체 폭을 쓰되, 좌상단 펼치기 버튼이 제목을 가리지 않게 아래로 민다 */
+/* 접었을 때도 손잡이 폭만큼은 비운다 — 본문 위에 손잡이가 얹히지 않게 */
 .contentWide {
-  margin-left: 0 !important;
-  padding-top: 46px;
-}
-
-/* 레일 안 '메뉴 접기' — 다른 항목과 같은 모양 */
-.foldIcon {
-  width: 22px;
-  flex: 0 0 auto;
-  text-align: center;
-  font-size: 16px;
-  font-weight: 800;
-  line-height: 1;
+  margin-left: 22px !important;
 }
 
 /*
- * 접힌 상태 전용 펼치기 버튼 — 레일이 있던 자리(좌상단 아이콘 줄)에 둔다.
- * 예전에는 레일 중간에 반쯤 걸친 탭이라 잘린 것처럼 보였다.
+ * 접기 토글 — 레일 오른쪽 가장자리에 붙는 손잡이(세로 탭).
+ * 좌하단에 두었더니 레일 하단의 마이페이지 아바타와 겹쳤다.
+ * 세로 중앙은 레일의 어떤 버튼도 쓰지 않는 자리라 충돌이 없다.
  */
-.railOpen {
+.railToggle {
   position: fixed;
-  left: 10px;
-  top: 14px;
+  left: 176px; /* 레일 폭 */
+  top: 50%;
+  transform: translate(-50%, -50%);
   z-index: 70;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
+  width: 22px;
+  height: 52px;
+  border-radius: 0 8px 8px 0;
   border: 1px solid var(--border-soft, #d5dbe2);
+  border-left: 0;
   background: #fff;
-  color: var(--text-body, #4e5968);
-  font-size: 16px;
+  color: var(--text-muted, #8b95a1);
+  font-size: 13px;
   font-weight: 800;
   line-height: 1;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(20, 32, 64, 0.16);
+  box-shadow: 2px 2px 10px rgba(20, 32, 64, 0.14);
   display: grid;
   place-items: center;
   padding: 0;
+  transition: left 0.22s ease, color 0.16s, background 0.16s;
 }
-.railOpen:hover {
+/* 접힌 상태 — 화면 왼쪽 끝에 붙는다 */
+.railToggleOff {
+  left: 0;
+  transform: translate(0, -50%);
+}
+.railToggle:hover {
   color: var(--blue, #3182f6);
-  border-color: var(--blue, #3182f6);
+  background: var(--blue-soft, #e8f3ff);
 }
 
 @media (max-width: 640px) {
-  .railOpen {
-    left: 8px;
-    top: 10px;
-    width: 36px;
-    height: 36px;
+  .railToggle {
+    left: 56px; /* 모바일 레일 폭 */
+    width: 20px;
+    height: 46px;
+  }
+  /* 미디어쿼리가 뒤에 오므로 접힘 상태도 여기서 다시 못박는다 */
+  .railToggleOff {
+    left: 0;
+  }
+  .contentWide {
+    margin-left: 20px !important;
   }
 }
