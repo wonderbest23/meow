@@ -16,6 +16,7 @@ import {
 import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
 import { estimateMinutes } from "../../lib/plan-builder/questions";
 import ConsistencyPanel from "./ConsistencyPanel";
+import PlanLoading from "./PlanLoading";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
 import styles from "./PlanOverview.module.css";
 
@@ -197,12 +198,14 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   // 전역 순번(1-based)
   let counter = 0;
 
-  // 첫 페인트 전(로컬 캐시 읽기 전)에는 빈 프레임만 — 0%→완성으로 튀는 화면 방지
+  // 첫 페인트 전(로컬 캐시 읽기 전)에는 공용 로딩 — 0%→완성으로 튀는 화면 방지
   if (!ready) {
     return (
       <div className={styles.page}>
         <div className={styles.frame}>
-          <div className={styles.app} aria-busy="true" />
+          <div className={styles.app}>
+            <PlanLoading variant="rows" note="플랜을 불러오는 중…" />
+          </div>
         </div>
       </div>
     );

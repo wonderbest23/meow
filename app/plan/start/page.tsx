@@ -7,6 +7,7 @@ import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
+import PlanLoading from "../PlanLoading";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
 function Select({
@@ -304,7 +305,7 @@ export default function PlanStartPage() {
   const others = visible.filter((p) => p !== featured);
 
   // 로그인 확인 전에는 아무것도 단정하지 않는다(깜빡임 방지)
-  if (authed === null) return <div className={styles.page} aria-busy="true" />;
+  if (authed === null) return <div className={styles.page}><div className={styles.frame}><PlanLoading variant="deck" count={4} note="준비하는 중…" /></div></div>;
 
   // 실제로 플랜을 만드는 단계 — 여기부터는 로그인이 필요하다
   if (!authed) {

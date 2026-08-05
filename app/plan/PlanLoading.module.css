@@ -1,0 +1,98 @@
+/*
+ * 플랜 빌더 공용 로딩 표현.
+ * 화면마다 제각각(빈 화면 / 자체 스켈레톤)이던 것을 하나로 모은다.
+ * 규칙: 골격이 먼저 보이고 은은하게 맥동한다. 스피너는 쓰지 않는다.
+ */
+
+@keyframes planSkelPulse {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+.wrap {
+  padding: 26px 30px 40px;
+}
+
+.bar,
+.title,
+.line,
+.card,
+.chip {
+  border-radius: 8px;
+  background: var(--border-soft, #e9edf2);
+  animation: planSkelPulse 1.4s ease-in-out infinite;
+}
+
+.title {
+  width: 42%;
+  max-width: 320px;
+  height: 28px;
+  margin-bottom: 14px;
+}
+.bar {
+  width: 26%;
+  max-width: 200px;
+  height: 13px;
+  margin-bottom: 30px;
+}
+
+/* 카드 격자 — 목록·시작 화면용 */
+.deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 20px;
+}
+.card {
+  aspect-ratio: 4 / 5;
+  border-radius: 16px;
+}
+
+/* 줄 목록 — 개요·문서·마이페이지용 */
+.rows {
+  display: grid;
+  gap: 12px;
+}
+.row {
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 16px;
+  padding: 18px 20px;
+  background: var(--surface, #fff);
+}
+.line {
+  height: 13px;
+  margin-bottom: 10px;
+}
+.line:last-child {
+  margin-bottom: 0;
+}
+.lineHead {
+  width: 32%;
+  height: 17px;
+  margin-bottom: 14px;
+}
+.lineShort {
+  width: 58%;
+}
+
+.note {
+  margin: 26px 0 0;
+  text-align: center;
+  color: var(--text-muted, #8b95a1);
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .wrap {
+    padding: 16px 14px 28px;
+  }
+  .deck {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bar, .title, .line, .card, .chip {
+    animation: none;
+  }
+}

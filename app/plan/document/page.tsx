@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { FileDown, FileText, Presentation, LayoutGrid, Lock, Maximize2, X } from "lucide-react";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
+import PlanLoading from "../PlanLoading";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import InlineDocEditor from "../InlineDocEditor";
 import wiz from "../SectionWizard.module.css";
@@ -347,19 +348,9 @@ export default function PlanDocumentPage() {
 
             <div className={styles.canvas}>
               {!ready ? (
-                /* 불러오는 동안 문서 모양 스켈레톤 — 빈 화면이면 멈춘 것처럼 보인다 */
-                <div className={styles.paper} aria-busy="true" aria-label="문서를 불러오는 중">
-                  <div className={styles.skelTitle} />
-                  <div className={styles.skelSub} />
-                  {[0, 1, 2].map((i) => (
-                    <div key={i} className={styles.skelBlock}>
-                      <div className={styles.skelHead} />
-                      <div className={styles.skelLine} />
-                      <div className={styles.skelLine} />
-                      <div className={styles.skelLineShort} />
-                    </div>
-                  ))}
-                  <p className={styles.skelNote}>문서를 불러오는 중…</p>
+                /* 불러오는 동안 — 앱 전체가 공유하는 로딩 표현 */
+                <div className={styles.paper}>
+                  <PlanLoading variant="document" count={3} note="문서를 불러오는 중…" />
                 </div>
               ) : sections.length === 0 ? (
                 <div className={styles.empty}>

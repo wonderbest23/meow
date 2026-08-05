@@ -7,6 +7,7 @@ import { hydrateFromServer, type PlanState } from "../../../lib/plan-builder/pla
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
+import PlanLoading from "../PlanLoading";
 
 /*
  * /plan/me — 마이페이지.
@@ -60,7 +61,7 @@ export default function PlanMePage() {
     router.push("/plan");
   }
 
-  if (account === null) return <div className={styles.page} aria-busy="true" />;
+  if (account === null) return <div className={styles.page}><PlanLoading variant="rows" count={3} note="계정 정보를 불러오는 중…" /></div>;
   if (!account.authenticated) {
     return (
       <div className={styles.page}>

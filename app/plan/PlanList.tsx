@@ -7,6 +7,7 @@ import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { Pencil, FileText, Plus, Rocket, TrendingUp, Landmark, ClipboardList, Users, Calculator, BarChart3 } from "lucide-react";
 import styles from "./PlanList.module.css";
+import PlanLoading from "./PlanLoading";
 
 /**
  * 유형별 시각 정체성 — 색·아이콘·짧은 라벨.
@@ -50,7 +51,9 @@ export default function PlanList() {
   if (!state) {
     return (
       <div className={styles.page}>
-        <div className={styles.frame} />
+        <div className={styles.frame}>
+          <PlanLoading variant="deck" note="내 플랜을 불러오는 중…" />
+        </div>
       </div>
     );
   }
