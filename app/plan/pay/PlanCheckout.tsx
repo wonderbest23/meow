@@ -7,6 +7,7 @@ import Link from "next/link";
 const NICEPAY_SDK_URL = "https://pay.nicepay.co.kr/v1/js/";
 import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
+import { Spinner } from "../PlanLoading";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -154,7 +155,13 @@ export default function PlanCheckout() {
             {info.price.toLocaleString("ko-KR")}원
             <span>문서 1부 · 1회 결제</span>
           </div>
-        ) : null}
+        ) : (
+          /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */
+          <div className={styles.price} aria-busy="true">
+            <Spinner />
+            <span>결제 정보를 확인하는 중…</span>
+          </div>
+        )}
 
         {info && !info.payable ? (
           <p className={styles.notice}>
@@ -167,7 +174,7 @@ export default function PlanCheckout() {
             onClick={startPayment}
             disabled={phase === "preparing" || phase === "opening"}
           >
-            {phase === "preparing" ? "결제 준비 중…" : phase === "opening" ? "결제창을 여는 중…" : "카드로 결제하기"}
+            {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : "카드로 결제하기"}
           </button>
         )}
 

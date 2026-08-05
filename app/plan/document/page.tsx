@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { FileDown, FileText, Presentation, LayoutGrid, Lock, Maximize2, X } from "lucide-react";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
-import PlanLoading from "../PlanLoading";
+import PlanLoading, { Spinner } from "../PlanLoading";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import InlineDocEditor from "../InlineDocEditor";
 import wiz from "../SectionWizard.module.css";
@@ -334,13 +334,13 @@ export default function PlanDocumentPage() {
                   </span>
                 )}
                 <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleExport("docx"))} title={isSample ? "샘플은 내려받을 수 없습니다" : locked ? "결제 후 열립니다" : "Word로 내려받기"}>
-                  {locked ? <Lock size={13} /> : <FileText size={14} />} {exporting === "docx" ? "내보내는 중…" : "Word"}
+                  {exporting === "docx" ? <Spinner /> : locked ? <Lock size={13} /> : <FileText size={14} />} {exporting === "docx" ? "내보내는 중…" : "Word"}
                 </button>
                 <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleDeck())} title={locked ? "결제 후 열립니다" : "발표자료(PPT) 만들기"}>
-                  {locked ? <Lock size={13} /> : <Presentation size={14} />} {exporting === "pptx" ? "만드는 중…" : "PPT"}
+                  {exporting === "pptx" ? <Spinner /> : locked ? <Lock size={13} /> : <Presentation size={14} />} {exporting === "pptx" ? "만드는 중…" : "PPT"}
                 </button>
                 <button className={`${styles.tool} ${styles.toolPrimary}`} disabled={busy} onClick={() => (locked ? goPay() : handleExport("pdf"))} title={locked ? "결제 후 열립니다" : "PDF로 내려받기"}>
-                  {locked ? <Lock size={13} /> : <FileDown size={14} />} {exporting === "pdf" ? "내보내는 중…" : "PDF"}
+                  {exporting === "pdf" ? <Spinner /> : locked ? <Lock size={13} /> : <FileDown size={14} />} {exporting === "pdf" ? "내보내는 중…" : "PDF"}
                 </button>
               </div>
               {deckError ? <p className={styles.deckError}>{deckError}</p> : null}

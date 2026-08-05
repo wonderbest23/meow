@@ -8,6 +8,7 @@ import Link from "@tiptap/extension-link";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { ChartFigure } from "./chart-node";
 import styles from "./InlineDocEditor.module.css";
+import { Spinner } from "./PlanLoading";
 
 export interface InlineDocEditorProps {
   /** 초기 본문 (서버에서 렌더한 HTML) */
@@ -114,7 +115,7 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
 
       <div className={`${styles.status} ${status === "failed" ? styles.statusFail : ""}`} aria-live="polite">
         {status === "saving"
-          ? "저장 중…"
+          ? <><Spinner /> 저장 중…</>
           : status === "saved"
             ? "저장됨"
             : status === "failed"

@@ -23,6 +23,7 @@ import {
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
+import { Spinner } from "./PlanLoading";
 import InlineDocEditor from "./InlineDocEditor";
 import PlanGate from "./PlanGate";
 import { htmlToMarkdown } from "../../lib/plan-builder/html-to-markdown";
@@ -727,7 +728,7 @@ export default function SectionWizard({
                 <>
                   <button className={styles.btn} onClick={() => setEditingMd(null)}>취소</button>
                   <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={saveEdited}>
-                    {generating ? "저장 중…" : "저장"}
+                    {generating ? <><Spinner /> 저장 중…</> : "저장"}
                   </button>
                 </>
               ) : generatedHtml ? (
@@ -740,7 +741,7 @@ export default function SectionWizard({
                     onClick={requestRegenerate}
                     title={locked ? "잠긴 섹션입니다" : undefined}
                   >
-                    {generating ? "생성 중…" : locked ? <><Lock size={13} /> 잠김</> : <><RefreshCw size={13} /> 다시 생성</>}
+                    {generating ? <><Spinner /> 생성 중…</> : locked ? <><Lock size={13} /> 잠김</> : <><RefreshCw size={13} /> 다시 생성</>}
                   </button>
                 </>
               ) : (
@@ -752,7 +753,7 @@ export default function SectionWizard({
                     disabled={generating}
                     onClick={attemptGenerate}
                   >
-                    {generating ? "생성 중…" : complete ? "완료하고 생성 →" : `${totalReq - answeredReq}개 남음`}
+                    {generating ? <><Spinner /> 생성 중…</> : complete ? "완료하고 생성 →" : `${totalReq - answeredReq}개 남음`}
                   </button>
                 </>
               )}
@@ -816,7 +817,7 @@ function AISuggest({
     <div>
       {!list && (
         <button className={styles.suggestBtn} disabled={loading} onClick={onLoad}>
-          <Sparkles size={13} /> {loading ? "추천 불러오는 중…" : "AI 추천 받기"}
+          {loading ? <Spinner /> : <Sparkles size={13} />} {loading ? "추천 불러오는 중…" : "AI 추천 받기"}
         </button>
       )}
       {list && list.length > 0 && (
@@ -827,7 +828,7 @@ function AISuggest({
             </button>
           ))}
           <button className={styles.suggestBtn} disabled={loading} onClick={onLoad}>
-            <Sparkles size={12} /> {loading ? "다시 불러오는 중…" : "다른 추천 받기"}
+            {loading ? <Spinner /> : <Sparkles size={12} />} {loading ? "다시 불러오는 중…" : "다른 추천 받기"}
           </button>
         </div>
       )}

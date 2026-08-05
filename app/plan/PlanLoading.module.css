@@ -96,3 +96,28 @@
     animation: none;
   }
 }
+
+
+/*
+ * 인라인 스피너 — 버튼이 일하는 중임을 글자 말고 움직임으로도 알린다.
+ * 로딩 골격(스켈레톤)은 화면 단위, 이 스피너는 버튼 단위로 쓴다.
+ */
+@keyframes planSpin {
+  to { transform: rotate(360deg); }
+}
+.spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  vertical-align: -0.12em;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  opacity: 0.85;
+  animation: planSpin 0.7s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation-duration: 2.4s;
+  }
+}

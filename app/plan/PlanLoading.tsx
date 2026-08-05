@@ -2,6 +2,11 @@
 
 import styles from "./PlanLoading.module.css";
 
+/** 버튼 안에서 쓰는 인라인 스피너 — 글자 크기를 따라간다 */
+export function Spinner() {
+  return <span className={styles.spinner} aria-hidden="true" />;
+}
+
 export type PlanLoadingVariant = "deck" | "rows" | "document";
 
 export interface PlanLoadingProps {
