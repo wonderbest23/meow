@@ -64,43 +64,43 @@ export function HomeHeroScene() {
           <article className="hero-report-card">
             <header>
               <div><i /><i /><i /></div>
-              <span><Sparkles /> 맞춤 사업 실행 보고서</span>
+              <span><Sparkles /> 사업계획서 플랜 빌더</span>
               <em><i /> 준비됨</em>
             </header>
             <div className="hero-report-workspace">
               <aside>
-                <strong>최종 결과</strong>
-                <span className="active"><FileText /> 사업 요약</span>
-                <span><BarChart3 /> 시장 확인</span>
-                <span><Presentation /> 사업소개서</span>
-                <span><Globe2 /> 판매 페이지</span>
+                <strong>플랜 개요</strong>
+                <span className="active"><FileText /> 사업 개요</span>
+                <span><BarChart3 /> 고객과 시장</span>
+                <span><Presentation /> 사업 전략</span>
+                <span><Globe2 /> 재무 계획</span>
               </aside>
               <section>
-                <div className="hero-report-kicker"><span>추천 1순위</span><em>적합도 86%</em></div>
-                <h2>생활권 반려동물<br />긴급 돌봄 연결</h2>
-                <p>고객 문제와 가격을 먼저 확인하고 한 생활권에서 작게 시작하는 실행안입니다.</p>
+                <div className="hero-report-kicker"><span>창업 초기 · 사업계획서</span><em>진행률 100%</em></div>
+                <h2>새벽커피<br />사업계획서</h2>
+                <p>질문에 답한 사실만으로 인공지능이 섹션별 본문과 12개월 손익표를 완성했습니다.</p>
                 <div className="hero-report-metrics">
-                  <span><small>첫 검증</small><strong>14일</strong></span>
-                  <span><small>확인 고객</small><strong>10명</strong></span>
-                  <span><small>예상 손익분기</small><strong>32만원</strong></span>
+                  <span><small>완료 섹션</small><strong>25개</strong></span>
+                  <span><small>손익분기</small><strong>7개월차</strong></span>
+                  <span><small>작성 시간</small><strong>52분</strong></span>
                 </div>
                 <div className="hero-report-progress" aria-hidden="true"><i /><i /><i /><i /><i /></div>
                 <div className="hero-report-checks">
-                  <span><Check /> 사업 방향 확인</span>
-                  <span><Check /> 실행 문서 완성</span>
-                  <span><Check /> 첫 고객 일정</span>
+                  <span><Check /> 전 섹션 생성 완료</span>
+                  <span><Check /> 재무표 자동 계산</span>
+                  <span><Check /> 발표자료 준비됨</span>
                 </div>
               </section>
             </div>
-            <footer><span>PDF</span><span>WORD</span><span>PPTX</span><strong>전체 화면 미리보기</strong></footer>
+            <footer><span>PDF</span><span>WORD</span><span>PPT</span><strong>문서 보기</strong></footer>
             <i className="hero-report-scan" aria-hidden="true" />
           </article>
         </div>
 
-        <div className="hero-floating-file hero-file-plan"><FileText /><span><strong>사업계획서</strong><small>PDF · 24쪽</small></span><Check /></div>
-        <div className="hero-floating-file hero-file-market"><BarChart3 /><span><strong>시장·고객 진단</strong><small>WORD</small></span><Check /></div>
-        <div className="hero-floating-file hero-file-deck"><Presentation /><span><strong>사업소개서</strong><small>PPTX</small></span><Check /></div>
-        <div className="hero-floating-file hero-file-web"><Globe2 /><span><strong>판매 페이지</strong><small>WEB</small></span><Check /></div>
+        <div className="hero-floating-file hero-file-plan"><FileText /><span><strong>사업계획서</strong><small>PDF · Word</small></span><Check /></div>
+        <div className="hero-floating-file hero-file-market"><BarChart3 /><span><strong>재무 모델</strong><small>3년 추정</small></span><Check /></div>
+        <div className="hero-floating-file hero-file-deck"><Presentation /><span><strong>발표자료</strong><small>PPT</small></span><Check /></div>
+        <div className="hero-floating-file hero-file-web"><Globe2 /><span><strong>정부지원 PSST</strong><small>4부 구성</small></span><Check /></div>
       </div>
     </div>
   );

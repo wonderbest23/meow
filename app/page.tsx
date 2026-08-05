@@ -87,7 +87,7 @@ import { RegionalCoveragePanel } from "../components/regional-coverage-panel";
 import { QualityAssurancePanel } from "../components/quality-assurance-panel";
 import { GrantMatcherPanel } from "../components/grant-matcher-panel";
 import { ServiceOpsPanel } from "../components/service-ops-panel";
-import { HomeHeroScene, HomeResearchEvidence } from "../components/home-hero-scene";
+import { HomeHeroScene } from "../components/home-hero-scene";
 import { BeginnerMissionRoadmap } from "../components/beginner-mission-roadmap";
 import { DeliveryDocumentPreview } from "../components/delivery-document-preview";
 import {
@@ -542,18 +542,14 @@ function Home({
       .catch(() => undefined);
   }, []);
   const deliverables = [
-    "사업 실행 요약서",
-    "고객·시장 진단서",
-    "상품 구성·손익표",
-    "이름·소개 문구 모음",
-    "판매 페이지 원고",
-    "30일 첫 고객 실행안",
-    "근거 기반 사업계획서",
-    "영업 운영 준비서",
-    "실행 결과 검증 보고서",
-    "공공지원사업 신청 초안",
-    "사업소개서 파워포인트",
-    "투자제안서(IR) 파워포인트",
+    "창업 초기 사업계획서 — 지원·대출 심사용",
+    "성장·확장 사업계획서 — 실적 기반 확장 자금",
+    "정부지원 PSST 사업계획서 — 예비·초기창업패키지 양식",
+    "간단 요약 계획서 — 첫 미팅·1차 심사용",
+    "내부 전략 문서 — 팀 실행 계획",
+    "창업 초기 재무 예측 — 12개월 손익",
+    "정밀 재무 모델 — 3년 추정·민감도",
+    "발표자료(PPT) — 완성 문서 기반 자동 구성",
   ];
   const requestCustomHomepage = () => {
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
@@ -575,49 +571,47 @@ function Home({
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         <section className="simple-home-choice">
           <div className="home-hero-copy">
-            <span className="section-label">직업 탐색부터 사업 실행까지</span>
-            <h1>아이디어를 현실로,<br />오늘창업</h1>
-            <p>완벽하지 않아도 괜찮습니다. 아이디어만 들고 오세요. 함께 가능성을 확인하고, 바로 시작할 수 있는 방법과 계획을 만들어드립니다.</p>
+            <span className="section-label">질문에 답하면 문서가 완성됩니다</span>
+            <h1>사업계획서,<br />오늘 완성하세요</h1>
+            <p>사업 정보를 적고 질문에 답하면, 인공지능이 섹션별로 사업계획서를 씁니다. 정부지원 PSST부터 재무 모델까지 7가지 문서 유형을 같은 답변으로 만들 수 있습니다.</p>
             <div className="home-hero-actions">
               <button className="conversation-choice" onClick={onStart} aria-label="나에게 맞는 사업 찾기 시작"><strong>시작하기</strong></button>
             </div>
-            <p className="home-hero-assurance"><ShieldCheck /> 사업 아이디어 찾기는 무료 · 결과물 제작은 선택</p>
+            <p className="home-hero-assurance"><ShieldCheck /> 완성 샘플 3부 무료 열람 · 앞 2개 섹션 무료 작성</p>
           </div>
         </section>
         <a className="home-scroll-hint" href="#how"><ArrowDown /> 아래에서 제공 범위 확인</a>
       </div>
 
-      <HomeResearchEvidence />
-
       <section className="home-proof-bar" aria-label="서비스 구성 요약">
-        <div><strong>무료</strong><span>사업 아이디어 탐색</span></div>
-        <div><strong>12종</strong><span>문서 10종과 발표자료 2종</span></div>
-        <div><strong>즉시</strong><span>결제 후 완성본 자동 제작</span></div>
-        <div><strong>PDF·워드·PPTX</strong><span>바로 쓰는 문서 형식</span></div>
+        <div><strong>7가지</strong><span>문서 유형 — 계획서·재무·PSST</span></div>
+        <div><strong>무료</strong><span>샘플 3부 열람 · 앞 2개 섹션 작성</span></div>
+        <div><strong>1회</strong><span>답변 입력 — 다른 유형에 그대로 재사용</span></div>
+        <div><strong>PDF·Word·PPT</strong><span>완성 문서와 발표자료 내려받기</span></div>
       </section>
 
       <section className="home-section home-method" id="how">
         <div className="home-section-heading">
           <span>진행 방식</span>
-          <h2>아이디어만 주는 것이 아니라<br />확인하고 실행하는 순서까지 만듭니다</h2>
-          <p>초보자가 다음 행동을 고민하지 않도록 입력, 근거 확인, 결과물, 실행 미션을 한 흐름으로 연결합니다.</p>
+          <h2>질문에 답하기만 하면<br />문서가 순서대로 완성됩니다</h2>
+          <p>글쓰기는 인공지능이 맡습니다. 사용자는 사업에 대한 사실만 답하면 됩니다.</p>
         </div>
         <div className="home-method-flow">
-          <article><em>01</em><MessageCircle /><h3>나를 먼저 파악</h3><p>경험, 관심사, 가능한 시간, 자본과 지역을 대화 또는 8개 질문으로 정리합니다.</p></article>
-          <article><em>02</em><BarChart3 /><h3>사업 가능성 확인</h3><p>고객 문제, 기존 대안, 가격과 인허가 조건을 확인하고 아직 모르는 값은 가정으로 남깁니다.</p></article>
-          <article><em>03</em><PackageCheck /><h3>실행 자료 제작</h3><p>시장 진단, 손익표, 사업계획서, 판매 페이지와 첫 고객 실행안을 순서대로 완성합니다.</p></article>
-          <article><em>04</em><CalendarDays /><h3>선택 실행 도우미</h3><p>결과물을 받은 뒤 필요할 때 사업자 등록, 계약, 세무, 홍보를 한 번에 한 가지씩 확인합니다.</p></article>
+          <article><em>01</em><MessageCircle /><h3>사업 정보 입력</h3><p>사업 이름과 한두 문장 설명이면 시작할 수 있습니다. 업종·지역은 선택입니다.</p></article>
+          <article><em>02</em><PackageCheck /><h3>문서 유형 선택</h3><p>창업 초기·성장 확장·정부지원 PSST·재무 모델 등 7가지 중 목적에 맞는 문서를 고릅니다.</p></article>
+          <article><em>03</em><BarChart3 /><h3>질문 답변 → AI 작성</h3><p>섹션마다 필요한 질문에 답하면 인공지능이 본문을 쓰고, 재무 숫자는 답변으로 자동 계산됩니다.</p></article>
+          <article><em>04</em><CalendarDays /><h3>문서 보기·내려받기</h3><p>완성 문서를 화면에서 확인하고 PDF·Word로 받거나, 발표자료(PPT)를 만듭니다.</p></article>
         </div>
       </section>
 
       <section className="home-deliverables" id="deliverables">
         <div className="home-deliverables-inner">
           <div className="home-deliverables-copy">
-            <span>최종 결과물</span>
-            <h2>시작하면 무엇을 받는지<br />처음부터 분명하게</h2>
-            <p>진행 단계가 끝날 때마다 결과물을 확인하고 수정합니다. 실행 문서는 PDF와 워드로, 사업소개서와 투자제안서는 파워포인트로 받을 수 있습니다.</p>
+            <span>문서 유형</span>
+            <h2>목적에 맞는 문서를<br />골라서 만드세요</h2>
+            <p>한 번 입력한 답변은 다른 유형에 그대로 이어집니다. 문서는 PDF와 수정 가능한 Word로, 발표자료는 PPT로 받을 수 있습니다.</p>
             <ul>{deliverables.map((item) => <li key={item}><Check /> {item}</li>)}</ul>
-            <button className="home-sample-preview" onClick={onPreview}>완성 결과 예시 보기</button>
+            <a className="home-sample-preview" href="/plan">완성 샘플 3부 보기</a>
           </div>
         </div>
       </section>
@@ -626,7 +620,7 @@ function Home({
         <div className="home-evidence-intro">
           <span>근거 확인 방식</span>
           <h2>인공지능의 답을<br />그대로 믿게 하지 않습니다</h2>
-          <p>추천은 출발점입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.</p>
+          <p>생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.</p>
           <div className="home-evidence-note"><ShieldCheck /><p><strong>확정처럼 쓰지 않는 원칙</strong>공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p></div>
         </div>
         <div className="home-evidence-table">
@@ -641,29 +635,24 @@ function Home({
         <div className="home-price-inner">
           <div className="home-price-copy">
             <span>이용 안내</span>
-            <h2>아이디어는 무료로 찾고,<br />실행 자료가 필요할 때만 신청하세요</h2>
-            <p>사업자등록 없이 추천 사업을 살펴볼 수 있습니다. 마음에 드는 사업을 고른 뒤에만 전체 결과물 제작을 신청합니다.</p>
-            <div><ShieldCheck /><span><strong>무료 탐색에는 결제 정보가 필요하지 않습니다</strong><small>결과물 제작 신청은 계좌이체로 진행합니다</small></span></div>
+            <h2>무료로 품질을 확인하고,<br />문서가 필요할 때만 결제하세요</h2>
+            <p>완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.</p>
+            <div><ShieldCheck /><span><strong>무료 범위에는 결제 정보가 필요하지 않습니다</strong><small>결제는 신용·체크카드로 안전하게 진행됩니다</small></span></div>
           </div>
           <div className="home-price-options">
             <article className="home-price-panel">
-              <header><span>맞춤 사업 실행 파일</span><h3>전체 결과물 자동 제작</h3><p>{paymentAllowed ? "계좌이체 신청 가능" : businessInfo?.mailOrderStatus === "preparing" ? "통신판매업 신고 준비 중" : "정식 판매 준비 중"}</p></header>
-              <div className="home-price-value"><span><s>{PACKAGE_LIST_AMOUNT.toLocaleString("ko-KR")}원</s><em>베타 할인가</em></span><strong className="home-price-number">{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></strong></div>
+              <header><span>사업계획서 플랜 빌더</span><h3>문서 1부 · 모든 유형 동일가</h3><p>구독이 아닙니다 — 필요한 문서만 1회 결제</p></header>
+              <div className="home-price-value"><span><em>문서 1부당</em></span><strong className="home-price-number">{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></strong></div>
               <ul>
-                <li><Check /> 결제 전 사업 초안·발표자료·판매 페이지 미리보기</li>
-                <li><Check /> 실행 문서 10종과 발표자료 2종</li>
-                <li><Check /> 기본 홈페이지 자동 제작·직접 수정</li>
-                <li><Check /> PDF·워드·파워포인트 내려받기</li>
-                <li><Check /> 단계별 진행 없이 완성본 한 번에 제공</li>
-                <li><Check /> 인공지능 초안 수정·다시 만들기</li>
+                <li><Check /> 결제한 문서의 전체 섹션 생성</li>
+                <li><Check /> PDF·수정 가능한 Word 내려받기</li>
+                <li><Check /> 발표자료(PPT) 자동 구성</li>
+                <li><Check /> 답변 기반 12개월 손익표 자동 계산</li>
+                <li><Check /> 같은 사업의 다른 유형에 답변 그대로 재사용</li>
+                <li><Check /> 섹션 수정·다시 생성 무제한</li>
               </ul>
-              <button onClick={onStart}>무료 초안부터 보기 <ArrowRight /></button>
-              <small>{paymentAllowed ? "결과물 제작 신청 시 계좌이체" : "판매자 정보 확인 후 계좌이체가 열립니다"}</small>
-            </article>
-            <article className="home-custom-price">
-              <span><MessageCircle /></span>
-              <div><small>선택 서비스</small><strong>맞춤 홈페이지 제작</strong><p>디자인과 추가 기능을 상담한 뒤 범위와 일정을 확정합니다.</p></div>
-              <div><strong>{CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터</strong><button type="button" onClick={requestCustomHomepage}>상담하기 <ArrowRight /></button></div>
+              <button onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
+              <small>신용·체크카드 결제 · 나이스페이 안전 결제</small>
             </article>
           </div>
         </div>
@@ -672,16 +661,16 @@ function Home({
       <section className="home-faq" aria-labelledby="home-faq-title">
         <div><span>자주 묻는 질문</span><h2 id="home-faq-title">시작 전에 확인하세요</h2></div>
         <div>
-          <details><summary>사업 아이디어가 없어도 시작할 수 있나요?<ChevronDown /></summary><p>네. 지금까지의 경험, 관심사, 가능한 시간과 자본을 바탕으로 현실적인 후보부터 찾습니다.</p></details>
-          <details><summary>사업자등록을 해야 아이디어를 볼 수 있나요?<ChevronDown /></summary><p>아니요. 아이디어 탐색과 추천 확인은 사업자등록 없이 무료로 이용할 수 있습니다. 전체 결과물 제작을 신청할 때만 로그인과 결제 절차가 필요합니다.</p></details>
-          <details><summary>언제 비용을 내나요?<ChevronDown /></summary><p>추천 사업을 고른 뒤 사업 초안, 발표자료 3장과 판매 페이지를 무료로 미리봅니다. PDF·워드·PPTX 다운로드나 홈페이지 공개를 선택할 때만 계좌이체로 신청합니다.</p></details>
-          <details><summary>결과가 성공을 보장하나요?<ChevronDown /></summary><p>아닙니다. 추천과 문서는 실행을 위한 초안입니다. 시장 반응은 고객 인터뷰와 실제 결제로 확인하며, 세무·법률·인허가의 최종 판단은 공식 기관이나 전문가 확인이 필요합니다.</p></details>
-          <details><summary>문서를 직접 수정할 수 있나요?<ChevronDown /></summary><p>판매 페이지는 화면에서 직접 수정하고 전체 화면으로 확인할 수 있습니다. 문서는 워드로 내려받아 이어서 편집할 수 있습니다.</p></details>
+          <details><summary>글을 잘 못 써도 만들 수 있나요?<ChevronDown /></summary><p>네. 사용자는 사업에 대한 사실(가격, 고객, 비용 등)만 답하면 되고, 문장은 인공지능이 씁니다. 답이 어려운 질문은 AI 추천 답변을 참고할 수 있습니다.</p></details>
+          <details><summary>결제 전에 품질을 확인할 수 있나요?<ChevronDown /></summary><p>네. 실제 인공지능으로 만든 완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 내 사업으로도 앞 2개 섹션을 무료로 만들어 직접 확인할 수 있습니다.</p></details>
+          <details><summary>언제 비용을 내나요?<ChevronDown /></summary><p>3번째 섹션부터 결제가 필요합니다. 문서 1부당 149,000원 1회 결제이며, 결제한 문서의 전체 섹션 생성과 PDF·Word·PPT 내려받기가 열립니다. 신용·체크카드로 결제합니다.</p></details>
+          <details><summary>정부지원사업 양식에 맞나요?<ChevronDown /></summary><p>정부지원 PSST 유형은 예비창업패키지 등 심사 기준에 맞춰 문제인식·실현가능성·성장전략·팀구성 4부로 완성됩니다. 제출 전 해당 공고의 세부 양식을 확인하세요.</p></details>
+          <details><summary>재무 숫자도 만들어주나요?<ChevronDown /></summary><p>가격·원가·고정비 답변을 근거로 12개월 손익표를 자동 계산해 문서에 넣습니다. 정밀 재무 모델은 3년 추정과 민감도까지 포함합니다. 확인되지 않은 수치는 사실처럼 쓰지 않습니다.</p></details>
         </div>
       </section>
 
       <footer className="home-footer">
-        <div><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /><p>경험에서 사업 기회를 찾고, 근거와 실행 순서까지 만드는 창업 실행 서비스</p></div>
+        <div><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /><p>질문에 답하면 인공지능이 사업계획서·재무 모델·발표자료를 완성하는 문서 서비스</p></div>
         <nav aria-label="하단 안내"><a href="/business-info">사업자·통신판매 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
         <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><small>© 2026 오늘창업</small></div>
       </footer>
