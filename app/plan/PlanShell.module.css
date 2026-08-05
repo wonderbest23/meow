@@ -160,3 +160,41 @@
     backdrop-filter: blur(6px);
   }
 }
+
+
+/* 레일 접기 */
+.railOff {
+  transform: translateX(-100%);
+}
+.rail {
+  transition: transform 0.22s ease;
+}
+.contentWide {
+  margin-left: 0 !important;
+}
+
+/* 접기 토글 — 좌하단 고정, 레일 위/본문 위 어디서든 같은 자리 */
+.railToggle {
+  position: fixed;
+  left: 10px;
+  bottom: 14px;
+  z-index: 70;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border-soft, #d5dbe2);
+  background: rgba(255, 255, 255, 0.95);
+  color: var(--text-body, #4e5968);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(20, 32, 64, 0.16);
+  display: grid;
+  place-items: center;
+  padding: 0 0 2px;
+}
+.railToggle:hover {
+  color: var(--blue, #3182f6);
+  border-color: var(--blue, #3182f6);
+}

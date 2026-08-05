@@ -40,6 +40,18 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const back = backTarget(pathname);
 
+  /* 레일 접기 — 좁은 화면에서 본문이 전체 폭을 쓰도록. 선택은 기억한다. */
+  const [railHidden, setRailHidden] = useState(false);
+  useEffect(() => {
+    try { setRailHidden(localStorage.getItem("plan-rail-hidden") === "1"); } catch { /* 무해 */ }
+  }, []);
+  function toggleRail() {
+    setRailHidden((v) => {
+      try { localStorage.setItem("plan-rail-hidden", v ? "0" : "1"); } catch { /* 무해 */ }
+      return !v;
+    });
+  }
+
   /*
    * 레일에 로그인 상태를 실제로 드러낸다.
    * 예전에는 로그인 여부와 무관하게 같은 사람 모양 아이콘만 있어서,
@@ -64,7 +76,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.shell}>
-      <nav className={styles.rail} aria-label="주요 메뉴">
+      <nav className={`${styles.rail} ${railHidden ? styles.railOff : ""}`} aria-label="주요 메뉴">
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">오늘<br />창업</Link>
         <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">{ICONS.plan}</Link>
         <Link href="/plan/info" className={`${styles.railBtn} ${onInfo ? styles.on : ""}`} title="이용 안내" aria-label="이용 안내">{ICONS.help}</Link>
@@ -84,7 +96,16 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
           </Link>
         )}
       </nav>
-      <div className={styles.content}>
+      <button
+        type="button"
+        className={`${styles.railToggle} ${railHidden ? styles.railToggleOff : ""}`}
+        onClick={toggleRail}
+        aria-label={railHidden ? "메뉴 펼치기" : "메뉴 접기"}
+        title={railHidden ? "메뉴 펼치기" : "메뉴 접기"}
+      >
+        {railHidden ? "»" : "«"}
+      </button>
+      <div className={`${styles.content} ${railHidden ? styles.contentWide : ""}`}>
         {back && (
           <Link href={back.href} className={styles.shellBack} aria-label={`${back.label}(으)로 돌아가기`}>
             <span aria-hidden="true">←</span> {back.label}
