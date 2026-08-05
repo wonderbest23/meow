@@ -4443,6 +4443,12 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .hero-report-metrics > span:first-child { border-left: 0; }
 .hero-report-metrics small { color: #6b7684; font-size: 7px; }
 .hero-report-metrics strong { color: #2c3440; font-size: 11px; }
+/* 플랜 개요의 챕터 행을 축소 재현 — 회색 막대 그래프(구 디자인)를 대체 */
+.hero-report-sections { margin: 15px 0 12px; display: grid; gap: 6px; }
+.hero-report-sections > div { display: flex; align-items: center; gap: 9px; padding: 8px 11px; background: #f2f4f6; border-radius: 9px; }
+.hero-report-sections em { width: 20px; height: 20px; border-radius: 50%; background: #fff; color: #3182f6; font-style: normal; font-weight: 800; font-size: 11px; display: grid; place-items: center; border: 1px solid #d9e6fb; }
+.hero-report-sections span { flex: 1; font-size: 12.5px; font-weight: 700; color: #4e5968; }
+.hero-report-sections b { font-size: 11px; font-weight: 800; color: #0f9d63; background: #dcf5ea; border-radius: 999px; padding: 3px 8px; }
 .hero-report-progress { height: 54px; margin: 15px 0 11px; border-bottom: 1px solid #e5e8eb; display: flex; align-items: end; gap: 6px; }
 .hero-report-progress i { width: 20%; height: 20%; border-radius: 3px 3px 0 0; background: #8b95a1; transform-origin: bottom; animation: hero-report-bar 4.8s ease-in-out infinite; }
 .hero-report-progress i:nth-child(2) { height: 35%; animation-delay: -.18s; }
@@ -5088,6 +5094,10 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .hero-report-metrics small { font-size: 6px; }
   .hero-report-metrics strong { font-size: 9px; }
   .hero-report-progress { height: 33px; margin: 8px 0 7px; gap: 4px; }
+  .hero-report-sections { margin: 9px 0 8px; gap: 4px; }
+  .hero-report-sections > div { padding: 6px 8px; }
+  .hero-report-sections span { font-size: 11px; }
+  .hero-report-sections b { font-size: 9.5px; padding: 2px 6px; }
   .hero-report-checks { gap: 4px 7px; }
   .hero-report-checks span { font-size: 6px; }
   .hero-report-card > footer { min-height: 31px; padding: 6px 9px; }

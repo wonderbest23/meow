@@ -84,7 +84,11 @@ export function HomeHeroScene() {
                   <span><small>손익분기</small><strong>7개월차</strong></span>
                   <span><small>작성 시간</small><strong>52분</strong></span>
                 </div>
-                <div className="hero-report-progress" aria-hidden="true"><i /><i /><i /><i /><i /></div>
+                <div className="hero-report-sections" aria-hidden="true">
+                  <div><em>1</em><span>사업 개요</span><b>완료 6/6</b></div>
+                  <div><em>2</em><span>고객과 시장</span><b>완료 5/5</b></div>
+                  <div><em>3</em><span>재무 계획</span><b>완료 4/4</b></div>
+                </div>
                 <div className="hero-report-checks">
                   <span><Check /> 전 섹션 생성 완료</span>
                   <span><Check /> 재무표 자동 계산</span>
