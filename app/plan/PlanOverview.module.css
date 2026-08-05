@@ -546,7 +546,7 @@
   font-weight: 600;
 }
 .node.done .nodeTime {
-  visibility: hidden;
+  display: none;
 }
 .nodeDoneTag {
   font-size: 10px;
@@ -557,9 +557,6 @@
   padding: 3px 8px;
   flex: 0 0 auto;
   margin-left: auto;
-}
-.node.done .nodeTime {
-  margin-left: 0;
 }
 /* 챕터 전부 완료 시 카운트도 완료색 */
 .chapCountDone {
@@ -803,25 +800,50 @@
   color: var(--blue, #3182f6);
   font-variant-numeric: tabular-nums;
 }
-.meterPrimary .segs i {
-  width: 26px;
-  height: 10px;
-}
+/* 세그먼트 규격은 모든 미터가 동일하다 — 진행률은 숫자 크기로만 강조한다 */
 
 
-/* 폰에서 미터 스트립 — 좁은 폭에서 겹치지 않게 줄 단위로 */
+/*
+ * 폰 미터 — flex 한 줄에 셋을 우겨넣으면 세그먼트가 옆 칸 위로 넘쳤다.
+ * 진행률이 한 줄을 독점하고, 나머지 둘이 아래 줄을 반씩 나눈다.
+ */
 @media (max-width: 640px) {
   .meters {
-    row-gap: 10px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 0;
+    padding: 16px 0 18px;
   }
   .meter {
-    padding: 0 14px;
+    padding: 0;
+    min-width: 0;
   }
   .meterPrimary {
-    flex-basis: 100%;
-    padding-left: 4px;
+    grid-column: 1 / -1;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border-soft, #e5e8eb);
   }
-  .meterPrimary + .meter::before {
+  /* 세로 구분선은 두 번째 줄의 가운데에만 */
+  .meter + .meter::before {
     display: none;
+  }
+  .meterPrimary + .meter {
+    padding-right: 14px;
+  }
+  .meterPrimary + .meter + .meter {
+    padding-left: 14px;
+    border-left: 1px solid var(--border-soft, #e5e8eb);
+  }
+  .meterRow {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .segs {
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  /* 모든 미터의 세그먼트 규격을 하나로 — 색만 뜻을 달리한다 */
+  .segs i {
+    width: 18px;
   }
 }
