@@ -169,7 +169,7 @@
  * table-layout: fixed로 화면 폭에 맞추면 12개월 손익표처럼 열이 많은 표는
  * 한 칸이 30px도 안 돼 숫자가 세로로 쪼개진다. 표만 옆으로 밀어 본다.
  */
-@media (max-width: 700px) {
+@media (max-width: 640px) {
   .surface table {
     display: block;
     width: max-content;

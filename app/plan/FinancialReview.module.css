@@ -211,7 +211,7 @@
   color: var(--wz-muted, #4e5968);
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .head {
     flex-direction: column;
   }

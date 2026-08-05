@@ -375,7 +375,7 @@
  * 문서 그리드는 232px+1fr 그대로라 본문이 232px 첫 칸에 구겨 넣어졌다.
  * 목차가 사라지는 순간 그리드도 한 칸이 되어야 한다.
  */
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
   .app {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -391,7 +391,7 @@
   }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 640px) {
   .mobileBack {
     flex: none;
     border: 0;
@@ -598,7 +598,7 @@
   padding-left: 22px;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 640px) {
   .readerScroll {
     padding: 12px 0 48px;
   }
@@ -672,7 +672,7 @@
 }
 
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   /* 셸의 통일 뒤로가기가 있으니 중복 버튼은 접는다 */
   .mobileBack {
     display: none;

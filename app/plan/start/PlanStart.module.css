@@ -481,7 +481,7 @@
   font-size: 12.5px;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 640px) {
   .grid {
     grid-template-columns: 1fr;
   }
@@ -638,7 +638,7 @@
   padding: 13px 15px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .hero {
     grid-template-columns: 1fr;
     gap: 14px;

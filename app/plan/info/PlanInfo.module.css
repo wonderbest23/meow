@@ -168,7 +168,7 @@
   color: #101828;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .page {
     padding: 28px 18px 56px;
   }

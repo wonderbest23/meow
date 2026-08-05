@@ -105,7 +105,7 @@
   margin-left: 68px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .rail {
     width: 56px;
   }
@@ -137,7 +137,7 @@
 .shellBack {
   display: none;
 }
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   /* sticky — 어느 화면에서든 콘텐츠 맨 위 같은 자리에 있고, 스크롤해도 따라온다 */
   .shellBack {
     position: sticky;

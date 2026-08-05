@@ -78,7 +78,7 @@
 .railLock {
   color: #f4b740;
 }
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   /* 폰에서는 카드 프레임을 접고 화면을 전부 쓴다 — 회색 띠 여백 제거 */
   .page {
     padding: 0 0 32px;
@@ -566,7 +566,7 @@
   color: #0f9d63 !important;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 640px) {
   .band {
     padding: 15px 16px 16px;
   }
@@ -670,7 +670,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .finale {
     grid-template-columns: 1fr;
     gap: 12px;
@@ -775,7 +775,7 @@
 
 
 /* 셸 통일 뒤로가기(≤720)가 있으니 자체 원형 버튼은 접는다 — base 정의보다 뒤에 있어야 이긴다 */
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .back {
     display: none;
   }
@@ -806,4 +806,22 @@
 .meterPrimary .segs i {
   width: 26px;
   height: 10px;
+}
+
+
+/* 폰에서 미터 스트립 — 좁은 폭에서 겹치지 않게 줄 단위로 */
+@media (max-width: 640px) {
+  .meters {
+    row-gap: 10px;
+  }
+  .meter {
+    padding: 0 14px;
+  }
+  .meterPrimary {
+    flex-basis: 100%;
+    padding-left: 4px;
+  }
+  .meterPrimary + .meter::before {
+    display: none;
+  }
 }
