@@ -294,7 +294,6 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             <button type="button" className={styles.segOn}><LayoutGrid size={13} /> 구조 보기</button>
             <button type="button" onClick={onOpenDocument}><FileText size={13} /> 문서 보기</button>
           </div>
-          <span className={styles.docCount}>생성 완료 {assembled.length}개</span>
           <div className={styles.spring} />
           {bulk ? (
             <div className={styles.bulkStatus}>

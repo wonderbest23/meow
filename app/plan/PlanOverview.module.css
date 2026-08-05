@@ -291,11 +291,6 @@
   color: #de5f7d;
 }
 
-.docCount {
-  font-size: 12.5px;
-  font-weight: 700;
-  color: var(--text-muted, #8b95a1);
-}
 
 /* 문서 보기 */
 .docView {
@@ -845,5 +840,32 @@
   /* 모든 미터의 세그먼트 규격을 하나로 — 색만 뜻을 달리한다 */
   .segs i {
     width: 18px;
+  }
+}
+
+
+/* 폰 툴바 — 좁은 폭에서 조각조각 흩어지지 않게 꽉 채운다 */
+@media (max-width: 640px) {
+  .tools {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .seg {
+    width: 100%;
+  }
+  .seg button {
+    flex: 1;
+    padding: 10px 0;
+    text-align: center;
+    justify-content: center;
+  }
+  .bulkBtn,
+  .bulkStatus {
+    width: 100%;
+    justify-content: center;
+  }
+  .spring {
+    display: none;
   }
 }
