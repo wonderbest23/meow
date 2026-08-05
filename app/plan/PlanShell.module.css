@@ -14,18 +14,20 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: 68px;
+  width: 176px;
   background: #0e1e30;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 6px;
-  padding: 18px 0;
+  padding: 18px 14px;
   z-index: 40;
 }
 .logo {
-  width: 40px;
+  width: fit-content;
+  min-width: 40px;
   height: 40px;
+  padding: 0 12px;
   /* 아바타(원형·한 글자)로 오해받지 않도록 각진 워드마크로 둔다 */
   border-radius: 9px;
   background: linear-gradient(150deg, var(--blue, #3182f6), #7f9bff);
@@ -42,11 +44,12 @@
   text-decoration: none;
 }
 .railBtn {
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
-  display: grid;
-  place-items: center;
+  min-height: 46px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 0 12px;
   color: #c3d3df;
   background: rgba(255, 255, 255, 0.04);
   border: 0;
@@ -57,7 +60,15 @@
 .railBtn svg {
   width: 22px;
   height: 22px;
+  flex: 0 0 auto;
   display: block;
+}
+/* 아이콘 옆 이름 — 아이콘만으로는 무엇인지 읽히지 않는다 */
+.railLabel {
+  font-size: 13.5px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
 }
 .railBtn:hover {
   background: rgba(255, 255, 255, 0.12);
@@ -75,19 +86,28 @@
 }
 
 /* 로그인 상태 — 이메일 첫 글자를 아바타로 */
-.me {
+/* 로그인 상태 — 원형 이니셜 + 이름 */
+.meAvatar {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 50%;
   background: var(--blue, #3182f6);
   color: #fff;
-  border-radius: 50%;
-  font-weight: 700;
-  font-size: 15px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 13px;
 }
 
 /* 비로그인 상태 — 아이콘 대신 '로그인'이라고 읽히게 */
 .signIn {
-  border-radius: 10px;
+  border-radius: 12px;
   background: rgba(255, 255, 255, 0.08);
   color: #e8edf5;
+}
+.signIn .signInText {
+  display: none;
 }
 .signIn:hover {
   background: rgba(255, 255, 255, 0.16);
@@ -102,23 +122,42 @@
 .content {
   flex: 1;
   min-width: 0;
-  margin-left: 68px;
+  margin-left: 176px;
 }
 
+/* 폰 — 화면 폭이 아까우니 아이콘만. 이름이 필요하면 손잡이로 접었다 편다 */
 @media (max-width: 640px) {
   .rail {
     width: 56px;
+    align-items: center;
+    padding: 18px 0;
   }
   .content {
     margin-left: 56px;
   }
   .railBtn {
     width: 42px;
-    height: 42px;
+    min-height: 42px;
+    justify-content: center;
+    padding: 0;
+    gap: 0;
+  }
+  .railLabel {
+    display: none;
+  }
+  .signIn .signInText {
+    display: block;
+  }
+  .meAvatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
   }
   .logo {
     width: 36px;
+    min-width: 0;
     height: 36px;
+    padding: 0;
   }
 }
 
@@ -181,7 +220,7 @@
  */
 .railToggle {
   position: fixed;
-  left: 68px; /* 레일 폭 */
+  left: 176px; /* 레일 폭 */
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 70;

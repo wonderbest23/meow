@@ -78,12 +78,17 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
     <div className={styles.shell}>
       <nav className={`${styles.rail} ${railHidden ? styles.railOff : ""}`} aria-label="주요 메뉴">
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">오늘<br />창업</Link>
-        <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">{ICONS.plan}</Link>
-        <Link href="/plan/info" className={`${styles.railBtn} ${onInfo ? styles.on : ""}`} title="이용 안내" aria-label="이용 안내">{ICONS.help}</Link>
+        <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">
+          {ICONS.plan}<span className={styles.railLabel}>내 플랜</span>
+        </Link>
+        <Link href="/plan/info" className={`${styles.railBtn} ${onInfo ? styles.on : ""}`} title="이용 안내" aria-label="이용 안내">
+          {ICONS.help}<span className={styles.railLabel}>이용 안내</span>
+        </Link>
         <div className={styles.spring} />
         {account?.authenticated ? (
           <Link href="/plan/me" className={`${styles.railBtn} ${styles.me} ${onMe ? styles.on : ""}`} title={`마이페이지 · ${account.email ?? ""}`} aria-label={`마이페이지 (${account.email ?? "로그인됨"})`}>
-            {initial ?? ICONS.team}
+            <span className={styles.meAvatar}>{initial ?? ICONS.team}</span>
+            <span className={styles.railLabel}>마이페이지</span>
           </Link>
         ) : (
           <Link
@@ -93,6 +98,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
             aria-label="로그인"
           >
             <span className={styles.signInText}>로그인</span>
+            <span className={styles.railLabel}>계정 만들기</span>
           </Link>
         )}
       </nav>
