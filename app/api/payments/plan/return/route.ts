@@ -61,17 +61,21 @@ export async function POST(request: Request) {
   if (!order) {
     return redirect(request, { status: "fail", reason: "주문을 찾을 수 없습니다." });
   }
+  const planQ = {
+    ...(order.planId ? { planId: order.planId } : {}),
+    ...(order.planType ? { planType: order.planType } : {}),
+  };
   if (order.status === "done") {
     // 같은 결과가 두 번 들어와도 중복 승인하지 않는다
-    return redirect(request, { status: "ok" });
+    return redirect(request, { status: "ok", ...planQ });
   }
   if (clientId !== nicepayClientKey()) {
     await markPlanOrderFailed({ orderId, code: "CLIENT_MISMATCH", message: "가맹점 정보 불일치" }).catch(() => {});
-    return redirect(request, { status: "fail", reason: "결제 정보를 확인하지 못했습니다." });
+    return redirect(request, { status: "fail", reason: "결제 정보를 확인하지 못했습니다.", ...planQ });
   }
   if (Date.parse(order.expiresAt) <= Date.now()) {
     await markPlanOrderFailed({ orderId, code: "ORDER_EXPIRED", message: "주문 유효시간 초과" }).catch(() => {});
-    return redirect(request, { status: "fail", reason: "결제 시간이 만료되었습니다. 다시 시도해주세요." });
+    return redirect(request, { status: "fail", reason: "결제 시간이 만료되었습니다. 다시 시도해주세요.", ...planQ });
   }
 
   // 4) 서버 승인 — 금액은 DB에 있는 값으로만 보낸다
@@ -87,9 +91,9 @@ export async function POST(request: Request) {
     if (result && result.status === "paid" && result.amount !== order.amount) {
       await cancelNicepayPayment(tid, "금액 불일치").catch(() => {});
     }
-    return redirect(request, { status: "fail", reason: result?.resultMsg || "결제 승인에 실패했습니다." });
+    return redirect(request, { status: "fail", reason: result?.resultMsg || "결제 승인에 실패했습니다.", ...planQ });
   }
 
   await markPlanOrderPaid({ orderId, tid, raw: result.raw });
-  return redirect(request, { status: "ok" });
+  return redirect(request, { status: "ok", ...planQ });
 }

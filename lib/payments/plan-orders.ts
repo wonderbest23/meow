@@ -93,12 +93,14 @@ export async function getPlanOrder(orderId: string): Promise<{
   status: string;
   orderName: string;
   expiresAt: string;
+  planId: string | null;
+  planType: string | null;
 } | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("payment_orders")
-    .select("order_id, amount, owner_id, status, order_name, expires_at")
+    .select("order_id, amount, owner_id, status, order_name, expires_at, opportunity")
     .eq("order_id", orderId)
     .maybeSingle();
   if (error) throw error;
@@ -110,6 +112,8 @@ export async function getPlanOrder(orderId: string): Promise<{
     status: data.status as string,
     orderName: data.order_name as string,
     expiresAt: data.expires_at as string,
+    planId: ((data.opportunity as { planId?: string } | null)?.planId ?? null),
+    planType: ((data.opportunity as { planType?: string } | null)?.planType ?? null),
   };
 }
 
