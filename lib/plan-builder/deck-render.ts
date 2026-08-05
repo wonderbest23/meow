@@ -318,6 +318,132 @@ function bodySlide(pptx: PptxGenJS, item: DeckSlide, variant: number) {
   return slide;
 }
 
+/**
+ * 사업 정의 슬라이드 — "무슨 사업인가"를 한 방에.
+ * 브랜드 블루 풀배경 + 거대 문장, 아래에 무엇을/누구에게/어떻게 카드.
+ */
+function statementSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: number, total: number) {
+  const slide = pptx.addSlide();
+  slide.background = { color: BRAND_DEEP };
+  // 모티프 — 밝은 원
+  slide.addShape(pptx.ShapeType.ellipse, {
+    x: 10.1, y: -2.6, w: 6.6, h: 6.6,
+    fill: { color: WHITE, transparency: 90 }, line: { type: "none" },
+  });
+  slide.addShape(pptx.ShapeType.ellipse, {
+    x: -1.7, y: 5.4, w: 4.4, h: 4.4,
+    fill: { color: WHITE, transparency: 93 }, line: { type: "none" },
+  });
+
+  slide.addText(item.eyebrow.toUpperCase(), {
+    x: 0.95, y: 0.85, w: 9, h: 0.32,
+    fontFace: FONT, fontSize: 12, bold: true, color: "BAD3FA", charSpacing: 1.6, margin: 0,
+  });
+  // 사업 정의 문장 — 이 덱에서 가장 큰 글자
+  slide.addText(item.lead || item.title, {
+    x: 0.92, y: 1.45, w: 11.5, h: 2.3,
+    fontFace: FONT, fontSize: 34, bold: true, color: WHITE, margin: 0, fit: "shrink", lineSpacingMultiple: 1.22,
+  });
+
+  // 무엇을 / 누구에게 / 어떻게 — 반투명 흰 카드
+  const points = (item.points ?? []).slice(0, 4);
+  if (points.length) {
+    const n = points.length;
+    const gap = 0.34;
+    const cardW = (11.83 - gap * (n - 1)) / n;
+    points.forEach((p, i) => {
+      const x = 0.75 + i * (cardW + gap);
+      slide.addShape(pptx.ShapeType.roundRect, {
+        x, y: 4.15, w: cardW, h: 2.15,
+        fill: { color: WHITE, transparency: 8 }, line: { type: "none" }, rectRadius: 0.14, shadow: softShadow(),
+      });
+      slide.addText(p.label, {
+        x: x + 0.28, y: 4.45, w: cardW - 0.56, h: 0.4,
+        fontFace: FONT, fontSize: 12.5, bold: true, color: BRAND_DEEP, margin: 0,
+      });
+      slide.addText(p.detail, {
+        x: x + 0.28, y: 4.92, w: cardW - 0.56, h: 1.18,
+        fontFace: FONT, fontSize: 14, bold: true, color: INK, margin: 0, lineSpacingMultiple: 1.28, fit: "shrink",
+      });
+    });
+  }
+  if (item.note) {
+    slide.addText(item.note, {
+      x: 0.95, y: 6.55, w: 11.4, h: 0.4,
+      fontFace: FONT, fontSize: 11, italic: true, color: "BAD3FA", margin: 0, fit: "shrink",
+    });
+  }
+  slide.addText(`${page} / ${total}`, {
+    x: 11.6, y: 7.02, w: 0.98, h: 0.24,
+    fontFace: FONT, fontSize: 9, bold: true, color: "9DBBEF", align: "right", margin: 0,
+  });
+  return slide;
+}
+
+/**
+ * 비전·목표 슬라이드 — 방향 한 문장 + 기한 있는 목표.
+ * 다크 바탕에 크게, 목표는 흰 카드로 도드라지게.
+ */
+function visionSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide, page: number, total: number) {
+  const slide = pptx.addSlide();
+  slide.background = { color: DARK };
+  darkOrnaments(pptx, slide);
+
+  slide.addText(item.eyebrow.toUpperCase(), {
+    x: 0.95, y: 0.85, w: 9, h: 0.32,
+    fontFace: FONT, fontSize: 12, bold: true, color: "6FA5F5", charSpacing: 1.6, margin: 0,
+  });
+  slide.addText(item.title, {
+    x: 0.92, y: 1.4, w: 11.4, h: 0.9,
+    fontFace: FONT, fontSize: 30, bold: true, color: WHITE, margin: 0, fit: "shrink",
+  });
+  if (item.lead) {
+    slide.addText(`“${item.lead}”`, {
+      x: 0.95, y: 2.5, w: 10.6, h: 1.15,
+      fontFace: FONT, fontSize: 21, bold: true, color: ICE, margin: 0, fit: "shrink", lineSpacingMultiple: 1.3,
+    });
+  }
+
+  // 목표 — metrics 우선, 없으면 points를 카드로
+  const metrics = (item.metrics ?? []).slice(0, 4);
+  const points = (item.points ?? []).slice(0, 4);
+  const rows = metrics.length
+    ? metrics.map((m) => ({ a: m.label, b: m.value, c: m.note }))
+    : points.map((p) => ({ a: p.label, b: p.detail, c: undefined as string | undefined }));
+  const n = Math.min(rows.length, 4);
+  if (n) {
+    const gap = 0.34;
+    const cardW = (11.83 - gap * (n - 1)) / n;
+    rows.slice(0, n).forEach((r, i) => {
+      const x = 0.75 + i * (cardW + gap);
+      slide.addShape(pptx.ShapeType.roundRect, {
+        x, y: 4.05, w: cardW, h: 2.2,
+        fill: { color: WHITE, transparency: 6 }, line: { type: "none" }, rectRadius: 0.14, shadow: softShadow(),
+      });
+      slide.addText(r.a, {
+        x: x + 0.28, y: 4.35, w: cardW - 0.56, h: 0.36,
+        fontFace: FONT, fontSize: 12, bold: true, color: BRAND_DEEP, margin: 0,
+      });
+      slide.addText(r.b, {
+        x: x + 0.28, y: 4.78, w: cardW - 0.56, h: metrics.length ? 0.78 : 1.2,
+        fontFace: FONT, fontSize: metrics.length ? 23 : 13.5, bold: true, color: INK, margin: 0,
+        lineSpacingMultiple: 1.26, fit: "shrink",
+      });
+      if (r.c) {
+        slide.addText(r.c, {
+          x: x + 0.28, y: 5.62, w: cardW - 0.56, h: 0.4,
+          fontFace: FONT, fontSize: 11.5, color: INK_SOFT, margin: 0, fit: "shrink",
+        });
+      }
+    });
+  }
+  slide.addText(`${page} / ${total}`, {
+    x: 11.6, y: 7.02, w: 0.98, h: 0.24,
+    fontFace: FONT, fontSize: 9, bold: true, color: "8FA6BF", align: "right", margin: 0,
+  });
+  return slide;
+}
+
 /** 마지막 슬라이드 — 요청·다음 단계 */
 function closingSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
   const slide = pptx.addSlide();
@@ -384,6 +510,14 @@ export async function renderDeckPptx(plan: DeckPlan): Promise<Buffer> {
     if (isLast) {
       closingSlide(pptx, plan, item);
       return; // 클로징은 자체 서명이 있다 — 푸터를 겹쳐 찍지 않는다
+    }
+    if (item.kind === "statement") {
+      statementSlide(pptx, plan, item, index + 1, total);
+      return;
+    }
+    if (item.kind === "vision") {
+      visionSlide(pptx, plan, item, index + 1, total);
+      return;
     }
     const slide = bodySlide(pptx, item, bodyIndex);
     bodyIndex += 1;

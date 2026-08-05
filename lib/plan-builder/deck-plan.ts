@@ -6,6 +6,12 @@ import { completeJson, type LLMConfig } from "../llm/complete";
 import { calculateFinancials, collectFinancialInputs } from "./financials";
 
 export interface DeckSlide {
+  /**
+   * 슬라이드 성격.
+   * statement = 사업 정의 한 방(청중이 "무슨 사업인지" 즉시 이해),
+   * vision = 비전·목표 강조. 나머지는 일반 본문.
+   */
+  kind?: "statement" | "vision";
   /** 상단 작은 라벨 */
   eyebrow: string;
   title: string;
@@ -31,6 +37,13 @@ const SYSTEM_PROMPT = [
   "슬라이드는 읽는 문서가 아니라 말하면서 보여주는 자료입니다. 문장을 짧게 끊고 군더더기를 지우세요.",
   "각 항목은 한 줄로 읽히게 쓰고, 같은 말을 다른 슬라이드에서 반복하지 마세요.",
   "근거가 약한 값은 슬라이드에 넣지 말고 빼세요. 빈칸이 과장보다 낫습니다.",
+  "",
+  "구성 규칙 — 반드시 지키세요:",
+  "1) 표지 바로 다음 슬라이드는 kind:\"statement\" — 이 사업이 무엇인지 한 방에 이해시키는 장입니다.",
+  "   lead에 '누구에게 무엇을 어떻게 파는 사업'인지 한 문장(50자 이내)으로, points에는 무엇을/누구에게/어떻게(+얼마에) 3~4개를 채우세요.",
+  "   청중이 이 장만 보고 '아, 이런 사업이구나'가 되어야 합니다.",
+  "2) 문제·해결 다음, 재무 앞에 kind:\"vision\" 슬라이드를 하나 두세요 — 이 사업이 가려는 방향과 목표.",
+  "   lead에 비전 한 문장, points 또는 metrics에 기한이 있는 목표(예: 1년차 월 200건)를 담으세요.",
 ].join("\n");
 
 /** 슬라이드 구성 요청에 쓰는 JSON 형식 안내 */
@@ -39,7 +52,8 @@ const SHAPE_GUIDE = `{
   "slogan": "한 줄 슬로건(20자 이내)",
   "slides": [
     {
-      "eyebrow": "상단 라벨(예: 문제, 해결, 시장)",
+      "kind": "statement | vision (해당 슬라이드에만, 그 외 생략)",
+      "eyebrow": "상단 라벨(예: 사업 소개, 문제, 해결, 비전)",
       "title": "슬라이드 제목(25자 이내)",
       "lead": "핵심 한 문장(60자 이내, 선택)",
       "points": [{ "label": "짧은 제목(12자 이내)", "detail": "설명 한 줄(60자 이내)" }],
@@ -118,7 +132,9 @@ function normalize(raw: Record<string, unknown>, fallbackName: string): DeckPlan
           })
           .filter((m) => m.label && m.value)
       : undefined;
+    const kindRaw = text(s.kind, 12);
     slides.push({
+      kind: kindRaw === "statement" || kindRaw === "vision" ? kindRaw : undefined,
       eyebrow: text(s.eyebrow, 24) || "SECTION",
       title,
       lead: text(s.lead, 140) || undefined,
