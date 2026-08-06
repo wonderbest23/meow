@@ -29,7 +29,7 @@
 }
 .app {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr); /* 우측 트래커 열 제거 — 헤더 미터가 진행률을 담당 */
+  grid-template-columns: minmax(0, 1fr) 232px; /* 본문이 먼저, 목차는 맨 우측 — 왼쪽에 새 기둥이 끼어들지 않는다 */
   /* 암시적 행은 내용만큼 늘어나 목차가 잘린 채 스크롤이 안 됐다 — 행을 컨테이너에 고정 */
   grid-template-rows: minmax(0, 1fr);
   background: var(--wz-panel);
@@ -98,6 +98,7 @@
 
 /* chapter nav — 레퍼런스 골격(사각 행 + 들여쓰기 이동 + 0.2s 전환)을 우리 색으로 */
 .nav {
+  order: 2; /* DOM은 [목차, 본문]이지만 화면은 [본문 | 목차] — 개요에서 넘어와도 본문 위치가 그대로다 */
   background: var(--wz-nav);
   color: #fff;
   min-height: 0;
