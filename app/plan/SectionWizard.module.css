@@ -1415,3 +1415,46 @@
     box-shadow: none;
   }
 }
+
+
+/*
+ * 폰 헤더 재배열 — 상단 한 줄을 [← 내 플랜(좌)] [미터 컴팩트(우)]로 쓴다.
+ * 미터를 셸 뒤로가기 pill과 같은 행(mhead 위 여백)에 올려 세로 공간을 아낀다.
+ */
+@media (max-width: 640px) {
+  .mhead {
+    position: relative;
+  }
+  .meters {
+    position: absolute;
+    top: -46px; /* 셸 뒤로가기 pill 행 */
+    right: 12px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .mt {
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .mt + .mt::before {
+    display: none;
+  }
+  .mtL {
+    display: none; /* 라벨은 생략 — 값만으로 읽힌다 */
+  }
+  .mtV {
+    margin-top: 0;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--wz-muted, #4e5968);
+    white-space: nowrap;
+  }
+  /* '유형'(전략/재무)은 폰에서 정보가치가 낮다 — 상태·시간·진행만 */
+  .mt:first-child {
+    display: none;
+  }
+}
