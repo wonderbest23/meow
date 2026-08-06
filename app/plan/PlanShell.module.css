@@ -208,9 +208,9 @@
 .rail {
   transition: transform 0.22s ease;
 }
-/* 접었을 때도 손잡이 폭만큼은 비운다 — 본문 위에 손잡이가 얹히지 않게 */
+/* 접힘 — 본문이 전체 폭을 쓰고, 손잡이는 그 위에 반투명하게 겹친다 */
 .contentWide {
-  margin-left: 22px !important;
+  margin-left: 0 !important;
 }
 
 /*
@@ -245,6 +245,13 @@
 .railToggleOff {
   left: 0;
   transform: translate(0, -50%);
+  opacity: 0.55;
+  border-left: 0;
+  border-radius: 0 8px 8px 0;
+}
+.railToggleOff:hover,
+.railToggleOff:focus-visible {
+  opacity: 1;
 }
 .railToggle:hover {
   color: var(--blue, #3182f6);
@@ -262,6 +269,6 @@
     left: 0;
   }
   .contentWide {
-    margin-left: 20px !important;
+    margin-left: 0 !important;
   }
 }
