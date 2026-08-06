@@ -23,6 +23,7 @@ import {
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
+import GuideBubble, { ringClass } from "./GuideBubble";
 import { Spinner } from "./PlanLoading";
 import InlineDocEditor from "./InlineDocEditor";
 import PlanGate from "./PlanGate";

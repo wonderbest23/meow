@@ -17,6 +17,7 @@ import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-bui
 import { estimateMinutes } from "../../lib/plan-builder/questions";
 import ConsistencyPanel from "./ConsistencyPanel";
 import PlanLoading from "./PlanLoading";
+import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
 import styles from "./PlanOverview.module.css";
 
@@ -279,7 +280,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           </button>
         )}
         {doneCount > 0 && doneCount === total && (
-          <button type="button" className={styles.finale} onClick={onOpenDocument}>
+          <button type="button" className={`${styles.finale} ${ringClass()}`} onClick={onOpenDocument}>
+            <GuideBubble text="완성! 제안서를 만들어보세요" />
             <span className={styles.finaleIcon} aria-hidden="true"><Presentation size={22} /></span>
             <span className={styles.finaleBody}>
               <b>{total}개 섹션을 모두 채우셨습니다</b>
@@ -353,13 +355,14 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                       <button
                         key={section.id}
                         type="button"
-                        className={`${styles.node} ${done ? styles.done : ""} ${writing ? styles.writing : ""} ${isNext ? styles.next : ""}`}
+                        className={`${styles.node} ${done ? styles.done : ""} ${writing ? styles.writing : ""} ${isNext ? styles.next : ""} ${isNext ? ringClass() : ""}`}
                         onClick={() => onOpenSection?.(chapter.id, section.id)}
                         title={section.summary}
                       >
                         <span className={styles.nodeNum}>{done ? <CheckIcon /> : num}</span>
                         <span className={styles.nodeLabel}>{section.title}</span>
                         {isLocked && <span className={styles.lockTag} title="잠긴 섹션 — 일괄 생성이 건너뜁니다"><Lock size={10} strokeWidth={2.4} /></span>}
+                        {isNext && <GuideBubble text="여기를 눌러 작성하세요!" />}
                         {isNext && <span className={styles.nextTag}>여기부터</span>}
                         {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
                         {done && <span className={styles.nodeDoneTag}>완료</span>}
