@@ -324,9 +324,6 @@ export default function PlanDocumentPage() {
                   </button>
                 </div>
                 <div className={styles.spring} />
-                <button className={styles.tool} disabled={!sections.length} onClick={() => setReader(true)} title="문서만 전체 화면으로 이어서 읽기">
-                  <Maximize2 size={14} /> 전체 화면
-                </button>
                 {isSample && <span className={styles.sampleNote}>샘플은 열람 전용 — 내려받기는 내 문서에서</span>}
                 {locked && (
                   <span className={styles.sampleNote}>
@@ -345,6 +342,13 @@ export default function PlanDocumentPage() {
               </div>
               {deckError ? <p className={styles.deckError}>{deckError}</p> : null}
             </header>
+
+            {/* 전체 화면은 툴바가 아니라 문서 위에 떠 있는다 — 헤더가 홀쭉해진다 */}
+            {sections.length > 0 && (
+              <button type="button" className={styles.fsFloat} onClick={() => setReader(true)} title="문서만 전체 화면으로 이어서 읽기">
+                <Maximize2 size={14} /> 전체 화면
+              </button>
+            )}
 
             <div className={styles.canvas}>
               {!ready ? (
