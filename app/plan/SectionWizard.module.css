@@ -1042,6 +1042,19 @@
   100% { background: #fff6f7; }
 }
 
+/* 답변 직후 자동 이동한 다음 질문 — 잠깐 파란 링으로 "이제 여기" */
+@keyframes qNextRing {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #3182f6) 50%, transparent), var(--wz-shadow-sm); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--wz-brand, #3182f6) 22%, transparent), var(--wz-shadow-sm); }
+}
+.qNext {
+  border-color: var(--wz-brand, #3182f6);
+  animation: qNextRing 1.6s ease-in-out 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .qNext { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #3182f6) 50%, transparent); }
+}
+
 /* 모순 패널에서 짚어 들어온 질문 — 빨간 테두리로 정확히 어디인지 보여준다 */
 .qConflict {
   border: 1.5px solid #d6455d;

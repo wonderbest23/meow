@@ -46,15 +46,30 @@ const Check = ({ n = 11 }: { n?: number }) => (
  * 네이티브 smooth는 환경에 따라 무시되므로 직접 그린다(동작 보장).
  */
 function scrollToElement(container: HTMLElement, el: HTMLElement) {
-  const cr = container.getBoundingClientRect();
+  // 폭이 좁으면 컨테이너가 아니라 창(window)이 스크롤 주체다 — 실제로 스크롤 가능한 쪽을 움직인다
+  const containerScrolls = container.scrollHeight > container.clientHeight + 4;
   const er = el.getBoundingClientRect();
-  const raw = container.scrollTop + (er.top - cr.top) - (container.clientHeight - er.height) / 2;
-  const target = Math.max(0, Math.min(raw, container.scrollHeight - container.clientHeight));
-  const start = container.scrollTop;
+  let read: () => number;
+  let write: (v: number) => void;
+  let target: number;
+  if (containerScrolls) {
+    const cr = container.getBoundingClientRect();
+    const raw = container.scrollTop + (er.top - cr.top) - (container.clientHeight - er.height) / 2;
+    target = Math.max(0, Math.min(raw, container.scrollHeight - container.clientHeight));
+    read = () => container.scrollTop;
+    write = (v) => { container.scrollTop = v; };
+  } else {
+    const raw = window.scrollY + er.top - (window.innerHeight - er.height) / 2;
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    target = Math.max(0, Math.min(raw, Math.max(0, max)));
+    read = () => window.scrollY;
+    write = (v) => window.scrollTo(0, v);
+  }
+  const start = read();
   const delta = target - start;
   const reduce = typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   if (reduce || Math.abs(delta) < 4) {
-    container.scrollTop = target;
+    write(target);
     return;
   }
   const duration = Math.min(620, 240 + Math.abs(delta) * 0.45);
@@ -62,14 +77,14 @@ function scrollToElement(container: HTMLElement, el: HTMLElement) {
   let done = false;
   const step = (now: number) => {
     const p = Math.min(1, (now - t0) / duration);
-    container.scrollTop = start + delta * (1 - Math.pow(1 - p, 3)); // easeOutCubic
+    write(start + delta * (1 - Math.pow(1 - p, 3))); // easeOutCubic
     if (p < 1) requestAnimationFrame(step);
     else done = true;
   };
   requestAnimationFrame(step);
   // 탭이 백그라운드면 rAF가 돌지 않는다 — 애니메이션은 없더라도 목표 위치에는 도달시킨다
   window.setTimeout(() => {
-    if (!done) container.scrollTop = target;
+    if (!done) write(target);
   }, duration + 150);
 }
 
@@ -229,7 +244,38 @@ export default function SectionWizard({
     if (el) el.scrollTop = el.scrollHeight;
   }, [streamText]);
 
-  const setAnswer = (qid: string, v: unknown) => setAnswers((prev) => ({ ...prev, [qid]: v }));
+  /* 다음에 답할 질문 — 자동 스크롤 후 잠깐 파란 링으로 짚어준다 */
+  const [nextFocusQid, setNextFocusQid] = useState<string | null>(null);
+  const nextFocusTimer = useRef<number | null>(null);
+
+  /**
+   * 선택형 답변 직후 다음 미답변 질문으로 부드럽게 이동한다.
+   * 타이핑(text)과 복수 선택(multi)은 스크롤을 뺏지 않는다.
+   */
+  function advanceFrom(qid: string, nextAnswers: AnswerMap) {
+    const flat = groups.flatMap((g) => g.questions).filter((q) => isVisible(q, nextAnswers));
+    const idx = flat.findIndex((q) => q.id === qid);
+    if (idx < 0) return;
+    const next = flat.slice(idx + 1).find((q) => !isAnswered(q, nextAnswers[q.id]));
+    if (!next) return;
+    setNextFocusQid(next.id);
+    if (nextFocusTimer.current) window.clearTimeout(nextFocusTimer.current);
+    nextFocusTimer.current = window.setTimeout(() => setNextFocusQid(null), 2600);
+    // 새 답의 등장 애니메이션이 자리 잡은 뒤 이동
+    window.setTimeout(() => {
+      const container = bodyRef.current;
+      const el = container?.querySelector<HTMLElement>(`[data-qid="${next.id}"]`);
+      if (container && el) scrollToElement(container, el);
+    }, 180);
+  }
+
+  const setAnswer = (qid: string, v: unknown) => {
+    const next = { ...answers, [qid]: v };
+    setAnswers(next);
+    const q = groups.flatMap((g) => g.questions).find((x) => x.id === qid);
+    const autoKinds = new Set(["yesno", "single", "select"]);
+    if (q && autoKinds.has(q.input.kind) && isAnswered(q, v)) advanceFrom(qid, next);
+  };
   const toggleMulti = (qid: string, opt: string) =>
     setAnswers((prev) => {
       const cur = Array.isArray(prev[qid]) ? (prev[qid] as string[]) : [];
@@ -685,7 +731,7 @@ export default function SectionWizard({
                       <div
                         key={q.id}
                         data-qid={q.id}
-                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? styles.qConflict : ""}`}
+                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? styles.qConflict : ""} ${nextFocusQid === q.id ? styles.qNext : ""}`}
                       >
                         <div className={styles.qq}>
                           {q.q}
