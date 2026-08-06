@@ -59,8 +59,35 @@ export default function PlanList() {
   }
 
 
-  const ownPlans = state ? state.plans.filter((p) => !isSamplePlan(p.id)) : [];
+  const planPct = (p: (typeof state.plans)[number]) => {
+    const total = sectionCountForType(p.planType);
+    const done = Object.keys(p.sections).filter((k) => k !== "financials/__review").length;
+    return total ? Math.round((done / total) * 100) : 0;
+  };
+  /* 진행 중 → 시작 전 → 완성 순. 완성본은 볼 일이 적으니 맨 아래로 보낸다. */
+  const ownPlans = state
+    ? state.plans
+        .filter((p) => !isSamplePlan(p.id))
+        .sort((a, b) => {
+          const rank = (p: typeof a) => {
+            const pct = planPct(p);
+            return pct === 100 ? 2 : pct > 0 ? 0 : 1;
+          };
+          const d = rank(a) - rank(b);
+          return d !== 0 ? d : (b.updatedAt || "").localeCompare(a.updatedAt || "");
+        })
+    : [];
   const samples = state ? state.plans.filter((p) => isSamplePlan(p.id)) : [];
+
+  /* 안내 네비게이터 — 지금 눌러야 할 곳 하나를 말풍선으로 짚어준다 */
+  const inProgress = ownPlans.find((p) => { const pct = planPct(p); return pct > 0 && pct < 100; });
+  const notStarted = ownPlans.find((p) => planPct(p) === 0);
+  const guide = inProgress
+    ? { planId: inProgress.id, text: "작성 중인 플랜이에요 — 마무리해보세요!" }
+    : notStarted
+      ? { planId: notStarted.id, text: "여기부터 시작해보세요!" }
+      : null;
+  const guideNewPlan = ownPlans.length === 0;
 
   function openPlan(id: string) {
     setActivePlan(id);
@@ -111,7 +138,10 @@ export default function PlanList() {
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>아직 만든 플랜이 없어요</p>
             <p className={styles.emptyDesc}>사업 정보를 입력하고 첫 사업계획서를 시작해보세요.</p>
-            <Link href="/plan/start" className={styles.newBtn}>+ 첫 플랜 만들기</Link>
+            <span className={styles.guideAnchor}>
+              <span className={styles.guideBubble} aria-hidden="true">여기를 눌러 시작하세요!</span>
+              <Link href="/plan/start" className={`${styles.newBtn} ${styles.guidePulse}`}>+ 첫 플랜 만들기</Link>
+            </span>
           </div>
         ) : (
           <div className={styles.deck}>
@@ -127,11 +157,14 @@ export default function PlanList() {
               return (
                 <button
                   key={p.id}
-                  className={styles.planCard}
+                  className={`${styles.planCard} ${guide?.planId === p.id ? styles.guideCard : ""}`}
                   style={{ ["--acc" as string]: acc }}
                   onClick={() => openPlan(p.id)}
                 >
-                  <span className={`${styles.sheet} ${isActive ? styles.sheetActive : ""}`}>
+                  {guide?.planId === p.id && (
+                    <span className={styles.guideBubble} aria-hidden="true">{guide.text}</span>
+                  )}
+                  <span className={`${styles.sheet} ${isActive ? styles.sheetActive : ""} ${guide?.planId === p.id ? styles.sheetGuide : ""}`}>
                     <span className={styles.cover}>
                       {sample ? (
                         <span className={styles.coverBadge}>예시</span>

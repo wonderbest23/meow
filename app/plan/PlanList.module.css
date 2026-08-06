@@ -627,3 +627,82 @@
   font-weight: 700;
   color: var(--text-muted, #8b95a1);
 }
+
+
+/* ── 안내 네비게이터 — 지금 눌러야 할 곳 하나를 말풍선 + 테두리로 ── */
+
+.guideCard {
+  position: relative;
+}
+
+/* 강조 테두리 — 은은하게 숨쉬는 파란 링 */
+@keyframes guideRing {
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3182f6) 55%, transparent), 0 10px 26px rgba(47, 87, 244, 0.25); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blue, #3182f6) 25%, transparent), 0 10px 26px rgba(47, 87, 244, 0.18); }
+}
+.sheetGuide {
+  animation: guideRing 1.8s ease-in-out infinite;
+}
+
+/* 말풍선 — 카드 위에 떠 있고 아래로 꼬리 */
+@keyframes guideFloat {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, -5px); }
+}
+.guideBubble {
+  position: absolute;
+  left: 50%;
+  top: -14px;
+  transform: translate(-50%, 0);
+  z-index: 3;
+  white-space: nowrap;
+  background: var(--blue, #3182f6);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 8px 13px;
+  border-radius: 999px;
+  box-shadow: 0 8px 20px rgba(47, 87, 244, 0.35);
+  animation: guideFloat 1.8s ease-in-out infinite;
+  pointer-events: none;
+}
+.guideBubble::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--blue, #3182f6);
+  border-bottom: 0;
+}
+
+/* 빈 상태 — 새 플랜 버튼 강조 */
+.guideAnchor {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+}
+.guideAnchor .guideBubble {
+  top: -40px;
+}
+.guidePulse {
+  animation: guideRing 1.8s ease-in-out infinite;
+}
+
+@media (max-width: 640px) {
+  .guideBubble {
+    font-size: 11px;
+    padding: 7px 11px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheetGuide, .guidePulse {
+    animation: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3182f6) 55%, transparent);
+  }
+  .guideBubble {
+    animation: none;
+  }
+}
