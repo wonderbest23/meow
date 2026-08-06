@@ -1403,3 +1403,15 @@
 .suggestBtn svg {
   flex: 0 0 auto;
 }
+
+
+/* 폰 — 개요와 같은 전면 사용: 회색 프레임 여백을 걷는다 */
+@media (max-width: 640px) {
+  .page {
+    padding: 0 0 32px;
+  }
+  .app {
+    border-radius: 0;
+    box-shadow: none;
+  }
+}
