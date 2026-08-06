@@ -273,7 +273,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             onClick={() => onOpenSection?.(nextInfo.chapterId, nextInfo.sectionId)}
           >
             <span className={styles.finaleBody}>
-              <b>{doneCount === 0 ? "첫 섹션부터 시작해 보세요" : `${total - doneCount}개 섹션이 남았습니다`}</b>
+              <b>{doneCount === 0 ? "첫 섹션부터 시작해 보세요" : `섹션 ${total - doneCount}개가 남아 있어요`}</b>
               <span>다음 차례: {nextInfo.num}. {nextInfo.title}</span>
             </span>
             <span className={styles.finaleGo}>이어서 작성 →</span>
@@ -281,7 +281,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         )}
         {doneCount > 0 && doneCount === total && (
           <button type="button" className={`${styles.finale} ${ringClass()}`} onClick={onOpenDocument}>
-            <GuideBubble text="완성! 제안서를 만들어보세요" />
+            <GuideBubble text="완성됐어요 — 제안서를 만들어 보세요" />
             <span className={styles.finaleIcon} aria-hidden="true"><Presentation size={22} /></span>
             <span className={styles.finaleBody}>
               <b>{total}개 섹션을 모두 채우셨습니다</b>
@@ -362,7 +362,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                         <span className={styles.nodeNum}>{done ? <CheckIcon /> : num}</span>
                         <span className={styles.nodeLabel}>{section.title}</span>
                         {isLocked && <span className={styles.lockTag} title="잠긴 섹션 — 일괄 생성이 건너뜁니다"><Lock size={10} strokeWidth={2.4} /></span>}
-                        {isNext && <GuideBubble text="여기를 눌러 작성하세요!" />}
+                        {isNext && <GuideBubble text="다음은 여기예요" />}
                         {isNext && <span className={styles.nextTag}>여기부터</span>}
                         {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
                         {done && <span className={styles.nodeDoneTag}>완료</span>}

@@ -740,11 +740,11 @@ export default function SectionWizard({
                         data-qid={q.id}
                         className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? styles.qConflict : ""} ${currentQid === q.id ? ringClass() : ""}`}
                       >
-                        {currentQid === q.id && <GuideBubble text="여기부터 답해주세요!" />}
+                        {currentQid === q.id && <GuideBubble text="여기부터 답하면 돼요" />}
                         <div className={styles.qq}>
                           {q.q}
                           {showMissing && missingIds.includes(q.id) && <span className={styles.needTag}>입력이 필요합니다</span>}
-                          {conflictQids.includes(q.id) && <span className={styles.conflictTag}>여기가 어긋납니다</span>}
+                          {conflictQids.includes(q.id) && <span className={styles.conflictTag}>이 답변이 서로 달라요</span>}
                         </div>
                         {q.help && <div className={styles.qh}>{q.help}</div>}
                         {renderInput(q, answers[q.id], { setAnswer, toggleMulti, styles })}

@@ -572,7 +572,7 @@ function Home({
         <section className="simple-home-choice">
           <div className="home-hero-copy">
             <span className="section-label">질문에 답하면 문서가 완성됩니다</span>
-            <h1>사업계획서,<br />오늘 완성하세요</h1>
+            <h1>사업계획서,<br />오늘 하루면 충분합니다</h1>
             <p>사업 정보를 적고 질문에 답하면, 인공지능이 섹션별로 사업계획서를 씁니다. 정부지원 PSST부터 재무 모델까지 7가지 문서 유형을 같은 답변으로 만들 수 있습니다.</p>
             <div className="home-hero-actions">
               <button className="conversation-choice" onClick={onStart} aria-label="나에게 맞는 사업 찾기 시작"><strong>시작하기</strong></button>
@@ -635,7 +635,7 @@ function Home({
         <div className="home-price-inner">
           <div className="home-price-copy">
             <span>이용 안내</span>
-            <h2>무료로 품질을 확인하고,<br />문서가 필요할 때만 결제하세요</h2>
+            <h2>무료로 품질을 확인한 뒤,<br />필요한 문서만 결제합니다</h2>
             <p>완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.</p>
             <div><ShieldCheck /><span><strong>무료 범위에는 결제 정보가 필요하지 않습니다</strong><small>결제는 신용·체크카드로 안전하게 진행됩니다</small></span></div>
           </div>
@@ -659,12 +659,12 @@ function Home({
       </section>
 
       <section className="home-faq" aria-labelledby="home-faq-title">
-        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">시작 전에 확인하세요</h2></div>
+        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">궁금한 점을 미리 확인해 보세요</h2></div>
         <div>
           <details><summary>글을 잘 못 써도 만들 수 있나요?<ChevronDown /></summary><p>네. 사용자는 사업에 대한 사실(가격, 고객, 비용 등)만 답하면 되고, 문장은 인공지능이 씁니다. 답이 어려운 질문은 AI 추천 답변을 참고할 수 있습니다.</p></details>
           <details><summary>결제 전에 품질을 확인할 수 있나요?<ChevronDown /></summary><p>네. 실제 인공지능으로 만든 완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 내 사업으로도 앞 2개 섹션을 무료로 만들어 직접 확인할 수 있습니다.</p></details>
           <details><summary>언제 비용을 내나요?<ChevronDown /></summary><p>3번째 섹션부터 결제가 필요합니다. 문서 1부당 149,000원 1회 결제이며, 결제한 문서의 전체 섹션 생성과 PDF·Word·PPT 내려받기가 열립니다. 신용·체크카드로 결제합니다.</p></details>
-          <details><summary>정부지원사업 양식에 맞나요?<ChevronDown /></summary><p>정부지원 PSST 유형은 예비창업패키지 등 심사 기준에 맞춰 문제인식·실현가능성·성장전략·팀구성 4부로 완성됩니다. 제출 전 해당 공고의 세부 양식을 확인하세요.</p></details>
+          <details><summary>정부지원사업 양식에 맞나요?<ChevronDown /></summary><p>정부지원 PSST 유형은 예비창업패키지 등 심사 기준에 맞춰 문제인식·실현가능성·성장전략·팀구성 4부로 완성됩니다. 제출 전에 해당 공고의 세부 양식을 한 번 더 확인해 주세요.</p></details>
           <details><summary>재무 숫자도 만들어주나요?<ChevronDown /></summary><p>가격·원가·고정비 답변을 근거로 12개월 손익표를 자동 계산해 문서에 넣습니다. 정밀 재무 모델은 3년 추정과 민감도까지 포함합니다. 확인되지 않은 수치는 사실처럼 쓰지 않습니다.</p></details>
         </div>
       </section>

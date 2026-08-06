@@ -83,9 +83,9 @@ export default function PlanList() {
   const inProgress = ownPlans.find((p) => { const pct = planPct(p); return pct > 0 && pct < 100; });
   const notStarted = ownPlans.find((p) => planPct(p) === 0);
   const guide = inProgress
-    ? { planId: inProgress.id, text: "작성 중인 플랜이에요 — 마무리해보세요!" }
+    ? { planId: inProgress.id, text: "작성 중인 플랜이에요 — 이어서 완성해 보세요" }
     : notStarted
-      ? { planId: notStarted.id, text: "여기부터 시작해보세요!" }
+      ? { planId: notStarted.id, text: "여기서부터 시작하면 돼요" }
       : null;
   const guideNewPlan = ownPlans.length === 0;
 
@@ -139,7 +139,7 @@ export default function PlanList() {
             <p className={styles.emptyTitle}>아직 만든 플랜이 없어요</p>
             <p className={styles.emptyDesc}>사업 정보를 입력하고 첫 사업계획서를 시작해보세요.</p>
             <span className={styles.guideAnchor}>
-              <span className={styles.guideBubble} aria-hidden="true">여기를 눌러 시작하세요!</span>
+              <span className={styles.guideBubble} aria-hidden="true">첫 플랜을 만들어 보세요</span>
               <Link href="/plan/start" className={`${styles.newBtn} ${styles.guidePulse}`}>+ 첫 플랜 만들기</Link>
             </span>
           </div>
@@ -269,7 +269,7 @@ export default function PlanList() {
           <div className={styles.sampleBlock}>
             <div className={styles.listHead}>
               <h2 className={styles.listTitle}>
-                결제 전에 완성본을 확인하세요<span>샘플 {samples.length}부</span>
+                결제 전에 완성본을 미리 볼 수 있어요<span>샘플 {samples.length}부</span>
               </h2>
             </div>
             <div className={styles.deck}>

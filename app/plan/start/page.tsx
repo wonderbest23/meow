@@ -380,17 +380,17 @@ export default function PlanStartPage() {
 
                   <div className={styles.field}>
                     <span className={styles.label}>대표자 역할</span>
-                    <Select value={biz.role} options={ROLES} placeholder="선택하세요" onChange={(v) => set("role", v)} />
+                    <Select value={biz.role} options={ROLES} placeholder="선택해 주세요" onChange={(v) => set("role", v)} />
                   </div>
 
                   <div className={styles.field}>
                     <span className={styles.label}>진행 단계</span>
-                    <Select value={biz.stage} options={STAGES} placeholder="선택하세요" onChange={(v) => set("stage", v)} />
+                    <Select value={biz.stage} options={STAGES} placeholder="선택해 주세요" onChange={(v) => set("stage", v)} />
                   </div>
 
                   <div className={styles.field}>
                     <span className={styles.label}>업종</span>
-                    <Select value={biz.industry} options={INDUSTRIES} placeholder="선택하세요" onChange={(v) => set("industry", v)} />
+                    <Select value={biz.industry} options={INDUSTRIES} placeholder="선택해 주세요" onChange={(v) => set("industry", v)} />
                   </div>
 
                   <div className={styles.field}>
@@ -460,7 +460,7 @@ export default function PlanStartPage() {
 
                 {hiddenCount > 0 && (
                   <p className={styles.hiddenNote}>
-                    이미 만든 유형 {hiddenCount}개는 목록에서 뺐어요. 다른 사업으로 만들려면 위에서 ‘처음부터 새로 시작’을 선택하세요.
+                    이미 만든 유형 {hiddenCount}개는 목록에서 뺐어요. 다른 사업으로 만들려면 위에서 ‘처음부터 새로 시작’을 선택해 주세요.
                   </p>
                 )}
                 {/* 표지형 카드 덱 — 레퍼런스 대시보드의 플랜 카드 구조(커버+하단 스트립+배지) */}
