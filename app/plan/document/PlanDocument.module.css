@@ -10,7 +10,8 @@
 
 .app {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  /* 위저드와 같은 [본문 | 목차] — wiz.nav의 order:2를 그대로 물려받으므로 열 순서도 맞춰야 한다 */
+  grid-template-columns: minmax(0, 1fr) 232px;
   /* 암시적 행은 내용만큼 늘어나 목차가 잘린 채 스크롤이 안 됐다 — 행을 컨테이너에 고정 */
   grid-template-rows: minmax(0, 1fr);
   background: var(--wz-panel);
