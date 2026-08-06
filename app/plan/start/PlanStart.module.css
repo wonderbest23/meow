@@ -886,3 +886,11 @@
   color: var(--text-muted, #8b95a1);
   word-break: keep-all;
 }
+
+
+/* 폰 — 셸 뒤로가기 pill이 겹칠 첫 줄 확보 */
+@media (max-width: 640px) {
+  .page {
+    padding-top: 56px;
+  }
+}

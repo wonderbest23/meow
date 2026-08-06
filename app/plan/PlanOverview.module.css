@@ -89,7 +89,7 @@
     min-height: 100vh;
   }
   .main {
-    padding: 16px 14px 28px;
+    padding: 56px 14px 28px; /* 첫 줄은 뒤로가기 pill 몫 */
   }
 }
 

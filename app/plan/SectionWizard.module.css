@@ -29,7 +29,7 @@
 }
 .app {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr) 268px;
+  grid-template-columns: 232px minmax(0, 1fr); /* 우측 트래커 열 제거 — 헤더 미터가 진행률을 담당 */
   /* 암시적 행은 내용만큼 늘어나 목차가 잘린 채 스크롤이 안 됐다 — 행을 컨테이너에 고정 */
   grid-template-rows: minmax(0, 1fr);
   background: var(--wz-panel);
@@ -768,13 +768,8 @@
 
 /* tracker */
 .tracker {
-  background: var(--wz-panel2);
-  border-left: 1px solid var(--wz-line);
-  padding: 22px 20px;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
+  /* 진행률·생성 버튼이 헤더·하단 바에 이미 있다 — 별도 열은 혼란만 줬다 */
+  display: none;
 }
 .tpH {
   font-size: 12px;
@@ -928,6 +923,7 @@
     margin-left: auto;
   }
   .tracker {
+  display: none; /* 진행률·생성 버튼이 헤더·하단 바에 이미 있다 — 별도 열은 혼란만 줬다 */
     border-left: 0;
     border-top: 1px solid var(--wz-line);
   }
@@ -1424,11 +1420,12 @@
 @media (max-width: 640px) {
   .mhead {
     position: relative;
+    padding-top: 58px; /* 첫 줄 = [← 내 플랜 | 미터] */
   }
   .meters {
     position: absolute;
-    top: -46px; /* 셸 뒤로가기 pill 행 */
-    right: 12px;
+    top: 16px; /* 헤더 첫 줄 우측 */
+    right: 14px;
     margin: 0;
     display: flex;
     align-items: center;

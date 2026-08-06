@@ -199,3 +199,11 @@
     gap: 8px;
   }
 }
+
+
+/* 폰 — 셸 뒤로가기 pill이 겹칠 첫 줄 확보 */
+@media (max-width: 640px) {
+  .page {
+    padding-top: 56px;
+  }
+}
