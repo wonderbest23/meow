@@ -273,14 +273,21 @@ export default function SectionWizard({
     const next = { ...answers, [qid]: v };
     setAnswers(next);
     const q = groups.flatMap((g) => g.questions).find((x) => x.id === qid);
-    const autoKinds = new Set(["yesno", "single", "select"]);
-    if (q && autoKinds.has(q.input.kind) && isAnswered(q, v)) advanceFrom(qid, next);
+    if (!q || q.input.kind === "text") return; // 타이핑은 스크롤을 뺏지 않는다
+    const wasAnswered = isAnswered(q, answers[qid]);
+    const nowAnswered = isAnswered(q, v);
+    // 선택형은 답할 때마다, 복수 선택은 '미답변→답변' 첫 전환에만 이동
+    const always = q.input.kind !== "multi";
+    if (nowAnswered && (always || !wasAnswered)) advanceFrom(qid, next);
   };
-  const toggleMulti = (qid: string, opt: string) =>
-    setAnswers((prev) => {
-      const cur = Array.isArray(prev[qid]) ? (prev[qid] as string[]) : [];
-      return { ...prev, [qid]: cur.includes(opt) ? cur.filter((o) => o !== opt) : [...cur, opt] };
-    });
+  const toggleMulti = (qid: string, opt: string) => {
+    const cur = Array.isArray(answers[qid]) ? (answers[qid] as string[]) : [];
+    const nextVal = cur.includes(opt) ? cur.filter((o) => o !== opt) : [...cur, opt];
+    const next = { ...answers, [qid]: nextVal };
+    setAnswers(next);
+    // 첫 선택(미답변→답변)에만 다음 질문으로 이동 — 추가 선택은 방해하지 않는다
+    if (cur.length === 0 && nextVal.length > 0) advanceFrom(qid, next);
+  };
 
   // 사업 정보 + 지금까지의 답변을 AI 맥락 문자열로
   function buildContext(): string {
@@ -947,10 +954,16 @@ function FreeChoice({
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              add();
-            }
+            if (e.key === "Enter") e.preventDefault(); // 폼 제출·줄바꿈 방지만
+          }}
+          onKeyUp={(e) => {
+            /*
+             * 추가는 keyup에서 한다. keydown 시점엔 한글 IME 조합이 아직
+             * 확정 전이라, 거기서 추가하면 마지막 음절이 한 번 더 들어갔다
+             * ("어려움" → "움" 중복 칩). keyup 시점엔 조합이 끝나 있어
+             * Enter 한 번으로 완전한 문자열이 정확히 한 번 추가된다.
+             */
+            if (e.key === "Enter") add();
           }}
         />
         <button type="button" className={styles.freeAdd} onClick={add} disabled={!draft.trim()}>
