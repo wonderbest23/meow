@@ -244,9 +244,12 @@ export default function SectionWizard({
     if (el) el.scrollTop = el.scrollHeight;
   }, [streamText]);
 
-  /* 다음에 답할 질문 — 자동 스크롤 후 잠깐 파란 링으로 짚어준다 */
-  const [nextFocusQid, setNextFocusQid] = useState<string | null>(null);
-  const nextFocusTimer = useRef<number | null>(null);
+  /* 지금 답할 질문(첫 미답변) — 말풍선+링이 항상 붙어 있고, 답하면 다음으로 옮겨간다 */
+  const currentQid = useMemo(() => {
+    if (generatedHtml || editingMd !== null || generating) return null;
+    const flat = groups.flatMap((g) => g.questions).filter((q) => isVisible(q, answers));
+    return flat.find((q) => !isAnswered(q, answers[q.id]))?.id ?? null;
+  }, [groups, answers, generatedHtml, editingMd, generating]);
 
   /**
    * 선택형 답변 직후 다음 미답변 질문으로 부드럽게 이동한다.
@@ -258,9 +261,6 @@ export default function SectionWizard({
     if (idx < 0) return;
     const next = flat.slice(idx + 1).find((q) => !isAnswered(q, nextAnswers[q.id]));
     if (!next) return;
-    setNextFocusQid(next.id);
-    if (nextFocusTimer.current) window.clearTimeout(nextFocusTimer.current);
-    nextFocusTimer.current = window.setTimeout(() => setNextFocusQid(null), 2600);
     // 새 답의 등장 애니메이션이 자리 잡은 뒤 이동
     window.setTimeout(() => {
       const container = bodyRef.current;
@@ -731,8 +731,9 @@ export default function SectionWizard({
                       <div
                         key={q.id}
                         data-qid={q.id}
-                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? styles.qConflict : ""} ${nextFocusQid === q.id ? styles.qNext : ""}`}
+                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? styles.qConflict : ""} ${currentQid === q.id ? ringClass() : ""}`}
                       >
+                        {currentQid === q.id && <GuideBubble text="여기부터 답해주세요!" />}
                         <div className={styles.qq}>
                           {q.q}
                           {showMissing && missingIds.includes(q.id) && <span className={styles.needTag}>입력이 필요합니다</span>}
