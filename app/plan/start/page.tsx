@@ -8,6 +8,7 @@ import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
 import PlanLoading from "../PlanLoading";
+import { TYPE_META, DEFAULT_META } from "../type-meta";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
 function Select({
@@ -477,11 +478,13 @@ export default function PlanStartPage() {
                 <div className={styles.deck}>
                   {[...(featured ? [featured] : []), ...others].map((pt) => {
                     const tone = TONES[pt.tone] ?? TONES[1];
+                    // 아이콘·대표색은 내 플랜 목록과 같은 공용 정의에서 — 화면마다 얼굴이 달라지지 않게
+                    const meta = TYPE_META[pt.type] ?? DEFAULT_META;
                     return (
                       <button
                         key={pt.id}
                         className={styles.planCard}
-                        style={{ ["--acc" as string]: tone.acc, ["--tint" as string]: tone.tint }}
+                        style={{ ["--acc" as string]: meta.accent, ["--tint" as string]: tone.tint }}
                         onClick={() => pick(pt)}
                       >
                         <span className={styles.sheet}>
@@ -491,7 +494,7 @@ export default function PlanStartPage() {
                                 <Star size={10} fill="currentColor" /> 가장 인기
                               </span>
                             )}
-                            <span className={styles.coverIcon} aria-hidden="true">{pt.icon}</span>
+                            <span className={styles.coverIcon} aria-hidden="true"><meta.Icon /></span>
                             <span className={styles.coverName}>{pt.name}</span>
                           </span>
                           <span className={styles.strip}>
