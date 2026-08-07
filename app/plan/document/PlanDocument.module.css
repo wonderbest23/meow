@@ -413,32 +413,24 @@
   .app {
     grid-template-columns: minmax(0, 1fr);
   }
+  /* 위 회색 띠를 없애고 헤더 아래 흰 칩 줄로 — 위저드·개요와 같은 머리 구조 */
   .mobileNav {
     display: flex;
+    order: 1; /* 헤더(제목·도구) 다음, 문서 캔버스 앞 */
     gap: 8px;
     align-items: center;
-    padding: 54px 14px 10px; /* 첫 줄은 뒤로가기 pill 몫 */
+    padding: 0 14px 10px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     border-bottom: 1px solid var(--wz-line);
-    background: var(--wz-panel2);
+    background: var(--wz-panel);
+  }
+  .canvas {
+    order: 2;
   }
 }
 
 @media (max-width: 640px) {
-  .mobileBack {
-    flex: none;
-    border: 0;
-    background: var(--wz-ink, #191f28);
-    color: #fff;
-    font: inherit;
-    font-size: 12.5px;
-    font-weight: 700;
-    padding: 8px 12px;
-    border-radius: 8px;
-    cursor: pointer;
-    white-space: nowrap;
-  }
   .mobileChap {
     flex: none;
     border: 1px solid var(--wz-line);
@@ -461,9 +453,11 @@
   .app > nav {
     display: none;
   }
-  /* 좁은 폭에선 한 줄 헤더가 비좁다 — 제목/도구를 다시 쌓는다 */
+  /* 좁은 폭에선 한 줄 헤더가 비좁다 — 제목/도구를 다시 쌓는다.
+     첫 줄(54px)은 셸 뒤로가기 pill 몫 — 위저드·개요와 동일 */
   .mhead {
     display: block;
+    padding: 54px 14px 12px;
   }
   .routeHeader {
     margin: 0 0 12px;
@@ -492,7 +486,7 @@
 /* 좁은 화면에서 내보내기 버튼이 세 줄로 흩어지던 것 — 한 줄에 담는다 */
 @media (max-width: 560px) {
   .mhead {
-    padding: 16px 14px 12px;
+    padding: 54px 14px 12px; /* 첫 줄은 셸 pill 몫 */
   }
   .routeTitle {
     font-size: 20px;
