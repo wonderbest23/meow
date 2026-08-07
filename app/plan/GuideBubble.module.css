@@ -32,6 +32,26 @@
   animation: guideFloat 1.8s ease-in-out infinite;
   pointer-events: none;
 }
+/* 닫기 × — 부모는 pointer-events:none이지만 여기만 살린다 */
+.close {
+  pointer-events: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  margin-left: 7px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  vertical-align: -2px;
+}
+.close:hover {
+  background: rgba(255, 255, 255, 0.36);
+}
 .bubble::after {
   content: "";
   position: absolute;

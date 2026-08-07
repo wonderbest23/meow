@@ -8,6 +8,7 @@ import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, is
 import { Pencil, FileText, Plus, Rocket, TrendingUp, Landmark, ClipboardList, Users, Calculator, BarChart3 } from "lucide-react";
 import styles from "./PlanList.module.css";
 import PlanLoading from "./PlanLoading";
+import { useGuideVisible, GuideClose } from "./GuideBubble";
 
 /**
  * 유형별 시각 정체성 — 색·아이콘·짧은 라벨.
@@ -33,6 +34,8 @@ export default function PlanList() {
   /** 결제 이력이 하나라도 있으면 샘플 줄을 접는다 — 이미 실물을 갖고 있으니 */
   const [hasAnyPaid, setHasAnyPaid] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
+  /* 훅은 조기 return(로딩) 앞에 있어야 한다 */
+  const [guideOn, dismissGuide] = useGuideVisible();
 
   useEffect(() => {
     let alive = true;
@@ -79,14 +82,15 @@ export default function PlanList() {
     : [];
   const samples = state ? state.plans.filter((p) => isSamplePlan(p.id)) : [];
 
-  /* 안내 네비게이터 — 지금 눌러야 할 곳 하나를 말풍선으로 짚어준다 */
+  /* 안내 네비게이터 — 지금 눌러야 할 곳 하나를 말풍선으로 짚어준다. X로 세션 동안 끌 수 있다 */
   const inProgress = ownPlans.find((p) => { const pct = planPct(p); return pct > 0 && pct < 100; });
   const notStarted = ownPlans.find((p) => planPct(p) === 0);
-  const guide = inProgress
+  const guideRaw = inProgress
     ? { planId: inProgress.id, text: "작성 중인 플랜이에요 — 이어서 완성해 보세요" }
     : notStarted
       ? { planId: notStarted.id, text: "여기서부터 시작하면 돼요" }
       : null;
+  const guide = guideOn ? guideRaw : null;
   const guideNewPlan = ownPlans.length === 0;
 
   function openPlan(id: string) {
@@ -139,8 +143,10 @@ export default function PlanList() {
             <p className={styles.emptyTitle}>아직 만든 플랜이 없어요</p>
             <p className={styles.emptyDesc}>사업 정보를 입력하고 첫 사업계획서를 시작해보세요.</p>
             <span className={styles.guideAnchor}>
-              <span className={styles.guideBubble} aria-hidden="true">첫 플랜을 만들어 보세요</span>
-              <Link href="/plan/start" className={`${styles.newBtn} ${styles.guidePulse}`}>+ 첫 플랜 만들기</Link>
+              {guideOn && (
+                <span className={styles.guideBubble}>첫 플랜을 만들어 보세요<GuideClose onClose={dismissGuide} className={styles.guideClose} /></span>
+              )}
+              <Link href="/plan/start" className={`${styles.newBtn} ${guideOn ? styles.guidePulse : ""}`}>+ 첫 플랜 만들기</Link>
             </span>
           </div>
         ) : (
@@ -162,7 +168,7 @@ export default function PlanList() {
                   onClick={() => openPlan(p.id)}
                 >
                   {guide?.planId === p.id && (
-                    <span className={styles.guideBubble} aria-hidden="true">{guide.text}</span>
+                    <span className={styles.guideBubble}>{guide.text}<GuideClose onClose={dismissGuide} className={styles.guideClose} /></span>
                   )}
                   <span className={`${styles.sheet} ${isActive ? styles.sheetActive : ""} ${guide?.planId === p.id ? styles.sheetGuide : ""}`}>
                     <span className={styles.cover}>
