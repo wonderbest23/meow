@@ -431,23 +431,33 @@ export default function PlanStartPage() {
                 {/* 기존 답변 이어받기 선택 — 이미 작성한 플랜이 있을 때만 */}
                 {donor && (
                   <div className={styles.inheritBox}>
-                    <div className={styles.inheritHead}>이미 작성한 답변이 있어요 — 새 플랜에 어떻게 할까요?</div>
-                    <div className={styles.inheritOpts}>
+                    <div className={styles.inheritHead}>이미 작성한 답변이 있어요</div>
+                    <div className={styles.inheritOpts} role="radiogroup" aria-label="답변 이어받기 선택">
                       <button
                         type="button"
+                        role="radio"
+                        aria-checked={inherit}
                         className={`${styles.inheritOpt} ${inherit ? styles.inheritOn : ""}`}
                         onClick={() => setInherit(true)}
                       >
-                        <b>같은 사업, 답변 이어받기</b>
-                        <span>‘{donor.title}’({donor.planType})의 답변 {donor.count}개를 그대로 가져와, 겹치는 질문은 다시 입력하지 않습니다.</span>
+                        <span className={styles.inheritRadio} aria-hidden="true" />
+                        <span className={styles.inheritText}>
+                          <b>같은 사업, 답변 이어받기</b>
+                          <span>‘{donor.title}’의 답변 {donor.count}개를 가져와요 — 겹치는 질문은 건너뜁니다</span>
+                        </span>
                       </button>
                       <button
                         type="button"
+                        role="radio"
+                        aria-checked={!inherit}
                         className={`${styles.inheritOpt} ${!inherit ? styles.inheritOn : ""}`}
                         onClick={() => setInherit(false)}
                       >
-                        <b>처음부터 새로 시작</b>
-                        <span>다른 사업이거나 답을 전부 새로 쓰고 싶을 때. 빈 상태로 시작합니다.</span>
+                        <span className={styles.inheritRadio} aria-hidden="true" />
+                        <span className={styles.inheritText}>
+                          <b>처음부터 새로 시작</b>
+                          <span>다른 사업을 만들거나 답을 전부 새로 쓸 때 — 빈 상태로 시작해요</span>
+                        </span>
                       </button>
                     </div>
                   </div>
