@@ -888,9 +888,14 @@
 }
 
 
-/* 폰 — 셸 뒤로가기 pill이 겹칠 첫 줄 확보 */
+/* 폰 — 옆 여백 없이 꽉 채운다(위저드·문서와 동일). 첫 줄(48px)은 셸 뒤로가기 몫 */
 @media (max-width: 640px) {
   .page {
-    padding-top: 56px;
+    padding: 48px 0 32px;
+  }
+  .app {
+    border-radius: 0;
+    box-shadow: none;
+    min-height: 0;
   }
 }
