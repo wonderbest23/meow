@@ -376,8 +376,10 @@
   outline-offset: 1px;
 }
 
+/* 좌우 꽉 채우는 세그먼트 — 왼쪽에만 뭉쳐 있으면 균형이 깨진다 */
 .cats {
-  display: inline-flex;
+  display: flex;
+  width: 100%;
   background: var(--surface-soft, #f7f8fa);
   border: 1px solid var(--border-soft, #e5e8eb);
   border-radius: 12px;
@@ -386,6 +388,7 @@
   margin-bottom: 18px;
 }
 .cats button {
+  flex: 1 1 0;
   border: 0;
   background: transparent;
   color: var(--text-muted, #8b95a1);
@@ -395,6 +398,7 @@
   padding: 10px 20px;
   border-radius: 9px;
   cursor: pointer;
+  text-align: center;
 }
 .cats button.catOn {
   background: var(--text-strong, #191f28);
