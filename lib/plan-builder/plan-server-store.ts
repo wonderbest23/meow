@@ -34,6 +34,8 @@ export interface ServerPlan {
     }
   >;
   answers: Record<string, Record<string, unknown>>;
+  /** 답변 이어받기 출처 — 화면 안내용 */
+  inheritedFrom?: { title: string; count: number };
 }
 
 export interface ServerPlanState {
@@ -78,6 +80,9 @@ export function normalizeState(input: Partial<ServerPlanState> | null | undefine
       updatedAt: str(p?.updatedAt, 40) || new Date().toISOString(),
       sections: p?.sections && typeof p.sections === "object" ? p.sections : {},
       answers: p?.answers && typeof p.answers === "object" ? p.answers : {},
+      ...(p?.inheritedFrom && typeof p.inheritedFrom === "object"
+        ? { inheritedFrom: { title: str(p.inheritedFrom.title, 120), count: Number(p.inheritedFrom.count) || 0 } }
+        : {}),
     })),
     activePlanId: typeof input?.activePlanId === "string" ? input.activePlanId.slice(0, 60) : null,
   };

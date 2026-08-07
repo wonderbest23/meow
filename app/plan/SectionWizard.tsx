@@ -23,6 +23,7 @@ import {
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
+import InheritNote from "./InheritNote";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { Spinner } from "./PlanLoading";
 import InlineDocEditor from "./InlineDocEditor";
@@ -674,7 +675,10 @@ export default function SectionWizard({
               ) : (
               <>
               {editingMd === null && !generatedHtml && !generating && (
-                <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
+                <>
+                  <InheritNote />
+                  <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
+                </>
               )}
 
               {editingMd !== null ? (

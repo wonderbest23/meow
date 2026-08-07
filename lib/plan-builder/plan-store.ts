@@ -51,6 +51,8 @@ export interface Plan {
   sections: Record<string, StoredSection>; // key = `${chapterId}/${sectionId}`
   /** 섹션별 질문 답변 (생성 전에도 보존) */
   answers: Record<string, Record<string, unknown>>;
+  /** 답변을 이어받아 만든 플랜이면 출처 — 화면이 "왜 미리 채워져 있는지" 설명하는 데 쓴다 */
+  inheritedFrom?: { title: string; count: number };
 }
 
 export interface PlanState {
@@ -82,6 +84,7 @@ function migrate(parsed: Record<string, unknown>): PlanState {
       updatedAt: p.updatedAt || new Date().toISOString(),
       sections: p.sections || {},
       answers: p.answers || {},
+      ...(p.inheritedFrom ? { inheritedFrom: p.inheritedFrom } : {}),
     }));
     return {
       business: { ...EMPTY_BUSINESS, ...((parsed.business as Partial<BusinessProfile>) || {}) },
@@ -206,6 +209,7 @@ export function createPlan(planType: string, title?: string, opts?: { inheritAns
     updatedAt: now,
     sections: {},
     answers: inherited,
+    ...(donor ? { inheritedFrom: { title: donor.title, count: realAnswerCount(donor) } } : {}),
   };
   s.plans.push(plan);
   s.activePlanId = plan.id;

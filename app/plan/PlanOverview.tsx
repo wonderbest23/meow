@@ -16,6 +16,7 @@ import {
 import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
 import { estimateMinutes } from "../../lib/plan-builder/questions";
 import ConsistencyPanel from "./ConsistencyPanel";
+import InheritNote from "./InheritNote";
 import PlanLoading from "./PlanLoading";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
@@ -263,6 +264,9 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           </div>
           <div className={styles.spring} />
         </div>
+
+        {/* 이어받아 만든 플랜이면 왜 미리 채워져 있는지 먼저 설명한다 */}
+        <InheritNote />
 
         {/* 다 채운 사람에게 마지막 단계 — 발표자료 */}
         {/* 작성 중이면 다음 할 일을 바로 이어준다 — 재방문 시 첫 행동이 명확해야 한다 */}
