@@ -522,6 +522,17 @@ export default function SectionWizard({
     [reviewAnswers, key],
   );
 
+  // 지금도 실제로 어긋나 있는 질문 — 답을 고치면 즉시 빠져서 빨간 표시가 풀린다
+  const liveConflictQids = useMemo(() => {
+    const s = new Set<string>();
+    for (const issue of sectionIssues) {
+      for (const r of issue.refs) {
+        if (r.key === key) for (const qid of r.qids ?? []) s.add(qid);
+      }
+    }
+    return s;
+  }, [sectionIssues, key]);
+
   /** 이 섹션이 잠겨 있는지 — 서버와 같은 규칙 */
   const gate: "login_required" | "payment_required" | null = !access
     ? null
@@ -742,13 +753,15 @@ export default function SectionWizard({
                       <div
                         key={q.id}
                         data-qid={q.id}
-                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? styles.qConflict : ""} ${currentQid === q.id ? ringClass() : ""}`}
+                        className={`${styles.q} ${q.showWhen ? styles.qSub : ""} ${showMissing && missingIds.includes(q.id) ? styles.qMissing : ""} ${conflictQids.includes(q.id) ? (liveConflictQids.has(q.id) ? styles.qConflict : styles.qResolved) : ""} ${currentQid === q.id ? ringClass() : ""}`}
                       >
                         {currentQid === q.id && <GuideBubble text="여기부터 답하면 돼요" />}
                         <div className={styles.qq}>
                           {q.q}
                           {showMissing && missingIds.includes(q.id) && <span className={styles.needTag}>입력이 필요합니다</span>}
-                          {conflictQids.includes(q.id) && <span className={styles.conflictTag}>이 답변이 서로 달라요</span>}
+                          {conflictQids.includes(q.id) && (liveConflictQids.has(q.id)
+                            ? <span className={styles.conflictTag}>이 답변이 서로 달라요</span>
+                            : <span className={styles.resolvedTag}>해결됐어요</span>)}
                         </div>
                         {q.help && <div className={styles.qh}>{q.help}</div>}
                         {renderInput(q, answers[q.id], { setAnswer, toggleMulti, styles })}
@@ -806,7 +819,6 @@ export default function SectionWizard({
               ) : (
                 <>
                   <button className={styles.btn} onClick={onBack}>← 이전</button>
-                  <button className={`${styles.btn} ${styles.btnGhost}`} onClick={() => { setAnswers({}); setSuggestions({}); saveAnswers(key, {}); }}>초기화</button>
                   <button
                     className={`${styles.btn} ${styles.btnPrimary} ${!complete ? styles.btnWaiting : styles.beacon}`}
                     disabled={generating}

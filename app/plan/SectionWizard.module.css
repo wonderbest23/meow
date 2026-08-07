@@ -1071,6 +1071,24 @@
   white-space: nowrap;
 }
 
+/* 어긋났던 답을 고치면 — 빨간 대신 파란 '해결' 상태로 즉시 전환 */
+.qResolved {
+  border: 1.5px solid var(--wz-brand, #3182f6);
+  background: #f4f8ff;
+  box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.1), var(--wz-shadow-sm);
+}
+.resolvedTag {
+  margin-left: 8px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--wz-brand, #3182f6);
+  border-radius: 999px;
+  padding: 3px 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
 /* 아직 다 못 채운 상태의 생성 버튼 — 막지 않고 남은 개수를 알려준다 */
 .btnWaiting {
   background: var(--wz-panel2);
