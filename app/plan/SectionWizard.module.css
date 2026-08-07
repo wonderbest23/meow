@@ -426,6 +426,18 @@
   align-items: center;
   gap: 8px;
 }
+/* '예상 소요시간' 인라인 접두어 — PC는 위 라벨이 있으니 숨기고, 폰에서만 보인다 */
+.mtPrefix {
+  display: none;
+}
+@media (max-width: 640px) {
+  .mtPrefix {
+    display: inline;
+    color: var(--wz-faint, #8b95a1);
+    font-weight: 700;
+  }
+}
+
 .segs {
   display: flex;
   gap: 4px;
@@ -1439,11 +1451,12 @@
 @media (max-width: 640px) {
   .mhead {
     position: relative;
-    padding-top: 58px; /* 첫 줄 = [← 내 플랜 | 미터] */
+    padding-top: 58px; /* 첫 줄 = [← 내 플랜] */
   }
+  /* 미터는 둘째 줄('사업 개요' 줄) 우측 — 첫 줄은 뒤로가기만 */
   .meters {
     position: absolute;
-    top: 16px; /* 헤더 첫 줄 우측 */
+    top: 58px;
     right: 14px;
     margin: 0;
     display: flex;
@@ -1460,17 +1473,13 @@
     display: none;
   }
   .mtL {
-    display: none; /* 라벨은 생략 — 값만으로 읽힌다 */
+    display: none; /* 위 라벨 대신 값 안에 '예상 소요시간'을 붙인다 */
   }
   .mtV {
     margin-top: 0;
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--wz-muted, #4e5968);
     white-space: nowrap;
-  }
-  /* '유형'(전략/재무)은 폰에서 정보가치가 낮다 — 상태·시간·진행만 */
-  .mt:first-child {
-    display: none;
   }
 }

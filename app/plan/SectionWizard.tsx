@@ -668,9 +668,8 @@ export default function SectionWizard({
               <div className={styles.crumb}>{chapter.title}</div>
               <h1>{section.title}</h1>
               <div className={styles.meters}>
-                <div className={styles.mt}><div className={styles.mtL}>유형</div><div className={styles.mtV}>전략</div></div>
-                <div className={styles.mt}><div className={styles.mtL}>상태</div><div className={styles.mtV}>{generatedHtml ? "생성 완료" : complete ? "작성 완료" : answeredReq > 0 ? "작성 중" : "시작 전"}</div></div>
-                <div className={styles.mt}><div className={styles.mtL}>예상 시간</div><div className={styles.mtV}>{estimateMinutes(key, section.title, planType)}분</div></div>
+                {/* '상태'는 하단 버튼과 중복이라 뺐다 — 시간과 진행만 남긴다 */}
+                <div className={styles.mt}><div className={styles.mtL}>예상 소요시간</div><div className={styles.mtV}><span className={styles.mtPrefix}>예상 소요시간 </span>{estimateMinutes(key, section.title, planType)}분</div></div>
                 <div className={styles.mt}><div className={styles.mtL}>진행</div><div className={styles.mtV}><span className={styles.segs}>{[0, 1, 2, 3].map((i) => (<i key={i} className={i < Math.round((pct / 100) * 4) ? styles.f : ""} />))}</span></div></div>
               </div>
             </div>
@@ -819,12 +818,13 @@ export default function SectionWizard({
               ) : (
                 <>
                   <button className={styles.btn} onClick={onBack}>← 이전</button>
+                  {/* 미완료여도 파란 버튼 그대로 — 누르면 비어 있는 질문으로 데려간다 */}
                   <button
-                    className={`${styles.btn} ${styles.btnPrimary} ${!complete ? styles.btnWaiting : styles.beacon}`}
+                    className={`${styles.btn} ${styles.btnPrimary} ${complete ? styles.beacon : ""}`}
                     disabled={generating}
                     onClick={attemptGenerate}
                   >
-                    {generating ? <><Spinner /> 생성 중…</> : complete ? "완료하고 생성 →" : `${totalReq - answeredReq}개 남음`}
+                    {generating ? <><Spinner /> 생성 중…</> : complete ? "완료하고 생성 →" : "다음 단계 →"}
                   </button>
                 </>
               )}
