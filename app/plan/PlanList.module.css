@@ -400,10 +400,10 @@
 .emblem {
   position: absolute;
   left: 50%;
-  top: 36%;
+  top: 40%; /* 제목을 뺀 자유 공간의 시각적 중앙 */
   transform: translate(-50%, -50%);
-  width: 28cqw;
-  height: 28cqw;
+  width: 36cqw;
+  height: 36cqw;
   border-radius: 50%;
   background: #fff;
   display: grid;
@@ -412,8 +412,9 @@
   box-shadow: 0 2cqw 7cqw rgba(0, 0, 0, 0.22);
 }
 .emblem svg {
-  width: 13cqw;
-  height: 13cqw;
+  /* 원 지름의 절반 — 원이 커져도 비율이 유지된다 */
+  width: 18cqw;
+  height: 18cqw;
   display: block;
 }
 
