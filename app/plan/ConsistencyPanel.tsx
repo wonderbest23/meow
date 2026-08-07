@@ -35,6 +35,7 @@ export default function ConsistencyPanel({ issues, onOpenSection, compact }: Con
                   key={r.key}
                   type="button"
                   className={styles.link}
+                  title={r.label}
                   onClick={() => {
                     // 이동한 섹션에서 어긋난 질문을 짚어주기 위한 전달
                     try {
@@ -43,7 +44,7 @@ export default function ConsistencyPanel({ issues, onOpenSection, compact }: Con
                     onOpenSection(chapterId, sectionId);
                   }}
                 >
-                  {r.label} →
+                  모순 수정하기
                 </button>
               );
             })}
