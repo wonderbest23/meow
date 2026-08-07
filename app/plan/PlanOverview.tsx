@@ -317,9 +317,12 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
               </button>
             </div>
           ) : (
-            <button type="button" className={styles.bulkBtn} onClick={generateAll} disabled={pendingKeys.length === 0}>
-              <Zap size={13} /> 남은 {pendingKeys.length}개 한번에 생성
-            </button>
+            /* 생성할 게 없으면 아예 숨긴다 — '남은 0개' 회색 버튼은 정체를 알 수 없었다 */
+            pendingKeys.length > 0 && (
+              <button type="button" className={styles.bulkBtn} onClick={generateAll}>
+                <Zap size={13} /> 답변한 섹션 {pendingKeys.length}개 한번에 생성
+              </button>
+            )
           )}
         </div>
 
