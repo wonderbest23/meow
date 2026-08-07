@@ -267,14 +267,17 @@
 }
 
 @media (max-width: 640px) {
+  /* 폰은 손가락 대상 — 더 크고 또렷하게 */
   .railToggle {
     left: 56px; /* 모바일 레일 폭 */
-    width: 20px;
-    height: 46px;
+    width: 28px;
+    height: 64px;
+    font-size: 16px;
   }
   /* 미디어쿼리가 뒤에 오므로 접힘 상태도 여기서 다시 못박는다 */
   .railToggleOff {
     left: 0;
+    opacity: 0.85; /* 폰에선 호버가 없다 — 처음부터 또렷하게 */
   }
   .contentWide {
     margin-left: 0 !important;
