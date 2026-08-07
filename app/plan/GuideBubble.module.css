@@ -47,6 +47,12 @@
   .bubble {
     font-size: 11px;
     padding: 7px 11px;
+    /* 화면 밖으로 잘리지 않게 — 필요하면 줄바꿈 */
+    white-space: normal;
+    width: max-content;
+    max-width: calc(100vw - 48px);
+    text-align: center;
+    line-height: 1.45;
   }
 }
 

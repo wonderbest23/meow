@@ -691,9 +691,15 @@
 }
 
 @media (max-width: 640px) {
+  /* 좁은 카드 중앙 기준이라 nowrap이면 화면 밖으로 잘린다 — 카드 폭 안에서 줄바꿈 */
   .guideBubble {
     font-size: 11px;
     padding: 7px 11px;
+    white-space: normal;
+    width: max-content;
+    max-width: 150px;
+    text-align: center;
+    line-height: 1.45;
   }
 }
 
