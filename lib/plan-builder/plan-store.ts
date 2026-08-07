@@ -174,14 +174,29 @@ export function saveBusiness(business: BusinessProfile) {
  * 다시 묻지 않기 위해서다. 생성된 본문(sections)은 물려받지 않는다 —
  * 유형이 다르면 같은 답이라도 글이 달라야 하므로 새로 생성한다.
  */
+/** 실제로 채워진 답변 수 — 빈 문자열·빈 배열·초기화로 남은 빈 섹션은 세지 않는다 */
+function realAnswerCount(p: Plan): number {
+  return Object.values(p.answers ?? {}).reduce((n, sec) => {
+    return (
+      n +
+      Object.values(sec ?? {}).filter(
+        (v) => v != null && v !== "" && !(Array.isArray(v) && v.length === 0),
+      ).length
+    );
+  }, 0);
+}
+
+/** 답변을 물려줄 플랜 — 진짜 답변이 1개 이상 있는 것 중 가장 최근 */
+function pickDonor(s: PlanState): Plan | undefined {
+  return s.plans
+    .filter((p) => !isSamplePlan(p.id) && realAnswerCount(p) > 0)
+    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0];
+}
+
 export function createPlan(planType: string, title?: string, opts?: { inheritAnswers?: boolean }): string {
   const s = loadState();
   const now = new Date().toISOString();
-  const donor = opts?.inheritAnswers === false
-    ? undefined
-    : s.plans
-        .filter((p) => !isSamplePlan(p.id) && Object.keys(p.answers ?? {}).length > 0)
-        .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0];
+  const donor = opts?.inheritAnswers === false ? undefined : pickDonor(s);
   const inherited: Plan["answers"] = donor ? JSON.parse(JSON.stringify(donor.answers)) : {};
   const plan: Plan = {
     id: newId(),
@@ -201,13 +216,9 @@ export function createPlan(planType: string, title?: string, opts?: { inheritAns
 
 /** 답변을 물려줄 수 있는 기존 플랜(가장 최근) — 새 플랜 만들 때 선택지를 보여줄지 판단용 */
 export function answerDonor(): { title: string; planType: string; count: number } | null {
-  const s = loadState();
-  const donor = s.plans
-    .filter((p) => !isSamplePlan(p.id) && Object.keys(p.answers ?? {}).length > 0)
-    .sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0];
+  const donor = pickDonor(loadState());
   if (!donor) return null;
-  const count = Object.values(donor.answers).reduce((n, sec) => n + Object.keys(sec ?? {}).length, 0);
-  return { title: donor.title, planType: donor.planType, count };
+  return { title: donor.title, planType: donor.planType, count: realAnswerCount(donor) };
 }
 
 /** 예시 플랜은 저장 대상이 아니다. 쓰기 함수는 모두 여기서 먼저 걸러진다. */
