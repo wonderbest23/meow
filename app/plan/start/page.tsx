@@ -506,8 +506,8 @@ export default function PlanStartPage() {
                 </div>
 
                 <p className={styles.sameNote}>
-                  유형에 따라 채우는 <b>섹션 구성과 개수가 다릅니다</b>. 답변은 플랜별로 남으니,
-                  나중에 플랜을 복제해 다른 유형으로 만들면 겹치는 섹션은 다시 답하지 않아도 됩니다.
+                  유형에 따라 채우는 <b>섹션 구성과 개수가 다릅니다</b>. 같은 사업으로 다른 유형을
+                  만들면 답변을 이어받아, 겹치는 섹션은 다시 답하지 않아도 돼요.
                 </p>
 
                 <div className={styles.actions} style={{ marginTop: 18 }}>
