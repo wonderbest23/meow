@@ -268,7 +268,7 @@ export default function PlanDocumentPage() {
         <div className={styles.app}>
           {/* 좌측 목차 — 위저드와 동일한 어두운 내비 모듈을 그대로 쓴다 */}
           <nav className={wiz.nav} aria-label="문서 목차">
-            <button className={wiz.navTop} onClick={() => router.push("/plan/overview")}>플랜 개요</button>
+            <button className={wiz.navTop} onClick={() => router.push("/plan/overview")}>← 플랜 개요</button>
             {grouped.map(([chapterTitle, list]) => {
               const chapterNum = numbering.get(list[0]?.key ?? "")?.chapterNum;
               return (

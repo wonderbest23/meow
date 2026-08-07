@@ -116,56 +116,35 @@
 .nav > * {
   flex-shrink: 0;
 }
+/* 조용한 유령 버튼 — 목차의 다크 톤에 녹는다 */
 .navTop {
   width: calc(100% - 28px);
-  margin: 0 14px 14px;
-  border: 0;
-  background: #fff;
-  color: #10233a;
-  font: inherit;
-  font-weight: 700;
-  font-size: 14px;
-  padding: 13px;
-  border-radius: 6px;
-  cursor: pointer;
-  text-align: center;
-  transition: 0.2s;
-}
-.navTop:hover {
-  background: #eef2f6;
-}
-/* 세그먼트 — 가운데 모서리는 각지게 붙인다 */
-.navTabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  margin: 0 14px 16px;
-}
-.navTab {
-  border: 1.5px solid rgba(255, 255, 255, 0.22);
+  margin: 0 14px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
-  color: #cbd8e2;
+  color: #dbe5ee;
   font: inherit;
   font-weight: 700;
   font-size: 12.5px;
-  padding: 11px 8px;
+  padding: 9px;
+  border-radius: 8px;
   cursor: pointer;
+  text-align: center;
+  transition: 0.15s;
   transition: 0.2s;
 }
-.navTab:first-child {
-  border-radius: 6px 0 0 6px;
-  border-right-width: 0;
-}
-.navTab:last-child {
-  border-radius: 0 6px 6px 0;
-}
-.navTab:hover {
+.navTop:hover {
+  background: rgba(255, 255, 255, 0.1);
   color: #fff;
-  background: rgba(255, 255, 255, 0.08);
 }
-.navTab.navTabOn {
-  background: #f4b740;
-  border-color: #f4b740;
-  color: #10233a;
+/* 목차 캡션 — 작은 회색 라벨 하나로 충분하다 */
+.navCaption {
+  margin: 0 14px 8px;
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
 }
 
 /* 챕터 = 가로 전체를 채우는 사각 행 */

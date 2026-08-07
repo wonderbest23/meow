@@ -623,11 +623,9 @@ export default function SectionWizard({
 
           {/* chapter nav — 레퍼런스 스타일 */}
           <nav className={styles.nav} aria-label="챕터">
-            <button className={styles.navTop} onClick={onBack}>플랜 개요</button>
-            <div className={styles.navTabs}>
-              <button className={`${styles.navTab} ${styles.navTabOn}`} type="button">목차</button>
-              <button className={styles.navTab} type="button" title="준비 중">맞춤 요소</button>
-            </div>
+            {/* 상단은 조용한 유령 버튼 하나 — 흰 큰 버튼·노란 탭('맞춤 요소'는 준비 중)은 목차 톤을 깼다 */}
+            <button className={styles.navTop} onClick={onBack}>← 플랜 개요</button>
+            <div className={styles.navCaption}>목차</div>
             {chapters.map((ch, ci) => {
               const open = ch.id === chapter.id;
               return (
