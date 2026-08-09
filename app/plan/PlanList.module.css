@@ -374,9 +374,12 @@
   background: #fff;
   transition: transform 0.2s, box-shadow 0.2s;
 }
-.planCard:hover .sheet {
-  transform: translateY(-4px);
-  box-shadow: 0 18px 36px rgba(20, 32, 64, 0.16);
+/* 터치 기기에서는 탭마다 카드가 들썩였다 — 진짜 호버 환경에서만 */
+@media (hover: hover) and (pointer: fine) {
+  .planCard:hover .sheet {
+    transform: translateY(-4px);
+    box-shadow: 0 18px 36px rgba(20, 32, 64, 0.16);
+  }
 }
 .sheetActive {
   box-shadow: 0 0 0 2px var(--acc, #3182f6);
@@ -388,6 +391,9 @@
   flex-direction: column;
   align-items: flex-start;
   justify-content: flex-end;
+  /* px 폴백 — cqw 미지원 브라우저에서 카드가 제각각 되지 않게 */
+  gap: 8px;
+  padding: 13px;
   gap: 4cqw;
   padding: 7cqw;
   background:
@@ -402,6 +408,8 @@
   left: 50%;
   top: 40%; /* 제목을 뺀 자유 공간의 시각적 중앙 */
   transform: translate(-50%, -50%);
+  width: 66px;
+  height: 66px;
   width: 36cqw;
   height: 36cqw;
   border-radius: 50%;
@@ -413,6 +421,8 @@
 }
 .emblem svg {
   /* 원 지름의 절반 — 원이 커져도 비율이 유지된다 */
+  width: 33px;
+  height: 33px;
   width: 18cqw;
   height: 18cqw;
   display: block;
@@ -420,6 +430,9 @@
 
 /* 유형 칩 — 제목 위 작은 반투명 칩 (기존 디자인) */
 .typeChip {
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 10px;
   padding: 2cqw 4.5cqw;
   border-radius: 3cqw;
   background: rgba(255, 255, 255, 0.2);
@@ -434,6 +447,7 @@
 .coverName {
   position: relative;
   color: #fff;
+  font-size: 16px;
   font-size: 9cqw;
   font-weight: 800;
   line-height: 1.3;
@@ -458,6 +472,10 @@
 }
 .coverBadge {
   position: absolute;
+  top: 9px;
+  left: 9px;
+  font-size: 10px;
+  padding: 5px 9px;
   top: 5cqw;
   left: 5cqw;
   z-index: 2;
@@ -483,6 +501,9 @@
   gap: 10px;
   padding: 11px 13px;
   background: #fff;
+  /* 진행 바·'시작 전'·'완성' 어떤 내용이든 같은 높이 */
+  min-height: 44px;
+  box-sizing: border-box;
 }
 /* 카드 전체가 button이라 내부는 전부 span — inline이면 진행 바 width가 무시된다 */
 .strip .bar {
@@ -501,6 +522,10 @@
 /* 완성 리본 — 우상단 모서리를 가로지르는 띠 */
 .stamp {
   position: absolute;
+  top: 16px;
+  right: -30px;
+  width: 118px;
+  padding: 5px 0;
   top: 9cqw;
   right: -17cqw;
   width: 65cqw;
@@ -509,6 +534,7 @@
   transform: rotate(45deg);
   background: #16b877;
   color: #fff;
+  font-size: 11px;
   font-size: 6cqw;
   font-weight: 900;
   letter-spacing: 0.24em;

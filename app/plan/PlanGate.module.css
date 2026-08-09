@@ -57,8 +57,11 @@
   letter-spacing: 0;
 }
 
+/* 버튼은 세로 스택 — 나란히 두면 좁은 폭에서 겹치거나 어색하게 감겼다 */
 .primary {
-  display: inline-block;
+  display: block;
+  max-width: 300px;
+  margin: 0 auto;
   background: var(--wz-brand, #3182f6);
   color: #fff;
   font-weight: 700;
@@ -73,8 +76,9 @@
 }
 
 .secondary {
-  display: inline-block;
-  margin-left: 10px;
+  display: block;
+  max-width: 300px;
+  margin: 10px auto 0;
   background: #fff;
   color: var(--wz-muted, #4e5968);
   font-weight: 600;

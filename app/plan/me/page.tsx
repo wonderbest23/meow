@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { hydrateFromServer, type PlanState } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, clearLocalState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
@@ -58,6 +58,8 @@ export default function PlanMePage() {
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
+    // 로컬 플랜 캐시도 함께 비운다 — 로그아웃 후에도 이전 계정 플랜이 보이던 버그
+    clearLocalState();
     router.push("/plan");
   }
 

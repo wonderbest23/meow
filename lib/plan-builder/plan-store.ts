@@ -161,6 +161,13 @@ export function activePlan(state?: PlanState): Plan | null {
   return s.plans.find((p) => p.id === s.activePlanId) ?? s.plans[0] ?? null;
 }
 
+/** 로그아웃 시 로컬 캐시 제거 — 다음 사용자에게 이전 계정의 플랜이 보이면 안 된다 */
+export function clearLocalState() {
+  try {
+    localStorage.removeItem(KEY);
+  } catch {}
+}
+
 /** 사업 정보 저장 (플랜은 유지) */
 export function saveBusiness(business: BusinessProfile) {
   const s = loadState();
