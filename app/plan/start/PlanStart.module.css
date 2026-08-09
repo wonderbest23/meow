@@ -715,7 +715,10 @@
 /* 커버 — 내 플랜 목록 카드와 동일한 문법(사선 결 + 중앙 흰 원 엠블럼 + 하단 이름) */
 .cover {
   position: relative;
+  /* 폭의 125%(4:5)로 높이를 직접 못박는다 — 기종별 비율 편차 차단 */
   aspect-ratio: 4 / 5;
+  min-height: 200px;
+  height: 125cqw;
   display: flex;
   align-items: flex-start;
   justify-content: flex-end;

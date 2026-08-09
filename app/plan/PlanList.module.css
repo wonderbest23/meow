@@ -386,7 +386,11 @@
 }
 .cover {
   position: relative;
+  /* 높이를 브라우저 해석에 맡기지 않는다 — 폭의 125%(4:5)로 직접 못박아
+     기종·브라우저마다 비율이 달라지던 문제를 차단 */
   aspect-ratio: 4 / 5;
+  min-height: 200px;
+  height: 125cqw;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
