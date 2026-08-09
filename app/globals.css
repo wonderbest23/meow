@@ -9412,3 +9412,16 @@ body {
     font-size: 11.5px;
   }
 }
+
+/*
+ * iOS 사파리는 글자 16px 미만인 입력 필드에 포커스하면 화면을 자동 확대한다.
+ * 입력 후 수동으로 축소해야 하는 불편 — 폰에서는 모든 입력을 16px로 고정해 차단.
+ * (!important: 모듈 CSS의 14px대 지정을 일괄로 눌러야 한다)
+ */
+@media (max-width: 640px) {
+  input,
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
