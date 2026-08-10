@@ -30,7 +30,7 @@ import InlineDocEditor from "./InlineDocEditor";
 import PlanGate from "./PlanGate";
 import { htmlToMarkdown } from "../../lib/plan-builder/html-to-markdown";
 import FinancialReview from "./FinancialReview";
-import { Sparkles, PenLine, Lock, Unlock, Undo2, RefreshCw, CodeXml } from "lucide-react";
+import { Sparkles, PenLine, Lock, Unlock, Undo2, RefreshCw } from "lucide-react";
 import styles from "./SectionWizard.module.css";
 
 type AnswerMap = Record<string, unknown>;
@@ -350,7 +350,7 @@ export default function SectionWizard({
    */
   function requestRegenerate() {
     if (locked) {
-      alert("이 섹션은 잠겨 있어 다시 생성할 수 없습니다.\n자물쇠를 풀고 다시 시도해주세요.");
+      alert("수정 보호가 켜져 있어 다시 생성할 수 없습니다.\n본문 위의 '수정 보호 중' 버튼을 눌러 끈 뒤 다시 시도해주세요.");
       return;
     }
     if (edited && !confirm("직접 고친 내용이 새로 생성한 글로 바뀝니다.\n계속할까요? (생성 후 '되돌리기'로 한 번 복구할 수 있어요)")) {
@@ -691,7 +691,7 @@ export default function SectionWizard({
 
               {editingMd !== null ? (
                 <>
-                  <span className={styles.genBadge}><CodeXml size={13} /> 직접 편집 (마크다운)</span>
+                  <span className={styles.genBadge}><PenLine size={13} /> 본문 직접 수정</span>
                   <textarea
                     className={styles.mdEditor}
                     value={editingMd}
@@ -709,9 +709,9 @@ export default function SectionWizard({
                       type="button"
                       className={`${styles.lockBtn} ${locked ? styles.lockOn : ""}`}
                       onClick={onToggleLock}
-                      title={locked ? "잠금 해제 — 다시 생성이 이 글을 덮어쓸 수 있게 됩니다" : "잠그면 다시 생성이 이 글을 덮어쓰지 못합니다"}
+                      title={locked ? "수정 보호를 끕니다 — 다시 생성이 본문을 새로 쓸 수 있게 됩니다" : "수정 보호를 켜면 '다시 생성'이 이 본문을 덮어쓰지 않습니다"}
                     >
-                      {locked ? <><Lock size={12} /> 잠김</> : <><Unlock size={12} /> 잠그기</>}
+                      {locked ? <><Lock size={12} /> 수정 보호 중</> : <><Unlock size={12} /> 수정 보호</>}
                     </button>
                     {canUndo && (
                       <button type="button" className={styles.undoBtn} onClick={onUndo} title="직전 본문으로 되돌립니다">
@@ -721,7 +721,7 @@ export default function SectionWizard({
                   </div>
                   {locked && (
                     <p className={styles.lockNote}>
-                      이 섹션은 잠겨 있습니다. 다시 생성해도 이 글은 그대로 남습니다.
+                      수정 보호가 켜져 있어요 — 다시 생성해도 이 글은 그대로 유지됩니다.
                     </p>
                   )}
                   {/* 편집 모드가 따로 없다 — 문서가 늘 편집 가능한 상태다 */}
@@ -803,14 +803,14 @@ export default function SectionWizard({
               ) : generatedHtml ? (
                 <>
                   <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
-                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="마크다운 원문을 직접 손봅니다"><CodeXml size={13} /> 마크다운</button>
+                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="생성된 본문을 직접 고칩니다"><PenLine size={13} /> 본문 수정</button>
                   <button
                     className={`${styles.btn} ${styles.btnPrimary} ${locked ? styles.btnLocked : ""}`}
                     disabled={generating}
                     onClick={requestRegenerate}
-                    title={locked ? "잠긴 섹션입니다" : undefined}
+                    title={locked ? "수정 보호가 켜져 있어요 — 본문 위 '수정 보호 중'을 눌러 끄면 다시 생성할 수 있습니다" : undefined}
                   >
-                    {generating ? <><Spinner /> 생성 중…</> : locked ? <><Lock size={13} /> 잠김</> : <><RefreshCw size={13} /> 다시 생성</>}
+                    {generating ? <><Spinner /> 생성 중…</> : locked ? <><Lock size={13} /> 보호 중 — 다시 생성 불가</> : <><RefreshCw size={13} /> 다시 생성</>}
                   </button>
                 </>
               ) : (
