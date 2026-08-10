@@ -22,7 +22,7 @@ import {
   isSamplePlan,
 } from "../../lib/plan-builder/plan-store";
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
-import { enqueueGeneration, isGenerating, generatingCount, subscribeGeneration } from "../../lib/plan-builder/generation-queue";
+import { enqueueGeneration, isGenerating, subscribeGeneration, totalPendingCount } from "../../lib/plan-builder/generation-queue";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
 import InheritNote from "./InheritNote";
@@ -675,9 +675,9 @@ export default function SectionWizard({
                 </>
               ) : (
                 <>
-                  {generatingCount() > 0 && (
+                  {totalPendingCount() > 0 && (
                     <span className={styles.readOnlyNote}>
-                      <Spinner /> 본문 {generatingCount()}개를 뒤에서 만들고 있어요 — 기다리지 않아도 됩니다
+                      <Spinner /> 본문 {totalPendingCount()}개를 서버에서 만들고 있어요 — 창을 닫아도 계속됩니다
                     </span>
                   )}
                   <button

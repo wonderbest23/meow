@@ -71,6 +71,11 @@
       "name": "today-startup-direct-plan",
       "binding": "DIRECT_PLAN_WORKFLOW",
       "class_name": "DirectPlanWorkflow"
+    },
+    {
+      "name": "today-startup-plan-sections",
+      "binding": "PLAN_SECTIONS_WORKFLOW",
+      "class_name": "PlanSectionsWorkflow"
     }
   ],
   "observability": {

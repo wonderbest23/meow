@@ -21,7 +21,7 @@ import InheritNote from "./InheritNote";
 import PlanLoading from "./PlanLoading";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
-import { generatingCount, generatingTitle, subscribeGeneration } from "../../lib/plan-builder/generation-queue";
+import { generatingTitle, subscribeGeneration, totalPendingCount, refreshServerPending } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -117,7 +117,26 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
    */
   const [, setQueueTick] = useState(0);
   useEffect(() => subscribeGeneration(() => setQueueTick((n) => n + 1)), []);
-  const queued = generatingCount();
+  /*
+   * 서버에 맡긴 생성은 이 창 밖에서 돈다 — 몇 개 남았는지 주기적으로 확인한다.
+   * 남은 게 없으면 확인도 멈춘다(빈 폴링을 계속 돌리지 않는다).
+   */
+  useEffect(() => {
+    const planId = activePlan(loadState())?.id;
+    if (!planId) return;
+    let alive = true;
+    void refreshServerPending(planId);
+    const timer = setInterval(() => {
+      if (!alive) return;
+      if (totalPendingCount() === 0) return;
+      void refreshServerPending(planId);
+    }, 15_000);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+    };
+  }, []);
+  const queued = totalPendingCount();
 
   // 아직 생성되지 않았지만 답변이 있는 섹션 = 일괄 생성 대상
   const pendingKeys = useMemo(() => {

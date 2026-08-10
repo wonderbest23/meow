@@ -1,9 +1,11 @@
 // @ts-expect-error The OpenNext worker is generated before Wrangler bundles this entrypoint.
 import handler from "./.open-next/worker.js";
 import { handleDraftPackageServiceRequest } from "./lib/draft-package/service";
+import { handlePlanSectionServiceRequest } from "./lib/plan-builder/section-service";
 
 export { DraftPackageWorkflow } from "./lib/draft-package/workflow";
 export { DirectPlanWorkflow } from "./lib/direct-plan/workflow";
+export { PlanSectionsWorkflow } from "./lib/plan-builder/section-workflow";
 
 const platformHosts = new Set([
   "oneulstart.com",
@@ -28,6 +30,8 @@ export default {
   async fetch(request: Request, env: CloudflareEnv, context: ExecutionContext) {
     const internalResponse = await handleDraftPackageServiceRequest(request, env);
     if (internalResponse) return internalResponse;
+    const planSectionResponse = await handlePlanSectionServiceRequest(request, env);
+    if (planSectionResponse) return planSectionResponse;
     return handler.fetch(customerSiteRequest(request), env, context);
   },
 } satisfies ExportedHandler<CloudflareEnv>;

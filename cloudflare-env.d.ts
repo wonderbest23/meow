@@ -11,6 +11,7 @@ interface __BaseEnv_CloudflareEnv {
 	WORKER_SELF_REFERENCE: Service<typeof import("./cloudflare-worker").default>;
 	DRAFT_PACKAGE_WORKFLOW: Workflow<Parameters<import("./cloudflare-worker").DraftPackageWorkflow['run']>[0]['payload']>;
 	DIRECT_PLAN_WORKFLOW: Workflow<Parameters<import("./cloudflare-worker").DirectPlanWorkflow['run']>[0]['payload']>;
+	PLAN_SECTIONS_WORKFLOW: Workflow<Parameters<import("./cloudflare-worker").PlanSectionsWorkflow['run']>[0]['payload']>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
