@@ -232,7 +232,11 @@ export function answerDonor(): { title: string; planType: string; count: number 
   return { title: donor.title, planType: donor.planType, count: realAnswerCount(donor) };
 }
 
-/** 예시 플랜은 저장 대상이 아니다. 쓰기 함수는 모두 여기서 먼저 걸러진다. */
+/**
+ * 예시(샘플) 플랜은 저장 대상이 아니다.
+ * 모든 쓰기 함수(답변·본문·잠금·되돌리기·이름·복제·삭제)가 여기서 먼저 걸러진다 —
+ * 화면에서 버튼을 감추는 것과 별개로, 저장 계층에서 한 번 더 막는다.
+ */
 function readOnlyPlan(planId: string | null | undefined): boolean {
   return isSamplePlan(planId);
 }
@@ -305,7 +309,7 @@ export function loadAnswers(key: string, state?: PlanState): Record<string, unkn
 export function saveAnswers(key: string, answers: Record<string, unknown>) {
   const s = loadState();
   const p = activePlan(s);
-  if (!p) return;
+  if (!p || readOnlyPlan(p.id)) return;
   if (!p.answers) p.answers = {};
   p.answers[key] = answers;
   p.updatedAt = new Date().toISOString();
@@ -341,7 +345,8 @@ export function saveSection(
 ): boolean {
   const s = loadState();
   const p = activePlan(s);
-  if (!p) return false;
+  // 예시 플랜은 저장 대상이 아니다 — 조용히 사라지는 대신 실패를 알린다
+  if (!p || readOnlyPlan(p.id)) return false;
   const before = p.sections[key];
   p.sections[key] = {
     markdown,
@@ -366,7 +371,7 @@ export function toggleSectionLock(key: string): boolean {
   const s = loadState();
   const p = activePlan(s);
   const sec = p?.sections[key];
-  if (!p || !sec) return false;
+  if (!p || readOnlyPlan(p.id) || !sec) return false;
   sec.locked = !sec.locked;
   p.updatedAt = new Date().toISOString();
   persist(s);
@@ -379,7 +384,7 @@ export function restorePreviousSection(key: string): StoredSection | null {
   const s = loadState();
   const p = activePlan(s);
   const sec = p?.sections[key];
-  if (!p || !sec?.previous) return null;
+  if (!p || readOnlyPlan(p.id) || !sec?.previous) return null;
   const restored: StoredSection = {
     markdown: sec.previous.markdown,
     html: sec.previous.html,

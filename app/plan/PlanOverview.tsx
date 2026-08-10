@@ -12,6 +12,7 @@ import {
   loadAnswers,
   saveSection,
   priorSectionsSummary,
+  isSamplePlan,
 } from "../../lib/plan-builder/plan-store";
 import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
 import { estimateMinutes } from "../../lib/plan-builder/questions";
@@ -61,6 +62,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [issues, setIssues] = useState<ConsistencyIssue[]>([]);
   /** 잠근 섹션 — 일괄 생성이 건너뛴다 */
   const [lockedKeys, setLockedKeys] = useState<Set<string>>(new Set());
+  /** 예시(샘플) 플랜은 읽기 전용 — 완성 문구·생성 도구를 다르게 보여준다 */
+  const [readOnly, setReadOnly] = useState(false);
 
   const [ready, setReady] = useState(false);
 
@@ -78,6 +81,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         setTitle(p.title);
         setType(p.planType);
       }
+      setReadOnly(isSamplePlan(p?.id));
       setIssues(findConsistencyIssues(p?.answers ?? {}, s.business));
       setLockedKeys(new Set(Object.entries(p?.sections ?? {}).filter(([, v]) => v?.locked).map(([k]) => k)));
       setReady(true);
@@ -285,11 +289,20 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         )}
         {doneCount > 0 && doneCount === total && (
           <button type="button" className={`${styles.finale} ${ringClass()}`} onClick={onOpenDocument}>
-            <GuideBubble text="다음은 발표자료예요" />
+            <GuideBubble text={readOnly ? "완성본을 살펴보세요" : "다음은 발표자료예요"} />
             <span className={styles.finaleIcon} aria-hidden="true"><Presentation size={22} /></span>
             <span className={styles.finaleBody}>
-              <b>사업계획서가 완성됐어요 🎉</b>
-              <span>{total}개 섹션을 모두 작성했습니다. 문서 화면에서 PDF·Word로 받거나, 발표자료(PPT)까지 만들 수 있어요.</span>
+              {readOnly ? (
+                <>
+                  <b>예시로 만들어 둔 완성 문서예요</b>
+                  <span>실제 서비스로 생성한 결과물입니다. 내 사업으로도 같은 문서를 만들 수 있어요.</span>
+                </>
+              ) : (
+                <>
+                  <b>사업계획서가 완성됐어요 🎉</b>
+                  <span>{total}개 섹션을 모두 작성했습니다. 문서 화면에서 PDF·Word로 받거나, 발표자료(PPT)까지 만들 수 있어요.</span>
+                </>
+              )}
             </span>
             <span className={styles.finaleGo}>문서 보러 가기 →</span>
           </button>
