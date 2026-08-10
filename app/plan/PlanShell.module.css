@@ -216,8 +216,14 @@
   transition: transform 0.22s ease;
 }
 /* 접힘 — 본문이 전체 폭을 쓰고, 손잡이는 그 위에 반투명하게 겹친다 */
+/*
+ * 레일을 접으면 손잡이만 화면 왼쪽 끝에 남는다.
+ * 그 자리를 본문이 그대로 쓰면 손잡이가 글자 위에 얹혀 첫 글자가 가려진다
+ * ("결제 전에…"의 '결'이 덮였다). 손잡이 폭만큼 자리를 비워 둔다.
+ */
 .contentWide {
   margin-left: 0 !important;
+  padding-left: 22px;
 }
 
 /*
@@ -280,5 +286,6 @@
   }
   .contentWide {
     margin-left: 0 !important;
+    padding-left: 28px; /* 폰 손잡이가 더 넓다 */
   }
 }

@@ -118,6 +118,8 @@
   font-size: 18px;
   font-weight: 800;
   letter-spacing: -0.3px;
+  /* 좁은 화면에서 마지막 줄에 두 글자만 떨어지지 않게 */
+  text-wrap: balance;
 }
 .listTitle span {
   color: var(--text-muted, #8b95a1);

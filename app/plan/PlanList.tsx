@@ -266,7 +266,7 @@ export default function PlanList() {
           <div className={styles.sampleBlock}>
             <div className={styles.listHead}>
               <h2 className={styles.listTitle}>
-                결제 전에 완성본을 미리 볼 수 있어요<span>샘플 {samples.length}부</span>
+                결제 전에 완성본을 미리 볼 수 있어요
               </h2>
             </div>
             <div className={styles.deck}>
