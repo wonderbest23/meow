@@ -28,21 +28,16 @@ export function adminCookieName(scope: AdminScope) {
   return COOKIE_BY_SCOPE[scope];
 }
 
-// True when payments has been given its own dedicated credential. Until then, the payments
-// console keeps sharing the support session so existing deployments work unchanged.
-export function paymentsHasOwnCredential() {
-  return (process.env.ADMIN_PAYMENTS_PASSWORD?.trim()?.length ?? 0) >= 8;
+/**
+ * 어드민 인증은 비밀번호 하나·세션 하나로 통일한다.
+ * 과거에는 결제 콘솔이 ADMIN_PAYMENTS_PASSWORD로 별도 세션을 요구해
+ * 화면을 옮길 때마다 다시 로그인해야 했다 — 전부 support 스코프로 붙인다.
+ */
+export function resolveScope(_scope: AdminScope): AdminScope {
+  return "support";
 }
 
-// Map a requested scope to the scope actually enforced. Payments collapses to "support" until a
-// dedicated ADMIN_PAYMENTS_PASSWORD is configured.
-export function resolveScope(scope: AdminScope): AdminScope {
-  if (scope === "payments" && !paymentsHasOwnCredential()) return "support";
-  return scope;
-}
-
-export function scopePassword(scope: AdminScope) {
-  if (scope === "payments") return process.env.ADMIN_PAYMENTS_PASSWORD?.trim() ?? "";
+export function scopePassword(_scope: AdminScope) {
   return process.env.ADMIN_CHAT_PASSWORD?.trim() ?? "";
 }
 

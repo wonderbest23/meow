@@ -8,7 +8,6 @@ async function main() {
   const {
     ADMIN_SESSION_TTL_MS,
     isScopeConfigured,
-    paymentsHasOwnCredential,
     resolveScope,
     signAdminSessionToken,
     verifyAdminSessionToken,
@@ -37,20 +36,11 @@ async function main() {
   assert.equal(await verifyAdminSessionToken("a.b.c", "support"), false);
   assert.equal(await verifyAdminSessionToken(undefined, "support"), false);
 
-  // Scope fallback: without a dedicated payments password, payments collapses to support.
-  assert.equal(paymentsHasOwnCredential(), false, "no dedicated payments credential yet");
-  assert.equal(resolveScope("payments"), "support", "payments falls back to support");
-
-  // With a dedicated payments credential, scopes are isolated.
+  // 어드민 세션은 하나 — payments 스코프도 support로 통일된다.
+  assert.equal(resolveScope("payments"), "support", "payments collapses to support");
   process.env.ADMIN_PAYMENTS_PASSWORD = "distinct-payments-password";
-  assert.equal(paymentsHasOwnCredential(), true);
-  assert.equal(resolveScope("payments"), "payments");
-  const paymentsToken = await signAdminSessionToken("payments");
-  assert.equal(await verifyAdminSessionToken(paymentsToken, "payments"), true, "payments token verifies");
-  // Cross-scope: a support token must NOT be accepted as payments, and vice versa.
+  assert.equal(resolveScope("payments"), "support", "dedicated payments password is ignored now");
   const supportToken = await signAdminSessionToken("support");
-  assert.equal(await verifyAdminSessionToken(supportToken, "payments"), false, "support token rejected for payments");
-  assert.equal(await verifyAdminSessionToken(paymentsToken, "support"), false, "payments token rejected for support");
 
   // Secret rotation invalidates existing tokens.
   process.env.ADMIN_SESSION_SECRET = "a-dedicated-rotation-secret-value";

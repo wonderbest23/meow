@@ -224,6 +224,7 @@ export async function listAdminConversations(): Promise<SupportConversation[]> {
   const supabase = await supportSupabase();
   if (!supabase) {
     return [...demoConversations.values()]
+      .filter((item) => item.lastMessagePreview.trim().length > 0)
       .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
       .map((item) => clone(publicConversation(item)));
   }
@@ -232,7 +233,10 @@ export async function listAdminConversations(): Promise<SupportConversation[]> {
     .select("*")
     .order("updated_at", { ascending: false });
   if (error) throw error;
-  return (data ?? []).map((row) => mapConversation(row));
+  return (data ?? [])
+    .map((row) => mapConversation(row))
+    // 사용자가 실제로 문의를 남긴 대화만 — 메시지 없는 빈 대화는 콘솔에 소음만 된다
+    .filter((item) => (item.lastMessagePreview ?? "").trim().length > 0);
 }
 
 export async function getAdminChat(conversationId: string): Promise<SupportChat> {

@@ -1,7 +1,8 @@
 "use client";
 
-import { Banknote, CheckCircle2, Clock3, ExternalLink, FileCheck2, LogOut, RefreshCw, RotateCcw, XCircle } from "lucide-react";
+import { Banknote, CheckCircle2, Clock3, ExternalLink, FileCheck2, RefreshCw, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
+import AdminNav from "../AdminNav";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 
 type SessionState = { authenticated: boolean; configured: boolean };
@@ -64,7 +65,7 @@ export default function AdminPaymentsPage() {
   }, []);
 
   useEffect(() => {
-    void fetch("/api/admin/support/session?scope=payments", { cache: "no-store" })
+    void fetch("/api/admin/support/session", { cache: "no-store" })
       .then((response) => payload<SessionState>(response))
       .then((state) => { setSession(state); if (state.authenticated) void load().catch((error) => setMessage(error.message)); })
       .catch((error) => setMessage(error.message));
@@ -82,14 +83,9 @@ export default function AdminPaymentsPage() {
   const login = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setMessage("");
     try {
-      await payload(await fetch("/api/admin/support/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password, scope: "payments" }) }));
+      await payload(await fetch("/api/admin/support/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) }));
       setPassword(""); setSession({ authenticated: true, configured: true }); await load();
     } catch (error) { setMessage(error instanceof Error ? error.message : "로그인하지 못했습니다."); } finally { setBusy(false); }
-  };
-
-  const logout = async () => {
-    await fetch("/api/admin/support/session?scope=payments", { method: "DELETE" });
-    setSession((current) => ({ authenticated: false, configured: current?.configured ?? true }));
   };
 
   const act = async (action: "confirm" | "cancel" | "refund" | "cash_receipt_issued") => {
@@ -120,10 +116,7 @@ export default function AdminPaymentsPage() {
   if (!session.authenticated) return <main className="admin-login-page"><form onSubmit={login}><span><Banknote /></span><h1>입금 주문 관리</h1><p>계좌 입금 확인과 현금영수증 상태를 처리합니다.</p><label><span>관리자 비밀번호</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus /></label>{message && <p className="admin-login-error">{message}</p>}<button disabled={busy || !password || !session.configured}>로그인</button><Link href="/">고객 화면으로 돌아가기</Link></form></main>;
 
   return <main className="admin-payment-page">
-    <header className="admin-support-header">
-      <div><span><Banknote /></span><div><strong>계좌이체 주문 관리</strong><small>카카오뱅크 3333-01-4982733 · 김주홍</small></div></div>
-      <div><Link href="/admin">1:1 문의</Link><Link className="active" href="/admin/payments">입금 주문</Link><Link href="/admin/legal">운영 설정</Link><button type="button" onClick={logout}><LogOut /> 로그아웃</button></div>
-    </header>
+    <AdminNav title="입금 주문" subtitle="계좌이체 확인·환불·현금영수증 처리" />
     <section className="admin-payment-summary"><div><Clock3 /><span><small>확인할 주문</small><strong>{waitingCount}건</strong></span></div><p>고객의 ‘입금했어요’ 알림만 믿지 말고 카카오뱅크 거래내역의 금액과 입금자명을 직접 대조하세요.</p><button onClick={() => void load()}><RefreshCw /> 새로고침</button></section>
     <div className="admin-payment-workspace">
       <aside className="admin-payment-orders"><header><strong>최근 계좌이체 주문</strong><span>{orders.length}건</span></header><div>{orders.length === 0 && <p>아직 계좌이체 주문이 없습니다.</p>}{orders.map((order) => <button key={order.orderId} className={selectedId === order.orderId ? "selected" : ""} onClick={() => { setSelectedId(order.orderId); setNote(order.adminNote ?? ""); }}><span><strong>{order.depositorName || "입금자 미입력"}</strong><em className={`status-${order.status}`}>{statusText[order.status] ?? order.status}</em></span><p>{order.opportunityTitle}</p><small>{order.amount.toLocaleString("ko-KR")}원 · {dateTime(order.createdAt)}</small></button>)}</div></aside>

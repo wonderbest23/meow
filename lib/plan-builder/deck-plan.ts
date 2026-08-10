@@ -231,6 +231,7 @@ export async function buildDeckPlan(
   ];
   for (const a of attempts) {
     const raw = await completeJson(config, {
+      kind: "deck",
       system: SYSTEM_PROMPT,
       user: user + a.extra,
       maxOutputTokens: a.maxOutputTokens,

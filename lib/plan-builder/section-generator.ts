@@ -204,6 +204,7 @@ export async function generateSection(config: LLMConfig | null, input: SectionGe
     return { markdown: fallbackSection(input), source: "fallback" };
   }
   const text = await completeText(config, {
+    kind: "generate",
     system: SYSTEM_PROMPT,
     user: buildUserPrompt(input),
     maxOutputTokens: 4000,
@@ -227,7 +228,7 @@ export async function streamSection(
   if (!config) return { markdown: fallbackSection(input), source: "fallback" };
   const text = await streamText(
     config,
-    { system: SYSTEM_PROMPT, user: buildUserPrompt(input), maxOutputTokens: 4000, effort: "medium" },
+    { kind: "generate", system: SYSTEM_PROMPT, user: buildUserPrompt(input), maxOutputTokens: 4000, effort: "medium" },
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: fallbackSection(input), source: "fallback" };

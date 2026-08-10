@@ -1,6 +1,8 @@
 // OpenAI와 Anthropic(Claude)을 한 인터페이스로 호출하는 통합 LLM 클라이언트.
 // 호출부는 provider를 신경 쓰지 않고 completeText/completeJson만 쓰면 된다.
 
+import { recordLlmUsage } from "./usage";
+
 export type LLMProvider = "openai" | "anthropic";
 
 export type LLMConfig = {
@@ -13,6 +15,8 @@ export type LLMCompleteParams = {
   system: string;
   user: string;
   maxOutputTokens: number;
+  // 사용량 집계용 기능 태그 (generate/deck/suggest/…) — 어드민 대시보드에 쓴다
+  kind?: string;
   // OpenAI Responses의 reasoning.effort. Claude에는 적용되지 않는다.
   effort?: "low" | "medium" | "high";
   timeoutMs?: number;
@@ -133,11 +137,19 @@ function completeOnce(config: LLMConfig, params: LLMCompleteParams): Promise<str
 export async function completeText(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
   if (!config.apiKey) return null;
   const primary = await completeOnce(config, params);
-  if (primary) return primary;
+  if (primary) {
+    await recordLlmUsage(params.kind ?? "etc", config.provider, true);
+    return primary;
+  }
   const alt = envAlternate(config);
-  if (!alt) return null;
+  if (!alt) {
+    await recordLlmUsage(params.kind ?? "etc", config.provider, false);
+    return null;
+  }
   console.error(`[llm] ${config.provider} 실패 — ${alt.provider}(${alt.model})로 폴백`);
-  return completeOnce(alt, params);
+  const second = await completeOnce(alt, params);
+  await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== null);
+  return second;
 }
 
 /** 모델 출력에서 JSON 객체를 파싱한다. 코드펜스가 있으면 벗겨낸다. 실패 시 null. */
@@ -176,11 +188,18 @@ export async function streamText(
 ): Promise<string | null> {
   if (!config.apiKey) return null;
   const first = await streamOnce(config, params, onDelta);
-  if (first !== "setup_failed") return first;
+  if (first !== "setup_failed") {
+    await recordLlmUsage(params.kind ?? "etc", config.provider, first !== null);
+    return first;
+  }
   const alt = envAlternate(config);
-  if (!alt) return null;
+  if (!alt) {
+    await recordLlmUsage(params.kind ?? "etc", config.provider, false);
+    return null;
+  }
   console.error(`[llm] ${config.provider} 스트림 실패 — ${alt.provider}(${alt.model})로 폴백`);
   const second = await streamOnce(alt, params, onDelta);
+  await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== "setup_failed" && second !== null);
   return second === "setup_failed" ? null : second;
 }
 

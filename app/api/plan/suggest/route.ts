@@ -69,7 +69,7 @@ export async function POST(req: Request) {
     .filter(Boolean)
     .join("\n");
 
-  const text = await completeText(config, { system: SYSTEM, user, maxOutputTokens: 700, effort: "low" });
+  const text = await completeText(config, { kind: "suggest", system: SYSTEM, user, maxOutputTokens: 700, effort: "low" });
   const suggestions = parseArray(text) ?? fallbackSuggest(question);
   return NextResponse.json({ suggestions: suggestions.slice(0, count), source: text ? "ai" : "fallback" });
 }

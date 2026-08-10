@@ -9425,3 +9425,39 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* ── 어드민 대시보드 ── */
+.admin-dash-page { min-height: 100vh; background: #f2f4f6; padding-bottom: 48px; }
+.admin-dash-error { max-width: 1080px; margin: 14px auto 0; padding: 0 20px; color: #c33d55; font-size: 13px; }
+.admin-dash-cards { max-width: 1080px; margin: 20px auto 0; padding: 0 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.admin-dash-cards article { background: #fff; border: 1px solid #e5e8eb; border-radius: 14px; padding: 16px; display: flex; flex-direction: column; gap: 4px; }
+.admin-dash-icon { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; margin-bottom: 6px; }
+.admin-dash-icon svg { width: 17px; height: 17px; }
+.admin-dash-icon.users { background: #e8f3ff; color: #3182f6; }
+.admin-dash-icon.pay { background: #e7f5f0; color: #12a58a; }
+.admin-dash-icon.refund { background: #fdecef; color: #c33d55; }
+.admin-dash-icon.inquiry { background: #f0eefc; color: #6b5bdd; }
+.admin-dash-icon.llm { background: #fff4e6; color: #d69133; }
+.admin-dash-cards small { font-size: 11.5px; font-weight: 800; color: #8b95a1; letter-spacing: 0.04em; }
+.admin-dash-cards strong { font-size: 17px; font-weight: 800; color: #191f28; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
+.admin-dash-cards em { font-style: normal; font-size: 11.5px; color: #8b95a1; }
+.admin-dash-columns { max-width: 1080px; margin: 14px auto 0; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admin-dash-panel { background: #fff; border: 1px solid #e5e8eb; border-radius: 14px; padding: 16px; }
+.admin-dash-panel > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.admin-dash-panel > header strong { font-size: 14px; font-weight: 800; color: #191f28; }
+.admin-dash-panel > header a { font-size: 12px; font-weight: 700; color: #3182f6; text-decoration: none; }
+.admin-dash-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.admin-dash-panel li { display: flex; align-items: center; gap: 9px; padding: 9px 0; border-top: 1px solid #f2f4f6; font-size: 13px; }
+.admin-dash-panel li p { flex: 1; min-width: 0; margin: 0; color: #333d4b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-dash-panel li b { font-weight: 800; color: #191f28; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin-dash-panel li time { flex: none; font-size: 11.5px; color: #8b95a1; white-space: nowrap; }
+.admin-dash-panel li em { flex: none; min-width: 18px; height: 18px; border-radius: 999px; background: #3182f6; color: #fff; font-style: normal; font-size: 11px; font-weight: 800; display: grid; place-items: center; padding: 0 5px; }
+.admin-dash-badge { flex: none; font-size: 10.5px; font-weight: 800; border-radius: 999px; padding: 3px 8px; background: #f2f4f6; color: #4e5968; white-space: nowrap; }
+.admin-dash-badge.open { background: #e8f3ff; color: #3182f6; }
+.admin-dash-badge.done { background: #e7f5f0; color: #0f9d66; }
+.admin-dash-badge.refunded { background: #fdecef; color: #c33d55; }
+.admin-dash-badge.failed, .admin-dash-badge.expired { background: #fdecef; color: #c33d55; }
+.admin-dash-empty { margin: 6px 0 2px; font-size: 12.5px; color: #8b95a1; }
+@media (max-width: 640px) {
+  .admin-dash-columns { grid-template-columns: 1fr; }
+}

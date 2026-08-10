@@ -98,12 +98,12 @@ export default function AdminLegalPage() {
 
   if (!session) return <main className="admin-support-loading">운영 설정을 불러오는 중입니다.</main>;
   if (!session.authenticated) return (
-    <main className="admin-login-page"><form onSubmit={login}><span><LockKeyhole /></span><h1>운영 설정</h1><p>사업자 정보, 개인정보와 환불 기준을 관리합니다.</p><label><span>관리자 비밀번호</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus /></label>{message && <p className="admin-login-error">{message}</p>}<button disabled={busy || !password || !session.configured}>로그인</button><Link href="/admin">상담 관리로 돌아가기</Link></form></main>
+    <main className="admin-login-page"><form onSubmit={login}><span><LockKeyhole /></span><h1>운영 설정</h1><p>사업자 정보, 개인정보와 환불 기준을 관리합니다.</p><label><span>관리자 비밀번호</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus /></label>{message && <p className="admin-login-error">{message}</p>}<button disabled={busy || !password || !session.configured}>로그인</button><Link href="/admin">대시보드로 돌아가기</Link></form></main>
   );
 
   return (
     <main className="admin-legal-page">
-      <header><div><img src="/today-startup-logo-2026.png" alt="오늘창업" /><span><strong>사이트 공개 운영 설정</strong><small>통신판매업 신고와 판매자 정보</small></span></div><nav><Link href="/admin">1:1 문의</Link><Link href="/admin/payments">입금 주문</Link><Link className="active" href="/admin/legal">운영 설정</Link></nav></header>
+      <header><div><img src="/today-startup-logo-2026.png" alt="오늘창업" /><span><strong>사이트 공개 운영 설정</strong><small>통신판매업 신고와 판매자 정보</small></span></div><nav><Link href="/admin">대시보드</Link><Link href="/admin/support">1:1 상담</Link><Link href="/admin/payments">입금 주문</Link><Link className="active" href="/admin/legal">운영 설정</Link></nav></header>
       <div className={`admin-readiness ${readiness?.ready ? "ready" : "blocked"}`}>
         {readiness?.ready ? <CheckCircle2 /> : <ShieldAlert />}
         <div><strong>{readiness?.ready ? "판매자 정보와 운영 기준을 모두 확인했습니다." : readiness?.siteOpen ? "사이트는 공개 중이며 유료 결제만 잠겨 있습니다." : "신고용 사이트 공개 정보를 확인해주세요."}</strong><p>{readiness?.ready ? "계좌이체 설정과 유료 판매 환경값이 켜지면 주문을 받을 수 있습니다." : missingText}</p></div>

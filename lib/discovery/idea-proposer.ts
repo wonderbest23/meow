@@ -166,6 +166,7 @@ export async function proposeIdeas(
 ): Promise<Opportunity[]> {
   if (!config?.apiKey) return [];
   const parsed = await completeJson(config, {
+    kind: "idea",
     system:
       "당신은 한국의 초보 창업가를 위한 사업 발굴 전략가입니다. 사용자 프로필에 맞춰 매번 새롭고 현실적인 사업 아이디어를 제안합니다. 확인되지 않은 사실·수치·성과를 절대 지어내지 마세요.",
     user: JSON.stringify(buildPrompt(profile, preferences, pickDistinct(SECTOR_UNIVERSE, count))),
