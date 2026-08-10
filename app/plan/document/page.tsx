@@ -122,6 +122,20 @@ export default function PlanDocumentPage() {
     document.getElementById(`sec-${key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  /*
+   * 주소에 #섹션이 붙어 들어오면 그 대목으로 내려간다.
+   * 목차에서 예시 문서의 한 섹션을 고른 경우가 이 길로 온다.
+   * 본문이 그려진 뒤라야 대상이 존재하므로 sections를 기다린다.
+   */
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!id || !sections.length) return;
+    const timer = setTimeout(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 120);
+    return () => clearTimeout(timer);
+  }, [sections.length]);
+
   /** 문서에서 고친 내용을 저장한다. 원본은 마크다운이므로 되돌려 담는다. */
   function saveEdit(key: string, nextHtml: string) {
     const md = htmlToMarkdown(nextHtml);

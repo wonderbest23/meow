@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { chaptersForType, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
-import { activePlan, hydrateFromServer, loadState, planStatuses } from "../../lib/plan-builder/plan-store";
+import { activePlan, hydrateFromServer, isSamplePlan, loadState, planStatuses } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanRailNav.module.css";
 
@@ -63,6 +63,7 @@ export default function PlanRailNav() {
 
   const activeKey = currentSectionKey(pathname);
   const onDocument = pathname.startsWith("/plan/document");
+  const sample = isSamplePlan(plan?.id);
 
   /* 열려 있는 챕터 — 지금 보는 섹션의 챕터는 항상 펼친다 */
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
@@ -81,6 +82,14 @@ export default function PlanRailNav() {
         el.scrollIntoView({ behavior: "smooth", block: "start" });
         return;
       }
+    }
+    /*
+     * 예시 문서에는 질문·답변 화면이 없다. 그리로 보내면 로그인하라는
+     * 안내만 뜬다 — 보러 온 사람에게는 막다른 길이다. 바로 그 대목으로 보낸다.
+     */
+    if (sample) {
+      router.push(`/plan/document#sec-${chapterId}-${sectionId}`);
+      return;
     }
     router.push(`/plan/${chapterId}/${sectionId}`);
   }

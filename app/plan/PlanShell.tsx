@@ -154,6 +154,23 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
       >
         {(phone ? drawer : !railHidden) ? "«" : "»"}
       </button>
+      {/*
+        폰 전용 메뉴 버튼 — 왼쪽 손잡이는 본문 위에 얹혀 글자를 가렸다.
+        오른쪽 아래 고정 버튼으로 옮긴다(엄지로 닿는 자리).
+      */}
+      <button
+        type="button"
+        className={`${styles.menuFab} ${drawer ? styles.menuFabOn : ""}`}
+        onClick={() => setDrawer((v) => !v)}
+        aria-label={drawer ? "메뉴 닫기" : "메뉴 열기"}
+        aria-expanded={drawer}
+      >
+        {drawer ? (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+        ) : (
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        )}
+      </button>
       <div className={`${styles.content} ${railHidden ? styles.contentWide : ""}`}>
         {back && (
           <Link href={back.href} className={styles.shellBack} aria-label={`${back.label}(으)로 돌아가기`}>
