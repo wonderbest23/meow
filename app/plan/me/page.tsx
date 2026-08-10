@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { hydrateFromServer, clearLocalState, type PlanState } from "../../../lib/plan-builder/plan-store";
@@ -30,11 +30,26 @@ const STATUS_LABEL: Record<string, string> = {
 
 const BAD_STATUS = new Set(["canceled", "partial_canceled", "aborted", "expired", "failed"]);
 
+type RefundInfo = { orderId: string; status: "received" | "done" | "rejected" };
+
+const REFUND_LABEL: Record<RefundInfo["status"], string> = {
+  received: "환불 접수됨",
+  done: "환불 완료",
+  rejected: "환불 거절",
+};
+
 export default function PlanMePage() {
   const router = useRouter();
   const [account, setAccount] = useState<{ authenticated: boolean; email: string | null; paid: boolean } | null>(null);
   const [payments, setPayments] = useState<PaymentHistoryItem[] | null>(null);
   const [state, setState] = useState<PlanState | null>(null);
+  /** orderId → 환불 요청 상태 */
+  const [refunds, setRefunds] = useState<Record<string, RefundInfo>>({});
+  /** 환불 사유 입력을 연 주문 */
+  const [refundFor, setRefundFor] = useState<string | null>(null);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundBusy, setRefundBusy] = useState(false);
+  const [refundMessage, setRefundMessage] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -48,6 +63,15 @@ export default function PlanMePage() {
           .then((r) => (r.ok ? r.json() : { payments: [] }))
           .then((data: { payments?: PaymentHistoryItem[] }) => alive && setPayments(data.payments ?? []))
           .catch(() => alive && setPayments([]));
+        void fetch("/api/plan/refund", { cache: "no-store" })
+          .then((r) => (r.ok ? r.json() : { requests: [] }))
+          .then((data: { requests?: RefundInfo[] }) => {
+            if (!alive) return;
+            const map: Record<string, RefundInfo> = {};
+            for (const item of data.requests ?? []) map[item.orderId] = item;
+            setRefunds(map);
+          })
+          .catch(() => undefined);
       })
       .catch(() => alive && setAccount({ authenticated: false, email: null, paid: false }));
     void hydrateFromServer().then((s) => alive && setState(s));
@@ -55,6 +79,30 @@ export default function PlanMePage() {
       alive = false;
     };
   }, []);
+
+  async function submitRefund(orderId: string) {
+    const reason = refundReason.trim();
+    if (reason.length < 5 || refundBusy) return;
+    setRefundBusy(true);
+    setRefundMessage("");
+    try {
+      const response = await fetch("/api/plan/refund", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, reason }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message ?? "환불 요청을 접수하지 못했습니다.");
+      setRefunds((current) => ({ ...current, [orderId]: { orderId, status: "received" } }));
+      setRefundFor(null);
+      setRefundReason("");
+      setRefundMessage("환불 요청이 접수됐습니다. 처리 결과는 이 화면과 이메일로 안내됩니다.");
+    } catch (error) {
+      setRefundMessage(error instanceof Error ? error.message : "환불 요청을 접수하지 못했습니다.");
+    } finally {
+      setRefundBusy(false);
+    }
+  }
 
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -130,11 +178,14 @@ export default function PlanMePage() {
           <div className={styles.tableWrap}>
             <table className={styles.table}>
               <thead>
-                <tr><th>상품</th><th>금액</th><th>상태</th><th>일시</th></tr>
+                <tr><th>상품</th><th>금액</th><th>상태</th><th>일시</th><th>환불</th></tr>
               </thead>
               <tbody>
-                {payments.map((item) => (
-                  <tr key={item.orderId}>
+                {payments.map((item) => {
+                  const refund = refunds[item.orderId];
+                  return (
+                  <Fragment key={item.orderId}>
+                  <tr>
                     <td>{item.orderName || "-"}</td>
                     <td className={styles.amount}>{item.amount.toLocaleString("ko-KR")}원</td>
                     <td>
@@ -143,10 +194,47 @@ export default function PlanMePage() {
                       </span>
                     </td>
                     <td>{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
+                    <td>
+                      {item.status !== "done" ? (
+                        <span className={styles.refundNa}>—</span>
+                      ) : refund ? (
+                        <span className={`${styles.status} ${refund.status === "done" ? styles.statusDone : refund.status === "rejected" ? styles.statusBad : ""}`}>
+                          {REFUND_LABEL[refund.status]}
+                        </span>
+                      ) : (
+                        <button type="button" className={styles.refundBtn} onClick={() => { setRefundFor(refundFor === item.orderId ? null : item.orderId); setRefundReason(""); setRefundMessage(""); }}>
+                          환불 요청
+                        </button>
+                      )}
+                    </td>
                   </tr>
-                ))}
+                  {refundFor === item.orderId && (
+                    <tr>
+                      <td colSpan={5}>
+                        <div className={styles.refundForm}>
+                          <textarea
+                            rows={2}
+                            value={refundReason}
+                            onChange={(event) => setRefundReason(event.target.value)}
+                            placeholder="환불 사유를 적어주세요 (5자 이상). 문서 생성 시작 후 단순 변심 환불은 제한될 수 있습니다."
+                            maxLength={1000}
+                          />
+                          <div>
+                            <button type="button" className={styles.refundSubmit} disabled={refundBusy || refundReason.trim().length < 5} onClick={() => void submitRefund(item.orderId)}>
+                              {refundBusy ? "접수 중…" : "환불 요청 접수"}
+                            </button>
+                            <button type="button" className={styles.refundCancel} onClick={() => setRefundFor(null)}>닫기</button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
+                  );
+                })}
               </tbody>
             </table>
+            {refundMessage && <p className={styles.refundMessage}>{refundMessage}</p>}
           </div>
         )}
       </section>

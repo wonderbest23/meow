@@ -14,6 +14,7 @@ type Stats = {
     paidAmount: number | null;
     paid7d: number | null;
     refundCount: number | null;
+    refundPending: number | null;
     recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; createdAt: string }>;
   };
   inquiries: {
@@ -145,8 +146,8 @@ export default function AdminDashboardPage() {
         <article>
           <span className="admin-dash-icon refund"><RotateCcw /></span>
           <small>환불</small>
-          <strong>{num(stats?.payments.refundCount ?? null)}건</strong>
-          <em>환불 처리는 입금 주문에서</em>
+          <strong>{stats?.payments.refundPending != null ? `대기 ${num(stats.payments.refundPending)}건` : "접수함 준비 중"}</strong>
+          <em><Link href="/admin/refunds">환불 접수함 열기 →</Link>{stats?.payments.refundCount != null ? ` · 완료 ${num(stats.payments.refundCount)}건` : ""}</em>
         </article>
         <article>
           <span className="admin-dash-icon inquiry"><Headphones /></span>

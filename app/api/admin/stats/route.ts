@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "../../../../lib/persistence";
+import { countPendingRefundRequests } from "../../../../lib/payments/refund-requests";
 import { listAdminConversations } from "../../../../lib/support-chat/repository";
 import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
 
@@ -126,9 +127,12 @@ export async function GET() {
     }
   }
 
+  // 환불 접수함 대기 건수 (테이블 미생성이면 null)
+  const refundPending = await countPendingRefundRequests().catch(() => null);
+
   return privateJson({
     users: { total: usersTotal, active7d: usersActive7d },
-    payments: { paidCount, paidAmount, paid7d, refundCount, recentOrders },
+    payments: { paidCount, paidAmount, paid7d, refundCount, refundPending, recentOrders },
     inquiries,
     llm,
   });
