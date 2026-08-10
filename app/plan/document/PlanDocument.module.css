@@ -744,28 +744,40 @@
 }
 
 /*
- * 도구줄은 어느 폭에서도 한 줄이다.
- * 줄바꿈을 허용하면 헤더가 두 배로 두꺼워져 본문이 그만큼 밀린다.
- * 넘치면 가로로 밀어서 본다.
+ * 좁은 화면의 도구줄 — 성격이 다른 둘을 줄로 나눈다.
+ *
+ *   1줄: 구조 보기 · 문서 보기   (화면 전환)
+ *   2줄: Word · 홈페이지 · PPT · PDF (내보내기)
+ *
+ * 한 줄에 몰아넣으면 넘쳐서 가로로 밀리고, 그러면 정작 화면 전환이
+ * 밖으로 밀려나 보이지 않는다.
  */
-@media (max-width: 640px) {
+@media (max-width: 1080px) {
   .toolbar {
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     width: 100%;
-    overflow-x: auto;
-    scrollbar-width: none;
+    gap: 8px;
+    overflow: visible;
   }
 
-  .toolbar::-webkit-scrollbar {
-    display: none;
+  /* 보기 전환은 첫 줄을 통째로 쓴다 */
+  .toolbar > .seg {
+    flex: 0 0 100%;
   }
 
-  .toolbar > * {
-    flex: none;
+  .toolbar > .seg button {
+    flex: 1;
+    justify-content: center;
   }
 
-  /* 빈 공간을 밀어내던 스프링은 한 줄에서는 자리만 먹는다 */
+  /* 빈 공간을 밀어내던 스프링은 줄이 나뉘면 자리만 먹는다 */
   .toolbar > .spring {
     display: none;
+  }
+
+  .toolbar > .tool {
+    flex: 1;
+    justify-content: center;
+    padding: 0 10px;
   }
 }
