@@ -400,6 +400,7 @@ export default function PlanDocumentPage() {
                             <div className={styles.body}>
                               <InlineDocEditor
                                 html={s.html}
+                                readOnly={isSample}
                                 status={failedKey === s.key ? "failed" : savedKey === s.key ? "saved" : "idle"}
                                 onChange={(nextHtml) => saveEdit(s.key, nextHtml)}
                               />

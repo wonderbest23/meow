@@ -22,6 +22,12 @@ export interface InlineDocEditorProps {
   status?: "idle" | "saving" | "saved" | "failed";
   /** 디바운스(ms) */
   debounceMs?: number;
+  /**
+   * 읽기 전용 — 예시 문서처럼 고칠 수 없는 글.
+   * 저장 계층에서 막는 것만으로는 부족하다. 화면에서 글자가 쳐지는데
+   * 아무 일도 일어나지 않으면 고쳐진 줄 알고 넘어간다.
+   */
+  readOnly?: boolean;
 }
 
 const SAVE_DEBOUNCE = 1500;
@@ -31,7 +37,7 @@ const SAVE_DEBOUNCE = 1500;
  * 버튼을 눌러 '편집 모드'로 들어가지 않고, 그 자리에서 바로 고친다.
  * 글자를 선택하면 그 위에 서식 툴바가 뜬다.
  */
-export default function InlineDocEditor({ html, onChange, status = "idle", debounceMs = SAVE_DEBOUNCE }: InlineDocEditorProps) {
+export default function InlineDocEditor({ html, onChange, status = "idle", debounceMs = SAVE_DEBOUNCE, readOnly = false }: InlineDocEditorProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latest = useRef(onChange);
   latest.current = onChange;
@@ -48,6 +54,7 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
       ChartFigure,
     ],
     content: html,
+    editable: !readOnly,
     editorProps: {
       attributes: { class: styles.surface, spellcheck: "false" },
     },
@@ -56,6 +63,13 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
       timer.current = setTimeout(() => latest.current(editor.getHTML()), debounceMs);
     },
   });
+
+  // 읽기 전용 여부가 바뀌면 편집기에도 반영한다
+  useEffect(() => {
+    if (!editor) return;
+    if (editor.isEditable === !readOnly) return;
+    editor.setEditable(!readOnly);
+  }, [readOnly, editor]);
 
   // 다른 섹션으로 이동하거나 다시 생성했을 때 본문 교체
   useEffect(() => {
@@ -77,6 +91,14 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
   if (!editor) return <div className={styles.wrap} />;
 
   const btn = (active: boolean) => `${styles.tbBtn} ${active ? styles.tbOn : ""}`;
+
+  if (readOnly) {
+    return (
+      <div className={styles.wrap}>
+        <EditorContent editor={editor} />
+      </div>
+    );
+  }
 
   return (
     <div className={styles.wrap}>
