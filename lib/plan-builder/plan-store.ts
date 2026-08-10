@@ -501,7 +501,17 @@ export async function hydrateFromServer(): Promise<PlanState> {
   try {
     const res = await fetch("/api/plan/state", { cache: "no-store" });
     if (res.ok) {
-      const server = migrate((await res.json()) as Record<string, unknown>);
+      const payload = (await res.json()) as Record<string, unknown>;
+      /*
+       * 로그아웃·세션 만료 상태면 이전 계정의 로컬 캐시를 즉시 비운다.
+       * 로그아웃 버튼을 거치지 않아도(만료·다른 탭 로그아웃) 개인 플랜이
+       * 화면에 남지 않게 — 모든 플랜 화면이 이 함수를 지나므로 여기 한 곳이면 된다.
+       */
+      if (payload.authenticated === false) {
+        clearLocalState();
+        return loadState();
+      }
+      const server = migrate(payload);
       const local = loadState();
       // 로컬에 더 많은 플랜이 있으면(방금 만든 경우) 서버로 덮어쓰지 않고 로컬을 올린다.
       const ownLocal = local.plans.filter((p) => !isSamplePlan(p.id));

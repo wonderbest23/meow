@@ -11,7 +11,8 @@ export const runtime = "nodejs";
 export async function GET() {
   const identity = await requireGuestIdentity();
   const state = await loadPlanState(identity.hash);
-  return NextResponse.json(state);
+  // 클라이언트가 로그아웃·세션 만료를 감지해 로컬 캐시를 비울 수 있게 인증 여부를 함께 준다
+  return NextResponse.json({ ...state, authenticated: identity.userId !== null });
 }
 
 export async function PUT(request: Request) {
