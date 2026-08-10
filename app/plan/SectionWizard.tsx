@@ -805,14 +805,16 @@ export default function SectionWizard({
                 <>
                   <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
                   <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="생성된 본문을 직접 고칩니다"><PenLine size={13} /> 본문 수정</button>
-                  <button
-                    className={`${styles.btn} ${styles.btnPrimary} ${locked ? styles.btnLocked : ""}`}
-                    disabled={generating}
-                    onClick={requestRegenerate}
-                    title={locked ? "수정 보호가 켜져 있어요 — 본문 위 '수정 보호 중'을 눌러 끄면 다시 생성할 수 있습니다" : undefined}
-                  >
-                    {generating ? <><Spinner /> 생성 중…</> : locked ? <><Lock size={13} /> 보호 중 — 다시 생성 불가</> : <><RefreshCw size={13} /> 다시 생성</>}
-                  </button>
+                  {/* 수정 보호 중에는 누를 수 없는 버튼을 두지 않는다 — 보호를 끄면 다시 나타난다 */}
+                  {!locked && (
+                    <button
+                      className={`${styles.btn} ${styles.btnPrimary}`}
+                      disabled={generating}
+                      onClick={requestRegenerate}
+                    >
+                      {generating ? <><Spinner /> 생성 중…</> : <><RefreshCw size={13} /> 다시 생성</>}
+                    </button>
+                  )}
                 </>
               ) : (
                 <>
