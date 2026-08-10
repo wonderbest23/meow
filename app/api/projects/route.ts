@@ -3,7 +3,6 @@ import { requireGuestIdentity } from "../../../lib/api-auth";
 import { createProject, persistenceMode } from "../../../lib/project-repository";
 import { createProjectSchema } from "../../../lib/service-domain";
 import { paymentsEnabled } from "../../../lib/payments/config";
-import { ensurePaidStarterLanding } from "../../../lib/landing/auto-publish";
 import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 
 export async function POST(request: Request) {
@@ -34,9 +33,8 @@ export async function POST(request: Request) {
       identity.hash,
       identity.userId,
     );
-    const starterLanding = await ensurePaidStarterLanding(project, identity.hash).catch(() => null);
     return NextResponse.json(
-      { project, persistence: persistenceMode(), starterLanding },
+      { project, persistence: persistenceMode() },
       { status: 201 },
     );
   } catch (error) {

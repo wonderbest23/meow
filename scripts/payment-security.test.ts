@@ -17,8 +17,6 @@ import {
   reportManualTransferDeposit,
   syncPaymentFromProvider,
 } from "../lib/payments/repository";
-import { ensurePaidStarterLanding } from "../lib/landing/auto-publish";
-import { getPublishedLandingBySlug } from "../lib/landing/repository";
 import { getProject } from "../lib/project-repository";
 
 async function main() {
@@ -104,13 +102,7 @@ const provider = {
   approvedAt: new Date().toISOString(),
 };
 const first = await completePaymentOrder({ order, provider, testPaid: true });
-const starterLanding = await ensurePaidStarterLanding(first.project, guestTokenHash);
-const publishedLanding = await getPublishedLandingBySlug(starterLanding.site.slug);
-assert.equal(starterLanding.site.status, "published", "결제 완료 후 홈페이지가 바로 공개되어야 합니다.");
-assert.equal(starterLanding.site.publishedVersion, 1);
-assert.equal(publishedLanding?.config.leadCaptureEnabled, false, "사업자·개인정보 설정 전에는 개인정보를 받지 않아야 합니다.");
-assert.ok(publishedLanding?.config.heroImageUrl, "업종별 대표 이미지가 포함되어야 합니다.");
-assert.equal(starterLanding.publicPath, `/launch/${starterLanding.site.slug}`);
+// (옛 고객 홈페이지 자동 공개 기능은 제거됨 — 결제 확인만 검증한다)
 const completedOrder = await getPaymentOrder(order.orderId, guestTokenHash);
 assert.ok(completedOrder?.projectId);
 const second = await completePaymentOrder({
@@ -188,13 +180,12 @@ const canceledTransfer = await cancelManualTransferOrder(noIdentifierOrder.order
 assert.equal(canceledTransfer.status, "canceled");
 
 console.log(JSON.stringify({
-  passed: 34,
+  passed: 30,
   sample: {
     orderAmount: order.amount,
     orderStatus: canceled.status,
     projectIdStable: first.project.id === second.project.id,
     refunded: (await getProject(first.project.id, guestTokenHash))?.paymentStatus,
-    starterHomepage: starterLanding.publicPath,
     manualTransferStatus: refunded.status,
     cashReceipt: receiptIssued.cashReceiptStatus,
   },
