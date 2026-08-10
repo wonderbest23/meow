@@ -74,7 +74,36 @@ export type LandingBlockProps = {
   StatsSection: StatsProps;
   GallerySection: GalleryProps;
   OfferSection: OfferProps;
+  PriceList: PriceListProps;
+  LocationSection: LocationProps;
+  FaqSection: FaqProps;
   CtaSection: CtaProps;
+};
+
+type PriceListProps = {
+  eyebrow: string;
+  heading: string;
+  name1: string; desc1: string; price1: string;
+  name2: string; desc2: string; price2: string;
+  name3: string; desc3: string; price3: string;
+  note: string;
+};
+
+type LocationProps = {
+  eyebrow: string;
+  heading: string;
+  address: string;
+  hours: string;
+  closed: string;
+  contact: string;
+};
+
+type FaqProps = {
+  eyebrow: string;
+  heading: string;
+  q1: string; a1: string;
+  q2: string; a2: string;
+  q3: string; a3: string;
 };
 
 const imageField = (label: string) => ({
@@ -98,7 +127,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
   categories: {
     main: {
       title: "첫 화면과 상품",
-      components: ["HeroSection", "OfferSection", "CtaSection"],
+      components: ["HeroSection", "OfferSection", "PriceList", "CtaSection"],
       defaultExpanded: true,
     },
     content: {
@@ -108,7 +137,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     },
     visual: {
       title: "사진과 근거",
-      components: ["TrustBar", "StatsSection", "GallerySection"],
+      components: ["TrustBar", "StatsSection", "GallerySection", "LocationSection", "FaqSection"],
       defaultExpanded: true,
     },
   },
@@ -337,6 +366,113 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         <section className="landing-block landing-block-offer"><div><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p></div><aside><strong>{price}</strong><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></aside></section>
       ),
     },
+    /* 메뉴·가격표 — 음식점·매장 템플릿의 핵심. 값을 모르면 방문자는 문의하지 않는다 */
+    PriceList: {
+      label: "메뉴·가격",
+      fields: {
+        eyebrow: text("작은 안내 문구"),
+        heading: text("제목"),
+        name1: text("항목 1 이름"), desc1: text("항목 1 설명"), price1: text("항목 1 가격"),
+        name2: text("항목 2 이름"), desc2: text("항목 2 설명"), price2: text("항목 2 가격"),
+        name3: text("항목 3 이름"), desc3: text("항목 3 설명"), price3: text("항목 3 가격"),
+        note: text("아래 안내"),
+      },
+      defaultProps: {
+        eyebrow: "메뉴와 가격",
+        heading: "무엇을 얼마에 드리는지",
+        name1: "대표 상품", desc1: "구성과 포함 내용을 적어주세요.", price1: "가격 상담",
+        name2: "", desc2: "", price2: "",
+        name3: "", desc3: "", price3: "",
+        note: "가격은 상황에 따라 달라질 수 있습니다.",
+      },
+      render: ({ eyebrow, heading, name1, desc1, price1, name2, desc2, price2, name3, desc3, price3, note }) => (
+        <section className="landing-block landing-block-price">
+          <header>
+            <span>{eyebrow}</span>
+            <h2>{heading}</h2>
+          </header>
+          <ul>
+            {[[name1, desc1, price1], [name2, desc2, price2], [name3, desc3, price3]]
+              .filter(([n]) => n)
+              .map(([n, d, p]) => (
+                <li key={n}>
+                  <div><strong>{n}</strong>{d ? <span>{d}</span> : null}</div>
+                  <b>{p}</b>
+                </li>
+              ))}
+          </ul>
+          {note ? <small>{note}</small> : null}
+        </section>
+      ),
+    },
+
+    /* 위치·영업시간 — 동네 장사에서 가장 많이 찾는 정보 */
+    LocationSection: {
+      label: "위치·영업시간",
+      fields: {
+        eyebrow: text("작은 안내 문구"),
+        heading: text("제목"),
+        address: text("주소"),
+        hours: text("영업시간"),
+        closed: text("휴무"),
+        contact: text("연락처"),
+      },
+      defaultProps: {
+        eyebrow: "찾아오는 길",
+        heading: "언제, 어디로 오시면 되는지",
+        address: "주소를 입력하세요",
+        hours: "평일 09:00 - 18:00",
+        closed: "일요일 휴무",
+        contact: "",
+      },
+      render: ({ eyebrow, heading, address, hours, closed, contact }) => (
+        <section className="landing-block landing-block-location">
+          <header>
+            <span>{eyebrow}</span>
+            <h2>{heading}</h2>
+          </header>
+          <dl>
+            <div><dt>주소</dt><dd>{address}</dd></div>
+            <div><dt>영업시간</dt><dd>{hours}</dd></div>
+            {closed ? <div><dt>휴무</dt><dd>{closed}</dd></div> : null}
+            {contact ? <div><dt>연락처</dt><dd>{contact}</dd></div> : null}
+          </dl>
+        </section>
+      ),
+    },
+
+    /* 자주 묻는 질문 — 초안에는 이미 있었는데 화면에 나올 자리가 없었다 */
+    FaqSection: {
+      label: "자주 묻는 질문",
+      fields: {
+        eyebrow: text("작은 안내 문구"),
+        heading: text("제목"),
+        q1: text("질문 1"), a1: area("답변 1"),
+        q2: text("질문 2"), a2: area("답변 2"),
+        q3: text("질문 3"), a3: area("답변 3"),
+      },
+      defaultProps: {
+        eyebrow: "자주 묻는 질문",
+        heading: "궁금한 점을 먼저 풀어 드립니다",
+        q1: "신청 후에는 어떻게 되나요?", a1: "입력한 연락처로 확인 후 다음 절차를 안내합니다.",
+        q2: "바로 결제해야 하나요?", a2: "아니요. 필요한 범위와 조건을 먼저 확인합니다.",
+        q3: "", a3: "",
+      },
+      render: ({ eyebrow, heading, q1, a1, q2, a2, q3, a3 }) => (
+        <section className="landing-block landing-block-faq">
+          <header>
+            <span>{eyebrow}</span>
+            <h2>{heading}</h2>
+          </header>
+          <dl>
+            {[[q1, a1], [q2, a2], [q3, a3]].filter(([q]) => q).map(([q, a]) => (
+              <div key={q}><dt>{q}</dt><dd>{a}</dd></div>
+            ))}
+          </dl>
+        </section>
+      ),
+    },
+
     CtaSection: {
       label: "마지막 신청 안내",
       fields: {

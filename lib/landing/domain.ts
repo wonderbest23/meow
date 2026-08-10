@@ -164,6 +164,25 @@ export const landingTemplateOptions: Array<{
   },
 ];
 
+/*
+ * 업종에 맞는 대표 사진.
+ *
+ * 템플릿마다 사진이 하나뿐이라, 같은 '동네 매장' 템플릿을 쓰는 카페와
+ * 미용실과 꽃집이 모두 같은 가방 가게 사진을 썼다. 업종이 잡히면
+ * 그 업종의 사진을 쓴다(전부 직접 확인한 사진이다).
+ */
+const SECTOR_HERO_IMAGES: Array<{ test: RegExp; url: string }> = [
+  { test: /(카페|커피|음식점|식당|베이커리|외식|주점|디저트)/, url: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1800&q=82" },
+  { test: /(미용|뷰티|헤어|네일|피부|왁싱|살롱)/, url: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1800&q=82" },
+  { test: /(교육|수업|클래스|체험|학원|코칭|과외)/, url: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1800&q=82" },
+  { test: /(꽃|플라워|공방|소품|잡화|편집숍|소매|매장)/, url: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1800&q=82" },
+];
+
+export function heroImageForSector(sector: string, fallback: string): string {
+  const hit = SECTOR_HERO_IMAGES.find((item) => item.test.test(sector));
+  return hit ? hit.url : fallback;
+}
+
 export function inferLandingTemplate(sector: string): LandingTemplateId {
   if (/(앱|플랫폼|소프트웨어|SaaS|인공지능|AI|데이터|개발)/i.test(sector)) return "tech";
   if (/(콘텐츠|디자인|작가|사진|영상|크리에이터|마케팅)/.test(sector)) return "creator";
@@ -185,6 +204,7 @@ export function applyLandingTemplate(
     templateId,
     accentColor: template.accentColor,
     backgroundTone: template.backgroundTone,
+    // 템플릿을 바꿔 고를 때는 그 템플릿의 사진으로 — 업종 추정은 처음 만들 때만 한다
     heroImageUrl: template.heroImageUrl,
     heroImageAlt: draft.heroImageAlt || `${draft.businessName} 대표 이미지`,
   };
@@ -326,7 +346,7 @@ export function createLandingDraft(input: {
     templateId,
     leadCaptureEnabled: true,
     logoImageUrl: "",
-    heroImageUrl: template.heroImageUrl,
+    heroImageUrl: heroImageForSector(input.sector ?? "", template.heroImageUrl),
     heroImageAlt: `${input.title} 대표 이미지`,
     pageData: null,
     heroLabel: "지금 첫 고객을 모집하고 있어요",

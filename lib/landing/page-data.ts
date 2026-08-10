@@ -9,6 +9,14 @@ export const landingBlockTypes = [
   "StatsSection",
   "GallerySection",
   "OfferSection",
+  /*
+   * 아래 셋은 홈페이지 제작 서비스들의 업종별 템플릿이 공통으로 두는 자리다.
+   * 음식점은 '메뉴·가격'과 '위치·영업시간'을, 앱·서비스는 '요금'과 'FAQ'를
+   * 반드시 담는다. 없으면 방문자가 결정을 못 한다.
+   */
+  "PriceList",
+  "LocationSection",
+  "FaqSection",
   "CtaSection",
 ] as const;
 
@@ -152,6 +160,48 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
   });
   const cta = block("CtaSection", `cta-${templateId}`, value.cta);
 
+  /*
+   * 아래 셋은 업종별 템플릿의 필수 자리다(홈페이지 제작 서비스 공통).
+   * 값은 계획서 답변에서 가져온 것만 채우고, 없으면 사업주가 채우도록 비워 둔다.
+   */
+  const price = block("PriceList", `price-${templateId}`, {
+    eyebrow: "메뉴와 가격",
+    heading: "무엇을 얼마에 드리는지",
+    name1: seed.offerTitle,
+    desc1: seed.offerDescription,
+    price1: seed.priceLabel,
+    /*
+     * 계획서에서 확인되는 상품은 '대표 상품' 하나뿐이다.
+     * 나머지를 '선택 이유'로 채우면 이름과 설명이 같은 줄이 생기고,
+     * 무엇보다 팔지 않는 것을 메뉴에 올리게 된다 — 비워서 사업주가 채운다.
+     */
+    name2: "",
+    desc2: "",
+    price2: "",
+    name3: "",
+    desc3: "",
+    price3: "",
+    note: "가격과 구성은 상황에 따라 달라질 수 있습니다.",
+  });
+  const location = block("LocationSection", `location-${templateId}`, {
+    eyebrow: "찾아오는 길",
+    heading: "언제, 어디로 오시면 되는지",
+    address: "주소를 입력하세요",
+    hours: "영업시간을 입력하세요",
+    closed: "",
+    contact: "",
+  });
+  const faq = block("FaqSection", `faq-${templateId}`, {
+    eyebrow: "자주 묻는 질문",
+    heading: "궁금한 점을 먼저 풀어 드립니다",
+    q1: "신청 후에는 어떻게 되나요?",
+    a1: "입력한 연락처로 확인 후 다음 절차를 안내합니다.",
+    q2: "바로 결제해야 하나요?",
+    a2: "아니요. 필요한 범위와 조건을 먼저 확인합니다.",
+    q3: "",
+    a3: "",
+  });
+
   const heroLayout: Record<string, string> = {
     service: "split",
     local: "immersive",
@@ -167,15 +217,21 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
     layout: heroLayout[templateId] ?? "split",
   });
 
+  /*
+   * 업종마다 방문자가 확인하는 순서가 다르다.
+   *  - 동네 매장·음식점: 무엇을 파는지(메뉴·가격) → 어디로 가면 되는지(위치)
+   *  - 앱·플랫폼: 무엇이 되는지(기능) → 얼마인지(요금) → 걸리는 점(FAQ)
+   *  - 수업·예약: 어떻게 진행되는지 → 얼마인지 → 궁금한 점
+   */
   const layouts: Record<string, LandingPageData["content"]> = {
-    service: [hero, trust, feature, process, offer, cta],
-    local: [hero, trust, gallery, feature, offer, cta],
-    product: [hero, offer, stats, feature, gallery, cta],
-    class: [hero, feature, process, stats, offer, cta],
-    tech: [hero, stats, feature, process, offer, cta],
-    creator: [hero, gallery, story, feature, cta],
-    wellness: [hero, trust, feature, gallery, offer, cta],
-    editorial: [hero, story, stats, feature, offer, cta],
+    service: [hero, trust, feature, process, price, faq, cta],
+    local: [hero, trust, gallery, price, location, faq, cta],
+    product: [hero, offer, price, stats, feature, gallery, cta],
+    class: [hero, feature, process, price, faq, location, cta],
+    tech: [hero, stats, feature, process, price, faq, cta],
+    creator: [hero, gallery, story, feature, price, cta],
+    wellness: [hero, trust, feature, gallery, price, location, cta],
+    editorial: [hero, story, stats, feature, price, cta],
   };
   return landingPageDataSchema.parse({
     root: { props: { title: seed.businessName } },

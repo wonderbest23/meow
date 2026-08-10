@@ -9644,3 +9644,167 @@ body {
     font-size: 16.5px;
   }
 }
+
+/* ── 메뉴·가격 / 위치·영업시간 / 자주 묻는 질문 ─────────────────
+ * 업종별 템플릿의 필수 자리. 다른 landing-block과 폭·여백을 맞춘다.
+ * ───────────────────────────────────────────────────────────── */
+.landing-block-price,
+.landing-block-location,
+.landing-block-faq {
+  width: min(1000px, calc(100% - 48px));
+  padding: 78px 0;
+}
+
+.landing-block-price > header > span,
+.landing-block-location > header > span,
+.landing-block-faq > header > span {
+  color: var(--landing-accent);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.landing-block-price h2,
+.landing-block-location h2,
+.landing-block-faq h2 {
+  margin: 10px 0 30px;
+  font-size: clamp(28px, 3.6vw, 42px);
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+  word-break: keep-all;
+}
+
+/* 값은 오른쪽에 모아 세로로 훑을 수 있게 */
+.landing-block-price ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid #e5e8eb;
+}
+
+.landing-block-price li {
+  padding: 22px 4px;
+  border-bottom: 1px solid #e5e8eb;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.landing-block-price li > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.landing-block-price strong {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.landing-block-price li span {
+  color: #4e5968;
+  font-size: 14.5px;
+  line-height: 1.6;
+  word-break: keep-all;
+}
+
+.landing-block-price b {
+  flex: none;
+  font-size: 18px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--landing-accent);
+}
+
+.landing-block-price small {
+  display: block;
+  margin-top: 14px;
+  color: #6b7684;
+  font-size: 12.5px;
+}
+
+.landing-block-location dl,
+.landing-block-faq dl {
+  margin: 0;
+  display: grid;
+  gap: 0;
+  border-top: 1px solid #e5e8eb;
+}
+
+.landing-block-location dl > div,
+.landing-block-faq dl > div {
+  padding: 20px 4px;
+  border-bottom: 1px solid #e5e8eb;
+}
+
+.landing-block-location dl > div {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 16px;
+  align-items: baseline;
+}
+
+.landing-block-location dt,
+.landing-block-faq dt {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #4e5968;
+}
+
+.landing-block-faq dt {
+  font-size: 17px;
+  color: inherit;
+  letter-spacing: -0.02em;
+}
+
+.landing-block-location dd,
+.landing-block-faq dd {
+  margin: 0;
+  font-size: 15.5px;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.landing-block-faq dd {
+  margin-top: 8px;
+  color: #4e5968;
+}
+
+/* 어두운 배경 템플릿 */
+.tone-dark .landing-block-price li,
+.tone-dark .landing-block-price ul,
+.tone-dark .landing-block-location dl,
+.tone-dark .landing-block-location dl > div,
+.tone-dark .landing-block-faq dl,
+.tone-dark .landing-block-faq dl > div {
+  border-color: #ffffff22;
+}
+
+.tone-dark .landing-block-price li span,
+.tone-dark .landing-block-location dt,
+.tone-dark .landing-block-faq dd {
+  color: #b0b8c1;
+}
+
+@media (max-width: 640px) {
+  .landing-block-price,
+  .landing-block-location,
+  .landing-block-faq {
+    width: 100%;
+    padding: 52px 18px 58px;
+  }
+
+  .landing-block-price li {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  /* 좁은 화면에서 110px 라벨 열은 값을 짓누른다 */
+  .landing-block-location dl > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+}
