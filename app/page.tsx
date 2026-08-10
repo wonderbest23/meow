@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  ArrowDown,
   ArrowLeft,
   ArrowRight,
   BadgeCheck,
@@ -87,7 +86,6 @@ import { RegionalCoveragePanel } from "../components/regional-coverage-panel";
 import { QualityAssurancePanel } from "../components/quality-assurance-panel";
 import { GrantMatcherPanel } from "../components/grant-matcher-panel";
 import { ServiceOpsPanel } from "../components/service-ops-panel";
-import { HomeHeroScene } from "../components/home-hero-scene";
 import { BeginnerMissionRoadmap } from "../components/beginner-mission-roadmap";
 import { DeliveryDocumentPreview } from "../components/delivery-document-preview";
 import {
@@ -567,20 +565,20 @@ function Home({
   return (
     <main className="new-home simple-home">
       <div className="hero-shell">
-        <HomeHeroScene />
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         <section className="simple-home-choice">
           <div className="home-hero-copy">
             <span className="section-label">AI 사업계획서</span>
             <h1>사업계획서,<br />오늘 하루면 충분합니다</h1>
-            <p>질문에 답하면 인공지능이 문장을 대신 씁니다.<br /><b>7가지 문서 유형</b> — 답변은 <b>한 번</b>이면 돼요.</p>
+            <p>질문에 답하면 인공지능이 문장을 대신 씁니다.<br />복잡한 사업계획서, 이제 쉽게 시작하세요.</p>
             <div className="home-hero-actions">
-              <button className="conversation-choice" onClick={onStart} aria-label="나에게 맞는 사업 찾기 시작"><strong>시작하기</strong></button>
+              <button className="conversation-choice" onClick={onStart} aria-label="무료로 시작하기">
+                <strong>무료로 시작하기</strong>
+                <ArrowRight />
+              </button>
             </div>
-            <p className="home-hero-assurance"><ShieldCheck /> 완성 샘플 3부 무료 열람 · 앞 2개 섹션 무료 작성</p>
           </div>
         </section>
-        <a className="home-scroll-hint" href="#how"><ArrowDown /> 아래에서 제공 범위 확인</a>
       </div>
 
       <section className="home-proof-bar" aria-label="서비스 구성 요약">

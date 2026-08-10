@@ -9512,3 +9512,122 @@ body {
     line-height: 1.75;
   }
 }
+
+/* ──────────────────────────────────────────────────────────────
+ * 메인 히어로 — 사진 배경 위에 가운데 정렬
+ *
+ * 예전에는 캔버스로 그린 장면을 배경으로 썼다. 실제 결과물(노트북 화면의
+ * 사업계획서)이 보이는 사진으로 바꾸고, 글은 그 위 여백에 가운데로 놓는다.
+ * 사진의 피사체 위치가 가로/세로에서 다르므로 두 장을 나눠 쓴다.
+ * ────────────────────────────────────────────────────────────── */
+.simple-home .hero-shell {
+  background-color: #eef3fb;
+  background-image: url("/hero-desktop-2026.jpg");
+  background-size: cover;
+  background-position: center bottom;
+  background-repeat: no-repeat;
+  color: var(--text-strong, #191f28);
+}
+
+/* 글이 놓이는 위쪽은 사진이 밝아 대비가 충분하다 — 옅게만 띄운다 */
+.simple-home .hero-shell::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.72) 0%, rgba(255, 255, 255, 0.34) 38%, rgba(255, 255, 255, 0) 62%);
+}
+
+/*
+ * PC — 가로 사진은 노트북이 오른쪽에 있다. 글을 가운데 두면 사진 위에
+ * 겹쳐 읽기 어려워지므로 왼쪽 빈 자리에 붙이고 세로 가운데로 맞춘다.
+ */
+.simple-home .simple-home-choice {
+  min-height: calc(100vh - var(--topbar-h));
+  padding: 0 24px;
+  justify-items: start;
+  align-content: center;
+}
+
+.simple-home .home-hero-copy {
+  width: min(560px, 100%);
+  display: grid;
+  justify-items: start;
+  gap: 18px;
+  text-align: left;
+}
+
+.simple-home .home-hero-copy h1 {
+  margin: 0;
+  font-size: clamp(34px, 4.4vw, 56px);
+  font-weight: 900;
+  line-height: 1.22;
+  letter-spacing: -0.03em;
+  text-wrap: balance;
+}
+
+.simple-home .home-hero-copy > p {
+  margin: 0;
+  max-width: 34em;
+}
+
+.simple-home .home-hero-actions {
+  margin-top: 8px;
+}
+
+/* 하나뿐인 행동 — 크고 둥글게 */
+.simple-home .home-hero-actions > .conversation-choice {
+  min-height: 62px;
+  padding: 0 34px;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.28);
+}
+
+.simple-home .home-hero-actions > .conversation-choice strong {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+/* 전역 규칙이 button 안의 svg를 숨긴다 — 이 화살표는 보여야 한다 */
+.simple-home .home-hero-actions > .conversation-choice svg {
+  display: block !important;
+  width: 19px;
+  height: 19px;
+  color: currentColor;
+}
+
+@media (max-width: 640px) {
+  .simple-home .hero-shell {
+    /* 세로 사진 — 노트북이 아래쪽에 오고 위가 비어 글자리가 된다 */
+    background-image: url("/hero-mobile-2026.jpg");
+  }
+
+  /* 폰 — 세로 사진은 노트북이 아래에 있다. 위쪽 빈 자리에 가운데로 놓는다 */
+  .simple-home .simple-home-choice {
+    padding: 28px 20px 0;
+    justify-items: center;
+    align-content: start;
+  }
+
+  .simple-home .home-hero-copy {
+    width: min(560px, 100%);
+    justify-items: center;
+    gap: 14px;
+    text-align: center;
+  }
+
+  .simple-home .home-hero-actions > .conversation-choice {
+    min-height: 54px;
+    padding: 0 26px;
+  }
+
+  .simple-home .home-hero-actions > .conversation-choice strong {
+    font-size: 16.5px;
+  }
+}
