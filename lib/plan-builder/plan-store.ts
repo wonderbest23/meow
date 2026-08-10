@@ -500,7 +500,67 @@ export async function pushToServer(): Promise<void> {
   }
 }
 
-/** 서버에서 상태를 불러와 로컬에 반영(서버 우선) */
+/**
+ * 같은 플랜의 서버본과 로컬본을 합친다.
+ * 통째로 덮어쓰면 아직 업로드되지 않은 최신 섹션이 사라진다 —
+ * 섹션은 키별 생성 시각으로, 답변은 섹션 키 단위로 최신 쪽을 남긴다.
+ */
+function mergePlan(serverPlan: Plan, localPlan: Plan): Plan {
+  const localNewer = (localPlan.updatedAt || "") > (serverPlan.updatedAt || "");
+  const base = localNewer ? localPlan : serverPlan;
+  const other = localNewer ? serverPlan : localPlan;
+
+  const sections: Record<string, StoredSection> = { ...(other.sections ?? {}) };
+  for (const [key, sec] of Object.entries(base.sections ?? {})) {
+    const prev = sections[key];
+    // 어느 쪽에 있든 '나중에 만든 본문'이 이긴다
+    if (!prev || (sec.generatedAt || "") >= (prev.generatedAt || "")) sections[key] = sec;
+  }
+
+  return {
+    ...base,
+    sections,
+    answers: { ...(other.answers ?? {}), ...(base.answers ?? {}) },
+    updatedAt: localNewer ? localPlan.updatedAt : serverPlan.updatedAt,
+  };
+}
+
+/** 서버 상태와 로컬 상태를 합친 결과 */
+function mergeStates(server: PlanState, local: PlanState): PlanState {
+  const ownOf = (s: PlanState) => s.plans.filter((p) => !isSamplePlan(p.id));
+  const byId = new Map<string, Plan>();
+  for (const p of ownOf(server)) byId.set(p.id, p);
+  for (const p of ownOf(local)) {
+    const fromServer = byId.get(p.id);
+    byId.set(p.id, fromServer ? mergePlan(fromServer, p) : p);
+  }
+  const plans = [...byId.values()].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
+
+  // 지금 보고 있는 플랜(샘플 포함)을 그대로 유지한다 — 화면이 다른 문서로 튀지 않게
+  const keepActive =
+    local.activePlanId && (isSamplePlan(local.activePlanId) || byId.has(local.activePlanId))
+      ? local.activePlanId
+      : server.activePlanId && byId.has(server.activePlanId)
+        ? server.activePlanId
+        : plans[0]?.id ?? null;
+
+  return {
+    business: local.business.name ? local.business : server.business,
+    plans,
+    activePlanId: keepActive,
+  };
+}
+
+/** 서버에 없는 로컬 내용이 남아 있는지 — 있으면 업로드해야 한다 */
+function stateSignature(s: PlanState): string {
+  return s.plans
+    .filter((p) => !isSamplePlan(p.id))
+    .map((p) => `${p.id}:${p.updatedAt}:${Object.keys(p.sections ?? {}).length}:${Object.keys(p.answers ?? {}).length}`)
+    .sort()
+    .join("|");
+}
+
+/** 서버에서 상태를 불러와 로컬과 병합한다(최신 것이 이긴다) */
 export async function hydrateFromServer(): Promise<PlanState> {
   if (typeof window === "undefined") return loadState();
   try {
@@ -518,15 +578,15 @@ export async function hydrateFromServer(): Promise<PlanState> {
       }
       const server = migrate(payload);
       const local = loadState();
-      // 로컬에 더 많은 플랜이 있으면(방금 만든 경우) 서버로 덮어쓰지 않고 로컬을 올린다.
-      const ownLocal = local.plans.filter((p) => !isSamplePlan(p.id));
-      if (ownLocal.length > server.plans.length) {
-        void pushToServer();
-      } else if (server.plans.length > 0 || server.business.name) {
-        // 샘플을 열어 둔 상태는 서버가 모른다(전송에서 걷어내므로) — 활성 선택은 로컬을 지킨다
-        if (isSamplePlan(local.activePlanId)) server.activePlanId = local.activePlanId;
-        persist(server);
-      }
+      /*
+       * 예전에는 서버 응답으로 로컬을 통째로 덮어썼다.
+       * 방금 생성한 섹션이 아직 업로드되지 않았으면 그 순간 화면에서 사라졌다가
+       * (개요가 "1번부터 다시"라고 안내) 업로드가 끝난 뒤에야 되살아났다.
+       * 이제는 플랜·섹션 단위로 최신 것을 남기고, 로컬에만 있는 내용은 올린다.
+       */
+      const merged = mergeStates(server, local);
+      persist(merged);
+      if (stateSignature(merged) !== stateSignature(server)) void pushToServer();
     }
   } catch {
     // 서버 실패 → 로컬 캐시 사용

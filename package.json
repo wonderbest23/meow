@@ -57,7 +57,8 @@
     "test:persistence": "node --env-file-if-exists=.env.local scripts/persistence-smoke.mjs",
     "test:e2e": "node scripts/e2e-scenario.mjs",
     "test:font-subset": "tsx scripts/font-subset.test.ts",
-    "test:deck-narrative": "tsx scripts/deck-narrative.test.ts"
+    "test:deck-narrative": "tsx scripts/deck-narrative.test.ts",
+    "test:plan-merge": "tsx scripts/plan-merge.test.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.1",
