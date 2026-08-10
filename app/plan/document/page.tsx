@@ -314,18 +314,12 @@ export default function PlanDocumentPage() {
                   </button>
                 </div>
                 <div className={styles.spring} />
-                {isSample && <span className={styles.sampleNote}>샘플은 열람 전용 — 내려받기는 내 문서에서</span>}
-                {locked && (
-                  <span className={styles.sampleNote}>
-                    <Lock size={11} strokeWidth={2.4} /> 내려받기는 결제 후 열립니다 · {access!.price.toLocaleString("ko-KR")}원
-                  </span>
-                )}
-                <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleExport("docx"))} title={isSample ? "샘플은 내려받을 수 없습니다" : locked ? "결제 후 열립니다" : "Word로 내려받기"}>
+                <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleExport("docx"))} title={locked ? "결제 후 열립니다" : "Word로 내려받기"}>
                   {exporting === "docx" ? <Spinner /> : locked ? <Lock size={13} /> : <FileText size={14} />} {exporting === "docx" ? "내보내는 중…" : "Word"}
                 </button>
                 {/* 계획서를 다 쓰면 홈페이지에 실을 말도 이미 다 답해 둔 상태다 — 그대로 옮겨 만든다 */}
-                <button className={styles.tool} disabled={busy} onClick={() => (isSample ? undefined : locked ? goPay() : router.push("/plan/homepage"))} title={isSample ? "샘플은 홈페이지를 만들 수 없습니다" : locked ? "결제 후 열립니다" : "계획서 내용으로 홈페이지 만들기"}>
-                  {locked ? <Lock size={13} /> : <Globe2 size={14} />} 홈페이지
+                <button className={styles.tool} disabled={busy && !isSample} onClick={() => (locked && !isSample ? goPay() : router.push("/plan/homepage"))} title={locked && !isSample ? "결제 후 열립니다" : "계획서 내용으로 만든 홈페이지 보기"}>
+                  {locked && !isSample ? <Lock size={13} /> : <Globe2 size={14} />} 홈페이지
                 </button>
                 <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleDeck())} title={locked ? "결제 후 열립니다" : "발표자료(PPT) 만들기"}>
                   {exporting === "pptx" ? <Spinner /> : locked ? <Lock size={13} /> : <Presentation size={14} />} {exporting === "pptx" ? "만드는 중…" : "PPT"}

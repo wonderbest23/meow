@@ -80,13 +80,18 @@
 }
 
 /* 레퍼런스 세그먼트: 연한 알약 컨테이너 + 활성은 잉크색 알약 */
+/*
+ * 보기 전환 — 개요 화면(PlanOverview.module.css)과 값이 같아야 한다.
+ * 버튼 하나로 오가는 컨트롤이 화면마다 다르게 생기면 낯설다.
+ * 값을 바꿀 땐 두 파일을 함께 고친다.
+ */
 .seg {
   display: inline-flex;
   align-items: center;
-  gap: 2px;
-  background: var(--wz-panel2);
-  border: 1px solid var(--wz-line);
-  border-radius: 999px;
+  gap: 4px;
+  background: var(--surface, #fff);
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 12px;
   padding: 4px;
 }
 .seg button {
@@ -95,12 +100,12 @@
   gap: 6px;
   border: 0;
   background: transparent;
-  color: var(--wz-muted);
+  color: var(--text-muted, #8b95a1);
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 8px 16px;
-  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 800;
+  padding: 9px 18px;
+  border-radius: 9px;
   cursor: pointer;
   transition: 0.2s;
   white-space: nowrap;
@@ -109,7 +114,7 @@
   color: var(--wz-ink);
 }
 .seg .segOn {
-  background: var(--wz-ink);
+  background: var(--text-strong, #191f28);
   color: #fff;
 }
 .seg .segOn:hover {
@@ -717,13 +722,50 @@
     padding: 14px 20px 12px;
   }
 
+  /* 도구는 한 줄을 지킨다 — 넘치면 가로로 민다(두 줄이 되면 헤더가 두꺼워진다) */
   .toolbar {
-    flex-wrap: wrap;
-    justify-content: flex-end;
+    flex-wrap: nowrap;
     width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toolbar > * {
+    flex: none;
   }
 
   .routeHeader {
     margin-right: 0;
+  }
+}
+
+/*
+ * 도구줄은 어느 폭에서도 한 줄이다.
+ * 줄바꿈을 허용하면 헤더가 두 배로 두꺼워져 본문이 그만큼 밀린다.
+ * 넘치면 가로로 밀어서 본다.
+ */
+@media (max-width: 640px) {
+  .toolbar {
+    flex-wrap: nowrap;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .toolbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .toolbar > * {
+    flex: none;
+  }
+
+  /* 빈 공간을 밀어내던 스프링은 한 줄에서는 자리만 먹는다 */
+  .toolbar > .spring {
+    display: none;
   }
 }

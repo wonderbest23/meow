@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
+import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, loadState, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
@@ -32,6 +33,7 @@ export default function PlanHomepagePage() {
   const [site, setSite] = useState<LandingSiteRecord | null>(null);
   const [draft, setDraft] = useState<LandingDraft | null>(null);
   const [editable, setEditable] = useState(false);
+  const [sample, setSample] = useState(false);
   const [price, setPrice] = useState(149000);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
@@ -47,15 +49,21 @@ export default function PlanHomepagePage() {
         setPhase("blocked");
         return;
       }
-      // 예시 문서는 열람 전용이다 — 남의 사업으로 홈페이지를 열 수는 없다
+      /*
+       * 예시 문서 — 서버를 거치지 않고 그 자리에서 만들어 보여준다.
+       * 답변이 이미 들어 있고 변환은 순수 계산이라 AI도 저장도 필요 없다.
+       * 결과물이 어떻게 생겼는지 보여주는 게 목적이므로 열람만 가능하다.
+       */
       if (isSamplePlan(plan.id)) {
-        setBlocked({
-          title: "예시 문서로는 홈페이지를 만들 수 없어요",
-          detail: "내 사업계획서를 만들면 그 내용으로 홈페이지를 만들어 드립니다.",
-          missing: [],
-          cta: "plan",
+        const draft = landingDraftFromPlan({
+          planTitle: plan.title,
+          business: state.business,
+          answers: plan.answers,
         });
-        setPhase("blocked");
+        setDraft(draft);
+        setEditable(false);
+        setSample(true);
+        setPhase("ready");
         return;
       }
       const res = await fetch("/api/plan/landing", {
@@ -204,14 +212,22 @@ export default function PlanHomepagePage() {
         <div className={styles.previewWrap}>
           <div className={styles.payBar}>
             <div>
-              <strong className={styles.payTitle}>계획서 내용으로 홈페이지를 만들었어요</strong>
+              <strong className={styles.payTitle}>
+                {sample ? "계획서 내용으로 만든 홈페이지예요" : "계획서 내용으로 홈페이지를 만들었어요"}
+              </strong>
               <p className={styles.payNote}>
-                지금은 미리보기입니다. 내용을 고치고 인터넷에 공개하려면 결제가 필요합니다.
+                {sample
+                  ? "예시 계획서의 답변으로 만든 결과입니다. 내 계획서로도 이렇게 만들어집니다."
+                  : "지금은 미리보기입니다. 내용을 고치고 인터넷에 공개하려면 결제가 필요합니다."}
               </p>
             </div>
-            <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
-              {price.toLocaleString("ko-KR")}원 · 수정하고 공개하기 →
-            </button>
+            {sample ? (
+              <a className={styles.cta} href="/plan/start">내 플랜 만들기 →</a>
+            ) : (
+              <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
+                {price.toLocaleString("ko-KR")}원 · 수정하고 공개하기 →
+              </button>
+            )}
           </div>
           <div className={styles.preview} aria-label="홈페이지 미리보기">
             <LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} />

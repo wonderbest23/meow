@@ -206,8 +206,13 @@
 .tools:empty {
   display: none;
 }
+/*
+ * 보기 전환 — 문서 화면(document/PlanDocument.module.css)과 값이 같아야 한다.
+ * 값을 바꿀 땐 두 파일을 함께 고친다.
+ */
 .seg {
   display: inline-flex;
+  align-items: center;
   background: var(--surface, #fff);
   border: 1px solid var(--border-soft, #e5e8eb);
   border-radius: 12px;
