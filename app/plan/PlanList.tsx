@@ -126,7 +126,10 @@ export default function PlanList() {
           <h2 className={styles.listTitle}>
             내 플랜<span>{ownPlans.length}개</span>
           </h2>
-          <Link href="/plan/start" className={styles.newBtn}>+ 새 플랜</Link>
+          {/* 플랜이 없으면 아래 빈 화면의 '첫 플랜 만들기'가 이미 있다 — 같은 버튼을 두 개 두지 않는다 */}
+          {ownPlans.length > 0 && (
+            <Link href="/plan/start" className={styles.newBtn}>+ 새 플랜</Link>
+          )}
         </div>
 
         {ownPlans.length === 0 ? (
