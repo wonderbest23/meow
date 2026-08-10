@@ -48,7 +48,37 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try { setRailHidden(localStorage.getItem("plan-rail-hidden") === "1"); } catch { /* 무해 */ }
   }, []);
+
+  /*
+   * 폰에서는 레일이 아이콘 폭(56px)이라 목차가 들어갈 자리가 없다.
+   * 손잡이를 누르면 서랍처럼 넓게 펼치고, 뒤 배경을 누르면 닫는다 —
+   * PC와 같은 목차를 폰에서도 쓰게 한다.
+   */
+  const [phone, setPhone] = useState(false);
+  const [drawer, setDrawer] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const apply = () => setPhone(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  // 화면을 옮기면 서랍은 닫는다 — 열어 둔 채 넘어가면 본문을 가린다
+  useEffect(() => { setDrawer(false); }, [pathname]);
+
+  useEffect(() => {
+    if (!drawer) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDrawer(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawer]);
+
   function toggleRail() {
+    if (phone) {
+      setDrawer((v) => !v);
+      return;
+    }
     setRailHidden((v) => {
       try { localStorage.setItem("plan-rail-hidden", v ? "0" : "1"); } catch { /* 무해 */ }
       return !v;
@@ -79,7 +109,12 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className={styles.shell}>
-      <nav className={`${styles.rail} ${railHidden ? styles.railOff : ""}`} aria-label="주요 메뉴">
+      {/* 서랍 뒤 배경 — 누르면 닫힌다 */}
+      {drawer && <div className={styles.scrim} onClick={() => setDrawer(false)} aria-hidden="true" />}
+      <nav
+        className={`${styles.rail} ${railHidden ? styles.railOff : ""} ${drawer ? styles.railOpen : ""}`}
+        aria-label="주요 메뉴"
+      >
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/today-startup-mark-2026.png" alt="오늘창업" width={40} height={40} />
@@ -112,12 +147,12 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
       </nav>
       <button
         type="button"
-        className={`${styles.railToggle} ${railHidden ? styles.railToggleOff : ""}`}
+        className={`${styles.railToggle} ${railHidden ? styles.railToggleOff : ""} ${drawer ? styles.railToggleOpen : ""}`}
         onClick={toggleRail}
-        aria-label={railHidden ? "메뉴 펼치기" : "메뉴 접기"}
-        title={railHidden ? "메뉴 펼치기" : "메뉴 접기"}
+        aria-label={(phone ? drawer : !railHidden) ? "메뉴 접기" : "메뉴 펼치기"}
+        title={(phone ? drawer : !railHidden) ? "메뉴 접기" : "메뉴 펼치기"}
       >
-        {railHidden ? "»" : "«"}
+        {(phone ? drawer : !railHidden) ? "«" : "»"}
       </button>
       <div className={`${styles.content} ${railHidden ? styles.contentWide : ""}`}>
         {back && (
