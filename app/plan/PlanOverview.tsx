@@ -285,13 +285,13 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         )}
         {doneCount > 0 && doneCount === total && (
           <button type="button" className={`${styles.finale} ${ringClass()}`} onClick={onOpenDocument}>
-            <GuideBubble text="완성됐어요 — 제안서를 만들어 보세요" />
+            <GuideBubble text="다음은 발표자료예요" />
             <span className={styles.finaleIcon} aria-hidden="true"><Presentation size={22} /></span>
             <span className={styles.finaleBody}>
-              <b>{total}개 섹션을 모두 채우셨습니다</b>
-              <span>이제 이 내용으로 사업 제안서(PPT)를 만들 수 있어요. 문서 화면에서 바로 받으실 수 있습니다.</span>
+              <b>사업계획서가 완성됐어요 🎉</b>
+              <span>{total}개 섹션을 모두 작성했습니다. 문서 화면에서 PDF·Word로 받거나, 발표자료(PPT)까지 만들 수 있어요.</span>
             </span>
-            <span className={styles.finaleGo}>제안서 만들기 →</span>
+            <span className={styles.finaleGo}>문서 보러 가기 →</span>
           </button>
         )}
 
