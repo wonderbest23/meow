@@ -50,6 +50,11 @@ export default function PlanMePage() {
   const [refundReason, setRefundReason] = useState("");
   const [refundBusy, setRefundBusy] = useState(false);
   const [refundMessage, setRefundMessage] = useState("");
+  /** 회원 탈퇴 — 실수 방지를 위해 이메일을 다시 입력받는다 */
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleteEmail, setDeleteEmail] = useState("");
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteMessage, setDeleteMessage] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -101,6 +106,29 @@ export default function PlanMePage() {
       setRefundMessage(error instanceof Error ? error.message : "환불 요청을 접수하지 못했습니다.");
     } finally {
       setRefundBusy(false);
+    }
+  }
+
+  async function deleteAccount() {
+    if (deleteBusy) return;
+    if (!window.confirm("정말 탈퇴하시겠어요?\n작성한 플랜과 문서가 모두 삭제되며 되돌릴 수 없습니다.")) return;
+    setDeleteBusy(true);
+    setDeleteMessage("");
+    try {
+      const response = await fetch("/api/auth/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: deleteEmail.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error?.message ?? "탈퇴 처리에 실패했습니다.");
+      clearLocalState();
+      router.push("/");
+      router.refresh();
+    } catch (error) {
+      setDeleteMessage(error instanceof Error ? error.message : "탈퇴 처리에 실패했습니다.");
+    } finally {
+      setDeleteBusy(false);
     }
   }
 
@@ -235,6 +263,48 @@ export default function PlanMePage() {
               </tbody>
             </table>
             {refundMessage && <p className={styles.refundMessage}>{refundMessage}</p>}
+          </div>
+        )}
+      </section>
+
+      <section className={styles.card}>
+        <div className={styles.cardHead}>
+          <h2 className={styles.cardTitle}>회원 탈퇴</h2>
+        </div>
+        {!showDelete ? (
+          <>
+            <p className={styles.empty}>
+              계정과 작성한 플랜·문서가 모두 삭제됩니다. 결제·환불 기록은 법령상 보존 의무가 있어
+              사람과 연결되지 않는 형태로만 남습니다.
+            </p>
+            <button type="button" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
+              탈퇴 진행하기
+            </button>
+          </>
+        ) : (
+          <div className={styles.deleteForm}>
+            <p>
+              되돌릴 수 없습니다. 계속하려면 로그인한 이메일 <b>{account.email}</b>을(를) 입력해 주세요.
+            </p>
+            <input
+              type="email"
+              value={deleteEmail}
+              onChange={(event) => setDeleteEmail(event.target.value)}
+              placeholder="이메일 입력"
+              autoComplete="off"
+            />
+            {deleteMessage && <p className={styles.deleteError}>{deleteMessage}</p>}
+            <div>
+              <button
+                type="button"
+                className={styles.dangerBtn}
+                disabled={deleteBusy || deleteEmail.trim().length < 5}
+                onClick={() => void deleteAccount()}
+              >
+                {deleteBusy ? "처리 중…" : "탈퇴하기"}
+              </button>
+              <button type="button" className={styles.refundCancel} onClick={() => setShowDelete(false)}>취소</button>
+            </div>
           </div>
         )}
       </section>

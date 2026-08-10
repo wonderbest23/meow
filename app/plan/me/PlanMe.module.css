@@ -279,3 +279,54 @@
   font-size: 12.5px;
   color: var(--blue, #3182f6);
 }
+
+/* 회원 탈퇴 — 되돌릴 수 없는 행동이라 톤을 분명히 한다 */
+.dangerBtn {
+  border: 1px solid #f3c4ce;
+  background: #fff;
+  color: #c33d55;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  padding: 10px 16px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+.dangerBtn:hover:not(:disabled) {
+  background: #fdecef;
+  border-color: #e79aa9;
+}
+.dangerBtn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+.deleteForm {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.deleteForm > p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--text-body, #4e5968);
+}
+.deleteForm input {
+  width: 100%;
+  max-width: 320px;
+  border: 1.5px solid var(--border-soft, #e5e8eb);
+  background: var(--surface-soft, #f7f8fa);
+  border-radius: 10px;
+  padding: 11px 13px;
+  font: inherit;
+  font-size: 14px;
+}
+.deleteForm > div {
+  display: flex;
+  gap: 8px;
+}
+.deleteError {
+  margin: 0;
+  font-size: 12.5px;
+  color: #c33d55;
+}
