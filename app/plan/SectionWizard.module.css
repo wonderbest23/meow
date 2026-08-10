@@ -1522,3 +1522,17 @@
   color: var(--wz-muted);
   word-break: keep-all;
 }
+
+/*
+ * 좁은 창 — 목차를 접는다(문서 화면과 같은 이유).
+ * 레일 176px + 목차 232px가 본문을 눌러 태블릿에서 폰보다 읽기 나빠졌다.
+ */
+@media (min-width: 641px) and (max-width: 1080px) {
+  .app {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nav {
+    display: none;
+  }
+}
