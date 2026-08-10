@@ -59,7 +59,9 @@
     "test:font-subset": "tsx scripts/font-subset.test.ts",
     "test:deck-narrative": "tsx scripts/deck-narrative.test.ts",
     "test:plan-merge": "tsx scripts/plan-merge.test.ts",
-    "test:generation-queue": "tsx scripts/generation-queue.test.ts"
+    "test:generation-queue": "tsx scripts/generation-queue.test.ts",
+    "test:landing-from-plan": "tsx scripts/landing-from-plan.test.ts",
+    "test:plan-landing-chain": "tsx scripts/plan-landing-chain.test.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.1",

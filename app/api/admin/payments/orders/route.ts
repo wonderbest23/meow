@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { ensurePaidStarterLanding } from "../../../../../lib/landing/auto-publish";
 import {
   cancelManualTransferOrder,
   completeManualTransferOrder,
@@ -77,6 +78,7 @@ export async function PATCH(request: Request) {
 
     if (input.action === "confirm") {
       const result = await completeManualTransferOrder(original, input.note);
+      const starterLanding = await ensurePaidStarterLanding(result.project, original.guestTokenHash).catch(() => null);
       await recordPaymentEvent(`manual-confirm:${input.orderId}`, "MANUAL_TRANSFER_CONFIRMED", { orderId: input.orderId, amount: original.amount });
       await recordServiceAudit({
         projectId: result.project.id,
@@ -86,9 +88,9 @@ export async function PATCH(request: Request) {
         resourceId: input.orderId,
         status: "success",
         detail: `${original.amount.toLocaleString("ko-KR")}원 계좌 입금을 관리자가 확인했습니다.`,
-        metadata: { method: "manual_transfer" },
+        metadata: { method: "manual_transfer", starterLanding: starterLanding?.publicPath ?? null },
       });
-      return privateJson({ order: adminOrder(result.order), projectId: result.project.id });
+      return privateJson({ order: adminOrder(result.order), projectId: result.project.id, starterLanding });
     }
 
     const order = input.action === "cancel"

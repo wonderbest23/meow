@@ -190,6 +190,34 @@ export async function createProject(
   return project;
 }
 
+/**
+ * 사업계획서에 연결된 프로젝트 찾기.
+ *
+ * 홈페이지(랜딩)는 프로젝트 단위로 저장된다. 플랜 빌더에는 프로젝트가 없으므로
+ * 플랜당 하나의 담는 그릇을 만들어 두고, opportunity.planId로 다시 찾는다.
+ */
+export async function findProjectIdByPlan(
+  planId: string,
+  guestTokenHash: string,
+): Promise<string | null> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    for (const project of demoStore.values()) {
+      if (project.guestTokenHash !== guestTokenHash) continue;
+      if ((project.opportunity as Record<string, unknown> | null)?.planId === planId) return project.id;
+    }
+    return null;
+  }
+  const { data, error } = await supabase
+    .from("projects")
+    .select("id")
+    .eq("guest_token_hash", guestTokenHash)
+    .eq("opportunity->>planId", planId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.id ?? null;
+}
+
 export async function getProject(
   projectId: string,
   guestTokenHash: string,
