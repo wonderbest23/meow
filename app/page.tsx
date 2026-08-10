@@ -568,9 +568,9 @@ function Home({
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         <section className="simple-home-choice">
           <div className="home-hero-copy">
-            <span className="section-label">AI 사업계획서</span>
+            <span className="section-label">대국민 창업시대</span>
             <h1>사업계획서,<br />오늘 하루면 충분합니다</h1>
-            <p>질문에 답하면 인공지능이 문장을 대신 씁니다.<br />복잡한 사업계획서, 이제 쉽게 시작하세요.</p>
+            <p>사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.<br />복잡한 사업계획서, 이제 쉽게 시작하세요.</p>
             <div className="home-hero-actions">
               <button className="conversation-choice" onClick={onStart} aria-label="무료로 시작하기">
                 <strong>무료로 시작하기</strong>
