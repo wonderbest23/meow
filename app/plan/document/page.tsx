@@ -298,7 +298,8 @@ export default function PlanDocumentPage() {
               모바일에서는 좌측 목차가 통째로 숨어 '플랜 개요'로 돌아갈 길이 없었다.
               좁은 화면 전용으로 개요 링크와 챕터 점프를 가로 스트립으로 둔다.
             */}
-            {/* 뒤로가기는 셸 pill 하나로 통일 — 여기는 챕터 이동 칩만 */}
+            {/* 뒤로가기는 셸 pill 하나로 통일 — 여기는 챕터 이동 칩만. 칩이 없으면 줄도 없다 */}
+            {grouped.length > 0 && (
             <div className={styles.mobileNav}>
               {grouped.map(([chapterTitle, list]) => (
                 <button key={chapterTitle} type="button" className={styles.mobileChap} onClick={() => list[0] && scrollToSection(list[0].key)}>
@@ -306,6 +307,7 @@ export default function PlanDocumentPage() {
                 </button>
               ))}
             </div>
+            )}
             <header className={styles.mhead}>
               <div className={styles.routeHeader}>
                 <h1 className={styles.routeTitle}>
