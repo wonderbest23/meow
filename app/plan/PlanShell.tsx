@@ -155,22 +155,29 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         {(phone ? drawer : !railHidden) ? "«" : "»"}
       </button>
       {/*
-        폰 전용 메뉴 버튼 — 왼쪽 손잡이는 본문 위에 얹혀 글자를 가렸다.
-        오른쪽 아래 고정 버튼으로 옮긴다(엄지로 닿는 자리).
+        폰 상단 바 — 사이트 다른 화면처럼 로고가 보이는 머리 영역.
+        예전에는 머리 없이 본문이 바로 시작해 여기가 어느 서비스인지
+        알 수 없었고, 메뉴 버튼도 본문 위에 떠 있었다.
       */}
-      <button
-        type="button"
-        className={`${styles.menuFab} ${drawer ? styles.menuFabOn : ""}`}
-        onClick={() => setDrawer((v) => !v)}
-        aria-label={drawer ? "메뉴 닫기" : "메뉴 열기"}
-        aria-expanded={drawer}
-      >
-        {drawer ? (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
-        ) : (
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
-        )}
-      </button>
+      <header className={styles.mobileBar}>
+        <Link href="/" className={styles.mobileBrand} aria-label="오늘창업 홈">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/today-startup-logo-2026.png" alt="오늘창업" width={1288} height={322} />
+        </Link>
+        <button
+          type="button"
+          className={`${styles.menuFab} ${drawer ? styles.menuFabOn : ""}`}
+          onClick={() => setDrawer((v) => !v)}
+          aria-label={drawer ? "메뉴 닫기" : "메뉴 열기"}
+          aria-expanded={drawer}
+        >
+          {drawer ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+          )}
+        </button>
+      </header>
       <div className={`${styles.content} ${railHidden ? styles.contentWide : ""}`}>
         {back && (
           <Link href={back.href} className={styles.shellBack} aria-label={`${back.label}(으)로 돌아가기`}>

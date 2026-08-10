@@ -198,9 +198,13 @@
 .tools {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 12px;
   margin-bottom: 18px;
+}
+/* 표시할 게 없으면 빈 줄만 남는다 — 여백을 만들지 않는다 */
+.tools:empty {
+  display: none;
 }
 .seg {
   display: inline-flex;
@@ -901,4 +905,22 @@
 
 @media (prefers-reduced-motion: reduce) {
   .queueDot { animation: none; opacity: 0.8; }
+}
+
+/* 폰 — 제목과 보기 전환이 한 줄에 들어가지 않는다. 줄을 나눠 각자 폭을 쓴다 */
+@media (max-width: 640px) {
+  .bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .bar .seg {
+    align-self: stretch;
+  }
+
+  .bar .seg button {
+    flex: 1;
+    justify-content: center;
+  }
 }

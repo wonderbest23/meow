@@ -123,7 +123,7 @@ function samplePlans(): Plan[] {
     sections: Object.fromEntries(
       Object.entries(d.sections).map(([k, v]) => [k, { markdown: v.markdown, html: v.html, generatedAt: "2026-01-15T09:00:00.000Z", locked: true }]),
     ),
-    answers: {},
+    answers: d.answers,
   }));
 }
 

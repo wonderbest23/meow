@@ -259,6 +259,15 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
               플랜 개요 <span>· {title}</span>
             </h1>
           </div>
+          {/*
+            보기 전환은 문서 화면과 같은 자리(제목 줄 오른쪽)에 둔다.
+            예전에는 개요만 본문 한가운데 있어서, 버튼을 눌러 넘어가면
+            같은 컨트롤이 다른 곳에 나타나 길을 잃었다.
+          */}
+          <div className={styles.seg} role="tablist" aria-label="보기 전환">
+            <button type="button" className={styles.segOn}><LayoutGrid size={13} /> 구조 보기</button>
+            <button type="button" onClick={onOpenDocument}><FileText size={13} /> 문서 보기</button>
+          </div>
         </div>
 
         {/* 진행 미터 */}
@@ -338,12 +347,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
 
         <ConsistencyPanel issues={issues} onOpenSection={onOpenSection} />
 
-        {/* 구조 / 문서 전환 */}
+        {/* 생성 진행·일괄 생성 */}
         <div className={styles.tools}>
-          <div className={styles.seg}>
-            <button type="button" className={styles.segOn}><LayoutGrid size={13} /> 구조 보기</button>
-            <button type="button" onClick={onOpenDocument}><FileText size={13} /> 문서 보기</button>
-          </div>
           <div className={styles.spring} />
           {queued > 0 && !bulk && (
             <span className={styles.queueTag} title="기다리지 않아도 됩니다 — 다른 섹션을 계속 진행하세요">

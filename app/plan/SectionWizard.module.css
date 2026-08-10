@@ -1523,3 +1523,53 @@
   color: var(--wz-muted);
   word-break: keep-all;
 }
+
+/* 예시 문서 — 답변을 보여주되 고칠 수는 없다 */
+.sampleBanner {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--wz-line, #e5e7eb);
+  border-radius: 12px;
+  background: var(--wz-soft, #f7f8fa);
+  display: grid;
+  gap: 4px;
+}
+
+.sampleBanner strong {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--wz-ink, #111827);
+}
+
+.sampleBanner p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--wz-muted, #6b7280);
+  text-wrap: pretty;
+}
+
+/* 고치려 한 순간에만 뜬다 */
+.sampleBlocked {
+  margin-top: 6px;
+  padding: 7px 11px;
+  border-radius: 8px;
+  background: #fdecec;
+  color: #c0392b;
+  font-size: 12.5px;
+  font-weight: 700;
+  justify-self: start;
+}
+
+/* 답변은 읽을 수 있게 두되 손댄 티가 나지 않게 */
+.sampleLocked {
+  cursor: not-allowed;
+}
+
+.sampleLocked input,
+.sampleLocked textarea,
+.sampleLocked select,
+.sampleLocked button {
+  pointer-events: none;
+}

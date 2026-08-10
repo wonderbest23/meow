@@ -44,7 +44,8 @@ export default function ConsistencyPanel({ issues, onOpenSection, compact }: Con
                     onOpenSection(chapterId, sectionId);
                   }}
                 >
-                  모순 수정하기
+                  {/* 어긋난 섹션마다 버튼이 하나씩 생긴다 — 이름이 없으면 같은 버튼이 여러 개로 보인다 */}
+                  {r.label} 고치기
                 </button>
               );
             })}

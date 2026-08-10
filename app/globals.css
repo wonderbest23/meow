@@ -4942,7 +4942,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .admin-legal-page { min-height: 100vh; padding-bottom: 80px; background: #f2f4f6; }
 .admin-legal-page > header { height: var(--topbar-h); flex: none; padding: 0 max(24px, calc((100vw - 1040px) / 2)); border-bottom: 1px solid #d1d6db; background: white; display: flex; align-items: center; justify-content: space-between; }
 .admin-legal-page > header > div { display: flex; align-items: center; gap: 14px; }
-.admin-legal-page > header img { width: 126px; }
+.admin-legal-page > header img { height: var(--topbar-logo-h); width: auto; display: block; }
 .admin-legal-page > header span { padding-left: 13px; border-left: 1px solid #d1d6db; display: grid; gap: 2px; }
 .admin-legal-page > header strong { font-size: 13px; }
 .admin-legal-page > header small { color: #6b7684; font-size: 9px; }
@@ -4992,7 +4992,8 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 @media (max-width: 640px) {
   .account-link { width: 39px; padding: 0; justify-content: center; font-size: 0; }
   .platform-legal-header, .account-page > header { padding: 0 18px; }
-  .platform-legal-header img, .account-page > header img { width: 124px; }
+  /* 폭을 못박으면 4:1 로고가 늘어난다 — 높이는 토큰이 정한다 */
+  .platform-legal-header img, .account-page > header img { width: auto; }
   .platform-legal-layout { width: 100%; padding: 0 0 50px; grid-template-columns: 1fr; gap: 0; }
   .platform-legal-layout > aside { position: static; padding: 13px 18px; border-bottom: 1px solid #d1d6db; background: white; overflow-x: auto; }
   .platform-legal-layout > aside > strong { display: none; }
@@ -5027,7 +5028,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .admin-legal-page > header { padding: 0 14px; gap: 12px; }
   .admin-legal-page > header nav { overflow-x: auto; scrollbar-width: none; }
   .admin-legal-page > header nav::-webkit-scrollbar { display: none; }
-  .admin-legal-page > header img { width: 112px; }
+  .admin-legal-page > header img { width: auto; }
   .admin-legal-page > header span { display: none; }
   .admin-legal-page > header nav { flex-wrap: wrap; justify-content: flex-end; }
   .admin-readiness, .admin-legal-page > form { width: calc(100% - 28px); }
@@ -7239,7 +7240,7 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
   .manual-transfer-form fieldset button { min-height: 44px; }
   .manual-payment-page { padding: 12px 0 36px; }
   .manual-payment-page > header { height: 50px; padding: 0 16px; margin-bottom: 8px; }
-  .manual-payment-page > header img { width: 122px; }
+  .manual-payment-page > header img { width: auto; }
   .manual-payment-page > header > span { font-size: 8px; }
   .manual-payment-card { border-right: 0; border-left: 0; border-radius: 0; box-shadow: none; }
   .manual-payment-state { padding: 24px 18px 20px; grid-template-columns: 38px minmax(0, 1fr); gap: 11px; }
@@ -9426,7 +9427,7 @@ body {
     padding: 0 16px;
   }
   .platform-legal-header img {
-    width: 116px;
+    width: auto;
   }
   /* 시행일·원문 링크가 10px이라 읽기 어려웠다 */
   .platform-legal-document > header small,

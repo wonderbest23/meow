@@ -165,6 +165,10 @@ export default function SectionWizard({
   const [showMissing, setShowMissing] = useState(false);
   /** 예시(샘플) 플랜은 읽기 전용 — 고쳐도 저장되지 않으므로 수정 도구를 아예 감춘다 */
   const [readOnly, setReadOnly] = useState(false);
+  /** 이 섹션에 보여줄 예시 답변이 있는지 */
+  const hasSampleAnswers = Object.keys(answers).length > 0;
+  /** 예시 답변을 고치려 한 적이 있는지 — 안내를 띄운다 */
+  const [sampleBlocked, setSampleBlocked] = useState(false);
   /** 이 섹션에 이미 만들어 둔 본문이 있는지 */
   const [hasBody, setHasBody] = useState(false);
   /** 생성 이후 답변을 고쳤는지 — 고쳤으면 넘어갈 때 자동으로 다시 만든다 */
@@ -484,6 +488,17 @@ export default function SectionWizard({
    * 필수 답변이 비어 있으면 그 질문으로 데려가고,
    * 다 채웠으면 본문 생성을 뒤에 맡기고 바로 다음 섹션으로 넘어간다.
    */
+  /*
+   * 예시 답변을 건드리면 막고 이유를 알린다.
+   * 조용히 무시하면 고쳐진 줄 알고 넘어간다 — 문서 화면에서 겪었던 문제다.
+   */
+  function blockSampleEdit(event: React.SyntheticEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    setSampleBlocked(true);
+    bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   function goNext() {
     if (!complete) {
       setShowMissing(true);
@@ -540,16 +555,16 @@ export default function SectionWizard({
             </div>
 
             <div className={styles.mbody} ref={bodyRef}>
-              {readOnly ? (
-                /* 예시 문서는 로그인 없이도 볼 수 있다 — 본문은 문서 화면에서 */
+              {readOnly && !hasSampleAnswers ? (
+                /* 답변이 준비되지 않은 예시 — 완성 문서로 안내한다 */
                 <div className={styles.samplePanel}>
                   <strong>예시로 만들어 둔 완성 문서예요</strong>
-                  <p>질문·답변 화면은 내 플랜에서만 쓰입니다. 완성된 본문은 문서 화면에서 볼 수 있어요.</p>
+                  <p>이 예시는 완성본만 준비돼 있습니다. 완성된 본문은 문서 화면에서 볼 수 있어요.</p>
                   <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={onOpenDocument}>
                     문서 보러 가기 →
                   </button>
                 </div>
-              ) : gate ? (
+              ) : gate && !readOnly ? (
                 <PlanGate
                   reason={gate}
                   freeLabels={access?.freeLabels}
@@ -558,6 +573,18 @@ export default function SectionWizard({
                 />
               ) : (
               <>
+              {/*
+                예시 문서 — 질문과 답변을 그대로 보여준다.
+                이 화면을 감추면 '무엇을 답하면 저런 문서가 나오는지'를 알 수 없다.
+                고치려고 하면 막고 이유를 알린다.
+              */}
+              {readOnly && (
+                <div className={styles.sampleBanner}>
+                  <strong>이렇게 답해서 만든 문서예요</strong>
+                  <p>아래는 예시로 채워 둔 답변입니다. 내 플랜에서는 직접 답하면 이 자리에 내 사업 내용이 들어갑니다.</p>
+                  {sampleBlocked && <span className={styles.sampleBlocked}>예시라서 답변을 수정할 수 없습니다</span>}
+                </div>
+              )}
               <InheritNote />
               <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
 
@@ -573,6 +600,11 @@ export default function SectionWizard({
                 </div>
               )}
 
+              <div
+                className={readOnly ? styles.sampleLocked : undefined}
+                onClickCapture={readOnly ? blockSampleEdit : undefined}
+                onKeyDownCapture={readOnly ? blockSampleEdit : undefined}
+              >
               {(
                 groups.map((g: QuestionGroup) => (
                   <div key={g.id} className={styles.group}>
@@ -612,6 +644,7 @@ export default function SectionWizard({
                   </div>
                 ))
               )}
+              </div>
 
               {/* 재무 챕터에서는 인식한 숫자와 계산 결과를 항상 확인할 수 있게 한다 */}
               {chapter.id === "financials" && (
@@ -631,7 +664,8 @@ export default function SectionWizard({
                */}
               {readOnly ? (
                 <>
-                  <span className={styles.readOnlyNote}>예시 문서는 열람만 가능합니다</span>
+                  <span className={styles.readOnlyNote}>예시 답변 · 수정 불가</span>
+                  <button type="button" className={styles.btn} onClick={onOpenDocument}>완성 문서 보기</button>
                   <a className={`${styles.btn} ${styles.btnPrimary}`} href="/plan/start">내 플랜 만들기 →</a>
                 </>
               ) : (
