@@ -7,12 +7,16 @@ import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, fina
 import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT } from "../../../../lib/plan-builder/access";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
 
 // 섹션 생성 — 답변을 프롬프트로 만들어 Claude/OpenAI가 그 섹션 본문(마크다운) 생성 → HTML까지 렌더.
 
 export async function POST(req: Request) {
+  // AI·렌더 비용이 드는 호출 — 화면 제어와 별개로 서버에서 빈도를 제한한다
+  const limited = await enforceRateLimit("generate-section", req, { limit: 40, windowMs: 10 * 60_000, message: "본문 생성 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  if (limited) return limited;
   const body = (await req.json().catch(() => ({}))) as {
     chapterId?: string;
     sectionId?: string;

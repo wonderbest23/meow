@@ -5,6 +5,7 @@ import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { buildDeckPlan } from "../../../../lib/plan-builder/deck-plan";
 import { renderDeckPptx } from "../../../../lib/plan-builder/deck-render";
 import { pickDeckTheme } from "../../../../lib/plan-builder/deck-themes";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -13,6 +14,9 @@ export const maxDuration = 60;
 // 유료 결과물이므로 결제 여부를 먼저 확인한다.
 
 export async function POST(req: Request) {
+  // AI·렌더 비용이 드는 호출 — 화면 제어와 별개로 서버에서 빈도를 제한한다
+  const limited = await enforceRateLimit("deck-build", req, { limit: 12, windowMs: 10 * 60_000, message: "발표자료 생성 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  if (limited) return limited;
   const body = (await req.json().catch(() => ({}))) as {
     /** true면 PPTX 대신 슬라이드 구성(JSON)을 돌려준다 — 품질 검수·테스트용 */
     planOnly?: boolean;
