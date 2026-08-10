@@ -7,6 +7,7 @@ import {
   saveLandingDraft,
 } from "../../../../../lib/landing/repository";
 import { getProject } from "../../../../../lib/project-repository";
+import { checkLandingEditAccess, landingEditErrorResponse } from "../../../../../lib/landing/plan-entitlement";
 
 export async function GET(
   _request: Request,
@@ -62,6 +63,12 @@ export async function PUT(
   try {
     const { projectId } = await context.params;
     const identity = await requireGuestIdentity();
+    // 화면에서 버튼을 숨기는 것만으로는 API를 직접 부르면 뚫린다
+    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId);
+    if (reason !== "ok") {
+      const { status, body } = landingEditErrorResponse(reason);
+      return NextResponse.json(body, { status });
+    }
     const draft = landingDraftSchema.parse(await request.json());
     const site = await saveLandingDraft(projectId, identity.hash, draft);
     return NextResponse.json({ site });

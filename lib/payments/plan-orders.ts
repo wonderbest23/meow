@@ -8,6 +8,12 @@ import { PACKAGE_AMOUNT, TERMS_VERSION } from "./domain";
 
 /** 플랜 빌더 상품명 — 이 값으로 권한을 판정하므로 바꾸면 기존 구매자가 잠긴다 */
 export const PLAN_PRODUCT_NAME = "사업계획서 플랜 빌더";
+/*
+ * 홈페이지는 계획서와 별개로 파는 상품이다.
+ * 만든 홈페이지를 보는 것(미리보기)은 무료, 고치고 공개하는 것이 결제 대상.
+ */
+export const HOMEPAGE_PRODUCT_NAME = "사업계획서 홈페이지";
+export const HOMEPAGE_PRODUCT_AMOUNT = 149_000;
 export const PLAN_PRODUCT_AMOUNT = PACKAGE_AMOUNT;
 
 /*
@@ -48,13 +54,16 @@ export async function createPlanOrder(input: {
   /** 이 결제로 열리는 플랜 — 문서 단위 결제의 연결 고리 */
   planId: string;
   planType: string;
+  /** 무엇을 사는 결제인지 — 계획서(기본)인지 홈페이지인지 */
+  product?: "plan" | "homepage";
 }): Promise<PlanOrder> {
   const now = new Date();
   const orderId = `PB-${now.getTime().toString(36)}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+  const homepage = input.product === "homepage";
   const order: PlanOrder = {
     orderId,
-    amount: planPrice(input.planType),
-    orderName: PLAN_PRODUCT_NAME,
+    amount: homepage ? HOMEPAGE_PRODUCT_AMOUNT : planPrice(input.planType),
+    orderName: homepage ? HOMEPAGE_PRODUCT_NAME : PLAN_PRODUCT_NAME,
     status: "created",
     ownerId: input.ownerId,
   };
@@ -191,6 +200,31 @@ export async function paidPlanEntitlement(userId: string): Promise<PaidPlanEntit
     else allAccess = true;
   }
   return { allAccess, planIds };
+}
+
+/**
+ * 홈페이지를 결제한 플랜들.
+ *
+ * 계획서 결제와 별개다 — 계획서를 샀다고 홈페이지가 열리지는 않는다.
+ * planId 없는 주문(구 전체 이용권)은 여기서는 인정하지 않는다.
+ */
+export async function paidHomepagePlanIds(userId: string): Promise<Set<string>> {
+  const supabase = getServerSupabase();
+  if (!supabase) return new Set(); // 로컬 데모 — 결제 없이 열지 않는다(잠금 동작을 그대로 확인하려고)
+  const { data, error } = await supabase
+    .from("payment_orders")
+    .select("opportunity")
+    .eq("owner_id", userId)
+    .eq("order_name", HOMEPAGE_PRODUCT_NAME)
+    .eq("status", "done")
+    .limit(200);
+  if (error) throw error;
+  const planIds = new Set<string>();
+  for (const row of data ?? []) {
+    const planId = (row.opportunity as { planId?: string } | null)?.planId;
+    if (planId) planIds.add(String(planId));
+  }
+  return planIds;
 }
 
 /** 결제 이력이 하나라도 있는지 (샘플 노출 판단용) */

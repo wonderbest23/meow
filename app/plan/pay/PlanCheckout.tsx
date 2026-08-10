@@ -46,9 +46,12 @@ export default function PlanCheckout() {
   const params = useSearchParams();
   const planId = params.get("planId") ?? "";
   const planType = params.get("planType") ?? "";
+  // 계획서 결제와 홈페이지 결제는 같은 화면을 쓰되 금액과 안내가 다르다
+  const isHomepage = params.get("product") === "homepage";
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean } | null>(null);
+  const [homepageInfo, setHomepageInfo] = useState<{ price: number; editable: boolean } | null>(null);
   const started = useRef(false);
 
   useEffect(() => {
@@ -61,6 +64,17 @@ export default function PlanCheckout() {
       .catch(() => {
         if (alive) setInfo(null);
       });
+    if (isHomepage && planId) {
+      // 홈페이지 가격·구매 여부는 홈페이지 API가 안다
+      fetch(`/api/plan/landing?planId=${encodeURIComponent(planId)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (alive) setHomepageInfo({ price: d.price, editable: Boolean(d.editable) });
+        })
+        .catch(() => {
+          if (alive) setHomepageInfo(null);
+        });
+    }
     return () => {
       alive = false;
     };
@@ -75,7 +89,7 @@ export default function PlanCheckout() {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planType }),
+        body: JSON.stringify({ planId, planType, ...(isHomepage ? { product: "homepage" } : {}) }),
       });
       const data = (await res.json()) as {
         clientId?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
@@ -144,13 +158,27 @@ export default function PlanCheckout() {
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
-        <h1 className={styles.title}>이 문서 전체 열기</h1>
+        <h1 className={styles.title}>{isHomepage ? "홈페이지 수정하고 공개하기" : "이 문서 전체 열기"}</h1>
         <p className={styles.desc}>
-          {planType ? <b>{planType}</b> : "이 문서"} 1부의 전체 섹션이 열리고, 완성 후 PDF·Word·발표용 PPT로 내려받을 수 있습니다.
-          같은 사업으로 다른 유형을 만들 땐 답변이 그대로 이어집니다.
+          {isHomepage ? (
+            <>
+              계획서 내용으로 만든 홈페이지를 직접 고치고 인터넷에 공개할 수 있습니다.
+              신청 폼으로 들어온 문의도 이곳에서 확인합니다.
+            </>
+          ) : (
+            <>
+              {planType ? <b>{planType}</b> : "이 문서"} 1부의 전체 섹션이 열리고, 완성 후 PDF·Word·발표용 PPT로 내려받을 수 있습니다.
+              같은 사업으로 다른 유형을 만들 땐 답변이 그대로 이어집니다.
+            </>
+          )}
         </p>
 
-        {info ? (
+        {isHomepage ? (
+          <div className={styles.price}>
+            {(homepageInfo?.price ?? 149000).toLocaleString("ko-KR")}원
+            <span>홈페이지 1개 · 1회 결제</span>
+          </div>
+        ) : info ? (
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
             <span>문서 1부 · 1회 결제</span>

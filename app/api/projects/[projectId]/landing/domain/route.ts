@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkLandingEditAccess, landingEditErrorResponse } from "../../../../../../lib/landing/plan-entitlement";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../../lib/api-auth";
 import {
@@ -50,6 +51,11 @@ export async function GET(
   try {
     const { projectId } = await context.params;
     const identity = await requireGuestIdentity();
+    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId);
+    if (reason !== "ok") {
+      const { status, body } = landingEditErrorResponse(reason);
+      return NextResponse.json(body, { status });
+    }
     const site = await getLandingForProject(projectId, identity.hash);
     if (!site) throw new Error("LANDING_NOT_FOUND");
     const connection = site.customDomain
@@ -77,6 +83,11 @@ export async function POST(
   try {
     const { projectId } = await context.params;
     const identity = await requireGuestIdentity();
+    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId);
+    if (reason !== "ok") {
+      const { status, body } = landingEditErrorResponse(reason);
+      return NextResponse.json(body, { status });
+    }
     const { hostname: rawHostname } = requestSchema.parse(await request.json());
     const hostname = normalizeLandingHostname(rawHostname);
     const site = await getLandingForProject(projectId, identity.hash);
@@ -111,6 +122,11 @@ export async function DELETE(
   try {
     const { projectId } = await context.params;
     const identity = await requireGuestIdentity();
+    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId);
+    if (reason !== "ok") {
+      const { status, body } = landingEditErrorResponse(reason);
+      return NextResponse.json(body, { status });
+    }
     const site = await getLandingForProject(projectId, identity.hash);
     if (!site) throw new Error("LANDING_NOT_FOUND");
     if (site.customDomain && cloudflareSaasConfigured()) {

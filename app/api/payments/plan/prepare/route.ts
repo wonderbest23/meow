@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
-import { createPlanOrder, paidPlanEntitlement, planPrice, PLAN_PRODUCT_NAME } from "../../../../../lib/payments/plan-orders";
+import { createPlanOrder, paidPlanEntitlement, paidHomepagePlanIds, PLAN_PRODUCT_NAME, HOMEPAGE_PRODUCT_NAME } from "../../../../../lib/payments/plan-orders";
 import { nicepayClientKey, nicepayConfigured } from "../../../../../lib/payments/nicepay-client";
 
 export const runtime = "nodejs";
@@ -10,7 +10,9 @@ export const runtime = "nodejs";
 // (금액을 브라우저에서 만들지 않게 하려는 것)
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string };
+  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string };
+  // 계획서와 홈페이지는 별개 상품이다 — 어느 쪽 결제인지 여기서 갈린다
+  const product = body.product === "homepage" ? "homepage" : "plan";
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
   const planType = typeof body.planType === "string" ? body.planType.slice(0, 120) : "";
   if (!planId || !planType) {
@@ -35,10 +37,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "login_required", message: "로그인 후 결제할 수 있습니다." }, { status: 401 });
   }
 
-  // 같은 플랜에 두 번 받지 않는다 (구 전체 이용권 보유자도 마찬가지)
-  const ent = await paidPlanEntitlement(identity.userId);
-  if (ent.allAccess || ent.planIds.has(planId)) {
-    return NextResponse.json({ error: "already_paid", message: "이미 이 플랜은 열려 있습니다." }, { status: 409 });
+  // 같은 것에 두 번 받지 않는다 (구 전체 이용권 보유자도 마찬가지)
+  if (product === "homepage") {
+    const purchased = await paidHomepagePlanIds(identity.userId);
+    if (purchased.has(planId)) {
+      return NextResponse.json({ error: "already_paid", message: "이미 이 홈페이지는 열려 있습니다." }, { status: 409 });
+    }
+  } else {
+    const ent = await paidPlanEntitlement(identity.userId);
+    if (ent.allAccess || ent.planIds.has(planId)) {
+      return NextResponse.json({ error: "already_paid", message: "이미 이 플랜은 열려 있습니다." }, { status: 409 });
+    }
   }
 
   try {
@@ -48,13 +57,14 @@ export async function POST(request: Request) {
       customerEmail: identity.email,
       planId,
       planType,
+      product,
     });
     return NextResponse.json(
       {
         clientId: nicepayClientKey(),
         orderId: order.orderId,
         amount: order.amount,
-        goodsName: `${PLAN_PRODUCT_NAME} · ${planType}`.slice(0, 40),
+        goodsName: (product === "homepage" ? HOMEPAGE_PRODUCT_NAME : `${PLAN_PRODUCT_NAME} · ${planType}`).slice(0, 40),
         buyerEmail: identity.email,
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },

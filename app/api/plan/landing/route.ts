@@ -6,6 +6,7 @@ import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
 import { createProject, findProjectIdByPlan } from "../../../../lib/project-repository";
 import { getLandingForProject, saveLandingDraft } from "../../../../lib/landing/repository";
 import { landingDraftFromPlan, planLandingReadiness } from "../../../../lib/landing/from-plan";
+import { paidHomepagePlanIds, HOMEPAGE_PRODUCT_AMOUNT } from "../../../../lib/payments/plan-orders";
 
 export const runtime = "nodejs";
 
@@ -15,7 +16,10 @@ export const runtime = "nodejs";
  * GET  — 이 플랜에 이미 만든 홈페이지가 있는지 확인한다.
  * POST — 계획서 답변으로 초안을 만든다(이미 있으면 그대로 돌려준다 — 편집한 내용을 덮지 않는다).
  *
- * 홈페이지는 계획서 결제에 포함된 산출물이라 PDF·PPT와 같은 기준으로 막는다.
+ * 홈페이지는 계획서와 별개로 파는 상품이다.
+ * 만들어 보여주는 것(미리보기)까지는 무료 — 자기 계획서가 홈페이지로 어떻게
+ * 보이는지 확인하고 살지 정한다. 고치고 공개하는 것부터가 결제 대상이다.
+ * 실제 차단은 이 라우트와 저장·공개 라우트가 하고, 화면은 이유만 알린다.
  */
 
 async function planFor(planId: string) {
@@ -36,7 +40,11 @@ export async function GET(request: Request) {
   if (!projectId) return NextResponse.json({ site: null, projectId: null });
 
   const site = await getLandingForProject(projectId, identity.hash);
-  return NextResponse.json({ site, projectId }, { headers: { "Cache-Control": "private, no-store" } });
+  const purchased = identity.userId ? await paidHomepagePlanIds(identity.userId) : new Set<string>();
+  return NextResponse.json(
+    { site, projectId, editable: purchased.has(planId), price: HOMEPAGE_PRODUCT_AMOUNT },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
 }
 
 export async function POST(request: Request) {
@@ -58,12 +66,13 @@ export async function POST(request: Request) {
   if (!access.authenticated) {
     return NextResponse.json({ error: "login_required", message: "로그인 후 이용할 수 있습니다." }, { status: 401 });
   }
-  if (!access.paid) {
-    return NextResponse.json(
-      { error: "payment_required", message: "홈페이지 만들기는 결제 후 이용할 수 있습니다." },
-      { status: 402 },
-    );
-  }
+
+  /*
+   * 수정·공개 권한은 홈페이지 결제 여부로 갈린다.
+   * 미리보기만 하는 사람에게도 초안은 만들어 준다 — 사기 전에 봐야 살지 정한다.
+   */
+  const purchased = identity.userId ? await paidHomepagePlanIds(identity.userId) : new Set<string>();
+  const entitlement = { editable: purchased.has(plan.id), price: HOMEPAGE_PRODUCT_AMOUNT };
 
   const source = { planTitle: plan.title, business: state.business, answers: plan.answers, contactEmail: access.email ?? "" };
   const readiness = planLandingReadiness(source);
@@ -99,12 +108,12 @@ export async function POST(request: Request) {
 
   // 이미 만들어 둔 홈페이지가 있으면 손대지 않는다 — 편집한 내용을 계획서로 덮으면 안 된다
   const existing = await getLandingForProject(projectId, identity.hash);
-  if (existing) return NextResponse.json({ site: existing, projectId, created: false });
+  if (existing) return NextResponse.json({ site: existing, projectId, ...entitlement, created: false });
 
   const draft = landingDraftFromPlan(source);
   try {
     const site = await saveLandingDraft(projectId, identity.hash, draft);
-    return NextResponse.json({ site, projectId, created: true }, { status: 201 });
+    return NextResponse.json({ site, projectId, ...entitlement, created: true }, { status: 201 });
   } catch (error) {
     // 주소가 겹치면 사업체 이름 뒤에 짧은 꼬리를 붙여 한 번 더 시도한다
     if (error instanceof Error && error.message === "SLUG_TAKEN") {
@@ -113,7 +122,7 @@ export async function POST(request: Request) {
         ...draft,
         slug: `${draft.slug}-${suffix}`.slice(0, 60),
       });
-      return NextResponse.json({ site, projectId, created: true }, { status: 201 });
+      return NextResponse.json({ site, projectId, ...entitlement, created: true }, { status: 201 });
     }
     throw error;
   }
