@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
+import { LandingBlocksRenderer } from "../../../components/landing-blocks";
+import { createLandingPageData } from "../../../lib/landing/page-data";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, loadState, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
@@ -29,6 +31,8 @@ export default function PlanHomepagePage() {
   const [projectId, setProjectId] = useState<string | null>(null);
   const [site, setSite] = useState<LandingSiteRecord | null>(null);
   const [draft, setDraft] = useState<LandingDraft | null>(null);
+  const [editable, setEditable] = useState(false);
+  const [price, setPrice] = useState(149000);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
 
@@ -62,10 +66,12 @@ export default function PlanHomepagePage() {
       if (!alive) return;
 
       if (res.ok) {
-        const data = (await res.json()) as { site: LandingSiteRecord; projectId: string };
+        const data = (await res.json()) as { site: LandingSiteRecord; projectId: string; editable?: boolean; price?: number };
         setSite(data.site);
         setProjectId(data.projectId);
         setDraft(data.site.draft);
+        setEditable(Boolean(data.editable));
+        if (typeof data.price === "number") setPrice(data.price);
         setPhase("ready");
         return;
       }
@@ -158,8 +164,8 @@ export default function PlanHomepagePage() {
     if (cta !== "pay") return "/plan/overview";
     const plan = activePlan(loadState());
     const query = plan
-      ? `?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}`
-      : "";
+      ? `?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=homepage`
+      : "?product=homepage";
     return `/plan/pay${query}`;
   }
 
@@ -190,7 +196,30 @@ export default function PlanHomepagePage() {
         </div>
       )}
 
-      {phase === "ready" && draft && (
+      {/*
+        결제 전에는 만들어진 홈페이지를 보여만 준다.
+        사기 전에 자기 사업이 어떻게 보이는지 확인할 수 있어야 한다.
+      */}
+      {phase === "ready" && draft && !editable && (
+        <div className={styles.previewWrap}>
+          <div className={styles.payBar}>
+            <div>
+              <strong className={styles.payTitle}>계획서 내용으로 홈페이지를 만들었어요</strong>
+              <p className={styles.payNote}>
+                지금은 미리보기입니다. 내용을 고치고 인터넷에 공개하려면 결제가 필요합니다.
+              </p>
+            </div>
+            <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
+              {price.toLocaleString("ko-KR")}원 · 수정하고 공개하기 →
+            </button>
+          </div>
+          <div className={styles.preview} aria-label="홈페이지 미리보기">
+            <LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} />
+          </div>
+        </div>
+      )}
+
+      {phase === "ready" && draft && editable && (
         <LandingQuickEditor
           draft={draft}
           action={action}

@@ -78,3 +78,55 @@
 @media (prefers-reduced-motion: reduce) {
   .dot { animation: none; opacity: 0.8; }
 }
+
+/* 결제 전 — 만들어진 홈페이지를 보여만 준다 */
+.previewWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px 20px 40px;
+}
+
+.payBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 14px;
+  background: var(--surface-2, #f9fafb);
+}
+
+.payTitle {
+  display: block;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text, #111827);
+}
+
+.payNote {
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-2, #6b7280);
+  text-wrap: pretty;
+}
+
+/* 실제 홈페이지 모습 그대로 — 클릭은 막는다(아직 내 것이 아니다) */
+.preview {
+  overflow: hidden;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 14px;
+  background: #fff;
+  pointer-events: none;
+  user-select: none;
+}
+
+@media (max-width: 640px) {
+  .previewWrap { padding: 14px 14px 32px; }
+  .payBar { padding: 14px; }
+  .cta { width: 100%; }
+}
