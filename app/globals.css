@@ -9461,3 +9461,32 @@ body {
 @media (max-width: 640px) {
   .admin-dash-columns { grid-template-columns: 1fr; }
 }
+
+/* ── 히어로 시인성 다듬기 — 라벨은 칩으로, 본문은 짧게 + 굵기 강약 ── */
+.simple-home .home-hero-copy > .section-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px;
+  border-radius: 999px;
+  background: var(--blue-soft, #e8f3ff);
+  color: var(--blue-dark, #1b64da);
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+}
+.simple-home .home-hero-copy > p {
+  font-size: 17px;
+  line-height: 1.85;
+  word-break: keep-all;
+  color: var(--text-body, #4e5968);
+}
+.simple-home .home-hero-copy > p b {
+  color: var(--text-strong, #191f28);
+  font-weight: 800;
+}
+@media (max-width: 640px) {
+  .simple-home .home-hero-copy > p {
+    font-size: 14.5px;
+    line-height: 1.75;
+  }
+}

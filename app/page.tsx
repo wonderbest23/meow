@@ -571,9 +571,9 @@ function Home({
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         <section className="simple-home-choice">
           <div className="home-hero-copy">
-            <span className="section-label">질문에 답하면 문서가 완성됩니다</span>
+            <span className="section-label">AI 사업계획서</span>
             <h1>사업계획서,<br />오늘 하루면 충분합니다</h1>
-            <p>사업 정보를 적고 질문에 답하면, 인공지능이 섹션별로 사업계획서를 씁니다. 정부지원 PSST부터 재무 모델까지 7가지 문서 유형을 같은 답변으로 만들 수 있습니다.</p>
+            <p>질문에 답하면 인공지능이 문장을 대신 씁니다.<br /><b>7가지 문서 유형</b> — 답변은 <b>한 번</b>이면 돼요.</p>
             <div className="home-hero-actions">
               <button className="conversation-choice" onClick={onStart} aria-label="나에게 맞는 사업 찾기 시작"><strong>시작하기</strong></button>
             </div>
