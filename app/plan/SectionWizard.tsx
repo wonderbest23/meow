@@ -790,10 +790,11 @@ export default function SectionWizard({
               )}
             </div>
 
+            {/* 잠긴 화면(로그인·결제 안내)에는 하단 바가 필요 없다 — 빈 띠만 남았다 */}
+            {gate && !generatedHtml ? null : (
             <div className={styles.foot}>
-              {gate && !generatedHtml ? (
-                <button className={styles.btn} onClick={onBack}>← 이전</button>
-              ) : editingMd !== null ? (
+              {/* 뒤로가기는 상단 '← 플랜 개요' 하나로 통일 — 하단 중복 버튼 제거 */}
+              {editingMd !== null ? (
                 <>
                   <button className={styles.btn} onClick={() => setEditingMd(null)}>취소</button>
                   <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={saveEdited}>
@@ -815,7 +816,6 @@ export default function SectionWizard({
                 </>
               ) : (
                 <>
-                  <button className={styles.btn} onClick={onBack}>← 이전</button>
                   {/* 미완료여도 파란 버튼 그대로 — 누르면 비어 있는 질문으로 데려간다 */}
                   <button
                     className={`${styles.btn} ${styles.btnPrimary} ${complete ? styles.beacon : ""}`}
@@ -827,6 +827,7 @@ export default function SectionWizard({
                 </>
               )}
             </div>
+            )}
           </section>
 
           {/* tracker */}

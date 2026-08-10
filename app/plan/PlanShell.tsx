@@ -26,7 +26,9 @@ const ICONS = {
  */
 function backTarget(pathname: string): { href: string; label: string } | null {
   if (pathname === "/plan" || pathname === "/plan/") return null; // 목록이 뿌리
-  if (pathname.startsWith("/plan/overview")) return { href: "/plan", label: "내 플랜" };
+  // 개요 뿌리는 목록으로, 그 아래 섹션 위저드는 한 단계 위(개요)로
+  if (pathname === "/plan/overview" || pathname === "/plan/overview/") return { href: "/plan", label: "내 플랜" };
+  if (pathname.startsWith("/plan/overview/")) return { href: "/plan/overview", label: "플랜 개요" };
   if (pathname.startsWith("/plan/start")) return { href: "/plan", label: "내 플랜" };
   if (pathname.startsWith("/plan/info")) return { href: "/plan", label: "내 플랜" };
   if (pathname.startsWith("/plan/me")) return { href: "/plan", label: "내 플랜" };
