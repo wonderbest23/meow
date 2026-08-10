@@ -128,5 +128,66 @@
 @media (max-width: 640px) {
   .previewWrap { padding: 14px 14px 32px; }
   .payBar { padding: 14px; }
-  .cta { width: 100%; }
+  .payActions { width: 100%; }
+  .payActions > * { flex: 1; }
+}
+
+/* 안내 옆 행동 두 가지 — 전체 화면으로 보기 / 다음 단계 */
+.payActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ghost {
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--text, #111827);
+  font-size: 13.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ghost:hover { background: var(--surface-2, #f9fafb); }
+}
+
+/* 전체 화면 — 앱 껍데기 없이 홈페이지만 */
+.fullscreen {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreenBody {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.fullscreenClose {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 81;
+  height: 38px;
+  padding: 0 15px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  backdrop-filter: blur(6px);
+  color: var(--text, #111827);
+  font-size: 13.5px;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(20, 32, 64, 0.16);
 }

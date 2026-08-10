@@ -6991,7 +6991,19 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .landing-block-hero.layout-immersive { width: 100%; max-width: none; min-height: 790px; padding: 90px max(24px, calc((100vw - 1180px) / 2)); grid-template-columns: minmax(0, 760px); align-items: end; color: #fff; position: relative; isolation: isolate; }
 .landing-block-hero.layout-immersive:after { content: ""; position: absolute; z-index: -1; inset: 0; background: #101318a3; }
 .landing-block-hero.layout-immersive figure { position: absolute; z-index: -2; inset: 0; height: 100%; }
+/*
+ * 사진 위에 얹는 배치 — 제목이 안 읽혔다.
+ * 섹션에 color:#fff를 줘도 전역 h1 색(진한 잉크)이 더 세서 덮어썼다.
+ * 어두운 배치에서는 글자 색을 직접 못박는다.
+ */
 .landing-block-hero.layout-immersive p { color: #e5e8eb; }
+.landing-block-hero.layout-immersive h1,
+.landing-block-hero.layout-immersive .landing-block-hero-copy > span,
+.landing-block-hero.layout-tech h1 { color: #fff; }
+/* 사진이 밝으면 0.64 그늘로는 부족하다 — 글이 놓이는 아래쪽을 더 어둡게 */
+.landing-block-hero.layout-immersive:after {
+  background: linear-gradient(180deg, rgba(16, 19, 24, 0.45) 0%, rgba(16, 19, 24, 0.78) 100%);
+}
 .landing-block-hero.layout-editorial { width: 100%; max-width: none; min-height: 760px; padding: 0; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0; border-top: 1px solid #e5e8eb; border-bottom: 1px solid #e5e8eb; }
 .landing-block-hero.layout-editorial .landing-block-hero-copy { padding: 100px max(36px, calc((100vw - 1180px) / 2)); padding-right: 70px; }
 .landing-block-hero.layout-editorial figure { height: 760px; }

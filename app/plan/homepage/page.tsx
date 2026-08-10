@@ -6,6 +6,7 @@ import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
+import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, loadState, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
@@ -34,6 +35,8 @@ export default function PlanHomepagePage() {
   const [draft, setDraft] = useState<LandingDraft | null>(null);
   const [editable, setEditable] = useState(false);
   const [sample, setSample] = useState(false);
+  /** 앱 껍데기를 걷어내고 홈페이지만 화면 가득 — 실제로 어떻게 보이는지 확인용 */
+  const [fullscreen, setFullscreen] = useState(false);
   const [price, setPrice] = useState(149000);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
@@ -55,9 +58,14 @@ export default function PlanHomepagePage() {
        * 결과물이 어떻게 생겼는지 보여주는 게 목적이므로 열람만 가능하다.
        */
       if (isSamplePlan(plan.id)) {
+        /*
+         * 예시에는 사업 정보가 없다. 업종을 안 넘기면 기본 템플릿(일반 서비스)이
+         * 잡혀 커피집에 낯선 사진과 색이 붙는다 — 예시의 업종을 함께 넘긴다.
+         */
+        const doc = SAMPLE_DOCS.find((item) => item.id === plan.id);
         const draft = landingDraftFromPlan({
           planTitle: plan.title,
-          business: state.business,
+          business: { ...state.business, industry: doc?.industry || state.business.industry },
           answers: plan.answers,
         });
         setDraft(draft);
@@ -179,6 +187,17 @@ export default function PlanHomepagePage() {
 
   return (
     <>
+      {/* 전체 화면 — 방문자가 보는 그대로 */}
+      {fullscreen && draft && (
+        <div className={styles.fullscreen} role="dialog" aria-label="홈페이지 전체 화면">
+          <button type="button" className={styles.fullscreenClose} onClick={() => setFullscreen(false)}>
+            닫기 ✕
+          </button>
+          <div className={styles.fullscreenBody}>
+            <LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} />
+          </div>
+        </div>
+      )}
       {phase === "loading" && (
         <div className={styles.center}>
           <span className={styles.dot} />
@@ -221,6 +240,10 @@ export default function PlanHomepagePage() {
                   : "지금은 미리보기입니다. 내용을 고치고 인터넷에 공개하려면 결제가 필요합니다."}
               </p>
             </div>
+            <div className={styles.payActions}>
+            <button type="button" className={styles.ghost} onClick={() => setFullscreen(true)}>
+              전체 화면으로 보기
+            </button>
             {sample ? (
               <a className={styles.cta} href="/plan/start">내 플랜 만들기 →</a>
             ) : (
@@ -228,6 +251,7 @@ export default function PlanHomepagePage() {
                 {price.toLocaleString("ko-KR")}원 · 수정하고 공개하기 →
               </button>
             )}
+            </div>
           </div>
           <div className={styles.preview} aria-label="홈페이지 미리보기">
             <LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} />

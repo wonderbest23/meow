@@ -11,6 +11,8 @@ export interface SampleDoc {
   title: string;
   planType: string;
   sections: Record<string, { markdown: string; html: string }>;
+  /** 업종 — 홈페이지 템플릿을 고르는 데 쓴다(없으면 일반 서비스로 잡힌다) */
+  industry: string;
   /*
    * 이 문서를 만든 답변.
    * 완성본만 보여주면 "무엇을 답하면 이런 글이 나오는지"를 알 수 없다.
@@ -24,11 +26,18 @@ const SAMPLE_ANSWER_SETS: Record<string, Record<string, Record<string, unknown>>
   sample_coffee: COFFEE_ANSWERS,
 };
 
+const SAMPLE_INDUSTRIES: Record<string, string> = {
+  sample_coffee: "카페·음식점",
+  sample_flower_psst: "매장·소매",
+  sample_flower_fm: "매장·소매",
+};
+
 export const SAMPLE_DOCS: SampleDoc[] = [COFFEE, FLOWER_PSST, FLOWER_FM].map((s) => ({
   id: s.id,
   title: s.title,
   planType: s.planType,
   sections: s.sections as SampleDoc["sections"],
+  industry: SAMPLE_INDUSTRIES[s.id] ?? "",
   answers: SAMPLE_ANSWER_SETS[s.id] ?? {},
 }));
 
