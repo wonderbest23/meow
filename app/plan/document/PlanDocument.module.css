@@ -419,11 +419,17 @@
     order: 1; /* 헤더(제목·도구) 다음, 문서 캔버스 앞 */
     gap: 8px;
     align-items: center;
-    padding: 0 14px 10px;
+    /* 위 구분선과 칩이 붙어 겹쳐 보였다 — 위아래 숨 쉴 여백 */
+    padding: 10px 14px 12px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    /* 가로 스크롤은 유지하되 스크롤바 띠는 숨긴다 */
+    scrollbar-width: none;
     border-bottom: 1px solid var(--wz-line);
     background: var(--wz-panel);
+  }
+  .mobileNav::-webkit-scrollbar {
+    display: none;
   }
   .canvas {
     order: 2;
