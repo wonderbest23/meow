@@ -1,0 +1,149 @@
+/* 레일 안의 플랜 목차 — 어두운 레일 톤에 그대로 얹힌다 */
+
+.wrap {
+  /* 남은 높이를 차지하고 그 안에서만 스크롤한다 — 레일 전체가 늘어나지 않게 */
+  flex: 1 1 auto;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+/* 지금 열어 둔 플랜 이름 — 목차가 어느 문서의 것인지 */
+.planName {
+  margin: 0 0 8px;
+  padding: 0 4px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: rgba(255, 255, 255, 0.55);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chapter {
+  display: flex;
+  flex-direction: column;
+}
+
+.chapterBtn {
+  min-height: 34px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.86);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.chapterNum {
+  flex: none;
+  width: 17px;
+  height: 17px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.14);
+  display: grid;
+  place-items: center;
+  font-size: 10px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.chapterName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapterCount {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 4px;
+}
+
+.section {
+  min-height: 30px;
+  padding: 0 6px 0 27px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.sectionNo {
+  flex: none;
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+.sectionName {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 다 쓴 섹션 — 남은 일과 구분되게 조금 밝게 */
+.sectionDone .sectionName {
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.sectionOn {
+  background: var(--blue, #3182f6);
+  color: #fff;
+}
+
+.sectionOn .sectionNo,
+.sectionOn .sectionName {
+  color: #fff;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .chapterBtn:hover,
+  .section:hover {
+    background: rgba(255, 255, 255, 0.09);
+  }
+
+  .sectionOn:hover {
+    background: var(--blue, #3182f6);
+  }
+}
+
+/* 폰 — 레일이 아이콘 폭(56px)으로 줄어 목차가 들어갈 자리가 없다 */
+@media (max-width: 640px) {
+  .wrap {
+    display: none;
+  }
+}

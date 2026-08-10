@@ -527,45 +527,6 @@ export default function SectionWizard({
       <div className={styles.frame}>
         <div className={styles.app}>
 
-          {/* chapter nav — 레퍼런스 스타일 */}
-          <nav className={styles.nav} aria-label="챕터">
-            {/* 상단은 조용한 유령 버튼 하나 — 흰 큰 버튼·노란 탭('맞춤 요소'는 준비 중)은 목차 톤을 깼다 */}
-            <button className={styles.navTop} onClick={onBack}>← 플랜 개요</button>
-            <div className={styles.navCaption}>목차</div>
-            {chapters.map((ch, ci) => {
-              const open = ch.id === chapter.id;
-              return (
-                <div key={ch.id} className={`${styles.chap} ${open ? styles.open : ""}`}>
-                  <button className={styles.ch} onClick={() => onNavigateSection?.(ch.id, ch.sections[0].id)}>
-                    <span className={styles.cname}>{ch.title}</span>
-                    <span className={styles.cnum}>{ci + 1}</span>
-                  </button>
-                  <div className={styles.secs}>
-                    {ch.sections.map((s, si) => {
-                      const sk = sectionKey(ch.id, s.id);
-                      const done = statuses[sk] === "done";
-                      const active = ch.id === chapter.id && s.id === section.id;
-                      const paywalled =
-                        !!access && access.authenticated && !access.paid && !access.freeKeys.includes(sk) && !done;
-                      const guided = sk === guideKey && !paywalled;
-                      return (
-                        <button key={s.id} className={`${styles.sec} ${done ? styles.done : ""} ${active ? styles.on : ""}`} onClick={() => onNavigateSection?.(ch.id, s.id)}>
-                          <span className={`${styles.secLabel} ${guided ? styles.beaconNav : ""}`}>
-                            <span className={styles.secNo}>{ci + 1}.{si + 1}</span>
-                            {s.title}
-                          </span>
-                          <span className={styles.secDot}>
-                            {done ? <Check n={11} /> : paywalled ? <Lock size={10} strokeWidth={2.4} /> : null}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              );
-            })}
-          </nav>
-
           {/* main */}
           <section className={styles.main}>
             <div className={styles.mhead}>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import PlanRailNav from "./PlanRailNav";
 import styles from "./PlanShell.module.css";
 
 const ICONS = {
@@ -89,6 +90,8 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         <Link href="/plan/info" className={`${styles.railBtn} ${onInfo ? styles.on : ""}`} title="이용 안내" aria-label="이용 안내">
           {ICONS.help}<span className={styles.railLabel}>이용 안내</span>
         </Link>
+        {/* 플랜을 열어 둔 상태면 그 목차가 여기 붙는다 — 오른쪽 별도 열이 아니라 */}
+        <PlanRailNav />
         <div className={styles.spring} />
         {account?.authenticated ? (
           <Link href="/plan/me" className={`${styles.railBtn} ${styles.me} ${onMe ? styles.on : ""}`} title={`마이페이지 · ${account.email ?? ""}`} aria-label={`마이페이지 (${account.email ?? "로그인됨"})`}>

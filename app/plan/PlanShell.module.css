@@ -80,6 +80,10 @@
 .spring {
   flex: 1;
 }
+/* 목차가 붙어 있으면 남은 높이는 목차가 쓴다 — 빈 스프링이 자리를 나눠 갖지 않게 */
+.rail:has([data-plan-nav]) .spring {
+  flex: 0 0 0;
+}
 .lock {
   color: #f4b740;
 }

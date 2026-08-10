@@ -10,8 +10,8 @@
 
 .app {
   display: grid;
-  /* 위저드와 같은 [본문 | 목차] — wiz.nav의 order:2를 그대로 물려받으므로 열 순서도 맞춰야 한다 */
-  grid-template-columns: minmax(0, 1fr) 232px;
+  /* 목차는 왼쪽 레일 안으로 옮겼다 — 본문이 폭을 다 쓴다 */
+  grid-template-columns: minmax(0, 1fr);
   /* 암시적 행은 내용만큼 늘어나 목차가 잘린 채 스크롤이 안 됐다 — 행을 컨테이너에 고정 */
   grid-template-rows: minmax(0, 1fr);
   background: var(--wz-panel);
@@ -704,14 +704,6 @@
  * '구조 보기'와 왼쪽 레일이 맡는다.
  */
 @media (min-width: 641px) and (max-width: 1080px) {
-  .app {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .app > nav {
-    display: none;
-  }
-
   /* 종이 여백 56px은 넓은 화면 기준이다 — 여기서는 그만큼 글이 줄어든다 */
   .paper {
     padding: 40px 32px 44px;

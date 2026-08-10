@@ -29,7 +29,8 @@
 }
 .app {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 232px; /* 본문이 먼저, 목차는 맨 우측 — 왼쪽에 새 기둥이 끼어들지 않는다 */
+  /* 목차는 왼쪽 레일 안으로 옮겼다 — 본문이 폭을 다 쓴다 */
+  grid-template-columns: minmax(0, 1fr);
   /* 암시적 행은 내용만큼 늘어나 목차가 잘린 채 스크롤이 안 됐다 — 행을 컨테이너에 고정 */
   grid-template-rows: minmax(0, 1fr);
   background: var(--wz-panel);
@@ -1521,18 +1522,4 @@
   line-height: 1.7;
   color: var(--wz-muted);
   word-break: keep-all;
-}
-
-/*
- * 좁은 창 — 목차를 접는다(문서 화면과 같은 이유).
- * 레일 176px + 목차 232px가 본문을 눌러 태블릿에서 폰보다 읽기 나빠졌다.
- */
-@media (min-width: 641px) and (max-width: 1080px) {
-  .app {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .nav {
-    display: none;
-  }
 }

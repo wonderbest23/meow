@@ -266,32 +266,6 @@ export default function PlanDocumentPage() {
       )}
       <div className={wiz.frame}>
         <div className={styles.app}>
-          {/* 좌측 목차 — 위저드와 동일한 어두운 내비 모듈을 그대로 쓴다 */}
-          <nav className={wiz.nav} aria-label="문서 목차">
-            <button className={wiz.navTop} onClick={() => router.push("/plan/overview")}>← 플랜 개요</button>
-            {grouped.map(([chapterTitle, list]) => {
-              const chapterNum = numbering.get(list[0]?.key ?? "")?.chapterNum;
-              return (
-                <div key={chapterTitle} className={`${wiz.chap} ${wiz.open}`}>
-                  <button className={wiz.ch} onClick={() => list[0] && scrollToSection(list[0].key)}>
-                    <span className={wiz.cname}>{chapterTitle}</span>
-                    {chapterNum ? <span className={wiz.cnum}>{chapterNum}</span> : null}
-                  </button>
-                  <div className={wiz.secs}>
-                    {list.map((s) => (
-                      <button key={s.key} className={wiz.sec} onClick={() => scrollToSection(s.key)}>
-                        <span className={wiz.secLabel}>
-                          {numbering.has(s.key) ? <span className={wiz.secNo}>{numbering.get(s.key)!.num}</span> : null}
-                          {s.sectionTitle}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </nav>
-
           {/* 본문 */}
           <section className={styles.main}>
             {/*
