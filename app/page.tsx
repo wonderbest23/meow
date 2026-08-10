@@ -426,7 +426,7 @@ function readConversationDraft() {
 function Logo({ onClick }: { onClick: () => void }) {
   return (
     <button className="brand" onClick={onClick} aria-label="오늘창업 홈으로">
-      <img className="brand-logo" src="/today-startup-logo-2026.png" alt="오늘창업" width="1600" height="520" />
+      <img className="brand-logo" src="/today-startup-logo-2026.png" alt="오늘창업" width="1288" height="322" />
     </button>
   );
 }

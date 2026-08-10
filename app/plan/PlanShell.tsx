@@ -79,7 +79,10 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   return (
     <div className={styles.shell}>
       <nav className={`${styles.rail} ${railHidden ? styles.railOff : ""}`} aria-label="주요 메뉴">
-        <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">오늘<br />창업</Link>
+        <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/today-startup-mark-2026.png" alt="오늘창업" width={40} height={40} />
+        </Link>
         <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">
           {ICONS.plan}<span className={styles.railLabel}>내 플랜</span>
         </Link>
