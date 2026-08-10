@@ -22,12 +22,12 @@ import {
   isSamplePlan,
 } from "../../lib/plan-builder/plan-store";
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
+import { enqueueGeneration, isGenerating, generatingCount, subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
 import ConsistencyPanel from "./ConsistencyPanel";
 import InheritNote from "./InheritNote";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { Spinner } from "./PlanLoading";
-import InlineDocEditor from "./InlineDocEditor";
 import PlanGate from "./PlanGate";
 import { htmlToMarkdown } from "../../lib/plan-builder/html-to-markdown";
 import FinancialReview from "./FinancialReview";
@@ -104,6 +104,8 @@ export interface SectionWizardProps {
   planTitle?: string;
   planType?: string;
   onBack?: () => void;
+  /** 마지막 섹션에서 '문서 보러 가기' */
+  onOpenDocument?: () => void;
   onNavigateSection?: (chapterId: string, sectionId: string) => void;
   onComplete?: (chapterId: string, sectionId: string, answers: AnswerMap) => void;
 }
@@ -115,6 +117,7 @@ export default function SectionWizard({
   planTitle = "새 플랜",
   planType = "창업 초기 · 사업계획서",
   onBack,
+  onOpenDocument,
   onNavigateSection,
   onComplete,
 }: SectionWizardProps) {
@@ -129,22 +132,26 @@ export default function SectionWizard({
   // 문서 유형에 따라 묻는 질문이 달라진다(재무 문서에서 브랜드 질문을 빼는 식)
   const groups = useMemo(() => questionsForSection(key, section.title, planType), [key, section.title, planType]);
 
+  /** 이 유형의 전체 섹션 순서 — '다음 단계 (n/총)' 표시와 이동에 쓴다 */
+  const flatSectionList = useMemo(
+    () => chapters.flatMap((ch) => ch.sections.map((sec) => ({ chapterId: ch.id, sectionId: sec.id, title: sec.title }))),
+    [chapters],
+  );
+  const currentIndex = useMemo(
+    () => flatSectionList.findIndex((item) => item.chapterId === chapterId && item.sectionId === sectionId),
+    [flatSectionList, chapterId, sectionId],
+  );
+  const nextSection = currentIndex >= 0 ? flatSectionList[currentIndex + 1] ?? null : null;
+
   const [answers, setAnswers] = useState<AnswerMap>({});
   const [suggestions, setSuggestions] = useState<Record<string, string[]>>({});
   const [loadingSug, setLoadingSug] = useState<Record<string, boolean>>({});
-  const [generating, setGenerating] = useState(false);
-  const [generatedHtml, setGeneratedHtml] = useState<string | null>(null);
   const [genSource, setGenSource] = useState<"ai" | "fallback" | null>(null);
   // 생성 중 실시간으로 쌓이는 본문
-  const [streamText, setStreamText] = useState("");
-  const streamRef = useRef<HTMLDivElement>(null);
-  const [editingMd, setEditingMd] = useState<string | null>(null);
   const [savedMd, setSavedMd] = useState<string>("");
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "failed">("idle");
   // 이 섹션을 사용자가 직접 고쳤는지 / 다시 생성으로부터 잠갔는지
   const [edited, setEdited] = useState(false);
   const [locked, setLocked] = useState(false);
-  const [canUndo, setCanUndo] = useState(false);
   // 로그인·결제 권한 (서버 판정 결과를 받아온다)
   const [access, setAccess] = useState<{
     authenticated: boolean; paid: boolean; freeKeys: string[]; freeLabels: string[]; price: number;
@@ -158,6 +165,13 @@ export default function SectionWizard({
   const [showMissing, setShowMissing] = useState(false);
   /** 예시(샘플) 플랜은 읽기 전용 — 고쳐도 저장되지 않으므로 수정 도구를 아예 감춘다 */
   const [readOnly, setReadOnly] = useState(false);
+  /** 이 섹션에 이미 만들어 둔 본문이 있는지 */
+  const [hasBody, setHasBody] = useState(false);
+  /** 생성 이후 답변을 고쳤는지 — 고쳤으면 넘어갈 때 자동으로 다시 만든다 */
+  const [answersDirty, setAnswersDirty] = useState(false);
+  /** 백그라운드 생성 상태(이 섹션 / 전체 대기 수) */
+  const [queueTick, setQueueTick] = useState(0);
+  useEffect(() => subscribeGeneration(() => setQueueTick((n) => n + 1)), []);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   // 섹션 진입 시: 저장된 답변 복원 + 이미 생성된 본문이 있으면 표시
@@ -193,22 +207,20 @@ export default function SectionWizard({
     }
 
     const stored = p?.sections[key];
+    setHasBody(!!stored);
+    setAnswersDirty(false);
     if (stored) {
-      setGeneratedHtml(conflictFocus.length ? null : stored.html);
+      // 본문은 문서 화면에서 본다 — 위저드는 '답변 → 다음'만 담당한다
       setSavedMd(stored.markdown);
       setGenSource("ai");
       setEdited(!!stored.edited);
       setLocked(!!stored.locked);
-      setCanUndo(!!stored.previous);
     } else {
-      setGeneratedHtml(null);
       setSavedMd("");
       setGenSource(null);
       setEdited(false);
       setLocked(false);
-      setCanUndo(false);
     }
-    setEditingMd(null);
     setShowMissing(false);
   }, [key]);
 
@@ -220,6 +232,7 @@ export default function SectionWizard({
       hydratedKey.current = key;
       return;
     }
+    setAnswersDirty(true);
     const t = setTimeout(() => saveAnswers(key, answers), 500);
     return () => clearTimeout(t);
   }, [answers, key]);
@@ -243,18 +256,13 @@ export default function SectionWizard({
   }, [planType]);
 
   // 글이 쌓이는 동안 항상 마지막 줄이 보이게
-  useEffect(() => {
-    if (!streamText) return;
-    const el = bodyRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [streamText]);
 
   /* 지금 답할 질문(첫 미답변) — 말풍선+링이 항상 붙어 있고, 답하면 다음으로 옮겨간다 */
   const currentQid = useMemo(() => {
-    if (generatedHtml || editingMd !== null || generating) return null;
+    if (readOnly) return null;
     const flat = groups.flatMap((g) => g.questions).filter((q) => isVisible(q, answers));
     return flat.find((q) => !isAnswered(q, answers[q.id]))?.id ?? null;
-  }, [groups, answers, generatedHtml, editingMd, generating]);
+  }, [groups, answers, readOnly]);
 
   /**
    * 선택형 답변 직후 다음 미답변 질문으로 부드럽게 이동한다.
@@ -352,147 +360,19 @@ export default function SectionWizard({
    * 다시 생성 전에 손으로 고친 내용을 지켜준다.
    * 잠긴 섹션은 아예 막고, 고친 흔적이 있으면 한 번 묻는다.
    */
-  function requestRegenerate() {
-    if (locked) {
-      alert("수정 보호가 켜져 있어 다시 생성할 수 없습니다.\n본문 위의 '수정 보호 중' 버튼을 눌러 끈 뒤 다시 시도해주세요.");
-      return;
-    }
-    if (edited && !confirm("직접 고친 내용이 새로 생성한 글로 바뀝니다.\n계속할까요? (생성 후 '되돌리기'로 한 번 복구할 수 있어요)")) {
-      return;
-    }
-    void handleGenerate();
-  }
 
   /** 잠금 토글 */
-  function onToggleLock() {
-    setLocked(toggleSectionLock(key));
-  }
 
   /** 직전 본문으로 되돌리기 */
-  function onUndo() {
-    const restored = restorePreviousSection(key);
-    if (!restored) return;
-    setGeneratedHtml(restored.html);
-    setSavedMd(restored.markdown);
-    setEdited(true);
-    setCanUndo(false);
-  }
 
   /** 본문을 실시간으로 받아 화면에 쌓는다. */
-  async function handleGenerate() {
-    setGenerating(true);
-    setStreamText("");
-    try {
-      const res = await fetch("/api/plan/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          chapterId: chapter.id,
-          sectionId: section.id,
-          answers,
-          planTitle,
-          planType,
-          planId: activePlan(loadState())?.id,
-          business: loadState().business,
-          priorSummary: priorSectionsSummary(key),
-          // 재무 입력이 여러 섹션에 흩어져 있어 전체 답변을 함께 보낸다(현재 섹션 답변·보정값 포함).
-          allAnswers: mergedAnswers(),
-          stream: true,
-        }),
-      });
-
-      if (!res.body) throw new Error("no stream");
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let acc = "";
-      let finished: { markdown?: string; html?: string; source?: "ai" | "fallback" } | null = null;
-
-      for (;;) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          let msg: { t?: string; v?: string; markdown?: string; html?: string; source?: "ai" | "fallback" };
-          try {
-            msg = JSON.parse(line);
-          } catch {
-            continue;
-          }
-          if (msg.t === "delta" && msg.v) {
-            acc += msg.v;
-            setStreamText(acc);
-          } else if (msg.t === "done") {
-            finished = msg;
-          }
-        }
-      }
-
-      if (finished?.markdown && finished.html) {
-        setGeneratedHtml(finished.html);
-        setGenSource(finished.source ?? null);
-        saveSection(key, finished.markdown, finished.html, { keepPrevious: true });
-        setSavedMd(finished.markdown);
-        setEdited(false);
-        setCanUndo(!!savedMd);
-        onComplete?.(chapter.id, section.id, answers);
-      } else {
-        setGeneratedHtml("<p>생성에 실패했습니다.</p>");
-      }
-    } catch {
-      setGeneratedHtml("<p>생성 중 오류가 발생했습니다.</p>");
-    } finally {
-      setGenerating(false);
-      setStreamText("");
-    }
-  }
 
   /**
    * 인라인 편집 결과를 저장한다.
    * 원본 형식은 마크다운이므로(PDF·DOCX가 여기서 나온다) HTML을 되돌려 저장한다.
    */
-  function saveInline(nextHtml: string) {
-    const md = htmlToMarkdown(nextHtml);
-    if (!md.trim() || md === savedMd) return;
-    setSaveState("saving");
-    const ok = saveSection(key, md, nextHtml, { edited: true });
-    if (!ok) {
-      // 저장할 플랜이 없다 — 성공한 척하지 않는다
-      setSaveState("failed");
-      return;
-    }
-    setSavedMd(md);
-    setGeneratedHtml(nextHtml);
-    setEdited(true);
-    setSaveState("saved");
-  }
 
   /** 직접 수정한 마크다운을 저장 (HTML은 서버에서 다시 렌더) */
-  async function saveEdited() {
-    const md = (editingMd ?? "").trim();
-    if (!md) return;
-    setGenerating(true);
-    try {
-      const res = await fetch("/api/plan/render", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ markdown: md }),
-      });
-      const data = (await res.json()) as { html?: string };
-      const html = data.html ?? md.replace(/\n/g, "<br>");
-      saveSection(key, md, html);
-      setSavedMd(md);
-      setGeneratedHtml(html);
-      setEditingMd(null);
-    } catch {
-      alert("저장에 실패했습니다.");
-    } finally {
-      setGenerating(false);
-    }
-  }
 
   const { answeredReq, totalReq, pct, perGroup } = useMemo(() => {
     const totalReq = visibleRequiredCount(groups, answers);
@@ -599,23 +479,45 @@ export default function SectionWizard({
   }, [groups, answers]);
 
   /** 다 채웠으면 생성, 아니면 첫 빈 항목으로 데려간다. */
-  function attemptGenerate() {
-    if (complete) {
-      setShowMissing(false);
-      requestRegenerate();
+  /**
+   * 하나뿐인 다음 버튼.
+   * 필수 답변이 비어 있으면 그 질문으로 데려가고,
+   * 다 채웠으면 본문 생성을 뒤에 맡기고 바로 다음 섹션으로 넘어간다.
+   */
+  function goNext() {
+    if (!complete) {
+      setShowMissing(true);
+      const first = missingIds[0];
+      if (!first) return;
+      window.setTimeout(() => {
+        const container = bodyRef.current;
+        const el = container?.querySelector<HTMLElement>(`[data-qid="${first}"]`);
+        if (!container || !el) return;
+        scrollToElement(container, el);
+        el.querySelector<HTMLElement>("input, textarea, button")?.focus({ preventScroll: true });
+      }, 40);
       return;
     }
-    setShowMissing(true);
-    const first = missingIds[0];
-    if (!first) return;
-    // 표시가 반영된 뒤 이동한다 (rAF는 백그라운드 탭에서 멈추므로 타이머를 쓴다)
-    window.setTimeout(() => {
-      const container = bodyRef.current;
-      const el = container?.querySelector<HTMLElement>(`[data-qid="${first}"]`);
-      if (!container || !el) return;
-      scrollToElement(container, el);
-      el.querySelector<HTMLElement>("input, textarea, button")?.focus({ preventScroll: true });
-    }, 0);
+
+    setShowMissing(false);
+    // 아직 본문이 없거나 답변을 고쳤으면 생성을 걸어 둔다(이미 만든 그대로면 그냥 넘어간다)
+    if (!readOnly && !locked && (!hasBody || answersDirty)) {
+      saveAnswers(key, answers);
+      enqueueGeneration({
+        key,
+        chapterId: chapter.id,
+        sectionId: section.id,
+        title: section.title,
+        answers,
+        allAnswers: mergedAnswers(),
+      });
+      setHasBody(true);
+      setAnswersDirty(false);
+      onComplete?.(chapter.id, section.id, answers);
+    }
+
+    if (nextSection) onNavigateSection?.(nextSection.chapterId, nextSection.sectionId);
+    else onOpenDocument?.();
   }
 
   const C = 2 * Math.PI * 15.5;
@@ -677,7 +579,16 @@ export default function SectionWizard({
             </div>
 
             <div className={styles.mbody} ref={bodyRef}>
-              {gate && !generatedHtml ? (
+              {readOnly ? (
+                /* 예시 문서는 로그인 없이도 볼 수 있다 — 본문은 문서 화면에서 */
+                <div className={styles.samplePanel}>
+                  <strong>예시로 만들어 둔 완성 문서예요</strong>
+                  <p>질문·답변 화면은 내 플랜에서만 쓰입니다. 완성된 본문은 문서 화면에서 볼 수 있어요.</p>
+                  <button type="button" className={`${styles.btn} ${styles.btnPrimary}`} onClick={onOpenDocument}>
+                    문서 보러 가기 →
+                  </button>
+                </div>
+              ) : gate ? (
                 <PlanGate
                   reason={gate}
                   freeLabels={access?.freeLabels}
@@ -686,71 +597,22 @@ export default function SectionWizard({
                 />
               ) : (
               <>
-              {editingMd === null && !generatedHtml && !generating && (
-                <>
-                  <InheritNote />
-                  <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
-                </>
+              <InheritNote />
+              <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
+
+              {/* 상태 칩 — 이미 만든 섹션인지, 지금 만들어지는 중인지 */}
+              {(hasBody || isGenerating(key)) && (
+                <div className={styles.genHead}>
+                  {isGenerating(key) ? (
+                    <span className={styles.genBadge}><Spinner /> 본문 만드는 중…</span>
+                  ) : (
+                    <span className={styles.genBadge}><Sparkles size={13} /> 본문 작성 완료</span>
+                  )}
+                  {readOnly && <span className={styles.lockBtn}>예시 문서 · 열람 전용</span>}
+                </div>
               )}
 
-              {editingMd !== null ? (
-                <>
-                  <span className={styles.genBadge}><PenLine size={13} /> 본문 직접 수정</span>
-                  <textarea
-                    className={styles.mdEditor}
-                    value={editingMd}
-                    onChange={(e) => setEditingMd(e.target.value)}
-                    spellCheck={false}
-                  />
-                </>
-              ) : generatedHtml ? (
-                <>
-                  <div className={styles.genHead}>
-                    <span className={styles.genBadge}>
-                      {edited ? <><PenLine size={13} /> 직접 고친 본문</> : genSource === "ai" ? <><Sparkles size={13} /> AI 생성 본문</> : "초안(키 미설정 · 폴백)"}
-                    </span>
-                    {readOnly ? (
-                      <span className={styles.lockBtn}>예시 문서 · 열람 전용</span>
-                    ) : (
-                    <button
-                      type="button"
-                      className={`${styles.lockBtn} ${locked ? styles.lockOn : ""}`}
-                      onClick={onToggleLock}
-                      title={locked ? "수정 보호를 끕니다 — 다시 생성이 본문을 새로 쓸 수 있게 됩니다" : "수정 보호를 켜면 '다시 생성'이 이 본문을 덮어쓰지 않습니다"}
-                    >
-                      {locked ? <><Lock size={12} /> 수정 보호 중</> : <><Unlock size={12} /> 수정 보호</>}
-                    </button>
-                    )}
-                    {!readOnly && canUndo && (
-                      <button type="button" className={styles.undoBtn} onClick={onUndo} title="직전 본문으로 되돌립니다">
-                        <Undo2 size={12} /> 되돌리기
-                      </button>
-                    )}
-                  </div>
-                  {!readOnly && locked && (
-                    <p className={styles.lockNote}>
-                      수정 보호가 켜져 있어요 — 다시 생성해도 이 글은 그대로 유지됩니다.
-                    </p>
-                  )}
-                  {/* 편집 모드가 따로 없다 — 문서가 늘 편집 가능한 상태다 */}
-                  <InlineDocEditor html={generatedHtml} onChange={saveInline} status={saveState} />
-                </>
-              ) : generating ? (
-                <div className={styles.writing}>
-                  <span className={styles.genBadge}><PenLine size={13} /> {section.title} 작성 중…</span>
-                  {streamText ? (
-                    <div className={styles.streamDoc} ref={streamRef}>
-                      {streamText}
-                      <span className={styles.caret} aria-hidden="true" />
-                    </div>
-                  ) : (
-                    <div className={styles.thinking}>
-                      <div className={styles.spinner} />
-                      <div>답변을 정리하고 있어요…</div>
-                    </div>
-                  )}
-                </div>
-              ) : (
+              {(
                 groups.map((g: QuestionGroup) => (
                   <div key={g.id} className={styles.group}>
                     <div className={styles.gl}><span className={styles.gi} aria-hidden="true" />{g.label}</div>
@@ -791,7 +653,7 @@ export default function SectionWizard({
               )}
 
               {/* 재무 챕터에서는 인식한 숫자와 계산 결과를 항상 확인할 수 있게 한다 */}
-              {chapter.id === "financials" && editingMd === null && !generatedHtml && !generating && (
+              {chapter.id === "financials" && (
                 <FinancialReview allAnswers={reviewAnswers} onOverride={setFinOverride} />
               )}
               </>
@@ -799,48 +661,32 @@ export default function SectionWizard({
             </div>
 
             {/* 잠긴 화면(로그인·결제 안내)에는 하단 바가 필요 없다 — 빈 띠만 남았다 */}
-            {gate && !generatedHtml ? null : (
+            {gate && !readOnly ? null : (
             <div className={styles.foot}>
-              {/* 뒤로가기는 상단 '← 플랜 개요' 하나로 통일 — 하단 중복 버튼 제거 */}
-              {editingMd !== null ? (
+              {/*
+               * 버튼은 하나다.
+               * 본문 생성은 뒤에서 돌고, 사용자는 계속 다음 질문으로 나아간다.
+               * (본문 확인·수정은 문서 화면에서 한꺼번에)
+               */}
+              {readOnly ? (
                 <>
-                  <button className={styles.btn} onClick={() => setEditingMd(null)}>취소</button>
-                  <button className={`${styles.btn} ${styles.btnPrimary}`} disabled={generating} onClick={saveEdited}>
-                    {generating ? <><Spinner /> 저장 중…</> : "저장"}
-                  </button>
+                  <span className={styles.readOnlyNote}>예시 문서는 열람만 가능합니다</span>
+                  <a className={`${styles.btn} ${styles.btnPrimary}`} href="/plan/start">내 플랜 만들기 →</a>
                 </>
-              ) : generatedHtml ? (
-                readOnly ? (
-                  /* 예시 문서는 고칠 수 없다 — 대신 내 플랜을 시작하는 길만 둔다 */
-                  <>
-                    <span className={styles.readOnlyNote}>예시 문서는 열람만 가능합니다</span>
-                    <a className={`${styles.btn} ${styles.btnPrimary}`} href="/plan/start">내 플랜 만들기 →</a>
-                  </>
-                ) : (
-                <>
-                  <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
-                  <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="생성된 본문을 직접 고칩니다"><PenLine size={13} /> 본문 수정</button>
-                  {/* 수정 보호 중에는 누를 수 없는 버튼을 두지 않는다 — 보호를 끄면 다시 나타난다 */}
-                  {!locked && (
-                    <button
-                      className={`${styles.btn} ${styles.btnPrimary}`}
-                      disabled={generating}
-                      onClick={requestRegenerate}
-                    >
-                      {generating ? <><Spinner /> 생성 중…</> : <><RefreshCw size={13} /> 다시 생성</>}
-                    </button>
-                  )}
-                </>
-                )
               ) : (
                 <>
-                  {/* 미완료여도 파란 버튼 그대로 — 누르면 비어 있는 질문으로 데려간다 */}
+                  {generatingCount() > 0 && (
+                    <span className={styles.readOnlyNote}>
+                      <Spinner /> 본문 {generatingCount()}개를 뒤에서 만들고 있어요 — 기다리지 않아도 됩니다
+                    </span>
+                  )}
                   <button
                     className={`${styles.btn} ${styles.btnPrimary} ${complete ? styles.beacon : ""}`}
-                    disabled={generating}
-                    onClick={attemptGenerate}
+                    onClick={goNext}
                   >
-                    {generating ? <><Spinner /> 생성 중…</> : complete ? "완료하고 생성 →" : "다음 단계 →"}
+                    {nextSection
+                      ? `다음 단계 (${currentIndex + 2}/${flatSectionList.length}) →`
+                      : "문서 보러 가기 →"}
                   </button>
                 </>
               )}
@@ -873,11 +719,11 @@ export default function SectionWizard({
               })}
             </ul>
             <button
-              className={`${styles.finish} ${!complete && !generatedHtml ? styles.finishWaiting : !generatedHtml && !gate ? styles.beacon : ""}`}
-              disabled={generating || !!generatedHtml || !!gate}
-              onClick={attemptGenerate}
+              className={`${styles.finish} ${!complete ? styles.finishWaiting : !gate ? styles.beacon : ""}`}
+              disabled={!!gate}
+              onClick={goNext}
             >
-              <Check n={16} /> {generatedHtml ? "생성 완료" : complete ? "완료하고 생성" : `${totalReq - answeredReq}개 더 답하기`}
+              <Check n={16} /> {complete ? (nextSection ? "다음 단계" : "문서 보러 가기") : `${totalReq - answeredReq}개 더 답하기`}
             </button>
           </aside>
         </div>

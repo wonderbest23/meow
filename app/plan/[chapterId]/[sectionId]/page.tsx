@@ -39,6 +39,7 @@ export default function SectionPage() {
       planType={planType}
       onBack={() => router.push("/plan/overview")}
       onNavigateSection={(chapterId, sectionId) => router.push(`/plan/${chapterId}/${sectionId}`)}
+      onOpenDocument={() => router.push("/plan/document")}
       onComplete={() => {
         // 생성 완료(스토어 저장은 위저드가 처리). 개요로 돌아가면 반영됨.
       }}

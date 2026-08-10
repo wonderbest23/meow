@@ -1497,3 +1497,28 @@
     margin-bottom: 2px;
   }
 }
+
+/* 예시 문서 안내 패널 — 위저드에서는 질문 대신 이걸 보여준다 */
+.samplePanel {
+  border: 1px solid var(--wz-line);
+  border-radius: 14px;
+  background: var(--wz-panel2);
+  padding: 26px 22px;
+  text-align: center;
+  max-width: 460px;
+  margin: 8px auto;
+}
+.samplePanel strong {
+  display: block;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--wz-ink);
+  margin-bottom: 8px;
+}
+.samplePanel p {
+  margin: 0 0 16px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--wz-muted);
+  word-break: keep-all;
+}
