@@ -21,6 +21,7 @@ import InheritNote from "./InheritNote";
 import PlanLoading from "./PlanLoading";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
+import { generatingCount, generatingTitle, subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -109,6 +110,14 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     }
     return { doneCount: done, total, pct: total ? Math.round((done / total) * 100) : 0 };
   }, [statuses, type, chapters]);
+
+  /*
+   * 위저드에서 '다음 단계'로 넘어가며 걸어 둔 본문 생성은 뒤에서 돈다.
+   * 개요로 돌아왔을 때 몇 개가 남았는지 보이지 않으면 '왜 아직 비어 있지?'가 된다.
+   */
+  const [, setQueueTick] = useState(0);
+  useEffect(() => subscribeGeneration(() => setQueueTick((n) => n + 1)), []);
+  const queued = generatingCount();
 
   // 아직 생성되지 않았지만 답변이 있는 섹션 = 일괄 생성 대상
   const pendingKeys = useMemo(() => {
@@ -317,6 +326,11 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             <button type="button" onClick={onOpenDocument}><FileText size={13} /> 문서 보기</button>
           </div>
           <div className={styles.spring} />
+          {queued > 0 && !bulk && (
+            <span className={styles.queueTag} title="기다리지 않아도 됩니다 — 다른 섹션을 계속 진행하세요">
+              <i className={styles.queueDot} /> 본문 {queued}개 만드는 중{generatingTitle() ? ` · ${generatingTitle()}` : ""}
+            </span>
+          )}
           {bulk ? (
             <div className={styles.bulkStatus}>
               <span className={styles.bulkBar}>
