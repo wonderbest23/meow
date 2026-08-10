@@ -19,6 +19,7 @@ import {
   activePlan,
   loadAnswers,
   saveAnswers,
+  isSamplePlan,
 } from "../../lib/plan-builder/plan-store";
 import { FINANCIAL_OVERRIDE_KEY } from "../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../lib/plan-builder/consistency";
@@ -155,11 +156,14 @@ export default function SectionWizard({
   const [planAnswers, setPlanAnswers] = useState<Record<string, Record<string, unknown>>>({});
   // 생성을 시도했는데 빈 필수 항목이 있을 때만 빨갛게 표시한다(처음부터 겁주지 않는다)
   const [showMissing, setShowMissing] = useState(false);
+  /** 예시(샘플) 플랜은 읽기 전용 — 고쳐도 저장되지 않으므로 수정 도구를 아예 감춘다 */
+  const [readOnly, setReadOnly] = useState(false);
   const bodyRef = useRef<HTMLDivElement>(null);
 
   // 섹션 진입 시: 저장된 답변 복원 + 이미 생성된 본문이 있으면 표시
   useEffect(() => {
     const p = activePlan();
+    setReadOnly(isSamplePlan(p?.id));
     setAnswers(loadAnswers(key));
     setFinOverrides(loadAnswers(FINANCIAL_OVERRIDE_KEY));
     setPlanAnswers(p?.answers ?? {});
@@ -705,6 +709,9 @@ export default function SectionWizard({
                     <span className={styles.genBadge}>
                       {edited ? <><PenLine size={13} /> 직접 고친 본문</> : genSource === "ai" ? <><Sparkles size={13} /> AI 생성 본문</> : "초안(키 미설정 · 폴백)"}
                     </span>
+                    {readOnly ? (
+                      <span className={styles.lockBtn}>예시 문서 · 열람 전용</span>
+                    ) : (
                     <button
                       type="button"
                       className={`${styles.lockBtn} ${locked ? styles.lockOn : ""}`}
@@ -713,13 +720,14 @@ export default function SectionWizard({
                     >
                       {locked ? <><Lock size={12} /> 수정 보호 중</> : <><Unlock size={12} /> 수정 보호</>}
                     </button>
-                    {canUndo && (
+                    )}
+                    {!readOnly && canUndo && (
                       <button type="button" className={styles.undoBtn} onClick={onUndo} title="직전 본문으로 되돌립니다">
                         <Undo2 size={12} /> 되돌리기
                       </button>
                     )}
                   </div>
-                  {locked && (
+                  {!readOnly && locked && (
                     <p className={styles.lockNote}>
                       수정 보호가 켜져 있어요 — 다시 생성해도 이 글은 그대로 유지됩니다.
                     </p>
@@ -802,6 +810,13 @@ export default function SectionWizard({
                   </button>
                 </>
               ) : generatedHtml ? (
+                readOnly ? (
+                  /* 예시 문서는 고칠 수 없다 — 대신 내 플랜을 시작하는 길만 둔다 */
+                  <>
+                    <span className={styles.readOnlyNote}>예시 문서는 열람만 가능합니다</span>
+                    <a className={`${styles.btn} ${styles.btnPrimary}`} href="/plan/start">내 플랜 만들기 →</a>
+                  </>
+                ) : (
                 <>
                   <button className={styles.btn} onClick={() => setGeneratedHtml(null)}>← 답변 수정</button>
                   <button className={styles.btn} onClick={() => setEditingMd(savedMd)} title="생성된 본문을 직접 고칩니다"><PenLine size={13} /> 본문 수정</button>
@@ -816,6 +831,7 @@ export default function SectionWizard({
                     </button>
                   )}
                 </>
+                )
               ) : (
                 <>
                   {/* 미완료여도 파란 버튼 그대로 — 누르면 비어 있는 질문으로 데려간다 */}

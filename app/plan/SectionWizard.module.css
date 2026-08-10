@@ -1483,3 +1483,17 @@
     white-space: nowrap;
   }
 }
+
+/* 예시 문서 안내 — 하단 바에서 CTA 옆에 놓이는 설명 */
+.readOnlyNote {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  color: var(--wz-faint);
+}
+@media (max-width: 640px) {
+  .readOnlyNote {
+    flex: 1 1 100%;
+    margin-bottom: 2px;
+  }
+}
