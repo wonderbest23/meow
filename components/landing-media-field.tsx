@@ -3,7 +3,7 @@
 import { Image as ImageIcon, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 
-async function resizeImage(file: File, kind: "logo" | "hero") {
+async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Blob> {
   if (!file.type.startsWith("image/")) throw new Error("이미지 파일만 올릴 수 있습니다.");
   if (file.size > 12 * 1024 * 1024) throw new Error("12MB 이하 이미지를 선택해주세요.");
 
@@ -27,7 +27,33 @@ async function resizeImage(file: File, kind: "logo" | "hero") {
   const context = canvas.getContext("2d");
   if (!context) throw new Error("이미지를 처리하지 못했습니다.");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
-  return canvas.toDataURL(kind === "logo" ? "image/png" : "image/jpeg", kind === "logo" ? 0.92 : 0.82);
+  const type = kind === "logo" ? "image/png" : "image/jpeg";
+  const blob = await new Promise<Blob | null>((resolve) =>
+    canvas.toBlob(resolve, type, kind === "logo" ? 0.92 : 0.82),
+  );
+  if (!blob) throw new Error("이미지를 처리하지 못했습니다.");
+  return blob;
+}
+
+/*
+ * 줄인 사진을 스토리지에 올리고 주소만 돌려준다.
+ *
+ * 예전에는 여기서 data URL(base64)을 만들어 페이지 JSON에 그대로 넣었다.
+ * 한 장에 최대 900KB라 몇 장만 올려도 페이지가 4MB 한도에 걸려 저장이 막혔다.
+ * 파일은 스토리지에 두고 JSON에는 주소만 남긴다.
+ *
+ * 이미 base64로 저장된 옛 페이지는 그대로 읽힌다 — 스키마가 두 형태를 모두
+ * 받아들이고, 여기서는 새로 올리는 것만 주소로 바꾼다.
+ */
+async function uploadImage(blob: Blob, kind: "logo" | "hero") {
+  const form = new FormData();
+  form.append("file", new File([blob], `${kind}.${blob.type === "image/png" ? "png" : "jpg"}`, { type: blob.type }));
+  const res = await fetch("/api/uploads", { method: "POST", body: form });
+  const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+  if (!res.ok || !data.url) {
+    throw new Error(data.message ?? "사진을 올리지 못했습니다. 잠시 후 다시 시도해주세요.");
+  }
+  return data.url;
 }
 
 export function LandingMediaField({
@@ -52,7 +78,7 @@ export function LandingMediaField({
     setLoading(true);
     setError("");
     try {
-      onChange(await resizeImage(file, kind));
+      onChange(await uploadImage(await resizeImage(file, kind), kind));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "이미지를 처리하지 못했습니다.");
     } finally {
