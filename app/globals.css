@@ -4650,9 +4650,9 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
  * 카드들을 같은 자리에 겹쳐 두고 지금 것만 보인다. 자리를 차지한 채 사라지므로
  * 글이 바뀔 때 아래 내용이 출렁이지 않는다.
  */
-.home-proof-bar { position: relative; width: min(1200px, calc(100% - 48px)); min-height: 178px; margin: 0 auto; padding: 30px 24px 44px; display: grid; place-items: center; background: #f2f4f6; overflow: hidden; }
-.home-proof-bar > div { grid-area: 1 / 1; max-width: 720px; display: grid; justify-items: center; gap: 10px; text-align: center; opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(6px); transition: opacity .62s ease, transform .62s cubic-bezier(.2,.7,.3,1), filter .62s ease; pointer-events: none; }
-.home-proof-bar > div.on { opacity: 1; transform: none; filter: none; }
+.home-proof-bar { position: relative; width: min(1200px, calc(100% - 48px)); min-height: 178px; margin: 0 auto; padding: 30px 24px 44px; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; background: #f2f4f6; overflow: hidden; }
+.home-proof-bar > div:not(.home-proof-dots) { grid-area: 1 / 1; width: 100%; max-width: 720px; display: grid; justify-items: center; gap: 10px; text-align: center; opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(6px); transition: opacity .62s ease, transform .62s cubic-bezier(.2,.7,.3,1), filter .62s ease; pointer-events: none; }
+.home-proof-bar > div.on:not(.home-proof-dots) { opacity: 1; transform: none; filter: none; }
 .home-proof-bar strong { color: #202632; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.25; text-wrap: balance; }
 .home-proof-bar span { color: #6b7684; font-size: 15px; line-height: 1.6; text-wrap: pretty; }
 
@@ -4669,7 +4669,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 
 /* 움직임을 줄여 달라고 한 사람에게는 흐림·이동 없이 바로 바뀐다 */
 @media (prefers-reduced-motion: reduce) {
-  .home-proof-bar > div { transition: none; transform: none; filter: none; }
+  .home-proof-bar > div:not(.home-proof-dots) { transition: none; transform: none; filter: none; }
 }
 
 .home-section { padding: 108px 24px; }
@@ -5091,8 +5091,6 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .home-research-evidence { padding: 52px 20px; }
   .home-research-inner { grid-template-columns: 1fr; gap: 28px; }
   .home-research-inner > header { max-width: 510px; }
-  .home-proof-bar { grid-template-columns: 1fr 1fr; padding: 15px 0; }
-  .home-proof-bar > div { min-height: 72px; }
   .home-proof-bar > div:nth-child(3) { border-left: 0; }
   .home-section-heading { grid-template-columns: 110px 1fr; }
   .home-section-heading > p { grid-column: 2; }
@@ -5191,7 +5189,6 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .home-research-list > a:last-child { border-bottom: 0; }
   .home-research-list > a strong { font-size: 13px; }
   .home-research-list > a i { font-size: 8px; }
-  .home-proof-bar { width: 100%; min-height: 0; padding: 12px 18px; }
   .home-proof-bar > div { min-height: 66px; padding: 8px 12px; }
   .home-proof-bar strong { font-size: 17px; }
   .home-proof-bar span { font-size: 9px; }
