@@ -9808,3 +9808,30 @@ body {
     gap: 4px;
   }
 }
+
+/*
+ * 어드민 경보 — 지금 무언가 막혀 있다는 것을 맨 위에서 알린다.
+ * 카드의 숫자만으로는 지나친다(크레딧이 떨어진 날에도 화면은 멀쩡해 보였다).
+ */
+.admin-dash-alert {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border: 1px solid #f0b7b3;
+  border-left: 4px solid #b3261e;
+  border-radius: 12px;
+  background: #fdf3f2;
+  display: grid;
+  gap: 4px;
+}
+
+.admin-dash-alert strong {
+  color: #8c1d18;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.admin-dash-alert span {
+  color: #5f2b28;
+  font-size: 13px;
+  line-height: 1.6;
+}

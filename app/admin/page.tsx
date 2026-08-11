@@ -2,6 +2,7 @@
 
 import { Banknote, Headphones, LayoutDashboard, RefreshCw, RotateCcw, Users, Zap } from "lucide-react";
 import Link from "next/link";
+import { llmFailureAlert } from "../../lib/llm/alert";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import AdminNav from "./AdminNav";
 
@@ -23,7 +24,16 @@ type Stats = {
     total: number;
     recent: Array<{ id: string; preview: string; status: string; updatedAt: string; unread: number }>;
   };
-  llm: { today: number; last7d: number; total: number; failed7d: number } | null;
+  llm: {
+    today: number;
+    last7d: number;
+    total: number;
+    failed7d: number;
+    last24h: number;
+    failed24h: number;
+    failed1h: number;
+    lastFailureAt: string | null;
+  } | null;
 };
 
 const orderStatusText: Record<string, string> = {
@@ -82,7 +92,7 @@ export default function AdminDashboardPage() {
     if (!session?.authenticated) return;
     void loadStats().catch((loadError) => setError(loadError instanceof Error ? loadError.message : "지표를 불러오지 못했습니다."));
     const timer = window.setInterval(() => void loadStats().catch(() => undefined), 30_000);
-    return () => window.clearInterval(timer);
+      return () => window.clearInterval(timer);
   }, [loadStats, session?.authenticated]);
 
   const login = async (event: FormEvent) => {
@@ -125,10 +135,23 @@ export default function AdminDashboardPage() {
     );
   }
 
+  const llmAlert = llmFailureAlert(stats?.llm ?? null);
+
   return (
     <main className="admin-dash-page">
       <AdminNav title="대시보드" subtitle="오늘창업 운영 현황 한눈에" />
       {error && <p className="admin-dash-error">{error}</p>}
+
+      {/*
+        지금 고장났는지를 맨 위에서 알린다.
+        카드의 숫자만으로는 지나친다 — 크레딧이 떨어진 날에도 화면은 멀쩡해 보였다.
+      */}
+      {llmAlert && (
+        <div className="admin-dash-alert" role="alert">
+          <strong>AI 호출 실패가 이어지고 있습니다</strong>
+          <span>{llmAlert}</span>
+        </div>
+      )}
 
       <section className="admin-dash-cards">
         <article>
@@ -161,12 +184,19 @@ export default function AdminDashboardPage() {
           {stats?.llm ? (
             <>
               <strong>오늘 {num(stats.llm.today)}회</strong>
-              <em>7일 {num(stats.llm.last7d)}회 · 실패 {num(stats.llm.failed7d)} · 누적 {num(stats.llm.total)}</em>
+              <em>
+                24시간 {num(stats.llm.last24h)}회 · 실패 {num(stats.llm.failed24h)}
+                {" · "}7일 실패 {num(stats.llm.failed7d)}
+              </em>
             </>
           ) : (
             <>
-              <strong>수집 준비 중</strong>
-              <em>supabase 마이그레이션 0020(llm_usage) 적용 후 집계됩니다</em>
+              {/* '준비 중'으로 보이면 방치된다 — 무엇을 해야 하는지 적는다 */}
+              <strong>기록 안 됨</strong>
+              <em>
+                Supabase SQL Editor에서 <code>supabase/migrations/0020_llm_usage.sql</code>을
+                실행해야 AI 실패를 감시할 수 있습니다
+              </em>
             </>
           )}
         </article>

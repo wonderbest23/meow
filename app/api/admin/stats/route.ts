@@ -102,8 +102,23 @@ export async function GET() {
     })),
   };
 
-  // API 사용량 — llm_usage 테이블(마이그레이션 0020). 아직 없으면 null로 안내.
-  let llm: { today: number; last7d: number; total: number; failed7d: number } | null = null;
+  /*
+   * API 사용량 — llm_usage 테이블(마이그레이션 0020). 아직 없으면 null로 안내.
+   *
+   * 7일 누적만으로는 '지금 고장났는지'를 알 수 없다. 크레딧이 방금
+   * 떨어졌어도 7일 숫자에 묻힌다 — 최근 1시간·24시간과 실패율,
+   * 마지막 실패 시각을 함께 준다.
+   */
+  let llm: {
+    today: number;
+    last7d: number;
+    total: number;
+    failed7d: number;
+    last24h: number;
+    failed24h: number;
+    failed1h: number;
+    lastFailureAt: string | null;
+  } | null = null;
   if (supabase) {
     try {
       const total = await supabase.from("llm_usage").select("id", { count: "exact", head: true });
@@ -116,11 +131,35 @@ export async function GET() {
         .select("id", { count: "exact", head: true })
         .eq("ok", false)
         .gte("created_at", weekAgo);
+      const dayAgo = new Date(Date.now() - 24 * 60 * 60_000).toISOString();
+      const hourAgo = new Date(Date.now() - 60 * 60_000).toISOString();
+      const day = await supabase.from("llm_usage").select("id", { count: "exact", head: true }).gte("created_at", dayAgo);
+      const failedDay = await supabase
+        .from("llm_usage")
+        .select("id", { count: "exact", head: true })
+        .eq("ok", false)
+        .gte("created_at", dayAgo);
+      const failedHour = await supabase
+        .from("llm_usage")
+        .select("id", { count: "exact", head: true })
+        .eq("ok", false)
+        .gte("created_at", hourAgo);
+      const lastFail = await supabase
+        .from("llm_usage")
+        .select("created_at")
+        .eq("ok", false)
+        .order("created_at", { ascending: false })
+        .limit(1);
+
       llm = {
         total: total.count ?? 0,
         today: today.count ?? 0,
         last7d: week.count ?? 0,
         failed7d: failed.count ?? 0,
+        last24h: day.count ?? 0,
+        failed24h: failedDay.count ?? 0,
+        failed1h: failedHour.count ?? 0,
+        lastFailureAt: (lastFail.data?.[0] as { created_at?: string } | undefined)?.created_at ?? null,
       };
     } catch {
       llm = null; // 테이블 미생성 — 대시보드가 마이그레이션 안내를 띄운다
