@@ -581,11 +581,17 @@ function Home({
         </section>
       </div>
 
+      {/*
+        무엇을 해주는 곳인지 네 마디로.
+        예전에는 "7가지 / 무료 / 1회 / PDF·Word·PPT"처럼 숫자가 앞에 서 있었다.
+        숫자만 봐서는 무엇을 해주는지 알 수 없어서, 하는 일을 제목으로 올리고
+        숫자는 그 아래 근거로 내렸다. 한 칸에 하나씩 넘겨 본다.
+      */}
       <section className="home-proof-bar" aria-label="서비스 구성 요약">
-        <div><strong>7가지</strong><span>문서 유형 — 계획서·재무·PSST</span></div>
-        <div><strong>무료</strong><span>샘플 3부 열람 · 앞 2개 섹션 작성</span></div>
-        <div><strong>1회</strong><span>답변 입력 — 다른 유형에 그대로 재사용</span></div>
-        <div><strong>PDF·Word·PPT</strong><span>완성 문서와 발표자료 내려받기</span></div>
+        <div><strong>빠른 사업계획서 기획</strong><span>질문에 답하면 인공지능이 문장을 씁니다 · 문서 유형 7가지</span></div>
+        <div><strong>기획서 기반 홈페이지 제작</strong><span>계획서에 답한 내용이 그대로 홈페이지가 됩니다</span></div>
+        <div><strong>발표자료까지 한 번에</strong><span>PDF · Word · PPT로 내려받습니다</span></div>
+        <div><strong>먼저 보고 결정하세요</strong><span>완성 샘플 3부 열람 · 앞 2개 섹션 무료 작성</span></div>
       </section>
 
       <section className="home-section home-method" id="how">

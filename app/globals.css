@@ -4641,11 +4641,30 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .home-research-list > a i { color: #6b7684; font-size: 8px; font-style: normal; line-height: 1.5; }
 .home-research-list > a > svg { width: 13px; color: #6b7684; }
 
-.home-proof-bar { width: min(1200px, calc(100% - 48px)); min-height: 118px; margin: 0 auto; padding: 0 6px; display: grid; grid-template-columns: repeat(4, 1fr); align-items: center; background: #f2f4f6; }
-.home-proof-bar > div { min-height: 54px; padding: 2px 28px; border-left: 1px solid #d1d6db; display: grid; align-content: center; gap: 4px; }
-.home-proof-bar > div:first-child { border-left: 0; }
-.home-proof-bar strong { color: #202632; font-size: 21px; }
-.home-proof-bar span { color: #6b7684; font-size: 12px; }
+/*
+ * 무엇을 해주는 곳인지 네 마디로 — 한 번에 하나씩 넘겨 본다.
+ *
+ * 예전에는 네 칸을 한 줄에 눌러 담아 글자가 12px까지 작아졌고, 칸마다 세로줄로만
+ * 나뉘어 어디까지가 한 항목인지 읽기 어려웠다. 한 칸을 화면 폭만큼 쓰게 하고
+ * 옆 칸을 살짝 걸치게 둔다 — 더 있다는 것이 보여야 넘겨 볼 생각이 든다.
+ *
+ * 스크롤 스냅만 쓴다. 저절로 넘어가면 읽던 글이 사라지고, 멈추는 방법도 필요해진다.
+ */
+.home-proof-bar { width: min(1200px, calc(100% - 48px)); margin: 0 auto; padding: 18px 0; display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; overscroll-behavior-x: contain; scrollbar-width: none; background: #f2f4f6; }
+.home-proof-bar::-webkit-scrollbar { display: none; }
+.home-proof-bar > div { flex: 0 0 min(520px, 86%); scroll-snap-align: center; min-height: 96px; padding: 20px 24px; border: 1px solid #e0e4e8; border-radius: 16px; background: #fff; display: grid; align-content: center; gap: 7px; }
+/* 첫 칸과 끝 칸도 가운데에 설 수 있게 */
+.home-proof-bar > div:first-child { margin-left: auto; }
+.home-proof-bar > div:last-child { margin-right: auto; }
+.home-proof-bar strong { color: #202632; font-size: 20px; font-weight: 800; letter-spacing: -0.02em; text-wrap: balance; }
+.home-proof-bar span { color: #6b7684; font-size: 13.5px; line-height: 1.6; text-wrap: pretty; }
+
+@media (max-width: 640px) {
+  .home-proof-bar { width: 100%; padding: 14px 0; gap: 10px; }
+  .home-proof-bar > div { flex: 0 0 84%; min-height: 88px; padding: 17px 18px; }
+  .home-proof-bar strong { font-size: 17.5px; }
+  .home-proof-bar span { font-size: 12.5px; }
+}
 
 .home-section { padding: 108px 24px; }
 .home-section-heading { width: min(1200px, 100%); margin: 0 auto 55px; display: grid; grid-template-columns: 150px minmax(0, 650px) minmax(260px, 1fr); gap: 36px; align-items: end; }
