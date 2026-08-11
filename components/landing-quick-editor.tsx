@@ -174,6 +174,8 @@ export function LandingQuickEditor({
             <label><span>이메일</span><input type="email" value={draft.businessEmail} onChange={(event) => update({ businessEmail: event.target.value })} placeholder="hello@mybusiness.kr" /></label>
             <label><span>사업자등록번호</span><input value={draft.businessRegistrationNumber} onChange={(event) => update({ businessRegistrationNumber: event.target.value })} placeholder="000-00-00000" /></label>
             <label className="wide"><span>사업장 주소</span><input value={draft.businessAddress} onChange={(event) => update({ businessAddress: event.target.value })} placeholder="고객 불만을 처리할 수 있는 실제 주소" /></label>
+            {/* 영업시간 — 계획서에는 묻지 않는다. 동네 매장은 방문자가 가장 먼저 찾는 정보라 여기서 채운다 */}
+            <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(event) => update({ openHours: event.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무 (비워 두면 홈페이지에 표시하지 않습니다)" /></label>
             <label><span>통신판매업 신고번호</span><input value={draft.mailOrderSalesNumber} onChange={(event) => update({ mailOrderSalesNumber: event.target.value })} placeholder="신고번호 또는 면제 근거" /></label>
             {draft.leadCaptureEnabled && <label><span>개인정보 문의</span><input value={draft.privacyContact} onChange={(event) => update({ privacyContact: event.target.value })} placeholder="이메일 또는 전화번호" /></label>}
             {draft.pageMode === "transaction" && <label className="wide"><span>교환·환불 조건</span><textarea value={draft.refundPolicy} onChange={(event) => update({ refundPolicy: event.target.value })} placeholder="취소 가능 시점, 환불 금액과 처리 기간" /></label>}

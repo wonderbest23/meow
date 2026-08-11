@@ -70,6 +70,8 @@ export const landingDraftSchema = z.object({
   analyticsNotice: z.string().trim().max(500).default(""),
   businessRepresentative: z.string().trim().max(100).default(""),
   businessAddress: z.string().trim().max(300).default(""),
+  /* 영업시간 — 계획서에는 묻지 않는다. 홈페이지 에디터에서 직접 채운다 */
+  openHours: z.string().trim().max(200).default(""),
   businessContact: z.string().trim().max(200).default(""),
   businessPhone: z.string().trim().max(50).default(""),
   businessEmail: z.string().trim().email().or(z.literal("")).default(""),
@@ -407,6 +409,7 @@ export function createLandingDraft(input: {
     analyticsNotice: "페이지 방문·버튼 클릭 측정을 위해 임의 방문자 ID, 방문 경로와 유입 주소를 저장합니다.",
     businessRepresentative: "",
     businessAddress: "",
+    openHours: "",
     businessContact: "",
     businessPhone: "",
     businessEmail: "",
