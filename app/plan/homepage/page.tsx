@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Maximize2 } from "lucide-react";
+import { LayoutTemplate, Maximize2 } from "lucide-react";
+import dynamic from "next/dynamic";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
@@ -11,6 +12,17 @@ import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, loadState, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
+
+/*
+ * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
+ * 이미 만들어져 있었는데 어디에도 붙어 있지 않았다 — 결제한 사람이 쓸 수 있게
+ * 여기에 단다. 글자만 고치는 폼(LandingQuickEditor)은 그대로 두고 함께 쓴다:
+ * 문구만 손볼 때 굳이 배치 편집기를 열 필요는 없다.
+ */
+const LandingVisualBuilder = dynamic(
+  () => import("../../../components/landing-visual-builder").then((m) => m.LandingVisualBuilder),
+  { ssr: false },
+);
 
 /*
  * 사업계획서로 만드는 홈페이지.
@@ -38,6 +50,8 @@ export default function PlanHomepagePage() {
   const [sample, setSample] = useState(false);
   /** 앱 껍데기를 걷어내고 홈페이지만 화면 가득 — 실제로 어떻게 보이는지 확인용 */
   const [fullscreen, setFullscreen] = useState(false);
+  /** 섹션 배치 편집기 — 결제한 사람만 연다 */
+  const [builderOpen, setBuilderOpen] = useState(false);
   const [price, setPrice] = useState(149000);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
@@ -261,13 +275,32 @@ export default function PlanHomepagePage() {
             안내 줄에 나란히 두면 '수정하러 가기'와 무게가 같아 보여, 정작 눌러야
             할 것이 뭔지 흐려진다.
           */}
-          <button type="button" className={styles.fsFloat} onClick={() => setFullscreen(true)} title="홈페이지만 화면 가득 보기">
-            <Maximize2 size={14} /> 전체 화면
-          </button>
           <div className={styles.preview} aria-label="홈페이지 미리보기">
+            <button type="button" className={styles.fsFloat} onClick={() => setFullscreen(true)} title="홈페이지만 화면 가득 보기">
+              <Maximize2 size={14} /> 전체 화면
+            </button>
             <LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} />
           </div>
         </div>
+      )}
+
+      {/* 섹션 배치 편집기 — 화면을 덮고 열린다. 저장하면 초안의 pageData가 바뀐다 */}
+      {builderOpen && draft && editable && (
+        <LandingVisualBuilder
+          data={draft.pageData ?? createLandingPageData(draft, draft.templateId)}
+          businessName={draft.businessName}
+          onClose={() => setBuilderOpen(false)}
+          onSave={(pageData) => {
+            setDraft({ ...draft, pageData });
+            setBuilderOpen(false);
+          }}
+        />
+      )}
+
+      {phase === "ready" && draft && editable && (
+        <button type="button" className={styles.builderOpen} onClick={() => setBuilderOpen(true)}>
+          <LayoutTemplate size={15} /> 섹션 넣고 빼고 순서 바꾸기
+        </button>
       )}
 
       {phase === "ready" && draft && editable && (

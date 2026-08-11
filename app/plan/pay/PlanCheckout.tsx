@@ -141,14 +141,23 @@ export default function PlanCheckout() {
     );
   }
 
-  if (info?.paid) {
+  /*
+   * 이미 산 것인지 판정.
+   *
+   * 예전에는 상품과 상관없이 계획서 결제 여부(info.paid)만 봤다. 그래서 계획서를
+   * 산 사람이 홈페이지를 사러 오면 "이미 열려 있습니다"로 막혀 결제 자체가
+   * 불가능했다 — 파는 쪽이 못 팔게 막고 있었다. 상품마다 따로 본다.
+   */
+  const alreadyOwned = isHomepage ? homepageInfo?.editable === true : info?.paid === true;
+
+  if (alreadyOwned) {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
-          <h1 className={styles.title}>이 문서는 이미 열려 있습니다</h1>
-          <p className={styles.desc}>결제가 확인되어 전체 섹션을 쓸 수 있습니다.</p>
-          <Link href="/plan/overview" className={styles.primary}>플랜으로 돌아가기</Link>
+          <h1 className={styles.title}>{isHomepage ? "홈페이지는 이미 열려 있습니다" : "이 문서는 이미 열려 있습니다"}</h1>
+          <p className={styles.desc}>{isHomepage ? "결제가 확인되어 사진·글·버튼을 고치고 공개할 수 있습니다." : "결제가 확인되어 전체 섹션을 쓸 수 있습니다."}</p>
+          <Link href={isHomepage ? "/plan/homepage" : "/plan/overview"} className={styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "플랜으로 돌아가기"}</Link>
         </div>
       </div>
     );
