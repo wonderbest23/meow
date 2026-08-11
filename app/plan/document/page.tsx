@@ -313,20 +313,87 @@ export default function PlanDocumentPage() {
                     <FileText size={13} /> 문서 보기
                   </button>
                 </div>
-                <div className={styles.spring} />
-                <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleExport("docx"))} title={locked ? "결제 후 열립니다" : "Word로 내려받기"}>
-                  {exporting === "docx" ? <Spinner /> : locked ? <Lock size={13} /> : <FileText size={14} />} {exporting === "docx" ? "내보내는 중…" : "Word"}
-                </button>
-                {/* 계획서를 다 쓰면 홈페이지에 실을 말도 이미 다 답해 둔 상태다 — 그대로 옮겨 만든다 */}
-                <button className={styles.tool} disabled={busy && !isSample} onClick={() => (locked && !isSample ? goPay() : router.push("/plan/homepage"))} title={locked && !isSample ? "결제 후 열립니다" : "계획서 내용으로 만든 홈페이지 보기"}>
-                  {locked && !isSample ? <Lock size={13} /> : <Globe2 size={14} />} 홈페이지
-                </button>
-                <button className={styles.tool} disabled={busy} onClick={() => (locked ? goPay() : handleDeck())} title={locked ? "결제 후 열립니다" : "발표자료(PPT) 만들기"}>
-                  {exporting === "pptx" ? <Spinner /> : locked ? <Lock size={13} /> : <Presentation size={14} />} {exporting === "pptx" ? "만드는 중…" : "PPT"}
-                </button>
-                <button className={`${styles.tool} ${styles.toolPrimary}`} disabled={busy} onClick={() => (locked ? goPay() : handleExport("pdf"))} title={locked ? "결제 후 열립니다" : "PDF로 내려받기"}>
-                  {exporting === "pdf" ? <Spinner /> : locked ? <Lock size={13} /> : <FileDown size={14} />} {exporting === "pdf" ? "내보내는 중…" : "PDF"}
-                </button>
+              </div>
+
+              {/*
+                결과물은 성격이 둘로 갈린다 — 파일이 내 컴퓨터로 내려오는 것과,
+                계획서를 재료로 새로 만들어지는 것. 예전에는 넷이 같은 모양으로
+                한 줄에 4등분되어, 무엇을 누르면 무슨 일이 나는지 읽히지 않았고
+                폰에서는 한 칸이 70px 남짓으로 눌리지도 않았다.
+              */}
+              <div className={styles.outputs}>
+                <div className={styles.outGroup}>
+                  <span className={styles.outLabel}>
+                    <FileDown size={12} /> 파일로 내려받기
+                  </span>
+                  <div className={styles.outRow}>
+                    <button
+                      className={`${styles.outBtn} ${styles.outBtnPrimary}`}
+                      disabled={busy}
+                      onClick={() => (locked ? goPay() : handleExport("pdf"))}
+                      title={locked ? "결제 후 열립니다" : "PDF로 내려받기"}
+                    >
+                      <span className={styles.outIcon}>
+                        {exporting === "pdf" ? <Spinner /> : locked ? <Lock size={16} /> : <FileDown size={18} />}
+                      </span>
+                      <span className={styles.outText}>
+                        <strong className={styles.outName}>{exporting === "pdf" ? "내려받는 중…" : "PDF"}</strong>
+                        <span className={styles.outHint}>인쇄·제출용 · .pdf</span>
+                      </span>
+                    </button>
+                    <button
+                      className={styles.outBtn}
+                      disabled={busy}
+                      onClick={() => (locked ? goPay() : handleExport("docx"))}
+                      title={locked ? "결제 후 열립니다" : "Word로 내려받기"}
+                    >
+                      <span className={styles.outIcon}>
+                        {exporting === "docx" ? <Spinner /> : locked ? <Lock size={16} /> : <FileDown size={18} />}
+                      </span>
+                      <span className={styles.outText}>
+                        <strong className={styles.outName}>{exporting === "docx" ? "내려받는 중…" : "Word"}</strong>
+                        <span className={styles.outHint}>고쳐 쓰기용 · .docx</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.outGroup}>
+                  <span className={styles.outLabel}>
+                    <Presentation size={12} /> 이 계획서로 더 만들기
+                  </span>
+                  <div className={styles.outRow}>
+                    <button
+                      className={styles.outBtn}
+                      disabled={busy}
+                      onClick={() => (locked ? goPay() : handleDeck())}
+                      title={locked ? "결제 후 열립니다" : "발표자료(PPT) 만들기"}
+                    >
+                      <span className={styles.outIcon}>
+                        {exporting === "pptx" ? <Spinner /> : locked ? <Lock size={16} /> : <Presentation size={18} />}
+                      </span>
+                      <span className={styles.outText}>
+                        <strong className={styles.outName}>{exporting === "pptx" ? "만드는 중…" : "발표자료"}</strong>
+                        <span className={styles.outHint}>발표용 · .pptx</span>
+                      </span>
+                    </button>
+                    {/* 계획서를 다 쓰면 홈페이지에 실을 말도 이미 다 답해 둔 상태다 — 그대로 옮겨 만든다 */}
+                    <button
+                      className={styles.outBtn}
+                      disabled={busy && !isSample}
+                      onClick={() => (locked && !isSample ? goPay() : router.push("/plan/homepage"))}
+                      title={locked && !isSample ? "결제 후 열립니다" : "계획서 내용으로 만든 홈페이지 보기"}
+                    >
+                      <span className={styles.outIcon}>
+                        {locked && !isSample ? <Lock size={16} /> : <Globe2 size={18} />}
+                      </span>
+                      <span className={styles.outText}>
+                        <strong className={styles.outName}>홈페이지</strong>
+                        <span className={styles.outHint}>고객용 웹사이트</span>
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </div>
               {deckError ? <p className={styles.deckError}>{deckError}</p> : null}
             </header>

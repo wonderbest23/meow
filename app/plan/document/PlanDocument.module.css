@@ -121,39 +121,143 @@
   color: #fff;
 }
 
-/* 내보내기 — 컴팩트 도구 버튼 */
-.tool {
+/*
+ * 결과물 — 성격이 둘로 갈린다.
+ *  · 파일로 내려받기: 눌러도 화면이 안 바뀌고 컴퓨터에 파일이 생긴다
+ *  · 더 만들기: 계획서를 재료로 새 결과물이 만들어진다
+ *
+ * 예전에는 넷이 같은 알약 모양으로 한 줄에 4등분됐다. 무엇을 누르면 무슨 일이
+ * 나는지 읽히지 않았고, 폰에서는 한 칸이 70px 남짓이라 누르기도 어려웠다.
+ * 묶음을 나누고, 버튼마다 무엇을 받는지(확장자·쓰임)를 한 줄 덧붙인다.
+ */
+.outputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 18px;
+  margin-top: 12px;
+}
+
+.outGroup {
+  /* 두 묶음이 폭을 나눠 갖다가, 좁아지면 각자 한 줄을 쓴다 */
+  flex: 1 1 320px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.outLabel {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  border: 1px solid var(--wz-line);
-  background: var(--wz-panel);
+  gap: 5px;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   color: var(--wz-muted);
+}
+
+.outRow {
+  display: flex;
+  gap: 8px;
+}
+
+.outBtn {
+  flex: 1 1 0;
+  min-width: 0;
+  /* 손가락으로 눌리는 크기 — 예전 알약은 높이 36px에 폭 70px이었다 */
+  min-height: 54px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+  border: 1px solid var(--wz-line);
+  border-radius: 14px;
+  background: var(--wz-panel);
+  color: var(--text-strong, #191f28);
   font: inherit;
-  font-size: 12.5px;
-  font-weight: 700;
-  padding: 9px 14px;
-  border-radius: 999px;
+  text-align: left;
   cursor: pointer;
-  transition: 0.2s;
+  transition: 0.18s;
+}
+
+/* 가장 많이 쓰는 것 하나만 눈에 띄게 — 넷 다 강조하면 아무것도 강조되지 않는다 */
+.outBtnPrimary {
+  border-color: #c7dbff;
+  background: #eef4ff;
+}
+
+.outIcon {
+  flex: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  background: rgba(49, 130, 246, 0.1);
+  color: var(--blue, #3182f6);
+}
+
+.outBtnPrimary .outIcon {
+  background: var(--blue, #3182f6);
+  color: #fff;
+}
+
+.outText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.outName {
+  font-size: 13.5px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
   white-space: nowrap;
 }
-.tool:hover:not(:disabled) {
-  border-color: var(--wz-brand);
-  color: var(--wz-brand);
+
+.outHint {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--wz-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.tool:disabled {
-  opacity: 0.45;
+
+.outBtn:disabled {
+  opacity: 0.5;
   cursor: default;
 }
-.toolPrimary {
-  background: var(--wz-brand);
-  border-color: var(--wz-brand);
-  color: #fff;
+
+@media (hover: hover) and (pointer: fine) {
+  .outBtn:hover:not(:disabled) {
+    border-color: var(--blue, #3182f6);
+    transform: translateY(-1px);
+  }
 }
-.toolPrimary:hover:not(:disabled) {
-  color: #fff;
-  filter: brightness(1.06);
+
+@media (prefers-reduced-motion: reduce) {
+  .outBtn {
+    transition: none;
+  }
+  .outBtn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* 폰 — 묶음마다 한 줄씩 쓰고, 한 줄 안에서 둘이 반씩 나눈다 */
+@media (max-width: 640px) {
+  .outputs {
+    gap: 12px;
+  }
+  .outGroup {
+    flex: 1 1 100%;
+  }
+  .outBtn {
+    min-height: 58px;
+    padding: 0 10px;
+  }
 }
 
 .deckError {
@@ -511,12 +615,6 @@
   .seg {
     flex: 1 1 100%;
   }
-  .tool {
-    flex: 1 1 0;
-    justify-content: center;
-    padding: 10px 8px;
-    font-size: 12.5px;
-  }
 }
 
 
@@ -775,9 +873,4 @@
     display: none;
   }
 
-  .toolbar > .tool {
-    flex: 1;
-    justify-content: center;
-    padding: 0 10px;
-  }
 }
