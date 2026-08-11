@@ -15,7 +15,7 @@ export async function GET() {
   return NextResponse.json({ ...state, authenticated: identity.userId !== null });
 }
 
-export async function PUT(request: Request) {
+async function saveFromRequest(request: Request) {
   const limited = await enforceRateLimit("plan-state-save", request, { limit: 60, windowMs: 60_000 });
   if (limited) return limited;
 
@@ -27,6 +27,20 @@ export async function PUT(request: Request) {
 
   await savePlanState(identity.hash, normalizeState(body));
   return NextResponse.json({ ok: true });
+}
+
+export async function PUT(request: Request) {
+  return saveFromRequest(request);
+}
+
+/*
+ * 화면을 떠날 때의 마지막 저장은 navigator.sendBeacon으로 온다.
+ * beacon은 POST로만 보낼 수 있어서(메서드를 고를 수 없다) 같은 처리를
+ * POST에도 열어 둔다. 없으면 405로 조용히 버려진다 —
+ * 정작 가장 중요한 '나가기 직전 저장'이 실패한다.
+ */
+export async function POST(request: Request) {
+  return saveFromRequest(request);
 }
 
 export async function DELETE(request: Request) {

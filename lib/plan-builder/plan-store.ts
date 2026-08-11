@@ -535,17 +535,124 @@ export function assembleSections(state?: PlanState): Array<{
 // ── 서버 동기화 ──
 
 /** 현재 로컬 상태를 서버에 저장(fire-and-forget) */
-export async function pushToServer(): Promise<void> {
-  if (typeof window === "undefined") return;
+/*
+ * 서버 저장.
+ *
+ * 원래 상태는 계정(서버)에 있다. 브라우저 저장분은 잠깐 들고 있는 사본일
+ * 뿐이다 — 기기를 바꾸면 따라오지 않기 때문이다.
+ *
+ * 예전에는 fire-and-forget이었다. 응답 코드조차 보지 않아서 500이든
+ * 401이든 성공으로 쳤고, 실패하면 아무도 몰랐다. 이제는
+ *  - 한 번에 하나씩만 보낸다(빠른 두 번의 저장이 뒤바뀌어 덮어쓰지 않게)
+ *  - 실패하면 물러났다가 다시 시도한다
+ *  - 지금 저장 상태를 화면이 물어볼 수 있다
+ */
+export type PlanSyncStatus = "idle" | "saving" | "saved" | "offline";
+
+let syncStatus: PlanSyncStatus = "idle";
+let pushInFlight = false;
+let pushQueued = false;
+/* 보내는 중에 들어온 요청들 — 뒤이어 나갈 저장의 결과를 함께 받는다 */
+let queuedWaiters: Array<(ok: boolean) => void> = [];
+let retryTimer: ReturnType<typeof setTimeout> | null = null;
+let retryDelay = 2000;
+const syncListeners = new Set<() => void>();
+
+function setSync(next: PlanSyncStatus) {
+  if (syncStatus === next) return;
+  syncStatus = next;
+  for (const fn of syncListeners) fn();
+}
+
+/** 지금 저장 상태 — 화면이 '저장 안 됨'을 알릴 수 있게 */
+export function planSyncStatus(): PlanSyncStatus {
+  return syncStatus;
+}
+
+export function subscribePlanSync(fn: () => void): () => void {
+  syncListeners.add(fn);
+  return () => void syncListeners.delete(fn);
+}
+
+function payload() {
+  const state = loadState();
+  // 예시는 계정 것이 아니다 — 올리지 않는다
+  return { ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) };
+}
+
+function scheduleRetry() {
+  if (retryTimer) return;
+  retryTimer = setTimeout(() => {
+    retryTimer = null;
+    void pushToServer();
+  }, retryDelay);
+  // 계속 실패하면 간격을 늘린다 — 끊긴 망을 계속 두드리지 않는다
+  retryDelay = Math.min(retryDelay * 2, 60_000);
+}
+
+export async function pushToServer(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  /*
+   * 이미 보내는 중이면 끝난 뒤 한 번만 더 보낸다(순서가 뒤바뀌지 않게).
+   * 이때 false를 돌려주면 '실패'와 구분이 안 된다 — 뒤이어 나갈 저장의
+   * 결과를 기다렸다가 그대로 알려준다.
+   */
+  if (pushInFlight) {
+    pushQueued = true;
+    return new Promise<boolean>((resolve) => queuedWaiters.push(resolve));
+  }
+  pushInFlight = true;
+  setSync("saving");
   try {
-    const state = loadState();
-    await fetch("/api/plan/state", {
+    const res = await fetch("/api/plan/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) }),
+      body: JSON.stringify(payload()),
     });
+    if (!res.ok) throw new Error(`PLAN_STATE_${res.status}`);
+    retryDelay = 2000;
+    setSync("saved");
+    return true;
   } catch {
-    // 오프라인/실패 시 로컬만 유지
+    setSync("offline");
+    scheduleRetry();
+    return false;
+  } finally {
+    pushInFlight = false;
+    if (pushQueued) {
+      pushQueued = false;
+      const waiters = queuedWaiters;
+      queuedWaiters = [];
+      void pushToServer().then((result) => waiters.forEach((resolve) => resolve(result)));
+    } else if (queuedWaiters.length) {
+      const waiters = queuedWaiters;
+      queuedWaiters = [];
+      waiters.forEach((resolve) => resolve(syncStatus === "saved"));
+    }
+  }
+}
+
+/*
+ * 화면을 떠날 때 마지막 한 번 — fetch는 문서가 사라지면 취소되므로
+ * 종료 시점에도 살아남는 sendBeacon으로 보낸다.
+ */
+if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
+  const flush = () => {
+    if (syncStatus === "saved" || syncStatus === "idle") return;
+    try {
+      navigator.sendBeacon?.(
+        "/api/plan/state?beacon=1",
+        new Blob([JSON.stringify(payload())], { type: "application/json" }),
+      );
+    } catch {
+      /* 무해 */
+    }
+  };
+  window.addEventListener("pagehide", flush);
+  if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "hidden") flush();
+    });
   }
 }
 

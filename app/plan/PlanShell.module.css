@@ -479,3 +479,39 @@
     color: #fff;
   }
 }
+
+/*
+ * 저장 실패 알림 — 조용히 실패하면 사용자는 저장된 줄 안다.
+ * 화면 맨 위에 띄우되 작업을 막지는 않는다(쓰던 내용은 남아 있으므로).
+ */
+.syncWarn {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 90;
+  min-height: 40px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: #b3261e;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.syncWarn button {
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid #ffffff66;
+  border-radius: 999px;
+  background: transparent;
+  color: #fff;
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}

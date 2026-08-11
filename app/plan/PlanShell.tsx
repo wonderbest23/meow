@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import PlanRailNav from "./PlanRailNav";
+import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanShell.module.css";
 
 const ICONS = {
@@ -107,8 +108,24 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   // 목록·개요·섹션 위저드는 '내 플랜'으로 묶어 하이라이트
   const onPlan = !onInfo && !onMe && pathname.startsWith("/plan");
 
+  /*
+   * 저장 상태 — 예전에는 실패해도 아무 표시가 없었다.
+   * 저장이 밀리거나 끊기면 알려주고, 다시 시도할 길을 준다.
+   */
+  const [sync, setSync] = useState<PlanSyncStatus>("idle");
+  useEffect(() => {
+    setSync(planSyncStatus());
+    return subscribePlanSync(() => setSync(planSyncStatus()));
+  }, []);
+
   return (
     <div className={styles.shell}>
+      {sync === "offline" && (
+        <div className={styles.syncWarn} role="status">
+          <span>저장하지 못했습니다 — 연결을 확인해 주세요. 쓰던 내용은 남아 있습니다.</span>
+          <button type="button" onClick={() => void pushToServer()}>다시 저장</button>
+        </div>
+      )}
       {/* 서랍 뒤 배경 — 누르면 닫힌다 */}
       {drawer && <div className={styles.scrim} onClick={() => setDrawer(false)} aria-hidden="true" />}
       <nav
