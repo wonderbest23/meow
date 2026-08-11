@@ -19,6 +19,25 @@ const SYSTEM_PROMPT = [
   "출력은 해당 섹션의 마크다운 본문만 작성하세요. 최상위 제목(#)이나 코드펜스는 넣지 마세요.",
 ].join("\n");
 
+/*
+ * 한 섹션에 허용하는 출력 한도.
+ *
+ * 예전에는 4,000이었는데, 운영에서 실제로 재 보니 출력이 정확히 4,000에
+ * 걸린 응답이 나왔다. 출력이 한도와 같다는 건 할 말을 마쳐서 멈춘 게 아니라
+ * 잘렸다는 뜻이다 — 문장 중간에서 끊긴 본문이 그대로 저장되고 있었다.
+ *
+ * 생각 토큰이 같은 예산을 나눠 쓰기 때문에 깊이 생각할수록 본문 자리가
+ * 줄어든다. 측정된 평균이 3,663이라 4,000에는 여유가 없었다.
+ * 한도를 늘려도 필요 없는 섹션은 예전만큼만 쓰므로 대부분의 비용은 그대로다.
+ */
+const SECTION_MAX_TOKENS = 8000;
+
+/*
+ * 한도를 늘렸으니 오래 걸리는 응답도 생긴다. 기본 제한(120초)에 걸려
+ * 실패하면 잘림을 고치려다 통째로 못 받는 게 되므로 함께 늘린다.
+ */
+const SECTION_TIMEOUT_MS = 180_000;
+
 function formatAnswers(answers: Record<string, unknown>): string {
   const lines: string[] = [];
   for (const [k, v] of Object.entries(answers)) {
@@ -233,8 +252,9 @@ export async function generateSection(config: LLMConfig | null, input: SectionGe
     kind: "generate",
     system: sectionSystemPrompt(input),
     user: buildUserPrompt(input),
-    maxOutputTokens: 4000,
+    maxOutputTokens: SECTION_MAX_TOKENS,
     effort: "medium",
+    timeoutMs: SECTION_TIMEOUT_MS,
     // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
     cache: true,
   });
@@ -257,7 +277,15 @@ export async function streamSection(
   if (!config) return { markdown: fallbackSection(input), source: "fallback" };
   const text = await streamText(
     config,
-    { kind: "generate", system: sectionSystemPrompt(input), user: buildUserPrompt(input), maxOutputTokens: 4000, effort: "medium", cache: true },
+    {
+      kind: "generate",
+      system: sectionSystemPrompt(input),
+      user: buildUserPrompt(input),
+      maxOutputTokens: SECTION_MAX_TOKENS,
+      effort: "medium",
+      timeoutMs: SECTION_TIMEOUT_MS,
+      cache: true,
+    },
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
