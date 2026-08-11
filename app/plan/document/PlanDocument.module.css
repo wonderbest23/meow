@@ -560,10 +560,18 @@
     white-space: nowrap;
   }
 
+  /*
+   * 폰에서는 카드 프레임을 접고 화면을 전부 쓴다 — 개요 화면(PlanOverview의
+   * 같은 규칙)과 값을 맞춘다. 문서만 둥근 카드로 남아 좌우가 들어간 폭으로
+   * 보였고, 개요에서 문서로 넘어올 때 판이 바뀌는 느낌을 줬다.
+   */
   .app {
     grid-template-columns: 1fr;
     height: auto;
     max-height: none;
+    border-radius: 0;
+    box-shadow: none;
+    min-height: 100vh;
   }
   .app > nav {
     display: none;
@@ -572,7 +580,7 @@
      첫 줄(54px)은 셸 뒤로가기 pill 몫 — 위저드·개요와 동일 */
   .mhead {
     display: block;
-    padding: 54px 14px 12px;
+    padding: 56px 14px 12px; /* 개요 화면과 같은 값 — 오갈 때 머리가 밀리지 않게 */
   }
   .routeHeader {
     margin: 0 0 12px;
