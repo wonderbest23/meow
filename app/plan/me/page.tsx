@@ -133,7 +133,16 @@ export default function PlanMePage() {
   }
 
   async function logout() {
-    await fetch("/api/auth/logout", { method: "POST" });
+    /*
+     * 서버 세션이 실제로 끊겼는지 확인한다.
+     * 예전에는 응답을 보지 않고 화면만 정리했다 — 통신이 실패하면
+     * 로그아웃된 것처럼 보이지만 세션은 살아 있다(공용 PC에서 위험하다).
+     */
+    const res = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    if (!res || !res.ok) {
+      setDeleteMessage("로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해주세요.");
+      return;
+    }
     // 로컬 플랜 캐시도 함께 비운다 — 로그아웃 후에도 이전 계정 플랜이 보이던 버그
     clearLocalState();
     router.push("/plan");

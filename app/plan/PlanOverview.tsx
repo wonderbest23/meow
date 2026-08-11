@@ -57,6 +57,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [assembled, setAssembled] = useState<ReturnType<typeof assembleSections>>([]);
   const [inProgress, setInProgress] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<{ done: number; total: number; current: string | null } | null>(null);
+  /* 일괄 생성이 실패했을 때 알린다 — 조용히 끝나면 다 된 줄 안다 */
+  const [bulkError, setBulkError] = useState<string | null>(null);
   const cancelBulk = useRef(false);
   const [title, setTitle] = useState(planTitle);
   const [type, setType] = useState<string | undefined>(undefined);
@@ -165,6 +167,11 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       return;
     }
 
+    /*
+     * 실패를 세어 둔다. 예전에는 전부 실패해도 진행 막대가 끝까지 차고
+     * 아무 말이 없어서, 한 개도 만들어지지 않았는데 다 된 줄 알았다.
+     */
+    let failures = 0;
     for (let i = 0; i < pendingKeys.length; i += 1) {
       if (cancelBulk.current) break;
       const target = pendingKeys[i];
@@ -187,14 +194,28 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         });
         if (res.ok) {
           const data = (await res.json()) as { markdown?: string; html?: string };
-          if (data.markdown && data.html) saveSection(target.key, data.markdown, data.html);
+          // 시작할 때의 플랜에 저장한다 — 오래 걸리는 동안 활성 플랜이 바뀔 수 있다
+          if (data.markdown && data.html) saveSection(target.key, data.markdown, data.html, { planId: plan.id });
+          else failures += 1;
+        } else {
+          failures += 1;
         }
       } catch {
-        // 실패한 섹션은 건너뛰고 계속 진행
+        // 실패한 섹션은 건너뛰고 계속 진행 — 다만 몇 개가 실패했는지는 알린다
+        failures += 1;
       }
     }
 
     setBulk(null);
+    if (failures > 0) {
+      setBulkError(
+        failures === pendingKeys.length
+          ? "본문을 만들지 못했습니다. 잠시 후 다시 시도해주세요."
+          : `${failures}개 섹션을 만들지 못했습니다. 다시 시도하면 그 섹션만 만듭니다.`,
+      );
+    } else {
+      setBulkError(null);
+    }
     // 결과 반영
     const next = loadState();
     setStoreStatuses(planStatuses(next));
@@ -376,6 +397,10 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             )
           )}
         </div>
+
+        {bulkError && (
+          <p className={styles.bulkError} role="status">{bulkError}</p>
+        )}
 
         {/* 챕터 밴드 */}
         <div className={styles.plan}>

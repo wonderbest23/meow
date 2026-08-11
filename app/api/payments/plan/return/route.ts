@@ -94,6 +94,34 @@ export async function POST(request: Request) {
     return redirect(request, { status: "fail", reason: result?.resultMsg || "결제 승인에 실패했습니다.", ...planQ });
   }
 
-  await markPlanOrderPaid({ orderId, tid, raw: result.raw });
+  /*
+   * 5) 승인 결과를 남긴다 — 여기서 실패하면 돈만 빠져나간다.
+   *
+   * PG 승인은 이미 끝났으므로 이 저장이 실패하면 결제는 됐는데 문서는
+   * 열리지 않는 상태가 된다. 몇 번 다시 시도하고, 그래도 안 되면
+   * 승인을 취소해 돈을 돌려준다(취소까지 실패하면 주문번호를 알려
+   * 사람이 처리할 수 있게 한다).
+   */
+  let saved = false;
+  for (let attempt = 0; attempt < 3 && !saved; attempt += 1) {
+    try {
+      await markPlanOrderPaid({ orderId, tid, raw: result.raw });
+      saved = true;
+    } catch {
+      if (attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
+  }
+
+  if (!saved) {
+    const cancelled = await cancelNicepayPayment(tid, "결제 기록 저장 실패").then(() => true).catch(() => false);
+    return redirect(request, {
+      status: "fail",
+      reason: cancelled
+        ? "결제 처리 중 문제가 생겨 자동으로 취소했습니다. 다시 시도해주세요."
+        : `결제는 되었으나 처리에 실패했습니다. 주문번호 ${orderId}로 문의해주세요.`,
+      ...planQ,
+    });
+  }
+
   return redirect(request, { status: "ok", ...planQ });
 }

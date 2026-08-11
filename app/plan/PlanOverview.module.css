@@ -929,3 +929,16 @@
     justify-content: center;
   }
 }
+
+/* 일괄 생성 실패 안내 — 조용히 끝나면 다 만들어진 줄 안다 */
+.bulkError {
+  margin: 10px 0 0;
+  padding: 11px 14px;
+  border: 1px solid #f3c3c0;
+  border-radius: 12px;
+  background: #fdf3f2;
+  color: #a3231c;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}

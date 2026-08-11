@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   PACKAGE_AMOUNT,
   confirmPaymentSchema,
@@ -187,8 +188,20 @@ assert.equal(noIdentifierOrder.cashReceiptIdentifier, null);
 const canceledTransfer = await cancelManualTransferOrder(noIdentifierOrder.orderId, "입금 전 고객 취소");
 assert.equal(canceledTransfer.status, "canceled");
 
+/*
+ * 승인 뒤 기록 저장이 실패하면 돈만 빠져나간다.
+ * 라우트가 '재시도 → 그래도 실패하면 승인 취소'를 실제로 하는지,
+ * 소스에 그 경로가 있는지 확인한다(외부 PG를 부르지 않고 검사).
+ */
+{
+  const src = readFileSync(new URL("../app/api/payments/plan/return/route.ts", import.meta.url), "utf8");
+  assert.ok(/for \(let attempt = 0; attempt < 3/.test(src), "저장 실패 시 재시도가 있어야 한다");
+  assert.ok(/cancelNicepayPayment\(tid, "결제 기록 저장 실패"\)/.test(src), "끝내 실패하면 승인을 취소해야 한다");
+  assert.ok(/주문번호 \$\{orderId\}/.test(src), "취소까지 실패하면 주문번호를 알려야 한다");
+}
+
 console.log(JSON.stringify({
-  passed: 34,
+  passed: 37,
   sample: {
     orderAmount: order.amount,
     orderStatus: canceled.status,
