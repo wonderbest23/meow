@@ -125,7 +125,12 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
     ...(whyBetter && !solutions.length
       ? [{ title: "기존 방식과 다른 점", description: clamp(sentence(whyBetter, "."), 300) }]
       : []),
-    ...(whyFirst ? [{ title: "이 고객부터 시작합니다", description: clamp(sentence(whyFirst, "."), 300) }] : []),
+    /*
+     * whyFirst는 "왜 이 고객부터 노리는가"라는 계획서 쪽 논리다. 설명은 손님에게도
+     * 쓸모 있지만 제목이 내부 언어라 홈페이지에 그대로 서면 어색하다.
+     * 손님이 자기 이야기로 읽을 수 있는 제목으로 바꿔 단다.
+     */
+    ...(whyFirst ? [{ title: "이런 분들이 찾으십니다", description: clamp(sentence(whyFirst, "."), 300) }] : []),
   ].filter((item) => item.title);
 
   const benefits = benefitPool.length ? benefitPool.slice(0, 3) : base.benefits;

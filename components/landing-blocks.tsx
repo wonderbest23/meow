@@ -342,7 +342,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       render: ({ eyebrow, heading, image1, caption1, image2, caption2, image3, caption3 }) => (
         <section className="landing-block landing-block-gallery">
           <header><span>{eyebrow}</span><h2>{heading}</h2></header>
-          <div>{[[image1, caption1], [image2, caption2], [image3, caption3]].map(([image, caption], index) => <figure key={`${caption}-${index}`}>{image ? <img src={image} alt="" /> : <i /> }<figcaption>{caption}</figcaption></figure>)}</div>
+          <div>{[[image1, caption1], [image2, caption2], [image3, caption3]].filter(([image]) => image).map(([image, caption], index) => <figure key={`${caption}-${index}`}><img src={image} alt="" /><figcaption>{caption}</figcaption></figure>)}</div>
         </section>
       ),
     },
