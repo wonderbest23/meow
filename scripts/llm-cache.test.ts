@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { completeText, type LLMConfig } from "../lib/llm/complete";
+import { completeText, streamText, type LLMConfig } from "../lib/llm/complete";
 import { buildUserPrompt, sectionSystemPrompt, type SectionGenInput } from "../lib/plan-builder/section-generator";
 import type { PlanChapterDef, PlanSectionDef } from "../lib/plan-builder/blueprint";
 
@@ -100,6 +100,41 @@ async function main() {
     const input = lastBody.input as Array<{ role?: string; content?: string }>;
     assert.equal(input[0].role, "system");
     assert.equal(input[0].content, "규칙", "OpenAI 쪽 형태는 그대로여야 한다");
+
+    /*
+     * 7) 스트리밍 사용량은 두 이벤트에 나뉘어 온다 — 입력·캐시는 message_start,
+     *    출력은 message_delta. 한쪽만 읽으면 요금의 대부분(출력)을 놓친다.
+     *    실제 섹션 생성이 이 경로를 타므로 여기가 측정의 근거다.
+     */
+    const events = [
+      { type: "message_start", message: { usage: { input_tokens: 900, cache_read_input_tokens: 1400, cache_creation_input_tokens: 0, output_tokens: 1 } } },
+      { type: "content_block_delta", delta: { text: "본문" } },
+      { type: "message_delta", usage: { output_tokens: 2600 } },
+    ];
+    globalThis.fetch = (async () =>
+      new Response(
+        new ReadableStream({
+          start(controller) {
+            for (const e of events) controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(e)}\n\n`));
+            controller.close();
+          },
+        }),
+        { status: 200 },
+      )) as unknown as typeof fetch;
+
+    const logged: string[] = [];
+    const realLog = console.log;
+    console.log = (...args: unknown[]) => void logged.push(args.join(" "));
+    try {
+      await streamText(anthropic, { kind: "generate", system: "규칙", user: "질문", maxOutputTokens: 4000, cache: true }, () => {});
+    } finally {
+      console.log = realLog;
+    }
+    const line = logged.find((l) => l.includes("[llm] usage"));
+    assert.ok(line, "스트리밍에서도 사용량이 남아야 한다");
+    assert.match(line, /out=2600/, "출력 토큰(message_delta)이 빠지면 요금을 잴 수 없다");
+    assert.match(line, /cache_read=1400/, "캐시 적중(message_start)도 같은 줄에 있어야 한다");
+    assert.match(line, /in=900/);
   } finally {
     globalThis.fetch = originalFetch;
   }

@@ -37,18 +37,31 @@ export type LLMCompleteParams = {
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 
+type AnthropicUsage = {
+  input_tokens?: number;
+  output_tokens?: number;
+  cache_creation_input_tokens?: number;
+  cache_read_input_tokens?: number;
+};
+
 /**
- * 캐시가 실제로 걸렸는지 남긴다.
+ * 한 호출에 실제로 쓰인 토큰을 남긴다 — 1건당 얼마인지 재는 유일한 근거.
  *
- * 캐시는 조용히 실패한다 — 앞부분이 최소 길이(모델마다 512~1024토큰)에
- * 못 미치면 오류 없이 그냥 캐시가 안 만들어진다. 숫자를 눈으로 봐야
- * 효과가 있는지 알 수 있어서 호출마다 찍는다(wrangler tail로 확인).
+ * 두 가지를 동시에 본다.
+ *  - 캐시가 걸렸나: 캐시는 조용히 실패한다. 앞부분이 최소 길이(모델마다
+ *    512~1024토큰)에 못 미치면 오류 없이 그냥 안 걸린다. read가 0이 아니어야 성공.
+ *  - 얼마가 나갔나: 요금의 대부분은 출력에서 나온다. 입력만 봐서는 알 수 없다.
+ *
+ * 단가는 일부러 코드에 넣지 않는다 — 값이 바뀌면 조용히 틀린 금액을 찍게 되고,
+ * 그건 안 찍느니만 못하다. 토큰 수만 남기고 환산은 읽을 때 한다.
  */
-function logCacheUsage(kind: string, usage: unknown) {
-  const u = usage as { input_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number } | null;
+function logUsage(kind: string, model: string, usage: unknown) {
+  const u = usage as AnthropicUsage | null;
   if (!u) return;
   console.log(
-    `[llm] cache kind=${kind} read=${u.cache_read_input_tokens ?? 0} write=${u.cache_creation_input_tokens ?? 0} fresh=${u.input_tokens ?? 0}`,
+    `[llm] usage kind=${kind} model=${model}` +
+      ` in=${u.input_tokens ?? 0} out=${u.output_tokens ?? 0}` +
+      ` cache_read=${u.cache_read_input_tokens ?? 0} cache_write=${u.cache_creation_input_tokens ?? 0}`,
   );
 }
 
@@ -136,7 +149,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
     content?: Array<{ type?: string; text?: string }>;
     usage?: unknown;
   } | null;
-  if (params.cache) logCacheUsage(params.kind ?? "etc", payload?.usage ?? null);
+  logUsage(params.kind ?? "etc", config.model, payload?.usage ?? null);
   if (!payload || !Array.isArray(payload.content)) return null;
   const text = payload.content
     .filter((block) => block?.type === "text" && typeof block.text === "string")
@@ -291,6 +304,11 @@ async function streamOnce(
   const decoder = new TextDecoder();
   let buffer = "";
   let full = "";
+  /*
+   * 스트리밍은 사용량이 두 번에 나눠 온다 — 입력·캐시는 첫 이벤트(message_start),
+   * 출력은 마지막 직전(message_delta). 한쪽만 보면 요금의 절반을 놓치므로 합쳐 둔다.
+   */
+  let usage: AnthropicUsage | null = null;
 
   try {
     for (;;) {
@@ -311,9 +329,11 @@ async function streamOnce(
           } catch {
             continue;
           }
-          // 캐시 적중 수치는 첫 이벤트(message_start)에만 실려 온다
-          if (anthropic && params.cache && payload.type === "message_start") {
-            logCacheUsage(params.kind ?? "etc", (payload.message as { usage?: unknown } | undefined)?.usage ?? null);
+          if (anthropic && payload.type === "message_start") {
+            usage = { ...(usage ?? {}), ...((payload.message as { usage?: AnthropicUsage } | undefined)?.usage ?? {}) };
+          }
+          if (anthropic && payload.type === "message_delta") {
+            usage = { ...(usage ?? {}), ...((payload.usage as AnthropicUsage | undefined) ?? {}) };
           }
           const piece = anthropic
             ? payload.type === "content_block_delta"
@@ -330,7 +350,10 @@ async function streamOnce(
       }
     }
   } catch {
+    // 중간에 끊겨도 거기까지의 사용량은 청구된다 — finally에서 남긴다
     return full || null;
+  } finally {
+    if (anthropic) logUsage(params.kind ?? "etc", config.model, usage);
   }
   return full || null;
 }
