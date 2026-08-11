@@ -64,8 +64,15 @@ export default function PlanHomepagePage() {
          * 잡혀 커피집에 낯선 사진과 색이 붙는다 — 예시의 업종을 함께 넘긴다.
          */
         const doc = SAMPLE_DOCS.find((item) => item.id === plan.id);
+        /*
+         * 플랜 이름은 목록에서 구분하려고 "샘플 · 새벽커피 (창업 초기)"처럼
+         * 붙여 뒀는데, 그게 홈페이지 상호명 자리에 그대로 들어가
+         * "샘플 · 새벽커피 (창업 초기)에 문의해 보세요"가 손님 화면에 섰다.
+         * 가게 이름만 남긴다.
+         */
+        const shopName = plan.title.replace(/^샘플\s*·\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim();
         const draft = landingDraftFromPlan({
-          planTitle: plan.title,
+          planTitle: shopName || plan.title,
           business: { ...state.business, industry: doc?.industry || state.business.industry },
           answers: plan.answers,
         });
