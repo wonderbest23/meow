@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Maximize2 } from "lucide-react";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
@@ -231,28 +232,31 @@ export default function PlanHomepagePage() {
         <div className={styles.previewWrap}>
           <div className={styles.payBar}>
             <div>
-              <strong className={styles.payTitle}>
-                {sample ? "계획서 내용으로 만든 홈페이지예요" : "계획서 내용으로 홈페이지를 만들었어요"}
-              </strong>
+              <strong className={styles.payTitle}>계획서 내용으로 만든 홈페이지</strong>
               <p className={styles.payNote}>
                 {sample
                   ? "예시 계획서의 답변으로 만든 결과입니다. 내 계획서로도 이렇게 만들어집니다."
-                  : "지금은 미리보기입니다. 내용을 고치고 인터넷에 공개하려면 결제가 필요합니다."}
+                  : `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 홈페이지 에디터가 필요합니다. ${price.toLocaleString("ko-KR")}원.`}
               </p>
             </div>
             <div className={styles.payActions}>
-            <button type="button" className={styles.ghost} onClick={() => setFullscreen(true)}>
-              전체 화면으로 보기
-            </button>
-            {sample ? (
-              <a className={styles.cta} href="/plan/start">내 플랜 만들기 →</a>
-            ) : (
-              <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
-                {price.toLocaleString("ko-KR")}원 · 수정하고 공개하기 →
-              </button>
-            )}
+              {sample ? (
+                <a className={styles.cta} href="/plan/start">내 플랜 만들기 →</a>
+              ) : (
+                <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
+                  홈페이지 에디터 →
+                </button>
+              )}
             </div>
           </div>
+          {/*
+            전체 화면은 문서 화면과 같은 방식 — 미리보기 위에 떠 있는 버튼 하나.
+            안내 줄에 나란히 두면 '수정하러 가기'와 무게가 같아 보여, 정작 눌러야
+            할 것이 뭔지 흐려진다.
+          */}
+          <button type="button" className={styles.fsFloat} onClick={() => setFullscreen(true)} title="홈페이지만 화면 가득 보기">
+            <Maximize2 size={14} /> 전체 화면
+          </button>
           <div className={styles.preview} aria-label="홈페이지 미리보기">
             <LandingBlocksRenderer data={draft.pageData ?? createLandingPageData(draft, draft.templateId)} />
           </div>

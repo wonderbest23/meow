@@ -81,10 +81,45 @@
 
 /* 결제 전 — 만들어진 홈페이지를 보여만 준다 */
 .previewWrap {
+  position: relative; /* 떠 있는 전체 화면 버튼의 기준 */
   display: flex;
   flex-direction: column;
   gap: 16px;
   padding: 20px 20px 40px;
+}
+
+/*
+ * 전체 화면 — 문서 화면(PlanDocument의 fsFloat)과 같은 방식.
+ * 안내 줄에 나란히 두면 '수정하러 가기'와 무게가 같아 보여, 정작 눌러야 할 것이
+ * 무엇인지 흐려졌다. 미리보기 위에 떠 있게 해 보조 행동임을 드러낸다.
+ */
+.fsFloat {
+  position: sticky;
+  top: 12px;
+  z-index: 20;
+  align-self: flex-end;
+  margin-bottom: -46px; /* 떠 있는 버튼이 아래 미리보기를 밀지 않게 */
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 13px;
+  border: 1px solid var(--line, #e5e7eb);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(6px);
+  color: var(--text-2, #6b7280);
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(20, 32, 64, 0.14);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .fsFloat:hover {
+    color: var(--text, #111827);
+    border-color: var(--brand, #2563eb);
+  }
 }
 
 .payBar {
