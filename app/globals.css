@@ -6022,6 +6022,12 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .presentation-stage-navigation > p span { min-width: 0; }
 .presentation-stage-navigation > p strong { color: #333d4b; display: block; }
 body:has(.presentation-preview) .support-chat-widget { display: none; }
+/*
+ * 폰에서 플랜 서랍이 열려 있는 동안에는 상담 버튼을 감춘다.
+ * 상담 버튼(z-index 120)이 서랍(46) 위에 떠서 맨 아래 '마이페이지'를 가렸다.
+ * 서랍이 화면을 덮은 동안에는 어차피 누를 수도 없는 버튼이다.
+ */
+body:has([data-rail-open]) .support-chat-widget { display: none; }
 .deliverable-list article { animation: delivery-card-in .38s ease both; animation-delay: calc(var(--delivery-index) * 45ms); }
 
 @keyframes detail-open { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
