@@ -1,4 +1,4 @@
-/* 레일 안의 플랜 목차 — 어두운 레일 톤에 그대로 얹힌다 */
+/* 레일 안의 플랜 목록 — 어두운 레일 톤에 그대로 얹힌다 */
 
 .wrap {
   /* 남은 높이를 차지하고 그 안에서만 스크롤한다 — 레일 전체가 늘어나지 않게 */
@@ -15,17 +15,100 @@
   scrollbar-width: thin;
 }
 
-/* 지금 열어 둔 플랜 이름 — 목차가 어느 문서의 것인지 */
-.planName {
-  margin: 0 0 8px;
+.plan {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 플랜 한 줄 — 누르면 그 안에 무엇이 있는지 펼친다 */
+.planRow {
+  min-height: 36px;
   padding: 0 8px;
-  font-size: 11.5px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-align: left;
+  cursor: pointer;
+  font-size: 12.5px;
   font-weight: 800;
   letter-spacing: -0.01em;
-  color: rgba(255, 255, 255, 0.55);
-  white-space: nowrap;
+}
+
+/* 지금 작업 중인 플랜 — 여럿 중 어느 것이 기준인지 */
+.planOn {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.caret {
+  flex: none;
+  width: 12px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  transition: transform 0.14s ease;
+}
+
+.caretOpen {
+  transform: rotate(90deg);
+}
+
+.planName {
+  flex: 1;
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.planCount {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.sampleTag {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.14);
+  font-size: 9.5px;
+  font-weight: 800;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.planBody {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 0 8px;
+}
+
+/*
+ * 이 플랜으로 만들어진 것.
+ * 목차보다 위에 둔다 — 다 쓴 사람이 가장 자주 찾는 건 결과물이다.
+ */
+.outputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 4px 8px 8px 20px;
+}
+
+.output {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 11.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
 }
 
 .chapter {
@@ -34,30 +117,31 @@
 }
 
 .chapterBtn {
-  min-height: 34px;
-  padding: 0 8px;
+  min-height: 32px;
+  /* 플랜 아래 단계임이 보이게 — 화살표 자리만큼 들여쓴다 */
+  padding: 0 8px 0 20px;
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(255, 255, 255, 0.82);
   display: flex;
   align-items: center;
   gap: 8px;
   text-align: left;
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
 }
 
 .chapterNum {
   flex: none;
-  width: 17px;
-  height: 17px;
+  width: 16px;
+  height: 16px;
   border-radius: 5px;
   background: rgba(255, 255, 255, 0.14);
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -72,7 +156,7 @@
 
 .chapterCount {
   flex: none;
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.45);
@@ -85,9 +169,8 @@
 }
 
 .section {
-  min-height: 30px;
-  /* 챕터 아래 단계임이 보이는 최소한의 들여쓰기 — 27px은 좁은 서랍에서 과했다 */
-  padding: 0 10px 0 18px;
+  min-height: 29px;
+  padding: 0 10px 0 30px;
   border: 0;
   border-radius: 7px;
   background: transparent;
@@ -97,13 +180,13 @@
   gap: 7px;
   text-align: left;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 600;
 }
 
 .sectionNo {
   flex: none;
-  font-size: 10.5px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.38);
 }
@@ -132,9 +215,15 @@
 }
 
 @media (hover: hover) and (pointer: fine) {
+  .planRow:hover,
   .chapterBtn:hover,
   .section:hover {
     background: rgba(255, 255, 255, 0.09);
+  }
+
+  .output:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.3);
   }
 
   .sectionOn:hover {
@@ -143,11 +232,19 @@
 }
 
 /*
- * 폰 — 아이콘 폭(56px)일 때는 목차가 들어갈 자리가 없다.
- * 손잡이로 서랍을 펼치면(:global(.railOpen)) 그때 보인다.
+ * 폰 — 접힌 띠는 아이콘 폭(56px)이라 목록이 들어갈 자리가 없다.
+ * 서랍을 열었을 때만 보인다.
+ *
+ * 예전에는 숨기는 규칙만 있고 다시 보이게 하는 규칙이 없어서, 폰에서는
+ * 서랍을 열어도 목록이 끝내 나오지 않았다. data-rail-open은 PlanShell이
+ * 서랍을 열 때 남기는 표시다(모듈 해시가 붙지 않아 여기서 가리킬 수 있다).
  */
 @media (max-width: 640px) {
   .wrap {
     display: none;
+  }
+
+  [data-rail-open] .wrap {
+    display: flex;
   }
 }

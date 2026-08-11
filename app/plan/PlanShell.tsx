@@ -128,8 +128,14 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
       )}
       {/* 서랍 뒤 배경 — 누르면 닫힌다 */}
       {drawer && <div className={styles.scrim} onClick={() => setDrawer(false)} aria-hidden="true" />}
+      {/*
+        data-rail-open — 서랍이 열렸다는 사실을 자식 CSS도 알아야 한다.
+        railOpen은 이 모듈에서 해시된 이름이라 PlanRailNav 쪽 CSS가 가리킬 수 없어서,
+        해시되지 않는 표시를 하나 남긴다.
+      */}
       <nav
         className={`${styles.rail} ${railHidden ? styles.railOff : ""} ${drawer ? styles.railOpen : ""}`}
+        data-rail-open={drawer ? "" : undefined}
         aria-label="주요 메뉴"
       >
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">
