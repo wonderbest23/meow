@@ -432,8 +432,9 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
             <h2>{heading}</h2>
           </header>
           <dl>
-            <div><dt>주소</dt><dd>{address}</dd></div>
-            <div><dt>영업시간</dt><dd>{hours}</dd></div>
+            {/* 값이 없으면 줄을 내지 않는다 — 빈 항목은 미완성으로 읽힌다 */}
+            {address ? <div><dt>주소</dt><dd>{address}</dd></div> : null}
+            {hours ? <div><dt>영업시간</dt><dd>{hours}</dd></div> : null}
             {closed ? <div><dt>휴무</dt><dd>{closed}</dd></div> : null}
             {contact ? <div><dt>연락처</dt><dd>{contact}</dd></div> : null}
           </dl>

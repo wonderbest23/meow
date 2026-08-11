@@ -56,6 +56,9 @@ export type LandingPageSeed = {
   priceLabel: string;
   benefits: Array<{ title: string; description: string }>;
   proofItems: string[];
+  /* 찾아오는 길 — 계획서에서 확인된 것만 채운다. 없으면 그 칸을 통째로 뺀다 */
+  businessAddress?: string;
+  openHours?: string;
 };
 
 function block<T extends Record<string, string | number | boolean | null>>(
@@ -199,8 +202,8 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
   const location = block("LocationSection", `location-${templateId}`, {
     eyebrow: "찾아오는 길",
     heading: "언제, 어디로 오시면 되는지",
-    address: "주소를 입력하세요",
-    hours: "영업시간을 입력하세요",
+    address: seed.businessAddress ?? "",
+    hours: seed.openHours ?? "",
     closed: "",
     contact: "",
   });
@@ -246,9 +249,18 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
     wellness: [hero, trust, feature, gallery, price, location, cta],
     editorial: [hero, story, stats, feature, price, cta],
   };
+  /*
+   * 찾아오는 길은 주소를 모르면 뺀다.
+   * 예전에는 "주소를 입력하세요"가 그대로 손님 화면에 섰다 — 편집자에게 하는
+   * 말이 방문자에게 보이면, 그 페이지는 미완성으로 읽힌다. 빈 칸을 남기느니
+   * 없는 칸으로 두고, 주소를 채우면 그때 나타나게 한다.
+   */
+  const chosen = (layouts[templateId] ?? layouts.service).filter(
+    (item) => item !== location || Boolean(seed.businessAddress?.trim()),
+  );
   return landingPageDataSchema.parse({
     root: { props: { title: seed.businessName } },
-    content: layouts[templateId] ?? layouts.service,
+    content: chosen,
   });
 }
 
