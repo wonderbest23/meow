@@ -146,7 +146,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         <PlanRailNav />
         <div className={styles.spring} />
         {account?.authenticated ? (
-          <Link href="/plan/me" className={`${styles.railBtn} ${styles.me} ${onMe ? styles.on : ""}`} title={`마이페이지 · ${account.email ?? ""}`} aria-label={`마이페이지 (${account.email ?? "로그인됨"})`}>
+          <Link href="/plan/me" className={`${styles.railBtn} ${onMe ? styles.on : ""}`} title={`마이페이지 · ${account.email ?? ""}`} aria-label={`마이페이지 (${account.email ?? "로그인됨"})`}>
             <span className={styles.meAvatar}>{initial ?? ICONS.team}</span>
             <span className={styles.railLabel}>마이페이지</span>
           </Link>

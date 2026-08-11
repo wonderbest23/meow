@@ -152,6 +152,11 @@
   .signIn .signInText {
     display: block;
   }
+  /*
+   * 접힌 띠(42px)에서는 아바타가 버튼을 꽉 채워 그 자체로 버튼처럼 읽힌다.
+   * 이 100%는 '42px을 채우라'는 뜻이지 '얼마든 늘어나라'는 뜻이 아니다 —
+   * 서랍이 열리면 버튼이 넓어지므로 아래에서 다시 원으로 못박는다.
+   */
   .meAvatar {
     width: 100%;
     height: 100%;
@@ -174,6 +179,17 @@
 
   .railOpen .railLabel {
     display: block;
+  }
+
+  /*
+   * 서랍이 열리면 버튼이 서랍 폭(236px)만큼 넓어진다. 위의 100%가 그 폭을
+   * 그대로 따라가 아바타가 가로로 늘어난 타원이 되고, 이름은 오른쪽 끝으로
+   * 밀려났다. 이름 옆에 붙는 작은 원으로 되돌린다.
+   */
+  .railOpen .meAvatar {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
   }
 
   .railOpen .logo {
