@@ -517,6 +517,14 @@ function GuidedTopBar({
   );
 }
 
+/* 서비스 요약 네 마디 — 하는 일이 제목, 숫자는 그 아래 근거 */
+const HOME_PROOF_ITEMS = [
+  { title: "빠른 사업계획서 기획", body: "질문에 답하면 인공지능이 문장을 씁니다 · 문서 유형 7가지" },
+  { title: "기획서 기반 홈페이지 제작", body: "계획서에 답한 내용이 그대로 홈페이지가 됩니다" },
+  { title: "발표자료까지 한 번에", body: "PDF · Word · PPT로 내려받습니다" },
+  { title: "먼저 보고 결정하세요", body: "완성 샘플 3부 열람 · 앞 2개 섹션 무료 작성" },
+];
+
 function Home({
   onStart,
   onPreview,
@@ -524,6 +532,26 @@ function Home({
   onStart: () => void;
   onPreview: () => void;
 }) {
+  /*
+   * 서비스 요약 — 네 마디를 가운데서 하나씩 띄운다.
+   *
+   * 네 칸을 한 줄에 눌러 담았더니 글씨가 작아져 아무도 읽지 않았다. 한 번에
+   * 하나만 크게 띄우면 그 한 줄은 읽힌다.
+   *
+   * 저절로 넘어가되 사람이 손을 대면 멈춘다 — 읽는 중에 글이 사라지면
+   * 넘어가는 화면이 아니라 방해가 된다.
+   */
+  const [proofIndex, setProofIndex] = useState(0);
+  const [proofPaused, setProofPaused] = useState(false);
+
+  useEffect(() => {
+    if (proofPaused) return;
+    // 움직임을 줄여 달라고 한 사람에게는 돌리지 않는다
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = setInterval(() => setProofIndex((n) => (n + 1) % HOME_PROOF_ITEMS.length), 2800);
+    return () => clearInterval(timer);
+  }, [proofPaused]);
+
   const [businessInfo, setBusinessInfo] = useState<{
     operatorName: string; representativeName: string; businessRegistrationNumber: string; mailOrderSalesNumber: string;
     mailOrderStatus: MailOrderStatus; internetDomainName: string;
@@ -587,11 +615,23 @@ function Home({
         숫자만 봐서는 무엇을 해주는지 알 수 없어서, 하는 일을 제목으로 올리고
         숫자는 그 아래 근거로 내렸다. 한 칸에 하나씩 넘겨 본다.
       */}
-      <section className="home-proof-bar" aria-label="서비스 구성 요약">
-        <div><strong>빠른 사업계획서 기획</strong><span>질문에 답하면 인공지능이 문장을 씁니다 · 문서 유형 7가지</span></div>
-        <div><strong>기획서 기반 홈페이지 제작</strong><span>계획서에 답한 내용이 그대로 홈페이지가 됩니다</span></div>
-        <div><strong>발표자료까지 한 번에</strong><span>PDF · Word · PPT로 내려받습니다</span></div>
-        <div><strong>먼저 보고 결정하세요</strong><span>완성 샘플 3부 열람 · 앞 2개 섹션 무료 작성</span></div>
+      <section
+        className="home-proof-bar"
+        aria-label="서비스 구성 요약"
+        onMouseEnter={() => setProofPaused(true)}
+        onMouseLeave={() => setProofPaused(false)}
+      >
+        {HOME_PROOF_ITEMS.map((item, index) => (
+          <div key={item.title} className={index === proofIndex ? "on" : ""} aria-hidden={index !== proofIndex}>
+            <strong>{item.title}</strong>
+            <span>{item.body}</span>
+          </div>
+        ))}
+        <div className="home-proof-dots" aria-hidden="true">
+          {HOME_PROOF_ITEMS.map((item, index) => (
+            <i key={item.title} className={index === proofIndex ? "on" : ""} />
+          ))}
+        </div>
       </section>
 
       <section className="home-section home-method" id="how">
