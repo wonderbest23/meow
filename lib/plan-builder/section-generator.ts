@@ -197,9 +197,17 @@ export function fallbackSection(input: SectionGenInput): string {
 }
 
 /**
- * 섹션 본문(마크다운) 생성. config가 없으면(키 미설정) 폴백을 반환.
+ * 섹션 본문(마크다운) 생성.
+ *
+ * source의 뜻을 셋으로 나눈다 — 예전에는 둘을 뭉뚱그려 사고를 못 봤다.
+ *  - ai:       모델이 쓴 본문
+ *  - fallback: 키 자체가 없다(로컬 개발). 답변을 표로 정리해 돌려준다
+ *  - failed:   키는 있는데 호출이 실패했다. 운영 사고이므로 본문을 만들지 않는다
+ *
+ * 예전에는 실패해도 fallback을 200으로 돌려줬고, 화면은 그걸 그대로 저장해
+ * '완료'로 표시했다. 결제한 사람이 AI가 쓴 글 대신 표를 받고도 알 수 없었다.
  */
-export async function generateSection(config: LLMConfig | null, input: SectionGenInput): Promise<{ markdown: string; source: "ai" | "fallback" }> {
+export async function generateSection(config: LLMConfig | null, input: SectionGenInput): Promise<{ markdown: string; source: "ai" | "fallback" | "failed" }> {
   if (!config) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
@@ -211,7 +219,8 @@ export async function generateSection(config: LLMConfig | null, input: SectionGe
     effort: "medium",
   });
   if (!text || text.trim().length < 40) {
-    return { markdown: fallbackSection(input), source: "fallback" };
+    // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
+    return { markdown: "", source: "failed" };
   }
   return { markdown: appendFinancials(text.trim(), input), source: "ai" };
 }
@@ -224,14 +233,14 @@ export async function streamSection(
   config: LLMConfig | null,
   input: SectionGenInput,
   onDelta: (chunk: string) => void,
-): Promise<{ markdown: string; source: "ai" | "fallback" }> {
+): Promise<{ markdown: string; source: "ai" | "fallback" | "failed" }> {
   if (!config) return { markdown: fallbackSection(input), source: "fallback" };
   const text = await streamText(
     config,
     { kind: "generate", system: SYSTEM_PROMPT, user: buildUserPrompt(input), maxOutputTokens: 4000, effort: "medium" },
     onDelta,
   );
-  if (!text || text.trim().length < 40) return { markdown: fallbackSection(input), source: "fallback" };
+  if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
   /*
    * 스트리밍 화면에는 재무 블록이 델타로 흐르지 않지만, 최종 저장본에는 붙는다.
    * 클라이언트는 마지막 done 페이로드의 markdown/html로 갈아끼우므로 문제없다.

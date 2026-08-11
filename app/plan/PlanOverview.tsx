@@ -21,7 +21,7 @@ import InheritNote from "./InheritNote";
 import PlanLoading from "./PlanLoading";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
-import { generatingTitle, subscribeGeneration, totalPendingCount, refreshServerPending } from "../../lib/plan-builder/generation-queue";
+import { generatingTitle, subscribeGeneration, totalPendingCount, refreshServerPending, failedCount } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -139,6 +139,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     };
   }, []);
   const queued = totalPendingCount();
+  /* 뒤에서 만들다 실패한 섹션 — 알리지 않으면 영영 비어 있는 줄 모른다 */
+  const failedSections = failedCount();
 
   // 아직 생성되지 않았지만 답변이 있는 섹션 = 일괄 생성 대상
   const pendingKeys = useMemo(() => {
@@ -400,6 +402,12 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
 
         {bulkError && (
           <p className={styles.bulkError} role="status">{bulkError}</p>
+        )}
+
+        {!bulkError && failedSections > 0 && (
+          <p className={styles.bulkError} role="status">
+            {failedSections}개 섹션의 본문을 만들지 못했습니다. 위 ‘한번에 생성’으로 다시 시도해 주세요.
+          </p>
         )}
 
         {/* 챕터 밴드 */}

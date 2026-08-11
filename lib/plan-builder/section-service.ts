@@ -136,7 +136,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     .slice(0, 4000) || undefined;
 
   const config = resolveLLMConfig(job.ownerHash, "anthropic");
-  const { markdown } = await generateSection(config, {
+  const { markdown, source } = await generateSection(config, {
     chapter,
     section,
     answers,
@@ -148,6 +148,12 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     financialsReference,
     conflicts,
   });
+
+  /*
+   * 실패했으면 저장하지 않고 던진다 — 워크플로가 다시 시도하고,
+   * 끝내 안 되면 그 섹션만 실패로 남는다. 표를 본문인 척 저장하지 않는다.
+   */
+  if (source === "failed" || !markdown.trim()) throw new Error("SECTION_GENERATION_FAILED");
 
   let html = "";
   try {

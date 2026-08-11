@@ -132,6 +132,10 @@ export async function POST(req: Request) {
         const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
         try {
           const { markdown, source } = await streamSection(config, genInput, (chunk) => send({ t: "delta", v: chunk }));
+          if (source === "failed") {
+            send({ t: "error" });
+            return;
+          }
           let html = "";
           try {
             html = await renderPlanMarkdown(markdown);
@@ -167,6 +171,23 @@ export async function POST(req: Request) {
     financialsReference,
     conflicts,
   });
+
+  /*
+   * AI 호출이 실패했으면 본문을 만들지 않는다.
+   *
+   * 예전에는 실패해도 '답변 표'를 200으로 돌려줬고, 화면은 그것을 저장해
+   * 섹션을 '완료'로 표시했다. 결제한 사람이 AI가 쓴 글 대신 표를 받고도
+   * 알 수 없었고, 운영자도 사고를 눈치채지 못했다.
+   */
+  if (source === "failed") {
+    return NextResponse.json(
+      {
+        error: "generation_failed",
+        message: "본문을 만들지 못했습니다. 잠시 후 다시 시도해주세요.",
+      },
+      { status: 502 },
+    );
+  }
 
   let html = "";
   try {
