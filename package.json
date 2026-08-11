@@ -62,7 +62,8 @@
     "test:generation-queue": "tsx scripts/generation-queue.test.ts",
     "test:landing-from-plan": "tsx scripts/landing-from-plan.test.ts",
     "test:plan-landing-chain": "tsx scripts/plan-landing-chain.test.ts",
-    "test:plan-section-service": "tsx scripts/plan-section-service.test.ts"
+    "test:plan-section-service": "tsx scripts/plan-section-service.test.ts",
+    "test:plan-guest-persist": "tsx scripts/plan-guest-persist.test.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.1",

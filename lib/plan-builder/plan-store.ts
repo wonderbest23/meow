@@ -154,11 +154,42 @@ function persist(state: PlanState) {
   }
 }
 
-/** 현재 활성 플랜 (없으면 null) */
+/**
+ * 현재 활성 플랜 (없으면 null).
+ *
+ * 활성 id를 잃었을 때 예시 플랜으로 넘어가면 안 된다 — 남의 사업 내용이
+ * AI 추천과 본문 생성의 맥락으로 들어간다(꽃집 답변이 싱크대 사업에 나왔다).
+ * 내 플랜 중에서만 고르고, 하나도 없을 때만 예시를 본다.
+ */
 export function activePlan(state?: PlanState): Plan | null {
   const s = state ?? loadState();
-  if (!s.activePlanId) return s.plans[0] ?? null;
-  return s.plans.find((p) => p.id === s.activePlanId) ?? s.plans[0] ?? null;
+  const own = s.plans.filter((p) => !isSamplePlan(p.id));
+  const byId = s.activePlanId ? s.plans.find((p) => p.id === s.activePlanId) : undefined;
+  if (byId) return byId;
+  return own[0] ?? s.plans[0] ?? null;
+}
+
+/*
+ * 직전에 로그인 상태였는지 기억한다.
+ * 로컬 캐시를 지울지 판단하는 유일한 근거 — '로그인했다가 풀린 경우'와
+ * '처음부터 로그인하지 않은 경우'를 구분하지 못하면 남의 글을 지우게 된다.
+ */
+const AUTH_FLAG = "oneul-plan-authed";
+
+function readAuthFlag(): boolean {
+  try {
+    return localStorage.getItem(AUTH_FLAG) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function writeAuthFlag(value: boolean) {
+  try {
+    localStorage.setItem(AUTH_FLAG, value ? "1" : "0");
+  } catch {
+    /* 무해 */
+  }
 }
 
 /** 로그아웃 시 로컬 캐시 제거 — 다음 사용자에게 이전 계정의 플랜이 보이면 안 된다 */
@@ -568,13 +599,23 @@ export async function hydrateFromServer(): Promise<PlanState> {
     if (res.ok) {
       const payload = (await res.json()) as Record<string, unknown>;
       /*
-       * 로그아웃·세션 만료 상태면 이전 계정의 로컬 캐시를 즉시 비운다.
-       * 로그아웃 버튼을 거치지 않아도(만료·다른 탭 로그아웃) 개인 플랜이
-       * 화면에 남지 않게 — 모든 플랜 화면이 이 함수를 지나므로 여기 한 곳이면 된다.
+       * 로그아웃·세션 만료면 이전 계정의 로컬 캐시를 비운다.
+       *
+       * 단, '로그인한 적 있는 사람이 로그아웃된 경우'에만이다.
+       * 예전에는 authenticated=false이기만 하면 지웠는데, 로그인하지 않고
+       * 쓰던 사람의 작성 중인 답변까지 화면을 옮길 때마다 날아갔다.
+       * (그러고 나면 활성 플랜을 잃어 예시 플랜으로 넘어가는 2차 피해까지 났다.)
        */
+      const wasAuthenticated = readAuthFlag();
       if (payload.authenticated === false) {
-        clearLocalState();
-        return loadState();
+        if (wasAuthenticated) {
+          clearLocalState();
+          writeAuthFlag(false);
+          return loadState();
+        }
+        writeAuthFlag(false);
+      } else if (payload.authenticated === true) {
+        writeAuthFlag(true);
       }
       const server = migrate(payload);
       const local = loadState();

@@ -3,6 +3,7 @@ import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { completeText } from "../../../../lib/llm/complete";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,8 @@ const SYSTEM = [
   "주어진 '한 질문'에 대한 답안 후보만 제안합니다. 사용자가 고르거나 다듬을 초안이며 확정 사실이 아닙니다.",
   "근거 없는 매출·시장규모·성장률·경쟁사 실명·수상 이력·특허는 절대 넣지 마세요.",
   "각 후보는 한 문장 또는 짧은 구로, 서로 다른 각도에서 제안하세요.",
+  "제안은 반드시 주어진 '사업 맥락'의 업종·상품·고객에 맞춰야 합니다. 맥락에 없는 다른 업종(예: 꽃집, 카페)을 임의로 가정하지 마세요.",
+  "사업 맥락이 비어 있으면 특정 업종을 지어내지 말고, 어떤 사업에도 적용되는 일반적인 형태로 제안하세요.",
   "반드시 문자열 배열 형태의 JSON만 출력하세요. 예: [\"...\", \"...\", \"...\"]",
 ].join("\n");
 
@@ -43,6 +46,42 @@ function fallbackSuggest(question: string): string[] {
   ];
 }
 
+/** 저장된 플랜에서 사업 맥락을 만든다 — 화면이 보낸 맥락과 합친다 */
+async function serverContext(ownerHash: string, clientContext: string): Promise<string> {
+  const parts: string[] = [];
+  try {
+    const state = await loadPlanState(ownerHash);
+    const b = state.business;
+    const bizLines = [
+      b.name && `사업명: ${b.name}`,
+      b.description && `사업 설명: ${b.description}`,
+      b.industry && `업종: ${b.industry}`,
+      b.region && `지역: ${b.region}`,
+      b.stage && `진행 단계: ${b.stage}`,
+    ].filter(Boolean);
+    if (bizLines.length) parts.push(`[사업 정보]\n${bizLines.join("\n")}`);
+
+    const plan = state.plans.find((p) => p.id === state.activePlanId) ?? state.plans[0];
+    if (plan) {
+      const answered: string[] = [];
+      for (const [key, map] of Object.entries(plan.answers ?? {})) {
+        for (const [, value] of Object.entries(map ?? {})) {
+          if (value == null || value === "") continue;
+          answered.push(`- ${Array.isArray(value) ? value.join(", ") : String(value)}`);
+        }
+        if (answered.length > 40) break;
+        void key;
+      }
+      if (answered.length) parts.push(`[지금까지 답한 내용]\n${answered.slice(0, 40).join("\n")}`);
+    }
+  } catch {
+    // 저장분을 못 읽어도 화면이 보낸 맥락은 쓴다
+  }
+  // 화면이 보낸 맥락에는 방금 입력해 아직 저장되지 않은 답도 들어 있다
+  if (clientContext.trim()) parts.push(clientContext.slice(0, 1500));
+  return parts.join("\n\n");
+}
+
 export async function POST(req: Request) {
   // AI·렌더 비용이 드는 호출 — 화면 제어와 별개로 서버에서 빈도를 제한한다
   const limited = await enforceRateLimit("plan-suggest", req, { limit: 80, windowMs: 10 * 60_000, message: "AI 추천 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
@@ -63,10 +102,19 @@ export async function POST(req: Request) {
     return NextResponse.json({ suggestions: fallbackSuggest(question), source: "fallback" });
   }
 
+  /*
+   * 사업 맥락은 서버에서도 직접 읽는다.
+   *
+   * 화면이 보내주는 맥락에만 기대면, 로컬 상태가 비어 있는 순간(다른 기기·
+   * 새로고침·세션 문제) 맥락 없이 호출되어 엉뚱한 업종의 답이 나온다.
+   * 저장된 플랜이 진짜 근거다.
+   */
+  const context = await serverContext(identity.hash, body.context ?? "");
+
   const user = [
     `질문: ${question}`,
     body.help ? `설명: ${body.help}` : "",
-    body.context ? `사업 맥락(사용자가 지금까지 답한 내용):\n${body.context.slice(0, 1500)}` : "",
+    context ? `사업 맥락(사용자가 지금까지 답한 내용):\n${context.slice(0, 2000)}` : "",
     "",
     `위 질문에 대한 답안 후보 ${count}개를 JSON 문자열 배열로만 출력하세요.`,
   ]
