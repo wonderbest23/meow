@@ -5,6 +5,7 @@ import { SAMPLE as COFFEE } from "./coffee";
 import { SAMPLE as FLOWER_PSST } from "./flower-psst";
 import { SAMPLE as FLOWER_FM } from "./flower-fm";
 import { SAMPLE_ANSWERS as COFFEE_ANSWERS } from "../sample-answers";
+import { FLOWER_ANSWERS } from "../sample-answers-flower";
 
 export interface SampleDoc {
   id: string;
@@ -22,8 +23,10 @@ export interface SampleDoc {
 }
 
 const SAMPLE_ANSWER_SETS: Record<string, Record<string, Record<string, unknown>>> = {
-  // 새벽커피만 답변까지 준비돼 있다 — 나머지는 완성 문서만 보여준다
   sample_coffee: COFFEE_ANSWERS,
+  /* 꽃집 둘은 같은 사업을 다른 양식으로 쓴 것이라 답변을 공유한다 */
+  sample_flower_psst: FLOWER_ANSWERS,
+  sample_flower_fm: FLOWER_ANSWERS,
 };
 
 const SAMPLE_INDUSTRIES: Record<string, string> = {
