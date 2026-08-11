@@ -22,9 +22,35 @@ export type LLMCompleteParams = {
   timeoutMs?: number;
   // JSON 객체 응답을 유도한다(OpenAI는 json_object 포맷 강제).
   jsonObject?: boolean;
+  /*
+   * system 블록을 프롬프트 캐시에 올린다(Anthropic).
+   *
+   * 캐시는 '앞에서부터 똑같은 만큼'만 걸린다. 그래서 호출마다 바뀌지 않는
+   * 내용을 전부 system에 몰아넣고 이 값을 켜야 한다 — 한 글자라도 다르면
+   * 그 뒤는 전부 캐시가 아니다.
+   *
+   * 되풀이되는 호출에만 켠다. 한 번만 부르는 곳에 켜면 쓰기 요금(1.25배)만
+   * 내고 읽을 일이 없어 손해다.
+   */
+  cache?: boolean;
 };
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+
+/**
+ * 캐시가 실제로 걸렸는지 남긴다.
+ *
+ * 캐시는 조용히 실패한다 — 앞부분이 최소 길이(모델마다 512~1024토큰)에
+ * 못 미치면 오류 없이 그냥 캐시가 안 만들어진다. 숫자를 눈으로 봐야
+ * 효과가 있는지 알 수 있어서 호출마다 찍는다(wrangler tail로 확인).
+ */
+function logCacheUsage(kind: string, usage: unknown) {
+  const u = usage as { input_tokens?: number; cache_creation_input_tokens?: number; cache_read_input_tokens?: number } | null;
+  if (!u) return;
+  console.log(
+    `[llm] cache kind=${kind} read=${u.cache_read_input_tokens ?? 0} write=${u.cache_creation_input_tokens ?? 0} fresh=${u.input_tokens ?? 0}`,
+  );
+}
 
 async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
   let response: Response;
@@ -89,7 +115,10 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
       body: JSON.stringify({
         model: config.model,
         max_tokens: params.maxOutputTokens,
-        system,
+        // 캐시를 쓰려면 블록 배열이어야 한다 — 문자열에는 cache_control을 달 곳이 없다
+        system: params.cache
+          ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
+          : system,
         messages: [{ role: "user", content: params.user }],
       }),
       cache: "no-store",
@@ -105,7 +134,9 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
   }
   const payload = (await response.json().catch(() => null)) as {
     content?: Array<{ type?: string; text?: string }>;
+    usage?: unknown;
   } | null;
+  if (params.cache) logCacheUsage(params.kind ?? "etc", payload?.usage ?? null);
   if (!payload || !Array.isArray(payload.content)) return null;
   const text = payload.content
     .filter((block) => block?.type === "text" && typeof block.text === "string")
@@ -225,7 +256,9 @@ async function streamOnce(
             ? {
                 model: config.model,
                 max_tokens: params.maxOutputTokens,
-                system: params.system,
+                system: params.cache
+                  ? [{ type: "text", text: params.system, cache_control: { type: "ephemeral" } }]
+                  : params.system,
                 messages: [{ role: "user", content: params.user }],
                 stream: true,
               }
@@ -277,6 +310,10 @@ async function streamOnce(
             payload = JSON.parse(raw) as Record<string, unknown>;
           } catch {
             continue;
+          }
+          // 캐시 적중 수치는 첫 이벤트(message_start)에만 실려 온다
+          if (anthropic && params.cache && payload.type === "message_start") {
+            logCacheUsage(params.kind ?? "etc", (payload.message as { usage?: unknown } | undefined)?.usage ?? null);
           }
           const piece = anthropic
             ? payload.type === "content_block_delta"

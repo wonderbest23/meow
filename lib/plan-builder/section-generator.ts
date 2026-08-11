@@ -86,12 +86,30 @@ function formatBusiness(b?: BusinessInfo): string {
   return lines.join("\n");
 }
 
-/** 사용자 프롬프트 조립 (테스트에서 직접 확인할 수 있게 공개) */
-export function buildUserPrompt(input: SectionGenInput): string {
+/**
+ * 시스템 프롬프트 조립 — 한 플랜의 25개 섹션에서 '글자 하나까지 똑같은' 부분만 담는다.
+ *
+ * 프롬프트 캐시는 앞에서부터 똑같은 만큼만 걸린다. 그래서 작성 규칙·사업 정보·
+ * 문서 성격처럼 섹션이 바뀌어도 안 변하는 것을 전부 여기로 옮겼다.
+ * 섹션마다 달라지는 것(챕터·질문 답변·앞 섹션 요약)은 사용자 쪽에 남는다.
+ *
+ * 여기에 섹션별로 달라지는 값을 넣으면 캐시가 통째로 무너진다 — 조용히,
+ * 오류 없이. 이 함수에 무언가 추가할 때는 그게 25번 내내 같은지 먼저 확인할 것.
+ */
+export function sectionSystemPrompt(input: SectionGenInput): string {
   const biz = formatBusiness(input.business);
   return [
-    biz ? `[사업 정보]\n${biz}\n` : `사업명: ${input.planTitle ?? "(미정)"}`,
+    SYSTEM_PROMPT,
+    biz ? `\n[사업 정보]\n${biz}` : `\n사업명: ${input.planTitle ?? "(미정)"}`,
     planTypeGuidanceBlock(input.planType),
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/** 사용자 프롬프트 조립 (테스트에서 직접 확인할 수 있게 공개) */
+export function buildUserPrompt(input: SectionGenInput): string {
+  return [
     `챕터: ${input.chapter.title}`,
     `작성할 섹션: ${input.section.title}`,
     `섹션 목적: ${input.section.summary}`,
@@ -213,10 +231,12 @@ export async function generateSection(config: LLMConfig | null, input: SectionGe
   }
   const text = await completeText(config, {
     kind: "generate",
-    system: SYSTEM_PROMPT,
+    system: sectionSystemPrompt(input),
     user: buildUserPrompt(input),
     maxOutputTokens: 4000,
     effort: "medium",
+    // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
+    cache: true,
   });
   if (!text || text.trim().length < 40) {
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
@@ -237,7 +257,7 @@ export async function streamSection(
   if (!config) return { markdown: fallbackSection(input), source: "fallback" };
   const text = await streamText(
     config,
-    { kind: "generate", system: SYSTEM_PROMPT, user: buildUserPrompt(input), maxOutputTokens: 4000, effort: "medium" },
+    { kind: "generate", system: sectionSystemPrompt(input), user: buildUserPrompt(input), maxOutputTokens: 4000, effort: "medium", cache: true },
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
