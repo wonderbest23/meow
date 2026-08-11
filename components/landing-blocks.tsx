@@ -482,9 +482,9 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         buttonLabel: text("버튼 문구"),
       },
       defaultProps: {
-        eyebrow: "지금 시작하기",
-        title: "궁금한 내용을 편하게 알려주세요",
-        description: "남겨주신 내용을 확인한 뒤 필요한 다음 단계를 안내합니다.",
+        eyebrow: "문의하기",
+        title: "궁금한 점을 남겨주세요",
+        description: "문의를 남겨주시면 알려주신 연락처로 답변드립니다.",
         buttonLabel: "문의하기",
       },
       render: ({ eyebrow, title, description, buttonLabel }) => (

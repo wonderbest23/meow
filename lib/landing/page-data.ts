@@ -101,10 +101,23 @@ function shared(seed: LandingPageSeed) {
       price: seed.priceLabel,
       buttonLabel: seed.ctaLabel,
     },
+    /*
+     * 마지막 문의 칸.
+     *
+     * 예전에는 "남겨주신 내용을 확인한 뒤 필요한 다음 단계를 안내합니다" 같은
+     * 문장이 박혀 있었다. 어느 사업에 붙여도 말이 되는 문장은 방문자에게
+     * 아무것도 알려주지 않고, 이 페이지를 기계가 찍어냈다는 인상만 준다.
+     * 사업 이름과 실제 상품을 넣어 '누구에게 무엇을 묻는 칸'인지 밝힌다.
+     *
+     * 없는 사실을 지어내지는 않는다 — 여기 들어가는 건 이미 사용자가 답한
+     * 상호명과 상품뿐이다.
+     */
     cta: {
-      eyebrow: "지금 시작하기",
-      title: "궁금한 내용을 편하게 알려주세요",
-      description: "남겨주신 내용을 확인한 뒤 필요한 다음 단계를 안내합니다.",
+      eyebrow: "문의하기",
+      title: `${seed.businessName}에 문의해 보세요`,
+      description: seed.offerTitle
+        ? `${seed.offerTitle} 관련 문의를 남겨주시면 연락처로 답변드립니다.`
+        : "궁금한 점을 남겨주시면 연락처로 답변드립니다.",
       buttonLabel: seed.ctaLabel,
     },
   };

@@ -352,7 +352,7 @@ export function createLandingDraft(input: {
     heroLabel: "지금 첫 고객을 모집하고 있어요",
     headline: input.oneLiner || `${input.title}, 가장 작은 실행부터 시작하세요`,
     subheadline: `${input.customer || "고객"}에게 필요한 결과를 ${input.model || "맞춤 방식"}으로 검증합니다.`,
-    ctaLabel: "무료로 신청하기",
+    ctaLabel: "문의하기",
     accentColor: template.accentColor,
     backgroundTone: template.backgroundTone,
     benefits: [
