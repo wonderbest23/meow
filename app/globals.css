@@ -4650,19 +4650,19 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
  * 카드들을 같은 자리에 겹쳐 두고 지금 것만 보인다. 자리를 차지한 채 사라지므로
  * 글이 바뀔 때 아래 내용이 출렁이지 않는다.
  */
-.home-proof-bar { position: relative; width: min(1200px, calc(100% - 48px)); min-height: 178px; margin: 0 auto; padding: 30px 24px 44px; display: grid; grid-template-columns: minmax(0, 1fr); place-items: center; background: #f2f4f6; overflow: hidden; }
+.home-proof-bar { position: relative; width: min(1200px, calc(100% - 48px)); min-height: 178px; margin: 0 auto; padding: 30px 24px 26px; display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; row-gap: 16px; place-items: center; background: #f2f4f6; overflow: hidden; }
 .home-proof-bar > div:not(.home-proof-dots) { grid-area: 1 / 1; width: 100%; max-width: 720px; display: grid; justify-items: center; gap: 10px; text-align: center; opacity: 0; transform: translateY(14px) scale(0.985); filter: blur(6px); transition: opacity .62s ease, transform .62s cubic-bezier(.2,.7,.3,1), filter .62s ease; pointer-events: none; }
 .home-proof-bar > div.on:not(.home-proof-dots) { opacity: 1; transform: none; filter: none; }
 .home-proof-bar strong { color: #202632; font-size: 30px; font-weight: 800; letter-spacing: -0.03em; line-height: 1.25; text-wrap: balance; }
 .home-proof-bar span { color: #6b7684; font-size: 15px; line-height: 1.6; text-wrap: pretty; }
 
 /* 몇 번째인지 — 넷 중 어디쯤인지 보이면 기다릴 마음이 생긴다 */
-.home-proof-dots { position: absolute; left: 0; right: 0; bottom: 20px; display: flex; justify-content: center; gap: 7px; }
+.home-proof-dots { grid-row: 2; display: flex; justify-content: center; gap: 7px; }
 .home-proof-dots i { width: 6px; height: 6px; border-radius: 50%; background: #c9cfd6; transition: background .3s ease, width .3s ease; }
 .home-proof-dots i.on { width: 20px; border-radius: 999px; background: #1b64da; }
 
 @media (max-width: 640px) {
-  .home-proof-bar { width: 100%; min-height: 168px; padding: 26px 20px 40px; }
+  .home-proof-bar { width: 100%; min-height: 168px; padding: 24px 20px 22px; }
   .home-proof-bar strong { font-size: 22px; }
   .home-proof-bar span { font-size: 13.5px; }
 }
