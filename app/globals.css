@@ -8368,7 +8368,15 @@ body:has(.explore-page) .support-chat-toggle::after {
   font-size: 11px;
 }
 
-.landing-block-cta a,
+/*
+ * 옛 화면용 버튼 정규화.
+ *
+ * 여기에 .landing-block-cta a 가 섞여 있었다. !important로 배경을 옛 사이트
+ * 파랑(--action-blue)으로 덮어써서, 홈페이지가 자기 강조색(--landing-accent)을
+ * 쓰지 못했다 — 꽃집 페이지의 따뜻한 색을 골라도 버튼만 남의 파랑이 됐다.
+ * 모서리도 7px에서 14px로 바뀌어 같은 페이지의 다른 버튼과 어긋났다.
+ * 홈페이지 블록은 자체 디자인을 쓰므로 여기서 뺀다.
+ */
 .manual-project-start {
   border: 0 !important;
   border-radius: 14px !important;
