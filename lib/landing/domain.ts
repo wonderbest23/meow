@@ -349,24 +349,39 @@ export function createLandingDraft(input: {
     heroImageUrl: heroImageForSector(input.sector ?? "", template.heroImageUrl),
     heroImageAlt: `${input.title} 대표 이미지`,
     pageData: null,
-    heroLabel: "지금 첫 고객을 모집하고 있어요",
-    headline: input.oneLiner || `${input.title}, 가장 작은 실행부터 시작하세요`,
-    subheadline: `${input.customer || "고객"}에게 필요한 결과를 ${input.model || "맞춤 방식"}으로 검증합니다.`,
+    /*
+     * 여기부터는 답변이 비었을 때 쓰는 기본 문구다.
+     *
+     * 예전 값들은 "가장 작은 실행부터", "…으로 검증합니다", "작게 시작",
+     * "결과를 기록" 같은 창업 검증 어투였다. 이건 사장님이 자기 사업을
+     * 점검할 때 쓰는 말이지, 손님에게 보여줄 홈페이지의 말이 아니다.
+     * 싱크대 가게나 카페 페이지에 붙으면 그 자리에서 어색해진다.
+     *
+     * 손님 쪽에서 읽히는 말로 쓰되, 사용자가 답한 적 없는 사실(무료·최저가·
+     * 수상 등)은 절대 넣지 않는다. 지킬 수 있는 응대 약속만 적는다.
+     */
+    heroLabel: "지금 문의를 받고 있습니다",
+    headline: input.oneLiner || input.title,
+    subheadline: `${input.customer || "고객"}을 위한 ${input.model || "서비스"}입니다.`,
     ctaLabel: "문의하기",
     accentColor: template.accentColor,
     backgroundTone: template.backgroundTone,
     benefits: [
-      { title: "문제를 먼저 확인", description: "불필요한 기능보다 지금 해결해야 할 문제부터 확인합니다." },
-      { title: "작게 시작", description: "큰 비용을 쓰기 전에 가장 작은 실행으로 반응을 검증합니다." },
-      { title: "결과를 기록", description: "신청과 피드백을 다음 개선에 바로 반영합니다." },
+      { title: "직접 상담합니다", description: "남겨주신 문의는 담당자가 직접 확인하고 답변드립니다." },
+      { title: "필요한 만큼만", description: "무엇이 필요한지 먼저 확인하고, 그에 맞는 방법만 제안합니다." },
+      { title: "일정을 미리 알려드립니다", description: "언제 무엇이 진행되는지 시작 전에 안내해 드립니다." },
     ],
-    offerTitle: "첫 신청에서 확인하는 내용",
-    offerDescription: "현재 상황, 원하는 결과, 예상 일정과 비용을 확인한 뒤 다음 행동을 안내합니다.",
-    priceLabel: "첫 상담 무료",
+    offerTitle: "상담 안내",
+    offerDescription: "지금 상황과 원하시는 결과를 알려주시면, 가능한 방법과 일정·비용을 정리해 안내해 드립니다.",
+    /*
+     * 예전 기본값은 "첫 상담 무료"였다. 무료인지 아닌지는 사용자가 답한 적이
+     * 없는데 페이지가 먼저 약속하고 있었다 — 손님이 찾아와 따질 수 있는 말이다.
+     */
+    priceLabel: "문의 후 안내",
     proofItems: [],
     faq: [
-      { question: "신청 후에는 어떻게 되나요?", answer: "입력한 연락처로 확인 후 다음 절차를 안내합니다." },
-      { question: "바로 결제해야 하나요?", answer: "아니요. 필요한 범위와 조건을 먼저 확인합니다." },
+      { question: "문의하면 언제 답변받을 수 있나요?", answer: "남겨주신 연락처로 확인한 뒤 순서대로 안내해 드립니다." },
+      { question: "어떤 내용을 남기면 되나요?", answer: "필요하신 내용과 연락 가능한 시간을 함께 남겨주시면 더 빠르게 안내해 드립니다." },
     ],
     collectEmail: true,
     collectPhone: false,

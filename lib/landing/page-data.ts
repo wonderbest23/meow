@@ -68,8 +68,8 @@ function block<T extends Record<string, string | number | boolean | null>>(
 
 function benefits(seed: LandingPageSeed) {
   return [0, 1, 2].map((index) => seed.benefits[index] ?? {
-    title: `선택 이유 ${index + 1}`,
-    description: "고객이 얻는 결과를 쉬운 문장으로 알려주세요.",
+    title: "직접 상담합니다",
+    description: "남겨주신 문의는 담당자가 직접 확인하고 답변드립니다.",
   });
 }
 
@@ -86,7 +86,7 @@ function shared(seed: LandingPageSeed) {
     features: {
       eyebrow: "선택하는 이유",
       heading: `${seed.businessName}이 필요한 순간`,
-      intro: "고객이 바로 이해할 수 있는 핵심 장점을 세 가지로 정리했습니다.",
+      intro: "많은 분들이 이런 이유로 찾아주십니다.",
       title1: items[0].title,
       body1: items[0].description,
       title2: items[1].title,
@@ -127,8 +127,8 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
   const value = shared(seed);
   const proof = seed.proofItems;
   const trust = block("TrustBar", `trust-${templateId}`, {
-    label: "고객이 확인할 수 있는 내용",
-    item1: proof[0] ?? "제공 범위를 먼저 안내합니다",
+    label: "믿고 맡기셔도 됩니다",
+    item1: proof[0] ?? "진행 전에 범위와 비용을 먼저 안내",
     item2: proof[1] ?? "진행 단계를 쉽게 설명합니다",
     item3: proof[2] ?? "문의 후 조건을 확정합니다",
     item4: "모바일에서도 편하게 확인",
@@ -146,7 +146,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
     step3Body: "확정한 내용에 맞춰 진행하고 결과를 안내합니다.",
   });
   const stats = block("StatsSection", `stats-${templateId}`, {
-    heading: "복잡한 설명보다 분명한 진행",
+    heading: "진행은 이렇게 됩니다",
     value1: "01",
     label1: "필요 확인",
     value2: "02",
@@ -162,8 +162,8 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
     imageSide: templateId === "editorial" ? "left" : "right",
   });
   const gallery = block("GallerySection", `gallery-${templateId}`, {
-    eyebrow: "서비스 미리보기",
-    heading: "이런 경험을 제공합니다",
+    eyebrow: "둘러보기",
+    heading: "이런 모습입니다",
     image1: seed.heroImageUrl,
     caption1: seed.benefits[0]?.title ?? "첫 번째 경험",
     image2: "",
@@ -207,10 +207,10 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
   const faq = block("FaqSection", `faq-${templateId}`, {
     eyebrow: "자주 묻는 질문",
     heading: "궁금한 점을 먼저 풀어 드립니다",
-    q1: "신청 후에는 어떻게 되나요?",
-    a1: "입력한 연락처로 확인 후 다음 절차를 안내합니다.",
-    q2: "바로 결제해야 하나요?",
-    a2: "아니요. 필요한 범위와 조건을 먼저 확인합니다.",
+    q1: "문의하면 언제 답변받을 수 있나요?",
+    a1: "남겨주신 연락처로 확인한 뒤 순서대로 안내해 드립니다.",
+    q2: "어떤 내용을 남기면 되나요?",
+    a2: "필요하신 내용과 연락 가능한 시간을 함께 남겨주시면 더 빠르게 안내해 드립니다.",
     q3: "",
     a3: "",
   });
