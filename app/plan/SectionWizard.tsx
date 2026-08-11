@@ -624,12 +624,19 @@ export default function SectionWizard({
                             : <span className={styles.resolvedTag}>해결됐어요</span>)}
                         </div>
                         {q.help && <div className={styles.qh}>{q.help}</div>}
-                        {renderInput(q, answers[q.id], { setAnswer, toggleMulti, styles })}
+                        {renderInput(q, answers[q.id], { setAnswer, toggleMulti, styles, suggested: suggestions[q.id] ?? [] })}
                         {q.aiSuggest && (
                           <AISuggest
                             q={q}
                             loading={!!loadingSug[q.id]}
                             list={suggestions[q.id]}
+                            picked={
+                              Array.isArray(answers[q.id])
+                                ? (answers[q.id] as string[])
+                                : typeof answers[q.id] === "string" && answers[q.id]
+                                  ? [answers[q.id] as string]
+                                  : []
+                            }
                             onLoad={() => loadSuggest(q)}
                             onPick={(text) => {
                               if (q.input.kind === "text") setAnswer(q.id, text);
@@ -727,10 +734,19 @@ export default function SectionWizard({
   );
 }
 
+/*
+ * AI 추천.
+ *
+ * 예전에는 고르면 위쪽에 칩으로 쌓았다. 추천 문장이 길다 보니 칩이
+ * 서너 줄을 먹고 화면이 흐트러졌고, 같은 문장이 카드와 칩 두 곳에
+ * 나와 무엇이 골라진 상태인지 오히려 헷갈렸다.
+ * 이제는 고른 카드 자체가 파랗게 켜진다 — 다시 누르면 꺼진다.
+ */
 function AISuggest({
   q,
   loading,
   list,
+  picked,
   onLoad,
   onPick,
   styles,
@@ -738,6 +754,8 @@ function AISuggest({
   q: QuestionDef;
   loading: boolean;
   list?: string[];
+  /** 지금 골라져 있는 값들 — 카드를 켜진 상태로 보여주기 위해 */
+  picked: string[];
   onLoad: () => void;
   onPick: (text: string) => void;
   styles: Record<string, string>;
@@ -751,11 +769,20 @@ function AISuggest({
       )}
       {list && list.length > 0 && (
         <div className={styles.sugList}>
-          {list.map((s, i) => (
-            <button key={i} className={styles.sugCard} onClick={() => onPick(s)}>
-              {s}
-            </button>
-          ))}
+          {list.map((s, i) => {
+            const on = picked.includes(s);
+            return (
+              <button
+                key={i}
+                type="button"
+                className={`${styles.sugCard} ${on ? styles.sugCardOn : ""}`}
+                aria-pressed={on}
+                onClick={() => onPick(s)}
+              >
+                {s}
+              </button>
+            );
+          })}
           <button className={styles.suggestBtn} disabled={loading} onClick={onLoad}>
             {loading ? <Spinner /> : <Sparkles size={12} />} {loading ? "다시 불러오는 중…" : "다른 추천 받기"}
           </button>
@@ -776,12 +803,15 @@ function FreeChoice({
   placeholder,
   onChange,
   styles,
+  suggested = [],
 }: {
   value: unknown;
   multi: boolean;
   placeholder: string;
   onChange: (v: unknown) => void;
   styles: Record<string, string>;
+  /** 지금 화면에 떠 있는 AI 추천 — 이 문장들은 카드가 켜져서 보이므로 칩으로 또 쌓지 않는다 */
+  suggested?: string[];
 }) {
   const [draft, setDraft] = useState("");
   const picked = multi
@@ -807,11 +837,18 @@ function FreeChoice({
     else onChange("");
   }
 
+  /*
+   * 추천 카드에 이미 켜져 있는 문장은 칩으로 또 보여주지 않는다.
+   * 같은 문장이 두 곳에 나오면 무엇이 골라졌는지 오히려 헷갈리고,
+   * 추천 문장은 길어서 칩이 서너 줄을 먹는다.
+   */
+  const chips = picked.filter((v) => !suggested.includes(v));
+
   return (
     <div className={styles.free}>
-      {picked.length > 0 && (
+      {chips.length > 0 && (
         <div className={styles.freeChips}>
-          {picked.map((v) => (
+          {chips.map((v) => (
             <span key={v} className={styles.freeChip}>
               {v}
               <button type="button" onClick={() => remove(v)} aria-label={`${v} 빼기`}>
@@ -858,6 +895,8 @@ function renderInput(
     setAnswer: (qid: string, v: unknown) => void;
     toggleMulti: (qid: string, opt: string) => void;
     styles: Record<string, string>;
+    /** 지금 떠 있는 AI 추천 — 자유 입력이 중복 칩을 만들지 않도록 */
+    suggested?: string[];
   }
 ) {
   const { setAnswer, toggleMulti, styles } = ctx;
@@ -879,7 +918,7 @@ function renderInput(
     case "single": {
       const opts = q.input.options;
       if (opts.length === 0) {
-        return <FreeChoice value={value} multi={false} placeholder="직접 입력하고 Enter" onChange={(v) => setAnswer(q.id, v)} styles={styles} />;
+        return <FreeChoice value={value} multi={false} placeholder="직접 입력하고 Enter" onChange={(v) => setAnswer(q.id, v)} styles={styles} suggested={ctx.suggested} />;
       }
       return (
         <div className={styles.radio}>
@@ -893,7 +932,7 @@ function renderInput(
       const opts = q.input.options;
       const arr = Array.isArray(value) ? (value as string[]) : [];
       if (opts.length === 0) {
-        return <FreeChoice value={value} multi placeholder="직접 입력하고 Enter" onChange={(v) => setAnswer(q.id, v)} styles={styles} />;
+        return <FreeChoice value={value} multi placeholder="직접 입력하고 Enter" onChange={(v) => setAnswer(q.id, v)} styles={styles} suggested={ctx.suggested} />;
       }
       return (
         <div className={styles.chk}>
