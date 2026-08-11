@@ -53,6 +53,12 @@ export default function PlanRailNav() {
    * 단, 지금 보고 있는 대목이 속한 챕터는 열어 둔다.
    */
   const [openChapters, setOpenChapters] = useState<Record<string, boolean>>({});
+  /*
+   * 샘플은 '사기 전에 완성본을 보여주는' 판매용이다. 결제 이력이 생기면
+   * 목록 화면이 샘플 줄을 접는데(PlanList의 hasAnyPaid), 레일만 계속 보여주면
+   * 같은 사람에게 화면마다 다른 말을 하는 셈이 된다. 같은 규칙을 따른다.
+   */
+  const [hasAnyPaid, setHasAnyPaid] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -60,6 +66,12 @@ export default function PlanRailNav() {
     void hydrateFromServer().then(() => {
       if (alive) setReady(true);
     });
+    fetch("/api/plan/access")
+      .then((r) => r.json())
+      .then((d) => {
+        if (alive) setHasAnyPaid(!!d.hasAnyPaid);
+      })
+      .catch(() => {});
     // 본문이 만들어지면 완료 개수가 바뀐다
     const off = subscribeGeneration(() => setTick((n) => n + 1));
     return () => {
@@ -73,9 +85,9 @@ export default function PlanRailNav() {
   /* 내가 만든 것 먼저, 예시는 뒤에 — 목록 화면과 같은 순서 */
   const plans = useMemo(() => {
     const own = state.plans.filter((p) => !isSamplePlan(p.id));
-    const samples = state.plans.filter((p) => isSamplePlan(p.id));
-    return [...own, ...samples];
-  }, [state]);
+    if (hasAnyPaid) return own;
+    return [...own, ...state.plans.filter((p) => isSamplePlan(p.id))];
+  }, [state, hasAnyPaid]);
 
   const activeKey = currentSectionKey(pathname);
   const onDocument = pathname.startsWith("/plan/document");
