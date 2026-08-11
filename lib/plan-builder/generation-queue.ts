@@ -15,6 +15,8 @@ import { activePlan, loadState, priorSectionsSummary, pushToServer, saveSection 
 
 export interface GenerationJob {
   key: string;
+  /** 이 본문이 들어갈 플랜 — 끝날 때 활성 플랜이 바뀌어 있을 수 있다 */
+  planId?: string;
   chapterId: string;
   sectionId: string;
   title: string;
@@ -65,8 +67,15 @@ export function failedCount(): number {
 
 async function runOne(job: GenerationJob): Promise<void> {
   const state = loadState();
-  const plan = activePlan(state);
-  if (!plan) throw new Error("NO_ACTIVE_PLAN");
+  /*
+   * 생성은 몇십 초가 걸린다. 그동안 사용자가 다른 플랜을 열면 활성 플랜이
+   * 바뀐다 — 그때 활성 플랜에 저장하면 다른 사업의 문서에 이 본문이 들어간다.
+   * 시작할 때의 플랜을 끝까지 들고 간다.
+   */
+  const plan = job.planId
+    ? state.plans.find((p) => p.id === job.planId) ?? null
+    : activePlan(state);
+  if (!plan) throw new Error("PLAN_NOT_FOUND");
 
   const res = await fetch("/api/plan/generate", {
     method: "POST",
@@ -86,7 +95,7 @@ async function runOne(job: GenerationJob): Promise<void> {
   if (!res.ok) throw new Error(`GENERATE_FAILED_${res.status}`);
   const data = (await res.json()) as { markdown?: string; html?: string };
   if (!data.markdown || !data.html) throw new Error("GENERATE_EMPTY");
-  saveSection(job.key, data.markdown, data.html, { keepPrevious: true });
+  saveSection(job.key, data.markdown, data.html, { keepPrevious: true, planId: plan.id });
 }
 
 async function drain(): Promise<void> {
@@ -142,7 +151,9 @@ export async function refreshServerPending(planId: string): Promise<void> {
  * 먼저 서버에 맡겨 본다 — 성공하면 창을 닫아도 계속 만들어진다.
  * 서버가 받지 못하면(로컬 개발·미로그인) 브라우저 큐로 대신 돌린다.
  */
-export function enqueueGeneration(job: GenerationJob): void {
+export function enqueueGeneration(input: GenerationJob): void {
+  // 지금 열려 있는 플랜을 새겨 둔다 — 끝날 때 활성 플랜이 바뀌어 있어도 여기로 간다
+  const job: GenerationJob = { ...input, planId: input.planId ?? activePlan(loadState())?.id };
   failed.delete(job.key);
   void (async () => {
     if (await tryServerQueue(job)) return;

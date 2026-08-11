@@ -336,16 +336,32 @@ export function loadAnswers(key: string, state?: PlanState): Record<string, unkn
   return p?.answers?.[key] ?? {};
 }
 
-/** 활성 플랜에 섹션 답변 저장 (생성 전에도 보존) */
-export function saveAnswers(key: string, answers: Record<string, unknown>) {
+/*
+ * 저장 대상 플랜을 정한다.
+ *
+ * planId를 준 호출은 '그 플랜'에만 쓴다. 비동기로 끝나는 일(본문 생성)은
+ * 시작할 때와 끝날 때의 활성 플랜이 다를 수 있고, 그때 활성 플랜에 쓰면
+ * 다른 사업의 문서에 남의 본문이 들어간다. 못 찾으면 쓰지 않는다.
+ */
+function targetPlan(state: PlanState, planId?: string): Plan | null {
+  if (planId) return state.plans.find((p) => p.id === planId) ?? null;
+  return activePlan(state);
+}
+
+/**
+ * 섹션 답변 저장 (생성 전에도 보존).
+ * 저장하지 못하면 false — 호출부가 '저장됨'이라고 잘못 알리지 않도록.
+ */
+export function saveAnswers(key: string, answers: Record<string, unknown>, planId?: string): boolean {
   const s = loadState();
-  const p = activePlan(s);
-  if (!p || readOnlyPlan(p.id)) return;
+  const p = targetPlan(s, planId);
+  if (!p || readOnlyPlan(p.id)) return false;
   if (!p.answers) p.answers = {};
   p.answers[key] = answers;
   p.updatedAt = new Date().toISOString();
   persist(s);
   void pushToServer();
+  return true;
 }
 
 /** 답변이 하나라도 있는 섹션 키 목록 (작성 중 표시용) */
@@ -372,10 +388,12 @@ export function saveSection(
     edited?: boolean;
     /** 덮어쓰기 전 본문을 되돌리기용으로 남길지 */
     keepPrevious?: boolean;
+    /** 이 플랜에만 저장한다 — 생성이 끝날 때 활성 플랜이 바뀌어 있을 수 있다 */
+    planId?: string;
   },
 ): boolean {
   const s = loadState();
-  const p = activePlan(s);
+  const p = targetPlan(s, options?.planId);
   // 예시 플랜은 저장 대상이 아니다 — 조용히 사라지는 대신 실패를 알린다
   if (!p || readOnlyPlan(p.id)) return false;
   const before = p.sections[key];
