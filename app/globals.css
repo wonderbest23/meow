@@ -7076,6 +7076,33 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
  * 어두운 배치에서는 글자 색을 직접 못박는다.
  */
 .landing-block-hero.layout-immersive p { color: #e5e8eb; }
+
+/*
+ * 사진 없는 첫 화면.
+ *
+ * 사진을 배경으로 까는 배치인데, 사진이 없으면 어둡게 덮는 막(:after)만 남아
+ * 790px짜리 회색 상자가 되고 글이 그 바닥에 붙는다. 가게 이름이 회색 벽
+ * 아래쪽에 처박힌 꼴이라, 차라리 사진이 있는 편이 나아 보였다.
+ *
+ * 사진이 없을 때는 강조색을 깔고 글을 가운데로 모은다. 높이도 글에 맞춰 줄인다 —
+ * 채울 것이 없는데 화면 하나를 다 쓸 이유가 없다.
+ */
+.landing-block-hero.layout-immersive.no-image {
+  min-height: 0;
+  padding-top: 108px;
+  padding-bottom: 108px;
+  align-items: center;
+  justify-items: center;
+  text-align: center;
+  background: linear-gradient(160deg, var(--landing-accent, #1b64da) 0%, #101318 120%);
+}
+
+.landing-block-hero.layout-immersive.no-image:after { display: none; }
+
+@media (max-width: 640px) {
+  .landing-block-hero.layout-immersive.no-image { padding-top: 72px; padding-bottom: 72px; }
+}
+
 .landing-block-hero.layout-immersive h1,
 .landing-block-hero.layout-immersive .landing-block-hero-copy > span,
 .landing-block-hero.layout-tech h1 { color: #fff; }

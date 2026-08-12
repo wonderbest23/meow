@@ -211,7 +211,8 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, title, description, buttonLabel, imageUrl, layout, ...style }) => (
-        <section className={`landing-block landing-block-hero layout-${layout} ${styleClass(style)}`}>
+        // 사진이 없으면 no-image 를 남긴다 — 사진 깔던 자리가 빈 회색 상자로 남으면 안 된다
+        <section className={`landing-block landing-block-hero layout-${layout} ${imageUrl ? "" : "no-image"} ${styleClass(style)}`}>
           <div className="landing-block-hero-copy">
             <span>{eyebrow}</span>
             <h1>{title}</h1>

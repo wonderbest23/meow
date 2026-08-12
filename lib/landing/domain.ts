@@ -177,7 +177,17 @@ const SECTOR_HERO_IMAGES: Array<{ test: RegExp; url: string }> = [
   { test: /(카페|커피|음식점|식당|베이커리|외식|주점|디저트)/, url: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1800&q=82" },
   { test: /(미용|뷰티|헤어|네일|피부|왁싱|살롱)/, url: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1800&q=82" },
   { test: /(교육|수업|클래스|체험|학원|코칭|과외)/, url: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1800&q=82" },
-  { test: /(꽃|플라워|공방|소품|잡화|편집숍|소매|매장)/, url: "https://images.unsplash.com/photo-1556228453-efd6c1ff04f6?auto=format&fit=crop&w=1800&q=82" },
+  /*
+   * 꽃집·공방·소매에는 사진을 깔지 않는다.
+   *
+   * 여기 걸려 있던 사진은 소파와 안락의자가 놓인 라운지였다. 꽃은 탁자 위
+   * 화병 하나뿐이라, 무인꽃집 예시 첫 화면에 남의 거실이 깔린 꼴이었다.
+   *
+   * 이 줄이 맡는 업종이 꽃집부터 잡화점·편집숍까지 너무 넓어서 한 장으로
+   * 감당할 수 없다. 어설픈 사진을 까느니 색만 두고, 사진은 가게 주인이
+   * 자기 매장 사진으로 채우게 한다(홈페이지 편집기에 올리는 자리가 있다).
+   */
+  { test: /(꽃|플라워|공방|소품|잡화|편집숍|소매|매장)/, url: "" },
 ];
 
 export function heroImageForSector(sector: string, fallback: string): string {
