@@ -391,12 +391,17 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         caption3: "세 번째 경험",
         ...styleDefaults,
       },
-      render: ({ eyebrow, heading, image1, caption1, image2, caption2, image3, caption3, ...style }) => (
-        <section className={`landing-block landing-block-gallery ${styleClass(style)}`}>
-          <header><span>{eyebrow}</span><h2>{heading}</h2></header>
-          <div>{[[image1, caption1], [image2, caption2], [image3, caption3]].filter(([image]) => image).map(([image, caption], index) => <figure key={`${caption}-${index}`}><img src={image} alt="" /><figcaption>{caption}</figcaption></figure>)}</div>
-        </section>
-      ),
+      render: ({ eyebrow, heading, image1, caption1, image2, caption2, image3, caption3, ...style }) => {
+        const shots = [[image1, caption1], [image2, caption2], [image3, caption3]].filter(([image]) => image);
+        // 사진이 없으면 "이런 모습입니다"라는 제목만 남는다 — 그 칸은 아예 그리지 않는다
+        if (!shots.length) return null;
+        return (
+          <section className={`landing-block landing-block-gallery ${styleClass(style)}`}>
+            <header><span>{eyebrow}</span><h2>{heading}</h2></header>
+            <div>{shots.map(([image, caption], index) => <figure key={`${caption}-${index}`}><img src={image} alt="" /><figcaption>{caption}</figcaption></figure>)}</div>
+          </section>
+        );
+      },
     },
     OfferSection: {
       label: "상품·가격",

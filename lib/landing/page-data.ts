@@ -202,7 +202,15 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
   const gallery = block("GallerySection", `gallery-${templateId}`, {
     eyebrow: "둘러보기",
     heading: "이런 모습입니다",
-    image1: seed.heroImageUrl,
+    /*
+     * 첫 화면 사진을 여기 다시 쓰지 않는다.
+     *
+     * 예전에는 그렇게 채웠는데, 사진이 그것 하나뿐이라 "사진 3장" 칸에 첫 화면과
+     * 똑같은 사진이 한 장만 덩그러니 놓였다. 같은 사진을 두 번 본 손님에게는
+     * 보여줄 게 없는 가게로 읽힌다. 사진은 사업주가 넣는다 — 그때까지 이 칸은
+     * 통째로 나오지 않는다.
+     */
+    image1: "",
     caption1: seed.benefits[0]?.title ?? "첫 번째 경험",
     image2: "",
     caption2: seed.benefits[1]?.title ?? "두 번째 경험",
