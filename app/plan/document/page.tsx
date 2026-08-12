@@ -242,10 +242,10 @@ export default function PlanDocumentPage() {
    *
    * 발표자료(PPTX)도 같은 자리에 둔다. 다만 슬라이드 구성은 AI 가 만들기 때문에
    * 운영에서 한 번 뽑아 와야 굽을 수 있다(scripts/bake-sample-decks.mts).
-   * 아직 못 구운 예시가 있어서, 파일이 있는 것만 열어 준다.
+   * 못 구운 예시가 생기면 그 단추만 잠기도록 목록으로 둔다.
    */
   const samplePlanId = isSample ? activePlan(loadState())?.id ?? null : null;
-  const BAKED_DECKS = new Set(["sample_flower_fm", "sample_flower_psst"]);
+  const BAKED_DECKS = new Set(["sample_flower_fm", "sample_flower_psst", "sample_coffee"]);
   function sampleFile(ext: "pdf" | "docx" | "pptx"): string | null {
     if (!samplePlanId) return null;
     if (ext === "pptx" && !BAKED_DECKS.has(samplePlanId)) return null;
