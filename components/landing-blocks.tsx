@@ -63,7 +63,8 @@ type GalleryProps = {
   caption3: string;
 };
 type OfferProps = { eyebrow: string; title: string; description: string; price: string; buttonLabel: string };
-type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string };
+type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string };
+type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string } & BlockStyle;
 
 export type LandingBlockProps = {
   HeroSection: HeroProps;
@@ -119,6 +120,42 @@ const imageField = (label: string) => ({
     />
   ),
 });
+
+/*
+ * 블록마다 고르는 겉모습.
+ *
+ * 블록별로 고유한 값을 만들면 조합이 폭발해 사람도 AI도 고르지 못한다.
+ * 모든 블록이 같은 네 가지만 나눠 쓴다 — 이 넷만 달라도 같은 블록이 전혀
+ * 다른 자리처럼 읽힌다.
+ *
+ * 값은 감싸는 section의 클래스로만 나간다. 블록마다 CSS를 새로 짜지 않고
+ * globals.css의 tone-* / density-* / align-* 규칙 한 벌을 함께 쓴다.
+ */
+const styleFields = {
+  tone: { type: "select" as const, label: "배경", options: [
+    { label: "기본", value: "plain" }, { label: "연한 색", value: "soft" },
+    { label: "강조색", value: "accent" }, { label: "어둡게", value: "dark" },
+  ] },
+  density: { type: "select" as const, label: "여백", options: [
+    { label: "좁게", value: "tight" }, { label: "보통", value: "normal" }, { label: "넉넉히", value: "roomy" },
+  ] },
+  align: { type: "select" as const, label: "정렬", options: [
+    { label: "왼쪽", value: "left" }, { label: "가운데", value: "center" },
+  ] },
+  divider: { type: "select" as const, label: "위쪽 구분선", options: [
+    { label: "없음", value: "none" }, { label: "선", value: "line" },
+  ] },
+};
+
+const styleDefaults = { tone: "plain", density: "normal", align: "center", divider: "none" };
+
+/*
+ * 이미 저장된 페이지에는 이 값들이 없다 — 없으면 기본값으로 읽는다.
+ * 안 그러면 class="tone-undefined"가 되어 아무 규칙에도 안 걸린다.
+ */
+function styleClass(p: { tone?: string; density?: string; align?: string; divider?: string }) {
+  return `tone-${p.tone ?? "plain"} density-${p.density ?? "normal"} align-${p.align ?? "center"} divider-${p.divider ?? "none"}`;
+}
 
 const text = (label: string) => ({ type: "text" as const, label });
 const area = (label: string) => ({ type: "textarea" as const, label });
@@ -481,15 +518,17 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         title: area("큰 제목"),
         description: area("설명"),
         buttonLabel: text("버튼 문구"),
+        ...styleFields,
       },
       defaultProps: {
         eyebrow: "문의하기",
         title: "궁금한 점을 남겨주세요",
         description: "문의를 남겨주시면 알려주신 연락처로 답변드립니다.",
         buttonLabel: "문의하기",
+        ...styleDefaults,
       },
-      render: ({ eyebrow, title, description, buttonLabel }) => (
-        <section className="landing-block landing-block-cta"><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></section>
+      render: ({ eyebrow, title, description, buttonLabel, ...style }) => (
+        <section className={`landing-block landing-block-cta ${styleClass(style)}`}><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></section>
       ),
     },
   },

@@ -6997,6 +6997,33 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .landing-block > header > span, .landing-block > div > span, .landing-block-hero-copy > span, .landing-block-cta > span { color: var(--landing-accent); font-size: 12px; font-weight: 900; }
 .landing-block h2 { margin-bottom: 18px; font-size: 44px; line-height: 1.15; }
 .landing-block p { color: #4e5968; line-height: 1.75; }
+/*
+ * 블록 겉모습 한 벌 — 모든 블록이 나눠 쓴다.
+ *
+ * 블록마다 CSS를 새로 짜면 12벌이 되고, 하나 고칠 때마다 12곳을 봐야 한다.
+ * 감싸는 section에 클래스만 붙이고 규칙은 여기 한 곳에만 둔다.
+ */
+.landing-block.tone-soft { background: color-mix(in srgb, var(--landing-accent, #2563eb) 7%, #fff); }
+.landing-block.tone-accent { background: var(--landing-accent, #2563eb); color: #fff; }
+.landing-block.tone-accent :where(h1, h2, h3, strong, span, p) { color: inherit; }
+.landing-block.tone-dark { background: #191f28; color: #fff; }
+.landing-block.tone-dark :where(h1, h2, h3, strong, span, p) { color: inherit; }
+
+.landing-block.density-tight { padding-top: 40px; padding-bottom: 40px; }
+.landing-block.density-normal { padding-top: 72px; padding-bottom: 72px; }
+.landing-block.density-roomy { padding-top: 112px; padding-bottom: 112px; }
+
+.landing-block.align-left { text-align: left; align-items: flex-start; }
+.landing-block.align-center { text-align: center; align-items: center; }
+
+.landing-block.divider-line { border-top: 1px solid color-mix(in srgb, currentColor 14%, transparent); }
+
+@media (max-width: 640px) {
+  .landing-block.density-tight { padding-top: 30px; padding-bottom: 30px; }
+  .landing-block.density-normal { padding-top: 48px; padding-bottom: 48px; }
+  .landing-block.density-roomy { padding-top: 68px; padding-bottom: 68px; }
+}
+
 .landing-block a { min-height: 52px; padding: 0 20px; border-radius: 7px; background: var(--landing-accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 900; }
 .landing-block a svg { width: 17px; }
 
