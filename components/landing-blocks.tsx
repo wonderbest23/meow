@@ -158,6 +158,23 @@ function styleClass(p: { tone?: string; density?: string; align?: string; divide
 }
 
 const text = (label: string) => ({ type: "text" as const, label });
+
+/*
+ * 화면에서 바로 고치는 칸.
+ *
+ * contentEditable 을 켜면 Puck 이 미리보기의 그 글자를 편집 가능한 span 으로
+ * 감싼다. 오른쪽 칸을 찾아 들어가지 않고 제목을 눌러 그 자리에서 고친다.
+ *
+ * 저장 형태는 그대로다(plaintext-only) — 옛 페이지가 깨지지 않는다.
+ *
+ * 다만 편집기에서는 값이 글자가 아니라 요소로 넘어온다. 그래서 값을 글자처럼
+ * 쓰는 칸에는 아직 켜지 않았다 — 빈 칸을 걸러내거나(신뢰 띠·자주 묻는 질문·
+ * 찾아오는 길) key 를 만드는 데 쓰는 값들이다. 거기 켜면 빈 줄이 되살아나거나
+ * key 가 [object Object] 가 된다. 그 칸들은 걸러내기·key 를 값과 떼어낸 뒤에
+ * 켠다.
+ */
+const liveText = (label: string) => ({ type: "text" as const, label, contentEditable: true });
+const liveArea = (label: string) => ({ type: "textarea" as const, label, contentEditable: true });
 const area = (label: string) => ({ type: "textarea" as const, label });
 
 export const landingBlockConfig: Config<LandingBlockProps> = {
@@ -194,10 +211,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
             { label: "잡지처럼 크게", value: "editorial" },
           ],
         },
-        eyebrow: text("작은 안내 문구"),
-        title: area("가장 큰 제목"),
-        description: area("제목 아래 설명"),
-        buttonLabel: text("버튼 문구"),
+        eyebrow: liveText("작은 안내 문구"),
+        title: liveArea("가장 큰 제목"),
+        description: liveArea("제목 아래 설명"),
+        buttonLabel: liveText("버튼 문구"),
         imageUrl: imageField("대표 이미지"),
         ...styleFields,
       },
@@ -226,7 +243,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     TrustBar: {
       label: "신뢰 문구 띠",
       fields: {
-        label: text("왼쪽 제목"),
+        label: liveText("왼쪽 제목"),
         item1: text("문구 1"),
         item2: text("문구 2"),
         item3: text("문구 3"),
@@ -252,9 +269,9 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     FeatureGrid: {
       label: "장점 3개",
       fields: {
-        eyebrow: text("작은 제목"),
-        heading: text("섹션 제목"),
-        intro: area("짧은 설명"),
+        eyebrow: liveText("작은 제목"),
+        heading: liveText("섹션 제목"),
+        intro: liveArea("짧은 설명"),
         title1: text("첫 번째 장점"),
         body1: area("첫 번째 설명"),
         title2: text("두 번째 장점"),
@@ -285,8 +302,8 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     ProcessSteps: {
       label: "이용 과정",
       fields: {
-        eyebrow: text("작은 제목"),
-        heading: text("섹션 제목"),
+        eyebrow: liveText("작은 제목"),
+        heading: liveText("섹션 제목"),
         step1Title: text("1단계 제목"),
         step1Body: area("1단계 설명"),
         step2Title: text("2단계 제목"),
@@ -316,9 +333,9 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     StorySection: {
       label: "브랜드 이야기",
       fields: {
-        eyebrow: text("작은 제목"),
-        title: area("섹션 제목"),
-        body: area("브랜드 설명"),
+        eyebrow: liveText("작은 제목"),
+        title: liveArea("섹션 제목"),
+        body: liveArea("브랜드 설명"),
         imageUrl: imageField("브랜드 이미지"),
         imageSide: {
           type: "radio",
@@ -345,7 +362,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     StatsSection: {
       label: "숫자·단계 강조",
       fields: {
-        heading: text("섹션 제목"),
+        heading: liveText("섹션 제목"),
         value1: text("숫자 1"),
         label1: text("설명 1"),
         value2: text("숫자 2"),
@@ -371,8 +388,8 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     GallerySection: {
       label: "사진 3장",
       fields: {
-        eyebrow: text("작은 제목"),
-        heading: text("섹션 제목"),
+        eyebrow: liveText("작은 제목"),
+        heading: liveText("섹션 제목"),
         image1: imageField("사진 1"),
         caption1: text("사진 1 설명"),
         image2: imageField("사진 2"),
@@ -410,11 +427,11 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     OfferSection: {
       label: "상품·가격",
       fields: {
-        eyebrow: text("작은 제목"),
-        title: text("상품 이름"),
-        description: area("상품 설명"),
-        price: text("가격"),
-        buttonLabel: text("버튼 문구"),
+        eyebrow: liveText("작은 제목"),
+        title: liveText("상품 이름"),
+        description: liveArea("상품 설명"),
+        price: liveText("가격"),
+        buttonLabel: liveText("버튼 문구"),
         ...styleFields,
       },
       defaultProps: {
@@ -433,12 +450,12 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     PriceList: {
       label: "메뉴·가격",
       fields: {
-        eyebrow: text("작은 안내 문구"),
-        heading: text("제목"),
+        eyebrow: liveText("작은 안내 문구"),
+        heading: liveText("제목"),
         name1: text("항목 1 이름"), desc1: text("항목 1 설명"), price1: text("항목 1 가격"),
         name2: text("항목 2 이름"), desc2: text("항목 2 설명"), price2: text("항목 2 가격"),
         name3: text("항목 3 이름"), desc3: text("항목 3 설명"), price3: text("항목 3 가격"),
-        note: text("아래 안내"),
+        note: liveText("아래 안내"),
         ...styleFields,
       },
       defaultProps: {
@@ -475,8 +492,8 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     LocationSection: {
       label: "위치·영업시간",
       fields: {
-        eyebrow: text("작은 안내 문구"),
-        heading: text("제목"),
+        eyebrow: liveText("작은 안내 문구"),
+        heading: liveText("제목"),
         address: text("주소"),
         hours: text("영업시간"),
         closed: text("휴무"),
@@ -513,8 +530,8 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     FaqSection: {
       label: "자주 묻는 질문",
       fields: {
-        eyebrow: text("작은 안내 문구"),
-        heading: text("제목"),
+        eyebrow: liveText("작은 안내 문구"),
+        heading: liveText("제목"),
         q1: text("질문 1"), a1: area("답변 1"),
         q2: text("질문 2"), a2: area("답변 2"),
         q3: text("질문 3"), a3: area("답변 3"),
@@ -546,10 +563,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     CtaSection: {
       label: "마지막 신청 안내",
       fields: {
-        eyebrow: text("작은 제목"),
-        title: area("큰 제목"),
-        description: area("설명"),
-        buttonLabel: text("버튼 문구"),
+        eyebrow: liveText("작은 제목"),
+        title: liveArea("큰 제목"),
+        description: liveArea("설명"),
+        buttonLabel: liveText("버튼 문구"),
         ...styleFields,
       },
       defaultProps: {
