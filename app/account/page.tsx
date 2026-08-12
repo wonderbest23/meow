@@ -256,18 +256,41 @@ export default function AccountPage() {
               </p>
             </header>
             {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
-            {mode !== "recover" && <label><span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span><div><KeyRound /><input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} placeholder="8자 이상" /></div></label>}
+            {/*
+              * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
+              * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 되고, 위 이메일 칸에는
+              * 아무 안내가 없어 두 칸의 생김새도 어긋났다. 규칙이 필요한 화면에서만
+              * 칸 아래 안내로 붙인다.
+              */}
+            {mode !== "recover" && (
+              <label>
+                <span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span>
+                <div><KeyRound /><input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /></div>
+                {mode !== "login" && <small className="account-hint">8자 이상</small>}
+              </label>
+            )}
             {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><KeyRound /><input type="password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div></label>}
             {mode === "register" && <div className="account-consents"><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
             {(mode === "login" || mode === "register") && (
-              <label className="account-remember">
-                <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-                <span>로그인 상태 유지<small>끄면 브라우저를 닫을 때 로그아웃됩니다.</small></span>
-              </label>
+              /*
+               * 체크 상자와 설명이 두 줄로 쌓여 있어서, 상자가 글보다 한 줄 위에 뜬 채로
+               * 왼쪽에 홀로 남았다. 한 줄로 붙이고, 그 줄 오른쪽 빈자리에 '비밀번호 찾기'를
+               * 둔다 — 로그인 화면에서 흔히 짝지어 놓는 자리다.
+               */
+              <div className="account-optionrow">
+                <label className="account-remember">
+                  <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+                  <span>로그인 상태 유지</span>
+                </label>
+                {mode === "login" && (
+                  <button type="button" onClick={() => { setMode("recover"); setMessage(""); }}>비밀번호 찾기</button>
+                )}
+              </div>
             )}
             {message && <p className="account-form-message">{message}</p>}
             <button className="account-submit" disabled={!valid || busy}>{busy ? "처리 중..." : mode === "register" ? "계정 만들기" : mode === "recover" ? "복구 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"} <LogIn /></button>
-            <footer>{mode === "login" ? <><button type="button" onClick={() => { setMode("register"); setMessage(""); }}>처음이신가요? 회원가입</button><button type="button" onClick={() => { setMode("recover"); setMessage(""); }}>비밀번호 찾기</button></> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>
+            {/* 아래는 한 가지만 남긴다 — '비밀번호 찾기'는 위 줄로 올라갔다 */}
+            <footer>{mode === "login" ? <span>처음이신가요? <button type="button" onClick={() => { setMode("register"); setMessage(""); }}>회원가입</button></span> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>
           </form>
         </section>
       )}

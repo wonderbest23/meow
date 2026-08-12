@@ -9437,6 +9437,74 @@ body {
 .account-submit:hover:not(:disabled) {
   filter: brightness(1.06);
 }
+
+/*
+ * 로그인 화면 정리.
+ *
+ * 셋이 어긋나 있었다. 체크 상자가 설명 글 위에 홀로 떠 있었고, 비밀번호 칸에만
+ * "8자 이상"이 적혀 있어 이메일 칸과 생김새가 달랐고, 아래 두 버튼이 양 끝으로
+ * 벌어져 어느 쪽이 주된 행동인지 읽히지 않았다.
+ */
+
+/* 로그인 유지 · 비밀번호 찾기 — 한 줄에 마주 놓는다 */
+.account-optionrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.account-optionrow > button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-2, #6b7684);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .account-optionrow > button:hover { color: var(--blue, #3182f6); }
+}
+
+/* 설명 줄이 빠졌으니 상자와 글을 같은 줄 가운데로 맞춘다 */
+.account-remember { align-items: center; gap: 8px; }
+.account-remember > span { display: inline; font-size: 12.5px; font-weight: 600; }
+
+/* 지켜야 할 규칙은 칸 아래 작은 글로 — 칸 안에 넣으면 값처럼 읽힌다 */
+.account-hint {
+  color: var(--text-3, #8b95a1);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+/*
+ * 못 누르는 버튼.
+ *
+ * opacity로 흐리면 글씨까지 같이 흐려져 무슨 버튼인지 안 읽힌다.
+ * 색을 낮춘 회색으로 바꿔 '아직 아니다'만 알린다.
+ */
+.account-submit:disabled {
+  opacity: 1;
+  background: var(--line, #e5e8eb);
+  color: var(--text-3, #8b95a1);
+}
+
+/* 마지막 줄은 가운데 한 문장 — 회원가입만 눈에 들어오게 */
+.account-auth-shell form > footer {
+  justify-content: center;
+  color: var(--text-2, #6b7684);
+  font-size: 12.5px;
+}
+
+.account-auth-shell form > footer button {
+  color: var(--blue, #3182f6);
+  font-size: 12.5px;
+  font-weight: 800;
+}
 .account-form-message,
 .account-message {
   padding: 12px 14px;
