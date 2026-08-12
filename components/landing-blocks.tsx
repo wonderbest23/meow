@@ -13,8 +13,8 @@ type HeroProps = {
   buttonLabel: string;
   imageUrl: string;
   layout: "split" | "immersive" | "product" | "course" | "tech" | "editorial";
-};
-type TrustProps = { label: string; item1: string; item2: string; item3: string; item4: string };
+} & BlockStyle;
+type TrustProps = { label: string; item1: string; item2: string; item3: string; item4: string } & BlockStyle;
 type FeatureProps = {
   eyebrow: string;
   heading: string;
@@ -97,7 +97,7 @@ type LocationProps = {
   hours: string;
   closed: string;
   contact: string;
-};
+} & BlockStyle;
 
 type FaqProps = {
   eyebrow: string;
@@ -199,6 +199,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         description: area("제목 아래 설명"),
         buttonLabel: text("버튼 문구"),
         imageUrl: imageField("대표 이미지"),
+        ...styleFields,
       },
       defaultProps: {
         layout: "split",
@@ -207,9 +208,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         description: "누구에게 어떤 도움을 주는지 짧게 설명하세요.",
         buttonLabel: "문의하기",
         imageUrl: "",
+        ...styleDefaults,
       },
-      render: ({ eyebrow, title, description, buttonLabel, imageUrl, layout }) => (
-        <section className={`landing-block landing-block-hero layout-${layout}`}>
+      render: ({ eyebrow, title, description, buttonLabel, imageUrl, layout, ...style }) => (
+        <section className={`landing-block landing-block-hero layout-${layout} ${styleClass(style)}`}>
           <div className="landing-block-hero-copy">
             <span>{eyebrow}</span>
             <h1>{title}</h1>
@@ -228,6 +230,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         item2: text("문구 2"),
         item3: text("문구 3"),
         item4: text("문구 4"),
+        ...styleFields,
       },
       defaultProps: {
         label: "안심하고 시작하세요",
@@ -235,9 +238,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         item2: "진행 단계 확인",
         item3: "문의 후 조건 확정",
         item4: "모바일 대응",
+        ...styleDefaults,
       },
-      render: ({ label, item1, item2, item3, item4 }) => (
-        <section className="landing-block-trust">
+      render: ({ label, item1, item2, item3, item4, ...style }) => (
+        <section className={`landing-block landing-block-trust ${styleClass(style)}`}>
           <strong>{label}</strong>
           <div>{[item1, item2, item3, item4].map((item) => <span key={item}><Check />{item}</span>)}</div>
         </section>
@@ -459,6 +463,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         hours: text("영업시간"),
         closed: text("휴무"),
         contact: text("연락처"),
+        ...styleFields,
       },
       defaultProps: {
         eyebrow: "찾아오는 길",
@@ -467,9 +472,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         hours: "평일 09:00 - 18:00",
         closed: "일요일 휴무",
         contact: "",
+        ...styleDefaults,
       },
-      render: ({ eyebrow, heading, address, hours, closed, contact }) => (
-        <section className="landing-block landing-block-location">
+      render: ({ eyebrow, heading, address, hours, closed, contact, ...style }) => (
+        <section className={`landing-block landing-block-location ${styleClass(style)}`}>
           <header>
             <span>{eyebrow}</span>
             <h2>{heading}</h2>
