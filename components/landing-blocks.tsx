@@ -65,6 +65,7 @@ type GalleryProps = {
 type OfferProps = { eyebrow: string; title: string; description: string; price: string; buttonLabel: string } & BlockStyle;
 type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string };
 type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string } & BlockStyle;
+type FooterProps = { brand: string; tagline: string; hours: string; contact: string } & BlockStyle;
 
 export type LandingBlockProps = {
   HeroSection: HeroProps;
@@ -79,6 +80,7 @@ export type LandingBlockProps = {
   LocationSection: LocationProps;
   FaqSection: FaqProps;
   CtaSection: CtaProps;
+  FooterSection: FooterProps;
 };
 
 type PriceListProps = {
@@ -191,7 +193,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     },
     visual: {
       title: "사진과 근거",
-      components: ["TrustBar", "StatsSection", "GallerySection", "LocationSection", "FaqSection"],
+      components: ["TrustBar", "StatsSection", "GallerySection", "LocationSection", "FaqSection", "FooterSection"],
       defaultExpanded: true,
     },
   },
@@ -578,6 +580,41 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       },
       render: ({ eyebrow, title, description, buttonLabel, ...style }) => (
         <section className={`landing-block landing-block-cta ${styleClass(style)}`}><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></section>
+      ),
+    },
+    /*
+     * 페이지 맨 아래 가게 소개.
+     *
+     * 공개 페이지는 이미 사업자정보 푸터를 그린다(대표자·사업장·사업자등록번호·
+     * 통신판매업). 그건 법으로 적어야 하는 것이라 여기서 고치거나 지울 수 없게
+     * 두고, 이 블록은 그 위에 놓이는 가게 자신의 마무리 말만 맡는다.
+     */
+    FooterSection: {
+      label: "맨 아래 가게 소개",
+      fields: {
+        brand: liveText("가게 이름"),
+        tagline: liveArea("한 줄 소개"),
+        /* 비면 안 그린다 — 값으로 걸러내므로 인라인 편집은 켜지 않는다 */
+        hours: text("영업시간"),
+        contact: text("연락처"),
+        ...styleFields,
+      },
+      defaultProps: {
+        brand: "가게 이름",
+        tagline: "찾아주셔서 고맙습니다.",
+        hours: "",
+        contact: "",
+        ...styleDefaults,
+      },
+      render: ({ brand, tagline, hours, contact, ...style }) => (
+        <section className={`landing-block landing-block-footer ${styleClass(style)}`}>
+          <strong>{brand}</strong>
+          <p>{tagline}</p>
+          <div>
+            {hours ? <span>영업시간 {hours}</span> : null}
+            {contact ? <span>연락처 {contact}</span> : null}
+          </div>
+        </section>
       ),
     },
   },

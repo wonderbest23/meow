@@ -7080,6 +7080,30 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
  */
 .landing-block :where(h1, h2, h3, h4) { color: inherit; }
 
+/*
+ * 맨 아래 가게 소개.
+ *
+ * 공개 페이지는 이 아래에 사업자정보 푸터를 따로 그린다(법정 표시 항목).
+ * 이 블록은 그 위에 놓이는 가게 자신의 마무리 말이라, 법정 푸터와 붙어 보이지
+ * 않게 위아래 여백을 넉넉히 두고 글씨를 작게 눌러 둔다.
+ */
+.landing-block-footer {
+  display: grid;
+  gap: 8px;
+  border-top: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.landing-block-footer strong { font-size: 18px; font-weight: 900; letter-spacing: -0.02em; }
+.landing-block-footer p { margin: 0; color: var(--text-2, #6b7684); font-size: 13.5px; line-height: 1.6; }
+
+.landing-block-footer > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  color: var(--text-2, #6b7684);
+  font-size: 12.5px;
+}
+
 .landing-block a { min-height: 52px; padding: 0 20px; border-radius: 7px; background: var(--landing-accent, #1b64da); color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-size: 14px; font-weight: 900; }
 .landing-block a svg { width: 17px; }
 
