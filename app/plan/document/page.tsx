@@ -240,11 +240,16 @@ export default function PlanDocumentPage() {
    * (scripts/bake-sample-files.mts) 정적 파일로 건넨다. 누를 때마다 만들지
    * 않으니 기다림도 없다.
    *
-   * PPT 는 여기 없다 — 만들 때 AI 를 부르는 터라 미리 구우려면 따로 돌려야 한다.
+   * 발표자료(PPTX)도 같은 자리에 둔다. 다만 슬라이드 구성은 AI 가 만들기 때문에
+   * 운영에서 한 번 뽑아 와야 굽을 수 있다(scripts/bake-sample-decks.mts).
+   * 아직 못 구운 예시가 있어서, 파일이 있는 것만 열어 준다.
    */
   const samplePlanId = isSample ? activePlan(loadState())?.id ?? null : null;
-  function sampleFile(ext: "pdf" | "docx"): string | null {
-    return samplePlanId ? `/samples/${samplePlanId}.${ext}` : null;
+  const BAKED_DECKS = new Set(["sample_flower_fm", "sample_flower_psst"]);
+  function sampleFile(ext: "pdf" | "docx" | "pptx"): string | null {
+    if (!samplePlanId) return null;
+    if (ext === "pptx" && !BAKED_DECKS.has(samplePlanId)) return null;
+    return `/samples/${samplePlanId}.${ext}`;
   }
 
   /** 결제 전이면 서버 왕복 없이 바로 결제 화면으로 */
@@ -388,12 +393,16 @@ export default function PlanDocumentPage() {
                   <div className={styles.outRow}>
                     <button
                       className={styles.outBtn}
-                      disabled={busy}
-                      onClick={() => (locked ? goPay() : handleDeck())}
+                      disabled={busy && !sampleFile("pptx")}
+                      onClick={() => {
+                        const file = sampleFile("pptx");
+                        if (file) return void window.open(file, "_blank", "noopener");
+                        return locked ? goPay() : handleDeck();
+                      }}
                       title={locked ? "결제 후 열립니다" : "발표자료(PPT) 만들기"}
                     >
                       <span className={styles.outIcon}>
-                        {exporting === "pptx" ? <Spinner /> : locked ? <Lock size={16} /> : <Presentation size={18} />}
+                        {exporting === "pptx" ? <Spinner /> : locked && !isSample ? <Lock size={16} /> : <Presentation size={18} />}
                       </span>
                       <span className={styles.outText}>
                         <strong className={styles.outName}>{exporting === "pptx" ? "만드는 중…" : "발표자료"}</strong>
