@@ -7,6 +7,21 @@ import { landingBlockConfig, type LandingBlockProps } from "./landing-blocks";
 
 const useLandingPuck = createUsePuck();
 
+/*
+ * 맨 앞이 편집기를 열었을 때의 기본 폭이다.
+ *
+ * 휴대전화가 앞에 있어서, 넓은 화면에서 열어도 가운데 좁은 칸에만 페이지가
+ * 보였다. 고칠 자리를 찾기 전에 "왜 이렇게 좁지"부터 묻게 된다. PC 를 앞에
+ * 둔다 — 넓게 보면서 고치고, 폰은 눌러서 확인한다.
+ *
+ * 태블릿은 뺐다. 이 홈페이지는 640px 을 경계로 폰과 PC 두 벌만 그린다.
+ * 768 을 보여주면 제품에 없는 세 번째 모습을 보여주는 셈이다.
+ */
+const VIEWPORTS = [
+  { width: 1280, height: "auto" as const, icon: "Monitor" as const, label: "PC" },
+  { width: 390, height: "auto" as const, icon: "Smartphone" as const, label: "휴대전화" },
+];
+
 function BuilderActions({
   onClose,
   onSave,
@@ -42,11 +57,7 @@ export function LandingVisualBuilder({
         headerTitle="판매 페이지 자유 편집"
         headerPath={businessName}
         height="100dvh"
-        viewports={[
-          { width: 390, height: "auto", icon: "Smartphone", label: "휴대전화" },
-          { width: 768, height: "auto", icon: "Tablet", label: "태블릿" },
-          { width: 1280, height: "auto", icon: "Monitor", label: "PC" },
-        ]}
+        viewports={VIEWPORTS}
         overrides={{
           headerActions: () => <BuilderActions onClose={onClose} onSave={onSave} />,
         }}
