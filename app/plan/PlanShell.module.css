@@ -411,8 +411,23 @@
     align-items: stretch;
     padding: 14px 10px;
     transform: translateX(100%);
-    box-shadow: -18px 0 40px rgba(9, 16, 28, 0.35);
     z-index: 46;
+    /*
+     * 그림자는 열렸을 때만 드리운다.
+     *
+     * 닫힌 서랍은 화면 밖 오른쪽에 서 있는데, 그림자만 -18px 안쪽으로 뻗어
+     * 화면 오른쪽 가장자리에 옅은 검은 띠로 남아 있었다. 서랍은 안 보이고
+     * 그림자만 보이니, 화면에 이유 없는 얼룩이 진 것처럼 읽혔다.
+     *
+     * 닫힌 동안에는 손가락도 받지 않는다 — 안 보이는 것이 화면 끝의 탭을
+     * 가로채면 안 된다.
+     */
+    pointer-events: none;
+  }
+
+  .railOpen {
+    box-shadow: -18px 0 40px rgba(9, 16, 28, 0.35);
+    pointer-events: auto;
   }
 
   /* 로고는 상단 바가 보여준다 — 서랍 안에서 또 보일 필요가 없다 */
