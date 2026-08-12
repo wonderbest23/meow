@@ -9690,9 +9690,15 @@ body {
     background-image: url("/hero-mobile-2026.jpg");
   }
 
-  /* 폰 — 세로 사진은 노트북이 아래에 있다. 위쪽 빈 자리에 가운데로 놓는다 */
+  /*
+   * 폰 — 세로 사진은 노트북이 아래에 있다. 위쪽 빈 자리에 가운데로 놓는다.
+   *
+   * 위 여백이 28px일 때는 글이 화면 꼭대기에 붙고 아래로 456px이 비어, 글자리
+   * 안에서 한쪽으로 쏠려 보였다. 사진의 노트북과 겹치지 않는 선까지만 내린다 —
+   * 가운데로 다 내리면 글이 노트북 위에 얹힌다.
+   */
   .simple-home .simple-home-choice {
-    padding: 28px 20px 0;
+    padding: 76px 20px 0;
     justify-items: center;
     align-content: start;
   }
