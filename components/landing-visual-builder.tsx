@@ -51,6 +51,27 @@ const MOTION_TEMPLATES = [
   { value: "side", label: "좌우에서", detail: "옆에서 밀려 들어옵니다" },
 ];
 
+/*
+ * 고른 효과를 그 자리에서 한 번 보여준다.
+ *
+ * 실제 효과는 스크롤에 맞춰 도는 것이라, 이미 화면에 떠 있는 칸은 눌러도 아무
+ * 일이 없어 보인다. 고르자마자 어떻게 나타나는지 봐야 고를 수 있다.
+ *
+ * 미리보기용 클래스를 잠깐 붙였다 뗀다. 저장되는 값은 건드리지 않는다.
+ */
+function playMotionPreview(id: string, motion: string) {
+  if (!id || motion === "none") return;
+  const frame = document.querySelector<HTMLIFrameElement>(".landing-visual-builder iframe");
+  const el = frame?.contentDocument?.querySelector(`[data-puck-dnd="${CSS.escape(id)}"] .landing-block`);
+  if (!(el instanceof HTMLElement)) return;
+  const cls = `motion-preview-${motion}`;
+  el.classList.remove(cls);
+  /* 다시 그리게 한 뒤 붙여야 같은 효과를 연달아 눌러도 매번 돈다 */
+  void el.offsetWidth;
+  el.classList.add(cls);
+  el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
+}
+
 function MotionPanel() {
   const getPuck = useGetPuck();
   const selected = useLandingPuck((state) => state.selectedItem);
@@ -76,6 +97,7 @@ function MotionPanel() {
               destinationZone: puck.appState.ui.itemSelector?.zone ?? "default-zone",
               data: { ...item2, props: { ...item2.props, motion: item.value } },
             });
+            playMotionPreview(String(item2.props.id ?? ""), item.value);
           }}
         >
           <strong>{item.label}</strong>

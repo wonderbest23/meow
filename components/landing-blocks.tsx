@@ -13,6 +13,7 @@ type HeroProps = {
   buttonLabel: string;
   imageUrl: string;
   layout: "split" | "immersive" | "product" | "course" | "tech" | "editorial";
+  photo: Slot;
 } & BlockStyle;
 type TrustProps = { label: string; item1: string; item2: string; item3: string; item4: string } & BlockStyle;
 type FeatureProps = {
@@ -307,6 +308,17 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         description: liveArea("제목 아래 설명"),
         buttonLabel: liveText("버튼 문구"),
         imageUrl: imageField("대표 이미지"),
+        /*
+         * 사진을 따로 고르고 옮기려면 사진이 블록이어야 한다.
+         *
+         * 위 '대표 이미지'는 블록 속성이라 눌러도 첫 화면 전체가 잡힌다. 여기에
+         * '사진 한 장'을 끌어다 놓으면 그 사진만 고르고 끌 수 있다.
+         *
+         * 둘 다 남겨 둔다 — 이미 대표 이미지로 만든 페이지가 있고, 그걸 지우면
+         * 그 페이지들 첫 화면에서 사진이 사라진다. 끌어다 놓은 사진이 있으면
+         * 그쪽을 쓰고, 없으면 예전처럼 대표 이미지를 쓴다.
+         */
+        photo: { type: "slot" as const, label: "사진 (끌어다 놓기)", allow: ["PhotoBlock"] },
         ...styleFields,
       },
       defaultProps: {
@@ -316,9 +328,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         description: "누구에게 어떤 도움을 주는지 짧게 설명하세요.",
         buttonLabel: "문의하기",
         imageUrl: "",
+        photo: [],
         ...styleDefaults,
       },
-      render: ({ eyebrow, title, description, buttonLabel, imageUrl, layout, ...style }) => (
+      render: ({ eyebrow, title, description, buttonLabel, imageUrl, layout, photo: Photo, ...style }) => (
         // 사진이 없으면 no-image 를 남긴다 — 사진 깔던 자리가 빈 회색 상자로 남으면 안 된다
         <section className={`landing-block landing-block-hero layout-${layout} ${imageUrl ? "" : "no-image"} ${styleClass(style)}`} style={blockBg(style)}>
           <div className="landing-block-hero-copy">
@@ -327,6 +340,8 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
             <p>{description}</p>
             <a href="#landing-contact">{buttonLabel}<ArrowRight /></a>
           </div>
+          {/* 끌어다 놓은 사진이 있으면 그쪽이 이긴다 — 없을 때만 예전 대표 이미지 */}
+          <Photo className="landing-block-hero-slot" />
           {imageUrl && <figure><img src={imageUrl} alt="" /></figure>}
         </section>
       ),
