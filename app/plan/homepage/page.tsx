@@ -87,7 +87,19 @@ export default function PlanHomepagePage() {
         const shopName = plan.title.replace(/^샘플\s*·\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim();
         const draft = landingDraftFromPlan({
           planTitle: shopName || plan.title,
-          business: { ...state.business, industry: doc?.industry || state.business.industry },
+          /*
+           * 예시는 남의 가게 이야기다. 여기에 로그인한 사람의 사업 정보를 섞으면
+           * 안 된다.
+           *
+           * 실제로 그렇게 나갔다 — 사업 정보에 "한빛싱크"를 적어 둔 계정에서는
+           * 무인꽃집 예시가 "한빛싱크"라는 제목으로, "한빛싱크 가격 안내" 밑에
+           * 중형 꽃다발 25,000원을 파는 화면으로 보였다. 결제 전에 물건을 보러 온
+           * 사람에게 보여주는 화면이 이러면 안 된다.
+           *
+           * 예시 자신의 업종만 쓰고, 상호·지역은 비워 예시의 계획서 답변에서
+           * 채우게 한다.
+           */
+          business: { ...state.business, name: "", region: "", industry: doc?.industry ?? "" },
           answers: plan.answers,
         });
         setDraft(draft);
