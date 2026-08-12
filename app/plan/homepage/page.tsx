@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { LayoutTemplate, Maximize2 } from "lucide-react";
+import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
@@ -309,9 +309,23 @@ export default function PlanHomepagePage() {
         />
       )}
 
+      {/*
+        * 자유 편집이 이 화면의 주된 행동이다.
+        *
+        * 예전에는 "섹션 넣고 빼고 순서 바꾸기"라는 이름으로 제목보다 위, 테두리만
+        * 있는 작은 단추로 놓여 있었다. 무엇을 여는 단추인지 읽히지 않아 그 아래
+        * 설정들과 같은 무게로 보였다.
+        *
+        * 이름을 하는 일로 바꾸고, 무슨 화면이 열리는지 한 줄 붙여 맨 위에 크게 둔다.
+        */}
       {phase === "ready" && draft && editable && (
         <button type="button" className={styles.builderOpen} onClick={() => setBuilderOpen(true)}>
-          <LayoutTemplate size={15} /> 섹션 넣고 빼고 순서 바꾸기
+          <span className={styles.builderOpenIcon}><LayoutTemplate size={18} /></span>
+          <span className={styles.builderOpenText}>
+            <strong>자유 편집 열기</strong>
+            <small>글·사진·색을 화면에서 직접 고칩니다</small>
+          </span>
+          <ArrowRight size={16} />
         </button>
       )}
 

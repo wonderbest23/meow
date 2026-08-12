@@ -7105,6 +7105,26 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
   inset: 0;
 }
 
+/*
+ * 사진이 칸에 잘려 들어갈 때 어디를 보여줄지, 얼마나 키울지.
+ *
+ * 사진은 칸 비율에 맞춰 잘린다. 무엇이 잘릴지는 사진마다 다른데 고를 방법이
+ * 없어 인물이 잘리거나 간판이 사라져도 손댈 수 없었다.
+ *
+ * '잘리지 않게 전부'는 사진을 다 보여주는 대신 빈 자리가 생긴다. 그 자리는
+ * 덮는 막과 같은 색으로 채워 잘린 것처럼 보이지 않게 한다.
+ */
+.landing-block.has-bg.bgpos-center { background-position: center; }
+.landing-block.has-bg.bgpos-top { background-position: center top; }
+.landing-block.has-bg.bgpos-bottom { background-position: center bottom; }
+.landing-block.has-bg.bgpos-left { background-position: left center; }
+.landing-block.has-bg.bgpos-right { background-position: right center; }
+
+.landing-block.has-bg.bgzoom-cover { background-size: cover; }
+.landing-block.has-bg.bgzoom-contain { background-size: contain; background-repeat: no-repeat; background-color: #101318; }
+.landing-block.has-bg.bgzoom-z120 { background-size: 120% auto; background-repeat: no-repeat; }
+.landing-block.has-bg.bgzoom-z150 { background-size: 150% auto; background-repeat: no-repeat; }
+
 .landing-block.has-bg.shade-light::before { background: rgba(16, 19, 24, 0.28); }
 .landing-block.has-bg.shade-medium::before { background: rgba(16, 19, 24, 0.5); }
 .landing-block.has-bg.shade-heavy::before { background: rgba(16, 19, 24, 0.72); }

@@ -63,7 +63,7 @@ type GalleryProps = {
   caption3: string;
 } & BlockStyle;
 type OfferProps = { eyebrow: string; title: string; description: string; price: string; buttonLabel: string } & BlockStyle;
-type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string; motion?: string; bgImage?: string; bgShade?: string };
+type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string; motion?: string; bgImage?: string; bgShade?: string; bgPosition?: string; bgZoom?: string };
 type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string } & BlockStyle;
 type FooterProps = { brand: string; tagline: string; hours: string; contact: string } & BlockStyle;
 
@@ -161,6 +161,21 @@ const styleFields = {
    * 사진마다 다르니 자동으로 정할 수 없다 — 고르게 한다. 사진이 없으면 아무
    * 일도 하지 않는다.
    */
+  /*
+   * 사진이 칸에 잘려 들어갈 때 어디를 보여줄지.
+   *
+   * 사진은 칸 비율에 맞춰 잘린다. 무엇이 잘릴지는 사진마다 다른데 고를 방법이
+   * 없어서, 인물이 잘리거나 간판이 사라져도 손댈 수 없었다.
+   */
+  bgPosition: { type: "select" as const, label: "사진 위치", options: [
+    { label: "가운데", value: "center" }, { label: "위쪽", value: "top" },
+    { label: "아래쪽", value: "bottom" }, { label: "왼쪽", value: "left" },
+    { label: "오른쪽", value: "right" },
+  ] },
+  bgZoom: { type: "select" as const, label: "사진 확대", options: [
+    { label: "칸에 꽉 채우기", value: "cover" }, { label: "잘리지 않게 전부", value: "contain" },
+    { label: "크게 (120%)", value: "z120" }, { label: "더 크게 (150%)", value: "z150" },
+  ] },
   bgShade: { type: "select" as const, label: "사진 덮기", options: [
     { label: "없음", value: "none" }, { label: "옅게", value: "light" },
     { label: "보통", value: "medium" }, { label: "진하게", value: "heavy" },
@@ -171,14 +186,14 @@ const styleFields = {
   ] },
 };
 
-const styleDefaults = { tone: "plain", density: "normal", align: "center", divider: "none", motion: "none", bgImage: "", bgShade: "medium" };
+const styleDefaults = { tone: "plain", density: "normal", align: "center", divider: "none", motion: "none", bgImage: "", bgShade: "medium", bgPosition: "center", bgZoom: "cover" };
 
 /*
  * 이미 저장된 페이지에는 이 값들이 없다 — 없으면 기본값으로 읽는다.
  * 안 그러면 class="tone-undefined"가 되어 아무 규칙에도 안 걸린다.
  */
 function styleClass(p: BlockStyle) {
-  const bg = p.bgImage ? ` has-bg shade-${p.bgShade ?? "medium"}` : "";
+  const bg = p.bgImage ? ` has-bg shade-${p.bgShade ?? "medium"} bgpos-${p.bgPosition ?? "center"} bgzoom-${p.bgZoom ?? "cover"}` : "";
   return `tone-${p.tone ?? "plain"} density-${p.density ?? "normal"} align-${p.align ?? "center"} divider-${p.divider ?? "none"} motion-${p.motion ?? "none"}${bg}`;
 }
 
