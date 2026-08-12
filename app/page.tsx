@@ -75,6 +75,7 @@ import { normalizeGeneratedOpportunity, type ManualPreferences } from "../lib/id
 import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
+import { SiteHeader, SiteLogo } from "../components/site-header";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -421,43 +422,13 @@ function readConversationDraft() {
   }
 }
 
-function Logo({ onClick }: { onClick: () => void }) {
-  return (
-    <button className="brand" onClick={onClick} aria-label="오늘창업 홈으로">
-      <img className="brand-logo" src="/today-startup-logo-2026.png" alt="오늘창업" width="1288" height="322" />
-    </button>
-  );
-}
-
-function Header({
-  onHome,
-  onStart,
-  light = false,
-  homeNav = false,
-}: {
-  onHome: () => void;
-  onStart?: () => void;
-  light?: boolean;
-  homeNav?: boolean;
-}) {
-  return (
-    <header className={`site-header ${light ? "light" : ""}`}>
-      <Logo onClick={onHome} />
-      {homeNav && (
-        <nav className="home-header-nav" aria-label="메인 안내">
-          <a href="#how">진행 방식</a>
-          <a href="#deliverables">결과물</a>
-          <a href="#evidence">근거 기준</a>
-          <a href="#price">이용 안내</a>
-        </nav>
-      )}
-      <div className="header-actions">
-        <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /></a>
-        {onStart && <button className="small-start" onClick={onStart}>시작하기</button>}
-      </div>
-    </header>
-  );
-}
+/*
+ * 이 파일 안에서만 쓰던 헤더를 components/site-header.tsx 로 옮겼다.
+ * 계정 화면이 자기 헤더를 따로 그리느라 여백과 테두리가 어긋나 있었기 때문이다.
+ * 여기 호출 지점이 열 곳이 넘어서 이름은 그대로 두고 속만 갈아 끼운다.
+ */
+const Header = SiteHeader;
+const Logo = SiteLogo;
 
 function PrimaryButton({
   children,

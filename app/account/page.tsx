@@ -2,6 +2,8 @@
 
 import { ArrowLeft, ArrowRight, Bookmark, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, Receipt, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { SiteHeader } from "../../components/site-header";
 import type { PaymentHistoryItem } from "../../lib/payments/plan-orders";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
@@ -42,6 +44,7 @@ function rememberLocally(remember: boolean, email: string) {
 }
 
 export default function AccountPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
   const [session, setSession] = useState<SessionState | null>(null);
   const [email, setEmail] = useState("");
@@ -193,7 +196,12 @@ export default function AccountPage() {
 
   return (
     <main className="account-page">
-      <header><Link href="/"><img src="/today-startup-logo-2026.png" alt="오늘창업" /></Link><Link href="/"><ArrowLeft /> 홈으로</Link></header>
+      {/*
+        * 머리말은 홈과 같은 것을 쓴다. 예전에는 여기서 따로 그려서 좌우 여백과
+        * 아래 테두리가 달랐고, 오른쪽에 놓이는 것도 홈과 어긋났다.
+        * 마이페이지 아이콘은 끈다 — 지금 보고 있는 화면으로 다시 보내는 단추다.
+        */}
+      <SiteHeader light showAccount={false} onHome={() => router.push("/")} onStart={() => router.push("/plan/start")} />
       {session.authenticated ? (
         <section className="account-dashboard">
           <div className="account-welcome"><span><CheckCircle2 /></span><div><small>내 계정</small><h1>작업을 이어서 시작하세요</h1><p>{session.email}</p></div><button onClick={logout}><LogOut /> 로그아웃</button></div>
