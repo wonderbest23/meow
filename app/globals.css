@@ -7028,6 +7028,34 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
   .landing-builder-hint { padding: 0 12px; font-size: 11.5px; }
 }
 
+/* 등장 효과 고르는 칸 */
+.landing-motion-panel { display: grid; gap: 8px; padding: 12px; }
+.landing-motion-panel > small { color: var(--text-2, #6b7684); font-size: 11.5px; font-weight: 700; }
+
+.landing-motion-panel button {
+  display: grid;
+  gap: 2px;
+  padding: 10px 12px;
+  border: 1px solid var(--line, #e5e8eb);
+  border-radius: 10px;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.landing-motion-panel button strong { font-size: 13px; font-weight: 800; color: var(--text, #191f28); }
+.landing-motion-panel button span { font-size: 11.5px; color: var(--text-2, #6b7684); }
+.landing-motion-panel button.on { border-color: var(--blue, #1b64da); background: var(--blue-soft, #e8f3ff); }
+.landing-motion-panel button.on strong { color: var(--blue, #1b64da); }
+
+.landing-motion-empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: var(--text-2, #6b7684);
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+
 /*
  * 편집기 머리말 — 접지 않는다.
  *
@@ -7238,6 +7266,49 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 @keyframes landing-motion-side {
   from { opacity: 0; transform: translateX(-24px); }
   to { opacity: 1; transform: none; }
+}
+
+/*
+ * 사진 한 장 — 따로 고르고 끌 수 있는 조각.
+ *
+ * 사진이 블록 속성이던 때는 사진을 눌러도 블록 전체가 잡혔다. 이제 사진마다
+ * 모양·크기·맞춤을 따로 고른다.
+ */
+.landing-photo { margin: 0; display: grid; gap: 8px; justify-items: center; }
+.landing-photo img { width: 100%; height: 100%; display: block; }
+.landing-photo figcaption { color: var(--text-2, #6b7684); font-size: 13px; text-align: center; }
+
+.landing-photo.size-sm img, .landing-photo.size-sm .landing-photo-empty { aspect-ratio: 1; max-width: 160px; }
+.landing-photo.size-md img, .landing-photo.size-md .landing-photo-empty { aspect-ratio: 4 / 3; max-width: 100%; }
+.landing-photo.size-lg img, .landing-photo.size-lg .landing-photo-empty { aspect-ratio: 3 / 4; max-width: 100%; }
+
+.landing-photo.shape-square img, .landing-photo.shape-square .landing-photo-empty { border-radius: 0; }
+.landing-photo.shape-round img, .landing-photo.shape-round .landing-photo-empty { border-radius: 14px; }
+.landing-photo.shape-circle img, .landing-photo.shape-circle .landing-photo-empty { border-radius: 50%; aspect-ratio: 1; }
+
+.landing-photo.fit-cover img { object-fit: cover; }
+.landing-photo.fit-contain img { object-fit: contain; background: var(--surface-2, #f2f4f6); }
+
+/* 사진을 아직 안 고른 자리 — 빈칸이면 끌어 놓을 자리가 안 보인다 */
+.landing-photo-empty {
+  width: 100%;
+  border: 1px dashed var(--line, #d1d6db);
+  background: var(--surface-2, #f7f8fa);
+  color: var(--text-3, #8b95a1);
+  display: grid;
+  place-items: center;
+  font-size: 12.5px;
+}
+
+.landing-block-photogrid { display: grid; gap: 22px; }
+.landing-photogrid-zone { display: grid; gap: 16px; }
+.landing-block-photogrid.cols-2 .landing-photogrid-zone { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.landing-block-photogrid.cols-3 .landing-photogrid-zone { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.landing-block-photogrid.cols-4 .landing-photogrid-zone { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+@media (max-width: 640px) {
+  .landing-block-photogrid.cols-3 .landing-photogrid-zone,
+  .landing-block-photogrid.cols-4 .landing-photogrid-zone { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 /*

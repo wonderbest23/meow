@@ -2,7 +2,7 @@
 
 import { ArrowRight, Check } from "lucide-react";
 import type { ComponentType, CSSProperties, ReactNode } from "react";
-import type { Config } from "@puckeditor/core";
+import type { Config, Slot } from "@puckeditor/core";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { LandingMediaField } from "./landing-media-field";
 
@@ -65,6 +65,8 @@ type GalleryProps = {
 type OfferProps = { eyebrow: string; title: string; description: string; price: string; buttonLabel: string } & BlockStyle;
 type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string; motion?: string; bgImage?: string; bgShade?: string; bgPosition?: string; bgZoom?: string };
 type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string } & BlockStyle;
+type PhotoProps = { imageUrl: string; caption: string; shape: string; size: string; fit: string };
+type PhotoGridProps = { eyebrow: string; heading: string; columns: string; photos: Slot } & BlockStyle;
 type FooterProps = { brand: string; tagline: string; hours: string; contact: string } & BlockStyle;
 
 export type LandingBlockProps = {
@@ -81,6 +83,8 @@ export type LandingBlockProps = {
   FaqSection: FaqProps;
   CtaSection: CtaProps;
   FooterSection: FooterProps;
+  PhotoBlock: PhotoProps;
+  PhotoGrid: PhotoGridProps;
 };
 
 type PriceListProps = {
@@ -278,7 +282,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     },
     visual: {
       title: "사진과 근거",
-      components: ["TrustBar", "StatsSection", "GallerySection", "LocationSection", "FaqSection", "FooterSection"],
+      components: ["TrustBar", "StatsSection", "GallerySection", "PhotoGrid", "LocationSection", "FaqSection", "FooterSection"],
       defaultExpanded: true,
     },
   },
@@ -665,6 +669,70 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       },
       render: ({ eyebrow, title, description, buttonLabel, ...style }) => (
         <section className={`landing-block landing-block-cta ${styleClass(style)}`} style={blockBg(style)}><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></section>
+      ),
+    },
+    /*
+     * 사진 한 장 — 그 자체가 하나의 조각이다.
+     *
+     * 지금까지 사진은 블록 속성이라, 사진을 눌러도 블록 전체가 잡히고 끌면 블록이
+     * 통째로 움직였다. 사진만 고르거나 옮길 수 없었다.
+     *
+     * 사진을 독립된 블록으로 만들면 Puck 이 그것 하나만 고르고 끌게 해 준다.
+     * '사진 여러 장' 칸 안에 넣어 쓴다.
+     */
+    PhotoBlock: {
+      label: "사진 한 장",
+      fields: {
+        imageUrl: imageField("사진"),
+        caption: liveText("사진 설명"),
+        shape: { type: "select" as const, label: "모양", options: [
+          { label: "사각", value: "square" }, { label: "모서리 둥글게", value: "round" },
+          { label: "동그랗게", value: "circle" },
+        ] },
+        size: { type: "select" as const, label: "크기", options: [
+          { label: "작게", value: "sm" }, { label: "보통", value: "md" }, { label: "크게", value: "lg" },
+        ] },
+        fit: { type: "select" as const, label: "사진 맞춤", options: [
+          { label: "칸에 꽉 채우기", value: "cover" }, { label: "잘리지 않게 전부", value: "contain" },
+        ] },
+      },
+      defaultProps: { imageUrl: "", caption: "", shape: "round", size: "md", fit: "cover" },
+      render: ({ imageUrl, caption, shape, size, fit }) => (
+        <figure className={`landing-photo shape-${shape} size-${size} fit-${fit}`}>
+          {imageUrl ? <img src={imageUrl} alt="" /> : <span className="landing-photo-empty">사진을 고르세요</span>}
+          {caption ? <figcaption>{caption}</figcaption> : null}
+        </figure>
+      ),
+    },
+    /*
+     * 사진 여러 장 — 안에 '사진 한 장'을 넣는 칸.
+     *
+     * slot 이라 안에 든 사진마다 따로 고르고, 끌어서 순서를 바꾸고, 지울 수 있다.
+     * 기존 '사진 3장' 블록은 그대로 둔다 — 이미 그 블록으로 만든 페이지가 있다.
+     */
+    PhotoGrid: {
+      label: "사진 여러 장",
+      fields: {
+        eyebrow: liveText("작은 제목"),
+        heading: liveText("섹션 제목"),
+        columns: { type: "select" as const, label: "한 줄에", options: [
+          { label: "2칸", value: "2" }, { label: "3칸", value: "3" }, { label: "4칸", value: "4" },
+        ] },
+        photos: { type: "slot" as const, label: "사진", allow: ["PhotoBlock"] },
+        ...styleFields,
+      },
+      defaultProps: {
+        eyebrow: "둘러보기",
+        heading: "이런 모습입니다",
+        columns: "3",
+        photos: [],
+        ...styleDefaults,
+      },
+      render: ({ eyebrow, heading, columns, photos: Photos, ...style }) => (
+        <section className={`landing-block landing-block-photogrid cols-${columns} ${styleClass(style)}`} style={blockBg(style)}>
+          <header><span>{eyebrow}</span><h2>{heading}</h2></header>
+          <Photos className="landing-photogrid-zone" />
+        </section>
       ),
     },
     /*

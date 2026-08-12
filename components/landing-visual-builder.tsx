@@ -1,7 +1,7 @@
 "use client";
 
-import { blocksPlugin, createUsePuck, fieldsPlugin, outlinePlugin, Puck, type Data } from "@puckeditor/core";
-import { MousePointerClick, Redo2, Save, Undo2, X } from "lucide-react";
+import { blocksPlugin, createUsePuck, fieldsPlugin, outlinePlugin, Puck, useGetPuck, type Data } from "@puckeditor/core";
+import { MousePointerClick, Redo2, Save, Sparkles, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { landingBlockConfig, type LandingBlockProps } from "./landing-blocks";
 
@@ -36,10 +36,61 @@ const VIEWPORTS = [
  * 오른쪽 속성 칸(fields)도 같은 방식이다. 이걸 넘기면 Puck 이 자기 것을 붙이지
  * 않으므로, 원본을 펼쳐 이름만 바꾼다.
  */
+/*
+ * 등장 효과 고르는 칸.
+ *
+ * 효과는 블록마다 오른쪽 '고치기' 칸 맨 아래에 있어서, 열세 칸을 지나야 닿았다.
+ * 여기서는 블록을 고르고 원하는 움직임을 한 번 눌러 정한다.
+ *
+ * 값은 블록의 motion 속성 하나뿐이다 — 따로 저장하지 않는다.
+ */
+const MOTION_TEMPLATES = [
+  { value: "none", label: "없음", detail: "움직이지 않습니다" },
+  { value: "fade", label: "서서히", detail: "옅게 있다가 또렷해집니다" },
+  { value: "up", label: "아래에서 위로", detail: "살짝 올라오며 나타납니다" },
+  { value: "side", label: "좌우에서", detail: "옆에서 밀려 들어옵니다" },
+];
+
+function MotionPanel() {
+  const getPuck = useGetPuck();
+  const selected = useLandingPuck((state) => state.selectedItem);
+  if (!selected) {
+    return <p className="landing-motion-empty">먼저 화면에서 칸을 하나 누르세요. 그 칸이 어떻게 나타날지 여기서 정합니다.</p>;
+  }
+  const current = (selected.props as { motion?: string }).motion ?? "none";
+  return (
+    <div className="landing-motion-panel">
+      <small>고른 칸의 등장 방식</small>
+      {MOTION_TEMPLATES.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          className={current === item.value ? "on" : ""}
+          onClick={() => {
+            const puck = getPuck();
+            const item2 = puck.selectedItem;
+            if (!item2) return;
+            puck.dispatch({
+              type: "replace",
+              destinationIndex: puck.appState.ui.itemSelector?.index ?? 0,
+              destinationZone: puck.appState.ui.itemSelector?.zone ?? "default-zone",
+              data: { ...item2, props: { ...item2.props, motion: item.value } },
+            });
+          }}
+        >
+          <strong>{item.label}</strong>
+          <span>{item.detail}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
 const KOREAN_PLUGINS = [
   { ...blocksPlugin(), label: "블록 넣기" },
   { ...outlinePlugin(), label: "페이지 구성" },
   { ...fieldsPlugin(), label: "고치기" },
+  { name: "motion", label: "등장 효과", icon: <Sparkles />, render: () => <MotionPanel /> },
 ];
 
 /*
