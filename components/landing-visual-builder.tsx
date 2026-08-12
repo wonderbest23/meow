@@ -1,7 +1,7 @@
 "use client";
 
 import { blocksPlugin, createUsePuck, fieldsPlugin, outlinePlugin, Puck, type Data } from "@puckeditor/core";
-import { MousePointerClick, Save, X } from "lucide-react";
+import { MousePointerClick, Redo2, Save, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { landingBlockConfig, type LandingBlockProps } from "./landing-blocks";
 
@@ -59,7 +59,17 @@ function BuilderHint() {
   );
 }
 
-function BuilderActions({
+/*
+ * 항상 보이는 도구줄.
+ *
+ * Puck 은 좁은 화면에서 머리말을 접는다. 그러면 닫기·편집 내용 적용·되돌리기가
+ * 전부 크기 0 이 되어, 화살표를 찾아 펼치기 전에는 닫지도 저장하지도 못한다.
+ * 폰에서 이건 막다른 길이다.
+ *
+ * Puck 의 접기 규칙과 싸우지 않고, 편집기 위에 우리 줄을 하나 둔다. 되돌리기는
+ * Puck 의 history 를 그대로 쓴다 — 우리가 따로 기억하지 않는다.
+ */
+function BuilderBar({
   onClose,
   onSave,
 }: {
@@ -67,10 +77,21 @@ function BuilderActions({
   onSave: (data: LandingPageData) => void;
 }) {
   const data = useLandingPuck((state) => state.appState.data);
+  const history = useLandingPuck((state) => state.history);
   return (
-    <div className="landing-builder-header-actions">
-      <button type="button" onClick={onClose}><X /> 닫기</button>
-      <button type="button" className="save" onClick={() => onSave(data as LandingPageData)}><Save /> 편집 내용 적용</button>
+    <div className="landing-builder-bar">
+      <div className="landing-builder-bar-history">
+        <button type="button" onClick={() => history.back()} disabled={!history.hasPast} title="되돌리기">
+          <Undo2 /> 되돌리기
+        </button>
+        <button type="button" onClick={() => history.forward()} disabled={!history.hasFuture} title="앞으로">
+          <Redo2 /> 앞으로
+        </button>
+      </div>
+      <div className="landing-builder-bar-main">
+        <button type="button" onClick={onClose}><X /> 닫기</button>
+        <button type="button" className="save" onClick={() => onSave(data as LandingPageData)}><Save /> 편집 내용 적용</button>
+      </div>
     </div>
   );
 }
@@ -99,7 +120,18 @@ export function LandingVisualBuilder({
         plugins={KOREAN_PLUGINS}
         viewports={VIEWPORTS}
         overrides={{
-          headerActions: () => <BuilderActions onClose={onClose} onSave={onSave} />,
+          /*
+           * 머리말을 통째로 우리 것으로 바꾼다.
+           *
+           * headerActions 만 바꾸면 Puck 의 접는 규칙이 그대로라, 좁은 화면에서
+           * 우리 단추까지 같이 숨는다. 접지 않는 머리말을 직접 그린다.
+           */
+          header: () => (
+            <div className="landing-builder-head">
+              <strong>{businessName || "판매 페이지"}</strong>
+              <BuilderBar onClose={onClose} onSave={onSave} />
+            </div>
+          ),
         }}
       />
     </div>
