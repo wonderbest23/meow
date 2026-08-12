@@ -18,19 +18,39 @@ export const landingBlockTypes = [
   "LocationSection",
   "FaqSection",
   "CtaSection",
+  /*
+   * 나중에 더한 칸들. 여기 없으면 그 칸이 든 페이지는 통째로 불러오지 못한다 —
+   * 블록을 새로 만들 때 이 목록에 넣는 것을 잊으면 안 된다.
+   */
+  "FooterSection",
+  "PhotoGrid",
+  "PhotoBlock",
 ] as const;
 
 export type LandingBlockType = (typeof landingBlockTypes)[number];
 
 const primitiveProp = z.union([z.string().max(900_000), z.number(), z.boolean(), z.null()]);
 
+/*
+ * 칸 안에 다른 칸이 들어가는 자리(slot).
+ *
+ * '사진 여러 장' 안의 사진들, 첫 화면에 끌어다 놓은 사진이 여기 담긴다. 값이
+ * 배열이라 위의 primitiveProp 만으로는 통과하지 못하고, 그러면 페이지를 아예
+ * 불러오지 못한다.
+ *
+ * 안에 든 것은 다시 이 스키마로 재귀 검사하지 않는다 — 전체 크기 제한(4MB)이
+ * 아래 superRefine 에서 걸리므로 여기서 깊이를 더 파고들 이유가 없다.
+ */
+const slotProp = z.array(z.unknown()).max(64);
+const blockProp = z.union([primitiveProp, slotProp]);
+
 export const landingPageDataSchema = z.object({
   root: z.object({
-    props: z.record(z.string(), primitiveProp).optional(),
+    props: z.record(z.string(), blockProp).optional(),
   }).passthrough(),
   content: z.array(z.object({
     type: z.enum(landingBlockTypes),
-    props: z.record(z.string(), primitiveProp),
+    props: z.record(z.string(), blockProp),
   }).passthrough()).max(32),
   zones: z.record(z.string(), z.array(z.unknown())).optional(),
 }).superRefine((value, context) => {
