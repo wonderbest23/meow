@@ -146,22 +146,30 @@ function splitMenuLine(label: string, fallbackName: string): { name: string; pri
 export function createLandingPageData(seed: LandingPageSeed, templateId: string): LandingPageData {
   const value = shared(seed);
   const menu = splitMenuLine(seed.priceLabel, seed.offerTitle);
-  const proof = seed.proofItems;
+  /* 손님이 오기 전에 확인하는 것 — 아는 것만, 아는 순서대로 */
+  const visitFacts = [
+    seed.businessAddress ? `${seed.businessAddress}에서 운영합니다` : "",
+    seed.openHours ? `${seed.openHours} 문 엽니다` : "",
+  ].filter(Boolean);
+  // 하나도 모르면 띠가 제목만 남는다 — 그때만 응대 약속을 세운다
+  const trustItems = visitFacts.length ? visitFacts : ["문의 주시면 바로 안내해 드립니다"];
+
   const trust = block("TrustBar", `trust-${templateId}`, {
     label: "믿고 맡기셔도 됩니다",
     /*
-     * 실적으로 채우고, 없으면 빈칸으로 둔다.
+     * 손님이 오기 전에 확인하는 것만 싣는다 — 어디인지, 언제 여는지, 얼마인지.
      *
-     * 예전에는 네 칸을 "진행 단계를 쉽게 설명합니다", "모바일에서도 편하게 확인"
-     * 같은 말로 메웠다. 어느 가게에 붙여도 말이 되는 문장이라 손님에게 알려주는
-     * 게 없고, 네 칸이 꽉 찬 만큼 오히려 지어낸 티가 났다.
+     * 예전에는 두 종류의 남의 말이 들어와 있었다. 하나는 "모바일에서도 편하게
+     * 확인" 같은 채움말로, 어느 가게에 붙여도 말이 되니 알려주는 게 없었다.
+     * 다른 하나는 계획서의 실적("실제 판매·매출 발생")인데, 그건 사업을 심사하는
+     * 사람에게 보이려고 쓴 말이지 손님이 알 바가 아니다.
      *
-     * 아는 사실 하나가 지어낸 넷보다 낫다. 남는 칸은 사업주가 채운다.
+     * 아는 사실 하나가 지어낸 넷보다 낫다. 남는 칸은 그리지 않고, 사업주가 채운다.
      */
-    item1: proof[0] ?? "문의 주시면 범위와 비용을 먼저 알려드립니다",
-    item2: proof[1] ?? (seed.businessAddress ? `${seed.businessAddress}에서 운영합니다` : ""),
-    item3: proof[2] ?? "",
-    item4: proof[3] ?? "",
+    item1: trustItems[0] ?? "",
+    item2: trustItems[1] ?? "",
+    item3: "",
+    item4: "",
   });
   const feature = block("FeatureGrid", `features-${templateId}`, value.features);
   const offer = block("OfferSection", `offer-${templateId}`, value.offer);
@@ -328,11 +336,10 @@ export function syncLandingPageData(
           props[`body${index + 1}`] = item.description;
         });
       }
-      if (component.type === "TrustBar" && changed.has("proofItems")) {
-        [0, 1, 2].forEach((index) => {
-          props[`item${index + 1}`] = seed.proofItems[index] ?? "";
-        });
-      }
+      /*
+       * 신뢰 띠는 더 이상 계획서 실적을 받지 않는다. 예전 연결을 남겨 두면
+       * 실적이 비워질 때 사업주가 직접 적어 넣은 문구까지 같이 지워진다.
+       */
       if (component.type === "OfferSection") {
         if (changed.has("offerTitle")) props.title = seed.offerTitle;
         if (changed.has("offerDescription")) props.description = seed.offerDescription;

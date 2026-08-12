@@ -60,16 +60,6 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
   const whyBetter = text(get("overview/problem", "why_better"));
   const offerTypes = list(get("market/products", "offer_type"));
   const priceValue = text(get("market/products", "price_value"));
-  /*
-   * 성과는 '검증된 사실'로 읽히므로 실제로 이뤘다고 답한 것만 싣는다.
-   * 아직 성과가 없으면(has_traction = no) 준비 중인 내용은 넣지 않는다 —
-   * 홈페이지에서 준비 과정은 실적처럼 보여서는 안 된다.
-   */
-  const hasTraction = text(get("overview/achievements", "has_traction")) === "yes";
-  const achievements = hasTraction
-    ? [text(get("overview/achievements", "traction_detail")), ...list(get("overview/achievements", "traction_types"))]
-        .filter(Boolean)
-    : [];
   const city = text(get("overview/summary", "city")) || text(source.business.region);
   const buyerTypes = list(get("overview/summary", "buyer_type"));
 
@@ -144,7 +134,18 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
     offerTitle: mainOffer ? clamp(mainOffer, 60) : base.offerTitle,
     offerDescription: offerDetail ? clamp(sentence(offerDetail, "."), 600) : base.offerDescription,
     priceLabel: priceValue ? clamp(priceValue, 100) : base.priceLabel,
-    proofItems: achievements.slice(0, 4).map((item) => clamp(item, 200)),
+    /*
+     * 계획서의 실적은 홈페이지에 싣지 않는다.
+     *
+     * 예전에는 "실제 판매·매출 발생", "고객 확보", "월 1,400건 내외 판매" 같은
+     * 답변이 신뢰 띠와 공개 페이지의 '확인 근거' 칸으로 그대로 넘어갔다.
+     * 그건 사업이 굴러가는지 심사하는 사람에게 보이려고 쓴 말이다 — 꽃 사러 온
+     * 손님이 이 가게의 월 판매 건수를 알아야 할 이유가 없다.
+     *
+     * 손님이 실제로 궁금해하는 것(위치, 영업시간, 가격 안내)은 아래 칸들이
+     * 이미 맡고 있다. 여기는 비워 둔다.
+     */
+    proofItems: [],
     privacyController: businessName,
     businessAddress: clamp(city, 300),
     /*
