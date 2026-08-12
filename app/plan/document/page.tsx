@@ -232,6 +232,21 @@ export default function PlanDocumentPage() {
   const locked = !isSample && access !== null && !access.paid;
   const busy = exporting !== null || !sections.length || isSample;
 
+  /*
+   * 예시의 PDF·Word 는 미리 구워 둔 파일을 그냥 내려준다.
+   *
+   * 예시는 결제 대상이 아니라서 /api/plan/document 가 막는다. 서버 검사에 예외를
+   * 내면 그 구멍으로 실제 문서도 새어 나가므로, 파일을 미리 만들어 두고
+   * (scripts/bake-sample-files.mts) 정적 파일로 건넨다. 누를 때마다 만들지
+   * 않으니 기다림도 없다.
+   *
+   * PPT 는 여기 없다 — 만들 때 AI 를 부르는 터라 미리 구우려면 따로 돌려야 한다.
+   */
+  const samplePlanId = isSample ? activePlan(loadState())?.id ?? null : null;
+  function sampleFile(ext: "pdf" | "docx"): string | null {
+    return samplePlanId ? `/samples/${samplePlanId}.${ext}` : null;
+  }
+
   /** 결제 전이면 서버 왕복 없이 바로 결제 화면으로 */
   function goPay() {
     const p = activePlan(loadState());
@@ -329,12 +344,16 @@ export default function PlanDocumentPage() {
                   <div className={styles.outRow}>
                     <button
                       className={`${styles.outBtn} ${styles.outBtnPrimary}`}
-                      disabled={busy}
-                      onClick={() => (locked ? goPay() : handleExport("pdf"))}
+                      disabled={busy && !sampleFile("pdf")}
+                      onClick={() => {
+                        const file = sampleFile("pdf");
+                        if (file) return void window.open(file, "_blank", "noopener");
+                        return locked ? goPay() : handleExport("pdf");
+                      }}
                       title={locked ? "결제 후 열립니다" : "PDF로 내려받기"}
                     >
                       <span className={styles.outIcon}>
-                        {exporting === "pdf" ? <Spinner /> : locked ? <Lock size={16} /> : <FileDown size={18} />}
+                        {exporting === "pdf" ? <Spinner /> : locked && !isSample ? <Lock size={16} /> : <FileDown size={18} />}
                       </span>
                       <span className={styles.outText}>
                         <strong className={styles.outName}>{exporting === "pdf" ? "내려받는 중…" : "PDF"}</strong>
@@ -343,12 +362,16 @@ export default function PlanDocumentPage() {
                     </button>
                     <button
                       className={styles.outBtn}
-                      disabled={busy}
-                      onClick={() => (locked ? goPay() : handleExport("docx"))}
+                      disabled={busy && !sampleFile("docx")}
+                      onClick={() => {
+                        const file = sampleFile("docx");
+                        if (file) return void window.open(file, "_blank", "noopener");
+                        return locked ? goPay() : handleExport("docx");
+                      }}
                       title={locked ? "결제 후 열립니다" : "Word로 내려받기"}
                     >
                       <span className={styles.outIcon}>
-                        {exporting === "docx" ? <Spinner /> : locked ? <Lock size={16} /> : <FileDown size={18} />}
+                        {exporting === "docx" ? <Spinner /> : locked && !isSample ? <Lock size={16} /> : <FileDown size={18} />}
                       </span>
                       <span className={styles.outText}>
                         <strong className={styles.outName}>{exporting === "docx" ? "내려받는 중…" : "Word"}</strong>
