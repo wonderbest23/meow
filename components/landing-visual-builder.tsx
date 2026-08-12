@@ -66,10 +66,16 @@ function playMotionPreview(id: string, motion: string) {
   if (!(el instanceof HTMLElement)) return;
   const cls = `motion-preview-${motion}`;
   el.classList.remove(cls);
-  /* 다시 그리게 한 뒤 붙여야 같은 효과를 연달아 눌러도 매번 돈다 */
-  void el.offsetWidth;
-  el.classList.add(cls);
-  el.addEventListener("animationend", () => el.classList.remove(cls), { once: true });
+  /*
+   * 값을 바꾸면 그 칸이 다시 그려진다. 바로 클래스를 붙이면 다시 그려질 때
+   * 지워져 아무 일도 일어나지 않는다 — 다시 그린 뒤에 붙인다.
+   */
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const target = frame?.contentDocument?.querySelector(`[data-puck-dnd="${CSS.escape(id)}"] .landing-block`);
+    if (!(target instanceof HTMLElement)) return;
+    target.classList.add(cls);
+    target.addEventListener("animationend", () => target.classList.remove(cls), { once: true });
+  }));
 }
 
 function MotionPanel() {

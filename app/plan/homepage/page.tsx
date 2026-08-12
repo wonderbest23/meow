@@ -121,6 +121,16 @@ export default function PlanHomepagePage() {
         setProjectId(data.projectId);
         setDraft(data.site.draft);
         setEditable(Boolean(data.editable));
+        /*
+         * 고칠 수 있는 사람에게는 자유 편집을 바로 연다.
+         *
+         * 그 앞에 있던 화면은 제목·처음 설정·전체화면·저장하고 공개·결제 안내·
+         * 주소·디자인 고르기가 한 줄로 쌓여 있어, 무엇부터 할지 읽히지 않았다.
+         * 이 화면에서 할 일은 결국 홈페이지를 고치는 것 하나다.
+         *
+         * 닫으면 그 화면으로 돌아간다 — 주소 확인이나 공개는 거기서 한다.
+         */
+        if (data.editable) setBuilderOpen(true);
         if (typeof data.price === "number") setPrice(data.price);
         setPhase("ready");
         return;
