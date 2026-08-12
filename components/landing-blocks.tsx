@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, Check } from "lucide-react";
-import type { ComponentType } from "react";
+import type { ComponentType, CSSProperties, ReactNode } from "react";
 import type { Config } from "@puckeditor/core";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { LandingMediaField } from "./landing-media-field";
@@ -179,7 +179,44 @@ const liveText = (label: string) => ({ type: "text" as const, label, contentEdit
 const liveArea = (label: string) => ({ type: "textarea" as const, label, contentEditable: true });
 const area = (label: string) => ({ type: "textarea" as const, label });
 
+/*
+ * 페이지 강조색.
+ *
+ * 버튼·작은 제목·강조 배경이 모두 --landing-accent 를 읽는다. 이 변수 하나만
+ * 바꾸면 페이지 전체 색이 따라 바뀐다.
+ *
+ * 색을 직접 입력받지 않고 고르게 한다. 아무 색이나 넣으면 흰 글씨가 얹히는
+ * 버튼에서 글이 안 보이는 조합이 나온다 — 흰 글씨가 읽히는 진하기만 골라 뒀다.
+ */
+const ACCENT_OPTIONS = [
+  { label: "파랑 (기본)", value: "#1b64da" },
+  { label: "남색", value: "#1e3a8a" },
+  { label: "초록", value: "#15803d" },
+  { label: "청록", value: "#0f766e" },
+  { label: "보라", value: "#6d28d9" },
+  { label: "자주", value: "#a21caf" },
+  { label: "빨강", value: "#b91c1c" },
+  { label: "주황", value: "#c2410c" },
+  { label: "갈색", value: "#78350f" },
+  { label: "먹색", value: "#191f28" },
+];
+
+/** 저장된 값이 우리가 고른 색일 때만 쓴다 — 남이 넣은 값이 그대로 style 로 나가지 않게 */
+export function landingAccentStyle(accent: unknown) {
+  const hit = ACCENT_OPTIONS.find((option) => option.value === accent);
+  return hit ? ({ "--landing-accent": hit.value } as CSSProperties) : undefined;
+}
+
 export const landingBlockConfig: Config<LandingBlockProps> = {
+  root: {
+    fields: {
+      accent: { type: "select", label: "페이지 강조색", options: ACCENT_OPTIONS },
+    },
+    defaultProps: { accent: "#1b64da" },
+    render: ({ accent, children }) => (
+      <div className="landing-block-page" style={landingAccentStyle(accent)}>{children as ReactNode}</div>
+    ),
+  },
   categories: {
     main: {
       title: "첫 화면과 상품",
@@ -621,8 +658,9 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
 };
 
 export function LandingBlocksRenderer({ data }: { data: LandingPageData }) {
+  /* 편집기에서 고른 강조색은 root 에 있다 — 공개 화면에도 같은 색이 걸려야 한다 */
   return (
-    <div className="landing-block-page">
+    <div className="landing-block-page" style={landingAccentStyle(data.root?.props?.accent)}>
       {data.content.map((component, index) => {
         const renderer = landingBlockConfig.components[component.type]?.render as ComponentType<Record<string, unknown>> | undefined;
         if (!renderer) return null;
