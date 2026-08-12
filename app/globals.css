@@ -7136,6 +7136,39 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .landing-block-page :where(h1, h2, h3, p) { word-break: keep-all; overflow-wrap: break-word; }
 .landing-block { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 112px 0; }
 .landing-block > header > span, .landing-block > div > span, .landing-block-hero-copy > span, .landing-block-cta > span { color: var(--landing-accent, #1b64da); font-size: 12px; font-weight: 900; }
+/*
+ * 페이지 글꼴과 글자 크기.
+ *
+ * 둘 다 페이지 전체 값이다. 블록마다 다른 글꼴을 쓰면 한 페이지가 여러 사람이
+ * 만든 것처럼 보인다.
+ *
+ * 글꼴은 기기에 이미 있는 것만 쓴다 — 웹에서 내려받게 하면 손님이 그만큼 더
+ * 기다리고, 느린 망에서는 글이 늦게 뜬다. 한글이 확실히 되는 것만 담았다.
+ */
+.landing-block-page.font-sans { font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+.landing-block-page.font-round { font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; letter-spacing: -0.01em; }
+.landing-block-page.font-serif { font-family: "Nanum Myeongjo", "Apple SD Gothic Neo", serif; }
+
+/*
+ * 크기는 세 단계뿐이고 굵기는 열지 않는다. 제목은 굵게·본문은 보통으로 이미
+ * 짝지어져 있어서, 하나만 건드리면 그 짝이 깨지고 읽기 어려워진다.
+ *
+ * 블록 규칙(.landing-block-hero h1 등)을 이기려면 여기가 더 구체적이어야 한다.
+ */
+.landing-block-page.scale-sm .landing-block-hero h1 { font-size: 56px; }
+.landing-block-page.scale-lg .landing-block-hero h1 { font-size: 76px; }
+.landing-block-page.scale-sm .landing-block h2 { font-size: 37px; }
+.landing-block-page.scale-lg .landing-block h2 { font-size: 51px; }
+.landing-block-page.scale-sm .landing-block p { font-size: 15px; }
+.landing-block-page.scale-lg .landing-block p { font-size: 18px; }
+
+@media (max-width: 640px) {
+  .landing-block-page.scale-sm .landing-block-hero h1 { font-size: 36px; }
+  .landing-block-page.scale-lg .landing-block-hero h1 { font-size: 48px; }
+  .landing-block-page.scale-sm .landing-block h2 { font-size: 27px; }
+  .landing-block-page.scale-lg .landing-block h2 { font-size: 35px; }
+}
+
 .landing-block h2 { margin-bottom: 18px; font-size: 44px; line-height: 1.15; }
 .landing-block p { color: #4e5968; line-height: 1.75; }
 /*

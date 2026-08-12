@@ -254,7 +254,39 @@ const ACCENT_OPTIONS = [
   { label: "먹색", value: "#191f28" },
 ];
 
+/*
+ * 페이지 글꼴.
+ *
+ * 자유 입력을 받지 않는다. 아무 글꼴이나 받으면 한글이 없는 것을 골라 네모만
+ * 뜨거나, 장식용 글꼴로 본문을 깔아 못 읽는 페이지가 나온다. 한글이 확실히
+ * 되는 것만 골라 뒀다.
+ */
+const FONT_OPTIONS = [
+  { label: "또렷한 고딕 (기본)", value: "sans" },
+  { label: "부드러운 고딕", value: "round" },
+  { label: "단정한 명조", value: "serif" },
+];
+
+/*
+ * 글자 크기 — 페이지 전체가 한 단계씩 같이 움직인다.
+ *
+ * 굵기나 개별 크기는 열지 않는다. 제목은 굵게·본문은 보통으로 이미 짝지어져
+ * 있어서 하나만 건드리면 그 짝이 깨진다. 손님이 읽기 어려워지는 쪽으로 흐른다.
+ */
+const SCALE_OPTIONS = [
+  { label: "작게", value: "sm" },
+  { label: "보통", value: "md" },
+  { label: "크게", value: "lg" },
+];
+
 /** 저장된 값이 우리가 고른 색일 때만 쓴다 — 남이 넣은 값이 그대로 style 로 나가지 않게 */
+/** 저장된 값이 우리가 고른 것일 때만 클래스로 내보낸다 */
+export function landingPageClass(font: unknown, scale: unknown) {
+  const f = FONT_OPTIONS.some((o) => o.value === font) ? font : "sans";
+  const c = SCALE_OPTIONS.some((o) => o.value === scale) ? scale : "md";
+  return `landing-block-page font-${f} scale-${c}`;
+}
+
 export function landingAccentStyle(accent: unknown) {
   const hit = ACCENT_OPTIONS.find((option) => option.value === accent);
   return hit ? ({ "--landing-accent": hit.value } as CSSProperties) : undefined;
@@ -264,10 +296,12 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
   root: {
     fields: {
       accent: { type: "select", label: "페이지 강조색", options: ACCENT_OPTIONS },
+      font: { type: "select", label: "글꼴", options: FONT_OPTIONS },
+      scale: { type: "select", label: "글자 크기", options: SCALE_OPTIONS },
     },
-    defaultProps: { accent: "#1b64da" },
-    render: ({ accent, children }) => (
-      <div className="landing-block-page" style={landingAccentStyle(accent)}>{children as ReactNode}</div>
+    defaultProps: { accent: "#1b64da", font: "sans", scale: "md" },
+    render: ({ accent, font, scale, children }) => (
+      <div className={landingPageClass(font, scale)} style={landingAccentStyle(accent)}>{children as ReactNode}</div>
     ),
   },
   categories: {
@@ -831,7 +865,10 @@ function withSlotRenderers(props: Record<string, unknown>) {
 export function LandingBlocksRenderer({ data }: { data: LandingPageData }) {
   /* 편집기에서 고른 강조색은 root 에 있다 — 공개 화면에도 같은 색이 걸려야 한다 */
   return (
-    <div className="landing-block-page" style={landingAccentStyle(data.root?.props?.accent)}>
+    <div
+      className={landingPageClass(data.root?.props?.font, data.root?.props?.scale)}
+      style={landingAccentStyle(data.root?.props?.accent)}
+    >
       {data.content.map((component, index) =>
         renderStoredBlock(component, String(component.props.id ?? `${component.type}-${index}`)),
       )}
