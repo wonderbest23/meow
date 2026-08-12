@@ -340,8 +340,14 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
             <p>{description}</p>
             <a href="#landing-contact">{buttonLabel}<ArrowRight /></a>
           </div>
-          {/* 끌어다 놓은 사진이 있으면 그쪽이 이긴다 — 없을 때만 예전 대표 이미지 */}
-          <Photo className="landing-block-hero-slot" />
+          {/*
+            * 끌어다 놓은 사진이 있으면 그쪽이 이긴다 — 없을 때만 예전 대표 이미지.
+            *
+            * 이 슬롯을 만들기 전에 저장된 페이지에는 photo 라는 값이 아예 없다.
+            * 그대로 <Photo /> 를 쓰면 undefined 를 컴포넌트로 쓰려다 화면이 통째로
+            * 죽는다 — 실제로 그렇게 났다. 그릴 수 있을 때만 그린다.
+            */}
+          {typeof Photo === "function" ? <Photo className="landing-block-hero-slot" /> : null}
           {imageUrl && <figure><img src={imageUrl} alt="" /></figure>}
         </section>
       ),
@@ -746,7 +752,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       render: ({ eyebrow, heading, columns, photos: Photos, ...style }) => (
         <section className={`landing-block landing-block-photogrid cols-${columns} ${styleClass(style)}`} style={blockBg(style)}>
           <header><span>{eyebrow}</span><h2>{heading}</h2></header>
-          <Photos className="landing-photogrid-zone" />
+          {typeof Photos === "function" ? <Photos className="landing-photogrid-zone" /> : null}
         </section>
       ),
     },
@@ -788,16 +794,47 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
   },
 };
 
+/* 저장된 칸 하나를 그린다 — 편집기 밖(미리보기·공개 화면)에서 쓴다 */
+function renderStoredBlock(component: { type: string; props: Record<string, unknown> }, key: string) {
+  const components = landingBlockConfig.components as Record<string, { render?: unknown } | undefined>;
+  const renderer = components[component.type]?.render as ComponentType<Record<string, unknown>> | undefined;
+  if (!renderer) return null;
+  const Block = renderer;
+  return <Block key={key} {...withSlotRenderers(component.props)} />;
+}
+
+/*
+ * 칸 안에 든 칸(slot)을 편집기 밖에서도 그린다.
+ *
+ * 편집기에서는 Puck 이 슬롯 자리에 '그리는 함수'를 넣어 준다. 저장된 데이터에는
+ * 그냥 배열이 들어 있어서, 그대로 넘기면 블록이 <Photo /> 처럼 배열을 컴포넌트로
+ * 쓰려다 화면이 통째로 죽는다 — 실제로 그렇게 났다.
+ *
+ * 배열로 온 자리를 그리는 함수로 바꿔 끼운다. 편집기와 공개 화면이 같은 블록
+ * 코드를 쓰므로, 여기서 모양을 맞춰 줘야 양쪽이 같은 결과를 낸다.
+ */
+function withSlotRenderers(props: Record<string, unknown>) {
+  const next: Record<string, unknown> = { ...props };
+  for (const [key, value] of Object.entries(props)) {
+    if (!Array.isArray(value)) continue;
+    const children = value.filter(
+      (item): item is { type: string; props: Record<string, unknown> } =>
+        Boolean(item) && typeof item === "object" && typeof (item as { type?: unknown }).type === "string",
+    );
+    next[key] = function SlotZone({ className }: { className?: string }) {
+      return <div className={className}>{children.map((child, index) => renderStoredBlock(child, `${key}-${index}`))}</div>;
+    };
+  }
+  return next;
+}
+
 export function LandingBlocksRenderer({ data }: { data: LandingPageData }) {
   /* 편집기에서 고른 강조색은 root 에 있다 — 공개 화면에도 같은 색이 걸려야 한다 */
   return (
     <div className="landing-block-page" style={landingAccentStyle(data.root?.props?.accent)}>
-      {data.content.map((component, index) => {
-        const renderer = landingBlockConfig.components[component.type]?.render as ComponentType<Record<string, unknown>> | undefined;
-        if (!renderer) return null;
-        const Block = renderer;
-        return <Block key={String(component.props.id ?? `${component.type}-${index}`)} {...component.props} />;
-      })}
+      {data.content.map((component, index) =>
+        renderStoredBlock(component, String(component.props.id ?? `${component.type}-${index}`)),
+      )}
     </div>
   );
 }
