@@ -74,12 +74,12 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   infrastructureRecipients: "Supabase, Inc. 및 Cloudflare, Inc.",
   infrastructureCountries: "",
   infrastructureProcessingDetails: "Supabase는 로그인·계정 복구와 프로젝트 데이터베이스를, Cloudflare는 웹 호스팅·콘텐츠 전송·보안과 오류 기록을 처리합니다.",
-  overseasRecipient: "OpenAI 및 OpenAI가 공개한 하위처리자",
+  overseasRecipient: "Anthropic, OpenAI 및 각 사가 공개한 하위처리자",
   overseasCountries: "",
   overseasTransferredData: "사업 아이디어, 경력·관심사, 예산·가능 시간, 지역과 사용자가 입력한 프로젝트 내용 중 생성에 필요한 부분",
   overseasPurpose: "맞춤 사업 추천, 문서 초안 작성, 문장 수정과 이미지 생성",
   overseasTimingAndMethod: "사용자가 인공지능 생성 기능을 실행할 때 암호화된 통신망으로 전송",
-  overseasRetention: "텍스트 생성 요청은 저장 옵션을 끄고 전송합니다. 이미지 생성 등 기능별 처리 기준은 다를 수 있으며, 오남용 방지 로그는 OpenAI의 기본 정책에 따라 최대 30일 보관될 수 있습니다. 법적 의무가 있으면 더 길어질 수 있습니다.",
+  overseasRetention: "텍스트 생성 요청은 저장 옵션을 끄고 전송합니다. 이미지 생성 등 기능별 처리 기준은 다를 수 있으며, 오남용 방지 로그는 각 인공지능 사업자의 기본 정책에 따라 최대 30일 보관될 수 있습니다. 법적 의무가 있으면 더 길어질 수 있습니다.",
   overseasRefusalImpact: "인공지능 처리를 원하지 않으면 해당 생성 기능을 사용하지 않을 수 있습니다. 이 경우 기본 계산·서식 기능은 이용할 수 있지만 맞춤 문장·이미지 생성은 제한됩니다.",
   refundBeforeSupply: "관리자가 입금을 확인하기 전에는 주문을 취소할 수 있습니다. 이미 입금했더라도 맞춤 결과물 제작이 시작되지 않았다면 입금 사실을 확인한 뒤 전액 환급합니다.",
   refundAfterSupply: "관리자가 입금을 확인하여 이용자 입력에 맞춘 인공지능 호출과 디지털 결과물 제작이 시작된 뒤에는 생성 비용이 발생하고 제3자에게 재판매할 수 없는 맞춤 결과물이 만들어지므로, 단순 변심에 따른 청약철회와 환불이 제한됩니다. 다만 약정한 핵심 결과물이 제공되지 않았거나 표시·광고 또는 계약 내용과 다르게 제공된 경우, 정상 이용할 수 없는 중대한 하자가 합리적인 기간 안에 고쳐지지 않은 경우와 그 밖에 관계 법령이 보장하는 경우에는 재제공, 일부 환급 또는 전액 환급을 요청할 수 있습니다.",
@@ -142,7 +142,7 @@ export function evaluatePlatformLaunchReadiness(
       return typeof value === "string" && value.trim().length === 0;
     })
     .map(({ label }) => label);
-  if (!settings.openAiRegionConfirmed) missing.push("OpenAI 실제 처리 지역 확인");
+  if (!settings.openAiRegionConfirmed) missing.push("Anthropic·OpenAI 실제 처리 지역 확인");
   if (!settings.infrastructureRegionConfirmed) missing.push("Supabase·Cloudflare 처리 지역 확인");
   if (!settings.authEmailDeliveryConfirmed) missing.push("가입·계정복구 메일 실사용 확인");
   if (!settings.legalReviewConfirmed) missing.push("운영자 최종 검토 확인");
@@ -254,7 +254,7 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
           "결제: 주문번호, 금액·상태, 입금자명, 연락처, 현금영수증 종류와 발급 식별정보 - 입금 확인, 현금영수증 발급, 취소·환급과 분쟁 대응. 계좌 비밀번호나 인터넷뱅킹 인증정보는 수집하지 않습니다.",
           "문의: 이메일 또는 대화 내용 - 고객 요청 처리",
           "자동 생성 정보: 접속 기록, 쿠키, 기기·브라우저 정보, IP 주소 - 보안, 오류 대응, 부정 이용 방지",
-          "OpenAI 연결 정보: 사용자가 직접 입력한 API 키의 끝 4자리와 연결 시각 - 연결 상태 표시. 키 원문은 데이터베이스와 브라우저 저장소에 보관하지 않고 서버 메모리에서 최대 4시간 사용합니다.",
+          "인공지능 연결 정보: 사용자가 직접 입력한 API 키의 끝 4자리와 연결 시각 - 연결 상태 표시. 키 원문은 데이터베이스와 브라우저 저장소에 보관하지 않고 서버 메모리에서 최대 4시간 사용합니다.",
         ],
       },
       {
@@ -268,9 +268,9 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
       {
         title: "3. 개인정보의 처리위탁과 국외 처리",
         paragraphs: [
-          "서비스 운영을 위해 Supabase(로그인·데이터베이스), Cloudflare(호스팅·보안), OpenAI(인공지능 생성)를 이용합니다. 현재 대금은 안내된 계좌로 직접 이체받고 운영자가 거래내역을 확인합니다.",
+          "서비스 운영을 위해 Supabase(로그인·데이터베이스), Cloudflare(호스팅·보안), Anthropic·OpenAI(인공지능 생성)를 이용합니다. 현재 대금은 안내된 계좌로 직접 이체받고 운영자가 거래내역을 확인합니다.",
           `기반 서비스 국외 처리: ${shown(settings.infrastructureRecipients)} / 처리 국가 ${shown(settings.infrastructureCountries, "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력")} / ${settings.infrastructureProcessingDetails}`,
-          "OpenAI로 전송되는 항목, 국가, 시기와 방법, 보관 기준은 ‘인공지능 및 국외 처리 안내’에서 별도로 확인할 수 있습니다.",
+          "인공지능 사업자로 전송되는 항목, 국가, 시기와 방법, 보관 기준은 ‘인공지능 및 국외 처리 안내’에서 별도로 확인할 수 있습니다.",
         ],
       },
       {
@@ -324,10 +324,10 @@ function aiDocument(settings: PlatformLegalSettings): LegalDocument {
         ],
       },
       {
-        title: "3. OpenAI 국외 처리",
+        title: "3. 인공지능 국외 처리",
         items: [
           `이전받는 자: ${shown(settings.overseasRecipient)}`,
-          `처리 국가: ${shown(settings.overseasCountries, "운영 중인 OpenAI 계정의 실제 처리 지역 확인 후 입력")}`,
+          `처리 국가: ${shown(settings.overseasCountries, "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")}`,
           `이전 항목: ${settings.overseasTransferredData}`,
           `목적: ${settings.overseasPurpose}`,
           `시기와 방법: ${settings.overseasTimingAndMethod}`,
