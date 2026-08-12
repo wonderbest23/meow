@@ -1,6 +1,6 @@
 "use client";
 
-import { blocksPlugin, createUsePuck, outlinePlugin, Puck, type Data } from "@puckeditor/core";
+import { blocksPlugin, createUsePuck, fieldsPlugin, outlinePlugin, Puck, type Data } from "@puckeditor/core";
 import { MousePointerClick, Save, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { landingBlockConfig, type LandingBlockProps } from "./landing-blocks";
@@ -33,11 +33,13 @@ const VIEWPORTS = [
  * 조용히 어긋난다. Puck 이 같은 name 의 플러그인을 덮어쓰므로, 원본을 그대로
  * 펼치고 label 만 바꿔 넘긴다. 그리는 방식과 아이콘은 원본 그대로다.
  *
- * 오른쪽 속성 칸(fields)은 넘기지 않는다 — Puck 이 알아서 붙인다.
+ * 오른쪽 속성 칸(fields)도 같은 방식이다. 이걸 넘기면 Puck 이 자기 것을 붙이지
+ * 않으므로, 원본을 펼쳐 이름만 바꾼다.
  */
 const KOREAN_PLUGINS = [
   { ...blocksPlugin(), label: "블록 넣기" },
   { ...outlinePlugin(), label: "페이지 구성" },
+  { ...fieldsPlugin(), label: "고치기" },
 ];
 
 /*
