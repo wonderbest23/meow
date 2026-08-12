@@ -25,7 +25,7 @@ type FeatureProps = {
   body2: string;
   title3: string;
   body3: string;
-};
+} & BlockStyle;
 type ProcessProps = {
   eyebrow: string;
   heading: string;
@@ -61,7 +61,7 @@ type GalleryProps = {
   caption2: string;
   image3: string;
   caption3: string;
-};
+} & BlockStyle;
 type OfferProps = { eyebrow: string; title: string; description: string; price: string; buttonLabel: string };
 type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string };
 type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string } & BlockStyle;
@@ -88,7 +88,7 @@ type PriceListProps = {
   name2: string; desc2: string; price2: string;
   name3: string; desc3: string; price3: string;
   note: string;
-};
+} & BlockStyle;
 
 type LocationProps = {
   eyebrow: string;
@@ -105,7 +105,7 @@ type FaqProps = {
   q1: string; a1: string;
   q2: string; a2: string;
   q3: string; a3: string;
-};
+} & BlockStyle;
 
 const imageField = (label: string) => ({
   type: "custom" as const,
@@ -255,6 +255,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         body2: area("두 번째 설명"),
         title3: text("세 번째 장점"),
         body3: area("세 번째 설명"),
+        ...styleFields,
       },
       defaultProps: {
         eyebrow: "선택하는 이유",
@@ -266,9 +267,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         body2: "다른 선택지보다 편리한 점을 설명하세요.",
         title3: "세 번째 장점",
         body3: "믿고 선택할 수 있는 이유를 설명하세요.",
+        ...styleDefaults,
       },
-      render: ({ eyebrow, heading, intro, title1, body1, title2, body2, title3, body3 }) => (
-        <section className="landing-block landing-block-features">
+      render: ({ eyebrow, heading, intro, title1, body1, title2, body2, title3, body3, ...style }) => (
+        <section className={`landing-block landing-block-features ${styleClass(style)}`}>
           <header><span>{eyebrow}</span><h2>{heading}</h2><p>{intro}</p></header>
           <div>{[[title1, body1], [title2, body2], [title3, body3]].map(([title, body], index) => <article key={`${title}-${index}`}><i>{String(index + 1).padStart(2, "0")}</i><h3>{title}</h3><p>{body}</p></article>)}</div>
         </section>
@@ -365,6 +367,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         caption2: text("사진 2 설명"),
         image3: imageField("사진 3"),
         caption3: text("사진 3 설명"),
+        ...styleFields,
       },
       defaultProps: {
         eyebrow: "서비스 미리보기",
@@ -375,9 +378,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         caption2: "두 번째 경험",
         image3: "",
         caption3: "세 번째 경험",
+        ...styleDefaults,
       },
-      render: ({ eyebrow, heading, image1, caption1, image2, caption2, image3, caption3 }) => (
-        <section className="landing-block landing-block-gallery">
+      render: ({ eyebrow, heading, image1, caption1, image2, caption2, image3, caption3, ...style }) => (
+        <section className={`landing-block landing-block-gallery ${styleClass(style)}`}>
           <header><span>{eyebrow}</span><h2>{heading}</h2></header>
           <div>{[[image1, caption1], [image2, caption2], [image3, caption3]].filter(([image]) => image).map(([image, caption], index) => <figure key={`${caption}-${index}`}><img src={image} alt="" /><figcaption>{caption}</figcaption></figure>)}</div>
         </section>
@@ -413,6 +417,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         name2: text("항목 2 이름"), desc2: text("항목 2 설명"), price2: text("항목 2 가격"),
         name3: text("항목 3 이름"), desc3: text("항목 3 설명"), price3: text("항목 3 가격"),
         note: text("아래 안내"),
+        ...styleFields,
       },
       defaultProps: {
         eyebrow: "메뉴와 가격",
@@ -421,9 +426,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         name2: "", desc2: "", price2: "",
         name3: "", desc3: "", price3: "",
         note: "가격은 상황에 따라 달라질 수 있습니다.",
+        ...styleDefaults,
       },
-      render: ({ eyebrow, heading, name1, desc1, price1, name2, desc2, price2, name3, desc3, price3, note }) => (
-        <section className="landing-block landing-block-price">
+      render: ({ eyebrow, heading, name1, desc1, price1, name2, desc2, price2, name3, desc3, price3, note, ...style }) => (
+        <section className={`landing-block landing-block-price ${styleClass(style)}`}>
           <header>
             <span>{eyebrow}</span>
             <h2>{heading}</h2>
@@ -488,6 +494,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         q1: text("질문 1"), a1: area("답변 1"),
         q2: text("질문 2"), a2: area("답변 2"),
         q3: text("질문 3"), a3: area("답변 3"),
+        ...styleFields,
       },
       defaultProps: {
         eyebrow: "자주 묻는 질문",
@@ -495,9 +502,10 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         q1: "신청 후에는 어떻게 되나요?", a1: "입력한 연락처로 확인 후 다음 절차를 안내합니다.",
         q2: "바로 결제해야 하나요?", a2: "아니요. 필요한 범위와 조건을 먼저 확인합니다.",
         q3: "", a3: "",
+        ...styleDefaults,
       },
-      render: ({ eyebrow, heading, q1, a1, q2, a2, q3, a3 }) => (
-        <section className="landing-block landing-block-faq">
+      render: ({ eyebrow, heading, q1, a1, q2, a2, q3, a3, ...style }) => (
+        <section className={`landing-block landing-block-faq ${styleClass(style)}`}>
           <header>
             <span>{eyebrow}</span>
             <h2>{heading}</h2>
