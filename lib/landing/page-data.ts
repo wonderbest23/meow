@@ -126,15 +126,42 @@ function shared(seed: LandingPageSeed) {
   };
 }
 
+/*
+ * 가격 답변은 보통 "중형 꽃다발 25,000원"처럼 이름과 금액이 한 줄로 온다.
+ *
+ * 그대로 두면 메뉴 이름 칸에는 대표 상품 문구가("밤에도 문 여는 무인 꽃집"),
+ * 가격 칸에는 이름과 금액이 함께 들어간다. 메뉴판에 가게 소개가 품목으로 올라간
+ * 꼴이라 손님은 뭘 얼마에 파는지 알 수 없다.
+ *
+ * 금액 앞에 이름이 붙어 있으면 그쪽을 품목으로 올린다. 금액만 적혀 있거나
+ * "가격 상담"처럼 숫자가 없으면 건드리지 않는다 — 쪼갤 근거가 없으면 그대로 둔다.
+ */
+function splitMenuLine(label: string, fallbackName: string): { name: string; price: string } {
+  const hit = label.match(/^(.+?)\s*([\d,]+\s*원.*)$/);
+  // 앞부분이 숫자·쉼표뿐이면 금액을 잘못 자른 것이다("25,000원" → "2" + "5,000원")
+  if (hit && /[^\d,\s]/.test(hit[1])) return { name: hit[1].trim(), price: hit[2].trim() };
+  return { name: fallbackName, price: label };
+}
+
 export function createLandingPageData(seed: LandingPageSeed, templateId: string): LandingPageData {
   const value = shared(seed);
+  const menu = splitMenuLine(seed.priceLabel, seed.offerTitle);
   const proof = seed.proofItems;
   const trust = block("TrustBar", `trust-${templateId}`, {
     label: "믿고 맡기셔도 됩니다",
-    item1: proof[0] ?? "진행 전에 범위와 비용을 먼저 안내",
-    item2: proof[1] ?? "진행 단계를 쉽게 설명합니다",
-    item3: proof[2] ?? "문의 후 조건을 확정합니다",
-    item4: "모바일에서도 편하게 확인",
+    /*
+     * 실적으로 채우고, 없으면 빈칸으로 둔다.
+     *
+     * 예전에는 네 칸을 "진행 단계를 쉽게 설명합니다", "모바일에서도 편하게 확인"
+     * 같은 말로 메웠다. 어느 가게에 붙여도 말이 되는 문장이라 손님에게 알려주는
+     * 게 없고, 네 칸이 꽉 찬 만큼 오히려 지어낸 티가 났다.
+     *
+     * 아는 사실 하나가 지어낸 넷보다 낫다. 남는 칸은 사업주가 채운다.
+     */
+    item1: proof[0] ?? "문의 주시면 범위와 비용을 먼저 알려드립니다",
+    item2: proof[1] ?? (seed.businessAddress ? `${seed.businessAddress}에서 운영합니다` : ""),
+    item3: proof[2] ?? "",
+    item4: proof[3] ?? "",
   });
   const feature = block("FeatureGrid", `features-${templateId}`, value.features);
   const offer = block("OfferSection", `offer-${templateId}`, value.offer);
@@ -182,10 +209,16 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
    */
   const price = block("PriceList", `price-${templateId}`, {
     eyebrow: "메뉴와 가격",
-    heading: "무엇을 얼마에 드리는지",
-    name1: seed.offerTitle,
+    /*
+     * 제목은 이 칸이 무슨 칸인지가 아니라 누구네 가격인지를 말한다.
+     * "무엇을 얼마에 드리는지"는 홈페이지를 만드는 사람 쪽 언어였다 —
+     * 위에 이미 "메뉴와 가격"이라고 붙여 놓고 그 말을 한 번 더 풀어 쓴 셈이라,
+     * 손님은 두 줄을 읽고도 새로 아는 게 없었다.
+     */
+    heading: `${seed.businessName} 가격 안내`,
+    name1: menu.name,
     desc1: seed.offerDescription,
-    price1: seed.priceLabel,
+    price1: menu.price,
     /*
      * 계획서에서 확인되는 상품은 '대표 상품' 하나뿐이다.
      * 나머지를 '선택 이유'로 채우면 이름과 설명이 같은 줄이 생기고,
@@ -201,7 +234,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
   });
   const location = block("LocationSection", `location-${templateId}`, {
     eyebrow: "찾아오는 길",
-    heading: "언제, 어디로 오시면 되는지",
+    heading: "매장 위치와 영업시간",
     address: seed.businessAddress ?? "",
     hours: seed.openHours ?? "",
     closed: "",
@@ -209,7 +242,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
   });
   const faq = block("FaqSection", `faq-${templateId}`, {
     eyebrow: "자주 묻는 질문",
-    heading: "궁금한 점을 먼저 풀어 드립니다",
+    heading: "문의 전에 확인해 보세요",
     q1: "문의하면 언제 답변받을 수 있나요?",
     a1: "남겨주신 연락처로 확인한 뒤 순서대로 안내해 드립니다.",
     q2: "어떤 내용을 남기면 되나요?",

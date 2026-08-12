@@ -41,14 +41,6 @@ function sentence(value: string, suffix = ""): string {
   return /[.!?…]$/.test(trimmed) ? trimmed : `${trimmed}${suffix}`;
 }
 
-/** 받침 유무로 을/를을 고른다 — "직장인를"처럼 읽히면 홈페이지 첫 줄이 망가진다 */
-function objectParticle(word: string): string {
-  const last = word.trim().slice(-1);
-  const code = last.charCodeAt(0);
-  // 한글 음절이 아니면(영문·숫자·기호) 판단할 수 없으므로 조사를 붙이지 않는다
-  if (Number.isNaN(code) || code < 0xac00 || code > 0xd7a3) return "";
-  return (code - 0xac00) % 28 === 0 ? "를" : "을";
-}
 
 function clamp(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1).trimEnd()}…`;
@@ -90,15 +82,20 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
     sector: text(source.business.industry),
   });
 
-  const targetParticle = objectParticle(firstTarget);
-  const headline = clamp(
-    mainOffer
-      ? firstTarget && targetParticle
-        ? `${firstTarget}${targetParticle} 위한 ${mainOffer}`
-        : mainOffer
-      : base.headline,
-    120,
-  );
+  /*
+   * 큰 제목은 상호다.
+   *
+   * 예전에는 "○○을 위한 △△"라고 썼다 — 계획서의 '누구를 먼저 노리는가' 답을
+   * 그대로 옮긴 문장이다. 그래서 첫 화면에 상호가 한 번도 나오지 않았고, 손님은
+   * 자기가 어느 가게를 보고 있는지 모르는 채 "강서구 인근에서 일하는 20~40대
+   * 직장인을 위한"부터 읽어야 했다. 노리는 고객층은 사업 계획을 세울 때 쓰는
+   * 말이지 손님에게 할 말이 아니다.
+   *
+   * 가게 홈페이지는 상호부터 보여준다. 대표 상품은 그 위 한 줄에 올려 간판 문구로
+   * 쓰고, 고객층 문장은 첫 화면에서 뺀다.
+   */
+  const headline = clamp(businessName || mainOffer || base.headline, 120);
+  const heroTagline = clamp(mainOffer, 60);
 
   /*
    * 소제목은 '어떤 문제를 어떻게 푸는가' 한 문장.
@@ -140,9 +137,9 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
     businessName,
     headline,
     subheadline,
-    heroLabel: buyerTypes.some((item) => item.includes("B2B"))
-      ? "도입 상담을 받고 있어요"
-      : base.heroLabel,
+    heroLabel:
+      heroTagline ||
+      (buyerTypes.some((item) => item.includes("B2B")) ? "도입 상담을 받고 있어요" : base.heroLabel),
     benefits,
     offerTitle: mainOffer ? clamp(mainOffer, 60) : base.offerTitle,
     offerDescription: offerDetail ? clamp(sentence(offerDetail, "."), 600) : base.offerDescription,

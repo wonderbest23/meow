@@ -243,7 +243,8 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       render: ({ label, item1, item2, item3, item4, ...style }) => (
         <section className={`landing-block landing-block-trust ${styleClass(style)}`}>
           <strong>{label}</strong>
-          <div>{[item1, item2, item3, item4].map((item) => <span key={item}><Check />{item}</span>)}</div>
+          {/* 빈 칸은 그리지 않는다 — 체크 표시만 덩그러니 남는다 */}
+          <div>{[item1, item2, item3, item4].filter(Boolean).map((item) => <span key={item}><Check />{item}</span>)}</div>
         </section>
       ),
     },
