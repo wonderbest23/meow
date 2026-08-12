@@ -63,7 +63,7 @@ type GalleryProps = {
   caption3: string;
 } & BlockStyle;
 type OfferProps = { eyebrow: string; title: string; description: string; price: string; buttonLabel: string } & BlockStyle;
-type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string; motion?: string };
+type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string; motion?: string; bgImage?: string; bgShade?: string };
 type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string } & BlockStyle;
 type FooterProps = { brand: string; tagline: string; hours: string; contact: string } & BlockStyle;
 
@@ -153,20 +153,43 @@ const styleFields = {
    * 움직임에 어지러움을 느끼는 사람이 있다. 기기에서 '동작 줄이기'를 켜 두면
    * 어떤 값을 골라도 아예 움직이지 않는다 — CSS 쪽에서 막는다.
    */
+  bgImage: imageField("배경 사진"),
+  /*
+   * 배경 사진 위 글이 안 읽히는 일을 막는 막.
+   *
+   * 사진을 깔면 밝은 부분에서 흰 글씨가, 어두운 부분에서 검은 글씨가 사라진다.
+   * 사진마다 다르니 자동으로 정할 수 없다 — 고르게 한다. 사진이 없으면 아무
+   * 일도 하지 않는다.
+   */
+  bgShade: { type: "select" as const, label: "사진 덮기", options: [
+    { label: "없음", value: "none" }, { label: "옅게", value: "light" },
+    { label: "보통", value: "medium" }, { label: "진하게", value: "heavy" },
+  ] },
   motion: { type: "select" as const, label: "등장 효과", options: [
     { label: "없음", value: "none" }, { label: "서서히", value: "fade" },
     { label: "아래에서 위로", value: "up" }, { label: "좌우에서", value: "side" },
   ] },
 };
 
-const styleDefaults = { tone: "plain", density: "normal", align: "center", divider: "none", motion: "none" };
+const styleDefaults = { tone: "plain", density: "normal", align: "center", divider: "none", motion: "none", bgImage: "", bgShade: "medium" };
 
 /*
  * 이미 저장된 페이지에는 이 값들이 없다 — 없으면 기본값으로 읽는다.
  * 안 그러면 class="tone-undefined"가 되어 아무 규칙에도 안 걸린다.
  */
-function styleClass(p: { tone?: string; density?: string; align?: string; divider?: string; motion?: string }) {
-  return `tone-${p.tone ?? "plain"} density-${p.density ?? "normal"} align-${p.align ?? "center"} divider-${p.divider ?? "none"} motion-${p.motion ?? "none"}`;
+function styleClass(p: BlockStyle) {
+  const bg = p.bgImage ? ` has-bg shade-${p.bgShade ?? "medium"}` : "";
+  return `tone-${p.tone ?? "plain"} density-${p.density ?? "normal"} align-${p.align ?? "center"} divider-${p.divider ?? "none"} motion-${p.motion ?? "none"}${bg}`;
+}
+
+/*
+ * 배경 사진 주소는 클래스로 나갈 수 없어 style 로 넘긴다.
+ * 값이 없으면 아무것도 안 붙인다 — 빈 url() 이 나가면 브라우저가 현재 주소를
+ * 사진으로 여겨 헛요청을 보낸다.
+ */
+function blockBg(p: BlockStyle) {
+  if (!p.bgImage) return undefined;
+  return { "--block-bg": `url("${p.bgImage.replace(/"/g, "%22")}")` } as CSSProperties;
 }
 
 const text = (label: string) => ({ type: "text" as const, label });
@@ -278,7 +301,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       },
       render: ({ eyebrow, title, description, buttonLabel, imageUrl, layout, ...style }) => (
         // 사진이 없으면 no-image 를 남긴다 — 사진 깔던 자리가 빈 회색 상자로 남으면 안 된다
-        <section className={`landing-block landing-block-hero layout-${layout} ${imageUrl ? "" : "no-image"} ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-hero layout-${layout} ${imageUrl ? "" : "no-image"} ${styleClass(style)}`} style={blockBg(style)}>
           <div className="landing-block-hero-copy">
             <span>{eyebrow}</span>
             <h1>{title}</h1>
@@ -308,7 +331,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ label, item1, item2, item3, item4, ...style }) => (
-        <section className={`landing-block landing-block-trust ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-trust ${styleClass(style)}`} style={blockBg(style)}>
           <strong>{label}</strong>
           {/* 빈 칸은 그리지 않는다 — 체크 표시만 덩그러니 남는다 */}
           <div>{[item1, item2, item3, item4].filter(Boolean).map((item) => <span key={item}><Check />{item}</span>)}</div>
@@ -342,7 +365,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, heading, intro, title1, body1, title2, body2, title3, body3, ...style }) => (
-        <section className={`landing-block landing-block-features ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-features ${styleClass(style)}`} style={blockBg(style)}>
           <header><span>{eyebrow}</span><h2>{heading}</h2><p>{intro}</p></header>
           <div>{[[title1, body1], [title2, body2], [title3, body3]].map(([title, body], index) => <article key={`${title}-${index}`}><i>{String(index + 1).padStart(2, "0")}</i><h3>{title}</h3><p>{body}</p></article>)}</div>
         </section>
@@ -373,7 +396,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, heading, step1Title, step1Body, step2Title, step2Body, step3Title, step3Body, ...style }) => (
-        <section className={`landing-block landing-block-process ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-process ${styleClass(style)}`} style={blockBg(style)}>
           <header><span>{eyebrow}</span><h2>{heading}</h2></header>
           <ol>{[[step1Title, step1Body], [step2Title, step2Body], [step3Title, step3Body]].map(([title, body], index) => <li key={`${title}-${index}`}><i>{index + 1}</i><div><h3>{title}</h3><p>{body}</p></div></li>)}</ol>
         </section>
@@ -402,7 +425,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, title, body, imageUrl, imageSide, ...style }) => (
-        <section className={`landing-block landing-block-story image-${imageSide} ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-story image-${imageSide} ${styleClass(style)}`} style={blockBg(style)}>
           <div><span>{eyebrow}</span><h2>{title}</h2><p>{body}</p></div>
           {imageUrl && <figure><img src={imageUrl} alt="" /></figure>}
         </section>
@@ -431,7 +454,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ heading, value1, label1, value2, label2, value3, label3, ...style }) => (
-        <section className={`landing-block landing-block-stats ${styleClass(style)}`}><h2>{heading}</h2><div>{[[value1, label1], [value2, label2], [value3, label3]].map(([value, label]) => <article key={`${value}-${label}`}><strong>{value}</strong><span>{label}</span></article>)}</div></section>
+        <section className={`landing-block landing-block-stats ${styleClass(style)}`} style={blockBg(style)}><h2>{heading}</h2><div>{[[value1, label1], [value2, label2], [value3, label3]].map(([value, label]) => <article key={`${value}-${label}`}><strong>{value}</strong><span>{label}</span></article>)}</div></section>
       ),
     },
     GallerySection: {
@@ -466,7 +489,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
          */
         if (!shots.length) return <></>;
         return (
-          <section className={`landing-block landing-block-gallery ${styleClass(style)}`}>
+          <section className={`landing-block landing-block-gallery ${styleClass(style)}`} style={blockBg(style)}>
             <header><span>{eyebrow}</span><h2>{heading}</h2></header>
             <div>{shots.map(([image, caption], index) => <figure key={`${caption}-${index}`}><img src={image} alt="" /><figcaption>{caption}</figcaption></figure>)}</div>
           </section>
@@ -492,7 +515,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, title, description, price, buttonLabel, ...style }) => (
-        <section className={`landing-block landing-block-offer ${styleClass(style)}`}><div><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p></div><aside><strong>{price}</strong><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></aside></section>
+        <section className={`landing-block landing-block-offer ${styleClass(style)}`} style={blockBg(style)}><div><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p></div><aside><strong>{price}</strong><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></aside></section>
       ),
     },
     /* 메뉴·가격표 — 음식점·매장 템플릿의 핵심. 값을 모르면 방문자는 문의하지 않는다 */
@@ -517,7 +540,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, heading, name1, desc1, price1, name2, desc2, price2, name3, desc3, price3, note, ...style }) => (
-        <section className={`landing-block landing-block-price ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-price ${styleClass(style)}`} style={blockBg(style)}>
           <header>
             <span>{eyebrow}</span>
             <h2>{heading}</h2>
@@ -559,7 +582,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, heading, address, hours, closed, contact, ...style }) => (
-        <section className={`landing-block landing-block-location ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-location ${styleClass(style)}`} style={blockBg(style)}>
           <header>
             <span>{eyebrow}</span>
             <h2>{heading}</h2>
@@ -595,7 +618,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, heading, q1, a1, q2, a2, q3, a3, ...style }) => (
-        <section className={`landing-block landing-block-faq ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-faq ${styleClass(style)}`} style={blockBg(style)}>
           <header>
             <span>{eyebrow}</span>
             <h2>{heading}</h2>
@@ -626,7 +649,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ eyebrow, title, description, buttonLabel, ...style }) => (
-        <section className={`landing-block landing-block-cta ${styleClass(style)}`}><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></section>
+        <section className={`landing-block landing-block-cta ${styleClass(style)}`} style={blockBg(style)}><span>{eyebrow}</span><h2>{title}</h2><p>{description}</p><a href="#landing-contact">{buttonLabel}<ArrowRight /></a></section>
       ),
     },
     /*
@@ -654,7 +677,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
         ...styleDefaults,
       },
       render: ({ brand, tagline, hours, contact, ...style }) => (
-        <section className={`landing-block landing-block-footer ${styleClass(style)}`}>
+        <section className={`landing-block landing-block-footer ${styleClass(style)}`} style={blockBg(style)}>
           <strong>{brand}</strong>
           <p>{tagline}</p>
           <div>

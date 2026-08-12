@@ -7081,6 +7081,43 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .landing-block :where(h1, h2, h3, h4) { color: inherit; }
 
 /*
+ * 블록 배경 사진.
+ *
+ * 사진은 뒤로 깔고 글은 그 위에 둔다. 사진 위에 글을 얹으면 밝은 부분에서 흰
+ * 글씨가, 어두운 부분에서 검은 글씨가 사라진다 — 사진마다 다르므로 덮는 막의
+ * 진하기를 사업주가 고른다.
+ *
+ * 막을 씌운 칸은 글씨를 흰색으로 못박는다. 반쯤 어두운 배경에 원래 색(검정)
+ * 글씨가 남으면 그게 가장 안 읽힌다.
+ */
+.landing-block.has-bg {
+  position: relative;
+  isolation: isolate;
+  background-image: var(--block-bg);
+  background-size: cover;
+  background-position: center;
+}
+
+.landing-block.has-bg::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+}
+
+.landing-block.has-bg.shade-light::before { background: rgba(16, 19, 24, 0.28); }
+.landing-block.has-bg.shade-medium::before { background: rgba(16, 19, 24, 0.5); }
+.landing-block.has-bg.shade-heavy::before { background: rgba(16, 19, 24, 0.72); }
+
+.landing-block.has-bg.shade-light,
+.landing-block.has-bg.shade-medium,
+.landing-block.has-bg.shade-heavy { color: #fff; }
+
+.landing-block.has-bg.shade-light :where(h1, h2, h3, h4, p, span, strong, li, i),
+.landing-block.has-bg.shade-medium :where(h1, h2, h3, h4, p, span, strong, li, i),
+.landing-block.has-bg.shade-heavy :where(h1, h2, h3, h4, p, span, strong, li, i) { color: inherit; }
+
+/*
  * 블록 등장 효과.
  *
  * 자바스크립트를 쓰지 않는다. 스크립트로 숨겼다가 보여주는 방식은, 그 스크립트가
