@@ -63,7 +63,7 @@ type GalleryProps = {
   caption3: string;
 } & BlockStyle;
 type OfferProps = { eyebrow: string; title: string; description: string; price: string; buttonLabel: string } & BlockStyle;
-type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string };
+type BlockStyle = { tone?: string; density?: string; align?: string; divider?: string; motion?: string };
 type CtaProps = { eyebrow: string; title: string; description: string; buttonLabel: string } & BlockStyle;
 type FooterProps = { brand: string; tagline: string; hours: string; contact: string } & BlockStyle;
 
@@ -147,16 +147,26 @@ const styleFields = {
   divider: { type: "select" as const, label: "위쪽 구분선", options: [
     { label: "없음", value: "none" }, { label: "선", value: "line" },
   ] },
+  /*
+   * 스크롤해서 이 칸이 보일 때 한 번 움직인다.
+   *
+   * 움직임에 어지러움을 느끼는 사람이 있다. 기기에서 '동작 줄이기'를 켜 두면
+   * 어떤 값을 골라도 아예 움직이지 않는다 — CSS 쪽에서 막는다.
+   */
+  motion: { type: "select" as const, label: "등장 효과", options: [
+    { label: "없음", value: "none" }, { label: "서서히", value: "fade" },
+    { label: "아래에서 위로", value: "up" }, { label: "좌우에서", value: "side" },
+  ] },
 };
 
-const styleDefaults = { tone: "plain", density: "normal", align: "center", divider: "none" };
+const styleDefaults = { tone: "plain", density: "normal", align: "center", divider: "none", motion: "none" };
 
 /*
  * 이미 저장된 페이지에는 이 값들이 없다 — 없으면 기본값으로 읽는다.
  * 안 그러면 class="tone-undefined"가 되어 아무 규칙에도 안 걸린다.
  */
-function styleClass(p: { tone?: string; density?: string; align?: string; divider?: string }) {
-  return `tone-${p.tone ?? "plain"} density-${p.density ?? "normal"} align-${p.align ?? "center"} divider-${p.divider ?? "none"}`;
+function styleClass(p: { tone?: string; density?: string; align?: string; divider?: string; motion?: string }) {
+  return `tone-${p.tone ?? "plain"} density-${p.density ?? "normal"} align-${p.align ?? "center"} divider-${p.divider ?? "none"} motion-${p.motion ?? "none"}`;
 }
 
 const text = (label: string) => ({ type: "text" as const, label });

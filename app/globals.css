@@ -7081,6 +7081,52 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .landing-block :where(h1, h2, h3, h4) { color: inherit; }
 
 /*
+ * 블록 등장 효과.
+ *
+ * 자바스크립트를 쓰지 않는다. 스크립트로 숨겼다가 보여주는 방식은, 그 스크립트가
+ * 한 번이라도 안 돌면 손님 화면에서 글이 영영 사라진다. 공개된 가게 홈페이지에서
+ * 그런 일이 나면 안 된다.
+ *
+ * CSS 스크롤 타임라인(animation-timeline: view())이 되는 곳에서만 숨겼다가
+ * 드러낸다. 안 되는 브라우저에서는 규칙 자체가 무시되어 글이 처음부터 보인다.
+ *
+ * 기기에서 '동작 줄이기'를 켜 두면 어떤 값을 골라도 움직이지 않는다 —
+ * 움직임에 어지러움을 느끼는 사람이 있다.
+ */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .landing-block.motion-fade,
+    .landing-block.motion-up,
+    .landing-block.motion-side {
+      animation-timeline: view();
+      animation-range: entry 0% entry 55%;
+      animation-fill-mode: both;
+      animation-duration: 1ms; /* 타임라인이 진행을 맡는다 */
+      animation-timing-function: ease-out;
+    }
+
+    .landing-block.motion-fade { animation-name: landing-motion-fade; }
+    .landing-block.motion-up { animation-name: landing-motion-up; }
+    .landing-block.motion-side { animation-name: landing-motion-side; }
+  }
+}
+
+@keyframes landing-motion-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes landing-motion-up {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes landing-motion-side {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+
+/*
  * 맨 아래 가게 소개.
  *
  * 공개 페이지는 이 아래에 사업자정보 푸터를 따로 그린다(법정 표시 항목).
