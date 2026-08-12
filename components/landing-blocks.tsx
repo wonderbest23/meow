@@ -393,8 +393,11 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       },
       render: ({ eyebrow, heading, image1, caption1, image2, caption2, image3, caption3, ...style }) => {
         const shots = [[image1, caption1], [image2, caption2], [image3, caption3]].filter(([image]) => image);
-        // 사진이 없으면 "이런 모습입니다"라는 제목만 남는다 — 그 칸은 아예 그리지 않는다
-        if (!shots.length) return null;
+        /*
+         * 사진이 없으면 "이런 모습입니다"라는 제목만 남는다 — 그 칸은 아예 그리지 않는다.
+         * null 대신 빈 조각을 돌려준다. Puck은 render가 항상 요소를 돌려주기를 요구한다.
+         */
+        if (!shots.length) return <></>;
         return (
           <section className={`landing-block landing-block-gallery ${styleClass(style)}`}>
             <header><span>{eyebrow}</span><h2>{heading}</h2></header>
