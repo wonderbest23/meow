@@ -52,6 +52,11 @@ check("먼저 가격을 꺼내지 말라는 규칙이 있다", CONSULT_SYSTEM.in
 /* 요구사항 13 — 말투 */
 check("답변 길이 상한이 규칙에 있다", /3~5문장/.test(CONSULT_SYSTEM));
 
+/* 실제 대화에서 profile 이 비고 같은 질문이 반복됐다 — 항목 이름을 알려주고 나서 고쳐졌다 */
+check("채울 항목 이름이 규칙에 들어 있다",
+  CONSULT_SYSTEM.includes("budget: 투자 가능 금액") && CONSULT_SYSTEM.includes("region: 희망 지역"));
+check("profile 에 남기지 않으면 잊는다고 경고한다", CONSULT_SYSTEM.includes("다음 턴에 잊고"));
+
 console.log("첫 화면");
 check("빠른 선택이 6개다", CONSULT_STARTERS.length === 6, `${CONSULT_STARTERS.length}개`);
 check("아이템 없는 사람용 보기가 있다", CONSULT_STARTERS.some((s) => s.includes("없어요")));
