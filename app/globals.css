@@ -1584,7 +1584,95 @@ a { color: inherit; text-decoration: none; }
 .document-preview-cover dd { margin: 0; color: #2c3440; font-size: 11px; font-weight: 700; }
 .document-preview-cover aside { padding: 13px 15px; border-left: 3px solid #d3ad36; background: #fff6d8; color: #6c5d28; font-size: 10px; line-height: 1.6; }
 .document-editor-studio { position: fixed; inset: 0; z-index: 650; background: #f2f4f6; color: #202632; display: grid; grid-template-rows: 68px minmax(0, 1fr); animation: backdrop-in .18s ease both; }
-body:has(.document-editor-studio) .support-chat-widget { z-index: 700; bottom: calc(78px + env(safe-area-inset-bottom)); }
+body:has(.document-editor-studio) /*
+ * 창업 상담 — 위젯을 열면 처음 보이는 것.
+ *
+ * 서비스 문의(결제·환불)와 같은 창을 쓰되, 상담이 주된 것이라 먼저 보인다.
+ * 문의 쪽 규칙을 건드리지 않으려고 이름을 따로 뒀다.
+ */
+.consult-pane { display: grid; gap: 10px; }
+
+.consult-pane > article { display: grid; gap: 3px; }
+.consult-pane > article > span { color: var(--text-3, #8b95a1); font-size: 10.5px; font-weight: 800; }
+.consult-pane > article > p {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-2, #f2f4f6);
+  color: var(--text, #191f28);
+  font-size: 13px;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+.consult-pane > article.customer { justify-items: end; }
+.consult-pane > article.customer > p { background: var(--blue, #1b64da); color: #fff; }
+
+/* 중간 정리 — 내 상황을 이해하고 있다는 것이 보여야 계속 답한다 */
+.consult-summary {
+  padding: 12px 14px;
+  border: 1px solid var(--blue-soft, #cfe3ff);
+  border-radius: 12px;
+  background: var(--blue-soft, #eef5ff);
+}
+.consult-summary > strong { display: block; margin-bottom: 6px; color: var(--blue, #1b64da); font-size: 12px; font-weight: 800; }
+.consult-summary ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; }
+.consult-summary li { color: var(--text, #191f28); font-size: 12.5px; line-height: 1.6; }
+
+.consult-picks { display: grid; gap: 8px; }
+.consult-picks > article {
+  padding: 12px 14px;
+  border: 1px solid var(--line, #e5e8eb);
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+.consult-picks header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.consult-picks header strong { font-size: 13.5px; font-weight: 800; }
+.consult-picks header span { color: #f59e0b; font-size: 12px; letter-spacing: 1px; }
+.consult-picks em { display: block; margin-bottom: 3px; color: var(--text-2, #6b7684); font-size: 11px; font-style: normal; font-weight: 800; }
+.consult-picks ul { margin: 0; padding-left: 15px; display: grid; gap: 2px; }
+.consult-picks li { font-size: 12px; line-height: 1.55; color: var(--text, #333d4b); }
+.consult-picks .watch li { color: var(--text-2, #6b7684); }
+
+.consult-cta {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--blue, #1b64da);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.consult-cta svg { width: 15px; }
+
+/* 두 갈래를 오가는 줄 — 눈에 띄되 주된 행동을 가리지 않게 */
+.consult-to-support {
+  margin-top: 2px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-2, #6b7684);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.consult-to-support svg { width: 14px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .consult-to-support:hover { color: var(--blue, #1b64da); }
+}
+
+.support-chat-widget { z-index: 700; bottom: calc(78px + env(safe-area-inset-bottom)); }
 body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 0; }
 .document-editor-header { min-width: 0; padding: 0 18px 0 22px; border-bottom: 1px solid #d1d6db; background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .document-editor-header > div { min-width: 0; display: flex; align-items: baseline; gap: 9px; }

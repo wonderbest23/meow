@@ -3,12 +3,35 @@
 import {
   ChevronRight,
   ClipboardList,
+  MessageCircleQuestion,
   ShieldCheck,
+  Sparkles,
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
 import type { SupportChat } from "../lib/support-chat/repository";
+import {
+  CONSULT_OPENING,
+  CONSULT_STARTERS,
+  PROFILE_LABELS,
+  type ConsultPick,
+  type ConsultProfile,
+} from "../lib/consult/domain";
+
+/*
+ * 이 위젯은 두 가지를 한다.
+ *
+ * 창업 상담 — 열면 처음 보이는 것. "뭘 해야 할지 모르겠다"는 사람에게 되물어
+ *   조건에 맞는 아이템을 같이 찾는다. 공짜로 주는 것이고, 여기서 잡은 조건이
+ *   그대로 사업계획서로 넘어간다.
+ * 서비스 문의 — 결제·환불처럼 우리 서비스 자체를 묻는 것. 예전부터 있던 기능이라
+ *   그대로 두고 아래 줄로 내렸다.
+ *
+ * 상담 대화는 서버에 저장하지 않는다. 로그인 전에도 쓰고, 남의 창업 고민을 우리가
+ * 들고 있을 이유가 없다. 이 화면이 들고 있다가 매번 함께 보낸다.
+ */
+type ConsultTurn = { id: string; role: "user" | "assistant"; text: string };
 
 type QuickMessage = {
   id: string;
@@ -40,6 +63,15 @@ function topicChoiceLabel(label: string) {
 export function SupportChatWidget() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  /* 열면 상담부터 — 문의는 눌러서 간다 */
+  const [mode, setMode] = useState<"consult" | "support">("consult");
+  const [consultTurns, setConsultTurns] = useState<ConsultTurn[]>([]);
+  const [consultProfile, setConsultProfile] = useState<ConsultProfile>({});
+  const [consultChoices, setConsultChoices] = useState<string[]>([]);
+  const [consultSummary, setConsultSummary] = useState<string[]>([]);
+  const [consultPicks, setConsultPicks] = useState<ConsultPick[]>([]);
+  const [consultReady, setConsultReady] = useState(false);
+  const [consultThinking, setConsultThinking] = useState(false);
   const [chat, setChat] = useState<SupportChat>({ conversation: null, messages: [] });
   const [message, setMessage] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<(typeof supportFaqCategories)[number]["id"] | null>(null);
@@ -151,6 +183,53 @@ export function SupportChatWidget() {
     window.setTimeout(() => textareaRef.current?.focus(), 80);
   };
 
+  const askConsult = async (nextMessage: string) => {
+    setMessage("");
+    setConsultChoices([]);
+    setConsultThinking(true);
+    const asked: ConsultTurn = { id: crypto.randomUUID(), role: "user", text: nextMessage };
+    setConsultTurns((current) => [...current, asked]);
+    try {
+      const response = await fetch("/api/consult", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: nextMessage,
+          /* 서버는 대화를 기억하지 않는다 — 앞의 말을 우리가 들고 가서 보낸다 */
+          history: consultTurns.slice(-12).map((turn) => ({ role: turn.role, text: turn.text })),
+          profile: consultProfile,
+        }),
+      });
+      const payload = (await response.json()) as {
+        message?: string;
+        profile?: ConsultProfile;
+        choices?: string[];
+        summary?: string[];
+        picks?: ConsultPick[];
+        ready?: boolean;
+      };
+      if (!response.ok || !payload.message) throw new Error("상담을 이어가지 못했습니다.");
+      setConsultTurns((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: payload.message! }]);
+      /* 알아낸 것이 하나도 없으면 앞서 모은 것을 지우지 않는다 */
+      if (payload.profile && Object.keys(payload.profile).length) setConsultProfile(payload.profile);
+      setConsultChoices(payload.choices ?? []);
+      setConsultSummary(payload.summary ?? []);
+      setConsultPicks(payload.picks ?? []);
+      setConsultReady(Boolean(payload.ready));
+    } catch {
+      setConsultTurns((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          text: "지금은 상담을 이어가지 못했습니다. 잠시 후 다시 말씀해 주세요.",
+        },
+      ]);
+    } finally {
+      setConsultThinking(false);
+    }
+  };
+
   const askSupportAssistant = async (nextMessage: string) => {
     const customerCreatedAt = new Date().toISOString();
     setShowQuickMenu(false);
@@ -206,7 +285,12 @@ export function SupportChatWidget() {
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
     const nextMessage = message.trim();
-    if (!nextMessage || sending || assistantThinking) return;
+    if (!nextMessage || sending || assistantThinking || consultThinking) return;
+
+    if (mode === "consult") {
+      await askConsult(nextMessage);
+      return;
+    }
 
     if (!operatorMode) {
       await askSupportAssistant(nextMessage);
@@ -266,20 +350,107 @@ export function SupportChatWidget() {
         <section className="support-chat-panel" role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
           <header>
             <span><img src="/support-agent-avatar-2026.png" alt="" width="48" height="48" /></span>
-            <div><strong>오늘창업 상담 도우미</strong><small><i /> 궁금한 내용을 편하게 물어보세요</small></div>
+            <div>
+              <strong>{mode === "consult" ? "무료 창업 상담" : "서비스 이용 문의"}</strong>
+              <small><i /> {mode === "consult" ? "뭘 할지 몰라도 괜찮아요" : "결제·환불·이용 방법을 물어보세요"}</small>
+            </div>
             <button type="button" onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기">닫기</button>
           </header>
 
           <div className="support-chat-body">
             <div className="support-chat-conversation">
               <div className={`support-chat-messages ${showAllHistory ? "history-expanded" : ""}`} ref={messageListRef} aria-live="polite">
-                {loading && chat.messages.length === 0 && quickMessages.length === 0 && <p className="support-chat-loading">이전 문의를 불러오는 중입니다.</p>}
-                {hiddenMessageCount > 0 && (
+                {mode === "consult" ? (
+                  <section className="consult-pane" aria-label="창업 상담">
+                    {consultTurns.length === 0 && (
+                      <>
+                        <div className="support-chat-bot-message">
+                          <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span>
+                          <div><strong>어떤 창업을 생각하고 계세요?</strong><p>{CONSULT_OPENING.split("\n")[1]}</p></div>
+                        </div>
+                        <div className="support-chat-choice-bubbles" aria-label="상담 시작 고르기">
+                          {CONSULT_STARTERS.map((starter) => (
+                            <button type="button" key={starter} onClick={() => void askConsult(starter)}>{starter}</button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+
+                    {consultTurns.map((turn) => (
+                      <article key={turn.id} className={turn.role === "user" ? "customer" : "assistant"}>
+                        <span>{turn.role === "user" ? "나" : "상담사"}</span>
+                        <p>{turn.text}</p>
+                      </article>
+                    ))}
+
+                    {consultThinking && (
+                      <div className="support-chat-thinking" role="status" aria-label="상담 답변 작성 중">
+                        <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span><i /><i /><i />
+                      </div>
+                    )}
+
+                    {/* 중간 정리 — 내 상황을 이해하고 있다는 것이 보여야 계속 답한다 */}
+                    {!consultThinking && consultSummary.length > 0 && (
+                      <div className="consult-summary" aria-label="지금까지 파악한 내용">
+                        <strong>지금까지 파악한 내용</strong>
+                        <ul>{consultSummary.map((line) => <li key={line}>{line}</li>)}</ul>
+                      </div>
+                    )}
+
+                    {!consultThinking && consultPicks.length > 0 && (
+                      <div className="consult-picks" aria-label="추천 아이템">
+                        {consultPicks.map((pick) => (
+                          <article key={pick.name}>
+                            <header>
+                              <strong>{pick.name}</strong>
+                              <span aria-label={`적합도 ${pick.fit}점`}>{"★".repeat(pick.fit)}{"☆".repeat(5 - pick.fit)}</span>
+                            </header>
+                            {pick.why.length > 0 && (
+                              <div><em>왜 맞나요</em><ul>{pick.why.map((line) => <li key={line}>{line}</li>)}</ul></div>
+                            )}
+                            {pick.watch.length > 0 && (
+                              <div className="watch"><em>주의할 점</em><ul>{pick.watch.map((line) => <li key={line}>{line}</li>)}</ul></div>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* 눌러서 답하기 — 직접 쓰기 싫은 사람이 대부분이다 */}
+                    {!consultThinking && consultChoices.length > 0 && (
+                      <div className="support-chat-choice-bubbles" aria-label="답 고르기">
+                        {consultChoices.map((choice) => (
+                          <button type="button" key={choice} onClick={() => void askConsult(choice)}>{choice}</button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/*
+                      * 상담이 충분히 진행된 뒤에만 다음 단계를 권한다. 여기서 모은 조건은
+                      * 사업계획서 첫 화면으로 넘긴다 — 같은 것을 두 번 묻지 않는다.
+                      */}
+                    {!consultThinking && consultReady && (
+                      <a
+                        className="consult-cta"
+                        href={`/plan/start?consult=${encodeURIComponent(JSON.stringify(consultProfile))}`}
+                      >
+                        <Sparkles /> 이 아이템으로 창업계획 만들기
+                      </a>
+                    )}
+
+                    <button type="button" className="consult-to-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
+                      <MessageCircleQuestion /> 서비스 이용 문의는 여기
+                    </button>
+                  </section>
+                ) : null}
+
+                {mode === "support" && loading && chat.messages.length === 0 && quickMessages.length === 0 && <p className="support-chat-loading">이전 문의를 불러오는 중입니다.</p>}
+                {mode === "support" && hiddenMessageCount > 0 && (
                   <button type="button" className="support-chat-history-toggle" onClick={() => setShowAllHistory((current) => !current)}>
                     {showAllHistory ? "최신 대화만 보기" : `이전 대화 ${hiddenMessageCount}개 보기`}
                   </button>
                 )}
-                {showAllHistory && (
+                {mode === "support" && showAllHistory && (
                   <div className="support-chat-saved-history" aria-label="이전 운영자 상담">
                     {chat.messages.map((item) => (
                       <article key={item.id} className={item.sender === "customer" ? "customer" : "admin"}>
@@ -290,7 +461,7 @@ export function SupportChatWidget() {
                     ))}
                   </div>
                 )}
-                {quickMessages.map((item) => (
+                {mode === "support" && quickMessages.map((item) => (
                   <article key={item.id} className={item.sender}>
                     <span>{item.sender === "customer" ? "나" : "상담 도우미"}</span>
                     <p>{item.body}</p>
@@ -307,12 +478,12 @@ export function SupportChatWidget() {
                     <time dateTime={item.createdAt}>{messageTime(item.createdAt)}</time>
                   </article>
                 ))}
-                {assistantThinking && (
-                  <div className="support-chat-thinking" role="status" aria-label="상담 답변 작성 중">
+                {mode === "support" && assistantThinking && (
+                  <div className="support-chat-thinking" role="status" aria-label="문의 답변 작성 중">
                     <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span><i /><i /><i />
                   </div>
                 )}
-                {showQuickMenu ? (
+                {mode === "support" && showQuickMenu ? (
                   <section className="support-chat-home" aria-label="자주 묻는 질문">
                     <div className="support-chat-bot-message">
                       <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span>
@@ -349,8 +520,11 @@ export function SupportChatWidget() {
                         </div>
                       </>
                     )}
+                    <button type="button" className="consult-to-support" onClick={() => setMode("consult")}>
+                      <Sparkles /> 창업 상담으로 돌아가기
+                    </button>
                   </section>
-                ) : chat.messages.length === 0 && quickMessages.length === 0 ? (
+                ) : mode === "support" && chat.messages.length === 0 && quickMessages.length === 0 ? (
                   <div className="support-chat-bot-message">
                     <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span>
                     <div><strong>{operatorMode ? "문의 내용을 남겨주세요." : "무엇이 궁금한가요?"}</strong><p>{operatorMode ? "확인 후 이 대화창으로 답변해 드릴게요." : "아래 입력창에 편하게 적어주세요."}</p></div>
@@ -360,8 +534,8 @@ export function SupportChatWidget() {
 
               <form className="support-chat-form" onSubmit={sendMessage}>
                 <div className="support-chat-form-heading">
-                  <span>{operatorMode ? "운영자에게 전달됩니다" : "직접 질문하기"}</span>
-                  {!showQuickMenu && <button type="button" onClick={openQuestionMenu}><ClipboardList /> 질문 다시 고르기</button>}
+                  <span>{mode === "consult" ? "상담사에게 이야기하기" : operatorMode ? "운영자에게 전달됩니다" : "직접 질문하기"}</span>
+                  {mode === "support" && !showQuickMenu && <button type="button" onClick={openQuestionMenu}><ClipboardList /> 질문 다시 고르기</button>}
                 </div>
                 {error && <p className="support-chat-error">{error}</p>}
                 <div className="support-chat-input-row">
@@ -372,11 +546,15 @@ export function SupportChatWidget() {
                     onKeyDown={handleKeyDown}
                     maxLength={2000}
                     rows={2}
-                    placeholder={assistantThinking ? "답변을 확인하고 있어요" : operatorMode ? "문의 내용을 적어주세요" : "궁금한 내용을 입력해주세요"}
-                    aria-label="문의 메시지"
-                    disabled={assistantThinking}
+                    placeholder={
+                      mode === "consult"
+                        ? consultThinking ? "상담사가 답을 쓰고 있어요" : "편하게 적어주세요"
+                        : assistantThinking ? "답변을 확인하고 있어요" : operatorMode ? "문의 내용을 적어주세요" : "궁금한 내용을 입력해주세요"
+                    }
+                    aria-label={mode === "consult" ? "상담 메시지" : "문의 메시지"}
+                    disabled={assistantThinking || consultThinking}
                   />
-                  <button type="submit" disabled={!message.trim() || sending || assistantThinking} aria-label="메시지 보내기" title="보내기">보내기</button>
+                  <button type="submit" disabled={!message.trim() || sending || assistantThinking || consultThinking} aria-label="메시지 보내기" title="보내기">보내기</button>
                 </div>
                 <small><ShieldCheck /> 비밀번호나 주민등록번호는 입력하지 마세요.</small>
               </form>
@@ -390,11 +568,11 @@ export function SupportChatWidget() {
           className="support-chat-toggle"
           onClick={() => setOpen(true)}
           aria-expanded="false"
-          aria-label="홈페이지·이용 문의 열기"
-          title="홈페이지·이용 문의"
+          aria-label="무료 창업 상담 열기"
+          title="무료 창업 상담"
         >
           <img src="/support-agent-avatar-2026.png" alt="" width="54" height="54" />
-          <span>문의</span>
+          <span>창업 상담</span>
           {unread > 0 && <em>{unread > 9 ? "9+" : unread}</em>}
         </button>
       )}
