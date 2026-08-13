@@ -6,6 +6,8 @@
  * 빠지는 것'이다. 예전에 프롬프트에서 한 줄이 사라져도 아무도 몰랐다.
  */
 import {
+  businessFromConsult,
+  readConsultParam,
   CONSULT_SYSTEM,
   CONSULT_STARTERS,
   CONSULT_OPENING,
@@ -92,6 +94,20 @@ check("빈 항목은 줄로 만들지 않는다", profileLines({}).length === 0)
 check("채운 것만 줄이 된다",
   profileLines({ budget: "5천만원", region: "경기" }).join("|") === "경기|5천만원"
   || profileLines({ budget: "5천만원", region: "경기" }).length === 2);
+
+console.log("사업계획서로 넘기기");
+const handed = businessFromConsult({ region: "경기", interest: "무인 스터디카페", budget: "5000만원", unmanned: "선호" });
+check("업종과 지역이 그대로 옮겨진다", handed.industry === "무인 스터디카페" && handed.region === "경기");
+check("설명은 손님이 한 말로만 만든다",
+  handed.description.includes("경기") && handed.description.includes("5000만원"));
+check("아는 게 거의 없으면 설명을 지어내지 않는다", businessFromConsult({ region: "서울" }).description === "");
+check("은퇴한 사람은 단계가 달라진다", businessFromConsult({ job: "은퇴" }).stage === "은퇴 후 창업 준비");
+
+check("주소에서 상담 카드를 읽는다",
+  readConsultParam(JSON.stringify({ region: "경기" }))?.region === "경기");
+check("빈 카드는 읽지 않는다", readConsultParam("{}") === null);
+check("망가진 값은 읽지 않는다", readConsultParam("이건 JSON이 아니다") === null);
+check("모르는 항목은 버린다", readConsultParam(JSON.stringify({ 몰래: "값" })) === null);
 
 console.log(failed === 0 ? "\n전부 통과" : `\n${failed}개 실패`);
 process.exit(failed === 0 ? 0 : 1);

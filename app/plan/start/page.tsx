@@ -8,6 +8,7 @@ import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
 import PlanLoading from "../PlanLoading";
+import { businessFromConsult, readConsultParam, profileLines, type ConsultProfile } from "../../../lib/consult/domain";
 import { TYPE_META, DEFAULT_META } from "../type-meta";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -225,6 +226,14 @@ export default function PlanStartPage() {
    * 않아도 사업 정보가 채워진 채 2단계로 넘어가 있었고(이전 방문 때 이 브라우저에
    * 남긴 값), 한참 진행한 뒤에야 로그인하라는 말을 듣게 됐다.
    */
+  /*
+   * 상담에서 넘어온 조건.
+   *
+   * 상담에서 지역·업종을 이미 물었는데 여기서 또 묻는다면 손님은 상담이 헛일이었다고
+   * 느낀다. 넘어온 것을 미리 채우고, 어디서 온 값인지 밝혀 고칠 수 있게 한다.
+   */
+  const [fromConsult, setFromConsult] = useState<ConsultProfile | null>(null);
+
   const [authed, setAuthed] = useState<boolean | null>(null);
   useEffect(() => {
     let alive = true;
@@ -238,13 +247,35 @@ export default function PlanStartPage() {
     return () => { alive = false; };
   }, []);
 
+  useEffect(() => {
+    setFromConsult(readConsultParam(new URLSearchParams(window.location.search).get("consult")));
+  }, []);
+
   // 이미 등록한 사업이 있으면 불러와서 재입력을 줄인다(사업 1개 유지)
   // 로그인한 뒤에만 불러온다 — 로그아웃 상태에서 남의 기기 값이 채워져 보이면 안 된다
   useEffect(() => {
     if (!authed) return;
     const s = loadState();
-    if (s.business.name) {
+    /*
+     * 저장된 사업 정보가 먼저다 — 손님이 실제로 적어 둔 값이고, 상담은 참고다.
+     * 상담에서 온 값은 그 뒤에 빈 칸만 메운다. 순서를 반대로 하면 저장본을
+     * 불러오는 이 자리에서 상담 값이 통째로 지워진다(실제로 그랬다).
+     */
+    const consult = readConsultParam(new URLSearchParams(window.location.search).get("consult"));
+    const filled = consult ? businessFromConsult(consult) : null;
+    const base = s.business.name ? s.business : { ...EMPTY_BUSINESS };
+    if (filled) {
+      setBiz({
+        ...base,
+        industry: base.industry || filled.industry,
+        region: base.region || filled.region,
+        stage: base.stage || filled.stage,
+        description: base.description || filled.description,
+      });
+    } else if (s.business.name) {
       setBiz(s.business);
+    }
+    if (s.business.name) {
       setHasExisting(true);
       if (s.plans.length > 0) setStep(2); // 사업+플랜이 이미 있으면 유형 선택부터
     }
@@ -337,6 +368,20 @@ export default function PlanStartPage() {
                   : <><b>먼저 사업을 알려주세요.</b> 여기 적은 내용이 이후 모든 질문과 AI 추천에 반영됩니다.</>
                 : <><b>어떤 걸 만들까요?</b> 같은 사업으로 여러 종류의 플랜을 만들 수 있어요.</>}
             </p>
+
+            {/*
+              * 상담에서 온 값임을 밝힌다.
+              *
+              * 말없이 채워 두면 손님은 자기가 언제 적었는지 몰라 불안해한다. 어디서
+              * 왔는지 보이고, 그대로 쓸지 고칠지는 손님이 정한다.
+              */}
+            {fromConsult && step === 1 && (
+              <div className={styles.consultNote}>
+                <strong>상담에서 가져온 내용입니다</strong>
+                <ul>{profileLines(fromConsult).map((line) => <li key={line}>{line}</li>)}</ul>
+                <small>아래 칸에 미리 채워 뒀습니다. 다르면 고쳐주세요.</small>
+              </div>
+            )}
 
             {/* 단계 표시 */}
             <div className={styles.steps}>

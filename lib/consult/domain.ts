@@ -159,3 +159,52 @@ export function profileLines(profile: ConsultProfile): string[] {
     .map((key) => (profile[key] ? `${PROFILE_LABELS[key]}: ${profile[key]}` : ""))
     .filter(Boolean);
 }
+
+/*
+ * 상담에서 사업계획서로 넘기기.
+ *
+ * 상담에서 지역·업종을 이미 물었는데 사업계획서 첫 화면에서 또 묻는다면, 손님은
+ * 상담이 헛일이었다고 느낀다. 옮길 수 있는 것만 옮기고 나머지는 손대지 않는다.
+ *
+ * 상호는 넘기지 않는다 — 상담에서 묻지 않는 것이고, 지어내면 손님이 지우는
+ * 수고만 는다.
+ */
+export function businessFromConsult(profile: ConsultProfile): {
+  industry: string;
+  region: string;
+  stage: string;
+  description: string;
+} {
+  const stage = profile.job?.includes("은퇴")
+    ? "은퇴 후 창업 준비"
+    : profile.job
+      ? "준비 중"
+      : "";
+
+  /* 설명은 손님이 한 말을 이어 붙이기만 한다. 없는 사실을 만들지 않는다 */
+  const parts = [
+    profile.region ? `${profile.region}에서` : "",
+    profile.interest ? `${profile.interest}을(를)` : "",
+    profile.unmanned ? `${profile.unmanned === "선호" ? "무인으로 " : ""}` : "",
+    profile.budget ? `${profile.budget} 규모로` : "",
+  ].filter(Boolean);
+
+  return {
+    industry: profile.interest ?? "",
+    region: profile.region ?? "",
+    stage,
+    description: parts.length >= 2 ? `${parts.join(" ")} 시작하려고 합니다.` : "",
+  };
+}
+
+/** 주소에 담긴 상담 카드를 읽는다 — 남이 만든 주소일 수 있으니 형식을 검사한다 */
+export function readConsultParam(raw: string | null): ConsultProfile | null {
+  if (!raw) return null;
+  try {
+    const parsed = consultProfileSchema.safeParse(JSON.parse(raw));
+    if (!parsed.success) return null;
+    return Object.keys(parsed.data).length ? parsed.data : null;
+  } catch {
+    return null;
+  }
+}
