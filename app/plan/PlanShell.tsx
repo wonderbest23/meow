@@ -29,7 +29,12 @@ const ICONS = {
 function backTarget(pathname: string): { href: string; label: string } | null {
   if (pathname === "/plan" || pathname === "/plan/") return null; // 목록이 뿌리
   // 개요 뿌리는 목록으로, 그 아래 섹션 위저드는 한 단계 위(개요)로
-  if (pathname === "/plan/overview" || pathname === "/plan/overview/") return { href: "/plan", label: "내 플랜" };
+  /*
+   * 개요 화면은 제목 줄에 자기 뒤로가기(←)를 이미 갖고 있다. 여기서 알약을 또
+   * 띄우면 같은 화면에 뒤로가기가 둘이 되고, 그 알약이 겹칠 자리를 비워 두느라
+   * 제목 위에 56px 이 빈다. 화면을 열면 회색 여백부터 보였다.
+   */
+  if (pathname === "/plan/overview" || pathname === "/plan/overview/") return null;
   if (pathname.startsWith("/plan/overview/")) return { href: "/plan/overview", label: "플랜 개요" };
   if (pathname.startsWith("/plan/start")) return { href: "/plan", label: "내 플랜" };
   if (pathname.startsWith("/plan/info")) return { href: "/plan", label: "내 플랜" };
