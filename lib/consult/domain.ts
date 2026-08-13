@@ -1,0 +1,152 @@
+import { z } from "zod";
+
+/*
+ * 무료 창업 상담.
+ *
+ * 문의 응답 챗봇(support)과 다른 물건이다. 저쪽은 "이 서비스가 뭔가요"에 답하고,
+ * 여기는 "뭘 하면 좋을까요"를 같이 찾는다. 그래서 답이 아니라 질문이 주된 출력이다.
+ *
+ * 상담이 끝나면 여기서 모은 조건이 그대로 사업계획서 첫 화면으로 넘어간다 —
+ * 같은 것을 두 번 묻지 않는다.
+ */
+
+/** 대화에서 하나씩 채워 나가는 상담 카드 */
+export const consultProfileSchema = z.object({
+  ageBand: z.string().max(40).optional(),
+  job: z.string().max(60).optional(),
+  region: z.string().max(60).optional(),
+  budget: z.string().max(60).optional(),
+  loanIncluded: z.string().max(40).optional(),
+  hoursPerDay: z.string().max(40).optional(),
+  runsSelf: z.string().max(40).optional(),
+  hiring: z.string().max(40).optional(),
+  unmanned: z.string().max(40).optional(),
+  channel: z.string().max(40).optional(),
+  interest: z.string().max(80).optional(),
+  experience: z.string().max(120).optional(),
+  targetIncome: z.string().max(60).optional(),
+  riskAppetite: z.string().max(40).optional(),
+  storeLease: z.string().max(40).optional(),
+});
+
+export type ConsultProfile = z.infer<typeof consultProfileSchema>;
+
+/** 사람이 읽는 이름 — 중간 분석과 넘겨주는 화면에서 같은 말을 쓴다 */
+export const PROFILE_LABELS: Record<keyof ConsultProfile, string> = {
+  ageBand: "나이대",
+  job: "현재 하는 일",
+  region: "희망 지역",
+  budget: "투자 가능 금액",
+  loanIncluded: "대출 포함 여부",
+  hoursPerDay: "하루 투입 시간",
+  runsSelf: "직접 운영",
+  hiring: "직원 고용",
+  unmanned: "무인 운영 선호",
+  channel: "온라인·오프라인",
+  interest: "관심 업종",
+  experience: "사업 경험·경력",
+  targetIncome: "목표 월수익",
+  riskAppetite: "위험 감수",
+  storeLease: "점포 임대",
+};
+
+export const consultPickSchema = z.object({
+  name: z.string().min(1).max(40),
+  fit: z.number().int().min(1).max(5),
+  why: z.array(z.string().max(120)).max(4),
+  watch: z.array(z.string().max(120)).max(4),
+});
+
+export type ConsultPick = z.infer<typeof consultPickSchema>;
+
+/*
+ * 한 번의 응답.
+ *
+ * message 는 늘 있고, 나머지는 그때그때다. 세 가지를 한 번에 다 내보내지 않는다 —
+ * 질문하면서 추천까지 하면 사용자는 무엇에 답해야 할지 모른다.
+ */
+export const consultReplySchema = z.object({
+  /** 사용자에게 보일 말. 짧게. */
+  message: z.string().min(1).max(1200),
+  /** 지금까지 알아낸 것 — 매번 통째로 다시 보낸다(덮어쓴다) */
+  profile: consultProfileSchema.default({}),
+  /** 눌러서 답할 수 있는 보기. 없으면 직접 쓴다 */
+  choices: z.array(z.string().max(30)).max(6).default([]),
+  /** 중간 정리 — 서너 번 묻고 나서 한 번 */
+  summary: z.array(z.string().max(90)).max(6).default([]),
+  /** 아이템 추천 — 조건이 충분히 모였을 때만 */
+  picks: z.array(consultPickSchema).max(3).default([]),
+  /** 사업계획서로 넘어가자고 권할 단계인지 */
+  ready: z.boolean().default(false),
+});
+
+export type ConsultReply = z.infer<typeof consultReplySchema>;
+
+/** 첫 화면 빠른 선택 — 아무것도 안 정한 사람이 누를 것부터 */
+export const CONSULT_STARTERS = [
+  "창업 아이템이 없어요",
+  "무인창업을 찾고 있어요",
+  "소자본 창업을 찾고 있어요",
+  "부업으로 시작하고 싶어요",
+  "은퇴 후 할 일을 찾고 있어요",
+  "이미 생각한 아이템이 있어요",
+] as const;
+
+export const CONSULT_OPENING =
+  "어떤 창업을 생각하고 계세요?\n아직 정해진 게 없어도 괜찮아요. 몇 가지만 여쭤보고 맞는 걸 같이 찾아드릴게요.";
+
+/**
+ * 상담 규칙.
+ *
+ * 지금 쓰는 문의 챗봇은 물으면 답하고 끝난다. 창업 상담에서 그렇게 하면 사용자는
+ * 무엇을 더 물어야 할지 모른 채 멈춘다. 여기서는 AI 가 대화를 끌고 간다.
+ */
+export const CONSULT_SYSTEM = [
+  "당신은 '오늘창업'의 창업 상담사입니다. 한국어로 상담합니다.",
+  "",
+  "# 무엇을 하는가",
+  "손님이 자기 조건에 맞는 창업 아이템을 찾도록 질문으로 이끕니다.",
+  "묻는 말에 답만 하고 끝내지 마세요. 답한 뒤 반드시 다음 질문을 이어가세요.",
+  "",
+  "# 질문 방식",
+  "- 한 번에 질문 1개. 꼭 필요하면 2개까지. 설문지처럼 여러 개를 나열하지 마세요.",
+  "- 지금 대화에 필요한 것만 묻습니다. 정해진 순서를 따르지 마세요.",
+  "- 손님 유형에 따라 물을 것이 달라집니다. 은퇴 후를 찾는 분에게는 체력 부담과 무인 운영을,",
+  "  직장인에게는 평일 가능한 시간과 온라인 여부를, 이미 아이템이 있는 분에게는 그 아이템의",
+  "  지역·투자금·경쟁을 먼저 묻습니다.",
+  "- 이미 답한 것을 다시 묻지 마세요.",
+  "",
+  "# 중간 정리",
+  "질문을 서너 번 주고받았으면 summary 에 지금까지 파악한 것을 짧게 적어 손님이 '내 상황을",
+  "이해하고 있구나' 느끼게 하세요. 정리한 뒤에도 질문은 이어집니다.",
+  "",
+  "# 아이템 추천",
+  "조건이 충분히 모이면 picks 에 3개까지 담습니다. 업종 이름만 나열하지 말고 왜 맞는지(why)와",
+  "주의할 점(watch)을 함께 적습니다. 조건이 아직 부족하면 picks 를 비우고 계속 물으세요.",
+  "",
+  "# 솔직할 것",
+  "손님이 원하는 것이 조건에 맞지 않으면 맞다고 하지 마세요. 어렵다고 말하고, 같은 분야에서",
+  "조건에 맞는 다른 형태를 제시하세요. 무조건 칭찬하는 상담은 도움이 되지 않습니다.",
+  "확실하지 않은 수치(매출·수익률·권리금)를 지어내지 마세요. 모르면 모른다고 하세요.",
+  "",
+  "# 돈 이야기",
+  "먼저 가격이나 결제를 꺼내지 마세요. 상담이 충분히 진행되고 방향이 잡혔을 때만 ready 를",
+  "true 로 두세요. 그 뒤 안내는 화면이 맡습니다.",
+  "",
+  "# 말투",
+  "짧은 문장. 쉬운 말. 카카오톡으로 상담받는 느낌. 장황하게 쓰지 마세요.",
+  "친절하되 과하게 친근하지 않게. 답변은 3~5문장을 넘기지 마세요.",
+  "",
+  "# 출력",
+  "JSON 객체만 출력합니다.",
+  '{"message":"손님에게 보일 말","profile":{...},"choices":["보기"],"summary":["정리"],"picks":[{"name":"","fit":1,"why":[],"watch":[]}],"ready":false}',
+  "profile 은 지금까지 알아낸 것을 매번 통째로 다시 담으세요(빠뜨리면 잊힙니다).",
+  "choices 는 눌러서 답할 수 있는 짧은 보기입니다. 자유롭게 답해야 하는 질문이면 비우세요.",
+].join("\n");
+
+/** 프로필에서 실제로 채워진 것만 사람이 읽는 줄로 */
+export function profileLines(profile: ConsultProfile): string[] {
+  return (Object.keys(PROFILE_LABELS) as Array<keyof ConsultProfile>)
+    .map((key) => (profile[key] ? `${PROFILE_LABELS[key]}: ${profile[key]}` : ""))
+    .filter(Boolean);
+}

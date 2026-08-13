@@ -67,7 +67,8 @@
     "test:plan-target-plan": "tsx scripts/plan-target-plan.test.ts",
     "test:plan-sync": "tsx scripts/plan-sync.test.ts",
     "test:llm-alert": "tsx scripts/llm-alert.test.ts",
-    "test:llm-cache": "tsx scripts/llm-cache.test.ts"
+    "test:llm-cache": "tsx scripts/llm-cache.test.ts",
+    "test:consult": "tsx scripts/consult.test.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.1",
