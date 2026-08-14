@@ -1634,8 +1634,13 @@ body:has(.document-editor-studio) /*
   border-radius: 14px;
   background: var(--surface-2, #f2f4f6);
   color: var(--text, #191f28);
-  font-size: 13.5px;
-  line-height: 1.65;
+  /*
+   * 어르신이 쓰는 화면이다. 13.5px 은 폰에서 눈을 가늘게 뜨게 만든다.
+   * 본문 16px, 줄 간격 1.75 — 읽는 데 힘이 덜 든다.
+   */
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
   white-space: pre-wrap;
   word-break: keep-all;
   overflow-wrap: anywhere;
@@ -1656,6 +1661,47 @@ body:has(.document-editor-studio) /*
 }
 
 /*
+ * 한 덩이씩 차례로 나타난다.
+ *
+ * 말풍선과 보기 단추가 한꺼번에 튀어나오면 어디를 봐야 할지 모른다. 상담사 말이
+ * 먼저 뜨고, 잠깐 뒤에 고를 것이 따라 나온다 — 사람이 말하고 나서 선택지를
+ * 내미는 순서와 같다.
+ *
+ * 움직임에 어지러움을 느끼는 분이 있다. '동작 줄이기'를 켜 두면 그냥 뜬다.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .support-chat-messages .consult-pane > article,
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles,
+  .support-chat-messages .consult-pane .consult-summary,
+  .support-chat-messages .consult-pane .consult-picks,
+  .support-chat-messages .consult-pane .consult-cta {
+    animation: consult-rise 420ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
+  }
+
+  /* 말이 먼저, 고를 것은 그 뒤 */
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles { animation-delay: 260ms; }
+  .support-chat-messages .consult-pane .consult-summary { animation-delay: 180ms; }
+  .support-chat-messages .consult-pane .consult-picks { animation-delay: 240ms; }
+  .support-chat-messages .consult-pane .consult-cta { animation-delay: 380ms; }
+
+  /* 보기 단추도 하나씩 — 여섯 개가 동시에 뜨면 벽처럼 보인다 */
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button {
+    animation: consult-rise 360ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
+  }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(1) { animation-delay: 300ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(2) { animation-delay: 360ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(3) { animation-delay: 420ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(4) { animation-delay: 480ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(5) { animation-delay: 540ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(6) { animation-delay: 600ms; }
+}
+
+@keyframes consult-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/*
  * 보기 단추·정리·추천은 대화 흐름 안에 놓인다.
  *
  * 문의 쪽 규칙이 말풍선을 오른쪽으로 밀어 두어서, 그대로 두면 보기 단추가
@@ -1671,10 +1717,30 @@ body:has(.document-editor-studio) /*
   justify-content: flex-start;
 }
 
+/*
+ * 누르는 것은 크게.
+ *
+ * 어르신은 손끝이 무디고 화면을 멀리 두고 본다. 작은 알약은 눌렀는데 안 눌렸다는
+ * 느낌을 준다 — 높이를 손가락에 맞추고 글씨도 함께 올린다.
+ */
 .support-chat-messages .consult-pane .support-chat-choice-bubbles button {
   width: auto;
+  min-height: 46px;
+  padding: 10px 16px;
   text-align: left;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
 }
+
+/* 정리·추천 글씨도 함께 — 한 화면 안에서 크기가 널뛰면 더 어지럽다 */
+.support-chat-messages .consult-pane .consult-summary > strong { font-size: 14px; }
+.support-chat-messages .consult-pane .consult-summary li { font-size: 14.5px; line-height: 1.7; }
+.support-chat-messages .consult-pane .consult-picks header strong { font-size: 15.5px; }
+.support-chat-messages .consult-pane .consult-picks li { font-size: 14px; line-height: 1.65; }
+.support-chat-messages .consult-pane .consult-picks em { font-size: 12.5px; }
+.support-chat-messages .consult-pane .consult-cta { min-height: 52px; font-size: 15px; }
+.support-chat-messages .consult-pane .consult-to-support { min-height: 44px; font-size: 13.5px; }
 
 .support-chat-messages .consult-pane .consult-summary,
 .support-chat-messages .consult-pane .consult-picks,
@@ -1742,6 +1808,9 @@ body:has(.document-editor-studio) /*
   cursor: pointer;
 }
 .consult-to-support svg { width: 14px; }
+
+/* 상담 중에는 입력창 글씨도 키운다 — 자기가 무엇을 쳤는지 보여야 한다 */
+.support-chat-widget .support-chat-form textarea { font-size: 15px; line-height: 1.6; }
 
 @media (hover: hover) and (pointer: fine) {
   .consult-to-support:hover { color: var(--blue, #1b64da); }
