@@ -1709,12 +1709,19 @@ body:has(.document-editor-studio) /*
  * 맞추고 얼굴 너비만큼 들여 쓴다.
  */
 .support-chat-messages .consult-pane .support-chat-choice-bubbles {
-  align-self: stretch;
+  /*
+   * stretch + margin-left 로 두었더니 폭이 칸을 넘어 단추가 화면 밖으로 잘렸다.
+   * 늘리지 않고 왼쪽에 붙인 뒤 남는 폭만큼만 쓰게 한다.
+   */
+  align-self: flex-start;
+  max-width: calc(100% - 33px);
   margin-left: 33px;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   justify-content: flex-start;
+  justify-items: start;
+  align-items: flex-start;
 }
 
 /*
@@ -1744,7 +1751,11 @@ body:has(.document-editor-studio) /*
 
 .support-chat-messages .consult-pane .consult-summary,
 .support-chat-messages .consult-pane .consult-picks,
-.support-chat-messages .consult-pane .consult-cta { align-self: stretch; margin-left: 33px; }
+.support-chat-messages .consult-pane .consult-cta {
+  align-self: flex-start;
+  width: calc(100% - 33px);
+  margin-left: 33px;
+}
 
 .support-chat-messages .consult-pane .consult-to-support { align-self: flex-start; }
 
