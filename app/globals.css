@@ -1584,266 +1584,7 @@ a { color: inherit; text-decoration: none; }
 .document-preview-cover dd { margin: 0; color: #2c3440; font-size: 11px; font-weight: 700; }
 .document-preview-cover aside { padding: 13px 15px; border-left: 3px solid #d3ad36; background: #fff6d8; color: #6c5d28; font-size: 10px; line-height: 1.6; }
 .document-editor-studio { position: fixed; inset: 0; z-index: 650; background: #f2f4f6; color: #202632; display: grid; grid-template-rows: 68px minmax(0, 1fr); animation: backdrop-in .18s ease both; }
-body:has(.document-editor-studio) /*
- * 창업 상담 — 위젯을 열면 처음 보이는 것.
- *
- * 서비스 문의(결제·환불)와 같은 창을 쓰되, 상담이 주된 것이라 먼저 보인다.
- * 문의 쪽 규칙을 건드리지 않으려고 이름을 따로 뒀다.
- */
-/*
- * 상담 말풍선.
- *
- * 처음에는 grid 로 짰는데 문의 쪽 규칙(.support-chat-messages article)이 폭과
- * 정렬을 먼저 잡아, 내 말과 상담사 말이 둘 다 왼쪽에 붙어 누가 한 말인지
- * 구분되지 않았다. 그 규칙과 싸우지 않도록 세로 정렬을 이 칸에서 직접 정한다.
- *
- * 흔한 메신저와 같은 모양이다 — 상담사는 왼쪽에 얼굴과 함께, 내 말은 오른쪽에
- * 강조색으로. 한쪽으로 몰리지 않게 폭을 82%로 묶는다. 한 줄이 화면 끝까지 가면
- * 읽는 눈이 되돌아오는 거리가 길어진다.
- */
-.support-chat-messages .consult-pane {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 12px;
-}
-
-.support-chat-messages .consult-pane > article {
-  max-width: 82%;
-  width: auto;
-  display: flex;
-  align-items: flex-end;
-  gap: 7px;
-}
-
-/* 상담사 얼굴 — 누가 말하는지 글자 없이 알아보게 */
-.support-chat-messages .consult-pane > article.assistant::before {
-  content: "";
-  width: 26px;
-  height: 26px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  background: url("/support-agent-avatar-2026.png") center / cover no-repeat, var(--surface-2, #f2f4f6);
-}
-
-.support-chat-messages .consult-pane > article > span { display: none; }
-
-.support-chat-messages .consult-pane > article > p {
-  margin: 0;
-  padding: 10px 13px;
-  border-radius: 14px;
-  background: var(--surface-2, #f2f4f6);
-  color: var(--text, #191f28);
-  /*
-   * 어르신이 쓰는 화면이다. 13.5px 은 폰에서 눈을 가늘게 뜨게 만든다.
-   * 본문 16px, 줄 간격 1.75 — 읽는 데 힘이 덜 든다.
-   */
-  font-size: 16px;
-  line-height: 1.75;
-  letter-spacing: -0.01em;
-  white-space: pre-wrap;
-  word-break: keep-all;
-  overflow-wrap: anywhere;
-}
-
-/* 말꼬리 — 같은 쪽 모서리만 각지게 해서 방향이 읽힌다 */
-.support-chat-messages .consult-pane > article.assistant > p { border-bottom-left-radius: 5px; }
-
-.support-chat-messages .consult-pane > article.customer {
-  align-self: flex-end;
-  flex-direction: row-reverse;
-}
-
-.support-chat-messages .consult-pane > article.customer > p {
-  background: var(--blue, #1b64da);
-  color: #fff;
-  border-bottom-right-radius: 5px;
-}
-
-/*
- * 한 덩이씩 차례로 나타난다.
- *
- * 말풍선과 보기 단추가 한꺼번에 튀어나오면 어디를 봐야 할지 모른다. 상담사 말이
- * 먼저 뜨고, 잠깐 뒤에 고를 것이 따라 나온다 — 사람이 말하고 나서 선택지를
- * 내미는 순서와 같다.
- *
- * 움직임에 어지러움을 느끼는 분이 있다. '동작 줄이기'를 켜 두면 그냥 뜬다.
- */
-@media (prefers-reduced-motion: no-preference) {
-  .support-chat-messages .consult-pane > article,
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles,
-  .support-chat-messages .consult-pane .consult-summary,
-  .support-chat-messages .consult-pane .consult-picks,
-  .support-chat-messages .consult-pane .consult-cta {
-    animation: consult-rise 420ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
-  }
-
-  /* 말이 먼저, 고를 것은 그 뒤 */
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles { animation-delay: 260ms; }
-  .support-chat-messages .consult-pane .consult-summary { animation-delay: 180ms; }
-  .support-chat-messages .consult-pane .consult-picks { animation-delay: 240ms; }
-  .support-chat-messages .consult-pane .consult-cta { animation-delay: 380ms; }
-
-  /* 보기 단추도 하나씩 — 여섯 개가 동시에 뜨면 벽처럼 보인다 */
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button {
-    animation: consult-rise 360ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
-  }
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(1) { animation-delay: 300ms; }
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(2) { animation-delay: 360ms; }
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(3) { animation-delay: 420ms; }
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(4) { animation-delay: 480ms; }
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(5) { animation-delay: 540ms; }
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(6) { animation-delay: 600ms; }
-}
-
-@keyframes consult-rise {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: none; }
-}
-
-/*
- * 보기 단추·정리·추천은 대화 흐름 안에 놓인다.
- *
- * 문의 쪽 규칙이 말풍선을 오른쪽으로 밀어 두어서, 그대로 두면 보기 단추가
- * 오른쪽 끝에 붙어 상담사 말과 이어지지 않았다. 상담사가 준 것이므로 왼쪽에
- * 맞추고 얼굴 너비만큼 들여 쓴다.
- */
-/*
- * 고를 것은 같은 폭으로 쌓는다.
- *
- * 알약처럼 흘려 놓았더니 글자 길이대로 폭이 제각각이라(167~212px) 계단처럼 보였고,
- * 왼쪽 여백까지 67px 들어가 어디부터 읽어야 할지 알 수 없었다.
- *
- * 상담톡류가 쓰는 방식은 같은 폭으로 쌓은 목록이다. 폭이 같으면 눈이 왼쪽 한 줄만
- * 따라 내려가면 되고 손가락도 아무 데나 닿는다 — 어르신에게 특히 그렇다.
- */
-.support-chat-messages .consult-pane .support-chat-choice-bubbles {
-  align-self: stretch;
-  width: 100%;
-  max-width: none;
-  margin: 2px 0 0;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-}
-
-/*
- * 누르는 것은 크게.
- *
- * 어르신은 손끝이 무디고 화면을 멀리 두고 본다. 작은 알약은 눌렀는데 안 눌렸다는
- * 느낌을 준다 — 높이를 손가락에 맞추고 글씨도 함께 올린다.
- */
-.support-chat-messages .consult-pane .support-chat-choice-bubbles button {
-  width: 100%;
-  min-height: 52px;
-  padding: 13px 16px;
-  border: 1px solid var(--line, #d1d6db);
-  border-radius: 12px;
-  background: #fff;
-  color: var(--text, #191f28);
-  text-align: left;
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.45;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:hover {
-    border-color: var(--blue, #1b64da);
-    background: var(--blue-soft, #eef5ff);
-    color: var(--blue, #1b64da);
-  }
-}
-
-/* 정리·추천 글씨도 함께 — 한 화면 안에서 크기가 널뛰면 더 어지럽다 */
-.support-chat-messages .consult-pane .consult-summary > strong { font-size: 14px; }
-.support-chat-messages .consult-pane .consult-summary li { font-size: 14.5px; line-height: 1.7; }
-.support-chat-messages .consult-pane .consult-picks header strong { font-size: 15.5px; }
-.support-chat-messages .consult-pane .consult-picks li { font-size: 14px; line-height: 1.65; }
-.support-chat-messages .consult-pane .consult-picks em { font-size: 12.5px; }
-.support-chat-messages .consult-pane .consult-cta { min-height: 52px; font-size: 15px; }
-.support-chat-messages .consult-pane .consult-to-support { min-height: 44px; font-size: 13.5px; }
-
-.support-chat-messages .consult-pane .consult-summary,
-.support-chat-messages .consult-pane .consult-picks,
-.support-chat-messages .consult-pane .consult-cta {
-  align-self: stretch;
-  width: 100%;
-  margin-left: 0;
-}
-
-.support-chat-messages .consult-pane .consult-to-support { align-self: flex-start; }
-
-/* 중간 정리 — 내 상황을 이해하고 있다는 것이 보여야 계속 답한다 */
-.consult-summary {
-  padding: 12px 14px;
-  border: 1px solid var(--blue-soft, #cfe3ff);
-  border-radius: 12px;
-  background: var(--blue-soft, #eef5ff);
-}
-.consult-summary > strong { display: block; margin-bottom: 6px; color: var(--blue, #1b64da); font-size: 12px; font-weight: 800; }
-.consult-summary ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; }
-.consult-summary li { color: var(--text, #191f28); font-size: 12.5px; line-height: 1.6; }
-
-.consult-picks { display: grid; gap: 8px; }
-.consult-picks > article {
-  padding: 12px 14px;
-  border: 1px solid var(--line, #e5e8eb);
-  border-radius: 12px;
-  background: #fff;
-  display: grid;
-  gap: 8px;
-}
-.consult-picks header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-.consult-picks header strong { font-size: 13.5px; font-weight: 800; }
-.consult-picks header span { color: #f59e0b; font-size: 12px; letter-spacing: 1px; }
-.consult-picks em { display: block; margin-bottom: 3px; color: var(--text-2, #6b7684); font-size: 11px; font-style: normal; font-weight: 800; }
-.consult-picks ul { margin: 0; padding-left: 15px; display: grid; gap: 2px; }
-.consult-picks li { font-size: 12px; line-height: 1.55; color: var(--text, #333d4b); }
-.consult-picks .watch li { color: var(--text-2, #6b7684); }
-
-.consult-cta {
-  min-height: 44px;
-  padding: 0 14px;
-  border-radius: 10px;
-  background: var(--blue, #1b64da);
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  font-size: 13px;
-  font-weight: 800;
-  text-decoration: none;
-}
-.consult-cta svg { width: 15px; }
-
-/* 두 갈래를 오가는 줄 — 눈에 띄되 주된 행동을 가리지 않게 */
-.consult-to-support {
-  margin-top: 2px;
-  padding: 8px 10px;
-  border: 0;
-  border-radius: 8px;
-  background: none;
-  color: var(--text-2, #6b7684);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.consult-to-support svg { width: 14px; }
-
-/* 상담 중에는 입력창 글씨도 키운다 — 자기가 무엇을 쳤는지 보여야 한다 */
-.support-chat-widget .support-chat-form textarea { font-size: 15px; line-height: 1.6; }
-
-@media (hover: hover) and (pointer: fine) {
-  .consult-to-support:hover { color: var(--blue, #1b64da); }
-}
-
-.support-chat-widget { z-index: 700; bottom: calc(78px + env(safe-area-inset-bottom)); }
+body:has(.document-editor-studio) .support-chat-widget { z-index: 700; bottom: calc(78px + env(safe-area-inset-bottom)); }
 body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 0; }
 .document-editor-header { min-width: 0; padding: 0 18px 0 22px; border-bottom: 1px solid #d1d6db; background: #fff; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .document-editor-header > div { min-width: 0; display: flex; align-items: baseline; gap: 9px; }
@@ -10614,4 +10355,281 @@ body {
   color: #5f2b28;
   font-size: 13px;
   line-height: 1.6;
+}
+
+/*
+ * 창업 상담 — 위젯을 열면 처음 보이는 것.
+ *
+ * 서비스 문의(결제·환불)와 같은 창을 쓰되, 상담이 주된 것이라 먼저 보인다.
+ * 문의 쪽 규칙을 건드리지 않으려고 이름을 따로 뒀다.
+ */
+/*
+ * 상담 말풍선.
+ *
+ * 처음에는 grid 로 짰는데 문의 쪽 규칙(.support-chat-messages article)이 폭과
+ * 정렬을 먼저 잡아, 내 말과 상담사 말이 둘 다 왼쪽에 붙어 누가 한 말인지
+ * 구분되지 않았다. 그 규칙과 싸우지 않도록 세로 정렬을 이 칸에서 직접 정한다.
+ *
+ * 흔한 메신저와 같은 모양이다 — 상담사는 왼쪽에 얼굴과 함께, 내 말은 오른쪽에
+ * 강조색으로. 한쪽으로 몰리지 않게 폭을 82%로 묶는다. 한 줄이 화면 끝까지 가면
+ * 읽는 눈이 되돌아오는 거리가 길어진다.
+ */
+.support-chat-messages .consult-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+/*
+ * 한 덩이 = 이름줄 + 말풍선 + 시각.
+ *
+ * 얼굴·이름을 말풍선 위에 두고 시각을 아래에 단다. 색과 좌우만으로 구분하면
+ * 색을 가리기 어려운 분이 헷갈리고, 시각이 없으면 언제 나눈 이야기인지 모른다.
+ */
+.support-chat-messages .consult-pane > article {
+  max-width: 84%;
+  width: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.support-chat-messages .consult-pane > article > header {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.support-chat-messages .consult-pane > article > header img {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: block;
+}
+
+.support-chat-messages .consult-pane > article > header span {
+  color: var(--text-2, #4e5968);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.support-chat-messages .consult-pane > article > time {
+  color: var(--text-3, #8b95a1);
+  font-size: 11.5px;
+}
+
+.support-chat-messages .consult-pane > article.customer > header,
+.support-chat-messages .consult-pane > article.customer > time { align-self: flex-end; }
+
+.support-chat-messages .consult-pane > article > p {
+  margin: 0;
+  padding: 10px 13px;
+  border-radius: 14px;
+  background: var(--surface-2, #f2f4f6);
+  color: var(--text, #191f28);
+  /*
+   * 어르신이 쓰는 화면이다. 13.5px 은 폰에서 눈을 가늘게 뜨게 만든다.
+   * 본문 16px, 줄 간격 1.75 — 읽는 데 힘이 덜 든다.
+   */
+  font-size: 16px;
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+  white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
+/* 말꼬리 — 같은 쪽 모서리만 각지게 해서 방향이 읽힌다 */
+.support-chat-messages .consult-pane > article.assistant > p { border-top-left-radius: 5px; }
+
+.support-chat-messages .consult-pane > article.customer { align-self: flex-end; }
+
+.support-chat-messages .consult-pane > article.customer > p {
+  background: var(--blue, #1b64da);
+  color: #fff;
+  border-top-right-radius: 5px;
+}
+
+/*
+ * 한 덩이씩 차례로 나타난다.
+ *
+ * 말풍선과 보기 단추가 한꺼번에 튀어나오면 어디를 봐야 할지 모른다. 상담사 말이
+ * 먼저 뜨고, 잠깐 뒤에 고를 것이 따라 나온다 — 사람이 말하고 나서 선택지를
+ * 내미는 순서와 같다.
+ *
+ * 움직임에 어지러움을 느끼는 분이 있다. '동작 줄이기'를 켜 두면 그냥 뜬다.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .support-chat-messages .consult-pane > article,
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles,
+  .support-chat-messages .consult-pane .consult-summary,
+  .support-chat-messages .consult-pane .consult-picks,
+  .support-chat-messages .consult-pane .consult-cta {
+    animation: consult-rise 420ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
+  }
+
+  /* 말이 먼저, 고를 것은 그 뒤 */
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles { animation-delay: 260ms; }
+  .support-chat-messages .consult-pane .consult-summary { animation-delay: 180ms; }
+  .support-chat-messages .consult-pane .consult-picks { animation-delay: 240ms; }
+  .support-chat-messages .consult-pane .consult-cta { animation-delay: 380ms; }
+
+  /* 보기 단추도 하나씩 — 여섯 개가 동시에 뜨면 벽처럼 보인다 */
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button {
+    animation: consult-rise 360ms cubic-bezier(0.22, 0.68, 0.36, 1) both;
+  }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(1) { animation-delay: 300ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(2) { animation-delay: 360ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(3) { animation-delay: 420ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(4) { animation-delay: 480ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(5) { animation-delay: 540ms; }
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:nth-child(6) { animation-delay: 600ms; }
+}
+
+@keyframes consult-rise {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+
+/*
+ * 보기 단추·정리·추천은 대화 흐름 안에 놓인다.
+ *
+ * 문의 쪽 규칙이 말풍선을 오른쪽으로 밀어 두어서, 그대로 두면 보기 단추가
+ * 오른쪽 끝에 붙어 상담사 말과 이어지지 않았다. 상담사가 준 것이므로 왼쪽에
+ * 맞추고 얼굴 너비만큼 들여 쓴다.
+ */
+/*
+ * 고를 것은 같은 폭으로 쌓는다.
+ *
+ * 알약처럼 흘려 놓았더니 글자 길이대로 폭이 제각각이라(167~212px) 계단처럼 보였고,
+ * 왼쪽 여백까지 67px 들어가 어디부터 읽어야 할지 알 수 없었다.
+ *
+ * 상담톡류가 쓰는 방식은 같은 폭으로 쌓은 목록이다. 폭이 같으면 눈이 왼쪽 한 줄만
+ * 따라 내려가면 되고 손가락도 아무 데나 닿는다 — 어르신에게 특히 그렇다.
+ */
+.support-chat-messages .consult-pane .support-chat-choice-bubbles {
+  align-self: stretch;
+  width: 100%;
+  max-width: none;
+  margin: 2px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+/*
+ * 누르는 것은 크게.
+ *
+ * 어르신은 손끝이 무디고 화면을 멀리 두고 본다. 작은 알약은 눌렀는데 안 눌렸다는
+ * 느낌을 준다 — 높이를 손가락에 맞추고 글씨도 함께 올린다.
+ */
+.support-chat-messages .consult-pane .support-chat-choice-bubbles button {
+  width: 100%;
+  min-height: 52px;
+  padding: 13px 16px;
+  border: 1px solid var(--line, #d1d6db);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text, #191f28);
+  text-align: left;
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .support-chat-messages .consult-pane .support-chat-choice-bubbles button:hover {
+    border-color: var(--blue, #1b64da);
+    background: var(--blue-soft, #eef5ff);
+    color: var(--blue, #1b64da);
+  }
+}
+
+/* 정리·추천 글씨도 함께 — 한 화면 안에서 크기가 널뛰면 더 어지럽다 */
+.support-chat-messages .consult-pane .consult-summary > strong { font-size: 14px; }
+.support-chat-messages .consult-pane .consult-summary li { font-size: 14.5px; line-height: 1.7; }
+.support-chat-messages .consult-pane .consult-picks header strong { font-size: 15.5px; }
+.support-chat-messages .consult-pane .consult-picks li { font-size: 14px; line-height: 1.65; }
+.support-chat-messages .consult-pane .consult-picks em { font-size: 12.5px; }
+.support-chat-messages .consult-pane .consult-cta { min-height: 52px; font-size: 15px; }
+.support-chat-messages .consult-pane .consult-to-support { min-height: 44px; font-size: 13.5px; }
+
+.support-chat-messages .consult-pane .consult-summary,
+.support-chat-messages .consult-pane .consult-picks,
+.support-chat-messages .consult-pane .consult-cta {
+  align-self: stretch;
+  width: 100%;
+  margin-left: 0;
+}
+
+.support-chat-messages .consult-pane .consult-to-support { align-self: flex-start; }
+
+/* 중간 정리 — 내 상황을 이해하고 있다는 것이 보여야 계속 답한다 */
+.consult-summary {
+  padding: 12px 14px;
+  border: 1px solid var(--blue-soft, #cfe3ff);
+  border-radius: 12px;
+  background: var(--blue-soft, #eef5ff);
+}
+.consult-summary > strong { display: block; margin-bottom: 6px; color: var(--blue, #1b64da); font-size: 12px; font-weight: 800; }
+.consult-summary ul { margin: 0; padding-left: 16px; display: grid; gap: 3px; }
+.consult-summary li { color: var(--text, #191f28); font-size: 12.5px; line-height: 1.6; }
+
+.consult-picks { display: grid; gap: 8px; }
+.consult-picks > article {
+  padding: 12px 14px;
+  border: 1px solid var(--line, #e5e8eb);
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+}
+.consult-picks header { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.consult-picks header strong { font-size: 13.5px; font-weight: 800; }
+.consult-picks header span { color: #f59e0b; font-size: 12px; letter-spacing: 1px; }
+.consult-picks em { display: block; margin-bottom: 3px; color: var(--text-2, #6b7684); font-size: 11px; font-style: normal; font-weight: 800; }
+.consult-picks ul { margin: 0; padding-left: 15px; display: grid; gap: 2px; }
+.consult-picks li { font-size: 12px; line-height: 1.55; color: var(--text, #333d4b); }
+.consult-picks .watch li { color: var(--text-2, #6b7684); }
+
+.consult-cta {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  background: var(--blue, #1b64da);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.consult-cta svg { width: 15px; }
+
+/* 두 갈래를 오가는 줄 — 눈에 띄되 주된 행동을 가리지 않게 */
+.consult-to-support {
+  margin-top: 2px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text-2, #6b7684);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.consult-to-support svg { width: 14px; }
+
+/* 상담 중에는 입력창 글씨도 키운다 — 자기가 무엇을 쳤는지 보여야 한다 */
+.support-chat-widget .support-chat-form textarea { font-size: 15px; line-height: 1.6; }
+
+@media (hover: hover) and (pointer: fine) {
+  .consult-to-support:hover { color: var(--blue, #1b64da); }
 }
