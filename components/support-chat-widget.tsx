@@ -31,7 +31,7 @@ import {
  * 상담 대화는 서버에 저장하지 않는다. 로그인 전에도 쓰고, 남의 창업 고민을 우리가
  * 들고 있을 이유가 없다. 이 화면이 들고 있다가 매번 함께 보낸다.
  */
-type ConsultTurn = { id: string; role: "user" | "assistant"; text: string };
+type ConsultTurn = { id: string; role: "user" | "assistant"; text: string; at: string };
 
 type QuickMessage = {
   id: string;
@@ -187,7 +187,7 @@ export function SupportChatWidget() {
     setMessage("");
     setConsultChoices([]);
     setConsultThinking(true);
-    const asked: ConsultTurn = { id: crypto.randomUUID(), role: "user", text: nextMessage };
+    const asked: ConsultTurn = { id: crypto.randomUUID(), role: "user", text: nextMessage, at: new Date().toISOString() };
     setConsultTurns((current) => [...current, asked]);
     try {
       const response = await fetch("/api/consult", {
@@ -209,7 +209,7 @@ export function SupportChatWidget() {
         ready?: boolean;
       };
       if (!response.ok || !payload.message) throw new Error("상담을 이어가지 못했습니다.");
-      setConsultTurns((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: payload.message! }]);
+      setConsultTurns((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: payload.message!, at: new Date().toISOString() }]);
       /* 알아낸 것이 하나도 없으면 앞서 모은 것을 지우지 않는다 */
       if (payload.profile && Object.keys(payload.profile).length) setConsultProfile(payload.profile);
       setConsultChoices(payload.choices ?? []);
@@ -223,6 +223,7 @@ export function SupportChatWidget() {
           id: crypto.randomUUID(),
           role: "assistant",
           text: "지금은 상담을 이어가지 못했습니다. 잠시 후 다시 말씀해 주세요.",
+          at: new Date().toISOString(),
         },
       ]);
     } finally {
@@ -369,6 +370,10 @@ export function SupportChatWidget() {
                           * 여기만 다른 틀을 쓰면 첫 화면과 대화 중 화면이 다른 서비스처럼 보인다.
                           */}
                         <article className="assistant">
+                          <header>
+                            <img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" />
+                            <span>상담사</span>
+                          </header>
                           <p>{CONSULT_OPENING}</p>
                         </article>
                         <div className="support-chat-choice-bubbles" aria-label="상담 시작 고르기">
@@ -381,8 +386,13 @@ export function SupportChatWidget() {
 
                     {consultTurns.map((turn) => (
                       <article key={turn.id} className={turn.role === "user" ? "customer" : "assistant"}>
-                        <span>{turn.role === "user" ? "나" : "상담사"}</span>
+                        {/* 누가 말했는지 얼굴과 이름으로 — 색만으로 구분하면 색을 못 가리는 분이 헷갈린다 */}
+                        <header>
+                          {turn.role === "assistant" && <img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" />}
+                          <span>{turn.role === "user" ? "나" : "상담사"}</span>
+                        </header>
                         <p>{turn.text}</p>
+                        <time dateTime={turn.at}>{messageTime(turn.at)}</time>
                       </article>
                     ))}
 
