@@ -364,10 +364,13 @@ export function SupportChatWidget() {
                   <section className="consult-pane" aria-label="창업 상담">
                     {consultTurns.length === 0 && (
                       <>
-                        <div className="support-chat-bot-message">
-                          <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span>
-                          <div><strong>어떤 창업을 생각하고 계세요?</strong><p>{CONSULT_OPENING.split("\n")[1]}</p></div>
-                        </div>
+                        {/*
+                          * 첫 인사도 뒤따르는 상담사 말과 같은 모양으로.
+                          * 여기만 다른 틀을 쓰면 첫 화면과 대화 중 화면이 다른 서비스처럼 보인다.
+                          */}
+                        <article className="assistant">
+                          <p>{CONSULT_OPENING}</p>
+                        </article>
                         <div className="support-chat-choice-bubbles" aria-label="상담 시작 고르기">
                           {CONSULT_STARTERS.map((starter) => (
                             <button type="button" key={starter} onClick={() => void askConsult(starter)}>{starter}</button>
