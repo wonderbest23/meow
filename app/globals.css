@@ -1590,22 +1590,97 @@ body:has(.document-editor-studio) /*
  * 서비스 문의(결제·환불)와 같은 창을 쓰되, 상담이 주된 것이라 먼저 보인다.
  * 문의 쪽 규칙을 건드리지 않으려고 이름을 따로 뒀다.
  */
-.consult-pane { display: grid; gap: 10px; }
+/*
+ * 상담 말풍선.
+ *
+ * 처음에는 grid 로 짰는데 문의 쪽 규칙(.support-chat-messages article)이 폭과
+ * 정렬을 먼저 잡아, 내 말과 상담사 말이 둘 다 왼쪽에 붙어 누가 한 말인지
+ * 구분되지 않았다. 그 규칙과 싸우지 않도록 세로 정렬을 이 칸에서 직접 정한다.
+ *
+ * 흔한 메신저와 같은 모양이다 — 상담사는 왼쪽에 얼굴과 함께, 내 말은 오른쪽에
+ * 강조색으로. 한쪽으로 몰리지 않게 폭을 82%로 묶는다. 한 줄이 화면 끝까지 가면
+ * 읽는 눈이 되돌아오는 거리가 길어진다.
+ */
+.support-chat-messages .consult-pane {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+}
 
-.consult-pane > article { display: grid; gap: 3px; }
-.consult-pane > article > span { color: var(--text-3, #8b95a1); font-size: 10.5px; font-weight: 800; }
-.consult-pane > article > p {
+.support-chat-messages .consult-pane > article {
+  max-width: 82%;
+  width: auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 7px;
+}
+
+/* 상담사 얼굴 — 누가 말하는지 글자 없이 알아보게 */
+.support-chat-messages .consult-pane > article.assistant::before {
+  content: "";
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: url("/support-agent-avatar-2026.png") center / cover no-repeat, var(--surface-2, #f2f4f6);
+}
+
+.support-chat-messages .consult-pane > article > span { display: none; }
+
+.support-chat-messages .consult-pane > article > p {
   margin: 0;
-  padding: 10px 12px;
-  border-radius: 12px;
+  padding: 10px 13px;
+  border-radius: 14px;
   background: var(--surface-2, #f2f4f6);
   color: var(--text, #191f28);
-  font-size: 13px;
+  font-size: 13.5px;
   line-height: 1.65;
   white-space: pre-wrap;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
-.consult-pane > article.customer { justify-items: end; }
-.consult-pane > article.customer > p { background: var(--blue, #1b64da); color: #fff; }
+
+/* 말꼬리 — 같은 쪽 모서리만 각지게 해서 방향이 읽힌다 */
+.support-chat-messages .consult-pane > article.assistant > p { border-bottom-left-radius: 5px; }
+
+.support-chat-messages .consult-pane > article.customer {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.support-chat-messages .consult-pane > article.customer > p {
+  background: var(--blue, #1b64da);
+  color: #fff;
+  border-bottom-right-radius: 5px;
+}
+
+/*
+ * 보기 단추·정리·추천은 대화 흐름 안에 놓인다.
+ *
+ * 문의 쪽 규칙이 말풍선을 오른쪽으로 밀어 두어서, 그대로 두면 보기 단추가
+ * 오른쪽 끝에 붙어 상담사 말과 이어지지 않았다. 상담사가 준 것이므로 왼쪽에
+ * 맞추고 얼굴 너비만큼 들여 쓴다.
+ */
+.support-chat-messages .consult-pane .support-chat-choice-bubbles {
+  align-self: stretch;
+  margin-left: 33px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+}
+
+.support-chat-messages .consult-pane .support-chat-choice-bubbles button {
+  width: auto;
+  text-align: left;
+}
+
+.support-chat-messages .consult-pane .consult-summary,
+.support-chat-messages .consult-pane .consult-picks,
+.support-chat-messages .consult-pane .consult-cta { align-self: stretch; margin-left: 33px; }
+
+.support-chat-messages .consult-pane .consult-to-support { align-self: flex-start; }
 
 /* 중간 정리 — 내 상황을 이해하고 있다는 것이 보여야 계속 답한다 */
 .consult-summary {
