@@ -349,9 +349,14 @@
  * 표지형 플랜 카드 — start 페이지 덱과 같은 언어.
  * 레퍼런스 대시보드의 플랜 카드(커버+스트립+배지) + New Plan 점선 카드.
  */
+/*
+ * auto-fill 은 카드가 모자라도 빈 칸을 남긴다. 샘플이 3장인데 폭 1064 에서
+ * 5칸이 잡혀 카드가 왼쪽에 몰리고 오른쪽 두 칸이 비어 있었다.
+ * auto-fit 은 빈 칸을 접어 남은 카드가 폭을 나눠 갖는다.
+ */
 .deck {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 20px;
 }
 .planCard {
@@ -729,14 +734,25 @@
   border-bottom: 0;
 }
 
-/* 빈 상태 — 새 플랜 버튼 강조 */
+/*
+ * 빈 상태 — 새 플랜 버튼 강조.
+ *
+ * 말풍선은 버튼 위 40px 에 뜨는데 버튼과 설명글 사이가 28px(설명 아래 18 +
+ * 여기 10)뿐이라, 말풍선이 설명글을 덮고 있었다. 말풍선이 앉을 자리를 준다.
+ */
 .guideAnchor {
   position: relative;
   display: inline-block;
-  margin-top: 10px;
+  margin-top: 48px;
 }
+/*
+ * top 을 고정 -40px 로 두면 말풍선 높이에 따라 결과가 달라진다. 모바일에서는
+ * 줄바꿈이 생겨 두 줄이 되고, 그만큼 아래로 자라 버튼을 덮었다.
+ * 아래쪽을 기준으로 잡으면 높이가 몇 줄이든 늘 버튼 위에 앉는다.
+ */
 .guideAnchor .guideBubble {
-  top: -40px;
+  top: auto;
+  bottom: calc(100% + 10px);
 }
 .guidePulse {
   animation: guideRing 1.8s ease-in-out infinite;
