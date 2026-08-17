@@ -4767,7 +4767,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .home-price-panel ul { margin: 0; padding: 20px 0; border-top: 1px solid #e5e8eb; display: grid; gap: 11px; list-style: none; }
 .home-price-panel li { color: #4e5968; display: flex; align-items: center; gap: 8px; font-size: 15px; line-height: 1.6; }
 .home-price-panel li svg { width: 15px; color: #1b64da; }
-.home-price-panel > button { width: 100%; min-height: var(--btn-h-lg); border: 0; border-radius: var(--radius); box-shadow: var(--shadow-blue); background: var(--lime); color: #202632; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; cursor: pointer; }
+.home-price-panel > button { width: 100%; min-height: var(--btn-h-lg) !important; border: 0; border-radius: var(--radius); box-shadow: var(--shadow-blue) !important; background: var(--lime); color: #202632; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; cursor: pointer; }
 .home-price-panel > button svg { width: 17px; }
 .home-price-panel > small { margin-top: 11px; color: #6b7684; display: block; text-align: center; font-size: 13px; line-height: 1.5; }
 .home-custom-price { padding: 18px; border: 1px solid #ffffff24; border-radius: var(--radius); background: #ffffff0b; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; }
@@ -8386,10 +8386,10 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 /* 플랜 빌더(.plan-ui)는 자체 디자인 체계를 쓰므로 이 정규화에서 제외한다.
    여기 !important가 그쪽 모듈 CSS를 전부 덮어써서 모서리·굵기 위계가 뭉개졌다. */
 button:not(.brand):not(.mobile-report-backdrop):not(.plan-ui *) {
-  min-height: 40px;
-  border-radius: 14px !important;
+  min-height: var(--btn-h);
+  border-radius: var(--radius) !important;
   letter-spacing: 0 !important;
-  font-weight: 800 !important;
+  font-weight: 700 !important;
   box-shadow: none !important;
   transform: none !important;
 }
@@ -8456,15 +8456,15 @@ button:not(.plan-ui *) > i:has(> svg:only-child) {
   .quality-assurance-panel footer button.primary,
   .admin-payment-detail > footer button.confirm
 ) {
-  min-height: 50px !important;
-  padding: 0 22px !important;
+  min-height: var(--btn-h-lg) !important;
+  padding: 0 20px !important;
   border: 0 !important;
-  border-radius: 14px !important;
+  border-radius: var(--radius) !important;
   background: var(--action-blue) !important;
   color: #fff !important;
-  font-size: 15px !important;
-  font-weight: 850 !important;
-  line-height: 1.25 !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  line-height: 1.22 !important;
   text-align: center;
 }
 
@@ -8564,25 +8564,36 @@ button:disabled {
 }
 
 .small-start {
-  min-height: 42px !important;
+  min-height: var(--btn-h) !important;
   height: auto;
-  padding: 0 17px !important;
-  font-size: 13px !important;
+  padding: 0 16px !important;
+  font-size: 14px !important;
 }
 
-.simple-home .home-hero-actions > button,
+/*
+ * 히어로 주 버튼 — Neuros lg 규격(48 / 좌우 20 / 글씨 16 Bold).
+ *
+ * 이 버튼 하나를 두고 !important 가 아홉 개 겹쳐 있었다. 새 규칙을 얹으면
+ * 열 번째가 될 뿐이라, 실제로 이기는 여기 값을 고친다.
+ *
+ * 그림자는 위 전역 규칙이 box-shadow: none !important 로 눌러 둔다. 평평하게
+ * 만들자고 일부러 넣은 것이라 그대로 두고, 주 버튼에만 되살린다 — 파랑빛
+ * 그림자는 이 디자인에서 '눌리는 것'을 알리는 유일한 신호다.
+ */
+.simple-home .home-hero-actions > button.conversation-choice,
 .simple-home-choice > div > .conversation-choice {
   width: auto;
   min-width: 152px;
-  min-height: 58px !important;
-  padding: 0 26px !important;
+  min-height: var(--btn-h-lg) !important;
+  padding: 0 20px !important;
   display: inline-flex;
   justify-content: center;
+  box-shadow: var(--shadow-blue) !important;
 }
 .simple-home .home-hero-actions > button strong {
   color: inherit;
-  font-size: 18px;
-  font-weight: 850;
+  font-size: 16px;
+  font-weight: 700;
 }
 
 .start-mode-icon,
@@ -9712,13 +9723,13 @@ body {
   .simple-home .home-hero-actions > button {
     width: auto !important;
     min-width: 150px !important;
-    min-height: 52px !important;
-    padding: 0 25px !important;
-    border-radius: 11px !important;
+    min-height: var(--btn-h-lg) !important;
+    padding: 0 20px !important;
+    border-radius: var(--radius) !important;
   }
 
   .simple-home .home-hero-actions > button strong {
-    font-size: 15px;
+    font-size: 16px;
   }
 
   .simple-home .home-hero-copy > .home-hero-assurance {
@@ -10152,21 +10163,16 @@ body {
 }
 
 /*
- * 하나뿐인 행동.
+ * 하나뿐인 행동 — 알약(999px·62px)에서 Neuros lg 규격으로.
  *
- * 알약 모양(999px)에 62px 높이로 크게 뒀었는데, 페이지의 다른 어떤 요소와도
- * 닮지 않아 혼자 떠 보였다. Neuros 의 lg 버튼 규격(높이 48·라운드 12·좌우 20)에
- * 맞춘다. 그림자는 한 겹 짙은 것 대신 파랑빛 세 겹 — 가장자리가 덜 딱딱하다.
+ * 크기와 라운드는 여기서 정하지 않는다. 아래쪽 !important 블록이 이긴다
+ * (".simple-home .home-hero-actions > button" 을 찾을 것). 여기는 모양만.
  */
 .simple-home .home-hero-actions > .conversation-choice {
-  min-height: var(--btn-h-lg);
-  padding: 0 24px;
   border: 0;
-  border-radius: var(--radius);
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  box-shadow: var(--shadow-blue);
 }
 
 .simple-home .home-hero-actions > .conversation-choice strong {
