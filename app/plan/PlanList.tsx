@@ -206,17 +206,24 @@ export default function PlanList() {
                       )}
                       <span className={styles.typeChip}>{meta.short}</span>
                     </span>
-                    <span className={styles.strip}>
-                      {pct === 0 ? (
-                        <b className={styles.notStarted}>시작 전</b>
-                      ) : (
-                        <>
-                          <span className={styles.bar}>
-                            <span className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`} style={{ width: `${pct}%` }} />
-                          </span>
-                          <b className={styles.pct}>{pct === 100 ? "완성" : `${pct}%`}</b>
-                        </>
-                      )}
+                    {/*
+                      세 상태를 같은 자리에서 비교한다.
+                      예전에는 '시작 전'만 막대 없이 글자만 있어, 카드를 여러 장
+                      늘어놓으면 어디까지 했는지 눈으로 대볼 수가 없었다.
+                      0% 도 막대를 그리고, 색과 함께 모양(○ ◐ ✓)으로도 나눈다 —
+                      색만으로 나누면 색각 이상인 분에게는 구분이 사라진다.
+                    */}
+                    <span
+                      className={`${styles.strip} ${pct === 0 ? styles.stripIdle : pct === 100 ? styles.stripDone : styles.stripLive}`}
+                    >
+                      <span className={styles.stateDot} aria-hidden="true" />
+                      <span className={styles.bar}>
+                        <span
+                          className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`}
+                          style={{ width: `${Math.max(pct, 0)}%` }}
+                        />
+                      </span>
+                      <b className={styles.pct}>{pct === 0 ? "시작 전" : pct === 100 ? "완성" : `${pct}%`}</b>
                     </span>
                   </span>
                   <span className={styles.cardMeta}>

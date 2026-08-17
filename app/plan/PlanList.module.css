@@ -780,3 +780,68 @@
     animation: none;
   }
 }
+
+/* ── 진행 상태 — Wireframes Kit 의 Progress Indicator ────────────
+ * 키트는 단계마다 (1) 위쪽 굵은 색 막대 (2) 원형 상태 아이콘 (3) 이름을
+ * 함께 둔다. 색 하나로만 나누지 않는 것이 핵심이다.
+ *
+ * 우리는 '시작 전'만 막대 없이 글자만 있어서, 카드를 여러 장 늘어놓으면
+ * 어디까지 했는지 눈으로 대볼 수가 없었다. 세 상태를 같은 자리에 놓는다.
+ * ───────────────────────────────────────────────────────────── */
+
+/* 카드 맨 위 상태 띠 — 21장을 훑을 때 이것만 보고도 골라낸다 */
+.strip {
+  position: relative;
+}
+.strip::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 3px;
+  background: currentColor;
+}
+.stripIdle { color: #c1c7cd; }
+.stripLive { color: var(--blue, #3272db); }
+.stripDone { color: #16b877; }
+
+/* 색과 함께 모양으로도 나눈다 — 색만으로는 색각 이상인 분에게 구분이 사라진다 */
+.stateDot {
+  flex: none;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  box-sizing: border-box;
+}
+.stripIdle .stateDot { border-style: dotted; }
+.stripLive .stateDot {
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  transform: rotate(45deg);
+}
+.stripDone .stateDot {
+  border: 0;
+  background: currentColor;
+  position: relative;
+}
+.stripDone .stateDot::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 1.5px;
+  width: 3px;
+  height: 6px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+/* 시작 전에도 빈 홈을 그린다 — 셋이 같은 자리에서 비교된다 */
+.stripIdle .barFill { background: transparent; }
+.stripIdle .pct { color: #697077; }
+.stripLive .pct { color: var(--blue, #3272db); }
+.stripDone .pct { color: #16b877; }
+.strip .pct { font-weight: 700; }
+
