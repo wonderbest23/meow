@@ -10937,3 +10937,154 @@ body {
   .simple-home .home-hero-screen { aspect-ratio: 4 / 3; border-radius: var(--radius-lg); }
   .simple-home .home-hero-screen img { object-position: center 62%; }
 }
+
+/* ── 섹션 제목 블록 — Neuros 의 Seciton headling/Level 1 ─────────
+ * 원본은 모든 섹션이 같은 틀이다: 알약 태그 → 제목 → 설명, 전부 가운데.
+ * 우리는 150/650/260 3열이라 눈썹은 왼쪽, 제목은 가운데, 설명은 오른쪽으로
+ * 흩어져 있었다. 히어로를 가운데로 옮기고 나니 더 어긋나 보인다.
+ *
+ * 여백은 Figma 에서 잰 값이다 — 태그와 제목 사이 16, 제목과 설명 사이 16,
+ * 제목 폭 520, 설명 폭 480.
+ *
+ * 근거·이용 안내는 아직 2열(글 | 표)이라 가운데로 옮기지 않는다. 눈썹 모양만
+ * 맞춘다 — 배치까지 바꾸려면 섹션을 세로로 다시 쌓아야 한다.
+ * ───────────────────────────────────────────────────────────── */
+.home-section-heading > span,
+.home-deliverables-copy > span,
+.home-evidence-intro > span,
+.home-price-copy > span,
+.home-faq > div:first-child > span {
+  justify-self: start;
+  width: fit-content;
+  padding: 9px 18px;
+  border: 1px solid var(--border-soft);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* 검정 바탕 위에서는 테두리와 바탕을 뒤집는다 */
+.home-price-copy > span {
+  border-color: rgba(255, 255, 255, .2);
+  background: rgba(255, 255, 255, .08);
+  color: #8bbcff;
+}
+
+.home-section-heading,
+.home-deliverables-copy {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+/*
+ * 3열이던 시절의 흔적 — 설명문에 grid-column: 2 가 박혀 있어, 한 열로 바꿔도
+ * 보이지 않는 두 번째 칸이 생기고 첫 칸이 0px 로 찌부러졌다(모바일에서 눈썹
+ * 알약이 제목 위로 겹쳐 보이던 이유). 자리 지정을 전부 푼다.
+ */
+.home-section-heading > span,
+.home-section-heading > h2,
+.home-section-heading > p,
+.home-deliverables-copy > span,
+.home-deliverables-copy > h2,
+.home-deliverables-copy > p,
+.home-deliverables-copy > ul,
+.home-deliverables-copy > a { grid-column: auto; grid-row: auto; }
+
+.home-section-heading > span,
+.home-deliverables-copy > span { justify-self: center; }
+
+.home-section-heading h2,
+.home-deliverables-copy h2 { max-width: 620px; margin: 0; text-wrap: balance; }
+
+.home-section-heading p,
+.home-deliverables-copy > p { max-width: var(--prose-max); margin: 0; }
+
+.home-deliverables-copy { max-width: none; }
+.home-deliverables-copy ul { width: min(920px, 100%); margin-top: 12px; justify-items: start; text-align: left; }
+.home-deliverables-copy > .home-sample-preview { margin-top: 8px; }
+
+@media (max-width: 640px) {
+  .home-section-heading,
+  .home-deliverables-copy { gap: 14px; }
+  .home-section-heading > span,
+  .home-deliverables-copy > span,
+  .home-evidence-intro > span,
+  .home-price-copy > span,
+  .home-faq > div:first-child > span { padding: 8px 15px; font-size: 13px; }
+}
+
+/* ── 진행 방식 — Neuros 의 Solution card ──────────────────────
+ * 세로 구분선만 있는 4열 표였다. 표는 '읽을 것'처럼 보이고 카드는 '하나씩
+ * 보는 것'처럼 보인다. 순서를 훑는 자리라 카드가 맞다.
+ *
+ * 실측: 라운드 12 / 패딩 32 / 테두리 1px #b6bccd / 세로 간격 16 /
+ * 제목 20 Bold 1.42 / 설명 16 Regular 1.6 (#4b5162, 투명도 .8)
+ *
+ * 원본은 맨 위가 아이콘인데 우리는 아이콘을 쓰지 않기로 했다. 그 자리에
+ * 단계 번호를 둔다 — 원본의 파랑 라벨과 같은 크기·색이다.
+ * ───────────────────────────────────────────────────────────── */
+.home-method-flow {
+  border-top: 0;
+  border-bottom: 0;
+  gap: var(--gap-card);
+}
+
+.home-method-flow article {
+  min-height: 0;
+  padding: 32px;
+  border: 1px solid #b6bccd;
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: grid;
+  align-content: start;
+  gap: 16px;
+}
+.home-method-flow article:first-child { border-left: 1px solid #b6bccd; }
+.home-method-flow article:nth-child(3),
+.home-method-flow article:nth-child(4) { border-top: 1px solid #b6bccd; }
+
+.home-method-flow article em {
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.home-method-flow h3 {
+  margin: 0;
+  color: #1c1f25;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.42;
+}
+
+.home-method-flow p {
+  margin: 0;
+  color: #4b5162;
+  font-size: 16px;
+  line-height: 1.6;
+  opacity: .8;
+}
+
+@media (max-width: 1100px) {
+  .home-method-flow { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 640px) {
+  .home-method-flow { grid-template-columns: 1fr; gap: 12px; }
+  .home-method-flow article {
+    padding: 22px 20px;
+    border: 1px solid #b6bccd;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+  .home-method-flow article em { grid-column: auto; }
+  .home-method-flow h3 { grid-column: auto; font-size: 18px; }
+  .home-method-flow p { grid-column: auto; margin-top: 0; font-size: 15px; }
+}
