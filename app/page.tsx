@@ -642,11 +642,18 @@ function Home({
         </div>
       </section>
 
+      {/*
+        제목은 다른 섹션과 같은 틀(가운데)로 빼고, 그 아래를 원칙 상자와
+        표 두 칸으로 둔다. 예전에는 제목이 왼쪽 칸 안에 갇혀 있어 위아래
+        섹션과 시작하는 세로선이 어긋났다.
+      */}
       <section className="home-section home-evidence" id="evidence">
-        <div className="home-evidence-intro">
+        <div className="home-section-heading">
           <span>근거 확인 방식</span>
           <h2>인공지능의 답을<br />그대로 믿게 하지 않습니다</h2>
           <p>생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.</p>
+        </div>
+        <div className="home-evidence-intro">
           <div className="home-evidence-note"><ShieldCheck /><p><strong>확정처럼 쓰지 않는 원칙</strong>공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p></div>
         </div>
         <div className="home-evidence-table">

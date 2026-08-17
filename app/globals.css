@@ -11088,3 +11088,45 @@ body {
   .home-method-flow h3 { grid-column: auto; font-size: 18px; }
   .home-method-flow p { grid-column: auto; margin-top: 0; font-size: 15px; }
 }
+
+/* ── 근거 확인 방식 — 제목을 위로, 아래를 두 칸으로 ─────────────
+ * Neuros 의 Value section/4 는 가운데 제목 아래에 글과 그림을 두 칸으로
+ * 놓는다. 우리는 제목이 왼쪽 칸 안에 갇혀 있어 위아래 섹션과 글이 시작하는
+ * 세로선이 어긋났다. 제목만 빼서 공통 틀에 얹는다.
+ * ───────────────────────────────────────────────────────────── */
+.home-evidence > .home-section-heading {
+  grid-column: 1 / -1;
+  margin-bottom: 8px;
+}
+.home-evidence-intro { display: grid; align-content: center; }
+
+@media (max-width: 1100px) {
+  .home-evidence > .home-section-heading { margin-bottom: 0; }
+}
+
+/* ── 자주 묻는 질문 — Neuros 의 FAQ section/3 ────────────────────
+ * 원본도 우리처럼 2열(왼쪽 제목·오른쪽 아코디언)이라 배치는 그대로 둔다.
+ * 다른 것은 항목마다 왼쪽에 파랑 세로 막대가 있다는 점 하나다. 목록이
+ * 길어질 때 어디까지가 한 항목인지 눈이 잡을 것을 준다.
+ * ───────────────────────────────────────────────────────────── */
+.home-faq summary { position: relative; padding-left: 16px; }
+.home-faq summary::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 3px;
+  height: 1.4em;
+  border-radius: 2px;
+  background: var(--blue);
+  transform: translateY(-50%);
+}
+.home-faq details p { padding-left: 16px; }
+
+/* 왼쪽 칸은 제목이 위에 붙는다 — 가운데로 뜨면 오른쪽 목록과 어긋나 보인다 */
+.home-faq > div:first-child { align-self: start; }
+
+@media (max-width: 640px) {
+  .home-faq summary { padding-left: 13px; }
+  .home-faq details p { padding-left: 13px; }
+}
