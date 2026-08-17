@@ -730,10 +730,22 @@ function Home({
         </div>
       </section>
 
+      {/*
+        Neuros 의 Footer/1 — 맨 위에 상호와 가는 선, 가운데에 안내 열,
+        맨 아래 다시 가는 선 아래로 저작권 한 줄. 바탕은 흰색이다.
+        검정이던 것을 흰색으로 바꾸는 김에 법정 고지가 더 잘 읽힌다.
+      */}
       <footer className="home-footer">
-        <div><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /><p>질문에 답하면 인공지능이 사업계획서·재무 모델·발표자료를 완성하는 문서 서비스</p></div>
-        <nav aria-label="하단 안내"><a href="/business-info">사업자·통신판매 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
-        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><small>© 2026 오늘창업 · 화면 디자인 일부는 Khoa (JAK)의 Neuros Lite를 따랐습니다 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC BY 4.0</a>)</small></div>
+        <div className="home-footer-top"><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /></div>
+        <div className="home-footer-cols">
+        <div><strong>오늘창업</strong><p>질문에 답하면 인공지능이 사업계획서·재무 모델·발표자료를 완성하는 문서 서비스</p></div>
+        <nav aria-label="하단 안내"><strong>안내</strong><a href="/business-info">사업자·통신판매 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
+        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p></div>
+        </div>
+        <div className="home-footer-bottom">
+          <small>© 2026 오늘창업</small>
+          <small>화면 디자인 일부는 Khoa (JAK)의 Neuros Lite를 따랐습니다 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC BY 4.0</a>)</small>
+        </div>
       </footer>
     </main>
   );

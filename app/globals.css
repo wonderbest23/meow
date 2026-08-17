@@ -11130,3 +11130,90 @@ body {
   .home-faq summary { padding-left: 13px; }
   .home-faq details p { padding-left: 13px; }
 }
+
+/* ── 푸터 — Neuros 의 Footer/1 ────────────────────────────────
+ * 검정이던 것을 흰 바탕으로. 원본이 그렇기도 하고, 우리 푸터에는 사업자
+ * 등록번호·통신판매 신고 같은 법정 고지가 들어 있어 잘 읽히는 편이 낫다.
+ *
+ * 틀: 맨 위 상호 + 가는 선 / 가운데 안내 열 / 맨 아래 가는 선 + 저작권 줄.
+ * ───────────────────────────────────────────────────────────── */
+.home-footer {
+  padding: 72px max(var(--gutter), calc((100vw - var(--content-max)) / 2));
+  background: var(--surface);
+  color: var(--text-body);
+  display: block;
+}
+
+.home-footer .brand-logo { filter: none; }
+.home-footer .brand strong { color: var(--text-strong); }
+
+/* 상호 옆으로 이어지는 가는 선 — 원본의 특징이다 */
+.home-footer-top {
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--border-soft);
+  display: flex;
+  align-items: center;
+}
+
+.home-footer-cols {
+  padding: 34px 0 44px;
+  display: grid;
+  grid-template-columns: 1.1fr .7fr 1.2fr;
+  gap: 60px;
+  align-items: start;
+}
+
+.home-footer-cols > div:first-child > strong,
+.home-footer nav > strong,
+.home-footer-notice > strong {
+  display: block;
+  margin-bottom: 14px;
+  color: var(--text-strong);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.home-footer-cols > div:first-child > p {
+  max-width: 320px;
+  margin: 0;
+  color: var(--text-body);
+  font-size: 15px;
+  line-height: 1.7;
+}
+
+/*
+ * 모바일에서 nav 를 2열로 두던 옛 규칙이 남아 있어, 새로 넣은 '안내' 제목이
+ * 첫 칸을 차지하고 링크가 그 옆으로 흘렀다. 제목은 늘 한 줄을 다 쓴다.
+ */
+.home-footer nav { display: grid; gap: 10px; }
+.home-footer nav > strong { grid-column: 1 / -1; }
+.home-footer nav a { color: var(--text-body); font-size: 15px; line-height: 1.6; }
+.home-footer nav a:hover { color: var(--blue); }
+
+.home-footer-notice p { margin: 9px 0 0; color: var(--text-body); font-size: 14px; line-height: 1.7; }
+.home-business-info { margin: 0 0 12px; color: var(--text-body); display: grid; gap: 4px; font-size: 14px; line-height: 1.6; }
+
+.home-footer-bottom {
+  padding-top: 22px;
+  border-top: 1px solid var(--border-soft);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 24px;
+}
+/* 검정 바탕일 때는 --text-muted 로 충분했지만 흰 바탕에서는 3.04 다 */
+.home-footer-bottom small { color: #626981; font-size: 14px; }
+.home-footer-bottom a { color: var(--text-body); text-decoration: underline; }
+
+@media (max-width: 900px) {
+  .home-footer-cols { grid-template-columns: 1fr 1fr; gap: 36px; }
+  .home-footer-notice { grid-column: 1 / -1; }
+}
+
+@media (max-width: 640px) {
+  .home-footer { padding: 48px var(--gutter); }
+  .home-footer-cols { padding: 28px 0 32px; grid-template-columns: 1fr; gap: 28px; }
+  .home-footer-notice { grid-column: auto; }
+  .home-footer-bottom { flex-direction: column; align-items: flex-start; }
+}
