@@ -4681,7 +4681,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .home-method-flow { width: min(var(--content-max), 100%); margin: auto; border-top: 1px solid #b0b8c1; border-bottom: 1px solid #b0b8c1; display: grid; grid-template-columns: repeat(4, 1fr); }
 .home-method-flow article { min-height: 290px; padding: 28px 24px 30px; border-left: 1px solid #e5e8eb; position: relative; }
 .home-method-flow article:first-child { border-left: 0; }
-.home-method-flow article em { color: #8b95a1; font-size: 13px; font-style: normal; font-weight: 800; }
+.home-method-flow article em { color: #626981; font-size: 13px; font-style: normal; font-weight: 800; }
 .home-method-flow article > svg { width: 28px; height: 28px; margin: 54px 0 16px; color: #1b64da; }
 .home-method-flow article:nth-child(2) > svg, .home-method-flow article:nth-child(4) > svg { color: #d76f4f; }
 .home-method-flow h3 { margin: 0 0 10px; font-size: 20px; line-height: 1.4; }
@@ -4736,7 +4736,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .home-evidence-note strong { display: block; color: #7e3f2e; }
 .home-evidence-table { border-top: 1px solid #d1d6db; }
 .home-evidence-table > div { min-height: 82px; padding: 14px 4px; border-bottom: 1px solid #d1d6db; display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; }
-.home-evidence-table em { color: #8b95a1; font-size: 13px; font-style: normal; font-weight: 800; }
+.home-evidence-table em { color: #626981; font-size: 13px; font-style: normal; font-weight: 800; }
 .home-evidence-table span { display: grid; gap: 3px; }
 .home-evidence-table strong { font-size: 16px; line-height: 1.5; }
 .home-evidence-table small { color: #6b7684; font-size: 13px; line-height: 1.5; }
@@ -4800,7 +4800,8 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .home-footer nav a { color: #b0b8c1; font-size: 15px; line-height: 1.6; }
 .home-footer-notice strong { font-size: 15px; }
 .home-footer-notice p { margin: 9px 0 18px; color: #8b95a1; font-size: 13px; line-height: 1.7; }
-.home-footer-notice small { color: #8b95a1; font-size: 13px; }
+.home-footer-notice small { color: #8b95a1; font-size: 13px; line-height: 1.6; }
+.home-footer-notice small a { color: #b0b8c1; text-decoration: underline; }
 .home-business-info { margin: 9px 0 12px; color: #8b95a1; display: grid; gap: 4px; font-size: 13px; line-height: 1.6; }
 
 /* Platform legal, account and launch readiness */
@@ -10691,4 +10692,93 @@ body {
 
 @media (hover: hover) and (pointer: fine) {
   .consult-to-support:hover { color: var(--blue, #1b64da); }
+}
+
+/* ── 마지막 권유 배너 ─────────────────────────────────────────
+ * Neuros Lite 의 Trial banner/2 (Khoa/JAK, CC BY 4.0) 를 옮긴 것.
+ * 파랑 카드 안에 왼쪽은 제목과 행동, 오른쪽은 유리질 카드 세 칸.
+ *
+ * 원본은 배경에 그래프 그림이 깔리는데 그건 안 가져온다 — 우리 화면에는
+ * 보여줄 실제 그래프가 없고, 장식으로 넣으면 데이터처럼 읽힌다.
+ * ───────────────────────────────────────────────────────────── */
+.home-trial { padding: 80px var(--gutter); background: var(--surface); }
+
+.home-trial-card {
+  width: min(var(--content-max), 100%);
+  margin: auto;
+  padding: 60px;
+  border-radius: var(--radius-xl);
+  background: var(--blue);
+  color: #fff;
+  display: grid;
+  grid-template-columns: minmax(360px, 1fr) 381px;
+  gap: 40px;
+  align-items: center;
+}
+
+.home-trial-lead { display: grid; gap: 32px; justify-items: start; }
+.home-trial-lead h2 { margin: 0; color: #fff; font-size: 44px; line-height: 1.16; letter-spacing: -0.02em; text-wrap: balance; }
+
+/* 파랑 위의 버튼 — 흰 바탕을 쓰면 카드가 두 조각으로 갈린다. 반투명으로 얹는다 */
+.home-trial-lead > button {
+  min-height: var(--btn-h-lg) !important;
+  padding: 0 24px !important;
+  border: 1px solid rgba(255, 255, 255, .28) !important;
+  border-radius: var(--radius) !important;
+  background: linear-gradient(102deg, rgba(255, 255, 255, .13) 6%, rgba(255, 255, 255, .245) 91%) !important;
+  color: #fff !important;
+  font-size: 16px !important;
+  font-weight: 700 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.home-trial-lead > button svg { width: 19px; height: 19px; }
+
+.home-trial-points { margin: 0; padding: 0; display: grid; gap: 20px; list-style: none; }
+.home-trial-points li {
+  padding: 8px 18px 8px 8px;
+  border: 1px solid rgba(255, 255, 255, .2);
+  border-radius: 16px;
+  background: linear-gradient(101deg, rgba(255, 255, 255, .075) 6%, rgba(255, 255, 255, .175) 91%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.home-trial-points li > span {
+  flex: none;
+  align-self: stretch;
+  padding: 12px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, .1);
+  display: grid;
+  place-items: center;
+}
+.home-trial-points li > span svg { width: 24px; height: 24px; color: #fff; }
+.home-trial-points li > div { min-width: 0; display: grid; gap: 2px; }
+.home-trial-points strong { color: #fff; font-size: 16px; font-weight: 600; line-height: 1.5; }
+/*
+ * 원본은 설명문을 흰색 70% 로 흐리는데, 우리 파랑(#3272db) 위에서는 대비가
+ * 3.45 라 기준(4.5)에 못 미친다. 92% 로 올려도 4.16 이라 결국 100% 뿐이다.
+ * 흐리기 대신 굵기(600 vs 400)와 크기로 제목과 갈라 놓는다.
+ */
+.home-trial-points p { margin: 0; color: #fff; font-size: 15px; font-weight: 400; line-height: 1.55; }
+
+@media (max-width: 1100px) {
+  .home-trial-card { grid-template-columns: 1fr; gap: 36px; }
+}
+
+@media (max-width: 640px) {
+  .home-trial { padding: var(--section-y) var(--gutter); }
+  .home-trial-card { padding: 32px 22px; border-radius: var(--radius-lg); gap: 28px; }
+  .home-trial-lead { gap: 24px; justify-items: stretch; }
+  /*
+   * br 을 숨겼더니 '보고'와 '결정하세요'가 붙었다 — 태그 앞뒤에 공백이 없어
+   * 줄바꿈이 사라지면 두 낱말이 이어진다. 좁은 화면에서도 줄바꿈을 살린다.
+   */
+  .home-trial-lead h2 { font-size: 28px; line-height: 1.35; }
+  .home-trial-lead > button { justify-content: center; }
+  .home-trial-points { gap: 12px; }
+  .home-trial-points p { font-size: 14px; }
 }

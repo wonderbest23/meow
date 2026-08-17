@@ -673,6 +673,34 @@ function Home({
         </div>
       </section>
 
+      {/*
+        가격을 본 직후, 질문으로 넘어가기 전에 한 번 더 권하는 자리.
+        오른쪽 세 칸은 새로 지어낸 말이 아니라 위 섹션에서 이미 밝힌 사실을
+        옮긴 것이다 — 여기서만 하는 약속을 만들면 지키지 못한다.
+      */}
+      <section className="home-trial" aria-labelledby="home-trial-title">
+        <div className="home-trial-card">
+          <div className="home-trial-lead">
+            <h2 id="home-trial-title">먼저 만들어 보고<br />결정하세요</h2>
+            <button type="button" onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
+          </div>
+          <ul className="home-trial-points">
+            <li>
+              <span aria-hidden="true"><FileText /></span>
+              <div><strong>결제 없이 확인</strong><p>완성 샘플 3부를 로그인 없이 전체 열람하고, 내 사업으로도 앞 2개 섹션을 만들어 봅니다.</p></div>
+            </li>
+            <li>
+              <span aria-hidden="true"><ShieldCheck /></span>
+              <div><strong>구독이 아닙니다</strong><p>필요한 문서만 1부씩 결제합니다. 자동으로 다시 청구되지 않습니다.</p></div>
+            </li>
+            <li>
+              <span aria-hidden="true"><Check /></span>
+              <div><strong>근거를 함께 표시</strong><p>확인되지 않은 수치는 사실처럼 쓰지 않고 &lsquo;가정&rsquo; 또는 &lsquo;확인 필요&rsquo;로 남깁니다.</p></div>
+            </li>
+          </ul>
+        </div>
+      </section>
+
       <section className="home-faq" aria-labelledby="home-faq-title">
         <div><span>자주 묻는 질문</span><h2 id="home-faq-title">궁금한 점을 미리 확인해 보세요</h2></div>
         <div>
@@ -687,7 +715,7 @@ function Home({
       <footer className="home-footer">
         <div><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /><p>질문에 답하면 인공지능이 사업계획서·재무 모델·발표자료를 완성하는 문서 서비스</p></div>
         <nav aria-label="하단 안내"><a href="/business-info">사업자·통신판매 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
-        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><small>© 2026 오늘창업</small></div>
+        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><small>© 2026 오늘창업 · 화면 디자인 일부는 Khoa (JAK)의 Neuros Lite를 따랐습니다 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC BY 4.0</a>)</small></div>
       </footer>
     </main>
   );
