@@ -10704,6 +10704,8 @@ body {
 .home-trial { padding: 80px var(--gutter); background: var(--surface); }
 
 .home-trial-card {
+  position: relative;
+  overflow: hidden;
   width: min(var(--content-max), 100%);
   margin: auto;
   padding: 60px;
@@ -10715,6 +10717,22 @@ body {
   gap: 40px;
   align-items: center;
 }
+
+/*
+ * 배경 선 그래프 — Figma 에서 내려받은 원본 에셋.
+ * 원본과 같이 왼쪽 아래에 깔고 50% 로 죽인다. 오른쪽 카드 쪽으로는 서서히
+ * 사라지게 해서 글을 방해하지 않는다. 뜻이 없는 장식이라 화면 낭독에서 뺀다.
+ */
+.home-trial-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: url("/trial-banner-lines.png") left bottom / auto 100% no-repeat;
+  opacity: .5;
+  mask-image: linear-gradient(100deg, #000 0%, #000 42%, transparent 72%);
+  pointer-events: none;
+}
+.home-trial-card > * { position: relative; }
 
 .home-trial-lead { display: grid; gap: 32px; justify-items: start; }
 .home-trial-lead h2 { margin: 0; color: #fff; font-size: 44px; line-height: 1.16; letter-spacing: -0.02em; text-wrap: balance; }
