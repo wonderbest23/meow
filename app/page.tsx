@@ -565,6 +565,12 @@ function Home({
     <main className="new-home simple-home">
       <div className="hero-shell">
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+        {/*
+          첫 화면 — Neuros Lite 의 Hero banner/03 구조.
+          가운데로 모으고, 제목 아래에 만들어지는 결과물을 큰 카드로 보여준다.
+          예전에는 사진이 화면 전체를 덮고 글이 왼쪽에 얹혀 있었다. 사진이
+          주인공이라 정작 무엇이 만들어지는지는 작게 보였다.
+        */}
         <section className="simple-home-choice">
           <div className="home-hero-copy">
             <span className="section-label">창업 10만원대로 시작하세요</span>
@@ -575,7 +581,12 @@ function Home({
                 <strong>무료로 시작하기</strong>
                 <ArrowRight />
               </button>
+              {/* 원본의 'Watch video' 자리. 우리는 소개 영상이 없어 실제로 있는 것을 건다 */}
+              <a className="hero-secondary" href="/plan"><strong>완성 샘플 3부 보기</strong></a>
             </div>
+          </div>
+          <div className="home-hero-screen">
+            <img src="/hero-desktop-2026.jpg" alt="사업계획서가 만들어지는 화면" width={1204} height={480} />
           </div>
         </section>
       </div>
