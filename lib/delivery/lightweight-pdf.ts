@@ -1,5 +1,5 @@
 import { marked, type Token, type Tokens } from "marked";
-import { CHART_FENCE_LANG, parseChartSpec, chartScale, shortWon } from "../plan-builder/chart";
+import { CHART_FENCE_LANG, parseChartSpec, chartScale, chartTicks, shortWon } from "../plan-builder/chart";
 import { subsetTrueType } from "./font-subset";
 
 type PdfDocumentInput = {
@@ -325,7 +325,7 @@ class PdfLayout {
         if ((token as Tokens.Code).lang === CHART_FENCE_LANG) {
           const spec = parseChartSpec(token.text);
           // 형식이 어긋나면 원시 JSON을 문서에 흘리지 않는다
-          if (spec) this.lineChart(spec.points, spec.breakEvenMonth);
+          if (spec) this.planChart(spec.points, spec.breakEvenMonth, spec.kind);
           continue;
         }
         this.text(token.text, { size: 8, color: "45544E", indent: 12 });
@@ -333,8 +333,15 @@ class PdfLayout {
     }
   }
 
-  /** 누적 손익 곡선 — 0선을 기준으로 적자·흑자 구간을 나눠 보여준다. */
-  private lineChart(points: Array<{ label: string; value: number }>, breakEvenMonth: number | null) {
+  /**
+   * 손익 차트 — 0선을 기준으로 적자·흑자를 나눠 보여준다.
+   * 누적은 선, 월별은 막대. 웹 문서(chartToSvg)와 같은 규칙이다.
+   */
+  private planChart(
+    points: Array<{ label: string; value: number }>,
+    breakEvenMonth: number | null,
+    kind: "cumulative" | "monthly" = "cumulative",
+  ) {
     const height = 168;
     const padL = 54;
     const padT = 16;
@@ -352,9 +359,8 @@ class PdfLayout {
     const px = (i: number) => LEFT + padL + (points.length === 1 ? plotW / 2 : (i / (points.length - 1)) * plotW);
     const py = (v: number) => PAGE_HEIGHT - (top + padT) - plotH + ((v - min) / range) * plotH;
 
-    // 눈금선 + 축 라벨
-    for (let i = 0; i <= 4; i += 1) {
-      const value = min + (range * i) / 4;
+    // 눈금선 + 축 라벨 — 웹과 같은 반올림 눈금을 쓴다(0 / 100만 / 200만 …)
+    for (const value of chartTicks(points)) {
       const y = py(value);
       this.page.commands.push(`q ${rgb("E9EDF2")} RG 0.6 w ${px(0).toFixed(2)} ${y.toFixed(2)} m ${px(points.length - 1).toFixed(2)} ${y.toFixed(2)} l S Q`);
       this.drawText(shortWon(Math.round(value)), LEFT + 8, PAGE_HEIGHT - y - 3.2, { size: 6.6, color: "8B95A1", width: padL - 12 });
@@ -364,16 +370,30 @@ class PdfLayout {
     const zero = py(0);
     this.page.commands.push(`q ${rgb("8B95A1")} RG 1 w ${px(0).toFixed(2)} ${zero.toFixed(2)} m ${px(points.length - 1).toFixed(2)} ${zero.toFixed(2)} l S Q`);
 
-    // 곡선
-    const path = points.map((p, i) => `${px(i).toFixed(2)} ${py(p.value).toFixed(2)} ${i === 0 ? "m" : "l"}`).join(" ");
-    this.page.commands.push(`q ${rgb("3182F6")} RG 1.6 w 1 j 1 J ${path} S Q`);
+    if (kind === "monthly") {
+      // 월별은 달마다 끊긴 값이라 막대로 — 웹(chartToSvg)과 같은 규칙
+      const slot = points.length > 1 ? plotW / (points.length - 1) : plotW;
+      const barW = Math.max(2, Math.min(7, slot * 0.19)); /* 키트 비율 — 칸의 19% */
+      points.forEach((p, i) => {
+        const yv = py(p.value);
+        const h = Math.abs(yv - zero);
+        const bottom = Math.min(yv, zero);
+        this.page.commands.push(
+          `q ${rgb(p.value < 0 ? "D6455D" : "3272DB")} rg ${(px(i) - barW / 2).toFixed(2)} ${bottom.toFixed(2)} ${barW.toFixed(2)} ${Math.max(h, 0.6).toFixed(2)} re f Q`,
+        );
+      });
+    } else {
+      // 누적은 이어지는 값이라 선
+      const path = points.map((p, i) => `${px(i).toFixed(2)} ${py(p.value).toFixed(2)} ${i === 0 ? "m" : "l"}`).join(" ");
+      this.page.commands.push(`q ${rgb("3272DB")} RG 1.6 w 1 j 1 J ${path} S Q`);
 
-    // 각 점 — 적자는 붉게, 흑자는 초록으로
-    points.forEach((p, i) => {
-      const cx = px(i);
-      const cy = py(p.value);
-      this.page.commands.push(`q ${rgb(p.value < 0 ? "D6455D" : "0F9D66")} rg ${(cx - 1.4).toFixed(2)} ${(cy - 1.4).toFixed(2)} 2.8 2.8 re f Q`);
-    });
+      // 각 점 — 적자는 붉게, 흑자는 주색으로
+      points.forEach((p, i) => {
+        this.page.commands.push(
+          `q ${rgb(p.value < 0 ? "D6455D" : "3272DB")} rg ${(px(i) - 1.4).toFixed(2)} ${(py(p.value) - 1.4).toFixed(2)} 2.8 2.8 re f Q`,
+        );
+      });
+    }
 
     // 흑자 전환 지점
     if (breakEvenMonth && breakEvenMonth <= points.length) {
