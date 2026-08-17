@@ -132,6 +132,44 @@ export default function PlanList() {
           )}
         </div>
 
+        {/*
+          한눈에 보는 숫자.
+          카드 21장을 세어 보지 않으면 몇 개나 끝냈는지 알 수 없었다.
+          셋은 서로 겹치지 않고 합이 전체와 같다 — 이어서 할 것 + 완성 = 전체.
+
+          원본(Stats-card)에는 '+2,5%' 같은 증감 배지 자리가 있지만 비운다.
+          우리에게 대응하는 실제 지표가 없고, 없는 숫자를 만들어 넣지 않는다.
+          플랜이 하나도 없으면 0 셋을 보여줄 이유가 없어 통째로 그리지 않는다.
+        */}
+        {ownPlans.length > 0 && (
+          <div className={styles.statRow}>
+            {[
+              { key: "all", label: "전체 플랜", value: ownPlans.length, desc: "만든 문서 전부" },
+              {
+                key: "todo",
+                label: "이어서 할 것",
+                value: ownPlans.filter((p) => planPct(p) < 100).length,
+                desc: "아직 완성하지 않음",
+              },
+              {
+                key: "done",
+                label: "완성",
+                value: ownPlans.filter((p) => planPct(p) === 100).length,
+                desc: "전체 섹션을 채움",
+              },
+            ].map((s) => (
+              <div key={s.key} className={`${styles.statCard} ${styles[`stat_${s.key}`]}`}>
+                <span className={styles.statMark} aria-hidden="true" />
+                <span className={styles.statText}>
+                  <small>{s.label}</small>
+                  <strong>{s.value}</strong>
+                  <small>{s.desc}</small>
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
         {ownPlans.length === 0 ? (
           <div className={styles.empty}>
             <p className={styles.emptyTitle}>아직 만든 플랜이 없어요</p>

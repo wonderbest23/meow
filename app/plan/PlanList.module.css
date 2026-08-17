@@ -686,19 +686,29 @@
   0%, 100% { transform: translate(-50%, 0); }
   50% { transform: translate(-50%, -5px); }
 }
+/*
+ * nowrap 이라 문구가 길면 카드 밖으로 자란다. 카드 폭이 181px 인데 말풍선이
+ * 279px 이라 양쪽으로 49px 씩 삐져나가 왼쪽 사이드바까지 넘어갔다.
+ * 좁은 화면에만 넣어 뒀던 줄바꿈을 모든 폭에 적용한다 — 넓은 화면에서도
+ * 카드 한 장의 폭은 좁다.
+ */
 .guideBubble {
   position: absolute;
   left: 50%;
   top: -14px;
   transform: translate(-50%, 0);
   z-index: 3;
-  white-space: nowrap;
+  white-space: normal;
+  width: max-content;
+  max-width: min(100%, 220px);
+  text-align: center;
   background: var(--blue, #3182f6);
   color: #fff;
   font-size: 12px;
   font-weight: 700;
+  line-height: 1.45;
   padding: 8px 13px;
-  border-radius: 999px;
+  border-radius: 14px;
   box-shadow: 0 8px 20px rgba(47, 87, 244, 0.35);
   animation: guideFloat 1.8s ease-in-out infinite;
   pointer-events: none;
@@ -844,4 +854,70 @@
 .stripLive .pct { color: var(--blue, #3272db); }
 .stripDone .pct { color: #16b877; }
 .strip .pct { font-weight: 700; }
+
+/* ── 한눈에 보는 숫자 — Wireframes Kit 의 Stats-card ─────────────
+ * 실측: 테두리 1px #dde1e6 / 패딩 16 / 안쪽 간격 16 / 표식 상자 48 /
+ *       위·아래 설명 16px #697077 / 숫자 24px Bold #21272a (행간 1.1)
+ *
+ * 표식 색은 카드의 상태 색과 같게 맞춘다 — 위에서 본 색이 아래 카드에서
+ * 같은 뜻으로 다시 나오게 해야 두 번 배우지 않는다.
+ * ───────────────────────────────────────────────────────────── */
+.statRow {
+  margin: 14px 0 22px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1px solid #dde1e6;
+  border-radius: 12px;
+  background: var(--surface, #fff);
+}
+
+.statMark {
+  flex: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+}
+.statMark::after {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.stat_all { color: #697077; }
+.stat_todo { color: var(--blue, #3272db); }
+.stat_done { color: #16b877; }
+.stat_all .statMark { background: #f2f4f8; }
+.stat_todo .statMark { background: #e8f0fd; }
+.stat_done .statMark { background: #e4f7ef; }
+
+.statText { min-width: 0; display: grid; }
+.statText small { color: #697077; font-size: 14px; line-height: 1.4; }
+.statText strong {
+  color: #21272a;
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+@media (max-width: 640px) {
+  .statRow { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .statCard { padding: 12px; gap: 10px; }
+  .statMark { width: 36px; height: 36px; border-radius: 8px; }
+  .statMark::after { width: 11px; height: 11px; }
+  .statText small { font-size: 12px; }
+  .statText small:last-child { display: none; }
+  .statText strong { font-size: 20px; }
+}
 
