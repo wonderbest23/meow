@@ -45,7 +45,7 @@ a { color: inherit; text-decoration: none; }
 .site-header nav a { opacity: .78; }
 .site-header nav a:hover { opacity: 1; color: var(--green); }
 .header-actions { display: flex; align-items: center; gap: 10px; }
-.account-link { width: 39px; min-height: 39px; padding: 0; border: 1px solid #d1d6db; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
+.account-link { width: 39px; min-height: 39px; padding: 0; border: 1px solid #d1d6db; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; }
 .site-header.light .account-link { border-color: #ffffff3d; background: #ffffff12; }
 .account-link svg { width: 15px; }
 .login-status { color: inherit; opacity: .7; font-size: 12px; font-weight: 700; }
@@ -4861,49 +4861,49 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-auth-shell { width: min(440px, calc(100% - 32px)); min-height: calc(100vh - 72px); margin: auto; padding: 56px 0; display: grid; align-items: center; }
 .account-auth-shell > form { padding: 30px; border: 1px solid #d1d6db; border-radius: 8px; background: white; box-shadow: 0 18px 50px #2026320d; display: grid; gap: 16px; }
 .account-auth-shell > form > header { padding-bottom: 18px; border-bottom: 1px solid #e5e8eb; display: grid; gap: 6px; }
-.account-auth-shell > form > header span { color: #1b64da; font-size: 10px; font-weight: 800; }
+.account-auth-shell > form > header span { color: #1b64da; font-size: 13px; font-weight: 800; }
 .account-auth-shell > form > header strong { font-size: 21px; letter-spacing: -0.4px; }
-.account-auth-shell > form > header p { margin: 0; color: #6b7684; font-size: 12.5px; line-height: 1.6; }
+.account-auth-shell > form > header p { margin: 0; color: #697077; font-size: 13px; line-height: 1.6; }
 .account-auth-shell > form > label { display: grid; gap: 7px; }
-.account-auth-shell > form > label > span { color: #4e5968; font-size: 11px; font-weight: 800; }
+.account-auth-shell > form > label > span { color: #4e5968; font-size: 13px; font-weight: 800; }
 .account-auth-shell > form > label > div { height: 48px; padding: 0 12px; border: 1px solid #b0b8c1; border-radius: 7px; display: flex; align-items: center; gap: 9px; }
 .account-auth-shell > form > label > div:focus-within { border-color: #1b64da; box-shadow: 0 0 0 3px #1b64da12; }
-.account-auth-shell > form > label svg { width: 16px; color: #6b7684; }
+.account-auth-shell > form > label svg { width: 16px; color: #697077; }
 .account-auth-shell input { min-width: 0; width: 100%; border: 0; outline: 0; }
 /* 로그인 상태 유지 */
 .account-remember { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; }
 .account-remember input { width: 17px; height: 17px; margin-top: 1px; flex: 0 0 auto; accent-color: #1b64da; cursor: pointer; }
 .account-remember > span { display: grid; gap: 2px; color: #333d4b; font-size: 13px; font-weight: 700; }
-.account-remember small { color: #6b7684; font-size: 11.5px; font-weight: 400; }
+.account-remember small { color: #697077; font-size: 13px; font-weight: 400; }
 
 .account-consents { padding: 13px; border: 1px solid #e5e8eb; border-radius: 7px; background: #f7f8fa; display: grid; gap: 9px; }
-.account-consents label { display: flex; align-items: flex-start; gap: 8px; color: #4e5968; font-size: 11px; line-height: 1.5; }
+.account-consents label { display: flex; align-items: flex-start; gap: 8px; color: #4e5968; font-size: 13px; line-height: 1.5; }
 .account-consents input { width: 16px; height: 16px; flex: 0 0 auto; accent-color: #1b64da; }
 .account-consents a { color: #1b64da; font-weight: 800; text-decoration: underline; }
 .account-submit { min-height: 50px; border: 0; border-radius: 7px; background: #202632; color: white; display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; cursor: pointer; }
 .account-submit:disabled { opacity: .42; cursor: not-allowed; }
 .account-submit svg { width: 17px; }
-.account-form-message, .account-message { margin: 0; padding: 10px 12px; border-radius: 6px; background: #eef6ff; color: #1b64da; font-size: 11px; line-height: 1.55; }
+.account-form-message, .account-message { margin: 0; padding: 10px 12px; border-radius: 6px; background: #eef6ff; color: #1b64da; font-size: 13px; line-height: 1.55; }
 .account-auth-shell form > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.account-auth-shell form > footer button { padding: 0; border: 0; background: none; color: #4e5968; font-size: 12px; cursor: pointer; }
+.account-auth-shell form > footer button { padding: 0; border: 0; background: none; color: #4e5968; font-size: 13px; cursor: pointer; }
 .account-dashboard { width: min(980px, calc(100% - 48px)); margin: auto; padding: 58px 0 90px; }
 .account-welcome { padding-bottom: 32px; border-bottom: 1px solid #d1d6db; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
 .account-welcome > span { width: 46px; height: 46px; border-radius: 8px; background: #e8f3ff; color: #1b64da; display: grid; place-items: center; }
 .account-welcome > span svg { width: 22px; }
-.account-welcome small { color: #1b64da; font-size: 10px; font-weight: 800; }
+.account-welcome small { color: #1b64da; font-size: 13px; font-weight: 800; }
 .account-welcome h1 { margin: 2px 0; font-size: 27px; }
-.account-welcome p { margin: 0; color: #6b7684; font-size: 11px; }
-.account-welcome button { height: 38px; padding: 0 11px; border: 1px solid #d1d6db; border-radius: 6px; background: white; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.account-welcome p { margin: 0; color: #697077; font-size: 13px; }
+.account-welcome button { height: 38px; padding: 0 11px; border: 1px solid #d1d6db; border-radius: 6px; background: white; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .account-welcome button svg { width: 14px; }
 .account-projects { margin-top: 34px; }
 
 /* 결제 내역 */
 .account-payments { margin-top: 34px; }
 .account-payments table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 13px; }
-.account-payments th { padding: 9px 10px; border-bottom: 1px solid #d1d6db; color: #6b7684; font-size: 11.5px; font-weight: 700; text-align: left; }
+.account-payments th { padding: 9px 10px; border-bottom: 1px solid #d1d6db; color: #697077; font-size: 13px; font-weight: 700; text-align: left; }
 .account-payments td { padding: 12px 10px; border-bottom: 1px solid #e5e8eb; color: #333d4b; }
 .account-payment-amount { font-variant-numeric: tabular-nums; font-weight: 700; }
-.account-payment-status { padding: 3px 8px; border-radius: 999px; background: #f2f4f6; color: #4e5968; font-size: 11.5px; font-weight: 700; white-space: nowrap; }
+.account-payment-status { padding: 3px 8px; border-radius: 999px; background: #f2f4f6; color: #4e5968; font-size: 13px; font-weight: 700; white-space: nowrap; }
 .account-payment-status.is-done { background: #e7f8ef; color: #10794b; }
 .account-payment-status.is-failed, .account-payment-status.is-canceled, .account-payment-status.is-aborted, .account-payment-status.is-expired { background: #fdeceb; color: #b42318; }
 
@@ -4915,8 +4915,8 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-saved-ideas { margin-top: 34px; }
 .account-saved-ideas > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .account-saved-ideas > header strong { font-size: 18px; }
-.account-saved-ideas > header p { margin: 5px 0 0; color: #6b7684; font-size: 11px; }
-.account-saved-ideas > header > a { min-height: 40px; padding: 0 12px; border-radius: 7px; background: #202632; color: white; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; }
+.account-saved-ideas > header p { margin: 5px 0 0; color: #697077; font-size: 13px; }
+.account-saved-ideas > header > a { min-height: 40px; padding: 0 12px; border-radius: 7px; background: #202632; color: white; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; }
 .account-saved-ideas > header svg { width: 14px; }
 .account-saved-ideas > div { margin-top: 16px; border-top: 1px solid #d1d6db; }
 .account-saved-ideas > div > article { min-height: 96px; border-bottom: 1px solid #d1d6db; display: grid; grid-template-columns: minmax(0, 1fr) 40px; align-items: center; }
@@ -4925,32 +4925,32 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-saved-ideas article > a > span { width: 40px; height: 40px; border-radius: 7px; background: #e8f3ff; color: #1b64da; display: grid; place-items: center; }
 .account-saved-ideas article > a > span svg { width: 18px; }
 .account-saved-ideas article > a > div { min-width: 0; display: grid; gap: 3px; }
-.account-saved-ideas article > a small { color: #1b64da; font-size: 9px; font-weight: 800; }
+.account-saved-ideas article > a small { color: #1b64da; font-size: 13px; font-weight: 800; }
 .account-saved-ideas article > a strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.account-saved-ideas article > a p { margin: 0; overflow: hidden; color: #6b7684; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.account-saved-ideas article > a > svg { width: 15px; color: #6b7684; }
-.account-saved-ideas article > button { width: 34px; height: 34px; padding: 0; border: 1px solid #d1d6db; border-radius: 6px; background: white; color: #6b7684; display: grid; place-items: center; cursor: pointer; }
+.account-saved-ideas article > a p { margin: 0; overflow: hidden; color: #697077; font-size: 13px; text-overflow: ellipsis; white-space: nowrap; }
+.account-saved-ideas article > a > svg { width: 15px; color: #697077; }
+.account-saved-ideas article > button { width: 34px; height: 34px; padding: 0; border: 1px solid #d1d6db; border-radius: 6px; background: white; color: #697077; display: grid; place-items: center; cursor: pointer; }
 .account-saved-ideas article > button:hover { border-color: #b0b8c1; color: #b44848; }
 .account-saved-ideas article > button:disabled { opacity: .45; cursor: wait; }
 .account-saved-ideas article > button svg { width: 15px; }
 .account-projects > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .account-projects > header strong { font-size: 18px; }
-.account-projects > header p { margin: 5px 0 0; color: #6b7684; font-size: 11px; }
-.account-projects > header > a { min-height: 40px; padding: 0 12px; border-radius: 7px; background: #202632; color: white; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; }
+.account-projects > header p { margin: 5px 0 0; color: #697077; font-size: 13px; }
+.account-projects > header > a { min-height: 40px; padding: 0 12px; border-radius: 7px; background: #202632; color: white; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; }
 .account-projects > header svg { width: 14px; }
 .account-projects > div { margin-top: 16px; border-top: 1px solid #d1d6db; }
 .account-projects > div > a { min-height: 78px; padding: 12px 10px; border-bottom: 1px solid #d1d6db; display: grid; grid-template-columns: 40px 1fr 20px; gap: 13px; align-items: center; }
 .account-projects > div > a:hover { background: white; }
 .account-projects > div > a > span { width: 40px; height: 40px; border-radius: 7px; background: #e5e8eb; color: #1b64da; display: grid; place-items: center; }
 .account-projects > div > a svg { width: 18px; }
-.account-projects > div > a > svg { width: 15px; color: #6b7684; }
+.account-projects > div > a > svg { width: 15px; color: #697077; }
 .account-projects > div > a div { min-width: 0; display: grid; gap: 4px; }
 .account-projects > div > a strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
-.account-projects > div > a small { color: #6b7684; font-size: 10px; }
+.account-projects > div > a small { color: #697077; font-size: 13px; }
 .account-empty { margin-top: 16px; padding: 45px 20px; border: 1px dashed #b0b8c1; border-radius: 8px; color: #4e5968; text-align: center; }
 .account-empty svg { width: 28px; }
 .account-empty strong { display: block; margin: 11px 0 4px; color: #333d4b; font-size: 14px; }
-.account-empty p { margin: 0; font-size: 11px; }
+.account-empty p { margin: 0; font-size: 13px; }
 
 .checkout-agreements { padding: 0 !important; border-radius: 8px !important; overflow: hidden; }
 .checkout-agreements .agreement { border: 0; border-radius: 0; }
@@ -6188,7 +6188,7 @@ body, body * { letter-spacing: 0 !important; }
   border-bottom: 1px solid #e7e9ec; background: #fff;
 }
 .header-actions { gap: 8px; }
-.account-link { height: 38px; min-height: 38px; border-color: #dfe2e5; border-radius: 6px; background: #fff; color: #30363b; font-size: 12px; font-weight: 700; }
+.account-link { height: 38px; min-height: 38px; border-color: #dfe2e5; border-radius: 6px; background: #fff; color: #30363b; font-size: 13px; font-weight: 700; }
 .site-header.light .account-link { border-color: #ffffff42; background: #ffffff12; color: #fff; }
 .site-header.light .account-link svg { stroke-width: 2.2; }
 .small-start { border-radius: 6px !important; }
@@ -9900,7 +9900,7 @@ body {
 
 /* 설명 줄이 빠졌으니 상자와 글을 같은 줄 가운데로 맞춘다 */
 .account-remember { align-items: center; gap: 8px; }
-.account-remember > span { display: inline; font-size: 12.5px; font-weight: 600; }
+.account-remember > span { display: inline; font-size: 13px; font-weight: 600; }
 
 /* 지켜야 할 규칙은 칸 아래 작은 글로 — 칸 안에 넣으면 값처럼 읽힌다 */
 .account-hint {

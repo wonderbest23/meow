@@ -150,7 +150,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: -0.01em;
   color: var(--wz-muted);
@@ -217,7 +217,7 @@
 }
 
 .outHint {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--wz-muted);
   white-space: nowrap;
@@ -263,7 +263,7 @@
 .deckError {
   flex: 1 1 100%; /* 한 줄 헤더 아래로 내려앉는다 */
   margin: 0;
-  font-size: 12.5px;
+  font-size: 13px;
   color: #c33d55;
 }
 
@@ -280,7 +280,7 @@
   background: rgba(255, 255, 255, 0.96);
   color: var(--wz-muted);
   font: inherit;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   padding: 10px 15px;
   border-radius: 999px;
@@ -444,7 +444,7 @@
 .body :global(th) {
   background: var(--wz-panel2);
   font-weight: 800;
-  font-size: 12px;
+  font-size: 13px;
 }
 .body :global(strong) {
   font-weight: 800;
@@ -552,7 +552,7 @@
     background: var(--wz-panel);
     color: var(--wz-muted, #4e5968);
     font: inherit;
-    font-size: 12.5px;
+    font-size: 13px;
     font-weight: 700;
     padding: 8px 12px;
     border-radius: 8px;
@@ -772,7 +772,7 @@
 
 /* 샘플 문서 표식 */
 .sampleNote {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--wz-faint, #8b95a1);
   white-space: nowrap;
 }
