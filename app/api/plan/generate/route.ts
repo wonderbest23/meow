@@ -178,8 +178,13 @@ export async function POST(req: Request) {
           } catch {
             html = markdown.replace(/\n/g, "<br>");
           }
-          if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, true);
-          send({ t: "done", markdown, html, source });
+          let quota = null;
+          if (regenPlanId) {
+            /* 여기도 같다 — AI 가 쓴 글(ai)일 때만 깎는다 */
+            await recordRegen(regenPlanId, identity.hash, sectionKey, source === "ai");
+            quota = await resolveRegenQuota(regenPlanId);
+          }
+          send({ t: "done", markdown, html, source, ...(quota ? { quota } : {}) });
         } catch {
           if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, false);
           send({ t: "error" });
@@ -229,8 +234,19 @@ export async function POST(req: Request) {
     );
   }
 
-  /* 여기까지 왔으면 본문이 실제로 만들어졌다 — 이때만 1회를 깎는다 */
-  if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, true);
+  /*
+   * AI 가 실제로 쓴 글일 때만 1회를 깎는다.
+   *
+   * source 가 fallback 이면 키가 없어 AI 를 아예 부르지 않고 답변을 표로
+   * 정리해 돌려준 것이다. 실비가 0인데 횟수를 깎으면 손님이 받지도 않은
+   * 것에 값을 치르게 된다.
+   */
+  let quota: Awaited<ReturnType<typeof resolveRegenQuota>> | null = null;
+  if (regenPlanId) {
+    await recordRegen(regenPlanId, identity.hash, sectionKey, source === "ai");
+    /* 방금 깎인 값을 다시 읽어 화면이 '남은 N회'를 바로 보여줄 수 있게 한다 */
+    quota = await resolveRegenQuota(regenPlanId);
+  }
 
   let html = "";
   try {
@@ -239,5 +255,5 @@ export async function POST(req: Request) {
     html = markdown.replace(/\n/g, "<br>");
   }
 
-  return NextResponse.json({ markdown, html, source });
+  return NextResponse.json({ markdown, html, source, ...(quota ? { quota } : {}) });
 }
