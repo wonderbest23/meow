@@ -51,7 +51,7 @@
 .link {
   flex: none;
   border: 0;
-  background: var(--blue, #3182f6);
+  background: var(--blue, #3272db);
   color: #fff;
   font: inherit;
   font-size: 12.5px;

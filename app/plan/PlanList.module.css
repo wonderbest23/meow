@@ -49,7 +49,7 @@
 .bizRow dt {
   flex: none;
   width: 76px;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-muted, #697077);
 }
@@ -79,7 +79,7 @@
   gap: 8px;
 }
 .tag {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-body, #4e5968);
   background: var(--surface-soft, #f7f8fa);
@@ -101,8 +101,8 @@
   white-space: nowrap;
 }
 .editBtn:hover {
-  border-color: var(--blue, #3182f6);
-  color: var(--blue, #3182f6);
+  border-color: var(--blue, #3272db);
+  color: var(--blue, #3272db);
 }
 
 /* 섹션 헤더 */
@@ -131,7 +131,7 @@
   align-items: center;
   gap: 6px;
   border: 0;
-  background: var(--blue, #3182f6);
+  background: var(--blue, #3272db);
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -164,12 +164,12 @@
 }
 .card:hover {
   transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--blue, #3182f6) 40%, transparent);
+  border-color: color-mix(in srgb, var(--blue, #3272db) 40%, transparent);
   box-shadow: 0 16px 36px rgba(20, 32, 64, 0.12);
 }
 .card.active {
-  border-color: var(--blue, #3182f6);
-  box-shadow: 0 0 0 1px var(--blue, #3182f6) inset;
+  border-color: var(--blue, #3272db);
+  box-shadow: 0 0 0 1px var(--blue, #3272db) inset;
 }
 .cardTop {
   display: flex;
@@ -178,16 +178,16 @@
   gap: 10px;
 }
 .cardType {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 800;
-  color: var(--blue, #3182f6);
+  color: var(--blue, #3272db);
   letter-spacing: 0.03em;
 }
 .activeBadge {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3182f6);
+  color: var(--blue, #3272db);
   padding: 4px 9px;
   border-radius: 999px;
 }
@@ -216,11 +216,11 @@
 }
 .renameBtn:hover {
   background: var(--surface-soft, #f7f8fa);
-  color: var(--blue, #3182f6);
+  color: var(--blue, #3272db);
 }
 .titleInput {
   width: 100%;
-  border: 1.5px solid var(--blue, #3182f6);
+  border: 1.5px solid var(--blue, #3272db);
   border-radius: 8px;
   padding: 7px 10px;
   font: inherit;
@@ -247,14 +247,14 @@
 .barFill {
   height: 100%;
   border-radius: 4px;
-  background: var(--blue, #3182f6);
+  background: var(--blue, #3272db);
   transition: width 0.3s;
 }
 .barFill.done {
   background: #16b877;
 }
 .pct {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--text-body, #4e5968);
   font-variant-numeric: tabular-nums;
@@ -269,7 +269,7 @@
   margin-top: 2px;
 }
 .date {
-  font-size: 11.5px;
+  font-size: 13px;
   color: var(--text-muted, #697077);
 }
 .copyBtn {
@@ -277,7 +277,7 @@
   background: transparent;
   color: var(--text-muted, #697077);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   padding: 5px 9px;
   border-radius: 7px;
@@ -285,7 +285,7 @@
 }
 .copyBtn:hover {
   background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3182f6);
+  color: var(--blue, #3272db);
 }
 
 .delBtn {
@@ -293,7 +293,7 @@
   background: transparent;
   color: var(--text-muted, #697077);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   padding: 5px 9px;
   border-radius: 7px;
@@ -389,7 +389,7 @@
   }
 }
 .sheetActive {
-  box-shadow: 0 0 0 2px var(--acc, #3182f6);
+  box-shadow: 0 0 0 2px var(--acc, #3272db);
 }
 .cover {
   position: relative;
@@ -442,7 +442,7 @@
 .typeChip {
   padding: 4px 8px;
   border-radius: 6px;
-  font-size: 10px;
+  font-size: 13px;
   padding: 2cqw 4.5cqw;
   border-radius: 3cqw;
   background: rgba(255, 255, 255, 0.2);
@@ -484,7 +484,7 @@
   position: absolute;
   top: 9px;
   left: 9px;
-  font-size: 10px;
+  font-size: 13px;
   padding: 5px 9px;
   top: 5cqw;
   left: 5cqw;
@@ -523,7 +523,7 @@
   display: block;
 }
 .strip .pct {
-  font-size: 12px;
+  font-size: 13px;
   min-width: 34px;
   text-align: right;
 }
@@ -542,9 +542,14 @@
   padding: 3cqw 0;
   text-align: center;
   transform: rotate(45deg);
-  background: #16b877;
+  /*
+   * 흰 글씨가 얹히는 자리라 밝은 초록(#16b877, 2.57)으로는 읽히지 않는다.
+   * 진행 막대는 글씨가 없어 밝은 초록 그대로 둔다 — 같은 초록이라도
+   * 글씨가 올라가는지에 따라 요구되는 진하기가 다르다.
+   */
+  background: #0b7a4f;
   color: #fff;
-  font-size: 11px;
+  font-size: 13px;
   font-size: 6cqw;
   font-weight: 900;
   letter-spacing: 0.24em;
@@ -561,10 +566,15 @@
   gap: 3px;
   padding: 0 2px;
 }
+/*
+ * 카드 색조(--acc)를 글씨 색으로 쓰고 있었다. 색조는 유형마다 달라서
+ * 청록 계열이면 흰 바탕에서 2.81 까지 떨어진다. 유형 구분은 위 표지가
+ * 이미 하고 있으므로 여기 글씨는 읽히는 것이 먼저다.
+ */
 .metaType {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 800;
-  color: var(--acc, #3182f6);
+  color: var(--text-body, #4e5968);
 }
 .metaRow {
   display: flex;
@@ -617,8 +627,8 @@
   background: transparent;
 }
 .newCard:hover .newCardInner {
-  border-color: var(--blue, #3182f6);
-  color: var(--blue, #3182f6);
+  border-color: var(--blue, #3272db);
+  color: var(--blue, #3272db);
   background: var(--blue-soft, #e8f3ff);
 }
 
@@ -632,7 +642,7 @@
     gap: 12px;
   }
   .metaType {
-    font-size: 12px;
+    font-size: 13px;
   }
 }
 
@@ -660,7 +670,7 @@
 
 /* 아직 손대지 않은 플랜 — 빈 진행 바 대신 상태를 글자로 */
 .notStarted {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-muted, #697077);
 }
@@ -674,8 +684,8 @@
 
 /* 강조 테두리 — 은은하게 숨쉬는 파란 링 */
 @keyframes guideRing {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3182f6) 55%, transparent), 0 10px 26px rgba(47, 87, 244, 0.25); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blue, #3182f6) 25%, transparent), 0 10px 26px rgba(47, 87, 244, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3272db) 55%, transparent), 0 10px 26px rgba(47, 87, 244, 0.25); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blue, #3272db) 25%, transparent), 0 10px 26px rgba(47, 87, 244, 0.18); }
 }
 .sheetGuide {
   animation: guideRing 1.8s ease-in-out infinite;
@@ -702,9 +712,9 @@
   width: max-content;
   max-width: min(100%, 220px);
   text-align: center;
-  background: var(--blue, #3182f6);
+  background: var(--blue, #3272db);
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   line-height: 1.45;
   padding: 8px 13px;
@@ -725,7 +735,7 @@
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
   vertical-align: -2px;
@@ -740,7 +750,7 @@
   bottom: -5px;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--blue, #3182f6);
+  border-top-color: var(--blue, #3272db);
   border-bottom: 0;
 }
 
@@ -771,7 +781,7 @@
 @media (max-width: 640px) {
   /* 좁은 카드 중앙 기준이라 nowrap이면 화면 밖으로 잘린다 — 카드 폭 안에서 줄바꿈 */
   .guideBubble {
-    font-size: 11px;
+    font-size: 13px;
     padding: 7px 11px;
     white-space: normal;
     width: max-content;
@@ -784,7 +794,7 @@
 @media (prefers-reduced-motion: reduce) {
   .sheetGuide, .guidePulse {
     animation: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3182f6) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3272db) 55%, transparent);
   }
   .guideBubble {
     animation: none;
@@ -852,7 +862,8 @@
 .stripIdle .barFill { background: transparent; }
 .stripIdle .pct { color: #697077; }
 .stripLive .pct { color: var(--blue, #3272db); }
-.stripDone .pct { color: #16b877; }
+/* 흰 바탕 위 글씨라 밝은 초록은 2.57 — 막대는 밝게 두고 글씨만 진하게 */
+.stripDone .pct { color: #0b7a4f; }
 .strip .pct { font-weight: 700; }
 
 /* ── 한눈에 보는 숫자 — Wireframes Kit 의 Stats-card ─────────────
@@ -897,7 +908,7 @@
 
 .stat_all { color: #697077; }
 .stat_todo { color: var(--blue, #3272db); }
-.stat_done { color: #16b877; }
+.stat_done { color: #0b7a4f; }
 .stat_all .statMark { background: #f2f4f8; }
 .stat_todo .statMark { background: #e8f0fd; }
 .stat_done .statMark { background: #e4f7ef; }
@@ -916,7 +927,7 @@
   .statCard { padding: 12px; gap: 10px; }
   .statMark { width: 36px; height: 36px; border-radius: 8px; }
   .statMark::after { width: 11px; height: 11px; }
-  .statText small { font-size: 12px; }
+  .statText small { font-size: 13px; }
   .statText small:last-child { display: none; }
   .statText strong { font-size: 20px; }
 }

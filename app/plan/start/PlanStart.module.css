@@ -35,7 +35,7 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(150deg, var(--blue, #3182f6), #7f9bff);
+  background: linear-gradient(150deg, var(--blue, #3272db), #7f9bff);
   display: grid;
   place-items: center;
   color: #fff;
@@ -120,7 +120,7 @@
 }
 /*
  * 단계 배지 — 작은 원 안의 흰 글씨라 배경이 밝으면 읽히지 않는다.
- * 진행 중 #3182f6 은 3.71, 완료 #16b877 은 2.57 이었다.
+ * 진행 중 #3272db 은 3.71, 완료 #16b877 은 2.57 이었다.
  * 막대(진행률)에 쓰는 밝은 초록과 달리 여기는 글씨가 얹히므로 더 진해야 한다.
  */
 .step.stepOn .stepNum {
@@ -159,7 +159,7 @@
   margin-bottom: 8px;
 }
 .req {
-  color: var(--blue, #3182f6);
+  color: var(--blue, #3272db);
   margin-left: 3px;
 }
 .input,
@@ -176,7 +176,7 @@
 }
 .input:focus,
 .textarea:focus {
-  outline: 2px solid var(--blue, #3182f6);
+  outline: 2px solid var(--blue, #3272db);
   outline-offset: 1px;
 }
 .hint {
@@ -208,10 +208,10 @@
   transition: 0.14s;
 }
 .selectBtn:hover {
-  border-color: color-mix(in srgb, var(--blue, #3182f6) 45%, var(--border-soft, #e5e8eb));
+  border-color: color-mix(in srgb, var(--blue, #3272db) 45%, var(--border-soft, #e5e8eb));
 }
 .selectBtn:focus-visible {
-  outline: 2px solid var(--blue, #3182f6);
+  outline: 2px solid var(--blue, #3272db);
   outline-offset: 1px;
 }
 .selectBtn.placeholder {
@@ -277,7 +277,7 @@
 }
 .option.optionOn {
   background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3182f6);
+  color: var(--blue, #3272db);
   font-weight: 700;
 }
 .option svg {
@@ -290,9 +290,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px dashed color-mix(in srgb, var(--blue, #3182f6) 45%, transparent);
+  border: 1px dashed color-mix(in srgb, var(--blue, #3272db) 45%, transparent);
   background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3182f6);
+  color: var(--blue, #3272db);
   font: inherit;
   font-weight: 800;
   font-size: 13px;
@@ -312,7 +312,7 @@
 }
 .primaryBtn {
   border: 0;
-  background: var(--blue, #3182f6);
+  background: var(--blue, #3272db);
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -377,7 +377,7 @@
   color: var(--text-strong, #191f28);
 }
 .titleInput:focus {
-  outline: 2px solid var(--blue, #3182f6);
+  outline: 2px solid var(--blue, #3272db);
   outline-offset: 1px;
 }
 
@@ -434,7 +434,7 @@
   box-shadow: 0 18px 40px rgba(20, 32, 64, 0.12);
 }
 .card:focus-visible {
-  outline: 2px solid var(--blue, #3182f6);
+  outline: 2px solid var(--blue, #3272db);
   outline-offset: 2px;
 }
 .cardTop {
@@ -898,7 +898,7 @@
   transition: border 0.15s;
 }
 .inheritOn .inheritRadio {
-  border: 6px solid var(--blue, #3182f6);
+  border: 6px solid var(--blue, #3272db);
 }
 .inheritText {
   display: flex;

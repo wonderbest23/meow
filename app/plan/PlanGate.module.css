@@ -18,7 +18,7 @@
   display: grid;
   place-items: center;
   background: var(--wz-brand-soft, #e8f3ff);
-  color: var(--wz-brand, #3182f6);
+  color: var(--wz-brand, #3272db);
 }
 
 .title {
@@ -51,7 +51,7 @@
   font-variant-numeric: tabular-nums;
 }
 .price span {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--wz-muted, #4e5968);
   letter-spacing: 0;
@@ -62,7 +62,7 @@
   display: block;
   max-width: 300px;
   margin: 0 auto;
-  background: var(--wz-brand, #3182f6);
+  background: var(--wz-brand, #3272db);
   color: #fff;
   font-weight: 700;
   font-size: 14.5px;
@@ -90,13 +90,13 @@
   transition: 0.2s;
 }
 .secondary:hover {
-  border-color: var(--wz-brand, #3182f6);
-  color: var(--wz-brand, #3182f6);
+  border-color: var(--wz-brand, #3272db);
+  color: var(--wz-brand, #3272db);
 }
 
 .note {
   margin: 18px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.65;
   color: var(--wz-faint, #8b95a1);
 }
