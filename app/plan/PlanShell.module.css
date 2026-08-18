@@ -1,7 +1,16 @@
 /* 플랜 빌더 공통 셸 — 고정 아이콘 레일 + 콘텐츠 영역.
    /plan 이하 모든 화면이 이 레일을 공유한다(레퍼런스와 동일한 구조). */
 
+/*
+ * 레일 폭은 세 곳(레일 자체·본문 여백·접기 단추 위치)이 함께 움직인다.
+ * 176px 이 각각 적혀 있어 한 곳만 고치면 어긋났다. 토큰 하나로 묶는다.
+ *
+ * 176 → 208 로 넓혔다. 176px 에 9~12.5px 글씨를 욱여넣고 있었는데,
+ * 글씨를 13px 로 올리면 이름이 잘린다. 좁은 칸의 작은 글씨는 공간을
+ * 아낀 것이 아니라 읽기를 포기한 것이다.
+ */
 .shell {
+  --rail-w: 208px;
   min-height: 100vh;
   background: var(--surface-muted, #f2f4f6);
   color: var(--text-strong, #191f28);
@@ -14,7 +23,7 @@
   top: 0;
   left: 0;
   bottom: 0;
-  width: 176px;
+  width: var(--rail-w);
   background: #0e1e30;
   display: flex;
   flex-direction: column;
@@ -125,7 +134,7 @@
 .content {
   flex: 1;
   min-width: 0;
-  margin-left: 176px;
+  margin-left: var(--rail-w);
   position: relative; /* 폰 뒤로가기 pill의 absolute 기준 */
 }
 
@@ -302,7 +311,7 @@
  */
 .railToggle {
   position: fixed;
-  left: 176px; /* 레일 폭 */
+  left: var(--rail-w);
   top: 50%;
   transform: translate(-50%, -50%);
   z-index: 70;

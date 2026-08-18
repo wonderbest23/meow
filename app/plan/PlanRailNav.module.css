@@ -33,7 +33,7 @@
   gap: 7px;
   text-align: left;
   cursor: pointer;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
@@ -65,7 +65,7 @@
 
 .planCount {
   flex: none;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
@@ -77,7 +77,7 @@
   padding: 1px 6px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
-  font-size: 9.5px;
+  font-size: 13px;
   font-weight: 800;
   color: rgba(255, 255, 255, 0.7);
 }
@@ -106,7 +106,7 @@
   border-radius: 999px;
   background: transparent;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
   cursor: pointer;
@@ -130,7 +130,7 @@
   gap: 8px;
   text-align: left;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
 }
 
@@ -142,7 +142,7 @@
   background: rgba(255, 255, 255, 0.14);
   display: grid;
   place-items: center;
-  font-size: 9.5px;
+  font-size: 13px;
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
@@ -157,7 +157,7 @@
 
 .chapterCount {
   flex: none;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
@@ -182,13 +182,13 @@
   gap: 7px;
   text-align: left;
   cursor: pointer;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .sectionNo {
   flex: none;
-  font-size: 10px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: rgba(255, 255, 255, 0.38);
 }
