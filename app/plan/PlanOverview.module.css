@@ -162,7 +162,7 @@
   background: var(--border-soft, #e5e8eb);
 }
 .meterLabel {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--text-muted, #697077);
@@ -283,7 +283,7 @@
   transition: width 0.3s;
 }
 .bulkText {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-body, #4e5968);
   white-space: nowrap;
@@ -293,7 +293,7 @@
   background: transparent;
   color: var(--text-muted, #697077);
   font: inherit;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   padding: 5px 10px;
   border-radius: 7px;
@@ -357,7 +357,7 @@
   background: var(--surface, #fff);
 }
 .docCrumb {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--blue, #3272db);
   margin-bottom: 4px;
@@ -415,7 +415,7 @@
 .docBody :global(th) {
   background: var(--surface-soft, #f7f8fa);
   font-weight: 800;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /* 챕터 밴드 — 파스텔 배경 대신 흰 패널 + 강조 번호 (문서 화면과 같은 언어) */
@@ -453,7 +453,7 @@
   min-width: 0;
 }
 .chapCount {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--text-muted, #697077);
   font-variant-numeric: tabular-nums;
@@ -490,7 +490,7 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   flex: 0 0 auto;
   background: var(--surface, #fff);
@@ -509,7 +509,7 @@
 }
 .nodeTime {
   margin-left: auto;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   color: var(--text-muted, #697077);
   font-variant-numeric: tabular-nums;
@@ -522,7 +522,7 @@
   background: var(--surface, #fff);
 }
 .writingTag {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--bandAccent, #3358f4);
   background: color-mix(in srgb, var(--bandAccent, #3358f4) 12%, #fff);
@@ -549,17 +549,22 @@
   border-color: #16b877;
   color: #fff;
 }
+/*
+ * 완료한 섹션은 흐리게 두어 '남은 것' 이 눈에 띄게 한다. 다만 흐린 것과
+ * 안 보이는 것은 다르다 — 회색 카드 위라 --text-muted 로는 4.43 이다.
+ * 한 단계 더 진한 값으로 내린다.
+ */
 .node.done .nodeLabel {
-  color: var(--text-muted, #697077);
+  color: #626981;
   font-weight: 600;
 }
 .node.done .nodeTime {
   display: none;
 }
 .nodeDoneTag {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
-  color: #0f9d63;
+  color: #0b7a4f;
   background: #dcf5ea;
   border-radius: 999px;
   padding: 3px 8px;
@@ -568,7 +573,7 @@
 }
 /* 챕터 전부 완료 시 카운트도 완료색 */
 .chapCountDone {
-  color: #0f9d63 !important;
+  color: #0b7a4f !important;
 }
 
 @media (max-width: 640px) {
@@ -590,7 +595,7 @@
   animation: nextPulse 2s ease infinite;
 }
 .nextTag {
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
   background: var(--bandAccent, #3358f4);
@@ -618,7 +623,7 @@
 
 /* 잠긴 섹션 표시 — 일괄 생성이 건너뛴다 */
 .lockTag {
-  font-size: 11px;
+  font-size: 13px;
   line-height: 1;
 }
 
@@ -736,7 +741,7 @@
     padding-left: 0;
   }
   .meterLabel {
-    font-size: 10px;
+    font-size: 13px;
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
@@ -894,7 +899,7 @@
   border: 1px solid var(--line);
   background: var(--surface-2, #fff);
   color: var(--text-2, #4b5563);
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
 }
@@ -977,7 +982,7 @@
   border-radius: 999px;
   background: #8a5a12;
   color: #fff;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
