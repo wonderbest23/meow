@@ -7,6 +7,21 @@ export const CUSTOM_HOMEPAGE_FROM_AMOUNT = 490_000;
 export const PACKAGE_NAME = "맞춤 사업 실행 파일";
 export const PACKAGE_SUPPLY_AMOUNT = Math.round(PACKAGE_AMOUNT / 1.1);
 export const PACKAGE_VAT_AMOUNT = PACKAGE_AMOUNT - PACKAGE_SUPPLY_AMOUNT;
+/*
+ * 섹션 다시 생성 — 문서 1부에 포함되는 횟수와 추가 묶음.
+ *
+ * '무제한'으로 팔면 AI 실비가 그대로 손실이 된다. 다만 손님이 예측할 수 있는
+ * 단위여야 해서 실비가 아니라 횟수로 판다 — 모델 단가가 바뀌어도 약속이
+ * 흔들리지 않고, 남은 횟수를 화면에서 눈으로 볼 수 있다.
+ *
+ * 여기서 세는 것은 '이미 쓰인 섹션을 AI 로 다시 만드는 것'뿐이다. 손님이
+ * 직접 글을 고쳐 쓰는 것은 비용이 들지 않으므로 제한하지 않는다.
+ */
+export const REGEN_INCLUDED = 20;
+export const REGEN_PACK_COUNT = 10;
+export const REGEN_PACK_AMOUNT = 4_900;
+export const REGEN_PACK_NAME = "다시 생성 10회";
+
 export const TERMS_VERSION = "2026-07-23-custom-digital";
 
 export const paymentMethodSchema = z.enum(["CARD", "TOSSPAY", "TRANSFER"]);

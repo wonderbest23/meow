@@ -8,6 +8,9 @@ import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-bu
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT } from "../../../../lib/plan-builder/access";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { resolveRegenQuota, recordRegen } from "../../../../lib/plan-builder/regen-quota";
+import { REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../../../../lib/payments/domain";
 
 export const runtime = "nodejs";
 
@@ -110,6 +113,37 @@ export async function POST(req: Request) {
   }
 
   const identity = await requireGuestIdentity();
+
+  /*
+   * 다시 생성 횟수.
+   *
+   * 이미 본문이 있는 섹션을 AI 로 또 만드는 것만 센다. 첫 생성은 문서값에
+   * 포함되고, 손님이 직접 글을 고쳐 쓰는 것은 비용이 들지 않는다.
+   *
+   * 화면이 보낸 값을 믿지 않는다 — 서버가 저장해 둔 본문이 있는지로 판정한다.
+   * 그래야 요청을 손으로 만들어 우회할 수 없다.
+   */
+  let regenPlanId = "";
+  if (body.planId) {
+    const saved = await loadPlanState(identity.hash);
+    const plan = saved.plans.find((p) => p.id === body.planId);
+    const existing = plan?.sections?.[sectionKey];
+    if (existing?.markdown) {
+      const quota = await resolveRegenQuota(body.planId);
+      if (quota.remaining <= 0) {
+        return NextResponse.json(
+          {
+            error: "regen_quota_exceeded",
+            message: `이 문서에 포함된 다시 생성 ${quota.allowed}회를 모두 썼습니다. ${REGEN_PACK_COUNT}회를 ${REGEN_PACK_AMOUNT.toLocaleString("ko-KR")}원에 추가할 수 있습니다.`,
+            quota,
+          },
+          { status: 402 },
+        );
+      }
+      regenPlanId = body.planId;
+    }
+  }
+
   const config = resolveLLMConfig(identity.hash, "anthropic");
   const genInput = {
     chapter,
@@ -133,6 +167,8 @@ export async function POST(req: Request) {
         try {
           const { markdown, source } = await streamSection(config, genInput, (chunk) => send({ t: "delta", v: chunk }));
           if (source === "failed") {
+            /* 스트리밍도 같은 규칙 — 여기가 빠지면 stream:true 로 횟수를 우회할 수 있다 */
+            if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, false);
             send({ t: "error" });
             return;
           }
@@ -142,8 +178,10 @@ export async function POST(req: Request) {
           } catch {
             html = markdown.replace(/\n/g, "<br>");
           }
+          if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, true);
           send({ t: "done", markdown, html, source });
         } catch {
+          if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, false);
           send({ t: "error" });
         } finally {
           controller.close();
@@ -180,6 +218,8 @@ export async function POST(req: Request) {
    * 알 수 없었고, 운영자도 사고를 눈치채지 못했다.
    */
   if (source === "failed") {
+    /* 실패는 ok=false 로 남긴다 — 기록은 하되 잔여 횟수에서 빼지 않는다 */
+    if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, false);
     return NextResponse.json(
       {
         error: "generation_failed",
@@ -188,6 +228,9 @@ export async function POST(req: Request) {
       { status: 502 },
     );
   }
+
+  /* 여기까지 왔으면 본문이 실제로 만들어졌다 — 이때만 1회를 깎는다 */
+  if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, true);
 
   let html = "";
   try {

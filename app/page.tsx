@@ -155,6 +155,7 @@ import { refinementInputFromProject } from "../lib/refinement/domain";
 import {
   CUSTOM_HOMEPAGE_FROM_AMOUNT,
   PACKAGE_AMOUNT,
+  REGEN_INCLUDED,
   PACKAGE_LIST_AMOUNT,
   PACKAGE_NAME,
 } from "../lib/payments/domain";
@@ -682,7 +683,7 @@ function Home({
                 <li><Check /> 발표자료(PPT) 자동 구성</li>
                 <li><Check /> 답변 기반 12개월 손익표 자동 계산</li>
                 <li><Check /> 같은 사업의 다른 유형에 답변 그대로 재사용</li>
-                <li><Check /> 섹션 수정·다시 생성 무제한</li>
+                <li><Check /> 섹션 다시 생성 {REGEN_INCLUDED}회 포함 (직접 고쳐 쓰는 것은 제한 없음)</li>
               </ul>
               <button onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
               <small>신용·체크카드 결제 · 나이스페이 안전 결제</small>
