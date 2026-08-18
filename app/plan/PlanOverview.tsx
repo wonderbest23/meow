@@ -1,5 +1,6 @@
 "use client";
 
+import { rememberRegenQuota, regenQuotaOf, subscribeRegenQuota, REGEN_WARN_AT } from "../../lib/plan-builder/regen-store";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { chaptersForType, sectionCountForType, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
 import {
@@ -59,6 +60,36 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [bulk, setBulk] = useState<{ done: number; total: number; current: string | null } | null>(null);
   /* 일괄 생성이 실패했을 때 알린다 — 조용히 끝나면 다 된 줄 안다 */
   const [bulkError, setBulkError] = useState<string | null>(null);
+  /*
+   * 다시 생성 남은 횟수.
+   * 서버가 응답에 실어 주는 값을 그대로 보여준다 — 여기서 다시 계산하지 않는다.
+   * 20회를 다 쓰는 순간 예고 없이 막히면 손님은 그걸 고장으로 읽는다.
+   */
+  const [regenTick, setRegenTick] = useState(0);
+  const [activePlanId, setActivePlanId] = useState<string | null>(null);
+  useEffect(() => subscribeRegenQuota(() => setRegenTick((n) => n + 1)), []);
+
+  /*
+   * 화면이 열릴 때 한 번 물어본다.
+   * 생성 응답에만 실어 오면 손님은 '한 번 써 봐야' 몇 회 남았는지 알게 된다.
+   */
+  useEffect(() => {
+    if (!activePlanId) return;
+    let alive = true;
+    void (async () => {
+      try {
+        const res = await fetch(`/api/plan/regen-quota?planId=${encodeURIComponent(activePlanId)}`);
+        if (!res.ok || !alive) return;
+        const data = (await res.json()) as { quota?: unknown };
+        rememberRegenQuota(activePlanId, data.quota);
+      } catch {
+        /* 조회 실패는 조용히 넘어간다 — 안내가 없을 뿐 생성은 막지 않는다 */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [activePlanId]);
   const cancelBulk = useRef(false);
   const [title, setTitle] = useState(planTitle);
   const [type, setType] = useState<string | undefined>(undefined);
@@ -80,6 +111,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       setAssembled(assembleSections(s));
       setInProgress(new Set(answeredSectionKeys(s)));
       const p = activePlan(s);
+      setActivePlanId(p?.id ?? null);
       if (p) {
         setTitle(p.title);
         setType(p.planType);
@@ -195,7 +227,8 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           }),
         });
         if (res.ok) {
-          const data = (await res.json()) as { markdown?: string; html?: string };
+          const data = (await res.json()) as { markdown?: string; html?: string; quota?: unknown };
+          rememberRegenQuota(plan.id, data.quota);
           // 시작할 때의 플랜에 저장한다 — 오래 걸리는 동안 활성 플랜이 바뀔 수 있다
           if (data.markdown && data.html) saveSection(target.key, data.markdown, data.html, { planId: plan.id });
           else failures += 1;
@@ -409,6 +442,20 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             {failedSections}개 섹션의 본문을 만들지 못했습니다. 위 ‘한번에 생성’으로 다시 시도해 주세요.
           </p>
         )}
+
+        {(() => {
+          /* regenTick 은 구독 알림을 렌더로 잇는 용도다 */
+          void regenTick;
+          const q = regenQuotaOf(activePlanId ?? undefined);
+          if (!q || q.remaining > REGEN_WARN_AT) return null;
+          return (
+            <p className={styles.regenNote} role="status" data-empty={q.remaining === 0 ? "true" : undefined}>
+              {q.remaining > 0
+                ? `이 문서에 포함된 다시 생성이 ${q.remaining}회 남았습니다. (총 ${q.allowed}회)`
+                : `이 문서에 포함된 다시 생성 ${q.allowed}회를 모두 썼습니다. 직접 고쳐 쓰는 것은 계속 할 수 있습니다.`}
+            </p>
+          );
+        })()}
 
         {/* 챕터 밴드 */}
         <div className={styles.plan}>

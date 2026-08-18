@@ -1,3 +1,4 @@
+import { rememberRegenQuota } from "./regen-store";
 import { activePlan, loadState, priorSectionsSummary, pushToServer, saveSection } from "./plan-store";
 
 /**
@@ -93,7 +94,9 @@ async function runOne(job: GenerationJob): Promise<void> {
     }),
   });
   if (!res.ok) throw new Error(`GENERATE_FAILED_${res.status}`);
-  const data = (await res.json()) as { markdown?: string; html?: string };
+  const data = (await res.json()) as { markdown?: string; html?: string; quota?: unknown };
+  /* 서버가 알려준 남은 횟수를 화면이 쓸 수 있게 담아 둔다 */
+  rememberRegenQuota(plan.id, data.quota);
   if (!data.markdown || !data.html) throw new Error("GENERATE_EMPTY");
   saveSection(job.key, data.markdown, data.html, { keepPrevious: true, planId: plan.id });
 }

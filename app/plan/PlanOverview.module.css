@@ -946,3 +946,25 @@
   font-weight: 600;
   line-height: 1.6;
 }
+
+/*
+ * 다시 생성 남은 횟수 안내.
+ * 아직 남았을 때는 파랑(알림), 다 썼을 때는 주황(행동 필요)으로 나눈다.
+ * 빨강은 오류 자리라 여기 쓰지 않는다 — 다 쓴 것은 고장이 아니다.
+ */
+.regenNote {
+  margin: 10px 0 0;
+  padding: 11px 14px;
+  border: 1px solid #c9ddfb;
+  border-radius: 12px;
+  background: #eef4fe;
+  color: #1f4f9c;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+.regenNote[data-empty="true"] {
+  border-color: #f0d3a8;
+  background: #fdf6ea;
+  color: #8a5a12;
+}
