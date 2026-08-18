@@ -126,7 +126,7 @@
   color: #dbe5ee;
   font: inherit;
   font-weight: 700;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 9px;
   border-radius: 8px;
   cursor: pointer;
@@ -141,7 +141,7 @@
 /* 목차 캡션 — 작은 회색 라벨 하나로 충분하다 */
 .navCaption {
   margin: 0 14px 8px;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
@@ -358,7 +358,7 @@
   border-bottom: 1px solid var(--wz-line);
 }
 .crumb {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--wz-brand);
   letter-spacing: 0.04em;
@@ -392,7 +392,7 @@
   background: var(--wz-line);
 }
 .mtL {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.09em;
   color: var(--wz-faint);
@@ -446,7 +446,7 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--wz-brand);
@@ -475,7 +475,7 @@
 }
 .qh {
   color: var(--wz-muted);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.5;
   margin-bottom: 13px;
 }
@@ -589,7 +589,7 @@
   color: var(--wz-brand);
   font: inherit;
   font-weight: 800;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 8px 14px;
   border-radius: 999px;
   cursor: pointer;
@@ -621,7 +621,7 @@
 }
 .sugCard::before {
   content: "✨";
-  font-size: 12px;
+  font-size: 13px;
 }
 
 /*
@@ -715,7 +715,7 @@
 .genDoc :global(th) {
   background: var(--wz-panel2);
   font-weight: 800;
-  font-size: 12px;
+  font-size: 13px;
 }
 .mdEditor {
   width: 100%;
@@ -739,7 +739,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   padding: 4px 10px;
   border-radius: 999px;
@@ -783,7 +783,7 @@
   display: none;
 }
 .tpH {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
   color: var(--wz-faint);
@@ -812,7 +812,7 @@
   letter-spacing: -0.5px;
 }
 .rl {
-  font-size: 12px;
+  font-size: 13px;
   color: var(--wz-muted);
   font-weight: 600;
   margin-top: 2px;
@@ -841,7 +841,7 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--wz-faint);
 }
@@ -860,7 +860,7 @@
   flex: 1;
 }
 .tc {
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--wz-faint);
   font-variant-numeric: tabular-nums;
@@ -970,12 +970,12 @@
     min-width: 0;
   }
   .mtL {
-    font-size: 9.5px;
+    font-size: 13px;
     letter-spacing: 0.02em;
     white-space: nowrap;
   }
   .mtV {
-    font-size: 12.5px;
+    font-size: 13px;
     margin-top: 4px;
     gap: 6px;
     white-space: nowrap; /* '시작 전'이 두 줄로 감기던 것 */
@@ -1035,7 +1035,7 @@
 }
 .needTag {
   margin-left: 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   color: #c33d55;
   background: #fdecef;
@@ -1071,7 +1071,7 @@
 }
 .conflictTag {
   margin-left: 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
   background: #d6455d;
@@ -1089,7 +1089,7 @@
 }
 .resolvedTag {
   margin-left: 8px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 800;
   color: #fff;
   background: var(--wz-brand, #3272db);
@@ -1229,7 +1229,7 @@
 }
 .freeHint {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--wz-faint);
 }
 
@@ -1251,7 +1251,7 @@
 }
 .editHint {
   margin: 12px 0 0;
-  font-size: 12px;
+  font-size: 13px;
   color: var(--wz-faint);
 }
 
@@ -1299,7 +1299,7 @@
   height: 30px;
   padding: 0 12px;
   margin: 0;
-  font-size: 11.5px;
+  font-size: 13px;
   line-height: 1;
   border-radius: 999px;
   display: inline-flex;
@@ -1319,7 +1319,7 @@
   background: var(--wz-panel);
   color: var(--wz-muted);
   font: inherit;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 700;
   padding: 5px 10px;
   border-radius: 999px;
@@ -1341,7 +1341,7 @@
 }
 .lockNote {
   margin: 0 0 12px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.6;
   color: #96631a;
   background: #fff6e5;
@@ -1357,7 +1357,7 @@
 
 /* 목차에서 결제가 필요한 섹션 */
 .secLock {
-  font-size: 9px;
+  font-size: 13px;
   line-height: 1;
 }
 
@@ -1496,7 +1496,7 @@
   }
   .mtV {
     margin-top: 0;
-    font-size: 12px;
+    font-size: 13px;
     font-weight: 700;
     color: var(--wz-muted, #4e5968);
     white-space: nowrap;
@@ -1507,7 +1507,7 @@
 .readOnlyNote {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--wz-faint);
 }
 @media (max-width: 640px) {
@@ -1575,7 +1575,7 @@
   border-radius: 8px;
   background: #fdecec;
   color: #c0392b;
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 700;
   justify-self: start;
 }
