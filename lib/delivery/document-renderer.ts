@@ -19,7 +19,7 @@ import {
   type ITableCellOptions,
 } from "docx";
 import { marked, type Token, type Tokens } from "marked";
-import { CHART_FENCE_LANG, parseChartSpec, shortWon, type ChartPoint } from "../plan-builder/chart";
+import { CHART_FENCE_LANG, chartScale, parseChartSpec, shortWon, type ChartPoint } from "../plan-builder/chart";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderLightweightPdf } from "./lightweight-pdf";
@@ -137,7 +137,12 @@ function barCell(width: number, fill: string, align: (typeof AlignmentType)[keyo
  * 이미지를 넣을 수 없으므로 0을 가운데 두고 좌(적자)·우(흑자)로 뻗는 막대표로 그린다.
  */
 function chartTable(points: ChartPoint[], breakEvenMonth: number | null): Table {
-  const peak = Math.max(1, ...points.map((p) => Math.abs(p.value)));
+  /*
+   * 막대 길이 기준은 웹·PDF 와 같은 반올림 눈금을 쓴다. 예전에는 실제 최댓값을
+   * 기준으로 삼아, 같은 플랜인데 PDF 와 Word 의 막대 비율이 서로 달랐다.
+   */
+  const scale = chartScale(points);
+  const peak = Math.max(1, Math.abs(scale.min), Math.abs(scale.max));
   const MAX_BLOCKS = 26;
   const label = (p: ChartPoint, i: number) =>
     breakEvenMonth === i + 1 ? `${p.label} ◀ 월 흑자 전환` : p.label;
