@@ -11222,3 +11222,73 @@ body {
   .home-footer-notice { grid-column: auto; }
   .home-footer-bottom { flex-direction: column; align-items: flex-start; }
 }
+
+/* ── 후기 블록 ────────────────────────────────────────────────
+ * 레퍼런스(쇼핑몰 리뷰 요약)와 같은 구성 — 평균 별점 · 총 개수 ·
+ * 평점 분포 막대 · 후기 카드.
+ *
+ * 색·라운드·그림자는 이미 심어 둔 토큰을 그대로 쓴다. 여기만 다른 규칙을
+ * 두면 나중에 어긋난다.
+ * ───────────────────────────────────────────────────────────── */
+.home-reviews {
+  width: 100%;
+  display: grid;
+  gap: 16px;
+}
+
+/* 시연용임을 화면에서도 못 박는다 — 스크린샷만 돌아다녀도 오해가 없게 */
+.home-reviews-demo {
+  margin: 0;
+  padding: 9px 14px;
+  border: 1px dashed #f0d3a8;
+  border-radius: var(--radius);
+  background: #fdf6ea;
+  color: #8a5a12;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-reviews-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 220px) minmax(0, 1fr);
+  gap: 28px;
+  align-items: center;
+  padding: 24px 28px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.home-reviews-score { display: grid; justify-items: center; gap: 4px; }
+.home-reviews-score strong { color: var(--text-strong); font-size: 44px; font-weight: 800; line-height: 1.1; letter-spacing: -0.02em; }
+.home-reviews-score > span { color: var(--text-body); font-size: 15px; margin-top: -6px; }
+.home-reviews-score small { color: var(--text-body); font-size: 14px; }
+
+.home-review-stars { display: inline-flex; gap: 2px; font-size: 17px; line-height: 1; }
+.home-review-stars i { color: #d1d6db; font-style: normal; }
+.home-review-stars i.on { color: #f5a524; }
+
+.home-reviews-spread { margin: 0; padding: 0; display: grid; gap: 7px; list-style: none; }
+.home-reviews-spread li { display: grid; grid-template-columns: 34px minmax(0, 1fr) 30px; gap: 10px; align-items: center; color: var(--text-body); font-size: 13px; }
+.home-reviews-spread b { text-align: right; font-variant-numeric: tabular-nums; }
+.home-reviews-bar { height: 8px; border-radius: 999px; background: #eef1f5; overflow: hidden; }
+.home-reviews-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--blue); }
+
+.home-reviews-list { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; list-style: none; }
+.home-reviews-list li {
+  padding: 18px 20px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  background: var(--surface);
+  display: grid;
+  gap: 9px;
+  align-content: start;
+}
+.home-reviews-list p { margin: 0; color: var(--text-strong); font-size: 15px; line-height: 1.65; }
+.home-reviews-list small { color: var(--text-body); font-size: 13px; }
+
+@media (max-width: 760px) {
+  .home-reviews-summary { grid-template-columns: 1fr; gap: 18px; padding: 20px; }
+  .home-reviews-score strong { font-size: 36px; }
+}

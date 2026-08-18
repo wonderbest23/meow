@@ -497,6 +497,90 @@ const HOME_PROOF_ITEMS = [
   { title: "먼저 보고 결정하세요", body: "완성 샘플 3부 열람 · 앞 2개 섹션 무료 작성" },
 ];
 
+/*
+ * 후기 블록.
+ *
+ * 보여 준 레퍼런스(쇼핑몰 리뷰 요약)와 같은 구성이다 — 평균 별점, 총 개수,
+ * 평점 분포 막대, 후기 카드 몇 장.
+ *
+ * demo 를 주면 시연용 숫자로 그린다. 실제로는 reviews 를 받아 그리고,
+ * 하나도 없으면 아무것도 그리지 않는다 — 후기가 0건인데 자리만 있으면
+ * 빈 껍데기가 보이고, 없는 후기를 채워 넣고 싶어진다.
+ */
+interface HomeReview {
+  score: number;
+  body: string;
+  who: string;
+  at: string;
+}
+
+const REVIEW_DEMO: HomeReview[] = [
+  { score: 5, body: "질문에 답만 했는데 사업계획서가 나왔습니다. 은행 제출용으로 그대로 썼어요.", who: "무인 스터디카페 · 경기", at: "2026.08" },
+  { score: 5, body: "재무 부분이 제일 막막했는데 12개월 손익표가 자동으로 계산돼서 좋았습니다.", who: "베이커리 창업 준비 · 서울", at: "2026.08" },
+  { score: 4, body: "정부지원 PSST 양식에 맞춰 나와서 편했습니다. 세부 문구는 조금 손봤어요.", who: "예비창업패키지 지원 · 부산", at: "2026.07" },
+];
+
+function Stars({ score }: { score: number }) {
+  return (
+    <span className="home-review-stars" aria-label={`5점 만점에 ${score}점`}>
+      {[1, 2, 3, 4, 5].map((n) => (
+        <i key={n} className={n <= Math.round(score) ? "on" : ""} aria-hidden="true">
+          ★
+        </i>
+      ))}
+    </span>
+  );
+}
+
+function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: HomeReview[] }) {
+  const list = demo ? REVIEW_DEMO : reviews ?? [];
+  if (!list.length) return null;
+
+  const average = list.reduce((sum, r) => sum + r.score, 0) / list.length;
+  /* 5점부터 1점까지 몇 개씩인지 — 레퍼런스의 '평점 비율' 막대 */
+  const spread = [5, 4, 3, 2, 1].map((score) => ({
+    score,
+    count: list.filter((r) => r.score === score).length,
+  }));
+  const peak = Math.max(1, ...spread.map((s) => s.count));
+
+  return (
+    <div className="home-reviews" aria-label="사용자 후기">
+      {demo && <p className="home-reviews-demo">디자인 확인용 예시입니다. 실제 후기가 아닙니다.</p>}
+      <div className="home-reviews-summary">
+        <div className="home-reviews-score">
+          <strong>{average.toFixed(1)}</strong>
+          <span>/ 5</span>
+          <Stars score={average} />
+          <small>후기 {list.length.toLocaleString("ko-KR")}개</small>
+        </div>
+        <ul className="home-reviews-spread">
+          {spread.map((s) => (
+            <li key={s.score}>
+              <span>{s.score}점</span>
+              <span className="home-reviews-bar">
+                <span style={{ width: `${(s.count / peak) * 100}%` }} />
+              </span>
+              <b>{s.count}</b>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <ul className="home-reviews-list">
+        {list.map((r) => (
+          <li key={r.body}>
+            <Stars score={r.score} />
+            <p>{r.body}</p>
+            <small>
+              {r.who} · {r.at}
+            </small>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function Home({
   onStart,
   onPreview,
@@ -504,6 +588,11 @@ function Home({
   onStart: () => void;
   onPreview: () => void;
 }) {
+  /* 디자인 확인용 — 주소에 ?demo=reviews 가 있을 때만 후기 블록을 그린다 */
+  const [reviewDemo, setReviewDemo] = useState(false);
+  useEffect(() => {
+    setReviewDemo(new URLSearchParams(window.location.search).get("demo") === "reviews");
+  }, []);
   /*
    * 서비스 요약 — 네 마디를 가운데서 하나씩 띄운다.
    *
@@ -586,9 +675,22 @@ function Home({
               <a className="hero-secondary" href="/plan"><strong>완성 샘플 3부 보기</strong></a>
             </div>
           </div>
-          <div className="home-hero-screen">
-            <img src="/hero-desktop-2026.jpg" alt="사업계획서가 만들어지는 화면" width={1204} height={480} />
-          </div>
+          {/*
+            히어로 자리 — 평소에는 결과물 사진.
+            주소에 ?demo=reviews 가 붙으면 후기 블록으로 바꿔 그린다.
+
+            시연용 숫자다. 일반 방문자에게는 보이지 않는다 — 받은 적 없는
+            후기를 손님이 보는 화면에 두면 표시광고법 문제이기도 하고,
+            '확인되지 않은 수치를 사실처럼 쓰지 않는다'는 이 서비스의 약속과
+            정면으로 어긋난다. 실제 후기가 쌓이면 이 자리에 그대로 꽂는다.
+          */}
+          {reviewDemo ? (
+            <HomeReviews demo />
+          ) : (
+            <div className="home-hero-screen">
+              <img src="/hero-desktop-2026.jpg" alt="사업계획서가 만들어지는 화면" width={1204} height={480} />
+            </div>
+          )}
         </section>
       </div>
 
