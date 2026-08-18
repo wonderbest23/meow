@@ -101,7 +101,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
 }
 .stepNum {
   flex: none;
@@ -110,20 +110,25 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   background: var(--surface-muted, #f2f4f6);
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
 }
 .step.stepOn {
   color: var(--text-strong, #191f28);
 }
+/*
+ * 단계 배지 — 작은 원 안의 흰 글씨라 배경이 밝으면 읽히지 않는다.
+ * 진행 중 #3182f6 은 3.71, 완료 #16b877 은 2.57 이었다.
+ * 막대(진행률)에 쓰는 밝은 초록과 달리 여기는 글씨가 얹히므로 더 진해야 한다.
+ */
 .step.stepOn .stepNum {
-  background: var(--blue, #3182f6);
+  background: var(--blue, #3272db);
   color: #fff;
 }
 .step.stepDone .stepNum {
-  background: #16b877;
+  background: #0b7a4f;
   color: #fff;
 }
 .stepBar {
@@ -147,9 +152,9 @@
   grid-column: 1 / -1;
 }
 .label {
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
@@ -175,8 +180,8 @@
   outline-offset: 1px;
 }
 .hint {
-  font-size: 12px;
-  color: var(--text-muted, #8b95a1);
+  font-size: 13px;
+  color: var(--text-muted, #697077);
   margin-top: 6px;
   line-height: 1.5;
 }
@@ -210,13 +215,13 @@
   outline-offset: 1px;
 }
 .selectBtn.placeholder {
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font-weight: 500;
 }
 .selectBtn svg {
   width: 16px;
   height: 16px;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   flex: 0 0 auto;
   transition: transform 0.16s;
 }
@@ -290,7 +295,7 @@
   color: var(--blue, #3182f6);
   font: inherit;
   font-weight: 800;
-  font-size: 12.5px;
+  font-size: 13px;
   padding: 8px 14px;
   border-radius: 999px;
   cursor: pointer;
@@ -352,9 +357,9 @@
 }
 .titleLabel {
   display: block;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   letter-spacing: 0.04em;
   text-transform: uppercase;
   margin-bottom: 8px;
@@ -391,7 +396,7 @@
   flex: 1 1 0;
   border: 0;
   background: transparent;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font: inherit;
   font-weight: 800;
   font-size: 13.5px;
@@ -451,7 +456,7 @@
   right: 10px;
   background: var(--acc);
   color: #fff;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   padding: 4px 10px;
   border-radius: 999px;
@@ -459,7 +464,7 @@
 .cat {
   color: var(--acc);
   font-weight: 800;
-  font-size: 11.5px;
+  font-size: 13px;
   letter-spacing: 0.05em;
   margin: 15px 18px 2px;
 }
@@ -472,7 +477,7 @@
 .desc {
   margin: 8px 18px 0;
   color: var(--text-body, #4e5968);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.55;
 }
 .go {
@@ -482,7 +487,7 @@
   margin: 14px 18px 0;
   color: var(--acc);
   font-weight: 800;
-  font-size: 12.5px;
+  font-size: 13px;
 }
 
 @media (max-width: 640px) {
@@ -503,7 +508,7 @@
 /* 필수 칸을 채웠다는 표시 */
 .okTag {
   margin-left: 6px;
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 900;
   color: #0f9d66;
 }
@@ -528,8 +533,8 @@
   }
 }
 .todo {
-  font-size: 12.5px;
-  color: var(--text-muted, #8b95a1);
+  font-size: 13px;
+  color: var(--text-muted, #697077);
 }
 @media (prefers-reduced-motion: reduce) {
   .ready { animation: none; }
@@ -577,7 +582,7 @@
   display: inline-block;
   background: var(--acc, #3358f4);
   color: #fff;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   padding: 4px 10px;
   border-radius: 999px;
@@ -609,7 +614,7 @@
   gap: 5px;
 }
 .fits li {
-  font-size: 12.5px;
+  font-size: 13px;
   color: var(--text-body, #4e5968);
   padding-left: 17px;
   position: relative;
@@ -620,23 +625,23 @@
   left: 0;
   color: var(--acc, #3358f4);
   font-weight: 900;
-  font-size: 11px;
+  font-size: 13px;
 }
 
 .otherLabel {
   margin: 26px 0 12px;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   text-transform: uppercase;
 }
 
 .sameNote {
   margin: 18px 0 0;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.7;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   background: var(--surface-soft, #f7f8fa);
   border-radius: 11px;
   padding: 13px 15px;
@@ -656,7 +661,7 @@
 .meta {
   margin-top: 9px;
   display: inline-block;
-  font-size: 11.5px;
+  font-size: 13px;
   font-weight: 800;
   color: var(--acc, #3358f4);
   background: var(--surface, #fff);
@@ -774,7 +779,7 @@
   gap: 4px;
   background: #10233a;
   color: #f4b740;
-  font-size: 10.5px;
+  font-size: 13px;
   font-weight: 800;
   padding: 5px 10px;
   border-radius: 999px;
@@ -789,7 +794,7 @@
   padding: 11px 13px;
   background: #fff;
   color: var(--text-body, #4e5968);
-  font-size: 12.5px;
+  font-size: 13px;
 }
 .strip b {
   font-weight: 800;
@@ -797,7 +802,7 @@
   color: var(--text-strong, #191f28);
 }
 .strip svg {
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   transition: transform 0.2s, color 0.2s;
 }
 .planCard:hover .strip svg {
@@ -807,9 +812,9 @@
 
 /* 카드 밖 설명 — 표지를 어지럽히지 않는다 */
 .cardDesc {
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1.6;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -907,9 +912,9 @@
   color: var(--text-strong, #191f28);
 }
 .inheritText span {
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.55;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   word-break: keep-all;
 }
 
@@ -921,9 +926,9 @@
   background: var(--surface-soft, #f7f8fa);
   border: 1px dashed var(--border-soft, #d5dbe2);
   border-radius: 10px;
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 1.6;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   word-break: keep-all;
 }
 
@@ -977,5 +982,5 @@
 
 .consultNote > small {
   color: var(--text-2, #6b7684);
-  font-size: 12px;
+  font-size: 13px;
 }

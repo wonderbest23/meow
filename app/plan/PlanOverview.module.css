@@ -132,7 +132,7 @@
 }
 .title span {
   font-weight: 500;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
 }
 
 /* 진행 미터 스트립 */
@@ -165,7 +165,7 @@
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   text-transform: uppercase;
 }
 .meterRow {
@@ -226,7 +226,7 @@
 .seg button {
   border: 0;
   background: transparent;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font: inherit;
   font-weight: 800;
   font-size: 13.5px;
@@ -255,7 +255,7 @@
 }
 .bulkBtn:disabled {
   background: var(--surface-soft, #f7f8fa);
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -291,7 +291,7 @@
 .bulkCancel {
   border: 1px solid var(--border-soft, #e5e8eb);
   background: transparent;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font: inherit;
   font-size: 12px;
   font-weight: 700;
@@ -346,7 +346,7 @@
 .docEmpty {
   padding: 60px 20px;
   text-align: center;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font-size: 14px;
 }
 .docSection {
@@ -455,7 +455,7 @@
 .chapCount {
   font-size: 12px;
   font-weight: 800;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font-variant-numeric: tabular-nums;
 }
 .nodes {
@@ -511,7 +511,7 @@
   margin-left: auto;
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font-variant-numeric: tabular-nums;
   flex: 0 0 auto;
 }
@@ -550,7 +550,7 @@
   color: #fff;
 }
 .node.done .nodeLabel {
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
   font-weight: 600;
 }
 .node.done .nodeTime {
@@ -694,7 +694,7 @@
   gap: 6px;
 }
 .lockTag {
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
 }
 
 
@@ -796,7 +796,7 @@
   color: var(--text-strong, #191f28);
 }
 .continueBanner .finaleBody span {
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, #697077);
 }
 
 

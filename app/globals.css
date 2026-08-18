@@ -8875,7 +8875,12 @@ body:has(.explore-page) .support-chat-toggle::after {
   --surface-muted: #f2f4f6;
   --text-strong: #191f28;
   --text-body: #4e5968;
-  --text-muted: #8b95a1;
+  /*
+   * 흰 바탕 위 3.04 라 기준(4.5)에 못 미쳤다. 작은 라벨이 아니라 실제로 읽는
+   * 글에 쓰이는 자리가 많아(플랜 유형 설명, 안내 문구) 흐린 채로 둘 수 없다.
+   * Neuros 의 CoolGray/60 — 5.02 로 통과한다.
+   */
+  --text-muted: #697077;
   --blue: #3272db;
   --blue-dark: #1b64da;
   --blue-soft: #e8f3ff;

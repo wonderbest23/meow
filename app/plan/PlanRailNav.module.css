@@ -68,7 +68,8 @@
   font-size: 10.5px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.45);
+  /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .sampleTag {
@@ -159,7 +160,8 @@
   font-size: 10px;
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.45);
+  /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .sections {
