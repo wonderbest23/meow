@@ -1,3 +1,4 @@
+import { grantRegenPack } from "../../../../../lib/plan-builder/regen-quota";
 import { NextResponse } from "next/server";
 import {
   approveNicepayPayment,
@@ -121,6 +122,33 @@ export async function POST(request: Request) {
         : `결제는 되었으나 처리에 실패했습니다. 주문번호 ${orderId}로 문의해주세요.`,
       ...planQ,
     });
+  }
+
+  /*
+   * '다시 생성' 묶음이면 여기서 횟수를 늘린다.
+   *
+   * 주문에 남긴 product 로 판정한다 — 화면이 보낸 값을 쓰면 149,000원짜리
+   * 결제 하나로 재생성만 무한히 받을 수 있다.
+   *
+   * 지급이 실패하면 결제는 됐는데 횟수가 안 늘어난 상태가 된다. 여기서도
+   * 몇 번 다시 시도하고, 그래도 안 되면 승인을 취소해 돈을 돌려준다.
+   */
+  if (order.product === "regen" && order.planId) {
+    let granted = false;
+    for (let attempt = 0; attempt < 3 && !granted; attempt += 1) {
+      granted = await grantRegenPack(order.planId, order.ownerId ?? "", orderId, order.amount).catch(() => false);
+      if (!granted && attempt < 2) await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+    }
+    if (!granted) {
+      const cancelled = await cancelNicepayPayment(tid, "다시 생성 횟수 지급 실패").then(() => true).catch(() => false);
+      return redirect(request, {
+        status: "fail",
+        reason: cancelled
+          ? "결제 처리 중 문제가 생겨 자동으로 취소했습니다. 다시 시도해주세요."
+          : `결제는 되었으나 횟수 반영에 실패했습니다. 주문번호 ${orderId}로 문의해주세요.`,
+        ...planQ,
+      });
+    }
   }
 
   return redirect(request, { status: "ok", ...planQ });

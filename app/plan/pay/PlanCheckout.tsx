@@ -48,6 +48,8 @@ export default function PlanCheckout() {
   const planType = params.get("planType") ?? "";
   // 계획서 결제와 홈페이지 결제는 같은 화면을 쓰되 금액과 안내가 다르다
   const isHomepage = params.get("product") === "homepage";
+  /* 다시 생성 묶음 — 문서를 여는 결제가 아니라 횟수만 더한다 */
+  const isRegen = params.get("product") === "regen";
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean } | null>(null);
@@ -89,7 +91,7 @@ export default function PlanCheckout() {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planType, ...(isHomepage ? { product: "homepage" } : {}) }),
+        body: JSON.stringify({ planId, planType, ...(isRegen ? { product: "regen" } : isHomepage ? { product: "homepage" } : {}) }),
       });
       const data = (await res.json()) as {
         clientId?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;

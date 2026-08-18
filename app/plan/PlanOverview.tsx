@@ -1,5 +1,6 @@
 "use client";
 
+import { REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../../lib/payments/domain";
 import { rememberRegenQuota, regenQuotaOf, subscribeRegenQuota, REGEN_WARN_AT } from "../../lib/plan-builder/regen-store";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { chaptersForType, sectionCountForType, type PlanSectionStatus } from "../../lib/plan-builder/blueprint";
@@ -453,6 +454,17 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
               {q.remaining > 0
                 ? `이 문서에 포함된 다시 생성이 ${q.remaining}회 남았습니다. (총 ${q.allowed}회)`
                 : `이 문서에 포함된 다시 생성 ${q.allowed}회를 모두 썼습니다. 직접 고쳐 쓰는 것은 계속 할 수 있습니다.`}
+              {q.remaining === 0 && activePlanId && (
+                <>
+                  {" "}
+                  <a
+                    className={styles.regenBuy}
+                    href={`/plan/pay?planId=${encodeURIComponent(activePlanId)}&planType=${encodeURIComponent(type ?? "")}&product=regen`}
+                  >
+                    {REGEN_PACK_COUNT}회 추가 ({REGEN_PACK_AMOUNT.toLocaleString("ko-KR")}원)
+                  </a>
+                </>
+              )}
             </p>
           );
         })()}

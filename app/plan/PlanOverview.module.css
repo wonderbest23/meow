@@ -968,3 +968,17 @@
   background: #fdf6ea;
   color: #8a5a12;
 }
+
+/* 다 썼을 때만 뜨는 추가 구매 — 안내 문장 안에 이어 붙인다 */
+.regenBuy {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #8a5a12;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}

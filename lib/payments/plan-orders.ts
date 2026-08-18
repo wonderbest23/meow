@@ -4,7 +4,7 @@
 
 import { randomUUID } from "node:crypto";
 import { getServerSupabase } from "../persistence";
-import { PACKAGE_AMOUNT, TERMS_VERSION } from "./domain";
+import { PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_NAME, TERMS_VERSION } from "./domain";
 
 /** 플랜 빌더 상품명 — 이 값으로 권한을 판정하므로 바꾸면 기존 구매자가 잠긴다 */
 export const PLAN_PRODUCT_NAME = "사업계획서 플랜 빌더";
@@ -54,16 +54,21 @@ export async function createPlanOrder(input: {
   /** 이 결제로 열리는 플랜 — 문서 단위 결제의 연결 고리 */
   planId: string;
   planType: string;
-  /** 무엇을 사는 결제인지 — 계획서(기본)인지 홈페이지인지 */
-  product?: "plan" | "homepage";
+  /** 무엇을 사는 결제인지 — 계획서(기본) / 홈페이지 / 다시 생성 묶음 */
+  product?: "plan" | "homepage" | "regen";
 }): Promise<PlanOrder> {
   const now = new Date();
   const orderId = `PB-${now.getTime().toString(36)}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
   const homepage = input.product === "homepage";
+  const regen = input.product === "regen";
+  /*
+   * 금액은 서버가 정한다. 화면이 보낸 값을 쓰면 4,900원짜리를 100원으로
+   * 바꿔 보내는 요청 하나로 뚫린다.
+   */
   const order: PlanOrder = {
     orderId,
-    amount: homepage ? HOMEPAGE_PRODUCT_AMOUNT : planPrice(input.planType),
-    orderName: homepage ? HOMEPAGE_PRODUCT_NAME : PLAN_PRODUCT_NAME,
+    amount: regen ? REGEN_PACK_AMOUNT : homepage ? HOMEPAGE_PRODUCT_AMOUNT : planPrice(input.planType),
+    orderName: regen ? REGEN_PACK_NAME : homepage ? HOMEPAGE_PRODUCT_NAME : PLAN_PRODUCT_NAME,
     status: "created",
     ownerId: input.ownerId,
   };
@@ -84,7 +89,8 @@ export async function createPlanOrder(input: {
     status: "created",
     // 문서 단위 권한의 연결 고리 — 어떤 플랜을 여는 결제인지 여기 남긴다
     // (opportunity는 진단 흐름의 NOT NULL jsonb 컬럼을 재사용)
-    opportunity: { planId: input.planId, planType: input.planType },
+    // product 를 함께 남긴다 — 승인 시 무엇을 열어 줄지 여기서 읽는다
+    opportunity: { planId: input.planId, planType: input.planType, product: input.product ?? "plan" },
     founder_profile: {},
     terms_version: TERMS_VERSION,
     terms_agreed_at: now.toISOString(),
@@ -104,6 +110,8 @@ export async function getPlanOrder(orderId: string): Promise<{
   expiresAt: string;
   planId: string | null;
   planType: string | null;
+  /** 무엇을 산 주문인지 — 승인 뒤 무엇을 열어 줄지 여기서 갈린다 */
+  product: "plan" | "homepage" | "regen";
 } | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
@@ -123,6 +131,8 @@ export async function getPlanOrder(orderId: string): Promise<{
     expiresAt: data.expires_at as string,
     planId: ((data.opportunity as { planId?: string } | null)?.planId ?? null),
     planType: ((data.opportunity as { planType?: string } | null)?.planType ?? null),
+    /* 옛 주문에는 product 가 없다 — 그때는 전부 계획서 결제였다 */
+    product: (((data.opportunity as { product?: string } | null)?.product ?? "plan") as "plan" | "homepage" | "regen"),
   };
 }
 
