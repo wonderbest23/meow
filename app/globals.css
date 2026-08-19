@@ -11416,27 +11416,49 @@ body {
   .home-proof-bar span { font-size: 15px; }
 }
 
-/* ── 상담 입력창 — 보내기를 칸 안으로 ─────────────────────────────
- * 지금까지 [입력칸][보내기] 두 칸짜리 격자였다. 버튼이 72px 을 가져가서
- * 정작 쓰는 칸이 좁고, 좁은 칸에서는 한 줄만 쓰고 마는 사람이 많다.
- * 버튼을 칸 안 오른쪽 아래로 옮기고 칸을 전폭으로 넓힌다.
+/* ── 상담 입력창 — 테두리를 칸 밖으로, 버튼을 그 안에 ─────────────
+ * 1차로 버튼을 textarea 위에 띄웠더니 어디에도 맞지 않았다. 글씨는 왼쪽
+ * 15px 에서 시작하는데 버튼은 오른쪽 8px 에 붙어서, 같은 상자 안인데
+ * 좌우 여백이 서로 달랐다.
  *
- * 이 파일 앞쪽에 !important 가 붙은 규칙이 여럿 있어 여기서도 같은 무기를
- * 쓴다. 새 규칙을 얹는 게 아니라 앞의 값을 이기려는 것이므로 최소한만.
+ * 그래서 상자를 한 칸 밖으로 뺀다 — 테두리·바탕·라운드는 바깥 상자
+ * (.support-chat-input-row)가 갖고, textarea 는 테두리 없이 그 안에
+ * 눕는다. 버튼도 겹치는 게 아니라 그냥 아래 줄에 놓인다.
+ *
+ * 그러면 여백이 하나로 정리된다 — 글씨 왼쪽 14, 버튼 오른쪽 14,
+ * 위 14, 아래 14. 네 변이 같은 값이라 눈이 편하다.
+ *
+ * 이 파일 앞쪽에 !important 가 붙은 규칙이 여럿이라 여기서도 같은 무기를
+ * 쓴다. 값을 이기려는 것이므로 최소한만.
  */
 .support-chat-panel .support-chat-form > .support-chat-input-row {
-  position: relative;
-  display: block !important;
+  display: flex !important;
+  flex-direction: column;
+  align-items: stretch;
   grid-template-columns: none !important;
-  gap: 0;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border-soft, #e5e8eb);
+  border-radius: 14px;
+  background: var(--surface-soft, #f7f8fa);
+}
+
+/* 글씨를 누르든 상자를 누르든 커서는 입력칸으로 */
+.support-chat-panel .support-chat-form > .support-chat-input-row:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(50, 114, 219, .14);
 }
 
 .support-chat-panel .support-chat-input-row textarea {
   width: 100%;
-  min-height: 108px;
-  max-height: 180px;
-  padding: 13px 15px 56px;
-  border-radius: 12px;
+  min-height: 76px;
+  max-height: 168px;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  outline: none !important;
   font-size: 15px;
   line-height: 1.6;
 }
@@ -11448,13 +11470,12 @@ body {
 }
 
 .support-chat-panel .support-chat-input-row > button {
-  position: absolute;
-  right: 8px;
-  bottom: 8px;
+  position: static;
+  align-self: flex-end;
   width: auto !important;
   height: 40px !important;
-  min-width: 86px;
-  padding: 0 16px;
+  min-width: 88px;
+  padding: 0 18px;
   border: 0;
   border-radius: 999px !important;
   background: var(--blue) !important;
@@ -11462,16 +11483,16 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   font-size: 14px;
   font-weight: 700;
 }
 
-
-/* 못 누르는 상태가 파랑이면 왜 안 눌리는지 알 수 없다 */
+/* 못 누르는 상태가 파랑이면 왜 안 눌리는지 알 수 없다.
+   다만 상자 바탕(#f7f8fa)에 #e5e8eb 를 얹으면 버튼이 있는지도 안 보인다.
+   한 단 진하게 — 꺼져 있다는 건 알아보되 사라지지는 않게. */
 .support-chat-panel .support-chat-input-row > button:disabled {
-  background: #e5e8eb !important;
-  color: #8a929e !important;
+  background: #dde1e6 !important;
+  color: #5c636e !important;
   cursor: default;
 }
 
@@ -11482,18 +11503,17 @@ body {
 }
 
 @media (max-width: 640px) {
+  .support-chat-panel .support-chat-form > .support-chat-input-row {
+    padding: 12px;
+    gap: 9px;
+  }
   .support-chat-panel .support-chat-input-row textarea {
-    min-height: 100px;
-    max-height: 148px;
-    padding: 12px 13px 56px;
+    min-height: 68px;
+    max-height: 132px;
     font-size: 15px;
   }
   /* 손가락으로 누르는 자리는 44px 아래로 내리지 않는다 */
-  .support-chat-panel .support-chat-input-row > button {
-    height: 44px !important;
-    bottom: 6px;
-    right: 6px;
-  }
+  .support-chat-panel .support-chat-input-row > button { height: 44px !important; }
 }
 
 /*

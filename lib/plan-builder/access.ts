@@ -8,6 +8,39 @@ import { paidPlanEntitlement, planPrice } from "../payments/plan-orders";
 /** 결제 없이 볼 수 있는 섹션 수 (앞에서부터) — 1.1, 1.2 */
 export const FREE_SECTION_COUNT = 2;
 
+/**
+ * 결제 없이 AI 본문을 맛볼 수 있는 문서 수.
+ *
+ * 무료 2개 섹션은 '문서마다' 열린다. 그런데 문서는 몇 개든 만들 수 있어서,
+ * 문서를 열 개 만들면 결제 없이 본문 스무 개가 나갔다 — 그만큼이 실비다.
+ * 사업 아이템을 몇 개 견주어 보는 것은 정상적인 사용이라 문서 만들기 자체를
+ * 막지는 않는다. 대신 '무료로 본문을 써 본 문서'를 세 개까지만 센다.
+ * 계정당 무료 생성은 3 × 2 = 6회가 상한이 된다.
+ */
+export const FREE_PLAN_LIMIT = 3;
+
+/**
+ * 이 문서에서 무료 생성을 더 해도 되는지.
+ *
+ * '무료로 써 본 문서'는 결제되지 않았으면서 본문이 하나라도 만들어진 문서다.
+ * 지금 문서가 이미 그중 하나면 계속 쓸 수 있다 — 두 번째 무료 섹션을 쓰다가
+ * 갑자기 막히면 안 된다.
+ */
+export function freePlanLimitReached(
+  planId: string | undefined,
+  plans: Array<{ id: string; sections?: Record<string, { markdown?: string } | undefined> | null }>,
+  paidPlanIds: Set<string>,
+): boolean {
+  const used = new Set<string>();
+  for (const p of plans) {
+    if (!p?.id || paidPlanIds.has(p.id)) continue;
+    const hasBody = Object.values(p.sections ?? {}).some((sec) => Boolean(sec?.markdown));
+    if (hasBody) used.add(p.id);
+  }
+  if (planId && used.has(planId)) return false;
+  return used.size >= FREE_PLAN_LIMIT;
+}
+
 export type AccessReason = "ok" | "login_required" | "payment_required";
 
 export interface PlanAccess {
@@ -23,6 +56,8 @@ export interface PlanAccess {
   price: number;
   /** 무료로 열리는 섹션 키 (플랜 유형 기준 앞 2개) */
   freeKeys: string[];
+  /** 결제로 열린 문서 id — 무료 문서 수를 셀 때 제외한다 */
+  paidPlanIds: Set<string>;
 }
 
 /** 유형에 맞는 순서에서 앞 N개 섹션 키 */
@@ -46,7 +81,7 @@ export async function resolvePlanAccess(planType?: string, planId?: string): Pro
   const price = planPrice(planType);
   const user = await getAuthenticatedUser();
   if (!user) {
-    return { authenticated: false, email: null, paid: false, allAccess: false, hasAnyPaid: false, price, freeKeys: freeSectionKeys(planType) };
+    return { authenticated: false, email: null, paid: false, allAccess: false, hasAnyPaid: false, price, freeKeys: freeSectionKeys(planType), paidPlanIds: new Set() };
   }
   const ent = await paidPlanEntitlement(user.id);
   return {
@@ -57,6 +92,7 @@ export async function resolvePlanAccess(planType?: string, planId?: string): Pro
     hasAnyPaid: ent.allAccess || ent.planIds.size > 0,
     price,
     freeKeys: freeSectionKeys(planType),
+    paidPlanIds: ent.planIds,
   };
 }
 

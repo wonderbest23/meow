@@ -23,7 +23,7 @@ import InheritNote from "./InheritNote";
 import PlanLoading from "./PlanLoading";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
-import { generatingTitle, subscribeGeneration, totalPendingCount, refreshServerPending, failedCount } from "../../lib/plan-builder/generation-queue";
+import { generatingTitle, subscribeGeneration, totalPendingCount, refreshServerPending, failedCount, isGenerating, generationFailureMessage } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanOverview.module.css";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
@@ -150,7 +150,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
    * 위저드에서 '다음 단계'로 넘어가며 걸어 둔 본문 생성은 뒤에서 돈다.
    * 개요로 돌아왔을 때 몇 개가 남았는지 보이지 않으면 '왜 아직 비어 있지?'가 된다.
    */
-  const [, setQueueTick] = useState(0);
+  const [queueTick, setQueueTick] = useState(0);
   useEffect(() => subscribeGeneration(() => setQueueTick((n) => n + 1)), []);
   /*
    * 서버에 맡긴 생성은 이 창 밖에서 돈다 — 몇 개 남았는지 주기적으로 확인한다.
@@ -175,19 +175,27 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   /* 뒤에서 만들다 실패한 섹션 — 알리지 않으면 영영 비어 있는 줄 모른다 */
   const failedSections = failedCount();
 
-  // 아직 생성되지 않았지만 답변이 있는 섹션 = 일괄 생성 대상
+  /*
+   * 되살리기 대상 — '답변은 있는데 본문이 비어 있고, 지금 만들고 있지도 않은' 섹션.
+   *
+   * 예전에는 지금 만들고 있는 섹션까지 여기에 들어갔다. 그래서 화면에
+   * "본문 1개 만드는 중" 과 "답변한 섹션 1개 한번에 생성" 이 나란히 떴고,
+   * 그 버튼을 누르면 이미 만들고 있는 것을 한 번 더 불렀다 — 같은 섹션에
+   * API 를 두 번 쓴 것이다. isGenerating 으로 뺀다.
+   */
   const pendingKeys = useMemo(() => {
     const out: Array<{ key: string; chapterId: string; sectionId: string; title: string }> = [];
     for (const ch of chapters) {
       for (const s of ch.sections) {
         const key = `${ch.id}/${s.id}`;
-        if (statuses[key] !== "done" && inProgress.has(key) && !lockedKeys.has(key)) {
+        if (statuses[key] !== "done" && inProgress.has(key) && !lockedKeys.has(key) && !isGenerating(key)) {
           out.push({ key, chapterId: ch.id, sectionId: s.id, title: s.title });
         }
       }
     }
     return out;
-  }, [statuses, inProgress, chapters, lockedKeys]);
+    // queueTick 은 큐가 바뀔 때 이 목록을 다시 세라는 신호다
+  }, [statuses, inProgress, chapters, lockedKeys, queueTick]);
 
   /** 답변이 있는 미생성 섹션을 순차 생성한다(앞 섹션 결과가 뒤에 반영되도록 순서 유지). */
   async function generateAll() {
@@ -425,10 +433,21 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
               </button>
             </div>
           ) : (
-            /* 생성할 게 없으면 아예 숨긴다 — '남은 0개' 회색 버튼은 정체를 알 수 없었다 */
-            pendingKeys.length > 0 && (
+            /*
+             * 이 버튼은 평소에 쓰는 것이 아니라 되살리기다.
+             *
+             * 정상 흐름에서는 섹션을 다 채우고 '다음'을 누르면 본문이 저절로
+             * 만들어진다. 그러니 이 버튼이 보인다는 건 무언가 걸렸다는 뜻이다 —
+             * 생성이 실패했거나, 만드는 도중에 창을 닫았거나.
+             *
+             * 그래서 (1) 지금 만들고 있는 게 하나도 없을 때만 보이고,
+             * (2) 이름도 '한번에 생성'이 아니라 무엇을 되살리는지로 적는다.
+             * 위의 '이어서 작성'이 이 화면의 주된 행동이고, 이건 그 옆의
+             * 조용한 복구 수단이라 생김새도 한 단 낮춘다.
+             */
+            pendingKeys.length > 0 && queued === 0 && (
               <button type="button" className={styles.bulkBtn} onClick={generateAll}>
-                <Zap size={13} /> 답변한 섹션 {pendingKeys.length}개 한번에 생성
+                <Zap size={13} /> 본문이 비어 있는 {pendingKeys.length}개 만들기
               </button>
             )
           )}
@@ -438,9 +457,11 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           <p className={styles.bulkError} role="status">{bulkError}</p>
         )}
 
+        {/* 실패 이유가 있으면 그것부터 — '만들지 못했습니다'만으로는 무엇을 해야 할지 알 수 없다 */}
         {!bulkError && failedSections > 0 && (
           <p className={styles.bulkError} role="status">
-            {failedSections}개 섹션의 본문을 만들지 못했습니다. 위 ‘한번에 생성’으로 다시 시도해 주세요.
+            {generationFailureMessage()
+              ?? `${failedSections}개 섹션의 본문을 만들지 못했습니다. 위 ‘본문이 비어 있는 N개 만들기’로 다시 시도해 주세요.`}
           </p>
         )}
 

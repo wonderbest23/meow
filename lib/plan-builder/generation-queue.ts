@@ -66,6 +66,19 @@ export function failedCount(): number {
   return failed.size;
 }
 
+/*
+ * 서버가 왜 거절했는지.
+ *
+ * 지금까지는 실패를 전부 '만들지 못했습니다' 한 줄로 뭉쳤다. 결제가 필요한
+ * 것인지, 다시 생성 횟수를 다 쓴 것인지, 무료 문서 수가 찼는지 — 이유가
+ * 다른데 화면은 같은 말을 했다. 서버가 보낸 설명을 그대로 들고 온다.
+ */
+let lastFailureMessage: string | null = null;
+
+export function generationFailureMessage(): string | null {
+  return lastFailureMessage;
+}
+
 async function runOne(job: GenerationJob): Promise<void> {
   const state = loadState();
   /*
@@ -93,7 +106,12 @@ async function runOne(job: GenerationJob): Promise<void> {
       allAnswers: job.allAnswers,
     }),
   });
-  if (!res.ok) throw new Error(`GENERATE_FAILED_${res.status}`);
+  if (!res.ok) {
+    const detail = (await res.json().catch(() => null)) as { message?: string } | null;
+    lastFailureMessage = typeof detail?.message === "string" ? detail.message : null;
+    throw new Error(`GENERATE_FAILED_${res.status}`);
+  }
+  lastFailureMessage = null;
   const data = (await res.json()) as { markdown?: string; html?: string; quota?: unknown };
   /* 서버가 알려준 남은 횟수를 화면이 쓸 수 있게 담아 둔다 */
   rememberRegenQuota(plan.id, data.quota);

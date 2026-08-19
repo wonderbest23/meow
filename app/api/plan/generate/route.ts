@@ -6,7 +6,7 @@ import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "../../../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
-import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT } from "../../../../lib/plan-builder/access";
+import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT, FREE_PLAN_LIMIT, freePlanLimitReached } from "../../../../lib/plan-builder/access";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { resolveRegenQuota, recordRegen } from "../../../../lib/plan-builder/regen-quota";
@@ -113,6 +113,26 @@ export async function POST(req: Request) {
   }
 
   const identity = await requireGuestIdentity();
+  const savedState = await loadPlanState(identity.hash);
+
+  /*
+   * 무료로 본문을 써 본 문서 수 제한.
+   *
+   * 무료 2개 섹션이 문서마다 열리는데 문서 개수에는 제한이 없었다. 문서를
+   * 열 개 만들면 결제 없이 본문 스무 개가 나간다 — 그게 그대로 실비다.
+   * 결제한 문서는 세지 않고, 이미 무료로 쓰기 시작한 문서도 막지 않는다.
+   */
+  if (!access.paid && !access.allAccess) {
+    if (freePlanLimitReached(body.planId, savedState.plans, access.paidPlanIds)) {
+      return NextResponse.json(
+        {
+          error: "free_plan_limit",
+          message: `결제 없이 본문을 써 볼 수 있는 문서는 ${FREE_PLAN_LIMIT}개까지입니다. 기존 문서를 결제하거나 지운 뒤 이어서 만들 수 있습니다.`,
+        },
+        { status: 402 },
+      );
+    }
+  }
 
   /*
    * 다시 생성 횟수.
@@ -125,8 +145,7 @@ export async function POST(req: Request) {
    */
   let regenPlanId = "";
   if (body.planId) {
-    const saved = await loadPlanState(identity.hash);
-    const plan = saved.plans.find((p) => p.id === body.planId);
+    const plan = savedState.plans.find((p) => p.id === body.planId);
     const existing = plan?.sections?.[sectionKey];
     if (existing?.markdown) {
       const quota = await resolveRegenQuota(body.planId);
