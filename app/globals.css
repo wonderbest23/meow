@@ -11352,32 +11352,47 @@ body {
   .home-reviews-score strong { font-size: 36px; }
 }
 
-/* ── 서비스 구성 요약 띠 — 진행 방식 카드와 같은 말투로 ──────────────
- * 지금까지 이 자리는 '눈썹 없는 섹션 제목'이었다. 글자 30px 굵게, 위아래
- * 실선, 178px 빈 상자. 바로 아래 '진행 방식' 제목이 38px 로 또 나오니까
- * 제목이 두 번 연달아 나오는 것처럼 보였다 — 손님이 "여기가 다른쪽이랑
- * 안 맞는다"고 한 이유다.
+/* ── 서비스 구성 요약 띠 — 회색 띠로 ───────────────────────────────
+ * 이 자리는 세 번 어긋나 있었다.
  *
- * 이건 제목이 아니라 넷 중 하나를 돌려 보여 주는 '카드'다. 그래서 진행
- * 방식 카드와 같은 치수를 쓴다 — 테두리 1px #b6bccd, 라운드 12, 제목 20/1.42,
- * 본문 16/1.6. 크기가 한 단 내려가면서 아래 진짜 제목과 서열이 생긴다.
+ * 하나. 눈썹 없는 30px 제목 + 위아래 실선이라, 바로 아래 '진행 방식'
+ * 38px 제목과 서열이 겹쳐 제목이 두 번 나오는 것처럼 보였다.
+ * 둘. 잠깐 카드로 바꿔 봤더니 이번엔 흰 바탕 위 흰 카드가 혼자 떠서
+ * 어디에도 속하지 않았다.
+ * 셋. 4열 표이던 시절 규칙(@media 620px)의 `> div { min-height: 66px }`
+ * 가 점 표시 줄까지 잡아서, 휴대폰에서 아래쪽에 66px 짜리 빈 칸이
+ * 생겼다. '하단이 비었다'의 진짜 원인이 이거다.
  *
- * 한 칸에 하나씩 넘겨 보는 구조(page.tsx)는 그대로 둔다. 바꾸는 건 옷차림뿐.
+ * 홈은 이미 흰 → 회색 → 흰 → 검정으로 띠를 번갈아 쌓는다(문서 유형이
+ * 회색이다). 그 규칙에 이 자리를 얹는다 — 화면 끝까지 가는 회색 띠.
+ * 상자가 없어지면 '빈 칸'도 같이 없어진다.
+ *
+ * 한 칸에 하나씩 넘겨 보는 구조는 그대로 둔다(네 칸을 한 줄에 눌러
+ * 담았더니 아무도 안 읽었다 — page.tsx 의 기록). 바꾸는 건 옷차림뿐.
  */
 .home-proof-bar {
-  min-height: 132px;
-  padding: 28px 32px 24px;
-  border: 1px solid #b6bccd;
-  border-radius: var(--radius);
-  background: var(--surface);
-  row-gap: 18px;
+  width: 100%;
+  min-height: 0;
+  padding: 46px var(--gutter) 42px;
+  border: 0;
+  border-radius: 0;
+  background: #f2f4f6;
+  row-gap: 20px;
+}
+
+/* 4열 표 시절 규칙이 점 표시 줄까지 잡던 것을 끊는다. */
+.home-proof-bar > .home-proof-dots { min-height: 0; padding: 0; }
+
+.home-proof-bar > div:not(.home-proof-dots) {
+  max-width: 640px;
+  gap: 8px;
 }
 
 .home-proof-bar strong {
   color: #1c1f25;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
-  line-height: 1.42;
+  line-height: 1.4;
   letter-spacing: -0.01em;
 }
 
@@ -11388,18 +11403,15 @@ body {
 }
 
 /* 옛 파랑(#1b64da) 이 여기만 남아 있었다. 홈의 파랑은 --blue 하나다. */
-.home-proof-dots i.on { background: var(--blue); }
 .home-proof-dots i { background: #c4cad4; }
+.home-proof-dots i.on { background: var(--blue); }
 
 @media (max-width: 640px) {
-  /* 640 아래에서 width:100% 로 꽉 채우던 규칙이 있어 카드 테두리가 화면
-     양끝에 붙었다. 이제 카드이므로 좌우 여백 안쪽으로 들여놓는다. */
-  .home-proof-bar { width: calc(100% - var(--gutter) * 2); min-height: 124px; padding: 22px 20px 20px; }
-  .home-proof-bar strong { font-size: 18px; }
+  .home-proof-bar { padding: 34px var(--gutter) 30px; row-gap: 18px; }
+  .home-proof-bar strong { font-size: 19px; }
   /*
-   * 4열 표이던 시절 남은 9px 규칙(@media 620px)을 여기서 되돌린다. 본문
-   * 단계는 13px 아래로 내려가지 않기로 했고, 이 문장은 캡션이 아니라
-   * 실제로 읽는 한 줄이다.
+   * 4열 표 시절 남은 9px 규칙을 되돌린다. 본문 단계는 13px 아래로
+   * 내려가지 않기로 했고, 이 문장은 캡션이 아니라 읽는 한 줄이다.
    */
   .home-proof-bar span { font-size: 15px; }
 }
