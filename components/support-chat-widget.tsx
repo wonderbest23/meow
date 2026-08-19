@@ -12,8 +12,10 @@ import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } fr
 import { supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
 import type { SupportChat } from "../lib/support-chat/repository";
 import {
+  CONSULT_INPUT_EXAMPLES,
   CONSULT_OPENING,
   CONSULT_STARTERS,
+  SUPPORT_INPUT_EXAMPLES,
   PROFILE_LABELS,
   type ConsultPick,
   type ConsultProfile,
@@ -85,6 +87,27 @@ export function SupportChatWidget() {
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * 입력창 예시 돌리기.
+   *
+   * "편하게 적어주세요" 로는 무엇을 얼마나 적어야 할지 알 수 없다. 지역·업종이
+   * 들어간 실제 문장을 예시로 띄우면 사람들이 그 형태로 따라 쓴다.
+   *
+   * 이미 뭔가 친 뒤에는 바꾸지 않는다 — 자기가 쓰던 자리에서 글자가 움직이면
+   * 방해가 된다. 움직임을 줄여 달라고 한 사람에게는 첫 예시만 고정한다.
+   */
+  const [exampleIndex, setExampleIndex] = useState(0);
+
+  useEffect(() => {
+    if (!open || message.trim()) return;
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const timer = setInterval(() => setExampleIndex((n) => n + 1), 3600);
+    return () => clearInterval(timer);
+  }, [open, message]);
+
+  const inputExamples = mode === "consult" ? CONSULT_INPUT_EXAMPLES : SUPPORT_INPUT_EXAMPLES;
+  const inputExample = inputExamples[exampleIndex % inputExamples.length];
 
   const loadChat = useCallback(async (markRead: boolean) => {
     try {
@@ -540,7 +563,7 @@ export function SupportChatWidget() {
                 ) : mode === "support" && chat.messages.length === 0 && quickMessages.length === 0 ? (
                   <div className="support-chat-bot-message">
                     <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span>
-                    <div><strong>{operatorMode ? "문의 내용을 남겨주세요." : "무엇이 궁금한가요?"}</strong><p>{operatorMode ? "확인 후 이 대화창으로 답변해 드릴게요." : "아래 입력창에 편하게 적어주세요."}</p></div>
+                    <div><strong>{operatorMode ? "문의 내용을 남겨주세요." : "무엇이 궁금한가요?"}</strong><p>{operatorMode ? "확인 후 이 대화창으로 답변해 드릴게요." : "예) 결제한 문서를 다시 내려받고 싶어요 — 이렇게 한 줄로 적어주세요."}</p></div>
                   </div>
                 ) : null}
               </div>
@@ -561,12 +584,18 @@ export function SupportChatWidget() {
                     rows={2}
                     placeholder={
                       mode === "consult"
-                        ? consultThinking ? "상담사가 답을 쓰고 있어요" : "편하게 적어주세요"
-                        : assistantThinking ? "답변을 확인하고 있어요" : operatorMode ? "문의 내용을 적어주세요" : "궁금한 내용을 입력해주세요"
+                        ? consultThinking ? "상담사가 답을 쓰고 있어요" : inputExample
+                        : assistantThinking ? "답변을 확인하고 있어요" : operatorMode ? "예) 결제가 안 되는데 확인해 주세요" : inputExample
                     }
                     aria-label={mode === "consult" ? "상담 메시지" : "문의 메시지"}
                     disabled={assistantThinking || consultThinking}
                   />
+                  {/*
+                    * 보내기는 입력칸 오른쪽 옆이 아니라 입력칸 '안' 오른쪽 아래에 둔다.
+                    * 옆에 두면 입력칸이 그만큼 좁아지고, 좁은 칸에서는 사람들이
+                    * 한 줄만 쓰고 만다. 안으로 넣으면 쓰는 자리는 넓어지고 버튼은
+                    * 손가락이 가는 자리(오른쪽 아래)에 온다.
+                    */}
                   <button type="submit" disabled={!message.trim() || sending || assistantThinking || consultThinking} aria-label="메시지 보내기" title="보내기">보내기</button>
                 </div>
                 <small><ShieldCheck /> 비밀번호나 주민등록번호는 입력하지 마세요.</small>
