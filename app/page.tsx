@@ -655,6 +655,11 @@ function Home({
     "정밀 재무 모델 — 3년 추정·민감도",
     "발표자료(PPT) — 완성 문서 기반 자동 구성",
   ];
+  /* 홈에서 바로 창업 상담 창을 연다 — 문의(사람)가 아니라 상담(AI) 쪽으로 */
+  const openConsult = () => {
+    window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "consult" } }));
+  };
+
   const requestCustomHomepage = () => {
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
       detail: {
@@ -688,8 +693,16 @@ function Home({
                 <strong>무료로 시작하기</strong>
                 <ArrowRight />
               </button>
-              {/* 원본의 'Watch video' 자리. 우리는 소개 영상이 없어 실제로 있는 것을 건다 */}
-              <a className="hero-secondary" href="/plan"><strong>완성 샘플 3부 보기</strong></a>
+              {/*
+                원본의 'Watch video' 자리.
+                한동안 '완성 샘플 3부 보기'를 걸어 뒀는데, 왼쪽 '무료로 시작하기'를
+                누르면 어차피 문서 목록(샘플 포함)이 나온다 — 같은 곳으로 가는 문이
+                둘이었다. 여기는 '아직 뭘 할지 모르겠는 사람'의 자리로 바꾼다.
+                샘플 보기는 아래 '문서 유형' 칸에 그대로 있다.
+              */}
+              <button type="button" className="hero-secondary" onClick={openConsult}>
+                <strong>챗봇 상담하기</strong>
+              </button>
             </div>
           </div>
           {/*

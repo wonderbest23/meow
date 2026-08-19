@@ -168,8 +168,14 @@ export function SupportChatWidget() {
 
   useEffect(() => {
     const openWithMessage = (event: Event) => {
-      const detail = (event as CustomEvent<{ message?: string }>).detail;
+      const detail = (event as CustomEvent<{ message?: string; mode?: "consult" | "support" }>).detail;
       setOpen(true);
+      /*
+       * 어느 창으로 열지 부르는 쪽이 정한다.
+       * 이 창은 한 번 문의 쪽으로 넘어가면 그대로 있어서, 홈에서 '창업 상담'을
+       * 눌렀는데 지난번에 보던 문의 화면이 나오는 일이 있었다.
+       */
+      if (detail?.mode) setMode(detail.mode);
       if (detail?.message?.trim()) {
         setShowQuickMenu(false);
         setOperatorMode(true);
