@@ -552,6 +552,7 @@ function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: Home
 
   return (
     <div className="home-reviews" aria-label="사용자 후기">
+      {demo && <p className="home-reviews-demo">디자인 확인용 예시입니다. 실제 후기가 아닙니다.</p>}
       <div className="home-reviews-summary">
         <div className="home-reviews-score">
           <strong>{average.toFixed(1)}</strong>
@@ -601,20 +602,14 @@ function Home({
   onPreview: () => void;
 }) {
   /*
-   * 후기 블록 — 디자인 확인용.
+   * 후기 블록 — 디자인 확인 단계라 시연 데이터로 공개 홈에 띄운다.
    *
-   * 주소에 ?demo=reviews 가 있을 때만 그린다. 방문자에게 보이지 않으므로
-   * 화면 안에 '실제 후기가 아닙니다' 를 적을 필요가 없다 — 주소를 아는
-   * 사람만 보는 것이 표시 문구보다 확실한 차단이다.
-   *
-   * 공개 홈에 띄우려면 지어낸 숫자가 아니라 실제로 받은 후기를 reviews 로
-   * 넘겨야 한다. 받은 적 없는 후기를 진짜처럼 두는 것은 표시광고법상
-   * 기만적 표시다.
+   * 블록 안의 '실제 후기가 아닙니다' 표시가 이것을 성립시킨다. 그 한 줄이
+   * 빠지면 받은 적 없는 후기를 진짜처럼 두는 것이 되고, 표시광고법상
+   * 기만적 표시에 해당한다. 표시를 지우려면 먼저 실제 후기를 받아
+   * reviews 로 넘겨야 한다.
    */
-  const [reviewDemo, setReviewDemo] = useState(false);
-  useEffect(() => {
-    setReviewDemo(new URLSearchParams(window.location.search).get("demo") === "reviews");
-  }, []);
+  const reviewDemo = true;
   /*
    * 서비스 요약 — 네 마디를 가운데서 하나씩 띄운다.
    *
