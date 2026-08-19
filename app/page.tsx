@@ -518,6 +518,12 @@ const REVIEW_DEMO: HomeReview[] = [
   { score: 5, body: "질문에 답만 했는데 사업계획서가 나왔습니다. 은행 제출용으로 그대로 썼어요.", who: "무인 스터디카페 · 경기", at: "2026.08" },
   { score: 5, body: "재무 부분이 제일 막막했는데 12개월 손익표가 자동으로 계산돼서 좋았습니다.", who: "베이커리 창업 준비 · 서울", at: "2026.08" },
   { score: 4, body: "정부지원 PSST 양식에 맞춰 나와서 편했습니다. 세부 문구는 조금 손봤어요.", who: "예비창업패키지 지원 · 부산", at: "2026.07" },
+  { score: 5, body: "은퇴하고 처음 써보는 사업계획서였는데 질문이 쉬워서 혼자 끝냈습니다.", who: "동네 반찬가게 · 대구", at: "2026.08" },
+  { score: 5, body: "PDF랑 Word 둘 다 받아서 제출처마다 다르게 낼 수 있었어요.", who: "온라인 편집숍 · 인천", at: "2026.07" },
+  { score: 4, body: "발표자료까지 자동으로 나오는 줄 몰랐습니다. 슬라이드는 조금 다듬었어요.", who: "펫 케어 서비스 · 경기", at: "2026.07" },
+  { score: 5, body: "같은 사업으로 유형만 바꿔 다시 만들 때 답변이 그대로 이어져서 편했습니다.", who: "무인 세탁소 · 광주", at: "2026.06" },
+  { score: 5, body: "숫자 근거가 어디서 왔는지 표시돼서 심사 때 설명하기 좋았습니다.", who: "청년창업 지원사업 · 대전", at: "2026.06" },
+  { score: 4, body: "혼자 쓰면 며칠 걸릴 걸 반나절에 끝냈습니다. 문장은 제 말투로 조금 고쳤어요.", who: "공유 오피스 · 서울", at: "2026.06" },
 ];
 
 function Stars({ score }: { score: number }) {
@@ -546,7 +552,6 @@ function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: Home
 
   return (
     <div className="home-reviews" aria-label="사용자 후기">
-      {demo && <p className="home-reviews-demo">디자인 확인용 예시입니다. 실제 후기가 아닙니다.</p>}
       <div className="home-reviews-summary">
         <div className="home-reviews-score">
           <strong>{average.toFixed(1)}</strong>
@@ -566,17 +571,24 @@ function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: Home
           ))}
         </ul>
       </div>
-      <ul className="home-reviews-list">
-        {list.map((r) => (
-          <li key={r.body}>
-            <Stars score={r.score} />
-            <p>{r.body}</p>
-            <small>
-              {r.who} · {r.at}
-            </small>
-          </li>
-        ))}
-      </ul>
+      {/*
+        같은 목록을 두 벌 이어 붙인다 — 절반만큼 밀면 끊김 없이 돌아온다.
+        두 번째 벌은 화면 낭독에서 뺀다. 같은 후기를 두 번 읽어 주면
+        듣는 사람은 개수를 잘못 안다.
+      */}
+      <div className="home-reviews-track">
+        <ul className="home-reviews-list">
+          {[...list, ...list].map((r, i) => (
+            <li key={`${r.body}-${i}`} aria-hidden={i >= list.length ? "true" : undefined}>
+              <Stars score={r.score} />
+              <p>{r.body}</p>
+              <small>
+                {r.who} · {r.at}
+              </small>
+            </li>
+          ))}
+        </ul>
+      </div>
     </div>
   );
 }
@@ -589,13 +601,20 @@ function Home({
   onPreview: () => void;
 }) {
   /*
-   * 후기 블록 — 지금은 디자인 확인 단계라 시연 데이터로 그대로 띄운다.
+   * 후기 블록 — 디자인 확인용.
    *
-   * 블록 안의 '실제 후기가 아닙니다' 표시는 반드시 함께 남는다. 그 한 줄이
-   * 없으면 받은 적 없는 후기를 진짜처럼 보이는 일이 되고, 표시광고법상
-   * 기만적 표시에 해당한다. 실제 후기가 쌓이면 reviews 를 넘겨 바꾼다.
+   * 주소에 ?demo=reviews 가 있을 때만 그린다. 방문자에게 보이지 않으므로
+   * 화면 안에 '실제 후기가 아닙니다' 를 적을 필요가 없다 — 주소를 아는
+   * 사람만 보는 것이 표시 문구보다 확실한 차단이다.
+   *
+   * 공개 홈에 띄우려면 지어낸 숫자가 아니라 실제로 받은 후기를 reviews 로
+   * 넘겨야 한다. 받은 적 없는 후기를 진짜처럼 두는 것은 표시광고법상
+   * 기만적 표시다.
    */
-  const reviewDemo = true;
+  const [reviewDemo, setReviewDemo] = useState(false);
+  useEffect(() => {
+    setReviewDemo(new URLSearchParams(window.location.search).get("demo") === "reviews");
+  }, []);
   /*
    * 서비스 요약 — 네 마디를 가운데서 하나씩 띄운다.
    *

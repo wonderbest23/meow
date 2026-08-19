@@ -11230,30 +11230,27 @@ body {
  * 색·라운드·그림자는 이미 심어 둔 토큰을 그대로 쓴다. 여기만 다른 규칙을
  * 두면 나중에 어긋난다.
  * ───────────────────────────────────────────────────────────── */
-.home-reviews {
+/*
+ * 히어로 칸에는 '.simple-home-choice > div { width: min(500px, 100%) }' 라는
+ * 옛 규칙이 있다. 글 칸을 좁게 묶으려던 것인데 자식 선택자라 특이도가 높아
+ * .home-reviews 의 width 를 이긴다. 후기 띠는 넓게 써야 하므로 같은 모양의
+ * 선택자로 되돌린다.
+ */
+.simple-home-choice > div.home-reviews {
   width: 100%;
+  max-width: none;
+  justify-self: stretch;
   display: grid;
   gap: 16px;
+  /*
+   * 히어로는 가운데 정렬이라 그대로 물려받으면 후기 본문까지 가운데로 선다.
+   * 후기는 여러 줄로 읽는 글이라 왼쪽으로 맞춰야 눈이 줄을 따라간다.
+   * 요약(평균 별점)은 숫자 하나라 가운데가 맞아 따로 되돌린다.
+   */
+  text-align: left;
 }
+.home-reviews-score { text-align: center; }
 
-/*
- * 시연용임을 화면에서 못 박는다.
- *
- * 작은 글씨로 구석에 두면 표시한 의미가 없다 — 표시광고법은 깨알 글씨가
- * 아니라 '전체적으로 어떻게 읽히는가' 를 본다. 평균 별점 바로 위에서
- * 같은 크기로 읽히게 둔다.
- */
-.home-reviews-demo {
-  margin: 0;
-  padding: 12px 16px;
-  border: 1px solid #e5c08a;
-  border-radius: var(--radius);
-  background: #fdf6ea;
-  color: #7a4f0f;
-  font-size: 15px;
-  font-weight: 700;
-  text-align: center;
-}
 
 .home-reviews-summary {
   display: grid;
@@ -11282,8 +11279,44 @@ body {
 .home-reviews-bar { height: 8px; border-radius: 999px; background: #eef1f5; overflow: hidden; }
 .home-reviews-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--blue); }
 
-.home-reviews-list { margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; list-style: none; }
+/*
+ * 가로로 흐르는 띠.
+ *
+ * 격자로 쌓으면 히어로 칸 폭에 갇혀 2열밖에 안 되고 세로로 길어진다.
+ * 한 줄로 세워 천천히 흘려보내면 폭에 상관없이 여러 장이 보이고, 움직임
+ * 자체가 '후기가 계속 쌓이고 있다'는 인상을 준다.
+ *
+ * 목록을 두 벌 이어 붙이고 절반만큼 밀면 끊김 없이 이어진다(두 번째 벌은
+ * 화면 낭독에서 뺀다 — 같은 후기를 두 번 읽어 주면 개수를 잘못 안다).
+ */
+.home-reviews-track {
+  position: relative;
+  overflow: hidden;
+  /* 양쪽 끝을 흐리게 — 잘린 카드가 갑자기 끊겨 보이지 않게 */
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.home-reviews-list {
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  list-style: none;
+  animation: reviewsFlow 48s linear infinite;
+}
+.home-reviews-track:hover .home-reviews-list { animation-play-state: paused; }
+@keyframes reviewsFlow {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+/* 움직임을 원치 않는 분에게는 멈춰 세우고 가로로 밀어 볼 수 있게 둔다 */
+@media (prefers-reduced-motion: reduce) {
+  .home-reviews-list { animation: none; }
+  .home-reviews-track { overflow-x: auto; }
+}
 .home-reviews-list li {
+  flex: none;
+  width: 280px;
   padding: 18px 20px;
   border: 1px solid var(--border-soft);
   border-radius: var(--radius);
