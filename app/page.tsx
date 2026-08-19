@@ -588,11 +588,14 @@ function Home({
   onStart: () => void;
   onPreview: () => void;
 }) {
-  /* 디자인 확인용 — 주소에 ?demo=reviews 가 있을 때만 후기 블록을 그린다 */
-  const [reviewDemo, setReviewDemo] = useState(false);
-  useEffect(() => {
-    setReviewDemo(new URLSearchParams(window.location.search).get("demo") === "reviews");
-  }, []);
+  /*
+   * 후기 블록 — 지금은 디자인 확인 단계라 시연 데이터로 그대로 띄운다.
+   *
+   * 블록 안의 '실제 후기가 아닙니다' 표시는 반드시 함께 남는다. 그 한 줄이
+   * 없으면 받은 적 없는 후기를 진짜처럼 보이는 일이 되고, 표시광고법상
+   * 기만적 표시에 해당한다. 실제 후기가 쌓이면 reviews 를 넘겨 바꾼다.
+   */
+  const reviewDemo = true;
   /*
    * 서비스 요약 — 네 마디를 가운데서 하나씩 띄운다.
    *
