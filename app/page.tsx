@@ -490,11 +490,16 @@ function GuidedTopBar({
 }
 
 /* 서비스 요약 네 마디 — 하는 일이 제목, 숫자는 그 아래 근거 */
-const HOME_PROOF_ITEMS = [
-  { title: "빠른 사업계획서 기획", body: "질문에 답하면 인공지능이 문장을 씁니다 · 문서 유형 7가지" },
-  { title: "기획서 기반 홈페이지 제작", body: "계획서에 답한 내용이 그대로 홈페이지가 됩니다" },
-  { title: "발표자료까지 한 번에", body: "PDF · Word · PPT로 내려받습니다" },
-  { title: "먼저 보고 결정하세요", body: "완성 샘플 3부 열람 · 앞 2개 섹션 무료 작성" },
+/*
+ * BRIX 'Stats V7' — 숫자 큰 카드 4장. 회전(한 칸씩 넘기기)을 걷어내고
+ * 정적으로 편다. 숫자는 전부 실제 값이다 — 지어낸 통계가 아니라
+ * 서비스 구성 그대로: 문서 7유형, 샘플 3부, 무료 2섹션, 파일 3종.
+ */
+const HOME_STATS = [
+  { num: "7", unit: "가지", label: "문서 유형", body: "사업계획서 · 재무 모델 · 발표자료까지" },
+  { num: "3", unit: "부", label: "완성 샘플", body: "로그인 없이 전체를 열람합니다" },
+  { num: "2", unit: "개", label: "무료 섹션", body: "어떤 문서든 앞부분을 무료로 만들어 봅니다" },
+  { num: "3", unit: "종", label: "내려받기", body: "PDF · Word · PPT" },
 ];
 
 /*
@@ -619,16 +624,6 @@ function Home({
    * 저절로 넘어가되 사람이 손을 대면 멈춘다 — 읽는 중에 글이 사라지면
    * 넘어가는 화면이 아니라 방해가 된다.
    */
-  const [proofIndex, setProofIndex] = useState(0);
-  const [proofPaused, setProofPaused] = useState(false);
-
-  useEffect(() => {
-    if (proofPaused) return;
-    // 움직임을 줄여 달라고 한 사람에게는 돌리지 않는다
-    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-    const timer = setInterval(() => setProofIndex((n) => (n + 1) % HOME_PROOF_ITEMS.length), 2800);
-    return () => clearInterval(timer);
-  }, [proofPaused]);
 
   const [businessInfo, setBusinessInfo] = useState<{
     operatorName: string; representativeName: string; businessRegistrationNumber: string; mailOrderSalesNumber: string;
@@ -676,7 +671,7 @@ function Home({
   return (
     <main className="new-home simple-home">
       <div className="hero-shell">
-        <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+        <Header light onConsult={openConsult} onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         {/*
           첫 화면 — Neuros Lite 의 Hero banner/03 구조.
           가운데로 모으고, 제목 아래에 만들어지는 결과물을 큰 카드로 보여준다.
@@ -714,13 +709,15 @@ function Home({
             '확인되지 않은 수치를 사실처럼 쓰지 않는다'는 이 서비스의 약속과
             정면으로 어긋난다. 실제 후기가 쌓이면 이 자리에 그대로 꽂는다.
           */}
-          {reviewDemo ? (
-            <HomeReviews demo />
-          ) : (
-            <div className="home-hero-screen">
-              <img src="/hero-desktop-2026.jpg" alt="사업계획서가 만들어지는 화면" width={1204} height={480} />
-            </div>
-          )}
+          {/*
+            BRIX Heros V1 의 겹치는 큰 카드 2장 (726×551, 라운드 30, 뒤 카드가
+            114 낮게). 뒤에는 휴대폰 화면, 앞에는 PC 화면 — 실제 결과물 사진이다.
+          */}
+          <div className="home-hero-collage">
+            <img className="home-hero-collage-back" src="/hero-mobile-2026.jpg" alt="" aria-hidden="true" width={726} height={551} />
+            <img className="home-hero-collage-front" src="/hero-desktop-2026.jpg" alt="사업계획서가 만들어지는 화면" width={726} height={551} />
+          </div>
+          {reviewDemo && <HomeReviews demo />}
         </section>
       </div>
 
@@ -730,21 +727,15 @@ function Home({
         숫자만 봐서는 무엇을 해주는지 알 수 없어서, 하는 일을 제목으로 올리고
         숫자는 그 아래 근거로 내렸다. 한 칸에 하나씩 넘겨 본다.
       */}
-      <section
-        className="home-proof-bar"
-        aria-label="서비스 구성 요약"
-        onMouseEnter={() => setProofPaused(true)}
-        onMouseLeave={() => setProofPaused(false)}
-      >
-        {HOME_PROOF_ITEMS.map((item, index) => (
-          <div key={item.title} className={index === proofIndex ? "on" : ""} aria-hidden={index !== proofIndex}>
-            <strong>{item.title}</strong>
-            <span>{item.body}</span>
-          </div>
-        ))}
-        <div className="home-proof-dots" aria-hidden="true">
-          {HOME_PROOF_ITEMS.map((item, index) => (
-            <i key={item.title} className={index === proofIndex ? "on" : ""} />
+      <section className="home-stats" aria-label="서비스 구성 요약">
+        <h2>숫자로 먼저 확인하세요</h2>
+        <div className="home-stats-cards">
+          {HOME_STATS.map((item) => (
+            <article key={item.label}>
+              <strong>{item.num}<em>{item.unit}</em></strong>
+              <b>{item.label}</b>
+              <p>{item.body}</p>
+            </article>
           ))}
         </div>
       </section>
@@ -805,10 +796,16 @@ function Home({
             <p>완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.</p>
             <div><ShieldCheck /><span><strong>무료 범위에는 결제 정보가 필요하지 않습니다</strong><small>결제는 신용·체크카드로 안전하게 진행됩니다</small></span></div>
           </div>
-          <div className="home-price-options">
-            <article className="home-price-panel">
-              <header><span>사업계획서 플랜 빌더</span><h3>문서 1부 · 모든 유형 동일가</h3><p>구독이 아닙니다 — 필요한 문서만 1회 결제</p></header>
-              <div className="home-price-value"><span><em>문서 1부당</em></span><strong className="home-price-number">{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></strong></div>
+          {/*
+            BRIX 'Pricing V6' — 가운데 세로선을 사이에 둔 두 칸. 왼쪽은 문서,
+            오른쪽은 맞춤 홈페이지. 포함 내역 목록은 지우지 않는다 — 다시 생성
+            횟수 같은 약속은 여기 말고는 밝힐 자리가 없다.
+          */}
+          <div className="home-price-plans">
+            <article>
+              <span className="home-price-plan-type">사업계획서 문서 1부</span>
+              <strong className="home-price-number">{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></strong>
+              <p>모든 유형 동일가 · 구독이 아니라 필요한 문서만 1회 결제합니다.</p>
               <ul>
                 <li><Check /> 결제한 문서의 전체 섹션 생성</li>
                 <li><Check /> PDF·수정 가능한 Word 내려받기</li>
@@ -820,6 +817,18 @@ function Home({
               <button onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
               <small>신용·체크카드 결제 · 나이스페이 안전 결제</small>
             </article>
+            <article>
+              <span className="home-price-plan-type">맞춤 홈페이지 제작</span>
+              <strong className="home-price-number">{CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}<small>원부터</small></strong>
+              <p>자동 제작 홈페이지보다 세밀한 디자인이나 예약·결제 기능이 필요할 때, 상담으로 견적을 정합니다.</p>
+              <ul>
+                <li><Check /> 계획서에 답한 내용을 그대로 반영</li>
+                <li><Check /> 디자인·기능 범위를 상담으로 확정</li>
+                <li><Check /> 제작비는 범위 확정 후 결제</li>
+              </ul>
+              <button type="button" className="home-price-consult" onClick={requestCustomHomepage}>제작 상담하기</button>
+              <small>상담은 무료입니다</small>
+            </article>
           </div>
         </div>
       </section>
@@ -829,31 +838,21 @@ function Home({
         오른쪽 세 칸은 새로 지어낸 말이 아니라 위 섹션에서 이미 밝힌 사실을
         옮긴 것이다 — 여기서만 하는 약속을 만들면 지키지 못한다.
       */}
+      {/*
+        BRIX 'Call To Action V8' — 가운데 제목 하나와 버튼 둘뿐인 마지막 권유.
+        예전 파랑 카드의 오른쪽 세 칸은 가격 섹션에서 이미 밝힌 사실의 복사본이라
+        지워도 잃는 정보가 없다.
+      */}
       <section className="home-trial" aria-labelledby="home-trial-title">
-        <div className="home-trial-card">
-          <div className="home-trial-lead">
-            <h2 id="home-trial-title">먼저 만들어 보고<br />결정하세요</h2>
-            <button type="button" onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
-          </div>
-          <ul className="home-trial-points">
-            <li>
-              <span aria-hidden="true"><FileText /></span>
-              <div><strong>결제 없이 확인</strong><p>완성 샘플 3부를 로그인 없이 전체 열람하고, 내 사업으로도 앞 2개 섹션을 만들어 봅니다.</p></div>
-            </li>
-            <li>
-              <span aria-hidden="true"><ShieldCheck /></span>
-              <div><strong>구독이 아닙니다</strong><p>필요한 문서만 1부씩 결제합니다. 자동으로 다시 청구되지 않습니다.</p></div>
-            </li>
-            <li>
-              <span aria-hidden="true"><Check /></span>
-              <div><strong>근거를 함께 표시</strong><p>확인되지 않은 수치는 사실처럼 쓰지 않고 &lsquo;가정&rsquo; 또는 &lsquo;확인 필요&rsquo;로 남깁니다.</p></div>
-            </li>
-          </ul>
+        <h2 id="home-trial-title">먼저 만들어 보고<br />결정하세요</h2>
+        <div className="home-trial-actions">
+          <button type="button" className="home-trial-primary" onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
+          <button type="button" className="home-trial-secondary" onClick={openConsult}>챗봇 상담하기</button>
         </div>
       </section>
 
       <section className="home-faq" aria-labelledby="home-faq-title">
-        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">궁금한 점을 미리 확인해 보세요</h2></div>
+        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">궁금한 점을 미리 확인해 보세요</h2><p>더 궁금한 것은 화면 오른쪽 아래 상담 창에 물어보세요.</p></div>
         <div>
           <details><summary>글을 잘 못 써도 만들 수 있나요?<ChevronDown /></summary><p>네. 사용자는 사업에 대한 사실(가격, 고객, 비용 등)만 답하면 되고, 문장은 인공지능이 씁니다. 답이 어려운 질문은 AI 추천 답변을 참고할 수 있습니다.</p></details>
           <details><summary>결제 전에 품질을 확인할 수 있나요?<ChevronDown /></summary><p>네. 실제 인공지능으로 만든 완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 내 사업으로도 앞 2개 섹션을 무료로 만들어 직접 확인할 수 있습니다.</p></details>
@@ -868,17 +867,28 @@ function Home({
         맨 아래 다시 가는 선 아래로 저작권 한 줄. 바탕은 흰색이다.
         검정이던 것을 흰색으로 바꾸는 김에 법정 고지가 더 잘 읽힌다.
       */}
+      {/*
+        BRIX 'Footers V10' — 한 줄(로고·링크 줄) + 가는 선 + 가운데 저작권.
+        원본의 소셜 아이콘 자리는 우리에게 계정이 없어 비운다. 사업자 법정
+        표기와 AI 경고는 디자인이 어떻게 바뀌어도 지우지 않는다 — 저작권 줄
+        아래 작은 글씨로 남긴다.
+      */}
       <footer className="home-footer">
-        <div className="home-footer-top"><Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} /></div>
-        <div className="home-footer-cols">
-        <div><strong>오늘창업</strong><p>질문에 답하면 인공지능이 사업계획서·재무 모델·발표자료를 완성하는 문서 서비스</p></div>
-        <nav aria-label="하단 안내"><strong>안내</strong><a href="/business-info">사업자·통신판매 정보</a><a href="/privacy">개인정보처리방침</a><a href="/ai-notice">인공지능·국외 처리</a><a href="/terms">이용약관</a><a href="/refund">취소·환불 기준</a><a href="/account">로그인·계정 복구</a></nav>
-        <div className="home-footer-notice"><strong>판매자·이용 안내</strong>{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p></div>
+        <div className="home-footer-row">
+          <Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+          <nav aria-label="하단 안내">
+            <a href="/business-info">사업자·통신판매 정보</a>
+            <a href="/privacy">개인정보처리방침</a>
+            <a href="/ai-notice">인공지능·국외 처리</a>
+            <a href="/terms">이용약관</a>
+            <a href="/refund">취소·환불 기준</a>
+            <a href="/account">로그인·계정 복구</a>
+          </nav>
         </div>
         <div className="home-footer-bottom">
-          <small>© 2026 오늘창업</small>
-          <small>화면 디자인 일부는 Khoa (JAK)의 Neuros Lite를 따랐습니다 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC BY 4.0</a>)</small>
+          <small>© 2026 오늘창업 · 화면 디자인은 BRIX Templates의 Website Wireframes UI Kit와 Khoa (JAK)의 Neuros Lite를 따랐습니다 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC BY 4.0</a>)</small>
         </div>
+        <div className="home-footer-notice">{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p></div>
       </footer>
     </main>
   );

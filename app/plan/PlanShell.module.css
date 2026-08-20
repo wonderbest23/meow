@@ -12,8 +12,8 @@
 .shell {
   --rail-w: 208px;
   min-height: 100vh;
-  background: var(--surface-muted, #f2f4f6);
-  color: var(--text-strong, #191f28);
+  background: var(--surface-muted, #f6f5ff);
+  color: var(--text-strong, #0d0a2c);
   display: flex;
 }
 
@@ -104,7 +104,7 @@
   height: 26px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
   display: grid;
   place-items: center;
@@ -273,7 +273,7 @@
     padding: 4px 6px 4px 0;
     font-size: 13.5px;
     font-weight: 700;
-    color: var(--text-muted, #6b7684);
+    color: var(--text-muted, #5f5c7f);
     text-decoration: none;
   }
   .shellBack span {
@@ -321,7 +321,7 @@
   border: 1px solid var(--border-soft, #d5dbe2);
   border-left: 0;
   background: #fff;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font-size: 13px;
   font-weight: 800;
   line-height: 1;
@@ -345,8 +345,8 @@
   opacity: 1;
 }
 .railToggle:hover {
-  color: var(--blue, #3272db);
-  background: var(--blue-soft, #e8f3ff);
+  color: var(--blue, #4a3aff);
+  background: var(--blue-soft, #efeefb);
 }
 
 @media (max-width: 640px) {
@@ -473,7 +473,7 @@
     align-items: center;
     justify-content: space-between;
     background: #fff;
-    border-bottom: 1px solid var(--border-soft, #e5e8eb);
+    border-bottom: 1px solid var(--border-soft, #dfdef1);
   }
 
   .mobileBrand {

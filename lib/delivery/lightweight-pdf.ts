@@ -379,18 +379,18 @@ class PdfLayout {
         const h = Math.abs(yv - zero);
         const bottom = Math.min(yv, zero);
         this.page.commands.push(
-          `q ${rgb(p.value < 0 ? "D6455D" : "3272DB")} rg ${(px(i) - barW / 2).toFixed(2)} ${bottom.toFixed(2)} ${barW.toFixed(2)} ${Math.max(h, 0.6).toFixed(2)} re f Q`,
+          `q ${rgb(p.value < 0 ? "D6455D" : "4A3AFF")} rg ${(px(i) - barW / 2).toFixed(2)} ${bottom.toFixed(2)} ${barW.toFixed(2)} ${Math.max(h, 0.6).toFixed(2)} re f Q`,
         );
       });
     } else {
       // 누적은 이어지는 값이라 선
       const path = points.map((p, i) => `${px(i).toFixed(2)} ${py(p.value).toFixed(2)} ${i === 0 ? "m" : "l"}`).join(" ");
-      this.page.commands.push(`q ${rgb("3272DB")} RG 1.6 w 1 j 1 J ${path} S Q`);
+      this.page.commands.push(`q ${rgb("4A3AFF")} RG 1.6 w 1 j 1 J ${path} S Q`);
 
       // 각 점 — 적자는 붉게, 흑자는 주색으로
       points.forEach((p, i) => {
         this.page.commands.push(
-          `q ${rgb(p.value < 0 ? "D6455D" : "3272DB")} rg ${(px(i) - 1.4).toFixed(2)} ${(py(p.value) - 1.4).toFixed(2)} 2.8 2.8 re f Q`,
+          `q ${rgb(p.value < 0 ? "D6455D" : "4A3AFF")} rg ${(px(i) - 1.4).toFixed(2)} ${(py(p.value) - 1.4).toFixed(2)} 2.8 2.8 re f Q`,
         );
       });
     }

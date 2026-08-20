@@ -1,8 +1,8 @@
 /* 안내 네비게이터 공용 스타일 — 목록·개요·위저드가 같은 언어를 쓴다 */
 
 @keyframes guideRing {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3272db) 55%, transparent), 0 10px 26px rgba(47, 87, 244, 0.25); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blue, #3272db) 25%, transparent), 0 10px 26px rgba(47, 87, 244, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #4a3aff) 55%, transparent), 0 10px 26px rgba(74, 58, 255, 0.25); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blue, #4a3aff) 25%, transparent), 0 10px 26px rgba(74, 58, 255, 0.18); }
 }
 
 .ring {
@@ -22,13 +22,13 @@
   transform: translate(-50%, 0);
   z-index: 5;
   white-space: nowrap;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
   padding: 8px 13px;
   border-radius: 999px;
-  box-shadow: 0 8px 20px rgba(47, 87, 244, 0.35);
+  box-shadow: 0 8px 20px rgba(74, 58, 255, 0.35);
   animation: guideFloat 1.8s ease-in-out infinite;
   pointer-events: none;
 }
@@ -59,7 +59,7 @@
   bottom: -5px;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--blue, #3272db);
+  border-top-color: var(--blue, #4a3aff);
   border-bottom: 0;
 }
 
@@ -79,7 +79,7 @@
 @media (prefers-reduced-motion: reduce) {
   .ring {
     animation: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3272db) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #4a3aff) 55%, transparent);
   }
   .bubble {
     animation: none;

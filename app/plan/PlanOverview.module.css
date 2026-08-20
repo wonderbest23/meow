@@ -2,8 +2,8 @@
 
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f2f4f6);
-  color: var(--text-strong, #191f28);
+  background: var(--surface-muted, #f6f5ff);
+  color: var(--text-strong, #0d0a2c);
   font-family: inherit;
   padding: 22px 16px 48px;
 }
@@ -38,14 +38,14 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(150deg, var(--blue, #3272db), #7f9bff);
+  background: linear-gradient(150deg, var(--blue, #4a3aff), #7f9bff);
   display: grid;
   place-items: center;
   color: #fff;
   font-weight: 800;
   font-size: 16px;
   margin-bottom: 14px;
-  box-shadow: 0 8px 18px rgba(47, 87, 244, 0.5);
+  box-shadow: 0 8px 18px rgba(74, 58, 255, 0.5);
 }
 .railBtn {
   width: 44px;
@@ -116,9 +116,9 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   background: var(--surface, #fff);
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   cursor: pointer;
   font-size: 18px;
   display: grid;
@@ -132,7 +132,7 @@
 }
 .title span {
   font-weight: 500;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
 }
 
 /* 진행 미터 스트립 */
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 0;
   padding: 18px 4px 20px;
-  border-bottom: 1px solid var(--border-soft, #e5e8eb);
+  border-bottom: 1px solid var(--border-soft, #dfdef1);
   margin-bottom: 20px;
 }
 .meter {
@@ -159,13 +159,13 @@
   top: 4px;
   bottom: 4px;
   width: 1px;
-  background: var(--border-soft, #e5e8eb);
+  background: var(--border-soft, #dfdef1);
 }
 .meterLabel {
   font-size: 13px;
   font-weight: 800;
   letter-spacing: 0.08em;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   text-transform: uppercase;
 }
 .meterRow {
@@ -186,10 +186,10 @@
   width: 22px;
   height: 8px;
   border-radius: 4px;
-  background: var(--surface-muted, #e5e8eb);
+  background: var(--surface-muted, #dfdef1);
 }
 .segs i.on {
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
 }
 .segs i.ok {
   background: #16b877;
@@ -218,7 +218,7 @@
   display: inline-flex;
   align-items: center;
   background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 12px;
   padding: 4px;
   gap: 4px;
@@ -226,7 +226,7 @@
 .seg button {
   border: 0;
   background: transparent;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font: inherit;
   font-weight: 800;
   font-size: 13.5px;
@@ -235,7 +235,7 @@
   cursor: pointer;
 }
 .seg button.segOn {
-  background: var(--text-strong, #191f28);
+  background: var(--text-strong, #0d0a2c);
   color: #fff;
 }
 
@@ -246,9 +246,9 @@
  * 둘 중 무엇을 눌러야 하는지 알 수 없었다. 한 단 낮춘다.
  */
 .bulkBtn {
-  border: 1px solid var(--blue, #3272db);
+  border: 1px solid var(--blue, #4a3aff);
   background: var(--surface, #fff);
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
   font: inherit;
   font-weight: 700;
   font-size: 13px;
@@ -259,8 +259,8 @@
   white-space: nowrap;
 }
 .bulkBtn:disabled {
-  background: var(--surface-soft, #f7f8fa);
-  color: var(--text-muted, #697077);
+  background: var(--surface-soft, #f9f9ff);
+  color: var(--text-muted, #5f5c7f);
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -269,7 +269,7 @@
   align-items: center;
   gap: 10px;
   background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 10px;
   padding: 8px 12px;
 }
@@ -277,26 +277,26 @@
   width: 90px;
   height: 6px;
   border-radius: 3px;
-  background: var(--surface-muted, #f2f4f6);
+  background: var(--surface-muted, #f6f5ff);
   overflow: hidden;
   flex: 0 0 auto;
 }
 .bulkFill {
   display: block;
   height: 100%;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   transition: width 0.3s;
 }
 .bulkText {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   white-space: nowrap;
 }
 .bulkCancel {
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   background: transparent;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -320,22 +320,22 @@
   align-items: center;
   gap: 10px;
   padding: 14px 16px;
-  background: var(--surface-soft, #f7f8fa);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  background: var(--surface-soft, #f9f9ff);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 14px;
   margin-bottom: 18px;
 }
 .exportInfo {
   font-size: 13.5px;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   margin-right: auto;
 }
 .exportInfo b {
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
 }
 .exportBtn {
-  border: 1px solid var(--blue, #3272db);
-  background: var(--blue, #3272db);
+  border: 1px solid var(--blue, #4a3aff);
+  background: var(--blue, #4a3aff);
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -351,12 +351,12 @@
 .docEmpty {
   padding: 60px 20px;
   text-align: center;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font-size: 14px;
 }
 .docSection {
   padding: 22px 24px;
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 16px;
   margin-bottom: 16px;
   background: var(--surface, #fff);
@@ -364,7 +364,7 @@
 .docCrumb {
   font-size: 13px;
   font-weight: 800;
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
   margin-bottom: 4px;
 }
 .docTitle {
@@ -376,7 +376,7 @@
 .docBody {
   font-size: 14.5px;
   line-height: 1.7;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
 }
 .docBody :global(h1) {
   font-size: 20px;
@@ -406,19 +406,19 @@
   border-collapse: collapse;
   margin: 12px 0 18px;
   font-size: 13px;
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 10px;
   overflow: hidden;
 }
 .docBody :global(th),
 .docBody :global(td) {
-  border-bottom: 1px solid var(--border-soft, #e5e8eb);
+  border-bottom: 1px solid var(--border-soft, #dfdef1);
   padding: 9px 12px;
   text-align: left;
   vertical-align: top;
 }
 .docBody :global(th) {
-  background: var(--surface-soft, #f7f8fa);
+  background: var(--surface-soft, #f9f9ff);
   font-weight: 800;
   font-size: 13px;
 }
@@ -431,7 +431,7 @@
 }
 .band {
   background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 16px;
   padding: 18px 22px 20px;
 }
@@ -453,14 +453,14 @@
   font-size: 17px;
   font-weight: 800;
   letter-spacing: -0.4px;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
   flex: 1;
   min-width: 0;
 }
 .chapCount {
   font-size: 13px;
   font-weight: 800;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font-variant-numeric: tabular-nums;
 }
 .nodes {
@@ -476,8 +476,8 @@
   border-radius: 11px;
   cursor: pointer;
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-  background: var(--surface-soft, #f7f8fa);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  background: var(--surface-soft, #f9f9ff);
+  border: 1px solid var(--border-soft, #dfdef1);
   text-align: left;
 }
 .node:hover {
@@ -486,7 +486,7 @@
   box-shadow: 0 8px 18px rgba(20, 32, 64, 0.08);
 }
 .node:focus-visible {
-  outline: 2px solid var(--blue, #3272db);
+  outline: 2px solid var(--blue, #4a3aff);
   outline-offset: 2px;
 }
 .nodeNum {
@@ -506,7 +506,7 @@
 .nodeLabel {
   font-weight: 700;
   font-size: 13.5px;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -516,7 +516,7 @@
   margin-left: auto;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font-variant-numeric: tabular-nums;
   flex: 0 0 auto;
 }
@@ -560,7 +560,7 @@
  * 한 단계 더 진한 값으로 내린다.
  */
 .node.done .nodeLabel {
-  color: #626981;
+  color: #5f5c7f;
   font-weight: 600;
 }
 .node.done .nodeTime {
@@ -640,7 +640,7 @@
   gap: 18px;
   width: 100%;
   text-align: left;
-  border: 1.5px solid var(--blue, #3272db);
+  border: 1.5px solid var(--blue, #4a3aff);
   border-radius: 16px;
   background: linear-gradient(120deg, #eef4ff, var(--surface, #fff) 65%);
   padding: 20px 22px;
@@ -667,19 +667,19 @@
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.3px;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
 }
 .finaleBody span {
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
 }
 .finaleGo {
   flex: none;
   font-size: 13.5px;
   font-weight: 800;
   color: #fff;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   border-radius: 10px;
   padding: 12px 18px;
   white-space: nowrap;
@@ -704,7 +704,7 @@
   gap: 6px;
 }
 .lockTag {
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
 }
 
 
@@ -809,17 +809,17 @@
 .continueBanner {
   grid-template-columns: minmax(0, 1fr) auto;
   background: var(--surface, #fff);
-  border: 1.5px solid var(--blue, #3272db);
+  border: 1.5px solid var(--blue, #4a3aff);
 }
 
 @media (max-width: 640px) {
   .continueBanner { grid-template-columns: 1fr; }
 }
 .continueBanner .finaleBody b {
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
 }
 .continueBanner .finaleBody span {
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
 }
 
 
@@ -828,7 +828,7 @@
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
   font-variant-numeric: tabular-nums;
 }
 /* 세그먼트 규격은 모든 미터가 동일하다 — 진행률은 숫자 크기로만 강조한다 */
@@ -852,7 +852,7 @@
   .meterPrimary {
     grid-column: 1 / -1;
     padding-bottom: 14px;
-    border-bottom: 1px solid var(--border-soft, #e5e8eb);
+    border-bottom: 1px solid var(--border-soft, #dfdef1);
   }
   /* 세로 구분선은 두 번째 줄의 가운데에만 */
   .meter + .meter::before {
@@ -863,7 +863,7 @@
   }
   .meterPrimary + .meter + .meter {
     padding-left: 14px;
-    border-left: 1px solid var(--border-soft, #e5e8eb);
+    border-left: 1px solid var(--border-soft, #dfdef1);
   }
   .meterRow {
     gap: 8px;

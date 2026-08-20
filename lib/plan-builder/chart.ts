@@ -148,10 +148,10 @@ export function chartToSvg(spec: ChartSpec): string {
   const y = (v: number) => padT + plotH - ((v - min) / range) * plotH;
   const zeroY = y(0);
 
-  const POS = "#3272db";
+  const POS = "#4a3aff";
   const NEG = "#d6455d";
-  const AXIS = "#626981";
-  const GRID = "#dde1e6"; /* 키트의 CoolGray/20 */
+  const AXIS = "#5f5c7f";
+  const GRID = "#dfdef1"; /* 키트의 CoolGray/20 */
 
   /* 가로 눈금선 + y축 라벨 — 반올림된 값이라 읽을 수 있다 */
   const gridLines = chartTicks(spec.points)

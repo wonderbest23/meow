@@ -8,7 +8,7 @@
 .surface {
   font-size: 14.5px;
   line-height: 1.75;
-  color: var(--wz-ink, #191f28);
+  color: var(--wz-ink, #0d0a2c);
   outline: none;
   border-radius: 10px;
   padding: 6px 10px;
@@ -16,11 +16,11 @@
   transition: background 0.14s, box-shadow 0.14s;
 }
 .surface:hover {
-  background: var(--wz-panel2, #f7f8fa);
+  background: var(--wz-panel2, #f9f9ff);
 }
 .surface:focus {
   background: transparent;
-  box-shadow: 0 0 0 1px var(--wz-line, #e5e8eb);
+  box-shadow: 0 0 0 1px var(--wz-line, #dfdef1);
 }
 
 .surface h1,
@@ -52,21 +52,21 @@
 .surface blockquote {
   margin: 0 0 12px;
   padding: 8px 14px;
-  border-left: 3px solid var(--wz-brand, #3272db);
-  background: var(--wz-panel2, #f7f8fa);
+  border-left: 3px solid var(--wz-brand, #4a3aff);
+  background: var(--wz-panel2, #f9f9ff);
   border-radius: 0 8px 8px 0;
-  color: var(--wz-muted, #4e5968);
+  color: var(--wz-muted, #585667);
 }
 .surface strong {
   font-weight: 800;
 }
 .surface a {
-  color: var(--wz-brand, #3272db);
+  color: var(--wz-brand, #4a3aff);
   text-decoration: underline;
 }
 .surface hr {
   border: 0;
-  border-top: 1px solid var(--wz-line, #e5e8eb);
+  border-top: 1px solid var(--wz-line, #dfdef1);
   margin: 20px 0;
 }
 
@@ -80,13 +80,13 @@
 }
 .surface th,
 .surface td {
-  border: 1px solid var(--wz-line, #e5e8eb);
+  border: 1px solid var(--wz-line, #dfdef1);
   padding: 8px 10px;
   text-align: left;
   vertical-align: top;
 }
 .surface th {
-  background: var(--wz-panel2, #f7f8fa);
+  background: var(--wz-panel2, #f9f9ff);
   font-weight: 800;
 }
 .surface .selectedCell::after {
@@ -101,7 +101,7 @@
 .surface figure {
   margin: 14px 0 20px;
   padding: 10px;
-  border: 1px solid var(--wz-line, #e5e8eb);
+  border: 1px solid var(--wz-line, #dfdef1);
   border-radius: 12px;
   background: #fff;
   overflow-x: auto;
@@ -118,7 +118,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--wz-ink, #191f28);
+  background: var(--wz-ink, #0d0a2c);
   border-radius: 10px;
   padding: 4px 5px;
   box-shadow: 0 10px 26px rgba(20, 32, 64, 0.28);
@@ -141,7 +141,7 @@
   color: #fff;
 }
 .tbOn {
-  background: var(--wz-brand, #3272db);
+  background: var(--wz-brand, #4a3aff);
   color: #fff;
 }
 .tbSep {

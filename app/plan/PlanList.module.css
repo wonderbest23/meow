@@ -2,8 +2,8 @@
 
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f2f4f6);
-  color: var(--text-strong, #191f28);
+  background: var(--surface-muted, #f6f5ff);
+  color: var(--text-strong, #0d0a2c);
   padding: 26px 20px 56px;
 }
 .frame {
@@ -40,7 +40,7 @@
   align-items: baseline;
   gap: 16px;
   padding: 8px 0;
-  border-top: 1px solid var(--border-soft, #e5e8eb);
+  border-top: 1px solid var(--border-soft, #dfdef1);
 }
 .bizRow:first-child {
   border-top: 0;
@@ -51,14 +51,14 @@
   width: 76px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
 }
 .bizRow dd {
   margin: 0;
   min-width: 0;
   font-size: 14.5px;
   font-weight: 600;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -69,7 +69,7 @@
 }
 .bizDesc {
   margin: 0 0 12px;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   font-size: 14px;
   line-height: 1.6;
 }
@@ -81,16 +81,16 @@
 .tag {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-body, #4e5968);
-  background: var(--surface-soft, #f7f8fa);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  color: var(--text-body, #585667);
+  background: var(--surface-soft, #f9f9ff);
+  border: 1px solid var(--border-soft, #dfdef1);
   padding: 6px 12px;
   border-radius: 999px;
 }
 .editBtn {
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   background: var(--surface, #fff);
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   font: inherit;
   font-weight: 700;
   font-size: 13px;
@@ -101,8 +101,8 @@
   white-space: nowrap;
 }
 .editBtn:hover {
-  border-color: var(--blue, #3272db);
-  color: var(--blue, #3272db);
+  border-color: var(--blue, #4a3aff);
+  color: var(--blue, #4a3aff);
 }
 
 /* 섹션 헤더 */
@@ -122,7 +122,7 @@
   text-wrap: balance;
 }
 .listTitle span {
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font-weight: 700;
   margin-left: 6px;
 }
@@ -131,7 +131,7 @@
   align-items: center;
   gap: 6px;
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -140,7 +140,7 @@
   border-radius: 11px;
   cursor: pointer;
   text-decoration: none;
-  box-shadow: 0 8px 18px rgba(47, 87, 244, 0.28);
+  box-shadow: 0 8px 18px rgba(74, 58, 255, 0.28);
 }
 
 /* 플랜 카드 그리드 */
@@ -152,7 +152,7 @@
 .card {
   position: relative;
   background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 18px;
   padding: 20px 22px 18px;
   cursor: pointer;
@@ -164,12 +164,12 @@
 }
 .card:hover {
   transform: translateY(-3px);
-  border-color: color-mix(in srgb, var(--blue, #3272db) 40%, transparent);
+  border-color: color-mix(in srgb, var(--blue, #4a3aff) 40%, transparent);
   box-shadow: 0 16px 36px rgba(20, 32, 64, 0.12);
 }
 .card.active {
-  border-color: var(--blue, #3272db);
-  box-shadow: 0 0 0 1px var(--blue, #3272db) inset;
+  border-color: var(--blue, #4a3aff);
+  box-shadow: 0 0 0 1px var(--blue, #4a3aff) inset;
 }
 .cardTop {
   display: flex;
@@ -180,14 +180,14 @@
 .cardType {
   font-size: 13px;
   font-weight: 800;
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
   letter-spacing: 0.03em;
 }
 .activeBadge {
   font-size: 13px;
   font-weight: 800;
-  background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3272db);
+  background: var(--blue-soft, #efeefb);
+  color: var(--blue, #4a3aff);
   padding: 4px 9px;
   border-radius: 999px;
 }
@@ -204,7 +204,7 @@
   display: inline-flex;
   align-items: center;
   font-size: 13px;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   opacity: 0;
   cursor: pointer;
   padding: 2px 5px;
@@ -215,18 +215,18 @@
   opacity: 1;
 }
 .renameBtn:hover {
-  background: var(--surface-soft, #f7f8fa);
-  color: var(--blue, #3272db);
+  background: var(--surface-soft, #f9f9ff);
+  color: var(--blue, #4a3aff);
 }
 .titleInput {
   width: 100%;
-  border: 1.5px solid var(--blue, #3272db);
+  border: 1.5px solid var(--blue, #4a3aff);
   border-radius: 8px;
   padding: 7px 10px;
   font: inherit;
   font-size: 16px;
   font-weight: 800;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
   background: var(--surface, #fff);
 }
 .titleInput:focus {
@@ -241,13 +241,13 @@
   flex: 1;
   height: 7px;
   border-radius: 4px;
-  background: var(--surface-muted, #f2f4f6);
+  background: var(--surface-muted, #f6f5ff);
   overflow: hidden;
 }
 .barFill {
   height: 100%;
   border-radius: 4px;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   transition: width 0.3s;
 }
 .barFill.done {
@@ -256,7 +256,7 @@
 .pct {
   font-size: 13px;
   font-weight: 800;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   font-variant-numeric: tabular-nums;
   min-width: 62px;
   text-align: right;
@@ -270,12 +270,12 @@
 }
 .date {
   font-size: 13px;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
 }
 .copyBtn {
   border: 0;
   background: transparent;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -284,14 +284,14 @@
   cursor: pointer;
 }
 .copyBtn:hover {
-  background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3272db);
+  background: var(--blue-soft, #efeefb);
+  color: var(--blue, #4a3aff);
 }
 
 .delBtn {
   border: 0;
   background: transparent;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -307,7 +307,7 @@
 /* 빈 상태 */
 .empty {
   background: var(--surface, #fff);
-  border: 1px dashed var(--border-soft, #e5e8eb);
+  border: 1px dashed var(--border-soft, #dfdef1);
   border-radius: 18px;
   padding: 56px 24px;
   text-align: center;
@@ -319,7 +319,7 @@
 }
 .emptyDesc {
   margin: 0 0 18px;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font-size: 14px;
 }
 
@@ -377,7 +377,7 @@
   flex-direction: column;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   background: #fff;
   transition: transform 0.2s, box-shadow 0.2s;
 }
@@ -389,7 +389,7 @@
   }
 }
 .sheetActive {
-  box-shadow: 0 0 0 2px var(--acc, #3272db);
+  box-shadow: 0 0 0 2px var(--acc, #4a3aff);
 }
 .cover {
   position: relative;
@@ -574,7 +574,7 @@
 .metaType {
   font-size: 13px;
   font-weight: 800;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
 }
 .metaRow {
   display: flex;
@@ -607,7 +607,7 @@
   border-radius: 16px;
   display: flex;
   flex-direction: column;
-  background: var(--surface-soft, #f7f8fa);
+  background: var(--surface-soft, #f9f9ff);
   overflow: hidden;
   transition: 0.2s;
 }
@@ -618,7 +618,7 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
   font-size: 13.5px;
   font-weight: 700;
 }
@@ -627,9 +627,9 @@
   background: transparent;
 }
 .newCard:hover .newCardInner {
-  border-color: var(--blue, #3272db);
-  color: var(--blue, #3272db);
-  background: var(--blue-soft, #e8f3ff);
+  border-color: var(--blue, #4a3aff);
+  color: var(--blue, #4a3aff);
+  background: var(--blue-soft, #efeefb);
 }
 
 @media (max-width: 640px) {
@@ -672,7 +672,7 @@
 .notStarted {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted, #697077);
+  color: var(--text-muted, #5f5c7f);
 }
 
 
@@ -684,8 +684,8 @@
 
 /* 강조 테두리 — 은은하게 숨쉬는 파란 링 */
 @keyframes guideRing {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3272db) 55%, transparent), 0 10px 26px rgba(47, 87, 244, 0.25); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blue, #3272db) 25%, transparent), 0 10px 26px rgba(47, 87, 244, 0.18); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #4a3aff) 55%, transparent), 0 10px 26px rgba(74, 58, 255, 0.25); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--blue, #4a3aff) 25%, transparent), 0 10px 26px rgba(74, 58, 255, 0.18); }
 }
 .sheetGuide {
   animation: guideRing 1.8s ease-in-out infinite;
@@ -712,14 +712,14 @@
   width: max-content;
   max-width: min(100%, 220px);
   text-align: center;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
   line-height: 1.45;
   padding: 8px 13px;
   border-radius: 14px;
-  box-shadow: 0 8px 20px rgba(47, 87, 244, 0.35);
+  box-shadow: 0 8px 20px rgba(74, 58, 255, 0.35);
   animation: guideFloat 1.8s ease-in-out infinite;
   pointer-events: none;
 }
@@ -750,7 +750,7 @@
   bottom: -5px;
   transform: translateX(-50%);
   border: 6px solid transparent;
-  border-top-color: var(--blue, #3272db);
+  border-top-color: var(--blue, #4a3aff);
   border-bottom: 0;
 }
 
@@ -794,7 +794,7 @@
 @media (prefers-reduced-motion: reduce) {
   .sheetGuide, .guidePulse {
     animation: none;
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #3272db) 55%, transparent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue, #4a3aff) 55%, transparent);
   }
   .guideBubble {
     animation: none;
@@ -823,7 +823,7 @@
   background: currentColor;
 }
 .stripIdle { color: #c1c7cd; }
-.stripLive { color: var(--blue, #3272db); }
+.stripLive { color: var(--blue, #4a3aff); }
 .stripDone { color: #16b877; }
 
 /* 색과 함께 모양으로도 나눈다 — 색만으로는 색각 이상인 분에게 구분이 사라진다 */
@@ -860,15 +860,15 @@
 
 /* 시작 전에도 빈 홈을 그린다 — 셋이 같은 자리에서 비교된다 */
 .stripIdle .barFill { background: transparent; }
-.stripIdle .pct { color: #697077; }
-.stripLive .pct { color: var(--blue, #3272db); }
+.stripIdle .pct { color: #5f5c7f; }
+.stripLive .pct { color: var(--blue, #4a3aff); }
 /* 흰 바탕 위 글씨라 밝은 초록은 2.57 — 막대는 밝게 두고 글씨만 진하게 */
 .stripDone .pct { color: #0b7a4f; }
 .strip .pct { font-weight: 700; }
 
 /* ── 한눈에 보는 숫자 — Wireframes Kit 의 Stats-card ─────────────
- * 실측: 테두리 1px #dde1e6 / 패딩 16 / 안쪽 간격 16 / 표식 상자 48 /
- *       위·아래 설명 16px #697077 / 숫자 24px Bold #21272a (행간 1.1)
+ * 실측: 테두리 1px #dfdef1 / 패딩 16 / 안쪽 간격 16 / 표식 상자 48 /
+ *       위·아래 설명 16px #5f5c7f / 숫자 24px Bold #21272a (행간 1.1)
  *
  * 표식 색은 카드의 상태 색과 같게 맞춘다 — 위에서 본 색이 아래 카드에서
  * 같은 뜻으로 다시 나오게 해야 두 번 배우지 않는다.
@@ -885,7 +885,7 @@
   align-items: center;
   gap: 16px;
   padding: 16px;
-  border: 1px solid #dde1e6;
+  border: 1px solid #dfdef1;
   border-radius: 12px;
   background: var(--surface, #fff);
 }
@@ -906,15 +906,15 @@
   background: currentColor;
 }
 
-.stat_all { color: #697077; }
-.stat_todo { color: var(--blue, #3272db); }
+.stat_all { color: #5f5c7f; }
+.stat_todo { color: var(--blue, #4a3aff); }
 .stat_done { color: #0b7a4f; }
 .stat_all .statMark { background: #f2f4f8; }
 .stat_todo .statMark { background: #e8f0fd; }
 .stat_done .statMark { background: #e4f7ef; }
 
 .statText { min-width: 0; display: grid; }
-.statText small { color: #697077; font-size: 14px; line-height: 1.4; }
+.statText small { color: #5f5c7f; font-size: 14px; line-height: 1.4; }
 .statText strong {
   color: #21272a;
   font-size: 24px;

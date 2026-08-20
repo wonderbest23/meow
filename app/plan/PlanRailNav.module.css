@@ -207,7 +207,7 @@
 }
 
 .sectionOn {
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
 }
 
@@ -229,7 +229,7 @@
   }
 
   .sectionOn:hover {
-    background: var(--blue, #3272db);
+    background: var(--blue, #4a3aff);
   }
 }
 

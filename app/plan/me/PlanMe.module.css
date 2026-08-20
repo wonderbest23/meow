@@ -12,7 +12,7 @@
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
 }
 
 .card {
@@ -35,16 +35,16 @@
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.3px;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
 }
 
 .cardAction {
   margin-left: auto;
   padding: 8px 14px;
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 10px;
   background: var(--surface, #fff);
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -54,8 +54,8 @@
 }
 
 .cardAction:hover {
-  border-color: var(--blue, #3272db);
-  color: var(--blue, #3272db);
+  border-color: var(--blue, #4a3aff);
+  color: var(--blue, #4a3aff);
 }
 
 /* 라벨-값 줄 — 내 플랜 목록의 사업 카드와 같은 형태 */
@@ -68,7 +68,7 @@
   align-items: baseline;
   gap: 16px;
   padding: 9px 0;
-  border-top: 1px solid var(--border-soft, #e5e8eb);
+  border-top: 1px solid var(--border-soft, #dfdef1);
 }
 
 .row:first-child {
@@ -89,7 +89,7 @@
   min-width: 0;
   font-size: 14.5px;
   font-weight: 600;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
@@ -107,7 +107,7 @@
 
 .table th {
   padding: 0 10px 9px;
-  border-bottom: 1px solid var(--border-soft, #e5e8eb);
+  border-bottom: 1px solid var(--border-soft, #dfdef1);
   color: var(--text-muted, #8b95a1);
   font-size: 13px;
   font-weight: 700;
@@ -117,8 +117,8 @@
 
 .table td {
   padding: 12px 10px;
-  border-bottom: 1px solid var(--border-soft, #e5e8eb);
-  color: var(--text-body, #4e5968);
+  border-bottom: 1px solid var(--border-soft, #dfdef1);
+  color: var(--text-body, #585667);
   white-space: nowrap;
 }
 
@@ -130,14 +130,14 @@
 .amount {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
 }
 
 .status {
   padding: 3px 9px;
   border-radius: 999px;
-  background: var(--surface-muted, #f2f4f6);
-  color: var(--text-body, #4e5968);
+  background: var(--surface-muted, #f6f5ff);
+  color: var(--text-body, #585667);
   font-size: 13px;
   font-weight: 700;
 }
@@ -162,10 +162,10 @@
 .logout {
   margin-left: auto;
   padding: 11px 18px;
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 10px;
   background: var(--surface, #fff);
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   font: inherit;
   font-size: 13.5px;
   font-weight: 700;
@@ -215,7 +215,7 @@
 .refundBtn {
   border: 1px solid var(--border-soft, #d5dbe2);
   background: #fff;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -225,8 +225,8 @@
   white-space: nowrap;
 }
 .refundBtn:hover {
-  border-color: var(--blue, #3272db);
-  color: var(--blue, #3272db);
+  border-color: var(--blue, #4a3aff);
+  color: var(--blue, #4a3aff);
 }
 .refundForm {
   display: flex;
@@ -236,8 +236,8 @@
 }
 .refundForm textarea {
   width: 100%;
-  border: 1.5px solid var(--border-soft, #e5e8eb);
-  background: var(--surface-soft, #f7f8fa);
+  border: 1.5px solid var(--border-soft, #dfdef1);
+  background: var(--surface-soft, #f9f9ff);
   border-radius: 10px;
   padding: 10px 12px;
   font: inherit;
@@ -250,7 +250,7 @@
 }
 .refundSubmit {
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -277,7 +277,7 @@
 .refundMessage {
   margin: 10px 0 0;
   font-size: 13px;
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
 }
 
 /* 회원 탈퇴 — 되돌릴 수 없는 행동이라 톤을 분명히 한다 */
@@ -309,13 +309,13 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.7;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
 }
 .deleteForm input {
   width: 100%;
   max-width: 320px;
-  border: 1.5px solid var(--border-soft, #e5e8eb);
-  background: var(--surface-soft, #f7f8fa);
+  border: 1.5px solid var(--border-soft, #dfdef1);
+  background: var(--surface-soft, #f9f9ff);
   border-radius: 10px;
   padding: 11px 13px;
   font: inherit;

@@ -1,7 +1,7 @@
 /* 로그인·결제 안내 — 질문 대신 자리를 차지한다 */
 
 .wrap {
-  border: 1px solid var(--wz-line, #e5e8eb);
+  border: 1px solid var(--wz-line, #dfdef1);
   border-radius: 16px;
   background: var(--wz-panel, #fff);
   padding: 40px 28px 34px;
@@ -17,8 +17,8 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--wz-brand-soft, #e8f3ff);
-  color: var(--wz-brand, #3272db);
+  background: var(--wz-brand-soft, #efeefb);
+  color: var(--wz-brand, #4a3aff);
 }
 
 .title {
@@ -26,14 +26,14 @@
   font-size: 19px;
   font-weight: 800;
   letter-spacing: -0.4px;
-  color: var(--wz-ink, #191f28);
+  color: var(--wz-ink, #0d0a2c);
 }
 
 .desc {
   margin: 0 0 20px;
   font-size: 13.5px;
   line-height: 1.75;
-  color: var(--wz-muted, #4e5968);
+  color: var(--wz-muted, #585667);
 }
 
 .price {
@@ -43,8 +43,8 @@
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: var(--wz-ink, #191f28);
-  background: var(--wz-panel2, #f7f8fa);
+  color: var(--wz-ink, #0d0a2c);
+  background: var(--wz-panel2, #f9f9ff);
   border-radius: 12px;
   padding: 14px 22px;
   margin-bottom: 20px;
@@ -53,7 +53,7 @@
 .price span {
   font-size: 13px;
   font-weight: 600;
-  color: var(--wz-muted, #4e5968);
+  color: var(--wz-muted, #585667);
   letter-spacing: 0;
 }
 
@@ -62,7 +62,7 @@
   display: block;
   max-width: 300px;
   margin: 0 auto;
-  background: var(--wz-brand, #3272db);
+  background: var(--wz-brand, #4a3aff);
   color: #fff;
   font-weight: 700;
   font-size: 14.5px;
@@ -80,7 +80,7 @@
   max-width: 300px;
   margin: 10px auto 0;
   background: #fff;
-  color: var(--wz-muted, #4e5968);
+  color: var(--wz-muted, #585667);
   font-weight: 600;
   font-size: 14px;
   padding: 13px 22px;
@@ -90,8 +90,8 @@
   transition: 0.2s;
 }
 .secondary:hover {
-  border-color: var(--wz-brand, #3272db);
-  color: var(--wz-brand, #3272db);
+  border-color: var(--wz-brand, #4a3aff);
+  color: var(--wz-brand, #4a3aff);
 }
 
 .note {

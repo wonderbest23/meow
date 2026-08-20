@@ -2,7 +2,7 @@
 
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f2f4f6);
+  background: var(--surface-muted, #f6f5ff);
   display: grid;
   place-items: center;
   padding: 40px 20px;
@@ -10,7 +10,7 @@
 
 .card {
   background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 20px;
   box-shadow: 0 20px 50px rgba(20, 32, 64, 0.08);
   padding: 44px 34px 34px;
@@ -26,8 +26,8 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--blue-soft, #e8f3ff);
-  color: var(--blue, #3272db);
+  background: var(--blue-soft, #efeefb);
+  color: var(--blue, #4a3aff);
 }
 
 .title {
@@ -35,14 +35,14 @@
   font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
 }
 
 .desc {
   margin: 0 0 22px;
   font-size: 14px;
   line-height: 1.75;
-  color: var(--text-body, #4e5968);
+  color: var(--text-body, #585667);
 }
 
 .price {
@@ -52,8 +52,8 @@
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.6px;
-  color: var(--text-strong, #191f28);
-  background: var(--surface-soft, #f7f8fa);
+  color: var(--text-strong, #0d0a2c);
+  background: var(--surface-soft, #f9f9ff);
   border-radius: 14px;
   padding: 18px;
   margin-bottom: 22px;
@@ -70,7 +70,7 @@
   display: block;
   width: 100%;
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -122,7 +122,7 @@
   text-decoration: none;
 }
 .back:hover {
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
 }
 
 

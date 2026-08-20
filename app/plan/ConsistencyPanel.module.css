@@ -44,14 +44,14 @@
   font-size: 13px;
   font-weight: 700;
   letter-spacing: -0.2px;
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
   word-break: keep-all;
 }
 
 .link {
   flex: none;
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
   font: inherit;
   font-size: 12.5px;

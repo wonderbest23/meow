@@ -90,7 +90,7 @@
   align-items: center;
   gap: 4px;
   background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #e5e8eb);
+  border: 1px solid var(--border-soft, #dfdef1);
   border-radius: 12px;
   padding: 4px;
 }
@@ -114,7 +114,7 @@
   color: var(--wz-ink);
 }
 .seg .segOn {
-  background: var(--text-strong, #191f28);
+  background: var(--text-strong, #0d0a2c);
   color: #fff;
 }
 .seg .segOn:hover {
@@ -173,7 +173,7 @@
   border: 1px solid var(--wz-line);
   border-radius: 14px;
   background: var(--wz-panel);
-  color: var(--text-strong, #191f28);
+  color: var(--text-strong, #0d0a2c);
   font: inherit;
   text-align: left;
   cursor: pointer;
@@ -194,11 +194,11 @@
   display: grid;
   place-items: center;
   background: rgba(49, 130, 246, 0.1);
-  color: var(--blue, #3272db);
+  color: var(--blue, #4a3aff);
 }
 
 .outBtnPrimary .outIcon {
-  background: var(--blue, #3272db);
+  background: var(--blue, #4a3aff);
   color: #fff;
 }
 
@@ -232,7 +232,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .outBtn:hover:not(:disabled) {
-    border-color: var(--blue, #3272db);
+    border-color: var(--blue, #4a3aff);
     transform: translateY(-1px);
   }
 }
@@ -299,7 +299,7 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  background: var(--surface-muted, #f2f4f6);
+  background: var(--surface-muted, #f6f5ff);
   padding: 26px 30px 40px;
 }
 
@@ -550,7 +550,7 @@
     flex: none;
     border: 1px solid var(--wz-line);
     background: var(--wz-panel);
-    color: var(--wz-muted, #4e5968);
+    color: var(--wz-muted, #585667);
     font: inherit;
     font-size: 13px;
     font-weight: 700;
@@ -642,7 +642,7 @@
   align-items: center;
   gap: 12px;
   padding: 10px 16px;
-  background: var(--wz-ink, #191f28);
+  background: var(--wz-ink, #0d0a2c);
   color: #fff;
 }
 
@@ -696,7 +696,7 @@
 .readerBody {
   font-size: 14.5px;
   line-height: 1.8;
-  color: var(--wz-ink, #191f28);
+  color: var(--wz-ink, #0d0a2c);
 }
 
 .readerBody :global(table) {
@@ -711,21 +711,21 @@
 
 .readerBody :global(th),
 .readerBody :global(td) {
-  border: 1px solid var(--wz-line, #e5e8eb);
+  border: 1px solid var(--wz-line, #dfdef1);
   padding: 8px 10px;
   text-align: left;
   vertical-align: top;
 }
 
 .readerBody :global(th) {
-  background: var(--wz-panel2, #f7f8fa);
+  background: var(--wz-panel2, #f9f9ff);
   font-weight: 800;
 }
 
 .readerBody :global(figure.plan-chart-figure) {
   margin: 14px 0 20px;
   padding: 10px;
-  border: 1px solid var(--wz-line, #e5e8eb);
+  border: 1px solid var(--wz-line, #dfdef1);
   border-radius: 12px;
   overflow-x: auto;
 }

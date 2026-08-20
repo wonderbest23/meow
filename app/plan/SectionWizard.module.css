@@ -5,20 +5,20 @@
   --wz-nav: #12324a;
   --wz-nav-ink: #a9bdd2;
   --wz-nav-line: #20455f;
-  --wz-brand: var(--blue, #3272db);
-  --wz-brand-soft: var(--blue-soft, #e8f3ff);
+  --wz-brand: var(--blue, #4a3aff);
+  --wz-brand-soft: var(--blue-soft, #efeefb);
   --wz-ok: #16b877;
   --wz-track: #dde3ef;
-  --wz-line: var(--border-soft, #e5e8eb);
+  --wz-line: var(--border-soft, #dfdef1);
   --wz-panel: var(--surface, #fff);
-  --wz-panel2: var(--surface-soft, #f7f8fa);
-  --wz-ink: var(--text-strong, #191f28);
-  --wz-muted: var(--text-body, #4e5968);
-  --wz-faint: var(--text-muted, #697077);
+  --wz-panel2: var(--surface-soft, #f9f9ff);
+  --wz-ink: var(--text-strong, #0d0a2c);
+  --wz-muted: var(--text-body, #585667);
+  --wz-faint: var(--text-muted, #5f5c7f);
   --wz-shadow: 0 24px 60px rgba(20, 32, 64, 0.12);
   --wz-shadow-sm: 0 2px 8px rgba(20, 32, 64, 0.06);
 
-  background: var(--surface-muted, #f2f4f6);
+  background: var(--surface-muted, #f6f5ff);
   color: var(--wz-ink);
   min-height: 100vh;
   padding: 22px 16px 40px;
@@ -63,7 +63,7 @@
   font-weight: 800;
   font-size: 16px;
   margin-bottom: 14px;
-  box-shadow: 0 8px 18px rgba(47, 87, 244, 0.5);
+  box-shadow: 0 8px 18px rgba(74, 58, 255, 0.5);
 }
 .railBtn {
   width: 44px;
@@ -303,7 +303,7 @@
 .sec.on {
   color: #fff;
   font-weight: 700;
-  background: rgba(47, 87, 244, 0.28);
+  background: rgba(74, 58, 255, 0.28);
 }
 .sec.on .secNo {
   color: #cdd9ff;
@@ -511,7 +511,7 @@
   background: var(--wz-brand);
   border-color: var(--wz-brand);
   color: #fff;
-  box-shadow: 0 6px 16px rgba(47, 87, 244, 0.32);
+  box-shadow: 0 6px 16px rgba(74, 58, 255, 0.32);
 }
 .chk {
   display: flex;
@@ -631,9 +631,9 @@
  * 무엇이 골라진 상태인지도 헷갈렸다.
  */
 .sugCardOn {
-  border-color: var(--blue, #3272db);
-  background: var(--blue-soft, #e8f3ff);
-  color: var(--blue-dark, #1b64da);
+  border-color: var(--blue, #4a3aff);
+  background: var(--blue-soft, #efeefb);
+  color: var(--blue-dark, #4a3aff);
   font-weight: 700;
 }
 
@@ -773,7 +773,7 @@
   border: 0;
   background: var(--wz-brand);
   color: #fff;
-  box-shadow: 0 8px 20px rgba(47, 87, 244, 0.35);
+  box-shadow: 0 8px 20px rgba(74, 58, 255, 0.35);
   margin-left: auto;
 }
 
@@ -1051,15 +1051,15 @@
 
 /* 답변 직후 자동 이동한 다음 질문 — 잠깐 파란 링으로 "이제 여기" */
 @keyframes qNextRing {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #3272db) 50%, transparent), var(--wz-shadow-sm); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--wz-brand, #3272db) 22%, transparent), var(--wz-shadow-sm); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #4a3aff) 50%, transparent), var(--wz-shadow-sm); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--wz-brand, #4a3aff) 22%, transparent), var(--wz-shadow-sm); }
 }
 .qNext {
-  border-color: var(--wz-brand, #3272db);
+  border-color: var(--wz-brand, #4a3aff);
   animation: qNextRing 1.6s ease-in-out 2;
 }
 @media (prefers-reduced-motion: reduce) {
-  .qNext { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #3272db) 50%, transparent); }
+  .qNext { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #4a3aff) 50%, transparent); }
 }
 
 /* 모순 패널에서 짚어 들어온 질문 — 빨간 테두리로 정확히 어디인지 보여준다 */
@@ -1083,7 +1083,7 @@
 
 /* 어긋났던 답을 고치면 — 빨간 대신 파란 '해결' 상태로 즉시 전환 */
 .qResolved {
-  border: 1.5px solid var(--wz-brand, #3272db);
+  border: 1.5px solid var(--wz-brand, #4a3aff);
   background: #f4f8ff;
   box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.1), var(--wz-shadow-sm);
 }
@@ -1092,7 +1092,7 @@
   font-size: 13px;
   font-weight: 800;
   color: #fff;
-  background: var(--wz-brand, #3272db);
+  background: var(--wz-brand, #4a3aff);
   border-radius: 999px;
   padding: 3px 8px;
   vertical-align: middle;
@@ -1498,7 +1498,7 @@
     margin-top: 0;
     font-size: 13px;
     font-weight: 700;
-    color: var(--wz-muted, #4e5968);
+    color: var(--wz-muted, #585667);
     white-space: nowrap;
   }
 }
@@ -1548,7 +1548,7 @@
   padding: 14px 16px;
   border: 1px solid var(--wz-line, #e5e7eb);
   border-radius: 12px;
-  background: var(--wz-soft, #f7f8fa);
+  background: var(--wz-soft, #f9f9ff);
   display: grid;
   gap: 4px;
 }
