@@ -13152,3 +13152,233 @@ html .simple-home .site-header a.account-link > svg {
   .demo-step-types b.pick { background: #4a3aff; border-color: #4a3aff; color: #fff; }
   .demo-step-checks i { background: #4a3aff; border-color: #4a3aff; }
 }
+
+/* ══ 히어로 무대 v5 — 장면 전환극 ═══════════════════════════════════
+ * 쌓이는 피드가 아니라 연극이다. 한 무대(고정 460px)에서 장면이
+ * 스르륵 바뀌고, 마우스 커서가 직접 칩을 누르고 체크를 찍는다.
+ *
+ * 16초 시계:
+ *  1막 상담   0–26%  (타이핑 3–13, 전송 14, 생각 15–19, 답변 20–24)
+ *             24–27% 스르륵 퇴장
+ *  2막 유형   27–45% (커서 이동 30–35, 클릭 36, 칩 채움 37) 43–45 퇴장
+ *  3막 답변   45–66% (체크 클릭 50 / 55 / 60) 64–66 퇴장
+ *  4막 문서   68–97% (떠오름 68–74, 빛 쓸림 74–84, 그래프 82–90)
+ *             97–100% 잦아들고 처음으로
+ */
+.demo-card.demo-v5 {
+  display: grid;
+  height: 460px;
+  overflow: hidden;
+  position: relative;
+}
+.demo-card.demo-v5 .demo-scene {
+  grid-area: 1 / 1;
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 12px;
+  padding: 28px 34px;
+  opacity: 0;                      /* 각 장면은 자기 막에만 존재한다 */
+}
+
+/* 1막 — 채팅 (가운데 정렬 말고 위부터) */
+.demo-v5 .demo-scene-chat { align-content: start; padding: 0; animation: v5-chat 16s ease infinite; }
+.demo-v5 .demo-scene-chat .demo-chat-body { min-height: 150px; }
+.demo-v5 .demo-msg-user span { animation: v5-type 16s steps(18) infinite; }
+.demo-v5 .demo-send { animation: v5-send 16s ease infinite; }
+.demo-v5 .demo-msg-thinking { animation: v5-think 16s ease infinite; }
+.demo-v5 .demo-msg-reply { animation: v5-reply 16s ease infinite; }
+
+/* 2·3막 공통 머리 */
+.demo-v5 .demo-scene small { color: #4a3aff; font-size: 12px; font-weight: 800; }
+.demo-v5 .demo-scene h4 { margin: 0 0 6px; color: #0d0a2c; font-size: 22px; font-weight: 800; }
+
+/* 2막 — 유형 카드 */
+.demo-v5 .demo-scene-types { animation: v5-types 16s ease infinite; }
+.demo-type-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+.demo-type-grid b {
+  padding: 18px 14px;
+  border: 1.5px solid #dfdef1;
+  border-radius: 16px;
+  color: #0d0a2c;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.35;
+  text-align: center;
+}
+.demo-type-grid b span { display: block; margin-top: 4px; color: #7f7ca2; font-size: 11.5px; font-weight: 500; }
+.demo-type-grid b.pick { animation: v5-chip 16s ease infinite; }
+.demo-type-grid b.pick span { animation: v5-chip-sub 16s ease infinite; }
+
+/* 3막 — 체크 */
+.demo-v5 .demo-scene-checks { animation: v5-checks 16s ease infinite; }
+.demo-v5 .demo-scene-checks p {
+  margin: 0;
+  padding: 13px 16px;
+  border: 1px solid #efeefb;
+  border-radius: 14px;
+  background: #f9f9ff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+}
+.demo-v5 .demo-scene-checks span { color: #585667; }
+.demo-v5 .demo-scene-checks em { margin-left: auto; color: #0d0a2c; font-style: normal; font-weight: 700; white-space: nowrap; }
+.demo-v5 .demo-scene-checks i {
+  flex: none; width: 18px; height: 18px; border-radius: 50%;
+  border: 1.5px solid #dfdef1; background: #fff; position: relative;
+}
+.demo-v5 .demo-scene-checks i::after {
+  content: ""; position: absolute; left: 5px; top: 2px;
+  width: 5px; height: 9px; border: solid #fff; border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.demo-v5 .ck1 i { animation: v5-ck1 16s ease infinite; }
+.demo-v5 .ck2 i { animation: v5-ck2 16s ease infinite; }
+.demo-v5 .ck3 i { animation: v5-ck3 16s ease infinite; }
+
+/* 4막 — 문서 */
+.demo-v5 .demo-scene-paper { padding: 20px 34px; animation: v5-paper-scene 16s ease infinite; }
+.demo-v5 .demo-paper {
+  margin: 0 auto;
+  width: min(480px, 100%);
+  padding: 22px 26px 16px;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(20, 20, 43, .14);
+  animation: v5-paper 16s cubic-bezier(.22, .8, .3, 1) infinite;
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  gap: 8px;
+}
+.demo-v5 .demo-paper::after {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .85) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: v5-shine 16s ease infinite;
+}
+.demo-v5 .demo-chart i { animation: v5-bar 16s ease infinite; }
+.demo-v5 .demo-chart { height: 58px; }
+.demo-v5 .demo-paper strong { font-size: 19px; }
+
+/* 커서 — 장면 2·3을 누비며 누른다. 좌표는 카드 기준 %. */
+.demo-cursor {
+  position: absolute;
+  left: 0; top: 0;
+  z-index: 5;
+  opacity: 0;
+  filter: drop-shadow(0 2px 4px rgba(20, 20, 43, .35));
+  animation: v5-cursor 16s ease-in-out infinite;
+  pointer-events: none;
+}
+.demo-cursor::after {          /* 클릭 물결 */
+  content: "";
+  position: absolute;
+  left: -4px; top: -4px;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  border: 2px solid #4a3aff;
+  opacity: 0;
+  animation: v5-click 16s ease-out infinite;
+}
+
+/* ── 16s 시계 ── */
+@keyframes v5-chat {
+  0% { opacity: 0; transform: translateY(14px); }
+  2%, 24% { opacity: 1; transform: none; }
+  27%, 100% { opacity: 0; transform: translateY(-22px); }
+}
+@keyframes v5-type { 0%, 3% { clip-path: inset(0 100% 0 0); } 13%, 100% { clip-path: inset(0 0 0 0); } }
+@keyframes v5-send { 0%, 13.5% { transform: none; } 14.2% { transform: scale(.86); } 15%, 100% { transform: none; } }
+@keyframes v5-think { 0%, 14.5% { opacity: 0; } 15%, 19% { opacity: 1; } 20%, 100% { opacity: 0; } }
+@keyframes v5-reply { 0%, 19.5% { opacity: 0; transform: translateY(6px); } 21%, 100% { opacity: 1; transform: none; } }
+
+@keyframes v5-types {
+  0%, 27% { opacity: 0; transform: translateY(24px) scale(.98); }
+  30%, 42% { opacity: 1; transform: none; }
+  45%, 100% { opacity: 0; transform: translateY(-22px); }
+}
+@keyframes v5-chip {
+  0%, 35.5% { background: #fff; border-color: #dfdef1; color: #0d0a2c; transform: none; }
+  36.5% { transform: scale(.95); }
+  37.5%, 100% { background: #4a3aff; border-color: #4a3aff; color: #fff; transform: none; }
+}
+@keyframes v5-chip-sub { 0%, 36.5% { color: #7f7ca2; } 37.5%, 100% { color: rgba(255, 255, 255, .8); } }
+
+@keyframes v5-checks {
+  0%, 45% { opacity: 0; transform: translateY(24px) scale(.98); }
+  48%, 63% { opacity: 1; transform: none; }
+  66%, 100% { opacity: 0; transform: translateY(-22px); }
+}
+@keyframes v5-ck1 { 0%, 49.5% { background: #fff; border-color: #dfdef1; } 50.5%, 100% { background: #4a3aff; border-color: #4a3aff; } }
+@keyframes v5-ck2 { 0%, 54.5% { background: #fff; border-color: #dfdef1; } 55.5%, 100% { background: #4a3aff; border-color: #4a3aff; } }
+@keyframes v5-ck3 { 0%, 59.5% { background: #fff; border-color: #dfdef1; } 60.5%, 100% { background: #4a3aff; border-color: #4a3aff; } }
+
+@keyframes v5-paper-scene {
+  0%, 67% { opacity: 0; }
+  70%, 97% { opacity: 1; }
+  100% { opacity: 0; }
+}
+@keyframes v5-paper {
+  0%, 67% { transform: translateY(40px) scale(.96); }
+  74%, 100% { transform: none; }
+}
+@keyframes v5-shine { 0%, 74% { transform: translateX(-120%); } 84%, 100% { transform: translateX(120%); } }
+@keyframes v5-bar { 0%, 80% { transform: scaleY(0); } 90%, 97% { transform: none; } 100% { transform: scaleY(0); } }
+
+/* 커서 경로: 유형 칩 → 체크 1·2·3 → 퇴장.
+   translate 의 % 는 커서 자신 크기 기준이라 못 쓴다 — 카드 기준인
+   left/top 으로 움직인다. */
+@keyframes v5-cursor {
+  0%, 29% { opacity: 0; left: 78%; top: 88%; transform: none; }
+  31% { opacity: 1; }
+  35% { left: 21%; top: 57%; transform: none; }        /* 첫 칩 위 */
+  36.5% { left: 21%; top: 57%; transform: scale(.85); }
+  38%, 42% { left: 21%; top: 57%; transform: none; }
+  45% { opacity: 0; left: 30%; top: 70%; }
+  48% { opacity: 0; left: 70%; top: 82%; }
+  49% { opacity: 1; }
+  50% { left: 10%; top: 42%; transform: none; }        /* 체크 1 */
+  50.5% { left: 10%; top: 42%; transform: scale(.85); }
+  52% { left: 10%; top: 42%; transform: none; }
+  55% { left: 10%; top: 56%; }                          /* 체크 2 */
+  55.5% { left: 10%; top: 56%; transform: scale(.85); }
+  57% { left: 10%; top: 56%; transform: none; }
+  60% { left: 10%; top: 70%; }                          /* 체크 3 */
+  60.5% { left: 10%; top: 70%; transform: scale(.85); }
+  62% { opacity: 1; left: 10%; top: 70%; transform: none; }
+  66%, 100% { opacity: 0; left: 20%; top: 86%; }
+}
+@keyframes v5-click {
+  0%, 36% { opacity: 0; transform: scale(.4); }
+  36.5% { opacity: .8; transform: scale(.5); }
+  39% { opacity: 0; transform: scale(1.5); }
+  50% { opacity: .8; transform: scale(.5); }
+  52.5% { opacity: 0; transform: scale(1.5); }
+  55% { opacity: .8; transform: scale(.5); }
+  57.5% { opacity: 0; transform: scale(1.5); }
+  60% { opacity: .8; transform: scale(.5); }
+  62.5% { opacity: 0; transform: scale(1.5); }
+  63%, 100% { opacity: 0; }
+}
+
+/* 정지 화면: 마지막 막(완성 문서)만 보인다 */
+@media (prefers-reduced-motion: reduce) {
+  .demo-v5 .demo-scene, .demo-v5 .demo-msg-user span, .demo-v5 .demo-send,
+  .demo-v5 .demo-msg-thinking, .demo-v5 .demo-msg-reply,
+  .demo-type-grid b.pick, .demo-type-grid b.pick span,
+  .demo-v5 .demo-scene-checks i, .demo-v5 .demo-paper,
+  .demo-v5 .demo-paper::after, .demo-v5 .demo-chart i, .demo-cursor { animation: none; }
+  .demo-v5 .demo-scene-paper { opacity: 1; }
+  .demo-cursor { opacity: 0; }
+}
+
+@media (max-width: 640px) {
+  .demo-card.demo-v5 { height: 420px; }
+  .demo-v5 .demo-scene { padding: 20px 18px; }
+  .demo-v5 .demo-scene h4 { font-size: 18px; }
+  .demo-type-grid { grid-template-columns: 1fr; gap: 8px; }
+  .demo-type-grid b { padding: 12px 14px; font-size: 14px; }
+  .demo-v5 .demo-scene-checks p { padding: 11px 12px; font-size: 12px; }
+}

@@ -743,44 +743,40 @@ function Home({
             onClick={openConsult}
             onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openConsult(); } }}
           >
-            <div className="demo-card" aria-hidden="true">
-              <header className="demo-chat-head">
-                <img src="/support-agent-avatar-2026.png" alt="" width="30" height="30" />
-                <div><strong>오늘창업 상담</strong><span>무엇이든 물어보세요</span></div>
-              </header>
-              <div className="demo-chat-body">
-                <p className="demo-msg-user"><span>50대를 대상으로 하는 복지사업을 추천해줘</span></p>
-                <p className="demo-msg-thinking"><i /><i /><i /></p>
-                <p className="demo-msg-reply">시니어 돌봄 서비스가 조건에 맞아요. 바로 계획서로 만들어 드릴게요.</p>
+            <div className="demo-card demo-v5" aria-hidden="true">
+              {/* 1막 — 상담 */}
+              <div className="demo-scene demo-scene-chat">
+                <header className="demo-chat-head">
+                  <img src="/support-agent-avatar-2026.png" alt="" width="30" height="30" />
+                  <div><strong>오늘창업 상담</strong><span>무엇이든 물어보세요</span></div>
+                </header>
+                <div className="demo-chat-body">
+                  <p className="demo-msg-user"><span>50대를 대상으로 하는 복지사업을 추천해줘</span></p>
+                  <p className="demo-msg-thinking"><i /><i /><i /></p>
+                  <p className="demo-msg-reply">시니어 돌봄 서비스가 조건에 맞아요. 바로 계획서로 만들어 드릴게요.</p>
+                </div>
+                <div className="demo-chat-input"><span>눌러서 직접 물어보세요</span><b className="demo-send">보내기</b></div>
               </div>
-              {/* 버튼을 대신하는 자리 — 헤더 검색칸과 같은 도는 링으로 강조 */}
-              <div className="demo-chat-input demo-entry">
-                <span>눌러서 직접 물어보세요</span>
-                <b className="demo-send">보내기</b>
-              </div>
-              {/* 실제 흐름 2막 — 문서 유형 고르기 */}
-              <div className="demo-steps demo-step-types">
-                <small>문서 유형 선택</small>
-                <div>
-                  <b className="pick">창업 초기</b>
-                  <b>정부지원 PSST</b>
-                  <b>재무 모델</b>
+              {/* 2막 — 문서 유형 선택 (커서가 눌러 준다) */}
+              <div className="demo-scene demo-scene-types">
+                <small>1단계 · 문서 유형 선택</small>
+                <h4>어떤 문서를 만들까요?</h4>
+                <div className="demo-type-grid">
+                  <b className="pick">창업 초기<br /><span>지원·대출 심사용</span></b>
+                  <b>정부지원 PSST<br /><span>예비창업패키지</span></b>
+                  <b>재무 모델<br /><span>3년 추정·민감도</span></b>
                 </div>
               </div>
-              {/* 실제 흐름 3막 — 질문에 답하기 */}
-              <div className="demo-steps demo-step-checks">
-                <small>질문에 답하기</small>
+              {/* 3막 — 질문에 답하기 */}
+              <div className="demo-scene demo-scene-checks">
+                <small>2단계 · 질문에 답하기</small>
+                <h4>사실만 답하면 됩니다</h4>
                 <p className="ck1"><i /><span>대상 고객은 누구인가요?</span><em>50대 이상 시니어</em></p>
                 <p className="ck2"><i /><span>초기 투자금은 얼마인가요?</span><em>5,000만 원</em></p>
                 <p className="ck3"><i /><span>함께 일할 인원은요?</span><em>대표 포함 2명</em></p>
               </div>
-              {/* 4막 — 만들어지는 중 */}
-              <div className="demo-loading">
-                <i />
-                <span>사업계획서 만드는 중…</span>
-                <b className="demo-progress"><u /></b>
-              </div>
-              <div className="demo-out">
+              {/* 4막 — 결과물 */}
+              <div className="demo-scene demo-scene-paper">
                 <div className="demo-paper">
                   <strong>사업계획서</strong>
                   <em>시니어 돌봄 서비스 · 50대 이상 대상</em>
@@ -796,6 +792,8 @@ function Home({
                   <small>12개월 손익 자동 계산</small>
                 </div>
               </div>
+              {/* 장면을 누비는 마우스 커서 */}
+              <span className="demo-cursor"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 3l14 8-6.5 1.5L9 19z" fill="#0d0a2c" stroke="#fff" strokeWidth="1.5" /></svg></span>
             </div>
           </div>
           {reviewDemo && <HomeReviews demo />}
