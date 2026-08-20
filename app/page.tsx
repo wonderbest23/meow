@@ -704,12 +704,46 @@ function Home({
             정면으로 어긋난다. 실제 후기가 쌓이면 이 자리에 그대로 꽂는다.
           */}
           {/*
-            BRIX Heros V1 의 겹치는 큰 카드 2장 (726×551, 라운드 30, 뒤 카드가
-            114 낮게). 뒤에는 휴대폰 화면, 앞에는 PC 화면 — 실제 결과물 사진이다.
+            서비스가 하는 일을 9초짜리 무대로 보여준다 — 채팅창에 질문이
+            타이핑되고, 보내면 오른쪽 프린터에서 사업계획서가 뽑혀 나온다.
+            전부 CSS 애니메이션이고 반복된다. 카드 배치(왼쪽 낮게 + 오른쪽
+            높게 겹침)는 BRIX Heros V1 실측 그대로.
+            움직임 줄이기 설정에서는 완성 장면(문서가 다 나온 상태)만 보인다.
           */}
-          <div className="home-hero-collage">
-            <img className="home-hero-collage-back" src="/hero-mobile-2026.jpg" alt="" aria-hidden="true" width={726} height={551} />
-            <img className="home-hero-collage-front" src="/hero-desktop-2026.jpg" alt="사업계획서가 만들어지는 화면" width={726} height={551} />
+          <div className="home-hero-demo" role="img" aria-label="상담 질문에 답하면 사업계획서가 자동으로 만들어지는 과정">
+            <div className="demo-chat" aria-hidden="true">
+              <header>
+                <img src="/support-agent-avatar-2026.png" alt="" width="30" height="30" />
+                <div><strong>오늘창업 상담</strong><span>무엇이든 물어보세요</span></div>
+              </header>
+              <div className="demo-chat-body">
+                <p className="demo-msg-user"><span>50대를 대상으로 하는 복지사업을 추천해줘</span></p>
+                <p className="demo-msg-thinking"><i /><i /><i /></p>
+                <p className="demo-msg-reply">시니어 돌봄 서비스가 조건에 맞아요. 바로 계획서로 만들어 드릴게요.</p>
+              </div>
+              <div className="demo-chat-input">
+                <span>메시지를 입력하세요</span>
+                <b className="demo-send">보내기</b>
+              </div>
+            </div>
+            <div className="demo-printer" aria-hidden="true">
+              <div className="demo-printer-slot" />
+              <div className="demo-paper">
+                <strong>사업계획서</strong>
+                <em>시니어 돌봄 서비스 · 50대 이상 대상</em>
+                <span className="demo-line w90" />
+                <span className="demo-line w70" />
+                <b>1. 사업 개요</b>
+                <span className="demo-line w95" />
+                <span className="demo-line w80" />
+                <b>2. 고객과 시장</b>
+                <span className="demo-line w85" />
+                <div className="demo-chart">
+                  <i style={{ height: "30%" }} /><i style={{ height: "45%" }} /><i style={{ height: "38%" }} /><i style={{ height: "60%" }} /><i style={{ height: "74%" }} /><i style={{ height: "92%" }} />
+                </div>
+                <small>12개월 손익 자동 계산</small>
+              </div>
+            </div>
           </div>
           {reviewDemo && <HomeReviews demo />}
         </section>
