@@ -13486,3 +13486,84 @@ html .simple-home .site-header a.account-link > svg {
   .home-peek-track li { width: 210px; }
   .home-peek-cap { font-size: 12px; padding: 0 8px; }
 }
+
+/* ══ AI 상투 디자인 걷어내기 ═══════════════════════════════════════
+ * 거대 알약 버튼, 알약 눈썹 칩, 도는 그라데이션 링, 보라 글로우 —
+ * 요즘 AI 만든 사이트들이 다 쓰는 옷이라는 지적. 전부 차분한 사각
+ * (라운드 12)과 보통 크기로 되돌린다. 색 체계는 그대로.
+ */
+
+/* 버튼: 알약 → 라운드 12, 키도 보통으로 */
+.simple-home .home-trial-actions > button.home-trial-primary,
+.simple-home .home-trial-actions > button.home-trial-secondary {
+  min-height: 52px !important;
+  padding: 0 28px !important;
+  border-radius: 12px !important;
+  font-size: 16px;
+  box-shadow: none;
+}
+.simple-home .home-trial-actions > button.home-trial-primary { box-shadow: 0 4px 12px rgba(74, 58, 255, .18); }
+
+.home-price-plans article > button {
+  min-height: 52px !important;
+  padding: 0 28px !important;
+  border-radius: 12px !important;
+}
+
+.simple-home .site-header .small-start { border-radius: 10px !important; }
+
+/* 눈썹: 알약 칩 → 그냥 작은 보라 글자 */
+.simple-home .home-hero-copy > .section-label,
+.simple-home .home-section-heading > span,
+.simple-home .home-deliverables-copy > span,
+.simple-home .home-evidence-intro > span,
+.simple-home .home-price-copy > span,
+.simple-home .home-faq > div:first-child > span {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--blue);
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: .02em;
+}
+
+/* FAQ: 알약 줄 → 라운드 14 카드 줄 */
+.simple-home .home-faq details { border-radius: 14px; }
+.simple-home .home-faq details[open] { border-radius: 14px; }
+
+/* 히어로 검색창: 도는 링·글로우 제거 — 얇은 보라 테두리의 보통 입력창 */
+.simple-home .home-hero-actions > form.hero-search {
+  border: 1.5px solid #cccae3;
+  border-radius: 14px;
+  background: #fff;
+  animation: none;
+  box-shadow: 0 2px 10px rgba(20, 20, 43, .06);
+}
+.simple-home .home-hero-actions > form.hero-search:focus-within {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(74, 58, 255, .12);
+}
+.simple-home .home-hero-actions > form.hero-search > button {
+  min-height: 44px !important;
+  border-radius: 10px !important;
+  background: var(--blue) !important;
+}
+
+/* 무대 안 잔재들도 같은 결로 */
+.demo-card .demo-chat-input { border-radius: 12px; }
+.demo-send { border-radius: 8px; }
+.demo-type-grid b { border-radius: 12px; }
+
+/* 후기·구성 카드의 과한 라운드도 한 단 내림 */
+.home-reviews-list li { border-radius: 14px; }
+.demo-card { border-radius: 20px; }
+.simple-home .home-hero-stage { border-radius: 20px; }
+
+/* 떠 있는 상담 단추: 그라데이션 원 → 단색 */
+.support-chat-widget .support-chat-toggle {
+  background: var(--blue);
+  box-shadow: 0 10px 26px rgba(20, 20, 43, .28);
+}
