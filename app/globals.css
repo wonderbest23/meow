@@ -13567,3 +13567,26 @@ html .simple-home .site-header a.account-link > svg {
   background: var(--blue);
   box-shadow: 0 10px 26px rgba(20, 20, 43, .28);
 }
+
+/* 되돌림: 히어로 검색창의 도는 링·글로우는 남긴다 — 마음에 든다는
+   확인. 'AI 상투 걷어내기'에서 이것만 제외. 나머지(버튼·눈썹·FAQ)는
+   걷어낸 그대로 둔다. */
+.simple-home .home-hero-actions > form.hero-search {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    conic-gradient(from var(--consult-ring-angle),
+      #4a3aff, #962dff, #2d5bff, #93aafd, #4a3aff) border-box;
+  animation: consult-ring-spin 3.2s linear infinite;
+  box-shadow: 0 0 22px rgba(74, 58, 255, .25);
+}
+.simple-home .home-hero-actions > form.hero-search:focus-within {
+  box-shadow: 0 0 30px rgba(74, 58, 255, .4);
+}
+.simple-home .home-hero-actions > form.hero-search > button {
+  border-radius: 999px !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .simple-home .home-hero-actions > form.hero-search { animation: none; }
+}
