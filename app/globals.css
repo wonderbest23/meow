@@ -12276,3 +12276,48 @@ html .simple-home .site-header a.account-link > svg {
   padding-top: 0;
   justify-self: center;
 }
+
+/* ── 헤더 상담 검색칸 — 빛나는 링 강조 ─────────────────────────────
+ * 히어로의 '챗봇 상담하기' 버튼을 없앤 대신, 상담으로 들어가는 유일한
+ * 문인 이 칸을 회전하는 그라데이션 링으로 강조한다. 색은 킷 System
+ * Colors(#4A3AFF·#962DFF·#2D5BFF)만 쓴다.
+ *
+ * 만드는 법: 테두리 2px 를 투명하게 뚫고, 안쪽(padding-box)은 밝은 면,
+ * 테두리 자리(border-box)에는 도는 원뿔 그라데이션을 깐다. 회전각은
+ * @property 로 등록해야 transition/animation 이 된다 — 지원 안 하는
+ * 브라우저는 링이 멈춰 있을 뿐 깨지지 않는다.
+ */
+@property --consult-ring-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.simple-home .site-header button.header-consult-search {
+  position: relative;
+  border: 2px solid transparent;
+  background:
+    linear-gradient(#f6f5ff, #f6f5ff) padding-box,
+    conic-gradient(from var(--consult-ring-angle),
+      #4a3aff, #962dff, #2d5bff, #93aafd, #4a3aff) border-box;
+  animation: consult-ring-spin 3.2s linear infinite;
+  /* 전역 버튼 규칙이 box-shadow: none !important 라 여기도 같은 무기 */
+  box-shadow: 0 0 14px rgba(74, 58, 255, .22) !important;
+}
+
+/* 도는 링 위에서도 글은 제자리 */
+.simple-home .site-header button.header-consult-search:hover {
+  background:
+    linear-gradient(#efeefb, #efeefb) padding-box,
+    conic-gradient(from var(--consult-ring-angle),
+      #4a3aff, #962dff, #2d5bff, #93aafd, #4a3aff) border-box;
+  box-shadow: 0 0 20px rgba(74, 58, 255, .32) !important;
+}
+
+@keyframes consult-ring-spin {
+  to { --consult-ring-angle: 360deg; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simple-home .site-header button.header-consult-search { animation: none; }
+}

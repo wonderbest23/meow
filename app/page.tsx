@@ -689,15 +689,9 @@ function Home({
                 <ArrowRight />
               </button>
               {/*
-                원본의 'Watch video' 자리.
-                한동안 '완성 샘플 3부 보기'를 걸어 뒀는데, 왼쪽 '무료로 시작하기'를
-                누르면 어차피 문서 목록(샘플 포함)이 나온다 — 같은 곳으로 가는 문이
-                둘이었다. 여기는 '아직 뭘 할지 모르겠는 사람'의 자리로 바꾼다.
-                샘플 보기는 아래 '문서 유형' 칸에 그대로 있다.
+                상담 들어가는 문은 헤더의 검색칸 하나로 모은다 — 히어로에 같은
+                문이 둘 있으니 헷갈린다는 피드백. 검색칸은 빛나는 링으로 강조.
               */}
-              <button type="button" className="hero-secondary" onClick={openConsult}>
-                <strong>챗봇 상담하기</strong>
-              </button>
             </div>
           </div>
           {/*
