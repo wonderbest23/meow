@@ -692,16 +692,7 @@ function Home({
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "consult" } }));
   };
 
-  /* 히어로 검색창 — 친 글이 그대로 상담 첫 질문이 된다 */
-  const [heroQuery, setHeroQuery] = useState("");
-  const submitHeroQuery = (e: React.FormEvent) => {
-    e.preventDefault();
-    const text = heroQuery.trim();
-    window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
-      detail: text ? { mode: "consult", message: text } : { mode: "consult" },
-    }));
-    setHeroQuery("");
-  };
+
 
   const requestCustomHomepage = () => {
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
@@ -736,19 +727,16 @@ function Home({
               도는 링으로 강조하고, 누르면 상담 창이 열린다.
               시작하기는 우측 상단에 그대로 있다.
             */}
+            {/*
+              네이버 AI 검색 방식 — 여기서 치는 게 아니라, 누르는 순간
+              상담 창이 열리고 거기서 바로 친다. 그래서 이건 입력창처럼
+              생긴 단추다.
+            */}
             <div className="home-hero-actions">
-              <form className="hero-search" onSubmit={submitHeroQuery}>
+              <button type="button" className="hero-search" onClick={openConsult} aria-label="창업 상담 열기">
                 <Search aria-hidden="true" />
-                <input
-                  type="text"
-                  value={heroQuery}
-                  onChange={(e) => setHeroQuery(e.target.value)}
-                  placeholder="궁금한 창업, 무엇이든 물어보세요"
-                  aria-label="창업 상담 질문 입력"
-                  maxLength={500}
-                />
-                <button type="submit">물어보기</button>
-              </form>
+                <span>궁금한 창업, 무엇이든 물어보세요</span>
+              </button>
             </div>
           </div>
           {/*

@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  ArrowUp,
   ChevronRight,
   ClipboardList,
   MessageCircleQuestion,
@@ -462,8 +463,9 @@ export function SupportChatWidget() {
                     ))}
 
                     {consultThinking && (
-                      <div className="support-chat-thinking" role="status" aria-label="상담 답변 작성 중">
-                        <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span><i /><i /><i />
+                      <div className="consult-planning" role="status" aria-label="답변 준비 중">
+                        <span>답변 계획 중…</span>
+                        <i /><i /><i />
                       </div>
                     )}
 
@@ -641,9 +643,10 @@ export function SupportChatWidget() {
                     * 한 줄만 쓰고 만다. 안으로 넣으면 쓰는 자리는 넓어지고 버튼은
                     * 손가락이 가는 자리(오른쪽 아래)에 온다.
                     */}
-                  <button type="submit" disabled={!message.trim() || sending || assistantThinking || consultThinking} aria-label="메시지 보내기" title="보내기">보내기</button>
+                  <button type="submit" disabled={!message.trim() || sending || assistantThinking || consultThinking} aria-label="메시지 보내기" title="보내기"><ArrowUp aria-hidden="true" /></button>
                 </div>
                 <small><ShieldCheck /> 비밀번호나 주민등록번호는 입력하지 마세요.</small>
+                <small className="ai-caution">AI 답변에는 정확하지 않은 정보가 포함될 수 있어요.</small>
               </form>
             </div>
           </div>

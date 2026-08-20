@@ -13590,3 +13590,90 @@ html .simple-home .site-header a.account-link > svg {
 @media (prefers-reduced-motion: reduce) {
   .simple-home .home-hero-actions > form.hero-search { animation: none; }
 }
+
+/* ══ 챗봇 — 네이버 AI 검색풍 개편 ═══════════════════════════════════
+ * 참고 화면: 연한 그라데이션 바탕, 내 말은 옅은 회청 말풍선(오른쪽),
+ * 답변 준비는 '답변 계획 중…' + 반짝이는 뼈대 줄 셋, 아래는 큰 둥근
+ * 입력창과 원형 ↑ 버튼, 밑에 AI 주의 한 줄.
+ */
+.support-chat-widget .support-chat-messages {
+  background: linear-gradient(180deg, #fff 0%, #f4f4fc 70%, #eef0fb 100%);
+}
+
+/* 내 말풍선: 보라 그라데이션 → 옅은 회청 (참고 화면 그대로) */
+.support-chat-messages .consult-pane > article.customer > p {
+  background: #e9edf6;
+  color: #0d0a2c;
+  border-radius: 18px;
+  box-shadow: none;
+  font-weight: 500;
+}
+/* 상담사 답변: 카드 틀 없이 바탕 위 글 — 참고 화면의 답변 방식 */
+.support-chat-messages .consult-pane > article.assistant > p {
+  background: none;
+  border: 0;
+  box-shadow: none;
+  padding-left: 2px;
+}
+
+/* 답변 계획 중 — 글 한 줄 + 반짝이는 뼈대 줄 셋 */
+.consult-planning {
+  display: grid;
+  gap: 10px;
+  padding: 4px 2px;
+}
+.consult-planning span { color: #585667; font-size: 14px; }
+.consult-planning i {
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #e3e7f4 25%, #f2f4fb 50%, #e3e7f4 75%);
+  background-size: 200% 100%;
+  animation: consult-skeleton 1.4s ease-in-out infinite;
+  display: block;
+}
+.consult-planning i:nth-child(3) { width: 100%; }
+.consult-planning i:nth-child(4) { width: 92%; animation-delay: .12s; }
+.consult-planning i:nth-child(2) { width: 100%; }
+.consult-planning i:last-child { width: 68%; animation-delay: .24s; }
+@keyframes consult-skeleton {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* 입력창 — 큰 라운드 + 원형 ↑ 버튼 */
+.support-chat-panel .support-chat-form > .support-chat-input-row {
+  border-radius: 22px;
+  border-color: #e4e7f2;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(20, 20, 43, .07);
+}
+/* 전역 button:not(...) 이 0,3,1 — 위젯 클래스를 하나 더 얹어 이긴다 */
+.support-chat-widget .support-chat-panel .support-chat-input-row > button {
+  width: 44px !important;
+  min-width: 0 !important;
+  height: 44px !important;
+  padding: 0 !important;
+  border-radius: 50% !important;
+}
+.support-chat-widget .support-chat-panel .support-chat-input-row > button svg {
+  display: inline-block !important;
+  width: 19px !important;
+  height: 19px !important;
+}
+.support-chat-widget .support-chat-panel .support-chat-input-row > button:disabled {
+  background: #e4e7f2 !important;
+  color: #9aa0b4 !important;
+}
+
+/* 아래 잔글씨 둘 — 경고 + AI 주의 */
+.support-chat-widget .support-chat-form > small.ai-caution {
+  margin-top: 2px;
+  color: #7f7ca2;
+  text-align: center;
+  display: block;
+}
+
+/* 움직임 줄이기: 뼈대 반짝임 정지 */
+@media (prefers-reduced-motion: reduce) {
+  .consult-planning i { animation: none; }
+}
