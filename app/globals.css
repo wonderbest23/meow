@@ -12804,3 +12804,59 @@ html .simple-home .site-header a.account-link > svg {
 @media (prefers-reduced-motion: reduce) {
   .demo-out::before { animation: none; opacity: 0; }
 }
+
+/* ── 히어로 검색창 — '무료로 시작하기' 버튼이 있던 자리 ─────────────
+ * 헤더가 아니라 여기가 맞다는 지적. 헤더는 링크 줄로 되돌리고,
+ * 도는 링 검색창은 히어로 한가운데로 내려온다. 누르면 상담이 열린다.
+ */
+.simple-home .home-hero-actions { width: 100%; margin-top: 12px; display: flex; justify-content: center; }
+
+.simple-home .home-hero-actions > button.hero-search {
+  width: min(574px, 100%);
+  min-height: 62px !important;
+  padding: 0 26px !important;
+  border: 2px solid transparent;
+  border-radius: 999px !important;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    conic-gradient(from var(--consult-ring-angle),
+      #4a3aff, #962dff, #2d5bff, #93aafd, #4a3aff) border-box;
+  animation: consult-ring-spin 3.2s linear infinite;
+  box-shadow: 0 0 22px rgba(74, 58, 255, .25) !important;
+  color: #5f5c7f;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  font-size: 16px;
+  font-weight: 500 !important;
+  cursor: pointer;
+}
+.simple-home .home-hero-actions > button.hero-search svg {
+  display: inline-block !important;
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px;
+  color: #7f7ca2;
+  flex: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  .simple-home .home-hero-actions > button.hero-search:hover {
+    color: #0d0a2c;
+    box-shadow: 0 0 30px rgba(74, 58, 255, .38) !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .simple-home .home-hero-actions > button.hero-search { animation: none; }
+}
+@media (max-width: 640px) {
+  .simple-home .home-hero-actions > button.hero-search { min-height: 54px !important; font-size: 15px; }
+}
+
+/* 무대 입력줄의 링은 뺀다 — 히어로 검색창과 겹치면 시끄럽다 */
+.demo-card .demo-chat-input.demo-entry {
+  border: 1px solid #dfdef1;
+  background: #fff;
+  animation: none;
+  box-shadow: none;
+}

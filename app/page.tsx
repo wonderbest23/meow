@@ -671,7 +671,7 @@ function Home({
   return (
     <main className="new-home simple-home">
       <div className="hero-shell">
-        <Header light onConsult={openConsult} onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+        <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         {/*
           첫 화면 — Neuros Lite 의 Hero banner/03 구조.
           가운데로 모으고, 제목 아래에 만들어지는 결과물을 큰 카드로 보여준다.
@@ -684,9 +684,16 @@ function Home({
             <h1>사업계획서,<br />오늘 하루면 충분합니다</h1>
             <p>사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.<br />복잡한 사업계획서, 이제 쉽게 시작하세요.</p>
             {/*
-              버튼 없음 — 시작하기는 우측 상단에 이미 있고, 아래 무대 자체가
-              눌러서 상담을 시작하는 문이다.
+              '무료로 시작하기' 버튼이 있던 자리 — 이제 검색창이다.
+              도는 링으로 강조하고, 누르면 상담 창이 열린다.
+              시작하기는 우측 상단에 그대로 있다.
             */}
+            <div className="home-hero-actions">
+              <button type="button" className="hero-search" onClick={openConsult}>
+                <Search aria-hidden="true" />
+                <span>궁금한 창업, 무엇이든 물어보세요</span>
+              </button>
+            </div>
           </div>
           {/*
             히어로 자리 — 평소에는 결과물 사진.
