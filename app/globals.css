@@ -11524,3 +11524,30 @@ body {
 .support-chat-widget .support-chat-form > small { font-size: 13px; color: #697077; }
 .support-chat-widget .support-chat-form-heading > span { font-size: 13px; color: #4b5162; }
 .support-chat-widget .support-chat-panel .support-chat-form-heading > button { height: 32px; padding: 0 12px; font-size: 13px; }
+
+/* ── 상담 → 사업계획서, 중간 단계 권유 ───────────────────────────
+ * 최종 버튼(.consult-cta)만 있으면 그게 뜨기 전까지는 다음 단계로 가는 문이
+ * 아예 없다 — 상담이 채팅만 계속되는 것처럼 보이던 이유다. 조건이 두어 개
+ * 모이면 먼저 조용히 알린다. 상담을 끊지 않도록 파란 버튼이 아니라 연한 칸.
+ */
+.consult-cta-soft {
+  margin-top: 2px;
+  padding: 12px 14px;
+  border: 1px solid var(--blue-soft-line, #cfe0fb);
+  border-radius: 12px;
+  background: var(--blue-soft, #eff5ff);
+  color: var(--text-body, #4b5162);
+  display: grid;
+  gap: 4px;
+  font-size: 14px;
+  line-height: 1.5;
+  text-decoration: none;
+}
+.consult-cta-soft b {
+  color: var(--blue, #3272db);
+  font-size: 13px;
+  font-weight: 800;
+}
+@media (hover: hover) and (pointer: fine) {
+  .consult-cta-soft:hover { border-color: var(--blue, #3272db); }
+}

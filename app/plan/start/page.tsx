@@ -8,7 +8,7 @@ import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
 import PlanLoading from "../PlanLoading";
-import { businessFromConsult, readConsultParam, profileLines, type ConsultProfile } from "../../../lib/consult/domain";
+import { businessFromConsult, readConsultParam, readStashedConsult, stashConsult, clearStashedConsult, profileLines, type ConsultProfile } from "../../../lib/consult/domain";
 import { TYPE_META, DEFAULT_META } from "../type-meta";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -247,8 +247,29 @@ export default function PlanStartPage() {
     return () => { alive = false; };
   }, []);
 
+  /*
+   * 상담에서 온 값을 먼저 잡는다.
+   *
+   * 로그인 여부와 상관없이 돈다 — 예전에는 아래 '저장된 사업 불러오기' 안에만
+   * 있어서 로그인 전에는 아무것도 채워지지 않았고, 로그인 안내를 거치는 동안
+   * 주소의 ?consult=... 까지 사라져 상담 내용이 통째로 날아갔다.
+   * 주소에 있으면 그걸 쓰고 곧바로 옮겨 담아 두고, 없으면 옮겨 둔 것을 꺼낸다.
+   */
   useEffect(() => {
-    setFromConsult(readConsultParam(new URLSearchParams(window.location.search).get("consult")));
+    const fromUrl = readConsultParam(new URLSearchParams(window.location.search).get("consult"));
+    if (fromUrl) stashConsult(fromUrl);
+    const profile = fromUrl ?? readStashedConsult();
+    if (!profile) return;
+    setFromConsult(profile);
+    const filled = businessFromConsult(profile);
+    /* 손님이 이미 적어 둔 칸은 건드리지 않는다 — 빈 칸만 메운다 */
+    setBiz((prev) => ({
+      ...prev,
+      industry: prev.industry || filled.industry,
+      region: prev.region || filled.region,
+      stage: prev.stage || filled.stage,
+      description: prev.description || filled.description,
+    }));
   }, []);
 
   // 이미 등록한 사업이 있으면 불러와서 재입력을 줄인다(사업 1개 유지)
@@ -261,7 +282,7 @@ export default function PlanStartPage() {
      * 상담에서 온 값은 그 뒤에 빈 칸만 메운다. 순서를 반대로 하면 저장본을
      * 불러오는 이 자리에서 상담 값이 통째로 지워진다(실제로 그랬다).
      */
-    const consult = readConsultParam(new URLSearchParams(window.location.search).get("consult"));
+    const consult = readConsultParam(new URLSearchParams(window.location.search).get("consult")) ?? readStashedConsult();
     const filled = consult ? businessFromConsult(consult) : null;
     const base = s.business.name ? s.business : { ...EMPTY_BUSINESS };
     if (filled) {
@@ -326,6 +347,8 @@ export default function PlanStartPage() {
     await hydrateFromServer().catch(() => {});
     saveBusiness(biz);
     createPlan(pt.type, biz.name, { inheritAnswers: inherit });
+    /* 상담 내용은 여기까지가 임무다 — 남겨 두면 다음에 또 '상담에서 가져왔다'고 뜬다 */
+    clearStashedConsult();
     router.push("/plan/overview");
   }
 
@@ -347,6 +370,17 @@ export default function PlanStartPage() {
           <div className={styles.app}>
             <div className={styles.main}>
               <h1 className={styles.h1}>새 플랜 만들기</h1>
+              {/*
+                상담을 마치고 온 사람에게는 '그 내용이 어디 갔는지'부터 답한다.
+                이 안내가 없으면 로그인 벽만 보고 상담이 끊겼다고 느낀다.
+              */}
+              {fromConsult && (
+                <div className={styles.consultNote}>
+                  <strong>상담에서 답한 내용은 그대로 있습니다</strong>
+                  <ul>{profileLines(fromConsult).map((line) => <li key={line}>{line}</li>)}</ul>
+                  <small>로그인하면 이 내용이 채워진 채로 이어집니다.</small>
+                </div>
+              )}
               <PlanGate reason="login_required" />
             </div>
           </div>

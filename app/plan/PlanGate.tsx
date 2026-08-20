@@ -21,9 +21,16 @@ export interface PlanGateProps {
  * 실제 차단은 서버(/api/plan/generate)가 하고, 여기서는 이유와 다음 행동만 알린다.
  */
 export default function PlanGate({ reason, freeLabels = [], price, sectionTitle }: PlanGateProps) {
-  // 로그인 후 지금 보던 섹션으로 돌아오게 한다
+  /*
+   * 로그인 후 지금 보던 자리로 돌아오게 한다.
+   *
+   * pathname 만 쓰면 물음표 뒤가 잘린다 — /plan/start?consult=... 로 온 손님이
+   * 로그인하고 오면 상담 내용이 사라진 빈 화면을 만났다. 주소창의 질의까지
+   * 통째로 들고 간다(서버 렌더에서는 window 가 없으므로 pathname 만).
+   */
   const pathname = usePathname();
-  const backTo = `/account?next=${encodeURIComponent(pathname || "/plan/overview")}`;
+  const search = typeof window === "undefined" ? "" : window.location.search;
+  const backTo = `/account?next=${encodeURIComponent((pathname || "/plan/overview") + search)}`;
 
   if (reason === "login_required") {
     return (

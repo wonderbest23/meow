@@ -139,6 +139,20 @@ export const CONSULT_SYSTEM = [
   "  지역·투자금·경쟁을 먼저 묻습니다.",
   "- 이미 답한 것을 다시 묻지 마세요.",
   "",
+  "# 업종별로 꼭 짚을 것",
+  "손님의 관심 업종이 드러나면 아래에서 해당하는 줄을 골라 그 항목부터 확인하세요.",
+  "여기 적힌 것은 '무엇을 물어야 하는가'이지 정답이 아닙니다. 수치는 여전히 지어내지 마세요.",
+  "- 카페·음식점: 자리(유동인구·임대료 수준), 주방 인력, 배달 병행 여부, 영업신고와 위생교육",
+  "- 무인매장(무인카페·아이스크림·밀키트·사진): 하루 관리 시간, 도난·기기 고장 대응, 본사 계약 조건",
+  "- 무인 세탁·코인빨래방: 초기 설비비 비중, 전기·수도 부담, 근처 경쟁 점포",
+  "- 배달 전문(공유주방 포함): 배달앱 수수료, 조리 인력, 리뷰 관리, 피크 시간 감당",
+  "- 편의점·프랜차이즈: 가맹 조건(로열티·인테리어·위약금), 24시간 여부, 본사 상권 보호",
+  "- 온라인 쇼핑몰·스마트스토어: 상품 소싱 경로, 재고 부담, 광고비 감당, 통신판매업 신고",
+  "- 교육·공방·체험: 강사 본인 여부, 정원과 회차, 재등록률, 학원 등록 대상인지",
+  "- 미용·헬스·서비스: 면허·자격, 예약 관리, 단골 확보, 인력 이탈",
+  "- 부업·1인: 본업과 겹치는 시간, 겸업 제한, 혼자 감당 가능한 규모",
+  "해당 업종이 목록에 없으면 손님의 말에서 '자리·사람·돈·시간' 중 아직 모르는 것을 물으세요.",
+  "",
   "# 중간 정리",
   "질문을 서너 번 주고받았으면 summary 에 지금까지 파악한 것을 짧게 적어 손님이 '내 상황을",
   "이해하고 있구나' 느끼게 하세요. 정리한 뒤에도 질문은 이어집니다.",
@@ -153,8 +167,10 @@ export const CONSULT_SYSTEM = [
   "확실하지 않은 수치(매출·수익률·권리금)를 지어내지 마세요. 모르면 모른다고 하세요.",
   "",
   "# 돈 이야기",
-  "먼저 가격이나 결제를 꺼내지 마세요. 상담이 충분히 진행되고 방향이 잡혔을 때만 ready 를",
-  "true 로 두세요. 그 뒤 안내는 화면이 맡습니다.",
+  "먼저 가격이나 결제를 꺼내지 마세요. 그 안내는 화면이 맡습니다.",
+  "ready 는 '방향이 잡혔는가'를 뜻합니다. 관심 업종이 정해졌고 지역·예산·투입 시간 중",
+  "하나라도 파악됐으면 true 로 두세요. 완벽히 다 알아야 하는 것이 아닙니다.",
+  "한 번 true 로 둔 뒤에도 대화는 계속됩니다 — 이어서 더 물어도 됩니다.",
   "",
   "# 말투",
   "짧은 문장. 쉬운 말. 카카오톡으로 상담받는 느낌. 장황하게 쓰지 마세요.",
@@ -221,6 +237,44 @@ export function businessFromConsult(profile: ConsultProfile): {
 }
 
 /** 주소에 담긴 상담 카드를 읽는다 — 남이 만든 주소일 수 있으니 형식을 검사한다 */
+/*
+ * 상담 결과를 로그인 왕복 동안 들고 있는 자리.
+ *
+ * 상담을 마치고 '사업계획서 시작하기'를 누르면 /plan/start 로 가는데, 로그인
+ * 전이면 로그인 안내가 먼저 뜬다. 그 사이에 주소창의 ?consult=... 가 사라져서
+ * 로그인하고 돌아오면 상담에서 답한 것이 통째로 날아갔다 — 손님 입장에서는
+ * 챗봇과 나눈 이야기가 아무 데도 이어지지 않은 것이다.
+ *
+ * 그래서 주소로 받은 즉시 여기에 옮겨 둔다. 이 기기, 이 탭에서만 산다.
+ */
+const CONSULT_STASH_KEY = "oneulstart.consult.handoff";
+
+export function stashConsult(profile: ConsultProfile): void {
+  try {
+    if (typeof sessionStorage === "undefined") return;
+    sessionStorage.setItem(CONSULT_STASH_KEY, JSON.stringify(profile));
+  } catch {
+    // 저장을 막아 둔 브라우저면 그냥 넘어간다 — 주소에 있는 값으로만 동작한다
+  }
+}
+
+export function readStashedConsult(): ConsultProfile | null {
+  try {
+    if (typeof sessionStorage === "undefined") return null;
+    return readConsultParam(sessionStorage.getItem(CONSULT_STASH_KEY));
+  } catch {
+    return null;
+  }
+}
+
+export function clearStashedConsult(): void {
+  try {
+    if (typeof sessionStorage !== "undefined") sessionStorage.removeItem(CONSULT_STASH_KEY);
+  } catch {
+    // 무시
+  }
+}
+
 export function readConsultParam(raw: string | null): ConsultProfile | null {
   if (!raw) return null;
   try {

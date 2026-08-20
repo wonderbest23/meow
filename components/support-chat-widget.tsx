@@ -109,6 +109,27 @@ export function SupportChatWidget() {
   const inputExamples = mode === "consult" ? CONSULT_INPUT_EXAMPLES : SUPPORT_INPUT_EXAMPLES;
   const inputExample = inputExamples[exampleIndex % inputExamples.length];
 
+  /*
+   * 언제 '사업계획서 시작'을 권할까.
+   *
+   * 모델이 주는 ready 하나에만 맡겨 두면 영영 안 뜰 수 있다 — 실제로 상담이
+   * 채팅만 계속되고 다음 단계로 넘어가는 문이 안 열렸다. 모델의 판단과 별개로
+   * 화면에서도 셀 수 있는 조건을 함께 본다.
+   *
+   * 두 단계로 권한다.
+   *  중간 — 조건 2개 + 손님이 두 번 말했으면 '지금까지 내용으로도 시작할 수 있다'고
+   *         조용히 알린다. 상담을 끊지 않도록 눈에 덜 띄는 줄로.
+   *  최종 — 아이템 추천이 나왔거나 조건이 충분히 모이면 큰 버튼으로 권한다.
+   */
+  const consultFilled = Object.values(consultProfile).filter(
+    (v) => typeof v === "string" && v.trim().length > 0,
+  ).length;
+  const consultUserTurns = consultTurns.filter((t) => t.role === "user").length;
+  const canStartPlan =
+    consultReady || consultPicks.length > 0 || (consultFilled >= 4 && consultUserTurns >= 3);
+  const canStartEarly = !canStartPlan && consultFilled >= 2 && consultUserTurns >= 2;
+  const consultHandoffHref = `/plan/start?consult=${encodeURIComponent(JSON.stringify(consultProfile))}`;
+
   const loadChat = useCallback(async (markRead: boolean) => {
     try {
       const response = await fetch(`/api/support/chat${markRead ? "" : "?peek=1"}`, { cache: "no-store" });
@@ -244,7 +265,14 @@ export function SupportChatWidget() {
       setConsultChoices(payload.choices ?? []);
       setConsultSummary(payload.summary ?? []);
       setConsultPicks(payload.picks ?? []);
-      setConsultReady(Boolean(payload.ready));
+      /*
+       * 한 번 '방향이 잡혔다'가 되면 되돌리지 않는다.
+       *
+       * 예전에는 매 턴 payload.ready 로 덮어써서, 모델이 한 번 true 를 준 뒤
+       * 다음 턴에 false 를 주면 '창업계획 만들기' 버튼이 사라졌다. 손님 입장에서는
+       * 버튼이 깜빡이다 없어지는 셈이라 아무도 누르지 못했다.
+       */
+      if (payload.ready) setConsultReady(true);
     } catch {
       setConsultTurns((current) => [
         ...current,
@@ -468,15 +496,18 @@ export function SupportChatWidget() {
                     )}
 
                     {/*
-                      * 상담이 충분히 진행된 뒤에만 다음 단계를 권한다. 여기서 모은 조건은
-                      * 사업계획서 첫 화면으로 넘긴다 — 같은 것을 두 번 묻지 않는다.
+                      * 다음 단계로 가는 문. 여기서 모은 조건은 사업계획서 첫 화면으로
+                      * 그대로 넘어간다 — 같은 것을 두 번 묻지 않는다.
                       */}
-                    {!consultThinking && consultReady && (
-                      <a
-                        className="consult-cta"
-                        href={`/plan/start?consult=${encodeURIComponent(JSON.stringify(consultProfile))}`}
-                      >
-                        <Sparkles /> 이 아이템으로 창업계획 만들기
+                    {!consultThinking && canStartEarly && (
+                      <a className="consult-cta-soft" href={consultHandoffHref}>
+                        지금까지 답한 내용으로 사업계획서를 시작할 수 있어요
+                        <b>{consultFilled}개 항목이 그대로 넘어갑니다 →</b>
+                      </a>
+                    )}
+                    {!consultThinking && canStartPlan && (
+                      <a className="consult-cta" href={consultHandoffHref}>
+                        <Sparkles /> 이 내용으로 사업계획서 시작하기
                       </a>
                     )}
 
