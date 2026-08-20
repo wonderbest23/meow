@@ -87,6 +87,8 @@ export function SupportChatWidget() {
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+  /* 홈 히어로 검색창에서 온 질문을 리스너([] deps)가 최신 함수로 부를 수 있게 */
+  const askConsultRef = useRef<(m: string) => Promise<void>>(async () => {});
 
   /*
    * 입력창 예시 돌리기.
@@ -197,10 +199,15 @@ export function SupportChatWidget() {
        * 눌렀는데 지난번에 보던 문의 화면이 나오는 일이 있었다.
        */
       if (detail?.mode) setMode(detail.mode);
-      if (detail?.message?.trim()) {
+      const text = detail?.message?.trim();
+      if (!text) return;
+      if (detail?.mode === "consult") {
+        /* 히어로 검색창에서 친 질문 — 열리자마자 바로 보낸다. 다시 치게 하지 않는다. */
+        void askConsultRef.current(text);
+      } else {
         setShowQuickMenu(false);
         setOperatorMode(true);
-        setMessage(detail.message.trim());
+        setMessage(text);
         window.setTimeout(() => textareaRef.current?.focus(), 80);
       }
     };
@@ -287,6 +294,7 @@ export function SupportChatWidget() {
       setConsultThinking(false);
     }
   };
+  askConsultRef.current = askConsult;
 
   const askSupportAssistant = async (nextMessage: string) => {
     const customerCreatedAt = new Date().toISOString();

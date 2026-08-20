@@ -12860,3 +12860,126 @@ html .simple-home .site-header a.account-link > svg {
   animation: none;
   box-shadow: none;
 }
+
+/* ── 히어로 검색창 v2 — 진짜 입력창 ─────────────────────────────────
+ * 누르면 챗봇으로 '넘어가는' 게 아니라, 여기서 치면 그 질문이 상담
+ * 첫 마디로 바로 전송된다.
+ */
+.simple-home .home-hero-actions > form.hero-search {
+  width: min(574px, 100%);
+  min-height: 62px;
+  padding: 0 8px 0 24px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background:
+    linear-gradient(#fff, #fff) padding-box,
+    conic-gradient(from var(--consult-ring-angle),
+      #4a3aff, #962dff, #2d5bff, #93aafd, #4a3aff) border-box;
+  animation: consult-ring-spin 3.2s linear infinite;
+  box-shadow: 0 0 22px rgba(74, 58, 255, .25);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.simple-home .home-hero-actions > form.hero-search:focus-within {
+  box-shadow: 0 0 30px rgba(74, 58, 255, .4);
+}
+.simple-home .home-hero-actions > form.hero-search svg {
+  display: inline-block !important;
+  width: 20px !important;
+  height: 20px !important;
+  flex: none;
+  color: #7f7ca2;
+}
+.simple-home .home-hero-actions > form.hero-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: none;
+  color: #0d0a2c;
+  font: inherit;
+  font-size: 16px;
+}
+.simple-home .home-hero-actions > form.hero-search input::placeholder { color: #7f7ca2; }
+.simple-home .home-hero-actions > form.hero-search > button {
+  flex: none;
+  min-height: 46px !important;
+  padding: 0 22px !important;
+  border: 0;
+  border-radius: 999px !important;
+  background: var(--blue) !important;
+  color: #fff !important;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+@media (prefers-reduced-motion: reduce) {
+  .simple-home .home-hero-actions > form.hero-search { animation: none; }
+}
+@media (max-width: 640px) {
+  .simple-home .home-hero-actions > form.hero-search { min-height: 56px; padding-left: 18px; }
+  .simple-home .home-hero-actions > form.hero-search input { font-size: 15px; }
+  .simple-home .home-hero-actions > form.hero-search > button { min-height: 42px !important; padding: 0 16px !important; }
+}
+
+/* ── 챗봇 패널 현대화 ──────────────────────────────────────────────
+ * 각진 8px 상자 → 큰 라운드, 부드러운 그림자, 보라 그라데이션 말풍선.
+ */
+.support-chat-widget .support-chat-panel {
+  width: 400px;
+  border: 1px solid #efeefb;
+  border-radius: 24px;
+  box-shadow: 0 28px 80px rgba(20, 20, 43, .22);
+}
+.support-chat-widget .support-chat-panel > header {
+  background: #fff;
+  border-bottom: 1px solid #efeefb;
+}
+.support-chat-widget .support-chat-panel > header > span {
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4a3aff, #962dff);
+  color: #fff;
+}
+.support-chat-widget .support-chat-messages { background: #f9f9ff; }
+
+/* 상담 말풍선 — 내 말은 보라 그라데이션, 상담사는 흰 카드 */
+.support-chat-messages .consult-pane > article.customer > p {
+  background: linear-gradient(135deg, #4a3aff, #6a5cff);
+  color: #fff;
+  border-radius: 16px 16px 4px 16px;
+  box-shadow: 0 6px 16px rgba(74, 58, 255, .22);
+}
+.support-chat-messages .consult-pane > article.assistant > p {
+  background: #fff;
+  border: 1px solid #efeefb;
+  border-radius: 16px 16px 16px 4px;
+  box-shadow: 0 2px 8px rgba(20, 20, 43, .05);
+}
+
+/* 눌러 답하는 말풍선 — 흰 알약, 올리면 보라 */
+.support-chat-widget .support-chat-choice-bubbles button {
+  border: 1px solid #dfdef1;
+  border-radius: 999px !important;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(20, 20, 43, .05);
+}
+
+/* 입력 상자 — 흰 카드 위 얇은 그림자, 보내기는 그라데이션 */
+.support-chat-widget .support-chat-form { border-top: 1px solid #efeefb; background: #fff; }
+.support-chat-panel .support-chat-form > .support-chat-input-row {
+  border-color: #efeefb;
+  background: #f9f9ff;
+}
+.support-chat-panel .support-chat-input-row > button:not(:disabled) {
+  background: linear-gradient(135deg, #4a3aff, #7a3bff) !important;
+  box-shadow: 0 6px 16px rgba(74, 58, 255, .3);
+}
+
+/* 떠 있는 상담 단추 — 검정 원 → 보라 그라데이션 */
+.support-chat-widget .support-chat-toggle {
+  border: 0;
+  background: linear-gradient(135deg, #4a3aff, #962dff);
+  box-shadow: 0 14px 36px rgba(74, 58, 255, .45);
+  opacity: 1;
+}
