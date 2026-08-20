@@ -683,16 +683,10 @@ function Home({
             <span className="section-label">창업 10만원대로 시작하세요</span>
             <h1>사업계획서,<br />오늘 하루면 충분합니다</h1>
             <p>사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.<br />복잡한 사업계획서, 이제 쉽게 시작하세요.</p>
-            <div className="home-hero-actions">
-              <button className="conversation-choice" onClick={onStart} aria-label="무료로 시작하기">
-                <strong>무료로 시작하기</strong>
-                <ArrowRight />
-              </button>
-              {/*
-                상담 들어가는 문은 헤더의 검색칸 하나로 모은다 — 히어로에 같은
-                문이 둘 있으니 헷갈린다는 피드백. 검색칸은 빛나는 링으로 강조.
-              */}
-            </div>
+            {/*
+              버튼 없음 — 시작하기는 우측 상단에 이미 있고, 아래 무대 자체가
+              눌러서 상담을 시작하는 문이다.
+            */}
           </div>
           {/*
             히어로 자리 — 평소에는 결과물 사진.
@@ -710,9 +704,21 @@ function Home({
             높게 겹침)는 BRIX Heros V1 실측 그대로.
             움직임 줄이기 설정에서는 완성 장면(문서가 다 나온 상태)만 보인다.
           */}
-          <div className="home-hero-demo" role="img" aria-label="상담 질문에 답하면 사업계획서가 자동으로 만들어지는 과정">
-            <div className="demo-chat" aria-hidden="true">
-              <header>
+          {/*
+            서비스가 하는 일을 한 장의 카드로 보여주는 9초 무대 — 위는 채팅,
+            아래 투입구에서 사업계획서가 뽑혀 나온다. 무대 자체가 버튼이다:
+            누르면 진짜 상담 창이 열린다(히어로의 버튼을 없앤 대신).
+          */}
+          <div
+            className="home-hero-stage"
+            role="button"
+            tabIndex={0}
+            aria-label="창업 상담 시작하기 — 질문하면 사업계획서가 자동으로 만들어집니다"
+            onClick={openConsult}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openConsult(); } }}
+          >
+            <div className="demo-card" aria-hidden="true">
+              <header className="demo-chat-head">
                 <img src="/support-agent-avatar-2026.png" alt="" width="30" height="30" />
                 <div><strong>오늘창업 상담</strong><span>무엇이든 물어보세요</span></div>
               </header>
@@ -722,26 +728,25 @@ function Home({
                 <p className="demo-msg-reply">시니어 돌봄 서비스가 조건에 맞아요. 바로 계획서로 만들어 드릴게요.</p>
               </div>
               <div className="demo-chat-input">
-                <span>메시지를 입력하세요</span>
+                <span>눌러서 직접 물어보세요</span>
                 <b className="demo-send">보내기</b>
               </div>
-            </div>
-            <div className="demo-printer" aria-hidden="true">
               <div className="demo-printer-slot" />
-              <div className="demo-paper">
-                <strong>사업계획서</strong>
-                <em>시니어 돌봄 서비스 · 50대 이상 대상</em>
-                <span className="demo-line w90" />
-                <span className="demo-line w70" />
-                <b>1. 사업 개요</b>
-                <span className="demo-line w95" />
-                <span className="demo-line w80" />
-                <b>2. 고객과 시장</b>
-                <span className="demo-line w85" />
-                <div className="demo-chart">
-                  <i style={{ height: "30%" }} /><i style={{ height: "45%" }} /><i style={{ height: "38%" }} /><i style={{ height: "60%" }} /><i style={{ height: "74%" }} /><i style={{ height: "92%" }} />
+              <div className="demo-out">
+                <div className="demo-paper">
+                  <strong>사업계획서</strong>
+                  <em>시니어 돌봄 서비스 · 50대 이상 대상</em>
+                  <span className="demo-line w90" />
+                  <b>1. 사업 개요</b>
+                  <span className="demo-line w95" />
+                  <span className="demo-line w80" />
+                  <b>2. 고객과 시장</b>
+                  <span className="demo-line w85" />
+                  <div className="demo-chart">
+                    <i style={{ height: "30%" }} /><i style={{ height: "45%" }} /><i style={{ height: "38%" }} /><i style={{ height: "60%" }} /><i style={{ height: "74%" }} /><i style={{ height: "92%" }} />
+                  </div>
+                  <small>12개월 손익 자동 계산</small>
                 </div>
-                <small>12개월 손익 자동 계산</small>
               </div>
             </div>
           </div>
