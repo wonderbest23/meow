@@ -8585,8 +8585,10 @@ button:disabled {
 .simple-home-choice > div > .conversation-choice {
   width: auto;
   min-width: 152px;
-  min-height: var(--btn-h-lg) !important;
-  padding: 0 20px !important;
+  /* BRIX 킷 Master Button 실측 — 높이 54, 좌우 28, 알약 */
+  min-height: 54px !important;
+  padding: 0 28px !important;
+  border-radius: 999px !important;
   display: inline-flex;
   justify-content: center;
   box-shadow: var(--shadow-blue) !important;
@@ -11550,4 +11552,115 @@ body {
 }
 @media (hover: hover) and (pointer: fine) {
   .consult-cta-soft:hover { border-color: var(--blue, #3272db); }
+}
+
+/* ══ 히어로 — BRIX Wireframes Kit 'Heros V22' 배치 이식 ══════════════
+ * (BRIX Templates, Figma Community, 사본 v8R1Uxxj… 에서 실측)
+ *
+ * V22 구조: 가운데 제목(56/66, 폭 574) → 본문(18/30) → 화면 전폭의
+ * 카드 갤러리 띠. 카드는 높이가 들쭉날쭉(스태거)하고 히어로 바닥에서
+ * 잘려 나간다 — 이 '바닥에서 잘리는 콜라주'가 V22 의 서명이다.
+ *
+ * V22 에는 버튼이 없지만 우리 히어로의 두 버튼은 지운다는 뜻이 아니므로
+ * 유지하고, 치수만 킷 공통 버튼 규격(높이 54 · 패딩 좌우 24 · 알약 30)을
+ * 따른다. 문구·색·글꼴은 전부 우리 것.
+ *
+ * 실측값 (PC 1440):
+ *   제목 56px / 행간 66 / 700, 폭 574   본문 18px / 행간 30
+ *   제목→본문 16   본문→띠 79   카드 폭 224(중앙 252) 간격 24 라운드 20
+ *   스태거 오프셋: 가장자리 137 / 그다음 52 / 중앙 0
+ * 실측값 (Mobile 430):
+ *   제목 44px / 행간 50   본문 14px / 행간 24   카드 라운드 14, 양옆 bleed
+ */
+
+.simple-home .simple-home-choice { padding-bottom: 0; }
+
+.simple-home .home-hero-copy h1 {
+  font-size: 56px;
+  line-height: 1.18;          /* 66 / 56 */
+  font-weight: 700;
+  max-width: 700px;           /* 574는 영문 기준 — 한글 두 줄이 들어가는 최소폭 */
+}
+
+.simple-home .home-hero-copy > p {
+  max-width: 574px;
+  font-size: 18px;
+  line-height: 1.67;          /* 30 / 18 */
+}
+
+/* 킷 공통 버튼 규격 — Master Primary/Secondary Button 실측.
+   전역 button:not(...) 규칙이 :not() 안 선택자까지 세어 0,3,1 이다.
+   button. 을 붙여 같은 급(0,3,1)으로 맞추고 뒤에 있으니 이긴다. */
+.simple-home .home-hero-actions { margin-top: 8px; }
+.simple-home .home-hero-actions > button.conversation-choice,
+.simple-home .home-hero-actions > button.hero-secondary {
+  min-height: 54px !important;
+  padding: 0 28px !important;
+  border-radius: 999px !important;
+}
+
+/* ── 후기 띠를 V22 갤러리 자리로 ──
+ * 요약 카드(평균+분포 막대)는 갤러리 위에 두면 V22 의 '제목 → 띠' 직행
+ * 구조가 깨진다. 평균·개수만 한 줄로 남기고 분포 막대는 히어로에서 뺀다.
+ */
+.simple-home-choice > div.home-reviews { max-width: none; gap: 20px; }
+
+.home-reviews-summary {
+  margin: 0 auto;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  display: flex;
+  justify-content: center;
+}
+.home-reviews-spread { display: none; }
+.home-reviews-score {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.home-reviews-score strong { font-size: 22px; }
+
+/* 시연 표시 — 내용은 그대로, 옷만 얇게 */
+.home-reviews-demo {
+  max-width: 574px;
+  margin: 0 auto;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* 화면 전폭 띠 + 바닥 잘림 */
+.home-reviews-track {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  max-height: 240px;
+  overflow: hidden;
+  align-self: center;
+}
+
+.home-reviews-list { gap: 24px; align-items: flex-start; }
+
+.home-reviews-list li {
+  width: 224px;
+  border-radius: 20px;
+}
+
+/* 스태거 — V22 의 137/52/0/52 리듬을 4장 주기로 반복한다 */
+.home-reviews-list li:nth-child(4n+1) { margin-top: 64px; }
+.home-reviews-list li:nth-child(4n+2) { margin-top: 24px; }
+.home-reviews-list li:nth-child(4n+3) { margin-top: 0; }
+.home-reviews-list li:nth-child(4n+4) { margin-top: 24px; }
+
+@media (max-width: 640px) {
+  .simple-home .home-hero-copy h1 { font-size: 44px; line-height: 1.14; }  /* 50/44 */
+  .simple-home .home-hero-copy > p { font-size: 15px; line-height: 1.6; } /* 킷은 14 — 한글은 15 를 하한으로 */
+  .home-reviews-track { max-height: 220px; }
+  .home-reviews-list { gap: 16px; }
+  .home-reviews-list li { width: 180px; border-radius: 14px; padding: 14px 16px; }
+  .home-reviews-list li:nth-child(4n+1) { margin-top: 44px; }
+  .home-reviews-list li:nth-child(4n+2) { margin-top: 16px; }
+  .home-reviews-list li:nth-child(4n+3) { margin-top: 0; }
+  .home-reviews-list li:nth-child(4n+4) { margin-top: 16px; }
 }
