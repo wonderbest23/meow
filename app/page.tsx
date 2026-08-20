@@ -758,7 +758,23 @@ function Home({
                 <span>눌러서 직접 물어보세요</span>
                 <b className="demo-send">보내기</b>
               </div>
-              {/* 답변 직후 잠깐 — 만들어지는 중 */}
+              {/* 실제 흐름 2막 — 문서 유형 고르기 */}
+              <div className="demo-steps demo-step-types">
+                <small>문서 유형 선택</small>
+                <div>
+                  <b className="pick">창업 초기</b>
+                  <b>정부지원 PSST</b>
+                  <b>재무 모델</b>
+                </div>
+              </div>
+              {/* 실제 흐름 3막 — 질문에 답하기 */}
+              <div className="demo-steps demo-step-checks">
+                <small>질문에 답하기</small>
+                <p className="ck1"><i /><span>대상 고객은 누구인가요?</span><em>50대 이상 시니어</em></p>
+                <p className="ck2"><i /><span>초기 투자금은 얼마인가요?</span><em>5,000만 원</em></p>
+                <p className="ck3"><i /><span>함께 일할 인원은요?</span><em>대표 포함 2명</em></p>
+              </div>
+              {/* 4막 — 만들어지는 중 */}
               <div className="demo-loading">
                 <i />
                 <span>사업계획서 만드는 중…</span>

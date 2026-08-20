@@ -12983,3 +12983,172 @@ html .simple-home .site-header a.account-link > svg {
   box-shadow: 0 14px 36px rgba(74, 58, 255, .45);
   opacity: 1;
 }
+
+/* ══ 히어로 무대 v4 — 실제 흐름 4막: 상담 → 유형 → 답변 → 출력 ═══════
+ * "실제 화면과 다르다"는 지적. 진짜 순서대로 늘린다. 시계 9s → 14s,
+ * 같은 이름의 키프레임을 다시 정의해 앞 판을 덮는다.
+ *
+ * 0–3% 등장 · 4–16% 질문 타이핑 · 17–19% 보내기 · 20–26% 생각 ·
+ * 26–29% 답변 · 30–38% 유형 선택(칩이 보라로 채워짐) ·
+ * 40–57% 질문 셋에 체크가 하나씩 · 58–70% 만드는 중 ·
+ * 70–92% 출력+빛 쓸림 · 84–90% 그래프 · 97–100% 잦아듦
+ */
+.demo-card,
+.demo-msg-user span,
+.demo-send,
+.demo-msg-thinking,
+.demo-msg-reply,
+.demo-loading,
+.demo-progress u,
+.demo-card .demo-paper,
+.demo-card .demo-paper::after,
+.demo-chart i,
+.demo-out::before {
+  animation-duration: 14s;
+}
+
+/* ── 2막: 유형 칩 ── */
+.demo-steps {
+  margin: 0 20px 12px;
+  padding: 12px 14px;
+  border: 1px solid #efeefb;
+  border-radius: 14px;
+  background: #fff;
+  display: grid;
+  gap: 8px;
+  opacity: 0;
+}
+.demo-steps small { color: #7f7ca2; font-size: 11px; font-weight: 700; }
+.demo-step-types { animation: demo-types-show 14s ease infinite; }
+.demo-step-types > div { display: flex; gap: 8px; flex-wrap: wrap; }
+.demo-step-types b {
+  padding: 7px 13px;
+  border: 1px solid #dfdef1;
+  border-radius: 999px;
+  color: #585667;
+  font-size: 12px;
+  font-weight: 700;
+}
+.demo-step-types b.pick { animation: demo-chip-pick 14s ease infinite; }
+
+/* ── 3막: 질문 체크 ── */
+.demo-step-checks { animation: demo-checks-show 14s ease infinite; }
+.demo-step-checks p {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.demo-step-checks span { color: #585667; }
+.demo-step-checks em { margin-left: auto; color: #0d0a2c; font-style: normal; font-weight: 700; white-space: nowrap; }
+.demo-step-checks i {
+  flex: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  border: 1.5px solid #dfdef1;
+  background: #fff;
+  position: relative;
+}
+.demo-step-checks i::after {
+  content: "";
+  position: absolute;
+  left: 4px; top: 1px;
+  width: 5px; height: 9px;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.demo-step-checks .ck1 i { animation: demo-check-1 14s ease infinite; }
+.demo-step-checks .ck2 i { animation: demo-check-2 14s ease infinite; }
+.demo-step-checks .ck3 i { animation: demo-check-3 14s ease infinite; }
+
+/* ── 14s 시계로 전부 다시 정의 ── */
+@keyframes demo-chat-pop {
+  0% { opacity: 0; transform: translateY(16px) scale(.97); }
+  3%, 97% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(16px) scale(.97); }
+}
+@keyframes demo-type {
+  0%, 4% { clip-path: inset(0 100% 0 0); }
+  16%, 100% { clip-path: inset(0 0 0 0); }
+}
+@keyframes demo-send-press {
+  0%, 17% { transform: none; }
+  18% { transform: scale(.86); }
+  19%, 100% { transform: none; }
+}
+@keyframes demo-thinking {
+  0%, 19.5% { opacity: 0; }
+  20%, 26% { opacity: 1; }
+  27%, 100% { opacity: 0; }
+}
+@keyframes demo-reply {
+  0%, 26% { opacity: 0; transform: translateY(6px); }
+  29%, 97% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes demo-types-show {
+  0%, 30% { opacity: 0; transform: translateY(6px); }
+  33%, 97% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes demo-chip-pick {
+  0%, 35% { background: #fff; border-color: #dfdef1; color: #585667; }
+  38%, 100% { background: #4a3aff; border-color: #4a3aff; color: #fff; }
+}
+@keyframes demo-checks-show {
+  0%, 40% { opacity: 0; transform: translateY(6px); }
+  43%, 97% { opacity: 1; transform: none; }
+  100% { opacity: 0; }
+}
+@keyframes demo-check-1 {
+  0%, 45% { background: #fff; border-color: #dfdef1; }
+  47%, 100% { background: #4a3aff; border-color: #4a3aff; }
+}
+@keyframes demo-check-2 {
+  0%, 50% { background: #fff; border-color: #dfdef1; }
+  52%, 100% { background: #4a3aff; border-color: #4a3aff; }
+}
+@keyframes demo-check-3 {
+  0%, 55% { background: #fff; border-color: #dfdef1; }
+  57%, 100% { background: #4a3aff; border-color: #4a3aff; }
+}
+@keyframes demo-loading-show {
+  0%, 57% { opacity: 0; transform: translateY(4px); }
+  59%, 69% { opacity: 1; transform: none; }
+  72%, 100% { opacity: 0; }
+}
+@keyframes demo-progress-fill {
+  0%, 58% { transform: scaleX(0); }
+  70%, 100% { transform: scaleX(1); }
+}
+@keyframes demo-ghost {
+  0%, 3% { opacity: 0; }
+  6%, 68% { opacity: 1; }
+  74%, 100% { opacity: 0; }
+}
+@keyframes demo-print {
+  0%, 70% { opacity: 0; clip-path: inset(0 0 100% 0); transform: translateY(-18px); }
+  72% { opacity: 1; }
+  88% { clip-path: inset(0 0 0% 0); transform: none; }
+  97% { opacity: 1; clip-path: inset(0 0 0% 0); transform: none; }
+  100% { opacity: 0; clip-path: inset(0 0 0% 0); }
+}
+@keyframes demo-shine {
+  0%, 84% { transform: translateX(-120%); }
+  94%, 100% { transform: translateX(120%); }
+}
+@keyframes demo-bar {
+  0%, 84% { transform: scaleY(0); }
+  92%, 97% { transform: none; }
+  100% { transform: scaleY(0); }
+}
+
+/* 정지 화면(움직임 줄이기): 전 과정이 끝난 모습 — 칩은 채워지고 체크도 완료 */
+@media (prefers-reduced-motion: reduce) {
+  .demo-steps, .demo-step-types b.pick, .demo-step-checks i { animation: none; }
+  .demo-steps { opacity: 1; }
+  .demo-step-types b.pick { background: #4a3aff; border-color: #4a3aff; color: #fff; }
+  .demo-step-checks i { background: #4a3aff; border-color: #4a3aff; }
+}
