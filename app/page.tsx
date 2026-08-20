@@ -727,11 +727,17 @@ function Home({
                 <p className="demo-msg-thinking"><i /><i /><i /></p>
                 <p className="demo-msg-reply">시니어 돌봄 서비스가 조건에 맞아요. 바로 계획서로 만들어 드릴게요.</p>
               </div>
-              <div className="demo-chat-input">
+              {/* 버튼을 대신하는 자리 — 헤더 검색칸과 같은 도는 링으로 강조 */}
+              <div className="demo-chat-input demo-entry">
                 <span>눌러서 직접 물어보세요</span>
                 <b className="demo-send">보내기</b>
               </div>
-              <div className="demo-printer-slot" />
+              {/* 답변 직후 잠깐 — 만들어지는 중 */}
+              <div className="demo-loading">
+                <i />
+                <span>사업계획서 만드는 중…</span>
+                <b className="demo-progress"><u /></b>
+              </div>
               <div className="demo-out">
                 <div className="demo-paper">
                   <strong>사업계획서</strong>
