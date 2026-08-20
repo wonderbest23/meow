@@ -13677,3 +13677,54 @@ html .simple-home .site-header a.account-link > svg {
 @media (prefers-reduced-motion: reduce) {
   .consult-planning i { animation: none; }
 }
+
+/* ══ 상담 심플 모드 — 레퍼런스(네이버 AI 검색)만큼 비운다 ═══════════
+ * 심플함의 정체는 장식 제거다. 상담(mode-consult)에서는:
+ * 명찰·아바타·시각·머리글 줄을 없애고, 말풍선과 입력창과 여백만 남긴다.
+ * 서비스 문의(mode-support)는 운영자 대화라 명찰을 유지한다.
+ */
+
+/* 말풍선 위 명찰(아바타+이름)과 아래 시각 제거 */
+.mode-consult .consult-pane > article > header { display: none; }
+.mode-consult .consult-pane > article > time { display: none; }
+.mode-consult .consult-pane > article { gap: 0; }
+
+/* 입력창 위 '상담사에게 이야기하기' 머리글 줄 제거 */
+.mode-consult .support-chat-form > .support-chat-form-heading { display: none; }
+
+/* 패널 머리: 아이콘 상자·부제 없이 제목 한 줄.
+   .open 변형이 40px(아이콘 칸)짜리 3열을 다시 깔아서 제목이 40px 칸에
+   구겨졌다 — 같은 특이성으로 덮는다. */
+.support-chat-widget .support-chat-panel > header,
+.support-chat-widget.open .support-chat-panel > header {
+  min-height: 54px;
+  border-bottom: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 0 18px;
+}
+.support-chat-widget .support-chat-panel > header > span { display: none; }
+.support-chat-widget .support-chat-panel > header small { display: none; }
+.support-chat-widget .support-chat-panel > header strong { font-size: 15px; }
+
+/* 패널 자체도 테두리 없이 그림자만 */
+.support-chat-widget .support-chat-panel {
+  border: 0;
+  box-shadow: 0 24px 70px rgba(20, 20, 43, .2);
+}
+
+/* 첫 화면 선택지: 카드 알약 → 밑줄 없는 담백한 줄 */
+.mode-consult .support-chat-choice-bubbles button {
+  box-shadow: none;
+  border-color: #e4e7f2;
+  background: #fff;
+  font-weight: 500;
+}
+
+/* 시작 인사 말풍선도 명찰 없이 */
+.mode-consult .consult-pane .support-chat-bot-message > span { display: none; }
+
+/* 아래 잔글씨: 한 줄 톤으로 통일 */
+.support-chat-widget .support-chat-form > small { text-align: center; }
+
+/* 입력 상자: 테두리 대신 여백 — 참고 화면의 떠 있는 입력창 */
+.support-chat-widget .support-chat-form { border-top: 0; background: transparent; }

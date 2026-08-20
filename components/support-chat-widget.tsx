@@ -414,7 +414,7 @@ export function SupportChatWidget() {
   return (
     <div className={`support-chat-widget ${open ? "open" : ""}`}>
       {open && (
-        <section className="support-chat-panel" role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
+        <section className={`support-chat-panel mode-${mode}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
           <header>
             <span><img src="/support-agent-avatar-2026.png" alt="" width="48" height="48" /></span>
             <div>
