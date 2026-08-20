@@ -13382,3 +13382,107 @@ html .simple-home .site-header a.account-link > svg {
   .demo-type-grid b { padding: 12px 14px; font-size: 14px; }
   .demo-v5 .demo-scene-checks p { padding: 11px 12px; font-size: 12px; }
 }
+
+/* ── 랜딩페이지 미리보기 띠 — 후기 아래 ─────────────────────────────
+ * 미니 브라우저 창 목업이 후기 띠와 반대 방향으로 흐른다. 링크가 없어
+ * 눌리지 않는 순수 구경거리. 색(--peek)은 고객 사이트라는 설정.
+ */
+.simple-home-choice > div.home-peek,
+.home-peek {
+  width: 100%;
+  max-width: none;
+  justify-self: stretch;
+  margin-top: 8px;
+  display: grid;
+  gap: 14px;
+}
+.home-peek-cap {
+  margin: 0 auto;
+  max-width: 640px;
+  color: #7f7ca2;
+  font-size: 13px;
+  text-align: center;
+}
+.home-peek-track {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+.home-peek-track ul {
+  margin: 0;
+  padding: 6px 0 14px;
+  list-style: none;
+  display: flex;
+  gap: 20px;
+  width: max-content;
+  /* 후기 띠(48s, 왼쪽으로)와 반대로 — 오른쪽으로 느리게 */
+  animation: peekFlow 56s linear infinite reverse;
+}
+.home-peek-track:hover ul { animation-play-state: paused; }
+.home-peek-track li {
+  flex: none;
+  width: 250px;
+  border: 1px solid #efeefb;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(20, 20, 43, .1);
+  overflow: hidden;
+  display: grid;
+}
+.peek-bar {
+  padding: 8px 10px;
+  border-bottom: 1px solid #f3f2fb;
+  display: flex;
+  gap: 4px;
+}
+.peek-bar i { width: 7px; height: 7px; border-radius: 50%; background: #dfdef1; }
+.peek-bar i:first-child { background: #f6b0b0; }
+.peek-bar i:nth-child(2) { background: #f3d9a4; }
+.peek-bar i:nth-child(3) { background: #b7e2c0; }
+.peek-hero {
+  min-height: 74px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, var(--peek), color-mix(in srgb, var(--peek) 62%, #fff));
+  display: grid;
+  align-content: center;
+  gap: 3px;
+}
+.peek-hero b { color: #fff; font-size: 15px; font-weight: 800; }
+.peek-hero em { color: rgba(255, 255, 255, .85); font-size: 11px; font-style: normal; }
+.peek-row {
+  height: 7px;
+  margin: 0 16px;
+  border-radius: 4px;
+  background: #efeefb;
+}
+.peek-row:first-of-type { margin-top: 14px; }
+.peek-row + .peek-row { margin-top: 7px; }
+.peek-row.w85 { width: 70%; }
+.peek-row.w60 { width: 50%; }
+.peek-grid {
+  margin: 12px 16px 16px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+}
+.peek-grid i {
+  height: 34px;
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--peek) 14%, #fff);
+  border: 1px solid color-mix(in srgb, var(--peek) 22%, #fff);
+}
+
+@keyframes peekFlow {
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-peek-track ul { animation: none; }
+  .home-peek-track { overflow-x: auto; }
+}
+@media (max-width: 640px) {
+  .home-peek-track li { width: 210px; }
+  .home-peek-cap { font-size: 12px; padding: 0 8px; }
+}

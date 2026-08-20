@@ -531,6 +531,43 @@ const REVIEW_DEMO: HomeReview[] = [
   { score: 4, body: "혼자 쓰면 며칠 걸릴 걸 반나절에 끝냈습니다. 문장은 제 말투로 조금 고쳤어요.", who: "공유 오피스 · 서울", at: "2026.06" },
 ];
 
+/*
+ * 후기 속 사업으로 만들어 본 랜딩페이지 미리보기 띠.
+ *
+ * 실제 고객 홈페이지를 동의 없이 내걸 수는 없다 — 후기와 같은 시연이다.
+ * 미니 브라우저 창 모양의 순수 CSS 목업이고, 링크가 없어 눌리지 않는다.
+ * 색은 고객 사이트라는 설정이라 우리 브랜드색에 묶지 않는다.
+ */
+const LANDING_PEEKS = [
+  { name: "무인 스터디카페", tag: "24시간 무인 운영 · 경기", hue: "#4a3aff" },
+  { name: "동네 베이커리", tag: "당일 생산 · 서울", hue: "#d97706" },
+  { name: "무인 세탁소", tag: "셀프 빨래방 · 광주", hue: "#0e9f8a" },
+  { name: "시니어 돌봄 서비스", tag: "방문 요양 · 부산", hue: "#16803c" },
+  { name: "배달 분식집", tag: "배달 전문 · 인천", hue: "#dc2626" },
+  { name: "가죽 공방 클래스", tag: "원데이 클래스 · 대전", hue: "#a21caf" },
+];
+
+function HomeLandingPeek() {
+  return (
+    <div className="home-peek" role="img" aria-label="계획서 답변으로 만들어지는 홈페이지 예시 목업 여섯 종">
+      <p className="home-peek-cap">계획서에 답한 내용은 홈페이지가 됩니다 — 후기 속 사업으로 만들어 본 예시(시연용, 실제 사이트가 아닙니다)</p>
+      <div className="home-peek-track" aria-hidden="true">
+        <ul>
+          {[...LANDING_PEEKS, ...LANDING_PEEKS].map((p, i) => (
+            <li key={`${p.name}-${i}`} style={{ "--peek": p.hue } as React.CSSProperties}>
+              <span className="peek-bar"><i /><i /><i /></span>
+              <span className="peek-hero"><b>{p.name}</b><em>{p.tag}</em></span>
+              <span className="peek-row w85" />
+              <span className="peek-row w60" />
+              <span className="peek-grid"><i /><i /><i /></span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  );
+}
+
 function Stars({ score }: { score: number }) {
   return (
     <span className="home-review-stars" aria-label={`5점 만점에 ${score}점`}>
@@ -797,6 +834,7 @@ function Home({
             </div>
           </div>
           {reviewDemo && <HomeReviews demo />}
+          {reviewDemo && <HomeLandingPeek />}
         </section>
       </div>
 
