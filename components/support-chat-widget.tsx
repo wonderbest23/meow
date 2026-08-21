@@ -419,6 +419,21 @@ export function SupportChatWidget() {
               <strong>{mode === "consult" ? "무료 창업 상담" : "서비스 이용 문의"}</strong>
               <small><i /> {mode === "consult" ? "뭘 할지 몰라도 괜찮아요" : "결제·환불·이용 방법을 물어보세요"}</small>
             </div>
+            {mode === "consult" && consultTurns.length > 0 && (
+              <button
+                type="button"
+                className="chat-restart"
+                onClick={() => {
+                  /* 처음 화면으로 — 나눈 대화와 파악한 조건을 비우고 새로 시작 */
+                  setConsultTurns([]);
+                  setConsultProfile({});
+                  setConsultChoices([]);
+                  setConsultSummary([]);
+                  setConsultPicks([]);
+                  setConsultReady(false);
+                }}
+              >새 상담</button>
+            )}
             <button type="button" onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기">닫기</button>
           </header>
 
@@ -441,15 +456,16 @@ export function SupportChatWidget() {
                             { tag: "무인 매장", q: "3천만 원으로 무인 매장 하고 싶어요" },
                             { tag: "부업 찾기", q: "직장 다니면서 주말에만 할 부업을 찾고 있어요" },
                           ].map((ex) => (
-                            <li key={ex.tag}>
-                              <button type="button" onClick={() => void askConsult(ex.q)}>
-                                <i aria-hidden="true">↳</i>
-                                <b>{ex.tag}</b>
-                                <span>{ex.q}</span>
-                              </button>
+                            <li key={ex.tag} className="consult-example">
+                              <i aria-hidden="true">↳</i>
+                              <b>{ex.tag}</b>
+                              <span>{ex.q}</span>
                             </li>
                           ))}
                         </ul>
+                        <button type="button" className="welcome-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
+                          <MessageCircleQuestion /> 서비스 이용 문의는 여기
+                        </button>
                       </div>
                     )}
 
@@ -524,9 +540,11 @@ export function SupportChatWidget() {
                       </a>
                     )}
 
-                    <button type="button" className="consult-to-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
-                      <MessageCircleQuestion /> 서비스 이용 문의는 여기
-                    </button>
+                    {consultTurns.length > 0 && (
+                      <button type="button" className="consult-to-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
+                        <MessageCircleQuestion /> 서비스 이용 문의는 여기
+                      </button>
+                    )}
                   </section>
                 ) : null}
 

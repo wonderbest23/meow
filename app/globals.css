@@ -13788,3 +13788,83 @@ html .simple-home .site-header a.account-link > svg {
 @media (hover: hover) and (pointer: fine) {
   .mode-consult .consult-welcome button:hover { background: #eef0fb !important; }
 }
+
+/* ── 상담 첫 화면 다듬기 — 지적 네 가지 ─────────────────────────────
+ * 예시는 눌리지 않는 순수 시범(li), 문의 버튼은 예시 밑에 테두리를
+ * 갖고 앉는다. 헤더에 '새 상담' 버튼. 상담 입력창 밑 잔글씨는 없앤다.
+ */
+/* 줄마다 가운데면 ↳ 가 지그재그가 된다 — 묶음째 가운데, 줄은 왼쪽 맞춤 */
+.consult-welcome ul { width: fit-content; max-width: 100%; margin: 0 auto; justify-items: start; }
+.consult-welcome li.consult-example {
+  width: 100%;
+  max-width: 100%;
+  padding: 9px 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+.consult-welcome li.consult-example i { flex: none; color: #4a3aff; font-style: normal; font-weight: 700; }
+.consult-welcome li.consult-example b { flex: none; color: #7f7ca2; font-weight: 700; }
+.consult-welcome li.consult-example span { color: #0d0a2c; font-weight: 500; min-width: 0; }
+
+/* 문의 버튼 — 예시 아래, 테두리 있는 조용한 칩 */
+.mode-consult button.welcome-support {
+  width: auto;              /* 앞의 .consult-welcome button { width:100% } 를 무름 */
+  justify-self: center;
+  margin-top: 4px;
+  min-height: 40px !important;
+  padding: 0 18px !important;
+  border: 1px solid #dfdef1 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #585667 !important;
+  font-size: 13px;
+  font-weight: 700 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  cursor: pointer;
+  box-shadow: none !important;
+}
+.mode-consult button.welcome-support svg { display: inline-block !important; width: 15px !important; height: 15px !important; }
+@media (hover: hover) and (pointer: fine) {
+  .mode-consult button.welcome-support:hover { border-color: #4a3aff !important; color: #4a3aff !important; }
+}
+
+/* 대화 중 아래쪽 문의 버튼도 같은 칩 모양으로 */
+.mode-consult .consult-to-support {
+  align-self: center;
+  min-height: 38px !important;
+  padding: 0 16px !important;
+  border: 1px solid #dfdef1 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #585667 !important;
+  font-size: 13px;
+}
+
+/* 헤더 '새 상담' */
+.support-chat-widget .support-chat-panel > header,
+.support-chat-widget.open .support-chat-panel > header {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  gap: 8px;
+}
+.support-chat-widget .support-chat-panel > header .chat-restart {
+  min-height: 34px !important;
+  padding: 0 12px !important;
+  border: 1px solid #dfdef1 !important;
+  border-radius: 10px !important;
+  background: #fff !important;
+  color: #585667 !important;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* 상담 모드: 입력창 밑 잔글씨 제거 (문의 모드에는 남긴다).
+   ai-caution 은 앞 규칙이 display:block 을 더 세게 걸어 둬서 따로 누른다. */
+.mode-consult .support-chat-form > small,
+.support-chat-widget .mode-consult .support-chat-form > small.ai-caution { display: none; }
+/* 문의 모드 잔글씨는 가운데로 */
+.support-chat-widget .support-chat-form > small { justify-content: center; }
