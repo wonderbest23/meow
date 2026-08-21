@@ -13868,3 +13868,29 @@ html .simple-home .site-header a.account-link > svg {
 .support-chat-widget .mode-consult .support-chat-form > small.ai-caution { display: none; }
 /* 문의 모드 잔글씨는 가운데로 */
 .support-chat-widget .support-chat-form > small { justify-content: center; }
+
+/* 첫 화면 블록이 pane 의 flex-start 에 붙어 왼쪽으로 쏠렸다 — 전폭으로 */
+.mode-consult .consult-pane .consult-welcome {
+  width: 100%;
+  align-self: stretch;
+}
+
+/* 제목 그라데이션: 멈춘 칠 → 링처럼 흘러 도는 빛.
+   양끝 색을 같게 해 이어 붙는 자리가 안 보이게 하고, 배경을 3배로
+   늘려 위치만 돌린다. */
+.consult-welcome h3 {
+  background: linear-gradient(100deg,
+    #0d0a2c 0%, #4a3aff 30%, #962dff 50%, #93aafd 70%, #0d0a2c 100%);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: consult-title-flow 6s linear infinite;
+}
+@keyframes consult-title-flow {
+  from { background-position: 0% 0; }
+  to { background-position: -300% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .consult-welcome h3 { animation: none; }
+}
