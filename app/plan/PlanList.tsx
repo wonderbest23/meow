@@ -5,10 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
-import { Pencil, Plus } from "lucide-react";
+import { FileText, Pencil, Plus, Trash2 } from "lucide-react";
 import styles from "./PlanList.module.css";
 import PlanLoading from "./PlanLoading";
-import { useGuideVisible, GuideClose } from "./GuideBubble";
 
 /**
  * 유형별 시각 정체성 — 색·아이콘·짧은 라벨.
@@ -25,8 +24,6 @@ export default function PlanList() {
   /** 결제 이력이 하나라도 있으면 샘플 줄을 접는다 — 이미 실물을 갖고 있으니 */
   const [hasAnyPaid, setHasAnyPaid] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
-  /* 훅은 조기 return(로딩) 앞에 있어야 한다 */
-  const [guideOn, dismissGuide] = useGuideVisible();
 
   useEffect(() => {
     let alive = true;
@@ -73,17 +70,6 @@ export default function PlanList() {
     : [];
   const samples = state ? state.plans.filter((p) => isSamplePlan(p.id)) : [];
 
-  /* 안내 네비게이터 — 지금 눌러야 할 곳 하나를 말풍선으로 짚어준다. X로 세션 동안 끌 수 있다 */
-  const inProgress = ownPlans.find((p) => { const pct = planPct(p); return pct > 0 && pct < 100; });
-  const notStarted = ownPlans.find((p) => planPct(p) === 0);
-  const guideRaw = inProgress
-    ? { planId: inProgress.id, text: "작성 중인 플랜이에요 — 이어서 완성해 보세요" }
-    : notStarted
-      ? { planId: notStarted.id, text: "여기서부터 시작하면 돼요" }
-      : null;
-  const guide = guideOn ? guideRaw : null;
-  const guideNewPlan = ownPlans.length === 0;
-
   function openPlan(id: string) {
     setActivePlan(id);
     router.push("/plan/overview");
@@ -117,69 +103,23 @@ export default function PlanList() {
     <div className={styles.page}>
       <div className={styles.frame}>
         {/*
-          사업 정보는 마이페이지에 둔다.
-          플랜이 여러 개인데 목록 맨 위에 사업 카드가 하나 떠 있으면
-          어느 플랜의 정보인지 읽히지 않는다. 여기는 플랜만 늘어놓는다.
+          CRM UI Kit(Dashboard) 배치 — 옅은 바탕 위 흰 카드, 제목 한 줄, 숫자는 최소.
+          예전의 통계 카드 셋·안내 말풍선·포스터형 표지는 '어렵다'는 피드백으로
+          걷어냈다. 한 카드에 제목·유형·진행 한 줄이면 충분하다.
         */}
-        {/* 플랜 목록 */}
         <div className={styles.listHead}>
-          <h2 className={styles.listTitle}>
-            내 플랜<span>{ownPlans.length}개</span>
-          </h2>
-          {/* 플랜이 없으면 아래 빈 화면의 '첫 플랜 만들기'가 이미 있다 — 같은 버튼을 두 개 두지 않는다 */}
+          <h2 className={styles.listTitle}>내 플랜</h2>
           {ownPlans.length > 0 && (
-            <Link href="/plan/start" className={styles.newBtn}>+ 새 플랜</Link>
+            <Link href="/plan/start" className={styles.newBtn}><Plus size={16} /> 새 플랜</Link>
           )}
         </div>
 
-        {/*
-          한눈에 보는 숫자.
-          카드 21장을 세어 보지 않으면 몇 개나 끝냈는지 알 수 없었다.
-          셋은 서로 겹치지 않고 합이 전체와 같다 — 이어서 할 것 + 완성 = 전체.
-
-          원본(Stats-card)에는 '+2,5%' 같은 증감 배지 자리가 있지만 비운다.
-          우리에게 대응하는 실제 지표가 없고, 없는 숫자를 만들어 넣지 않는다.
-          플랜이 하나도 없으면 0 셋을 보여줄 이유가 없어 통째로 그리지 않는다.
-        */}
-        {ownPlans.length > 0 && (
-          <div className={styles.statRow}>
-            {[
-              { key: "all", label: "전체 플랜", value: ownPlans.length, desc: "만든 문서 전부" },
-              {
-                key: "todo",
-                label: "이어서 할 것",
-                value: ownPlans.filter((p) => planPct(p) < 100).length,
-                desc: "아직 완성하지 않음",
-              },
-              {
-                key: "done",
-                label: "완성",
-                value: ownPlans.filter((p) => planPct(p) === 100).length,
-                desc: "전체 섹션을 채움",
-              },
-            ].map((s) => (
-              <div key={s.key} className={`${styles.statCard} ${styles[`stat_${s.key}`]}`}>
-                <span className={styles.statMark} aria-hidden="true" />
-                <span className={styles.statText}>
-                  <small>{s.label}</small>
-                  <strong>{s.value}</strong>
-                  <small>{s.desc}</small>
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
-
         {ownPlans.length === 0 ? (
           <div className={styles.empty}>
+            <span className={styles.emptyArt} aria-hidden="true"><FileText size={28} /></span>
             <p className={styles.emptyTitle}>아직 만든 플랜이 없어요</p>
-            <p className={styles.emptyDesc}>사업 정보를 입력하고 첫 사업계획서를 시작해보세요.</p>
-            <span className={styles.guideAnchor}>
-              {guideOn && (
-                <span className={styles.guideBubble}>첫 플랜을 만들어 보세요<GuideClose onClose={dismissGuide} className={styles.guideClose} /></span>
-              )}
-              <Link href="/plan/start" className={`${styles.newBtn} ${guideOn ? styles.guidePulse : ""}`}>+ 첫 플랜 만들기</Link>
-            </span>
+            <p className={styles.emptyDesc}>사업 이름과 한두 문장 설명이면 시작할 수 있어요.</p>
+            <Link href="/plan/start" className={styles.newBtn}><Plus size={16} /> 첫 플랜 만들기</Link>
           </div>
         ) : (
           <div className={styles.deck}>
@@ -189,164 +129,93 @@ export default function PlanList() {
               const pct = total ? Math.round((done / total) * 100) : 0;
               const isActive = p.id === state.activePlanId;
               const meta = TYPE_META[p.planType] ?? DEFAULT_META;
-              const acc = meta.accent;
-              // 예시 플랜은 읽기 전용 — 이름 변경·복제·삭제를 걸지 않는다
-              const sample = isSamplePlan(p.id);
               return (
-                <button
+                <div
                   key={p.id}
-                  className={`${styles.planCard} ${guide?.planId === p.id ? styles.guideCard : ""}`}
-                  style={{ ["--acc" as string]: acc }}
+                  className={`${styles.card} ${isActive ? styles.cardActive : ""}`}
+                  style={{ ["--acc" as string]: meta.accent }}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => openPlan(p.id)}
+                  onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPlan(p.id); } }}
                 >
-                  {guide?.planId === p.id && (
-                    <span className={styles.guideBubble}>{guide.text}<GuideClose onClose={dismissGuide} className={styles.guideClose} /></span>
+                  <div className={styles.cardTop}>
+                    <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
+                    <span className={styles.cardActions}>
+                      <button type="button" className={styles.iconBtn} title="이름 변경" aria-label="이름 변경" onClick={(e) => startRename(e, p.id, p.title)}><Pencil size={14} /></button>
+                      <button type="button" className={styles.iconBtn} title="삭제" aria-label="삭제" onClick={(e) => removePlan(e, p.id, p.title)}><Trash2 size={14} /></button>
+                    </span>
+                  </div>
+
+                  {editingId === p.id ? (
+                    <input
+                      className={styles.titleInput}
+                      value={draftTitle}
+                      autoFocus
+                      onClick={(e) => e.stopPropagation()}
+                      onChange={(e) => setDraftTitle(e.target.value)}
+                      onBlur={() => commitRename(p.id)}
+                      onKeyDown={(e) => {
+                        e.stopPropagation();
+                        if (e.key === "Enter") commitRename(p.id);
+                        if (e.key === "Escape") setEditingId(null);
+                      }}
+                    />
+                  ) : (
+                    <strong className={styles.cardTitle}>{p.title}</strong>
                   )}
-                  <span className={`${styles.sheet} ${isActive ? styles.sheetActive : ""} ${guide?.planId === p.id ? styles.sheetGuide : ""}`}>
-                    <span className={styles.cover}>
-                      {sample ? (
-                        <span className={styles.coverBadge}>예시</span>
-                      ) : isActive ? (
-                        <span className={styles.coverBadge}>작업 중</span>
-                      ) : null}
-                      <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
-                      {pct === 100 && <span className={styles.stamp} aria-label="완성됨">완성</span>}
-                      {editingId === p.id ? (
-                        <input
-                          className={styles.coverInput}
-                          value={draftTitle}
-                          autoFocus
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={(e) => setDraftTitle(e.target.value)}
-                          onBlur={() => commitRename(p.id)}
-                          onKeyDown={(e) => {
-                            e.stopPropagation();
-                            if (e.key === "Enter") commitRename(p.id);
-                            if (e.key === "Escape") setEditingId(null);
-                          }}
-                        />
-                      ) : (
-                        <span className={styles.coverName}>
-                          {p.title}
-                          {sample ? null : <span
-                            role="button"
-                            tabIndex={0}
-                            className={styles.renameBtn}
-                            title="이름 변경"
-                            onClick={(e) => startRename(e, p.id, p.title)}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") startRename(e as unknown as React.MouseEvent, p.id, p.title);
-                            }}
-                          >
-                            <Pencil size={12} />
-                          </span>}
-                        </span>
-                      )}
-                      <span className={styles.typeChip}>{meta.short}</span>
-                    </span>
-                    {/*
-                      세 상태를 같은 자리에서 비교한다.
-                      예전에는 '시작 전'만 막대 없이 글자만 있어, 카드를 여러 장
-                      늘어놓으면 어디까지 했는지 눈으로 대볼 수가 없었다.
-                      0% 도 막대를 그리고, 색과 함께 모양(○ ◐ ✓)으로도 나눈다 —
-                      색만으로 나누면 색각 이상인 분에게는 구분이 사라진다.
-                    */}
-                    <span
-                      className={`${styles.strip} ${pct === 0 ? styles.stripIdle : pct === 100 ? styles.stripDone : styles.stripLive}`}
-                    >
-                      <span className={styles.stateDot} aria-hidden="true" />
-                      <span className={styles.bar}>
-                        <span
-                          className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`}
-                          style={{ width: `${Math.max(pct, 0)}%` }}
-                        />
-                      </span>
-                      <b className={styles.pct}>{pct === 0 ? "시작 전" : pct === 100 ? "완성" : `${pct}%`}</b>
-                    </span>
-                  </span>
-                  <span className={styles.cardMeta}>
-                    <span className={styles.metaType}>{p.planType}</span>
-                    <span className={styles.metaRow}>
-                      <span className={styles.date}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")}</span>
-                      {sample ? null : <><span
-                        role="button"
-                        tabIndex={0}
-                        className={styles.delBtn}
-                        onClick={(e) => removePlan(e, p.id, p.title)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") removePlan(e as unknown as React.MouseEvent, p.id, p.title);
-                        }}
-                      >
-                        삭제
-                      </span></>}
-                    </span>
-                  </span>
-                </button>
+                  <span className={styles.cardType}>{p.planType}</span>
+
+                  <div className={styles.progress}>
+                    <span className={styles.progressNum}><b>{done}</b> / {total} <small>섹션 완료</small></span>
+                    <span className={styles.bar}><span className={`${styles.barFill} ${pct === 100 ? styles.done : ""}`} style={{ width: `${pct}%` }} /></span>
+                  </div>
+
+                  <div className={styles.cardFoot}>
+                    <span>{pct === 100 ? "완성" : pct === 0 ? "시작 전" : "작성 중"}</span>
+                    <span>{new Date(p.updatedAt).toLocaleDateString("ko-KR")}</span>
+                  </div>
+                </div>
               );
             })}
-
-            {/* 레퍼런스의 + New Plan 점선 카드 */}
-            <Link href="/plan/start" className={styles.newCard}>
-              <span className={styles.newCardInner}>
-                <span className={styles.newCardBody}>
-                  <Plus size={22} />
-                  새 플랜
-                </span>
-                {/* 플랜 카드의 진행 바 자리를 그대로 비워 둔다 — 높이가 어긋나지 않게 */}
-                <span className={styles.strip} aria-hidden="true">
-                  <span className={styles.bar} />
-                  <b className={styles.pct}>&nbsp;</b>
-                </span>
-              </span>
-              {/* 플랜 카드 아래 유형·날짜 줄과 같은 높이를 비워 두 카드의 아랫단을 맞춘다 */}
-              <span className={styles.cardMeta} aria-hidden="true">
-                <span className={styles.metaType}>&nbsp;</span>
-                <span className={styles.metaRow}>
-                  <span className={styles.date}>&nbsp;</span>
-                </span>
-              </span>
-            </Link>
           </div>
         )}
 
-        {/* 결제 전 샘플 — 어드민이 실제 AI로 만든 완성본 3부. 결제 이력이 생기면 접는다. */}
+        {/* 결제 전 샘플 — 어드민이 실제 AI로 만든 완성본. 결제 이력이 생기면 접는다. */}
         {!hasAnyPaid && samples.length > 0 && (
           <div className={styles.sampleBlock}>
             <div className={styles.listHead}>
-              <h2 className={styles.listTitle}>
-                결제 전에 완성본을 미리 볼 수 있어요
-              </h2>
+              <h2 className={styles.sectionTitle}>완성 샘플 미리 보기</h2>
+              <span className={styles.sectionNote}>실제 AI로 만든 문서 · 읽기 전용</span>
             </div>
             <div className={styles.deck}>
               {samples.map((p) => {
                 const meta = TYPE_META[p.planType] ?? DEFAULT_META;
                 return (
-                  <button
+                  <div
                     key={p.id}
-                    className={styles.planCard}
+                    className={styles.card}
                     style={{ ["--acc" as string]: meta.accent }}
+                    role="button"
+                    tabIndex={0}
                     onClick={() => openPlan(p.id)}
+                    onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openPlan(p.id); } }}
                   >
-                    <span className={styles.sheet}>
-                      <span className={styles.cover}>
-                        <span className={styles.coverBadge}>샘플</span>
-                        <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
-                        <span className={styles.sampleMark} aria-hidden="true">SAMPLE</span>
-                        <span className={styles.coverName}>{p.title.replace(/^샘플 · /, "")}</span>
-                        <span className={styles.typeChip}>{meta.short}</span>
-                      </span>
-                      <span className={styles.strip}>
-                        <span className={styles.bar}><span className={`${styles.barFill} ${styles.done}`} style={{ width: "100%" }} /></span>
-                        <b className={styles.pct}>완성</b>
-                      </span>
-                    </span>
-                    <span className={styles.cardMeta}>
-                      <span className={styles.metaType}>{p.planType}</span>
-                      <span className={styles.metaRow}>
-                        <span className={styles.date}>실제 AI 생성 문서 · 읽기 전용</span>
-                      </span>
-                    </span>
-                  </button>
+                    <div className={styles.cardTop}>
+                      <span className={styles.emblem} aria-hidden="true"><meta.Icon /></span>
+                      <span className={styles.sampleTag}>샘플</span>
+                    </div>
+                    <strong className={styles.cardTitle}>{p.title.replace(/^샘플 · /, "")}</strong>
+                    <span className={styles.cardType}>{p.planType}</span>
+                    <div className={styles.progress}>
+                      <span className={styles.progressNum}><b>{sectionCountForType(p.planType)}</b> / {sectionCountForType(p.planType)} <small>섹션 완료</small></span>
+                      <span className={styles.bar}><span className={`${styles.barFill} ${styles.done}`} style={{ width: "100%" }} /></span>
+                    </div>
+                    <div className={styles.cardFoot}>
+                      <span>완성</span>
+                      <span>열어 보기 →</span>
+                    </div>
+                  </div>
                 );
               })}
             </div>

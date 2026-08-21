@@ -555,3 +555,34 @@
   font-size: 12.5px;
   cursor: pointer;
 }
+
+/*
+ * ── CRM UI Kit 사이드바: 짙은 남색 → 흰 바탕 ──────────────────────
+ * 실측: 흰 바탕, 오른쪽 1px #d8d8d8 구분선, 글자 #1c1d21 / 보조 #8181a5,
+ * 선택 항목은 옅은 바탕. 짙은 레일은 화면 왼쪽 사분의 일을 검게 눌러
+ * 본문보다 먼저 눈에 들어왔다 — 레일은 조용해야 한다.
+ */
+.rail {
+  background: #fff;
+  border-right: 1px solid #e6e6ef;
+}
+.railBtn {
+  color: #55586a;
+  background: transparent;
+}
+.railBtn svg { color: #8181a5; }
+.railBtn:hover {
+  background: #f5f5fa;
+  color: #1c1d21;
+}
+.railBtn.on {
+  background: color-mix(in srgb, var(--blue, #4a3aff) 10%, #fff);
+  color: var(--blue, #4a3aff);
+}
+.railBtn.on svg { color: var(--blue, #4a3aff); }
+.signIn {
+  background: #f5f5fa;
+  color: #1c1d21;
+}
+.signIn:hover { background: #ececf4; }
+.content { background: #f5f5fa; }

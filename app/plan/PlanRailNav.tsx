@@ -94,6 +94,12 @@ export default function PlanRailNav() {
   const expandedId = openId ?? state.activePlanId ?? plans[0]?.id ?? null;
 
   if (!mounted || plans.length === 0) return null;
+  /*
+   * 목록 화면(/plan)에서는 그리지 않는다. 오른쪽 본문이 이미 플랜 목록인데
+   * 왼쪽에 플랜마다 챕터 일곱 줄을 또 펼치면 같은 것을 두 번 보여주는 셈이고,
+   * 그게 '대시보드가 어렵다'의 가장 큰 원인이었다. 플랜 안으로 들어가면 나온다.
+   */
+  if (pathname === "/plan") return null;
 
   /** 이동할 때는 작업 중인 플랜도 그쪽으로 옮긴다 — 이후 문서·PPT가 헷갈리지 않게 */
   function go(planId: string, href: string) {

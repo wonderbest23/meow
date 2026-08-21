@@ -1,3 +1,4 @@
+/* 레일이 흰 바탕(CRM UI Kit)이 되면서 흰 글씨 계열을 전부 어두운 계열로 바꿨다. */
 /* 레일 안의 플랜 목록 — 어두운 레일 톤에 그대로 얹힌다 */
 
 .wrap {
@@ -5,7 +6,7 @@
   flex: 1 1 auto;
   margin-top: 10px;
   padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid #f0f0f3;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -27,7 +28,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.9);
+  color: #1c1d21;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -40,14 +41,14 @@
 
 /* 지금 작업 중인 플랜 — 여럿 중 어느 것이 기준인지 */
 .planOn {
-  background: rgba(255, 255, 255, 0.1);
+  background: #f0f0f3;
 }
 
 .caret {
   flex: none;
   width: 12px;
   font-size: 9px;
-  color: rgba(255, 255, 255, 0.5);
+  color: #8181a5;
   transition: transform 0.14s ease;
 }
 
@@ -69,17 +70,17 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
-  color: rgba(255, 255, 255, 0.55);
+  color: #8181a5;
 }
 
 .sampleTag {
   flex: none;
   padding: 1px 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.14);
+  background: #ececf4;
   font-size: 13px;
   font-weight: 800;
-  color: rgba(255, 255, 255, 0.7);
+  color: #55586a;
 }
 
 .planBody {
@@ -102,10 +103,10 @@
 .output {
   min-height: 26px;
   padding: 0 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid #e6e6ef;
   border-radius: 999px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.82);
+  color: #1c1d21;
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -124,7 +125,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.82);
+  color: #1c1d21;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -139,7 +140,7 @@
   width: 16px;
   height: 16px;
   border-radius: 5px;
-  background: rgba(255, 255, 255, 0.14);
+  background: #ececf4;
   display: grid;
   place-items: center;
   font-size: 13px;
@@ -161,7 +162,7 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
-  color: rgba(255, 255, 255, 0.55);
+  color: #8181a5;
 }
 
 .sections {
@@ -176,7 +177,7 @@
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  color: #8181a5;
   display: flex;
   align-items: center;
   gap: 7px;
@@ -190,7 +191,7 @@
   flex: none;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 255, 255, 0.38);
+  color: #b4b4c8;
 }
 
 .sectionName {
@@ -203,7 +204,7 @@
 
 /* 다 쓴 섹션 — 남은 일과 구분되게 조금 밝게 */
 .sectionDone .sectionName {
-  color: rgba(255, 255, 255, 0.82);
+  color: #1c1d21;
 }
 
 .sectionOn {
@@ -220,12 +221,12 @@
   .planRow:hover,
   .chapterBtn:hover,
   .section:hover {
-    background: rgba(255, 255, 255, 0.09);
+    background: #f5f5fa;
   }
 
   .output:hover {
-    background: rgba(255, 255, 255, 0.12);
-    border-color: rgba(255, 255, 255, 0.3);
+    background: #ececf4;
+    border-color: #d8d8d8;
   }
 
   .sectionOn:hover {
