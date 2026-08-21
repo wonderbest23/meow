@@ -2,7 +2,7 @@
 
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f6f5ff);
+  background: var(--surface-muted, #f5f5fa);
   color: var(--text-strong, #0d0a2c);
   padding: 22px 16px 48px;
 }
@@ -112,7 +112,7 @@
   place-items: center;
   font-size: 13px;
   font-weight: 800;
-  background: var(--surface-muted, #f6f5ff);
+  background: var(--surface-muted, #f5f5fa);
   color: var(--text-muted, #5f5c7f);
 }
 .step.stepOn {

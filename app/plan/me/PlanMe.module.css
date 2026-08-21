@@ -136,7 +136,7 @@
 .status {
   padding: 3px 9px;
   border-radius: 999px;
-  background: var(--surface-muted, #f6f5ff);
+  background: var(--surface-muted, #f5f5fa);
   color: var(--text-body, #585667);
   font-size: 13px;
   font-weight: 700;

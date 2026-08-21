@@ -12,7 +12,7 @@
 .shell {
   --rail-w: 208px;
   min-height: 100vh;
-  background: var(--surface-muted, #f6f5ff);
+  background: var(--surface-muted, #f5f5fa);
   color: var(--text-strong, #0d0a2c);
   display: flex;
 }
@@ -586,3 +586,29 @@
 }
 .signIn:hover { background: #ececf4; }
 .content { background: #f5f5fa; }
+
+/*
+ * 접기 손잡이 — 레일 테두리 위에 앉은 작은 원.
+ * 긴 직사각형에 레일과 다른 테두리 색(#d5dbe2)이라 따로 노는 부품처럼
+ * 보였다. 레일 테두리(#e6e6ef)와 같은 선, 28px 원, 기울지 않은 그림자.
+ */
+.railToggle {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #e6e6ef;
+  border-radius: 50%;
+  color: #8181a5;
+  font-size: 12px;
+  box-shadow: 0 2px 8px rgba(28, 29, 33, 0.1);
+}
+.railToggleOff {
+  border-radius: 0 14px 14px 0;
+  border-left: 0;
+  opacity: 0.8;
+}
+@media (max-width: 640px) {
+  .railToggle { width: 32px; height: 32px; font-size: 14px; }
+}
+
+/* plan 안쪽 페이지들은 --surface-muted 토큰으로 바탕을 칠한다 — 킷 바탕값으로 맞춘다 */
+.content { --surface-muted: #f5f5fa; }
