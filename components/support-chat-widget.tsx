@@ -14,8 +14,6 @@ import { supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/f
 import type { SupportChat } from "../lib/support-chat/repository";
 import {
   CONSULT_INPUT_EXAMPLES,
-  CONSULT_OPENING,
-  CONSULT_STARTERS,
   SUPPORT_INPUT_EXAMPLES,
   PROFILE_LABELS,
   type ConsultPick,
@@ -430,24 +428,29 @@ export function SupportChatWidget() {
                 {mode === "consult" ? (
                   <section className="consult-pane" aria-label="창업 상담">
                     {consultTurns.length === 0 && (
-                      <>
-                        {/*
-                          * 첫 인사도 뒤따르는 상담사 말과 같은 모양으로.
-                          * 여기만 다른 틀을 쓰면 첫 화면과 대화 중 화면이 다른 서비스처럼 보인다.
-                          */}
-                        <article className="assistant">
-                          <header>
-                            <img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" />
-                            <span>상담사</span>
-                          </header>
-                          <p>{CONSULT_OPENING}</p>
-                        </article>
-                        <div className="support-chat-choice-bubbles" aria-label="상담 시작 고르기">
-                          {CONSULT_STARTERS.map((starter) => (
-                            <button type="button" key={starter} onClick={() => void askConsult(starter)}>{starter}</button>
+                      /*
+                       * 첫 화면 — 레퍼런스(네이버 AI 검색)처럼 그라데이션 큰 글씨와
+                       * '이렇게 물으면 된다'는 예시 셋만. 예시를 누르면 그 문장이
+                       * 그대로 첫 질문으로 전송된다.
+                       */
+                      <div className="consult-welcome">
+                        <h3>어떤 창업이든,<br />같이 찾아드려요</h3>
+                        <ul aria-label="질문 예시">
+                          {[
+                            { tag: "카페 창업", q: "성수동에서 카페 창업하고 싶어요" },
+                            { tag: "무인 매장", q: "3천만 원으로 무인 매장 하고 싶어요" },
+                            { tag: "부업 찾기", q: "직장 다니면서 주말에만 할 부업을 찾고 있어요" },
+                          ].map((ex) => (
+                            <li key={ex.tag}>
+                              <button type="button" onClick={() => void askConsult(ex.q)}>
+                                <i aria-hidden="true">↳</i>
+                                <b>{ex.tag}</b>
+                                <span>{ex.q}</span>
+                              </button>
+                            </li>
                           ))}
-                        </div>
-                      </>
+                        </ul>
+                      </div>
                     )}
 
                     {consultTurns.map((turn) => (
