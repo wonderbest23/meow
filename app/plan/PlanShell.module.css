@@ -612,3 +612,37 @@
 
 /* plan 안쪽 페이지들은 --surface-muted 토큰으로 바탕을 칠한다 — 킷 바탕값으로 맞춘다 */
 .content { --surface-muted: #f5f5fa; }
+
+/*
+ * ── 메뉴 접기: 레일 손잡이 → 킷의 상단바 햄버거 ───────────────────
+ * CRM UI Kit 실측: 본문 상단바 왼쪽, 36×36, 위 24 / 왼 28, 석 줄 아이콘.
+ * 레일 가장자리에 튀어나온 « 손잡이는 킷에 없는 우리 발명품이었다.
+ */
+.railToggle,
+.railToggleOff {
+  top: 24px;
+  left: calc(var(--rail-w) + 28px);
+  transform: none;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e6e6ef;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: none;
+  opacity: 1;
+}
+.railToggleOff { left: 28px; }
+.railToggle:hover { background: #f5f5fa; }
+.burger { display: grid; gap: 4px; }
+.burger i { display: block; width: 16px; height: 2px; border-radius: 1px; background: #55586a; }
+.railToggle:hover .burger i { background: var(--blue, #4a3aff); }
+
+@media (max-width: 640px) {
+  /* 폰은 상단 바 안에 이미 메뉴 단추가 있으니 여기서는 그 자리에 맞춘다 */
+  .railToggle, .railToggleOff { top: 14px; left: auto; right: 14px; width: 40px; height: 40px; }
+}
+
+/* 본문에 상단바가 없어 햄버거가 카드 모서리에 걸쳤다 — 레일 맨 위(로고 오른쪽)로.
+   접힌 상태에서는 본문 왼쪽 위에 남아 다시 펼 수 있다. */
+.railToggle { top: 18px; left: calc(var(--rail-w) - 14px - 36px); }
+.railToggleOff { top: 18px; left: 14px; }

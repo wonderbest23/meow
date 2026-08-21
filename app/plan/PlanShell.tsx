@@ -180,7 +180,8 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         aria-label={(phone ? drawer : !railHidden) ? "메뉴 접기" : "메뉴 펼치기"}
         title={(phone ? drawer : !railHidden) ? "메뉴 접기" : "메뉴 펼치기"}
       >
-        {(phone ? drawer : !railHidden) ? "«" : "»"}
+        {/* 킷(CRM UI Kit)의 상단바 Menu icon — 석 줄 햄버거. 레일 가장자리 손잡이는 킷에 없다 */}
+        <span className={styles.burger} aria-hidden="true"><i /><i /><i /></span>
       </button>
       {/*
         폰 상단 바 — 사이트 다른 화면처럼 로고가 보이는 머리 영역.
