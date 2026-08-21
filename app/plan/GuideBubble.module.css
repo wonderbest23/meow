@@ -85,3 +85,13 @@
     animation: none;
   }
 }
+
+/*
+ * 안내 말풍선·링 — '어렵다'는 피드백의 한 원인. 화면마다 "여기예요",
+ * "살펴보세요"가 떠 있으면 읽을 게 늘어난다. 킷에는 이런 장치가 없다.
+ * 전부 감춘다(동작은 그대로, 표시만).
+ */
+.bubble { display: none !important; }
+/* .ring 은 강조 '대상'(버튼·카드)에 붙는 클래스다 — 숨기면 그 요소가 통째로 사라진다.
+   고리 효과만 끈다. */
+.ring { box-shadow: none !important; animation: none !important; outline: none !important; }
