@@ -539,12 +539,42 @@ const REVIEW_DEMO: HomeReview[] = [
  * 색은 고객 사이트라는 설정이라 우리 브랜드색에 묶지 않는다.
  */
 const LANDING_PEEKS = [
-  { name: "무인 스터디카페", tag: "24시간 무인 운영 · 경기", hue: "#4a3aff" },
-  { name: "동네 베이커리", tag: "당일 생산 · 서울", hue: "#d97706" },
-  { name: "무인 세탁소", tag: "셀프 빨래방 · 광주", hue: "#0e9f8a" },
-  { name: "시니어 돌봄 서비스", tag: "방문 요양 · 부산", hue: "#16803c" },
-  { name: "배달 분식집", tag: "배달 전문 · 인천", hue: "#dc2626" },
-  { name: "가죽 공방 클래스", tag: "원데이 클래스 · 대전", hue: "#a21caf" },
+  {
+    name: "무인 스터디카페", hue: "#4a3aff", url: "quietseat.kr", region: "경기 수원",
+    menu: ["요금", "좌석", "이용 안내"], cta: "좌석 예약",
+    head: "조용한 24시간, 당신의 자리", sub: "첫 달 정기권 20% 할인 · 앱으로 출입",
+    feats: [["24시간 무인", "새벽에도 열려 있어요"], ["개인 좌석", "칸막이·콘센트·스탠드"], ["앱 출입", "QR로 바로 입장"]],
+  },
+  {
+    name: "동네 베이커리", hue: "#d97706", url: "morningloaf.kr", region: "서울 마포",
+    menu: ["오늘의 빵", "케이크", "오시는 길"], cta: "오늘의 빵 보기",
+    head: "매일 아침 굽는 빵", sub: "당일 생산, 당일 판매 · 오전 7시 오픈",
+    feats: [["천연 발효", "24시간 저온 숙성"], ["주문 케이크", "하루 전 예약"], ["픽업 예약", "기다림 없이 바로"]],
+  },
+  {
+    name: "무인 세탁소", hue: "#0e9f8a", url: "cleanspin.kr", region: "광주 서구",
+    menu: ["요금", "이용 방법", "위치"], cta: "요금 안내",
+    head: "빨래는 맡기고, 시간은 챙기세요", sub: "대형 이불도 40분이면 끝 · 24시간",
+    feats: [["24시간", "연중무휴 운영"], ["대형 세탁기", "이불·커튼도 한 번에"], ["간편 결제", "카드·앱 모두 가능"]],
+  },
+  {
+    name: "시니어 돌봄 서비스", hue: "#16803c", url: "withcare.kr", region: "부산 해운대",
+    menu: ["서비스", "요금", "상담"], cta: "상담 신청",
+    head: "가족처럼, 곁에서", sub: "방문 요양 · 병원 동행 · 정기 안부",
+    feats: [["요양보호사 매칭", "성향에 맞춰 연결"], ["병원 동행", "예약부터 귀가까지"], ["정기 안부", "가족에게 리포트"]],
+  },
+  {
+    name: "배달 분식집", hue: "#dc2626", url: "tteok30.kr", region: "인천 부평",
+    menu: ["메뉴", "세트", "리뷰"], cta: "메뉴 보기",
+    head: "바삭한 떡볶이, 30분 안에", sub: "배달 전문 · 단체 주문 환영",
+    feats: [["세트 구성", "2인·4인 세트"], ["단체 주문", "하루 전 예약 시 할인"], ["리뷰 이벤트", "사진 리뷰 음료 증정"]],
+  },
+  {
+    name: "가죽 공방 클래스", hue: "#a21caf", url: "leatherday.kr", region: "대전 유성",
+    menu: ["클래스", "작품", "예약"], cta: "클래스 예약",
+    head: "손으로 만드는 하루", sub: "원데이 클래스 · 소수 정원 4명",
+    feats: [["소수 정원", "1:4 밀착 수업"], ["재료 포함", "추가 비용 없음"], ["선물 포장", "당일 포장 가능"]],
+  },
 ];
 
 function HomeLandingPeek() {
@@ -555,11 +585,23 @@ function HomeLandingPeek() {
         <ul>
           {[...LANDING_PEEKS, ...LANDING_PEEKS].map((p, i) => (
             <li key={`${p.name}-${i}`} style={{ "--peek": p.hue } as React.CSSProperties}>
-              <span className="peek-bar"><i /><i /><i /></span>
-              <span className="peek-hero"><b>{p.name}</b><em>{p.tag}</em></span>
-              <span className="peek-row w85" />
-              <span className="peek-row w60" />
-              <span className="peek-grid"><i /><i /><i /></span>
+              <div className="peek-bar"><i /><i /><i /><span>{p.url}</span></div>
+              <div className="peek-site">
+                <div className="peek-nav">
+                  <b>{p.name}</b>
+                  {p.menu.map((m) => <span key={m}>{m}</span>)}
+                  <em>{p.cta}</em>
+                </div>
+                <div className="peek-hero">
+                  <strong>{p.head}</strong>
+                  <p>{p.sub}</p>
+                  <i>{p.cta}</i>
+                </div>
+                <div className="peek-feats">
+                  {p.feats.map(([t, d]) => <div key={t}><b>{t}</b><span>{d}</span></div>)}
+                </div>
+                <div className="peek-foot">© {p.name} · {p.region} · 사업자 정보 · 이용약관</div>
+              </div>
             </li>
           ))}
         </ul>
