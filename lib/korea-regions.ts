@@ -82,3 +82,66 @@ export function searchRegions(input: string, limit = 8): KoreaRegion[] {
   scored.sort((a, b) => a.score - b.score || regionLabel(a.r).localeCompare(regionLabel(b.r), "ko"));
   return scored.slice(0, limit).map((s) => s.r);
 }
+
+/* ── 읍·면·동 → 시·군·구 ───────────────────────────────────────────
+ * '성수동'만 쳐도 '서울 성동구'가 나오게. 4,023개라 첫 화면 무게에
+ * 얹지 않고, 지역 칸을 실제로 쓸 때만 불러온다(지연 로딩).
+ *
+ * 출처: 행정표준코드관리시스템 '법정동코드 전체자료'(2026-03 기준).
+ */
+export interface EmdHit {
+  /** 친 동 이름 */
+  emd: string;
+  region: KoreaRegion;
+}
+
+let emdMap: Record<string, string> | null = null;
+let emdLoading: Promise<void> | null = null;
+
+/** 동 목록을 준비한다 — 지역 칸에 처음 손댈 때 한 번 */
+export function loadEmd(): Promise<void> {
+  if (emdMap) return Promise.resolve();
+  if (!emdLoading) {
+    emdLoading = import("./korea-emd.json")
+      .then((m) => { emdMap = (m.default ?? m) as Record<string, string>; })
+      .catch(() => { emdMap = {}; });
+  }
+  return emdLoading;
+}
+
+const SIDO_BY_SHORT = new Map(KOREA_REGIONS.filter((r) => !r.sigungu).map((r) => [r.sidoShort, r.sido]));
+
+/** '성수' / '성수동' → 서울 성동구. 아직 안 불러왔으면 빈 결과. */
+export function searchEmd(input: string, limit = 6): EmdHit[] {
+  const q = input.trim();
+  if (!emdMap || q.length < 2) return [];
+  const starts: EmdHit[] = [];
+  const includes: EmdHit[] = [];
+  for (const [emd, packed] of Object.entries(emdMap)) {
+    const isStart = emd.startsWith(q);
+    if (!isStart && !emd.includes(q)) continue;
+    for (const one of packed.split(";")) {
+      const [sidoShort, sigungu] = one.split("|");
+      const sido = SIDO_BY_SHORT.get(sidoShort) ?? sidoShort;
+      const hit: EmdHit = { emd, region: { sido, sidoShort, sigungu } };
+      (isStart ? starts : includes).push(hit);
+    }
+    if (starts.length >= limit) break;
+  }
+  const all = [...starts, ...includes];
+  /*
+   * 같은 시·군·구로 가는 줄은 하나만.
+   * '성수동' 은 성수동·성수동1가·성수동2가 세 줄이 다 성동구인데,
+   * 세 줄을 다 보여 주면 고를 것이 아니라 읽을 것이 된다.
+   */
+  const seen = new Set<string>();
+  const out: EmdHit[] = [];
+  for (const h of all) {
+    const k = `${h.region.sidoShort}|${h.region.sigungu}`;
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(h);
+    if (out.length >= limit) break;
+  }
+  return out;
+}

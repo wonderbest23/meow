@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { searchRegions, regionLabel } from "../lib/korea-regions";
+import { searchRegions, regionLabel, loadEmd, searchEmd, type KoreaRegion } from "../lib/korea-regions";
 
 /*
  * 지역 입력칸.
@@ -25,11 +25,23 @@ export default function RegionInput({
 }) {
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(0);
+  const [emdReady, setEmdReady] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  const hits = useMemo(() => searchRegions(value, 8), [value]);
+  /* 동 목록은 4,023줄이라 이 칸을 실제로 쓸 때만 불러온다 */
+  useEffect(() => { void loadEmd().then(() => setEmdReady(true)); }, []);
+
+  const hits = useMemo(() => {
+    const direct = searchRegions(value, 8).map((r) => ({ r, via: "" }));
+    void emdReady;
+    /* '성수동' 처럼 동을 치면 그 동이 속한 구를 올린다 */
+    const byEmd = searchEmd(value, 6)
+      .map((h) => ({ r: h.region, via: h.emd }))
+      .filter((x) => !direct.some((d) => d.r.sidoShort === x.r.sidoShort && d.r.sigungu === x.r.sigungu));
+    return [...byEmd, ...direct].slice(0, 8);
+  }, [value, emdReady]);
   /* 이미 정확히 고른 값이면 목록을 띄우지 않는다 */
-  const exact = hits.length === 1 && regionLabel(hits[0]) === value.trim();
+  const exact = hits.length === 1 && !hits[0].via && regionLabel(hits[0].r) === value.trim();
   const show = open && value.trim().length > 0 && hits.length > 0 && !exact;
 
   useEffect(() => { setActive(0); }, [value]);
@@ -43,9 +55,9 @@ export default function RegionInput({
   }, []);
 
   function choose(i: number) {
-    const r = hits[i];
-    if (!r) return;
-    onChange(regionLabel(r));
+    const hit = hits[i];
+    if (!hit) return;
+    onChange(regionLabel(hit.r));
     setOpen(false);
   }
 
@@ -72,8 +84,8 @@ export default function RegionInput({
       />
       {show && (
         <ul className="region-list" role="listbox">
-          {hits.map((r, i) => (
-            <li key={`${r.sido}-${r.sigungu}`}>
+          {hits.map((hit, i) => (
+            <li key={`${hit.via}-${hit.r.sido}-${hit.r.sigungu}`}>
               <button
                 type="button"
                 role="option"
@@ -83,8 +95,8 @@ export default function RegionInput({
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choose(i)}
               >
-                <b>{regionLabel(r)}</b>
-                <small>{r.sido}</small>
+                <b>{regionLabel(hit.r)}</b>
+                <small>{hit.via ? `${hit.via} 소재` : hit.r.sido}</small>
               </button>
             </li>
           ))}
