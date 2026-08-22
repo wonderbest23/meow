@@ -4,7 +4,9 @@ import { blocksPlugin, createUsePuck, fieldsPlugin, outlinePlugin, Puck, useGetP
 import { MousePointerClick, Redo2, Save, Sparkles, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { landingBlockConfig, type LandingBlockProps } from "./landing-blocks";
+import { useState } from "react";
 import { BrainwaveEditor } from "./brainwave-editor";
+import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "../lib/landing/brainwave/catalog";
 
 const useLandingPuck = createUsePuck();
 
@@ -192,13 +194,26 @@ export function LandingVisualBuilder({
   onClose: () => void;
   onSave: (data: LandingPageData) => void;
 }) {
+  /*
+   * 옛 블록 페이지에서 킷 페이지로 갈아타기.
+   * 킷으로 바꾸면 블록 편집 내용은 사라진다 — 물어본 뒤 바꾸고, 저장은 손님이 누른다.
+   */
+  const [switched, setSwitched] = useState<LandingPageData | null>(null);
+  const current = switched ?? data;
   /* Brainwave.io 킷 페이지는 블록 편집기(Puck)가 아니라 자리 편집기로 고친다 */
-  if (data.brainwave) {
-    return <BrainwaveEditor data={data} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} />;
+  if (current.brainwave) {
+    return <BrainwaveEditor data={current} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} />;
   }
+  const switchToKit = () => {
+    if (!window.confirm("새 킷 페이지(26가지 디자인)로 바꿉니다. 지금 블록으로 꾸민 내용은 사라지고, 글과 사진만 다시 넣게 됩니다. 바꿀까요?")) return;
+    setSwitched({ brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE.service, texts: {}, images: {} }, root: { props: { title: businessName } }, content: [] });
+  };
   return (
     <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="판매 페이지 자유 편집">
       <BuilderHint />
+      <button type="button" className="builder-switch-kit" onClick={switchToKit}>
+        <Sparkles size={15} /> 새 킷 페이지로 바꾸기 — 26가지 완성 디자인에 글·사진만 넣기
+      </button>
       <Puck
         config={landingBlockConfig}
         data={data as Data<LandingBlockProps>}

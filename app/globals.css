@@ -14614,3 +14614,4 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-ai-meta b { color: #161c2d; }
 .bw-ai-meta a { color: #473bf0; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .bw-ai-meta em { font-style: normal; color: #161c2d; }
+.builder-switch-kit { position: fixed; right: 16px; bottom: 92px; z-index: 70; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 0; border-radius: 10px; background: #161c2d; color: #fff; font-size: 13px; font-weight: 700; box-shadow: 0 10px 30px rgba(22,28,45,.3); cursor: pointer; }

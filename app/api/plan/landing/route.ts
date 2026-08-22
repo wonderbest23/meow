@@ -8,6 +8,7 @@ import { getLandingForProject, saveLandingDraft } from "../../../../lib/landing/
 import { landingDraftFromPlan, planLandingReadiness } from "../../../../lib/landing/from-plan";
 import { paidHomepagePlanIds, HOMEPAGE_PRODUCT_AMOUNT } from "../../../../lib/payments/plan-orders";
 import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
+import { isEditorPreviewAccount } from "../../../../lib/landing/editor-preview";
 
 /*
  * 운영자는 결제 없이 편집기를 연다.
@@ -17,8 +18,8 @@ import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
  * 관리자 로그인(payments 범위, 비밀번호로 여는 쿠키)을 그대로 쓴다.
  * 관리자로 로그인하지 않은 사람에게는 아무것도 달라지지 않는다.
  */
-async function editableFor(planId: string, purchased: Set<string>) {
-  return purchased.has(planId) || (await hasAdminSession("payments"));
+async function editableFor(planId: string, purchased: Set<string>, email: string | null) {
+  return purchased.has(planId) || isEditorPreviewAccount(email) || (await hasAdminSession("payments"));
 }
 
 export const runtime = "nodejs";
@@ -55,7 +56,7 @@ export async function GET(request: Request) {
   const site = await getLandingForProject(projectId, identity.hash);
   const purchased = identity.userId ? await paidHomepagePlanIds(identity.userId) : new Set<string>();
   return NextResponse.json(
-    { site, projectId, editable: await editableFor(planId, purchased), price: HOMEPAGE_PRODUCT_AMOUNT },
+    { site, projectId, editable: await editableFor(planId, purchased, identity.email), price: HOMEPAGE_PRODUCT_AMOUNT },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }
@@ -85,7 +86,7 @@ export async function POST(request: Request) {
    * 미리보기만 하는 사람에게도 초안은 만들어 준다 — 사기 전에 봐야 살지 정한다.
    */
   const purchased = identity.userId ? await paidHomepagePlanIds(identity.userId) : new Set<string>();
-  const entitlement = { editable: await editableFor(plan.id, purchased), price: HOMEPAGE_PRODUCT_AMOUNT };
+  const entitlement = { editable: await editableFor(plan.id, purchased, identity.email), price: HOMEPAGE_PRODUCT_AMOUNT };
 
   const source = { planTitle: plan.title, business: state.business, answers: plan.answers, contactEmail: access.email ?? "" };
   const readiness = planLandingReadiness(source);

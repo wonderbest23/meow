@@ -1,3 +1,4 @@
+import { isEditorPreviewAccount } from "./editor-preview";
 import { getProject } from "../project-repository";
 import { paidHomepagePlanIds } from "../payments/plan-orders";
 
@@ -15,6 +16,7 @@ export async function checkLandingEditAccess(
   projectId: string,
   guestTokenHash: string,
   userId: string | null,
+  email?: string | null,
 ): Promise<LandingEditReason> {
   const project = await getProject(projectId, guestTokenHash);
   if (!project) return "not_found";
@@ -28,7 +30,10 @@ export async function checkLandingEditAccess(
   if (!planId) return "payment_required";
 
   const purchased = await paidHomepagePlanIds(userId);
-  return purchased.has(planId) ? "ok" : "payment_required";
+  if (purchased.has(planId)) return "ok";
+  /* 운영자 미리보기 계정 — 결제 없이 편집·저장·공개를 열어 본다 */
+  if (email && isEditorPreviewAccount(email)) return "ok";
+  return "payment_required";
 }
 
 export function landingEditErrorResponse(reason: Exclude<LandingEditReason, "ok">) {

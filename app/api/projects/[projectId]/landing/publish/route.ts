@@ -10,7 +10,7 @@ export async function POST(
   try {
     const { projectId } = await context.params;
     const identity = await requireGuestIdentity();
-    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId);
+    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId, identity.email);
     if (reason !== "ok") {
       const { status, body } = landingEditErrorResponse(reason);
       return NextResponse.json(body, { status });

@@ -64,7 +64,7 @@ export async function PUT(
     const { projectId } = await context.params;
     const identity = await requireGuestIdentity();
     // 화면에서 버튼을 숨기는 것만으로는 API를 직접 부르면 뚫린다
-    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId);
+    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId, identity.email);
     if (reason !== "ok") {
       const { status, body } = landingEditErrorResponse(reason);
       return NextResponse.json(body, { status });
