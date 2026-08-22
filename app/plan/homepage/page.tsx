@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
+import { HomepageKitPanel } from "../../../components/homepage-kit-panel";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
@@ -146,7 +147,8 @@ export default function PlanHomepagePage() {
          *
          * 닫으면 그 화면으로 돌아간다 — 주소 확인이나 공개는 거기서 한다.
          */
-        if (data.editable) setBuilderOpen(true);
+        /* 옛 블록 페이지만 편집기를 바로 연다 — 킷 페이지는 화면(미리보기·사업자·문의)부터 보여준다 */
+        if (data.editable && !data.site.draft.pageData?.brainwave) setBuilderOpen(true);
         if (typeof data.price === "number") setPrice(data.price);
         setPhase("ready");
         return;
@@ -346,7 +348,7 @@ export default function PlanHomepagePage() {
         *
         * 이름을 하는 일로 바꾸고, 무슨 화면이 열리는지 한 줄 붙여 맨 위에 크게 둔다.
         */}
-      {phase === "ready" && draft && editable && (
+      {phase === "ready" && draft && editable && !draft.pageData?.brainwave && (
         <button type="button" className={styles.builderOpen} onClick={() => setBuilderOpen(true)}>
           <span className={styles.builderOpenIcon}><LayoutTemplate size={18} /></span>
           <span className={styles.builderOpenText}>
@@ -357,7 +359,24 @@ export default function PlanHomepagePage() {
         </button>
       )}
 
-      {phase === "ready" && draft && editable && (
+      {/* 킷 페이지 — 편집은 미리보기를 눌러 열고, 밖에는 사업자 정보·도메인·문의만 */}
+      {phase === "ready" && draft && editable && draft.pageData?.brainwave && (
+        <HomepageKitPanel
+          draft={draft}
+          site={site}
+          projectId={projectId}
+          publicPath={publicPath}
+          action={action}
+          message={message}
+          onChange={setDraft}
+          onSave={save}
+          onPublish={publish}
+          onOpenEditor={() => setBuilderOpen(true)}
+          onSiteUpdated={(next) => setSite(next)}
+        />
+      )}
+
+      {phase === "ready" && draft && editable && !draft.pageData?.brainwave && (
         <LandingQuickEditor
           draft={draft}
           action={action}

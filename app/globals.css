@@ -14615,3 +14615,49 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-ai-meta a { color: #473bf0; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .bw-ai-meta em { font-style: normal; color: #161c2d; }
 .builder-switch-kit { position: fixed; right: 16px; bottom: 92px; z-index: 70; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 0; border-radius: 10px; background: #161c2d; color: #fff; font-size: 13px; font-weight: 700; box-shadow: 0 10px 30px rgba(22,28,45,.3); cursor: pointer; }
+
+/* ── 킷 페이지 홈페이지 화면(/plan/homepage) ───────────────────── */
+.hk { display: grid; gap: 16px; }
+.hk-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.hk-top h3 { margin: 0 0 4px; font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+.hk-url { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #8181a5; }
+.hk-url span { padding: 2px 8px; border-radius: 999px; background: #f0f0f5; color: #1c1d21; font-weight: 700; font-size: 11.5px; }
+.hk-url a { display: inline-flex; align-items: center; gap: 4px; color: #1c1d21; text-decoration: underline; text-underline-offset: 3px; }
+.hk-actions { display: flex; gap: 8px; }
+.hk-actions button { min-height: 42px; padding: 0 16px; border: 1px solid #e1e1e8; border-radius: 10px; background: #fff; color: #1c1d21; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 7px; cursor: pointer; }
+.hk-actions .hk-primary { background: #4a3aff; border-color: #4a3aff; color: #fff; }
+.hk-actions button:disabled { opacity: .5; cursor: default; }
+.hk-msg { margin: -6px 0 0; font-size: 13px; color: #4a3aff; font-weight: 700; }
+.hk-preview { border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; overflow: hidden; }
+.hk-preview-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 16px; border-bottom: 1px solid #eeeef3; }
+.hk-preview-head strong { font-size: 14px; }
+.hk-edit { min-height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #4a3aff; color: #fff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.hk-preview-body { position: relative; display: block; width: 100%; max-height: 560px; overflow: hidden; padding: 0; border: 0; background: #f5f5fa; text-align: left; cursor: pointer; }
+.hk-preview-body .bw-stage { pointer-events: none; }
+.hk-preview-cover { position: absolute; left: 0; right: 0; bottom: 0; padding: 34px 16px 14px; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.96) 55%); color: #1c1d21; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
+.hk-card { border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; padding: 18px; }
+.hk-card-head { display: flex; gap: 12px; align-items: flex-start; margin-bottom: 14px; }
+.hk-card-head svg { flex: none; color: #4a3aff; margin-top: 2px; }
+.hk-card-head strong { display: block; font-size: 15px; }
+.hk-card-head small { color: #8181a5; font-size: 12.5px; line-height: 1.5; }
+.hk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
+.hk-grid label { display: grid; gap: 5px; font-size: 12.5px; color: #5e5e72; }
+.hk-grid label.wide { grid-column: 1 / -1; }
+.hk-grid input:not([type="checkbox"]) { min-height: 40px; padding: 0 12px; border: 1px solid #e1e1e8; border-radius: 8px; font-size: 14px; color: #1c1d21; background: #fff; }
+.hk-grid .slug-input { display: flex; align-items: center; border: 1px solid #e1e1e8; border-radius: 8px; overflow: hidden; }
+.hk-grid .slug-input em { padding: 0 10px; background: #f5f5fa; color: #8181a5; font-style: normal; font-size: 13px; line-height: 40px; }
+.hk-grid .slug-input input { border: 0; flex: 1; }
+.hk-switch { display: flex !important; align-items: flex-start; gap: 10px; padding: 10px 12px; border-radius: 8px; background: #f5f5fa; }
+.hk-switch input { margin-top: 3px; }
+.hk-switch span { color: #1c1d21; font-weight: 700; font-size: 13.5px; }
+.hk-switch small { display: block; margin-top: 2px; color: #8181a5; font-weight: 400; }
+.hk-empty { margin: 0; color: #8181a5; font-size: 13px; }
+.hk-leads { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.hk-leads li { display: flex; gap: 12px; padding: 12px; border-radius: 10px; background: #f5f5fa; }
+.hk-leads i { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; background: #4a3aff; color: #fff; font-style: normal; font-weight: 700; }
+.hk-leads strong { display: block; font-size: 14px; }
+.hk-leads span { font-size: 13px; color: #1c1d21; }
+.hk-leads p { margin: 6px 0 0; font-size: 13px; color: #5e5e72; white-space: pre-wrap; }
+.hk-leads small { display: block; margin-top: 4px; color: #8181a5; font-size: 11.5px; }
+@media (max-width: 640px) { .hk-grid { grid-template-columns: 1fr; } .hk-actions { width: 100%; } .hk-actions button { flex: 1; justify-content: center; } }
+.hk { padding-top: 10px; }
