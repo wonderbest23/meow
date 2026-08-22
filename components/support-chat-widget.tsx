@@ -3,6 +3,7 @@
 import {
   ArrowUp,
   ChevronRight,
+  X,
   ClipboardList,
   MessageCircleQuestion,
   ShieldCheck,
@@ -434,7 +435,7 @@ export function SupportChatWidget() {
                 }}
               >새 상담</button>
             )}
-            <button type="button" onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기">닫기</button>
+            <button type="button" className="chat-close" onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기"><X aria-hidden="true" /></button>
           </header>
 
           <div className="support-chat-body">
@@ -463,9 +464,13 @@ export function SupportChatWidget() {
                             </li>
                           ))}
                         </ul>
-                        <button type="button" className="welcome-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
-                          <MessageCircleQuestion /> 서비스 이용 문의는 여기
-                        </button>
+                        <div className="welcome-actions">
+                          {/* 상담 없이 바로 만들 사람의 문 — 플랜 만들기로 */}
+                          <a className="welcome-start" href="/plan/start">바로 시작하기</a>
+                          <button type="button" className="welcome-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
+                            <MessageCircleQuestion /> 서비스 이용 문의는 여기
+                          </button>
+                        </div>
                       </div>
                     )}
 
