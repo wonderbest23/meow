@@ -1217,3 +1217,25 @@
   .typeRow:hover, .primaryBtn:not(:disabled):hover { transform: none; }
 }
 .fieldNote { margin: 6px 0 0; color: #8181a5; font-size: 12px; line-height: 1.5; }
+
+/* 다음 단계 버튼 — 섹션 작성 화면과 같은 자리·모양(아래 꽉 차게).
+   왼쪽에 작게 붙어 있으면 다른 화면과 손이 가는 곳이 달라진다. */
+.actions {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #f0f0f3;
+  display: grid;
+  gap: 10px;
+  justify-items: stretch;
+}
+.actions .todo { color: #8181a5; font-size: 12.5px; text-align: center; }
+.actions .primaryBtn {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 10px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}

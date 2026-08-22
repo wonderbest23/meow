@@ -406,13 +406,6 @@ export default function PlanStartPage() {
               >←</button>
               <h1 className={styles.h1}>새 플랜 만들기</h1>
             </div>
-            <p className={styles.lead}>
-              {step === 1
-                ? hasExisting
-                  ? <><b>사업 정보를 확인해 주세요.</b> 수정하면 앞으로 만드는 모든 플랜에 반영됩니다.</>
-                  : <><b>먼저 사업을 알려주세요.</b> 여기 적은 내용이 이후 모든 질문과 AI 추천에 반영됩니다.</>
-                : <><b>어떤 걸 만들까요?</b> 같은 사업으로 여러 종류의 플랜을 만들 수 있어요.</>}
-            </p>
 
             {/*
               * 상담에서 온 값임을 밝힌다.
@@ -501,19 +494,20 @@ export default function PlanStartPage() {
                   버튼에는 할 일만 적는다. 다음 단계 이름까지 넣으면 문구가 길어져
                   모바일에서 두 줄로 감긴다. 아직 못 넘어가는 이유는 버튼 아래에 둔다.
                 */}
+                {/* 버튼 자리는 다른 화면(섹션 작성)과 같게 — 아래 꽉 차게, 안내는 그 위 한 줄 */}
                 <div className={styles.actions}>
-                  <button
-                    className={`${styles.primaryBtn} ${step1Ok ? styles.ready : ""}`}
-                    disabled={!step1Ok}
-                    onClick={() => setStep(2)}
-                  >
-                    다음 단계
-                  </button>
                   {!step1Ok && (
                     <span className={styles.todo}>
                       {!biz.name.trim() ? "사업 이름" : "사업 설명"}을 입력해 주세요
                     </span>
                   )}
+                  <button
+                    className={`${styles.primaryBtn} ${step1Ok ? styles.ready : ""}`}
+                    disabled={!step1Ok}
+                    onClick={() => setStep(2)}
+                  >
+                    다음 단계 →
+                  </button>
                 </div>
               </>
             ) : (
