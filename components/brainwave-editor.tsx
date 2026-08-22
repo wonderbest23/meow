@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageUp, LoaderCircle, Redo2, Save, Undo2, X } from "lucide-react";
+import { ImageUp, LoaderCircle, Redo2, Save, Sparkles, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwavePage, loadBrainwavePage, type BrainwavePageData } from "./brainwave-page";
@@ -19,14 +19,21 @@ import { resizeImage, uploadImage } from "./landing-media-field";
  */
 type Over = { texts: Record<string, string>; images: Record<string, string> };
 
+type TokenBalance = { purchased: number; used: number; remaining: number; packSize: number };
+
 export function BrainwaveEditor({
   data,
   onClose,
   onSave,
+  projectId = null,
+  business = { name: "", summary: "" },
 }: {
   data: LandingPageData;
   onClose: () => void;
   onSave: (data: LandingPageData) => void;
+  /** AI 수정(토큰 차감)에 필요 — 없으면 AI 칸이 숨는다 */
+  projectId?: string | null;
+  business?: { name: string; summary: string };
 }) {
   const init = data.brainwave!;
   const [page, setPage] = useState(init.page);
@@ -41,6 +48,44 @@ export function BrainwaveEditor({
   const pendingImage = useRef<string | null>(null);
 
   useEffect(() => { loadBrainwavePage(page).then(setMeta).catch(() => setMeta(null)); }, [page]);
+
+  /*
+   * AI 로 고치기 — "전부 우리 가게 말투로", "가격은 25,000원" 같은 지시 한 줄.
+   * 서버가 글 자리 목록을 보고 바꿀 자리만 돌려준다. 토큰은 쓴 만큼 차감되고,
+   * 잔액이 모자라면 충전 결제로 보낸다. 결과는 되돌리기 한 번으로 전부 취소된다.
+   */
+  const [ai, setAi] = useState<{ open: boolean; instruction: string; busy: boolean; note: string; balance: TokenBalance | null; planId: string; packAmount: number }>({
+    open: false, instruction: "", busy: false, note: "", balance: null, planId: "", packAmount: 9900,
+  });
+  useEffect(() => {
+    if (!projectId) return;
+    fetch(`/api/projects/${projectId}/landing/ai-tokens`, { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { planId?: string; balance?: TokenBalance; pack?: { amount: number } }) => setAi((s) => ({ ...s, balance: j.balance ?? null, planId: j.planId ?? "", packAmount: j.pack?.amount ?? 9900 })))
+      .catch(() => {});
+  }, [projectId]);
+  const runAi = async () => {
+    if (!projectId || ai.busy || ai.instruction.trim().length < 2) return;
+    const snapshot = finishText();
+    setAi((s) => ({ ...s, busy: true, note: "" }));
+    try {
+      const res = await fetch(`/api/projects/${projectId}/landing/ai-edit`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ instruction: ai.instruction, page, texts: snapshot.texts, business }),
+      });
+      const j = (await res.json().catch(() => ({}))) as { texts?: Record<string, string>; changed?: number; balance?: TokenBalance; error?: { code?: string; message?: string } };
+      if (!res.ok) {
+        setAi((s) => ({ ...s, busy: false, note: j.error?.message ?? "AI 수정에 실패했습니다.", balance: j.balance ?? s.balance }));
+        return;
+      }
+      if (j.texts && Object.keys(j.texts).length) commit({ ...snapshot, texts: { ...snapshot.texts, ...j.texts } });
+      setAi((s) => ({ ...s, busy: false, instruction: "", note: `${j.changed ?? 0}개 자리를 고쳤습니다. 마음에 안 들면 되돌리기(↶)를 누르세요.`, balance: j.balance ?? s.balance }));
+    } catch {
+      setAi((s) => ({ ...s, busy: false, note: "연결이 끊겼습니다. 다시 시도해 주세요." }));
+    }
+  };
+  const tokenPayHref = ai.planId ? `/plan/pay?planId=${encodeURIComponent(ai.planId)}&product=tokens` : "";
 
   const commit = (next: Over) => {
     setHistory((h) => [...h.slice(-40), over]);
@@ -107,7 +152,7 @@ export function BrainwaveEditor({
   const changed = Object.keys(over.texts).length + Object.keys(over.images).length;
 
   return (
-    <div className="landing-visual-builder bw-editor" role="dialog" aria-modal="true" aria-label="홈페이지 글·사진 고치기">
+    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 글·사진 고치기">
       <header className="bw-editor-bar">
         <div className="bw-editor-left">
           <strong>글·사진 고치기</strong>
@@ -127,11 +172,39 @@ export function BrainwaveEditor({
         <div className="bw-editor-right">
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /></button>
+          {projectId ? <button type="button" className={`bw-editor-ai ${ai.open ? "on" : ""}`} onClick={() => setAi((s) => ({ ...s, open: !s.open }))} title="AI 로 고치기"><Sparkles /> AI</button> : null}
           <button type="button" className="bw-editor-save" onClick={save}><Save /> 저장</button>
           <button type="button" onClick={() => { finishText(); onClose(); }} title="닫기"><X /></button>
         </div>
       </header>
       {error ? <p className="bw-editor-error">{error}</p> : null}
+      {projectId && ai.open ? (
+        <div className="bw-ai">
+          <div className="bw-ai-row">
+            <input
+              value={ai.instruction}
+              onChange={(e) => setAi((s) => ({ ...s, instruction: e.target.value }))}
+              onKeyDown={(e) => { if (e.key === "Enter") void runAi(); }}
+              placeholder='예: "전부 우리 가게 말투로 바꿔줘. 가격은 25,000원, 성수동 카페야"'
+              maxLength={1000}
+              disabled={ai.busy}
+            />
+            <button type="button" onClick={() => void runAi()} disabled={ai.busy || ai.instruction.trim().length < 2 || (ai.balance ? ai.balance.remaining < 2000 : false)}>
+              {ai.busy ? <><LoaderCircle className="spin" /> 고치는 중</> : "AI 로 고치기"}
+            </button>
+          </div>
+          <div className="bw-ai-meta">
+            {ai.balance ? (
+              <span>
+                남은 토큰 <b>{ai.balance.remaining.toLocaleString("ko-KR")}</b>
+                {ai.balance.remaining < 2000 ? " — 충전이 필요합니다" : ` (페이지 전체 고치기 약 ${Math.max(0, Math.floor(ai.balance.remaining / 8000))}회)`}
+              </span>
+            ) : <span>토큰 잔액 확인 중…</span>}
+            {tokenPayHref ? <a href={tokenPayHref}>토큰 20만 충전 · {ai.packAmount.toLocaleString("ko-KR")}원</a> : null}
+            {ai.note ? <em>{ai.note}</em> : null}
+          </div>
+        </div>
+      ) : null}
       <div className="bw-editor-stage" onClick={finishText}>
         <div className="bw-editor-canvas">
           <BrainwavePage

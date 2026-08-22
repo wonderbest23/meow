@@ -14591,3 +14591,26 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .home-peek-track li .peek-shot { display: block; width: 100%; aspect-ratio: 640 / 559; object-fit: cover; object-position: top; background: #f4f7fa; }
 /* 한글은 띄어쓰기 단위로 줄을 바꾼다 — 킷의 break-word 는 글자 중간을 자른다("같|이") */
 .bw-canvas [style] { word-break: keep-all !important; overflow-wrap: break-word; }
+
+/* 도메인 상품 결제 유도 */
+.landing-domain-connector .domain-buy-cta { display: flex; justify-content: center; align-items: center; min-height: 48px; margin: 12px 0; border-radius: 8px; background: #4a3aff; color: #fff; font-weight: 700; font-size: 14px; text-decoration: none; }
+.landing-domain-connector .domain-term { margin: 0 0 10px; padding: 8px 12px; border-radius: 8px; background: #f6f5ff; color: #585667; font-size: 12.5px; }
+.landing-domain-connector .domain-term.soon { background: #fff7e6; color: #8a5a00; }
+.landing-domain-connector .domain-term.expired { background: #fff1f1; color: #b91c1c; }
+.landing-domain-connector .domain-term a { margin-left: 8px; font-weight: 700; color: inherit; text-decoration: underline; }
+
+/* AI 로 고치기 */
+.bw-editor.with-ai { grid-template-rows: auto auto auto 1fr auto; }
+.bw-editor-right .bw-editor-ai { gap: 6px; font-weight: 700; }
+.bw-editor-right .bw-editor-ai.on { background: #161c2d; border-color: #161c2d; color: #fff; }
+.bw-editor-right .bw-editor-ai.on svg { stroke: #fff; }
+.bw-ai { padding: 10px 16px 12px; background: #fff; border-bottom: 1px solid #e3e6ee; display: grid; gap: 8px; }
+.bw-ai-row { display: flex; gap: 8px; }
+.bw-ai-row input { flex: 1; min-height: 42px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 8px; font-size: 14px; }
+.bw-ai-row input:focus { outline: 2px solid #473bf0; border-color: transparent; }
+.bw-ai-row button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: #473bf0; color: #fff; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+.bw-ai-row button:disabled { opacity: .45; cursor: default; }
+.bw-ai-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 12.5px; color: #5d6270; }
+.bw-ai-meta b { color: #161c2d; }
+.bw-ai-meta a { color: #473bf0; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.bw-ai-meta em { font-style: normal; color: #161c2d; }

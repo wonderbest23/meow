@@ -133,3 +133,27 @@ export type TossPaymentResponse = {
   cancels?: Array<{ cancelAmount: number; canceledAt: string; cancelStatus: string }> | null;
   [key: string]: unknown;
 };
+
+/*
+ * 홈페이지 부가 상품 — 원가 대비 남는 구조로 잡았다.
+ *
+ * 도메인 연결 + 호스팅 1년 59,000원
+ *   원가: Cloudflare for SaaS 커스텀 호스트네임(100개까지 무료, 이후 월 $0.10)
+ *   + 트래픽·저장 ≈ 연 1,000~2,000원. 마진 95% 안팎. 도메인 '등록'은 손님이
+ *   가비아 등에서 직접 사고(연 1~2만원), 우리는 연결과 운영을 판다.
+ *   1년 지나면 연결을 끊지 않고 갱신을 안내한다(갱신 전까지 편집만 막는다).
+ *
+ * AI 수정 토큰 20만 9,900원
+ *   홈페이지 글을 AI 에게 시켜 고치는 기능. 한 번에 페이지 글 자리 전체
+ *   (~6k 입력) + 답(~2k 출력) ≈ 8k 토큰 → 팩 하나로 25회 안팎.
+ *   원가(Claude Sonnet 5 기준 입력 $3/M·출력 $15/M): 20만 토큰 ≈ $1.2 ≈
+ *   1,700원 → 마진 80% 이상. 플랜(홈페이지) 단위로 쌓이고, 실패한 호출은
+ *   차감하지 않는다.
+ */
+export const DOMAIN_PRODUCT_NAME = "내 도메인 연결 + 호스팅 1년";
+export const DOMAIN_PRODUCT_AMOUNT = 59_000;
+export const DOMAIN_PRODUCT_DAYS = 365;
+
+export const TOKEN_PACK_NAME = "홈페이지 AI 수정 토큰 20만";
+export const TOKEN_PACK_AMOUNT = 9_900;
+export const TOKEN_PACK_TOKENS = 200_000;

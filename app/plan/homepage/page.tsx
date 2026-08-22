@@ -327,6 +327,8 @@ export default function PlanHomepagePage() {
         <LandingVisualBuilder
           data={draft.pageData ?? createLandingPageData(draft, draft.templateId)}
           businessName={draft.businessName}
+          projectId={projectId}
+          businessSummary={draft.subheadline || draft.offerDescription}
           onClose={() => setBuilderOpen(false)}
           onSave={(pageData) => {
             setDraft({ ...draft, pageData });

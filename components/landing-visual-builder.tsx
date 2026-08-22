@@ -179,17 +179,22 @@ function BuilderBar({
 export function LandingVisualBuilder({
   data,
   businessName,
+  projectId,
+  businessSummary,
   onClose,
   onSave,
 }: {
   data: LandingPageData;
   businessName: string;
+  /** AI 수정(토큰)에 쓴다 — 없으면 AI 단추가 숨는다 */
+  projectId?: string | null;
+  businessSummary?: string;
   onClose: () => void;
   onSave: (data: LandingPageData) => void;
 }) {
   /* Brainwave.io 킷 페이지는 블록 편집기(Puck)가 아니라 자리 편집기로 고친다 */
   if (data.brainwave) {
-    return <BrainwaveEditor data={data} onClose={onClose} onSave={onSave} />;
+    return <BrainwaveEditor data={data} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} />;
   }
   return (
     <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="판매 페이지 자유 편집">

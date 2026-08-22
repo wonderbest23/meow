@@ -282,6 +282,8 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
         <LandingVisualBuilder
           data={draft.pageData ?? createLandingPageData(draft, draft.templateId)}
           businessName={draft.businessName}
+          projectId={project.id}
+          businessSummary={draft.subheadline || draft.offerDescription}
           onClose={() => setBuilderOpen(false)}
           onSave={(pageData) => {
             updateDraft({ pageData });

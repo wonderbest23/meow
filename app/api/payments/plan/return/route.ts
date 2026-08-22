@@ -65,6 +65,8 @@ export async function POST(request: Request) {
   const planQ = {
     ...(order.planId ? { planId: order.planId } : {}),
     ...(order.planType ? { planType: order.planType } : {}),
+    /* 결과 화면이 무엇을 산 결제였는지 알아야 맞는 곳으로 돌려보낸다(홈페이지·도메인·토큰 → 홈페이지 화면) */
+    product: order.product,
   };
   if (order.status === "done") {
     // 같은 결과가 두 번 들어와도 중복 승인하지 않는다

@@ -14,9 +14,11 @@ import { useCallback, useEffect, useState } from "react";
 import type { LandingDomainConnection } from "../lib/landing/custom-domain";
 import type { LandingSiteRecord } from "../lib/landing/domain";
 
+type DomainEntitlement = { active: boolean; expiresAt: string | null; required: boolean; planId: string; price: number };
 type DomainPayload = {
   site: LandingSiteRecord;
   connection?: LandingDomainConnection;
+  entitlement?: DomainEntitlement;
   error?: { message?: string };
 };
 
@@ -35,6 +37,7 @@ export function LandingDomainConnector({
 }) {
   const [hostname, setHostname] = useState(initialCustomDomain);
   const [connection, setConnection] = useState<LandingDomainConnection | null>(null);
+  const [entitlement, setEntitlement] = useState<DomainEntitlement | null>(null);
   const [action, setAction] = useState<"idle" | "loading" | "connecting" | "removing">("idle");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
@@ -47,6 +50,7 @@ export function LandingDomainConnector({
       const payload = await response.json() as DomainPayload;
       if (!response.ok) throw new Error(payload.error?.message ?? "도메인 상태를 확인하지 못했습니다.");
       setConnection(payload.connection ?? null);
+      setEntitlement(payload.entitlement ?? null);
       setHostname(payload.site.customDomain ?? "");
       onSiteUpdated(payload.site);
       if (!quiet) setMessage(payload.connection?.ready ? "도메인 연결이 완료되었습니다." : "");
@@ -131,8 +135,32 @@ export function LandingDomainConnector({
 
   const connectedHostname = connection?.hostname || initialCustomDomain;
   const busy = action !== "idle";
+  /*
+   * 도메인 연결은 '내 도메인 연결 + 호스팅 1년' 을 산 뒤에 연다.
+   * 아직 안 샀으면 폼 대신 결제로 보내는 카드 — 연결돼 있는데 만료됐으면 끊지
+   * 않고(사이트가 죽으면 안 된다) 갱신만 안내한다.
+   */
+  const needsPurchase = entitlement?.required && !entitlement.active;
+  const expiresSoon = entitlement?.active && entitlement.expiresAt && new Date(entitlement.expiresAt).getTime() - Date.now() < 30 * 86_400_000;
+  const payHref = entitlement?.planId ? `/plan/pay?planId=${encodeURIComponent(entitlement.planId)}&product=domain` : "";
+  if (needsPurchase && !connectedHostname) {
+    return (
+      <section className="landing-domain-connector">
+        <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결 + 호스팅 1년</strong><p>가비아 등에서 산 도메인(www.mybrand.com)을 이 홈페이지에 붙입니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.</p></span></div>
+        <div className="domain-demo-row"><span>www.mybrand.com</span><em>연결 예시</em></div>
+        <a className="domain-buy-cta" href={payHref}>{(entitlement?.price ?? 59000).toLocaleString("ko-KR")}원 · 1년 — 결제하고 연결하기</a>
+        <nav className="domain-buy-links"><span>아직 도메인이 없다면</span><a href="https://domain.gabia.com/" target="_blank" rel="noreferrer">가비아 <ExternalLink /></a><a href="https://www.hosting.kr/domain" target="_blank" rel="noreferrer">호스팅케이알 <ExternalLink /></a></nav>
+      </section>
+    );
+  }
   return (
     <section className="landing-domain-connector">
+      {entitlement?.required && entitlement.expiresAt ? (
+        <p className={`domain-term ${needsPurchase ? "expired" : expiresSoon ? "soon" : ""}`}>
+          {needsPurchase ? "호스팅 기간이 끝났습니다. 연결은 유지되지만 변경하려면 갱신이 필요합니다." : `호스팅 ${entitlement.expiresAt.slice(0, 10)}까지`}
+          {(needsPurchase || expiresSoon) && payHref ? <a href={payHref}> 1년 갱신 {(entitlement.price).toLocaleString("ko-KR")}원</a> : null}
+        </p>
+      ) : null}
       <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>구매한 주소의 www 주소만 입력하면 됩니다.</p></span>{connection?.ready ? <em className="ready"><CheckCircle2 /> 연결 완료</em> : connectedHostname ? <em><LoaderCircle /> 연결 확인 중</em> : null}</div>
 
       {!connectedHostname ? (

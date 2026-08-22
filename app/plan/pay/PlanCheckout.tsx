@@ -50,6 +50,15 @@ export default function PlanCheckout() {
   const isHomepage = params.get("product") === "homepage";
   /* 다시 생성 묶음 — 문서를 여는 결제가 아니라 횟수만 더한다 */
   const isRegen = params.get("product") === "regen";
+  /* 홈페이지 부가 상품 — 도메인 연결+호스팅 1년 / AI 수정 토큰. 둘 다 홈페이지가 열린 뒤에만 */
+  const isDomain = params.get("product") === "domain";
+  const isTokens = params.get("product") === "tokens";
+  const product = isRegen ? "regen" : isHomepage ? "homepage" : isDomain ? "domain" : isTokens ? "tokens" : "plan";
+  const COPY: Record<string, { title: string; desc: string; price: number; unit: string }> = {
+    domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결합니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.", price: 59000, unit: "홈페이지 1개 · 1년" },
+    tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’ 처럼 말하면 AI 가 페이지 글을 고칩니다. 20만 토큰은 페이지 전체 고치기 25회 안팎입니다.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
+  };
+  const extra = COPY[product];
   const [phase, setPhase] = useState<Phase>("idle");
   const [message, setMessage] = useState<string | null>(null);
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean } | null>(null);
@@ -91,7 +100,7 @@ export default function PlanCheckout() {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planType, ...(isRegen ? { product: "regen" } : isHomepage ? { product: "homepage" } : {}) }),
+        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}) }),
       });
       const data = (await res.json()) as {
         clientId?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
@@ -150,7 +159,8 @@ export default function PlanCheckout() {
    * 산 사람이 홈페이지를 사러 오면 "이미 열려 있습니다"로 막혀 결제 자체가
    * 불가능했다 — 파는 쪽이 못 팔게 막고 있었다. 상품마다 따로 본다.
    */
-  const alreadyOwned = isHomepage ? homepageInfo?.editable === true : info?.paid === true;
+  /* 도메인·토큰·다시 생성은 '이미 샀다'는 개념이 없다(서버가 중복·갱신 시점을 따로 판정) */
+  const alreadyOwned = extra || isRegen ? false : isHomepage ? homepageInfo?.editable === true : info?.paid === true;
 
   if (alreadyOwned) {
     return (
@@ -169,9 +179,9 @@ export default function PlanCheckout() {
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
-        <h1 className={styles.title}>{isHomepage ? "홈페이지 수정하고 공개하기" : "이 문서 전체 열기"}</h1>
+        <h1 className={styles.title}>{extra ? extra.title : isHomepage ? "홈페이지 수정하고 공개하기" : "이 문서 전체 열기"}</h1>
         <p className={styles.desc}>
-          {isHomepage ? (
+          {extra ? extra.desc : isHomepage ? (
             <>
               계획서 내용으로 만든 홈페이지를 직접 고치고 인터넷에 공개할 수 있습니다.
               신청 폼으로 들어온 문의도 이곳에서 확인합니다.
@@ -184,7 +194,12 @@ export default function PlanCheckout() {
           )}
         </p>
 
-        {isHomepage ? (
+        {extra ? (
+          <div className={styles.price}>
+            {extra.price.toLocaleString("ko-KR")}원
+            <span>{extra.unit}</span>
+          </div>
+        ) : isHomepage ? (
           <div className={styles.price}>
             {(homepageInfo?.price ?? 149000).toLocaleString("ko-KR")}원
             <span>홈페이지 1개 · 1회 결제</span>
@@ -220,9 +235,9 @@ export default function PlanCheckout() {
         {message ? <p className={styles.error}>{message}</p> : null}
 
         <p className={styles.note}>
-          지금까지 답한 내용은 그대로 남아 있습니다. 결제가 끝나면 이어서 작성됩니다.
+          {extra ? "결제가 끝나면 홈페이지 화면으로 돌아갑니다." : "지금까지 답한 내용은 그대로 남아 있습니다. 결제가 끝나면 이어서 작성됩니다."}
         </p>
-        <Link href="/plan/overview" className={styles.back}>← 나중에 하기</Link>
+        <Link href={extra || isHomepage ? "/plan/homepage" : "/plan/overview"} className={styles.back}>← 나중에 하기</Link>
       </div>
     </div>
   );

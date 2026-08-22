@@ -1,8 +1,7 @@
 import { loadPlanState } from "../../../../../lib/plan-builder/plan-server-store";
-import { REGEN_PACK_NAME } from "../../../../../lib/payments/domain";
 import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
-import { createPlanOrder, paidPlanEntitlement, paidHomepagePlanIds, PLAN_PRODUCT_NAME, HOMEPAGE_PRODUCT_NAME } from "../../../../../lib/payments/plan-orders";
+import { createPlanOrder, paidPlanEntitlement, paidHomepagePlanIds, domainEntitlement, productName, PLAN_PRODUCT_NAME, type PlanProduct } from "../../../../../lib/payments/plan-orders";
 import { nicepayClientKey, nicepayConfigured } from "../../../../../lib/payments/nicepay-client";
 
 export const runtime = "nodejs";
@@ -14,7 +13,7 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string };
   // 계획서와 홈페이지는 별개 상품이다 — 어느 쪽 결제인지 여기서 갈린다
-  const product = body.product === "homepage" ? "homepage" : body.product === "regen" ? "regen" : "plan";
+  const product: PlanProduct = (["homepage", "regen", "domain", "tokens"] as const).find((p) => p === body.product) ?? "plan";
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
   const planType = typeof body.planType === "string" ? body.planType.slice(0, 120) : "";
   if (!planId || !planType) {
@@ -43,10 +42,23 @@ export async function POST(request: Request) {
    * 다시 생성 묶음은 '이미 산 것'이라는 개념이 없다 — 몇 번이든 더 살 수 있다.
    * 대신 내 문서인지는 확인한다. 남의 문서에 횟수를 넣어 줄 수는 없다.
    */
-  if (product === "regen") {
+  if (product === "regen" || product === "tokens") {
     const state = await loadPlanState(identity.hash);
     if (!state.plans.some((p) => p.id === planId)) {
       return NextResponse.json({ error: "not_found", message: "이 문서를 찾을 수 없습니다." }, { status: 404 });
+    }
+    /* 토큰은 홈페이지가 열려 있어야 쓸 데가 있다 — 홈페이지 결제 전에는 팔지 않는다 */
+    if (product === "tokens" && !(await paidHomepagePlanIds(identity.userId)).has(planId)) {
+      return NextResponse.json({ error: "homepage_required", message: "홈페이지를 먼저 열어야 AI 수정 토큰을 쓸 수 있습니다." }, { status: 409 });
+    }
+  } else if (product === "domain") {
+    if (!(await paidHomepagePlanIds(identity.userId)).has(planId)) {
+      return NextResponse.json({ error: "homepage_required", message: "홈페이지를 먼저 열어야 도메인을 연결할 수 있습니다." }, { status: 409 });
+    }
+    const ent = await domainEntitlement(identity.userId, planId);
+    /* 만료 30일 전부터 갱신을 받는다 — 그 전에는 이미 산 것 */
+    if (ent.active && ent.expiresAt && new Date(ent.expiresAt).getTime() - Date.now() > 30 * 86_400_000) {
+      return NextResponse.json({ error: "already_paid", message: `이미 연결 중입니다 (${ent.expiresAt.slice(0, 10)}까지). 만료 30일 전부터 갱신할 수 있습니다.` }, { status: 409 });
     }
   } else if (product === "homepage") {
     const purchased = await paidHomepagePlanIds(identity.userId);
@@ -74,7 +86,7 @@ export async function POST(request: Request) {
         clientId: nicepayClientKey(),
         orderId: order.orderId,
         amount: order.amount,
-        goodsName: (product === "regen" ? REGEN_PACK_NAME : product === "homepage" ? HOMEPAGE_PRODUCT_NAME : `${PLAN_PRODUCT_NAME} · ${planType}`).slice(0, 40),
+        goodsName: (product === "plan" ? `${PLAN_PRODUCT_NAME} · ${planType}` : productName(product)).slice(0, 40),
         buyerEmail: identity.email,
       },
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },

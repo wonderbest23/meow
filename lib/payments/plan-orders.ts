@@ -4,7 +4,29 @@
 
 import { randomUUID } from "node:crypto";
 import { getServerSupabase } from "../persistence";
-import { PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_NAME, TERMS_VERSION } from "./domain";
+import { PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_NAME, TERMS_VERSION, DOMAIN_PRODUCT_NAME, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_DAYS, TOKEN_PACK_NAME, TOKEN_PACK_AMOUNT, TOKEN_PACK_TOKENS } from "./domain";
+
+/** 파는 것 — 계획서 / 홈페이지 / 다시 생성 묶음 / 도메인 연결+호스팅 / AI 수정 토큰 */
+export type PlanProduct = "plan" | "homepage" | "regen" | "domain" | "tokens";
+
+export function productAmount(product: PlanProduct, planType: string): number {
+  switch (product) {
+    case "regen": return REGEN_PACK_AMOUNT;
+    case "homepage": return HOMEPAGE_PRODUCT_AMOUNT;
+    case "domain": return DOMAIN_PRODUCT_AMOUNT;
+    case "tokens": return TOKEN_PACK_AMOUNT;
+    default: return planPrice(planType);
+  }
+}
+export function productName(product: PlanProduct): string {
+  switch (product) {
+    case "regen": return REGEN_PACK_NAME;
+    case "homepage": return HOMEPAGE_PRODUCT_NAME;
+    case "domain": return DOMAIN_PRODUCT_NAME;
+    case "tokens": return TOKEN_PACK_NAME;
+    default: return PLAN_PRODUCT_NAME;
+  }
+}
 
 /** 플랜 빌더 상품명 — 이 값으로 권한을 판정하므로 바꾸면 기존 구매자가 잠긴다 */
 export const PLAN_PRODUCT_NAME = "사업계획서 플랜 빌더";
@@ -54,21 +76,20 @@ export async function createPlanOrder(input: {
   /** 이 결제로 열리는 플랜 — 문서 단위 결제의 연결 고리 */
   planId: string;
   planType: string;
-  /** 무엇을 사는 결제인지 — 계획서(기본) / 홈페이지 / 다시 생성 묶음 */
-  product?: "plan" | "homepage" | "regen";
+  /** 무엇을 사는 결제인지 — 계획서(기본) / 홈페이지 / 다시 생성 묶음 / 도메인 / 토큰 */
+  product?: PlanProduct;
 }): Promise<PlanOrder> {
   const now = new Date();
   const orderId = `PB-${now.getTime().toString(36)}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
-  const homepage = input.product === "homepage";
-  const regen = input.product === "regen";
+  const product: PlanProduct = input.product ?? "plan";
   /*
    * 금액은 서버가 정한다. 화면이 보낸 값을 쓰면 4,900원짜리를 100원으로
    * 바꿔 보내는 요청 하나로 뚫린다.
    */
   const order: PlanOrder = {
     orderId,
-    amount: regen ? REGEN_PACK_AMOUNT : homepage ? HOMEPAGE_PRODUCT_AMOUNT : planPrice(input.planType),
-    orderName: regen ? REGEN_PACK_NAME : homepage ? HOMEPAGE_PRODUCT_NAME : PLAN_PRODUCT_NAME,
+    amount: productAmount(product, input.planType),
+    orderName: productName(product),
     status: "created",
     ownerId: input.ownerId,
   };
@@ -111,7 +132,7 @@ export async function getPlanOrder(orderId: string): Promise<{
   planId: string | null;
   planType: string | null;
   /** 무엇을 산 주문인지 — 승인 뒤 무엇을 열어 줄지 여기서 갈린다 */
-  product: "plan" | "homepage" | "regen";
+  product: PlanProduct;
 } | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
@@ -132,7 +153,7 @@ export async function getPlanOrder(orderId: string): Promise<{
     planId: ((data.opportunity as { planId?: string } | null)?.planId ?? null),
     planType: ((data.opportunity as { planType?: string } | null)?.planType ?? null),
     /* 옛 주문에는 product 가 없다 — 그때는 전부 계획서 결제였다 */
-    product: (((data.opportunity as { product?: string } | null)?.product ?? "plan") as "plan" | "homepage" | "regen"),
+    product: (((data.opportunity as { product?: string } | null)?.product ?? "plan") as PlanProduct),
   };
 }
 
@@ -277,4 +298,45 @@ export async function listPaymentHistory(userId: string): Promise<PaymentHistory
     paidAt: row.confirmed_at ? String(row.confirmed_at) : null,
     method: row.method ? String(row.method) : null,
   }));
+}
+
+/*
+ * 도메인 연결+호스팅 — 플랜(홈페이지)마다 1년. 승인일(confirmed_at) + 365일.
+ * 만료돼도 연결을 끊지는 않는다(손님 사이트가 갑자기 죽으면 안 된다) —
+ * 새 연결·변경만 막고 갱신을 안내한다.
+ */
+export async function domainEntitlement(userId: string | null, planId: string): Promise<{ active: boolean; expiresAt: string | null }> {
+  const supabase = getServerSupabase();
+  if (!supabase || !userId) return { active: false, expiresAt: null };
+  const { data, error } = await supabase
+    .from("payment_orders")
+    .select("opportunity, confirmed_at, created_at")
+    .eq("owner_id", userId)
+    .eq("order_name", DOMAIN_PRODUCT_NAME)
+    .eq("status", "done")
+    .limit(50);
+  if (error) throw error;
+  let latest: number | null = null;
+  for (const row of data ?? []) {
+    if (String((row.opportunity as { planId?: string } | null)?.planId ?? "") !== planId) continue;
+    const at = new Date((row.confirmed_at as string | null) ?? (row.created_at as string)).getTime() + DOMAIN_PRODUCT_DAYS * 86_400_000;
+    if (latest === null || at > latest) latest = at;
+  }
+  if (latest === null) return { active: false, expiresAt: null };
+  return { active: latest > Date.now(), expiresAt: new Date(latest).toISOString() };
+}
+
+/** 산 토큰 합계 — 플랜 단위. 실제 잔액은 llm_usage 차감분을 뺀 값(lib/landing/ai-tokens.ts) */
+export async function purchasedTokens(userId: string | null, planId: string): Promise<number> {
+  const supabase = getServerSupabase();
+  if (!supabase || !userId) return 0;
+  const { data, error } = await supabase
+    .from("payment_orders")
+    .select("opportunity")
+    .eq("owner_id", userId)
+    .eq("order_name", TOKEN_PACK_NAME)
+    .eq("status", "done")
+    .limit(500);
+  if (error) throw error;
+  return (data ?? []).filter((row) => String((row.opportunity as { planId?: string } | null)?.planId ?? "") === planId).length * TOKEN_PACK_TOKENS;
 }

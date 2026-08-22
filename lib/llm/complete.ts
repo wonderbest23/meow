@@ -22,6 +22,8 @@ export type LLMCompleteParams = {
   timeoutMs?: number;
   // JSON 객체 응답을 유도한다(OpenAI는 json_object 포맷 강제).
   jsonObject?: boolean;
+  /** 토큰 사용량을 받는다 — 손님에게 토큰으로 파는 기능(홈페이지 AI 수정)이 차감에 쓴다 */
+  onUsage?: (usage: { inputTokens: number; outputTokens: number; model: string; provider: LLMProvider }) => void;
   /*
    * system 블록을 프롬프트 캐시에 올린다(Anthropic).
    *
@@ -99,8 +101,12 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
   const payload = (await response.json().catch(() => null)) as {
     output_text?: string;
     output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
+    usage?: { input_tokens?: number; output_tokens?: number };
   } | null;
   if (!payload) return null;
+  if (params.onUsage && payload.usage) {
+    params.onUsage({ inputTokens: payload.usage.input_tokens ?? 0, outputTokens: payload.usage.output_tokens ?? 0, model: config.model, provider: "openai" });
+  }
   const text =
     payload.output_text ??
     payload.output
@@ -150,6 +156,15 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
     usage?: unknown;
   } | null;
   logUsage(params.kind ?? "etc", config.model, payload?.usage ?? null);
+  if (params.onUsage && payload?.usage) {
+    const u = payload.usage as AnthropicUsage;
+    params.onUsage({
+      inputTokens: (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
+      outputTokens: u.output_tokens ?? 0,
+      model: config.model,
+      provider: "anthropic",
+    });
+  }
   if (!payload || !Array.isArray(payload.content)) return null;
   const text = payload.content
     .filter((block) => block?.type === "text" && typeof block.text === "string")
