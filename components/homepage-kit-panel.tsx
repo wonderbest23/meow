@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ExternalLink, Inbox, LoaderCircle, Pencil, Rocket, Save, ShieldCheck } from "lucide-react";
+import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
+import { ExternalLink, Inbox, LayoutTemplate, LoaderCircle, Pencil, Rocket, Save, ShieldCheck } from "lucide-react";
 import type { LandingDraft, LandingLeadRecord, LandingSiteRecord } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
@@ -51,6 +52,16 @@ export function HomepageKitPanel({
   const busy = action === "saving" || action === "publishing";
   const published = site?.status === "published";
   const page = BRAINWAVE_PAGES.find((p) => p.id === draft.pageData?.brainwave?.page);
+  const [picking, setPicking] = useState(false);
+  const bw = draft.pageData?.brainwave;
+  const pickTemplate = (id: string) => {
+    if (!draft.pageData || !bw) return;
+    if (id === bw.page) { setPicking(false); return; }
+    const dirty = Object.keys(bw.texts ?? {}).length + Object.keys(bw.images ?? {}).length > 0;
+    if (dirty && !window.confirm("템플릿을 바꾸면 지금까지 고친 글·사진은 새 페이지에 맞지 않아 초기화됩니다. 바꿀까요?")) return;
+    onChange({ ...draft, pageData: { ...draft.pageData, brainwave: { page: id, texts: {}, images: {} }, content: [] } });
+    setPicking(false);
+  };
 
   /* 접수된 문의 — 같은 프로젝트의 landing API 가 돌려준다 */
   const [leads, setLeads] = useState<LandingLeadRecord[] | null>(null);
@@ -94,14 +105,18 @@ export function HomepageKitPanel({
       {/* 1. 미리보기 — 누르면 편집기 */}
       <div className="hk-preview">
         <div className="hk-preview-head">
-          <strong>{page ? `${page.name} · ${page.ko}` : "페이지"}</strong>
-          <button type="button" className="hk-edit" onClick={onOpenEditor}><Pencil size={15} /> 글·사진 고치기</button>
+          <strong>{page ? `${page.ko} · ${page.name}` : "페이지"}</strong>
+          <div className="hk-preview-btns">
+            <button type="button" className="hk-pick" onClick={() => setPicking(true)}><LayoutTemplate size={15} /> 템플릿 선택하기</button>
+            <button type="button" className="hk-edit" onClick={onOpenEditor}><Pencil size={15} /> 에디터</button>
+          </div>
         </div>
-        <button type="button" className="hk-preview-body" onClick={onOpenEditor} aria-label="홈페이지 편집 열기">
+        <button type="button" className="hk-preview-body" onClick={onOpenEditor} aria-label="에디터 열기">
           <LandingBlocksRenderer data={draft.pageData!} />
-          <span className="hk-preview-cover"><Pencil size={18} /> 누르면 편집이 열립니다 — 글은 그 자리에서 고치고, 사진은 눌러 바꿉니다. 26가지 페이지 중 바꿀 수 있어요</span>
+          <span className="hk-preview-cover"><Pencil size={18} /> 누르면 에디터가 열립니다 — 글은 그 자리에서, 사진은 눌러서 바꿉니다</span>
         </button>
       </div>
+      {picking && bw ? <BrainwaveTemplatePicker current={bw.page} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}
 
       {/* 2. 사업자 정보 */}
       <div className="hk-card">

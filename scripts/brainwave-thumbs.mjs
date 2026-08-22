@@ -8,7 +8,7 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 
 const base = process.argv[2] ?? "http://localhost:8083";
-const IDS = ["0-290", "0-2226", "0-1102", "0-2555", "0-2385", "0-181", "0-421", "0-2", "0-1371", "0-1950"];
+const IDS = ["0-290", "0-2226", "0-1102", "0-2555", "0-2385", "0-181", "0-421", "0-2", "0-1371", "0-1950", "0-3347", "0-3446", "0-3558", "0-3659", "0-3728", "0-3745", "0-3763", "0-3777", "0-3807", "0-3853", "0-3890", "0-3919", "0-4032", "0-4065", "0-4259", "0-4339"];
 const chrome = [
   `${homedir()}/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`,
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",

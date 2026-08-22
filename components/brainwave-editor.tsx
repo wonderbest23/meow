@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageUp, LoaderCircle, Redo2, Save, Sparkles, Undo2, X } from "lucide-react";
+import { ImageUp, LayoutTemplate, LoaderCircle, Monitor, Redo2, Save, Smartphone, Sparkles, Tablet, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
+import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { BrainwavePage, loadBrainwavePage, type BrainwavePageData } from "./brainwave-page";
 import { resizeImage, uploadImage } from "./landing-media-field";
 
@@ -43,6 +44,14 @@ export function BrainwaveEditor({
   const [meta, setMeta] = useState<BrainwavePageData | null>(null);
   const [editing, setEditing] = useState<{ id: string; el: HTMLElement } | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
+  /*
+   * 보는 폭 — PC 1280 / 태블릿 768 / 모바일 390.
+   * 킷 페이지는 폭에 맞춰 통째로 줄어든다(글이 다시 흐르지 않는다). 그래서
+   * 이 토글은 '폰에서 얼마나 작아 보이는지' 를 확인하는 용도다.
+   */
+  const [view, setView] = useState<"pc" | "tablet" | "mobile">("pc");
+  const VIEW_W = { pc: 1600, tablet: 768, mobile: 390 } as const;
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingImage = useRef<string | null>(null);
@@ -152,21 +161,18 @@ export function BrainwaveEditor({
   const changed = Object.keys(over.texts).length + Object.keys(over.images).length;
 
   return (
-    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 글·사진 고치기">
+    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 에디터">
       <header className="bw-editor-bar">
         <div className="bw-editor-left">
-          <strong>글·사진 고치기</strong>
-          <label className="bw-editor-page">
-            <span>페이지</span>
-            <select value={page} onChange={(e) => changePage(e.target.value)}>
-              <optgroup label="랜딩 (10)">
-                {BRAINWAVE_PAGES.filter((p) => p.group === "landing").map((p) => <option key={p.id} value={p.id}>{p.name} · {p.ko}</option>)}
-              </optgroup>
-              <optgroup label="안쪽 페이지 (16)">
-                {BRAINWAVE_PAGES.filter((p) => p.group === "inner").map((p) => <option key={p.id} value={p.id}>{p.name} · {p.ko}</option>)}
-              </optgroup>
-            </select>
-          </label>
+          <strong>에디터</strong>
+          <button type="button" className="bw-editor-pick" onClick={() => setPicking(true)}>
+            <LayoutTemplate size={15} /> {BRAINWAVE_PAGES.find((p) => p.id === page)?.ko ?? "템플릿"} · 바꾸기
+          </button>
+          <div className="bw-editor-views" role="group" aria-label="보는 폭">
+            <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC"><Monitor size={15} /></button>
+            <button type="button" className={view === "tablet" ? "on" : ""} onClick={() => setView("tablet")} title="태블릿"><Tablet size={15} /></button>
+            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일"><Smartphone size={15} /></button>
+          </div>
           <small>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다. {changed ? `고친 자리 ${changed}개` : ""}</small>
         </div>
         <div className="bw-editor-right">
@@ -205,8 +211,9 @@ export function BrainwaveEditor({
           </div>
         </div>
       ) : null}
+      {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
       <div className="bw-editor-stage" onClick={finishText}>
-        <div className="bw-editor-canvas">
+        <div className={`bw-editor-canvas view-${view}`} style={{ maxWidth: VIEW_W[view] }}>
           <BrainwavePage
             pageId={page}
             overrides={over}
