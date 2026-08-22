@@ -1694,9 +1694,23 @@
 /* 다음 버튼은 하단 바를 꽉 채운다 — 손이 어디로 가야 하는지 한눈에.
    '이전' 은 옆에 작게(내용 폭), 나머지 전부를 '다음' 이 가진다. */
 .foot { justify-content: stretch; }
-.foot .btnPrimary { flex: 1; min-height: 52px; font-size: 15px; }
+/* 어딘가에서 display:flex 가 걸려 있는데 justify-content 가 없어
+   글씨가 한쪽으로 쏠렸다 — 가운데로 못박는다. */
+.foot .btnPrimary {
+  flex: 1;
+  min-height: 52px;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.foot .btn:not(.btnPrimary) { display: flex; align-items: center; justify-content: center; }
 .foot .btn:not(.btnPrimary) { flex: none; }
 @media (max-width: 640px) {
   .foot { padding: 12px 16px; }
   .foot .btnPrimary { min-height: 50px; }
 }
+
+/* 카드 아래로 상담 단추가 앉을 자리를 비워 둔다 — 화면이 짧아도 겹치지 않게 */
+.page { padding-bottom: 96px; }

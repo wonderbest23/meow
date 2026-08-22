@@ -14063,5 +14063,7 @@ html .simple-home .site-header a.account-link > svg {
 .mode-consult a.welcome-start:hover { background: var(--blue-dark, #3a2ddb); }
 
 /* 섹션 작성 화면의 하단 바 '다음' 버튼을 떠 있는 상담 단추가 가렸다 — 위로 올린다 */
-body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 108px; right: 18px; }
-@media (max-width: 640px) { body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 96px; } }
+/* 하단 바의 '다음' 이 폭을 꽉 채우면서 떠 있는 상담 단추와 겹쳤다.
+   단추를 위로 올리면 오히려 카드 안으로 파고든다 — 카드 아래 여백을
+   확보하고(아래 .page padding-bottom) 단추는 그 자리에 둔다. */
+body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; }
