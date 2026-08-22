@@ -102,7 +102,21 @@ export default function PlanHomepagePage() {
           business: { ...state.business, name: "", region: "", industry: doc?.industry ?? "" },
           answers: plan.answers,
         });
-        setDraft(draft);
+        /*
+         * 예시마다 업종에 맞는 킷 페이지를 고른다 — 업종 추정만 믿으면 커피집도
+         * 꽃집도 똑같이 '매장'으로 잡혀 같은 페이지가 나온다.
+         *   새벽커피(카페) → 03 Coworking(공간·매장)
+         *   무인꽃집(소매) → 06 ECommerce(온라인 상점)
+         */
+        const samplePage: Record<string, string> = {
+          sample_coffee: "0-2226",
+          sample_flower_psst: "0-1102",
+          sample_flower_fm: "0-1102",
+        };
+        const page = samplePage[plan.id];
+        setDraft(page && draft.pageData?.brainwave
+          ? { ...draft, pageData: { ...draft.pageData, brainwave: { ...draft.pageData.brainwave, page } } }
+          : draft);
         setEditable(false);
         setSample(true);
         setPhase("ready");
