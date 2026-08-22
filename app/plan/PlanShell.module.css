@@ -648,3 +648,12 @@
 .railToggleOff { top: 18px; left: 14px; }
 /* 아바타도 보라를 쓰지 않는다 — 보라는 '다음에 누를 것' 전용 */
 .meAvatar { background: #1c1d21; }
+
+/* 레일 로고 — 심볼만 두었더니 사이트 다른 화면(홈·폰 상단바)과 달랐다.
+   같은 가로형 로고를 쓴다. 접힌 폰 레일에서는 폭이 없어 심볼만 보이게 잘라 쓴다. */
+.logo { width: auto; min-width: 0; height: 26px; border-radius: 0; place-items: center start; margin-bottom: 18px; }
+.logo img { width: auto; height: 26px; max-width: none; object-fit: contain; }
+@media (max-width: 640px) {
+  .logo { width: 40px; min-width: 40px; height: 40px; overflow: hidden; place-items: center; }
+  .logo img { width: auto; height: 26px; object-position: left center; max-width: none; }
+}

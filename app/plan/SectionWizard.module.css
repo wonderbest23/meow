@@ -1620,3 +1620,33 @@
   .main, .q, .opt.on, .foot { animation: none; }
   .opt:hover, .btnPrimary:not(:disabled):hover { transform: none; }
 }
+
+/* ── 묶음 단계 ────────────────────────────────────────────────────
+ * 한 화면에 묶음 하나. 위에 점으로 현재 위치를 보여 주고, 넘어갈 때
+ * 질문 카드가 다시 차례로 선다(.group key 가 바뀌며 재등장).
+ */
+.stepDots {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 2px 0 16px;
+}
+.stepDot {
+  width: 26px; height: 6px;
+  min-height: 0 !important;
+  padding: 0 !important;
+  border: 0;
+  border-radius: 3px !important;
+  background: #e6e6ef;
+  cursor: pointer;
+  transition: background .2s ease, transform .15s ease;
+}
+.stepDot:hover { transform: scaleY(1.6); }
+.stepDotDone { background: #22b573; }
+.stepDotOn { background: var(--blue, #4a3aff); }
+.stepNow { margin-left: 6px; color: #8181a5; font-size: 12px; font-weight: 700; }
+.group { animation: planRise .38s cubic-bezier(.2,.7,.2,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .group { animation: none; }
+  .stepDot:hover { transform: none; }
+}

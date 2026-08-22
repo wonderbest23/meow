@@ -132,6 +132,19 @@ export default function SectionWizard({
   // 문서 유형에 따라 묻는 질문이 달라진다(재무 문서에서 브랜드 질문을 빼는 식)
   const groups = useMemo(() => questionsForSection(key, section.title, planType), [key, section.title, planType]);
 
+  /*
+   * 한 번에 묶음 하나.
+   * 예전에는 질문 열몇 개가 한 화면에 다 있어 스크롤로 훑어야 했다 —
+   * "지금 뭘 답해야 하는지" 가 보이지 않는다. 묶음 단위로 넘긴다.
+   * 섹션이 바뀌면 처음으로 돌아간다.
+   */
+  const [gi, setGi] = useState(0);
+  useEffect(() => { setGi(0); }, [key]);
+  const stepCount = groups.length;
+  const stepIndex = Math.min(gi, Math.max(stepCount - 1, 0));
+  const stepGroup = groups[stepIndex];
+  const isLastStep = stepIndex >= stepCount - 1;
+
   /** 이 유형의 전체 섹션 순서 — '다음 단계 (n/총)' 표시와 이동에 쓴다 */
   const flatSectionList = useMemo(
     () => chapters.flatMap((ch) => ch.sections.map((sec) => ({ chapterId: ch.id, sectionId: sec.id, title: sec.title }))),
@@ -605,9 +618,25 @@ export default function SectionWizard({
                 onClickCapture={readOnly ? blockSampleEdit : undefined}
                 onKeyDownCapture={readOnly ? blockSampleEdit : undefined}
               >
+              {/* 단계 표시 — 몇 번째 묶음인지, 어디까지 왔는지 */}
+              {stepCount > 1 && (
+                <div className={styles.stepDots} aria-label={`묶음 ${stepIndex + 1} / ${stepCount}`}>
+                  {groups.map((g, i) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      className={`${styles.stepDot} ${i === stepIndex ? styles.stepDotOn : ""} ${(perGroup[g.id]?.total ?? 0) > 0 && perGroup[g.id]?.done === perGroup[g.id]?.total ? styles.stepDotDone : ""}`}
+                      onClick={() => setGi(i)}
+                      title={g.label}
+                      aria-label={`${i + 1}. ${g.label}`}
+                    />
+                  ))}
+                  <span className={styles.stepNow}>{stepIndex + 1} / {stepCount}</span>
+                </div>
+              )}
               {(
-                groups.map((g: QuestionGroup) => (
-                  <div key={g.id} className={styles.group}>
+                (stepGroup ? [stepGroup] : []).map((g: QuestionGroup) => (
+                  <div key={`${g.id}-${stepIndex}`} className={styles.group}>
                     <div className={styles.gl}><span className={styles.gi} aria-hidden="true" />{g.label}</div>
                     {g.questions.filter((q) => isVisible(q, answers)).map((q) => (
                       <div
@@ -682,13 +711,33 @@ export default function SectionWizard({
                       <Spinner /> 본문 {totalPendingCount()}개를 서버에서 만들고 있어요 — 창을 닫아도 계속됩니다
                     </span>
                   )}
+                  {stepIndex > 0 && (
+                    <button className={styles.btn} onClick={() => { setGi(stepIndex - 1); bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                      ← 이전
+                    </button>
+                  )}
                   <button
                     className={`${styles.btn} ${styles.btnPrimary} ${complete ? styles.beacon : ""}`}
-                    onClick={goNext}
+                    onClick={() => {
+                      if (!isLastStep) {
+                        /* 이 묶음의 필수 답이 비었으면 그 질문으로 데려간다 — 다음 묶음으로 넘기지 않는다 */
+                        const miss = (stepGroup?.questions ?? []).filter(
+                          (q) => !q.optional && isVisible(q, answers) && !isAnswered(q, answers[q.id]),
+                        );
+                        if (miss.length > 0) { goNext(); return; }
+                        setGi(stepIndex + 1);
+                        setShowMissing(false);
+                        bodyRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+                        return;
+                      }
+                      goNext();
+                    }}
                   >
-                    {nextSection
-                      ? `다음 단계 (${currentIndex + 2}/${flatSectionList.length}) →`
-                      : "문서 보러 가기 →"}
+                    {!isLastStep
+                      ? "다음 →"
+                      : nextSection
+                        ? `다음 단계 (${currentIndex + 2}/${flatSectionList.length}) →`
+                        : "문서 보러 가기 →"}
                   </button>
                 </>
               )}
