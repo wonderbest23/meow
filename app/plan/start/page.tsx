@@ -350,7 +350,12 @@ export default function PlanStartPage() {
     createPlan(pt.type, biz.name, { inheritAnswers: inherit });
     /* 상담 내용은 여기까지가 임무다 — 남겨 두면 다음에 또 '상담에서 가져왔다'고 뜬다 */
     clearStashedConsult();
-    router.push("/plan/overview");
+    /*
+     * 빠른 길 — AI가 사업 설명을 먼저 분석하고 꼭 필요한 것만 묻는다(/plan/analyze).
+     * 답변을 이어받은 플랜은 이미 채워진 것이 많으니 기존 개요로 바로 간다.
+     * 분석이 실패하거나 건너뛰면 /plan/analyze 가 개요로 보낸다 — 막히는 길은 없다.
+     */
+    router.push(inherit && donor ? "/plan/overview" : "/plan/analyze");
   }
 
   // 같은 사업으로 이어갈 때는 이미 만든 유형을 숨긴다 — 같은 문서를 또 사는 건 의미가 없다

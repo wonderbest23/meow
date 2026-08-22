@@ -1,6 +1,7 @@
 import type { MarketEvidence } from "../market/domain";
 import type { MarketResearchBusinessContext } from "../market/openai-research";
 import { projectForPlan } from "./project-bridge";
+import { MODEL_TAGS, OPERATION_TAGS, readAnalysisRecord } from "./analyzer/domain";
 
 /*
  * 사업계획서 ↔ 공식 시장조사 연결.
@@ -32,6 +33,19 @@ function first(...values: unknown[]): string {
   return "";
 }
 
+/** __analysis 의 confirmed 값만 — 모양이 어긋나면 전부 빈 값 */
+function confirmedAnalysis(a: Answers): { customer: string; problem: string; solution: string; tags: string } {
+  const rec = readAnalysisRecord(a);
+  const pick = (f: { value: unknown; status: string } | undefined) => (f && f.status === "confirmed" ? text(f.value) : "");
+  if (!rec) return { customer: "", problem: "", solution: "", tags: "" };
+  const an = rec.analysis;
+  const tagLabels = [
+    ...(an.modelTags.status === "confirmed" ? (an.modelTags.value ?? []).map((t) => MODEL_TAGS[t]) : []),
+    ...(an.operationTags.status === "confirmed" ? (an.operationTags.value ?? []).map((t) => OPERATION_TAGS[t]) : []),
+  ].filter(Boolean);
+  return { customer: pick(an.customer), problem: pick(an.problem), solution: pick(an.solution), tags: tagLabels.join(", ") };
+}
+
 /** 시작 화면의 업종 9종 → 조사 엔진의 사업 유형 */
 export const INDUSTRY_ARCHETYPE: Record<string, string> = {
   "카페·음식점": "local_retail",
@@ -59,12 +73,18 @@ export function planResearchContext(
   business: Business,
 ): MarketResearchBusinessContext {
   const a = plan.answers ?? {};
+  /*
+   * AI 사업 분석(__analysis)이 있으면 confirmed 값을 맨 앞에 둔다.
+   * inferred 는 쓰지 않는다 — 검색어의 사실로 굳히면 안 된다. 분석이 없는
+   * 옛 플랜은 아래 순서가 그대로라 동작이 변하지 않는다.
+   */
+  const confirmed = confirmedAnalysis(a);
   return {
     title: first(business.name, plan.title),
-    sector: text(business.industry),
-    customer: first(a["market/segments"]?.first_target, a["market/personas"]?.situation, a["overview/summary"]?.buyer_type),
-    problem: first(a["overview/problem"]?.problems, business.description),
-    model: first(a["market/products"]?.main_offer, business.description),
+    sector: [text(business.industry), confirmed.tags].filter(Boolean).join(" · "),
+    customer: first(confirmed.customer, a["market/segments"]?.first_target, a["market/personas"]?.situation, a["overview/summary"]?.buyer_type),
+    problem: first(confirmed.problem, a["overview/problem"]?.problems, business.description),
+    model: first(confirmed.solution, a["market/products"]?.main_offer, business.description),
     revenue: text(a["financials/revenue"]?.revenue_streams),
     region: text(business.region) || "대한민국",
     archetype: archetypeForIndustry(business.industry),

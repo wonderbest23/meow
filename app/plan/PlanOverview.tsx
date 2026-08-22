@@ -25,6 +25,8 @@ import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
 import { generatingTitle, subscribeGeneration, totalPendingCount, refreshServerPending, failedCount, isGenerating, generationFailureMessage } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanOverview.module.css";
+import { ANALYSIS_KEY } from "../../lib/plan-builder/analyzer/domain";
+import { useRouter } from "next/navigation";
 
 // 챕터 톤(1~6) → 밴드 배경 / 강조색 (오늘창업 블루 계열 파스텔)
 const TONES: Record<number, { bg: string; accent: string }> = {
@@ -99,6 +101,9 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const [lockedKeys, setLockedKeys] = useState<Set<string>>(new Set());
   /** 예시(샘플) 플랜은 읽기 전용 — 완성 문구·생성 도구를 다르게 보여준다 */
   const [readOnly, setReadOnly] = useState(false);
+  /** AI 사업 분석을 이미 거쳤는가 — 안 거쳤으면 빠른 길을 권한다 */
+  const [hasAnalysis, setHasAnalysis] = useState(true);
+  const router = useRouter();
 
   const [ready, setReady] = useState(false);
 
@@ -118,6 +123,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         setType(p.planType);
       }
       setReadOnly(isSamplePlan(p?.id));
+      setHasAnalysis(Boolean(p?.answers?.[ANALYSIS_KEY]));
       setIssues(findConsistencyIssues(p?.answers ?? {}, s.business));
       setLockedKeys(new Set(Object.entries(p?.sections ?? {}).filter(([, v]) => v?.locked).map(([k]) => k)));
       setReady(true);
@@ -369,6 +375,17 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         </div>
 
         <InheritNote />
+
+        {/* 빠른 길 — 아직 아무것도 안 썼고 AI 분석도 안 거쳤으면 권한다. 기존 위저드는 그대로다 */}
+        {!readOnly && !hasAnalysis && doneCount === 0 && (
+          <div className={styles.analyzeNudge}>
+            <div className={styles.heroText}>
+              <strong>AI와 먼저 사업을 정리할까요?</strong>
+              <span>사업 설명을 읽고 꼭 필요한 것만 몇 가지 물어봐요. 답은 아래 섹션에 그대로 채워집니다.</span>
+            </div>
+            <button type="button" className={styles.heroBtn} onClick={() => router.push("/plan/analyze")}>AI와 정리하기 →</button>
+          </div>
+        )}
 
         {/*
           본문의 주인공 — '지금 할 일' 하나. 스물다섯 줄을 훑기 전에 무엇을

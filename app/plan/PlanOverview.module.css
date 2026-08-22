@@ -1279,3 +1279,12 @@
   .side, .body, .hero, .group, .group .row, .sideBar i, .chartCol i, .checkOn { animation: none; }
   .row:hover, .heroBtn:hover { transform: none; }
 }
+
+/* AI 사업 정리 권유 — hero 보다 한 단계 조용하게(점선), 같은 글자·버튼 */
+.analyzeNudge {
+  padding: 14px 18px; border-radius: 12px; background: #f7f9ff;
+  border: 1.5px dashed color-mix(in srgb, var(--blue, #4a3aff) 45%, transparent);
+  display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.analyzeNudge .heroText strong { font-size: 15px; }
