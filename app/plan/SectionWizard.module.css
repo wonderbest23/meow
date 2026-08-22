@@ -1679,3 +1679,9 @@
   font-weight: 700;
 }
 @media (prefers-reduced-motion: reduce) { .gauge i { transition: none; } }
+
+/* 하단 바 배치 — 라벨(왼쪽) · 이전/다음(오른쪽에 나란히).
+   .btnPrimary 의 margin-left:auto 와 라벨의 margin-right:auto 가 겹쳐
+   '이전' 이 가운데 붕 떠 있었다. 밀어내기는 라벨 하나만 한다. */
+.foot .btnPrimary { margin-left: 0; }
+.foot .gaugeText { margin-right: auto; }

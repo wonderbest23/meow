@@ -14061,3 +14061,7 @@ html .simple-home .site-header a.account-link > svg {
   align-items: center;
 }
 .mode-consult a.welcome-start:hover { background: var(--blue-dark, #3a2ddb); }
+
+/* 섹션 작성 화면의 하단 바 '다음' 버튼을 떠 있는 상담 단추가 가렸다 — 위로 올린다 */
+body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 108px; right: 18px; }
+@media (max-width: 640px) { body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 96px; } }
