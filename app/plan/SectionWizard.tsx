@@ -563,7 +563,7 @@ export default function SectionWizard({
               <div className={styles.meters}>
                 {/* '상태'는 하단 버튼과 중복이라 뺐다 — 시간과 진행만 남긴다 */}
                 <div className={styles.mt}><div className={styles.mtL}>예상 소요시간</div><div className={styles.mtV}><span className={styles.mtPrefix}>예상 소요시간 </span>{estimateMinutes(key, section.title, planType)}분</div></div>
-                <div className={styles.mt}><div className={styles.mtL}>진행</div><div className={styles.mtV}><span className={styles.segs}>{[0, 1, 2, 3].map((i) => (<i key={i} className={i < Math.round((pct / 100) * 4) ? styles.f : ""} />))}</span></div></div>
+
               </div>
             </div>
 
@@ -618,22 +618,6 @@ export default function SectionWizard({
                 onClickCapture={readOnly ? blockSampleEdit : undefined}
                 onKeyDownCapture={readOnly ? blockSampleEdit : undefined}
               >
-              {/* 단계 표시 — 몇 번째 묶음인지, 어디까지 왔는지 */}
-              {stepCount > 1 && (
-                <div className={styles.stepDots} aria-label={`묶음 ${stepIndex + 1} / ${stepCount}`}>
-                  {groups.map((g, i) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      className={`${styles.stepDot} ${i === stepIndex ? styles.stepDotOn : ""} ${(perGroup[g.id]?.total ?? 0) > 0 && perGroup[g.id]?.done === perGroup[g.id]?.total ? styles.stepDotDone : ""}`}
-                      onClick={() => setGi(i)}
-                      title={g.label}
-                      aria-label={`${i + 1}. ${g.label}`}
-                    />
-                  ))}
-                  <span className={styles.stepNow}>{stepIndex + 1} / {stepCount}</span>
-                </div>
-              )}
               {(
                 (stepGroup ? [stepGroup] : []).map((g: QuestionGroup) => (
                   <div key={`${g.id}-${stepIndex}`} className={styles.group}>
@@ -693,6 +677,13 @@ export default function SectionWizard({
             {/* 잠긴 화면(로그인·결제 안내)에는 하단 바가 필요 없다 — 빈 띠만 남았다 */}
             {gate && !readOnly ? null : (
             <div className={styles.foot}>
+              {/* 진행 게이지 — 하단 바 위쪽 끝에 꽉 차게. 지나온 묶음은 초록. */}
+              {stepCount > 1 && (
+                <span className={styles.gauge} aria-hidden="true">
+                  <i style={{ width: `${Math.round(((stepIndex + 1) / stepCount) * 100)}%` }} />
+                </span>
+              )}
+              {stepCount > 1 && <span className={styles.gaugeText}>{stepGroup?.label} · {stepIndex + 1}/{stepCount}</span>}
               {/*
                * 버튼은 하나다.
                * 본문 생성은 뒤에서 돌고, 사용자는 계속 다음 질문으로 나아간다.

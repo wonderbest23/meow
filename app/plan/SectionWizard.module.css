@@ -1650,3 +1650,32 @@
   .group { animation: none; }
   .stepDot:hover { transform: none; }
 }
+
+/* ── 진행 게이지 — 하단 바 ────────────────────────────────────────
+ * 머리의 '진행' 칸과 본문 위 점 표시를 걷어내고, 하단 바 위쪽 끝에
+ * 꽉 찬 초록 게이지 하나로 모은다. 지금 몇 번째인지는 왼쪽 글로.
+ */
+.stepDots { display: none; }
+.foot { position: relative; }
+.gauge {
+  position: absolute;
+  left: 0; right: 0; top: 0;
+  height: 4px;
+  background: #eceef3;
+  display: block;
+  overflow: hidden;
+}
+.gauge i {
+  display: block;
+  height: 100%;
+  background: #22b573;
+  border-radius: 0 2px 2px 0;
+  transition: width .35s cubic-bezier(.2,.7,.2,1);
+}
+.gaugeText {
+  margin-right: auto;
+  color: #8181a5;
+  font-size: 12px;
+  font-weight: 700;
+}
+@media (prefers-reduced-motion: reduce) { .gauge i { transition: none; } }
