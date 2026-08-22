@@ -24,7 +24,8 @@ import styles from "./PlanRailNav.module.css";
 function currentSectionKey(pathname: string): string | null {
   const parts = pathname.split("/").filter(Boolean); // ["plan", ch, sec]
   if (parts.length !== 3 || parts[0] !== "plan") return null;
-  if (parts[1] === "overview" || parts[1] === "document") return null;
+  /* 챕터가 아닌 고정 경로들 — /plan/pay/result 가 섹션으로 읽히면 안 된다 */
+  if (["overview", "document", "pay", "me", "info", "start", "homepage"].includes(parts[1])) return null;
   return `${parts[1]}/${parts[2]}`;
 }
 
@@ -106,7 +107,17 @@ export default function PlanRailNav() {
    * 왼쪽에 플랜마다 챕터 일곱 줄을 또 펼치면 같은 것을 두 번 보여주는 셈이고,
    * 그게 '대시보드가 어렵다'의 가장 큰 원인이었다. 플랜 안으로 들어가면 나온다.
    */
-  if (pathname === "/plan" || pathname === "/plan/overview") return null;
+  /*
+   * 목차는 '플랜 안에서 일하는 화면'에서만 — 섹션 작성, 문서, 홈페이지.
+   * 목록(/plan)·개요·새 플랜 만들기·안내·결제·마이페이지에서는 그리지 않는다.
+   * 새 플랜을 만드는 중에 다른 플랜의 챕터 일곱 줄이 옆에 서 있으면
+   * 지금 하는 일에 집중이 안 된다.
+   */
+  const insidePlan =
+    pathname.startsWith("/plan/document") ||
+    pathname.startsWith("/plan/homepage") ||
+    currentSectionKey(pathname) !== null;
+  if (!insidePlan) return null;
 
   /** 이동할 때는 작업 중인 플랜도 그쪽으로 옮긴다 — 이후 문서·PPT가 헷갈리지 않게 */
   function go(planId: string, href: string) {
