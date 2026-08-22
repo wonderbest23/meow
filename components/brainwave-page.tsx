@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Urbanist, Rubik } from "next/font/google";
+import { layoutPage, childBox, type MobileLayout, type Box } from "../lib/landing/brainwave/mobile-layout";
 
 /*
  * 킷 글꼴 Gilroy 는 유료라 못 싣는다. 폭·굵기가 가장 가까운 무료 글꼴 Urbanist 를
@@ -126,8 +127,75 @@ export function BrainwaveNodeView({
   );
 }
 
+/*
+ * 모바일 자동 재배치(lib/landing/brainwave/mobile-layout.ts) 그리기.
+ * stack 은 세로로 쌓고(배경은 뒤에 깔고), leaf 는 원래 좌표 그대로 폭에 맞춰 줄인다.
+ */
+function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: MobileLayout; width: number; overrides?: BrainwaveOverrides; onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void; parentBox?: { x: number; w: number } }) {
+  if (layout.kind === "leaf") {
+    /*
+     * 글만 있는 잎은 줄이지 않고 다시 흐르게 한다 — 769px 짜리 가운데 제목을 그대로
+     * 줄이면 16px 이 된다. 75% 까지만 줄이고 나머지는 줄바꿈으로 받는다(zoom 은
+     * transform 과 달리 높이에 반영되므로 아래 내용이 밀린다).
+     */
+    const textish = (n: BrainwaveNode): boolean => n.tag === "p" || n.tag === "span" || n.tag === "br" || n.tag === "#" || (n.tag !== "img" && (n.ch ?? []).length > 0 && (n.ch ?? []).every(textish));
+    const textOnly = layout.nodes.every(textish);
+    if (textOnly) {
+      const s = Math.max(0.75, Math.min(1, width / Math.max(1, layout.box.w)));
+      /* 킷 DOM 은 z 순서라 설명이 제목보다 앞에 올 수 있다 — 세로 위치대로 다시 세운다 */
+      const flow = (n: BrainwaveNode, box: Box): BrainwaveNode => {
+        const kids = (n.ch ?? []).map((c, i) => ({ c, i, y: c.tag === "#" || c.tag === "br" ? null : (childBox(c, box)?.y ?? null) }));
+        const ordered = kids.every((k) => k.y === null) ? kids : [...kids].sort((a, b) => (a.y ?? a.i) - (b.y ?? b.i));
+        return {
+          ...n,
+          st: { ...(n.st ?? {}), position: "relative", left: "auto", right: "auto", top: "auto", bottom: "auto", transform: "none", width: "100%", height: "auto", whiteSpace: "pre-wrap", overflow: "visible" },
+          ch: ordered.map(({ c }) => (c.tag === "#" || c.tag === "br" ? c : flow(c, childBox(c, box) ?? box))),
+        };
+      };
+      return (
+        <div className="bwm-leaf bwm-text" style={{ width, alignSelf: "center" }}>
+          <div className="bwm-flow" style={{ zoom: s, width: width / s }}>
+            {[...layout.nodes].sort((a, b) => (childBox(a, layout.frame)?.y ?? 0) - (childBox(b, layout.frame)?.y ?? 0)).map((n, i) => <BrainwaveNodeView key={n.id ?? i} node={flow(n, childBox(n, layout.frame) ?? layout.box)} overrides={overrides} onPick={onPick} />)}
+          </div>
+        </div>
+      );
+    }
+    const s = Math.min(1, width / Math.max(1, layout.box.w));
+    const w = layout.box.w * s, h = layout.box.h * s;
+    const dx = layout.box.x - layout.frame.x, dy = layout.box.y - layout.frame.y;
+    /* 원래 줄에서 왼쪽·가운데·오른쪽 어디에 있었는지 그대로 — 전부 가운데로 모으면 킷과 달라진다 */
+    let align: "flex-start" | "center" | "flex-end" = "center";
+    if (parentBox && parentBox.w > layout.box.w * 1.15) {
+      const c = layout.box.x + layout.box.w / 2, pc = parentBox.x + parentBox.w / 2;
+      if (Math.abs(c - pc) > parentBox.w * 0.08) align = c < pc ? "flex-start" : "flex-end";
+    }
+    return (
+      <div className="bwm-leaf" style={{ width: w, height: h, alignSelf: align }}>
+        <div className="bwm-frame" style={{ width: layout.frame.w, height: layout.frame.h, transform: `translate(${-dx * s}px, ${-dy * s}px) scale(${s})` }}>
+          {layout.nodes.map((n, i) => <BrainwaveNodeView key={n.id ?? i} node={n} overrides={overrides} onPick={onPick} />)}
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="bwm-stack">
+      {layout.bg.length ? (
+        <div className="bwm-bg" aria-hidden="true">
+          {layout.bg.map((n, i) => (
+            <BrainwaveNodeView key={n.id ?? i} node={{ ...n, st: { ...(n.st ?? {}), position: "absolute", left: "0", top: "0", right: "0", bottom: "0", width: "100%", height: "100%", transform: "none" } }} overrides={overrides} />
+          ))}
+        </div>
+      ) : null}
+      <div className="bwm-items">
+        {layout.items.map((it, i) => <MobileView key={i} layout={it} width={width} overrides={overrides} onPick={onPick} parentBox={layout.box} />)}
+      </div>
+    </div>
+  );
+}
+
 /**
  * 1600 캔버스를 담는 무대. 폭을 재서 비율만큼 줄이고, 높이도 그만큼만 차지한다.
+ * 폭이 640 이하면(또는 mode="mobile") 자동 재배치로 그린다.
  */
 export function BrainwaveStage({
   page,
@@ -135,24 +203,39 @@ export function BrainwaveStage({
   onPick,
   maxWidth,
   className,
+  mode = "auto",
 }: {
   page: BrainwavePageData;
   overrides?: BrainwaveOverrides;
   onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void;
   maxWidth?: number;
   className?: string;
+  /** auto: 폭 640 이하면 모바일 재배치 / desktop: 항상 줄이기 / mobile: 항상 재배치 */
+  mode?: "auto" | "desktop" | "mobile";
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [width, setWidth] = useState(0);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const measure = () => setScale(Math.min(1, el.clientWidth / page.w));
+    const measure = () => { setScale(Math.min(1, el.clientWidth / page.w)); setWidth(el.clientWidth); };
     measure();
     const ro = new ResizeObserver(measure);
     ro.observe(el);
     return () => ro.disconnect();
   }, [page.w]);
+  const mobile = mode === "mobile" || (mode === "auto" && width > 0 && width <= 640);
+  const target = Math.max(200, width - 32);
+  const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
+  if (mobile && layout) {
+    return (
+      <div ref={ref} className={`bw-stage bw-mobile ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
+        {/* 양옆 16px 여백 — 잎이 화면 끝에 붙으면 글이 가장자리에 닿는다 */}
+        {width > 0 ? <MobileView layout={layout} width={target} overrides={overrides} onPick={onPick} /> : null}
+      </div>
+    );
+  }
   /*
    * 비율은 CSS 가 먼저 계산한다(tan(atan2(100cqw, 1600px)) — 길이 나눗셈 대신).
    * 서버에서 그린 HTML 도 첫 화면부터 맞는 크기로 서고, 자바스크립트는 그 값을
@@ -181,7 +264,7 @@ export function loadBrainwavePage(id: string): Promise<BrainwavePageData> {
   return p;
 }
 
-export function BrainwavePage({ pageId, overrides, onPick, className, preloaded }: { pageId: string; overrides?: BrainwaveOverrides; onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void; className?: string; preloaded?: BrainwavePageData | null }) {
+export function BrainwavePage({ pageId, overrides, onPick, className, preloaded, mode }: { pageId: string; overrides?: BrainwaveOverrides; onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void; className?: string; preloaded?: BrainwavePageData | null; mode?: "auto" | "desktop" | "mobile" }) {
   const [page, setPage] = useState<BrainwavePageData | null>(preloaded && preloaded.id === pageId ? preloaded : null);
   const [err, setErr] = useState("");
   useEffect(() => {
@@ -193,5 +276,5 @@ export function BrainwavePage({ pageId, overrides, onPick, className, preloaded 
   }, [pageId, preloaded]);
   if (err) return <p className="bw-error">페이지를 불러오지 못했습니다: {err}</p>;
   if (!page) return <div className="bw-loading" aria-busy="true" />;
-  return <BrainwaveStage page={page} overrides={overrides} onPick={onPick} className={className} />;
+  return <BrainwaveStage page={page} overrides={overrides} onPick={onPick} className={className} mode={mode} />;
 }

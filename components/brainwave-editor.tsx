@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ImageUp, LayoutTemplate, LoaderCircle, Monitor, Redo2, Save, Smartphone, Sparkles, Tablet, Undo2, X } from "lucide-react";
+import { Eye, ImageUp, LayoutTemplate, LoaderCircle, Monitor, Pencil, Redo2, Save, Smartphone, Sparkles, Tablet, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
@@ -52,6 +52,8 @@ export function BrainwaveEditor({
    */
   const [view, setView] = useState<"pc" | "tablet" | "mobile">("pc");
   const VIEW_W = { pc: 1600, tablet: 768, mobile: 390 } as const;
+  /* 미리보기 — 손님이 보는 그대로(테두리·클릭 없음) */
+  const [previewMode, setPreviewMode] = useState(false);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingImage = useRef<string | null>(null);
@@ -171,9 +173,12 @@ export function BrainwaveEditor({
           <div className="bw-editor-views" role="group" aria-label="보는 폭">
             <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC"><Monitor size={15} /></button>
             <button type="button" className={view === "tablet" ? "on" : ""} onClick={() => setView("tablet")} title="태블릿"><Tablet size={15} /></button>
-            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일"><Smartphone size={15} /></button>
+            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일 (자동 재배치)"><Smartphone size={15} /></button>
           </div>
-          <small>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다. {changed ? `고친 자리 ${changed}개` : ""}</small>
+          <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} onClick={() => { finishText(); setPreviewMode((v) => !v); }}>
+            {previewMode ? <><Pencil size={14} /> 편집으로</> : <><Eye size={14} /> 미리보기</>}
+          </button>
+          <small>{previewMode ? "손님이 보는 그대로입니다." : view === "mobile" ? "모바일은 가로로 나란한 것을 세로로 쌓아 보여줍니다." : "글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다."} {changed ? `고친 자리 ${changed}개` : ""}</small>
         </div>
         <div className="bw-editor-right">
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /></button>
@@ -213,11 +218,12 @@ export function BrainwaveEditor({
       ) : null}
       {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
       <div className="bw-editor-stage" onClick={finishText}>
-        <div className={`bw-editor-canvas view-${view}`} style={{ maxWidth: VIEW_W[view] }}>
+        <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view] }}>
           <BrainwavePage
             pageId={page}
             overrides={over}
-            onPick={(kind, id, el) => (kind === "text" ? pickText(id, el) : pickImage(id))}
+            mode={view === "mobile" ? "mobile" : "desktop"}
+            onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : pickImage(id))}
           />
           {uploading ? <div className="bw-editor-uploading"><LoaderCircle className="spin" /> 사진 올리는 중</div> : null}
         </div>
