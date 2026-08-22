@@ -1060,3 +1060,132 @@
 @media (max-width: 640px) {
   .page { padding: 16px 16px 56px; }
 }
+
+/* ══ CRM UI Kit 'Project Details' 구조 ═══════════════════════════════
+ * [사이드바 300: 머리·진행률·다음 할 일·챕터 차트] [본문: 탭 칩 + 행 목록]
+ * 실측 문법은 목록 화면(PlanList)과 같다 — 바탕 #f5f5fa, 흰 카드 r12,
+ * 행 52/r8, 상태 칩 r6, 제목 #1c1d21, 보조 #8181a5.
+ */
+.page { padding: 0; }
+.layout { display: grid; grid-template-columns: 300px minmax(0, 1fr); min-height: 100vh; }
+
+.side {
+  padding: 24px 22px 32px;
+  background: #fff;
+  border-right: 1px solid #ececf4;
+  display: grid;
+  align-content: start;
+  gap: 22px;
+}
+.sideTop { display: flex; align-items: flex-start; gap: 10px; }
+.sideTop .back {
+  width: 32px; height: 32px; min-height: 0 !important;
+  margin: 0; padding: 0 !important;
+  border: 1px solid #e6e6ef; border-radius: 8px !important;
+  background: #fff; color: #55586a; font-size: 14px;
+  display: grid; place-items: center;
+}
+.sideTitle { display: grid; gap: 2px; min-width: 0; }
+.sideTitle strong { font-size: 16px; font-weight: 700; color: #1c1d21; line-height: 1.3; }
+.sideTitle span { font-size: 12px; color: #8181a5; }
+
+.sideBlock { display: grid; gap: 8px; padding-top: 18px; border-top: 1px solid #f0f0f3; }
+.sideBlock small { font-size: 12px; font-weight: 700; color: #8181a5; }
+.sideProgress { display: flex; align-items: center; gap: 10px; }
+.sideBar { flex: 1; height: 6px; border-radius: 3px; background: #f0f0f3; overflow: hidden; display: block; }
+.sideBar i { display: block; height: 100%; border-radius: 3px; background: var(--blue, #4a3aff); }
+.sideProgress b { font-size: 14px; color: #1c1d21; }
+.sideMuted { margin: 0; font-size: 12px; color: #8181a5; }
+.sideNext { margin: 0; font-size: 14px; font-weight: 700; color: #1c1d21; }
+.sidePrimary {
+  min-height: 38px !important;
+  padding: 0 14px !important;
+  border: 0; border-radius: 8px !important;
+  background: var(--blue, #4a3aff) !important; color: #fff !important;
+  font-size: 13px; font-weight: 700 !important;
+  justify-self: start;
+}
+.chart {
+  height: 110px; padding: 8px 6px 0;
+  border-radius: 8px; background: #f5f5fa;
+  display: flex; align-items: flex-end; gap: 8px;
+}
+.chartCol { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
+.chartCol i { width: 4px; border-radius: 2px; background: var(--blue, #4a3aff); display: block; }
+.chartCol:nth-child(even) i { background: #22b573; }
+
+.body { padding: 22px 28px 48px; display: grid; align-content: start; gap: 14px; }
+.bar { min-height: 44px; }
+.title { font-size: 18px; }
+
+/* 보기 전환 — 킷 탭 칩 */
+.seg { gap: 6px; }
+.seg button {
+  min-height: 30px !important; padding: 0 12px !important;
+  border: 0; border-radius: 8px !important;
+  background: #f5f5fa; color: #55586a;
+  font-size: 12px; font-weight: 700 !important;
+}
+.seg .segOn { background: var(--blue, #4a3aff); color: #fff; }
+
+/* 행 목록 */
+.rows { padding: 10px 16px 16px; border-radius: 12px; background: #fff; display: grid; gap: 4px; }
+.group { display: grid; gap: 6px; padding-top: 10px; }
+.groupHead { display: flex; align-items: center; gap: 8px; padding: 8px 2px 4px; }
+.groupNo {
+  width: 20px; height: 20px; border-radius: 6px;
+  background: var(--blue, #4a3aff); color: #fff;
+  font-size: 11px; font-weight: 700; display: grid; place-items: center;
+}
+.groupHead b { font-size: 13px; font-weight: 700; color: #1c1d21; }
+.groupCount { margin-left: auto; font-size: 12px; color: #8181a5; }
+
+.row {
+  width: 100%;
+  min-height: 52px !important;
+  padding: 8px 12px 8px 14px !important;
+  border: 1px solid #f0f0f3 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: inherit;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.row:hover { background: #f9f9fc !important; border-color: #e6e6ef !important; }
+.rowNext { border-color: color-mix(in srgb, var(--blue, #4a3aff) 45%, #fff) !important; }
+.check {
+  width: 18px; height: 18px; border-radius: 5px;
+  border: 1.5px solid #d8d8e6; background: #fff;
+  display: grid; place-items: center; color: #fff;
+}
+.check svg { width: 11px; height: 11px; }
+.checkOn { background: var(--blue, #4a3aff); border-color: var(--blue, #4a3aff); }
+.rowMain { min-width: 0; display: grid; gap: 1px; }
+.rowMain b { font-size: 14px; font-weight: 700; color: #1c1d21; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowMain small { font-size: 12px; color: #8181a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowMeta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8181a5; white-space: nowrap; }
+.rowMeta svg { display: inline-block !important; width: 12px !important; height: 12px !important; }
+.chip { min-width: 58px; padding: 5px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 700; text-align: center; white-space: nowrap; }
+.chip_done { background: #e3f7ec; color: #157a47; }
+.chip_live { background: #fff4d6; color: #8a6400; }
+.chip_next { background: #efeefb; color: var(--blue, #4a3aff); }
+.chip_idle { background: #f0f0f3; color: #55586a; }
+
+@media (max-width: 1000px) {
+  .layout { grid-template-columns: 1fr; }
+  .side { border-right: 0; border-bottom: 1px solid #ececf4; padding: 18px 16px; }
+  .chart { display: none; }
+}
+@media (max-width: 640px) {
+  .body { padding: 14px 12px 40px; }
+  .row { grid-template-columns: 18px minmax(0, 1fr) auto; }
+  .rowMeta { display: none; }
+}
+.seg button.segOn { background: var(--blue, #4a3aff) !important; color: #fff !important; }
+.seg button { box-shadow: none !important; }

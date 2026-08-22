@@ -310,20 +310,70 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
     );
   }
 
+  /* 챕터별 완료 비율 — 사이드바 막대 차트용 */
+  const chapterBars = chapters.map((ch) => {
+    const t = ch.sections.length;
+    const d = ch.sections.filter((sec) => statuses[`${ch.id}/${sec.id}`] === "done").length;
+    return { id: ch.id, title: ch.title, pct: t ? Math.round((d / t) * 100) : 0 };
+  });
+
   return (
     <div className={styles.page}>
-      <div className={styles.frame}>
-       <div className={styles.app}>
-        <div className={styles.main}>
-        <div className={styles.bar}>
-          <div className={styles.barLeft}>
-            <button type="button" className={styles.back} onClick={onBack} aria-label="뒤로">
-              ←
-            </button>
-            <h1 className={styles.title}>
-              플랜 개요 <span>· {title}</span>
-            </h1>
+      {/*
+        CRM UI Kit 'Project Details' 구조 — [사이드바: 프로젝트 머리·설명·
+        진행률·차트] [본문: 탭 칩 + 작업 행 목록]. 레일은 PlanShell 이 그린다.
+      */}
+      <div className={styles.layout}>
+        <aside className={styles.side}>
+          <div className={styles.sideTop}>
+            <button type="button" className={styles.back} onClick={onBack} aria-label="내 플랜으로">←</button>
+            <div className={styles.sideTitle}>
+              <strong>{title}</strong>
+              <span>{type}{readOnly ? " · 예시" : ""}</span>
+            </div>
           </div>
+
+          <div className={styles.sideBlock}>
+            <small>진행률</small>
+            <div className={styles.sideProgress}>
+              <span className={styles.sideBar}><i style={{ width: `${pct}%` }} /></span>
+              <b>{pct}%</b>
+            </div>
+            <p className={styles.sideMuted}>{doneCount} / {total} 섹션 완료 · 전략 깊이 {doneCount >= total * 0.6 ? "높음" : doneCount > 0 ? "보통" : "낮음"}</p>
+          </div>
+
+          {doneCount < total && nextInfo && (
+            <div className={styles.sideBlock}>
+              <small>다음 할 일</small>
+              <p className={styles.sideNext}>{nextInfo.num}. {nextInfo.title}</p>
+              <button type="button" className={styles.sidePrimary} onClick={() => onOpenSection?.(nextInfo.chapterId, nextInfo.sectionId)}>
+                {doneCount === 0 ? "첫 섹션 시작하기" : "이어서 작성"} →
+              </button>
+            </div>
+          )}
+          {doneCount > 0 && doneCount === total && (
+            <div className={styles.sideBlock}>
+              <small>{readOnly ? "예시 문서" : "완성"}</small>
+              <p className={styles.sideNext}>{readOnly ? "실제 서비스로 생성한 완성본입니다." : `${total}개 섹션을 모두 작성했어요.`}</p>
+              <button type="button" className={styles.sidePrimary} onClick={onOpenDocument}>문서 보러 가기 →</button>
+            </div>
+          )}
+
+          <div className={styles.sideBlock}>
+            <small>챕터별 진행</small>
+            <div className={styles.chart} aria-label="챕터별 완료 비율">
+              {chapterBars.map((c) => (
+                <span key={c.id} className={styles.chartCol} title={`${c.title} ${c.pct}%`}>
+                  <i style={{ height: `${Math.max(6, c.pct)}%` }} />
+                </span>
+              ))}
+            </div>
+          </div>
+        </aside>
+
+        <section className={styles.body}>
+        <div className={styles.bar}>
+          <h1 className={styles.title}>플랜 개요</h1>
           {/*
             보기 전환은 문서 화면과 같은 자리(제목 줄 오른쪽)에 둔다.
             예전에는 개요만 본문 한가운데 있어서, 버튼을 눌러 넘어가면
@@ -335,80 +385,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           </div>
         </div>
 
-        {/* 진행 미터 */}
-        {/* 진행률이 주인공 — 나머지 둘은 보조 지표로 가라앉힌다 */}
-        <div className={styles.meters}>
-          <div className={`${styles.meter} ${styles.meterPrimary}`}>
-            <div className={styles.meterLabel}>진행률</div>
-            <div className={styles.meterRow}>
-              <span className={styles.meterValue}>{pct}%</span>
-              <span className={styles.segs}>
-                {[0, 1, 2, 3, 4].map((i) => (
-                  <i key={i} className={i < Math.round((pct / 100) * 5) ? styles.ok : ""} />
-                ))}
-              </span>
-            </div>
-          </div>
-          <div className={styles.meter}>
-            <div className={styles.meterLabel}>완료 섹션</div>
-            <div className={styles.meterRow}>
-              <span className={styles.meterValue}>
-                {doneCount} / {total}
-              </span>
-            </div>
-          </div>
-          <div className={styles.meter}>
-            <div className={styles.meterLabel}>전략 깊이</div>
-            <div className={styles.meterRow}>
-              <span className={styles.meterValue}>{doneCount >= total * 0.6 ? "높음" : doneCount > 0 ? "보통" : "낮음"}</span>
-              <span className={styles.segs}>
-                {[0, 1, 2, 3].map((i) => (
-                  <i key={i} className={i < Math.ceil((doneCount / Math.max(total, 1)) * 4) ? styles.on : ""} />
-                ))}
-              </span>
-            </div>
-          </div>
-          <div className={styles.spring} />
-        </div>
-
-        {/* 이어받아 만든 플랜이면 왜 미리 채워져 있는지 먼저 설명한다 */}
         <InheritNote />
-
-        {/* 다 채운 사람에게 마지막 단계 — 발표자료 */}
-        {/* 작성 중이면 다음 할 일을 바로 이어준다 — 재방문 시 첫 행동이 명확해야 한다 */}
-        {doneCount < total && nextInfo && (
-          <button
-            type="button"
-            className={`${styles.finale} ${styles.continueBanner}`}
-            onClick={() => onOpenSection?.(nextInfo.chapterId, nextInfo.sectionId)}
-          >
-            <span className={styles.finaleBody}>
-              <b>{doneCount === 0 ? "첫 섹션부터 시작해 보세요" : `섹션 ${total - doneCount}개가 남아 있어요`}</b>
-              <span>다음 차례: {nextInfo.num}. {nextInfo.title}</span>
-            </span>
-            <span className={styles.finaleGo}>이어서 작성 →</span>
-          </button>
-        )}
-        {doneCount > 0 && doneCount === total && (
-          <button type="button" className={`${styles.finale} ${ringClass()}`} onClick={onOpenDocument}>
-            <GuideBubble text={readOnly ? "완성본을 살펴보세요" : "다음은 발표자료예요"} />
-            <span className={styles.finaleIcon} aria-hidden="true"><Presentation size={22} /></span>
-            <span className={styles.finaleBody}>
-              {readOnly ? (
-                <>
-                  <b>예시로 만들어 둔 완성 문서예요</b>
-                  <span>실제 서비스로 생성한 결과물입니다. 내 사업으로도 같은 문서를 만들 수 있어요.</span>
-                </>
-              ) : (
-                <>
-                  <b>사업계획서가 완성됐어요 🎉</b>
-                  <span>{total}개 섹션을 모두 작성했습니다. 문서 화면에서 PDF·Word로 받거나, 발표자료(PPT)까지 만들 수 있어요.</span>
-                </>
-              )}
-            </span>
-            <span className={styles.finaleGo}>문서 보러 가기 →</span>
-          </button>
-        )}
 
         <ConsistencyPanel issues={issues} onOpenSection={onOpenSection} />
 
@@ -490,64 +467,55 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           );
         })()}
 
-        {/* 챕터 밴드 */}
-        <div className={styles.plan}>
-          {chapters.map((chapter, ci) => {
-            const tone = TONES[chapter.tone] ?? TONES[1];
-            return (
-              <div
-                key={chapter.id}
-                className={styles.band}
-                style={{ ["--bandBg" as string]: tone.bg, ["--bandAccent" as string]: tone.accent }}
-              >
-                <div className={styles.chapHead}>
-                  <span className={styles.chapNo}>{ci + 1}</span>
-                  <h3 className={styles.chapName}>{chapter.title}</h3>
-                  {(() => {
-                    const d = chapter.sections.filter((sec) => statuses[`${chapter.id}/${sec.id}`] === "done").length;
-                    const t = chapter.sections.length;
-                    return (
-                      <span className={`${styles.chapCount} ${d === t && t > 0 ? styles.chapCountDone : ""}`}>
-                        {d === t && t > 0 ? "완료 " : ""}{d}/{t}
-                      </span>
-                    );
-                  })()}
-                </div>
-                <div className={styles.nodes}>
-                  {chapter.sections.map((section) => {
-                    counter += 1;
-                    const key = `${chapter.id}/${section.id}`;
-                    const done = statuses[key] === "done";
-                    const writing = !done && inProgress.has(key);
-                    const isNext = key === nextKey;
-                    const isLocked = lockedKeys.has(key);
-                    const num = counter;
-                    return (
-                      <button
-                        key={section.id}
-                        type="button"
-                        className={`${styles.node} ${done ? styles.done : ""} ${writing ? styles.writing : ""} ${isNext ? styles.next : ""} ${isNext ? ringClass() : ""}`}
-                        onClick={() => onOpenSection?.(chapter.id, section.id)}
-                        title={section.summary}
-                      >
-                        <span className={styles.nodeNum}>{done ? <CheckIcon /> : num}</span>
-                        <span className={styles.nodeLabel}>{section.title}</span>
-                        {isLocked && <span className={styles.lockTag} title="수정 보호 중 — 일괄 생성이 건너뜁니다"><Lock size={10} strokeWidth={2.4} /></span>}
-                        {isNext && <GuideBubble text="다음은 여기예요" />}
-                        {isNext && <span className={styles.nextTag}>여기부터</span>}
-                        {writing && !isNext && <span className={styles.writingTag}>작성 중</span>}
-                        {done && <span className={styles.nodeDoneTag}>완료</span>}
-                        <span className={styles.nodeTime}>{estimateMinutes(`${chapter.id}/${section.id}`, section.title, type)}분</span>
-                      </button>
-                    );
-                  })}
-                </div>
+        {/* 섹션 행 목록 — 킷의 작업 행. 챕터는 얇은 구분 라벨로만 */}
+        <div className={styles.rows}>
+          {chapters.map((chapter, ci) => (
+            <div key={chapter.id} className={styles.group}>
+              <div className={styles.groupHead}>
+                <span className={styles.groupNo}>{ci + 1}</span>
+                <b>{chapter.title}</b>
+                {(() => {
+                  const d = chapter.sections.filter((sec) => statuses[`${chapter.id}/${sec.id}`] === "done").length;
+                  const t = chapter.sections.length;
+                  return <span className={styles.groupCount}>{d}/{t}</span>;
+                })()}
               </div>
-            );
-          })}
+              {chapter.sections.map((section) => {
+                counter += 1;
+                const key = `${chapter.id}/${section.id}`;
+                const done = statuses[key] === "done";
+                const writing = !done && inProgress.has(key);
+                const isNext = key === nextKey;
+                const isLocked = lockedKeys.has(key);
+                const num = counter;
+                const status = done ? "done" : writing ? "live" : isNext ? "next" : "idle";
+                return (
+                  <button
+                    key={section.id}
+                    type="button"
+                    className={`${styles.row} ${isNext ? styles.rowNext : ""}`}
+                    onClick={() => onOpenSection?.(chapter.id, section.id)}
+                    title={section.summary}
+                  >
+                    <span className={`${styles.check} ${done ? styles.checkOn : ""}`} aria-hidden="true">{done && <CheckIcon />}</span>
+                    <span className={styles.rowMain}>
+                      <b>{num}. {section.title}</b>
+                      {section.summary && <small>{section.summary}</small>}
+                    </span>
+                    <span className={styles.rowMeta}>
+                      {isLocked && <span title="수정 보호 중"><Lock size={12} /></span>}
+                      <span>{estimateMinutes(key, section.title, type)}분</span>
+                    </span>
+                    <span className={`${styles.chip} ${styles[`chip_${status}`]}`}>
+                      {status === "done" ? "완료" : status === "live" ? "작성 중" : status === "next" ? "여기부터" : "시작 전"}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
         </div>
-        </div>
-       </div>
+        </section>
       </div>
     </div>
   );
