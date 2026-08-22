@@ -7,6 +7,9 @@ import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, fina
 import { financialTableOwner, needsMultiYear } from "./blueprint";
 import { findConsistencyIssues, issuesForSection } from "./consistency";
 import { loadPlanEvidence, evidenceForSection, toPromptEvidence, sectionUsesEvidence } from "./market-research";
+import { buildPlanBusinessContext } from "./context/build";
+import { contextForSection, type SectionBusinessContext } from "./context/section";
+import { ANALYSIS_KEY } from "./analyzer/domain";
 
 /*
  * 본문 생성을 서버 안에서 처리하기 위한 내부 통로.
@@ -127,7 +130,15 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
 
   const all = findConsistencyIssues(plan.answers, state.business);
   const relevant = key === "summary/executive" ? all : issuesForSection(all, key);
-  const conflicts = relevant.length ? relevant.map(({ title, detail }) => ({ title, detail })) : undefined;
+  let conflicts = relevant.length ? relevant.map(({ title, detail }) => ({ title, detail })) : undefined;
+
+  // AI 사업 분석 맥락 — 일반 생성 경로(app/api/plan/generate)와 같은 규칙
+  let context: SectionBusinessContext | undefined;
+  if (plan.answers[ANALYSIS_KEY]) {
+    const ctx = buildPlanBusinessContext({ business: state.business, answers: plan.answers });
+    context = contextForSection(key, ctx);
+    if (ctx.conflicts.length) conflicts = [...(conflicts ?? []), ...ctx.conflicts];
+  }
 
   // 앞 섹션 요약 — 뒤 섹션이 앞 내용을 이어받게 한다
   const priorSummary = Object.entries(plan.sections)
@@ -154,6 +165,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     financialsReference,
     conflicts,
     evidence: evidence.length ? evidence : undefined,
+    context,
   });
 
   /*

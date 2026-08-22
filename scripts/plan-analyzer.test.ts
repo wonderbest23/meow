@@ -145,11 +145,14 @@ let ans: Record<string, Record<string, unknown>> = {};
 ans = applySlotAnswer(ans, PACKS.class, "classPrice", "5만원");
 assert.equal(ans["financials/revenue"].unit_price, "5만원", "classPrice → unit_price");
 assert.equal(ans["market/products"].has_price, "yes", "게이트도 켠다");
+// 2차 수정: 재료비·공간비는 "구성 항목" — 합계 칸에 직접 쓰지 않고 숫자 확인 단계에서 사용자가 합계를 확정한다
 ans = applySlotAnswer(ans, PACKS.class, "materialCost", "1만5천원");
-assert.equal(ans["financials/expenses"].variable_per_unit, "1만5천원");
+assert.equal(ans["financials/expenses"]?.variable_per_unit, undefined, "재료비만으로 변동비 합계를 확정하지 않는다");
 ans = applySlotAnswer(ans, PACKS.class, "venueCost", "월 60만원");
-assert.equal(ans["financials/expenses"].fixed_total, "월 60만원");
+assert.equal(ans["financials/expenses"]?.fixed_total, undefined, "공간비만으로 고정비 합계를 확정하지 않는다");
 assert.deepEqual(ans["financials/expenses"].fixed_items, ["임대료"]);
+// 사용자가 숫자 확인 화면에서 합계를 확정한 뒤의 모습
+ans = { ...ans, "financials/expenses": { ...ans["financials/expenses"], variable_per_unit: "15,000원", fixed_total: "600,000원" } };
 // 등록되지 않은 슬롯은 폐기
 const before = JSON.stringify(ans);
 ans = applySlotAnswer(ans, PACKS.class, "newAmazingBusinessMetric", "999");

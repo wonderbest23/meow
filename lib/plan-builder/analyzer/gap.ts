@@ -65,6 +65,9 @@ export function slotState(
     if (f.status === "confirmed" && filled(f.value)) return "filled";
   }
   if (slot.mapsTo && filled(answers?.[slot.mapsTo.sectionKey]?.[slot.mapsTo.qid])) return "filled";
+  // 합계가 이미 있으면 구성 항목은 묻지 않는다 (위저드에서 고정비·변동비 합계를 적은 경우)
+  if (slot.contributesTo === "fixed" && filled(answers?.["financials/expenses"]?.fixed_total)) return "filled";
+  if (slot.contributesTo === "variable" && filled(answers?.["financials/expenses"]?.variable_per_unit)) return "filled";
   return "missing";
 }
 
@@ -259,4 +262,68 @@ export function applyAnalysisToAnswers(answers: Answers, analysis: BusinessAnaly
   if (promo.length) setIfEmpty(next, "strategy/promotion", "promo_channels", promo);
 
   return next;
+}
+
+/* ───────── 숫자 확인 — 파생·합계 값은 사용자가 확인해야 저장된다 ───────── */
+
+export interface NumberConfirm {
+  /** 저장할 칸 */
+  target: { sectionKey: string; qid: string };
+  label: string;
+  /** 초기값(원) */
+  value: number;
+  /** 어떻게 나온 값인지 */
+  formula: string;
+  /** 더해야 할지도 모르는 항목 안내 */
+  hint: string;
+  unit: string;
+}
+
+/**
+ * 라운드가 끝난 뒤 사용자에게 확인받을 숫자들.
+ *  - 월 판매량: 팩 산식(정원×횟수×참석률 / 방문자×전환율)
+ *  - 월 고정비 합계: 공간비 같은 구성 항목이 있으면 그 값을 초기값으로 — 다른 비용을 더하라고 안내
+ *  - 1건당 변동비 합계: 재료비 같은 구성 항목이 있으면 그 값을 초기값으로 — 수수료·포장을 더하라고 안내
+ * 이미 답이 있는 칸은 만들지 않는다.
+ */
+export function numberConfirms(record: Pick<AnalysisRecord, "analysis" | "slots">, answers: Answers): NumberConfirm[] {
+  const pack = packForAnalysis(record.analysis);
+  const nums = numericSlots(record.slots);
+  const out: NumberConfirm[] = [];
+  const has = (sec: string, qid: string) => filled(answers?.[sec]?.[qid]);
+
+  const d = pack.deriveVolume?.(nums) ?? null;
+  if (d && !has("financials/revenue", "monthly_volume")) {
+    out.push({ target: { sectionKey: "financials/revenue", qid: "monthly_volume" }, label: "월 판매(수강) 건수", value: d.value, formula: d.formula, hint: "가정이 들어간 숫자예요. 보수적으로 잡을수록 계획서가 믿음직해요.", unit: "건/월" });
+  }
+  const comp = (kind: "fixed" | "variable") =>
+    slotsForPack(pack)
+      .filter((s) => s.contributesTo === kind && nums[s.id])
+      .map((s) => ({ label: s.label.replace(/\s*\(.*\)$/, ""), value: nums[s.id]! }));
+
+  const fixedParts = comp("fixed");
+  if (fixedParts.length && !has("financials/expenses", "fixed_total")) {
+    const sum = fixedParts.reduce((n, p) => n + p.value, 0);
+    out.push({
+      target: { sectionKey: "financials/expenses", qid: "fixed_total" },
+      label: "월 고정비 합계",
+      value: sum,
+      formula: fixedParts.map((p) => `${p.label} ${p.value.toLocaleString("ko-KR")}원`).join(" + "),
+      hint: "공간비 외에 광고비·통신비·보험료·구독 도구처럼 팔지 않아도 매달 나가는 돈이 있으면 더해서 적어주세요.",
+      unit: "원/월",
+    });
+  }
+  const varParts = comp("variable");
+  if (varParts.length && !has("financials/expenses", "variable_per_unit")) {
+    const sum = varParts.reduce((n, p) => n + p.value, 0);
+    out.push({
+      target: { sectionKey: "financials/expenses", qid: "variable_per_unit" },
+      label: "1건당 변동비 합계",
+      value: sum,
+      formula: varParts.map((p) => `${p.label} ${p.value.toLocaleString("ko-KR")}원`).join(" + "),
+      hint: "재료비 외에 결제 수수료·포장비·배송비·플랫폼 수수료처럼 한 건 팔 때마다 붙는 돈이 있으면 더해서 적어주세요.",
+      unit: "원/건",
+    });
+  }
+  return out;
 }

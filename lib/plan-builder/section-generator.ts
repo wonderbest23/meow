@@ -5,6 +5,7 @@ import { completeText, streamText, type LLMConfig } from "../llm/complete";
 import type { PlanChapterDef, PlanSectionDef } from "./blueprint";
 import { questionsForSection } from "./questions";
 import { planTypeGuidanceBlock } from "./plan-type-guidance";
+import type { SectionBusinessContext } from "./context/section";
 
 const SYSTEM_PROMPT = [
   "당신은 한국에서 실제로 실행할 사업계획서의 한 섹션을 작성하는 선임 사업전략가입니다.",
@@ -83,6 +84,11 @@ export interface SectionGenInput {
    * (lib/plan-builder/market-research.ts evidenceForSection). 없으면 예전과 같다.
    */
   evidence?: PromptEvidence[];
+  /**
+   * AI 사업 분석으로 구조화한 맥락 — 이 섹션에 필요한 필드만(lib/plan-builder/context/section.ts).
+   * 확정 정보와 AI 추정을 갈라서 넘기고, 추정은 사실로 쓰지 못하게 한다. 없으면 예전과 같다.
+   */
+  context?: SectionBusinessContext;
 }
 
 export interface PromptEvidence {
@@ -142,6 +148,46 @@ function formatConflicts(conflicts?: Array<{ title: string; detail: string }>): 
     "임의로 한쪽을 골라 사실처럼 쓰거나, 평균·중간값을 내어 새로운 수치를 만들지 마세요.",
     "충돌과 무관한 내용은 평소대로 작성하세요.",
   ].join("\n");
+}
+
+/**
+ * 구조화된 맥락 블록.
+ * 확정 정보는 사실로, AI 추정은 '참고'로만. 추정으로 숫자·시장·경쟁사·고객 행동을 만들지 못하게 하고,
+ * 같은 내용을 섹션마다 되풀이하지 않도록 "관점을 잡는 참고"라고 못 박는다.
+ */
+export function formatContext(ctx?: SectionBusinessContext, opts?: { hasFinancialBlock?: boolean }): string {
+  if (!ctx) return "";
+  if (!ctx.confirmed.length && !ctx.inferred.length && !ctx.hints.length && !(ctx.finance && !opts?.hasFinancialBlock)) return "";
+  const lines: string[] = ["\n[이 사업의 구조화된 맥락]"];
+  if (ctx.confirmed.length) {
+    lines.push("", "확정된 정보(사용자가 직접 적었거나 확인한 것):");
+    for (const c of ctx.confirmed) lines.push(`- ${c.label}: ${c.value}`);
+  }
+  if (ctx.inferred.length) {
+    lines.push("", "AI 추정 참고정보(사용자가 확인하지 않음):");
+    for (const c of ctx.inferred) lines.push(`- ${c.label}: ${c.value} (추정)`);
+  }
+  if (ctx.hints.length) {
+    lines.push("", "이 사업 구조에서 생각할 것(관점 힌트이지 사실이 아님):");
+    for (const h of ctx.hints) lines.push(`- ${h}`);
+  }
+  if (ctx.finance && !opts?.hasFinancialBlock) {
+    lines.push("", "계산된 재무 핵심값(시스템 계산 — 다시 계산하지 말고 인용만):", ctx.finance);
+  }
+  if (ctx.unknowns.length) {
+    lines.push("", `아직 정해지지 않은 것: ${ctx.unknowns.join(", ")} — 값을 만들지 말고 필요하면 '추가 정의 필요'로 둔다.`);
+  }
+  lines.push(
+    "",
+    "[맥락 사용 규칙]",
+    "- 확정된 정보는 사실로 사용할 수 있습니다.",
+    "- AI 추정 참고정보는 사업 구조를 이해하는 참고자료일 뿐입니다. 사용자가 확정한 사실처럼 쓰지 말고, 필요하면 '~를 고려할 경우' 같은 조건형으로만 언급하세요.",
+    "- 추정을 이용해 숫자·시장규모·가격·성과·경쟁사·고객 행동을 새로 만들지 마세요.",
+    "- 이 섹션 사용자 답변과 맥락이 어긋나면 사용자 답변을 우선합니다.",
+    "- 이 맥락은 이 섹션의 관점을 잡기 위한 참고입니다. 맥락을 그대로 요약해 반복하지 말고, 이 섹션의 목적에 필요한 정보만 쓰세요. 앞 섹션에서 이미 설명한 내용은 반복하지 마세요.",
+    "- 어느 사업에나 붙는 문장('혁신적인', '차별화된', '고객 만족 극대화', '시장 경쟁력 확보', '적극적인 홍보', '지속적인 성장')으로 문단을 채우지 마세요. 이 사업의 구조·사용자 답변·근거·계산값으로 구체적으로 쓰세요.",
+  );
+  return lines.join("\n");
 }
 
 function formatBusiness(b?: BusinessInfo): string {
@@ -209,6 +255,7 @@ export function buildUserPrompt(input: SectionGenInput): string {
         ].join("\n")
       : "",
     formatConflicts(input.conflicts),
+    formatContext(input.context, { hasFinancialBlock: Boolean(input.financialsMarkdown || input.financialsReference) }),
     formatEvidence(input.evidence),
     input.evidence?.length
       ? "\n위 사업 정보·답변·시장 근거만 바탕으로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 목록에 없는 값은 '추가 정의 필요'로 표기하세요."

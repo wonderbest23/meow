@@ -12,6 +12,9 @@ import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { resolveRegenQuota, recordRegen } from "../../../../lib/plan-builder/regen-quota";
 import { REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../../../../lib/payments/domain";
 import { loadPlanEvidence, evidenceForSection, toPromptEvidence, sectionUsesEvidence } from "../../../../lib/plan-builder/market-research";
+import { buildPlanBusinessContext } from "../../../../lib/plan-builder/context/build";
+import { contextForSection, type SectionBusinessContext } from "../../../../lib/plan-builder/context/section";
+import { ANALYSIS_KEY } from "../../../../lib/plan-builder/analyzer/domain";
 
 export const runtime = "nodejs";
 
@@ -95,6 +98,18 @@ export async function POST(req: Request) {
     const all = findConsistencyIssues(body.allAnswers, body.business);
     const relevant = sectionKey === "summary/executive" ? all : issuesForSection(all, sectionKey);
     if (relevant.length) conflicts = relevant.map(({ title, detail }) => ({ title, detail }));
+  }
+
+  /*
+   * AI 사업 분석 맥락 — plan.answers["__analysis"] 가 있을 때만 의미가 있다.
+   * 이 섹션에 필요한 필드만 고르고(contextForSection), 위저드 답과 VERIFY 확정값이
+   * 다르면 기존 충돌 블록에 합친다. 분석이 없는 옛 플랜은 context 가 undefined 라 예전과 같다.
+   */
+  let context: SectionBusinessContext | undefined;
+  if (body.allAnswers && body.allAnswers[ANALYSIS_KEY]) {
+    const ctx = buildPlanBusinessContext({ business: body.business ?? {}, answers: body.allAnswers });
+    context = contextForSection(sectionKey, ctx);
+    if (ctx.conflicts.length) conflicts = [...(conflicts ?? []), ...ctx.conflicts];
   }
 
   // 화면만 가려서는 우회할 수 있으므로 생성 자체를 서버에서 막는다.
@@ -186,6 +201,7 @@ export async function POST(req: Request) {
     financialsReference,
     conflicts,
     evidence: evidence.length ? evidence : undefined,
+    context,
   };
 
   // 실시간 생성 — 한 줄에 JSON 하나씩 흘려보낸다.

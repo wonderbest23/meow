@@ -34,6 +34,13 @@ export interface PackSlot {
    * 예: asset_cost 는 needs_assets=yes 뒤에만 보인다 — 게이트를 안 켜면 위저드에서 답이 숨는다.
    */
   alsoSet?: Array<{ sectionKey: string; qid: string; value: unknown }>;
+  /**
+   * 합계의 "구성 항목"인 슬롯. 직접 mapsTo 하지 않는다 — 공간비는 고정비 전체가 아니고
+   * 재료비는 1건당 변동비 전체가 아니다(결제수수료·포장·배송이 더 붙는다).
+   * 화면(숫자 확인)이 이 값을 초기값으로 보여주고, 사용자가 합계를 확인한 뒤에야
+   * financials/expenses.fixed_total · variable_per_unit 에 들어간다.
+   */
+  contributesTo?: "fixed" | "variable";
 }
 
 export type PackId = "class" | "commerce" | "unit_sale";
@@ -143,12 +150,12 @@ const CLASS_PACK: QuestionPack = {
     },
     {
       id: "materialCost",
-      label: "1인당 재료비",
+      label: "1인당 재료비 (구성 변동비)",
       ask: "수강생 한 명당 재료비가 대략 얼마나 들 것 같나요?",
       why: "한 명 받을 때마다 나가는 돈이에요 — 남는 돈을 계산하는 데 써요",
       grade: "blocking",
       input: { kind: "number", unit: "원", hint: "예: 1만5천원" },
-      mapsTo: { sectionKey: "financials/expenses", qid: "variable_per_unit" },
+      contributesTo: "variable",
       alsoSet: [{ sectionKey: "financials/expenses", qid: "variable_items", value: ["재료·원가"] }],
     },
     {
@@ -161,12 +168,12 @@ const CLASS_PACK: QuestionPack = {
     },
     {
       id: "venueCost",
-      label: "월 공간 비용",
+      label: "월 공간 비용 (고정비 구성 항목)",
       ask: "공간에 드는 돈은 한 달에 얼마쯤일까요? (임대료·대관료)",
-      why: "고정비의 대부분이에요",
+      why: "고정비에서 가장 큰 항목이에요",
       grade: "important",
       input: { kind: "number", unit: "원", hint: "예: 월 60만원" },
-      mapsTo: { sectionKey: "financials/expenses", qid: "fixed_total" },
+      contributesTo: "fixed",
       alsoSet: [{ sectionKey: "financials/expenses", qid: "fixed_items", value: ["임대료"] }],
     },
   ],
@@ -215,12 +222,12 @@ const COMMERCE_PACK: QuestionPack = {
     },
     {
       id: "cogs",
-      label: "상품 원가",
+      label: "상품 원가+포장·배송 (구성 변동비)",
       ask: "한 번 팔 때 상품 원가와 포장·배송비는 얼마쯤 드나요?",
-      why: "한 건 팔 때 남는 돈을 계산해요",
+      why: "한 건 팔 때 남는 돈을 계산해요 — 결제·플랫폼 수수료는 따로 더해요",
       grade: "blocking",
       input: { kind: "number", unit: "원", hint: "예: 1만2천원" },
-      mapsTo: { sectionKey: "financials/expenses", qid: "variable_per_unit" },
+      contributesTo: "variable",
       alsoSet: [{ sectionKey: "financials/expenses", qid: "variable_items", value: ["재료·원가", "포장·배송비"] }],
     },
     {

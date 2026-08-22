@@ -21,7 +21,7 @@ import {
   type BusinessAnalysis,
   type SlotAnswer,
 } from "../../../lib/plan-builder/analyzer/domain";
-import { analyzeGaps, applyAnalysisToAnswers, applySlotAnswer, numericSlots, shouldContinue, MAX_ROUNDS } from "../../../lib/plan-builder/analyzer/gap";
+import { analyzeGaps, applyAnalysisToAnswers, applySlotAnswer, numberConfirms, shouldContinue, MAX_ROUNDS, type NumberConfirm } from "../../../lib/plan-builder/analyzer/gap";
 import { parseAmount } from "../../../lib/plan-builder/financials";
 import type { DynamicQuestion } from "../../../lib/plan-builder/analyzer/question-generator";
 import PlanLoading from "../PlanLoading";
@@ -64,8 +64,8 @@ export default function AnalyzeFlow() {
   const [completeness, setCompleteness] = useState(0);
   const [loadingQ, setLoadingQ] = useState(false);
   /* 파생 판매량 */
-  const [derived, setDerived] = useState<{ value: number; formula: string } | null>(null);
-  const [deriveInput, setDeriveInput] = useState("");
+  const [confirms, setConfirms] = useState<NumberConfirm[]>([]);
+  const [confirmInputs, setConfirmInputs] = useState<Record<string, string>>({});
 
   const persistRecord = useCallback(
     (rec: AnalysisRecord, pid: string) => {
@@ -256,28 +256,30 @@ export default function AnalyzeFlow() {
     }
   }
 
-  /* ───── 파생 판매량 ───── */
+  /* ───── 숫자 확인 — 파생 판매량 · 고정비 합계 · 변동비 합계 ───── */
   function goDerive(rec: AnalysisRecord, ans: Answers) {
-    const report = analyzeGaps(rec, ans);
-    const already = ans["financials/revenue"]?.monthly_volume;
-    const d = report.pack.deriveVolume?.(numericSlots(rec.slots)) ?? null;
-    if (d && !already) {
-      setDerived(d);
-      setDeriveInput(String(d.value));
+    const list = numberConfirms(rec, ans);
+    if (list.length) {
+      setConfirms(list);
+      setConfirmInputs(Object.fromEntries(list.map((c) => [c.target.qid, String(c.value)])));
       setPhase("derive");
       return;
     }
     finishAll(rec);
   }
 
-  function acceptDerived(value: string) {
+  /** 확인한 숫자만 저장한다. 비워 두면 그 칸은 그대로 둔다(나중에 직접 입력) */
+  function acceptConfirms() {
     if (!record || !planId) return;
-    const n = parseAmount(value);
-    if (n) {
-      const next: Answers = { ...answersRef.current, "financials/revenue": { ...(answersRef.current["financials/revenue"] ?? {}), monthly_volume: `월 ${n}건` } };
-      commitAnswers(answersRef.current, next, planId);
-      setAnswers(next);
+    let next: Answers = answersRef.current;
+    for (const c of confirms) {
+      const n = parseAmount(confirmInputs[c.target.qid] ?? "");
+      if (!n) continue;
+      const text = c.target.qid === "monthly_volume" ? `월 ${n}건` : `${n.toLocaleString("ko-KR")}원`;
+      next = { ...next, [c.target.sectionKey]: { ...(next[c.target.sectionKey] ?? {}), [c.target.qid]: text } };
     }
+    commitAnswers(answersRef.current, next, planId);
+    setAnswers(next);
     finishAll(record);
   }
 
@@ -461,21 +463,29 @@ export default function AnalyzeFlow() {
         </>
       )}
 
-      {phase === "derive" && derived && (
+      {phase === "derive" && confirms.length > 0 && (
         <>
           <div className={styles.kicker}>숫자 확인</div>
-          <p className={styles.lead}>답해주신 내용으로 월 판매량을 이렇게 계산했어요.</p>
-          <p className={styles.sub}>가정이 들어간 숫자예요. 확인해 주시면 재무 계산에 쓰고, 아니면 직접 고쳐주세요.</p>
-          <div className={styles.derive}>
-            <b>월 약 {derived.value.toLocaleString("ko-KR")}{record && analyzeGaps(record, answers).pack.id === "class" ? "명" : "건"}</b>
-            <code>{derived.formula}</code>
-          </div>
-          <div className={styles.numRow} style={{ marginTop: 12 }}>
-            <input className={styles.input} value={deriveInput} onChange={(e) => setDeriveInput(e.target.value)} />
-            <span className={styles.unit}>건/월</span>
+          <p className={styles.lead}>답해주신 내용으로 이렇게 정리했어요. 맞는지 봐주세요.</p>
+          <p className={styles.sub}>확인한 숫자만 재무 계산에 쓰여요. 비워 두면 나중에 직접 입력할 수 있어요.</p>
+          <div className={styles.qList}>
+            {confirms.map((c) => (
+              <div key={c.target.qid} className={styles.qCard}>
+                <div className={styles.qNum}>{c.label}</div>
+                <div className={styles.derive}>
+                  <b>{c.value.toLocaleString("ko-KR")} {c.unit}</b>
+                  <code>{c.formula}</code>
+                </div>
+                <p className={styles.qWhy} style={{ marginTop: 8 }}>{c.hint}</p>
+                <div className={styles.numRow}>
+                  <input className={styles.input} value={confirmInputs[c.target.qid] ?? ""} onChange={(e) => setConfirmInputs((m) => ({ ...m, [c.target.qid]: e.target.value }))} />
+                  <span className={styles.unit}>{c.unit}</span>
+                </div>
+              </div>
+            ))}
           </div>
           <div className={styles.actions}>
-            <button type="button" className={styles.primaryBtn} onClick={() => acceptDerived(deriveInput)}>이 숫자로 할게요 →</button>
+            <button type="button" className={styles.primaryBtn} onClick={acceptConfirms}>이 숫자로 할게요 →</button>
             <button type="button" className={styles.linkBtn} onClick={() => finishAll(record)}>건너뛰기 — 나중에 직접 입력</button>
           </div>
         </>
