@@ -183,26 +183,15 @@ export default function PlanRailNav() {
 
             {open && (
               <div className={styles.planBody}>
-                {/* 이 플랜으로 만들어진 것 — 목차보다 먼저 둔다 */}
-                <div className={styles.outputs}>
-                  {!sample && (
-                    <button type="button" className={styles.output} onClick={() => go(plan.id, "/plan/overview")}>
-                      개요
-                    </button>
-                  )}
-                  <button type="button" className={styles.output} onClick={() => go(plan.id, "/plan/document")}>
-                    문서
-                  </button>
-                  <button type="button" className={styles.output} onClick={() => go(plan.id, "/plan/homepage")}>
-                    홈페이지
-                  </button>
-                </div>
-
+                {/*
+                  개요·문서·홈페이지 단추는 뺐다. 개요 화면에 '구조 보기 /
+                  문서 보기' 가 있고 문서 화면에 홈페이지 카드가 있어 같은 문이
+                  둘이었다 — 레일은 목차만 맡는다.
+                */}
                 {chapters.map((chapter, ci) => {
                   const chapterKey = `${plan.id}:${chapter.id}`;
                   const chapterOpen =
                     openChapters[chapterKey] ?? (isActive && activeKey?.split("/")[0] === chapter.id);
-                  const chapterDone = doneCount(plan, chapter.id);
                   return (
                     <div key={chapter.id} className={styles.chapter}>
                       <button
@@ -213,9 +202,7 @@ export default function PlanRailNav() {
                       >
                         <span className={styles.chapterNum}>{ci + 1}</span>
                         <span className={styles.chapterName}>{chapter.title}</span>
-                        <span className={styles.chapterCount}>
-                          {chapterDone}/{chapter.sections.length}
-                        </span>
+                        {/* 옆의 3/3 숫자는 뺐다 — 목차에서 셀 것이 아니라 고를 것이다 */}
                       </button>
                       {chapterOpen && (
                         <div className={styles.sections}>
