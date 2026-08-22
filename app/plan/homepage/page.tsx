@@ -9,6 +9,7 @@ import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
 import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
+import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, loadState, isSamplePlan } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
@@ -114,8 +115,9 @@ export default function PlanHomepagePage() {
           sample_flower_fm: "0-1102",
         };
         const page = samplePage[plan.id];
+        /* 예시는 한글로 — 가게 이름을 넣은 문구 세트(디자인은 그대로, 글만) */
         setDraft(page && draft.pageData?.brainwave
-          ? { ...draft, pageData: { ...draft.pageData, brainwave: { ...draft.pageData.brainwave, page } } }
+          ? { ...draft, pageData: { ...draft.pageData, brainwave: { ...draft.pageData.brainwave, page, texts: koTextsFor(page, shopName || plan.title) } } }
           : draft);
         setEditable(false);
         setSample(true);

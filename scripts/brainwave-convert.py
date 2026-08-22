@@ -403,7 +403,9 @@ def collect(n, parent_id=None, idx=0):
     # 글을 직접 품은 노드에 id 가 없으면(푸터 목록의 <p> 들, 섞인 글의 <span>)
     # 부모 id 에 번호를 붙여 만든다 — 그래야 그 줄도 고칠 수 있다
     texts = [c["text"] for c in n["ch"] if c["tag"] == "#"]
-    if texts and not n.get("id") and parent_id:
+    # id 없는 노드 전부에 경로 id 를 준다 — 글 가진 것만 주면 <p><span> 처럼
+    # 한 단계 건너뛴 자리끼리 같은 id 가 나왔다(…4528/1 둘)
+    if not n.get("id") and parent_id:
         n["id"] = "%s/%d" % (parent_id, idx)
     nid = n.get("id") or parent_id
     if n["tag"] == "img" and not n["src"].endswith(".svg"):

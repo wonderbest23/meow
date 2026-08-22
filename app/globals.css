@@ -14589,3 +14589,5 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 
 /* 홈 예시 띠 — 킷 페이지 첫 화면 스크린샷 */
 .home-peek-track li .peek-shot { display: block; width: 100%; aspect-ratio: 640 / 559; object-fit: cover; object-position: top; background: #f4f7fa; }
+/* 한글은 띄어쓰기 단위로 줄을 바꾼다 — 킷의 break-word 는 글자 중간을 자른다("같|이") */
+.bw-canvas [style] { word-break: keep-all !important; overflow-wrap: break-word; }
