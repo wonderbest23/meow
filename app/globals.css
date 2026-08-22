@@ -14107,3 +14107,28 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .region-list button small { color: #8181a5; font-size: 12px; }
 .region-list button.on,
 .region-list button:hover { background: #f0f0f3 !important; }
+
+/* ── 차트 수치 말풍선 ──────────────────────────────────────────────
+ * 점마다 깔아 둔 투명한 세로 띠에 마우스가 오면 그 달의 정확한 수치를
+ * 띄운다. 자바스크립트 없이 :hover 만으로 — 문서 화면 어디서든 동작한다.
+ */
+.plan-chart .plan-chart-pt .hl,
+.plan-chart .plan-chart-pt .hd,
+.plan-chart .plan-chart-pt .tip {
+  opacity: 0;
+  transition: opacity .12s ease;
+  pointer-events: none;
+}
+.plan-chart .plan-chart-pt:hover .hl { opacity: .45; }
+.plan-chart .plan-chart-pt:hover .hd,
+.plan-chart .plan-chart-pt:hover .tip { opacity: 1; }
+.plan-chart .plan-chart-pt .hit { cursor: crosshair; }
+/* 손가락으로는 hover 가 없다 — 눌러도 뜨게 */
+.plan-chart .plan-chart-pt:active .hl { opacity: .45; }
+.plan-chart .plan-chart-pt:active .hd,
+.plan-chart .plan-chart-pt:active .tip { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .plan-chart .plan-chart-pt .hl,
+  .plan-chart .plan-chart-pt .hd,
+  .plan-chart .plan-chart-pt .tip { transition: none; }
+}

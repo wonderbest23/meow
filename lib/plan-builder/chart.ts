@@ -212,6 +212,47 @@ export function chartToSvg(spec: ChartSpec): string {
       `<text x="${mx.toFixed(1)}" y="${(padT - 14).toFixed(1)}" text-anchor="middle" font-size="12.5" font-weight="700" fill="#0f9d66">${spec.breakEvenMonth}개월차 월 흑자 전환</text>`;
   }
 
+  /*
+   * 마우스를 올리면 그 달의 정확한 수치를 띄운다.
+   *
+   * 예전에는 눈금만 보고 어림잡아야 했다 — '3월이 대충 200만쯤' 이지
+   * 정확히 얼마인지 알 수 없었다. 점마다 투명한 세로 띠를 깔아 두고,
+   * 그 띠에 마우스가 오면 세로선·큰 점·말풍선이 함께 뜬다.
+   * CSS :hover 만 쓰므로 자바스크립트가 필요 없다(문서 화면·인쇄 미리보기
+   * 어디서 그리든 그대로 동작한다).
+   */
+  const hitW = n > 1 ? plotW / (n - 1) : plotW;
+  const hovers = spec.points
+    .map((p, i) => {
+      const px = x(i);
+      const py = y(p.value);
+      const money = `${p.value < 0 ? "-" : ""}${Math.abs(Math.round(p.value)).toLocaleString("ko-KR")}원`;
+      const text = `${p.label} · ${money}`;
+      /* 글자 폭을 재지 못하므로 글자 수로 어림한다 — 한글은 넉넉히 */
+      const tipW = Math.max(96, text.length * 8.4 + 20);
+      const tipH = 30;
+      /* 오른쪽 끝에서는 왼쪽으로 접어 넣는다 */
+      let tx = px - tipW / 2;
+      if (tx < padL) tx = padL;
+      if (tx + tipW > W - padR) tx = W - padR - tipW;
+      /* 위가 좁으면 아래로 */
+      const above = py - tipH - 12 >= padT;
+      const ty = above ? py - tipH - 10 : py + 12;
+      return (
+        `<g class="plan-chart-pt">` +
+        `<rect class="hit" x="${(px - hitW / 2).toFixed(1)}" y="${padT}" width="${hitW.toFixed(1)}" height="${plotH}" fill="transparent"/>` +
+        `<line class="hl" x1="${px.toFixed(1)}" y1="${padT}" x2="${px.toFixed(1)}" y2="${(H - padB).toFixed(1)}" stroke="${POS}" stroke-width="1" stroke-dasharray="3 3"/>` +
+        `<circle class="hd" cx="${px.toFixed(1)}" cy="${py.toFixed(1)}" r="5" fill="${p.value < 0 ? NEG : POS}" stroke="#ffffff" stroke-width="2"/>` +
+        `<g class="tip">` +
+        `<rect x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" width="${tipW.toFixed(1)}" height="${tipH}" rx="7" fill="#1c1d21" fill-opacity="0.94"/>` +
+        `<text x="${(tx + tipW / 2).toFixed(1)}" y="${(ty + 19).toFixed(1)}" text-anchor="middle" font-size="12.5" font-weight="700" fill="#ffffff">${escapeXml(text)}</text>` +
+        `</g>` +
+        `<title>${escapeXml(text)}</title>` +
+        `</g>`
+      );
+    })
+    .join("");
+
   return [
     `<svg class="plan-chart" role="img" aria-label="${escapeXml(spec.title)}" viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">`,
     `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`,
@@ -220,6 +261,7 @@ export function chartToSvg(spec: ChartSpec): string {
     zeroLine,
     marker,
     xLabels,
+    hovers,
     `</svg>`,
   ].join("");
 }
