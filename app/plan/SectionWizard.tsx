@@ -33,6 +33,14 @@ import { htmlToMarkdown } from "../../lib/plan-builder/html-to-markdown";
 import FinancialReview from "./FinancialReview";
 import { Sparkles, PenLine, Lock, Unlock, Undo2, RefreshCw } from "lucide-react";
 import styles from "./SectionWizard.module.css";
+import RegionInput from "../../components/region-input";
+
+/** 지역을 묻는 질문인지 — id 나 예시 문구로 가린다 */
+function isRegionQuestion(q: QuestionDef): boolean {
+  if (["city", "region", "area", "location"].includes(q.id)) return true;
+  const ph = q.input.kind === "text" ? (q.input.placeholder ?? "") : "";
+  return /지역|소재지|어디에 있/.test(q.q) && ph.includes("예: 서울");
+}
 
 type AnswerMap = Record<string, unknown>;
 
@@ -999,6 +1007,14 @@ function renderInput(
     case "text":
       return q.input.long ? (
         <textarea className={styles.txt} rows={3} placeholder={q.input.placeholder} value={typeof value === "string" ? value : ""} onChange={(e) => setAnswer(q.id, e.target.value)} />
+      ) : isRegionQuestion(q) ? (
+        /* 지역은 손으로 다 치지 않아도 되게 — '마포' 만 쳐도 '서울 마포구' */
+        <RegionInput
+          className={styles.txt}
+          placeholder={q.input.placeholder}
+          value={typeof value === "string" ? value : ""}
+          onChange={(v) => setAnswer(q.id, v)}
+        />
       ) : (
         <input className={styles.txt} placeholder={q.input.placeholder} value={typeof value === "string" ? value : ""} onChange={(e) => setAnswer(q.id, e.target.value)} />
       );

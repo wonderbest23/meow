@@ -7,6 +7,7 @@ import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
+import RegionInput from "../../../components/region-input";
 import PlanLoading from "../PlanLoading";
 import { businessFromConsult, readConsultParam, readStashedConsult, stashConsult, clearStashedConsult, profileLines, type ConsultProfile } from "../../../lib/consult/domain";
 import { TYPE_META, DEFAULT_META } from "../type-meta";
@@ -486,7 +487,7 @@ export default function PlanStartPage() {
 
                   <div className={styles.field}>
                     <label className={styles.label} htmlFor="bizRegion">지역</label>
-                    <input id="bizRegion" className={styles.input} placeholder="예: 서울 마포구" value={biz.region} onChange={(e) => set("region", e.target.value)} />
+                    <RegionInput id="bizRegion" className={styles.input} placeholder="예: 서울 마포구" value={biz.region} onChange={(v) => set("region", v)} />
                   </div>
                 </div>
 

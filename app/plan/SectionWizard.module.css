@@ -1714,3 +1714,8 @@
 
 /* 카드 아래로 상담 단추가 앉을 자리를 비워 둔다 — 화면이 짧아도 겹치지 않게 */
 .page { padding-bottom: 96px; }
+
+/* 지역 추천 목록이 아래 질문 카드에 가렸다 — 목록을 연 질문을 위로 올린다.
+   .region-list 는 이 모듈 밖(전역)이라 :global 로 감싸야 이름이 안 바뀐다. */
+.q { position: relative; }
+.q:has(:global(.region-list)) { z-index: 30; }

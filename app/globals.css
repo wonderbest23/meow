@@ -14067,3 +14067,43 @@ html .simple-home .site-header a.account-link > svg {
    단추를 위로 올리면 오히려 카드 안으로 파고든다 — 카드 아래 여백을
    확보하고(아래 .page padding-bottom) 단추는 그 자리에 둔다. */
 body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; }
+
+/* ── 지역 자동완성 ─────────────────────────────────────────────────
+ * '마포'만 쳐도 '서울 마포구'. 입력칸 아래 목록, 고르면 채워진다.
+ */
+.region-field { position: relative; }
+.region-list {
+  position: absolute;
+  left: 0; right: 0; top: calc(100% + 6px);
+  z-index: 60;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid #e6e6ef;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgba(28, 29, 33, .16);
+  max-height: 288px;
+  overflow: auto;
+}
+.region-list button {
+  width: 100%;
+  min-height: 40px !important;
+  padding: 0 12px !important;
+  border: 0 !important;
+  border-radius: 8px !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  color: #1c1d21 !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 14px;
+}
+.region-list button b { font-weight: 700; }
+.region-list button small { color: #8181a5; font-size: 12px; }
+.region-list button.on,
+.region-list button:hover { background: #f0f0f3 !important; }
