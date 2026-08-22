@@ -236,3 +236,12 @@
   .rowNew .rowActions { display: flex; }
   .iconBtn { opacity: 1; }
 }
+
+/* 색 규칙: 주 행동(새 플랜)만 보라. 필터 칩 선택은 검정, 체크는 초록. */
+.segOn { background: #1c1d21; color: #fff; }
+.checkOn { background: #22b573; border-color: #22b573; }
+.chip_sample { background: #f0f0f3; color: #55586a; }
+.barCol i, .barCol:nth-child(even) i { background: #b4b4c8; }
+.tileIcon { color: #55586a; }
+.tile_todo .tileIcon, .tile_done .tileIcon, .tile_sample .tileIcon { color: #55586a; }
+.rowIcon { background: #f0f0f3; color: #55586a; }

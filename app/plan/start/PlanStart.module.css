@@ -1152,3 +1152,35 @@
 /* 카테고리 칩이 전폭 반반으로 늘어나던 것 — 내용 폭만 */
 .cats { display: flex; width: fit-content; grid-template-columns: none; }
 .cats button { flex: none; width: auto; }
+
+/* ══ 색 규칙: 주 행동만 보라, 나머지는 무채색 ═══════════════════════
+ * "다음에 누를 버튼은 한 색으로" — 카테고리 칩·단계 번호·라디오까지
+ * 보라면 정작 눌러야 할 것이 묻힌다.
+ *  1단계 주 행동 = '다음 단계'(보라)  /  2단계 주 행동 = 행의 '선택'(보라)
+ */
+.headRow { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.backBtn {
+  width: 32px; height: 32px;
+  min-height: 0 !important; padding: 0 !important;
+  border: 1px solid #e6e6ef; border-radius: 8px !important;
+  background: #fff; color: #55586a; font-size: 14px;
+  display: grid; place-items: center; cursor: pointer;
+  box-shadow: none !important;
+}
+.backBtn:hover { background: #f5f5fa; color: #1c1d21; }
+.h1 { margin-bottom: 0; }
+
+/* 단계 번호: 현재 = 검정, 완료 = 초록 체크, 대기 = 회색 — 보라 아님 */
+.step.stepOn .stepNum { background: #1c1d21; color: #fff; }
+
+/* 카테고리 칩: 선택 = 검정 */
+.cats button.catOn { background: #1c1d21; color: #fff; }
+
+/* 이어받기 라디오: 선택 = 검정 */
+.inheritOn .inheritRadio { border-color: #1c1d21; }
+.inheritOn .inheritRadio::after { background: #1c1d21; }
+
+/* 2단계 주 행동 — 행의 '선택'은 항상 보라 채움 */
+.typeGo { background: var(--blue, #4a3aff); color: #fff; }
+.typeRow:hover .typeGo { background: var(--blue-dark, #3a2ddb); }
+.typeIcon { background: #f0f0f3; color: #55586a; }

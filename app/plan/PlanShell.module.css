@@ -646,3 +646,5 @@
    접힌 상태에서는 본문 왼쪽 위에 남아 다시 펼 수 있다. */
 .railToggle { top: 18px; left: calc(var(--rail-w) - 14px - 36px); }
 .railToggleOff { top: 18px; left: 14px; }
+/* 아바타도 보라를 쓰지 않는다 — 보라는 '다음에 누를 것' 전용 */
+.meAvatar { background: #1c1d21; }

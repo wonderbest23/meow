@@ -1231,3 +1231,15 @@
   .heroBtn { width: 100%; }
   .chipBlank { display: none; }
 }
+
+/* 색 규칙: 주 행동('지금 할 일' 버튼)만 보라. 탭 칩 선택은 검정, 체크는 초록,
+   챕터 번호·'여기부터' 칩은 무채색. */
+.seg button.segOn { background: #1c1d21 !important; color: #fff !important; }
+.checkOn { background: #22b573; border-color: #22b573; }
+.groupNo { background: #1c1d21; }
+.chip_next { background: #f0f0f3; color: #1c1d21; }
+.rowNext { border-color: #1c1d21 !important; }
+.sidePrimary { display: none; }  /* 사이드바엔 주 행동을 두지 않는다 — 본문 카드 하나뿐 */
+/* 막대(데이터)도 보라를 쓰지 않는다 — 보라는 '누를 것' 하나뿐 */
+.sideBar i { background: #1c1d21; }
+.chartCol i, .chartCol:nth-child(even) i { background: #b4b4c8; }

@@ -394,7 +394,17 @@ export default function PlanStartPage() {
       <div className={styles.frame}>
         <div className={styles.app}>
           <div className={styles.main}>
-            <h1 className={styles.h1}>새 플랜 만들기</h1>
+            {/* 뒤로 — 모든 plan 화면에서 같은 자리(왼쪽 위)·같은 모양. 2단계면 1단계로, 1단계면 목록으로 */}
+            <div className={styles.headRow}>
+              <button
+                type="button"
+                className={styles.backBtn}
+                onClick={() => (step === 2 ? setStep(1) : router.push("/plan"))}
+                aria-label={step === 2 ? "사업 정보로 돌아가기" : "내 플랜으로"}
+                title={step === 2 ? "사업 정보로" : "내 플랜으로"}
+              >←</button>
+              <h1 className={styles.h1}>새 플랜 만들기</h1>
+            </div>
             <p className={styles.lead}>
               {step === 1
                 ? hasExisting
@@ -588,9 +598,7 @@ export default function PlanStartPage() {
                   만들면 답변을 이어받아, 겹치는 섹션은 다시 답하지 않아도 돼요.
                 </p>
 
-                <div className={styles.actions} style={{ marginTop: 18 }}>
-                  <button className={styles.ghostBtn} onClick={() => setStep(1)}>← 사업 정보 수정</button>
-                </div>
+
               </>
             )}
           </div>
