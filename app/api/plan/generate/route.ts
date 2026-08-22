@@ -11,6 +11,7 @@ import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { resolveRegenQuota, recordRegen } from "../../../../lib/plan-builder/regen-quota";
 import { REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../../../../lib/payments/domain";
+import { loadPlanEvidence, evidenceForSection, toPromptEvidence, sectionUsesEvidence } from "../../../../lib/plan-builder/market-research";
 
 export const runtime = "nodejs";
 
@@ -163,6 +164,15 @@ export async function POST(req: Request) {
     }
   }
 
+  /*
+   * 공식 시장 근거 — 서버에 저장된 것만 읽는다(화면이 보낸 값은 쓰지 않는다).
+   * 관련 섹션 넷에만 넘기고, 근거가 없으면 예전과 똑같이 생성된다.
+   * 생성 때 검색을 새로 하지 않는다 — 검색은 사용자가 단추로만 실행한다.
+   */
+  const evidence = body.planId && sectionUsesEvidence(sectionKey)
+    ? toPromptEvidence(evidenceForSection(sectionKey, await loadPlanEvidence(body.planId, identity.hash)))
+    : [];
+
   const config = resolveLLMConfig(identity.hash, "anthropic");
   const genInput = {
     chapter,
@@ -175,6 +185,7 @@ export async function POST(req: Request) {
     financialsMarkdown,
     financialsReference,
     conflicts,
+    evidence: evidence.length ? evidence : undefined,
   };
 
   // 실시간 생성 — 한 줄에 JSON 하나씩 흘려보낸다.
@@ -221,18 +232,7 @@ export async function POST(req: Request) {
     });
   }
 
-  const { markdown, source } = await generateSection(config, {
-    chapter,
-    section,
-    answers: body.answers ?? {},
-    planTitle: body.planTitle,
-    planType: body.planType,
-    business: body.business,
-    priorSummary: body.priorSummary,
-    financialsMarkdown,
-    financialsReference,
-    conflicts,
-  });
+  const { markdown, source } = await generateSection(config, genInput);
 
   /*
    * AI 호출이 실패했으면 본문을 만들지 않는다.

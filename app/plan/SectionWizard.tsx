@@ -34,6 +34,8 @@ import FinancialReview from "./FinancialReview";
 import { Sparkles, PenLine, Lock, Unlock, Undo2, RefreshCw } from "lucide-react";
 import styles from "./SectionWizard.module.css";
 import RegionInput from "../../components/region-input";
+import MarketEvidencePanel from "./MarketEvidencePanel";
+import { RESEARCH_BUTTON_SECTIONS } from "../../lib/plan-builder/market-research";
 
 /** 지역을 묻는 질문인지 — id 나 예시 문구로 가린다 */
 function isRegionQuestion(q: QuestionDef): boolean {
@@ -608,6 +610,10 @@ export default function SectionWizard({
               )}
               <InheritNote />
               <ConsistencyPanel issues={sectionIssues} onOpenSection={onNavigateSection} compact />
+              {/* 공식 시장자료 — 문제·세그먼트·경쟁 섹션에만. 예시 문서에는 두지 않는다 */}
+              {!readOnly && (RESEARCH_BUTTON_SECTIONS as readonly string[]).includes(key) && (
+                <MarketEvidencePanel planId={activePlan()?.id ?? null} />
+              )}
 
               {/* 상태 칩 — 이미 만든 섹션인지, 지금 만들어지는 중인지 */}
               {(hasBody || isGenerating(key)) && (

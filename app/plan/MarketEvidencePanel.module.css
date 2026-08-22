@@ -1,0 +1,27 @@
+.panel { margin: 0 0 18px; padding: 14px 16px; border: 1px solid #e6e6ee; border-radius: 12px; background: #fff; }
+.head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.title { display: flex; align-items: flex-start; gap: 10px; min-width: 0; }
+.title svg { flex: none; margin-top: 3px; color: #4a3aff; }
+.title strong { display: block; font-size: 14px; }
+.title small { display: block; color: #8181a5; font-size: 12.5px; line-height: 1.5; }
+.actions { display: flex; gap: 8px; }
+.primary { min-height: 36px; padding: 0 14px; border: 0; border-radius: 8px; background: #4a3aff; color: #fff; font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+.primary:disabled { opacity: .5; cursor: default; }
+.ghost { min-height: 36px; padding: 0 12px; border: 1px solid #e1e1e8; border-radius: 8px; background: #fff; color: #1c1d21; font-weight: 700; font-size: 13px; cursor: pointer; }
+.note { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.5; }
+.ok { background: #eefaf2; color: #0f6b3c; }
+.hint { background: #f5f5fa; color: #5e5e72; }
+.warn { background: #fff7e6; color: #8a5a00; }
+.error { background: #fff1f1; color: #b91c1c; }
+.list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.list li { padding: 10px 12px; border-radius: 10px; background: #f7f7fb; }
+.metric { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.metric b { font-size: 13.5px; }
+.metric span { font-size: 13.5px; color: #1c1d21; font-weight: 700; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 4px; font-size: 12px; color: #5e5e72; }
+.meta em { font-style: normal; color: #8a5a00; }
+.meta em.ok { color: #0f6b3c; }
+.meta a { display: inline-flex; align-items: center; gap: 3px; color: #4a3aff; text-decoration: underline; text-underline-offset: 2px; }
+.why { margin: 6px 0 0; font-size: 12px; color: #5e5e72; line-height: 1.5; }
+.spin { animation: mep-spin 1s linear infinite; }
+@keyframes mep-spin { to { transform: rotate(360deg); } }

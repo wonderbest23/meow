@@ -9,13 +9,14 @@ import { planTypeGuidanceBlock } from "./plan-type-guidance";
 const SYSTEM_PROMPT = [
   "당신은 한국에서 실제로 실행할 사업계획서의 한 섹션을 작성하는 선임 사업전략가입니다.",
   "이 작업은 소설·광고 창작이 아닙니다. 오직 사용자가 제공한 답변만 확정 사실로 사용할 수 있습니다.",
-  "고객 인터뷰·설문·매출·시장규모·성장률·경쟁사 실명·수상·특허·제휴·후기를 절대 만들어내지 마세요.",
+  "고객 인터뷰·설문·매출·시장규모·성장률·경쟁사 실명·수상·특허·제휴·후기 같은 사실을 스스로 만들어내지 마세요.",
+  "단, [공식 원문 검색을 통해 확보한 시장 근거] 블록이 제공되면 그 안의 정보는 사용할 수 있습니다. 그 블록의 수치·기관명·기준일·URL은 변경하거나 추정하지 말고 전달된 값 그대로 쓰세요.",
   "근거가 없는 수치나 주장은 반드시 '추가 정의 필요' 또는 '검증 필요'로 표기하고, 미래형·조건형 문장을 사용하세요.",
   "다만 그 표기를 문장마다 반복하지 마세요. 본문에서는 미확정임이 드러나게 서술만 하고, 섹션 끝에 '추가 정의 필요 항목' 목록 하나로 모으세요. 같은 표기가 한 섹션에 세 번을 넘으면 실패로 간주합니다.",
   "그 목록의 각 항목에는 '어디서 어떻게 확인하는지'를 한 줄로 붙이세요. 모른다고만 하는 문서는 읽는 사람이 다음 행동을 할 수 없습니다. 예: 상권·유동인구는 소상공인 상권정보시스템(sg.sbiz.or.kr), 업종·시장 통계는 KOSIS 국가통계포털, 임대료·설비 비용은 실제 견적서 2~3곳 비교, 인허가는 관할 시·군·구청 담당 부서 문의.",
   "섹션은 소제목(##, ###)으로 구조화하고, 비교·구성·수치 정리에 적합하면 마크다운 표를 사용하세요.",
   "각 문단은 이 사업에만 해당하는 구체적 내용으로 쓰고, 다른 업종에 복붙해도 말이 되는 범용 문장은 실패로 간주합니다.",
-  "과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사·URL을 금지합니다.",
+  "과장, 성공 보장, 가상 고객 인용을 금지하고, 존재하지 않는 경쟁사·URL을 만들지 마세요. 단, 시장 근거 블록에 제공된 sourceUrl 은 실제 검색 인용에서 확인된 주소이므로 인용할 수 있습니다.",
   "출력은 해당 섹션의 마크다운 본문만 작성하세요. 최상위 제목(#)이나 코드펜스는 넣지 마세요.",
 ].join("\n");
 
@@ -77,6 +78,56 @@ export interface SectionGenInput {
    * 어느 쪽이 맞는지 확정되지 않았으므로 AI가 한쪽을 골라 단정하지 않도록 알려준다.
    */
   conflicts?: Array<{ title: string; detail: string }>;
+  /**
+   * 공식 원문 검색으로 확보한 시장 근거 — 이 섹션에 관련된 것만 넘긴다
+   * (lib/plan-builder/market-research.ts evidenceForSection). 없으면 예전과 같다.
+   */
+  evidence?: PromptEvidence[];
+}
+
+export interface PromptEvidence {
+  metric: string;
+  value: string;
+  unit?: string;
+  sourceName: string;
+  sourceUrl: string;
+  observedAt: string;
+  note?: string;
+  verification?: string;
+}
+
+/**
+ * 근거 블록. 숫자·기관·기준일·URL 은 검색 결과에서 온 값 그대로이고,
+ * 모델은 이 목록 밖의 시장 수치를 만들 수 없다.
+ * 사용자 답변과 어긋나면 한쪽을 정답으로 고르지 말고 충돌을 적게 한다 —
+ * consistency.ts 가 답변끼리의 충돌을 다루는 것과 같은 태도다.
+ */
+export function formatEvidence(evidence?: PromptEvidence[]): string {
+  if (!evidence?.length) return "";
+  const items = evidence.map((e, i) =>
+    [
+      `${i + 1}.`,
+      `지표: ${e.metric}`,
+      `값: ${e.value}${e.unit && !e.value.includes(e.unit) ? ` ${e.unit}` : ""}`,
+      `기관: ${e.sourceName}`,
+      `기준일: ${e.observedAt || "원문 확인 필요"}`,
+      `원문: ${e.sourceUrl}`,
+      e.note ? `적용 시 주의: ${e.note}` : "",
+      `확인 상태: ${e.verification === "verified" ? "공식 API 확인" : e.verification === "user_supplied" ? "사용자 입력" : "공식 원문 검색 결과 · 원문 재확인 권장"}`,
+    ].filter(Boolean).join("\n"),
+  );
+  return [
+    "\n[공식 원문 검색을 통해 확보한 시장 근거]",
+    ...items,
+    "",
+    "이 블록의 숫자와 기관명, 기준일, URL 은 실제 검색 결과에서 전달된 데이터입니다.",
+    "본문에서 시장 수치가 필요한 경우 이 목록에 존재하는 수치만 사용할 수 있습니다.",
+    "목록에 존재하지 않는 시장규모·성장률·고객 수·사업체 수를 새로 만들지 마세요.",
+    "출처를 사용할 때 기관명과 기준일을 함께 적으세요. 예: '통계청 ○○통계 기준 2025년 ○○는 약 000명으로 집계되었다.' 또는 '○○는 000개로 확인된다(소상공인시장진흥공단, 2025).'",
+    "URL 을 새로 만들거나 수정하지 마세요. 같은 출처를 문장마다 반복하지 말고, 섹션 끝에 '### 참고 근거' 목록으로 '- 기관 자료명 (기준일) — [원문](URL)' 형식으로 한 번만 모으세요.",
+    "확인 상태가 '원문 재확인 권장'인 자료는 공식 검색 원문을 기반으로 수집되었으나 사람의 최종 재확인이 남아 있는 자료입니다. 이를 '정부에서 검증 완료된 수치'라고 표현하지 마세요.",
+    "사용자 입력 수치와 이 근거가 충돌하면 공식 검색 근거를 자동으로 '정답'으로 확정하지 마세요. 둘의 기준연도·집계범위·시장 정의가 다를 수 있습니다. 충돌 사실을 간단히 표시하고 확인이 필요하다고 작성하세요.",
+  ].join("\n");
 }
 
 /** 충돌을 프롬프트 블록으로 — 지어내지 말고 미확정임을 드러내라고 지시한다. */
@@ -158,7 +209,10 @@ export function buildUserPrompt(input: SectionGenInput): string {
         ].join("\n")
       : "",
     formatConflicts(input.conflicts),
-    "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
+    formatEvidence(input.evidence),
+    input.evidence?.length
+      ? "\n위 사업 정보·답변·시장 근거만 바탕으로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 목록에 없는 값은 '추가 정의 필요'로 표기하세요."
+      : "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
     input.priorSummary
       ? "앞서 작성한 섹션과 용어·숫자·전략 방향이 어긋나지 않게 하고, 같은 내용을 그대로 반복하지 말고 이 섹션의 관점에서 이어서 쓰세요."
       : "",
@@ -223,6 +277,10 @@ export function fallbackSection(input: SectionGenInput): string {
   } else if (input.financialsReference) {
     parts.push(`## 참고한 재무 수치`);
     parts.push(input.financialsReference);
+  }
+  if (input.evidence?.length) {
+    parts.push(`### 참고 근거`);
+    parts.push(input.evidence.map((e) => `- ${e.sourceName} ${e.metric} ${e.value} (${e.observedAt || "기준일 확인"}) — [원문](${e.sourceUrl})`).join("\n"));
   }
   if (input.conflicts?.length) {
     parts.push(`## 확정 필요 — 답변이 서로 어긋난 부분`);

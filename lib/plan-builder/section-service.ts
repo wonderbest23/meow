@@ -6,6 +6,7 @@ import { loadPlanState, savePlanState } from "./plan-server-store";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "./financials";
 import { financialTableOwner, needsMultiYear } from "./blueprint";
 import { findConsistencyIssues, issuesForSection } from "./consistency";
+import { loadPlanEvidence, evidenceForSection, toPromptEvidence, sectionUsesEvidence } from "./market-research";
 
 /*
  * 본문 생성을 서버 안에서 처리하기 위한 내부 통로.
@@ -135,6 +136,11 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     .join("\n\n")
     .slice(0, 4000) || undefined;
 
+  // 공식 시장 근거 — 일반 생성 경로(app/api/plan/generate)와 같은 규칙으로 같은 섹션에만
+  const evidence = sectionUsesEvidence(key)
+    ? toPromptEvidence(evidenceForSection(key, await loadPlanEvidence(job.planId, job.ownerHash)))
+    : [];
+
   const config = resolveLLMConfig(job.ownerHash, "anthropic");
   const { markdown, source } = await generateSection(config, {
     chapter,
@@ -147,6 +153,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     financialsMarkdown,
     financialsReference,
     conflicts,
+    evidence: evidence.length ? evidence : undefined,
   });
 
   /*

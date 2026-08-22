@@ -28,6 +28,8 @@ const BOTTOM = 72;
 function inlineText(tokens: Token[] | undefined, fallback = ""): string {
   if (!tokens?.length) return fallback.replace(/\s+/g, " ").trim();
   return tokens.map((token) => {
+    /* 링크는 주소까지 남긴다 — 종이에서는 글자만 남으면 출처를 따라갈 수 없다(DOCX 와 같은 표기) */
+    if (token.type === "link") return `${inlineText(token.tokens, token.text)} (${token.href})`;
     if ("tokens" in token && Array.isArray(token.tokens)) return inlineText(token.tokens, "text" in token ? String(token.text) : "");
     if (token.type === "br") return "\n";
     return "text" in token ? String(token.text) : "";

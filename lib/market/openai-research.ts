@@ -97,18 +97,56 @@ function validDate(value: string, fallback: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : fallback;
 }
 
-function projectPrompt(project: ProjectRecord) {
+/*
+ * 조사에 실제로 쓰이는 사업 정보.
+ *
+ * 이 함수는 ProjectRecord 전체가 아니라 아래 여덟 값만 읽는다. 프로젝트가
+ * 없는 사업계획서(plan-builder)도 같은 조사를 쓰려고 입력을 이 모양으로
+ * 넓혔다 — ProjectRecord 를 넘기던 기존 호출부는 그대로 동작한다.
+ */
+export interface MarketResearchBusinessContext {
+  title?: string;
+  sector?: string;
+  customer?: string;
+  problem?: string;
+  model?: string;
+  revenue?: string;
+  region?: string;
+  archetype?: string;
+}
+
+export type MarketResearchInput = ProjectRecord | MarketResearchBusinessContext;
+
+function isProjectRecord(input: MarketResearchInput): input is ProjectRecord {
+  return typeof (input as ProjectRecord).opportunity === "object" && (input as ProjectRecord).opportunity !== null;
+}
+
+/** ProjectRecord 에서 조사용 사업 정보만 뽑는다 */
+export function projectResearchContext(project: ProjectRecord): MarketResearchBusinessContext {
   const setup = project.businessSetup;
   return {
+    title: String(project.opportunity.title ?? project.title),
+    sector: String(project.opportunity.sector ?? ""),
+    customer: String(project.opportunity.customer ?? ""),
+    problem: String(project.opportunity.oneLiner ?? ""),
+    model: String(project.opportunity.model ?? ""),
+    revenue: String(project.opportunity.revenue ?? ""),
+    region: setup?.region ?? "대한민국",
+    archetype: setup?.archetype ?? "undecided",
+  };
+}
+
+function projectPrompt(context: MarketResearchBusinessContext) {
+  return {
     business: {
-      title: String(project.opportunity.title ?? project.title),
-      sector: String(project.opportunity.sector ?? ""),
-      customer: String(project.opportunity.customer ?? ""),
-      problem: String(project.opportunity.oneLiner ?? ""),
-      model: String(project.opportunity.model ?? ""),
-      revenue: String(project.opportunity.revenue ?? ""),
-      region: setup?.region ?? "대한민국",
-      archetype: setup?.archetype ?? "undecided",
+      title: context.title ?? "",
+      sector: context.sector ?? "",
+      customer: context.customer ?? "",
+      problem: context.problem ?? "",
+      model: context.model ?? "",
+      revenue: context.revenue ?? "",
+      region: context.region || "대한민국",
+      archetype: context.archetype || "undecided",
     },
     task: [
       "위 사업의 수요·고객 규모·사업체 또는 경쟁 현황·소비나 산업 변화를 설명할 수 있는 한국 공식 자료를 3~5개 찾으세요.",
@@ -125,9 +163,10 @@ function projectPrompt(project: ProjectRecord) {
 }
 
 export async function researchOfficialMarketEvidence(
-  project: ProjectRecord,
+  input: MarketResearchInput,
   config: OpenAIRuntimeConfig,
 ): Promise<{ evidence: MarketEvidence[]; citedSourceCount: number; model: string }> {
+  const context = isProjectRecord(input) ? projectResearchContext(input) : input;
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/responses", {
@@ -154,7 +193,7 @@ export async function researchOfficialMarketEvidence(
             role: "system",
             content: "당신은 한국 초기 사업의 시장 근거를 조사하는 분석가입니다. 검색한 공식 원문에 실제로 적힌 사실만 구조화하고, 추정·모델 기억·홍보성 문구·존재하지 않는 수치와 주소를 만들지 마세요.",
           },
-          { role: "user", content: JSON.stringify(projectPrompt(project)) },
+          { role: "user", content: JSON.stringify(projectPrompt(context)) },
         ],
       }),
       signal: AbortSignal.timeout(150_000),
@@ -192,7 +231,7 @@ export async function researchOfficialMarketEvidence(
       value: item.value,
       numericValue: item.numericValue,
       unit: item.unit,
-      region: item.region || project.businessSetup?.region || "대한민국",
+      region: item.region || context.region || "대한민국",
       sourceName: item.sourceName || citation.title,
       sourceUrl: citation.url,
       observedAt,

@@ -3,7 +3,8 @@ import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
-import { createProject, findProjectIdByPlan } from "../../../../lib/project-repository";
+import { findProjectIdByPlan } from "../../../../lib/project-repository";
+import { ensureProjectForPlan } from "../../../../lib/plan-builder/project-bridge";
 import { getLandingForProject, saveLandingDraft } from "../../../../lib/landing/repository";
 import { landingDraftFromPlan, planLandingReadiness } from "../../../../lib/landing/from-plan";
 import { paidHomepagePlanIds, HOMEPAGE_PRODUCT_AMOUNT } from "../../../../lib/payments/plan-orders";
@@ -105,20 +106,7 @@ export async function POST(request: Request) {
    * 홈페이지 저장소는 프로젝트 단위다. 플랜당 하나의 그릇을 만들어 두고 재사용한다.
    * 결제는 위에서 이미 확인했으므로 그릇 자체는 결제 완료 상태로 만든다.
    */
-  let projectId = await findProjectIdByPlan(plan.id, identity.hash);
-  if (!projectId) {
-    const project = await createProject(
-      {
-        opportunity: { title: plan.title, planId: plan.id, source: "plan-builder" },
-        founderProfile: {},
-        paymentStatus: "paid",
-        packagePrice: 0,
-      },
-      identity.hash,
-      identity.userId,
-    );
-    projectId = project.id;
-  }
+  const projectId = await ensureProjectForPlan(plan, identity);
 
   // 이미 만들어 둔 홈페이지가 있으면 손대지 않는다 — 편집한 내용을 계획서로 덮으면 안 된다
   const existing = await getLandingForProject(projectId, identity.hash);
