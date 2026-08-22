@@ -83,11 +83,18 @@ export default function PlanRailNav() {
   const state = useMemo(() => loadState(), [pathname, tick, ready, mounted]);
 
   /* 내가 만든 것 먼저, 예시는 뒤에 — 목록 화면과 같은 순서 */
+  /*
+   * 레일에는 지금 작업 중인 플랜 하나만 둔다.
+   * 플랜 스물한 개가 '1인 무인꽃집 0/25' 로 줄줄이 늘어서면 레일이
+   * 본문보다 복잡해진다. 다른 플랜은 '내 플랜' 목록에서 고른다.
+   */
   const plans = useMemo(() => {
+    const active = state.plans.find((p) => p.id === state.activePlanId);
+    if (active) return [active];
     const own = state.plans.filter((p) => !isSamplePlan(p.id));
-    if (hasAnyPaid) return own;
-    return [...own, ...state.plans.filter((p) => isSamplePlan(p.id))];
-  }, [state, hasAnyPaid]);
+    return own.slice(0, 1);
+  }, [state]);
+  void hasAnyPaid;
 
   const activeKey = currentSectionKey(pathname);
   const onDocument = pathname.startsWith("/plan/document");
@@ -99,7 +106,7 @@ export default function PlanRailNav() {
    * 왼쪽에 플랜마다 챕터 일곱 줄을 또 펼치면 같은 것을 두 번 보여주는 셈이고,
    * 그게 '대시보드가 어렵다'의 가장 큰 원인이었다. 플랜 안으로 들어가면 나온다.
    */
-  if (pathname === "/plan") return null;
+  if (pathname === "/plan" || pathname === "/plan/overview") return null;
 
   /** 이동할 때는 작업 중인 플랜도 그쪽으로 옮긴다 — 이후 문서·PPT가 헷갈리지 않게 */
   function go(planId: string, href: string) {

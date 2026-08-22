@@ -342,23 +342,6 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             <p className={styles.sideMuted}>{doneCount} / {total} 섹션 완료 · 전략 깊이 {doneCount >= total * 0.6 ? "높음" : doneCount > 0 ? "보통" : "낮음"}</p>
           </div>
 
-          {doneCount < total && nextInfo && (
-            <div className={styles.sideBlock}>
-              <small>다음 할 일</small>
-              <p className={styles.sideNext}>{nextInfo.num}. {nextInfo.title}</p>
-              <button type="button" className={styles.sidePrimary} onClick={() => onOpenSection?.(nextInfo.chapterId, nextInfo.sectionId)}>
-                {doneCount === 0 ? "첫 섹션 시작하기" : "이어서 작성"} →
-              </button>
-            </div>
-          )}
-          {doneCount > 0 && doneCount === total && (
-            <div className={styles.sideBlock}>
-              <small>{readOnly ? "예시 문서" : "완성"}</small>
-              <p className={styles.sideNext}>{readOnly ? "실제 서비스로 생성한 완성본입니다." : `${total}개 섹션을 모두 작성했어요.`}</p>
-              <button type="button" className={styles.sidePrimary} onClick={onOpenDocument}>문서 보러 가기 →</button>
-            </div>
-          )}
-
           <div className={styles.sideBlock}>
             <small>챕터별 진행</small>
             <div className={styles.chart} aria-label="챕터별 완료 비율">
@@ -386,6 +369,36 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         </div>
 
         <InheritNote />
+
+        {/*
+          본문의 주인공 — '지금 할 일' 하나. 스물다섯 줄을 훑기 전에 무엇을
+          눌러야 하는지 먼저 보이게. 완성이면 문서 보러 가기가 주인공.
+        */}
+        {doneCount < total && nextInfo ? (
+          <div className={styles.hero}>
+            <span className={styles.heroKicker}>지금 할 일</span>
+            <div className={styles.heroRow}>
+              <div className={styles.heroText}>
+                <strong>{nextInfo.num}. {nextInfo.title}</strong>
+                <span>{doneCount === 0 ? "첫 섹션입니다 — 질문 몇 개에 답하면 본문이 만들어져요." : `${total - doneCount}개 남았어요 · 앞 섹션 답변은 그대로 이어집니다.`}</span>
+              </div>
+              <button type="button" className={styles.heroBtn} onClick={() => onOpenSection?.(nextInfo.chapterId, nextInfo.sectionId)}>
+                {doneCount === 0 ? "시작하기" : "이어서 작성"} →
+              </button>
+            </div>
+          </div>
+        ) : doneCount > 0 && doneCount === total ? (
+          <div className={styles.hero}>
+            <span className={styles.heroKicker}>{readOnly ? "예시 문서" : "완성"}</span>
+            <div className={styles.heroRow}>
+              <div className={styles.heroText}>
+                <strong>{readOnly ? "실제 서비스로 만든 완성본이에요" : "사업계획서가 완성됐어요"}</strong>
+                <span>{readOnly ? "내 사업으로도 같은 문서를 만들 수 있어요." : "PDF·Word로 받거나 발표자료(PPT)를 만들 수 있어요."}</span>
+              </div>
+              <button type="button" className={styles.heroBtn} onClick={onOpenDocument}>문서 보러 가기 →</button>
+            </div>
+          </div>
+        ) : null}
 
         <ConsistencyPanel issues={issues} onOpenSection={onOpenSection} />
 
@@ -493,7 +506,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                   <button
                     key={section.id}
                     type="button"
-                    className={`${styles.row} ${isNext ? styles.rowNext : ""}`}
+                    className={`${styles.row} ${isNext ? styles.rowNext : ""} ${done ? styles.rowDone : ""}`}
                     onClick={() => onOpenSection?.(chapter.id, section.id)}
                     title={section.summary}
                   >
@@ -506,9 +519,13 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
                       {isLocked && <span title="수정 보호 중"><Lock size={12} /></span>}
                       <span>{estimateMinutes(key, section.title, type)}분</span>
                     </span>
-                    <span className={`${styles.chip} ${styles[`chip_${status}`]}`}>
-                      {status === "done" ? "완료" : status === "live" ? "작성 중" : status === "next" ? "여기부터" : "시작 전"}
-                    </span>
+                    {status === "idle" ? (
+                      <span className={styles.chipBlank} aria-hidden="true" />
+                    ) : (
+                      <span className={`${styles.chip} ${styles[`chip_${status}`]}`}>
+                        {status === "done" ? "완료" : status === "live" ? "작성 중" : "여기부터"}
+                      </span>
+                    )}
                   </button>
                 );
               })}
