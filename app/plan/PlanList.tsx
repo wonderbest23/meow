@@ -245,7 +245,7 @@ export default function PlanList() {
             <span className={styles.sort}><ArrowDownUp size={13} /> 정렬: 최근 수정</span>
           </div>
 
-          <div className={styles.list}>
+          <div className={styles.list} key={filter}>
             {/* 킷의 'Type to add a new task…' 줄 */}
             <Link href="/plan/start" className={`${styles.row} ${styles.rowNew}`}>
               <span className={styles.check} aria-hidden="true" />

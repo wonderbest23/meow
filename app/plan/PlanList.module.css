@@ -245,3 +245,39 @@
 .tileIcon { color: #55586a; }
 .tile_todo .tileIcon, .tile_done .tileIcon, .tile_sample .tileIcon { color: #55586a; }
 .rowIcon { background: #f0f0f3; color: #55586a; }
+
+/* ══ 움직임 ═══════════════════════════════════════════════════════
+ * 홈의 무대만큼 '간편해 보이게' — 화면이 떠오르고, 행이 차례로 서고,
+ * 막대가 차오르고, 체크가 톡 튀고, 칩·단계가 바뀔 때 스르륵.
+ * 전부 CSS. 움직임 줄이기 설정에서는 끈다.
+ */
+@keyframes planRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes planRowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes planGrowX { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes planGrowY { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes planPop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: none; } }
+.side { animation: planRise .45s cubic-bezier(.2,.7,.2,1) both; }
+.main { animation: planRise .45s cubic-bezier(.2,.7,.2,1) .06s both; }
+.tile { animation: planRise .4s cubic-bezier(.2,.7,.2,1) both; }
+.tile:nth-child(2) { animation-delay: .05s; } .tile:nth-child(3) { animation-delay: .1s; } .tile:nth-child(4) { animation-delay: .15s; }
+.list .row { animation: planRowIn .35s cubic-bezier(.2,.7,.2,1) both; }
+.list .row:nth-child(2) { animation-delay: .03s; } .list .row:nth-child(3) { animation-delay: .06s; }
+.list .row:nth-child(4) { animation-delay: .09s; } .list .row:nth-child(5) { animation-delay: .12s; }
+.list .row:nth-child(6) { animation-delay: .15s; } .list .row:nth-child(7) { animation-delay: .18s; }
+.list .row:nth-child(8) { animation-delay: .21s; } .list .row:nth-child(9) { animation-delay: .24s; }
+.list .row:nth-child(n+10) { animation-delay: .27s; }
+.row { transition: background .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.row:hover { transform: translateX(3px); box-shadow: 0 6px 16px rgba(28, 29, 33, .06); }
+.row:active { transform: translateX(3px) scale(.995); }
+.barCol i { transform-origin: bottom; animation: planGrowY .6s cubic-bezier(.2,.7,.2,1) .2s both; }
+.checkOn { animation: planPop .3s ease; }
+.seg { transition: background .15s ease, color .15s ease, transform .1s ease; }
+.seg:active { transform: scale(.96); }
+.newBtn { transition: background .15s ease, transform .1s ease, box-shadow .15s ease; }
+.newBtn:hover { box-shadow: 0 8px 20px rgba(74, 58, 255, .25); transform: translateY(-1px); }
+.newBtn:active { transform: translateY(0) scale(.98); }
+.chip { transition: background .15s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .side, .main, .tile, .list .row, .barCol i, .checkOn { animation: none; }
+  .row, .row:hover, .newBtn:hover { transform: none; }
+}

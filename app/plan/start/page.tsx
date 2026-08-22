@@ -438,6 +438,7 @@ export default function PlanStartPage() {
               </div>
             </div>
 
+            <div key={step} className={styles.stepBody}>
             {step === 1 ? (
               <>
                 <div className={styles.formGrid}>
@@ -601,6 +602,7 @@ export default function PlanStartPage() {
 
               </>
             )}
+            </div>
           </div>
         </div>
       </div>

@@ -1184,3 +1184,35 @@
 .typeGo { background: var(--blue, #4a3aff); color: #fff; }
 .typeRow:hover .typeGo { background: var(--blue-dark, #3a2ddb); }
 .typeIcon { background: #f0f0f3; color: #55586a; }
+
+/* ══ 움직임 ═══════════════════════════════════════════════════════
+ * 홈의 무대만큼 '간편해 보이게' — 화면이 떠오르고, 행이 차례로 서고,
+ * 막대가 차오르고, 체크가 톡 튀고, 칩·단계가 바뀔 때 스르륵.
+ * 전부 CSS. 움직임 줄이기 설정에서는 끈다.
+ */
+@keyframes planRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes planRowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes planGrowX { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes planGrowY { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes planPop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: none; } }
+.main { animation: planRise .45s cubic-bezier(.2,.7,.2,1) both; }
+.stepBody { animation: planRise .4s cubic-bezier(.2,.7,.2,1) both; }
+.typeList .typeRow { animation: planRowIn .35s cubic-bezier(.2,.7,.2,1) both; }
+.typeList .typeRow:nth-child(2) { animation-delay: .05s; } .typeList .typeRow:nth-child(3) { animation-delay: .1s; }
+.typeList .typeRow:nth-child(4) { animation-delay: .15s; } .typeList .typeRow:nth-child(n+5) { animation-delay: .2s; }
+.typeRow { transition: background .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+.typeRow:hover { transform: translateX(3px); box-shadow: 0 6px 16px rgba(28, 29, 33, .06); }
+.typeGo { transition: background .15s ease, transform .1s ease; }
+.typeRow:active .typeGo { transform: scale(.96); }
+.field input, .field textarea, .field select, .titleInput { transition: border-color .15s ease, box-shadow .15s ease; }
+.stepNum { transition: background .2s ease, color .2s ease, transform .2s ease; }
+.step.stepOn .stepNum { animation: planPop .35s ease; }
+.primaryBtn { transition: background .15s ease, transform .1s ease, box-shadow .15s ease; }
+.primaryBtn:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(74, 58, 255, .25); }
+.primaryBtn:active { transform: scale(.98); }
+.inheritOpt { transition: background .15s ease, box-shadow .15s ease; }
+.cats button { transition: background .15s ease, color .15s ease; }
+@media (prefers-reduced-motion: reduce) {
+  .main, .stepBody, .typeList .typeRow, .step.stepOn .stepNum { animation: none; }
+  .typeRow:hover, .primaryBtn:not(:disabled):hover { transform: none; }
+}

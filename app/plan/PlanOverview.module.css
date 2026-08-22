@@ -1243,3 +1243,39 @@
 /* 막대(데이터)도 보라를 쓰지 않는다 — 보라는 '누를 것' 하나뿐 */
 .sideBar i { background: #1c1d21; }
 .chartCol i, .chartCol:nth-child(even) i { background: #b4b4c8; }
+
+/* ══ 움직임 ═══════════════════════════════════════════════════════
+ * 홈의 무대만큼 '간편해 보이게' — 화면이 떠오르고, 행이 차례로 서고,
+ * 막대가 차오르고, 체크가 톡 튀고, 칩·단계가 바뀔 때 스르륵.
+ * 전부 CSS. 움직임 줄이기 설정에서는 끈다.
+ */
+@keyframes planRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes planRowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes planGrowX { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes planGrowY { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes planPop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: none; } }
+.side { animation: planRise .45s cubic-bezier(.2,.7,.2,1) both; }
+.body { animation: planRise .45s cubic-bezier(.2,.7,.2,1) .06s both; }
+.hero { animation: planRise .5s cubic-bezier(.2,.7,.2,1) .12s both; }
+.group { animation: planRise .4s cubic-bezier(.2,.7,.2,1) both; }
+.group:nth-child(2) { animation-delay: .06s; } .group:nth-child(3) { animation-delay: .12s; }
+.group:nth-child(4) { animation-delay: .18s; } .group:nth-child(n+5) { animation-delay: .24s; }
+.group .row { animation: planRowIn .35s cubic-bezier(.2,.7,.2,1) both; }
+.group .row:nth-child(2) { animation-delay: .03s; } .group .row:nth-child(3) { animation-delay: .06s; }
+.group .row:nth-child(4) { animation-delay: .09s; } .group .row:nth-child(5) { animation-delay: .12s; }
+.group .row:nth-child(n+6) { animation-delay: .15s; }
+.row { transition: background .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease, opacity .15s ease; }
+.row:hover { transform: translateX(3px); box-shadow: 0 6px 16px rgba(28, 29, 33, .06); }
+.row:active { transform: translateX(3px) scale(.995); }
+.sideBar i { transform-origin: left; animation: planGrowX .8s cubic-bezier(.2,.7,.2,1) .2s both; transition: width .4s ease; }
+.chartCol i { transform-origin: bottom; animation: planGrowY .6s cubic-bezier(.2,.7,.2,1) .25s both; }
+.checkOn { animation: planPop .3s ease; }
+.heroBtn { transition: background .15s ease, transform .1s ease, box-shadow .15s ease; box-shadow: 0 6px 16px rgba(74, 58, 255, .25); }
+.heroBtn:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(74, 58, 255, .32); }
+.heroBtn:active { transform: scale(.98); }
+.seg button { transition: background .15s ease, color .15s ease, transform .1s ease; }
+.seg button:active { transform: scale(.96); }
+@media (prefers-reduced-motion: reduce) {
+  .side, .body, .hero, .group, .group .row, .sideBar i, .chartCol i, .checkOn { animation: none; }
+  .row:hover, .heroBtn:hover { transform: none; }
+}

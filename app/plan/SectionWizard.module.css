@@ -1591,3 +1591,32 @@
 .sampleLocked button {
   pointer-events: none;
 }
+
+/* ══ 움직임 ═══════════════════════════════════════════════════════
+ * 홈의 무대만큼 '간편해 보이게' — 화면이 떠오르고, 행이 차례로 서고,
+ * 막대가 차오르고, 체크가 톡 튀고, 칩·단계가 바뀔 때 스르륵.
+ * 전부 CSS. 움직임 줄이기 설정에서는 끈다.
+ */
+@keyframes planRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes planRowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@keyframes planGrowX { from { transform: scaleX(0); } to { transform: none; } }
+@keyframes planGrowY { from { transform: scaleY(0); } to { transform: none; } }
+@keyframes planPop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: none; } }
+/* 섹션 작성 화면 — 질문 카드가 차례로 서고, 고르면 톡 튀고, 다음 버튼이 반응한다 */
+.main { animation: planRise .45s cubic-bezier(.2,.7,.2,1) both; }
+.q { animation: planRise .4s cubic-bezier(.2,.7,.2,1) both; transition: border-color .15s ease, box-shadow .15s ease; }
+.q:nth-child(2) { animation-delay: .05s; } .q:nth-child(3) { animation-delay: .1s; }
+.q:nth-child(4) { animation-delay: .15s; } .q:nth-child(5) { animation-delay: .2s; }
+.q:nth-child(n+6) { animation-delay: .25s; }
+.opt { transition: background .15s ease, border-color .15s ease, color .15s ease, transform .1s ease; }
+.opt:hover { transform: translateY(-1px); }
+.opt:active { transform: scale(.97); }
+.opt.on { animation: planPop .25s ease; }
+.foot { animation: planRise .4s cubic-bezier(.2,.7,.2,1) .15s both; }
+.btn { transition: background .15s ease, transform .1s ease, box-shadow .15s ease; }
+.btnPrimary:not(:disabled):hover { transform: translateY(-1px); box-shadow: 0 8px 20px rgba(74, 58, 255, .25); }
+.btn:active { transform: scale(.98); }
+@media (prefers-reduced-motion: reduce) {
+  .main, .q, .opt.on, .foot { animation: none; }
+  .opt:hover, .btnPrimary:not(:disabled):hover { transform: none; }
+}
