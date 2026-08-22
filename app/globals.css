@@ -14132,3 +14132,457 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   .plan-chart .plan-chart-pt .hd,
   .plan-chart .plan-chart-pt .tip { transition: none; }
 }
+
+/* ════════════════════════════════════════════════════════════════════
+ * Brainwave.io 랜딩 킷 (lib/landing/kits.ts)
+ *
+ * .kit 가 붙은 페이지만 이 규칙을 받는다 — 킷을 들이기 전에 저장된 고객
+ * 페이지에는 아무 클래스도 없어 예전 모양 그대로다.
+ *
+ * 킷에서 잰 값(1600 캔버스): 본문 폭 1110 · 글자 60/48/36/24/21/19/17/15/13
+ * 먹 #161c2d · 파랑 #473bf0 · 초록 #68d585 · 연회색 #f4f7fa · 카드 둥글기 10
+ * 버튼 59 높이 · 17 Bold · 라벨 13 Bold 자간 +1.6
+ * ════════════════════════════════════════════════════════════════════ */
+.landing-block-page.kit {
+  --kit-ink: #161c2d;
+  --kit-muted: #5d6270;
+  --kit-soft: #f4f7fa;
+  --kit-green: #68d585;
+  --kit-red: #f74d4d;
+  --kit-shadow: 0 32px 54px rgba(65, 62, 101, .10);
+  --kit-pad: max(24px, calc((100% - 1110px) / 2));
+  font-family: Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  color: var(--kit-ink);
+  background: #fff;
+}
+.landing-block-page.kit :where(h1, h2, h3, strong) { color: var(--kit-ink); font-weight: 700; }
+
+/* 모든 칸을 화면 끝까지 깔고 안쪽을 1110 으로 맞춘다 — 킷의 바탕색은 늘 가득 찬다 */
+.landing-block-page.kit .landing-block {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 100px var(--kit-pad);
+}
+.landing-block-page.kit .landing-block.density-tight { padding-top: 48px; padding-bottom: 48px; }
+.landing-block-page.kit .landing-block.density-roomy { padding-top: 130px; padding-bottom: 130px; }
+
+/* 글자 — 킷 스케일 */
+.landing-block-page.kit .landing-block h2 { margin-bottom: 16px; font-size: 36px; line-height: 48px; letter-spacing: -.033em; }
+.landing-block-page.kit .landing-block h3 { font-size: 21px; line-height: 32px; letter-spacing: -.02em; }
+.landing-block-page.kit .landing-block p { color: var(--kit-muted); font-size: 19px; line-height: 32px; letter-spacing: -.01em; }
+.landing-block-page.kit .landing-block > header > span,
+.landing-block-page.kit .landing-block > div > span,
+.landing-block-page.kit .landing-block-hero-copy > span,
+.landing-block-page.kit .landing-block-cta > span {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: var(--landing-accent, #473bf0);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .125em;
+  text-transform: uppercase;
+}
+
+/* 버튼 — 59 높이, 17 Bold, 둥글기 6 */
+.landing-block-page.kit .landing-block a {
+  min-height: 59px;
+  padding: 0 32px;
+  border-radius: 6px;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -.035em;
+  background: var(--landing-accent, #473bf0);
+  color: #fff;
+  box-shadow: none;
+}
+.landing-block-page.kit .landing-block a svg { width: 18px; }
+
+/* ── 첫 화면 공통 ───────────────────────────────────────────── */
+.landing-block-page.kit .landing-block-hero {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  padding: 120px var(--kit-pad) 110px;
+  gap: 60px;
+}
+.landing-block-page.kit .landing-block-hero h1 { max-width: 640px; margin: 18px 0 24px; font-size: 60px; line-height: 65px; letter-spacing: -.033em; }
+.landing-block-page.kit .landing-block-hero p { max-width: 520px; margin-bottom: 34px; font-size: 19px; line-height: 32px; }
+.landing-block-page.kit .landing-block-hero figure { height: auto; aspect-ratio: 4 / 3; border-radius: 10px; box-shadow: none; }
+
+/* ── 숫자(Facts) — 48 Bold 숫자 옆에 17 설명, 세 칸 한 줄 ─────── */
+.landing-block-page.kit .landing-block-stats { background: #fff; color: var(--kit-ink); padding-top: 70px; padding-bottom: 70px; }
+.landing-block-page.kit .landing-block-stats > h2 { display: none; }
+.landing-block-page.kit .landing-block-stats > div { margin-top: 0; border: 0; gap: 30px; }
+.landing-block-page.kit .landing-block-stats article {
+  min-height: 0; padding: 0; border: 0;
+  display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; column-gap: 18px;
+}
+.landing-block-page.kit .landing-block-stats strong { font-size: 48px; line-height: 58px; letter-spacing: -.037em; color: var(--kit-ink); }
+.landing-block-page.kit .landing-block-stats span { color: var(--kit-muted); font-size: 17px; line-height: 29px; font-weight: 400; }
+
+/* ── 서비스 카드(Services) — 흰 카드 r10 그림자, 세 칸 ───────── */
+.landing-block-page.kit .landing-block-features > header { max-width: 560px; margin: 0 auto; text-align: center; }
+.landing-block-page.kit .landing-block-features > header > p { font-size: 19px; }
+.landing-block-page.kit .landing-block-features > div { margin-top: 50px; border: 0; gap: 30px; }
+.landing-block-page.kit .landing-block-features article {
+  min-height: 0; padding: 36px 30px 34px; border: 0; border-radius: 10px;
+  background: #fff; box-shadow: var(--kit-shadow); text-align: left;
+}
+.landing-block-page.kit .landing-block-features article + article { padding-left: 30px; }
+.landing-block-page.kit .landing-block-features article i {
+  width: 60px; height: 60px; border-radius: 50%; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--landing-accent, #473bf0) 12%, #fff); font-size: 17px;
+}
+.landing-block-page.kit .landing-block-features article h3 { margin: 28px 0 10px; font-size: 21px; }
+.landing-block-page.kit .landing-block-features article p { font-size: 17px; line-height: 29px; }
+
+/* ── 소개(Content) — 사진 r8 + 글, 연회색 바탕 ──────────────── */
+.landing-block-page.kit .landing-block-story { min-height: 0; gap: 80px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.landing-block-page.kit .landing-block-story h2 { font-size: 36px; }
+.landing-block-page.kit .landing-block-story > div > p { font-size: 19px; }
+.landing-block-page.kit .landing-block-story figure { height: auto; aspect-ratio: 4 / 3; border-radius: 8px; }
+
+/* ── 이용 방법(How) — 파란 동그라미 번호, 세 칸 가로 ─────────── */
+.landing-block-page.kit .landing-block-process { background: #fff; color: var(--kit-ink); }
+.landing-block-page.kit .landing-block-process > header { grid-template-columns: 1fr; max-width: 560px; margin: 0 auto; text-align: center; }
+.landing-block-page.kit .landing-block-process > header > span { color: var(--landing-accent, #473bf0); }
+.landing-block-page.kit .landing-block-process ol { margin-top: 56px; border: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
+.landing-block-page.kit .landing-block-process li { min-height: 0; padding: 0; border: 0; grid-template-columns: 1fr; align-content: start; row-gap: 22px; }
+.landing-block-page.kit .landing-block-process li i {
+  width: 60px; height: 60px; border: 0; border-radius: 50%;
+  background: var(--landing-accent, #473bf0); color: #fff; font-size: 21px; font-weight: 700;
+}
+.landing-block-page.kit .landing-block-process li h3 { margin-bottom: 8px; }
+.landing-block-page.kit .landing-block-process li p { color: var(--kit-muted); font-size: 17px; line-height: 29px; }
+
+/* ── 가격(Pricing) — 카드 r10 ──────────────────────────────── */
+.landing-block-page.kit .landing-block-price,
+.landing-block-page.kit .landing-block-location,
+.landing-block-page.kit .landing-block-faq { width: 100%; padding: 100px var(--kit-pad); }
+.landing-block-page.kit .landing-block-price > header,
+.landing-block-page.kit .landing-block-faq > header { max-width: 560px; margin: 0 auto 50px; text-align: center; }
+.landing-block-page.kit .landing-block-price ul { border: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
+.landing-block-page.kit .landing-block-price ul:has(li:only-child) { grid-template-columns: minmax(0, 540px); justify-content: center; }
+.landing-block-page.kit .landing-block-price ul:has(li:nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.landing-block-page.kit .landing-block-price li {
+  padding: 40px 34px; border: 0; border-radius: 10px; background: #fff; box-shadow: var(--kit-shadow);
+  flex-direction: column; align-items: stretch; gap: 18px;
+}
+.landing-block-page.kit .landing-block-price strong { font-size: 21px; }
+.landing-block-page.kit .landing-block-price li span { font-size: 17px; color: var(--kit-muted); }
+.landing-block-page.kit .landing-block-price b { font-size: 48px; line-height: 58px; letter-spacing: -.037em; color: var(--kit-ink); }
+.landing-block-page.kit .landing-block-price small { display: block; margin-top: 26px; text-align: center; }
+
+/* ── FAQ — 두 열, 21 Bold 질문 ─────────────────────────────── */
+.landing-block-page.kit .landing-block-faq dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px 60px; }
+.landing-block-page.kit .landing-block-faq dl > div { padding: 0; border: 0; }
+.landing-block-page.kit .landing-block-faq dt { font-size: 21px; line-height: 32px; font-weight: 700; }
+.landing-block-page.kit .landing-block-faq dd { margin: 10px 0 0; color: var(--kit-muted); font-size: 17px; line-height: 29px; }
+
+/* ── 마지막 부름(CTA) — 가운데 32 Bold + 버튼 ──────────────── */
+.landing-block-page.kit .landing-block-cta { min-height: 0; padding: 90px var(--kit-pad); background: #fff; color: var(--kit-ink); }
+.landing-block-page.kit .landing-block-cta h2 { max-width: 760px; font-size: 36px; line-height: 48px; }
+.landing-block-page.kit .landing-block-cta p { color: var(--kit-muted); font-size: 19px; }
+
+/* ── 후기(Testimonial) — 흰 카드 r10, 54 동그라미 얼굴 ──────── */
+.landing-block-page.kit .landing-block-reviews > header { max-width: 560px; margin: 0 auto 50px; text-align: center; }
+.landing-block-page.kit .landing-block-reviews > div { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
+.landing-block-page.kit .landing-block-reviews > div:has(article:only-child) { grid-template-columns: minmax(0, 640px); justify-content: center; }
+.landing-block-page.kit .landing-block-reviews > div:has(article:nth-child(2):last-child) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.landing-block-page.kit .landing-block-reviews article {
+  min-height: 260px; padding: 40px 34px 34px; border-radius: 10px; background: #fff; box-shadow: var(--kit-shadow);
+  display: grid; grid-template-rows: 1fr auto; gap: 28px; text-align: left;
+}
+.landing-block-page.kit .landing-block-reviews blockquote { margin: 0; color: var(--kit-ink); font-size: 21px; line-height: 32px; font-weight: 700; letter-spacing: -.02em; word-break: keep-all; }
+.landing-block-page.kit .landing-block-reviews footer { display: flex; align-items: center; gap: 14px; }
+.landing-block-page.kit .landing-block-reviews footer i {
+  width: 54px; height: 54px; border-radius: 50%; flex: none; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--landing-accent, #473bf0) 14%, #fff); color: var(--landing-accent, #473bf0); font-style: normal; font-weight: 700; font-size: 19px;
+}
+.landing-block-page.kit .landing-block-reviews footer strong { display: block; font-size: 17px; }
+.landing-block-page.kit .landing-block-reviews footer small { color: var(--kit-muted); font-size: 15px; }
+
+/* ── 알림 띠(Alert) — 파란 96 띠, 흰 꼬리표 ─────────────────── */
+.landing-block-page.kit .landing-block-alert { min-height: 96px; padding: 22px var(--kit-pad); background: var(--landing-accent, #473bf0); color: #fff; display: grid; place-items: center; }
+.landing-block-page.kit .landing-block-alert > div { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 14px; }
+.landing-block-page.kit .landing-block-alert i { padding: 6px 12px; border-radius: 4px; background: #fff; color: var(--landing-accent, #473bf0); font-style: normal; font-size: 13px; font-weight: 700; letter-spacing: .125em; text-transform: uppercase; }
+.landing-block-page.kit .landing-block-alert p { margin: 0; color: #fff; font-size: 17px; line-height: 29px; }
+.landing-block-page.kit .landing-block-alert a { min-height: 0; padding: 0; background: none; color: #fff; text-decoration: underline; text-underline-offset: 4px; font-size: inherit; }
+
+/* ── 영상(Video) — 먹색 바탕, 1110 r20 틀, 68 재생 단추 ─────── */
+.landing-block-page.kit .landing-block-video { background: var(--kit-ink); color: #fff; display: grid; gap: 40px; justify-items: center; text-align: center; }
+.landing-block-page.kit .landing-block-video .landing-video-copy h2 { color: #fff; }
+.landing-block-page.kit .landing-block-video .landing-video-copy p { color: #ffffffb8; }
+.landing-block-page.kit .landing-video-frame {
+  position: relative; width: 100%; max-width: 1110px; aspect-ratio: 16 / 9; border-radius: 20px; overflow: hidden;
+  background: #0a0d17 center / cover no-repeat;
+}
+.landing-block-page.kit .landing-video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.landing-block-page.kit .landing-video-play {
+  position: absolute; inset: 0; min-height: 0; padding: 0; border-radius: 0; background: rgba(22, 28, 45, .28); display: grid; place-items: center;
+}
+.landing-block-page.kit .landing-video-play b {
+  width: 68px; height: 68px; border-radius: 50%; background: #fff; display: grid; place-items: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .25); transition: transform .2s ease;
+}
+.landing-block-page.kit .landing-video-play b::after { content: ""; margin-left: 5px; border-style: solid; border-width: 10px 0 10px 16px; border-color: transparent transparent transparent var(--landing-accent, #473bf0); }
+.landing-block-page.kit .landing-video-play:hover b { transform: scale(1.06); }
+
+/* ── 신뢰 띠(Features 띠) — 셋 나란히, 얇은 줄 ───────────────── */
+.landing-block-page.kit .landing-block-trust { min-height: 0; padding: 40px var(--kit-pad); border-color: #e9ecf2; background: #fff; }
+.landing-block-page.kit .landing-block-trust > strong { font-size: 17px; }
+.landing-block-page.kit .landing-block-trust span { font-size: 17px; color: var(--kit-ink); }
+
+/* 갤러리·상품 — 모서리 r10 */
+.landing-block-page.kit .landing-block-gallery figure { border-radius: 10px; }
+.landing-block-page.kit .landing-block-offer { border: 0; border-radius: 10px; background: var(--kit-soft); }
+
+/* ════════════════════════════════════════════════════════════════════
+ * 킷별 차이 — 잰 대로
+ * ════════════════════════════════════════════════════════════════════ */
+
+/* 08 Consultation — 사진 위 파란 그늘, 왼쪽 흰 글 */
+.landing-block-page.kit-consult .landing-block-hero.layout-immersive { min-height: 676px; align-items: center; }
+.landing-block-page.kit-consult .landing-block-hero.layout-immersive:after { background: linear-gradient(90deg, rgba(71, 59, 240, .88) 0%, rgba(71, 59, 240, .55) 45%, rgba(22, 28, 45, .25) 100%); }
+.landing-block-page.kit-consult .landing-block-hero.layout-immersive a { background: #fff; color: var(--landing-accent, #473bf0); }
+.landing-block-page.kit-consult .landing-block-story { background: var(--kit-soft); }
+.landing-block-page.kit-consult .landing-block-features { padding-top: 60px; }
+
+/* 01 Agency — 연회색 첫 화면에 둥근 사진, 색 카드 서비스 */
+.landing-block-page.kit-agency .landing-block-hero { background: var(--kit-soft); }
+.landing-block-page.kit-agency .landing-block-hero figure { width: min(463px, 100%); aspect-ratio: 1; border-radius: 50%; justify-self: center; }
+.landing-block-page.kit-agency .landing-block-features article { color: #fff; background: var(--landing-accent, #473bf0); box-shadow: none; min-height: 420px; align-content: end; display: grid; }
+.landing-block-page.kit-agency .landing-block-features article:first-child { background: var(--kit-red); }
+.landing-block-page.kit-agency .landing-block-features article :where(h3, p, i) { color: #fff; }
+.landing-block-page.kit-agency .landing-block-features article i { background: #ffffff2e; }
+.landing-block-page.kit-agency .landing-block-process { background: var(--kit-soft); }
+.landing-block-page.kit-agency .landing-block-reviews { background: var(--landing-accent, #473bf0); }
+.landing-block-page.kit-agency .landing-block-reviews > header :where(span, h2) { color: #fff; }
+.landing-block-page.kit-agency .landing-block-cta { background: var(--kit-ink); color: #fff; }
+.landing-block-page.kit-agency .landing-block-cta :where(h2, p) { color: #fff; }
+.landing-block-page.kit-agency .landing-block-cta p { color: #ffffffb8; }
+
+/* 02 SaaS — 가운데 제목 48, 그 아래 큰 화면 사진 r10 */
+.landing-block-page.kit-saas .landing-block-hero { grid-template-columns: 1fr; justify-items: center; text-align: center; padding-bottom: 80px; }
+.landing-block-page.kit-saas .landing-block-hero h1 { max-width: 760px; margin-inline: auto; font-size: 48px; line-height: 58px; }
+.landing-block-page.kit-saas .landing-block-hero p { margin-inline: auto; }
+.landing-block-page.kit-saas .landing-block-hero figure { width: min(844px, 100%); aspect-ratio: 3 / 2; box-shadow: var(--kit-shadow); }
+.landing-block-page.kit-saas .landing-block-hero.layout-split figure { box-shadow: var(--kit-shadow); }
+.landing-block-page.kit-saas .landing-block-story,
+.landing-block-page.kit-saas .landing-block-reviews { background: var(--kit-soft); }
+.landing-block-page.kit-saas .landing-block-price,
+.landing-block-page.kit-saas .landing-block-faq { background: var(--kit-ink); color: #fff; }
+.landing-block-page.kit-saas .landing-block-price > header :where(h2), .landing-block-page.kit-saas .landing-block-faq :where(h2, dt) { color: #fff; }
+.landing-block-page.kit-saas .landing-block-faq dd { color: #ffffffb8; }
+.landing-block-page.kit-saas .landing-block-price small { color: #ffffffa0; }
+.landing-block-page.kit-saas .landing-block-cta { border-top: 1px solid #e9ecf2; padding: 64px var(--kit-pad); }
+
+/* 03 Coworking — 어두운 사진 첫 화면, 왼쪽 정렬, 24 부제 */
+.landing-block-page.kit-cowork .landing-block-hero.layout-immersive { min-height: 760px; align-items: center; }
+.landing-block-page.kit-cowork .landing-block-hero.layout-immersive:after { background: linear-gradient(180deg, rgba(22, 28, 45, .55) 0%, rgba(22, 28, 45, .78) 100%); }
+.landing-block-page.kit-cowork .landing-block-hero p { font-size: 24px; line-height: 34px; color: #fff; font-weight: 700; }
+.landing-block-page.kit-cowork .landing-block-story { background: var(--kit-soft); }
+.landing-block-page.kit-cowork .landing-block-gallery { background: var(--kit-ink); color: #fff; }
+.landing-block-page.kit-cowork .landing-block-gallery :where(h2) { color: #fff; }
+.landing-block-page.kit-cowork .landing-block-location { background: #fff; }
+
+/* 05 Web Application — 먹색 분할 첫 화면, 초록 라벨 */
+.landing-block-page.kit-webapp .landing-block-hero.layout-tech { background: var(--kit-ink); padding: 120px var(--kit-pad) 110px; min-height: 0; }
+.landing-block-page.kit-webapp .landing-block-hero.layout-tech .landing-block-hero-copy > span { color: var(--kit-green); }
+.landing-block-page.kit-webapp .landing-block-hero.layout-tech figure { height: auto; aspect-ratio: 541 / 383; padding: 0; border: 0; background: none; box-shadow: none; }
+.landing-block-page.kit-webapp .landing-block-hero.layout-tech figure img { border-radius: 8px; }
+.landing-block-page.kit-webapp .landing-block-hero.layout-tech p { color: #ffffffc2; }
+.landing-block-page.kit-webapp .landing-block-story:nth-of-type(even) figure { order: -1; }
+.landing-block-page.kit-webapp .landing-block-story h2 { font-size: 36px; }
+.landing-block-page.kit-webapp .landing-block-price { background: #ecf2f7; }
+
+/* 06 ECommerce — 15px 띄운 둥근 상자들 */
+.landing-block-page.kit-shop .landing-block-hero.layout-immersive,
+.landing-block-page.kit-shop .landing-block-story,
+.landing-block-page.kit-shop .landing-block-reviews,
+.landing-block-page.kit-shop .landing-block-cta {
+  width: calc(100% - 30px); margin: 15px auto; border-radius: 10px; overflow: hidden;
+  padding-left: max(24px, calc((100% - 1110px) / 2)); padding-right: max(24px, calc((100% - 1110px) / 2));
+}
+.landing-block-page.kit-shop .landing-block-hero.layout-immersive { min-height: 760px; background: #0a0d17; align-items: end; }
+.landing-block-page.kit-shop .landing-block-hero.layout-immersive:after { background: linear-gradient(180deg, rgba(10, 13, 23, .15) 0%, rgba(10, 13, 23, .75) 100%); }
+.landing-block-page.kit-shop .landing-block-hero.layout-immersive.no-image { background: #0a0d17; align-items: center; }
+.landing-block-page.kit-shop .landing-block-hero .landing-block-hero-copy > span { color: var(--kit-soft); }
+.landing-block-page.kit-shop .landing-block-features article { background: var(--kit-soft); box-shadow: none; }
+.landing-block-page.kit-shop .landing-block-story { background: var(--landing-accent, #473bf0); color: #fff; }
+.landing-block-page.kit-shop .landing-block-story :where(h2, p, span) { color: #fff; }
+.landing-block-page.kit-shop .landing-block-story a { background: #fff; color: var(--landing-accent, #473bf0); }
+.landing-block-page.kit-shop .landing-block-reviews { background: var(--kit-ink); }
+.landing-block-page.kit-shop .landing-block-reviews > header :where(span, h2) { color: #fff; }
+.landing-block-page.kit-shop .landing-block-cta { background: var(--kit-ink); color: #fff; min-height: 520px; display: grid; place-content: center; }
+.landing-block-page.kit-shop .landing-block-cta :where(h2) { color: #fff; font-size: 60px; line-height: 65px; }
+.landing-block-page.kit-shop .landing-block-cta p { color: #ffffffb8; }
+.landing-block-page.kit-shop .landing-block-cta a { background: #fff; color: var(--kit-ink); }
+
+/* 07 Mobile App — 파란 그라데이션 첫 화면, 세로 폰 사진 */
+.landing-block-page.kit-app .landing-block-hero { background: linear-gradient(118deg, var(--landing-accent, #473bf0) 0%, color-mix(in srgb, var(--landing-accent, #473bf0) 72%, #161c2d) 100%); color: #fff; }
+.landing-block-page.kit-app .landing-block-hero :where(h1, p) { color: #fff; }
+.landing-block-page.kit-app .landing-block-hero .landing-block-hero-copy > span { color: #ffffffd0; }
+.landing-block-page.kit-app .landing-block-hero p { color: #ffffffc8; }
+.landing-block-page.kit-app .landing-block-hero a { background: #fff; color: var(--landing-accent, #473bf0); }
+.landing-block-page.kit-app .landing-block-hero figure { width: min(341px, 100%); aspect-ratio: 341 / 735; border-radius: 36px; justify-self: center; box-shadow: 0 40px 80px rgba(0, 0, 0, .3); }
+.landing-block-page.kit-app .landing-block-hero.layout-split figure { box-shadow: 0 40px 80px rgba(0, 0, 0, .3); }
+.landing-block-page.kit-app .landing-block-features { background: linear-gradient(160deg, var(--kit-ink) 0%, color-mix(in srgb, var(--landing-accent, #473bf0) 45%, #161c2d) 100%); color: #fff; }
+.landing-block-page.kit-app .landing-block-features > header :where(span, h2, p) { color: #fff; }
+.landing-block-page.kit-app .landing-block-features > header p { color: #ffffffb8; }
+.landing-block-page.kit-app .landing-block-features article { background: #ffffff14; box-shadow: none; }
+.landing-block-page.kit-app .landing-block-features article :where(h3, p) { color: #fff; }
+.landing-block-page.kit-app .landing-block-features article p { color: #ffffffb8; }
+.landing-block-page.kit-app .landing-block-features article i { background: #ffffff22; color: #fff; }
+.landing-block-page.kit-app .landing-block-price { background: var(--kit-soft); }
+
+/* 09 Product — 큰 제목 가운데, 살구색 판 위 상품 사진 */
+.landing-block-page.kit-product .landing-block-hero.layout-product { grid-template-columns: 1fr; justify-items: center; text-align: center; min-height: 0; padding-bottom: 60px; }
+.landing-block-page.kit-product .landing-block-hero h1 { max-width: 820px; margin-inline: auto; }
+.landing-block-page.kit-product .landing-block-hero p { margin-inline: auto; }
+.landing-block-page.kit-product .landing-block-hero.layout-product figure { width: min(720px, 100%); height: auto; aspect-ratio: 4 / 3; border: 0; background: none; }
+.landing-block-page.kit-product .landing-block-hero.layout-product figure img { padding: 0; }
+.landing-block-page.kit-product .landing-block-offer { background: var(--kit-soft); border-radius: 0; }
+.landing-block-page.kit-product .landing-block-story { background: var(--landing-accent, #473bf0); color: #fff; }
+.landing-block-page.kit-product .landing-block-story :where(h2, p, span) { color: #fff; }
+.landing-block-page.kit-product .landing-block-story figure { background: #fde7c3; }
+.landing-block-page.kit-product .landing-block-features { background: var(--kit-ink); }
+.landing-block-page.kit-product .landing-block-features > header :where(span, h2, p) { color: #fff; }
+.landing-block-page.kit-product .landing-block-features > header p { color: #ffffffb8; }
+
+/* 10 B2B — #f8f8f8 첫 화면, 세로 사진 오른쪽 */
+.landing-block-page.kit-b2b .landing-block-hero { background: #f8f8f8; }
+.landing-block-page.kit-b2b .landing-block-hero h1 { font-size: 48px; line-height: 58px; }
+.landing-block-page.kit-b2b .landing-block-hero figure { width: min(408px, 100%); aspect-ratio: 408 / 636; border-radius: 0; justify-self: end; }
+.landing-block-page.kit-b2b .landing-block-features { background: var(--kit-soft); }
+.landing-block-page.kit-b2b .landing-block-reviews article { min-height: 352px; }
+.landing-block-page.kit-b2b .landing-block-cta { background: var(--landing-accent, #473bf0); color: #fff; padding: 56px var(--kit-pad); }
+.landing-block-page.kit-b2b .landing-block-cta :where(h2, p) { color: #fff; }
+.landing-block-page.kit-b2b .landing-block-cta a { background: #fff; color: var(--kit-ink); }
+.landing-block-page.kit-b2b .landing-block-cta > span { color: #ffffffd0; }
+
+/* ── 공개 페이지 껍데기 — 상단 메뉴·문의 양식(킷의 CTA Form) ──── */
+.public-landing.kit { font-family: Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; background: #fff; }
+.public-landing.kit .public-landing-nav { padding: 20px max(24px, calc((100% - 1110px) / 2)); background: #fff; border-bottom: 1px solid #eef0f4; }
+.public-landing.kit .public-landing-nav button { min-height: 45px; padding: 0 24px; border-radius: 6px; font-size: 17px; font-weight: 700; letter-spacing: -.03em; }
+.public-landing.kit .public-lead-section {
+  width: 100%; max-width: none; margin: 0; padding: 110px max(24px, calc((100% - 1110px) / 2)); border-radius: 0;
+  background: #161c2d; color: #fff; box-shadow: none; grid-template-columns: minmax(0, 1fr) minmax(0, 440px); gap: 80px; align-items: center;
+}
+.public-landing.kit .public-lead-section > div > small { color: #68d585; font-size: 13px; letter-spacing: .125em; text-transform: uppercase; }
+.public-landing.kit .public-lead-section > div h2 { color: #fff; font-size: 36px; line-height: 48px; letter-spacing: -.033em; }
+.public-landing.kit .public-lead-section > div > p { color: #ffffffb8; font-size: 19px; line-height: 32px; }
+.public-landing.kit .public-lead-section form,
+.public-landing.kit .public-lead-ready,
+.public-landing.kit .public-lead-success { padding: 34px 30px; border-radius: 10px; background: #fff; color: #161c2d; }
+.public-landing.kit .public-lead-section form input:not([type="checkbox"]),
+.public-landing.kit .public-lead-section form textarea { min-height: 50px; border: 1px solid #e3e6ee; border-radius: 6px; font-size: 15px; background: #fff; }
+.public-landing.kit .public-lead-section form button[type="submit"] { min-height: 59px; border-radius: 6px; font-size: 17px; font-weight: 700; }
+.public-landing.kit .public-lead-section form :where(p, small, strong) { color: #161c2d; }
+.public-landing.kit .public-lead-section form small { color: #5d6270; }
+.public-landing.kit .public-landing-footer { background: #161c2d; color: #ffffffb8; }
+.public-landing.kit .public-landing-footer :where(strong, p, small, a) { color: inherit; }
+.public-landing.kit .public-kit-credit a { color: #ffffff80; text-decoration: underline; text-underline-offset: 3px; }
+
+/* ── 640 이하 — 한 열 (태블릿 모드 없음) ─────────────────────── */
+@media (max-width: 640px) {
+  .landing-block-page.kit { --kit-pad: 20px; }
+  .landing-block-page.kit .landing-block { padding-top: 64px; padding-bottom: 64px; }
+  .landing-block-page.kit .landing-block-hero { padding: 72px 20px 64px; gap: 32px; grid-template-columns: 1fr; }
+  .landing-block-page.kit .landing-block-hero h1 { font-size: 36px; line-height: 44px; }
+  .landing-block-page.kit .landing-block-hero p { font-size: 17px; line-height: 28px; }
+  .landing-block-page.kit .landing-block h2 { font-size: 28px; line-height: 38px; }
+  .landing-block-page.kit .landing-block p { font-size: 16px; line-height: 27px; }
+  .landing-block-page.kit .landing-block-stats > div,
+  .landing-block-page.kit .landing-block-features > div,
+  .landing-block-page.kit .landing-block-process ol,
+  .landing-block-page.kit .landing-block-price ul,
+  .landing-block-page.kit .landing-block-faq dl,
+  .landing-block-page.kit .landing-block-reviews > div { grid-template-columns: 1fr !important; gap: 20px; }
+  .landing-block-page.kit .landing-block-stats strong { font-size: 36px; line-height: 44px; }
+  .landing-block-page.kit .landing-block-story { gap: 28px; }
+  .landing-block-page.kit .landing-block-price b { font-size: 36px; line-height: 44px; }
+  .landing-block-page.kit .landing-video-frame { border-radius: 12px; }
+  .landing-block-page.kit-shop .landing-block-hero.layout-immersive,
+  .landing-block-page.kit-shop .landing-block-story,
+  .landing-block-page.kit-shop .landing-block-reviews,
+  .landing-block-page.kit-shop .landing-block-cta { width: calc(100% - 16px); margin: 8px auto; padding-left: 20px; padding-right: 20px; }
+  .landing-block-page.kit-shop .landing-block-hero.layout-immersive { min-height: 520px; }
+  .landing-block-page.kit-shop .landing-block-cta :where(h2) { font-size: 36px; line-height: 44px; }
+  .landing-block-page.kit-saas .landing-block-hero h1,
+  .landing-block-page.kit-b2b .landing-block-hero h1 { font-size: 36px; line-height: 44px; }
+  .landing-block-page.kit-app .landing-block-hero figure { width: min(240px, 100%); }
+  .landing-block-page.kit-b2b .landing-block-hero figure { justify-self: center; }
+  .public-landing.kit .public-lead-section { padding: 64px 20px; grid-template-columns: 1fr; gap: 32px; }
+  .public-landing.kit .public-lead-section > div h2 { font-size: 28px; line-height: 38px; }
+}
+
+/* 사진 위 첫 화면(consult·cowork·shop) — 킷은 왼쪽 정렬이고 글은 전부 흰색이다.
+   기본 immersive 배치가 가운데로 모으고 라벨을 강조색으로 칠해 파란 바탕에 파란
+   글자가 됐다. */
+.landing-block-page.kit .landing-block-hero.layout-immersive { text-align: left; justify-items: start; }
+.landing-block-page.kit .landing-block-hero.layout-immersive .landing-block-hero-copy > span { color: #ffffffd9; }
+.landing-block-page.kit .landing-block-hero.layout-immersive p { color: #ffffffd6; }
+.landing-block-page.kit .landing-block-hero.layout-immersive.no-image { text-align: center; justify-items: center; }
+/* 킷은 칸 안의 글을 가운데 모으지 않는다 — 제목만 가운데, 본문·카드는 왼쪽 */
+.landing-block-page.kit .landing-block-story > div,
+.landing-block-page.kit .landing-block-price li,
+.landing-block-page.kit .landing-block-faq dl,
+.landing-block-page.kit .landing-block-offer { text-align: left; }
+.landing-block-page.kit .landing-block-faq dl > div { border-top: 1px solid #e9ecf2; padding-top: 24px; }
+/* 사진 옆 글(split·tech)도 왼쪽 정렬 — 킷에서 가운데 모으는 첫 화면은 saas·product 뿐 */
+.landing-block-page.kit .landing-block-hero.layout-split,
+.landing-block-page.kit .landing-block-hero.layout-tech { text-align: left; justify-items: start; }
+.landing-block-page.kit .landing-block-hero.layout-split .landing-block-hero-copy,
+.landing-block-page.kit .landing-block-hero.layout-tech .landing-block-hero-copy { justify-self: start; }
+.landing-block-page.kit-saas .landing-block-hero.layout-split { text-align: center; justify-items: center; }
+
+/* ── Brainwave 킷 페이지 무대 ───────────────────────────────────
+ * 1600 캔버스를 보는 폭만큼 줄인다. 글·칸은 킷 좌표 그대로다. */
+.bw-stage { position: relative; width: 100%; overflow: hidden; background: #fff; container-type: inline-size; }
+/* 비율 = 보는 폭 / 1600. tan(atan2(a, b)) 는 a/b 를 숫자로 돌려준다(길이끼리 나눗셈이 안 되므로). */
+.bw-fit { --bw-scale: tan(atan2(100cqw, calc(var(--bw-w, 1600) * 1px))); position: relative; width: 100%; height: calc(var(--bw-h, 1000) * 1px * var(--bw-scale)); }
+@supports not (width: tan(atan2(1px, 1px))) {
+  .bw-fit { --bw-scale: var(--bw-js-scale, 1); }
+}
+.bw-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; transform: scale(var(--bw-scale)); font-family: Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", sans-serif; color: #161c2d; }
+.bw-canvas :where(p, div, span, img) { margin: 0; box-sizing: border-box; }
+.bw-canvas p { white-space: pre-wrap; }
+.bw-canvas img { display: block; }
+.bw-loading { min-height: 320px; background: linear-gradient(90deg, #f4f7fa 25%, #eceff4 37%, #f4f7fa 63%); background-size: 400% 100%; animation: bw-shimmer 1.2s ease infinite; }
+@keyframes bw-shimmer { from { background-position: 100% 0 } to { background-position: 0 0 } }
+.bw-error { padding: 24px; color: #b91c1c; }
+
+/* ── Brainwave 자리 편집기 ───────────────────────────────────── */
+.bw-editor { display: grid; grid-template-rows: auto auto 1fr auto; background: #e9ecf2; }
+.bw-editor-bar { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 10px 16px; background: #fff; border-bottom: 1px solid #e3e6ee; }
+.bw-editor-left { display: flex; align-items: center; gap: 14px; min-width: 0; flex-wrap: wrap; }
+.bw-editor-left strong { font-size: 15px; }
+.bw-editor-left small { color: #5d6270; font-size: 12.5px; }
+.bw-editor-page { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.bw-editor-page select { min-height: 34px; padding: 0 10px; border: 1px solid #dfe3ea; border-radius: 6px; background: #fff; font-size: 13px; }
+.bw-editor-right { display: flex; align-items: center; gap: 6px; }
+.bw-editor-right button { min-height: 36px; min-width: 36px; padding: 0 10px; border: 1px solid #dfe3ea; border-radius: 6px; background: #fff; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+.bw-editor-right button:disabled { opacity: .4; cursor: default; }
+.bw-editor-right button svg { width: 16px; height: 16px; }
+.bw-editor-right .bw-editor-save { background: #473bf0; border-color: #473bf0; color: #fff; font-weight: 700; }
+.bw-editor-error { margin: 0; padding: 8px 16px; background: #fff1f1; color: #b91c1c; font-size: 13px; }
+.bw-editor-stage { overflow: auto; padding: 20px; }
+.bw-editor-canvas { position: relative; max-width: 1600px; margin: 0 auto; box-shadow: 0 20px 60px rgba(22, 28, 45, .12); }
+.bw-editor-canvas [data-bw-text] { cursor: text; outline: 1px dashed transparent; outline-offset: 2px; transition: outline-color .12s; }
+.bw-editor-canvas [data-bw-text]:hover { outline-color: #473bf0aa; }
+.bw-editor-canvas [data-bw-text][contenteditable="plaintext-only"] { outline: 2px solid #473bf0; background: #473bf012; }
+.bw-editor-canvas [data-bw-image] { cursor: pointer; }
+.bw-editor-canvas [data-bw-image]:hover { outline: 3px solid #473bf0; outline-offset: -3px; }
+.bw-editor-uploading { position: absolute; inset: 0; display: grid; place-items: center; background: #ffffffb8; font-weight: 700; color: #161c2d; gap: 8px; }
+.bw-editor-hint { margin: 0; padding: 8px 16px; background: #fff; border-top: 1px solid #e3e6ee; color: #5d6270; font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
+.bw-editor-hint svg { width: 15px; height: 15px; }
+/* 공개 페이지 — 킷 머리글이 있으니 우리 머리글은 없고, 문의 양식·법정 푸터만 아래에 */
+.public-landing.brainwave .public-lead-section { margin-top: 0; }
+.bw-editor-right button svg { width: 16px; height: 16px; stroke: #161c2d; }
+.bw-editor-right .bw-editor-save svg { stroke: #fff; }
+/* 전역 letter-spacing:0 !important 를 이기기 위한 자간 변수 — 킷 값 그대로 */
+.bw-canvas [style*="--bw-ls"] { letter-spacing: var(--bw-ls) !important; }
+.bw-canvas [data-bw-btn] { cursor: pointer; }
+.bw-canvas [data-bw-btn]:focus-visible { outline: 3px solid #473bf0; outline-offset: 2px; }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PublicLandingClient } from "../../../components/public-landing-client";
+import { loadBrainwavePageServer } from "../../../lib/landing/brainwave/load";
 import { getPublishedLandingBySlug } from "../../../lib/landing/repository";
 
 export async function generateMetadata(
@@ -22,5 +23,6 @@ export default async function PublicLandingPage(
   const { slug } = await context.params;
   const published = await getPublishedLandingBySlug(slug);
   if (!published) notFound();
-  return <PublicLandingClient slug={slug} config={published.config} />;
+  const bw = published.config.pageData?.brainwave ? await loadBrainwavePageServer(published.config.pageData.brainwave.page) : null;
+  return <PublicLandingClient slug={slug} config={published.config} brainwavePage={bw} />;
 }

@@ -4,6 +4,7 @@ import { blocksPlugin, createUsePuck, fieldsPlugin, outlinePlugin, Puck, useGetP
 import { MousePointerClick, Redo2, Save, Sparkles, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { landingBlockConfig, type LandingBlockProps } from "./landing-blocks";
+import { BrainwaveEditor } from "./brainwave-editor";
 
 const useLandingPuck = createUsePuck();
 
@@ -186,6 +187,10 @@ export function LandingVisualBuilder({
   onClose: () => void;
   onSave: (data: LandingPageData) => void;
 }) {
+  /* Brainwave.io 킷 페이지는 블록 편집기(Puck)가 아니라 자리 편집기로 고친다 */
+  if (data.brainwave) {
+    return <BrainwaveEditor data={data} onClose={onClose} onSave={onSave} />;
+  }
   return (
     <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="판매 페이지 자유 편집">
       <BuilderHint />

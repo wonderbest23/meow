@@ -245,8 +245,8 @@ export default function PlanHomepagePage() {
       {phase === "loading" && (
         <div className={styles.center}>
           <span className={styles.dot} />
-          <p className={styles.centerTitle}>계획서 내용으로 홈페이지를 만들고 있어요</p>
-          <p className={styles.centerNote}>대표 상품, 첫 고객, 문제와 해결을 그대로 옮깁니다.</p>
+          <p className={styles.centerTitle}>홈페이지 틀을 불러오고 있어요</p>
+          <p className={styles.centerNote}>Brainwave.io 킷 페이지를 그대로 가져옵니다. 글과 사진은 편집에서 바꿉니다.</p>
         </div>
       )}
 
@@ -275,10 +275,10 @@ export default function PlanHomepagePage() {
         <div className={styles.previewWrap}>
           <div className={styles.payBar}>
             <div>
-              <strong className={styles.payTitle}>계획서 내용으로 만든 홈페이지</strong>
+              <strong className={styles.payTitle}>킷 페이지로 만든 홈페이지</strong>
               <p className={styles.payNote}>
                 {sample
-                  ? "예시 계획서의 답변으로 만든 결과입니다. 내 계획서로도 이렇게 만들어집니다."
+                  ? "예시 홈페이지입니다. 내 사업으로 만들면 이 페이지의 글과 사진을 바꿔 쓰게 됩니다."
                   : `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 홈페이지 에디터가 필요합니다. ${price.toLocaleString("ko-KR")}원.`}
               </p>
             </div>
@@ -333,7 +333,7 @@ export default function PlanHomepagePage() {
           <span className={styles.builderOpenIcon}><LayoutTemplate size={18} /></span>
           <span className={styles.builderOpenText}>
             <strong>자유 편집 열기</strong>
-            <small>글·사진·색을 화면에서 직접 고칩니다</small>
+            <small>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다. 26가지 페이지 중 고를 수 있어요</small>
           </span>
           <ArrowRight size={16} />
         </button>

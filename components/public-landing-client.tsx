@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "react";
+import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
+import type { BrainwavePageData } from "./brainwave-page";
 import { ArrowRight, Check, ChevronDown, LoaderCircle, ShieldCheck } from "lucide-react";
 import { landingCollectedItems, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
@@ -17,9 +19,12 @@ function getVisitorId() {
 export function PublicLandingClient({
   slug,
   config,
+  brainwavePage = null,
 }: {
   slug: string;
   config: LandingDraft;
+  /** 킷 페이지 트리 — 서버가 미리 읽어 넘기면 첫 HTML 에 글이 다 들어간다 */
+  brainwavePage?: BrainwavePageData | null;
 }) {
   const formRef = useRef<HTMLDivElement>(null);
   const viewed = useRef(false);
@@ -99,14 +104,22 @@ export function PublicLandingClient({
     ? { backgroundImage: `url(${config.heroImageUrl})` }
     : undefined;
   const initials = config.businessName.replaceAll(" ", "").slice(0, 2);
+  /*
+   * 킷 배치(lib/landing/kits.ts)는 블록 안에서 정해지지만, 문의 양식과 상단
+   * 메뉴는 블록 밖에 있다 — 껍데기에도 같은 클래스를 붙여 한 벌로 입힌다.
+   */
+  const kitValue = config.pageData?.root?.props?.kit;
+  const kit = isLandingKit(kitValue) ? kitValue : null;
+  /* 킷 페이지는 머리글을 자기 안에 갖고 있다 — 우리 상단 메뉴를 겹쳐 두지 않는다 */
+  const brainwave = Boolean(config.pageData?.brainwave);
   return (
-    <main className={`public-landing tone-${config.backgroundTone} template-${config.templateId}`} style={style}>
-      <nav className="public-landing-nav">
+    <main className={`public-landing tone-${config.backgroundTone} template-${config.templateId}${kit ? ` kit kit-${kit}` : ""}${brainwave ? " brainwave" : ""}`} style={style}>
+      {!brainwave && <nav className="public-landing-nav">
         <span className="public-landing-brand">{config.logoImageUrl ? <img src={config.logoImageUrl} alt={`${config.businessName} 로고`} /> : <i>{initials}</i>}<strong>{config.businessName}</strong></span>
         <button onClick={moveToForm}>{config.ctaLabel}</button>
-      </nav>
+      </nav>}
 
-      {config.pageData ? <LandingBlocksRenderer data={config.pageData} /> : <><section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
+      {config.pageData ? <LandingBlocksRenderer data={config.pageData} preloaded={brainwavePage} /> : <><section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
         <div className="public-landing-hero-copy">
           <span>{config.heroLabel}</span>
           <h1>{config.headline}</h1>
@@ -166,6 +179,8 @@ export function PublicLandingClient({
         <p>{config.legalNotice}</p>
         {config.leadCaptureEnabled && <small>개인정보 문의 {config.privacyContact}</small>}
         <small>호스팅 제공자 {config.hostingProvider} · © {new Date().getFullYear()} {config.businessName}</small>
+        {/* CC BY 4.0 — 킷 배치를 쓴 페이지는 출처를 적는다 */}
+        {kit || brainwave ? <small className="public-kit-credit"><a href={landingKitCredit.url} target="_blank" rel="noreferrer">{landingKitCredit.text}</a></small> : null}
       </footer>
       {config.analyticsEnabled && !analyticsDismissed && !analyticsAgreed && <aside className="public-analytics-consent"><p><strong>방문 분석 선택 동의</strong><span>{config.analyticsNotice}</span></p><div><button onClick={() => setAnalyticsDismissed(true)}>거부</button><button onClick={() => setAnalyticsAgreed(true)}>동의</button></div></aside>}
     </main>

@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { kitForTemplate, type LandingKitId } from "./kits";
+import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "./brainwave/catalog";
 
 export const landingBlockTypes = [
   "HeroSection",
@@ -25,6 +27,14 @@ export const landingBlockTypes = [
   "FooterSection",
   "PhotoGrid",
   "PhotoBlock",
+  /*
+   * Brainwave.io 킷에서 가져온 칸들(lib/landing/kits.ts).
+   * 알림 띠(Alert) · 영상(Video) · 후기(Testimonial) — 킷의 9개 배치 중
+   * 8개가 후기를 두고, 셋이 영상을, 둘이 알림 띠를 둔다.
+   */
+  "AlertBar",
+  "VideoSection",
+  "ReviewSection",
 ] as const;
 
 export type LandingBlockType = (typeof landingBlockTypes)[number];
@@ -44,7 +54,21 @@ const primitiveProp = z.union([z.string().max(900_000), z.number(), z.boolean(),
 const slotProp = z.array(z.unknown()).max(64);
 const blockProp = z.union([primitiveProp, slotProp]);
 
+/*
+ * Brainwave.io 킷 페이지(노드 그대로).
+ *
+ * page 는 lib/landing/brainwave/catalog.ts 의 id, texts/images 는 노드 id → 바꾼 값.
+ * 이 값이 있으면 content(블록)는 쓰지 않는다 — 페이지는 킷 트리가 그린다.
+ */
+export const brainwaveDataSchema = z.object({
+  page: z.string().regex(/^[0-9]+-[0-9]+$/),
+  texts: z.record(z.string(), z.string().max(4000)).default({}),
+  images: z.record(z.string(), z.string().max(900_000)).default({}),
+});
+export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
+
 export const landingPageDataSchema = z.object({
+  brainwave: brainwaveDataSchema.optional(),
   root: z.object({
     props: z.record(z.string(), blockProp).optional(),
   }).passthrough(),
@@ -163,7 +187,26 @@ function splitMenuLine(label: string, fallbackName: string): { name: string; pri
   return { name: fallbackName, price: label };
 }
 
-export function createLandingPageData(seed: LandingPageSeed, templateId: string): LandingPageData {
+/**
+ * @param kitOverride 킷을 직접 고를 때(개발용 미리보기·나중의 킷 고르기 화면).
+ *                    없으면 업종 템플릿에 맞는 킷을 쓴다.
+ */
+export function createLandingPageData(seed: LandingPageSeed, templateId: string, kitOverride?: LandingKitId): LandingPageData {
+  /*
+   * 새 홈페이지는 Brainwave.io 킷 페이지를 노드 그대로 쓴다.
+   *
+   * 사용자 지시: "오차 없이 그대로 가져오고, 그 안에서 글·사진만 고친다" —
+   * 계획서 내용을 킷 자리에 끼워 맞추지 않는다(내가 임의로 대입하지 않는다).
+   * 킷의 글이 그대로 들어 있고, 편집기에서 자리마다 바꾼다.
+   * 아래 블록 조립(kit 배치)은 brainwave 값이 없는 옛 페이지를 위해 남겨 둔다.
+   */
+  if (!kitOverride) {
+    return landingPageDataSchema.parse({
+      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {} },
+      root: { props: { title: seed.businessName } },
+      content: [],
+    });
+  }
   const value = shared(seed);
   const menu = splitMenuLine(seed.priceLabel, seed.offerTitle);
   /* 손님이 오기 전에 확인하는 것 — 아는 것만, 아는 순서대로 */
@@ -287,19 +330,22 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
     a3: "",
   });
 
-  const heroLayout: Record<string, string> = {
-    service: "split",
-    local: "immersive",
-    product: "product",
-    class: "course",
-    tech: "tech",
-    creator: "editorial",
-    wellness: "immersive",
-    editorial: "editorial",
+  /*
+   * 첫 화면 배치는 킷 샘플에 가장 가까운 뼈대를 고른다 — 나머지 차이(바탕색·
+   * 둥글기·글자 크기)는 .kit-* CSS 가 입힌다.
+   *   consult 사진 위 흰 글 / cowork 어두운 사진 / shop 둥근 검정 상자 → immersive
+   *   agency·saas·app·b2b 사진 옆 글 → split / webapp 어두운 분할 → tech
+   *   product 상품 사진 → product
+   */
+  const kitHero: Record<string, string> = {
+    consult: "immersive", cowork: "immersive", shop: "immersive",
+    agency: "split", saas: "split", app: "split", b2b: "split",
+    webapp: "tech", product: "product",
   };
+  const heroKit = kitOverride ?? kitForTemplate[templateId] ?? "consult";
   const hero = block("HeroSection", `hero-${templateId}`, {
     ...value.hero,
-    layout: heroLayout[templateId] ?? "split",
+    layout: kitHero[heroKit] ?? "split",
   });
 
   /*
@@ -308,15 +354,58 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
    *  - 앱·플랫폼: 무엇이 되는지(기능) → 얼마인지(요금) → 걸리는 점(FAQ)
    *  - 수업·예약: 어떻게 진행되는지 → 얼마인지 → 궁금한 점
    */
-  const layouts: Record<string, LandingPageData["content"]> = {
-    service: [hero, trust, feature, process, price, faq, cta],
-    local: [hero, trust, gallery, price, location, faq, cta],
-    product: [hero, offer, price, stats, feature, gallery, cta],
-    class: [hero, feature, process, price, faq, location, cta],
-    tech: [hero, stats, feature, process, price, faq, cta],
-    creator: [hero, gallery, story, feature, price, cta],
-    wellness: [hero, trust, feature, gallery, price, location, cta],
-    editorial: [hero, story, stats, feature, price, cta],
+  /*
+   * 킷에서 가져온 칸들.
+   *
+   * 후기는 비워 둔다 — 받은 적 없는 후기를 지어 넣을 수는 없다. 사업주가
+   * 채우기 전까지 이 칸은 공개 화면에 나오지 않는다(갤러리와 같은 규칙).
+   * 알림 띠는 대표 상품 한 줄로, 영상은 주소를 넣기 전까지 나오지 않는다.
+   */
+  const alert = block("AlertBar", `alert-${templateId}`, {
+    tag: "안내",
+    text: seed.offerTitle ? `${seed.offerTitle} — 지금 문의하실 수 있습니다.` : "지금 문의하실 수 있습니다.",
+    linkLabel: seed.ctaLabel,
+  });
+  const video = block("VideoSection", `video-${templateId}`, {
+    heading: `${seed.businessName}을 1분 영상으로 만나보세요`,
+    description: "",
+    videoUrl: "",
+    posterUrl: seed.heroImageUrl,
+  });
+  const reviews = block("ReviewSection", `reviews-${templateId}`, {
+    eyebrow: "고객 후기",
+    heading: "이용하신 분들의 이야기",
+    quote1: "", name1: "", role1: "",
+    quote2: "", name2: "", role2: "",
+    quote3: "", name3: "", role3: "",
+  });
+
+  /*
+   * 킷의 9개 샘플이 섹션을 쌓은 순서 그대로다(lib/landing/kits.ts 머리말).
+   * 헤더·푸터는 공개 페이지 껍데기가 그리므로 뺐고, 킷의 'CTA Form' 은
+   * 공개 페이지의 문의 양식(#landing-contact)이 그 모양을 입는다.
+   *
+   *  consult  08: Hero → Facts → Services → Content → Alert → Testimonial → (Form)
+   *  agency   01: Hero → Services → Testimonial → About → Facts → Features → Works
+   *  saas     02: Hero → Features → Content → Facts → Content → Testimonial → Pricing → FAQ → CTA
+   *  cowork   03: Hero → Facts → Locations → Content → Features → Content → Subscribe
+   *  webapp   05: Hero → Features → Content×3 → Pricing
+   *  shop     06: Hero → Category → All Items → Content → Testimonial → CTA
+   *  app      07: Hero → Content×2 → How → Video → Features → Testimonial → Pricing
+   *  product  09: Hero → Content×3 → Pricing → CTA Image
+   *  b2b      10: Hero → Alert → Content → Services → Video → Testimonial → CTA
+   */
+  const kit = kitOverride ?? kitForTemplate[templateId] ?? "consult";
+  const kitLayouts: Record<string, LandingPageData["content"]> = {
+    consult: [hero, stats, feature, story, alert, reviews, price, faq, cta],
+    agency:  [hero, feature, reviews, story, stats, process, gallery, price, cta],
+    saas:    [hero, trust, story, stats, feature, reviews, price, faq, cta],
+    cowork:  [hero, stats, location, story, trust, gallery, price, faq, cta],
+    webapp:  [hero, trust, story, feature, process, price, faq, cta],
+    shop:    [hero, feature, offer, price, story, reviews, gallery, cta],
+    app:     [hero, story, feature, process, video, reviews, price, faq, cta],
+    product: [hero, offer, story, feature, price, reviews, cta],
+    b2b:     [hero, alert, story, feature, video, reviews, process, price, cta],
   };
   /*
    * 찾아오는 길은 주소를 모르면 뺀다.
@@ -324,11 +413,11 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string)
    * 말이 방문자에게 보이면, 그 페이지는 미완성으로 읽힌다. 빈 칸을 남기느니
    * 없는 칸으로 두고, 주소를 채우면 그때 나타나게 한다.
    */
-  const chosen = (layouts[templateId] ?? layouts.service).filter(
+  const chosen = (kitLayouts[kit] ?? kitLayouts.consult).filter(
     (item) => item !== location || Boolean(seed.businessAddress?.trim()),
   );
   return landingPageDataSchema.parse({
-    root: { props: { title: seed.businessName } },
+    root: { props: { title: seed.businessName, kit, accent: "#473bf0" } },
     content: chosen,
   });
 }
@@ -338,6 +427,8 @@ export function syncLandingPageData(
   seed: LandingPageSeed,
   changedKeys: string[],
 ): LandingPageData {
+  /* 킷 페이지는 폼 값을 받아 쓰지 않는다 — 글은 페이지 위에서 직접 고친다 */
+  if (data.brainwave) return data;
   const changed = new Set(changedKeys);
   const items = benefits(seed);
   return landingPageDataSchema.parse({

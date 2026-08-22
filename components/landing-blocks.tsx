@@ -5,6 +5,8 @@ import type { ComponentType, CSSProperties, ReactNode } from "react";
 import type { Config, Slot } from "@puckeditor/core";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { LandingMediaField } from "./landing-media-field";
+import { isLandingKit, landingKitOptions } from "../lib/landing/kits";
+import { BrainwavePage, type BrainwavePageData } from "./brainwave-page";
 
 type HeroProps = {
   eyebrow: string;
@@ -69,6 +71,16 @@ type CtaProps = { eyebrow: string; title: string; description: string; buttonLab
 type PhotoProps = { imageUrl: string; caption: string; shape: string; size: string; fit: string };
 type PhotoGridProps = { eyebrow: string; heading: string; columns: string; photos: Slot } & BlockStyle;
 type FooterProps = { brand: string; tagline: string; hours: string; contact: string } & BlockStyle;
+/* Brainwave.io 킷에서 가져온 칸들 */
+type AlertProps = { tag: string; text: string; linkLabel: string } & BlockStyle;
+type VideoProps = { heading: string; description: string; videoUrl: string; posterUrl: string } & BlockStyle;
+type ReviewProps = {
+  eyebrow: string;
+  heading: string;
+  quote1: string; name1: string; role1: string;
+  quote2: string; name2: string; role2: string;
+  quote3: string; name3: string; role3: string;
+} & BlockStyle;
 
 export type LandingBlockProps = {
   HeroSection: HeroProps;
@@ -86,6 +98,9 @@ export type LandingBlockProps = {
   FooterSection: FooterProps;
   PhotoBlock: PhotoProps;
   PhotoGrid: PhotoGridProps;
+  AlertBar: AlertProps;
+  VideoSection: VideoProps;
+  ReviewSection: ReviewProps;
 };
 
 type PriceListProps = {
@@ -242,7 +257,8 @@ const area = (label: string) => ({ type: "textarea" as const, label });
  * 버튼에서 글이 안 보이는 조합이 나온다 — 흰 글씨가 읽히는 진하기만 골라 뒀다.
  */
 const ACCENT_OPTIONS = [
-  { label: "파랑 (기본)", value: "#1b64da" },
+  { label: "킷 파랑 (기본)", value: "#473bf0" },
+  { label: "파랑", value: "#1b64da" },
   { label: "남색", value: "#1e3a8a" },
   { label: "초록", value: "#15803d" },
   { label: "청록", value: "#0f766e" },
@@ -281,10 +297,15 @@ const SCALE_OPTIONS = [
 
 /** 저장된 값이 우리가 고른 색일 때만 쓴다 — 남이 넣은 값이 그대로 style 로 나가지 않게 */
 /** 저장된 값이 우리가 고른 것일 때만 클래스로 내보낸다 */
-export function landingPageClass(font: unknown, scale: unknown) {
+export function landingPageClass(font: unknown, scale: unknown, kit?: unknown) {
   const f = FONT_OPTIONS.some((o) => o.value === font) ? font : "sans";
   const c = SCALE_OPTIONS.some((o) => o.value === scale) ? scale : "md";
-  return `landing-block-page font-${f} scale-${c}`;
+  /*
+   * 킷 배치(lib/landing/kits.ts). 값이 없으면 — 킷을 들이기 전에 저장된
+   * 페이지 — 아무 킷 클래스도 붙지 않아 예전 모양 그대로 그려진다.
+   */
+  const k = isLandingKit(kit) ? ` kit kit-${kit}` : "";
+  return `landing-block-page font-${f} scale-${c}${k}`;
 }
 
 export function landingAccentStyle(accent: unknown) {
@@ -295,13 +316,18 @@ export function landingAccentStyle(accent: unknown) {
 export const landingBlockConfig: Config<LandingBlockProps> = {
   root: {
     fields: {
+      kit: {
+        type: "select",
+        label: "페이지 배치 (Brainwave.io 킷)",
+        options: landingKitOptions.map((o) => ({ label: `${o.name} — ${o.description}`, value: o.id })),
+      },
       accent: { type: "select", label: "페이지 강조색", options: ACCENT_OPTIONS },
       font: { type: "select", label: "글꼴", options: FONT_OPTIONS },
       scale: { type: "select", label: "글자 크기", options: SCALE_OPTIONS },
     },
-    defaultProps: { accent: "#1b64da", font: "sans", scale: "md" },
-    render: ({ accent, font, scale, children }) => (
-      <div className={landingPageClass(font, scale)} style={landingAccentStyle(accent)}>{children as ReactNode}</div>
+    defaultProps: { kit: "consult", accent: "#473bf0", font: "sans", scale: "md" },
+    render: ({ accent, font, scale, kit, children }) => (
+      <div className={landingPageClass(font, scale, kit)} style={landingAccentStyle(accent)}>{children as ReactNode}</div>
     ),
   },
   categories: {
@@ -317,7 +343,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     },
     visual: {
       title: "사진과 근거",
-      components: ["TrustBar", "StatsSection", "GallerySection", "PhotoGrid", "LocationSection", "FaqSection", "FooterSection"],
+      components: ["TrustBar", "StatsSection", "GallerySection", "PhotoGrid", "LocationSection", "FaqSection", "ReviewSection", "VideoSection", "AlertBar", "FooterSection"],
       defaultExpanded: true,
     },
   },
@@ -791,6 +817,113 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
       ),
     },
     /*
+     * ── Brainwave.io 킷에서 가져온 칸들 ──────────────────────────────
+     */
+    AlertBar: {
+      label: "알림 띠",
+      fields: {
+        tag: liveText("작은 꼬리표"),
+        text: liveText("알림 문장"),
+        linkLabel: liveText("링크 글자"),
+        ...styleFields,
+      },
+      defaultProps: { tag: "안내", text: "지금 문의하실 수 있습니다.", linkLabel: "문의하기", ...styleDefaults },
+      render: ({ tag, text, linkLabel, ...style }) => (
+        <section className={`landing-block landing-block-alert ${styleClass(style)}`} style={blockBg(style)}>
+          <div>
+            {tag ? <i>{tag}</i> : null}
+            <p>{text} {linkLabel ? <a href="#landing-contact">{linkLabel}</a> : null}</p>
+          </div>
+        </section>
+      ),
+    },
+    /*
+     * 영상 — 주소를 넣기 전까지는 그리지 않는다. 재생 단추만 있고 눌러도 아무
+     * 일이 없는 칸은 고장 난 페이지로 읽힌다.
+     */
+    VideoSection: {
+      label: "영상",
+      fields: {
+        heading: liveText("제목"),
+        description: liveArea("설명"),
+        videoUrl: text("영상 주소 (유튜브)"),
+        posterUrl: imageField("덮개 사진"),
+        ...styleFields,
+      },
+      defaultProps: { heading: "1분 영상으로 만나보세요", description: "", videoUrl: "", posterUrl: "", ...styleDefaults },
+      render: ({ heading, description, videoUrl, posterUrl, ...style }) => {
+        const url = typeof videoUrl === "string" ? videoUrl.trim() : "";
+        if (!url) return <></>; /* Puck 은 render 가 항상 요소를 돌려주기를 요구한다 */
+        const id = url.match(/(?:youtu\.be\/|v=|embed\/|shorts\/)([\w-]{6,})/)?.[1];
+        const poster = typeof posterUrl === "string" ? posterUrl : "";
+        return (
+          <section className={`landing-block landing-block-video ${styleClass(style)}`} style={blockBg(style)}>
+            <div className="landing-video-frame" style={poster ? { backgroundImage: `url("${poster.replace(/"/g, "%22")}")` } : undefined}>
+              {id ? (
+                <iframe
+                  src={`https://www.youtube-nocookie.com/embed/${id}`}
+                  title={typeof heading === "string" ? heading : "영상"}
+                  loading="lazy"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                />
+              ) : (
+                <a className="landing-video-play" href={url} target="_blank" rel="noreferrer" aria-label="영상 보기"><b /></a>
+              )}
+            </div>
+            <div className="landing-video-copy">
+              <h2>{heading}</h2>
+              {description ? <p>{description}</p> : null}
+            </div>
+          </section>
+        );
+      },
+    },
+    /*
+     * 후기 — 셋 다 비어 있으면 칸 자체를 그리지 않는다(갤러리와 같은 규칙).
+     * 받은 적 없는 후기를 채움말로 세우면 그게 곧 거짓 광고다.
+     */
+    ReviewSection: {
+      label: "고객 후기",
+      fields: {
+        eyebrow: liveText("작은 안내 문구"),
+        heading: liveText("제목"),
+        quote1: area("후기 1"), name1: text("이름 1"), role1: text("소개 1 (예: 성수동 · 2회 방문)"),
+        quote2: area("후기 2"), name2: text("이름 2"), role2: text("소개 2"),
+        quote3: area("후기 3"), name3: text("이름 3"), role3: text("소개 3"),
+        ...styleFields,
+      },
+      defaultProps: {
+        eyebrow: "고객 후기", heading: "이용하신 분들의 이야기",
+        quote1: "", name1: "", role1: "", quote2: "", name2: "", role2: "", quote3: "", name3: "", role3: "",
+        ...styleDefaults,
+      },
+      render: ({ eyebrow, heading, quote1, name1, role1, quote2, name2, role2, quote3, name3, role3, ...style }) => {
+        const items = [
+          { quote: quote1, name: name1, role: role1 },
+          { quote: quote2, name: name2, role: role2 },
+          { quote: quote3, name: name3, role: role3 },
+        ].filter((item) => typeof item.quote === "string" && item.quote.trim());
+        if (!items.length) return <></>;
+        return (
+          <section className={`landing-block landing-block-reviews ${styleClass(style)}`} style={blockBg(style)}>
+            <header><span>{eyebrow}</span><h2>{heading}</h2></header>
+            <div>
+              {items.map((item, index) => (
+                <article key={index}>
+                  <blockquote>“{item.quote}”</blockquote>
+                  <footer>
+                    <i aria-hidden="true">{(item.name || "고객").slice(0, 1)}</i>
+                    <div><strong>{item.name || "고객"}</strong>{item.role ? <small>{item.role}</small> : null}</div>
+                  </footer>
+                </article>
+              ))}
+            </div>
+          </section>
+        );
+      },
+    },
+    /*
      * 페이지 맨 아래 가게 소개.
      *
      * 공개 페이지는 이미 사업자정보 푸터를 그린다(대표자·사업장·사업자등록번호·
@@ -862,11 +995,15 @@ function withSlotRenderers(props: Record<string, unknown>) {
   return next;
 }
 
-export function LandingBlocksRenderer({ data }: { data: LandingPageData }) {
+export function LandingBlocksRenderer({ data, preloaded }: { data: LandingPageData; preloaded?: BrainwavePageData | null }) {
+  /* Brainwave.io 킷 페이지 — 노드 그대로, 글·사진만 바꿔 끼운 채 그린다 */
+  if (data.brainwave) {
+    return <BrainwavePage pageId={data.brainwave.page} overrides={{ texts: data.brainwave.texts, images: data.brainwave.images }} preloaded={preloaded} />;
+  }
   /* 편집기에서 고른 강조색은 root 에 있다 — 공개 화면에도 같은 색이 걸려야 한다 */
   return (
     <div
-      className={landingPageClass(data.root?.props?.font, data.root?.props?.scale)}
+      className={landingPageClass(data.root?.props?.font, data.root?.props?.scale, data.root?.props?.kit)}
       style={landingAccentStyle(data.root?.props?.accent)}
     >
       {data.content.map((component, index) =>

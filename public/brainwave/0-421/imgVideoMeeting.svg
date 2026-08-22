@@ -1,0 +1,6 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="39" height="32" viewBox="0 0 39 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="video_meeting">
+<path id="Combined Shape" fill-rule="evenodd" clip-rule="evenodd" d="M3.54545 0H35.4545C37.4134 0 39 1.59111 39 3.55556L38.9823 24.8889C38.9823 26.8533 37.4134 28.4444 35.4545 28.4444H26.5909V32H12.4091V28.4444H3.54545C1.58659 28.4444 0 26.8533 0 24.8889V3.55556C0 1.59111 1.58659 0 3.54545 0ZM3.54545 24.8889H35.4545V3.55556H3.54545V24.8889Z" fill="#68D585"/>
+<path id="Path" opacity="0.4" d="M26.5909 14.2222L14.1818 21.3333V7.11111L26.5909 14.2222Z" fill="#68D585"/>
+</g>
+</svg>

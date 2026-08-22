@@ -3,7 +3,7 @@
 import { Image as ImageIcon, Upload, X } from "lucide-react";
 import { useRef, useState } from "react";
 
-async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Blob> {
+export async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Blob> {
   if (!file.type.startsWith("image/")) throw new Error("이미지 파일만 올릴 수 있습니다.");
   if (file.size > 12 * 1024 * 1024) throw new Error("12MB 이하 이미지를 선택해주세요.");
 
@@ -45,7 +45,7 @@ async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Blob> {
  * 이미 base64로 저장된 옛 페이지는 그대로 읽힌다 — 스키마가 두 형태를 모두
  * 받아들이고, 여기서는 새로 올리는 것만 주소로 바꾼다.
  */
-async function uploadImage(blob: Blob, kind: "logo" | "hero") {
+export async function uploadImage(blob: Blob, kind: "logo" | "hero") {
   const form = new FormData();
   form.append("file", new File([blob], `${kind}.${blob.type === "image/png" ? "png" : "jpg"}`, { type: blob.type }));
   const res = await fetch("/api/uploads", { method: "POST", body: form });

@@ -133,7 +133,9 @@ export function LandingQuickEditor({
           </div>
           <section className="landing-advanced-edit-callout">
             <span><PanelsTopLeft /></span>
-            <div><small>더 자유롭게 만들기</small><strong>섹션을 직접 추가하고 순서를 바꾸세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있습니다.</p></div>
+            {draft.pageData?.brainwave
+              ? <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong><p>Brainwave.io 킷 페이지를 그대로 씁니다. 26가지 페이지 중 다른 것으로 바꿀 수도 있습니다.</p></div>
+              : <div><small>더 자유롭게 만들기</small><strong>섹션을 직접 추가하고 순서를 바꾸세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있습니다.</p></div>}
             <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
           </section>
           <div className="landing-media-grid">
@@ -144,7 +146,22 @@ export function LandingQuickEditor({
         </div>
       )}
 
-      {step === "content" && (
+      {step === "content" && draft.pageData?.brainwave && (
+        <div className="landing-easy-panel">
+          <header><small>고객이 보는 내용</small><h4>글과 사진은 페이지 위에서 직접 고칩니다</h4><p>킷 페이지는 이 폼의 문구를 받아 쓰지 않습니다. 아래 두 값은 문의 양식과 상단 버튼에 쓰입니다.</p></header>
+          <div className="landing-essential-form">
+            <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(event) => update({ businessName: event.target.value })} /></label>
+            <label><span>문의 버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(event) => update({ ctaLabel: event.target.value })} /></label>
+          </div>
+          <section className="landing-advanced-edit-callout">
+            <span><PanelsTopLeft /></span>
+            <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong></div>
+            <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
+          </section>
+        </div>
+      )}
+
+      {step === "content" && !draft.pageData?.brainwave && (
         <div className="landing-easy-panel">
           <header><small>고객이 보는 내용</small><h4>추천 문구를 읽고 틀린 부분만 고치세요</h4><p>어려운 용어 없이 고객, 제공 내용과 가격이 바로 보이게 구성했습니다.</p></header>
           <div className="landing-essential-form">

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { PublicLandingClient } from "../../components/public-landing-client";
+import { loadBrainwavePageServer } from "../../lib/landing/brainwave/load";
 import { getPublishedLandingByCustomDomain } from "../../lib/landing/repository";
 
 async function currentHostname() {
@@ -26,5 +27,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function CustomerSitePage() {
   const published = await getPublishedLandingByCustomDomain(await currentHostname());
   if (!published) notFound();
-  return <PublicLandingClient slug={published.site.slug} config={published.config} />;
+  const bw = published.config.pageData?.brainwave ? await loadBrainwavePageServer(published.config.pageData.brainwave.page) : null;
+  return <PublicLandingClient slug={published.site.slug} config={published.config} brainwavePage={bw} />;
 }
