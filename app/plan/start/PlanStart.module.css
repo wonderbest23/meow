@@ -1216,3 +1216,4 @@
   .main, .stepBody, .typeList .typeRow, .step.stepOn .stepNum { animation: none; }
   .typeRow:hover, .primaryBtn:not(:disabled):hover { transform: none; }
 }
+.fieldNote { margin: 6px 0 0; color: #8181a5; font-size: 12px; line-height: 1.5; }

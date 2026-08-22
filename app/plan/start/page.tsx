@@ -449,6 +449,12 @@ export default function PlanStartPage() {
                       {biz.name.trim() && <span className={styles.okTag}>✓</span>}
                     </label>
                     <input id="bizName" className={styles.input} placeholder="예: 새벽커피" value={biz.name} onChange={(e) => set("name", e.target.value)} />
+                    {/* 이 이름이 곧 플랜 이름이 된다 — 모르고 지나가면 새 플랜이 앞 사업 이름으로 만들어진다 */}
+                    <p className={styles.fieldNote}>
+                      {hasExisting
+                        ? "이전에 등록한 사업입니다. 다른 사업이라면 이름부터 바꿔 주세요 — 이 이름이 플랜 이름이 됩니다."
+                        : "이 이름이 플랜 이름이 됩니다."}
+                    </p>
                   </div>
 
                   <div className={`${styles.field} ${styles.fieldWide}`}>
@@ -547,8 +553,33 @@ export default function PlanStartPage() {
                       >
                         <span className={styles.inheritRadio} aria-hidden="true" />
                         <span className={styles.inheritText}>
-                          <b>처음부터 새로 시작</b>
-                          <span>다른 사업을 만들거나 답을 전부 새로 쓸 때 — 빈 상태로 시작해요</span>
+                          <b>같은 사업, 답변은 새로</b>
+                          <span>사업은 그대로 두고 답을 전부 다시 쓸 때 — 빈 상태로 시작해요</span>
+                        </span>
+                      </button>
+                      {/*
+                        '다른 사업'은 답변 문제가 아니라 사업 자체가 바뀌는 것이다.
+                        예전에는 '처음부터 새로 시작' 하나가 두 가지를 다 뜻해서,
+                        누르고 만들어도 플랜 이름이 앞 사업(예: '한빛싱크')으로 남았다.
+                        — 플랜 제목은 사업 이름을 그대로 쓰기 때문이다.
+                        이 줄은 사업 정보를 비우고 1단계로 되돌린다.
+                      */}
+                      <button
+                        type="button"
+                        role="radio"
+                        aria-checked={false}
+                        className={styles.inheritOpt}
+                        onClick={() => {
+                          setBiz({ ...EMPTY_BUSINESS });
+                          setInherit(false);
+                          setHasExisting(false);
+                          setStep(1);
+                        }}
+                      >
+                        <span className={styles.inheritRadio} aria-hidden="true" />
+                        <span className={styles.inheritText}>
+                          <b>다른 사업으로 만들기</b>
+                          <span>사업 이름부터 새로 적어요 — 플랜 이름도 새 사업 이름이 됩니다</span>
                         </span>
                       </button>
                     </div>
