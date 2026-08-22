@@ -1680,8 +1680,13 @@
 }
 @media (prefers-reduced-motion: reduce) { .gauge i { transition: none; } }
 
-/* 하단 바 배치 — 라벨(왼쪽) · 이전/다음(오른쪽에 나란히).
-   .btnPrimary 의 margin-left:auto 와 라벨의 margin-right:auto 가 겹쳐
-   '이전' 이 가운데 붕 떠 있었다. 밀어내기는 라벨 하나만 한다. */
+/* 하단 바 배치 — 버튼은 항상 오른쪽에 나란히.
+   진행 라벨이 묶음 제목 옆으로 올라가면서 밀어낼 것이 없어졌다.
+   첫 번째 버튼이 왼쪽 끝을 밀어 주고, 나머지는 그 옆에 붙는다. */
+.foot { justify-content: flex-end; }
 .foot .btnPrimary { margin-left: 0; }
-.foot .gaugeText { margin-right: auto; }
+
+/* 진행 라벨을 하단에서 묶음 제목 옆으로 올린다 — 아래에는 게이지만 남는다 */
+.gaugeText { display: none; }
+.glStep { margin-left: auto; color: #8181a5; font-size: 12px; font-weight: 700; }
+.gl { display: flex; align-items: center; gap: 8px; }

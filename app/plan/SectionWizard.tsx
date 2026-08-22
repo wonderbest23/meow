@@ -621,7 +621,10 @@ export default function SectionWizard({
               {(
                 (stepGroup ? [stepGroup] : []).map((g: QuestionGroup) => (
                   <div key={`${g.id}-${stepIndex}`} className={styles.group}>
-                    <div className={styles.gl}><span className={styles.gi} aria-hidden="true" />{g.label}</div>
+                    <div className={styles.gl}>
+                      <span className={styles.gi} aria-hidden="true" />{g.label}
+                      {stepCount > 1 && <span className={styles.glStep}>{stepIndex + 1} / {stepCount}</span>}
+                    </div>
                     {g.questions.filter((q) => isVisible(q, answers)).map((q) => (
                       <div
                         key={q.id}
@@ -683,7 +686,7 @@ export default function SectionWizard({
                   <i style={{ width: `${Math.round(((stepIndex + 1) / stepCount) * 100)}%` }} />
                 </span>
               )}
-              {stepCount > 1 && <span className={styles.gaugeText}>{stepGroup?.label} · {stepIndex + 1}/{stepCount}</span>}
+
               {/*
                * 버튼은 하나다.
                * 본문 생성은 뒤에서 돌고, 사용자는 계속 다음 질문으로 나아간다.

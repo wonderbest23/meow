@@ -657,3 +657,6 @@
   .logo { width: 40px; min-width: 40px; height: 40px; overflow: hidden; place-items: center; }
   .logo img { width: auto; height: 26px; object-position: left center; max-width: none; }
 }
+
+/* 로고를 본문 첫 줄과 같은 높이로 — 레일과 카드가 따로 시작하는 것처럼 보였다 */
+.rail { padding-top: 40px; }
