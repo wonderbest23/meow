@@ -1022,3 +1022,133 @@
   .page { padding: 16px 16px 56px; }
   .main { padding: 20px 16px 24px; }
 }
+
+/*
+ * ── CRM UI Kit 'Create New Project' 문법 ───────────────────────────
+ * 작은 캡션 → 큰 제목 → 얇은 구분선으로 나뉜 섹션 → 맨 아래 주 버튼.
+ * 포스터 타일은 없다. 유형 선택은 Tasks 화면과 같은 목록 행이다.
+ */
+.main { max-width: 880px; }
+.h1 { font-size: 20px; font-weight: 700; color: #1c1d21; margin-bottom: 4px; }
+.lead { color: #8181a5; font-size: 13px; }
+.lead b { color: #1c1d21; }
+
+/* 단계 표시 — 작게, 칩처럼 */
+.steps { margin: 18px 0 22px; padding-bottom: 18px; border-bottom: 1px solid #f0f0f3; gap: 10px; }
+.step { font-size: 13px; color: #8181a5; }
+.stepOn { color: #1c1d21; }
+.stepNum {
+  width: 22px; height: 22px; border-radius: 50%;
+  background: #f0f0f3; color: #8181a5; font-size: 12px; font-weight: 700;
+  display: inline-grid; place-items: center;
+}
+.stepOn .stepNum { background: var(--blue, #4a3aff); color: #fff; }
+.stepDone .stepNum { background: #22b573; color: #fff; }
+.stepBar { background: #e6e6ef; }
+
+/* 입력칸 — 킷 폼: 라벨 12/#8181a5, 칸 44, 테두리 #e6e6ef r8 */
+.field label, .titleLabel { color: #8181a5; font-size: 12px; font-weight: 700; }
+.field input, .field textarea, .field select, .titleInput {
+  min-height: 44px;
+  border: 1px solid #e6e6ef;
+  border-radius: 8px;
+  background: #fff;
+  color: #1c1d21;
+  font-size: 14px;
+}
+.field input:focus, .field textarea:focus, .field select:focus, .titleInput:focus {
+  border-color: var(--blue, #4a3aff);
+  box-shadow: 0 0 0 3px rgba(74, 58, 255, .12);
+  outline: none;
+}
+
+/* 사업 요약·이어받기 상자 — 옅은 바탕 r8, 테두리 없음 */
+.summaryBox { border: 0; border-radius: 8px; background: #f5f5fa; color: #1c1d21; }
+.inheritBox { border: 0; border-radius: 8px; background: #f5f5fa; }
+.inheritHead { color: #8181a5; font-size: 12px; font-weight: 700; }
+.inheritOpt { border-radius: 8px; }
+.inheritOn { background: #fff; box-shadow: 0 1px 2px rgba(28, 29, 33, .06); }
+
+/* 카테고리 — 킷 필터 칩 */
+.cats { border: 0; background: transparent; gap: 6px; padding: 0; }
+.cats button {
+  min-height: 30px !important;
+  padding: 0 12px !important;
+  border: 0;
+  border-radius: 8px !important;
+  background: #f5f5fa;
+  color: #55586a;
+  font-size: 12px;
+  font-weight: 700 !important;
+}
+.cats button.catOn { background: var(--blue, #4a3aff); color: #fff; }
+
+.hiddenNote, .sameNote {
+  padding: 10px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: #f5f5fa;
+  color: #55586a;
+  font-size: 12.5px;
+}
+
+/* ── 유형 목록 행 ── */
+.typeList { display: grid; gap: 6px; margin-top: 12px; }
+.typeRow {
+  width: 100%;
+  min-height: 60px !important;
+  padding: 10px 12px 10px 14px !important;
+  border: 1px solid #f0f0f3 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  box-shadow: none !important;
+  color: inherit;
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: background .12s ease, border-color .12s ease;
+}
+.typeRow:hover { background: #f9f9fc !important; border-color: #e6e6ef !important; }
+.typeRow:focus-visible { outline: 2px solid var(--blue, #4a3aff); outline-offset: 1px; }
+.typeIcon {
+  width: 34px; height: 34px; border-radius: 8px;
+  background: color-mix(in srgb, var(--acc, #4a3aff) 12%, #fff);
+  color: var(--acc, #4a3aff);
+  display: grid; place-items: center;
+}
+.typeIcon svg { display: inline-block !important; width: 16px !important; height: 16px !important; }
+.typeMain { min-width: 0; display: grid; gap: 2px; }
+.typeMain b { font-size: 14px; font-weight: 700; color: #1c1d21; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.typeMain small { font-size: 12.5px; color: #8181a5; line-height: 1.45; }
+.typeBadge {
+  padding: 2px 7px; border-radius: 5px;
+  background: #fff4d6; color: #8a6400;
+  font-size: 10.5px; font-style: normal; font-weight: 700;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.typeBadge svg { display: inline-block !important; width: 10px !important; height: 10px !important; }
+.typeCount { color: #8181a5; font-size: 12px; white-space: nowrap; }
+.typeGo {
+  padding: 6px 10px; border-radius: 6px;
+  background: #f5f5fa; color: var(--blue, #4a3aff);
+  font-size: 12px; font-weight: 700; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.typeGo svg { display: inline-block !important; width: 14px !important; height: 14px !important; }
+.typeRow:hover .typeGo { background: var(--blue, #4a3aff); color: #fff; }
+
+/* 버튼 — 킷 Send: r8, 보통 크기 */
+.primaryBtn { min-height: 42px; border-radius: 8px; font-size: 14px; }
+.ghostBtn { min-height: 38px; border: 1px solid #e6e6ef; border-radius: 8px; color: #55586a; background: #fff; font-size: 13px; }
+
+@media (max-width: 640px) {
+  .typeRow { grid-template-columns: 34px minmax(0, 1fr); }
+  .typeCount { grid-column: 2; }
+  .typeGo { grid-column: 2; justify-self: start; }
+}
+/* 카테고리 칩이 전폭 반반으로 늘어나던 것 — 내용 폭만 */
+.cats { display: flex; width: fit-content; grid-template-columns: none; }
+.cats button { flex: none; width: auto; }

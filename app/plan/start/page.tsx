@@ -553,35 +553,31 @@ export default function PlanStartPage() {
                     이미 만든 유형 {hiddenCount}개는 목록에서 뺐어요. 다른 사업으로 만들려면 위에서 ‘처음부터 새로 시작’을 선택해 주세요.
                   </p>
                 )}
-                {/* 표지형 카드 덱 — 레퍼런스 대시보드의 플랜 카드 구조(커버+하단 스트립+배지) */}
-                <div className={styles.deck}>
+                {/*
+                  CRM UI Kit 의 목록 행 — 포스터 타일 대신 한 줄에 하나씩.
+                  아이콘 · 이름/설명 · 섹션 수 · 선택. 읽을 것이 줄고 비교가 쉽다.
+                */}
+                <div className={styles.typeList} role="list">
                   {[...(featured ? [featured] : []), ...others].map((pt) => {
-                    const tone = TONES[pt.tone] ?? TONES[1];
-                    // 아이콘·대표색은 내 플랜 목록과 같은 공용 정의에서 — 화면마다 얼굴이 달라지지 않게
                     const meta = TYPE_META[pt.type] ?? DEFAULT_META;
                     return (
                       <button
                         key={pt.id}
-                        className={styles.planCard}
-                        style={{ ["--acc" as string]: meta.accent, ["--tint" as string]: tone.tint }}
+                        role="listitem"
+                        className={styles.typeRow}
+                        style={{ ["--acc" as string]: meta.accent }}
                         onClick={() => pick(pt)}
                       >
-                        <span className={styles.sheet}>
-                          <span className={styles.cover}>
-                            {pt.featured && (
-                              <span className={styles.coverBadge}>
-                                <Star size={10} fill="currentColor" /> 가장 인기
-                              </span>
-                            )}
-                            <span className={styles.coverIcon} aria-hidden="true"><meta.Icon /></span>
-                            <span className={styles.coverName}>{pt.name}</span>
-                          </span>
-                          <span className={styles.strip}>
-                            <b>{sectionCountForType(pt.type)}개 섹션</b>
-                            <ArrowRight size={14} />
-                          </span>
+                        <span className={styles.typeIcon} aria-hidden="true"><meta.Icon /></span>
+                        <span className={styles.typeMain}>
+                          <b>
+                            {pt.name}
+                            {pt.featured && <em className={styles.typeBadge}><Star size={10} fill="currentColor" /> 가장 인기</em>}
+                          </b>
+                          <small>{pt.desc}</small>
                         </span>
-                        <span className={styles.cardDesc}>{pt.desc}</span>
+                        <span className={styles.typeCount}>{sectionCountForType(pt.type)}개 섹션</span>
+                        <span className={styles.typeGo}>선택 <ArrowRight size={14} /></span>
                       </button>
                     );
                   })}
