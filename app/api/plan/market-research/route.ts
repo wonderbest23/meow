@@ -140,6 +140,7 @@ export async function POST(request: Request) {
       WEB_SEARCH_NO_SOURCES: { status: 404, message: "공식 자료를 찾지 못했어요. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해주세요." },
       WEB_SEARCH_PARSE_FAILED: { status: 502, message: "공식 자료를 정리하지 못했어요. 잠시 후 다시 시도해 주세요." },
       WEB_SEARCH_API_REJECTED: { status: 502, message: "검색 서비스가 요청을 거부했습니다. 잠시 뒤 다시 시도해주세요." },
+      WEB_SEARCH_OUTPUT_TRUNCATED: { status: 502, message: "공식 자료를 정리하다가 응답이 끊겼습니다. 잠시 후 다시 시도해 주세요." },
       MARKET_RESEARCH_EMPTY: { status: 502, message: "검색 응답이 비어 있었습니다. 잠시 뒤 다시 시도해주세요." },
       MARKET_RESEARCH_UNAVAILABLE: { status: 502, message: "검색 서비스에 연결하지 못했습니다. 잠시 뒤 다시 시도해주세요." },
     };

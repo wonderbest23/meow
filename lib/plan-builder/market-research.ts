@@ -183,7 +183,16 @@ export function toPromptEvidence(list: MarketEvidence[]) {
     unit: e.unit,
     sourceName: e.sourceName,
     sourceUrl: e.sourceUrl,
-    observedAt: e.observedAt,
+    /*
+     * 검색일이 기준일 자리에 들어가지 않게 한다.
+     *
+     * 원문에서 기준일을 확인하지 못하면 저장할 때 검색한 날짜를 대신 넣는다
+     * (스키마가 날짜를 요구한다). 그 값을 그대로 넘겼더니 본문에
+     * "기준일 2026-08-23"으로 인쇄됐다 — 2023년 통계인데 오늘 날짜가 붙는다.
+     * 수집일과 같으면 기준일을 모르는 것이므로 비워서 넘기고,
+     * Writer 쪽 형식이 "원문 확인 필요"로 적게 둔다.
+     */
+    observedAt: e.observedAt && e.observedAt === (e.retrievedAt || "").slice(0, 10) ? "" : e.observedAt,
     note: e.note,
     verification: e.verification,
   }));

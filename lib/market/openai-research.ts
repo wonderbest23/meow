@@ -20,21 +20,40 @@ const allowedDomains = [
   "mss.go.kr",
 ] as const;
 
-const researchOutputSchema = z.object({
-  evidence: z.array(z.object({
-    title: z.string().trim().min(2).max(200),
-    metric: z.string().trim().min(2).max(100),
-    value: z.string().trim().min(1).max(300),
-    numericValue: z.number().finite().min(0).max(1_000_000_000_000).nullable().default(null),
-    unit: z.string().trim().max(30).default(""),
-    region: z.string().trim().max(100).default(""),
-    sourceName: z.string().trim().min(2).max(150),
-    sourceUrl: z.string().url(),
-    observedAt: z.string().trim().max(40).default(""),
-    note: z.string().trim().max(1_000).default(""),
-    sourceExcerpt: z.string().trim().max(2_000).default(""),
-  })).min(1).max(6),
+const evidenceItemSchema = z.object({
+  title: z.string().trim().min(2).max(200),
+  metric: z.string().trim().min(2).max(100),
+  value: z.string().trim().min(1).max(300),
+  numericValue: z.number().finite().min(0).max(1_000_000_000_000).nullable().default(null),
+  unit: z.string().trim().max(30).default(""),
+  region: z.string().trim().max(100).default(""),
+  sourceName: z.string().trim().min(2).max(150),
+  sourceUrl: z.string().url(),
+  observedAt: z.string().trim().max(40).default(""),
+  note: z.string().trim().max(1_000).default(""),
+  sourceExcerpt: z.string().trim().max(2_000).default(""),
 });
+
+/*
+ * 항목을 하나씩 검증한다.
+ *
+ * 예전에는 배열 전체를 한 번에 parse 해서, 다섯 건 중 한 건에 빈 unit 이나
+ * 잘린 주소가 섞이면 멀쩡한 네 건까지 같이 버려졌다(운영에서 실제로
+ * WEB_SEARCH_PARSE_FAILED 로 나왔다). 근거의 안전성은 아래 인용 대조가
+ * 지키므로, 여기서는 형태가 어긋난 항목만 떨어뜨린다.
+ */
+export function parseEvidenceItems(parsed: unknown): { items: z.infer<typeof evidenceItemSchema>[]; dropped: string[] } {
+  const raw = (parsed as { evidence?: unknown })?.evidence;
+  if (!Array.isArray(raw)) return { items: [], dropped: ["evidence 배열이 없음"] };
+  const items: z.infer<typeof evidenceItemSchema>[] = [];
+  const dropped: string[] = [];
+  for (const candidate of raw.slice(0, 12)) {
+    const result = evidenceItemSchema.safeParse(candidate);
+    if (result.success) items.push(result.data);
+    else dropped.push(result.error.issues.map((i) => `${i.path.join(".")}:${i.code}`).join(","));
+  }
+  return { items, dropped };
+}
 
 type UrlCitation = { url: string; title: string };
 
@@ -50,6 +69,8 @@ type ResponsesPayload = {
     }>;
   }>;
   error?: { message?: string };
+  status?: string;
+  incomplete_details?: { reason?: string };
 };
 
 function outputText(payload: ResponsesPayload) {
@@ -210,7 +231,17 @@ function projectPrompt(context: MarketResearchBusinessContext) {
       "sourceUrl은 검색에서 확인한 공식 원문 주소를 정확히 복사하세요. 존재하지 않는 주소를 만들지 마세요.",
       "note에는 이 수치를 이 사업에 적용할 때의 범위와 주의점을 한 문장으로 적으세요.",
       "sourceExcerpt에는 원문이 무엇을 집계한 자료인지 짧게 요약하세요. 긴 문장을 그대로 복사하지 마세요.",
-      "응답은 JSON 객체 {\"evidence\":[...]} 하나만 쓰세요. 설명 문장, 인사말, 코드펜스를 앞뒤에 붙이지 마세요.",
+      /*
+       * 열쇠 이름을 전부 적어 준다.
+       *
+       * 예전에는 JSON 모드가 형태를 강제한다고 보고 이름을 적지 않았는데, 그 JSON 모드가
+       * 웹 검색과 함께 쓸 수 없어서 이 조사는 한 번도 성공한 적이 없었다. 평문으로 받는
+       * 지금은 이름을 말해 주지 않으면 모델이 제 나름의 이름을 쓴다 — 운영 실측에서
+       * title·metric·sourceName 이 통째로 빠져 다섯 건이 전부 버려졌다.
+       */
+      "응답은 JSON 객체 하나만 쓰세요. 설명 문장, 인사말, 코드펜스를 앞뒤에 붙이지 마세요.",
+      "형식은 정확히 다음과 같습니다. 열쇠 이름을 바꾸거나 빠뜨리지 마세요.",
+      "{\"evidence\":[{\"title\":\"자료 이름\",\"metric\":\"무엇을 센 수치인지\",\"value\":\"원문 표기 그대로\",\"numericValue\":123 또는 null,\"unit\":\"단위\",\"region\":\"지역\",\"sourceName\":\"기관·통계 이름\",\"sourceUrl\":\"원문 주소\",\"observedAt\":\"YYYY-MM-DD 또는 빈 문자열\",\"note\":\"적용 시 주의\",\"sourceExcerpt\":\"원문이 무엇을 집계했는지 요약\"}]}",
     ],
   };
 }
@@ -232,7 +263,16 @@ export async function researchOfficialMarketEvidence(
         model: config.model,
         store: false,
         reasoning: { effort: "medium" },
-        max_output_tokens: 4_000,
+        /*
+         * 출력 상한.
+         *
+         * 4,000 이었을 때 세 사업 중 둘이 MARKET_RESEARCH_EMPTY 로 끝났다.
+         * 검색을 열 번 넘게 돌면 추론 토큰만 2,700 을 쓰고(실측), 남은 몫으로는
+         * 근거 다섯 건의 한국어 본문과 긴 통계표 주소를 다 적지 못해 최종 메시지가
+         * 통째로 잘린다. 성공한 사업도 3,715 로 상한에 붙어 있었다.
+         * 실사용은 4~5천이고 나머지는 여유분이다 — 상한이지 목표가 아니다.
+         */
+        max_output_tokens: 12_000,
         /*
          * 출력 형식을 지정하지 않는다 — 평문으로 받는다.
          *
@@ -271,21 +311,30 @@ export async function researchOfficialMarketEvidence(
       : `WEB_SEARCH_API_REJECTED:${payload.error?.message ?? response.status}`);
   }
   const text = outputText(payload);
-  if (!text) throw new Error("MARKET_RESEARCH_EMPTY");
+  if (!text) {
+    /* 왜 비었는지 구분한다 — 출력 상한에 잘린 것과 모델이 아무것도 못 찾은 것은 대응이 다르다 */
+    const reason = payload.incomplete_details?.reason ?? payload.status ?? "unknown";
+    throw new Error(reason === "max_output_tokens" ? "WEB_SEARCH_OUTPUT_TRUNCATED" : `MARKET_RESEARCH_EMPTY:${reason}`);
+  }
 
   const cited = extractActualSearchSources(payload);
   /* 검색이 아예 돌지 않았으면 뒤 단계를 볼 필요가 없다 */
   if (!cited.size) throw new Error("WEB_SEARCH_NO_SOURCES");
 
-  const candidate = researchOutputSchema.safeParse(extractJsonObject(text));
-  if (!candidate.success) throw new Error("WEB_SEARCH_PARSE_FAILED");
-  const parsed = candidate.data;
+  const { items, dropped } = parseEvidenceItems(extractJsonObject(text));
+  if (dropped.length) console.warn("[market-research] 형태가 어긋난 근거 후보를 버렸습니다:", dropped.join(" | "));
+  if (!items.length) throw new Error(`WEB_SEARCH_PARSE_FAILED:${dropped.join(" | ").slice(0, 300) || "본문에서 JSON 을 찾지 못함"}`);
   const retrievedAt = new Date().toISOString();
   const retrievedDate = retrievedAt.slice(0, 10);
-  const evidence = parsed.evidence.flatMap((item): MarketEvidence[] => {
+  /* 인용 대조에서 몇 건이 떨어졌는지 — 모델이 실제로 없는 주소를 쓰는 빈도를 운영에서 보기 위해 */
+  let uncited = 0;
+  const evidence = items.flatMap((item): MarketEvidence[] => {
     const normalized = normalizeUrl(item.sourceUrl);
     const citation = cited.get(normalized);
-    if (!citation || !isOfficialEvidenceUrl(citation.url)) return [];
+    if (!citation || !isOfficialEvidenceUrl(citation.url)) {
+      uncited += 1;
+      return [];
+    }
     const observedAt = validDate(item.observedAt, retrievedDate);
     const dateNotice = item.observedAt
       ? ""
@@ -312,6 +361,7 @@ export async function researchOfficialMarketEvidence(
       isDemo: false,
     }];
   });
+  if (uncited) console.warn(`[market-research] 실제 검색 출처에 없거나 공식 도메인이 아니어서 버린 근거 ${uncited}건 (후보 ${items.length}건, 검색 출처 ${cited.size}개)`);
   /* 검색은 돌았지만 실제 인용에 존재하는 공식 근거가 하나도 없으면 성공이 아니다 */
   if (!evidence.length) throw new Error("WEB_SEARCH_NO_CITED_EVIDENCE");
   return { evidence, citedSourceCount: cited.size, model: config.model };
