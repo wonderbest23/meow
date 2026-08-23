@@ -77,7 +77,9 @@ export const REVIEWER_SYSTEM = [
   ' "dimensions":[{"id":"structure","score":0~5,"reason":"한 줄"}, …7개],',
   ' "issues":[{"severity":"critical|warning|improvement","category":"business_model|customer|problem_solution|competition|marketing|operation|finance|market_evidence|fact_safety|consistency|writing","sectionKey":"overview/summary","title":"짧은 제목","problem":"무엇이 문제인가","whyItMatters":"왜 중요한가","evidence":["본문 인용이나 근거"],"recommendation":"무엇을 확인하거나 고치면 되는가","requiresUserInput":true,"autoFixable":false}],',
   ' "strengths":["잘 된 점"], "topPriorities":["가장 먼저 볼 것"], "summary":"두세 문장"}',
-  "issues 는 중요한 것부터 최대 12개까지만 쓰세요. 모든 문장은 한국어 존댓말로, 창업자가 바로 행동할 수 있게 쓰세요.",
+  "issues 는 중요한 것부터 최대 8개까지만 쓰세요. 사소한 것을 채워 넣지 마세요.",
+  "problem 은 2문장 이내, whyItMatters 는 1문장, recommendation 은 2문장 이내, evidence 는 2개 이내로 쓰세요. 길게 쓰면 응답이 잘려 검토 전체가 버려집니다.",
+  "모든 문장은 한국어 존댓말로, 창업자가 바로 행동할 수 있게 쓰세요.",
 ].join("\n");
 
 function fieldLines(ctx: PlanBusinessContext): { confirmed: string[]; inferred: string[] } {
@@ -225,7 +227,15 @@ export async function reviewPlan(
       kind: "plan-review",
       system: REVIEWER_SYSTEM,
       user: buildReviewerPrompt(input),
-      maxOutputTokens: 6000,
+      /*
+       * 출력 상한.
+       *
+       * 처음에는 6,000 이었는데 운영에서 재 보니 out=6000 으로 정확히 상한에 걸렸다 —
+       * 다 쓰고 멈춘 게 아니라 잘린 것이고, 잘린 JSON 은 파싱에 실패해 검토가 통째로 버려졌다.
+       * 한국어로 문제 8건을 근거·개선방법까지 쓰면 6,000 에 들어가지 않는다.
+       * 넉넉히 두어도 할 말을 마치면 그만 쓰므로 평소 비용은 거의 그대로다.
+       */
+      maxOutputTokens: 10_000,
       effort: "medium",
       jsonObject: true,
       cache: true,

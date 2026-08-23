@@ -217,6 +217,8 @@ assert.equal(norm.issues.find((i) => i.title === "모르는 섹션 키")!.sectio
 assert.ok(!norm.issues.some((i) => i.title === "너무 짧은 설명"), "설명이 너무 짧은 항목은 버린다");
 assert.ok(!norm.issues.some((i) => i.title === "없는 심각도"), "목록 밖 severity 는 버린다");
 assert.equal(norm.issues.length, 8, "형식 맞는 8개는 모두 살아남는다");
+assert.ok(REVIEWER_SYSTEM.includes("최대 8개까지만"), "항목 수 상한을 프롬프트가 명시");
+assert.ok(REVIEWER_SYSTEM.includes("길게 쓰면 응답이 잘려"), "길이 초과가 검토 전체를 버린다는 경고");
 
 /* 잘못된 출력은 통째로 버린다 */
 assert.equal(normalizeReviewOutput(null, known), null);
