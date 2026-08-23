@@ -147,6 +147,8 @@ export default function ReviewFollowUp({
             business: state.business,
             priorSummary: priorSectionsSummary(t.key),
             allAnswers: activePlan()?.answers ?? {},
+            // 방금 답한 값이 이 섹션 프롬프트에 닿아야 다시 쓰는 의미가 있다
+            withContext: true,
           }),
         });
         if (!res.ok) {

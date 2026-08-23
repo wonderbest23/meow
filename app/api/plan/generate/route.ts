@@ -34,6 +34,8 @@ export async function POST(req: Request) {
     planId?: string;
     /** 켜면 본문을 조각 단위로 흘려준다(NDJSON) */
     stream?: boolean;
+    /** 검토 보완 후 다시 쓰기 — 분석이 없는 플랜에도 맥락을 넣는다 */
+    withContext?: boolean;
     priorSummary?: string;
     /** 플랜 전체 답변 — 재무 계산에 필요(입력이 여러 섹션에 흩어져 있음) */
     allAnswers?: Record<string, Record<string, unknown>>;
@@ -105,8 +107,15 @@ export async function POST(req: Request) {
    * 이 섹션에 필요한 필드만 고르고(contextForSection), 위저드 답과 VERIFY 확정값이
    * 다르면 기존 충돌 블록에 합친다. 분석이 없는 옛 플랜은 context 가 undefined 라 예전과 같다.
    */
+  /*
+   * 검토 보완으로 다시 쓰는 요청은 분석이 없어도 맥락을 넣는다.
+   *
+   * 옛 플랜에는 __analysis 가 없어 맥락이 통째로 빠지는데, 그러면 사용자가 방금 답한
+   * 홍보 채널이 '한눈에 보기' 프롬프트에 닿지 않아 다시 써도 아무것도 바뀌지 않는다(실측).
+   * 일반 생성 경로의 동작은 그대로 둔다 — 분석 없는 플랜은 예전과 바이트 동일.
+   */
   let context: SectionBusinessContext | undefined;
-  if (body.allAnswers && body.allAnswers[ANALYSIS_KEY]) {
+  if (body.allAnswers && (body.allAnswers[ANALYSIS_KEY] || body.withContext)) {
     const ctx = buildPlanBusinessContext({ business: body.business ?? {}, answers: body.allAnswers });
     context = contextForSection(sectionKey, ctx);
     if (ctx.conflicts.length) conflicts = [...(conflicts ?? []), ...ctx.conflicts];
