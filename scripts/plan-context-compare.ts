@@ -8,6 +8,25 @@
  * 결과: docs/compare/<사업>-<섹션>.md (BEFORE · AFTER · 심사 결과)
  * 테스트 전용이다 — 심사 프롬프트는 운영 기능이 아니고 사용자에게 노출하지 않는다.
  */
+/*
+ * 운영서버에서 돌리는 방법 (로컬에 LLM 키가 없을 때 — 실측으로 검증된 경로):
+ *   1) npx tsx scripts/_gen-prod-payload.ts /tmp/cases.js
+ *   2) 운영에 로그인한 브라우저 콘솔에 /tmp/cases.js 내용을 붙여넣어 window.__CASES 를 채운다
+ *   3) 아래 러너를 붙여넣고 window.__R 에서 결과 20건을 읽는다 (저장하지 않으므로 쿼터·플랜 영향 없음)
+ *
+ *   window.__R=[]; window.__DONE=false;
+ *   window.__go=async()=>{ for(const c of window.__CASES){ for(const key of c.sections){
+ *     const [chapterId,sectionId]=key.split("/");
+ *     for(const v of ["before","after"]){
+ *       const all = v==="after" ? {...c.answers, __analysis: c.rec} : c.answers;
+ *       const body={chapterId,sectionId,answers:all[key]||{},planTitle:c.planTitle,planType:c.planType,
+ *                   planId:"cmp_"+c.id+"_"+v,allAnswers:all,business:c.business};
+ *       const r=await fetch("/api/plan/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+ *       const j=await r.json(); window.__R.push({c:c.id,key,v,status:r.status,source:j.source,md:j.markdown||""});
+ *     }}} window.__DONE=true; }; window.__go();
+ *
+ * 2026-08-23 실행 결과: docs/동적질문-2차-운영검증보고서.md
+ */
 import { mkdirSync, writeFileSync } from "node:fs";
 import { PLAN_BLUEPRINT } from "../lib/plan-builder/blueprint";
 import { formatContext, generateSection, sectionSystemPrompt, type SectionGenInput } from "../lib/plan-builder/section-generator";
@@ -18,7 +37,7 @@ import { completeJson, type LLMConfig } from "../lib/llm/complete";
 
 type Answers = Record<string, Record<string, unknown>>;
 
-interface Case {
+export interface Case {
   id: string;
   business: { name: string; description: string; industry: string; region: string; stage: string; role: string };
   analysis: Parameters<typeof normalizeAnalysis>[0];
@@ -27,7 +46,7 @@ interface Case {
   sections: string[];
 }
 
-const CASES: Case[] = [
+export const CASES: Case[] = [
   {
     id: "A-class",
     business: { name: "멍케이크 클래스", description: "반려견 케이크 만드는 과정을 SNS에 올려 사람들을 모집하고 원데이 클래스를 운영한다.", industry: "교육·강의", region: "서울 마포구", stage: "아이디어 단계", role: "예비창업자" },
@@ -64,7 +83,7 @@ const CASES: Case[] = [
     slots: { aov: { value: "6만원", status: "confirmed" }, monthlyVisitors: { value: "3,000명", status: "confirmed" }, conversionRate: { value: "2명 (2%)", status: "confirmed" }, cogs: { value: "2만5천원", status: "confirmed" }, problem: { value: null, status: "unknown" } },
     answers: {
       "overview/summary": { value_prop: "출근복만 골라 놓아 고르는 시간을 줄인다" }, "market/segments": { first_target: "30~40대 직장인 여성" },
-      "market/products": { main_offer: "출근용 여성 의류" }, "financials/revenue": { unit_price: "6만원", monthly_volume: "월 60건", revenue_streams: ["1회성 판매"] },
+      "market/products": { main_offer: "출근용 여성 의류" }, "overview/problem": { problems: ["출근용 옷을 고르는 데 시간이 오래 걸린다"], solutions: ["출근복만 모아 코디까지 제안"], problem_freq: "매일·매주 반복" }, "financials/revenue": { unit_price: "6만원", monthly_volume: "월 60건", revenue_streams: ["1회성 판매"] },
       "financials/expenses": { variable_per_unit: "30,000원", fixed_total: "400,000원" },
     },
     sections: ["overview/summary", "market/products"],
@@ -84,7 +103,7 @@ const CASES: Case[] = [
     slots: { unitPrice: { value: "4만5천원", status: "confirmed" }, monthlyVolume: { value: "월 80건", status: "confirmed" }, unitCost: { value: "5천원", status: "confirmed" }, fixedTotal: { value: "90만원", status: "confirmed" }, customer: { value: null, status: "unknown" } },
     answers: {
       "overview/summary": { value_prop: "1인 예약제라 기다림 없이 조용히 받는 시술" }, "market/products": { main_offer: "젤네일 기본 시술" },
-      "strategy/distribution": { delivery: "매장 방문 · 예약제" }, "financials/revenue": { unit_price: "4만5천원", monthly_volume: "월 80건", revenue_streams: ["시간·건당 요금"] },
+      "strategy/distribution": { delivery: "매장 방문 · 예약제" }, "overview/problem": { problems: ["동네 네일샵은 대기와 소음이 있어 편히 받기 어렵다"], solutions: ["1인 예약제로 한 명씩만 받는 시술"], problem_freq: "월 1~2회" }, "financials/revenue": { unit_price: "4만5천원", monthly_volume: "월 80건", revenue_streams: ["시간·건당 요금"] },
       "financials/expenses": { variable_per_unit: "5천원", fixed_total: "90만원" },
     },
     sections: ["overview/summary", "strategy/distribution"],
@@ -123,10 +142,10 @@ const CASES: Case[] = [
     slots: { unitPrice: { value: "180만원", status: "confirmed" }, monthlyVolume: { value: "월 4건", status: "confirmed" }, unitCost: { value: "70만원", status: "confirmed" }, fixedTotal: { value: "120만원", status: "confirmed" } },
     answers: {
       "overview/summary": { value_prop: "카페 동선과 좌석 수에 맞춘 치수 설계", established: "yes", revenue: "yes" }, "market/segments": { first_target: "소형 카페 운영자" },
-      "market/products": { main_offer: "카페 맞춤 테이블·바 세트" }, "financials/revenue": { unit_price: "180만원", monthly_volume: "월 4건", revenue_streams: ["1회성 판매"] },
+      "market/products": { main_offer: "카페 맞춤 테이블·바 세트" }, "overview/problem": { problems: ["기성 가구가 좁은 카페 공간에 맞지 않아 좌석 수가 줄어든다"], solutions: ["실측 후 공간에 맞춘 주문제작"], problem_freq: "가끔·비정기" }, "financials/revenue": { unit_price: "180만원", monthly_volume: "월 4건", revenue_streams: ["1회성 판매"] },
       "financials/expenses": { variable_per_unit: "70만원", fixed_total: "120만원" },
     },
-    sections: ["overview/summary", "market/competitors"],
+    sections: ["overview/summary", "market/segments"],
   },
 ];
 
@@ -187,4 +206,5 @@ async function main() {
   }
 }
 
-void main();
+// 직접 실행할 때만 돈다 — 다른 스크립트가 CASES 를 import 해도 생성이 시작되지 않게
+if (process.argv[1]?.includes("plan-context-compare")) void main();
