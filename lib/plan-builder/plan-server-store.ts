@@ -59,7 +59,18 @@ function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.slice(0, max) : "";
 }
 
-/** 저장 전 정규화 — 길이 제한, 형태 보정 */
+/*
+ * 저장 전 정규화 — 형태 보정과 문자열 길이 제한만 한다.
+ *
+ * 여기서 플랜을 개수로 잘라내면 안 된다. 예전에는 plans.slice(0, 30)이 있었고,
+ * 이 함수는 읽기(loadPlanState)와 쓰기(savePlanState) 양쪽을 다 지난다.
+ * mergeStates가 플랜을 createdAt 오름차순(오래된 것이 앞)으로 정렬하므로
+ * slice(0, 30)은 '가장 최근에 만든 플랜'부터 버렸다 — 31번째를 만드는 순간
+ * 사용자가 지우지도 않은 최신 플랜이 조용히 사라진다.
+ *
+ * 저장된 플랜은 사용자 데이터다. 삭제는 deletePlanById(사용자가 직접 지운 경우)로만 한다.
+ * 화면에 몇 개를 보여줄지는 화면에서 정한다 — 저장 계층은 전부 보존한다.
+ */
 export function normalizeState(input: Partial<ServerPlanState> | null | undefined): ServerPlanState {
   const b = (input?.business ?? {}) as Partial<ServerBusinessProfile>;
   const plans = Array.isArray(input?.plans) ? input!.plans! : [];
@@ -72,7 +83,7 @@ export function normalizeState(input: Partial<ServerPlanState> | null | undefine
       region: str(b.region, 80),
       stage: str(b.stage, 60),
     },
-    plans: plans.slice(0, 30).map((p) => ({
+    plans: plans.map((p) => ({
       id: str(p?.id, 60) || `plan_${Math.random().toString(36).slice(2, 10)}`,
       title: str(p?.title, 120) || "새 플랜",
       planType: str(p?.planType, 120) || "창업 초기 · 사업계획서",

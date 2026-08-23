@@ -66,6 +66,7 @@
     "test:plan-guest-persist": "tsx scripts/plan-guest-persist.test.ts",
     "test:plan-target-plan": "tsx scripts/plan-target-plan.test.ts",
     "test:plan-sync": "tsx scripts/plan-sync.test.ts",
+    "test:plan-capacity": "tsx scripts/plan-store-capacity.test.ts",
     "test:llm-alert": "tsx scripts/llm-alert.test.ts",
     "test:llm-cache": "tsx scripts/llm-cache.test.ts",
     "test:consult": "tsx scripts/consult.test.ts"
