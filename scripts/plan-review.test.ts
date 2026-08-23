@@ -7,6 +7,7 @@ import {
   countBySeverity,
   normalizeReviewOutput,
   readReview,
+  salvageTruncatedJson,
   sortIssues,
   type ReviewIssue,
   type ReviewRecord,
@@ -289,4 +290,42 @@ const before = JSON.stringify(healthyAnswers());
 collectDeterministic({ answers: healthyAnswers(), business, evidence });
 assert.equal(JSON.stringify(healthyAnswers()), before, "검토는 답변을 변형하지 않는다(순수)");
 
-console.log("plan-review.test.ts: 전부 통과");
+/* ═══════════ 잘린 응답 복구 — 운영에서 두 번 겪은 실패 ═══════════ */
+
+const fullJson = JSON.stringify({
+  overallQualityScore: 70,
+  summary: "요약입니다.",
+  dimensions: [{ id: "structure", score: 4, reason: "좋습니다" }],
+  issues: [
+    { severity: "critical", category: "finance", title: "첫 번째 문제", problem: "첫 번째 문제의 설명입니다.", whyItMatters: "중요한 이유입니다.", evidence: ["근거"], recommendation: "이렇게 고치세요.", requiresUserInput: true, autoFixable: false },
+    { severity: "warning", category: "marketing", title: "두 번째 문제", problem: "두 번째 문제의 설명입니다.", whyItMatters: "중요한 이유입니다.", evidence: ["근거"], recommendation: "이렇게 고치세요.", requiresUserInput: false, autoFixable: true },
+    { severity: "improvement", category: "writing", title: "세 번째 문제", problem: "세 번째 문제의 설명입니다.", whyItMatters: "중요한 이유입니다.", evidence: ["근거"], recommendation: "이렇게 고치세요.", requiresUserInput: false, autoFixable: true },
+  ],
+});
+// 세 번째 문제 한가운데서 잘린 응답
+const truncated = fullJson.slice(0, fullJson.indexOf("세 번째 문제의 설명") + 5);
+assert.equal(JSON.parse.bind(null, truncated) instanceof Function, true);
+let parseFailed = false;
+try { JSON.parse(truncated); } catch { parseFailed = true; }
+assert.ok(parseFailed, "잘린 응답은 그대로는 파싱되지 않는다");
+
+const salvaged = salvageTruncatedJson(truncated)!;
+assert.ok(salvaged, "잘린 응답에서 완결된 부분을 복구한다");
+const salvagedNorm = normalizeReviewOutput(salvaged, new Set(["overview/summary"]))!;
+assert.ok(salvagedNorm, "복구본이 검증을 통과한다");
+assert.equal(salvagedNorm.issues.length, 2, "완결된 문제 2건은 살리고 잘린 1건만 버린다");
+assert.equal(salvagedNorm.issues[0].title, "첫 번째 문제");
+assert.equal(salvagedNorm.score, 70);
+// 복구 불가한 쓰레기는 null
+assert.equal(salvageTruncatedJson("완전히 깨진 응답"), null);
+assert.equal(salvageTruncatedJson(""), null);
+// 멀쩡한 JSON 은 정상 경로가 처리한다(복구를 타지 않는다)
+assert.ok(normalizeReviewOutput(JSON.parse(fullJson), new Set()));
+
+/* 요약이 길어도 버리지 않고 자른다 */
+const longSummary = normalizeReviewOutput({ overallQualityScore: 50, summary: "가".repeat(2000), issues: [], dimensions: [] }, new Set())!;
+assert.ok(longSummary, "긴 요약 때문에 보고서를 버리지 않는다");
+assert.ok(longSummary.summary.length <= 600);
+assert.ok(normalizeReviewOutput({ overallQualityScore: 50, summary: "짧음", strengths: Array.from({ length: 20 }, (_, i) => `강점${i}`) }, new Set())!.strengths.length <= 6);
+
+console.log("plan-review.test.ts (복구 포함): 전부 통과");

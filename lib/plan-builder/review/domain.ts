@@ -149,12 +149,61 @@ export const reviewIssueSchema = z.object({
  */
 export const reviewOutputSchema = z.object({
   overallQualityScore: z.number().min(0).max(100),
-  dimensions: z.array(z.unknown()).max(20).optional(),
-  issues: z.array(z.unknown()).max(40).optional(),
-  strengths: z.array(z.string().max(200)).max(6).optional(),
-  topPriorities: z.array(z.string().max(200)).max(5).optional(),
-  summary: z.string().max(600),
+  dimensions: z.array(z.unknown()).max(40).optional(),
+  issues: z.array(z.unknown()).max(60).optional(),
+  // 길이는 여기서 막지 않고 normalize 에서 자른다 — 요약이 길다고 검토를 통째로 버릴 이유가 없다
+  strengths: z.array(z.string()).optional(),
+  topPriorities: z.array(z.string()).optional(),
+  summary: z.string().optional(),
 });
+
+function cut(s: string, n: number): string {
+  const t = s.trim();
+  return t.length <= n ? t : `${t.slice(0, n - 1)}…`;
+}
+
+/*
+ * 잘린 JSON 복구.
+ *
+ * 한국어 검토는 출력이 길어 상한에 걸리는 일이 실제로 있었다(운영 실측 out=6000, out=10000).
+ * 잘린 응답을 통째로 버리면 다 쓴 문제 여섯 개까지 함께 잃는다.
+ * 마지막으로 완결된 값까지만 남기고 열린 괄호를 닫아 되살린다.
+ */
+export function salvageTruncatedJson(text: string): Record<string, unknown> | null {
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  const body = text.slice(start);
+  const stack: string[] = [];
+  let inString = false;
+  let escaped = false;
+  let cutAt = -1;
+  let cutStack: string[] = [];
+  for (let i = 0; i < body.length; i += 1) {
+    const ch = body[i];
+    if (inString) {
+      if (escaped) escaped = false;
+      else if (ch === "\\") escaped = true;
+      else if (ch === '"') inString = false;
+      continue;
+    }
+    if (ch === '"') { inString = true; continue; }
+    if (ch === "{" || ch === "[") { stack.push(ch === "{" ? "}" : "]"); continue; }
+    if (ch === "}" || ch === "]") {
+      stack.pop();
+      // 값 하나가 완결된 지점 — 여기까지는 안전하게 살릴 수 있다
+      cutAt = i + 1;
+      cutStack = [...stack];
+    }
+  }
+  if (cutAt < 0 || !cutStack.length) return null;
+  const repaired = body.slice(0, cutAt).replace(/,\s*$/, "") + cutStack.reverse().join("");
+  try {
+    const parsed = JSON.parse(repaired) as unknown;
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null;
+  } catch {
+    return null;
+  }
+}
 
 const dimensionSchema = z.object({ id: z.string().max(40), score: z.number().min(0).max(5), reason: z.string().max(300).optional() });
 
@@ -167,7 +216,11 @@ export function normalizeReviewOutput(
   knownSections: ReadonlySet<string>,
 ): { issues: ReviewIssue[]; dimensions: ReviewDimension[]; strengths: string[]; topPriorities: string[]; summary: string; score: number } | null {
   const parsed = reviewOutputSchema.safeParse(input);
-  if (!parsed.success) return null;
+  if (!parsed.success) {
+    // 왜 버렸는지 남긴다 — 운영에서 조용히 폴백되면 원인을 찾을 수 없다
+    console.error("[review] 출력 검증 실패:", parsed.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join(" / "));
+    return null;
+  }
   const r = parsed.data;
 
   // 형식이 맞는 문제만 남긴다. 최대 12개 — 화면이 감당할 수 있는 양이다
@@ -208,9 +261,9 @@ export function normalizeReviewOutput(
   return {
     issues,
     dimensions,
-    strengths: (r.strengths ?? []).map((s) => s.trim()).filter(Boolean),
-    topPriorities: (r.topPriorities ?? []).map((s) => s.trim()).filter(Boolean),
-    summary: r.summary.trim(),
+    strengths: (r.strengths ?? []).map((s) => cut(s, 200)).filter(Boolean).slice(0, 6),
+    topPriorities: (r.topPriorities ?? []).map((s) => cut(s, 200)).filter(Boolean).slice(0, 5),
+    summary: cut(r.summary ?? "", 600),
     score: clamp(Math.round(r.overallQualityScore), 0, 100),
   };
 }

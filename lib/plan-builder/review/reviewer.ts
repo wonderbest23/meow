@@ -19,6 +19,7 @@ import {
   REVIEW_DIMENSIONS,
   REVIEW_VERSION,
   normalizeReviewOutput,
+  salvageTruncatedJson,
   sortIssues,
   type BusinessPlanReview,
   type ReviewIssue,
@@ -235,14 +236,24 @@ export async function reviewPlan(
        * 한국어로 문제 8건을 근거·개선방법까지 쓰면 6,000 에 들어가지 않는다.
        * 넉넉히 두어도 할 말을 마치면 그만 쓰므로 평소 비용은 거의 그대로다.
        */
-      maxOutputTokens: 10_000,
+      maxOutputTokens: 16_000,
       effort: "medium",
       jsonObject: true,
       cache: true,
       timeoutMs: 150_000,
     }).catch(() => null);
-    const obj = text ? parseJsonObject(text) : null;
+    /*
+     * 잘려도 살린다.
+     * 출력이 상한에 걸리면 JSON 이 닫히지 않아 통째로 버려졌다(운영 실측 2회).
+     * 정상 파싱을 먼저 해 보고, 실패하면 완결된 부분까지 복구해 쓴다.
+     */
+    let obj = text ? parseJsonObject(text) : null;
+    if (!obj && text) {
+      obj = salvageTruncatedJson(text);
+      if (obj) console.warn("[review] 응답이 잘려 완결된 부분만 복구했습니다");
+    }
     ai = obj ? normalizeReviewOutput(obj, knownSections) : null;
+    if (text && !ai) console.error("[review] LLM 응답을 쓰지 못해 확정 문제만으로 보고서를 만듭니다");
   }
 
   if (!ai) {
