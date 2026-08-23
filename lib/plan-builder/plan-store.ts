@@ -215,9 +215,21 @@ export function saveBusiness(business: BusinessProfile) {
  * 다시 묻지 않기 위해서다. 생성된 본문(sections)은 물려받지 않는다 —
  * 유형이 다르면 같은 답이라도 글이 달라야 하므로 새로 생성한다.
  */
+/*
+ * 답변이 아닌 가상 섹션 키.
+ * __analysis: AI 사업 분석 결과 — 같은 사업이면 물려받는 게 맞다(다시 분석하지 않아도 된다).
+ * __review:   사업계획서 검토 결과 — 본문이 다른 새 플랜으로 따라가면 낡은 평가가 최신처럼 보인다.
+ * 둘 다 '답변 개수'에는 세지 않는다 — 손님에게 보여 주는 숫자가 부풀기 때문이다.
+ */
+const VIRTUAL_ANSWER_KEYS = ["__analysis", "__review"];
+const NOT_INHERITED_KEYS = ["__review"];
+
 /** 실제로 채워진 답변 수 — 빈 문자열·빈 배열·초기화로 남은 빈 섹션은 세지 않는다 */
 function realAnswerCount(p: Plan): number {
-  return Object.values(p.answers ?? {}).reduce((n, sec) => {
+  return Object.entries(p.answers ?? {})
+    .filter(([key]) => !VIRTUAL_ANSWER_KEYS.includes(key))
+    .map(([, sec]) => sec)
+    .reduce((n, sec) => {
     return (
       n +
       Object.values(sec ?? {}).filter(
@@ -239,6 +251,8 @@ export function createPlan(planType: string, title?: string, opts?: { inheritAns
   const now = new Date().toISOString();
   const donor = opts?.inheritAnswers === false ? undefined : pickDonor(s);
   const inherited: Plan["answers"] = donor ? JSON.parse(JSON.stringify(donor.answers)) : {};
+  // 검토 결과는 그 문서의 본문에 대한 평가다 — 새 문서로 따라오면 안 된다
+  for (const key of NOT_INHERITED_KEYS) delete inherited[key];
   const plan: Plan = {
     id: newId(),
     title: title || s.business.name || "새 플랜",

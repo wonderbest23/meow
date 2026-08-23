@@ -1,0 +1,81 @@
+/* AI 사업 검토 — 플랜 개요의 다른 카드와 같은 글자·모서리·여백을 쓴다 */
+.wrap {
+  border: 1px solid #ececf2;
+  border-radius: 12px;
+  background: #fff;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+  display: grid;
+  gap: 12px;
+}
+.head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.headText { display: grid; gap: 3px; min-width: 0; }
+.headText strong { font-size: 15px; font-weight: 800; color: #1c1d21; }
+.headText span { font-size: 12.5px; color: #8181a5; line-height: 1.5; }
+.btn {
+  border: 0; background: var(--blue, #3272db); color: #fff; font: inherit; font-weight: 800; font-size: 13px;
+  min-height: 38px; padding: 9px 18px; border-radius: 8px; cursor: pointer; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.btn:disabled { opacity: .5; cursor: not-allowed; }
+.ghost { border: 1px solid #e6e6ef; background: #fff; color: #55586a; font: inherit; font-weight: 700; font-size: 12.5px; min-height: 32px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+
+/* 완성도 */
+.scoreRow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 10px; background: #f7f9ff; flex-wrap: wrap; }
+.score { font-size: 30px; font-weight: 800; color: var(--blue, #3272db); line-height: 1; font-variant-numeric: tabular-nums; }
+.scoreOf { font-size: 13px; color: #8181a5; font-weight: 700; }
+.scoreLabel { font-size: 12px; font-weight: 800; color: #8181a5; letter-spacing: .03em; }
+.counts { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+.count { font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
+.cCritical { background: #fdecec; color: #c0362c; }
+.cWarning { background: #fdf3e3; color: #a35c07; }
+.cImprovement { background: #eef2f8; color: #55586a; }
+
+/* 차원 막대 */
+.dims { display: grid; gap: 7px; }
+.dim { display: grid; grid-template-columns: 116px 1fr 28px; align-items: center; gap: 10px; }
+.dimLabel { font-size: 12.5px; color: #55586a; font-weight: 700; }
+.dimBar { height: 6px; border-radius: 999px; background: #f0f0f3; overflow: hidden; }
+.dimFill { height: 100%; border-radius: 999px; background: var(--blue, #3272db); }
+.dimLow .dimFill { background: #e0912f; }
+.dimBad .dimFill { background: #d0544a; }
+.dimScore { font-size: 12px; font-weight: 800; color: #1c1d21; text-align: right; font-variant-numeric: tabular-nums; }
+.dimReason { grid-column: 1 / -1; font-size: 12px; color: #8181a5; margin: -2px 0 4px 126px; line-height: 1.5; }
+
+/* 잘 된 점 */
+.strengths { display: grid; gap: 5px; }
+.strength { font-size: 13px; color: #1f7a4d; line-height: 1.55; }
+
+/* 문제 목록 */
+.groupTitle { font-size: 12.5px; font-weight: 800; color: #8181a5; margin-top: 4px; }
+.issues { display: grid; gap: 8px; }
+.issue { border: 1px solid #ececf2; border-left-width: 3px; border-radius: 8px; padding: 12px 14px; display: grid; gap: 5px; }
+.issue.critical { border-left-color: #d0544a; }
+.issue.warning { border-left-color: #e0912f; }
+.issue.improvement { border-left-color: #c9c9d8; }
+.issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.issueTitle { font-size: 14px; font-weight: 800; color: #1c1d21; word-break: keep-all; }
+.tag { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: #f0f0f3; color: #8181a5; white-space: nowrap; }
+.tagDet { background: #eef2f8; color: #3272db; }
+.issueBody { font-size: 13px; color: #55586a; line-height: 1.65; word-break: keep-all; }
+.rec { font-size: 13px; color: #1c1d21; line-height: 1.65; background: #f7f9ff; border-radius: 8px; padding: 9px 12px; word-break: keep-all; }
+.rec b { color: var(--blue, #3272db); }
+.evidence { font-size: 12px; color: #8181a5; line-height: 1.55; }
+.actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+
+/* 상태 */
+.note { font-size: 12.5px; color: #8181a5; line-height: 1.6; }
+.stale { border: 1px dashed #e0c07a; background: #fffaf0; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #8a6116; line-height: 1.6; }
+.fail { border: 1px solid #f3d9d9; background: #fff7f7; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #1c1d21; line-height: 1.6; }
+.disclaimer { font-size: 11.5px; color: #a0a0b8; line-height: 1.55; border-top: 1px solid #f0f0f3; padding-top: 10px; }
+
+@media (max-width: 640px) {
+  .dim { grid-template-columns: 92px 1fr 26px; }
+  .dimReason { margin-left: 0; }
+  .counts { margin-left: 0; width: 100%; }
+}
+
+/* 검토 중 아이콘 회전 — 전역 클래스에 기대지 않는다 */
+.spin { animation: reviewSpin .9s linear infinite; }
+@keyframes reviewSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spin { animation: none; } }

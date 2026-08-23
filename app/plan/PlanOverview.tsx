@@ -19,6 +19,7 @@ import {
 import { findConsistencyIssues, type ConsistencyIssue } from "../../lib/plan-builder/consistency";
 import { estimateMinutes } from "../../lib/plan-builder/questions";
 import ConsistencyPanel from "./ConsistencyPanel";
+import ReviewPanel from "./ReviewPanel";
 import InheritNote from "./InheritNote";
 import PlanLoading from "./PlanLoading";
 import GuideBubble, { ringClass } from "./GuideBubble";
@@ -418,6 +419,9 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         ) : null}
 
         <ConsistencyPanel issues={issues} onOpenSection={onOpenSection} />
+
+        {/* AI 사업 검토 — 본문이 하나라도 있을 때만. 실패해도 문서 기능은 그대로다 */}
+        <ReviewPanel planId={activePlanId} doneCount={doneCount} onOpenSection={onOpenSection} />
 
         {/* 생성 진행·일괄 생성 */}
         <div className={styles.tools}>
