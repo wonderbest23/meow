@@ -41,7 +41,20 @@ export interface PackSlot {
    * financials/expenses.fixed_total · variable_per_unit 에 들어간다.
    */
   contributesTo?: "fixed" | "variable";
+  /**
+   * 이 슬롯의 확정 답을 섹션 작성 AI 에게 "사업 핵심 지표"로 그대로 넘긴다.
+   *
+   * 팩이 늘어나도 Context 빌더를 고치지 않기 위한 선언이다 — 무엇을 넘길지는
+   * 팩이 정하고, 빌더는 이 표시가 붙은 confirmed 슬롯만 실어 나른다.
+   * 이미 PlanBusinessContext 의 구조화 필드로 전달되는 값(판매가·월 판매량)에는
+   * 붙이지 않는다. 두 번 말하면 프롬프트만 길어진다.
+   * label 에 (예상)을 붙이면 계획값임이 본문에서 실적으로 둔갑하지 않는다.
+   */
+  contextMetric?: { label: string; unit?: string; category: MetricCategory };
 }
+
+/** 지표의 성격 — 섹션마다 필요한 종류만 골라 넘긴다 */
+export type MetricCategory = "revenue" | "capacity" | "conversion" | "traffic" | "cost" | "retention" | "operation" | "other";
 
 export type PackId = "class" | "commerce" | "unit_sale";
 
@@ -130,6 +143,7 @@ const CLASS_PACK: QuestionPack = {
       why: "정원이 한 달에 벌 수 있는 최대 매출을 정해요",
       grade: "blocking",
       input: { kind: "number", unit: "명", hint: "예: 6명" },
+      contextMetric: { label: "회당 정원", unit: "명", category: "capacity" },
     },
     {
       id: "classesPerMonth",
@@ -138,6 +152,7 @@ const CLASS_PACK: QuestionPack = {
       why: "횟수 × 정원이 월 수강생 수가 돼요",
       grade: "blocking",
       input: { kind: "number", unit: "회", hint: "예: 8회" },
+      contextMetric: { label: "월 수업 횟수", unit: "회", category: "capacity" },
     },
     {
       id: "venueType",
@@ -156,6 +171,7 @@ const CLASS_PACK: QuestionPack = {
       grade: "blocking",
       input: { kind: "number", unit: "원", hint: "예: 1만5천원" },
       contributesTo: "variable",
+      contextMetric: { label: "1인당 재료비", unit: "원", category: "cost" },
       alsoSet: [{ sectionKey: "financials/expenses", qid: "variable_items", value: ["재료·원가"] }],
     },
     {
@@ -165,6 +181,7 @@ const CLASS_PACK: QuestionPack = {
       why: "너무 낙관적인 매출을 막아 줘요",
       grade: "important",
       input: { kind: "single", options: ["50%", "70%", "80%", "100%"] },
+      contextMetric: { label: "예상 평균 참석률", unit: "%", category: "capacity" },
     },
     {
       id: "venueCost",
@@ -174,6 +191,7 @@ const CLASS_PACK: QuestionPack = {
       grade: "important",
       input: { kind: "number", unit: "원", hint: "예: 월 60만원" },
       contributesTo: "fixed",
+      contextMetric: { label: "월 공간 비용", unit: "원", category: "cost" },
       alsoSet: [{ sectionKey: "financials/expenses", qid: "fixed_items", value: ["임대료"] }],
     },
   ],
@@ -211,6 +229,7 @@ const COMMERCE_PACK: QuestionPack = {
       why: "방문자 × 구매 비율이 판매 건수가 돼요",
       grade: "blocking",
       input: { kind: "number", unit: "명", hint: "예: 2,000명" },
+      contextMetric: { label: "월 방문자 수(예상)", unit: "명", category: "traffic" },
     },
     {
       id: "conversionRate",
@@ -219,6 +238,7 @@ const COMMERCE_PACK: QuestionPack = {
       why: "온라인 쇼핑몰은 보통 1~3명 정도예요",
       grade: "blocking",
       input: { kind: "single", options: ["1명 (1%)", "2명 (2%)", "3명 (3%)", "5명 (5%)"] },
+      contextMetric: { label: "구매 전환율(예상)", unit: "%", category: "conversion" },
     },
     {
       id: "cogs",
@@ -228,6 +248,7 @@ const COMMERCE_PACK: QuestionPack = {
       grade: "blocking",
       input: { kind: "number", unit: "원", hint: "예: 1만2천원" },
       contributesTo: "variable",
+      contextMetric: { label: "1건당 상품 원가+포장·배송", unit: "원", category: "cost" },
       alsoSet: [{ sectionKey: "financials/expenses", qid: "variable_items", value: ["재료·원가", "포장·배송비"] }],
     },
     {
@@ -237,6 +258,7 @@ const COMMERCE_PACK: QuestionPack = {
       why: "온라인 판매는 광고비가 곧 방문자예요",
       grade: "important",
       input: { kind: "number", unit: "원", hint: "예: 월 30만원" },
+      contextMetric: { label: "월 광고비", unit: "원", category: "cost" },
       mapsTo: { sectionKey: "strategy/promotion", qid: "promo_budget" },
       alsoSet: [{ sectionKey: "strategy/promotion", qid: "has_promo_budget", value: "yes" }],
     },
@@ -247,6 +269,7 @@ const COMMERCE_PACK: QuestionPack = {
       why: "손익분기를 계산하는 데 꼭 필요해요",
       grade: "important",
       input: { kind: "number", unit: "원", hint: "예: 월 20만원" },
+      contextMetric: { label: "월 고정비", unit: "원", category: "cost" },
       mapsTo: { sectionKey: "financials/expenses", qid: "fixed_total" },
     },
   ],
@@ -291,6 +314,7 @@ const UNIT_SALE_PACK: QuestionPack = {
       why: "한 건 팔 때 얼마가 남는지 계산해요",
       grade: "blocking",
       input: { kind: "number", unit: "원", hint: "예: 2만원" },
+      contextMetric: { label: "1건당 원가", unit: "원", category: "cost" },
       mapsTo: { sectionKey: "financials/expenses", qid: "variable_per_unit" },
     },
     {
@@ -300,6 +324,7 @@ const UNIT_SALE_PACK: QuestionPack = {
       why: "손익분기를 계산하는 데 꼭 필요해요",
       grade: "blocking",
       input: { kind: "number", unit: "원", hint: "예: 월 80만원" },
+      contextMetric: { label: "월 고정비", unit: "원", category: "cost" },
       mapsTo: { sectionKey: "financials/expenses", qid: "fixed_total" },
     },
     {
@@ -309,6 +334,7 @@ const UNIT_SALE_PACK: QuestionPack = {
       why: "얼마를 준비해야 하는지가 자금 계획의 출발이에요",
       grade: "important",
       input: { kind: "number", unit: "원", hint: "예: 1,500만원" },
+      contextMetric: { label: "초기 투자 금액", unit: "원", category: "cost" },
       mapsTo: { sectionKey: "financials/assets", qid: "asset_cost" },
       alsoSet: [{ sectionKey: "financials/assets", qid: "needs_assets", value: "yes" }],
     },
@@ -353,12 +379,21 @@ export function findSlot(pack: QuestionPack, id: string): PackSlot | undefined {
  * 로드 시 무결성 검증 — 슬롯 id 가 겹치면 답이 엉뚱한 칸에 들어간다.
  * questions.ts 의 분기 무결성 검증과 같은 태도: 조용히 넘어가지 않고 바로 던진다.
  */
+/*
+ * 이미 PlanBusinessContext 의 구조화 필드로 나가는 답변 칸.
+ * 여기로 mapsTo 하는 슬롯에 contextMetric 을 또 달면 같은 값이 프롬프트에 두 번 실린다.
+ */
+const ALREADY_IN_CONTEXT = new Set(["financials/revenue.unit_price", "financials/revenue.monthly_volume"]);
+
 (function verifyPacks() {
   for (const pack of Object.values(PACKS)) {
     const seen = new Set<string>();
     for (const s of slotsForPack(pack)) {
       if (seen.has(s.id)) throw new Error(`[analyzer/packs] 슬롯 id 중복: ${pack.id}.${s.id}`);
       seen.add(s.id);
+      if (s.contextMetric && s.mapsTo && ALREADY_IN_CONTEXT.has(`${s.mapsTo.sectionKey}.${s.mapsTo.qid}`)) {
+        throw new Error(`[analyzer/packs] ${pack.id}.${s.id} 은 이미 구조화 필드로 전달된다 — contextMetric 을 빼라`);
+      }
     }
   }
 })();

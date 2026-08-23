@@ -147,6 +147,7 @@ function formatConflicts(conflicts?: Array<{ title: string; detail: string }>): 
     "해당 내용을 단정적으로 서술하지 마세요. 두 값(또는 두 진술)이 모두 존재한다는 사실을 밝히고 '확정 필요'로 표기하세요.",
     "임의로 한쪽을 골라 사실처럼 쓰거나, 평균·중간값을 내어 새로운 수치를 만들지 마세요.",
     "충돌과 무관한 내용은 평소대로 작성하세요.",
+    "충돌 설명은 본문에서 한 문단 이내로만 다루세요. 어느 값이 어떻게 다른지에 대한 상세한 서술은 섹션 끝의 '추가 정의 필요 항목'으로 보내고, 본문이 충돌 설명으로 채워지지 않게 하세요.",
   ].join("\n");
 }
 
@@ -157,7 +158,7 @@ function formatConflicts(conflicts?: Array<{ title: string; detail: string }>): 
  */
 export function formatContext(ctx?: SectionBusinessContext, opts?: { hasFinancialBlock?: boolean }): string {
   if (!ctx) return "";
-  if (!ctx.confirmed.length && !ctx.inferred.length && !ctx.hints.length && !(ctx.finance && !opts?.hasFinancialBlock)) return "";
+  if (!ctx.confirmed.length && !ctx.inferred.length && !ctx.hints.length && !ctx.metrics.length && !(ctx.finance && !opts?.hasFinancialBlock)) return "";
   const lines: string[] = ["\n[이 사업의 구조화된 맥락]"];
   if (ctx.confirmed.length) {
     lines.push("", "확정된 정보(사용자가 직접 적었거나 확인한 것):");
@@ -166,6 +167,17 @@ export function formatContext(ctx?: SectionBusinessContext, opts?: { hasFinancia
   if (ctx.inferred.length) {
     lines.push("", "AI 추정 참고정보(사용자가 확인하지 않음):");
     for (const c of ctx.inferred) lines.push(`- ${c.label}: ${c.value} (추정)`);
+  }
+  if (ctx.metrics.length) {
+    lines.push("", "[사용자가 확인한 사업 핵심 지표]");
+    for (const m of ctx.metrics) {
+      const unit = m.unit && !m.value.includes(m.unit) ? m.unit : "";
+      lines.push(`- ${m.label}: ${m.value}${unit}${m.source === "calculation" ? " (계산값 — 사용자 확인함)" : ""}`);
+    }
+    lines.push(
+      "이 값들은 사용자가 직접 답했거나 확인한 값입니다. 새 숫자를 만들지 말고 필요한 경우 이 값만 사용하세요.",
+      "이름에 (예상)이 붙은 값은 사용자의 계획·추정치입니다. 이미 달성한 실적처럼 쓰지 마세요.",
+    );
   }
   if (ctx.hints.length) {
     lines.push("", "이 사업 구조에서 생각할 것(관점 힌트이지 사실이 아님):");

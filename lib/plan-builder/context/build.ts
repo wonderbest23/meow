@@ -17,8 +17,9 @@
  * 순수 함수. 서버·클라이언트·테스트 어디서나 같은 결과.
  */
 import { readAnalysisRecord, MODEL_TAGS, OPERATION_TAGS, type AnalysisRecord, type AnalysisStatus } from "../analyzer/domain";
-import { packForAnalysis, slotsForPack } from "../analyzer/packs";
-import { collectFinancialInputs, calculateFinancials, financialsToReference, type FinancialResult } from "../financials";
+import { packForAnalysis, slotsForPack, type MetricCategory } from "../analyzer/packs";
+import { numericSlots } from "../analyzer/gap";
+import { collectFinancialInputs, calculateFinancials, financialsToReference, parseAmount, type FinancialResult } from "../financials";
 
 export type ContextSource = "user_input" | "user_answer" | "ai_inference" | "official_evidence" | "calculation";
 
@@ -26,6 +27,23 @@ export interface ContextField<T> {
   value: T | null;
   status: AnalysisStatus;
   source: ContextSource;
+}
+
+/**
+ * 사용자가 확정한 사업 고유 지표.
+ *
+ * 질문팩의 contextMetric 선언이 화이트리스트다 — 팩에 없는 슬롯 id 는 어디서 와도 실리지 않는다.
+ * inferred 는 절대 들어오지 않는다: 사용자가 직접 답한 값(user_answer)과
+ * 사용자가 화면에서 확인한 계산값(calculation)만이다.
+ */
+export interface BusinessMetric {
+  id: string;
+  label: string;
+  value: string;
+  unit?: string;
+  status: "confirmed";
+  source: "user_answer" | "calculation";
+  category: MetricCategory;
 }
 
 export interface PlanBusinessContext {
@@ -43,6 +61,8 @@ export interface PlanBusinessContext {
   funding: { needs?: ContextField<string>; amount?: ContextField<string>; use?: ContextField<string> };
   goals: { horizon?: ContextField<string>; main?: ContextField<string[]>; constraint?: ContextField<string> };
   finance: { summary?: string };
+  /** 팩이 전달하겠다고 선언한 확정 지표 (방문자 수·전환율·정원 등) */
+  metrics: BusinessMetric[];
   unknowns: Array<{ field: string; label: string }>;
   /** 위저드 답과 VERIFY 확정값이 다른 경우 — 기존 충돌 블록으로 간다 */
   conflicts: Array<{ title: string; detail: string }>;
@@ -212,6 +232,7 @@ export function buildPlanBusinessContext(input: BuildContextInput): PlanBusiness
       constraint: pick(fromAnswer(get("objectives/corporate", "constraint"))),
     },
     finance: {},
+    metrics: [],
     unknowns: [],
     conflicts,
   };
@@ -221,6 +242,36 @@ export function buildPlanBusinessContext(input: BuildContextInput): PlanBusiness
   if (fin) {
     const ref = financialsToReference(fin);
     if (ref) ctx.finance.summary = ref;
+  }
+
+  /*
+   * 사업 고유 지표 — 팩이 contextMetric 을 선언한 슬롯 중 confirmed 인 것만.
+   *
+   * 2026-08-23 운영검증에서 쇼핑몰의 방문자 3,000명·전환율 2%가 confirmed 인데도
+   * 맥락에 실리지 않아 본문이 "사용자가 확인한 값이 아니다"라고 잘못 쓴 일이 있었다.
+   * 팩마다 빌더를 고치지 않도록, 무엇을 넘길지는 팩 선언이 정한다.
+   */
+  if (rec) {
+    for (const slot of slotsForPack(packForAnalysis(rec.analysis))) {
+      const m = slot.contextMetric;
+      if (!m) continue;
+      const answered = rec.slots[slot.id];
+      if (!answered || answered.status !== "confirmed") continue;
+      const value = (answered.value ?? "").trim();
+      if (!value) continue;
+      ctx.metrics.push({ id: slot.id, label: m.label, value, ...(m.unit ? { unit: m.unit } : {}), status: "confirmed", source: "user_answer", category: m.category });
+    }
+    /*
+     * 사용자가 확인한 파생값의 산출 근거.
+     * 숫자 확인 화면에서 그대로 승인했을 때만 넣는다 — 사용자가 값을 고쳤다면
+     * 그 산식은 더 이상 그 숫자의 근거가 아니므로 넣지 않는다(확인하지 않은 파생값 금지).
+     */
+    const pack = packForAnalysis(rec.analysis);
+    const derived = pack.deriveVolume?.(numericSlots(rec.slots)) ?? null;
+    const savedVolume = parseAmount(get("financials/revenue", "monthly_volume"));
+    if (derived && savedVolume != null && savedVolume === derived.value) {
+      ctx.metrics.push({ id: "derivedVolume", label: "월 판매량 산출 근거", value: derived.formula, status: "confirmed", source: "calculation", category: "capacity" });
+    }
   }
 
   // unknown — 동적 질문에 "아직 모르겠어요"로 답한 것 + 핵심 축 중 비어 있는 것
