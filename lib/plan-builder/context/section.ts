@@ -64,6 +64,8 @@ const LABELS: Record<Path, string> = {
   "operations.venueType": "공간 방식",
   "operations.capacity": "수용 한계",
   "operations.who": "실제 업무 수행",
+  "team.ownerPayIncluded": "대표자 인건비 반영 여부",
+  "operations.ownerHours": "하루 운영 투입 시간",
   "marketing.channels": "홍보 채널",
   "marketing.acquisitionModel": "고객 유입 방식",
   "marketing.message": "핵심 메시지",
@@ -79,6 +81,7 @@ const LABELS: Record<Path, string> = {
   "funding.needs": "외부 자금 필요",
   "funding.amount": "필요 자금",
   "funding.use": "자금 용도",
+  "funding.sources": "자금 조달 방법",
   "goals.horizon": "목표 기간",
   "goals.main": "주요 목표",
   "goals.constraint": "제약",
@@ -95,26 +98,37 @@ export const SECTION_CONTEXT_RULES: Record<string, Rule> = {
   "overview/mission": { fields: ["identity.description", "problem.statement", "solution.mainOffer"], noInferred: true },
   "overview/ip": { fields: ["solution.mainOffer", "solution.differentiator"], noInferred: true },
   "overview/achievements": { fields: ["identity.stage", "traction.established", "traction.hasRevenue", "traction.items"], noInferred: true },
-  "overview/structure": { fields: ["team.size", "operations.who", "identity.stage"], noInferred: true },
+  "overview/structure": { fields: ["team.size", "operations.who", "team.ownerExperience", "identity.stage"], noInferred: true },
   "market/products": { fields: ["solution.mainOffer", "solution.description", "solution.differentiator", "revenue.unitPrice", "revenue.model", "classification.modelTags"], hints: true, metrics: ["revenue", "capacity", "cost"] },
   "market/segments": { fields: ["customer.target", "customer.persona", "identity.region", "operations.coverage", "classification.operationTags"], metrics: ["traffic", "conversion", "capacity"] },
   "market/personas": { fields: ["customer.target", "customer.persona", "customer.budget", "customer.channels", "marketing.acquisitionModel", "problem.statement"], metrics: ["traffic", "conversion"] },
   "market/competitors": { fields: ["competition.alternatives", "competition.knownCompetitors", "competition.differentiator", "solution.mainOffer", "customer.target"] },
-  "market/swot": { fields: ["identity.industry", "solution.mainOffer", "solution.differentiator", "operations.delivery", "operations.capacity", "team.ownerExperience", "goals.constraint"], noInferred: true },
+  "market/swot": { fields: ["identity.industry", "solution.mainOffer", "solution.differentiator", "operations.delivery", "operations.capacity", "team.ownerExperience", "competition.knownCompetitors", "goals.constraint"], noInferred: true },
   "objectives/corporate": { fields: ["identity.stage", "goals.horizon", "goals.main", "goals.constraint", "revenue.volume"], noInferred: true },
   "strategy/product": { fields: ["solution.mainOffer", "solution.description", "solution.differentiator", "classification.modelTags", "customer.target"], hints: true },
-  "strategy/distribution": { fields: ["operations.delivery", "operations.coverage", "operations.venueType", "operations.capacity", "revenue.model", "classification.operationTags"], hints: true, metrics: ["capacity", "operation", "traffic"] },
+  "strategy/distribution": { fields: ["operations.delivery", "operations.coverage", "operations.venueType", "operations.capacity", "operations.ownerHours", "revenue.model", "revenue.volume", "classification.operationTags"], hints: true, metrics: ["capacity", "operation", "traffic"] },
   "strategy/price": { fields: ["revenue.unitPrice", "revenue.model", "customer.budget", "solution.mainOffer", "classification.modelTags"], hints: true, finance: true, metrics: ["revenue", "cost", "conversion"] },
   "strategy/promotion": { fields: ["customer.target", "marketing.channels", "marketing.acquisitionModel", "marketing.message", "marketing.budget", "customer.channels", "classification.operationTags"], hints: true, metrics: ["traffic", "conversion", "cost"] },
   "strategy/people": { fields: ["team.size", "operations.who", "operations.capacity", "team.ownerExperience", "classification.operationTags"], hints: true, metrics: ["capacity", "operation"] },
   "strategy/exit": { fields: ["identity.stage", "revenue.model"], noInferred: true },
   "funding/requirements": { fields: ["identity.stage", "funding.needs", "funding.amount", "funding.use", "revenue.model"], noInferred: true, finance: true },
   "financials/revenue": { fields: ["revenue.model", "revenue.streams", "revenue.unitPrice", "revenue.volume", "operations.capacity", "classification.modelTags"], hints: true, finance: true, metrics: ["revenue", "traffic", "conversion", "capacity"], metricLimit: 6 },
-  "financials/staffing": { fields: ["operations.who", "team.size", "operations.capacity"], finance: true, metrics: ["capacity", "operation"] },
-  "financials/expenses": { fields: ["operations.venueType", "operations.delivery", "classification.modelTags", "marketing.budget"], hints: true, finance: true, metrics: ["cost", "operation"] },
-  "financials/assets": { fields: ["operations.venueType", "operations.delivery", "identity.stage"], finance: true },
-  "financials/financing": { fields: ["funding.needs", "funding.amount", "identity.stage"], noInferred: true, finance: true },
-  "summary/executive": { fields: [...CORE, "identity.region", "solution.differentiator", "marketing.channels", "marketing.acquisitionModel", "revenue.unitPrice", "revenue.volume", "team.ownerExperience", "funding.needs", "goals.main"], hints: true, finance: true, metrics: ["revenue", "traffic", "conversion", "capacity", "cost"], metricLimit: 6 },
+  "financials/staffing": { fields: ["operations.who", "team.size", "operations.capacity", "team.ownerPayIncluded"], finance: true, metrics: ["capacity", "operation"] },
+  "financials/expenses": { fields: ["operations.venueType", "operations.delivery", "classification.modelTags", "marketing.budget", "team.ownerPayIncluded"], hints: true, finance: true, metrics: ["cost", "operation"] },
+  "financials/assets": { fields: ["operations.venueType", "operations.delivery", "funding.use", "identity.stage"], finance: true },
+  "financials/financing": { fields: ["funding.needs", "funding.amount", "funding.sources", "team.ownerPayIncluded", "identity.stage"], noInferred: true, finance: true },
+  /*
+   * 실행요약이 받는 필드는 15개를 넘기지 않는다.
+   *
+   * 여기에 다 밀어넣고 싶은 유혹이 있다 — 거의 모든 보완 답변이 실행요약을 '다시 쓸 섹션'으로
+   * 지목하기 때문이다. 그런데 맥락 항목이 스무 개를 넘으면 무엇이 중요한지가 묻히고, 그건
+   * 요약을 더 나쁘게 만든다. 그래서 실제로 요약에 쓰이는 것만 남기고, 소비하지 않을 값은
+   * 아예 affected 에서 뺐다(RESOLUTION_TARGETS 주석 참고).
+   *
+   * 빠진 것들: 지역·업종·단계는 시스템 프롬프트의 사업 정보에 이미 있고,
+   * 판매가·손익분기는 finance:true 로 받는 재무 요약에 있다 — 맥락에서 또 줄 필요가 없다.
+   */
+  "summary/executive": { fields: [...CORE, "solution.differentiator", "marketing.channels", "revenue.volume", "operations.who", "operations.capacity", "competition.knownCompetitors", "funding.sources", "funding.use", "team.ownerExperience"], hints: true, finance: true, metrics: ["revenue", "traffic", "conversion", "capacity", "cost"], metricLimit: 6 },
 };
 
 /** 사업모델 태그 → Writer 가 그 사업답게 생각하도록 하는 관점 힌트 (사실이 아니라 체크리스트) */

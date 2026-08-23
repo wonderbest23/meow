@@ -66,15 +66,21 @@ export const RESOLUTION_TARGETS: Record<string, Target> = {
   promo_budget: {
     id: "promo_budget", label: "월 홍보 예산", sectionKey: "strategy/promotion", qid: "promo_budget", fromWizard: true,
     gates: [{ sectionKey: "strategy/promotion", qid: "has_promo_budget", value: "yes" }],
-    affected: ["strategy/promotion", "financials/expenses", EXEC],
+    /* 예산 액수는 실행요약이 인용하지 않는다 — 다시 써도 안 바뀌므로 대상에서 뺀다 */
+    affected: ["strategy/promotion", "financials/expenses"],
   },
   message: {
     id: "message", label: "홍보 핵심 메시지", sectionKey: "strategy/promotion", qid: "message", fromWizard: true,
-    affected: ["strategy/promotion", EXEC],
+    affected: ["strategy/promotion"],
   },
   owner_pay: {
-    id: "owner_pay", label: "대표자 급여", sectionKey: "financials/staffing", qid: "owner_pay", fromWizard: true,
-    affected: ["financials/staffing", "financials/expenses", "financials/financing", EXEC],
+    /*
+     * 예/아니오다 — "대표자 인건비를 계획에 포함하셨나요?".
+     * 금액은 staff_monthly 한 칸에 모이므로 여기서 돈을 만들지 않는다(이중계상).
+     * 반영 여부는 재무 세 섹션의 맥락으로 가고, 실행요약은 이 사실을 인용하지 않는다.
+     */
+    id: "owner_pay", label: "대표자 인건비 반영 여부", sectionKey: "financials/staffing", qid: "owner_pay", fromWizard: true,
+    affected: ["financials/staffing", "financials/expenses", "financials/financing"],
   },
   staff_monthly: {
     id: "staff_monthly", label: "월 인건비", sectionKey: "financials/staffing", qid: "staff_monthly", fromWizard: true,
@@ -153,7 +159,7 @@ export const RESOLUTION_TARGETS: Record<string, Target> = {
     ask: "하루에 매장 관리나 준비에 몇 시간 정도 쓸 계획인가요?",
     help: "자리를 비울 때 대신 관리할 사람이나 방법이 있으면 함께 적어주세요.",
     input: { kind: "text", placeholder: "예: 하루 3시간, 주말은 가족이 대신 확인", long: true },
-    affected: ["strategy/people", "strategy/distribution", EXEC],
+    affected: ["strategy/people", "strategy/distribution"],
   },
 };
 
@@ -248,7 +254,14 @@ function manualEdit(sectionKey?: string): IssueResolution {
 
 /** 문제 문장에서 실마리를 찾는다 — 카테고리만으로는 어느 칸인지 좁혀지지 않는다 */
 const KEYWORD_TARGETS: Array<{ re: RegExp; targets: string[] }> = [
-  { re: /인건비|급여|대표자 (?:노동|시간|인건)|기회비용/, targets: ["owner_pay"] },
+  /*
+   * 인건비 지적은 금액 칸부터 묻는다.
+   *
+   * 예전에는 owner_pay 하나만 걸었는데 그 질문은 "대표자 인건비를 계획에 포함하셨나요?"라는
+   * 예/아니오다. 사용자가 "예"라고 답해도 고정비에 들어가는 금액(staff_monthly)이 비어 있으면
+   * 손익분기는 그대로고 Reviewer 는 같은 지적을 반복한다.
+   */
+  { re: /인건비|급여|대표자 (?:노동|시간|인건)|기회비용/, targets: ["staff_monthly", "owner_pay"] },
   { re: /자금\s*조달|운영자금|초기 자금|자본금/, targets: ["funding_sources", "use_of_funds"] },
   { re: /홍보\s*예산|광고비|마케팅 예산/, targets: ["promo_budget"] },
   { re: /채널|유입|모객|고객 확보/, targets: ["promo_channels", "message"] },
@@ -272,7 +285,8 @@ const CATEGORY_TARGETS: Partial<Record<ReviewCategory, string[]>> = {
   problem_solution: ["problems"],
   business_model: ["first_target", "problems"],
   operation: ["growth_ceiling", "who_works"],
-  finance: ["owner_pay", "fixed_total"],
+  /* 예/아니오보다 금액 칸이 기본값으로 낫다 — 답했을 때 숫자가 실제로 움직인다 */
+  finance: ["fixed_total", "staff_monthly"],
 };
 
 /**

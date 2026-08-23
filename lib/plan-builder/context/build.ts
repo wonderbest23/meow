@@ -53,12 +53,12 @@ export interface PlanBusinessContext {
   problem: { statement?: ContextField<string>; frequency?: ContextField<string>; currentAlternative?: ContextField<string> };
   solution: { mainOffer?: ContextField<string>; description?: ContextField<string>; differentiator?: ContextField<string> };
   revenue: { model?: ContextField<string>; streams?: ContextField<string[]>; unitPrice?: ContextField<string>; volume?: ContextField<string> };
-  operations: { delivery?: ContextField<string>; coverage?: ContextField<string>; venueType?: ContextField<string>; capacity?: ContextField<string>; who?: ContextField<string[]> };
+  operations: { delivery?: ContextField<string>; coverage?: ContextField<string>; venueType?: ContextField<string>; capacity?: ContextField<string>; who?: ContextField<string[]>; ownerHours?: ContextField<string> };
   marketing: { channels?: ContextField<string[]>; acquisitionModel?: ContextField<string[]>; message?: ContextField<string>; budget?: ContextField<string> };
   competition: { alternatives?: ContextField<string[]>; knownCompetitors?: ContextField<string>; differentiator?: ContextField<string> };
   traction: { established?: ContextField<string>; hasRevenue?: ContextField<string>; items?: ContextField<string[]> };
-  team: { size?: ContextField<string>; ownerExperience?: ContextField<string> };
-  funding: { needs?: ContextField<string>; amount?: ContextField<string>; use?: ContextField<string> };
+  team: { size?: ContextField<string>; ownerExperience?: ContextField<string>; ownerPayIncluded?: ContextField<string> };
+  funding: { needs?: ContextField<string>; amount?: ContextField<string>; use?: ContextField<string>; sources?: ContextField<string> };
   goals: { horizon?: ContextField<string>; main?: ContextField<string[]>; constraint?: ContextField<string> };
   finance: { summary?: string };
   /** 팩이 전달하겠다고 선언한 확정 지표 (방문자 수·전환율·정원 등) */
@@ -200,6 +200,8 @@ export function buildPlanBusinessContext(input: BuildContextInput): PlanBusiness
         fromAnswer(get("financials/revenue", "growth_ceiling")),
       ),
       who: pick(fromAnswer(get("strategy/people", "who_works"), true)),
+      /* 하루 운영 투입 시간 — Reviewer 의 owner_hours 보완이 저장하는 칸을 그대로 읽는다 */
+      ownerHours: pick(fromAnswer(get("strategy/people", "how_manage"))),
     },
     marketing: {
       channels: pick(fromAnswer(get("strategy/promotion", "promo_channels"), true), fromAnalysis(an?.acquisitionChannels)),
@@ -220,11 +222,22 @@ export function buildPlanBusinessContext(input: BuildContextInput): PlanBusiness
     team: {
       size: pick(fromAnswer(get("overview/structure", "team_size"))),
       ownerExperience: pick(fromAnswer(get("summary/executive", "why_us")), fromSlot(rec, "ownerExperience")),
+      /*
+       * 대표자 인건비를 계획에 넣었는지 — 금액이 아니라 예/아니오다.
+       *
+       * 금액은 staff_monthly 한 칸에 모인다(그 앞 질문의 도움말이 "대표자 급여, 직원,
+       * 파트너 지급 포함"이라고 못박는다). 그래서 이 답을 돈으로 바꿔 재무 엔진에
+       * 더하면 같은 인건비를 두 번 세게 된다. 여기서는 '반영했다고 답했다'는 사실만
+       * 맥락으로 옮겨, 답한 뒤 관련 섹션을 다시 썼을 때 문서가 실제로 달라지게 한다.
+       */
+      ownerPayIncluded: pick(fromAnswer(get("financials/staffing", "owner_pay"))),
     },
     funding: {
       needs: pick(fromAnswer(get("funding/requirements", "needs_funding"))),
       amount: pick(fromAnswer(get("funding/requirements", "amount"))),
       use: pick(fromAnswer(get("funding/requirements", "use_of_funds"))),
+      /* 조달 방법 — 자금 섹션이 "얼마"만 알고 "어디서"를 몰라 다시 써도 바뀌지 않았다 */
+      sources: pick(fromAnswer(get("funding/requirements", "sources"))),
     },
     goals: {
       horizon: pick(fromAnswer(get("objectives/corporate", "horizon"))),

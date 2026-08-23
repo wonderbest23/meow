@@ -96,11 +96,18 @@ const bIssue: ReviewIssue = {
 };
 const bRes = resolveAiIssue(bIssue, analyzerSlotsFor(baseAnswers()));
 assert.equal(bRes.type, "answer");
-assert.deepEqual(bRes.slots?.map((s) => s.id), ["owner_pay"], "B. 인건비 → owner_pay");
+/*
+ * 인건비 지적은 '금액 칸'부터 묻는다.
+ *
+ * 예전에는 owner_pay 하나만 걸었는데 그 질문은 "대표자 인건비를 계획에 포함하셨나요?"라는
+ * 예/아니오다. "예"라고 답해도 고정비에 들어가는 금액(staff_monthly)이 비어 있으면
+ * 손익분기는 그대로고 Reviewer 는 같은 지적을 반복한다.
+ */
+assert.deepEqual(bRes.slots?.map((s) => s.id), ["staff_monthly", "owner_pay"], "B. 인건비 → 금액 칸 먼저, 반영 여부는 그다음");
 assert.deepEqual(affectedOf(bRes).sort(), ["financials/expenses", "financials/financing", "financials/staffing", "summary/executive"]);
 const bQs = followUpQuestions(bRes, baseAnswers());
-assert.equal(bQs[0].target.qid, "owner_pay");
-assert.equal(bQs[0].current, "월 100만원", "기존 답이 있으면 미리 채운다");
+assert.equal(bQs[0].target.qid, "staff_monthly", "첫 질문은 금액");
+assert.equal(bQs[1].target.qid, "owner_pay");
 
 /* ═══════ Case C — 차별점 부족 → differentiator ═══════ */
 const cIssue: ReviewIssue = { ...bIssue, id: "ai-2", category: "competition", title: "차별점이 추상적", problem: "'맞춤형 경험'만으로는 경쟁 대안과 구분되지 않습니다.", recommendation: "비교 기준 2~3개를 정해 주세요." };
