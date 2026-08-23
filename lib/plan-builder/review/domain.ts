@@ -74,6 +74,15 @@ export interface ReviewIssue {
   autoFixable: boolean;
   /** 이 문제를 누가 찾았는가 — 코드가 확정한 것과 AI 판단을 구분해 보여준다 */
   origin: "deterministic" | "ai";
+  /**
+   * 이 문제를 어떻게 푸는가 — 코드가 정한다(Reviewer LLM 이 아니라).
+   * lib/plan-builder/review/resolution.ts 참조. 타입은 순환 참조를 피해 여기서 최소로 둔다.
+   */
+  resolution?: {
+    type: "answer" | "market_research" | "manual_edit" | "auto_rewrite";
+    slots?: Array<{ id: string; sectionKey?: string; qid?: string; analyzerSlot?: string }>;
+    affectedSections?: string[];
+  };
 }
 
 export interface ReviewDimension {

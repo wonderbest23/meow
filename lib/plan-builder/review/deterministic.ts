@@ -12,6 +12,7 @@ import { calculateFinancials, collectFinancialInputs, parseAmount, type Financia
 import { buildPlanBusinessContext, type PlanBusinessContext } from "../context/build";
 import type { MarketEvidence } from "../../market/domain";
 import type { ReviewIssue } from "./domain";
+import { MARKET_RESEARCH_RESOLUTION, RESOLUTION_TARGETS, answerResolution } from "./resolution";
 
 type Answers = Record<string, Record<string, unknown>>;
 type Business = { name?: string; description?: string; industry?: string; region?: string; stage?: string };
@@ -30,6 +31,13 @@ export interface DeterministicResult {
   consistency: ConsistencyIssue[];
   /** 운영 능력 상한 — 사용자가 답한 값에서만 나온다 */
   capacity: { value: number; basis: string } | null;
+}
+
+/** 맥락 충돌 제목 → 고쳐야 할 질문 */
+function conflictTargets(title: string): string[] {
+  if (title.includes("핵심 고객")) return ["first_target"];
+  if (title.includes("대표 상품")) return ["unit_price"];
+  return [];
 }
 
 function won(n: number): string {
@@ -88,6 +96,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "판매가를 올리거나 1건당 변동비 구성(재료·수수료·포장·배송)을 다시 확인해 주세요. 변동비에 고정비 항목이 잘못 섞여 있지 않은지도 함께 보시면 좋습니다.",
       requiresUserInput: true,
       autoFixable: false,
+      resolution: answerResolution(["unit_price", "variable_per_unit"]),
     });
   }
 
@@ -107,6 +116,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
         recommendation: "고정비를 줄이거나, 판매가·판매량 계획을 다시 잡아 주세요. 목표 판매량이 보수적으로 잡힌 것이라면 그 근거를 본문에 함께 적는 편이 좋습니다.",
         requiresUserInput: true,
         autoFixable: false,
+        resolution: answerResolution(["fixed_total", "monthly_volume", "unit_price"]),
       });
     }
   }
@@ -124,6 +134,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "정원·운영 횟수를 늘릴 계획이라면 그 계획(추가 인력·공간·시간)을 본문에 적고, 그렇지 않다면 목표 판매량을 운영 상한 안으로 조정해 주세요.",
       requiresUserInput: true,
       autoFixable: false,
+      resolution: answerResolution(["growth_ceiling", "monthly_volume"]),
     });
   }
 
@@ -143,6 +154,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "자기자금·대출·지원사업 중 어디서 얼마를 마련할 계획인지 '자금 소요' 섹션에 적어 주세요.",
       requiresUserInput: true,
       autoFixable: false,
+      resolution: answerResolution(["funding_sources", "use_of_funds"]),
     });
   }
 
@@ -162,6 +174,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "고객이 실제로 있는 곳 한두 곳을 정하고, 거기에 매달 얼마를 쓸지 '홍보 전략' 섹션에 적어 주세요.",
       requiresUserInput: true,
       autoFixable: false,
+      resolution: answerResolution(["promo_channels", "promo_budget"]),
     });
   }
 
@@ -178,6 +191,10 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "두 값 중 맞는 쪽으로 답변을 맞춰 주세요. 둘 다 맞다면(예: 상품별 가격이 다름) 본문에서 구분해 적어야 합니다.",
       requiresUserInput: true,
       autoFixable: false,
+      // 어긋난 질문이 등록된 목표면 그 질문을 그대로 다시 물어 고치게 한다
+      resolution: answerResolution(
+        c.refs.flatMap((r) => r.qids ?? []).filter((qid) => RESOLUTION_TARGETS[qid]).slice(0, 3),
+      ),
     });
   }
 
@@ -193,6 +210,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "둘 중 실제로 쓸 표현을 하나 정해 주세요.",
       requiresUserInput: true,
       autoFixable: false,
+      resolution: answerResolution(conflictTargets(c.title)),
     });
   }
 
@@ -208,6 +226,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "정해지는 대로 해당 질문에 답을 채워 주세요. 지금 정할 수 없다면 언제·무엇을 보고 정할지를 본문에 적어 두는 것만으로도 문서가 단단해집니다.",
       requiresUserInput: true,
       autoFixable: false,
+      resolution: answerResolution(context.unknowns.map((u) => u.field).slice(0, 3)),
     });
   }
 
@@ -224,6 +243,7 @@ export function collectDeterministic(input: DeterministicInput): DeterministicRe
       recommendation: "플랜 개요의 '공식 시장자료 찾기'로 관련 통계를 한 번 검색해 붙여 주세요.",
       requiresUserInput: false,
       autoFixable: false,
+      resolution: MARKET_RESEARCH_RESOLUTION,
     });
   }
 

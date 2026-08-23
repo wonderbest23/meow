@@ -15,6 +15,7 @@ import { toPromptEvidence } from "../market-research";
 import type { MarketEvidence } from "../../market/domain";
 import type { PlanBusinessContext } from "../context/build";
 import type { DeterministicResult } from "./deterministic";
+import { analyzerSlotsFor, resolveAiIssue } from "./resolution";
 import {
   REVIEW_DIMENSIONS,
   REVIEW_VERSION,
@@ -293,7 +294,13 @@ export async function reviewPlan(
     return { review: fallbackReview(det), source: "deterministic" };
   }
 
-  const issues = mergeIssues(det, ai.issues);
+  /*
+   * AI 가 찾은 문제를 기존 질문·슬롯에 잇는다.
+   * Reviewer 는 sectionKey·qid 를 고르지 않는다 — 연결은 코드의 몫이다.
+   */
+  const usableSlots = analyzerSlotsFor(input.answers ?? {});
+  const resolved = ai.issues.map((i) => ({ ...i, resolution: resolveAiIssue(i, usableSlots) }));
+  const issues = mergeIssues(det, resolved);
   return {
     review: {
       version: REVIEW_VERSION,

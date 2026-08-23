@@ -21,6 +21,7 @@ import {
   type ReviewRecord,
   type ReviewSeverity,
 } from "../../lib/plan-builder/review/domain";
+import ReviewFollowUp from "./ReviewFollowUp";
 import styles from "./ReviewPanel.module.css";
 
 const GROUP_TITLE: Record<ReviewSeverity, string> = {
@@ -33,11 +34,14 @@ export default function ReviewPanel({
   planId,
   doneCount,
   onOpenSection,
+  onOpenDocument,
 }: {
   planId: string | null;
   /** 본문이 만들어진 섹션 수 — 하나도 없으면 검토할 것이 없다 */
   doneCount: number;
   onOpenSection?: (chapterId: string, sectionId: string) => void;
+  /** 문장 문제는 편집기로 보낸다 — 정형 질문으로 풀 수 없는 것들 */
+  onOpenDocument?: () => void;
 }) {
   const [record, setRecord] = useState<ReviewRecord | null>(null);
   const [status, setStatus] = useState<"none" | "stale" | "fresh">("none");
@@ -45,6 +49,8 @@ export default function ReviewPanel({
   const [error, setError] = useState("");
   const [expanded, setExpanded] = useState(false);
   const [readOnly, setReadOnly] = useState(false);
+  /** 지금 답변을 받고 있는 문제 */
+  const [openIssue, setOpenIssue] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     const s = loadState();
@@ -185,7 +191,24 @@ export default function ReviewPanel({
                   {expanded && issue.evidence.length > 0 && <p className={styles.evidence}>근거 · {issue.evidence.join(" / ")}</p>}
                   <p className={styles.rec}><b>→</b> {issue.recommendation}</p>
                   <div className={styles.actions}>
-                    {issue.sectionKey && onOpenSection && (
+                    {/*
+                      문제 종류에 맞는 행동 하나만 보여 준다.
+                      answer: 이 자리에서 1~3개만 묻는다(위저드 첫 화면으로 보내지 않는다)
+                      market_research: 기존 공식자료 기능으로
+                      manual_edit/auto_rewrite: 편집기 또는 해당 섹션으로
+                    */}
+                    {issue.resolution?.type === "answer" && planId && (
+                      <button type="button" className={styles.ghost} onClick={() => setOpenIssue(openIssue === issue.id ? null : issue.id)}>
+                        {openIssue === issue.id ? "접기" : "답변 추가하기 →"}
+                      </button>
+                    )}
+                    {issue.resolution?.type === "market_research" && onOpenSection && (
+                      <button type="button" className={styles.ghost} onClick={() => onOpenSection("market", "segments")}>공식자료 찾아보기 →</button>
+                    )}
+                    {issue.resolution?.type === "manual_edit" && onOpenDocument && (
+                      <button type="button" className={styles.ghost} onClick={onOpenDocument}>해당 부분 직접 수정 →</button>
+                    )}
+                    {issue.sectionKey && onOpenSection && issue.resolution?.type !== "market_research" && (
                       <button
                         type="button"
                         className={styles.ghost}
@@ -194,10 +217,18 @@ export default function ReviewPanel({
                           if (chapterId && sectionId) onOpenSection(chapterId, sectionId);
                         }}
                       >
-                        {issue.requiresUserInput ? "답변 추가하기" : "해당 섹션 열기"} →
+                        해당 섹션 열기
                       </button>
                     )}
                   </div>
+                  {openIssue === issue.id && planId && (
+                    <ReviewFollowUp
+                      issue={issue}
+                      planId={planId}
+                      onSaved={refresh}
+                      onClose={() => setOpenIssue(null)}
+                    />
+                  )}
                 </article>
               ))}
             </div>

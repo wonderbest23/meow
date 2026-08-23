@@ -421,7 +421,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         <ConsistencyPanel issues={issues} onOpenSection={onOpenSection} />
 
         {/* AI 사업 검토 — 본문이 하나라도 있을 때만. 실패해도 문서 기능은 그대로다 */}
-        <ReviewPanel planId={activePlanId} doneCount={doneCount} onOpenSection={onOpenSection} />
+        <ReviewPanel planId={activePlanId} doneCount={doneCount} onOpenSection={onOpenSection} onOpenDocument={onOpenDocument} />
 
         {/* 생성 진행·일괄 생성 */}
         <div className={styles.tools}>
