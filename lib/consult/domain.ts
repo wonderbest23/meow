@@ -236,6 +236,56 @@ export function businessFromConsult(profile: ConsultProfile): {
   };
 }
 
+/*
+ * 상담에서 받은 답을 사업계획서 질문 칸으로 옮긴다.
+ *
+ * businessFromConsult 는 사업 정보 네 칸(업종·지역·단계·설명)만 만든다. 나머지 —
+ * 예산, 대출 포함 여부, 직접 운영, 경력, 하루 투입 시간, 목표 월수익 — 는 화면에
+ * 보여 주기만 하고 버려졌다. 손님이 이미 답한 것을 뒤에서 또 묻는 셈이었다.
+ *
+ * 여기서는 손님이 실제로 한 말만 옮긴다. 없는 답을 추측해 채우지 않는다.
+ * 값이 선택지와 정확히 맞지 않을 수 있으므로(예: "3000만원"), 자유 입력 칸에만 넣는다.
+ */
+export function answersFromConsult(profile: ConsultProfile | null | undefined): Record<string, Record<string, unknown>> {
+  if (!profile) return {};
+  const out: Record<string, Record<string, unknown>> = {};
+  const put = (sectionKey: string, qid: string, value: string | undefined) => {
+    if (!value || !value.trim()) return;
+    out[sectionKey] = { ...(out[sectionKey] ?? {}), [qid]: value.trim() };
+  };
+
+  /*
+   * 대출을 포함한 금액이면 외부 자금이 필요하다고 답한 것이다.
+   * "미포함"에도 "포함"이 들어 있으므로 앞의 '미·불·안'을 먼저 걸러낸다.
+   */
+  const loanIncluded = Boolean(profile.loanIncluded && /포함/.test(profile.loanIncluded) && !/[미불안]포함|없|제외|아니/.test(profile.loanIncluded));
+  if (loanIncluded) {
+    put("funding/requirements", "needs_funding", "yes");
+    put("funding/requirements", "self_fund", profile.budget);
+  } else if (profile.budget) {
+    /* 대출 없이 쓸 수 있는 돈 = 자기자본 */
+    put("funding/requirements", "self_fund", profile.budget);
+  }
+
+  /* 투자 가능 금액은 초기 투자 규모로도 읽힌다 — 재무 계산이 쓰는 칸 */
+  put("financials/assets", "asset_cost", profile.budget);
+
+  /* 대표자가 직접 하는지 */
+  if (profile.runsSelf?.includes("직접")) put("strategy/people", "who_works", "대표자 직접");
+
+  /* 경력은 '왜 우리가 잘할 수 있나'의 재료다 */
+  put("summary/executive", "why_us", profile.experience);
+
+  /*
+   * hoursPerDay(하루 투입 시간)는 옮기지 않는다.
+   * 기존 질문 중 뜻이 맞는 칸이 없다 — strategy/people 의 how_manage 는
+   * "인력의 품질·신뢰를 어떻게 관리하나요?" 라서 "하루 3시간"을 넣으면 엉뚱한 답이 된다.
+   * 맞는 칸이 생기기 전까지는 옮기지 않는 편이 낫다.
+   */
+
+  return out;
+}
+
 /** 주소에 담긴 상담 카드를 읽는다 — 남이 만든 주소일 수 있으니 형식을 검사한다 */
 /*
  * 상담 결과를 로그인 왕복 동안 들고 있는 자리.

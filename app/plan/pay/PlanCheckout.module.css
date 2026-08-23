@@ -27,7 +27,7 @@
   display: grid;
   place-items: center;
   background: var(--blue-soft, #efeefb);
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
 }
 
 .title {
@@ -70,7 +70,7 @@
   display: block;
   width: 100%;
   border: 0;
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -122,7 +122,7 @@
   text-decoration: none;
 }
 .back:hover {
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
 }
 
 

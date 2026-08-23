@@ -51,7 +51,7 @@
   width: 36px; height: 36px; border-radius: 8px;
   background: #fff;
   display: grid; place-items: center;
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
 }
 .tile_todo .tileIcon { color: #e0a100; }
 .tile_done .tileIcon { color: #22b573; }
@@ -68,7 +68,7 @@
   gap: 10px;
 }
 .barCol { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
-.barCol i { width: 4px; border-radius: 2px; background: var(--blue, #4a3aff); display: block; }
+.barCol i { width: 4px; border-radius: 2px; background: var(--blue, #3272db); display: block; }
 .barCol:nth-child(even) i { background: #22b573; }
 
 /* ── 본문 ── */
@@ -90,7 +90,7 @@
   min-height: 38px;
   padding: 0 14px;
   border-radius: 8px;
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -128,7 +128,7 @@
   cursor: pointer;
 }
 .seg svg { display: inline-block !important; width: 13px !important; height: 13px !important; }
-.segOn { background: var(--blue, #4a3aff); color: #fff; }
+.segOn { background: var(--blue, #3272db); color: #fff; }
 .sort { display: inline-flex; align-items: center; gap: 6px; color: #8181a5; font-size: 12px; }
 
 .list {
@@ -157,10 +157,10 @@
   transition: background .12s ease, border-color .12s ease;
 }
 .row:hover { background: #f9f9fc; border-color: #e6e6ef; }
-.row:focus-visible { outline: 2px solid var(--blue, #4a3aff); outline-offset: 1px; }
-.rowActive { border-color: color-mix(in srgb, var(--acc, #4a3aff) 40%, #fff); }
+.row:focus-visible { outline: 2px solid var(--blue, #3272db); outline-offset: 1px; }
+.rowActive { border-color: color-mix(in srgb, var(--acc, #3272db) 40%, #fff); }
 .rowNew { border-style: dashed; grid-template-columns: 18px minmax(0, 1fr) auto; color: #8181a5; }
-.rowNew:hover { color: var(--blue, #4a3aff); }
+.rowNew:hover { color: var(--blue, #3272db); }
 
 .check {
   width: 18px; height: 18px;
@@ -170,18 +170,18 @@
   display: grid; place-items: center;
   color: #fff;
 }
-.checkOn { background: var(--blue, #4a3aff); border-color: var(--blue, #4a3aff); }
+.checkOn { background: var(--blue, #3272db); border-color: var(--blue, #3272db); }
 .rowIcon {
   width: 30px; height: 30px; border-radius: 8px;
-  background: color-mix(in srgb, var(--acc, #4a3aff) 12%, #fff);
-  color: var(--acc, #4a3aff);
+  background: color-mix(in srgb, var(--acc, #3272db) 12%, #fff);
+  color: var(--acc, #3272db);
   display: grid; place-items: center;
 }
 .rowIcon svg { width: 15px; height: 15px; }
 .rowMain { min-width: 0; display: grid; gap: 1px; }
 .rowMain b { font-size: 14px; font-weight: 700; color: #1c1d21; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rowMain small { font-size: 12px; color: #8181a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.titleInput { width: 100%; padding: 4px 8px; border: 1px solid var(--blue, #4a3aff); border-radius: 6px; font: inherit; font-size: 14px; font-weight: 700; }
+.titleInput { width: 100%; padding: 4px 8px; border: 1px solid var(--blue, #3272db); border-radius: 6px; font: inherit; font-size: 14px; font-weight: 700; }
 
 .rowMeta { display: flex; gap: 14px; color: #8181a5; font-size: 12px; }
 .rowMeta span { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }
@@ -198,7 +198,7 @@
 .chip_done { background: #e3f7ec; color: #157a47; }
 .chip_live { background: #fff4d6; color: #8a6400; }
 .chip_idle { background: #f0f0f3; color: #55586a; }
-.chip_sample { background: #efeefb; color: var(--blue, #4a3aff); }
+.chip_sample { background: #efeefb; color: var(--blue, #3272db); }
 
 .rowActions { display: flex; gap: 2px; color: #b4b4c8; min-width: 34px; justify-content: flex-end; }
 .iconBtn {

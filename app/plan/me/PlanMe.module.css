@@ -54,8 +54,8 @@
 }
 
 .cardAction:hover {
-  border-color: var(--blue, #4a3aff);
-  color: var(--blue, #4a3aff);
+  border-color: var(--blue, #3272db);
+  color: var(--blue, #3272db);
 }
 
 /* 라벨-값 줄 — 내 플랜 목록의 사업 카드와 같은 형태 */
@@ -225,8 +225,8 @@
   white-space: nowrap;
 }
 .refundBtn:hover {
-  border-color: var(--blue, #4a3aff);
-  color: var(--blue, #4a3aff);
+  border-color: var(--blue, #3272db);
+  color: var(--blue, #3272db);
 }
 .refundForm {
   display: flex;
@@ -250,7 +250,7 @@
 }
 .refundSubmit {
   border: 0;
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -277,7 +277,7 @@
 .refundMessage {
   margin: 10px 0 0;
   font-size: 13px;
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
 }
 
 /* 회원 탈퇴 — 되돌릴 수 없는 행동이라 톤을 분명히 한다 */

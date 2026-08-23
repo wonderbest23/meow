@@ -194,11 +194,11 @@
   display: grid;
   place-items: center;
   background: rgba(49, 130, 246, 0.1);
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
 }
 
 .outBtnPrimary .outIcon {
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
   color: #fff;
 }
 
@@ -232,7 +232,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .outBtn:hover:not(:disabled) {
-    border-color: var(--blue, #4a3aff);
+    border-color: var(--blue, #3272db);
     transform: translateY(-1px);
   }
 }

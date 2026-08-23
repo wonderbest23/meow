@@ -52,7 +52,7 @@
 .surface blockquote {
   margin: 0 0 12px;
   padding: 8px 14px;
-  border-left: 3px solid var(--wz-brand, #4a3aff);
+  border-left: 3px solid var(--wz-brand, #3272db);
   background: var(--wz-panel2, #f9f9ff);
   border-radius: 0 8px 8px 0;
   color: var(--wz-muted, #585667);
@@ -61,7 +61,7 @@
   font-weight: 800;
 }
 .surface a {
-  color: var(--wz-brand, #4a3aff);
+  color: var(--wz-brand, #3272db);
   text-decoration: underline;
 }
 .surface hr {
@@ -141,7 +141,7 @@
   color: #fff;
 }
 .tbOn {
-  background: var(--wz-brand, #4a3aff);
+  background: var(--wz-brand, #3272db);
   color: #fff;
 }
 .tbSep {

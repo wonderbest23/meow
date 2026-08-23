@@ -18,7 +18,7 @@
   display: grid;
   place-items: center;
   background: var(--wz-brand-soft, #efeefb);
-  color: var(--wz-brand, #4a3aff);
+  color: var(--wz-brand, #3272db);
 }
 
 .title {
@@ -62,7 +62,7 @@
   display: block;
   max-width: 300px;
   margin: 0 auto;
-  background: var(--wz-brand, #4a3aff);
+  background: var(--wz-brand, #3272db);
   color: #fff;
   font-weight: 700;
   font-size: 14.5px;
@@ -90,8 +90,8 @@
   transition: 0.2s;
 }
 .secondary:hover {
-  border-color: var(--wz-brand, #4a3aff);
-  color: var(--wz-brand, #4a3aff);
+  border-color: var(--wz-brand, #3272db);
+  color: var(--wz-brand, #3272db);
 }
 
 .note {

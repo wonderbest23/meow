@@ -71,6 +71,7 @@
     "test:owner-pay": "tsx scripts/owner-pay-safety.test.ts",
     "test:followup-loop": "tsx scripts/followup-loop.test.ts",
     "test:review-digest": "tsx scripts/review-digest.test.ts",
+    "test:consult-carry": "tsx scripts/consult-carry.test.ts",
     "test:market-citation": "tsx scripts/market-citation-guard.test.ts",
     "test:document-url": "tsx scripts/document-source-url.test.ts",
     "test:llm-alert": "tsx scripts/llm-alert.test.ts",

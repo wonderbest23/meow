@@ -38,7 +38,7 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(150deg, var(--blue, #4a3aff), #7f9bff);
+  background: linear-gradient(150deg, var(--blue, #3272db), #7f9bff);
   display: grid;
   place-items: center;
   color: #fff;
@@ -189,7 +189,7 @@
   background: var(--surface-muted, #dfdef1);
 }
 .segs i.on {
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
 }
 .segs i.ok {
   background: #16b877;
@@ -246,9 +246,9 @@
  * 둘 중 무엇을 눌러야 하는지 알 수 없었다. 한 단 낮춘다.
  */
 .bulkBtn {
-  border: 1px solid var(--blue, #4a3aff);
+  border: 1px solid var(--blue, #3272db);
   background: var(--surface, #fff);
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
   font: inherit;
   font-weight: 700;
   font-size: 13px;
@@ -284,7 +284,7 @@
 .bulkFill {
   display: block;
   height: 100%;
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
   transition: width 0.3s;
 }
 .bulkText {
@@ -331,11 +331,11 @@
   margin-right: auto;
 }
 .exportInfo b {
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
 }
 .exportBtn {
-  border: 1px solid var(--blue, #4a3aff);
-  background: var(--blue, #4a3aff);
+  border: 1px solid var(--blue, #3272db);
+  background: var(--blue, #3272db);
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -364,7 +364,7 @@
 .docCrumb {
   font-size: 13px;
   font-weight: 800;
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
   margin-bottom: 4px;
 }
 .docTitle {
@@ -486,7 +486,7 @@
   box-shadow: 0 8px 18px rgba(20, 32, 64, 0.08);
 }
 .node:focus-visible {
-  outline: 2px solid var(--blue, #4a3aff);
+  outline: 2px solid var(--blue, #3272db);
   outline-offset: 2px;
 }
 .nodeNum {
@@ -640,7 +640,7 @@
   gap: 18px;
   width: 100%;
   text-align: left;
-  border: 1.5px solid var(--blue, #4a3aff);
+  border: 1.5px solid var(--blue, #3272db);
   border-radius: 16px;
   background: linear-gradient(120deg, #eef4ff, var(--surface, #fff) 65%);
   padding: 20px 22px;
@@ -679,7 +679,7 @@
   font-size: 13.5px;
   font-weight: 800;
   color: #fff;
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
   border-radius: 10px;
   padding: 12px 18px;
   white-space: nowrap;
@@ -809,7 +809,7 @@
 .continueBanner {
   grid-template-columns: minmax(0, 1fr) auto;
   background: var(--surface, #fff);
-  border: 1.5px solid var(--blue, #4a3aff);
+  border: 1.5px solid var(--blue, #3272db);
 }
 
 @media (max-width: 640px) {
@@ -828,7 +828,7 @@
   font-size: 26px;
   font-weight: 800;
   letter-spacing: -0.5px;
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
   font-variant-numeric: tabular-nums;
 }
 /* 세그먼트 규격은 모든 미터가 동일하다 — 진행률은 숫자 크기로만 강조한다 */
@@ -1093,7 +1093,7 @@
 .sideBlock small { font-size: 12px; font-weight: 700; color: #8181a5; }
 .sideProgress { display: flex; align-items: center; gap: 10px; }
 .sideBar { flex: 1; height: 6px; border-radius: 3px; background: #f0f0f3; overflow: hidden; display: block; }
-.sideBar i { display: block; height: 100%; border-radius: 3px; background: var(--blue, #4a3aff); }
+.sideBar i { display: block; height: 100%; border-radius: 3px; background: var(--blue, #3272db); }
 .sideProgress b { font-size: 14px; color: #1c1d21; }
 .sideMuted { margin: 0; font-size: 12px; color: #8181a5; }
 .sideNext { margin: 0; font-size: 14px; font-weight: 700; color: #1c1d21; }
@@ -1101,7 +1101,7 @@
   min-height: 38px !important;
   padding: 0 14px !important;
   border: 0; border-radius: 8px !important;
-  background: var(--blue, #4a3aff) !important; color: #fff !important;
+  background: var(--blue, #3272db) !important; color: #fff !important;
   font-size: 13px; font-weight: 700 !important;
   justify-self: start;
 }
@@ -1111,7 +1111,7 @@
   display: flex; align-items: flex-end; gap: 8px;
 }
 .chartCol { flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
-.chartCol i { width: 4px; border-radius: 2px; background: var(--blue, #4a3aff); display: block; }
+.chartCol i { width: 4px; border-radius: 2px; background: var(--blue, #3272db); display: block; }
 .chartCol:nth-child(even) i { background: #22b573; }
 
 .body { padding: 22px 28px 48px; display: grid; align-content: start; gap: 14px; }
@@ -1126,7 +1126,7 @@
   background: #f5f5fa; color: #55586a;
   font-size: 12px; font-weight: 700 !important;
 }
-.seg .segOn { background: var(--blue, #4a3aff); color: #fff; }
+.seg .segOn { background: var(--blue, #3272db); color: #fff; }
 
 /* 행 목록 */
 .rows { padding: 10px 16px 16px; border-radius: 12px; background: #fff; display: grid; gap: 4px; }
@@ -1134,7 +1134,7 @@
 .groupHead { display: flex; align-items: center; gap: 8px; padding: 8px 2px 4px; }
 .groupNo {
   width: 20px; height: 20px; border-radius: 6px;
-  background: var(--blue, #4a3aff); color: #fff;
+  background: var(--blue, #3272db); color: #fff;
   font-size: 11px; font-weight: 700; display: grid; place-items: center;
 }
 .groupHead b { font-size: 13px; font-weight: 700; color: #1c1d21; }
@@ -1158,14 +1158,14 @@
   transition: background .12s ease, border-color .12s ease;
 }
 .row:hover { background: #f9f9fc !important; border-color: #e6e6ef !important; }
-.rowNext { border-color: color-mix(in srgb, var(--blue, #4a3aff) 45%, #fff) !important; }
+.rowNext { border-color: color-mix(in srgb, var(--blue, #3272db) 45%, #fff) !important; }
 .check {
   width: 18px; height: 18px; border-radius: 5px;
   border: 1.5px solid #d8d8e6; background: #fff;
   display: grid; place-items: center; color: #fff;
 }
 .check svg { width: 11px; height: 11px; }
-.checkOn { background: var(--blue, #4a3aff); border-color: var(--blue, #4a3aff); }
+.checkOn { background: var(--blue, #3272db); border-color: var(--blue, #3272db); }
 .rowMain { min-width: 0; display: grid; gap: 1px; }
 .rowMain b { font-size: 14px; font-weight: 700; color: #1c1d21; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .rowMain small { font-size: 12px; color: #8181a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -1174,7 +1174,7 @@
 .chip { min-width: 58px; padding: 5px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 700; text-align: center; white-space: nowrap; }
 .chip_done { background: #e3f7ec; color: #157a47; }
 .chip_live { background: #fff4d6; color: #8a6400; }
-.chip_next { background: #efeefb; color: var(--blue, #4a3aff); }
+.chip_next { background: #efeefb; color: var(--blue, #3272db); }
 .chip_idle { background: #f0f0f3; color: #55586a; }
 
 @media (max-width: 1000px) {
@@ -1187,7 +1187,7 @@
   .row { grid-template-columns: 18px minmax(0, 1fr) auto; }
   .rowMeta { display: none; }
 }
-.seg button.segOn { background: var(--blue, #4a3aff) !important; color: #fff !important; }
+.seg button.segOn { background: var(--blue, #3272db) !important; color: #fff !important; }
 .seg button { box-shadow: none !important; }
 
 /* ── 위계: 주인공 하나, 나머지는 조용히 ─────────────────────────────
@@ -1199,12 +1199,12 @@
   padding: 18px 20px;
   border-radius: 12px;
   background: #fff;
-  border: 1.5px solid var(--blue, #4a3aff);
+  border: 1.5px solid var(--blue, #3272db);
   box-shadow: 0 6px 18px rgba(74, 58, 255, .1);
   display: grid;
   gap: 8px;
 }
-.heroKicker { font-size: 12px; font-weight: 800; color: var(--blue, #4a3aff); }
+.heroKicker { font-size: 12px; font-weight: 800; color: var(--blue, #3272db); }
 .heroRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .heroText { display: grid; gap: 3px; min-width: 0; }
 .heroText strong { font-size: 18px; font-weight: 800; color: #1c1d21; }
@@ -1213,7 +1213,7 @@
   min-height: 44px !important;
   padding: 0 20px !important;
   border: 0; border-radius: 10px !important;
-  background: var(--blue, #4a3aff) !important; color: #fff !important;
+  background: var(--blue, #3272db) !important; color: #fff !important;
   font-size: 15px; font-weight: 700 !important;
   white-space: nowrap;
 }
@@ -1283,7 +1283,7 @@
 /* AI 사업 정리 권유 — hero 보다 한 단계 조용하게(점선), 같은 글자·버튼 */
 .analyzeNudge {
   padding: 14px 18px; border-radius: 12px; background: #f7f9ff;
-  border: 1.5px dashed color-mix(in srgb, var(--blue, #4a3aff) 45%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--blue, #3272db) 45%, transparent);
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   margin-bottom: 12px;
 }

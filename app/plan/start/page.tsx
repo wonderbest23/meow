@@ -2,14 +2,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { saveBusiness, createPlan, hydrateFromServer, loadState, answerDonor, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
+import { saveBusiness, createPlan, saveAnswers, hydrateFromServer, loadState, answerDonor, EMPTY_BUSINESS, type BusinessProfile } from "../../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import { Sparkles, Star, ArrowRight } from "lucide-react";
 import PlanGate from "../PlanGate";
 import styles from "./PlanStart.module.css";
 import RegionInput from "../../../components/region-input";
 import PlanLoading from "../PlanLoading";
-import { businessFromConsult, readConsultParam, readStashedConsult, stashConsult, clearStashedConsult, profileLines, type ConsultProfile } from "../../../lib/consult/domain";
+import { businessFromConsult, answersFromConsult, readConsultParam, readStashedConsult, stashConsult, clearStashedConsult, profileLines, type ConsultProfile } from "../../../lib/consult/domain";
 import { TYPE_META, DEFAULT_META } from "../type-meta";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -299,7 +299,15 @@ export default function PlanStartPage() {
     }
     if (s.business.name) {
       setHasExisting(true);
-      if (s.plans.length > 0) setStep(2); // 사업+플랜이 이미 있으면 유형 선택부터
+      /*
+       * 상담에서 왔으면 1단계를 건너뛰지 않는다.
+       *
+       * 예전에는 저장된 사업이 있으면 곧장 유형 선택으로 넘어갔다. 그래서 상담에서
+       * 전혀 다른 사업(예: 베이커리)을 20분 이야기하고 와도 옛 사업(꽃집) 화면이
+       * 떠 있었고, 상담에서 가져온 값은 아무 칸에도 보이지 않았다 — 손님 눈에는
+       * 상담이 통째로 버려진 것이다. 상담이 있으면 사업 정보부터 보여 준다.
+       */
+      if (s.plans.length > 0 && !consult) setStep(2);
     }
     setDonor(answerDonor());
     setExistingTypes(new Set(s.plans.filter((p) => !p.id.startsWith("sample_")).map((p) => p.planType)));
@@ -347,7 +355,16 @@ export default function PlanStartPage() {
      */
     await hydrateFromServer().catch(() => {});
     saveBusiness(biz);
-    createPlan(pt.type, biz.name, { inheritAnswers: inherit });
+    const planId = createPlan(pt.type, biz.name, { inheritAnswers: inherit });
+    /*
+     * 상담에서 받은 답을 질문 칸으로 옮겨 담는다.
+     *
+     * 예전에는 업종·지역·설명 세 칸만 채우고 나머지(예산·대출·직접 운영·경력)는
+     * 화면에 보여 주기만 하고 버렸다. 손님은 이미 답한 것을 뒤에서 또 묻는 셈이었다.
+     * 이미 적어 둔 칸은 건드리지 않고 빈 칸만 메운다.
+     */
+    const carried = answersFromConsult(fromConsult);
+    for (const [sectionKey, values] of Object.entries(carried)) saveAnswers(sectionKey, values, planId);
     /* 상담 내용은 여기까지가 임무다 — 남겨 두면 다음에 또 '상담에서 가져왔다'고 뜬다 */
     clearStashedConsult();
     /*

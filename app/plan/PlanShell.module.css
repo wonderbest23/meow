@@ -104,7 +104,7 @@
   height: 26px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--blue, #4a3aff);
+  background: var(--blue, #3272db);
   color: #fff;
   display: grid;
   place-items: center;
@@ -345,7 +345,7 @@
   opacity: 1;
 }
 .railToggle:hover {
-  color: var(--blue, #4a3aff);
+  color: var(--blue, #3272db);
   background: var(--blue-soft, #efeefb);
 }
 
@@ -576,10 +576,10 @@
   color: #1c1d21;
 }
 .railBtn.on {
-  background: color-mix(in srgb, var(--blue, #4a3aff) 10%, #fff);
-  color: var(--blue, #4a3aff);
+  background: color-mix(in srgb, var(--blue, #3272db) 10%, #fff);
+  color: var(--blue, #3272db);
 }
-.railBtn.on svg { color: var(--blue, #4a3aff); }
+.railBtn.on svg { color: var(--blue, #3272db); }
 .signIn {
   background: #f5f5fa;
   color: #1c1d21;
@@ -635,7 +635,7 @@
 .railToggle:hover { background: #f5f5fa; }
 .burger { display: grid; gap: 4px; }
 .burger i { display: block; width: 16px; height: 2px; border-radius: 1px; background: #55586a; }
-.railToggle:hover .burger i { background: var(--blue, #4a3aff); }
+.railToggle:hover .burger i { background: var(--blue, #3272db); }
 
 @media (max-width: 640px) {
   /* 폰은 상단 바 안에 이미 메뉴 단추가 있으니 여기서는 그 자리에 맞춘다 */
