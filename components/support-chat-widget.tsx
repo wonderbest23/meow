@@ -465,8 +465,15 @@ export function SupportChatWidget() {
                           ))}
                         </ul>
                         <div className="welcome-actions">
-                          {/* 상담 없이 바로 만들 사람의 문 — 플랜 만들기로 */}
-                          <a className="welcome-start" href="/plan/start">바로 시작하기</a>
+                          {/*
+                            상담 없이 바로 만들 사람의 문.
+
+                            예전에는 /plan/start 로 직행했는데, 그 화면은 사업 정보부터 받으므로
+                            처음 온 사람이 무엇을 받는지 보기도 전에 로그인 벽을 만난다.
+                            홈의 '무료로 시작하기'와 같은 곳(/plan)으로 보낸다 — 완성 샘플을 먼저 보고,
+                            실제로 플랜을 추가할 때 로그인을 요구하는 순서다.
+                          */}
+                          <a className="welcome-start" href="/plan">바로 시작하기</a>
                           <button type="button" className="welcome-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
                             <MessageCircleQuestion /> 서비스 이용 문의는 여기
                           </button>

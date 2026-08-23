@@ -9,7 +9,12 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
+/*
+ * 아이폰 사파리는 세로 화면에서 본문 글자를 제멋대로 키운다(text-size-adjust 의 기본값 auto).
+ * 그러면 글자가 커진 만큼 칸이 넓어져 가로로 삐져나가는데, 맥·크롬 개발 화면에서는
+ * 이 동작이 없어 재현되지 않는다. 우리가 정한 크기를 그대로 쓰게 못박는다.
+ */
+html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body { margin: 0; color: var(--ink); background: #fff; font-family: "Noto Sans KR", sans-serif; word-break: keep-all; }
 button, input, select { font: inherit; }
 button { color: inherit; }
@@ -4381,7 +4386,15 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 }
 
 /* Complete home storefront */
-.simple-home { overflow: clip; background: #f6f5ff; }
+/*
+ * overflow 를 두 번 쓴다.
+ *
+ * clip 은 사파리 16 부터다. 그 아래 아이폰에서는 이 줄이 통째로 무시돼 홈이 전폭
+ * 요소(후기 띠의 width:100vw)를 못 자르고 가로 스크롤이 생긴다 — 크롬 개발 화면에서는
+ * 재현되지 않는다. 앞에 hidden 을 두면 옛 사파리가 그걸 쓰고, 새 브라우저는 뒤의 clip 을 쓴다.
+ * 이 안에는 sticky·fixed 요소가 없어 hidden 으로 깨질 것이 없다(확인함).
+ */
+.simple-home { overflow: hidden; overflow: clip; background: #f6f5ff; }
 .simple-home .hero-shell {
   height: clamp(660px, calc(100svh - 32px), 820px);
   min-height: 660px;
