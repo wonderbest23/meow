@@ -137,7 +137,7 @@ const sections = [
   { key: "overview/summary", title: "사업 개요 · 한눈에 보기", markdown: "## 한눈에 보기\n반려견 보호자를 대상으로 한다. 수강료는 5만원이다." },
   { key: "financials/revenue", title: "재무 계획 · 매출", markdown: "## 매출\n월 40건을 목표로 한다." },
 ];
-const prompt = buildReviewerPrompt({ planTitle: "멍케이크 클래스", planType: "창업 초기 · 사업계획서", business, sections, evidence, deterministic: c });
+const prompt = buildReviewerPrompt({ planTitle: "멍케이크 클래스", planType: "창업 초기 · 사업계획서", business, sections, answers: cAnswers, evidence, deterministic: c });
 
 assert.ok(prompt.includes("[코드가 이미 확정한 문제 — 검증됨. 반박·중복 금지]"));
 assert.ok(prompt.includes("한 건 팔수록 손해가 나는 가격 구조입니다"), "확정 문제가 프롬프트에 실린다");
@@ -148,6 +148,16 @@ assert.ok(prompt.includes("- 운영·delivery: 오프라인 대면"), "inferred 
 assert.ok(prompt.includes("[공식 시장 근거]") && prompt.includes("통계청"));
 assert.ok(prompt.includes("[사업계획서 본문]") && prompt.includes("### overview/summary"));
 assert.ok(prompt.includes("[사용자가 확인한 사업 지표 — 확정]") && prompt.includes("회당 정원"));
+
+/*
+ * 사실 대조 기준선 — Writer 가 받은 원문 답변을 Reviewer 도 받아야 한다.
+ * 운영 실측에서 Context 요약만 주자 정상 서술(knows_breakeven=no 등)을 환각으로 잡았다.
+ */
+assert.ok(prompt.includes("[사용자가 질문에 답한 원문 — 전부 확정 사실입니다]"));
+assert.ok(prompt.includes("- financials/staffing.owner_pay: 월 100만원"), "원문 답변이 그대로 실린다");
+assert.ok(prompt.includes("- financials/staffing.has_staff_cost: 아니오"), "yes/no 는 읽는 말로");
+assert.ok(prompt.includes("환각으로 잡지 마세요"));
+assert.ok(!prompt.includes("__analysis."), "가상 키는 원문 목록에서 뺀다");
 
 // 시스템 프롬프트 규칙
 assert.ok(REVIEWER_SYSTEM.includes("사업 성공을 예측하는 것이 아니라"));

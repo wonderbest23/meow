@@ -122,12 +122,35 @@ export function digestSection(markdown: string, limit = DIGEST_PER_SECTION): str
   return `${out.slice(0, limit)}\n…(이하 생략 — 숫자·표·소제목은 위에 모두 포함)`;
 }
 
+/*
+ * 사용자가 답한 원문.
+ *
+ * 없으면 안 된다. PlanBusinessContext 는 골라 담은 요약이라, 본문이 인용한 답변이
+ * 거기 없으면 Reviewer 가 "확정 사실에 없다"며 정상 서술을 환각으로 잡는다.
+ * 운영 실측에서 실제로 그랬다(knows_breakeven·asset_own 을 근거 없는 값으로 지목).
+ * 사실 대조의 기준선은 Writer 가 받은 것과 같아야 한다.
+ */
+function answerLines(answers: Record<string, Record<string, unknown>>): string[] {
+  const out: string[] = [];
+  for (const [sectionKey, map] of Object.entries(answers)) {
+    if (sectionKey.startsWith("__") || sectionKey.includes("__review")) continue;
+    for (const [qid, value] of Object.entries(map ?? {})) {
+      if (value == null || value === "" || (Array.isArray(value) && value.length === 0)) continue;
+      const v = Array.isArray(value) ? value.join(", ") : String(value);
+      out.push(`- ${sectionKey}.${qid}: ${v === "yes" ? "예" : v === "no" ? "아니오" : v.slice(0, 200)}`);
+    }
+  }
+  return out;
+}
+
 export interface ReviewerInput {
   planTitle: string;
   planType?: string;
   business: { name?: string; description?: string; industry?: string; region?: string; stage?: string };
   /** 생성된 본문 — key = `${chapter}/${section}` */
   sections: Array<{ key: string; title: string; markdown: string }>;
+  /** 사용자가 답한 원문 — 사실 대조의 기준선 */
+  answers?: Record<string, Record<string, unknown>>;
   evidence: MarketEvidence[];
   deterministic: DeterministicResult;
 }
@@ -150,6 +173,16 @@ export function buildReviewerPrompt(input: ReviewerInput): string {
   );
 
   parts.push("", "[사용자가 제공한 사실 — 확정]", confirmed.length ? confirmed.join("\n") : "- (없음)");
+
+  const raw = answerLines(input.answers ?? {});
+  if (raw.length) {
+    parts.push(
+      "",
+      "[사용자가 질문에 답한 원문 — 전부 확정 사실입니다]",
+      ...raw,
+      "본문이 위 답변을 인용하는 것은 정상입니다. 환각으로 잡지 마세요.",
+    );
+  }
 
   if (det.context.metrics.length) {
     parts.push(

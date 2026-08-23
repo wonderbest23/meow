@@ -59,6 +59,7 @@ export async function POST(req: Request) {
     planType: plan.planType,
     business: state.business,
     sections,
+    answers: plan.answers ?? {},
     evidence,
     deterministic,
   });
