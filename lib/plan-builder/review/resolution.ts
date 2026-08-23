@@ -91,6 +91,10 @@ export const RESOLUTION_TARGETS: Record<string, Target> = {
     gates: [{ sectionKey: "funding/requirements", qid: "needs_funding", value: "yes" }],
     affected: ["funding/requirements", "financials/assets", EXEC],
   },
+  main_offer: {
+    id: "main_offer", label: "대표 상품·서비스", sectionKey: "market/products", qid: "main_offer", fromWizard: true,
+    affected: ["market/products", "strategy/product", OVERVIEW, EXEC],
+  },
   first_target: {
     id: "first_target", label: "가장 먼저 공략할 고객", sectionKey: "market/segments", qid: "first_target", fromWizard: true,
     affected: ["market/segments", "market/personas", "strategy/promotion", OVERVIEW, EXEC],
@@ -180,11 +184,41 @@ const ANALYZER_TARGETS: Record<string, { label: string; affected: string[] }> = 
 
 /* ───────── 문제 → 목표 ───────── */
 
+/*
+ * 다른 이름으로 들어오는 같은 값들.
+ *
+ * 미확정 항목은 분석 슬롯 id(problem·customer·classPrice…)로 들어오는데
+ * 여기 목표는 질문 id(problems·first_target·unit_price…)를 쓴다.
+ * 맞춰 주지 않으면 '답변 추가하기' 를 눌러도 물을 것이 없는 빈 화면이 뜬다(실측).
+ */
+const TARGET_ALIAS: Record<string, string> = {
+  customer: "first_target",
+  problem: "problems",
+  solution: "main_offer",
+  ownerExperience: "why_us",
+  classPrice: "unit_price",
+  aov: "unit_price",
+  unitPrice: "unit_price",
+  monthlyVolume: "monthly_volume",
+  materialCost: "variable_per_unit",
+  cogs: "variable_per_unit",
+  unitCost: "variable_per_unit",
+  venueCost: "fixed_total",
+  fixedOps: "fixed_total",
+  fixedTotal: "fixed_total",
+  adBudget: "promo_budget",
+  initialInvestment: "use_of_funds",
+};
+
 /** 코드가 만든 확정 문제는 만들 때 resolution 을 함께 붙인다(아래 헬퍼를 deterministic 에서 쓴다) */
 export function answerResolution(targetIds: string[]): IssueResolution {
   const slots: ResolutionSlotRef[] = [];
   const affected = new Set<string>();
-  for (const id of targetIds) {
+  const seen = new Set<string>();
+  for (const raw of targetIds) {
+    const id = TARGET_ALIAS[raw] ?? raw;
+    if (seen.has(id)) continue;
+    seen.add(id);
     const t = RESOLUTION_TARGETS[id];
     if (t) {
       slots.push({ id: t.id, ...(t.sectionKey ? { sectionKey: t.sectionKey } : {}), ...(t.qid ? { qid: t.qid } : {}) });
@@ -197,6 +231,11 @@ export function answerResolution(targetIds: string[]): IssueResolution {
       for (const s of a.affected) affected.add(s);
     }
   }
+  /*
+   * 물을 것이 하나도 없으면 '답변 추가하기' 를 붙이지 않는다 —
+   * 눌러도 빈 화면이 뜨는 버튼은 없느니만 못하다.
+   */
+  if (slots.length === 0) return { type: "manual_edit" };
   return { type: "answer", slots, affectedSections: [...affected] };
 }
 

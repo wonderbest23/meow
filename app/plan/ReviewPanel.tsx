@@ -197,11 +197,11 @@ export default function ReviewPanel({
                       market_research: 기존 공식자료 기능으로
                       manual_edit/auto_rewrite: 편집기 또는 해당 섹션으로
                     */}
-                    {issue.resolution?.type === "answer" && planId && (
+                    {issue.resolution?.type === "answer" && issue.resolution.slots?.length && planId ? (
                       <button type="button" className={styles.ghost} onClick={() => setOpenIssue(openIssue === issue.id ? null : issue.id)}>
                         {openIssue === issue.id ? "접기" : "답변 추가하기 →"}
                       </button>
-                    )}
+                    ) : null}
                     {issue.resolution?.type === "market_research" && onOpenSection && (
                       <button type="button" className={styles.ghost} onClick={() => onOpenSection("market", "segments")}>공식자료 찾아보기 →</button>
                     )}

@@ -163,6 +163,26 @@ for (const key of Object.keys(before)) {
 assert.ok(!affected.has("market/swot") && !affected.has("financials/revenue"), "H. 홍보 답변이 SWOT·매출을 건드리지 않는다");
 assert.notEqual(contentHash(before), contentHash(after), "H. 일부만 바뀌어도 검토는 stale");
 
+/* ═══════ 슬롯 id 이름 차이 — 미확정 항목이 빈 버튼이 되지 않게 ═══════ */
+// 미확정 항목은 분석 슬롯 id 로 들어온다(problem·customer·classPrice…)
+const aliased = answerResolution(["problem", "customer", "classPrice"]);
+assert.equal(aliased.type, "answer");
+assert.deepEqual(aliased.slots?.map((s) => s.id), ["problems", "first_target", "unit_price"], "다른 이름도 같은 질문으로 잇는다");
+assert.equal(followUpQuestions(aliased, baseAnswers()).length, 3, "실제로 물을 질문이 만들어진다");
+// 같은 목표로 겹치면 한 번만
+assert.equal(answerResolution(["materialCost", "unitCost", "variable_per_unit"]).slots?.length, 1);
+// 물을 것이 없으면 '답변 추가하기' 를 붙이지 않는다
+const empty = answerResolution(["존재하지_않는_슬롯"]);
+assert.equal(empty.type, "manual_edit", "빈 버튼을 만들지 않는다");
+assert.equal(followUpQuestions(empty, baseAnswers()).length, 0);
+
+/* 미확정 항목 문제(코드 생성)도 실제 질문으로 이어진다 */
+const unknownAnswers = baseAnswers();
+unknownAnswers[ANALYSIS_KEY] = { ...rec, slots: { ...rec.slots, differentiator: { value: null, status: "unknown" } } } as unknown as Record<string, unknown>;
+const unknownIssue = collectDeterministic({ answers: unknownAnswers, business, evidence: [] }).issues.find((i) => i.title.includes("아직 정하지 않은"))!;
+assert.ok(unknownIssue, "미확정 항목 문제가 잡힌다");
+assert.ok(followUpQuestions(unknownIssue.resolution, unknownAnswers).length > 0, "미확정 항목도 물을 질문이 있다");
+
 /* ═══════ 질문 수 상한 ═══════ */
 assert.ok(followUpQuestions(answerResolution(["promo_channels", "promo_budget", "message", "first_target"]), baseAnswers()).length <= 3, "한 문제당 최대 3개");
 
