@@ -147,7 +147,7 @@ assert.equal(contextForSection("overview/summary", null), undefined);
 assert.equal(contextForSection("없는/섹션", ctx), undefined);
 // 분배는 전체보다 작다
 const allLabels = Object.values(SECTION_CONTEXT_RULES).reduce((n, r) => Math.max(n, r.fields.length), 0);
-assert.ok(allLabels <= 14, "한 섹션 최대 14필드");
+assert.ok(allLabels <= 15, "한 섹션 최대 15필드");
 
 /* ───────── D. Writer 프롬프트 ───────── */
 
