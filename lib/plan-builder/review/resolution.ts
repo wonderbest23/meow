@@ -101,7 +101,8 @@ export const RESOLUTION_TARGETS: Record<string, Target> = {
   },
   problems: {
     id: "problems", label: "고객이 겪는 문제", sectionKey: "overview/problem", qid: "problems", fromWizard: true,
-    affected: ["overview/problem", "market/segments", OVERVIEW, EXEC],
+    // 세그먼트는 고객으로 나뉘고 문제는 페르소나 서술에 쓰인다 — 값을 받는 섹션만 적는다
+    affected: ["overview/problem", "market/personas", OVERVIEW, EXEC],
   },
   differentiator: {
     id: "differentiator", label: "경쟁 대비 차별점", sectionKey: "market/competitors", qid: "differentiator", fromWizard: true,

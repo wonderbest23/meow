@@ -90,7 +90,7 @@ export const DEFAULT_METRIC_LIMIT = 4;
 const CORE: Path[] = ["identity.industry", "customer.target", "problem.statement", "solution.mainOffer", "revenue.model", "operations.delivery"];
 
 export const SECTION_CONTEXT_RULES: Record<string, Rule> = {
-  "overview/summary": { fields: [...CORE, "identity.region", "identity.stage", "marketing.acquisitionModel", "revenue.unitPrice", "revenue.volume", "classification.modelTags"], hints: true, finance: true, metrics: ["revenue", "traffic", "conversion", "capacity", "cost"], metricLimit: 6 },
+  "overview/summary": { fields: [...CORE, "identity.region", "identity.stage", "marketing.channels", "marketing.acquisitionModel", "revenue.unitPrice", "revenue.volume", "classification.modelTags"], hints: true, finance: true, metrics: ["revenue", "traffic", "conversion", "capacity", "cost"], metricLimit: 6 },
   "overview/problem": { fields: ["customer.target", "problem.statement", "problem.frequency", "problem.currentAlternative", "solution.mainOffer", "solution.differentiator"] },
   "overview/mission": { fields: ["identity.description", "problem.statement", "solution.mainOffer"], noInferred: true },
   "overview/ip": { fields: ["solution.mainOffer", "solution.differentiator"], noInferred: true },
@@ -114,7 +114,7 @@ export const SECTION_CONTEXT_RULES: Record<string, Rule> = {
   "financials/expenses": { fields: ["operations.venueType", "operations.delivery", "classification.modelTags", "marketing.budget"], hints: true, finance: true, metrics: ["cost", "operation"] },
   "financials/assets": { fields: ["operations.venueType", "operations.delivery", "identity.stage"], finance: true },
   "financials/financing": { fields: ["funding.needs", "funding.amount", "identity.stage"], noInferred: true, finance: true },
-  "summary/executive": { fields: [...CORE, "identity.region", "solution.differentiator", "marketing.acquisitionModel", "revenue.unitPrice", "revenue.volume", "team.ownerExperience", "funding.needs", "goals.main"], hints: true, finance: true, metrics: ["revenue", "traffic", "conversion", "capacity", "cost"], metricLimit: 6 },
+  "summary/executive": { fields: [...CORE, "identity.region", "solution.differentiator", "marketing.channels", "marketing.acquisitionModel", "revenue.unitPrice", "revenue.volume", "team.ownerExperience", "funding.needs", "goals.main"], hints: true, finance: true, metrics: ["revenue", "traffic", "conversion", "capacity", "cost"], metricLimit: 6 },
 };
 
 /** 사업모델 태그 → Writer 가 그 사업답게 생각하도록 하는 관점 힌트 (사실이 아니라 체크리스트) */

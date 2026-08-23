@@ -186,4 +186,36 @@ assert.ok(followUpQuestions(unknownIssue.resolution, unknownAnswers).length > 0,
 /* ═══════ 질문 수 상한 ═══════ */
 assert.ok(followUpQuestions(answerResolution(["promo_channels", "promo_budget", "message", "first_target"]), baseAnswers()).length <= 3, "한 문제당 최대 3개");
 
-console.log("plan-review-resolution.test.ts: 전부 통과");
+/* ═══════ 영향 섹션은 그 값을 실제로 받아야 한다 ═══════ */
+/*
+ * 운영 실측에서 홍보 채널을 답하고 '한눈에 보기'를 다시 썼는데 본문에 채널이 없었다.
+ * 영향 섹션으로 지정해 놓고 정작 그 섹션 맥락에 값이 가지 않으면 재생성이 헛돈다.
+ */
+import { SECTION_CONTEXT_RULES } from "../lib/plan-builder/context/section";
+const FIELD_OF: Record<string, string> = {
+  promo_channels: "marketing.channels",
+  promo_budget: "marketing.budget",
+  message: "marketing.message",
+  first_target: "customer.target",
+  problems: "problem.statement",
+  differentiator: "solution.differentiator",
+  main_offer: "solution.mainOffer",
+  unit_price: "revenue.unitPrice",
+  monthly_volume: "revenue.volume",
+  why_us: "team.ownerExperience",
+  who_works: "operations.who",
+};
+for (const [targetId, path] of Object.entries(FIELD_OF)) {
+  const t = RESOLUTION_TARGETS[targetId];
+  if (!t) continue;
+  const misses = t.affected.filter((key) => {
+    const rule = SECTION_CONTEXT_RULES[key];
+    // 추정을 받지 않는 섹션(성과·미션 등)과 경쟁·SWOT 처럼 별도 필드를 쓰는 섹션은 제외
+    return rule && !rule.fields.includes(path) && !rule.fields.some((f) => f.startsWith(path.split(".")[0] + "."));
+  });
+  assert.deepEqual(misses, [], `${targetId}: 영향 섹션 ${misses.join(",")} 이 ${path} 를 받지 못한다`);
+}
+assert.ok(SECTION_CONTEXT_RULES["overview/summary"].fields.includes("marketing.channels"), "한눈에 보기가 사용자의 실제 홍보 채널을 받는다");
+assert.ok(SECTION_CONTEXT_RULES["summary/executive"].fields.includes("marketing.channels"));
+
+console.log("plan-review-resolution.test.ts (영향 섹션 검증 포함): 전부 통과");
