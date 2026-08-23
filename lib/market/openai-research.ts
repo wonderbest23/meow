@@ -60,20 +60,36 @@ function outputText(payload: ResponsesPayload) {
     .join("");
 }
 
-function normalizeUrl(value: string) {
+/*
+ * 같은 원문을 가리키는 주소를 같은 열쇠로 만든다.
+ *
+ * 모델이 적어 온 주소와 검색이 실제로 돌려준 주소는 프로토콜·www·끝 슬래시·
+ * 추적 파라미터에서 갈리기 쉽다. 문자열을 그대로 비교하면 멀쩡한 공식 자료를
+ * 버린다. 반대로 너무 뭉개면 서로 다른 통계표가 하나로 합쳐지므로,
+ * 경로와 의미 있는 질의는 그대로 둔다(kosis 는 질의로 표를 구분한다).
+ */
+const TRACKING_PARAMS = ["utm_source", "utm_medium", "utm_campaign", "utm_term", "utm_content", "gclid", "fbclid", "spm", "ref"];
+
+export function normalizeUrl(value: string) {
   try {
-    const url = new URL(value);
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:") return "";
+    url.protocol = "https:";
+    url.hostname = url.hostname.toLowerCase().replace(/^www\./, "");
     url.hash = "";
-    url.searchParams.delete("utm_source");
-    url.searchParams.delete("utm_medium");
-    url.searchParams.delete("utm_campaign");
-    return url.toString().replace(/\/$/, "");
+    url.port = "";
+    for (const key of TRACKING_PARAMS) url.searchParams.delete(key);
+    url.searchParams.sort();
+    const query = url.searchParams.toString();
+    const path = url.pathname.replace(/\/+$/, "");
+    return `${url.hostname}${path}${query ? `?${query}` : ""}`;
   } catch {
     return "";
   }
 }
 
-function citations(payload: ResponsesPayload) {
+/** 응답에 실제로 담긴 검색 출처만 모은다 — 모델이 본문에 쓴 주소는 여기 들어오지 않는다 */
+export function extractActualSearchSources(payload: ResponsesPayload) {
   const found = new Map<string, UrlCitation>();
   for (const item of payload.output ?? []) {
     for (const source of item.action?.sources ?? []) {
@@ -91,6 +107,43 @@ function citations(payload: ResponsesPayload) {
     }
   }
   return found;
+}
+
+/*
+ * 본문에서 JSON 객체를 꺼낸다.
+ *
+ * web_search 를 쓰면 OpenAI 가 JSON 모드를 거부하므로(아래 요청 본문 주석 참고)
+ * 응답은 평문으로 온다. 모델이 코드펜스를 두르거나 앞뒤에 한 문장을 덧붙이는
+ * 경우까지만 받아주고, 그 이상은 복원하지 않는다 — 깨진 근거를 억지로 살리는
+ * 것보다 근거 0건으로 실패하는 편이 낫다.
+ */
+export function extractJsonObject(raw: string): unknown {
+  const text = raw.replace(/```(?:json)?\s*/gi, "").replace(/```/g, "").trim();
+  const start = text.indexOf("{");
+  if (start < 0) return null;
+  // 문자열 안의 중괄호를 세지 않도록 따옴표·이스케이프를 추적한다
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (escaped) { escaped = false; continue; }
+    if (ch === "\\") { escaped = true; continue; }
+    if (ch === '"') { inString = !inString; continue; }
+    if (inString) continue;
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        try {
+          return JSON.parse(text.slice(start, i + 1));
+        } catch {
+          return null;
+        }
+      }
+    }
+  }
+  return null;
 }
 
 function validDate(value: string, fallback: string) {
@@ -157,7 +210,7 @@ function projectPrompt(context: MarketResearchBusinessContext) {
       "sourceUrl은 검색에서 확인한 공식 원문 주소를 정확히 복사하세요. 존재하지 않는 주소를 만들지 마세요.",
       "note에는 이 수치를 이 사업에 적용할 때의 범위와 주의점을 한 문장으로 적으세요.",
       "sourceExcerpt에는 원문이 무엇을 집계한 자료인지 짧게 요약하세요. 긴 문장을 그대로 복사하지 마세요.",
-      "JSON 객체 {evidence:[...]}만 출력하세요.",
+      "응답은 JSON 객체 {\"evidence\":[...]} 하나만 쓰세요. 설명 문장, 인사말, 코드펜스를 앞뒤에 붙이지 마세요.",
     ],
   };
 }
@@ -180,7 +233,14 @@ export async function researchOfficialMarketEvidence(
         store: false,
         reasoning: { effort: "medium" },
         max_output_tokens: 4_000,
-        text: { format: { type: "json_object" } },
+        /*
+         * 출력 형식을 지정하지 않는다 — 평문으로 받는다.
+         *
+         * 예전에는 text.format = json_object 였고, 그래서 이 조사는 운영에서
+         * 한 번도 성공한 적이 없다. OpenAI 가 웹 검색과 JSON 모드를 같이 쓰는
+         * 요청을 400 으로 거부한다("Web Search cannot be used with JSON mode").
+         * 구조는 API 형식이 아니라 아래 extractJsonObject + Zod 로 잡는다.
+         */
         tools: [{
           type: "web_search",
           search_context_size: "high",
@@ -205,14 +265,21 @@ export async function researchOfficialMarketEvidence(
   }
   const payload = await response.json() as ResponsesPayload;
   if (!response.ok) {
+    /* 운영 로그에서 원인을 구분한다 — 사용자에게 보이는 문구는 route 가 정한다 */
     throw new Error(response.status === 429
       ? "OPENAI_429"
-      : `MARKET_RESEARCH_FAILED:${payload.error?.message ?? response.status}`);
+      : `WEB_SEARCH_API_REJECTED:${payload.error?.message ?? response.status}`);
   }
   const text = outputText(payload);
   if (!text) throw new Error("MARKET_RESEARCH_EMPTY");
-  const parsed = researchOutputSchema.parse(JSON.parse(text));
-  const cited = citations(payload);
+
+  const cited = extractActualSearchSources(payload);
+  /* 검색이 아예 돌지 않았으면 뒤 단계를 볼 필요가 없다 */
+  if (!cited.size) throw new Error("WEB_SEARCH_NO_SOURCES");
+
+  const candidate = researchOutputSchema.safeParse(extractJsonObject(text));
+  if (!candidate.success) throw new Error("WEB_SEARCH_PARSE_FAILED");
+  const parsed = candidate.data;
   const retrievedAt = new Date().toISOString();
   const retrievedDate = retrievedAt.slice(0, 10);
   const evidence = parsed.evidence.flatMap((item): MarketEvidence[] => {
@@ -245,6 +312,7 @@ export async function researchOfficialMarketEvidence(
       isDemo: false,
     }];
   });
-  if (!evidence.length) throw new Error("MARKET_RESEARCH_NO_CITED_EVIDENCE");
+  /* 검색은 돌았지만 실제 인용에 존재하는 공식 근거가 하나도 없으면 성공이 아니다 */
+  if (!evidence.length) throw new Error("WEB_SEARCH_NO_CITED_EVIDENCE");
   return { evidence, citedSourceCount: cited.size, model: config.model };
 }

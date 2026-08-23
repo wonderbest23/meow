@@ -130,7 +130,16 @@ export async function POST(request: Request) {
     const map: Record<string, { status: number; message: string }> = {
       OPENAI_429: { status: 429, message: "OpenAI 사용 한도 또는 검색 요청 제한을 확인해주세요. 잠시 후 다시 시도해주세요." },
       MARKET_RESEARCH_TIMEOUT: { status: 504, message: "시장 근거 탐색 시간이 초과되었습니다. 이미 저장된 근거는 그대로 있습니다. 잠시 뒤 다시 시도해주세요." },
+      /*
+       * 아래 네 가지는 사용자에게는 사실상 같은 상황("공식 자료를 찾지 못했다")이지만
+       * 운영 로그에서는 구분돼야 한다 — 어디서 끊겼는지 모르면 고칠 수가 없다.
+       * 검색이 안 돌았는지, 응답을 못 읽었는지, 인용에 남은 공식 근거가 없었는지.
+       */
       MARKET_RESEARCH_NO_CITED_EVIDENCE: { status: 404, message: "공식 근거를 찾지 못했습니다. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해주세요." },
+      WEB_SEARCH_NO_CITED_EVIDENCE: { status: 404, message: "공식 근거를 찾지 못했습니다. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해주세요." },
+      WEB_SEARCH_NO_SOURCES: { status: 404, message: "공식 자료를 찾지 못했어요. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해주세요." },
+      WEB_SEARCH_PARSE_FAILED: { status: 502, message: "공식 자료를 정리하지 못했어요. 잠시 후 다시 시도해 주세요." },
+      WEB_SEARCH_API_REJECTED: { status: 502, message: "검색 서비스가 요청을 거부했습니다. 잠시 뒤 다시 시도해주세요." },
       MARKET_RESEARCH_EMPTY: { status: 502, message: "검색 응답이 비어 있었습니다. 잠시 뒤 다시 시도해주세요." },
       MARKET_RESEARCH_UNAVAILABLE: { status: 502, message: "검색 서비스에 연결하지 못했습니다. 잠시 뒤 다시 시도해주세요." },
     };
