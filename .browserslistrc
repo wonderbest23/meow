@@ -1,0 +1,10 @@
+# 접두사를 함부로 지우지 않게 실제 사용자 기기를 적어 둔다.
+#
+# 이게 없으면 CSS 최적화기가 제 기본값으로 판단해 -webkit- 접두사를 떨어뜨린다.
+# 실제로 -webkit-text-size-adjust 가 지워져 아이폰에서만 글자가 제멋대로 커졌다
+# (사파리는 접두사 없는 text-size-adjust 를 지원하지 않는다).
+> 0.3%
+last 2 versions
+iOS >= 15
+Safari >= 15
+not dead
