@@ -14,3 +14,7 @@ supabase/.temp/
 
 # 로컬 검증 산출물(감사 스크립트·생성된 문서)
 .tmp-final/
+
+# 멈춘 빌드를 치울 때 만든 임시 폴더 (rm 이 느려 이름만 바꿔 둔다)
+.next-broken-*
+.open-next-*
