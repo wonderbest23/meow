@@ -15142,3 +15142,26 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bwmob-footer-contact { margin: 24px 0 0; font-size: 14px; }
 .bwmob-footer-contact strong { opacity: .55; font-weight: 600; margin-right: 6px; }
 .bwmob-footer .bwmob-fine { opacity: .4; }
+
+/* ── 히어로 타이포 손질 (2026-08-25, 사용자 요청) ──
+ * 제목은 "사업, 오늘 하루면 충분합니다" 한 줄 — 크기를 줄이고(56→46) 몸통은
+ * 600, "사업," 만 800 으로 굵기 대비를 준다. 눈썹은 파란 그라데이션이 흐른다.
+ */
+.simple-home .home-hero-copy h1 { font-size: 46px; font-weight: 600; letter-spacing: -0.03em; }
+.simple-home .home-hero-copy h1 b { font-weight: 800; }
+@media (max-width: 640px) {
+  .simple-home .home-hero-copy h1 { font-size: 34px; line-height: 1.22; }
+}
+.simple-home .home-hero-copy > .section-label {
+  background: linear-gradient(90deg, #3272db, #79b0ff, #4a3aff, #3272db);
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: hero-label-flow 5s linear infinite;
+}
+@keyframes hero-label-flow { to { background-position: -300% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .simple-home .home-hero-copy > .section-label { animation: none; background: none; color: var(--blue); -webkit-text-fill-color: currentColor; }
+}

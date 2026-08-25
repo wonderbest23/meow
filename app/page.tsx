@@ -724,7 +724,7 @@ function Home({
         <section className="simple-home-choice">
           <div className="home-hero-copy">
             <span className="section-label">창업 10만원대로 시작하세요</span>
-            <h1>사업계획서,<br />오늘 하루면 충분합니다</h1>
+            <h1><b>사업,</b> 오늘 하루면 충분합니다</h1>
             <p>사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.<br />복잡한 사업계획서, 이제 쉽게 시작하세요.</p>
             {/*
               '무료로 시작하기' 버튼이 있던 자리 — 이제 검색창이다.
