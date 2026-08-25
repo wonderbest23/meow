@@ -14856,7 +14856,20 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
  * 킷 페이지 모바일판 — 손으로 짠 레이아웃 (components/brainwave-mobile.tsx)
  * 색은 킷 팔레트 그대로: 잉크 #161c2d / 포인트 #473bf0 / 가격 #68d585 / 바탕 #f4f7fa
  * ──────────────────────────────────────────────────────────────── */
-.bwmob { width: 100%; background: #fff; color: #161c2d; font-size: 15px; line-height: 1.7; text-align: center; word-break: keep-all; }
+/*
+ * 글꼴은 데스크톱 킷과 같은 스택으로 — 안 그러면 같은 홈페이지의 제목이
+ * PC(Urbanist+Pretendard)와 폰(앱 기본 글꼴)에서 다른 얼굴이 된다(사용자 지적).
+ * 제목 자간도 킷처럼 음수로 죈다.
+ */
+.bwmob { width: 100%; background: #fff; color: #161c2d; font-family: var(--bw-latin), Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif; font-size: 15px; line-height: 1.7; text-align: center; word-break: keep-all; }
+/* 전역 letter-spacing 강제 규칙이 있어(킷 렌더도 --bw-ls 로 우회한다) 여기도 !important 로 잡는다 */
+.bwmob :is(h1, h2, h3, strong) { letter-spacing: -0.02em !important; }
+/*
+ * 전역 :where(h1..h4){color:var(--text-strong)} 가 상속을 이겨, 어두운 구역과
+ * 사진 위에서도 제목이 남색으로 찍혔다. 제목은 구역의 글색을 따르게 한다 —
+ * 밝은 구역은 잉크, 어두운 구역·히어로는 흰색.
+ */
+.bwmob :is(h1, h2, h3) { color: inherit; }
 .bwmob-sec { padding: 44px 20px; }
 .bwmob-dark { background: #161c2d; color: #fff; }
 .bwmob-soft { background: #f4f7fa; }
@@ -14926,7 +14939,11 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bwmob-cart i { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 999px; background: #473bf0; color: #fff; font: 700 11px/18px inherit; font-style: normal; }
 .bwmob-shophero { position: relative; padding: 0; }
 .bwmob-shophero .bwmob-cover { min-height: 300px; object-fit: cover; }
-.bwmob-shophero-txt { position: absolute; inset: 0; display: grid; place-content: end center; padding: 26px 20px; background: linear-gradient(180deg, rgba(10,13,23,0) 30%, rgba(10,13,23,.62)); color: #fff; }
+/*
+ * 히어로 글은 사진의 세로 가운데에 둔다 — 모바일 히어로의 관례이고 사용자 요청.
+ * 아래 깔때기 그라데이션 대신 사진 전체에 고른 스크림을 깔아 가운데 글이 읽히게 한다.
+ */
+.bwmob-shophero-txt { position: absolute; inset: 0; display: grid; place-content: center; padding: 26px 20px; background: rgba(10, 13, 23, .44); color: #fff; }
 .bwmob-shophero-txt .bwmob-h1 { margin-bottom: 6px; font-size: 24px; }
 
 /* 카테고리·상품 격자 */
