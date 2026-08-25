@@ -14851,3 +14851,110 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   .simple-home .simple-home-choice { grid-template-columns: minmax(0, 1fr); }
   .simple-home .simple-home-choice > * { min-width: 0; max-width: 100%; }
 }
+
+/* ────────────────────────────────────────────────────────────────
+ * 킷 페이지 모바일판 — 손으로 짠 레이아웃 (components/brainwave-mobile.tsx)
+ * 색은 킷 팔레트 그대로: 잉크 #161c2d / 포인트 #473bf0 / 가격 #68d585 / 바탕 #f4f7fa
+ * ──────────────────────────────────────────────────────────────── */
+.bwmob { width: 100%; background: #fff; color: #161c2d; font-size: 15px; line-height: 1.7; text-align: center; word-break: keep-all; }
+.bwmob-sec { padding: 44px 20px; }
+.bwmob-dark { background: #161c2d; color: #fff; }
+.bwmob-soft { background: #f4f7fa; }
+.bwmob-brand { margin: 0 0 26px; font-size: 22px; font-weight: 800; }
+.bwmob-eyebrow { margin: 0 0 10px; color: #68d585; font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+.bwmob-h1 { margin: 0 0 22px; font-size: 27px; line-height: 1.35; font-weight: 800; }
+.bwmob-h2 { margin: 0 0 10px; font-size: 21px; line-height: 1.4; font-weight: 800; }
+.bwmob-sub { margin: 0 0 22px; color: inherit; opacity: .78; }
+.bwmob-fine { margin: 12px 0 0; font-size: 12px; opacity: .6; }
+.bwmob-btn { width: 100%; min-height: 52px; padding: 0 20px; border: 0; border-radius: 10px; background: #473bf0; color: #fff; font: inherit; font-size: 16px; font-weight: 700; cursor: pointer; }
+
+/* 예약 묶음 */
+.bwmob-book { display: grid; gap: 10px; }
+.bwmob-field { display: flex; align-items: center; gap: 10px; min-height: 52px; padding: 0 16px; border-radius: 10px; background: #fff; color: #161c2d; font-weight: 600; text-align: left; }
+.bwmob-field-ic { width: 18px; height: 18px; flex: none; }
+.bwmob-caret { margin-left: auto; opacity: .45; font-size: 12px; }
+
+/* 영상·사진 */
+.bwmob-video { padding-top: 0; }
+.bwmob-video-shot { position: relative; border-radius: 14px; overflow: hidden; }
+.bwmob-cover { display: block; width: 100%; height: auto; }
+.bwmob-play { position: absolute; inset: 0; display: grid; place-items: center; color: #fff; font-size: 20px; background: rgba(10,13,23,.25); }
+.bwmob-video-label { margin: 12px 0 0; font-weight: 700; }
+.bwmob-photo { display: block; width: 100%; height: auto; border-radius: 14px; margin: 0 0 18px; }
+
+/* 숫자 셋 */
+.bwmob-stats { display: grid; gap: 26px; }
+.bwmob-stat strong { display: block; font-size: 40px; font-weight: 800; line-height: 1.1; }
+.bwmob-stat p { margin: 6px 0 0; opacity: .75; }
+
+/* 사진 카드 */
+.bwmob-cards { display: grid; gap: 14px; }
+.bwmob-card { border-radius: 14px; overflow: hidden; background: #fff; box-shadow: 0 8px 24px rgba(22,28,45,.08); text-align: left; }
+.bwmob-card-img { display: block; width: 100%; height: 170px; object-fit: cover; }
+.bwmob-card-body { display: flex; align-items: baseline; justify-content: space-between; padding: 13px 16px; }
+.bwmob-card-body small { opacity: .6; }
+
+/* 특징 목록 */
+.bwmob-feats { display: grid; gap: 18px; text-align: left; }
+.bwmob-feat { display: flex; gap: 14px; }
+.bwmob-feat-ic { width: 26px; height: 26px; flex: none; margin-top: 3px; }
+.bwmob-feat p { margin: 3px 0 0; opacity: .75; }
+
+/* 체크 목록 */
+.bwmob-checks { display: grid; gap: 18px; text-align: left; }
+.bwmob-check { display: flex; gap: 12px; }
+.bwmob-check-ic { flex: none; width: 24px; height: 24px; border-radius: 50%; background: #68d585; color: #0a0d17; display: grid; place-items: center; font-size: 13px; font-weight: 800; margin-top: 2px; }
+.bwmob-check p { margin: 3px 0 0; opacity: .78; }
+
+/* 구독 */
+.bwmob-subscribe { display: grid; gap: 10px; }
+.bwmob-subscribe input { min-height: 52px; padding: 0 16px; border: 1px solid #d8d8d8; border-radius: 10px; font: inherit; background: #fff; }
+
+/* FAQ */
+.bwmob-faq { text-align: left; display: grid; gap: 8px; }
+.bwmob-faq details { border-bottom: 1px solid #eceff3; padding: 12px 2px; }
+.bwmob-faq summary { font-weight: 700; cursor: pointer; list-style: none; display: flex; justify-content: space-between; gap: 10px; }
+.bwmob-faq summary::after { content: "▾"; opacity: .4; }
+.bwmob-faq details[open] summary::after { content: "▴"; }
+.bwmob-faq p { margin: 10px 0 0; opacity: .75; }
+
+/* 쇼핑몰 머리·히어로 */
+.bwmob-shophead { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; }
+.bwmob-shophead strong { font-size: 19px; font-weight: 800; }
+.bwmob-cart { position: relative; display: inline-grid; place-items: center; width: 40px; height: 40px; border-radius: 10px; background: #f4f7fa; }
+.bwmob-cart-ic { width: 20px; height: 20px; }
+.bwmob-cart i { position: absolute; top: -5px; right: -5px; min-width: 18px; height: 18px; border-radius: 999px; background: #473bf0; color: #fff; font: 700 11px/18px inherit; font-style: normal; }
+.bwmob-shophero { position: relative; padding: 0; }
+.bwmob-shophero .bwmob-cover { min-height: 300px; object-fit: cover; }
+.bwmob-shophero-txt { position: absolute; inset: 0; display: grid; place-content: end center; padding: 26px 20px; background: linear-gradient(180deg, rgba(10,13,23,0) 30%, rgba(10,13,23,.62)); color: #fff; }
+.bwmob-shophero-txt .bwmob-h1 { margin-bottom: 6px; font-size: 24px; }
+
+/* 카테고리·상품 격자 */
+.bwmob-cats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.bwmob-cat { display: grid; gap: 3px; padding: 14px 12px 12px; border-radius: 14px; background: #f4f7fa; }
+.bwmob-cat-img { width: 100%; height: 88px; object-fit: contain; margin-bottom: 6px; }
+.bwmob-cat small { opacity: .55; font-size: 12px; }
+.bwmob-row { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px; }
+.bwmob-row .bwmob-h2 { margin: 0; }
+.bwmob-more { color: #473bf0; font-weight: 700; }
+.bwmob-goods { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.bwmob-good { display: grid; gap: 2px; border-radius: 14px; background: #fff; padding: 12px 12px 14px; text-align: left; }
+.bwmob-good-img { width: 100%; height: 120px; object-fit: contain; margin-bottom: 8px; }
+.bwmob-good strong { font-size: 14px; }
+.bwmob-price { margin: 0; color: #161c2d; font-weight: 800; display: flex; gap: 8px; align-items: baseline; }
+.bwmob-was { color: #7d818d; font-weight: 500; text-decoration: line-through; font-size: 12px; }
+
+/* 후기·CTA */
+.bwmob-quote { margin: 0; }
+.bwmob-quote p { margin: 0 0 12px; font-size: 16px; line-height: 1.75; }
+.bwmob-quote footer { opacity: .7; font-size: 13px; }
+.bwmob-cta .bwmob-h2 { margin-bottom: 18px; }
+
+/* 푸터 */
+.bwmob-footer { padding: 40px 20px 30px; background: #0a0d17; color: #fff; text-align: left; }
+.bwmob-footer-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 22px 16px; }
+.bwmob-footer-col strong { display: block; margin-bottom: 8px; font-size: 13px; opacity: .55; }
+.bwmob-footer-col p { margin: 0 0 7px; font-size: 14px; }
+.bwmob-footer-contact { margin: 24px 0 0; font-size: 14px; }
+.bwmob-footer-contact strong { opacity: .55; font-weight: 600; margin-right: 6px; }
+.bwmob-footer .bwmob-fine { opacity: .4; }

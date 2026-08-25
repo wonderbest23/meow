@@ -73,6 +73,7 @@
     "test:review-digest": "tsx scripts/review-digest.test.ts",
     "test:consult-carry": "tsx scripts/consult-carry.test.ts",
     "test:question-fallback": "tsx scripts/question-fallback.test.ts",
+    "test:brainwave-mobile": "tsx scripts/brainwave-mobile.test.tsx",
     "test:market-citation": "tsx scripts/market-citation-guard.test.ts",
     "test:document-url": "tsx scripts/document-source-url.test.ts",
     "test:llm-alert": "tsx scripts/llm-alert.test.ts",

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Urbanist, Rubik } from "next/font/google";
 import { layoutPage, childBox, type MobileLayout, type Box } from "../lib/landing/brainwave/mobile-layout";
+import { renderBrainwaveMobile } from "./brainwave-mobile";
 
 /*
  * 킷 글꼴 Gilroy 는 유료라 못 싣는다. 폭·굵기가 가장 가까운 무료 글꼴 Urbanist 를
@@ -314,6 +315,18 @@ export function BrainwaveStage({
   const mobile = mode === "mobile" || (mode === "auto" && width > 0 && width <= 640);
   const target = Math.max(200, width - 32);
   const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
+  /*
+   * 손으로 짠 모바일판이 있는 페이지는 그걸 먼저 쓴다.
+   * 킷에는 모바일 아트보드가 없어(프레임 87개 전수 확인 — 전부 데스크톱 폭)
+   * 자동 재배치는 어디까지나 폴백이다. 글·사진은 같은 노드 id 로 읽으므로
+   * 편집기에서 고친 내용이 PC·모바일에 똑같이 반영된다.
+   */
+  if (mobile) {
+    const handcrafted = renderBrainwaveMobile(page, overrides, onPick);
+    if (handcrafted) {
+      return <div ref={ref} className={`bw-stage bw-mobile ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>{width > 0 ? handcrafted : null}</div>;
+    }
+  }
   if (mobile && layout) {
     return (
       <div ref={ref} className={`bw-stage bw-mobile ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
