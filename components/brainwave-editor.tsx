@@ -18,7 +18,10 @@ import { resizeImage, uploadImage } from "./landing-media-field";
  *     노드 id 와 맞지 않으므로 버린다(물어본 뒤).
  * 칸을 옮기거나 색을 바꾸는 기능은 없다 — 킷 구조를 그대로 지키기 위해서다.
  */
-type Over = { texts: Record<string, string>; images: Record<string, string> };
+type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string> };
+
+/* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로 저장, url 은 주소를 저장 */
+type BtnPanel = { id: string; textId: string | null; label: string; mode: "contact" | "url" | "none"; url: string };
 
 type TokenBalance = { purchased: number; used: number; remaining: number; packSize: number };
 
@@ -38,7 +41,7 @@ export function BrainwaveEditor({
 }) {
   const init = data.brainwave!;
   const [page, setPage] = useState(init.page);
-  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images } });
+  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) } });
   const [history, setHistory] = useState<Over[]>([]);
   const [future, setFuture] = useState<Over[]>([]);
   const [meta, setMeta] = useState<BrainwavePageData | null>(null);
@@ -130,6 +133,36 @@ export function BrainwaveEditor({
     return over;
   };
 
+  /*
+   * 버튼 자리 — 판을 열어 글자와 '누르면 어디로'를 한 번에 고친다.
+   * 버튼 글은 그 자리 편집 대신 여기서 고친다(버튼을 누르는 순간 이동이 먼저냐
+   * 글이 먼저냐가 모호해서 — 판 하나로 합쳤다).
+   */
+  const [btn, setBtn] = useState<BtnPanel | null>(null);
+  const pickButton = (id: string) => {
+    finishText();
+    const textSlot = meta?.slots.text.find((s) => s.id.startsWith(`I${id};`)) ?? null;
+    const label = textSlot ? over.texts[textSlot.id] ?? textSlot.text : "";
+    const saved = over.links[id] ?? "contact";
+    const mode = saved === "contact" || saved === "none" ? saved : "url";
+    setBtn({ id, textId: textSlot?.id ?? null, label, mode, url: mode === "url" ? saved : "" });
+  };
+  const applyBtn = () => {
+    if (!btn) return;
+    const texts = { ...over.texts };
+    if (btn.textId) {
+      const original = meta?.slots.text.find((s) => s.id === btn.textId)?.text ?? "";
+      if (btn.label === original) delete texts[btn.textId]; else texts[btn.textId] = btn.label;
+    }
+    const links = { ...over.links };
+    const url = btn.url.trim();
+    /* 주소는 https/tel/mailto 만 — "www.…" 처럼 오면 https 를 붙여 준다 */
+    const normalized = btn.mode !== "url" ? btn.mode : /^(https?:\/\/|tel:|mailto:)/i.test(url) ? url : url ? `https://${url}` : "";
+    if (normalized === "contact" || normalized === "") delete links[btn.id]; else links[btn.id] = normalized;
+    commit({ ...over, texts, links });
+    setBtn(null);
+  };
+
   /* 사진 자리 — 파일 고르기 */
   const pickImage = (id: string) => { finishText(); pendingImage.current = id; fileRef.current?.click(); };
   const onFile = async (file?: File) => {
@@ -152,13 +185,13 @@ export function BrainwaveEditor({
     const dirty = Object.keys(over.texts).length + Object.keys(over.images).length > 0;
     if (dirty && !window.confirm("페이지를 바꾸면 이 페이지에서 고친 글·사진은 사라집니다. 바꿀까요?")) return;
     finishText();
-    commit({ texts: {}, images: {} });
+    commit({ texts: {}, images: {}, links: {} });
     setPage(next);
   };
 
   const save = () => {
     const final = finishText();
-    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images }, content: [] });
+    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links }, content: [] });
   };
 
   const changed = Object.keys(over.texts).length + Object.keys(over.images).length;
@@ -222,14 +255,44 @@ export function BrainwaveEditor({
             pageId={page}
             overrides={over}
             mode={view === "mobile" ? "mobile" : "desktop"}
-            onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : pickImage(id))}
+            onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id) : pickButton(id))}
           />
           {uploading ? <div className="bw-editor-uploading"><LoaderCircle className="spin" /> 사진 올리는 중</div> : null}
         </div>
       </div>
+      {btn ? (
+        <div className="bw-btn-panel" role="dialog" aria-label="버튼 설정">
+          <strong>이 버튼을 누르면</strong>
+          <div className="bw-btn-opts" role="radiogroup">
+            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "contact"} onChange={() => setBtn({ ...btn, mode: "contact" })} /> 문의·신청 양식으로 <small>페이지 아래 양식으로 내려갑니다</small></label>
+            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "url"} onChange={() => setBtn({ ...btn, mode: "url" })} /> 주소(URL) 열기 <small>스마트스토어·예약 페이지·전화 등</small></label>
+            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "none"} onChange={() => setBtn({ ...btn, mode: "none" })} /> 아무 동작 없음</label>
+          </div>
+          {btn.mode === "url" ? (
+            <input
+              className="bw-btn-url"
+              value={btn.url}
+              placeholder="예: https://smartstore.naver.com/…  또는  tel:010-0000-0000"
+              maxLength={600}
+              autoFocus
+              onChange={(e) => setBtn({ ...btn, url: e.target.value })}
+              onKeyDown={(e) => { if (e.key === "Enter") applyBtn(); }}
+            />
+          ) : null}
+          {btn.textId ? (
+            <label className="bw-btn-label"><span>버튼 글자</span>
+              <input value={btn.label} maxLength={80} onChange={(e) => setBtn({ ...btn, label: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") applyBtn(); }} />
+            </label>
+          ) : null}
+          <div className="bw-btn-actions">
+            <button type="button" onClick={() => setBtn(null)}>취소</button>
+            <button type="button" className="bw-btn-apply" onClick={applyBtn}>적용</button>
+          </div>
+        </div>
+      ) : null}
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
       <p className="bw-editor-hint">
-        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다.</>}
+        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 글·사진은 눌러서 고치고, 버튼은 눌러서 글자와 이동할 곳을 정합니다.</>}
         {changed ? <b> 고친 자리 {changed}개</b> : null}
       </p>
     </div>

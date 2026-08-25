@@ -18,15 +18,18 @@
  */
 
 import type { ReactNode } from "react";
-import type { BrainwavePageData, BrainwaveOverrides } from "./brainwave-page";
+import type { BrainwavePageData, BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
+import { runBrainwaveButton, buttonIdFromTextId } from "../lib/landing/brainwave/button-action";
 
-type Pick = (kind: "text" | "image", id: string, el: HTMLElement) => void;
+type Pick = BrainwavePick;
 
 export interface MobileTemplateProps {
   /** 노드 id → 현재 글(사용자 오버라이드 → 킷 원문 순) */
   t: (id: string, fallback?: string) => string;
   /** 노드 id → 현재 사진 경로 */
   img: (id: string, fallback: string) => string;
+  /** 버튼 노드 id → 눌렀을 때 이동(에디터가 저장) */
+  links?: Record<string, string>;
   onPick?: Pick;
 }
 
@@ -36,8 +39,10 @@ function T({ id, t, onPick, as: Tag = "span", className }: { id: string; t: Mobi
   const text = t(id);
   if (!text) return null;
   return (
-    /* data-bw-text: 에디터의 편집 표시(점선 테두리·하이라이트) CSS 가 그대로 붙는다 */
-    <Tag className={className} data-bw-text={onPick ? id : undefined} onClick={onPick ? (e) => onPick("text", id, e.currentTarget as HTMLElement) : undefined}>
+    /* data-bw-text: 에디터의 편집 표시(점선 테두리·하이라이트) CSS 가 그대로 붙는다.
+       stopPropagation 필수 — 없으면 편집 중 드래그(글 선택)가 무대 클릭으로 새어
+       나가 finishText 가 편집을 끝내 버린다(사용자 보고: "드래그가 안 된다"). */
+    <Tag className={className} data-bw-text={onPick ? id : undefined} onClick={onPick ? (e) => { e.stopPropagation(); onPick("text", id, e.currentTarget as HTMLElement); } : undefined}>
       {text}
     </Tag>
   );
@@ -52,7 +57,7 @@ function Img({ id, src, img, onPick, className, alt = "" }: { id: string; src: s
       alt={alt}
       loading="lazy"
       data-bw-image={onPick ? id : undefined}
-      onClick={onPick ? (e) => onPick("image", id, e.currentTarget as HTMLElement) : undefined}
+      onClick={onPick ? (e) => { e.stopPropagation(); onPick("image", id, e.currentTarget as HTMLElement); } : undefined}
     />
   );
 }
@@ -61,9 +66,33 @@ function Section({ className, children, dark }: { className?: string; children: 
   return <section className={`bwmob-sec ${dark ? "bwmob-dark" : ""} ${className ?? ""}`}>{children}</section>;
 }
 
+/*
+ * 킷 버튼. 글 자리 id 로 라벨을 읽고, 버튼 노드 id(=I…; 앞부분)로 이동을 정한다 —
+ * PC 화면의 같은 버튼과 같은 키라서 어느 쪽에서 정하든 둘 다에 적용된다.
+ * 에디터에서 누르면 버튼 판(글자·이동할 곳)이 열리고, 공개 화면에서는 이동한다.
+ */
+function Btn({ textId, t, links, onPick, className = "bwmob-btn", submit }: { textId: string; t: MobileTemplateProps["t"]; links?: Record<string, string>; onPick?: Pick; className?: string; submit?: boolean }) {
+  const btnId = buttonIdFromTextId(textId);
+  return (
+    <button
+      type={submit && !onPick ? "submit" : "button"}
+      className={className}
+      data-bw-btn={btnId}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (onPick) onPick("button", btnId, e.currentTarget);
+        else runBrainwaveButton(links, btnId);
+      }}
+    >
+      {t(textId)}
+    </button>
+  );
+}
+
 /* ── 03 Coworking → 카페(새벽커피) ─────────────────────── */
 
-function Cafe0_2226({ t, img, onPick }: MobileTemplateProps) {
+function Cafe0_2226({ t, img, links, onPick }: MobileTemplateProps) {
   const A = "/brainwave/0-2226";
   const faq: Array<[string, string?]> = [
     ["0:2246", "0:2247"],
@@ -84,7 +113,7 @@ function Cafe0_2226({ t, img, onPick }: MobileTemplateProps) {
         <div className="bwmob-book">
           <div className="bwmob-field"><Img id="I0:2373;0:4740;0:4766/0" src={`${A}/imgPin32.svg`} img={img} className="bwmob-field-ic" /><T id="I0:2373;0:4738" t={t} onPick={onPick} /><span className="bwmob-caret" aria-hidden>▾</span></div>
           <div className="bwmob-field"><Img id="0:4778/0/0" src={`${A}/imgCalendar60.svg`} img={img} className="bwmob-field-ic" /><T id="I0:2374;0:4738" t={t} onPick={onPick} /><span className="bwmob-caret" aria-hidden>▾</span></div>
-          <button type="button" className="bwmob-btn"><T id="I0:2372;0:4557" t={t} onPick={onPick} /></button>
+          <Btn textId="I0:2372;0:4557" t={t} links={links} onPick={onPick} />
         </div>
       </Section>
 
@@ -165,7 +194,7 @@ function Cafe0_2226({ t, img, onPick }: MobileTemplateProps) {
         <T id="0:2235" t={t} onPick={onPick} as="p" className="bwmob-sub" />
         <form className="bwmob-subscribe" onSubmit={(e) => e.preventDefault()}>
           <input type="email" placeholder={t("0:2232") || "이메일 주소"} aria-label="이메일 주소" />
-          <button type="submit" className="bwmob-btn"><T id="I0:2233;0:4557" t={t} onPick={onPick} /></button>
+          <Btn textId="I0:2233;0:4557" t={t} links={links} onPick={onPick} submit />
         </form>
         <p className="bwmob-fine"><T id="0:2236/0" t={t} onPick={onPick} /> <T id="0:2236/1" t={t} onPick={onPick} /></p>
       </Section>
@@ -190,7 +219,7 @@ function Cafe0_2226({ t, img, onPick }: MobileTemplateProps) {
 
 /* ── 06 ECommerce → 무인꽃집 ───────────────────────────── */
 
-function Shop0_1102({ t, img, onPick }: MobileTemplateProps) {
+function Shop0_1102({ t, img, links, onPick }: MobileTemplateProps) {
   const A = "/brainwave/0-1102";
   const cats = [
     ["0:1332/0/0", "imgSofa.png", "0:1333", "0:1334"],
@@ -268,7 +297,7 @@ function Shop0_1102({ t, img, onPick }: MobileTemplateProps) {
         <Img id="0:1146/0/0" src={`${A}/imgJeanPhilippeDelbergheBa2MCCtXg2OUnsplash1.jpg`} img={img} onPick={onPick} className="bwmob-photo" alt="" />
         <T id="0:1141" t={t} onPick={onPick} as="h2" className="bwmob-h2" />
         <T id="0:1142" t={t} onPick={onPick} as="p" className="bwmob-sub" />
-        <button type="button" className="bwmob-btn"><T id="I0:1140;0:4572" t={t} onPick={onPick} /></button>
+        <Btn textId="I0:1140;0:4572" t={t} links={links} onPick={onPick} />
       </Section>
 
       {/* 후기 한 편 */}
@@ -284,7 +313,7 @@ function Shop0_1102({ t, img, onPick }: MobileTemplateProps) {
       {/* 마무리 CTA */}
       <Section dark className="bwmob-cta">
         <T id="0:1111" t={t} onPick={onPick} as="h2" className="bwmob-h2" />
-        <button type="button" className="bwmob-btn"><T id="I0:1110;0:4626" t={t} onPick={onPick} /></button>
+        <Btn textId="I0:1110;0:4626" t={t} links={links} onPick={onPick} />
       </Section>
 
       <MobileFooter prefix="I0:1103" t={t} onPick={onPick} />
@@ -294,7 +323,7 @@ function Shop0_1102({ t, img, onPick }: MobileTemplateProps) {
 
 /* ── 08 Consultation → 상담 서비스 (service 업종 기본 템플릿) ── */
 
-function Consult0_290({ t, img, onPick }: MobileTemplateProps) {
+function Consult0_290({ t, img, links, onPick }: MobileTemplateProps) {
   const A = "/brainwave/0-290";
   const services = [
     ["0:372/0", "imgBgCopy.png", "0:373"],
@@ -330,7 +359,7 @@ function Consult0_290({ t, img, onPick }: MobileTemplateProps) {
         <div className="bwmob-shophero-txt">
           <T id="0:414" t={t} onPick={onPick} as="h1" className="bwmob-h1" />
           <T id="0:415" t={t} onPick={onPick} as="p" className="bwmob-herosub" />
-          <button type="button" className="bwmob-btn"><T id="I0:416;0:4460" t={t} onPick={onPick} /></button>
+          <Btn textId="I0:416;0:4460" t={t} links={links} onPick={onPick} />
         </div>
       </Section>
 
@@ -416,7 +445,7 @@ function Consult0_290({ t, img, onPick }: MobileTemplateProps) {
             <T id="I0:306;0:4718" t={t} onPick={onPick} as="small" />
             <input type="text" placeholder={t("I0:306;0:4717")} />
           </label>
-          <button type="submit" className="bwmob-btn"><T id="I0:302;0:4557" t={t} onPick={onPick} /></button>
+          <Btn textId="I0:302;0:4557" t={t} links={links} onPick={onPick} submit />
         </form>
       </Section>
 
@@ -425,7 +454,7 @@ function Consult0_290({ t, img, onPick }: MobileTemplateProps) {
         <T id="0:294" t={t} onPick={onPick} as="h2" className="bwmob-h2" />
         <form className="bwmob-subscribe" onSubmit={(e) => e.preventDefault()}>
           <input type="email" placeholder={t("I0:296;0:4597") || "이메일 주소"} aria-label="이메일 주소" />
-          <button type="submit" className="bwmob-btn"><T id="I0:295;0:4460" t={t} onPick={onPick} /></button>
+          <Btn textId="I0:295;0:4460" t={t} links={links} onPick={onPick} submit />
         </form>
       </Section>
 
@@ -482,5 +511,5 @@ export function renderBrainwaveMobile(
   const originals = new Map(page.slots.text.map((s) => [s.id, s.text]));
   const t = (id: string, fallback = "") => overrides?.texts?.[id] ?? originals.get(id) ?? fallback;
   const img = (id: string, fallback: string) => overrides?.images?.[id] ?? fallback;
-  return <Template t={t} img={img} onPick={onPick} />;
+  return <Template t={t} img={img} links={overrides?.links} onPick={onPick} />;
 }

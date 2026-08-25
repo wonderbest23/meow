@@ -26,6 +26,8 @@ async function main() {
     for (const m of c.musts) assert.ok(html.includes(m), `${c.id}: "${m}" 이 화면에 있어야 한다`);
     /* 자산 경로가 페이지 폴더를 가리킨다 */
     assert.ok(html.includes(`/brainwave/${c.id}/`), `${c.id}: 킷 자산 경로`);
+    /* 버튼은 링크 키(버튼 노드 id)를 단 채 그려진다 — 에디터의 버튼 판이 이 키로 저장한다 */
+    assert.ok(html.includes("data-bw-btn"), `${c.id}: 버튼에 data-bw-btn`);
     /* 데스크톱 메뉴 줄(넓은 공백 벌림)은 모바일에 없어야 한다 */
     assert.ok(!/메뉴\s{4,}공간|꽃 고르기\s{4,}정기 구독/.test(html), `${c.id}: 가로 메뉴 줄 없음`);
 

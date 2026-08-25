@@ -64,6 +64,11 @@ export const brainwaveDataSchema = z.object({
   page: z.string().regex(/^[0-9]+-[0-9]+$/),
   texts: z.record(z.string(), z.string().max(4000)).default({}),
   images: z.record(z.string(), z.string().max(900_000)).default({}),
+  /*
+   * 버튼 노드 id → 누르면 하는 일. 없으면 "contact"(아래 문의 양식으로).
+   * "none" 은 아무 동작 없음, 그 밖은 주소(https/tel/mailto)다.
+   */
+  links: z.record(z.string(), z.string().max(600)).default({}),
 });
 export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
 
@@ -202,7 +207,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string,
    */
   if (!kitOverride) {
     return landingPageDataSchema.parse({
-      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {} },
+      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {}, links: {} },
       root: { props: { title: seed.businessName } },
       content: [],
     });

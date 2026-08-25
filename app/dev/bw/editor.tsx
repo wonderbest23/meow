@@ -6,7 +6,7 @@ import type { LandingPageData } from "../../../lib/landing/page-data";
 export function DevEditor({ page }: { page: string }) {
   const [open, setOpen] = useState(false);
   const [saved, setSaved] = useState<LandingPageData | null>(null);
-  const data: LandingPageData = saved ?? { brainwave: { page, texts: {}, images: {} }, root: { props: {} }, content: [] };
+  const data: LandingPageData = saved ?? { brainwave: { page, texts: {}, images: {}, links: {} }, root: { props: {} }, content: [] };
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} style={{ position: "fixed", right: 16, bottom: 90, zIndex: 60, padding: "10px 14px", borderRadius: 8, background: "#473bf0", color: "#fff", fontWeight: 700 }}>편집기 열기</button>

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Urbanist, Rubik } from "next/font/google";
 import { layoutPage, childBox, type MobileLayout, type Box } from "../lib/landing/brainwave/mobile-layout";
+import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import { renderBrainwaveMobile } from "./brainwave-mobile";
 
 /*
@@ -42,7 +43,11 @@ export type BrainwavePageData = {
   slots: { text: Array<{ id: string; text: string }>; image: Array<{ id: string; src: string }> };
 };
 
-export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string> };
+export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string> };
+
+/** 편집기에서 자리를 눌렀을 때 — button 은 버튼 링크·글자 판을 연다 */
+export type BrainwavePick = (kind: "text" | "image" | "button", id: string, el: HTMLElement) => void;
+
 
 /* 킷 글꼴 Gilroy 는 한글이 없다 — Pretendard 로 받친다. 크기·자간·줄간은 킷 값 그대로. */
 const FONT_FALLBACK: Record<string, string> = {
@@ -68,12 +73,15 @@ export function BrainwaveNodeView({
   overrides,
   parentId,
   onPick,
+  inButton,
 }: {
   node: BrainwaveNode;
   overrides?: BrainwaveOverrides;
   parentId?: string;
-  /** 편집기에서 — 글/사진 자리를 누르면 알린다 */
-  onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void;
+  /** 편집기에서 — 글/사진/버튼 자리를 누르면 알린다 */
+  onPick?: BrainwavePick;
+  /** 조상 중에 버튼이 있다 — 안쪽 글·중첩 버튼은 손대지 않고 버튼 루트가 받는다 */
+  inButton?: boolean;
 }) {
   const id = node.id ?? parentId;
   if (node.tag === "#") return <>{node.text}</>;
@@ -95,33 +103,34 @@ export function BrainwaveNodeView({
   const hasText = node.ch?.some((c) => c.tag === "#");
   const text = hasText && node.id && overrides?.texts?.[node.id];
   /*
-   * 킷의 단추(이름에 Button 이 든 노드)는 그림일 뿐이다. 공개 화면에서는 누르면
-   * 아래 문의 양식(#landing-contact)으로 내려가게 한다 — 편집 중에는 글 고치기가
-   * 우선이라 걸지 않는다.
+   * 킷의 단추(이름에 Button 이 든 노드) — 가장 바깥 버튼 노드만 버튼으로 삼는다
+   * (킷은 "Button / Solid" 안에 "Button 1" 이 겹으로 들어 있다).
+   *   공개 화면: 누르면 links 에 적힌 대로 움직인다(기본: 아래 문의 양식으로).
+   *   편집기: 누르면 버튼 판(글자·이동할 곳)을 연다 — 안쪽 글은 따로 안 잡는다.
    */
-  const isButton = !onPick && /button/i.test(node.name ?? "");
-  const goContact = isButton
-    ? (e: React.MouseEvent<HTMLDivElement>) => {
-        const target = document.getElementById("landing-contact");
-        if (!target) return;
+  const isButton = !inButton && /button/i.test(node.name ?? "") && Boolean(node.id);
+  const act = isButton
+    ? (e: React.MouseEvent<HTMLDivElement> | React.KeyboardEvent<HTMLDivElement>) => {
         e.preventDefault();
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
+        e.stopPropagation();
+        if (onPick) onPick("button", node.id!, e.currentTarget as HTMLElement);
+        else runBrainwaveButton(overrides?.links, node.id!);
       }
     : undefined;
   /* 태그는 div/p/span 뿐이다 — 타입은 div 로 둔다 */
   const Tag = (["div", "p", "span"].includes(node.tag) ? node.tag : "div") as "div";
   const children: ReactNode = text !== undefined && text !== false
     ? text
-    : node.ch?.map((c, i) => <BrainwaveNodeView key={i} node={c} overrides={overrides} parentId={id} onPick={onPick} />);
+    : node.ch?.map((c, i) => <BrainwaveNodeView key={i} node={c} overrides={overrides} parentId={id} onPick={onPick} inButton={inButton || isButton} />);
   return (
     <Tag
       style={nodeStyle(node.st)}
-      data-bw-text={hasText && node.id ? node.id : undefined}
-      data-bw-btn={isButton ? "" : undefined}
+      data-bw-text={hasText && node.id && !inButton && !isButton ? node.id : undefined}
+      data-bw-btn={isButton ? node.id : undefined}
       role={isButton ? "button" : undefined}
       tabIndex={isButton ? 0 : undefined}
-      onClick={onPick && hasText && node.id ? (e: React.MouseEvent<HTMLDivElement>) => { e.stopPropagation(); onPick("text", node.id!, e.currentTarget); } : goContact}
-      onKeyDown={isButton ? (e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === "Enter" || e.key === " ") document.getElementById("landing-contact")?.scrollIntoView({ behavior: "smooth" }); } : undefined}
+      onClick={act ?? (onPick && hasText && node.id && !inButton ? (e: React.MouseEvent<HTMLDivElement>) => { e.stopPropagation(); onPick("text", node.id!, e.currentTarget); } : undefined)}
+      onKeyDown={isButton ? (e: React.KeyboardEvent<HTMLDivElement>) => { if (e.key === "Enter" || e.key === " ") act?.(e); } : undefined}
     >
       {children}
     </Tag>
@@ -132,7 +141,7 @@ export function BrainwaveNodeView({
  * 모바일 자동 재배치(lib/landing/brainwave/mobile-layout.ts) 그리기.
  * stack 은 세로로 쌓고(배경은 뒤에 깔고), leaf 는 원래 좌표 그대로 폭에 맞춰 줄인다.
  */
-function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: MobileLayout; width: number; overrides?: BrainwaveOverrides; onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void; parentBox?: { x: number; w: number } }) {
+function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: MobileLayout; width: number; overrides?: BrainwaveOverrides; onPick?: BrainwavePick; parentBox?: { x: number; w: number } }) {
   if (layout.kind === "leaf") {
     /*
      * 머리카락 두께 잎은 그리지 않는다.
@@ -294,7 +303,7 @@ export function BrainwaveStage({
 }: {
   page: BrainwavePageData;
   overrides?: BrainwaveOverrides;
-  onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void;
+  onPick?: BrainwavePick;
   maxWidth?: number;
   className?: string;
   /** auto: 폭 640 이하면 모바일 재배치 / desktop: 항상 줄이기 / mobile: 항상 재배치 */
@@ -314,6 +323,23 @@ export function BrainwaveStage({
   }, [page.w]);
   const mobile = mode === "mobile" || (mode === "auto" && width > 0 && width <= 640);
   const target = Math.max(200, width - 32);
+  /*
+   * 등장 애니메이션 — 공개 화면·미리보기(onPick 없음)에서만. 섹션이 화면에 들어올 때
+   * 살짝 떠오른다. 숨김 클래스는 JS 가 붙인다 — JS 가 없으면 그냥 다 보인다.
+   */
+  const animate = !onPick;
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !animate || width === 0) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const targets = el.querySelectorAll<HTMLElement>(".bwmob > *, .bwm-items > *, .bw-canvas > div > div");
+    if (!targets.length) return;
+    const io = new IntersectionObserver((entries) => {
+      for (const en of entries) if (en.isIntersecting) { en.target.classList.add("bw-in"); io.unobserve(en.target); }
+    }, { threshold: 0.08, rootMargin: "0px 0px -6% 0px" });
+    targets.forEach((t) => { t.classList.add("bw-anim"); io.observe(t); });
+    return () => { io.disconnect(); targets.forEach((t) => t.classList.remove("bw-anim", "bw-in")); };
+  }, [animate, mobile, page.id, width]);
   const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
   /*
    * 손으로 짠 모바일판이 있는 페이지는 그걸 먼저 쓴다.
@@ -363,7 +389,7 @@ export function loadBrainwavePage(id: string): Promise<BrainwavePageData> {
   return p;
 }
 
-export function BrainwavePage({ pageId, overrides, onPick, className, preloaded, mode }: { pageId: string; overrides?: BrainwaveOverrides; onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void; className?: string; preloaded?: BrainwavePageData | null; mode?: "auto" | "desktop" | "mobile" }) {
+export function BrainwavePage({ pageId, overrides, onPick, className, preloaded, mode }: { pageId: string; overrides?: BrainwaveOverrides; onPick?: BrainwavePick; className?: string; preloaded?: BrainwavePageData | null; mode?: "auto" | "desktop" | "mobile" }) {
   const [page, setPage] = useState<BrainwavePageData | null>(preloaded && preloaded.id === pageId ? preloaded : null);
   const [err, setErr] = useState("");
   useEffect(() => {
