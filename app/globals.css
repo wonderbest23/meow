@@ -6,6 +6,19 @@
   --green-dark: #3272db;
   --lime: #efeefb;
   --line: #dfdef1;
+  /*
+   * 애플 공식 폰트 조합 (2026-08-25, 사용자 요청).
+   *
+   * SF Pro·SF Mono·New York 파일을 직접 싣는 것은 애플 라이선스가 금지한다
+   * (애플 플랫폼 앱 디자인 용도로만 허용). 대신 시스템 스택을 쓴다 —
+   * 아이폰·맥에서는 -apple-system 이 진짜 SF Pro 로, 한글은 애플 공식 한글
+   * 서체(Apple SD Gothic Neo)로 그려진다. ui-monospace = SF Mono,
+   * ui-serif = New York. SF 에는 한글이 없어 파일을 실어도 한글은 어차피
+   * 대체 서체로 보인다. 윈도·안드로이드는 Pretendard(SF 대응 무료 서체)로 받친다.
+   */
+  --font-sans: -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", Pretendard, "Pretendard Variable", "Noto Sans KR", "Malgun Gothic", sans-serif;
+  --font-serif: ui-serif, "New York", Georgia, "Nanum Myeongjo", "Noto Serif KR", serif;
+  --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 * { box-sizing: border-box; }
@@ -25,7 +38,9 @@ svg.lucide { stroke-linecap: round; stroke-linejoin: round; }
  * 이 동작이 없어 재현되지 않는다. 우리가 정한 크기를 그대로 쓰게 못박는다.
  */
 html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
-body { margin: 0; color: var(--ink); background: #fff; font-family: "Noto Sans KR", sans-serif; word-break: keep-all; }
+body { margin: 0; color: var(--ink); background: #fff; font-family: var(--font-sans); word-break: keep-all; }
+/* 코드·주소 조각은 SF Mono 계열로 */
+code, pre, kbd, samp { font-family: var(--font-mono); }
 button, input, select { font: inherit; }
 button { color: inherit; }
 a { color: inherit; text-decoration: none; }
@@ -253,7 +268,7 @@ a { color: inherit; text-decoration: none; }
 .profile-page .radar-wrap line, .explore-page .radar-wrap line { stroke: #cccae3; }
 .radar-wrap .radar-data { fill: #b3a8ff30; stroke: var(--lime); stroke-width: 2; }
 .profile-page .radar-data, .explore-page .radar-data { fill: #3272db1a; stroke: var(--green); }
-.radar-wrap text { fill: #8b95a1; font: 600 8px "Noto Sans KR"; text-anchor: middle; dominant-baseline: middle; }
+.radar-wrap text { fill: #8b95a1; font: 600 8px var(--font-sans); text-anchor: middle; dominant-baseline: middle; }
 .profile-page .radar-wrap text, .explore-page .radar-wrap text { fill: #585667; }
 
 /* Assessment */
@@ -1566,7 +1581,7 @@ a { color: inherit; text-decoration: none; }
 .delivery-doc-icon svg { width: 20px; }
 .deliverable-list article > div { min-width: 0; display: grid; }
 .delivery-document-summary { min-height: 66px; align-content: center; gap: 2px; }
-.deliverable-list article small { color: #5f5c7f; font: 700 9px "Noto Sans KR", sans-serif; line-height: 1.4; }
+.deliverable-list article small { color: #5f5c7f; font: 700 9px var(--font-sans); line-height: 1.4; }
 .deliverable-list article strong { overflow-wrap: anywhere; font-size: 14px; line-height: 1.45; }
 .deliverable-list article p { color: #5f5c7f; font-size: 10px; line-height: 1.55; margin: 0; }
 .delivery-document-summary > span { margin-top: 4px; color: #5f5c7f; font-size: 9px; line-height: 1.45; }
@@ -2385,7 +2400,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .work-product-head > button { height: 34px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 7px; background: white; display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; cursor: pointer; }
 .work-product-head > button svg { width: 13px; }
 .work-product-head > button:disabled { opacity: .5; cursor: wait; }
-.work-product-head > .auto-update-label { padding: 7px 9px; border-radius: 7px; background: #eef6ff; display: flex; align-items: center; gap: 5px; color: #585667; font: 700 10px "Noto Sans KR"; letter-spacing: 0; }
+.work-product-head > .auto-update-label { padding: 7px 9px; border-radius: 7px; background: #eef6ff; display: flex; align-items: center; gap: 5px; color: #585667; font: 700 10px var(--font-sans); letter-spacing: 0; }
 .work-product-head > .auto-update-label svg { width: 13px; }
 .brief-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 17px; }
 .brief-grid article { min-height: 95px; padding: 14px; border-radius: 9px; background: white; border: 1px solid #dfdef1; display: grid; align-content: start; }
@@ -2423,7 +2438,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .economics-grid small { color: #5f5c7f; font-size: 8px; }.economics-grid strong { color: var(--lime); font: 800 13px "DM Sans"; margin-top: 3px; }
 .brand-core { margin-top: 17px; padding: 18px; border-radius: 10px; background: #0d0a2c; color: white; }
 .brand-core h4 { font-size: 15px; line-height: 1.6; margin: 6px 0 14px; }
-.brand-core > div { display: flex; gap: 5px; }.brand-core > div span { padding: 5px 7px; border-radius: 5px; background: #ffffff10; color: #8b95a1; font: 700 9px "Noto Sans KR"; letter-spacing: 0; }
+.brand-core > div { display: flex; gap: 5px; }.brand-core > div span { padding: 5px 7px; border-radius: 5px; background: #ffffff10; color: #8b95a1; font: 700 9px var(--font-sans); letter-spacing: 0; }
 .brand-candidates { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 10px; }
 .brand-candidates button { min-height: 100px; padding: 12px; border: 1px solid #dfdef1; border-radius: 8px; background: white; display: grid; text-align: left; position: relative; cursor: pointer; }
 .brand-candidates button.selected { border: 2px solid var(--green); background: #eef6ff; }
@@ -2433,11 +2448,11 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .brand-preview > div:last-child { display: grid; }.brand-preview small { color: #5f5c7f; font-size: 8px; }.brand-preview strong { font-size: 10px; margin-top: 4px; }
 .landing-draft { margin-top: 16px; border: 1px solid #dfdef1; border-radius: 10px; background: white; overflow: hidden; }
 .landing-draft-nav { height: 42px; padding: 0 13px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid #f6f5ff; }
-.landing-draft-nav strong { font-size: 9px; }.landing-draft-nav span { color: #8b95a1; font: 8px "Noto Sans KR"; letter-spacing: 0; }.landing-draft-nav button { border: 0; border-radius: 5px; background: var(--ink); color: white; padding: 6px 8px; font-size: 7px; }
+.landing-draft-nav strong { font-size: 9px; }.landing-draft-nav span { color: #8b95a1; font: 8px var(--font-sans); letter-spacing: 0; }.landing-draft-nav button { border: 0; border-radius: 5px; background: var(--ink); color: white; padding: 6px 8px; font-size: 7px; }
 .landing-draft-hero { min-height: 220px; padding: 38px 12%; background: #eef6ff; text-align: center; }
 .landing-draft-hero small { color: var(--green-dark); font-size: 8px; }.landing-draft-hero h4 { font-size: 17px; line-height: 1.55; margin: 7px 0; }.landing-draft-hero p { color: #5f5c7f; font-size: 9px; }.landing-draft-hero button { border: 0; border-radius: 6px; background: var(--green); color: white; padding: 8px 10px; display: inline-flex; gap: 5px; font-size: 8px; font-weight: 700; }.landing-draft-hero button svg { width: 12px; }
 .landing-copy-blocks { display: grid; grid-template-columns: repeat(3, 1fr); padding: 14px; }.landing-copy-blocks article { padding: 11px; border-right: 1px solid #dfdef1; }.landing-copy-blocks article:last-child { border: 0; }.landing-copy-blocks small { color: #5f5c7f; font-size: 7px; }.landing-copy-blocks strong { display: block; font-size: 9px; line-height: 1.55; margin-top: 5px; }
-.cta-check { margin-top: 10px; padding: 11px; border-radius: 8px; background: #efeefb; display: flex; align-items: center; gap: 7px; }.cta-check svg { width: 16px; color: var(--green); }.cta-check span { display: grid; color: #585667; font: 8px "Noto Sans KR"; letter-spacing: 0; }.cta-check strong { color: #333d4b; font-size: 9px; }
+.cta-check { margin-top: 10px; padding: 11px; border-radius: 8px; background: #efeefb; display: flex; align-items: center; gap: 7px; }.cta-check svg { width: 16px; color: var(--green); }.cta-check span { display: grid; color: #585667; font: 8px var(--font-sans); letter-spacing: 0; }.cta-check strong { color: #333d4b; font-size: 9px; }
 .sales-message { margin-top: 16px; padding: 17px; border-radius: 9px; background: white; border: 1px solid #dfdef1; position: relative; }.sales-message > small { color: var(--green-dark); font-size: 9px; font-weight: 800; }.sales-message p { color: #585667; font-size: 11px; line-height: 1.75; }.sales-message button { position: absolute; right: 12px; top: 12px; border: 0; border-radius: 5px; background: #eef6ff; color: #585667; padding: 6px 8px; font-size: 8px; cursor: pointer; }
 .launch-channels { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 9px; }.launch-channels article { padding: 13px; border-radius: 8px; background: white; border: 1px solid #dfdef1; }.launch-channels span { color: #8b95a1; font: 800 9px "DM Sans"; }.launch-channels strong { display: block; font-size: 11px; margin: 13px 0 5px; }.launch-channels p { color: #5f5c7f; font-size: 9px; line-height: 1.6; }.launch-channels em { color: var(--green-dark); font-size: 8px; font-style: normal; font-weight: 700; }
 .support-ready { margin-top: 10px; padding: 14px; border-radius: 9px; background: #e8f0fb; color: #4b6683; display: grid; grid-template-columns: 25px 1fr auto; align-items: center; gap: 9px; }.support-ready > svg { width: 21px; }.support-ready > div { display: grid; }.support-ready small { font-size: 7px; }.support-ready strong { font-size: 9px; }.support-ready p { font-size: 8px; margin: 3px 0 0; }.support-ready > span { border-radius: 5px; background: #ffffffa8; color: #6e8298; padding: 7px 8px; font-size: 8px; font-weight: 700; }
@@ -3285,7 +3300,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .landing-builder-footer > button:disabled { opacity: .5; cursor: not-allowed; }
 
 /* Public landing page */
-.public-landing { --landing-accent: #1b64da; min-height: 100vh; background: #faf6eb; color: #202632; font-family: Arial, "Noto Sans KR", sans-serif; }
+.public-landing { --landing-accent: #1b64da; min-height: 100vh; background: #faf6eb; color: #202632; font-family: var(--font-sans); }
 .public-landing.tone-white { background: #fff; }
 .public-landing.tone-dark { background: #191f28; color: #f7f8fa; }
 .public-landing-nav { width: min(1120px, calc(100% - 40px)); min-height: 72px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }
@@ -5921,7 +5936,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .deck-slide-preview.dark .deck-preview-chart > p { color: #8b95a1; }
 .deck-slide-preview.dark .deck-preview-lead { color: #b0b8c1; }
 .deck-preview-statement { height: 100%; padding-left: 8%; display: grid; align-content: center; grid-template-columns: auto 1fr; column-gap: 2.2%; }
-.deck-preview-statement b { color: var(--deck-accent, #3272db); font-family: Georgia, serif; font-size: 7.2cqw; line-height: .8; }
+.deck-preview-statement b { color: var(--deck-accent, #3272db); font-family: var(--font-serif); font-size: 7.2cqw; line-height: .8; }
 .deck-preview-statement strong { max-width: 88%; overflow-wrap: anywhere; font-size: 3cqw; line-height: 1.5; }
 .deck-preview-statement i { grid-column: 2; width: 11%; height: 4px; margin: 4% 0 2.5%; background: var(--deck-accent, #3272db); }
 .deck-preview-statement p { grid-column: 2; max-width: 84%; margin: 0; color: #585667; font-size: 1.45cqw; line-height: 1.55; }
@@ -7171,9 +7186,9 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
  * 글꼴은 기기에 이미 있는 것만 쓴다 — 웹에서 내려받게 하면 손님이 그만큼 더
  * 기다리고, 느린 망에서는 글이 늦게 뜬다. 한글이 확실히 되는 것만 담았다.
  */
-.landing-block-page.font-sans { font-family: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
-.landing-block-page.font-round { font-family: "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; letter-spacing: -0.01em; }
-.landing-block-page.font-serif { font-family: "Nanum Myeongjo", "Apple SD Gothic Neo", serif; }
+.landing-block-page.font-sans { font-family: var(--font-sans); }
+.landing-block-page.font-round { font-family: var(--font-sans); letter-spacing: -0.01em; }
+.landing-block-page.font-serif { font-family: var(--font-serif); }
 
 /*
  * 크기는 세 단계뿐이고 굵기는 열지 않는다. 제목은 굵게·본문은 보통으로 이미
@@ -7539,8 +7554,8 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 .tone-dark .landing-block-features p, .tone-dark .landing-block-story p { color: #b0b8c1; }
 .tone-dark .landing-block-features > div, .tone-dark .landing-block-features article { border-color: #ffffff24; }
 .tone-dark .landing-block-story { background: #191f28; }
-.template-creator .landing-block-page, .template-editorial .landing-block-page { font-family: Georgia, "Noto Serif KR", serif; }
-.template-creator .landing-block-page p, .template-editorial .landing-block-page p, .template-creator .landing-block-page a, .template-editorial .landing-block-page a { font-family: Arial, "Noto Sans KR", sans-serif; }
+.template-creator .landing-block-page, .template-editorial .landing-block-page { font-family: var(--font-serif); }
+.template-creator .landing-block-page p, .template-editorial .landing-block-page p, .template-creator .landing-block-page a, .template-editorial .landing-block-page a { font-family: var(--font-sans); }
 
 @media (max-width: 640px) {
   .landing-advanced-edit-callout { grid-template-columns: 34px minmax(0, 1fr); padding: 14px; }
