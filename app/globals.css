@@ -13438,24 +13438,26 @@ html .simple-home .site-header a.account-link > svg {
 /* 커서 경로: 유형 칩 → 체크 1·2·3 → 퇴장.
    translate 의 % 는 커서 자신 크기 기준이라 못 쓴다 — 카드 기준인
    left/top 으로 움직인다. */
+/* 좌표는 JS 가 실측해 넣는 변수(--aim-*)를 읽는다 — 모바일 재배치에서도 표적을
+   정확히 누른다. 변수가 없을 때의 폴백은 예전 데스크톱 값. */
 @keyframes v5-cursor {
   0%, 29% { opacity: 0; left: 78%; top: 88%; transform: none; }
   31% { opacity: 1; }
-  35% { left: 21%; top: 57%; transform: none; }        /* 첫 칩 위 */
-  36.5% { left: 21%; top: 57%; transform: scale(.85); }
-  38%, 42% { left: 21%; top: 57%; transform: none; }
+  35% { left: var(--aim-chipx, 21%); top: var(--aim-chipy, 57%); transform: none; }        /* 첫 칩 위 */
+  36.5% { left: var(--aim-chipx, 21%); top: var(--aim-chipy, 57%); transform: scale(.85); }
+  38%, 42% { left: var(--aim-chipx, 21%); top: var(--aim-chipy, 57%); transform: none; }
   45% { opacity: 0; left: 30%; top: 70%; }
   48% { opacity: 0; left: 70%; top: 82%; }
   49% { opacity: 1; }
-  50% { left: 10%; top: 42%; transform: none; }        /* 체크 1 */
-  50.5% { left: 10%; top: 42%; transform: scale(.85); }
-  52% { left: 10%; top: 42%; transform: none; }
-  55% { left: 10%; top: 56%; }                          /* 체크 2 */
-  55.5% { left: 10%; top: 56%; transform: scale(.85); }
-  57% { left: 10%; top: 56%; transform: none; }
-  60% { left: 10%; top: 70%; }                          /* 체크 3 */
-  60.5% { left: 10%; top: 70%; transform: scale(.85); }
-  62% { opacity: 1; left: 10%; top: 70%; transform: none; }
+  50% { left: var(--aim-ck1x, 10%); top: var(--aim-ck1y, 42%); transform: none; }        /* 체크 1 */
+  50.5% { left: var(--aim-ck1x, 10%); top: var(--aim-ck1y, 42%); transform: scale(.85); }
+  52% { left: var(--aim-ck1x, 10%); top: var(--aim-ck1y, 42%); transform: none; }
+  55% { left: var(--aim-ck2x, 10%); top: var(--aim-ck2y, 56%); }                          /* 체크 2 */
+  55.5% { left: var(--aim-ck2x, 10%); top: var(--aim-ck2y, 56%); transform: scale(.85); }
+  57% { left: var(--aim-ck2x, 10%); top: var(--aim-ck2y, 56%); transform: none; }
+  60% { left: var(--aim-ck3x, 10%); top: var(--aim-ck3y, 70%); }                          /* 체크 3 */
+  60.5% { left: var(--aim-ck3x, 10%); top: var(--aim-ck3y, 70%); transform: scale(.85); }
+  62% { opacity: 1; left: var(--aim-ck3x, 10%); top: var(--aim-ck3y, 70%); transform: none; }
   66%, 100% { opacity: 0; left: 20%; top: 86%; }
 }
 @keyframes v5-click {

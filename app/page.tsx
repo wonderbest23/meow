@@ -692,6 +692,55 @@ function Home({
     "발표자료(PPT) — 완성 문서 기반 자동 구성",
   ];
   /* 홈에서 바로 창업 상담 창을 연다 — 문의(사람)가 아니라 상담(AI) 쪽으로 */
+  /*
+   * 데모 커서 좌표 보정 — 커서 경로의 %좌표는 데스크톱 배치 기준이라, 모바일에서
+   * 유형 칩이 세로 1열로 재배치되면 허공을 눌렀다(사용자 보고). 실제 표적(첫 칩,
+   * 체크 1·2·3)의 위치를 재서 CSS 변수로 넣고, 키프레임이 그 변수를 읽는다.
+   * 커서 svg 의 화살촉이 (5,3)px 이라 그만큼 빼서 촉이 표적 한가운데에 닿게 한다.
+   */
+  useEffect(() => {
+    const card = document.querySelector<HTMLElement>(".demo-card.demo-v5");
+    if (!card) return;
+    const aim = () => {
+      const r = card.getBoundingClientRect();
+      if (!r.width || !r.height) return;
+      const put = (name: string, sel: string) => {
+        const el = card.querySelector<HTMLElement>(sel);
+        if (!el) return;
+        const b = el.getBoundingClientRect();
+        let px = b.left + b.width / 2;
+        let py = b.top + b.height / 2;
+        /*
+         * 장면은 쉬는 동안 translateY·scale 로 밀려 있다(등장 애니메이션의 시작 자세).
+         * 클릭이 일어나는 '보이는 구간'은 transform: none 이므로, 지금 잰 좌표에서
+         * 장면의 현재 변환을 역산해 빼야 커서가 제자리를 누른다(실측: y 가 40px대 어긋남).
+         */
+        const scene = el.closest<HTMLElement>(".demo-scene");
+        const tr = scene ? getComputedStyle(scene).transform : "none";
+        if (scene && tr && tr !== "none") {
+          const m = new DOMMatrix(tr);
+          const sr = scene.getBoundingClientRect();
+          const c0x = sr.left + sr.width / 2 - m.e;
+          const c0y = sr.top + sr.height / 2 - m.f;
+          px = c0x + (px - m.e - c0x) / (m.a || 1);
+          py = c0y + (py - m.f - c0y) / (m.d || 1);
+        }
+        card.style.setProperty(`--${name}x`, `${((px - r.left - 5) / r.width * 100).toFixed(1)}%`);
+        card.style.setProperty(`--${name}y`, `${((py - r.top - 3) / r.height * 100).toFixed(1)}%`);
+      };
+      put("aim-chip", ".demo-type-grid b.pick");
+      put("aim-ck1", ".ck1 i");
+      put("aim-ck2", ".ck2 i");
+      put("aim-ck3", ".ck3 i");
+    };
+    aim();
+    /* 첫 화면 로딩 직후에는 레이아웃이 아직 움직인다 — 자리 잡은 뒤 한 번 더 */
+    const settle = window.setTimeout(aim, 1200);
+    const ro = new ResizeObserver(aim);
+    ro.observe(card);
+    return () => { window.clearTimeout(settle); ro.disconnect(); };
+  }, []);
+
   const openConsult = () => {
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "consult" } }));
   };
