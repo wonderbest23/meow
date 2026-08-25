@@ -1,6 +1,6 @@
 "use client";
 
-import { Banknote, Headphones, LayoutDashboard, LogOut, RotateCcw, Settings } from "lucide-react";
+import { Banknote, Headphones, LayoutDashboard, LogOut, PanelsTopLeft, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -24,6 +24,7 @@ export default function AdminNav({ title, subtitle }: { title: string; subtitle?
     { href: "/admin/payments", label: "입금 주문", Icon: Banknote },
     { href: "/admin/refunds", label: "환불", Icon: RotateCcw },
     { href: "/admin/legal", label: "운영 설정", Icon: Settings },
+    { href: "/admin/homepage", label: "홈 문구", Icon: PanelsTopLeft },
   ];
 
   return (

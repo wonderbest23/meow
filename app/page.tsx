@@ -741,6 +741,22 @@ function Home({
     return () => { window.clearTimeout(settle); ro.disconnect(); };
   }, []);
 
+  /*
+   * 어드민이 고친 홈 문구(/admin/homepage). 코드의 기본 문구로 먼저 그려지고,
+   * 오버라이드가 오면 바꿔 끼운다 — 실패하면 그냥 기본 문구다.
+   */
+  const [siteCopy, setSiteCopy] = useState<{ texts: Record<string, string>; hidden: string[] }>({ texts: {}, hidden: [] });
+  useEffect(() => {
+    fetch("/api/site-copy", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((j: { texts?: Record<string, string>; hidden?: string[] }) => { if (j && typeof j === "object") setSiteCopy({ texts: j.texts ?? {}, hidden: j.hidden ?? [] }); })
+      .catch(() => {});
+  }, []);
+  const sc = (id: string, def: string) => siteCopy.texts[id] ?? def;
+  /** \n 을 <br/> 로 */
+  const scBr = (id: string, def: string) => sc(id, def).split("\n").map((line, i, all) => <Fragment key={i}>{line}{i < all.length - 1 ? <br /> : null}</Fragment>);
+  const scHidden = (id: string) => siteCopy.hidden.includes(id);
+
   const openConsult = () => {
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "consult" } }));
   };
@@ -772,9 +788,9 @@ function Home({
         */}
         <section className="simple-home-choice">
           <div className="home-hero-copy">
-            <span className="section-label">창업 10만원대로 시작하세요</span>
-            <h1><b>사업,</b> 오늘 하루면 충분합니다</h1>
-            <p>사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.<br />복잡한 사업계획서, 이제 쉽게 시작하세요.</p>
+            <span className="section-label">{sc("hero.eyebrow", "창업 10만원대로 시작하세요")}</span>
+            <h1>{(() => { const t = sc("hero.title", "사업,|오늘 하루면 충분합니다"); const [head, ...rest] = t.split("|"); return rest.length ? <><b>{head}</b> {rest.join("|").trim()}</> : t; })()}</h1>
+            <p>{scBr("hero.subtitle", "사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.\n복잡한 사업계획서, 이제 쉽게 시작하세요.")}</p>
             {/*
               '무료로 시작하기' 버튼이 있던 자리 — 이제 검색창이다.
               도는 링으로 강조하고, 누르면 상담 창이 열린다.
@@ -885,8 +901,8 @@ function Home({
         숫자만 봐서는 무엇을 해주는지 알 수 없어서, 하는 일을 제목으로 올리고
         숫자는 그 아래 근거로 내렸다. 한 칸에 하나씩 넘겨 본다.
       */}
-      <section className="home-stats" aria-label="서비스 구성 요약">
-        <h2>숫자로 먼저 확인하세요</h2>
+      {scHidden("stats") ? null : <section className="home-stats" aria-label="서비스 구성 요약">
+        <h2>{sc("stats.title", "숫자로 먼저 확인하세요")}</h2>
         <div className="home-stats-cards">
           {HOME_STATS.map((item) => (
             <article key={item.label}>
@@ -896,13 +912,13 @@ function Home({
             </article>
           ))}
         </div>
-      </section>
+      </section>}
 
-      <section className="home-section home-method" id="how">
+      {scHidden("method") ? null : <section className="home-section home-method" id="how">
         <div className="home-section-heading">
-          <span>진행 방식</span>
-          <h2>질문에 답하기만 하면<br />문서가 순서대로 완성됩니다</h2>
-          <p>글쓰기는 인공지능이 맡습니다. 사용자는 사업에 대한 사실만 답하면 됩니다.</p>
+          <span>{sc("method.eyebrow", "진행 방식")}</span>
+          <h2>{scBr("method.title", "질문에 답하기만 하면\n문서가 순서대로 완성됩니다")}</h2>
+          <p>{scBr("method.subtitle", "글쓰기는 인공지능이 맡습니다. 사용자는 사업에 대한 사실만 답하면 됩니다.")}</p>
         </div>
         <div className="home-method-flow">
           <article><em>01</em><MessageCircle /><h3>사업 정보 입력</h3><p>사업 이름과 한두 문장 설명이면 시작할 수 있습니다. 업종·지역은 선택입니다.</p></article>
@@ -910,30 +926,30 @@ function Home({
           <article><em>03</em><BarChart3 /><h3>질문 답변 → AI 작성</h3><p>섹션마다 필요한 질문에 답하면 인공지능이 본문을 쓰고, 재무 숫자는 답변으로 자동 계산됩니다.</p></article>
           <article><em>04</em><CalendarDays /><h3>문서 보기·내려받기</h3><p>완성 문서를 화면에서 확인하고 PDF·Word로 받거나, 발표자료(PPT)를 만듭니다.</p></article>
         </div>
-      </section>
+      </section>}
 
-      <section className="home-deliverables" id="deliverables">
+      {scHidden("deliverables") ? null : <section className="home-deliverables" id="deliverables">
         <div className="home-deliverables-inner">
           <div className="home-deliverables-copy">
-            <span>문서 유형</span>
-            <h2>목적에 맞는 문서를<br />골라서 만드세요</h2>
-            <p>한 번 입력한 답변은 다른 유형에 그대로 이어집니다. 문서는 PDF와 수정 가능한 Word로, 발표자료는 PPT로 받을 수 있습니다.</p>
+            <span>{sc("deliverables.eyebrow", "문서 유형")}</span>
+            <h2>{scBr("deliverables.title", "목적에 맞는 문서를\n골라서 만드세요")}</h2>
+            <p>{scBr("deliverables.subtitle", "한 번 입력한 답변은 다른 유형에 그대로 이어집니다. 문서는 PDF와 수정 가능한 Word로, 발표자료는 PPT로 받을 수 있습니다.")}</p>
             <ul>{deliverables.map((item) => <li key={item}><Check /> {item}</li>)}</ul>
             <a className="home-sample-preview" href="/plan">완성 샘플 3부 보기</a>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/*
         제목은 다른 섹션과 같은 틀(가운데)로 빼고, 그 아래를 원칙 상자와
         표 두 칸으로 둔다. 예전에는 제목이 왼쪽 칸 안에 갇혀 있어 위아래
         섹션과 시작하는 세로선이 어긋났다.
       */}
-      <section className="home-section home-evidence" id="evidence">
+      {scHidden("evidence") ? null : <section className="home-section home-evidence" id="evidence">
         <div className="home-section-heading">
-          <span>근거 확인 방식</span>
-          <h2>인공지능의 답을<br />그대로 믿게 하지 않습니다</h2>
-          <p>생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.</p>
+          <span>{sc("evidence.eyebrow", "근거 확인 방식")}</span>
+          <h2>{scBr("evidence.title", "인공지능의 답을\n그대로 믿게 하지 않습니다")}</h2>
+          <p>{scBr("evidence.subtitle", "생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.")}</p>
         </div>
         <div className="home-evidence-intro">
           <div className="home-evidence-note"><ShieldCheck /><p><strong>확정처럼 쓰지 않는 원칙</strong>공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p></div>
@@ -944,14 +960,14 @@ function Home({
           <div><em>3</em><span><strong>현장 근거</strong><small>고객 인터뷰·견적·가격 반응</small></span><b>직접 확인</b></div>
           <div><em>4</em><span><strong>최종 판정</strong><small>확인됨·가정·확인 필요</small></span><b>사용자 승인</b></div>
         </div>
-      </section>
+      </section>}
 
-      <section className="home-price" id="price">
+      {scHidden("price") ? null : <section className="home-price" id="price">
         <div className="home-price-inner">
           <div className="home-price-copy">
-            <span>이용 안내</span>
-            <h2>무료로 품질을 확인한 뒤,<br />필요한 문서만 결제합니다</h2>
-            <p>완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.</p>
+            <span>{sc("price.eyebrow", "이용 안내")}</span>
+            <h2>{scBr("price.title", "무료로 품질을 확인한 뒤,\n필요한 문서만 결제합니다")}</h2>
+            <p>{scBr("price.subtitle", "완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.")}</p>
             <div><ShieldCheck /><span><strong>무료 범위에는 결제 정보가 필요하지 않습니다</strong><small>결제는 신용·체크카드로 안전하게 진행됩니다</small></span></div>
           </div>
           {/*
@@ -1009,7 +1025,7 @@ function Home({
             </article>
           </div>
         </div>
-      </section>
+      </section>}
 
       {/*
         가격을 본 직후, 질문으로 넘어가기 전에 한 번 더 권하는 자리.
@@ -1021,16 +1037,16 @@ function Home({
         예전 파랑 카드의 오른쪽 세 칸은 가격 섹션에서 이미 밝힌 사실의 복사본이라
         지워도 잃는 정보가 없다.
       */}
-      <section className="home-trial" aria-labelledby="home-trial-title">
-        <h2 id="home-trial-title">먼저 만들어 보고<br />결정하세요</h2>
+      {scHidden("trial") ? null : <section className="home-trial" aria-labelledby="home-trial-title">
+        <h2 id="home-trial-title">{scBr("trial.title", "먼저 만들어 보고\n결정하세요")}</h2>
         <div className="home-trial-actions">
           <button type="button" className="home-trial-primary" onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
           <button type="button" className="home-trial-secondary" onClick={openConsult}>챗봇 상담하기</button>
         </div>
-      </section>
+      </section>}
 
-      <section className="home-faq" aria-labelledby="home-faq-title">
-        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">궁금한 점을 미리 확인해 보세요</h2><p>더 궁금한 것은 화면 오른쪽 아래 상담 창에 물어보세요.</p></div>
+      {scHidden("faq") ? null : <section className="home-faq" aria-labelledby="home-faq-title">
+        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">{sc("faq.title", "궁금한 점을 미리 확인해 보세요")}</h2><p>{scBr("faq.subtitle", "더 궁금한 것은 화면 오른쪽 아래 상담 창에 물어보세요.")}</p></div>
         <div>
           <details><summary>글을 잘 못 써도 만들 수 있나요?<ChevronDown /></summary><p>네. 사용자는 사업에 대한 사실(가격, 고객, 비용 등)만 답하면 되고, 문장은 인공지능이 씁니다. 답이 어려운 질문은 AI 추천 답변을 참고할 수 있습니다.</p></details>
           <details><summary>결제 전에 품질을 확인할 수 있나요?<ChevronDown /></summary><p>네. 실제 인공지능으로 만든 완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 내 사업으로도 앞 2개 섹션을 무료로 만들어 직접 확인할 수 있습니다.</p></details>
@@ -1038,7 +1054,7 @@ function Home({
           <details><summary>정부지원사업 양식에 맞나요?<ChevronDown /></summary><p>정부지원 PSST 유형은 예비창업패키지 등 심사 기준에 맞춰 문제인식·실현가능성·성장전략·팀구성 4부로 완성됩니다. 제출 전에 해당 공고의 세부 양식을 한 번 더 확인해 주세요.</p></details>
           <details><summary>재무 숫자도 만들어주나요?<ChevronDown /></summary><p>가격·원가·고정비 답변을 근거로 12개월 손익표를 자동 계산해 문서에 넣습니다. 정밀 재무 모델은 3년 추정과 민감도까지 포함합니다. 확인되지 않은 수치는 사실처럼 쓰지 않습니다.</p></details>
         </div>
-      </section>
+      </section>}
 
       {/*
         Neuros 의 Footer/1 — 맨 위에 상호와 가는 선, 가운데에 안내 열,
