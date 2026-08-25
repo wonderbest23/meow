@@ -14750,7 +14750,9 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-stage.bw-mobile { font-family: Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", sans-serif; color: #161c2d; line-height: 1.2; }
 .bw-mobile :where(p, span, div) { font-size: inherit; }
 .bwm-leaf.bwm-text { overflow: visible; height: auto; }
-.bwm-flow { position: relative; }
+/* 흐름 배치 안의 글·사진은 가운데 — 세로 한 열에서는 축이 하나여야 정돈돼 보인다 */
+.bwm-flow { position: relative; text-align: center; word-break: keep-all; }
+.bwm-flow img { margin-inline: auto; }
 .bwm-flow > * { position: relative !important; display: block; }
 
 /* ────────────────────────────────────────────────────────────────

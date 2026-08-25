@@ -187,8 +187,22 @@ function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: M
     if (textOnly || tooSmallToRead) {
       const s = Math.max(0.75, Math.min(1, width / Math.max(1, layout.box.w)));
       /* 킷 DOM 은 z 순서라 설명이 제목보다 앞에 올 수 있다 — 세로 위치대로 다시 세운다 */
+      /*
+       * 데스크톱용 가로 메뉴 줄은 폰에서 뺀다.
+       *
+       * 킷은 "메뉴    공간    예약    오시는 길"처럼 짧은 낱말들을 넓은 공백으로
+       * 벌려 한 글줄에 심어 두었다. 폰 폭에서는 어떻게 접어도 흉하고, 미리보기라
+       * 눌리지도 않는다 — 실제 모바일 사이트들이 메뉴를 숨기는 이유 그대로 뺀다.
+       * 판정: 4칸 이상 공백으로 벌어진 짧은 낱말이 3개 이상인 글 노드.
+       */
+      const isMenuRow = (n: BrainwaveNode): boolean => {
+        const raw = (n.ch ?? []).filter((c) => c.tag === "#").map((c) => c.text ?? "").join("");
+        const tokens = raw.split(/\s{4,}/).map((t) => t.trim()).filter(Boolean);
+        return tokens.length >= 3 && tokens.every((t) => t.length <= 8);
+      };
       const flow = (n: BrainwaveNode, box: Box): BrainwaveNode => {
-        const kids = (n.ch ?? []).map((c, i) => ({ c, i, y: c.tag === "#" || c.tag === "br" ? null : (childBox(c, box)?.y ?? null) }));
+        const kids = (n.ch ?? []).map((c, i) => ({ c, i, y: c.tag === "#" || c.tag === "br" ? null : (childBox(c, box)?.y ?? null) }))
+          .filter(({ c }) => !(c.tag !== "#" && c.tag !== "br" && isMenuRow(c)));
         const ordered = kids.every((k) => k.y === null) ? kids : [...kids].sort((a, b) => (a.y ?? a.i) - (b.y ?? b.i));
         /*
          * 사진·아이콘은 폭을 100% 로 늘리지 않는다.
@@ -197,20 +211,33 @@ function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: M
          * 잎도 여기로 오는데, 그 안에는 아이콘이 섞여 있다. 전부 100% 로 늘리면
          * 20px 짜리 아이콘이 화면 폭만큼 커진다. 원래 크기를 지키되 화면은 넘지 않게 둔다.
          */
+        /*
+         * 사진·아이콘은 킷에서의 실제 상자 크기(px)로 고정한다.
+         * 킷 아이콘은 흔히 48px 상자 안에서 width:100% 로 그려지는데, 흐름 배치가
+         * 상자를 풀면 100% 의 기준이 화면 폭이 되어 컵 아이콘이 600px 로 뻥튀기됐다
+         * (실측 — 사진을 덮는 거대한 컵). 재던 시점의 상자 폭을 px 로 박아 준다.
+         */
         const isImg = n.tag === "img" || n.tag === "svg";
+        /* flow 의 box 인자는 이 노드 자신의 상자다(호출부가 childBox 로 풀어 넘긴다) */
         const sizing: Record<string, string> = isImg
-          ? { width: (n.st ?? {}).width ?? "auto", maxWidth: "100%", height: "auto" }
+          ? { width: `${Math.max(1, Math.round(box.w))}px`, maxWidth: "100%", height: "auto" }
           : { width: "100%", maxWidth: "100%", height: "auto" };
         return {
           ...n,
-          st: { ...(n.st ?? {}), position: "relative", left: "auto", right: "auto", top: "auto", bottom: "auto", transform: "none", whiteSpace: "pre-wrap", overflow: "visible", ...sizing },
+          /*
+           * whiteSpace 는 normal — pre-wrap 이 아니다.
+           * 킷은 메뉴 항목들을 한 글줄 안에서 넓은 공백으로 벌려 두었는데, pre-wrap 은
+           * 그 공백을 그대로 살려 313px 잎에서 줄이 넘쳐 "예약·오시는 길"이 잘려 보였다.
+           * 줄바꿈은 <br> 요소로 들어오므로 normal 로 해도 살아남는다.
+           */
+          st: { ...(n.st ?? {}), position: "relative", left: "auto", right: "auto", top: "auto", bottom: "auto", transform: "none", whiteSpace: "normal", overflow: "visible", ...sizing },
           ch: ordered.map(({ c }) => (c.tag === "#" || c.tag === "br" ? c : flow(c, childBox(c, box) ?? box))),
         };
       };
       return (
         <div className="bwm-leaf bwm-text" style={{ width, alignSelf: "center" }}>
           <div className="bwm-flow" style={{ zoom: s, width: width / s }}>
-            {[...layout.nodes].sort((a, b) => (childBox(a, layout.frame)?.y ?? 0) - (childBox(b, layout.frame)?.y ?? 0)).map((n, i) => <BrainwaveNodeView key={n.id ?? i} node={flow(n, childBox(n, layout.frame) ?? layout.box)} overrides={overrides} onPick={onPick} />)}
+            {[...layout.nodes].filter((n) => !isMenuRow(n)).sort((a, b) => (childBox(a, layout.frame)?.y ?? 0) - (childBox(b, layout.frame)?.y ?? 0)).map((n, i) => <BrainwaveNodeView key={n.id ?? i} node={flow(n, childBox(n, layout.frame) ?? layout.box)} overrides={overrides} onPick={onPick} />)}
           </div>
         </div>
       );
@@ -218,12 +245,16 @@ function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: M
     const s = Math.min(1, width / Math.max(1, layout.box.w));
     const w = layout.box.w * s, h = layout.box.h * s;
     const dx = layout.box.x - layout.frame.x, dy = layout.box.y - layout.frame.y;
-    /* 원래 줄에서 왼쪽·가운데·오른쪽 어디에 있었는지 그대로 — 전부 가운데로 모으면 킷과 달라진다 */
-    let align: "flex-start" | "center" | "flex-end" = "center";
-    if (parentBox && parentBox.w > layout.box.w * 1.15) {
-      const c = layout.box.x + layout.box.w / 2, pc = parentBox.x + parentBox.w / 2;
-      if (Math.abs(c - pc) > parentBox.w * 0.08) align = c < pc ? "flex-start" : "flex-end";
-    }
+    /*
+     * 폰에서는 전부 가운데로 모은다.
+     *
+     * 처음에는 원래 줄에서의 좌/우 위치를 유지했는데(킷과 같아 보이라고), 가로로
+     * 나란하던 것을 세로로 쌓는 순간 그 정렬은 의미를 잃는다 — 매장 고르기는 왼쪽,
+     * 날짜 고르기는 가운데, 자리 예약은 오른쪽에 붙어 지그재그가 됐고, 사용자 말대로
+     * "홈페이지가 아니라" 조각 모음처럼 보였다. 한 열로 쌓을 때는 한 축이 맞아야 한다.
+     */
+    const align = "center" as const;
+    void parentBox;
     return (
       <div className="bwm-leaf" style={{ width: w, height: h, alignSelf: align }}>
         <div className="bwm-frame" style={{ width: layout.frame.w, height: layout.frame.h, transform: `translate(${-dx * s}px, ${-dy * s}px) scale(${s})` }}>
