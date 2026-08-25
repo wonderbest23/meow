@@ -4878,7 +4878,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .platform-legal-document > footer svg { width: 12px; }
 
 .account-loading { min-height: 100vh; display: grid; place-items: center; color: #585667; }
-.account-page { min-height: 100vh; background: #f6f5ff; }
+.account-page { min-height: 100vh; background: #f5f5fa; }  /* 플랜 대시보드와 같은 바탕 */
 /*
  * 계정 화면의 머리말은 홈과 같은 .site-header 를 쓴다(components/site-header.tsx).
  * 예전에는 여기서 따로 그려서 좌우 여백을 100px까지 벌리고 테두리 색도 다르게
@@ -4926,19 +4926,22 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-form-message, .account-message { margin: 0; padding: 10px 12px; border-radius: 6px; background: #eef6ff; color: #3272db; font-size: 13px; line-height: 1.55; }
 .account-auth-shell form > footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
 .account-auth-shell form > footer button { padding: 0; border: 0; background: none; color: #585667; font-size: 13px; cursor: pointer; }
-.account-dashboard { width: min(980px, calc(100% - 48px)); margin: auto; padding: 58px 0 90px; }
-.account-welcome { padding-bottom: 32px; border-bottom: 1px solid #cccae3; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
+.account-dashboard { width: min(880px, calc(100% - 32px)); margin: auto; padding: 40px 0 90px; display: grid; gap: 16px; }
+/* grid 자식의 min-width:auto 가 결제 표의 min-content(432px)를 물려받아
+   모바일 레이아웃 뷰포트를 벌렸다(오른쪽 잘림) — [[safari-grid-overflow]] 와 같은 계열 */
+.account-dashboard > * { min-width: 0; max-width: 100%; }
+.account-welcome { padding: 20px 22px; border: 1px solid #ececf4; border-radius: 14px; background: #fff; display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; }
 .account-welcome > span { width: 46px; height: 46px; border-radius: 8px; background: #efeefb; color: #3272db; display: grid; place-items: center; }
 .account-welcome > span svg { width: 22px; }
 .account-welcome small { color: #3272db; font-size: 13px; font-weight: 800; }
-.account-welcome h1 { margin: 2px 0; font-size: 27px; }
+.account-welcome h1 { margin: 2px 0; font-size: 21px; letter-spacing: -.01em; }
 .account-welcome p { margin: 0; color: #5f5c7f; font-size: 13px; }
 .account-welcome button { height: 38px; padding: 0 11px; border: 1px solid #cccae3; border-radius: 6px; background: white; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 700; cursor: pointer; }
 .account-welcome button svg { width: 14px; }
-.account-projects { margin-top: 34px; }
+.account-projects { margin: 0; padding: 20px 22px; border: 1px solid #ececf4; border-radius: 14px; background: #fff; }
 
 /* 결제 내역 */
-.account-payments { margin-top: 34px; }
+.account-payments { margin: 0; padding: 20px 22px; border: 1px solid #ececf4; border-radius: 14px; background: #fff; }
 .account-payments table { width: 100%; margin-top: 14px; border-collapse: collapse; font-size: 13px; }
 .account-payments th { padding: 9px 10px; border-bottom: 1px solid #cccae3; color: #5f5c7f; font-size: 13px; font-weight: 700; text-align: left; }
 .account-payments td { padding: 12px 10px; border-bottom: 1px solid #dfdef1; color: #333d4b; }
@@ -4948,8 +4951,9 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-payment-status.is-failed, .account-payment-status.is-canceled, .account-payment-status.is-aborted, .account-payment-status.is-expired { background: #fdeceb; color: #b42318; }
 
 @media (max-width: 640px) {
-  /* 좁은 화면에서는 표를 옆으로 밀어 본다 */
-  .account-payments table { display: block; width: max-content; max-width: 100%; overflow-x: auto; }
+  /* 좁은 화면에서는 표를 카드 안에서 옆으로 민다 — width:max-content 를 주면
+     표가 레이아웃 뷰포트 자체를 벌려 페이지 전체가 잘린다(실측 449px) */
+  .account-payments table { display: block; max-width: 100%; overflow-x: auto; }
   .account-payments th, .account-payments td { white-space: nowrap; }
 }
 .account-saved-ideas { margin-top: 34px; }
@@ -4976,9 +4980,9 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-projects > header { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
 .account-projects > header strong { font-size: 18px; }
 .account-projects > header p { margin: 5px 0 0; color: #5f5c7f; font-size: 13px; }
-.account-projects > header > a { min-height: 40px; padding: 0 12px; border-radius: 7px; background: #0d0a2c; color: white; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; }
+.account-projects > header > a { min-height: 40px; padding: 0 14px; border-radius: 8px; background: var(--blue, #3272db); color: white; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 800; }
 .account-projects > header svg { width: 14px; }
-.account-projects > div { margin-top: 16px; border-top: 1px solid #cccae3; }
+
 .account-projects > div > a { min-height: 78px; padding: 12px 10px; border-bottom: 1px solid #cccae3; display: grid; grid-template-columns: 40px 1fr 20px; gap: 13px; align-items: center; }
 .account-projects > div > a:hover { background: white; }
 .account-projects > div > a > span { width: 40px; height: 40px; border-radius: 7px; background: #dfdef1; color: #3272db; display: grid; place-items: center; }
@@ -4987,7 +4991,8 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .account-projects > div > a div { min-width: 0; display: grid; gap: 4px; }
 .account-projects > div > a strong { overflow: hidden; font-size: 14px; text-overflow: ellipsis; white-space: nowrap; }
 .account-projects > div > a small { color: #5f5c7f; font-size: 13px; }
-.account-empty { margin-top: 16px; padding: 45px 20px; border: 1px dashed #b0b8c1; border-radius: 8px; color: #585667; text-align: center; }
+.account-empty { margin-top: 16px; padding: 40px 20px; border: 1px dashed #d8dbe8; border-radius: 12px; color: #585667; text-align: center; display: grid; gap: 6px; justify-items: center; }
+.account-empty svg { width: 22px; color: #8b95a1; }
 .account-empty svg { width: 28px; }
 .account-empty strong { display: block; margin: 11px 0 4px; color: #333d4b; font-size: 14px; }
 .account-empty p { margin: 0; font-size: 13px; }
@@ -15172,3 +15177,33 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .admin-home-hide { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 18px; }
 .admin-home-hide label { display: flex; align-items: center; gap: 9px; font-size: 14px; color: #1c1d21; cursor: pointer; }
 @media (max-width: 640px) { .admin-home-hide { grid-template-columns: 1fr; } }
+
+/* 계정 — 진행 중인 사업(플랜 목록), 플랜 대시보드와 같은 결 (2026-08-25) */
+.account-plan-list { margin-top: 16px; display: grid; gap: 8px; }
+.account-plan-list > button {
+  min-height: 66px;
+  padding: 12px 14px;
+  border: 1px solid #ececf4;
+  border-radius: 12px;
+  background: #fff;
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto 16px;
+  gap: 12px;
+  align-items: center;
+  text-align: left;
+  cursor: pointer;
+}
+.account-plan-list > button:hover { border-color: var(--blue, #3272db); background: #fafbff; }
+.account-plan-list > button > span { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; }
+.account-plan-list > button > span svg { width: 19px; }
+.account-plan-list > button strong { display: block; overflow: hidden; font-size: 14.5px; text-overflow: ellipsis; white-space: nowrap; }
+.account-plan-list > button small { color: #5f5c7f; font-size: 12.5px; }
+.account-plan-list > button > em { padding: 4px 10px; border-radius: 999px; font-size: 12px; font-style: normal; font-weight: 800; white-space: nowrap; }
+.account-plan-list > button > svg { width: 15px; color: #8b95a1; }
+.account-plan-all { margin-top: 6px; min-height: 42px; border-radius: 10px; background: #f5f5fa; color: #333d4b; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 13px; font-weight: 700; }
+.account-plan-all:hover { background: #efeefb; }
+.account-plan-all svg { width: 14px; }
+@media (max-width: 640px) {
+  .account-plan-list > button { grid-template-columns: 36px minmax(0, 1fr) 16px; }
+  .account-plan-list > button > em { display: none; }
+}

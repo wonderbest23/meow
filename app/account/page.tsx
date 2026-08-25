@@ -1,10 +1,13 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, Bookmark, BriefcaseBusiness, CheckCircle2, KeyRound, LogIn, LogOut, Mail, Receipt, Trash2 } from "lucide-react";
+import { ArrowRight, BriefcaseBusiness, CheckCircle2, ChevronRight, KeyRound, LogIn, LogOut, Mail, Plus, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "../../components/site-header";
 import type { PaymentHistoryItem } from "../../lib/payments/plan-orders";
+import { hydrateFromServer, setActivePlan, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
+import { sectionCountForType } from "../../lib/plan-builder/blueprint";
+import { TYPE_META, DEFAULT_META } from "../plan/type-meta";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Mode = "login" | "register" | "recover" | "reset";
@@ -58,6 +61,24 @@ export default function AccountPage() {
   const [remember, setRemember] = useState(true);
   /** 결제 내역 — 로그인한 뒤에만 불러온다 */
   const [payments, setPayments] = useState<PaymentHistoryItem[] | null>(null);
+  /*
+   * 내 플랜 목록 — /plan 대시보드와 같은 저장소(plan-store)를 읽는다.
+   * 예전에는 옛 진단 흐름의 프로젝트(/?view=project)를 보여줘서, 누르면 지금
+   * 제품(플랜)이 아니라 홈의 옛 애니메이션 화면으로 들어갔다(사용자 보고).
+   */
+  const [plans, setPlans] = useState<PlanState["plans"] | null>(null);
+  useEffect(() => {
+    if (!session?.authenticated) return;
+    let alive = true;
+    hydrateFromServer().then((s) => { if (alive) setPlans(s.plans.filter((p) => !isSamplePlan(p.id))); }).catch(() => { if (alive) setPlans([]); });
+    return () => { alive = false; };
+  }, [session?.authenticated]);
+  const openPlan = (id: string) => { setActivePlan(id); router.push("/plan/overview"); };
+  const planPct = (p: NonNullable<typeof plans>[number]) => {
+    const total = sectionCountForType(p.planType);
+    const done = Object.keys(p.sections).filter((k) => k !== "financials/__review").length;
+    return total ? Math.min(100, Math.round((done / total) * 100)) : 0;
+  };
   const [terms, setTerms] = useState(false);
   const [privacy, setPrivacy] = useState(false);
   const [aiNotice, setAiNotice] = useState(false);
@@ -203,9 +224,41 @@ export default function AccountPage() {
         */}
       <SiteHeader light showAccount={false} onHome={() => router.push("/")} onStart={() => router.push("/plan/start")} />
       {session.authenticated ? (
-        <section className="account-dashboard">
+        /* plan-ui: 전역 버튼 정규화(아이콘 숨김 등)에서 제외 — 플랜과 같은 체계를 쓴다 */
+        <section className="account-dashboard plan-ui">
           <div className="account-welcome"><span><CheckCircle2 /></span><div><small>내 계정</small><h1>작업을 이어서 시작하세요</h1><p>{session.email}</p></div><button onClick={logout}><LogOut /> 로그아웃</button></div>
-          <div className="account-projects account-plan-shortcut"><header><div><strong>사업계획서 플랜</strong><p>작성 중인 사업계획서를 이어서 쓰거나 새로 시작할 수 있습니다.</p></div><Link href="/plan">내 플랜 열기 <ArrowRight /></Link></header></div>
+
+          {/* 진행 중인 사업 = 플랜 목록. 누르면 /plan 의 그 플랜에서 바로 이어진다. */}
+          <div className="account-projects">
+            <header>
+              <div><strong>진행 중인 사업</strong><p>작성 중인 사업계획서를 눌러 이어서 쓰세요.</p></div>
+              <Link href="/plan/start"><Plus /> 새 플랜 만들기</Link>
+            </header>
+            {plans === null ? (
+              <div className="account-empty"><BriefcaseBusiness /><strong>플랜을 불러오는 중입니다…</strong></div>
+            ) : plans.length === 0 ? (
+              <div className="account-empty"><BriefcaseBusiness /><strong>아직 만든 플랜이 없습니다.</strong><p>새 플랜을 만들면 여기에서 이어서 쓸 수 있습니다.</p></div>
+            ) : (
+              <div className="account-plan-list">
+                {[...plans].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).map((plan) => {
+                  const meta = TYPE_META[plan.planType] ?? DEFAULT_META;
+                  const pct = planPct(plan);
+                  return (
+                    <button type="button" key={plan.id} onClick={() => openPlan(plan.id)}>
+                      <span style={{ background: `${meta.accent}14`, color: meta.accent }}><meta.Icon /></span>
+                      <div>
+                        <strong>{plan.title}</strong>
+                        <small>{meta.short} · {pct === 100 ? "완성" : `${pct}% 작성`} · {new Date(plan.updatedAt).toLocaleDateString("ko-KR")} 수정</small>
+                      </div>
+                      <em style={{ background: pct === 100 ? "#e7f8ef" : "#eef3fd", color: pct === 100 ? "#10794b" : "#3272db" }}>{pct === 100 ? "완성" : "이어쓰기"}</em>
+                      <ChevronRight />
+                    </button>
+                  );
+                })}
+                <Link className="account-plan-all" href="/plan">플랜 대시보드 전체 열기 <ArrowRight /></Link>
+              </div>
+            )}
+          </div>
           <div className="account-payments">
             <header>
               <div>
@@ -237,7 +290,6 @@ export default function AccountPage() {
               </table>
             )}
           </div>
-          <div className="account-projects"><header><div><strong>진행 중인 사업</strong><p>실행을 시작한 사업과 완성 중인 문서를 이어서 볼 수 있습니다.</p></div><Link href="/?view=start">새 사업 시작 <ArrowRight /></Link></header>{session.projects.length === 0 ? <div className="account-empty"><BriefcaseBusiness /><strong>아직 계정에 연결된 사업이 없습니다.</strong><p>새 사업을 시작하거나, 기존 작업을 만든 브라우저에서 로그인하면 자동으로 연결됩니다.</p></div> : <div>{session.projects.map((project) => <Link key={project.id} href={`/?view=project&project=${project.id}`}><span><BriefcaseBusiness /></span><div><strong>{project.title}</strong><small>{project.activeStage + 1}단계 · {new Date(project.updatedAt).toLocaleDateString("ko-KR")} 수정</small></div><ArrowRight /></Link>)}</div>}</div>
           {message && <p className="account-message">{message}</p>}
         </section>
       ) : (
