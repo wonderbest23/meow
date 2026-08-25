@@ -134,21 +134,76 @@ export function BrainwaveNodeView({
 function MobileView({ layout, width, overrides, onPick, parentBox }: { layout: MobileLayout; width: number; overrides?: BrainwaveOverrides; onPick?: (kind: "text" | "image", id: string, el: HTMLElement) => void; parentBox?: { x: number; w: number } }) {
   if (layout.kind === "leaf") {
     /*
+     * 머리카락 두께 잎은 그리지 않는다.
+     *
+     * 킷의 예약 바에는 칸 사이 1px 세로 구분선(imgLine*.svg)이 있다. 가로로 나란할
+     * 때는 얇은 줄이지만, 폰에서 세로로 쌓으면 폭 1px·높이 94px 짜리 '보이지 않는
+     * 구멍'이 되어 매장 고르기와 날짜 고르기 사이가 뻥 뚫려 보였다(실측).
+     * 폭이 몇 px 뿐인 잎은 세로 쌓기에서 아무 정보도 주지 못한다 — 건너뛴다.
+     * (가로로 긴 1px 가로줄은 구분선 역할을 하므로 그대로 둔다.)
+     */
+    if (layout.box.w <= 6) return null;
+    /*
      * 글만 있는 잎은 줄이지 않고 다시 흐르게 한다 — 769px 짜리 가운데 제목을 그대로
      * 줄이면 16px 이 된다. 75% 까지만 줄이고 나머지는 줄바꿈으로 받는다(zoom 은
      * transform 과 달리 높이에 반영되므로 아래 내용이 밀린다).
      */
     const textish = (n: BrainwaveNode): boolean => n.tag === "p" || n.tag === "span" || n.tag === "br" || n.tag === "#" || (n.tag !== "img" && (n.ch ?? []).length > 0 && (n.ch ?? []).every(textish));
     const textOnly = layout.nodes.every(textish);
-    if (textOnly) {
+
+    /*
+     * 글이 읽을 수 없게 작아지면 줄이지 말고 다시 흐르게 한다.
+     *
+     * 아이콘이 하나 섞였다는 이유로 '글만 있는 잎'에서 빠지면, 넓은 줄이 통째로
+     * 줄어들며 16px 글자가 4.4px 이 됐다(실측). 아무리 킷 모양을 지켜도 못 읽으면
+     * 소용이 없다.
+     *
+     * 판정은 배율이 아니라 '줄인 뒤 실제 글자 크기'로 한다. 처음에는 배율 0.55 로
+     * 잡았는데, 배율 0.65 짜리가 10.5px, 0.59 가 8.9px 로 남았다 — 원래 글자가
+     * 작으면 배율이 높아도 못 읽는다. 12px 을 밑돌면 흐름 배치로 넘긴다
+     * (흐름 배치의 최소 배율 0.75 와도 맞는 기준이다: 16px × 0.75 = 12px).
+     */
+    const rawScale = Math.min(1, width / Math.max(1, layout.box.w));
+    const hasText = (n: BrainwaveNode): boolean => (n.ch ?? []).some((c) => (c.tag === "#" && (c.text ?? "").trim().length > 1) || hasText(c));
+    /*
+     * 이 잎에서 '실제 글이 찍히는' 가장 작은 글자 크기 — 상속을 따라 계산한다.
+     *
+     * 처음에는 명시된 fontSize 만 모았는데, 제목만 20px 로 명시되고 본문 글이
+     * 크기 지정 없이(=기본 16) 들어 있는 잎에서 기준이 20 이 되어 통과해 버렸다.
+     * 그 본문이 0.65 배로 줄면 10.5px — 실측으로 남아 있던 작은 글자가 이것이다.
+     * 글자 크기는 부모에서 상속되므로, 글 노드에 닿을 때까지 물려 내려간 값으로 잰다.
+     */
+    const minFont = (n: BrainwaveNode, inherited = 16): number => {
+      const own = parseFloat((n.st ?? {}).fontSize ?? "");
+      const eff = Number.isFinite(own) && own > 0 ? own : inherited;
+      const hasDirectText = (n.ch ?? []).some((c) => c.tag === "#" && (c.text ?? "").trim().length > 1);
+      const kids = (n.ch ?? []).filter((c) => c.tag !== "#" && c.tag !== "br").map((c) => minFont(c, eff));
+      return Math.min(hasDirectText ? eff : Infinity, ...(kids.length ? kids : [Infinity]));
+    };
+    const smallest = Math.min(...layout.nodes.map((n) => minFont(n)));
+    const basis = Number.isFinite(smallest) ? smallest : 16;
+    const tooSmallToRead = basis * rawScale < 12 && layout.nodes.some(hasText);
+
+    if (textOnly || tooSmallToRead) {
       const s = Math.max(0.75, Math.min(1, width / Math.max(1, layout.box.w)));
       /* 킷 DOM 은 z 순서라 설명이 제목보다 앞에 올 수 있다 — 세로 위치대로 다시 세운다 */
       const flow = (n: BrainwaveNode, box: Box): BrainwaveNode => {
         const kids = (n.ch ?? []).map((c, i) => ({ c, i, y: c.tag === "#" || c.tag === "br" ? null : (childBox(c, box)?.y ?? null) }));
         const ordered = kids.every((k) => k.y === null) ? kids : [...kids].sort((a, b) => (a.y ?? a.i) - (b.y ?? b.i));
+        /*
+         * 사진·아이콘은 폭을 100% 로 늘리지 않는다.
+         *
+         * 이 흐름 배치는 원래 '글만 있는 잎' 전용이었다. 이제 글이 너무 작아지는
+         * 잎도 여기로 오는데, 그 안에는 아이콘이 섞여 있다. 전부 100% 로 늘리면
+         * 20px 짜리 아이콘이 화면 폭만큼 커진다. 원래 크기를 지키되 화면은 넘지 않게 둔다.
+         */
+        const isImg = n.tag === "img" || n.tag === "svg";
+        const sizing: Record<string, string> = isImg
+          ? { width: (n.st ?? {}).width ?? "auto", maxWidth: "100%", height: "auto" }
+          : { width: "100%", maxWidth: "100%", height: "auto" };
         return {
           ...n,
-          st: { ...(n.st ?? {}), position: "relative", left: "auto", right: "auto", top: "auto", bottom: "auto", transform: "none", width: "100%", height: "auto", whiteSpace: "pre-wrap", overflow: "visible" },
+          st: { ...(n.st ?? {}), position: "relative", left: "auto", right: "auto", top: "auto", bottom: "auto", transform: "none", whiteSpace: "pre-wrap", overflow: "visible", ...sizing },
           ch: ordered.map(({ c }) => (c.tag === "#" || c.tag === "br" ? c : flow(c, childBox(c, box) ?? box))),
         };
       };

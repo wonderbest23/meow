@@ -86,6 +86,17 @@ const isBoxy = (n: BrainwaveNode) => {
 };
 const hasImg = (n: BrainwaveNode): boolean => (n.ch ?? []).some((c) => c.tag === "img" || hasImg(c));
 const isGradient = (n: BrainwaveNode) => /gradient/.test(n.st?.backgroundImage ?? "") || Boolean(n.st?.mixBlendMode);
+/*
+ * 글이 들어 있는 노드는 '배경'이 될 수 없다.
+ *
+ * 배경으로 빠진 노드는 원래 절대좌표 그대로 무대 전체에 깔린다. 사진·색 판이라면
+ * 그게 맞지만, 푸터의 어두운 패널처럼 링크·저작권 글줄을 품은 노드가 배경으로
+ * 빠지면 그 글이 재배치된 항목들 위에 겹쳐 찍힌다 — 폰 화면에서 "문의"가
+ * 구독 안내문 위에 얹혀 보이던 것이 정확히 이것이었다(실측 7곳).
+ */
+const containsText = (n: BrainwaveNode): boolean =>
+  (n.ch ?? []).some((c) => (c.tag === "#" && (c.text ?? "").trim().length > 1) || containsText(c));
+
 const isLeafNode = (n: BrainwaveNode) => n.tag === "img" || n.tag === "p" || n.tag === "span" || n.tag === "br" || (n.ch ?? []).some((c) => c.tag === "#");
 
 /** display:contents 래퍼를 풀어 실제 상자를 가진 자식 목록으로 */
@@ -130,13 +141,24 @@ export function layoutItems(items: Item[], depth = 0, target = 390): MobileLayou
   const box = bbox(items);
   if (items.length === 1) {
     const { node, box: nb, frame } = items[0];
-    /* 글만 담은 묶음(제목+설명)은 쪼개지 않는다 — 가운데 맞춤이 부모에 걸려 있다 */
-    if (depth > 8 || isLeafNode(node) || isBoxy(node) || isTextish(node)) return { kind: "leaf", box: nb, frame, nodes: [node] };
+    /*
+     * 글만 담은 묶음(제목+설명)은 쪼개지 않는다 — 가운데 맞춤이 부모에 걸려 있다.
+     *
+     * 바탕·테두리가 있다고 무조건 통째로 두면 안 된다. 예전에는 isBoxy 이기만 하면
+     * 잎으로 확정했는데, 그러면 배경색이 깔린 '섹션 전체'(폭 1,600)까지 카드로 보고
+     * 한 덩어리로 만든다. 폰에서는 그게 27% 로 줄어 16px 글자가 4.4px 이 됐다 —
+     * 읽을 수 없는 크기다(실측).
+     *
+     * 카드로 볼 만한 크기(폰 폭의 1.6배 이내)일 때만 통째로 둔다. 그보다 넓으면
+     * 안을 더 쪼갠다 — 바탕은 아래에서 배경으로 따로 빠지므로 모양은 남는다.
+     */
+    const boxyCard = isBoxy(node) && nb.w <= target * 1.6;
+    if (depth > 8 || isLeafNode(node) || boxyCard || isTextish(node)) return { kind: "leaf", box: nb, frame, nodes: [node] };
     const kids = realChildren(node, nb);
     if (kids.length < 2) return { kind: "leaf", box: nb, frame, nodes: [node] };
     /* 부모를 거의 다 덮는 자식은 배경 */
     const area = nb.w * nb.h;
-    const bg = kids.filter((k) => k.box.w * k.box.h >= area * 0.82 && (k.node.tag === "img" || isBoxy(k.node) || (k.node.ch ?? []).some((c) => c.tag === "img")));
+    const bg = kids.filter((k) => k.box.w * k.box.h >= area * 0.82 && !containsText(k.node) && (k.node.tag === "img" || isBoxy(k.node) || (k.node.ch ?? []).some((c) => c.tag === "img")));
     const rest = kids.filter((k) => !bg.includes(k));
     if (!rest.length) return { kind: "leaf", box: nb, frame, nodes: [node] };
     const inner = layoutItems(rest, depth + 1, target);
@@ -156,7 +178,7 @@ export function layoutItems(items: Item[], depth = 0, target = 390): MobileLayou
    * 안 그러면 배경 때문에 글까지 한 덩어리로 1/4 로 줄어든다.
    */
   const area = box.w * box.h;
-  const isBgLike = (it: Item) => it.box.w * it.box.h >= area * 0.5 && (it.node.tag === "img" || isBoxy(it.node) || hasImg(it.node) || isGradient(it.node));
+  const isBgLike = (it: Item) => it.box.w * it.box.h >= area * 0.5 && !containsText(it.node) && (it.node.tag === "img" || isBoxy(it.node) || hasImg(it.node) || isGradient(it.node));
   const bg = items.filter(isBgLike);
   const rest = items.filter((i) => !bg.includes(i));
   if (bg.length && rest.length && depth < 10) {
@@ -170,7 +192,7 @@ export function layoutPage(root: BrainwaveNode, w: number, h: number, target = 3
   const pageBox = { x: 0, y: 0, w, h };
   const kids = realChildren(root, pageBox);
   const area = w * h;
-  const bg = kids.filter((k) => k.box.w * k.box.h >= area * 0.95);
+  const bg = kids.filter((k) => k.box.w * k.box.h >= area * 0.95 && !containsText(k.node));
   const rest = kids.filter((k) => !bg.includes(k));
   const inner = layoutItems(rest, 0, target);
   return { kind: "stack", box: pageBox, bg: bg.map((b) => b.node), items: inner.kind === "stack" && inner.bg.length === 0 ? inner.items : [inner] };
