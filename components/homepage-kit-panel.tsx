@@ -111,10 +111,11 @@ export function HomepageKitPanel({
             <button type="button" className="hk-edit" onClick={onOpenEditor}><Pencil size={15} /> 에디터</button>
           </div>
         </div>
-        <button type="button" className="hk-preview-body" onClick={onOpenEditor} aria-label="에디터 열기">
+        {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
+        <div role="button" tabIndex={0} className="hk-preview-body" onClick={onOpenEditor} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
           <LandingBlocksRenderer data={draft.pageData!} />
           <span className="hk-preview-cover"><Pencil size={18} /> 누르면 에디터가 열립니다 — 글은 그 자리에서, 사진은 눌러서 바꿉니다</span>
-        </button>
+        </div>
       </div>
       {picking && bw ? <BrainwaveTemplatePicker current={bw.page} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}
 

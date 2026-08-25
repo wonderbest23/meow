@@ -173,7 +173,7 @@ export function BrainwaveEditor({
           <div className="bw-editor-views" role="group" aria-label="보는 폭">
             <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC"><Monitor size={15} /></button>
             <button type="button" className={view === "tablet" ? "on" : ""} onClick={() => setView("tablet")} title="태블릿"><Tablet size={15} /></button>
-            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일 (자동 재배치)"><Smartphone size={15} /></button>
+            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일"><Smartphone size={15} /></button>
           </div>
           <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} onClick={() => { finishText(); setPreviewMode((v) => !v); }}>
             {previewMode ? <><Pencil size={14} /> 편집으로</> : <><Eye size={14} /> 미리보기</>}

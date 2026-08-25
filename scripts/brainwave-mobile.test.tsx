@@ -15,6 +15,8 @@ async function main() {
   const cases = [
     { id: "0-2226", ko: KO_0_2226(), musts: ["새벽커피", "매장 고르기", "자리 예약", "자주 앉는 자리", "단골이 늘어나는 이유", "새 메뉴 소식 받기", "영업시간이 어떻게 되나요?", "© 2026"] },
     { id: "0-1102", ko: KO_0_1102(), musts: ["무인꽃집", "밤에도 꽃을 살 수 있는", "오늘의 꽃다발", "계절 꽃다발 M", "25,000원", "32,000원", "김민서", "© 2026"] },
+    /* 0-290 은 ko/ 매핑이 없다 — 사용자 초안 오버라이드만 얹은 상태를 흉내 낸다 */
+    { id: "0-290", ko: { "0:414": "테스트싱크 — 오늘 안에 뚫어 드립니다", "0:397": "제공 서비스" }, musts: ["테스트싱크", "제공 서비스", "Get Free Consultancy", "1M+", "93%", "Easy Booking", "bwmob-step-num", "bwmob-form"] },
   ] as const;
 
   for (const c of cases) {
@@ -37,8 +39,8 @@ async function main() {
     assert.ok(raw.length > 3000, `${c.id}: 원문 폴백 렌더`);
   }
 
-  assert.equal(Object.keys(BRAINWAVE_MOBILE).length, 2, "등록된 수제판 2장");
-  console.log("brainwave-mobile: 두 페이지 렌더·오버라이드 반영·원문 폴백·메뉴 제거 확인");
+  assert.equal(Object.keys(BRAINWAVE_MOBILE).length, 3, "등록된 수제판 3장");
+  console.log("brainwave-mobile: 세 페이지 렌더·오버라이드 반영·원문 폴백·메뉴 제거 확인");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });

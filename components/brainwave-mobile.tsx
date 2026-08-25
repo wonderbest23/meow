@@ -290,7 +290,149 @@ function Shop0_1102({ t, img, onPick }: MobileTemplateProps) {
   );
 }
 
-/* ── 공용 푸터 — 두 페이지 모두 킷의 같은 푸터 인스턴스를 쓴다 ── */
+/* ── 08 Consultation → 상담 서비스 (service 업종 기본 템플릿) ── */
+
+function Consult0_290({ t, img, onPick }: MobileTemplateProps) {
+  const A = "/brainwave/0-290";
+  const services = [
+    ["0:372/0", "imgBgCopy.png", "0:373"],
+    ["0:379/0", "imgBgCopy1.jpg", "0:380"],
+    ["0:386/0", "imgBgCopy2.jpg", "0:387"],
+    ["0:393/0", "imgBgCopy3.jpg", "0:394"],
+  ] as const;
+  const steps = [
+    ["0:340", "0:337", "0:336"],
+    ["0:346", "0:343", "0:342"],
+    ["0:352", "0:349", "0:348"],
+  ] as const;
+  const quotes = [
+    ["0:316", "I0:317;0:4616/0", "imgOval.png", "I0:317;0:4618", "I0:317;0:4617"],
+    ["0:320", "I0:321;0:4616/0", "imgOval1.png", "I0:321;0:4618", "I0:321;0:4617"],
+    ["0:324", "I0:325;0:4616/0", "imgOval2.png", "I0:325;0:4618", "I0:325;0:4617"],
+  ] as const;
+  const fields = [
+    ["I0:303;0:4582", "I0:303;0:4581", "text"],
+    ["I0:304;0:4582", "I0:304;0:4581", "email"],
+    ["I0:305;0:4582", "I0:305;0:4581", "tel"],
+  ] as const;
+  return (
+    <div className="bwmob">
+      {/* 머리 — 상호만 */}
+      <header className="bwmob-shophead">
+        <T id="0:418" t={t} onPick={onPick} as="strong" />
+      </header>
+
+      {/* 히어로 — 배경 사진 위 헤드라인 + 버튼 */}
+      <Section className="bwmob-shophero">
+        <Img id="0:411/0" src={`${A}/imgBg.jpg`} img={img} onPick={onPick} className="bwmob-cover bwmob-cover-tall" alt="" />
+        <div className="bwmob-shophero-txt">
+          <T id="0:414" t={t} onPick={onPick} as="h1" className="bwmob-h1" />
+          <T id="0:415" t={t} onPick={onPick} as="p" className="bwmob-herosub" />
+          <button type="button" className="bwmob-btn"><T id="I0:416;0:4460" t={t} onPick={onPick} /></button>
+        </div>
+      </Section>
+
+      {/* 숫자 셋 */}
+      <Section className="bwmob-stats">
+        {([["0:400", "0:401"], ["0:403", "0:404"], ["0:406", "0:407"]] as const).map(([n, c]) => (
+          <div key={n} className="bwmob-stat">
+            <T id={n} t={t} onPick={onPick} as="strong" />
+            <T id={c} t={t} onPick={onPick} as="p" />
+          </div>
+        ))}
+      </Section>
+
+      {/* 제공 서비스 — 사진 카드 넷 */}
+      <Section className="bwmob-soft">
+        <T id="0:397" t={t} onPick={onPick} as="h2" className="bwmob-h2" />
+        <T id="0:396" t={t} onPick={onPick} as="p" className="bwmob-sub" />
+        <div className="bwmob-cards">
+          {services.map(([iid, file, name]) => (
+            <div key={iid} className="bwmob-card">
+              <Img id={iid} src={`${A}/${file}`} img={img} onPick={onPick} className="bwmob-card-img" alt="" />
+              <div className="bwmob-card-body">
+                <T id={name} t={t} onPick={onPick} as="strong" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 이용 순서 — 1·2·3 */}
+      <Section>
+        <T id="0:365" t={t} onPick={onPick} as="h2" className="bwmob-h2" />
+        <T id="0:364" t={t} onPick={onPick} as="p" className="bwmob-sub" />
+        <Img id="0:357/0/0" src={`${A}/imgBitmap1.jpg`} img={img} onPick={onPick} className="bwmob-photo" alt="" />
+        <div className="bwmob-steps">
+          {steps.map(([num, title, body]) => (
+            <div key={num} className="bwmob-step">
+              <T id={num} t={t} onPick={onPick} as="span" className="bwmob-step-num" />
+              <div>
+                <T id={title} t={t} onPick={onPick} as="strong" />
+                <T id={body} t={t} onPick={onPick} as="p" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </Section>
+
+      {/* 알림 줄 — 배지 + 한 문장 */}
+      <Section className="bwmob-soft bwmob-noticewrap">
+        <p className="bwmob-notice">
+          <T id="I0:330;0:4592" t={t} onPick={onPick} as="span" className="bwmob-badge" />
+          <T id="0:329/0" t={t} onPick={onPick} /> <T id="0:329/1" t={t} onPick={onPick} as="strong" /><T id="0:329/2" t={t} onPick={onPick} />
+        </p>
+      </Section>
+
+      {/* 이용 후기 셋 */}
+      <Section dark>
+        <div className="bwmob-quotes">
+          {quotes.map(([body, ava, file, name, role]) => (
+            <blockquote key={body} className="bwmob-quote">
+              <T id={body} t={t} onPick={onPick} as="p" />
+              <footer>
+                <Img id={ava} src={`${A}/${file}`} img={img} onPick={onPick} className="bwmob-quote-ava" alt="" />
+                <T id={name} t={t} onPick={onPick} as="strong" /> · <T id={role} t={t} onPick={onPick} />
+              </footer>
+            </blockquote>
+          ))}
+        </div>
+      </Section>
+
+      {/* 상담 신청 폼 */}
+      <Section className="bwmob-soft">
+        <T id="0:309" t={t} onPick={onPick} as="h2" className="bwmob-h2" />
+        <T id="0:308" t={t} onPick={onPick} as="p" className="bwmob-sub" />
+        <form className="bwmob-form" onSubmit={(e) => e.preventDefault()}>
+          {fields.map(([label, ph, type]) => (
+            <label key={label} className="bwmob-formfield">
+              <T id={label} t={t} onPick={onPick} as="small" />
+              <input type={type} placeholder={t(ph)} />
+            </label>
+          ))}
+          <label className="bwmob-formfield">
+            <T id="I0:306;0:4718" t={t} onPick={onPick} as="small" />
+            <input type="text" placeholder={t("I0:306;0:4717")} />
+          </label>
+          <button type="submit" className="bwmob-btn"><T id="I0:302;0:4557" t={t} onPick={onPick} /></button>
+        </form>
+      </Section>
+
+      {/* 소식 구독 */}
+      <Section dark className="bwmob-cta">
+        <T id="0:294" t={t} onPick={onPick} as="h2" className="bwmob-h2" />
+        <form className="bwmob-subscribe" onSubmit={(e) => e.preventDefault()}>
+          <input type="email" placeholder={t("I0:296;0:4597") || "이메일 주소"} aria-label="이메일 주소" />
+          <button type="submit" className="bwmob-btn"><T id="I0:295;0:4460" t={t} onPick={onPick} /></button>
+        </form>
+      </Section>
+
+      <MobileFooter prefix="I0:291" t={t} onPick={onPick} />
+    </div>
+  );
+}
+
+/* ── 공용 푸터 — 세 페이지 모두 킷의 같은 푸터 인스턴스를 쓴다 ── */
 
 function MobileFooter({ prefix, t, onPick }: { prefix: string; t: MobileTemplateProps["t"]; onPick?: Pick }) {
   const P = (suffix: string) => `${prefix};${suffix}`;
@@ -324,6 +466,7 @@ function MobileFooter({ prefix, t, onPick }: { prefix: string; t: MobileTemplate
 export const BRAINWAVE_MOBILE: Record<string, (p: MobileTemplateProps) => ReactNode> = {
   "0-2226": Cafe0_2226,
   "0-1102": Shop0_1102,
+  "0-290": Consult0_290,
 };
 
 /** BrainwaveStage 가 쓰는 결합부 — 오버라이드 → 킷 원문 순으로 글을 찾는다 */
