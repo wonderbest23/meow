@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, ImageUp, LayoutTemplate, LoaderCircle, Monitor, Pencil, Redo2, Save, Smartphone, Sparkles, Tablet, Undo2, X } from "lucide-react";
+import { Eye, LayoutTemplate, LoaderCircle, Monitor, Pencil, Redo2, Save, Smartphone, Sparkles, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
@@ -46,12 +46,13 @@ export function BrainwaveEditor({
   const [uploading, setUploading] = useState<string | null>(null);
   const [picking, setPicking] = useState(false);
   /*
-   * 보는 폭 — PC 1280 / 태블릿 768 / 모바일 390.
-   * 킷 페이지는 폭에 맞춰 통째로 줄어든다(글이 다시 흐르지 않는다). 그래서
-   * 이 토글은 '폰에서 얼마나 작아 보이는지' 를 확인하는 용도다.
+   * 보는 폭 — 제품 정책과 같게 둘뿐이다: PC / 모바일 (태블릿 모드 없음, ≤640 은 모바일).
+   * 폰에서 열면 모바일 모드로 시작한다 — 지금 기기에서 보이는 그대로를 고치게.
    */
-  const [view, setView] = useState<"pc" | "tablet" | "mobile">("pc");
-  const VIEW_W = { pc: 1600, tablet: 768, mobile: 390 } as const;
+  const [view, setView] = useState<"pc" | "mobile">(() =>
+    typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches ? "mobile" : "pc",
+  );
+  const VIEW_W = { pc: 1600, mobile: 390 } as const;
   /* 미리보기 — 손님이 보는 그대로(테두리·클릭 없음) */
   const [previewMode, setPreviewMode] = useState(false);
   const [error, setError] = useState("");
@@ -168,17 +169,15 @@ export function BrainwaveEditor({
         <div className="bw-editor-left">
           <strong>에디터</strong>
           <button type="button" className="bw-editor-pick" onClick={() => setPicking(true)}>
-            <LayoutTemplate size={15} /> {BRAINWAVE_PAGES.find((p) => p.id === page)?.ko ?? "템플릿"} · 바꾸기
+            <LayoutTemplate size={15} /> {BRAINWAVE_PAGES.find((p) => p.id === page)?.ko ?? "템플릿"}<span className="bw-editor-pick-x"> · 바꾸기</span>
           </button>
           <div className="bw-editor-views" role="group" aria-label="보는 폭">
-            <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC"><Monitor size={15} /></button>
-            <button type="button" className={view === "tablet" ? "on" : ""} onClick={() => setView("tablet")} title="태블릿"><Tablet size={15} /></button>
-            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일"><Smartphone size={15} /></button>
+            <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC 화면"><Monitor size={15} /> PC</button>
+            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일 화면"><Smartphone size={15} /> 모바일</button>
           </div>
-          <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} onClick={() => { finishText(); setPreviewMode((v) => !v); }}>
-            {previewMode ? <><Pencil size={14} /> 편집으로</> : <><Eye size={14} /> 미리보기</>}
+          <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} title={previewMode ? "편집으로" : "미리보기"} onClick={() => { finishText(); setPreviewMode((v) => !v); }}>
+            {previewMode ? <><Pencil size={14} /><span className="bw-editor-pick-x"> 편집으로</span></> : <><Eye size={14} /><span className="bw-editor-pick-x"> 미리보기</span></>}
           </button>
-          <small>{previewMode ? "손님이 보는 그대로입니다." : view === "mobile" ? "모바일은 가로로 나란한 것을 세로로 쌓아 보여줍니다." : "글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다."} {changed ? `고친 자리 ${changed}개` : ""}</small>
         </div>
         <div className="bw-editor-right">
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /></button>
@@ -229,7 +228,10 @@ export function BrainwaveEditor({
         </div>
       </div>
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
-      <p className="bw-editor-hint"><ImageUp /> 사진은 그 자리 크기에 맞춰 잘려 들어갑니다. 칸을 옮기거나 색을 바꾸는 기능은 없습니다 — 킷 구조를 그대로 지킵니다.</p>
+      <p className="bw-editor-hint">
+        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다.</>}
+        {changed ? <b> 고친 자리 {changed}개</b> : null}
+      </p>
     </div>
   );
 }

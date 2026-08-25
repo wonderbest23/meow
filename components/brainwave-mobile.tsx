@@ -36,7 +36,8 @@ function T({ id, t, onPick, as: Tag = "span", className }: { id: string; t: Mobi
   const text = t(id);
   if (!text) return null;
   return (
-    <Tag className={className} onClick={onPick ? (e) => onPick("text", id, e.currentTarget as HTMLElement) : undefined}>
+    /* data-bw-text: 에디터의 편집 표시(점선 테두리·하이라이트) CSS 가 그대로 붙는다 */
+    <Tag className={className} data-bw-text={onPick ? id : undefined} onClick={onPick ? (e) => onPick("text", id, e.currentTarget as HTMLElement) : undefined}>
       {text}
     </Tag>
   );
@@ -50,6 +51,7 @@ function Img({ id, src, img, onPick, className, alt = "" }: { id: string; src: s
       src={img(id, src)}
       alt={alt}
       loading="lazy"
+      data-bw-image={onPick ? id : undefined}
       onClick={onPick ? (e) => onPick("image", id, e.currentTarget as HTMLElement) : undefined}
     />
   );
