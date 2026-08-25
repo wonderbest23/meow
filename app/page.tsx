@@ -910,11 +910,31 @@ function Home({
             오른쪽은 맞춤 홈페이지. 포함 내역 목록은 지우지 않는다 — 다시 생성
             횟수 같은 약속은 여기 말고는 밝힐 자리가 없다.
           */}
+          {/*
+            2026-08-25 개편(사용자 요청): 왼쪽 칸을 '실제로 받는 문서'처럼 보이게 —
+            종이 묶음 카드 + 표지 미리보기 + 파일 칩. 가격의 메리트는 지어낸 비교가
+            아니라 이미 밝힌 사실의 재구성으로만 말한다: 결제 한 번 = 문서 3종
+            (계획서·발표자료·손익표), 1종당 환산가는 산수다.
+          */}
           <div className="home-price-plans">
-            <article>
+            <article className="home-price-doc">
+              <span className="home-doc-badge">구독 아님 · 모든 유형 동일가</span>
+              <div className="home-doc-sheet" aria-hidden="true">
+                <header><b>사업계획서</b><span>예비창업패키지 표준 목차</span></header>
+                <ol>
+                  <li>문제 인식</li>
+                  <li>실현 가능성</li>
+                  <li>성장 전략</li>
+                  <li>팀 구성</li>
+                </ol>
+                <div className="home-doc-files"><i className="pdf">PDF</i><i className="docx">DOCX</i><i className="ppt">PPT</i></div>
+              </div>
               <span className="home-price-plan-type">사업계획서 문서 1부</span>
               <strong className="home-price-number">{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></strong>
-              <p>모든 유형 동일가 · 구독이 아니라 필요한 문서만 1회 결제합니다.</p>
+              <p className="home-doc-worth">
+                결제 한 번에 <b>계획서 + 발표자료(PPT) + 12개월 손익표</b> —
+                문서 3종, 1종당 {Math.round(PACKAGE_AMOUNT / 3).toLocaleString("ko-KR")}원꼴입니다.
+              </p>
               <ul>
                 <li><Check /> 결제한 문서의 전체 섹션 생성</li>
                 <li><Check /> PDF·수정 가능한 Word 내려받기</li>
@@ -926,7 +946,7 @@ function Home({
               <button onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
               <small>신용·체크카드 결제 · 나이스페이 안전 결제</small>
             </article>
-            <article>
+            <article className="home-price-custom">
               <span className="home-price-plan-type">맞춤 홈페이지 제작</span>
               <strong className="home-price-number">{CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}<small>원부터</small></strong>
               <p>자동 제작 홈페이지보다 세밀한 디자인이나 예약·결제 기능이 필요할 때, 상담으로 견적을 정합니다.</p>
