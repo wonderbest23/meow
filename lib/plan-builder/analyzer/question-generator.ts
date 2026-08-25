@@ -60,9 +60,23 @@ function slotLine(s: PackSlot): string {
   return `- id=${s.id} · ${s.label} · ${kind} · 기본 질문: "${s.ask}" · 이유: ${s.why}`;
 }
 
+/*
+ * 운영에서 폴백이 얼마나 나는지 세기 위한 로그.
+ * 사용자 답변 내용은 절대 싣지 않는다 — 슬롯 개수와 사유만.
+ */
+function logSource(source: "ai" | "fallback", slots: number, ai: number, reason?: string) {
+  const parts = [`[plan-question] source=${source}`, `slots=${slots}`, `ai=${ai}`, `fallback=${slots - ai}`];
+  if (reason) parts.push(`reason=${reason}`);
+  console.log(parts.join(" "));
+}
+
 /**
  * 슬롯 → 질문. LLM 실패·검증 실패는 기본 문장으로 조용히 대체한다.
  * 반환하는 questions 의 순서와 개수는 입력 slots 와 같다.
+ *
+ * 이 함수는 어떤 경우에도 던지지 않는다. completeText 는 타임아웃·HTTP 오류·
+ * 프로바이더 장애를 전부 null 로 돌려주지만, 그 약속이 미래에 깨지거나 이 안의
+ * 다른 코드가 터져도 질문 라운드 전체가 죽으면 안 된다 — 마지막 잡이를 둔다.
  */
 export async function generateQuestions(
   config: LLMConfig | null,
@@ -72,44 +86,68 @@ export async function generateQuestions(
 ): Promise<{ intro: string; questions: DynamicQuestion[]; source: "ai" | "fallback" }> {
   const base = defaultQuestions(slots);
   const fallbackIntro = round === 1 ? "조금만 더 알려주세요. 숫자가 있어야 손익을 계산할 수 있어요." : "거의 다 됐어요. 몇 가지만 더요.";
-  if (!config || !slots.length) return { intro: fallbackIntro, questions: base, source: "fallback" };
+  if (!slots.length) return { intro: fallbackIntro, questions: base, source: "fallback" };
+  if (!config) {
+    logSource("fallback", slots.length, 0, "no_config");
+    return { intro: fallbackIntro, questions: base, source: "fallback" };
+  }
 
-  const user = [
-    "[사업 요약]",
-    analysis.summaryForUser,
-    analysis.customer.value ? `- 고객: ${analysis.customer.value}` : "",
-    analysis.solution.value ? `- 제공: ${analysis.solution.value}` : "",
-    "",
-    `[물어야 할 항목 ${slots.length}개 — id 는 그대로]`,
-    ...slots.map(slotLine),
-    "",
-    "각 항목을 쉬운 질문으로 바꿔 JSON 객체 하나만 출력하세요.",
-  ]
-    .filter((l) => l !== "")
-    .join("\n");
+  try {
+    const user = [
+      "[사업 요약]",
+      analysis.summaryForUser,
+      analysis.customer.value ? `- 고객: ${analysis.customer.value}` : "",
+      analysis.solution.value ? `- 제공: ${analysis.solution.value}` : "",
+      "",
+      `[물어야 할 항목 ${slots.length}개 — id 는 그대로]`,
+      ...slots.map(slotLine),
+      "",
+      "각 항목을 쉬운 질문으로 바꿔 JSON 객체 하나만 출력하세요.",
+    ]
+      .filter((l) => l !== "")
+      .join("\n");
 
-  const text = await completeText(config, {
-    kind: "plan-questions",
-    system: SYSTEM,
-    user,
-    maxOutputTokens: 900,
-    effort: "low",
-    jsonObject: true,
-    cache: true,
-    timeoutMs: 30_000,
-  });
-  const obj = text ? parseJsonObject(text) : null;
-  const parsed = obj ? outputSchema.safeParse(obj) : null;
-  if (!parsed?.success) return { intro: fallbackIntro, questions: base, source: "fallback" };
+    const text = await completeText(config, {
+      kind: "plan-questions",
+      system: SYSTEM,
+      user,
+      maxOutputTokens: 900,
+      effort: "low",
+      jsonObject: true,
+      cache: true,
+      timeoutMs: 30_000,
+    });
+    if (!text) {
+      /* 1차·(있다면) 2차 프로바이더까지 전부 실패한 경우다 — completeText 가 교차 폴백을 이미 했다 */
+      logSource("fallback", slots.length, 0, "provider_failed");
+      return { intro: fallbackIntro, questions: base, source: "fallback" };
+    }
+    const obj = parseJsonObject(text);
+    if (!obj) {
+      logSource("fallback", slots.length, 0, "malformed_json");
+      return { intro: fallbackIntro, questions: base, source: "fallback" };
+    }
+    const parsed = outputSchema.safeParse(obj);
+    if (!parsed.success) {
+      logSource("fallback", slots.length, 0, "schema_mismatch");
+      return { intro: fallbackIntro, questions: base, source: "fallback" };
+    }
 
-  const byId = new Map(parsed.data.questions.map((q) => [q.id, q]));
-  let used = 0;
-  const questions = base.map((b) => {
-    const ai = byId.get(b.id); // 목록에 없는 id 는 여기서 자연히 버려진다
-    if (!ai) return b;
-    used += 1;
-    const suggestions = b.input.kind === "number" ? (ai.suggestions ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 4) : undefined;
-    return { ...b, q: ai.q.trim(), why: ai.why?.trim() || b.why, ...(suggestions?.length ? { suggestions } : {}) };
-  });
-  return { intro: parsed.data.intro?.trim() || fallbackIntro, questions, source: used ? "ai" : "fallback" };
+    const byId = new Map(parsed.data.questions.map((q) => [q.id, q]));
+    let used = 0;
+    const questions = base.map((b) => {
+      const ai = byId.get(b.id); // 목록에 없는 id 는 여기서 자연히 버려진다
+      if (!ai) return b;
+      used += 1;
+      const suggestions = b.input.kind === "number" ? (ai.suggestions ?? []).map((s) => s.trim()).filter(Boolean).slice(0, 4) : undefined;
+      return { ...b, q: ai.q.trim(), why: ai.why?.trim() || b.why, ...(suggestions?.length ? { suggestions } : {}) };
+    });
+    /* 일부만 AI 가 채웠으면 나머지는 팩 문장 — 부분 폴백도 로그에서 보인다 */
+    logSource(used ? "ai" : "fallback", slots.length, used, used && used < slots.length ? "partial" : undefined);
+    return { intro: parsed.data.intro?.trim() || fallbackIntro, questions, source: used ? "ai" : "fallback" };
+  } catch (err) {
+    console.error("[plan-question] 예상 밖 오류 — 팩 기본 문장으로 폴백:", err instanceof Error ? err.message : err);
+    logSource("fallback", slots.length, 0, "unexpected_error");
+    return { intro: fallbackIntro, questions: base, source: "fallback" };
+  }
 }

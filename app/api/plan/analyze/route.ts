@@ -44,6 +44,14 @@ export async function POST(req: Request) {
     region: (body.region ?? "").slice(0, 80),
     stage: (body.stage ?? "").slice(0, 60),
   });
-  if (!analysis) return NextResponse.json({ ok: false, reason: "analysis_failed" });
+  if (!analysis) {
+    /*
+     * 운영에서 분석 폴백 빈도를 세기 위한 로그 — 사용자 입력 내용은 싣지 않는다.
+     * 화면은 이 응답을 받으면 "직접 입력해서 계속하기"로 기존 위저드를 안내한다.
+     * 사업 정보는 /plan/start 에서 이미 저장됐으므로 여기서 잃을 것이 없다.
+     */
+    console.warn(`[plan-analyze] source=fallback reason=analysis_failed provider=${config.provider} desc_len=${description.length}`);
+    return NextResponse.json({ ok: false, reason: "analysis_failed" });
+  }
   return NextResponse.json({ ok: true, analysis });
 }
