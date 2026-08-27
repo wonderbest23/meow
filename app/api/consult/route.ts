@@ -4,7 +4,7 @@ import { requireGuestIdentity } from "../../../lib/api-auth";
 import { enforceRateLimit } from "../../../lib/rate-limit";
 import { resolveLLMConfig } from "../../../lib/llm/config";
 import { completeJson } from "../../../lib/llm/complete";
-import { loadConsultSession, saveConsultTurn, consultLimitFor, CONSULT_FREE_TURNS_GUEST } from "../../../lib/consult/repository";
+import { loadConsultSession, saveConsultTurn, resetConsultSession, consultLimitFor, CONSULT_FREE_TURNS_GUEST } from "../../../lib/consult/repository";
 import {
   CONSULT_SYSTEM,
   consultReplySchema,
@@ -57,6 +57,36 @@ function fallback(): ConsultReply {
     picks: [],
     ready: false,
   };
+}
+
+/*
+ * 저장된 상담 되살리기.
+ *
+ * 대화는 계정별로 서버에 남는데(saveConsultTurn), 화면은 매번 빈 채로 시작해서
+ * 새로고침 한 번에 '보이는' 대화가 사라졌다 — 저장하는 이유가 무색했다.
+ * 위젯이 열릴 때 이걸 불러 이어서 보여 준다.
+ */
+export async function GET() {
+  const identity = await requireGuestIdentity();
+  const session = await loadConsultSession(identity.hash).catch(() => null);
+  const limit = consultLimitFor(identity.userId);
+  return NextResponse.json(
+    {
+      profile: session?.profile ?? {},
+      /* 화면이 다 그리지도 못할 옛 대화까지 나를 이유가 없다 */
+      messages: (session?.messages ?? []).slice(-30),
+      remainingToday: Math.max(0, limit - (session?.turnsToday ?? 0)),
+      isGuest: !identity.userId,
+    },
+    { headers: { "Cache-Control": "private, no-store" } },
+  );
+}
+
+/* '새 상담' — 대화·카드만 지운다. 오늘 쓴 횟수는 남는다(한도 초기화 구멍 방지). */
+export async function DELETE() {
+  const identity = await requireGuestIdentity();
+  await resetConsultSession(identity.hash).catch(() => {});
+  return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 export async function POST(request: Request) {
@@ -147,7 +177,21 @@ export async function POST(request: Request) {
   }).catch(() => {});
 
   return NextResponse.json(
-    { ...reply.data, remainingToday: Math.max(0, limit - ((session?.turnsToday ?? 0) + 1)) },
+    {
+      ...reply.data,
+      /*
+       * 화면에도 저장본과 같은 '합쳐진' 카드를 준다.
+       *
+       * 예전에는 모델이 준 profile 을 그대로 돌려줬다. 규칙에는 "매번 통째로
+       * 다시 담으라"고 했지만 모델이 한 항목을 빠뜨리면, 화면이 카드를 통째로
+       * 교체하면서 그 조건이 조용히 사라졌다 — 사업계획서로 넘어가는 값이
+       * 상담 도중에 줄어드는 것이다.
+       */
+      profile: merged,
+      remainingToday: Math.max(0, limit - ((session?.turnsToday ?? 0) + 1)),
+      /* 화면이 '로그인하면 더 이어갈 수 있다'는 안내를 비회원에게만 보여 주게 */
+      isGuest: !identity.userId,
+    },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }

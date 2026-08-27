@@ -13,6 +13,7 @@ import { usePathname } from "next/navigation";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
 import { supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
 import type { SupportChat } from "../lib/support-chat/repository";
+import { trackFunnel } from "../lib/funnel/client";
 import {
   CONSULT_INPUT_EXAMPLES,
   SUPPORT_INPUT_EXAMPLES,
@@ -41,6 +42,8 @@ type QuickMessage = {
   body: string;
   createdAt: string;
   faq?: SupportFaqItem;
+  /* AI 자유 답변에 서버가 붙여 준 화면 링크 — FAQ 경로의 link 와 같은 모양 */
+  link?: { href: string; label: string };
   allowOperator?: boolean;
   operatorContext?: string;
 };
@@ -74,6 +77,17 @@ export function SupportChatWidget() {
   const [consultPicks, setConsultPicks] = useState<ConsultPick[]>([]);
   const [consultReady, setConsultReady] = useState(false);
   const [consultThinking, setConsultThinking] = useState(false);
+  /*
+   * 하루 상담 한도에 닿았는가.
+   *
+   * 예전에는 서버의 429 안내("로그인하시면 이어서…")가 catch 에 삼켜져
+   * "지금은 상담을 이어가지 못했습니다"라는 오류문만 보였다. 무료 한도를 다 쓴
+   * 사람 = 가장 몰입한 사람인데, 그 순간에 아무 문도 열어 주지 않은 것이다.
+   */
+  const [consultLimit, setConsultLimit] = useState<{ needsLogin: boolean } | null>(null);
+  /* 오늘 남은 무료 상담 횟수 — 비회원에게만 보여 준다 */
+  const [consultRemaining, setConsultRemaining] = useState<number | null>(null);
+  const [consultIsGuest, setConsultIsGuest] = useState(false);
   const [chat, setChat] = useState<SupportChat>({ conversation: null, messages: [] });
   const [message, setMessage] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState<(typeof supportFaqCategories)[number]["id"] | null>(null);
@@ -131,6 +145,70 @@ export function SupportChatWidget() {
     consultReady || consultPicks.length > 0 || (consultFilled >= 4 && consultUserTurns >= 3);
   const canStartEarly = !canStartPlan && consultFilled >= 2 && consultUserTurns >= 2;
   const consultHandoffHref = `/plan/start?consult=${encodeURIComponent(JSON.stringify(consultProfile))}`;
+  /* 추천 카드에서 바로 시작 — 고른 아이템을 관심 업종으로 채워서 넘긴다 */
+  const pickHandoffHref = (name: string) =>
+    `/plan/start?consult=${encodeURIComponent(JSON.stringify({ ...consultProfile, interest: name }))}`;
+
+  /*
+   * 저장된 상담 되살리기 — 상담 창을 처음 열 때 한 번.
+   *
+   * 서버는 대화를 계정별로 저장하는데 화면은 매번 빈 채로 시작해서,
+   * 새로고침 한 번에 '보이는' 대화가 사라졌다. 어제 20분 답한 사람이
+   * 오늘 와서 빈 화면을 만나면 그 20분은 없던 일이 된다.
+   */
+  const consultRestored = useRef(false);
+  useEffect(() => {
+    if (!open || mode !== "consult" || consultRestored.current) return;
+    consultRestored.current = true;
+    void (async () => {
+      try {
+        const response = await fetch("/api/consult", { cache: "no-store" });
+        if (!response.ok) return;
+        const payload = await response.json() as {
+          profile?: ConsultProfile;
+          messages?: Array<{ role: "user" | "assistant"; text: string; at?: string }>;
+          remainingToday?: number;
+          isGuest?: boolean;
+        };
+        const restored: ConsultTurn[] = (payload.messages ?? []).map((turn) => ({
+          id: crypto.randomUUID(),
+          role: turn.role,
+          text: turn.text,
+          at: turn.at ?? new Date().toISOString(),
+        }));
+        /* 그 사이(히어로 검색 등) 대화가 이미 시작됐으면 덮지 않는다 */
+        if (restored.length) setConsultTurns((current) => (current.length ? current : restored));
+        const restoredProfile = payload.profile ?? {};
+        if (Object.keys(restoredProfile).length) {
+          setConsultProfile((current) => (Object.keys(current).length ? current : restoredProfile));
+        }
+        if (typeof payload.remainingToday === "number") {
+          setConsultRemaining(payload.remainingToday);
+          /* 어제 한도까지 쓴 사람이 오늘 0회로 돌아온 경우까지 여기서 잡힌다 */
+          if (payload.remainingToday === 0) setConsultLimit({ needsLogin: Boolean(payload.isGuest) });
+        }
+        setConsultIsGuest(Boolean(payload.isGuest));
+      } catch {
+        // 복원 실패는 조용히 — 새 상담으로 시작하면 된다
+      }
+    })();
+  }, [open, mode]);
+
+  /*
+   * CTA 노출 측정 — 상태가 유지되는 동안 한 번만 보낸다.
+   * 노출 없이 클릭만 세면 문구를 바꿔도 무엇이 나아졌는지 알 수 없다.
+   */
+  const trackedCtaViews = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!open || mode !== "consult") return;
+    const seen = (variant: "main" | "soft") => {
+      if (trackedCtaViews.current.has(variant)) return;
+      trackedCtaViews.current.add(variant);
+      trackFunnel("consult_cta_view", { variant });
+    };
+    if (canStartPlan) seen("main");
+    else if (canStartEarly) seen("soft");
+  }, [open, mode, canStartPlan, canStartEarly]);
 
   const loadChat = useCallback(async (markRead: boolean) => {
     try {
@@ -241,6 +319,8 @@ export function SupportChatWidget() {
   };
 
   const askConsult = async (nextMessage: string) => {
+    /* 한도에 닿은 뒤에는 보내지 않는다 — 같은 안내가 말풍선으로 쌓이기만 한다 */
+    if (consultLimit) return;
     setMessage("");
     setConsultChoices([]);
     setConsultThinking(true);
@@ -264,11 +344,40 @@ export function SupportChatWidget() {
         summary?: string[];
         picks?: ConsultPick[];
         ready?: boolean;
+        remainingToday?: number;
+        isGuest?: boolean;
+        error?: string;
+        needsLogin?: boolean;
       };
+      /*
+       * 하루 한도(429)는 오류가 아니라 안내다.
+       * 서버가 보낸 문장("로그인하시면 이어서…")을 상담사 말풍선으로 그대로
+       * 보여 주고, 아래에서 로그인·계획서 시작 버튼을 연다.
+       */
+      if (!response.ok && payload.error === "consult_limit" && payload.message) {
+        const needsLogin = Boolean(payload.needsLogin);
+        setConsultTurns((current) => [
+          ...current,
+          { id: crypto.randomUUID(), role: "assistant", text: payload.message!, at: new Date().toISOString() },
+        ]);
+        setConsultLimit({ needsLogin });
+        setConsultRemaining(0);
+        trackFunnel("consult_limit_view", { needsLogin });
+        return;
+      }
       if (!response.ok || !payload.message) throw new Error("상담을 이어가지 못했습니다.");
+      if (typeof payload.remainingToday === "number") setConsultRemaining(payload.remainingToday);
+      setConsultIsGuest(Boolean(payload.isGuest));
       setConsultTurns((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: payload.message!, at: new Date().toISOString() }]);
-      /* 알아낸 것이 하나도 없으면 앞서 모은 것을 지우지 않는다 */
-      if (payload.profile && Object.keys(payload.profile).length) setConsultProfile(payload.profile);
+      /*
+       * 교체가 아니라 합친다 — 서버도 합쳐서 주지만, 여기서도 한 번 더.
+       * 카드를 통째로 갈아끼우는 코드가 남아 있으면 어느 쪽 실수든
+       * 모은 조건이 사라지는 쪽으로 무너진다.
+       */
+      if (payload.profile && Object.keys(payload.profile).length) {
+        const nextProfile = payload.profile;
+        setConsultProfile((current) => ({ ...current, ...nextProfile }));
+      }
       setConsultChoices(payload.choices ?? []);
       setConsultSummary(payload.summary ?? []);
       setConsultPicks(payload.picks ?? []);
@@ -290,6 +399,8 @@ export function SupportChatWidget() {
           at: new Date().toISOString(),
         },
       ]);
+      /* 쓴 문장을 입력칸에 되돌린다 — 실패했다고 다시 치게 하면 거기서 떠난다 */
+      setMessage(nextMessage);
     } finally {
       setConsultThinking(false);
     }
@@ -318,6 +429,7 @@ export function SupportChatWidget() {
       const payload = await response.json() as {
         answer?: string;
         needsOperator?: boolean;
+        link?: { href: string; label: string } | null;
         error?: { message?: string };
       };
       if (!response.ok || !payload.answer) throw new Error(payload.error?.message ?? "답변을 만들지 못했습니다.");
@@ -328,6 +440,7 @@ export function SupportChatWidget() {
           sender: "assistant",
           body: payload.answer!,
           createdAt: new Date().toISOString(),
+          link: payload.link ?? undefined,
           allowOperator: true,
           operatorContext: nextMessage,
         },
@@ -432,6 +545,11 @@ export function SupportChatWidget() {
                   setConsultSummary([]);
                   setConsultPicks([]);
                   setConsultReady(false);
+                  /*
+                   * 서버 보관본도 지운다 — 안 지우면 새로고침 때 방금 버린 대화가
+                   * 되살아난다. 하루 사용량은 서버가 지키므로 여기서 초기화되지 않는다.
+                   */
+                  void fetch("/api/consult", { method: "DELETE" }).catch(() => {});
                 }}
               >새 상담</button>
             )}
@@ -473,7 +591,7 @@ export function SupportChatWidget() {
                             홈의 '무료로 시작하기'와 같은 곳(/plan)으로 보낸다 — 완성 샘플을 먼저 보고,
                             실제로 플랜을 추가할 때 로그인을 요구하는 순서다.
                           */}
-                          <a className="welcome-start" href="/plan">바로 시작하기</a>
+                          <a className="welcome-start" href="/plan" onClick={() => trackFunnel("consult_cta_click", { variant: "welcome" })}>바로 시작하기</a>
                           <button type="button" className="welcome-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
                             <MessageCircleQuestion /> 서비스 이용 문의는 여기
                           </button>
@@ -522,6 +640,18 @@ export function SupportChatWidget() {
                             {pick.watch.length > 0 && (
                               <div className="watch"><em>주의할 점</em><ul>{pick.watch.map((line) => <li key={line}>{line}</li>)}</ul></div>
                             )}
+                            {/*
+                              * 추천이 뜨는 순간이 상담의 정점이다. 카드에서 바로
+                              * 시작할 수 있게 문을 단다 — 아이템을 '고르는' 행동이
+                              * 그대로 다음 단계가 된다.
+                              */}
+                            <a
+                              className="consult-pick-start"
+                              href={pickHandoffHref(pick.name)}
+                              onClick={() => trackFunnel("consult_cta_click", { variant: "pick", pick: pick.name })}
+                            >
+                              ‘{pick.name}’(으)로 사업계획서 시작 <ChevronRight />
+                            </a>
                           </article>
                         ))}
                       </div>
@@ -540,16 +670,85 @@ export function SupportChatWidget() {
                       * 다음 단계로 가는 문. 여기서 모은 조건은 사업계획서 첫 화면으로
                       * 그대로 넘어간다 — 같은 것을 두 번 묻지 않는다.
                       */}
-                    {!consultThinking && canStartEarly && (
-                      <a className="consult-cta-soft" href={consultHandoffHref}>
+                    {!consultThinking && !consultLimit && canStartEarly && (
+                      <a
+                        className="consult-cta-soft"
+                        href={consultHandoffHref}
+                        onClick={() => trackFunnel("consult_cta_click", { variant: "soft" })}
+                      >
                         지금까지 답한 내용으로 사업계획서를 시작할 수 있어요
-                        <b>{consultFilled}개 항목이 그대로 넘어갑니다 →</b>
+                        <b>{consultFilled}개 항목이 그대로 넘어가고, 앞 2개 섹션은 무료예요 →</b>
                       </a>
                     )}
-                    {!consultThinking && canStartPlan && (
-                      <a className="consult-cta" href={consultHandoffHref}>
-                        <Sparkles /> 이 내용으로 사업계획서 시작하기
+                    {/*
+                      * 추천 카드가 떠 있으면 카드의 시작 버튼이 주된 행동이다.
+                      * 그 아래 큰 CTA 를 또 세우면 같은 말을 하는 버튼이 둘이 되어
+                      * 무엇을 눌러야 할지 헷갈린다 — 추천이 없을 때만 큰 CTA 를,
+                      * 있을 때는 '추천 중에 없어도 시작할 수 있다'는 조용한 줄만 둔다.
+                      */}
+                    {!consultThinking && !consultLimit && canStartPlan && consultPicks.length === 0 && (
+                      <a
+                        className="consult-cta"
+                        href={consultHandoffHref}
+                        onClick={() => trackFunnel("consult_cta_click", { variant: "main" })}
+                      >
+                        <Sparkles />
+                        {/* 결제 문턱이 아니라 무료 문턱을 보여 준다 — 앞 2개 섹션은 실제로 무료다 */}
+                        <span>
+                          <strong>이 내용으로 사업계획서 시작하기</strong>
+                          <small>앞 2개 섹션은 무료로 만들어 볼 수 있어요</small>
+                        </span>
                       </a>
+                    )}
+                    {!consultThinking && !consultLimit && canStartPlan && consultPicks.length > 0 && (
+                      <a
+                        className="consult-cta-soft"
+                        href={consultHandoffHref}
+                        onClick={() => trackFunnel("consult_cta_click", { variant: "main", withPicks: true })}
+                      >
+                        마음에 드는 추천이 없어도 괜찮아요
+                        <b>지금까지 내용 그대로 시작하기 →</b>
+                      </a>
+                    )}
+
+                    {/*
+                      * 하루 한도에 닿았을 때 — 가장 몰입한 순간이다.
+                      * 오류가 아니라 다음 문을 연다: 모은 내용으로 계획서를
+                      * 시작하거나(비로그인도 값이 살아서 넘어간다), 로그인하고
+                      * 이어간다.
+                      */}
+                    {!consultThinking && consultLimit && (
+                      <div className="consult-limit" aria-label="오늘 상담 한도 안내">
+                        {consultFilled > 0 && (
+                          <a
+                            className="consult-cta"
+                            href={consultHandoffHref}
+                            onClick={() => trackFunnel("consult_cta_click", { variant: "limit_plan" })}
+                          >
+                            <Sparkles />
+                            <span>
+                              <strong>지금까지 내용으로 사업계획서 시작하기</strong>
+                              <small>{consultFilled}개 항목이 그대로 넘어가요 · 앞 2개 섹션 무료</small>
+                            </span>
+                          </a>
+                        )}
+                        {consultLimit.needsLogin && (
+                          <a
+                            className="consult-limit-login"
+                            href={`/account?next=${encodeURIComponent(pathname || "/")}`}
+                            onClick={() => trackFunnel("consult_login_click")}
+                          >
+                            로그인하고 상담 이어가기 <ChevronRight />
+                          </a>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 무료가 얼마 안 남았을 때만 — 매 턴 숫자가 붙어 있으면 잔소리가 된다 */}
+                    {!consultThinking && !consultLimit && consultIsGuest && consultRemaining !== null && consultRemaining <= 2 && consultTurns.length > 0 && (
+                      <p className="consult-remaining">
+                        오늘 무료 상담 {consultRemaining}회 남음 · 로그인하면 더 여유 있게 이어갈 수 있어요
+                      </p>
                     )}
 
                     {consultTurns.length > 0 && (
@@ -581,9 +780,17 @@ export function SupportChatWidget() {
                   <article key={item.id} className={item.sender}>
                     <span>{item.sender === "customer" ? "나" : "상담 도우미"}</span>
                     <p>{item.body}</p>
-                    {item.sender === "assistant" && item.faq?.link && (
-                      <a className="support-answer-link" href={item.faq.link.href}>
-                        {item.faq.link.label} <ChevronRight />
+                    {/* FAQ 경로든 AI 자유 답변이든, 다음 행동이 있으면 링크 칩을 단다 */}
+                    {item.sender === "assistant" && (item.faq?.link ?? item.link) && (
+                      <a
+                        className="support-answer-link"
+                        href={(item.faq?.link ?? item.link)!.href}
+                        onClick={() => trackFunnel("support_link_click", {
+                          href: (item.faq?.link ?? item.link)!.href,
+                          source: item.faq ? "faq" : "ai",
+                        })}
+                      >
+                        {(item.faq?.link ?? item.link)!.label} <ChevronRight />
                       </a>
                     )}
                     {item.sender === "assistant" && (item.faq || item.allowOperator) && (
@@ -664,11 +871,13 @@ export function SupportChatWidget() {
                     rows={2}
                     placeholder={
                       mode === "consult"
-                        ? consultThinking ? "상담사가 답을 쓰고 있어요" : inputExample
+                        ? consultLimit
+                          ? "오늘 상담은 여기까지예요 — 위의 버튼으로 이어가세요"
+                          : consultThinking ? "상담사가 답을 쓰고 있어요" : inputExample
                         : assistantThinking ? "답변을 확인하고 있어요" : operatorMode ? "예) 결제가 안 되는데 확인해 주세요" : inputExample
                     }
                     aria-label={mode === "consult" ? "상담 메시지" : "문의 메시지"}
-                    disabled={assistantThinking || consultThinking}
+                    disabled={assistantThinking || consultThinking || (mode === "consult" && Boolean(consultLimit))}
                   />
                   {/*
                     * 보내기는 입력칸 오른쪽 옆이 아니라 입력칸 '안' 오른쪽 아래에 둔다.
@@ -676,7 +885,7 @@ export function SupportChatWidget() {
                     * 한 줄만 쓰고 만다. 안으로 넣으면 쓰는 자리는 넓어지고 버튼은
                     * 손가락이 가는 자리(오른쪽 아래)에 온다.
                     */}
-                  <button type="submit" disabled={!message.trim() || sending || assistantThinking || consultThinking} aria-label="메시지 보내기" title="보내기"><ArrowUp aria-hidden="true" /></button>
+                  <button type="submit" disabled={!message.trim() || sending || assistantThinking || consultThinking || (mode === "consult" && Boolean(consultLimit))} aria-label="메시지 보내기" title="보내기"><ArrowUp aria-hidden="true" /></button>
                 </div>
                 <small><ShieldCheck /> 비밀번호나 주민등록번호는 입력하지 마세요.</small>
                 <small className="ai-caution">AI 답변에는 정확하지 않은 정보가 포함될 수 있어요.</small>

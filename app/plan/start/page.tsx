@@ -10,6 +10,7 @@ import styles from "./PlanStart.module.css";
 import RegionInput from "../../../components/region-input";
 import PlanLoading from "../PlanLoading";
 import { businessFromConsult, answersFromConsult, readConsultParam, readStashedConsult, stashConsult, clearStashedConsult, profileLines, type ConsultProfile } from "../../../lib/consult/domain";
+import { trackFunnel } from "../../../lib/funnel/client";
 import { TYPE_META, DEFAULT_META } from "../type-meta";
 
 /** 드롭다운 선택 — 레퍼런스 스타일 */
@@ -261,6 +262,22 @@ export default function PlanStartPage() {
     if (fromUrl) stashConsult(fromUrl);
     const profile = fromUrl ?? readStashedConsult();
     if (!profile) return;
+    /*
+     * 상담 값을 들고 실제로 도착했다 — 깔때기의 '인계 도착' 지점.
+     * 주소로 왔을 때만 세고, 같은 값은 탭에서 한 번만 센다 — 새로고침·개발
+     * 모드의 이중 실행으로 도착이 부풀면 클릭 대비 도착률이 거짓말을 한다.
+     */
+    if (fromUrl) {
+      const signature = JSON.stringify(fromUrl);
+      let counted = false;
+      try {
+        counted = sessionStorage.getItem("oneulstart.consult.arrived") === signature;
+        if (!counted) sessionStorage.setItem("oneulstart.consult.arrived", signature);
+      } catch {
+        // 저장을 막아 둔 브라우저면 그냥 센다
+      }
+      if (!counted) trackFunnel("consult_handoff_arrive", { filled: profileLines(fromUrl).length });
+    }
     setFromConsult(profile);
     const filled = businessFromConsult(profile);
     /* 손님이 이미 적어 둔 칸은 건드리지 않는다 — 빈 칸만 메운다 */

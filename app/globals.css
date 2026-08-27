@@ -10666,11 +10666,17 @@ body {
 .support-chat-messages .consult-pane .consult-picks li { font-size: 14px; line-height: 1.65; }
 .support-chat-messages .consult-pane .consult-picks em { font-size: 12.5px; }
 .support-chat-messages .consult-pane .consult-cta { min-height: 52px; font-size: 15px; }
+.support-chat-messages .consult-pane .consult-cta span strong { font-size: 15px; }
+.support-chat-messages .consult-pane .consult-cta span small { font-size: 12px; }
+.support-chat-messages .consult-pane .consult-pick-start { min-height: 40px; font-size: 13.5px; }
+.support-chat-messages .consult-pane .consult-limit-login { min-height: 48px; font-size: 14.5px; }
+.support-chat-messages .consult-pane .consult-remaining { font-size: 12.5px; }
 .support-chat-messages .consult-pane .consult-to-support { min-height: 44px; font-size: 13.5px; }
 
 .support-chat-messages .consult-pane .consult-summary,
 .support-chat-messages .consult-pane .consult-picks,
-.support-chat-messages .consult-pane .consult-cta {
+.support-chat-messages .consult-pane .consult-cta,
+.support-chat-messages .consult-pane .consult-limit {
   align-self: stretch;
   width: 100%;
   margin-left: 0;
@@ -10720,7 +10726,61 @@ body {
   font-weight: 800;
   text-decoration: none;
 }
-.consult-cta svg { width: 15px; }
+.consult-cta svg { width: 15px; flex: none; }
+/* 두 줄 문구(행동 + 무료 안내) — 세로 여백은 패딩이 만든다 */
+.consult-cta { padding: 9px 16px; }
+.consult-cta span { display: grid; gap: 1px; text-align: left; }
+.consult-cta span strong { font-size: 13.5px; font-weight: 800; }
+.consult-cta span small { font-size: 11px; font-weight: 600; opacity: .88; }
+
+/* 추천 카드 안의 시작 버튼 — 카드 하나가 곧 다음 단계의 문이 된다 */
+.consult-pick-start {
+  width: fit-content;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--blue-soft, #eef5ff);
+  color: var(--blue, #3272db);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+.consult-pick-start svg { width: 13px; }
+
+/* 하루 한도 안내 — 오류가 아니라 다음 문. 계획서 시작이 위, 로그인이 아래 */
+.consult-limit { display: grid; gap: 8px; }
+.consult-limit-login {
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line, #dfdef1);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text, #0d0a2c);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.consult-limit-login svg { width: 14px; }
+
+/* 남은 무료 횟수 — 안내지 경고가 아니다. 조용히 */
+.consult-remaining {
+  margin: 0;
+  color: var(--text-2, #5f5c7f);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .consult-pick-start:hover { background: var(--blue, #3272db); color: #fff; }
+  .consult-limit-login:hover { border-color: var(--blue, #3272db); color: var(--blue, #3272db); }
+}
 
 /* 두 갈래를 오가는 줄 — 눈에 띄되 주된 행동을 가리지 않게 */
 .consult-to-support {

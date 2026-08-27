@@ -21,6 +21,7 @@ const expectedTables = [
   "platform_legal_settings",
   "account_consents",
   "opportunity_preferences",
+  "funnel_events",
 ] as const;
 
 let cachedClient: SupabaseClient | null | undefined;

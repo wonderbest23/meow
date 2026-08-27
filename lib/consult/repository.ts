@@ -89,6 +89,25 @@ export async function saveConsultTurn(
 }
 
 /*
+ * '새 상담' — 대화와 상담 카드만 지운다.
+ *
+ * 오늘 쓴 횟수는 남긴다. 지워 주면 새 상담 버튼이 하루 한도를 초기화하는
+ * 구멍이 된다.
+ */
+export async function resetConsultSession(ownerHash: string): Promise<void> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const held = memory.get(ownerHash);
+    if (held) memory.set(ownerHash, { profile: {}, messages: [], turnsToday: held.turnsToday, day: held.day });
+    return;
+  }
+  await supabase
+    .from("consult_sessions")
+    .update({ profile: {}, messages: [], updated_at: new Date().toISOString() })
+    .eq("owner_hash", ownerHash);
+}
+
+/*
  * 하루 사용량.
  *
  * 로그인하지 않은 사람은 맛만 본다 — 상담은 유입 통로라 아주 막으면 가입 자체가

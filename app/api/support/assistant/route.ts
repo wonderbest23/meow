@@ -17,9 +17,30 @@ const requestSchema = z.object({
   page: z.string().trim().max(500).optional(),
 });
 
+/*
+ * 답변에 붙일 수 있는 화면 링크.
+ *
+ * FAQ 버튼으로 온 질문에는 링크 칩이 붙는데, 직접 친 질문의 AI 답변은 글만
+ * 남아서 "얼마예요?" → 답만 읽고 이탈하는 흐름이 끊기지 않았다. 모델이
+ * 주소를 지어내면 안 되므로, 여기 정의된 id 만 고르게 하고 주소는 서버가 단다.
+ */
+const ASSISTANT_LINKS = {
+  "plan-start": { href: "/plan/start", label: "새 문서 시작하기" },
+  "plan-samples": { href: "/plan", label: "샘플 문서 보기" },
+  "plan-document": { href: "/plan/document", label: "문서 보기 열기" },
+  "plan-me": { href: "/plan/me", label: "마이페이지 열기" },
+  "refund-info": { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" },
+} as const;
+
+type AssistantLinkId = keyof typeof ASSISTANT_LINKS;
+
+const linkIds = Object.keys(ASSISTANT_LINKS) as [AssistantLinkId, ...AssistantLinkId[]];
+
 const responseSchema = z.object({
   answer: z.string().trim().min(1).max(900),
   needsOperator: z.boolean(),
+  /* 모델이 엉뚱한 값을 줘도 답변까지 버리지는 않는다 — 링크만 뗀다 */
+  link: z.enum(linkIds).nullish().catch(undefined),
 });
 
 const runtimeState = globalThis as typeof globalThis & {
@@ -49,13 +70,15 @@ function fallbackAnswer(message: string) {
   const exact = findSupportFaq(message);
   const normalizedQuestion = message.replace(/\s+/g, " ").trim().replace(/[?.!]+$/g, "");
   if (exact && exact.question.replace(/[?.!]+$/g, "") === normalizedQuestion) {
-    return { answer: exact.answer, needsOperator: false, source: "faq" as const };
+    return { answer: exact.answer, needsOperator: false, link: exact.link ?? null, source: "faq" as const };
   }
   const keywordMatches = findSupportFaqKeywordMatches(message, 3);
   if (keywordMatches.length > 0) {
     return {
       answer: keywordMatches.map((item) => item.answer).join(" "),
       needsOperator: false,
+      /* 여러 항목이 섞이면 첫(가장 잘 맞는) 항목의 링크만 — 칩이 줄지어 서면 아무것도 안 눌린다 */
+      link: keywordMatches.find((item) => item.link)?.link ?? null,
       source: "faq" as const,
     };
   }
@@ -64,6 +87,7 @@ function fallbackAnswer(message: string) {
     return {
       answer: `${candidates[0].answer} 이 답변이 질문과 다르면 현재 화면 주소와 하려던 작업을 운영자에게 남겨주세요.`,
       needsOperator: true,
+      link: candidates[0].link ?? null,
       source: "faq" as const,
     };
   }
@@ -112,7 +136,13 @@ export async function POST(request: Request) {
               "가능하면 사용자가 지금 할 다음 행동을 정확한 화면 이름이나 버튼 문구와 함께 알려주세요.",
               "세무·법률·투자 판단은 대행하거나 확정하지 말고 서비스 지원 범위를 설명하세요.",
               "서비스 지식으로 확정할 수 없거나 실제 주문·계정·프로젝트 확인이 필요하면 needsOperator를 true로 하세요.",
-              "JSON 객체 {answer, needsOperator}만 출력하세요.",
+              "답의 다음 행동이 아래 화면 중 하나면 link에 그 id를 넣으세요. 해당 없으면 link를 생략하세요.",
+              "- plan-start: 새 문서 시작(유형 선택·가격 확인 포함)",
+              "- plan-samples: 완성 샘플 문서 보기 / 내 문서 목록",
+              "- plan-document: 완성 문서 보기·내려받기·발표자료",
+              "- plan-me: 마이페이지(결제 내역·계정)",
+              "- refund-info: 취소·환불 기준 안내",
+              "JSON 객체 {answer, needsOperator, link?}만 출력하세요.",
               "",
               "오늘창업 서비스 지식:",
               supportKnowledgeText(input.message),
@@ -141,7 +171,13 @@ export async function POST(request: Request) {
     const text = outputText(payload);
     if (!text) return privateJson(fallbackAnswer(input.message));
     const result = responseSchema.parse(JSON.parse(text));
-    return privateJson({ ...result, source: "openai", model: config.model });
+    return privateJson({
+      answer: result.answer,
+      needsOperator: result.needsOperator,
+      link: result.link ? ASSISTANT_LINKS[result.link] : null,
+      source: "openai",
+      model: config.model,
+    });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return privateJson(
