@@ -16,6 +16,8 @@ import {
   landingPageDataSchema,
   syncLandingPageData,
 } from "../lib/landing/page-data";
+import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "../lib/landing/brainwave/catalog";
+import { landingKitIds } from "../lib/landing/kits";
 
 const draft = createLandingDraft({
   title: "초보 창업 테스트",
@@ -45,16 +47,39 @@ assert.equal(applyLandingTemplate(publishable, "product").templateId, "product")
 assert.ok(applyLandingTemplate(publishable, "product").heroImageUrl.includes("images.unsplash.com"));
 assert.ok(publishable.pageData);
 
-const templateLayouts = landingTemplateOptions.map((template) => (
-  createLandingPageData(publishable, template.id).content.map((component) => component.type).join(",")
+/*
+ * 킷 전환 뒤의 계약: 새 페이지는 Brainwave 킷 노드를 그대로 쓴다.
+ * 템플릿마다 정해진 킷 페이지(BRAINWAVE_DEFAULT_FOR_TEMPLATE)가 들어가고,
+ * 블록(content)은 비어 있다 — 페이지는 킷 트리가 그린다.
+ */
+for (const template of landingTemplateOptions) {
+  const pageData = createLandingPageData(publishable, template.id);
+  assert.equal(pageData.brainwave?.page, BRAINWAVE_DEFAULT_FOR_TEMPLATE[template.id]);
+  assert.equal(pageData.content.length, 0);
+}
+
+/* 옛 블록 조립은 kitOverride 경로에만 남아 있다 — 킷마다 배치가 달라야 한다 */
+const kitLayouts = landingKitIds.map((kitId) => (
+  createLandingPageData(publishable, "service", kitId).content.map((component) => component.type).join(",")
 ));
-assert.equal(new Set(templateLayouts).size, landingTemplateOptions.length);
+assert.equal(new Set(kitLayouts).size, landingKitIds.length);
+assert.ok(kitLayouts.every((layout) => layout.startsWith("HeroSection")));
 
 const upgradedLegacyDraft = ensureLandingPageData({ ...publishable, pageData: null });
-assert.equal(upgradedLegacyDraft.pageData.content[0]?.type, "HeroSection");
+assert.equal(upgradedLegacyDraft.pageData.brainwave?.page, BRAINWAVE_DEFAULT_FOR_TEMPLATE[publishable.templateId]);
 
-const updatedPageData = syncLandingPageData(
+/* 킷 페이지는 폼 동기화를 받지 않는다 — 글은 페이지 위에서 직접 고친다 */
+const syncedKitPage = syncLandingPageData(
   upgradedLegacyDraft.pageData,
+  { ...publishable, headline: "바뀐 첫 화면 제목입니다" },
+  ["headline"],
+);
+assert.deepEqual(syncedKitPage, upgradedLegacyDraft.pageData);
+
+/* 옛 블록 페이지는 여전히 폼 값을 따라간다 */
+const legacyPageData = createLandingPageData(publishable, "service", "consult");
+const updatedPageData = syncLandingPageData(
+  legacyPageData,
   { ...publishable, headline: "바뀐 첫 화면 제목입니다" },
   ["headline"],
 );
