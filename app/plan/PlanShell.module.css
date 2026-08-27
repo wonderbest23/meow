@@ -668,3 +668,34 @@
 @media (min-width: 641px) {
   .contentWide { padding-left: 64px; }
 }
+
+/* ══ 움직임 — 본문(PlanList)과 같은 결 ═══════════════════════════
+ * 레일 자체는 접기(.railOff)·폰 서랍이 transform 을 쓰므로 건드리지 않고
+ * 투명도만 스르륵. 버튼은 위에서부터 차례로 미끄러져 들어온다.
+ * 등장은 backwards — 끝난 뒤 transform 을 놓아줘야 호버가 움직인다.
+ */
+@keyframes shellFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes shellBtnIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+@media (min-width: 641px) {
+  .rail { animation: shellFadeIn .4s ease backwards; }
+  .logo { animation: shellBtnIn .4s cubic-bezier(.22, .61, .21, 1) backwards; }
+  .railBtn { animation: shellBtnIn .38s cubic-bezier(.22, .61, .21, 1) backwards; }
+  .railBtn:nth-of-type(1) { animation-delay: .05s; }
+  .railBtn:nth-of-type(2) { animation-delay: .1s; }
+  .railBtn:nth-of-type(3) { animation-delay: .15s; }
+  .railBtn:nth-of-type(4) { animation-delay: .2s; }
+  .railBtn:nth-of-type(n+5) { animation-delay: .25s; }
+}
+.railBtn { transition: background .18s ease, color .18s ease, transform .2s cubic-bezier(.22, .61, .21, 1); }
+.railBtn:hover { transform: translateX(2px); }
+.railBtn:active { transform: translateX(2px) scale(.98); }
+.railBtn svg { transition: color .18s ease, transform .25s cubic-bezier(.22, .61, .21, 1); }
+.railBtn:hover svg { transform: scale(1.1); }
+.railToggle { transition: left .22s ease, color .16s, background .16s, transform .15s ease; }
+.railToggle:active { transform: scale(.94); }
+.menuFab { transition: background .18s ease, color .18s ease, transform .15s ease; }
+.menuFab:active { transform: scale(.92); }
+@media (prefers-reduced-motion: reduce) {
+  .rail, .logo, .railBtn { animation: none; }
+  .railBtn:hover, .railBtn:active, .railBtn:hover svg, .railToggle:active, .menuFab:active { transform: none; }
+}

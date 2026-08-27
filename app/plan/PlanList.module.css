@@ -221,7 +221,11 @@
 .emptyRow { margin: 0; padding: 18px 0; text-align: center; color: #8181a5; font-size: 13px; }
 
 @media (max-width: 1000px) {
-  .layout { grid-template-columns: 1fr; }
+  /*
+   * 세로로 쌓이면 min-height 의 남는 높이가 두 행에 고루 늘어나
+   * 타일 아래에 이유 없는 빈 공간이 생겼다 — 남는 높이는 본문이 다 쓴다.
+   */
+  .layout { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .side { border-right: 0; border-bottom: 1px solid #ececf4; padding: 18px 16px; }
   .tiles { grid-template-columns: repeat(4, 1fr); }
   .sideChart { display: none; }
@@ -229,6 +233,8 @@
 @media (max-width: 640px) {
   .main { padding: 14px 12px 40px; }
   .tiles { grid-template-columns: repeat(2, 1fr); }
+  /* 손가락 대상 — 30px 칩은 폰에서 빗나간다 */
+  .seg { min-height: 38px !important; padding: 0 14px !important; }
   .row { grid-template-columns: 18px 30px minmax(0, 1fr) auto; gap: 10px; padding: 8px 10px; }
   .rowMeta { display: none; }
   .rowActions { display: none; }
@@ -249,35 +255,81 @@
 /* ══ 움직임 ═══════════════════════════════════════════════════════
  * 홈의 무대만큼 '간편해 보이게' — 화면이 떠오르고, 행이 차례로 서고,
  * 막대가 차오르고, 체크가 톡 튀고, 칩·단계가 바뀔 때 스르륵.
- * 전부 CSS. 움직임 줄이기 설정에서는 끈다.
+ * 전부 CSS(+타일 숫자 카운트업만 JS). 움직임 줄이기 설정에서는 끈다.
+ *
+ * 결이 같아야 부드럽게 읽힌다 — 이징은 한 곡선(--pl-ease)만 쓰고,
+ * 등장은 아래→위 12px, 호버는 1~3px 안에서만 움직인다. 큰 동작은 소음이다.
  */
-@keyframes planRise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-@keyframes planRowIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
-@keyframes planGrowX { from { transform: scaleX(0); } to { transform: none; } }
+.page { --pl-ease: cubic-bezier(.22, .61, .21, 1); }
+@keyframes planRise { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes planFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes planRowIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: none; } }
 @keyframes planGrowY { from { transform: scaleY(0); } to { transform: none; } }
 @keyframes planPop { 0% { transform: scale(.6); } 60% { transform: scale(1.15); } 100% { transform: none; } }
-.side { animation: planRise .45s cubic-bezier(.2,.7,.2,1) both; }
-.main { animation: planRise .45s cubic-bezier(.2,.7,.2,1) .06s both; }
-.tile { animation: planRise .4s cubic-bezier(.2,.7,.2,1) both; }
-.tile:nth-child(2) { animation-delay: .05s; } .tile:nth-child(3) { animation-delay: .1s; } .tile:nth-child(4) { animation-delay: .15s; }
-.list .row { animation: planRowIn .35s cubic-bezier(.2,.7,.2,1) both; }
-.list .row:nth-child(2) { animation-delay: .03s; } .list .row:nth-child(3) { animation-delay: .06s; }
-.list .row:nth-child(4) { animation-delay: .09s; } .list .row:nth-child(5) { animation-delay: .12s; }
-.list .row:nth-child(6) { animation-delay: .15s; } .list .row:nth-child(7) { animation-delay: .18s; }
-.list .row:nth-child(8) { animation-delay: .21s; } .list .row:nth-child(9) { animation-delay: .24s; }
-.list .row:nth-child(n+10) { animation-delay: .27s; }
-.row { transition: background .15s ease, border-color .15s ease, transform .15s ease, box-shadow .15s ease; }
+
+/* ── 등장: 화면 → 사이드바 → 타일 → 필터 → 행 순서로 숨 쉬듯 ── */
+.page { animation: planFade .35s ease backwards; }
+.side { animation: planRise .5s var(--pl-ease) backwards; }
+.main { animation: planRise .5s var(--pl-ease) .08s backwards; }
+.topbar { animation: planRise .45s var(--pl-ease) .12s backwards; }
+.filters { animation: planRise .45s var(--pl-ease) .16s backwards; }
+.tile { animation: planRise .45s var(--pl-ease) backwards; }
+.tile:nth-child(2) { animation-delay: .06s; } .tile:nth-child(3) { animation-delay: .12s; } .tile:nth-child(4) { animation-delay: .18s; }
+.sideChart { animation: planRise .5s var(--pl-ease) .22s backwards; }
+.groupLabel { animation: planFade .4s ease .25s backwards; }
+.emptyRow { animation: planRise .4s var(--pl-ease) backwards; }
+.list .row { animation: planRowIn .4s var(--pl-ease) backwards; }
+.list .row:nth-child(2) { animation-delay: .04s; } .list .row:nth-child(3) { animation-delay: .08s; }
+.list .row:nth-child(4) { animation-delay: .12s; } .list .row:nth-child(5) { animation-delay: .16s; }
+.list .row:nth-child(6) { animation-delay: .2s; } .list .row:nth-child(7) { animation-delay: .24s; }
+.list .row:nth-child(8) { animation-delay: .28s; } .list .row:nth-child(9) { animation-delay: .32s; }
+.list .row:nth-child(n+10) { animation-delay: .36s; }
+
+/* ── 진행 막대: 왼쪽부터 차례로 차오른다 ── */
+.barCol i { transform-origin: bottom; animation: planGrowY .7s var(--pl-ease) backwards; transition: opacity .2s ease; }
+.barCol:nth-child(1) i { animation-delay: .25s; } .barCol:nth-child(2) i { animation-delay: .32s; }
+.barCol:nth-child(3) i { animation-delay: .39s; } .barCol:nth-child(4) i { animation-delay: .46s; }
+.barCol:nth-child(5) i { animation-delay: .53s; } .barCol:nth-child(6) i { animation-delay: .6s; }
+.barCol:nth-child(7) i { animation-delay: .67s; } .barCol:nth-child(n+8) i { animation-delay: .74s; }
+.bars:hover .barCol i { opacity: .45; }
+.bars .barCol:hover i { opacity: 1; }
+
+/* ── 행: 스르륵 밀리고, 아이콘이 살짝 커지고, 화살표가 따라온다 ── */
+.row { transition: background .18s ease, border-color .18s ease, transform .22s var(--pl-ease), box-shadow .22s var(--pl-ease); }
 .row:hover { transform: translateX(3px); box-shadow: 0 6px 16px rgba(28, 29, 33, .06); }
 .row:active { transform: translateX(3px) scale(.995); }
-.barCol i { transform-origin: bottom; animation: planGrowY .6s cubic-bezier(.2,.7,.2,1) .2s both; }
-.checkOn { animation: planPop .3s ease; }
-.seg { transition: background .15s ease, color .15s ease, transform .1s ease; }
+.rowIcon { transition: transform .25s var(--pl-ease), background .18s ease; }
+.row:hover .rowIcon { transform: scale(1.12); }
+.rowActions { transition: transform .22s var(--pl-ease), color .18s ease; }
+.row:hover .rowActions { transform: translateX(2px); color: #55586a; }
+.check { transition: border-color .18s ease, background .18s ease; }
+.checkOn { animation: planPop .32s var(--pl-ease); }
+.iconBtn { transition: opacity .18s ease, background .15s ease, color .15s ease, transform .15s ease; }
+.iconBtn:active { transform: scale(.92); }
+.chip { transition: background .18s ease, color .18s ease; }
+.rowNew .rowActions svg { transition: transform .3s var(--pl-ease); }
+.rowNew:hover .rowActions svg { transform: rotate(90deg); }
+
+/* ── 타일: 살짝 떠오르고 아이콘이 마중 나온다 ── */
+.tile { transition: transform .25s var(--pl-ease), box-shadow .25s var(--pl-ease); }
+.tile:hover { transform: translateY(-2px); box-shadow: 0 8px 18px rgba(28, 29, 33, .07); }
+.tileIcon { transition: transform .3s var(--pl-ease); }
+.tile:hover .tileIcon { transform: translateY(-1px) scale(1.08); }
+
+/* ── 버튼·칩: 눌리는 느낌은 짧고 얕게 ── */
+.seg { transition: background .18s ease, color .18s ease, transform .12s ease; }
 .seg:active { transform: scale(.96); }
-.newBtn { transition: background .15s ease, transform .1s ease, box-shadow .15s ease; }
-.newBtn:hover { box-shadow: 0 8px 20px rgba(74, 58, 255, .25); transform: translateY(-1px); }
+.newBtn { transition: background .18s ease, transform .15s var(--pl-ease), box-shadow .2s var(--pl-ease); }
+.newBtn svg { transition: transform .3s var(--pl-ease); }
+.newBtn:hover { box-shadow: 0 8px 20px rgba(28, 29, 33, .18); transform: translateY(-1px); }
+.newBtn:hover svg { transform: rotate(90deg); }
 .newBtn:active { transform: translateY(0) scale(.98); }
-.chip { transition: background .15s ease; }
+
 @media (prefers-reduced-motion: reduce) {
-  .side, .main, .tile, .list .row, .barCol i, .checkOn { animation: none; }
-  .row, .row:hover, .newBtn:hover { transform: none; }
+  .page, .side, .main, .topbar, .filters, .tile, .sideChart, .groupLabel, .emptyRow,
+  .list .row, .barCol i, .checkOn { animation: none; }
+  .row, .row:hover, .row:active, .rowIcon, .row:hover .rowIcon, .rowActions, .row:hover .rowActions,
+  .tile:hover, .tile:hover .tileIcon, .newBtn:hover, .newBtn:hover svg, .rowNew:hover .rowActions svg,
+  .seg:active, .iconBtn:active { transform: none; }
+  .bars:hover .barCol i { opacity: 1; }
 }

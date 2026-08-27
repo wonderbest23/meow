@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
@@ -15,6 +15,43 @@ import PlanLoading from "./PlanLoading";
  * 표지의 짧은 라벨(칩)까지 유형마다 다르게 둔다.
  */
 import { TYPE_META, DEFAULT_META } from "./type-meta";
+
+/*
+ * 타일 숫자 카운트업 — 0에서 값까지 부드럽게 차오른다.
+ * 등장 애니메이션과 결을 맞춘 장식이라, 움직임 줄이기 설정에서는 곧장 값을 쓴다.
+ */
+function CountUp({ value }: { value: number }) {
+  const [shown, setShown] = useState(0);
+  /*
+   * 출발점은 '지금 화면에 보이는 값'이다.
+   * 목표값을 ref 에 미리 적어 두는 방식은 개발 모드의 이펙트 이중 실행에서
+   * 두 번째 실행이 "이미 도착했다"고 착각해 0에 멈춰 버렸다.
+   */
+  const shownRef = useRef(0);
+  useEffect(() => {
+    if (typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) {
+      shownRef.current = value;
+      setShown(value);
+      return;
+    }
+    const start = shownRef.current;
+    if (start === value) return;
+    const t0 = performance.now();
+    const duration = 650;
+    let raf = 0;
+    const tick = (t: number) => {
+      const k = Math.min(1, (t - t0) / duration);
+      const eased = 1 - Math.pow(1 - k, 3);
+      const next = Math.round(start + (value - start) * eased);
+      shownRef.current = next;
+      setShown(next);
+      if (k < 1) raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [value]);
+  return <>{shown}</>;
+}
 
 /** 내 플랜 목록(대시보드) — 사업 요약 + 표지형 플랜 카드 */
 export default function PlanList() {
@@ -193,7 +230,7 @@ export default function PlanList() {
               { key: "sample", label: "샘플", value: counts.sample, Icon: BookOpen },
             ].map((t) => (
               <div key={t.key} className={`${styles.tile} ${styles[`tile_${t.key}`]}`}>
-                <span className={styles.tileText}><small>{t.label}</small><strong>{t.value}</strong></span>
+                <span className={styles.tileText}><small>{t.label}</small><strong><CountUp value={t.value} /></strong></span>
                 <span className={styles.tileIcon} aria-hidden="true"><t.Icon size={18} /></span>
               </div>
             ))}
