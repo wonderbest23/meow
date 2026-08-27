@@ -361,7 +361,12 @@ export function fallbackSection(input: SectionGenInput): string {
  * 예전에는 실패해도 fallback을 200으로 돌려줬고, 화면은 그걸 그대로 저장해
  * '완료'로 표시했다. 결제한 사람이 AI가 쓴 글 대신 표를 받고도 알 수 없었다.
  */
-export async function generateSection(config: LLMConfig | null, input: SectionGenInput): Promise<{ markdown: string; source: "ai" | "fallback" | "failed" }> {
+export async function generateSection(
+  config: LLMConfig | null,
+  input: SectionGenInput,
+  /** 요청자가 떠나면 모델 호출도 끊는다(선택) — 워크플로 경로는 넘기지 않는다 */
+  signal?: AbortSignal,
+): Promise<{ markdown: string; source: "ai" | "fallback" | "failed" }> {
   if (!config) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
@@ -374,6 +379,7 @@ export async function generateSection(config: LLMConfig | null, input: SectionGe
     timeoutMs: SECTION_TIMEOUT_MS,
     // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
     cache: true,
+    signal,
   });
   if (!text || text.trim().length < 40) {
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
@@ -390,6 +396,8 @@ export async function streamSection(
   config: LLMConfig | null,
   input: SectionGenInput,
   onDelta: (chunk: string) => void,
+  /** 보는 사람이 떠나면 모델 호출도 끊는다 — 안 끊으면 출력 토큰이 그대로 실비다 */
+  signal?: AbortSignal,
 ): Promise<{ markdown: string; source: "ai" | "fallback" | "failed" }> {
   if (!config) return { markdown: fallbackSection(input), source: "fallback" };
   const text = await streamText(
@@ -402,6 +410,7 @@ export async function streamSection(
       effort: "medium",
       timeoutMs: SECTION_TIMEOUT_MS,
       cache: true,
+      signal,
     },
     onDelta,
   );

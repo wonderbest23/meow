@@ -188,8 +188,17 @@ export function enqueueGeneration(input: GenerationJob): void {
 }
 
 async function tryServerQueue(job: GenerationJob): Promise<boolean> {
-  const plan = activePlan(loadState());
+  const state = loadState();
+  const plan = (job.planId ? state.plans.find((p) => p.id === job.planId) : null) ?? activePlan(state);
   if (!plan) return false;
+  /*
+   * 본문이 이미 있는 섹션(답을 고쳐 다시 만드는 경우)은 서버 큐에 보내지 않는다.
+   *
+   * 서버 워크플로는 '처음 만들기' 전용이라 완성된 섹션을 건너뛴다 — 보내면
+   * 조용히 무시되어 손님은 다시 만들어지길 기다리기만 하게 된다. 다시 만들기는
+   * 브라우저 경로(/api/plan/generate)로 보내야 유료 횟수도 올바르게 센다.
+   */
+  if (plan.sections?.[job.key]?.markdown) return false;
   try {
     /*
      * 서버 워크플로는 저장된 답변을 읽어 본문을 만든다.

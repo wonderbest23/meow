@@ -106,8 +106,32 @@ export async function POST(request: Request) {
     return NextResponse.json({ started: false, supported: false, queued: 0, blocked });
   }
 
-  const run = await workflow.create({
-    params: { ownerHash: identity.hash, planId: plan.id, sections: allowed },
-  });
-  return NextResponse.json({ started: true, supported: true, runId: run.id, queued: allowed.length, blocked });
+  /*
+   * 실행 아이디를 결정적으로 만든다 — 같은 플랜으로 1분 안에 다시 오면
+   * (더블클릭, 화면 재시도) 같은 아이디가 되어 새 런이 만들어지지 않는다.
+   * 워크플로 아이디는 재사용이 안 되므로 분 단위 버킷을 붙여 시간이 지나면
+   * 자연히 새 아이디가 된다. 그 뒤의 중복은 섹션 서비스의
+   * ALREADY_GENERATED 건너뛰기가 받는다.
+   */
+  const bucket = Math.floor(Date.now() / 60_000).toString(36);
+  const instanceId = `pb-${identity.hash.slice(0, 10)}-${plan.id.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 28)}-${bucket}`;
+  try {
+    const run = await workflow.create({
+      id: instanceId,
+      params: { ownerHash: identity.hash, planId: plan.id, sections: allowed },
+    });
+    return NextResponse.json({ started: true, supported: true, runId: run.id, queued: allowed.length, blocked });
+  } catch (error) {
+    /*
+     * 아이디 충돌 = 방금 같은 플랜으로 이미 시작된 런이 있다 — 그 런이 일을
+     * 맡고 있으니 시작된 것으로 답한다. 다른 이유의 실패를 중복으로 오해하면
+     * 안 되므로, 그 아이디의 런이 실제로 있는지 확인한 뒤에만 그렇게 답한다.
+     */
+    const existing = await workflow.get(instanceId).catch(() => null);
+    if (existing) {
+      return NextResponse.json({ started: true, supported: true, runId: instanceId, deduped: true, queued: allowed.length, blocked });
+    }
+    console.error("[plan-queue] workflow create 실패:", error instanceof Error ? error.message : error);
+    return NextResponse.json({ started: false, supported: true, queued: 0, blocked }, { status: 500 });
+  }
 }

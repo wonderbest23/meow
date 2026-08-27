@@ -35,9 +35,22 @@ export type LLMCompleteParams = {
    * 내고 읽을 일이 없어 손해다.
    */
   cache?: boolean;
+  /*
+   * 호출을 밖에서 끊는 신호 — 스트리밍 중 사용자가 화면을 떠났을 때 쓴다.
+   * 이게 없으면 보는 사람이 사라진 뒤에도 모델이 끝까지 쓰고, 그 출력 토큰이
+   * 그대로 실비가 된다.
+   */
+  signal?: AbortSignal;
 };
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+
+/** 타임아웃과 외부 중단 신호를 하나로 — 둘 중 먼저 온 쪽이 끊는다 */
+function callSignal(params: LLMCompleteParams): AbortSignal {
+  const timeout = AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  if (!params.signal) return timeout;
+  return typeof AbortSignal.any === "function" ? AbortSignal.any([timeout, params.signal]) : timeout;
+}
 
 type AnthropicUsage = {
   input_tokens?: number;
@@ -88,7 +101,7 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
         ],
       }),
       cache: "no-store",
-      signal: AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      signal: callSignal(params),
     });
   } catch (err) {
     console.error("[llm] openai fetch 실패:", err instanceof Error ? err.message : err);
@@ -141,7 +154,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
         messages: [{ role: "user", content: params.user }],
       }),
       cache: "no-store",
-      signal: AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+      signal: callSignal(params),
     });
   } catch (err) {
     console.error("[llm] anthropic fetch 실패:", err instanceof Error ? err.message : err);
@@ -200,6 +213,8 @@ export async function completeText(config: LLMConfig, params: LLMCompleteParams)
     await recordLlmUsage(params.kind ?? "etc", config.provider, true);
     return primary;
   }
+  /* 밖에서 끊은 호출은 실패가 아니다 — 폴백으로 또 부르면 끊은 의미가 없다 */
+  if (params.signal?.aborted) return null;
   const alt = envAlternate(config);
   if (!alt) {
     await recordLlmUsage(params.kind ?? "etc", config.provider, false);
@@ -251,6 +266,8 @@ export async function streamText(
     await recordLlmUsage(params.kind ?? "etc", config.provider, first !== null);
     return first;
   }
+  /* 밖에서 끊은 호출은 실패가 아니다 — 폴백으로 또 부르면 끊은 의미가 없다 */
+  if (params.signal?.aborted) return null;
   const alt = envAlternate(config);
   if (!alt) {
     await recordLlmUsage(params.kind ?? "etc", config.provider, false);
@@ -303,7 +320,7 @@ async function streamOnce(
               },
         ),
         cache: "no-store",
-        signal: AbortSignal.timeout(params.timeoutMs ?? DEFAULT_TIMEOUT_MS),
+        signal: callSignal(params),
       },
     );
   } catch (err) {

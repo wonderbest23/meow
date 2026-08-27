@@ -216,14 +216,50 @@ export async function POST(req: Request) {
   // 실시간 생성 — 한 줄에 JSON 하나씩 흘려보낸다.
   if (body.stream) {
     const encoder = new TextEncoder();
+    /*
+     * 보는 사람이 떠나면(탭 닫기·이동) 모델 호출도 같이 끊는다.
+     * 예전에는 클라이언트가 사라져도 모델이 끝까지 썼다 — 아무도 받지 않는
+     * 출력 토큰이 그대로 실비였고, 그 위에 send 가 던진 예외 때문에 차감
+     * 기록이 두 줄(성공+실패) 남는 경우도 있었다.
+     */
+    const upstream = new AbortController();
+    if (req.signal.aborted) upstream.abort();
+    else req.signal.addEventListener("abort", () => upstream.abort(), { once: true });
     const stream = new ReadableStream<Uint8Array>({
       async start(controller) {
-        const send = (obj: unknown) => controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+        let clientGone = false;
+        const send = (obj: unknown) => {
+          if (clientGone) return;
+          try {
+            controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+          } catch {
+            /* 받는 쪽이 사라졌다 — 생성도 끊고, 아래에서 차감 없이 마무리한다 */
+            clientGone = true;
+            upstream.abort();
+          }
+        };
+        /* 차감 기록은 무슨 일이 있어도 한 번만 */
+        let recorded = false;
+        const record = async (ok: boolean) => {
+          if (!regenPlanId || recorded) return;
+          recorded = true;
+          await recordRegen(regenPlanId, identity.hash, sectionKey, ok);
+        };
         try {
-          const { markdown, source } = await streamSection(config, genInput, (chunk) => send({ t: "delta", v: chunk }));
+          const { markdown, source } = await streamSection(
+            config,
+            genInput,
+            (chunk) => send({ t: "delta", v: chunk }),
+            upstream.signal,
+          );
+          /* 손님이 떠난 생성은 전달된 것이 없다 — 횟수를 깎지 않는다 */
+          if (clientGone || upstream.signal.aborted) {
+            await record(false);
+            return;
+          }
           if (source === "failed") {
             /* 스트리밍도 같은 규칙 — 여기가 빠지면 stream:true 로 횟수를 우회할 수 있다 */
-            if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, false);
+            await record(false);
             send({ t: "error" });
             return;
           }
@@ -236,16 +272,24 @@ export async function POST(req: Request) {
           let quota = null;
           if (regenPlanId) {
             /* 여기도 같다 — AI 가 쓴 글(ai)일 때만 깎는다 */
-            await recordRegen(regenPlanId, identity.hash, sectionKey, source === "ai");
+            await record(source === "ai");
             quota = await resolveRegenQuota(regenPlanId);
           }
           send({ t: "done", markdown, html, source, ...(quota ? { quota } : {}) });
         } catch {
-          if (regenPlanId) await recordRegen(regenPlanId, identity.hash, sectionKey, false);
+          await record(false);
           send({ t: "error" });
         } finally {
-          controller.close();
+          try {
+            controller.close();
+          } catch {
+            // 이미 닫혔으면(클라이언트 이탈) 그대로 둔다
+          }
         }
+      },
+      cancel() {
+        /* 런타임이 이탈을 cancel 로 알려 주는 경우 — 위의 abort 경로와 같은 뜻 */
+        upstream.abort();
       },
     });
     return new Response(stream, {
@@ -257,7 +301,8 @@ export async function POST(req: Request) {
     });
   }
 
-  const { markdown, source } = await generateSection(config, genInput);
+  /* 요청이 끊기면(탭 닫기) 모델 호출도 같이 끊는다 — 받는 사람 없는 출력은 실비 낭비다 */
+  const { markdown, source } = await generateSection(config, genInput, req.signal);
 
   /*
    * AI 호출이 실패했으면 본문을 만들지 않는다.

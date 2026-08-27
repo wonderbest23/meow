@@ -91,6 +91,15 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   const key = `${chapter.id}/${section.id}`;
   const existing = plan.sections[key];
   if (existing?.edited || existing?.locked) return { ok: true, skipped: "USER_EDITED" };
+  /*
+   * 본문이 이미 있으면 만들지 않는다.
+   *
+   * 이 경로는 '처음 만들기' 전용이다. 다시 만들기는 /api/plan/generate 가
+   * 유료 횟수를 세면서 처리한다. 여기서 또 만들면 세 가지가 한꺼번에 샌다 —
+   * 중복 큐 실행마다 AI 실비가 두 배로 나가고, 횟수 차감 없이 재생성이
+   * 되고(우회), 뒤늦게 도착한 생성이 손님이 방금 본 본문을 예고 없이 덮는다.
+   */
+  if (existing?.markdown) return { ok: true, skipped: "ALREADY_GENERATED" };
 
   const answers = plan.answers[key];
   if (!answers || Object.keys(answers).length === 0) return { ok: true, skipped: "NO_ANSWERS" };
@@ -190,6 +199,11 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   if (!target) return { ok: false, skipped: "PLAN_NOT_FOUND" };
   const current = target.sections[key];
   if (current?.edited || current?.locked) return { ok: true, skipped: "USER_EDITED" };
+  /*
+   * 생성하는 사이 다른 실행(중복 큐·경쟁 런)이 먼저 저장했으면 그쪽을 남긴다.
+   * 실비는 이미 두 번 나갔지만, 화면의 본문이 두 번 갈리는 것은 막는다.
+   */
+  if (current?.markdown) return { ok: true, skipped: "ALREADY_GENERATED" };
 
   target.sections[key] = {
     markdown,
