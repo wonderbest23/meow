@@ -16097,3 +16097,68 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .account-optionrow { padding: 0 2px; }
 .account-auth-shell form > footer span, .account-auth-shell form > footer > button { font-size: 13px; color: #9a98b5; }
 .account-auth-shell form > footer span button { font-size: 13px; }
+
+/* ── 소셜 버튼 한 벌로 + 입력칸 흰 배경 제거 ─────────────────────
+ * 구글 공식 버튼(GIS)은 생김새를 바꿀 수 없어 카카오와 어긋났다.
+ * 우리가 그린 버튼을 보이게 두고, 공식 버튼은 그 위에 투명하게 얹는다 —
+ * 클릭은 공식 버튼이 받으므로 로그인 동작은 그대로다.
+ */
+.account-google-btn,
+.account-kakao-btn {
+  position: relative;
+  height: 48px;
+  min-height: 48px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.account-google-btn {
+  background: #fff;
+  border: 1.5px solid #e2e2ee;
+  overflow: hidden;
+  transition: border-color .15s ease;
+}
+.account-google-btn:hover { border-color: #c9c8dd; }
+.account-social-visual {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #3d3a52;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  pointer-events: none;
+}
+.account-social-visual svg { width: 17px; height: 17px; flex: none; }
+/* 공식 버튼 — 보이지 않지만 클릭·포커스는 전부 받는다 */
+.account-google-real {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.0001;
+}
+.account-kakao-btn {
+  border: 0;
+  border-radius: 14px;
+  padding: 0;
+  background: #fee500;
+  color: rgba(0, 0, 0, .85);
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+/*
+ * 입력칸 안 흰 상자 — 전역 어딘가의 입력 배경이 케스케이드에서 이겨
+ * 회색 칸 안에 흰 네모가 떠 있었다. 여기서는 칸(label>div)이 배경을
+ * 그리고 입력은 늘 투명해야 한다.
+ */
+.account-auth-shell > form label input { background: transparent !important; }
