@@ -903,9 +903,20 @@ function Home({
       */}
       {scHidden("stats") ? null : <section className="home-stats" aria-label="서비스 구성 요약">
         <h2>{sc("stats.title", "숫자로 먼저 확인하세요")}</h2>
+        {/*
+          레퍼런스(SEO 도구 피처 카드) 느낌 — 카드 위쪽에 은은한 격자·글로우 위에
+          항목마다 다른 미니 비주얼을 얹고, 아래에 숫자·이름·설명을 둔다.
+          비주얼은 장식이라 화면 낭독에서 뺀다. 텍스트는 예전 그대로다.
+        */}
         <div className="home-stats-cards">
-          {HOME_STATS.map((item) => (
+          {HOME_STATS.map((item, index) => (
             <article key={item.label}>
+              <span className={`stat-viz stat-viz-${index}`} aria-hidden="true">
+                {index === 0 && <span className="viz-pages"><i /><i /><i /></span>}
+                {index === 1 && <span className="viz-samples"><i>새벽커피</i><i>무인꽃집</i><i>재무 모델</i></span>}
+                {index === 2 && <span className="viz-free"><i className="on" /><i className="on" /><i className="lock" /></span>}
+                {index === 3 && <span className="viz-files"><b className="pdf">PDF</b><b className="docx">DOCX</b><b className="ppt">PPT</b></span>}
+              </span>
               <strong>{item.num}<em>{item.unit}</em></strong>
               <b>{item.label}</b>
               <p>{item.body}</p>

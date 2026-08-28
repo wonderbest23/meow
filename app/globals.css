@@ -15580,3 +15580,133 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   .simple-home .show-fin-bars i,
   .simple-home .show-btn { animation: none; }
 }
+
+/* ── ⑥ 숫자 4칸 → 글로우 피처 카드(SEO 도구 레퍼런스) ───────────────
+ * 헤어라인 줄이던 것을, 위쪽에 격자·보랏빛 글로우 비주얼을 얹은 다크
+ * 카드로 바꾼다. 항목마다 비주얼이 다르다 — 문서 묶음 / 샘플 표지 /
+ * 무료 구간 잠금 / 파일 칩. 텍스트(숫자·이름·설명)는 그대로다.
+ */
+.simple-home .home-stats-cards { gap: 24px; }
+.simple-home .home-stats-cards article {
+  padding: 10px 10px 24px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #16132a 0%, #0d0b16 60%);
+  gap: 6px;
+  overflow: hidden;
+  transition: transform .3s cubic-bezier(.22, .61, .21, 1), border-color .3s ease;
+}
+.simple-home .home-stats-cards article:hover {
+  transform: translateY(-3px);
+  border-top-color: rgba(255, 255, 255, .22);
+  border-color: rgba(255, 255, 255, .22);
+}
+.simple-home .home-stats-cards article > strong,
+.simple-home .home-stats-cards article > b,
+.simple-home .home-stats-cards article > p { padding: 0 16px; }
+.simple-home .home-stats-cards article > strong { margin-top: 14px; font-size: 34px; }
+.simple-home .home-stats-cards strong em { font-size: 20px; }
+.simple-home .home-stats-cards b { font-size: 16px; }
+.simple-home .home-stats-cards p { font-size: 14px; }
+
+/* 비주얼 무대 — 은은한 격자 + 가운데 위 보랏빛 글로우 */
+.simple-home .stat-viz {
+  position: relative;
+  display: grid;
+  place-items: center;
+  /* 카드의 justify-items:start 가 무대를 내용 폭으로 줄인다 — 가로로 꽉 채운다 */
+  width: 100%;
+  justify-self: stretch;
+  height: 128px;
+  border-radius: 10px;
+  background:
+    linear-gradient(rgba(255, 255, 255, .045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, .045) 1px, transparent 1px),
+    radial-gradient(70% 90% at 50% 0%, rgba(116, 84, 255, .28), transparent 70%),
+    #0b0913;
+  background-size: 26px 26px, 26px 26px, 100% 100%, 100% 100%;
+  overflow: hidden;
+  transition: box-shadow .3s ease;
+}
+.simple-home .home-stats-cards article:hover .stat-viz {
+  box-shadow: inset 0 0 60px rgba(116, 84, 255, .22);
+}
+
+/* ① 문서 묶음 — 부채꼴로 겹친 종이 세 장 */
+.simple-home .viz-pages { position: relative; width: 54px; height: 72px; }
+.simple-home .viz-pages i {
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background:
+    repeating-linear-gradient(#fff 0 26px, #d9d8e6 26px 29px, #fff 29px 40px) ;
+  background-color: #fff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .5);
+}
+.simple-home .viz-pages i:nth-child(1) { transform: rotate(-10deg) translateX(-16px); opacity: .45; }
+.simple-home .viz-pages i:nth-child(2) { transform: rotate(9deg) translateX(16px); opacity: .65; }
+.simple-home .viz-pages i:nth-child(3) {
+  background: linear-gradient(180deg, #fff 0 18px, transparent 18px),
+    repeating-linear-gradient(transparent 0 24px, #e3e2ee 24px 30px);
+  background-color: #fff;
+}
+
+/* ② 샘플 표지 세 장 — 실제 샘플 이름표 */
+.simple-home .viz-samples { display: flex; gap: 8px; }
+.simple-home .viz-samples i {
+  width: 58px;
+  padding: 26px 6px 8px;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 6px;
+  background: linear-gradient(180deg, rgba(116, 84, 255, .35) 0 18px, rgba(255, 255, 255, .06) 18px);
+  color: #cfd4e2;
+  font-size: 9.5px;
+  font-style: normal;
+  font-weight: 700;
+  text-align: center;
+  white-space: nowrap;
+}
+.simple-home .viz-samples i:nth-child(2) { transform: translateY(-8px); border-color: rgba(255, 255, 255, .28); background: linear-gradient(180deg, rgba(50, 114, 219, .5) 0 18px, rgba(255, 255, 255, .1) 18px); color: #fff; }
+
+/* ③ 무료 구간 — 앞 두 줄은 열려 있고 세 번째부터 잠금 */
+.simple-home .viz-free { width: 64%; display: grid; gap: 9px; }
+.simple-home .viz-free i { position: relative; height: 15px; border-radius: 999px; background: rgba(255, 255, 255, .1); }
+.simple-home .viz-free i::before {
+  content: "✓";
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #22b573;
+  color: #fff;
+  font-size: 10px;
+  line-height: 16px;
+  text-align: center;
+}
+.simple-home .viz-free i.on { background: linear-gradient(90deg, rgba(50, 114, 219, .75), rgba(116, 84, 255, .55)); }
+.simple-home .viz-free i.lock { opacity: .5; }
+.simple-home .viz-free i.lock::before { content: "🔒"; background: transparent; font-size: 11px; }
+
+/* ④ 파일 칩 — 내려받는 세 형식 */
+.simple-home .viz-files { display: flex; gap: 8px; }
+.simple-home .viz-files b {
+  min-width: 46px;
+  padding: 9px 8px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .45);
+}
+.simple-home .viz-files .pdf { background: #d64545; }
+.simple-home .viz-files .docx { background: #3272db; }
+.simple-home .viz-files .ppt { background: #d97b34; transform: translateY(6px); }
+.simple-home .viz-files .pdf { transform: translateY(6px); }
+
+@media (max-width: 640px) {
+  .simple-home .stat-viz { height: 112px; }
+}
