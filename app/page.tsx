@@ -912,6 +912,47 @@ function Home({
             </article>
           ))}
         </div>
+
+        {/*
+          레퍼런스(TOP50 웹플로우)의 Collaboration·SEO 카드 자리 — 숫자만으로는
+          문서가 어떻게 생겼는지 모른다. 실제 샘플 3부의 화면 구성을 그대로 축소해
+          보여주고, 커서가 단추를 누르면 본문·손익 막대가 채워지는 루프를 돈다.
+          내용은 전부 실존하는 샘플(새벽커피·무인꽃집)과 실제 무료 구간 이름이다 —
+          지어낸 수치는 넣지 않는다. 장식이므로 화면 낭독에서는 뺀다.
+        */}
+        <div className="home-stats-showcase">
+          <article className="home-show-card">
+            <header>
+              <strong>완성 문서는 이렇게 생겼습니다</strong>
+              <p>실제 AI로 만든 샘플 ‘새벽커피 (창업 초기)’의 화면 구성입니다. 질문에 답하고 누르면 그 섹션의 본문이 완성됩니다.</p>
+            </header>
+            <div className="home-show-stage" aria-hidden="true">
+              <div className="show-doc-page">
+                <header><b>새벽커피 — 창업 초기 사업계획서</b><span>25개 섹션 · PDF·Word·PPT</span></header>
+                <nav><i className="on">1.1 한눈에 보기</i><i>1.2 문제와 해결</i><i>2.1 고객</i></nav>
+                <div className="show-doc-lines"><s /><s /><s /><s /><s className="short" /></div>
+                <span className="show-btn show-doc-btn">이 섹션 만들기</span>
+              </div>
+              <span className="show-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8.2-6.6 1.2-3.2 6z" fill="#fff" stroke="#0d0a2c" strokeWidth="1.4" /></svg></span>
+            </div>
+            <a href="/plan">샘플 3부 열어보기 <ArrowRight /></a>
+          </article>
+          <article className="home-show-card">
+            <header>
+              <strong>숫자는 답변으로 자동 계산됩니다</strong>
+              <p>가격·원가·고정비 답만으로 12개월 손익표가 만들어집니다. 샘플 ‘무인꽃집 (정밀 재무 모델)’의 구성입니다.</p>
+            </header>
+            <div className="home-show-stage" aria-hidden="true">
+              <div className="show-fin-panel">
+                <header><b>월별 영업손익</b><span>답변 기반 자동 계산 · 12개월</span></header>
+                <div className="show-fin-bars">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
+                <span className="show-btn show-fin-btn">손익표 만들기</span>
+              </div>
+              <span className="show-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8.2-6.6 1.2-3.2 6z" fill="#fff" stroke="#0d0a2c" strokeWidth="1.4" /></svg></span>
+            </div>
+            <a href="/plan">샘플 3부 열어보기 <ArrowRight /></a>
+          </article>
+        </div>
       </section>}
 
       {scHidden("method") ? null : <section className="home-section home-method" id="how">
