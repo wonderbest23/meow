@@ -14,6 +14,17 @@
 import { execSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 
+/*
+ * 이 점검은 '내 컴퓨터에서 dev 서버를 켜 둔 채 배포하는' 실수를 막는 것이다.
+ * CI 러너는 매번 새 기계라 dev 서버도, 죽은 잠금도 있을 수 없다 — 게다가
+ * pgrep -f 가 러너의 무관한 프로세스 명령줄에 우연히 걸려('next dev' 문자열)
+ * 배포를 이틀 막았다(실측: GitHub Actions PID 2393 오탐). CI 에서는 건너뛴다.
+ */
+if (process.env.CI) {
+  console.log("· CI 환경 — 로컬 개발서버 점검은 해당 없음, 통과");
+  process.exit(0);
+}
+
 const run = (cmd) => {
   try {
     return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
