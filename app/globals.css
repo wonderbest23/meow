@@ -15869,3 +15869,68 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 @media (prefers-reduced-motion: reduce) {
   .simple-home .ev-row, .simple-home .ev-row span, .simple-home .evidence-verdicts i { animation: none; }
 }
+
+/* ── ⑦-2 레퍼런스 그대로: 글로우 엠블럼 + 교체되는 헤드라인 ── */
+.simple-home .evidence-emblem {
+  position: relative;
+  width: 150px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+}
+.simple-home .emblem-core {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: radial-gradient(circle at 35% 30%, #8d6bff, #4a2ee0 70%);
+  box-shadow: 0 0 40px rgba(124, 92, 255, .8), 0 0 130px rgba(124, 92, 255, .45);
+}
+.simple-home .emblem-core svg { width: 30px; height: 30px; }
+.simple-home .evidence-emblem .ring {
+  position: absolute;
+  border: 1px solid rgba(160, 141, 255, .28);
+  border-radius: 50%;
+  animation: evRing 6s ease-in-out infinite;
+}
+.simple-home .evidence-emblem .r1 { inset: 26px; }
+.simple-home .evidence-emblem .r2 { inset: 8px; opacity: .65; animation-delay: 1.2s; }
+.simple-home .evidence-emblem .r3 { inset: -14px; opacity: .35; animation-delay: 2.4s; }
+@keyframes evRing { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.07); } }
+
+/*
+ * 헤드라인 로테이터 — 근거 원칙 네 문장이 4초씩 교체된다.
+ * 문장들이 같은 자리에 겹쳐 서고(absolute), 아래에서 떠올라 위로 사라진다.
+ * 높이는 두 줄 기준으로 고정해 아래 내용이 출렁이지 않게 한다.
+ */
+.simple-home .evidence-rotator {
+  position: relative;
+  width: 100%;
+  min-height: 2.45em;
+}
+.simple-home .evidence-rotator span {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  animation: evSwap 16s ease-in-out infinite;
+}
+.simple-home .evidence-rotator span:nth-child(2) { animation-delay: 4s; }
+.simple-home .evidence-rotator span:nth-child(3) { animation-delay: 8s; }
+.simple-home .evidence-rotator span:nth-child(4) { animation-delay: 12s; }
+@keyframes evSwap {
+  0% { opacity: 0; transform: translateY(18px); filter: blur(7px); }
+  4%, 21% { opacity: 1; transform: none; filter: none; }
+  26%, 100% { opacity: 0; transform: translateY(-16px); filter: blur(7px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .simple-home .evidence-emblem .ring { animation: none; }
+  .simple-home .evidence-rotator span { animation: none; }
+  .simple-home .evidence-rotator span:first-child { opacity: 1; }
+  .simple-home .evidence-rotator span:not(:first-child) { display: none; }
+}

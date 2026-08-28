@@ -1026,22 +1026,23 @@ function Home({
             </div>
           ))}
         </div>
+        {/*
+          레퍼런스 그대로의 가운데 무대 — 글로우 엠블럼 + 작은 칩 + 큰 헤드라인.
+          헤드라인은 근거 원칙 네 문장이 계속 교체된다(사용자 요청). 문장은
+          전부 실제로 지키는 규칙이다. 낭독기에는 첫 문장을 제목으로 읽힌다.
+        */}
         <div className="evidence-center">
-          <span className="evidence-badge"><ShieldCheck /> {sc("evidence.eyebrow", "근거 확인 방식")}</span>
-          <h2>{scBr("evidence.title", "인공지능의 답을\n그대로 믿게 하지 않습니다")}</h2>
-          <p>{scBr("evidence.subtitle", "생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.")}</p>
-          <div className="evidence-verdicts" aria-label="근거 판정 구분">
-            <i className="ok">확인됨</i>
-            <i className="assume">가정</i>
-            <i className="check">확인 필요</i>
-          </div>
-          <p className="evidence-principle">공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p>
-        </div>
-        <div className="home-evidence-table">
-          <div><em>1</em><span><strong>사용자 조건</strong><small>경험·시간·자본·지역</small></span><b>직접 입력</b></div>
-          <div><em>2</em><span><strong>공식 자료</strong><small>통계·법령·지원사업 공고</small></span><b>원문·확인일</b></div>
-          <div><em>3</em><span><strong>현장 근거</strong><small>고객 인터뷰·견적·가격 반응</small></span><b>직접 확인</b></div>
-          <div><em>4</em><span><strong>최종 판정</strong><small>확인됨·가정·확인 필요</small></span><b>사용자 승인</b></div>
+          <span className="evidence-emblem" aria-hidden="true">
+            <i className="ring r1" /><i className="ring r2" /><i className="ring r3" />
+            <span className="emblem-core"><ShieldCheck /></span>
+          </span>
+          {/* 설명 없이 큰 글씨만 돌아간다 — 배지·문단은 사용자 요청으로 뺐다 */}
+          <h2 className="evidence-rotator" aria-label={sc("evidence.title", "인공지능의 답을 그대로 믿게 하지 않습니다").replace(/\n/g, " ")}>
+            <span aria-hidden="true">{scBr("evidence.title", "인공지능의 답을\n그대로 믿게 하지 않습니다")}</span>
+            <span aria-hidden="true">근거 없는 숫자는<br />쓰지 않습니다</span>
+            <span aria-hidden="true">확인되지 않으면<br />‘확인 필요’로 남깁니다</span>
+            <span aria-hidden="true">공식 자료에는<br />원문과 확인일을 남깁니다</span>
+          </h2>
         </div>
       </section>}
 
