@@ -135,43 +135,54 @@ export default function AccountPage() {
   useEffect(() => {
     if (session?.authenticated || (mode !== "login" && mode !== "register")) return;
     let alive = true;
-    void loadGoogleScript().then((gis) => {
-      const parent = googleButtonRef.current;
-      if (!alive || !gis || !parent) return;
-      gis.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: (response) => {
-          if (!response.credential) return;
-          setBusy(true);
-          setMessage("");
-          void fetch("/api/auth/google", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ credential: response.credential, remember }),
-          })
-            .then((r) => payload<{ authenticated: boolean; email: string | null }>(r))
-            .then((data) => {
-              rememberLocally(remember, data.email ?? "");
-              goNext();
-            })
-            .catch((error) => {
-              setMessage(error instanceof Error ? error.message : "구글 로그인에 실패했습니다.");
-              setBusy(false);
-            });
-        },
-      });
-      parent.innerHTML = "";
-      gis.renderButton(parent, {
-        theme: "outline",
-        size: "large",
-        shape: "pill",
-        logo_alignment: "center",
-        text: mode === "register" ? "signup_with" : "signin_with",
-        locale: "ko",
-        /* GIS 버튼 최대 폭은 400 — 폼 폭에 맞춰 꽉 채운다 */
-        width: Math.min(400, parent.clientWidth || 400),
-      });
-    });
+    /*
+     * 스크립트 로딩·폼 마운트·세션 확인이 제각각 끝나서 한 번에 그리려 하면
+     * 빈 자리로 남는 때가 있었다 — 그려질 때까지 짧게 다시 시도한다.
+     */
+    void (async () => {
+      for (let attempt = 0; attempt < 20 && alive; attempt += 1) {
+        const gis = await loadGoogleScript();
+        const parent = googleButtonRef.current;
+        if (!alive) return;
+        if (gis && parent) {
+          gis.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: (response) => {
+              if (!response.credential) return;
+              setBusy(true);
+              setMessage("");
+              void fetch("/api/auth/google", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ credential: response.credential, remember }),
+              })
+                .then((r) => payload<{ authenticated: boolean; email: string | null }>(r))
+                .then((data) => {
+                  rememberLocally(remember, data.email ?? "");
+                  goNext();
+                })
+                .catch((error) => {
+                  setMessage(error instanceof Error ? error.message : "구글 로그인에 실패했습니다.");
+                  setBusy(false);
+                });
+            },
+          });
+          parent.innerHTML = "";
+          gis.renderButton(parent, {
+            theme: "outline",
+            size: "large",
+            shape: "pill",
+            logo_alignment: "center",
+            text: mode === "register" ? "signup_with" : "signin_with",
+            locale: "ko",
+            /* GIS 버튼 최대 폭은 400 — 자기 칸 폭에 맞춘다 */
+            width: Math.min(400, parent.clientWidth || 400),
+          });
+          if (parent.childElementCount > 0) return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+    })();
     return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.authenticated, mode, remember]);
@@ -214,6 +225,11 @@ export default function AccountPage() {
   };
 
   useEffect(() => {
+    /* 카카오 리디렉트가 실패로 돌아온 경우 — 설정이 빠졌을 때다 */
+    if (new URL(window.location.href).searchParams.get("social_error") === "kakao") {
+      window.history.replaceState({}, "", "/account");
+      setMessage("카카오 로그인이 아직 준비되지 않았습니다. 이메일로 로그인해 주세요.");
+    }
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
@@ -227,7 +243,8 @@ export default function AccountPage() {
         .then(() => {
           const raw = new URL(window.location.href).searchParams.get("next");
           if (raw && raw.startsWith("/") && !raw.startsWith("//")) { window.location.assign(raw); return; }
-          window.history.replaceState({}, "", "/account"); setMessage("이메일 확인이 완료되었습니다."); return loadSession();
+          /* 이메일 확인·카카오 로그인 둘 다 이 길로 돌아온다 — 어느 쪽에도 맞는 말로 */
+          window.history.replaceState({}, "", "/account"); setMessage("로그인되었습니다."); return loadSession();
         })
         .catch((error) => { setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
       return;
@@ -391,21 +408,39 @@ export default function AccountPage() {
               ('내 작업 불러오기')이 같은 말을 두 번 했고, 모바일에서는 방패
               아이콘이 제목 위에 덩그러니 놓였다. 제목 한 줄만 남긴다.
             */}
+            {/* 레퍼런스(월렛 앱): 가운데 굵은 인사말 하나 — 설명은 필요한 화면에만 */}
             <header>
               <strong>
-                {mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 찾기" : mode === "reset" ? "새 비밀번호 설정" : "로그인"}
+                {mode === "register" ? "가입하고 바로 시작하세요" : mode === "recover" ? "비밀번호 찾기" : mode === "reset" ? "새 비밀번호 설정" : "다시 만나서 반가워요"}
               </strong>
-              <p>
-                {mode === "register"
-                  ? "이메일 인증 없이 바로 시작합니다."
-                  : mode === "recover"
-                    ? "가입한 이메일로 복구 링크를 보내드립니다."
-                    : mode === "reset"
-                      ? "8자 이상으로 새 비밀번호를 정해주세요."
-                      : "작성한 내용이 계정에 저장돼 어느 기기에서든 이어집니다."}
-              </p>
+              {(mode === "recover" || mode === "reset") && (
+                <p>{mode === "recover" ? "가입한 이메일로 복구 링크를 보내드립니다." : "8자 이상으로 새 비밀번호를 정해주세요."}</p>
+              )}
             </header>
-            {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
+            {/* 간편 로그인 — 레퍼런스처럼 입력칸 위에 나란히 */}
+            {(mode === "login" || mode === "register") && (
+              <div className="account-google">
+                <span className="account-social-caption">간편하게 계속하기</span>
+                <div className="account-social-row">
+                  <div ref={googleButtonRef} className="account-google-btn" />
+                  <button
+                    type="button"
+                    className="account-kakao-btn"
+                    disabled={busy}
+                    onClick={() => window.location.assign(`/api/auth/kakao${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`)}
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.9 3 2.8 6.2 2.8 10.1c0 2.5 1.7 4.7 4.2 6l-.9 3.3c-.1.3.3.6.6.4l3.9-2.6c.5.1 1 .1 1.4.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z" /></svg>
+                    카카오
+                  </button>
+                </div>
+                {mode === "register" && (
+                  <small>
+                    Google·카카오로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.
+                  </small>
+                )}
+              </div>
+            )}
+            {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
             {/*
               * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
               * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 되고, 위 이메일 칸에는
@@ -415,11 +450,11 @@ export default function AccountPage() {
             {mode !== "recover" && (
               <label>
                 <span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span>
-                <div><KeyRound /><input type="password" minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /></div>
+                <div><KeyRound /><input type="password" placeholder={mode === "reset" ? "새 비밀번호" : "비밀번호"} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /></div>
                 {mode !== "login" && <small className="account-hint">8자 이상</small>}
               </label>
             )}
-            {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><KeyRound /><input type="password" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div></label>}
+            {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><KeyRound /><input type="password" placeholder="비밀번호 확인" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div></label>}
             {mode === "register" && <div className="account-consents"><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
             {(mode === "login" || mode === "register") && (
               /*
@@ -439,18 +474,6 @@ export default function AccountPage() {
             )}
             {message && <p className="account-form-message">{message}</p>}
             <button className="account-submit" disabled={!valid || busy}>{busy ? "처리 중..." : mode === "register" ? "계정 만들기" : mode === "recover" ? "복구 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"} <LogIn /></button>
-            {/* 소셜 로그인은 이메일 폼 아래가 익숙한 자리다 — '또는' 선 아래 구글 버튼 */}
-            {(mode === "login" || mode === "register") && (
-              <div className="account-google">
-                <div className="account-divider"><i /><span>또는</span><i /></div>
-                <div ref={googleButtonRef} className="account-google-btn" />
-                {mode === "register" && (
-                  <small>
-                    Google로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.
-                  </small>
-                )}
-              </div>
-            )}
             {/* 아래는 한 가지만 남긴다 — '비밀번호 찾기'는 위 줄로 올라갔다 */}
             <footer>{mode === "login" ? <span>처음이신가요? <button type="button" onClick={() => { setMode("register"); setMessage(""); }}>회원가입</button></span> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>
           </form>

@@ -16017,3 +16017,83 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .account-google-btn > div { width: auto !important; }
 .account-divider { margin-top: 2px; }
 .account-google > small { text-align: center; }
+
+/* ── 소셜 로그인 두 개 나란히 — 구글(GIS) + 카카오 ── */
+.account-social-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  align-items: center;
+}
+.account-social-row .account-google-btn { justify-items: stretch; min-height: 40px; }
+.account-kakao-btn {
+  height: 40px;
+  padding: 0 12px;
+  border: 0;
+  /* 카카오 버튼 규정색 — 노랑 바탕에 검정 글·심볼 */
+  border-radius: 20px; /* GIS pill(높이 40)과 같은 둥글기 */
+  background: #fee500;
+  color: rgba(0, 0, 0, .85);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: filter .15s ease;
+}
+.account-kakao-btn:hover { filter: brightness(.96); }
+.account-kakao-btn:disabled { opacity: .5; cursor: not-allowed; }
+.account-kakao-btn svg { width: 17px; height: 17px; fill: rgba(0, 0, 0, .9); flex: none; }
+@media (max-width: 380px) {
+  .account-social-row { grid-template-columns: 1fr; }
+}
+
+/* ── /account — 월렛 앱 레퍼런스 배치 ─────────────────────────────
+ * 가운데 인사말 → '간편하게 계속하기' 소셜 두 알약 → 라벨 없는 채움
+ * 입력칸(자리말+아이콘) → 가운데 알약 주 버튼 → 작은 안내 한 줄.
+ */
+.account-auth-shell > form { gap: 14px; padding: 40px 30px 30px; }
+.account-auth-shell > form > header { justify-items: center; text-align: center; gap: 6px; padding-bottom: 6px; }
+.account-auth-shell > form > header strong { font-size: 23px; line-height: 1.4; letter-spacing: -0.02em; color: #221d4e; }
+.account-social-caption { display: block; color: #9a98b5; font-size: 12px; font-weight: 700; text-align: center; }
+.account-google { gap: 12px; margin: 0 0 6px; }
+.account-social-row { max-width: 360px; width: 100%; margin: 0 auto; }
+
+/* 라벨은 낭독기에만 — 눈에는 자리말(placeholder)로 보인다 */
+.account-auth-shell > form > label { gap: 0; }
+.account-auth-shell > form > label > span {
+  position: absolute;
+  width: 1px; height: 1px;
+  margin: -1px; padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+.account-auth-shell > form > label > div {
+  height: 52px;
+  padding: 0 16px;
+  border: 1.5px solid transparent;
+  border-radius: 14px;
+  background: #f1f1f6;
+}
+.account-auth-shell > form > label > div:focus-within { border-color: var(--blue, #3272db); background: #fff; }
+.account-auth-shell input::placeholder { color: #9a98b5; }
+.account-auth-shell > form > label svg { color: #9a98b5; }
+.account-hint { margin: 6px 2px 0; color: #9a98b5; font-size: 12px; }
+
+.account-submit {
+  justify-self: center;
+  width: auto;
+  min-width: 230px;
+  min-height: 52px;
+  margin-top: 4px;
+  padding: 0 46px;
+  border-radius: 999px;
+}
+.account-optionrow { padding: 0 2px; }
+.account-auth-shell form > footer span, .account-auth-shell form > footer > button { font-size: 13px; color: #9a98b5; }
+.account-auth-shell form > footer span button { font-size: 13px; }
