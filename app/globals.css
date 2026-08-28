@@ -15964,3 +15964,56 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .account-divider { display: flex; align-items: center; gap: 12px; }
 .account-divider i { flex: 1; height: 1px; background: #e6e6ef; }
 .account-divider span { color: #8181a5; font-size: 12.5px; font-weight: 700; white-space: nowrap; }
+
+/* ── /account 로그인 카드 현대화 ──────────────────────────────────
+ * 각진 8px 카드·검정 버튼이던 것을 부드러운 20px 카드, 파랑 주 버튼,
+ * 옅은 입력칸으로 바꾼다. 구글 버튼은 폼 아래 '또는' 선 밑 — 익숙한 자리다.
+ */
+.account-page { background: #f6f5ff; }
+.account-auth-shell { width: min(430px, calc(100% - 32px)); }
+.account-auth-shell > form {
+  padding: 38px 32px 30px;
+  border: 1px solid #ececf4;
+  border-radius: 20px;
+  box-shadow: 0 24px 70px rgba(13, 10, 44, .1);
+  gap: 17px;
+}
+.account-auth-shell > form > header { padding-bottom: 4px; border-bottom: 0; gap: 8px; }
+.account-auth-shell > form > header strong { font-size: 26px; letter-spacing: -0.03em; }
+.account-auth-shell > form > header p { font-size: 14px; color: #8181a5; }
+.account-auth-shell > form > label > span { font-size: 13px; color: #55586a; }
+.account-auth-shell > form > label > div {
+  height: 50px;
+  padding: 0 14px;
+  border: 1px solid #e2e2ee;
+  border-radius: 12px;
+  background: #fafaff;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+.account-auth-shell > form > label > div:focus-within {
+  border-color: var(--blue, #3272db);
+  background: #fff;
+  box-shadow: 0 0 0 4px rgba(50, 114, 219, .1);
+}
+.account-auth-shell input { background: transparent; font-size: 15px; }
+.account-submit {
+  min-height: 52px;
+  border-radius: 12px;
+  background: var(--blue, #3272db);
+  font-size: 15px;
+  transition: background .15s ease, transform .12s ease, box-shadow .2s ease;
+}
+.account-submit:not(:disabled):hover { background: #2a63c2; box-shadow: 0 10px 24px rgba(50, 114, 219, .3); transform: translateY(-1px); }
+.account-submit:not(:disabled):active { transform: none; }
+.account-consents { border-radius: 12px; }
+.account-form-message, .account-message { border-radius: 10px; }
+.account-auth-shell form > footer { justify-content: center; padding-top: 2px; }
+.account-auth-shell form > footer span { color: #8181a5; font-size: 13.5px; }
+.account-auth-shell form > footer button { color: var(--blue, #3272db); font-weight: 800; font-size: 13.5px; }
+
+/* 구글 버튼 줄 — 가운데 정렬, 위에 '또는' 선 */
+.account-google { margin: 2px 0 0; gap: 14px; }
+.account-google-btn { justify-items: center; }
+.account-google-btn > div { width: auto !important; }
+.account-divider { margin-top: 2px; }
+.account-google > small { text-align: center; }

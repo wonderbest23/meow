@@ -164,11 +164,12 @@ export default function AccountPage() {
       gis.renderButton(parent, {
         theme: "outline",
         size: "large",
-        shape: "rectangular",
-        logo_alignment: "left",
+        shape: "pill",
+        logo_alignment: "center",
         text: mode === "register" ? "signup_with" : "signin_with",
         locale: "ko",
-        width: Math.min(360, parent.clientWidth || 360),
+        /* GIS 버튼 최대 폭은 400 — 폼 폭에 맞춰 꽉 채운다 */
+        width: Math.min(400, parent.clientWidth || 400),
       });
     });
     return () => { alive = false; };
@@ -404,18 +405,6 @@ export default function AccountPage() {
                       : "작성한 내용이 계정에 저장돼 어느 기기에서든 이어집니다."}
               </p>
             </header>
-            {/* 구글로 한 번에 — 이메일 칸 위에 둔다. 가입 동의는 아래 고지로 갈음한다. */}
-            {(mode === "login" || mode === "register") && (
-              <div className="account-google">
-                <div ref={googleButtonRef} className="account-google-btn" />
-                {mode === "register" && (
-                  <small>
-                    Google로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.
-                  </small>
-                )}
-                <div className="account-divider"><i /><span>또는 이메일로</span><i /></div>
-              </div>
-            )}
             {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
             {/*
               * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
@@ -450,6 +439,18 @@ export default function AccountPage() {
             )}
             {message && <p className="account-form-message">{message}</p>}
             <button className="account-submit" disabled={!valid || busy}>{busy ? "처리 중..." : mode === "register" ? "계정 만들기" : mode === "recover" ? "복구 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"} <LogIn /></button>
+            {/* 소셜 로그인은 이메일 폼 아래가 익숙한 자리다 — '또는' 선 아래 구글 버튼 */}
+            {(mode === "login" || mode === "register") && (
+              <div className="account-google">
+                <div className="account-divider"><i /><span>또는</span><i /></div>
+                <div ref={googleButtonRef} className="account-google-btn" />
+                {mode === "register" && (
+                  <small>
+                    Google로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.
+                  </small>
+                )}
+              </div>
+            )}
             {/* 아래는 한 가지만 남긴다 — '비밀번호 찾기'는 위 줄로 올라갔다 */}
             <footer>{mode === "login" ? <span>처음이신가요? <button type="button" onClick={() => { setMode("register"); setMessage(""); }}>회원가입</button></span> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>
           </form>
