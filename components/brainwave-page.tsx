@@ -332,13 +332,26 @@ export function BrainwaveStage({
     const el = ref.current;
     if (!el || !animate || width === 0) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    const targets = el.querySelectorAll<HTMLElement>(".bwmob > *, .bwm-items > *, .bw-canvas > div > div");
+    /*
+     * display:contents 래퍼는 상자를 만들지 않아 관찰자가 영영 발화하지 않고,
+     * opacity·transform 도 먹지 않는다 — 애니메이션 대상에서 뺀다.
+     */
+    const targets = [...el.querySelectorAll<HTMLElement>(".bwmob > *, .bwm-items > *, .bw-canvas > div > div")]
+      .filter((t) => getComputedStyle(t).display !== "contents");
     if (!targets.length) return;
     const io = new IntersectionObserver((entries) => {
       for (const en of entries) if (en.isIntersecting) { en.target.classList.add("bw-in"); io.unobserve(en.target); }
     }, { threshold: 0.08, rootMargin: "0px 0px -6% 0px" });
     targets.forEach((t) => { t.classList.add("bw-anim"); io.observe(t); });
-    return () => { io.disconnect(); targets.forEach((t) => t.classList.remove("bw-anim", "bw-in")); };
+    /*
+     * 안전판 — 어떤 이유로든(스케일·클립 조상 등) 관찰이 발화하지 않으면
+     * 섹션이 영구히 숨는다. 장식이 내용을 이기면 안 된다: 잠시 뒤 전부 연다.
+     */
+    const failsafe = window.setTimeout(() => {
+      targets.forEach((t) => t.classList.add("bw-in"));
+      io.disconnect();
+    }, 2_500);
+    return () => { window.clearTimeout(failsafe); io.disconnect(); targets.forEach((t) => t.classList.remove("bw-anim", "bw-in")); };
   }, [animate, mobile, page.id, width]);
   const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
   /*
