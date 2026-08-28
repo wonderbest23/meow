@@ -495,6 +495,16 @@ function GuidedTopBar({
  * 정적으로 편다. 숫자는 전부 실제 값이다 — 지어낸 통계가 아니라
  * 서비스 구성 그대로: 문서 7유형, 샘플 3부, 무료 2섹션, 파일 3종.
  */
+/*
+ * 근거 섹션 배경에 흐르는 '검증 안 된 수치'들.
+ * 숫자는 전부 ###로 가린다 — 배경 장식에서도 지어낸 수치를 만들지 않는다.
+ */
+const EVIDENCE_TOKENS = [
+  "시장규모 ###억", "월 매출 ###만원", "성장률 ##%", "경쟁사 #곳",
+  "객단가 #.#만원", "재방문율 ##%", "유동인구 ###명", "원가율 ##%",
+  "임대료 ###만원", "가맹점 ###개", "전환율 #.#%", "고객 ###명",
+];
+
 const HOME_STATS = [
   { num: "7", unit: "가지", label: "문서 유형", body: "사업계획서 · 재무 모델 · 발표자료까지" },
   { num: "3", unit: "부", label: "완성 샘플", body: "로그인 없이 전체를 열람합니다" },
@@ -997,14 +1007,35 @@ function Home({
         표 두 칸으로 둔다. 예전에는 제목이 왼쪽 칸 안에 갇혀 있어 위아래
         섹션과 시작하는 세로선이 어긋났다.
       */}
-      {scHidden("evidence") ? null : <section className="home-section home-evidence" id="evidence">
-        <div className="home-section-heading">
-          <span>{sc("evidence.eyebrow", "근거 확인 방식")}</span>
+      {/*
+        레퍼런스(Hardened security)의 문법 — 어두운 밴드, 배경에 흐르는 텍스트,
+        가운데 글로우와 헤드라인. 배경에 떠다니는 것은 '검증 안 된 수치'들이고
+        (숫자는 전부 ###로 가린 예시 — 지어낸 수치를 만들지 않는 원칙 그대로),
+        일부는 줄이 그어진다. 인공지능의 답을 그대로 쓰지 않는다는 것을
+        말이 아니라 화면으로 보여주는 자리다. 배경은 장식이라 낭독에서 뺀다.
+      */}
+      {scHidden("evidence") ? null : <section className="home-section home-evidence evidence-dark" id="evidence">
+        <div className="evidence-matrix" aria-hidden="true">
+          {Array.from({ length: 6 }, (_, row) => (
+            <div key={row} className={`ev-row ev-row-${row % 3}`}>
+              {Array.from({ length: 10 }, (_, col) => {
+                const token = EVIDENCE_TOKENS[(row * 3 + col) % EVIDENCE_TOKENS.length];
+                const kind = (row + col) % 5 === 0 ? "cut" : (row * 2 + col) % 7 === 3 ? "glow" : "dim";
+                return <span key={col} className={kind}>{token}</span>;
+              })}
+            </div>
+          ))}
+        </div>
+        <div className="evidence-center">
+          <span className="evidence-badge"><ShieldCheck /> {sc("evidence.eyebrow", "근거 확인 방식")}</span>
           <h2>{scBr("evidence.title", "인공지능의 답을\n그대로 믿게 하지 않습니다")}</h2>
           <p>{scBr("evidence.subtitle", "생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.")}</p>
-        </div>
-        <div className="home-evidence-intro">
-          <div className="home-evidence-note"><ShieldCheck /><p><strong>확정처럼 쓰지 않는 원칙</strong>공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p></div>
+          <div className="evidence-verdicts" aria-label="근거 판정 구분">
+            <i className="ok">확인됨</i>
+            <i className="assume">가정</i>
+            <i className="check">확인 필요</i>
+          </div>
+          <p className="evidence-principle">공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p>
         </div>
         <div className="home-evidence-table">
           <div><em>1</em><span><strong>사용자 조건</strong><small>경험·시간·자본·지역</small></span><b>직접 입력</b></div>
