@@ -16254,3 +16254,18 @@ button.account-kakao-btn svg { display: inline-block !important; }
   .simple-home .home-faq { grid-template-columns: 1fr; gap: 36px; }
   .simple-home .home-faq > div:first-child { max-width: 560px; }
 }
+
+/* ── 하단 텍스트 섹션 헤딩 정렬 통일 ─────────────────────────────
+ * '문서 유형'은 좌측인데 '이용 안내'·FAQ 는 가운데라 섞여 있었다(사용자
+ * 지적). 다크 매트릭스 밴드만 레퍼런스대로 중앙을 유지하고, 나머지 텍스트
+ * 섹션 헤딩은 전부 좌측 정렬로 맞춘다.
+ */
+.simple-home .home-price-copy,
+.simple-home .home-faq > div:first-child {
+  justify-items: start;
+  justify-self: start;
+  text-align: left;
+}
+.simple-home .home-price-copy > div { justify-content: flex-start; }
+.simple-home .home-faq > div:first-child { max-width: 880px; }
+.simple-home .home-faq > div:last-child { justify-self: start; width: min(812px, 100%); }
