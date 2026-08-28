@@ -8,7 +8,47 @@ import type { PaymentHistoryItem } from "../../lib/payments/plan-orders";
 import { hydrateFromServer, setActivePlan, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { TYPE_META, DEFAULT_META } from "../plan/type-meta";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+
+/*
+ * 구글 로그인(GIS) — 버튼이 받아 온 ID 토큰을 서버(/api/auth/google)가
+ * Supabase 로 검증한다. 클라이언트 ID 는 공개값이라 코드에 둬도 되고,
+ * 환경변수로 바꿀 수 있게 열어 둔다.
+ */
+const GOOGLE_CLIENT_ID =
+  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ??
+  "1003888311201-3ai90gt9sohnkc2u7oujs7i6igjo28ff.apps.googleusercontent.com";
+
+type GoogleAccountsId = {
+  initialize: (config: { client_id: string; callback: (response: { credential?: string }) => void }) => void;
+  renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+};
+
+declare global {
+  interface Window {
+    google?: { accounts?: { id?: GoogleAccountsId } };
+  }
+}
+
+/** GIS 스크립트를 한 번만 싣는다 — 이미 있으면 그 로딩을 같이 기다린다 */
+function loadGoogleScript(): Promise<GoogleAccountsId | null> {
+  if (typeof window === "undefined") return Promise.resolve(null);
+  if (window.google?.accounts?.id) return Promise.resolve(window.google.accounts.id);
+  return new Promise((resolve) => {
+    const existing = document.querySelector<HTMLScriptElement>('script[src="https://accounts.google.com/gsi/client"]');
+    const script = existing ?? document.createElement("script");
+    const done = () => resolve(window.google?.accounts?.id ?? null);
+    script.addEventListener("load", done, { once: true });
+    script.addEventListener("error", () => resolve(null), { once: true });
+    if (!existing) {
+      script.src = "https://accounts.google.com/gsi/client";
+      script.async = true;
+      document.head.appendChild(script);
+    } else if (window.google?.accounts?.id) {
+      done();
+    }
+  });
+}
 
 type Mode = "login" | "register" | "recover" | "reset";
 type AccountProject = { id: string; title: string; status: string; paymentStatus: string; activeStage: number; updatedAt: string };
@@ -85,6 +125,55 @@ export default function AccountPage() {
   const [recoveryTokens, setRecoveryTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  /* 구글 버튼이 그려질 자리 — GIS 가 이 안에 iframe 버튼을 그린다 */
+  const googleButtonRef = useRef<HTMLDivElement>(null);
+
+  /*
+   * 구글 버튼 그리기.
+   * remember·mode 가 바뀌면 콜백이 그 값을 새로 물도록 다시 초기화한다.
+   */
+  useEffect(() => {
+    if (session?.authenticated || (mode !== "login" && mode !== "register")) return;
+    let alive = true;
+    void loadGoogleScript().then((gis) => {
+      const parent = googleButtonRef.current;
+      if (!alive || !gis || !parent) return;
+      gis.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: (response) => {
+          if (!response.credential) return;
+          setBusy(true);
+          setMessage("");
+          void fetch("/api/auth/google", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credential: response.credential, remember }),
+          })
+            .then((r) => payload<{ authenticated: boolean; email: string | null }>(r))
+            .then((data) => {
+              rememberLocally(remember, data.email ?? "");
+              goNext();
+            })
+            .catch((error) => {
+              setMessage(error instanceof Error ? error.message : "구글 로그인에 실패했습니다.");
+              setBusy(false);
+            });
+        },
+      });
+      parent.innerHTML = "";
+      gis.renderButton(parent, {
+        theme: "outline",
+        size: "large",
+        shape: "rectangular",
+        logo_alignment: "left",
+        text: mode === "register" ? "signup_with" : "signin_with",
+        locale: "ko",
+        width: Math.min(360, parent.clientWidth || 360),
+      });
+    });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.authenticated, mode, remember]);
 
   /**
    * 로그인 후 돌아갈 곳. 열린 리다이렉트가 되지 않게 내부 경로만 받는다.
@@ -315,6 +404,18 @@ export default function AccountPage() {
                       : "작성한 내용이 계정에 저장돼 어느 기기에서든 이어집니다."}
               </p>
             </header>
+            {/* 구글로 한 번에 — 이메일 칸 위에 둔다. 가입 동의는 아래 고지로 갈음한다. */}
+            {(mode === "login" || mode === "register") && (
+              <div className="account-google">
+                <div ref={googleButtonRef} className="account-google-btn" />
+                {mode === "register" && (
+                  <small>
+                    Google로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.
+                  </small>
+                )}
+                <div className="account-divider"><i /><span>또는 이메일로</span><i /></div>
+              </div>
+            )}
             {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
             {/*
               * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
