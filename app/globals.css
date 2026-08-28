@@ -16243,3 +16243,14 @@ button.account-kakao-btn svg { display: inline-block !important; }
   .simple-home .viz-free i.lock::before,
   .simple-home .viz-files b { animation: none; }
 }
+
+/* ── FAQ 태블릿 정리 ─────────────────────────────────────────────
+ * 위의 2열 규칙(minmax(280,430) 1fr)이 폭 제한 없이 걸려, 태블릿에서
+ * 질문 칸이 최소 폭까지 쪼그라들어 낱말이 한두 글자씩 꺾였다(사용자 보고).
+ * 넓은 화면에서만 2열을 쓰고, 그 아래(≤1160)는 제목 아래 질문이 오는
+ * 세로 스택으로 되돌린다.
+ */
+@media (max-width: 1160px) {
+  .simple-home .home-faq { grid-template-columns: 1fr; gap: 36px; }
+  .simple-home .home-faq > div:first-child { max-width: 560px; }
+}
