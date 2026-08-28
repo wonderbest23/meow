@@ -15393,6 +15393,15 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   .simple-home .home-faq { grid-template-columns: 1fr; }
   /* 폰에서는 열 높이를 맞출 이웃이 없다 — 빈 여백만 남는 최소 높이를 푼다 */
   .simple-home .home-method-flow article { min-height: 0; }
+  /*
+   * 폰 제목 크기 — 36px 하한이면 짧은 화면 폭에서 제목이 네다섯 줄로
+   * 세로로 길어진다. 폰에서는 두 줄 안에 들어오는 크기로 내린다.
+   */
+  .simple-home .home-section-heading h2,
+  .simple-home .home-deliverables-copy h2,
+  .simple-home .home-price-copy h2,
+  .simple-home .home-faq h2,
+  .simple-home .home-stats h2 { font-size: clamp(24px, 7vw, 30px); }
 }
 
 /* ── ⑤ 다크 카드 쇼케이스 — 레퍼런스의 Collaboration·SEO 카드 자리 ──
@@ -15768,7 +15777,11 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .simple-home .evidence-center {
   position: relative;
   z-index: 1;
-  max-width: 760px;
+  /*
+   * 로테이터 문장이 absolute 라 부모 폭에 기여하지 않는다 — 내용 맞춤으로
+   * 두면 엠블럼 폭(150px)까지 쪼그라들어 글이 넘쳤다. 폭을 직접 준다.
+   */
+  width: min(880px, 100%);
   display: grid;
   justify-items: center;
   gap: 22px;
@@ -15791,11 +15804,11 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .simple-home .evidence-dark h2 {
   margin: 0;
   color: #fff;
-  font-size: clamp(34px, 4.4vw, 54px);
+  /* nowrap 두 줄이 좁은 화면에서도 들어가게 — 아래로 길어지는 대신 작아진다 */
+  font-size: clamp(24px, 4.9vw, 54px);
   font-weight: 700;
-  line-height: 1.14;
+  line-height: 1.16;
   letter-spacing: -0.03em;
-  text-wrap: balance;
   text-shadow: 0 0 60px rgba(124, 92, 255, .35);
 }
 .simple-home .evidence-center > p { max-width: 560px; margin: 0; color: #98a0b3; font-size: 17px; line-height: 1.75; }
@@ -15916,6 +15929,13 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   display: flex;
   align-items: center;
   justify-content: center;
+  text-align: center;
+  /*
+   * 줄바꿈은 문장에 넣어 둔 <br> 한 번뿐이다 — 자동 줄바꿈이 끼어들면
+   * 좁은 화면에서 서너 줄로 세로로 길어진다. 대신 글자 크기가 화면 폭을
+   * 따라 줄어들어(아래 h2 clamp) 두 줄이 항상 들어간다.
+   */
+  white-space: nowrap;
   opacity: 0;
   animation: evSwap 16s ease-in-out infinite;
 }
@@ -15924,8 +15944,8 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .simple-home .evidence-rotator span:nth-child(4) { animation-delay: 12s; }
 @keyframes evSwap {
   0% { opacity: 0; transform: translateY(18px); filter: blur(7px); }
-  4%, 21% { opacity: 1; transform: none; filter: none; }
-  26%, 100% { opacity: 0; transform: translateY(-16px); filter: blur(7px); }
+  3%, 23% { opacity: 1; transform: none; filter: none; }
+  26.5%, 100% { opacity: 0; transform: translateY(-16px); filter: blur(7px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
