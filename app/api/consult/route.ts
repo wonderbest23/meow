@@ -96,6 +96,17 @@ export async function POST(request: Request) {
     message: "상담 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
   });
   if (limited) return limited;
+  /*
+   * 하루 상한(IP) — 아래의 계정별 일일 한도는 게스트 쿠키 기준이라 쿠키를
+   * 지우면 초기화된다. 요청자가 고를 수 없는 IP 로 받친다. 공유 IP(사무실)를
+   * 생각해 계정 한도보다 훨씬 넉넉하게 잡는다.
+   */
+  const dayLimited = await enforceRateLimit("consult-day", request, {
+    limit: 80,
+    windowMs: 24 * 60 * 60_000,
+    message: "오늘 상담 요청이 많았습니다. 내일 다시 이용해주세요.",
+  });
+  if (dayLimited) return dayLimited;
 
   const identity = await requireGuestIdentity();
 
@@ -134,7 +145,29 @@ export async function POST(request: Request) {
    * 모델이 이미 물어본 것을 다시 묻는 일이 줄어든다.
    */
   const known = profileLines(input.profile);
-  const conversation = input.history
+
+  /*
+   * 프롬프트에 실리는 대화는 서버 저장본을 우선한다.
+   *
+   * 화면이 보낸 history 는 요청자가 마음대로 만들 수 있다 — 24개 × 2,000자면
+   * 임의 텍스트 4.8만 자를 상담사 프롬프트에 그대로 싣는 통로였다(역할 탈취
+   * 재료이자 입력 토큰 부풀리기). 서버가 매 턴 저장하므로(saveConsultTurn)
+   * 저장본이 곧 진짜 대화다. 저장본이 비어 있을 때만(새 대화·데모·저장 실패)
+   * 화면 값을 쓰되, 어느 쪽이든 최근 12턴 · 총 6,000자 예산으로 자른다.
+   */
+  const HISTORY_TURNS = 12;
+  const HISTORY_CHARS = 6_000;
+  const serverTurns = (session?.messages ?? []).map((turn) => ({ role: turn.role, text: turn.text }));
+  const sourceTurns = serverTurns.length ? serverTurns : input.history;
+  const trimmedTurns: Array<{ role: "user" | "assistant"; text: string }> = [];
+  let historyBudget = HISTORY_CHARS;
+  for (const turn of sourceTurns.slice(-HISTORY_TURNS).reverse()) {
+    const text = turn.text.slice(0, 1_500);
+    if (historyBudget - text.length < 0) break;
+    historyBudget -= text.length;
+    trimmedTurns.unshift({ role: turn.role, text });
+  }
+  const conversation = trimmedTurns
     .map((turn) => `${turn.role === "user" ? "손님" : "상담사"}: ${turn.text}`)
     .join("\n");
 

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { getCustomerChat, sendCustomerMessage } from "../../../../lib/support-chat/repository";
 import { notifyOwnerByEmail } from "../../../../lib/notify/owner-email";
 
@@ -28,6 +29,14 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  /* 저장·이메일 알림이 붙은 쓰기다 — 제한이 없으면 수신함과 표가 스팸으로 찬다 */
+  const limited = await enforceRateLimit("support-chat", request, {
+    limit: 20,
+    windowMs: 10 * 60_000,
+    message: "메시지를 너무 자주 보내고 있습니다. 잠시 후 다시 보내주세요.",
+  });
+  if (limited) return limited;
+
   try {
     const identity = await requireGuestIdentity();
     const input = messageSchema.parse(await request.json());
