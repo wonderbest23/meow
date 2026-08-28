@@ -15267,3 +15267,130 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   .account-plan-list > button { grid-template-columns: 36px minmax(0, 1fr) 16px; }
   .account-plan-list > button > em { display: none; }
 }
+
+/* ══ 하단 개편 — TOP 50 레퍼런스(웹플로우 홈) 문법 ═══════════════════
+ * 사용자가 준 레퍼런스에서 가져온 것: ① 초대형 좌측 정렬 디스플레이 헤드라인
+ * ② 박스 대신 얇은 헤어라인 위의 4열 밸류 프롭 ③ 어두운 밴드로 리듬 주기
+ * ④ 다열 메가 푸터. 히어로·데모·예시 홈페이지(위쪽)는 손대지 않는다.
+ */
+
+/* ── ① 섹션 헤드라인: 가운데 정렬 → 좌측 정렬 대형 디스플레이 ── */
+.simple-home .home-section-heading,
+.simple-home .home-deliverables-copy {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  justify-items: start;
+  text-align: left;
+  margin-bottom: 64px;
+}
+.simple-home .home-deliverables-copy { margin-bottom: 0; }
+.simple-home .home-section-heading > span,
+.simple-home .home-deliverables-copy > span { justify-self: start; }
+.simple-home .home-section-heading h2,
+.simple-home .home-deliverables-copy h2 { max-width: 880px; text-wrap: balance; }
+.simple-home .home-deliverables-copy ul { justify-self: stretch; }
+.simple-home .home-section-heading h2,
+.simple-home .home-deliverables-copy h2,
+.simple-home .home-evidence-intro h2,
+.simple-home .home-price-copy h2,
+.simple-home .home-faq h2,
+.simple-home .home-stats h2 {
+  font-size: clamp(36px, 4.8vw, 58px);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.032em;
+}
+.simple-home .home-section-heading p { max-width: 620px; font-size: 18px; }
+
+/* ── ② 구성 요약: 흰 카드 4장 → 어두운 밴드 + 헤어라인 밸류 프롭 ── */
+.simple-home .home-stats {
+  padding: 110px var(--gutter) 120px;
+  background: #08070f;
+  justify-items: stretch;
+  gap: 64px;
+}
+.simple-home .home-stats h2 {
+  width: min(1264px, 100%);
+  margin: 0 auto;
+  color: #fff;
+  text-align: left;
+}
+.simple-home .home-stats-cards { margin: 0 auto; gap: 46px 32px; }
+.simple-home .home-stats-cards article {
+  min-height: 0;
+  padding: 24px 0 0;
+  border-radius: 0;
+  border-top: 1px solid rgba(255, 255, 255, .22);
+  background: transparent;
+  box-shadow: none;
+  justify-items: start;
+  text-align: left;
+  gap: 10px;
+  transition: border-color .25s ease;
+}
+.simple-home .home-stats-cards article:hover { border-top-color: rgba(255, 255, 255, .6); }
+.simple-home .home-stats-cards strong { color: #fff; font-size: 42px; letter-spacing: -0.02em; }
+.simple-home .home-stats-cards strong em { color: #9db9ff; font-size: 24px; }
+.simple-home .home-stats-cards b { color: #fff; font-size: 17px; }
+.simple-home .home-stats-cards p { color: #98a0b3; font-size: 15px; line-height: 1.7; }
+
+/* ── ③ 진행 방식: 굵은 테두리 상자 → 얇은 헤어라인 열 ── */
+.simple-home .home-method-flow { border-top-color: #e3e2f0; border-bottom: 0; }
+.simple-home .home-method-flow article { min-height: 250px; border-left-color: #ececf4; }
+.simple-home .home-method-flow article > svg { margin: 40px 0 14px; }
+.simple-home .home-deliverables-copy ul { border-top-color: #dcdaee; }
+.simple-home .home-faq { grid-template-columns: minmax(280px, 430px) 1fr; }
+
+/* ── ④ 푸터: 한 줄 → 다열 메가 푸터(어두운 밴드) ── */
+.simple-home .home-footer {
+  padding: 92px var(--gutter) 44px;
+  background: #08070f;
+  color: #fff;
+  justify-items: stretch;
+}
+.simple-home .home-footer .brand-logo { filter: brightness(0) invert(1); }
+.simple-home .home-footer-main {
+  width: min(1220px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 56px;
+  align-items: start;
+}
+.simple-home .home-footer-brand { display: grid; justify-items: start; gap: 16px; }
+.simple-home .home-footer-brand p { max-width: 300px; margin: 0; color: #98a0b3; font-size: 15px; line-height: 1.7; }
+.simple-home .home-footer-main nav { display: grid; justify-items: start; gap: 12px; }
+.simple-home .home-footer-main nav strong { margin-bottom: 4px; color: #8b95a1; font-size: 13px; font-weight: 800; letter-spacing: .04em; }
+.simple-home .home-footer-main nav a { color: #c3c9d4; font-size: 15px; line-height: 1.6; text-decoration: none; }
+.simple-home .home-footer-main nav a:hover { color: #fff; }
+.simple-home .home-footer-bottom {
+  width: min(1220px, 100%);
+  margin: 64px auto 0;
+  padding-top: 26px;
+  border-top: 1px solid rgba(255, 255, 255, .14);
+  justify-items: start;
+}
+.simple-home .home-footer-bottom small { color: #8b95a1; text-align: left; }
+.simple-home .home-footer-bottom small a { color: #b0b8c1; }
+.simple-home .home-footer-notice {
+  width: min(1220px, 100%);
+  margin: 14px auto 0;
+  justify-items: start;
+  gap: 6px;
+}
+.simple-home .home-footer-notice p,
+.simple-home .home-footer-notice small,
+.simple-home .home-business-info { color: #77808f; text-align: left; }
+
+@media (max-width: 900px) {
+  .simple-home .home-footer-main { grid-template-columns: 1fr; gap: 36px; }
+  .simple-home .home-stats-cards { grid-template-columns: 1fr 1fr; gap: 30px 22px; }
+}
+@media (max-width: 640px) {
+  .simple-home .home-stats { padding: 72px var(--gutter) 80px; gap: 40px; }
+  .simple-home .home-stats-cards { grid-template-columns: 1fr; }
+  .simple-home .home-faq { grid-template-columns: 1fr; }
+  /* 폰에서는 열 높이를 맞출 이웃이 없다 — 빈 여백만 남는 최소 높이를 푼다 */
+  .simple-home .home-method-flow article { min-height: 0; }
+}

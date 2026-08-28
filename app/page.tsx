@@ -1067,16 +1067,31 @@ function Home({
         표기와 AI 경고는 디자인이 어떻게 바뀌어도 지우지 않는다 — 저작권 줄
         아래 작은 글씨로 남긴다.
       */}
+      {/*
+        TOP 50 레퍼런스(웹플로우)의 다열 메가 푸터.
+        왼쪽은 상호와 한 줄 소개, 오른쪽 두 열은 서비스·약관. 법정 표기와
+        AI 경고는 어떤 개편에서도 지우지 않는다 — 맨 아래 그대로 남는다.
+      */}
       <footer className="home-footer">
-        <div className="home-footer-row">
-          <Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
-          <nav aria-label="하단 안내">
+        <div className="home-footer-main">
+          <div className="home-footer-brand">
+            <Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+            <p>질문에 답하면 사업계획서·발표자료·홈페이지가 만들어집니다. 시작에 필요한 문서를 하루 안에.</p>
+          </div>
+          <nav aria-label="서비스">
+            <strong>서비스</strong>
+            <a href="/plan">내 문서</a>
+            <a href="/plan/start">새 문서 시작</a>
+            <a href="/plan/info">이용 안내</a>
+            <a href="/account">로그인·계정 복구</a>
+          </nav>
+          <nav aria-label="약관과 정책">
+            <strong>약관과 정책</strong>
             <a href="/business-info">사업자·통신판매 정보</a>
             <a href="/privacy">개인정보처리방침</a>
             <a href="/ai-notice">인공지능·국외 처리</a>
             <a href="/terms">이용약관</a>
             <a href="/refund">취소·환불 기준</a>
-            <a href="/account">로그인·계정 복구</a>
           </nav>
         </div>
         <div className="home-footer-bottom">
