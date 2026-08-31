@@ -43,7 +43,80 @@ export type BrainwavePageData = {
   slots: { text: Array<{ id: string; text: string }>; image: Array<{ id: string; src: string }> };
 };
 
-export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string>; sizes?: Record<string, number> };
+export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string>; sizes?: Record<string, number>; hidden?: string[] };
+
+/*
+ * 숨긴 자리(hidden) 펼치기 — 섹션 id 하나를 숨기면 그 안의 글·사진·버튼 id 전부가
+ * 숨는다. 데스크톱 트리는 노드를 안 그리면 하위가 저절로 빠지지만, 손으로 짠
+ * 모바일판은 잎 id 로 하나씩 읽으므로 이 확장 집합이 필요하다.
+ */
+export function expandHidden(root: BrainwaveNode, hidden: string[] | undefined): Set<string> {
+  const out = new Set<string>(hidden ?? []);
+  if (!out.size) return out;
+  const collect = (n: BrainwaveNode) => { if (n.id) out.add(n.id); n.ch?.forEach(collect); };
+  const walk = (n: BrainwaveNode) => {
+    if (n.id && out.has(n.id)) { collect(n); return; }
+    n.ch?.forEach(walk);
+  };
+  walk(root);
+  return out;
+}
+
+/*
+ * 데스크톱 캔버스에서 숨긴 섹션만큼 아래를 끌어올린다.
+ *
+ * 킷 좌표는 두 겹이다: 최상위 그룹(섹션)과 display:contents 래퍼 안의 상자는
+ * 페이지 px 로, 상자 '안'의 잎은 그 상자 기준(%·calc)으로 적혀 있다. 그래서
+ * 페이지에 닻 내린(pageAnchored) 노드의 top 만 옮기면 섹션이 통째로 올라온다.
+ * 트리는 건드리지 않는다 — 그릴 때 좌표만 고쳐 그린다.
+ */
+function collapseHidden(page: BrainwavePageData, hidden: string[] | undefined): { root: BrainwaveNode; h: number } {
+  if (!hidden?.length) return { root: page.root, h: page.h };
+  const hiddenSet = new Set(hidden);
+  const px = (v: string | undefined) => (v && /^-?[\d.]+px$/.test(v) ? parseFloat(v) : null);
+  /* 숨긴 페이지-닻 노드의 세로 범위 — contents 래퍼는 하위 상자들의 합집합 */
+  const extent = (n: BrainwaveNode): { y0: number; y1: number } | null => {
+    let y0 = Infinity, y1 = -Infinity;
+    const visit = (m: BrainwaveNode, anchored: boolean) => {
+      if (!anchored || m.tag === "#" || m.tag === "br") return;
+      const top = px(m.st?.top);
+      const h = px(m.st?.height);
+      if (top !== null) { y0 = Math.min(y0, top); y1 = Math.max(y1, top + (h ?? 0)); }
+      if (m.st?.display === "contents" || top === null) m.ch?.forEach((c) => visit(c, true));
+    };
+    visit(n, true);
+    return y0 === Infinity ? null : { y0, y1: Math.min(y1, page.h) };
+  };
+  /* 1) 숨긴 섹션들의 범위 수집(페이지-닻 층에서만) */
+  const segs: Array<{ y0: number; y1: number }> = [];
+  const collectSegs = (n: BrainwaveNode, anchored: boolean) => {
+    if (n.tag === "#" || n.tag === "br") return;
+    if (n.id && hiddenSet.has(n.id)) { if (anchored) { const e = extent(n); if (e) segs.push(e); } return; }
+    const childAnchored = anchored && n.st?.display === "contents";
+    n.ch?.forEach((c) => collectSegs(c, n === page.root ? true : childAnchored));
+  };
+  collectSegs(page.root, true);
+  if (!segs.length) return { root: page.root, h: page.h };
+  /* 겹치는 범위는 합쳐서 이중으로 끌어올리지 않는다 */
+  segs.sort((a, b) => a.y0 - b.y0);
+  const merged: Array<{ y0: number; y1: number }> = [];
+  for (const s of segs) {
+    const last = merged.at(-1);
+    if (last && s.y0 <= last.y1) last.y1 = Math.max(last.y1, s.y1); else merged.push({ ...s });
+  }
+  const shiftAt = (y: number) => merged.reduce((acc, s) => acc + (y >= s.y1 ? s.y1 - s.y0 : y > s.y0 ? y - s.y0 : 0), 0);
+  const total = merged.reduce((acc, s) => acc + (s.y1 - s.y0), 0);
+  /* 2) 살아남은 페이지-닻 노드의 top 을 끌어올린 사본 트리 */
+  const rebuild = (n: BrainwaveNode, anchored: boolean): BrainwaveNode => {
+    if (n.tag === "#" || n.tag === "br") return n;
+    const top = anchored ? px(n.st?.top) : null;
+    const childAnchored = anchored && n.st?.display === "contents";
+    const ch = n.ch?.map((c) => rebuild(c, n === page.root ? true : childAnchored));
+    if (top !== null && shiftAt(top) > 0) return { ...n, st: { ...n.st, top: `${top - shiftAt(top)}px` }, ch };
+    return ch === n.ch ? n : { ...n, ch };
+  };
+  return { root: rebuild(page.root, true), h: Math.max(200, page.h - total) };
+}
 
 /** 편집기에서 자리를 눌렀을 때 — button 은 버튼 링크·글자 판을 연다 */
 export type BrainwavePick = (kind: "text" | "image" | "button", id: string, el: HTMLElement) => void;
@@ -98,6 +171,8 @@ export function BrainwaveNodeView({
   const id = node.id ?? parentId;
   if (node.tag === "#") return <>{node.text}</>;
   if (node.tag === "br") return <br />;
+  /* 숨긴 자리 — 그리지 않는다(섹션이면 하위 전부가 여기서 같이 빠진다) */
+  if (node.id && overrides?.hidden?.includes(node.id)) return null;
   if (node.tag === "img") {
     const isPhoto = node.src && !node.src.endsWith(".svg");
     const src = (isPhoto && id && overrides?.images?.[id]) || node.src || "";
@@ -185,6 +260,7 @@ export function BrainwaveNodeView({
       style={style}
       data-bw-text={hasText && node.id && !inButton && !isButton ? node.id : undefined}
       data-bw-btn={isButton ? node.id : undefined}
+      data-bw-node={onPick && node.id ? node.id : undefined}
       role={isButton ? "button" : undefined}
       tabIndex={isButton ? 0 : undefined}
       onClick={act ?? (onPick && hasText && node.id && !inButton ? (e: React.MouseEvent<HTMLDivElement>) => { e.stopPropagation(); onPick("text", node.id!, e.currentTarget); } : undefined)}
@@ -412,6 +488,8 @@ export function BrainwaveStage({
     return () => { window.clearTimeout(failsafe); io.disconnect(); targets.forEach((t) => t.classList.remove("bw-anim", "bw-in")); };
   }, [animate, mobile, page.id, width]);
   const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
+  /* 데스크톱: 숨긴 섹션만큼 아래를 끌어올린 좌표로 그린다 */
+  const collapsed = useMemo(() => collapseHidden(page, overrides?.hidden), [page, overrides?.hidden]);
   /*
    * 손으로 짠 모바일판이 있는 페이지는 그걸 먼저 쓴다.
    * 킷에는 모바일 아트보드가 없어(프레임 87개 전수 확인 — 전부 데스크톱 폭)
@@ -438,10 +516,10 @@ export function BrainwaveStage({
    * 같은 숫자로 덮어쓸 뿐이다(옛 브라우저 대비).
    */
   return (
-    <div ref={ref} className={`bw-stage ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ "--bw-w": page.w, "--bw-h": page.h, "--bw-js-scale": scale, maxWidth } as CSSProperties}>
+    <div ref={ref} className={`bw-stage ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ "--bw-w": page.w, "--bw-h": collapsed.h, "--bw-js-scale": scale, maxWidth } as CSSProperties}>
       <div className="bw-fit">
-        <div className="bw-canvas" style={{ width: page.w, height: page.h }}>
-          <BrainwaveNodeView node={page.root} overrides={overrides} onPick={onPick} />
+        <div className="bw-canvas" style={{ width: page.w, height: collapsed.h }}>
+          <BrainwaveNodeView node={collapsed.root} overrides={overrides} onPick={onPick} />
         </div>
       </div>
     </div>

@@ -998,7 +998,7 @@ function withSlotRenderers(props: Record<string, unknown>) {
 export function LandingBlocksRenderer({ data, preloaded }: { data: LandingPageData; preloaded?: BrainwavePageData | null }) {
   /* Brainwave.io 킷 페이지 — 노드 그대로, 글·사진만 바꿔 끼운 채 그린다 */
   if (data.brainwave) {
-    return <BrainwavePage pageId={data.brainwave.page} overrides={{ texts: data.brainwave.texts, images: data.brainwave.images, links: data.brainwave.links, sizes: data.brainwave.sizes }} preloaded={preloaded} />;
+    return <BrainwavePage pageId={data.brainwave.page} overrides={{ texts: data.brainwave.texts, images: data.brainwave.images, links: data.brainwave.links, sizes: data.brainwave.sizes, hidden: data.brainwave.hidden }} preloaded={preloaded} />;
   }
   /* 편집기에서 고른 강조색은 root 에 있다 — 공개 화면에도 같은 색이 걸려야 한다 */
   return (

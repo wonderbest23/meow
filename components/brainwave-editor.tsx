@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, LayoutTemplate, List, LoaderCircle, Monitor, Pencil, Plus, Redo2, Save, Smartphone, Sparkles, Trash2, Type, Undo2, X } from "lucide-react";
+import { Eye, EyeOff, LayoutTemplate, List, LoaderCircle, Monitor, Pencil, Plus, Redo2, RotateCcw, Save, Smartphone, Sparkles, Trash2, Type, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
@@ -19,7 +19,7 @@ import { resizeImage, uploadImage } from "./landing-media-field";
  *     노드 id 와 맞지 않으므로 버린다(물어본 뒤).
  * 칸을 옮기거나 색을 바꾸는 기능은 없다 — 킷 구조를 그대로 지키기 위해서다.
  */
-type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string>; sizes: Record<string, number> };
+type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string>; sizes: Record<string, number>; hidden: string[] };
 
 /* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로, url 은 주소, sec 는 "sec:N"(섹션 스크롤) */
 type LinkMode = "contact" | "url" | "none" | "sec";
@@ -59,7 +59,7 @@ export function BrainwaveEditor({
 }) {
   const init = data.brainwave!;
   const [page, setPage] = useState(init.page);
-  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) } });
+  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) }, hidden: [...(init.hidden ?? [])] });
   const [history, setHistory] = useState<Over[]>([]);
   const [future, setFuture] = useState<Over[]>([]);
   const [meta, setMeta] = useState<BrainwavePageData | null>(null);
@@ -271,6 +271,74 @@ export function BrainwaveEditor({
     setMenu(null);
   };
 
+  /*
+   * 숨기기('삭제') — 킷 트리는 그대로 두고 그 자리만 안 그린다.
+   * 섹션을 숨기면 데스크톱은 아래가 그만큼 올라오고, 복원은 숨김 목록에서 한다.
+   */
+  const hide = (id: string) => {
+    finishText();
+    setMenu(null);
+    setBtn(null);
+    setCtx(null);
+    if (over.hidden.includes(id)) return;
+    commit({ ...over, hidden: [...over.hidden, id] });
+  };
+  const restore = (id: string) => commit({ ...over, hidden: over.hidden.filter((h) => h !== id) });
+  const [hiddenOpen, setHiddenOpen] = useState(false);
+  /* 숨긴 id 가 뭐였는지 사람이 읽게 — 글 미리보기·사진·섹션 이름 */
+  const hiddenLabel = (id: string): string => {
+    const slot = meta?.slots.text.find((s) => s.id === id);
+    if (slot) return `글 — ${(over.texts[id] ?? slot.text).slice(0, 24)}`;
+    if (meta?.slots.image.some((s) => s.id === id)) return "사진";
+    const sec = meta?.root.ch?.find((n) => n.id === id);
+    if (sec) return `섹션 — ${sec.name || id}`;
+    return `자리 ${id}`;
+  };
+
+  /* 우클릭 메뉴(Wix 식) — 글/사진/버튼/섹션에서 숨기기·편집을 바로 연다 */
+  const [ctx, setCtx] = useState<{ x: number; y: number; entries: Array<{ label: string; danger?: boolean; act: () => void }> } | null>(null);
+  useEffect(() => {
+    if (!ctx) return;
+    const close = () => setCtx(null);
+    window.addEventListener("mousedown", close);
+    window.addEventListener("scroll", close, { capture: true, passive: true });
+    return () => { window.removeEventListener("mousedown", close); window.removeEventListener("scroll", close, { capture: true }); };
+  }, [ctx]);
+  const onStageContext = (e: React.MouseEvent) => {
+    if (previewMode) return;
+    const target = e.target as HTMLElement;
+    const textEl = target.closest<HTMLElement>("[data-bw-text]");
+    const imgEl = target.closest<HTMLElement>("[data-bw-image]");
+    const btnEl = target.closest<HTMLElement>("[data-bw-btn]");
+    /* 섹션 = 킷 트리 최상위 그룹 — 조상의 data-bw-node(편집기에서만 붙는다)로 찾는다 */
+    const sectionIds = new Set((meta?.root.ch ?? []).map((n) => n.id).filter(Boolean) as string[]);
+    let secId: string | null = null;
+    for (let el: HTMLElement | null = target; el; el = el.parentElement) {
+      const nid = el.dataset?.bwNode;
+      if (nid && sectionIds.has(nid)) { secId = nid; break; }
+    }
+    const entries: Array<{ label: string; danger?: boolean; act: () => void }> = [];
+    if (textEl) {
+      const id = textEl.dataset.bwText!;
+      entries.push({ label: "글 고치기", act: () => pickText(id, textEl) });
+      entries.push({ label: "이 글 숨기기", danger: true, act: () => hide(id) });
+    }
+    if (imgEl) {
+      const id = imgEl.dataset.bwImage!;
+      entries.push({ label: "사진 바꾸기", act: () => pickImage(id) });
+      entries.push({ label: "이 사진 숨기기", danger: true, act: () => hide(id) });
+    }
+    if (btnEl && !textEl) {
+      const id = btnEl.dataset.bwBtn!;
+      entries.push({ label: "버튼 설정", act: () => pickButton(id) });
+      entries.push({ label: "이 버튼 숨기기", danger: true, act: () => hide(id) });
+    }
+    if (secId) entries.push({ label: "섹션 통째로 숨기기", danger: true, act: () => hide(secId!) });
+    if (!entries.length) return;
+    e.preventDefault();
+    setCtx({ x: Math.min(e.clientX, window.innerWidth - 190), y: Math.min(e.clientY, window.innerHeight - entries.length * 40 - 16), entries });
+  };
+
   /* 사진 자리 — 파일 고르기 */
   const pickImage = (id: string) => { finishText(); setMenu(null); pendingImage.current = id; fileRef.current?.click(); };
   const onFile = async (file?: File) => {
@@ -294,17 +362,17 @@ export function BrainwaveEditor({
     if (dirty && !window.confirm("페이지를 바꾸면 이 페이지에서 고친 글·사진은 사라집니다. 바꿀까요?")) return;
     finishText();
     setMenu(null);
-    commit({ texts: {}, images: {}, links: {}, sizes: {} });
+    commit({ texts: {}, images: {}, links: {}, sizes: {}, hidden: [] });
     setSizeTarget(null);
     setPage(next);
   };
 
   const save = () => {
     const final = finishText();
-    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes }, content: [] });
+    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden }, content: [] });
   };
 
-  const changed = Object.keys(over.texts).length + Object.keys(over.images).length + Object.keys(over.sizes).length;
+  const changed = Object.keys(over.texts).length + Object.keys(over.images).length + Object.keys(over.sizes).length + over.hidden.length;
 
   return (
     <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 에디터">
@@ -323,6 +391,11 @@ export function BrainwaveEditor({
           </button>
         </div>
         <div className="bw-editor-right">
+          {over.hidden.length ? (
+            <button type="button" className={`bw-editor-hiddenbtn ${hiddenOpen ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setHiddenOpen((v) => !v); }} title="숨긴 자리 보기">
+              <EyeOff /> {over.hidden.length}
+            </button>
+          ) : null}
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /></button>
           {projectId ? <button type="button" className={`bw-editor-ai ${ai.open ? "on" : ""}`} onClick={() => setAi((s) => ({ ...s, open: !s.open }))} title="AI 로 고치기"><Sparkles /> AI</button> : null}
@@ -441,6 +514,33 @@ export function BrainwaveEditor({
           </div>
         </aside>
       ) : null}
+      {/* 우클릭 메뉴 — Wix 식 컨텍스트 메뉴(숨기기·바로 편집) */}
+      {ctx ? (
+        <div className="bw-ctx" role="menu" style={{ left: ctx.x, top: ctx.y }} onMouseDown={(e) => e.stopPropagation()}>
+          {ctx.entries.map((en, i) => (
+            <button key={i} type="button" role="menuitem" className={en.danger ? "danger" : ""} onClick={() => { setCtx(null); en.act(); }}>{en.label}</button>
+          ))}
+        </div>
+      ) : null}
+      {/* 숨긴 자리 목록 — 복원은 여기서 */}
+      {hiddenOpen && over.hidden.length ? (
+        <aside className="bw-inspector bw-hidden-panel" role="dialog" aria-label="숨긴 자리">
+          <header>
+            <strong><EyeOff size={15} /> 숨긴 자리 {over.hidden.length}개</strong>
+            <button type="button" onClick={() => setHiddenOpen(false)} title="닫기"><X size={16} /></button>
+          </header>
+          <p className="bw-menu-hint">숨긴 자리는 지워진 게 아니라 안 보일 뿐입니다 — 언제든 복원할 수 있습니다.</p>
+          <ul className="bw-hidden-list">
+            {over.hidden.map((id) => (
+              <li key={id}>
+                <span>{hiddenLabel(id)}</span>
+                <button type="button" onClick={() => restore(id)}><RotateCcw size={13} /> 복원</button>
+              </li>
+            ))}
+          </ul>
+          <button type="button" className="bw-ins-done" onClick={() => { commit({ ...over, hidden: [] }); setHiddenOpen(false); }}>모두 복원</button>
+        </aside>
+      ) : null}
       {projectId && ai.open ? (
         <div className="bw-ai">
           <div className="bw-ai-row">
@@ -469,7 +569,7 @@ export function BrainwaveEditor({
         </div>
       ) : null}
       {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
-      <div className="bw-editor-stage" onClick={finishText}>
+      <div className="bw-editor-stage" onClick={finishText} onContextMenu={onStageContext}>
         <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view] }}>
           <BrainwavePage
             pageId={page}
@@ -527,7 +627,7 @@ export function BrainwaveEditor({
       ) : null}
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
       <p className="bw-editor-hint">
-        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 글·사진은 눌러서 고치고, 버튼은 눌러서 글자와 이동할 곳을 정합니다.</>}
+        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 글·사진은 눌러서 고치고, 마우스 오른쪽 버튼으로 숨기기(삭제)·섹션 지우기를 할 수 있습니다.</>}
         {changed ? <b> 고친 자리 {changed}개</b> : null}
       </p>
     </div>

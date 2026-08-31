@@ -75,6 +75,11 @@ export const brainwaveDataSchema = z.object({
    * 크게 벗어나면 글이 잘리므로, 디자인이 버티는 범위로 못박는다.
    */
   sizes: z.record(z.string(), z.number().min(0.7).max(1.5)).default({}),
+  /*
+   * 숨긴 자리(노드 id 목록) — '삭제'는 킷 트리를 지우는 게 아니라 안 그리는 것이다.
+   * 섹션 id 면 하위 전부가 숨고, 데스크톱은 아래 섹션들이 그만큼 올라온다.
+   */
+  hidden: z.array(z.string().max(80)).max(500).default([]),
 });
 export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
 
@@ -213,7 +218,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string,
    */
   if (!kitOverride) {
     return landingPageDataSchema.parse({
-      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {}, links: {}, sizes: {} },
+      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {}, links: {}, sizes: {}, hidden: [] },
       root: { props: { title: seed.businessName } },
       content: [],
     });

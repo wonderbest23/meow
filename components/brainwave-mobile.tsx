@@ -18,7 +18,7 @@
  */
 
 import type { ReactNode } from "react";
-import type { BrainwavePageData, BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
+import { expandHidden, type BrainwavePageData, type BrainwaveOverrides, type BrainwavePick } from "./brainwave-page";
 import { runBrainwaveButton, buttonIdFromTextId } from "../lib/landing/brainwave/button-action";
 
 type Pick = BrainwavePick;
@@ -49,11 +49,13 @@ function T({ id, t, onPick, as: Tag = "span", className }: { id: string; t: Mobi
 }
 
 function Img({ id, src, img, onPick, className, alt = "" }: { id: string; src: string; img: MobileTemplateProps["img"]; onPick?: Pick; className?: string; alt?: string }) {
+  const resolved = img(id, src);
+  if (!resolved) return null; /* 숨긴 사진 */
   return (
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={className}
-      src={img(id, src)}
+      src={resolved}
       alt={alt}
       loading="lazy"
       data-bw-image={onPick ? id : undefined}
@@ -73,6 +75,8 @@ function Section({ className, children, dark }: { className?: string; children: 
  */
 function Btn({ textId, t, links, onPick, className = "bwmob-btn", submit }: { textId: string; t: MobileTemplateProps["t"]; links?: Record<string, string>; onPick?: Pick; className?: string; submit?: boolean }) {
   const btnId = buttonIdFromTextId(textId);
+  const label = t(textId);
+  if (!label) return null; /* 숨긴 버튼 */
   return (
     <button
       type={submit && !onPick ? "submit" : "button"}
@@ -85,7 +89,7 @@ function Btn({ textId, t, links, onPick, className = "bwmob-btn", submit }: { te
         else runBrainwaveButton(links, btnId);
       }}
     >
-      {t(textId)}
+      {label}
     </button>
   );
 }
@@ -509,7 +513,9 @@ export function renderBrainwaveMobile(
   const Template = BRAINWAVE_MOBILE[page.id];
   if (!Template) return null;
   const originals = new Map(page.slots.text.map((s) => [s.id, s.text]));
-  const t = (id: string, fallback = "") => overrides?.texts?.[id] ?? originals.get(id) ?? fallback;
-  const img = (id: string, fallback: string) => overrides?.images?.[id] ?? fallback;
+  /* 숨긴 자리는 섹션 id → 하위 잎 id 전부로 펼쳐 읽는다 — 빈 값이면 T/Img/Btn 이 안 그린다 */
+  const hidden = expandHidden(page.root, overrides?.hidden);
+  const t = (id: string, fallback = "") => (hidden.has(id) ? "" : overrides?.texts?.[id] ?? originals.get(id) ?? fallback);
+  const img = (id: string, fallback: string) => (hidden.has(id) ? "" : overrides?.images?.[id] ?? fallback);
   return <Template t={t} img={img} links={overrides?.links} onPick={onPick} />;
 }
