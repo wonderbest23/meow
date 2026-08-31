@@ -564,10 +564,10 @@ const LANDING_PEEKS = [
   { id: "0-1950", name: "04 Job Site",     ko: "채용 사이트" },
 ];
 
-function HomeLandingPeek() {
+function HomeLandingPeek({ caption, secId }: { caption?: string; secId?: string }) {
   return (
-    <div className="home-peek" role="img" aria-label="홈페이지로 쓸 수 있는 Brainwave.io 킷 랜딩 페이지 열 종">
-      <p className="home-peek-cap">계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)</p>
+    <div className="home-peek" data-sc-section={secId} role="img" aria-label="홈페이지로 쓸 수 있는 Brainwave.io 킷 랜딩 페이지 열 종">
+      <p className="home-peek-cap">{caption ?? "계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)"}</p>
       <div className="home-peek-track" aria-hidden="true">
         <ul>
           {[...LANDING_PEEKS, ...LANDING_PEEKS].map((p, i) => (
@@ -595,7 +595,7 @@ function Stars({ score }: { score: number }) {
   );
 }
 
-function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: HomeReview[] }) {
+function HomeReviews({ demo = false, reviews, notice, secId }: { demo?: boolean; reviews?: HomeReview[]; notice?: string; secId?: string }) {
   const list = demo ? REVIEW_DEMO : reviews ?? [];
   if (!list.length) return null;
 
@@ -608,8 +608,8 @@ function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: Home
   const peak = Math.max(1, ...spread.map((s) => s.count));
 
   return (
-    <div className="home-reviews" aria-label="사용자 후기">
-      {demo && <p className="home-reviews-demo">디자인 확인용 예시입니다. 실제 후기가 아닙니다.</p>}
+    <div className="home-reviews" data-sc-section={secId} aria-label="사용자 후기">
+      {demo && <p className="home-reviews-demo">{notice ?? "디자인 확인용 예시입니다. 실제 후기가 아닙니다."}</p>}
       <div className="home-reviews-summary">
         <div className="home-reviews-score">
           <strong>{average.toFixed(1)}</strong>
@@ -844,7 +844,7 @@ function Home({
             <div className="home-hero-actions">
               <button type="button" className="hero-search" onClick={openConsult} aria-label="창업 상담 열기">
                 <Search aria-hidden="true" />
-                <span>궁금한 창업, 무엇이든 물어보세요</span>
+                <span>{sc("hero.search", "궁금한 창업, 무엇이든 물어보세요")}</span>
               </button>
             </div>
           </div>
@@ -930,8 +930,8 @@ function Home({
               <span className="demo-cursor"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 3l14 8-6.5 1.5L9 19z" fill="#0d0a2c" stroke="#fff" strokeWidth="1.5" /></svg></span>
             </div>
           </div>
-          {reviewDemo && <HomeReviews demo />}
-          {reviewDemo && <HomeLandingPeek />}
+          {reviewDemo && !scHidden("reviews") && <HomeReviews demo secId="reviews" notice={sc("reviews.notice", "디자인 확인용 예시입니다. 실제 후기가 아닙니다.")} />}
+          {reviewDemo && !scHidden("peek") && <HomeLandingPeek secId="peek" caption={sc("peek.caption", "계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)")} />}
         </section>
       </div>
 
