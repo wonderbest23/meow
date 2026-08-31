@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, LayoutTemplate, LoaderCircle, Monitor, Pencil, Redo2, Save, Smartphone, Sparkles, Undo2, X } from "lucide-react";
+import { Eye, LayoutTemplate, LoaderCircle, Monitor, Pencil, Redo2, Save, Smartphone, Sparkles, Type, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
@@ -59,15 +59,6 @@ export function BrainwaveEditor({
   /* 미리보기 — 손님이 보는 그대로(테두리·클릭 없음) */
   const [previewMode, setPreviewMode] = useState(false);
 
-  /* 편집 중 스크롤하면 크기 토글이 글자를 따라간다 */
-  useEffect(() => {
-    if (!editing) return;
-    const follow = () => placeSizePop(editing.el);
-    window.addEventListener("scroll", follow, { capture: true, passive: true });
-    window.addEventListener("resize", follow);
-    return () => { window.removeEventListener("scroll", follow, { capture: true }); window.removeEventListener("resize", follow); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing]);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingImage = useRef<string | null>(null);
@@ -120,7 +111,10 @@ export function BrainwaveEditor({
   const undo = () => { const prev = history.at(-1); if (!prev) return; setHistory((h) => h.slice(0, -1)); setFuture((f) => [over, ...f]); setOver(prev); };
   const redo = () => { const nxt = future[0]; if (!nxt) return; setFuture((f) => f.slice(1)); setHistory((h) => [...h, over]); setOver(nxt); };
 
-  /* 글 자리 — 그 자리에서 고친다 */
+  /*
+   * 글 자리 — 그 자리에서 고친다. 고르는 순간 오른쪽에 텍스트 판이 떠서
+   * 내용·크기를 세세하게 만질 수 있다(화면의 글자와 양방향으로 같이 움직인다).
+   */
   const pickText = (id: string, el: HTMLElement) => {
     if (editing?.el === el) return;
     finishText();
@@ -128,17 +122,33 @@ export function BrainwaveEditor({
     el.focus();
     setEditing({ id, el });
     setSizeTarget(id);
-    placeSizePop(el);
+    setDraftText(el.innerText);
+    histPushed.current = false;
+    el.oninput = () => setDraftText(el.innerText);
   };
-  /* 크기 토글은 고른 글자 바로 위에 뜬다 — 화면 어딘가의 고정 줄이 아니라 */
-  const [sizePop, setSizePop] = useState<{ x: number; y: number } | null>(null);
-  const placeSizePop = (el: HTMLElement) => {
-    const r = el.getBoundingClientRect();
-    setSizePop({ x: Math.min(Math.max(r.left + r.width / 2, 120), window.innerWidth - 120), y: Math.max(r.top, 96) });
+  /* 텍스트 판의 내용 칸 — 화면의 글자와 같은 값을 비춘다 */
+  const [draftText, setDraftText] = useState("");
+  /* 판에서 한 글자라도 고치면 그 편집 전 상태를 한 번만 히스토리에 넣는다(타자마다 쌓지 않게) */
+  const histPushed = useRef(false);
+  /*
+   * 판의 내용 칸으로 고칠 때는 DOM 을 직접 만지지 않는다 — innerText 대입은
+   * React 가 아는 텍스트 노드를 갈아치워 다음 렌더에서 removeChild 오류가 난다.
+   * 오버라이드 상태로 흘려 React 가 그리게 한다(같은 요소라 editing.el 은 유지).
+   */
+  const typeInPanel = (value: string) => {
+    if (!editing) return;
+    setDraftText(value);
+    if (!histPushed.current) { histPushed.current = true; setHistory((h) => [...h.slice(-40), over]); setFuture([]); }
+    const original = meta?.slots.text.find((t) => t.id === editing.id)?.text ?? "";
+    setOver((o) => {
+      const texts = { ...o.texts };
+      if (value === original) delete texts[editing.id]; else texts[editing.id] = value;
+      return { ...o, texts };
+    });
   };
   /*
-   * 글씨 크기 프리셋 — 마지막으로 고른 글 자리에 적용된다.
-   * 자유 크기가 아니라 네 단이다: 킷 칸은 절대좌표라 크게 벗어나면 잘린다.
+   * 글씨 크기 — 마지막으로 고른 글 자리에 적용된다.
+   * 프리셋 네 단 + 미세 슬라이더(70~150%). 킷 칸은 절대좌표라 그 밖은 잘린다.
    */
   const [sizeTarget, setSizeTarget] = useState<string | null>(null);
   const SIZE_STEPS: Array<[number, string]> = [[0.85, "작게"], [1, "보통"], [1.15, "크게"], [1.3, "더 크게"]];
@@ -147,7 +157,6 @@ export function BrainwaveEditor({
     const sizes = { ...over.sizes };
     if (scale === 1) delete sizes[sizeTarget]; else sizes[sizeTarget] = scale;
     commit({ ...over, sizes });
-    if (editing) requestAnimationFrame(() => placeSizePop(editing.el));
   };
   /* 고치던 글을 마무리하고, 반영된 값을 돌려준다 — 저장 때 setState 가 늦어
      옛 값을 저장하는 일이 있었다 */
@@ -155,13 +164,14 @@ export function BrainwaveEditor({
     if (!editing) return over;
     const { id, el } = editing;
     el.contentEditable = "false";
+    el.oninput = null;
     const text = el.innerText;
     const original = meta?.slots.text.find((t) => t.id === id)?.text ?? "";
     const next = { ...over, texts: { ...over.texts } };
     if (text === original) delete next.texts[id]; else next.texts[id] = text;
     setEditing(null);
-    setSizePop(null);
     setSizeTarget(null);
+    histPushed.current = false;
     if (JSON.stringify(next.texts) !== JSON.stringify(over.texts)) { commit(next); return next; }
     return over;
   };
@@ -255,17 +265,47 @@ export function BrainwaveEditor({
         </div>
       </header>
       {error ? <p className="bw-editor-error">{error}</p> : null}
-      {!previewMode && sizeTarget && sizePop ? (
-        <div className="bw-size-pop" role="group" aria-label="글씨 크기" style={{ left: sizePop.x, top: sizePop.y }} onMouseDown={(e) => e.preventDefault()}>
-          {SIZE_STEPS.map(([scale, label]) => (
-            <button
-              key={scale}
-              type="button"
-              className={(over.sizes[sizeTarget] ?? 1) === scale ? "on" : ""}
-              onClick={(e) => { e.stopPropagation(); applySize(scale); }}
-            >{label}</button>
-          ))}
-        </div>
+      {/* 텍스트 판 — 글자를 고르면 오른쪽에 떠서 내용·크기를 세세하게 고친다(Wix 식 도킹 패널) */}
+      {!previewMode && editing && sizeTarget ? (
+        <aside className="bw-inspector" role="dialog" aria-label="텍스트 편집">
+          <header>
+            <strong><Type size={15} /> 텍스트</strong>
+            <button type="button" onClick={finishText} title="닫기"><X size={16} /></button>
+          </header>
+          <label className="bw-ins-field">
+            <span>내용</span>
+            <textarea
+              value={draftText}
+              rows={Math.min(6, Math.max(2, draftText.split("\n").length + 1))}
+              maxLength={2000}
+              onChange={(e) => typeInPanel(e.target.value)}
+            />
+            <small>화면의 글자를 직접 눌러 고쳐도 됩니다.</small>
+          </label>
+          <div className="bw-ins-field">
+            <span>글씨 크기 <b>{Math.round((over.sizes[sizeTarget] ?? 1) * 100)}%</b></span>
+            <input
+              type="range"
+              min={70}
+              max={150}
+              step={5}
+              value={Math.round((over.sizes[sizeTarget] ?? 1) * 100)}
+              onChange={(e) => applySize(Number(e.target.value) / 100)}
+              aria-label="글씨 크기(%)"
+            />
+            <div className="bw-ins-steps" role="group" aria-label="크기 프리셋">
+              {SIZE_STEPS.map(([scale, label]) => (
+                <button
+                  key={scale}
+                  type="button"
+                  className={(over.sizes[sizeTarget] ?? 1) === scale ? "on" : ""}
+                  onClick={() => applySize(scale)}
+                >{label}</button>
+              ))}
+            </div>
+          </div>
+          <button type="button" className="bw-ins-done" onClick={finishText}>완료</button>
+        </aside>
       ) : null}
       {projectId && ai.open ? (
         <div className="bw-ai">

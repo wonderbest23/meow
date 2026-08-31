@@ -14727,7 +14727,14 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-canvas :where(p, div, span, img), .bw-mobile :where(p, div, span, img) { margin: 0; padding: 0; box-sizing: border-box; }
 .bw-canvas p, .bw-mobile p { white-space: pre-wrap; }
 .bw-canvas img, .bw-mobile img { display: block; }
-.bw-loading { min-height: 320px; background: linear-gradient(90deg, #f4f7fa 25%, #eceff4 37%, #f4f7fa 63%); background-size: 400% 100%; animation: bw-shimmer 1.2s ease infinite; }
+/* 불러오는 중 — 흰 바탕에 워드마크와 진행 막대만(Wix 로딩을 본뜬 간결형) */
+.bw-loading { min-height: 320px; background: #fff; display: grid; place-content: center; justify-items: center; gap: 26px; }
+.bw-loading-word { font-size: clamp(24px, 4vw, 34px); letter-spacing: .04em; color: #161c2d; font-weight: 300; }
+.bw-loading-word b { font-weight: 800; }
+.bw-loading-bar { position: relative; width: min(340px, 60vw); height: 6px; border-radius: 999px; background: #e8eaf1; overflow: hidden; }
+.bw-loading-bar i { position: absolute; inset: 0 auto 0 0; width: 42%; border-radius: inherit; background: linear-gradient(90deg, #7aa5ff, #473bf0); animation: bwLoadSlide 1.3s ease-in-out infinite; }
+@keyframes bwLoadSlide { from { transform: translateX(-110%); } to { transform: translateX(340%); } }
+@media (prefers-reduced-motion: reduce) { .bw-loading-bar i { animation: none; width: 100%; } }
 @keyframes bw-shimmer { from { background-position: 100% 0 } to { background-position: 0 0 } }
 .bw-error { padding: 24px; color: #b91c1c; }
 
@@ -14756,8 +14763,9 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-editor-canvas [data-bw-btn] { cursor: pointer; }
 .bw-editor-canvas [data-bw-btn]:hover { outline: 3px solid #68d585; outline-offset: 2px; border-radius: 6px; }
 
-/* 버튼 설정 판 — 화면 아래 시트 */
-.bw-btn-panel { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 80; width: min(460px, calc(100vw - 20px)); padding: 16px; border-radius: 14px; background: #fff; box-shadow: 0 18px 60px rgba(22, 28, 45, .3); display: grid; gap: 12px; }
+/* 버튼 설정 판 — 텍스트 판과 같은 자리(오른쪽 도킹), 폰에서는 아래 시트 */
+.bw-btn-panel { position: fixed; top: 64px; right: 14px; z-index: 90; width: min(320px, calc(100vw - 28px)); max-height: calc(100dvh - 130px); overflow: auto; padding: 16px; border-radius: 14px; background: #fff; border: 1px solid #e3e6ee; box-shadow: 0 18px 60px rgba(22, 28, 45, .22); display: grid; gap: 12px; animation: bwInsIn .18s ease backwards; }
+@media (max-width: 640px) { .bw-btn-panel { top: auto; right: 10px; left: 10px; bottom: 10px; width: auto; max-height: 60dvh; } }
 .bw-btn-panel > strong { font-size: 15px; }
 .bw-btn-opts { display: grid; gap: 8px; }
 .bw-btn-opts label { display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
@@ -16362,52 +16370,75 @@ button.account-kakao-btn svg { display: inline-block !important; }
 }
 .hk-fold-save button:disabled { opacity: .5; cursor: default; }
 
-/* 에디터 — 글씨 크기 프리셋 바 */
-.bw-size-bar {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 7px 16px;
+/*
+ * 텍스트 판 — 글자를 고르면 오른쪽에 뜨는 도킹 패널(Wix 인스펙터 식).
+ * 화면 글자와 양방향으로 이어져, 내용은 여기서든 그 자리에서든 고칠 수 있다.
+ */
+.bw-inspector {
+  position: fixed;
+  top: 64px;
+  right: 14px;
+  z-index: 90;
+  width: min(296px, calc(100vw - 28px));
+  max-height: calc(100dvh - 130px);
+  overflow: auto;
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border-radius: 14px;
   background: #fff;
-  border-bottom: 1px solid #e3e6ee;
+  border: 1px solid #e3e6ee;
+  box-shadow: 0 18px 60px rgba(22, 28, 45, .22);
+  animation: bwInsIn .18s ease backwards;
 }
-.bw-size-bar span { color: #5d6270; font-size: 12.5px; font-weight: 700; margin-right: 4px; }
-.bw-size-bar button {
-  min-height: 28px;
-  padding: 0 11px;
+@keyframes bwInsIn { from { opacity: 0; transform: translateX(10px); } }
+.bw-inspector > header { display: flex; align-items: center; justify-content: space-between; }
+.bw-inspector > header strong { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; color: #161c2d; }
+.bw-inspector > header button { border: 0; background: transparent; color: #5d6270; cursor: pointer; padding: 4px; display: grid; place-items: center; border-radius: 8px; }
+.bw-inspector > header button:hover { background: #f1f3f8; color: #161c2d; }
+.bw-ins-field { display: grid; gap: 7px; }
+.bw-ins-field > span { font-size: 12.5px; font-weight: 700; color: #5d6270; display: flex; justify-content: space-between; align-items: baseline; }
+.bw-ins-field > span b { color: #473bf0; font-size: 12.5px; }
+.bw-ins-field textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 9px 11px;
   border: 1px solid #dfe3ea;
-  border-radius: 999px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #161c2d;
+}
+.bw-ins-field textarea:focus { outline: 2px solid #473bf0; outline-offset: -1px; }
+.bw-ins-field small { color: #8e93a4; font-size: 11.5px; }
+.bw-ins-field input[type="range"] { width: 100%; accent-color: #473bf0; }
+.bw-ins-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+.bw-ins-steps button {
+  min-height: 30px;
+  padding: 0 2px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
   background: #fff;
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   color: #3d3a52;
   cursor: pointer;
-}
-.bw-size-bar button.on { border-color: #473bf0; background: #473bf0; color: #fff; }
-
-/* 글씨 크기 토글 — 고른 글자 바로 위에 뜨는 말풍선(고정 줄 아님) */
-.bw-size-pop {
-  position: fixed;
-  transform: translate(-50%, calc(-100% - 10px));
-  z-index: 90;
-  display: flex;
-  gap: 4px;
-  padding: 5px;
-  border-radius: 999px;
-  background: #161c2d;
-  box-shadow: 0 10px 30px rgba(22, 28, 45, .35);
-}
-.bw-size-pop button {
-  min-height: 28px;
-  padding: 0 11px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: #c9cede;
-  font-size: 12.5px;
-  font-weight: 700;
   white-space: nowrap;
+}
+.bw-ins-steps button.on { border-color: #473bf0; background: #473bf0; color: #fff; }
+.bw-ins-done {
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: #161c2d;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
   cursor: pointer;
 }
-.bw-size-pop button:hover { color: #fff; }
-.bw-size-pop button.on { background: #473bf0; color: #fff; }
+/* 폰에서는 아래 시트로 — 오른쪽에 둘 자리가 없다 */
+@media (max-width: 640px) {
+  .bw-inspector { top: auto; right: 10px; left: 10px; bottom: 10px; width: auto; max-height: 46dvh; }
+  @keyframes bwInsIn { from { opacity: 0; transform: translateY(12px); } }
+}

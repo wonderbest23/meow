@@ -431,6 +431,13 @@ export function BrainwavePage({ pageId, overrides, onPick, className, preloaded,
     return () => { live = false; };
   }, [pageId, preloaded]);
   if (err) return <p className="bw-error">페이지를 불러오지 못했습니다: {err}</p>;
-  if (!page) return <div className="bw-loading" aria-busy="true" />;
+  /* 불러오는 동안 — 회색 껍데기 대신 워드마크 + 진행 막대 하나(간결하게) */
+  if (!page)
+    return (
+      <div className="bw-loading" aria-busy="true" role="status" aria-label="페이지를 불러오는 중">
+        <span className="bw-loading-word"><b>오늘</b>창업</span>
+        <span className="bw-loading-bar" aria-hidden="true"><i /></span>
+      </div>
+    );
   return <BrainwaveStage page={page} overrides={overrides} onPick={onPick} className={className} mode={mode} />;
 }
