@@ -609,7 +609,6 @@ function HomeReviews({ demo = false, reviews, notice, noticeOff, secId }: { demo
 
   return (
     <div className="home-reviews" data-sc-section={secId} aria-label="사용자 후기">
-      {demo && !noticeOff && <p className="home-reviews-demo" data-sc-field="reviews.notice">{notice ?? "디자인 확인용 예시입니다. 실제 후기가 아닙니다."}</p>}
       <div className="home-reviews-summary">
         <div className="home-reviews-score">
           <strong>{average.toFixed(1)}</strong>
@@ -647,6 +646,8 @@ function HomeReviews({ demo = false, reviews, notice, noticeOff, secId }: { demo
           ))}
         </ul>
       </div>
+      {/* 시연 고지 — 후기 아래 작은 회색 한 줄(사용자 요청: 테두리 없이, 맨 아래) */}
+      {demo && !noticeOff && <p className="home-reviews-demo" data-sc-field="reviews.notice">{notice ?? "디자인 확인용 예시입니다. 실제 후기가 아닙니다."}</p>}
     </div>
   );
 }
