@@ -16437,6 +16437,45 @@ button.account-kakao-btn svg { display: inline-block !important; }
   font-weight: 700;
   cursor: pointer;
 }
+/*
+ * 전역 `button:not(.plan-ui *) svg { display:none }` 가 에디터 버튼 아이콘까지
+ * 숨겼다(되돌리기·다시·닫기·휴지통이 빈 네모로 보였다) — 에디터 안에서는 되살린다.
+ */
+.landing-visual-builder button svg { display: inline-block !important; }
+
+/* 메뉴 판 — 항목 줄(이름·이동·삭제)과 URL 칸 */
+.bw-menu-hint { margin: 0; font-size: 12px; line-height: 1.5; color: #8e93a4; }
+.bw-menu-item { display: grid; gap: 6px; }
+.bw-menu-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px; }
+.bw-menu-row input, .bw-menu-row select, .bw-menu-url {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  font-size: 13px;
+  background: #fff;
+  color: #161c2d;
+  min-width: 0;
+}
+.bw-menu-row select { padding-right: 26px; }
+.bw-menu-row > button { border: 1px solid #dfe3ea; border-radius: 8px; background: #fff; color: #8e93a4; cursor: pointer; padding: 0 9px; display: grid; place-items: center; }
+.bw-menu-row > button:disabled { opacity: .35; cursor: default; }
+.bw-menu-row > button:hover:not(:disabled) { color: #d64545; border-color: #eab8b8; }
+.bw-menu-add {
+  min-height: 34px;
+  border: 1px dashed #c9cede;
+  border-radius: 8px;
+  background: #fff;
+  color: #473bf0;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.bw-menu-panel .bw-btn-actions button:disabled { opacity: .5; cursor: default; }
 /* 폰에서는 아래 시트로 — 오른쪽에 둘 자리가 없다 */
 @media (max-width: 640px) {
   .bw-inspector { top: auto; right: 10px; left: 10px; bottom: 10px; width: auto; max-height: 46dvh; }

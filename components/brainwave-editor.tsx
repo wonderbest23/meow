@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, LayoutTemplate, LoaderCircle, Monitor, Pencil, Redo2, Save, Smartphone, Sparkles, Type, Undo2, X } from "lucide-react";
+import { Eye, LayoutTemplate, List, LoaderCircle, Monitor, Pencil, Plus, Redo2, Save, Smartphone, Sparkles, Trash2, Type, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { BrainwavePage, loadBrainwavePage, type BrainwavePageData } from "./brainwave-page";
+import { BrainwavePage, loadBrainwavePage, menuItemsOf, type BrainwavePageData } from "./brainwave-page";
 import { resizeImage, uploadImage } from "./landing-media-field";
 
 /*
@@ -118,6 +118,24 @@ export function BrainwaveEditor({
   const pickText = (id: string, el: HTMLElement) => {
     if (editing?.el === el) return;
     finishText();
+    /*
+     * 머리글의 가로 메뉴 줄이면 그 자리 편집 대신 메뉴 판을 연다 —
+     * 항목 이름과 '누르면 어디로'를 항목별로 정한다(Wix 메뉴 관리 식).
+     */
+    const current = over.texts[id] ?? meta?.slots.text.find((t) => t.id === id)?.text ?? el.innerText;
+    const items = menuItemsOf(current);
+    if (items) {
+      setMenu({
+        id,
+        items: items.map((name, i) => {
+          const saved = over.links[`${id}@${i}`] ?? "none";
+          const mode = saved === "none" || saved === "contact" ? saved : "url";
+          return { name, mode, url: mode === "url" ? saved : "" };
+        }),
+      });
+      return;
+    }
+    setMenu(null);
     el.contentEditable = "plaintext-only";
     el.focus();
     setEditing({ id, el });
@@ -184,6 +202,7 @@ export function BrainwaveEditor({
   const [btn, setBtn] = useState<BtnPanel | null>(null);
   const pickButton = (id: string) => {
     finishText();
+    setMenu(null);
     const textSlot = meta?.slots.text.find((s) => s.id.startsWith(`I${id};`)) ?? null;
     const label = textSlot ? over.texts[textSlot.id] ?? textSlot.text : "";
     const saved = over.links[id] ?? "contact";
@@ -206,8 +225,36 @@ export function BrainwaveEditor({
     setBtn(null);
   };
 
+  /*
+   * 메뉴 판 — 머리글의 가로 메뉴 줄을 눌렀을 때. 항목별 이름·링크를 정한다.
+   * 항목은 3~6개(3개 밑으로 줄면 메뉴 줄로 인식되지 않아 링크가 죽는다),
+   * 이름은 8자까지(같은 이유 — 모바일 숨김 판정과 기준을 공유한다).
+   */
+  const [menu, setMenu] = useState<{ id: string; items: Array<{ name: string; mode: "none" | "contact" | "url"; url: string }> } | null>(null);
+  const applyMenu = () => {
+    if (!menu) return;
+    const kept = menu.items.filter((m) => m.name.trim());
+    if (kept.length < 3) return;
+    /* 간격은 지금 글의 공백을 그대로 살리고, 모자라면 4칸으로 잇는다 */
+    const current = over.texts[menu.id] ?? meta?.slots.text.find((t) => t.id === menu.id)?.text ?? "";
+    const seps = current.match(/\s{4,}/g) ?? [];
+    const joined = kept.map((m, i) => (i ? (seps[i - 1] ?? "    ") + m.name.trim() : m.name.trim())).join("");
+    const original = meta?.slots.text.find((t) => t.id === menu.id)?.text ?? "";
+    const texts = { ...over.texts };
+    if (joined === original) delete texts[menu.id]; else texts[menu.id] = joined;
+    const links = { ...over.links };
+    for (const k of Object.keys(links)) if (k.startsWith(`${menu.id}@`)) delete links[k];
+    kept.forEach((m, i) => {
+      const url = m.url.trim();
+      const v = m.mode !== "url" ? m.mode : /^(https?:\/\/|tel:|mailto:)/i.test(url) ? url : url ? `https://${url}` : "";
+      if (v && v !== "none") links[`${menu.id}@${i}`] = v;
+    });
+    commit({ ...over, texts, links });
+    setMenu(null);
+  };
+
   /* 사진 자리 — 파일 고르기 */
-  const pickImage = (id: string) => { finishText(); pendingImage.current = id; fileRef.current?.click(); };
+  const pickImage = (id: string) => { finishText(); setMenu(null); pendingImage.current = id; fileRef.current?.click(); };
   const onFile = async (file?: File) => {
     const id = pendingImage.current;
     if (!file || !id) return;
@@ -228,6 +275,7 @@ export function BrainwaveEditor({
     const dirty = Object.keys(over.texts).length + Object.keys(over.images).length > 0;
     if (dirty && !window.confirm("페이지를 바꾸면 이 페이지에서 고친 글·사진은 사라집니다. 바꿀까요?")) return;
     finishText();
+    setMenu(null);
     commit({ texts: {}, images: {}, links: {}, sizes: {} });
     setSizeTarget(null);
     setPage(next);
@@ -252,7 +300,7 @@ export function BrainwaveEditor({
             <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC 화면"><Monitor size={15} /> PC</button>
             <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일 화면"><Smartphone size={15} /> 모바일</button>
           </div>
-          <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} title={previewMode ? "편집으로" : "미리보기"} onClick={() => { finishText(); setPreviewMode((v) => !v); }}>
+          <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} title={previewMode ? "편집으로" : "미리보기"} onClick={() => { finishText(); setMenu(null); setPreviewMode((v) => !v); }}>
             {previewMode ? <><Pencil size={14} /><span className="bw-editor-pick-x"> 편집으로</span></> : <><Eye size={14} /><span className="bw-editor-pick-x"> 미리보기</span></>}
           </button>
         </div>
@@ -305,6 +353,61 @@ export function BrainwaveEditor({
             </div>
           </div>
           <button type="button" className="bw-ins-done" onClick={finishText}>완료</button>
+        </aside>
+      ) : null}
+      {/* 메뉴 판 — 머리글 가로 메뉴를 누르면 항목별 이름·링크를 정한다(Wix 메뉴 관리 식) */}
+      {!previewMode && menu ? (
+        <aside className="bw-inspector bw-menu-panel" role="dialog" aria-label="메뉴 관리">
+          <header>
+            <strong><List size={15} /> 메뉴 관리</strong>
+            <button type="button" onClick={() => setMenu(null)} title="닫기"><X size={16} /></button>
+          </header>
+          <p className="bw-menu-hint">항목 이름(8자까지)과 누르면 갈 곳을 정합니다. 모바일 화면에는 가로 메뉴가 표시되지 않습니다.</p>
+          {menu.items.map((m, i) => (
+            <div className="bw-menu-item" key={i}>
+              <div className="bw-menu-row">
+                <input
+                  value={m.name}
+                  maxLength={8}
+                  aria-label={`메뉴 ${i + 1} 이름`}
+                  onChange={(e) => { const items = [...menu.items]; items[i] = { ...m, name: e.target.value.replace(/\s+/g, " ") }; setMenu({ ...menu, items }); }}
+                />
+                <select
+                  value={m.mode}
+                  aria-label={`메뉴 ${i + 1} 이동`}
+                  onChange={(e) => { const items = [...menu.items]; items[i] = { ...m, mode: e.target.value as "none" | "contact" | "url" }; setMenu({ ...menu, items }); }}
+                >
+                  <option value="none">이동 없음</option>
+                  <option value="contact">문의 양식</option>
+                  <option value="url">주소(URL)</option>
+                </select>
+                <button
+                  type="button"
+                  title={menu.items.length <= 3 ? "메뉴는 3개까지 줄일 수 있습니다" : "삭제"}
+                  disabled={menu.items.length <= 3}
+                  onClick={() => setMenu({ ...menu, items: menu.items.filter((_, j) => j !== i) })}
+                ><Trash2 size={14} /></button>
+              </div>
+              {m.mode === "url" ? (
+                <input
+                  className="bw-menu-url"
+                  placeholder="예: https://smartstore.naver.com/…"
+                  maxLength={600}
+                  value={m.url}
+                  onChange={(e) => { const items = [...menu.items]; items[i] = { ...m, url: e.target.value }; setMenu({ ...menu, items }); }}
+                />
+              ) : null}
+            </div>
+          ))}
+          {menu.items.length < 6 ? (
+            <button type="button" className="bw-menu-add" onClick={() => setMenu({ ...menu, items: [...menu.items, { name: "메뉴", mode: "none", url: "" }] })}>
+              <Plus size={14} /> 항목 추가
+            </button>
+          ) : null}
+          <div className="bw-btn-actions">
+            <button type="button" onClick={() => setMenu(null)}>취소</button>
+            <button type="button" className="bw-btn-apply" onClick={applyMenu} disabled={menu.items.filter((m) => m.name.trim()).length < 3}>적용</button>
+          </div>
         </aside>
       ) : null}
       {projectId && ai.open ? (

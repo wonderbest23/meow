@@ -48,6 +48,18 @@ export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Reco
 /** 편집기에서 자리를 눌렀을 때 — button 은 버튼 링크·글자 판을 연다 */
 export type BrainwavePick = (kind: "text" | "image" | "button", id: string, el: HTMLElement) => void;
 
+/*
+ * 머리글의 가로 메뉴 줄 — "Demos    Pages    Support    Contact"처럼 짧은
+ * 낱말들을 넓은 공백(4칸 이상)으로 벌린 글 노드. 모바일에서 이 줄을 숨기는
+ * 판정과 같은 기준이다. 편집기는 이 줄에 메뉴 판(항목 이름·링크)을 열고,
+ * 공개 화면은 항목마다 links["노드id@번호"] 대로 누를 수 있게 span 으로 감싼다.
+ */
+export function menuItemsOf(text: string): string[] | null {
+  if (!text || text.includes("\n")) return null;
+  const tokens = text.split(/\s{4,}/).map((t) => t.trim()).filter(Boolean);
+  return tokens.length >= 3 && tokens.every((t) => t.length <= 8) ? tokens : null;
+}
+
 
 /* 킷 글꼴 Gilroy 는 한글이 없다 — Pretendard 로 받친다. 크기·자간·줄간은 킷 값 그대로. */
 const FONT_FALLBACK: Record<string, string> = {
@@ -119,9 +131,37 @@ export function BrainwaveNodeView({
     : undefined;
   /* 태그는 div/p/span 뿐이다 — 타입은 div 로 둔다 */
   const Tag = (["div", "p", "span"].includes(node.tag) ? node.tag : "div") as "div";
-  const children: ReactNode = text !== undefined && text !== false
-    ? text
-    : node.ch?.map((c, i) => <BrainwaveNodeView key={i} node={c} overrides={overrides} parentId={id} onPick={onPick} inButton={inButton || isButton} />);
+  /*
+   * 메뉴 줄이면 항목을 span 으로 감싼다 — 글자·공백은 원문 그대로라 픽셀이 안
+   * 변하고, 공개 화면에서 링크가 걸린 항목만 눌린다(없으면 장식 그대로).
+   */
+  const rawText = hasText && node.id && !inButton && !isButton
+    ? (typeof text === "string" ? text : (node.ch ?? []).every((c) => c.tag === "#") ? (node.ch ?? []).map((c) => c.text ?? "").join("") : "")
+    : "";
+  const menu = rawText ? menuItemsOf(rawText) : null;
+  let menuIdx = -1;
+  const children: ReactNode = menu
+    ? rawText.split(/(\s{4,})/).map((part, i) => {
+        if (!part.trim()) return part;
+        menuIdx += 1;
+        const key = `${node.id}@${menuIdx}`;
+        const link = overrides?.links?.[key];
+        const live = !onPick && link && link !== "none";
+        return (
+          <span
+            key={i}
+            data-bw-mi={menuIdx}
+            role={live ? "link" : undefined}
+            tabIndex={live ? 0 : undefined}
+            style={live ? { cursor: "pointer" } : undefined}
+            onClick={live ? (e) => { e.stopPropagation(); runBrainwaveButton(overrides?.links, key); } : undefined}
+            onKeyDown={live ? (e) => { if (e.key === "Enter") runBrainwaveButton(overrides?.links, key); } : undefined}
+          >{part}</span>
+        );
+      })
+    : text !== undefined && text !== false
+      ? text
+      : node.ch?.map((c, i) => <BrainwaveNodeView key={i} node={c} overrides={overrides} parentId={id} onPick={onPick} inButton={inButton || isButton} />);
   /*
    * 글씨 크기 배율(프리셋).
    *
