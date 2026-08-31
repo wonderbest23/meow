@@ -69,6 +69,12 @@ export const brainwaveDataSchema = z.object({
    * "none" 은 아무 동작 없음, 그 밖은 주소(https/tel/mailto)다.
    */
   links: z.record(z.string(), z.string().max(600)).default({}),
+  /*
+   * 글 자리 id → 글씨 크기 배율.
+   * 자유 크기가 아니라 프리셋(0.85·1.15·1.3)만 쓴다 — 킷의 절대좌표 칸을
+   * 크게 벗어나면 글이 잘리므로, 디자인이 버티는 범위로 못박는다.
+   */
+  sizes: z.record(z.string(), z.number().min(0.7).max(1.5)).default({}),
 });
 export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
 
@@ -207,7 +213,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string,
    */
   if (!kitOverride) {
     return landingPageDataSchema.parse({
-      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {}, links: {} },
+      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {}, links: {}, sizes: {} },
       root: { props: { title: seed.businessName } },
       content: [],
     });

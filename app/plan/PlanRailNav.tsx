@@ -119,6 +119,53 @@ export default function PlanRailNav() {
     currentSectionKey(pathname) !== null;
   if (!insidePlan) return null;
 
+  /*
+   * 홈페이지 화면에서는 플랜 챕터 목차 대신 '홈페이지 편집 목차'를 보여 준다.
+   * 홈페이지를 고치러 온 사람에게 사업계획서 챕터 일곱 줄은 지금 할 일이
+   * 아니다(사용자 지적). 항목을 누르면 그 칸으로 스크롤하고, 접이식이면 펼친다.
+   */
+  if (pathname.startsWith("/plan/homepage")) {
+    const activeTitle = plans.find((p) => p.id === state.activePlanId)?.title ?? "내 플랜";
+    const jump = (id: string) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el instanceof HTMLDetailsElement) el.open = true;
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
+    const items: Array<[string, string]> = [
+      ["hk-preview", "미리보기·에디터"],
+      ["hk-business", "사업자 정보"],
+      ["hk-domain", "내 도메인 연결"],
+      ["hk-leads", "접수된 문의"],
+    ];
+    return (
+      <div className={styles.wrap} data-plan-nav="" aria-label="홈페이지 편집 목차">
+        <div className={styles.plan}>
+          <button type="button" className={`${styles.planRow} ${styles.planOn}`} title={activeTitle}>
+            <span className={styles.planName}>{activeTitle}</span>
+            <span className={styles.planCount}>홈페이지</span>
+          </button>
+          <div className={styles.planBody}>
+            {items.map(([id, label], index) => (
+              <div key={id} className={styles.chapter}>
+                <button type="button" className={styles.chapterBtn} onClick={() => jump(id)}>
+                  <span className={styles.chapterNum}>{index + 1}</span>
+                  <span className={styles.chapterName}>{label}</span>
+                </button>
+              </div>
+            ))}
+            <div className={styles.chapter}>
+              <button type="button" className={styles.chapterBtn} onClick={() => router.push("/plan/overview")}>
+                <span className={styles.chapterNum}>←</span>
+                <span className={styles.chapterName}>사업계획서로 돌아가기</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /** 이동할 때는 작업 중인 플랜도 그쪽으로 옮긴다 — 이후 문서·PPT가 헷갈리지 않게 */
   function go(planId: string, href: string) {
     if (state.activePlanId !== planId) setActivePlan(planId);

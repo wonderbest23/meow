@@ -18,7 +18,7 @@ import { resizeImage, uploadImage } from "./landing-media-field";
  *     노드 id 와 맞지 않으므로 버린다(물어본 뒤).
  * 칸을 옮기거나 색을 바꾸는 기능은 없다 — 킷 구조를 그대로 지키기 위해서다.
  */
-type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string> };
+type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string>; sizes: Record<string, number> };
 
 /* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로 저장, url 은 주소를 저장 */
 type BtnPanel = { id: string; textId: string | null; label: string; mode: "contact" | "url" | "none"; url: string };
@@ -41,7 +41,7 @@ export function BrainwaveEditor({
 }) {
   const init = data.brainwave!;
   const [page, setPage] = useState(init.page);
-  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) } });
+  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) } });
   const [history, setHistory] = useState<Over[]>([]);
   const [future, setFuture] = useState<Over[]>([]);
   const [meta, setMeta] = useState<BrainwavePageData | null>(null);
@@ -117,6 +117,19 @@ export function BrainwaveEditor({
     el.contentEditable = "plaintext-only";
     el.focus();
     setEditing({ id, el });
+    setSizeTarget(id);
+  };
+  /*
+   * 글씨 크기 프리셋 — 마지막으로 고른 글 자리에 적용된다.
+   * 자유 크기가 아니라 네 단이다: 킷 칸은 절대좌표라 크게 벗어나면 잘린다.
+   */
+  const [sizeTarget, setSizeTarget] = useState<string | null>(null);
+  const SIZE_STEPS: Array<[number, string]> = [[0.85, "작게"], [1, "보통"], [1.15, "크게"], [1.3, "더 크게"]];
+  const applySize = (scale: number) => {
+    if (!sizeTarget) return;
+    const sizes = { ...over.sizes };
+    if (scale === 1) delete sizes[sizeTarget]; else sizes[sizeTarget] = scale;
+    commit({ ...over, sizes });
   };
   /* 고치던 글을 마무리하고, 반영된 값을 돌려준다 — 저장 때 setState 가 늦어
      옛 값을 저장하는 일이 있었다 */
@@ -185,16 +198,17 @@ export function BrainwaveEditor({
     const dirty = Object.keys(over.texts).length + Object.keys(over.images).length > 0;
     if (dirty && !window.confirm("페이지를 바꾸면 이 페이지에서 고친 글·사진은 사라집니다. 바꿀까요?")) return;
     finishText();
-    commit({ texts: {}, images: {}, links: {} });
+    commit({ texts: {}, images: {}, links: {}, sizes: {} });
+    setSizeTarget(null);
     setPage(next);
   };
 
   const save = () => {
     const final = finishText();
-    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links }, content: [] });
+    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes }, content: [] });
   };
 
-  const changed = Object.keys(over.texts).length + Object.keys(over.images).length;
+  const changed = Object.keys(over.texts).length + Object.keys(over.images).length + Object.keys(over.sizes).length;
 
   return (
     <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 에디터">
@@ -221,6 +235,21 @@ export function BrainwaveEditor({
         </div>
       </header>
       {error ? <p className="bw-editor-error">{error}</p> : null}
+      {!previewMode && sizeTarget ? (
+        <div className="bw-size-bar" role="group" aria-label="글씨 크기">
+          <span>글씨 크기</span>
+          {SIZE_STEPS.map(([scale, label]) => (
+            <button
+              key={scale}
+              type="button"
+              className={(over.sizes[sizeTarget] ?? 1) === scale ? "on" : ""}
+              /* mousedown 에서 포커스를 뺏지 않아야 고치던 글이 닫히지 않는다 */
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => applySize(scale)}
+            >{label}</button>
+          ))}
+        </div>
+      ) : null}
       {projectId && ai.open ? (
         <div className="bw-ai">
           <div className="bw-ai-row">

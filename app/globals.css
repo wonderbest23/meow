@@ -16323,3 +16323,64 @@ button.account-kakao-btn svg { display: inline-block !important; }
 .hk-cta-btn { transition: transform .15s ease, box-shadow .2s ease, border-color .15s ease; }
 .hk-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(13, 10, 44, .1); }
 .hk-cta-btn:active { transform: none; }
+
+/* ── 홈페이지 패널 2차 다듬기 — 목업 바 안의 작은 행동 버튼 + 폴드 저장 ── */
+.hk-mock-actions { display: flex; gap: 6px; flex: none; }
+.hk-mock-actions button {
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #3d3a52;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.hk-mock-actions button:hover { border-color: #b9b6d6; }
+.hk-mock-actions .hk-mock-edit { border-color: #3272db; background: #3272db; color: #fff; }
+.hk-mock-actions .hk-mock-edit:hover { background: #2a63c2; }
+.hk-dots { display: inline-flex; gap: 7px; flex: none; }
+.hk-fold-save { margin-top: 14px; display: flex; justify-content: flex-end; }
+.hk-fold-save button {
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 9px;
+  background: #3272db;
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.hk-fold-save button:disabled { opacity: .5; cursor: default; }
+
+/* 에디터 — 글씨 크기 프리셋 바 */
+.bw-size-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 16px;
+  background: #fff;
+  border-bottom: 1px solid #e3e6ee;
+}
+.bw-size-bar span { color: #5d6270; font-size: 12.5px; font-weight: 700; margin-right: 4px; }
+.bw-size-bar button {
+  min-height: 28px;
+  padding: 0 11px;
+  border: 1px solid #dfe3ea;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #3d3a52;
+  cursor: pointer;
+}
+.bw-size-bar button.on { border-color: #473bf0; background: #473bf0; color: #fff; }

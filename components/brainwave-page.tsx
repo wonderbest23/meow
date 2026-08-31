@@ -43,7 +43,7 @@ export type BrainwavePageData = {
   slots: { text: Array<{ id: string; text: string }>; image: Array<{ id: string; src: string }> };
 };
 
-export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string> };
+export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string>; sizes?: Record<string, number> };
 
 /** 편집기에서 자리를 눌렀을 때 — button 은 버튼 링크·글자 판을 연다 */
 export type BrainwavePick = (kind: "text" | "image" | "button", id: string, el: HTMLElement) => void;
@@ -122,9 +122,27 @@ export function BrainwaveNodeView({
   const children: ReactNode = text !== undefined && text !== false
     ? text
     : node.ch?.map((c, i) => <BrainwaveNodeView key={i} node={c} overrides={overrides} parentId={id} onPick={onPick} inButton={inButton || isButton} />);
+  /*
+   * 글씨 크기 배율(프리셋).
+   *
+   * px 로 적힌 크기·줄간이면 함께 배율을 곱하고, 크기를 상속받는 노드면
+   * em 으로 건다. 킷 칸은 절대좌표라 무한정 키울 수 없어 배율 자체를
+   * 스키마(0.7~1.5)에서 못박았다.
+   */
+  const sizeScale = hasText && node.id ? overrides?.sizes?.[node.id] : undefined;
+  const style = nodeStyle(node.st);
+  if (sizeScale && sizeScale !== 1) {
+    const scalePx = (value: unknown) => {
+      const n = typeof value === "string" && value.endsWith("px") ? parseFloat(value) : null;
+      return n !== null && Number.isFinite(n) ? `${Math.round(n * sizeScale * 10) / 10}px` : null;
+    };
+    style.fontSize = scalePx(style.fontSize) ?? `${sizeScale}em`;
+    const lh = scalePx(style.lineHeight);
+    if (lh) style.lineHeight = lh;
+  }
   return (
     <Tag
-      style={nodeStyle(node.st)}
+      style={style}
       data-bw-text={hasText && node.id && !inButton && !isButton ? node.id : undefined}
       data-bw-btn={isButton ? node.id : undefined}
       role={isButton ? "button" : undefined}

@@ -29,16 +29,18 @@ import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 type Action = "idle" | "saving" | "saved" | "publishing";
 
 /* 접이식 카드 — 요약 줄(아이콘·제목·상태 배지)만 보이다가 누르면 펼쳐진다 */
-function Fold({ icon, title, badge, hint, children, defaultOpen }: {
+function Fold({ icon, title, badge, hint, children, defaultOpen, id }: {
   icon: ReactNode;
   title: string;
   badge?: ReactNode;
   hint?: string;
   children: ReactNode;
   defaultOpen?: boolean;
+  /** 왼쪽 사이드바에서 바로 찾아오는 앵커 */
+  id?: string;
 }) {
   return (
-    <details className="hk-fold" open={defaultOpen}>
+    <details className="hk-fold" open={defaultOpen} id={id}>
       <summary>
         <span className="hk-fold-ic">{icon}</span>
         <span className="hk-fold-tt">
@@ -88,7 +90,7 @@ export function HomepageKitPanel({
     if (id === bw.page) { setPicking(false); return; }
     const dirty = Object.keys(bw.texts ?? {}).length + Object.keys(bw.images ?? {}).length > 0;
     if (dirty && !window.confirm("템플릿을 바꾸면 지금까지 고친 글·사진은 새 페이지에 맞지 않아 초기화됩니다. 바꿀까요?")) return;
-    onChange({ ...draft, pageData: { ...draft.pageData, brainwave: { page: id, texts: {}, images: {}, links: {} }, content: [] } });
+    onChange({ ...draft, pageData: { ...draft.pageData, brainwave: { page: id, texts: {}, images: {}, links: {}, sizes: {} }, content: [] } });
     setPicking(false);
   };
 
@@ -134,26 +136,24 @@ export function HomepageKitPanel({
       </header>
       {message ? <p className="hk-msg">{message}</p> : null}
 
-      {/* 1. 주된 행동 — 큰 버튼 둘 */}
-      <div className="hk-cta">
-        <button type="button" className="hk-cta-btn" onClick={() => setPicking(true)}>
-          <LayoutTemplate size={20} />
-          <span><strong>템플릿 선택하기</strong><small>{page ? `지금: ${page.ko}` : "디자인 고르기"}</small></span>
-        </button>
-        <button type="button" className="hk-cta-btn hk-cta-primary" onClick={onOpenEditor}>
-          <Pencil size={20} />
-          <span><strong>에디터로 꾸미기</strong><small>글·사진을 그 자리에서 수정</small></span>
-        </button>
-      </div>
-
       {/*
         미리보기 — 브라우저 목업(신호등 점 + 주소창) 안에 담는다.
         '이게 실제로 손님 브라우저에서 열리는 화면'이라는 게 한눈에 읽힌다.
+        템플릿·에디터 버튼은 목업 바 오른쪽의 작은 버튼으로 — 예전의 큰 버튼
+        두 개는 미리보기보다 목소리가 컸다(사용자 지적).
       */}
-      <div className="hk-preview hk-mock">
-        <div className="hk-mock-bar" aria-hidden="true">
-          <i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" />
+      <div className="hk-preview hk-mock" id="hk-preview">
+        <div className="hk-mock-bar">
+          <span aria-hidden="true" className="hk-dots"><i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" /></span>
           <span className="hk-mock-url">{publicPath ? `oneulstart.com${publicPath}` : "내 사업 홈페이지"}</span>
+          <span className="hk-mock-actions">
+            <button type="button" onClick={() => setPicking(true)} title={page ? `지금 템플릿: ${page.ko}` : "디자인 고르기"}>
+              <LayoutTemplate size={14} /> 템플릿
+            </button>
+            <button type="button" className="hk-mock-edit" onClick={onOpenEditor}>
+              <Pencil size={14} /> 에디터 열기
+            </button>
+          </span>
         </div>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={0} className="hk-preview-body" onClick={onOpenEditor} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
@@ -165,6 +165,7 @@ export function HomepageKitPanel({
 
       {/* 2. 사업자 정보 — 접이식 */}
       <Fold
+        id="hk-business"
         icon={<ShieldCheck size={18} />}
         title="사업자 정보"
         badge={missing.length ? <em className="hk-badge hk-badge-warn">채울 것 {missing.length}개</em> : <em className="hk-badge hk-badge-ok">완료</em>}
@@ -187,10 +188,15 @@ export function HomepageKitPanel({
           <label><span>문의 버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(e) => update({ ctaLabel: e.target.value })} /></label>
           <label className="wide"><span>무료 주소 끝부분</span><div className="slug-input"><em>/launch/</em><input value={draft.slug} onChange={(e) => update({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "") })} /></div></label>
         </div>
+        {/* 이 칸에서 고친 것을 바로 저장 — 위로 스크롤해 전체 저장을 찾지 않게 */}
+        <div className="hk-fold-save">
+          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <LoaderCircle className="spin" size={14} /> : <Save size={14} />} 사업자 정보 저장</button>
+        </div>
       </Fold>
 
       {/* 3. 도메인 — 접이식. 카드 안의 자체 제목은 CSS 로 숨긴다(요약 줄과 중복) */}
       <Fold
+        id="hk-domain"
         icon={<Globe2 size={18} />}
         title="내 도메인 연결"
         badge={site?.customDomain ? <em className="hk-badge hk-badge-ok">{site.customDomain}</em> : null}
@@ -207,6 +213,7 @@ export function HomepageKitPanel({
 
       {/* 4. 접수된 문의 — 접이식 */}
       <Fold
+        id="hk-leads"
         icon={<Inbox size={18} />}
         title="접수된 문의"
         badge={leads && leads.length > 0 ? <em className="hk-badge hk-badge-info">{leads.length}건</em> : <em className="hk-badge">0건</em>}
