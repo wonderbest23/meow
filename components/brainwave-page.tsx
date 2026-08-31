@@ -43,7 +43,7 @@ export type BrainwavePageData = {
   slots: { text: Array<{ id: string; text: string }>; image: Array<{ id: string; src: string }> };
 };
 
-export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string>; sizes?: Record<string, number>; hidden?: string[] };
+export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string>; sizes?: Record<string, number>; hidden?: string[]; order?: string[] };
 
 /*
  * 숨긴 자리(hidden) 펼치기 — 섹션 id 하나를 숨기면 그 안의 글·사진·버튼 id 전부가
@@ -63,63 +63,104 @@ export function expandHidden(root: BrainwaveNode, hidden: string[] | undefined):
 }
 
 /*
- * 데스크톱 캔버스에서 숨긴 섹션만큼 아래를 끌어올린다.
+ * 섹션 밴드 — 킷 트리 최상위 그룹 하나가 화면의 섹션 하나다.
  *
  * 킷 좌표는 두 겹이다: 최상위 그룹(섹션)과 display:contents 래퍼 안의 상자는
  * 페이지 px 로, 상자 '안'의 잎은 그 상자 기준(%·calc)으로 적혀 있다. 그래서
- * 페이지에 닻 내린(pageAnchored) 노드의 top 만 옮기면 섹션이 통째로 올라온다.
- * 트리는 건드리지 않는다 — 그릴 때 좌표만 고쳐 그린다.
+ * 섹션 하나를 '통째로'(하위 페이지-닻 노드 전부 같은 양만큼) 옮기면 안 깨진다.
+ * 예전엔 노드별로 부분 시프트를 했는데, 섹션들이 세로로 겹치는 킷 특성상 서로
+ * 밀려 들어가 페이지 전체가 깨져 보였다 — 밴드 단위 이동으로 바꿨다.
  */
-function collapseHidden(page: BrainwavePageData, hidden: string[] | undefined): { root: BrainwaveNode; h: number } {
-  if (!hidden?.length) return { root: page.root, h: page.h };
-  const hiddenSet = new Set(hidden);
-  const px = (v: string | undefined) => (v && /^-?[\d.]+px$/.test(v) ? parseFloat(v) : null);
-  /* 숨긴 페이지-닻 노드의 세로 범위 — contents 래퍼는 하위 상자들의 합집합 */
-  const extent = (n: BrainwaveNode): { y0: number; y1: number } | null => {
-    let y0 = Infinity, y1 = -Infinity;
-    const visit = (m: BrainwaveNode, anchored: boolean) => {
-      if (!anchored || m.tag === "#" || m.tag === "br") return;
-      const top = px(m.st?.top);
-      const h = px(m.st?.height);
-      if (top !== null) { y0 = Math.min(y0, top); y1 = Math.max(y1, top + (h ?? 0)); }
-      if (m.st?.display === "contents" || top === null) m.ch?.forEach((c) => visit(c, true));
+const pxOf = (v: string | undefined) => (v && /^-?[\d.]+px$/.test(v) ? parseFloat(v) : null);
+
+export type SectionBand = { id: string; name: string; y0: number; delta: number };
+
+/** 최상위 섹션들을 위→아래 순서로. delta 는 다음 섹션 시작까지의 키(마지막은 페이지 끝까지) */
+export function sectionBands(page: BrainwavePageData): SectionBand[] {
+  const extent = (n: BrainwaveNode): number | null => {
+    let y0 = Infinity;
+    const visit = (m: BrainwaveNode) => {
+      if (m.tag === "#" || m.tag === "br") return;
+      const top = pxOf(m.st?.top);
+      if (top !== null) y0 = Math.min(y0, top);
+      if (m.st?.display === "contents" || top === null) m.ch?.forEach(visit);
     };
-    visit(n, true);
-    return y0 === Infinity ? null : { y0, y1: Math.min(y1, page.h) };
+    visit(n);
+    return y0 === Infinity ? null : y0;
   };
-  /* 1) 숨긴 섹션들의 범위 수집(페이지-닻 층에서만) */
-  const segs: Array<{ y0: number; y1: number }> = [];
-  const collectSegs = (n: BrainwaveNode, anchored: boolean) => {
-    if (n.tag === "#" || n.tag === "br") return;
-    if (n.id && hiddenSet.has(n.id)) { if (anchored) { const e = extent(n); if (e) segs.push(e); } return; }
-    const childAnchored = anchored && n.st?.display === "contents";
-    n.ch?.forEach((c) => collectSegs(c, n === page.root ? true : childAnchored));
-  };
-  collectSegs(page.root, true);
-  if (!segs.length) return { root: page.root, h: page.h };
-  /* 겹치는 범위는 합쳐서 이중으로 끌어올리지 않는다 */
-  segs.sort((a, b) => a.y0 - b.y0);
-  const merged: Array<{ y0: number; y1: number }> = [];
-  for (const s of segs) {
-    const last = merged.at(-1);
-    if (last && s.y0 <= last.y1) last.y1 = Math.max(last.y1, s.y1); else merged.push({ ...s });
-  }
-  const shiftAt = (y: number) => merged.reduce((acc, s) => acc + (y >= s.y1 ? s.y1 - s.y0 : y > s.y0 ? y - s.y0 : 0), 0);
-  const total = merged.reduce((acc, s) => acc + (s.y1 - s.y0), 0);
-  /* 2) 살아남은 페이지-닻 노드의 top 을 끌어올린 사본 트리 */
-  const rebuild = (n: BrainwaveNode, anchored: boolean): BrainwaveNode => {
-    if (n.tag === "#" || n.tag === "br") return n;
-    const top = anchored ? px(n.st?.top) : null;
-    const childAnchored = anchored && n.st?.display === "contents";
-    const ch = n.ch?.map((c) => rebuild(c, n === page.root ? true : childAnchored));
-    if (top !== null && shiftAt(top) > 0) return { ...n, st: { ...n.st, top: `${top - shiftAt(top)}px` }, ch };
-    return ch === n.ch ? n : { ...n, ch };
-  };
-  return { root: rebuild(page.root, true), h: Math.max(200, page.h - total) };
+  const items = (page.root.ch ?? [])
+    .filter((n) => n.tag !== "#" && n.tag !== "br" && n.id)
+    .map((n) => ({ n, y0: extent(n) }))
+    .filter((x): x is { n: BrainwaveNode; y0: number } => x.y0 !== null)
+    .sort((a, b) => a.y0 - b.y0);
+  return items.map((x, i) => ({
+    id: x.n.id!,
+    name: x.n.name ?? "",
+    y0: x.y0,
+    delta: Math.max(0, (i + 1 < items.length ? items[i + 1].y0 : page.h) - x.y0),
+  }));
 }
 
-/** 편집기에서 자리를 눌렀을 때 — button 은 버튼 링크·글자 판을 연다 */
-export type BrainwavePick = (kind: "text" | "image" | "button", id: string, el: HTMLElement) => void;
+/*
+ * 보이는 섹션들의 최종 순서.
+ * order 는 편집기가 저장한 전체 순서다. 목록에 없는 섹션(예: 방금 복원한 것)은
+ * 원래 자리(자연 순서의 그 슬롯)에 남는다 — 끝에 붙이면 복원할 때마다 헝클어진다.
+ */
+export function orderedSections(bands: SectionBand[], hidden: string[] | undefined, order: string[] | undefined): SectionBand[] {
+  const hiddenSet = new Set(hidden ?? []);
+  const natural = bands.filter((b) => !hiddenSet.has(b.id));
+  const listed = (order ?? []).filter((id) => natural.some((b) => b.id === id));
+  if (listed.length < 2) return natural;
+  const seq = [...natural];
+  const slots = natural.map((b, i) => (listed.includes(b.id) ? i : -1)).filter((i) => i >= 0);
+  slots.forEach((slot, k) => { seq[slot] = natural.find((b) => b.id === listed[k])!; });
+  return seq;
+}
+
+/** 숨긴 섹션이 있던 자리 — 편집기가 '되살리기' 줄을 그 위치에 띄운다 */
+type RestoreStrip = { id: string; name: string; y: number };
+
+function sectionLayout(page: BrainwavePageData, hidden: string[] | undefined, order: string[] | undefined): { root: BrainwaveNode; h: number; strips: RestoreStrip[] } {
+  if (!hidden?.length && !order?.length) return { root: page.root, h: page.h, strips: [] };
+  const bands = sectionBands(page);
+  if (!bands.length) return { root: page.root, h: page.h, strips: [] };
+  const hiddenSet = new Set(hidden ?? []);
+  const seq = orderedSections(bands, hidden, order);
+  /* 새 시작 위치 — 순서대로 키(delta)를 쌓는다 */
+  const newY0 = new Map<string, number>();
+  let y = Math.min(...bands.map((b) => b.y0));
+  for (const b of seq) { newY0.set(b.id, y); y += b.delta; }
+  const totalHidden = bands.filter((b) => hiddenSet.has(b.id)).reduce((a, b) => a + b.delta, 0);
+  const h = Math.max(200, page.h - totalHidden);
+  /* 숨긴 섹션의 빈 자리 = 자연 순서에서 그 다음 보이는 섹션의 새 위치 */
+  const strips: RestoreStrip[] = bands.filter((b) => hiddenSet.has(b.id)).map((b) => {
+    const nextVis = bands.find((v) => v.y0 > b.y0 && !hiddenSet.has(v.id));
+    return { id: b.id, name: b.name, y: nextVis ? newY0.get(nextVis.id) ?? h : h };
+  });
+  /* 섹션 하나를 통째로 s 만큼 이동 — 하위의 페이지-닻 px top 전부 */
+  const shiftNode = (n: BrainwaveNode, s: number): BrainwaveNode => {
+    if (n.tag === "#" || n.tag === "br") return n;
+    const top = pxOf(n.st?.top);
+    const passThrough = n.st?.display === "contents" || top === null;
+    const ch = passThrough ? n.ch?.map((c) => shiftNode(c, s)) : n.ch;
+    if (top !== null) return { ...n, st: { ...n.st, top: `${top + s}px` }, ch };
+    return ch === n.ch ? n : { ...n, ch };
+  };
+  const root = {
+    ...page.root,
+    ch: page.root.ch?.map((c) => {
+      const target = c.id ? newY0.get(c.id) : undefined;
+      if (target === undefined) return c;
+      const band = bands.find((b) => b.id === c.id)!;
+      const s = target - band.y0;
+      return s === 0 ? c : shiftNode(c, s);
+    }),
+  };
+  return { root, h, strips };
+}
+
+/** 편집기에서 자리를 눌렀을 때 — button 은 버튼 판, restore 는 숨긴 섹션 되살리기 */
+export type BrainwavePick = (kind: "text" | "image" | "button" | "restore", id: string, el: HTMLElement) => void;
 
 /*
  * 머리글의 가로 메뉴 줄 — "Demos    Pages    Support    Contact"처럼 짧은
@@ -488,8 +529,8 @@ export function BrainwaveStage({
     return () => { window.clearTimeout(failsafe); io.disconnect(); targets.forEach((t) => t.classList.remove("bw-anim", "bw-in")); };
   }, [animate, mobile, page.id, width]);
   const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
-  /* 데스크톱: 숨긴 섹션만큼 아래를 끌어올린 좌표로 그린다 */
-  const collapsed = useMemo(() => collapseHidden(page, overrides?.hidden), [page, overrides?.hidden]);
+  /* 데스크톱: 숨긴 섹션만큼 끌어올리고, 저장된 섹션 순서대로 재배치한 좌표로 그린다 */
+  const collapsed = useMemo(() => sectionLayout(page, overrides?.hidden, overrides?.order), [page, overrides?.hidden, overrides?.order]);
   /*
    * 손으로 짠 모바일판이 있는 페이지는 그걸 먼저 쓴다.
    * 킷에는 모바일 아트보드가 없어(프레임 87개 전수 확인 — 전부 데스크톱 폭)
@@ -520,6 +561,16 @@ export function BrainwaveStage({
       <div className="bw-fit">
         <div className="bw-canvas" style={{ width: page.w, height: collapsed.h }}>
           <BrainwaveNodeView node={collapsed.root} overrides={overrides} onPick={onPick} />
+          {/* 숨긴 섹션의 빈 자리 — 편집기에서만 '되살리기' 줄이 그 위치에 뜬다 */}
+          {onPick ? collapsed.strips.map((strip) => (
+            <button
+              key={strip.id}
+              type="button"
+              className="bw-restore-strip"
+              style={{ top: strip.y }}
+              onClick={(e) => { e.stopPropagation(); onPick("restore", strip.id, e.currentTarget); }}
+            >+ 숨긴 섹션 되살리기{strip.name ? ` — ${strip.name}` : ""}</button>
+          )) : null}
         </div>
       </div>
     </div>

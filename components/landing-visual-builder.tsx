@@ -206,7 +206,7 @@ export function LandingVisualBuilder({
   }
   const switchToKit = () => {
     if (!window.confirm("새 킷 페이지(26가지 디자인)로 바꿉니다. 지금 블록으로 꾸민 내용은 사라지고, 글과 사진만 다시 넣게 됩니다. 바꿀까요?")) return;
-    setSwitched({ brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE.service, texts: {}, images: {}, links: {}, sizes: {}, hidden: [] }, root: { props: { title: businessName } }, content: [] });
+    setSwitched({ brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE.service, texts: {}, images: {}, links: {}, sizes: {}, hidden: [], order: [] }, root: { props: { title: businessName } }, content: [] });
   };
   return (
     <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="판매 페이지 자유 편집">

@@ -16512,6 +16512,59 @@ button.account-kakao-btn svg { display: inline-block !important; }
 .bw-eltool button.danger:hover { background: #3a2530; }
 .bw-eltool button svg { display: inline-block !important; }
 
+/* 숨긴 섹션의 빈 자리 — 캔버스 위 '되살리기' 줄(편집기 전용) */
+.bw-restore-strip {
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 40;
+  border: 1px dashed #473bf0;
+  border-radius: 999px;
+  background: #ffffffef;
+  color: #473bf0;
+  font-size: 22px;
+  font-weight: 700;
+  padding: 10px 26px;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 6px 24px rgba(22, 28, 45, .16);
+}
+.bw-restore-strip:hover { background: #473bf0; color: #fff; }
+
+/* 섹션 순서 판 */
+.bw-sec-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.bw-sec-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid #e8eaf1;
+  border-radius: 10px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #3d3a52;
+  background: #fff;
+  cursor: grab;
+}
+.bw-sec-list li.locked { cursor: default; background: #f7f8fb; color: #8e93a4; }
+.bw-sec-list li.locked em { font-style: normal; font-size: 11px; font-weight: 700; color: #b0b5c4; border: 1px solid #e0e3ec; border-radius: 6px; padding: 1px 6px; }
+.bw-sec-list li > span:first-of-type { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bw-sec-list li svg { color: #b0b5c4; flex: none; }
+.bw-sec-arrows { display: inline-flex; gap: 4px; }
+.bw-sec-arrows button {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid #dfe3ea;
+  border-radius: 8px;
+  background: #fff;
+  color: #3d3a52;
+  cursor: pointer;
+}
+.bw-sec-arrows button:disabled { opacity: .3; cursor: default; }
+.bw-sec-arrows button:hover:not(:disabled) { border-color: #473bf0; color: #473bf0; }
+
 /* 우클릭 메뉴 — Wix 식 컨텍스트 메뉴 */
 .bw-ctx {
   position: fixed;

@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Eye, EyeOff, LayoutTemplate, List, LoaderCircle, Monitor, Pencil, Plus, Redo2, RotateCcw, Save, Smartphone, Sparkles, Trash2, Type, Undo2, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, LayoutTemplate, List, LoaderCircle, Monitor, Pencil, Plus, Redo2, RotateCcw, Rows3, Save, Smartphone, Sparkles, Trash2, Type, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { BrainwavePage, loadBrainwavePage, menuItemsOf, type BrainwavePageData } from "./brainwave-page";
+import { BrainwavePage, loadBrainwavePage, menuItemsOf, orderedSections, sectionBands, type BrainwavePageData } from "./brainwave-page";
 import { brainwaveSections } from "../lib/landing/brainwave/button-action";
 import { resizeImage, uploadImage } from "./landing-media-field";
 
@@ -19,7 +19,7 @@ import { resizeImage, uploadImage } from "./landing-media-field";
  *     노드 id 와 맞지 않으므로 버린다(물어본 뒤).
  * 칸을 옮기거나 색을 바꾸는 기능은 없다 — 킷 구조를 그대로 지키기 위해서다.
  */
-type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string>; sizes: Record<string, number>; hidden: string[] };
+type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string>; sizes: Record<string, number>; hidden: string[]; order: string[] };
 
 /* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로, url 은 주소, sec 는 "sec:N"(섹션 스크롤) */
 type LinkMode = "contact" | "url" | "none" | "sec";
@@ -59,7 +59,7 @@ export function BrainwaveEditor({
 }) {
   const init = data.brainwave!;
   const [page, setPage] = useState(init.page);
-  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) }, hidden: [...(init.hidden ?? [])] });
+  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) }, hidden: [...(init.hidden ?? [])], order: [...(init.order ?? [])] });
   const [history, setHistory] = useState<Over[]>([]);
   const [future, setFuture] = useState<Over[]>([]);
   const [meta, setMeta] = useState<BrainwavePageData | null>(null);
@@ -321,6 +321,43 @@ export function BrainwaveEditor({
     commit({ ...over, hidden: [...over.hidden, id] });
   };
   const restore = (id: string) => commit({ ...over, hidden: over.hidden.filter((h) => h !== id) });
+  /*
+   * 섹션 순서 — 보이는 섹션 전체의 위→아래 순서를 저장한다.
+   * 맨 위(머리글·첫 화면)와 맨 아래(바닥글)는 잠근다(사용자 지시).
+   */
+  const sectionSeq = () => (meta ? orderedSections(sectionBands(meta), over.hidden, over.order) : []);
+  const canMoveSec = (id: string): { up: boolean; down: boolean } => {
+    const seq = sectionSeq();
+    const i = seq.findIndex((b) => b.id === id);
+    if (i < 0) return { up: false, down: false };
+    return { up: i > 1, down: i >= 1 && i < seq.length - 2 };
+  };
+  const moveSection = (id: string, dir: -1 | 1) => {
+    const seq = sectionSeq();
+    const i = seq.findIndex((b) => b.id === id);
+    const j = i + dir;
+    if (i < 1 || i > seq.length - 2 || j < 1 || j > seq.length - 2) return;
+    const next = [...seq];
+    [next[i], next[j]] = [next[j], next[i]];
+    commit({ ...over, order: next.map((b) => b.id) });
+    if (sel) requestAnimationFrame(() => placeSel(sel.el));
+  };
+  /* 섹션 순서 판의 드래그 상태 */
+  const [secPanel, setSecPanel] = useState(false);
+  const dragSec = useRef<string | null>(null);
+  const dropSection = (targetId: string) => {
+    const from = dragSec.current;
+    dragSec.current = null;
+    if (!from || from === targetId) return;
+    const seq = sectionSeq();
+    const i = seq.findIndex((b) => b.id === from);
+    const j = seq.findIndex((b) => b.id === targetId);
+    if (i < 1 || i > seq.length - 2 || j < 1 || j > seq.length - 2) return;
+    const next = [...seq];
+    const [moved] = next.splice(i, 1);
+    next.splice(j, 0, moved);
+    commit({ ...over, order: next.map((b) => b.id) });
+  };
   const [hiddenOpen, setHiddenOpen] = useState(false);
   /* 숨긴 id 가 뭐였는지 사람이 읽게 — 글 미리보기·사진·섹션 이름 */
   const hiddenLabel = (id: string): string => {
@@ -399,17 +436,17 @@ export function BrainwaveEditor({
     if (dirty && !window.confirm("페이지를 바꾸면 이 페이지에서 고친 글·사진은 사라집니다. 바꿀까요?")) return;
     finishText();
     setMenu(null);
-    commit({ texts: {}, images: {}, links: {}, sizes: {}, hidden: [] });
+    commit({ texts: {}, images: {}, links: {}, sizes: {}, hidden: [], order: [] });
     setSizeTarget(null);
     setPage(next);
   };
 
   const save = () => {
     const final = finishText();
-    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden }, content: [] });
+    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden, order: final.order }, content: [] });
   };
 
-  const changed = Object.keys(over.texts).length + Object.keys(over.images).length + Object.keys(over.sizes).length + over.hidden.length;
+  const changed = Object.keys(over.texts).length + Object.keys(over.images).length + Object.keys(over.sizes).length + over.hidden.length + (over.order.length ? 1 : 0);
 
   return (
     <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 에디터">
@@ -428,8 +465,11 @@ export function BrainwaveEditor({
           </button>
         </div>
         <div className="bw-editor-right">
+          <button type="button" className={`bw-editor-hiddenbtn ${secPanel ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setHiddenOpen(false); setSecPanel((v) => !v); }} title="섹션 순서 바꾸기">
+            <Rows3 /> 섹션
+          </button>
           {over.hidden.length ? (
-            <button type="button" className={`bw-editor-hiddenbtn ${hiddenOpen ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setHiddenOpen((v) => !v); }} title="숨긴 자리 보기">
+            <button type="button" className={`bw-editor-hiddenbtn ${hiddenOpen ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setSecPanel(false); setHiddenOpen((v) => !v); }} title="숨긴 자리 보기">
               <EyeOff /> {over.hidden.length}
             </button>
           ) : null}
@@ -447,6 +487,8 @@ export function BrainwaveEditor({
           <span className="bw-eltool-kind">{sel.kind}</span>
           {sel.kind === "사진" ? <button type="button" onClick={() => { pendingImage.current = sel.id; fileRef.current?.click(); }}><Pencil size={13} /> 바꾸기</button> : null}
           <button type="button" className="danger" onClick={() => hide(sel.id)}><Trash2 size={13} /> 숨기기</button>
+          {sel.secId && canMoveSec(sel.secId).up ? <button type="button" title="섹션 위로" onClick={() => moveSection(sel.secId!, -1)}><ArrowUp size={13} /></button> : null}
+          {sel.secId && canMoveSec(sel.secId).down ? <button type="button" title="섹션 아래로" onClick={() => moveSection(sel.secId!, 1)}><ArrowDown size={13} /></button> : null}
           {sel.secId ? <button type="button" className="danger" onClick={() => hide(sel.secId!)}>섹션 숨기기</button> : null}
         </div>
       ) : null}
@@ -587,6 +629,54 @@ export function BrainwaveEditor({
           <button type="button" className="bw-ins-done" onClick={() => { commit({ ...over, hidden: [] }); setHiddenOpen(false); }}>모두 복원</button>
         </aside>
       ) : null}
+      {/* 섹션 순서 판 — 드래그(또는 ↑↓)로 순서 바꾸기. 맨 위·바닥글은 고정 */}
+      {secPanel ? (
+        <aside className="bw-inspector bw-sec-panel" role="dialog" aria-label="섹션 순서">
+          <header>
+            <strong><Rows3 size={15} /> 섹션 순서</strong>
+            <button type="button" onClick={() => setSecPanel(false)} title="닫기"><X size={16} /></button>
+          </header>
+          <p className="bw-menu-hint">끌어서(또는 화살표로) 순서를 바꿉니다. 맨 위와 바닥글은 고정입니다.</p>
+          <ul className="bw-sec-list">
+            {sectionSeq().map((b, i, seq) => {
+              const locked = i === 0 || i === seq.length - 1;
+              return (
+                <li
+                  key={b.id}
+                  className={locked ? "locked" : ""}
+                  draggable={!locked}
+                  onDragStart={() => { dragSec.current = b.id; }}
+                  onDragOver={(e) => { if (!locked) e.preventDefault(); }}
+                  onDrop={() => dropSection(b.id)}
+                >
+                  {locked ? <em>고정</em> : <GripVertical size={14} aria-hidden />}
+                  <span>{i + 1}. {b.name || "섹션"}</span>
+                  {!locked ? (
+                    <span className="bw-sec-arrows">
+                      <button type="button" disabled={!canMoveSec(b.id).up} onClick={() => moveSection(b.id, -1)} title="위로"><ArrowUp size={13} /></button>
+                      <button type="button" disabled={!canMoveSec(b.id).down} onClick={() => moveSection(b.id, 1)} title="아래로"><ArrowDown size={13} /></button>
+                    </span>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+          {over.hidden.length ? (
+            <>
+              <p className="bw-menu-hint">숨긴 섹션·자리는 캔버스의 &quot;+ 되살리기&quot; 줄이나 아래에서 복원합니다.</p>
+              <ul className="bw-hidden-list">
+                {over.hidden.map((id) => (
+                  <li key={id}>
+                    <span>{hiddenLabel(id)}</span>
+                    <button type="button" onClick={() => restore(id)}><RotateCcw size={13} /> 복원</button>
+                  </li>
+                ))}
+              </ul>
+            </>
+          ) : null}
+          {over.order.length ? <button type="button" className="bw-ins-done" onClick={() => commit({ ...over, order: [] })}>원래 순서로</button> : null}
+        </aside>
+      ) : null}
       {projectId && ai.open ? (
         <div className="bw-ai">
           <div className="bw-ai-row">
@@ -621,7 +711,7 @@ export function BrainwaveEditor({
             pageId={page}
             overrides={over}
             mode={view === "mobile" ? "mobile" : "desktop"}
-            onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id, el) : pickButton(id, el))}
+            onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id, el) : kind === "restore" ? restore(id) : pickButton(id, el))}
           />
           {uploading ? <div className="bw-editor-uploading"><LoaderCircle className="spin" /> 사진 올리는 중</div> : null}
         </div>

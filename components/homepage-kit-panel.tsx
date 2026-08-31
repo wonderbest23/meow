@@ -90,7 +90,7 @@ export function HomepageKitPanel({
     if (id === bw.page) { setPicking(false); return; }
     const dirty = Object.keys(bw.texts ?? {}).length + Object.keys(bw.images ?? {}).length > 0;
     if (dirty && !window.confirm("템플릿을 바꾸면 지금까지 고친 글·사진은 새 페이지에 맞지 않아 초기화됩니다. 바꿀까요?")) return;
-    onChange({ ...draft, pageData: { ...draft.pageData, brainwave: { page: id, texts: {}, images: {}, links: {}, sizes: {}, hidden: [] }, content: [] } });
+    onChange({ ...draft, pageData: { ...draft.pageData, brainwave: { page: id, texts: {}, images: {}, links: {}, sizes: {}, hidden: [], order: [] }, content: [] } });
     setPicking(false);
   };
 
