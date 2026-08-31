@@ -146,8 +146,15 @@ export function HomepageKitPanel({
         </button>
       </div>
 
-      {/* 미리보기 — 누르면 편집기 */}
-      <div className="hk-preview">
+      {/*
+        미리보기 — 브라우저 목업(신호등 점 + 주소창) 안에 담는다.
+        '이게 실제로 손님 브라우저에서 열리는 화면'이라는 게 한눈에 읽힌다.
+      */}
+      <div className="hk-preview hk-mock">
+        <div className="hk-mock-bar" aria-hidden="true">
+          <i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" />
+          <span className="hk-mock-url">{publicPath ? `oneulstart.com${publicPath}` : "내 사업 홈페이지"}</span>
+        </div>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={0} className="hk-preview-body" onClick={onOpenEditor} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
           <LandingBlocksRenderer data={draft.pageData!} />

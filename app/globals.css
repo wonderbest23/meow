@@ -16269,3 +16269,57 @@ button.account-kakao-btn svg { display: inline-block !important; }
 .simple-home .home-price-copy > div { justify-content: flex-start; }
 .simple-home .home-faq > div:first-child { max-width: 880px; }
 .simple-home .home-faq > div:last-child { justify-self: start; width: min(812px, 100%); }
+
+/* ── 내 사업 홈페이지 패널 다듬기 ─────────────────────────────────
+ * ① 미리보기를 브라우저 목업(신호등 점·주소창) 안에 — 손님 브라우저에서
+ *   열리는 화면임이 한눈에 읽힌다.
+ * ② 머리줄·접이식 요약의 글자 침범 수리 — 좁은 폭에서 주소가 버튼 밑으로
+ *   파고들고, 배지가 제목에 붙어 있었다.
+ * ③ 큰 버튼·접이식 카드의 손맛(호버) 정돈.
+ */
+.hk-mock { border: 1px solid #e3e2ee; border-radius: 16px; overflow: hidden; box-shadow: 0 18px 48px rgba(13, 10, 44, .1); }
+.hk-mock-bar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  background: #f3f2f9;
+  border-bottom: 1px solid #e7e6f0;
+}
+.hk-dot { width: 11px; height: 11px; border-radius: 50%; flex: none; }
+.hk-dot.r { background: #f26d63; }
+.hk-dot.y { background: #f5bd4f; }
+.hk-dot.g { background: #58c356; }
+.hk-mock-url {
+  flex: 1;
+  min-width: 0;
+  margin-left: 8px;
+  padding: 6px 12px;
+  border: 1px solid #e7e6f0;
+  border-radius: 8px;
+  background: #fff;
+  color: #8181a5;
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 머리줄 — 주소가 길어도 버튼 밑으로 파고들지 않게 */
+.hk-top > div:first-child { flex: 1 1 320px; min-width: 0; }
+.hk-url { flex-wrap: wrap; row-gap: 4px; }
+.hk-url-pending, .hk-url a { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 접이식 요약 — 제목·배지·설명이 서로 밀지 않게 */
+.hk-fold summary { gap: 12px; }
+.hk-fold summary:hover { background: #fafaff; }
+.hk-fold { transition: border-color .15s ease; }
+.hk-fold[open], .hk-fold:hover { border-color: #d5d3e8; }
+.hk-fold-tt { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.hk-fold-tt strong { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 14.5px; }
+.hk-fold-tt small { display: block; color: #8181a5; font-size: 12.5px; line-height: 1.55; overflow-wrap: anywhere; }
+
+/* 큰 버튼 두 개 — 같은 키에 호버 손맛 */
+.hk-cta-btn { transition: transform .15s ease, box-shadow .2s ease, border-color .15s ease; }
+.hk-cta-btn:hover { transform: translateY(-1px); box-shadow: 0 10px 26px rgba(13, 10, 44, .1); }
+.hk-cta-btn:active { transform: none; }
