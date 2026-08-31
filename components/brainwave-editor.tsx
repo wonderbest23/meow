@@ -58,6 +58,16 @@ export function BrainwaveEditor({
   const VIEW_W = { pc: 1600, mobile: 390 } as const;
   /* 미리보기 — 손님이 보는 그대로(테두리·클릭 없음) */
   const [previewMode, setPreviewMode] = useState(false);
+
+  /* 편집 중 스크롤하면 크기 토글이 글자를 따라간다 */
+  useEffect(() => {
+    if (!editing) return;
+    const follow = () => placeSizePop(editing.el);
+    window.addEventListener("scroll", follow, { capture: true, passive: true });
+    window.addEventListener("resize", follow);
+    return () => { window.removeEventListener("scroll", follow, { capture: true }); window.removeEventListener("resize", follow); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing]);
   const [error, setError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingImage = useRef<string | null>(null);
@@ -118,6 +128,13 @@ export function BrainwaveEditor({
     el.focus();
     setEditing({ id, el });
     setSizeTarget(id);
+    placeSizePop(el);
+  };
+  /* 크기 토글은 고른 글자 바로 위에 뜬다 — 화면 어딘가의 고정 줄이 아니라 */
+  const [sizePop, setSizePop] = useState<{ x: number; y: number } | null>(null);
+  const placeSizePop = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setSizePop({ x: Math.min(Math.max(r.left + r.width / 2, 120), window.innerWidth - 120), y: Math.max(r.top, 96) });
   };
   /*
    * 글씨 크기 프리셋 — 마지막으로 고른 글 자리에 적용된다.
@@ -130,6 +147,7 @@ export function BrainwaveEditor({
     const sizes = { ...over.sizes };
     if (scale === 1) delete sizes[sizeTarget]; else sizes[sizeTarget] = scale;
     commit({ ...over, sizes });
+    if (editing) requestAnimationFrame(() => placeSizePop(editing.el));
   };
   /* 고치던 글을 마무리하고, 반영된 값을 돌려준다 — 저장 때 setState 가 늦어
      옛 값을 저장하는 일이 있었다 */
@@ -142,6 +160,8 @@ export function BrainwaveEditor({
     const next = { ...over, texts: { ...over.texts } };
     if (text === original) delete next.texts[id]; else next.texts[id] = text;
     setEditing(null);
+    setSizePop(null);
+    setSizeTarget(null);
     if (JSON.stringify(next.texts) !== JSON.stringify(over.texts)) { commit(next); return next; }
     return over;
   };
@@ -235,17 +255,14 @@ export function BrainwaveEditor({
         </div>
       </header>
       {error ? <p className="bw-editor-error">{error}</p> : null}
-      {!previewMode && sizeTarget ? (
-        <div className="bw-size-bar" role="group" aria-label="글씨 크기">
-          <span>글씨 크기</span>
+      {!previewMode && sizeTarget && sizePop ? (
+        <div className="bw-size-pop" role="group" aria-label="글씨 크기" style={{ left: sizePop.x, top: sizePop.y }} onMouseDown={(e) => e.preventDefault()}>
           {SIZE_STEPS.map(([scale, label]) => (
             <button
               key={scale}
               type="button"
               className={(over.sizes[sizeTarget] ?? 1) === scale ? "on" : ""}
-              /* mousedown 에서 포커스를 뺏지 않아야 고치던 글이 닫히지 않는다 */
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => applySize(scale)}
+              onClick={(e) => { e.stopPropagation(); applySize(scale); }}
             >{label}</button>
           ))}
         </div>

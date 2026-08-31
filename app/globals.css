@@ -16384,3 +16384,30 @@ button.account-kakao-btn svg { display: inline-block !important; }
   cursor: pointer;
 }
 .bw-size-bar button.on { border-color: #473bf0; background: #473bf0; color: #fff; }
+
+/* 글씨 크기 토글 — 고른 글자 바로 위에 뜨는 말풍선(고정 줄 아님) */
+.bw-size-pop {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 90;
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  background: #161c2d;
+  box-shadow: 0 10px 30px rgba(22, 28, 45, .35);
+}
+.bw-size-pop button {
+  min-height: 28px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #c9cede;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bw-size-pop button:hover { color: #fff; }
+.bw-size-pop button.on { background: #473bf0; color: #fff; }
