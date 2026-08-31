@@ -13577,11 +13577,14 @@ html .simple-home .site-header a.account-link > svg {
   display: grid;
   gap: 14px;
 }
-.home-peek-cap {
-  margin: 0 auto;
+/* 띠 아래 출처 한 줄 — 후기 고지와 같은 옷(작은 회색). .new-home p 보다 세게 */
+.new-home .home-peek-cap {
+  margin: 10px auto 0;
   max-width: 640px;
-  color: #7f7ca2;
-  font-size: 13px;
+  color: #7b8194;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.5;
   text-align: center;
 }
 .home-peek-track {
@@ -13667,7 +13670,7 @@ html .simple-home .site-header a.account-link > svg {
 }
 @media (max-width: 640px) {
   .home-peek-track li { width: 210px; }
-  .home-peek-cap { font-size: 12px; padding: 0 8px; }
+  .new-home .home-peek-cap { font-size: 11px; padding: 0 8px; }
 }
 
 /* ══ AI 상투 디자인 걷어내기 ═══════════════════════════════════════

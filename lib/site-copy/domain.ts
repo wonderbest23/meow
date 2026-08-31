@@ -26,7 +26,7 @@ export const SITE_COPY_FIELDS: SiteCopyField[] = [
   { id: "hero.subtitle", group: "히어로(첫 화면)", label: "설명", def: "사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.\n복잡한 사업계획서, 이제 쉽게 시작하세요.", multiline: true },
   { id: "hero.search", group: "히어로(첫 화면)", label: "검색창 안내 문구", def: "궁금한 창업, 무엇이든 물어보세요" },
   { id: "reviews.notice", group: "후기", label: "안내 문구", def: "디자인 확인용 예시입니다. 실제 후기가 아닙니다.", multiline: true, hint: "실제 후기가 쌓이기 전까지 표시되는 고지입니다" },
-  { id: "peek.caption", group: "홈페이지 미리보기 띠", label: "설명", def: "계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)", multiline: true },
+  { id: "peek.caption", group: "홈페이지 미리보기 띠", label: "출처 표기", def: "디자인 Brainwave.io UI Kit · CC BY 4.0", hint: "이 킷은 CC BY 4.0 — 출처 표기가 이용 조건입니다" },
   { id: "stats.title", group: "숫자 요약", label: "제목", def: "숫자로 먼저 확인하세요" },
   { id: "method.eyebrow", group: "진행 방식", label: "눈썹", def: "진행 방식" },
   { id: "method.title", group: "진행 방식", label: "제목", def: "질문에 답하기만 하면\n문서가 순서대로 완성됩니다", multiline: true },

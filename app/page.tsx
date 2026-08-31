@@ -567,7 +567,6 @@ const LANDING_PEEKS = [
 function HomeLandingPeek({ caption, captionOff, secId }: { caption?: string; captionOff?: boolean; secId?: string }) {
   return (
     <div className="home-peek" data-sc-section={secId} role="img" aria-label="홈페이지로 쓸 수 있는 Brainwave.io 킷 랜딩 페이지 열 종">
-      {captionOff ? null : <p className="home-peek-cap" data-sc-field="peek.caption">{caption ?? "계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)"}</p>}
       <div className="home-peek-track" aria-hidden="true">
         <ul>
           {[...LANDING_PEEKS, ...LANDING_PEEKS].map((p, i) => (
@@ -579,6 +578,11 @@ function HomeLandingPeek({ caption, captionOff, secId }: { caption?: string; cap
           ))}
         </ul>
       </div>
+      {/*
+        띠 아래 작은 한 줄. 설명 문구는 뺐고(사용자 요청) 출처만 남긴다 —
+        이 킷은 CC BY 4.0 이라 표기가 이용 조건이다. 지우면 라이선스 위반이 된다.
+      */}
+      {captionOff ? null : <p className="home-peek-cap" data-sc-field="peek.caption">{caption ?? "디자인 Brainwave.io UI Kit · CC BY 4.0"}</p>}
     </div>
   );
 }
@@ -934,7 +938,7 @@ function Home({
             </div>
           </div>
           {reviewDemo && !scHidden("reviews") && <HomeReviews demo secId="reviews" noticeOff={scOff("reviews.notice")} notice={sc("reviews.notice", "디자인 확인용 예시입니다. 실제 후기가 아닙니다.")} />}
-          {reviewDemo && !scHidden("peek") && <HomeLandingPeek secId="peek" captionOff={scOff("peek.caption")} caption={sc("peek.caption", "계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)")} />}
+          {reviewDemo && !scHidden("peek") && <HomeLandingPeek secId="peek" captionOff={scOff("peek.caption")} caption={sc("peek.caption", "디자인 Brainwave.io UI Kit · CC BY 4.0")} />}
         </section>
       </div>
 
