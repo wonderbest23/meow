@@ -56,6 +56,25 @@ export const HIDEABLE_SECTIONS: Array<{ id: string; label: string }> = [
 const FIELD_IDS = new Set(SITE_COPY_FIELDS.map((f) => f.id));
 const SECTION_IDS = new Set(HIDEABLE_SECTIONS.map((s) => s.id));
 
+/*
+ * 화면에서 고를 수 있는 섹션 — 자리 id 의 앞부분("price.title" → "price")이 곧
+ * 섹션이다. 어드민은 실제 홈 화면 위에서 이 단위로 고르고 숨긴다.
+ * 히어로는 페이지의 뼈대라 글만 고칠 수 있고 숨기지 못한다.
+ */
+export const EDIT_SECTIONS: Array<{ id: string; label: string; hideable: boolean }> = (() => {
+  const out = new Map<string, { id: string; label: string; hideable: boolean }>();
+  for (const field of SITE_COPY_FIELDS) {
+    const id = field.id.split(".")[0];
+    if (!out.has(id)) out.set(id, { id, label: field.group, hideable: SECTION_IDS.has(id) });
+  }
+  return [...out.values()];
+})();
+
+/** 그 섹션에 속한 글 자리들 */
+export function fieldsForSection(sectionId: string) {
+  return SITE_COPY_FIELDS.filter((field) => field.id.startsWith(`${sectionId}.`));
+}
+
 export const siteCopySchema = z.object({
   texts: z.record(z.string(), z.string().max(2000)).default({}),
   hidden: z.array(z.string()).max(32).default([]),

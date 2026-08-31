@@ -76,6 +76,7 @@ import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
+import { HomeCopyChrome } from "../components/home-copy-chrome";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -762,10 +763,37 @@ function Home({
       .then((j: { texts?: Record<string, string>; hidden?: string[] }) => { if (j && typeof j === "object") setSiteCopy({ texts: j.texts ?? {}, hidden: j.hidden ?? [] }); })
       .catch(() => {});
   }, []);
+  /*
+   * 어드민 홈 편집기(/admin/homepage)가 이 페이지를 iframe 으로 띄운다.
+   * 실제 화면 그대로 보면서 섹션을 고르고 지우게 하려는 것 — 편집기가 보내는
+   * 초안(sc-draft)을 그대로 그리고, 섹션 위에 고르기 껍데기를 씌운다.
+   * 손님 화면에는 아무 영향이 없다(부모 창이 있고 copyEdit 이 붙었을 때만).
+   */
+  const [copyEdit, setCopyEdit] = useState(false);
+  const [copySelected, setCopySelected] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.parent === window || !new URLSearchParams(window.location.search).has("copyEdit")) return;
+    setCopyEdit(true);
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data as { type?: string; texts?: Record<string, string>; hidden?: string[]; id?: string } | null;
+      if (data?.type === "sc-draft") setSiteCopy({ texts: data.texts ?? {}, hidden: data.hidden ?? [] });
+      if (data?.type === "sc-selected") {
+        setCopySelected(data.id ?? null);
+        if (data.id) document.querySelector(`[data-sc-section="${data.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+    window.addEventListener("message", onMessage);
+    window.parent.postMessage({ type: "sc-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   const sc = (id: string, def: string) => siteCopy.texts[id] ?? def;
   /** \n 을 <br/> 로 */
   const scBr = (id: string, def: string) => sc(id, def).split("\n").map((line, i, all) => <Fragment key={i}>{line}{i < all.length - 1 ? <br /> : null}</Fragment>);
-  const scHidden = (id: string) => siteCopy.hidden.includes(id);
+  /* 편집기에서는 숨긴 섹션도 흐리게 그린다 — 지운 자리를 보고 되살릴 수 있어야 한다 */
+  const scHidden = (id: string) => !copyEdit && siteCopy.hidden.includes(id);
 
   const openConsult = () => {
     window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "consult" } }));
@@ -787,7 +815,9 @@ function Home({
   };
 
   return (
-    <main className="new-home simple-home">
+    <main className={`new-home simple-home ${copyEdit ? "sc-editing" : ""}`}>
+      {/* 어드민 홈 편집기에서 열렸을 때만 — 섹션 테두리·고르기 줄 */}
+      {copyEdit ? <HomeCopyChrome hidden={siteCopy.hidden} selected={copySelected} /> : null}
       <div className="hero-shell">
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         {/*
@@ -796,7 +826,7 @@ function Home({
           예전에는 사진이 화면 전체를 덮고 글이 왼쪽에 얹혀 있었다. 사진이
           주인공이라 정작 무엇이 만들어지는지는 작게 보였다.
         */}
-        <section className="simple-home-choice">
+        <section className="simple-home-choice" data-sc-section="hero">
           <div className="home-hero-copy">
             <span className="section-label">{sc("hero.eyebrow", "창업 10만원대로 시작하세요")}</span>
             <h1>{(() => { const t = sc("hero.title", "사업,|오늘 하루면 충분합니다"); const [head, ...rest] = t.split("|"); return rest.length ? <><b>{head}</b> {rest.join("|").trim()}</> : t; })()}</h1>
@@ -911,7 +941,7 @@ function Home({
         숫자만 봐서는 무엇을 해주는지 알 수 없어서, 하는 일을 제목으로 올리고
         숫자는 그 아래 근거로 내렸다. 한 칸에 하나씩 넘겨 본다.
       */}
-      {scHidden("stats") ? null : <section className="home-stats" aria-label="서비스 구성 요약">
+      {scHidden("stats") ? null : <section className="home-stats" data-sc-section="stats" aria-label="서비스 구성 요약">
         <h2>{sc("stats.title", "숫자로 먼저 확인하세요")}</h2>
         {/*
           레퍼런스(SEO 도구 피처 카드) 느낌 — 카드 위쪽에 은은한 격자·글로우 위에
@@ -976,7 +1006,7 @@ function Home({
         </div>
       </section>}
 
-      {scHidden("method") ? null : <section className="home-section home-method" id="how">
+      {scHidden("method") ? null : <section className="home-section home-method" data-sc-section="method" id="how">
         <div className="home-section-heading">
           <span>{sc("method.eyebrow", "진행 방식")}</span>
           <h2>{scBr("method.title", "질문에 답하기만 하면\n문서가 순서대로 완성됩니다")}</h2>
@@ -990,7 +1020,7 @@ function Home({
         </div>
       </section>}
 
-      {scHidden("deliverables") ? null : <section className="home-deliverables" id="deliverables">
+      {scHidden("deliverables") ? null : <section className="home-deliverables" data-sc-section="deliverables" id="deliverables">
         <div className="home-deliverables-inner">
           <div className="home-deliverables-copy">
             <span>{sc("deliverables.eyebrow", "문서 유형")}</span>
@@ -1014,7 +1044,7 @@ function Home({
         일부는 줄이 그어진다. 인공지능의 답을 그대로 쓰지 않는다는 것을
         말이 아니라 화면으로 보여주는 자리다. 배경은 장식이라 낭독에서 뺀다.
       */}
-      {scHidden("evidence") ? null : <section className="home-section home-evidence evidence-dark" id="evidence">
+      {scHidden("evidence") ? null : <section className="home-section home-evidence evidence-dark" data-sc-section="evidence" id="evidence">
         <div className="evidence-matrix" aria-hidden="true">
           {Array.from({ length: 6 }, (_, row) => (
             <div key={row} className={`ev-row ev-row-${row % 3}`}>
@@ -1046,7 +1076,7 @@ function Home({
         </div>
       </section>}
 
-      {scHidden("price") ? null : <section className="home-price" id="price">
+      {scHidden("price") ? null : <section className="home-price" data-sc-section="price" id="price">
         <div className="home-price-inner">
           <div className="home-price-copy">
             <span>{sc("price.eyebrow", "이용 안내")}</span>
@@ -1121,7 +1151,7 @@ function Home({
         예전 파랑 카드의 오른쪽 세 칸은 가격 섹션에서 이미 밝힌 사실의 복사본이라
         지워도 잃는 정보가 없다.
       */}
-      {scHidden("trial") ? null : <section className="home-trial" aria-labelledby="home-trial-title">
+      {scHidden("trial") ? null : <section className="home-trial" data-sc-section="trial" aria-labelledby="home-trial-title">
         <h2 id="home-trial-title">{scBr("trial.title", "먼저 만들어 보고\n결정하세요")}</h2>
         <div className="home-trial-actions">
           <button type="button" className="home-trial-primary" onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
@@ -1129,7 +1159,7 @@ function Home({
         </div>
       </section>}
 
-      {scHidden("faq") ? null : <section className="home-faq" aria-labelledby="home-faq-title">
+      {scHidden("faq") ? null : <section className="home-faq" data-sc-section="faq" aria-labelledby="home-faq-title">
         <div><span>자주 묻는 질문</span><h2 id="home-faq-title">{sc("faq.title", "궁금한 점을 미리 확인해 보세요")}</h2><p>{scBr("faq.subtitle", "더 궁금한 것은 화면 오른쪽 아래 상담 창에 물어보세요.")}</p></div>
         <div>
           <details><summary>글을 잘 못 써도 만들 수 있나요?<ChevronDown /></summary><p>네. 사용자는 사업에 대한 사실(가격, 고객, 비용 등)만 답하면 되고, 문장은 인공지능이 씁니다. 답이 어려운 질문은 AI 추천 답변을 참고할 수 있습니다.</p></details>

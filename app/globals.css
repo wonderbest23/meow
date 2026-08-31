@@ -16630,3 +16630,182 @@ button.account-kakao-btn svg { display: inline-block !important; }
   .bw-inspector { top: auto; right: 10px; left: 10px; bottom: 10px; width: auto; max-height: 46dvh; }
   @keyframes bwInsIn { from { opacity: 0; transform: translateY(12px); } }
 }
+
+/* ── 어드민 홈페이지 편집 ──────────────────────────────────
+   실제 홈을 iframe 으로 띄우고 그 위에서 섹션을 고른다.
+   껍데기(.sc-*)는 iframe 안(홈 페이지)에서, 나머지는 어드민 화면에서 쓴다. */
+
+/* 홈 안쪽 — 섹션 테두리와 고르기 줄 */
+.sc-chrome { position: absolute; inset: 0; pointer-events: none; z-index: 900; }
+.sc-box {
+  position: absolute;
+  border: 2px dashed rgba(50, 114, 219, .45);
+  border-radius: 8px;
+  pointer-events: none;
+  transition: border-color .15s ease, background .15s ease;
+}
+.sc-box:hover, .sc-box.on { border-color: #3272db; background: rgba(50, 114, 219, .06); }
+.sc-box.off { border-color: #d38b8b; background: rgba(211, 69, 69, .07); }
+.sc-box-bar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: #161c2d;
+  box-shadow: 0 8px 24px rgba(22, 28, 45, .3);
+  pointer-events: auto;
+}
+.sc-box-name { max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 0 8px; border: 0; background: transparent; color: #98a0b6; font-size: 12px; font-weight: 800; cursor: pointer; }
+.sc-box-bar button {
+  min-height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8ebf4;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.sc-box-bar button:hover { background: #2a3147; }
+.sc-box-bar button.danger { color: #ff9d9d; }
+.sc-box-bar button.danger:hover { background: #3a2530; }
+.sc-box-bar button.restore { color: #8ee0a6; }
+.sc-box-bar button.restore:hover { background: #23392c; }
+.sc-box-fixed { padding: 0 9px; font-size: 11.5px; font-weight: 700; color: #6f7896; }
+.sc-box-off-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #c73a3a;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  pointer-events: none;
+}
+/* 숨긴 섹션은 흐리게 — 편집기에서만 보인다(손님 화면에서는 아예 안 그린다) */
+.sc-editing [data-sc-section] { transition: opacity .15s ease; }
+
+/* 어드민 화면 — 좌 미리보기 / 우 편집 */
+.admin-home-editor { display: flex; flex-direction: column; height: 100dvh; background: #f4f6fa; }
+.admin-home-editor > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 20px;
+  background: #fff;
+  border-bottom: 1px solid #e3e6ee;
+  flex: none;
+}
+.admin-home-editor > header > div { display: flex; align-items: center; gap: 12px; }
+.admin-home-editor > header img { width: 30px; height: 30px; border-radius: 8px; }
+.admin-home-editor > header span { display: grid; }
+.admin-home-editor > header strong { font-size: 15px; color: #161c2d; }
+.admin-home-editor > header small { font-size: 12px; color: #7b8194; }
+.admin-home-editor > header nav { display: flex; gap: 6px; flex-wrap: wrap; }
+.admin-home-editor > header nav a { padding: 7px 12px; border-radius: 999px; font-size: 13px; font-weight: 700; color: #5d6270; }
+.admin-home-editor > header nav a.active { background: #161c2d; color: #fff; }
+
+.admin-home-body { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 14px; padding: 14px; }
+.admin-home-preview { min-width: 0; display: flex; flex-direction: column; border-radius: 14px; overflow: hidden; background: #fff; border: 1px solid #e3e6ee; }
+.admin-home-mock { display: flex; align-items: center; gap: 10px; padding: 9px 12px; background: #f7f8fb; border-bottom: 1px solid #e8eaf1; flex: none; }
+.admin-home-dots { display: inline-flex; gap: 5px; }
+.admin-home-dots i { width: 9px; height: 9px; border-radius: 50%; background: #d6dae4; }
+.admin-home-url { flex: 1; font-size: 12.5px; color: #7b8194; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-home-mock a { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: #3272db; }
+.admin-home-preview iframe { flex: 1; width: 100%; border: 0; background: #fff; }
+
+.admin-home-side { min-width: 0; display: flex; flex-direction: column; gap: 12px; overflow: auto; }
+.admin-home-seclist { display: grid; gap: 5px; padding: 10px; border-radius: 14px; background: #fff; border: 1px solid #e3e6ee; flex: none; }
+.admin-home-seclist button {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  font-size: 13px;
+  font-weight: 600;
+  color: #3d3a52;
+  text-align: left;
+  cursor: pointer;
+}
+/* 전역 `button:not(.plan-ui *) svg { display:none }` 이 어드민 아이콘도 지운다 — 여기선 되살린다 */
+.admin-home-editor button svg, .sc-box-bar button svg { display: inline-block !important; }
+.admin-home-seclist button svg { color: #b0b5c4; flex: none; }
+.admin-home-seclist button:hover { background: #f4f6fa; }
+.admin-home-seclist button.on { border-color: #3272db; background: #eef4fd; color: #1f4f9e; }
+.admin-home-seclist button.off { color: #b0b5c4; text-decoration: line-through; }
+
+.admin-home-fields { display: grid; gap: 12px; padding: 14px; border-radius: 14px; background: #fff; border: 1px solid #e3e6ee; }
+.admin-home-fields > header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.admin-home-fields h2 { margin: 0; font-size: 15px; color: #161c2d; }
+.admin-home-fields > header em { font-style: normal; font-size: 11.5px; font-weight: 700; color: #b0b5c4; border: 1px solid #e0e3ec; border-radius: 6px; padding: 2px 7px; }
+.admin-home-fields > header button {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 11px;
+  border: 1px solid #e6c9c9;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #c73a3a;
+  cursor: pointer;
+}
+.admin-home-fields > header button.restore { border-color: #bfe3c9; color: #2f7d4a; }
+.admin-home-fields label { display: grid; gap: 5px; font-size: 12.5px; font-weight: 700; color: #5d6270; }
+.admin-home-fields input, .admin-home-fields textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid #dfe3ea;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #161c2d;
+  background: #fff;
+  resize: vertical;
+}
+.admin-home-fields input:focus, .admin-home-fields textarea:focus { outline: 2px solid #3272db; outline-offset: -1px; }
+.admin-home-fields label small { font-weight: 400; color: #8e93a4; font-size: 11.5px; }
+.admin-home-offnote { margin: 0; padding: 8px 11px; border-radius: 9px; background: #fbeeee; color: #c73a3a; font-size: 12.5px; font-weight: 700; }
+.admin-home-hint { margin: 0; color: #8e93a4; font-size: 12px; line-height: 1.5; }
+
+.admin-home-actions { position: sticky; bottom: 0; display: grid; gap: 8px; padding: 12px; border-radius: 14px; background: #fff; border: 1px solid #e3e6ee; }
+.admin-home-actions p { margin: 0; font-size: 12.5px; color: #2f7d4a; }
+.admin-home-actions > div { display: flex; justify-content: flex-end; gap: 8px; }
+.admin-home-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid #dfe3ea;
+  border-radius: 10px;
+  background: #fff;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #3d3a52;
+  cursor: pointer;
+}
+.admin-home-actions button.save { border-color: #3272db; background: #3272db; color: #fff; }
+.admin-home-actions button:disabled { opacity: .5; cursor: default; }
+.admin-home-actions button svg { display: inline-block !important; }
+
+@media (max-width: 1000px) {
+  .admin-home-editor { height: auto; }
+  .admin-home-body { grid-template-columns: 1fr; }
+  .admin-home-preview { height: 62dvh; }
+}

@@ -7,7 +7,14 @@ const ADMIN_AUTH_EXEMPT = ["/api/admin/support/session"];
 
 
 function withSecurityHeaders(response: NextResponse) {
-  response.headers.set("X-Frame-Options", "DENY");
+  /*
+   * 프레임 차단 — 남의 사이트가 우리 화면을 덮어씌우는 클릭재킹은 계속 막는다.
+   * 다만 우리 화면끼리는 허용해야 한다: 어드민 홈 편집기(/admin/homepage)가
+   * 진짜 홈을 iframe 으로 띄워 그 위에서 섹션을 고르기 때문이다(DENY 면 빈 칸).
+   * frame-ancestors 'self' 가 현행 표준이고, X-Frame-Options 는 옛 브라우저용이다.
+   */
+  response.headers.set("X-Frame-Options", "SAMEORIGIN");
+  response.headers.set("Content-Security-Policy", "frame-ancestors 'self'");
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
