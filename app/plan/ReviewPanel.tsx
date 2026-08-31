@@ -22,6 +22,7 @@ import {
   type ReviewSeverity,
 } from "../../lib/plan-builder/review/domain";
 import ReviewFollowUp from "./ReviewFollowUp";
+import ReviewInlineEdit from "./ReviewInlineEdit";
 import styles from "./ReviewPanel.module.css";
 
 const GROUP_TITLE: Record<ReviewSeverity, string> = {
@@ -51,6 +52,8 @@ export default function ReviewPanel({
   const [readOnly, setReadOnly] = useState(false);
   /** 지금 답변을 받고 있는 문제 */
   const [openIssue, setOpenIssue] = useState<string | null>(null);
+  /** 지금 본문을 그 자리에서 고치고 있는 문제 */
+  const [openEdit, setOpenEdit] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     const s = loadState();
@@ -155,16 +158,22 @@ export default function ReviewPanel({
 
           {review.dimensions.length > 0 && (
             <div className={styles.dims}>
-              {review.dimensions.map((d) => (
-                <div key={d.id} className={`${styles.dim} ${d.score <= 1.5 ? styles.dimBad : d.score <= 3 ? styles.dimLow : ""}`}>
-                  <span className={styles.dimLabel}>{d.label}</span>
-                  <span className={styles.dimBar}>
-                    <span className={styles.dimFill} style={{ width: `${(d.score / 5) * 100}%` }} />
-                  </span>
-                  <span className={styles.dimScore}>{d.score}</span>
-                  {expanded && d.reason && <span className={styles.dimReason}>{d.reason}</span>}
-                </div>
-              ))}
+              {review.dimensions.map((d) => {
+                /* 색만으로는 구분이 어렵다(사용자 지적) — 등급을 말로도 적고 테두리를 준다 */
+                const grade = d.score <= 1.5 ? "취약" : d.score <= 3 ? "보완 필요" : "좋음";
+                const tone = d.score <= 1.5 ? styles.dimBad : d.score <= 3 ? styles.dimLow : styles.dimGood;
+                return (
+                  <div key={d.id} className={`${styles.dim} ${tone}`}>
+                    <span className={styles.dimLabel}>{d.label}</span>
+                    <span className={styles.dimBar}>
+                      <span className={styles.dimFill} style={{ width: `${(d.score / 5) * 100}%` }} />
+                    </span>
+                    <span className={styles.dimScore}>{d.score}<i>/5</i></span>
+                    <span className={styles.dimGrade}>{grade}</span>
+                    {expanded && d.reason && <span className={styles.dimReason}>{d.reason}</span>}
+                  </div>
+                );
+              })}
             </div>
           )}
 
@@ -198,26 +207,33 @@ export default function ReviewPanel({
                       manual_edit/auto_rewrite: 편집기 또는 해당 섹션으로
                     */}
                     {issue.resolution?.type === "answer" && issue.resolution.slots?.length && planId ? (
-                      <button type="button" className={styles.ghost} onClick={() => setOpenIssue(openIssue === issue.id ? null : issue.id)}>
+                      <button type="button" className={styles.primaryGhost} onClick={() => { setOpenEdit(null); setOpenIssue(openIssue === issue.id ? null : issue.id); }}>
                         {openIssue === issue.id ? "접기" : "답변 추가하기 →"}
                       </button>
                     ) : null}
+                    {/* 본문 고치기 — 화면을 떠나지 않는다. 섹션 본문이 있는 문제면 항상 준다 */}
+                    {issue.sectionKey && planId && (
+                      <button type="button" className={styles.primaryGhost} onClick={() => { setOpenIssue(null); setOpenEdit(openEdit === issue.id ? null : issue.id); }}>
+                        {openEdit === issue.id ? "접기" : "여기서 본문 고치기 →"}
+                      </button>
+                    )}
                     {issue.resolution?.type === "market_research" && onOpenSection && (
                       <button type="button" className={styles.ghost} onClick={() => onOpenSection("market", "segments")}>공식자료 찾아보기 →</button>
                     )}
+                    {/* 아래 둘은 화면을 옮기는 길 — 작은 글씨로 남겨 둔다 */}
                     {issue.resolution?.type === "manual_edit" && onOpenDocument && (
-                      <button type="button" className={styles.ghost} onClick={onOpenDocument}>해당 부분 직접 수정 →</button>
+                      <button type="button" className={styles.link} onClick={onOpenDocument}>문서 편집기에서 보기</button>
                     )}
                     {issue.sectionKey && onOpenSection && issue.resolution?.type !== "market_research" && (
                       <button
                         type="button"
-                        className={styles.ghost}
+                        className={styles.link}
                         onClick={() => {
                           const [chapterId, sectionId] = issue.sectionKey!.split("/");
                           if (chapterId && sectionId) onOpenSection(chapterId, sectionId);
                         }}
                       >
-                        해당 섹션 열기
+                        질문부터 다시 답하기
                       </button>
                     )}
                   </div>
@@ -227,6 +243,14 @@ export default function ReviewPanel({
                       planId={planId}
                       onSaved={refresh}
                       onClose={() => setOpenIssue(null)}
+                    />
+                  )}
+                  {openEdit === issue.id && planId && issue.sectionKey && (
+                    <ReviewInlineEdit
+                      sectionKey={issue.sectionKey}
+                      planId={planId}
+                      onSaved={refresh}
+                      onClose={() => setOpenEdit(null)}
                     />
                   )}
                 </article>

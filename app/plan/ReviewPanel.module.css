@@ -31,17 +31,53 @@
 .cWarning { background: #fdf3e3; color: #a35c07; }
 .cImprovement { background: #eef2f8; color: #55586a; }
 
-/* 차원 막대 */
-.dims { display: grid; gap: 7px; }
-.dim { display: grid; grid-template-columns: 116px 1fr 28px; align-items: center; gap: 10px; }
-.dimLabel { font-size: 12.5px; color: #55586a; font-weight: 700; }
+/*
+ * 차원 막대.
+ * 예전에는 색만 달랐다 — 막대 길이도 짧고 색도 비슷해 어디가 문제인지 한눈에
+ * 안 들어왔다(사용자 지적). 이제 줄마다 옅은 배경과 왼쪽 색 테두리를 주고,
+ * 점수 옆에 '취약/보완 필요/좋음'을 말로 적는다. 색을 못 보는 사람도 읽을 수 있다.
+ */
+.dims { display: grid; gap: 6px; }
+.dim {
+  display: grid;
+  grid-template-columns: 116px 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px 8px 10px;
+  border-radius: 8px;
+  border-left: 3px solid #c9c9d8;
+  background: #fafafd;
+}
+.dimLabel { font-size: 12.5px; color: #1c1d21; font-weight: 700; }
 /* span 을 쓰므로 display 를 명시한다 — 인라인이면 높이·너비가 먹지 않아 막대가 비어 보인다 */
-.dimBar { display: block; height: 6px; border-radius: 999px; background: #f0f0f3; overflow: hidden; }
-.dimFill { display: block; height: 100%; min-width: 2px; border-radius: 999px; background: var(--blue, #3272db); transition: width .4s ease; }
+.dimBar { display: block; height: 8px; border-radius: 999px; background: #e9e9f0; overflow: hidden; }
+.dimFill { display: block; height: 100%; min-width: 3px; border-radius: 999px; background: var(--blue, #3272db); transition: width .4s ease; }
+.dimScore { font-size: 13px; font-weight: 800; color: #1c1d21; text-align: right; font-variant-numeric: tabular-nums; }
+.dimScore i { font-style: normal; font-size: 11px; font-weight: 700; color: #a0a3b5; margin-left: 1px; }
+.dimGrade { font-size: 11px; font-weight: 800; padding: 3px 8px; border-radius: 999px; white-space: nowrap; }
+
+.dimGood { border-left-color: #3272db; background: #f5f8ff; }
+.dimGood .dimFill { background: #3272db; }
+.dimGood .dimGrade { background: #e6eeff; color: #2a5fb0; }
+
+.dimLow { border-left-color: #e0912f; background: #fffaf1; }
 .dimLow .dimFill { background: #e0912f; }
+.dimLow .dimGrade { background: #fbeed6; color: #96590a; }
+
+/* 취약 — 가장 눈에 띄어야 한다: 테두리를 두르고 배경도 붉게 */
+.dimBad { border: 1px solid #f0c9c5; border-left: 3px solid #d0544a; background: #fff5f4; }
+.dimBad .dimLabel { color: #a83a30; }
 .dimBad .dimFill { background: #d0544a; }
-.dimScore { font-size: 12px; font-weight: 800; color: #1c1d21; text-align: right; font-variant-numeric: tabular-nums; }
-.dimReason { grid-column: 1 / -1; font-size: 12px; color: #8181a5; margin: -2px 0 4px 126px; line-height: 1.5; }
+.dimBad .dimScore { color: #a83a30; }
+.dimBad .dimGrade { background: #fadcd9; color: #a83a30; }
+
+.dimReason { grid-column: 1 / -1; font-size: 12px; color: #8181a5; margin: 2px 0 0 0; line-height: 1.5; }
+
+@media (max-width: 640px) {
+  .dim { grid-template-columns: 1fr auto auto; }
+  .dimBar { grid-column: 1 / -1; order: 3; }
+  .dimReason { order: 4; }
+}
 
 /* 잘 된 점 */
 .strengths { display: grid; gap: 5px; }
@@ -108,3 +144,52 @@
 .followSaved { display: flex; align-items: center; gap: 6px; font-size: 13.5px; font-weight: 700; color: #1f7a4d; margin: 0; }
 .followErr { font-size: 12.5px; color: #c0362c; margin: 0; line-height: 1.55; }
 .followNote { font-size: 11.5px; color: #a0a0b8; margin: 0; }
+
+/* 주된 행동 — 그 자리에서 고치는 길 */
+.primaryGhost {
+  border: 1px solid #cddcf7;
+  background: #f2f7ff;
+  color: #2a5fb0;
+  font: inherit;
+  font-weight: 800;
+  font-size: 12.5px;
+  min-height: 32px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.primaryGhost:hover { background: #e6eeff; border-color: #b6cdf2; }
+/* 화면을 옮기는 길 — 눈에 덜 띄게 */
+.link {
+  border: 0;
+  background: none;
+  color: #8181a5;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+  padding: 6px 2px;
+}
+.link:hover { color: #55586a; }
+
+/* 그 자리에서 본문 고치기 */
+.inline { margin-top: 8px; border: 1px solid #e6e6ef; border-radius: 8px; background: #fbfbfe; padding: 12px; display: grid; gap: 8px; }
+.inlineHead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.inlineHead strong { font-size: 13px; font-weight: 800; color: #1c1d21; }
+.inlineArea {
+  width: 100%;
+  border: 1px solid #dcdce6;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font: inherit;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #1c1d21;
+  background: #fff;
+  resize: vertical;
+}
+.inlineArea:focus { outline: 2px solid #3272db; outline-offset: -1px; }
+.inlineNote { font-size: 12px; color: #8181a5; line-height: 1.55; margin: 0; }
+.inlineErr { font-size: 12.5px; color: #c0362c; margin: 0; }
