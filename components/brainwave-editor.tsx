@@ -6,6 +6,7 @@ import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { BrainwavePage, loadBrainwavePage, menuItemsOf, type BrainwavePageData } from "./brainwave-page";
+import { brainwaveSections } from "../lib/landing/brainwave/button-action";
 import { resizeImage, uploadImage } from "./landing-media-field";
 
 /*
@@ -20,8 +21,25 @@ import { resizeImage, uploadImage } from "./landing-media-field";
  */
 type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string>; sizes: Record<string, number> };
 
-/* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로 저장, url 은 주소를 저장 */
-type BtnPanel = { id: string; textId: string | null; label: string; mode: "contact" | "url" | "none"; url: string };
+/* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로, url 은 주소, sec 는 "sec:N"(섹션 스크롤) */
+type LinkMode = "contact" | "url" | "none" | "sec";
+type BtnPanel = { id: string; textId: string | null; label: string; mode: LinkMode; url: string; sec: number };
+
+/* 저장된 링크 값("contact"·"none"·"sec:N"·주소) → 판에서 고르는 모드·값 */
+function parseLink(saved: string): { mode: LinkMode; url: string; sec: number } {
+  if (saved === "none" || saved === "contact") return { mode: saved, url: "", sec: 0 };
+  const m = saved.match(/^sec:(\d+)$/);
+  if (m) return { mode: "sec", url: "", sec: Number(m[1]) };
+  return { mode: "url", url: saved, sec: 0 };
+}
+
+/* 판에서 고른 것 → 저장할 링크 값("" 은 기본 그대로 = 항목 삭제) */
+function serializeLink(mode: LinkMode, url: string, sec: number): string {
+  if (mode === "sec") return `sec:${sec}`;
+  if (mode !== "url") return mode;
+  const u = url.trim();
+  return /^(https?:\/\/|tel:|mailto:)/i.test(u) ? u : u ? `https://${u}` : "";
+}
 
 type TokenBalance = { purchased: number; used: number; remaining: number; packSize: number };
 
@@ -125,13 +143,10 @@ export function BrainwaveEditor({
     const current = over.texts[id] ?? meta?.slots.text.find((t) => t.id === id)?.text ?? el.innerText;
     const items = menuItemsOf(current);
     if (items) {
+      setSecCount(brainwaveSections(document.querySelector(".bw-editor-canvas") ?? document).length);
       setMenu({
         id,
-        items: items.map((name, i) => {
-          const saved = over.links[`${id}@${i}`] ?? "none";
-          const mode = saved === "none" || saved === "contact" ? saved : "url";
-          return { name, mode, url: mode === "url" ? saved : "" };
-        }),
+        items: items.map((name, i) => ({ name, ...parseLink(over.links[`${id}@${i}`] ?? "none") })),
       });
       return;
     }
@@ -205,9 +220,8 @@ export function BrainwaveEditor({
     setMenu(null);
     const textSlot = meta?.slots.text.find((s) => s.id.startsWith(`I${id};`)) ?? null;
     const label = textSlot ? over.texts[textSlot.id] ?? textSlot.text : "";
-    const saved = over.links[id] ?? "contact";
-    const mode = saved === "contact" || saved === "none" ? saved : "url";
-    setBtn({ id, textId: textSlot?.id ?? null, label, mode, url: mode === "url" ? saved : "" });
+    setSecCount(brainwaveSections(document.querySelector(".bw-editor-canvas") ?? document).length);
+    setBtn({ id, textId: textSlot?.id ?? null, label, ...parseLink(over.links[id] ?? "contact") });
   };
   const applyBtn = () => {
     if (!btn) return;
@@ -217,9 +231,8 @@ export function BrainwaveEditor({
       if (btn.label === original) delete texts[btn.textId]; else texts[btn.textId] = btn.label;
     }
     const links = { ...over.links };
-    const url = btn.url.trim();
     /* 주소는 https/tel/mailto 만 — "www.…" 처럼 오면 https 를 붙여 준다 */
-    const normalized = btn.mode !== "url" ? btn.mode : /^(https?:\/\/|tel:|mailto:)/i.test(url) ? url : url ? `https://${url}` : "";
+    const normalized = serializeLink(btn.mode, btn.url, btn.sec);
     if (normalized === "contact" || normalized === "") delete links[btn.id]; else links[btn.id] = normalized;
     commit({ ...over, texts, links });
     setBtn(null);
@@ -230,7 +243,13 @@ export function BrainwaveEditor({
    * 항목은 3~6개(3개 밑으로 줄면 메뉴 줄로 인식되지 않아 링크가 죽는다),
    * 이름은 8자까지(같은 이유 — 모바일 숨김 판정과 기준을 공유한다).
    */
-  const [menu, setMenu] = useState<{ id: string; items: Array<{ name: string; mode: "none" | "contact" | "url"; url: string }> } | null>(null);
+  const [menu, setMenu] = useState<{ id: string; items: Array<{ name: string; mode: LinkMode; url: string; sec: number }> } | null>(null);
+  /* 섹션 개수·미리 내려가 보기 — '섹션으로 이동'을 고를 때 어느 칸인지 눈으로 확인시킨다 */
+  const [secCount, setSecCount] = useState(0);
+  const jumpToSection = (n: number) => {
+    const els = brainwaveSections(document.querySelector(".bw-editor-canvas") ?? document);
+    els[Math.min(n, Math.max(0, els.length - 1))]?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
   const applyMenu = () => {
     if (!menu) return;
     const kept = menu.items.filter((m) => m.name.trim());
@@ -245,8 +264,7 @@ export function BrainwaveEditor({
     const links = { ...over.links };
     for (const k of Object.keys(links)) if (k.startsWith(`${menu.id}@`)) delete links[k];
     kept.forEach((m, i) => {
-      const url = m.url.trim();
-      const v = m.mode !== "url" ? m.mode : /^(https?:\/\/|tel:|mailto:)/i.test(url) ? url : url ? `https://${url}` : "";
+      const v = serializeLink(m.mode, m.url, m.sec);
       if (v && v !== "none") links[`${menu.id}@${i}`] = v;
     });
     commit({ ...over, texts, links });
@@ -375,10 +393,11 @@ export function BrainwaveEditor({
                 <select
                   value={m.mode}
                   aria-label={`메뉴 ${i + 1} 이동`}
-                  onChange={(e) => { const items = [...menu.items]; items[i] = { ...m, mode: e.target.value as "none" | "contact" | "url" }; setMenu({ ...menu, items }); }}
+                  onChange={(e) => { const mode = e.target.value as LinkMode; const items = [...menu.items]; items[i] = { ...m, mode }; setMenu({ ...menu, items }); if (mode === "sec") jumpToSection(m.sec); }}
                 >
                   <option value="none">이동 없음</option>
                   <option value="contact">문의 양식</option>
+                  {secCount > 1 ? <option value="sec">섹션으로 이동</option> : null}
                   <option value="url">주소(URL)</option>
                 </select>
                 <button
@@ -397,10 +416,22 @@ export function BrainwaveEditor({
                   onChange={(e) => { const items = [...menu.items]; items[i] = { ...m, url: e.target.value }; setMenu({ ...menu, items }); }}
                 />
               ) : null}
+              {m.mode === "sec" ? (
+                <select
+                  className="bw-menu-url"
+                  value={m.sec}
+                  aria-label={`메뉴 ${i + 1} 이동할 섹션`}
+                  onChange={(e) => { const sec = Number(e.target.value); const items = [...menu.items]; items[i] = { ...m, sec }; setMenu({ ...menu, items }); jumpToSection(sec); }}
+                >
+                  {Array.from({ length: secCount }, (_, s) => (
+                    <option key={s} value={s}>{s === 0 ? "맨 위(1번 섹션)" : `${s + 1}번 섹션`}</option>
+                  ))}
+                </select>
+              ) : null}
             </div>
           ))}
           {menu.items.length < 6 ? (
-            <button type="button" className="bw-menu-add" onClick={() => setMenu({ ...menu, items: [...menu.items, { name: "메뉴", mode: "none", url: "" }] })}>
+            <button type="button" className="bw-menu-add" onClick={() => setMenu({ ...menu, items: [...menu.items, { name: "메뉴", mode: "none", url: "", sec: 0 }] })}>
               <Plus size={14} /> 항목 추가
             </button>
           ) : null}
@@ -454,9 +485,24 @@ export function BrainwaveEditor({
           <strong>이 버튼을 누르면</strong>
           <div className="bw-btn-opts" role="radiogroup">
             <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "contact"} onChange={() => setBtn({ ...btn, mode: "contact" })} /> 문의·신청 양식으로 <small>페이지 아래 양식으로 내려갑니다</small></label>
+            {secCount > 1 ? (
+              <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "sec"} onChange={() => { setBtn({ ...btn, mode: "sec" }); jumpToSection(btn.sec); }} /> 페이지 섹션으로 <small>이 페이지 안의 칸으로 내려갑니다</small></label>
+            ) : null}
             <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "url"} onChange={() => setBtn({ ...btn, mode: "url" })} /> 주소(URL) 열기 <small>스마트스토어·예약 페이지·전화 등</small></label>
             <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "none"} onChange={() => setBtn({ ...btn, mode: "none" })} /> 아무 동작 없음</label>
           </div>
+          {btn.mode === "sec" ? (
+            <select
+              className="bw-btn-url"
+              value={btn.sec}
+              aria-label="이동할 섹션"
+              onChange={(e) => { const sec = Number(e.target.value); setBtn({ ...btn, sec }); jumpToSection(sec); }}
+            >
+              {Array.from({ length: secCount }, (_, s) => (
+                <option key={s} value={s}>{s === 0 ? "맨 위(1번 섹션)" : `${s + 1}번 섹션`}</option>
+              ))}
+            </select>
+          ) : null}
           {btn.mode === "url" ? (
             <input
               className="bw-btn-url"
