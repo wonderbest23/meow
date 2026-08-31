@@ -130,6 +130,39 @@ export function BrainwaveEditor({
   const redo = () => { const nxt = future[0]; if (!nxt) return; setFuture((f) => f.slice(1)); setHistory((h) => [...h, over]); setOver(nxt); };
 
   /*
+   * 선택 툴바(Wix 식) — 요소를 '클릭'만 해도 그 위에 작은 액션 줄이 뜬다.
+   * 우클릭 메뉴는 보조 수단으로 남긴다(둘 다 같은 hide 를 부른다).
+   */
+  const [sel, setSel] = useState<{ kind: "글" | "메뉴" | "사진" | "버튼"; id: string; el: HTMLElement; secId: string | null } | null>(null);
+  const [selPos, setSelPos] = useState<{ x: number; y: number } | null>(null);
+  const placeSel = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    setSelPos({ x: Math.min(Math.max(r.left + r.width / 2, 150), window.innerWidth - 150), y: Math.max(r.top, 96) });
+  };
+  /* 이 요소가 든 최상위 섹션 id — 킷 트리 최상위 그룹을 조상 data-bw-node 에서 찾는다 */
+  const secIdOf = (el: HTMLElement | null): string | null => {
+    const sectionIds = new Set((meta?.root.ch ?? []).map((n) => n.id).filter(Boolean) as string[]);
+    for (let cur: HTMLElement | null = el; cur; cur = cur.parentElement) {
+      const nid = cur.dataset?.bwNode;
+      if (nid && sectionIds.has(nid)) return nid;
+    }
+    return null;
+  };
+  const select = (kind: "글" | "메뉴" | "사진" | "버튼", id: string, el: HTMLElement) => {
+    setSel({ kind, id, el, secId: secIdOf(el) });
+    placeSel(el);
+  };
+  const deselect = () => { setSel(null); setSelPos(null); };
+  useEffect(() => {
+    if (!sel) return;
+    const follow = () => placeSel(sel.el);
+    window.addEventListener("scroll", follow, { capture: true, passive: true });
+    window.addEventListener("resize", follow);
+    return () => { window.removeEventListener("scroll", follow, { capture: true }); window.removeEventListener("resize", follow); };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel]);
+
+  /*
    * 글 자리 — 그 자리에서 고친다. 고르는 순간 오른쪽에 텍스트 판이 떠서
    * 내용·크기를 세세하게 만질 수 있다(화면의 글자와 양방향으로 같이 움직인다).
    */
@@ -148,11 +181,13 @@ export function BrainwaveEditor({
         id,
         items: items.map((name, i) => ({ name, ...parseLink(over.links[`${id}@${i}`] ?? "none") })),
       });
+      select("메뉴", id, el);
       return;
     }
     setMenu(null);
     el.contentEditable = "plaintext-only";
     el.focus();
+    select("글", id, el);
     setEditing({ id, el });
     setSizeTarget(id);
     setDraftText(el.innerText);
@@ -215,9 +250,10 @@ export function BrainwaveEditor({
    * 글이 먼저냐가 모호해서 — 판 하나로 합쳤다).
    */
   const [btn, setBtn] = useState<BtnPanel | null>(null);
-  const pickButton = (id: string) => {
+  const pickButton = (id: string, el?: HTMLElement) => {
     finishText();
     setMenu(null);
+    if (el) select("버튼", id, el);
     const textSlot = meta?.slots.text.find((s) => s.id.startsWith(`I${id};`)) ?? null;
     const label = textSlot ? over.texts[textSlot.id] ?? textSlot.text : "";
     setSecCount(brainwaveSections(document.querySelector(".bw-editor-canvas") ?? document).length);
@@ -280,6 +316,7 @@ export function BrainwaveEditor({
     setMenu(null);
     setBtn(null);
     setCtx(null);
+    deselect();
     if (over.hidden.includes(id)) return;
     commit({ ...over, hidden: [...over.hidden, id] });
   };
@@ -340,7 +377,7 @@ export function BrainwaveEditor({
   };
 
   /* 사진 자리 — 파일 고르기 */
-  const pickImage = (id: string) => { finishText(); setMenu(null); pendingImage.current = id; fileRef.current?.click(); };
+  const pickImage = (id: string, el?: HTMLElement) => { finishText(); setMenu(null); if (el) select("사진", id, el); pendingImage.current = id; fileRef.current?.click(); };
   const onFile = async (file?: File) => {
     const id = pendingImage.current;
     if (!file || !id) return;
@@ -386,7 +423,7 @@ export function BrainwaveEditor({
             <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC 화면"><Monitor size={15} /> PC</button>
             <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일 화면"><Smartphone size={15} /> 모바일</button>
           </div>
-          <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} title={previewMode ? "편집으로" : "미리보기"} onClick={() => { finishText(); setMenu(null); setPreviewMode((v) => !v); }}>
+          <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} title={previewMode ? "편집으로" : "미리보기"} onClick={() => { finishText(); setMenu(null); deselect(); setPreviewMode((v) => !v); }}>
             {previewMode ? <><Pencil size={14} /><span className="bw-editor-pick-x"> 편집으로</span></> : <><Eye size={14} /><span className="bw-editor-pick-x"> 미리보기</span></>}
           </button>
         </div>
@@ -404,6 +441,15 @@ export function BrainwaveEditor({
         </div>
       </header>
       {error ? <p className="bw-editor-error">{error}</p> : null}
+      {/* 선택 툴바 — 누른 요소 바로 위에 뜨는 액션 줄(Wix 식). 숨기기는 우클릭 없이 여기서 */}
+      {!previewMode && sel && selPos ? (
+        <div className="bw-eltool" role="toolbar" aria-label={`선택: ${sel.kind}`} style={{ left: selPos.x, top: selPos.y }} onMouseDown={(e) => e.preventDefault()}>
+          <span className="bw-eltool-kind">{sel.kind}</span>
+          {sel.kind === "사진" ? <button type="button" onClick={() => { pendingImage.current = sel.id; fileRef.current?.click(); }}><Pencil size={13} /> 바꾸기</button> : null}
+          <button type="button" className="danger" onClick={() => hide(sel.id)}><Trash2 size={13} /> 숨기기</button>
+          {sel.secId ? <button type="button" className="danger" onClick={() => hide(sel.secId!)}>섹션 숨기기</button> : null}
+        </div>
+      ) : null}
       {/* 텍스트 판 — 글자를 고르면 오른쪽에 떠서 내용·크기를 세세하게 고친다(Wix 식 도킹 패널) */}
       {!previewMode && editing && sizeTarget ? (
         <aside className="bw-inspector" role="dialog" aria-label="텍스트 편집">
@@ -569,13 +615,13 @@ export function BrainwaveEditor({
         </div>
       ) : null}
       {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
-      <div className="bw-editor-stage" onClick={finishText} onContextMenu={onStageContext}>
+      <div className="bw-editor-stage" onClick={() => { finishText(); deselect(); }} onContextMenu={onStageContext}>
         <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view] }}>
           <BrainwavePage
             pageId={page}
             overrides={over}
             mode={view === "mobile" ? "mobile" : "desktop"}
-            onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id) : pickButton(id))}
+            onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id, el) : pickButton(id, el))}
           />
           {uploading ? <div className="bw-editor-uploading"><LoaderCircle className="spin" /> 사진 올리는 중</div> : null}
         </div>
@@ -627,7 +673,7 @@ export function BrainwaveEditor({
       ) : null}
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
       <p className="bw-editor-hint">
-        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 글·사진은 눌러서 고치고, 마우스 오른쪽 버튼으로 숨기기(삭제)·섹션 지우기를 할 수 있습니다.</>}
+        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 요소를 누르면 위에 뜨는 줄에서 숨기기(삭제)·섹션 지우기를 할 수 있습니다.</>}
         {changed ? <b> 고친 자리 {changed}개</b> : null}
       </p>
     </div>

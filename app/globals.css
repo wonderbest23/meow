@@ -16477,6 +16477,41 @@ button.account-kakao-btn svg { display: inline-block !important; }
 }
 .bw-menu-panel .bw-btn-actions button:disabled { opacity: .5; cursor: default; }
 
+/* 선택 툴바 — 누른 요소 바로 위에 뜨는 액션 줄(Wix 식) */
+.bw-eltool {
+  position: fixed;
+  transform: translate(-50%, calc(-100% - 10px));
+  z-index: 95;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 6px;
+  border-radius: 999px;
+  background: #161c2d;
+  box-shadow: 0 10px 30px rgba(22, 28, 45, .35);
+  animation: bwInsIn .12s ease backwards;
+}
+.bw-eltool-kind { padding: 0 8px 0 6px; font-size: 12px; font-weight: 800; color: #8f96ab; }
+.bw-eltool button {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 28px;
+  padding: 0 11px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8ebf4;
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.bw-eltool button:hover { background: #2a3147; }
+.bw-eltool button.danger { color: #ff9d9d; }
+.bw-eltool button.danger:hover { background: #3a2530; }
+.bw-eltool button svg { display: inline-block !important; }
+
 /* 우클릭 메뉴 — Wix 식 컨텍스트 메뉴 */
 .bw-ctx {
   position: fixed;
