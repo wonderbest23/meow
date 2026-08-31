@@ -16809,3 +16809,60 @@ button.account-kakao-btn svg { display: inline-block !important; }
   .admin-home-body { grid-template-columns: 1fr; }
   .admin-home-preview { height: 62dvh; }
 }
+
+/* 글 한 조각 — 고른 섹션 안에서만 보이는 작은 테두리와 줄 */
+.sc-field {
+  position: absolute;
+  border: 1px dashed rgba(199, 58, 58, .5);
+  border-radius: 6px;
+  pointer-events: none;
+}
+.sc-field.off { background: rgba(199, 58, 58, .1); }
+.sc-field-bar {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  transform: translateY(-4px);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 3px;
+  border-radius: 999px;
+  background: #4a2230;
+  box-shadow: 0 6px 18px rgba(22, 28, 45, .28);
+  pointer-events: auto;
+  white-space: nowrap;
+}
+.sc-field-bar > span { padding: 0 8px; font-size: 11.5px; font-weight: 800; color: #e3b3bd; }
+.sc-field-bar button {
+  min-height: 24px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: #ffe3e6;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.sc-field-bar button:hover { background: #62303f; }
+.sc-field-bar button.danger { color: #ffb0b0; }
+.sc-field-bar button.restore { color: #a7e6b8; }
+
+/* 어드민 — 글 조각 삭제 표시 */
+.admin-home-fields label > span { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.admin-home-fields label > span button {
+  border: 0;
+  background: transparent;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #c73a3a;
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 6px;
+}
+.admin-home-fields label > span button:hover { background: #fbeeee; }
+.admin-home-fields label > span button.restore { color: #2f7d4a; }
+.admin-home-fields label > span button.restore:hover { background: #eef7f1; }
+.admin-home-fields label.off > span { color: #b0b5c4; }
+.admin-home-fields label.off input, .admin-home-fields label.off textarea { background: #f4f6fa; color: #b0b5c4; text-decoration: line-through; }

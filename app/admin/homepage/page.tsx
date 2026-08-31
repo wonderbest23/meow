@@ -60,8 +60,17 @@ export default function AdminHomepagePage() {
       const data = event.data as { type?: string; id?: string } | null;
       if (data?.type === "sc-ready") { pushDraft(texts, hidden); return; }
       if (!data?.id) return;
+      const sectionOf = (id: string) => id.split(".")[0];
       if (data.type === "sc-select") setSelected(data.id);
-      if (data.type === "sc-hide") { setHidden((current) => current.includes(data.id!) ? current : [...current, data.id!]); setSelected(data.id); }
+      if (data.type === "sc-field") {
+        setSelected(sectionOf(data.id));
+        window.setTimeout(() => {
+          const el = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[data-field-input="${data.id}"]`);
+          el?.focus();
+          el?.scrollIntoView({ block: "center" });
+        }, 60);
+      }
+      if (data.type === "sc-hide") { setHidden((current) => current.includes(data.id!) ? current : [...current, data.id!]); setSelected(sectionOf(data.id)); }
       if (data.type === "sc-show") setHidden((current) => current.filter((id) => id !== data.id));
     };
     window.addEventListener("message", onMessage);
@@ -155,17 +164,27 @@ export default function AdminHomepagePage() {
                 ) : <em>고정 섹션</em>}
               </header>
               {currentHidden ? <p className="admin-home-offnote">지금 이 섹션은 손님에게 보이지 않습니다.</p> : null}
-              {fieldsForSection(current.id).map((field) => (
-                <label key={field.id}>
-                  <span>{field.label}</span>
-                  {field.multiline ? (
-                    <textarea rows={3} value={texts[field.id] ?? field.def} onChange={(event) => setTexts((c) => ({ ...c, [field.id]: event.target.value }))} />
-                  ) : (
-                    <input value={texts[field.id] ?? field.def} onChange={(event) => setTexts((c) => ({ ...c, [field.id]: event.target.value }))} />
-                  )}
-                  {field.hint && <small>{field.hint}</small>}
-                </label>
-              ))}
+              {fieldsForSection(current.id).map((field) => {
+                const fieldOff = hidden.includes(field.id);
+                return (
+                  <label key={field.id} className={fieldOff ? "off" : ""}>
+                    <span>
+                      {field.label}
+                      <button
+                        type="button"
+                        className={fieldOff ? "restore" : "danger"}
+                        onClick={() => setHidden((c) => fieldOff ? c.filter((id) => id !== field.id) : [...c, field.id])}
+                      >{fieldOff ? "되살리기" : "이 글 삭제"}</button>
+                    </span>
+                    {field.multiline ? (
+                      <textarea data-field-input={field.id} rows={3} disabled={fieldOff} value={texts[field.id] ?? field.def} onChange={(event) => setTexts((c) => ({ ...c, [field.id]: event.target.value }))} />
+                    ) : (
+                      <input data-field-input={field.id} disabled={fieldOff} value={texts[field.id] ?? field.def} onChange={(event) => setTexts((c) => ({ ...c, [field.id]: event.target.value }))} />
+                    )}
+                    {fieldOff ? <small>지금 이 글은 화면에 나오지 않습니다.</small> : field.hint ? <small>{field.hint}</small> : null}
+                  </label>
+                );
+              })}
               <p className="admin-home-hint">칸을 비우면 기본 문구로 돌아갑니다. 줄바꿈은 그대로 반영됩니다.</p>
             </div>
           ) : <p className="admin-home-hint">왼쪽 화면에서 섹션을 골라 주세요.</p>}

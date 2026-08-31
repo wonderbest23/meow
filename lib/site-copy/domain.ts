@@ -34,9 +34,7 @@ export const SITE_COPY_FIELDS: SiteCopyField[] = [
   { id: "deliverables.eyebrow", group: "문서 유형", label: "눈썹", def: "문서 유형" },
   { id: "deliverables.title", group: "문서 유형", label: "제목", def: "목적에 맞는 문서를\n골라서 만드세요", multiline: true },
   { id: "deliverables.subtitle", group: "문서 유형", label: "설명", def: "한 번 입력한 답변은 다른 유형에 그대로 이어집니다. 문서는 PDF와 수정 가능한 Word로, 발표자료는 PPT로 받을 수 있습니다.", multiline: true },
-  { id: "evidence.eyebrow", group: "근거 확인", label: "눈썹", def: "근거 확인 방식" },
   { id: "evidence.title", group: "근거 확인", label: "제목", def: "인공지능의 답을\n그대로 믿게 하지 않습니다", multiline: true },
-  { id: "evidence.subtitle", group: "근거 확인", label: "설명", def: "생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.", multiline: true },
   { id: "price.eyebrow", group: "가격", label: "눈썹", def: "이용 안내" },
   { id: "price.title", group: "가격", label: "제목", def: "무료로 품질을 확인한 뒤,\n필요한 문서만 결제합니다", multiline: true },
   { id: "price.subtitle", group: "가격", label: "설명", def: "완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.", multiline: true },
@@ -80,9 +78,13 @@ export function fieldsForSection(sectionId: string) {
   return SITE_COPY_FIELDS.filter((field) => field.id.startsWith(`${sectionId}.`));
 }
 
+/*
+ * 숨긴 것 — 섹션 id("reviews")뿐 아니라 글 한 조각 id("reviews.notice")도 들어간다.
+ * 문구를 비우면 기본값으로 돌아가는 규칙 때문에, '이 문장만 없애기'는 숨김으로만 된다.
+ */
 export const siteCopySchema = z.object({
   texts: z.record(z.string(), z.string().max(2000)).default({}),
-  hidden: z.array(z.string()).max(32).default([]),
+  hidden: z.array(z.string()).max(64).default([]),
 });
 export type SiteCopy = z.infer<typeof siteCopySchema>;
 
@@ -98,6 +100,6 @@ export function sanitizeSiteCopy(input: SiteCopy): SiteCopy {
     if (v.trim() === "" || v === def) continue;
     texts[id] = v;
   }
-  const hidden = [...new Set(input.hidden.filter((id) => SECTION_IDS.has(id)))];
+  const hidden = [...new Set(input.hidden.filter((id) => SECTION_IDS.has(id) || FIELD_IDS.has(id)))];
   return { texts, hidden };
 }

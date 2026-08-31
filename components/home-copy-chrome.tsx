@@ -13,17 +13,21 @@
  */
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { EDIT_SECTIONS } from "../lib/site-copy/domain";
+import { EDIT_SECTIONS, SITE_COPY_FIELDS } from "../lib/site-copy/domain";
 
 type Box = { id: string; label: string; hideable: boolean; top: number; left: number; width: number; height: number };
+/* 글 한 조각 — 고른 섹션 안에서만 표시한다(전부 그리면 화면이 시끄럽다) */
+type FieldBox = { id: string; label: string; top: number; left: number; width: number; height: number };
 
 export type HomeCopyMessage =
   | { type: "sc-select"; id: string }
   | { type: "sc-hide"; id: string }
-  | { type: "sc-show"; id: string };
+  | { type: "sc-show"; id: string }
+  | { type: "sc-field"; id: string };
 
 export function HomeCopyChrome({ hidden, selected }: { hidden: string[]; selected: string | null }) {
   const [boxes, setBoxes] = useState<Box[]>([]);
+  const [fields, setFields] = useState<FieldBox[]>([]);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
@@ -48,6 +52,18 @@ export function HomeCopyChrome({ hidden, selected }: { hidden: string[]; selecte
         });
       }
       setBoxes((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next));
+      const nextFields: FieldBox[] = [];
+      if (selected) {
+        for (const el of document.querySelectorAll<HTMLElement>("[data-sc-field]")) {
+          const id = el.dataset.scField;
+          if (!id || !id.startsWith(`${selected}.`)) continue;
+          const field = SITE_COPY_FIELDS.find((f) => f.id === id);
+          const rect = el.getBoundingClientRect();
+          if (!field || rect.height < 6) continue;
+          nextFields.push({ id, label: field.label, top: rect.top + window.scrollY, left: rect.left + window.scrollX, width: rect.width, height: rect.height });
+        }
+      }
+      setFields((prev) => (JSON.stringify(prev) === JSON.stringify(nextFields) ? prev : nextFields));
     };
     measure();
     /*
@@ -65,7 +81,7 @@ export function HomeCopyChrome({ hidden, selected }: { hidden: string[]; selecte
       window.removeEventListener("scroll", measure);
       window.clearInterval(timer);
     };
-  }, [mounted, hidden]);
+  }, [mounted, hidden, selected]);
 
   const send = (message: HomeCopyMessage) => window.parent.postMessage(message, window.location.origin);
 
@@ -92,6 +108,25 @@ export function HomeCopyChrome({ hidden, selected }: { hidden: string[]; selecte
               ) : <span className="sc-box-fixed">고정</span>}
             </div>
             {isHidden ? <span className="sc-box-off-tag">숨김 — 손님에게 보이지 않습니다</span> : null}
+          </div>
+        );
+      })}
+      {/* 고른 섹션 안의 글 조각 — 이 문장만 지우고 싶을 때 */}
+      {fields.map((field) => {
+        const off = hidden.includes(field.id);
+        return (
+          <div
+            key={field.id}
+            className={`sc-field ${off ? "off" : ""}`}
+            style={{ top: field.top, left: field.left, width: field.width, height: field.height }}
+          >
+            <div className="sc-field-bar">
+              <span>{field.label}</span>
+              <button type="button" onClick={() => send({ type: "sc-field", id: field.id })}>고치기</button>
+              {off
+                ? <button type="button" className="restore" onClick={() => send({ type: "sc-show", id: field.id })}>되살리기</button>
+                : <button type="button" className="danger" onClick={() => send({ type: "sc-hide", id: field.id })}>이 글 삭제</button>}
+            </div>
           </div>
         );
       })}
