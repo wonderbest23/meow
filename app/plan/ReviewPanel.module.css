@@ -92,7 +92,6 @@
 
 /* 상태 */
 .note { font-size: 12.5px; color: #8181a5; line-height: 1.6; }
-.stale { border: 1px dashed #e0c07a; background: #fffaf0; border-radius: 8px; padding: 10px 14px; font-size: 12.5px; color: #8a6116; line-height: 1.6; }
 .fail { border: 1px solid #f3d9d9; background: #fff7f7; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: #1c1d21; line-height: 1.6; }
 .disclaimer { font-size: 11.5px; color: #a0a0b8; line-height: 1.55; border-top: 1px solid #f0f0f3; padding-top: 10px; }
 
@@ -270,3 +269,22 @@
   .loadingBar i { animation: none; width: 100%; }
   .dimFill { transition: none; }
 }
+
+/* ── 시작 · 끝 화면 ──────────────────────────────────────
+   검토 직후엔 점수와 개수만 한 장으로 보고 시작한다. 끝나면 다시 검토를 권한다. */
+.intro { display: grid; justify-items: center; text-align: center; gap: 10px; padding: 22px 16px 18px; border-radius: 12px; background: #f7f9ff; }
+.introScore { display: flex; align-items: baseline; gap: 6px; }
+.introScore .score { font-size: 44px; }
+.introText { margin: 0; font-size: 15px; color: #1c1d21; line-height: 1.6; word-break: keep-all; }
+.introText b { color: var(--blue, #3272db); }
+.doneMark { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: #eaf6ee; color: #2f7d4a; }
+.doneMark svg { display: inline-block; }
+.intro .actions { justify-content: center; }
+
+/* 스텝 줄 — 번호 · 점 · 점수 */
+.stepScore { font-size: 12.5px; font-weight: 800; color: #8181a5; font-variant-numeric: tabular-nums; }
+.cardCat { font-size: 12px; font-weight: 700; color: #8181a5; }
+
+/* 머리글 안의 작은 링크(본문이 바뀌었을 때) */
+.inlineLink { border: 0; background: none; padding: 0; font: inherit; font-weight: 800; color: var(--blue, #3272db); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
+.inlineLink:disabled { opacity: .5; cursor: default; }
