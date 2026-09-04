@@ -21,10 +21,11 @@
 .ghost { border: 1px solid #e6e6ef; background: #fff; color: #55586a; font: inherit; font-weight: 700; font-size: 12.5px; min-height: 32px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
 
 /* 완성도 */
-.scoreRow { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border-radius: 10px; background: #f7f9ff; flex-wrap: wrap; }
+.scoreRow { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-radius: 10px; background: #f7f9ff; flex-wrap: wrap; }
+.scoreMain { display: flex; align-items: baseline; gap: 6px; }
 .score { font-size: 30px; font-weight: 800; color: var(--blue, #3272db); line-height: 1; font-variant-numeric: tabular-nums; }
 .scoreOf { font-size: 13px; color: #8181a5; font-weight: 700; }
-.scoreLabel { font-size: 12px; font-weight: 800; color: #8181a5; letter-spacing: .03em; }
+.scoreLabel { font-size: 12px; font-weight: 800; color: #8181a5; letter-spacing: .03em; margin-left: 4px; }
 .counts { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
 .count { font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 999px; white-space: nowrap; }
 .cCritical { background: #fdecec; color: #c0362c; }
@@ -83,20 +84,9 @@
 .strengths { display: grid; gap: 5px; }
 .strength { font-size: 13px; color: #1f7a4d; line-height: 1.55; }
 
-/* 문제 목록 */
-.groupTitle { font-size: 12.5px; font-weight: 800; color: #8181a5; margin-top: 4px; }
-.issues { display: grid; gap: 8px; }
-.issue { border: 1px solid #ececf2; border-left-width: 3px; border-radius: 8px; padding: 12px 14px; display: grid; gap: 5px; }
-.issue.critical { border-left-color: #d0544a; }
-.issue.warning { border-left-color: #e0912f; }
-.issue.improvement { border-left-color: #c9c9d8; }
-.issueHead { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.issueTitle { font-size: 14px; font-weight: 800; color: #1c1d21; word-break: keep-all; }
+/* 문제 카드 안의 딱지 — 스텝 카드가 함께 쓴다 */
 .tag { font-size: 11px; font-weight: 800; padding: 2px 7px; border-radius: 999px; background: #f0f0f3; color: #8181a5; white-space: nowrap; }
 .tagDet { background: #eef2f8; color: #3272db; }
-.issueBody { font-size: 13px; color: #55586a; line-height: 1.65; word-break: keep-all; }
-.rec { font-size: 13px; color: #1c1d21; line-height: 1.65; background: #f7f9ff; border-radius: 8px; padding: 9px 12px; word-break: keep-all; }
-.rec b { color: var(--blue, #3272db); }
 .evidence { font-size: 12px; color: #8181a5; line-height: 1.55; }
 .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
 
@@ -193,3 +183,90 @@
 .inlineArea:focus { outline: 2px solid #3272db; outline-offset: -1px; }
 .inlineNote { font-size: 12px; color: #8181a5; line-height: 1.55; margin: 0; }
 .inlineErr { font-size: 12.5px; color: #c0362c; margin: 0; }
+
+
+/* ── 스텝(한 번에 문제 하나) ───────────────────────────────
+   예전에는 문제 7개와 설명을 한꺼번에 펼쳐 두었다. 읽을 것이 많으면
+   아무것도 고치지 않게 된다 — 지금은 하나만 크게 보여 주고 넘긴다. */
+.stepper { display: grid; gap: 10px; }
+.stepBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.stepCount { font-size: 12.5px; font-weight: 700; color: #55586a; }
+.stepCount b { color: var(--blue, #3272db); font-size: 14px; }
+.dots { display: inline-flex; gap: 5px; flex-wrap: wrap; }
+.dots i { width: 7px; height: 7px; border-radius: 50%; background: #e2e2ec; transition: background .25s ease, transform .25s ease; }
+.dots i.dotOn { background: var(--blue, #3272db); transform: scale(1.35); }
+.dots i.dotDone { background: #4aa06a; }
+
+.card {
+  border: 1px solid #e6e6ef;
+  border-radius: 12px;
+  padding: 16px;
+  display: grid;
+  gap: 9px;
+  background: #fff;
+}
+/* 넘길 때 옆에서 들어온다 — 방향이 있으면 '다음으로 갔다'가 몸으로 읽힌다 */
+@keyframes reviewSlideL { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: none; } }
+@keyframes reviewSlideR { from { opacity: 0; transform: translateX(-18px); } to { opacity: 1; transform: none; } }
+.slideL { animation: reviewSlideL .28s cubic-bezier(.22,.9,.3,1) backwards; }
+.slideR { animation: reviewSlideR .28s cubic-bezier(.22,.9,.3,1) backwards; }
+
+.cardTop { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chip { font-size: 11.5px; font-weight: 800; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+.chip.critical { background: #fdecec; color: #c0362c; }
+.chip.warning { background: #fdf3e3; color: #a35c07; }
+.chip.improvement { background: #eef2f8; color: #55586a; }
+.doneTag { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 800; color: #2f7d4a; background: #eaf6ee; padding: 4px 9px; border-radius: 999px; }
+.doneTag svg { display: inline-block; }
+
+.cardTitle { margin: 2px 0 0; font-size: 16px; font-weight: 800; color: #1c1d21; line-height: 1.45; word-break: keep-all; }
+.cardBody { font-size: 13.5px; color: #55586a; line-height: 1.7; margin: 0; word-break: keep-all; }
+
+.fix { background: #f4f8ff; border-radius: 10px; padding: 11px 13px; display: grid; gap: 4px; }
+.fixLabel { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; color: var(--blue, #3272db); }
+.fixLabel svg { display: inline-block; }
+.fix p { margin: 0; font-size: 13.5px; color: #1c1d21; line-height: 1.7; word-break: keep-all; }
+
+.more { margin-top: 2px; }
+.more summary { font-size: 12.5px; font-weight: 700; color: #8181a5; cursor: pointer; list-style: none; padding: 4px 0; }
+.more summary::-webkit-details-marker { display: none; }
+.more summary::before { content: "▸ "; }
+.more[open] summary::before { content: "▾ "; }
+.more > p { margin: 6px 0 0; }
+
+/* 이전 / 나중에 하기 / 다음 */
+.nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.navBtn {
+  display: inline-flex; align-items: center; gap: 5px;
+  border: 1px solid #e6e6ef; background: #fff; color: #1c1d21;
+  font: inherit; font-weight: 700; font-size: 13px;
+  min-height: 36px; padding: 7px 14px; border-radius: 8px; cursor: pointer;
+}
+.navBtn:disabled { opacity: .4; cursor: default; }
+.navBtn:hover:not(:disabled) { border-color: #c9d6ef; background: #f7f9ff; }
+.navBtn svg { display: inline-block; }
+
+/* 검토하는 동안 */
+.loading { display: grid; gap: 8px; padding: 14px 16px; border-radius: 10px; background: #f7f9ff; font-size: 12.5px; color: #55586a; font-weight: 700; }
+.loadingBar { position: relative; display: block; height: 5px; border-radius: 999px; background: #e4eaf7; overflow: hidden; }
+.loadingBar i { position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: inherit; background: var(--blue, #3272db); animation: reviewLoad 1.2s ease-in-out infinite; }
+@keyframes reviewLoad { from { transform: translateX(-110%); } to { transform: translateX(320%); } }
+
+/* 자세히 보기 토글 */
+.detailToggle {
+  display: inline-flex; align-items: center; gap: 6px;
+  border: 0; background: none; color: #55586a;
+  font: inherit; font-weight: 700; font-size: 12.5px;
+  padding: 6px 0; cursor: pointer; justify-self: start;
+}
+.detailToggle svg { transition: transform .2s ease; display: inline-block; }
+.detailOpen svg { transform: rotate(180deg); }
+.detailToggle em { font-style: normal; color: #8181a5; font-weight: 700; }
+@keyframes reviewFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.detailBody { display: grid; gap: 10px; animation: reviewFadeIn .24s ease backwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  .slideL, .slideR, .detailBody { animation: none; }
+  .loadingBar i { animation: none; width: 100%; }
+  .dimFill { transition: none; }
+}
