@@ -14,6 +14,7 @@ import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } fr
 import { supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
 import type { SupportChat } from "../lib/support-chat/repository";
 import { trackFunnel } from "../lib/funnel/client";
+import { activePlan, isSamplePlan } from "../lib/plan-builder/plan-store";
 import {
   CONSULT_INPUT_EXAMPLES,
   SUPPORT_INPUT_EXAMPLES,
@@ -327,6 +328,9 @@ export function SupportChatWidget() {
     const asked: ConsultTurn = { id: crypto.randomUUID(), role: "user", text: nextMessage, at: new Date().toISOString() };
     setConsultTurns((current) => [...current, asked]);
     try {
+      /* 손님이 쓰는 계획서가 있으면 알린다 — 상담사가 그 내용을 근거로 답한다(예시 플랜은 제외) */
+      const plan = activePlan();
+      const planId = plan && !isSamplePlan(plan.id) ? plan.id : undefined;
       const response = await fetch("/api/consult", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -335,9 +339,10 @@ export function SupportChatWidget() {
           /* 서버는 대화를 기억하지 않는다 — 앞의 말을 우리가 들고 가서 보낸다 */
           history: consultTurns.slice(-12).map((turn) => ({ role: turn.role, text: turn.text })),
           profile: consultProfile,
+          ...(planId ? { planId } : {}),
         }),
       });
-      const payload = (await response.json()) as {
+      type ConsultPayload = {
         message?: string;
         profile?: ConsultProfile;
         choices?: string[];
@@ -349,6 +354,57 @@ export function SupportChatWidget() {
         error?: string;
         needsLogin?: boolean;
       };
+      /*
+       * 스트리밍(NDJSON). 평문은 오는 대로 마지막 말풍선에 이어 붙이고,
+       * 끝의 done 에 카드·보기·추천이 실려 온다. 오류·한도(429)는 예전처럼 JSON 이다.
+       */
+      let payload: ConsultPayload;
+      const isStream = response.ok && (response.headers.get("content-type") ?? "").includes("ndjson") && response.body;
+      if (isStream) {
+        const bubbleId = crypto.randomUUID();
+        setConsultThinking(false);
+        setConsultTurns((current) => [...current, { id: bubbleId, role: "assistant", text: "", at: new Date().toISOString() }]);
+        const reader = response.body!.getReader();
+        const decoder = new TextDecoder();
+        let buffered = "";
+        let done: ConsultPayload | null = null;
+        let shown = "";
+        for (;;) {
+          const { value, done: end } = await reader.read();
+          if (end) break;
+          buffered += decoder.decode(value, { stream: true });
+          const lines = buffered.split("\n");
+          buffered = lines.pop() ?? "";
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            let obj: { t?: string; v?: string } & ConsultPayload;
+            try { obj = JSON.parse(line); } catch { continue; }
+            if (obj.t === "delta" && obj.v) {
+              shown += obj.v;
+              const text = shown;
+              setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text } : turn)));
+            } else if (obj.t === "done") {
+              done = obj;
+            }
+          }
+        }
+        if (!done) throw new Error("상담을 이어가지 못했습니다.");
+        payload = done;
+        /* 서버가 확정한 전체 문장으로 맞춘다(조각이 빠졌을 때 대비) */
+        if (payload.message) { const finalText = payload.message; setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text: finalText } : turn))); }
+        if (typeof payload.remainingToday === "number") setConsultRemaining(payload.remainingToday);
+        setConsultIsGuest(Boolean(payload.isGuest));
+        if (payload.profile && Object.keys(payload.profile).length) {
+          const nextProfile = payload.profile;
+          setConsultProfile((current) => ({ ...current, ...nextProfile }));
+        }
+        setConsultChoices(payload.choices ?? []);
+        setConsultSummary(payload.summary ?? []);
+        setConsultPicks(payload.picks ?? []);
+        if (payload.ready) setConsultReady(true);
+        return;
+      }
+      payload = (await response.json()) as ConsultPayload;
       /*
        * 하루 한도(429)는 오류가 아니라 안내다.
        * 서버가 보낸 문장("로그인하시면 이어서…")을 상담사 말풍선으로 그대로

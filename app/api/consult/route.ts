@@ -3,10 +3,13 @@ import { z } from "zod";
 import { requireGuestIdentity } from "../../../lib/api-auth";
 import { enforceRateLimit } from "../../../lib/rate-limit";
 import { resolveLLMConfig } from "../../../lib/llm/config";
-import { completeJson } from "../../../lib/llm/complete";
+import { streamText, parseJsonObject } from "../../../lib/llm/complete";
+import { loadPlanState } from "../../../lib/plan-builder/plan-server-store";
+import { planDigest } from "../../../lib/consult/plan-digest";
 import { loadConsultSession, saveConsultTurn, resetConsultSession, consultLimitFor, CONSULT_FREE_TURNS_GUEST } from "../../../lib/consult/repository";
 import {
   CONSULT_SYSTEM,
+  CONSULT_META_SEP,
   consultReplySchema,
   consultProfileSchema,
   profileLines,
@@ -44,6 +47,8 @@ const requestSchema = z.object({
   history: z.array(turnSchema).max(24).default([]),
   /* 지금까지 채워진 상담 카드 */
   profile: consultProfileSchema.default({}),
+  /* 손님이 지금 쓰는 계획서 — 있으면 그 내용을 근거로 답한다 */
+  planId: z.string().max(60).optional(),
 });
 
 /** 열쇠가 없거나 호출이 실패해도 상담이 끊기지 않게 — 사람이 이어받을 자리를 알린다 */
@@ -171,60 +176,125 @@ export async function POST(request: Request) {
     .map((turn) => `${turn.role === "user" ? "손님" : "상담사"}: ${turn.text}`)
     .join("\n");
 
+  /*
+   * 손님의 계획서 — 챗봇이 손님의 사업을 아는 상담이 되게 한다.
+   * 계정(hash)에 묶인 플랜만 읽으므로 남의 planId 를 넣어도 아무것도 안 나온다.
+   */
+  let planBlock = "";
+  if (input.planId) {
+    const state = await loadPlanState(identity.hash).catch(() => null);
+    const plan = state?.plans.find((p) => p.id === input.planId);
+    if (plan) planBlock = `손님의 사업계획서\n${planDigest(plan, state!.business)}`;
+  }
+
   const user = [
     known.length ? `지금까지 알아낸 것\n${known.join("\n")}` : "아직 알아낸 것이 없습니다.",
     "",
+    ...(planBlock ? [planBlock, ""] : []),
     conversation ? `지금까지 대화\n${conversation}` : "첫 대화입니다.",
     "",
     `손님의 마지막 말\n${input.message}`,
   ].join("\n");
 
-  const raw = await completeJson(config, {
-    system: CONSULT_SYSTEM,
-    user,
-    maxOutputTokens: 1200,
-    kind: "consult",
-    jsonObject: true,
-    /* 규칙이 매번 같다 — 앞부분을 캐시에 올려 반복 비용을 줄인다 */
-    cache: true,
-    timeoutMs: 60_000,
-  });
-  if (!raw) return NextResponse.json(fallback(), { headers: { "Cache-Control": "private, no-store" } });
-
-  const reply = consultReplySchema.safeParse(raw);
-  if (!reply.success) return NextResponse.json(fallback(), { headers: { "Cache-Control": "private, no-store" } });
-
   /*
-   * 주고받은 말과 정리된 상담 카드를 남긴다.
-   * 저장이 실패해도 상담은 그대로 이어진다 — 화면이 들고 있는 값으로 계속 돈다.
+   * 스트리밍.
+   *
+   * 답이 5~10초 뒤에 통째로 떨어지면 느리고 멍청해 보인다. 모델이 평문 답을
+   * 먼저 쓰고 === 뒤에 JSON(카드·보기·추천)을 붙이도록 했으므로, 평문은 오는
+   * 대로 흘려주고 JSON 은 끝에 모아 파싱한다. 첫 글자가 '{' 면(옛 형식으로
+   * 답한 경우) 흘리지 않고 끝에서 통째로 읽는다.
    */
-  const at = new Date().toISOString();
-  const merged = { ...input.profile, ...reply.data.profile };
-  await saveConsultTurn(identity.hash, {
-    profile: merged,
-    appended: [
-      { role: "user", text: input.message, at },
-      { role: "assistant", text: reply.data.message, at },
-    ],
-    turnsToday: (session?.turnsToday ?? 0) + 1,
-  }).catch(() => {});
+  const encoder = new TextEncoder();
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let closed = false;
+      const send = (obj: unknown) => {
+        if (closed) return;
+        try { controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n")); } catch { closed = true; }
+      };
+      let full = "";
+      let sentLen = 0;
+      /* 닫힘 함수 안에서 바뀌는 값 — 변수로 두면 TS 가 첫 값으로 좁혀 버린다 */
+      const st = { mode: "unknown" as "unknown" | "text" | "json" };
+      let sepAt = -1;
+      const HOLD = CONSULT_META_SEP.length + 2; /* 구분선이 조각 사이에 걸쳐 올 수 있어 끝을 조금 남긴다 */
+      const flushText = (upTo: number) => {
+        if (upTo > sentLen) { send({ t: "delta", v: full.slice(sentLen, upTo) }); sentLen = upTo; }
+      };
+      const onDelta = (chunk: string) => {
+        full += chunk;
+        if (st.mode === "unknown") {
+          const head = full.trimStart();
+          if (!head) return;
+          st.mode = head.startsWith("{") ? "json" : "text";
+        }
+        if (st.mode === "json" || sepAt >= 0) return;
+        const idx = full.indexOf(`\n${CONSULT_META_SEP}`);
+        const idx0 = full.startsWith(CONSULT_META_SEP) ? 0 : -1;
+        const found = idx0 >= 0 ? 0 : idx;
+        if (found >= 0) { sepAt = found; flushText(found); return; }
+        flushText(Math.max(sentLen, full.length - HOLD));
+      };
+      const text = await streamText(config, {
+        system: CONSULT_SYSTEM,
+        user,
+        maxOutputTokens: 1200,
+        kind: "consult",
+        cache: true,
+        timeoutMs: 60_000,
+        signal: request.signal,
+      }, onDelta);
 
-  return NextResponse.json(
-    {
-      ...reply.data,
-      /*
-       * 화면에도 저장본과 같은 '합쳐진' 카드를 준다.
-       *
-       * 예전에는 모델이 준 profile 을 그대로 돌려줬다. 규칙에는 "매번 통째로
-       * 다시 담으라"고 했지만 모델이 한 항목을 빠뜨리면, 화면이 카드를 통째로
-       * 교체하면서 그 조건이 조용히 사라졌다 — 사업계획서로 넘어가는 값이
-       * 상담 도중에 줄어드는 것이다.
-       */
-      profile: merged,
-      remainingToday: Math.max(0, limit - ((session?.turnsToday ?? 0) + 1)),
-      /* 화면이 '로그인하면 더 이어갈 수 있다'는 안내를 비회원에게만 보여 주게 */
-      isGuest: !identity.userId,
+      let reply: ConsultReply | null = null;
+      if (text) {
+        let message = "";
+        let meta: Record<string, unknown> = {};
+        if (st.mode === "json") {
+          const obj = parseJsonObject(text);
+          if (obj) { message = String(obj.message ?? ""); meta = obj; }
+          if (message) send({ t: "delta", v: message });
+        } else {
+          const cut = sepAt >= 0 ? sepAt : text.indexOf(`\n${CONSULT_META_SEP}`);
+          message = (cut >= 0 ? text.slice(0, cut) : text).trim();
+          if (cut >= 0) { flushText(cut); meta = parseJsonObject(text.slice(cut + CONSULT_META_SEP.length + 1)) ?? {}; }
+          else flushText(text.length);
+        }
+        const parsed = consultReplySchema.safeParse({ ...meta, message });
+        if (parsed.success && parsed.data.message) reply = parsed.data;
+      }
+      if (!reply) {
+        const fb = fallback();
+        if (sentLen === 0) send({ t: "delta", v: fb.message });
+        send({ t: "done", ...fb, profile: input.profile, remainingToday: Math.max(0, limit - (session?.turnsToday ?? 0)), isGuest: !identity.userId });
+        controller.close();
+        return;
+      }
+
+      /* 주고받은 말과 정리된 상담 카드를 남긴다. 저장이 실패해도 상담은 이어진다. */
+      const at = new Date().toISOString();
+      const merged = { ...input.profile, ...reply.profile };
+      await saveConsultTurn(identity.hash, {
+        profile: merged,
+        appended: [
+          { role: "user", text: input.message, at },
+          { role: "assistant", text: reply.message, at },
+        ],
+        turnsToday: (session?.turnsToday ?? 0) + 1,
+      }).catch(() => {});
+
+      send({
+        t: "done",
+        ...reply,
+        /* 화면에도 저장본과 같은 '합쳐진' 카드를 준다 — 모델이 한 항목을 빠뜨려도 조건이 사라지지 않게 */
+        profile: merged,
+        remainingToday: Math.max(0, limit - ((session?.turnsToday ?? 0) + 1)),
+        isGuest: !identity.userId,
+      });
+      controller.close();
     },
-    { headers: { "Cache-Control": "private, no-store" } },
-  );
+  });
+  return new Response(stream, {
+    headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "private, no-store", "X-Accel-Buffering": "no" },
+  });
 }
+
