@@ -14853,7 +14853,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .hk-back { flex: none; width: 32px; height: 32px; border: 1px solid #e6e6ef; border-radius: 8px; background: #fff; color: #55586a; font-size: 14px; display: grid; place-items: center; text-decoration: none; }
 .hk-top .hk-actions { margin-left: auto; }
-.hk-top h3 { margin: 0 0 3px; font-size: 20px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; }
+.hk-top h3 { margin: 0 0 3px; font-size: 20px; font-weight: 800; letter-spacing: -.01em; line-height: 1.25; color: #1c1d21; }
 .hk-url { margin: 0; display: flex; align-items: center; gap: 10px; font-size: 13px; color: #8181a5; }
 .hk-url span { padding: 2px 8px; border-radius: 999px; background: #f0f0f5; color: #1c1d21; font-weight: 700; font-size: 11.5px; }
 .hk-url a { display: inline-flex; align-items: center; gap: 4px; color: #1c1d21; text-decoration: underline; text-underline-offset: 3px; }

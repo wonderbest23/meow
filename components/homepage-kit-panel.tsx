@@ -129,7 +129,7 @@ export function HomepageKitPanel({
                 /* 공개 전에는 이 주소가 아직 없어서(404) 링크를 걸지 않는다 */
                 : <em className="hk-url-pending">{publicPath} — 공개하면 이 주소로 열립니다</em>}
             </p>
-          ) : <p className="hk-url"><span>첫 공개 후 주소가 생깁니다</span></p>}
+          ) : <p className="hk-url">첫 공개 후 주소가 생깁니다</p>}
         </div>
         <div className="hk-actions">
           <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />} 저장</button>

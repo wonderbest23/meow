@@ -79,7 +79,8 @@
     "test:llm-alert": "tsx scripts/llm-alert.test.ts",
     "test:llm-cache": "tsx scripts/llm-cache.test.ts",
     "test:consult": "tsx scripts/consult.test.ts",
-    "test:consult-eval": "tsx scripts/consult-eval.ts"
+    "test:consult-eval": "tsx scripts/consult-eval.ts",
+    "test:consult-plan": "tsx scripts/consult-plan-check.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.1",
