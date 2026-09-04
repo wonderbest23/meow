@@ -343,10 +343,15 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
             <div className={styles.sideTitle}>
               <strong>{title}</strong>
               <span>{type}{readOnly ? " · 예시" : ""}</span>
-              <div className={styles.sideProgress} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="진행률">
-                <span className={styles.sideBar}><i style={{ width: `${pct}%` }} /></span>
-                <b>{doneCount}/{total} · {pct}%</b>
-              </div>
+            </div>
+            {/* 오른쪽 끝의 원형 게이지 — 이름을 읽고 눈을 옮기면 '이만큼 됐다'가 보인다 */}
+            <div className={styles.ring} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label={`진행률 ${pct}%, ${doneCount}/${total} 섹션`}>
+              <svg viewBox="0 0 44 44" aria-hidden="true">
+                <circle className={styles.ringTrack} cx="22" cy="22" r="19" />
+                <circle className={styles.ringFill} cx="22" cy="22" r="19" style={{ strokeDashoffset: 119.4 * (1 - pct / 100) }} />
+              </svg>
+              <b>{pct}<i>%</i></b>
+              <small>{doneCount}/{total}</small>
             </div>
           </div>
 
