@@ -14,7 +14,7 @@
  * 보여 주고(스텝), 나머지는 접어 둔다. 고치면 다음 문제로 넘어간다.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, ClipboardCheck, ChevronDown, RefreshCw, Sparkles } from "lucide-react";
+import { ArrowRight, Check, ClipboardCheck, ChevronDown, RefreshCw, Sparkles } from "lucide-react";
 import { activePlan, loadState, saveAnswers, isSamplePlan } from "../../lib/plan-builder/plan-store";
 import {
   REVIEW_CATEGORY_LABEL,
@@ -173,15 +173,18 @@ export default function ReviewPanel({
           <span>
             {review
               ? status === "stale"
-                ? <>본문이 바뀌었어요 · <button type="button" className={styles.inlineLink} onClick={run} disabled={running}>지금 문서로 다시 검토</button></>
+                ? "본문이 바뀌었어요. 다 보고 나서 다시 검토하면 점수가 갱신돼요."
                 : "약한 곳을 하나씩 짚어 드릴게요."
               : "컨설턴트 관점에서 읽고, 빈틈을 하나씩 짚어 드려요."}
           </span>
         </div>
-        <button type="button" className={review ? styles.ghost : styles.btn} onClick={run} disabled={running || !planId}>
-          {running ? <RefreshCw size={14} className={styles.spin} /> : <ClipboardCheck size={14} />}
-          {running ? "검토하는 중…" : review ? "다시 검토" : "검토 시작"}
-        </button>
+        {/* 버튼은 검토 전에만 — 검토 뒤에는 화면마다 큰 버튼이 하나씩 따로 있다 */}
+        {!review && (
+          <button type="button" className={styles.btn} onClick={run} disabled={running || !planId}>
+            {running ? <RefreshCw size={14} className={styles.spin} /> : <ClipboardCheck size={14} />}
+            {running ? "검토하는 중…" : "검토 시작"}
+          </button>
+        )}
       </div>
 
       {error && <div className={styles.fail}>{error}</div>}
@@ -225,9 +228,17 @@ export default function ReviewPanel({
         <div className={styles.stepper}>
           <div className={styles.stepBar}>
             <span className={styles.stepCount}><b>{step + 1}</b> / {issues.length}</span>
-            <span className={styles.dots} aria-hidden="true">
+            <span className={styles.dots} role="tablist" aria-label="문제 목록">
               {issues.map((it, i) => (
-                <i key={it.id} className={`${i === step ? styles.dotOn : ""} ${resolved.includes(it.id) ? styles.dotDone : ""}`} />
+                <button
+                  key={it.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={i === step}
+                  aria-label={`${i + 1}번째 문제`}
+                  className={`${styles.dot} ${i === step ? styles.dotOn : ""} ${resolved.includes(it.id) ? styles.dotDone : ""}`}
+                  onClick={() => go(i)}
+                />
               ))}
             </span>
             <span className={styles.stepScore}>{score}점</span>
@@ -261,12 +272,9 @@ export default function ReviewPanel({
               const open = tool !== null;
               return (
                 <div className={styles.actions}>
-                  <button type="button" className={open ? styles.ghost : styles.btn} onClick={() => setTool(open ? null : primary)}>
+                  <button type="button" className={`${open ? styles.ghost : styles.btn} ${styles.wide}`} onClick={() => setTool(open ? null : primary)}>
                     {open ? "접기" : primary === "answer" ? "답하고 고치기 →" : "지금 고치기 →"}
                   </button>
-                  {canAnswer && canEdit && !open && (
-                    <button type="button" className={styles.link} onClick={() => setTool("edit")}>본문을 직접 고칠래요</button>
-                  )}
                 </div>
               );
             })()}
@@ -285,6 +293,9 @@ export default function ReviewPanel({
                 {current.evidence.length > 0 && <p className={styles.evidence}>근거 · {current.evidence.join(" / ")}</p>}
                 {current.origin === "deterministic" && <p className={styles.evidence}>이 문제는 AI 추측이 아니라 계산으로 확인된 것이에요.</p>}
                 <div className={styles.actions}>
+                  {current.resolution?.type === "answer" && current.sectionKey && planId && (
+                    <button type="button" className={styles.link} onClick={() => setTool("edit")}>본문을 직접 고칠래요</button>
+                  )}
                   {current.sectionKey && onOpenSection && current.resolution?.type !== "market_research" && (
                     <button type="button" className={styles.link} onClick={() => { const [c, sId] = current.sectionKey!.split("/"); if (c && sId) onOpenSection(c, sId); }}>질문부터 다시 답하기</button>
                   )}
@@ -296,11 +307,14 @@ export default function ReviewPanel({
             )}
           </article>
 
+          {/* 누를 것은 위의 큰 버튼 하나다. 여기는 '이건 넘어갈게요'뿐 — 뒤로 가려면 위의 점을 누른다 */}
           <div className={styles.nav}>
-            <button type="button" className={styles.navBtn} onClick={() => go(step - 1)} disabled={step === 0}><ArrowLeft size={14} /> 이전</button>
-            <button type="button" className={styles.link} onClick={() => markDone(current.id)} disabled={resolved.includes(current.id)}>나중에</button>
-            <button type="button" className={styles.navBtn} onClick={() => (step >= issues.length - 1 ? setResolved(issues.map((i) => i.id)) : go(step + 1))}>
-              {step >= issues.length - 1 ? "마치기" : "다음"} <ArrowRight size={14} />
+            <button
+              type="button"
+              className={styles.skip}
+              onClick={() => (step >= issues.length - 1 ? setResolved(issues.map((i) => i.id)) : go(step + 1))}
+            >
+              {step >= issues.length - 1 ? "다 봤어요, 마치기" : "이건 넘어갈게요"} <ArrowRight size={13} />
             </button>
           </div>
         </div>
@@ -314,13 +328,15 @@ export default function ReviewPanel({
             {issues.length === 0 ? "발견된 문제가 없어요." : <>{issues.length}개를 모두 살펴봤어요.</>}
           </p>
           <div className={styles.actions}>
-            {issues.length > 0 && <button type="button" className={styles.btn} onClick={run} disabled={running}><RefreshCw size={14} /> 고친 문서로 다시 검토</button>}
-            {issues.length > 0 && <button type="button" className={styles.ghost} onClick={() => { setResolved([]); setStep(0); }}>처음부터 다시 보기</button>}
+            <button type="button" className={styles.btn} onClick={run} disabled={running || !planId}>
+              {running ? <RefreshCw size={14} className={styles.spin} /> : <RefreshCw size={14} />} {running ? "검토하는 중…" : "고친 문서로 다시 검토"}
+            </button>
           </div>
+          {issues.length > 0 && <button type="button" className={styles.link} onClick={() => { setResolved([]); setStep(0); }}>처음부터 다시 보기</button>}
         </div>
       )}
 
-      {review && (
+      {review && (!started || doneAll || issues.length === 0) && (
         <>
           <button type="button" className={`${styles.detailToggle} ${detail ? styles.detailOpen : ""}`} onClick={() => setDetail((v) => !v)}>
             <ChevronDown size={15} /> {detail ? "접기" : "점수 자세히 · 잘된 점"}

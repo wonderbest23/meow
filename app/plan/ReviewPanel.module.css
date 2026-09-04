@@ -191,10 +191,13 @@
 .stepBar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .stepCount { font-size: 12.5px; font-weight: 700; color: #55586a; }
 .stepCount b { color: var(--blue, #3272db); font-size: 14px; }
-.dots { display: inline-flex; gap: 5px; flex-wrap: wrap; }
-.dots i { width: 7px; height: 7px; border-radius: 50%; background: #e2e2ec; transition: background .25s ease, transform .25s ease; }
-.dots i.dotOn { background: var(--blue, #3272db); transform: scale(1.35); }
-.dots i.dotDone { background: #4aa06a; }
+.dots { display: inline-flex; gap: 4px; flex-wrap: wrap; }
+/* 점은 누를 수 있다 — 뒤로 가는 유일한 길이라 손가락 크기(24px)로 */
+.dot { width: 24px; height: 24px; border: 0; background: none; padding: 0; cursor: pointer; display: grid; place-items: center; }
+.dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #e2e2ec; transition: background .25s ease, transform .25s ease; }
+.dot.dotOn::before { background: var(--blue, #3272db); transform: scale(1.4); }
+.dot.dotDone::before { background: #4aa06a; }
+.dot:hover::before { transform: scale(1.3); }
 
 .card {
   border: 1px solid #e6e6ef;
@@ -234,7 +237,12 @@
 .more > p { margin: 6px 0 0; }
 
 /* 이전 / 나중에 하기 / 다음 */
-.nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nav { display: flex; justify-content: flex-end; }
+.skip { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; color: #8181a5; font: inherit; font-size: 12.5px; font-weight: 700; padding: 6px 2px; cursor: pointer; }
+.skip:hover { color: #55586a; }
+.skip svg { display: inline-block; }
+/* 카드의 큰 버튼 — 한 화면에 하나뿐이니 눈에 띄게 */
+.wide { width: 100%; justify-content: center; min-height: 44px; font-size: 14px; }
 .navBtn {
   display: inline-flex; align-items: center; gap: 5px;
   border: 1px solid #e6e6ef; background: #fff; color: #1c1d21;
