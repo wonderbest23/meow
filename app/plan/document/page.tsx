@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FileDown, FileText, Globe2, Presentation, LayoutGrid, Lock, Maximize2, X } from "lucide-react";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan } from "../../../lib/plan-builder/plan-store";
-import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
+import { chaptersForType, documentArrangement, sectionCountForType } from "../../../lib/plan-builder/blueprint";
 import PlanLoading, { Spinner } from "../PlanLoading";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import InlineDocEditor from "../InlineDocEditor";
@@ -65,6 +65,9 @@ export default function PlanDocumentPage() {
    * 아니면 작성 챕터 그대로 묶는다. 번호(1.1식)도 배치를 따른다.
    */
   const arrangement = useMemo(() => documentArrangement(planType || undefined), [planType]);
+  /* 개요 화면과 같은 진행률 — 본문이 있는 섹션 / 이 유형의 전체 섹션 */
+  const totalSections = useMemo(() => Math.max(1, sectionCountForType(planType || undefined)), [planType]);
+  const progressPct = Math.min(100, Math.round((sections.length / totalSections) * 100));
 
   const numbering = useMemo(() => {
     const map = new Map<string, { num: string; chapterNum: number }>();
@@ -317,11 +320,20 @@ export default function PlanDocumentPage() {
             </div>
             )}
             <header className={styles.mhead}>
-              <div className={styles.routeHeader}>
-                <h1 className={styles.routeTitle}>
+              {/*
+                머리는 플랜 개요와 같은 모양이다 — [←] 이름·모델, 오른쪽 끝 퍼센트, 아래 선 게이지.
+                예전엔 여기만 큰 제목 + '사업계획서 문서'라 오갈 때 다른 화면처럼 보였다(사용자 지적).
+              */}
+              <div className={styles.headTop}>
+                <button type="button" className={styles.headBack} onClick={() => router.push("/plan/overview")} aria-label="플랜 개요로">←</button>
+                <h1 className={styles.headTitle}>
                   {title}
-                  <span>사업계획서 문서</span>
+                  <span>{planType || "사업계획서"}{isSample ? " · 예시" : ""}</span>
                 </h1>
+                <span className={styles.headPct}>{progressPct}%<small>{sections.length}/{totalSections}</small></span>
+              </div>
+              <div className={styles.headGauge} role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100} aria-label={`진행률 ${progressPct}%, ${sections.length}/${totalSections} 섹션`}>
+                <i style={{ width: `${progressPct}%` }} />
               </div>
               <div className={styles.toolbar}>
                 {/* 레퍼런스의 Structural/Document View 세그먼트 */}
