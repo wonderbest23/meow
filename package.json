@@ -78,7 +78,8 @@
     "test:document-url": "tsx scripts/document-source-url.test.ts",
     "test:llm-alert": "tsx scripts/llm-alert.test.ts",
     "test:llm-cache": "tsx scripts/llm-cache.test.ts",
-    "test:consult": "tsx scripts/consult.test.ts"
+    "test:consult": "tsx scripts/consult.test.ts",
+    "test:consult-eval": "tsx scripts/consult-eval.ts"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "^1.20.1",
