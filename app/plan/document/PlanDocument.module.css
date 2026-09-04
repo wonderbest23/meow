@@ -34,18 +34,15 @@
 }
 
 /* 제목과 도구를 한 줄로 — 헤더가 두 줄씩 차지하던 것을 줄인다 */
-.mhead {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px 16px;
-  padding: 16px 30px 14px;
-  border-bottom: 1px solid var(--wz-line);
-}
+.mhead { display: block; padding: 0; border-bottom: 1px solid var(--wz-line); }
+/* 흰 머리 블록 — 개요 aside(폰) 와 같은 값 */
+.headBlock { position: relative; padding: 14px 16px 17px; background: #fff; }
+/* 도구(보기 전환·내려받기) — 예전 .mhead 의 배치 */
+.toolWrap { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 16px; padding: 12px 30px 14px; }
 
 /* 레퍼런스 route-header: 굵은 제목 + 가는 보조어 */
 /* 머리 — 플랜 개요(.sideTop)와 같은 값 */
-.headTop { display: flex; align-items: center; gap: 12px; flex: 1 0 100%; }
+.headTop { display: flex; align-items: center; gap: 12px; }
 .headBack {
   flex: none; width: 32px; height: 32px; min-height: 0 !important;
   margin: 0; padding: 0 !important;
@@ -57,8 +54,8 @@
 .headTitle span { font-size: 13px; font-weight: 400; color: #8181a5; letter-spacing: 0; }
 .headPct { flex: none; display: grid; justify-items: end; gap: 2px; font-size: 18px; font-weight: 800; color: #1c1d21; line-height: 1; font-variant-numeric: tabular-nums; }
 .headPct small { font-size: 11px; font-weight: 700; color: #8181a5; }
-.headGauge { flex: 1 0 100%; height: 3px; background: #e6e7ef; border-radius: 2px; overflow: hidden; margin-bottom: 4px; }
-.headGauge i { display: block; height: 100%; background: #1c1d21; border-radius: 2px; transition: width .8s cubic-bezier(.2,.7,.2,1); }
+.headGauge { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: #e6e7ef; overflow: hidden; }
+.headGauge i { display: block; height: 100%; background: #1c1d21; border-radius: 0 2px 2px 0; transition: width .8s cubic-bezier(.2,.7,.2,1); }
 .routeHeader {
   display: flex;
   align-items: flex-end;
@@ -593,10 +590,8 @@
   }
   /* 좁은 폭에선 한 줄 헤더가 비좁다 — 제목/도구를 다시 쌓는다.
      첫 줄(54px)은 셸 뒤로가기 pill 몫 — 위저드·개요와 동일 */
-  .mhead {
-    display: block;
-    padding: 56px 14px 12px; /* 개요 화면과 같은 값 — 오갈 때 머리가 밀리지 않게 */
-  }
+  .mhead { padding: 0; }
+  .toolWrap { padding: 12px 14px; }
   .routeHeader {
     margin: 0 0 12px;
   }
@@ -623,9 +618,7 @@
 
 /* 좁은 화면에서 내보내기 버튼이 세 줄로 흩어지던 것 — 한 줄에 담는다 */
 @media (max-width: 560px) {
-  .mhead {
-    padding: 54px 14px 12px; /* 첫 줄은 셸 pill 몫 */
-  }
+  .mhead { padding: 0; }
   .routeTitle {
     font-size: 20px;
   }

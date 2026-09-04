@@ -321,9 +321,11 @@ export default function PlanDocumentPage() {
             )}
             <header className={styles.mhead}>
               {/*
-                머리는 플랜 개요와 같은 모양이다 — [←] 이름·모델, 오른쪽 끝 퍼센트, 아래 선 게이지.
-                예전엔 여기만 큰 제목 + '사업계획서 문서'라 오갈 때 다른 화면처럼 보였다(사용자 지적).
+                머리는 플랜 개요와 같은 모양·같은 값이다 — 흰 블록(14px 16px 17px), [←] 이름·모델,
+                오른쪽 끝 퍼센트, 블록 바닥에 좌우 끝까지 닿는 선 게이지. 예전엔 큰 제목 +
+                '사업계획서 문서'에 위 54px 빈 여백(없어진 뒤로가기 pill 몫)까지 있어 달라 보였다.
               */}
+              <div className={styles.headBlock}>
               <div className={styles.headTop}>
                 <button type="button" className={styles.headBack} onClick={() => router.push("/plan/overview")} aria-label="플랜 개요로">←</button>
                 <h1 className={styles.headTitle}>
@@ -335,6 +337,8 @@ export default function PlanDocumentPage() {
               <div className={styles.headGauge} role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100} aria-label={`진행률 ${progressPct}%, ${sections.length}/${totalSections} 섹션`}>
                 <i style={{ width: `${progressPct}%` }} />
               </div>
+              </div>
+              <div className={styles.toolWrap}>
               <div className={styles.toolbar}>
                 {/* 레퍼런스의 Structural/Document View 세그먼트 */}
                 <div className={styles.seg} role="tablist" aria-label="보기 전환">
@@ -440,6 +444,7 @@ export default function PlanDocumentPage() {
                 </div>
               </div>
               {deckError ? <p className={styles.deckError}>{deckError}</p> : null}
+              </div>
             </header>
 
             {/* 전체 화면은 툴바가 아니라 문서 위에 떠 있는다 — 헤더가 홀쭉해진다 */}
