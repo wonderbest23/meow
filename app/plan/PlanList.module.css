@@ -33,26 +33,28 @@
 .sideHead strong { font-size: 14px; font-weight: 700; color: #1c1d21; }
 .sideHead span { font-size: 12px; color: #8181a5; }
 
-.tiles { display: grid; gap: 8px; }
+/*
+ * 현황 타일 — 한 줄로 납작하게.
+ * 예전엔 라벨 위·숫자 아래 두 줄에 아이콘 상자까지 있어 폰에서 2×2 로 화면을
+ * 크게 먹었다(사용자: "몇백 개 만드는 사람 없는데 두 줄은 너무 많다").
+ * 숫자 네 개는 한 줄이면 충분하다 — 사이드바(PC)만 2×2, 그 밖은 1×4.
+ */
+.tiles { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px; }
 .tile {
-  min-height: 58px;
-  padding: 10px 12px 10px 14px;
+  min-height: 40px;
+  padding: 7px 10px;
   border-radius: 8px;
   background: #f5f5fa;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  gap: 7px;
+  min-width: 0;
 }
-.tileText { display: grid; gap: 2px; }
-.tileText small { font-size: 12px; color: #8181a5; }
-.tileText strong { font-size: 20px; font-weight: 700; color: #1c1d21; line-height: 1.1; }
-.tileIcon {
-  width: 36px; height: 36px; border-radius: 8px;
-  background: #fff;
-  display: grid; place-items: center;
-  color: var(--blue, #3272db);
-}
+.tileText { display: flex; align-items: baseline; gap: 5px; min-width: 0; }
+.tileText small { font-size: 12px; color: #8181a5; white-space: nowrap; }
+.tileText strong { font-size: 16px; font-weight: 700; color: #1c1d21; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tileIcon { display: grid; place-items: center; color: var(--blue, #3272db); flex: none; }
+.tileIcon svg { width: 16px; height: 16px; }
 .tile_todo .tileIcon { color: #e0a100; }
 .tile_done .tileIcon { color: #22b573; }
 .tile_sample .tileIcon { color: #8181a5; }
@@ -232,7 +234,12 @@
 }
 @media (max-width: 640px) {
   .main { padding: 14px 12px 40px; }
-  .tiles { grid-template-columns: repeat(2, 1fr); }
+  /* 폰에서도 한 줄 — 아이콘은 빼서 자리를 만든다 */
+  .tiles { grid-template-columns: repeat(4, 1fr); gap: 5px; }
+  .tile { padding: 7px 8px; gap: 0; }
+  .tileIcon { display: none; }
+  .tileText { flex-direction: column; align-items: flex-start; gap: 0; }
+  .tileText small { font-size: 11px; }
   /* 손가락 대상 — 30px 칩은 폰에서 빗나간다 */
   .seg { min-height: 38px !important; padding: 0 14px !important; }
   .row { grid-template-columns: 18px 30px minmax(0, 1fr) auto; gap: 10px; padding: 8px 10px; }
