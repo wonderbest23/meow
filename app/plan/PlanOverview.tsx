@@ -24,7 +24,7 @@ import InheritNote from "./InheritNote";
 import PlanLoading from "./PlanLoading";
 import GuideBubble, { ringClass } from "./GuideBubble";
 import { LayoutGrid, FileText, Zap, Lock, Presentation } from "lucide-react";
-import { generatingTitle, subscribeGeneration, totalPendingCount, refreshServerPending, failedCount, isGenerating, generationFailureMessage } from "../../lib/plan-builder/generation-queue";
+import { subscribeGeneration, totalPendingCount, refreshServerPending, failedCount, isGenerating, generationFailureMessage } from "../../lib/plan-builder/generation-queue";
 import styles from "./PlanOverview.module.css";
 import { ANALYSIS_KEY } from "../../lib/plan-builder/analyzer/domain";
 import { useRouter } from "next/navigation";
@@ -332,25 +332,25 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
       */}
       <div className={styles.layout}>
         <aside className={styles.side}>
+          {/*
+            머리 + 게이지 한 줄. 예전엔 '진행률' 제목, 막대, '15/15 섹션 완료 · 전략 깊이
+            높음', '챕터별 진행' 제목까지 네 줄이었다(사용자: 너무 비효율적). 이름 아래에
+            얇은 선 하나와 숫자만 둔다. '전략 깊이'는 완료 수를 다른 말로 한 번 더 한
+            것이라 뺐다.
+          */}
           <div className={styles.sideTop}>
             <button type="button" className={styles.back} onClick={onBack} aria-label="내 플랜으로">←</button>
             <div className={styles.sideTitle}>
               <strong>{title}</strong>
               <span>{type}{readOnly ? " · 예시" : ""}</span>
+              <div className={styles.sideProgress} role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="진행률">
+                <span className={styles.sideBar}><i style={{ width: `${pct}%` }} /></span>
+                <b>{doneCount}/{total} · {pct}%</b>
+              </div>
             </div>
           </div>
 
           <div className={styles.sideBlock}>
-            <small>진행률</small>
-            <div className={styles.sideProgress}>
-              <span className={styles.sideBar}><i style={{ width: `${pct}%` }} /></span>
-              <b>{pct}%</b>
-            </div>
-            <p className={styles.sideMuted}>{doneCount} / {total} 섹션 완료 · 전략 깊이 {doneCount >= total * 0.6 ? "높음" : doneCount > 0 ? "보통" : "낮음"}</p>
-          </div>
-
-          <div className={styles.sideBlock}>
-            <small>챕터별 진행</small>
             <div className={styles.chart} aria-label="챕터별 완료 비율">
               {chapterBars.map((c) => (
                 <span key={c.id} className={styles.chartCol} title={`${c.title} ${c.pct}%`}>
@@ -426,11 +426,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
         {/* 생성 진행·일괄 생성 */}
         <div className={styles.tools}>
           <div className={styles.spring} />
-          {queued > 0 && !bulk && (
-            <span className={styles.queueTag} title="기다리지 않아도 됩니다 — 다른 섹션을 계속 진행하세요">
-              <i className={styles.queueDot} /> 본문 {queued}개 만드는 중{generatingTitle() ? ` · ${generatingTitle()}` : ""}
-            </span>
-          )}
+          {/* '본문 N개 만드는 중' 띠는 뺐다 — 만드는 중인 섹션은 행에서 이미 표시된다 */}
           {bulk ? (
             <div className={styles.bulkStatus}>
               <span className={styles.bulkBar}>
