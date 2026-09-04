@@ -1088,17 +1088,15 @@
 .sideTitle { display: grid; gap: 3px; min-width: 0; flex: 1; }
 .sideTitle strong { font-size: 20px; font-weight: 800; color: #1c1d21; line-height: 1.25; word-break: keep-all; letter-spacing: -.01em; }
 .sideTitle span { font-size: 13px; color: #8181a5; }
+/* 오른쪽 끝 퍼센트 — 아래 선 게이지와 짝 */
+.pctText { flex: none; display: grid; justify-items: end; gap: 2px; font-size: 18px; font-weight: 800; color: #1c1d21; line-height: 1; font-variant-numeric: tabular-nums; }
+.pctText small { font-size: 11px; font-weight: 700; color: #8181a5; }
+/* 구분선 = 게이지. 3px 트랙 위에 채워진 만큼 진한 선 */
+.sideGauge { position: relative; height: 3px; margin-top: 14px; background: #e6e7ef; border-radius: 2px; overflow: hidden; }
+.sideGauge i { display: block; height: 100%; background: #1c1d21; border-radius: 2px; transition: width .8s cubic-bezier(.2,.7,.2,1); }
 
-/* 원형 게이지 — 이름 오른쪽 끝. 둘레 2π·19 ≈ 119.4, dashoffset 으로 채운다 */
-.ring { position: relative; width: 60px; height: 60px; flex: none; display: grid; place-items: center; align-content: center; }
-.ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
-.ringTrack { fill: none; stroke: #e6e7ef; stroke-width: 4; }
-.ringFill { fill: none; stroke: #1c1d21; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 119.4; transition: stroke-dashoffset .8s cubic-bezier(.2,.7,.2,1); }
-.ring b { position: relative; font-size: 15px; font-weight: 800; color: #1c1d21; line-height: 1; font-variant-numeric: tabular-nums; }
-.ring b i { font-style: normal; font-size: 9px; font-weight: 700; margin-left: 1px; color: #55586a; }
-.ring small { position: relative; margin-top: 3px; font-size: 9.5px; font-weight: 700; color: #8181a5; line-height: 1; font-variant-numeric: tabular-nums; }
 
-.sideBlock { display: grid; gap: 8px; padding-top: 14px; border-top: 1px solid #f0f0f3; }
+.sideBlock { display: grid; gap: 8px; padding-top: 14px; }
 .sideNext { margin: 0; font-size: 14px; font-weight: 700; color: #1c1d21; }
 .sidePrimary {
   min-height: 38px !important;
@@ -1182,9 +1180,11 @@
 
 @media (max-width: 1000px) {
   .layout { grid-template-columns: 1fr; }
-  .side { border-right: 0; border-bottom: 1px solid #ececf4; padding: 14px 16px; }
+  .side { position: relative; border-right: 0; border-bottom: 0; padding: 14px 16px 17px; }
   .chart { display: none; }
   .sideBlock { display: none; }
+  .sideGauge { position: absolute; left: 0; right: 0; bottom: 0; margin: 0; border-radius: 0; }
+  .sideGauge i { border-radius: 0 2px 2px 0; }
 }
 @media (max-width: 640px) {
   .body { padding: 14px 12px 40px; }
@@ -1279,7 +1279,7 @@
 .seg button:active { transform: scale(.96); }
 @media (prefers-reduced-motion: reduce) {
   .side, .body, .hero, .group, .group .row, .chartCol i, .checkOn { animation: none; }
-  .ringFill { transition: none; }
+  .sideGauge i { transition: none; }
   .row:hover, .heroBtn:hover { transform: none; }
 }
 
