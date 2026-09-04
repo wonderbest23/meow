@@ -20,8 +20,7 @@ import {
   SUPPORT_INPUT_EXAMPLES,
   PROFILE_LABELS,
   type ConsultPick,
-  type ConsultProfile,
-} from "../lib/consult/domain";
+  type ConsultProfile, profileLines } from "../lib/consult/domain";
 
 /*
  * 이 위젯은 두 가지를 한다.
@@ -35,6 +34,20 @@ import {
  * 상담 대화는 서버에 저장하지 않는다. 로그인 전에도 쓰고, 남의 창업 고민을 우리가
  * 들고 있을 이유가 없다. 이 화면이 들고 있다가 매번 함께 보낸다.
  */
+/*
+ * 담당자가 답해야 정확한 종류인가.
+ * 상담사(AI)는 창업 이야기만 하도록 묶여 있어 환불·결제 오류·계정·법률은 못 푼다.
+ * 손님 말과 답을 함께 보고, 걸리면 그 이유를 한 줄로 돌려준다.
+ */
+function escalationReason(asked: string, answered: string): string | null {
+  const text = `${asked}\n${answered}`;
+  if (/환불|결제.*(안|오류|실패|취소)|취소.*결제|이중.*결제|영수증|세금계산서/.test(text)) return "결제·환불은 담당자가 직접 확인해 드려요.";
+  if (/로그인.*(안|못)|비밀번호|계정|탈퇴|개인정보/.test(text)) return "계정 문제는 담당자가 확인해야 정확해요.";
+  if (/소송|고소|법적|변호사|세무사|세금 신고|계약서 검토/.test(text)) return "법률·세무는 사람이 답하는 게 맞아요.";
+  if (/사람.*(연결|바꿔|통화)|담당자|직원.*(연결|바꿔)|상담원/.test(asked)) return "담당자에게 바로 남길 수 있어요.";
+  return null;
+}
+
 type ConsultSource = { n: number; name: string; url: string; observedAt?: string; verification?: string };
 type ConsultTurn = { id: string; role: "user" | "assistant"; text: string; at: string; sources?: ConsultSource[] };
 
@@ -89,6 +102,12 @@ export function SupportChatWidget() {
   const [consultLimit, setConsultLimit] = useState<{ needsLogin: boolean } | null>(null);
   /* 오늘 남은 무료 상담 횟수 — 비회원에게만 보여 준다 */
   const [consultRemaining, setConsultRemaining] = useState<number | null>(null);
+  /*
+   * 담당자 연결 권유 — 상담사가 답할 수 없는 종류(환불·결제 오류·계정·법률)면
+   * 답 아래에 '담당자에게 남기기'를 띄운다. 1:1 콘솔은 있었지만 채팅 안에서
+   * 넘어가는 길이 없어서, 못 푸는 질문이 그냥 막다른 골목이었다.
+   */
+  const [consultEscalate, setConsultEscalate] = useState<string | null>(null);
   const [consultIsGuest, setConsultIsGuest] = useState(false);
   const [chat, setChat] = useState<SupportChat>({ conversation: null, messages: [] });
   const [message, setMessage] = useState("");
@@ -307,6 +326,19 @@ export function SupportChatWidget() {
     setMessage("");
   };
 
+  /** 상담 대화를 그대로 들고 담당자 문의로 — 손님이 같은 말을 두 번 하지 않게 */
+  const handoffFromConsult = () => {
+    const lines = consultTurns.slice(-6).map((t) => `${t.role === "user" ? "손님" : "상담사"}: ${t.text.slice(0, 160)}`);
+    const known = profileLines(consultProfile).join(", ");
+    const context = [known ? `조건: ${known}` : "", ...lines].filter(Boolean).join("\n").slice(0, 900);
+    trackFunnel("consult_handoff_human", {});
+    setMode("support");
+    setShowQuickMenu(false);
+    setOperatorMode(true);
+    setMessage(`[상담에서 넘어온 문의]\n${context}\n\n담당자에게 묻고 싶은 것: `);
+    window.setTimeout(() => textareaRef.current?.focus(), 80);
+  };
+
   const startOperatorInquiry = (faq?: SupportFaqItem, context?: string) => {
     setShowQuickMenu(false);
     setOperatorMode(true);
@@ -325,6 +357,7 @@ export function SupportChatWidget() {
     if (consultLimit) return;
     setMessage("");
     setConsultChoices([]);
+    setConsultEscalate(null);
     setConsultThinking(true);
     const asked: ConsultTurn = { id: crypto.randomUUID(), role: "user", text: nextMessage, at: new Date().toISOString() };
     setConsultTurns((current) => [...current, asked]);
@@ -404,6 +437,7 @@ export function SupportChatWidget() {
         setConsultSummary(payload.summary ?? []);
         setConsultPicks(payload.picks ?? []);
         if (payload.ready) setConsultReady(true);
+        setConsultEscalate(escalationReason(nextMessage, payload.message ?? ""));
         return;
       }
       payload = (await response.json()) as ConsultPayload;
@@ -822,9 +856,16 @@ export function SupportChatWidget() {
                       </p>
                     )}
 
-                    {consultTurns.length > 0 && (
-                      <button type="button" className="consult-to-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
-                        <MessageCircleQuestion /> 서비스 이용 문의는 여기
+                    {/* 못 푸는 종류면 답 바로 아래에 — 대화를 들고 담당자 문의로 넘어간다 */}
+                    {!consultThinking && consultEscalate && (
+                      <div className="consult-escalate" role="status">
+                        <span>{consultEscalate}</span>
+                        <button type="button" onClick={handoffFromConsult}>담당자에게 이 대화 남기기 →</button>
+                      </div>
+                    )}
+                    {consultTurns.length > 0 && !consultEscalate && (
+                      <button type="button" className="consult-to-support" onClick={handoffFromConsult}>
+                        <MessageCircleQuestion /> 담당자에게 남기기 · 서비스 문의
                       </button>
                     )}
                   </section>

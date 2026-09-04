@@ -18,6 +18,7 @@ export const funnelEventNames = [
   "consult_cta_click",
   "consult_limit_view",
   "consult_login_click",
+  "consult_handoff_human",
   "consult_handoff_arrive",
   "support_link_click",
 ] as const;

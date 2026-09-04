@@ -47,9 +47,11 @@ export async function POST(request: Request) {
      * 쏟아지지 않게 하려는 것이다. 실패해도 접수는 그대로 성공한다.
      */
     const isConsult = input.message.startsWith("[맞춤 홈페이지 제작");
-    if (isConsult || chat.conversation?.unreadByAdmin === 1) {
+    /* 자동 상담이 못 푼 질문 — 손님이 이미 한 번 막힌 뒤라 매번 바로 알린다 */
+    const isHandoff = input.message.startsWith("[상담에서 넘어온 문의]");
+    if (isConsult || isHandoff || chat.conversation?.unreadByAdmin === 1) {
       await notifyOwnerByEmail(
-        isConsult ? "[오늘창업] 맞춤 홈페이지 제작 상담이 접수됐습니다" : "[오늘창업] 새 1:1 문의가 도착했습니다",
+        isConsult ? "[오늘창업] 맞춤 홈페이지 제작 상담이 접수됐습니다" : isHandoff ? "[오늘창업] 챗봇이 못 푼 문의 — 담당자 답변 필요" : "[오늘창업] 새 1:1 문의가 도착했습니다",
         [
           input.message.slice(0, 800),
           "",
