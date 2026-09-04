@@ -567,13 +567,18 @@ export default function SectionWizard({
 
           {/* main */}
           <section className={styles.main}>
+            {/*
+              머리는 개요·문서 화면과 같은 블록이다 — [←] 제목 20px · 아래 13px(챕터 · 예상 시간).
+              예전엔 여기만 24px 제목 + 눈썹 + 미터 상자에, 폰에선 없어진 뒤로가기 줄 몫으로
+              위 58px 이 비어 있었다(사용자: 화면마다 머리가 달라 헷갈림).
+            */}
             <div className={styles.mhead}>
-              <div className={styles.crumb}>{chapter.title}</div>
-              <h1>{section.title}</h1>
-              <div className={styles.meters}>
-                {/* '상태'는 하단 버튼과 중복이라 뺐다 — 시간과 진행만 남긴다 */}
-                <div className={styles.mt}><div className={styles.mtL}>예상 소요시간</div><div className={styles.mtV}><span className={styles.mtPrefix}>예상 소요시간 </span>{estimateMinutes(key, section.title, planType)}분</div></div>
-
+              <div className={styles.headBlock}>
+                {onBack && <button type="button" className={styles.headBack} onClick={onBack} aria-label="플랜 개요로">←</button>}
+                <h1 className={styles.headTitle}>
+                  {section.title}
+                  <span>{chapter.title} · 예상 {estimateMinutes(key, section.title, planType)}분</span>
+                </h1>
               </div>
             </div>
 

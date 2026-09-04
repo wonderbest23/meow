@@ -353,10 +353,18 @@
   min-height: 0;
   background: var(--wz-panel);
 }
-.mhead {
-  padding: 22px 30px 18px;
-  border-bottom: 1px solid var(--wz-line);
+.mhead { padding: 0; border-bottom: 1px solid var(--wz-line); }
+/* 흰 머리 블록 — 개요·문서 화면과 같은 값 */
+.headBlock { display: flex; align-items: center; gap: 12px; padding: 14px 16px 17px; background: #fff; }
+.headBack {
+  flex: none; width: 32px; height: 32px; min-height: 0 !important;
+  margin: 0; padding: 0 !important;
+  border: 1px solid #e6e6ef; border-radius: 8px !important;
+  background: #fff; color: #55586a; font: inherit; font-size: 14px;
+  display: grid; place-items: center; cursor: pointer; box-shadow: none !important;
 }
+.mhead .headTitle { margin: 0; display: grid; gap: 3px; min-width: 0; flex: 1; font-size: 20px; font-weight: 800; color: #1c1d21; line-height: 1.25; word-break: keep-all; letter-spacing: -.01em; }
+.mhead .headTitle span { font-size: 13px; font-weight: 400; color: #8181a5; letter-spacing: 0; }
 .crumb {
   font-size: 13px;
   font-weight: 800;
@@ -949,12 +957,7 @@
  * 오른쪽 '진행' 눈금이 잘리고 '시작 전' 같은 값이 두 줄로 감겼다.
  */
 @media (max-width: 560px) {
-  .mhead {
-    padding: 18px 16px 14px;
-  }
-  .mhead h1 {
-    font-size: 20px;
-  }
+  .mhead { padding: 0; }
   .mbody {
     padding: 18px 16px 24px;
   }
@@ -1468,10 +1471,7 @@
  * 미터를 셸 뒤로가기 pill과 같은 행(mhead 위 여백)에 올려 세로 공간을 아낀다.
  */
 @media (max-width: 640px) {
-  .mhead {
-    position: relative;
-    padding-top: 58px; /* 첫 줄 = [← 내 플랜] */
-  }
+  .mhead { position: relative; padding: 0; }
   /* 미터는 둘째 줄('사업 개요' 줄) 우측 — 첫 줄은 뒤로가기만 */
   .meters {
     position: absolute;
