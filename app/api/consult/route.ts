@@ -6,6 +6,9 @@ import { resolveLLMConfig } from "../../../lib/llm/config";
 import { streamText, parseJsonObject } from "../../../lib/llm/complete";
 import { loadPlanState } from "../../../lib/plan-builder/plan-server-store";
 import { planDigest } from "../../../lib/consult/plan-digest";
+import { loadPlanEvidence } from "../../../lib/plan-builder/market-research";
+import { pickConsultEvidence, evidenceBlock, applyCitations } from "../../../lib/consult/evidence";
+import type { MarketEvidence } from "../../../lib/market/domain";
 import { loadConsultSession, saveConsultTurn, resetConsultSession, consultLimitFor, CONSULT_FREE_TURNS_GUEST } from "../../../lib/consult/repository";
 import {
   CONSULT_SYSTEM,
@@ -61,6 +64,7 @@ function fallback(): ConsultReply {
     summary: [],
     picks: [],
     ready: false,
+    sources: [],
   };
 }
 
@@ -181,16 +185,24 @@ export async function POST(request: Request) {
    * 계정(hash)에 묶인 플랜만 읽으므로 남의 planId 를 넣어도 아무것도 안 나온다.
    */
   let planBlock = "";
+  /* 계획서에 저장된 공식 근거 — 상담사가 수치를 말할 때 이것만 쓰고 [E#] 로 표시한다 */
+  let evidence: MarketEvidence[] = [];
   if (input.planId) {
     const state = await loadPlanState(identity.hash).catch(() => null);
     const plan = state?.plans.find((p) => p.id === input.planId);
-    if (plan) planBlock = `손님의 사업계획서\n${planDigest(plan, state!.business)}`;
+    if (plan) {
+      planBlock = `손님의 사업계획서\n${planDigest(plan, state!.business)}`;
+      const saved = await loadPlanEvidence(plan.id, identity.hash).catch(() => [] as MarketEvidence[]);
+      evidence = pickConsultEvidence(saved, input.profile);
+    }
   }
+  const evidenceText = evidenceBlock(evidence);
 
   const user = [
     known.length ? `지금까지 알아낸 것\n${known.join("\n")}` : "아직 알아낸 것이 없습니다.",
     "",
     ...(planBlock ? [planBlock, ""] : []),
+    ...(evidenceText ? [evidenceText, ""] : []),
     conversation ? `지금까지 대화\n${conversation}` : "첫 대화입니다.",
     "",
     `손님의 마지막 말\n${input.message}`,
@@ -259,7 +271,9 @@ export async function POST(request: Request) {
           if (cut >= 0) { flushText(cut); meta = parseJsonObject(text.slice(cut + CONSULT_META_SEP.length + 1)) ?? {}; }
           else flushText(text.length);
         }
-        const parsed = consultReplySchema.safeParse({ ...meta, message });
+        /* [E#] → (출처 #), 실제로 쓰인 근거만 sources 로 */
+        const cited = applyCitations(message, evidence);
+        const parsed = consultReplySchema.safeParse({ ...meta, message: cited.message, sources: cited.sources });
         if (parsed.success && parsed.data.message) reply = parsed.data;
       }
       if (!reply) {

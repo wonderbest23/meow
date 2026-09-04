@@ -78,6 +78,14 @@ export const consultReplySchema = z.object({
   picks: z.array(consultPickSchema).max(3).default([]),
   /** 사업계획서로 넘어가자고 권할 단계인지 */
   ready: z.boolean().default(false),
+  /** 답에 인용된 공식 근거 — 모델이 아니라 서버가 [E#] 표시를 보고 채운다 */
+  sources: z.array(z.object({
+    n: z.number().int().min(1),
+    name: z.string().max(150),
+    url: z.string().max(600),
+    observedAt: z.string().max(20).default(""),
+    verification: z.enum(["verified", "user_supplied", "needs_review"]).default("needs_review"),
+  })).max(8).default([]),
 });
 
 export type ConsultReply = z.infer<typeof consultReplySchema>;
@@ -188,6 +196,12 @@ export const CONSULT_SYSTEM = [
   "답하세요 — 적힌 조건·수치·검토 지적을 그대로 인용하고, 어느 섹션을 어떻게 고치면 되는지",
   "구체적으로 말하세요. 계획서에 없는 수치는 지어내지 마세요. 계획서가 있는 손님에게 처음부터",
   "아이템을 다시 찾자고 하지 마세요. profile 은 계획서에서 확인되는 것까지 채웁니다.",
+  "",
+  "# 공식 근거",
+  "아래에 '공식 근거' 블록이 있으면 수치는 거기 있는 것만 말하고, 그 문장 끝에 [E번호]를 붙이세요",
+  "(예: '반경 1km 카페가 42곳이에요 [E2]'). 근거 블록에 없는 수치는 말하지 않습니다 —",
+  "'그 자료는 아직 없어요' 라고 하고, 계획서를 시작하면 공식자료를 찾아 준다고 안내하세요.",
+  "근거 블록이 없으면 수치 자체를 말하지 마세요. 감으로 말하는 숫자가 손님에게는 사실로 들립니다.",
   "",
   "# 말투",
   "짧은 문장. 쉬운 말. 카카오톡으로 상담받는 느낌. 장황하게 쓰지 마세요.",

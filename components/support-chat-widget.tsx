@@ -35,7 +35,8 @@ import {
  * 상담 대화는 서버에 저장하지 않는다. 로그인 전에도 쓰고, 남의 창업 고민을 우리가
  * 들고 있을 이유가 없다. 이 화면이 들고 있다가 매번 함께 보낸다.
  */
-type ConsultTurn = { id: string; role: "user" | "assistant"; text: string; at: string };
+type ConsultSource = { n: number; name: string; url: string; observedAt?: string; verification?: string };
+type ConsultTurn = { id: string; role: "user" | "assistant"; text: string; at: string; sources?: ConsultSource[] };
 
 type QuickMessage = {
   id: string;
@@ -353,6 +354,7 @@ export function SupportChatWidget() {
         isGuest?: boolean;
         error?: string;
         needsLogin?: boolean;
+        sources?: ConsultSource[];
       };
       /*
        * 스트리밍(NDJSON). 평문은 오는 대로 마지막 말풍선에 이어 붙이고,
@@ -391,7 +393,7 @@ export function SupportChatWidget() {
         if (!done) throw new Error("상담을 이어가지 못했습니다.");
         payload = done;
         /* 서버가 확정한 전체 문장으로 맞춘다(조각이 빠졌을 때 대비) */
-        if (payload.message) { const finalText = payload.message; setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text: finalText } : turn))); }
+        if (payload.message) { const finalText = payload.message; const sources = payload.sources ?? []; setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text: finalText, sources } : turn))); }
         if (typeof payload.remainingToday === "number") setConsultRemaining(payload.remainingToday);
         setConsultIsGuest(Boolean(payload.isGuest));
         if (payload.profile && Object.keys(payload.profile).length) {
@@ -663,6 +665,19 @@ export function SupportChatWidget() {
                           <span>{turn.role === "user" ? "나" : "상담사"}</span>
                         </header>
                         <p>{turn.text}</p>
+                        {/* 답에 인용된 공식 근거 — (출처 n) 이 가리키는 곳. 실제로 쓰인 것만 온다 */}
+                        {turn.sources && turn.sources.length > 0 && (
+                          <ul className="consult-sources" aria-label="출처">
+                            {turn.sources.map((src) => (
+                              <li key={src.n}>
+                                <b>{src.n}</b>
+                                {src.url ? <a href={src.url} target="_blank" rel="noreferrer">{src.name}</a> : <span>{src.name}</span>}
+                                {src.observedAt ? <small>{src.observedAt}</small> : null}
+                                {src.verification === "verified" ? <em>공식 확인</em> : null}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
                         <time dateTime={turn.at}>{messageTime(turn.at)}</time>
                       </article>
                     ))}
