@@ -287,6 +287,13 @@ export async function POST(request: Request) {
       /* 주고받은 말과 정리된 상담 카드를 남긴다. 저장이 실패해도 상담은 이어진다. */
       const at = new Date().toISOString();
       const merged = { ...input.profile, ...reply.profile };
+      /*
+       * ready 는 코드가 확정한다.
+       * 규칙(업종 + 지역·예산·시간 중 하나)은 분명한데, 모델은 질문을 더 이어갈 때
+       * false 로 두는 버릇이 있었다(정답 세트 c13 — 프롬프트를 강화해도 그대로).
+       * 그러면 '창업계획 만들기' 문이 열리지 않는다. 판정은 모델이 아니라 여기서.
+       */
+      if (merged.interest && (merged.region || merged.budget || merged.hoursPerDay)) reply = { ...reply, ready: true };
       await saveConsultTurn(identity.hash, {
         profile: merged,
         appended: [
