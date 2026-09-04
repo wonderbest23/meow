@@ -8,13 +8,16 @@
 }
 @keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 
-.headRow { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+.headRow { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; }
 .backBtn {
+  /* flex 안에서 눌리면 15px 로 찌그러진다(실측) — 다른 화면의 뒤로 버튼과 같이 고정 */
+  flex: none;
   width: 32px; height: 32px; min-height: 0 !important; padding: 0 !important;
   border: 1px solid #e6e6ef; border-radius: 8px !important; background: #fff; color: #55586a;
   font-size: 14px; display: grid; place-items: center; cursor: pointer; box-shadow: none !important;
 }
-.h1 { margin: 0; font-size: 20px; font-weight: 700; color: #1c1d21; }
+.h1 { margin: 0; display: grid; gap: 3px; min-width: 0; flex: 1; font-size: 20px; font-weight: 800; color: #1c1d21; line-height: 1.25; letter-spacing: -.01em; word-break: keep-all; }
+.h1 span { font-size: 13px; font-weight: 400; color: #8181a5; letter-spacing: 0; }
 
 .steps { display: flex; align-items: center; gap: 10px; margin: 18px 0 22px; padding-bottom: 18px; border-bottom: 1px solid #f0f0f3; flex-wrap: wrap; }
 .step { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: #8181a5; }

@@ -47,6 +47,7 @@ export default function AnalyzeFlow() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("loading");
   const [planId, setPlanId] = useState<string | null>(null);
+  const [planTitle, setPlanTitle] = useState("");
   const [record, setRecord] = useState<AnalysisRecord | null>(null);
   const [answers, setAnswers] = useState<Answers>({});
   const [failReason, setFailReason] = useState<string>("");
@@ -87,6 +88,7 @@ export default function AnalyzeFlow() {
         return;
       }
       setPlanId(p.id);
+      setPlanTitle(p.title);
       setAnswers(p.answers ?? {});
       const saved = readAnalysisRecord(p.answers);
       if (saved) {
@@ -307,8 +309,9 @@ export default function AnalyzeFlow() {
 
   const Head = (
     <div className={styles.headRow}>
+      {/* 개요·문서·섹션 화면과 같은 머리 — [←] 제목 20px · 아래 13px(플랜 이름) */}
       <button type="button" className={styles.backBtn} onClick={() => router.push("/plan/overview")} aria-label="플랜 개요로" title="플랜 개요로">←</button>
-      <h1 className={styles.h1}>AI와 사업 정리하기</h1>
+      <h1 className={styles.h1}>AI와 사업 정리하기{planTitle && <span>{planTitle}</span>}</h1>
     </div>
   );
 

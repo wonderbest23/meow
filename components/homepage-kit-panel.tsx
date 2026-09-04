@@ -117,6 +117,8 @@ export function HomepageKitPanel({
   return (
     <section className="hk">
       <header className="hk-top">
+        {/* 개요·문서·섹션 화면과 같은 머리 규칙 — [←] 제목 20px · 아래 13px */}
+        <a href="/plan/overview" className="hk-back" aria-label="플랜 개요로">←</a>
         <div>
           <h3>내 사업 홈페이지</h3>
           {publicPath ? (
