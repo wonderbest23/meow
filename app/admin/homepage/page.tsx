@@ -28,7 +28,7 @@ export default function AdminHomepagePage() {
   const [hidden, setHidden] = useState<string[]>([]);
   /* 저장된 값 — 저장 후 되돌리기(변경 취소) 기준 */
   const [saved, setSaved] = useState<SiteCopy>({ texts: {}, hidden: [] });
-  const [selected, setSelected] = useState<string | null>("hero");
+  const [selected, setSelected] = useState<string | null>("chatHome");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const frameRef = useRef<HTMLIFrameElement>(null);

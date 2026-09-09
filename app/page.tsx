@@ -78,6 +78,7 @@ import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
 import { HomeProductPreview } from "../components/home-product-preview";
 import { HomeConversationEntry } from "../components/home-conversation-entry";
+import { HomeServiceOverview } from "../components/home-service-overview";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -155,9 +156,7 @@ import {
 } from "../lib/draft-package/domain";
 import { refinementInputFromProject } from "../lib/refinement/domain";
 import {
-  CUSTOM_HOMEPAGE_FROM_AMOUNT,
   PACKAGE_AMOUNT,
-  REGEN_INCLUDED,
   PACKAGE_LIST_AMOUNT,
   PACKAGE_NAME,
 } from "../lib/payments/domain";
@@ -491,208 +490,24 @@ function GuidedTopBar({
   );
 }
 
-/* 서비스 요약 네 마디 — 하는 일이 제목, 숫자는 그 아래 근거 */
-/*
- * BRIX 'Stats V7' — 숫자 큰 카드 4장. 회전(한 칸씩 넘기기)을 걷어내고
- * 정적으로 편다. 숫자는 전부 실제 값이다 — 지어낸 통계가 아니라
- * 서비스 구성 그대로: 문서 7유형, 샘플 3부, 무료 2섹션, 파일 3종.
- */
-const HOME_STATS = [
-  { num: "7", unit: "가지", label: "문서 유형", body: "사업계획서 · 재무 모델 · 발표자료까지" },
-  { num: "3", unit: "부", label: "완성 샘플", body: "로그인 없이 전체를 열람합니다" },
-  { num: "2", unit: "개", label: "무료 섹션", body: "어떤 문서든 앞부분을 무료로 만들어 봅니다" },
-  { num: "3", unit: "종", label: "내려받기", body: "PDF · Word · PPT" },
-];
-
-/*
- * 후기 블록.
- *
- * 보여 준 레퍼런스(쇼핑몰 리뷰 요약)와 같은 구성이다 — 평균 별점, 총 개수,
- * 평점 분포 막대, 후기 카드 몇 장.
- *
- * demo 를 주면 시연용 숫자로 그린다. 실제로는 reviews 를 받아 그리고,
- * 하나도 없으면 아무것도 그리지 않는다 — 후기가 0건인데 자리만 있으면
- * 빈 껍데기가 보이고, 없는 후기를 채워 넣고 싶어진다.
- */
-interface HomeReview {
-  score: number;
-  body: string;
-  who: string;
-  at: string;
-}
-
-const REVIEW_DEMO: HomeReview[] = [
-  { score: 5, body: "질문에 답만 했는데 사업계획서가 나왔습니다. 은행 제출용으로 그대로 썼어요.", who: "무인 스터디카페 · 경기", at: "2026.08" },
-  { score: 5, body: "재무 부분이 제일 막막했는데 12개월 손익표가 자동으로 계산돼서 좋았습니다.", who: "베이커리 창업 준비 · 서울", at: "2026.08" },
-  { score: 4, body: "정부지원 PSST 양식에 맞춰 나와서 편했습니다. 세부 문구는 조금 손봤어요.", who: "예비창업패키지 지원 · 부산", at: "2026.07" },
-  { score: 5, body: "은퇴하고 처음 써보는 사업계획서였는데 질문이 쉬워서 혼자 끝냈습니다.", who: "동네 반찬가게 · 대구", at: "2026.08" },
-  { score: 5, body: "PDF랑 Word 둘 다 받아서 제출처마다 다르게 낼 수 있었어요.", who: "온라인 편집숍 · 인천", at: "2026.07" },
-  { score: 4, body: "발표자료까지 자동으로 나오는 줄 몰랐습니다. 슬라이드는 조금 다듬었어요.", who: "펫 케어 서비스 · 경기", at: "2026.07" },
-  { score: 5, body: "같은 사업으로 유형만 바꿔 다시 만들 때 답변이 그대로 이어져서 편했습니다.", who: "무인 세탁소 · 광주", at: "2026.06" },
-  { score: 5, body: "숫자 근거가 어디서 왔는지 표시돼서 심사 때 설명하기 좋았습니다.", who: "청년창업 지원사업 · 대전", at: "2026.06" },
-  { score: 4, body: "혼자 쓰면 며칠 걸릴 걸 반나절에 끝냈습니다. 문장은 제 말투로 조금 고쳤어요.", who: "공유 오피스 · 서울", at: "2026.06" },
-];
-
-/*
- * 홈페이지 예시 띠 — Brainwave.io 킷 랜딩 10장(실제 제품이 쓰는 페이지).
- *
- * 예전에는 후기 속 사업을 흉내 낸 순수 CSS 목업 여섯 개를 그려 놓았다. 제품이
- * 킷 페이지를 노드 그대로 쓰게 된 뒤로는 그 목업이 제품과 다른 모양을
- * 보여주는 셈이었다 — 실제로 만들어지는 페이지의 첫 화면(Figma 스크린샷
- * 위쪽 1600×1400)을 그대로 보여준다. public/brainwave/thumbs/<id>.jpg.
- * 눌리지 않는다 — 예시일 뿐이다.
- */
-const LANDING_PEEKS = [
-  { id: "0-290",  name: "08 Consultation", ko: "상담·전문 서비스" },
-  { id: "0-2226", name: "03 Coworking",    ko: "공간·매장" },
-  { id: "0-1102", name: "06 ECommerce",    ko: "온라인 상점" },
-  { id: "0-2555", name: "01 Agency",       ko: "에이전시·제작" },
-  { id: "0-2385", name: "02 SaaS",         ko: "구독 서비스" },
-  { id: "0-181",  name: "09 Product",      ko: "단일 상품" },
-  { id: "0-421",  name: "07 Mobile App",   ko: "앱" },
-  { id: "0-2",    name: "10 B2B",          ko: "기업 서비스" },
-  { id: "0-1371", name: "05 Web App",      ko: "웹 서비스" },
-  { id: "0-1950", name: "04 Job Site",     ko: "채용 사이트" },
-];
-
-function HomeLandingPeek() {
-  return (
-    <div className="home-peek" role="img" aria-label="홈페이지로 쓸 수 있는 Brainwave.io 킷 랜딩 페이지 열 종">
-      <p className="home-peek-cap">계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)</p>
-      <div className="home-peek-track" aria-hidden="true">
-        <ul>
-          {[...LANDING_PEEKS, ...LANDING_PEEKS].map((p, i) => (
-            <li key={`${p.id}-${i}`}>
-              <div className="peek-bar"><i /><i /><i /><span>{p.name}</span></div>
-              <img className="peek-shot" src={`/brainwave/thumbs/${p.id}.jpg`} alt="" loading="lazy" decoding="async" />
-              <div className="peek-foot">{p.ko}</div>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
-function Stars({ score }: { score: number }) {
-  return (
-    <span className="home-review-stars" aria-label={`5점 만점에 ${score}점`}>
-      {[1, 2, 3, 4, 5].map((n) => (
-        <i key={n} className={n <= Math.round(score) ? "on" : ""} aria-hidden="true">
-          ★
-        </i>
-      ))}
-    </span>
-  );
-}
-
-function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: HomeReview[] }) {
-  const list = demo ? REVIEW_DEMO : reviews ?? [];
-  if (!list.length) return null;
-
-  const average = list.reduce((sum, r) => sum + r.score, 0) / list.length;
-  /* 5점부터 1점까지 몇 개씩인지 — 레퍼런스의 '평점 비율' 막대 */
-  const spread = [5, 4, 3, 2, 1].map((score) => ({
-    score,
-    count: list.filter((r) => r.score === score).length,
-  }));
-  const peak = Math.max(1, ...spread.map((s) => s.count));
-
-  return (
-    <div className="home-reviews" aria-label="사용자 후기">
-      {demo && <p className="home-reviews-demo">디자인 확인용 예시입니다. 실제 후기가 아닙니다.</p>}
-      <div className="home-reviews-summary">
-        <div className="home-reviews-score">
-          <strong>{average.toFixed(1)}</strong>
-          <span>/ 5</span>
-          <Stars score={average} />
-          <small>후기 {list.length.toLocaleString("ko-KR")}개</small>
-        </div>
-        <ul className="home-reviews-spread">
-          {spread.map((s) => (
-            <li key={s.score}>
-              <span>{s.score}점</span>
-              <span className="home-reviews-bar">
-                <span style={{ width: `${(s.count / peak) * 100}%` }} />
-              </span>
-              <b>{s.count}</b>
-            </li>
-          ))}
-        </ul>
-      </div>
-      {/*
-        같은 목록을 두 벌 이어 붙인다 — 절반만큼 밀면 끊김 없이 돌아온다.
-        두 번째 벌은 화면 낭독에서 뺀다. 같은 후기를 두 번 읽어 주면
-        듣는 사람은 개수를 잘못 안다.
-      */}
-      <div className="home-reviews-track">
-        <ul className="home-reviews-list">
-          {[...list, ...list].map((r, i) => (
-            <li key={`${r.body}-${i}`} aria-hidden={i >= list.length ? "true" : undefined}>
-              <Stars score={r.score} />
-              <p>{r.body}</p>
-              <small>
-                {r.who} · {r.at}
-              </small>
-            </li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  );
-}
-
 function Home({
   onStart,
-  onPreview,
 }: {
   onStart: () => void;
-  onPreview: () => void;
 }) {
-  /*
-   * 후기 블록 — 디자인 확인 단계라 시연 데이터로 공개 홈에 띄운다.
-   *
-   * 블록 안의 '실제 후기가 아닙니다' 표시가 이것을 성립시킨다. 그 한 줄이
-   * 빠지면 받은 적 없는 후기를 진짜처럼 두는 것이 되고, 표시광고법상
-   * 기만적 표시에 해당한다. 표시를 지우려면 먼저 실제 후기를 받아
-   * reviews 로 넘겨야 한다.
-   */
-  const reviewDemo = true;
-  /*
-   * 서비스 요약 — 네 마디를 가운데서 하나씩 띄운다.
-   *
-   * 네 칸을 한 줄에 눌러 담았더니 글씨가 작아져 아무도 읽지 않았다. 한 번에
-   * 하나만 크게 띄우면 그 한 줄은 읽힌다.
-   *
-   * 저절로 넘어가되 사람이 손을 대면 멈춘다 — 읽는 중에 글이 사라지면
-   * 넘어가는 화면이 아니라 방해가 된다.
-   */
-
   const [businessInfo, setBusinessInfo] = useState<{
     operatorName: string; representativeName: string; businessRegistrationNumber: string; mailOrderSalesNumber: string;
     mailOrderStatus: MailOrderStatus; internetDomainName: string;
     businessAddress: string; supportEmail: string; supportPhone: string; hostingProvider: string;
   } | null>(null);
-  const [paymentAllowed, setPaymentAllowed] = useState(false);
   useEffect(() => {
     void fetch("/api/platform/readiness", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
         setBusinessInfo(data.business ?? null);
-        setPaymentAllowed(data.readiness?.paymentAllowed === true);
       })
       .catch(() => undefined);
   }, []);
-  const deliverables = [
-    "창업 초기 사업계획서 — 지원·대출 심사용",
-    "성장·확장 사업계획서 — 실적 기반 확장 자금",
-    "정부지원 PSST 사업계획서 — 예비·초기창업패키지 양식",
-    "간단 요약 계획서 — 첫 미팅·1차 심사용",
-    "내부 전략 문서 — 팀 실행 계획",
-    "창업 초기 재무 예측 — 12개월 손익",
-    "정밀 재무 모델 — 3년 추정·민감도",
-    "발표자료(PPT) — 완성 문서 기반 자동 구성",
-  ];
   /*
    * 어드민이 고친 홈 문구(/admin/homepage). 코드의 기본 문구로 먼저 그려지고,
    * 오버라이드가 오면 바꿔 끼운다 — 실패하면 그냥 기본 문구다.
@@ -707,26 +522,12 @@ function Home({
   const sc = (id: string, def: string) => siteCopy.texts[id] ?? def;
   /** \n 을 <br/> 로 */
   const scBr = (id: string, def: string) => sc(id, def).split("\n").map((line, i, all) => <Fragment key={i}>{line}{i < all.length - 1 ? <br /> : null}</Fragment>);
-  const scHidden = (id: string) => siteCopy.hidden.includes(id);
 
   const openConsult = () => {
     onStart();
   };
 
 
-
-  const requestCustomHomepage = () => {
-    window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
-      detail: {
-        message: [
-          "[맞춤 홈페이지 제작 상담]",
-          `기본 제작비: ${CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터`,
-          "자동 제작 홈페이지보다 세밀한 디자인이나 예약·결제 기능이 필요합니다.",
-          "원하는 내용: ",
-        ].join("\n"),
-      },
-    }));
-  };
 
   return (
     <main className="new-home simple-home product-home">
@@ -740,9 +541,9 @@ function Home({
         */}
         <section className="simple-home-choice">
           <div className="home-hero-copy">
-            <span className="section-label">{sc("hero.eyebrow", "창업 10만원대로 시작하세요")}</span>
-            <h1>{(() => { const t = sc("hero.title", "사업,|오늘 하루면 충분합니다"); const [head, ...rest] = t.split("|"); return rest.length ? <><b>{head}</b> {rest.join("|").trim()}</> : t; })()}</h1>
-            <p>{scBr("hero.subtitle", "사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.\n복잡한 사업계획서, 이제 쉽게 시작하세요.")}</p>
+            <span className="section-label">{sc("chatHome.eyebrow", "대화로 만드는 내 사업계획서")}</span>
+            <h1>{sc("chatHome.title", "오늘창업")}</h1>
+            <p>{scBr("chatHome.subtitle", "아이디어만 있어도, 이미 운영 중이어도 괜찮아요.\n대화로 정리하고, 내 사업에 맞는 계획으로 만드세요.")}</p>
             {/*
               '무료로 시작하기' 버튼이 있던 자리 — 이제 검색창이다.
               도는 링으로 강조하고, 누르면 상담 창이 열린다.
@@ -758,171 +559,10 @@ function Home({
             </div>
           </div>
           <HomeProductPreview />
-          {reviewDemo && <HomeReviews demo />}
-          {reviewDemo && <HomeLandingPeek />}
         </section>
       </div>
 
-      {/*
-        무엇을 해주는 곳인지 네 마디로.
-        예전에는 "7가지 / 무료 / 1회 / PDF·Word·PPT"처럼 숫자가 앞에 서 있었다.
-        숫자만 봐서는 무엇을 해주는지 알 수 없어서, 하는 일을 제목으로 올리고
-        숫자는 그 아래 근거로 내렸다. 한 칸에 하나씩 넘겨 본다.
-      */}
-      {scHidden("stats") ? null : <section className="home-stats" aria-label="서비스 구성 요약">
-        <h2>{sc("stats.title", "숫자로 먼저 확인하세요")}</h2>
-        <div className="home-stats-cards">
-          {HOME_STATS.map((item) => (
-            <article key={item.label}>
-              <strong>{item.num}<em>{item.unit}</em></strong>
-              <b>{item.label}</b>
-              <p>{item.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>}
-
-      {scHidden("method") ? null : <section className="home-section home-method" id="how">
-        <div className="home-section-heading">
-          <span>{sc("method.eyebrow", "진행 방식")}</span>
-          <h2>{scBr("method.title", "질문에 답하기만 하면\n문서가 순서대로 완성됩니다")}</h2>
-          <p>{scBr("method.subtitle", "글쓰기는 인공지능이 맡습니다. 사용자는 사업에 대한 사실만 답하면 됩니다.")}</p>
-        </div>
-        <div className="home-method-flow">
-          <article><em>01</em><MessageCircle /><h3>대화로 시작하기</h3><p>아이디어가 없어도 괜찮아요. 관심 있는 일이나 지금 운영하는 사업을 이야기해 주세요.</p></article>
-          <article><em>02</em><PackageCheck /><h3>내 사업안 다듬기</h3><p>제안받은 상품, 고객, 운영 방법을 확인해요. 직접 수정하거나 AI와 함께 다듬을 수 있어요.</p></article>
-          <article><em>03</em><BarChart3 /><h3>계획서 만들기</h3><p>다듬은 사업안을 바탕으로 계획서를 만들어요. 제안한 수치와 확인이 필요한 내용은 구분해요.</p></article>
-          <article><em>04</em><CalendarDays /><h3>내 사업 이어가기</h3><p>자료를 확인하고 내려받거나, 다음 할 일을 하나씩 진행해요. 홈페이지 제작은 필요할 때 선택해요.</p></article>
-        </div>
-      </section>}
-
-      {scHidden("deliverables") ? null : <section className="home-deliverables" id="deliverables">
-        <div className="home-deliverables-inner">
-          <div className="home-deliverables-copy">
-            <span>{sc("deliverables.eyebrow", "문서 유형")}</span>
-            <h2>{scBr("deliverables.title", "목적에 맞는 문서를\n골라서 만드세요")}</h2>
-            <p>{scBr("deliverables.subtitle", "한 번 입력한 답변은 다른 유형에 그대로 이어집니다. 문서는 PDF와 수정 가능한 Word로, 발표자료는 PPT로 받을 수 있습니다.")}</p>
-            <ul>{deliverables.map((item) => <li key={item}><Check /> {item}</li>)}</ul>
-            <a className="home-sample-preview" href="/plan">완성 샘플 3부 보기</a>
-          </div>
-        </div>
-      </section>}
-
-      {/*
-        제목은 다른 섹션과 같은 틀(가운데)로 빼고, 그 아래를 원칙 상자와
-        표 두 칸으로 둔다. 예전에는 제목이 왼쪽 칸 안에 갇혀 있어 위아래
-        섹션과 시작하는 세로선이 어긋났다.
-      */}
-      {scHidden("evidence") ? null : <section className="home-section home-evidence" id="evidence">
-        <div className="home-section-heading">
-          <span>{sc("evidence.eyebrow", "근거 확인 방식")}</span>
-          <h2>{scBr("evidence.title", "인공지능의 답을\n그대로 믿게 하지 않습니다")}</h2>
-          <p>{scBr("evidence.subtitle", "생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.")}</p>
-        </div>
-        <div className="home-evidence-intro">
-          <div className="home-evidence-note"><ShieldCheck /><p><strong>확정처럼 쓰지 않는 원칙</strong>공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p></div>
-        </div>
-        <div className="home-evidence-table">
-          <div><em>1</em><span><strong>사용자 조건</strong><small>경험·시간·자본·지역</small></span><b>직접 입력</b></div>
-          <div><em>2</em><span><strong>공식 자료</strong><small>통계·법령·지원사업 공고</small></span><b>원문·확인일</b></div>
-          <div><em>3</em><span><strong>현장 근거</strong><small>고객 인터뷰·견적·가격 반응</small></span><b>직접 확인</b></div>
-          <div><em>4</em><span><strong>최종 판정</strong><small>확인됨·가정·확인 필요</small></span><b>사용자 승인</b></div>
-        </div>
-      </section>}
-
-      {scHidden("price") ? null : <section className="home-price" id="price">
-        <div className="home-price-inner">
-          <div className="home-price-copy">
-            <span>{sc("price.eyebrow", "이용 안내")}</span>
-            <h2>{scBr("price.title", "무료로 품질을 확인한 뒤,\n필요한 문서만 결제합니다")}</h2>
-            <p>{scBr("price.subtitle", "완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.")}</p>
-            <div><ShieldCheck /><span><strong>무료 범위에는 결제 정보가 필요하지 않습니다</strong><small>결제는 신용·체크카드로 안전하게 진행됩니다</small></span></div>
-          </div>
-          {/*
-            BRIX 'Pricing V6' — 가운데 세로선을 사이에 둔 두 칸. 왼쪽은 문서,
-            오른쪽은 맞춤 홈페이지. 포함 내역 목록은 지우지 않는다 — 다시 생성
-            횟수 같은 약속은 여기 말고는 밝힐 자리가 없다.
-          */}
-          {/*
-            2026-08-25 개편(사용자 요청): 왼쪽 칸을 '실제로 받는 문서'처럼 보이게 —
-            종이 묶음 카드 + 표지 미리보기 + 파일 칩. 가격의 메리트는 지어낸 비교가
-            아니라 이미 밝힌 사실의 재구성으로만 말한다: 결제 한 번 = 문서 3종
-            (계획서·발표자료·손익표), 1종당 환산가는 산수다.
-          */}
-          <div className="home-price-plans">
-            <article className="home-price-doc">
-              <span className="home-doc-badge">구독 아님 · 모든 유형 동일가</span>
-              <div className="home-doc-sheet" aria-hidden="true">
-                <header><b>사업계획서</b><span>예비창업패키지 표준 목차</span></header>
-                <ol>
-                  <li>문제 인식</li>
-                  <li>실현 가능성</li>
-                  <li>성장 전략</li>
-                  <li>팀 구성</li>
-                </ol>
-                <div className="home-doc-files"><i className="pdf">PDF</i><i className="docx">DOCX</i><i className="ppt">PPT</i></div>
-              </div>
-              <span className="home-price-plan-type">사업계획서 문서 1부</span>
-              <strong className="home-price-number">{PACKAGE_AMOUNT.toLocaleString("ko-KR")}<small>원</small></strong>
-              <p className="home-doc-worth">
-                결제 한 번에 <b>계획서 + 발표자료(PPT) + 12개월 손익표</b> —
-                문서 3종, 1종당 {Math.round(PACKAGE_AMOUNT / 3).toLocaleString("ko-KR")}원꼴입니다.
-              </p>
-              <ul>
-                <li><Check /> 결제한 문서의 전체 섹션 생성</li>
-                <li><Check /> PDF·수정 가능한 Word 내려받기</li>
-                <li><Check /> 발표자료(PPT) 자동 구성</li>
-                <li><Check /> 답변 기반 12개월 손익표 자동 계산</li>
-                <li><Check /> 같은 사업의 다른 유형에 답변 그대로 재사용</li>
-                <li><Check /> 섹션 다시 생성 {REGEN_INCLUDED}회 포함 (직접 고쳐 쓰는 것은 제한 없음)</li>
-              </ul>
-              <button onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
-              <small>신용·체크카드 결제 · 나이스페이 안전 결제</small>
-            </article>
-            <article className="home-price-custom">
-              <span className="home-price-plan-type">맞춤 홈페이지 제작</span>
-              <strong className="home-price-number">{CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}<small>원부터</small></strong>
-              <p>자동 제작 홈페이지보다 세밀한 디자인이나 예약·결제 기능이 필요할 때, 상담으로 견적을 정합니다.</p>
-              <ul>
-                <li><Check /> 계획서에 답한 내용을 그대로 반영</li>
-                <li><Check /> 디자인·기능 범위를 상담으로 확정</li>
-                <li><Check /> 제작비는 범위 확정 후 결제</li>
-              </ul>
-              <button type="button" className="home-price-consult" onClick={requestCustomHomepage}>제작 상담하기</button>
-              <small>상담은 무료입니다</small>
-            </article>
-          </div>
-        </div>
-      </section>}
-
-      {/*
-        가격을 본 직후, 질문으로 넘어가기 전에 한 번 더 권하는 자리.
-        오른쪽 세 칸은 새로 지어낸 말이 아니라 위 섹션에서 이미 밝힌 사실을
-        옮긴 것이다 — 여기서만 하는 약속을 만들면 지키지 못한다.
-      */}
-      {/*
-        BRIX 'Call To Action V8' — 가운데 제목 하나와 버튼 둘뿐인 마지막 권유.
-        예전 파랑 카드의 오른쪽 세 칸은 가격 섹션에서 이미 밝힌 사실의 복사본이라
-        지워도 잃는 정보가 없다.
-      */}
-      {scHidden("trial") ? null : <section className="home-trial" aria-labelledby="home-trial-title">
-        <h2 id="home-trial-title">{scBr("trial.title", "먼저 만들어 보고\n결정하세요")}</h2>
-        <div className="home-trial-actions">
-          <button type="button" className="home-trial-primary" onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
-          <button type="button" className="home-trial-secondary" onClick={openConsult}>챗봇 상담하기</button>
-        </div>
-      </section>}
-
-      {scHidden("faq") ? null : <section className="home-faq" aria-labelledby="home-faq-title">
-        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">{sc("faq.title", "궁금한 점을 미리 확인해 보세요")}</h2><p>{scBr("faq.subtitle", "더 궁금한 것은 화면 오른쪽 아래 상담 창에 물어보세요.")}</p></div>
-        <div>
-          <details><summary>글을 잘 못 써도 만들 수 있나요?<ChevronDown /></summary><p>네. 사용자는 사업에 대한 사실(가격, 고객, 비용 등)만 답하면 되고, 문장은 인공지능이 씁니다. 답이 어려운 질문은 AI 추천 답변을 참고할 수 있습니다.</p></details>
-          <details><summary>결제 전에 품질을 확인할 수 있나요?<ChevronDown /></summary><p>네. 실제 인공지능으로 만든 완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 내 사업으로도 앞 2개 섹션을 무료로 만들어 직접 확인할 수 있습니다.</p></details>
-          <details><summary>언제 비용을 내나요?<ChevronDown /></summary><p>3번째 섹션부터 결제가 필요합니다. 문서 1부당 149,000원 1회 결제이며, 결제한 문서의 전체 섹션 생성과 PDF·Word·PPT 내려받기가 열립니다. 신용·체크카드로 결제합니다.</p></details>
-          <details><summary>정부지원사업 양식에 맞나요?<ChevronDown /></summary><p>정부지원 PSST 유형은 예비창업패키지 등 심사 기준에 맞춰 문제인식·실현가능성·성장전략·팀구성 4부로 완성됩니다. 제출 전에 해당 공고의 세부 양식을 한 번 더 확인해 주세요.</p></details>
-          <details><summary>재무 숫자도 만들어주나요?<ChevronDown /></summary><p>가격·원가·고정비 답변을 근거로 12개월 손익표를 자동 계산해 문서에 넣습니다. 정밀 재무 모델은 3년 추정과 민감도까지 포함합니다. 확인되지 않은 수치는 사실처럼 쓰지 않습니다.</p></details>
-        </div>
-      </section>}
+      <HomeServiceOverview onStart={onStart} />
 
       {/*
         Neuros 의 Footer/1 — 맨 위에 상호와 가는 선, 가운데에 안내 열,
@@ -4786,5 +4426,5 @@ export default function Page() {
   if (screen === "sample" || screen === "delivery") return <FinalDelivery opportunity={paidReportDemoOpportunity} price={49000} brandChoice="곁봄" serverProject={null} demo onHome={returnFromSample} onStart={sampleReturnScreen === "home" ? () => navigate("start") : returnFromSample} sampleActionLabel={sampleReturnScreen === "checkout" ? "결제 화면으로 돌아가기" : sampleReturnScreen === "preview" ? "내 초안으로 돌아가기" : undefined} sampleView={sampleView} onCloseSample={sampleReturnScreen === "home" ? undefined : returnFromSample} />;
   if (screen === "explore") return <Explore profile={profile} feedback={feedback} setFeedback={setFeedback} onHome={() => navigate("home")} onStartOpportunity={startOpportunity} />;
   // 새 기획은 대화로 시작하고, 이미 작성한 예전 결과물 경로는 유지한다.
-  return <Home onStart={() => router.push("/plan/chat")} onPreview={() => openSample("home", "summary")} />;
+  return <Home onStart={() => router.push("/plan/chat")} />;
 }

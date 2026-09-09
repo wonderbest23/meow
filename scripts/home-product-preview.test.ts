@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
+import { sanitizeSiteCopy, EDIT_SECTIONS } from "../lib/site-copy/domain";
 
 async function main() {
+  assert.deepEqual(sanitizeSiteCopy({ texts: { 'hero.title': 'old claim', 'reviews.notice': 'old demo', 'chatHome.title': '새 제목' }, hidden: ['reviews', 'price'] }), { texts: { 'chatHome.title': '새 제목' }, hidden: [] });
+  assert.deepEqual(EDIT_SECTIONS.map(section => section.id), ['chatHome']);
   const browser = await puppeteer.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
   await mkdir("artifacts/home-product-preview", { recursive: true });
   try {
@@ -11,7 +14,7 @@ async function main() {
       await page.setViewport({ width, height: 900 });
       await page.setRequestInterception(true);
       page.on("request", req => {
-        if (new URL(req.url()).pathname.startsWith("/api/")) void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify({ texts: {}, hidden: [], chat: { conversation: null, messages: [] } }) });
+        if (new URL(req.url()).pathname.startsWith("/api/")) void req.respond({ status: 200, contentType: "application/json", body: JSON.stringify({ texts: { 'hero.title': '사업, 오늘 하루면 충분합니다', 'price.subtitle': '완성 샘플 3부', 'stats.title': '숫자로 먼저 확인하세요' }, hidden: [], chat: { conversation: null, messages: [] } }) });
         else void req.continue();
       });
       const errors: string[] = [];
@@ -20,6 +23,19 @@ async function main() {
       const section = 'section[aria-label="대화에서 사업계획서까지 영상 미리보기"]';
       const ring = 'button[aria-label="대화로 사업 기획 시작하기"]';
       await page.waitForSelector(section);
+      const homeText = await page.$eval('main', el => el.textContent ?? '');
+      assert.match(homeText, /챗GPT로 사업계획서/);
+      for (const obsolete of ['실제 후기가 아닙니다', '숫자로 먼저 확인하세요', '지원·대출 심사용', '완성 샘플 3부', '오늘 하루면 충분합니다']) assert.equal(homeText.includes(obsolete), false, obsolete);
+      assert.equal(await page.$('.home-reviews'), null);
+      assert.equal(await page.$$eval('nav[aria-label="메인 안내"] a', links => links.every(link => !!document.querySelector(link.getAttribute('href')!))), true);
+      await page.$eval('#difference', el => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
+      await page.screenshot({ path: `artifacts/home-product-preview/${width}-difference.png` });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.$eval('#price details:nth-child(2) summary', el => (el as HTMLElement).click());
+      assert.equal(await page.$eval('#price details:nth-child(2)', el => el.hasAttribute('open')), true);
+      await page.$eval('#price', el => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
+      await page.screenshot({ path: `artifacts/home-product-preview/${width}-usage.png` });
+      await page.$eval(ring, el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
       assert.equal(await page.$(ring + ' svg'), null, "링에 아이콘이 없어야 함");
       assert.equal(await page.$eval(ring + ' [class*="__send"]', el => el.textContent), '보내기');
       assert.equal(await page.$eval(ring, el => {

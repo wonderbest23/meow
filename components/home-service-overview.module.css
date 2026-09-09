@@ -1,0 +1,56 @@
+.overview { color: #202632; background: #fff; letter-spacing: 0; }
+.overview .section { width: min(1040px, 100%); margin: 0 auto; padding: 76px 32px; scroll-margin-top: 80px; }
+.overview .heading { text-align: center; margin: 0 auto 36px; }
+.overview .heading > span { display: block; color: #64748b; font-size: 14px; font-weight: 550; margin-bottom: 12px; }
+.overview h2 { margin: 0; color: #202632; font-size: 30px; line-height: 1.45; font-weight: 700; letter-spacing: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.overview .heading > p { margin: 18px 0 0; font-size: 16px; line-height: 1.8; color: #5b6574; word-break: keep-all; }
+.overview h3 { font-size: 18px; line-height: 1.5; font-weight: 650; color: #202632; margin: 0 0 8px; letter-spacing: 0; }
+.overview p { font-size: 15px; line-height: 1.8; color: #5b6574; margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.steps { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 32px; }
+.steps li { min-width: 0; padding-top: 20px; border-top: 2px solid #e5eaf0; }
+.number { display: block; color: #2869d5; font-size: 15px; font-weight: 650; margin-bottom: 14px; }
+.difference { background: #f6f8fb; scroll-margin-top: 70px; }
+.differenceRows { margin: 0 auto; max-width: 800px; }
+.differenceRows article { display: grid; grid-template-columns: 156px minmax(0, 1fr); align-items: start; gap: 24px; padding: 26px 0; border-top: 1px solid #dde3eb; }
+.differenceRows article:last-child { padding-bottom: 0; }
+.keyword { display: inline-flex; justify-self: start; padding: 6px 12px; border: 1px solid #cbd7e8; border-radius: 6px; color: #355b91; background: #fff; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
+.results article { min-width: 0; padding-top: 24px; border-top: 1px solid #dce2ea; display: flex; flex-direction: column; }
+.formats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 20px; }
+.formats span { padding: 5px 9px; border: 1px solid #d7dee7; border-radius: 5px; font-size: 12px; color: #506078; }
+.overview .note { text-align: center; margin-top: 26px; font-size: 13px; color: #697586; }
+.overview .usage { border-top: 1px solid #e5eaf0; padding-top: 56px; }
+.faq { max-width: 760px; margin: auto; }
+.faq details { border-bottom: 1px solid #e5eaf0; }
+.faq summary { cursor: pointer; list-style: none; display: flex; gap: 16px; justify-content: space-between; padding: 21px 0; font-size: 16px; font-weight: 600; line-height: 1.6; word-break: keep-all; }
+.faq summary::-webkit-details-marker { display: none; }
+.faq summary::after { content: '+'; flex: none; font-size: 20px; color: #7b8796; }
+.faq details[open] summary::after { content: '\2212'; }
+.faq details p { padding: 0 26px 22px 0; }
+.actions { display: flex; justify-content: center; align-items: center; gap: 20px; margin-top: 36px; }
+.overview .actions button { border: 0; background: #3182f6; color: #fff; padding: 16px 24px; min-height: 52px; border-radius: 8px; font-size: 16px; font-weight: 650; cursor: pointer; box-shadow: none; transition: background .2s, transform .2s; }
+.overview .actions button:hover { background: #236ed8; transform: translateY(-1px); }
+.actions a { color: #4b617d; font-size: 14px; text-underline-offset: 4px; }
+.overview :is(button,a,summary):focus-visible { outline: 3px solid #3182f6; outline-offset: 4px; }
+@media(max-width:600px) {
+  .overview .section { padding: 46px 22px; }
+  .overview .heading { margin-bottom: 28px; }
+  .overview h2 { font-size: 24px; }
+  .overview h3 { font-size: 17px; }
+  .overview .heading > span { font-size: 12px; }
+  .overview .heading > p, .overview p { font-size: 14px; line-height: 1.75; }
+  .desktopBreak { display: none; }
+  .steps { grid-template-columns: 1fr; gap: 24px; }
+  .steps li { position: relative; border: 0; padding: 0 0 0 30px; }
+  .number { position: absolute; top: 2px; left: 0; margin: 0; }
+  .differenceRows article { grid-template-columns: 1fr; gap: 12px; padding: 22px 0; }
+  .keyword { font-size: 12px; }
+  .results { grid-template-columns: 1fr; gap: 22px; }
+  .results article { padding-top: 20px; }
+  .formats { padding-top: 12px; }
+  .overview .note { font-size: 12px; text-align: left; }
+  .faq summary { font-size: 15px; }
+  .actions { flex-direction: column; }
+  .overview .actions button { width: 100%; }
+}
+@media(prefers-reduced-motion:reduce) { .overview .actions button { transition: none; } }

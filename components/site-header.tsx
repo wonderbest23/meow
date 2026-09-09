@@ -58,7 +58,7 @@ export function SiteHeader({
         <nav className="home-header-nav" aria-label="메인 안내">
           <a href="#how">진행 방식</a>
           <a href="#deliverables">결과물</a>
-          <a href="#evidence">근거 기준</a>
+          <a href="#difference">오늘창업의 차이</a>
           <a href="#price">이용 안내</a>
         </nav>
       ) : null}
