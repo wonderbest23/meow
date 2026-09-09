@@ -1,5 +1,8 @@
 import { renderPdf, renderDocx, type BusinessDocument, type DocumentProjectMeta } from "../../../../lib/delivery/document-renderer";
 import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
+import { requireGuestIdentity } from "../../../../lib/api-auth";
+import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
 
 export const runtime = "nodejs";
 
@@ -53,6 +56,18 @@ export async function POST(req: Request) {
     return new Response(JSON.stringify({ error: "payment_required", message: "PDF·Word 내려받기는 결제 후 이용할 수 있습니다." }), { status: 402, headers: { "Content-Type": "application/json" } });
   }
 
+  let manualReview: string[] = [];
+  if (body.planId) {
+    const identity = await requireGuestIdentity();
+    const plan = (await loadPlanState(identity.hash)).plans.find(p => p.id === body.planId);
+    if (!plan) return Response.json({ message: "문서를 찾을 수 없습니다." }, { status: 404 });
+    const snapshot = coachDocumentSnapshot(plan);
+    if (snapshot) {
+      if (snapshot.stale.length || snapshot.missing.length) return Response.json({ message: "대화에서 최신 내용을 문서에 반영한 뒤 내려받아주세요. 기존 내용은 유지되어 있습니다." }, { status: 409 });
+      body.title = plan.title; body.planType = plan.planType; body.business = snapshot.business; body.sections = snapshot.sections;
+      manualReview = snapshot.manualReview;
+    }
+  }
   const title = (body.title || "사업계획서").slice(0, 80);
   const format = body.format === "docx" ? "docx" : "pdf";
   const sections = Array.isArray(body.sections) ? body.sections.filter((s) => s?.markdown) : [];
@@ -84,7 +99,7 @@ export async function POST(req: Request) {
   });
 
   // 첫 h1은 PDF 렌더러가 표지 중복으로 건너뛰므로 문서 제목을 배치한다(DOCX에서는 제목으로 표시).
-  const assembled = [`# ${title}`, "", ...tocLines, ...bodyLines].join("\n");
+  const assembled = [`# ${title}`, "", ...tocLines, ...bodyLines, ...(manualReview.length ? ["", "## 참고 사항", `직접 수정한 항목은 보존되어 있습니다. 최근 사업 정보와의 일치 여부를 확인해주세요: ${manualReview.join(", ")}`] : [])].join("\n");
 
   const document: BusinessDocument = {
     id: "plan",

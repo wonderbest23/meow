@@ -55,6 +55,7 @@ declare module "cloudflare:workers" {
     do<T>(
       name: string,
       config: {
+        timeout?: number | `${number} ${"second" | "minute" | "hour" | "day"}${"" | "s"}`;
         retries?: {
           limit: number;
           delay: number

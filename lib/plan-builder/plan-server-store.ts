@@ -3,6 +3,7 @@
 // 구조: 사업 1개 + 플랜 여러 개.
 
 import { getServerSupabase } from "../persistence";
+import { readCoach } from "./coach";
 
 export interface ServerBusinessProfile {
   name: string;
@@ -25,6 +26,7 @@ export interface ServerPlan {
       markdown: string;
       html: string;
       generatedAt: string;
+      coachRevision?: number;
       /** 사용자가 직접 고쳤는지 */
       edited?: boolean;
       /** 다시 생성이 덮어쓰지 못하게 잠금 */
@@ -102,14 +104,15 @@ export function normalizeState(input: Partial<ServerPlanState> | null | undefine
 export async function loadPlanState(ownerHash: string): Promise<ServerPlanState> {
   const supabase = getServerSupabase();
   if (!supabase) {
-    return memoryStore.get(ownerHash) ?? { ...EMPTY, business: { ...EMPTY_BUSINESS } };
+    return structuredClone(memoryStore.get(ownerHash) ?? { ...EMPTY, business: { ...EMPTY_BUSINESS } });
   }
   const { data, error } = await supabase
     .from("plan_states")
     .select("data")
     .eq("owner_hash", ownerHash)
     .maybeSingle();
-  if (error || !data) return { ...EMPTY, business: { ...EMPTY_BUSINESS } };
+  if (error) throw new Error("PLAN_LOAD_FAILED");
+  if (!data) return { ...EMPTY, business: { ...EMPTY_BUSINESS } };
   return normalizeState(data.data as Partial<ServerPlanState>);
 }
 
@@ -127,7 +130,20 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
   const byId = new Map(stored.plans.map((p) => [p.id, p]));
   for (const p of incoming.plans) {
     const prev = byId.get(p.id);
-    if (!prev || (p.updatedAt || "") >= (prev.updatedAt || "")) byId.set(p.id, p);
+    if (prev && (readCoach(prev.answers) || readCoach(p.answers))) {
+      const previousRevision = readCoach(prev.answers)?.revision ?? 0;
+      const incomingRevision = readCoach(p.answers)?.revision ?? 0;
+      const newest = incomingRevision < previousRevision ? prev : incomingRevision > previousRevision ? p : (p.updatedAt || "") >= (prev.updatedAt || "") ? p : prev;
+      const sections = { ...prev.sections };
+      for (const [key, value] of Object.entries(p.sections)) {
+        if (!sections[key] || value.generatedAt >= sections[key].generatedAt) sections[key] = value;
+      }
+      const previousJob = prev.answers.__coach_job;
+      const incomingJob = p.answers.__coach_job;
+      const job = !incomingJob ? previousJob : !previousJob ? incomingJob
+        : String(incomingJob.updatedAt ?? "") >= String(previousJob.updatedAt ?? "") ? incomingJob : previousJob;
+      byId.set(p.id, { ...newest, answers: { ...newest.answers, ...(job ? { __coach_job: job } : {}) }, sections });
+    } else if (!prev || (p.updatedAt || "") >= (prev.updatedAt || "")) byId.set(p.id, p);
   }
   const plans = [...byId.values()].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
   return {
@@ -143,26 +159,65 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
   };
 }
 
-export async function savePlanState(ownerHash: string, state: ServerPlanState): Promise<void> {
-  const stored = await loadPlanState(ownerHash);
-  const clean = mergeStates(stored, normalizeState(state));
+/** Browser autosaves may edit documents, but cannot create or replace server job/context records. */
+export function preserveServerCoachRecords(incoming: ServerPlanState, stored: ServerPlanState): ServerPlanState {
+  const keys = ["__business_coach", "__coach_job", "__coach_generation", "__business_edit_history"];
+  return { ...incoming, plans: incoming.plans.map(plan => {
+    const saved = stored.plans.find(item => item.id === plan.id);
+    const answers = { ...plan.answers };
+    for (const key of keys) {
+      if (saved?.answers[key]) answers[key] = saved.answers[key];
+      else delete answers[key];
+    }
+    return { ...plan, answers };
+  }) };
+}
+
+type PlanSaveGuard = { planId: string; coachRevision: number; jobToken?: string | null; jobStatus?: string; planUpdatedAt?: string | null };
+function checkSaveGuard(stored: ServerPlanState, guard?: PlanSaveGuard) {
+  if (!guard) return;
+  const plan = stored.plans.find(p => p.id === guard.planId);
+  if ((readCoach(plan?.answers ?? {})?.revision ?? 0) !== guard.coachRevision
+    || (guard.jobToken !== undefined && (plan?.answers.__coach_job?.token ?? null) !== guard.jobToken)
+    || (guard.jobStatus !== undefined && plan?.answers.__coach_job?.status !== guard.jobStatus)
+    || (guard.planUpdatedAt !== undefined && (plan?.updatedAt ?? null) !== guard.planUpdatedAt)) throw new Error("PLAN_VERSION_CONFLICT");
+}
+
+export async function savePlanState(ownerHash: string, state: ServerPlanState, guard?: PlanSaveGuard): Promise<void> {
   const supabase = getServerSupabase();
   if (!supabase) {
-    memoryStore.set(ownerHash, clean);
+    const stored = structuredClone(memoryStore.get(ownerHash) ?? EMPTY);
+    checkSaveGuard(stored, guard);
+    memoryStore.set(ownerHash, structuredClone(mergeStates(stored, normalizeState(state))));
     return;
   }
+  // Compare-and-swap prevents simultaneous tabs/workers replacing an owner's whole document collection.
+  for (let attempt = 0; attempt < 5; attempt++) {
+  const { data: row, error: readError } = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", ownerHash).maybeSingle();
+  if (readError) throw new Error("PLAN_LOAD_FAILED");
+  const stored = normalizeState(row?.data as Partial<ServerPlanState> | undefined);
+  checkSaveGuard(stored, guard);
+  const clean = mergeStates(stored, normalizeState(state));
   const active = clean.plans.find((p) => p.id === clean.activePlanId) ?? clean.plans[0];
-  await supabase.from("plan_states").upsert(
-    {
+  const payload = {
       owner_hash: ownerHash,
       // 목록 조회 편의를 위해 대표값은 컬럼에도 보관
       title: clean.business.name || active?.title || "새 플랜",
       plan_type: active?.planType || "창업 초기 · 사업계획서",
       data: clean,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "owner_hash" },
-  );
+      updated_at: new Date(Math.max(Date.now(), Date.parse(row?.updated_at ?? "") + 1 || 0)).toISOString(),
+    };
+  if (!row) {
+    const { error } = await supabase.from("plan_states").insert(payload);
+    if (!error) return;
+    if (error.code === "23505") continue;
+    throw new Error("PLAN_SAVE_FAILED");
+  }
+  const { data, error } = await supabase.from("plan_states").update(payload).eq("owner_hash", ownerHash).eq("updated_at", row.updated_at).select("owner_hash");
+  if (error) throw new Error("PLAN_SAVE_FAILED");
+  if (data?.length) return;
+  }
+  throw new Error("PLAN_VERSION_CONFLICT");
 }
 
 /** 플랜 삭제 — 병합 저장에서는 페이로드 누락이 삭제가 아니므로, 삭제는 이 경로로만 한다. */

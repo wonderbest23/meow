@@ -124,10 +124,11 @@ function coverSlide(pptx: PptxGenJS, plan: DeckPlan, item: DeckSlide) {
     x: 1.75, y: 5.98, w: 7, h: 0.32,
     fontFace: FONT, fontSize: 14, bold: true, color: WHITE, margin: 0,
   });
-  slide.addText(`사업 제안서 · ${new Date().toLocaleDateString("ko-KR")}`, {
+  slide.addText(`사업 소개서 · ${new Date().toLocaleDateString("ko-KR")}`, {
     x: 1.75, y: 6.3, w: 6, h: 0.26,
     fontFace: FONT, fontSize: 10.5, color: "8FA6BF", margin: 0,
   });
+  return slide;
 }
 
 /** 판형 A — 흰 카드 열 (그림자 + 파란 번호 원) */
@@ -507,32 +508,36 @@ export async function renderDeckPptx(plan: DeckPlan, theme: DeckTheme = DEFAULT_
   pptx.defineLayout({ name: "PLAN16x9", width: W, height: H });
   pptx.layout = "PLAN16x9";
   pptx.author = plan.brandName;
-  pptx.title = `${plan.brandName} 사업 제안서`;
+  pptx.title = `${plan.brandName} 사업 소개서`;
 
   const total = plan.slides.length;
   let bodyIndex = 0; // 본문 판형 순환용 — 같은 레이아웃이 연달아 나오지 않게
+  const sourceNotes = (slide: PptxGenJS.Slide, item: DeckSlide) => {
+    if (item.sourceSections?.length) slide.addNotes(`근거: 사업계획서 ${item.sourceSections.join(", ")}\n사용자 제공 정보와 제안·목표는 구분해서 읽어주세요.\n${item.note ?? ""}`);
+  };
   plan.slides.forEach((item, index) => {
     const isFirst = index === 0;
     const isLast = index === total - 1 && total > 1;
     if (isFirst) {
-      coverSlide(pptx, plan, item);
+      sourceNotes(coverSlide(pptx, plan, item), item);
       return; // 표지에는 쪽번호를 넣지 않는다
     }
     if (isLast) {
-      closingSlide(pptx, plan, item);
+      sourceNotes(closingSlide(pptx, plan, item), item);
       return; // 클로징은 자체 서명이 있다 — 푸터를 겹쳐 찍지 않는다
     }
     if (item.kind === "statement") {
-      statementSlide(pptx, plan, item, index + 1, total);
+      sourceNotes(statementSlide(pptx, plan, item, index + 1, total), item);
       return;
     }
     if (item.kind === "vision") {
-      visionSlide(pptx, plan, item, index + 1, total);
+      sourceNotes(visionSlide(pptx, plan, item, index + 1, total), item);
       return;
     }
     const slide = bodySlide(pptx, item, bodyIndex);
     bodyIndex += 1;
     footer(slide, plan.brandName, index + 1, total);
+    sourceNotes(slide, item);
   });
 
   const data = (await pptx.write({ outputType: "nodebuffer" })) as Buffer;

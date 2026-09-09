@@ -46,6 +46,8 @@ export default function PlanCheckout() {
   const params = useSearchParams();
   const planId = params.get("planId") ?? "";
   const planType = params.get("planType") ?? "";
+  const isCoach = ["일반 사업계획서", "사업 운영·개선 계획서"].includes(planType);
+  const planHref = isCoach ? `/plan/chat?planId=${encodeURIComponent(planId)}` : "/plan/overview";
   // 계획서 결제와 홈페이지 결제는 같은 화면을 쓰되 금액과 안내가 다르다
   const isHomepage = params.get("product") === "homepage";
   /* 다시 생성 묶음 — 문서를 여는 결제가 아니라 횟수만 더한다 */
@@ -146,7 +148,7 @@ export default function PlanCheckout() {
           <h1 className={styles.title}>로그인이 필요합니다</h1>
           <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아옵니다.</p>
           <Link href="/account?next=%2Fplan%2Fpay" className={styles.primary}>로그인 · 회원가입</Link>
-          <Link href="/plan/overview" className={styles.back}>← 나중에 하기</Link>
+          <Link href={planHref} className={styles.back}>← 나중에 하기</Link>
         </div>
       </div>
     );
@@ -169,7 +171,7 @@ export default function PlanCheckout() {
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{isHomepage ? "홈페이지는 이미 열려 있습니다" : "이 문서는 이미 열려 있습니다"}</h1>
           <p className={styles.desc}>{isHomepage ? "결제가 확인되어 사진·글·버튼을 고치고 공개할 수 있습니다." : "결제가 확인되어 전체 섹션을 쓸 수 있습니다."}</p>
-          <Link href={isHomepage ? "/plan/homepage" : "/plan/overview"} className={styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "플랜으로 돌아가기"}</Link>
+          <Link href={isHomepage ? "/plan/homepage" : planHref} className={styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "플랜으로 돌아가기"}</Link>
         </div>
       </div>
     );
@@ -237,7 +239,7 @@ export default function PlanCheckout() {
         <p className={styles.note}>
           {extra ? "결제가 끝나면 홈페이지 화면으로 돌아갑니다." : "지금까지 답한 내용은 그대로 남아 있습니다. 결제가 끝나면 이어서 작성됩니다."}
         </p>
-        <Link href={extra || isHomepage ? "/plan/homepage" : "/plan/overview"} className={styles.back}>← 나중에 하기</Link>
+        <Link href={extra || isHomepage ? "/plan/homepage" : planHref} className={styles.back}>← 나중에 하기</Link>
       </div>
     </div>
   );

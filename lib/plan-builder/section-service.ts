@@ -1,15 +1,19 @@
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
 import { renderPlanMarkdown } from "./markdown";
-import { resolveLLMConfig } from "../llm/config";
+import { resolveLLMConfig, resolvePlanningLLMConfig } from "../llm/config";
+import { readCoach, coachContext, coachDocumentRevision } from "./coach";
 import { loadPlanState, savePlanState } from "./plan-server-store";
+import { generateAndSaveCoach } from "./coach-job";
+import type { CoachJobRequest } from "./coach-job-types";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "./financials";
-import { financialTableOwner, needsMultiYear } from "./blueprint";
+import { financialTableOwner, needsMultiYear, chaptersForType } from "./blueprint";
 import { findConsistencyIssues, issuesForSection } from "./consistency";
 import { loadPlanEvidence, evidenceForSection, toPromptEvidence, sectionUsesEvidence } from "./market-research";
 import { buildPlanBusinessContext } from "./context/build";
 import { contextForSection, type SectionBusinessContext } from "./context/section";
 import { ANALYSIS_KEY } from "./analyzer/domain";
+import { resolveRegenQuota, recordRegen } from "./regen-quota";
 
 /*
  * 본문 생성을 서버 안에서 처리하기 위한 내부 통로.
@@ -30,7 +34,7 @@ export interface PlanSectionJob {
   sectionId: string;
 }
 
-type ServiceRequest = { operation: "generateSection"; job: PlanSectionJob };
+type ServiceRequest = { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest };
 
 function encodeHex(value: ArrayBuffer) {
   return [...new Uint8Array(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -56,7 +60,15 @@ async function verifyBody(secret: string, timestamp: string, body: string, signa
 }
 
 export async function callPlanSectionService(service: Fetcher, secret: string, job: PlanSectionJob): Promise<{ ok: boolean }> {
-  const body = JSON.stringify({ operation: "generateSection", job } satisfies ServiceRequest);
+  return callPlanningService(service, secret, { operation: "generateSection", job });
+}
+
+export async function callCoachService(service: Fetcher, secret: string, job: CoachJobRequest): Promise<{ ok: boolean }> {
+  return callPlanningService(service, secret, { operation: "completeCoach", job });
+}
+
+async function callPlanningService(service: Fetcher, secret: string, input: ServiceRequest): Promise<{ ok: boolean }> {
+  const body = JSON.stringify(input);
   const timestamp = Date.now().toString();
   const signature = await signBody(secret, timestamp, body);
   const response = await service.fetch(`https://plan-section.internal${internalPath}`, {
@@ -91,15 +103,12 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   const key = `${chapter.id}/${section.id}`;
   const existing = plan.sections[key];
   if (existing?.edited || existing?.locked) return { ok: true, skipped: "USER_EDITED" };
-  /*
-   * 본문이 이미 있으면 만들지 않는다.
-   *
-   * 이 경로는 '처음 만들기' 전용이다. 다시 만들기는 /api/plan/generate 가
-   * 유료 횟수를 세면서 처리한다. 여기서 또 만들면 세 가지가 한꺼번에 샌다 —
-   * 중복 큐 실행마다 AI 실비가 두 배로 나가고, 횟수 차감 없이 재생성이
-   * 되고(우회), 뒤늦게 도착한 생성이 손님이 방금 본 본문을 예고 없이 덮는다.
-   */
-  if (existing?.markdown) return { ok: true, skipped: "ALREADY_GENERATED" };
+  const initialCoach = readCoach(plan.answers);
+  if (!initialCoach && existing?.markdown) return { ok: true, skipped: "ALREADY_GENERATED" };
+  if (initialCoach && !chaptersForType(plan.planType).some(c => c.id === job.chapterId && c.sections.some(s => s.id === job.sectionId))) throw new Error("SECTION_OUT_OF_SCOPE");
+  const revision = initialCoach ? coachDocumentRevision(initialCoach) : undefined;
+  if (existing && revision != null && existing.coachRevision === revision) return { ok: true, skipped: "ALREADY_GENERATED" };
+  if (existing && revision != null && (await resolveRegenQuota(plan.id)).remaining <= 0) throw new Error("REGEN_QUOTA_EXCEEDED");
 
   const answers = plan.answers[key];
   if (!answers || Object.keys(answers).length === 0) return { ok: true, skipped: "NO_ANSWERS" };
@@ -116,7 +125,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   ]);
   let financialsMarkdown: string | undefined;
   let financialsReference: string | undefined;
-  if (FINANCIAL_SECTIONS.has(key)) {
+  if (!initialCoach && FINANCIAL_SECTIONS.has(key)) {
     const { inputs, growthLabel, staffIncluded } = collectFinancialInputs(plan.answers);
     const result = calculateFinancials(inputs);
     if (result.unit || result.monthly.length) {
@@ -151,7 +160,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
 
   // 앞 섹션 요약 — 뒤 섹션이 앞 내용을 이어받게 한다
   const priorSummary = Object.entries(plan.sections)
-    .filter(([sectionKey]) => sectionKey !== key)
+    .filter(([sectionKey, value]) => sectionKey !== key && (!initialCoach || value.coachRevision === revision))
     .map(([, value]) => value.markdown)
     .join("\n\n")
     .slice(0, 4000) || undefined;
@@ -161,14 +170,16 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     ? toPromptEvidence(evidenceForSection(key, await loadPlanEvidence(job.planId, job.ownerHash)))
     : [];
 
-  const config = resolveLLMConfig(job.ownerHash, "anthropic");
+  const coach = readCoach(plan.answers);
+  const config = coach ? resolvePlanningLLMConfig(job.ownerHash) : resolveLLMConfig(job.ownerHash, "anthropic");
   const { markdown, source } = await generateSection(config, {
     chapter,
     section,
     answers,
     planTitle: plan.title,
     planType: plan.planType,
-    business: state.business,
+    business: coach?.business ?? state.business,
+    coachContext: coach ? coachContext(coach) : undefined,
     priorSummary,
     financialsMarkdown,
     financialsReference,
@@ -181,12 +192,13 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
    * 실패했으면 저장하지 않고 던진다 — 워크플로가 다시 시도하고,
    * 끝내 안 되면 그 섹션만 실패로 남는다. 표를 본문인 척 저장하지 않는다.
    */
-  if (source === "failed" || !markdown.trim()) throw new Error("SECTION_GENERATION_FAILED");
+  if (source === "failed" || (coach && source !== "ai") || !markdown.trim()) throw new Error("SECTION_GENERATION_FAILED");
 
   let html = "";
   try {
     html = await renderPlanMarkdown(markdown);
   } catch {
+    if (coach) throw new Error("SECTION_RENDER_FAILED");
     html = markdown.replace(/\n/g, "<br>");
   }
 
@@ -198,21 +210,21 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   const target = fresh.plans.find((item) => item.id === job.planId);
   if (!target) return { ok: false, skipped: "PLAN_NOT_FOUND" };
   const current = target.sections[key];
+  const targetCoach = readCoach(target.answers);
+  if (coach && (!targetCoach || coachDocumentRevision(targetCoach) !== coachDocumentRevision(coach))) throw new Error("BUSINESS_CONTEXT_CHANGED");
   if (current?.edited || current?.locked) return { ok: true, skipped: "USER_EDITED" };
-  /*
-   * 생성하는 사이 다른 실행(중복 큐·경쟁 런)이 먼저 저장했으면 그쪽을 남긴다.
-   * 실비는 이미 두 번 나갔지만, 화면의 본문이 두 번 갈리는 것은 막는다.
-   */
-  if (current?.markdown) return { ok: true, skipped: "ALREADY_GENERATED" };
+  if (current?.markdown && (!coach || current.coachRevision === coachDocumentRevision(coach))) return { ok: true, skipped: "ALREADY_GENERATED" };
 
   target.sections[key] = {
     markdown,
     html,
     generatedAt: new Date().toISOString(),
+    ...(coach ? { coachRevision: coachDocumentRevision(coach) } : {}),
     ...(current ? { previous: { markdown: current.markdown, html: current.html } } : {}),
   };
   target.updatedAt = new Date().toISOString();
   await savePlanState(job.ownerHash, fresh);
+  if (existing && coach) await recordRegen(job.planId, job.ownerHash, key, true);
   return { ok: true };
 }
 
@@ -231,7 +243,7 @@ export async function handlePlanSectionServiceRequest(request: Request, env: Clo
 
   try {
     const input = JSON.parse(body) as ServiceRequest;
-    const result = await generateAndSaveSection(input.job);
+    const result = input.operation === "completeCoach" ? await generateAndSaveCoach(input.job) : await generateAndSaveSection(input.job);
     return Response.json({ result });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "PLAN_SECTION_FAILED" }, { status: 500 });

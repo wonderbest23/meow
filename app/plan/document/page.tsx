@@ -1,22 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileDown, FileText, Globe2, Presentation, LayoutGrid, Lock, Maximize2, X } from "lucide-react";
-import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan } from "../../../lib/plan-builder/plan-store";
-import { chaptersForType, documentArrangement, sectionCountForType } from "../../../lib/plan-builder/blueprint";
-import PlanLoading, { Spinner } from "../PlanLoading";
+import DocumentWorkspace from "./DocumentWorkspace";
+import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan, setActivePlan } from "../../../lib/plan-builder/plan-store";
+import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
-import InlineDocEditor from "../InlineDocEditor";
-import wiz from "../SectionWizard.module.css";
-import styles from "./PlanDocument.module.css";
+import { coachDocumentSnapshot } from "../../../lib/plan-builder/coach-document";
 
-/**
- * /plan/document — 생성된 섹션을 하나의 문서로 조립해 보여주고 내보낸다.
- * 레퍼런스 문서 화면의 골격을 따른다: 좌측 어두운 목차(위저드와 동일 모듈) +
- * 큰 제목/세그먼트 헤더 + 번호 붙은 섹션 헤딩(1.1식)이 흐르는 문서 캔버스.
- */
+/** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 export default function PlanDocumentPage() {
   const router = useRouter();
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
@@ -30,27 +22,37 @@ export default function PlanDocumentPage() {
   const [isSample, setIsSample] = useState(false);
   /** 이 문서의 결제 상태 — null이면 확인 중. 잠겨 있으면 버튼에 미리 보여준다 */
   const [access, setAccess] = useState<{ paid: boolean; price: number } | null>(null);
-  /*
-   * 전체 모드 — 앱 껍데기를 걷어내고 문서만 이어서 읽는다(PDF 미리보기처럼).
-   * 편집기 없이 렌더된 HTML만 흘리므로 스크롤이 가볍고, 모바일에서 특히 유용하다.
-   */
-  const [reader, setReader] = useState(false);
+  const [accessError, setAccessError] = useState(false);
+  const [documentPlanId, setDocumentPlanId] = useState<string | null>(null);
+  const [coachHref, setCoachHref] = useState<string | null>(null);
+  const [contextNotice, setContextNotice] = useState("");
 
   useEffect(() => {
     let alive = true;
     hydrateFromServer().then((s) => {
       if (!alive) return;
+      const requested = new URLSearchParams(window.location.search).get("planId");
+      if (requested) {
+        if (!s.plans.some(p => p.id === requested)) { router.replace("/plan"); return; }
+        s = { ...s, activePlanId: requested }; setActivePlan(requested);
+      }
       setSections(assembleSections(s));
       const p = activePlan(s);
       if (p) {
+        const snapshot = coachDocumentSnapshot(p);
+        if (snapshot) {
+          setCoachHref(`/plan/chat?planId=${encodeURIComponent(p.id)}`);
+          setContextNotice(snapshot.stale.length ? "대화에서 수정한 내용이 있습니다. 최신 내용을 반영한 뒤 파일을 받아주세요." : snapshot.manualReview.length ? "직접 수정한 항목은 유지했습니다. 최근 사업 정보와 함께 확인해주세요." : "");
+        }
+        setDocumentPlanId(p.id);
         setTitle(p.title);
         setPlanType(p.planType);
         setIsSample(isSamplePlan(p.id));
         if (!isSamplePlan(p.id)) {
           fetch(`/api/plan/access?planType=${encodeURIComponent(p.planType)}&planId=${encodeURIComponent(p.id)}`)
-            .then((r) => r.json())
+            .then((r) => { if (!r.ok) throw new Error("access unavailable"); return r.json(); })
             .then((d) => { if (alive) setAccess({ paid: !!d.paid, price: Number(d.price) || 149000 }); })
-            .catch(() => {});
+            .catch(() => { if (alive) setAccessError(true); });
         }
       }
       setReady(true);
@@ -58,16 +60,13 @@ export default function PlanDocumentPage() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [router]);
 
   /*
    * 문서 배치. PSST처럼 재배치가 정의된 유형은 그 순서·제목으로 묶고,
    * 아니면 작성 챕터 그대로 묶는다. 번호(1.1식)도 배치를 따른다.
    */
   const arrangement = useMemo(() => documentArrangement(planType || undefined), [planType]);
-  /* 개요 화면과 같은 진행률 — 본문이 있는 섹션 / 이 유형의 전체 섹션 */
-  const totalSections = useMemo(() => Math.max(1, sectionCountForType(planType || undefined)), [planType]);
-  const progressPct = Math.min(100, Math.round((sections.length / totalSections) * 100));
 
   const numbering = useMemo(() => {
     const map = new Map<string, { num: string; chapterNum: number }>();
@@ -105,39 +104,6 @@ export default function PlanDocumentPage() {
     () => grouped.flatMap(([chapterTitle, list]) => list.map((s) => ({ chapterTitle, sectionTitle: s.sectionTitle, markdown: s.markdown }))),
     [grouped],
   );
-
-  // 전체 모드에서 배경 스크롤 잠금 + Esc로 닫기
-  useEffect(() => {
-    if (!reader) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setReader(false);
-    };
-    window.addEventListener("keydown", onKey);
-    return () => {
-      document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
-    };
-  }, [reader]);
-
-  function scrollToSection(key: string) {
-    document.getElementById(`sec-${key.replace("/", "-")}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
-
-  /*
-   * 주소에 #섹션이 붙어 들어오면 그 대목으로 내려간다.
-   * 목차에서 예시 문서의 한 섹션을 고른 경우가 이 길로 온다.
-   * 본문이 그려진 뒤라야 대상이 존재하므로 sections를 기다린다.
-   */
-  useEffect(() => {
-    const id = window.location.hash.slice(1);
-    if (!id || !sections.length) return;
-    const timer = setTimeout(() => {
-      document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 120);
-    return () => clearTimeout(timer);
-  }, [sections.length]);
 
   /** 문서에서 고친 내용을 저장한다. 원본은 마크다운이므로 되돌려 담는다. */
   function saveEdit(key: string, nextHtml: string) {
@@ -262,258 +228,26 @@ export default function PlanDocumentPage() {
     router.push(`/plan/pay${q}`);
   }
 
-  return (
-    <div className={`${wiz.page} ${styles.page}`}>
-      {reader && (
-        <div className={styles.reader} role="dialog" aria-label="문서 전체 화면">
-          <div className={styles.readerBar}>
-            <span className={styles.readerTitle}>{title}</span>
-            <button type="button" className={styles.readerClose} onClick={() => setReader(false)} aria-label="전체 화면 닫기">
-              <X size={16} /> 닫기
-            </button>
-          </div>
-          <div className={styles.readerScroll}>
-            <article className={`${styles.readerPaper} ${isSample ? styles.paperSample : ""}`}>
-              {isSample && <span className={styles.paperMark} aria-hidden="true">SAMPLE</span>}
-              <header className={styles.docHeader}>
-                <h2 className={styles.docTitle}>{title}</h2>
-                <div className={styles.docSub}>{planType}{planType && " · "}{sections.length}개 섹션</div>
-              </header>
-              {grouped.map(([chapterTitle, list], ci) => (
-                <div key={chapterTitle} className={styles.chapter}>
-                  <div className={styles.chapterHead}>
-                    <span className={styles.chapterNum}>{ci + 1}</span>
-                    <h3 className={styles.chapterName}>{chapterTitle}</h3>
-                  </div>
-                  {list.map((sec) => (
-                    <section key={sec.key} className={styles.section}>
-                      <div className={styles.secHead}>
-                        <i className={styles.secDash} aria-hidden="true" />
-                        <h4 className={styles.secTitle}>{sec.sectionTitle}</h4>
-                        {numbering.has(sec.key) ? <span className={styles.secNum}>{numbering.get(sec.key)!.num}</span> : null}
-                      </div>
-                      <div className={styles.readerBody} dangerouslySetInnerHTML={{ __html: sec.html }} />
-                    </section>
-                  ))}
-                </div>
-              ))}
-            </article>
-          </div>
-        </div>
-      )}
-      <div className={wiz.frame}>
-        <div className={styles.app}>
-          {/* 본문 */}
-          <section className={styles.main}>
-            {/*
-              모바일에서는 좌측 목차가 통째로 숨어 '플랜 개요'로 돌아갈 길이 없었다.
-              좁은 화면 전용으로 개요 링크와 챕터 점프를 가로 스트립으로 둔다.
-            */}
-            {/* 뒤로가기는 셸 pill 하나로 통일 — 여기는 챕터 이동 칩만. 칩이 없으면 줄도 없다 */}
-            {grouped.length > 0 && (
-            <div className={styles.mobileNav}>
-              {grouped.map(([chapterTitle, list]) => (
-                <button key={chapterTitle} type="button" className={styles.mobileChap} onClick={() => list[0] && scrollToSection(list[0].key)}>
-                  {chapterTitle}
-                </button>
-              ))}
-            </div>
-            )}
-            <header className={styles.mhead}>
-              {/*
-                머리는 플랜 개요와 같은 모양·같은 값이다 — 흰 블록(14px 16px 17px), [←] 이름·모델,
-                오른쪽 끝 퍼센트, 블록 바닥에 좌우 끝까지 닿는 선 게이지. 예전엔 큰 제목 +
-                '사업계획서 문서'에 위 54px 빈 여백(없어진 뒤로가기 pill 몫)까지 있어 달라 보였다.
-              */}
-              <div className={styles.headBlock}>
-              <div className={styles.headTop}>
-                <button type="button" className={styles.headBack} onClick={() => router.push("/plan/overview")} aria-label="플랜 개요로">←</button>
-                <h1 className={styles.headTitle}>
-                  {title}
-                  <span>{planType || "사업계획서"}{isSample ? " · 예시" : ""}</span>
-                </h1>
-                <span className={styles.headPct}>{progressPct}%<small>{sections.length}/{totalSections}</small></span>
-              </div>
-              <div className={styles.headGauge} role="progressbar" aria-valuenow={progressPct} aria-valuemin={0} aria-valuemax={100} aria-label={`진행률 ${progressPct}%, ${sections.length}/${totalSections} 섹션`}>
-                <i style={{ width: `${progressPct}%` }} />
-              </div>
-              </div>
-              <div className={styles.toolWrap}>
-              <div className={styles.toolbar}>
-                {/* 레퍼런스의 Structural/Document View 세그먼트 */}
-                <div className={styles.seg} role="tablist" aria-label="보기 전환">
-                  <button type="button" onClick={() => router.push("/plan/overview")}>
-                    <LayoutGrid size={13} /> 구조 보기
-                  </button>
-                  <button type="button" className={styles.segOn}>
-                    <FileText size={13} /> 문서 보기
-                  </button>
-                </div>
-              </div>
+  async function retryAccess() {
+    if (!documentPlanId) return;
+    setAccessError(false);
+    try {
+      const response = await fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(documentPlanId)}`);
+      if (!response.ok) throw new Error("access unavailable");
+      const data = await response.json();
+      setAccess({ paid: !!data.paid, price: Number(data.price) || 149000 });
+    } catch { setAccessError(true); }
+  }
 
-              {/*
-                결과물은 성격이 둘로 갈린다 — 파일이 내 컴퓨터로 내려오는 것과,
-                계획서를 재료로 새로 만들어지는 것. 예전에는 넷이 같은 모양으로
-                한 줄에 4등분되어, 무엇을 누르면 무슨 일이 나는지 읽히지 않았고
-                폰에서는 한 칸이 70px 남짓으로 눌리지도 않았다.
-              */}
-              <div className={styles.outputs}>
-                <div className={styles.outGroup}>
-                  <span className={styles.outLabel}>
-                    <FileDown size={12} /> 파일로 내려받기
-                  </span>
-                  <div className={styles.outRow}>
-                    <button
-                      className={`${styles.outBtn} ${styles.outBtnPrimary}`}
-                      disabled={busy && !sampleFile("pdf")}
-                      onClick={() => {
-                        const file = sampleFile("pdf");
-                        if (file) return void window.open(file, "_blank", "noopener");
-                        return locked ? goPay() : handleExport("pdf");
-                      }}
-                      title={locked ? "결제 후 열립니다" : "PDF로 내려받기"}
-                    >
-                      <span className={styles.outIcon}>
-                        {exporting === "pdf" ? <Spinner /> : locked && !isSample ? <Lock size={16} /> : <FileDown size={18} />}
-                      </span>
-                      <span className={styles.outText}>
-                        <strong className={styles.outName}>{exporting === "pdf" ? "내려받는 중…" : "PDF"}</strong>
-                        <span className={styles.outHint}>인쇄·제출용 · .pdf</span>
-                      </span>
-                    </button>
-                    <button
-                      className={styles.outBtn}
-                      disabled={busy && !sampleFile("docx")}
-                      onClick={() => {
-                        const file = sampleFile("docx");
-                        if (file) return void window.open(file, "_blank", "noopener");
-                        return locked ? goPay() : handleExport("docx");
-                      }}
-                      title={locked ? "결제 후 열립니다" : "Word로 내려받기"}
-                    >
-                      <span className={styles.outIcon}>
-                        {exporting === "docx" ? <Spinner /> : locked && !isSample ? <Lock size={16} /> : <FileDown size={18} />}
-                      </span>
-                      <span className={styles.outText}>
-                        <strong className={styles.outName}>{exporting === "docx" ? "내려받는 중…" : "Word"}</strong>
-                        <span className={styles.outHint}>고쳐 쓰기용 · .docx</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-
-                <div className={styles.outGroup}>
-                  <span className={styles.outLabel}>
-                    <Presentation size={12} /> 이 계획서로 더 만들기
-                  </span>
-                  <div className={styles.outRow}>
-                    <button
-                      className={styles.outBtn}
-                      disabled={busy && !sampleFile("pptx")}
-                      onClick={() => {
-                        const file = sampleFile("pptx");
-                        if (file) return void window.open(file, "_blank", "noopener");
-                        return locked ? goPay() : handleDeck();
-                      }}
-                      title={locked ? "결제 후 열립니다" : "발표자료(PPT) 만들기"}
-                    >
-                      <span className={styles.outIcon}>
-                        {exporting === "pptx" ? <Spinner /> : locked && !isSample ? <Lock size={16} /> : <Presentation size={18} />}
-                      </span>
-                      <span className={styles.outText}>
-                        <strong className={styles.outName}>{exporting === "pptx" ? "만드는 중…" : "발표자료"}</strong>
-                        <span className={styles.outHint}>발표용 · .pptx</span>
-                      </span>
-                    </button>
-                    {/* 계획서를 다 쓰면 홈페이지에 실을 말도 이미 다 답해 둔 상태다 — 그대로 옮겨 만든다 */}
-                    <button
-                      className={styles.outBtn}
-                      disabled={busy && !isSample}
-                      onClick={() => (locked && !isSample ? goPay() : router.push("/plan/homepage"))}
-                      title={locked && !isSample ? "결제 후 열립니다" : "계획서 내용으로 만든 홈페이지 보기"}
-                    >
-                      <span className={styles.outIcon}>
-                        {locked && !isSample ? <Lock size={16} /> : <Globe2 size={18} />}
-                      </span>
-                      <span className={styles.outText}>
-                        <strong className={styles.outName}>홈페이지</strong>
-                        <span className={styles.outHint}>고객용 웹사이트</span>
-                      </span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-              {deckError ? <p className={styles.deckError}>{deckError}</p> : null}
-              </div>
-            </header>
-
-            {/* 전체 화면은 툴바가 아니라 문서 위에 떠 있는다 — 헤더가 홀쭉해진다 */}
-            {sections.length > 0 && (
-              <button type="button" className={styles.fsFloat} onClick={() => setReader(true)} title="문서만 전체 화면으로 이어서 읽기">
-                <Maximize2 size={14} /> 전체 화면
-              </button>
-            )}
-
-            <div className={styles.canvas}>
-              {!ready ? (
-                /* 불러오는 동안 — 앱 전체가 공유하는 로딩 표현 */
-                <div className={styles.paper}>
-                  <PlanLoading variant="document" count={3} note="문서를 불러오는 중…" />
-                </div>
-              ) : sections.length === 0 ? (
-                <div className={styles.empty}>
-                  <p className={styles.emptyTitle}>아직 생성된 내용이 없어요</p>
-                  <p className={styles.emptyDesc}>개요에서 섹션을 열고 질문에 답하면 이곳에 문서가 쌓입니다.</p>
-                  <Link href="/plan/overview" className={styles.emptyBtn}>개요로 가기</Link>
-                </div>
-              ) : (
-                <article className={`${styles.paper} ${isSample ? styles.paperSample : ""}`}>
-                  {isSample && <span className={styles.paperMark} aria-hidden="true">SAMPLE</span>}
-                  <header className={styles.docHeader}>
-                    <h2 className={styles.docTitle}>{title}</h2>
-                    <div className={styles.docSub}>
-                      {planType}
-                      {planType && " · "}
-                      {new Date().toLocaleDateString("ko-KR")} 기준 · {sections.length}개 섹션
-                    </div>
-                  </header>
-
-                  {grouped.map(([chapterTitle, list]) => {
-                    const chapterNum = numbering.get(list[0]?.key ?? "")?.chapterNum;
-                    return (
-                      <div key={chapterTitle} className={styles.chapter}>
-                        <div className={styles.chapterHead}>
-                          {chapterNum ? <span className={styles.chapterNum}>{chapterNum}</span> : null}
-                          <h3 className={styles.chapterName}>{chapterTitle}</h3>
-                        </div>
-
-                        {list.map((s) => (
-                          <section key={s.key} id={`sec-${s.key.replace("/", "-")}`} className={styles.section}>
-                            {/* 레퍼런스 헤딩 행: 강조 대시 + 제목 + 우측 번호 */}
-                            <div className={styles.secHead}>
-                              <i className={styles.secDash} aria-hidden="true" />
-                              <h4 className={styles.secTitle}>{s.sectionTitle}</h4>
-                              {numbering.has(s.key) ? <span className={styles.secNum}>{numbering.get(s.key)!.num}</span> : null}
-                            </div>
-                            <div className={styles.body}>
-                              <InlineDocEditor
-                                html={s.html}
-                                readOnly={isSample}
-                                status={failedKey === s.key ? "failed" : savedKey === s.key ? "saved" : "idle"}
-                                onChange={(nextHtml) => saveEdit(s.key, nextHtml)}
-                              />
-                            </div>
-                          </section>
-                        ))}
-                      </div>
-                    );
-                  })}
-                </article>
-              )}
-            </div>
-          </section>
-        </div>
-      </div>
-    </div>
-  );
+  return <DocumentWorkspace title={title} planId={documentPlanId} planType={planType} ready={ready}
+    grouped={grouped} numbering={numbering} isSample={isSample} coachHref={coachHref}
+    notice={contextNotice} savedKey={savedKey} failedKey={failedKey} onSave={saveEdit}
+    exporting={exporting} locked={locked} accessPending={!isSample && access === null}
+    accessError={accessError} onRetryAccess={() => void retryAccess()}
+    error={deckError} onDownload={(format) => {
+      const file = sampleFile(format);
+      if (file) { window.open(file, "_blank", "noopener"); return; }
+      if (locked) { goPay(); return; }
+      if (format === "pptx") void handleDeck(); else void handleExport(format);
+    }} canDownload={(format) => !!sampleFile(format) || !busy} />;
 }

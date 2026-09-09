@@ -4,6 +4,7 @@
 
 import { completeJson, type LLMConfig } from "../llm/complete";
 import { calculateFinancials, collectFinancialInputs } from "./financials";
+import { reviewCoachSection } from "./coach-review";
 
 export interface DeckSlide {
   /**
@@ -23,6 +24,8 @@ export interface DeckSlide {
   metrics?: { label: string; value: string; note?: string }[];
   /** 하단 보조 문장 */
   note?: string;
+  /** 원문 계획서의 근거 항목. 발표자 노트에도 보관한다. */
+  sourceSections?: string[];
 }
 
 export interface DeckPlan {
@@ -32,7 +35,7 @@ export interface DeckPlan {
 }
 
 const SYSTEM_PROMPT = [
-  "당신은 투자자·심사역 앞에서 쓰이는 사업 발표자료를 만드는 전문가입니다.",
+  "당신은 고객·협력사에게 사업을 설명하는 사업소개 발표자료를 만드는 전문가입니다. 투자 요청은 사용 목적에 명시된 경우에만 다룹니다.",
   "주어진 사업계획서 내용만 근거로 사용하세요. 없는 수치·고객사·수상 이력을 지어내지 마세요.",
   "슬라이드는 읽는 문서가 아니라 말하면서 보여주는 자료입니다. 문장을 짧게 끊고 군더더기를 지우세요.",
   "각 항목은 한 줄로 읽히게 쓰고, 같은 말을 다른 슬라이드에서 반복하지 마세요.",
@@ -58,7 +61,8 @@ const SHAPE_GUIDE = `{
       "lead": "핵심 한 문장(60자 이내, 선택)",
       "points": [{ "label": "짧은 제목(12자 이내)", "detail": "설명 한 줄(60자 이내)" }],
       "metrics": [{ "label": "지표 이름", "value": "값", "note": "보조 설명(선택)" }],
-      "note": "하단 보조 문장(선택)"
+      "note": "하단 보조 문장(선택)",
+      "sourceSections": ["계획서의 챕터명 · 항목명"]
     }
   ]
 }`;
@@ -68,6 +72,8 @@ const SHAPE_GUIDE = `{
  * (Sequoia 피치덱 구성, 국내 PSST 심사자료 순서를 규칙화)
  */
 const ARCHETYPES: Record<string, string> = {
+  "일반 사업계획서": "사업 소개용입니다. 표지 → 누구에게 무엇을 파는가(statement) → 고객의 문제 → 상품 구성 → 이용 과정 → 제안 가격과 이유 → 판매 방법 → 작은 실행 범위 → 다음 실행 순서 → 다음 대화. 투자금 요청과 근거 없는 시장 규모는 넣지 않습니다. 확정되지 않은 내용은 제안으로 표시합니다.",
+  "사업 운영·개선 계획서": "대표와 팀의 운영 회의용입니다. 표지 → 현재 사업(statement) → 사용자 제공 운영 현황 → 당면 문제 → 원인 가설 → 유지할 것 → 개선할 것 → 실행 부담과 비용 → 결과 확인 기준 → 다음 실행. 실제 수치가 없으면 가정으로 대체했다고 밝히고 실적으로 표현하지 않습니다.",
   "정부지원 · PSST 사업계획서": [
     "이 덱은 정부지원 심사용입니다. 슬라이드 순서를 반드시 다음 서사로 구성하세요:",
     "표지 → 사업 정의(statement) → 문제인식(창업 동기·필요성) → 실현가능성(개발·준비 현황, 차별성)",
@@ -91,19 +97,19 @@ export function archetypeFor(planType?: string): string {
 }
 
 /** 계획서 본문을 슬라이드 재료로 압축 (프롬프트가 너무 길어지지 않게) */
-function digestSections(
+export function digestSections(
   sections: Array<{ chapterTitle: string; sectionTitle: string; markdown: string }>,
-  perSection = 700,
+  perSection = 6000,
 ): string {
   return sections
     .map((s) => {
       const body = s.markdown
         .replace(/```[\s\S]*?```/g, "") // 차트 펜스 제거
-        .replace(/\|[^\n]*\|/g, "") // 표는 재무 수치로 따로 넘긴다
         .replace(/\n{2,}/g, "\n")
         .trim()
-        .slice(0, perSection);
-      return `## ${s.chapterTitle} · ${s.sectionTitle}\n${body}`;
+        ;
+      const excerpt = body.length <= perSection ? body : `${body.slice(0, Math.floor(perSection * .65))}\n[중간 본문 일부 생략]\n${body.slice(-Math.floor(perSection * .35))}`;
+      return `## ${s.chapterTitle} · ${s.sectionTitle}\n${excerpt}`;
     })
     .join("\n\n");
 }
@@ -168,6 +174,7 @@ function normalize(raw: Record<string, unknown>, fallbackName: string): DeckPlan
       points: points?.length ? points : undefined,
       metrics: metrics?.length ? metrics : undefined,
       note: text(s.note, 160) || undefined,
+      sourceSections: Array.isArray(s.sourceSections) ? s.sourceSections.filter((v): v is string => typeof v === "string").slice(0, 4) : undefined,
     });
   }
   if (!slides.length) return null;
@@ -190,11 +197,13 @@ export async function buildDeckPlan(
     planType?: string;
     sections: Array<{ chapterTitle: string; sectionTitle: string; markdown: string }>;
     allAnswers: Record<string, Record<string, unknown>>;
+    businessContext?: string;
   },
 ): Promise<DeckPlan | null> {
   if (!config) return null;
 
-  const financial = deckFinancialMetrics(input.allAnswers);
+  const financial = input.businessContext ? undefined : deckFinancialMetrics(input.allAnswers);
+  const sourceNames = new Set(input.sections.map(s => `${s.chapterTitle} · ${s.sectionTitle}`));
   const user = [
     `[사업]`,
     `이름: ${input.businessName}`,
@@ -203,6 +212,7 @@ export async function buildDeckPlan(
     "",
     `[계획서 본문]`,
     digestSections(input.sections),
+    input.businessContext ? `[공통 사업 정보와 계산값]\n${input.businessContext}\n일반 사업소개용입니다. 실제 실적과 예상 목표를 구분하고 투자금 요청·시장 통계를 새로 만들지 마세요. design이 있으면 장기 구상과 startingPlan의 시작 범위를 구별하고 alternatives는 미선택 대안으로만 표시하세요. feasibility는 산술 검사이지 사업성 검증이 아닙니다. 최신 fields와 다른 가격이나 운영 범위를 새로 정하지 마세요.` : "",
     financial
       ? `\n[계산된 재무 수치 — 이 값만 사용하고 새로 만들지 마세요]\n${financial.map((m) => `- ${m.label}: ${m.value}${m.note ? ` (${m.note})` : ""}`).join("\n")}`
       : "",
@@ -213,6 +223,7 @@ export async function buildDeckPlan(
     "위 내용으로 10~12장짜리 사업 발표자료를 구성하세요.",
     "첫 장은 표지, 마지막 장은 요청·다음 단계로 하세요.",
     "재무 슬라이드에는 위에 준 계산 값을 metrics로 그대로 넣으세요.",
+    "각 슬라이드의 sourceSections에는 실제로 참고한 계획서 항목을 '챕터명 · 항목명'으로 넣으세요. 제안과 목표의 표시를 요약하면서 삭제하지 마세요.",
     "",
     "다음 JSON 형식으로만 답하세요:",
     SHAPE_GUIDE,
@@ -226,8 +237,8 @@ export async function buildDeckPlan(
    * 그래서 두 번째 시도는 조건을 바꾼다: 출력 한도를 늘리고 장수를 줄인다.
    */
   const attempts = [
-    { maxOutputTokens: 4000, effort: "medium" as const, extra: "" },
-    { maxOutputTokens: 6000, effort: "medium" as const, extra: "\n슬라이드는 8~10장으로 줄이고, points·metrics를 슬라이드당 3개 이하로 간결하게 하세요." },
+    { maxOutputTokens: 8000, effort: "medium" as const, extra: "" },
+    { maxOutputTokens: 12000, effort: "medium" as const, extra: "\n슬라이드는 8~10장으로 줄이고, points·metrics를 슬라이드당 3개 이하로 간결하게 하세요." },
   ];
   for (const a of attempts) {
     const raw = await completeJson(config, {
@@ -237,8 +248,16 @@ export async function buildDeckPlan(
       maxOutputTokens: a.maxOutputTokens,
       effort: a.effort,
     });
-    const plan = raw ? normalize(raw, input.businessName) : null;
-    if (plan) return plan;
+    let plan = raw ? normalize(raw, input.businessName) : null;
+    if (plan && plan.slides.length >= 8) {
+      if (input.businessContext) {
+        const checked = await reviewCoachSection(config, user, JSON.stringify(plan), "json");
+        if (!checked) continue;
+        try { plan = normalize(JSON.parse(checked), input.businessName); } catch { continue; }
+        if (!plan || plan.slides.length < 8 || plan.slides.some(s => !s.sourceSections?.length || s.sourceSections.some(name => !sourceNames.has(name)))) continue;
+      }
+      return plan;
+    }
   }
   return null;
 }

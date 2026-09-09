@@ -123,6 +123,8 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
     return subscribePlanSync(() => setSync(planSyncStatus()));
   }, []);
 
+  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/start")) return <>{children}</>;
+
   return (
     <div className={styles.shell}>
       {sync === "offline" && (

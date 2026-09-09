@@ -14,6 +14,7 @@ export interface StoredSection {
   markdown: string;
   html: string;
   generatedAt: string;
+  coachRevision?: number;
   /** 사용자가 직접 손댄 본문인지 — 다시 생성할 때 경고한다 */
   edited?: boolean;
   /** 잠금. 켜져 있으면 다시 생성이 덮어쓰지 못한다 */
@@ -416,6 +417,7 @@ export function saveSection(
     html,
     generatedAt: new Date().toISOString(),
     edited: options?.edited ?? false,
+    coachRevision: before?.coachRevision,
     // 잠금은 본문을 갈아끼워도 유지된다
     locked: before?.locked,
     previous:

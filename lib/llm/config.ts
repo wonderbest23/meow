@@ -34,3 +34,10 @@ export function resolveLLMConfig(guestHash: string, prefer: LLMProvider = "opena
 export function resolveAlternateLLMConfig(guestHash: string, provider: LLMProvider): LLMConfig | null {
   return provider === "openai" ? anthropicConfigFrom() : openaiConfigFrom(guestHash);
 }
+
+/** Business planning has its own model policy; unrelated support and image tasks keep theirs. */
+export function resolvePlanningLLMConfig(guestHash: string): LLMConfig | null {
+  const config = openaiConfigFrom(guestHash);
+  if (config) return { ...config, model: process.env.PLANNING_MODEL?.trim() || "gpt-6-astra" };
+  return anthropicConfigFrom();
+}

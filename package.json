@@ -3,6 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
+    "test:business-coach": "tsx scripts/business-coach.test.ts",
+    "test:business-design": "tsx scripts/business-design.test.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

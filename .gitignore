@@ -6,6 +6,7 @@
 .wrangler/
 .dev.vars*
 node_modules/
+.node_modules-offloaded-*/
 *.tsbuildinfo
 artifacts/
 tmp/

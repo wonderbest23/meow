@@ -76,7 +76,6 @@ import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
-import { HomeCopyChrome } from "../components/home-copy-chrome";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -496,16 +495,6 @@ function GuidedTopBar({
  * 정적으로 편다. 숫자는 전부 실제 값이다 — 지어낸 통계가 아니라
  * 서비스 구성 그대로: 문서 7유형, 샘플 3부, 무료 2섹션, 파일 3종.
  */
-/*
- * 근거 섹션 배경에 흐르는 '검증 안 된 수치'들.
- * 숫자는 전부 ###로 가린다 — 배경 장식에서도 지어낸 수치를 만들지 않는다.
- */
-const EVIDENCE_TOKENS = [
-  "시장규모 ###억", "월 매출 ###만원", "성장률 ##%", "경쟁사 #곳",
-  "객단가 #.#만원", "재방문율 ##%", "유동인구 ###명", "원가율 ##%",
-  "임대료 ###만원", "가맹점 ###개", "전환율 #.#%", "고객 ###명",
-];
-
 const HOME_STATS = [
   { num: "7", unit: "가지", label: "문서 유형", body: "사업계획서 · 재무 모델 · 발표자료까지" },
   { num: "3", unit: "부", label: "완성 샘플", body: "로그인 없이 전체를 열람합니다" },
@@ -564,9 +553,10 @@ const LANDING_PEEKS = [
   { id: "0-1950", name: "04 Job Site",     ko: "채용 사이트" },
 ];
 
-function HomeLandingPeek({ caption, captionOff, secId }: { caption?: string; captionOff?: boolean; secId?: string }) {
+function HomeLandingPeek() {
   return (
-    <div className="home-peek" data-sc-section={secId} role="img" aria-label="홈페이지로 쓸 수 있는 Brainwave.io 킷 랜딩 페이지 열 종">
+    <div className="home-peek" role="img" aria-label="홈페이지로 쓸 수 있는 Brainwave.io 킷 랜딩 페이지 열 종">
+      <p className="home-peek-cap">계획서를 마치면 이 페이지들 중 하나로 홈페이지가 만들어집니다 — 글과 사진만 내 것으로 바꾸면 됩니다 (디자인 Brainwave.io UI Kit, CC BY 4.0)</p>
       <div className="home-peek-track" aria-hidden="true">
         <ul>
           {[...LANDING_PEEKS, ...LANDING_PEEKS].map((p, i) => (
@@ -578,11 +568,6 @@ function HomeLandingPeek({ caption, captionOff, secId }: { caption?: string; cap
           ))}
         </ul>
       </div>
-      {/*
-        띠 아래 작은 한 줄. 설명 문구는 뺐고(사용자 요청) 출처만 남긴다 —
-        이 킷은 CC BY 4.0 이라 표기가 이용 조건이다. 지우면 라이선스 위반이 된다.
-      */}
-      {captionOff ? null : <p className="home-peek-cap" data-sc-field="peek.caption">{caption ?? "디자인 Brainwave.io UI Kit · CC BY 4.0"}</p>}
     </div>
   );
 }
@@ -599,7 +584,7 @@ function Stars({ score }: { score: number }) {
   );
 }
 
-function HomeReviews({ demo = false, reviews, notice, noticeOff, secId }: { demo?: boolean; reviews?: HomeReview[]; notice?: string; noticeOff?: boolean; secId?: string }) {
+function HomeReviews({ demo = false, reviews }: { demo?: boolean; reviews?: HomeReview[] }) {
   const list = demo ? REVIEW_DEMO : reviews ?? [];
   if (!list.length) return null;
 
@@ -612,7 +597,8 @@ function HomeReviews({ demo = false, reviews, notice, noticeOff, secId }: { demo
   const peak = Math.max(1, ...spread.map((s) => s.count));
 
   return (
-    <div className="home-reviews" data-sc-section={secId} aria-label="사용자 후기">
+    <div className="home-reviews" aria-label="사용자 후기">
+      {demo && <p className="home-reviews-demo">디자인 확인용 예시입니다. 실제 후기가 아닙니다.</p>}
       <div className="home-reviews-summary">
         <div className="home-reviews-score">
           <strong>{average.toFixed(1)}</strong>
@@ -650,8 +636,6 @@ function HomeReviews({ demo = false, reviews, notice, noticeOff, secId }: { demo
           ))}
         </ul>
       </div>
-      {/* 시연 고지 — 후기 아래 작은 회색 한 줄(사용자 요청: 테두리 없이, 맨 아래) */}
-      {demo && !noticeOff && <p className="home-reviews-demo" data-sc-field="reviews.notice">{notice ?? "디자인 확인용 예시입니다. 실제 후기가 아닙니다."}</p>}
     </div>
   );
 }
@@ -768,42 +752,13 @@ function Home({
       .then((j: { texts?: Record<string, string>; hidden?: string[] }) => { if (j && typeof j === "object") setSiteCopy({ texts: j.texts ?? {}, hidden: j.hidden ?? [] }); })
       .catch(() => {});
   }, []);
-  /*
-   * 어드민 홈 편집기(/admin/homepage)가 이 페이지를 iframe 으로 띄운다.
-   * 실제 화면 그대로 보면서 섹션을 고르고 지우게 하려는 것 — 편집기가 보내는
-   * 초안(sc-draft)을 그대로 그리고, 섹션 위에 고르기 껍데기를 씌운다.
-   * 손님 화면에는 아무 영향이 없다(부모 창이 있고 copyEdit 이 붙었을 때만).
-   */
-  const [copyEdit, setCopyEdit] = useState(false);
-  const [copySelected, setCopySelected] = useState<string | null>(null);
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (window.parent === window || !new URLSearchParams(window.location.search).has("copyEdit")) return;
-    setCopyEdit(true);
-    const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
-      const data = event.data as { type?: string; texts?: Record<string, string>; hidden?: string[]; id?: string } | null;
-      if (data?.type === "sc-draft") setSiteCopy({ texts: data.texts ?? {}, hidden: data.hidden ?? [] });
-      if (data?.type === "sc-selected") {
-        setCopySelected(data.id ?? null);
-        if (data.id) document.querySelector(`[data-sc-section="${data.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    };
-    window.addEventListener("message", onMessage);
-    window.parent.postMessage({ type: "sc-ready" }, window.location.origin);
-    return () => window.removeEventListener("message", onMessage);
-  }, []);
-
   const sc = (id: string, def: string) => siteCopy.texts[id] ?? def;
   /** \n 을 <br/> 로 */
   const scBr = (id: string, def: string) => sc(id, def).split("\n").map((line, i, all) => <Fragment key={i}>{line}{i < all.length - 1 ? <br /> : null}</Fragment>);
-  /* 편집기에서는 숨긴 섹션도 흐리게 그린다 — 지운 자리를 보고 되살릴 수 있어야 한다 */
-  const scHidden = (id: string) => !copyEdit && siteCopy.hidden.includes(id);
-  /* 글 한 조각 숨김("reviews.notice") — 섹션과 같은 규칙 */
-  const scOff = (id: string) => !copyEdit && siteCopy.hidden.includes(id);
+  const scHidden = (id: string) => siteCopy.hidden.includes(id);
 
   const openConsult = () => {
-    window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "consult" } }));
+    onStart();
   };
 
 
@@ -822,9 +777,7 @@ function Home({
   };
 
   return (
-    <main className={`new-home simple-home ${copyEdit ? "sc-editing" : ""}`}>
-      {/* 어드민 홈 편집기에서 열렸을 때만 — 섹션 테두리·고르기 줄 */}
-      {copyEdit ? <HomeCopyChrome hidden={siteCopy.hidden} selected={copySelected} /> : null}
+    <main className="new-home simple-home">
       <div className="hero-shell">
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         {/*
@@ -833,11 +786,11 @@ function Home({
           예전에는 사진이 화면 전체를 덮고 글이 왼쪽에 얹혀 있었다. 사진이
           주인공이라 정작 무엇이 만들어지는지는 작게 보였다.
         */}
-        <section className="simple-home-choice" data-sc-section="hero">
+        <section className="simple-home-choice">
           <div className="home-hero-copy">
-            {scOff("hero.eyebrow") ? null : <span className="section-label" data-sc-field="hero.eyebrow">{sc("hero.eyebrow", "창업 10만원대로 시작하세요")}</span>}
-            {scOff("hero.title") ? null : <h1 data-sc-field="hero.title">{(() => { const t = sc("hero.title", "사업,|오늘 하루면 충분합니다"); const [head, ...rest] = t.split("|"); return rest.length ? <><b>{head}</b> {rest.join("|").trim()}</> : t; })()}</h1>}
-            {scOff("hero.subtitle") ? null : <p data-sc-field="hero.subtitle">{scBr("hero.subtitle", "사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.\n복잡한 사업계획서, 이제 쉽게 시작하세요.")}</p>}
+            <span className="section-label">{sc("hero.eyebrow", "창업 10만원대로 시작하세요")}</span>
+            <h1>{(() => { const t = sc("hero.title", "사업,|오늘 하루면 충분합니다"); const [head, ...rest] = t.split("|"); return rest.length ? <><b>{head}</b> {rest.join("|").trim()}</> : t; })()}</h1>
+            <p>{scBr("hero.subtitle", "사업에 최적화된 질문에 클릭과 답변만 하면 됩니다.\n복잡한 사업계획서, 이제 쉽게 시작하세요.")}</p>
             {/*
               '무료로 시작하기' 버튼이 있던 자리 — 이제 검색창이다.
               도는 링으로 강조하고, 누르면 상담 창이 열린다.
@@ -851,7 +804,7 @@ function Home({
             <div className="home-hero-actions">
               <button type="button" className="hero-search" onClick={openConsult} aria-label="창업 상담 열기">
                 <Search aria-hidden="true" />
-                <span data-sc-field="hero.search">{sc("hero.search", "궁금한 창업, 무엇이든 물어보세요")}</span>
+                <span>궁금한 창업, 무엇이든 물어보세요</span>
               </button>
             </div>
           </div>
@@ -937,8 +890,8 @@ function Home({
               <span className="demo-cursor"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 3l14 8-6.5 1.5L9 19z" fill="#0d0a2c" stroke="#fff" strokeWidth="1.5" /></svg></span>
             </div>
           </div>
-          {reviewDemo && !scHidden("reviews") && <HomeReviews demo secId="reviews" noticeOff={scOff("reviews.notice")} notice={sc("reviews.notice", "디자인 확인용 예시입니다. 실제 후기가 아닙니다.")} />}
-          {reviewDemo && !scHidden("peek") && <HomeLandingPeek secId="peek" captionOff={scOff("peek.caption")} caption={sc("peek.caption", "디자인 Brainwave.io UI Kit · CC BY 4.0")} />}
+          {reviewDemo && <HomeReviews demo />}
+          {reviewDemo && <HomeLandingPeek />}
         </section>
       </div>
 
@@ -948,76 +901,24 @@ function Home({
         숫자만 봐서는 무엇을 해주는지 알 수 없어서, 하는 일을 제목으로 올리고
         숫자는 그 아래 근거로 내렸다. 한 칸에 하나씩 넘겨 본다.
       */}
-      {scHidden("stats") ? null : <section className="home-stats" data-sc-section="stats" aria-label="서비스 구성 요약">
-        {scOff("stats.title") ? null : <h2 data-sc-field="stats.title">{sc("stats.title", "숫자로 먼저 확인하세요")}</h2>}
-        {/*
-          레퍼런스(SEO 도구 피처 카드) 느낌 — 카드 위쪽에 은은한 격자·글로우 위에
-          항목마다 다른 미니 비주얼을 얹고, 아래에 숫자·이름·설명을 둔다.
-          비주얼은 장식이라 화면 낭독에서 뺀다. 텍스트는 예전 그대로다.
-        */}
+      {scHidden("stats") ? null : <section className="home-stats" aria-label="서비스 구성 요약">
+        <h2>{sc("stats.title", "숫자로 먼저 확인하세요")}</h2>
         <div className="home-stats-cards">
-          {HOME_STATS.map((item, index) => (
+          {HOME_STATS.map((item) => (
             <article key={item.label}>
-              <span className={`stat-viz stat-viz-${index}`} aria-hidden="true">
-                {index === 0 && <span className="viz-pages"><i /><i /><i /></span>}
-                {index === 1 && <span className="viz-samples"><i>새벽커피</i><i>무인꽃집</i><i>재무 모델</i></span>}
-                {index === 2 && <span className="viz-free"><i className="on" /><i className="on" /><i className="lock" /></span>}
-                {index === 3 && <span className="viz-files"><b className="pdf">PDF</b><b className="docx">DOCX</b><b className="ppt">PPT</b></span>}
-              </span>
               <strong>{item.num}<em>{item.unit}</em></strong>
               <b>{item.label}</b>
               <p>{item.body}</p>
             </article>
           ))}
         </div>
-
-        {/*
-          레퍼런스(TOP50 웹플로우)의 Collaboration·SEO 카드 자리 — 숫자만으로는
-          문서가 어떻게 생겼는지 모른다. 실제 샘플 3부의 화면 구성을 그대로 축소해
-          보여주고, 커서가 단추를 누르면 본문·손익 막대가 채워지는 루프를 돈다.
-          내용은 전부 실존하는 샘플(새벽커피·무인꽃집)과 실제 무료 구간 이름이다 —
-          지어낸 수치는 넣지 않는다. 장식이므로 화면 낭독에서는 뺀다.
-        */}
-        <div className="home-stats-showcase">
-          <article className="home-show-card">
-            <header>
-              <strong>완성 문서는 이렇게 생겼습니다</strong>
-              <p>실제 AI로 만든 샘플 ‘새벽커피 (창업 초기)’의 화면 구성입니다. 질문에 답하고 누르면 그 섹션의 본문이 완성됩니다.</p>
-            </header>
-            <div className="home-show-stage" aria-hidden="true">
-              <div className="show-doc-page">
-                <header><b>새벽커피 — 창업 초기 사업계획서</b><span>25개 섹션 · PDF·Word·PPT</span></header>
-                <nav><i className="on">1.1 한눈에 보기</i><i>1.2 문제와 해결</i><i>2.1 고객</i></nav>
-                <div className="show-doc-lines"><s /><s /><s /><s /><s className="short" /></div>
-                <span className="show-btn show-doc-btn">이 섹션 만들기</span>
-              </div>
-              <span className="show-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8.2-6.6 1.2-3.2 6z" fill="#fff" stroke="#0d0a2c" strokeWidth="1.4" /></svg></span>
-            </div>
-            <a href="/plan">샘플 3부 열어보기 <ArrowRight /></a>
-          </article>
-          <article className="home-show-card">
-            <header>
-              <strong>숫자는 답변으로 자동 계산됩니다</strong>
-              <p>가격·원가·고정비 답만으로 12개월 손익표가 만들어집니다. 샘플 ‘무인꽃집 (정밀 재무 모델)’의 구성입니다.</p>
-            </header>
-            <div className="home-show-stage" aria-hidden="true">
-              <div className="show-fin-panel">
-                <header><b>월별 영업손익</b><span>답변 기반 자동 계산 · 12개월</span></header>
-                <div className="show-fin-bars">{Array.from({ length: 12 }, (_, i) => <i key={i} />)}</div>
-                <span className="show-btn show-fin-btn">손익표 만들기</span>
-              </div>
-              <span className="show-cursor"><svg viewBox="0 0 24 24"><path d="M5 3l14 8.2-6.6 1.2-3.2 6z" fill="#fff" stroke="#0d0a2c" strokeWidth="1.4" /></svg></span>
-            </div>
-            <a href="/plan">샘플 3부 열어보기 <ArrowRight /></a>
-          </article>
-        </div>
       </section>}
 
-      {scHidden("method") ? null : <section className="home-section home-method" data-sc-section="method" id="how">
+      {scHidden("method") ? null : <section className="home-section home-method" id="how">
         <div className="home-section-heading">
-          {scOff("method.eyebrow") ? null : <span data-sc-field="method.eyebrow">{sc("method.eyebrow", "진행 방식")}</span>}
-          {scOff("method.title") ? null : <h2 data-sc-field="method.title">{scBr("method.title", "질문에 답하기만 하면\n문서가 순서대로 완성됩니다")}</h2>}
-          {scOff("method.subtitle") ? null : <p data-sc-field="method.subtitle">{scBr("method.subtitle", "글쓰기는 인공지능이 맡습니다. 사용자는 사업에 대한 사실만 답하면 됩니다.")}</p>}
+          <span>{sc("method.eyebrow", "진행 방식")}</span>
+          <h2>{scBr("method.title", "질문에 답하기만 하면\n문서가 순서대로 완성됩니다")}</h2>
+          <p>{scBr("method.subtitle", "글쓰기는 인공지능이 맡습니다. 사용자는 사업에 대한 사실만 답하면 됩니다.")}</p>
         </div>
         <div className="home-method-flow">
           <article><em>01</em><MessageCircle /><h3>사업 정보 입력</h3><p>사업 이름과 한두 문장 설명이면 시작할 수 있습니다. 업종·지역은 선택입니다.</p></article>
@@ -1027,12 +928,12 @@ function Home({
         </div>
       </section>}
 
-      {scHidden("deliverables") ? null : <section className="home-deliverables" data-sc-section="deliverables" id="deliverables">
+      {scHidden("deliverables") ? null : <section className="home-deliverables" id="deliverables">
         <div className="home-deliverables-inner">
           <div className="home-deliverables-copy">
-            {scOff("deliverables.eyebrow") ? null : <span data-sc-field="deliverables.eyebrow">{sc("deliverables.eyebrow", "문서 유형")}</span>}
-            {scOff("deliverables.title") ? null : <h2 data-sc-field="deliverables.title">{scBr("deliverables.title", "목적에 맞는 문서를\n골라서 만드세요")}</h2>}
-            {scOff("deliverables.subtitle") ? null : <p data-sc-field="deliverables.subtitle">{scBr("deliverables.subtitle", "한 번 입력한 답변은 다른 유형에 그대로 이어집니다. 문서는 PDF와 수정 가능한 Word로, 발표자료는 PPT로 받을 수 있습니다.")}</p>}
+            <span>{sc("deliverables.eyebrow", "문서 유형")}</span>
+            <h2>{scBr("deliverables.title", "목적에 맞는 문서를\n골라서 만드세요")}</h2>
+            <p>{scBr("deliverables.subtitle", "한 번 입력한 답변은 다른 유형에 그대로 이어집니다. 문서는 PDF와 수정 가능한 Word로, 발표자료는 PPT로 받을 수 있습니다.")}</p>
             <ul>{deliverables.map((item) => <li key={item}><Check /> {item}</li>)}</ul>
             <a className="home-sample-preview" href="/plan">완성 샘플 3부 보기</a>
           </div>
@@ -1044,51 +945,29 @@ function Home({
         표 두 칸으로 둔다. 예전에는 제목이 왼쪽 칸 안에 갇혀 있어 위아래
         섹션과 시작하는 세로선이 어긋났다.
       */}
-      {/*
-        레퍼런스(Hardened security)의 문법 — 어두운 밴드, 배경에 흐르는 텍스트,
-        가운데 글로우와 헤드라인. 배경에 떠다니는 것은 '검증 안 된 수치'들이고
-        (숫자는 전부 ###로 가린 예시 — 지어낸 수치를 만들지 않는 원칙 그대로),
-        일부는 줄이 그어진다. 인공지능의 답을 그대로 쓰지 않는다는 것을
-        말이 아니라 화면으로 보여주는 자리다. 배경은 장식이라 낭독에서 뺀다.
-      */}
-      {scHidden("evidence") ? null : <section className="home-section home-evidence evidence-dark" data-sc-section="evidence" id="evidence">
-        <div className="evidence-matrix" aria-hidden="true">
-          {Array.from({ length: 6 }, (_, row) => (
-            <div key={row} className={`ev-row ev-row-${row % 3}`}>
-              {Array.from({ length: 10 }, (_, col) => {
-                const token = EVIDENCE_TOKENS[(row * 3 + col) % EVIDENCE_TOKENS.length];
-                const kind = (row + col) % 5 === 0 ? "cut" : (row * 2 + col) % 7 === 3 ? "glow" : "dim";
-                return <span key={col} className={kind}>{token}</span>;
-              })}
-            </div>
-          ))}
+      {scHidden("evidence") ? null : <section className="home-section home-evidence" id="evidence">
+        <div className="home-section-heading">
+          <span>{sc("evidence.eyebrow", "근거 확인 방식")}</span>
+          <h2>{scBr("evidence.title", "인공지능의 답을\n그대로 믿게 하지 않습니다")}</h2>
+          <p>{scBr("evidence.subtitle", "생성된 문서는 초안입니다. 숫자와 조건마다 어디서 왔는지, 무엇을 더 확인해야 하는지 구분해 보여줍니다.")}</p>
         </div>
-        {/*
-          레퍼런스 그대로의 가운데 무대 — 글로우 엠블럼 + 작은 칩 + 큰 헤드라인.
-          헤드라인은 근거 원칙 네 문장이 계속 교체된다(사용자 요청). 문장은
-          전부 실제로 지키는 규칙이다. 낭독기에는 첫 문장을 제목으로 읽힌다.
-        */}
-        <div className="evidence-center">
-          <span className="evidence-emblem" aria-hidden="true">
-            <i className="ring r1" /><i className="ring r2" /><i className="ring r3" />
-            <span className="emblem-core"><ShieldCheck /></span>
-          </span>
-          {/* 설명 없이 큰 글씨만 돌아간다 — 배지·문단은 사용자 요청으로 뺐다 */}
-          {scOff("evidence.title") ? null : <h2 className="evidence-rotator" data-sc-field="evidence.title" aria-label={sc("evidence.title", "인공지능의 답을 그대로 믿게 하지 않습니다").replace(/\n/g, " ")}>
-            <span aria-hidden="true">{scBr("evidence.title", "인공지능의 답을\n그대로 믿게 하지 않습니다")}</span>
-            <span aria-hidden="true">근거 없는 숫자는<br />쓰지 않습니다</span>
-            <span aria-hidden="true">확인되지 않으면<br />‘확인 필요’로 남깁니다</span>
-            <span aria-hidden="true">공식 자료에는<br />원문과 확인일을 남깁니다</span>
-          </h2>}
+        <div className="home-evidence-intro">
+          <div className="home-evidence-note"><ShieldCheck /><p><strong>확정처럼 쓰지 않는 원칙</strong>공식 원문, 실제 견적, 고객 반응이 없으면 ‘가정’ 또는 ‘확인 필요’로 남깁니다.</p></div>
+        </div>
+        <div className="home-evidence-table">
+          <div><em>1</em><span><strong>사용자 조건</strong><small>경험·시간·자본·지역</small></span><b>직접 입력</b></div>
+          <div><em>2</em><span><strong>공식 자료</strong><small>통계·법령·지원사업 공고</small></span><b>원문·확인일</b></div>
+          <div><em>3</em><span><strong>현장 근거</strong><small>고객 인터뷰·견적·가격 반응</small></span><b>직접 확인</b></div>
+          <div><em>4</em><span><strong>최종 판정</strong><small>확인됨·가정·확인 필요</small></span><b>사용자 승인</b></div>
         </div>
       </section>}
 
-      {scHidden("price") ? null : <section className="home-price" data-sc-section="price" id="price">
+      {scHidden("price") ? null : <section className="home-price" id="price">
         <div className="home-price-inner">
           <div className="home-price-copy">
-            {scOff("price.eyebrow") ? null : <span data-sc-field="price.eyebrow">{sc("price.eyebrow", "이용 안내")}</span>}
-            {scOff("price.title") ? null : <h2 data-sc-field="price.title">{scBr("price.title", "무료로 품질을 확인한 뒤,\n필요한 문서만 결제합니다")}</h2>}
-            {scOff("price.subtitle") ? null : <p data-sc-field="price.subtitle">{scBr("price.subtitle", "완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.")}</p>}
+            <span>{sc("price.eyebrow", "이용 안내")}</span>
+            <h2>{scBr("price.title", "무료로 품질을 확인한 뒤,\n필요한 문서만 결제합니다")}</h2>
+            <p>{scBr("price.subtitle", "완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 어떤 문서든 앞 2개 섹션은 무료로 만들어 볼 수 있습니다. 결제는 문서 1부 단위입니다.")}</p>
             <div><ShieldCheck /><span><strong>무료 범위에는 결제 정보가 필요하지 않습니다</strong><small>결제는 신용·체크카드로 안전하게 진행됩니다</small></span></div>
           </div>
           {/*
@@ -1158,16 +1037,16 @@ function Home({
         예전 파랑 카드의 오른쪽 세 칸은 가격 섹션에서 이미 밝힌 사실의 복사본이라
         지워도 잃는 정보가 없다.
       */}
-      {scHidden("trial") ? null : <section className="home-trial" data-sc-section="trial" aria-labelledby="home-trial-title">
-        {scOff("trial.title") ? null : <h2 id="home-trial-title" data-sc-field="trial.title">{scBr("trial.title", "먼저 만들어 보고\n결정하세요")}</h2>}
+      {scHidden("trial") ? null : <section className="home-trial" aria-labelledby="home-trial-title">
+        <h2 id="home-trial-title">{scBr("trial.title", "먼저 만들어 보고\n결정하세요")}</h2>
         <div className="home-trial-actions">
           <button type="button" className="home-trial-primary" onClick={onStart}>무료로 시작하기 <ArrowRight /></button>
           <button type="button" className="home-trial-secondary" onClick={openConsult}>챗봇 상담하기</button>
         </div>
       </section>}
 
-      {scHidden("faq") ? null : <section className="home-faq" data-sc-section="faq" aria-labelledby="home-faq-title">
-        <div><span>자주 묻는 질문</span>{scOff("faq.title") ? null : <h2 id="home-faq-title" data-sc-field="faq.title">{sc("faq.title", "궁금한 점을 미리 확인해 보세요")}</h2>}{scOff("faq.subtitle") ? null : <p data-sc-field="faq.subtitle">{scBr("faq.subtitle", "더 궁금한 것은 화면 오른쪽 아래 상담 창에 물어보세요.")}</p>}</div>
+      {scHidden("faq") ? null : <section className="home-faq" aria-labelledby="home-faq-title">
+        <div><span>자주 묻는 질문</span><h2 id="home-faq-title">{sc("faq.title", "궁금한 점을 미리 확인해 보세요")}</h2><p>{scBr("faq.subtitle", "더 궁금한 것은 화면 오른쪽 아래 상담 창에 물어보세요.")}</p></div>
         <div>
           <details><summary>글을 잘 못 써도 만들 수 있나요?<ChevronDown /></summary><p>네. 사용자는 사업에 대한 사실(가격, 고객, 비용 등)만 답하면 되고, 문장은 인공지능이 씁니다. 답이 어려운 질문은 AI 추천 답변을 참고할 수 있습니다.</p></details>
           <details><summary>결제 전에 품질을 확인할 수 있나요?<ChevronDown /></summary><p>네. 실제 인공지능으로 만든 완성 샘플 3부를 로그인 없이 전체 열람할 수 있고, 내 사업으로도 앞 2개 섹션을 무료로 만들어 직접 확인할 수 있습니다.</p></details>
@@ -1188,31 +1067,16 @@ function Home({
         표기와 AI 경고는 디자인이 어떻게 바뀌어도 지우지 않는다 — 저작권 줄
         아래 작은 글씨로 남긴다.
       */}
-      {/*
-        TOP 50 레퍼런스(웹플로우)의 다열 메가 푸터.
-        왼쪽은 상호와 한 줄 소개, 오른쪽 두 열은 서비스·약관. 법정 표기와
-        AI 경고는 어떤 개편에서도 지우지 않는다 — 맨 아래 그대로 남는다.
-      */}
       <footer className="home-footer">
-        <div className="home-footer-main">
-          <div className="home-footer-brand">
-            <Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
-            <p>질문에 답하면 사업계획서·발표자료·홈페이지가 만들어집니다. 시작에 필요한 문서를 하루 안에.</p>
-          </div>
-          <nav aria-label="서비스">
-            <strong>서비스</strong>
-            <a href="/plan">내 문서</a>
-            <a href="/plan/start">새 문서 시작</a>
-            <a href="/plan/info">이용 안내</a>
-            <a href="/account">로그인·계정 복구</a>
-          </nav>
-          <nav aria-label="약관과 정책">
-            <strong>약관과 정책</strong>
+        <div className="home-footer-row">
+          <Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+          <nav aria-label="하단 안내">
             <a href="/business-info">사업자·통신판매 정보</a>
             <a href="/privacy">개인정보처리방침</a>
             <a href="/ai-notice">인공지능·국외 처리</a>
             <a href="/terms">이용약관</a>
             <a href="/refund">취소·환불 기준</a>
+            <a href="/account">로그인·계정 복구</a>
           </nav>
         </div>
         <div className="home-footer-bottom">
@@ -5039,10 +4903,11 @@ export default function Page() {
     navigate(target);
   };
 
-  if (screen === "start") {
-    const conversationInProgress = readConversationDraft().responses.some((response) => response.trim().length > 0);
-    return <StartChoice questionnaireProgress={Object.keys(answers).length} conversationInProgress={conversationInProgress} onDirect={() => navigate("direct")} onQuestionnaire={startQuestionnaire} onConversation={() => navigate("conversation")} onBack={() => navigate("home")} />;
-  }
+  useEffect(() => {
+    if (screen === "start") router.replace("/plan/chat?new=1");
+  }, [screen, router]);
+
+  if (screen === "start") return <div role="status">사업 기획 대화를 열고 있어요.</div>;
   if (screen === "direct") return <DirectPlanning onBack={() => navigate("start")} onComplete={completeDirectPlanning} />;
   if (screen === "assessment") return <Assessment answers={answers} setAnswers={setAnswers} onExit={() => navigate("start")} onComplete={complete} />;
   if (screen === "conversation") return <ConversationDiscovery onBack={() => navigate("start")} onComplete={completeConversation} />;
@@ -5052,7 +4917,6 @@ export default function Page() {
   if (screen === "project" && selectedProject) return <ProjectWorkspace opportunity={selectedProject} serverProject={serverProject} setServerProject={setServerProject} onHome={() => navigate("home")} />;
   if (screen === "sample" || screen === "delivery") return <FinalDelivery opportunity={paidReportDemoOpportunity} price={49000} brandChoice="곁봄" serverProject={null} demo onHome={returnFromSample} onStart={sampleReturnScreen === "home" ? () => navigate("start") : returnFromSample} sampleActionLabel={sampleReturnScreen === "checkout" ? "결제 화면으로 돌아가기" : sampleReturnScreen === "preview" ? "내 초안으로 돌아가기" : undefined} sampleView={sampleView} onCloseSample={sampleReturnScreen === "home" ? undefined : returnFromSample} />;
   if (screen === "explore") return <Explore profile={profile} feedback={feedback} setFeedback={setFeedback} onHome={() => navigate("home")} onStartOpportunity={startOpportunity} />;
-  // 홈의 '시작하기'는 플랜 목록으로 보낸다 — 샘플 문서가 먼저 보이고, 실제 작성 진입에서만 로그인을 요구한다.
-  // 기존 진단 흐름(?view=start 이하)은 코드·경로 모두 그대로 두어 링크로 계속 들어올 수 있다.
-  return <Home onStart={() => router.push("/plan")} onPreview={() => openSample("home", "summary")} />;
+  // 새 기획은 대화로 시작하고, 이미 작성한 예전 결과물 경로는 유지한다.
+  return <Home onStart={() => router.push("/plan/chat")} onPreview={() => openSample("home", "summary")} />;
 }

@@ -130,8 +130,8 @@ export async function runOpenAISmokeTest(config: OpenAIRuntimeConfig) {
       body: JSON.stringify({
         model: config.model,
         store: false,
-        reasoning: { effort: "none" },
-        max_output_tokens: 32,
+        reasoning: { effort: config.model.startsWith("gpt-6") ? "low" : "none" },
+        max_output_tokens: config.model.startsWith("gpt-6") ? 1024 : 32,
         input: "Reply with exactly VENTURE_DNA_OPENAI_OK and nothing else.",
       }),
       cache: "no-store",

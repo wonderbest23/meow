@@ -158,6 +158,8 @@ export function flatSections(): Array<{
  * 키는 플랜에 저장되는 planType 문자열과 같아야 한다.
  */
 export const PLAN_TYPE_SECTIONS: Record<string, string[]> = {
+  "일반 사업계획서": ["overview/summary", "overview/problem", "market/products", "market/personas", "strategy/price", "strategy/distribution", "strategy/promotion", "financials/expenses", "summary/executive"],
+  "사업 운영·개선 계획서": ["overview/summary", "overview/problem", "market/products", "market/personas", "strategy/product", "strategy/price", "strategy/promotion", "strategy/people", "financials/expenses", "summary/executive"],
   /*
    * 창업 초기는 전체 25개를 쓴다(목록에 넣지 않는다).
    * 아직 검증되지 않은 사업이라 '문제와 해결', '미션·비전'처럼

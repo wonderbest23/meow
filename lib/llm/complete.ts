@@ -18,10 +18,11 @@ export type LLMCompleteParams = {
   // 사용량 집계용 기능 태그 (generate/deck/suggest/…) — 어드민 대시보드에 쓴다
   kind?: string;
   // OpenAI Responses의 reasoning.effort. Claude에는 적용되지 않는다.
-  effort?: "low" | "medium" | "high";
+  effort?: "low" | "medium" | "high" | "xhigh" | "max";
   timeoutMs?: number;
   // JSON 객체 응답을 유도한다(OpenAI는 json_object 포맷 강제).
   jsonObject?: boolean;
+  jsonSchema?: { name: string; schema: Record<string, unknown> };
   /** 토큰 사용량을 받는다 — 손님에게 토큰으로 파는 기능(홈페이지 AI 수정)이 차감에 쓴다 */
   onUsage?: (usage: { inputTokens: number; outputTokens: number; model: string; provider: LLMProvider }) => void;
   /*
@@ -94,7 +95,7 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
         store: false,
         ...(params.effort ? { reasoning: { effort: params.effort } } : {}),
         max_output_tokens: params.maxOutputTokens,
-        ...(params.jsonObject ? { text: { format: { type: "json_object" } } } : {}),
+        ...(params.jsonSchema ? { text: { format: { type: "json_schema", strict: true, ...params.jsonSchema } } } : params.jsonObject ? { text: { format: { type: "json_object" } } } : {}),
         input: [
           { role: "system", content: params.system },
           { role: "user", content: params.user },
@@ -112,14 +113,18 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
     return null;
   }
   const payload = (await response.json().catch(() => null)) as {
+    status?: string;
+    model?: string;
+    incomplete_details?: unknown;
     output_text?: string;
     output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
     usage?: { input_tokens?: number; output_tokens?: number };
   } | null;
   if (!payload) return null;
   if (params.onUsage && payload.usage) {
-    params.onUsage({ inputTokens: payload.usage.input_tokens ?? 0, outputTokens: payload.usage.output_tokens ?? 0, model: config.model, provider: "openai" });
+    params.onUsage({ inputTokens: payload.usage.input_tokens ?? 0, outputTokens: payload.usage.output_tokens ?? 0, model: payload.model ?? config.model, provider: "openai" });
   }
+  if (payload.incomplete_details || (payload.status && payload.status !== "completed")) return null;
   const text =
     payload.output_text ??
     payload.output
@@ -165,6 +170,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
     return null;
   }
   const payload = (await response.json().catch(() => null)) as {
+    stop_reason?: string;
     content?: Array<{ type?: string; text?: string }>;
     usage?: unknown;
   } | null;
@@ -178,7 +184,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
       provider: "anthropic",
     });
   }
-  if (!payload || !Array.isArray(payload.content)) return null;
+  if (!payload || !Array.isArray(payload.content) || (payload.stop_reason && !["end_turn", "stop_sequence"].includes(payload.stop_reason))) return null;
   const text = payload.content
     .filter((block) => block?.type === "text" && typeof block.text === "string")
     .map((block) => block.text)
@@ -336,6 +342,8 @@ async function streamOnce(
   const decoder = new TextDecoder();
   let buffer = "";
   let full = "";
+  let completed = false;
+  let failed = false;
   /*
    * 스트리밍은 사용량이 두 번에 나눠 온다 — 입력·캐시는 첫 이벤트(message_start),
    * 출력은 마지막 직전(message_delta). 한쪽만 보면 요금의 절반을 놓치므로 합쳐 둔다.
@@ -366,7 +374,11 @@ async function streamOnce(
           }
           if (anthropic && payload.type === "message_delta") {
             usage = { ...(usage ?? {}), ...((payload.usage as AnthropicUsage | undefined) ?? {}) };
+            const reason = (payload.delta as { stop_reason?: string } | undefined)?.stop_reason;
+            if (reason === "max_tokens" || reason === "refusal") failed = true;
           }
+          if (payload.type === "message_stop" || payload.type === "response.completed") completed = true;
+          if (["error", "response.failed", "response.incomplete"].includes(String(payload.type))) failed = true;
           const piece = anthropic
             ? payload.type === "content_block_delta"
               ? ((payload.delta as { text?: string } | undefined)?.text ?? "")
@@ -383,9 +395,9 @@ async function streamOnce(
     }
   } catch {
     // 중간에 끊겨도 거기까지의 사용량은 청구된다 — finally에서 남긴다
-    return full || null;
+    return null;
   } finally {
     if (anthropic) logUsage(params.kind ?? "etc", config.model, usage);
   }
-  return full || null;
+  return completed && !failed ? full || null : null;
 }

@@ -6,6 +6,8 @@ import type { PlanChapterDef, PlanSectionDef } from "./blueprint";
 import { questionsForSection } from "./questions";
 import { planTypeGuidanceBlock } from "./plan-type-guidance";
 import type { SectionBusinessContext } from "./context/section";
+import { COACH_WRITER_RULES } from "./coach";
+import { reviewCoachSection } from "./coach-review";
 
 const SYSTEM_PROMPT = [
   "당신은 한국에서 실제로 실행할 사업계획서의 한 섹션을 작성하는 선임 사업전략가입니다.",
@@ -89,6 +91,7 @@ export interface SectionGenInput {
    * 확정 정보와 AI 추정을 갈라서 넘기고, 추정은 사실로 쓰지 못하게 한다. 없으면 예전과 같다.
    */
   context?: SectionBusinessContext;
+  coachContext?: string;
 }
 
 export interface PromptEvidence {
@@ -230,6 +233,7 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
     SYSTEM_PROMPT,
     biz ? `\n[사업 정보]\n${biz}` : `\n사업명: ${input.planTitle ?? "(미정)"}`,
     planTypeGuidanceBlock(input.planType),
+    input.coachContext ? COACH_WRITER_RULES : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -238,6 +242,7 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
 /** 사용자 프롬프트 조립 (테스트에서 직접 확인할 수 있게 공개) */
 export function buildUserPrompt(input: SectionGenInput): string {
   return [
+    input.coachContext ? `[공통 사업 정보 — 사용자 제공과 AI 제안을 구분]\n${input.coachContext}` : "",
     `챕터: ${input.chapter.title}`,
     `작성할 섹션: ${input.section.title}`,
     `섹션 목적: ${input.section.summary}`,
@@ -269,7 +274,9 @@ export function buildUserPrompt(input: SectionGenInput): string {
     formatConflicts(input.conflicts),
     formatContext(input.context, { hasFinancialBlock: Boolean(input.financialsMarkdown || input.financialsReference) }),
     formatEvidence(input.evidence),
-    input.evidence?.length
+    input.coachContext
+      ? "\n공통 사업 정보의 사용자 제공 내용과 AI 제안을 구분해서 실제 사업안 본문을 작성하세요. 이미 정리한 제안을 빈칸으로 되돌리지 마세요. 불확실한 사실·추가 확인은 마지막 참고 사항에만 모으세요."
+      : input.evidence?.length
       ? "\n위 사업 정보·답변·시장 근거만 바탕으로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 목록에 없는 값은 '추가 정의 필요'로 표기하세요."
       : "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
     input.priorSummary
@@ -375,7 +382,7 @@ export async function generateSection(
     system: sectionSystemPrompt(input),
     user: buildUserPrompt(input),
     maxOutputTokens: SECTION_MAX_TOKENS,
-    effort: "medium",
+    effort: input.coachContext ? "high" : "medium",
     timeoutMs: SECTION_TIMEOUT_MS,
     // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
     cache: true,
@@ -385,7 +392,9 @@ export async function generateSection(
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
     return { markdown: "", source: "failed" };
   }
-  return { markdown: appendFinancials(text.trim(), input), source: "ai" };
+  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim()) : text.trim();
+  if (!checked) return { markdown: "", source: "failed" };
+  return { markdown: appendFinancials(checked, input), source: "ai" };
 }
 
 /**

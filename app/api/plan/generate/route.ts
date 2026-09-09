@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { renderPlanMarkdown } from "../../../../lib/plan-builder/markdown";
 import { PLAN_BLUEPRINT, financialTableOwner, needsMultiYear } from "../../../../lib/plan-builder/blueprint";
 import { generateSection, streamSection } from "../../../../lib/plan-builder/section-generator";
-import { resolveLLMConfig } from "../../../../lib/llm/config";
+import { resolveLLMConfig, resolvePlanningLLMConfig } from "../../../../lib/llm/config";
+import { readCoach, coachContext } from "../../../../lib/plan-builder/coach";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "../../../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
@@ -15,6 +16,7 @@ import { loadPlanEvidence, evidenceForSection, toPromptEvidence, sectionUsesEvid
 import { buildPlanBusinessContext } from "../../../../lib/plan-builder/context/build";
 import { contextForSection, type SectionBusinessContext } from "../../../../lib/plan-builder/context/section";
 import { ANALYSIS_KEY } from "../../../../lib/plan-builder/analyzer/domain";
+import { generateAndSaveSection } from "../../../../lib/plan-builder/section-service";
 
 export const runtime = "nodejs";
 
@@ -197,14 +199,32 @@ export async function POST(req: Request) {
     ? toPromptEvidence(evidenceForSection(sectionKey, await loadPlanEvidence(body.planId, identity.hash)))
     : [];
 
-  const config = resolveLLMConfig(identity.hash, "anthropic");
+  const coach = body.planId ? readCoach(savedState.plans.find(p => p.id === body.planId)?.answers ?? {}) : null;
+  if (coach && body.planId) {
+    const savedPlan = savedState.plans.find(p => p.id === body.planId)!;
+    const actualAccess = await resolvePlanAccess(savedPlan.planType, savedPlan.id);
+    if (checkSectionAccess(actualAccess, sectionKey) !== "ok") return NextResponse.json({ message: "이 항목은 제작 신청 후 사용할 수 있습니다." }, { status: 402 });
+    try {
+      await generateAndSaveSection({ ownerHash: identity.hash, planId: savedPlan.id, chapterId: chapter.id, sectionId: section.id });
+      const saved = (await loadPlanState(identity.hash)).plans.find(p => p.id === savedPlan.id)?.sections[sectionKey];
+      if (!saved) throw new Error("SECTION_GENERATION_FAILED");
+      const payload = { ...saved, source: "ai", quota: await resolveRegenQuota(savedPlan.id) };
+      return body.stream
+        ? new Response(JSON.stringify({ t: "done", ...payload }) + "\n", { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } })
+        : NextResponse.json(payload);
+    } catch {
+      return NextResponse.json({ message: "검토를 마치지 못했습니다. 저장된 문서는 유지됩니다. 다시 시도해주세요." }, { status: 502 });
+    }
+  }
+  const config = coach ? resolvePlanningLLMConfig(identity.hash) : resolveLLMConfig(identity.hash, "anthropic");
   const genInput = {
     chapter,
     section,
     answers: body.answers ?? {},
     planTitle: body.planTitle,
     planType: body.planType,
-    business: body.business,
+    business: coach?.business ?? body.business,
+    coachContext: coach ? coachContext(coach) : undefined,
     priorSummary: body.priorSummary,
     financialsMarkdown,
     financialsReference,
@@ -214,7 +234,7 @@ export async function POST(req: Request) {
   };
 
   // 실시간 생성 — 한 줄에 JSON 하나씩 흘려보낸다.
-  if (body.stream) {
+  if (body.stream && !coach) {
     const encoder = new TextEncoder();
     /*
      * 보는 사람이 떠나면(탭 닫기·이동) 모델 호출도 같이 끊는다.

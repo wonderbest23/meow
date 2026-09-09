@@ -1,5 +1,6 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
-import { callPlanSectionService, type PlanSectionJob } from "./section-service";
+import { callPlanSectionService, callCoachService, type PlanSectionJob } from "./section-service";
+import type { CoachJobRequest } from "./coach-job-types";
 
 /*
  * 본문 생성을 브라우저 밖에서 끝까지 돌리는 워크플로.
@@ -11,10 +12,12 @@ import { callPlanSectionService, type PlanSectionJob } from "./section-service";
  * 앞 섹션 결과를 뒤 섹션이 참고하므로 한 번에 하나씩 순서대로 만든다.
  */
 
-export type PlanSectionsWorkflowParams = {
+export type PlanSectionsWorkflowParams = ({ operation: "coach" } & CoachJobRequest) | {
+  operation?: "sections";
   ownerHash: string;
   planId: string;
   sections: Array<{ chapterId: string; sectionId: string }>;
+  reviewedBusiness?: boolean;
 };
 
 /*
@@ -23,11 +26,20 @@ export type PlanSectionsWorkflowParams = {
  * 나머지 24개가 멈추면 안 된다.
  */
 const retryOptions = {
+  timeout: "15 minutes",
   retries: { limit: 3, delay: "30 seconds", backoff: "exponential" as const },
 } as const;
 
 export class PlanSectionsWorkflow extends WorkflowEntrypoint<CloudflareEnv, PlanSectionsWorkflowParams> {
   async run(event: WorkflowEvent<PlanSectionsWorkflowParams>, step: WorkflowStep) {
+    if (event.payload.operation === "coach") {
+      const job = event.payload;
+      return step.do("사업안 생성과 저장", { timeout: "8 minutes", retries: { limit: 0, delay: "5 seconds" } }, async () => {
+        const service = this.env.WORKER_SELF_REFERENCE;
+        if (!service) throw new Error("SELF_REFERENCE_MISSING");
+        return callCoachService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, job);
+      });
+    }
     const { ownerHash, planId, sections } = event.payload;
     const done: string[] = [];
     const failed: string[] = [];
@@ -36,7 +48,7 @@ export class PlanSectionsWorkflow extends WorkflowEntrypoint<CloudflareEnv, Plan
       const key = `${target.chapterId}/${target.sectionId}`;
       const job: PlanSectionJob = { ownerHash, planId, ...target };
       try {
-        await step.do(`${String(index + 1).padStart(2, "0")} ${key}`, retryOptions, async () => {
+        await step.do(`${String(index + 1).padStart(2, "0")} ${key}`, event.payload.reviewedBusiness ? { timeout: "30 minutes", retries: { limit: 1, delay: "30 seconds", backoff: "exponential" } } : retryOptions, async () => {
           const service = this.env.WORKER_SELF_REFERENCE;
           if (!service) throw new Error("SELF_REFERENCE_MISSING");
           return callPlanSectionService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, job);

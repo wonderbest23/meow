@@ -39,8 +39,18 @@ const SAVE_DEBOUNCE = 1500;
  */
 export default function InlineDocEditor({ html, onChange, status = "idle", debounceMs = SAVE_DEBOUNCE, readOnly = false }: InlineDocEditorProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pending = useRef<string | null>(null);
   const latest = useRef(onChange);
   latest.current = onChange;
+
+  function flushPending() {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+    if (pending.current === null) return;
+    const value = pending.current;
+    pending.current = null;
+    latest.current(value);
+  }
 
   const editor = useEditor({
     immediatelyRender: false, // SSR과 첫 렌더가 어긋나지 않게
@@ -60,15 +70,18 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
     },
     onUpdate: ({ editor }) => {
       if (timer.current) clearTimeout(timer.current);
-      timer.current = setTimeout(() => latest.current(editor.getHTML()), debounceMs);
+      pending.current = editor.getHTML();
+      timer.current = setTimeout(flushPending, debounceMs);
     },
+    onBlur: flushPending,
   });
 
   // 읽기 전용 여부가 바뀌면 편집기에도 반영한다
   useEffect(() => {
     if (!editor) return;
+    if (readOnly) flushPending();
     if (editor.isEditable === !readOnly) return;
-    editor.setEditable(!readOnly);
+    editor.setEditable(!readOnly, false);
   }, [readOnly, editor]);
 
   // 다른 섹션으로 이동하거나 다시 생성했을 때 본문 교체
@@ -81,10 +94,7 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
   // 화면을 떠나기 전 마지막 변경을 흘려보내지 않는다
   useEffect(() => {
     return () => {
-      if (timer.current) {
-        clearTimeout(timer.current);
-        timer.current = null;
-      }
+      flushPending();
     };
   }, []);
 

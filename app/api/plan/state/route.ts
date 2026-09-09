@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
-import { loadPlanState, savePlanState, deletePlanById, normalizeState, type ServerPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { loadPlanState, savePlanState, deletePlanById, normalizeState, preserveServerCoachRecords, type ServerPlanState } from "../../../../lib/plan-builder/plan-server-store";
 
 export const runtime = "nodejs";
 
@@ -25,7 +25,8 @@ async function saveFromRequest(request: Request) {
     return NextResponse.json({ error: "invalid body" }, { status: 400 });
   }
 
-  await savePlanState(identity.hash, normalizeState(body));
+  const stored = await loadPlanState(identity.hash);
+  await savePlanState(identity.hash, preserveServerCoachRecords(normalizeState(body), stored));
   return NextResponse.json({ ok: true });
 }
 
