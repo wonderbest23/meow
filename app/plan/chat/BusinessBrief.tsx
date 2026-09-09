@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { MessageSquareText, PencilLine } from "lucide-react";
 import { currentBusinessDesign, currentNextAction, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
 import BriefEditor, { type BriefPatch } from "./BriefEditor";
 import { briefTextParts, COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
@@ -44,6 +45,6 @@ export default function BusinessBrief({ coach, changed, onEdit, onSave, onDirty,
         {section === "action" && <><h2>먼저 이것 하나만 해보세요</h2>{nextAction ? <><p className={styles.lead}><BriefText text={nextAction.action} /></p><h3>여기까지 하면 돼요</h3><p><BriefText text={nextAction.doneWhen} /></p><details><summary>바로 쓸 수 있는 작업안</summary><blockquote>{nextAction.usableText}</blockquote></details><p className={styles.note}>선택 사항이에요. 하지 않아도 계획서를 만들 수 있어요.</p>{design && <details><summary>아직 확인이 필요한 내용</summary>{design.assumptions.map(item => <div key={item.statement}><h3>{item.statement}</h3><p>{item.howToCheck}</p></div>)}</details>}</> : <p>원하는 시작 방법을 대화로 알려주세요. 할 일 하나부터 정리해드릴게요.</p>}</>}
       </section>
     </div>
-    <div className={styles.documentActions}><div className={styles.briefTools}><button className={styles.textButton} disabled={disabled} onClick={() => onEdit(`${sections.find(item => item.id === section)?.label} 내용을 바꾸고 싶어요. `)}>AI와 다듬기</button><button className={styles.editLink} disabled={disabled} onClick={() => setEditing(true)}>직접 수정</button></div>{actions}</div>
+    <div className={styles.documentActions}><div className={styles.briefTools} role="group" aria-label="사업안 편집"><button className={styles.refineAction} disabled={disabled} onClick={() => onEdit(`${sections.find(item => item.id === section)?.label} 내용을 바꾸고 싶어요. `)}><MessageSquareText size={18} aria-hidden="true" />AI와 다듬기</button><button className={styles.editLink} disabled={disabled} onClick={() => setEditing(true)}><PencilLine size={18} aria-hidden="true" />직접 수정</button></div>{actions}</div>
   </>;
 }

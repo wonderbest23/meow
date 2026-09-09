@@ -25,3 +25,11 @@ export function coachDocumentSnapshot(plan: ServerPlan) {
     })),
   };
 }
+
+export function completedDocumentKey(plan: ServerPlan): string | null {
+  const expected = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`));
+  if (!expected.length || expected.some(key => !plan.sections[key]?.markdown.trim())) return null;
+  const snapshot = coachDocumentSnapshot(plan);
+  if (snapshot && (snapshot.missing.length || snapshot.stale.length || snapshot.manualReview.length)) return null;
+  return `${plan.id}:${snapshot?.revision ?? "document"}`;
+}

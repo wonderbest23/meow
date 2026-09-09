@@ -61,7 +61,12 @@
 .error,.jobError { color:#b42318; font-size:14px; line-height:1.65; margin:8px 0; overflow-wrap:anywhere; }.error a { color:inherit; font-weight:600; }.jobError p { margin:0 0 12px; }
 .attachment { display:flex; align-items:center; gap:12px; font-size:13px; margin-bottom:10px; padding:8px 0; }.attachment span { flex:1; min-width:0; overflow-wrap:anywhere; }.attachment button { border:0; background:none; color:#4e5968; min-height:36px; flex-shrink:0; }
 .viewTabs { display:none; }
-.briefPane { flex:0 0 46%; max-width:720px; min-width:0; display:flex; flex-direction:column; border-left:1px solid #eef0f3; background:#fff; }
+.briefPane { flex:1; min-width:0; display:flex; flex-direction:column; background:#fff; }
+.splitHandle { display:flex; flex:0 0 12px; justify-content:center; align-items:center; cursor:col-resize; touch-action:none; background:#fafbfc; border-inline:1px solid #edf0f3; }
+.splitHandle span { width:4px; height:44px; border-radius:4px; background:#c3cbd5; transition:background .15s,height .15s; }
+.splitHandle:hover span,.splitHandle:focus-visible span { background:#3182f6; height:64px; }
+.resizing { cursor:col-resize; user-select:none; }.resizing .splitHandle span { background:#3182f6; }
+@media(min-width:901px) { .hasBrief .chatPane { flex:0 0 var(--chat-share,42%); }.hasBrief .thread { padding-inline:24px; }.hasBrief .composer { padding-inline:20px; } }
 .briefScroll { flex:1; min-height:0; overflow-y:auto; padding:32px 32px 12px; overscroll-behavior:contain; scrollbar-gutter:stable; }
 .briefHeading h1 { font-size:25px; line-height:1.5; font-weight:700; word-break:keep-all; overflow-wrap:anywhere; margin:0 0 12px; outline:none; }.briefHeading > p { font-size:14px; color:#6b7684; margin:0 0 28px; line-height:1.7; }
 .sectionNav { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin-bottom:28px; }
@@ -77,13 +82,20 @@
 .briefSection details { border-top:1px solid #e5e8eb; margin-top:16px; }.briefSection summary { cursor:pointer; padding:16px 0; font-size:14px; font-weight:500; color:#4e5968; line-height:1.7; }.briefSection blockquote { margin:0; padding:4px 0 4px 14px; border-left:2px solid #d1d6db; }.briefSection ul { padding-left:20px; }.briefSection dl { margin:0; }
 .fact { padding:16px 0; border-bottom:1px solid #e5e8eb; transition:background .3s; min-width:0; }.fact dt { display:flex; align-items:center; flex-wrap:wrap; gap:8px; font-size:14px; font-weight:600; margin-bottom:8px; }.fact dd { margin:0; line-height:1.8; color:#333d4b; font-size:16px; white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; }.basis { font-size:11px; color:#6b7684; font-weight:400; }.changed { animation:highlight 3.5s ease-out; }
 .textButton { padding:12px 0; border:0; background:none; color:#1957b5; min-height:44px; font-size:14px; font-weight:600; text-align:left; }
-.briefTools { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px; }.briefTools > span { color:#6b7684; font-size:12px; line-height:1.5; }
+.briefTools { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; margin-bottom:16px; }
+.briefTools :is(.editLink,.refineAction) { display:flex; align-items:center; justify-content:center; gap:8px; min-width:0; min-height:46px; margin:0; padding:10px 8px; border:1px solid #dce1e7; border-radius:8px; background:#fff; color:#4e5968; font-size:14px; font-weight:600; line-height:1.5; transition:background .16s,transform .16s,border-color .16s; }
+.briefTools :is(.editLink,.refineAction):hover:not(:disabled) { background:#f5f7fa; border-color:#9ca9ba; }.briefTools button:active:not(:disabled) { transform:scale(.98); }.briefTools svg { flex-shrink:0; }
+.completionLabel { display:flex; align-items:center; justify-content:center; gap:6px; margin:0 0 10px; font-size:12px; font-weight:600; color:#4e5968; }
+.documentActions .finishButton { display:flex; align-items:center; justify-content:center; gap:12px; min-height:58px; background:#202b3b; box-shadow:0 5px 14px #202b3b18; animation:finishArrive .5s ease-out; transition:background .18s,transform .18s,box-shadow .18s; }
+.finishButton span { flex:1; }.finishButton svg { flex-shrink:0; }.documentActions .finishButton:hover { background:#101b2b; box-shadow:0 7px 20px #202b3b26; }.finishButton:hover > svg:last-child { transform:translateX(3px); }.finishButton:active { transform:scale(.985); }
+@keyframes finishArrive { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
 .editLink { display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-left:auto; padding:10px 14px; border:1px solid #bfd4f2; border-radius:8px; color:#1957b5; background:#edf4ff; min-height:44px; font-size:14px; line-height:1.5; font-weight:600; text-align:center; transition:background .16s,transform .16s; }.editLink:hover { background:#e0edff; }.editLink:active { transform:scale(.98); }
 .documentActions { flex-shrink:0; padding:16px 32px max(20px,env(safe-area-inset-bottom)); border-top:1px solid #e5e8eb; background:white; }.documentActions > small { display:block; font-size:12px; line-height:1.7; color:#6b7684; margin:0 0 10px; }.documentActions .primary { width:100%; }.documentActions .textButton { width:100%; text-align:center; }
 .documentActions details { font-size:12px; color:#6b7684; line-height:1.6; margin-top:8px; }.documentActions summary { cursor:pointer; }
 .generation span { display:block; font-size:15px; font-weight:600; }.generation progress { width:100%; height:8px; accent-color:#3182f6; margin:12px 0 8px; }.generation small { color:#6b7684; line-height:1.6; }
 .note,.briefSection .note { color:#6b7684; font-size:13px; line-height:1.7; margin:10px 0; }
 @media(max-width:900px) {
+  .splitHandle { display:none; }
   .appRail { display:none; }.header { height:72px; padding:0 12px; gap:8px; }.back { display:flex; }
   .viewTabs { display:grid; grid-template-columns:1fr 1fr; flex-shrink:0; padding:0 16px; border-bottom:1px solid #e5e8eb; background:#fff; }.viewTabs button { height:48px; border:0; border-bottom:2px solid transparent; background:none; color:#6b7684; font-size:15px; font-weight:600; display:flex; justify-content:center; align-items:center; gap:6px; }.viewTabs button[aria-pressed=true] { border-bottom-color:#3182f6; color:#1957b5; }.updateDot { width:5px; height:5px; background:#3182f6; border-radius:50%; }
   .mobileHidden { display:none; }.briefPane { flex:1; max-width:none; border:0; }

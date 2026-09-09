@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
@@ -13,6 +13,7 @@ import type { assembleSections } from "../../../lib/plan-builder/plan-store";
 type Format = "pdf" | "docx" | "pptx";
 type Props = {
   title: string; planId: string | null; planType: string; ready: boolean;
+  completionKey: string | null;
   grouped: Array<[string, ReturnType<typeof assembleSections>]>;
   numbering: Map<string, { num: string; chapterNum: number }>;
   isSample: boolean; coachHref: string | null; notice: string;
@@ -29,9 +30,22 @@ export default function DocumentWorkspace(props: Props) {
   const [continuous, setContinuous] = useState(false);
   const [editing, setEditing] = useState(false);
   const [modal, setModal] = useState<"toc" | "download" | null>(null);
+  const [celebrate, setCelebrate] = useState(false);
+  const announced = useRef<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
   const back = planId && !isSample ? `/plan/workspace?planId=${encodeURIComponent(planId)}&tab=documents` : "/plan";
+
+  useEffect(() => {
+    if (!ready || !props.completionKey || isSample) { setCelebrate(false); return; }
+    const key = `oneulstart:document-complete:${props.completionKey}`;
+    if (announced.current !== key) {
+      try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
+      announced.current = key; setCelebrate(true);
+    }
+    const timer = window.setTimeout(() => setCelebrate(false), 5000);
+    return () => window.clearTimeout(timer);
+  }, [ready, props.completionKey, isSample]);
 
   useEffect(() => {
     if (modal) dialog.current?.showModal(); else dialog.current?.close();
@@ -66,9 +80,10 @@ export default function DocumentWorkspace(props: Props) {
             <span className={styles.mode}>{isSample ? "예시 문서" : editing ? "수정 중" : "읽기"}</span>
             <button className={styles.help} onClick={() => window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "support" } }))}>문의</button>
           </div>
+          {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문">
             {!ready ? <PlanLoading variant="document" count={3} note="문서를 불러오고 있어요" /> : !grouped.length ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
-              <header className={styles.heading}><p>{isSample ? "예시 · " : ""}{props.planType}</p><h1>{title}</h1></header>
+              <header className={styles.heading}>{props.completionKey && <span className={styles.completedBadge}><Check size={14} aria-hidden="true" />작성 완료</span>}<p>{isSample ? "예시 · " : ""}{props.planType}</p><h1>{title}</h1></header>
               {props.notice && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
               {grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
                 <header className={styles.chapterHeading}><span>{index + 1}장</span><h2>{name}</h2></header>

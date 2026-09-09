@@ -45,6 +45,10 @@ async function main() {
       });
       await page.goto("http://localhost:8083/plan/document?planId=document-test", { waitUntil: "networkidle0", timeout: 60000 });
       await page.waitForSelector(".tiptap[contenteditable=false]");
+      await page.waitForSelector('[aria-label="완료 알림 닫기"]');
+      assert.ok(await page.$eval('[role="status"]', el => el.textContent?.includes("사업계획서 작성이 끝났어요")), "전체 문서가 있을 때 완료 안내");
+      await page.screenshot({ path: `artifacts/document-workspace/complete-${width}.png` });
+      await page.click('[aria-label="완료 알림 닫기"]');
       assert.equal(await page.$('aside[aria-label="작업 메뉴"]'), null, "문서 화면에서 사업 메뉴와 목차가 중복되지 않음");
       assert.equal(await page.$$eval("aside", nodes => nodes.filter(el => el.getBoundingClientRect().width > 0).length), width > 760 ? 1 : 0, "PC는 목차 하나, 모바일은 목차 버튼만 표시");
       assert.ok(await page.$eval('a[aria-label="이전 화면으로"]', el => el.getBoundingClientRect().width > 0), "PC와 모바일 모두 상단 뒤로 가기 제공");
@@ -82,6 +86,7 @@ async function main() {
       assert.equal(await page.$("dialog[open]"), null);
       paid = false;
       await page.reload({ waitUntil: "networkidle0" });
+      assert.equal(await page.$('[aria-label="완료 알림 닫기"]'), null, "같은 문서 완료 알림은 재접속 시 반복하지 않음");
       await click(page, "내려받기");
       await page.waitForFunction(() => document.querySelector("dialog")?.textContent?.includes("결제 후"));
       const unpaidPdf = await page.$("dialog button:has(strong)"); await unpaidPdf!.click();

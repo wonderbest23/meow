@@ -108,6 +108,21 @@ async function main() {
       if(width<=900)await clickText(page,"내 사업안",'[aria-label="화면 선택"]');
       await new Promise(resolve => setTimeout(resolve, 250));
       const pane='[aria-label="내 사업안 결과"]';
+      if (width > 900) {
+        const handle = await page.$('[role="separator"][aria-label="채팅 영역 너비 조절"]');
+        assert.ok(handle);
+        const before = await page.$eval('#business-chat-pane', el => el.getBoundingClientRect().width);
+        const box = await handle.boundingBox(); assert.ok(box);
+        await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+        await page.mouse.down(); await page.mouse.move(box.x - 110, box.y + box.height / 2, { steps: 12 }); await page.mouse.up();
+        const after = await page.$eval('#business-chat-pane', el => el.getBoundingClientRect().width);
+        assert.ok(after < before - 70 && after >= 279, "마우스로 채팅을 줄이되 최소 읽기 너비 유지");
+        assert.ok(Number(await page.evaluate(() => localStorage.getItem('oneulstart:chat-width'))) < 42, "조절한 너비를 보관");
+        await page.screenshot({ path: `artifacts/business-coach-ux/resized-${width}.png` });
+        await handle.focus(); await page.keyboard.press('End');
+        assert.ok(await page.$eval(pane, el => el.getBoundingClientRect().width >= 319), "키보드 최대 조절에서도 사업안 영역 보호");
+        await handle.click({ count: 2 });
+      } else assert.equal(await page.$eval('[role="separator"]', el => el.getBoundingClientRect().width), 0, "모바일은 기존 탭 흐름 유지");
       assert.equal(await page.$eval(`${pane} details`,el=>el.open),false);
       await page.screenshot({path:`artifacts/business-coach-ux/brief-${width}.png`});
       const cta=await page.$eval(`${pane} [class*="primary"]`,el=>{const r=el.getBoundingClientRect();return {bottom:r.bottom,left:r.left,right:r.right,height:r.height};});
@@ -144,7 +159,7 @@ async function main() {
       assert.equal(await page.$('form[aria-label="사업 정보 직접 수정"]'), null, "수정 전 취소는 바로 원래 항목으로 복귀");
       await clickText(page, "직접 수정", pane);
       const inputs = await page.$$('form[aria-label="사업 정보 직접 수정"] textarea');
-      await inputs[2].click({ clickCount: 3 });
+      await inputs[2].click({ count: 3 });
       await page.keyboard.press("Backspace");
       await inputs[2].type("125,000원");
       await clickText(page, "저장", pane);
@@ -206,6 +221,19 @@ async function main() {
         await page.waitForSelector('[aria-label="오늘창업의 답변"]');
         assert.ok(await page.$$eval('[aria-label="오늘창업의 답변"]', els => { const last=els.at(-1)!;return !last.querySelector('details') && (last.querySelector('p')?.textContent?.length ?? 0)>500; }), "최신 긴 답변은 접지 않고 바로 보여준다");
       }
+      const completeKeys = Array.from({ length: 9 }, (_, i) => `section-${i}`);
+      final = { ...final, completed: completeKeys, total: 9, job: null, generation: { revision: final.coach.documentRevision, keys: completeKeys } }; complete = true;
+      await page.setViewport({ width, height });
+      await page.reload({ waitUntil: "networkidle0" });
+      await page.waitForSelector('[aria-label="사업 기획 대화"]');
+      if (width <= 900) await clickText(page, "내 사업안", '[aria-label="화면 선택"]');
+      await page.waitForSelector('[class*="finishButton"]');
+      assert.ok(await page.$eval('[class*="finishButton"]', el => el.textContent?.includes("계획서 보기") && el.querySelectorAll('svg').length === 2));
+      assert.ok(await page.$eval(pane, el => el.textContent?.includes("계획서 작성 완료")));
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      await page.screenshot({ path: `artifacts/business-coach-ux/finished-${width}.png` });
+      await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
+      assert.equal(await page.$eval('[class*="finishButton"]', el => getComputedStyle(el).animationName), "none");
       assert.deepEqual(errors,[]);
       await page.close();
       console.log(`business-coach UX ${width}x${height}: passed (mock API)`);

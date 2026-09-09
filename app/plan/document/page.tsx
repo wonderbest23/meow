@@ -6,7 +6,7 @@ import DocumentWorkspace from "./DocumentWorkspace";
 import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan, setActivePlan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
-import { coachDocumentSnapshot } from "../../../lib/plan-builder/coach-document";
+import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 export default function PlanDocumentPage() {
@@ -26,6 +26,7 @@ export default function PlanDocumentPage() {
   const [documentPlanId, setDocumentPlanId] = useState<string | null>(null);
   const [coachHref, setCoachHref] = useState<string | null>(null);
   const [contextNotice, setContextNotice] = useState("");
+  const [completionKey, setCompletionKey] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -39,6 +40,7 @@ export default function PlanDocumentPage() {
       setSections(assembleSections(s));
       const p = activePlan(s);
       if (p) {
+        setCompletionKey(isSamplePlan(p.id) ? null : completedDocumentKey(p));
         const snapshot = coachDocumentSnapshot(p);
         if (snapshot) {
           setCoachHref(`/plan/chat?planId=${encodeURIComponent(p.id)}`);
@@ -240,6 +242,7 @@ export default function PlanDocumentPage() {
   }
 
   return <DocumentWorkspace title={title} planId={documentPlanId} planType={planType} ready={ready}
+    completionKey={completionKey}
     grouped={grouped} numbering={numbering} isSample={isSample} coachHref={coachHref}
     notice={contextNotice} savedKey={savedKey} failedKey={failedKey} onSave={saveEdit}
     exporting={exporting} locked={locked} accessPending={!isSample && access === null}

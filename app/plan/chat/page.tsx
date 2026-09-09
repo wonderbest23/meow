@@ -4,7 +4,8 @@ import PlanLoading from "../PlanLoading";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowUp, ChevronRight, Paperclip } from "lucide-react";
+import { ArrowUp, ChevronRight, Paperclip, FileCheck2, Check } from "lucide-react";
+import { useChatSplit } from "./useChatSplit";
 import { readCoach, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
 import type { BriefPatch } from "./BriefEditor";
 import type { CoachJob } from "../../../lib/plan-builder/coach-job-types";
@@ -26,6 +27,7 @@ function CoachSpeaker() {
 }
 
 export default function BusinessCoachPage() {
+  const split = useChatSplit();
   const router = useRouter();
   const [plan, setPlan] = useState<Snapshot | null>(null);
   const planRef = useRef<Snapshot | null>(null);
@@ -189,7 +191,7 @@ export default function BusinessCoachPage() {
   }
 
   const actions = <>
-    {generating ? <div className={styles.generation} role="status"><span>계획서를 작성하고 있어요</span><progress aria-label="문서 제작 진행" value={completed} max={targetKeys.length} /><small>{completed}/{targetKeys.length}개 항목 완료 · 서버에서 계속 제작합니다.</small></div> : documentCurrent ? <><button className={styles.primary} onClick={() => void openDocument()}>계획서 보기</button>{!paid && <button className={styles.textButton} onClick={() => void openDocument(true)}>전체 문서와 파일 제작 신청</button>}</> : <>
+    {generating ? <div className={styles.generation} role="status"><span>계획서를 작성하고 있어요</span><progress aria-label="문서 제작 진행" value={completed} max={targetKeys.length} /><small>{completed}/{targetKeys.length}개 항목 완료 · 서버에서 계속 제작합니다.</small></div> : documentCurrent ? <><p className={styles.completionLabel}><Check size={15} aria-hidden="true" />{completed >= (plan?.total ?? Infinity) ? "계획서 작성 완료" : "미리보기 준비 완료"}</p><button className={`${styles.primary} ${styles.finishButton}`} onClick={() => void openDocument()}><FileCheck2 size={22} aria-hidden="true" /><span>계획서 보기</span><ChevronRight size={20} aria-hidden="true" /></button>{!paid && <button className={styles.textButton} onClick={() => void openDocument(true)}>전체 문서와 파일 제작 신청</button>}</> : <>
       <small>{plan?.hasDocuments ? "업데이트 필요 · 기존 문서는 그대로 보관 중이에요." : !authenticated ? "로그인 후 제작할 수 있어요. 지금 대화는 그대로 이어집니다." : !paid ? "무료로 앞 2개 항목을 만들어요. 전체 제작은 선택 사항이에요." : "확인한 사업안으로 문서를 만들어요."}</small>
       {!authenticated ? <Link className={styles.primary} href={loginHref}>로그인하고 계획서 만들기</Link> : <button className={styles.primary} disabled={blocked} onClick={() => void submit("", "prepare")}>{plan?.hasDocuments ? "수정 내용을 계획서에 반영하기" : "이 내용으로 계획서 만들기"}</button>}
       {(plan?.hasDocuments || !!plan?.completed.length) && <button className={styles.textButton} onClick={() => void openDocument()}>기존 계획서 보기</button>}
@@ -201,8 +203,8 @@ export default function BusinessCoachPage() {
   return <main ref={pageRef} className={`${styles.page} ${hasBrief ? styles.hasBrief : ""}`}>
     <BusinessAppChrome title="사업 기획" active="chat" workspaceHref={plan ? workspaceHref(plan.planId) : undefined}>
     {hasBrief && <nav className={styles.viewTabs} aria-label="화면 선택"><button aria-pressed={view === "chat"} disabled={editDirty} onClick={() => setView("chat")}>대화</button><button aria-pressed={view === "brief"} onClick={() => setView("brief")}>내 사업안{changed.length > 0 && <span className={styles.updateDot} aria-label="수정됨" />}</button></nav>}
-    <div className={styles.workspace}>
-      <section className={`${styles.chatPane} ${view !== "chat" ? styles.mobileHidden : ""}`} aria-label="사업 기획 대화">
+    <div ref={split.ref} style={split.style} className={`${styles.workspace} ${split.dragging ? styles.resizing : ""}`}>
+      <section id="business-chat-pane" className={`${styles.chatPane} ${view !== "chat" ? styles.mobileHidden : ""}`} aria-label="사업 기획 대화">
         <div ref={conversationRef} className={styles.conversation} onScroll={e => { const el = e.currentTarget; follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; if (follow.current) setUnseen(false); }}>
           <div className={styles.thread}>
             <article className={`${styles.assistant} ${!started ? styles.firstMessage : ""}`} aria-label="오늘창업의 첫 메시지"><CoachSpeaker /><div className={styles.bubble}><p>반가워요.<br />어떤 사업을 함께 만들어볼까요?</p><p className={styles.greetingNote}>막연한 생각도 좋아요.<br />이야기하면서 하나씩 구체화해 봐요.</p></div></article>
@@ -235,6 +237,7 @@ export default function BusinessCoachPage() {
           </form>
         </footer>
       </section>
+      {hasBrief && <div {...split.separator} aria-controls="business-chat-pane" className={styles.splitHandle} title="드래그로 너비 조절 · 두 번 클릭하면 기본 너비"><span /></div>}
       {hasBrief && plan && <aside className={`${styles.briefPane} ${view !== "brief" ? styles.mobileHidden : ""}`} aria-label="내 사업안 결과"><BusinessBrief coach={plan.coach} changed={changed} onEdit={edit} onSave={saveBrief} onDirty={setEditDirty} disabled={blocked} actions={actions} />{error && view === "brief" && <p className={styles.error} role="alert">{error}</p>}</aside>}
     </div>
     </BusinessAppChrome>
