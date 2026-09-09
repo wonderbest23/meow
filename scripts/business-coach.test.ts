@@ -7,6 +7,7 @@ const tests = [
   "business-coach-job.test.ts",
   "business-coach-concurrency.test.ts",
   "business-coach-attachment.test.ts",
+  "coach-deck-context.test.ts",
 ];
 
 for (const test of tests) {

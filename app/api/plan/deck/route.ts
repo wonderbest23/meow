@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
-import { resolveLLMConfig } from "../../../../lib/llm/config";
+import { resolveLLMConfig, resolvePlanningLLMConfig } from "../../../../lib/llm/config";
+import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
+import { coachContext, readCoach } from "../../../../lib/plan-builder/coach";
 import { buildDeckPlan } from "../../../../lib/plan-builder/deck-plan";
 import { renderDeckPptx } from "../../../../lib/plan-builder/deck-render";
 import { pickDeckTheme } from "../../../../lib/plan-builder/deck-themes";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+export const maxDuration = 300;
 
 // 완성한 계획서로 발표용 PPT를 만든다.
 // 유료 결과물이므로 결제 여부를 먼저 확인한다.
@@ -39,7 +42,27 @@ export async function POST(req: Request) {
     );
   }
 
-  const sections = (body.sections ?? [])
+  const identity = await requireGuestIdentity();
+  let businessContext: string | undefined;
+  if (body.planId) {
+    const saved = (await loadPlanState(identity.hash)).plans.find(p => p.id === body.planId);
+    if (!saved) return NextResponse.json({ message: "문서를 찾을 수 없습니다." }, { status: 404 });
+    const snapshot = coachDocumentSnapshot(saved);
+    const coach = readCoach(saved.answers);
+    if (snapshot && coach) {
+      if (snapshot.stale.length || snapshot.missing.length) {
+        return NextResponse.json({ message: "대화에서 최신 내용을 문서에 반영한 뒤 발표자료를 만들어주세요. 기존 내용은 유지되어 있습니다." }, { status: 409 });
+      }
+      body.businessName = snapshot.business.name;
+      body.businessDescription = snapshot.business.description;
+      body.planType = saved.planType;
+      body.sections = snapshot.sections;
+      body.allAnswers = saved.answers;
+      businessContext = coachContext(coach);
+    }
+  }
+
+  const sections = (Array.isArray(body.sections) ? body.sections : [])
     .map((s) => ({
       chapterTitle: String(s.chapterTitle ?? "").slice(0, 60),
       sectionTitle: String(s.sectionTitle ?? "").slice(0, 60),
@@ -54,8 +77,7 @@ export async function POST(req: Request) {
     );
   }
 
-  const identity = await requireGuestIdentity();
-  const config = resolveLLMConfig(identity.hash, "anthropic");
+  const config = businessContext ? resolvePlanningLLMConfig(identity.hash) : resolveLLMConfig(identity.hash, "anthropic");
 
   const plan = await buildDeckPlan(config, {
     businessName: String(body.businessName ?? "").slice(0, 60) || "사업 제안서",
@@ -63,6 +85,7 @@ export async function POST(req: Request) {
     planType: body.planType,
     sections,
     allAnswers: body.allAnswers ?? {},
+    businessContext,
   });
 
   if (!plan) {
