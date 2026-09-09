@@ -11,7 +11,7 @@ import BusinessAppChrome from "./BusinessAppChrome";
 import PlanLoading from "./PlanLoading";
 import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
-import list from "./PlanList.module.css";
+import list from "./BusinessListPreview.module.css";
 
 export default function PlanList() {
   const router = useRouter();
