@@ -76,6 +76,7 @@ import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
+import { HomeProductPreview } from "../components/home-product-preview";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -691,56 +692,6 @@ function Home({
     "정밀 재무 모델 — 3년 추정·민감도",
     "발표자료(PPT) — 완성 문서 기반 자동 구성",
   ];
-  /* 홈에서 바로 창업 상담 창을 연다 — 문의(사람)가 아니라 상담(AI) 쪽으로 */
-  /*
-   * 데모 커서 좌표 보정 — 커서 경로의 %좌표는 데스크톱 배치 기준이라, 모바일에서
-   * 유형 칩이 세로 1열로 재배치되면 허공을 눌렀다(사용자 보고). 실제 표적(첫 칩,
-   * 체크 1·2·3)의 위치를 재서 CSS 변수로 넣고, 키프레임이 그 변수를 읽는다.
-   * 커서 svg 의 화살촉이 (5,3)px 이라 그만큼 빼서 촉이 표적 한가운데에 닿게 한다.
-   */
-  useEffect(() => {
-    const card = document.querySelector<HTMLElement>(".demo-card.demo-v5");
-    if (!card) return;
-    const aim = () => {
-      const r = card.getBoundingClientRect();
-      if (!r.width || !r.height) return;
-      const put = (name: string, sel: string) => {
-        const el = card.querySelector<HTMLElement>(sel);
-        if (!el) return;
-        const b = el.getBoundingClientRect();
-        let px = b.left + b.width / 2;
-        let py = b.top + b.height / 2;
-        /*
-         * 장면은 쉬는 동안 translateY·scale 로 밀려 있다(등장 애니메이션의 시작 자세).
-         * 클릭이 일어나는 '보이는 구간'은 transform: none 이므로, 지금 잰 좌표에서
-         * 장면의 현재 변환을 역산해 빼야 커서가 제자리를 누른다(실측: y 가 40px대 어긋남).
-         */
-        const scene = el.closest<HTMLElement>(".demo-scene");
-        const tr = scene ? getComputedStyle(scene).transform : "none";
-        if (scene && tr && tr !== "none") {
-          const m = new DOMMatrix(tr);
-          const sr = scene.getBoundingClientRect();
-          const c0x = sr.left + sr.width / 2 - m.e;
-          const c0y = sr.top + sr.height / 2 - m.f;
-          px = c0x + (px - m.e - c0x) / (m.a || 1);
-          py = c0y + (py - m.f - c0y) / (m.d || 1);
-        }
-        card.style.setProperty(`--${name}x`, `${((px - r.left - 5) / r.width * 100).toFixed(1)}%`);
-        card.style.setProperty(`--${name}y`, `${((py - r.top - 3) / r.height * 100).toFixed(1)}%`);
-      };
-      put("aim-chip", ".demo-type-grid b.pick");
-      put("aim-ck1", ".ck1 i");
-      put("aim-ck2", ".ck2 i");
-      put("aim-ck3", ".ck3 i");
-    };
-    aim();
-    /* 첫 화면 로딩 직후에는 레이아웃이 아직 움직인다 — 자리 잡은 뒤 한 번 더 */
-    const settle = window.setTimeout(aim, 1200);
-    const ro = new ResizeObserver(aim);
-    ro.observe(card);
-    return () => { window.clearTimeout(settle); ro.disconnect(); };
-  }, []);
-
   /*
    * 어드민이 고친 홈 문구(/admin/homepage). 코드의 기본 문구로 먼저 그려지고,
    * 오버라이드가 오면 바꿔 끼운다 — 실패하면 그냥 기본 문구다.
@@ -777,7 +728,7 @@ function Home({
   };
 
   return (
-    <main className="new-home simple-home">
+    <main className="new-home simple-home product-home">
       <div className="hero-shell">
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
         {/*
@@ -802,94 +753,13 @@ function Home({
               생긴 단추다.
             */}
             <div className="home-hero-actions">
-              <button type="button" className="hero-search" onClick={openConsult} aria-label="창업 상담 열기">
-                <Search aria-hidden="true" />
-                <span>궁금한 창업, 무엇이든 물어보세요</span>
+              <button type="button" className="home-start-button" onClick={openConsult} aria-label="대화로 사업 기획 시작하기">
+                <span>대화로 시작하기</span>
+                <ArrowRight aria-hidden="true" />
               </button>
             </div>
           </div>
-          {/*
-            히어로 자리 — 평소에는 결과물 사진.
-            주소에 ?demo=reviews 가 붙으면 후기 블록으로 바꿔 그린다.
-
-            시연용 숫자다. 일반 방문자에게는 보이지 않는다 — 받은 적 없는
-            후기를 손님이 보는 화면에 두면 표시광고법 문제이기도 하고,
-            '확인되지 않은 수치를 사실처럼 쓰지 않는다'는 이 서비스의 약속과
-            정면으로 어긋난다. 실제 후기가 쌓이면 이 자리에 그대로 꽂는다.
-          */}
-          {/*
-            서비스가 하는 일을 9초짜리 무대로 보여준다 — 채팅창에 질문이
-            타이핑되고, 보내면 오른쪽 프린터에서 사업계획서가 뽑혀 나온다.
-            전부 CSS 애니메이션이고 반복된다. 카드 배치(왼쪽 낮게 + 오른쪽
-            높게 겹침)는 BRIX Heros V1 실측 그대로.
-            움직임 줄이기 설정에서는 완성 장면(문서가 다 나온 상태)만 보인다.
-          */}
-          {/*
-            서비스가 하는 일을 한 장의 카드로 보여주는 9초 무대 — 위는 채팅,
-            아래 투입구에서 사업계획서가 뽑혀 나온다. 무대 자체가 버튼이다:
-            누르면 진짜 상담 창이 열린다(히어로의 버튼을 없앤 대신).
-          */}
-          <div
-            className="home-hero-stage"
-            role="button"
-            tabIndex={0}
-            aria-label="창업 상담 시작하기 — 질문하면 사업계획서가 자동으로 만들어집니다"
-            onClick={openConsult}
-            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openConsult(); } }}
-          >
-            <div className="demo-card demo-v5" aria-hidden="true">
-              {/* 1막 — 상담 */}
-              <div className="demo-scene demo-scene-chat">
-                <header className="demo-chat-head">
-                  <img src="/support-agent-avatar-2026.png" alt="" width="30" height="30" />
-                  <div><strong>오늘창업 상담</strong><span>무엇이든 물어보세요</span></div>
-                </header>
-                <div className="demo-chat-body">
-                  <p className="demo-msg-user"><span>50대를 대상으로 하는 복지사업을 추천해줘</span></p>
-                  <p className="demo-msg-thinking"><i /><i /><i /></p>
-                  <p className="demo-msg-reply">시니어 돌봄 서비스가 조건에 맞아요. 바로 계획서로 만들어 드릴게요.</p>
-                </div>
-                <div className="demo-chat-input"><span>눌러서 직접 물어보세요</span><b className="demo-send">보내기</b></div>
-              </div>
-              {/* 2막 — 문서 유형 선택 (커서가 눌러 준다) */}
-              <div className="demo-scene demo-scene-types">
-                <small>1단계 · 문서 유형 선택</small>
-                <h4>어떤 문서를 만들까요?</h4>
-                <div className="demo-type-grid">
-                  <b className="pick">창업 초기<br /><span>지원·대출 심사용</span></b>
-                  <b>정부지원 PSST<br /><span>예비창업패키지</span></b>
-                  <b>재무 모델<br /><span>3년 추정·민감도</span></b>
-                </div>
-              </div>
-              {/* 3막 — 질문에 답하기 */}
-              <div className="demo-scene demo-scene-checks">
-                <small>2단계 · 질문에 답하기</small>
-                <h4>사실만 답하면 됩니다</h4>
-                <p className="ck1"><i /><span>대상 고객은 누구인가요?</span><em>50대 이상 시니어</em></p>
-                <p className="ck2"><i /><span>초기 투자금은 얼마인가요?</span><em>5,000만 원</em></p>
-                <p className="ck3"><i /><span>함께 일할 인원은요?</span><em>대표 포함 2명</em></p>
-              </div>
-              {/* 4막 — 결과물 */}
-              <div className="demo-scene demo-scene-paper">
-                <div className="demo-paper">
-                  <strong>사업계획서</strong>
-                  <em>시니어 돌봄 서비스 · 50대 이상 대상</em>
-                  <span className="demo-line w90" />
-                  <b>1. 사업 개요</b>
-                  <span className="demo-line w95" />
-                  <span className="demo-line w80" />
-                  <b>2. 고객과 시장</b>
-                  <span className="demo-line w85" />
-                  <div className="demo-chart">
-                    <i style={{ height: "30%" }} /><i style={{ height: "45%" }} /><i style={{ height: "38%" }} /><i style={{ height: "60%" }} /><i style={{ height: "74%" }} /><i style={{ height: "92%" }} />
-                  </div>
-                  <small>12개월 손익 자동 계산</small>
-                </div>
-              </div>
-              {/* 장면을 누비는 마우스 커서 */}
-              <span className="demo-cursor"><svg viewBox="0 0 24 24" width="22" height="22"><path d="M5 3l14 8-6.5 1.5L9 19z" fill="#0d0a2c" stroke="#fff" strokeWidth="1.5" /></svg></span>
-            </div>
-          </div>
+          <HomeProductPreview />
           {reviewDemo && <HomeReviews demo />}
           {reviewDemo && <HomeLandingPeek />}
         </section>
@@ -921,10 +791,10 @@ function Home({
           <p>{scBr("method.subtitle", "글쓰기는 인공지능이 맡습니다. 사용자는 사업에 대한 사실만 답하면 됩니다.")}</p>
         </div>
         <div className="home-method-flow">
-          <article><em>01</em><MessageCircle /><h3>사업 정보 입력</h3><p>사업 이름과 한두 문장 설명이면 시작할 수 있습니다. 업종·지역은 선택입니다.</p></article>
-          <article><em>02</em><PackageCheck /><h3>문서 유형 선택</h3><p>창업 초기·성장 확장·정부지원 PSST·재무 모델 등 7가지 중 목적에 맞는 문서를 고릅니다.</p></article>
-          <article><em>03</em><BarChart3 /><h3>질문 답변 → AI 작성</h3><p>섹션마다 필요한 질문에 답하면 인공지능이 본문을 쓰고, 재무 숫자는 답변으로 자동 계산됩니다.</p></article>
-          <article><em>04</em><CalendarDays /><h3>문서 보기·내려받기</h3><p>완성 문서를 화면에서 확인하고 PDF·Word로 받거나, 발표자료(PPT)를 만듭니다.</p></article>
+          <article><em>01</em><MessageCircle /><h3>대화로 시작하기</h3><p>아이디어가 없어도 괜찮아요. 관심 있는 일이나 지금 운영하는 사업을 이야기해 주세요.</p></article>
+          <article><em>02</em><PackageCheck /><h3>내 사업안 다듬기</h3><p>제안받은 상품, 고객, 운영 방법을 확인해요. 직접 수정하거나 AI와 함께 다듬을 수 있어요.</p></article>
+          <article><em>03</em><BarChart3 /><h3>계획서 만들기</h3><p>다듬은 사업안을 바탕으로 계획서를 만들어요. 제안한 수치와 확인이 필요한 내용은 구분해요.</p></article>
+          <article><em>04</em><CalendarDays /><h3>내 사업 이어가기</h3><p>자료를 확인하고 내려받거나, 다음 할 일을 하나씩 진행해요. 홈페이지 제작은 필요할 때 선택해요.</p></article>
         </div>
       </section>}
 

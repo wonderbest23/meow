@@ -70,8 +70,7 @@ function topicChoiceLabel(label: string) {
 export function SupportChatWidget() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  /* 열면 상담부터 — 문의는 눌러서 간다 */
-  const [mode, setMode] = useState<"consult" | "support">("consult");
+  const [mode, setMode] = useState<"consult" | "support">("support");
   const [consultTurns, setConsultTurns] = useState<ConsultTurn[]>([]);
   const [consultProfile, setConsultProfile] = useState<ConsultProfile>({});
   const [consultChoices, setConsultChoices] = useState<string[]>([]);
@@ -284,7 +283,7 @@ export function SupportChatWidget() {
        * 이 창은 한 번 문의 쪽으로 넘어가면 그대로 있어서, 홈에서 '창업 상담'을
        * 눌렀는데 지난번에 보던 문의 화면이 나오는 일이 있었다.
        */
-      if (detail?.mode) setMode(detail.mode);
+      setMode(detail?.mode ?? "support");
       const text = detail?.message?.trim();
       if (!text) return;
       if (detail?.mode === "consult") {
@@ -942,9 +941,7 @@ export function SupportChatWidget() {
                         </div>
                       </>
                     )}
-                    <button type="button" className="consult-to-support" onClick={() => setMode("consult")}>
-                      <Sparkles /> 창업 상담으로 돌아가기
-                    </button>
+                    <a className="consult-to-support" href="/plan/chat">사업 기획은 새 대화에서 시작하기</a>
                   </section>
                 ) : mode === "support" && chat.messages.length === 0 && quickMessages.length === 0 ? (
                   <div className="support-chat-bot-message">
@@ -997,13 +994,13 @@ export function SupportChatWidget() {
         <button
           type="button"
           className="support-chat-toggle"
-          onClick={() => setOpen(true)}
+          onClick={() => { setMode("support"); setOpen(true); }}
           aria-expanded="false"
-          aria-label="무료 창업 상담 열기"
-          title="무료 창업 상담"
+          aria-label="서비스 이용 문의 열기"
+          title="서비스 이용 문의"
         >
           <img src="/support-agent-avatar-2026.png" alt="" width="54" height="54" />
-          <span>창업 상담</span>
+          <span>이용 문의</span>
           {unread > 0 && <em>{unread > 9 ? "9+" : unread}</em>}
         </button>
       )}
