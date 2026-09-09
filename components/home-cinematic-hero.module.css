@@ -3,6 +3,12 @@
 :global(.simple-home.product-home.cinematic-home .site-header) { height: 64px; min-height: 64px; max-width: 1280px; margin: auto; padding: 0 32px; }
 :global(.simple-home.product-home.cinematic-home .site-header .account-link) { background: #edf4ff; color: #3182f6; }
 :global(.simple-home.product-home.cinematic-home .site-header .account-link svg) { color: #3182f6; }
+:global(.simple-home.product-home.cinematic-home .home-footer) { background: #f5f6f8; color: #6b7684; }
+:global(.simple-home.product-home.cinematic-home .home-footer .brand-logo) { filter: none; }
+:global(.simple-home.product-home.cinematic-home .home-footer a) { color: #4e5968; opacity: 1; }
+:global(.simple-home.product-home.cinematic-home .home-footer :is(p,small)) { color: #6b7684; }
+:global(.simple-home.product-home.cinematic-home .home-footer-bottom) { border-color: #dfe4ea; }
+:global(.simple-home.product-home.cinematic-home .home-footer-notice) { border-color: #dfe4ea; }
 .hero { --progress: 0; position: relative; isolation: isolate; min-height: 610px; height: min(880px, calc(100svh - 104px)); margin: 0 24px; color: #191f28; }
 .media { position: absolute; inset: 0; overflow: hidden; border-radius: 28px; background: #edf4f7; }
 .media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,#ffffffb8 0%,#ffffff68 32%,transparent 62%); }
