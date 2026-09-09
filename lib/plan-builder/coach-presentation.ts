@@ -8,6 +8,22 @@ export const COACH_FIELD_LABELS: Record<CoachField["key"], string> = {
   minutesPerSale: "한 건에 필요한 시간",
 };
 
+// Presentation only: retain every character and never infer business facts.
+export function briefTextParts(text: string): { text: string; highlight: boolean }[] {
+  const pattern = /(?:(?:주|월|하루)\s*)?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?\s*(?:억|천만|백만|십만|만|천|백)?\s*(?:원|시간|분|명|곳|건|장|개(?:월)?|주|세트|%)/g;
+  const parts: { text: string; highlight: boolean }[] = [];
+  let cursor = 0;
+  let count = 0;
+  for (const match of text.matchAll(pattern)) {
+    if (count++ >= 6) break;
+    if (match.index > cursor) parts.push({ text: text.slice(cursor, match.index), highlight: false });
+    parts.push({ text: match[0], highlight: true });
+    cursor = match.index + match[0].length;
+  }
+  if (cursor < text.length) parts.push({ text: text.slice(cursor), highlight: false });
+  return parts;
+}
+
 export function changedCoachFields(previous: CoachState | null, next: CoachState): CoachField["key"][] {
   return next.fields.filter(field => {
     const before = previous?.fields.find(item => item.key === field.key);

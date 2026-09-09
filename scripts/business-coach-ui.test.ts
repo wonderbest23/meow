@@ -7,7 +7,7 @@ import { designFixture } from "./fixtures/coach-design";
 
 async function clickText(page: Page, text: string, scope = "") {
   const buttons = await page.$$(`${scope ? `${scope} ` : ""}button`);
-  for (const button of buttons) if (await button.evaluate((el, value) => el.textContent?.trim() === value, text)) { await button.click(); return; }
+  for (const button of buttons) if (await button.evaluate((el, value) => el.textContent?.trim() === value || el.getAttribute("aria-label") === value, text)) { await button.click(); return; }
   throw new Error(`Button not found: ${text}`);
 }
 async function main() {
@@ -103,6 +103,10 @@ async function main() {
       if(!authenticated){assert.ok(await page.$eval(`${pane} a`,el=>el.getAttribute("href")?.includes("plan-ui-fixture")));authenticated=true;await page.reload({waitUntil:"networkidle0"});await page.waitForFunction(()=>document.body.innerText.includes("첫 사업안을"));if(width<=900)await clickText(page,"내 사업안",'[aria-label="화면 선택"]');}
       await clickText(page,"상품과 고객",pane);
       assert.ok(await page.$eval(pane,el=>el.textContent?.includes("99,000원")));
+      await page.waitForFunction(()=>getComputedStyle(document.querySelector('[aria-label="사업안 항목"] [aria-pressed=true]')!).backgroundColor === "rgb(36, 107, 209)");
+      assert.ok(await page.$eval(`${pane} dd strong`, el=>el.textContent === "99,000원" && getComputedStyle(el).borderTopStyle === "solid"), "저장된 가격을 테두리로 강조");
+      const editPosition = await page.$eval(`${pane} [class*="editLink"]`, el=>{const rect=el.getBoundingClientRect();const footer=el.closest('[class*="documentActions"]')!;const primary=footer.querySelector('[class*="primary"]')!.getBoundingClientRect();return {bottom:rect.bottom,right:rect.right,primaryTop:primary.top,primaryRight:primary.right};});
+      assert.ok(editPosition.bottom <= editPosition.primaryTop && Math.abs(editPosition.right-editPosition.primaryRight) < 2, "수정 버튼은 고정 하단 영역의 오른쪽에 표시");
       await clickText(page,"시작 방법",pane);
       assert.ok(await page.$eval(pane,el=>el.textContent?.includes("하지 않아도 계획서를")));
       const overflow=await page.$eval(pane,el=>Array.from(el.querySelectorAll("p,dd,h1,h2,button")).some(el=>el.scrollWidth>el.clientWidth+1));
