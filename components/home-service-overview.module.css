@@ -1,12 +1,12 @@
 .overview { color: #202632; background: #fff; letter-spacing: 0; }
-.overview .section { width: min(1040px, 100%); margin: 0 auto; padding: 76px 32px; scroll-margin-top: 80px; }
-.overview .heading { text-align: center; margin: 0 auto 36px; }
+.overview .section { width: min(1120px, 100%); margin: 0 auto; padding: 110px 40px; scroll-margin-top: 80px; }
+.overview .heading { text-align: center; margin: 0 auto 54px; }
 .overview .heading > span { display: block; color: #64748b; font-size: 14px; font-weight: 550; margin-bottom: 12px; }
-.overview h2 { margin: 0; color: #202632; font-size: 30px; line-height: 1.45; font-weight: 700; letter-spacing: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.overview h2 { margin: 0; color: #202632; font-size: 40px; line-height: 1.45; font-weight: 700; letter-spacing: 0; word-break: keep-all; overflow-wrap: anywhere; }
 .overview .heading > p { margin: 18px 0 0; font-size: 16px; line-height: 1.8; color: #5b6574; word-break: keep-all; }
 .overview h3 { font-size: 18px; line-height: 1.5; font-weight: 650; color: #202632; margin: 0 0 8px; letter-spacing: 0; }
 .overview p { font-size: 15px; line-height: 1.8; color: #5b6574; margin: 0; word-break: keep-all; overflow-wrap: anywhere; }
-.difference { background: #f6f8fb; scroll-margin-top: 70px; }
+.difference { background: #fff; scroll-margin-top: 70px; }
 .differenceRows { margin: 0 auto; max-width: 800px; }
 .differenceRows article { display: grid; grid-template-columns: 156px minmax(0, 1fr); align-items: start; gap: 24px; padding: 26px 0; border-top: 1px solid #dde3eb; }
 .differenceRows article:last-child { padding-bottom: 0; }
@@ -15,6 +15,15 @@
 .results article { min-width: 0; padding-top: 24px; border-top: 1px solid #dce2ea; display: flex; flex-direction: column; }
 .formats { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 20px; }
 .formats span { padding: 5px 9px; border: 1px solid #d7dee7; border-radius: 5px; font-size: 12px; color: #506078; }
+.resultNumber { font-size: 32px; color: #a9bdd7; font-weight: 550; margin-bottom: 24px; }
+.resultLink { align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; color: #246bd1; font-size: 14px; font-weight: 600; margin-top: 20px; text-decoration: underline; text-underline-offset: 5px; }
+.website { background: #f4f6f8; }
+.siteExamples { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; max-width: 880px; margin: auto; }
+.siteExamples figure { min-width: 0; margin: 0; }
+.siteExamples img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 7; object-fit: contain; background: white; border: 1px solid #e2e7ec; border-radius: 8px; box-shadow: 0 20px 40px #233a5010; }
+.siteExamples figcaption { font-size: 14px; font-weight: 550; color: #586579; margin-top: 18px; text-align: center; }
+.overview .templateNote { text-align: center; font-size: 11px; color: #788495; margin-top: 30px; }
+.templateNote a { color: inherit; text-underline-offset: 3px; }
 .overview .note { text-align: center; margin-top: 26px; font-size: 13px; color: #697586; }
 .overview .usage { border-top: 1px solid #e5eaf0; padding-top: 56px; }
 .faq { max-width: 760px; margin: auto; }
@@ -30,9 +39,9 @@
 .actions a { color: #4b617d; font-size: 14px; text-underline-offset: 4px; }
 .overview :is(button,a,summary):focus-visible { outline: 3px solid #3182f6; outline-offset: 4px; }
 @media(max-width:600px) {
-  .overview .section { padding: 46px 22px; }
+  .overview .section { padding: 64px 24px; }
   .overview .heading { margin-bottom: 28px; }
-  .overview h2 { font-size: 24px; }
+  .overview h2 { font-size: 27px; }
   .overview h3 { font-size: 17px; }
   .overview .heading > span { font-size: 12px; }
   .overview .heading > p, .overview p { font-size: 14px; line-height: 1.75; }
@@ -46,6 +55,10 @@
   .faq summary { font-size: 15px; }
   .actions { flex-direction: column; }
   .overview .actions button { width: 100%; }
+  .siteExamples { grid-template-columns: 1fr; gap: 32px; max-width: 360px; }
+  .siteExamples figure:nth-child(2) { display: none; }
+  .resultNumber { font-size: 24px; margin-bottom: 12px; }
+  .resultLink { margin-top: 12px; }
 }
 @media(prefers-reduced-motion:reduce) { .overview .actions button { transition: none; } }
 .overview .heading > .statement { margin-top: 40px; font-size: 34px; line-height: 1.45; color: #7d8797; font-weight: 600; }

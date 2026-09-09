@@ -3,6 +3,7 @@
 import { PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
 import { useEffect, useRef } from "react";
 import { HomeScrollStory } from "./home-scroll-story";
+import { BRAINWAVE_CREDIT } from "../lib/landing/brainwave/catalog";
 import styles from "./home-service-overview.module.css";
 
 export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
@@ -25,9 +26,8 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
     <section className={styles.difference} id="difference" aria-labelledby="home-difference-title">
       <div className={styles.section}>
         <header className={styles.heading} data-reveal>
-          <span>그냥 AI에게 물어보는 것과 무엇이 다른가요?</span>
+          <span>오늘창업의 차이</span>
           <h2 id="home-difference-title">“챗GPT로 사업계획서 쓰면<br />되는 것 아닌가요?”</h2>
-          <p className={styles.statement}>답변을 받는 것에서,<br /><strong>내 사업을 이어가는 것으로.</strong></p>
           <p>오늘창업도 AI를 사용해요. 대화 이후의<br className={styles.desktopBreak} /> 정리·수정·문서 관리를 연결했어요.</p>
         </header>
         <div className={styles.differenceRows}>
@@ -44,11 +44,27 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
         <h2 id="home-results-title">읽고, 고치고, 꺼내 쓰는<br />내 사업 자료.</h2>
       </header>
       <div className={styles.results} data-reveal>
-        <article><h3>사업계획서</h3><p>사업 소개부터 상품·고객·비용·운영까지.</p><div className={styles.formats}><span>PDF</span><span>수정 가능한 Word</span></div></article>
-        <article><h3>발표자료</h3><p>완성한 계획서를 바탕으로 발표용 자료를 만들어요.</p><div className={styles.formats}><span>PPT</span></div></article>
-        <article><h3>내 사업 관리</h3><p>사업안과 문서 상태를 확인하고, 대화와 다음 할 일을 이어가요.</p><div className={styles.formats}><span>사업별 작업 공간</span></div></article>
+        <article><span className={styles.resultNumber}>01</span><h3>사업계획서</h3><p>사업 소개부터 상품·고객·비용·운영까지.</p><div className={styles.formats}><span>PDF</span><span>수정 가능한 Word</span></div><a className={styles.resultLink} href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer">PDF 샘플 열기</a></article>
+        <article><span className={styles.resultNumber}>02</span><h3>발표자료</h3><p>완성한 계획서를 바탕으로 발표용 자료를 만들어요.</p><div className={styles.formats}><span>PPT</span></div><a className={styles.resultLink} href="/samples/sample_coffee.pptx" download>PPT 샘플 받기</a></article>
+        <article><span className={styles.resultNumber}>03</span><h3>내 사업 관리</h3><p>사업안과 문서 상태를 확인하고, 대화와 다음 할 일을 이어가요.</p><div className={styles.formats}><span>사업별 작업 공간</span></div><a className={styles.resultLink} href="/plan">내 사업 열기</a></article>
       </div>
-      <p className={styles.note}>전체 문서 생성과 파일 내려받기는 결제 후 이용해요. 결과물은 검토·수정해서 사용하는 AI 초안이에요.</p>
+      <p className={styles.note}>공개 샘플은 가상 사례예요. 내 사업의 전체 문서 생성과 파일 내려받기는 결제 후 이용하며, 결과물은 검토·수정해서 사용하는 AI 초안이에요.</p>
+    </section>
+
+    <section className={styles.website} aria-labelledby="home-website-title">
+      <div className={styles.section}>
+        <header className={styles.heading} data-reveal>
+          <span>계획 다음, 필요한 만큼</span>
+          <h2 id="home-website-title">내 사업을 보여줄<br />홈페이지가 필요하다면.</h2>
+          <p>계획이 정리된 뒤, 제작 범위와 비용을<br className={styles.desktopBreak} /> 상담하고 다음 단계를 선택하세요.</p>
+        </header>
+        <div className={styles.siteExamples} data-reveal>
+          <figure><img src="/brainwave/thumbs/0-290.jpg" width="640" height="560" loading="lazy" alt="상담 서비스용 홈페이지 디자인 템플릿 예시" /><figcaption>상담·전문 서비스</figcaption></figure>
+          <figure><img src="/brainwave/thumbs/0-2226.jpg" width="640" height="560" loading="lazy" alt="공간 운영용 홈페이지 디자인 템플릿 예시" /><figcaption>공간·매장 소개</figcaption></figure>
+        </div>
+        <p className={styles.templateNote}>디자인 템플릿 예시이며, 이미지 속 업체·수치·후기는 실제 고객 실적이 아니에요.<br /><a href={BRAINWAVE_CREDIT.url} target="_blank" rel="noopener noreferrer">{BRAINWAVE_CREDIT.text}</a> · 한글 문구 적용 · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">라이선스</a></p>
+        <div className={styles.actions}><button type="button" onClick={() => window.dispatchEvent(new CustomEvent("venture:open-support-chat", { detail: { mode: "support", message: "홈페이지 제작을 상담하고 싶어요. 제작 범위와 비용을 알려주세요." } }))}>홈페이지 제작 상담하기</button></div>
+      </div>
     </section>
 
     <section className={`${styles.section} ${styles.usage}`} id="price" aria-labelledby="home-usage-title">
