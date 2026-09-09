@@ -17,3 +17,10 @@
 @media(prefers-reduced-motion:reduce) { .ring::before { animation: none; }.ring { transition: none; }.ring:hover { transform: none; } }
 .entry { width: min(580px, 100%); margin: 0 auto; min-width: 0; }
 :global(.simple-home.product-home .home-hero-actions) .entry button.ring { border-radius: 36px !important; padding: 2px !important; }
+.ring .inner { justify-content: center; padding-inline: 20px; }
+.ring .inner > .prompt { position: relative; flex: 0 1 auto; display: inline-block; text-align: center; }
+.prompt > span:first-child { visibility: hidden; }
+.prompt .typed { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; white-space: nowrap; }
+.typed i { width: 2px; height: 18px; background: #3182f6; margin-left: 3px; animation: caretBlink 1s steps(1) infinite; }
+@keyframes caretBlink { 50% { opacity: 0; } }
+@media(prefers-reduced-motion:reduce) { .typed i { animation: none; display: none; } }

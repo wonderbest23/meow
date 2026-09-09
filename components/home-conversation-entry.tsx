@@ -3,10 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { ArrowUp, MessageCircle } from "lucide-react";
 import styles from "./home-conversation-entry.module.css";
 
 export function HomeConversationEntry({ onStart }: { onStart: () => void }) {
+  const prompt = "어떤 사업을 꿈꾸고 있나요?";
+  const [typed, setTyped] = useState(prompt);
   const router = useRouter();
   const [entering, setEntering] = useState(false);
   const surface = useRef<HTMLDivElement>(null);
@@ -15,6 +16,23 @@ export function HomeConversationEntry({ onStart }: { onStart: () => void }) {
   const navigate = useRef(onStart);
   navigate.current = onStart;
   useEffect(() => { router.prefetch("/plan/chat"); }, [router]);
+  useEffect(() => {
+    const motion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const sync = () => {
+      if (timer) clearInterval(timer);
+      setTyped(prompt);
+      if (motion.matches) return;
+      let tick = 0;
+      timer = setInterval(() => {
+        if (document.hidden) return;
+        tick = (tick + 1) % (prompt.length + 38);
+        setTyped(prompt.slice(0, Math.min(prompt.length, tick + 1)));
+      }, 110);
+    };
+    sync(); motion.addEventListener("change", sync);
+    return () => { if (timer) clearInterval(timer); motion.removeEventListener("change", sync); };
+  }, []);
   useEffect(() => {
     if (!entering || !surface.current) return;
     const el = surface.current;
@@ -43,10 +61,10 @@ export function HomeConversationEntry({ onStart }: { onStart: () => void }) {
   };
   return <>
     <div className={styles.entry}><button className={styles.ring} type="button" onClick={enter} disabled={entering} aria-label="대화로 사업 기획 시작하기">
-      <span className={styles.inner}><MessageCircle aria-hidden="true"/><span>어떤 사업을 꿈꾸고 있나요?</span><span className={styles.send}><ArrowUp aria-hidden="true"/></span></span>
+      <span className={styles.inner}><span className={styles.prompt} aria-hidden="true"><span>{prompt}</span><span className={styles.typed}>{typed}<i/></span></span></span>
     </button></div>
     {entering && createPortal(<div className={styles.portal} role="status" aria-label="사업 기획 대화로 이동 중">
-      <div ref={surface} className={styles.surface}><header>오늘창업<span>사업 기획</span></header><div className={styles.welcome}><span>생각이 사업이 되는 순간</span><h2>어떤 사업을<br/>생각하고 계세요?</h2><div className={styles.line}/></div><div className={styles.input}><span>생각을 편하게 이야기해 주세요</span><ArrowUp size={22}/></div></div>
+      <div ref={surface} className={styles.surface}><header>오늘창업<span>사업 기획</span></header><div className={styles.welcome}><span>생각이 사업이 되는 순간</span><h2>어떤 사업을<br/>생각하고 계세요?</h2><div className={styles.line}/></div><div className={styles.input}><span>생각을 편하게 이야기해 주세요</span></div></div>
     </div>, document.body)}
   </>;
 }
