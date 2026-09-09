@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowUp, Check, ChevronRight, FileText, Pause, Play } from "lucide-react";
+import { ArrowUp, Check, ChevronRight, FileText } from "lucide-react";
 import styles from "./home-product-preview.module.css";
 
 const stages = ["대화로 시작", "사업안 다듬기", "내 사업 관리"];
@@ -25,20 +25,15 @@ export function HomeProductPreview() {
     return () => window.clearInterval(timer);
   }, [playing, visible, stage]);
 
-  return <section ref={root} className={styles.preview} aria-label="사업 기획 과정 미리보기">
-    <div className={styles.controls}>
-      <div className={styles.steps} aria-label="미리보기 장면 선택">
-        {stages.map((label, index) => <button key={label} type="button" aria-pressed={stage === index} onClick={() => { setStage(index); setPlaying(false); }}><span>{index + 1}</span>{label}</button>)}
-      </div>
-      <button className={styles.play} type="button" onClick={() => setPlaying(value => !value)} aria-label={playing ? "미리보기 일시정지" : "미리보기 자동재생"} title={playing ? "일시정지" : "자동재생"}>{playing ? <Pause size={16} /> : <Play size={16} />}</button>
-    </div>
-    <div className={styles.window}>
+  return <section ref={root} className={styles.preview} aria-label="사업 기획 과정 미리보기" data-stage={stage} data-playing={playing}>
+    <button className={styles.motionControl} type="button" onClick={() => setPlaying(value => !value)}>{playing ? "애니메이션 일시정지" : "애니메이션 재생"}</button>
+    <div className={styles.window} data-home-preview-window>
       <header className={styles.windowHeader}><span className={styles.brand}>오늘창업</span><span>이용 과정 예시</span></header>
       <div className={styles.scene} key={stage}>
         {stage === 0 ? <div className={styles.chat}>
           <div className={styles.chatHeading}><small>사업 기획</small><h2>한마디에서 시작해요.</h2></div>
           <div className={styles.userBubble}>사진 찍는 걸 좋아해요.<br />퇴근 후 할 수 있는 사업이 있을까요?</div>
-          <div className={styles.reply}><span className={styles.avatar}>오</span><div><strong>좋아하는 일부터 찾아볼게요.</strong><p>동네 가게의 메뉴 사진과 소개글을 만드는 일은 어떨까요?</p><div className={styles.tags}><span>사진 촬영</span><span>1인 시작</span></div></div></div>
+          <div className={styles.answer}><div className={styles.typing} aria-hidden="true"><i/><i/><i/></div><div className={styles.reply}><span className={styles.avatar}>오</span><div><strong>좋아하는 일부터 찾아볼게요.</strong><p>동네 가게의 메뉴 사진과 소개글을 만드는 일은 어떨까요?</p><div className={styles.tags}><span>사진 촬영</span><span>1인 시작</span></div></div></div></div>
           <div className={styles.composer} aria-hidden="true"><span>생각을 편하게 이야기해 주세요</span><ArrowUp size={20} /></div>
         </div> : stage === 1 ? <div className={styles.brief}>
           <small className={styles.badge}>내 사업안 · 예시</small><h2>동네 가게 메뉴 사진 제작</h2>
@@ -53,7 +48,6 @@ export function HomeProductPreview() {
           <div className={styles.next}><span>다음 할 일</span><strong>첫 상품 구성 다듬기</strong><ChevronRight size={18}/></div>
         </div>}
       </div>
-      <div className={styles.timeline} aria-hidden="true">{stages.map((label, index) => <i key={label} className={index === stage ? styles.current : ""} />)}</div>
     </div>
     <p className={styles.caption}>가상 사업으로 보여드리는 예시이며, 실제 내용은 대화에 따라 달라집니다.</p>
   </section>;

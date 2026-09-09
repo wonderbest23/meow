@@ -77,6 +77,7 @@ import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
 import { HomeProductPreview } from "../components/home-product-preview";
+import { HomeConversationEntry } from "../components/home-conversation-entry";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -753,10 +754,7 @@ function Home({
               생긴 단추다.
             */}
             <div className="home-hero-actions">
-              <button type="button" className="home-start-button" onClick={openConsult} aria-label="대화로 사업 기획 시작하기">
-                <span>대화로 시작하기</span>
-                <ArrowRight aria-hidden="true" />
-              </button>
+              <HomeConversationEntry onStart={openConsult} />
             </div>
           </div>
           <HomeProductPreview />
