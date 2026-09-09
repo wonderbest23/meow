@@ -21,6 +21,12 @@ async function main() {
       const ring = 'button[aria-label="대화로 사업 기획 시작하기"]';
       await page.waitForSelector(section);
       assert.equal(await page.$(ring + ' svg'), null, "링에 아이콘이 없어야 함");
+      assert.equal(await page.$eval(ring + ' [class*="__send"]', el => el.textContent), '보내기');
+      assert.equal(await page.$eval(ring, el => {
+        const prompt = el.querySelector('[class*="__prompt"]')!;
+        const send = el.querySelector('[class*="__send"]')!;
+        return prompt.getBoundingClientRect().right <= send.getBoundingClientRect().left;
+      }), true, '타이핑 문구와 보내기 영역이 겹치지 않아야 함');
       assert.equal(await page.$('[aria-label="미리보기 장면 선택"]'), null);
       await page.waitForFunction(() => { const v = document.querySelector('video'); return v && v.readyState >= 2 && v.currentTime > .1; });
       const media = await page.$eval('video', v => ({ src: v.currentSrc, width: v.videoWidth, height: v.videoHeight, muted: v.muted, inline: v.playsInline }));
@@ -38,7 +44,7 @@ async function main() {
         await page.screenshot({ path: `artifacts/home-product-preview/${width}-film-${time}.png` });
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       }
-      await page.click(ring);
+      await page.click(ring + ' [class*="__send"]');
       await page.waitForSelector('[aria-label="사업 기획 대화로 이동 중"]');
       await page.waitForFunction(() => location.pathname === "/plan/chat");
       await page.waitForFunction(() => document.body.style.overflow !== 'hidden');

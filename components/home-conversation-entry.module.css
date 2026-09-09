@@ -3,7 +3,8 @@
 .ring .inner { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 12px 16px 12px 22px; min-height: 62px; border-radius: 34px; background: #fff; color: #414d61; font-size: 16px; font-weight: 550; }
 .ring .inner > span:not(.send) { flex: 1; text-align: left; }
 .ring .inner > svg { display: block !important; color: #6580af; width: 21px; height: 21px; flex-shrink: 0; }
-.ring .send { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%; background: #edf3fc; }
+.ring .send { display: grid; place-items: center; flex: 0 0 64px; width: 64px; height: 42px; border-radius: 24px; background: #3182f6; color: #fff; font-size: 14px; font-weight: 650; white-space: nowrap; transition: background .2s; }
+.ring:hover .send { background: #246dd5; }
 .ring .send svg { display: block !important; width: 18px; height: 18px; color: #3676d7; }
 .ring:hover { transform: translateY(-3px); box-shadow: 0 10px 34px #4c7ceb33; }.ring:active { transform: scale(.985); }.ring:focus-visible { outline: 3px solid #3182f6; outline-offset: 5px; }
 .portal { position: fixed; inset: 0; z-index: 2147483000; background: #f7f9fc80; backdrop-filter: blur(6px); }
@@ -13,12 +14,12 @@
 .input { position: absolute; bottom: max(32px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(640px, calc(100% - 32px)); min-height: 66px; padding: 20px; border: 1px solid #e1e7ef; border-radius: 8px; display: flex; justify-content: space-between; color: #8a96a6; font-size: 14px; }.input svg { color: #3182f6; }
 @keyframes ringOrbit { from { transform: translate(-50%,-50%) rotate(0); } to { transform: translate(-50%,-50%) rotate(360deg); } }
 @keyframes enterContent { from { opacity: 0; transform: translateY(70px) scale(.9); } to { opacity: 1; transform: none; } }
-@media(max-width:600px) { .ring .inner { padding: 10px 12px 10px 16px; gap: 9px; min-height: 56px; font-size: 13px; }.ring .inner > svg { width: 18px; }.ring .send { width: 30px; height: 30px; }.welcome h2 { font-size: 30px; } }
+@media(max-width:600px) { .ring .inner { min-height: 56px; font-size: 13px; }.ring .inner > svg { width: 18px; }.ring .send { flex-basis: 56px; width: 56px; height: 40px; font-size: 13px; }.welcome h2 { font-size: 30px; } }
 @media(prefers-reduced-motion:reduce) { .ring::before { animation: none; }.ring { transition: none; }.ring:hover { transform: none; } }
 .entry { width: min(580px, 100%); margin: 0 auto; min-width: 0; }
 :global(.simple-home.product-home .home-hero-actions) .entry button.ring { border-radius: 36px !important; padding: 2px !important; }
-.ring .inner { justify-content: center; padding-inline: 20px; }
-.ring .inner > .prompt { position: relative; flex: 0 1 auto; display: inline-block; text-align: center; }
+.ring .inner { justify-content: space-between; padding: 8px 10px 8px 16px; gap: 10px; }
+.ring .inner > .prompt { position: relative; flex: 1; min-width: 0; display: inline-block; text-align: center; }
 .prompt > span:first-child { visibility: hidden; }
 .prompt .typed { position: absolute; inset: 0; display: flex; justify-content: center; align-items: center; white-space: nowrap; }
 .typed i { width: 2px; height: 18px; background: #3182f6; margin-left: 3px; animation: caretBlink 1s steps(1) infinite; }

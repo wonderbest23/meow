@@ -61,7 +61,7 @@ export function HomeConversationEntry({ onStart }: { onStart: () => void }) {
   };
   return <>
     <div className={styles.entry}><button className={styles.ring} type="button" onClick={enter} disabled={entering} aria-label="대화로 사업 기획 시작하기">
-      <span className={styles.inner}><span className={styles.prompt} aria-hidden="true"><span>{prompt}</span><span className={styles.typed}>{typed}<i/></span></span></span>
+      <span className={styles.inner}><span className={styles.prompt} aria-hidden="true"><span>{prompt}</span><span className={styles.typed}>{typed}<i/></span></span><span className={styles.send}>보내기</span></span>
     </button></div>
     {entering && createPortal(<div className={styles.portal} role="status" aria-label="사업 기획 대화로 이동 중">
       <div ref={surface} className={styles.surface}><header>오늘창업<span>사업 기획</span></header><div className={styles.welcome}><span>생각이 사업이 되는 순간</span><h2>어떤 사업을<br/>생각하고 계세요?</h2><div className={styles.line}/></div><div className={styles.input}><span>생각을 편하게 이야기해 주세요</span></div></div>
