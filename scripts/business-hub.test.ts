@@ -70,6 +70,9 @@ async function main(){
     await page.reload({waitUntil:"networkidle0"});
     await page.waitForSelector(`a[href="/plan/workspace?planId=${ready.id}"]`);
     assert.ok(await page.$eval("main",e=>e.textContent?.includes("수정 내용 반영 필요")));
+    assert.equal(await page.$eval("main", e => e.textContent?.includes("사업 열기")), false, "목록 열기 동작은 화살표 하나로 표시");
+    assert.ok(await page.$eval(`a[href="/plan/workspace?planId=${ready.id}"]`, e => !!e.getAttribute("aria-label")?.includes("사업 관리로 이동") && !!e.querySelector('[aria-hidden="true"] strong')?.textContent?.includes("동네 가게")), "미리보기는 저장된 사업 제목을 사용하고 링크에는 접근 가능한 이름을 제공");
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({path:`artifacts/business-hub/list-${width}.png`});
     await page.click(`a[href="/plan/workspace?planId=${ready.id}"]`);
     await page.waitForSelector('[aria-label="사업 관리 메뉴"]');
