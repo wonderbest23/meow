@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowUp, ChevronRight, Paperclip } from "lucide-react";
-import type { CoachField, CoachState } from "../../../lib/plan-builder/coach";
+import { readCoach, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
+import type { BriefPatch } from "./BriefEditor";
 import type { CoachJob } from "../../../lib/plan-builder/coach-job-types";
 import { changedCoachFields } from "../../../lib/plan-builder/coach-presentation";
 import { hydrateFromServer, setActivePlan } from "../../../lib/plan-builder/plan-store";
@@ -31,6 +32,7 @@ export default function BusinessCoachPage() {
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<{ name: string; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editDirty, setEditDirty] = useState(false);
   const [optimistic, setOptimistic] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
@@ -111,7 +113,7 @@ export default function BusinessCoachPage() {
   const completed = targetKeys.filter(key => plan?.completed.includes(key)).length;
   const generating = !!targetKeys.length && completed < targetKeys.length && !["errored", "terminated", "complete", "unknown"].includes(runStatus ?? "");
   const working = activeJob(plan?.job);
-  const blocked = busy || working || generating || loadFailed;
+  const blocked = busy || working || generating || loadFailed || editDirty;
   const hasBrief = !!plan?.coach.ready;
   const started = !!plan?.coach.messages.length || !!optimistic || !!plan?.job;
   const documentCurrent = !!targetKeys.length && completed === targetKeys.length;
@@ -174,10 +176,21 @@ export default function BusinessCoachPage() {
     } catch (e) { setError(e instanceof Error ? e.message : "파일을 읽지 못했어요."); }
   }
   function edit(value: string) { setView("chat"); setText(value); pendingId.current = null; window.setTimeout(() => input.current?.focus(), 0); }
+  async function saveBrief(patch: BriefPatch) {
+    const current = planRef.current;
+    if (!current) throw new Error("사업 정보를 다시 불러와 주세요.");
+    const response = await fetch("/api/plan/expert", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...patch, planId: current.planId, requestId: crypto.randomUUID() }) });
+    const payload = await response.json();
+    if (!response.ok) throw new Error(payload.message || "저장하지 못했어요. 입력 내용은 그대로 남아 있어요.");
+    const coach = payload.plan && readCoach(payload.plan.answers);
+    if (!coach) throw new Error("저장 결과를 확인하지 못했어요. 다시 확인해 주세요.");
+    accept({ plan: { ...current, title: payload.plan.title, updatedAt: payload.plan.updatedAt, coach } });
+    void hydrateFromServer().catch(() => {});
+  }
 
   const actions = <>
     {generating ? <div className={styles.generation} role="status"><span>계획서를 작성하고 있어요</span><progress aria-label="문서 제작 진행" value={completed} max={targetKeys.length} /><small>{completed}/{targetKeys.length}개 항목 완료 · 서버에서 계속 제작합니다.</small></div> : documentCurrent ? <><button className={styles.primary} onClick={() => void openDocument()}>계획서 보기</button>{!paid && <button className={styles.textButton} onClick={() => void openDocument(true)}>전체 문서와 파일 제작 신청</button>}</> : <>
-      <small>{!authenticated ? "로그인 후 제작할 수 있어요. 지금 대화는 그대로 이어집니다." : !paid ? "무료로 앞 2개 항목을 만들어요. 전체 제작은 선택 사항이에요." : "확인한 사업안으로 문서를 만들어요."}</small>
+      <small>{plan?.hasDocuments ? "업데이트 필요 · 기존 문서는 그대로 보관 중이에요." : !authenticated ? "로그인 후 제작할 수 있어요. 지금 대화는 그대로 이어집니다." : !paid ? "무료로 앞 2개 항목을 만들어요. 전체 제작은 선택 사항이에요." : "확인한 사업안으로 문서를 만들어요."}</small>
       {!authenticated ? <Link className={styles.primary} href={loginHref}>로그인하고 계획서 만들기</Link> : <button className={styles.primary} disabled={blocked} onClick={() => void submit("", "prepare")}>{plan?.hasDocuments ? "수정 내용을 계획서에 반영하기" : "이 내용으로 계획서 만들기"}</button>}
       {(plan?.hasDocuments || !!plan?.completed.length) && <button className={styles.textButton} onClick={() => void openDocument()}>기존 계획서 보기</button>}
     </>}
@@ -187,7 +200,7 @@ export default function BusinessCoachPage() {
 
   return <main ref={pageRef} className={`${styles.page} ${hasBrief ? styles.hasBrief : ""}`}>
     <BusinessAppChrome title="사업 기획" active="chat" workspaceHref={plan ? workspaceHref(plan.planId) : undefined}>
-    {hasBrief && <nav className={styles.viewTabs} aria-label="화면 선택"><button aria-pressed={view === "chat"} onClick={() => setView("chat")}>대화</button><button aria-pressed={view === "brief"} onClick={() => setView("brief")}>내 사업안{changed.length > 0 && <span className={styles.updateDot} aria-label="수정됨" />}</button></nav>}
+    {hasBrief && <nav className={styles.viewTabs} aria-label="화면 선택"><button aria-pressed={view === "chat"} disabled={editDirty} onClick={() => setView("chat")}>대화</button><button aria-pressed={view === "brief"} onClick={() => setView("brief")}>내 사업안{changed.length > 0 && <span className={styles.updateDot} aria-label="수정됨" />}</button></nav>}
     <div className={styles.workspace}>
       <section className={`${styles.chatPane} ${view !== "chat" ? styles.mobileHidden : ""}`} aria-label="사업 기획 대화">
         <div ref={conversationRef} className={styles.conversation} onScroll={e => { const el = e.currentTarget; follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; if (follow.current) setUnseen(false); }}>
@@ -222,7 +235,7 @@ export default function BusinessCoachPage() {
           </form>
         </footer>
       </section>
-      {hasBrief && plan && <aside className={`${styles.briefPane} ${view !== "brief" ? styles.mobileHidden : ""}`} aria-label="내 사업안 결과"><BusinessBrief coach={plan.coach} changed={changed} onEdit={edit} actions={actions} />{error && view === "brief" && <p className={styles.error} role="alert">{error}</p>}</aside>}
+      {hasBrief && plan && <aside className={`${styles.briefPane} ${view !== "brief" ? styles.mobileHidden : ""}`} aria-label="내 사업안 결과"><BusinessBrief coach={plan.coach} changed={changed} onEdit={edit} onSave={saveBrief} onDirty={setEditDirty} disabled={blocked} actions={actions} />{error && view === "brief" && <p className={styles.error} role="alert">{error}</p>}</aside>}
     </div>
     </BusinessAppChrome>
   </main>;

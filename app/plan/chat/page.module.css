@@ -98,3 +98,11 @@
 @keyframes pulse { 50% { opacity:.3; transform:translateY(-2px); } }
 @keyframes highlight { 0%,30% { background:#eaf2ff; } 100% { background:transparent; } }
 @media(prefers-reduced-motion:reduce) { .page * { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+.inlineEditor { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+.inlineField { display: flex; flex-direction: column; gap: 10px; margin: 22px 0; font-size: 15px; font-weight: 600; color: #333d4b; }
+.inlineField input, .inlineField textarea { box-sizing: border-box; width: 100%; min-width: 0; padding: 14px; border: 1px solid #cbd3df; border-radius: 8px; background: #fff; color: #191f28; font: inherit; font-size: 16px; font-weight: 400; line-height: 1.65; resize: vertical; letter-spacing: 0; }
+.inlineField input:focus, .inlineField textarea:focus { outline: 2px solid #3182f6; outline-offset: 2px; }
+.inlineEditActions { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
+.inlineEditActions .editLink { margin: 0; width: 100%; }
+.inlineEditor button:disabled { opacity: .5; cursor: not-allowed; }
+.inlineEditError { grid-column: 1 / -1; margin: 0; color: #b42318; font-size: 14px; line-height: 1.6; word-break: keep-all; overflow-wrap: anywhere; }

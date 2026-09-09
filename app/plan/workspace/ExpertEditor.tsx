@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { readCoach, type CoachField } from "../../../lib/plan-builder/coach";
-import { expertChanges, EXPERT_HISTORY_KEY, type ExpertHistory } from "../../../lib/plan-builder/coach-expert";
+import { currentNextAction, readCoach, type CoachField } from "../../../lib/plan-builder/coach";
+import { expertChanges, EXPERT_HISTORY_KEY, type ExpertHistory, type ExpertPatch } from "../../../lib/plan-builder/coach-expert";
 import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
 import { coachAmount } from "../../../lib/plan-builder/coach-feasibility";
 import { calculateFinancials } from "../../../lib/plan-builder/financials";
@@ -31,8 +31,9 @@ export default function ExpertEditor({ plan, onSaved, onDirtyChange }: { plan: P
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [conflict, setConflict] = useState(false);
+  const [nextAction, setNextAction] = useState<ExpertPatch["nextAction"]>();
   const fields = groups.flatMap(g => g.keys).map(key => ({ key, value: values[key]?.trim() || null }));
-  const changes = expertChanges(base, { title: title.trim() || base.business.name, fields });
+  const changes = expertChanges(base, { title: title.trim() || base.business.name, fields, nextAction });
   useEffect(() => { onDirtyChange(changes.length > 0); return () => onDirtyChange(false); }, [changes.length, onDirtyChange]);
   useEffect(() => {
     if (!changes.length) return;
@@ -47,13 +48,13 @@ export default function ExpertEditor({ plan, onSaved, onDirtyChange }: { plan: P
     if (busy || !changes.length) return;
     setBusy(true); setMessage("");
     try {
-      const response = await fetch("/api/plan/expert", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: plan.id, revision: base.revision, requestId: crypto.randomUUID(), title: title.trim() || base.business.name, fields }) });
+      const response = await fetch("/api/plan/expert", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: plan.id, revision: base.revision, requestId: crypto.randomUUID(), title: title.trim() || base.business.name, fields, nextAction }) });
       const payload = await response.json();
       if (!response.ok) { setConflict(response.status === 409); throw new Error(payload.message || "저장하지 못했어요."); }
       const next = payload.plan as Plan;
       const updated = readCoach(next.answers)!;
       setBase(updated); setValues(Object.fromEntries(updated.fields.map(f => [f.key, f.value]))); setTitle(updated.business.name);
-      onSaved(next); setReview(false); setConflict(false);
+      onSaved(next); setReview(false); setConflict(false); setNextAction(undefined);
       await hydrateFromServer();
       setMessage("사업 정보를 저장했어요. 기존 문서는 보존되며, 문서 반영은 아래 대화에서 요청할 수 있어요.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "저장하지 못했어요."); }
@@ -63,7 +64,22 @@ export default function ExpertEditor({ plan, onSaved, onDirtyChange }: { plan: P
     const state = await hydrateFromServer();
     const next = state.plans.find(p => p.id === plan.id); const latest = next && readCoach(next.answers);
     if (!next || !latest) return;
-    onSaved(next); setBase(latest); setValues(Object.fromEntries(latest.fields.map(f => [f.key, f.value]))); setTitle(latest.business.name); setConflict(false); setReview(false); setMessage("최신 정보로 다시 불러왔어요.");
+    onSaved(next); setBase(latest); setValues(Object.fromEntries(latest.fields.map(f => [f.key, f.value]))); setTitle(latest.business.name); setConflict(false); setReview(false); setNextAction(undefined); setMessage("최신 정보로 다시 불러왔어요.");
+  }
+  function undo(entry: ExpertHistory) {
+    const next = { ...values };
+    const action = { ...(currentNextAction(base) ?? base.design?.nextAction ?? { action: "", doneWhen: "", usableText: "" }) };
+    let changedAction = false;
+    for (const change of entry.changes) {
+      if (change.key === "title") setTitle(change.before ?? "");
+      else if (change.key.startsWith("nextAction.")) { action[change.key.slice(11) as "action" | "doneWhen" | "usableText"] = change.before ?? ""; changedAction = true; }
+      else next[change.key] = change.before ?? "";
+    }
+    if (changedAction) {
+      if (!action.action || !action.doneWhen || !action.usableText) { setMessage("이전 시작 방법이 비어 있어요. 사업안에서 시작 방법을 직접 수정해 주세요."); return; }
+      setNextAction(action);
+    }
+    setValues(next); setReview(true);
   }
   return <div className={styles.expert}>
     <h2>사업 정보를 정밀하게 다듬어요</h2>
@@ -77,6 +93,6 @@ export default function ExpertEditor({ plan, onSaved, onDirtyChange }: { plan: P
     {message && <p role="status">{message}</p>}
     {conflict && <button className={styles.secondary} onClick={() => void reload()}>입력 대신 최신 정보 불러오기</button>}
     <Link className={styles.textLink} href={businessChatHref(plan.id, "직접 수정한 최신 사업 정보로 사업안과 문서의 반영이 필요한 부분을 정리해 주세요. 직접 편집한 문서는 보존하고, 변경 내용과 상세 대안을 비교해 주세요.")}>AI와 개선안·문서 반영 검토하기</Link>
-    {!!history.length && <details><summary>최근 수정 기록</summary>{[...history].reverse().map(entry => <div className={styles.history} key={entry.id}><strong>{new Date(entry.at).toLocaleString("ko-KR")}</strong><p>{entry.changes.map(c => `${c.label}: ${c.after ?? "미정"}`).join("\n")}</p><button className={styles.secondary} disabled={busy} onClick={() => { const next = { ...values }; for (const change of entry.changes) { if (change.key === "title") setTitle(change.before ?? ""); else next[change.key] = change.before ?? ""; } setValues(next); setReview(true); }}>이 변경을 되돌릴 안 보기</button></div>)}</details>}
+    {!!history.length && <details><summary>최근 수정 기록</summary>{[...history].reverse().map(entry => <div className={styles.history} key={entry.id}><strong>{new Date(entry.at).toLocaleString("ko-KR")}</strong><p>{entry.changes.map(c => `${c.label}: ${c.after ?? "미정"}`).join("\n")}</p><button className={styles.secondary} disabled={busy} onClick={() => undo(entry)}>이 변경을 되돌릴 안 보기</button></div>)}</details>}
   </div>;
 }

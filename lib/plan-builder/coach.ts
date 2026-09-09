@@ -31,6 +31,7 @@ export type CoachState = {
   fields: CoachField[]; messages: CoachMessage[]; ready: boolean; suggestions: string[];
   ideaOrigin?: IdeaOrigin;
   design?: SavedBusinessDesign;
+  directAction?: { sourceRevision: number; action: string; doneWhen: string; usableText: string; needsReview?: boolean };
   lastGeneration?: { elapsedMs: number; calls: Array<{ provider: string; model: string; inputTokens: number; outputTokens: number }> };
   business: { name: string; description: string; role: string; industry: string; region: string; stage: string };
 };
@@ -66,12 +67,17 @@ export function applyCoachReply(previous: CoachState | null, reply: CoachReply, 
   const ideaOrigin = previous?.ideaOrigin ?? (suppliedIdea?.basis === "user" ? { text: suppliedIdea.value, messageId: suppliedIdea.messageId } : undefined);
   return { version: COACH_VERSION, revision: (previous?.revision ?? 0) + 1, documentRevision: (previous ? coachDocumentRevision(previous) : 0) + Number(changed), stage: reply.stage, depth: reply.depth,
     ...(ideaOrigin ? { ideaOrigin } : {}), ...(previous?.design ? { design: previous.design } : {}),
+    ...(previous?.directAction ? { directAction: { ...previous.directAction, sourceRevision: coachDocumentRevision(previous) + Number(changed), needsReview: previous.directAction.needsReview || changed } } : {}),
     fields: [...fields.values()], messages: [...messages, { id: `${message.id}-reply`, role: "assistant", text: reply.message, at: message.at }],
     ready: reply.ready && fields.has("business") && reply.stage !== "exploring", suggestions: reply.suggestions, business };
 }
 
 export function coachContext(state: CoachState): string {
-  return JSON.stringify({ version: state.version, revision: coachDocumentRevision(state), stage: state.stage, depth: state.depth, ideaOrigin: state.ideaOrigin, fields: state.fields, design: currentBusinessDesign(state), feasibility: checkCoachFeasibility(state.fields), financialScenario: coachFinancialReference(state) }, null, 2);
+  return JSON.stringify({ version: state.version, revision: coachDocumentRevision(state), stage: state.stage, depth: state.depth, ideaOrigin: state.ideaOrigin, fields: state.fields, design: currentBusinessDesign(state), userEditedAction: state.directAction?.sourceRevision === coachDocumentRevision(state) ? state.directAction : undefined, feasibility: checkCoachFeasibility(state.fields), financialScenario: coachFinancialReference(state) }, null, 2);
+}
+
+export function currentNextAction(state: CoachState) {
+  return state.directAction?.sourceRevision === coachDocumentRevision(state) ? state.directAction : currentBusinessDesign(state)?.nextAction;
 }
 
 export function currentBusinessDesign(state: CoachState): SavedBusinessDesign | undefined {

@@ -4,6 +4,8 @@ import puppeteer, { type Page } from "puppeteer-core";
 import { applyCoachReply, COACH_TYPES } from "../lib/plan-builder/coach";
 import { emptyCoach } from "../lib/plan-builder/coach-job";
 import { designFixture } from "./fixtures/coach-design";
+import { applyExpertPatch, expertPatchSchema } from "../lib/plan-builder/coach-expert";
+import { COACH_KEY } from "../lib/plan-builder/coach";
 
 async function clickText(page: Page, text: string, scope = "") {
   const buttons = await page.$$(`${scope ? `${scope} ` : ""}button`);
@@ -29,7 +31,17 @@ async function main() {
       let messagePosts = 0;
       let fail = false;
       let authenticated = width !== 390;
+      let editFail = true;
       page.on("request", request => {
+        if (new URL(request.url()).pathname === "/api/plan/expert") {
+          const reply = (body: unknown, status = 200) => void request.respond({ status, contentType: "application/json", body: JSON.stringify(body) });
+          if (editFail) { editFail = false; reply({ message: "저장 연결을 확인해 주세요. 입력은 남아 있어요." }, 503); return; }
+          const patch = expertPatchSchema.parse(JSON.parse(request.postData()!));
+          const result = applyExpertPatch({ [COACH_KEY]: { state: final.coach } }, patch, new Date().toISOString());
+          final = { ...final, coach: result.coach, title: result.coach.business.name, hasDocuments: true };
+          snapshot = final;
+          reply({ plan: { id: final.planId, title: final.title, answers: result.answers, updatedAt: new Date().toISOString() } }); return;
+        }
         if (new URL(request.url()).pathname !== "/api/plan/chat") { void request.continue(); return; }
         const respond = (body: unknown, status = 200) => void request.respond({ status, contentType: "application/json", body: JSON.stringify(body) });
         if (request.method() === "GET") { if (complete) snapshot = final; respond({ plan: snapshot, authenticated, paid: false }); return; }
@@ -43,7 +55,7 @@ async function main() {
         const coach = applyCoachReply(previous, { title: "동네 가게의 대표 메뉴 사진과 소개문구를 함께 만들어주는 사업", message: "상세 설계는 별도 사업안에 보관합니다.", stage: "startup", depth: "quick", ready: true, suggestions: ["상품을 구체화해 주세요", "시작 방법을 쉽게 바꿔주세요"], fields: [{ key: "business", value: body.message, basis: "user", messageId: body.requestId, quote: body.message }, { key: "price", value: "99,000원", basis: "proposal", quote: "", messageId: "" }, { key: "budget", value: "100만원", basis: "proposal", quote: "", messageId: "" }] }, user);
         coach.design = { ...designFixture(), sourceRevision: coach.documentRevision!, status: "proposal" };
         coach.messages[coach.messages.length - 1].summary = "첫 사업안을 만들었어요. 제안한 상품과 운영 방법을 확인해 주세요.";
-        final = { planId: "plan-ui-fixture", title: coach.business.name, planType: COACH_TYPES.startup, coach, completed: [], total: 9, generation: null, job: null };
+        final = { planId: "plan-ui-fixture", title: coach.business.name, planType: COACH_TYPES.startup, coach, hasDocuments: true, completed: [], total: 9, generation: null, job: null };
         snapshot = { ...final, coach: previous ?? emptyCoach(), job: { token: `token-ui-${messagePosts}`, runId: "test-run", baseRevision: previous?.revision ?? 0, message: user, status: "running", phase: "designing", durable: true, attempt: 1, updatedAt: at } };
         respond({ plan: snapshot, authenticated },202);
       });
@@ -111,7 +123,36 @@ async function main() {
       assert.ok(await page.$eval(pane,el=>el.textContent?.includes("하지 않아도 계획서를")));
       const overflow=await page.$eval(pane,el=>Array.from(el.querySelectorAll("p,dd,h1,h2,button")).some(el=>el.scrollWidth>el.clientWidth+1));
       assert.equal(overflow,false,"긴 제목과 본문이 잘리지 않는다");
-      await clickText(page,"이 내용 수정하기",pane);
+      await clickText(page,"직접 수정",pane);
+      await page.waitForSelector('form[aria-label="사업 정보 직접 수정"]');
+      const actionInput = 'form[aria-label="사업 정보 직접 수정"] textarea';
+      await page.$eval(actionInput, el => { el.value = ""; });
+      await page.type(actionInput, "샘플 사진 한 장을 촬영해요.");
+      const beforePosts = messagePosts;
+      await clickText(page, "저장", pane);
+      await page.waitForFunction(() => document.body.innerText.includes("저장 연결을 확인"));
+      assert.ok(await page.$eval(actionInput, el => el.value.includes("샘플 사진")), "저장 실패 후에도 수정 내용 유지");
+      await page.screenshot({ path: `artifacts/business-coach-ux/direct-edit-${width}.png` });
+      await clickText(page, "저장", pane);
+      await page.waitForFunction(() => !document.querySelector('form[aria-label="사업 정보 직접 수정"]'));
+      assert.ok(await page.$eval(pane, el => el.textContent?.includes("샘플 사진 한 장을 촬영해요.")));
+      assert.equal(messagePosts, beforePosts, "직접 저장은 AI 대화 요청을 하지 않음");
+      assert.ok(await page.$eval(pane, el => el.textContent?.includes("업데이트 필요")), "기존 자료가 있으면 업데이트 상태 표시");
+      await clickText(page, "상품과 고객", pane);
+      await clickText(page, "직접 수정", pane);
+      await clickText(page, "취소", pane);
+      assert.equal(await page.$('form[aria-label="사업 정보 직접 수정"]'), null, "수정 전 취소는 바로 원래 항목으로 복귀");
+      await clickText(page, "직접 수정", pane);
+      const inputs = await page.$$('form[aria-label="사업 정보 직접 수정"] textarea');
+      await inputs[2].click({ clickCount: 3 });
+      await page.keyboard.press("Backspace");
+      await inputs[2].type("125,000원");
+      await clickText(page, "저장", pane);
+      await page.waitForFunction(() => !document.querySelector('form[aria-label="사업 정보 직접 수정"]'));
+      assert.ok(await page.$eval(pane, el => el.textContent?.includes("125,000원")), "수정한 가격이 같은 항목에 즉시 반영");
+      assert.equal(final.coach.fields.find((f: any) => f.key === "price").basis, "user");
+      await clickText(page, "시작 방법", pane);
+      await clickText(page,"AI와 다듬기",pane);
       await page.waitForFunction(()=>document.activeElement?.tagName==="TEXTAREA");
       assert.ok(await page.$eval("textarea",el=>el.value.includes("시작 방법")));
       fail=true;
@@ -119,7 +160,7 @@ async function main() {
       await page.waitForSelector('[role="alert"]');
       assert.ok(await page.$eval("textarea",el=>el.value.includes("시작 방법")),"오류 후 입력 유지");
       if(width<=900)await clickText(page,"내 사업안",'[aria-label="화면 선택"]');
-      await clickText(page,"이 내용으로 계획서 만들기",pane);
+      await clickText(page,"수정 내용을 계획서에 반영하기",pane);
       await page.waitForFunction(()=>document.body.innerText.includes("문서 제작 서버에 연결하지 못했어요"));
       assert.equal(await page.$("progress"),null,"접수 실패를 가짜 진행률로 표시하지 않는다");
       if(width<=900)await clickText(page,"대화",'[aria-label="화면 선택"]');
@@ -138,7 +179,7 @@ async function main() {
         await page.waitForFunction(()=>document.body.innerText.includes("이전 대화 29"));
         await new Promise(resolve=>setTimeout(resolve,500));
         await page.$eval('[class*="conversation"]',el=>{el.scrollTop=0;el.dispatchEvent(new Event("scroll",{bubbles:true}));});
-        final={...final,coach:{...final.coach,revision:2,messages:[...history,pending,{id:"new-response",role:"assistant",text:"새로운 답변입니다.",summary:"수정 내용을 반영했어요.",at:new Date().toISOString()}]}};
+        final={...final,coach:{...final.coach,revision:final.coach.revision+1,messages:[...history,pending,{id:"new-response",role:"assistant",text:"새로운 답변입니다.",summary:"수정 내용을 반영했어요.",at:new Date().toISOString()}]}};
         complete=true;
         await page.waitForFunction(()=>document.body.innerText.includes("새 답변 보기"));
         assert.ok(await page.$eval('[class*="conversation"]',el=>el.scrollTop<5),"과거 대화를 읽는 중 새 답변이 화면을 끌어내리지 않는다");

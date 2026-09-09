@@ -7,7 +7,7 @@ import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { hydrateFromServer, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
 import { ACTION_KEY, actionStatus, businessChatHref, businessHubState } from "../../../lib/plan-builder/business-hub";
-import { currentBusinessDesign } from "../../../lib/plan-builder/coach";
+import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
 import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
 import frame from "../chat/page.module.css";
 import styles from "../BusinessHub.module.css";
@@ -66,7 +66,7 @@ export default function BusinessWorkspace() {
   function openLegacy() { if(plan){setActivePlan(plan.id);router.push("/plan/overview");} }
   const hub=plan ? businessHubState(plan,runStatus) : null;
   const design=hub?.coach ? currentBusinessDesign(hub.coach) : null;
-  const action=design?.nextAction;
+  const action=hub?.coach ? currentNextAction(hub.coach) : undefined;
   const done=plan && action ? actionStatus(plan,action.action) : "pending";
   const chat=plan ? businessChatHref(plan.id) : "/plan/chat?new=1";
   async function mark(status: "done" | "skipped" | "pending") {

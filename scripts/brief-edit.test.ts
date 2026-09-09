@@ -1,0 +1,26 @@
+import assert from "node:assert/strict";
+import { COACH_KEY, applyCoachReply, coachContext, currentNextAction } from "../lib/plan-builder/coach";
+import { applyExpertPatch, expertPatchSchema, EXPERT_HISTORY_KEY } from "../lib/plan-builder/coach-expert";
+import { designFixture } from "./fixtures/coach-design";
+
+const coach = applyCoachReply(null, { title: "사진 제작", message: "초안", stage: "startup", depth: "quick", ready: true, suggestions: [], fields: [{ key: "business", value: "사진 제작", basis: "user", quote: "사진 제작", messageId: "first" }, { key: "price", value: "6만원", basis: "proposal", quote: "", messageId: "" }] }, { id: "first", role: "user", text: "사진 제작", at: "2026-09-09" });
+coach.design = { ...designFixture(), sourceRevision: coach.documentRevision!, status: "proposal" };
+const original = JSON.stringify(coach);
+const patch = expertPatchSchema.parse({ planId: "test", revision: coach.revision, requestId: "64eb3322-3614-4ddd-a43c-a87c69d84a30", fields: [{ key: "price", value: "120,000원" }] });
+const saved = applyExpertPatch({ [COACH_KEY]: { state: coach }, document: { markdown: "직접 수정한 문서" } }, patch, "2026-09-09");
+assert.equal(JSON.stringify(coach), original);
+assert.equal(saved.answers.document.markdown, "직접 수정한 문서");
+assert.equal(saved.coach.fields.find(f => f.key === "price")?.basis, "user");
+assert.equal(saved.coach.documentRevision, coach.documentRevision! + 1);
+assert.throws(() => applyExpertPatch(saved.answers, patch, "2026-09-09"), /REVISION_CONFLICT/);
+assert.equal(applyExpertPatch(saved.answers, { ...patch, revision: saved.coach.revision }, "2026-09-09").changes.length, 0);
+const action = { action: "샘플 사진을 찍어요", doneWhen: "사진 한 장 완성", usableText: "메뉴 사진을 촬영해드립니다" };
+const result = applyExpertPatch(saved.answers, { ...patch, fields: [], revision: saved.coach.revision, nextAction: action }, "2026-09-09");
+assert.equal(currentNextAction(result.coach)?.action, action.action);
+assert.ok(coachContext(result.coach).includes(action.usableText));
+const later = applyExpertPatch(result.answers, { ...patch, revision: result.coach.revision, fields: [{ key: "price", value: "13만원" }] }, "2026-09-09");
+assert.equal(currentNextAction(later.coach)?.action, action.action, "가격 수정은 직접 작성한 시작 방법을 삭제하지 않음");
+assert.equal(later.coach.directAction?.needsReview, true);
+assert.ok((result.answers[EXPERT_HISTORY_KEY].entries as any[]).at(-1).changes.some((c: any) => c.key === "nextAction.action"));
+assert.equal(expertPatchSchema.safeParse({ ...patch, nextAction: { ...action, action: "" } }).success, false);
+console.log("Direct editing: provenance, document preservation, revision conflict, no-op and action context passed.");
