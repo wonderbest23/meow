@@ -89,11 +89,18 @@ export default function BusinessWorkspace() {
             <h2 ref={heading} tabIndex={-1}>이런 사업이에요</h2>
             <p>{design?.startingPlan.scope || hub.coach?.business.description || "기존에 작성한 사업계획서를 이어서 확인할 수 있어요."}</p>
             {hub.stale && <div className={styles.notice}><p>대화에서 바꾼 내용이 기존 문서와 달라요. 내 자료에서 확인해 주세요.</p></div>}
-            {hub.coach ? <><dl>{hub.coach.fields.filter(f=>["customer","offer","price","budget","hoursPerWeek"].includes(f.key)).map(field=><div className={styles.fact} key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}<span>{field.basis==="user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd>{field.value}</dd></div>)}</dl><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>기존 사업계획서 이어보기</button>}
+            {hub.coach ? <><dl className={styles.keyFacts}>{hub.coach.fields.filter(f=>["customer","offer","price","budget","hoursPerWeek"].includes(f.key)).map(field=><div className={styles.fact} key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}<span>{field.basis==="user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd>{field.value}</dd></div>)}</dl><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>기존 사업계획서 이어보기</button>}
           </>}
           {view==="documents" && <>
             <h2 ref={heading} tabIndex={-1}>내 사업 자료</h2>
-            {hub.documents.length ? <><p>{hub.complete ? "사업계획서의 모든 항목이 준비됐어요." : `사업계획서 ${hub.keys.length}개 항목 중 ${hub.documents.length}개가 준비됐어요.`}</p><progress className={styles.progress} aria-label="준비된 문서 항목" value={hub.documents.length} max={hub.keys.length}/>{hub.stale && <div className={styles.notice}><h3>수정 내용 반영 필요</h3><p>현재 사업안과 다른 내용이 문서에 남아 있어요. 기존 문서는 유지되며, 대화에서 반영을 요청할 수 있어요.</p></div>}<button className={styles.primary} onClick={openDocument}>자료 열기 · 다운로드</button><p className={styles.muted}>PDF·워드·발표자료는 문서 화면에서 확인해요. 전체 제작과 다운로드에는 결제가 필요할 수 있어요.</p></> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지의 대화는 그대로 사용합니다.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button>}</>}
+            {hub.documents.length ? <>
+              <div className={styles.documentState}><p>{hub.complete ? "사업계획서가 완성됐어요." : "사업계획서를 준비하고 있어요."}</p><span className={styles.count}>{hub.documents.length} / {hub.keys.length} 항목</span></div>
+              {!hub.complete && <progress className={styles.progress} aria-label="준비된 문서 항목" value={hub.documents.length} max={hub.keys.length}/>}
+              <ul className={styles.fileTypes} aria-label="내보내기 형식"><li>PDF</li><li>워드</li><li>발표자료 PPT</li></ul>
+              {hub.stale && <div className={styles.notice}><h3>수정 내용 반영 필요</h3><p>현재 사업안과 다른 내용이 문서에 남아 있어요. 기존 문서는 유지되며, 대화에서 반영을 요청할 수 있어요.</p></div>}
+              <button className={styles.primary} onClick={openDocument}>사업계획서 열기</button>
+              <p className={styles.downloadNote}>내려받기는 문서에서 · 이용 권한에 따라 결제 필요</p>
+            </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지의 대화는 그대로 사용합니다.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button>}</>}
             {hub.coach && !!hub.documents.length && <Link className={styles.secondary} href={chat}>{hub.stale ? "수정 내용 반영하러 가기" : "자료를 더 다듬기"}</Link>}
             <details><summary>홈페이지도 필요하신가요?</summary><p>사업계획서로 고객에게 보여줄 홈페이지를 만들 수 있어요. 이용 권한에 따라 결제가 필요할 수 있어요.</p><button className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push("/plan/homepage"); }}>홈페이지 만들기</button></details>
           </>}

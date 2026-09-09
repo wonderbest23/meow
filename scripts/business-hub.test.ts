@@ -77,6 +77,9 @@ async function main(){
     await new Promise(resolve=>setTimeout(resolve,250));
     await page.screenshot({path:`artifacts/business-hub/summary-${width}.png`});
     await click(page,"내 자료",'[aria-label="사업 관리 메뉴"]');
+    await page.waitForFunction(()=>{const el=document.querySelector('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]');return el?.textContent==="내 자료" && getComputedStyle(el).backgroundColor==="rgb(36, 107, 209)";});
+    assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).backgroundColor), "rgb(36, 107, 209)", "선택 메뉴를 파란 배경으로 명확히 구분");
+    assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).color), "rgb(255, 255, 255)", "선택 메뉴는 흰 글씨");
     assert.ok(await page.$eval('[aria-label="내 자료"]',e=>e.textContent?.includes("사업안 확인하고 자료 만들기")));
     await click(page,"사업 시작하기",'[aria-label="사업 관리 메뉴"]');
     await click(page,"대화에서 정한 할 일 보기");
@@ -112,7 +115,9 @@ async function main(){
       await page.click('a[href="/plan/workspace?planId=hub-test-stale"]');
       await page.waitForSelector('[aria-label="사업 관리 메뉴"]');await click(page,"내 자료",'[aria-label="사업 관리 메뉴"]');
       assert.ok(await page.$eval('[aria-label="내 자료"]',el=>el.textContent?.includes("수정 내용 반영 필요")));
-      await click(page,"자료 열기 · 다운로드");
+      assert.ok(await page.$('[aria-label="내보내기 형식"]'));
+      await page.screenshot({path:`artifacts/business-hub/documents-${width}.png`});
+      await click(page,"사업계획서 열기");
       await page.waitForFunction(()=>location.pathname==="/plan/document");
       assert.equal(new URL(page.url()).searchParams.get("planId"),"hub-test-stale");
     }

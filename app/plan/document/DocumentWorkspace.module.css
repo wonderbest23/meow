@@ -36,6 +36,7 @@
 .body :global(.tiptap) { font-size:16px; line-height:1.85; color:#4e5968; padding:0; margin:0; letter-spacing:0; word-break:keep-all; overflow-wrap:anywhere; }
 .body :global(.tiptap[contenteditable=false]):hover { background:transparent; }
 .body :global(.tiptap) strong { font-weight:600; }
+.body :global(.tiptap[contenteditable=false]) :is(p,li) > strong { color:#24496e; background:#f2f7fd; border:1px solid #d6e3f3; border-radius:4px; padding:1px 4px; -webkit-box-decoration-break:clone; box-decoration-break:clone; }
 .body :global(.tiptap) :is(h1,h2,h3,h4) { font-size:17px; line-height:1.6; color:#333d4b; font-weight:600; }
 .body :global(.tiptap) table { width:100%; font-size:14px; }
 .body :global(.tiptap) :is(th,td) { padding:12px; min-width:90px; vertical-align:top; border-color:#e5e8eb; }
