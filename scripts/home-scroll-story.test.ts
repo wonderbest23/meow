@@ -6,7 +6,7 @@ async function main() {
   const browser = await puppeteer.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
   await mkdir("artifacts/home-scroll-story", { recursive: true });
   try {
-    for (const [width, height] of [[320, 740], [390, 740], [390, 900], [768, 900], [1440, 900]]) {
+    for (const [width, height] of [[320, 740], [390, 740], [390, 900], [768, 900], [1440, 670], [1440, 900]]) {
       const page = await browser.newPage();
       await page.setViewport({ width, height });
       await page.setRequestInterception(true);

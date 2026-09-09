@@ -51,7 +51,7 @@ export function HomeScrollStory() {
     let previous = -1;
     const update = () => {
       frame = 0;
-      const enabled = !reduced.matches && window.innerHeight >= 700;
+      const enabled = !reduced.matches && window.innerHeight >= (window.innerWidth <= 600 ? 700 : 620);
       root.dataset.motion = enabled ? "on" : "off";
       if (!enabled) return;
       const top = parseFloat(getComputedStyle(surface).top) || 0;
