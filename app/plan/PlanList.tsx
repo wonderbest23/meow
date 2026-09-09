@@ -7,6 +7,7 @@ import { ChevronRight, MoreHorizontal } from "lucide-react";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, workspaceHref } from "../../lib/plan-builder/business-hub";
 import BusinessAppChrome from "./BusinessAppChrome";
+import PlanLoading from "./PlanLoading";
 import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
 
@@ -39,7 +40,7 @@ export default function PlanList() {
   function sample(id: string) { setActivePlan(id); router.push("/plan/document"); }
   return <main className={frame.page}><BusinessAppChrome title="내 사업" backHref="/">
     <div className={styles.scroll}><div className={styles.content}>
-      {!state ? <p role="status" className={styles.muted}>내 사업을 불러오고 있어요.</p> : <>
+      {!state ? <PlanLoading note="내 사업을 불러오고 있어요" /> : <>
         {plans.length === 0 ? <section className={styles.empty}>
           <img src="/support-agent-avatar-2026.png" alt="" width="72" height="72" />
           <h1>어떤 사업을<br />함께 만들어볼까요?</h1>

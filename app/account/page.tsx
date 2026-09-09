@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, BriefcaseBusiness, CheckCircle2, ChevronRight, KeyRound, LogIn, LogOut, Mail, Plus, Receipt } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "../../components/site-header";
@@ -9,6 +9,8 @@ import { hydrateFromServer, setActivePlan, isSamplePlan, type PlanState } from "
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { TYPE_META, DEFAULT_META } from "../plan/type-meta";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import PlanLoading, { Spinner } from "../plan/PlanLoading";
+import styles from "./Account.module.css";
 
 /*
  * 구글 로그인(GIS) — 버튼이 받아 온 ID 토큰을 서버(/api/auth/google)가
@@ -113,7 +115,7 @@ export default function AccountPage() {
     hydrateFromServer().then((s) => { if (alive) setPlans(s.plans.filter((p) => !isSamplePlan(p.id))); }).catch(() => { if (alive) setPlans([]); });
     return () => { alive = false; };
   }, [session?.authenticated]);
-  const openPlan = (id: string) => { setActivePlan(id); router.push("/plan/overview"); };
+  const openPlan = (id: string) => { setActivePlan(id); router.push(`/plan/workspace?planId=${encodeURIComponent(id)}`); };
   const planPct = (p: NonNullable<typeof plans>[number]) => {
     const total = sectionCountForType(p.planType);
     const done = Object.keys(p.sections).filter((k) => k !== "financials/__review").length;
@@ -125,6 +127,10 @@ export default function AccountPage() {
   const [recoveryTokens, setRecoveryTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageError, setMessageError] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [googleReady, setGoogleReady] = useState(false);
+  const [googleUnavailable, setGoogleUnavailable] = useState(false);
   /* 구글 버튼이 그려질 자리 — GIS 가 이 안에 iframe 버튼을 그린다 */
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
@@ -135,6 +141,8 @@ export default function AccountPage() {
   useEffect(() => {
     if (session?.authenticated || (mode !== "login" && mode !== "register")) return;
     let alive = true;
+    setGoogleReady(false); setGoogleUnavailable(false);
+    const timeout = window.setTimeout(() => { if (alive) setGoogleUnavailable(true); }, 10000);
     /*
      * 스크립트 로딩·폼 마운트·세션 확인이 제각각 끝나서 한 번에 그리려 하면
      * 빈 자리로 남는 때가 있었다 — 그려질 때까지 짧게 다시 시도한다.
@@ -151,6 +159,7 @@ export default function AccountPage() {
               if (!response.credential) return;
               setBusy(true);
               setMessage("");
+              setMessageError(false);
               void fetch("/api/auth/google", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -162,6 +171,7 @@ export default function AccountPage() {
                   goNext();
                 })
                 .catch((error) => {
+                  setMessageError(true);
                   setMessage(error instanceof Error ? error.message : "구글 로그인에 실패했습니다.");
                   setBusy(false);
                 });
@@ -171,19 +181,19 @@ export default function AccountPage() {
           gis.renderButton(parent, {
             theme: "outline",
             size: "large",
-            shape: "pill",
+            shape: "rectangular",
             logo_alignment: "center",
             text: mode === "register" ? "signup_with" : "signin_with",
             locale: "ko",
             /* GIS 버튼 최대 폭은 400 — 자기 칸 폭에 맞춘다 */
             width: Math.min(400, parent.clientWidth || 400),
           });
-          if (parent.childElementCount > 0) return;
+          if (parent.childElementCount > 0) { setGoogleReady(true); setGoogleUnavailable(false); window.clearTimeout(timeout); return; }
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
     })();
-    return () => { alive = false; };
+    return () => { alive = false; window.clearTimeout(timeout); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.authenticated, mode, remember]);
 
@@ -246,7 +256,7 @@ export default function AccountPage() {
           /* 이메일 확인·카카오 로그인 둘 다 이 길로 돌아온다 — 어느 쪽에도 맞는 말로 */
           window.history.replaceState({}, "", "/account"); setMessage("로그인되었습니다."); return loadSession();
         })
-        .catch((error) => { setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
+        .catch((error) => { setMessageError(true); setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
       return;
     }
     void loadSession()
@@ -262,7 +272,7 @@ export default function AccountPage() {
             .catch(() => {});
         }
       })
-      .catch((error) => { setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
+      .catch((error) => { setMessageError(true); setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
   }, []);
 
   // 지난번 선택과 이메일을 되살린다
@@ -285,7 +295,7 @@ export default function AccountPage() {
   }, [aiNotice, email, mode, password, passwordConfirm, privacy, recoveryTokens, terms]);
 
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (!valid || busy) return; setBusy(true); setMessage("");
+    event.preventDefault(); if (!valid || busy) return; setBusy(true); setMessage(""); setMessageError(false);
     try {
       if (mode === "recover") {
         await payload(await fetch("/api/auth/recover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }));
@@ -312,18 +322,25 @@ export default function AccountPage() {
         if (goNext()) return;
         setMessage("로그인했습니다."); await loadSession();
       }
-    } catch (error) { setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했습니다."); } finally { setBusy(false); }
+    } catch (error) { setMessageError(true); setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했습니다."); } finally { setBusy(false); }
   };
 
   const logout = async () => {
-    await fetch("/api/auth/logout", { method: "POST" }); setSession({ authenticated: false, email: null, projects: [] }); setMessage("로그아웃했습니다.");
+    if (busy) return;
+    setBusy(true); setMessage(""); setMessageError(false);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) throw new Error("로그아웃하지 못했어요. 다시 시도해 주세요.");
+      setSession({ authenticated: false, email: null, projects: [] }); setMessage("로그아웃했습니다.");
+    } catch (error) { setMessageError(true); setMessage(error instanceof Error ? error.message : "다시 시도해 주세요."); }
+    finally { setBusy(false); }
   };
 
 
-  if (!session) return <main className="account-loading">계정 정보를 확인하는 중입니다.</main>;
+  if (!session) return <main className={`${styles.page} plan-ui`}><SiteHeader light showAccount={false} onHome={() => router.push("/")} /><div className={styles.loading}><PlanLoading count={2} note="내 계정을 확인하고 있어요" /></div></main>;
 
   return (
-    <main className="account-page">
+    <main className={`${styles.page} account-page plan-ui`}>
       {/*
         * 머리말은 홈과 같은 것을 쓴다. 예전에는 여기서 따로 그려서 좌우 여백과
         * 아래 테두리가 달랐고, 오른쪽에 놓이는 것도 홈과 어긋났다.
@@ -333,16 +350,16 @@ export default function AccountPage() {
       {session.authenticated ? (
         /* plan-ui: 전역 버튼 정규화(아이콘 숨김 등)에서 제외 — 플랜과 같은 체계를 쓴다 */
         <section className="account-dashboard plan-ui">
-          <div className="account-welcome"><span><CheckCircle2 /></span><div><small>내 계정</small><h1>작업을 이어서 시작하세요</h1><p>{session.email}</p></div><button onClick={logout}><LogOut /> 로그아웃</button></div>
+          <div className="account-welcome"><div><small>내 계정</small><h1>반가워요</h1><p>{session.email}</p></div><button disabled={busy} onClick={logout}>{busy ? <Spinner /> : null} 로그아웃</button></div>
 
           {/* 진행 중인 사업 = 플랜 목록. 누르면 /plan 의 그 플랜에서 바로 이어진다. */}
           <div className="account-projects">
             <header>
               <div><strong>진행 중인 사업</strong><p>작성 중인 사업계획서를 눌러 이어서 쓰세요.</p></div>
-              <Link href="/plan/start"><Plus /> 새 플랜 만들기</Link>
+              <Link href="/plan/chat?new=1">새 사업 시작</Link>
             </header>
             {plans === null ? (
-              <div className="account-empty"><BriefcaseBusiness /><strong>플랜을 불러오는 중입니다…</strong></div>
+              <PlanLoading count={2} note="내 사업을 불러오고 있어요" />
             ) : plans.length === 0 ? (
               <div className="account-empty"><BriefcaseBusiness /><strong>아직 만든 플랜이 없습니다.</strong><p>새 플랜을 만들면 여기에서 이어서 쓸 수 있습니다.</p></div>
             ) : (
@@ -357,12 +374,12 @@ export default function AccountPage() {
                         <strong>{plan.title}</strong>
                         <small>{meta.short} · {pct === 100 ? "완성" : `${pct}% 작성`} · {new Date(plan.updatedAt).toLocaleDateString("ko-KR")} 수정</small>
                       </div>
-                      <em style={{ background: pct === 100 ? "#e7f8ef" : "#eef3fd", color: pct === 100 ? "#10794b" : "#3272db" }}>{pct === 100 ? "완성" : "이어쓰기"}</em>
+                      <em style={{ background: "#edf4ff", color: "#246bd1" }}>{pct === 100 ? "완성" : "이어쓰기"}</em>
                       <ChevronRight />
                     </button>
                   );
                 })}
-                <Link className="account-plan-all" href="/plan">플랜 대시보드 전체 열기 <ArrowRight /></Link>
+                <Link className="account-plan-all" href="/plan">내 사업 전체 보기</Link>
               </div>
             )}
           </div>
@@ -373,7 +390,7 @@ export default function AccountPage() {
                 <p>결제한 상품과 금액을 확인할 수 있습니다.</p>
               </div>
             </header>
-            {payments === null ? null : payments.length === 0 ? (
+            {payments === null ? <PlanLoading variant="compact" note="결제 내역을 확인하고 있어요" /> : payments.length === 0 ? (
               <div className="account-empty">
                 <Receipt />
                 <strong>아직 결제 내역이 없습니다.</strong>
@@ -397,11 +414,11 @@ export default function AccountPage() {
               </table>
             )}
           </div>
-          {message && <p className="account-message">{message}</p>}
+          {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
         </section>
       ) : (
-        <section className="account-auth-shell">
-          <form onSubmit={submit}>
+        <section className={`${styles.auth} account-auth-shell`}>
+          <form onSubmit={submit} aria-busy={busy}>
             {/*
               로그인에 필요한 건 이메일·비밀번호뿐이다.
               예전에는 큰 히어로 문구('어디서든 이어서 시작하세요')와 카드 제목
@@ -410,9 +427,9 @@ export default function AccountPage() {
             */}
             {/* 레퍼런스(월렛 앱): 가운데 굵은 인사말 하나 — 설명은 필요한 화면에만 */}
             <header>
-              <strong>
-                {mode === "register" ? "가입하고 바로 시작하세요" : mode === "recover" ? "비밀번호 찾기" : mode === "reset" ? "새 비밀번호 설정" : "다시 만나서 반가워요"}
-              </strong>
+              <span className={styles.eyebrow}>오늘창업 계정</span>
+              <h1>{mode === "register" ? "함께 시작해 볼까요?" : mode === "recover" ? "비밀번호를 잊으셨나요?" : mode === "reset" ? "새 비밀번호를 정해요" : "내 사업을 이어가세요"}</h1>
+              {(mode === "login" || mode === "register") && <p>{mode === "login" ? "저장한 대화와 자료가 기다리고 있어요." : "대화부터 사업계획서까지 한곳에서."}</p>}
               {(mode === "recover" || mode === "reset") && (
                 <p>{mode === "recover" ? "가입한 이메일로 복구 링크를 보내드립니다." : "8자 이상으로 새 비밀번호를 정해주세요."}</p>
               )}
@@ -420,19 +437,15 @@ export default function AccountPage() {
             {/* 간편 로그인 — 레퍼런스처럼 입력칸 위에 나란히 */}
             {(mode === "login" || mode === "register") && (
               <div className="account-google">
-                <span className="account-social-caption">간편하게 계속하기</span>
-                {/*
-                  두 버튼을 같은 생김새로 — 구글은 공식 버튼(GIS)만 로그인할 수
-                  있으므로, 우리가 그린 버튼 위에 공식 버튼을 투명하게 얹는다.
-                  누르는 건 공식 버튼이고, 보이는 건 카카오와 짝인 우리 버튼이다.
-                */}
+                {/* Google은 SDK가 제공하는 공식 버튼을 그대로 표시한다. */}
                 <div className="account-social-row">
-                  <div className="account-google-btn">
+                  <div className="account-google-btn" aria-busy={!googleReady && !googleUnavailable}>
                     <span className="account-social-visual" aria-hidden="true">
                       <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg>
                       구글로 계속하기
                     </span>
                     <div ref={googleButtonRef} className="account-google-real" />
+                    {!googleReady && <p className={styles.googleState}>{googleUnavailable ? "구글 연결이 지연돼요. 이메일로 로그인해 주세요." : "구글 로그인 준비 중…"}</p>}
                   </div>
                   <button
                     type="button"
@@ -451,7 +464,8 @@ export default function AccountPage() {
                 )}
               </div>
             )}
-            {mode !== "reset" && <label><span>이메일</span><div><Mail /><input type="email" placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" /></div></label>}
+            {(mode === "login" || mode === "register") && <div className={styles.divider}>이메일로 계속하기</div>}
+            {mode !== "reset" && <label><span>이메일</span><div><input type="email" required disabled={busy} placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></div></label>}
             {/*
               * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
               * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 되고, 위 이메일 칸에는
@@ -461,11 +475,11 @@ export default function AccountPage() {
             {mode !== "recover" && (
               <label>
                 <span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span>
-                <div><KeyRound /><input type="password" placeholder={mode === "reset" ? "새 비밀번호" : "비밀번호"} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /></div>
+                <div><input type={showPassword ? "text" : "password"} required disabled={busy} placeholder={mode === "reset" ? "새 비밀번호" : "비밀번호 입력"} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /><button className={styles.passwordToggle} type="button" aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={showPassword} onClick={()=>setShowPassword(!showPassword)}>{showPassword ? "숨기기" : "보기"}</button></div>
                 {mode !== "login" && <small className="account-hint">8자 이상</small>}
               </label>
             )}
-            {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><KeyRound /><input type="password" placeholder="비밀번호 확인" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div></label>}
+            {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><input type="password" required disabled={busy} placeholder="비밀번호를 다시 입력하세요" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div>{passwordConfirm && password !== passwordConfirm && <small className={styles.fieldError}>비밀번호가 서로 달라요.</small>}</label>}
             {mode === "register" && <div className="account-consents"><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
             {(mode === "login" || mode === "register") && (
               /*
@@ -483,8 +497,8 @@ export default function AccountPage() {
                 )}
               </div>
             )}
-            {message && <p className="account-form-message">{message}</p>}
-            <button className="account-submit" disabled={!valid || busy}>{busy ? "처리 중..." : mode === "register" ? "계정 만들기" : mode === "recover" ? "복구 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"} <LogIn /></button>
+            {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
+            <button className="account-submit" disabled={!valid || busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "계정 만들기" : mode === "recover" ? "복구 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
             {/* 아래는 한 가지만 남긴다 — '비밀번호 찾기'는 위 줄로 올라갔다 */}
             <footer>{mode === "login" ? <span>처음이신가요? <button type="button" onClick={() => { setMode("register"); setMessage(""); }}>회원가입</button></span> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>
           </form>

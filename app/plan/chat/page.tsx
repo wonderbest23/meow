@@ -1,4 +1,5 @@
 "use client";
+import PlanLoading from "../PlanLoading";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -211,7 +212,7 @@ export default function BusinessCoachPage() {
           {connectionError && <p role="status" className={styles.note}>연결이 잠시 끊겼어요. 저장된 작업 상태를 다시 확인하고 있어요.</p>}
           {error && <p className={styles.error} role="alert">{error} {login && <Link href={loginHref}>로그인하기</Link>}</p>}
           {loadFailed && <button className={styles.secondary} onClick={() => void refresh(new URLSearchParams(window.location.search).get("planId") ?? undefined).then(() => setError("")).catch(e => setError(e.message))}>대화 다시 불러오기</button>}
-          {!loaded && <p role="status" className={styles.note}>대화를 불러오고 있어요.</p>}
+          {!loaded && <PlanLoading variant="compact" note="대화를 불러오고 있어요" />}
           {attachment && <div className={styles.attachment}><span>{attachment.name}</span><button onClick={() => setAttachment(null)}>첨부 취소</button></div>}
           <form aria-busy={busy || working} onClick={e => { if (e.target === e.currentTarget) input.current?.focus(); }} onSubmit={e => { e.preventDefault(); void submit(); }}>
             <input hidden ref={file} type="file" accept=".txt,.md,.docx" onChange={e => { const selected = e.target.files?.[0]; if (selected) void attach(selected); e.target.value = ""; }} />

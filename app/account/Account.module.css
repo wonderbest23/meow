@@ -1,0 +1,72 @@
+.page { min-height:100dvh; background:#fff; color:#191f28; letter-spacing:0; }
+.page * { box-sizing:border-box; letter-spacing:0; }
+.page :is(h1,h2,p,button,a,span,strong) { word-break:keep-all; overflow-wrap:anywhere; }
+.page button,.page a { -webkit-tap-highlight-color:transparent; }
+.page button { cursor:pointer; transition:background .16s,transform .16s; }
+.page button:active:not(:disabled) { transform:scale(.98); }
+.page button:disabled { cursor:default; }
+.page :is(button,a,input):focus-visible { outline:3px solid #90baff; outline-offset:3px; }
+.page :global(.site-header) { border-bottom:1px solid #f2f4f6; }
+.auth { width:min(400px,calc(100% - 40px)); margin:56px auto 80px; }
+.page .auth > form { display:grid; gap:20px; padding:0; border:0; border-radius:0; background:#fff; box-shadow:none; }
+.page .auth > form > header { display:block; padding:0; margin:0 0 10px; text-align:left; border:0; }
+.page .auth > form > header > * { text-align:left; }
+.eyebrow { display:block; margin-bottom:12px; font-size:13px; font-weight:600; color:#246bd1; }
+.auth h1 { font-size:28px; line-height:1.4; font-weight:700; margin:0 0 12px; color:#191f28; }
+.page .auth > form > header p { color:#6b7684; font-size:15px; line-height:1.7; margin:0; }
+.page .auth > form > label { display:grid; gap:8px; margin:0; }
+.page .auth > form > label > span { position:static; width:auto; height:auto; overflow:visible; clip:auto; clip-path:none; margin:0; color:#333d4b; font-size:14px; font-weight:600; }
+.page .auth > form > label > div { display:flex; align-items:center; gap:4px; min-height:56px; border:1px solid #dce1e8; border-radius:8px; padding:0 14px; background:#f9fafb; box-shadow:none; }
+.page .auth > form > label > div:focus-within { border-color:#3182f6; box-shadow:0 0 0 3px #3182f612; background:#fff; }
+.page .auth input:not([type=checkbox]) { min-width:0; width:100%; height:54px; padding:0; border:0; outline:none; color:#191f28; font-size:16px; line-height:1.5; box-shadow:none; }
+.page .auth input::placeholder { color:#8b95a1; }
+.page .auth input:disabled { opacity:.65; }
+.page .passwordToggle { flex-shrink:0; min-height:44px; min-width:44px; border:0; border-radius:6px; background:transparent; color:#4e5968; font-size:13px; padding:6px; font-weight:500; }
+.divider { display:flex; align-items:center; gap:14px; color:#8b95a1; font-size:12px; margin:4px 0; }
+.divider::before,.divider::after { content:""; height:1px; flex:1; background:#e5e8eb; }
+.page :global(.account-google) { margin:0; gap:12px; }
+.page :global(.account-social-row) { display:grid; grid-template-columns:minmax(0,1fr); gap:10px; max-width:none; }
+.page :global(.account-google-btn) { display:flex; flex-direction:column; align-items:center; width:100%; height:auto; min-height:44px; padding:0; border:0; background:transparent; border-radius:8px; position:relative; }
+.page :global(.account-social-visual) { display:none; }
+.page :global(.account-google-real) { position:static; opacity:1; inset:auto; width:100%!important; height:auto; overflow:hidden; min-height:0; }
+.page :global(.account-google-real):empty { display:none; }
+.page :global(.account-kakao-btn) { min-height:48px; border:0; border-radius:8px; font-size:15px; font-weight:600; box-shadow:none; }
+.googleState { margin:0; padding:12px; font-size:13px; color:#6b7684; text-align:center; line-height:1.6; }
+.page :global(.account-google) > small { text-align:left; color:#6b7684; font-size:12px; line-height:1.7; }
+.page :global(.account-optionrow) { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0; flex-wrap:wrap; }
+.page :global(.account-remember) { display:flex; align-items:center; gap:8px; min-height:44px; }
+.page :global(.account-remember) > span { color:#4e5968; font-size:13px; font-weight:500; }
+.page :global(.account-optionrow) > button { padding:8px 0; min-height:44px; color:#4e5968; font-size:13px; font-weight:500; border:0; background:transparent; }
+.page .auth input[type=checkbox] { width:18px; height:18px; flex-shrink:0; accent-color:#246bd1; margin:0; }
+.page :global(.account-consents) { display:grid; gap:12px; padding:16px; border:1px solid #e5e8eb; background:#f9fafb; border-radius:8px; }
+.page :global(.account-consents) label { display:flex; align-items:flex-start; gap:10px; font-size:13px; line-height:1.7; }
+.page :global(.account-consents) label input { margin-top:2px; }
+.page :global(.account-hint) { font-size:12px; color:#6b7684; margin:0; }
+.page .auth :global(.account-submit) { display:flex; align-items:center; justify-content:center; gap:10px; width:100%; max-width:none; min-width:0; justify-self:stretch; min-height:56px; border:0; padding:14px 20px; border-radius:8px; background:#246bd1; color:#fff; font-size:17px; font-weight:600; box-shadow:none; line-height:1.5; }
+.page .auth :global(.account-submit):hover:not(:disabled) { background:#1b5bb7; box-shadow:none; transform:none; }
+.page .auth :global(.account-submit):disabled { background:#e5e8eb; color:#8b95a1; opacity:1; box-shadow:none; }
+.page .auth form[aria-busy=true] :global(.account-submit) { color:#246bd1; background:#edf4ff; }
+.page .auth form[aria-busy=true] :global(.account-social-row) { pointer-events:none; opacity:.6; }
+.page .auth form > footer { margin:0; padding:2px 0; text-align:center; }
+.page .auth form > footer :is(span,button) { color:#6b7684; font-size:14px; }
+.page .auth form > footer button { min-height:44px; padding:8px; border:0; background:transparent; color:#246bd1; font-weight:600; }
+.message,.error { font-size:14px; line-height:1.7; margin:0; padding:14px 16px; border:1px solid #d6e4f8; border-radius:8px; color:#1957b5; background:#f5f9ff; }
+.error { background:#fff6f5; border-color:#f4d0cd; color:#b42318; }.fieldError { color:#b42318; font-size:12px; }
+.loading { max-width:448px; margin:80px auto; }
+.page :global(.account-dashboard) { width:min(900px,calc(100% - 48px)); margin:40px auto 80px; padding:0; }
+.page :global(.account-welcome) { display:flex; align-items:center; gap:16px; padding:0 0 32px; border:0; background:transparent; box-shadow:none; }
+.page :global(.account-welcome) > div { flex:1; min-width:0; }.page :global(.account-welcome) h1 { font-size:28px; color:#191f28; margin:8px 0; }
+.page :global(.account-welcome) p { font-size:14px; color:#6b7684; overflow-wrap:anywhere; word-break:normal; }
+.page :global(.account-welcome) button { min-height:44px; padding:10px 14px; border:1px solid #e5e8eb; background:#fff; border-radius:8px; color:#4e5968; font-size:13px; }
+.page :is(:global(.account-projects),:global(.account-payments)) { padding:28px 0; background:transparent; border:0; border-top:1px solid #e5e8eb; border-radius:0; box-shadow:none; }
+.page :is(:global(.account-projects),:global(.account-payments)) header strong { font-size:19px; color:#191f28; }.page :is(:global(.account-projects),:global(.account-payments)) header p { font-size:14px; color:#6b7684; line-height:1.7; }
+.page :global(.account-projects) header a { width:auto; flex:0 0 auto; white-space:nowrap; padding:10px 14px; min-height:44px; color:#246bd1; background:#edf4ff; border-radius:8px; font-size:14px; }
+.page :global(.account-plan-list) > button { min-width:0; grid-template-columns:minmax(0,1fr) auto; padding:20px; border:1px solid #e5e8eb; border-radius:8px; background:#fff; text-align:left; }
+.page :global(.account-plan-list) > button > :is(span,svg) { display:none; }
+.page :global(.account-plan-list) > button strong { white-space:normal; font-size:16px; line-height:1.6; overflow:visible; }
+.page :global(.account-plan-list) > button small { display:block; margin-top:6px; font-size:12px; color:#6b7684; line-height:1.7; }
+.page :global(.account-plan-list) > button em { font-weight:600; border-radius:6px; }
+.page :global(.account-plan-all) { min-height:48px; border-radius:8px; background:#f2f4f6; font-size:14px; }
+.page :global(.account-payments) table { width:100%; font-size:13px; table-layout:fixed; }.page :global(.account-payments) :is(td,th) { padding:16px 8px; overflow-wrap:anywhere; }
+@media(max-width:600px) { .auth { margin:32px auto 56px; }.auth h1 { font-size:26px; }.page .auth > form { gap:18px; }.page :global(.account-dashboard) { width:calc(100% - 40px); margin:28px auto 80px; }.page :global(.account-welcome) { flex-wrap:wrap; }.page :global(.account-welcome) h1 { font-size:25px; }.page :global(.account-projects) header { flex-wrap:wrap; gap:12px; }.page :global(.account-plan-list) > button { padding:16px; }.loading { margin:48px auto; } }
+@media(prefers-reduced-motion:reduce) { .page * { animation:none!important; transition:none!important; } }

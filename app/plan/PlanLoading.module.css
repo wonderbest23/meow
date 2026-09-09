@@ -1,123 +1,22 @@
-/*
- * 플랜 빌더 공용 로딩 표현.
- * 화면마다 제각각(빈 화면 / 자체 스켈레톤)이던 것을 하나로 모은다.
- * 규칙: 골격이 먼저 보이고 은은하게 맥동한다. 스피너는 쓰지 않는다.
- */
-
-@keyframes planSkelPulse {
-  0%, 100% { opacity: 0.55; }
-  50% { opacity: 1; }
-}
-
-.wrap {
-  padding: 26px 30px 40px;
-}
-
-.bar,
-.title,
-.line,
-.card,
-.chip {
-  border-radius: 8px;
-  background: var(--border-soft, #e9edf2);
-  animation: planSkelPulse 1.4s ease-in-out infinite;
-}
-
-.title {
-  width: 42%;
-  max-width: 320px;
-  height: 28px;
-  margin-bottom: 14px;
-}
-.bar {
-  width: 26%;
-  max-width: 200px;
-  height: 13px;
-  margin-bottom: 30px;
-}
-
-/* 카드 격자 — 목록·시작 화면용 */
-.deck {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 20px;
-}
-.card {
-  aspect-ratio: 4 / 5;
-  border-radius: 16px;
-}
-
-/* 줄 목록 — 개요·문서·마이페이지용 */
-.rows {
-  display: grid;
-  gap: 12px;
-}
-.row {
-  border: 1px solid var(--border-soft, #dfdef1);
-  border-radius: 16px;
-  padding: 18px 20px;
-  background: var(--surface, #fff);
-}
-.line {
-  height: 13px;
-  margin-bottom: 10px;
-}
-.line:last-child {
-  margin-bottom: 0;
-}
-.lineHead {
-  width: 32%;
-  height: 17px;
-  margin-bottom: 14px;
-}
-.lineShort {
-  width: 58%;
-}
-
-.note {
-  margin: 26px 0 0;
-  text-align: center;
-  color: var(--text-muted, #5f5c7f);
-  font-size: 13px;
-}
-
-@media (max-width: 640px) {
-  .wrap {
-    padding: 16px 14px 28px;
-  }
-  .deck {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .bar, .title, .line, .card, .chip {
-    animation: none;
-  }
-}
-
-
-/*
- * 인라인 스피너 — 버튼이 일하는 중임을 글자 말고 움직임으로도 알린다.
- * 로딩 골격(스켈레톤)은 화면 단위, 이 스피너는 버튼 단위로 쓴다.
- */
-@keyframes planSpin {
-  to { transform: rotate(360deg); }
-}
-.spinner {
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  vertical-align: -0.12em;
-  border: 2px solid currentColor;
-  border-right-color: transparent;
-  border-radius: 50%;
-  opacity: 0.85;
-  animation: planSpin 0.7s linear infinite;
-}
-@media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation-duration: 2.4s;
-  }
-}
+.wrap { width:100%; max-width:820px; margin:0 auto; padding:28px 24px 36px; box-sizing:border-box; letter-spacing:0; }
+.wrap * { box-sizing:border-box; }
+.status { display:flex; align-items:center; gap:12px; min-height:32px; margin-bottom:30px; }
+.status p { margin:0; color:#4e5968; font-size:15px; font-weight:500; line-height:1.6; word-break:keep-all; overflow-wrap:anywhere; }
+.dots { display:flex; gap:4px; flex-shrink:0; }
+.dots i { width:6px; height:6px; border-radius:50%; background:#3182f6; animation:loadingDot 1.4s ease-in-out infinite; }
+.dots i:nth-child(2) { animation-delay:.16s; }.dots i:nth-child(3) { animation-delay:.32s; }
+.skeleton { width:100%; }
+.bar,.title,.line,.card { border-radius:6px; background:#edf0f4; animation:loadingPulse 1.8s ease-in-out infinite; }
+.title { width:55%; max-width:320px; height:24px; margin-bottom:12px; }
+.bar { width:34%; height:12px; margin-bottom:28px; }
+.rows { display:grid; gap:0; }.row { padding:22px 0; border-top:1px solid #eef0f3; }
+.line { height:12px; margin-bottom:12px; width:100%; }.line:last-child { margin-bottom:0; }.lineHead { width:35%; height:16px; }.lineShort { width:67%; }
+.deck { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }.card { aspect-ratio:1.4; border-radius:8px; }
+.compact { padding:12px 0; max-width:none; }.compact .status { margin:0; }.compact .status p { font-size:14px; }
+.fullPage { min-height:100dvh; display:flex; flex-direction:column; justify-content:center; max-width:560px; padding:40px 24px; }
+.spinner { display:inline-block; flex-shrink:0; width:1em; height:1em; vertical-align:-.12em; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:loadingSpin .8s linear infinite; }
+@keyframes loadingDot { 0%,70%,100% { opacity:.35; transform:translateY(0); } 35% { opacity:1; transform:translateY(-3px); } }
+@keyframes loadingPulse { 0%,100% { opacity:.5; } 50% { opacity:1; } }
+@keyframes loadingSpin { to { transform:rotate(360deg); } }
+@media(max-width:600px) { .wrap { padding:24px 20px; }.deck { grid-template-columns:repeat(2,minmax(0,1fr)); }.compact { padding:10px 0; }.fullPage { padding:32px 24px; } }
+@media(prefers-reduced-motion:reduce) { .wrap *,.spinner { animation:none!important; } }

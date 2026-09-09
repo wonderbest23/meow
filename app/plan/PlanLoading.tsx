@@ -7,15 +7,16 @@ export function Spinner() {
   return <span className={styles.spinner} aria-hidden="true" />;
 }
 
-export type PlanLoadingVariant = "deck" | "rows" | "document";
+export type PlanLoadingVariant = "deck" | "rows" | "document" | "compact";
 
 export interface PlanLoadingProps {
   /** deck=카드 격자(목록·시작), rows=줄 목록(개요·마이페이지), document=문서 본문 */
   variant?: PlanLoadingVariant;
-  /** 하단 안내 문구 — 생략하면 표시하지 않는다 */
+  /** 현재 불러오는 내용을 알리는 상태 문구 */
   note?: string;
   /** 뼈대 개수 */
   count?: number;
+  fullPage?: boolean;
 }
 
 /**
@@ -25,11 +26,13 @@ export interface PlanLoadingProps {
  * 빈 화면이라, 같은 앱인데 기다리는 경험이 제각각이었다. 여기 한 곳에서만
  * 정의하고 모든 화면이 이걸 쓴다.
  */
-export default function PlanLoading({ variant = "rows", note, count }: PlanLoadingProps) {
-  const n = count ?? (variant === "deck" ? 6 : 4);
+export default function PlanLoading({ variant = "rows", note = "화면을 준비하고 있어요", count, fullPage = false }: PlanLoadingProps) {
+  const n = count ?? 3;
 
   return (
-    <div className={styles.wrap} aria-busy="true" aria-label={note ?? "불러오는 중"}>
+    <div className={`${styles.wrap} ${fullPage ? styles.fullPage : ""} ${variant === "compact" ? styles.compact : ""}`} role="status" aria-label={note}>
+      <div className={styles.status}><span className={styles.dots} aria-hidden="true"><i /><i /><i /></span><p>{note}</p></div>
+      {variant !== "compact" && <div className={styles.skeleton} aria-hidden="true">
       <div className={styles.title} />
       <div className={styles.bar} />
 
@@ -52,7 +55,7 @@ export default function PlanLoading({ variant = "rows", note, count }: PlanLoadi
         </div>
       )}
 
-      {note && <p className={styles.note}>{note}</p>}
+      </div>}
     </div>
   );
 }

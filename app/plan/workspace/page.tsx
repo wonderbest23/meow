@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
+import PlanLoading from "../PlanLoading";
 import { hydrateFromServer, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
 import { ACTION_KEY, actionStatus, businessChatHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import { currentBusinessDesign } from "../../../lib/plan-builder/coach";
@@ -79,7 +80,7 @@ export default function BusinessWorkspace() {
   }
   return <main className={frame.page}><BusinessAppChrome title="내 사업 관리">
     <div className={styles.scroll}><div className={styles.content}>
-      {!loaded ? <p role="status">사업을 불러오고 있어요.</p> : !plan || !hub ? <><h1>사업을 찾지 못했어요</h1><p>목록에서 이어갈 사업을 다시 선택해 주세요.</p><Link className={styles.primary} href="/plan">내 사업으로</Link></> : <>
+      {!loaded ? <PlanLoading note="사업을 불러오고 있어요" /> : !plan || !hub ? <><h1>사업을 찾지 못했어요</h1><p>목록에서 이어갈 사업을 다시 선택해 주세요.</p><Link className={styles.primary} href="/plan">내 사업으로</Link></> : <>
         <div className={styles.workspaceTitle}><span className={styles.status}>{hub.status}</span><h1>{plan.title}</h1></div>
         <nav className={styles.tabs} aria-label="사업 관리 메뉴"><button aria-pressed={view==="summary"} onClick={()=>tab("summary")}>사업 요약</button><button aria-pressed={view==="documents"} onClick={()=>tab("documents")}>내 자료</button><button aria-pressed={view==="launch" || view==="action"} onClick={()=>tab("launch")}>사업 시작하기</button>{hub.coach ? <Link href={chat}>대화 이어가기</Link> : <button onClick={openLegacy}>기존 작업 열기</button>}</nav>
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={()=>{ if (!expertDirty || window.confirm("저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?")) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
