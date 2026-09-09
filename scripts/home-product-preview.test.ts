@@ -20,7 +20,7 @@ async function main() {
       const errors: string[] = [];
       page.on("pageerror", error => errors.push(String(error)));
       await page.goto("http://localhost:8083", { waitUntil: "networkidle0" });
-      const section = 'section[aria-label="대화에서 사업계획서까지 영상 미리보기"]';
+      const section = '[data-cinematic-hero]';
       const ring = 'button[aria-label="대화로 사업 기획 시작하기"]';
       await page.waitForSelector(section);
       const homeText = await page.$eval('main', el => el.textContent ?? '');
@@ -44,35 +44,27 @@ async function main() {
         return prompt.getBoundingClientRect().right <= send.getBoundingClientRect().left;
       }), true, '타이핑 문구와 보내기 영역이 겹치지 않아야 함');
       assert.equal(await page.$('[aria-label="미리보기 장면 선택"]'), null);
-      await page.waitForFunction(() => { const v = document.querySelector('video'); return v && v.readyState >= 2 && v.currentTime > .1; });
-      const media = await page.$eval('video', v => ({ src: v.currentSrc, width: v.videoWidth, height: v.videoHeight, muted: v.muted, inline: v.playsInline }));
-      assert.match(media.src, width <= 600 ? /mobile-v2.mp4/ : /desktop-v2.mp4/);
-      assert.equal(media.muted && media.inline, true);
-      assert.equal(media.width, width <= 600 ? 720 : 1280);
-      await page.screenshot({ path: `artifacts/home-product-preview/${width}-film-home.png` });
-      const first = await page.$eval('video', v => v.currentTime);
-      await new Promise(resolve => setTimeout(resolve, 600));
-      assert.ok(await page.$eval('video', v => v.currentTime) > first, "실제 영상이 재생되어야 함");
-      for (const time of [2.5, 7, 11]) {
-        await page.$eval('video', (v, t) => { v.pause(); v.currentTime = t; }, time);
-        await page.waitForFunction(t => { const v = document.querySelector('video'); return v && !v.seeking && Math.abs(v.currentTime - t) < .2; }, {}, time);
-        await page.$eval(section, el => el.scrollIntoView({ block: 'center' }));
-        await page.screenshot({ path: `artifacts/home-product-preview/${width}-film-${time}.png` });
-        assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-      }
+      await page.waitForFunction(() => { const img = document.querySelector<HTMLImageElement>('[data-cinematic-hero] img'); return img && img.complete && img.naturalWidth > 0; });
+      assert.match(await page.$eval(section + ' img', img => (img as HTMLImageElement).src), /oneulstart-team.png/);
+      await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+      await page.screenshot({ path: `artifacts/home-product-preview/${width}-photo-home.png` });
+      const first = await page.$eval(section + ' img', img => getComputedStyle(img).transform);
+      await page.mouse.wheel({ deltaY: 350 });
+      await page.waitForFunction(value => getComputedStyle(document.querySelector('[data-cinematic-hero] img')!).transform !== value, {}, first);
+      await page.$eval(ring, el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
       await page.click(ring + ' [class*="__send"]');
       await page.waitForSelector('[aria-label="사업 기획 대화로 이동 중"]');
       await page.waitForFunction(() => location.pathname === "/plan/chat");
       await page.waitForFunction(() => document.body.style.overflow !== 'hidden');
       await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
       await page.goto("http://localhost:8083", { waitUntil: "networkidle0" });
-      await page.waitForSelector('video[hidden]');
-      assert.ok(await page.$eval(section + ' img', img => img.complete && img.naturalWidth > 0));
+      await page.waitForSelector('[data-cinematic-hero][data-motion="off"]');
+      assert.ok(await page.$eval(section + ' img', img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0));
       await page.click(ring);
       await page.waitForFunction(() => location.pathname === "/plan/chat");
       assert.deepEqual(errors, []);
       await page.close();
-      console.log(`rendered home film ${width}: passed`);
+      console.log(`cinematic home entry ${width}: passed`);
     }
   } finally { await browser.close(); }
 }

@@ -3,6 +3,7 @@
 import { PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
 import { useEffect, useRef } from "react";
 import { HomeScrollStory } from "./home-scroll-story";
+import { HomeResultShowcase, HomeFounderWall } from "./home-result-showcase";
 import { BRAINWAVE_CREDIT } from "../lib/landing/brainwave/catalog";
 import styles from "./home-service-overview.module.css";
 
@@ -22,6 +23,8 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
   }, []);
   return <div className={styles.overview} ref={root}>
     <HomeScrollStory />
+    <HomeResultShowcase />
+    <HomeFounderWall />
 
     <section className={styles.difference} id="difference" aria-labelledby="home-difference-title">
       <div className={styles.section}>
@@ -36,19 +39,6 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
           <article data-reveal><span className={styles.keyword}>계획과 실적 구분</span><div><h3>예상 숫자와 실제 실적을 구분해요</h3><p>입력한 조건으로 비용과 손익을 계산하고, AI가 제안한 값은 가정으로 다뤄요. 실제 견적과 고객 반응은 따로 확인해야 해요.</p></div></article>
         </div>
       </div>
-    </section>
-
-    <section className={styles.section} id="deliverables" aria-labelledby="home-results-title">
-      <header className={styles.heading} data-reveal>
-        <span>대화 다음에 남는 것</span>
-        <h2 id="home-results-title">읽고, 고치고, 꺼내 쓰는<br />내 사업 자료.</h2>
-      </header>
-      <div className={styles.results} data-reveal>
-        <article><span className={styles.resultNumber}>01</span><h3>사업계획서</h3><p>사업 소개부터 상품·고객·비용·운영까지.</p><div className={styles.formats}><span>PDF</span><span>수정 가능한 Word</span></div><a className={styles.resultLink} href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer">PDF 샘플 열기</a></article>
-        <article><span className={styles.resultNumber}>02</span><h3>발표자료</h3><p>완성한 계획서를 바탕으로 발표용 자료를 만들어요.</p><div className={styles.formats}><span>PPT</span></div><a className={styles.resultLink} href="/samples/sample_coffee.pptx" download>PPT 샘플 받기</a></article>
-        <article><span className={styles.resultNumber}>03</span><h3>내 사업 관리</h3><p>사업안과 문서 상태를 확인하고, 대화와 다음 할 일을 이어가요.</p><div className={styles.formats}><span>사업별 작업 공간</span></div><a className={styles.resultLink} href="/plan">내 사업 열기</a></article>
-      </div>
-      <p className={styles.note}>공개 샘플은 가상 사례예요. 내 사업의 전체 문서 생성과 파일 내려받기는 결제 후 이용하며, 결과물은 검토·수정해서 사용하는 AI 초안이에요.</p>
     </section>
 
     <section className={styles.website} aria-labelledby="home-website-title">

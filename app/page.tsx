@@ -76,8 +76,7 @@ import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
-import { HomeProductPreview } from "../components/home-product-preview";
-import { HomeConversationEntry } from "../components/home-conversation-entry";
+import { HomeCinematicHero } from "../components/home-cinematic-hero";
 import { HomeServiceOverview } from "../components/home-service-overview";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
@@ -530,37 +529,16 @@ function Home({
 
 
   return (
-    <main className="new-home simple-home product-home">
-      <div className="hero-shell">
+    <main className="new-home simple-home product-home cinematic-home">
+      <div className="home-header-shell">
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
-        {/*
-          첫 화면 — Neuros Lite 의 Hero banner/03 구조.
-          가운데로 모으고, 제목 아래에 만들어지는 결과물을 큰 카드로 보여준다.
-          예전에는 사진이 화면 전체를 덮고 글이 왼쪽에 얹혀 있었다. 사진이
-          주인공이라 정작 무엇이 만들어지는지는 작게 보였다.
-        */}
-        <section className="simple-home-choice">
-          <div className="home-hero-copy">
-            <span className="section-label">{sc("chatHome.eyebrow", "대화로 만드는 내 사업계획서")}</span>
-            <h1>{sc("chatHome.title", "오늘창업")}</h1>
-            <p>{scBr("chatHome.subtitle", "아이디어만 있어도, 이미 운영 중이어도 괜찮아요.\n대화로 정리하고, 내 사업에 맞는 계획으로 만드세요.")}</p>
-            {/*
-              '무료로 시작하기' 버튼이 있던 자리 — 이제 검색창이다.
-              도는 링으로 강조하고, 누르면 상담 창이 열린다.
-              시작하기는 우측 상단에 그대로 있다.
-            */}
-            {/*
-              네이버 AI 검색 방식 — 여기서 치는 게 아니라, 누르는 순간
-              상담 창이 열리고 거기서 바로 친다. 그래서 이건 입력창처럼
-              생긴 단추다.
-            */}
-            <div className="home-hero-actions">
-              <HomeConversationEntry onStart={openConsult} />
-            </div>
-          </div>
-          <HomeProductPreview />
-        </section>
       </div>
+      <HomeCinematicHero
+        eyebrow={sc("chatHome.eyebrow", "대화로 만드는 내 사업계획서")}
+        title={sc("chatHome.title", "오늘창업")}
+        subtitle={scBr("chatHome.subtitle", "아이디어만 있어도, 이미 운영 중이어도 괜찮아요.\n대화로 정리하고, 내 사업에 맞는 계획으로 만드세요.")}
+        onStart={openConsult}
+      />
 
       <HomeServiceOverview onStart={onStart} />
 
