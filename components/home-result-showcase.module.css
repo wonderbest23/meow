@@ -6,25 +6,23 @@
 .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1800px; margin: auto; }
 .panel { min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
 .document { background: #191c20; }.presentation { background: #090a0d; }.workspace { background: #202326; }
-.visual { height: 460px; position: relative; display: grid; place-items: center; padding: 44px 26px 50px; overflow: hidden; }
-.paperStack { position: relative; width: 210px; height: 297px; transform: rotate(-7deg); }
-.paperStack img { display: block; position: relative; width: 100%; height: 100%; object-fit: cover; border-radius: 3px; box-shadow: 0 24px 60px #0009; }
-.backPaper { position: absolute; inset: 4px; background: #d8dce3; transform: translate(22px, 8px) rotate(9deg); border-radius: 3px; }
-.visualCaption { position: absolute; left: 20px; right: 20px; bottom: 22px; font-size: 10px; text-align: center; color: #8e949d; }
-.slides { width: 100%; max-width: 380px; }
-.slide { background: #202b40; border: 1px solid #44516a; padding: 30px 26px; border-radius: 5px; aspect-ratio: 1.4; display: flex; flex-direction: column; justify-content: center; transform: translateY(0); box-shadow: 0 30px 55px #0008; }
-.slide > span { color: #a9c6fc; font-size: 9px; font-weight: 650; }
-.slide > strong { color: #fff; font-size: 25px; line-height: 1.6; font-weight: 650; margin-top: 20px; word-break: keep-all; }
-.slideRule { width: 44px; height: 3px; background: #6c9ffc; margin: 22px 0 14px; transform-origin: left; }
-.slide small { color: #c3cbd8; font-size: 10px; }
-.slideTabs { display: flex; justify-content: center; gap: 8px; margin-top: 24px; }
-.slideTabs i { width: 36px; height: 3px; background: #3d424b; }.slideTabs i:first-child { background: #8dadf2; }
-.tasks { width: 100%; max-width: 320px; padding: 24px; border: 1px solid #42474d; border-radius: 12px; background: #292c31; box-shadow: 0 25px 60px #0006; }
-.taskHeader { color: white; font-size: 17px; font-weight: 650; padding-bottom: 22px; }.taskHeader span { display: block; margin-top: 8px; font-size: 11px; color: #a0a8b3; font-weight: 450; }
-.tasks > div:not(:first-child) { padding: 17px 0; border-top: 1px solid #41454b; }
-.tasks > div > span:not(.taskHeader span) { display: block; font-size: 10px; color: #9da9b9; }
-.tasks strong { display: block; font-size: 14px; color: #edf1f6; margin-top: 7px; font-weight: 550; }.tasks i { display: block; margin-top: 12px; width: 85%; height: 2px; background: #79a7ee; transform-origin: left; }
-.panelCopy { padding: 12px 38px 38px; flex: 1; display: flex; flex-direction: column; }
+.visual { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; background: #0c1016; isolation: isolate; }
+.graphicEntrance { width: 100%; height: 100%; perspective: 1000px; }
+.graphicMotion { width: 100%; height: 100%; transform-origin: 50% 55%; }
+.graphicMotion img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.visualCaption { position: absolute; left: 16px; right: 16px; bottom: 18px; font-size: 11px; text-align: center; color: #c2c9d3; line-height: 1.5; text-shadow: 0 1px 6px #000; }
+.results .motionToggle { --radius: 50%; --btn-h: 44px; display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; margin-top: 14px; border: 1px solid #535b67; border-radius: 50%; background: #24282e; color: #fff; cursor: pointer; }
+.results .motionToggle svg { display: block !important; width: 17px; height: 17px; color: inherit !important; }
+.motionToggle:hover { background: #38404b; }
+.motionToggle:focus-visible { outline: 3px solid #82b4ff; outline-offset: 4px; }
+.visual[data-entered="true"] .graphicEntrance { animation: graphicArrival 1.6s cubic-bezier(.16,1,.3,1) both; animation-play-state: paused; }
+.visual[data-entered="true"] .graphicMotion { animation: graphicDrift 10s ease-in-out 1.6s infinite; animation-play-state: paused; }
+.presentation .graphicMotion { --drift-x: -1%; --drift-y: -1.5%; --drift-angle: -.8deg; }
+.workspace .graphicMotion { --drift-x: .5%; --drift-y: -1%; --drift-angle: .6deg; }
+.visual[data-running="true"] .graphicEntrance, .visual[data-running="true"] .graphicMotion { animation-play-state: running; }
+@keyframes graphicArrival { from { opacity: .3; transform: translateY(32px) scale(.91) rotateX(5deg); } to { opacity: 1; transform: translateY(0) scale(1) rotateX(0); } }
+@keyframes graphicDrift { 0%, 100% { transform: translate(0, 0) scale(1) rotate(0); } 50% { transform: translate(var(--drift-x, 1%), var(--drift-y, -1.2%)) scale(1.035) rotate(var(--drift-angle, .8deg)); } }
+.panelCopy { padding: 32px 38px 38px; flex: 1; display: flex; flex-direction: column; }
 .panelCopy > span { color: #aeb5bf; font-size: 12px; margin-bottom: 20px; }
 .results .panelCopy h3 { color: #fff; font-size: 30px; line-height: 1.5; font-weight: 650; margin: 0 0 20px; letter-spacing: 0; word-break: keep-all; }
 .results .panelCopy p { color: #aeb5bf; font-size: 14px; line-height: 1.8; margin: 0; }
@@ -33,11 +31,6 @@
 .panelCopy a:hover svg { transform: translate(3px,-3px); background: #3182f6; }
 .panelCopy a:focus-visible { outline: 3px solid #82b4ff; outline-offset: 5px; }
 .results .note { color: #9199a5; font-size: 12px; line-height: 1.8; max-width: 850px; margin: 32px auto 0; text-align: center; padding: 0 28px; }
-.panel[data-seen="true"] .paperStack { animation: paperLift 7s ease-in-out infinite; }
-.panel[data-seen="true"] .slideRule, .panel[data-seen="true"] .tasks i { animation: trace 5s ease-in-out infinite; }
-.panel[data-seen="true"] .tasks > div:nth-child(3) i { animation-delay: .4s; }.panel[data-seen="true"] .tasks > div:nth-child(4) i { animation-delay: .8s; }
-@keyframes paperLift { 0%,100% { transform: translateY(0) rotate(-7deg); } 50% { transform: translateY(-15px) rotate(-3deg); } }
-@keyframes trace { 0%,100% { transform: scaleX(.35); opacity: .5; } 40%,70% { transform: scaleX(1); opacity: 1; } }
 .founders { --progress: 0; overflow: hidden; padding: 130px 0 40px; background: #fff; }
 .founders header { text-align: center; padding: 0 24px 70px; }
 .founders header > span { color: #6b7684; font-size: 14px; }
@@ -49,23 +42,28 @@
 .founders[data-motion="on"] .portraits { transform: scale(calc(1.13 - var(--progress) * .13)); }
 .founders[data-motion="on"] .portrait { transform: translateY(calc((1 - var(--progress)) * var(--offset) * 26px)); }
 .founders .imageNote { color: #8b95a1; font-size: 11px; text-align: center; padding: 0 24px; margin: 32px 0 0; line-height: 1.8; }
-@media (max-width: 1100px) { .panelCopy { padding-left: 24px; padding-right: 24px; }.results .panelCopy h3 { font-size: 26px; }.visual { height: 390px; padding: 32px 22px 48px; }.paperStack { width: 180px; height: 254px; }.slide { padding: 26px 20px; }.slide > strong { font-size: 21px; }.tasks { padding: 18px; } }
+@media (max-width: 1100px) { .panelCopy { padding-left: 24px; padding-right: 24px; }.results .panelCopy h3 { font-size: 26px; } }
+@media (min-width: 701px) and (max-width: 959px) {
+  .panels { grid-template-columns: 1fr; }
+  .panel { display: grid; grid-template-columns: 1fr 1fr; align-items: center; }
+  .panelCopy { padding: 32px; }
+}
 @media (max-width: 700px) {
   .results { padding-top: 70px; background: #101113; }
   .heading { padding: 0 24px 36px; }
   .results .heading h2 { font-size: 30px; }.results .heading p { font-size: 14px; }
   .panels { grid-template-columns: 1fr; gap: 0; }
-  .panel { padding: 0 24px 38px; }.panel + .panel { padding-top: 26px; }
-  .visual { height: 360px; padding: 26px 26px 46px; }
-  .paperStack { width: 190px; height: 269px; }
-  .panelCopy { padding: 12px 4px 0; max-width: 460px; width: 100%; margin: auto; }
+  .panel { padding: 0 0 38px; }
+  .panelCopy { padding: 28px 24px 0; max-width: 508px; width: 100%; margin: auto; box-sizing: border-box; }
   .panelCopy > span { margin-bottom: 16px; }.results .panelCopy h3 { font-size: 30px; }.results .panelCopy p { font-size: 14px; }
   .panelCopy a { padding-top: 22px; }
-  .slides { max-width: 330px; }.slide { padding: 28px; }.slide > strong { font-size: 24px; }
-  .tasks { max-width: 310px; }
   .results .note { font-size: 11px; text-align: left; }
   .founders { padding-top: 80px; }.founders header { padding-bottom: 48px; }.founders header h2 { font-size: 42px; }.founders header p { font-size: 15px; }
   .portraits { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
   .portrait:nth-child(n+7) { display: none; }
 }
-@media(prefers-reduced-motion:reduce) { .panel[data-seen="true"] .paperStack, .panel[data-seen="true"] .slideRule, .panel[data-seen="true"] .tasks i { animation: none; }.panelCopy a svg { transition: none; } }
+@media(prefers-reduced-motion:reduce) {
+  .visual[data-entered="true"] .graphicEntrance, .visual[data-entered="true"] .graphicMotion { animation: none; }
+  .results .motionToggle { display: none; }
+  .panelCopy a svg { transition: none; }
+}
