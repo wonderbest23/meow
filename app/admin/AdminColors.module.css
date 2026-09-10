@@ -1,0 +1,411 @@
+.admin :global(.admin-support-header > div:last-child > button), .admin :global(.admin-settings-link) { border: 1px solid #cccae3; border-radius: 6px; background: var(--app-surface); color: var(--app-body)
+}
+.admin :global(.admin-legal-page) { background: var(--app-raised)
+}
+.admin :global(.admin-legal-page > header) { border-bottom: 1px solid #cccae3; background: var(--app-surface)
+}
+.admin :global(.admin-legal-page > header span) { border-left: 1px solid #cccae3
+}
+.admin :global(.admin-legal-page > header small) { color: var(--app-muted)
+}
+.admin :global(.admin-legal-page > header nav a) { border-radius: 6px; color: var(--app-body)
+}
+.admin :global(.admin-legal-page > header nav a.active) { background: var(--app-line); color: var(--app-accent)
+}
+.admin :global(.admin-readiness) { border: 1px solid; border-radius: 8px
+}
+.admin :global(.admin-readiness.ready) { border-color: #b0b8c1; background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-readiness.blocked) { border-color: #e5d6aa; background: var(--app-warning-bg); color: var(--app-warning)
+}
+.admin :global(.admin-legal-page > form > section) { border: 1px solid #cccae3; border-radius: 8px; background: var(--app-surface)
+}
+.admin :global(.admin-legal-page > form > section > header) { border-bottom: 1px solid var(--app-line)
+}
+.admin :global(.admin-legal-page > form > section > header p) { color: var(--app-muted)
+}
+.admin :global(.admin-legal-page > form label > span) { color: var(--app-body)
+}
+.admin :global(.admin-legal-page input:not([type="checkbox"])), .admin :global(.admin-legal-page textarea) { border: 1px solid #b0b8c1; border-radius: 6px
+}
+.admin :global(.admin-legal-page input:focus), .admin :global(.admin-legal-page textarea:focus) { border-color: var(--app-primary); box-shadow: 0 0 0 3px #3272db12
+}
+.admin :global(.admin-legal-page label small) { color: var(--app-muted)
+}
+.admin :global(.admin-commerce-status) { border: 0
+}
+.admin :global(.admin-commerce-status legend) { color: var(--app-body)
+}
+.admin :global(.admin-commerce-status button) { border: 1px solid #b0b8c1; border-radius: 6px; background: var(--app-surface); color: var(--app-body)
+}
+.admin :global(.admin-commerce-status button.active) { border-color: var(--app-primary); background: var(--app-soft); color: var(--app-accent); box-shadow: inset 0 0 0 1px var(--app-primary)
+}
+.admin :global(.admin-commerce-links) { border-radius: 6px; background: var(--app-raised)
+}
+.admin :global(.admin-commerce-links a) { color: var(--app-accent)
+}
+.admin :global(.admin-legal-confirm > label) { border-bottom: 1px solid var(--app-line)
+}
+.admin :global(.admin-legal-confirm > label strong) { color: var(--app-body)
+}
+.admin :global(.admin-legal-confirm a) { color: var(--app-accent)
+}
+.admin :global(.admin-legal-actions) { border: 1px solid #cccae3; border-radius: 8px; background: var(--app-surface); box-shadow: 0 15px 40px #0d0a2c12
+}
+.admin :global(.admin-legal-actions p) { color: var(--app-accent)
+}
+.admin :global(.admin-legal-actions a) { color: var(--app-body)
+}
+.admin :global(.admin-legal-actions > button) { border: 0; border-radius: 7px; background: var(--app-raised); color: white
+}
+.admin :global(.admin-support-loading) { background: var(--app-raised); color: var(--app-body)
+}
+.admin :global(.admin-login-page) { background: var(--app-raised)
+}
+.admin :global(.admin-login-page form) { border: 1px solid #cccae3; border-radius: 8px; background: var(--app-surface); box-shadow: 0 18px 48px #0d0a2c14
+}
+.admin :global(.admin-login-page form > span) { border-radius: 8px; background: var(--app-raised); color: var(--app-accent)
+}
+.admin :global(.admin-login-page form > p) { color: var(--app-muted)
+}
+.admin :global(.admin-login-page input) { border: 1px solid #b0b8c1; border-radius: 7px
+}
+.admin :global(.admin-login-page input:focus) { border-color: var(--app-primary); box-shadow: 0 0 0 3px #3272db14
+}
+.admin :global(.admin-login-page button) { border: 0; border-radius: 7px; background: var(--app-raised); color: white
+}
+.admin :global(.admin-login-page a) { color: var(--app-body)
+}
+.admin :global(.admin-login-error), .admin :global(.admin-config-warning) { border-radius: 6px; background: var(--app-danger-bg); color: var(--app-danger) !important
+}
+.admin :global(.admin-support-page) { background: var(--app-raised); color: var(--app-text)
+}
+.admin :global(.admin-support-header) { border-bottom: 1px solid #cccae3; background: var(--app-surface)
+}
+.admin :global(.admin-support-header > div > span) { border-radius: 7px; background: var(--app-raised); color: var(--app-accent)
+}
+.admin :global(.admin-support-header small) { color: var(--app-muted)
+}
+.admin :global(.admin-support-header > button) { border: 1px solid #cccae3; border-radius: 6px; background: var(--app-surface); color: var(--app-body)
+}
+.admin :global(.admin-conversation-list) { border-right: 1px solid #cccae3; background: var(--app-surface)
+}
+.admin :global(.admin-conversation-list > header) { border-bottom: 1px solid var(--app-line)
+}
+.admin :global(.admin-conversation-list > header em) { color: var(--app-muted)
+}
+.admin :global(.admin-conversation-list > div > button) { border: 0; border-bottom: 1px solid var(--app-line); background: var(--app-surface); color: inherit
+}
+.admin :global(.admin-conversation-list > div > button:hover), .admin :global(.admin-conversation-list > div > button.selected) { background: var(--app-raised)
+}
+.admin :global(.admin-conversation-list > div > button.selected:before) { background: var(--app-primary)
+}
+.admin :global(.admin-conversation-list button time) { color: var(--app-muted)
+}
+.admin :global(.admin-conversation-list button p) { color: var(--app-body)
+}
+.admin :global(.admin-conversation-list button small) { border-radius: 4px; background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-conversation-list button small.closed) { background: var(--app-raised); color: var(--app-muted)
+}
+.admin :global(.admin-conversation-list button > em) { border-radius: 9px; background: var(--app-accent); color: var(--app-text)
+}
+.admin :global(.admin-empty-list) { color: var(--app-muted)
+}
+.admin :global(.admin-chat-room) { background: var(--app-raised)
+}
+.admin :global(.admin-chat-room > header) { border-bottom: 1px solid #cccae3; background: var(--app-surface)
+}
+.admin :global(.admin-chat-room > header small) { color: var(--app-muted)
+}
+.admin :global(.admin-chat-room > header button) { border: 1px solid #cccae3; border-radius: 6px; background: var(--app-surface); color: var(--app-body)
+}
+.admin :global(.admin-chat-messages article span), .admin :global(.admin-chat-messages article time) { color: var(--app-muted)
+}
+.admin :global(.admin-chat-messages article p) { border: 1px solid #cccae3; border-radius: 8px; background: var(--app-surface)
+}
+.admin :global(.admin-chat-messages article.admin p) { border-color: var(--app-text); background: var(--app-raised); color: white
+}
+.admin :global(.admin-chat-room > form) { border-top: 1px solid #cccae3; background: var(--app-surface)
+}
+.admin :global(.admin-chat-room > form > p) { color: var(--app-danger)
+}
+.admin :global(.admin-chat-room textarea) { border: 1px solid #b0b8c1; border-radius: 7px
+}
+.admin :global(.admin-chat-room textarea:focus) { border-color: var(--app-primary); box-shadow: 0 0 0 3px #3272db14
+}
+.admin :global(.admin-chat-room form button) { border: 0; border-radius: 7px; background: var(--app-raised); color: white
+}
+.admin :global(.admin-chat-placeholder) { color: var(--app-muted)
+}
+.admin :global(.admin-chat-placeholder strong) { color: var(--app-text)
+}
+@media (max-width: 640px) {
+ .admin :global(.admin-conversation-list) { border-right: 0; border-bottom: 1px solid #cccae3
+ }
+}
+@media (max-width: 640px) {
+ .admin :global(.admin-conversation-list > div > button) { border-right: 1px solid var(--app-line)
+ }
+}
+.admin :global(.admin-payment-page) { background: var(--app-raised); color: var(--app-text)
+}
+.admin :global(.admin-payment-page .admin-support-header > div:last-child > a), .admin :global(.admin-payment-page .admin-support-header > div:last-child > button) { border: 1px solid #cccae3; border-radius: 6px; background: var(--app-surface); color: var(--app-body)
+}
+.admin :global(.admin-payment-page .admin-support-header > div:last-child > a.active) { border-color: #b0b8c1; background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-payment-summary) { border: 1px solid #cccae3; border-radius: 8px; background: var(--app-surface)
+}
+.admin :global(.admin-payment-summary > div > svg) { color: #3272db
+}
+.admin :global(.admin-payment-summary small) { color: var(--app-muted)
+}
+.admin :global(.admin-payment-summary > p) { color: var(--app-body)
+}
+.admin :global(.admin-payment-summary > button) { border: 1px solid #cccae3; border-radius: 6px; background: var(--app-surface); color: var(--app-body)
+}
+.admin :global(.admin-payment-workspace) { border: 1px solid #cccae3; border-radius: 8px; background: var(--app-surface)
+}
+.admin :global(.admin-payment-orders) { border-right: 1px solid #cccae3; background: var(--app-raised)
+}
+.admin :global(.admin-payment-orders > header) { border-bottom: 1px solid #cccae3
+}
+.admin :global(.admin-payment-orders > header span) { color: var(--app-muted)
+}
+.admin :global(.admin-payment-orders > div > p) { color: var(--app-muted)
+}
+.admin :global(.admin-payment-orders > div > button) { border: 0; border-bottom: 1px solid var(--app-line); background: transparent
+}
+.admin :global(.admin-payment-orders > div > button:hover) { background: var(--app-surface)
+}
+.admin :global(.admin-payment-orders > div > button.selected) { background: var(--app-soft); box-shadow: inset 3px 0 var(--app-primary)
+}
+.admin :global(.admin-payment-orders button em), .admin :global(.admin-payment-detail .status-awaiting_deposit), .admin :global(.admin-payment-detail .status-deposit_reported), .admin :global(.admin-payment-detail .status-done), .admin :global(.admin-payment-detail .status-refunded), .admin :global(.admin-payment-detail .status-canceled) { border-radius: 5px; background: var(--app-line); color: var(--app-body)
+}
+.admin :global(.admin-payment-orders button em.status-deposit_reported), .admin :global(.admin-payment-detail .status-deposit_reported) { background: var(--app-warning-bg); color: var(--app-warning)
+}
+.admin :global(.admin-payment-orders button em.status-done), .admin :global(.admin-payment-detail .status-done) { background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-payment-orders button em.status-refunded), .admin :global(.admin-payment-detail .status-refunded) { background: var(--app-danger-bg); color: var(--app-danger)
+}
+.admin :global(.admin-payment-orders button p) { color: var(--app-body)
+}
+.admin :global(.admin-payment-orders button small) { color: var(--app-muted)
+}
+.admin :global(.admin-payment-detail > header) { border-bottom: 1px solid var(--app-line)
+}
+.admin :global(.admin-payment-detail > header small) { color: var(--app-muted)
+}
+.admin :global(.admin-payment-detail > header > a) { border: 1px solid #cccae3; border-radius: 6px; color: var(--app-text)
+}
+.admin :global(.admin-payment-amount small) { color: var(--app-muted)
+}
+.admin :global(.admin-payment-amount strong) { color: var(--app-accent)
+}
+.admin :global(.admin-payment-amount span) { color: var(--app-body)
+}
+.admin :global(.admin-payment-detail > dl) { border-top: 1px solid var(--app-line)
+}
+.admin :global(.admin-payment-detail > dl > div) { border-bottom: 1px solid var(--app-line)
+}
+.admin :global(.admin-payment-detail dt) { color: var(--app-muted)
+}
+.admin :global(.admin-payment-detail dd) { color: var(--app-text)
+}
+.admin :global(.admin-cash-receipt) { border: 1px solid #cccae3; border-radius: 7px; background: var(--app-raised)
+}
+.admin :global(.admin-cash-receipt svg) { color: #3272db
+}
+.admin :global(.admin-cash-receipt small) { color: var(--app-muted)
+}
+.admin :global(.admin-cash-receipt em) { color: var(--app-body)
+}
+.admin :global(.admin-cash-receipt > p) { color: var(--app-text)
+}
+.admin :global(.admin-payment-note > span) { color: var(--app-body)
+}
+.admin :global(.admin-payment-note textarea) { border: 1px solid #cccae3; border-radius: 6px
+}
+.admin :global(.admin-payment-note textarea:focus) { border-color: var(--app-primary); box-shadow: 0 0 0 3px #3272db12
+}
+.admin :global(.admin-payment-message) { border-radius: 6px; background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-payment-detail > footer button) { border: 1px solid #cccae3; border-radius: 7px; background: var(--app-surface); color: var(--app-text)
+}
+.admin :global(.admin-payment-detail > footer button.confirm) { border-color: var(--app-primary); background: var(--app-primary); color: white
+}
+.admin :global(.admin-payment-detail > footer button.refund) { border-color: #d6bcbc; color: var(--app-danger)
+}
+@media (max-width: 640px) {
+ .admin :global(.admin-payment-orders) { border-right: 0; border-bottom: 1px solid #cccae3
+ }
+}
+.admin :global(.admin-chat-room form button) {
+  background: var(--action-blue)
+}
+.admin :global(.admin-dash-page) { background: var(--app-raised)
+}
+.admin :global(.admin-dash-error) { color: var(--app-danger)
+}
+.admin :global(.admin-dash-cards article) { background: var(--app-surface); border: 1px solid var(--app-line); border-radius: 14px
+}
+.admin :global(.admin-dash-icon) { border-radius: 10px
+}
+.admin :global(.admin-dash-icon.users) { background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-dash-icon.pay) { background: var(--app-success-bg); color: var(--app-success)
+}
+.admin :global(.admin-dash-icon.refund) { background: var(--app-danger-bg); color: var(--app-danger)
+}
+.admin :global(.admin-dash-icon.inquiry) { background: var(--app-raised); color: var(--app-accent)
+}
+.admin :global(.admin-dash-icon.llm) { background: var(--app-warning-bg); color: var(--app-warning)
+}
+.admin :global(.admin-dash-cards small) { color: var(--app-muted); letter-spacing: 0
+}
+.admin :global(.admin-dash-cards strong) { color: var(--app-text); letter-spacing: 0
+}
+.admin :global(.admin-dash-cards em) { color: var(--app-muted)
+}
+.admin :global(.admin-dash-panel) { background: var(--app-surface); border: 1px solid var(--app-line); border-radius: 14px
+}
+.admin :global(.admin-dash-panel > header strong) { color: var(--app-text)
+}
+.admin :global(.admin-dash-panel > header a) { color: var(--app-accent)
+}
+.admin :global(.admin-dash-panel li) { border-top: 1px solid var(--app-line)
+}
+.admin :global(.admin-dash-panel li p) { color: var(--app-text)
+}
+.admin :global(.admin-dash-panel li b) { color: var(--app-text)
+}
+.admin :global(.admin-dash-panel li time) { color: var(--app-muted)
+}
+.admin :global(.admin-dash-panel li em) { border-radius: 999px; background: var(--app-primary); color: #fff
+}
+.admin :global(.admin-dash-badge) { border-radius: 999px; background: var(--app-raised); color: var(--app-body)
+}
+.admin :global(.admin-dash-badge.open) { background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-dash-badge.done) { background: var(--app-success-bg); color: var(--app-success)
+}
+.admin :global(.admin-dash-badge.refunded) { background: var(--app-danger-bg); color: var(--app-danger)
+}
+.admin :global(.admin-dash-badge.failed), .admin :global(.admin-dash-badge.expired) { background: var(--app-danger-bg); color: var(--app-danger)
+}
+.admin :global(.admin-dash-empty) { color: var(--app-muted)
+}
+.admin :global(.admin-dash-alert) {
+  border: 1px solid #f0b7b3;
+  border-left: 4px solid #b3261e;
+  border-radius: 12px;
+  background: var(--app-danger-bg)
+}
+.admin :global(.admin-dash-alert strong) {
+  color: var(--app-danger)
+}
+.admin :global(.admin-dash-alert span) {
+  color: var(--app-danger)
+}
+.admin :global(.admin-home-hide label) { color: var(--app-text)
+}
+.admin :global(.admin-home-editor) { background: var(--app-raised)
+}
+.admin :global(.admin-home-editor > header) {
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-line)
+}
+.admin :global(.admin-home-editor > header img) { border-radius: 8px
+}
+.admin :global(.admin-home-editor > header strong) { color: var(--app-text)
+}
+.admin :global(.admin-home-editor > header small) { color: var(--app-muted)
+}
+.admin :global(.admin-home-editor > header nav a) { border-radius: 999px; color: var(--app-muted)
+}
+.admin :global(.admin-home-editor > header nav a.active) { background: var(--app-raised); color: #fff
+}
+.admin :global(.admin-home-preview) { border-radius: 14px; background: var(--app-surface); border: 1px solid var(--app-line)
+}
+.admin :global(.admin-home-mock) { background: var(--app-raised); border-bottom: 1px solid var(--app-line)
+}
+.admin :global(.admin-home-dots i) { border-radius: 50%; background: var(--app-line)
+}
+.admin :global(.admin-home-url) { color: var(--app-muted)
+}
+.admin :global(.admin-home-mock a) { color: var(--app-accent)
+}
+.admin :global(.admin-home-preview iframe) { border: 0; background: var(--app-surface)
+}
+.admin :global(.admin-home-seclist) { border-radius: 14px; background: var(--app-surface); border: 1px solid var(--app-line)
+}
+.admin :global(.admin-home-seclist button) {
+  border: 1px solid transparent;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--app-body)
+}
+.admin :global(.admin-home-seclist button svg) { color: #b0b5c4
+}
+.admin :global(.admin-home-seclist button:hover) { background: var(--app-raised)
+}
+.admin :global(.admin-home-seclist button.on) { border-color: var(--app-primary); background: var(--app-soft); color: var(--app-accent)
+}
+.admin :global(.admin-home-seclist button.off) { color: var(--app-muted)
+}
+.admin :global(.admin-home-fields) { border-radius: 14px; background: var(--app-surface); border: 1px solid var(--app-line)
+}
+.admin :global(.admin-home-fields h2) { color: var(--app-text)
+}
+.admin :global(.admin-home-fields > header em) { color: var(--app-muted); border: 1px solid var(--app-line); border-radius: 6px
+}
+.admin :global(.admin-home-fields > header button) {
+  border: 1px solid #e6c9c9;
+  border-radius: 999px;
+  background: var(--app-surface);
+  color: var(--app-danger)
+}
+.admin :global(.admin-home-fields > header button.restore) { border-color: #bfe3c9; color: var(--app-success)
+}
+.admin :global(.admin-home-fields label) { color: var(--app-muted)
+}
+.admin :global(.admin-home-fields input), .admin :global(.admin-home-fields textarea) {
+  border: 1px solid #dfe3ea;
+  border-radius: 10px;
+  color: var(--app-text);
+  background: var(--app-surface)
+}
+.admin :global(.admin-home-fields label small) { color: var(--app-muted)
+}
+.admin :global(.admin-home-offnote) { border-radius: 9px; background: var(--app-danger-bg); color: var(--app-danger)
+}
+.admin :global(.admin-home-hint) { color: var(--app-muted)
+}
+.admin :global(.admin-home-actions) { border-radius: 14px; background: var(--app-surface); border: 1px solid var(--app-line)
+}
+.admin :global(.admin-home-actions p) { color: var(--app-success)
+}
+.admin :global(.admin-home-actions button) {
+  border: 1px solid #dfe3ea;
+  border-radius: 10px;
+  background: var(--app-surface);
+  color: var(--app-body)
+}
+.admin :global(.admin-home-actions button.save) { border-color: var(--app-primary); background: var(--app-primary); color: #fff
+}
+.admin :global(.admin-home-fields label > span button) {
+  border: 0;
+  background: transparent;
+  color: var(--app-danger);
+  border-radius: 6px
+}
+.admin :global(.admin-home-fields label > span button:hover) { background: var(--app-danger-bg)
+}
+.admin :global(.admin-home-fields label > span button.restore) { color: var(--app-success)
+}
+.admin :global(.admin-home-fields label > span button.restore:hover) { background: var(--app-success-bg)
+}
+.admin :global(.admin-home-fields label.off > span) { color: var(--app-muted)
+}
+.admin :global(.admin-home-fields label.off input), .admin :global(.admin-home-fields label.off textarea) { background: var(--app-raised); color: var(--app-muted)
+}

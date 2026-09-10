@@ -12,8 +12,8 @@
 .shell {
   --rail-w: 208px;
   min-height: 100vh;
-  background: var(--surface-muted, #f5f5fa);
-  color: var(--text-strong, #0d0a2c);
+  background: var(--surface-muted, var(--app-raised));
+  color: var(--text-strong, var(--app-text));
   display: flex;
 }
 
@@ -75,7 +75,7 @@
 .railLabel {
   font-size: 13.5px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 .railBtn:hover {
@@ -104,7 +104,7 @@
   height: 26px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
   display: grid;
   place-items: center;
@@ -127,7 +127,7 @@
 .signInText {
   font-size: 10.5px;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 /* 콘텐츠 영역 (레일 폭만큼 밀어냄) */
@@ -273,7 +273,7 @@
     padding: 4px 6px 4px 0;
     font-size: 13.5px;
     font-weight: 700;
-    color: var(--text-muted, #5f5c7f);
+    color: var(--text-muted, var(--app-muted));
     text-decoration: none;
   }
   .shellBack span {
@@ -318,10 +318,10 @@
   width: 22px;
   height: 52px;
   border-radius: 0 8px 8px 0;
-  border: 1px solid var(--border-soft, #d5dbe2);
+  border: 1px solid var(--border-soft, var(--app-line));
   border-left: 0;
-  background: #fff;
-  color: var(--text-muted, #5f5c7f);
+  background: var(--app-surface);
+  color: var(--text-muted, var(--app-muted));
   font-size: 13px;
   font-weight: 800;
   line-height: 1;
@@ -345,8 +345,8 @@
   opacity: 1;
 }
 .railToggle:hover {
-  color: var(--blue, #3272db);
-  background: var(--blue-soft, #efeefb);
+  color: var(--blue, var(--app-accent));
+  background: var(--blue-soft, var(--app-soft));
 }
 
 @media (max-width: 640px) {
@@ -472,8 +472,8 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: #fff;
-    border-bottom: 1px solid var(--border-soft, #dfdef1);
+    background: var(--app-surface);
+    border-bottom: 1px solid var(--border-soft, var(--app-line));
   }
 
   .mobileBrand {
@@ -500,10 +500,10 @@
     width: 40px;
     height: 40px;
     padding: 0;
-    border: 1px solid var(--border-soft, #d5dbe2);
+    border: 1px solid var(--border-soft, var(--app-line));
     border-radius: 11px;
-    background: #fff;
-    color: #1f2937;
+    background: var(--app-surface);
+    color: var(--app-body);
     cursor: pointer;
   }
 
@@ -563,29 +563,29 @@
  * 본문보다 먼저 눈에 들어왔다 — 레일은 조용해야 한다.
  */
 .rail {
-  background: #fff;
-  border-right: 1px solid #e6e6ef;
+  background: var(--app-surface);
+  border-right: 1px solid var(--app-line);
 }
 .railBtn {
-  color: #55586a;
+  color: var(--app-body);
   background: transparent;
 }
 .railBtn svg { color: #8181a5; }
 .railBtn:hover {
-  background: #f5f5fa;
-  color: #1c1d21;
+  background: var(--app-raised);
+  color: var(--app-text);
 }
 .railBtn.on {
-  background: color-mix(in srgb, var(--blue, #3272db) 10%, #fff);
-  color: var(--blue, #3272db);
+  background: color-mix(in srgb, var(--blue, var(--app-primary)) 10%, var(--app-surface));
+  color: var(--blue, var(--app-accent));
 }
 .railBtn.on svg { color: var(--blue, #3272db); }
 .signIn {
-  background: #f5f5fa;
-  color: #1c1d21;
+  background: var(--app-raised);
+  color: var(--app-text);
 }
-.signIn:hover { background: #ececf4; }
-.content { background: #f5f5fa; }
+.signIn:hover { background: var(--app-raised); }
+.content { background: var(--app-raised); }
 
 /*
  * 접기 손잡이 — 레일 테두리 위에 앉은 작은 원.
@@ -595,9 +595,9 @@
 .railToggle {
   width: 28px;
   height: 28px;
-  border: 1px solid #e6e6ef;
+  border: 1px solid var(--app-line);
   border-radius: 50%;
-  color: #8181a5;
+  color: var(--app-muted);
   font-size: 12px;
   box-shadow: 0 2px 8px rgba(28, 29, 33, 0.1);
 }
@@ -611,7 +611,7 @@
 }
 
 /* plan 안쪽 페이지들은 --surface-muted 토큰으로 바탕을 칠한다 — 킷 바탕값으로 맞춘다 */
-.content { --surface-muted: #f5f5fa; }
+.content { --surface-muted: var(--app-raised); }
 
 /*
  * ── 메뉴 접기: 레일 손잡이 → 킷의 상단바 햄버거 ───────────────────
@@ -625,17 +625,17 @@
   transform: none;
   width: 36px;
   height: 36px;
-  border: 1px solid #e6e6ef;
+  border: 1px solid var(--app-line);
   border-radius: 8px;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: none;
   opacity: 1;
 }
 .railToggleOff { left: 28px; }
-.railToggle:hover { background: #f5f5fa; }
+.railToggle:hover { background: var(--app-raised); }
 .burger { display: grid; gap: 4px; }
-.burger i { display: block; width: 16px; height: 2px; border-radius: 1px; background: #55586a; }
-.railToggle:hover .burger i { background: var(--blue, #3272db); }
+.burger i { display: block; width: 16px; height: 2px; border-radius: 1px; background: var(--app-body); }
+.railToggle:hover .burger i { background: var(--blue, var(--app-primary)); }
 
 @media (max-width: 640px) {
   /* 폰은 상단 바 안에 이미 메뉴 단추가 있으니 여기서는 그 자리에 맞춘다 */
@@ -648,11 +648,12 @@
 .railToggle { top: 35px; left: calc(var(--rail-w) - 14px - 36px); }
 .railToggleOff { top: 35px; left: 14px; }
 /* 아바타도 보라를 쓰지 않는다 — 보라는 '다음에 누를 것' 전용 */
-.meAvatar { background: #1c1d21; }
+.meAvatar { background: var(--app-raised); }
 
 /* 레일 로고 — 심볼만 두었더니 사이트 다른 화면(홈·폰 상단바)과 달랐다.
    같은 가로형 로고를 쓴다. 접힌 폰 레일에서는 폭이 없어 심볼만 보이게 잘라 쓴다. */
 .logo { width: auto; min-width: 0; height: 26px; border-radius: 0; place-items: center start; margin-bottom: 18px; }
+.logo > span { font-size: 18px; gap: 6px; }
 .logo img { width: auto; height: 26px; max-width: none; object-fit: contain; }
 @media (max-width: 640px) {
   .logo { width: 40px; min-width: 40px; height: 40px; overflow: hidden; place-items: center; }

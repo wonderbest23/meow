@@ -1,0 +1,59 @@
+.theme {
+  --app-bg: #080f1c;
+  --app-surface: #101b2d;
+  --app-raised: #18263d;
+  --app-hover: #203451;
+  --app-soft: #132d52;
+  --app-line: #2c405d;
+  --app-line-strong: #48678e;
+  --app-text: #f3f6fc;
+  --app-body: #c4d1e5;
+  --app-muted: #9badc7;
+  --app-accent: #9cc8ff;
+  --app-primary: #176af0;
+  --app-selected: #246bd1;
+  --app-danger: #ffb5b9;
+  --app-danger-bg: #3a1e2b;
+  --app-warning: #f4cd8b;
+  --app-warning-bg: #31281c;
+  --app-success: #8bddbd;
+  --app-success-bg: #153b35;
+  --app-panel-fill: linear-gradient(135deg, #1b2b44 0%, #111d30 75%);
+  --app-primary-fill: linear-gradient(115deg, #2388ff, #0755eb);
+  --surface: var(--app-surface);
+  --surface-2: var(--app-raised);
+  --surface-soft: var(--app-raised);
+  --surface-muted: var(--app-bg);
+  --border-soft: var(--app-line);
+  --text-strong: var(--app-text);
+  --text-body: var(--app-body);
+  --text-muted: var(--app-muted);
+  --text: var(--app-text);
+  --text-2: var(--app-body);
+  --blue: var(--app-primary);
+  --blue-dark: #1260d9;
+  --blue-soft: var(--app-soft);
+  --wz-ink: var(--app-text);
+  --wz-muted: var(--app-body);
+  --wz-faint: var(--app-muted);
+  --wz-panel: var(--app-surface);
+  --wz-panel2: var(--app-raised);
+  --wz-line: var(--app-line);
+  --wz-brand: var(--app-primary);
+  --wz-brand-soft: var(--app-soft);
+  min-height: 100dvh;
+  background: var(--app-bg);
+  color: var(--app-text);
+  color-scheme: dark;
+  font-synthesis: none;
+  accent-color: var(--app-primary);
+}
+.theme, .theme * { letter-spacing: 0; }
+.theme :is(input, textarea, select) { color-scheme: dark; }
+.theme :is(input, textarea)::placeholder { color: var(--app-muted); opacity: 1; }
+.theme :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #9cc8ff; outline-offset: 3px; }
+.theme ::selection { background: #246bd1; color: #fff; }
+.theme :is(main, aside, nav, article, section, div) { scrollbar-color: #486181 transparent; scrollbar-width: thin; }
+@media (prefers-reduced-motion: reduce) {
+  .theme *, .theme *::before, .theme *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}

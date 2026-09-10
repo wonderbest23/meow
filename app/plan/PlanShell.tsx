@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import PlanRailNav from "./PlanRailNav";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanShell.module.css";
+import WorkspaceBrand from "../../components/workspace-brand";
 
 const ICONS = {
   plan: (
@@ -146,8 +147,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         aria-label="주요 메뉴"
       >
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/today-startup-logo-2026.png" alt="오늘창업" width={1288} height={322} />
+          <WorkspaceBrand />
         </Link>
         <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">
           {ICONS.plan}<span className={styles.railLabel}>내 플랜</span>
@@ -192,8 +192,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
       */}
       <header className={styles.mobileBar}>
         <Link href="/" className={styles.mobileBrand} aria-label="오늘창업 홈">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/today-startup-logo-2026.png" alt="오늘창업" width={1288} height={322} />
+          <WorkspaceBrand />
         </Link>
         <button
           type="button"

@@ -3,6 +3,8 @@
 import { Banknote, Headphones, LayoutDashboard, LogOut, PanelsTopLeft, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import WorkspaceBrand from "../../components/workspace-brand";
+import styles from "./AdminWorkspace.module.css";
 
 /**
  * 어드민 공용 헤더 — 어느 화면에서든 같은 네비게이션.
@@ -28,23 +30,17 @@ export default function AdminNav({ title, subtitle }: { title: string; subtitle?
   ];
 
   return (
-    <header className="admin-support-header">
-      <div>
-        <span><LayoutDashboard /></span>
-        <div><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}</div>
-      </div>
-      <div>
+    <><aside className={styles.rail} aria-label="관리자 메뉴"><Link href="/admin" aria-label="오늘창업 관리자"><WorkspaceBrand /></Link><nav>
         {links.map(({ href, label, Icon }) => (
           <Link
             key={href}
-            className={`admin-settings-link ${pathname === href ? "active" : ""}`}
+            aria-current={pathname === href ? "page" : undefined}
             href={href}
           >
             <Icon /> {label}
           </Link>
         ))}
-        <button type="button" onClick={() => void logout()}><LogOut /> 로그아웃</button>
-      </div>
-    </header>
+      </nav><small>오늘창업 운영 관리</small></aside>
+    <header className={styles.header}><div><strong>{title}</strong>{subtitle && <small>{subtitle}</small>}</div><button type="button" onClick={() => void logout()}><LogOut size={18} />로그아웃</button></header></>
   );
 }

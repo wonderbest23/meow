@@ -6,7 +6,7 @@
   flex: 1 1 auto;
   margin-top: 10px;
   padding-top: 12px;
-  border-top: 1px solid #f0f0f3;
+  border-top: 1px solid var(--app-line);
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -28,7 +28,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #1c1d21;
+  color: var(--app-text);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -36,19 +36,19 @@
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 /* 지금 작업 중인 플랜 — 여럿 중 어느 것이 기준인지 */
 .planOn {
-  background: #f0f0f3;
+  background: var(--app-raised);
 }
 
 .caret {
   flex: none;
   width: 12px;
   font-size: 9px;
-  color: #8181a5;
+  color: var(--app-muted);
   transition: transform 0.14s ease;
 }
 
@@ -70,17 +70,17 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
-  color: #8181a5;
+  color: var(--app-muted);
 }
 
 .sampleTag {
   flex: none;
   padding: 1px 6px;
   border-radius: 999px;
-  background: #ececf4;
+  background: var(--app-raised);
   font-size: 13px;
   font-weight: 800;
-  color: #55586a;
+  color: var(--app-body);
 }
 
 .planBody {
@@ -103,10 +103,10 @@
 .output {
   min-height: 26px;
   padding: 0 10px;
-  border: 1px solid #e6e6ef;
+  border: 1px solid var(--app-line);
   border-radius: 999px;
   background: transparent;
-  color: #1c1d21;
+  color: var(--app-text);
   font-size: 13px;
   font-weight: 700;
   white-space: nowrap;
@@ -125,7 +125,7 @@
   border: 0;
   border-radius: 8px;
   background: transparent;
-  color: #1c1d21;
+  color: var(--app-text);
   display: flex;
   align-items: center;
   gap: 8px;
@@ -140,7 +140,7 @@
   width: 16px;
   height: 16px;
   border-radius: 5px;
-  background: #ececf4;
+  background: var(--app-raised);
   display: grid;
   place-items: center;
   font-size: 13px;
@@ -162,7 +162,7 @@
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   /* 어두운 레일 위 45% 는 4.39 — 기준을 겨우 못 넘겼다 */
-  color: #8181a5;
+  color: var(--app-muted);
 }
 
 .sections {
@@ -177,7 +177,7 @@
   border: 0;
   border-radius: 7px;
   background: transparent;
-  color: #8181a5;
+  color: var(--app-muted);
   display: flex;
   align-items: center;
   gap: 7px;
@@ -204,11 +204,11 @@
 
 /* 다 쓴 섹션 — 남은 일과 구분되게 조금 밝게 */
 .sectionDone .sectionName {
-  color: #1c1d21;
+  color: var(--app-text);
 }
 
 .sectionOn {
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
 }
 
@@ -221,16 +221,16 @@
   .planRow:hover,
   .chapterBtn:hover,
   .section:hover {
-    background: #f5f5fa;
+    background: var(--app-raised);
   }
 
   .output:hover {
-    background: #ececf4;
-    border-color: #d8d8d8;
+    background: var(--app-raised);
+    border-color: var(--app-line);
   }
 
   .sectionOn:hover {
-    background: var(--blue, #3272db);
+    background: var(--blue, var(--app-primary));
   }
 }
 

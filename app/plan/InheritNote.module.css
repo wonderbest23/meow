@@ -5,8 +5,8 @@
   gap: 10px;
   margin: 0 0 16px;
   padding: 12px 14px;
-  background: var(--blue-soft, #efeefb);
-  border: 1px solid color-mix(in srgb, var(--blue, #3272db) 28%, transparent);
+  background: var(--blue-soft, var(--app-soft));
+  border: 1px solid color-mix(in srgb, var(--blue, var(--app-primary)) 28%, transparent);
   border-radius: 12px;
 }
 .text {
@@ -14,11 +14,11 @@
   min-width: 0;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-body, #333d4b);
+  color: var(--text-body, var(--app-text));
   word-break: keep-all;
 }
 .text b {
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
   font-weight: 700;
 }
 .close {
@@ -32,7 +32,7 @@
   border: 0;
   border-radius: 50%;
   background: rgba(49, 130, 246, 0.12);
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
   font-size: 14px;
   line-height: 1;
   cursor: pointer;

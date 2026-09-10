@@ -2,8 +2,8 @@
 
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f5f5fa);
-  color: var(--text-strong, #0d0a2c);
+  background: var(--surface-muted, var(--app-raised));
+  color: var(--text-strong, var(--app-text));
   padding: 22px 16px 48px;
 }
 .frame {
@@ -11,7 +11,7 @@
   margin: 0 auto;
 }
 .app {
-  background: var(--surface, #fff);
+  background: var(--surface, var(--app-surface));
   border-radius: 24px;
   box-shadow: 0 24px 60px rgba(20, 32, 64, 0.1);
   /* overflow: hidden 금지 — 드롭다운 메뉴가 카드 밖으로 나와야 한다 */
@@ -35,7 +35,7 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(150deg, var(--blue, #3272db), #7f9bff);
+  background: linear-gradient(150deg, var(--blue, var(--app-primary)), #7f9bff);
   display: grid;
   place-items: center;
   color: #fff;
@@ -76,15 +76,15 @@
   margin: 0 0 4px;
   font-size: 27px;
   font-weight: 800;
-  letter-spacing: -0.6px;
+  letter-spacing: 0;
 }
 .lead {
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   font-size: 14.5px;
   margin: 0 0 20px;
 }
 .lead b {
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
   font-weight: 800;
 }
 
@@ -101,7 +101,7 @@
   gap: 8px;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
 }
 .stepNum {
   flex: none;
@@ -112,11 +112,11 @@
   place-items: center;
   font-size: 13px;
   font-weight: 800;
-  background: var(--surface-muted, #f5f5fa);
-  color: var(--text-muted, #5f5c7f);
+  background: var(--surface-muted, var(--app-raised));
+  color: var(--text-muted, var(--app-muted));
 }
 .step.stepOn {
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 /*
  * 단계 배지 — 작은 원 안의 흰 글씨라 배경이 밝으면 읽히지 않는다.
@@ -124,7 +124,7 @@
  * 막대(진행률)에 쓰는 밝은 초록과 달리 여기는 글씨가 얹히므로 더 진해야 한다.
  */
 .step.stepOn .stepNum {
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
 }
 /*
@@ -134,13 +134,13 @@
  * 완료는 색이 아니라 체크 표시로 구분한다.
  */
 .step.stepDone .stepNum {
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
 }
 .stepBar {
   flex: 0 0 28px;
   height: 2px;
-  background: var(--border-soft, #dfdef1);
+  background: var(--border-soft, var(--app-line));
 }
 
 /* 사업 정보 폼 */
@@ -160,24 +160,24 @@
 .label {
   font-size: 13px;
   font-weight: 800;
-  color: var(--text-muted, #5f5c7f);
-  letter-spacing: 0.04em;
+  color: var(--text-muted, var(--app-muted));
+  letter-spacing: 0;
   margin-bottom: 8px;
 }
 .req {
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
   margin-left: 3px;
 }
 .input,
 .textarea {
   width: 100%;
-  border: 1.5px solid var(--border-soft, #dfdef1);
-  background: var(--surface-soft, #f9f9ff);
+  border: 1.5px solid var(--border-soft, var(--app-line));
+  background: var(--surface-soft, var(--app-raised));
   border-radius: 12px;
   padding: 13px 16px;
   font: inherit;
   font-size: 14.5px;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
   resize: vertical;
 }
 .input:focus,
@@ -187,7 +187,7 @@
 }
 .hint {
   font-size: 13px;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   margin-top: 6px;
   line-height: 1.5;
 }
@@ -201,27 +201,27 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  border: 1.5px solid var(--border-soft, #dfdef1);
-  background: var(--surface-soft, #f9f9ff);
+  border: 1.5px solid var(--border-soft, var(--app-line));
+  background: var(--surface-soft, var(--app-raised));
   border-radius: 12px;
   padding: 13px 16px;
   font: inherit;
   font-size: 14.5px;
   font-weight: 600;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
   cursor: pointer;
   text-align: left;
   transition: 0.14s;
 }
 .selectBtn:hover {
-  border-color: color-mix(in srgb, var(--blue, #3272db) 45%, var(--border-soft, #dfdef1));
+  border-color: color-mix(in srgb, var(--blue, var(--app-primary)) 45%, var(--border-soft, var(--app-line)));
 }
 .selectBtn:focus-visible {
   outline: 2px solid var(--blue, #3272db);
   outline-offset: 1px;
 }
 .selectBtn.placeholder {
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   font-weight: 500;
 }
 .selectBtn svg {
@@ -241,8 +241,8 @@
   left: 0;
   right: 0;
   z-index: 30;
-  background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface, var(--app-surface));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 12px;
   box-shadow: 0 12px 32px rgba(20, 32, 64, 0.14);
   padding: 6px;
@@ -269,7 +269,7 @@
   background: transparent;
   font: inherit;
   font-size: 14px;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   padding: 11px 13px;
   border-radius: 8px;
   cursor: pointer;
@@ -279,11 +279,11 @@
   gap: 8px;
 }
 .option:hover {
-  background: var(--surface-soft, #f9f9ff);
+  background: var(--surface-soft, var(--app-raised));
 }
 .option.optionOn {
-  background: var(--blue-soft, #efeefb);
-  color: var(--blue, #3272db);
+  background: var(--blue-soft, var(--app-soft));
+  color: var(--blue, var(--app-accent));
   font-weight: 700;
 }
 .option svg {
@@ -296,9 +296,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  border: 1px dashed color-mix(in srgb, var(--blue, #3272db) 45%, transparent);
-  background: var(--blue-soft, #efeefb);
-  color: var(--blue, #3272db);
+  border: 1px dashed color-mix(in srgb, var(--blue, var(--app-primary)) 45%, transparent);
+  background: var(--blue-soft, var(--app-soft));
+  color: var(--blue, var(--app-accent));
   font: inherit;
   font-weight: 800;
   font-size: 13px;
@@ -318,7 +318,7 @@
 }
 .primaryBtn {
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -334,9 +334,9 @@
   box-shadow: none;
 }
 .ghostBtn {
-  border: 1px solid var(--border-soft, #dfdef1);
+  border: 1px solid var(--border-soft, var(--app-line));
   background: transparent;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   font: inherit;
   font-weight: 700;
   font-size: 14px;
@@ -345,17 +345,17 @@
   cursor: pointer;
 }
 .summaryBox {
-  background: var(--surface-soft, #f9f9ff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface-soft, var(--app-raised));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 14px;
   padding: 14px 18px;
   margin-bottom: 20px;
   font-size: 13.5px;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   line-height: 1.6;
 }
 .summaryBox b {
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 
 .titleField {
@@ -365,22 +365,22 @@
   display: block;
   font-size: 13px;
   font-weight: 800;
-  color: var(--text-muted, #5f5c7f);
-  letter-spacing: 0.04em;
+  color: var(--text-muted, var(--app-muted));
+  letter-spacing: 0;
   text-transform: uppercase;
   margin-bottom: 8px;
 }
 .titleInput {
   width: 100%;
   max-width: 420px;
-  border: 1.5px solid var(--border-soft, #dfdef1);
-  background: var(--surface-soft, #f9f9ff);
+  border: 1.5px solid var(--border-soft, var(--app-line));
+  background: var(--surface-soft, var(--app-raised));
   border-radius: 12px;
   padding: 13px 16px;
   font: inherit;
   font-size: 15px;
   font-weight: 700;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 .titleInput:focus {
   outline: 2px solid var(--blue, #3272db);
@@ -391,8 +391,8 @@
 .cats {
   display: flex;
   width: 100%;
-  background: var(--surface-soft, #f9f9ff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface-soft, var(--app-raised));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 12px;
   padding: 5px;
   gap: 5px;
@@ -402,7 +402,7 @@
   flex: 1 1 0;
   border: 0;
   background: transparent;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   font: inherit;
   font-weight: 800;
   font-size: 13.5px;
@@ -412,7 +412,7 @@
   text-align: center;
 }
 .cats button.catOn {
-  background: var(--text-strong, #0d0a2c);
+  background: var(--app-primary);
   color: #fff;
 }
 
@@ -425,8 +425,8 @@
 .card {
   position: relative;
   text-align: left;
-  border: 1px solid var(--border-soft, #dfdef1);
-  background: var(--surface, #fff);
+  border: 1px solid var(--border-soft, var(--app-line));
+  background: var(--surface, var(--app-surface));
   border-radius: 18px;
   padding: 0 0 18px;
   cursor: pointer;
@@ -471,18 +471,18 @@
   color: var(--acc);
   font-weight: 800;
   font-size: 13px;
-  letter-spacing: 0.05em;
+  letter-spacing: 0;
   margin: 15px 18px 2px;
 }
 .cardTitle {
   margin: 0 18px;
   font-size: 17px;
   font-weight: 800;
-  letter-spacing: -0.3px;
+  letter-spacing: 0;
 }
 .desc {
   margin: 8px 18px 0;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   font-size: 13px;
   line-height: 1.55;
 }
@@ -516,7 +516,7 @@
   margin-left: 6px;
   font-size: 13px;
   font-weight: 900;
-  color: #0f9d66;
+  color: var(--app-success);
 }
 
 /* 다음 버튼 — 조건이 채워지면 눌러야 한다는 걸 알린다 */
@@ -540,7 +540,7 @@
 }
 .todo {
   font-size: 13px;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
 }
 @media (prefers-reduced-motion: reduce) {
   .ready { animation: none; }
@@ -554,9 +554,9 @@
   gap: 22px;
   width: 100%;
   text-align: left;
-  border: 1.5px solid var(--acc, #3358f4);
+  border: 1.5px solid var(--acc, var(--app-primary));
   border-radius: 18px;
-  background: linear-gradient(120deg, var(--tint, #eef1ff), var(--surface, #fff) 62%);
+  background: linear-gradient(120deg, var(--tint, var(--app-raised)), var(--surface, var(--app-surface)) 62%);
   padding: 24px 26px;
   cursor: pointer;
   transition: transform 0.16s, box-shadow 0.16s;
@@ -570,8 +570,8 @@
   width: 54px;
   height: 54px;
   border-radius: 15px;
-  background: var(--surface, #fff);
-  color: var(--acc, #3358f4);
+  background: var(--surface, var(--app-surface));
+  color: var(--acc, var(--app-accent));
   display: grid;
   place-items: center;
   box-shadow: 0 4px 12px rgba(20, 32, 64, 0.1);
@@ -586,7 +586,7 @@
 }
 .heroBadge {
   display: inline-block;
-  background: var(--acc, #3358f4);
+  background: var(--acc, var(--app-primary));
   color: #fff;
   font-size: 13px;
   font-weight: 800;
@@ -597,14 +597,14 @@
   margin: 8px 0 6px;
   font-size: 21px;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  letter-spacing: 0;
 }
 .heroGo {
   flex: none;
   font-size: 14px;
   font-weight: 800;
   color: #fff;
-  background: var(--acc, #3358f4);
+  background: var(--acc, var(--app-primary));
   border-radius: 11px;
   padding: 13px 20px;
   white-space: nowrap;
@@ -621,7 +621,7 @@
 }
 .fits li {
   font-size: 13px;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   padding-left: 17px;
   position: relative;
 }
@@ -629,7 +629,7 @@
   content: "✓";
   position: absolute;
   left: 0;
-  color: var(--acc, #3358f4);
+  color: var(--acc, var(--app-accent));
   font-weight: 900;
   font-size: 13px;
 }
@@ -638,8 +638,8 @@
   margin: 26px 0 12px;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--text-muted, #5f5c7f);
+  letter-spacing: 0;
+  color: var(--text-muted, var(--app-muted));
   text-transform: uppercase;
 }
 
@@ -647,8 +647,8 @@
   margin: 18px 0 0;
   font-size: 13px;
   line-height: 1.7;
-  color: var(--text-muted, #5f5c7f);
-  background: var(--surface-soft, #f9f9ff);
+  color: var(--text-muted, var(--app-muted));
+  background: var(--surface-soft, var(--app-raised));
   border-radius: 11px;
   padding: 13px 15px;
 }
@@ -669,9 +669,9 @@
   display: inline-block;
   font-size: 13px;
   font-weight: 800;
-  color: var(--acc, #3358f4);
-  background: var(--surface, #fff);
-  border: 1px solid color-mix(in srgb, var(--acc, #3358f4) 30%, transparent);
+  color: var(--acc, var(--app-accent));
+  background: var(--surface, var(--app-surface));
+  border: 1px solid color-mix(in srgb, var(--acc, var(--app-primary)) 30%, transparent);
   border-radius: 999px;
   padding: 4px 10px;
   font-variant-numeric: tabular-nums;
@@ -705,8 +705,8 @@
   flex-direction: column;
   border-radius: 16px;
   overflow: hidden;
-  border: 1px solid var(--border-soft, #dfdef1);
-  background: #fff;
+  border: 1px solid var(--border-soft, var(--app-line));
+  background: var(--app-surface);
   transition: transform 0.2s, box-shadow 0.2s;
 }
 /* 터치 기기에서는 탭마다 카드가 들썩였다 — 진짜 호버 환경에서만 */
@@ -720,7 +720,7 @@
   outline: none;
 }
 .planCard:focus-visible .sheet {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc, #3358f4) 45%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--acc, var(--app-primary)) 45%, transparent);
 }
 
 /* 커버 — 내 플랜 목록 카드와 동일한 문법(사선 결 + 중앙 흰 원 엠블럼 + 하단 이름) */
@@ -737,7 +737,7 @@
   padding: 7cqw;
   background:
     repeating-linear-gradient(-52deg, rgba(255, 255, 255, 0.05) 0 10px, transparent 10px 26px),
-    linear-gradient(158deg, color-mix(in srgb, var(--acc, #3358f4) 88%, #fff) 0%, var(--acc, #3358f4) 52%, color-mix(in srgb, var(--acc, #3358f4) 72%, #10233a) 100%);
+    linear-gradient(158deg, color-mix(in srgb, var(--acc, var(--app-primary)) 88%, var(--app-surface)) 0%, var(--acc, var(--app-primary)) 52%, color-mix(in srgb, var(--acc, var(--app-primary)) 72%, #10233a) 100%);
   overflow: hidden;
 }
 .coverIcon {
@@ -750,10 +750,10 @@
   width: 36cqw;
   height: 36cqw;
   border-radius: 50%;
-  background: #fff;
+  background: var(--app-surface);
   display: grid;
   place-items: center;
-  color: var(--acc, #3358f4);
+  color: var(--acc, var(--app-accent));
   box-shadow: 0 8px 20px rgba(16, 35, 58, 0.22);
   pointer-events: none;
 }
@@ -771,7 +771,7 @@
   font-size: 9cqw;
   font-weight: 800;
   line-height: 1.3;
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
   word-break: keep-all;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.14);
   max-width: 100%;
@@ -798,14 +798,14 @@
   justify-content: space-between;
   gap: 8px;
   padding: 11px 13px;
-  background: #fff;
-  color: var(--text-body, #585667);
+  background: var(--app-surface);
+  color: var(--text-body, var(--app-body));
   font-size: 13px;
 }
 .strip b {
   font-weight: 800;
   font-variant-numeric: tabular-nums;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 .strip svg {
   color: var(--text-muted, #5f5c7f);
@@ -820,7 +820,7 @@
 .cardDesc {
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -865,13 +865,13 @@
 .inheritHead {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   margin-bottom: 8px;
 }
 .inheritOpts {
-  border: 1px solid var(--border-soft, #dfdef1);
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 12px;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--app-surface));
   overflow: hidden;
 }
 .inheritOpt {
@@ -888,10 +888,10 @@
   transition: background 0.15s;
 }
 .inheritOpt + .inheritOpt {
-  border-top: 1px solid var(--border-soft, #eef1f4);
+  border-top: 1px solid var(--border-soft, var(--app-line));
 }
 .inheritOpt:active {
-  background: var(--surface-soft, #f9f9ff);
+  background: var(--surface-soft, var(--app-raised));
 }
 .inheritRadio {
   flex: none;
@@ -899,12 +899,12 @@
   height: 19px;
   margin-top: 1px;
   border-radius: 50%;
-  border: 1.6px solid #cdd3da;
-  background: #fff;
+  border: 1.6px solid var(--app-line);
+  background: var(--app-surface);
   transition: border 0.15s;
 }
 .inheritOn .inheritRadio {
-  border: 6px solid var(--blue, #3272db);
+  border: 6px solid var(--blue, var(--app-primary));
 }
 .inheritText {
   display: flex;
@@ -915,12 +915,12 @@
 .inheritText b {
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 .inheritText span {
   font-size: 13px;
   line-height: 1.55;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   word-break: keep-all;
 }
 
@@ -929,12 +929,12 @@
 .hiddenNote {
   margin: 0 0 14px;
   padding: 10px 14px;
-  background: var(--surface-soft, #f9f9ff);
-  border: 1px dashed var(--border-soft, #d5dbe2);
+  background: var(--surface-soft, var(--app-raised));
+  border: 1px dashed var(--border-soft, var(--app-line));
   border-radius: 10px;
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   word-break: keep-all;
 }
 
@@ -960,15 +960,15 @@
 .consultNote {
   margin: 0 0 18px;
   padding: 14px 16px;
-  border: 1px solid var(--blue-soft, #cfe3ff);
+  border: 1px solid var(--blue-soft, var(--app-line));
   border-radius: 12px;
-  background: var(--blue-soft, #eef5ff);
+  background: var(--blue-soft, var(--app-soft));
 }
 
 .consultNote > strong {
   display: block;
   margin-bottom: 8px;
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
   font-size: 13px;
   font-weight: 800;
 }
@@ -981,13 +981,13 @@
 }
 
 .consultNote li {
-  color: var(--text, #0d0a2c);
+  color: var(--text, var(--app-text));
   font-size: 13px;
   line-height: 1.6;
 }
 
 .consultNote > small {
-  color: var(--text-2, #5f5c7f);
+  color: var(--text-2, var(--app-muted));
   font-size: 13px;
 }
 
@@ -996,7 +996,7 @@
  * /plan, /plan/overview 와 같은 문법. 떠 있는 큰 앱 카드를 벗기고
  * 단계 표시·입력 폼·유형 카드를 바탕 위 흰 카드로 둔다.
  */
-.page { padding: 28px 28px 64px; color: #1c1d21; }
+.page { padding: 28px 28px 64px; color: var(--app-text); }
 .app {
   background: transparent;
   border-radius: 0;
@@ -1006,14 +1006,14 @@
 .main {
   padding: 28px 28px 32px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: 0 1px 2px rgba(28, 29, 33, .04);
 }
-.h1 { color: #1c1d21; font-size: 20px; }
+.h1 { color: var(--app-text); font-size: 20px; }
 
 /* 유형 카드 — 테두리 얇게, 라운드 12 */
 .card {
-  border: 1px solid #ececf4;
+  border: 1px solid var(--app-line);
   border-radius: 12px;
   box-shadow: none;
 }
@@ -1021,8 +1021,8 @@
   transform: translateY(-2px);
   box-shadow: 0 10px 28px rgba(28, 29, 33, .1);
 }
-.cardTitle { color: #1c1d21; }
-.cardDesc { color: #8181a5; }
+.cardTitle { color: var(--app-text); }
+.cardDesc { color: var(--app-muted); }
 
 @media (max-width: 640px) {
   .page { padding: 16px 16px 56px; }
@@ -1035,45 +1035,45 @@
  * 포스터 타일은 없다. 유형 선택은 Tasks 화면과 같은 목록 행이다.
  */
 .main { max-width: 880px; }
-.h1 { font-size: 20px; font-weight: 700; color: #1c1d21; margin-bottom: 4px; }
-.lead { color: #8181a5; font-size: 13px; }
-.lead b { color: #1c1d21; }
+.h1 { font-size: 20px; font-weight: 700; color: var(--app-text); margin-bottom: 4px; }
+.lead { color: var(--app-muted); font-size: 13px; }
+.lead b { color: var(--app-text); }
 
 /* 단계 표시 — 작게, 칩처럼 */
-.steps { margin: 18px 0 22px; padding-bottom: 18px; border-bottom: 1px solid #f0f0f3; gap: 10px; }
-.step { font-size: 13px; color: #8181a5; }
-.stepOn { color: #1c1d21; }
+.steps { margin: 18px 0 22px; padding-bottom: 18px; border-bottom: 1px solid var(--app-line); gap: 10px; }
+.step { font-size: 13px; color: var(--app-muted); }
+.stepOn { color: var(--app-text); }
 .stepNum {
   width: 22px; height: 22px; border-radius: 50%;
-  background: #f0f0f3; color: #8181a5; font-size: 12px; font-weight: 700;
+  background: var(--app-raised); color: var(--app-muted); font-size: 12px; font-weight: 700;
   display: inline-grid; place-items: center;
 }
-.stepOn .stepNum { background: var(--blue, #3272db); color: #fff; }
-.stepDone .stepNum { background: var(--blue, #3272db); color: #fff; }
-.stepBar { background: #e6e6ef; }
+.stepOn .stepNum { background: var(--blue, var(--app-primary)); color: #fff; }
+.stepDone .stepNum { background: var(--blue, var(--app-primary)); color: #fff; }
+.stepBar { background: var(--app-line); }
 
 /* 입력칸 — 킷 폼: 라벨 12/#8181a5, 칸 44, 테두리 #e6e6ef r8 */
-.field label, .titleLabel { color: #8181a5; font-size: 12px; font-weight: 700; }
+.field label, .titleLabel { color: var(--app-muted); font-size: 12px; font-weight: 700; }
 .field input, .field textarea, .field select, .titleInput {
   min-height: 44px;
-  border: 1px solid #e6e6ef;
+  border: 1px solid var(--app-line);
   border-radius: 8px;
-  background: #fff;
-  color: #1c1d21;
+  background: var(--app-surface);
+  color: var(--app-text);
   font-size: 14px;
 }
 .field input:focus, .field textarea:focus, .field select:focus, .titleInput:focus {
-  border-color: var(--blue, #3272db);
+  border-color: var(--blue, var(--app-primary));
   box-shadow: 0 0 0 3px rgba(74, 58, 255, .12);
   outline: none;
 }
 
 /* 사업 요약·이어받기 상자 — 옅은 바탕 r8, 테두리 없음 */
-.summaryBox { border: 0; border-radius: 8px; background: #f5f5fa; color: #1c1d21; }
-.inheritBox { border: 0; border-radius: 8px; background: #f5f5fa; }
-.inheritHead { color: #8181a5; font-size: 12px; font-weight: 700; }
+.summaryBox { border: 0; border-radius: 8px; background: var(--app-raised); color: var(--app-text); }
+.inheritBox { border: 0; border-radius: 8px; background: var(--app-raised); }
+.inheritHead { color: var(--app-muted); font-size: 12px; font-weight: 700; }
 .inheritOpt { border-radius: 8px; }
-.inheritOn { background: #fff; box-shadow: 0 1px 2px rgba(28, 29, 33, .06); }
+.inheritOn { background: var(--app-surface); box-shadow: 0 1px 2px rgba(28, 29, 33, .06); }
 
 /* 카테고리 — 킷 필터 칩 */
 .cats { border: 0; background: transparent; gap: 6px; padding: 0; }
@@ -1082,19 +1082,19 @@
   padding: 0 12px !important;
   border: 0;
   border-radius: 8px !important;
-  background: #f5f5fa;
-  color: #55586a;
+  background: var(--app-raised);
+  color: var(--app-body);
   font-size: 12px;
   font-weight: 700 !important;
 }
-.cats button.catOn { background: var(--blue, #3272db); color: #fff; }
+.cats button.catOn { background: var(--blue, var(--app-primary)); color: #fff; }
 
 .hiddenNote, .sameNote {
   padding: 10px 12px;
   border: 0;
   border-radius: 8px;
-  background: #f5f5fa;
-  color: #55586a;
+  background: var(--app-raised);
+  color: var(--app-body);
   font-size: 12.5px;
 }
 
@@ -1104,9 +1104,9 @@
   width: 100%;
   min-height: 60px !important;
   padding: 10px 12px 10px 14px !important;
-  border: 1px solid #f0f0f3 !important;
+  border: 1px solid var(--app-line) !important;
   border-radius: 8px !important;
-  background: #fff !important;
+  background: var(--app-surface) !important;
   box-shadow: none !important;
   color: inherit;
   display: grid;
@@ -1117,38 +1117,38 @@
   cursor: pointer;
   transition: background .12s ease, border-color .12s ease;
 }
-.typeRow:hover { background: #f9f9fc !important; border-color: #e6e6ef !important; }
+.typeRow:hover { background: var(--app-raised) !important; border-color: var(--app-line) !important; }
 .typeRow:focus-visible { outline: 2px solid var(--blue, #3272db); outline-offset: 1px; }
 .typeIcon {
   width: 34px; height: 34px; border-radius: 8px;
-  background: color-mix(in srgb, var(--acc, #3272db) 12%, #fff);
-  color: var(--acc, #3272db);
+  background: color-mix(in srgb, var(--acc, var(--app-primary)) 12%, var(--app-surface));
+  color: var(--acc, var(--app-accent));
   display: grid; place-items: center;
 }
 .typeIcon svg { display: inline-block !important; width: 16px !important; height: 16px !important; }
 .typeMain { min-width: 0; display: grid; gap: 2px; }
-.typeMain b { font-size: 14px; font-weight: 700; color: #1c1d21; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.typeMain small { font-size: 12.5px; color: #8181a5; line-height: 1.45; }
+.typeMain b { font-size: 14px; font-weight: 700; color: var(--app-text); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.typeMain small { font-size: 12.5px; color: var(--app-muted); line-height: 1.45; }
 .typeBadge {
   padding: 2px 7px; border-radius: 5px;
-  background: #fff4d6; color: #8a6400;
+  background: var(--app-warning-bg); color: var(--app-warning);
   font-size: 10.5px; font-style: normal; font-weight: 700;
   display: inline-flex; align-items: center; gap: 3px;
 }
 .typeBadge svg { display: inline-block !important; width: 10px !important; height: 10px !important; }
-.typeCount { color: #8181a5; font-size: 12px; white-space: nowrap; }
+.typeCount { color: var(--app-muted); font-size: 12px; white-space: nowrap; }
 .typeGo {
   padding: 6px 10px; border-radius: 6px;
-  background: #f5f5fa; color: var(--blue, #3272db);
+  background: var(--app-raised); color: var(--blue, var(--app-accent));
   font-size: 12px; font-weight: 700; white-space: nowrap;
   display: inline-flex; align-items: center; gap: 4px;
 }
 .typeGo svg { display: inline-block !important; width: 14px !important; height: 14px !important; }
-.typeRow:hover .typeGo { background: var(--blue, #3272db); color: #fff; }
+.typeRow:hover .typeGo { background: var(--blue, var(--app-primary)); color: #fff; }
 
 /* 버튼 — 킷 Send: r8, 보통 크기 */
 .primaryBtn { min-height: 42px; border-radius: 8px; font-size: 14px; }
-.ghostBtn { min-height: 38px; border: 1px solid #e6e6ef; border-radius: 8px; color: #55586a; background: #fff; font-size: 13px; }
+.ghostBtn { min-height: 38px; border: 1px solid var(--app-line); border-radius: 8px; color: var(--app-body); background: var(--app-surface); font-size: 13px; }
 
 @media (max-width: 640px) {
   .typeRow { grid-template-columns: 34px minmax(0, 1fr); }
@@ -1168,28 +1168,28 @@
 .backBtn {
   width: 32px; height: 32px;
   min-height: 0 !important; padding: 0 !important;
-  border: 1px solid #e6e6ef; border-radius: 8px !important;
-  background: #fff; color: #55586a; font-size: 14px;
+  border: 1px solid var(--app-line); border-radius: 8px !important;
+  background: var(--app-surface); color: var(--app-body); font-size: 14px;
   display: grid; place-items: center; cursor: pointer;
   box-shadow: none !important;
 }
-.backBtn:hover { background: #f5f5fa; color: #1c1d21; }
+.backBtn:hover { background: var(--app-raised); color: var(--app-text); }
 .h1 { margin-bottom: 0; }
 
 /* 단계 번호: 현재 = 검정, 완료 = 초록 체크, 대기 = 회색 — 보라 아님 */
-.step.stepOn .stepNum { background: #1c1d21; color: #fff; }
+.step.stepOn .stepNum { background: var(--app-raised); color: #fff; }
 
 /* 카테고리 칩: 선택 = 검정 */
-.cats button.catOn { background: #1c1d21; color: #fff; }
+.cats button.catOn { background: var(--app-raised); color: #fff; }
 
 /* 이어받기 라디오: 선택 = 검정 */
-.inheritOn .inheritRadio { border-color: #1c1d21; }
-.inheritOn .inheritRadio::after { background: #1c1d21; }
+.inheritOn .inheritRadio { border-color: var(--app-text); }
+.inheritOn .inheritRadio::after { background: var(--app-raised); }
 
 /* 2단계 주 행동 — 행의 '선택'은 항상 보라 채움 */
-.typeGo { background: var(--blue, #3272db); color: #fff; }
-.typeRow:hover .typeGo { background: var(--blue-dark, #3a2ddb); }
-.typeIcon { background: #f0f0f3; color: #55586a; }
+.typeGo { background: var(--blue, var(--app-primary)); color: #fff; }
+.typeRow:hover .typeGo { background: var(--blue-dark, var(--app-primary)); }
+.typeIcon { background: var(--app-raised); color: var(--app-body); }
 
 /* ══ 움직임 ═══════════════════════════════════════════════════════
  * 홈의 무대만큼 '간편해 보이게' — 화면이 떠오르고, 행이 차례로 서고,
@@ -1222,19 +1222,19 @@
   .main, .stepBody, .typeList .typeRow, .step.stepOn .stepNum { animation: none; }
   .typeRow:hover, .primaryBtn:not(:disabled):hover { transform: none; }
 }
-.fieldNote { margin: 6px 0 0; color: #8181a5; font-size: 12px; line-height: 1.5; }
+.fieldNote { margin: 6px 0 0; color: var(--app-muted); font-size: 12px; line-height: 1.5; }
 
 /* 다음 단계 버튼 — 섹션 작성 화면과 같은 자리·모양(아래 꽉 차게).
    왼쪽에 작게 붙어 있으면 다른 화면과 손이 가는 곳이 달라진다. */
 .actions {
   margin-top: 22px;
   padding-top: 18px;
-  border-top: 1px solid #f0f0f3;
+  border-top: 1px solid var(--app-line);
   display: grid;
   gap: 10px;
   justify-items: stretch;
 }
-.actions .todo { color: #8181a5; font-size: 12.5px; text-align: center; }
+.actions .todo { color: var(--app-muted); font-size: 12.5px; text-align: center; }
 .actions .primaryBtn {
   width: 100%;
   min-height: 52px;

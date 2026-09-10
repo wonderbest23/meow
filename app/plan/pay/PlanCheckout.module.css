@@ -2,15 +2,15 @@
 
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f5f5fa);
+  background: var(--surface-muted, var(--app-raised));
   display: grid;
   place-items: center;
   padding: 40px 20px;
 }
 
 .card {
-  background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface, var(--app-surface));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 20px;
   box-shadow: 0 20px 50px rgba(20, 32, 64, 0.08);
   padding: 44px 34px 34px;
@@ -26,23 +26,23 @@
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: var(--blue-soft, #efeefb);
-  color: var(--blue, #3272db);
+  background: var(--blue-soft, var(--app-soft));
+  color: var(--blue, var(--app-accent));
 }
 
 .title {
   margin: 0 0 10px;
   font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--text-strong, #0d0a2c);
+  letter-spacing: 0;
+  color: var(--text-strong, var(--app-text));
 }
 
 .desc {
   margin: 0 0 22px;
   font-size: 14px;
   line-height: 1.75;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
 }
 
 .price {
@@ -51,9 +51,9 @@
   gap: 4px;
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.6px;
-  color: var(--text-strong, #0d0a2c);
-  background: var(--surface-soft, #f9f9ff);
+  letter-spacing: 0;
+  color: var(--text-strong, var(--app-text));
+  background: var(--surface-soft, var(--app-raised));
   border-radius: 14px;
   padding: 18px;
   margin-bottom: 22px;
@@ -62,7 +62,7 @@
 .price span {
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, var(--app-muted));
   letter-spacing: 0;
 }
 
@@ -70,7 +70,7 @@
   display: block;
   width: 100%;
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -93,8 +93,8 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.7;
-  color: #96631a;
-  background: #fff6e5;
+  color: var(--app-warning);
+  background: var(--app-warning-bg);
   border: 1px solid #f3d9a4;
   border-radius: 11px;
   padding: 13px;
@@ -104,25 +104,25 @@
   margin: 14px 0 0;
   font-size: 13px;
   line-height: 1.6;
-  color: #c33d55;
+  color: var(--app-danger);
 }
 
 .note {
   margin: 18px 0 0;
   font-size: 13px;
   line-height: 1.65;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, var(--app-muted));
 }
 
 .back {
   display: inline-block;
   margin-top: 16px;
   font-size: 13px;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, var(--app-muted));
   text-decoration: none;
 }
 .back:hover {
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
 }
 
 

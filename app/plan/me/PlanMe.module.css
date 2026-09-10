@@ -11,15 +11,15 @@
   margin: 0 0 26px;
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--text-strong, #0d0a2c);
+  letter-spacing: 0;
+  color: var(--text-strong, var(--app-text));
 }
 
 .card {
   padding: 22px 24px;
   margin-bottom: 16px;
   border-radius: 16px;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--app-surface));
   box-shadow: 0 10px 30px rgba(20, 32, 64, 0.06);
 }
 
@@ -34,17 +34,17 @@
   margin: 0;
   font-size: 16px;
   font-weight: 800;
-  letter-spacing: -0.3px;
-  color: var(--text-strong, #0d0a2c);
+  letter-spacing: 0;
+  color: var(--text-strong, var(--app-text));
 }
 
 .cardAction {
   margin-left: auto;
   padding: 8px 14px;
-  border: 1px solid var(--border-soft, #dfdef1);
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 10px;
-  background: var(--surface, #fff);
-  color: var(--text-body, #585667);
+  background: var(--surface, var(--app-surface));
+  color: var(--text-body, var(--app-body));
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -54,8 +54,8 @@
 }
 
 .cardAction:hover {
-  border-color: var(--blue, #3272db);
-  color: var(--blue, #3272db);
+  border-color: var(--blue, var(--app-primary));
+  color: var(--blue, var(--app-accent));
 }
 
 /* 라벨-값 줄 — 내 플랜 목록의 사업 카드와 같은 형태 */
@@ -68,7 +68,7 @@
   align-items: baseline;
   gap: 16px;
   padding: 9px 0;
-  border-top: 1px solid var(--border-soft, #dfdef1);
+  border-top: 1px solid var(--border-soft, var(--app-line));
 }
 
 .row:first-child {
@@ -81,7 +81,7 @@
   width: 84px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, var(--app-muted));
 }
 
 .row dd {
@@ -89,7 +89,7 @@
   min-width: 0;
   font-size: 14.5px;
   font-weight: 600;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
   line-height: 1.55;
   overflow-wrap: anywhere;
 }
@@ -107,8 +107,8 @@
 
 .table th {
   padding: 0 10px 9px;
-  border-bottom: 1px solid var(--border-soft, #dfdef1);
-  color: var(--text-muted, #8b95a1);
+  border-bottom: 1px solid var(--border-soft, var(--app-line));
+  color: var(--text-muted, var(--app-muted));
   font-size: 13px;
   font-weight: 700;
   text-align: left;
@@ -117,8 +117,8 @@
 
 .table td {
   padding: 12px 10px;
-  border-bottom: 1px solid var(--border-soft, #dfdef1);
-  color: var(--text-body, #585667);
+  border-bottom: 1px solid var(--border-soft, var(--app-line));
+  color: var(--text-body, var(--app-body));
   white-space: nowrap;
 }
 
@@ -130,42 +130,42 @@
 .amount {
   font-variant-numeric: tabular-nums;
   font-weight: 700;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 
 .status {
   padding: 3px 9px;
   border-radius: 999px;
-  background: var(--surface-muted, #f5f5fa);
-  color: var(--text-body, #585667);
+  background: var(--surface-muted, var(--app-raised));
+  color: var(--text-body, var(--app-body));
   font-size: 13px;
   font-weight: 700;
 }
 
 .statusDone {
-  background: #e7f8ef;
+  background: var(--app-success-bg);
   color: #10794b;
 }
 
 .statusBad {
-  background: #fdeceb;
-  color: #b42318;
+  background: var(--app-danger-bg);
+  color: var(--app-danger);
 }
 
 .empty {
   padding: 26px 0;
   text-align: center;
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, var(--app-muted));
   font-size: 13.5px;
 }
 
 .logout {
   margin-left: auto;
   padding: 11px 18px;
-  border: 1px solid var(--border-soft, #dfdef1);
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 10px;
-  background: var(--surface, #fff);
-  color: var(--text-body, #585667);
+  background: var(--surface, var(--app-surface));
+  color: var(--text-body, var(--app-body));
   font: inherit;
   font-size: 13.5px;
   font-weight: 700;
@@ -210,12 +210,12 @@
 
 /* 환불 요청 */
 .refundNa {
-  color: var(--text-muted, #8b95a1);
+  color: var(--text-muted, var(--app-muted));
 }
 .refundBtn {
-  border: 1px solid var(--border-soft, #d5dbe2);
-  background: #fff;
-  color: var(--text-body, #585667);
+  border: 1px solid var(--border-soft, var(--app-line));
+  background: var(--app-surface);
+  color: var(--text-body, var(--app-body));
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -225,8 +225,8 @@
   white-space: nowrap;
 }
 .refundBtn:hover {
-  border-color: var(--blue, #3272db);
-  color: var(--blue, #3272db);
+  border-color: var(--blue, var(--app-primary));
+  color: var(--blue, var(--app-accent));
 }
 .refundForm {
   display: flex;
@@ -236,8 +236,8 @@
 }
 .refundForm textarea {
   width: 100%;
-  border: 1.5px solid var(--border-soft, #dfdef1);
-  background: var(--surface-soft, #f9f9ff);
+  border: 1.5px solid var(--border-soft, var(--app-line));
+  background: var(--surface-soft, var(--app-raised));
   border-radius: 10px;
   padding: 10px 12px;
   font: inherit;
@@ -250,7 +250,7 @@
 }
 .refundSubmit {
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
   font: inherit;
   font-size: 13px;
@@ -264,9 +264,9 @@
   cursor: default;
 }
 .refundCancel {
-  border: 1px solid var(--border-soft, #d5dbe2);
-  background: #fff;
-  color: var(--text-muted, #8b95a1);
+  border: 1px solid var(--border-soft, var(--app-line));
+  background: var(--app-surface);
+  color: var(--text-muted, var(--app-muted));
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -277,14 +277,14 @@
 .refundMessage {
   margin: 10px 0 0;
   font-size: 13px;
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
 }
 
 /* 회원 탈퇴 — 되돌릴 수 없는 행동이라 톤을 분명히 한다 */
 .dangerBtn {
-  border: 1px solid #f3c4ce;
-  background: #fff;
-  color: #c33d55;
+  border: 1px solid var(--app-line);
+  background: var(--app-surface);
+  color: var(--app-danger);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -293,7 +293,7 @@
   cursor: pointer;
 }
 .dangerBtn:hover:not(:disabled) {
-  background: #fdecef;
+  background: var(--app-danger-bg);
   border-color: #e79aa9;
 }
 .dangerBtn:disabled {
@@ -309,13 +309,13 @@
   margin: 0;
   font-size: 13px;
   line-height: 1.7;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
 }
 .deleteForm input {
   width: 100%;
   max-width: 320px;
-  border: 1.5px solid var(--border-soft, #dfdef1);
-  background: var(--surface-soft, #f9f9ff);
+  border: 1.5px solid var(--border-soft, var(--app-line));
+  background: var(--surface-soft, var(--app-raised));
   border-radius: 10px;
   padding: 11px 13px;
   font: inherit;
@@ -328,5 +328,5 @@
 .deleteError {
   margin: 0;
   font-size: 13px;
-  color: #c33d55;
+  color: var(--app-danger);
 }

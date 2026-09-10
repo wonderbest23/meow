@@ -2,8 +2,8 @@
 
 .page {
   min-height: 100vh;
-  background: var(--surface-muted, #f5f5fa);
-  color: var(--text-strong, #0d0a2c);
+  background: var(--surface-muted, var(--app-raised));
+  color: var(--text-strong, var(--app-text));
   font-family: inherit;
   padding: 22px 16px 48px;
 }
@@ -14,7 +14,7 @@
 
 /* 앱 프레임: 아이콘 레일 + 본문 (위저드와 골격 통일) */
 .app {
-  background: var(--surface, #fff);
+  background: var(--surface, var(--app-surface));
   border-radius: 24px;
   box-shadow: 0 24px 60px rgba(20, 32, 64, 0.1);
   overflow: hidden;
@@ -38,7 +38,7 @@
   width: 38px;
   height: 38px;
   border-radius: 11px;
-  background: linear-gradient(150deg, var(--blue, #3272db), #7f9bff);
+  background: linear-gradient(150deg, var(--blue, var(--app-primary)), #7f9bff);
   display: grid;
   place-items: center;
   color: #fff;
@@ -116,9 +116,9 @@
   width: 42px;
   height: 42px;
   border-radius: 50%;
-  border: 1px solid var(--border-soft, #dfdef1);
-  background: var(--surface, #fff);
-  color: var(--text-body, #585667);
+  border: 1px solid var(--border-soft, var(--app-line));
+  background: var(--surface, var(--app-surface));
+  color: var(--text-body, var(--app-body));
   cursor: pointer;
   font-size: 18px;
   display: grid;
@@ -128,11 +128,11 @@
   margin: 0;
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.6px;
+  letter-spacing: 0;
 }
 .title span {
   font-weight: 500;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
 }
 
 /* 진행 미터 스트립 */
@@ -142,7 +142,7 @@
   align-items: center;
   gap: 0;
   padding: 18px 4px 20px;
-  border-bottom: 1px solid var(--border-soft, #dfdef1);
+  border-bottom: 1px solid var(--border-soft, var(--app-line));
   margin-bottom: 20px;
 }
 .meter {
@@ -159,13 +159,13 @@
   top: 4px;
   bottom: 4px;
   width: 1px;
-  background: var(--border-soft, #dfdef1);
+  background: var(--border-soft, var(--app-line));
 }
 .meterLabel {
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.08em;
-  color: var(--text-muted, #5f5c7f);
+  letter-spacing: 0;
+  color: var(--text-muted, var(--app-muted));
   text-transform: uppercase;
 }
 .meterRow {
@@ -186,13 +186,13 @@
   width: 22px;
   height: 8px;
   border-radius: 4px;
-  background: var(--surface-muted, #dfdef1);
+  background: var(--surface-muted, var(--app-line));
 }
 .segs i.on {
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
 }
 .segs i.ok {
-  background: #16b877;
+  background: var(--app-success);
 }
 .spring {
   flex: 1;
@@ -217,8 +217,8 @@
 .seg {
   display: inline-flex;
   align-items: center;
-  background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface, var(--app-surface));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 12px;
   padding: 4px;
   gap: 4px;
@@ -226,7 +226,7 @@
 .seg button {
   border: 0;
   background: transparent;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   font: inherit;
   font-weight: 800;
   font-size: 13.5px;
@@ -235,7 +235,7 @@
   cursor: pointer;
 }
 .seg button.segOn {
-  background: var(--text-strong, #0d0a2c);
+  background: var(--app-primary);
   color: #fff;
 }
 
@@ -246,9 +246,9 @@
  * 둘 중 무엇을 눌러야 하는지 알 수 없었다. 한 단 낮춘다.
  */
 .bulkBtn {
-  border: 1px solid var(--blue, #3272db);
-  background: var(--surface, #fff);
-  color: var(--blue, #3272db);
+  border: 1px solid var(--blue, var(--app-primary));
+  background: var(--surface, var(--app-surface));
+  color: var(--blue, var(--app-accent));
   font: inherit;
   font-weight: 700;
   font-size: 13px;
@@ -259,8 +259,8 @@
   white-space: nowrap;
 }
 .bulkBtn:disabled {
-  background: var(--surface-soft, #f9f9ff);
-  color: var(--text-muted, #5f5c7f);
+  background: var(--surface-soft, var(--app-raised));
+  color: var(--text-muted, var(--app-muted));
   box-shadow: none;
   cursor: not-allowed;
 }
@@ -268,8 +268,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface, var(--app-surface));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 10px;
   padding: 8px 12px;
 }
@@ -277,26 +277,26 @@
   width: 90px;
   height: 6px;
   border-radius: 3px;
-  background: var(--surface-muted, #f5f5fa);
+  background: var(--surface-muted, var(--app-raised));
   overflow: hidden;
   flex: 0 0 auto;
 }
 .bulkFill {
   display: block;
   height: 100%;
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   transition: width 0.3s;
 }
 .bulkText {
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   white-space: nowrap;
 }
 .bulkCancel {
-  border: 1px solid var(--border-soft, #dfdef1);
+  border: 1px solid var(--border-soft, var(--app-line));
   background: transparent;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   font: inherit;
   font-size: 13px;
   font-weight: 700;
@@ -320,22 +320,22 @@
   align-items: center;
   gap: 10px;
   padding: 14px 16px;
-  background: var(--surface-soft, #f9f9ff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface-soft, var(--app-raised));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 14px;
   margin-bottom: 18px;
 }
 .exportInfo {
   font-size: 13.5px;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
   margin-right: auto;
 }
 .exportInfo b {
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
 }
 .exportBtn {
-  border: 1px solid var(--blue, #3272db);
-  background: var(--blue, #3272db);
+  border: 1px solid var(--blue, var(--app-primary));
+  background: var(--blue, var(--app-primary));
   color: #fff;
   font: inherit;
   font-weight: 800;
@@ -351,32 +351,32 @@
 .docEmpty {
   padding: 60px 20px;
   text-align: center;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   font-size: 14px;
 }
 .docSection {
   padding: 22px 24px;
-  border: 1px solid var(--border-soft, #dfdef1);
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 16px;
   margin-bottom: 16px;
-  background: var(--surface, #fff);
+  background: var(--surface, var(--app-surface));
 }
 .docCrumb {
   font-size: 13px;
   font-weight: 800;
-  color: var(--blue, #3272db);
+  color: var(--blue, var(--app-accent));
   margin-bottom: 4px;
 }
 .docTitle {
   margin: 0 0 12px;
   font-size: 22px;
   font-weight: 800;
-  letter-spacing: -0.4px;
+  letter-spacing: 0;
 }
 .docBody {
   font-size: 14.5px;
   line-height: 1.7;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 .docBody :global(h1) {
   font-size: 20px;
@@ -406,19 +406,19 @@
   border-collapse: collapse;
   margin: 12px 0 18px;
   font-size: 13px;
-  border: 1px solid var(--border-soft, #dfdef1);
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 10px;
   overflow: hidden;
 }
 .docBody :global(th),
 .docBody :global(td) {
-  border-bottom: 1px solid var(--border-soft, #dfdef1);
+  border-bottom: 1px solid var(--border-soft, var(--app-line));
   padding: 9px 12px;
   text-align: left;
   vertical-align: top;
 }
 .docBody :global(th) {
-  background: var(--surface-soft, #f9f9ff);
+  background: var(--surface-soft, var(--app-raised));
   font-weight: 800;
   font-size: 13px;
 }
@@ -430,8 +430,8 @@
   gap: 14px;
 }
 .band {
-  background: var(--surface, #fff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface, var(--app-surface));
+  border: 1px solid var(--border-soft, var(--app-line));
   border-radius: 16px;
   padding: 18px 22px 20px;
 }
@@ -444,7 +444,7 @@
 .chapNo {
   font-size: 22px;
   font-weight: 800;
-  color: var(--bandAccent, #3358f4);
+  color: var(--bandAccent, var(--app-accent));
   font-variant-numeric: tabular-nums;
   line-height: 1;
 }
@@ -452,15 +452,15 @@
   margin: 0;
   font-size: 17px;
   font-weight: 800;
-  letter-spacing: -0.4px;
-  color: var(--text-strong, #0d0a2c);
+  letter-spacing: 0;
+  color: var(--text-strong, var(--app-text));
   flex: 1;
   min-width: 0;
 }
 .chapCount {
   font-size: 13px;
   font-weight: 800;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   font-variant-numeric: tabular-nums;
 }
 .nodes {
@@ -476,13 +476,13 @@
   border-radius: 11px;
   cursor: pointer;
   transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
-  background: var(--surface-soft, #f9f9ff);
-  border: 1px solid var(--border-soft, #dfdef1);
+  background: var(--surface-soft, var(--app-raised));
+  border: 1px solid var(--border-soft, var(--app-line));
   text-align: left;
 }
 .node:hover {
   transform: translateY(-2px);
-  border-color: color-mix(in srgb, var(--bandAccent, #3358f4) 55%, transparent);
+  border-color: color-mix(in srgb, var(--bandAccent, var(--app-primary)) 55%, transparent);
   box-shadow: 0 8px 18px rgba(20, 32, 64, 0.08);
 }
 .node:focus-visible {
@@ -498,15 +498,15 @@
   font-size: 13px;
   font-weight: 800;
   flex: 0 0 auto;
-  background: var(--surface, #fff);
-  color: var(--bandAccent, #3358f4);
-  border: 1px solid color-mix(in srgb, var(--bandAccent, #3358f4) 35%, transparent);
+  background: var(--surface, var(--app-surface));
+  color: var(--bandAccent, var(--app-accent));
+  border: 1px solid color-mix(in srgb, var(--bandAccent, var(--app-primary)) 35%, transparent);
   font-variant-numeric: tabular-nums;
 }
 .nodeLabel {
   font-weight: 700;
   font-size: 13.5px;
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -516,21 +516,21 @@
   margin-left: auto;
   font-size: 13px;
   font-weight: 700;
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
   font-variant-numeric: tabular-nums;
   flex: 0 0 auto;
 }
 /* 작성 중(답변만 있고 아직 생성 전) */
 .node.writing {
   border-style: dashed;
-  border-color: color-mix(in srgb, var(--bandAccent, #3358f4) 55%, transparent);
-  background: var(--surface, #fff);
+  border-color: color-mix(in srgb, var(--bandAccent, var(--app-primary)) 55%, transparent);
+  background: var(--surface, var(--app-surface));
 }
 .writingTag {
   font-size: 13px;
   font-weight: 800;
-  color: var(--bandAccent, #3358f4);
-  background: color-mix(in srgb, var(--bandAccent, #3358f4) 12%, #fff);
+  color: var(--bandAccent, var(--app-accent));
+  background: color-mix(in srgb, var(--bandAccent, var(--app-primary)) 12%, var(--app-surface));
   border-radius: 999px;
   padding: 3px 8px;
   flex: 0 0 auto;
@@ -541,17 +541,17 @@
  * 초록 체크는 "완료" 신호로만 남긴다.
  */
 .node.done {
-  background: #eef1f4;
+  background: var(--app-raised);
   border-color: transparent;
 }
 .node.done:hover {
   transform: none;
   box-shadow: none;
-  border-color: var(--border-soft, #d5dbe2);
+  border-color: var(--border-soft, var(--app-line));
 }
 .node.done .nodeNum {
-  background: #16b877;
-  border-color: #16b877;
+  background: var(--app-success);
+  border-color: var(--app-success);
   color: #fff;
 }
 /*
@@ -560,7 +560,7 @@
  * 한 단계 더 진한 값으로 내린다.
  */
 .node.done .nodeLabel {
-  color: #5f5c7f;
+  color: var(--app-muted);
   font-weight: 600;
 }
 .node.done .nodeTime {
@@ -569,8 +569,8 @@
 .nodeDoneTag {
   font-size: 13px;
   font-weight: 800;
-  color: #0b7a4f;
-  background: #dcf5ea;
+  color: var(--app-success);
+  background: var(--app-success-bg);
   border-radius: 999px;
   padding: 3px 8px;
   flex: 0 0 auto;
@@ -578,7 +578,7 @@
 }
 /* 챕터 전부 완료 시 카운트도 완료색 */
 .chapCountDone {
-  color: #0b7a4f !important;
+  color: var(--app-success) !important;
 }
 
 @media (max-width: 640px) {
@@ -595,7 +595,7 @@
 
 /* 다음에 손댈 섹션 — 어디부터 시작할지 눈에 띄게 */
 .node.next {
-  border-color: var(--bandAccent, #3358f4);
+  border-color: var(--bandAccent, var(--app-primary));
   /* 레퍼런스 pulse 구동: scale .95↔1.05 + 링 20px 확산 (2s ease 무한) */
   animation: nextPulse 2s ease infinite;
 }
@@ -603,7 +603,7 @@
   font-size: 13px;
   font-weight: 800;
   color: #fff;
-  background: var(--bandAccent, #3358f4);
+  background: var(--bandAccent, var(--app-primary));
   border-radius: 999px;
   padding: 3px 8px;
   white-space: nowrap;
@@ -611,7 +611,7 @@
 @keyframes nextPulse {
   0% {
     transform: scale(0.95);
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--bandAccent, #3358f4) 55%, transparent);
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--bandAccent, var(--app-primary)) 55%, transparent);
   }
   70% {
     transform: scale(1.05);
@@ -640,9 +640,9 @@
   gap: 18px;
   width: 100%;
   text-align: left;
-  border: 1.5px solid var(--blue, #3272db);
+  border: 1.5px solid var(--blue, var(--app-primary));
   border-radius: 16px;
-  background: linear-gradient(120deg, #eef4ff, var(--surface, #fff) 65%);
+  background: linear-gradient(120deg, var(--app-raised), var(--surface, var(--app-surface)) 65%);
   padding: 20px 22px;
   margin-bottom: 18px;
   cursor: pointer;
@@ -666,20 +666,20 @@
 .finaleBody b {
   font-size: 16px;
   font-weight: 800;
-  letter-spacing: -0.3px;
-  color: var(--text-strong, #0d0a2c);
+  letter-spacing: 0;
+  color: var(--text-strong, var(--app-text));
 }
 .finaleBody span {
   font-size: 13px;
   line-height: 1.6;
-  color: var(--text-body, #585667);
+  color: var(--text-body, var(--app-body));
 }
 .finaleGo {
   flex: none;
   font-size: 13.5px;
   font-weight: 800;
   color: #fff;
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   border-radius: 10px;
   padding: 12px 18px;
   white-space: nowrap;
@@ -704,7 +704,7 @@
   gap: 6px;
 }
 .lockTag {
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
 }
 
 
@@ -747,7 +747,7 @@
   }
   .meterLabel {
     font-size: 13px;
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
     white-space: nowrap;
   }
   .meterRow {
@@ -808,18 +808,18 @@
  */
 .continueBanner {
   grid-template-columns: minmax(0, 1fr) auto;
-  background: var(--surface, #fff);
-  border: 1.5px solid var(--blue, #3272db);
+  background: var(--surface, var(--app-surface));
+  border: 1.5px solid var(--blue, var(--app-primary));
 }
 
 @media (max-width: 640px) {
   .continueBanner { grid-template-columns: 1fr; }
 }
 .continueBanner .finaleBody b {
-  color: var(--text-strong, #0d0a2c);
+  color: var(--text-strong, var(--app-text));
 }
 .continueBanner .finaleBody span {
-  color: var(--text-muted, #5f5c7f);
+  color: var(--text-muted, var(--app-muted));
 }
 
 
@@ -827,8 +827,8 @@
 .meterPrimary .meterValue {
   font-size: 26px;
   font-weight: 800;
-  letter-spacing: -0.5px;
-  color: var(--blue, #3272db);
+  letter-spacing: 0;
+  color: var(--blue, var(--app-accent));
   font-variant-numeric: tabular-nums;
 }
 /* 세그먼트 규격은 모든 미터가 동일하다 — 진행률은 숫자 크기로만 강조한다 */
@@ -852,7 +852,7 @@
   .meterPrimary {
     grid-column: 1 / -1;
     padding-bottom: 14px;
-    border-bottom: 1px solid var(--border-soft, #dfdef1);
+    border-bottom: 1px solid var(--border-soft, var(--app-line));
   }
   /* 세로 구분선은 두 번째 줄의 가운데에만 */
   .meter + .meter::before {
@@ -863,7 +863,7 @@
   }
   .meterPrimary + .meter + .meter {
     padding-left: 14px;
-    border-left: 1px solid var(--border-soft, #dfdef1);
+    border-left: 1px solid var(--border-soft, var(--app-line));
   }
   .meterRow {
     gap: 8px;
@@ -915,7 +915,7 @@
   padding: 0 11px;
   border-radius: 999px;
   border: 1px solid var(--line);
-  background: var(--surface-2, #fff);
+  background: var(--surface-2, var(--app-surface));
   color: var(--text-2, #4b5563);
   font-size: 13px;
   font-weight: 600;
@@ -926,7 +926,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--brand, #2563eb);
+  background: var(--brand, var(--app-primary));
   animation: queuePulse 1.1s ease-in-out infinite;
 }
 
@@ -963,7 +963,7 @@
   padding: 11px 14px;
   border: 1px solid #f3c3c0;
   border-radius: 12px;
-  background: #fdf3f2;
+  background: var(--app-danger-bg);
   color: #a3231c;
   font-size: 13px;
   font-weight: 600;
@@ -978,9 +978,9 @@
 .regenNote {
   margin: 10px 0 0;
   padding: 11px 14px;
-  border: 1px solid #c9ddfb;
+  border: 1px solid var(--app-line);
   border-radius: 12px;
-  background: #eef4fe;
+  background: var(--app-raised);
   color: #1f4f9c;
   font-size: 13px;
   font-weight: 600;
@@ -988,8 +988,8 @@
 }
 .regenNote[data-empty="true"] {
   border-color: #f0d3a8;
-  background: #fdf6ea;
-  color: #8a5a12;
+  background: var(--app-raised);
+  color: var(--app-warning);
 }
 
 /* 다 썼을 때만 뜨는 추가 구매 — 안내 문장 안에 이어 붙인다 */
@@ -998,7 +998,7 @@
   margin-left: 4px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: #8a5a12;
+  background: var(--app-warning);
   color: #fff;
   font-size: 13px;
   font-weight: 700;
@@ -1012,7 +1012,7 @@
  * 제목 #1c1d21, 보조 #8181a5. 본문 전체를 감싸던 '떠 있는 큰 앱 카드'
  * (r24 + 짙은 그림자)는 벗긴다 — 킷은 카드들을 바탕에 직접 놓는다.
  */
-.page { padding: 28px 28px 64px; color: #1c1d21; }
+.page { padding: 28px 28px 64px; color: var(--app-text); }
 .app {
   background: transparent;
   border-radius: 0;
@@ -1022,16 +1022,16 @@
 }
 .main { padding: 0; }
 
-.title { color: #1c1d21; }
+.title { color: var(--app-text); }
 
 /* 진행률 줄 — 흰 카드 하나로 */
 .meters {
   padding: 20px 24px;
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: 0 1px 2px rgba(28, 29, 33, .04);
 }
-.meterLabel { color: #8181a5; }
+.meterLabel { color: var(--app-muted); }
 
 /* 챕터 띠 — 테두리 대신 카드 */
 .band {
@@ -1046,16 +1046,16 @@
 .continueBanner {
   border: 0;
   border-radius: 12px;
-  background: #fff;
+  background: var(--app-surface);
   box-shadow: 0 1px 2px rgba(28, 29, 33, .04);
 }
 .finale:hover { box-shadow: 0 10px 28px rgba(28, 29, 33, .1); }
-.finaleBody b { color: #1c1d21; }
-.finaleBody span { color: #8181a5; }
+.finaleBody b { color: var(--app-text); }
+.finaleBody span { color: var(--app-muted); }
 .finaleGo { border-radius: 10px; }
 
 /* 되살리기 버튼도 같은 톤 */
-.bulkBtn { border-color: #e6e6ef; color: #55586a; }
+.bulkBtn { border-color: var(--app-line); color: var(--app-body); }
 
 @media (max-width: 640px) {
   .page { padding: 16px 16px 56px; }
@@ -1071,8 +1071,8 @@
 
 .side {
   padding: 24px 22px 32px;
-  background: #fff;
-  border-right: 1px solid #ececf4;
+  background: var(--app-surface);
+  border-right: 1px solid var(--app-line);
   display: grid;
   align-content: start;
   gap: 22px;
@@ -1081,28 +1081,28 @@
 .sideTop .back {
   width: 32px; height: 32px; min-height: 0 !important;
   margin: 0; padding: 0 !important;
-  border: 1px solid #e6e6ef; border-radius: 8px !important;
-  background: #fff; color: #55586a; font-size: 14px;
+  border: 1px solid var(--app-line); border-radius: 8px !important;
+  background: var(--app-surface); color: var(--app-body); font-size: 14px;
   display: grid; place-items: center;
 }
 .sideTitle { display: grid; gap: 3px; min-width: 0; flex: 1; }
-.sideTitle strong { font-size: 20px; font-weight: 800; color: #1c1d21; line-height: 1.25; word-break: keep-all; letter-spacing: -.01em; }
-.sideTitle span { font-size: 13px; color: #8181a5; }
+.sideTitle strong { font-size: 20px; font-weight: 800; color: var(--app-text); line-height: 1.25; word-break: keep-all; letter-spacing: 0; }
+.sideTitle span { font-size: 13px; color: var(--app-muted); }
 /* 오른쪽 끝 퍼센트 — 아래 선 게이지와 짝 */
-.pctText { flex: none; display: grid; justify-items: end; gap: 2px; font-size: 18px; font-weight: 800; color: #1c1d21; line-height: 1; font-variant-numeric: tabular-nums; }
-.pctText small { font-size: 11px; font-weight: 700; color: #8181a5; }
+.pctText { flex: none; display: grid; justify-items: end; gap: 2px; font-size: 18px; font-weight: 800; color: var(--app-text); line-height: 1; font-variant-numeric: tabular-nums; }
+.pctText small { font-size: 11px; font-weight: 700; color: var(--app-muted); }
 /* 구분선 = 게이지. 3px 트랙 위에 채워진 만큼 진한 선 */
-.sideGauge { position: relative; height: 3px; margin-top: 14px; background: #e6e7ef; border-radius: 2px; overflow: hidden; }
-.sideGauge i { display: block; height: 100%; background: #1c1d21; border-radius: 2px; transition: width .8s cubic-bezier(.2,.7,.2,1); }
+.sideGauge { position: relative; height: 3px; margin-top: 14px; background: var(--app-line); border-radius: 2px; overflow: hidden; }
+.sideGauge i { display: block; height: 100%; background: var(--app-raised); border-radius: 2px; transition: width .8s cubic-bezier(.2,.7,.2,1); }
 
 
 .sideBlock { display: grid; gap: 8px; padding-top: 14px; }
-.sideNext { margin: 0; font-size: 14px; font-weight: 700; color: #1c1d21; }
+.sideNext { margin: 0; font-size: 14px; font-weight: 700; color: var(--app-text); }
 .sidePrimary {
   min-height: 38px !important;
   padding: 0 14px !important;
   border: 0; border-radius: 8px !important;
-  background: var(--blue, #3272db) !important; color: #fff !important;
+  background: var(--blue, var(--app-primary)) !important; color: #fff !important;
   font-size: 13px; font-weight: 700 !important;
   justify-self: start;
 }
@@ -1124,30 +1124,30 @@
 .seg button {
   min-height: 30px !important; padding: 0 12px !important;
   border: 0; border-radius: 8px !important;
-  background: #f5f5fa; color: #55586a;
+  background: var(--app-raised); color: var(--app-body);
   font-size: 12px; font-weight: 700 !important;
 }
-.seg .segOn { background: var(--blue, #3272db); color: #fff; }
+.seg .segOn { background: var(--blue, var(--app-primary)); color: #fff; }
 
 /* 행 목록 */
-.rows { padding: 10px 16px 16px; border-radius: 12px; background: #fff; display: grid; gap: 4px; }
+.rows { padding: 10px 16px 16px; border-radius: 12px; background: var(--app-surface); display: grid; gap: 4px; }
 .group { display: grid; gap: 6px; padding-top: 10px; }
 .groupHead { display: flex; align-items: center; gap: 8px; padding: 8px 2px 4px; }
 .groupNo {
   width: 20px; height: 20px; border-radius: 6px;
-  background: var(--blue, #3272db); color: #fff;
+  background: var(--blue, var(--app-primary)); color: #fff;
   font-size: 11px; font-weight: 700; display: grid; place-items: center;
 }
-.groupHead b { font-size: 13px; font-weight: 700; color: #1c1d21; }
-.groupCount { margin-left: auto; font-size: 12px; color: #8181a5; }
+.groupHead b { font-size: 13px; font-weight: 700; color: var(--app-text); }
+.groupCount { margin-left: auto; font-size: 12px; color: var(--app-muted); }
 
 .row {
   width: 100%;
   min-height: 52px !important;
   padding: 8px 12px 8px 14px !important;
-  border: 1px solid #f0f0f3 !important;
+  border: 1px solid var(--app-line) !important;
   border-radius: 8px !important;
-  background: #fff !important;
+  background: var(--app-surface) !important;
   box-shadow: none !important;
   color: inherit;
   display: grid;
@@ -1158,25 +1158,25 @@
   cursor: pointer;
   transition: background .12s ease, border-color .12s ease;
 }
-.row:hover { background: #f9f9fc !important; border-color: #e6e6ef !important; }
-.rowNext { border-color: color-mix(in srgb, var(--blue, #3272db) 45%, #fff) !important; }
+.row:hover { background: var(--app-raised) !important; border-color: var(--app-line) !important; }
+.rowNext { border-color: color-mix(in srgb, var(--blue, var(--app-primary)) 45%, #fff) !important; }
 .check {
   width: 18px; height: 18px; border-radius: 5px;
-  border: 1.5px solid #d8d8e6; background: #fff;
+  border: 1.5px solid var(--app-line); background: var(--app-surface);
   display: grid; place-items: center; color: #fff;
 }
 .check svg { width: 11px; height: 11px; }
-.checkOn { background: var(--blue, #3272db); border-color: var(--blue, #3272db); }
+.checkOn { background: var(--blue, var(--app-primary)); border-color: var(--blue, var(--app-primary)); }
 .rowMain { min-width: 0; display: grid; gap: 1px; }
-.rowMain b { font-size: 14px; font-weight: 700; color: #1c1d21; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rowMain small { font-size: 12px; color: #8181a5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.rowMeta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: #8181a5; white-space: nowrap; }
+.rowMain b { font-size: 14px; font-weight: 700; color: var(--app-text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowMain small { font-size: 12px; color: var(--app-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rowMeta { display: flex; align-items: center; gap: 10px; font-size: 12px; color: var(--app-muted); white-space: nowrap; }
 .rowMeta svg { display: inline-block !important; width: 12px !important; height: 12px !important; }
 .chip { min-width: 58px; padding: 5px 10px; border-radius: 6px; font-size: 11.5px; font-weight: 700; text-align: center; white-space: nowrap; }
-.chip_done { background: #e3f7ec; color: #157a47; }
-.chip_live { background: #fff4d6; color: #8a6400; }
-.chip_next { background: #efeefb; color: var(--blue, #3272db); }
-.chip_idle { background: #f0f0f3; color: #55586a; }
+.chip_done { background: var(--app-success-bg); color: var(--app-success); }
+.chip_live { background: var(--app-warning-bg); color: var(--app-warning); }
+.chip_next { background: var(--app-soft); color: var(--blue, var(--app-accent)); }
+.chip_idle { background: var(--app-raised); color: var(--app-body); }
 
 @media (max-width: 1000px) {
   .layout { grid-template-columns: 1fr; }
@@ -1191,7 +1191,7 @@
   .row { grid-template-columns: 18px minmax(0, 1fr) auto; }
   .rowMeta { display: none; }
 }
-.seg button.segOn { background: var(--blue, #3272db) !important; color: #fff !important; }
+.seg button.segOn { background: var(--blue, var(--app-primary)) !important; color: #fff !important; }
 .seg button { box-shadow: none !important; }
 
 /* ── 위계: 주인공 하나, 나머지는 조용히 ─────────────────────────────
@@ -1202,22 +1202,22 @@
 .hero {
   padding: 18px 20px;
   border-radius: 12px;
-  background: #fff;
-  border: 1.5px solid var(--blue, #3272db);
+  background: var(--app-surface);
+  border: 1.5px solid var(--blue, var(--app-primary));
   box-shadow: 0 6px 18px rgba(74, 58, 255, .1);
   display: grid;
   gap: 8px;
 }
-.heroKicker { font-size: 12px; font-weight: 800; color: var(--blue, #3272db); }
+.heroKicker { font-size: 12px; font-weight: 800; color: var(--blue, var(--app-accent)); }
 .heroRow { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
 .heroText { display: grid; gap: 3px; min-width: 0; }
-.heroText strong { font-size: 18px; font-weight: 800; color: #1c1d21; }
-.heroText span { font-size: 13px; color: #8181a5; }
+.heroText strong { font-size: 18px; font-weight: 800; color: var(--app-text); }
+.heroText span { font-size: 13px; color: var(--app-muted); }
 .heroBtn {
   min-height: 44px !important;
   padding: 0 20px !important;
   border: 0; border-radius: 10px !important;
-  background: var(--blue, #3272db) !important; color: #fff !important;
+  background: var(--blue, var(--app-primary)) !important; color: #fff !important;
   font-size: 15px; font-weight: 700 !important;
   white-space: nowrap;
 }
@@ -1228,7 +1228,7 @@
 .chipBlank { min-width: 58px; display: inline-block; }
 
 /* 제목 줄은 한 단 낮게 — 주인공 카드보다 눈에 덜 띄게 */
-.title { font-size: 16px; color: #55586a; }
+.title { font-size: 16px; color: var(--app-body); }
 
 @media (max-width: 640px) {
   .heroRow { flex-direction: column; align-items: stretch; }
@@ -1238,11 +1238,11 @@
 
 /* 색 규칙: 주 행동('지금 할 일' 버튼)만 보라. 탭 칩 선택은 검정, 체크는 초록,
    챕터 번호·'여기부터' 칩은 무채색. */
-.seg button.segOn { background: #1c1d21 !important; color: #fff !important; }
-.checkOn { background: #22b573; border-color: #22b573; }
-.groupNo { background: #1c1d21; }
-.chip_next { background: #f0f0f3; color: #1c1d21; }
-.rowNext { border-color: #1c1d21 !important; }
+.seg button.segOn { background: var(--app-raised) !important; color: #fff !important; }
+.checkOn { background: var(--app-success); border-color: var(--app-success); }
+.groupNo { background: var(--app-raised); }
+.chip_next { background: var(--app-raised); color: var(--app-text); }
+.rowNext { border-color: var(--app-text) !important; }
 .sidePrimary { display: none; }  /* 사이드바엔 주 행동을 두지 않는다 — 본문 카드 하나뿐 */
 /* 막대(데이터)도 보라를 쓰지 않는다 — 보라는 '누를 것' 하나뿐 */
 .chartCol i, .chartCol:nth-child(even) i { background: #b4b4c8; }
@@ -1285,8 +1285,8 @@
 
 /* AI 사업 정리 권유 — hero 보다 한 단계 조용하게(점선), 같은 글자·버튼 */
 .analyzeNudge {
-  padding: 14px 18px; border-radius: 12px; background: #f7f9ff;
-  border: 1.5px dashed color-mix(in srgb, var(--blue, #3272db) 45%, transparent);
+  padding: 14px 18px; border-radius: 12px; background: var(--app-raised);
+  border: 1.5px dashed color-mix(in srgb, var(--blue, var(--app-primary)) 45%, transparent);
   display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
   margin-bottom: 12px;
 }

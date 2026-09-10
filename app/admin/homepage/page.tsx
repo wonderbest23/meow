@@ -2,6 +2,7 @@
 
 import { ExternalLink, Eye, EyeOff, LockKeyhole, RotateCcw, Save } from "lucide-react";
 import Link from "next/link";
+import AdminNav from "../AdminNav";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { EDIT_SECTIONS, fieldsForSection, type SiteCopy } from "../../../lib/site-copy/domain";
 
@@ -117,10 +118,7 @@ export default function AdminHomepagePage() {
 
   return (
     <main className="admin-home-editor">
-      <header>
-        <div><img src="/today-startup-logo-2026.png" alt="오늘창업" /><span><strong>메인 홈페이지</strong><small>화면에서 섹션을 골라 고치고 지웁니다 · 저장해야 반영됩니다</small></span></div>
-        <nav><Link href="/admin">대시보드</Link><Link href="/admin/support">1:1 상담</Link><Link href="/admin/legal">운영 설정</Link><Link className="active" href="/admin/homepage">홈페이지</Link></nav>
-      </header>
+      <AdminNav title="메인 홈페이지" subtitle="홈페이지 문구와 섹션 관리 · 저장 후 반영" />
 
       <div className="admin-home-body">
         {/* 왼쪽 — 진짜 홈 화면. 섹션 테두리·버튼은 이 안에서 그린다 */}

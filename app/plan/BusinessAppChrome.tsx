@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft, FolderClosed, MessageCircle, MoreHorizontal, SquarePen, X } from "lucide-react";
 import styles from "./chat/page.module.css";
+import WorkspaceBrand from "../../components/workspace-brand";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
 export default function BusinessAppChrome({ children, title, active = "plans", backHref = "/plan", workspaceHref, showRail = true }: {
@@ -22,7 +23,7 @@ export default function BusinessAppChrome({ children, title, active = "plans", b
   }, [open]);
   return <>
     {showRail && <aside className={styles.appRail} aria-label="작업 메뉴">
-      <Link className={styles.brand} href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026.png" alt="오늘창업" width="132" height="33" /></Link>
+      <Link className={styles.brand} href="/" aria-label="오늘창업 홈"><WorkspaceBrand /></Link>
       <a className={styles.newChat} href="/plan/chat?new=1"><SquarePen size={19} />새 대화</a>
       <nav><Link href="/plan/chat" className={active === "chat" ? styles.currentNav : ""} aria-current={active === "chat" ? "page" : undefined}><MessageCircle size={19} />사업 기획</Link><Link href="/plan" className={active === "plans" ? styles.currentNav : ""} aria-current={active === "plans" ? "page" : undefined}><FolderClosed size={19} />내 사업</Link></nav>
       <span className={styles.railCaption}>아이디어에서 시작하는 내 사업</span>

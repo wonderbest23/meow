@@ -1,4 +1,5 @@
 import PlanShell from "./PlanShell";
+import theme from "../../components/workspace-theme.module.css";
 
 /**
  * /plan 이하 모든 화면이 고정 레일 셸을 공유한다.
@@ -9,7 +10,7 @@ import PlanShell from "./PlanShell";
  */
 export default function PlanLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="plan-ui">
+    <div className={`plan-ui ${theme.theme}`} data-workspace-theme="night">
       <PlanShell>{children}</PlanShell>
     </div>
   );

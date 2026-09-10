@@ -1,0 +1,50 @@
+.admin { min-height: 100dvh; background: linear-gradient(135deg, #13233b, #080f1c 55%); }
+.admin :is(button,input,textarea,select) { font-family: inherit; }
+.admin :is(button,a) svg { display: inline-block !important; flex-shrink: 0; }
+.admin :is(input,textarea,select) { background: #0b1627; color: var(--app-text); border-color: var(--app-line-strong); font-size: 15px; }
+.admin button { min-height: 42px; border-radius: 8px; transition: background .18s,border-color .18s,transform .18s; }
+.admin button:disabled { opacity: .5; cursor: not-allowed; }
+.admin button:active:not(:disabled) { transform: scale(.985); }
+.admin :global(main) { background: transparent; }
+.admin :global(.admin-dash-cards > article), .admin :global(.admin-dash-panel), .admin :global(.admin-home-fields), .admin :global(.admin-home-seclist) { background: var(--app-panel-fill); border: 1px solid var(--app-line); border-radius: 8px; }
+.admin :global(.admin-chat-room), .admin :global(.admin-payment-detail) { background: #0d1829; border-color: var(--app-line); }
+.admin :global(.admin-dash-panel h2), .admin :global(.admin-payment-detail h1) { color: var(--app-text); }
+.admin :global(.admin-login-page form) { background: var(--app-panel-fill); border: 1px solid var(--app-line-strong); box-shadow: 0 20px 70px #0005; border-radius: 8px; }
+.admin :global(.admin-login-page form > button), .admin :global(.admin-home-actions button.save), .admin :global(.admin-payment-detail button.confirm), .admin :global(.admin-legal-actions > button) { background: var(--app-primary-fill); color: #fff; border: 1px solid #419bff; }
+.admin :global(.admin-login-page form h1) { color: var(--app-text); }
+.admin :global(.admin-chat-messages article.admin p) { background: #174c98; color: #fff; }
+.admin :global(.admin-chat-messages article.customer p) { background: #1b2b44; color: var(--app-body); }
+.admin :global(.admin-legal-page form > section) { border-radius: 0; border: 0; border-bottom: 1px solid var(--app-line); background: transparent; }
+.admin :global(.admin-payment-orders button.selected), .admin :global(.admin-conversation-list button.selected) { background: #15325a; border-color: #559beb; box-shadow: inset 3px 0 0 #73b7ff; }
+.admin :global(.admin-home-preview iframe) { background: white; color-scheme: light; }
+.admin :global(.admin-dash-error), .admin :global(.admin-login-error) { color: var(--app-danger); background: var(--app-danger-bg); }
+.rail { position: fixed; inset: 0 auto 0 0; z-index: 50; width: 224px; padding: 30px 18px; display: flex; flex-direction: column; gap: 34px; border-right: 1px solid var(--app-line); background: linear-gradient(155deg,#15243b,#0a1423 70%); }
+.rail > a { text-decoration: none; }
+.rail nav { display: grid; gap: 8px; }
+.rail nav a { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 12px 14px; border: 1px solid transparent; border-radius: 8px; color: var(--app-muted); text-decoration: none; font-size: 14px; font-weight: 600; }
+.rail nav a:hover { background: #1c304c; color: var(--app-text); }
+.rail nav a[aria-current=page] { background: #143565; color: var(--app-accent); border-color: #416fa5; box-shadow: inset 3px 0 0 #65b0ff; }
+.rail nav svg { width: 20px; height: 20px; }
+.rail > small { margin-top: auto; color: var(--app-muted); font-size: 12px; }
+.header { min-height: 86px; padding: 22px 28px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--app-line); background: #0c1728; }
+.header > div { display: grid; gap: 6px; min-width: 0; }
+.header strong { color: var(--app-text); font-size: 21px; font-weight: 700; }
+.header small { color: var(--app-muted); font-size: 13px; line-height: 1.6; word-break: keep-all; }
+.header > button { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 14px; border: 1px solid var(--app-line-strong); color: var(--app-body); background: var(--app-panel-fill); flex-shrink: 0; font-size: 13px; }
+.admin main > .header { height: auto; padding: 22px 28px; border-color: var(--app-line); background: #0c1728; }
+.admin main > .header > div { display: grid; gap: 6px; }
+.admin main > .header strong { font-size: 21px; color: var(--app-text); }
+.admin main > .header small { font-size: 13px; color: var(--app-muted); }
+@media(min-width:1001px) { .admin:has(.rail) { padding-left: 224px; } }
+@media(max-width:1000px) {
+  .rail { position: static; width: 100%; padding: 16px; gap: 16px; border-right: 0; border-bottom: 1px solid var(--app-line); }
+  .rail > a, .rail > small { display: none; }
+  .rail nav { grid-template-columns: repeat(3,minmax(0,1fr)); gap: 6px; }
+  .rail nav a { justify-content: center; padding: 10px 6px; gap: 6px; font-size: 12px; min-width: 0; }
+  .rail nav svg { width: 17px; height: 17px; }
+  .header { padding: 18px 16px; }.header strong { font-size: 19px; }.header small { font-size: 12px; }
+  .admin main > .header { padding: 18px 16px; }
+  .admin main > .header strong { font-size: 19px; }
+  .admin main > .header small { font-size: 12px; }
+  .admin :global(.admin-home-editor) { height: auto; min-height: 100dvh; }
+}

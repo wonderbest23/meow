@@ -15,8 +15,8 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  border: 1px solid #f5cdd5;
-  background: #fff7f8;
+  border: 1px solid var(--app-line);
+  background: var(--app-raised);
   border-radius: 10px;
   padding: 9px 12px;
 }
@@ -30,12 +30,12 @@
   padding: 3px 8px;
 }
 .badgeConflict {
-  background: #fdecef;
-  color: #c33d55;
+  background: var(--app-danger-bg);
+  color: var(--app-danger);
 }
 .badgeCheck {
-  background: #fff4e6;
-  color: #a35c14;
+  background: var(--app-warning-bg);
+  color: var(--app-warning);
 }
 
 .rowTitle {
@@ -43,15 +43,15 @@
   min-width: 0;
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: -0.2px;
-  color: var(--text-strong, #0d0a2c);
+  letter-spacing: 0;
+  color: var(--text-strong, var(--app-text));
   word-break: keep-all;
 }
 
 .link {
   flex: none;
   border: 0;
-  background: var(--blue, #3272db);
+  background: var(--blue, var(--app-primary));
   color: #fff;
   font: inherit;
   font-size: 12.5px;

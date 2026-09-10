@@ -5,20 +5,20 @@
   --wz-nav: #12324a;
   --wz-nav-ink: #a9bdd2;
   --wz-nav-line: #20455f;
-  --wz-brand: var(--blue, #3272db);
-  --wz-brand-soft: var(--blue-soft, #efeefb);
-  --wz-ok: #16b877;
+  --wz-brand: var(--blue, var(--app-primary));
+  --wz-brand-soft: var(--blue-soft, var(--app-soft));
+  --wz-ok: var(--app-success);
   --wz-track: #dde3ef;
-  --wz-line: var(--border-soft, #dfdef1);
-  --wz-panel: var(--surface, #fff);
-  --wz-panel2: var(--surface-soft, #f9f9ff);
-  --wz-ink: var(--text-strong, #0d0a2c);
-  --wz-muted: var(--text-body, #585667);
-  --wz-faint: var(--text-muted, #5f5c7f);
+  --wz-line: var(--border-soft, var(--app-line));
+  --wz-panel: var(--surface, var(--app-surface));
+  --wz-panel2: var(--surface-soft, var(--app-raised));
+  --wz-ink: var(--text-strong, var(--app-text));
+  --wz-muted: var(--text-body, var(--app-body));
+  --wz-faint: var(--text-muted, var(--app-muted));
   --wz-shadow: 0 24px 60px rgba(20, 32, 64, 0.12);
   --wz-shadow-sm: 0 2px 8px rgba(20, 32, 64, 0.06);
 
-  background: var(--surface-muted, #f5f5fa);
+  background: var(--surface-muted, var(--app-raised));
   color: var(--wz-ink);
   min-height: 100vh;
   padding: 22px 16px 40px;
@@ -143,7 +143,7 @@
   margin: 0 14px 8px;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.12em;
+  letter-spacing: 0;
   text-transform: uppercase;
   color: rgba(255, 255, 255, 0.45);
 }
@@ -355,28 +355,28 @@
 }
 .mhead { padding: 0; border-bottom: 1px solid var(--wz-line); }
 /* 흰 머리 블록 — 개요·문서 화면과 같은 값 */
-.headBlock { display: flex; align-items: center; gap: 12px; padding: 14px 16px 17px; background: #fff; }
+.headBlock { display: flex; align-items: center; gap: 12px; padding: 14px 16px 17px; background: var(--app-surface); }
 .headBack {
   flex: none; width: 32px; height: 32px; min-height: 0 !important;
   margin: 0; padding: 0 !important;
-  border: 1px solid #e6e6ef; border-radius: 8px !important;
-  background: #fff; color: #55586a; font: inherit; font-size: 14px;
+  border: 1px solid var(--app-line); border-radius: 8px !important;
+  background: var(--app-surface); color: var(--app-body); font: inherit; font-size: 14px;
   display: grid; place-items: center; cursor: pointer; box-shadow: none !important;
 }
-.mhead .headTitle { margin: 0; display: grid; gap: 3px; min-width: 0; flex: 1; font-size: 20px; font-weight: 800; color: #1c1d21; line-height: 1.25; word-break: keep-all; letter-spacing: -.01em; }
-.mhead .headTitle span { font-size: 13px; font-weight: 400; color: #8181a5; letter-spacing: 0; }
+.mhead .headTitle { margin: 0; display: grid; gap: 3px; min-width: 0; flex: 1; font-size: 20px; font-weight: 800; color: var(--app-text); line-height: 1.25; word-break: keep-all; letter-spacing: 0; }
+.mhead .headTitle span { font-size: 13px; font-weight: 400; color: var(--app-muted); letter-spacing: 0; }
 .crumb {
   font-size: 13px;
   font-weight: 800;
   color: var(--wz-brand);
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
   margin-bottom: 5px;
 }
 .mhead h1 {
   margin: 0;
   font-size: 24px;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  letter-spacing: 0;
 }
 .meters {
   display: flex;
@@ -402,7 +402,7 @@
 .mtL {
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.09em;
+  letter-spacing: 0;
   color: var(--wz-faint);
   text-transform: uppercase;
 }
@@ -421,7 +421,7 @@
 @media (max-width: 640px) {
   .mtPrefix {
     display: inline;
-    color: var(--wz-faint, #8b95a1);
+    color: var(--wz-faint, var(--app-muted));
     font-weight: 700;
   }
 }
@@ -456,7 +456,7 @@
   gap: 10px;
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--wz-brand);
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -639,9 +639,9 @@
  * 무엇이 골라진 상태인지도 헷갈렸다.
  */
 .sugCardOn {
-  border-color: var(--blue, #3272db);
-  background: var(--blue-soft, #efeefb);
-  color: var(--blue-dark, #3272db);
+  border-color: var(--blue, var(--app-primary));
+  background: var(--blue-soft, var(--app-soft));
+  color: var(--blue-dark, var(--app-accent));
   font-weight: 700;
 }
 
@@ -686,7 +686,7 @@
   font-size: 18px;
   font-weight: 800;
   margin: 24px 0 10px;
-  letter-spacing: -0.3px;
+  letter-spacing: 0;
 }
 .genDoc :global(h3) {
   font-size: 15.5px;
@@ -793,7 +793,7 @@
 .tpH {
   font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0;
   color: var(--wz-faint);
   text-transform: uppercase;
   margin-bottom: 14px;
@@ -817,7 +817,7 @@
 .rt {
   font-size: 24px;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  letter-spacing: 0;
 }
 .rl {
   font-size: 13px;
@@ -877,8 +877,8 @@
   margin-top: 16px;
   width: 100%;
   border: 0;
-  background: var(--wz-ink);
-  color: var(--wz-panel);
+  background: var(--app-primary);
+  color: #fff;
   font: inherit;
   font-weight: 800;
   font-size: 15px;
@@ -974,7 +974,7 @@
   }
   .mtL {
     font-size: 13px;
-    letter-spacing: 0.02em;
+    letter-spacing: 0;
     white-space: nowrap;
   }
   .mtV {
@@ -998,7 +998,7 @@
     position: sticky;
     bottom: 0;
     z-index: 30;
-    background: var(--wz-panel, #fff);
+    background: var(--wz-panel, var(--app-surface));
     box-shadow: 0 -8px 20px rgba(20, 32, 64, 0.07);
   }
   .foot .btn {
@@ -1032,43 +1032,43 @@
 /* 미입력 필수 항목 — 생성을 시도했을 때만 표시한다 */
 .qMissing {
   border-color: #eeb3bf;
-  background: #fff6f7;
-  box-shadow: inset 3px 0 0 #d6455d, var(--wz-shadow-sm);
+  background: var(--app-danger-bg);
+  box-shadow: inset 3px 0 0 var(--app-danger), var(--wz-shadow-sm);
   animation: needAttention 0.45s ease-out;
 }
 .needTag {
   margin-left: 8px;
   font-size: 13px;
   font-weight: 800;
-  color: #c33d55;
-  background: #fdecef;
+  color: var(--app-danger);
+  background: var(--app-danger-bg);
   border-radius: 999px;
   padding: 3px 8px;
   vertical-align: middle;
   white-space: nowrap;
 }
 @keyframes needAttention {
-  0% { background: #ffe6ea; }
-  100% { background: #fff6f7; }
+  0% { background: var(--app-danger-bg); }
+  100% { background: var(--app-danger-bg); }
 }
 
 /* 답변 직후 자동 이동한 다음 질문 — 잠깐 파란 링으로 "이제 여기" */
 @keyframes qNextRing {
-  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #3272db) 50%, transparent), var(--wz-shadow-sm); }
-  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--wz-brand, #3272db) 22%, transparent), var(--wz-shadow-sm); }
+  0%, 100% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, var(--app-primary)) 50%, transparent), var(--wz-shadow-sm); }
+  50% { box-shadow: 0 0 0 6px color-mix(in srgb, var(--wz-brand, var(--app-primary)) 22%, transparent), var(--wz-shadow-sm); }
 }
 .qNext {
-  border-color: var(--wz-brand, #3272db);
+  border-color: var(--wz-brand, var(--app-primary));
   animation: qNextRing 1.6s ease-in-out 2;
 }
 @media (prefers-reduced-motion: reduce) {
-  .qNext { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, #3272db) 50%, transparent); }
+  .qNext { animation: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--wz-brand, var(--app-primary)) 50%, transparent); }
 }
 
 /* 모순 패널에서 짚어 들어온 질문 — 빨간 테두리로 정확히 어디인지 보여준다 */
 .qConflict {
-  border: 1.5px solid #d6455d;
-  background: #fff6f7;
+  border: 1.5px solid var(--app-danger);
+  background: var(--app-danger-bg);
   box-shadow: 0 0 0 3px rgba(214, 69, 93, 0.12), var(--wz-shadow-sm);
   animation: needAttention 0.45s ease-out;
 }
@@ -1077,7 +1077,7 @@
   font-size: 13px;
   font-weight: 800;
   color: #fff;
-  background: #d6455d;
+  background: var(--app-danger);
   border-radius: 999px;
   padding: 3px 8px;
   vertical-align: middle;
@@ -1086,8 +1086,8 @@
 
 /* 어긋났던 답을 고치면 — 빨간 대신 파란 '해결' 상태로 즉시 전환 */
 .qResolved {
-  border: 1.5px solid var(--wz-brand, #3272db);
-  background: #f4f8ff;
+  border: 1.5px solid var(--wz-brand, var(--app-primary));
+  background: var(--app-raised);
   box-shadow: 0 0 0 3px rgba(49, 130, 246, 0.1), var(--wz-shadow-sm);
 }
 .resolvedTag {
@@ -1095,7 +1095,7 @@
   font-size: 13px;
   font-weight: 800;
   color: #fff;
-  background: var(--wz-brand, #3272db);
+  background: var(--wz-brand, var(--app-primary));
   border-radius: 999px;
   padding: 3px 8px;
   vertical-align: middle;
@@ -1125,7 +1125,7 @@
 /* 트래커에서 덜 채운 항목 */
 .trackMissing .tn,
 .trackMissing .tc {
-  color: #c33d55;
+  color: var(--app-danger);
 }
 .trackMissing .tdot {
   border-color: #e8909f;
@@ -1334,9 +1334,9 @@
   color: var(--wz-brand);
 }
 .lockOn {
-  background: #fff6e5;
+  background: var(--app-warning-bg);
   border-color: #f0c26a;
-  color: #96631a;
+  color: var(--app-warning);
 }
 .lockOn:hover {
   border-color: #d9a233;
@@ -1346,8 +1346,8 @@
   margin: 0 0 12px;
   font-size: 13px;
   line-height: 1.6;
-  color: #96631a;
-  background: #fff6e5;
+  color: var(--app-warning);
+  background: var(--app-warning-bg);
   border: 1px solid #f3d9a4;
   border-radius: 10px;
   padding: 10px 13px;
@@ -1498,7 +1498,7 @@
     margin-top: 0;
     font-size: 13px;
     font-weight: 700;
-    color: var(--wz-muted, #585667);
+    color: var(--wz-muted, var(--app-body));
     white-space: nowrap;
   }
 }
@@ -1546,9 +1546,9 @@
 .sampleBanner {
   margin-bottom: 16px;
   padding: 14px 16px;
-  border: 1px solid var(--wz-line, #e5e7eb);
+  border: 1px solid var(--wz-line, var(--app-line));
   border-radius: 12px;
-  background: var(--wz-soft, #f9f9ff);
+  background: var(--wz-soft, var(--app-raised));
   display: grid;
   gap: 4px;
 }
@@ -1556,15 +1556,15 @@
 .sampleBanner strong {
   font-size: 14px;
   font-weight: 800;
-  letter-spacing: -0.01em;
-  color: var(--wz-ink, #111827);
+  letter-spacing: 0;
+  color: var(--wz-ink, var(--app-text));
 }
 
 .sampleBanner p {
   margin: 0;
   font-size: 13px;
   line-height: 1.65;
-  color: var(--wz-muted, #6b7280);
+  color: var(--wz-muted, var(--app-muted));
   text-wrap: pretty;
 }
 
@@ -1573,7 +1573,7 @@
   margin-top: 6px;
   padding: 7px 11px;
   border-radius: 8px;
-  background: #fdecec;
+  background: var(--app-danger-bg);
   color: #c0392b;
   font-size: 13px;
   font-weight: 700;
@@ -1637,14 +1637,14 @@
   padding: 0 !important;
   border: 0;
   border-radius: 3px !important;
-  background: #e6e6ef;
+  background: var(--app-line);
   cursor: pointer;
   transition: background .2s ease, transform .15s ease;
 }
 .stepDot:hover { transform: scaleY(1.6); }
-.stepDotDone { background: #22b573; }
-.stepDotOn { background: var(--blue, #3272db); }
-.stepNow { margin-left: 6px; color: #8181a5; font-size: 12px; font-weight: 700; }
+.stepDotDone { background: var(--app-success); }
+.stepDotOn { background: var(--blue, var(--app-primary)); }
+.stepNow { margin-left: 6px; color: var(--app-muted); font-size: 12px; font-weight: 700; }
 .group { animation: planRise .38s cubic-bezier(.2,.7,.2,1) both; }
 @media (prefers-reduced-motion: reduce) {
   .group { animation: none; }
@@ -1661,20 +1661,20 @@
   position: absolute;
   left: 0; right: 0; top: 0;
   height: 4px;
-  background: #eceef3;
+  background: var(--app-raised);
   display: block;
   overflow: hidden;
 }
 .gauge i {
   display: block;
   height: 100%;
-  background: #22b573;
+  background: var(--app-success);
   border-radius: 0 2px 2px 0;
   transition: width .35s cubic-bezier(.2,.7,.2,1);
 }
 .gaugeText {
   margin-right: auto;
-  color: #8181a5;
+  color: var(--app-muted);
   font-size: 12px;
   font-weight: 700;
 }
@@ -1688,7 +1688,7 @@
 
 /* 진행 라벨을 하단에서 묶음 제목 옆으로 올린다 — 아래에는 게이지만 남는다 */
 .gaugeText { display: none; }
-.glStep { margin-left: auto; color: #8181a5; font-size: 12px; font-weight: 700; }
+.glStep { margin-left: auto; color: var(--app-muted); font-size: 12px; font-weight: 700; }
 .gl { display: flex; align-items: center; gap: 8px; }
 
 /* 다음 버튼은 하단 바를 꽉 채운다 — 손이 어디로 가야 하는지 한눈에.

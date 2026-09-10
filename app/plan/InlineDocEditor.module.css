@@ -8,7 +8,7 @@
 .surface {
   font-size: 14.5px;
   line-height: 1.75;
-  color: var(--wz-ink, #0d0a2c);
+  color: var(--wz-ink, var(--app-text));
   outline: none;
   border-radius: 10px;
   padding: 6px 10px;
@@ -16,18 +16,18 @@
   transition: background 0.14s, box-shadow 0.14s;
 }
 .surface:hover {
-  background: var(--wz-panel2, #f9f9ff);
+  background: var(--wz-panel2, var(--app-raised));
 }
 .surface:focus {
   background: transparent;
-  box-shadow: 0 0 0 1px var(--wz-line, #dfdef1);
+  box-shadow: 0 0 0 1px var(--wz-line, var(--app-line));
 }
 
 .surface h1,
 .surface h2 {
   font-size: 18px;
   font-weight: 800;
-  letter-spacing: -0.3px;
+  letter-spacing: 0;
   margin: 24px 0 10px;
 }
 .surface h3 {
@@ -52,21 +52,21 @@
 .surface blockquote {
   margin: 0 0 12px;
   padding: 8px 14px;
-  border-left: 3px solid var(--wz-brand, #3272db);
-  background: var(--wz-panel2, #f9f9ff);
+  border-left: 3px solid var(--wz-brand, var(--app-primary));
+  background: var(--wz-panel2, var(--app-raised));
   border-radius: 0 8px 8px 0;
-  color: var(--wz-muted, #585667);
+  color: var(--wz-muted, var(--app-body));
 }
 .surface strong {
   font-weight: 800;
 }
 .surface a {
-  color: var(--wz-brand, #3272db);
+  color: var(--wz-brand, var(--app-accent));
   text-decoration: underline;
 }
 .surface hr {
   border: 0;
-  border-top: 1px solid var(--wz-line, #dfdef1);
+  border-top: 1px solid var(--wz-line, var(--app-line));
   margin: 20px 0;
 }
 
@@ -80,13 +80,13 @@
 }
 .surface th,
 .surface td {
-  border: 1px solid var(--wz-line, #dfdef1);
+  border: 1px solid var(--wz-line, var(--app-line));
   padding: 8px 10px;
   text-align: left;
   vertical-align: top;
 }
 .surface th {
-  background: var(--wz-panel2, #f9f9ff);
+  background: var(--wz-panel2, var(--app-raised));
   font-weight: 800;
 }
 .surface .selectedCell::after {
@@ -118,7 +118,7 @@
   display: flex;
   align-items: center;
   gap: 2px;
-  background: var(--wz-ink, #0d0a2c);
+  background: var(--app-raised);
   border-radius: 10px;
   padding: 4px 5px;
   box-shadow: 0 10px 26px rgba(20, 32, 64, 0.28);
@@ -141,7 +141,7 @@
   color: #fff;
 }
 .tbOn {
-  background: var(--wz-brand, #3272db);
+  background: var(--wz-brand, var(--app-primary));
   color: #fff;
 }
 .tbSep {
@@ -154,12 +154,12 @@
 .status {
   margin-top: 12px;
   font-size: 13px;
-  color: var(--wz-faint, #8b95a1);
+  color: var(--wz-faint, var(--app-muted));
   min-height: 16px;
 }
 
 .statusFail {
-  color: #c33d55;
+  color: var(--app-danger);
   font-weight: 700;
 }
 
