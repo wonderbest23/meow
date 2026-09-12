@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccountSession } from "../../../../lib/account-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
+import { authSessionInput } from "../../../../lib/auth-session-input";
 
-const schema = z.object({ accessToken: z.string().min(20), refreshToken: z.string().min(20), password: z.string().min(8).max(200) });
+const schema = authSessionInput.extend({ password: z.string().min(8).max(200) });
 
 export async function POST(request: Request) {
   const limited = await enforceRateLimit("auth-reset", request, {
@@ -24,6 +26,8 @@ export async function POST(request: Request) {
     await setAccountSession(sessionResult.data.session);
     return NextResponse.json({ reset: true });
   } catch (error) {
+    const linking = accountLinkError(error);
+    if (linking) return NextResponse.json({ error: { code: linking.code, message: `비밀번호는 변경되었어요. ${linking.message}` } }, { status: linking.status });
     return NextResponse.json({ error: { code: "PASSWORD_RESET_FAILED", message: error instanceof Error ? error.message : "비밀번호를 바꾸지 못했습니다." } }, { status: 400 });
   }
 }

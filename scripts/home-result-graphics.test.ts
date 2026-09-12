@@ -21,46 +21,60 @@ async function main() {
       page.on("pageerror", error => errors.push(String(error)));
       await page.goto(base, { waitUntil: "networkidle0" });
       assert.equal(await page.$$eval("[data-graphic]", elements => elements.length), 3);
-      assert.notEqual(await page.$eval('[aria-label="그래픽 애니메이션 일시 정지"] svg', el => getComputedStyle(el).display), "none", "Pause control icon must not be hidden by global button styles");
+      assert.equal(await page.$$eval('#deliverables button', elements => elements.filter(element => !element.closest('[inert]')).length), 0, "Result graphics do not show playback buttons; embedded app buttons stay inert");
       for (const name of ["business-plan", "presentation", "workspace"]) {
         const selector = `[data-graphic="${name}"]`;
         await page.$eval(selector, element => element.scrollIntoView({ block: "center", behavior: "instant" }));
         await page.waitForSelector(`${selector}[data-running="true"]`);
-        await page.waitForFunction((s) => {
-          const img = document.querySelector<HTMLImageElement>(`${s} img`);
-          return img?.complete && img.naturalWidth > 0;
-        }, {}, selector);
+        await page.waitForFunction((s) => [...document.querySelectorAll<HTMLImageElement>(`${s} img`)].every(img => img.complete && img.naturalWidth > 0), {}, selector);
         await pause(2000);
         const dimensions = await page.$eval(selector, element => {
           const rect = element.getBoundingClientRect();
-          const img = element.querySelector("img")!;
-          return { width: rect.width, height: rect.height, fit: getComputedStyle(img).objectFit, src: img.getAttribute("src") };
+          return { width: rect.width, height: rect.height, layers: element.querySelectorAll('[data-motion-layer]').length };
         });
-        assert.ok(Math.abs(dimensions.width - dimensions.height) < 2, "Graphic stage stays square");
-        assert.equal(dimensions.fit, "contain");
-        assert.equal(dimensions.src, `/home-media/${name}-graphic.png`);
-        const transform = () => page.$eval(`${selector} [class*="__graphicMotion"]`, element => getComputedStyle(element).transform);
-        const before = await transform();
+        if (name === "workspace") {
+          assert.ok(Math.abs(dimensions.height / dimensions.width - (width < 960 ? 1.25 : 1)) < .02, "Workspace preview has a stable responsive frame");
+          const before = await page.$eval(selector, element => Number((element as HTMLElement).dataset.progress));
+          await pause(650);
+          assert.ok(await page.$eval(selector, element => Number((element as HTMLElement).dataset.progress)) > before, "Workspace use sequence advances while visible");
+          assert.ok(await page.$(`${selector} [inert] [data-workspace-open-document]`));
+          assert.ok(await page.$(`${selector} input[type=range]`));
+          assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+          await page.screenshot({ path: `artifacts/home-result-graphics/${width}-${name}.png` });
+          continue;
+        }
+        assert.ok(Math.abs(dimensions.width - dimensions.height) < 2, "Document graphic stage stays square");
+        assert.ok(dimensions.layers >= 3, "Graphics need independently animated internal layers");
+        if (name !== "workspace") {
+          const sources = await page.$$eval(`${selector} img`, images => images.map(image => image.getAttribute("src")));
+          assert.ok(sources.length >= 3);
+          assert.ok(sources.every(source => source?.startsWith("/home-media/results/")), "Use rendered sample pages, not unrelated brand photos");
+        }
+        if (name === "presentation") {
+          const duration = await page.$eval(`${selector} [data-motion-layer]`, image => getComputedStyle(image).animationDuration);
+          assert.equal(duration, "24s", "Three slides hold for eight seconds each");
+          const captionTop = await page.$eval(`${selector} > span`, el => el.getBoundingClientRect().top);
+          const thumbnailBottom = await page.$eval(`${selector} [class*="slideStrip"]`, el => el.getBoundingClientRect().bottom);
+          assert.ok(thumbnailBottom < captionTop, "PPT thumbnails must not overlap the caption");
+        }
+        const time = () => page.$eval(`${selector} [data-motion-layer]`, element => Number(element.getAnimations()[0]?.currentTime));
+        const before = await time();
         await pause(650);
-        assert.notEqual(await transform(), before, "Visible graphics must actually animate");
+        assert.ok(await time() > before, "Visible layer timelines must advance");
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
         await page.screenshot({ path: `artifacts/home-result-graphics/${width}-${name}.png` });
       }
-      await page.$eval('[aria-label="그래픽 애니메이션 일시 정지"]', element => (element as HTMLButtonElement).click());
-      await page.waitForFunction(() => [...document.querySelectorAll("[data-graphic]")].every(el => (el as HTMLElement).dataset.running === "false"));
-      await pause(100);
-      const motion = '[data-graphic="workspace"] [class*="__graphicMotion"]';
-      const stopped = await page.$eval(motion, el => getComputedStyle(el).transform);
-      await pause(300);
-      assert.equal(await page.$eval(motion, el => getComputedStyle(el).transform), stopped);
-      await page.$eval('[aria-label="그래픽 애니메이션 재생"]', element => (element as HTMLButtonElement).click());
+      const motion = '[data-graphic="workspace"]';
       await page.evaluate(() => scrollTo({ top: 0, behavior: "instant" }));
       await page.waitForFunction(() => [...document.querySelectorAll("[data-graphic]")].every(el => (el as HTMLElement).dataset.running === "false"));
+      const stopped = await page.$eval(motion, el => (el as HTMLElement).dataset.progress);
+      await pause(300);
+      assert.equal(await page.$eval(motion, el => (el as HTMLElement).dataset.progress), stopped);
       await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
       await page.$eval('[data-graphic="workspace"]', element => element.scrollIntoView({ block: "center", behavior: "instant" }));
       await pause(200);
-      assert.equal(await page.$eval(motion, el => getComputedStyle(el).animationName), "none");
-      assert.equal(await page.$eval('[data-graphic="workspace"] img', el => getComputedStyle(el).visibility), "visible");
+      assert.equal(await page.$eval(motion, el => (el as HTMLElement).dataset.running), "false");
+      assert.equal(await page.$eval('[data-graphic="workspace"]', el => getComputedStyle(el).visibility), "visible");
       assert.equal(await page.$eval('#deliverables a[href="/samples/sample_coffee.pdf"]', el => el.getAttribute("target")), "_blank");
       assert.equal(await page.$eval('#deliverables a[href="/samples/sample_coffee.pptx"]', el => el.hasAttribute("download")), true);
       assert.ok(await page.$('#deliverables a[href="/plan"]'));

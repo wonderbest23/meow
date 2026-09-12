@@ -6,20 +6,21 @@ import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { hydrateFromServer, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
-import { ACTION_KEY, actionStatus, businessChatHref, businessHubState } from "../../../lib/plan-builder/business-hub";
+import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, businessNextStep } from "../../../lib/plan-builder/business-hub";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
-import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
 import frame from "../chat/page.module.css";
 import styles from "../BusinessHub.module.css";
 import LaunchWorkspace from "./LaunchWorkspace";
 import ExpertEditor from "./ExpertEditor";
 import launchStyles from "./LaunchWorkspace.module.css";
+import { WorkspaceDocumentStatus, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
 
-type View = "summary" | "documents" | "action" | "launch";
+type View = WorkspaceView;
 export default function BusinessWorkspace() {
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [loadError, setLoadError] = useState(false);
   const [view, setView] = useState<View>("summary");
   const [runStatus, setRunStatus] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
@@ -41,13 +42,13 @@ export default function BusinessWorkspace() {
         const state = await hydrateFromServer();
         const found = state.plans.find(p => p.id === id) ?? null;
         if (!alive) return;
-        setPlan(found); setLoaded(true);
+        setPlan(found); setLoaded(true); setLoadError(false);
         if (found?.answers.__business_coach) {
           const response = await fetch(`/api/plan/chat?planId=${encodeURIComponent(id)}`, { cache:"no-store" });
           if (response.ok) { const data=await response.json(); if(alive)setRunStatus(data.runStatus ?? null); }
           else if(alive)setRunStatus(null);
         }
-      } catch { if(alive){setRunStatus(null);setNotice("최신 상태를 확인하지 못했어요. 연결되면 다시 확인합니다.");} } finally { inFlight = false; }
+      } catch { if(alive){setLoaded(true);setLoadError(true);setRunStatus(null);} } finally { inFlight = false; }
     };
     void refresh(); const interval = window.setInterval(() => void refresh(),10000);
     const visible = () => { if (!document.hidden) void refresh(); };
@@ -79,30 +80,24 @@ export default function BusinessWorkspace() {
     setNotice(synced ? "기록을 저장했어요." : "기기에 기록했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해 주세요.");setSaving(false);
   }
   return <main className={frame.page}><BusinessAppChrome title="내 사업 관리">
-    <div className={styles.scroll}><div className={styles.content}>
-      {!loaded ? <PlanLoading note="사업을 불러오고 있어요" /> : !plan || !hub ? <><h1>사업을 찾지 못했어요</h1><p>목록에서 이어갈 사업을 다시 선택해 주세요.</p><Link className={styles.primary} href="/plan">내 사업으로</Link></> : <>
-        <div className={styles.workspaceTitle}><span className={styles.status}>{hub.status}</span><h1>{plan.title}</h1></div>
-        <nav className={styles.tabs} aria-label="사업 관리 메뉴"><button aria-pressed={view==="summary"} onClick={()=>tab("summary")}>사업 요약</button><button aria-pressed={view==="documents"} onClick={()=>tab("documents")}>내 자료</button><button aria-pressed={view==="launch" || view==="action"} onClick={()=>tab("launch")}>사업 시작하기</button>{hub.coach ? <Link href={chat}>대화 이어가기</Link> : <button onClick={openLegacy}>기존 작업 열기</button>}</nav>
+    {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
+      {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p><Link className={styles.primary} href="/plan">내 사업으로</Link><Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
+        {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인합니다.</p>}
+        <WorkspaceIdentity title={plan.title} status={hub.status} />
+        <WorkspaceNavigation view={view} onChange={tab}>{hub.coach ? <Link href={chat}>대화 이어가기</Link> : <button onClick={openLegacy}>기존 작업 열기</button>}</WorkspaceNavigation>
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={()=>{ if (!expertDirty || window.confirm("저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?")) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="launch" ? "사업 시작하기" : "다음 할 일"}>
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
-          {view==="summary" && (!expert || !hub.coach) && <>
-            <h2 ref={heading} tabIndex={-1}>이런 사업이에요</h2>
-            <p>{design?.startingPlan.scope || hub.coach?.business.description || "기존에 작성한 사업계획서를 이어서 확인할 수 있어요."}</p>
-            {hub.stale && <div className={styles.notice}><p>대화에서 바꾼 내용이 기존 문서와 달라요. 내 자료에서 확인해 주세요.</p></div>}
-            {hub.coach ? <><dl className={styles.keyFacts}>{hub.coach.fields.filter(f=>["customer","offer","price","budget","hoursPerWeek"].includes(f.key)).map(field=><div className={styles.fact} key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}<span>{field.basis==="user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd>{field.value}</dd></div>)}</dl><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>기존 사업계획서 이어보기</button>}
-          </>}
+          {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "기존에 작성한 사업계획서를 이어서 확인할 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
+            {hub.coach ? <><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>기존 사업계획서 이어보기</button>}
+          </WorkspaceSummary>}
           {view==="documents" && <>
             <h2 ref={heading} tabIndex={-1}>내 사업 자료</h2>
             {hub.documents.length ? <>
-              <div className={styles.documentState}><p>{hub.complete ? "사업계획서가 완성됐어요." : "사업계획서를 준비하고 있어요."}</p><span className={styles.count}>{hub.documents.length} / {hub.keys.length} 항목</span></div>
-              {!hub.complete && <progress className={styles.progress} aria-label="준비된 문서 항목" value={hub.documents.length} max={hub.keys.length}/>}
-              <ul className={styles.fileTypes} aria-label="내보내기 형식"><li>PDF</li><li>워드</li><li>발표자료 PPT</li></ul>
-              {hub.stale && <div className={styles.notice}><h3>수정 내용 반영 필요</h3><p>현재 사업안과 다른 내용이 문서에 남아 있어요. 기존 문서는 유지되며, 대화에서 반영을 요청할 수 있어요.</p></div>}
-              <button className={styles.primary} onClick={openDocument}>사업계획서 열기</button>
-              <p className={styles.downloadNote}>내려받기는 문서에서 · 이용 권한에 따라 결제 필요</p>
+              <WorkspaceDocumentStatus complete={hub.complete} count={hub.documents.length} total={hub.keys.length} stale={hub.stale} onOpen={openDocument} />
             </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지의 대화는 그대로 사용합니다.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button>}</>}
             {hub.coach && !!hub.documents.length && <Link className={styles.secondary} href={chat}>{hub.stale ? "수정 내용 반영하러 가기" : "자료를 더 다듬기"}</Link>}
+            {hub.complete && !hub.stale && <div className={styles.nextStep}><span>계획 다음 단계</span><h3>{businessNextStep(plan).title}</h3><p>지금 선택한 사업의 상품·운영·홈페이지 준비를 이어가요.</p><Link className={styles.secondary} href={businessNextStep(plan).href}>준비 과정 이어가기</Link></div>}
             <details><summary>홈페이지도 필요하신가요?</summary><p>사업계획서로 고객에게 보여줄 홈페이지를 만들 수 있어요. 이용 권한에 따라 결제가 필요할 수 있어요.</p><button className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push("/plan/homepage"); }}>홈페이지 만들기</button></details>
           </>}
           {view==="launch" && <>{action && <button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}
@@ -114,6 +109,6 @@ export default function BusinessWorkspace() {
           </>}
         </section>
       </>}
-    </div></div>
+    </div></div>}
   </BusinessAppChrome></main>;
 }

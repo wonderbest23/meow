@@ -10,7 +10,7 @@ import theme from "../../components/workspace-theme.module.css";
  */
 export default function PlanLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className={`plan-ui ${theme.theme}`} data-workspace-theme="night">
+    <div className={`plan-ui ${theme.theme}`} data-workspace-theme="light">
       <PlanShell>{children}</PlanShell>
     </div>
   );

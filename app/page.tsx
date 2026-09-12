@@ -78,6 +78,7 @@ import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
 import { HomeCinematicHero } from "../components/home-cinematic-hero";
 import { HomeServiceOverview } from "../components/home-service-overview";
+import homeTypography from "../components/home-typography.module.css";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -529,14 +530,13 @@ function Home({
 
 
   return (
-    <main className="new-home simple-home product-home cinematic-home">
+    <main className={`new-home simple-home product-home cinematic-home ${homeTypography.theme}`}>
       <div className="home-header-shell">
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
       </div>
       <HomeCinematicHero
-        eyebrow={sc("chatHome.eyebrow", "대화로 만드는 내 사업계획서")}
         title={sc("chatHome.title", "오늘창업")}
-        subtitle={scBr("chatHome.subtitle", "아이디어만 있어도, 이미 운영 중이어도 괜찮아요.\n대화로 정리하고, 내 사업에 맞는 계획으로 만드세요.")}
+        subtitle={scBr("chatHome.subtitle", "아이디어만 있어도 이미 운영 중이어도 괜찮아요\n대화로 정리하고 내 사업에 맞는 계획으로 만드세요")}
         onStart={openConsult}
       />
 
@@ -4404,5 +4404,5 @@ export default function Page() {
   if (screen === "sample" || screen === "delivery") return <FinalDelivery opportunity={paidReportDemoOpportunity} price={49000} brandChoice="곁봄" serverProject={null} demo onHome={returnFromSample} onStart={sampleReturnScreen === "home" ? () => navigate("start") : returnFromSample} sampleActionLabel={sampleReturnScreen === "checkout" ? "결제 화면으로 돌아가기" : sampleReturnScreen === "preview" ? "내 초안으로 돌아가기" : undefined} sampleView={sampleView} onCloseSample={sampleReturnScreen === "home" ? undefined : returnFromSample} />;
   if (screen === "explore") return <Explore profile={profile} feedback={feedback} setFeedback={setFeedback} onHome={() => navigate("home")} onStartOpportunity={startOpportunity} />;
   // 새 기획은 대화로 시작하고, 이미 작성한 예전 결과물 경로는 유지한다.
-  return <Home onStart={() => router.push("/plan/chat")} />;
+  return <Home onStart={() => router.push("/plan/chat?new=1")} />;
 }

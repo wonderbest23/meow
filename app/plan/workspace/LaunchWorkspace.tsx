@@ -17,6 +17,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   const [material, setMaterial] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [syncFailed, setSyncFailed] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const steps = launchSteps(plan, state);
   const remaining = steps.find(s => ["pending", "review"].includes(launchStatus(state, s)));
@@ -34,8 +35,9 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
     setState(next);
     const saved = loadState().plans.find(p => p.id === plan.id); if (saved) onSaved(saved);
     const synced = await pushToServer();
+    setSyncFailed(!synced);
     setMessage(synced ? "저장했어요." : "기기에 저장했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해주세요.");
-    setBusy(false); return true;
+    setBusy(false); return synced;
   }
   async function saveStep(status: "pending" | "done" | "skipped", advance: boolean) {
     if (!current || busy) return false;
@@ -83,5 +85,6 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
       <details><summary>전체 과정과 지난 기록</summary><div className={styles.stepList}>{steps.map(step => <button key={step.id} disabled={busy} onClick={() => void selectStep(step.id)}><span>{step.title}</span><small>{{ done: "준비 완료", skipped: "나중에", pending: "진행 전", review: "다시 확인" }[launchStatus(state, step)]}</small></button>)}</div><p>실행 메모와 자료는 사업계획서와 별도로 저장돼요. AI 대화로 구체화한 내용은 검토 후 사업안에 반영할 수 있어요. 실행 여부는 문서 이용 조건이 아니에요.</p></details>
     </>}
     {message && <p role="status">{message}</p>}
+    {syncFailed && <button className={styles.secondary} disabled={busy} onClick={() => void persist(state)}>서버 저장 다시 시도</button>}
   </div>;
 }

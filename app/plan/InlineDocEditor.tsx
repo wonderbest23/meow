@@ -18,6 +18,7 @@ export interface InlineDocEditorProps {
    * 디바운스는 이 컴포넌트가 처리한다.
    */
   onChange: (html: string) => void;
+  onDraft?: (html: string) => void;
   /** 저장 상태 표시용 */
   status?: "idle" | "saving" | "saved" | "failed";
   /** 디바운스(ms) */
@@ -37,11 +38,12 @@ const SAVE_DEBOUNCE = 1500;
  * 버튼을 눌러 '편집 모드'로 들어가지 않고, 그 자리에서 바로 고친다.
  * 글자를 선택하면 그 위에 서식 툴바가 뜬다.
  */
-export default function InlineDocEditor({ html, onChange, status = "idle", debounceMs = SAVE_DEBOUNCE, readOnly = false }: InlineDocEditorProps) {
+export default function InlineDocEditor({ html, onChange, onDraft, status = "idle", debounceMs = SAVE_DEBOUNCE, readOnly = false }: InlineDocEditorProps) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<string | null>(null);
   const latest = useRef(onChange);
   latest.current = onChange;
+  const latestDraft = useRef(onDraft); latestDraft.current = onDraft;
 
   function flushPending() {
     if (timer.current) clearTimeout(timer.current);
@@ -71,6 +73,7 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
     onUpdate: ({ editor }) => {
       if (timer.current) clearTimeout(timer.current);
       pending.current = editor.getHTML();
+      latestDraft.current?.(pending.current);
       timer.current = setTimeout(flushPending, debounceMs);
     },
     onBlur: flushPending,
@@ -151,7 +154,7 @@ export default function InlineDocEditor({ html, onChange, status = "idle", debou
           : status === "saved"
             ? "저장됨"
             : status === "failed"
-              ? "저장하지 못했습니다 — 플랜을 찾을 수 없어요. 새로고침 후 다시 시도해주세요."
+              ? "아직 서버에 저장되지 않았어요."
               : "글을 눌러 바로 고칠 수 있어요"}
       </div>
     </div>

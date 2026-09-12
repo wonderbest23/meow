@@ -6,6 +6,8 @@ import { readCoach, coachContext, coachDocumentRevision } from "./coach";
 import { loadPlanState, savePlanState } from "./plan-server-store";
 import { generateAndSaveCoach } from "./coach-job";
 import type { CoachJobRequest } from "./coach-job-types";
+import type { DeckJobRequest } from "./deck-job-types";
+import { generateAndSaveDeck } from "./deck-job";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "./financials";
 import { financialTableOwner, needsMultiYear, chaptersForType } from "./blueprint";
 import { findConsistencyIssues, issuesForSection } from "./consistency";
@@ -34,7 +36,7 @@ export interface PlanSectionJob {
   sectionId: string;
 }
 
-type ServiceRequest = { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest };
+type ServiceRequest = { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest };
 
 function encodeHex(value: ArrayBuffer) {
   return [...new Uint8Array(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -65,6 +67,9 @@ export async function callPlanSectionService(service: Fetcher, secret: string, j
 
 export async function callCoachService(service: Fetcher, secret: string, job: CoachJobRequest): Promise<{ ok: boolean }> {
   return callPlanningService(service, secret, { operation: "completeCoach", job });
+}
+export async function callDeckService(service: Fetcher, secret: string, job: DeckJobRequest): Promise<{ ok: boolean }> {
+  return callPlanningService(service, secret, { operation: "completeDeck", job });
 }
 
 async function callPlanningService(service: Fetcher, secret: string, input: ServiceRequest): Promise<{ ok: boolean }> {
@@ -243,7 +248,7 @@ export async function handlePlanSectionServiceRequest(request: Request, env: Clo
 
   try {
     const input = JSON.parse(body) as ServiceRequest;
-    const result = input.operation === "completeCoach" ? await generateAndSaveCoach(input.job) : await generateAndSaveSection(input.job);
+    const result = input.operation === "completeCoach" ? await generateAndSaveCoach(input.job) : input.operation === "completeDeck" ? await generateAndSaveDeck(input.job) : await generateAndSaveSection(input.job);
     return Response.json({ result });
   } catch (error) {
     return Response.json({ error: error instanceof Error ? error.message : "PLAN_SECTION_FAILED" }, { status: 500 });

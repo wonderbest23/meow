@@ -1,0 +1,50 @@
+[
+  {
+    "source": "/samples/sample_coffee.pdf",
+    "sha256": "6b80cbe296bc874102431dc89b074611e0ddce14067a5fa4523d0289334d6b20",
+    "previews": [
+      {
+        "file": "report-01.webp",
+        "page": 1,
+        "width": 1132,
+        "height": 1600
+      },
+      {
+        "file": "report-03.webp",
+        "page": 3,
+        "width": 1132,
+        "height": 1600
+      },
+      {
+        "file": "report-15.webp",
+        "page": 15,
+        "width": 1132,
+        "height": 1600
+      }
+    ]
+  },
+  {
+    "source": "/samples/sample_coffee.pptx",
+    "sha256": "4ecb9601d36a120450b68ab7e78b79c86e82fdaeffce56b90a32ade87f995531",
+    "previews": [
+      {
+        "file": "deck-01.webp",
+        "page": 1,
+        "width": 1600,
+        "height": 901
+      },
+      {
+        "file": "deck-03.webp",
+        "page": 3,
+        "width": 1600,
+        "height": 901
+      },
+      {
+        "file": "deck-08.webp",
+        "page": 8,
+        "width": 1600,
+        "height": 901
+      }
+    ]
+  }
+]

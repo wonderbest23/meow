@@ -1,6 +1,7 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
-import { callPlanSectionService, callCoachService, type PlanSectionJob } from "./section-service";
+import { callPlanSectionService, callCoachService, callDeckService, type PlanSectionJob } from "./section-service";
 import type { CoachJobRequest } from "./coach-job-types";
+import type { DeckJobRequest } from "./deck-job-types";
 
 /*
  * 본문 생성을 브라우저 밖에서 끝까지 돌리는 워크플로.
@@ -12,7 +13,7 @@ import type { CoachJobRequest } from "./coach-job-types";
  * 앞 섹션 결과를 뒤 섹션이 참고하므로 한 번에 하나씩 순서대로 만든다.
  */
 
-export type PlanSectionsWorkflowParams = ({ operation: "coach" } & CoachJobRequest) | {
+export type PlanSectionsWorkflowParams = ({ operation: "coach" } & CoachJobRequest) | ({ operation: "deck" } & DeckJobRequest) | {
   operation?: "sections";
   ownerHash: string;
   planId: string;
@@ -32,6 +33,14 @@ const retryOptions = {
 
 export class PlanSectionsWorkflow extends WorkflowEntrypoint<CloudflareEnv, PlanSectionsWorkflowParams> {
   async run(event: WorkflowEvent<PlanSectionsWorkflowParams>, step: WorkflowStep) {
+    if (event.payload.operation === "deck") {
+      const job = event.payload;
+      return step.do("발표자료 생성과 검수", { timeout: "20 minutes", retries: { limit: 0, delay: "5 seconds" } }, async () => {
+        const service = this.env.WORKER_SELF_REFERENCE;
+        if (!service) throw new Error("SELF_REFERENCE_MISSING");
+        return callDeckService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, job);
+      });
+    }
     if (event.payload.operation === "coach") {
       const job = event.payload;
       return step.do("사업안 생성과 저장", { timeout: "8 minutes", retries: { limit: 0, delay: "5 seconds" } }, async () => {

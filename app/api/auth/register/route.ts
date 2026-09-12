@@ -4,6 +4,7 @@ import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccoun
 import { getServerSupabase } from "../../../../lib/persistence";
 import { PLATFORM_POLICY_VERSION } from "../../../../lib/platform-legal/domain";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
 
 const schema = z.object({
   email: z.string().trim().email().max(200),
@@ -85,6 +86,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ authenticated: true, confirmationRequired: false, email: user.email });
   } catch (error) {
+    const linking = accountLinkError(error);
+    if (linking) return NextResponse.json({ error: { code: linking.code, message: `계정은 만들어졌어요. ${linking.message}` } }, { status: linking.status });
     const raw = error instanceof Error ? error.message : "";
     if (raw && isDuplicateEmail(raw)) {
       return NextResponse.json(

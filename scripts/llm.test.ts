@@ -41,6 +41,18 @@ async function main() {
     // 실패 응답은 null.
     mock(500, {});
     assert.equal(await completeText(openai, { system: "s", user: "u", maxOutputTokens: 10 }), null);
+    for (const code of ["insufficient_quota", "credit_balance_exhausted", "organization_spend_limit_exceeded", "project_spend_limit_exceeded", "organization_usage_limit_exceeded"]) {
+      mock(429, { error: { code } });
+      let failure = "";
+      await completeText(openai, { system: "s", user: "u", maxOutputTokens: 10, allowFallback: false, onFailure: event => { failure = event.code; } });
+      assert.equal(failure, "quota_exhausted", code);
+    }
+    for (const config of [openai, anthropic]) {
+      let failure = "";
+      globalThis.fetch = async () => { throw new DOMException("Fixture timeout", "TimeoutError"); };
+      await completeText(config, { system: "s", user: "u", maxOutputTokens: 10, allowFallback: false, onFailure: event => { failure = event.code; } });
+      assert.equal(failure, "timeout", "A timeout must not be presented as a billing problem");
+    }
   } finally {
     globalThis.fetch = originalFetch;
   }

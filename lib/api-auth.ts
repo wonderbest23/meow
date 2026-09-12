@@ -2,6 +2,7 @@ import { randomBytes } from "node:crypto";
 import { cookies } from "next/headers";
 import { getAuthenticatedUser } from "./account-auth";
 import { GUEST_COOKIE, hashIdentityToken, userProjectToken } from "./identity-tokens";
+import { planGuestWasClaimed } from "./plan-builder/plan-server-store";
 
 export async function requireGuestIdentity() {
   const user = await getAuthenticatedUser();
@@ -11,7 +12,7 @@ export async function requireGuestIdentity() {
   }
   const cookieStore = await cookies();
   let token = cookieStore.get(GUEST_COOKIE)?.value;
-  if (!token) {
+  if (!token || await planGuestWasClaimed(hashIdentityToken(token))) {
     token = randomBytes(32).toString("base64url");
     cookieStore.set(GUEST_COOKIE, token, {
       httpOnly: true,

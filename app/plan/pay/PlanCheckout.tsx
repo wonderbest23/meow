@@ -8,6 +8,7 @@ const NICEPAY_SDK_URL = "https://pay.nicepay.co.kr/v1/js/";
 import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { Spinner } from "../PlanLoading";
+import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -147,7 +148,7 @@ export default function PlanCheckout() {
           <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>로그인이 필요합니다</h1>
           <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아옵니다.</p>
-          <Link href="/account?next=%2Fplan%2Fpay" className={styles.primary}>로그인 · 회원가입</Link>
+          <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={styles.primary}>로그인 · 회원가입</Link>
           <Link href={planHref} className={styles.back}>← 나중에 하기</Link>
         </div>
       </div>
@@ -190,7 +191,8 @@ export default function PlanCheckout() {
             </>
           ) : (
             <>
-              {planType ? <b>{planType}</b> : "이 문서"} 1부의 전체 섹션이 열리고, 완성 후 PDF·Word·발표용 PPT로 내려받을 수 있습니다.
+              {planType ? <b>{planType}</b> : "이 문서"} 1부의 전체 섹션이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있습니다.
+              {!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 제공 준비 중이며 현재 결제 제공 범위에는 포함되지 않습니다."}
               같은 사업으로 다른 유형을 만들 땐 답변이 그대로 이어집니다.
             </>
           )}

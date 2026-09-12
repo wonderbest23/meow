@@ -4,6 +4,7 @@
 
 import { getServerSupabase } from "../persistence";
 import { readCoach } from "./coach";
+import { planAccountLinkingEnabled } from "./account-linking";
 
 export interface ServerBusinessProfile {
   name: string;
@@ -56,6 +57,16 @@ const EMPTY: ServerPlanState = {
 
 // dev/데모용 인메모리 폴백(서버 프로세스 생존 동안 유지)
 const memoryStore = new Map<string, ServerPlanState>();
+const memoryClaims = new Map<string, string>();
+
+export async function planGuestWasClaimed(ownerHash: string): Promise<boolean> {
+  if (!planAccountLinkingEnabled()) return false;
+  const supabase = getServerSupabase();
+  if (!supabase) return memoryClaims.has(ownerHash);
+  const { data, error } = await supabase.from("plan_owner_claims").select("guest_hash").eq("guest_hash", ownerHash).maybeSingle();
+  if (error) throw new Error("PLAN_CLAIM_FAILED");
+  return !!data;
+}
 
 function str(v: unknown, max: number): string {
   return typeof v === "string" ? v.slice(0, max) : "";
@@ -142,8 +153,16 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
       const incomingJob = p.answers.__coach_job;
       const job = !incomingJob ? previousJob : !previousJob ? incomingJob
         : String(incomingJob.updatedAt ?? "") >= String(previousJob.updatedAt ?? "") ? incomingJob : previousJob;
-      byId.set(p.id, { ...newest, answers: { ...newest.answers, ...(job ? { __coach_job: job } : {}) }, sections });
-    } else if (!prev || (p.updatedAt || "") >= (prev.updatedAt || "")) byId.set(p.id, p);
+      const previousDeck = prev.answers.__deck_job;
+      const incomingDeck = p.answers.__deck_job;
+      const deck = !incomingDeck ? previousDeck : !previousDeck ? incomingDeck : String(incomingDeck.updatedAt ?? "") >= String(previousDeck.updatedAt ?? "") ? incomingDeck : previousDeck;
+      byId.set(p.id, { ...newest, answers: { ...newest.answers, ...(job ? { __coach_job: job } : {}), ...(deck ? { __deck_job: deck } : {}) }, sections });
+    } else if (!prev || (p.updatedAt || "") >= (prev.updatedAt || "")) {
+      const previousDeck = prev?.answers.__deck_job;
+      const incomingDeck = p.answers.__deck_job;
+      const deck = !incomingDeck ? previousDeck : !previousDeck ? incomingDeck : String(incomingDeck.updatedAt ?? "") >= String(previousDeck.updatedAt ?? "") ? incomingDeck : previousDeck;
+      byId.set(p.id, { ...p, answers: { ...p.answers, ...(deck ? { __deck_job: deck } : {}) } });
+    }
   }
   const plans = [...byId.values()].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
   return {
@@ -159,9 +178,43 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
   };
 }
 
+/** Authenticated server code only: the browser cannot submit a source owner or imported state. */
+export async function claimGuestPlanState(guestHash: string, accountHash: string): Promise<"claimed" | "consumed"> {
+  if (guestHash === accountHash) return "claimed";
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const claimed = memoryClaims.get(guestHash);
+    if (claimed) return claimed === accountHash ? "claimed" : "consumed";
+    const guest = memoryStore.get(guestHash) ?? EMPTY;
+    if (guest.plans.some(plan => ["__coach_job", "__deck_job"].some(key => ["queued", "running"].includes(String(plan.answers[key]?.status))))) throw new Error("PLAN_CLAIM_BUSY");
+    const account = memoryStore.get(accountHash) ?? EMPTY;
+    if (memoryStore.has(guestHash)) memoryStore.set(accountHash, structuredClone(mergeStates(account, guest)));
+    memoryStore.delete(guestHash);
+    memoryClaims.set(guestHash, accountHash);
+    return "claimed";
+  }
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const guestResult = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", guestHash).maybeSingle();
+    const accountResult = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", accountHash).maybeSingle();
+    if (guestResult.error || accountResult.error) throw new Error("PLAN_CLAIM_FAILED");
+    const merged = mergeStates(normalizeState(accountResult.data?.data), normalizeState(guestResult.data?.data));
+    const active = merged.plans.find(plan => plan.id === merged.activePlanId) ?? merged.plans[0];
+    const { data, error } = await supabase.rpc("claim_plan_state", {
+      p_guest_hash: guestHash, p_account_hash: accountHash,
+      p_guest_at: guestResult.data?.updated_at ?? null, p_account_at: accountResult.data?.updated_at ?? null,
+      p_data: merged, p_title: merged.business.name || active?.title || "새 플랜", p_plan_type: active?.planType || "창업 초기 · 사업계획서",
+    });
+    if (error) throw new Error("PLAN_CLAIM_FAILED");
+    if (data === "claimed" || data === "consumed") return data;
+    if (data === "busy") throw new Error("PLAN_CLAIM_BUSY");
+    if (data !== "conflict") throw new Error("PLAN_CLAIM_FAILED");
+  }
+  throw new Error("PLAN_VERSION_CONFLICT");
+}
+
 /** Browser autosaves may edit documents, but cannot create or replace server job/context records. */
 export function preserveServerCoachRecords(incoming: ServerPlanState, stored: ServerPlanState): ServerPlanState {
-  const keys = ["__business_coach", "__coach_job", "__coach_generation", "__business_edit_history"];
+  const keys = ["__business_coach", "__coach_job", "__coach_generation", "__business_edit_history", "__deck_job"];
   return { ...incoming, plans: incoming.plans.map(plan => {
     const saved = stored.plans.find(item => item.id === plan.id);
     const answers = { ...plan.answers };
@@ -186,6 +239,7 @@ function checkSaveGuard(stored: ServerPlanState, guard?: PlanSaveGuard) {
 export async function savePlanState(ownerHash: string, state: ServerPlanState, guard?: PlanSaveGuard): Promise<void> {
   const supabase = getServerSupabase();
   if (!supabase) {
+    if (planAccountLinkingEnabled() && memoryClaims.has(ownerHash)) throw new Error("PLAN_OWNER_CHANGED");
     const stored = structuredClone(memoryStore.get(ownerHash) ?? EMPTY);
     checkSaveGuard(stored, guard);
     memoryStore.set(ownerHash, structuredClone(mergeStates(stored, normalizeState(state))));
@@ -207,6 +261,17 @@ export async function savePlanState(ownerHash: string, state: ServerPlanState, g
       data: clean,
       updated_at: new Date(Math.max(Date.now(), Date.parse(row?.updated_at ?? "") + 1 || 0)).toISOString(),
     };
+  if (planAccountLinkingEnabled()) {
+    const { data, error } = await supabase.rpc("commit_plan_state", {
+      p_owner_hash: ownerHash, p_expected_at: row?.updated_at ?? null, p_data: clean,
+      p_title: payload.title, p_plan_type: payload.plan_type,
+    });
+    if (error) throw new Error("PLAN_SAVE_FAILED");
+    if (data === "saved") return;
+    if (data === "transferred") throw new Error("PLAN_OWNER_CHANGED");
+    if (data === "conflict") continue;
+    throw new Error("PLAN_SAVE_FAILED");
+  }
   if (!row) {
     const { error } = await supabase.from("plan_states").insert(payload);
     if (!error) return;
@@ -222,6 +287,27 @@ export async function savePlanState(ownerHash: string, state: ServerPlanState, g
 
 /** 플랜 삭제 — 병합 저장에서는 페이로드 누락이 삭제가 아니므로, 삭제는 이 경로로만 한다. */
 export async function deletePlanById(ownerHash: string, planId: string): Promise<void> {
+  if (planAccountLinkingEnabled() && getServerSupabase()) {
+    const supabase = getServerSupabase()!;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const { data: row, error } = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", ownerHash).maybeSingle();
+      if (error) throw new Error("PLAN_LOAD_FAILED");
+      const stored = normalizeState(row?.data);
+      const plans = stored.plans.filter(plan => plan.id !== planId);
+      if (plans.length === stored.plans.length) return;
+      const next = { ...stored, plans, activePlanId: stored.activePlanId === planId ? plans[0]?.id ?? null : stored.activePlanId };
+      const active = plans.find(plan => plan.id === next.activePlanId) ?? plans[0];
+      const result = await supabase.rpc("commit_plan_state", {
+        p_owner_hash: ownerHash, p_expected_at: row?.updated_at ?? null, p_data: next,
+        p_title: next.business.name || active?.title || "새 플랜", p_plan_type: active?.planType || "창업 초기 · 사업계획서",
+      });
+      if (result.error) throw new Error("PLAN_SAVE_FAILED");
+      if (result.data === "saved") return;
+      if (result.data === "transferred") throw new Error("PLAN_OWNER_CHANGED");
+      if (result.data !== "conflict") throw new Error("PLAN_SAVE_FAILED");
+    }
+    throw new Error("PLAN_VERSION_CONFLICT");
+  }
   const stored = await loadPlanState(ownerHash);
   const plans = stored.plans.filter((p) => p.id !== planId);
   if (plans.length === stored.plans.length) return;

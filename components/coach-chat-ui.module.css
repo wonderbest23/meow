@@ -1,0 +1,41 @@
+.theme {
+  composes: tokens from "./workspace-theme.module.css";
+  --coach-font: 16px;
+  --coach-avatar: 32px;
+  --coach-label: 12px;
+  --coach-title: 21px;
+  --coach-space: 20px;
+  --coach-welcome-size: 38px;
+  color: var(--app-text);
+  color-scheme: light;
+}
+.theme :is(input, textarea, select) { color-scheme: light; }
+.theme .welcome > span { color: var(--app-muted); font-size: 13px; line-height: 1.6; }
+.theme .welcome h2 { margin: 16px 0; color: var(--app-text); font-size: var(--coach-welcome-size); font-weight: 700; line-height: 1.4; letter-spacing: 0; word-break: keep-all; }
+.theme .welcome > i { display: block; width: 42px; height: 4px; border-radius: 2px; background: var(--app-primary); }
+.theme .speaker { display: flex; align-items: center; gap: 9px; margin: 0 0 13px; color: var(--app-text); font-size: var(--coach-label); line-height: 1.5; }
+.theme .speaker img { display: block; width: var(--coach-avatar); height: var(--coach-avatar); border-radius: 50%; flex: none; }
+.theme .speaker b { font-weight: 600; }.theme .speaker > span { color: var(--app-accent); font-size: 11px; }
+.theme .message { min-width: 0; animation: messageArrive .28s ease-out; }
+.theme .message > p { margin: 0; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; font-size: var(--coach-font); line-height: 1.85; }
+.theme .userMessage { width: fit-content; max-width: 85%; margin-left: auto; padding: 13px 17px; background: #f2f4f7; color: var(--app-text); border: 1px solid #e5e9ef; border-radius: 16px 16px 4px 16px; }
+.theme .userMessage > p { color: var(--app-text); line-height: 1.7; }.theme .userMessage > small { display: block; margin-top: 6px; font-size: 11px; color: var(--app-muted); }
+.theme .assistantMessage { color: var(--app-body); background: transparent; }
+.theme .resultCard { padding: 0; border: 1px solid #d9e1ea; border-radius: 8px; overflow: hidden; background: var(--app-surface); box-shadow: 0 5px 20px #24354b06; animation: messageArrive .32s ease-out; }
+.theme .resultBody { padding: var(--coach-space); }
+.theme .resultLabel { display: flex; align-items: center; gap: 7px; margin: 0; font-size: var(--coach-label); font-weight: 500; color: var(--app-muted); }
+.theme .resultLabel svg { display: block; flex: none; }
+.theme .resultCard h2 { margin: 12px 0 0; font-size: var(--coach-title); line-height: 1.5; letter-spacing: 0; color: var(--app-text); word-break: keep-all; overflow-wrap: anywhere; }
+.theme .resultCard p { margin: 9px 0 0; color: var(--app-muted); font-size: var(--coach-label); line-height: 1.75; }
+.theme .resultAction { box-sizing: border-box; display: flex; align-items: center; justify-content: space-between; gap: 12px; width: 100%; min-height: 50px; margin: 0; padding: 13px var(--coach-space); border: 0; border-top: 1px solid var(--app-line); border-radius: 0; background: var(--app-raised); color: var(--app-text); font: inherit; font-size: var(--coach-font); font-weight: 600; text-align: left; }
+.theme button.resultAction { cursor: pointer; transition: background .18s ease; }.theme button.resultAction:hover { background: #edf3f9; }.theme button.resultAction:active { background: #e5edf5; }
+.theme .resultAction svg { display: block; flex: none; transition: transform .18s ease; }.theme button.resultAction:hover svg { transform: translateX(3px); }
+.theme .composerShell { display: flex; align-items: flex-end; gap: 8px; border: 1px solid var(--app-line); border-radius: 8px; padding: 10px; background: var(--app-surface); box-shadow: 0 3px 16px #24354b04; }
+.theme .composerShell:focus-within { border-color: #8baed6; background: var(--app-surface); box-shadow: 0 0 0 3px #3182f60b; }
+.theme .sendButton { display: grid; place-items: center; flex: none; width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; background: var(--app-primary); color: white; box-shadow: none; }
+.theme .sendButton svg { display: block; }.theme .sendButton:disabled { background: #edf1f5; color: #96a4b6; }
+.theme .typingDots { display: flex; align-items: center; gap: 5px; height: 12px; }.theme .typingDots i { width: 5px; height: 5px; border-radius: 50%; background: #75aaf4; animation: typingPulse 1.2s ease-in-out infinite; }.theme .typingDots i:nth-child(2) { animation-delay: .15s; }.theme .typingDots i:nth-child(3) { animation-delay: .3s; }
+@keyframes messageArrive { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+@keyframes typingPulse { 50% { opacity: .35; transform: translateY(-2px); } }
+@media (max-width: 600px) { .theme { --coach-welcome-size: 30px; } }
+@media (prefers-reduced-motion: reduce) { .theme .message, .theme .resultCard, .theme .typingDots i { animation: none; }.theme .resultAction, .theme .resultAction svg { transition: none; } }

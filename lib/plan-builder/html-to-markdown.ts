@@ -19,6 +19,14 @@ function createService(): TurndownService {
 
   // 표와 취소선은 GFM 플러그인으로 (문서에 표가 많다)
   td.use([tables, strikethrough]);
+  td.addRule("planTableCell", {
+    filter: ["th", "td"],
+    replacement: (content, node) => {
+      // GFM cells cannot contain literal newlines, including paragraph breaks from the editor.
+      const value = content.trim().replace(/\r?\n+/g, "<br>").replace(/(?<!\\)\|/g, "\\|");
+      return `${(node as HTMLElement).previousElementSibling ? " " : "| "}${value} |`;
+    },
+  });
 
   // 차트는 편집 대상이 아니다 — figure를 원래 펜스로 되돌린다.
   td.addRule("planChart", {

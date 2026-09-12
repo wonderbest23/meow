@@ -61,6 +61,8 @@ async function main() {
       });
       await page.goto(`${base}/plan/chat?new=1`, { waitUntil: "networkidle0", timeout: 60000 });
       await page.waitForSelector("textarea:not([disabled])");
+      assert.equal(await page.$eval('[data-chat-theme="light"]', el => getComputedStyle(el).backgroundColor), "rgb(255, 255, 255)", "흰 진입 화면의 배경을 실제 채팅에서도 유지한다");
+      assert.equal(await page.$eval('[data-coach-welcome] h2', el => el.textContent), "어떤 사업을생각하고 계세요?", "진입 애니메이션과 실제 채팅이 같은 시작 문구를 사용한다");
       const idea = "사진 촬영 경험으로 동네 가게의 메뉴 사진을 만들고 싶어요.";
       await page.type("textarea",idea);
       await page.reload({ waitUntil: "networkidle0" });
@@ -73,7 +75,7 @@ async function main() {
       assert.ok(entryLayout.greeting && entryLayout.formBottom <= entryLayout.height && entryLayout.height - entryLayout.formBottom < 40, "첫 메시지가 대화 안에 있고 입력창은 하단에 고정된다");
       await page.click('button[aria-label="대화 메뉴 열기"]');
       await page.waitForSelector('#chat-navigation');
-      assert.equal(await page.$$eval('#chat-navigation a', els => els.length), 3);
+      assert.equal(await page.$$eval('#chat-navigation a', els => els.length), 4);
       await page.keyboard.press('Escape');
       assert.equal(await page.$('#chat-navigation'), null, "앱 메뉴는 Escape로 닫힌다");
       await page.screenshot({ path: `artifacts/business-coach-ux/entry-${width}.png` });
@@ -104,6 +106,10 @@ async function main() {
       assert.ok(await page.$eval('[aria-label="이어서 대화하기"]', el => !!el.closest('[class*="conversation"]') && !el.closest('footer')), "후속 선택지는 입력창이 아닌 대화 안에 표시한다");
       assert.ok(await page.$$eval('[aria-label="오늘창업의 답변"]', els => els.every(el => !!el.querySelector('img'))), "후속 답변에도 같은 AI 프로필을 사용한다");
       assert.ok(layout.logo&&layout.icon);
+      assert.equal(await page.$$eval('[data-coach-message="user"]', elements => elements.length > 0), true, "실제 메시지는 홈페이지 시연과 같은 채팅 컴포넌트를 사용한다");
+      assert.equal(await page.$eval('[data-coach-message="user"]', el => getComputedStyle(el).backgroundColor), "rgb(242, 244, 247)", "대화가 시작된 뒤에도 파란 배경 대신 옅은 회색 말풍선을 유지한다");
+      assert.equal(await page.$eval('[data-coach-result] h2', el => el.textContent), final.title, "공통 결과 카드에는 실제 사업 제목이 표시된다");
+      assert.equal(await page.$eval('[data-coach-result] button', el => el.textContent?.trim()), "내 사업안 확인하기", "실제 결과 카드는 사업안으로 이동할 수 있다");
       await page.screenshot({path:`artifacts/business-coach-ux/chat-${width}.png`});
       if(width<=900)await clickText(page,"내 사업안",'[aria-label="화면 선택"]');
       await new Promise(resolve => setTimeout(resolve, 250));
@@ -130,7 +136,7 @@ async function main() {
       if(!authenticated){assert.ok(await page.$eval(`${pane} a`,el=>el.getAttribute("href")?.includes("plan-ui-fixture")));authenticated=true;await page.reload({waitUntil:"networkidle0"});await page.waitForFunction(()=>document.body.innerText.includes("첫 사업안을"));if(width<=900)await clickText(page,"내 사업안",'[aria-label="화면 선택"]');}
       await clickText(page,"상품과 고객",pane);
       assert.ok(await page.$eval(pane,el=>el.textContent?.includes("99,000원")));
-      await page.waitForFunction(()=>getComputedStyle(document.querySelector('[aria-label="사업안 항목"] [aria-pressed=true]')!).backgroundColor === "rgb(36, 107, 209)");
+      await page.waitForFunction(()=>getComputedStyle(document.querySelector('[aria-label="사업안 항목"] [aria-pressed=true]')!).backgroundColor !== getComputedStyle(document.querySelector('[aria-label="사업안 항목"] [aria-pressed=false]')!).backgroundColor);
       assert.ok(await page.$eval(`${pane} dd strong`, el=>el.textContent === "99,000원" && getComputedStyle(el).borderTopStyle === "solid"), "저장된 가격을 테두리로 강조");
       const editPosition = await page.$eval(`${pane} [class*="editLink"]`, el=>{const rect=el.getBoundingClientRect();const footer=el.closest('[class*="documentActions"]')!;const primary=footer.querySelector('[class*="primary"]')!.getBoundingClientRect();return {bottom:rect.bottom,right:rect.right,primaryTop:primary.top,primaryRight:primary.right};});
       assert.ok(editPosition.bottom <= editPosition.primaryTop && Math.abs(editPosition.right-editPosition.primaryRight) < 2, "수정 버튼은 고정 하단 영역의 오른쪽에 표시");

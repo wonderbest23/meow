@@ -1,0 +1,33 @@
+.theme {
+  --home-title-size: 48px;
+  --home-title-line: 1.4;
+  --home-body-size: 18px;
+  --home-body-line: 1.75;
+  --home-copy-gap: 24px;
+  --home-content-gap: 64px;
+  --home-section-space: 120px;
+  color: #191f28;
+  letter-spacing: 0;
+}
+
+@media (max-width: 1100px) {
+  .theme { --home-title-size: 40px; --home-body-size: 17px; }
+}
+
+@media (max-width: 900px) {
+  .theme { --home-title-size: 32px; }
+}
+
+@media (max-width: 700px) {
+  .theme {
+    --home-title-size: 32px;
+    --home-body-size: 16px;
+    --home-copy-gap: 20px;
+    --home-content-gap: 40px;
+    --home-section-space: 80px;
+  }
+}
+
+@media (max-width: 360px) {
+  .theme { --home-title-size: 28px; --home-body-size: 15px; }
+}

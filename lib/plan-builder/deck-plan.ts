@@ -2,7 +2,7 @@
 // 25개 섹션 본문을 그대로 넣으면 슬라이드가 글자로 꽉 차므로,
 // AI에게 발표자료 어법으로 다시 쓰게 한 뒤 그 결과만 슬라이드로 옮긴다.
 
-import { completeJson, type LLMConfig } from "../llm/complete";
+import { completeJson, parseJsonObject, type LLMConfig } from "../llm/complete";
 import { calculateFinancials, collectFinancialInputs } from "./financials";
 import { reviewCoachSection } from "./coach-review";
 
@@ -33,6 +33,13 @@ export interface DeckPlan {
   slogan: string;
   slides: DeckSlide[];
 }
+
+export type DeckBuildEvent = { stage: "generating" | "reviewing" | "repairing" | "validating" | "rendering" | "ready" | "failed"; attempt: number; code?: string };
+export type DeckBuildInput = {
+  businessName: string; businessDescription?: string; planType?: string;
+  sections: Array<{ chapterTitle: string; sectionTitle: string; markdown: string }>;
+  allAnswers: Record<string, Record<string, unknown>>; businessContext?: string;
+};
 
 const SYSTEM_PROMPT = [
   "당신은 고객·협력사에게 사업을 설명하는 사업소개 발표자료를 만드는 전문가입니다. 투자 요청은 사용 목적에 명시된 경우에만 다룹니다.",
@@ -191,39 +198,35 @@ function normalize(raw: Record<string, unknown>, fallbackName: string): DeckPlan
  */
 export async function buildDeckPlan(
   config: LLMConfig | null,
-  input: {
-    businessName: string;
-    businessDescription?: string;
-    planType?: string;
-    sections: Array<{ chapterTitle: string; sectionTitle: string; markdown: string }>;
-    allAnswers: Record<string, Record<string, unknown>>;
-    businessContext?: string;
-  },
+  input: DeckBuildInput,
+  onEvent?: (event: DeckBuildEvent) => void | Promise<void>,
+  checkpoint?: { draft?: DeckPlan; saveDraft: (draft: DeckPlan) => Promise<void> },
 ): Promise<DeckPlan | null> {
-  if (!config) return null;
+  if (!config) { await onEvent?.({ stage: "failed", attempt: 0, code: "ai_unavailable" }); return null; }
 
   const financial = input.businessContext ? undefined : deckFinancialMetrics(input.allAnswers);
   const sourceNames = new Set(input.sections.map(s => `${s.chapterTitle} · ${s.sectionTitle}`));
-  const user = [
+  const source = [
     `[사업]`,
     `이름: ${input.businessName}`,
     input.businessDescription ? `설명: ${input.businessDescription}` : "",
     input.planType ? `문서 유형: ${input.planType}` : "",
     "",
     `[계획서 본문]`,
-    digestSections(input.sections),
+    digestSections(input.sections, Math.min(6000, Math.max(200, Math.floor(32000 / Math.max(1, input.sections.length))))),
     input.businessContext ? `[공통 사업 정보와 계산값]\n${input.businessContext}\n일반 사업소개용입니다. 실제 실적과 예상 목표를 구분하고 투자금 요청·시장 통계를 새로 만들지 마세요. design이 있으면 장기 구상과 startingPlan의 시작 범위를 구별하고 alternatives는 미선택 대안으로만 표시하세요. feasibility는 산술 검사이지 사업성 검증이 아닙니다. 최신 fields와 다른 가격이나 운영 범위를 새로 정하지 마세요.` : "",
     financial
       ? `\n[계산된 재무 수치 — 이 값만 사용하고 새로 만들지 마세요]\n${financial.map((m) => `- ${m.label}: ${m.value}${m.note ? ` (${m.note})` : ""}`).join("\n")}`
       : "",
-    "",
-    "",
+  ].filter(Boolean).join("\n");
+  const user = [
+    source,
     `[서사 구성]\n${archetypeFor(input.planType)}`,
     "",
-    "위 내용으로 10~12장짜리 사업 발표자료를 구성하세요.",
+    "위 내용으로 8~10장짜리 사업 발표자료를 구성하세요.",
     "첫 장은 표지, 마지막 장은 요청·다음 단계로 하세요.",
     "재무 슬라이드에는 위에 준 계산 값을 metrics로 그대로 넣으세요.",
-    "각 슬라이드의 sourceSections에는 실제로 참고한 계획서 항목을 '챕터명 · 항목명'으로 넣으세요. 제안과 목표의 표시를 요약하면서 삭제하지 마세요.",
+    "표지와 마지막 장을 포함한 모든 슬라이드의 sourceSections에는 실제로 참고한 계획서 항목을 '챕터명 · 항목명'으로 정확히 넣으세요. 제안과 목표의 표시를 요약하면서 삭제하지 마세요.",
     "",
     "다음 JSON 형식으로만 답하세요:",
     SHAPE_GUIDE,
@@ -240,22 +243,48 @@ export async function buildDeckPlan(
     { maxOutputTokens: 8000, effort: "medium" as const, extra: "" },
     { maxOutputTokens: 12000, effort: "medium" as const, extra: "\n슬라이드는 8~10장으로 줄이고, points·metrics를 슬라이드당 3개 이하로 간결하게 하세요." },
   ];
-  for (const a of attempts) {
-    const raw = await completeJson(config, {
+  for (const [index, a] of attempts.entries()) {
+    const attempt = index + 1;
+    await onEvent?.({ stage: index === 0 && checkpoint?.draft ? "reviewing" : "generating", attempt });
+    let failure: string | undefined;
+    const raw = index === 0 && checkpoint?.draft ? checkpoint.draft as unknown as Record<string, unknown> : await completeJson(config, {
       kind: "deck",
       system: SYSTEM_PROMPT,
       user: user + a.extra,
       maxOutputTokens: a.maxOutputTokens,
       effort: a.effort,
+      timeoutMs: 120000,
+      allowFallback: false,
+      onFailure: event => { failure = event.code; },
     });
+    if (!raw && failure && ["quota_exhausted", "timeout", "rate_limited", "unavailable"].includes(failure)) {
+      await onEvent?.({ stage: "failed", attempt, code: `provider_${failure}` });
+      return null;
+    }
     let plan = raw ? normalize(raw, input.businessName) : null;
+    if (!plan || plan.slides.length < 8) {
+      await onEvent?.({ stage: "failed", attempt, code: raw ? "invalid_slides" : failure === "output_limit" ? "generation_output_limit" : "generation_empty" });
+      continue;
+    }
     if (plan && plan.slides.length >= 8) {
-      if (input.businessContext) {
-        const checked = await reviewCoachSection(config, user, JSON.stringify(plan), "json");
-        if (!checked) continue;
-        try { plan = normalize(JSON.parse(checked), input.businessName); } catch { continue; }
-        if (!plan || plan.slides.length < 8 || plan.slides.some(s => !s.sourceSections?.length || s.sourceSections.some(name => !sourceNames.has(name)))) continue;
+      await checkpoint?.saveDraft(plan);
+      {
+        const checked = await reviewCoachSection(config, source, JSON.stringify(plan), "json", event => onEvent?.({ stage: event === "reviewing" || event === "repairing" ? event : "failed", attempt, ...(event === "reviewing" || event === "repairing" ? {} : { code: event }) }), async repaired => {
+          const parsed = parseJsonObject(repaired);
+          const draft = parsed ? normalize(parsed, input.businessName) : null;
+          if (draft && draft.slides.length >= 8 && draft.slides.every(slide => slide.sourceSections?.length && slide.sourceSections.every(name => sourceNames.has(name)))) await checkpoint?.saveDraft(draft);
+        }, { compact: true, allowFallback: false });
+        // Checkpoints remain unapproved until the final review and validation succeed.
+        if (!checked) return null;
+        await onEvent?.({ stage: "validating", attempt });
+        const parsed = parseJsonObject(checked);
+        plan = parsed ? normalize(parsed, input.businessName) : null;
+        if (!plan || plan.slides.length < 8 || plan.slides.some(s => !s.sourceSections?.length || s.sourceSections.some(name => !sourceNames.has(name)))) {
+          await onEvent?.({ stage: "failed", attempt, code: !plan ? "review_json_invalid" : "source_validation_failed" });
+          continue;
+        }
       }
+      await onEvent?.({ stage: "ready", attempt });
       return plan;
     }
   }

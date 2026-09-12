@@ -17,6 +17,8 @@ export interface PlanLoadingProps {
   /** 뼈대 개수 */
   count?: number;
   fullPage?: boolean;
+  /** 앱 헤더 아래의 남은 공간을 채우는 페이지 로딩 */
+  fill?: boolean;
 }
 
 /**
@@ -26,11 +28,11 @@ export interface PlanLoadingProps {
  * 빈 화면이라, 같은 앱인데 기다리는 경험이 제각각이었다. 여기 한 곳에서만
  * 정의하고 모든 화면이 이걸 쓴다.
  */
-export default function PlanLoading({ variant = "rows", note = "화면을 준비하고 있어요", count, fullPage = false }: PlanLoadingProps) {
+export default function PlanLoading({ variant = "rows", note = "화면을 준비하고 있어요", count, fullPage = false, fill = false }: PlanLoadingProps) {
   const n = count ?? 3;
 
   return (
-    <div className={`${styles.wrap} ${fullPage ? styles.fullPage : ""} ${variant === "compact" ? styles.compact : ""}`} role="status" aria-label={note}>
+    <div className={`${styles.wrap} ${fullPage ? styles.fullPage : ""} ${fill ? styles.fill : ""} ${variant === "compact" ? styles.compact : ""}`} role="status" aria-label={note}>
       <div className={styles.status}><span className={styles.dots} aria-hidden="true"><i /><i /><i /></span><p>{note}</p></div>
       {variant !== "compact" && <div className={styles.skeleton} aria-hidden="true">
       <div className={styles.title} />

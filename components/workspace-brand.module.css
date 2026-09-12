@@ -1,2 +1,2 @@
-.brand { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; color: #f3f6fc; font-size: 24px; line-height: 1; font-weight: 750; letter-spacing: 0; }
+.brand { display: inline-flex; align-items: center; gap: 9px; white-space: nowrap; color: var(--app-text, #202632); font-size: 24px; line-height: 1; font-weight: 750; letter-spacing: 0; }
 .brand img { display: block; width: 38px; height: 38px; object-fit: contain; flex-shrink: 0; }

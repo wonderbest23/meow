@@ -20,9 +20,8 @@ export type SiteCopyField = {
 };
 
 export const SITE_COPY_FIELDS: SiteCopyField[] = [
-  { id: "chatHome.eyebrow", group: "첫 화면", label: "작은 머리글", def: "대화로 만드는 내 사업계획서" },
   { id: "chatHome.title", group: "첫 화면", label: "큰 제목", def: "오늘창업" },
-  { id: "chatHome.subtitle", group: "첫 화면", label: "설명", def: "아이디어만 있어도, 이미 운영 중이어도 괜찮아요.\n대화로 정리하고, 내 사업에 맞는 계획으로 만드세요.", multiline: true },
+  { id: "chatHome.subtitle", group: "첫 화면", label: "설명", def: "아이디어만 있어도 이미 운영 중이어도 괜찮아요\n대화로 정리하고 내 사업에 맞는 계획으로 만드세요", multiline: true },
 ];
 
 /** 이용 조건과 기능 안내는 구현에 맞춰 코드에서 관리한다. */

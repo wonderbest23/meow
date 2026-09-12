@@ -941,7 +941,7 @@ export function SupportChatWidget() {
                         </div>
                       </>
                     )}
-                    <a className="consult-to-support" href="/plan/chat">사업 기획은 새 대화에서 시작하기</a>
+                    <a className="consult-to-support" href="/plan/chat?new=1">사업 기획은 새 대화에서 시작하기</a>
                   </section>
                 ) : mode === "support" && chat.messages.length === 0 && quickMessages.length === 0 ? (
                   <div className="support-chat-bot-message">

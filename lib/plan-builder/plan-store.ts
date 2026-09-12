@@ -9,6 +9,15 @@ export function isSamplePlan(planId: string | null | undefined): boolean {
 }
 
 const KEY = "oneul-plan-demo-v1";
+const OWNER_KEY = "oneul-plan-cache-owner";
+
+function cachedOwnerKey(): string | null {
+  try { return localStorage.getItem(OWNER_KEY); } catch { return null; }
+}
+function stateCacheKey() {
+  const owner = cachedOwnerKey();
+  return owner ? `${KEY}:${owner}` : KEY;
+}
 
 export interface StoredSection {
   markdown: string;
@@ -136,7 +145,7 @@ function withSamples(state: PlanState): PlanState {
 export function loadState(): PlanState {
   if (typeof window === "undefined") return withSamples({ ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } });
   try {
-    const raw = window.localStorage.getItem(KEY);
+    const raw = window.localStorage.getItem(stateCacheKey());
     if (!raw) return withSamples({ ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } });
     return withSamples(migrate(JSON.parse(raw) as Record<string, unknown>));
   } catch {
@@ -149,10 +158,22 @@ function persist(state: PlanState) {
   try {
     // 샘플은 화면에만 존재한다 — 저장소에 남기지 않는다
     const clean = { ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) };
-    window.localStorage.setItem(KEY, JSON.stringify(clean));
+    window.localStorage.setItem(stateCacheKey(), JSON.stringify(clean));
   } catch {
     // ignore quota errors
   }
+}
+
+/** Cache an acknowledged server version without launching another whole-state autosave. */
+export function cacheDocumentSection(planId: string, key: string, section: StoredSection, updatedAt: string) {
+  const state = loadState();
+  const plan = state.plans.find(p => p.id === planId);
+  if (!plan || isSamplePlan(planId)) return;
+  const existing = plan.sections[key];
+  if (existing && existing.generatedAt > section.generatedAt) return;
+  plan.sections[key] = section;
+  plan.updatedAt = plan.updatedAt > updatedAt ? plan.updatedAt : updatedAt;
+  persist(state);
 }
 
 /**
@@ -195,9 +216,29 @@ function writeAuthFlag(value: boolean) {
 
 /** 로그아웃 시 로컬 캐시 제거 — 다음 사용자에게 이전 계정의 플랜이 보이면 안 된다 */
 export function clearLocalState() {
+  cancelPendingSync();
+  hydrationRequest++;
+  ownerVerified = false;
+  verifiedOwnerKey = null;
   try {
     localStorage.removeItem(KEY);
+    localStorage.removeItem(OWNER_KEY);
+    writeAuthFlag(false);
+    for (let index = localStorage.length - 1; index >= 0; index--) {
+      const key = localStorage.key(index);
+      if (key?.startsWith("oneul-document-draft:") || key?.startsWith(`${KEY}:`)) localStorage.removeItem(key);
+    }
   } catch {}
+  clearConversationDrafts();
+}
+
+function clearConversationDrafts() {
+  try {
+    for (let index = sessionStorage.length - 1; index >= 0; index--) {
+      const key = sessionStorage.key(index);
+      if (key?.startsWith("coach-input:")) sessionStorage.removeItem(key);
+    }
+  } catch { /* Storage may be unavailable. */ }
 }
 
 /** 사업 정보 저장 (플랜은 유지) */
@@ -303,7 +344,8 @@ export function deletePlan(planId: string) {
   s.plans = s.plans.filter((p) => p.id !== planId);
   if (s.activePlanId === planId) s.activePlanId = s.plans[0]?.id ?? null;
   persist(s);
-  void fetch(`/api/plan/state?planId=${encodeURIComponent(planId)}`, { method: "DELETE" }).catch(() => {});
+  const owner = cachedOwnerKey();
+  void fetch(`/api/plan/state?planId=${encodeURIComponent(planId)}${owner ? `&ownerKey=${encodeURIComponent(owner)}` : ""}`, { method: "DELETE" }).catch(() => {});
   void pushToServer();
 }
 
@@ -572,7 +614,27 @@ let pushQueued = false;
 let queuedWaiters: Array<(ok: boolean) => void> = [];
 let retryTimer: ReturnType<typeof setTimeout> | null = null;
 let retryDelay = 2000;
+let syncEpoch = 0;
+let activePush: AbortController | null = null;
+let ownerVerified = false;
+let verifiedOwnerKey: string | null = null;
+let hydrationRequest = 0;
 const syncListeners = new Set<() => void>();
+
+function cancelPendingSync() {
+  syncEpoch++;
+  activePush?.abort();
+  activePush = null;
+  if (retryTimer) clearTimeout(retryTimer);
+  retryTimer = null;
+  retryDelay = 2000;
+  pushInFlight = false;
+  pushQueued = false;
+  const waiters = queuedWaiters;
+  queuedWaiters = [];
+  waiters.forEach(resolve => resolve(false));
+  setSync("idle");
+}
 
 function setSync(next: PlanSyncStatus) {
   if (syncStatus === next) return;
@@ -593,7 +655,7 @@ export function subscribePlanSync(fn: () => void): () => void {
 function payload() {
   const state = loadState();
   // 예시는 계정 것이 아니다 — 올리지 않는다
-  return { ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) };
+  return { ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)), ...(verifiedOwnerKey ? { ownerKey: verifiedOwnerKey } : {}) };
 }
 
 function scheduleRetry() {
@@ -618,32 +680,58 @@ export async function pushToServer(): Promise<boolean> {
     return new Promise<boolean>((resolve) => queuedWaiters.push(resolve));
   }
   pushInFlight = true;
+  const epoch = syncEpoch;
   setSync("saving");
   try {
+    if (!ownerVerified) {
+      await hydrateFromServer(false);
+      if (epoch !== syncEpoch) return false;
+      if (!ownerVerified) throw new Error("PLAN_OWNER_UNVERIFIED");
+    }
+    if (cachedOwnerKey() !== verifiedOwnerKey) throw new Error("PLAN_OWNER_CHANGED");
+    activePush = new AbortController();
     const res = await fetch("/api/plan/state", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload()),
+      signal: activePush.signal,
     });
+    if (epoch !== syncEpoch) return false;
+    if (res.status === 409) {
+      const body = await res.json().catch(() => ({}));
+      if (body.error?.code === "PLAN_OWNER_CHANGED") {
+        cancelPendingSync();
+        ownerVerified = false;
+        await hydrateFromServer(false);
+        if (typeof window.location?.reload === "function") window.location.reload();
+        return false;
+      }
+    }
     if (!res.ok) throw new Error(`PLAN_STATE_${res.status}`);
+    if (retryTimer) clearTimeout(retryTimer);
+    retryTimer = null;
     retryDelay = 2000;
     setSync("saved");
     return true;
   } catch {
+    if (epoch !== syncEpoch) return false;
     setSync("offline");
     scheduleRetry();
     return false;
   } finally {
-    pushInFlight = false;
-    if (pushQueued) {
-      pushQueued = false;
-      const waiters = queuedWaiters;
-      queuedWaiters = [];
-      void pushToServer().then((result) => waiters.forEach((resolve) => resolve(result)));
-    } else if (queuedWaiters.length) {
-      const waiters = queuedWaiters;
-      queuedWaiters = [];
-      waiters.forEach((resolve) => resolve(syncStatus === "saved"));
+    if (epoch === syncEpoch) {
+      activePush = null;
+      pushInFlight = false;
+      if (pushQueued) {
+        pushQueued = false;
+        const waiters = queuedWaiters;
+        queuedWaiters = [];
+        void pushToServer().then((result) => waiters.forEach((resolve) => resolve(result)));
+      } else if (queuedWaiters.length) {
+        const waiters = queuedWaiters;
+        queuedWaiters = [];
+        waiters.forEach((resolve) => resolve(syncStatus === "saved"));
+      }
     }
   }
 }
@@ -655,6 +743,7 @@ export async function pushToServer(): Promise<boolean> {
 if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
   const flush = () => {
     if (syncStatus === "saved" || syncStatus === "idle") return;
+    if (!ownerVerified || cachedOwnerKey() !== verifiedOwnerKey) return;
     try {
       navigator.sendBeacon?.(
         "/api/plan/state?beacon=1",
@@ -665,6 +754,15 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
     }
   };
   window.addEventListener("pagehide", flush);
+  window.addEventListener("storage", (event: StorageEvent) => {
+    if (event.key !== null && (event.key !== OWNER_KEY || event.oldValue === event.newValue)) return;
+    cancelPendingSync();
+    ownerVerified = false;
+    verifiedOwnerKey = null;
+    hydrationRequest++;
+    clearConversationDrafts();
+    if (typeof window.location?.reload === "function") window.location.reload();
+  });
   if (typeof document !== "undefined" && typeof document.addEventListener === "function") {
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "hidden") flush();
@@ -733,12 +831,32 @@ function stateSignature(s: PlanState): string {
 }
 
 /** 서버에서 상태를 불러와 로컬과 병합한다(최신 것이 이긴다) */
-export async function hydrateFromServer(): Promise<PlanState> {
+export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
   if (typeof window === "undefined") return loadState();
+  const request = ++hydrationRequest;
   try {
     const res = await fetch("/api/plan/state", { cache: "no-store" });
     if (res.ok) {
       const payload = (await res.json()) as Record<string, unknown>;
+      if (request !== hydrationRequest) return loadState();
+      const nextOwner = typeof payload.ownerKey === "string" ? payload.ownerKey : null;
+      const previousOwner = cachedOwnerKey();
+      const wasAuthenticated = readAuthFlag();
+      const oldLocal = loadState();
+      if (previousOwner && !nextOwner) {
+        ownerVerified = false;
+        setSync("offline");
+        return oldLocal;
+      }
+      if (nextOwner && nextOwner !== previousOwner) {
+        if (previousOwner || wasAuthenticated) cancelPendingSync();
+        clearConversationDrafts();
+        try { localStorage.setItem(OWNER_KEY, nextOwner); } catch { return oldLocal; }
+        // Only a first-time anonymous cache may acquire an owner without a server handoff.
+        if (!previousOwner && !wasAuthenticated && payload.authenticated === false) persist(mergeStates(loadState(), oldLocal));
+      }
+      ownerVerified = true;
+      verifiedOwnerKey = nextOwner;
       /*
        * 로그아웃·세션 만료면 이전 계정의 로컬 캐시를 비운다.
        *
@@ -747,11 +865,11 @@ export async function hydrateFromServer(): Promise<PlanState> {
        * 쓰던 사람의 작성 중인 답변까지 화면을 옮길 때마다 날아갔다.
        * (그러고 나면 활성 플랜을 잃어 예시 플랜으로 넘어가는 2차 피해까지 났다.)
        */
-      const wasAuthenticated = readAuthFlag();
       if (payload.authenticated === false) {
-        if (wasAuthenticated) {
+        if (wasAuthenticated && !nextOwner) {
           clearLocalState();
           writeAuthFlag(false);
+          ownerVerified = true;
           return loadState();
         }
         writeAuthFlag(false);
@@ -768,10 +886,20 @@ export async function hydrateFromServer(): Promise<PlanState> {
        */
       const merged = mergeStates(server, local);
       persist(merged);
-      if (stateSignature(merged) !== stateSignature(server)) void pushToServer();
+      if (autoPush && stateSignature(merged) !== stateSignature(server)) void pushToServer();
+    } else if (request === hydrationRequest) {
+      ownerVerified = false;
     }
   } catch {
+    if (request === hydrationRequest) ownerVerified = false;
     // 서버 실패 → 로컬 캐시 사용
   }
   return loadState();
+}
+
+/** Finish pending anonymous saves before the login cookie changes identity. */
+export async function prepareAccountSignIn() {
+  const state = await hydrateFromServer(false);
+  if (!state.plans.some(plan => !isSamplePlan(plan.id))) return;
+  if (!await pushToServer()) throw new Error("작성한 사업을 아직 서버에 저장하지 못했어요. 연결을 확인한 뒤 다시 로그인해 주세요.");
 }

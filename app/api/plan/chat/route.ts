@@ -6,6 +6,7 @@ import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { resolvePlanningLLMConfig } from "../../../../lib/llm/config";
 import { emptyCoach, generateAndSaveCoach, updateCoachJob } from "../../../../lib/plan-builder/coach-job";
 import { COACH_JOB_KEY, readCoachJob, isCoachJobActive, isCoachJobStale, type CoachJob } from "../../../../lib/plan-builder/coach-job-types";
+import { reconcileCoachJob } from "../../../../lib/plan-builder/coach-job-status";
 import { serverPersistenceMode } from "../../../../lib/persistence";
 import { loadPlanState, savePlanState, type ServerPlan } from "../../../../lib/plan-builder/plan-server-store";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
@@ -36,30 +37,37 @@ function publicPlan(plan: ServerPlan, job = readCoachJob(plan.answers)) {
   return { job: job ? { ...job, durable: job.durable && !!job.dispatched } : null, updatedAt: plan.updatedAt, hasDocuments: !!Object.keys(plan.sections).length, planId: plan.id, title: plan.title, planType: plan.planType, coach, completed, total: keys.length, manualReview: coachDocumentSnapshot(plan)?.manualReview ?? [], generation: plan.answers.__coach_generation ?? null };
 }
 
-async function visibleJob(plan: ServerPlan): Promise<CoachJob | null> {
+async function visiblePlan(plan: ServerPlan, ownerHash: string): Promise<{ plan: ServerPlan; job: CoachJob | null }> {
   const job = readCoachJob(plan.answers);
-  if (!job || !isCoachJobActive(job)) return job;
-  if (isCoachJobStale(job)) return { ...job, status: "failed" };
+  if (!job || !isCoachJobActive(job)) return { plan, job };
+  if (isCoachJobStale(job)) return { plan, job: { ...job, status: "failed" } };
   if (job.durable) {
     const workflow = await binding();
     if (workflow) {
       try {
         const status = (await (await workflow.get(job.runId)).status()).status;
-        if (["errored", "terminated", "complete"].includes(status)) return { ...job, status: "failed" };
-        return { ...job, dispatched: true };
+        if (["errored", "terminated", "complete"].includes(status)) {
+          // The workflow can finish after the initial read. Return the fresh coach and job together.
+          const latest = (await loadPlanState(ownerHash)).plans.find(p => p.id === plan.id);
+          if (latest) return reconcileCoachJob(latest, job.token, status);
+          return { plan, job };
+        }
+        return { plan, job: { ...job, dispatched: true } };
       } catch { /* A temporary status lookup failure is not a failed generation. */ }
     }
   }
-  return job;
+  return { plan, job };
 }
 
 export async function GET(request: Request) {
   const identity = await requireGuestIdentity();
   const state = await loadPlanState(identity.hash);
   const id = new URL(request.url).searchParams.get("planId");
-  const plan = id ? state.plans.find(p => p.id === id) : state.plans.filter(p => readCoach(p.answers)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+  let plan = id ? state.plans.find(p => p.id === id) : state.plans.filter(p => readCoach(p.answers)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
   if (!plan) return json({ plan: null, authenticated: !!identity.userId });
   if (!readCoach(plan.answers)) return json({ message: "이 문서는 내 사업 목록의 기존 편집 화면에서 확인해주세요." }, 404);
+  const visible = await visiblePlan(plan, identity.hash);
+  plan = visible.plan;
   const access = await resolvePlanAccess(plan.planType, plan.id);
   let runStatus: string | null = null;
   const runId = plan.answers.__coach_generation?.runId;
@@ -69,7 +77,7 @@ export async function GET(request: Request) {
       try { runStatus = (await (await workflow.get(runId)).status()).status; } catch { runStatus = "unknown"; }
     }
   }
-  return json({ plan: publicPlan(plan, await visibleJob(plan)), authenticated: !!identity.userId, paid: access.paid, runStatus });
+  return json({ plan: publicPlan(plan, visible.job), authenticated: !!identity.userId, paid: access.paid, runStatus });
 }
 
 export async function POST(request: Request) {
@@ -82,13 +90,19 @@ export async function POST(request: Request) {
   const state = await loadPlanState(identity.hash);
   let plan = state.plans.find(p => p.id === (input.planId ?? `plan_${input.requestId}`));
   if (input.planId && !plan) return json({ message: "이 사업을 찾을 수 없습니다." }, 404);
+  const visible = plan ? await visiblePlan(plan, identity.hash) : null;
+  if (visible) {
+    const index = state.plans.findIndex(p => p.id === visible.plan.id);
+    state.plans[index] = visible.plan;
+    plan = visible.plan;
+  }
   const previous = plan ? readCoach(plan.answers) : null;
   if (plan && !previous) return json({ message: "기존 문서를 바꾸려면 내 사업 목록에서 해당 문서를 열어주세요." }, 400);
   if (previous?.messages.some(m => m.id === input.requestId)) return json({ plan: publicPlan(plan!), authenticated: !!identity.userId });
   if ((previous?.revision ?? 0) !== input.revision) return json({ message: "다른 화면에서 수정됐습니다. 최신 대화를 불러와주세요." }, 409);
 
   const oldJob = plan ? readCoachJob(plan.answers) : null;
-  const shownJob = plan ? await visibleJob(plan) : null;
+  const shownJob = visible?.job ?? null;
   if (isCoachJobActive(shownJob)) return input.action === "message" && oldJob?.message.id === input.requestId
     ? json({ plan: publicPlan(plan!, shownJob), authenticated: !!identity.userId }, 202)
     : json({ message: "먼저 보낸 내용을 정리하고 있어요. 완료 후 이어서 말씀해 주세요." }, 409);

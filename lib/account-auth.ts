@@ -8,6 +8,8 @@ import {
   userProjectToken,
 } from "./identity-tokens";
 import { getServerSupabase } from "./persistence";
+import { claimGuestPlanState } from "./plan-builder/plan-server-store";
+import { planAccountLinkingEnabled } from "./plan-builder/account-linking";
 
 function authConfiguration() {
   const url = process.env.SUPABASE_URL?.trim();
@@ -54,6 +56,7 @@ export async function setAccountSession(session: Session, remember = true) {
    */
   cookieStore.set(AUTH_ACCESS_COOKIE, session.access_token, { ...cookieOptions, ...life });
   cookieStore.set(AUTH_REFRESH_COOKIE, session.refresh_token, { ...cookieOptions, ...life });
+  if (planAccountLinkingEnabled()) cookieStore.delete(GUEST_COOKIE);
   if (remember) {
     cookieStore.set(REMEMBER_COOKIE, "1", { ...cookieOptions, httpOnly: false, ...life });
   } else {
@@ -110,10 +113,37 @@ export async function claimGuestProjects(userId: string, previousGuestHash: stri
   const supabase = getServerSupabase();
   if (!supabase) return;
   const userHash = hashIdentityToken(userProjectToken(userId));
+  if (!planAccountLinkingEnabled()) return claimLegacyProjects(userId, userHash, previousGuestHash);
+  try {
+    if (previousGuestHash && previousGuestHash !== userHash) {
+      const claim = await claimGuestPlanState(previousGuestHash, userHash);
+      if (claim === "consumed") previousGuestHash = null;
+    }
+    // A lost guest cookie must not strand a partially completed account migration.
+    const pending = await supabase.from("plan_owner_claims").select("guest_hash")
+      .eq("account_hash", userHash).is("legacy_completed_at", null).order("claimed_at", { ascending: true });
+    if (pending.error) throw pending.error;
+    for (const row of pending.data ?? []) {
+      await claimLegacyProjects(userId, userHash, row.guest_hash);
+      const completed = await supabase.from("plan_owner_claims").update({ legacy_completed_at: new Date().toISOString() })
+        .eq("guest_hash", row.guest_hash).eq("account_hash", userHash).is("legacy_completed_at", null);
+      if (completed.error) throw completed.error;
+    }
+    await claimLegacyProjects(userId, userHash, null);
+  } catch (error) {
+    if (error instanceof Error && ["PLAN_CLAIM_BUSY", "PLAN_VERSION_CONFLICT", "PLAN_CLAIM_FAILED"].includes(error.message)) throw error;
+    throw new Error("PLAN_CLAIM_FAILED");
+  }
+}
+
+async function claimLegacyProjects(userId: string, userHash: string, previousGuestHash: string | null) {
+  const supabase = getServerSupabase();
+  if (!supabase) return;
   if (previousGuestHash && previousGuestHash !== userHash) {
     const { error } = await supabase.from("projects").update({ owner_id: userId, guest_token_hash: userHash }).eq("guest_token_hash", previousGuestHash);
     if (error) throw error;
-    await supabase.from("payment_orders").update({ guest_token_hash: userHash }).eq("guest_token_hash", previousGuestHash);
+    const payment = await supabase.from("payment_orders").update({ guest_token_hash: userHash }).eq("guest_token_hash", previousGuestHash);
+    if (payment.error) throw payment.error;
   }
   const { error } = await supabase.from("projects").update({ guest_token_hash: userHash }).eq("owner_id", userId);
   if (error) throw error;

@@ -4,6 +4,7 @@ import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccoun
 import { getServerSupabase } from "../../../../lib/persistence";
 import { PLATFORM_POLICY_VERSION } from "../../../../lib/platform-legal/domain";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
 
 /*
  * 구글 로그인.
@@ -85,6 +86,8 @@ export async function POST(request: Request) {
     await setAccountSession(result.data.session, input.remember ?? true);
     return NextResponse.json({ authenticated: true, email: user.email ?? null });
   } catch (error) {
+    const linking = accountLinkError(error);
+    if (linking) return NextResponse.json({ error: { code: linking.code, message: linking.message } }, { status: linking.status });
     console.error("[auth-google] 오류:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { error: { code: "GOOGLE_LOGIN_FAILED", message: "구글 로그인에 실패했습니다. 잠시 후 다시 시도해주세요." } },

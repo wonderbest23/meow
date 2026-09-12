@@ -10,6 +10,7 @@ export type LLMConfig = {
   apiKey: string;
   model: string;
 };
+export type LLMFailure = { provider: LLMProvider; code: "quota_exhausted" | "output_limit" | "unavailable" | "invalid_json" | "timeout" | "rate_limited" };
 
 export type LLMCompleteParams = {
   system: string;
@@ -20,9 +21,14 @@ export type LLMCompleteParams = {
   // OpenAI Responses의 reasoning.effort. Claude에는 적용되지 않는다.
   effort?: "low" | "medium" | "high" | "xhigh" | "max";
   timeoutMs?: number;
+  /** Disable cross-provider retries for checkpointed, cost-bounded jobs. */
+  allowFallback?: boolean;
   // JSON 객체 응답을 유도한다(OpenAI는 json_object 포맷 강제).
   jsonObject?: boolean;
   jsonSchema?: { name: string; schema: Record<string, unknown> };
+  /** Opt in only for schemas compatible with Anthropic's structured-output subset. */
+  anthropicJsonSchema?: boolean;
+  onFailure?: (failure: LLMFailure) => void;
   /** 토큰 사용량을 받는다 — 손님에게 토큰으로 파는 기능(홈페이지 AI 수정)이 차감에 쓴다 */
   onUsage?: (usage: { inputTokens: number; outputTokens: number; model: string; provider: LLMProvider }) => void;
   /*
@@ -45,6 +51,11 @@ export type LLMCompleteParams = {
 };
 
 const DEFAULT_TIMEOUT_MS = 120_000;
+const QUOTA_CODES = new Set(["insufficient_quota", "credit_balance_exhausted", "organization_spend_limit_exceeded", "project_spend_limit_exceeded", "organization_usage_limit_exceeded"]);
+
+function requestFailure(signal: AbortSignal, error: unknown): LLMFailure["code"] {
+  return signal.reason?.name === "TimeoutError" || (error instanceof Error && error.name === "TimeoutError") ? "timeout" : "unavailable";
+}
 
 /** 타임아웃과 외부 중단 신호를 하나로 — 둘 중 먼저 온 쪽이 끊는다 */
 function callSignal(params: LLMCompleteParams): AbortSignal {
@@ -83,6 +94,7 @@ function logUsage(kind: string, model: string, usage: unknown) {
 
 async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
   let response: Response;
+  const signal = callSignal(params);
   try {
     response = await fetch("https://api.openai.com/v1/responses", {
       method: "POST",
@@ -102,17 +114,24 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
         ],
       }),
       cache: "no-store",
-      signal: callSignal(params),
+      signal,
     });
   } catch (err) {
     console.error("[llm] openai fetch 실패:", err instanceof Error ? err.message : err);
+    params.onFailure?.({ provider: "openai", code: requestFailure(signal, err) });
     return null;
   }
   if (!response.ok) {
-    console.error("[llm] openai", response.status, (await response.text().catch(() => "")).slice(0, 300));
+    const error = await response.json().catch(() => null) as { error?: { code?: string; type?: string } } | null;
+    const code = [error?.error?.code, error?.error?.type].some(value => value && QUOTA_CODES.has(value)) ? "quota_exhausted" : response.status === 429 ? "rate_limited" : "unavailable";
+    console.error(`[llm] failure kind=${params.kind ?? "etc"} provider=openai status=${response.status} code=${code}`);
+    params.onFailure?.({ provider: "openai", code });
     return null;
   }
-  const payload = (await response.json().catch(() => null)) as {
+  const payload = (await response.json().catch(error => {
+    params.onFailure?.({ provider: "openai", code: requestFailure(signal, error) });
+    return null;
+  })) as {
     status?: string;
     model?: string;
     incomplete_details?: unknown;
@@ -124,7 +143,12 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
   if (params.onUsage && payload.usage) {
     params.onUsage({ inputTokens: payload.usage.input_tokens ?? 0, outputTokens: payload.usage.output_tokens ?? 0, model: payload.model ?? config.model, provider: "openai" });
   }
-  if (payload.incomplete_details || (payload.status && payload.status !== "completed")) return null;
+  if (payload.incomplete_details || (payload.status && payload.status !== "completed")) {
+    const reason = (payload.incomplete_details as { reason?: string } | undefined)?.reason;
+    console.error(`[llm] incomplete kind=${params.kind ?? "etc"} provider=openai status=${payload.status ?? "unknown"} reason=${reason ?? "unknown"} output_tokens=${payload.usage?.output_tokens ?? 0}`);
+    params.onFailure?.({ provider: "openai", code: reason === "max_output_tokens" ? "output_limit" : "unavailable" });
+    return null;
+  }
   const text =
     payload.output_text ??
     payload.output
@@ -136,11 +160,12 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
 }
 
 async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
-  // Claude는 별도 json 포맷 강제가 없으므로, JSON이 필요하면 시스템 프롬프트에 지시를 덧붙인다.
+  // Schema-compatible callers also enable constrained JSON output at the API level.
   const system = params.jsonObject
-    ? `${params.system}\n\n반드시 설명이나 마크다운 코드펜스 없이 유효한 JSON 객체 하나만 출력하세요.`
+    ? `${params.system}\n\n반드시 설명이나 마크다운 코드펜스 없이 유효한 JSON 객체 하나만 출력하세요.${params.jsonSchema ? `\n출력 스키마: ${JSON.stringify(params.jsonSchema.schema)}` : ""}`
     : params.system;
   let response: Response;
+  const signal = callSignal(params);
   try {
     response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -152,6 +177,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
       body: JSON.stringify({
         model: config.model,
         max_tokens: params.maxOutputTokens,
+        ...(params.anthropicJsonSchema && params.jsonSchema ? { output_config: { format: { type: "json_schema", schema: params.jsonSchema.schema } } } : {}),
         // 캐시를 쓰려면 블록 배열이어야 한다 — 문자열에는 cache_control을 달 곳이 없다
         system: params.cache
           ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
@@ -159,21 +185,29 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
         messages: [{ role: "user", content: params.user }],
       }),
       cache: "no-store",
-      signal: callSignal(params),
+      signal,
     });
   } catch (err) {
     console.error("[llm] anthropic fetch 실패:", err instanceof Error ? err.message : err);
+    params.onFailure?.({ provider: "anthropic", code: requestFailure(signal, err) });
     return null;
   }
   if (!response.ok) {
-    console.error("[llm] anthropic", response.status, (await response.text().catch(() => "")).slice(0, 300));
+    const error = await response.json().catch(() => null) as { error?: { type?: string; message?: string } } | null;
+    const code = /credit balance|no credits|insufficient.*credit/i.test(error?.error?.message ?? "") ? "quota_exhausted" : response.status === 429 ? "rate_limited" : "unavailable";
+    console.error(`[llm] failure kind=${params.kind ?? "etc"} provider=anthropic status=${response.status} code=${code}`);
+    params.onFailure?.({ provider: "anthropic", code });
     return null;
   }
-  const payload = (await response.json().catch(() => null)) as {
+  const payload = (await response.json().catch(error => {
+    params.onFailure?.({ provider: "anthropic", code: requestFailure(signal, error) });
+    return null;
+  })) as {
     stop_reason?: string;
     content?: Array<{ type?: string; text?: string }>;
     usage?: unknown;
   } | null;
+  if (!payload) return null;
   logUsage(params.kind ?? "etc", config.model, payload?.usage ?? null);
   if (params.onUsage && payload?.usage) {
     const u = payload.usage as AnthropicUsage;
@@ -184,7 +218,12 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
       provider: "anthropic",
     });
   }
-  if (!payload || !Array.isArray(payload.content) || (payload.stop_reason && !["end_turn", "stop_sequence"].includes(payload.stop_reason))) return null;
+  if (!payload || !Array.isArray(payload.content) || (payload.stop_reason && !["end_turn", "stop_sequence"].includes(payload.stop_reason))) {
+    const code = payload?.stop_reason === "max_tokens" ? "output_limit" : "unavailable";
+    console.error(`[llm] incomplete kind=${params.kind ?? "etc"} provider=anthropic reason=${payload?.stop_reason ?? "unknown"}`);
+    params.onFailure?.({ provider: "anthropic", code });
+    return null;
+  }
   const text = payload.content
     .filter((block) => block?.type === "text" && typeof block.text === "string")
     .map((block) => block.text)
@@ -214,22 +253,26 @@ function completeOnce(config: LLMConfig, params: LLMCompleteParams): Promise<str
 /** provider에 맞는 모델을 호출해 원본 텍스트를 반환한다. 실패하면 반대 프로바이더로 1회 폴백. */
 export async function completeText(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
   if (!config.apiKey) return null;
-  const primary = await completeOnce(config, params);
-  if (primary) {
-    await recordLlmUsage(params.kind ?? "etc", config.provider, true);
-    return primary;
-  }
+  const measuredCall = async (target: LLMConfig) => {
+    const startedAt = Date.now();
+    let failure: LLMFailure["code"] | undefined;
+    let usage: Parameters<NonNullable<LLMCompleteParams["onUsage"]>>[0] | undefined;
+    const result = await completeOnce(target, { ...params,
+      onFailure: event => { failure = event.code; params.onFailure?.(event); },
+      onUsage: event => { usage = event; params.onUsage?.(event); },
+    });
+    console.log("[llm] call", JSON.stringify({ kind: params.kind ?? "etc", provider: target.provider, model: usage?.model ?? target.model, ok: !!result, code: failure, elapsedMs: Date.now() - startedAt, inputTokens: usage?.inputTokens ?? null, outputTokens: usage?.outputTokens ?? null }));
+    await recordLlmUsage(params.kind ?? "etc", target.provider, !!result, usage);
+    return result;
+  };
+  const primary = await measuredCall(config);
+  if (primary) return primary;
   /* 밖에서 끊은 호출은 실패가 아니다 — 폴백으로 또 부르면 끊은 의미가 없다 */
-  if (params.signal?.aborted) return null;
+  if (params.signal?.aborted || params.allowFallback === false) return null;
   const alt = envAlternate(config);
-  if (!alt) {
-    await recordLlmUsage(params.kind ?? "etc", config.provider, false);
-    return null;
-  }
+  if (!alt) return null;
   console.error(`[llm] ${config.provider} 실패 — ${alt.provider}(${alt.model})로 폴백`);
-  const second = await completeOnce(alt, params);
-  await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== null);
-  return second;
+  return measuredCall(alt);
 }
 
 /** 모델 출력에서 JSON 객체를 파싱한다. 코드펜스가 있으면 벗겨낸다. 실패 시 null. */
@@ -254,7 +297,12 @@ export async function completeJson(
   params: LLMCompleteParams,
 ): Promise<Record<string, unknown> | null> {
   const text = await completeText(config, { ...params, jsonObject: true });
-  return text ? parseJsonObject(text) : null;
+  const parsed = text ? parseJsonObject(text) : null;
+  if (text && !parsed) {
+    console.error(`[llm] invalid_json kind=${params.kind ?? "etc"} provider=${config.provider}`);
+    params.onFailure?.({ provider: config.provider, code: "invalid_json" });
+  }
+  return parsed;
 }
 
 /**

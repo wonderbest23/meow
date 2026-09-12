@@ -1,25 +1,26 @@
-.theme {
-  --app-bg: #080f1c;
-  --app-surface: #101b2d;
-  --app-raised: #18263d;
-  --app-hover: #203451;
-  --app-soft: #132d52;
-  --app-line: #2c405d;
-  --app-line-strong: #48678e;
-  --app-text: #f3f6fc;
-  --app-body: #c4d1e5;
-  --app-muted: #9badc7;
-  --app-accent: #9cc8ff;
-  --app-primary: #176af0;
-  --app-selected: #246bd1;
-  --app-danger: #ffb5b9;
-  --app-danger-bg: #3a1e2b;
-  --app-warning: #f4cd8b;
-  --app-warning-bg: #31281c;
-  --app-success: #8bddbd;
-  --app-success-bg: #153b35;
-  --app-panel-fill: linear-gradient(135deg, #1b2b44 0%, #111d30 75%);
-  --app-primary-fill: linear-gradient(115deg, #2388ff, #0755eb);
+.tokens, .theme {
+  --app-bg: #f7f9fc;
+  --app-surface: #ffffff;
+  --app-raised: #f2f5f8;
+  --app-hover: #e8edf3;
+  --app-soft: #edf3fc;
+  --app-line: #e1e7ef;
+  --app-line-strong: #c6d1de;
+  --app-text: #202632;
+  --app-body: #465365;
+  --app-muted: #6d7b8e;
+  --app-accent: #35669c;
+  --app-primary: #3182f6;
+  --app-selected: #e3edfc;
+  --app-selected-text: #244e84;
+  --app-danger: #b23b47;
+  --app-danger-bg: #fff2f3;
+  --app-warning: #795914;
+  --app-warning-bg: #fff8e8;
+  --app-success: #267959;
+  --app-success-bg: #eef8f2;
+  --app-panel-fill: #ffffff;
+  --app-primary-fill: #3182f6;
   --surface: var(--app-surface);
   --surface-2: var(--app-raised);
   --surface-soft: var(--app-raised);
@@ -41,19 +42,18 @@
   --wz-line: var(--app-line);
   --wz-brand: var(--app-primary);
   --wz-brand-soft: var(--app-soft);
-  min-height: 100dvh;
-  background: var(--app-bg);
   color: var(--app-text);
-  color-scheme: dark;
+  color-scheme: light;
   font-synthesis: none;
   accent-color: var(--app-primary);
 }
+.theme { min-height: 100dvh; background: var(--app-bg); }
 .theme, .theme * { letter-spacing: 0; }
-.theme :is(input, textarea, select) { color-scheme: dark; }
+.theme :is(input, textarea, select) { color-scheme: light; }
 .theme :is(input, textarea)::placeholder { color: var(--app-muted); opacity: 1; }
-.theme :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid #9cc8ff; outline-offset: 3px; }
+.theme :is(button, a, input, textarea, select, summary):focus-visible { outline: 2px solid var(--app-primary); outline-offset: 3px; }
 .theme ::selection { background: #246bd1; color: #fff; }
-.theme :is(main, aside, nav, article, section, div) { scrollbar-color: #486181 transparent; scrollbar-width: thin; }
+.theme :is(main, aside, nav, article, section, div) { scrollbar-color: #bcc7d4 transparent; scrollbar-width: thin; }
 @media (prefers-reduced-motion: reduce) {
   .theme *, .theme *::before, .theme *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
 }

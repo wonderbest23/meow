@@ -1,0 +1,97 @@
+import assert from "node:assert/strict";
+import { deckSource, deckFingerprint, generateAndSaveDeck } from "../lib/plan-builder/deck-job";
+import { DECK_JOB_KEY, readDeckJob, publicDeckJob, deckRetryState, type DeckJob } from "../lib/plan-builder/deck-job-types";
+import { chaptersForType } from "../lib/plan-builder/blueprint";
+import { loadPlanState, savePlanState, preserveServerCoachRecords, type ServerPlanState } from "../lib/plan-builder/plan-server-store";
+import { buildDeckPlan, type DeckPlan } from "../lib/plan-builder/deck-plan";
+import { renderDeckPptx } from "../lib/plan-builder/deck-render";
+import { pickDeckTheme } from "../lib/plan-builder/deck-themes";
+import JSZip from "jszip";
+
+async function main() {
+  process.env.PERSISTENCE_MODE = "demo-memory";
+  process.env.SUPABASE_URL = ""; process.env.SUPABASE_SERVICE_ROLE_KEY = "";
+  process.env.OPENAI_API_KEY = "fixture-only"; process.env.ANTHROPIC_API_KEY = "";
+  const state: ServerPlanState = { business: { name: "QA", description: "Synthetic", role: "", industry: "", region: "", stage: "" }, activePlanId: "a", plans: [{ id: "a", title: "QA", planType: "일반 사업계획서", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", answers: {}, sections: {} }] };
+  const plan = state.plans[0];
+  for (const chapter of chaptersForType(plan.planType)) for (const section of chapter.sections) plan.sections[`${chapter.id}/${section.id}`] = { markdown: "A synthetic proposal; no real revenue.", html: "<p>A synthetic proposal; no real revenue.</p>", generatedAt: plan.updatedAt };
+  const source = deckSource(plan, state.business);
+  const fingerprint = deckFingerprint(source);
+  const now = Date.parse("2026-09-11T10:00:00Z");
+  const limited = { fingerprint, attempt: 3, updatedAt: new Date(now).toISOString() } as DeckJob;
+  assert.equal(deckRetryState(limited, fingerprint, now).retryAfterSeconds, 900);
+  assert.equal(deckRetryState(limited, fingerprint, now + 900_000).attempt, 1);
+  assert.equal(deckRetryState(limited, fingerprint, now + 900_000).retryAfterSeconds, 0);
+  assert.equal(deckRetryState(limited, "changed", now).attempt, 1);
+  assert.equal(deckRetryState({ ...limited, attempt: 1 }, fingerprint, now).attempt, 2);
+  plan.answers[DECK_JOB_KEY] = { token: "job-a", runId: "deck-a", status: "queued", phase: "queued", fingerprint, updatedAt: plan.updatedAt, attempt: 1 };
+  assert.equal(deckFingerprint(deckSource(plan, state.business)), fingerprint, "Job metadata must not change document fingerprint");
+  await savePlanState("deck-owner-a", state);
+  const originalFetch = globalThis.fetch;
+  let calls = 0;
+  const draft = { brandName: "QA", slogan: "Synthetic", slides: Array.from({ length: 8 }, (_, i) => ({ title: `Slide ${i + 1}`, eyebrow: "Proposal", sourceSections: [`${source.sections[0].chapterTitle} · ${source.sections[0].sectionTitle}`] })) };
+  try {
+    globalThis.fetch = async (_url, init) => { calls++; const body = JSON.parse(String(init?.body)); const reviewing = String(body.input?.[0]?.content).includes("검토 대상"); return Response.json({ status: "completed", output_text: JSON.stringify(reviewing ? { issues: [] } : draft) }); };
+    assert.deepEqual(await generateAndSaveDeck({ ownerHash: "deck-owner-a", planId: "a", token: "job-a" }), { ok: true });
+    const saved = await loadPlanState("deck-owner-a");
+    const job = readDeckJob(saved.plans[0].answers)!;
+    assert.equal(job.status, "complete"); assert.equal(job.result?.slides.length, 8); assert.ok(job.draft);
+    assert.equal("result" in publicDeckJob(job)!, false, "Polling must not expose the full draft");
+    const staleAutosave = structuredClone(state);
+    staleAutosave.plans[0].updatedAt = new Date(Date.now() + 1000).toISOString();
+    await savePlanState("deck-owner-a", staleAutosave);
+    assert.equal(readDeckJob((await loadPlanState("deck-owner-a")).plans[0].answers)?.status, "complete", "Legacy autosave must not roll back a completed background job");
+    await generateAndSaveDeck({ ownerHash: "deck-owner-a", planId: "a", token: "job-a" });
+    assert.equal(calls, 2, "Generation and review run once; repeat delivery must not call AI");
+    const restored = readDeckJob(JSON.parse(JSON.stringify((await loadPlanState("deck-owner-a")).plans[0].answers)))!;
+    const bytes = await renderDeckPptx(restored.result!, pickDeckTheme(plan.planType, restored.result!.brandName, ""));
+    const file = await JSZip.loadAsync(bytes, { checkCRC32: true });
+    assert.equal(file.file(/^ppt\/slides\/slide\d+\.xml$/).length, 8, "Restored state renders a real eight-slide PPTX");
+    assert.ok(await file.file("[Content_Types].xml")?.async("string"));
+    const slide = await file.file("ppt/slides/slide2.xml")!.async("string");
+    assert.ok(slide.includes("Slide 2"), "Generated content, not a sample, is downloadable");
+    assert.equal(calls, 2, "Download from restored state must not call AI");
+    await assert.rejects(generateAndSaveDeck({ ownerHash: "other-owner", planId: "a", token: "job-a" }));
+    const untrusted = structuredClone(saved); untrusted.plans[0].answers[DECK_JOB_KEY] = { status: "complete", result: { slides: [] } };
+    assert.deepEqual(preserveServerCoachRecords(untrusted, saved).plans[0].answers[DECK_JOB_KEY], saved.plans[0].answers[DECK_JOB_KEY]);
+    const before = calls;
+    const resumed = await buildDeckPlan({ provider: "openai", model: "fixture", apiKey: "fixture-only" }, { ...source, businessContext: "Synthetic proposal; no real revenue." }, undefined, { draft, saveDraft: async () => undefined });
+    assert.equal(resumed?.slides.length, 8); assert.equal(calls - before, 1, "Resume must review the checkpoint without regenerating slides");
+    const changed = structuredClone(state); changed.plans[0].id = "changed"; changed.plans[0].sections[Object.keys(plan.sections)[0]].markdown = "Changed after dispatch";
+    await savePlanState("deck-owner-changed", changed);
+    assert.deepEqual(await generateAndSaveDeck({ ownerHash: "deck-owner-changed", planId: "changed", token: "job-a" }), { ok: false });
+    assert.equal(readDeckJob((await loadPlanState("deck-owner-changed")).plans[0].answers)?.code, "document_changed");
+    assert.equal(calls - before, 1, "Changed document must fail before another model call");
+    let reviewCalls = 0;
+    const repaired = { ...draft, slogan: "Repaired proposal" };
+    let latestDraft: DeckPlan = draft;
+    const events: string[] = [];
+    globalThis.fetch = async (_url, init) => {
+      const body = JSON.parse(String(init?.body));
+      const reviewing = String(body.input?.[0]?.content).includes("검토 대상");
+      if (reviewing && ++reviewCalls === 2) return Response.json({ error: { message: "Fixture provider outage" } }, { status: 524 });
+      return Response.json({ status: "completed", output_text: JSON.stringify(reviewing ? { issues: [{ quote: "Synthetic", reason: "Use the supplied proposal wording" }] } : repaired) });
+    };
+    const interrupted = await buildDeckPlan({ provider: "openai", model: "fixture", apiKey: "fixture-only" }, { ...source, businessContext: "Synthetic proposal; no real revenue." }, event => { if (event.code) events.push(event.code); }, { draft, saveDraft: async value => { latestDraft = value; } });
+    assert.equal(interrupted, null, "Provider outage must not approve an unreviewed deck");
+    assert.equal(latestDraft.slogan, repaired.slogan, "Save repaired draft before its final review");
+    assert.ok(events.includes("provider_unavailable"), "Do not report provider outage as malformed JSON");
+    process.env.ANTHROPIC_API_KEY = "fixture-alternate";
+    for (const [providerCode, expected] of [["credit_balance_exhausted", "provider_quota_exhausted"], ["project_spend_limit_exceeded", "provider_quota_exhausted"], ["rate_limit_exceeded", "provider_rate_limited"]]) {
+      let requests = 0;
+      const failures: string[] = [];
+      globalThis.fetch = async () => { requests++; return Response.json({ error: { code: providerCode } }, { status: 429 }); };
+      assert.equal(await buildDeckPlan({ provider: "openai", model: "fixture", apiKey: "fixture" }, source, event => { if (event.code) failures.push(event.code); }), null);
+      assert.equal(requests, 1, "Quota and rate limits must not trigger a retry or paid fallback");
+      assert.deepEqual(failures, [expected]);
+    }
+    let timeoutCalls = 0;
+    globalThis.fetch = async () => { timeoutCalls++; throw new DOMException("Fixture timeout", "TimeoutError"); };
+    const timeoutEvents: string[] = [];
+    assert.equal(await buildDeckPlan({ provider: "openai", model: "fixture", apiKey: "fixture" }, source, event => { if (event.code) timeoutEvents.push(event.code); }), null);
+    assert.equal(timeoutCalls, 1);
+    assert.deepEqual(timeoutEvents, ["provider_timeout"]);
+  } finally { globalThis.fetch = originalFetch; }
+  console.log("deck jobs: passed (checkpoint, resume, idempotency, owner isolation, stale source, protected job state)");
+}
+void main().catch(error => { console.error(error); process.exitCode = 1; });

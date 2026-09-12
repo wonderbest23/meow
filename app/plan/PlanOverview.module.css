@@ -1238,7 +1238,7 @@
 
 /* 색 규칙: 주 행동('지금 할 일' 버튼)만 보라. 탭 칩 선택은 검정, 체크는 초록,
    챕터 번호·'여기부터' 칩은 무채색. */
-.seg button.segOn { background: var(--app-raised) !important; color: #fff !important; }
+.seg button.segOn { background: var(--app-selected) !important; color: var(--app-selected-text) !important; }
 .checkOn { background: var(--app-success); border-color: var(--app-success); }
 .groupNo { background: var(--app-raised); }
 .chip_next { background: var(--app-raised); color: var(--app-text); }

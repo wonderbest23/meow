@@ -16,7 +16,7 @@
 .metadata { display:flex; align-items:center; flex-wrap:wrap; gap:6px 12px; color:var(--app-muted); font-size:12px; line-height:1.6; }
 .metadata > span { color:var(--app-muted); }
 .openArrow { width:48px; height:48px; display:grid; place-items:center; border:1px solid var(--app-line); border-radius:50%; color:var(--app-body); background:var(--app-raised); transition:background .18s,color .18s,transform .18s; }
-.businessOpen:hover .openArrow { background:var(--app-selected); color:#fff; border-color:var(--app-selected); transform:translateX(3px); }.businessOpen:hover .paper { transform:translateY(0) rotate(0); }.businessOpen:active .openArrow { transform:scale(.94); }
+.businessOpen:hover .openArrow { background:var(--app-selected); color:var(--app-selected-text); border-color:var(--app-line-strong); transform:translateX(3px); }.businessOpen:hover .paper { transform:translateY(0) rotate(0); }.businessOpen:active .openArrow { transform:scale(.94); }
 @media(max-width:600px) {
   .businessRow { padding:12px 14px 18px; }.businessOpen { grid-template-columns:64px minmax(0,1fr) 40px; gap:12px; align-items:start; }
   .preview { width:64px; height:88px; padding:10px 6px 0; }.paper { width:52px; height:82px; padding:7px 5px; }.paperHeading { font-size:0; gap:0; padding-bottom:5px; margin-bottom:5px; }.paperHeading svg { width:12px; height:12px; }.paper > strong { font-size:6px; }.businessRow .paper p { font-size:5px; margin-top:4px; -webkit-line-clamp:2; }.paperFoot { font-size:5px; padding-top:3px; }

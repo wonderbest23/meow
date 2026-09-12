@@ -1177,14 +1177,14 @@
 .h1 { margin-bottom: 0; }
 
 /* 단계 번호: 현재 = 검정, 완료 = 초록 체크, 대기 = 회색 — 보라 아님 */
-.step.stepOn .stepNum { background: var(--app-raised); color: #fff; }
+.step.stepOn .stepNum { background: var(--app-primary); color: #fff; }
 
 /* 카테고리 칩: 선택 = 검정 */
-.cats button.catOn { background: var(--app-raised); color: #fff; }
+.cats button.catOn { background: var(--app-selected); color: var(--app-selected-text); }
 
 /* 이어받기 라디오: 선택 = 검정 */
 .inheritOn .inheritRadio { border-color: var(--app-text); }
-.inheritOn .inheritRadio::after { background: var(--app-raised); }
+.inheritOn .inheritRadio::after { background: var(--app-primary); }
 
 /* 2단계 주 행동 — 행의 '선택'은 항상 보라 채움 */
 .typeGo { background: var(--blue, var(--app-primary)); color: #fff; }

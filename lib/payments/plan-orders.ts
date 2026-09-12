@@ -179,7 +179,7 @@ export async function markPlanOrderPaid(input: {
   if (error) throw error;
 }
 
-/** 승인 실패 — 왜 실패했는지 남겨 둔다. */
+/** Only an uncompleted order may fail; late callbacks cannot revoke paid access. */
 export async function markPlanOrderFailed(input: {
   orderId: string;
   code: string;
@@ -197,7 +197,8 @@ export async function markPlanOrderFailed(input: {
       raw_response: input.raw ?? null,
       updated_at: new Date().toISOString(),
     })
-    .eq("order_id", input.orderId);
+    .eq("order_id", input.orderId)
+    .eq("status", "created");
 }
 
 export interface PaidPlanEntitlement {

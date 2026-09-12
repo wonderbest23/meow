@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { authSessionInput } from "../../../../lib/auth-session-input";
 import { claimGuestProjects, createServerAuthClient, currentGuestHash, getAuthenticatedUser, listAccountProjects, setAccountSession } from "../../../../lib/account-auth";
-
-const tokenSchema = z.object({ accessToken: z.string().min(20), refreshToken: z.string().min(20) });
+import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
 
 function privateJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
@@ -18,7 +17,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const input = tokenSchema.parse(await request.json());
+    const input = authSessionInput.parse(await request.json());
     const previousGuestHash = await currentGuestHash();
     const auth = createServerAuthClient();
     const result = await auth.auth.setSession({ access_token: input.accessToken, refresh_token: input.refreshToken });
@@ -27,6 +26,8 @@ export async function POST(request: Request) {
     await setAccountSession(result.data.session);
     return privateJson({ authenticated: true, email: result.data.user.email ?? null });
   } catch (error) {
+    const linking = accountLinkError(error);
+    if (linking) return privateJson({ error: { code: linking.code, message: linking.message } }, { status: linking.status });
     return privateJson({ error: { code: "AUTH_SESSION_FAILED", message: error instanceof Error ? error.message : "로그인을 완료하지 못했습니다." } }, { status: 400 });
   }
 }

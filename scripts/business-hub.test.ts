@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import puppeteer, { type Page } from "puppeteer-core";
 import { applyCoachReply, COACH_KEY, COACH_TYPES } from "../lib/plan-builder/coach";
-import { ACTION_KEY, actionStatus, businessHubState } from "../lib/plan-builder/business-hub";
+import { ACTION_KEY, actionStatus, businessHubState, businessNextStep } from "../lib/plan-builder/business-hub";
 import { EMPTY_BUSINESS, type Plan, type PlanState } from "../lib/plan-builder/plan-store";
 import { designFixture } from "./fixtures/coach-design";
 
@@ -12,6 +12,8 @@ function fixture(): Plan {
   return {id:"hub-test-ready",title:coach.business.name,planType:COACH_TYPES.startup,createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),sections:{},answers:{[COACH_KEY]:{state:coach}}};
 }
 const ready=fixture();
+assert.equal(businessNextStep(ready).href, `/plan/workspace?planId=${ready.id}&tab=launch`, "다음 준비 단계도 선택한 사업에 연결");
+assert.equal(businessNextStep(ready).title, "내 사업의 시작 순서 정하기");
 assert.equal(businessHubState(ready).status,"사업안 준비됨");
 const keys=businessHubState(ready).keys;
 const complete={...ready,sections:Object.fromEntries(keys.map(key=>[key,{markdown:"실제 내용",html:"<p>실제 내용</p>",generatedAt:new Date().toISOString(),coachRevision:businessHubState(ready).revision!}]))};
@@ -63,7 +65,7 @@ async function main(){
     });
     await page.goto(`${base}/plan`,{waitUntil:"networkidle0",timeout:60000});
     await page.waitForSelector('a[href="/plan/chat?new=1"]');
-    assert.ok(await page.$eval("main",e=>e.textContent?.includes("사업 이야기 시작하기")));
+    assert.ok(await page.$eval("main",e=>e.textContent?.includes("새 대화 시작하기")));
     assert.equal(await page.$('[aria-label="사업 필터"]'),null);
     await page.screenshot({path:`artifacts/business-hub/empty-${width}.png`});
     server={...server,plans:[structuredClone(ready),{...structuredClone(stale),id:"hub-test-stale",title:"수정된 사업안"}],activePlanId:"hub-test-stale"};
@@ -80,9 +82,9 @@ async function main(){
     await new Promise(resolve=>setTimeout(resolve,250));
     await page.screenshot({path:`artifacts/business-hub/summary-${width}.png`});
     await click(page,"내 자료",'[aria-label="사업 관리 메뉴"]');
-    await page.waitForFunction(()=>{const el=document.querySelector('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]');return el?.textContent==="내 자료" && getComputedStyle(el).backgroundColor==="rgb(36, 107, 209)";});
-    assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).backgroundColor), "rgb(36, 107, 209)", "선택 메뉴를 파란 배경으로 명확히 구분");
-    assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).color), "rgb(255, 255, 255)", "선택 메뉴는 흰 글씨");
+    await page.waitForFunction(()=>{const el=document.querySelector('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]');return el?.textContent==="내 자료" && getComputedStyle(el).backgroundColor==="rgb(227, 237, 252)";});
+    assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).backgroundColor), "rgb(227, 237, 252)", "선택 메뉴를 옅은 색상으로 구분");
+    assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).color), "rgb(36, 78, 132)", "밝은 선택 배경에는 진한 글씨");
     assert.ok(await page.$eval('[aria-label="내 자료"]',e=>e.textContent?.includes("사업안 확인하고 자료 만들기")));
     await click(page,"사업 시작하기",'[aria-label="사업 관리 메뉴"]');
     await click(page,"대화에서 정한 할 일 보기");
@@ -128,4 +130,4 @@ async function main(){
     await context.close();console.log(`business-hub UI ${width}: passed (mock API)`);
   }}finally{await browser.close();}
 }
-main().catch(e=>{console.error(e);process.exitCode=1;});
+if (!process.argv.includes("--state-only")) main().catch(e=>{console.error(e);process.exitCode=1;});

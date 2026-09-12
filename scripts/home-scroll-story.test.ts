@@ -19,20 +19,22 @@ async function main() {
       const errors: string[] = [];
       page.on("pageerror", error => errors.push(String(error)));
       await page.goto("http://localhost:8083", { waitUntil: "networkidle0" });
-      const pinned = width >= 960;
-      await page.waitForSelector(`[data-scroll-story][data-motion="${pinned ? "on" : "off"}"]`);
+      const pinned = height >= 680;
       await page.screenshot({ path: `artifacts/home-scroll-story/${width}x${height}-hero.png` });
+      await page.$eval('#how', element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
+      await page.waitForSelector(`[data-scroll-story][data-motion="${pinned ? "on" : "off"}"]`);
+      await page.waitForSelector('[data-scroll-story][data-renderer="webgl"][data-rendered="true"]');
       if (pinned) {
         const states: string[] = [];
-        for (const progress of [0, .25, .4, .5, .7, 1, .25]) {
+        for (const progress of [.02, .25, .54, .6, .8, .97, .54]) {
           await page.$eval('[data-scroll-story]', (element, value) => {
             const pin = element.querySelector<HTMLElement>('[data-pin]')!;
             scrollTo({ top: element.getBoundingClientRect().top + scrollY - 64 + ((element as HTMLElement).offsetHeight - pin.offsetHeight) * value, behavior: 'instant' });
           }, progress);
-          await pause(100);
+          await page.waitForFunction(value => Math.abs(Number(document.querySelector<HTMLElement>('[data-scroll-story]')?.dataset.progress) - value) < .002, {}, progress);
           const state = await page.$eval('[data-scroll-story]', element => ({
             progress: Number((element as HTMLElement).dataset.progress),
-            transform: getComputedStyle(element.querySelector('[class*="__briefLayer"]')!).transform,
+            transform: getComputedStyle(element.querySelector('[data-phone-mount] [data-phone-focus]')!).transform,
             pin: element.querySelector('[data-pin]')!.getBoundingClientRect().top,
           }));
           assert.ok(Math.abs(state.progress - progress) < .015, 'Scroll must be continuous in both directions');
@@ -41,15 +43,19 @@ async function main() {
           await page.screenshot({ path: `artifacts/home-scroll-story/${width}x${height}-progress-${progress}.png` });
         }
         assert.notEqual(states[2], states[3], 'Intermediate motion must not snap between discrete scenes');
-        assert.equal(states[1], states[6], 'Reversing scroll restores the same visual state');
+        assert.equal(states[2], states[6], 'Reversing scroll restores the same visual state');
       } else {
-        assert.equal(await page.$eval('[data-pin]', el => getComputedStyle(el).display), 'none');
-        for (const index of [1, 2]) {
-          await page.$eval(`[data-scroll-story] article:nth-child(${index})`, element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
-          await pause(1000);
-          await page.screenshot({ path: `artifacts/home-scroll-story/${width}x${height}-mobile-step-${index}.png` });
-        }
+        assert.equal(await page.$eval('[data-pin]', el => getComputedStyle(el).position), 'relative');
+        assert.ok(await page.$eval('[data-phone-mount] [data-phone-screen]', el => el.getBoundingClientRect().height > 250));
+        await page.screenshot({ path: `artifacts/home-scroll-story/${width}x${height}-unpinned-phone.png` });
       }
+      assert.equal(await page.$$eval('#how button', elements => elements.length), 0, 'Playback uses a single scrubber without extra buttons');
+      assert.ok(await page.$eval('[data-phone-progress]', el => el.getBoundingClientRect().height >= 44), 'The scrubber retains a touch-sized target');
+      await page.focus('[data-phone-progress]');
+      await page.keyboard.press('End');
+      assert.equal(await page.$eval('#how [data-scroll-story]', el => (el as HTMLElement).dataset.progress), '1.00000');
+      await page.keyboard.press('Home');
+      assert.equal(await page.$eval('#how [data-scroll-story]', el => (el as HTMLElement).dataset.progress), '0.00000');
       for (const selector of ['#deliverables', '[data-founder-wall]', '#difference', '[aria-labelledby="home-website-title"]', '#price']) {
         await page.$eval(selector, element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
         await pause(1000);
@@ -60,15 +66,18 @@ async function main() {
       await page.waitForFunction(() => [...document.querySelectorAll('main img')].every(img => (img as HTMLImageElement).complete && (img as HTMLImageElement).naturalWidth > 0));
       assert.equal(await page.$eval('a[href="/samples/sample_coffee.pdf"]', a => a.getAttribute('target')), '_blank');
       assert.equal(await page.$eval('a[href="/samples/sample_coffee.pptx"]', a => a.hasAttribute('download')), true);
-      await page.$eval('[aria-labelledby="home-website-title"] button', element => (element as HTMLButtonElement).click());
-      await page.waitForFunction(() => [...document.querySelectorAll('textarea')].some(textarea => textarea.value.includes('홈페이지 제작을 상담하고 싶어요')));
-      await page.keyboard.press('Escape');
+      assert.ok(await page.$('[aria-labelledby="home-website-title"] a[href="/plan/homepage"]'));
+      assert.equal(await page.$$eval('[data-portrait] figcaption', elements => elements.length), 10);
+      assert.equal(await page.$eval('[data-portrait]:nth-child(6) figcaption', el => el.textContent), '꽃집 창업');
       await page.emulateMediaFeatures([{ name: 'prefers-reduced-motion', value: 'reduce' }]);
       await page.waitForSelector('[data-scroll-story][data-motion="off"]');
-      assert.equal(await page.$eval('[data-pin]', el => getComputedStyle(el).display), 'none');
-      // The application needs hydration; disabling the animation layer must not hide its content.
-      await page.$eval('[data-scroll-story]', el => el.removeAttribute('data-motion'));
-      assert.equal(await page.$$eval('[data-scroll-story] article', elements => elements.length === 2 && elements.every(el => el.getBoundingClientRect().height > 300)), true, 'The static fallback must show both sections');
+      assert.equal(await page.$eval('[data-pin]', el => getComputedStyle(el).position), 'relative');
+      await page.$eval('#how', element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
+      await pause(300);
+      const reducedProgress = await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress);
+      await pause(500);
+      assert.equal(await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress), reducedProgress, 'Reduced motion must not autoplay');
+      assert.ok(await page.$eval('[data-phone-mount] [data-phone-screen]', el => el.getBoundingClientRect().height > 250), 'Reduced motion keeps the product screen visible');
       assert.deepEqual(errors, []);
       await page.close();
       console.log(`continuous home story ${width}x${height}: passed`);

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "../../components/site-header";
 import type { PaymentHistoryItem } from "../../lib/payments/plan-orders";
-import { hydrateFromServer, setActivePlan, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
+import { hydrateFromServer, setActivePlan, isSamplePlan, prepareAccountSignIn, clearLocalState, type PlanState } from "../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
 import { TYPE_META, DEFAULT_META } from "../plan/type-meta";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
@@ -160,11 +160,11 @@ export default function AccountPage() {
               setBusy(true);
               setMessage("");
               setMessageError(false);
-              void fetch("/api/auth/google", {
+              void prepareAccountSignIn().then(() => fetch("/api/auth/google", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ credential: response.credential, remember }),
-              })
+              }))
                 .then((r) => payload<{ authenticated: boolean; email: string | null }>(r))
                 .then((data) => {
                   rememberLocally(remember, data.email ?? "");
@@ -248,7 +248,7 @@ export default function AccountPage() {
       setRecoveryTokens({ accessToken, refreshToken }); setMode("reset"); setSession({ authenticated: false, email: null, projects: [] }); return;
     }
     if (accessToken && refreshToken) {
-      void fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken, refreshToken }) })
+      void prepareAccountSignIn().then(() => fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken, refreshToken }) }))
         .then((response) => payload(response))
         .then(() => {
           const raw = new URL(window.location.href).searchParams.get("next");
@@ -297,6 +297,7 @@ export default function AccountPage() {
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!valid || busy) return; setBusy(true); setMessage(""); setMessageError(false);
     try {
+      if (mode !== "recover") await prepareAccountSignIn();
       if (mode === "recover") {
         await payload(await fetch("/api/auth/recover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }));
         setMessage("비밀번호 재설정 메일을 보냈습니다. 메일의 링크를 열어주세요.");
@@ -331,6 +332,8 @@ export default function AccountPage() {
     try {
       const response = await fetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) throw new Error("로그아웃하지 못했어요. 다시 시도해 주세요.");
+      clearLocalState();
+      setPlans([]);
       setSession({ authenticated: false, email: null, projects: [] }); setMessage("로그아웃했습니다.");
     } catch (error) { setMessageError(true); setMessage(error instanceof Error ? error.message : "다시 시도해 주세요."); }
     finally { setBusy(false); }

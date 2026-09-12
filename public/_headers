@@ -1,2 +1,5 @@
 /_next/static/*
   Cache-Control: public,max-age=0,must-revalidate
+
+/home-media/*
+  Cache-Control: public,max-age=0,must-revalidate

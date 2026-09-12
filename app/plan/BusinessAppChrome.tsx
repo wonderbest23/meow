@@ -8,7 +8,7 @@ import WorkspaceBrand from "../../components/workspace-brand";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
 export default function BusinessAppChrome({ children, title, active = "plans", backHref = "/plan", workspaceHref, showRail = true }: {
-  children: ReactNode; title: string; active?: "plans" | "chat"; backHref?: string; workspaceHref?: string; showRail?: boolean;
+  children: ReactNode; title: string; active?: "plans" | "chat" | "new"; backHref?: string; workspaceHref?: string; showRail?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -24,16 +24,24 @@ export default function BusinessAppChrome({ children, title, active = "plans", b
   return <>
     {showRail && <aside className={styles.appRail} aria-label="작업 메뉴">
       <Link className={styles.brand} href="/" aria-label="오늘창업 홈"><WorkspaceBrand /></Link>
-      <a className={styles.newChat} href="/plan/chat?new=1"><SquarePen size={19} />새 대화</a>
-      <nav><Link href="/plan/chat" className={active === "chat" ? styles.currentNav : ""} aria-current={active === "chat" ? "page" : undefined}><MessageCircle size={19} />사업 기획</Link><Link href="/plan" className={active === "plans" ? styles.currentNav : ""} aria-current={active === "plans" ? "page" : undefined}><FolderClosed size={19} />내 사업</Link></nav>
+      <Link className={styles.newChat} href="/plan/chat?new=1" aria-current={active === "new" ? "page" : undefined}><SquarePen size={19} />새 대화</Link>
+      <nav><Link href="/plan/planning" className={active === "chat" ? styles.currentNav : ""} aria-current={active === "chat" ? "page" : undefined}><MessageCircle size={19} />사업 기획</Link><Link href="/plan" className={active === "plans" ? styles.currentNav : ""} aria-current={active === "plans" ? "page" : undefined}><FolderClosed size={19} />내 사업</Link></nav>
       <span className={styles.railCaption}>아이디어에서 시작하는 내 사업</span>
     </aside>}
     <div className={styles.appSurface}>
       <header className={styles.header}>
         <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>
-        <div className={styles.headerTitle}><strong>{title}</strong><span>오늘창업{active === "chat" ? " AI 파트너" : ""}</span></div>
+        <div className={styles.headerTitle}><strong>{title}</strong><span>오늘창업{active !== "plans" ? " AI 파트너" : ""}</span></div>
         {workspaceHref && <Link className={styles.workspaceLink} href={workspaceHref}>사업 관리</Link>}
-        <div className={styles.headerMenu} ref={menu}><button className={styles.menuToggle} aria-label={open ? "대화 메뉴 닫기" : "대화 메뉴 열기"} aria-expanded={open} aria-controls="chat-navigation" onClick={() => setOpen(!open)}>{open ? <X size={22} /> : <MoreHorizontal size={24} />}</button>{open && <nav id="chat-navigation" className={styles.menuPanel} aria-label="대화 메뉴"><a href="/plan/chat?new=1"><SquarePen size={18} />새 대화</a><Link href="/plan"><FolderClosed size={18} />내 사업</Link><Link href="/">홈으로</Link></nav>}</div>
+        <div className={styles.headerMenu} ref={menu}>
+          <button className={styles.menuToggle} aria-label={open ? "대화 메뉴 닫기" : "대화 메뉴 열기"} aria-expanded={open} aria-controls="chat-navigation" onClick={() => setOpen(!open)}>{open ? <X size={22} /> : <MoreHorizontal size={24} />}</button>
+          {open && <nav id="chat-navigation" className={styles.menuPanel} aria-label="대화 메뉴">
+            <Link href="/plan/chat?new=1" onClick={() => setOpen(false)} aria-current={active === "new" ? "page" : undefined}><SquarePen size={18} />새 대화</Link>
+            <Link href="/plan/planning" onClick={() => setOpen(false)} aria-current={active === "chat" ? "page" : undefined}><MessageCircle size={18} />사업 기획</Link>
+            <Link href="/plan" onClick={() => setOpen(false)} aria-current={active === "plans" ? "page" : undefined}><FolderClosed size={18} />내 사업</Link>
+            <Link href="/">홈으로</Link>
+          </nav>}
+        </div>
       </header>
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}
       {children}

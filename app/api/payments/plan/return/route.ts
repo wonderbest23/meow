@@ -45,15 +45,12 @@ export async function POST(request: Request) {
 
   // 1) 결제창 인증 자체가 실패한 경우
   if (authResultCode !== "0000") {
-    if (orderId) {
-      await markPlanOrderFailed({ orderId, code: authResultCode || "AUTH_FAILED", message: authResultMsg || "인증 실패" }).catch(() => {});
-    }
+    // Unverified browser fields cannot change a stored order or its entitlement.
     return redirect(request, { status: "fail", reason: authResultMsg || "결제가 취소되었습니다." });
   }
 
   // 2) 위조 검증 — 우리 시크릿으로 다시 계산해 대조한다
   if (!signature || !verifyAuthSignature({ authToken, clientId, amount: amountRaw, signature })) {
-    await markPlanOrderFailed({ orderId, code: "SIGNATURE_MISMATCH", message: "위조된 결제 응답" }).catch(() => {});
     return redirect(request, { status: "fail", reason: "결제 정보를 확인하지 못했습니다." });
   }
 

@@ -2,8 +2,18 @@ import { chaptersForType } from "./blueprint";
 import { coachDocumentRevision, readCoach } from "./coach";
 import { isCoachJobActive, readCoachJob } from "./coach-job-types";
 import type { Plan } from "./plan-store";
+import { launchSteps, launchStatus, readLaunch } from "./business-launch";
 
 export const ACTION_KEY = "__business_next_action";
+
+export function chatEntryIntent(query: URLSearchParams): "new" | "resume" {
+  return !query.get("planId") && (query.get("new") === "1" || !!query.get("prompt")) ? "new" : "resume";
+}
+
+export function planningListPlans(plans: Plan[]) {
+  return plans.filter(plan => !!readCoach(plan.answers) || !!readCoachJob(plan.answers))
+    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+}
 
 export function businessHubState(plan: Plan, runStatus?: string | null) {
   const coach = readCoach(plan.answers);
@@ -32,6 +42,11 @@ export function actionStatus(plan: Plan, action: string) {
 }
 
 export function workspaceHref(id: string) { return `/plan/workspace?planId=${encodeURIComponent(id)}`; }
+export function businessNextStep(plan: Plan) {
+  const state = readLaunch(plan);
+  const step = launchSteps(plan, state).find(item => ["pending", "review"].includes(launchStatus(state, item)));
+  return { title: !state.configured ? "내 사업의 시작 순서 정하기" : step?.title ?? "준비 기록 확인하기", href: `${workspaceHref(plan.id)}&tab=launch` };
+}
 export function businessChatHref(id: string, prompt?: string) {
   const query = new URLSearchParams({ planId: id });
   if (prompt) query.set("prompt", prompt);

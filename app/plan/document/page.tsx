@@ -3,10 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import DocumentWorkspace from "./DocumentWorkspace";
-import { hydrateFromServer, assembleSections, activePlan, loadState, saveSection, isSamplePlan, setActivePlan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, assembleSections, activePlan, loadState, isSamplePlan, setActivePlan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
+import { documentContext } from "../../../lib/plan-builder/document-context";
+import { useDeckExport } from "./use-deck-export";
+import { useDocumentEdits } from "./use-document-edits";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 export default function PlanDocumentPage() {
@@ -14,8 +17,6 @@ export default function PlanDocumentPage() {
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
   const [title, setTitle] = useState("사업계획서");
   const [planType, setPlanType] = useState("");
-  const [savedKey, setSavedKey] = useState<string | null>(null);
-  const [failedKey, setFailedKey] = useState<string | null>(null);
   const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
   const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -27,6 +28,11 @@ export default function PlanDocumentPage() {
   const [coachHref, setCoachHref] = useState<string | null>(null);
   const [contextNotice, setContextNotice] = useState("");
   const [completionKey, setCompletionKey] = useState<string | null>(null);
+  const deck = useDeckExport(documentPlanId, !isSample && !!access?.paid, title);
+  const edits = useDocumentEdits((key, section) => {
+    setSections(current => current.map(item => item.key === key ? { ...item, markdown: section.markdown, html: section.html } : item));
+    void deck.refresh();
+  });
 
   useEffect(() => {
     let alive = true;
@@ -40,6 +46,9 @@ export default function PlanDocumentPage() {
       setSections(assembleSections(s));
       const p = activePlan(s);
       if (p) {
+        const recovered = isSamplePlan(p.id) ? {} : edits.initialize(p);
+        setSections(assembleSections(s).map(section => recovered[section.key] ? { ...section, html: recovered[section.key], markdown: htmlToMarkdown(recovered[section.key]) } : section));
+        if (!requested) router.replace(`/plan/document?planId=${encodeURIComponent(p.id)}`);
         setCompletionKey(isSamplePlan(p.id) ? null : completedDocumentKey(p));
         const snapshot = coachDocumentSnapshot(p);
         if (snapshot) {
@@ -109,61 +118,20 @@ export default function PlanDocumentPage() {
 
   /** 문서에서 고친 내용을 저장한다. 원본은 마크다운이므로 되돌려 담는다. */
   function saveEdit(key: string, nextHtml: string) {
-    const md = htmlToMarkdown(nextHtml);
-    if (!md.trim()) return;
-    if (!saveSection(key, md, nextHtml)) {
-      setFailedKey(key);
-      return;
-    }
-    setSections((prev) => prev.map((s) => (s.key === key ? { ...s, markdown: md, html: nextHtml } : s)));
-    setSavedKey(key);
+    edits.save(key, nextHtml);
   }
 
   /** 완성한 계획서로 발표용 PPT를 만든다(결제 확인은 서버가 한다). */
   async function handleDeck() {
-    if (!sections.length) return;
-    setExporting("pptx");
-    setDeckError(null);
-    try {
-      const state = loadState();
-      const plan = activePlan(state);
-      const res = await fetch("/api/plan/deck", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          businessName: state.business.name || title,
-          businessDescription: state.business.description,
-          planType,
-          planId: plan?.id,
-          sections: exportSections,
-          allAnswers: plan?.answers ?? {},
-        }),
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { message?: string };
-        setDeckError(data.message ?? "발표자료를 만들지 못했습니다.");
-        return;
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title} 사업 제안서.pptx`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    } catch {
-      setDeckError("발표자료를 만들지 못했습니다. 잠시 후 다시 시도해주세요.");
-    } finally {
-      setExporting(null);
-    }
+    if (sections.length) await deck.startOrDownload();
   }
 
   async function handleExport(format: "pdf" | "docx") {
     if (!sections.length) return;
     setExporting(format);
     try {
+      const context = documentContext(loadState(), documentPlanId);
+      if (!context) throw new Error("document not found");
       const res = await fetch("/api/plan/document", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -171,16 +139,14 @@ export default function PlanDocumentPage() {
           title,
           format,
           planType,
-          planId: activePlan(loadState())?.id,
-          business: loadState().business,
+          planId: context.plan.id,
+          business: context.business,
           sections: exportSections,
         }),
       });
       if (res.status === 402) {
-        const p = activePlan(loadState());
-        const q = p ? `?planId=${encodeURIComponent(p.id)}&planType=${encodeURIComponent(p.planType)}` : "";
         alert("PDF·Word 내려받기는 결제 후 이용할 수 있습니다. 결제 화면으로 이동합니다.");
-        router.push(`/plan/pay${q}`);
+        goPay();
         return;
       }
       if (!res.ok) throw new Error("export failed");
@@ -201,7 +167,7 @@ export default function PlanDocumentPage() {
   }
 
   const locked = !isSample && access !== null && !access.paid;
-  const busy = exporting !== null || !sections.length || isSample;
+  const busy = exporting !== null || !sections.length || isSample || edits.pending;
 
   /*
    * 예시의 PDF·Word 는 미리 구워 둔 파일을 그냥 내려준다.
@@ -215,7 +181,7 @@ export default function PlanDocumentPage() {
    * 운영에서 한 번 뽑아 와야 굽을 수 있다(scripts/bake-sample-decks.mts).
    * 못 구운 예시가 생기면 그 단추만 잠기도록 목록으로 둔다.
    */
-  const samplePlanId = isSample ? activePlan(loadState())?.id ?? null : null;
+  const samplePlanId = isSample ? documentPlanId : null;
   const BAKED_DECKS = new Set(["sample_flower_fm", "sample_flower_psst", "sample_coffee"]);
   function sampleFile(ext: "pdf" | "docx" | "pptx"): string | null {
     if (!samplePlanId) return null;
@@ -225,9 +191,8 @@ export default function PlanDocumentPage() {
 
   /** 결제 전이면 서버 왕복 없이 바로 결제 화면으로 */
   function goPay() {
-    const p = activePlan(loadState());
-    const q = p ? `?planId=${encodeURIComponent(p.id)}&planType=${encodeURIComponent(p.planType)}` : "";
-    router.push(`/plan/pay${q}`);
+    if (!documentPlanId) return;
+    router.push(`/plan/pay?planId=${encodeURIComponent(documentPlanId)}&planType=${encodeURIComponent(planType)}`);
   }
 
   async function retryAccess() {
@@ -244,13 +209,17 @@ export default function PlanDocumentPage() {
   return <DocumentWorkspace title={title} planId={documentPlanId} planType={planType} ready={ready}
     completionKey={completionKey}
     grouped={grouped} numbering={numbering} isSample={isSample} coachHref={coachHref}
-    notice={contextNotice} savedKey={savedKey} failedKey={failedKey} onSave={saveEdit}
+    notice={contextNotice} editStates={edits.states} onSave={saveEdit} onDraft={edits.stage}
+    restoreKeys={edits.restoreKeys} onRestore={edits.restore} onRetrySave={edits.retry} onDiscardDraft={edits.discard}
     exporting={exporting} locked={locked} accessPending={!isSample && access === null}
     accessError={accessError} onRetryAccess={() => void retryAccess()}
-    error={deckError} onDownload={(format) => {
+    deckStatus={isSample ? "" : deck.message} deckLabel={isSample ? "PPT 샘플 내려받기" : deck.label}
+    error={deckError || deck.error} onDownload={(format) => {
       const file = sampleFile(format);
       if (file) { window.open(file, "_blank", "noopener"); return; }
+      if (edits.hasPending()) { setDeckError("수정 내용을 먼저 저장한 뒤 파일을 받아주세요."); return; }
+      setDeckError(null);
       if (locked) { goPay(); return; }
       if (format === "pptx") void handleDeck(); else void handleExport(format);
-    }} canDownload={(format) => !!sampleFile(format) || !busy} />;
+    }} canDownload={(format) => !!sampleFile(format) || (!busy && (format !== "pptx" || (!deck.busy && deck.canRequest)))} />;
 }

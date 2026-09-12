@@ -56,7 +56,7 @@
 }
 .admin :global(.admin-legal-actions a) { color: var(--app-body)
 }
-.admin :global(.admin-legal-actions > button) { border: 0; border-radius: 7px; background: var(--app-raised); color: white
+.admin :global(.admin-legal-actions > button) { border: 0; border-radius: 7px; background: var(--app-primary); color: white
 }
 .admin :global(.admin-support-loading) { background: var(--app-raised); color: var(--app-body)
 }
@@ -72,7 +72,7 @@
 }
 .admin :global(.admin-login-page input:focus) { border-color: var(--app-primary); box-shadow: 0 0 0 3px #3272db14
 }
-.admin :global(.admin-login-page button) { border: 0; border-radius: 7px; background: var(--app-raised); color: white
+.admin :global(.admin-login-page button) { border: 0; border-radius: 7px; background: var(--app-primary); color: white
 }
 .admin :global(.admin-login-page a) { color: var(--app-body)
 }
@@ -124,7 +124,7 @@
 }
 .admin :global(.admin-chat-messages article p) { border: 1px solid #cccae3; border-radius: 8px; background: var(--app-surface)
 }
-.admin :global(.admin-chat-messages article.admin p) { border-color: var(--app-text); background: var(--app-raised); color: white
+.admin :global(.admin-chat-messages article.admin p) { border-color: var(--app-line); background: var(--app-soft); color: var(--app-text)
 }
 .admin :global(.admin-chat-room > form) { border-top: 1px solid #cccae3; background: var(--app-surface)
 }
@@ -134,7 +134,7 @@
 }
 .admin :global(.admin-chat-room textarea:focus) { border-color: var(--app-primary); box-shadow: 0 0 0 3px #3272db14
 }
-.admin :global(.admin-chat-room form button) { border: 0; border-radius: 7px; background: var(--app-raised); color: white
+.admin :global(.admin-chat-room form button) { border: 0; border-radius: 7px; background: var(--app-primary); color: white
 }
 .admin :global(.admin-chat-placeholder) { color: var(--app-muted)
 }
@@ -241,7 +241,7 @@
  }
 }
 .admin :global(.admin-chat-room form button) {
-  background: var(--action-blue)
+  background: var(--app-primary)
 }
 .admin :global(.admin-dash-page) { background: var(--app-raised)
 }
@@ -323,7 +323,7 @@
 }
 .admin :global(.admin-home-editor > header nav a) { border-radius: 999px; color: var(--app-muted)
 }
-.admin :global(.admin-home-editor > header nav a.active) { background: var(--app-raised); color: #fff
+.admin :global(.admin-home-editor > header nav a.active) { background: var(--app-selected); color: var(--app-selected-text)
 }
 .admin :global(.admin-home-preview) { border-radius: 14px; background: var(--app-surface); border: 1px solid var(--app-line)
 }

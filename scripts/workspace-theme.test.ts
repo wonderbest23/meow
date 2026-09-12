@@ -32,9 +32,9 @@ async function main() {
           default: respond({ texts: {}, hidden: [], chat: { conversation: null, messages: [] } });
         }
       });
-      for (const route of ["/admin", "/admin/support", "/admin/payments", "/admin/refunds", "/admin/legal", "/admin/homepage", "/plan/info", "/plan/me", "/plan/start"]) {
+      for (const route of ["/admin", "/admin/support", "/admin/payments", "/admin/refunds", "/admin/legal", "/admin/homepage", "/plan", "/plan/planning", "/plan/workspace", "/plan/info", "/plan/me", "/plan/start"]) {
         await page.goto(`http://localhost:8083${route}`, { waitUntil: "networkidle0", timeout: 60000 });
-        await page.waitForSelector('[data-workspace-theme="night"]');
+        await page.waitForSelector('[data-workspace-theme="light"]');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${width}`);
         if (route.startsWith("/admin")) {
           assert.equal(await page.$$eval('aside[aria-label="관리자 메뉴"] nav a', links => links.length), 6);
@@ -48,10 +48,10 @@ async function main() {
       assert.equal(await page.$('aside[aria-label="관리자 메뉴"]'), null);
       await page.screenshot({ path: `artifacts/workspace-theme/admin-login-${width}.png` });
       await page.goto("http://localhost:8083/", { waitUntil: "networkidle0" });
-      assert.equal(await page.$('[data-workspace-theme="night"]'), null, "Homepage must not inherit workspace theme");
+      assert.equal(await page.$('[data-workspace-theme="light"]'), null, "Homepage must not inherit workspace theme");
       await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
       await page.goto("http://localhost:8083/plan/chat?new=1", { waitUntil: "networkidle0" });
-      assert.equal(await page.$eval('[data-workspace-theme="night"] button', el => getComputedStyle(el).animationDuration), "0s");
+      assert.equal(await page.$eval('[data-workspace-theme="light"] button', el => getComputedStyle(el).animationDuration), "0s");
       assert.deepEqual(errors, []);
       console.log(`workspace theme ${width}: passed (local mock API, no writes)`);
       await page.close();

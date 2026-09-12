@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MessageCircle, SquarePen } from "lucide-react";
 import PlanRailNav from "./PlanRailNav";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 import styles from "./PlanShell.module.css";
@@ -37,9 +38,9 @@ function backTarget(pathname: string): { href: string; label: string } | null {
    */
   if (pathname === "/plan/overview" || pathname === "/plan/overview/") return null;
   if (pathname.startsWith("/plan/overview/")) return { href: "/plan/overview", label: "플랜 개요" };
-  if (pathname.startsWith("/plan/start")) return { href: "/plan", label: "내 플랜" };
-  if (pathname.startsWith("/plan/info")) return { href: "/plan", label: "내 플랜" };
-  if (pathname.startsWith("/plan/me")) return { href: "/plan", label: "내 플랜" };
+  if (pathname.startsWith("/plan/start")) return { href: "/plan", label: "내 사업" };
+  if (pathname.startsWith("/plan/info")) return { href: "/plan", label: "내 사업" };
+  if (pathname.startsWith("/plan/me")) return { href: "/plan", label: "내 사업" };
   if (pathname.startsWith("/plan/document")) return { href: "/plan/overview", label: "플랜 개요" };
   if (pathname.startsWith("/plan/pay")) return { href: "/plan/overview", label: "플랜 개요" };
   return { href: "/plan/overview", label: "플랜 개요" }; // 섹션 위저드 등
@@ -124,7 +125,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
     return subscribePlanSync(() => setSync(planSyncStatus()));
   }, []);
 
-  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/start")) return <>{children}</>;
+  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname.startsWith("/plan/planning") || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/start")) return <>{children}</>;
 
   return (
     <div className={styles.shell}>
@@ -149,8 +150,14 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈">
           <WorkspaceBrand />
         </Link>
-        <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 플랜" aria-label="내 플랜">
-          {ICONS.plan}<span className={styles.railLabel}>내 플랜</span>
+        <Link href="/plan/chat?new=1" className={styles.railBtn} title="새 대화" aria-label="새 대화">
+          <SquarePen size={20} /><span className={styles.railLabel}>새 대화</span>
+        </Link>
+        <Link href="/plan/planning" className={styles.railBtn} title="사업 기획" aria-label="사업 기획">
+          <MessageCircle size={20} /><span className={styles.railLabel}>사업 기획</span>
+        </Link>
+        <Link href="/plan" className={`${styles.railBtn} ${onPlan ? styles.on : ""}`} title="내 사업" aria-label="내 사업">
+          {ICONS.plan}<span className={styles.railLabel}>내 사업</span>
         </Link>
         <Link href="/plan/info" className={`${styles.railBtn} ${onInfo ? styles.on : ""}`} title="이용 안내" aria-label="이용 안내">
           {ICONS.help}<span className={styles.railLabel}>이용 안내</span>
