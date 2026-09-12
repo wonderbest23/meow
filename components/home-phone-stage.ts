@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CSS3DObject, CSS3DRenderer } from "three/addons/renderers/CSS3DRenderer.js";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
-import { PHONE_STORY_DURATION_SECONDS, phoneMotion } from "../lib/home-phone-motion";
+import { PHONE_STORY_DURATION_SECONDS, advancePhoneScroll, phoneMotion, phoneScrollProgress, phoneStoryPins, phoneStoryScrollDistance } from "../lib/home-phone-motion";
 
 function roundedShape(width: number, height: number, radius: number) {
   const x = -width / 2, y = -height / 2;
@@ -125,6 +125,7 @@ export function createPhoneStage(root: HTMLElement, onChapter: (index: number) =
   let disposed = false, visible = false, paused = preview !== undefined || reduced.matches, auto = preview === undefined;
   let raf = 0, previous = 0, seconds = 0, progress = preview ?? (reduced.matches ? .555 : 0);
   let scrollProgress = 0, chapter = -1, width = 0, height = 0;
+  let scrollEnabled = false;
   let pointerX = 0, pointerY = 0, shownX = 0, shownY = 0;
   let mobile = false, viewHeight = 10, centerY = 0, centerX = 0, checkRaster = true;
 
@@ -191,8 +192,8 @@ export function createPhoneStage(root: HTMLElement, onChapter: (index: number) =
     const dt = Math.min(.05, previous ? (now - previous) / 1000 : .016);
     previous = now;
     if (!paused && !reduced.matches && auto) seconds += dt;
-    const target = reduced.matches ? progress : auto ? Math.min(1, seconds / PHONE_STORY_DURATION_SECONDS) : scrollProgress;
-    if (!paused) progress += (target - progress) * (1 - Math.exp(-dt / .09));
+    const target = reduced.matches ? progress : auto ? Math.min(1, seconds / PHONE_STORY_DURATION_SECONDS) : mobile ? scrollProgress : phoneScrollProgress(scrollProgress);
+    if (!paused) progress = !auto && !mobile ? advancePhoneScroll(progress, target, dt) : progress + (target - progress) * (1 - Math.exp(-dt / .09));
     if (Math.abs(target - progress) < .00003 && !paused) progress = target;
     shownX += (pointerX - shownX) * .09;
     shownY += (pointerY - shownY) * .09;
@@ -221,7 +222,14 @@ export function createPhoneStage(root: HTMLElement, onChapter: (index: number) =
   const resize = () => {
     const rect = mount.getBoundingClientRect();
     width = rect.width; height = rect.height; mobile = width <= 700;
-    root.dataset.motion = !reduced.matches && innerHeight >= 680 ? "on" : "off";
+    const pinned = phoneStoryPins(innerWidth, innerHeight, reduced.matches);
+    root.style.setProperty("--phone-scroll-distance", `${phoneStoryScrollDistance(innerWidth, innerHeight)}px`);
+    root.dataset.motion = pinned ? "on" : "off";
+    if (pinned !== scrollEnabled && preview === undefined) {
+      auto = !pinned || mobile;
+      seconds = progress * PHONE_STORY_DURATION_SECONDS;
+    }
+    scrollEnabled = pinned;
     const copy = root.querySelector<HTMLElement>("[data-story-copy]");
     const contentTop = mobile && copy ? copy.offsetTop + copy.offsetHeight + 16 : 181;
     const deviceHeight = Math.min(mobile ? height - contentTop - 54 : height * .84, mobile ? width * 1.63 : 660);
@@ -242,13 +250,13 @@ export function createPhoneStage(root: HTMLElement, onChapter: (index: number) =
     wake();
   };
   const scroll = () => {
-    if (preview !== undefined || document.activeElement === scrubber) return;
+    if (!scrollEnabled || preview !== undefined || document.activeElement === scrubber) return;
     const before = scrollProgress;
     measureScroll();
     if (Math.abs(scrollProgress - before) > .0002) {
       auto = false;
+      paused = false;
       if (scrollProgress < .01 && before > .025) seconds = 0;
-      if (paused) { progress = scrollProgress; paint(); }
       wake();
     }
   };

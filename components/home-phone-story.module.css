@@ -1,8 +1,8 @@
 .story { background: #f7f8fa; color: #191f28; scroll-margin-top: 64px; overflow: clip; }
 .track { --type: 0; --send: 0; --answer: 0; --generate: 0; --brief: 0; --focus: 0; --focusDetach: 0; --document: 0; --complete: 0; --press: 0; --documentPress: 0; --messageLift: 0; --messageDetach: 0; }
 .stage { height: 820px; max-height: 1000px; position: relative; max-width: 1680px; margin: auto; isolation: isolate; }
-.track[data-motion="on"] { height: calc(100svh - 64px + 3600px); }
-.track[data-motion="on"] .stage { position: sticky; top: 64px; height: calc(100svh - 64px); min-height: 620px; }
+.track[data-motion="on"] { height: calc(100svh - 64px + var(--phone-scroll-distance, 7200px)); }
+.track[data-motion="on"] .stage { position: sticky; top: 64px; height: calc(100svh - 64px); }
 .copyArea { position: absolute; z-index: 3; top: 26%; left: max(6%, calc((100% - 1180px) / 2)); width: 480px; display: grid; grid-template-columns: minmax(0, 1fr); pointer-events: none; }
 .copy { grid-area: 1 / 1; width: 100%; opacity: 0; transform: translateY(18px); transition: opacity .16s ease, transform .55s cubic-bezier(.2,.75,.25,1); }
 .track[data-active="0"] .copy:nth-child(1), .track[data-active="1"] .copy:nth-child(2), .track[data-active="2"] .copy:nth-child(3) { opacity: 1; transform: none; transition-delay: .15s; }
@@ -84,7 +84,7 @@
 
 @media (max-width: 1100px) and (min-width: 701px) { .copyArea { width: 40%; left: 5%; }.story .copy h2 { font-size: var(--home-title-size, 40px); }.story .copy p { font-size: var(--home-body-size, 17px); } }
 @media (max-width: 700px) {
-  .track[data-motion="on"] { height: calc(100svh - 64px + 3000px); }
+  .track[data-motion="on"] { height: calc(100svh - 64px + var(--phone-scroll-distance, 3000px)); }
   .stage { height: 790px; }.track[data-motion="on"] .stage { min-height: 590px; }
   .copyArea { top: 32px; left: 24px; width: calc(100% - 48px); text-align: center; }
   .story .copy h2 { font-size: var(--home-title-size, 32px); }.story .copy p { font-size: var(--home-body-size, 16px); margin-top: var(--home-copy-gap, 20px); }

@@ -1,7 +1,44 @@
 export const PHONE_STORY_DURATION_SECONDS = 48;
+export const PHONE_SCROLL_MIN_SECONDS = 14;
+
+const clampProgress = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+
+export function phoneStoryPins(width: number, height: number, reduced = false) {
+  return !reduced && height >= (width > 700 ? 520 : 680);
+}
+
+export function phoneStoryScrollDistance(width: number, height: number) {
+  return width > 700 ? Math.max(7200, Math.min(10800, height * 10)) : 3000;
+}
+
+// Reserve scroll distance for reading the lifted message, conditions and finished document.
+const scrollStops = [
+  [0, 0], [.055, .12], [.11, .2], [.25, .2], [.34, .415], [.42, .555],
+  [.49, .67], [.63, .67], [.72, .845], [.79, .98], [.94, .98], [1, 1],
+] as const;
+
+export function phoneScrollProgress(value: number) {
+  const progress = clampProgress(value);
+  for (let index = 1; index < scrollStops.length; index++) {
+    const [end, to] = scrollStops[index];
+    const [start, from] = scrollStops[index - 1];
+    if (progress <= end) return from + (to - from) * (progress - start) / (end - start);
+  }
+  return 1;
+}
+
+export function advancePhoneScroll(current: number, target: number, elapsed: number) {
+  const from = clampProgress(current), to = clampProgress(target);
+  const dt = Number.isFinite(elapsed) ? Math.max(0, Math.min(.05, elapsed)) : 0;
+  if (!dt) return from;
+  const difference = to - from;
+  const eased = Math.abs(difference) * (1 - Math.exp(-dt / .22));
+  const step = Math.min(eased, dt / PHONE_SCROLL_MIN_SECONDS);
+  return Math.abs(difference) < .00003 ? to : from + Math.sign(difference) * step;
+}
 
 export function phoneMotion(value: number) {
-  const progress = Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
+  const progress = clampProgress(value);
   const phase = (start: number, end: number) => {
     const t = Math.max(0, Math.min(1, (progress - start) / (end - start)));
     return t * t * (3 - 2 * t);

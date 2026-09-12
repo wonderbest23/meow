@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { mkdir } from "node:fs/promises";
 import puppeteer from "puppeteer-core";
+import { phoneScrollProgress, phoneStoryPins } from "../lib/home-phone-motion";
 
 const pause = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -19,25 +20,26 @@ async function main() {
       const errors: string[] = [];
       page.on("pageerror", error => errors.push(String(error)));
       await page.goto("http://localhost:8083", { waitUntil: "networkidle0" });
-      const pinned = height >= 680;
+      const pinned = phoneStoryPins(width, height);
       await page.screenshot({ path: `artifacts/home-scroll-story/${width}x${height}-hero.png` });
       await page.$eval('#how', element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
       await page.waitForSelector(`[data-scroll-story][data-motion="${pinned ? "on" : "off"}"]`);
       await page.waitForSelector('[data-scroll-story][data-renderer="webgl"][data-rendered="true"]');
       if (pinned) {
         const states: string[] = [];
-        for (const progress of [.02, .25, .54, .6, .8, .97, .54]) {
+        for (const progress of [.02, .18, .42, .46, .8, .97, .42]) {
           await page.$eval('[data-scroll-story]', (element, value) => {
             const pin = element.querySelector<HTMLElement>('[data-pin]')!;
             scrollTo({ top: element.getBoundingClientRect().top + scrollY - 64 + ((element as HTMLElement).offsetHeight - pin.offsetHeight) * value, behavior: 'instant' });
           }, progress);
-          await page.waitForFunction(value => Math.abs(Number(document.querySelector<HTMLElement>('[data-scroll-story]')?.dataset.progress) - value) < .002, {}, progress);
+          const expected = width > 700 ? phoneScrollProgress(progress) : progress;
+          await page.waitForFunction(value => Math.abs(Number(document.querySelector<HTMLElement>('[data-scroll-story]')?.dataset.progress) - value) < .002, {}, expected);
           const state = await page.$eval('[data-scroll-story]', element => ({
             progress: Number((element as HTMLElement).dataset.progress),
             transform: getComputedStyle(element.querySelector('[data-phone-mount] [data-phone-focus]')!).transform,
             pin: element.querySelector('[data-pin]')!.getBoundingClientRect().top,
           }));
-          assert.ok(Math.abs(state.progress - progress) < .015, 'Scroll must be continuous in both directions');
+          assert.ok(Math.abs(state.progress - expected) < .015, 'Scroll follows the reading-time choreography in both directions');
           assert.ok(Math.abs(state.pin - 64) < 2);
           states.push(state.transform);
           await page.screenshot({ path: `artifacts/home-scroll-story/${width}x${height}-progress-${progress}.png` });
