@@ -231,7 +231,7 @@ export function SupportChatWidget() {
   }, []);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/start") return;
+    if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/start" || pathname === "/plan/proposal") return;
     void loadChat(false);
     const timer = window.setInterval(() => void loadChat(open), open ? 4000 : 12000);
     return () => window.clearInterval(timer);
@@ -593,7 +593,7 @@ export function SupportChatWidget() {
     }, 20);
   };
 
-  if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/start") return null;
+  if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/start" || pathname === "/plan/proposal") return null;
 
   const unread = chat.conversation?.unreadByCustomer ?? 0;
   const selectedCategory = selectedCategoryId

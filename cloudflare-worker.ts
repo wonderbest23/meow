@@ -2,37 +2,21 @@
 import handler from "./.open-next/worker.js";
 import { handleDraftPackageServiceRequest } from "./lib/draft-package/service";
 import { handlePlanSectionServiceRequest } from "./lib/plan-builder/section-service";
+import { customerSiteRequest, stagingUnavailable } from "./lib/staging/safety";
 
 export { DraftPackageWorkflow } from "./lib/draft-package/workflow";
 export { DirectPlanWorkflow } from "./lib/direct-plan/workflow";
 export { PlanSectionsWorkflow } from "./lib/plan-builder/section-workflow";
 
-const platformHosts = new Set([
-  "oneulstart.com",
-  "www.oneulstart.com",
-  "connect.oneulstart.com",
-  "today-startup.rena35200.workers.dev",
-]);
-
-function customerSiteRequest(request: Request) {
-  const url = new URL(request.url);
-  const hostname = url.hostname.toLowerCase();
-  const isCustomerHostname = !platformHosts.has(hostname)
-    && hostname !== "localhost"
-    && !hostname.endsWith(".localhost");
-  if (!isCustomerHostname || (request.method !== "GET" && request.method !== "HEAD")) return request;
-  if (url.pathname !== "/") return request;
-  url.pathname = "/customer-site";
-  return new Request(url, request);
-}
-
 export default {
   async fetch(request: Request, env: CloudflareEnv, context: ExecutionContext) {
+    const unavailable = stagingUnavailable({ ...env }, request.url);
+    if (unavailable) return unavailable;
     const internalResponse = await handleDraftPackageServiceRequest(request, env);
     if (internalResponse) return internalResponse;
     const planSectionResponse = await handlePlanSectionServiceRequest(request, env);
     if (planSectionResponse) return planSectionResponse;
-    return handler.fetch(customerSiteRequest(request), env, context);
+    return handler.fetch(customerSiteRequest(request, env.PLATFORM_APP_ORIGIN), env, context);
   },
 } satisfies ExportedHandler<CloudflareEnv>;
 

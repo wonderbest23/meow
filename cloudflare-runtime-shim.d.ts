@@ -4,6 +4,9 @@ interface Fetcher {
 
 interface CloudflareEnv {
   OPENAI_API_KEY: string;
+  APP_ENV?: string;
+  PLATFORM_APP_ORIGIN?: string;
+  PROPOSAL_AI_ENABLED?: string;
 }
 
 type Service<T = unknown> = Fetcher & T;

@@ -49,10 +49,12 @@ export default function DeckExportFixture() {
       <button onClick={() => reset(true)}>정상 접수</button>
       <button onClick={() => reset(true, true)}>응답 유실</button>
       <button onClick={() => reset(false)}>제공 준비 중</button>
+      <button onClick={() => { reset(false); server.current.job = { token: "727ee46b-fixture", runId: "fixture", fingerprint: "fixture", status: "failed", phase: "failed", updatedAt: new Date().toISOString(), attempt: 1, code: "review_response_invalid", ready: false, resumable: true }; }}>중단된 초안과 제공 준비 중</button>
+      <button onClick={() => { server.current.generationEnabled = true; }}>서버 제공 재개</button>
       <button onClick={() => setRevision(value => value + 1)}>문서 다시 열기</button>
       <button onClick={() => { if (server.current.job) server.current.job = { ...server.current.job, status: "complete", phase: "ready", ready: true }; setRevision(value => value + 1); }}>서버 완료</button>
     </div>
-    <p>상태 조회 {counts.reads} · 생성 요청 {counts.posts} · 다운로드 {counts.downloads}</p>
+    <p data-testid="request-counts">상태 조회 {counts.reads} · 생성 요청 {counts.posts} · 다운로드 {counts.downloads}</p>
     {mounted && <ExportControl key={revision} />}
   </main>;
 }

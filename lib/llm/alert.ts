@@ -20,7 +20,7 @@ export function llmFailureAlert(stats: LlmUsageStats | null): string | null {
 
   // 지금 무언가 막혀 있다 — 한 시간 안에 세 번이면 우연이 아니다
   if (stats.failed1h >= 3) {
-    return `최근 1시간 실패 ${stats.failed1h}건${when ? ` · 마지막 ${when}` : ""} — Anthropic 크레딧과 키를 확인해 주세요.`;
+    return `최근 1시간 실패 ${stats.failed1h}건${when ? ` · 마지막 ${when}` : ""} · AI 제공업체의 크레딧과 키를 확인해 주세요.`;
   }
 
   /*

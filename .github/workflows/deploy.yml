@@ -28,6 +28,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Verify critical workflows without external services
+        run: node --import tsx scripts/reliability-tests.mts
+
       - name: Build and deploy to Cloudflare
         run: npm run deploy
         env:

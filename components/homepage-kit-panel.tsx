@@ -2,11 +2,13 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { ChevronDown, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Pencil, Rocket, Save, ShieldCheck } from "lucide-react";
+import { ChevronDown, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Pencil, RefreshCw, Rocket, Save, ShieldCheck } from "lucide-react";
 import type { LandingDraft, LandingLeadRecord, LandingSiteRecord } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
+import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
+import { applyBusinessContent } from "../lib/landing/page-data";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -84,25 +86,39 @@ export function HomepageKitPanel({
   const published = site?.status === "published";
   const page = BRAINWAVE_PAGES.find((p) => p.id === draft.pageData?.brainwave?.page);
   const [picking, setPicking] = useState(false);
+  const [contentNotice, setContentNotice] = useState("");
   const bw = draft.pageData?.brainwave;
+  const contentSource = () => ({ businessName: draft.businessName, offer: draft.offerTitle, description: draft.offerDescription, customer: draft.pageData?.businessContent?.customer ?? "", price: draft.priceLabel, cta: draft.ctaLabel, image: draft.heroImageUrl });
+  const applyBusiness = () => {
+    if (!draft.pageData || busy || !draft.businessName.trim()) return;
+    onChange({ ...draft, pageData: applyBusinessContent(draft.pageData, contentSource()) });
+    setContentNotice("사업 정보를 반영했어요. 직접 고친 글과 사진은 유지됩니다. 저장하면 적용됩니다.");
+  };
   const pickTemplate = (id: string) => {
-    if (!draft.pageData || !bw) return;
+    if (!draft.pageData || !bw || busy) return;
     if (id === bw.page) { setPicking(false); return; }
-    const dirty = Object.keys(bw.texts ?? {}).length + Object.keys(bw.images ?? {}).length > 0;
-    if (dirty && !window.confirm("템플릿을 바꾸면 지금까지 고친 글·사진은 새 페이지에 맞지 않아 초기화됩니다. 바꿀까요?")) return;
-    onChange({ ...draft, pageData: { ...draft.pageData, brainwave: { page: id, texts: {}, images: {}, links: {}, sizes: {}, hidden: [], order: [] }, content: [] } });
+    const businessContent = { ...contentSource(), businessName: draft.businessName.trim() || "내 사업" };
+    onChange({ ...draft, pageData: { ...draft.pageData, businessContent, brainwave: createBusinessTemplate(businessContent, id), content: [] } });
     setPicking(false);
   };
 
   /* 접수된 문의 — 같은 프로젝트의 landing API 가 돌려준다 */
   const [leads, setLeads] = useState<LandingLeadRecord[] | null>(null);
+  const [leadsError, setLeadsError] = useState("");
+  const [leadsRefresh, setLeadsRefresh] = useState(0);
   useEffect(() => {
     if (!projectId) return;
-    fetch(`/api/projects/${projectId}/landing`, { cache: "no-store" })
-      .then((r) => r.json())
-      .then((j: { leads?: LandingLeadRecord[] }) => setLeads(j.leads ?? []))
-      .catch(() => setLeads([]));
-  }, [projectId]);
+    const controller = new AbortController();
+    setLeads(null); setLeadsError("");
+    fetch(`/api/projects/${projectId}/landing`, { cache: "no-store", signal: controller.signal })
+      .then(async response => {
+        const data = await response.json();
+        if (!response.ok || !Array.isArray(data.leads)) throw new Error("LEADS_LOAD_FAILED");
+        if (!controller.signal.aborted) setLeads(data.leads);
+      })
+      .catch(() => { if (!controller.signal.aborted) setLeadsError("문의를 불러오지 못했습니다. 새로고침해 다시 확인해주세요."); });
+    return () => controller.abort();
+  }, [projectId, leadsRefresh]);
 
   /* 공개 전에 비어 있으면 안 되는 것 — 법정 표기 */
   const missing = [
@@ -137,6 +153,7 @@ export function HomepageKitPanel({
         </div>
       </header>
       {message ? <p className="hk-msg">{message}</p> : null}
+      {contentNotice ? <p className="hk-msg" role="status">{contentNotice}</p> : null}
 
       {/*
         미리보기 — 브라우저 목업(신호등 점 + 주소창) 안에 담는다.
@@ -149,16 +166,19 @@ export function HomepageKitPanel({
           <span aria-hidden="true" className="hk-dots"><i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" /></span>
           <span className="hk-mock-url">{publicPath ? `oneulstart.com${publicPath}` : "내 사업 홈페이지"}</span>
           <span className="hk-mock-actions">
-            <button type="button" onClick={() => setPicking(true)} title={page ? `지금 템플릿: ${page.ko}` : "디자인 고르기"}>
+            <button type="button" onClick={applyBusiness} disabled={busy || !draft.businessName.trim() || !bw || !BRAINWAVE_PAGES.some(page => page.id === bw.page && page.group === "landing")} title="사업 정보 적용">
+              <RefreshCw size={14} /> 사업 정보 적용
+            </button>
+            <button type="button" disabled={busy} onClick={() => setPicking(true)} title={page ? `지금 템플릿: ${page.ko}` : "디자인 고르기"}>
               <LayoutTemplate size={14} /> 템플릿
             </button>
-            <button type="button" className="hk-mock-edit" onClick={onOpenEditor}>
+            <button type="button" className="hk-mock-edit" disabled={busy} onClick={onOpenEditor}>
               <Pencil size={14} /> 에디터 열기
             </button>
           </span>
         </div>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
-        <div role="button" tabIndex={0} className="hk-preview-body" onClick={onOpenEditor} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
+        <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} className="hk-preview-body" onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
           <LandingBlocksRenderer data={draft.pageData!} />
           <span className="hk-preview-cover"><Pencil size={18} /> 누르면 에디터가 열립니다 — 글은 그 자리에서, 사진은 눌러서 바꿉니다</span>
         </div>
@@ -218,10 +238,11 @@ export function HomepageKitPanel({
         id="hk-leads"
         icon={<Inbox size={18} />}
         title="접수된 문의"
-        badge={leads && leads.length > 0 ? <em className="hk-badge hk-badge-info">{leads.length}건</em> : <em className="hk-badge">0건</em>}
+        badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건</em>}
         hint={draft.leadCaptureEnabled ? "홈페이지 문의 양식으로 들어온 것입니다. 보유기간이 지나면 지워 주세요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
       >
-        {leads === null ? <p className="hk-empty">불러오는 중…</p> : leads.length === 0 ? <p className="hk-empty">아직 접수된 문의가 없습니다. 공개 주소를 알리면 여기 쌓입니다.</p> : (
+        <div className="hk-fold-save"><button type="button" aria-label="문의 새로고침" title="문의 새로고침" disabled={leads === null && !leadsError} onClick={() => setLeadsRefresh(value => value + 1)}><RefreshCw size={14} /> 새로고침</button></div>
+        {leadsError ? <p className="hk-empty" role="alert">{leadsError}</p> : leads === null ? <p className="hk-empty">불러오는 중…</p> : leads.length === 0 ? <p className="hk-empty">아직 접수된 문의가 없습니다. 공개 주소를 알리면 여기 쌓입니다.</p> : (
           <ul className="hk-leads">
             {leads.map((lead) => (
               <li key={lead.id}>

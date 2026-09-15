@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { currentNextAction, readCoach, type CoachField } from "../../../lib/plan-builder/coach";
 import { expertChanges, EXPERT_HISTORY_KEY, type ExpertHistory, type ExpertPatch } from "../../../lib/plan-builder/coach-expert";
@@ -8,7 +8,7 @@ import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation
 import { coachAmount } from "../../../lib/plan-builder/coach-feasibility";
 import { calculateFinancials } from "../../../lib/plan-builder/financials";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
-import { hydrateFromServer, type Plan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, planOwnerEpoch, type Plan } from "../../../lib/plan-builder/plan-store";
 import styles from "./LaunchWorkspace.module.css";
 
 const groups: Array<{ title: string; keys: CoachField["key"][] }> = [
@@ -32,12 +32,13 @@ export default function ExpertEditor({ plan, onSaved, onDirtyChange }: { plan: P
   const [message, setMessage] = useState("");
   const [conflict, setConflict] = useState(false);
   const [nextAction, setNextAction] = useState<ExpertPatch["nextAction"]>();
+  const ownerEpoch = useRef(planOwnerEpoch());
   const fields = groups.flatMap(g => g.keys).map(key => ({ key, value: values[key]?.trim() || null }));
   const changes = expertChanges(base, { title: title.trim() || base.business.name, fields, nextAction });
   useEffect(() => { onDirtyChange(changes.length > 0); return () => onDirtyChange(false); }, [changes.length, onDirtyChange]);
   useEffect(() => {
     if (!changes.length) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    const warn = (event: BeforeUnloadEvent) => { if (ownerEpoch.current === planOwnerEpoch()) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", warn);
     return () => window.removeEventListener("beforeunload", warn);
   }, [changes.length]);
@@ -45,11 +46,12 @@ export default function ExpertEditor({ plan, onSaved, onDirtyChange }: { plan: P
   const history = (plan.answers[EXPERT_HISTORY_KEY]?.entries ?? []) as ExpertHistory[];
   const money = (n: number | undefined) => n === undefined ? "미정" : `${n.toLocaleString("ko-KR")}원`;
   async function save() {
-    if (busy || !changes.length) return;
+    if (ownerEpoch.current !== planOwnerEpoch() || busy || !changes.length) return;
     setBusy(true); setMessage("");
     try {
       const response = await fetch("/api/plan/expert", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: plan.id, revision: base.revision, requestId: crypto.randomUUID(), title: title.trim() || base.business.name, fields, nextAction }) });
       const payload = await response.json();
+      if (ownerEpoch.current !== planOwnerEpoch()) return;
       if (!response.ok) { setConflict(response.status === 409); throw new Error(payload.message || "저장하지 못했어요."); }
       const next = payload.plan as Plan;
       const updated = readCoach(next.answers)!;

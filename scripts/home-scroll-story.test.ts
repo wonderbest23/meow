@@ -9,7 +9,7 @@ async function main() {
   const browser = await puppeteer.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
   await mkdir("artifacts/home-scroll-story", { recursive: true });
   try {
-    for (const [width, height] of [[320, 740], [390, 844], [768, 900], [1440, 670], [1440, 900]]) {
+    for (const [width, height] of [[320, 740], [390, 600], [454, 692], [390, 844], [768, 900], [1440, 500], [1440, 670], [1440, 900]]) {
       const page = await browser.newPage();
       await page.setViewport({ width, height });
       await page.setRequestInterception(true);
@@ -25,6 +25,10 @@ async function main() {
       await page.$eval('#how', element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
       await page.waitForSelector(`[data-scroll-story][data-motion="${pinned ? "on" : "off"}"]`);
       await page.waitForSelector('[data-scroll-story][data-renderer="webgl"][data-rendered="true"]');
+      await pause(300);
+      const initialProgress = await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress);
+      await pause(1000);
+      assert.equal(await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress), initialProgress, 'Entering the story must not start autoplay');
       if (pinned) {
         const states: string[] = [];
         for (const progress of [.02, .18, .42, .46, .8, .97, .42]) {
@@ -32,7 +36,7 @@ async function main() {
             const pin = element.querySelector<HTMLElement>('[data-pin]')!;
             scrollTo({ top: element.getBoundingClientRect().top + scrollY - 64 + ((element as HTMLElement).offsetHeight - pin.offsetHeight) * value, behavior: 'instant' });
           }, progress);
-          const expected = width > 700 ? phoneScrollProgress(progress) : progress;
+          const expected = phoneScrollProgress(progress);
           await page.waitForFunction(value => Math.abs(Number(document.querySelector<HTMLElement>('[data-scroll-story]')?.dataset.progress) - value) < .002, {}, expected);
           const state = await page.$eval('[data-scroll-story]', element => ({
             progress: Number((element as HTMLElement).dataset.progress),
@@ -41,6 +45,8 @@ async function main() {
           }));
           assert.ok(Math.abs(state.progress - expected) < .015, 'Scroll follows the reading-time choreography in both directions');
           assert.ok(Math.abs(state.pin - 64) < 2);
+          await pause(500);
+          assert.equal(await page.$eval('[data-scroll-story]', el => Number((el as HTMLElement).dataset.progress)), state.progress, 'The scene stops when scrolling stops');
           states.push(state.transform);
           await page.screenshot({ path: `artifacts/home-scroll-story/${width}x${height}-progress-${progress}.png` });
         }
@@ -57,7 +63,19 @@ async function main() {
       await page.keyboard.press('End');
       assert.equal(await page.$eval('#how [data-scroll-story]', el => (el as HTMLElement).dataset.progress), '1.00000');
       await page.keyboard.press('Home');
+      await pause(250);
       assert.equal(await page.$eval('#how [data-scroll-story]', el => (el as HTMLElement).dataset.progress), '0.00000');
+      await page.keyboard.press('Tab');
+      await pause(1000);
+      const afterBlur = await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress);
+      await pause(1000);
+      assert.equal(await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress), afterBlur, 'Leaving the scrubber cannot resume autoplay');
+      await page.setViewport({ width: width > 700 ? 454 : 1440, height });
+      await pause(1000);
+      const afterResize = await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress);
+      await pause(1000);
+      assert.equal(await page.$eval('[data-scroll-story]', el => (el as HTMLElement).dataset.progress), afterResize, 'Crossing a responsive breakpoint cannot start autoplay');
+      await page.setViewport({ width, height });
       for (const selector of ['#deliverables', '[data-founder-wall]', '#difference', '[aria-labelledby="home-website-title"]', '#price']) {
         await page.$eval(selector, element => element.scrollIntoView({ behavior: 'instant', block: 'start' }));
         await pause(1000);
@@ -85,7 +103,7 @@ async function main() {
       console.log(`continuous home story ${width}x${height}: passed`);
     }
   } finally {
-    const cleanup = setTimeout(() => browser.process()?.kill("SIGTERM"), 5000);
+    const cleanup = setTimeout(() => browser.process()?.kill("SIGKILL"), 5000);
     try { await browser.close(); } finally { clearTimeout(cleanup); }
   }
 }

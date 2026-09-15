@@ -10,6 +10,18 @@ export function isSamplePlan(planId: string | null | undefined): boolean {
 
 const KEY = "oneul-plan-demo-v1";
 const OWNER_KEY = "oneul-plan-cache-owner";
+let ownerEpoch = 0;
+const ownerListeners = new Set<() => void>();
+
+export function planOwnerEpoch() { return ownerEpoch; }
+export function subscribePlanOwnerChange(listener: () => void) {
+  ownerListeners.add(listener);
+  return () => { ownerListeners.delete(listener); };
+}
+function invalidateMountedOwner() {
+  ownerEpoch++;
+  for (const listener of ownerListeners) listener();
+}
 
 function cachedOwnerKey(): string | null {
   try { return localStorage.getItem(OWNER_KEY); } catch { return null; }
@@ -216,6 +228,7 @@ function writeAuthFlag(value: boolean) {
 
 /** 로그아웃 시 로컬 캐시 제거 — 다음 사용자에게 이전 계정의 플랜이 보이면 안 된다 */
 export function clearLocalState() {
+  invalidateMountedOwner();
   cancelPendingSync();
   hydrationRequest++;
   ownerVerified = false;
@@ -700,6 +713,7 @@ export async function pushToServer(): Promise<boolean> {
     if (res.status === 409) {
       const body = await res.json().catch(() => ({}));
       if (body.error?.code === "PLAN_OWNER_CHANGED") {
+        invalidateMountedOwner();
         cancelPendingSync();
         ownerVerified = false;
         await hydrateFromServer(false);
@@ -756,6 +770,7 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
   window.addEventListener("pagehide", flush);
   window.addEventListener("storage", (event: StorageEvent) => {
     if (event.key !== null && (event.key !== OWNER_KEY || event.oldValue === event.newValue)) return;
+    invalidateMountedOwner();
     cancelPendingSync();
     ownerVerified = false;
     verifiedOwnerKey = null;

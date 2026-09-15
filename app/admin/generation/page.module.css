@@ -1,0 +1,24 @@
+.page { min-height: 100dvh; color: var(--app-text); }
+.content { padding: 28px; }
+.toolbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.toolbar label { display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; }
+.toolbar select { padding: 10px 32px 10px 12px; border: 1px solid var(--app-line); border-radius: 6px; min-height: 42px; }
+.toolbar small { margin-left: auto; color: var(--app-muted); font-size: 12px; }
+.content button { width: 42px; height: 42px; display: inline-flex; justify-content: center; align-items: center; border: 1px solid var(--app-line); background: var(--app-surface); color: var(--app-text); }
+.content button:focus-visible, .content select:focus-visible { outline: 2px solid #3182f6; outline-offset: 3px; }
+.section { padding: 32px 0; border-bottom: 1px solid var(--app-line); }
+.section header { margin-bottom: 20px; }
+.section h1, .section h2 { font-size: 20px; line-height: 1.4; margin: 0 0 8px; letter-spacing: 0; }
+.section header p { color: var(--app-muted); font-size: 13px; line-height: 1.7; margin: 0; }
+.table { overflow-x: auto; max-width: 100%; border-top: 1px solid var(--app-line); }
+.table table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: left; }
+.table th { padding: 14px 12px; font-weight: 600; color: var(--app-muted); background: var(--app-panel-fill); white-space: nowrap; }
+.table td { padding: 16px 12px; border-bottom: 1px solid var(--app-line); vertical-align: top; line-height: 1.6; min-width: 92px; }
+.table td:nth-child(5) { min-width: 150px; }
+.table small { display: block; max-width: 220px; font-size: 11px; color: var(--app-muted); overflow-wrap: anywhere; margin-top: 4px; }
+.table [data-state=failed], .table .failure { color: var(--app-danger); }
+.table [data-state=complete], .table [data-state=ready] { color: #268563; }
+.pagination { display: flex; justify-content: flex-end; align-items: center; gap: 18px; margin-top: 16px; font-size: 13px; }
+.error { padding: 14px; background: var(--app-danger-bg); color: var(--app-danger); line-height: 1.7; font-size: 14px; }
+.empty { padding: 28px 0; font-size: 14px; color: var(--app-muted); }
+@media (max-width: 700px) { .content { padding: 20px 16px; min-width: 0; } .toolbar small { margin-left: 0; width: 100%; } .section { padding: 24px 0; } }

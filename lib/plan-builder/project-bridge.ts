@@ -1,5 +1,8 @@
 import { createProject, findProjectIdByPlan, getProject } from "../project-repository";
 import type { ProjectRecord } from "../service-domain";
+import { getServerSupabase } from "../persistence";
+
+const pendingDemoProjects = new Map<string, Promise<string>>();
 
 /*
  * 플랜 ↔ 프로젝트 다리.
@@ -15,6 +18,22 @@ export async function ensureProjectForPlan(
   plan: { id: string; title: string },
   identity: { hash: string; userId: string | null },
 ): Promise<string> {
+  const supabase = getServerSupabase();
+  if (supabase) {
+    const { data, error } = await supabase.rpc("ensure_plan_project", { p_plan_id: plan.id, p_title: plan.title, p_owner_hash: identity.hash, p_owner_id: identity.userId });
+    if (error) throw error;
+    if (typeof data !== "string") throw new Error("PLAN_PROJECT_INVALID");
+    return data;
+  }
+  const key = `${identity.hash}:${plan.id}`;
+  const pending = pendingDemoProjects.get(key);
+  if (pending) return pending;
+  const task = ensureDemoProject(plan, identity);
+  pendingDemoProjects.set(key, task);
+  try { return await task; } finally { if (pendingDemoProjects.get(key) === task) pendingDemoProjects.delete(key); }
+}
+
+async function ensureDemoProject(plan: { id: string; title: string }, identity: { hash: string; userId: string | null }) {
   const existing = await findProjectIdByPlan(plan.id, identity.hash);
   if (existing) return existing;
   const project = await createProject(

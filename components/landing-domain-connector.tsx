@@ -10,7 +10,7 @@ import {
   RefreshCw,
   Trash2,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { LandingDomainConnection } from "../lib/landing/custom-domain";
 import type { LandingSiteRecord } from "../lib/landing/domain";
 
@@ -41,29 +41,40 @@ export function LandingDomainConnector({
   const [action, setAction] = useState<"idle" | "loading" | "connecting" | "removing">("idle");
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
+  const siteUpdatedRef = useRef(onSiteUpdated);
+  const loadRequestRef = useRef<AbortController | null>(null);
+
+  useEffect(() => { siteUpdatedRef.current = onSiteUpdated; }, [onSiteUpdated]);
 
   const load = useCallback(async (quiet = false) => {
-    if (!projectId || demo) return;
+    if (!projectId || demo || loadRequestRef.current) return;
+    const controller = new AbortController();
+    loadRequestRef.current = controller;
     if (!quiet) setAction("loading");
     try {
-      const response = await fetch(`/api/projects/${projectId}/landing/domain`, { cache: "no-store" });
+      const response = await fetch(`/api/projects/${projectId}/landing/domain`, { cache: "no-store", signal: controller.signal });
       const payload = await response.json() as DomainPayload;
+      if (controller.signal.aborted) return;
       if (!response.ok) throw new Error(payload.error?.message ?? "도메인 상태를 확인하지 못했습니다.");
       setConnection(payload.connection ?? null);
       setEntitlement(payload.entitlement ?? null);
       setHostname(payload.site.customDomain ?? "");
-      onSiteUpdated(payload.site);
+      siteUpdatedRef.current(payload.site);
       if (!quiet) setMessage(payload.connection?.ready ? "도메인 연결이 완료되었습니다." : "");
     } catch (error) {
-      if (!quiet) setMessage(error instanceof Error ? error.message : "도메인 상태를 확인하지 못했습니다.");
+      if (!quiet && !controller.signal.aborted) setMessage(error instanceof Error ? error.message : "도메인 상태를 확인하지 못했습니다.");
     } finally {
-      if (!quiet) setAction("idle");
+      if (loadRequestRef.current === controller) {
+        loadRequestRef.current = null;
+        if (!quiet) setAction("idle");
+      }
     }
-  }, [demo, onSiteUpdated, projectId]);
+  }, [demo, projectId]);
 
   useEffect(() => {
     setHostname(initialCustomDomain);
     if (projectId && !demo) void load();
+    return () => { loadRequestRef.current?.abort(); loadRequestRef.current = null; };
   }, [demo, initialCustomDomain, load, projectId]);
 
   useEffect(() => {

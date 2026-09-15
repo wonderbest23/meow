@@ -3,7 +3,8 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { readLaunch, launchSteps, launchStatus, LAUNCH_KEY, quoteTotals, type LaunchState } from "../../../lib/plan-builder/business-launch";
+import { readLaunch, launchSteps, launchStatus, LAUNCH_KEY, quoteTotals, useOperatingWorkflow, type LaunchState } from "../../../lib/plan-builder/business-launch";
+import { readCoach } from "../../../lib/plan-builder/coach";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import { loadState, pushToServer, saveAnswers, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
 import styles from "./LaunchWorkspace.module.css";
@@ -39,9 +40,9 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
     setMessage(synced ? "저장했어요." : "기기에 저장했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해주세요.");
     setBusy(false); return synced;
   }
-  async function saveStep(status: "pending" | "done" | "skipped", advance: boolean) {
+  async function saveStep(status: "pending" | "done" | "skipped", advance: boolean, preserveReview = false) {
     if (!current || busy) return false;
-    const next = { ...state, records: { ...state.records, [current.id]: { status, signature: current.signature, note: effectiveNote, material: effectiveMaterial, at: new Date().toISOString() } } };
+    const next = { ...state, records: { ...state.records, [current.id]: { status, signature: preserveReview && record ? record.signature : current.signature, note: effectiveNote, material: effectiveMaterial, at: new Date().toISOString() } } };
     if (await persist(next)) {
       setNote(null); setMaterial(null);
       if (advance) { setSelected(launchSteps(plan, next).find(s => ["pending", "review"].includes(launchStatus(next, s)))?.id ?? null); top(); }
@@ -52,6 +53,15 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   async function selectStep(id: string) {
     if ((note !== null || material !== null) && current && !await saveStep("pending", false)) return;
     setSelected(id); setNote(null); setMaterial(null); top();
+  }
+  async function switchToImprovement() {
+    if (busy) return;
+    const withDraft = current && (note !== null || material !== null)
+      ? { ...state, records: { ...state.records, [current.id]: { status: record?.status ?? "pending", signature: current.signature, note: effectiveNote, material: effectiveMaterial, at: new Date().toISOString() } } }
+      : state;
+    if (await persist(useOperatingWorkflow(withDraft))) {
+      setSelected("operations"); setNote(null); setMaterial(null); top();
+    }
   }
   const aiPrompt = current ? `${current.prompt}\n\n현재 단계 메모: ${effectiveNote.slice(0, 600) || "없음"}\n현재 자료: ${effectiveMaterial.slice(0, 600)}\n이전에 기록한 내용(사용자 제공, 외부 검증 아님):\n${steps.filter(s => s.id !== current.id && state.records[s.id]?.note).map(s => `${s.title}: ${state.records[s.id].note.slice(0, 100)}`).join("\n").slice(0, 700)}` : "";
 
@@ -65,6 +75,10 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
       </div>
       <div className={styles.stepActions}>{config > 0 && <button className={styles.secondary} onClick={() => { setConfig(config - 1); top(); }}>이전</button>}<button className={styles.primary} disabled={busy} onClick={async () => { if (config < 2 && state.purpose !== "ideas") { setConfig(config + 1); top(); } else if (await persist({ ...state, configured: true })) { setConfig(null); setSelected(null); top(); } }}>{config === 2 || state.purpose === "ideas" ? "내 과정 보기" : "다음"}</button></div>
     </div> : <>
+      {readCoach(plan.answers)?.stage === "operating" && state.purpose === "launch" && <div className={styles.notice}>
+        <p>이제 운영 중인 사업이에요. 시작할 때 남긴 기록을 유지하면서 운영 개선 과정으로 바꿀 수 있어요.</p>
+        <button className={styles.secondary} disabled={busy} onClick={() => void switchToImprovement()}>운영 개선으로 전환</button>
+      </div>}
       <div className={styles.progressHeading}><span>{done}개 완료 · {skipped}개 나중에</span><button className={styles.textLink} onClick={() => { setConfig(0); top(); }}>진행 방식 변경</button></div>
       <progress value={done} max={steps.length} aria-label="실행 준비 완료" />
       {current ? <>
@@ -78,7 +92,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
         {current.links && <div className={styles.resources}>{current.links.map(link => <a href={link.url} target="_blank" rel="noopener noreferrer" key={link.url}>{link.title}</a>)}<small>공식 안내 확인: 2026. 9. 9. · 기관 화면에서 최신 내용을 확인해주세요.</small></div>}
         {current.id === "tax" && <details><summary>근처 세무사 찾아보기</summary><label className={styles.field}>희망 지역<input aria-label="세무사 희망 지역" maxLength={100} value={state.region} placeholder="예: 서울 마포구" onChange={e => setState({ ...state, region: e.target.value })} /></label>{state.region.trim() && <a className={styles.textLink} target="_blank" rel="noopener noreferrer" href={`https://map.naver.com/p/search/${encodeURIComponent(`${state.region.trim()} 세무사`)}`}>지도에서 직접 찾아보기</a>}<p>외부 검색이며 제휴·추천·예약 서비스가 아니에요.</p></details>}
         {current.caution && <p className={styles.caution}>{current.caution}</p>}
-        <Link className={styles.textLink} href={businessChatHref(plan.id, aiPrompt)} onClick={async e => { e.preventDefault(); if (await saveStep(record?.status ?? "pending", false)) router.push(businessChatHref(plan.id, aiPrompt)); }}>이 내용으로 AI와 구체화하기</Link>
+        <Link className={styles.textLink} href={businessChatHref(plan.id, aiPrompt)} onClick={async e => { e.preventDefault(); if (await saveStep(record?.status ?? "pending", false, true)) router.push(businessChatHref(plan.id, aiPrompt)); }}>이 내용으로 AI와 구체화하기</Link>
         <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => void saveStep("skipped", true)}>나중에 할게요</button><button className={styles.primary} disabled={busy} onClick={() => void saveStep("done", true)}>{busy ? "저장 중…" : "준비했어요 · 다음"}</button></div>
         <button className={styles.textLink} disabled={busy} onClick={() => void saveStep("pending", false)}>진행 중으로 저장</button>
       </> : <div className={styles.finish}><h2 ref={heading} tabIndex={-1}>{state.purpose === "ideas" ? "아이디어를 정리했어요" : "선택한 준비 과정을 확인했어요"}</h2><p>{skipped ? `${skipped}개는 나중에 하기로 남겼어요. 아래 과정에서 언제든 이어갈 수 있어요.` : "필요한 단계는 다시 열어 수정할 수 있어요."}</p><p>이 기록은 준비 상태이며, 실제 계약·등록·연결 완료를 대신하지 않아요.</p><Link className={styles.primary} href={businessChatHref(plan.id, "현재 사업의 다음 개선 방향을 함께 정하고 싶어요.")}>대화로 다음 방향 정하기</Link></div>}

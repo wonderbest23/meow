@@ -59,6 +59,6 @@ export function HomeConversationEntry({ onStart }: { onStart: () => void }) {
     startTransition(onStart);
   };
   return <div className={styles.entry}><button className={styles.ring} type="button" onClick={enter} disabled={entering} aria-busy={entering} aria-label="대화로 사업 기획 시작하기">
-    <span className={styles.inner}><span className={styles.prompt} aria-hidden="true"><span className={styles.typed}>{typed}<i/></span></span><span className={styles.send}>{entering ? <LoaderCircle className={styles.spinner} aria-hidden="true" /> : "보내기"}</span></span>
+    <span className={styles.inner}><span className={styles.prompt} data-entry-prompt aria-hidden="true"><span className={styles.typed}>{typed}<i/></span></span><span className={styles.send} data-entry-send>{entering ? <LoaderCircle className={styles.spinner} aria-hidden="true" /> : "보내기"}</span></span>
   </button></div>;
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { CheckCircle2, AlertTriangle, Clock3, RefreshCw } from "lucide-react";
 import styles from "../PlanCheckout.module.css";
 
 /**
@@ -12,8 +13,30 @@ import styles from "../PlanCheckout.module.css";
  */
 export default function PlanPayResult() {
   const params = useSearchParams();
-  const ok = params.get("status") === "ok";
-  const reason = params.get("reason");
+  const [status, setStatus] = useState(params.get("status"));
+  const [reason, setReason] = useState(params.get("reason"));
+  const [checking, setChecking] = useState(false);
+  const [loginRequired, setLoginRequired] = useState(false);
+  const inFlight = useRef(false);
+  const ok = status === "ok";
+  const pending = status === "pending";
+  const orderId = params.get("orderId");
+  async function checkPayment() {
+    if (inFlight.current || !orderId) return;
+    inFlight.current = true;
+    setChecking(true);
+    try {
+      const response = await fetch("/api/payments/plan/reconcile", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId }),
+        signal: AbortSignal.timeout(25_000),
+      });
+      if (response.status === 401) { setLoginRequired(true); return; }
+      const data = await response.json();
+      if (!response.ok || !["ok", "pending", "fail"].includes(data.status)) throw new Error("CHECK_UNAVAILABLE");
+      setStatus(data.status); setReason(data.reason ?? null);
+    } catch { setReason("아직 결과를 확인하지 못했습니다. 다시 결제하지 말고 잠시 후 확인해주세요."); }
+    finally { inFlight.current = false; setChecking(false); }
+  }
   // 실패 시 같은 문서로 다시 시도할 수 있게 — 이게 빠지면 재시도 화면이 결제할 문서를 모른다
   const planId = params.get("planId");
   const planType = params.get("planType");
@@ -30,13 +53,17 @@ export default function PlanPayResult() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={`${styles.icon} ${ok ? styles.iconPop : ""}`} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
-        <h1 className={styles.title}>{ok ? "결제가 완료되었습니다" : "결제를 마치지 못했습니다"}</h1>
-        <p className={styles.desc}>
-          {ok ? doneDesc : (reason ?? "결제가 취소되었거나 승인되지 않았습니다.")}
+        <div className={`${styles.icon} ${ok ? styles.iconPop : ""}`} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : pending ? <Clock3 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
+        <h1 className={styles.title}>{ok ? "결제가 완료되었습니다" : pending ? "결제 결과를 확인하고 있어요" : "결제를 마치지 못했습니다"}</h1>
+        <p className={styles.desc} aria-live="polite">
+          {ok ? doneDesc : pending ? (reason ?? "승인 결과 확인이 늦어지고 있습니다. 다시 결제하지 말고 이 주문의 결과를 확인해주세요.") : (reason ?? "결제가 취소되었거나 승인되지 않았습니다.")}
         </p>
+        {pending && orderId && <p className={styles.desc} style={{ overflowWrap: "anywhere" }}>주문번호 {orderId}</p>}
         {ok ? (
           <Link href={doneHref} className={styles.primary}>{doneLabel}</Link>
+        ) : pending ? (
+          loginRequired ? <Link href={`/account?next=${encodeURIComponent(`/plan/pay/result?${params.toString()}`)}`} className={styles.primary}>로그인하고 결과 확인</Link>
+            : <button type="button" onClick={checkPayment} disabled={checking || !orderId} className={`${styles.primary} ${styles.statusAction}`}><RefreshCw size={18} aria-hidden="true" />{checking ? "확인 중" : "결제 결과 확인"}</button>
         ) : (
           <Link href={retryHref} className={styles.primary}>{planId ? "다시 시도하기" : "플랜 개요로 가기"}</Link>
         )}

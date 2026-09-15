@@ -5,17 +5,18 @@ import type { CoachField } from "../../../lib/plan-builder/coach";
 import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
 import styles from "../BusinessHub.module.css";
 
-export type WorkspaceView = "summary" | "documents" | "action" | "launch";
+export type WorkspaceView = "summary" | "documents" | "action" | "launch" | "operations";
 
 export function WorkspaceIdentity({ title, status }: { title: string; status: string }) {
   return <div className={styles.workspaceTitle}><span className={styles.status}>{status}</span><h1>{title}</h1></div>;
 }
 
-export function WorkspaceNavigation({ view, onChange, children }: { view: WorkspaceView; onChange: (view: WorkspaceView) => void; children: ReactNode }) {
+export function WorkspaceNavigation({ view, onChange, children, operating = false }: { view: WorkspaceView; onChange: (view: WorkspaceView) => void; children: ReactNode; operating?: boolean }) {
   return <nav className={styles.tabs} aria-label="사업 관리 메뉴">
     <button aria-pressed={view === "summary"} onClick={() => onChange("summary")}>사업 요약</button>
     <button data-workspace-documents aria-pressed={view === "documents"} onClick={() => onChange("documents")}>내 자료</button>
-    <button aria-pressed={view === "launch" || view === "action"} onClick={() => onChange("launch")}>사업 시작하기</button>
+    <button aria-pressed={view === "launch" || view === "action"} onClick={() => onChange("launch")}>{operating ? "운영 개선하기" : "사업 시작하기"}</button>
+    <button aria-pressed={view === "operations"} onClick={() => onChange("operations")}>실적과 개선 기록</button>
     {children}
   </nav>;
 }

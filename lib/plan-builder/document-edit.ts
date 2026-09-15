@@ -1,7 +1,7 @@
-import { readCoach } from "./coach";
+import { coachDocumentRevision, readCoach } from "./coach";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 
-export type DocumentEditInput = { planId: string; key: string; baseGeneratedAt: string; action: "save" | "restore"; markdown?: string; html?: string };
+export type DocumentEditInput = { planId: string; key: string; baseGeneratedAt: string; action: "save" | "restore" | "review"; sourceRevision?: number; markdown?: string; html?: string };
 export function editedSection(current: ServerPlan["sections"][string], input: DocumentEditInput) {
   if (current.generatedAt !== input.baseGeneratedAt) throw new Error("DOCUMENT_CONFLICT");
   const next = input.action === "restore" ? current.previous : { markdown: input.markdown ?? "", html: input.html ?? "" };
@@ -14,7 +14,12 @@ export async function saveDocumentEdit(ownerHash: string, input: DocumentEditInp
     const plan = state.plans.find(p => p.id === input.planId);
     const current = plan?.sections[input.key];
     if (!plan || !current) throw new Error("DOCUMENT_NOT_FOUND");
-    const section = editedSection(current, input);
+    const coach = readCoach(plan.answers);
+    if (input.action === "review" && (!coach || coachDocumentRevision(coach) !== input.sourceRevision)) throw new Error("BUSINESS_CONTEXT_CHANGED");
+    const section = input.action === "review"
+      ? { ...editedSection(current, { ...input, action: "save", markdown: current.markdown, html: current.html }), previous: current.previous, coachRevision: input.sourceRevision! }
+      : editedSection(current, input);
+    if (coach && input.action === "restore") section.coachRevision = undefined;
     const updatedAt = plan.updatedAt;
     plan.sections[input.key] = section; plan.updatedAt = section.generatedAt;
     try {

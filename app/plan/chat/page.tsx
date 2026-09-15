@@ -4,7 +4,7 @@ import PlanLoading from "../PlanLoading";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUp, ChevronRight, Paperclip, FileCheck2, Check, Lightbulb, FileText, ChartNoAxesCombined } from "lucide-react";
+import { ArrowUp, ChevronRight, Paperclip, FileCheck2, Check, Lightbulb, FileText, Store } from "lucide-react";
 import { useChatSplit } from "./useChatSplit";
 import { readCoach, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
 import type { BriefPatch } from "./BriefEditor";
@@ -24,7 +24,7 @@ import chatUi from "../../../components/coach-chat-ui.module.css";
 type Snapshot = { planId: string; title: string; planType: string; updatedAt?: string; coach: CoachState; completed: string[]; total: number; hasDocuments?: boolean; manualReview?: string[]; job?: CoachJob | null; generation: { keys?: string[]; revision?: number; runId?: string } | null };
 type Payload = { plan?: Snapshot | null; message?: string; login?: boolean; authenticated?: boolean; paid?: boolean; runStatus?: string | null };
 const ENTRY_OPTIONS = ["아이디어가 없어요", "생각한 사업이 있어요", "사업을 운영 중이에요"];
-const ENTRY_ICONS = [Lightbulb, FileText, ChartNoAxesCombined];
+const ENTRY_ICONS = [Lightbulb, FileText, Store];
 const PHASES = { queued: "요청을 접수했어요", understanding: "말씀하신 내용을 살펴보고 있어요", designing: "상품과 운영 방법을 정리하고 있어요", saving: "사업안을 저장하고 있어요" };
 const activeJob = (job?: CoachJob | null) => !!job && ["queued", "running"].includes(job.status);
 
@@ -261,7 +261,7 @@ function BusinessCoach() {
         <div ref={conversationRef} className={styles.conversation} onScroll={e => { const el = e.currentTarget; follow.current = el.scrollHeight - el.scrollTop - el.clientHeight < 100; if (follow.current) setUnseen(false); }}>
           <div className={styles.thread}>
             <article className={`${styles.assistant} ${!started ? styles.firstMessage : ""}`} aria-label="오늘창업의 첫 메시지">{!started ? <CoachWelcome /> : <><CoachSpeaker /><p>어떤 사업을 생각하고 계세요?</p><p className={styles.greetingNote}>막연한 생각부터 편하게 이야기해 주세요.</p></>}</article>
-            {!started && <div className={styles.entryOptions} aria-label="대화 시작 선택지">{ENTRY_OPTIONS.map((option, index) => { const Icon = ENTRY_ICONS[index]; return <button key={option} style={{ animationDelay: `${index * 80 + 150}ms` }} disabled={!loaded || blocked} onClick={() => { pendingId.current = null; void submit(option); }}><i className={styles.choiceIcon} aria-hidden="true"><Icon size={25} /></i><span>{option}</span><ChevronRight size={18} aria-hidden="true" /></button>; })}</div>}
+            {!started && <div className={styles.entryOptions} aria-label="대화 시작 선택지">{ENTRY_OPTIONS.map((option, index) => { const Icon = ENTRY_ICONS[index]; return <button type="button" key={option} style={{ animationDelay: `${index * 80 + 150}ms` }} disabled={!loaded || blocked} onClick={() => { pendingId.current = null; void submit(option); }}><i className={styles.choiceIcon} aria-hidden="true"><Icon size={28} strokeWidth={1.8} /></i><span>{option}</span><ChevronRight size={17} aria-hidden="true" /></button>; })}</div>}
             {plan?.coach.messages.map((message, index) => <CoachMessage key={message.id} role={message.role} className={message.role === "user" ? styles.user : styles.assistant}>
               {message.summary ? <><p>{message.summary}</p>{index < plan.coach.messages.length - 1 && <details className={styles.oldMessage}><summary>당시 사업안 보기</summary><p>{message.text}</p></details>}</> : message.role === "assistant" && message.text.length > 500 && index < plan.coach.messages.length - 1 ? <details className={styles.oldMessage}><summary>이전 사업 제안 보기</summary><p>{message.text}</p></details> : <p>{message.text}</p>}
             </CoachMessage>)}

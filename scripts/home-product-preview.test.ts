@@ -24,7 +24,9 @@ async function main() {
       const ring = 'button[aria-label="대화로 사업 기획 시작하기"]';
       await page.waitForSelector(section);
       const homeText = await page.$eval('main', el => el.textContent ?? '');
-      assert.match(homeText, /챗GPT로 사업계획서/);
+      assert.match(homeText, /사업을 기획하는 순서로/);
+      assert.equal(await page.$$eval('#difference ol[aria-label="사업 기획 흐름"] li', steps => steps.length), 4);
+      assert.match(homeText, /함께 정리한 시작안/);
       for (const obsolete of ['실제 후기가 아닙니다', '숫자로 먼저 확인하세요', '지원·대출 심사용', '완성 샘플 3부', '오늘 하루면 충분합니다']) assert.equal(homeText.includes(obsolete), false, obsolete);
       assert.equal(await page.$('.home-reviews'), null);
       assert.equal(await page.$$eval('nav[aria-label="메인 안내"] a', links => links.every(link => !!document.querySelector(link.getAttribute('href')!))), true);
@@ -37,10 +39,10 @@ async function main() {
       await page.screenshot({ path: `artifacts/home-product-preview/${width}-usage.png` });
       await page.$eval(ring, el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
       assert.equal(await page.$(ring + ' svg'), null, "링에 아이콘이 없어야 함");
-      assert.equal(await page.$eval(ring + ' [class*="__send"]', el => el.textContent), '보내기');
+      assert.equal(await page.$eval(ring + ' [data-entry-send]', el => el.textContent), '보내기');
       assert.equal(await page.$eval(ring, el => {
-        const prompt = el.querySelector('[class*="__prompt"]')!;
-        const send = el.querySelector('[class*="__send"]')!;
+        const prompt = el.querySelector('[data-entry-prompt]')!;
+        const send = el.querySelector('[data-entry-send]')!;
         return prompt.getBoundingClientRect().right <= send.getBoundingClientRect().left;
       }), true, '타이핑 문구와 보내기 영역이 겹치지 않아야 함');
       assert.equal(await page.$('[aria-label="미리보기 장면 선택"]'), null);
@@ -52,9 +54,9 @@ async function main() {
       await page.mouse.wheel({ deltaY: 350 });
       await page.waitForFunction(value => getComputedStyle(document.querySelector('[data-cinematic-hero] img')!).transform !== value, {}, first);
       await page.$eval(ring, el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
-      await page.click(ring + ' [class*="__send"]');
-      await page.waitForSelector('[aria-label="사업 기획 대화로 이동 중"]');
+      await page.click(ring + ' [data-entry-send]');
       await page.waitForFunction(() => location.pathname === "/plan/chat");
+      assert.equal(await page.evaluate(() => new URL(location.href).searchParams.get('new')), '1');
       await page.waitForFunction(() => document.body.style.overflow !== 'hidden');
       await page.emulateMediaFeatures([{ name: "prefers-reduced-motion", value: "reduce" }]);
       await page.goto("http://localhost:8083", { waitUntil: "networkidle0" });
@@ -66,6 +68,9 @@ async function main() {
       await page.close();
       console.log(`cinematic home entry ${width}: passed`);
     }
-  } finally { await browser.close(); }
+  } finally {
+    const cleanup = setTimeout(() => browser.process()?.kill("SIGKILL"), 5000);
+    try { await browser.close(); } finally { clearTimeout(cleanup); }
+  }
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -76,9 +76,10 @@ import type { Opportunity } from "../data/opportunities";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { BusinessSetupPanel } from "../components/business-setup-panel";
 import { SiteHeader, SiteLogo } from "../components/site-header";
-import { HomeCinematicHero } from "../components/home-cinematic-hero";
+import { HomeOpening } from "../components/home-opening";
 import { HomeServiceOverview } from "../components/home-service-overview";
 import homeTypography from "../components/home-typography.module.css";
+import homeCinematic from "../components/home-cinematic-hero.module.css";
 import { archetypeLabels, legalFormLabels, needsPhysicalLocationAnalysis, workplaceLabels } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -530,11 +531,11 @@ function Home({
 
 
   return (
-    <main className={`new-home simple-home product-home cinematic-home ${homeTypography.theme}`}>
+    <main className={`new-home simple-home product-home cinematic-home ${homeTypography.theme} ${homeCinematic.page}`}>
       <div className="home-header-shell">
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
       </div>
-      <HomeCinematicHero
+      <HomeOpening
         title={sc("chatHome.title", "오늘창업")}
         subtitle={scBr("chatHome.subtitle", "아이디어만 있어도 이미 운영 중이어도 괜찮아요\n대화로 정리하고 내 사업에 맞는 계획으로 만드세요")}
         onStart={openConsult}
@@ -2649,13 +2650,13 @@ function FinalDelivery({
         const response = await fetch(`/api/projects/${serverProject.id}/landing`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(landingDraft),
+          body: JSON.stringify({ draft: landingDraft, expectedUpdatedAt: landingSite?.updatedAt ?? null }),
         });
         const payload = await response.json();
         if (!response.ok) throw new Error(payload.error?.message ?? "판매 페이지를 저장하지 못했습니다.");
         let nextSite = payload.site as LandingSiteRecord;
         if (publish) {
-          const publishResponse = await fetch(`/api/projects/${serverProject.id}/landing/publish`, { method: "POST" });
+          const publishResponse = await fetch(`/api/projects/${serverProject.id}/landing/publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt: nextSite.updatedAt }) });
           const publishPayload = await publishResponse.json();
           if (!publishResponse.ok) throw new Error(publishPayload.error?.message ?? "홈페이지를 공개하지 못했습니다.");
           nextSite = publishPayload.site;
@@ -2694,7 +2695,7 @@ function FinalDelivery({
     const response = await fetch(`/api/projects/${serverProject.id}/landing`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(next),
+      body: JSON.stringify({ draft: next, expectedUpdatedAt: landingSite?.updatedAt ?? null }),
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error?.message ?? "로고를 홈페이지에 저장하지 못했습니다.");
@@ -3236,7 +3237,7 @@ function FinalDelivery({
                   action={landingAction}
                   message={landingMessage}
                   published={demo || landingSite?.status === "published"}
-                  publicPath={demo ? `/launch/${landingDraft.slug}` : landingSite ? `/launch/${landingSite.slug}` : ""}
+                  publicPath={demo ? `/launch/${landingDraft.slug}` : landingSite ? `/launch/${landingSite.publishedSlug ?? landingSite.slug}` : ""}
                   projectId={serverProject?.id ?? null}
                   customDomain={landingSite?.customDomain ?? ""}
                   demo={demo}

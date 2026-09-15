@@ -1,0 +1,14 @@
+import assert from "node:assert/strict";
+import { adminJobSchema, jobDuration, jobNextStep, type AdminJob } from "../lib/llm/admin-jobs";
+const job: AdminJob = { id: "test", planId: "synthetic", kind: "deck", status: "failed", phase: "failed", errorCode: null, checkpoint: "source", updatedAt: "2026-09-13T00:00:00Z", startedAt: null, finishedAt: null, model: null, provider: null, inputTokens: null, outputTokens: null };
+assert.equal(jobDuration(job), null);
+assert.match(jobNextStep(job), /원본 계획서/);
+assert.match(jobNextStep({ ...job, checkpoint: "draft_slides" }), /초안 검토/);
+assert.match(jobNextStep({ ...job, checkpoint: "reviewed_slides" }), /파일 제작/);
+assert.match(jobNextStep({ ...job, checkpoint: "reviewed_slides", errorCode: "document_changed" }), /최신 계획서/);
+assert.match(jobNextStep({ ...job, kind: "operating", status: "ready" }), /행동 선택/);
+assert.match(jobNextStep({ ...job, kind: "operating", status: "running" }, Date.parse(job.updatedAt!) + 91000), /응답 중단/);
+assert.equal(jobDuration({ ...job, startedAt: job.updatedAt, finishedAt: "2026-09-13T00:00:02Z" }), 2000);
+assert.equal(jobDuration({ ...job, startedAt: "bad", finishedAt: "bad" }), null);
+assert.equal("secret" in adminJobSchema.parse({ ...job, secret: "must-not-leave-server" }), false);
+console.log("admin jobs: checkpoint resume, source changes, incomplete work, unknown duration and extra-field stripping passed");

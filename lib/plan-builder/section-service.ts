@@ -16,6 +16,7 @@ import { buildPlanBusinessContext } from "./context/build";
 import { contextForSection, type SectionBusinessContext } from "./context/section";
 import { ANALYSIS_KEY } from "./analyzer/domain";
 import { resolveRegenQuota, recordRegen } from "./regen-quota";
+import { executeProposalUpdate, type ProposalBackgroundJob } from "./proposal-background";
 
 /*
  * 본문 생성을 서버 안에서 처리하기 위한 내부 통로.
@@ -36,7 +37,7 @@ export interface PlanSectionJob {
   sectionId: string;
 }
 
-type ServiceRequest = { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest };
+type ServiceRequest = { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest } | { operation: "completeProposalUpdate"; job: ProposalBackgroundJob };
 
 function encodeHex(value: ArrayBuffer) {
   return [...new Uint8Array(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -70,6 +71,9 @@ export async function callCoachService(service: Fetcher, secret: string, job: Co
 }
 export async function callDeckService(service: Fetcher, secret: string, job: DeckJobRequest): Promise<{ ok: boolean }> {
   return callPlanningService(service, secret, { operation: "completeDeck", job });
+}
+export async function callProposalUpdateService(service: Fetcher, secret: string, job: ProposalBackgroundJob): Promise<{ ok: boolean }> {
+  return callPlanningService(service, secret, { operation: "completeProposalUpdate", job });
 }
 
 async function callPlanningService(service: Fetcher, secret: string, input: ServiceRequest): Promise<{ ok: boolean }> {
@@ -207,30 +211,37 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     html = markdown.replace(/\n/g, "<br>");
   }
 
-  /*
-   * 저장 직전에 상태를 다시 읽는다 — 생성하는 동안 사용자가 다른 섹션을
-   * 저장했을 수 있고, 통째로 덮으면 그 변경이 사라진다.
-   */
-  const fresh = await loadPlanState(job.ownerHash);
-  const target = fresh.plans.find((item) => item.id === job.planId);
-  if (!target) return { ok: false, skipped: "PLAN_NOT_FOUND" };
-  const current = target.sections[key];
-  const targetCoach = readCoach(target.answers);
-  if (coach && (!targetCoach || coachDocumentRevision(targetCoach) !== coachDocumentRevision(coach))) throw new Error("BUSINESS_CONTEXT_CHANGED");
-  if (current?.edited || current?.locked) return { ok: true, skipped: "USER_EDITED" };
-  if (current?.markdown && (!coach || current.coachRevision === coachDocumentRevision(coach))) return { ok: true, skipped: "ALREADY_GENERATED" };
+  // Retry only the commit, not the paid model call, when another tab saves meanwhile.
+  for (let attempt = 0; attempt < 4; attempt++) {
+    const fresh = await loadPlanState(job.ownerHash);
+    const target = fresh.plans.find((item) => item.id === job.planId);
+    if (!target) return { ok: false, skipped: "PLAN_NOT_FOUND" };
+    const current = target.sections[key];
+    const targetCoach = readCoach(target.answers);
+    if (target.planType !== plan.planType || (targetCoach ? coachDocumentRevision(targetCoach) : undefined) !== revision) throw new Error("BUSINESS_CONTEXT_CHANGED");
+    if (current?.edited || current?.locked) return { ok: true, skipped: "USER_EDITED" };
+    if (current?.markdown && (!coach || current.coachRevision === coachDocumentRevision(coach))) return { ok: true, skipped: "ALREADY_GENERATED" };
 
-  target.sections[key] = {
-    markdown,
-    html,
-    generatedAt: new Date().toISOString(),
-    ...(coach ? { coachRevision: coachDocumentRevision(coach) } : {}),
-    ...(current ? { previous: { markdown: current.markdown, html: current.html } } : {}),
-  };
-  target.updatedAt = new Date().toISOString();
-  await savePlanState(job.ownerHash, fresh);
-  if (existing && coach) await recordRegen(job.planId, job.ownerHash, key, true);
-  return { ok: true };
+    const updatedAt = target.updatedAt;
+    const generatedAt = new Date(Math.max(Date.now(), Date.parse(updatedAt) + 1 || 0, Date.parse(current?.generatedAt ?? "") + 1 || 0)).toISOString();
+    target.sections[key] = {
+      markdown,
+      html,
+      generatedAt,
+      ...(coach ? { coachRevision: coachDocumentRevision(coach) } : {}),
+      ...(current ? { previous: { markdown: current.markdown, html: current.html } } : {}),
+    };
+    target.updatedAt = generatedAt;
+    try {
+      await savePlanState(job.ownerHash, fresh, { planId: target.id, coachRevision: targetCoach?.revision ?? 0, planUpdatedAt: updatedAt });
+    } catch (error) {
+      if (error instanceof Error && error.message === "PLAN_VERSION_CONFLICT" && attempt < 3) continue;
+      throw error;
+    }
+    if (existing && coach) await recordRegen(job.planId, job.ownerHash, key, true);
+    return { ok: true };
+  }
+  throw new Error("PLAN_VERSION_CONFLICT");
 }
 
 export async function handlePlanSectionServiceRequest(request: Request, env: CloudflareEnv) {
@@ -248,6 +259,7 @@ export async function handlePlanSectionServiceRequest(request: Request, env: Clo
 
   try {
     const input = JSON.parse(body) as ServiceRequest;
+    if (input.operation === "completeProposalUpdate") return Response.json({ result: await executeProposalUpdate(input.job) });
     const result = input.operation === "completeCoach" ? await generateAndSaveCoach(input.job) : input.operation === "completeDeck" ? await generateAndSaveDeck(input.job) : await generateAndSaveSection(input.job);
     return Response.json({ result });
   } catch (error) {

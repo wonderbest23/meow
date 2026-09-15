@@ -1,0 +1,210 @@
+import assert from "node:assert/strict";
+import { createHash, createHmac, randomUUID } from "node:crypto";
+import { createRequire } from "node:module";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { createClient } from "@supabase/supabase-js";
+import JSZip from "jszip";
+import { LAB_URL, LAB_DB_URL, localCredentials } from "./local-account-lab.mts";
+import { proposalFixture } from "./proposal-fixtures";
+import { chaptersForType } from "../lib/plan-builder/blueprint";
+import { normalizeState, loadPlanState } from "../lib/plan-builder/plan-server-store";
+import { deckSource, deckFingerprint, generateAndSaveDeck } from "../lib/plan-builder/deck-job";
+import { readDeckJob } from "../lib/plan-builder/deck-job-types";
+import { createPlanOrder, markPlanOrderPaid } from "../lib/payments/plan-orders";
+
+const credentials = await localCredentials();
+const root = "/private/tmp/oneul-proposal-editor-20260914";
+await mkdir(root, { recursive: true });
+Object.assign(process.env, { PERSISTENCE_MODE: "supabase", SUPABASE_URL: credentials.apiUrl, SUPABASE_SERVICE_ROLE_KEY: credentials.serviceKey,
+  OPENAI_API_KEY: "local-mock-not-a-real-key", OPENAI_MODEL: "local-mock", ANTHROPIC_API_KEY: "", PLAN_ACCOUNT_LINKING_ENABLED: "true" });
+const db = createClient(credentials.apiUrl, credentials.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+const runtime = process.env.RUNTIME_NODE_MODULES; assert(runtime);
+const { chromium } = createRequire(`${runtime}/package.json`)("playwright");
+const runId = Date.now().toString(36), planId = `proposal_${runId}`;
+const password = `LocalOnly!${randomUUID()}`;
+const ownerHash = (id: string) => createHash("sha256").update(createHmac("sha256", credentials.authSecret).update(`today-startup:${id}`).digest("base64url")).digest("hex");
+const budgetPath = new URL("../artifacts/synthetic-ai-launch/budget.json", import.meta.url);
+const budgetBefore = await readFile(budgetPath, "utf8");
+const fixture = proposalFixture();
+const at = new Date().toISOString();
+const keys = chaptersForType("").flatMap(ch => ch.sections.map(section => `${ch.id}/${section.id}`)).slice(0, 12);
+const state = normalizeState({ business: { name: fixture.source.businessName, description: fixture.source.businessDescription!, role: "", region: "", industry: "", stage: "" }, activePlanId: planId, plans: [{ id: planId, title: fixture.source.businessName, planType: "", createdAt: at, updatedAt: at, answers: {}, sections: Object.fromEntries(keys.map((key, i) => [key, { markdown: fixture.source.sections[i].markdown, html: "", generatedAt: at }])) }] });
+const presentation = { sector: "b2b_service" as const, purpose: "sales" as const };
+const source = { ...deckSource(state.plans[0], state.business), presentation };
+const refs = new Map(fixture.source.sections.map((section, i) => [`${section.chapterTitle} · ${section.sectionTitle}`, `${source.sections[i].chapterTitle} · ${source.sections[i].sectionTitle}`]));
+fixture.deck.slides.forEach(slide => { slide.sourceSections = slide.sourceSections?.map(name => refs.get(name)!); });
+let aiRequests = 0;
+const transport = globalThis.fetch;
+globalThis.fetch = async (input, init) => {
+  const url = new URL(typeof input === "string" ? input : input instanceof URL ? input : input.url);
+  if (url.hostname === "api.openai.com") {
+    aiRequests++;
+    const body = JSON.parse(String(init?.body));
+    const reviewing = String(body.input[0].content).includes("검토 대상");
+    return Response.json({ status: "completed", output_text: JSON.stringify(reviewing ? { issues: [] } : fixture.deck), usage: { input_tokens: 0, output_tokens: 0 } });
+  }
+  assert([LAB_URL, LAB_DB_URL].includes(url.origin), `Non-local network blocked: ${url.origin}`);
+  return transport(input, init);
+};
+const checks: string[] = [], screenshots: string[] = [], errors: string[] = [];
+let browser: any;
+async function account(suffix: string) {
+  const email = `qa-proposal-${runId}-${suffix}@example.invalid`;
+  const { data, error } = await db.auth.admin.createUser({ email, password, email_confirm: true }); assert.equal(error, null); assert(data.user);
+  return { id: data.user.id, email, owner: ownerHash(data.user.id) };
+}
+try {
+  const a = await account("a"), b = await account("b");
+  const token = randomUUID();
+  state.plans[0].answers.__deck_job = { token, runId: `local-${runId}`, fingerprint: deckFingerprint(source), presentation, status: "queued", phase: "queued", updatedAt: at, attempt: 1 };
+  assert.equal((await db.from("plan_states").insert({ owner_hash: a.owner, data: state, title: state.business.name, plan_type: state.plans[0].planType, updated_at: at })).error, null);
+  const generated = await generateAndSaveDeck({ ownerHash: a.owner, planId, token }); assert(generated.ok);
+  assert.equal(aiRequests, 2); assert.equal(readDeckJob((await loadPlanState(a.owner)).plans[0].answers)?.result?.slides.length, 12);
+  checks.push("B2B 12-slide generation, source review, rendering and server persistence via real job pipeline with mocked AI");
+  const order = await createPlanOrder({ ownerId: a.id, guestTokenHash: a.owner, customerEmail: a.email, planId, planType: state.plans[0].planType, product: "plan" });
+  browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 }, reducedMotion: "reduce" });
+  await context.route("**/*", (route: any) => new URL(route.request().url()).origin === LAB_URL ? route.continue() : route.abort());
+  const page = await context.newPage();
+  page.on("pageerror", (error: Error) => errors.push(error.message));
+  const editorUrl = `${LAB_URL}/plan/proposal?planId=${planId}`;
+  const endpoint = `${LAB_URL}/api/plan/proposal?planId=${planId}`;
+  async function login(target: any, email: string) {
+    await target.goto(`${LAB_URL}/account?next=${encodeURIComponent(`/plan/proposal?planId=${planId}`)}`, { waitUntil: "domcontentloaded" });
+    await target.locator('input[type="email"]').fill(email);
+    await target.locator('input[autocomplete="current-password"]').fill(password);
+    await target.getByRole("button", { name: "로그인", exact: true }).click();
+    await target.waitForURL("**/plan/proposal?*");
+  }
+  await page.goto(editorUrl, { waitUntil: "domcontentloaded" });
+  assert.equal((await context.request.get(endpoint)).status(), 404);
+  await login(page, a.email);
+  await page.getByRole("heading", { name: "문서 이용 권한을 확인해 주세요" }).waitFor();
+  assert.equal((await context.request.get(endpoint)).status(), 402);
+  checks.push("anonymous and unpaid access are rejected before editing");
+  await markPlanOrderPaid({ orderId: order.orderId, tid: `local-proposal-${runId}`, raw: { synthetic: true, noPgCall: true } });
+  await page.reload({ waitUntil: "domcontentloaded" });
+  await page.getByRole("button", { name: "편집본 만들기" }).click();
+  await page.getByLabel("슬라이드 제목", { exact: true }).waitFor();
+  const initial = await (await context.request.get(endpoint)).json(); assert.equal(initial.saved.revision, 1);
+  checks.push("paid owner initializes an editable copy from the generated result");
+  const saved = async () => { await page.getByRole("status").filter({ hasText: /^저장됨$/ }).waitFor({ timeout: 20000 }); };
+  await page.getByLabel("슬라이드 제목", { exact: true }).fill("온결 스튜디오\n기업 고객 제안서");
+  await saved();
+  await page.getByLabel("제목 가로 위치", { exact: true }).fill("1.2");
+  await saved();
+  const dragTarget = page.getByRole("button", { name: "제목 위치 조정", exact: true });
+  const bounds = await dragTarget.boundingBox(); assert(bounds);
+  await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+  await page.mouse.down(); await page.mouse.move(bounds.x + bounds.width / 2 + 18, bounds.y + bounds.height / 2 + 10, { steps: 5 }); await page.mouse.up(); await saved();
+  let current = await (await context.request.get(endpoint)).json();
+  const coverEdit = current.saved.document.edits["proposal-cover"];
+  assert(coverEdit.layout.title.x > 1.2);
+  checks.push("title text, numeric placement and pointer drag autosave through the production API");
+  const coverPath = `${root}/desktop-cover.png`; await page.screenshot({ path: coverPath }); screenshots.push(coverPath);
+  const offeringIndex = fixture.deck.slides.findIndex(slide => slide.id === "proposal-offering");
+  await page.getByRole("navigation", { name: "슬라이드 목록" }).getByRole("button").nth(offeringIndex).click();
+  await page.getByLabel("표 1행 2열", { exact: true }).fill("맞춤 제안서 12장"); await saved();
+  current = await (await context.request.get(endpoint)).json();
+  assert.equal(current.saved.document.edits["proposal-offering"].content.table.rows[0][1], "맞춤 제안서 12장");
+  checks.push("native table content is editable and stored");
+  const tablePath = `${root}/desktop-table.png`; await page.screenshot({ path: tablePath }); screenshots.push(tablePath);
+  await page.reload({ waitUntil: "domcontentloaded" });
+  assert.equal(await page.getByLabel("슬라이드 제목", { exact: true }).inputValue(), "온결 스튜디오\n기업 고객 제안서");
+  assert.equal(Number(await page.getByLabel("제목 가로 위치", { exact: true }).inputValue()), Number(coverEdit.layout.title.x.toFixed(2)));
+  checks.push("browser reload restores title and actual canvas placement from the server");
+
+  const tab = await context.newPage(); await tab.goto(editorUrl, { waitUntil: "domcontentloaded" }); await tab.getByLabel("슬라이드 제목", { exact: true }).waitFor();
+  await page.getByLabel("슬라이드 설명", { exact: true }).fill("기업 고객의 첫 상담부터 제안까지 함께 정리합니다"); await saved();
+  await tab.getByLabel("슬라이드 제목", { exact: true }).fill("오래된 탭의 미저장 제목");
+  await tab.getByRole("alert").filter({ hasText: "다른 탭" }).waitFor({ timeout: 20000 });
+  assert.equal(await tab.getByLabel("슬라이드 제목", { exact: true }).inputValue(), "오래된 탭의 미저장 제목");
+  assert.equal((await (await context.request.get(endpoint)).json()).saved.document.edits["proposal-cover"].text.title, "온결 스튜디오\n기업 고객 제안서");
+  tab.on("dialog", (dialog: any) => dialog.accept()); await tab.close();
+  checks.push("two-tab version conflict preserves both server content and unsaved local input");
+
+  let fail = true;
+  await context.route(`${LAB_URL}/api/plan/proposal`, async (route: any) => {
+    if (route.request().method() === "POST" && fail) { fail = false; const response = await route.fetch(); assert.equal(response.status(), 200); return route.abort(); }
+    return route.continue();
+  });
+  await page.getByLabel("슬라이드 설명", { exact: true }).fill("저장 응답 유실 검증용 설명");
+  await page.getByRole("alert").filter({ hasText: "저장 응답" }).waitFor({ timeout: 30000 });
+  await page.getByLabel("슬라이드 설명", { exact: true }).fill("응답 유실 이후 추가로 고친 설명");
+  await page.getByRole("button", { name: "다시 저장", exact: true }).click(); await saved();
+  current = await (await context.request.get(endpoint)).json();
+  assert.equal(current.saved.document.edits["proposal-cover"].text.lead, "응답 유실 이후 추가로 고친 설명");
+  checks.push("lost save response retries idempotently without dropping newer local edits");
+  await context.unroute(`${LAB_URL}/api/plan/proposal`);
+  await page.getByRole("button", { name: "버전 기록", exact: true }).click();
+  page.on("dialog", (dialog: any) => dialog.accept());
+  const previous = current.saved.history.at(-1);
+  await page.locator("section").filter({ has: page.getByRole("heading", { name: "버전 기록", exact: true }) }).getByRole("button").first().click(); await saved();
+  const restored = await (await context.request.get(endpoint)).json();
+  assert.equal(restored.saved.revision, current.saved.revision + 1);
+  assert.deepEqual(restored.saved.document.edits, previous.edits);
+  checks.push("version restore creates a new revision and retains the prior version");
+  await page.getByRole("button", { name: "버전 기록", exact: true }).click();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByLabel("슬라이드 제목", { exact: true }).fill("온결 스튜디오\n최종 고객 제안서"); await saved();
+  await page.getByLabel("슬라이드 설명", { exact: true }).fill("영업 담당자가 바로 활용하는 제품 소개 자료"); await saved();
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  await page.evaluate(() => window.scrollTo(0, 0));
+  const mobilePath = `${root}/mobile-editor.png`; await page.screenshot({ path: mobilePath, fullPage: true }); screenshots.push(mobilePath);
+  checks.push("390px mobile editing saves without page overflow");
+  const beforeReconnect = await (await context.request.get(endpoint)).json();
+  await context.request.post(`${LAB_URL}/api/auth/logout`);
+  assert.equal((await context.request.get(endpoint)).status(), 404);
+  await context.close();
+  const reconnect = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  await reconnect.route("**/*", (route: any) => new URL(route.request().url()).origin === LAB_URL ? route.continue() : route.abort());
+  const again = await reconnect.newPage(); await login(again, a.email);
+  await again.getByLabel("슬라이드 제목", { exact: true }).waitFor();
+  assert.equal(await again.getByLabel("슬라이드 제목", { exact: true }).inputValue(), "온결 스튜디오\n최종 고객 제안서");
+  const afterReconnect = await (await reconnect.request.get(endpoint)).json(); assert.deepEqual(afterReconnect.saved, beforeReconnect.saved);
+  for (const width of [320, 768, 1440]) {
+    await again.setViewportSize({ width, height: 1000 });
+    assert(await again.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `No page overflow at ${width}px`);
+    const canvas = again.getByLabel("제안서 슬라이드 미리보기", { exact: true });
+    const bounds = await canvas.boundingBox(); assert(bounds && bounds.width > 250 && bounds.height > 130);
+    const { PNG } = createRequire(`${runtime}/package.json`)("pngjs");
+    const pixels = PNG.sync.read(await canvas.screenshot());
+    let ink = 0; for (let i = 0; i < pixels.data.length; i += 4) if (pixels.data[i] < 200 || pixels.data[i + 1] < 200 || pixels.data[i + 2] < 200) ink++;
+    assert(ink / (pixels.width * pixels.height) > .005, `Slide must render visible text and graphics at ${width}px`);
+  }
+  checks.push("320px, 768px and 1440px canvas framing, nonblank pixels and page overflow checks pass");
+  const downloadEvent = again.waitForEvent("download");
+  await again.getByRole("button", { name: "PPT 내려받기", exact: true }).click();
+  const download = await downloadEvent; const file = `${root}/edited-b2b-proposal.pptx`; await download.saveAs(file);
+  const zip = await JSZip.loadAsync(await readFile(file), { checkCRC32: true });
+  assert.equal(zip.file(/^ppt\/slides\/slide\d+\.xml$/).length, 12);
+  const xml = await zip.file("ppt/slides/slide1.xml")!.async("string"); assert(xml.includes("최종 고객 제안서"));
+  assert(xml.includes(`x="${Math.round(coverEdit.layout.title.x * 914400)}"`));
+  assert((await zip.file(`ppt/slides/slide${offeringIndex + 1}.xml`)!.async("string")).includes("맞춤 제안서 12장"));
+  const normalDownload = await reconnect.request.get(`${LAB_URL}/api/plan/deck?planId=${planId}&download=1`); assert.equal(normalDownload.status(), 200);
+  const normalZip = await JSZip.loadAsync(await normalDownload.body());
+  assert((await normalZip.file("ppt/slides/slide1.xml")!.async("string")).includes("최종 고객 제안서"));
+  assert.equal((await reconnect.request.get(`${endpoint}&download=1&revision=1`)).status(), 409);
+  checks.push("fresh login restores the exact account-owned draft and downloads native PPT text, table edits and placement");
+  const other = await browser.newContext(); const otherPage = await other.newPage();
+  await other.request.post(`${LAB_URL}/api/auth/login`, { data: { email: b.email, password } });
+  assert.equal((await other.request.get(endpoint)).status(), 404);
+  assert.equal((await other.request.post(`${LAB_URL}/api/plan/proposal`, { data: { planId, command: { type: "save", requestId: randomUUID(), expectedRevision: afterReconnect.saved.revision, edits: {} } } })).status(), 404);
+  assert.equal((await other.request.get(`${endpoint}&download=1&revision=${afterReconnect.saved.revision}`)).status(), 404);
+  await otherPage.close(); await other.close();
+  checks.push("another account cannot read, save or download this proposal");
+  const body = await (await reconnect.request.get(`${LAB_URL}/api/plan/state`)).json();
+  body.plans.find((p: any) => p.id === planId).answers.__proposal_editor = { revision: 9999, version: 1, document: {} };
+  assert.equal((await reconnect.request.put(`${LAB_URL}/api/plan/state`, { data: body })).status(), 200);
+  assert.equal((await (await reconnect.request.get(endpoint)).json()).saved.revision, afterReconnect.saved.revision);
+  checks.push("legacy browser autosave cannot forge the protected proposal record");
+  assert.equal(await readFile(budgetPath, "utf8"), budgetBefore); assert.deepEqual(errors, []);
+  await writeFile(`${root}/browser-fixture.json`, JSON.stringify({ email: a.email, password, planId, url: editorUrl }), { mode: 0o600 });
+} catch (error) {
+  errors.push(error instanceof Error ? error.stack ?? error.message : String(error)); process.exitCode = 1;
+  for (const [index, page] of (browser?.contexts().flatMap((c: any) => c.pages()) ?? []).entries()) { await page.screenshot({ path: `${root}/failure-${index}.png` }).catch(() => undefined); }
+} finally {
+  await browser?.close(); globalThis.fetch = transport;
+  await writeFile(`${root}/report.json`, JSON.stringify({ checks, errors, screenshots, realPaidAiCalls: 0, mockedAiRequests: aiRequests, realPayments: 0, localOnly: true }, null, 2), { mode: 0o600 });
+  console.log(JSON.stringify({ checks, errors, screenshots }, null, 2));
+}

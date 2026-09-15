@@ -5,6 +5,8 @@
 import { getServerSupabase } from "../persistence";
 import { readCoach } from "./coach";
 import { planAccountLinkingEnabled } from "./account-linking";
+import { OPERATING_KEY } from "./operating-records";
+import { PROPOSAL_KEY } from "./proposal-editor";
 
 export interface ServerBusinessProfile {
   name: string;
@@ -55,9 +57,14 @@ const EMPTY: ServerPlanState = {
   activePlanId: null,
 };
 
-// dev/데모용 인메모리 폴백(서버 프로세스 생존 동안 유지)
-const memoryStore = new Map<string, ServerPlanState>();
-const memoryClaims = new Map<string, string>();
+declare global {
+  var __oneulPlanDemoStore: { plans: Map<string, ServerPlanState>; claims: Map<string, string> } | undefined;
+}
+
+// Keep demo state shared across route bundles and development module reloads, not server restarts.
+const demoStore: NonNullable<typeof globalThis.__oneulPlanDemoStore> = globalThis.__oneulPlanDemoStore ?? (globalThis.__oneulPlanDemoStore = { plans: new Map(), claims: new Map() });
+const memoryStore = demoStore.plans;
+const memoryClaims = demoStore.claims;
 
 export async function planGuestWasClaimed(ownerHash: string): Promise<boolean> {
   if (!planAccountLinkingEnabled()) return false;
@@ -163,6 +170,19 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
       const deck = !incomingDeck ? previousDeck : !previousDeck ? incomingDeck : String(incomingDeck.updatedAt ?? "") >= String(previousDeck.updatedAt ?? "") ? incomingDeck : previousDeck;
       byId.set(p.id, { ...p, answers: { ...p.answers, ...(deck ? { __deck_job: deck } : {}) } });
     }
+    // Coach/document workers can finish with an older snapshot of operating history.
+    const previousOperations = prev?.answers[OPERATING_KEY];
+    const incomingOperations = p.answers[OPERATING_KEY];
+    const operations = !previousOperations ? incomingOperations : !incomingOperations ? previousOperations
+      : Number(incomingOperations.revision) > Number(previousOperations.revision) ? incomingOperations : previousOperations;
+    const merged = byId.get(p.id);
+    if (operations && merged) byId.set(p.id, { ...merged, answers: { ...merged.answers, [OPERATING_KEY]: operations } });
+    const previousProposal = prev?.answers[PROPOSAL_KEY];
+    const incomingProposal = p.answers[PROPOSAL_KEY];
+    const proposal = !previousProposal ? incomingProposal : !incomingProposal ? previousProposal
+      : Number(incomingProposal.revision) > Number(previousProposal.revision) ? incomingProposal : previousProposal;
+    const finalPlan = byId.get(p.id);
+    if (proposal && finalPlan) byId.set(p.id, { ...finalPlan, answers: { ...finalPlan.answers, [PROPOSAL_KEY]: proposal } });
   }
   const plans = [...byId.values()].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
   return {
@@ -214,7 +234,7 @@ export async function claimGuestPlanState(guestHash: string, accountHash: string
 
 /** Browser autosaves may edit documents, but cannot create or replace server job/context records. */
 export function preserveServerCoachRecords(incoming: ServerPlanState, stored: ServerPlanState): ServerPlanState {
-  const keys = ["__business_coach", "__coach_job", "__coach_generation", "__business_edit_history", "__deck_job"];
+  const keys = ["__business_coach", "__coach_job", "__coach_generation", "__business_edit_history", "__business_edit_receipts", "__deck_job", OPERATING_KEY, PROPOSAL_KEY];
   return { ...incoming, plans: incoming.plans.map(plan => {
     const saved = stored.plans.find(item => item.id === plan.id);
     const answers = { ...plan.answers };

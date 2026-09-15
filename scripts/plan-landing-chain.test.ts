@@ -5,6 +5,8 @@ import assert from "node:assert/strict";
  * Supabase 없이 인메모리 폴백으로 실행하므로 로그인·결제 없이 검증할 수 있다.
  */
 async function main() {
+  process.env.PERSISTENCE_MODE = "demo-memory";
+  process.env.SUPABASE_URL = ""; process.env.SUPABASE_SERVICE_ROLE_KEY = "";
   const { landingDraftFromPlan } = await import("../lib/landing/from-plan");
   const { createProject, findProjectIdByPlan } = await import("../lib/project-repository");
   const {
@@ -44,7 +46,7 @@ async function main() {
   const draft = landingDraftFromPlan(source);
   const site = await saveLandingDraft(project.id, ownerHash, draft);
   assert.equal(site.status, "draft");
-  assert.equal(site.draft.headline, "마포 직장인을 위한 테이크아웃 드립커피");
+  assert.equal(site.draft.headline, "새벽커피");
 
   // 5) 공개 전에는 공개 주소로 열리지 않아야 한다
   assert.equal(await getPublishedLandingBySlug(site.slug), null, "공개 전에는 열리면 안 된다");
@@ -54,7 +56,7 @@ async function main() {
   assert.equal(published.status, "published");
   const live = await getPublishedLandingBySlug(site.slug);
   assert.ok(live, "공개 후에는 /launch/{slug}에서 열려야 한다");
-  assert.equal(live!.config.headline, "마포 직장인을 위한 테이크아웃 드립커피");
+  assert.equal(live!.config.headline, "새벽커피");
   assert.equal(live!.config.businessName, "새벽커피");
 
   // 7) 다시 만들어도 이미 있는 홈페이지를 덮지 않는다(라우트가 이 값을 보고 판단한다)

@@ -83,16 +83,18 @@ async function serve() {
   }
   try { await access(join(appRoot, "node_modules")); } catch { await symlink(resolve("node_modules"), join(appRoot, "node_modules"), "dir"); }
   // This lab validates Next routes and local Supabase, not Cloudflare Workflow bindings.
-  await writeFile(join(appRoot, "next.config.ts"), "export default { devIndicators: false };\n");
+  // Match the app's Turbopack bundler; the temporary app and linked dependencies share the filesystem root.
+  await writeFile(join(appRoot, "next.config.ts"), "export default { devIndicators: false, turbopack: { root: '/' } };\n");
   const env: NodeJS.ProcessEnv = {
     PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR,
     NODE_ENV: "development", NEXT_TELEMETRY_DISABLED: "1", PERSISTENCE_MODE: "supabase",
     SUPABASE_URL: credentials.apiUrl, SUPABASE_SERVICE_ROLE_KEY: credentials.serviceKey,
     AUTH_PROJECT_SECRET: credentials.authSecret, PLAN_ACCOUNT_LINKING_ENABLED: "true",
     PAYMENTS_ENABLED: "false", NEXT_PUBLIC_PPT_GENERATION_VERIFIED: "false",
+    ADMIN_CHAT_PASSWORD: "LocalOnlyAdmin!20260913", ADMIN_SESSION_SECRET: "local-admin-generation-verification-only",
   };
   console.log(`[lab] Serving ${LAB_URL}; production env files, AI, payment and messaging credentials are excluded`);
-  const child = spawn(process.execPath, [resolve("node_modules/next/dist/bin/next"), "dev", "--webpack", "--hostname", "127.0.0.1", "--port", "8094"], { cwd: appRoot, env, stdio: "inherit" });
+  const child = spawn(process.execPath, [resolve("node_modules/next/dist/bin/next"), "dev", "--turbopack", "--hostname", "127.0.0.1", "--port", "8094"], { cwd: appRoot, env, stdio: "inherit" });
   for (const signal of ["SIGINT", "SIGTERM"] as const) process.on(signal, () => child.kill(signal));
   child.on("exit", code => { process.exitCode = code ?? 0; });
 }

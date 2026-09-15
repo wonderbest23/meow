@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildDeckPlan } from "../lib/plan-builder/deck-plan";
+import { buildDeckPlan, blueprintForDeckInput } from "../lib/plan-builder/deck-plan";
 
 async function main() {
   process.env.PERSISTENCE_MODE = "demo-memory";
@@ -27,7 +27,8 @@ async function main() {
       const output = reviewing ? { issues: [] } : {
         brandName: input.businessName,
         slogan: "A small test offer",
-        slides: Array.from({ length: 8 }, (_, i) => ({
+        slides: blueprintForDeckInput(input).slots.map((slot, i) => ({
+          id: slot.id,
           title: `Section ${i + 1}`,
           eyebrow: "Proposal",
           lead: "Proposed price: 60,000 KRW. No existing sales.",
@@ -37,7 +38,9 @@ async function main() {
       return Response.json({ status: "completed", output_text: JSON.stringify(output) });
     };
     const plan = await buildDeckPlan(config, input);
-    assert.equal(plan?.slides.length, 8);
+    assert.equal(plan?.slides.length, 10);
+    assert.equal(plan?.blueprint?.sector, "content_media");
+    assert.equal(plan?.slides[4].composition?.layout, "table");
     assert.equal(reviews, 1, "Business-context decks must pass the review pipeline");
     source = "Invented · Evidence";
     assert.equal(await buildDeckPlan(config, input), null, "Reject slide references absent from the saved document");

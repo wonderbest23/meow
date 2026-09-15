@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "../persistence";
 import { getProject } from "../project-repository";
+import { landingDraftFingerprint } from "./save-contract";
 import {
   ensureLandingPageData,
   landingDraftSchema,
@@ -62,6 +63,7 @@ function demoWithMetrics(site: LandingSiteRecord): LandingSiteRecord {
   const leads = demo.leads.filter((lead) => lead.siteId === site.id).length;
   return {
     ...clone(site),
+    publishedSlug: site.versions.find(version => version.version === site.publishedVersion)?.config.slug ?? null,
     draft: parseLandingDraft(site.draft),
     versions: site.versions.map((version) => ({
       ...clone(version),
@@ -97,6 +99,7 @@ async function mapSupabaseSite(
     config: parseLandingDraft(version.config),
     createdAt: version.created_at,
     publishedAt: version.published_at,
+    sourceUpdatedAt: version.source_updated_at ?? null,
   }));
   return {
     id: siteId,
@@ -105,6 +108,7 @@ async function mapSupabaseSite(
     status: row.status as LandingSiteRecord["status"],
     draft: parseLandingDraft(row.draft),
     publishedVersion: (row.published_version as number | null) ?? null,
+    publishedSlug: (row.published_slug as string | null) ?? null,
     versions,
     customDomain: (row.custom_domain as string | null) ?? null,
     createdAt: row.created_at as string,
@@ -178,6 +182,7 @@ export async function saveLandingDraft(
   projectId: string,
   guestTokenHash: string,
   input: LandingDraft,
+  condition?: { expectedUpdatedAt: string | null },
 ): Promise<LandingSiteRecord> {
   await requireProject(projectId, guestTokenHash);
   const draft = parseLandingDraft(input);
@@ -185,8 +190,13 @@ export async function saveLandingDraft(
   if (!supabase) {
     const slugOwner = demo.slugIndex.get(draft.slug);
     const existingId = demo.projectIndex.get(projectId);
+    const existing = existingId ? demo.sites.get(existingId)! : null;
+    if (condition && condition.expectedUpdatedAt !== (existing?.updatedAt ?? null)) {
+      if (condition.expectedUpdatedAt && existing && landingDraftFingerprint(existing.draft) === landingDraftFingerprint(draft)) return demoWithMetrics(existing);
+      throw new Error("LANDING_DRAFT_CONFLICT");
+    }
     if (slugOwner && slugOwner !== existingId) throw new Error("SLUG_TAKEN");
-    const now = new Date().toISOString();
+    const now = new Date(Math.max(Date.now(), existing ? Date.parse(existing.updatedAt) + 1 : 0)).toISOString();
     if (existingId) {
       const site = demo.sites.get(existingId)!;
       demo.slugIndex.delete(site.slug);
@@ -215,24 +225,34 @@ export async function saveLandingDraft(
     return clone(site);
   }
 
-  const { data, error } = await supabase
-    .from("landing_sites")
-    .upsert(
-      { project_id: projectId, slug: draft.slug, draft },
+  // The timestamp predicate and the write are one database operation, not a read-then-write check.
+  const values = { project_id: projectId, slug: draft.slug, draft };
+  const query = condition
+    ? condition.expectedUpdatedAt === null
+      ? supabase.from("landing_sites").insert(values)
+      : supabase.from("landing_sites").update({ slug: draft.slug, draft }).eq("project_id", projectId).eq("updated_at", condition.expectedUpdatedAt)
+    : supabase.from("landing_sites").upsert(
+      values,
       { onConflict: "project_id" },
-    )
-    .select()
-    .single();
+    );
+  const { data, error } = await query.select().maybeSingle();
+  if (condition && ((!error && !data) || error?.code === "23505")) {
+    const existing = await getLandingForProject(projectId, guestTokenHash);
+    if (existing && condition.expectedUpdatedAt && landingDraftFingerprint(existing.draft) === landingDraftFingerprint(draft)) return existing;
+    if (!error || (existing && condition.expectedUpdatedAt === null)) throw new Error("LANDING_DRAFT_CONFLICT");
+  }
   if (error) {
     if (error.code === "23505") throw new Error("SLUG_TAKEN");
     throw error;
   }
+  if (!data) throw new Error("LANDING_DRAFT_CONFLICT");
   return mapSupabaseSite(supabase, data);
 }
 
 export async function publishLanding(
   projectId: string,
   guestTokenHash: string,
+  expectedUpdatedAt?: string,
 ): Promise<LandingSiteRecord> {
   const site = await getLandingForProject(projectId, guestTokenHash);
   if (!site) throw new Error("LANDING_NOT_FOUND");
@@ -241,35 +261,37 @@ export async function publishLanding(
     throw new Error(`LANDING_COMPLIANCE_BLOCKED:${complianceIssues.join(" / ")}`);
   }
   const supabase = getServerSupabase();
+  const expected = expectedUpdatedAt ?? site.updatedAt;
+  const current = site.versions.find(version => version.version === site.publishedVersion);
+  const identical = site.status === "published" && current && landingDraftFingerprint(current.config) === landingDraftFingerprint(site.draft);
+  const replay = identical && current.sourceUpdatedAt === expected;
+  if (site.updatedAt !== expected && !replay) throw new Error("LANDING_DRAFT_CONFLICT");
   const now = new Date().toISOString();
   const nextVersion = (site.versions[0]?.version ?? 0) + 1;
   if (!supabase) {
     const stored = demo.sites.get(site.id)!;
+    const latest = stored.versions.find(version => version.version === stored.publishedVersion);
+    if (stored.status === "published" && latest?.sourceUpdatedAt === expected && landingDraftFingerprint(latest.config) === landingDraftFingerprint(stored.draft)) return demoWithMetrics(stored);
+    if (stored.updatedAt !== site.updatedAt) throw new Error("LANDING_DRAFT_CONFLICT");
+    if (identical) return demoWithMetrics(stored);
+    const slugOwner = [...demo.sites.values()].find(item => item.id !== site.id && item.status === "published" && item.versions.find(version => version.version === item.publishedVersion)?.config.slug === stored.draft.slug);
+    if (slugOwner) throw new Error("SLUG_TAKEN");
     const version: LandingVersion = {
       id: crypto.randomUUID(),
       version: nextVersion,
       config: clone(stored.draft),
       createdAt: now,
       publishedAt: now,
+      sourceUpdatedAt: stored.updatedAt,
     };
     stored.versions.unshift(version);
     stored.publishedVersion = nextVersion;
     stored.status = "published";
-    stored.updatedAt = now;
+    stored.updatedAt = new Date(Math.max(Date.now(), Date.parse(stored.updatedAt) + 1)).toISOString();
     return demoWithMetrics(stored);
   }
-  const { error: versionError } = await supabase.from("landing_versions").insert({
-    site_id: site.id,
-    version: nextVersion,
-    config: site.draft,
-    published_at: now,
-  });
-  if (versionError) throw versionError;
-  const { error } = await supabase
-    .from("landing_sites")
-    .update({ status: "published", published_version: nextVersion })
-    .eq("id", site.id);
-  if (error) throw error;
+  const { error } = await supabase.rpc("publish_landing_snapshot", { p_project_id: projectId, p_owner_hash: guestTokenHash, p_expected_updated_at: expected });
+  if (error) throw new Error(error.code === "23505" ? "SLUG_TAKEN" : error.message);
   return (await getLandingForProject(projectId, guestTokenHash))!;
 }
 
@@ -303,35 +325,36 @@ export async function rollbackLanding(
   projectId: string,
   guestTokenHash: string,
   versionNumber: number,
+  expectedUpdatedAt?: string,
 ): Promise<LandingSiteRecord> {
   const site = await getLandingForProject(projectId, guestTokenHash);
   if (!site) throw new Error("LANDING_NOT_FOUND");
   const target = site.versions.find((version) => version.version === versionNumber);
   if (!target) throw new Error("LANDING_VERSION_NOT_FOUND");
   const supabase = getServerSupabase();
+  const expected = expectedUpdatedAt ?? site.updatedAt;
+  const replay = site.status === "published" && site.publishedVersion === target.version && landingDraftFingerprint(site.draft) === landingDraftFingerprint(target.config);
+  if (site.updatedAt !== expected && !replay) throw new Error("LANDING_DRAFT_CONFLICT");
   if (!supabase) {
     const stored = demo.sites.get(site.id)!;
+    if (stored.updatedAt !== site.updatedAt) throw new Error("LANDING_DRAFT_CONFLICT");
+    if (replay) return demoWithMetrics(stored);
+    const slugOwner = demo.slugIndex.get(target.config.slug);
+    const publicOwner = [...demo.sites.values()].find(item => item.id !== site.id && item.status === "published" && item.versions.find(version => version.version === item.publishedVersion)?.config.slug === target.config.slug);
+    if ((slugOwner && slugOwner !== site.id) || publicOwner) throw new Error("SLUG_TAKEN");
     demo.slugIndex.delete(stored.slug);
     stored.draft = clone(target.config);
     stored.slug = target.config.slug;
     stored.publishedVersion = target.version;
     stored.status = "published";
-    stored.updatedAt = new Date().toISOString();
+    stored.updatedAt = new Date(Math.max(Date.now(), Date.parse(stored.updatedAt) + 1)).toISOString();
     demo.slugIndex.set(stored.slug, stored.id);
     return demoWithMetrics(stored);
   }
-  const { error } = await supabase
-    .from("landing_sites")
-    .update({
-      slug: target.config.slug,
-      draft: target.config,
-      published_version: target.version,
-      status: "published",
-    })
-    .eq("id", site.id);
+  const { error } = await supabase.rpc("rollback_landing_snapshot", { p_project_id: projectId, p_owner_hash: guestTokenHash, p_version: versionNumber, p_expected_updated_at: expected });
   if (error) {
     if (error.code === "23505") throw new Error("SLUG_TAKEN");
-    throw error;
+    throw new Error(error.message);
   }
   return (await getLandingForProject(projectId, guestTokenHash))!;
 }
@@ -341,8 +364,7 @@ export async function getPublishedLandingBySlug(
 ): Promise<{ site: LandingSiteRecord; config: LandingDraft } | null> {
   const supabase = getServerSupabase();
   if (!supabase) {
-    const siteId = demo.slugIndex.get(slug);
-    const site = siteId ? demo.sites.get(siteId) : null;
+    const site = [...demo.sites.values()].find(item => item.status === "published" && item.versions.find(version => version.version === item.publishedVersion)?.config.slug === slug);
     if (!site || site.status !== "published" || site.publishedVersion === null) return null;
     const version = site.versions.find((item) => item.version === site.publishedVersion);
     return version ? { site: demoWithMetrics(site), config: clone(version.config) } : null;
@@ -350,7 +372,7 @@ export async function getPublishedLandingBySlug(
   const { data, error } = await supabase
     .from("landing_sites")
     .select("*")
-    .eq("slug", slug)
+    .eq("published_slug", slug)
     .eq("status", "published")
     .maybeSingle();
   if (error) throw error;

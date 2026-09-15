@@ -1,0 +1,17 @@
+.opening { position: relative; isolation: isolate; background: #f7f8fa; overflow: clip; }
+.opening[data-opening-motion="on"] [data-cinematic-hero][data-motion] [data-home-preview-window] {
+  clip-path: inset(0 var(--opening-inset, 0%) round var(--opening-radius, 28px));
+}
+.opening[data-opening-motion="on"] > :global(#how) { overflow: visible; }
+.opening[data-opening-motion="on"] [data-phone-mount] {
+  transform: translate3d(0, var(--opening-phone-y, 0px), 0);
+}
+@media (max-width: 700px) {
+  .opening[data-opening-motion="on"] [data-cinematic-hero][data-mobile-expansion="on"] [data-home-preview-window] {
+    clip-path: inset(0 var(--opening-inset, 0%) round var(--hero-radius, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .opening [data-phone-mount] { transform: none; }
+  .opening [data-home-preview-window] { clip-path: none; }
+}

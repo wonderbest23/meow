@@ -5,22 +5,24 @@
 // 규격: https://github.com/nicepayments/nicepay-manual
 
 import { createHash } from "node:crypto";
+import { nicepayEnvironment } from "./nicepay-environment";
+import { paymentsEnabled } from "./config";
 
-const API_BASE = "https://api.nicepay.co.kr/v1";
-/** 결제창 SDK — 클라이언트에서 불러온다 */
-export const NICEPAY_SDK_URL = "https://pay.nicepay.co.kr/v1/js/";
+export function nicepaySdkUrl(): string {
+  return nicepayEnvironment().sdk;
+}
 
 export function nicepayClientKey(): string | null {
-  return process.env.NICEPAY_CLIENT_KEY?.trim() || null;
+  try { return nicepayEnvironment().clientKey; } catch { return null; }
 }
 
 function nicepaySecretKey(): string | null {
-  return process.env.NICEPAY_SECRET_KEY?.trim() || null;
+  try { return nicepayEnvironment().secretKey; } catch { return null; }
 }
 
 /** 키가 모두 설정되어 실제 결제가 가능한 상태인지 */
 export function nicepayConfigured(): boolean {
-  return Boolean(nicepayClientKey() && nicepaySecretKey());
+  return paymentsEnabled() && Boolean(nicepayClientKey() && nicepaySecretKey());
 }
 
 function basicAuthHeader(): string {
@@ -66,12 +68,38 @@ export interface NicepayApproveResult {
   raw: Record<string, unknown>;
 }
 
+async function paymentResult(response: Response, amount: number): Promise<NicepayApproveResult> {
+  const value: unknown = await response.json().catch(() => null);
+  const raw = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  const resultCode = typeof raw.resultCode === "string" ? raw.resultCode : "";
+  const approvedAmount = typeof raw.amount === "number" ? raw.amount : null;
+  const status = typeof raw.status === "string" ? raw.status : null;
+  return {
+    ok: response.ok && resultCode === "0000" && status === "paid" && approvedAmount === amount,
+    resultCode: response.ok ? resultCode : "HTTP_ERROR",
+    resultMsg: typeof raw.resultMsg === "string" ? raw.resultMsg : "",
+    tid: typeof raw.tid === "string" ? raw.tid : null,
+    orderId: typeof raw.orderId === "string" ? raw.orderId : null,
+    amount: approvedAmount, status,
+    paidAt: typeof raw.paidAt === "string" ? raw.paidAt : null, raw,
+  };
+}
+
+/** Read-only recovery after an approval response is lost. Never resubmit approval. */
+export async function lookupNicepayPayment(tid: string, amount: number): Promise<NicepayApproveResult> {
+  const response = await fetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}`, {
+    method: "GET", headers: { Authorization: basicAuthHeader() }, cache: "no-store",
+    redirect: "error", signal: AbortSignal.timeout(15_000),
+  });
+  return paymentResult(response, amount);
+}
+
 /**
  * 서버 승인. 인증된 거래(tid)를 실제 결제로 확정한다.
  * amount는 우리가 알고 있는 주문 금액을 보내며, 응답 금액도 다시 대조한다.
  */
 export async function approveNicepayPayment(tid: string, amount: number): Promise<NicepayApproveResult> {
-  const response = await fetch(`${API_BASE}/payments/${encodeURIComponent(tid)}`, {
+  const response = await fetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}`, {
     method: "POST",
     headers: {
       Authorization: basicAuthHeader(),
@@ -79,35 +107,23 @@ export async function approveNicepayPayment(tid: string, amount: number): Promis
     },
     body: JSON.stringify({ amount }),
     cache: "no-store",
+    redirect: "error",
+    signal: AbortSignal.timeout(20_000),
   });
 
-  const raw = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  const resultCode = typeof raw.resultCode === "string" ? raw.resultCode : "";
-  const approvedAmount = typeof raw.amount === "number" ? raw.amount : null;
-  const status = typeof raw.status === "string" ? raw.status : null;
-
-  return {
-    // 승인 성공은 resultCode 0000 + status paid + 금액 일치를 모두 만족해야 한다
-    ok: response.ok && resultCode === "0000" && status === "paid" && approvedAmount === amount,
-    resultCode,
-    resultMsg: typeof raw.resultMsg === "string" ? raw.resultMsg : "",
-    tid: typeof raw.tid === "string" ? raw.tid : null,
-    orderId: typeof raw.orderId === "string" ? raw.orderId : null,
-    amount: approvedAmount,
-    status,
-    paidAt: typeof raw.paidAt === "string" ? raw.paidAt : null,
-    raw,
-  };
+  return paymentResult(response, amount);
 }
 
 /** 승인된 결제를 취소한다(금액 불일치 등으로 되돌려야 할 때). */
 export async function cancelNicepayPayment(tid: string, reason: string): Promise<boolean> {
   try {
-    const response = await fetch(`${API_BASE}/payments/${encodeURIComponent(tid)}/cancel`, {
+    const response = await fetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}/cancel`, {
       method: "POST",
       headers: { Authorization: basicAuthHeader(), "Content-Type": "application/json" },
       body: JSON.stringify({ reason, orderId: `cancel_${Date.now()}` }),
       cache: "no-store",
+      redirect: "error",
+      signal: AbortSignal.timeout(20_000),
     });
     const raw = (await response.json().catch(() => ({}))) as Record<string, unknown>;
     return response.ok && raw.resultCode === "0000";

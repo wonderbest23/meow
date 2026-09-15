@@ -7,9 +7,13 @@ import { createClient } from "@supabase/supabase-js";
 import { LAB_URL, LAB_DB_URL, localCredentials } from "./local-account-lab.mts";
 import { applyCoachReply } from "../lib/plan-builder/coach";
 import { normalizeState, type ServerPlanState } from "../lib/plan-builder/plan-server-store";
+import { OPERATING_KEY, applyOperatingCommand, oldInput, previousPeriod, readOperatingState, referenceFor, type OperatingState, type PeriodInput } from "../lib/plan-builder/operating-records";
+import { generateOperatingAnalysis, previewOperatingAnalysis, type AnalysisRuntime } from "../lib/plan-builder/operating-analysis-service";
+import { recordLlmUsage } from "../lib/llm/usage";
 
 const exec = promisify(execFile);
 const credentials = await localCredentials();
+Object.assign(process.env, { PERSISTENCE_MODE: "supabase", SUPABASE_URL: credentials.apiUrl, SUPABASE_SERVICE_ROLE_KEY: credentials.serviceKey, OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "", OPERATING_AI_ENABLED: "false" });
 const originalFetch = globalThis.fetch;
 globalThis.fetch = (input, init) => {
   const url = new URL(typeof input === "string" ? input : input instanceof URL ? input : input.url);
@@ -40,7 +44,7 @@ class Client {
       const key = pair.slice(0, index); const value = pair.slice(index + 1);
       if (!value || /Max-Age=0/i.test(line)) this.cookies.delete(key); else this.cookies.set(key, value);
     }
-    const data = await response.json();
+    const data = response.headers.get("content-type")?.includes("application/json") ? await response.json() : await response.text();
     return { status: response.status, data, headers: response.headers };
   }
   async state() { const result = await this.request("/api/plan/state"); assert.equal(result.status, 200); return result.data as ServerPlanState & { authenticated: boolean; ownerKey: string }; }
@@ -55,6 +59,15 @@ function fixture(id: string): ServerPlanState {
     sections: { "overview/summary": { markdown: "직접 수정한 사업 소개", html: "<p>직접 수정한 사업 소개</p>", generatedAt: now, edited: true, locked: true } },
     answers: { __business_coach: { state: coach }, __deck_job: { status: "failed", token: `deck-${id}`, draft: { slides: [{ title: "저장된 PPT 초안" }] }, updatedAt: now } },
   }], activePlanId: id });
+}
+
+const periodInput: PeriodInput = { start: "2026-08-01", end: "2026-08-07", metrics: { inquiries: null, orders: 0, revenue: 100000, expenses: 50000 }, feedback: "가상 검증 기록", keep: "상품 품질", change: "응대 시간", nextAction: "문의 시각 기록", successCriterion: "기록 누락 확인" };
+function operatingFixture(): OperatingState {
+  const at = new Date().toISOString();
+  let records = readOperatingState({});
+  records = applyOperatingCommand(records, { action: "save", id: randomUUID(), expectedRevision: null, input: periodInput }, "로컬 가상 사업", at);
+  records = applyOperatingCommand(records, { action: "save", id: randomUUID(), expectedRevision: null, input: { ...periodInput, start: "2026-08-08", end: "2026-08-21", metrics: { ...periodInput.metrics, orders: 3, revenue: 200000 } } }, "로컬 가상 사업", at);
+  return applyOperatingCommand(records, { action: "report", id: randomUUID(), reference: referenceFor(records.periods[0], records.periods[1]) }, "로컬 가상 사업", at);
 }
 
 async function seed(owner: string, state: ServerPlanState) {
@@ -107,6 +120,7 @@ try {
   const guest = new Client(); await guest.state();
   const guestOwner = guest.ownerHash();
   const source = fixture(`plan_qa_${runId}_guest`);
+  source.plans[0].answers[OPERATING_KEY] = operatingFixture();
   await seed(guestOwner, source);
   await seed(userHash(a.id), fixture(`plan_qa_${runId}_existing`));
   const oldGuest = new Client(guest);
@@ -160,6 +174,52 @@ try {
     assert.equal((await otherAccountReplay.state()).plans.length, 0);
     const project = await db.from("projects").select("owner_id").eq("id", projectId).single();
     assert.equal(project.data?.owner_id, a.id);
+  });
+  await check("operating periods and archived reports survive login and enforce download ownership", async () => {
+    const planId = source.activePlanId!;
+    const records = readOperatingState(source.plans[0].answers);
+    const path = `/api/plan/operations?planId=${planId}`;
+    const response = await guest.request(path);
+    assert.equal(response.status, 200); assert.deepEqual(response.data.records, records);
+    assert.match(response.headers.get("cache-control") ?? "", /no-store/);
+    const downloadPath = `${path}&reportId=${records.reports[0].id}`;
+    const file = await guest.request(downloadPath);
+    assert.equal(file.status, 200); assert.match(file.headers.get("content-disposition") ?? "", /^attachment;/);
+    assert.match(file.data, /200,000원/); assert.match(file.data, /기간 길이가 달라/);
+    assert.equal((await otherAccountReplay.request(path)).status, 404);
+    assert.equal((await otherAccountReplay.request(downloadPath)).status, 404);
+    assert.equal((await oldGuest.request(downloadPath)).status, 404);
+    const reconnect = new Client(); assert.equal((await reconnect.login(a.email)).status, 200);
+    assert.deepEqual((await reconnect.request(path)).data.records, records);
+    assert.equal((await reconnect.request(downloadPath)).data, file.data);
+  });
+  await check("PostgreSQL operating writes reject stale tabs and preserve immutable archives", async () => {
+    const planId = source.activePlanId!;
+    const path = `/api/plan/operations?planId=${planId}`;
+    const post = (command: unknown) => guest.request("/api/plan/operations", "POST", { planId, command });
+    const before = (await guest.request(path)).data.records as OperatingState;
+    const period = before.periods[0];
+    const command = { action: "save", id: period.id, expectedRevision: period.revision, input: oldInput(period) };
+    const results = await Promise.all([
+      post({ ...command, input: { ...command.input, feedback: "로컬 DB 탭 A" } }),
+      post({ ...command, input: { ...command.input, feedback: "로컬 DB 탭 B" } }),
+    ]);
+    assert.deepEqual(results.map(r => r.status).sort(), [200, 409]);
+    let records = (await guest.request(path)).data.records as OperatingState;
+    const current = records.periods[0];
+    assert.equal(current.revision, period.revision + 1);
+    const archive = { action: "report", id: randomUUID(), reference: referenceFor(current, previousPeriod(records.periods, current)) };
+    assert.equal((await post(archive)).status, 200); assert.equal((await post(archive)).status, 200);
+    assert.equal((await post({ ...command, expectedRevision: current.revision, input: { ...oldInput(current), metrics: { ...current.metrics, revenue: 900000 } } })).status, 200);
+    records = (await guest.request(path)).data.records;
+    assert.equal(records.reports.length, 2); assert.equal(records.reports[0].period.metrics.revenue, 200000);
+    assert.equal(records.periods[0].metrics.revenue, 900000);
+    const state = await guest.state();
+    state.plans.find(p => p.id === planId)!.answers[OPERATING_KEY] = readOperatingState({});
+    assert.equal((await guest.request("/api/plan/state", "PUT", state)).status, 200);
+    assert.deepEqual((await guest.request(path)).data.records, records, "Generic autosave cannot erase server-owned operating records");
+    const disabled = await guest.request("/api/plan/operations/analysis", "POST", { action: "preview", planId, reference: referenceFor(records.periods[0], records.periods[1]), selection: { feedback: false, notes: false } });
+    assert.equal(disabled.status, 503); assert.equal(disabled.data.code, "ANALYSIS_DISABLED");
   });
   await check("account switch rejects old owner's autosave and DELETE", async () => {
     const previous = await guest.state(); assert.equal((await guest.login(b.email)).status, 200);
@@ -281,6 +341,72 @@ try {
       assert.equal(failed.cookies.has("venture_access"), false); assert.deepEqual((await stored(owner))?.data, draft);
       assert.equal((await stored(userHash(a.id)))?.data.plans.some((plan: { id: string }) => plan.id === draft.activePlanId), false);
     } finally { await sql("drop trigger if exists qa_fail_claim on public.plan_owner_claims; drop function if exists public.qa_fail_claim();"); }
+  });
+
+  await check("PostgreSQL analysis reservation deduplicates work and archives the chosen action across reconnect", async () => {
+    const owner = userHash(a.id);
+    const client = new Client(); assert.equal((await client.login(a.email)).status, 200);
+    const planId = source.activePlanId!;
+    const path = `/api/plan/operations?planId=${planId}`;
+    const records = (await client.request(path)).data.records as OperatingState;
+    const reference = referenceFor(records.periods[0], previousPeriod(records.periods, records.periods[0]));
+    let calls = 0;
+    let signalStart!: () => void; const started = new Promise<void>(resolve => { signalStart = resolve; });
+    let finish!: () => void; const wait = new Promise<void>(resolve => { finish = resolve; });
+    const runtime: AnalysisRuntime = { target: { provider: "mock", model: "local-db-fixture" }, generate: async payload => {
+      calls++; signalStart(); await wait;
+      return { result: { summary: "실제 DB 보관 흐름 검증용 모의 결과입니다", hypotheses: [{ title: "응대 과정을 확인할 필요", explanation: "원인을 확인한 결과가 아닙니다", evidenceIds: [payload.evidence[0].id], uncertainty: "추가 기록 필요" }], actions: [{ title: "문의 기록", hypothesisIndex: 0, action: "문의 시각을 기록합니다", successCriterion: "일주일간 기록 누락 확인" }], limitations: ["모의 응답으로 AI 품질을 검증하지 않았습니다"] } };
+    } };
+    const preview = await previewOperatingAnalysis(owner, planId, reference, { feedback: false, notes: false }, runtime);
+    const request = { id: randomUUID(), reference, selection: preview.selection, consent: { accepted: true as const, version: preview.version, hash: preview.hash, target: preview.target } };
+    const generation = generateOperatingAnalysis(owner, planId, request, runtime);
+    try {
+      await Promise.race([started, generation.then(() => { throw new Error("Generation finished before reservation"); })]);
+      const replay = await generateOperatingAnalysis(owner, planId, request, runtime);
+      assert.equal(replay.records.analyses.find(item => item.id === request.id)?.status, "running"); assert.equal(calls, 1);
+    } finally { finish(); }
+    const done = await generation; assert.equal(done.records.analyses.find(item => item.id === request.id)?.status, "ready");
+    const command = { action: "analysis-report", id: randomUUID(), analysisId: request.id, chosenAction: { index: 0, action: "직접 수정한 행동: 영업 종료 후 문의 기록", successCriterion: "7일 동안 누락 없이 기록했는지 확인" } };
+    const archive = () => client.request("/api/plan/operations", "POST", { planId, command });
+    assert.equal((await archive()).status, 200); assert.equal((await archive()).status, 200);
+    const filePath = `${path}&reportId=${command.id}`;
+    const file = await client.request(filePath); assert.equal(file.status, 200);
+    assert.match(file.data, /직접 수정한 행동/); assert.match(file.data, /로컬 모의 AI/);
+    assert.equal((await client.request("/api/auth/logout", "POST")).status, 200);
+    assert.equal((await client.request(filePath)).status, 404);
+    assert.equal((await client.login(a.email)).status, 200);
+    assert.equal((await client.request(filePath)).data, file.data);
+    const restored = (await client.request(path)).data.records as OperatingState;
+    assert.deepEqual(restored.reports.find(report => report.id === command.id)?.chosenAction, command.chosenAction);
+    assert.equal(restored.reports.filter(report => report.id === command.id).length, 1);
+    assert.equal(calls, 1);
+  });
+
+  await check("generation admin requires admin session and RPC excludes business content", async () => {
+    const client = new Client();
+    assert.equal((await client.request("/api/admin/generation")).status, 401);
+    assert.equal((await client.login(a.email)).status, 200);
+    assert.equal((await client.request("/api/admin/generation")).status, 401, "A customer login is not an admin login");
+    const anon = createClient(credentials.apiUrl, credentials.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+    assert.equal((await anon.rpc("admin_generation_jobs")).error?.code, "42501");
+    assert.equal((await anon.auth.signInWithPassword({ email: a.email, password })).error, null);
+    assert.equal((await anon.rpc("admin_generation_jobs")).error?.code, "42501");
+    const login = await client.request("/api/admin/support/session", "POST", { password: "LocalOnlyAdmin!20260913" });
+    assert.equal(login.status, 200);
+    await recordLlmUsage("local-admin-qa", "mock", false, { inputTokens: 123, outputTokens: 45 }, { model: "fixture-only", elapsedMs: 678, failureCode: "timeout" });
+    const result = await client.request("/api/admin/generation");
+    assert.equal(result.status, 200); assert.match(result.headers.get("cache-control") ?? "", /no-store/);
+    assert(result.data.jobs.length > 0 && result.data.jobs.length <= 20);
+    const serialized = JSON.stringify(result.data.jobs);
+    for (const secret of ["직접 수정한 사업 소개", "저장된 PPT 초안", "메뉴 사진 제작 사업을 시작하고", credentials.serviceKey, userHash(a.id)]) assert(!serialized.includes(secret));
+    const call = result.data.usage.find((item: { kind: string }) => item.kind === "local-admin-qa");
+    assert(call); assert.equal(call.model, "fixture-only"); assert.equal(call.elapsed_ms, 678); assert.equal(call.failure_code, "timeout"); assert.equal(call.input_tokens, 123);
+    const failures = await client.request("/api/admin/generation?status=failed");
+    assert.equal(failures.status, 200); assert(failures.data.jobs.every((job: { status: string }) => job.status === "failed"));
+    assert.equal((await client.request("/api/admin/generation?offset=-1")).status, 400);
+    assert.equal((await client.request("/api/admin/generation?offset=10001")).status, 400);
+    assert.equal((await client.request("/api/admin/support/session", "DELETE")).status, 200);
+    assert.equal((await client.request("/api/admin/generation")).status, 401);
   });
 
   await mkdir("artifacts/local-account-integration", { recursive: true });

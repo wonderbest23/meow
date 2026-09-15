@@ -45,7 +45,7 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
   const [mode, setMode] = useState<"edit" | "preview" | "leads" | "versions">("edit");
   const [builderOpen, setBuilderOpen] = useState(false);
 
-  const publicPath = site?.status === "published" ? `/launch/${site.slug}` : null;
+  const publicPath = site?.status === "published" ? `/launch/${site.publishedSlug ?? site.slug}` : null;
   const publicUrl = useMemo(() => {
     if (!publicPath || typeof window === "undefined") return publicPath;
     return `${window.location.origin}${publicPath}`;
@@ -85,14 +85,14 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
     void load();
   }, [project.id]);
 
-  const save = async (): Promise<LandingSiteRecord> => {
-    if (!draft) throw new Error("저장할 설정이 없습니다.");
+  const save = async (next = draft): Promise<LandingSiteRecord> => {
+    if (!next) throw new Error("저장할 설정이 없습니다.");
     setAction("saving");
     setMessage("");
     const response = await fetch(`/api/projects/${project.id}/landing`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
+      body: JSON.stringify({ draft: next, expectedUpdatedAt: site?.updatedAt ?? null }),
     });
     const payload = await response.json();
     if (!response.ok) throw new Error(payload.error?.message ?? "판매 페이지를 저장하지 못했습니다.");
@@ -113,9 +113,9 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
 
   const publish = async () => {
     try {
-      await save();
+      const saved = await save();
       setAction("publishing");
-      const response = await fetch(`/api/projects/${project.id}/landing/publish`, { method: "POST" });
+      const response = await fetch(`/api/projects/${project.id}/landing/publish`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt: saved.updatedAt }) });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error?.message ?? "판매 페이지를 공개하지 못했습니다.");
       setSite(payload.site);
@@ -134,7 +134,7 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
       const response = await fetch(`/api/projects/${project.id}/landing/rollback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ version }),
+        body: JSON.stringify({ version, expectedUpdatedAt: site?.updatedAt }),
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error?.message ?? "버전을 되돌리지 못했습니다.");
@@ -285,9 +285,14 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
           projectId={project.id}
           businessSummary={draft.subheadline || draft.offerDescription}
           onClose={() => setBuilderOpen(false)}
-          onSave={(pageData) => {
-            updateDraft({ pageData });
-            setBuilderOpen(false);
+          onSave={async (pageData) => {
+            const next = { ...draft, pageData };
+            setDraft(next);
+            try {
+              await save(next);
+              setBuilderOpen(false);
+              setMessage("서버에 저장했습니다.");
+            } finally { setAction("idle"); }
           }}
         />
       )}

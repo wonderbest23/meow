@@ -9,8 +9,11 @@
 // - 밑줄·색 띠 같은 장식선은 쓰지 않는다(전형적 자동 생성 티)
 
 import PptxGenJS from "pptxgenjs";
+import JSZip from "jszip";
+import { XMLBuilder, XMLParser } from "fast-xml-parser";
 import type { DeckPlan, DeckSlide } from "./deck-plan";
 import { DEFAULT_DECK_THEME, type DeckTheme } from "./deck-themes";
+import { appendEditorialDeck } from "./deck-editorial-render";
 
 // 16:9 (13.33 x 7.5 인치)
 const W = 13.33;
@@ -515,7 +518,8 @@ export async function renderDeckPptx(plan: DeckPlan, theme: DeckTheme = DEFAULT_
   const sourceNotes = (slide: PptxGenJS.Slide, item: DeckSlide) => {
     if (item.sourceSections?.length) slide.addNotes(`근거: 사업계획서 ${item.sourceSections.join(", ")}\n사용자 제공 정보와 제안·목표는 구분해서 읽어주세요.\n${item.note ?? ""}`);
   };
-  plan.slides.forEach((item, index) => {
+  if (plan.blueprint?.version === 2) appendEditorialDeck(pptx, plan);
+  else plan.slides.forEach((item, index) => {
     const isFirst = index === 0;
     const isLast = index === total - 1 && total > 1;
     if (isFirst) {
@@ -541,5 +545,19 @@ export async function renderDeckPptx(plan: DeckPlan, theme: DeckTheme = DEFAULT_
   });
 
   const data = (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
-  return data;
+  const zip = await JSZip.loadAsync(data);
+  const contentTypes = zip.file("[Content_Types].xml");
+  if (!contentTypes) throw new Error("PPTX content types are missing");
+  const xmlOptions = { ignoreAttributes: false, parseTagValue: false };
+  const manifest = new XMLParser(xmlOptions).parse(await contentTypes.async("string"));
+  const overrides = manifest.Types.Override as Array<{ "@_PartName": string; "@_ContentType": string }>;
+  // PptxGenJS lists a master per slide even though it writes only slideMaster1.
+  manifest.Types.Override = overrides.filter(entry => !(
+    entry["@_ContentType"] === "application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"
+    && /^\/ppt\/slideMasters\/slideMaster\d+\.xml$/.test(entry["@_PartName"])
+    && !zip.file(entry["@_PartName"].slice(1))
+  ));
+  if (manifest.Types.Override.length === overrides.length) return data;
+  zip.file("[Content_Types].xml", new XMLBuilder(xmlOptions).build(manifest));
+  return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }

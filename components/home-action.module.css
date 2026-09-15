@@ -1,0 +1,50 @@
+.action[data-home-action] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+  min-height: 64px;
+  box-sizing: border-box;
+  padding: 15px 22px;
+  border: 1px solid #c8dafa;
+  border-radius: 8px;
+  background: #edf4ff;
+  color: #245fc4;
+  font-family: inherit;
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .2s ease, border-color .2s ease, color .2s ease;
+}
+
+.label { min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
+.label small { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; font-weight: 450; color: inherit; opacity: .85; }
+.icon { display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; color: #2f6fe4; }
+.icon svg { display: block; width: 100%; height: 100%; stroke-width: 1.8; }
+.action[data-home-action][data-variant="solid"] { background: #2f6fe4; border-color: #2f6fe4; color: #fff; }
+.action[data-variant="solid"] .icon { color: inherit; }
+.action[data-home-action]:focus-visible { outline: 3px solid #3182f6; outline-offset: 4px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .action[data-home-action]:hover { background: #dfeaff; border-color: #a9c7fa; }
+  .action[data-home-action][data-variant="solid"]:hover { background: #245fc4; border-color: #245fc4; }
+}
+
+.action[data-home-action]:active { background: #d0e1ff; border-color: #8fb4f4; }
+.action[data-home-action][data-variant="solid"]:active { background: #1e52aa; border-color: #1e52aa; }
+
+@media (max-width: 700px) {
+  .action[data-home-action] { min-height: 56px; gap: 10px; padding: 13px 18px; font-size: 16px; }
+  .icon { flex-basis: 20px; width: 20px; height: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action[data-home-action] { transition: none; }
+}

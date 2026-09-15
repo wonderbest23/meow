@@ -129,6 +129,8 @@ export async function getPlanOrder(orderId: string): Promise<{
   status: string;
   orderName: string;
   expiresAt: string;
+  paymentKey: string | null;
+  providerStatus: string | null;
   planId: string | null;
   planType: string | null;
   /** 무엇을 산 주문인지 — 승인 뒤 무엇을 열어 줄지 여기서 갈린다 */
@@ -138,7 +140,7 @@ export async function getPlanOrder(orderId: string): Promise<{
   if (!supabase) return null;
   const { data, error } = await supabase
     .from("payment_orders")
-    .select("order_id, amount, owner_id, status, order_name, expires_at, opportunity")
+    .select("order_id, amount, owner_id, status, order_name, expires_at, opportunity, payment_key, provider_status")
     .eq("order_id", orderId)
     .maybeSingle();
   if (error) throw error;
@@ -150,6 +152,8 @@ export async function getPlanOrder(orderId: string): Promise<{
     status: data.status as string,
     orderName: data.order_name as string,
     expiresAt: data.expires_at as string,
+    paymentKey: (data.payment_key as string | null) ?? null,
+    providerStatus: (data.provider_status as string | null) ?? null,
     planId: ((data.opportunity as { planId?: string } | null)?.planId ?? null),
     planType: ((data.opportunity as { planType?: string } | null)?.planType ?? null),
     /* 옛 주문에는 product 가 없다 — 그때는 전부 계획서 결제였다 */
@@ -165,7 +169,7 @@ export async function markPlanOrderPaid(input: {
 }): Promise<void> {
   const supabase = getServerSupabase();
   if (!supabase) return;
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("payment_orders")
     .update({
       status: "done",
@@ -175,8 +179,17 @@ export async function markPlanOrderPaid(input: {
       confirmed_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
-    .eq("order_id", input.orderId);
+    .eq("order_id", input.orderId)
+    .eq("status", "created")
+    .select("order_id")
+    .maybeSingle();
   if (error) throw error;
+  if (data) return;
+  // A repeated acknowledgement is safe only for the same already-paid transaction.
+  const existing = await supabase.from("payment_orders").select("status,payment_key").eq("order_id", input.orderId).maybeSingle();
+  if (existing.error) throw existing.error;
+  if (existing.data?.status === "done" && existing.data.payment_key === input.tid) return;
+  throw new Error("PAYMENT_STATE_CONFLICT");
 }
 
 /** Only an uncompleted order may fail; late callbacks cannot revoke paid access. */

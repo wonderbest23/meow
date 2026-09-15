@@ -1,0 +1,16 @@
+.dialog { width: min(1100px, calc(100% - 32px)); max-height: 90dvh; margin: auto; padding: 0; border: 0; border-radius: 8px; background: #fff; color: #19212b; }
+.dialog::backdrop { background: rgb(22 28 45 / 55%); }
+.dialog .sheet { width: 100%; max-height: 90dvh; grid-template-rows: auto minmax(0, 1fr) auto; border-radius: 8px; }
+.sheet > header button { flex: 0 0 36px; color: #263446; }
+.sheet > header button svg { width: 18px; height: 18px; }
+.footer { display: flex; align-items: center; gap: 12px; padding: 16px 20px; border-top: 1px solid #e7ebef; }
+.footer p { flex: 1; margin: 0; font-size: 14px; line-height: 1.6; word-break: keep-all; }
+.footer button { min-height: 44px; padding: 10px 16px; border: 1px solid #d8e0e9; border-radius: 8px; background: #fff; color: #263446; font: inherit; font-size: 14px; cursor: pointer; }
+.footer .apply { background: #2469de; color: #fff; border-color: #2469de; }
+.footer button:disabled { opacity: .45; cursor: default; }
+.footer button:focus-visible { outline: 3px solid #93b8ff; outline-offset: 2px; }
+@media (max-width: 640px) {
+  .footer { flex-wrap: wrap; }
+  .footer p { flex-basis: 100%; }
+  .footer button { flex: 1; }
+}

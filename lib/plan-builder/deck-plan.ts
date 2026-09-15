@@ -1,12 +1,17 @@
-// 완성한 계획서 → 발표용 슬라이드 구성.
-// 25개 섹션 본문을 그대로 넣으면 슬라이드가 글자로 꽉 차므로,
-// AI에게 발표자료 어법으로 다시 쓰게 한 뒤 그 결과만 슬라이드로 옮긴다.
+// Saved business sources -> sector/purpose storyboard -> reviewed presentation content.
 
 import { completeJson, parseJsonObject, type LLMConfig } from "../llm/complete";
 import { calculateFinancials, collectFinancialInputs } from "./financials";
 import { reviewCoachSection } from "./coach-review";
+import { createProposalBlueprint, proposalBlueprintPrompt, type ProposalBlueprint, type ProposalOptions, type ProposalSlot } from "./proposal-blueprint";
+import type { ProposalSlideEdits } from "./proposal-revision";
 
 export interface DeckSlide {
+  placement?: ProposalSlideEdits["layout"];
+  id?: string;
+  composition?: Pick<ProposalSlot, "role" | "layout" | "treatment" | "missingEvidence">;
+  table?: { headers: string[]; rows: string[][] };
+  image?: { id: string; data: string; alt: string };
   /**
    * 슬라이드 성격.
    * statement = 사업 정의 한 방(청중이 "무슨 사업인지" 즉시 이해),
@@ -29,6 +34,7 @@ export interface DeckSlide {
 }
 
 export interface DeckPlan {
+  blueprint?: ProposalBlueprint;
   brandName: string;
   slogan: string;
   slides: DeckSlide[];
@@ -39,6 +45,9 @@ export type DeckBuildInput = {
   businessName: string; businessDescription?: string; planType?: string;
   sections: Array<{ chapterTitle: string; sectionTitle: string; markdown: string }>;
   allAnswers: Record<string, Record<string, unknown>>; businessContext?: string;
+  presentation?: ProposalOptions;
+  /** Only application-approved inline assets; the model cannot request a path or URL. */
+  assets?: Array<{ id: string; data: string; alt: string }>;
 };
 
 const SYSTEM_PROMPT = [
@@ -47,13 +56,9 @@ const SYSTEM_PROMPT = [
   "슬라이드는 읽는 문서가 아니라 말하면서 보여주는 자료입니다. 문장을 짧게 끊고 군더더기를 지우세요.",
   "각 항목은 한 줄로 읽히게 쓰고, 같은 말을 다른 슬라이드에서 반복하지 마세요.",
   "근거가 약한 값은 슬라이드에 넣지 말고 빼세요. 빈칸이 과장보다 낫습니다.",
-  "",
-  "구성 규칙 — 반드시 지키세요:",
-  "1) 표지 바로 다음 슬라이드는 kind:\"statement\" — 이 사업이 무엇인지 한 방에 이해시키는 장입니다.",
-  "   lead에 '누구에게 무엇을 어떻게 파는 사업'인지 한 문장(50자 이내)으로, points에는 무엇을/누구에게/어떻게(+얼마에) 3~4개를 채우세요.",
-  "   청중이 이 장만 보고 '아, 이런 사업이구나'가 되어야 합니다.",
-  "2) 문제·해결 다음, 재무 앞에 kind:\"vision\" 슬라이드를 하나 두세요 — 이 사업이 가려는 방향과 목표.",
-  "   lead에 비전 한 문장, points 또는 metrics에 기한이 있는 목표(예: 1년차 월 200건)를 담으세요.",
+  "업종별 편집 설계의 id와 역할 및 순서를 지키세요. 모든 업종을 투자 유치 이야기로 바꾸지 마세요.",
+  "고객 문제와 해결은 대응 구조로, 수행 범위는 표로, 이용 과정은 단계로 편집하세요. 장식용 카드의 반복을 피하세요.",
+  "현재 제공하는 것과 제안하는 것, 실제 실적과 예상 계산을 구분하세요. 상세 내용은 note로 분리하되 중요한 거래 조건을 숨기지 마세요.",
 ].join("\n");
 
 /** 슬라이드 구성 요청에 쓰는 JSON 형식 안내 */
@@ -62,12 +67,15 @@ const SHAPE_GUIDE = `{
   "slogan": "한 줄 슬로건(20자 이내)",
   "slides": [
     {
+      "id": "편집 설계에 지정된 id",
       "kind": "statement | vision (해당 슬라이드에만, 그 외 생략)",
       "eyebrow": "상단 라벨(예: 사업 소개, 문제, 해결, 비전)",
       "title": "슬라이드 제목(25자 이내)",
       "lead": "핵심 한 문장(60자 이내, 선택)",
       "points": [{ "label": "짧은 제목(12자 이내)", "detail": "설명 한 줄(60자 이내)" }],
       "metrics": [{ "label": "지표 이름", "value": "값", "note": "보조 설명(선택)" }],
+      "table": { "headers": ["항목", "내용", "조건"], "rows": [["원문 항목", "원문 내용", "원문 조건"]] },
+      "imageId": "제공된 이미지 id 중 하나(선택, 이미지가 없으면 생략)",
       "note": "하단 보조 문장(선택)",
       "sourceSections": ["계획서의 챕터명 · 항목명"]
     }
@@ -144,16 +152,59 @@ export function deckFinancialMetrics(allAnswers: Record<string, Record<string, u
   return out.length ? out : undefined;
 }
 
-function normalize(raw: Record<string, unknown>, fallbackName: string): DeckPlan | null {
+export function blueprintForDeckInput(input: DeckBuildInput): ProposalBlueprint {
+  let context: { stage?: string; fields?: Array<{ key?: string; value?: string; basis?: string }> } = {};
+  try { context = JSON.parse(input.businessContext ?? "{}"); } catch { /* Older context can be plain text. */ }
+  const fields = new Map((Array.isArray(context?.fields) ? context.fields : []).filter(field => field && typeof field.key === "string").map(field => [field.key, field]));
+  const has = (key: string) => typeof fields.get(key)?.value === "string" && Boolean(fields.get(key)!.value!.trim());
+  const evidence = {
+    images: Boolean(input.assets?.length), pricing: has("price"),
+    financials: input.businessContext ? ["price", "unitCost", "cost"].every(has) : Boolean(deckFinancialMetrics(input.allAnswers)?.length),
+    actuals: context?.stage === "operating" && fields.get("sales")?.basis === "user" && has("sales"),
+    ...input.presentation?.evidence,
+  };
+  return createProposalBlueprint({ ...input, options: {
+    ...(context?.stage === "operating" ? { stage: "operating" as const } : context?.stage === "exploring" ? { stage: "idea" as const } : {}),
+    ...input.presentation, evidence,
+  } });
+}
+
+function normalize(raw: Record<string, unknown>, fallbackName: string, blueprint?: ProposalBlueprint, assets: DeckBuildInput["assets"] = []): DeckPlan | null {
   const slidesRaw = Array.isArray(raw.slides) ? raw.slides : null;
   if (!slidesRaw?.length) return null;
+  if (blueprint && (slidesRaw.length !== blueprint.slots.length || slidesRaw.some((slide, index) => slide?.id !== blueprint.slots[index].id))) return null;
   const text = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
   const slides: DeckSlide[] = [];
-  for (const item of slidesRaw.slice(0, 16)) {
+  for (const [index, item] of slidesRaw.slice(0, 16).entries()) {
     if (!item || typeof item !== "object") continue;
     const s = item as Record<string, unknown>;
     const title = text(s.title, 60);
     if (!title) continue;
+    const slot = blueprint?.slots[index];
+    if (slot && (typeof s.title !== "string" || s.title.length > 50 || s.title.split("\n").length > 2 || (Array.isArray(s.points) && s.points.length > 4) || (Array.isArray(s.metrics) && s.metrics.length > 4))) return null;
+    if (slot) {
+      const within = (value: unknown, max: number) => value == null || (typeof value === "string" && value.length <= max);
+      if (!within(s.lead, 100) || !within(s.note, 160)) return null;
+      const detailLimit = slot.layout === "summary" ? 40 : Array.isArray(s.points) && s.points.length === 4 ? 60 : 90;
+      if (Array.isArray(s.points) && !s.points.every(point => point && within(point.label, 20) && within(point.detail, detailLimit))) return null;
+      if (Array.isArray(s.metrics) && !s.metrics.every(metric => metric && within(metric.label, 24) && within(metric.value, 30) && within(metric.note, 40))) return null;
+      if (Array.isArray(s.sourceSections) && s.sourceSections.length > 4) return null;
+    }
+    let table: DeckSlide["table"];
+    if (slot && s.table != null) {
+      const rawTable = s.table as Record<string, unknown>;
+      if (!Array.isArray(rawTable.headers) || rawTable.headers.length < 2 || rawTable.headers.length > 4 || !rawTable.headers.every(v => typeof v === "string" && v.length <= 12)) return null;
+      const columns = rawTable.headers.length;
+      if (!Array.isArray(rawTable.rows) || rawTable.rows.length < 1 || rawTable.rows.length > 5 || !rawTable.rows.every(row => Array.isArray(row) && row.length === columns && row.every(v => typeof v === "string" && v.length <= 160))) return null;
+      const rowHeight = Math.min(.8, 3.2 / rawTable.rows.length);
+      const lines = Math.max(1, Math.floor((rowHeight * 72 - 13) / (13 * 1.2)));
+      const maxCellChars = Math.floor((11.89 / columns * 72 - 23) / 13 * lines * .9);
+      if (!rawTable.rows.every(row => row.every((cell: string) => cell.length <= maxCellChars))) return null;
+      table = { headers: rawTable.headers as string[], rows: rawTable.rows as string[][] };
+    }
+    const imageId = typeof s.imageId === "string" ? s.imageId : (s.image as DeckSlide["image"])?.id;
+    const approvedImage = imageId ? assets.find(asset => asset.id === imageId && /^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(asset.data) && asset.data.length <= 4_000_000) : undefined;
+    if (slot && imageId && !approvedImage) return null;
     const points = Array.isArray(s.points)
       ? s.points
           .slice(0, 4)
@@ -173,7 +224,9 @@ function normalize(raw: Record<string, unknown>, fallbackName: string): DeckPlan
           .filter((m) => m.label && m.value)
       : undefined;
     const kindRaw = text(s.kind, 12);
+    if (slot && slot.role !== "cover" && !text(s.lead, 140) && !points?.length && !metrics?.length && !table?.rows.length) return null;
     slides.push({
+      ...(slot ? { id: slot.id, composition: { role: slot.role, layout: slot.layout, treatment: slot.treatment, missingEvidence: slot.missingEvidence }, ...(table ? { table } : {}), ...(approvedImage ? { image: approvedImage } : {}) } : {}),
       kind: kindRaw === "statement" || kindRaw === "vision" ? kindRaw : undefined,
       eyebrow: text(s.eyebrow, 24) || "SECTION",
       title,
@@ -186,10 +239,25 @@ function normalize(raw: Record<string, unknown>, fallbackName: string): DeckPlan
   }
   if (!slides.length) return null;
   return {
+    ...(blueprint ? { blueprint } : {}),
     brandName: text(raw.brandName, 60) || fallbackName,
     slogan: text(raw.slogan, 60),
     slides,
   };
+}
+
+export function normalizeProposalReplacements(deck: DeckPlan, slides: DeckSlide[]): DeckSlide[] | null {
+  if (!deck.blueprint) return null;
+  const ids = new Set(slides.map(slide => slide.id));
+  const slots = deck.blueprint.slots.filter(slot => ids.has(slot.id));
+  if (slots.length !== slides.length) return null;
+  const ordered = slots.map(slot => slides.find(slide => slide.id === slot.id)!);
+  return normalize({ slides: ordered }, deck.brandName, { ...deck.blueprint, slots })?.slides ?? null;
+}
+
+function deckReviewJson(plan: DeckPlan): string {
+  // Source assets and deterministic layout rules do not belong in a paid text-review request.
+  return JSON.stringify({ brandName: plan.brandName, slogan: plan.slogan, slides: plan.slides.map(({ composition: _composition, image, ...slide }) => ({ ...slide, ...(image ? { imageId: image.id } : {}) })) });
 }
 
 /**
@@ -205,6 +273,10 @@ export async function buildDeckPlan(
   if (!config) { await onEvent?.({ stage: "failed", attempt: 0, code: "ai_unavailable" }); return null; }
 
   const financial = input.businessContext ? undefined : deckFinancialMetrics(input.allAnswers);
+  // Persisted v1 checkpoints keep their old shape. New jobs must follow the v2 storyboard.
+  const blueprint = checkpoint?.draft && !checkpoint.draft.blueprint ? undefined : blueprintForDeckInput(input);
+  const assets = input.assets ?? checkpoint?.draft?.slides.flatMap(slide => slide.image ? [slide.image] : []) ?? [];
+  const normalizePlan = (raw: Record<string, unknown>) => normalize(raw, input.businessName, blueprint, assets);
   const sourceNames = new Set(input.sections.map(s => `${s.chapterTitle} · ${s.sectionTitle}`));
   const source = [
     `[사업]`,
@@ -214,16 +286,18 @@ export async function buildDeckPlan(
     "",
     `[계획서 본문]`,
     digestSections(input.sections, Math.min(6000, Math.max(200, Math.floor(32000 / Math.max(1, input.sections.length))))),
-    input.businessContext ? `[공통 사업 정보와 계산값]\n${input.businessContext}\n일반 사업소개용입니다. 실제 실적과 예상 목표를 구분하고 투자금 요청·시장 통계를 새로 만들지 마세요. design이 있으면 장기 구상과 startingPlan의 시작 범위를 구별하고 alternatives는 미선택 대안으로만 표시하세요. feasibility는 산술 검사이지 사업성 검증이 아닙니다. 최신 fields와 다른 가격이나 운영 범위를 새로 정하지 마세요.` : "",
+    input.businessContext ? `[공통 사업 정보와 계산값]\n${input.businessContext}\n실제 실적과 예상 목표를 구분하고 투자금 요청·시장 통계를 새로 만들지 마세요. design이 있으면 장기 구상과 startingPlan의 시작 범위를 구별하고 alternatives는 미선택 대안으로만 표시하세요. feasibility는 산술 검사이지 사업성 검증이 아닙니다. 최신 fields와 다른 가격이나 운영 범위를 새로 정하지 마세요.` : "",
     financial
       ? `\n[계산된 재무 수치 — 이 값만 사용하고 새로 만들지 마세요]\n${financial.map((m) => `- ${m.label}: ${m.value}${m.note ? ` (${m.note})` : ""}`).join("\n")}`
       : "",
+    blueprint ? proposalBlueprintPrompt(blueprint) : "",
+    assets.length ? `[사용 가능한 이미지]\n${assets.map(asset => `${asset.id}: ${asset.alt}`).join("\n")}` : "사용 가능한 이미지 없음. imageId를 생성하지 마세요.",
   ].filter(Boolean).join("\n");
   const user = [
     source,
-    `[서사 구성]\n${archetypeFor(input.planType)}`,
+    blueprint ? "본문에 위 편집 설계를 적용하세요. 표지와 다음 단계도 원문의 근거를 표기하세요." : `[서사 구성]\n${archetypeFor(input.planType)}`,
     "",
-    "위 내용으로 8~10장짜리 사업 발표자료를 구성하세요.",
+    blueprint ? `위 내용으로 정확히 ${blueprint.slots.length}장을 구성하세요. id를 추가·삭제·변경하지 마세요.` : "위 내용으로 8~10장짜리 사업 발표자료를 구성하세요.",
     "첫 장은 표지, 마지막 장은 요청·다음 단계로 하세요.",
     "재무 슬라이드에는 위에 준 계산 값을 metrics로 그대로 넣으세요.",
     "표지와 마지막 장을 포함한 모든 슬라이드의 sourceSections에는 실제로 참고한 계획서 항목을 '챕터명 · 항목명'으로 정확히 넣으세요. 제안과 목표의 표시를 요약하면서 삭제하지 마세요.",
@@ -234,14 +308,10 @@ export async function buildDeckPlan(
     .filter(Boolean)
     .join("\n");
 
-  /*
-   * 실측에서 2회 중 1회가 실패했고, 같은 조건 재시도도 같이 실패했다 —
-   * 원인이 응답 절단(토큰 한도)이면 같은 요청은 같은 자리에서 또 잘린다.
-   * 그래서 두 번째 시도는 조건을 바꾼다: 출력 한도를 늘리고 장수를 줄인다.
-   */
+  // Retry malformed/truncated content once with shorter rows, preserving stable slide IDs.
   const attempts = [
     { maxOutputTokens: 8000, effort: "medium" as const, extra: "" },
-    { maxOutputTokens: 12000, effort: "medium" as const, extra: "\n슬라이드는 8~10장으로 줄이고, points·metrics를 슬라이드당 3개 이하로 간결하게 하세요." },
+    { maxOutputTokens: 12000, effort: "medium" as const, extra: "\n요청한 id와 장수는 유지하고, points·metrics와 표의 행을 슬라이드당 3개 이하로 간결하게 하세요." },
   ];
   for (const [index, a] of attempts.entries()) {
     const attempt = index + 1;
@@ -261,7 +331,7 @@ export async function buildDeckPlan(
       await onEvent?.({ stage: "failed", attempt, code: `provider_${failure}` });
       return null;
     }
-    let plan = raw ? normalize(raw, input.businessName) : null;
+    let plan = raw ? normalizePlan(raw) : null;
     if (!plan || plan.slides.length < 8) {
       await onEvent?.({ stage: "failed", attempt, code: raw ? "invalid_slides" : failure === "output_limit" ? "generation_output_limit" : "generation_empty" });
       continue;
@@ -269,16 +339,16 @@ export async function buildDeckPlan(
     if (plan && plan.slides.length >= 8) {
       await checkpoint?.saveDraft(plan);
       {
-        const checked = await reviewCoachSection(config, source, JSON.stringify(plan), "json", event => onEvent?.({ stage: event === "reviewing" || event === "repairing" ? event : "failed", attempt, ...(event === "reviewing" || event === "repairing" ? {} : { code: event }) }), async repaired => {
+        const checked = await reviewCoachSection(config, source, deckReviewJson(plan), "json", event => onEvent?.({ stage: event === "reviewing" || event === "repairing" ? event : "failed", attempt, ...(event === "reviewing" || event === "repairing" ? {} : { code: event }) }), async repaired => {
           const parsed = parseJsonObject(repaired);
-          const draft = parsed ? normalize(parsed, input.businessName) : null;
+          const draft = parsed ? normalizePlan(parsed) : null;
           if (draft && draft.slides.length >= 8 && draft.slides.every(slide => slide.sourceSections?.length && slide.sourceSections.every(name => sourceNames.has(name)))) await checkpoint?.saveDraft(draft);
         }, { compact: true, allowFallback: false });
         // Checkpoints remain unapproved until the final review and validation succeed.
         if (!checked) return null;
         await onEvent?.({ stage: "validating", attempt });
         const parsed = parseJsonObject(checked);
-        plan = parsed ? normalize(parsed, input.businessName) : null;
+        plan = parsed ? normalizePlan(parsed) : null;
         if (!plan || plan.slides.length < 8 || plan.slides.some(s => !s.sourceSections?.length || s.sourceSections.some(name => !sourceNames.has(name)))) {
           await onEvent?.({ stage: "failed", attempt, code: !plan ? "review_json_invalid" : "source_validation_failed" });
           continue;

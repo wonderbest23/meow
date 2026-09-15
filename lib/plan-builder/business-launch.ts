@@ -20,6 +20,9 @@ export function readLaunch(plan: Plan): LaunchState {
   const parsed = launchSchema.safeParse(plan.answers[LAUNCH_KEY]);
   return parsed.success ? parsed.data : launchSchema.parse({ purpose: readCoach(plan.answers)?.stage === "operating" ? "improve" : "launch" });
 }
+export function useOperatingWorkflow(state: LaunchState): LaunchState {
+  return { ...state, purpose: "improve" };
+}
 export const LAUNCH_SOURCES = {
   registration: { title: "국세청 · 사업자등록 제출서류", url: "https://www.nts.go.kr/nts/ad/cntnts/cntntsView.do?mi=2445" },
   tax: { title: "국세청 · 인터넷 세법상담", url: "https://b.nts.go.kr/nts/cm/cntnts/cntntsView.do?cntntsId=109144&mi=13365" },
@@ -28,13 +31,18 @@ export const LAUNCH_SOURCES = {
 
 export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
   const coach = readCoach(plan.answers);
+  const improving = settings.purpose === "improve";
   const field = (key: string, fallback = "아직 정하지 않음") => coach?.fields.find(f => f.key === key)?.value ?? fallback;
   const business = field("business", plan.title), offer = field("offer"), customer = field("customer"), price = field("price"), channel = field("channel");
   const context = `사업: ${plan.title}\n소개: ${business}\n상품: ${offer}\n고객: ${customer}\n가격: ${price}`;
   const base = { signature: JSON.stringify([coach ? coachDocumentRevision(coach) : plan.title, settings.purpose, settings.workplace, settings.registered]) };
   const result: LaunchStep[] = [{ ...base, id: "offer", title: settings.purpose === "improve" ? "상품을 더 다듬어요" : "팔고 싶은 상품을 정해요", task: "정리된 상품 소개를 읽고 바꾸고 싶은 내용만 남겨주세요.", materialTitle: "상품 소개 초안", material: `${plan.title}\n\n${business}\n\n제공 내용: ${offer}\n이용 고객: ${customer}\n검토 중인 가격: ${price}\n문의·판매 경로: ${channel}`, prompt: "현재 상품 소개를 고객에게 바로 보여줄 수 있는 문장으로 다듬어 주세요. 정해지지 않은 구성과 가격은 제안으로 표시하고 효과나 실적은 만들지 마세요." }];
   if (settings.purpose === "ideas") return result;
-  result.push({ ...base, id: "operations", title: "작게 시작할 범위를 정해요", task: "처음 제공할 범위와 감당할 수 있는 비용을 확인해요.", materialTitle: "운영 범위 메모", material: `${context}\n\n준비 예산: ${field("budget")}\n처음 드는 비용: ${field("setupCost")}\n매달 나가는 비용: ${field("cost")}\n운영 범위: ${field("capacity")}\n주당 가능한 시간: ${field("hoursPerWeek")}\n\n이번에 하지 않을 일:\n추가로 필요한 준비물:`, prompt: "현재 사업의 첫 운영 범위를 작게 정하고, 이미 알려준 예산과 시간으로 가능한 준비물·작업 순서·보류할 일을 구체적으로 제안해주세요. 모르는 비용을 0원이나 실제 견적으로 확정하지 마세요." });
+  result.push({ ...base, id: "operations", title: improving ? "현재 운영에서 바꿀 일을 정해요" : "작게 시작할 범위를 정해요", task: improving ? "현재 문제와 비용을 확인하고 유지할 일과 바꿔볼 일을 나눠요." : "처음 제공할 범위와 감당할 수 있는 비용을 확인해요.", materialTitle: "운영 범위 메모", material: improving
+    ? `${context}\n\n현재 문제: ${field("problem")}\n현재 매출(제공된 정보): ${field("sales")}\n매달 나가는 비용: ${field("cost")}\n운영 범위: ${field("capacity")}\n개선 목표: ${field("goal")}\n\n유지할 일:\n이번에 바꿔볼 일:\n확인할 기간과 실제 결과:`
+    : `${context}\n\n준비 예산: ${field("budget")}\n처음 드는 비용: ${field("setupCost")}\n매달 나가는 비용: ${field("cost")}\n운영 범위: ${field("capacity")}\n주당 가능한 시간: ${field("hoursPerWeek")}\n\n이번에 하지 않을 일:\n추가로 필요한 준비물:`, prompt: improving
+    ? "현재 운영 중인 사업의 문제와 제공된 매출·비용을 바탕으로 유지할 일, 바꿀 일, 다음 실험 하나와 확인 기준을 정해주세요. 기록하지 않은 실적은 만들지 말고 원인 가설과 실제 결과를 구분해주세요. 새 창업 준비로 되돌리지 마세요."
+    : "현재 사업의 첫 운영 범위를 작게 정하고, 이미 알려준 예산과 시간으로 가능한 준비물·작업 순서·보류할 일을 구체적으로 제안해주세요. 모르는 비용을 0원이나 실제 견적으로 확정하지 마세요." });
   if (settings.workplace === "unknown") result.push({ ...base, id: "workspace-choice", title: "일할 공간이 필요한지 알아봐요", task: "사무실을 먼저 계약하지 않아도 돼요. 현재 사업에 필요한 공간부터 검토해요.", materialTitle: "작업 공간 검토 메모", material: `${context}\n\n고객이 직접 방문해야 하는지:\n장비·재고를 보관할 공간이 필요한지:\n집이나 온라인에서 할 수 있는 작업:\n별도 확인이 필요한 주소·시설 조건:`, prompt: "현재 사업에 사무실·점포가 실제로 필요한지 검토해 주세요. 온라인 운영, 집에서 작업, 소호·공유사무실, 점포 중 적용 가능한 선택지를 비교하고, 확인되지 않은 주소 사용·인허가 적합성을 확정하지 마세요." });
   if (settings.workplace === "shared" || settings.workplace === "shop") result.push({ ...base, id: "workplace", title: settings.workplace === "shared" ? "소호·공유사무실을 비교해요" : "사업장 계약 조건을 확인해요", task: "받은 견적과 이용 조건을 비교하고 계약 전 질문을 준비해요.", materialTitle: "사업장 문의 초안", material: `안녕하세요. ${business} 사업을 준비하고 있습니다.\n${settings.region ? `희망 지역은 ${settings.region}입니다.\n` : ""}다음 조건을 포함한 서면 견적을 받고 싶습니다.\n\n1. 상주 좌석 이용인지, 비상주 주소 이용인지\n2. 보증금·월 이용료·관리비·초기 비용 및 부가세 포함 여부\n3. 우편 수령·회의실·추가 인원 비용\n4. 제 업종의 사업자등록과 실제 영업에 적합한 공간인지\n5. 계약 당사자와 공간 제공 권한을 확인할 서류\n6. 이용 기간·중도 해지·자동 연장·보증금 반환 조건\n7. 주소 변경 및 폐업 시 필요한 절차\n\n계약서 초안과 전체 비용 내역을 함께 부탁드립니다.`, caution: "소호오피스도 상주형과 비상주형이 달라요. 저렴하다는 이유만으로 적합하다고 판단하지 않으며, 등록 가능 여부와 계약은 관할 기관·전문가에게 확인해야 해요. 아래는 문의 초안이지 계약서가 아니에요.", links: [LAUNCH_SOURCES.lease, LAUNCH_SOURCES.registration], prompt: "현재 사업의 사무실 견적과 계약 전 확인할 질문을 정리해 주세요. 법적 적합성·권리관계·등록 가능 여부를 확인했다고 단정하지 말고, 실제 견적이 없으면 임대료 시세를 만들지 마세요." });
   if (settings.registered !== "yes") result.push({ ...base, id: "registration", title: "사업자등록 준비를 확인해요", task: "실제로 판매를 시작할 시점에 맞춰 필요한 서류와 업종을 공식 안내에서 확인해요.", materialTitle: "등록 상담용 사업 설명", material: `${context}\n\n사업장 방식: ${settings.workplace === "remote" ? "별도 사무실 없이 운영 검토" : settings.workplace === "shared" ? "소호·공유사무실 검토" : settings.workplace === "shop" ? "점포·사업장 검토" : "미정"}\n\n확인하고 싶은 내용:\n- 사업 내용에 맞는 업종과 신청 서류\n- 주소 사용과 임차 관련 제출 자료\n- 해당 업종의 별도 인허가·신고 여부\n- 실제 개업 예정일에 맞는 신청 일정`, caution: "사업 아이디어를 확인하는 것과 실제 영업은 달라요. 여기서 준비 완료를 눌러도 사업자등록이 신청되지는 않아요.", links: [LAUNCH_SOURCES.registration], prompt: "현재 사업으로 관할 세무서에 물어볼 등록 상담 질문지를 작성해주세요. 업종코드·허가 여부·신청 완료를 임의로 확정하지 마세요." });
@@ -43,6 +51,20 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
   result.push({ ...base, id: "payment", title: "주문·결제 흐름을 점검해요", task: "고객이 문의하고 결제한 뒤 상품을 받는 과정을 한 번 따라가 봐요.", materialTitle: "판매 준비 점검표", material: `판매할 상품: ${offer}\n검토 중인 가격: ${price}\n주문·문의 경로: ${channel}\n\n확인할 내용:\n- 신청 내용과 고객 연락 방법\n- 최종 금액과 추가 비용 표시\n- 제공 시점과 제공 범위\n- 취소·환불 안내와 문의 방법\n- 결제 승인·실패·중복 결제 처리\n- 필요한 사업자·판매자·개인정보 안내\n\n선택한 결제 제공사:\n심사·연결 상태:\n실제 테스트 결과:`, caution: "이 단계는 연결 준비예요. 결제사 심사·가맹점 등록·실제 결제 연동이 완료됐다는 뜻은 아니에요.", prompt: "현재 사업에서 고객 문의부터 주문, 결제, 제공, 사후 문의까지의 흐름과 테스트 시나리오를 작성해주세요. 실제로 연결되지 않은 결제 기능을 연결 완료라고 표현하지 마세요." });
   result.push({ ...base, id: "marketing", title: "첫 홍보를 준비해요", task: "고객이 있는 채널 하나를 정하고 첫 게시물을 다듬어요.", materialTitle: "첫 홍보 글 초안", material: `${plan.title}\n\n${business}\n\n제공하려는 내용은 ${offer}입니다.\n${customer === "아직 정하지 않음" ? "관심 있는 분" : customer}의 의견과 문의를 받고 있습니다.\n자세한 구성과 이용 조건은 문의 시 안내드리겠습니다.\n\n게시할 채널: ${channel}\n문의 받을 주소: [연락 방법 입력]\n게시 예정일: [날짜 입력]`, caution: "저장된 사업 정보로 구성한 초안이에요. 가격·효과·이미지 사용 권한을 확인한 뒤 공개해 주세요. 마케팅 대행 연결은 아직 제공하지 않아요.", prompt: "현재 고객과 상품에 맞는 1주일 마케팅 계획과 바로 쓸 게시물 3개를 작성해주세요. 채널별 작업시간, 적은 예산의 테스트 방법, 확인할 지표를 포함하고 성과를 보장하지 마세요." });
   result.push({ ...base, id: "review", title: "운영 결과로 개선해요", task: "알고 있는 실제 결과만 남기고 다음 개선안을 받아보세요.", materialTitle: "운영 기록", material: `기록 기간:\n실제 문의 수:\n실제 판매 건수:\n실제 매출:\n실제 지출:\n고객이 남긴 의견:\n계속할 일:\n바꿔볼 일:\n\n아직 모르는 항목은 비워두어도 됩니다.`, prompt: "제가 기록한 실제 운영 결과를 바탕으로 유지할 것과 바꿀 것, 다음 실험 하나를 정해주세요. 기록하지 않은 실적은 만들지 말고 원인 추정과 확인된 결과를 구분해주세요." });
+  if (improving) {
+    const website = result.find(step => step.id === "website")!;
+    website.title = "홈페이지에서 개선할 곳을 찾아요";
+    website.task = "기존 홈페이지의 상품 설명과 문의 흐름을 점검해요";
+    website.materialTitle = "홈페이지 개선 요청서";
+    website.material += "\n\n현재 홈페이지 주소:\n고객이 이용하기 어려워한 부분:\n이번에 바꾸려는 내용:";
+    website.prompt = "운영 중인 사업의 홈페이지에서 상품 설명과 문의 흐름을 개선할 문구·구성을 제안해주세요. 제공된 화면이나 내용만 근거로 삼고, 주소만 보고 사이트를 점검했다고 말하거나 실제 전환율·후기·실적을 만들지 마세요.";
+    const marketing = result.find(step => step.id === "marketing")!;
+    marketing.title = "홍보 결과로 다음 실험을 정해요";
+    marketing.task = "지금 쓰는 채널의 실제 반응을 확인하고 바꿀 일 하나를 정해요";
+    marketing.materialTitle = "홍보 개선 메모";
+    marketing.material = `${context}\n\n현재 채널: ${channel}\n확인한 기간:\n실제 집행 비용:\n실제 문의와 판매:\n고객 반응:\n유지할 내용:\n다음에 바꿔볼 내용:`;
+    marketing.prompt = "현재 채널과 제가 기록한 홍보 결과를 바탕으로 다음 1주일에 바꿔볼 실험 하나와 게시물 초안을 작성해주세요. 기존 고객과 새 고객을 구별하고 확인할 지표를 정하되, 미입력 결과는 만들거나 성과를 보장하지 마세요.";
+  }
   return result;
 }
 

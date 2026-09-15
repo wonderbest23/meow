@@ -38,7 +38,7 @@ export const landingDraftSchema = z.object({
   heroImageAlt: z.string().trim().max(200).default(""),
   pageData: landingPageDataSchema.nullable().default(null),
   heroLabel: z.string().trim().max(80).default("지금 사전 신청을 받고 있어요"),
-  headline: z.string().trim().min(5).max(120),
+  headline: shortText,
   subheadline: z.string().trim().min(5).max(300),
   ctaLabel: z.string().trim().min(2).max(40),
   accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
@@ -58,7 +58,7 @@ export const landingDraftSchema = z.object({
   collectEmail: z.boolean(),
   collectPhone: z.boolean(),
   collectMessage: z.boolean(),
-  privacyController: z.string().trim().min(2).max(120),
+  privacyController: shortText,
   privacyContact: z.string().trim().max(200).default(""),
   privacyPurpose: z.string().trim().min(5).max(500),
   privacyRetentionPeriod: z.string().trim().min(2).max(120),
@@ -234,6 +234,7 @@ export function ensureLandingPageData(draft: LandingDraft): LandingDraft & { pag
 }
 
 export type LandingVersion = {
+  sourceUpdatedAt?: string | null;
   id: string;
   version: number;
   config: LandingDraft;
@@ -242,6 +243,7 @@ export type LandingVersion = {
 };
 
 export type LandingSiteRecord = {
+  publishedSlug?: string | null;
   id: string;
   projectId: string;
   slug: string;
@@ -383,8 +385,8 @@ export function createLandingDraft(input: {
       { title: "필요한 만큼만", description: "무엇이 필요한지 먼저 확인하고, 그에 맞는 방법만 제안합니다." },
       { title: "일정을 미리 알려드립니다", description: "언제 무엇이 진행되는지 시작 전에 안내해 드립니다." },
     ],
-    offerTitle: "상담 안내",
-    offerDescription: "지금 상황과 원하시는 결과를 알려주시면, 가능한 방법과 일정·비용을 정리해 안내해 드립니다.",
+    offerTitle: input.oneLiner ? input.oneLiner.slice(0, 60) : "상담 안내",
+    offerDescription: input.oneLiner ? input.oneLiner.slice(0, 600) : "제공 내용은 문의로 확인해주세요.",
     /*
      * 예전 기본값은 "첫 상담 무료"였다. 무료인지 아닌지는 사용자가 답한 적이
      * 없는데 페이지가 먼저 약속하고 있었다 — 손님이 찾아와 따질 수 있는 말이다.
@@ -431,6 +433,6 @@ export function createLandingDraft(input: {
   };
   return {
     ...draft,
-    pageData: createLandingPageData(draft, templateId),
+    pageData: createLandingPageData({ ...draft, customer: input.customer.slice(0, 600) }, templateId),
   };
 }

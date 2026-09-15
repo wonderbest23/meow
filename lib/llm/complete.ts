@@ -262,7 +262,7 @@ export async function completeText(config: LLMConfig, params: LLMCompleteParams)
       onUsage: event => { usage = event; params.onUsage?.(event); },
     });
     console.log("[llm] call", JSON.stringify({ kind: params.kind ?? "etc", provider: target.provider, model: usage?.model ?? target.model, ok: !!result, code: failure, elapsedMs: Date.now() - startedAt, inputTokens: usage?.inputTokens ?? null, outputTokens: usage?.outputTokens ?? null }));
-    await recordLlmUsage(params.kind ?? "etc", target.provider, !!result, usage);
+    await recordLlmUsage(params.kind ?? "etc", target.provider, !!result, usage, { model: usage?.model ?? target.model, elapsedMs: Date.now() - startedAt, failureCode: failure ?? (!result ? "empty_response" : undefined) });
     return result;
   };
   const primary = await measuredCall(config);

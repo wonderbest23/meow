@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-/* SDK 주소만 필요하다 — 서버 전용 모듈(시크릿 사용)을 클라이언트로 끌어오지 않는다 */
-const NICEPAY_SDK_URL = "https://pay.nicepay.co.kr/v1/js/";
+import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { Spinner } from "../PlanLoading";
@@ -16,25 +15,6 @@ declare global {
   interface Window {
     AUTHNICE?: { requestPay: (options: Record<string, unknown>) => void };
   }
-}
-
-/** 나이스페이 SDK를 한 번만 불러온다 */
-function loadSdk(): Promise<void> {
-  if (typeof window === "undefined") return Promise.resolve();
-  if (window.AUTHNICE) return Promise.resolve();
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${NICEPAY_SDK_URL}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("SDK_LOAD_FAILED")));
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = NICEPAY_SDK_URL;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("SDK_LOAD_FAILED"));
-    document.head.appendChild(script);
-  });
 }
 
 /**
@@ -106,7 +86,7 @@ export default function PlanCheckout() {
         body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}) }),
       });
       const data = (await res.json()) as {
-        clientId?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
+        clientId?: string; sdkUrl?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
         error?: string; message?: string;
       };
       if (!res.ok || !data.clientId || !data.orderId) {
@@ -116,7 +96,7 @@ export default function PlanCheckout() {
         return;
       }
 
-      await loadSdk();
+      await loadNicepaySdk(data.sdkUrl);
       if (!window.AUTHNICE) throw new Error("SDK_LOAD_FAILED");
 
       setPhase("opening");

@@ -89,6 +89,13 @@
   cursor: default;
 }
 
+.statusAction {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
 .notice {
   margin: 0;
   font-size: 13px;

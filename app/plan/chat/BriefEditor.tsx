@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { currentBusinessDesign, currentNextAction, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
 import { type ExpertPatch } from "../../../lib/plan-builder/coach-expert";
 import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
+import { planOwnerEpoch } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
 
 const groups: Record<string, CoachField["key"][]> = {
@@ -28,13 +29,14 @@ export default function BriefEditor({ coach, section, onSave, onClose, onDirty }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const requestPending = useRef(false);
+  const ownerEpoch = useRef(planOwnerEpoch());
   const form = useRef<HTMLFormElement>(null);
   const dirty = Object.keys(values).some(key => values[key].trim() !== (initial[key] ?? "").trim());
   useEffect(() => { onDirty(dirty || busy); return () => onDirty(false); }, [dirty, busy, onDirty]);
   useEffect(() => { form.current?.querySelector<HTMLInputElement>("input,textarea")?.focus(); }, []);
   useEffect(() => {
     if (!dirty && !busy) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    const warn = (event: BeforeUnloadEvent) => { if (ownerEpoch.current === planOwnerEpoch()) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", warn);
     const navigate = (event: MouseEvent) => {
       if (!(event.target instanceof Element) || !event.target.closest("a[href]")) return;
@@ -46,7 +48,7 @@ export default function BriefEditor({ coach, section, onSave, onClose, onDirty }
   function cancel() { if (!busy && (!dirty || window.confirm("저장하지 않은 수정을 취소할까요?"))) onClose(); }
   async function save(event: React.FormEvent) {
     event.preventDefault();
-    if (requestPending.current || !dirty) return;
+    if (ownerEpoch.current !== planOwnerEpoch() || requestPending.current || !dirty) return;
     requestPending.current = true; setBusy(true); setError("");
     try {
       const keys = groups[section] ?? [];

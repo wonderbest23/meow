@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import { createClient } from "@supabase/supabase-js";
+import { localCredentials } from "./local-account-lab.mts";
+
+const credentials = await localCredentials();
+assert.equal(new URL(credentials.apiUrl).hostname, "127.0.0.1");
+const original = globalThis.fetch;
+globalThis.fetch = async (input, init) => {
+  const url = new URL(typeof input === "string" ? input : input instanceof URL ? input : input.url);
+  assert.equal(url.origin, credentials.apiUrl, "Only the isolated local database may be contacted");
+  return original(input, init);
+};
+const db = createClient(credentials.apiUrl, credentials.serviceKey, { auth: { persistSession: false, autoRefreshToken: false } });
+const run = randomUUID().slice(0, 8);
+const created = await db.auth.admin.createUser({ email: `nicepay-${run}@example.test`, password: randomUUID(), email_confirm: true });
+assert.ifError(created.error); const owner = created.data.user!.id;
+const checks: string[] = [];
+const seed = async (label: string, product = "plan", planId?: string) => {
+  const orderId = `PB-local-${run}-${label}`;
+  const result = await db.from("payment_orders").insert({ id: randomUUID(), order_id: orderId, guest_token_hash: `local-${run}`, amount: 100, currency: "KRW", order_name: "사업계획서 플랜 빌더", owner_id: owner, method: "CARD", status: "created", opportunity: { planId: planId ?? `${run}-${label}`, product }, founder_profile: {}, terms_version: "local-test", terms_agreed_at: new Date().toISOString(), expires_at: new Date(Date.now() + 60_000).toISOString() });
+  assert.ifError(result.error); return orderId;
+};
+const claim = (id: string, tid = id) => db.rpc("claim_nicepay_plan_order", { p_order_id: id, p_tid: tid, p_environment: "sandbox" });
+const settle = (id: string, fields: Record<string, unknown> = {}) => db.rpc("settle_nicepay_plan_order", { p_order_id: id, p_tid: id, p_environment: "sandbox", p_raw: { resultCode: "0000", orderId: id, tid: id, amount: 100, currency: "KRW", status: "paid", ...fields } });
+const read = async (id: string) => { const result = await db.from("payment_orders").select("status,payment_key,provider_status").eq("order_id", id).single(); assert.ifError(result.error); return result.data!; };
+try {
+  const id = await seed("concurrent");
+  const claims = await Promise.all([claim(id), claim(id)]);
+  for (const result of claims) assert.ifError(result.error);
+  assert.equal(claims.filter(result => result.data === true).length, 1);
+  assert.equal((await read(id)).status, "confirming"); checks.push("single approval reservation under concurrency");
+  const done = await settle(id); assert.ifError(done.error); assert.equal(done.data, "done");
+  assert.equal((await settle(id)).data, "done"); checks.push("idempotent completion");
+  const changedTid = await db.rpc("settle_nicepay_plan_order", { p_order_id: id, p_tid: "other", p_environment: "sandbox", p_raw: { resultCode: "0000", tid: "other", orderId: id, amount: 100, currency: "KRW", status: "paid" } });
+  assert(changedTid.error); checks.push("different transaction blocked");
+  const mismatch = await seed("amount"); assert.ifError((await claim(mismatch)).error);
+  assert((await settle(mismatch, { amount: 101 })).error); assert.equal((await read(mismatch)).status, "confirming");
+  assert((await settle(mismatch, { currency: "USD" })).error); checks.push("amount and currency mismatch rollback");
+  const canceled = await seed("canceled"); assert.ifError((await claim(canceled)).error);
+  assert.equal((await settle(canceled, { status: "cancelled" })).data, "canceled");
+  assert((await settle(canceled)).error); checks.push("terminal cancellation cannot become paid");
+  const regen = await seed("regen", "regen"); assert.ifError((await claim(regen)).error);
+  assert.equal((await settle(regen)).data, "done"); assert.equal((await settle(regen)).data, "done");
+  const packs = await db.from("plan_regen_packs").select("granted").eq("order_id", regen);
+  assert.ifError(packs.error); assert.deepEqual(packs.data, [{ granted: 10 }]); checks.push("regen entitlement exactly once");
+  const conflict = await seed("regen-conflict", "regen"); assert.ifError((await claim(conflict)).error);
+  assert.ifError((await db.from("plan_regen_packs").insert({ plan_id: "wrong", owner_hash: owner, order_id: conflict, granted: 10, amount: 100 })).error);
+  assert((await settle(conflict)).error); assert.equal((await read(conflict)).status, "confirming"); checks.push("entitlement conflict rolls back order completion");
+  const one = await seed("same-plan-one", "plan", `${run}-same`), two = await seed("same-plan-two", "plan", `${run}-same`);
+  const duplicate = await Promise.all([claim(one), claim(two)]);
+  assert.equal(duplicate.filter(result => result.data === true).length, 1); assert.equal(duplicate.filter(result => result.error).length, 1); checks.push("duplicate orders cannot both start approval");
+  const anon = createClient(credentials.apiUrl, credentials.anonKey, { auth: { persistSession: false, autoRefreshToken: false } });
+  assert((await anon.rpc("claim_nicepay_plan_order", { p_order_id: id, p_tid: id, p_environment: "sandbox" })).error);
+  assert((await anon.rpc("settle_nicepay_plan_order", { p_order_id: id, p_tid: id, p_environment: "sandbox", p_raw: {} })).error); checks.push("public RPC execution denied");
+  const report = { run, passed: checks.length, checks, database: "local-only", pgCalls: 0, existingRowsChanged: false };
+  await mkdir("artifacts/local-nicepay", { recursive: true });
+  await writeFile(`artifacts/local-nicepay/${run}.json`, JSON.stringify(report, null, 2), { mode: 0o600 });
+  console.log(JSON.stringify(report, null, 2));
+} finally { globalThis.fetch = original; }

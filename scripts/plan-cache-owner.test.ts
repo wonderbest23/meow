@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import type { PlanState } from "../lib/plan-builder/plan-store";
 
 const KEY = "oneul-plan-demo-v1";
@@ -63,6 +64,8 @@ async function main() {
 
   local.setItem(KEY, JSON.stringify(state("guest-local")));
   const api = await import("../lib/plan-builder/plan-store");
+  let ownerNotifications = 0;
+  const unsubscribeOwner = api.subscribePlanOwnerChange(() => { ownerNotifications++; });
   const ownIds = () => api.loadState().plans.filter(plan => !api.isSamplePlan(plan.id)).map(plan => plan.id);
   try {
     await api.hydrateFromServer(false);
@@ -98,6 +101,7 @@ async function main() {
     assert.equal(local.getItem(OWNER), "account-c", "late identity responses cannot roll the active cache back");
 
     const changedWrite = deferred<Response>();
+    const oldOwnerEpoch = api.planOwnerEpoch();
     writeOnce = () => changedWrite.promise;
     const stalePush = api.pushToServer();
     const queuedPush = api.pushToServer();
@@ -109,6 +113,8 @@ async function main() {
     assert.equal(writes.length, countBeforeConflict, "a stale queued save must not resume under the next account");
     assert.deepEqual(ownIds(), ["account-d-plan"]);
     assert.equal(reloads, 1, "a stale tab refreshes its mounted conversation after the owner changes");
+    assert.ok(api.planOwnerEpoch() > oldOwnerEpoch, "dirty editors lose their owner scope before a forced reload");
+    assert.equal(ownerNotifications, 1);
 
     const pending = deferred<Response>();
     let signal: AbortSignal | null | undefined;
@@ -145,7 +151,9 @@ async function main() {
     server = { ...state("account-e-plan"), ownerKey: "account-e", authenticated: true };
     await api.hydrateFromServer(false);
     session.setItem("coach-input:account-e-plan", "account E draft");
+    const notificationsBeforeStorage = ownerNotifications;
     events.get("storage")?.({ key: OWNER, oldValue: "account-e", newValue: "account-f" });
+    assert.equal(ownerNotifications, notificationsBeforeStorage + 1, "cross-tab owner changes invalidate mounted editors");
     assert.equal(session.getItem("coach-input:account-e-plan"), null);
     assert.equal(reloads, 2);
     events.get("storage")?.({ key: null, oldValue: null, newValue: null });
@@ -158,8 +166,28 @@ async function main() {
     assert.equal(local.getItem("oneul-document-draft:private"), null);
     assert.equal(local.getItem(`${KEY}:other`), null);
     assert.equal(local.getItem("unrelated-preference"), "keep");
+    const finalNotifications = ownerNotifications;
+    unsubscribeOwner();
+    api.clearLocalState();
+    assert.equal(ownerNotifications, finalNotifications, "unmounted editor subscriptions are removed");
+    for (const path of ["app/plan/chat/BriefEditor.tsx", "app/plan/workspace/ExpertEditor.tsx", "app/plan/document/use-document-edits.ts"]) {
+      const source = readFileSync(path, "utf8");
+      assert.match(source, /=== planOwnerEpoch\(\).*event\.preventDefault\(\)/, `${path}: dirty-state protection must not prevent an account-change reload`);
+    }
+    const edits = readFileSync("app/plan/document/use-document-edits.ts", "utf8");
+    assert.match(edits, /signal: controller.signal/);
+    assert.match(edits, /if \(!current\(\)\) return;/);
+    assert.match(edits, /subscribePlanOwnerChange\(invalidate\)/);
+    assert.match(readFileSync("app/plan/PlanShell.tsx", "utf8"), /if \(ownerChanged\) return <PlanLoading/);
+    for (const path of ["app/dev/account-sync/page.tsx", "app/dev/account-sync/actions.ts"]) {
+      const source = readFileSync(path, "utf8");
+      assert.match(source, /NODE_ENV !== "development"/);
+      assert.match(source, /SUPABASE_URL !== "http:\/\/127\.0\.0\.1:55431"/);
+      assert.match(source, /PLAN_ACCOUNT_LINKING_ENABLED !== "true"/);
+    }
     console.log("plan-cache-owner: identity separation, stale responses, sign-in flush, unload and logout assertions passed");
   } finally {
+    unsubscribeOwner();
     api.clearLocalState();
   }
 }

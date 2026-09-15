@@ -1,4 +1,5 @@
 import type { DeckBuildEvent, DeckPlan } from "./deck-plan";
+import type { ProposalOptions } from "./proposal-blueprint";
 
 export const DECK_JOB_KEY = "__deck_job";
 export interface DeckJobRequest { ownerHash: string; planId: string; token: string }
@@ -8,6 +9,7 @@ export interface DeckJob {
   phase: DeckBuildEvent["stage"] | "queued";
   updatedAt: string; attempt: number; code?: string; retryWindowStartedAt?: string;
   draft?: DeckPlan; result?: DeckPlan;
+  presentation?: Pick<ProposalOptions, "sector" | "purpose">;
 }
 export function readDeckJob(answers: Record<string, Record<string, unknown>>): DeckJob | null {
   const job = answers[DECK_JOB_KEY];

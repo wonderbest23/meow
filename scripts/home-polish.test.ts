@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { applyCoachReply, COACH_KEY, type CoachField, type CoachReply } from "../lib/plan-builder/coach";
+import { applyCoachReply, COACH_KEY, COACH_SYSTEM, COACH_WRITER_RULES, type CoachField, type CoachReply } from "../lib/plan-builder/coach";
+import { BUSINESS_DESIGN_RULES } from "../lib/plan-builder/coach-design";
 import { checkCoachFeasibility } from "../lib/plan-builder/coach-feasibility";
 import { coachDocumentSnapshot } from "../lib/plan-builder/coach-document";
 import type { ServerPlan } from "../lib/plan-builder/plan-server-store";
@@ -37,6 +38,12 @@ const demoCss = readFileSync("components/home-workspace-demo.module.css", "utf8"
 assert.match(demoCss, /\.demo \.scrubber\s*\{[^}]*background:\s*transparent !important/);
 assert.match(demoCss, /\.demo \.scrubber:focus-visible/);
 const copy = readFileSync("components/home-service-overview.tsx", "utf8");
-for (const text of ["입력 근거 대조", "별도 계산 로직", "문서 버전 비교", "50만원 부족", "외부 사실 검증은 아니에요"]) assert.ok(copy.includes(text), text);
+for (const text of ["사업을 기획하는 순서로", "관심과 경험", "고객과 상품", "가격과 운영", "첫 실행 방법", "함께 정리한 시작안", "기획 예시예요", "질문과 제안이 달라져요"]) assert.ok(copy.includes(text), text);
+for (const text of ["챗GPT로", "입력 근거 대조", "별도 계산 로직", "문서 버전 비교", "모든 사업에 최적화"]) assert.ok(!copy.includes(text), text);
+assert.match(copy, /<ol className=\{styles.planningSteps\} aria-label="사업 기획 흐름">/);
+assert.match(COACH_SYSTEM, /경험·관심사/);
+assert.match(COACH_SYSTEM, /한 번에 질문 하나만/);
+assert.match(COACH_WRITER_RULES, /고객 → 상품 구성 → 제안 가격과 이유 → 최소 운영 방식 → 첫 판매 방법/);
+assert.match(BUSINESS_DESIGN_RULES, /nextAction은 선택적으로 해볼 행동 하나/);
 assert.match(readFileSync("public/_headers", "utf8"), /\/home-media\/\*\s+Cache-Control: public,max-age=0,must-revalidate/, "Homepage assets revalidate after a new deployment");
-console.log("Home polish: mobile clipping, transparent range and code-backed product examples passed");
+console.log("Home polish: mobile clipping, transparent range and grounded business-planning process example passed");

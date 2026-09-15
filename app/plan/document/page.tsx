@@ -3,13 +3,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import DocumentWorkspace from "./DocumentWorkspace";
-import { hydrateFromServer, assembleSections, activePlan, loadState, isSamplePlan, setActivePlan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, assembleSections, activePlan, loadState, isSamplePlan, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
 import { documentContext } from "../../../lib/plan-builder/document-context";
 import { useDeckExport } from "./use-deck-export";
 import { useDocumentEdits } from "./use-document-edits";
+import { coachDocumentRevision, readCoach } from "../../../lib/plan-builder/coach";
+import type { DocumentReviewSource } from "./DocumentSourceReview";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 export default function PlanDocumentPage() {
@@ -28,9 +30,18 @@ export default function PlanDocumentPage() {
   const [coachHref, setCoachHref] = useState<string | null>(null);
   const [contextNotice, setContextNotice] = useState("");
   const [completionKey, setCompletionKey] = useState<string | null>(null);
+  const [reviewSource, setReviewSource] = useState<DocumentReviewSource | null>(null);
+  function updateSourceStatus(plan: Plan) {
+    const coach = readCoach(plan.answers), snapshot = coachDocumentSnapshot(plan);
+    setCompletionKey(isSamplePlan(plan.id) ? null : completedDocumentKey(plan));
+    setReviewSource(coach ? { revision: coachDocumentRevision(coach), fields: coach.fields, sections: Object.fromEntries(Object.entries(plan.sections).filter(([, section]) => section.coachRevision !== coachDocumentRevision(coach)).map(([key, section]) => [key, section.generatedAt])) } : null);
+    setContextNotice(snapshot?.stale.length ? "공통 사업 조건이 바뀌었어요. 문서를 갱신하거나 각 항목을 확인해 주세요" : snapshot?.manualReview.length ? "직접 수정한 항목을 최신 사업 조건과 비교해 검토해 주세요" : "");
+  }
   const deck = useDeckExport(documentPlanId, !isSample && !!access?.paid, title);
   const edits = useDocumentEdits((key, section) => {
     setSections(current => current.map(item => item.key === key ? { ...item, markdown: section.markdown, html: section.html } : item));
+    const plan = loadState().plans.find(item => item.id === documentPlanId);
+    if (plan) updateSourceStatus(plan);
     void deck.refresh();
   });
 
@@ -49,11 +60,10 @@ export default function PlanDocumentPage() {
         const recovered = isSamplePlan(p.id) ? {} : edits.initialize(p);
         setSections(assembleSections(s).map(section => recovered[section.key] ? { ...section, html: recovered[section.key], markdown: htmlToMarkdown(recovered[section.key]) } : section));
         if (!requested) router.replace(`/plan/document?planId=${encodeURIComponent(p.id)}`);
-        setCompletionKey(isSamplePlan(p.id) ? null : completedDocumentKey(p));
+        updateSourceStatus(p);
         const snapshot = coachDocumentSnapshot(p);
         if (snapshot) {
           setCoachHref(`/plan/chat?planId=${encodeURIComponent(p.id)}`);
-          setContextNotice(snapshot.stale.length ? "대화에서 수정한 내용이 있습니다. 최신 내용을 반영한 뒤 파일을 받아주세요." : snapshot.manualReview.length ? "직접 수정한 항목은 유지했습니다. 최근 사업 정보와 함께 확인해주세요." : "");
         }
         setDocumentPlanId(p.id);
         setTitle(p.title);
@@ -207,6 +217,10 @@ export default function PlanDocumentPage() {
   }
 
   return <DocumentWorkspace title={title} planId={documentPlanId} planType={planType} ready={ready}
+    reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
+      if (!documentPlanId) return;
+      edits.acceptReviewed(documentPlanId, key, section, updatedAt);
+    }}
     completionKey={completionKey}
     grouped={grouped} numbering={numbering} isSample={isSample} coachHref={coachHref}
     notice={contextNotice} editStates={edits.states} onSave={saveEdit} onDraft={edits.stage}

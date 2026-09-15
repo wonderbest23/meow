@@ -1,0 +1,11 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "today-startup-staging",
+  "main": "staging/bootstrap-worker.ts",
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [],
+  "compatibility_date": "2026-07-14",
+  "limits": { "cpu_ms": 100 },
+  "observability": { "enabled": true }
+}

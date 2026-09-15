@@ -28,5 +28,5 @@ export default async function CustomerSitePage() {
   const published = await getPublishedLandingByCustomDomain(await currentHostname());
   if (!published) notFound();
   const bw = published.config.pageData?.brainwave ? await loadBrainwavePageServer(published.config.pageData.brainwave.page) : null;
-  return <PublicLandingClient slug={published.site.slug} config={published.config} brainwavePage={bw} />;
+  return <PublicLandingClient slug={published.config.slug} config={published.config} brainwavePage={bw} />;
 }

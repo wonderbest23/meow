@@ -12,7 +12,7 @@ export async function ensurePaidStarterLanding(
 ) {
   const existing = await getLandingForProject(project.id, guestTokenHash);
   if (existing?.status === "published") {
-    return { site: existing, publicPath: `/launch/${existing.slug}`, created: false };
+    return { site: existing, publicPath: `/launch/${existing.publishedSlug ?? existing.slug}`, created: false };
   }
 
   if (!existing) {
@@ -34,5 +34,5 @@ export async function ensurePaidStarterLanding(
   }
 
   const site = await publishLanding(project.id, guestTokenHash);
-  return { site, publicPath: `/launch/${site.slug}`, created: !existing };
+  return { site, publicPath: `/launch/${site.publishedSlug ?? site.slug}`, created: !existing };
 }

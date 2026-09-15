@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { MessageCircle, SquarePen } from "lucide-react";
 import PlanRailNav from "./PlanRailNav";
-import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
+import { planSyncStatus, subscribePlanSync, subscribePlanOwnerChange, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
+import PlanLoading from "./PlanLoading";
 import styles from "./PlanShell.module.css";
 import WorkspaceBrand from "../../components/workspace-brand";
 
@@ -120,12 +121,15 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
    * 저장이 밀리거나 끊기면 알려주고, 다시 시도할 길을 준다.
    */
   const [sync, setSync] = useState<PlanSyncStatus>("idle");
+  const [ownerChanged, setOwnerChanged] = useState(false);
+  useEffect(() => subscribePlanOwnerChange(() => setOwnerChanged(true)), []);
   useEffect(() => {
     setSync(planSyncStatus());
     return subscribePlanSync(() => setSync(planSyncStatus()));
   }, []);
 
-  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname.startsWith("/plan/planning") || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/start")) return <>{children}</>;
+  if (ownerChanged) return <PlanLoading fill note="현재 계정의 사업을 다시 확인하고 있어요" />;
+  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname === "/plan/proposal" || pathname.startsWith("/plan/planning") || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/start")) return <>{children}</>;
 
   return (
     <div className={styles.shell}>

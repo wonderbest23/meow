@@ -18,8 +18,9 @@
  */
 
 import type { ReactNode } from "react";
-import { expandHidden, type BrainwavePageData, type BrainwaveOverrides, type BrainwavePick } from "./brainwave-page";
+import { expandHidden, orderedSections, sectionBands, type BrainwavePageData, type BrainwaveOverrides, type BrainwavePick } from "./brainwave-page";
 import { runBrainwaveButton, buttonIdFromTextId } from "../lib/landing/brainwave/button-action";
+import { BrainwaveBusinessMobile } from "./brainwave-business-mobile";
 
 type Pick = BrainwavePick;
 
@@ -510,6 +511,7 @@ export function renderBrainwaveMobile(
   overrides: BrainwaveOverrides | undefined,
   onPick: Pick | undefined,
 ): ReactNode | null {
+  if (overrides?.contentMode === "business") return <BrainwaveBusinessMobile pageId={page.id} overrides={overrides} hidden={expandHidden(page.root, overrides.hidden)} sectionOrder={orderedSections(sectionBands(page), overrides.hidden, overrides.order).map(section => section.id)} onPick={onPick} />;
   const Template = BRAINWAVE_MOBILE[page.id];
   if (!Template) return null;
   const originals = new Map(page.slots.text.map((s) => [s.id, s.text]));

@@ -1,9 +1,10 @@
 .theme {
   --home-title-size: 48px;
-  --home-title-line: 1.4;
+  --home-title-line: 1.35;
   --home-body-size: 18px;
-  --home-body-line: 1.75;
+  --home-body-line: 1.65;
   --home-copy-gap: 24px;
+  --home-action-gap: 32px;
   --home-content-gap: 64px;
   --home-section-space: 120px;
   color: #191f28;
@@ -23,6 +24,7 @@
     --home-title-size: 32px;
     --home-body-size: 16px;
     --home-copy-gap: 20px;
+    --home-action-gap: 28px;
     --home-content-gap: 40px;
     --home-section-space: 80px;
   }

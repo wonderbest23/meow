@@ -3,10 +3,11 @@ import { deckSource, deckFingerprint, generateAndSaveDeck } from "../lib/plan-bu
 import { DECK_JOB_KEY, readDeckJob, publicDeckJob, deckRetryState, type DeckJob } from "../lib/plan-builder/deck-job-types";
 import { chaptersForType } from "../lib/plan-builder/blueprint";
 import { loadPlanState, savePlanState, preserveServerCoachRecords, type ServerPlanState } from "../lib/plan-builder/plan-server-store";
-import { buildDeckPlan, type DeckPlan } from "../lib/plan-builder/deck-plan";
+import { buildDeckPlan, blueprintForDeckInput, type DeckPlan } from "../lib/plan-builder/deck-plan";
 import { renderDeckPptx } from "../lib/plan-builder/deck-render";
 import { pickDeckTheme } from "../lib/plan-builder/deck-themes";
 import JSZip from "jszip";
+import { XMLParser } from "fast-xml-parser";
 
 async function main() {
   process.env.PERSISTENCE_MODE = "demo-memory";
@@ -29,13 +30,13 @@ async function main() {
   await savePlanState("deck-owner-a", state);
   const originalFetch = globalThis.fetch;
   let calls = 0;
-  const draft = { brandName: "QA", slogan: "Synthetic", slides: Array.from({ length: 8 }, (_, i) => ({ title: `Slide ${i + 1}`, eyebrow: "Proposal", sourceSections: [`${source.sections[0].chapterTitle} · ${source.sections[0].sectionTitle}`] })) };
+  const draft = { brandName: "QA", slogan: "Synthetic", slides: blueprintForDeckInput(source).slots.map((slot, i) => ({ id: slot.id, title: `Slide ${i + 1}`, lead: "A synthetic proposal; no real revenue.", eyebrow: "Proposal", sourceSections: [`${source.sections[0].chapterTitle} · ${source.sections[0].sectionTitle}`] })) };
   try {
     globalThis.fetch = async (_url, init) => { calls++; const body = JSON.parse(String(init?.body)); const reviewing = String(body.input?.[0]?.content).includes("검토 대상"); return Response.json({ status: "completed", output_text: JSON.stringify(reviewing ? { issues: [] } : draft) }); };
     assert.deepEqual(await generateAndSaveDeck({ ownerHash: "deck-owner-a", planId: "a", token: "job-a" }), { ok: true });
     const saved = await loadPlanState("deck-owner-a");
     const job = readDeckJob(saved.plans[0].answers)!;
-    assert.equal(job.status, "complete"); assert.equal(job.result?.slides.length, 8); assert.ok(job.draft);
+    assert.equal(job.status, "complete"); assert.equal(job.result?.slides.length, 10); assert.ok(job.draft);
     assert.equal("result" in publicDeckJob(job)!, false, "Polling must not expose the full draft");
     const staleAutosave = structuredClone(state);
     staleAutosave.plans[0].updatedAt = new Date(Date.now() + 1000).toISOString();
@@ -46,8 +47,14 @@ async function main() {
     const restored = readDeckJob(JSON.parse(JSON.stringify((await loadPlanState("deck-owner-a")).plans[0].answers)))!;
     const bytes = await renderDeckPptx(restored.result!, pickDeckTheme(plan.planType, restored.result!.brandName, ""));
     const file = await JSZip.loadAsync(bytes, { checkCRC32: true });
-    assert.equal(file.file(/^ppt\/slides\/slide\d+\.xml$/).length, 8, "Restored state renders a real eight-slide PPTX");
-    assert.ok(await file.file("[Content_Types].xml")?.async("string"));
+    assert.equal(file.file(/^ppt\/slides\/slide\d+\.xml$/).length, 10, "Restored state renders the complete editorial storyboard");
+    const contentTypes = await file.file("[Content_Types].xml")?.async("string");
+    assert.ok(contentTypes);
+    const manifest = new XMLParser({ ignoreAttributes: false }).parse(contentTypes);
+    const overrides = manifest.Types.Override as Array<{ "@_PartName": string }>;
+    for (const entry of overrides) assert.ok(file.file(entry["@_PartName"].slice(1)), `PPTX manifest must not reference a missing part: ${entry["@_PartName"]}`);
+    assert.equal(overrides.filter(entry => entry["@_PartName"].startsWith("/ppt/slideMasters/")).length, 1, "Keep the actual master and remove nonexistent per-slide masters");
+    assert.equal(file.file(/^ppt\/notesSlides\/notesSlide\d+\.xml$/).length, 10, "Package repair must preserve every source note");
     const slide = await file.file("ppt/slides/slide2.xml")!.async("string");
     assert.ok(slide.includes("Slide 2"), "Generated content, not a sample, is downloadable");
     assert.equal(calls, 2, "Download from restored state must not call AI");
@@ -56,7 +63,7 @@ async function main() {
     assert.deepEqual(preserveServerCoachRecords(untrusted, saved).plans[0].answers[DECK_JOB_KEY], saved.plans[0].answers[DECK_JOB_KEY]);
     const before = calls;
     const resumed = await buildDeckPlan({ provider: "openai", model: "fixture", apiKey: "fixture-only" }, { ...source, businessContext: "Synthetic proposal; no real revenue." }, undefined, { draft, saveDraft: async () => undefined });
-    assert.equal(resumed?.slides.length, 8); assert.equal(calls - before, 1, "Resume must review the checkpoint without regenerating slides");
+    assert.equal(resumed?.slides.length, 10); assert.equal(calls - before, 1, "Resume must review the checkpoint without regenerating slides");
     const changed = structuredClone(state); changed.plans[0].id = "changed"; changed.plans[0].sections[Object.keys(plan.sections)[0]].markdown = "Changed after dispatch";
     await savePlanState("deck-owner-changed", changed);
     assert.deepEqual(await generateAndSaveDeck({ ownerHash: "deck-owner-changed", planId: "changed", token: "job-a" }), { ok: false });

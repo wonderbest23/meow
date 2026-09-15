@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
 import { resolveLLMConfig, resolvePlanningLLMConfig } from "../../../../lib/llm/config";
@@ -15,6 +16,8 @@ import { deckSource, deckFingerprint } from "../../../../lib/plan-builder/deck-j
 import { DECK_JOB_KEY, readDeckJob, deckJobActive, deckJobExpired, deckRetryState, publicDeckJob, type DeckJob } from "../../../../lib/plan-builder/deck-job-types";
 import type { DeckBuildEvent } from "../../../../lib/plan-builder/deck-plan";
 import { PPT_GENERATION_VERIFIED, PPT_PREPARING_MESSAGE } from "../../../../lib/plan-builder/deck-availability";
+import { readSavedProposal } from "../../../../lib/plan-builder/proposal-editor";
+import { renderableProposal } from "../../../../lib/plan-builder/proposal-revision";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -48,14 +51,19 @@ export async function GET(req: Request) {
     if (job && deckJobActive(job) && deckJobExpired(job)) job = { ...job, status: "failed", phase: "failed", code: "job_timeout" };
   }
   let stale = false;
-  try { stale = !!job && deckFingerprint(deckSource(plan, state.business)) !== job.fingerprint; } catch { stale = !!job; }
+  try { stale = !!job && deckFingerprint({ ...deckSource(plan, state.business), ...(job.presentation ? { presentation: job.presentation } : {}) }) !== job.fingerprint; } catch { stale = !!job; }
   if (url.searchParams.get("download") !== "1") return json({ job: publicDeckJob(job), stale, generationEnabled: PPT_GENERATION_VERIFIED });
-  if (stale) return json({ message: "계획서가 수정됐습니다. 최신 내용으로 발표자료를 다시 만들어주세요." }, 409);
+  const edited = readSavedProposal(plan.answers);
+  let editedCurrent = false;
+  try { editedCurrent = !!edited && edited.fingerprint === deckFingerprint({ ...deckSource(plan, state.business), ...(edited.presentation ? { presentation: edited.presentation } : {}) }); } catch { /* Older snapshots remain downloadable from the versioned editor route. */ }
+  const useEdited = edited?.generationToken === job?.token && editedCurrent;
+  if (stale && !useEdited) return json({ message: "계획서가 수정됐습니다. 최신 내용으로 발표자료를 다시 만들어주세요." }, 409);
   if (job?.status !== "complete" || !job.result) return json({ message: "발표자료가 아직 준비되지 않았습니다." }, 409);
   const limited = await enforceRateLimit("deck-download", req, { limit: 12, windowMs: 10 * 60000 });
   if (limited) return limited;
   try {
-    const buffer = await renderDeckPptx(job.result, pickDeckTheme(plan.planType, job.result.brandName, ""));
+    const exportPlan = useEdited ? renderableProposal(edited!.document) : job.result;
+    const buffer = await renderDeckPptx(exportPlan, pickDeckTheme(plan.planType, exportPlan.brandName, ""));
     return new Response(new Uint8Array(buffer), { headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.presentationml.presentation", "Cache-Control": "private, no-store", "Content-Disposition": `attachment; filename="business-plan.pptx"; filename*=UTF-8''${encodeURIComponent(`${job.result.brandName} 사업 제안서.pptx`)}` } });
   } catch {
     console.error("[deck]", JSON.stringify({ token: job.token, stage: "rendering", code: "render_failed" }));
@@ -74,6 +82,7 @@ export async function POST(req: Request) {
     /** true면 PPTX 대신 슬라이드 구성(JSON)을 돌려준다 — 품질 검수·테스트용 */
     planOnly?: boolean;
     background?: boolean;
+    presentation?: unknown;
     businessName?: string;
     businessDescription?: string;
     planType?: string;
@@ -81,6 +90,8 @@ export async function POST(req: Request) {
     sections?: Array<{ chapterTitle?: string; sectionTitle?: string; markdown?: string }>;
     allAnswers?: Record<string, Record<string, unknown>>;
   };
+  const presentation = z.object({ sector: z.literal("b2b_service"), purpose: z.literal("sales") }).strict().optional().safeParse(body.presentation);
+  if (!presentation.success) return json({ message: "지원하는 제안서 유형을 선택해 주세요." }, 400);
 
   const access = await resolvePlanAccess(body.planType, typeof body.planId === "string" ? body.planId : undefined);
   if (!access.authenticated) {
@@ -100,7 +111,7 @@ export async function POST(req: Request) {
     const saved = state.plans.find(p => p.id === body.planId);
     if (!saved) return json({ message: "문서를 찾을 수 없습니다." }, 404);
     let source;
-    try { source = deckSource(saved, state.business); }
+    try { source = { ...deckSource(saved, state.business), ...(presentation.data ? { presentation: presentation.data } : {}) }; }
     catch { return json({ message: "먼저 최신 사업 내용을 계획서에 반영해주세요. 기존 문서는 유지됩니다." }, 409); }
     const fingerprint = deckFingerprint(source);
     const old = readDeckJob(saved.answers);
@@ -118,6 +129,7 @@ export async function POST(req: Request) {
     if (!workflow) return json({ message: "현재 환경에는 발표자료 제작 서버가 연결되어 있지 않습니다." }, 503);
     const token = crypto.randomUUID();
     const job: DeckJob = { token, runId: `deck-${token}`, fingerprint, status: "queued", phase: "queued", updatedAt: new Date().toISOString(), attempt: retry.attempt, retryWindowStartedAt: retry.retryWindowStartedAt,
+      ...(presentation.data ? { presentation: presentation.data } : {}),
       ...(old?.fingerprint === fingerprint && old.draft && !["source_validation_failed", "invalid_slides", "review_json_invalid"].includes(old.code ?? "") ? { draft: old.draft } : {}),
       ...(old?.fingerprint === fingerprint && old.result && old.code === "render_failed" ? { result: old.result } : {}) };
     const previousUpdatedAt = saved.updatedAt;
@@ -174,6 +186,7 @@ export async function POST(req: Request) {
     sections,
     allAnswers: body.allAnswers ?? {},
     businessContext,
+    ...(presentation.data ? { presentation: presentation.data } : {}),
   }, event => { lastEvent = event; console.log("[deck]", JSON.stringify({ reference, ...event })); });
 
   if (!plan) {

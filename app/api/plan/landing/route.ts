@@ -73,7 +73,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { planId?: string };
   if (!body.planId) return NextResponse.json({ error: "planId required" }, { status: 400 });
 
-  const { identity, state, plan } = await planFor(body.planId);
+  const { identity, plan } = await planFor(body.planId);
   if (!plan) return NextResponse.json({ error: "plan not found" }, { status: 404 });
 
   // 화면만 가려서는 우회할 수 있으므로 서버에서 막는다 — PDF·PPT와 같은 기준
@@ -89,7 +89,12 @@ export async function POST(request: Request) {
   const purchased = identity.userId ? await paidHomepagePlanIds(identity.userId) : new Set<string>();
   const entitlement = { editable: await editableFor(plan.id, purchased, identity.email), price: HOMEPAGE_PRODUCT_AMOUNT };
 
-  const source = { planTitle: plan.title, business: state.business, answers: plan.answers, contactEmail: access.email ?? "" };
+  const linkedProjectId = await findProjectIdByPlan(plan.id, identity.hash);
+  const existing = linkedProjectId ? await getLandingForProject(linkedProjectId, identity.hash) : null;
+  if (existing) return NextResponse.json({ site: existing, projectId: linkedProjectId, ...entitlement, created: false });
+
+  // Global business metadata may describe another plan. Coach metadata lives in this plan's answers.
+  const source = { planTitle: plan.title, business: {}, answers: plan.answers, contactEmail: access.email ?? "" };
   const readiness = planLandingReadiness(source);
   if (!readiness.ready) {
     return NextResponse.json(
@@ -109,21 +114,34 @@ export async function POST(request: Request) {
   const projectId = await ensureProjectForPlan(plan, identity);
 
   // 이미 만들어 둔 홈페이지가 있으면 손대지 않는다 — 편집한 내용을 계획서로 덮으면 안 된다
-  const existing = await getLandingForProject(projectId, identity.hash);
-  if (existing) return NextResponse.json({ site: existing, projectId, ...entitlement, created: false });
+  const createdMeanwhile = await getLandingForProject(projectId, identity.hash);
+  if (createdMeanwhile) return NextResponse.json({ site: createdMeanwhile, projectId, ...entitlement, created: false });
 
   const draft = landingDraftFromPlan(source);
   try {
-    const site = await saveLandingDraft(projectId, identity.hash, draft);
+    const site = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt: null });
     return NextResponse.json({ site, projectId, ...entitlement, created: true }, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.message === "LANDING_DRAFT_CONFLICT") {
+      const site = await getLandingForProject(projectId, identity.hash);
+      if (site) return NextResponse.json({ site, projectId, ...entitlement, created: false });
+      throw error;
+    }
     // 주소가 겹치면 사업체 이름 뒤에 짧은 꼬리를 붙여 한 번 더 시도한다
     if (error instanceof Error && error.message === "SLUG_TAKEN") {
       const suffix = Math.random().toString(36).slice(2, 6);
-      const site = await saveLandingDraft(projectId, identity.hash, {
-        ...draft,
-        slug: `${draft.slug}-${suffix}`.slice(0, 60),
-      });
+      let site;
+      try {
+        site = await saveLandingDraft(projectId, identity.hash, {
+          ...draft,
+          slug: `${draft.slug}-${suffix}`.slice(0, 60),
+        }, { expectedUpdatedAt: null });
+      } catch (retryError) {
+        if (!(retryError instanceof Error) || retryError.message !== "LANDING_DRAFT_CONFLICT") throw retryError;
+        site = await getLandingForProject(projectId, identity.hash);
+        if (!site) throw retryError;
+        return NextResponse.json({ site, projectId, ...entitlement, created: false });
+      }
       return NextResponse.json({ site, projectId, ...entitlement, created: true }, { status: 201 });
     }
     throw error;

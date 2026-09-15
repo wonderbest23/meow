@@ -7,7 +7,7 @@ import { enforceRateLimit } from "../../../../../lib/rate-limit";
 import { checkSectionAccess, resolvePlanAccess } from "../../../../../lib/plan-builder/access";
 
 export const runtime = "nodejs";
-const schema = z.object({ planId: z.string().min(1).max(60), key: z.string().min(1).max(100), baseGeneratedAt: z.string().min(1).max(40), action: z.enum(["save", "restore"]).default("save"), markdown: z.string().trim().min(1).max(120000).optional() });
+const schema = z.object({ planId: z.string().min(1).max(60), key: z.string().min(1).max(100), baseGeneratedAt: z.string().min(1).max(40), action: z.enum(["save", "restore", "review"]).default("save"), sourceRevision: z.number().int().nonnegative().optional(), markdown: z.string().trim().min(1).max(120000).optional() }).refine(input => input.action !== "review" || input.sourceRevision != null);
 const json = (data: unknown, status = 200) => Response.json(data, { status, headers: { "Cache-Control": "private, no-store" } });
 export async function PATCH(request: Request) {
   const limited = await enforceRateLimit("document-edit", request, { limit: 60, windowMs: 60000 });
@@ -27,6 +27,7 @@ export async function PATCH(request: Request) {
     return json(await saveDocumentEdit(identity.hash, { ...input, html }));
   } catch (error) {
     const code = error instanceof Error ? error.message : "DOCUMENT_SAVE_FAILED";
+    if (code === "BUSINESS_CONTEXT_CHANGED") return json({ code, message: "검토 중 사업 조건이 바뀌었어요. 최신 조건을 다시 불러와 확인해 주세요" }, 409);
     if (code === "DOCUMENT_CONFLICT" || code === "PLAN_VERSION_CONFLICT") return json({ code: "DOCUMENT_CONFLICT", message: "다른 화면에서 이 항목을 수정했어요. 내 초안은 이 기기에 보관했습니다." }, 409);
     return json({ code, message: "서버에 저장하지 못했어요. 내 초안은 이 기기에 보관했습니다." }, 503);
   }

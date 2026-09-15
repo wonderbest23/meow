@@ -13,6 +13,8 @@ import styles from "../BusinessHub.module.css";
 import LaunchWorkspace from "./LaunchWorkspace";
 import ExpertEditor from "./ExpertEditor";
 import launchStyles from "./LaunchWorkspace.module.css";
+import OperatingWorkspace from "./OperatingWorkspace";
+import operatingStyles from "./OperatingWorkspace.module.css";
 import { WorkspaceDocumentStatus, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
 
 type View = WorkspaceView;
@@ -27,12 +29,15 @@ export default function BusinessWorkspace() {
   const [saving, setSaving] = useState(false);
   const [expert, setExpert] = useState(false);
   const [expertDirty, setExpertDirty] = useState(false);
+  const [operatingDirty, setOperatingDirty] = useState(false);
+  const [pendingNavigation, setPendingNavigation] = useState<{ view: View } | { href: string } | null>(null);
+  const navigationDialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     const id = query.get("planId");
-    if (["summary","documents","action","launch"].includes(query.get("tab") ?? "")) setView(query.get("tab") as View);
+    if (["summary","documents","action","launch","operations"].includes(query.get("tab") ?? "")) setView(query.get("tab") as View);
     if (!id) { setLoaded(true); return; }
     let alive = true, inFlight = false;
     const refresh = async () => {
@@ -56,7 +61,10 @@ export default function BusinessWorkspace() {
     return () => { alive=false;window.clearInterval(interval);document.removeEventListener("visibilitychange",visible); };
   }, []);
 
+  useEffect(() => { if (pendingNavigation) navigationDialog.current?.showModal(); else navigationDialog.current?.close(); }, [pendingNavigation]);
+
   function tab(next: View) {
+    if (next !== view && operatingDirty) { setPendingNavigation({ view: next }); return; }
     if (next !== view && expertDirty && !window.confirm("저장하지 않은 수정안을 버리고 이동할까요?")) return;
     setView(next);
     const query=new URLSearchParams(window.location.search); query.set("tab",next);
@@ -79,14 +87,20 @@ export default function BusinessWorkspace() {
     const synced=await pushToServer();
     setNotice(synced ? "기록을 저장했어요." : "기기에 기록했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해 주세요.");setSaving(false);
   }
-  return <main className={frame.page}><BusinessAppChrome title="내 사업 관리">
+  return <main className={frame.page} onClickCapture={event => {
+    if (!operatingDirty) return;
+    const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
+    if (!anchor || anchor.hasAttribute("download") || anchor.target === "_blank") return;
+    event.preventDefault(); event.stopPropagation(); setPendingNavigation({ href: anchor.href });
+  }}><BusinessAppChrome title="내 사업 관리">
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p><Link className={styles.primary} href="/plan">내 사업으로</Link><Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인합니다.</p>}
         <WorkspaceIdentity title={plan.title} status={hub.status} />
-        <WorkspaceNavigation view={view} onChange={tab}>{hub.coach ? <Link href={chat}>대화 이어가기</Link> : <button onClick={openLegacy}>기존 작업 열기</button>}</WorkspaceNavigation>
+        <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"}>{hub.coach ? <Link href={chat}>대화 이어가기</Link> : <button onClick={openLegacy}>기존 작업 열기</button>}</WorkspaceNavigation>
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={()=>{ if (!expertDirty || window.confirm("저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?")) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
-        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="launch" ? "사업 시작하기" : "다음 할 일"}>
+        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "실적과 개선 기록" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
+          {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} />}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
           {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "기존에 작성한 사업계획서를 이어서 확인할 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
             {hub.coach ? <><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>기존 사업계획서 이어보기</button>}
@@ -100,7 +114,7 @@ export default function BusinessWorkspace() {
             {hub.complete && !hub.stale && <div className={styles.nextStep}><span>계획 다음 단계</span><h3>{businessNextStep(plan).title}</h3><p>지금 선택한 사업의 상품·운영·홈페이지 준비를 이어가요.</p><Link className={styles.secondary} href={businessNextStep(plan).href}>준비 과정 이어가기</Link></div>}
             <details><summary>홈페이지도 필요하신가요?</summary><p>사업계획서로 고객에게 보여줄 홈페이지를 만들 수 있어요. 이용 권한에 따라 결제가 필요할 수 있어요.</p><button className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push("/plan/homepage"); }}>홈페이지 만들기</button></details>
           </>}
-          {view==="launch" && <>{action && <button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}
+          {view==="launch" && <><button className={styles.textButton} onClick={()=>tab("operations")}>기간별 실적과 개선 리포트 보기</button>{action && <button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}
           {view==="action" && <>
             <h2 ref={heading} tabIndex={-1}>{done==="done" ? "하나를 마쳤어요" : done==="skipped" ? "이 일은 나중에 해요" : "지금은 이것 하나만"}</h2>
             <p className={styles.muted}>실행은 선택 사항이에요. 하지 않아도 사업안과 자료는 그대로 남아요.</p>
@@ -110,5 +124,9 @@ export default function BusinessWorkspace() {
         </section>
       </>}
     </div></div>}
-  </BusinessAppChrome></main>;
+  </BusinessAppChrome><dialog ref={navigationDialog} className={operatingStyles.dialog} onCancel={() => setPendingNavigation(null)}><h3>저장하지 않은 기록이 있어요</h3><p>이동하면 입력 중인 내용이 사라져요. 저장 중이라면 완료될 때까지 기다려 주세요.</p><div className={styles.actions}><button className={styles.secondary} autoFocus onClick={() => setPendingNavigation(null)}>계속 작성</button><button className={styles.primary} onClick={() => {
+    const next = pendingNavigation; setPendingNavigation(null); setOperatingDirty(false);
+    if (next && "view" in next) { setView(next.view); const query = new URLSearchParams(window.location.search); query.set("tab",next.view); window.history.replaceState(null,"",`/plan/workspace?${query}`); }
+    else if (next) router.push(next.href);
+  }}>저장하지 않고 이동</button></div></dialog></main>;
 }

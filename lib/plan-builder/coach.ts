@@ -47,6 +47,8 @@ export function coachDocumentRevision(state: CoachState): number {
 
 export function applyCoachReply(previous: CoachState | null, reply: CoachReply, message: CoachMessage): CoachState {
   const messages = [...(previous?.messages ?? []), message];
+  // A follow-up on the same business must not silently turn operations back into a new venture.
+  const stage = previous?.stage === "operating" || message.text.trim() === "사업을 운영 중이에요" ? "operating" : reply.stage;
   const fields = new Map((previous?.fields ?? []).map(f => [f.key, f]));
   for (const patch of reply.fields) {
     const source = messages.find(m => m.id === patch.messageId && m.role === "user");
@@ -60,16 +62,16 @@ export function applyCoachReply(previous: CoachState | null, reply: CoachReply, 
     if (existing?.basis === "user" && field.value !== existing.value && field.messageId !== message.id) continue;
     fields.set(field.key, field);
   }
-  const business = { name: reply.title, description: fields.get("business")?.value ?? previous?.business.description ?? message.text.slice(0, 1000), role: "", industry: "", region: "", stage: reply.stage === "operating" ? "운영 중" : "사업 기획" };
+  const business = { name: reply.title, description: fields.get("business")?.value ?? previous?.business.description ?? message.text.slice(0, 1000), role: "", industry: "", region: "", stage: stage === "operating" ? "운영 중" : "사업 기획" };
   const fingerprint = (values: CoachField[]) => JSON.stringify(values.map(({ key, value, basis }) => ({ key, value, basis })).sort((a, b) => a.key.localeCompare(b.key)));
-  const changed = !previous || previous.stage !== reply.stage || previous.depth !== reply.depth || previous.business.name !== business.name || fingerprint(previous.fields) !== fingerprint([...fields.values()]);
+  const changed = !previous || previous.stage !== stage || previous.depth !== reply.depth || previous.business.name !== business.name || fingerprint(previous.fields) !== fingerprint([...fields.values()]);
   const suppliedIdea = fields.get("business");
   const ideaOrigin = previous?.ideaOrigin ?? (suppliedIdea?.basis === "user" ? { text: suppliedIdea.value, messageId: suppliedIdea.messageId } : undefined);
-  return { version: COACH_VERSION, revision: (previous?.revision ?? 0) + 1, documentRevision: (previous ? coachDocumentRevision(previous) : 0) + Number(changed), stage: reply.stage, depth: reply.depth,
+  return { version: COACH_VERSION, revision: (previous?.revision ?? 0) + 1, documentRevision: (previous ? coachDocumentRevision(previous) : 0) + Number(changed), stage, depth: reply.depth,
     ...(ideaOrigin ? { ideaOrigin } : {}), ...(previous?.design ? { design: previous.design } : {}),
     ...(previous?.directAction ? { directAction: { ...previous.directAction, sourceRevision: coachDocumentRevision(previous) + Number(changed), needsReview: previous.directAction.needsReview || changed } } : {}),
     fields: [...fields.values()], messages: [...messages, { id: `${message.id}-reply`, role: "assistant", text: reply.message, at: message.at }],
-    ready: reply.ready && fields.has("business") && reply.stage !== "exploring", suggestions: reply.suggestions, business };
+    ready: reply.ready && fields.has("business") && stage !== "exploring", suggestions: reply.suggestions, business };
 }
 
 export function coachContext(state: CoachState): string {
@@ -102,6 +104,7 @@ export const COACH_SYSTEM = `오늘창업의 한국 사업 기획 담당자입�
 기존 ideaOrigin은 최초 구상이고 design은 이전 AI 제안입니다. 최신 발화가 우선입니다. '그걸로 해줘'는 직전 제안의 명확한 선택일 때만 반영하고, 여러 대안 중 무엇인지 모호하면 하나만 확인합니다. 선택된 제안도 외부 검증 사실이나 실제 실적으로 승격하지 않습니다.
 시작 범위·추천 이유·대안·확인 방법·다음 행동의 수정을 요청하면 reviseDesign=true를 반환하고, 관련 fields도 함께 갱신합니다. 단순 질문·인사는 reviseDesign=false입니다.
 운영 중이면 현재 문제와 제공된 매출·비용을 중심으로 유지·개선할 방법을 제안합니다. 투자 유치·사업 매각·정부지원 선정은 핵심 상품이 아닙니다.
+기존 stage가 operating이거나 사용자가 '사업을 운영 중이에요'를 선택하면 운영 중인 같은 사업의 개선 대화입니다. 후속 질문 때문에 startup이나 exploring으로 되돌리지 않습니다. 별개 사업을 새로 구상하려는 요청은 새 사업 대화에서 시작하도록 안내합니다.
 한 번에 질문 하나만 합니다. 이미 말한 내용은 다시 묻지 않고, 모르면 실행 가능한 대안을 proposal로 작성합니다.
 message는 쉬운 한국어로 2~3문장, 가급적 250자 이내입니다. 상세 사업안이나 긴 목록을 채팅 답변에 반복하지 않습니다. 탐색 후보는 최대 3개이며 이름과 한 문장 설명만 제공합니다. suggestions는 질문에 답할 수 있는 짧은 선택지 최대 3개로 작성합니다.
 사업이 정해지면 예산이나 실적 미입력을 이유로 ready를 늦추지 않습니다. ready=true이면 질문을 계속하지 말고 초안에서 구체화할 내용을 안내합니다.

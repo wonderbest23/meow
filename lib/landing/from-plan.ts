@@ -1,5 +1,6 @@
 import { createLandingDraft, type LandingDraft } from "./domain";
 import { createLandingPageData } from "./page-data";
+import { readCoach } from "../plan-builder/coach";
 
 /*
  * 사업계획서 → 홈페이지 초안.
@@ -46,22 +47,34 @@ function clamp(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1).trimEnd()}…`;
 }
 
-export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
+/** Readiness and generation must use the same, plan-scoped source. */
+export function resolvePlanLandingContent(source: PlanLandingSource) {
   const get = (sectionKey: string, qid: string) => source.answers?.[sectionKey]?.[qid];
+  const coach = readCoach(source.answers);
+  const field = (key: string) => coach?.fields.find((item) => item.key === key);
+  const business = coach ? coach.business : source.business;
+  const price = field("price");
+  return {
+    businessName: text(business?.name) || text(source.planTitle) || "새 사업",
+    industry: text(business?.industry),
+    city: text(business?.region) || text(get("overview/summary", "city")),
+    mainOffer: text(field("offer")?.value) || text(get("market/products", "main_offer")),
+    firstTarget: text(field("customer")?.value) || text(get("market/segments", "first_target")),
+    priceValue: price ? `${price.basis === "proposal" ? "제안 가격 · " : ""}${text(price.value)}` : text(get("market/products", "price_value")),
+    // Operating problems and financial fields are internal, not public sales copy.
+    offerDetail: text(get("market/products", "offer_detail")),
+    whyFirst: text(get("market/segments", "why_first")),
+    problems: coach?.stage === "operating" ? [] : list(get("overview/problem", "problems")),
+    solutions: coach?.stage === "operating" ? [] : list(get("overview/problem", "solutions")),
+    whyBetter: text(get("overview/problem", "why_better")),
+    offerTypes: list(get("market/products", "offer_type")),
+    buyerTypes: list(get("overview/summary", "buyer_type")),
+  };
+}
 
-  const businessName = text(source.business.name) || source.planTitle || "새 사업";
+export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
+  const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry } = resolvePlanLandingContent(source);
   const contactEmail = text(source.contactEmail);
-  const mainOffer = text(get("market/products", "main_offer"));
-  const offerDetail = text(get("market/products", "offer_detail"));
-  const firstTarget = text(get("market/segments", "first_target"));
-  const whyFirst = text(get("market/segments", "why_first"));
-  const problems = list(get("overview/problem", "problems"));
-  const solutions = list(get("overview/problem", "solutions"));
-  const whyBetter = text(get("overview/problem", "why_better"));
-  const offerTypes = list(get("market/products", "offer_type"));
-  const priceValue = text(get("market/products", "price_value"));
-  const city = text(get("overview/summary", "city")) || text(source.business.region);
-  const buyerTypes = list(get("overview/summary", "buyer_type"));
 
   // 기본 골격은 기존 템플릿이 만들고, 계획서에서 확인된 값만 덮어쓴다
   const base = createLandingDraft({
@@ -69,7 +82,7 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
     oneLiner: mainOffer,
     customer: firstTarget,
     model: offerTypes.join("·"),
-    sector: text(source.business.industry),
+    sector: industry,
   });
 
   /*
@@ -132,7 +145,7 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
       (buyerTypes.some((item) => item.includes("B2B")) ? "도입 상담을 받고 있어요" : base.heroLabel),
     benefits,
     offerTitle: mainOffer ? clamp(mainOffer, 60) : base.offerTitle,
-    offerDescription: offerDetail ? clamp(sentence(offerDetail, "."), 600) : base.offerDescription,
+    offerDescription: offerDetail ? clamp(sentence(offerDetail, "."), 600) : mainOffer ? clamp(mainOffer, 600) : base.offerDescription,
     priceLabel: priceValue ? clamp(priceValue, 100) : base.priceLabel,
     /*
      * 계획서의 실적은 홈페이지에 싣지 않는다.
@@ -158,14 +171,14 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
       : base.privacyPolicy,
   };
 
-  return { ...draft, pageData: createLandingPageData(draft, draft.templateId) };
+  return { ...draft, pageData: createLandingPageData({ ...draft, customer: clamp(firstTarget, 600) }, draft.templateId) };
 }
 
 /** 계획서에서 홈페이지를 만들 준비가 됐는지 — 최소한 대표 상품은 있어야 한다 */
 export function planLandingReadiness(source: PlanLandingSource): { ready: boolean; missing: string[] } {
-  const get = (sectionKey: string, qid: string) => source.answers?.[sectionKey]?.[qid];
+  const content = resolvePlanLandingContent(source);
   const missing: string[] = [];
-  if (!text(get("market/products", "main_offer"))) missing.push("상품·서비스 › 가장 대표적인 상품·서비스");
-  if (!text(get("market/segments", "first_target"))) missing.push("시장 세그먼트 › 가장 먼저 공략할 그룹");
+  if (!content.mainOffer) missing.push("대표 상품이나 서비스");
+  if (!content.firstTarget) missing.push("주로 이용할 고객");
   return { ready: missing.length === 0, missing };
 }

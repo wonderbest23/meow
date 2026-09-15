@@ -4,6 +4,7 @@ import { BriefcaseBusiness, ChevronRight, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "../../components/site-header";
+import { googleClientId } from "../../lib/google-client-id";
 import type { PaymentHistoryItem } from "../../lib/payments/plan-orders";
 import { hydrateFromServer, setActivePlan, isSamplePlan, prepareAccountSignIn, clearLocalState, type PlanState } from "../../lib/plan-builder/plan-store";
 import { sectionCountForType } from "../../lib/plan-builder/blueprint";
@@ -17,9 +18,7 @@ import styles from "./Account.module.css";
  * Supabase 로 검증한다. 클라이언트 ID 는 공개값이라 코드에 둬도 되고,
  * 환경변수로 바꿀 수 있게 열어 둔다.
  */
-const GOOGLE_CLIENT_ID =
-  process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ??
-  "1003888311201-3ai90gt9sohnkc2u7oujs7i6igjo28ff.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = googleClientId(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID, process.env.NEXT_PUBLIC_APP_ENV);
 
 type GoogleAccountsId = {
   initialize: (config: { client_id: string; callback: (response: { credential?: string }) => void }) => void;
@@ -140,6 +139,7 @@ export default function AccountPage() {
    */
   useEffect(() => {
     if (session?.authenticated || (mode !== "login" && mode !== "register")) return;
+    if (!GOOGLE_CLIENT_ID) { setGoogleReady(false); setGoogleUnavailable(true); return; }
     let alive = true;
     setGoogleReady(false); setGoogleUnavailable(false);
     const timeout = window.setTimeout(() => { if (alive) setGoogleUnavailable(true); }, 10000);

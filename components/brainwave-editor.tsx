@@ -5,9 +5,12 @@ import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, LayoutTemplate, List, Lo
 import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
+import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { BrainwavePage, loadBrainwavePage, menuItemsOf, orderedSections, sectionBands, type BrainwavePageData } from "./brainwave-page";
 import { brainwaveSections } from "../lib/landing/brainwave/button-action";
 import { resizeImage, uploadImage } from "./landing-media-field";
+import { useLandingEditorSave } from "./use-landing-editor-save";
+import { landingDraftFingerprint } from "../lib/landing/save-contract";
 
 /*
  * Brainwave.io 킷 페이지 자리 편집기.
@@ -15,7 +18,7 @@ import { resizeImage, uploadImage } from "./landing-media-field";
  * 페이지는 킷 그대로이고, 손대는 것은 둘뿐이다 — 글 자리와 사진 자리.
  *   · 글을 누르면 그 자리에서 고친다(contentEditable). 줄바꿈은 Enter.
  *   · 사진을 누르면 파일을 골라 바꾼다(스토리지에 올리고 주소만 저장).
- *   · 위쪽에서 26장 중 다른 페이지로 바꿀 수 있다 — 바꾸면 고친 글은 그 페이지
+ *   · 위쪽에서 10가지 홈페이지로 바꿀 수 있다 — 바꾸면 고친 글은 그 페이지
  *     노드 id 와 맞지 않으므로 버린다(물어본 뒤).
  * 칸을 옮기거나 색을 바꾸는 기능은 없다 — 킷 구조를 그대로 지키기 위해서다.
  */
@@ -52,14 +55,18 @@ export function BrainwaveEditor({
 }: {
   data: LandingPageData;
   onClose: () => void;
-  onSave: (data: LandingPageData) => void;
+  onSave: (data: LandingPageData) => void | Promise<void>;
   /** AI 수정(토큰 차감)에 필요 — 없으면 AI 칸이 숨는다 */
   projectId?: string | null;
   business?: { name: string; summary: string };
 }) {
   const init = data.brainwave!;
   const [page, setPage] = useState(init.page);
+  const [contentMode, setContentMode] = useState(init.contentMode);
+  const [businessContent, setBusinessContent] = useState(data.businessContent);
   const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) }, hidden: [...(init.hidden ?? [])], order: [...(init.order ?? [])] });
+  const initial = useRef(landingDraftFingerprint({ page, ...over }));
+  const persistence = useLandingEditorSave(onSave);
   const [history, setHistory] = useState<Over[]>([]);
   const [future, setFuture] = useState<Over[]>([]);
   const [meta, setMeta] = useState<BrainwavePageData | null>(null);
@@ -210,7 +217,7 @@ export function BrainwaveEditor({
     const original = meta?.slots.text.find((t) => t.id === editing.id)?.text ?? "";
     setOver((o) => {
       const texts = { ...o.texts };
-      if (value === original) delete texts[editing.id]; else texts[editing.id] = value;
+      if (!contentMode && value === original) delete texts[editing.id]; else texts[editing.id] = value;
       return { ...o, texts };
     });
   };
@@ -236,7 +243,7 @@ export function BrainwaveEditor({
     const text = el.innerText;
     const original = meta?.slots.text.find((t) => t.id === id)?.text ?? "";
     const next = { ...over, texts: { ...over.texts } };
-    if (text === original) delete next.texts[id]; else next.texts[id] = text;
+    if (!contentMode && text === original) delete next.texts[id]; else next.texts[id] = text;
     setEditing(null);
     setSizeTarget(null);
     histPushed.current = false;
@@ -264,7 +271,7 @@ export function BrainwaveEditor({
     const texts = { ...over.texts };
     if (btn.textId) {
       const original = meta?.slots.text.find((s) => s.id === btn.textId)?.text ?? "";
-      if (btn.label === original) delete texts[btn.textId]; else texts[btn.textId] = btn.label;
+      if (!contentMode && btn.label === original) delete texts[btn.textId]; else texts[btn.textId] = btn.label;
     }
     const links = { ...over.links };
     /* 주소는 https/tel/mailto 만 — "www.…" 처럼 오면 https 를 붙여 준다 */
@@ -296,7 +303,7 @@ export function BrainwaveEditor({
     const joined = kept.map((m, i) => (i ? (seps[i - 1] ?? "    ") + m.name.trim() : m.name.trim())).join("");
     const original = meta?.slots.text.find((t) => t.id === menu.id)?.text ?? "";
     const texts = { ...over.texts };
-    if (joined === original) delete texts[menu.id]; else texts[menu.id] = joined;
+    if (!contentMode && joined === original) delete texts[menu.id]; else texts[menu.id] = joined;
     const links = { ...over.links };
     for (const k of Object.keys(links)) if (k.startsWith(`${menu.id}@`)) delete links[k];
     kept.forEach((m, i) => {
@@ -432,24 +439,42 @@ export function BrainwaveEditor({
 
   const changePage = (next: string) => {
     if (next === page) return;
-    const dirty = Object.keys(over.texts).length + Object.keys(over.images).length > 0;
-    if (dirty && !window.confirm("페이지를 바꾸면 이 페이지에서 고친 글·사진은 사라집니다. 바꿀까요?")) return;
     finishText();
     setMenu(null);
-    commit({ texts: {}, images: {}, links: {}, sizes: {}, hidden: [], order: [] });
+    setBtn(null);
+    deselect();
+    const source = { ...(businessContent ?? { businessName: String(data.root.props?.title || "내 사업"), offer: business.summary, description: business.summary, customer: "", price: "문의 후 안내", cta: "문의하기", image: "" }), ...(business.name ? { businessName: business.name } : {}) };
+    const generated = createBusinessTemplate(source, next);
+    setBusinessContent(source);
+    setOver(generated);
+    setHistory([]); setFuture([]);
+    setContentMode("business");
     setSizeTarget(null);
     setPage(next);
   };
 
   const save = () => {
+    if (persistence.saving || uploading || ai.busy) return;
+    if (btn || menu) { setError("열려 있는 버튼이나 메뉴 설정을 먼저 적용해주세요."); return; }
+    setError("");
     const final = finishText();
-    onSave({ ...data, brainwave: { page, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden, order: final.order }, content: [] });
+    void persistence.save({ ...data, businessContent, brainwave: { page, contentMode, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden, order: final.order }, content: [] });
+  };
+  const close = () => {
+    if (persistence.saving || uploading || ai.busy) return;
+    const final = finishText();
+    if ((btn || menu || initial.current !== landingDraftFingerprint({ page, ...final })) && !window.confirm("수정 내용을 저장하지 않고 편집기를 닫을까요?")) return;
+    onClose();
   };
 
-  const changed = Object.keys(over.texts).length + Object.keys(over.images).length + Object.keys(over.sizes).length + over.hidden.length + (over.order.length ? 1 : 0);
+  const baseline = contentMode === "business" && businessContent ? createBusinessTemplate(businessContent, page) : null;
+  const edits = (saved: Record<string, string>, before: Record<string, string> = {}) => Object.entries(saved).filter(([id, value]) => value !== before[id]).length;
+  const changed = edits(over.texts, baseline?.texts) + edits(over.images, baseline?.images) + edits(over.links, baseline?.links) + Object.keys(over.sizes).length + over.hidden.filter(id => !baseline?.hidden.includes(id)).length + (baseline?.hidden.filter(id => !over.hidden.includes(id)).length ?? 0) + (over.order.length ? 1 : 0);
 
   return (
-    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 에디터">
+    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 에디터" aria-busy={persistence.saving}
+      onClickCapture={(event) => { if (persistence.saving) { event.preventDefault(); event.stopPropagation(); } }}
+      onKeyDownCapture={(event) => { if (persistence.saving && event.key !== "Tab") { event.preventDefault(); event.stopPropagation(); } }}>
       <header className="bw-editor-bar">
         <div className="bw-editor-left">
           <strong>에디터</strong>
@@ -476,11 +501,11 @@ export function BrainwaveEditor({
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /></button>
           {projectId ? <button type="button" className={`bw-editor-ai ${ai.open ? "on" : ""}`} onClick={() => setAi((s) => ({ ...s, open: !s.open }))} title="AI 로 고치기"><Sparkles /> AI</button> : null}
-          <button type="button" className="bw-editor-save" onClick={save}><Save /> 저장</button>
-          <button type="button" onClick={() => { finishText(); onClose(); }} title="닫기"><X /></button>
+          <button type="button" className="bw-editor-save" onClick={save} disabled={persistence.saving || !!uploading || ai.busy}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} {persistence.saving ? "저장 중" : "저장"}</button>
+          <button type="button" onClick={close} disabled={persistence.saving || !!uploading || ai.busy} title="닫기"><X /></button>
         </div>
       </header>
-      {error ? <p className="bw-editor-error">{error}</p> : null}
+      {error || persistence.error ? <p className="bw-editor-error" role="alert">{error || persistence.error}</p> : null}
       {/* 선택 툴바 — 누른 요소 바로 위에 뜨는 액션 줄(Wix 식). 숨기기는 우클릭 없이 여기서 */}
       {!previewMode && sel && selPos ? (
         <div className="bw-eltool" role="toolbar" aria-label={`선택: ${sel.kind}`} style={{ left: selPos.x, top: selPos.y }} onMouseDown={(e) => e.preventDefault()}>
@@ -705,11 +730,11 @@ export function BrainwaveEditor({
         </div>
       ) : null}
       {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
-      <div className="bw-editor-stage" onClick={() => { finishText(); deselect(); }} onContextMenu={onStageContext}>
+      <div className="bw-editor-stage" inert={persistence.saving} onClick={() => { finishText(); deselect(); }} onContextMenu={onStageContext}>
         <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view] }}>
           <BrainwavePage
             pageId={page}
-            overrides={over}
+            overrides={{ ...over, contentMode }}
             mode={view === "mobile" ? "mobile" : "desktop"}
             onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id, el) : kind === "restore" ? restore(id) : pickButton(id, el))}
           />

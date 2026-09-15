@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { cacheDocumentSection, type Plan, type StoredSection } from "../../../lib/plan-builder/plan-store";
+import { cacheDocumentSection, planOwnerEpoch, subscribePlanOwnerChange, type Plan, type StoredSection } from "../../../lib/plan-builder/plan-store";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 
 type Draft = { id: string; html: string; baseGeneratedAt: string };
@@ -15,6 +15,7 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
   const queue = useRef(Promise.resolve());
   const restoring = useRef(new Set<string>());
   const restoreAttempts = useRef<Record<string, Draft>>({});
+  const requests = useRef(new Set<AbortController>());
   const latestSaved = useRef(onSaved); latestSaved.current = onSaved;
   function state(key: string, value: EditState) { setStates(current => ({ ...current, [key]: value })); }
   function remember(key: string, draft: Draft) {
@@ -41,10 +42,15 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
   async function send(key: string, draft: Draft, action: "save" | "restore") {
     const target = plan.current;
     if (!target || (action === "save" && drafts.current[key]?.id !== draft.id)) return;
+    const epoch = planOwnerEpoch();
+    const controller = new AbortController();
+    requests.current.add(controller);
+    const current = () => epoch === planOwnerEpoch() && target === plan.current;
     state(key, { status: "saving" });
     try {
-      const response = await fetch("/api/plan/document/section", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: target.id, key, baseGeneratedAt: draft.baseGeneratedAt, action, ...(action === "save" ? { markdown: htmlToMarkdown(draft.html) } : {}) }) });
+      const response = await fetch("/api/plan/document/section", { method: "PATCH", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: target.id, key, baseGeneratedAt: draft.baseGeneratedAt, action, ...(action === "save" ? { markdown: htmlToMarkdown(draft.html) } : {}) }) });
       const data = await response.json();
+      if (!current()) return;
       if (!response.ok) throw new Error(data.message || "저장하지 못했어요. 초안은 이 기기에 남아 있습니다.");
       const section = data.section as StoredSection;
       target.sections[key] = section;
@@ -58,9 +64,10 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
         latestSaved.current(key, section); state(key, { status: "saved" });
       } else remember(key, { ...pending, baseGeneratedAt: section.generatedAt });
     } catch (error) {
+      if (!current()) return;
       const backedUp = drafts.current[key] ? remember(key, drafts.current[key]) : true;
       state(key, { status: "failed", message: backedUp ? (error instanceof Error ? error.message : "저장하지 못했어요.") : "서버와 기기에 저장하지 못했어요. 이 화면을 닫지 말고 다시 저장해주세요." });
-    } finally { restoring.current.delete(key); }
+    } finally { requests.current.delete(controller); if (current()) restoring.current.delete(key); }
   }
   function stage(key: string, html: string) {
     if (!plan.current?.sections[key]) return;
@@ -95,10 +102,26 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
     queue.current = queue.current.then(() => send(key, draft, "restore"));
   }
   function hasPending() { return Object.keys(drafts.current).length > 0 || restoring.current.size > 0; }
+  function acceptReviewed(planId: string, key: string, section: StoredSection, updatedAt: string) {
+    if (plan.current?.id !== planId || drafts.current[key] || restoring.current.has(key)) return;
+    plan.current.sections[key] = section;
+    cacheDocumentSection(planId, key, section, updatedAt);
+    latestSaved.current(key, section); state(key, { status: "saved" });
+  }
   useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => { if (hasPending()) { event.preventDefault(); event.returnValue = ""; } };
+    const epoch = planOwnerEpoch();
+    const invalidate = () => {
+      plan.current = null;
+      drafts.current = {};
+      restoreAttempts.current = {};
+      restoring.current.clear();
+      requests.current.forEach(controller => controller.abort());
+      requests.current.clear();
+    };
+    const unsubscribe = subscribePlanOwnerChange(invalidate);
+    const warn = (event: BeforeUnloadEvent) => { if (epoch === planOwnerEpoch() && hasPending()) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
+    return () => { unsubscribe(); invalidate(); window.removeEventListener("beforeunload", warn); };
   }, []);
-  return { states, restoreKeys, initialize, stage, save, retry, discard, restore, hasPending, pending: Object.values(states).some(s => s.status === "saving" || s.status === "failed") };
+  return { states, restoreKeys, initialize, stage, save, retry, discard, restore, acceptReviewed, hasPending, pending: Object.values(states).some(s => s.status === "saving" || s.status === "failed") };
 }

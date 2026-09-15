@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { PHONE_SCROLL_MIN_SECONDS, PHONE_STORY_DURATION_SECONDS, advancePhoneScroll, phoneMotion, phoneScrollProgress, phoneStoryPins, phoneStoryScrollDistance } from "../lib/home-phone-motion";
+import { readFileSync } from "node:fs";
+import { phoneMotion, phoneScrollProgress, phoneStoryCopy, phoneStoryPins, phoneStoryScrollDistance, phoneStoryScrollPosition } from "../lib/home-phone-motion";
 
 assert.equal(phoneMotion(-1).progress, 0);
 assert.equal(phoneMotion(2).progress, 1);
@@ -35,10 +36,9 @@ assert.equal(phoneMotion(.10).send, 1);
 assert.equal(phoneMotion(.20).messageLift, 1, "Hold the lifted UI card, not loose headline text");
 assert.equal(phoneMotion(.355).messageLift, 0);
 assert.equal(phoneMotion(.37).messageDetach, 0, "The lifted message returns before the business brief");
-assert.equal(PHONE_STORY_DURATION_SECONDS, 48);
 for (const key of ["messageLift", "focus"] as const) {
   const held = Array.from({ length: 1001 }, (_, index) => phoneMotion(index / 1000)[key] === 1).filter(Boolean).length;
-  assert.ok(held / 1000 * PHONE_STORY_DURATION_SECONDS >= 5.5, `${key} needs at least 5.5 seconds of uninterrupted reading time`);
+  assert.ok(held >= 115, `${key} reserves a full reading interval in the scroll timeline`);
 }
 const forward = [.1,.2,.4,.54,.7,.85].map(phoneMotion);
 const reverse = [.85,.7,.54,.4,.2,.1].map(phoneMotion).reverse();
@@ -64,20 +64,53 @@ for (let index = 1; index <= 1000; index++) {
   const previous = phoneScrollProgress((index - 1) / 1000), next = phoneScrollProgress(index / 1000);
   assert.ok(next >= previous && next - previous < .003, "Scroll choreography stays continuous and reversible");
 }
-assert.equal(advancePhoneScroll(.2, .8, 0), .2);
-assert.equal(advancePhoneScroll(.2, .8, NaN), .2);
-assert.equal(advancePhoneScroll(.2, .8, -1), .2);
-for (const fps of [30, 60, 120]) {
-  let forward = 0, reverse = 1;
-  for (let frame = 0; frame < fps; frame++) {
-    forward = advancePhoneScroll(forward, 1, 1 / fps);
-    reverse = advancePhoneScroll(reverse, 0, 1 / fps);
+for (const [width, height] of [[454, 692], [1440, 900], [1440, 500], [390, 600]]) {
+  const pinned = phoneStoryPins(width, height);
+  const stageHeight = pinned ? height - 64 : 820;
+  const trackHeight = pinned ? stageHeight + phoneStoryScrollDistance(width, height) : stageHeight;
+  const distance = pinned ? trackHeight - stageHeight : trackHeight + height - 64;
+  const start = pinned ? 64 : height - 64;
+  const position = (value: number) => phoneStoryScrollPosition({ top: start - value * distance, trackHeight, stageHeight, viewportHeight: height, pinned });
+  for (const value of [0, .18, .42, .67, 1]) {
+    assert.ok(Math.abs(position(value) - value) < .00001);
+    const initial = phoneMotion(phoneScrollProgress(position(value)));
+    for (let frame = 0; frame < 600; frame++) assert.deepEqual(phoneMotion(phoneScrollProgress(position(value))), initial, "An unchanged scroll position cannot advance the story");
   }
-  assert.ok(forward <= 1 / PHONE_SCROLL_MIN_SECONDS + .00001, "One fast wheel burst cannot consume the story in one second");
-  assert.ok(reverse >= 1 - 1 / PHONE_SCROLL_MIN_SECONDS - .00001);
+  assert.deepEqual([.18, .67, .42].map(position), [.42, .67, .18].map(position).reverse());
+  assert.equal(position(-1), 0);
+  assert.equal(position(2), 1);
 }
-let settled = 0;
-for (let frame = 0; frame < 60 * 20; frame++) settled = advancePhoneScroll(settled, .67, 1 / 60);
-assert.equal(settled, .67, "The animation settles exactly at its scroll target");
-assert.ok(advancePhoneScroll(.2, .8, 120) < .204, "Returning from a background tab cannot jump the timeline");
-console.log("Phone motion: ordering, reading holds, desktop scroll distance, speed limits and reverse determinism passed");
+const stage = readFileSync("components/home-phone-stage.ts", "utf8");
+const story = readFileSync("components/home-phone-story.tsx", "utf8");
+const storyCss = readFileSync("components/home-phone-story.module.css", "utf8");
+assert.doesNotMatch(stage, /PHONE_STORY_DURATION|advancePhoneScroll|seconds\s*\+=|auto\s*=/, "The live story has no time-based playback path");
+assert.doesNotMatch(story, /onFocus=|onBlur=/, "Focusing or leaving the scrubber cannot start playback");
+for (let index = 0; index <= 1000; index++) {
+  const state = phoneStoryCopy(index / 1000);
+  assert.ok(state.scenes.filter(scene => scene.visible).length <= 1, "Outgoing and incoming headings never overlap");
+  for (const scene of state.scenes) for (const part of scene.parts) {
+    assert.ok(part.opacity >= 0 && part.opacity <= 1);
+    assert.ok(part.y >= -24 && part.y <= 32);
+  }
+}
+for (const [index, progress] of [.2, .67, .98].entries()) {
+  const state = phoneStoryCopy(progress);
+  assert.equal(state.chapter, index);
+  assert.deepEqual(state.scenes[index].parts, Array(3).fill({ opacity: 1, y: 0 }), "Every line stays sharp and still throughout the reading hold");
+  for (let frame = 0; frame < 600; frame++) assert.deepEqual(phoneStoryCopy(progress), state);
+}
+const entering = phoneStoryCopy(.48).scenes[1].parts;
+assert.ok(entering[0].opacity > entering[1].opacity && entering[1].opacity > entering[2].opacity, "Heading lines enter before the supporting text");
+assert.ok(entering[0].y < entering[1].y);
+assert.ok(entering[2].y <= 20, "Supporting text never enters the button's 28px spacing");
+const leaving = phoneStoryCopy(.4).scenes[0].parts;
+assert.ok(leaving[0].opacity < leaving[1].opacity && leaving[1].opacity < leaving[2].opacity);
+assert.ok(leaving.every(part => part.y < 0), "Outgoing lines lift up as they fade");
+assert.equal(phoneStoryCopy(0, 0).scenes[0].visible, false);
+assert.equal(phoneStoryCopy(0, 1).scenes[0].visible, true);
+assert.equal(phoneStoryCopy(1, 1, 1).scenes[2].visible, false, "The last heading leaves with the section");
+assert.deepEqual(phoneStoryCopy(.555, 0, 1, true).scenes[1].parts, Array(3).fill({ opacity: 1, y: 0 }), "Reduced motion remains fully readable regardless of viewport entrance or exit");
+assert.deepEqual([0, .4, .48, .67, .83, .9, 1].map(p => phoneStoryCopy(p)), [1, .9, .83, .67, .48, .4, 0].map(p => phoneStoryCopy(p)).reverse());
+assert.doesNotMatch(storyCss, /transition: opacity \.16s|transition-delay: \.15s/, "Text frames cannot continue on a timer after scrolling stops");
+assert.match(story, /data-copy-part/);
+console.log("Phone motion: scroll-only progression, staggered text, reading holds, reduced motion and reverse determinism passed");

@@ -11,6 +11,8 @@ import styles from "./DocumentWorkspace.module.css";
 import type { assembleSections } from "../../../lib/plan-builder/plan-store";
 import type { EditState } from "./use-document-edits";
 import { DocumentChapterHeading, DocumentReadHeading, DocumentSectionHeading } from "./DocumentReadContent";
+import DocumentSourceReview, { type DocumentReviewSource } from "./DocumentSourceReview";
+import type { StoredSection } from "../../../lib/plan-builder/plan-store";
 
 type Format = "pdf" | "docx" | "pptx";
 type Props = {
@@ -27,6 +29,8 @@ type Props = {
   accessError: boolean; onRetryAccess: () => void;
   deckStatus?: string; deckLabel?: string;
   onDownload: (format: Format) => void; canDownload: (format: Format) => boolean;
+  reviewSource?: DocumentReviewSource | null;
+  onReviewed?: (key: string, section: StoredSection, updatedAt: string) => void;
 };
 
 export default function DocumentWorkspace(props: Props) {
@@ -99,6 +103,7 @@ export default function DocumentWorkspace(props: Props) {
                     {props.editStates[section.key]?.status === "failed" ? <><p role="alert">{props.editStates[section.key].message}</p><button onClick={() => props.onRetrySave(section.key)}><RefreshCw size={15} />다시 저장</button><button onClick={() => props.onDiscardDraft(section.key)}>서버 내용 불러오기</button></> : !editing && props.editStates[section.key] && <span role="status">{props.editStates[section.key].status === "saving" ? "서버에 저장 중…" : "서버에 저장됨"}</span>}
                     {editing && props.restoreKeys.includes(section.key) && !["saving", "failed"].includes(props.editStates[section.key]?.status ?? "") && <button onClick={() => props.onRestore(section.key)}><RotateCcw size={15} />직전 내용으로 되돌리기</button>}
                   </div>}
+                  {!isSample && planId && props.reviewSource?.sections[section.key] && props.onReviewed && <DocumentSourceReview key={`${section.key}:${props.reviewSource.revision}:${props.reviewSource.sections[section.key]}`} planId={planId} sectionKey={section.key} source={props.reviewSource} disabled={editing || ["saving", "failed"].includes(props.editStates[section.key]?.status ?? "")} onReviewed={props.onReviewed} />}
                 </section>)}
               </div>)}
               {!continuous && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
@@ -119,6 +124,7 @@ export default function DocumentWorkspace(props: Props) {
         {props.accessError ? <div className={styles.notice} role="alert">이용 권한을 확인하지 못했어요. <button className={styles.help} onClick={props.onRetryAccess}>다시 확인</button></div> : props.accessPending && <p role="status">이용 권한을 확인하고 있어요.</p>}
         {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const).map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format)} onClick={() => props.onDownload(format)}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : name}</strong><small>{description}</small></span><ChevronRight size={20} /></button>)}
         {props.deckStatus && <p role="status" aria-live="polite">{props.deckStatus}</p>}
+        {!isSample && planId && <Link href={`/plan/proposal?planId=${encodeURIComponent(planId)}`}>제안서 편집본 열기</Link>}
         {Object.values(props.editStates).some(state => state.status !== "saved") && <p role="status">저장이 끝난 뒤 파일을 받을 수 있어요. 저장에 실패한 항목은 본문에서 확인해주세요.</p>}
         {props.error && <p role="alert">{props.error}</p>}
       </div>}

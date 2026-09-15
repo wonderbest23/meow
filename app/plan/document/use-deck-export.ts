@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { DECK_PHASE_LABELS, deckFailureMessage, type PublicDeckJob } from "../../../lib/plan-builder/deck-job-types";
-import { PPT_GENERATION_VERIFIED, PPT_PREPARING_MESSAGE } from "../../../lib/plan-builder/deck-availability";
+import { DECK_PHASE_LABELS, type PublicDeckJob } from "../../../lib/plan-builder/deck-job-types";
+import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
+import { deckExportState } from "../../../lib/plan-builder/deck-export-state";
 
 export function useDeckExport(planId: string | null, enabled: boolean, title: string) {
   const [job, setJob] = useState<PublicDeckJob | null>(null);
@@ -13,6 +14,7 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
   const [generationEnabled, setGenerationEnabled] = useState(PPT_GENERATION_VERIFIED);
   const [downloading, setDownloading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [uncertainUntil, setUncertainUntil] = useState(0);
   const uncertain = useRef(uncertainUntil); uncertain.current = uncertainUntil;
   const currentId = useRef(planId); currentId.current = planId;
@@ -24,6 +26,7 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
     if (!planId || !enabled || polling.current) return;
     const controller = new AbortController();
     polling.current = controller;
+    setRefreshing(true);
     const timer = window.setTimeout(() => controller.abort("timeout"), 15000);
     const current = () => currentId.current === planId && polling.current === controller;
     try {
@@ -43,13 +46,13 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
       }
     } finally {
       window.clearTimeout(timer);
-      if (polling.current === controller) polling.current = null;
+      if (polling.current === controller) { polling.current = null; setRefreshing(false); }
     }
   }, [planId, enabled]);
 
   useEffect(() => {
     setJob(null); setStale(false); setError(null); setStatusError(null); setLoaded(false);
-    setSubmitting(false); setDownloading(false); setUncertainUntil(0); setGenerationEnabled(PPT_GENERATION_VERIFIED);
+    setSubmitting(false); setDownloading(false); setRefreshing(false); setUncertainUntil(0); setGenerationEnabled(PPT_GENERATION_VERIFIED);
     void refresh();
     const reconnect = () => { if (!document.hidden) void refresh(); };
     window.addEventListener("online", reconnect);
@@ -77,11 +80,12 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
     return () => window.clearInterval(timer);
   }, [busy, uncertainUntil, statusError, refresh]);
 
+  const view = deckExportState({ job, stale, loaded, statusError: !!statusError, generationEnabled });
+
   async function startOrDownload() {
     if (!planId || !enabled || busy || uncertainUntil || action.current) return;
-    if (!loaded || statusError) { await refresh(); return; }
-    const ready = !!job?.ready && !stale;
-    if (!ready && !generationEnabled) { setError(PPT_PREPARING_MESSAGE); return; }
+    if (view.action === "refresh") { await refresh(); return; }
+    const ready = view.action === "download";
     const controller = new AbortController();
     action.current = controller;
     const timer = window.setTimeout(() => controller.abort("timeout"), ready ? 90000 : 20000);
@@ -123,13 +127,9 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
       if (current()) { action.current = null; setSubmitting(false); setDownloading(false); }
     }
   }
-  const ready = !!job?.ready && !stale;
   const message = busy ? `${DECK_PHASE_LABELS[job!.phase]} · ${job!.resumable ? "슬라이드 초안이 저장됐어요. " : "원본 계획서는 저장되어 있어요. "}화면을 나가도 서버에서 계속 진행해요.`
     : uncertainUntil ? "제작 접수 상태를 확인하고 있어요. 중복 요청은 보내지 않습니다."
-    : job?.status === "failed" ? `${deckFailureMessage(job.code, job.resumable && !["source_validation_failed", "invalid_slides", "review_json_invalid"].includes(job.code ?? ""))} 문의 번호: ${job.token.slice(0, 8)}`
-    : ready ? DECK_PHASE_LABELS.ready
-    : !generationEnabled ? PPT_PREPARING_MESSAGE
-    : stale ? "계획서가 수정됐어요. 최신 내용으로 발표자료를 다시 만들어주세요." : "";
-  return { busy: busy || submitting || downloading || !!uncertainUntil, canRequest: enabled && (ready || generationEnabled), message, error: error || statusError, refresh, startOrDownload,
-    label: downloading ? "PPT 파일을 준비하고 있어요" : busy || submitting ? "발표자료 제작 중" : uncertainUntil ? "PPT 접수 확인 중" : ready ? "완성된 PPT 내려받기" : !generationEnabled ? "PPT 제공 준비 중" : !loaded || statusError ? "PPT 상태 다시 확인" : stale ? "최신 내용으로 PPT 만들기" : job?.status === "failed" ? "발표자료 다시 시도" : "발표자료 PPT" };
+    : view.message;
+  return { busy: busy || submitting || downloading || refreshing || !!uncertainUntil, canRequest: enabled, message, error: error || statusError, refresh, startOrDownload,
+    label: downloading ? "PPT 파일을 준비하고 있어요" : busy || submitting ? "발표자료 제작 중" : uncertainUntil ? "PPT 접수 확인 중" : refreshing ? "PPT 상태를 확인하고 있어요" : view.label };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -12,7 +12,9 @@ import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
 import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
-import { hydrateFromServer, activePlan, loadState, isSamplePlan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, activePlan, loadState, isSamplePlan, planOwnerEpoch, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
+import { persistLandingDraft } from "../../../lib/landing/save-client";
+import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import styles from "./page.module.css";
 
 /*
@@ -57,11 +59,52 @@ export default function PlanHomepagePage() {
   const [price, setPrice] = useState(149000);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
+  const requestRef = useRef<AbortController | null>(null);
+  const mounted = useRef(true);
+  const siteRef = useRef(site); siteRef.current = site;
+  const unsaved = editable && (builderOpen || (!!draft && landingDraftFingerprint(draft) !== landingDraftFingerprint(site?.draft)));
+
+  useEffect(() => {
+    mounted.current = true;
+    const invalidate = () => {
+      requestRef.current?.abort();
+      requestRef.current = null;
+      setBuilderOpen(false); setFullscreen(false); setEditable(false);
+      setDraft(null); setSite(null); setProjectId(null); setAction("idle"); setMessage("");
+      setBlocked({ title: "계정이 변경됐습니다", detail: "현재 계정으로 홈페이지를 다시 열어주세요.", missing: [], cta: "login" });
+      setPhase("blocked");
+    };
+    const unsubscribe = subscribePlanOwnerChange(invalidate);
+    return () => { mounted.current = false; requestRef.current?.abort(); unsubscribe(); };
+  }, []);
+
+  useEffect(() => {
+    if (!unsaved) return;
+    const epoch = planOwnerEpoch();
+    const warn = (event: BeforeUnloadEvent) => {
+      if (epoch !== planOwnerEpoch()) return;
+      event.preventDefault(); event.returnValue = "";
+    };
+    const confirmLink = (event: MouseEvent) => {
+      if (epoch !== planOwnerEpoch() || event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(link instanceof HTMLAnchorElement) || link.target === "_blank" || link.hasAttribute("download")) return;
+      const target = new URL(link.href, location.href);
+      if (target.origin === location.origin && target.pathname === location.pathname && target.search === location.search) return;
+      if (!window.confirm("저장되지 않은 수정 내용이 있을 수 있습니다. 이 화면을 나갈까요?")) { event.preventDefault(); event.stopPropagation(); }
+    };
+    window.addEventListener("beforeunload", warn);
+    document.addEventListener("click", confirmLink, true);
+    return () => { window.removeEventListener("beforeunload", warn); document.removeEventListener("click", confirmLink, true); };
+  }, [unsaved]);
 
   useEffect(() => {
     let alive = true;
+    let loadEpoch = planOwnerEpoch();
     (async () => {
       const state = await hydrateFromServer();
+      const epoch = planOwnerEpoch();
+      loadEpoch = epoch;
       const plan = activePlan(state);
       if (!alive) return;
       if (!plan) {
@@ -118,7 +161,7 @@ export default function PlanHomepagePage() {
         const page = samplePage[plan.id];
         /* 예시는 한글로 — 가게 이름을 넣은 문구 세트(디자인은 그대로, 글만) */
         setDraft(page && draft.pageData?.brainwave
-          ? { ...draft, pageData: { ...draft.pageData, brainwave: { ...draft.pageData.brainwave, page, texts: koTextsFor(page, shopName || plan.title) } } }
+          ? { ...draft, pageData: { ...draft.pageData, brainwave: { page, texts: koTextsFor(page, shopName || plan.title), images: {}, links: {}, sizes: {}, hidden: [], order: [] } } }
           : draft);
         setEditable(false);
         setSample(true);
@@ -130,10 +173,11 @@ export default function PlanHomepagePage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId: plan.id }),
       });
-      if (!alive) return;
+      if (!alive || epoch !== planOwnerEpoch()) return;
 
       if (res.ok) {
         const data = (await res.json()) as { site: LandingSiteRecord; projectId: string; editable?: boolean; price?: number };
+        if (!alive || epoch !== planOwnerEpoch()) return;
         setSite(data.site);
         setProjectId(data.projectId);
         setDraft(data.site.draft);
@@ -155,6 +199,7 @@ export default function PlanHomepagePage() {
       }
 
       const error = (await res.json().catch(() => ({}))) as { error?: string; message?: string; missing?: string[] };
+      if (!alive || epoch !== planOwnerEpoch()) return;
       if (res.status === 401) {
         setBlocked({ title: "로그인이 필요합니다", detail: "홈페이지는 내 계정에 저장됩니다.", missing: [], cta: "login" });
       } else if (res.status === 402) {
@@ -178,63 +223,87 @@ export default function PlanHomepagePage() {
         setBlocked({ title: "홈페이지를 준비하지 못했습니다", detail: error.message ?? "잠시 후 다시 시도해주세요.", missing: [], cta: "plan" });
       }
       setPhase("blocked");
-    })();
+    })().catch(() => {
+      if (!alive || loadEpoch !== planOwnerEpoch()) return;
+      setBlocked({ title: "홈페이지를 불러오지 못했습니다", detail: "연결 상태를 확인하고 다시 열어주세요.", missing: [], cta: "plan" });
+      setPhase("blocked");
+    });
     return () => {
       alive = false;
     };
   }, []);
 
-  const save = useCallback(async () => {
-    if (!projectId || !draft) return;
+  const saveDraft = useCallback(async (next: LandingDraft) => {
+    if (!projectId || !editable || requestRef.current) throw new Error("저장할 수 없는 상태입니다. 잠시 후 다시 시도해주세요.");
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const epoch = planOwnerEpoch();
+    const current = () => mounted.current && epoch === planOwnerEpoch();
+    setDraft(next);
     setAction("saving");
     setMessage("");
-    const res = await fetch(`/api/projects/${projectId}/landing`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
-    });
-    if (res.ok) {
-      const data = (await res.json()) as { site: LandingSiteRecord };
-      setSite(data.site);
+    try {
+      const saved = await persistLandingDraft(projectId, next, siteRef.current?.updatedAt ?? null, { signal: controller.signal });
+      if (!current()) throw new Error("계정이 변경되어 저장 결과를 표시하지 않습니다.");
+      siteRef.current = saved;
+      setSite(saved);
+      setDraft(value => value === next ? saved.draft : value);
       setAction("saved");
-      setMessage("저장했습니다.");
-      return;
+      setMessage("서버에 저장했습니다.");
+    } catch (error) {
+      if (current()) { setAction("idle"); setMessage(error instanceof Error ? error.message : "저장하지 못했습니다."); }
+      throw error;
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
     }
-    const error = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-    setAction("idle");
-    setMessage(error.error?.message ?? "저장하지 못했습니다.");
-  }, [projectId, draft]);
+  }, [projectId, editable]);
+
+  const save = useCallback(async () => {
+    if (!draft) return;
+    try { await saveDraft(draft); } catch { /* The draft and visible failure message are retained. */ }
+  }, [draft, saveDraft]);
 
   const publish = useCallback(async () => {
-    if (!projectId || !draft) return;
+    if (!projectId || !draft || !editable || requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const timeout = setTimeout(() => controller.abort(), 60_000);
+    const epoch = planOwnerEpoch();
+    const current = () => mounted.current && epoch === planOwnerEpoch();
     setAction("publishing");
     setMessage("");
-    // 공개 전에 지금 편집 중인 내용을 먼저 저장한다 — 저장 안 한 수정이 빠지면 안 된다
-    const saved = await fetch(`/api/projects/${projectId}/landing`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(draft),
-    });
-    if (!saved.ok) {
-      const error = (await saved.json().catch(() => ({}))) as { error?: { message?: string } };
-      setAction("idle");
-      setMessage(error.error?.message ?? "저장하지 못해 공개를 멈췄습니다.");
-      return;
-    }
-    const res = await fetch(`/api/projects/${projectId}/landing/publish`, { method: "POST" });
-    if (res.ok) {
-      const data = (await res.json()) as { site: LandingSiteRecord };
-      setSite(data.site);
-      setAction("idle");
+    let draftSaved = false;
+    try {
+      const saved = await persistLandingDraft(projectId, draft, siteRef.current?.updatedAt ?? null, { signal: controller.signal });
+      if (!current()) return;
+      draftSaved = true;
+      siteRef.current = saved; setSite(saved);
+      setDraft(value => value === draft ? saved.draft : value);
+      const res = await fetch(`/api/projects/${projectId}/landing/publish`, { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt: saved.updatedAt }) });
+      const data = await res.json();
+      if (!current()) return;
+      if (!res.ok || !data.site) throw new Error(data.error?.message ?? "공개 결과를 확인하지 못했습니다.");
+      siteRef.current = data.site; setSite(data.site);
       setMessage("홈페이지를 공개했습니다.");
+    } catch (error) {
+      if (current()) setMessage(`${draftSaved ? "초안은 서버에 저장됐습니다. 공개는 확인하지 못했습니다. " : ""}${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요."}`);
+    } finally {
+      clearTimeout(timeout);
+      if (requestRef.current === controller) requestRef.current = null;
+      if (current()) setAction("idle");
+    }
+  }, [projectId, draft, editable]);
+
+  const updateDraft = (next: LandingDraft) => { if (requestRef.current) return; setDraft(next); setAction("idle"); setMessage("저장되지 않은 변경사항이 있습니다."); };
+  const updateSite = (next: LandingSiteRecord) => {
+    if (site && landingDraftFingerprint(site.draft) !== landingDraftFingerprint(next.draft)) {
+      setMessage("다른 화면에서 초안이 변경됐습니다. 현재 수정 내용은 유지했어요. 최신 내용을 확인해주세요.");
       return;
     }
-    const error = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-    setAction("idle");
-    setMessage(error.error?.message ?? "공개하지 못했습니다.");
-  }, [projectId, draft]);
+    siteRef.current = next; setSite(next);
+  };
 
-  const publicPath = site ? `/launch/${site.slug}` : "";
+  const publicPath = site ? `/launch/${site.publishedSlug ?? site.slug}` : "";
 
   /** 막힌 이유마다 다음 행동이 다르다 — 결제·로그인·계획서 이어쓰기 */
   function blockedHref(cta: "pay" | "plan" | "login"): string {
@@ -332,8 +401,8 @@ export default function PlanHomepagePage() {
           projectId={projectId}
           businessSummary={draft.subheadline || draft.offerDescription}
           onClose={() => setBuilderOpen(false)}
-          onSave={(pageData) => {
-            setDraft({ ...draft, pageData });
+          onSave={async (pageData) => {
+            await saveDraft({ ...draft, pageData });
             setBuilderOpen(false);
           }}
         />
@@ -368,11 +437,11 @@ export default function PlanHomepagePage() {
           publicPath={publicPath}
           action={action}
           message={message}
-          onChange={setDraft}
+          onChange={updateDraft}
           onSave={save}
           onPublish={publish}
           onOpenEditor={() => setBuilderOpen(true)}
-          onSiteUpdated={(next) => setSite(next)}
+          onSiteUpdated={updateSite}
         />
       )}
 
@@ -386,12 +455,12 @@ export default function PlanHomepagePage() {
           projectId={projectId}
           customDomain={site?.customDomain ?? ""}
           demo={false}
-          onChange={setDraft}
+          onChange={updateDraft}
           onReset={() => site && setDraft(site.draft)}
           onSave={save}
           onPublish={publish}
           onPreview={() => publicPath && window.open(publicPath, "_blank", "noopener")}
-          onSiteUpdated={(next) => setSite(next)}
+          onSiteUpdated={updateSite}
         />
       )}
     </>

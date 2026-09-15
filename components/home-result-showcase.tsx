@@ -1,11 +1,11 @@
 "use client";
 
-import { ArrowUpRight } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useHomeScroll } from "./use-home-scroll";
 import styles from "./home-result-showcase.module.css";
 import { PPT_GENERATION_VERIFIED } from "../lib/plan-builder/deck-availability";
 import { HomeWorkspaceDemo } from "./home-workspace-demo";
+import { HomeAction } from "./home-action";
 
 function DocumentLayers() {
   return <div className={styles.paperStack}>
@@ -72,19 +72,19 @@ function AnimatedGraphic({ name, alt, caption }: { name: "business-plan" | "pres
 
 export function HomeResultShowcase() {
   return <section id="deliverables" className={styles.results} aria-labelledby="home-results-title">
-    <header className={styles.heading} data-reveal><h2 id="home-results-title">이제 생각을 꺼내 쓰세요</h2><p>읽고 고치고 다음 일을 이어가는 내 사업 자료</p></header>
+    <header className={styles.heading} data-home-copy><h2 id="home-results-title">이제 생각을 꺼내 쓰세요</h2><p>읽고 고치고 다음 일을 이어가는 내 사업 자료</p></header>
     <div className={styles.panels}>
-      <article className={styles.panel} data-reveal>
+      <article className={styles.panel}>
         <AnimatedGraphic name="business-plan" alt="새벽커피 공개 PDF의 실제 표지, 사업 개요와 표, 12개월 손익 추정과 그래프 페이지" caption="공개 PDF 샘플의 실제 페이지 · 가상 사업" />
-        <div className={styles.panelCopy}><span>사업계획서</span><h3>내 사업을 설명하는<br />한 권의 계획</h3><p>사업 소개부터 고객과 비용 운영까지<br />PDF와 수정 가능한 Word로</p><a href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer"><span>PDF 샘플 열기</span><ArrowUpRight aria-hidden="true" /></a></div>
+        <div className={styles.panelCopy} data-home-copy><span>사업계획서</span><h3>내 사업을 설명하는<br />한 권의 계획</h3><p>사업 소개부터 고객과 비용 운영까지<br />PDF와 수정 가능한 Word로</p><HomeAction href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer" icon="document">PDF 샘플 열기</HomeAction></div>
       </article>
-      <article className={`${styles.panel} ${styles.presentation}`} data-reveal>
+      <article className={`${styles.panel} ${styles.presentation}`}>
         <AnimatedGraphic name="presentation" alt="새벽커피 공개 PPT의 실제 사업 제안서 표지, 문제 정의, 재무 계획 슬라이드" caption="공개 PPT 샘플의 실제 슬라이드 · 가상 사업" />
-        <div className={styles.panelCopy}><span>발표자료{!PPT_GENERATION_VERIFIED && <span className={styles.availability}>제공 준비 중</span>}</span><h3>이야기는 짧게<br />핵심은 선명하게</h3><p>{PPT_GENERATION_VERIFIED ? <>정리한 사업계획서를 바탕으로<br />발표용 PPT를 만들어요</> : <>PPT 자동 생성은 준비 중이에요<br />공개 샘플을 먼저 확인해 보세요</>}</p><a href="/samples/sample_coffee.pptx" download><span>PPT 샘플 받기</span><ArrowUpRight aria-hidden="true" /></a></div>
+        <div className={styles.panelCopy} data-home-copy><span>발표자료{!PPT_GENERATION_VERIFIED && <span className={styles.availability}>제공 준비 중</span>}</span><h3>이야기는 짧게<br />핵심은 선명하게</h3><p>{PPT_GENERATION_VERIFIED ? <>정리한 사업계획서를 바탕으로<br />발표용 PPT를 만들어요</> : <>PPT 자동 생성은 준비 중이에요<br />공개 샘플을 먼저 확인해 보세요</>}</p><HomeAction href="/samples/sample_coffee.pptx" download icon="download">PPT 샘플 받기</HomeAction></div>
       </article>
-      <article className={styles.panel} data-reveal>
+      <article className={styles.panel}>
         <HomeWorkspaceDemo />
-        <div className={styles.panelCopy}><span>내 사업 관리</span><h3>계획 다음의 일도<br />끊기지 않도록</h3><p>사업안과 문서 대화와 다음 할 일을<br />사업별로 이어가요</p><a href="/plan"><span>내 사업 열기</span><ArrowUpRight aria-hidden="true" /></a></div>
+        <div className={styles.panelCopy} data-home-copy><span>내 사업 관리</span><h3>계획 다음의 일도<br />끊기지 않도록</h3><p>사업안과 문서 대화와 다음 할 일을<br />사업별로 이어가요</p><HomeAction href="/plan" icon="workspace">내 사업 열기</HomeAction></div>
       </article>
     </div>
     <p className={styles.note}>가상 사업으로 표현한 이용 흐름이며, 실제 내용과 화면은 사업별로 달라져요.<br />전체 문서 생성과 파일 내려받기는 결제 후 이용하며, AI 초안은 검토·수정해서 사용해야 해요.</p>
@@ -109,7 +109,7 @@ export function HomeFounderWall() {
     return () => observer.disconnect();
   }, [ref]);
   return <div className={styles.founders} ref={ref} data-founder-wall>
-    <header data-reveal><h2>처음이어도<br />다시 시작해도</h2><p>당신의 경험과 조건에서<br />내 사업의 가능성을 찾아요</p></header>
+    <header data-home-copy><h2>처음이어도<br />다시 시작해도</h2><p>당신의 경험과 조건에서<br />내 사업의 가능성을 찾아요</p></header>
     <div className={styles.portraitViewport} data-portrait-viewport>
       <div className={styles.portraits}>{professions.map((profession, index) => <figure className={styles.portrait} data-portrait key={profession} style={{ "--column": index % 5, "--row": Math.floor(index / 5), "--offset": index % 2 ? 1 : -1, "--bubble-delay": `${(index % 5) * 140}ms`, "--bubble-mobile-delay": `${(index % 2) * 180}ms` } as React.CSSProperties}><img src="/home-media/oneulstart-founders.png" width="1976" height="796" loading="lazy" alt={`${profession} 브랜드 이미지`} /><figcaption className={styles.professionBubble}>{profession}</figcaption></figure>)}</div>
     </div>

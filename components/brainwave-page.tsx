@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNod
 import { Urbanist, Rubik } from "next/font/google";
 import { layoutPage, childBox, type MobileLayout, type Box } from "../lib/landing/brainwave/mobile-layout";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
+import { BUSINESS_NODE_STYLES, BUSINESS_TEMPLATE_PROFILES } from "../lib/landing/brainwave/business-content";
 import { renderBrainwaveMobile } from "./brainwave-mobile";
 
 /*
@@ -43,7 +44,7 @@ export type BrainwavePageData = {
   slots: { text: Array<{ id: string; text: string }>; image: Array<{ id: string; src: string }> };
 };
 
-export type BrainwaveOverrides = { texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string>; sizes?: Record<string, number>; hidden?: string[]; order?: string[] };
+export type BrainwaveOverrides = { contentMode?: "business"; texts?: Record<string, string>; images?: Record<string, string>; links?: Record<string, string>; sizes?: Record<string, number>; hidden?: string[]; order?: string[] };
 
 /*
  * 숨긴 자리(hidden) 펼치기 — 섹션 id 하나를 숨기면 그 안의 글·사진·버튼 id 전부가
@@ -287,6 +288,7 @@ export function BrainwaveNodeView({
    */
   const sizeScale = hasText && node.id ? overrides?.sizes?.[node.id] : undefined;
   const style = nodeStyle(node.st);
+  if (overrides?.contentMode === "business" && node.id) Object.assign(style, BUSINESS_NODE_STYLES[node.id]);
   if (sizeScale && sizeScale !== 1) {
     const scalePx = (value: unknown) => {
       const n = typeof value === "string" && value.endsWith("px") ? parseFloat(value) : null;
@@ -562,7 +564,7 @@ export function BrainwaveStage({
         <div className="bw-canvas" style={{ width: page.w, height: collapsed.h }}>
           <BrainwaveNodeView node={collapsed.root} overrides={overrides} onPick={onPick} />
           {/* 숨긴 섹션의 빈 자리 — 편집기에서만 '되살리기' 줄이 그 위치에 뜬다 */}
-          {onPick ? collapsed.strips.map((strip) => (
+          {onPick ? collapsed.strips.filter(strip => overrides?.contentMode !== "business" || BUSINESS_TEMPLATE_PROFILES[page.id]?.sections.includes(strip.id)).map((strip) => (
             <button
               key={strip.id}
               type="button"

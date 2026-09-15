@@ -1,6 +1,3 @@
-export const PHONE_STORY_DURATION_SECONDS = 48;
-export const PHONE_SCROLL_MIN_SECONDS = 14;
-
 const clampProgress = (value: number) => Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 0;
 
 export function phoneStoryPins(width: number, height: number, reduced = false) {
@@ -9,6 +6,19 @@ export function phoneStoryPins(width: number, height: number, reduced = false) {
 
 export function phoneStoryScrollDistance(width: number, height: number) {
   return width > 700 ? Math.max(7200, Math.min(10800, height * 10)) : 3000;
+}
+
+export function phoneStoryScrollPosition({ top, trackHeight, stageHeight, viewportHeight, pinned }: {
+  top: number;
+  trackHeight: number;
+  stageHeight: number;
+  viewportHeight: number;
+  pinned: boolean;
+}) {
+  const viewport = Math.max(1, viewportHeight - 64);
+  const distance = pinned ? trackHeight - stageHeight : trackHeight + viewport;
+  const position = pinned ? 64 - top : viewport - top;
+  return clampProgress(position / Math.max(1, distance));
 }
 
 // Reserve scroll distance for reading the lifted message, conditions and finished document.
@@ -27,14 +37,30 @@ export function phoneScrollProgress(value: number) {
   return 1;
 }
 
-export function advancePhoneScroll(current: number, target: number, elapsed: number) {
-  const from = clampProgress(current), to = clampProgress(target);
-  const dt = Number.isFinite(elapsed) ? Math.max(0, Math.min(.05, elapsed)) : 0;
-  if (!dt) return from;
-  const difference = to - from;
-  const eased = Math.abs(difference) * (1 - Math.exp(-dt / .22));
-  const step = Math.min(eased, dt / PHONE_SCROLL_MIN_SECONDS);
-  return Math.abs(difference) < .00003 ? to : from + Math.sign(difference) * step;
+export function phoneStoryCopy(value: number, entry = 1, exit = 0, reduced = false) {
+  const progress = clampProgress(value);
+  const chapter = progress < .45 ? 0 : progress < .875 ? 1 : 2;
+  const phase = (position: number, start: number, end: number) => {
+    const t = clampProgress((position - start) / (end - start));
+    return t * t * (3 - 2 * t);
+  };
+  const entrances = [0, .445, .87];
+  const exits = [.37, .795, 1];
+  const scenes = entrances.map((start, index) => {
+    const parts = [0, 1, 2].map(part => {
+      if (reduced) return { opacity: index === chapter ? 1 : 0, y: 0 };
+      const stagger = part * .012;
+      const incoming = index === 0
+        ? phase(clampProgress(entry), part * .12, .72 + part * .12)
+        : phase(progress, start + stagger, start + stagger + .066);
+      const outgoing = index === 2
+        ? phase(clampProgress(exit), part * .08, .84 + part * .08)
+        : phase(progress, exits[index] + stagger, exits[index] + stagger + .05);
+      return { opacity: incoming * (1 - outgoing), y: (1 - incoming) * (part === 2 ? 20 : 32) - outgoing * 24 };
+    });
+    return { parts, visible: parts.some(part => part.opacity > .001) };
+  });
+  return { chapter, scenes };
 }
 
 export function phoneMotion(value: number) {

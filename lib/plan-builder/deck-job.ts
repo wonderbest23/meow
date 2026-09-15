@@ -12,7 +12,7 @@ import { loadPlanState, savePlanState, type ServerPlan, type ServerBusinessProfi
 export function deckSource(plan: ServerPlan, business: ServerBusinessProfile): DeckBuildInput {
   const coach = readCoach(plan.answers);
   const snapshot = coachDocumentSnapshot(plan);
-  if (snapshot && (snapshot.stale.length || snapshot.missing.length)) throw new Error("document_stale");
+  if (snapshot && (snapshot.stale.length || snapshot.missing.length || snapshot.manualReview.length)) throw new Error("document_stale");
   const sections = snapshot?.sections ?? chaptersForType(plan.planType).flatMap(chapter => chapter.sections.flatMap(section => {
     const saved = plan.sections[`${chapter.id}/${section.id}`];
     return saved?.markdown ? [{ chapterTitle: chapter.title, sectionTitle: section.title, markdown: saved.markdown }] : [];
@@ -49,7 +49,7 @@ export async function generateAndSaveDeck(request: DeckJobRequest): Promise<{ ok
   let stageStartedAt = startedAt;
   let previousStage: string = "queued";
   try {
-    const source = deckSource(plan, state.business);
+    const source = { ...deckSource(plan, state.business), ...(job.presentation ? { presentation: job.presentation } : {}) };
     if (deckFingerprint(source) !== job.fingerprint) throw new Error("document_changed");
     const config = source.businessContext ? resolvePlanningLLMConfig(request.ownerHash) : resolveLLMConfig(request.ownerHash, "anthropic");
     const result = job.result ?? await buildDeckPlan(config, source, async event => {
@@ -67,7 +67,7 @@ export async function generateAndSaveDeck(request: DeckJobRequest): Promise<{ ok
     } catch { throw new Error("render_failed"); }
     const latest = await loadPlanState(request.ownerHash);
     const current = latest.plans.find(p => p.id === request.planId);
-    if (!current || deckFingerprint(deckSource(current, latest.business)) !== job.fingerprint) throw new Error("document_changed");
+    if (!current || deckFingerprint({ ...deckSource(current, latest.business), ...(job.presentation ? { presentation: job.presentation } : {}) }) !== job.fingerprint) throw new Error("document_changed");
     await patchJob(request, { status: "complete", phase: "ready", result, code: undefined });
     console.log("[deck]", JSON.stringify({ token: request.token, stage: "ready", totalElapsedMs: Date.now() - startedAt }));
     return { ok: true };

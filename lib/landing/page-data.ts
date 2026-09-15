@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { kitForTemplate, type LandingKitId } from "./kits";
 import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "./brainwave/catalog";
+import { businessContentSchema, businessTemplateManifest, createBusinessTemplate, type BusinessContent } from "./brainwave/business-content";
 
 export const landingBlockTypes = [
   "HeroSection",
@@ -62,6 +63,7 @@ const blockProp = z.union([primitiveProp, slotProp]);
  */
 export const brainwaveDataSchema = z.object({
   page: z.string().regex(/^[0-9]+-[0-9]+$/),
+  contentMode: z.literal("business").optional(),
   texts: z.record(z.string(), z.string().max(4000)).default({}),
   images: z.record(z.string(), z.string().max(900_000)).default({}),
   /*
@@ -90,6 +92,7 @@ export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
 
 export const landingPageDataSchema = z.object({
   brainwave: brainwaveDataSchema.optional(),
+  businessContent: businessContentSchema.optional(),
   root: z.object({
     props: z.record(z.string(), blockProp).optional(),
   }).passthrough(),
@@ -109,8 +112,40 @@ export const landingPageDataSchema = z.object({
 
 export type LandingPageData = z.infer<typeof landingPageDataSchema>;
 
+export function applyBusinessContent(data: LandingPageData, source: BusinessContent): LandingPageData {
+  if (!data.brainwave) return data;
+  const content = businessContentSchema.parse(source);
+  const current = data.brainwave;
+  const fresh = createBusinessTemplate(content, current.page);
+  const baseline = data.businessContent && current.contentMode === "business" ? createBusinessTemplate(data.businessContent, current.page) : null;
+  const preserve = <T extends string | number>(next: Record<string, T>, saved: Record<string, T>, before?: Record<string, T>) => {
+    const result = { ...next };
+    for (const [id, value] of Object.entries(saved)) if (!before || value !== before[id]) result[id] = value;
+    return result;
+  };
+  const hidden = new Set(fresh.hidden);
+  for (const id of current.hidden) if (!baseline?.hidden.includes(id)) hidden.add(id);
+  for (const [id, image] of Object.entries(current.images)) {
+    if (image && (!baseline || image !== baseline.images[id]) && !current.hidden.includes(id)) hidden.delete(id);
+  }
+  if (baseline) {
+    for (const id of baseline.hidden) if (!current.hidden.includes(id)) hidden.delete(id);
+  } else {
+    // Legacy overrides have no provenance. Treat every saved override as a manual edit.
+    const edited = new Set([...Object.keys(current.texts), ...Object.keys(current.images), ...Object.keys(current.links), ...Object.keys(current.sizes)]);
+    for (const section of businessTemplateManifest[current.page].sections) {
+      if (!current.hidden.includes(section.id) && section.nodes.some(id => edited.has(id))) hidden.delete(section.id);
+    }
+  }
+  return landingPageDataSchema.parse({
+    ...data, businessContent: content,
+    brainwave: { ...fresh, texts: preserve(fresh.texts, current.texts, baseline?.texts), images: preserve(fresh.images, current.images, baseline?.images), links: preserve(fresh.links, current.links, baseline?.links), sizes: { ...current.sizes }, hidden: [...hidden], order: [...current.order] },
+  });
+}
+
 export type LandingPageSeed = {
   businessName: string;
+  customer?: string;
   heroLabel: string;
   headline: string;
   subheadline: string;
@@ -213,17 +248,20 @@ function splitMenuLine(label: string, fallbackName: string): { name: string; pri
  *                    없으면 업종 템플릿에 맞는 킷을 쓴다.
  */
 export function createLandingPageData(seed: LandingPageSeed, templateId: string, kitOverride?: LandingKitId): LandingPageData {
-  /*
-   * 새 홈페이지는 Brainwave.io 킷 페이지를 노드 그대로 쓴다.
-   *
-   * 사용자 지시: "오차 없이 그대로 가져오고, 그 안에서 글·사진만 고친다" —
-   * 계획서 내용을 킷 자리에 끼워 맞추지 않는다(내가 임의로 대입하지 않는다).
-   * 킷의 글이 그대로 들어 있고, 편집기에서 자리마다 바꾼다.
-   * 아래 블록 조립(kit 배치)은 brainwave 값이 없는 옛 페이지를 위해 남겨 둔다.
-   */
+  // Seed new pages only. Existing pageData is never regenerated on load or save.
   if (!kitOverride) {
+    const businessContent = businessContentSchema.parse({
+      businessName: seed.businessName,
+      offer: seed.offerTitle,
+      description: seed.offerDescription,
+      customer: seed.customer ?? "",
+      price: seed.priceLabel,
+      cta: seed.ctaLabel,
+      image: seed.heroImageUrl,
+    });
     return landingPageDataSchema.parse({
-      brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290", texts: {}, images: {}, links: {}, sizes: {}, hidden: [], order: [] },
+      brainwave: createBusinessTemplate(businessContent, BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290"),
+      businessContent,
       root: { props: { title: seed.businessName } },
       content: [],
     });

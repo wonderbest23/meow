@@ -108,3 +108,16 @@
 .nextStep { padding: 24px 0; border-top: 1px solid #dce2e9; margin-top: 24px; }
 .nextStep h3 { font-size: 18px; margin: 0 0 12px; }
 .nextStep a { display: inline-flex; align-items: center; gap: 8px; color: #244e84; font-weight: 600; min-height: 44px; }
+.sourceReview { margin-top: 20px; padding: 18px 0; border-top: 1px solid #dbe4ef; border-bottom: 1px solid #dbe4ef; font-size: 13px; line-height: 1.7; color: #46576d; }
+.sourceReview > strong { font-size: 14px; }
+.sourceReview details { margin: 12px 0; }
+.sourceReview summary { cursor: pointer; color: #2867ca; }
+.sourceReview dl { margin: 12px 0; }
+.sourceReview dl > div { display: grid; grid-template-columns: minmax(70px, .3fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; }
+.sourceReview dt { color: #718096; }
+.sourceReview dd { margin: 0; overflow-wrap: anywhere; }
+.sourceReview label { display: flex; align-items: flex-start; gap: 9px; margin: 16px 0; }
+.sourceReview input { width: 18px; height: 18px; flex: 0 0 18px; margin: 2px 0 0; accent-color: #2867ca; }
+.sourceReview > button { display: inline-flex; gap: 7px; align-items: center; min-height: 40px; background: #edf3fb; border: 1px solid #cbdcf3; color: #235caf; border-radius: 6px; padding: 8px 12px; font: inherit; cursor: pointer; }
+.sourceReview > button:disabled { opacity: .5; cursor: default; }
+.sourceReview p[role=alert] { color: #a34234; }

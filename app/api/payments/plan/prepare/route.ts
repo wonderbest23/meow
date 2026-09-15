@@ -2,7 +2,7 @@ import { loadPlanState } from "../../../../../lib/plan-builder/plan-server-store
 import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
 import { createPlanOrder, paidPlanEntitlement, paidHomepagePlanIds, domainEntitlement, productName, PLAN_PRODUCT_NAME, type PlanProduct } from "../../../../../lib/payments/plan-orders";
-import { nicepayClientKey, nicepayConfigured } from "../../../../../lib/payments/nicepay-client";
+import { nicepayClientKey, nicepayConfigured, nicepaySdkUrl } from "../../../../../lib/payments/nicepay-client";
 
 export const runtime = "nodejs";
 
@@ -84,6 +84,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         clientId: nicepayClientKey(),
+        sdkUrl: nicepaySdkUrl(),
         orderId: order.orderId,
         amount: order.amount,
         goodsName: (product === "plan" ? `${PLAN_PRODUCT_NAME} · ${planType}` : productName(product)).slice(0, 40),

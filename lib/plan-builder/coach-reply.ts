@@ -52,6 +52,8 @@ export async function completeCoachReply(config: LLMConfig, previous: CoachState
   }
   merged.design = { ...completed.data.design, status: "proposal", sourceRevision: coachDocumentRevision(merged) };
   merged.messages = merged.messages.map(m => m.id === `${message.id}-reply` ? { ...m, text: businessDesignReply(completed.data.design), summary: coachTurnSummary(previous, merged) } : m);
-  merged.suggestions = ["상품을 구체화해 주세요", "시작 방법을 쉽게 바꿔주세요"];
+  merged.suggestions = merged.stage === "operating"
+    ? ["현재 문제부터 정리해 주세요", "다음 개선 실험을 정해주세요"]
+    : ["상품을 구체화해 주세요", "시작 방법을 쉽게 바꿔주세요"];
   return finish(merged);
 }

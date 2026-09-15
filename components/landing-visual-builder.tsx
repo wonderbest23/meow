@@ -1,12 +1,15 @@
 "use client";
 
 import { blocksPlugin, createUsePuck, fieldsPlugin, outlinePlugin, Puck, useGetPuck, type Data } from "@puckeditor/core";
-import { MousePointerClick, Redo2, Save, Sparkles, Undo2, X } from "lucide-react";
+import { LoaderCircle, MousePointerClick, Redo2, Save, Sparkles, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
 import { landingBlockConfig, type LandingBlockProps } from "./landing-blocks";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { BrainwaveEditor } from "./brainwave-editor";
 import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "../lib/landing/brainwave/catalog";
+import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
+import { useLandingEditorSave } from "./use-landing-editor-save";
+import { landingDraftFingerprint } from "../lib/landing/save-contract";
 
 const useLandingPuck = createUsePuck();
 
@@ -153,27 +156,35 @@ function BuilderHint() {
  */
 function BuilderBar({
   onClose,
-  onSave,
+  persistence,
+  initialFingerprint,
 }: {
   onClose: () => void;
-  onSave: (data: LandingPageData) => void;
+  persistence: ReturnType<typeof useLandingEditorSave>;
+  initialFingerprint: string;
 }) {
   const data = useLandingPuck((state) => state.appState.data);
   const history = useLandingPuck((state) => state.history);
+  const close = () => {
+    if (persistence.saving) return;
+    if (initialFingerprint !== landingDraftFingerprint(data) && !window.confirm("수정 내용을 저장하지 않고 편집기를 닫을까요?")) return;
+    onClose();
+  };
   return (
     <div className="landing-builder-bar">
       <div className="landing-builder-bar-history">
-        <button type="button" onClick={() => history.back()} disabled={!history.hasPast} title="되돌리기">
+        <button type="button" onClick={() => history.back()} disabled={persistence.saving || !history.hasPast} title="되돌리기">
           <Undo2 /> 되돌리기
         </button>
-        <button type="button" onClick={() => history.forward()} disabled={!history.hasFuture} title="앞으로">
+        <button type="button" onClick={() => history.forward()} disabled={persistence.saving || !history.hasFuture} title="앞으로">
           <Redo2 /> 앞으로
         </button>
       </div>
       <div className="landing-builder-bar-main">
-        <button type="button" onClick={onClose}><X /> 닫기</button>
-        <button type="button" className="save" onClick={() => onSave(data as LandingPageData)}><Save /> 편집 내용 적용</button>
+        <button type="button" onClick={close} disabled={persistence.saving}><X /> 닫기</button>
+        <button type="button" className="save" disabled={persistence.saving} onClick={() => void persistence.save(data as LandingPageData)}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} {persistence.saving ? "저장 중" : "저장"}</button>
       </div>
+      {persistence.error ? <p role="alert">{persistence.error}</p> : null}
     </div>
   );
 }
@@ -192,27 +203,30 @@ export function LandingVisualBuilder({
   projectId?: string | null;
   businessSummary?: string;
   onClose: () => void;
-  onSave: (data: LandingPageData) => void;
+  onSave: (data: LandingPageData) => void | Promise<void>;
 }) {
   /*
    * 옛 블록 페이지에서 킷 페이지로 갈아타기.
    * 킷으로 바꾸면 블록 편집 내용은 사라진다 — 물어본 뒤 바꾸고, 저장은 손님이 누른다.
    */
   const [switched, setSwitched] = useState<LandingPageData | null>(null);
+  const persistence = useLandingEditorSave(onSave);
+  const initialFingerprint = useRef(landingDraftFingerprint(data));
   const current = switched ?? data;
   /* Brainwave.io 킷 페이지는 블록 편집기(Puck)가 아니라 자리 편집기로 고친다 */
   if (current.brainwave) {
     return <BrainwaveEditor data={current} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} />;
   }
   const switchToKit = () => {
-    if (!window.confirm("새 킷 페이지(26가지 디자인)로 바꿉니다. 지금 블록으로 꾸민 내용은 사라지고, 글과 사진만 다시 넣게 됩니다. 바꿀까요?")) return;
-    setSwitched({ brainwave: { page: BRAINWAVE_DEFAULT_FOR_TEMPLATE.service, texts: {}, images: {}, links: {}, sizes: {}, hidden: [], order: [] }, root: { props: { title: businessName } }, content: [] });
+    if (!window.confirm("10가지 홈페이지 템플릿을 사용하는 편집기로 바꿉니다. 지금 블록으로 꾸민 내용은 사라지고 사업 정보로 새 초안을 만듭니다. 바꿀까요?")) return;
+    const businessContent = data.businessContent ?? { businessName: businessName || "내 사업", offer: businessSummary ?? "", description: businessSummary ?? "", customer: "", price: "문의 후 안내", cta: "문의하기", image: "" };
+    setSwitched({ businessContent, brainwave: createBusinessTemplate(businessContent, BRAINWAVE_DEFAULT_FOR_TEMPLATE.service), root: { props: { title: businessName } }, content: [] });
   };
   return (
-    <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="판매 페이지 자유 편집">
+    <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="판매 페이지 자유 편집" inert={persistence.saving} aria-busy={persistence.saving}>
       <BuilderHint />
       <button type="button" className="builder-switch-kit" onClick={switchToKit}>
-        <Sparkles size={15} /> 새 킷 페이지로 바꾸기 — 26가지 완성 디자인에 글·사진만 넣기
+        <Sparkles size={15} /> 홈페이지 템플릿으로 바꾸기
       </button>
       <Puck
         config={landingBlockConfig}
@@ -233,7 +247,7 @@ export function LandingVisualBuilder({
           header: () => (
             <div className="landing-builder-head">
               <strong>{businessName || "판매 페이지"}</strong>
-              <BuilderBar onClose={onClose} onSave={onSave} />
+              <BuilderBar onClose={onClose} persistence={persistence} initialFingerprint={initialFingerprint.current} />
             </div>
           ),
         }}

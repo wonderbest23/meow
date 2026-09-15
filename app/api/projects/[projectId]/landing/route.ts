@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { createLandingDraft, landingDraftSchema } from "../../../../../lib/landing/domain";
 import {
@@ -8,6 +9,9 @@ import {
 } from "../../../../../lib/landing/repository";
 import { getProject } from "../../../../../lib/project-repository";
 import { checkLandingEditAccess, landingEditErrorResponse } from "../../../../../lib/landing/plan-entitlement";
+import { LANDING_CONFLICT_MESSAGE } from "../../../../../lib/landing/save-contract";
+
+const saveRequestSchema = z.object({ draft: landingDraftSchema, expectedUpdatedAt: z.string().datetime({ offset: true }).nullable() });
 
 export async function GET(
   _request: Request,
@@ -46,7 +50,7 @@ export async function GET(
         suggestedDraft.proofItems = proof.items.filter((item): item is string => typeof item === "string");
       }
     }
-    return NextResponse.json({ site, leads, suggestedDraft });
+    return NextResponse.json({ site, leads, suggestedDraft }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "랜딩페이지를 불러오지 못했습니다.";
     return NextResponse.json(
@@ -69,11 +73,18 @@ export async function PUT(
       const { status, body } = landingEditErrorResponse(reason);
       return NextResponse.json(body, { status });
     }
-    const draft = landingDraftSchema.parse(await request.json());
-    const site = await saveLandingDraft(projectId, identity.hash, draft);
+    const body = await request.json();
+    if (!body || !Object.hasOwn(body, "expectedUpdatedAt")) {
+      return NextResponse.json({ error: { code: "LANDING_VERSION_REQUIRED", message: "저장 기준 정보가 없습니다. 새로고침 후 다시 편집해주세요." } }, { status: 428 });
+    }
+    const { draft, expectedUpdatedAt } = saveRequestSchema.parse(body);
+    const site = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt });
     return NextResponse.json({ site });
   } catch (error) {
     const message = error instanceof Error ? error.message : "랜딩페이지를 저장하지 못했습니다.";
+    if (message === "LANDING_DRAFT_CONFLICT") {
+      return NextResponse.json({ error: { code: message, message: LANDING_CONFLICT_MESSAGE } }, { status: 409 });
+    }
     const code = message === "SLUG_TAKEN" ? message : "LANDING_DRAFT_INVALID";
     return NextResponse.json(
       {
