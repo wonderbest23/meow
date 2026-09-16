@@ -11,22 +11,29 @@ import { METRICS, OPERATING_KEY, readOperatingState } from "./operating-records"
 import { proposalPages, renderableProposal } from "./proposal-revision";
 import { proposalReviewDocument } from "./artifact-source-status";
 import { businessSourceProjection } from "./business-source-projection";
+import { optionLabelMap } from "./intake-context";
+import { detailQuestions, intakeSectorOptions } from "./intake-questions";
 
 export const artifactDigest = (value: unknown): string => createHash("sha256").update(JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item)).digest("hex");
 export function artifactSections(plan: ServerPlan) {
   return chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => ({ id: `section:${chapter.id}/${section.id}`, key: `${chapter.id}/${section.id}`, title: `${chapter.title} · ${section.title}`, chapterTitle: chapter.title, sectionTitle: section.title })));
 }
 function artifactIntakeSources(plan: ServerPlan, revision: number): ArtifactSource[] {
-  const source = (id: string, record: Record<string, unknown>, isPeriod = false): ArtifactSource => {
+  const industry = readCoach(plan.answers)?.business.industry ?? "";
+  const sector = intakeSectorOptions.find(option => option.value === industry || option.label === industry)?.value;
+  const optionLabels = new Map((sector ? detailQuestions(sector) : []).map(question => [question.id, optionLabelMap(question)]));
+  const source = (id: string, record: Record<string, unknown>, isPeriod = false, labels: Map<string, string> = new Map()): ArtifactSource => {
     const missing = record.value === null || record.value === undefined;
-    const value = missing ? "미입력" : typeof record.value === "string" ? record.value : JSON.stringify(record.value);
+    // Multi answers are label arrays; choice ids map to their labels so reviewers never see internal values.
+    const value = missing ? "미입력" : typeof record.value === "string" ? labels.get(record.value) ?? record.value
+      : Array.isArray(record.value) ? record.value.map(item => typeof item === "string" ? labels.get(item) ?? item : JSON.stringify(item)).join(", ") : JSON.stringify(record.value);
     const period = typeof record.period === "string" ? record.period : isPeriod && !missing ? value : undefined;
     return { id: `answer:${id}`, label: id, value, basis: missing ? "missing" : typeof record.basis === "string" ? record.basis : "user", revision,
       provenance: { messageId: typeof record.messageId === "string" ? record.messageId : "", quote: typeof record.quote === "string" ? record.quote : "" },
       ...(typeof record.unit === "string" ? { unit: record.unit } : {}), ...(period ? { period } : {}) };
   };
   const details = Object.entries(plan.answers["intake/details"] ?? {}).sort(([a], [b]) => a.localeCompare(b)).flatMap(([key, value]) =>
-    value && typeof value === "object" && !Array.isArray(value) && "value" in value ? [source(`intake/details/${key}`, value as Record<string, unknown>)] : []);
+    value && typeof value === "object" && !Array.isArray(value) && "value" in value ? [source(`intake/details/${key}`, value as Record<string, unknown>, false, optionLabels.get(key))] : []);
   const period = plan.answers["intake/period"];
   return [...details, ...(period && "value" in period ? [source("intake/period/value", period, true)] : [])];
 }

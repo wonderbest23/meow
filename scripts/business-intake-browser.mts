@@ -27,6 +27,7 @@ async function snapshot(context: any, planId: string): Promise<IntakePayload> {
 }
 async function saved(action: () => Promise<unknown>): Promise<IntakePayload> {
   const response = page.waitForResponse((response: any) => response.url().includes("/api/plan/chat") && response.request().method() === "POST");
+  response.catch(() => {});
   await action();
   const result = await response;
   const body = await result.json();
@@ -35,13 +36,48 @@ async function saved(action: () => Promise<unknown>): Promise<IntakePayload> {
   await page.locator('[data-reply-typing]').waitFor({ state: "hidden" });
   return body;
 }
+/** Drive one question the way the select-first UI expects (spec §2): chips, presets, ladders and presets first; the composer only for the typing exceptions. */
+async function prepareAnswer(q: IntakeSnapshot["nextQuestion"] & object, unknown: boolean): Promise<() => Promise<unknown>> {
+  const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
+  if (unknown) return () => button("아직 미정").click();
+  const hybrid = q.kind === "text" && q.id !== "business" && q.id !== "period" && (q.options?.length ?? 0) > 0;
+  if (q.kind === "multi") { await page.getByRole("checkbox").first().check(); return () => button(/^선택 완료\(\d+개\)$/).click(); }
+  if (q.kind === "single") return () => page.getByRole("radio").first().locator("..").click();
+  if (q.id === "period") return () => button("지난달").click();
+  if (q.kind === "number" && q.unit === "원") {
+    // space_hospitality price asks for a basis chip (시간당 · 1박 · 월 멤버십) before the ladder.
+    if (q.options?.length) await page.locator('[data-chat-question] button[aria-pressed="false"]').first().click();
+    // Range ladder → "정확히 입력" → 원-unit keypad. Only a "0원" chip would save from step 1, so skip it.
+    const ranges = page.locator('[data-stage="ranges"] button').filter({ hasNot: page.getByText("0원", { exact: true }) });
+    if (await ranges.count() > 0) { await ranges.first().click(); const exact = button("정확히 입력"); if (await exact.count() > 0) await exact.click(); }
+    await button("원 단위").click();
+    await page.locator(`#intake-exact-${q.id}`).fill(q.id === "price" ? "30000" : "0");
+    return () => button("이 금액으로 저장").click();
+  }
+  if (q.kind === "number") {
+    const presets = page.locator('[aria-label="자주 고르는 값"] button');
+    if (await presets.count() > 0) return () => presets.first().click();
+    await page.locator('[aria-label="값 조정"] input').fill("0");
+    return () => button("이 값으로 저장").click();
+  }
+  if (hybrid) {
+    // Tap the first available chip of each revealed step until the inline save is allowed (filter-only picks stay disabled).
+    for (let step = 0; step < 4 && await button("이대로 저장").isDisabled(); step++) {
+      const chip = page.locator('[data-chat-question] [role="group"]')
+        .filter({ hasNot: page.locator('button[aria-pressed="true"]') })
+        .locator('button[aria-pressed="false"]:enabled').first();
+      if (await chip.count() === 0) break;
+      await chip.click();
+    }
+    return () => button("이대로 저장").click();
+  }
+  await page.locator(`[id="intake-answer-${q.id}"]`).fill(q.id === "business" ? "지역 소상공인의 예약과 고객 문의를 정리하는 업무 지원 서비스" : "입력한 조건을 직접 확인하는 가상 사업 테스트");
+  return () => button("보내기").click();
+}
 async function answer(plan: IntakeSnapshot, unknown = false): Promise<IntakeSnapshot> {
   const q = plan.nextQuestion!; assert(q);
-  if (!unknown) {
-    if (q.kind === "multi") await page.getByRole("checkbox").first().check();
-    else if (q.kind === "single") { /* Single choices send directly inside the chat. */ }
-    else await page.locator(`[id="intake-answer-${q.id}"]`).fill(q.id === "period" ? "2026-08-01 / 2026-08-31" : q.kind === "number" ? "0" : q.id === "business" ? "지역 소상공인의 예약과 고객 문의를 정리하는 업무 지원 서비스" : q.id === "price" ? "방문 1회당 30,000원" : "입력한 조건을 직접 확인하는 가상 사업 테스트");
-  }
+  console.log(`Answering ${plan.intake.mode}:${q.id}`);
+  const commit = await prepareAnswer(q, unknown);
   await page.evaluate(() => {
     const w = window as any;
     const initial = document.querySelector("#intake-question-heading")?.textContent;
@@ -63,7 +99,7 @@ async function answer(plan: IntakeSnapshot, unknown = false): Promise<IntakeSnap
       setTimeout(() => observer.disconnect(), 5000);
     }, { once: true });
   });
-  const result = await saved(() => !unknown && q.kind === "single" ? page.getByRole("radio").first().locator("..").click() : page.getByRole("button", { name: unknown ? "아직 미정" : "답변 저장", exact: true }).click());
+  const result = await saved(commit);
   const elapsed = await page.evaluate(() => (window as any).__intakeRenderMs);
   if (typeof elapsed === "number") timings.push(elapsed);
   const reply = await page.evaluate(() => ({ elapsed: (window as any).__intakeReplyMs, typing: (window as any).__intakeTypingSeen }));
@@ -131,7 +167,7 @@ try {
       const conversation = document.querySelector('[data-intake-conversation]')!.getBoundingClientRect();
       const messages = document.querySelectorAll('[data-coach-message="user"]');
       const answer = messages[messages.length - 1].getBoundingClientRect();
-      const question = document.querySelector('[data-chat-question]')!.getBoundingClientRect();
+      const question = document.querySelector('#intake-question-heading')!.getBoundingClientRect();
       return answer.top >= conversation.top - 1 && answer.bottom < question.top && question.bottom <= conversation.bottom + 1;
     });
     await page.screenshot({ path: join(output, `chat-continuity-${width}.png`), fullPage: true });
@@ -145,7 +181,7 @@ try {
   const changed = await context.request.post(`${origin.origin}/api/plan/chat`, { headers: { ...apiHeaders, "x-business-intake-owner": other.ownerScope! }, data: { action: "answer", planId, revision: other.plan!.coach.revision, requestId: crypto.randomUUID(), questionId: "customer", value: "두 번째 탭에서 저장한 고객" } });
   assert.equal(changed.status(), 200);
   const collision = page.waitForResponse((response: any) => response.url().includes("/api/plan/chat") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "답변 저장", exact: true }).click();
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
   assert.equal((await collision).status(), 409);
   await page.getByText("저장 충돌", { exact: true }).waitFor();
   await page.locator('[data-reply-typing]').waitFor({ state: "hidden" });
@@ -168,7 +204,7 @@ try {
     lostRequest = route.request().postDataJSON();
     await route.fetch(); return route.abort("failed");
   });
-  await page.getByRole("button", { name: "답변 저장", exact: true }).click();
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
   await page.getByText("저장 실패", { exact: true }).waitFor();
   await page.locator('[data-reply-typing]').waitFor({ state: "hidden" });
   await page.unroute("**/api/plan/chat");
@@ -177,40 +213,59 @@ try {
   plan = (await snapshot(context, planId)).plan!;
   assert.equal(plan.coach.messages.filter(message => message.id === lostRequest.requestId).length, 1);
   checks.push("Lost response after a committed save survives reload and replays the exact request once");
-  await page.getByRole("button", { name: "자유 메모", exact: true }).click();
-  await page.locator("#intake-memo").fill("평일에는 다른 일을 하고 주말에는 방문 서비스를 해보고 싶습니다");
-  result = await saved(() => page.getByRole("button", { name: "메모 저장", exact: true }).click());
-  assert.equal(result.plan!.intake.notes.at(-1)!.status, "failed");
+  assert.equal(await page.getByRole("group", { name: "입력 방식" }).count(), 0);
+  const composer = page.getByRole("textbox", { name: "대화 내용", exact: true });
+  await composer.fill("예산: 100만원 고객: 주말 방문 서비스 이용자");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  await page.getByRole("region", { name: "입력 내용 확인" }).waitFor();
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: width < 901 ? 762 : 900 });
+    await page.waitForFunction(() => {
+      const prompt = document.querySelector('[aria-label="입력 내용 확인"]')!.getBoundingClientRect();
+      const conversation = document.querySelector('[data-intake-conversation]')!.getBoundingClientRect();
+      return prompt.top >= conversation.top - 1 && prompt.bottom <= conversation.bottom + 1;
+    });
+    assert.equal(await page.locator('[data-chat-question]').count(), 0, "Intent confirmation replaces long question choices instead of hiding below them");
+    await page.screenshot({ path: join(output, `intent-confirmation-${width}.png`), fullPage: true });
+  }
+  result = await saved(() => page.getByRole("button", { name: "메모로 남기기", exact: true }).click());
+  assert.equal(result.plan!.intake.notes.at(-1)!.status, "stored");
   assert.match(result.plan!.intake.notes.at(-1)!.text, /주말/);
-  await page.getByRole("button", { name: "AI 도움", exact: true }).click();
-  await page.locator("#intake-memo").fill("첫 고객을 만날 때 어떤 조건을 확인하면 좋을까요");
+  const beforeQuestion = result.plan!.coreAnswered;
+  await composer.fill("첫 고객을 만날 때 어떤 조건을 확인하면 좋을까요");
+  result = await saved(() => page.getByRole("button", { name: "보내기", exact: true }).click());
+  assert.equal(result.plan!.coreAnswered, beforeQuestion, "A consultation question is never the current field's confirmed answer");
+  assert.equal(result.plan!.intake.notes.at(-1)!.intent, "question");
+  assert.equal(result.plan!.intake.job, null);
   const unavailable = page.waitForResponse((response: any) => response.url().includes("/api/plan/chat") && response.request().method() === "POST");
-  await page.getByRole("button", { name: "AI에 질문", exact: true }).click();
+  await page.getByRole("button", { name: "AI 답변 받기", exact: true }).click();
   assert.equal((await unavailable).status(), 503);
   await page.getByText(/AI 정리는 지금 연결되지 않았어요/).waitFor();
-  await page.getByRole("button", { name: "질문 답변", exact: true }).click();
   plan = result.plan!;
   for (let count = 0; plan.nextQuestion && count < 12; count++) plan = await answer(plan);
   assert.equal(plan.coreComplete, true); assert.equal(plan.intake.job, null);
-  checks.push("Missing API key retains a complex note and still permits all 11 core answers without AI");
+  assert.equal(plan.coach.fields.find(field => field.key === "price")?.value, "30000원", "Exact keypad entry stores a coachAmount-parsable price");
+  assert.ok(!plan.coach.fields.some(field => /○○| \/ $|, $/.test(field.value)), "No placeholder or dangling separator reaches storage");
+  checks.push("Missing API key retains a complex note and still permits all 11 core answers without AI, using chips, presets and ladders instead of typing");
   for (const width of [320, 390, 768, 1440]) {
     await page.setViewportSize({ width, height: width < 901 ? 692 : 900 });
-    const summaryTab = page.getByRole("tab", { name: "사업 요약", exact: true });
-    if (await summaryTab.isVisible()) await summaryTab.click();
+    const summaryToggle = page.getByRole("button", { name: /^사업 요약/ });
+    if (await summaryToggle.isVisible()) await summaryToggle.click();
     await page.locator("#intake-summary-heading").waitFor();
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `Horizontal overflow at ${width}`);
     await page.screenshot({ path: join(output, `summary-${width}.png`), fullPage: true });
-    const inputTab = page.getByRole("tab", { name: "대화", exact: true });
-    if (await inputTab.isVisible()) await inputTab.click();
+    const backToChat = page.getByRole("button", { name: "대화로 돌아가기", exact: true });
+    if (await backToChat.isVisible()) await backToChat.click();
     await page.screenshot({ path: join(output, `input-${width}.png`), fullPage: true });
   }
-  checks.push("320/390/768/1440px layouts and summary tabs render without horizontal overflow");
+  checks.push("320/390/768/1440px layouts render without horizontal overflow; the mobile summary opens from the header toggle and returns to the chat");
   for (const [mode, label] of [["exploring", "아이디어를 찾고 있어요"], ["operating", "사업을 운영 중이에요"]]) {
     await page.goto(`${origin.origin}/plan/chat?new=1`, { waitUntil: "networkidle" });
     result = await saved(() => page.getByRole("button", { name: label, exact: true }).click());
     plan = result.plan!; assert.equal(plan.intake.mode, mode);
     for (let count = 0; plan.nextQuestion && count < 12; count++) plan = await answer(plan, mode === "operating" && plan.nextQuestion.id === "cost");
     assert.equal(plan.coreComplete, true);
+    if (mode === "operating") assert.match(String(plan.intake.answers.period?.value), /^\d{4}-\d{2}-01 \/ \d{4}-\d{2}-\d{2}$/, "The 지난달 preset stores a whole calendar month");
     assert.equal(plan.coach.stage, mode === "operating" ? "operating" : "startup");
     assert.equal(plan.intake.job, null);
     await page.reload({ waitUntil: "networkidle" });
@@ -231,7 +286,7 @@ try {
   await page.reload({ waitUntil: "networkidle" });
   assert.equal((await snapshot(context, firstMessagePlan.planId)).plan!.coach.messages.length, firstMessagePlan.coach.messages.length);
   await page.locator("#intake-memo").fill("소프트웨어");
-  result = await saved(() => page.getByRole("button", { name: "답변 저장", exact: true }).click());
+  result = await saved(() => page.getByRole("button", { name: "보내기", exact: true }).click());
   assert.equal(result.plan!.intake.sector, "software");
   assert.equal(result.plan!.nextQuestion?.id, "customer");
   assert.equal(result.plan!.intake.job, null);
@@ -240,7 +295,7 @@ try {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.locator("#intake-answer-customer").fill("모션 감소 설정 검증 고객");
   const reducedStart = Date.now();
-  await saved(() => page.getByRole("button", { name: "답변 저장", exact: true }).click());
+  await saved(() => page.getByRole("button", { name: "보내기", exact: true }).click());
   assert.ok(Date.now() - reducedStart < 600, "Reduced motion skips the artificial reply delay");
   assert.equal(await page.locator('[data-chat-question]').evaluate((element: HTMLElement) => getComputedStyle(element).animationName), "none");
   checks.push("Reduced motion disables entry animation and skips the 600ms visual pacing");
@@ -260,13 +315,13 @@ try {
   }
   await page.getByRole("button", { name: "직접 선택하기", exact: true }).click();
   assert.equal(await page.getByRole("radio").count(), 11);
-  result = await saved(() => page.getByRole("radio", { name: "교육 · 코칭", exact: true }).locator("..").click());
+  result = await saved(() => page.getByRole("radio", { name: /^교육 · 코칭/ }).locator("..").click());
   assert.equal(result.plan!.intake.sector, "education");
   assert.equal(result.plan!.nextQuestion?.id, "customer");
   await page.reload({ waitUntil: "networkidle" });
   assert.equal((await snapshot(context, industryPlanId)).plan!.intake.sector, "education", "Manual override survives reload instead of reverting to the inferred industry");
   await page.getByRole("button", { name: "업종 답변 수정", exact: true }).click();
-  assert.equal(await page.getByRole("radio", { name: "교육 · 코칭", exact: true }).isChecked(), true);
+  assert.equal(await page.getByRole("radio", { name: /^교육 · 코칭/ }).isChecked(), true);
   assert.equal(await page.getByRole("button", { name: "이 업종으로 계속", exact: true }).count(), 0);
   await page.getByRole("button", { name: "현재 질문으로", exact: true }).click();
   await page.goto(`${origin.origin}/plan/chat?new=1`, { waitUntil: "networkidle" });
@@ -285,6 +340,26 @@ try {
   assert.equal(await page.getByRole("button", { name: "이 업종으로 계속", exact: true }).count(), 0);
   assert.equal(result.plan!.intake.answers.industry, undefined);
   checks.push("Industry recommendation uses confirmed text without AI or auto-saving; manual selection, reload, edit, ambiguity fallback and double-click confirmation are safe at 320/390/526/768/1440px");
+  await page.goto(`${origin.origin}/plan/chat?new=1`, { waitUntil: "networkidle" });
+  await page.getByRole("textbox", { name: "대화 내용" }).fill("카페가 괜찮을까요?");
+  await page.getByRole("button", { name: "보내기", exact: true }).click();
+  assert.ok(page.url().includes("new=1"));
+  await page.getByText("이 기기에 보관 중", { exact: true }).waitFor();
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByText("카페가 괜찮을까요?", { exact: true }).waitFor();
+  result = await saved(() => page.getByRole("button", { name: "아이디어를 찾고 있어요", exact: true }).click());
+  assert.equal(result.plan!.coach.fields.length, 0);
+  assert.equal(result.plan!.intake.notes.at(-1)!.text, "카페가 괜찮을까요?");
+  assert.equal(result.plan!.intake.job, null);
+  await page.getByRole("textbox", { name: "대화 내용" }).fill("아직 보내지 않은 내용");
+  await page.route("**/api/plan/chat?*", (route: any) => route.fulfill({ status: 500, contentType: "text/html", body: "" }));
+  await page.reload({ waitUntil: "networkidle" });
+  await page.getByText(/서버가 응답을 완료하지 못했어요/).waitFor();
+  assert.equal(await page.getByText(/Unexpected end of JSON/).count(), 0);
+  await page.unroute("**/api/plan/chat?*");
+  await page.getByRole("button", { name: "최신 내용 불러오기", exact: true }).click();
+  assert.equal(await page.getByRole("textbox", { name: "대화 내용" }).inputValue(), "아직 보내지 않은 내용");
+  checks.push("One composer preserves unclassified questions and compound notes without AI; empty 500 responses show a safe error and retry restores the unsubmitted draft");
   assert.equal(errors.length, 0, errors.join("\n"));
   assert.equal(blockedExternal.length, 0, `Unexpected external browser requests: ${blockedExternal.join(",")}`);
   assert.ok(timings.length > 10 && Math.max(...timings) < 300, `Client render timings: ${timings.join(",")}`);

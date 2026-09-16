@@ -7,8 +7,8 @@ import styles from "./chat/page.module.css";
 import WorkspaceBrand from "../../components/workspace-brand";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
-export default function BusinessAppChrome({ children, title, active = "plans", backHref = "/plan", workspaceHref, showRail = true }: {
-  children: ReactNode; title: string; active?: "plans" | "chat" | "new"; backHref?: string; workspaceHref?: string; showRail?: boolean;
+export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", workspaceHref, showRail = true }: {
+  children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new"; backHref?: string; workspaceHref?: string; showRail?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -31,8 +31,9 @@ export default function BusinessAppChrome({ children, title, active = "plans", b
     <div className={styles.appSurface}>
       <header className={styles.header}>
         <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>
-        <div className={styles.headerTitle}><strong>{title}</strong><span>오늘창업{active !== "plans" ? " AI 파트너" : ""}</span></div>
+        <div className={styles.headerTitle}><strong>{title}</strong><span>{subtitle ?? `오늘창업${active !== "plans" ? " AI 파트너" : ""}`}</span></div>
         {workspaceHref && <Link className={styles.workspaceLink} href={workspaceHref}>사업 관리</Link>}
+        {actions}
         <div className={styles.headerMenu} ref={menu}>
           <button className={styles.menuToggle} aria-label={open ? "대화 메뉴 닫기" : "대화 메뉴 열기"} aria-expanded={open} aria-controls="chat-navigation" onClick={() => setOpen(!open)}>{open ? <X size={22} /> : <MoreHorizontal size={24} />}</button>
           {open && <nav id="chat-navigation" className={styles.menuPanel} aria-label="대화 메뉴">

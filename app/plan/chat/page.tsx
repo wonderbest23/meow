@@ -21,6 +21,8 @@ import styles from "./page.module.css";
 import { CoachMessage, CoachResultCard, CoachSpeaker, CoachWelcome } from "../../../components/coach-chat-ui";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import BusinessIntake from "./BusinessIntake";
+import { readChatResponse } from "../../../lib/http/read-chat-response";
+import type { ServerPlan } from "../../../lib/plan-builder/plan-server-store";
 
 type Snapshot = { planId: string; title: string; planType: string; updatedAt?: string; coach: CoachState; completed: string[]; total: number; hasDocuments?: boolean; manualReview?: string[]; job?: CoachJob | null; generation: { keys?: string[]; revision?: number; runId?: string } | null };
 type Payload = { plan?: Snapshot | null; message?: string; login?: boolean; authenticated?: boolean; paid?: boolean; runStatus?: string | null };
@@ -89,7 +91,7 @@ function BusinessCoach() {
     const epoch = routeEpoch.current;
     const res = await fetch(`/api/plan/chat${id ? `?planId=${encodeURIComponent(id)}` : ""}`, { cache: "no-store", signal });
     if (!res.ok) throw new Error("대화를 불러오지 못했어요. 다시 시도해 주세요.");
-    const data: Payload = await res.json();
+    const data = await readChatResponse<Payload>(res);
     if (signal?.aborted || epoch !== routeEpoch.current) return;
     accept(data); setConnectionError(false); setLoadFailed(false); return data.plan;
   }, [accept]);
@@ -195,7 +197,7 @@ function BusinessCoach() {
     pendingId.current = requestId; pendingAction.current = action;
     try {
       const res = await fetch("/api/plan/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action, planId: plan?.planId, revision: plan?.coach.revision ?? 0, message: content, requestId, retry }) });
-      const data: Payload = await res.json();
+      const data = await readChatResponse<Payload>(res);
       if (epoch !== routeEpoch.current) return;
       if (!res.ok) {
         setLogin(!!data.login); if (data.plan) accept(data);
@@ -224,7 +226,7 @@ function BusinessCoach() {
     try {
       let contents: string;
       if (/\.docx$/i.test(selected.name)) {
-        const res = await fetch("/api/plan/chat/attachment", { method: "POST", body: selected }); const data = await res.json(); if (!res.ok) throw new Error(data.message); contents = data.text;
+        const res = await fetch("/api/plan/chat/attachment", { method: "POST", body: selected }); const data = await readChatResponse<{ text: string; message?: string }>(res); if (!res.ok) throw new Error(data.message); contents = data.text;
       } else if (/\.(txt|md)$/i.test(selected.name)) contents = await selected.text();
       else throw new Error("워드(.docx) 또는 텍스트(.txt, .md) 문서를 첨부해 주세요.");
       if (contents.length > 18000) throw new Error("문서가 길어요. 필요한 부분만 18,000자 이내로 나누어 주세요.");
@@ -236,10 +238,10 @@ function BusinessCoach() {
     const current = planRef.current;
     if (!current) throw new Error("사업 정보를 다시 불러와 주세요.");
     const response = await fetch("/api/plan/expert", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...patch, planId: current.planId, requestId: crypto.randomUUID() }) });
-    const payload = await response.json();
+    const payload = await readChatResponse<{ plan?: ServerPlan; message?: string }>(response);
     if (!response.ok) throw new Error(payload.message || "저장하지 못했어요. 입력 내용은 그대로 남아 있어요.");
     const coach = payload.plan && readCoach(payload.plan.answers);
-    if (!coach) throw new Error("저장 결과를 확인하지 못했어요. 다시 확인해 주세요.");
+    if (!coach || !payload.plan) throw new Error("저장 결과를 확인하지 못했어요. 다시 확인해 주세요.");
     if (planRef.current?.planId === current.planId) accept({ plan: { ...current, title: payload.plan.title, updatedAt: payload.plan.updatedAt, coach } });
     void hydrateFromServer().catch(() => {});
   }

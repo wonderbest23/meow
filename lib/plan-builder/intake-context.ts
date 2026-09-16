@@ -10,20 +10,32 @@ export const INTAKE_CONTEXT_RULES = [
   "Do not invent AI answers or calculate missing revenue, costs, profit, ratios or totals from this block.",
   "Preserve the supplied unit, time period and qualifications. A reporting period alone is not evidence of operating results; do not assume monthly or annual figures.",
   "Keep user estimates, goals and plans distinct from actual results. If omitted is true, some complete entries were excluded for size; do not reconstruct them.",
+  "A range answer such as '10,000원~20,000원' or '5,000원 미만' must be quoted with its boundaries exactly as supplied; never cite a midpoint, average or single representative value for it.",
 ].join(" ");
 
 export type IntakeContextInput = { intakeContext?: string };
 type Answers = Record<string, Record<string, unknown>>;
 type IntakeValue = string | number | string[] | null;
 
-function answerRecord(questionId: string, label: string, input: unknown) {
+/** value → label for a question's catalogue options; unknown values pass through unchanged. */
+export function optionLabelMap(question: { options?: Array<{ value: string; label: string }> } | undefined): Map<string, string> {
+  return new Map((question?.options ?? []).map(option => [option.value, option.label]));
+}
+function labelled(value: IntakeValue, labels: Map<string, string>): IntakeValue {
+  if (typeof value === "string") return labels.get(value) ?? value;
+  if (Array.isArray(value)) return value.map(item => labels.get(item) ?? item);
+  return value;
+}
+
+function answerRecord(questionId: string, label: string, input: unknown, optionLabels: Map<string, string> = new Map()) {
   if (!input || typeof input !== "object" || Array.isArray(input)) return null;
   const record = input as Record<string, unknown>;
   if (!("value" in record) || (record.basis !== undefined && record.basis !== "user")) return null;
   const raw = record.value;
   if (raw !== null && typeof raw !== "string" && !(typeof raw === "number" && Number.isFinite(raw)) && !(Array.isArray(raw) && raw.every(item => typeof item === "string"))) return null;
   const unknown = raw === null || (typeof raw === "string" && !raw.trim()) || (Array.isArray(raw) && !raw.some(item => item.trim()));
-  const value: IntakeValue = unknown ? null : raw as IntakeValue;
+  // Choice answers stored as internal ids (software.releaseStatus) reach prompts as their labels, never as ids.
+  const value: IntakeValue = unknown ? null : labelled(raw as IntakeValue, optionLabels);
   const unit = typeof record.unit === "string" && record.unit.trim() ? record.unit : null;
   const period = typeof record.period === "string" && record.period.trim() ? record.period : null;
   const text = value === null ? null : Array.isArray(value) ? value.join(", ") : String(value);
@@ -37,9 +49,11 @@ function answerRecord(questionId: string, label: string, input: unknown) {
 export function confirmedIntakeContext(answers: Answers): string {
   const industry = readCoach(answers)?.business.industry ?? "";
   const sector = intakeSectorOptions.find(option => option.value === industry || option.label === industry)?.value;
-  const labels = new Map(sector ? detailQuestions(sector).map(question => [question.id, question.label]) : []);
+  const questions = sector ? detailQuestions(sector) : [];
+  const labels = new Map(questions.map(question => [question.id, question.label]));
+  const optionLabels = new Map(questions.map(question => [question.id, optionLabelMap(question)]));
   const details = Object.entries(answers["intake/details"] ?? {}).filter(([id]) => labels.has(id)).sort(([a], [b]) => a.localeCompare(b))
-    .flatMap(([id, value]) => { const record = answerRecord(id, labels.get(id) ?? id, value); return record ? [record] : []; });
+    .flatMap(([id, value]) => { const record = answerRecord(id, labels.get(id) ?? id, value, optionLabels.get(id)); return record ? [record] : []; });
   const periodInput = answers["intake/period"];
   const reportingPeriod = periodInput?.basis === "user" ? answerRecord("period", "Operating reporting period", periodInput) : null;
   if (!details.length && !reportingPeriod) return "";

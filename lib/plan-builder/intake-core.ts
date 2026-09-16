@@ -1,7 +1,9 @@
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
-import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, type IntakeMode, type IntakeQuestion } from "./intake-questions";
+import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, type IntakeMode, type IntakeQuestion } from "./intake-questions";
+import { INDUSTRY_HINTS, PRICE_BASIS, sectorChipOptions } from "./intake-options";
+import { descriptionSector } from "./intake-sector";
 import { PROPOSAL_SECTORS, type ProposalSector } from "./proposal-blueprint";
 import { INTAKE_KEY, INTAKE_VERSION, type IntakeCandidate, type IntakeCommand, type IntakeSnapshot, type IntakeState, type IntakeValue } from "./intake-types";
 import type { ServerPlan } from "./plan-server-store";
@@ -30,11 +32,33 @@ function candidateAnswers(intake: IntakeState, coach: CoachState) {
   return Object.fromEntries(Object.entries(intake.answers).map(([key, answer]) => [key, coach.fields.find(field => field.key === key && field.basis === "user")?.value ?? answer.value]));
 }
 
+/** Sector for chip sets: the confirmed intake sector, else a rule-based guess from the business text, else general. No AI. */
+export function intakeChipSector(intake: Pick<IntakeState, "sector" | "answers">, coach: Pick<CoachState, "fields">): ProposalSector {
+  if (intake.sector !== "general") return intake.sector;
+  const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value
+    ?? (typeof intake.answers.business?.value === "string" ? intake.answers.business.value : "");
+  return business.trim() ? descriptionSector(business) : "general";
+}
+
+/** Catalogue questions with the runtime options the client needs: candidate ideas, industry hints and sector chip sets (spec §6 Phase 1). Options are never persisted. */
 export function intakeQuestions(intake: IntakeState, coach: CoachState): IntakeQuestion[] {
   const ideas = intakeCandidates(candidateAnswers(intake, coach));
+  const sector = intakeChipSector(intake, coach);
   return [...coreQuestions(intake.mode), ...(intake.detailsRequested ? detailQuestions(intake.sector) : [])]
     .filter(question => question.id !== "candidate" || !coach.fields.some(field => field.key === "business" && field.basis === "user") || !!intake.answers.candidate)
-    .map(question => question.id === "candidate" ? { ...question, options: ideas.map(idea => ({ value: idea.id, label: idea.title })) } : question);
+    .map(question => {
+      if (question.id === "candidate") return { ...question, options: ideas.map(idea => ({ value: idea.id, label: idea.title })) };
+      if (question.id === "industry") return { ...question, options: question.options?.map(option => ({ ...option, hint: INDUSTRY_HINTS[option.value as ProposalSector] ?? option.hint })) };
+      if (question.id === "price") {
+        // The pricing basis is wording only (spec §4-1): storage stays a coachAmount string under coach.fields.price.
+        const period = PRICE_BASIS[sector], options = sectorChipOptions(sector, "price", intake.mode);
+        const hint = sector === "software" ? "무료 모델이면 아직 미정을 누르고 과금 기준에서 설명해요." : question.hint;
+        return { ...question, period, prompt: pricePrompt(period), ...(hint ? { hint } : {}), ...(options.length ? { options } : {}) };
+      }
+      if (question.kind !== "text" || question.options?.length) return question;
+      const options = sectorChipOptions(sector, question.id, intake.mode);
+      return options.length ? { ...question, options } : question;
+    });
 }
 
 export function answeredIntakeQuestion(intake: IntakeState, coach: CoachState, question: IntakeQuestion) {
@@ -57,7 +81,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
   for (const question of questions) {
     if (question.fieldKey || !intake.answers[question.id] || question.id === "candidate") continue;
     const answer = intake.answers[question.id];
-    const value = answer.status === "unknown" ? "아직 미정" : question.options?.find(option => option.value === answer.value)?.label ?? displayIntakeValue(answer.value);
+    const value = answer.status === "unknown" ? "아직 미정" : intakeValueLabel(question, answer.value);
     summary.push({ id: question.id, label: question.label, value, basis: "user" });
   }
   return { planId: plan.id, title: plan.title, planType: plan.planType, updatedAt: plan.updatedAt, coach,
@@ -71,6 +95,12 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
 
 export function displayIntakeValue(value: IntakeValue): string {
   return Array.isArray(value) ? value.join(", ") : value === null ? "" : String(value);
+}
+
+/** Option labels for choice answers; multi answers map each selected value. Falls back to the raw value. */
+export function intakeValueLabel(question: Pick<IntakeQuestion, "options">, value: IntakeValue): string {
+  const label = (item: string) => question.options?.find(option => option.value === item)?.label ?? item;
+  return Array.isArray(value) ? value.map(label).join(", ") : value === null ? "" : label(String(value));
 }
 
 export function intakeFieldRevision(coach: CoachState, intake: Pick<IntakeState, "mode" | "answers">, key: CoachField["key"]): string | null {
@@ -173,7 +203,7 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   coach.stage = intake.mode === "operating" ? "operating" : coach.fields.some(field => field.key === "business" && field.basis === "user") ? "startup" : "exploring";
   coach.business.stage = coach.stage === "operating" ? "운영 중" : "사업 기획";
   coach.ready = coach.stage !== "exploring" && !!coach.fields.find(field => field.key === "business" && field.basis === "user")?.value;
-  const selected = question.options?.find(option => option.value === value)?.label;
+  const selected = question.options && value !== null ? intakeValueLabel(question, value) : undefined;
   coach.messages.push({ id: command.requestId, role: "user", text: `${question.label}: ${command.unknown ? "아직 미정" : selected ?? quote}`, at });
 }
 

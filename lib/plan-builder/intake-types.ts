@@ -6,7 +6,7 @@ export const INTAKE_KEY = "__business_intake";
 export const INTAKE_VERSION = 1;
 export type IntakeValue = string | number | string[] | null;
 export type IntakeAnswer = { status: "answered" | "unknown"; value: IntakeValue; messageId: string; at: string; quote?: string };
-export type IntakeNote = { id: string; text: string; at: string; status: "queued" | "processing" | "review" | "stored" | "failed" };
+export type IntakeNote = { id: string; text: string; at: string; status: "queued" | "processing" | "review" | "stored" | "failed"; intent?: "memo" | "question" };
 export type IntakeCandidate = { id: string; fieldKey: CoachField["key"]; value: string; quote: string; noteId: string; baseValue: string | null; baseFieldRevision?: string | null; status: "pending" | "applied" | "rejected" };
 export type IntakeJob = {
   id: string; runId: string; kind: "extract" | "help" | "design";
@@ -24,10 +24,11 @@ export type IntakeState = {
   legacyImported: boolean;
 };
 export type IntakeCommand = {
-  action: "start" | "answer" | "message" | "confirm-extraction" | "details" | "extract" | "extract-pending" | "help" | "design" | "prepare";
+  action: "start" | "answer" | "message" | "note" | "confirm-extraction" | "details" | "extract" | "extract-pending" | "help" | "design" | "prepare";
   planId?: string; revision: number; requestId: string;
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;
   message?: string; candidateIds?: string[]; rejectIds?: string[]; overwriteIds?: string[];
+  noteIntent?: "memo" | "question";
 };
 export type IntakeSnapshot = {
   planId: string; title: string; planType: string; updatedAt: string; coach: CoachState;

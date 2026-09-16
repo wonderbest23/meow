@@ -149,6 +149,39 @@ async function main() {
       return { value: values[question.id] };
     }
 
+    await check("unified start stores an unclassified question atomically without AI or confirmed facts", async () => {
+      configureAI(true);
+      const ownerHash = `intake-note-start-${randomUUID()}`;
+      const command: IntakeCommand = { action: "start", mode: "exploring", message: "카페가 괜찮을까요?", noteIntent: "question", revision: 0, requestId: randomUUID() };
+      const first = await saveIntakeCommand(ownerHash, command, { aiAvailable: true, aiAllowed: true });
+      assert.equal(first.snapshot.coach.fields.length, 0);
+      assert.equal(first.snapshot.intake.notes[0].status, "stored");
+      assert.equal(first.snapshot.intake.notes[0].intent, "question");
+      assert.equal(first.job, null);
+      const replay = await saveIntakeCommand(ownerHash, command, { aiAvailable: true, aiAllowed: true });
+      assert.equal(replay.snapshot.coach.messages.length, 1);
+      assert.equal(replay.snapshot.intake.notes.length, 1);
+      assert.equal(calls.length, 0);
+      await assert.rejects(saveIntakeCommand(`invalid-${randomUUID()}`, { ...command, questionId: "business", value: "카페" }), assertIntakeError("invalid_start", 400));
+    });
+
+    await check("deferred notes preserve original input and document version even when AI is configured", async () => {
+      const session = await start();
+      await send(session, { action: "answer", questionId: "business", value: "사진 촬영 서비스" });
+      const before = await load(session);
+      configureAI(true);
+      const note = await send(session, { action: "note", message: "예산: 100만원\n고객: 직장인", noteIntent: "memo" }, true);
+      assert.equal(note.job, null);
+      assert.equal(note.snapshot.intake.candidates.length, 0);
+      assert.equal(note.snapshot.intake.notes.at(-1)?.status, "stored");
+      assert.equal(coachDocumentRevision(note.snapshot.coach), coachDocumentRevision(before.coach));
+      assert.deepEqual(note.snapshot.coach.fields, before.coach.fields);
+      const extraction = await send(session, { action: "extract" }, true);
+      assert.equal(extraction.job?.kind, "extract");
+      assert.equal(extraction.job?.noteIds.length, 1);
+      assert.equal(calls.length, 0, "Scheduling is not execution; note collection never calls the provider");
+    });
+
     await check("typed first message atomically starts, saves and replays without AI", async () => {
       configureAI(true);
       const ownerHash = `intake-entry-${randomUUID()}`;
@@ -449,6 +482,30 @@ async function main() {
       assert.deepEqual(await executeIntakeJob(request), { ok: true });
       assert.deepEqual(await loadPlanState(session.ownerHash), beforeReplay);
       assert.equal(calls.length, 1);
+    });
+
+    await check("explicit help persists one transcript reply across subsequent jobs without changing document revision", async () => {
+      configureAI(true);
+      const session = await start();
+      const initial = await load(session);
+      const documentRevision = coachDocumentRevision(initial.coach);
+      respond = () => completion({ message: "먼저 고객이 비용을 내는 대상을 구분해 보세요." });
+      const queued = await send(session, { action: "help", message: "고객은 어떻게 정하나요?" }, true);
+      const request = jobRequest(session, queued);
+      assert.deepEqual(await executeIntakeJob(request), { ok: true });
+      assert.deepEqual(await executeIntakeJob(request), { ok: true });
+      const completed = await load(session);
+      const replyId = `${request.jobId}:reply`;
+      assert.equal(completed.coach.messages.filter(message => message.id === replyId).length, 1);
+      assert.equal(coachDocumentRevision(completed.coach), documentRevision);
+      assert.equal(calls.length, 1);
+      await send(session, { action: "note", message: "문의가 많은 상품부터 확인하고 있어요", noteIntent: "memo" }, true);
+      await send(session, { action: "extract" }, true);
+      const next = await load(session);
+      assert.equal(next.intake.job?.kind, "extract");
+      assert.equal(next.coach.messages.filter(message => message.id === replyId).length, 1);
+      assert.equal(coachDocumentRevision(next.coach), documentRevision);
+      assert.equal(calls.length, 1, "queuing the next job must not synchronously call a provider");
     });
 
     await check("demo-memory daily quota permits 24 calls and blocks call 25 without blocking local answers", async () => {

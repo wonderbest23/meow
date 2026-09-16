@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { ChevronRight, FileCheck2 } from "lucide-react";
 import styles from "./coach-chat-ui.module.css";
 
-export function CoachWelcome() {
-  return <div className={styles.welcome} data-coach-welcome><span>생각이 사업이 되는 순간</span><h2>어떤 사업을<br />생각하고 계세요?</h2><i aria-hidden="true" /></div>;
+export function CoachWelcome({ tagline = true }: { tagline?: boolean }) {
+  return <div className={styles.welcome} data-coach-welcome>{tagline && <span>생각이 사업이 되는 순간</span>}<h2>어떤 사업을<br />생각하고 계세요?</h2><i aria-hidden="true" /></div>;
 }
 
 export function CoachSpeaker() {

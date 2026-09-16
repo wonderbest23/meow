@@ -15,11 +15,12 @@ import { rateLimit } from "../rate-limit";
 import { confirmedIntakeContext } from "./intake-context";
 
 export const intakeCommandSchema = z.object({
-  action: z.enum(["start", "answer", "message", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "prepare"]),
+  action: z.enum(["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "prepare"]),
   planId: z.string().min(1).max(60).optional(), revision: z.number().int().nonnegative().default(0), requestId: z.string().uuid(),
   mode: z.enum(["exploring", "startup", "operating"]).optional(), questionId: z.string().max(100).optional(),
   value: z.union([z.string().max(1200), z.number().finite(), z.array(z.string().max(200)).max(12), z.null()]).optional(),
   unknown: z.boolean().optional(), message: z.string().trim().max(8000).optional(),
+  noteIntent: z.enum(["memo", "question"]).optional(),
   candidateIds: z.array(z.string().max(160)).max(24).optional(), rejectIds: z.array(z.string().max(160)).max(24).optional(), overwriteIds: z.array(z.string().max(160)).max(24).optional(),
 }).strict();
 
@@ -27,6 +28,14 @@ function nextTimestamp(previous?: string) { return new Date(Math.max(Date.now(),
 function active(job: IntakeJob | null) { return !!job && ["queued", "running"].includes(job.status); }
 function fields(coach: CoachState) { return Object.fromEntries(coach.fields.map(field => [field.key, field.value])); }
 function commandSignature(command: IntakeCommand) { return createHash("sha256").update(JSON.stringify(command)).digest("hex"); }
+
+function storeDeferredNote(coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
+  if (!command.message) throw new IntakeError("message_required", "남길 내용을 입력해 주세요");
+  const chunks = command.message.match(/[\s\S]{1,4000}/g) ?? [];
+  if (intake.notes.length + chunks.length > 64 || intake.notes.reduce((sum, note) => sum + note.text.length, 0) + command.message.length > 100_000) throw new IntakeError("notes_limit", "메모가 많아요. 저장된 내용을 정리한 뒤 이어가 주세요", 413);
+  intake.notes.push(...chunks.map((text, index) => ({ id: `${command.requestId}:${index}`, text, at, status: "stored" as const, intent: command.noteIntent ?? "memo" as const })));
+  coach.messages.push({ id: command.requestId, role: "user", text: command.message, at });
+}
 
 export function newIntakeJob(coach: CoachState, intake: IntakeState, kind: IntakeJob["kind"], at: string, request?: string): IntakeJob | null {
   if (active(intake.job)) return null;
@@ -79,12 +88,14 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     let created: IntakeJob | null = null;
     if (command.action === "start") {
       if (savedIntake && command.mode && command.mode !== intake.mode) throw new IntakeError("mode_conflict", "진행 중인 사업 유형은 새 사업 진단에서 선택해 주세요", 409);
+      if (command.message && (savedIntake || command.questionId !== undefined || command.value !== undefined)) throw new IntakeError("invalid_start", "처음 남긴 이야기와 답변은 구분해 저장해 주세요");
       if (command.questionId !== undefined || command.value !== undefined) {
         if (savedIntake) throw new IntakeError("start_exists", "이미 시작한 대화에서는 답변 수정으로 이어가 주세요", 409);
         if (command.questionId !== "business" || typeof command.value !== "string" || !command.value.trim() || command.unknown) throw new IntakeError("invalid_start", "처음 이야기할 사업 내용을 입력해 주세요");
         // Persist the first typed answer and new conversation in the same CAS write.
         applyIntakeAnswer(plan, coach, intake, { ...command, action: "answer" }, at);
       }
+      if (command.message) storeDeferredNote(coach, intake, command, at);
       coach.stage = intake.mode === "operating" ? "operating" : intake.mode === "exploring" && !coach.fields.some(field => field.key === "business") ? "exploring" : "startup";
       coach.business.stage = coach.stage === "operating" ? "운영 중" : "사업 기획";
       if (plan.answers.__coach_job) {
@@ -94,6 +105,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     } else if (command.action === "answer") applyIntakeAnswer(plan, coach, intake, command, at);
     else if (command.action === "details") intake.detailsRequested = true;
     else if (command.action === "confirm-extraction") applyIntakeCandidates(coach, intake, command, at);
+    else if (command.action === "note") storeDeferredNote(coach, intake, command, at);
     else if (command.action === "message") {
       if (!command.message) throw new IntakeError("message_required", "메모 내용을 입력해 주세요");
       if (intake.notes.length >= 64 || intake.notes.reduce((total, note) => total + note.text.length, 0) + command.message.length > 100_000) throw new IntakeError("notes_limit", "메모가 많아요. 저장된 내용을 항목별로 정리한 뒤 이어가 주세요", 413);
@@ -111,7 +123,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       if (active(intake.job)) throw new IntakeError("ai_busy", "앞선 AI 작업이 진행 중이에요. 질문 답변과 직접 수정은 계속할 수 있어요", 409);
       if (!options.aiAvailable) throw new IntakeError("ai_unavailable", "AI 정리는 지금 연결되지 않았어요. 입력과 직접 수정은 계속할 수 있어요", 503);
       if (!options.aiAllowed) throw new IntakeError("ai_limit", "AI 이용 한도에 도달했어요. 기본 진단과 직접 수정은 계속할 수 있어요", 429);
-      if (command.action === "extract") intake.notes = intake.notes.map(note => note.status === "failed" ? { ...note, status: "queued" } : note);
+      if (command.action === "extract") intake.notes = intake.notes.map(note => note.status === "failed" || note.status === "stored" && note.intent === "memo" ? { ...note, status: "queued" } : note);
       if (command.action === "help" && !command.message) throw new IntakeError("message_required", "사업과 관련해 궁금한 점을 입력해 주세요");
       if (command.action === "design" && !coach.ready) throw new IntakeError("business_required", "사업 후보를 선택하거나 생각한 사업을 먼저 입력해 주세요");
       created = newIntakeJob(coach, intake, command.action === "extract-pending" ? "extract" : command.action as IntakeJob["kind"], at, command.message);
@@ -199,7 +211,15 @@ export async function executeIntakeJob(request: IntakeJobRequest): Promise<{ ok:
       const context = JSON.stringify({ stage: claimed.coach.stage, business: claimed.coach.business.name, fields: claimed.coach.fields.map(field => ({ key: field.key, value: field.value.slice(0, 180), basis: field.basis })), excerpted: true });
       const result = await helpIntake(config, context, job.request ?? "");
       if (!result.ok) throw new IntakeError(result.reason, "AI 답변을 완료하지 못했어요. 질문을 짧게 나눠 다시 요청할 수 있고 사업정보는 그대로 보관되어 있어요");
-      await updateIntakeJob(request, (_plan, _coach, _intake, current) => { if (current.status !== "running") throw new IntakeError("job_superseded", "기한이 지난 작업이에요", 409); current.reply = result.message; current.status = "complete"; });
+      await updateIntakeJob(request, (_plan, coach, _intake, current) => {
+        if (current.status !== "running") throw new IntakeError("job_superseded", "기한이 지난 작업이에요", 409);
+        current.reply = result.message; current.status = "complete";
+        const id = `${current.id}:reply`;
+        if (!coach.messages.some(message => message.id === id)) {
+          coach.messages.push({ id, role: "assistant", text: result.message, at: new Date().toISOString() });
+          coach.revision += 1;
+        }
+      });
     } else {
       const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach)}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(businessDesignSchema) }, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 3000, effort: "low", allowFallback: false });
       const parsed = businessDesignSchema.safeParse(raw);

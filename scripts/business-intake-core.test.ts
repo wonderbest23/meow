@@ -16,7 +16,7 @@ async function main() {
     const { emptyCoach } = await import("../lib/plan-builder/coach-job");
     const { COACH_KEY, COACH_TYPES, coachDocumentRevision } = await import("../lib/plan-builder/coach");
     const { INTAKE_KEY, INTAKE_VERSION } = await import("../lib/plan-builder/intake-types");
-    const { coreQuestions, detailQuestions, intakeCandidates } = await import("../lib/plan-builder/intake-questions");
+    const { coreQuestions, detailQuestions, intakeCandidates, intakeSectorOptions } = await import("../lib/plan-builder/intake-questions");
     const { PROPOSAL_SECTORS, SECTOR_PROFILES } = await import("../lib/plan-builder/proposal-blueprint");
     const { IntakeError, createIntake, readIntake, intakeQuestions, answeredIntakeQuestion, intakeSnapshot,
       applyIntakeAnswer, applyIntakeCandidates, intakeBusinessFingerprint, finishIntakeMutation, displayIntakeValue,
@@ -84,7 +84,7 @@ async function main() {
       if (question.id === "industry") return sector;
       if (question.id === "interest") return [sector];
       if (question.id === "period") return "2026-09-01 / 2026-09-15";
-      if (question.id === "price") return "12000원/회";
+      if (question.id === "price") return "12,000원";
       if (question.kind === "single") return question.options![0].value;
       if (question.kind === "multi") return [question.options![0].value];
       return question.kind === "number" ? 2 : `입력한 ${question.label}`;
@@ -388,9 +388,79 @@ async function main() {
       ["infinite number", { questionId: "budget", value: Number.POSITIVE_INFINITY }, "invalid_number"],
       ["too many hours", { questionId: "hoursPerWeek", value: 169 }, "invalid_number"],
       ["money with time unit", { questionId: "budget", value: "10시간" }, "invalid_number"],
+      ["prose price", { questionId: "price", value: "대표 메뉴 1개 7500원" }, "invalid_number"],
+      ["price with a per-unit suffix", { questionId: "price", value: "12000원/회" }, "invalid_number"],
     ] as Array<[string, Partial<IntakeCommand>, string]>) {
       check(`validation ${name}: expected error, no mutation`, () => rejected(fixture("startup"), patch, code));
     }
+    check("price accepts range-ladder strings and stores the exact won amount", () => {
+      const f = fixture("exploring");
+      answer(f, "price", "12,000원");
+      assert.equal(f.intake.answers.price.value, 12000);
+      assert.equal(f.coach.fields.find(item => item.key === "price")?.value, "12000원");
+      assert.equal(f.coach.fields.find(item => item.key === "price")?.quote, "12,000원");
+      answer(f, "price", "1.2만원");
+      assert.equal(f.coach.fields.find(item => item.key === "price")?.value, "12000원");
+      assert.equal(f.coach.messages.at(-1)?.text, "판매 가격: 1.2만원");
+    });
+    check("sector chip sets follow the confirmed sector, then the business text, then the general set", () => {
+      const f = fixture("startup");
+      const optionsOf = (id: string) => intakeQuestions(f.intake, f.coach).find(question => question.id === id)!.options ?? [];
+      assert.equal(optionsOf("customer").length, 6, "general customer set before any sector is known");
+      assert.equal(optionsOf("customer")[0].value, "개인 소비자");
+      assert.ok(optionsOf("business").every(option => option.group === "prefill"));
+      assert.ok(optionsOf("industry").every(option => option.hint), "industry chips carry example business types");
+      assert.deepEqual(optionsOf("industry").map(option => option.value), intakeSectorOptions.map(option => option.value));
+      assert.ok(!intakeQuestions(f.intake, f.coach).find(question => question.id === "budget")!.options, "range ladders stay in intake-options, not in question options");
+      answer(f, "business", "동네 반찬가게를 준비하고 있어요");
+      assert.equal(f.intake.sector, "general", "business text alone never confirms a sector");
+      assert.equal(optionsOf("customer")[0].value, "점심·테이크아웃을 찾는 인근 직장인", "rule-based guess picks the food set");
+      assert.equal(intakeQuestions(f.intake, f.coach).find(question => question.id === "price")!.period, "대표 메뉴 1개");
+      answer(f, "industry", "software");
+      assert.equal(optionsOf("customer")[0].value, "개인 사용자", "a confirmed industry wins over the text guess");
+      const price = intakeQuestions(f.intake, f.coach).find(question => question.id === "price")!;
+      assert.equal(price.period, "월 구독 1건"); assert.match(price.prompt, /^월 구독 1건 가격/); assert.equal(price.kind, "number");
+      assert.deepEqual(optionsOf("channel").filter(option => option.group === "sector").map(option => option.value), ["검색·블로그 콘텐츠", "앱스토어·런칭 커뮤니티"]);
+      assert.equal(optionsOf("channel").filter(option => option.group === "common").length, 6);
+      assert.ok(optionsOf("capacity").some(option => option.group === "people") && optionsOf("capacity").some(option => option.group === "unit"));
+      assert.ok(optionsOf("goal").some(option => option.group === "period") && optionsOf("goal").some(option => option.group === "metric"));
+      answer(f, "industry", "space_hospitality");
+      assert.deepEqual(optionsOf("price").map(option => option.value), ["시간당", "1박", "월 멤버십"], "space pricing basis chips");
+      answer(f, "customer", "1인 창업자·소규모 팀(사무 공간), 모임·파티 그룹");
+      assert.equal(f.coach.fields.find(item => item.key === "customer")?.value, "1인 창업자·소규모 팀(사무 공간), 모임·파티 그룹", "hybrid answers stay plain strings");
+      assert.equal(f.coach.messages.at(-1)?.text, "주요 고객: 1인 창업자·소규모 팀(사무 공간), 모임·파티 그룹");
+    });
+    check("exploring chip sets switch from the general set to the selected candidate's sector", () => {
+      const f = fixture("exploring");
+      const optionsOf = (id: string) => intakeQuestions(f.intake, f.coach).find(question => question.id === id)!.options ?? [];
+      assert.equal(optionsOf("experience").length, 12);
+      assert.equal(optionsOf("problem")[0].value, "필요한데 해주는 곳이 없음");
+      answer(f, "interest", ["local_service"]);
+      const idea = snapshot(f).candidateIdeas[0];
+      assert.equal(idea.sector, "local_service");
+      answer(f, "candidate", idea.id);
+      assert.equal(optionsOf("problem")[0].value, "맞는 업체를 찾기 어려움");
+      assert.equal(intakeQuestions(f.intake, f.coach).find(question => question.id === "price")!.period, "예약 1건");
+    });
+    check("operating problem chips combine shared operating issues with sector issues", () => {
+      const f = fixture("operating"); answer(f, "industry", "food_beverage");
+      const options = intakeQuestions(f.intake, f.coach).find(question => question.id === "problem")!.options!;
+      assert.equal(options.filter(option => option.group === "common").length, 6);
+      assert.deepEqual(options.filter(option => option.group === "sector").map(option => option.value), ["피크 시간 대응이 어렵다", "폐기·수수료 부담이 크다"]);
+      assert.ok(intakeQuestions(f.intake, f.coach).find(question => question.id === "business")!.options!.every(option => option.value.includes("○○")), "operating business chips are sentence starters");
+    });
+    check("multi detail questions take label arrays and reject legacy free text (client seeds the text instead)", () => {
+      const f = fixture("startup"); answer(f, "industry", "education"); f.intake.detailsRequested = true;
+      const feedback = detailQuestions("education").find(question => question.id === "education.feedback")!;
+      assert.equal(feedback.kind, "multi");
+      answer(f, "education.feedback", [feedback.options![0].value, feedback.options![2].value]);
+      assert.deepEqual(f.intake.answers["education.feedback"].value, [feedback.options![0].value, feedback.options![2].value]);
+      assert.equal(snapshot(f).summary.find(item => item.id === "education.feedback")?.value, `${feedback.options![0].label}, ${feedback.options![2].label}`);
+      rejected(f, { questionId: "education.feedback", value: "과제를 첨삭해 줍니다" }, "invalid_option");
+      answer(f, "education.classSize", "정원 제한 없음(녹화·자율 수강)");
+      assert.equal((f.plan.answers["intake/details"]["education.classSize"] as { value: unknown; unit: unknown }).value, "정원 제한 없음(녹화·자율 수강)");
+      assert.equal((f.plan.answers["intake/details"]["education.classSize"] as { unit: unknown }).unit, "명");
+    });
     check("multi-choice deduplicates valid values and rejects invalid shapes atomically", () => {
       const f = fixture("exploring");
       answer(f, "interest", ["software", "software", "education"]);
@@ -405,15 +475,17 @@ async function main() {
       assert.equal(f.coach.fields.find(item => item.key === "budget")?.value, "15000원");
       assert.equal(f.coach.fields.find(item => item.key === "budget")?.quote, "1.5만원");
       assert.equal(f.coach.fields.find(item => item.key === "hoursPerWeek")?.value, "2시간");
-      answer(f, "price", "대표 메뉴 1개 7500원");
-      assert.equal(f.coach.fields.find(item => item.key === "price")?.value, "대표 메뉴 1개 7500원");
+      answer(f, "price", "7500원");
+      assert.equal(f.coach.fields.find(item => item.key === "price")?.value, "7500원", "price is a coachAmount string, not prose");
+      assert.equal(f.intake.answers.price.value, 7500);
+      assert.equal(f.coach.fields.find(item => item.key === "price")?.quote, "7500원");
       assert.ok(!f.coach.fields.some(item => item.key === "unitCost" || item.key === "cost"));
     });
     check("food-service average ticket does not overwrite a directly typed unit price", () => {
       const f = fixture("startup"); answer(f, "industry", "food_beverage"); f.intake.detailsRequested = true;
-      answer(f, "price", "메뉴 1개 7500원");
+      answer(f, "price", "7500원");
       answer(f, "food_beverage.averageTicket", "주문당 평균 15000원 (예상)");
-      assert.equal(f.coach.fields.find(item => item.key === "price")?.value, "메뉴 1개 7500원");
+      assert.equal(f.coach.fields.find(item => item.key === "price")?.value, "7500원");
       assert.equal((f.plan.answers["intake/details"]["food_beverage.averageTicket"] as { value: unknown }).value, "주문당 평균 15000원 (예상)");
       answer(f, "price", undefined, true);
       assert.ok(!f.coach.fields.some(item => item.key === "price"));
@@ -527,7 +599,8 @@ async function main() {
     });
     check("detail map order is immaterial to the business fingerprint", () => {
       const f = fixture("startup"); f.intake.detailsRequested = true;
-      answer(f, "general.resources", "도구"); answer(f, "general.trialDays", 2);
+      const resources = detailQuestions("general").find(question => question.id === "general.resources")!;
+      answer(f, "general.resources", [resources.options![0].value]); answer(f, "general.trialDays", 2);
       const before = fingerprint(f);
       f.plan.answers["intake/details"] = Object.fromEntries(Object.entries(f.plan.answers["intake/details"]).reverse());
       assert.equal(fingerprint(f), before);
