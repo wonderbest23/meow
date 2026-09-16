@@ -1,6 +1,7 @@
 import { chaptersForType } from "./blueprint";
 import { coachDocumentRevision, readCoach } from "./coach";
 import type { ServerPlan } from "./plan-server-store";
+import { artifactDocumentOutdated, operatingSourceFingerprint } from "./artifact-source-status";
 
 export function coachDocumentSnapshot(plan: ServerPlan) {
   const coach = readCoach(plan.answers);
@@ -10,16 +11,17 @@ export function coachDocumentSnapshot(plan: ServerPlan) {
     key: `${chapter.id}/${section.id}`, chapterTitle: chapter.title, sectionTitle: section.title,
   })));
   const missing = entries.filter(({ key }) => !plan.sections[key]?.markdown.trim()).map(s => s.key);
+  const outdated = entries.filter(({ key }) => plan.sections[key] && (plan.sections[key].coachRevision !== revision || artifactDocumentOutdated(plan, key))).map(s => s.key);
   const stale = entries.filter(({ key }) => {
     const s = plan.sections[key];
-    return s && !s.edited && !s.locked && s.coachRevision !== revision;
+    return s && !s.edited && !s.locked && outdated.includes(key);
   }).map(s => s.key);
   const manualReview = entries.filter(({ key }) => {
     const s = plan.sections[key];
-    return s && (s.edited || s.locked) && s.coachRevision !== revision;
+    return s && (s.edited || s.locked) && outdated.includes(key);
   }).map(s => s.sectionTitle);
   return {
-    business: coach.business, revision, missing, stale, manualReview,
+    business: coach.business, revision, missing, stale, manualReview, outdated, operatingFingerprint: operatingSourceFingerprint(plan.answers),
     sections: entries.filter(({ key }) => plan.sections[key]?.markdown.trim()).map(({ key, ...titles }) => ({
       ...titles, markdown: plan.sections[key].markdown,
     })),
@@ -31,5 +33,5 @@ export function completedDocumentKey(plan: ServerPlan): string | null {
   if (!expected.length || expected.some(key => !plan.sections[key]?.markdown.trim())) return null;
   const snapshot = coachDocumentSnapshot(plan);
   if (snapshot && (snapshot.missing.length || snapshot.stale.length || snapshot.manualReview.length)) return null;
-  return `${plan.id}:${snapshot?.revision ?? "document"}`;
+  return `${plan.id}:${snapshot?.revision ?? "document"}${snapshot?.operatingFingerprint ? `:${snapshot.operatingFingerprint}` : ""}`;
 }

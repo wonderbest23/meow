@@ -108,7 +108,7 @@ export default function BusinessWorkspace() {
           {view==="documents" && <>
             <h2 ref={heading} tabIndex={-1}>내 사업 자료</h2>
             {hub.documents.length ? <>
-              <WorkspaceDocumentStatus complete={hub.complete} count={hub.documents.length} total={hub.keys.length} stale={hub.stale} onOpen={openDocument} />
+              <WorkspaceDocumentStatus businessId={plan.id} complete={hub.complete} count={hub.documents.length} total={hub.keys.length} stale={hub.stale} onOpen={openDocument} />
             </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지의 대화는 그대로 사용합니다.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button>}</>}
             {hub.coach && !!hub.documents.length && <Link className={styles.secondary} href={chat}>{hub.stale ? "수정 내용 반영하러 가기" : "자료를 더 다듬기"}</Link>}
             {hub.complete && !hub.stale && <div className={styles.nextStep}><span>계획 다음 단계</span><h3>{businessNextStep(plan).title}</h3><p>지금 선택한 사업의 상품·운영·홈페이지 준비를 이어가요.</p><Link className={styles.secondary} href={businessNextStep(plan).href}>준비 과정 이어가기</Link></div>}

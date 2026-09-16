@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { landingLeadSchema } from "../../../../../../lib/landing/domain";
 import {
@@ -6,6 +6,7 @@ import {
   getPublishedLandingBySlug,
 } from "../../../../../../lib/landing/repository";
 import { enforceRateLimit } from "../../../../../../lib/rate-limit";
+import { processLandingLeadNotification } from "../../../../../../lib/landing/lead-notifications";
 
 const requestSchema = landingLeadSchema.and(z.object({
   website: z.string().max(0).default(""),
@@ -42,6 +43,12 @@ export async function POST(
       marketingAgreed: body.marketingAgreed,
       source: body.source,
     });
+    try {
+      after(async () => {
+        try { await processLandingLeadNotification(lead.id); }
+        catch { console.warn("[landing-notification] dispatch deferred; durable outbox retained"); }
+      });
+    } catch { console.warn("[landing-notification] dispatch unavailable; durable outbox retained"); }
     return NextResponse.json({ ok: true, leadId: lead.id }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "신청을 접수하지 못했습니다.";

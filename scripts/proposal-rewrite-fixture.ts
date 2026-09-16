@@ -7,6 +7,7 @@ import { saveProposalEditor } from "../lib/plan-builder/proposal-editor-service"
 import type { RewritePayload, RewritePreview } from "../lib/plan-builder/proposal-rewrite";
 import { COACH_KEY, COACH_TYPES, COACH_VERSION, type CoachState } from "../lib/plan-builder/coach";
 import type { DocumentRefreshPayload } from "../lib/plan-builder/document-refresh";
+import type { ProposalSector, ProposalPurpose } from "../lib/plan-builder/proposal-blueprint";
 
 export async function seedRewriteFixture(owner: string, planId: string) {
   const fixture = proposalFixture(), at = new Date().toISOString();
@@ -51,8 +52,8 @@ export function documentFixtureResult(payload: DocumentRefreshPayload) {
   return { sections: payload.sections.map(section => ({ key: section.key, markdown: section.markdown.replaceAll("150만원", payload.fields.find(field => field.key === "price")!.value), summary: section.key === "strategy/price" ? "공통 판매가를 거래 조건에 반영했습니다" : "기존 본문을 유지하며 현재 조건을 확인했습니다" })) };
 }
 
-export async function seedBusinessRewriteFixture(owner: string, planId: string) {
-  const fixture = proposalFixture(), at = new Date().toISOString();
+export async function seedBusinessRewriteFixture(owner: string, planId: string, sector: ProposalSector = "b2b_service", purpose: ProposalPurpose = "sales") {
+  const fixture = proposalFixture(sector, purpose), at = new Date().toISOString();
   const chapters = chaptersForType(COACH_TYPES.startup);
   const targets = chapters.flatMap(chapter => chapter.sections.map(section => ({ key: `${chapter.id}/${section.id}`, chapterTitle: chapter.title, sectionTitle: section.title })));
   const roleKeys: Record<string, string> = { summary: "overview/summary", problem: "overview/problem", solution: "market/products", offering: "market/products", workflow: "strategy/distribution", commercial: "strategy/price", evidence: "market/personas", economics: "financials/expenses", roadmap: "strategy/promotion", risks: "summary/executive", team: "summary/executive", ask: "summary/executive" };
@@ -71,7 +72,7 @@ export async function seedBusinessRewriteFixture(owner: string, planId: string) 
     const target = targets.find(item => item.key === roleKeys[name.split(" · ")[1]])!;
     return `${target.chapterTitle} · ${target.sectionTitle}`;
   }))]; });
-  const presentation = { sector: "b2b_service" as const, purpose: "sales" as const }, token = randomUUID();
+  const presentation = { sector, purpose }, token = randomUUID();
   await savePlanState(owner, state);
   // Match the production job boundary: fingerprint the database representation, not insertion-order objects.
   const persisted = await loadPlanState(owner);

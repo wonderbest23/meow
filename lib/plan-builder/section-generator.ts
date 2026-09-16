@@ -8,6 +8,9 @@ import { planTypeGuidanceBlock } from "./plan-type-guidance";
 import type { SectionBusinessContext } from "./context/section";
 import { COACH_WRITER_RULES } from "./coach";
 import { reviewCoachSection } from "./coach-review";
+import { documentEditorialPrompt } from "./document-editorial";
+import { checkDocumentQuality } from "./document-quality";
+import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
 
 const SYSTEM_PROMPT = [
   "당신은 한국에서 실제로 실행할 사업계획서의 한 섹션을 작성하는 선임 사업전략가입니다.",
@@ -61,7 +64,7 @@ export interface BusinessInfo {
   stage?: string;
 }
 
-export interface SectionGenInput {
+export interface SectionGenInput extends IntakeContextInput {
   chapter: PlanChapterDef;
   section: PlanSectionDef;
   answers: Record<string, unknown>;
@@ -92,6 +95,9 @@ export interface SectionGenInput {
    */
   context?: SectionBusinessContext;
   coachContext?: string;
+  operatingContext?: string;
+  /** Complete current paragraphs for deterministic duplication checks, never used as numeric evidence. */
+  priorSections?: string[];
 }
 
 export interface PromptEvidence {
@@ -233,7 +239,9 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
     SYSTEM_PROMPT,
     biz ? `\n[사업 정보]\n${biz}` : `\n사업명: ${input.planTitle ?? "(미정)"}`,
     planTypeGuidanceBlock(input.planType),
+    documentEditorialPrompt(input),
     input.coachContext ? COACH_WRITER_RULES : "",
+    input.intakeContext ? INTAKE_CONTEXT_RULES : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -243,6 +251,8 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
 export function buildUserPrompt(input: SectionGenInput): string {
   return [
     input.coachContext ? `[공통 사업 정보 — 사용자 제공과 AI 제안을 구분]\n${input.coachContext}` : "",
+    boundedIntakeContext(input.intakeContext),
+    input.operatingContext ?? "",
     `챕터: ${input.chapter.title}`,
     `작성할 섹션: ${input.section.title}`,
     `섹션 목적: ${input.section.summary}`,
@@ -394,7 +404,14 @@ export async function generateSection(
   }
   const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim()) : text.trim();
   if (!checked) return { markdown: "", source: "failed" };
+  if (!validateSectionDraft(checked, input)) return { markdown: "", source: "failed" };
   return { markdown: appendFinancials(checked, input), source: "ai" };
+}
+
+export function validateSectionDraft(markdown: string, input: SectionGenInput): boolean {
+  const source = [formatAnswers(input.answers), formatBusiness(input.business), input.coachContext, intakeContextEvidence(input.intakeContext), input.operatingContext,
+    input.financialsMarkdown, input.financialsReference, formatEvidence(input.evidence), formatContext(input.context), formatConflicts(input.conflicts)].filter(Boolean).join("\n");
+  return checkDocumentQuality(markdown, source, input.priorSections).ok;
 }
 
 /**
@@ -424,9 +441,11 @@ export async function streamSection(
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
+  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim()) : text.trim();
+  if (!checked || !validateSectionDraft(checked, input)) return { markdown: "", source: "failed" };
   /*
    * 스트리밍 화면에는 재무 블록이 델타로 흐르지 않지만, 최종 저장본에는 붙는다.
    * 클라이언트는 마지막 done 페이로드의 markdown/html로 갈아끼우므로 문제없다.
    */
-  return { markdown: appendFinancials(text.trim(), input), source: "ai" };
+  return { markdown: appendFinancials(checked, input), source: "ai" };
 }

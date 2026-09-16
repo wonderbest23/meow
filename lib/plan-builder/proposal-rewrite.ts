@@ -6,6 +6,8 @@ export const REWRITE_TIMEOUT_MS = 120000;
 export type RewriteTarget = { provider: string; model: string };
 export type RewritePayload = {
   businessName: string; businessDescription?: string;
+  sector?: string; purpose?: string;
+  sourceIds?: Record<string, string>;
   sources: ProposalSource["sections"];
   changes: Array<{ section: string; before: string; after: string }>;
   slides: Array<Omit<DeckSlide, "image" | "placement">>;
@@ -30,11 +32,19 @@ export type RewriteCommand = z.infer<typeof rewriteCommandSchema>;
 export const rewriteResultSchema = z.object({ slides: z.array(z.object({
   id: z.string().min(1).max(80), eyebrow: z.string().min(1).max(24), title: z.string().min(1).max(50),
   lead: z.string().max(100).nullable(), note: z.string().max(160).nullable(),
-  points: z.array(z.object({ label: z.string().min(1).max(20), detail: z.string().min(1).max(90) }).strict()).min(1).max(4).nullable(),
+  points: z.array(z.object({ id: z.string().max(80).optional(), label: z.string().min(1).max(20), detail: z.string().min(1).max(90) }).strict()).min(1).max(4).nullable(),
   metrics: z.array(z.object({ label: z.string().min(1).max(24), value: z.string().min(1).max(30), note: z.string().max(40).nullable() }).strict()).min(1).max(4).nullable(),
   table: z.object({ headers: z.array(z.string().min(1).max(12)).min(2).max(4), rows: z.array(z.array(z.string().max(25))).min(1).max(5) }).strict().nullable(),
   sourceSections: z.array(z.string().min(1).max(200)).min(1).max(4),
-}).strict()).min(1).max(6) }).strict();
+}).strict()).min(1).max(4) }).strict();
+
+// Editable point IDs are local identity, not text the model should regenerate.
+// Strict provider schemas cannot contain optional object properties.
+export const rewriteProviderResultSchema = rewriteResultSchema.extend({
+  slides: z.array(rewriteResultSchema.shape.slides.element.extend({
+    points: z.array(rewriteResultSchema.shape.slides.element.shape.points.unwrap().element.omit({ id: true })).min(1).max(4).nullable(),
+  })).min(1).max(4),
+});
 
 export function rewriteErrorMessage(code?: string) {
   if (code === "target_changed") return "AI 전송 대상이 바뀌어 중단했어요. 변경분과 전송 대상을 다시 확인해 주세요";
@@ -42,5 +52,5 @@ export function rewriteErrorMessage(code?: string) {
 }
 
 export function rewriteExpired(job: ProposalRewrite) {
-  return job.status === "running" && Date.now() - Date.parse(job.startedAt) > REWRITE_TIMEOUT_MS;
+  return job.status === "running" && Date.now() - Date.parse(job.startedAt) > REWRITE_TIMEOUT_MS * Math.max(1, Math.ceil(job.preview.payload.slides.length / 4));
 }

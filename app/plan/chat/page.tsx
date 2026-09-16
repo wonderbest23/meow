@@ -20,6 +20,7 @@ import ChatLoading from "./loading";
 import styles from "./page.module.css";
 import { CoachMessage, CoachResultCard, CoachSpeaker, CoachWelcome } from "../../../components/coach-chat-ui";
 import chatUi from "../../../components/coach-chat-ui.module.css";
+import BusinessIntake from "./BusinessIntake";
 
 type Snapshot = { planId: string; title: string; planType: string; updatedAt?: string; coach: CoachState; completed: string[]; total: number; hasDocuments?: boolean; manualReview?: string[]; job?: CoachJob | null; generation: { keys?: string[]; revision?: number; runId?: string } | null };
 type Payload = { plan?: Snapshot | null; message?: string; login?: boolean; authenticated?: boolean; paid?: boolean; runStatus?: string | null };
@@ -29,7 +30,7 @@ const PHASES = { queued: "요청을 접수했어요", understanding: "말씀하�
 const activeJob = (job?: CoachJob | null) => !!job && ["queued", "running"].includes(job.status);
 
 export default function BusinessCoachPage() {
-  return <Suspense fallback={<ChatLoading />}><BusinessCoach /></Suspense>;
+  return <Suspense fallback={<ChatLoading />}>{process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 === "1" ? <BusinessIntake /> : <BusinessCoach />}</Suspense>;
 }
 
 function BusinessCoach() {

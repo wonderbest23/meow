@@ -139,8 +139,8 @@ export function LandingQuickEditor({
             <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
           </section>
           <div className="landing-media-grid">
-            <LandingMediaField label="대표 이미지" description="첫 화면을 채우는 사진입니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => update({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} />
-            <LandingMediaField label="로고" description="없으면 사업 이름으로 깔끔하게 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => update({ logoImageUrl })} />
+            <LandingMediaField key={`hero:${projectId}:${draft.templateId}`} label="대표 이미지" description="첫 화면을 채우는 사진입니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => update({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} />
+            <LandingMediaField key={`logo:${projectId}:${draft.templateId}`} label="로고" description="없으면 사업 이름으로 깔끔하게 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => update({ logoImageUrl })} />
           </div>
           <div className="landing-simple-style"><strong>대표색</strong><div>{["#176b4d", "#2457a6", "#a04435", "#6d4ca3", "#222222"].map((color) => <button key={color} title={color} aria-label={`대표색 ${color}`} className={draft.accentColor === color ? "active" : ""} style={{ background: color }} onClick={() => update({ accentColor: color })} />)}<label title="직접 색상 선택"><input type="color" value={draft.accentColor} onChange={(event) => update({ accentColor: event.target.value })} /></label></div></div>
         </div>

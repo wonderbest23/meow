@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { ProposalDocument, ProposalSlideEdits } from "./proposal-revision";
-import type { ProposalOptions } from "./proposal-blueprint";
+import { PROPOSAL_LAYOUTS, type ProposalOptions } from "./proposal-blueprint";
 import type { ProposalRewrite } from "./proposal-rewrite";
 import type { DocumentRefreshJob } from "./document-refresh";
 
@@ -28,18 +28,30 @@ export function proposalHistory(saved: SavedProposal, reason: NonNullable<Propos
 }
 const box = z.object({ x: z.number().min(0).max(13.33), y: z.number().min(0).max(7.5), w: z.number().min(.25).max(13.33), h: z.number().min(.2).max(7.5) }).strict()
   .refine(value => value.x + value.w <= 13.33 && value.y + value.h <= 7.5, "슬라이드 안에 배치해 주세요");
+const element = z.string().regex(/^(title|lead|eyebrow|image|table|chart|point:[a-zA-Z0-9_-]{1,80}:(label|detail))$/);
+const crop = z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), w: z.number().min(.05).max(1), h: z.number().min(.05).max(1) }).strict().refine(value => value.x + value.w <= 1.000001 && value.y + value.h <= 1.000001, "이미지 범위 안에서 잘라 주세요");
+export const proposalImageSchema = z.object({ id: z.string().min(1).max(100), data: z.string().max(2_000_000).regex(/^data:image\/(png|jpeg);base64,[a-zA-Z0-9+/=]+$/), alt: z.string().trim().min(1).max(160), width: z.number().int().min(1).max(12000).optional(), height: z.number().int().min(1).max(12000).optional(), fit: z.enum(["contain", "cover"]).optional(), crop: crop.optional() }).strict().refine(value => !value.crop || !!(value.width && value.height), "자르기 전에 이미지 크기를 확인해 주세요");
+export const proposalChartSchema = z.object({
+  type: z.enum(["bar", "line"]), categories: z.array(z.string().trim().min(1).max(20)).min(1).max(12),
+  series: z.array(z.object({ id: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/), name: z.string().trim().min(1).max(24), values: z.array(z.number().finite().min(-1e12).max(1e12)).min(1).max(12) }).strict()).min(1).max(3),
+  unit: z.string().trim().min(1).max(12), basis: z.enum(["actual", "estimate"]), source: z.string().trim().min(1).max(160),
+}).strict().refine(value => value.series.every(series => series.values.length === value.categories.length) && new Set(value.series.map(series => series.id)).size === value.series.length, "차트의 항목 수와 계열을 확인해 주세요");
+export const proposalPagesSchema = z.array(z.object({ id: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/), sourceId: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/).optional(), layout: z.enum(PROPOSAL_LAYOUTS), appendix: z.boolean().optional() }).strict()).min(1).max(60).refine(pages => new Set(pages.map(page => page.id)).size === pages.length);
 export const proposalEditsSchema = z.object({
-  text: z.object({ title: z.string().trim().min(1).max(60).optional(), lead: z.string().max(140).optional(), note: z.string().max(4000).optional() }).strict().optional(),
-  layout: z.object({ title: box.optional(), lead: box.optional(), image: box.optional() }).strict().optional(),
+  text: z.object({ title: z.string().trim().min(1).max(60).optional(), lead: z.string().max(140).optional(), note: z.string().max(4000).optional(), eyebrow: z.string().max(40).optional() }).strict().optional(),
+  layout: z.record(element, box.optional()).optional(),
+  alignment: z.record(element, z.enum(["left", "center", "right"]).optional()).optional(),
   content: z.object({
-    points: z.array(z.object({ label: z.string().min(1).max(20), detail: z.string().min(1).max(90) }).strict()).min(1).max(4).optional(),
-    table: z.object({ headers: z.array(z.string().min(1).max(12)).min(2).max(4), rows: z.array(z.array(z.string().max(25))).min(1).max(5) }).strict().refine(value => value.rows.every(row => row.length === value.headers.length), "표의 열 수가 일치해야 해요").optional(),
+    points: z.array(z.object({ id: z.string().regex(/^[a-zA-Z0-9_-]{1,80}$/).optional(), label: z.string().min(1).max(20), detail: z.string().min(1).max(160) }).strict()).min(1).max(4).refine(points => new Set(points.map((point, index) => point.id ?? `p${index + 1}`)).size === points.length).optional(),
+    table: z.object({ headers: z.array(z.string().min(1).max(24)).min(2).max(4), rows: z.array(z.array(z.string().max(160))).min(1).max(8) }).strict().refine(value => value.rows.every(row => row.length === value.headers.length), "표의 열 수가 일치해야 해요").optional(),
+    metrics: z.array(z.object({ label: z.string().min(1).max(24), value: z.string().min(1).max(30), note: z.string().max(40).optional() }).strict()).min(1).max(4).optional(),
+    image: proposalImageSchema.nullable().optional(), chart: proposalChartSchema.nullable().optional(),
   }).strict().optional(),
 }).strict();
 const base = { requestId: z.string().uuid(), expectedRevision: z.number().int().min(0) };
 export const proposalCommandSchema = z.discriminatedUnion("type", [
   z.object({ ...base, type: z.literal("initialize"), generationToken: z.string().min(1).max(100) }).strict(),
-  z.object({ ...base, type: z.literal("save"), edits: z.record(z.string().min(1).max(80), proposalEditsSchema).refine(value => Object.keys(value).length <= 30) }).strict(),
+  z.object({ ...base, type: z.literal("save"), edits: z.record(z.string().min(1).max(80), proposalEditsSchema).refine(value => Object.keys(value).length <= 60 && JSON.stringify(value).length <= 8_000_000), pages: proposalPagesSchema.optional() }).strict(),
   z.object({ ...base, type: z.literal("restore"), revision: z.number().int().min(1) }).strict(),
 ]);
 export type ProposalCommand = z.infer<typeof proposalCommandSchema>;

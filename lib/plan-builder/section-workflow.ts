@@ -1,5 +1,7 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
-import { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, type PlanSectionJob } from "./section-service";
+import { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService, type PlanSectionJob } from "./section-service";
+import type { IntakeJobRequest } from "./intake-types";
+import { ARTIFACT_MAX_CHUNKS, type ArtifactJobRequest } from "./artifact-updates";
 import type { ProposalBackgroundJob } from "./proposal-background";
 import type { CoachJobRequest } from "./coach-job-types";
 import type { DeckJobRequest } from "./deck-job-types";
@@ -14,7 +16,7 @@ import type { DeckJobRequest } from "./deck-job-types";
  * 앞 섹션 결과를 뒤 섹션이 참고하므로 한 번에 하나씩 순서대로 만든다.
  */
 
-export type PlanSectionsWorkflowParams = ProposalBackgroundJob | ({ operation: "coach" } & CoachJobRequest) | ({ operation: "deck" } & DeckJobRequest) | {
+export type PlanSectionsWorkflowParams = ArtifactJobRequest | ProposalBackgroundJob | ({ operation: "intake" } & IntakeJobRequest) | ({ operation: "coach" } & CoachJobRequest) | ({ operation: "deck" } & DeckJobRequest) | {
   operation?: "sections";
   ownerHash: string;
   planId: string;
@@ -34,9 +36,29 @@ const retryOptions = {
 
 export class PlanSectionsWorkflow extends WorkflowEntrypoint<CloudflareEnv, PlanSectionsWorkflowParams> {
   async run(event: WorkflowEvent<PlanSectionsWorkflowParams>, step: WorkflowStep) {
+    if (event.payload.operation === "intake") {
+      const { operation: _operation, ...job } = event.payload;
+      return step.do("요청한 사업정보 정리", { timeout: "2 minutes", retries: { limit: 0, delay: "5 seconds" } }, async () => {
+        const service = this.env.WORKER_SELF_REFERENCE;
+        if (!service) throw new Error("SELF_REFERENCE_MISSING");
+        return callIntakeService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, job);
+      });
+    }
+    if (event.payload.operation === "artifact_update") {
+      const job = event.payload;
+      for (let index = 0; index < ARTIFACT_MAX_CHUNKS; index++) {
+        const result = await step.do(`artifact-${job.attempt}-${index}`, { timeout: "3 minutes", retries: { limit: 0, delay: "5 seconds" } }, async () => {
+          const service = this.env.WORKER_SELF_REFERENCE;
+          if (!service) throw new Error("SELF_REFERENCE_MISSING");
+          return callArtifactChunkService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, { ...job, index });
+        });
+        if (!result.ok || result.done) return result;
+      }
+      throw new Error("ARTIFACT_CHUNK_LIMIT");
+    }
     if (event.payload.operation === "document_refresh" || event.payload.operation === "proposal_rewrite") {
       const job = event.payload;
-      return step.do("승인된 문서 변경안 작성과 검토", { timeout: "3 minutes", retries: { limit: 0, delay: "5 seconds" } }, async () => {
+      return step.do("승인된 문서 변경안 작성과 검토", { timeout: "30 minutes", retries: { limit: 0, delay: "5 seconds" } }, async () => {
         const service = this.env.WORKER_SELF_REFERENCE;
         if (!service) throw new Error("SELF_REFERENCE_MISSING");
         return callProposalUpdateService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, job);

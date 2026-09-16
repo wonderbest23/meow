@@ -15,10 +15,23 @@
 .action { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 48px; max-width: 100%; margin-top: 28px; padding: 12px 20px; border: 0; border-radius: 8px; color: #fff; background: #2469de; font: inherit; font-weight: 650; cursor: pointer; }
 .action svg { flex: 0 0 18px; }
 .action:focus-visible { outline: 3px solid #93b8ff; outline-offset: 3px; }
-.photo { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; margin-top: 36px; }
+.photo { display: block; width: 100%; height: auto; object-fit: contain; border-radius: 8px; margin-top: 36px; }
 .details { padding: 24px; }
 .sectionTitle { margin: 16px 0; font-size: 24px; line-height: 1.5; font-weight: 700; }
 .fact { padding: 24px 0; border-bottom: 1px solid #e7ebef; }
 .fact:last-child { border-bottom: 0; }
 .fact h2 { margin: 0 0 12px; font-size: 18px; line-height: 1.5; font-weight: 700; }
 .fact p { margin: 0; color: #536273; font-size: 16px; line-height: 1.8; white-space: pre-wrap; }
+.desktop .header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 28px max(32px, calc((100% - 1120px) / 2)); }
+.desktop .header .brand { font-size: 20px; }
+.desktop .header .action { display: inline-flex; margin: 0; }
+.desktop .hero { max-width: 1184px; margin: 0 auto; padding: 64px 32px 40px; }
+.desktop .hero h1 { font-size: 48px; max-width: 100%; }
+.desktop .description { max-width: 840px; font-size: 20px; }
+.desktop .hero .photo { margin-top: 48px; }
+.desktop .details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 1184px; margin: 0 auto; padding: 40px 32px; }
+.desktop .details > :not(.fact) { grid-column: 1 / -1; }
+.desktop .fact { min-width: 0; }
+.desktop .fact:last-child { border-bottom: 1px solid #e7ebef; }
+.action span { min-width: 0; overflow-wrap: anywhere; }
+@media (prefers-reduced-motion: reduce) { .page * { animation: none !important; transition: none !important; } }

@@ -186,7 +186,7 @@ export function LandingBuilderPanel({ project }: { project: ProjectRecord }) {
               <div><small>자유 편집</small><strong>필요한 섹션만 골라 직접 구성하세요</strong><p>첫 화면, 장점, 사진, 이용 과정과 상품 섹션을 추가하고 끌어서 순서를 바꿀 수 있습니다.</p></div>
               <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
             </section>
-            <div className="landing-media-grid"><LandingMediaField label="대표 이미지" description="첫 화면에 크게 표시됩니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => updateDraft({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} /><LandingMediaField label="로고" description="없으면 사업 이름으로 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => updateDraft({ logoImageUrl })} /></div>
+            <div className="landing-media-grid"><LandingMediaField key={`hero:${project.id}:${draft.templateId}`} label="대표 이미지" description="첫 화면에 크게 표시됩니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => updateDraft({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} /><LandingMediaField key={`logo:${project.id}:${draft.templateId}`} label="로고" description="없으면 사업 이름으로 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => updateDraft({ logoImageUrl })} /></div>
           </section>
 
           <section className="landing-edit-section">

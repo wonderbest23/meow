@@ -1,24 +1,27 @@
 import { createHash } from "node:crypto";
 import { readCoach } from "./coach";
 import { deckFingerprint, deckSource } from "./deck-job";
-import { readDeckJob } from "./deck-job-types";
+import { publicDeckJob, readDeckJob } from "./deck-job-types";
 import { loadPlanState, savePlanState, type ServerPlan, type ServerPlanState } from "./plan-server-store";
 import { PROPOSAL_KEY, ProposalError, readSavedProposal, proposalCommandSchema, proposalHistory, type ProposalCommand, type SavedProposal } from "./proposal-editor";
-import { previewProposalSourceChange, renderableProposal, setProposalSlideEdits } from "./proposal-revision";
+import { previewProposalSourceChange, renderableProposal, setProposalSlideEdits, upgradeProposalV3, validateProposalPages, proposalPages } from "./proposal-revision";
 import { PPT_GENERATION_VERIFIED } from "./deck-availability";
 import { coachDocumentSnapshot } from "./coach-document";
 import { chaptersForType } from "./blueprint";
 import type { BusinessConditionsView } from "./proposal-business";
+import { artifactStaleItems, proposalReviewDocument, pruneArtifactSlideMetadata } from "./artifact-source-status";
+import { pruneProposalRetainedSlides } from "./proposal-revision";
 
 function view(state: ServerPlanState, planId: string) {
   const plan = state.plans.find(item => item.id === planId);
   if (!plan) throw new ProposalError("not_found", "이 사업을 찾을 수 없어요", 404);
   const saved = readSavedProposal(plan.answers);
+  if (saved) saved.document = proposalReviewDocument(plan, saved.document);
   const job = readDeckJob(plan.answers);
   const coach = readCoach(plan.answers), snapshot = coachDocumentSnapshot(plan);
   const items = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => {
     const key = `${chapter.id}/${section.id}`, content = plan.sections[key];
-    return { key, title: `${chapter.title} · ${section.title}`, current: !!content?.markdown && content.coachRevision === snapshot?.revision, manual: !!content?.edited, locked: !!content?.locked };
+    return { key, title: `${chapter.title} · ${section.title}`, current: !!content?.markdown && content.coachRevision === snapshot?.revision && !snapshot?.outdated.includes(key), manual: !!content?.edited, locked: !!content?.locked };
   }));
   const total = items.length;
   const business: BusinessConditionsView | null = coach && snapshot ? { revision: coach.revision, fields: coach.fields,
@@ -29,13 +32,13 @@ function view(state: ServerPlanState, planId: string) {
   try {
     const source = deckSource(plan, state.business);
     const fingerprint = deckFingerprint({ ...source, ...(saved?.presentation ? { presentation: saved.presentation } : {}) });
-    sourceChanged = !!saved && saved.fingerprint !== fingerprint;
+    sourceChanged = !!saved && (saved.fingerprint !== fingerprint || !!saved.document.retainedSlideIds?.length || artifactStaleItems(plan).some(id => id.startsWith("proposal:")));
     if (saved && sourceChanged) affectedSlides = previewProposalSourceChange(saved.document, source).affected.map(slide => slide.title);
   } catch { sourceChanged = !!saved; }
   return {
     title: plan.title, saved: saved ? { ...saved, receipts: undefined } : null, sourceChanged, affectedSlides, business,
     generationEnabled: PPT_GENERATION_VERIFIED,
-    generation: job ? { token: job.token, status: job.status, editable: job.status === "complete" && job.result?.blueprint?.version === 2 } : null,
+    generation: job ? { ...publicDeckJob(job)!, editable: job.status === "complete" && job.result?.blueprint?.version === 2 } : null,
   };
 }
 export async function loadProposalEditor(ownerHash: string, planId: string) { return view(await loadPlanState(ownerHash), planId); }
@@ -68,6 +71,7 @@ export async function saveProposalEditor(ownerHash: string, planId: string, inpu
     const plan = state.plans.find(item => item.id === planId);
     if (!plan) throw new ProposalError("not_found", "이 사업을 찾을 수 없어요", 404);
     const old = readSavedProposal(plan.answers);
+    const oldReviewDocument = old ? proposalReviewDocument(plan, old.document) : null;
     const receipt = old?.receipts.find(item => item.requestId === command.requestId);
     if (receipt) {
       if (receipt.signature !== signature) throw new ProposalError("request_reused", "저장 요청이 달라졌어요. 최신 내용을 불러와 주세요");
@@ -86,28 +90,28 @@ export async function saveProposalEditor(ownerHash: string, planId: string, inpu
       if (deckFingerprint({ ...source, ...(job.presentation ? { presentation: job.presentation } : {}) }) !== job.fingerprint) throw new ProposalError("source_changed", "생성 후 원문이 바뀌었어요. 최신 원문으로 다시 생성해 주세요");
       next = { version: 1, revision: 1, savedAt: at, generationToken: job.token, fingerprint: job.fingerprint,
         ...(job.presentation ? { presentation: job.presentation } : {}),
-        document: { revision: 1, source: { businessName: source.businessName, businessDescription: source.businessDescription, sections: source.sections }, deck: structuredClone(job.result), edits: {} }, history: [], receipts: [] };
+        document: upgradeProposalV3({ revision: 1, source: { businessName: source.businessName, businessDescription: source.businessDescription, sections: source.sections }, deck: structuredClone(job.result), edits: {} }), history: [], receipts: [] };
     } else {
       if (!old) throw new ProposalError("not_initialized", "먼저 생성 결과를 편집본으로 열어 주세요");
       const restored = command.type === "restore" ? old.history.find(version => version.revision === command.revision) : undefined;
-      const baseDocument = restored?.document ?? old.document;
+      const baseDocument = upgradeProposalV3(restored?.document ?? oldReviewDocument!);
+      if (command.type === "save" && command.pages) {
+        try { validateProposalPages(baseDocument, command.pages); } catch { throw new ProposalError("invalid_pages", "페이지 순서와 원본을 확인해 주세요", 400); }
+        baseDocument.pages = structuredClone(command.pages);
+      }
+      baseDocument.retainedSlideIds = pruneProposalRetainedSlides(baseDocument).retainedSlideIds;
+      pruneArtifactSlideMetadata(plan, baseDocument);
       const edits = command.type === "restore" ? restored?.edits : command.edits;
       if (!edits) throw new ProposalError("version_not_found", "보관 기간이 지난 버전이에요. 최근 버전을 선택해 주세요");
-      const ids = new Set(baseDocument.deck.slides.map(slide => slide.id));
+      const ids = new Set(proposalPages(baseDocument).map(slide => slide.id));
       for (const [id, edit] of Object.entries(edits)) {
         if (!ids.has(id)) throw new ProposalError("invalid_slide", "존재하지 않는 슬라이드예요", 400);
-        const original = baseDocument.deck.slides.find(slide => slide.id === id)!;
-        if (edit.layout?.image && !original.image) throw new ProposalError("invalid_image", "이미지가 없는 슬라이드예요", 400);
-        if (edit.content?.table && !original.table) throw new ProposalError("invalid_table", "표가 없는 슬라이드예요", 400);
-        if (edit.content?.points && !original.points?.length) throw new ProposalError("invalid_points", "본문 항목이 없는 슬라이드예요", 400);
-        const pointLimit = original.composition?.layout === "summary" ? 40 : edit.content?.points?.length === 4 ? 60 : 90;
-        if (edit.content?.points?.some(point => point.detail.length > pointLimit)) throw new ProposalError("content_too_long", `이 슬라이드의 본문은 항목당 ${pointLimit}자까지 저장할 수 있어요`, 400);
         setProposalSlideEdits(baseDocument, id, edit, baseDocument.revision);
       }
       next = { ...structuredClone(old), revision: old.revision + 1, savedAt: at,
         fingerprint: restored?.fingerprint ?? old.fingerprint,
         document: { ...structuredClone(baseDocument), revision: old.revision + 1, edits: structuredClone(edits) },
-        history: proposalHistory(old, command.type === "restore" ? "restore" : "edit") };
+        history: proposalHistory({ ...old, document: oldReviewDocument! }, command.type === "restore" ? "restore" : "edit") };
     }
     renderableProposal(next.document);
     next.receipts = [...next.receipts, { requestId: command.requestId, signature, revision: next.revision }].slice(-64);

@@ -58,6 +58,8 @@
 .empty h2 { font-size: 26px; margin: 0; }
 .empty p { color: #677384; font-size: 15px; line-height: 1.8; max-width: 520px; margin: 0; }
 .empty a { color: #2867ca; }
+.empty > button:not(.primary) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid #d7dee8; border-radius: 6px; background: #fff; color: #334155; font-size: 14px; font-weight: 600; }
+.empty > button:not(.primary):hover { background: #eaf0f8; }
 .spin { animation: spin 1s linear infinite; }
 .editScope { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 .editScope a { font-size: 11px; color: #2867ca; }
@@ -131,6 +133,25 @@
 .updateActions > a { font-size: 13px; color: #2867ca; align-self: center; text-decoration: none; padding: 10px 0; }
 .documentText { font: inherit; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 420px; overflow-y: auto; }
 .draftSummary { margin: -8px 0 20px; color: #51677f; font-size: 13px; line-height: 1.7; }
+.page select { font: inherit; color: inherit; background: #fff; border: 1px solid #d8dee7; border-radius: 5px; padding: 9px; min-width: 0; max-width: 100%; }
+.inspector select { width: 100%; font-size: 13px; }
+.pageTools, .compactTools { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin: 10px 0 18px; }
+.pageTools button, .compactTools button, .controlButton, .tableRow button { display: inline-flex; align-items: center; justify-content: center; gap: 5px; min-height: 34px; min-width: 34px; padding: 6px 8px; border: 1px solid #dce2e9; border-radius: 5px; background: #fff; color: #43556e; font-size: 12px; }
+.pageTools select { max-width: 140px; font-size: 12px; }
+.pageTools .appendix { display: inline-flex; align-items: center; gap: 5px; color: #56657a; font-size: 12px; }
+.appendix input { accent-color: #2867ca; }
+.layoutWarnings { padding: 16px 0; border-bottom: 1px solid #e0d3b7; color: #885b25; font-size: 12px; }
+.layoutWarnings strong { display: block; margin-bottom: 8px; }
+.layoutWarnings button { display: block; text-align: left; border: 0; background: transparent; color: inherit; padding: 5px 0; font-size: 12px; line-height: 1.6; }
+.validation { color: #a34234; font-size: 12px; line-height: 1.6; }
+.tableRow textarea { min-width: 0; flex: 1; padding: 6px; font-size: 11px; }
+.tableRow button { padding: 4px; min-width: 26px; }
+.inspector input[type=range] { border: 0; padding: 0; accent-color: #2867ca; }
+.inspector input[hidden] { display: none; }
+.inspector details { margin: 16px 0; font-size: 12px; }
+.inspector summary { margin-bottom: 16px; cursor: pointer; }
+.generationOptions { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.generationOptions label { display: flex; flex-direction: column; gap: 8px; text-align: left; font-size: 13px; }
 @media (max-width: 640px) {
   .businessFields { grid-template-columns: minmax(0,1fr); gap: 16px; }
   .businessFields input { font-size: 16px; }

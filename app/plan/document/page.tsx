@@ -12,6 +12,7 @@ import { useDeckExport } from "./use-deck-export";
 import { useDocumentEdits } from "./use-document-edits";
 import { coachDocumentRevision, readCoach } from "../../../lib/plan-builder/coach";
 import type { DocumentReviewSource } from "./DocumentSourceReview";
+import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 export default function PlanDocumentPage() {
@@ -31,7 +32,16 @@ export default function PlanDocumentPage() {
   const [contextNotice, setContextNotice] = useState("");
   const [completionKey, setCompletionKey] = useState<string | null>(null);
   const [reviewSource, setReviewSource] = useState<DocumentReviewSource | null>(null);
+  const [summary, setSummary] = useState<ExecutiveSummary | null>(null);
+  const [summaryError, setSummaryError] = useState("");
   function updateSourceStatus(plan: Plan) {
+    try {
+      const nextSummary = buildExecutiveSummary(plan, documentContext(loadState(), plan.id)?.business);
+      setSummary(isSamplePlan(plan.id) || !hasExecutiveSummaryContent(nextSummary) ? null : nextSummary);
+      setSummaryError("");
+    } catch {
+      setSummary(null); setSummaryError("저장된 실적 기록을 읽지 못해 한 장 요약을 표시하지 않았습니다. 기존 문서는 유지되어 있습니다.");
+    }
     const coach = readCoach(plan.answers), snapshot = coachDocumentSnapshot(plan);
     setCompletionKey(isSamplePlan(plan.id) ? null : completedDocumentKey(plan));
     setReviewSource(coach ? { revision: coachDocumentRevision(coach), fields: coach.fields, sections: Object.fromEntries(Object.entries(plan.sections).filter(([, section]) => section.coachRevision !== coachDocumentRevision(coach)).map(([key, section]) => [key, section.generatedAt])) } : null);
@@ -136,8 +146,8 @@ export default function PlanDocumentPage() {
     if (sections.length) await deck.startOrDownload();
   }
 
-  async function handleExport(format: "pdf" | "docx") {
-    if (!sections.length) return;
+  async function handleExport(format: "pdf" | "docx", view: "summary" | "detailed" = "detailed") {
+    if (!sections.length && view !== "summary") return;
     setExporting(format);
     try {
       const context = documentContext(loadState(), documentPlanId);
@@ -148,6 +158,8 @@ export default function PlanDocumentPage() {
         body: JSON.stringify({
           title,
           format,
+          view,
+          sourceVersion: view === "summary" ? summary?.sourceVersion : undefined,
           planType,
           planId: context.plan.id,
           business: context.business,
@@ -159,18 +171,21 @@ export default function PlanDocumentPage() {
         goPay();
         return;
       }
-      if (!res.ok) throw new Error("export failed");
+      if (!res.ok) {
+        const failure = await res.json().catch(() => ({}));
+        throw new Error(failure.message || "파일을 만들지 못했습니다. 저장된 문서는 유지되어 있습니다.");
+      }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `${title}.${format}`;
+      a.download = `${title}${view === "summary" ? " 한 장 요약" : ""}.${format}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-    } catch {
-      alert("내보내기에 실패했습니다. 생성된 섹션이 있는지 확인해주세요.");
+    } catch (error) {
+      setDeckError(error instanceof Error ? error.message : "파일을 만들지 못했습니다. 저장된 문서는 유지되어 있습니다.");
     } finally {
       setExporting(null);
     }
@@ -217,6 +232,7 @@ export default function PlanDocumentPage() {
   }
 
   return <DocumentWorkspace title={title} planId={documentPlanId} planType={planType} ready={ready}
+    summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;
       edits.acceptReviewed(documentPlanId, key, section, updatedAt);
@@ -228,12 +244,12 @@ export default function PlanDocumentPage() {
     exporting={exporting} locked={locked} accessPending={!isSample && access === null}
     accessError={accessError} onRetryAccess={() => void retryAccess()}
     deckStatus={isSample ? "" : deck.message} deckLabel={isSample ? "PPT 샘플 내려받기" : deck.label}
-    error={deckError || deck.error} onDownload={(format) => {
+    error={deckError || deck.error} onDownload={(format, view) => {
       const file = sampleFile(format);
       if (file) { window.open(file, "_blank", "noopener"); return; }
       if (edits.hasPending()) { setDeckError("수정 내용을 먼저 저장한 뒤 파일을 받아주세요."); return; }
       setDeckError(null);
       if (locked) { goPay(); return; }
-      if (format === "pptx") void handleDeck(); else void handleExport(format);
-    }} canDownload={(format) => !!sampleFile(format) || (!busy && (format !== "pptx" || (!deck.busy && deck.canRequest)))} />;
+      if (format === "pptx") void handleDeck(); else void handleExport(format, view);
+    }} canDownload={(format, view) => !!sampleFile(format) || (view === "summary" ? !!summary && exporting === null && !isSample && !edits.pending && format !== "pptx" : !busy && (format !== "pptx" || (!deck.busy && deck.canRequest)))} />;
 }

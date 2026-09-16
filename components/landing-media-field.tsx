@@ -1,7 +1,8 @@
 "use client";
 
 import { Image as ImageIcon, Upload, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import LandingImageCrop from "./landing-image-crop";
 
 export async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Blob> {
   if (!file.type.startsWith("image/")) throw new Error("이미지 파일만 올릴 수 있습니다.");
@@ -46,14 +47,29 @@ export async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Bl
  * 받아들이고, 여기서는 새로 올리는 것만 주소로 바꾼다.
  */
 export async function uploadImage(blob: Blob, kind: "logo" | "hero") {
+  return (await uploadEditorImage(blob, kind, false)).url;
+}
+
+export type EditorImageUpload = { url: string; cleanupToken?: string };
+
+export async function uploadEditorImage(blob: Blob, kind: "logo" | "hero", editorDraft = true): Promise<EditorImageUpload> {
   const form = new FormData();
   form.append("file", new File([blob], `${kind}.${blob.type === "image/png" ? "png" : "jpg"}`, { type: blob.type }));
+  if (editorDraft) form.append("editorDraft", "true");
   const res = await fetch("/api/uploads", { method: "POST", body: form });
-  const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string };
+  const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string; cleanupToken?: string };
   if (!res.ok || !data.url) {
     throw new Error(data.message ?? "사진을 올리지 못했습니다. 잠시 후 다시 시도해주세요.");
   }
-  return data.url;
+  return { url: data.url, cleanupToken: data.cleanupToken };
+}
+
+export async function discardEditorImage(receipt: EditorImageUpload) {
+  if (!receipt.cleanupToken) return false;
+  try {
+    const response = await fetch("/api/uploads", { method: "DELETE", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ cleanupToken: receipt.cleanupToken }), keepalive: true });
+    return response.ok;
+  } catch { return false; }
 }
 
 export function LandingMediaField({
@@ -72,19 +88,54 @@ export function LandingMediaField({
   const inputRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [pending, setPending] = useState<EditorImageUpload | null>(null);
+  const pendingRef = useRef<EditorImageUpload | null>(null);
+  const active = useRef(true);
+  const operation = useRef(0);
+  const latest = useRef({ value, onChange, version: 0 });
+  if (latest.current.value !== value) latest.current.version++;
+  latest.current.value = value;
+  latest.current.onChange = onChange;
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+      operation.current++;
+      if (pendingRef.current) void discardEditorImage(pendingRef.current);
+    };
+  }, []);
 
   const choose = async (file?: File) => {
-    if (!file) return;
+    if (!file || loading || pendingRef.current) return;
+    const request = ++operation.current;
+    const before = { value: latest.current.value, version: latest.current.version };
     setLoading(true);
     setError("");
     try {
-      onChange(await uploadImage(await resizeImage(file, kind), kind));
+      const blob = await resizeImage(file, kind);
+      if (!active.current || operation.current !== request) return;
+      const receipt = await uploadEditorImage(blob, kind);
+      if (!active.current || operation.current !== request) { void discardEditorImage(receipt); return; }
+      if (latest.current.value !== before.value || latest.current.version !== before.version) {
+        pendingRef.current = receipt;
+        setPending(receipt);
+      } else latest.current.onChange(receipt.url);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "이미지를 처리하지 못했습니다.");
+      if (active.current && operation.current === request) setError(cause instanceof Error ? cause.message : "이미지를 처리하지 못했습니다.");
     } finally {
-      setLoading(false);
-      if (inputRef.current) inputRef.current.value = "";
+      if (active.current && operation.current === request) {
+        setLoading(false);
+        if (inputRef.current) inputRef.current.value = "";
+      }
     }
+  };
+  const resolve = (apply: boolean) => {
+    const receipt = pendingRef.current;
+    if (!receipt) return;
+    if (apply) latest.current.onChange(receipt.url); else void discardEditorImage(receipt);
+    pendingRef.current = null;
+    setPending(null);
   };
 
   return (
@@ -97,9 +148,15 @@ export function LandingMediaField({
         <p>{description}</p>
         {error && <small>{error}</small>}
       </div>
-      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => void choose(event.target.files?.[0])} />
-      <button type="button" onClick={() => inputRef.current?.click()} disabled={loading}><Upload /> {loading ? "처리 중" : "이미지 선택"}</button>
-      {value && <button type="button" className="remove" title={`${label} 삭제`} aria-label={`${label} 삭제`} onClick={() => onChange("")}>삭제</button>}
+      <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => { setCropFile(event.target.files?.[0] ?? null); event.target.value = ""; }} />
+      <button type="button" onClick={() => inputRef.current?.click()} disabled={loading || !!pending}><Upload /> {loading ? "처리 중" : "이미지 선택"}</button>
+      {value && <button type="button" className="remove" title={`${label} 삭제`} aria-label={`${label} 삭제`} onClick={() => { latest.current.version++; latest.current.value = ""; latest.current.onChange(""); }}>삭제</button>}
+      {pending ? <aside className="landing-media-conflict" role="region" aria-label={`${label} 변경 내용 비교`}>
+        <p>업로드 중 사진이 변경됐어요</p>
+        <img src={pending.url} alt="새로 업로드한 사진" />
+        <div><button type="button" onClick={() => resolve(false)}>현재 사진 유지</button><button type="button" onClick={() => resolve(true)}>새 사진 적용</button></div>
+      </aside> : null}
+      <LandingImageCrop file={cropFile} maxOutputEdge={kind === "logo" ? 600 : 1600} onApply={file => { setCropFile(null); void choose(file); }} onCancel={() => setCropFile(null)} />
     </section>
   );
 }

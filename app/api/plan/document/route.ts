@@ -3,11 +3,14 @@ import { resolvePlanAccess } from "../../../../lib/plan-builder/access";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
+import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../../lib/plan-builder/executive-summary";
 
 export const runtime = "nodejs";
 
 // 플랜 문서 내보내기 — 생성된 섹션들을 표지·목차와 함께 하나의 문서로 조립해 PDF/DOCX로 렌더.
 // 기존 lib/delivery 렌더러(한글 폰트 서브셋 임베드)를 그대로 재사용.
+
+import { withoutRepeatedSectionHeading } from "../../../../lib/delivery/document-section";
 
 type SectionInput = { chapterTitle?: string; sectionTitle?: string; markdown?: string };
 
@@ -41,6 +44,8 @@ export async function POST(req: Request) {
     sections?: SectionInput[];
     planType?: string;
     planId?: string;
+    view?: "summary" | "detailed";
+    sourceVersion?: string;
     business?: { name?: string; description?: string; industry?: string; region?: string; stage?: string };
   };
 
@@ -57,13 +62,23 @@ export async function POST(req: Request) {
   }
 
   let manualReview: string[] = [];
+  let summary: ExecutiveSummary | undefined;
+  if (body.view === "summary" && !body.planId) return Response.json({ message: "요약할 사업을 선택해 주세요." }, { status: 400 });
   if (body.planId) {
     const identity = await requireGuestIdentity();
-    const plan = (await loadPlanState(identity.hash)).plans.find(p => p.id === body.planId);
+    const state = await loadPlanState(identity.hash);
+    const plan = state.plans.find(p => p.id === body.planId);
     if (!plan) return Response.json({ message: "문서를 찾을 수 없습니다." }, { status: 404 });
+    if (body.view === "summary") {
+      try { summary = buildExecutiveSummary(plan, state.business); }
+      catch { return Response.json({ message: "저장된 실적 기록을 읽지 못했습니다. 원본은 변경하지 않았습니다." }, { status: 409 }); }
+      if (!hasExecutiveSummaryContent(summary)) return Response.json({ message: "사업 내용이나 고객을 먼저 정리한 뒤 요약을 받아주세요." }, { status: 422 });
+      if (body.sourceVersion && body.sourceVersion !== summary.sourceVersion) return Response.json({ message: "사업 정보가 바뀌었습니다. 문서를 다시 열어 최신 요약을 확인해 주세요." }, { status: 409 });
+      body.title = plan.title; body.planType = plan.planType; body.business = state.business;
+    }
     const snapshot = coachDocumentSnapshot(plan);
     if (snapshot) {
-      if (snapshot.stale.length || snapshot.missing.length) return Response.json({ message: "대화에서 최신 내용을 문서에 반영한 뒤 내려받아주세요. 기존 내용은 유지되어 있습니다." }, { status: 409 });
+      if (!summary && (snapshot.stale.length || snapshot.missing.length)) return Response.json({ message: "대화에서 최신 내용을 문서에 반영한 뒤 내려받아주세요. 기존 내용은 유지되어 있습니다." }, { status: 409 });
       body.title = plan.title; body.planType = plan.planType; body.business = snapshot.business; body.sections = snapshot.sections;
       manualReview = snapshot.manualReview;
     }
@@ -72,7 +87,7 @@ export async function POST(req: Request) {
   const format = body.format === "docx" ? "docx" : "pdf";
   const sections = Array.isArray(body.sections) ? body.sections.filter((s) => s?.markdown) : [];
 
-  if (sections.length === 0) {
+  if (!summary && sections.length === 0) {
     return new Response(JSON.stringify({ error: "no sections" }), { status: 400, headers: { "Content-Type": "application/json" } });
   }
 
@@ -94,7 +109,7 @@ export async function POST(req: Request) {
     bodyLines.push(`## ${ci + 1}. ${chapter}`, "");
     items.forEach((s, si) => {
       bodyLines.push(`### ${ci + 1}.${si + 1} ${s.sectionTitle || "섹션"}`, "");
-      bodyLines.push(demoteHeadings((s.markdown || "").trim()), "");
+      bodyLines.push(demoteHeadings(withoutRepeatedSectionHeading((s.markdown || "").trim(), s.sectionTitle || "섹션")), "");
     });
   });
 
@@ -107,6 +122,7 @@ export async function POST(req: Request) {
     type: body.planType || "사업계획서",
     versionLabel: "초안",
     markdown: assembled,
+    ...(summary ? { executiveSummary: summary } : {}),
   };
 
   const biz = body.business ?? {};
@@ -150,7 +166,7 @@ export async function POST(req: Request) {
     console.error("plan document render failed", { format, sections: sections.length, chars: assembled.length, message });
     return new Response(JSON.stringify({ error: "render_failed", message }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
-  const safe = title.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-").slice(0, 60);
+  const safe = `${title}${summary ? " 한 장 요약" : ""}`.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-").slice(0, 60);
   // 헤더는 Latin-1만 허용 → ASCII 폴백 + RFC 5987(UTF-8)로 한글 파일명 전달
   const ascii = safe.replace(/[^\x20-\x7E]/g, "") || "plan";
   const disposition = `attachment; filename="${ascii}.${format}"; filename*=UTF-8''${encodeURIComponent(safe)}.${format}`;

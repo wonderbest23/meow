@@ -28,6 +28,7 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
   const [consent, setConsent] = useState(false);
   const generationRequest = useRef<Extract<RewriteCommand, { type: "generate" }> | null>(null);
   const job = saved.rewrite;
+  const retainedCharts = renderableProposal(saved.document).slides.filter(slide => slide.chart && saved.document.retainedSlideIds?.includes(slide.id!));
   const pending = !!job && ["running", "ready", "failed"].includes(job.status);
   const expired = job && rewriteExpired(job);
   const impact = job?.status === "ready" ? job.preview.impact : preview?.impact;
@@ -59,9 +60,11 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
   }
   if (!sourceChanged && !pending) return null;
   return <section className={styles.sourceUpdate} aria-label="원문 변경 반영">
+    {retainedCharts.length > 0 && <p role="status">차트 확인 필요 {retainedCharts.length}개 페이지. 본문 갱신은 차트 값을 바꾸거나 최신으로 확인하지 않습니다</p>}
     <div className={styles.updateHeading}><FileDiff size={19} /><div><strong>{job?.status === "ready" ? "검토할 새 문안이 있어요" : "원문과 제안서의 변경분"}</strong><p>현재 제안서는 승인 전까지 그대로 유지됩니다</p></div>
       <button disabled={!canUpdate || loading} onClick={() => { if (open) setOpen(false); else if (pending) setOpen(true); else void inspect(); }}>{open ? "접기" : job?.status === "ready" ? "새 문안 검토" : "변경분 확인"}</button>
       <Link href={`/plan/document?planId=${encodeURIComponent(planId)}`}>원문 수정</Link>
+      <Link href={`/plan/workspace?planId=${encodeURIComponent(planId)}&tab=documents`}>결과물 변경 관리</Link>
     </div>
     {open && <div className={styles.updateBody}>
       {message && <p role="alert">{message}</p>}
@@ -74,10 +77,11 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
         <details className={styles.sourceDiff}><summary>바뀐 원문 {impact.changedSections.length}개</summary>{(job?.status === "ready" ? job.preview : preview)?.payload.changes.map(change => <section key={change.section}><h3>{change.section}</h3><div className={styles.compare}><div><small>이전</small><pre>{change.before || "없음"}</pre></div><div><small>현재</small><pre>{change.after || "삭제됨"}</pre></div></div></section>)}</details>
       </>}
       {job?.status === "ready" && <><div className={styles.reviewPages}>{job.preview.impact.affected.map(item => {
-        const before = renderableProposal(saved.document).slides.find(slide => slide.id === item.slideId)!;
+        const before = renderableProposal(saved.document).slides.find(slide => slide.id === item.slideId) ?? saved.document.deck.slides.find(slide => slide.id === item.slideId)!;
         const after = job.slides!.find(slide => slide.id === item.slideId)!;
         return <article key={item.slideId}><h3>{before.eyebrow || item.title}</h3><div className={styles.compare}><div><small>현재 저장본</small><SlideContent slide={before} /></div><div><small>원문을 반영한 문안</small><SlideContent slide={after} previous={before} /></div></div>
-          {item.textConflict && <fieldset><legend>직접 수정한 문안이 있어요</legend><label><input type="radio" name={item.slideId} checked={choices[item.slideId] === "keep_manual"} onChange={() => setChoices({ ...choices, [item.slideId]: "keep_manual" })} />내 문안 유지</label><label><input type="radio" name={item.slideId} checked={choices[item.slideId] === "use_revised"} onChange={() => setChoices({ ...choices, [item.slideId]: "use_revised" })} />새 문안으로 교체</label>{choices[item.slideId] === "keep_manual" && <p>직접 고친 항목은 이전 가격이나 조건이 남을 수 있어요. 유지할 내용을 확인해 주세요</p>}</fieldset>}
+          {before.chart && <p role="status">차트 값은 이번 문안 갱신에 포함되지 않아 그대로 보관됩니다. 본문을 교체해도 차트가 있는 페이지는 최신 확인이 필요한 상태로 남습니다</p>}
+          {item.textConflict && <fieldset><legend>직접 수정한 항목이나 확인할 차트가 있어요</legend><label><input type="radio" name={item.slideId} checked={choices[item.slideId] === "keep_manual"} onChange={() => setChoices({ ...choices, [item.slideId]: "keep_manual" })} />내 문안 유지</label><label><input type="radio" name={item.slideId} checked={choices[item.slideId] === "use_revised"} onChange={() => setChoices({ ...choices, [item.slideId]: "use_revised" })} />새 문안으로 교체</label>{choices[item.slideId] === "keep_manual" && <p>직접 고친 항목은 이전 가격이나 조건이 남을 수 있어요. 유지할 내용을 확인해 주세요</p>}</fieldset>}
         </article>;
       })}</div><div className={styles.updateActions}><button disabled={loading || !canUpdate} onClick={() => void command({ type: "dismiss", id: job.id })}><X size={16} />반영하지 않기</button><button className={styles.primary} disabled={loading || !canUpdate || job.preview.impact.affected.some(item => item.textConflict && !choices[item.slideId])} onClick={() => void command({ type: "apply", id: job.id, expectedRevision: saved.revision, choices })}><Check size={16} />확인한 문안 반영</button></div></>}
       {preview && !pending && <><ul className={styles.impactList}>{preview.impact.affected.map(item => <li key={item.slideId}>{item.title}{item.textConflict && <small>직접 수정한 문안 있음</small>}</li>)}</ul>

@@ -7,7 +7,9 @@ export type ProposalStage = typeof PROPOSAL_STAGES[number];
 export const PROPOSAL_EVIDENCE = ["images", "pricing", "financials", "actuals", "schedule", "references"] as const;
 export type ProposalEvidence = typeof PROPOSAL_EVIDENCE[number];
 export type EvidenceAvailability = Record<ProposalEvidence, boolean>;
-export type ProposalLayout = "cover" | "summary" | "columns" | "process" | "table" | "timeline" | "evidence" | "closing";
+export const PROPOSAL_LAYOUTS = ["cover", "summary", "columns", "process", "table", "timeline", "evidence", "chart", "closing"] as const;
+export type ProposalLayout = typeof PROPOSAL_LAYOUTS[number];
+export const PROPOSAL_LAYOUT_LABELS: Record<ProposalLayout, string> = { cover: "표지", summary: "핵심 요약", columns: "비교", process: "과정", table: "표", timeline: "일정", evidence: "이미지와 설명", chart: "데이터 차트", closing: "다음 단계" };
 export type ProposalRole = "cover" | "summary" | "problem" | "solution" | "offering" | "workflow" | "commercial" | "evidence" | "economics" | "roadmap" | "risks" | "team" | "ask" | "close";
 
 export type ProposalOptions = {

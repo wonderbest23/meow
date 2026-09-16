@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { EXTENSION_APPROVAL_ID, SyntheticAiBudget } from "./synthetic-ai-budget";
+import { EXTENSION_APPROVAL_ID, INDUSTRY_APPROVAL_ID, SyntheticAiBudget } from "./synthetic-ai-budget";
 
 async function main() {
 const root = mkdtempSync(join(tmpdir(), "oneul-budget-test-"));
@@ -53,6 +53,14 @@ try {
   const capped = new SyntheticAiBudget(root, 1); assert.equal(capped.summary().limitUsd, 1); capped.close();
   const resumed = new SyntheticAiBudget(root, 10, { id: EXTENSION_APPROVAL_ID, additionalUsd: 5 }); assert.equal(resumed.summary().limitUsd, 6); resumed.close();
   assert.throws(() => new SyntheticAiBudget(join(root, "missing-ledger"), 10, { id: EXTENSION_APPROVAL_ID, additionalUsd: 5 }), /original ledger/);
+  const industry = new SyntheticAiBudget(root, 30, { id: INDUSTRY_APPROVAL_ID, additionalUsd: 20 });
+  assert.equal(industry.summary().authorizedLimitUsd, 26);
+  assert.equal(industry.summary().reservedUpperBoundUsd, reserved);
+  assert.equal(industry.summary().extensions.length, 2); industry.close();
+  const industryAgain = new SyntheticAiBudget(root, 30, { id: INDUSTRY_APPROVAL_ID, additionalUsd: 20 });
+  assert.equal(industryAgain.summary().authorizedLimitUsd, 26, "Industry approval may be applied only once"); industryAgain.close();
+  assert.throws(() => new SyntheticAiBudget(root, 30.01, { id: INDUSTRY_APPROVAL_ID, additionalUsd: 20 }), /approval/i);
+  assert.throws(() => new SyntheticAiBudget(join(root, "missing-industry-ledger"), 30, { id: INDUSTRY_APPROVAL_ID, additionalUsd: 20 }), /original ledger/);
   console.log("synthetic AI budget: pre-call reservation, cumulative limit, lock, restart, timeout retention, endpoint/tier restrictions and corrupt-ledger refusal passed");
 } finally { rmSync(root, { recursive: true, force: true }); }
 }

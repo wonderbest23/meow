@@ -1,0 +1,63 @@
+import assert from "node:assert/strict";
+import { execFile } from "node:child_process";
+import { randomUUID } from "node:crypto";
+import { promisify } from "node:util";
+import { localCredentials } from "./local-account-lab.mts";
+
+const credentials = await localCredentials();
+const url = new URL(credentials.dbUrl);
+assert.equal(url.hostname, "127.0.0.1"); assert.equal(url.port, "55432");
+const prefix = randomUUID().slice(0, 8);
+const sql = `begin;
+do $$
+declare
+  project uuid := gen_random_uuid(); site uuid := gen_random_uuid(); lead uuid := gen_random_uuid();
+  rollback_lead uuid := gen_random_uuid(); token uuid := gen_random_uuid(); n integer; s text;
+begin
+  if to_regclass('public.landing_lead_notifications') is null then raise exception 'Apply local migration 0034 first'; end if;
+  insert into public.projects(id,title,guest_token_hash,opportunity) values(project,'QA lead ${prefix}','qa-lead-${prefix}','{}');
+  insert into public.landing_sites(id,project_id,slug,draft) values(site,project,'qa-lead-${prefix}','{}');
+  insert into public.landing_leads(id,site_id,name,email,privacy_agreed) values(lead,site,'QA local','qa-local@example.invalid',true);
+  select count(*) into n from public.landing_lead_notifications where lead_id=lead and site_id=site and status='pending';
+  assert n=1, 'Lead and outbox must be inserted together';
+  begin
+    insert into public.landing_leads(id,site_id,name,email,privacy_agreed) values(rollback_lead,site,'QA rollback','qa-local@example.invalid',true);
+    raise exception 'rollback fixture';
+  exception when raise_exception then null;
+  end;
+  assert not exists(select 1 from public.landing_lead_notifications where lead_id=rollback_lead), 'Rollback cannot leave an orphan notification';
+  select count(*) into n from public.claim_landing_lead_notification(lead,token,false);
+  assert n=1, 'First worker claims the row';
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),true);
+  assert n=0, 'Second worker must not override an active lease';
+  update public.landing_lead_notifications set lease_until=now()-interval '1 second' where lead_id=lead;
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),false);
+  assert n=1, 'Expired lease can be recovered';
+  update public.landing_lead_notifications set status='retry', lease_until=null,lease_token=null,next_attempt_at=now()+interval '10 minutes' where lead_id=lead;
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),false);
+  assert n=0, 'Background drain must honor retry delay';
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),true);
+  assert n=1, 'Explicit retry may claim before due time';
+  update public.landing_lead_notifications set status='blocked',lease_until=null,lease_token=null,error_code='missing_email_config' where lead_id=lead;
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),false);
+  assert n=0, 'Missing configuration must not hot loop';
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),true);
+  assert n=1, 'Explicit retry can recover blocked configuration';
+  update public.landing_lead_notifications set status='sent',lease_until=null,lease_token=null where lead_id=lead;
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),true);
+  assert n=0, 'Sent notification cannot be claimed again';
+  update public.landing_lead_notifications set status='processing',attempts=5,lease_until=now()-interval '1 second' where lead_id=lead;
+  select count(*) into n from public.claim_landing_lead_notification(lead,gen_random_uuid(),true);
+  assert n=0, 'Retry limit must hold after a crash';
+  select status into s from public.landing_lead_notifications where lead_id=lead;
+  assert s='failed', 'Exhausted crashed leases must become terminal';
+  assert not has_function_privilege('anon','public.claim_landing_lead_notification(uuid,uuid,boolean)','EXECUTE'), 'Anonymous clients cannot dispatch';
+  assert not has_function_privilege('authenticated','public.claim_landing_lead_notification(uuid,uuid,boolean)','EXECUTE'), 'Authenticated browser clients cannot bypass server ownership';
+  assert not has_table_privilege('authenticated','public.landing_lead_notifications','SELECT'), 'Recipient payload is server-only';
+  delete from public.landing_leads where id=lead;
+  assert not exists(select 1 from public.landing_lead_notifications where lead_id=lead), 'Lead deletion removes private notification payload';
+end $$;
+rollback;`;
+const result = await promisify(execFile)("psql", ["-h", "127.0.0.1", "-p", "55432", "-U", "postgres", "-d", "postgres", "-v", "ON_ERROR_STOP=1", "-At", "-c", sql], { env: { PATH: process.env.PATH, HOME: process.env.HOME, PGPASSWORD: decodeURIComponent(url.password) }, timeout: 30_000 });
+assert.match(result.stdout, /ROLLBACK/);
+console.log("landing-lead-notifications-db: local Supabase transaction/trigger, rollback, lease exclusion/recovery, due time, explicit retry, sent deduplication, max attempts, role restrictions and cascading cleanup passed; all fixtures rolled back");

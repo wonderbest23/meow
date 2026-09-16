@@ -22,7 +22,17 @@ export function deckSource(plan: ServerPlan, business: ServerBusinessProfile): D
   return { businessName: sourceBusiness.name || plan.title, businessDescription: sourceBusiness.description, planType: plan.planType, sections, allAnswers: Object.fromEntries(Object.entries(plan.answers).filter(([key]) => !key.startsWith("__"))), ...(coach ? { businessContext: coachContext(coach) } : {}) };
 }
 export function deckFingerprint(source: DeckBuildInput) {
-  return createHash("sha256").update(JSON.stringify(source)).digest("hex");
+  const details = source.allAnswers["intake/details"], period = source.allAnswers["intake/period"];
+  let input = source;
+  if (details || period) {
+    const allAnswers = { ...source.allAnswers };
+    const withoutMessageId = ({ messageId: _messageId, ...value }: Record<string, unknown>) => value;
+    if (details) allAnswers["intake/details"] = Object.fromEntries(Object.entries(details).map(([id, value]) => [id,
+      value && typeof value === "object" && !Array.isArray(value) ? withoutMessageId(value as Record<string, unknown>) : value]));
+    if (period) allAnswers["intake/period"] = withoutMessageId(period);
+    input = { ...source, allAnswers };
+  }
+  return createHash("sha256").update(JSON.stringify(input)).digest("hex");
 }
 async function patchJob(request: DeckJobRequest, patch: Partial<DeckJob>, queuedOnly = false) {
   for (let attempt = 0; attempt < 5; attempt++) {

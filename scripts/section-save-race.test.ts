@@ -8,7 +8,7 @@ async function main() {
   Object.assign(process.env, { PERSISTENCE_MODE: "supabase", SUPABASE_URL: "https://section-race.invalid", SUPABASE_SERVICE_ROLE_KEY: "local-test-only", PLAN_ACCOUNT_LINKING_ENABLED: "false", OPENAI_API_KEY: "section-test-only", ANTHROPIC_API_KEY: "" });
   const at = "2026-01-01T00:00:00.000Z";
   const key = "overview/summary";
-  const generated = "## 개선 계획\n\n운영 중인 사업에서 제공된 결과를 바탕으로 현재 상품을 유지하고 고객 반응을 기록하는 작은 실험을 제안합니다. 모르는 실적은 추정하지 않고 다음 확인 대상으로 남깁니다.";
+  let generated = "## 개선 계획\n\n운영 중인 사업에서 제공된 결과를 바탕으로 현재 상품을 유지하고 고객 반응을 기록하는 작은 실험을 제안합니다. 모르는 실적은 추정하지 않고 다음 확인 대상으로 남깁니다.";
   let stored: { data: ServerPlanState; updated_at: string } = { data: normalizeState({}), updated_at: at };
   let race: (() => void) | undefined;
   let aiCalls = 0, writes = 0, finalReads = 0, regenRecords = 0;
@@ -88,6 +88,11 @@ async function main() {
     await assert.rejects(generateAndSaveSection(job), /PLAN_VERSION_CONFLICT/);
     assert.equal(finalReads, 4, "commit contention must stop after a bounded number of attempts");
     assert.equal(aiCalls, 2); assert.equal(regenRecords, 0);
+
+    seed(); generated += "\n\n월 매출은 999만원입니다.";
+    await assert.rejects(generateAndSaveSection(job), /SECTION_GENERATION_FAILED/);
+    assert.equal(stored.data.plans[0].sections[key].markdown, "기존 문서", "quality rejection preserves the previous document");
+    assert.equal(writes, 0); assert.equal(regenRecords, 0);
     console.log("section save races: manual edit, independent edit, competing generation, business revision and bounded retries passed (mock AI/PostgREST)");
   } finally { globalThis.fetch = original; }
 }

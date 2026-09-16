@@ -14761,6 +14761,13 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-editor-right button svg { width: 16px; height: 16px; }
 .bw-editor-right .bw-editor-save { background: #473bf0; border-color: #473bf0; color: #fff; font-weight: 700; }
 .bw-editor-error { margin: 0; padding: 8px 16px; background: #fff1f1; color: #b91c1c; font-size: 13px; }
+.bw-editor-conflicts, .bw-editor-recovery { z-index: 94; position: fixed; inset: 80px 16px auto auto; width: min(420px, calc(100vw - 32px)); max-height: 60dvh; overflow: auto; padding: 18px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 32px #17223224; color: #172232; font-size: 14px; }
+.bw-editor-conflicts > div { padding-block: 14px; border-bottom: 1px solid #e5e7eb; }
+.bw-editor-conflicts p, .bw-editor-recovery p { margin: 0 0 12px; overflow-wrap: anywhere; }
+.bw-editor-conflicts button, .bw-editor-recovery button { min-height: 40px; margin: 4px 8px 0 0; padding: 8px 12px; border: 1px solid #b6c9e5; border-radius: 6px; background: #eff6ff; color: #1c54a0; font: inherit; cursor: pointer; }
+.bw-editor-conflict-images { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.bw-editor-conflict-images img { width: 100%; height: 120px; object-fit: contain; background: #f3f4f6; }
+.bw-editor-saved { position: fixed; right: 16px; bottom: 18px; z-index: 94; padding: 8px 12px; background: #eaf6ee; border-radius: 6px; font-size: 13px; color: #236b3d; pointer-events: none; }
 .bw-editor-stage { overflow: auto; padding: 20px; }
 .bw-editor-canvas { position: relative; max-width: 1600px; margin: 0 auto; box-shadow: 0 20px 60px rgba(22, 28, 45, .12); }
 .bw-editor-canvas [data-bw-text] { cursor: text; outline: 1px dashed transparent; outline-offset: 2px; transition: outline-color .12s; }
@@ -14788,7 +14795,11 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 /* 등장 애니메이션 — 공개 화면·미리보기. 숨김은 JS 가 .bw-anim 을 붙일 때만 생긴다 */
 .bw-anim { opacity: 0; transform: translateY(16px); transition: opacity .55s ease, transform .55s ease; }
 .bw-anim.bw-in { opacity: 1; transform: none; }
-.bw-editor-uploading { position: absolute; inset: 0; display: grid; place-items: center; background: #ffffffb8; font-weight: 700; color: #161c2d; gap: 8px; }
+.bw-editor-uploading { position: fixed; right: 16px; bottom: 52px; z-index: 20; display: flex; align-items: center; max-width: calc(100vw - 32px); padding: 12px 16px; border: 1px solid #dbe4ee; border-radius: 8px; background: #fff; box-shadow: 0 4px 18px #172b4d12; font-size: 14px; font-weight: 600; color: #161c2d; gap: 8px; pointer-events: none; }
+.bw-editor-uploading svg { width: 18px; height: 18px; flex: none; }
+.landing-media-conflict { grid-column: 1 / -1; padding: 12px 0; border-top: 1px solid #dbe4ee; }
+.landing-media-conflict > img { display: block; width: 160px; max-width: 100%; height: 100px; object-fit: contain; margin: 8px 0; }
+.landing-media-conflict > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .bw-editor-hint { margin: 0; padding: 8px 16px; background: #fff; border-top: 1px solid #e3e6ee; color: #5d6270; font-size: 12.5px; display: flex; align-items: center; gap: 8px; }
 .bw-editor-hint svg { width: 15px; height: 15px; flex: none; }
 .bw-editor-hint b { color: #161c2d; white-space: nowrap; }
@@ -14796,14 +14807,16 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 /* 모바일에서의 에디터 — 바를 두 줄로 정돈하고 폰 베젤 장식은 뺀다 (2026-08-25 정리) */
 @media (max-width: 640px) {
   .bw-editor-bar { flex-wrap: wrap; gap: 8px 10px; padding: 8px 10px; }
-  .bw-editor-left { order: 2; flex: 1 1 100%; flex-wrap: nowrap; gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .bw-editor-left { order: 2; flex: 1 1 100%; width: 100%; min-width: 0; flex-wrap: wrap; gap: 8px; overflow: visible; }
   .bw-editor-left strong { display: none; }
   .bw-editor-left > * { flex: none; }
   .bw-editor-pick-x { display: none; }
   .bw-editor-left { gap: 6px; }
   .bw-editor-pick, .bw-editor-preview { padding: 0 9px; }
   .bw-editor-views button { padding: 0 9px; }
-  .bw-editor-right { order: 1; flex: 1 1 100%; justify-content: flex-end; }
+  .bw-editor-right { order: 1; flex: 1 1 100%; width: 100%; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+  .bw-editor-right button { min-width: 0; min-height: 42px; padding: 0; justify-content: center; font-size: 0; }
+  .bw-editor-right button svg { flex: none; }
   .bw-editor-stage { padding: 10px; }
   .bw-editor-canvas.view-mobile { border: 0; border-radius: 12px; overflow: hidden; }
   .bw-ai { padding: 10px; }

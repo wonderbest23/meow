@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "../../../lib/persistence";
 import { getAuthenticatedUser } from "../../../lib/account-auth";
 import { enforceRateLimit } from "../../../lib/rate-limit";
+import { hashIdentityToken, userProjectToken } from "../../../lib/identity-tokens";
+import { containsUploadReference, issueUploadCleanupToken, readUploadCleanupToken } from "../../../lib/landing/upload-cleanup";
 
 export const runtime = "nodejs";
 
@@ -81,7 +83,50 @@ export async function POST(req: Request) {
 
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(name);
   if (!data?.publicUrl) {
+    await supabase.storage.from(BUCKET).remove([name]);
     return NextResponse.json({ error: "url_failed", message: "사진 주소를 만들지 못했습니다." }, { status: 502 });
   }
-  return NextResponse.json({ url: data.publicUrl });
+  const secret = process.env.AUTH_PROJECT_SECRET?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
+  const cleanupToken = form?.get("editorDraft") === "true" && secret ? issueUploadCleanupToken(name, user.id, secret) : undefined;
+  return NextResponse.json({ url: data.publicUrl, ...(cleanupToken ? { cleanupToken } : {}) });
+}
+
+export async function DELETE(req: Request) {
+  const limited = await enforceRateLimit("discard-editor-image", req, { limit: 40, windowMs: 10 * 60_000 });
+  if (limited) return limited;
+  const user = await getAuthenticatedUser();
+  if (!user) return NextResponse.json({ error: "login_required" }, { status: 401 });
+  const body = await req.json().catch(() => null);
+  const secret = process.env.AUTH_PROJECT_SECRET?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim() || "";
+  const path = typeof body?.cleanupToken === "string" ? readUploadCleanupToken(body.cleanupToken, user.id, secret) : null;
+  if (!path) return NextResponse.json({ error: "invalid_cleanup_receipt" }, { status: 400 });
+  const db = getServerSupabase();
+  if (!db) return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+  const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(path);
+  const owner = hashIdentityToken(userProjectToken(user.id));
+  const plans = await db.from("plan_states").select("data").eq("owner_hash", owner).maybeSingle();
+  if (plans.error) return NextResponse.json({ error: "reference_check_failed" }, { status: 503 });
+  if (containsUploadReference(plans.data?.data, publicUrl)) return NextResponse.json({ error: "upload_in_use" }, { status: 409 });
+  // Check every saved draft and published history page; never delete an accepted image.
+  for (let from = 0; ; from += 100) {
+    const projects = await db.from("projects").select("id").or(`owner_id.eq.${user.id},guest_token_hash.eq.${owner}`).order("id").range(from, from + 99);
+    if (projects.error) return NextResponse.json({ error: "reference_check_failed" }, { status: 503 });
+    for (const project of projects.data ?? []) {
+      const sites = await db.from("landing_sites").select("id,draft").eq("project_id", project.id);
+      if (sites.error) return NextResponse.json({ error: "reference_check_failed" }, { status: 503 });
+      for (const site of sites.data ?? []) {
+        if (containsUploadReference(site.draft, publicUrl)) return NextResponse.json({ error: "upload_in_use" }, { status: 409 });
+        for (let offset = 0; ; offset += 100) {
+          const versions = await db.from("landing_versions").select("config").eq("site_id", site.id).order("version").range(offset, offset + 99);
+          if (versions.error) return NextResponse.json({ error: "reference_check_failed" }, { status: 503 });
+          if (versions.data.some(version => containsUploadReference(version.config, publicUrl))) return NextResponse.json({ error: "upload_in_use" }, { status: 409 });
+          if (versions.data.length < 100) break;
+        }
+      }
+    }
+    if ((projects.data?.length ?? 0) < 100) break;
+  }
+  const removed = await db.storage.from(BUCKET).remove([path]);
+  if (removed.error) return NextResponse.json({ error: "cleanup_failed" }, { status: 502 });
+  return NextResponse.json({ removed: true });
 }

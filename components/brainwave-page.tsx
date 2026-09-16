@@ -6,6 +6,8 @@ import { layoutPage, childBox, type MobileLayout, type Box } from "../lib/landin
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import { BUSINESS_NODE_STYLES, BUSINESS_TEMPLATE_PROFILES } from "../lib/landing/brainwave/business-content";
 import { renderBrainwaveMobile } from "./brainwave-mobile";
+import { BrainwaveBusinessMobile } from "./brainwave-business-mobile";
+import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
 
 /*
  * 킷 글꼴 Gilroy 는 유료라 못 싣는다. 폭·굵기가 가장 가까운 무료 글꼴 Urbanist 를
@@ -533,6 +535,13 @@ export function BrainwaveStage({
   const layout = useMemo(() => (mobile ? layoutPage(page.root, page.w, page.h, target) : null), [mobile, page, target]);
   /* 데스크톱: 숨긴 섹션만큼 끌어올리고, 저장된 섹션 순서대로 재배치한 좌표로 그린다 */
   const collapsed = useMemo(() => sectionLayout(page, overrides?.hidden, overrides?.order), [page, overrides?.hidden, overrides?.order]);
+  if (!mobile && overrides && businessNeedsFlow(page, overrides)) {
+    const sections = orderedSections(sectionBands(page), overrides.hidden, overrides.order).map(section => section.id);
+    return <div ref={ref} className={`bw-stage bw-business-flow ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
+      <BrainwaveBusinessMobile pageId={page.id} overrides={overrides} hidden={expandHidden(page.root, overrides.hidden)} sectionOrder={sections} onPick={onPick} desktop />
+      {onPick ? collapsed.strips.filter(strip => BUSINESS_TEMPLATE_PROFILES[page.id]?.sections.includes(strip.id)).map(strip => <button key={strip.id} type="button" onClick={event => { event.stopPropagation(); onPick("restore", strip.id, event.currentTarget); }}>숨긴 섹션 되살리기</button>) : null}
+    </div>;
+  }
   /*
    * 손으로 짠 모바일판이 있는 페이지는 그걸 먼저 쓴다.
    * 킷에는 모바일 아트보드가 없어(프레임 87개 전수 확인 — 전부 데스크톱 폭)

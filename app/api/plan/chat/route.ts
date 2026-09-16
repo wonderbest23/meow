@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
@@ -15,6 +16,8 @@ import { COACH_KEY, COACH_TYPES, readCoach, coachDocumentRevision } from "../../
 import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
 import { resolveRegenQuota } from "../../../../lib/plan-builder/regen-quota";
 import { loadConsultSession, saveConsultTurn, consultLimitFor } from "../../../../lib/consult/repository";
+import { intakeGet, intakePost } from "../../../../lib/plan-builder/intake-http";
+import { intakeFeatureEnabled } from "../../../../lib/plan-builder/intake-types";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -59,7 +62,150 @@ async function visiblePlan(plan: ServerPlan, ownerHash: string): Promise<{ plan:
   return { plan, job };
 }
 
+const prepareReceiptSchema = z.object({ id: z.string(), signature: z.string(), runId: z.string(), paid: z.boolean(), accepted: z.boolean() });
+const prepareGenerationSchema = z.object({
+  revision: z.number().int().nonnegative(), runId: z.string().min(1), keys: z.array(z.string()), paid: z.boolean(),
+  receipts: z.array(prepareReceiptSchema).max(128).default([]),
+  dispatchState: z.enum(["reserved", "dispatching", "uncertain", "dispatched"]).optional(),
+  dispatchAt: z.string().optional(), dispatchToken: z.string().optional(),
+}).passthrough();
+type PrepareGeneration = z.infer<typeof prepareGenerationSchema>;
+type PrepareWorkflow = NonNullable<Awaited<ReturnType<typeof binding>>>;
+const nextPlanTimestamp = (at: string) => new Date(Math.max(Date.now(), (Date.parse(at) || 0) + 1)).toISOString();
+const readGeneration = (plan: ServerPlan) => plan.answers.__coach_generation ? prepareGenerationSchema.parse(plan.answers.__coach_generation) : null;
+const prepareConflict = () => json({ code: "revision_conflict", message: "사업정보나 제작 요청이 바뀌었어요. 최신 내용을 확인해주세요." }, 409);
+const prepareUnavailable = () => json({ code: "prepare_unavailable", message: "제작 접수 상태를 확인하지 못했어요. 같은 요청으로 다시 확인해주세요." }, 503);
+
+async function generationStatus(workflow: PrepareWorkflow, runId: string) {
+  try { return (await (await workflow.get(runId)).status()).status; } catch { return null; }
+}
+
+async function prepareQuota(plan: ServerPlan, keys: string[], revision: number) {
+  const count = keys.filter(key => { const value = plan.sections[key]; return value && !value.edited && !value.locked && value.coachRevision !== revision; }).length;
+  if (!count) return null;
+  const quota = await resolveRegenQuota(plan.id);
+  if (quota.unavailable) return json({ code: "quota_unavailable", message: "재작성 이용량을 확인하지 못했어요. 기존 문서는 보관되어 있고 제작은 시작하지 않았어요." }, 503);
+  return quota.remaining < count ? json({ message: `수정 내용 반영에 ${count}회 재작성이 필요합니다. 문서 화면에서 남은 횟수를 확인해주세요.` }, 402) : null;
+}
+
+async function markPrepareDispatch(ownerHash: string, planId: string, runId: string, accepted: boolean, token?: string) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const state = await loadPlanState(ownerHash), plan = state.plans.find(item => item.id === planId);
+    const coach = plan && readCoach(plan.answers), generation = plan && readGeneration(plan);
+    if (!plan || !coach || !generation || generation.runId !== runId || token && generation.dispatchToken !== token) return null;
+    const updatedAt = plan.updatedAt;
+    generation.dispatchState = accepted ? "dispatched" : "uncertain";
+    generation.dispatchAt = nextPlanTimestamp(updatedAt);
+    if (accepted) generation.receipts = generation.receipts.map(receipt => receipt.runId === runId ? { ...receipt, accepted: true } : receipt);
+    plan.answers.__coach_generation = generation;
+    plan.updatedAt = generation.dispatchAt;
+    try { await savePlanState(ownerHash, state, { planId, coachRevision: coach.revision, planUpdatedAt: updatedAt }); return plan; }
+    catch (error) { if (!(error instanceof Error) || error.message !== "PLAN_VERSION_CONFLICT" || attempt === 4) throw error; }
+  }
+  return null;
+}
+
+async function dispatchPreparedPlan(ownerHash: string, planId: string, runId: string, workflow: PrepareWorkflow) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const state = await loadPlanState(ownerHash), plan = state.plans.find(item => item.id === planId);
+    const coach = plan && readCoach(plan.answers), generation = plan && readGeneration(plan);
+    if (!plan || !coach || !generation || generation.runId !== runId) return prepareConflict();
+    const status = await generationStatus(workflow, runId);
+    if (status !== null) {
+      const saved = await markPrepareDispatch(ownerHash, planId, runId, true).catch(() => null);
+      if (["errored", "terminated"].includes(status)) return json({ plan: publicPlan(saved ?? plan), code: "generation_failed", message: "기존 제작 작업이 중단됐어요. 자동으로 다시 생성하지 않았습니다.", started: false }, 502);
+      return json({ plan: publicPlan(saved ?? plan), started: true, paid: generation.paid });
+    }
+    if (generation.dispatchState === "dispatched") return json({ plan: publicPlan(plan), started: true, paid: generation.paid }, 202);
+    if (generation.dispatchState === "dispatching" && Date.now() - Date.parse(generation.dispatchAt ?? "") < 60_000) return json({ plan: publicPlan(plan), started: false, message: "저장된 제작 요청의 접수를 확인하고 있어요." }, 202);
+    if (coachDocumentRevision(coach) !== generation.revision) return prepareConflict();
+    const quota = await prepareQuota(plan, generation.keys, generation.revision);
+    if (quota) return quota;
+    const updatedAt = plan.updatedAt, token = randomUUID();
+    generation.dispatchState = "dispatching";
+    generation.dispatchToken = token;
+    generation.dispatchAt = nextPlanTimestamp(updatedAt);
+    plan.answers.__coach_generation = generation;
+    plan.updatedAt = generation.dispatchAt;
+    try { await savePlanState(ownerHash, state, { planId, coachRevision: coach.revision, planUpdatedAt: updatedAt }); }
+    catch (error) {
+      if (error instanceof Error && error.message === "PLAN_VERSION_CONFLICT") continue;
+      return prepareUnavailable();
+    }
+    // A retry can only recover this reserved ID, never start another paid workflow.
+    try {
+      await workflow.create({ id: runId, params: { ownerHash, planId, sections: generation.keys.map(key => { const [chapterId, sectionId] = key.split("/"); return { chapterId, sectionId }; }), reviewedBusiness: true } });
+    } catch {
+      const recovered = await generationStatus(workflow, runId);
+      if (recovered === null) {
+        await markPrepareDispatch(ownerHash, planId, runId, false, token).catch(() => undefined);
+        return prepareUnavailable();
+      }
+      const saved = await markPrepareDispatch(ownerHash, planId, runId, true, token).catch(() => null);
+      if (["errored", "terminated"].includes(recovered)) return json({ plan: publicPlan(saved ?? plan), code: "generation_failed", message: "기존 제작 작업이 중단됐어요. 자동으로 다시 생성하지 않았습니다.", started: false }, 502);
+      return json({ plan: publicPlan(saved ?? plan), started: true, paid: generation.paid });
+    }
+    const saved = await markPrepareDispatch(ownerHash, planId, runId, true, token).catch(() => null);
+    return json({ plan: publicPlan(saved ?? plan), started: true, paid: generation.paid });
+  }
+  return prepareConflict();
+}
+
+async function preparePlan(ownerHash: string, planId: string | undefined, input: z.infer<typeof requestSchema>) {
+  if (!planId) return json({ message: "먼저 어떤 사업인지 대화로 알려주세요." }, 400);
+  const signature = createHash("sha256").update(JSON.stringify({ action: "prepare", planId, revision: input.revision, message: input.message, retry: input.retry })).digest("hex");
+  try {
+    for (let attempt = 0; attempt < 5; attempt++) {
+      const state = await loadPlanState(ownerHash), plan = state.plans.find(item => item.id === planId);
+      const coach = plan && readCoach(plan.answers);
+      if (!plan || !coach) return json({ message: "이 사업을 찾을 수 없습니다." }, 404);
+      const existing = readGeneration(plan), receipt = existing?.receipts.find(item => item.id === input.requestId);
+      if (receipt && receipt.signature !== signature || coach.messages.some(message => message.id === input.requestId)) return json({ code: "request_reused", message: "같은 요청 번호로 다른 작업을 시작할 수 없어요." }, 409);
+      const access = await resolvePlanAccess(plan.planType, plan.id);
+      if (!access.authenticated) return json({ message: "대화는 보관했습니다. 로그인 후 초안을 만들 수 있습니다.", login: true }, 401);
+      if (receipt?.accepted) return json({ plan: publicPlan(plan), started: true, paid: receipt.paid });
+      if (coach.revision !== input.revision) return prepareConflict();
+      if (!coach.ready) return json({ message: "먼저 어떤 사업인지 대화로 알려주세요." }, 400);
+      const coachJob = readCoachJob(plan.answers);
+      if (isCoachJobActive(coachJob) && !isCoachJobStale(coachJob!)) return prepareConflict();
+      if (!access.paid && freePlanLimitReached(plan.id, state.plans, access.paidPlanIds)) return json({ message: "무료 초안 이용 범위를 모두 사용했습니다. 기존 문서에서 이어가거나 결제 후 제작해주세요." }, 402);
+      const keys = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)).filter(key => checkSectionAccess(access, key) === "ok");
+      const workflow = await binding();
+      if (!workflow) return prepareUnavailable();
+      const revision = coachDocumentRevision(coach);
+      const reusable = existing?.revision === revision && existing.paid === access.paid && JSON.stringify(existing.keys) === JSON.stringify(keys);
+      if (receipt && (!reusable || receipt.runId !== existing?.runId)) return prepareConflict();
+      if (receipt && existing) return await dispatchPreparedPlan(ownerHash, planId, existing.runId, workflow);
+      if ((existing?.receipts.length ?? 0) >= 128) return json({ code: "prepare_limit", message: "제작 요청 보관 한도에 도달했어요. 기존 요청과 문서를 확인해주세요." }, 429);
+      // A reservation with no dispatch claim can be superseded without paid work.
+      if (existing && !reusable && existing.dispatchState !== "reserved") {
+        const status = await generationStatus(workflow, existing.runId);
+        if (status === null) return prepareUnavailable();
+        if (!["complete", "errored", "terminated"].includes(status)) return prepareConflict();
+      }
+      const quota = !reusable && await prepareQuota(plan, keys, revision);
+      if (quota) return quota;
+      const runId = reusable ? existing!.runId : `coach-${createHash("sha256").update(`${ownerHash}\0${planId}\0${input.requestId}`).digest("hex").slice(0, 48)}`;
+      const generation: PrepareGeneration = reusable ? existing! : { revision, runId, keys, paid: access.paid, receipts: existing?.receipts ?? [], dispatchState: "reserved" };
+      generation.receipts.push({ id: input.requestId, signature, runId, paid: access.paid, accepted: reusable && existing!.dispatchState === "dispatched" });
+      const updatedAt = plan.updatedAt;
+      for (const key of keys) plan.answers[key] ??= { planning_source: "사업 기획 대화의 공통 정보" };
+      plan.answers.__coach_generation = generation;
+      plan.updatedAt = nextPlanTimestamp(updatedAt);
+      state.activePlanId = plan.id;
+      try { await savePlanState(ownerHash, state, { planId, coachRevision: coach.revision, planUpdatedAt: updatedAt }); }
+      catch (error) {
+        if (error instanceof Error && error.message === "PLAN_VERSION_CONFLICT") continue;
+        return prepareUnavailable();
+      }
+      return await dispatchPreparedPlan(ownerHash, planId, runId, workflow);
+    }
+    return prepareConflict();
+  } catch { return prepareUnavailable(); }
+}
+
 export async function GET(request: Request) {
+  if (request.headers.get("x-business-intake") === "2") return intakeGet(request);
   const identity = await requireGuestIdentity();
   const state = await loadPlanState(identity.hash);
   const id = new URL(request.url).searchParams.get("planId");
@@ -81,6 +227,12 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  if (request.headers.get("x-business-intake") === "2") return intakePost(request, postLegacyChat);
+  if (intakeFeatureEnabled()) return json({ message: "새 사업 진단 화면을 불러와 주세요. 입력은 그대로 보관해 주세요.", code: "flow_upgrade" }, 409);
+  return postLegacyChat(request);
+}
+
+async function postLegacyChat(request: Request) {
   const limited = await enforceRateLimit("business-coach", request, { limit: 24, windowMs: 10 * 60000 });
   if (limited) return limited;
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));
@@ -98,6 +250,7 @@ export async function POST(request: Request) {
   }
   const previous = plan ? readCoach(plan.answers) : null;
   if (plan && !previous) return json({ message: "기존 문서를 바꾸려면 내 사업 목록에서 해당 문서를 열어주세요." }, 400);
+  if (input.action === "prepare") return preparePlan(identity.hash, plan?.id, input);
   if (previous?.messages.some(m => m.id === input.requestId)) return json({ plan: publicPlan(plan!), authenticated: !!identity.userId });
   if ((previous?.revision ?? 0) !== input.revision) return json({ message: "다른 화면에서 수정됐습니다. 최신 대화를 불러와주세요." }, 409);
 
@@ -106,38 +259,6 @@ export async function POST(request: Request) {
   if (isCoachJobActive(shownJob)) return input.action === "message" && oldJob?.message.id === input.requestId
     ? json({ plan: publicPlan(plan!, shownJob), authenticated: !!identity.userId }, 202)
     : json({ message: "먼저 보낸 내용을 정리하고 있어요. 완료 후 이어서 말씀해 주세요." }, 409);
-
-  if (input.action === "prepare") {
-    if (!plan || !previous?.ready) return json({ message: "먼저 어떤 사업인지 대화로 알려주세요." }, 400);
-    const access = await resolvePlanAccess(plan.planType, plan.id);
-    if (!access.authenticated) return json({ message: "대화는 보관했습니다. 로그인 후 초안을 만들 수 있습니다.", login: true }, 401);
-    if (!access.paid && freePlanLimitReached(plan.id, state.plans, access.paidPlanIds)) return json({ message: "무료 초안 이용 범위를 모두 사용했습니다. 기존 문서에서 이어가거나 결제 후 제작해주세요." }, 402);
-    const sections = chaptersForType(plan.planType).flatMap(c => c.sections.map(s => ({ chapterId: c.id, sectionId: s.id })))
-      .filter(s => checkSectionAccess(access, `${s.chapterId}/${s.sectionId}`) === "ok");
-    const workflow = await binding();
-    if (!workflow) return json({ message: "현재 환경에는 문서 제작 서버가 연결되어 있지 않습니다. 대화는 저장되어 있습니다." }, 503);
-    const revision = coachDocumentRevision(previous);
-    const existing = plan.answers.__coach_generation;
-    if (existing?.revision === revision && existing?.runId && existing?.paid === access.paid) {
-      try {
-        const status = await (await workflow.get(String(existing.runId))).status();
-        if (!["errored", "terminated", "complete"].includes(status.status)) return json({ plan: publicPlan(plan), started: true, paid: access.paid });
-      } catch { /* A saved dispatch may have failed before the workflow was created. */ }
-    }
-    const regenerations = sections.filter(s => { const v = plan!.sections[`${s.chapterId}/${s.sectionId}`]; return v && !v.edited && !v.locked && v.coachRevision !== revision; }).length;
-    if (regenerations && (await resolveRegenQuota(plan.id)).remaining < regenerations) return json({ message: `수정 내용 반영에 ${regenerations}회 재작성이 필요합니다. 문서 화면에서 남은 횟수를 확인해주세요.` }, 402);
-    for (const s of sections) plan.answers[`${s.chapterId}/${s.sectionId}`] ??= { planning_source: "사업 기획 대화의 공통 정보" };
-    // Save context before dispatch; the worker always reads the owner's stored snapshot.
-    const runId = `coach-${input.requestId}`;
-    plan.answers.__coach_generation = { revision, runId, keys: sections.map(s => `${s.chapterId}/${s.sectionId}`), paid: access.paid };
-    plan.updatedAt = new Date().toISOString();
-    state.activePlanId = plan.id;
-    try { await savePlanState(identity.hash, state, { planId: plan.id, coachRevision: previous.revision }); }
-    catch { return json({ message: "저장 상태가 변경됐습니다. 대화를 다시 불러온 뒤 제작해주세요." }, 409); }
-    try { await workflow.create({ id: runId, params: { ownerHash: identity.hash, planId: plan.id, sections, reviewedBusiness: true } }); }
-    catch { return json({ message: "제작 요청을 보내지 못했습니다. 다시 시도해주세요." }, 503); }
-    return json({ plan: publicPlan(plan), started: true, paid: access.paid });
-  }
 
   const retry = !!input.retry && !!plan && !!oldJob && oldJob.message.id === input.requestId && shownJob?.status === "failed";
   if (input.retry && !retry) return json({ message: "다시 시도할 작업을 찾지 못했어요. 대화를 새로 불러와 주세요." }, 409);

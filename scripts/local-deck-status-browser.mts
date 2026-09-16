@@ -111,6 +111,32 @@ try {
   }
   assert(files[0].equals(files[1]));
   checks.push("completed public sample downloads identically after reopening with generation disabled (10-slide valid PPTX)");
+  let proposalReads = 0, proposalWrites = 0;
+  const generation = { token: "727ee46b-fixture", runId: "fixture", fingerprint: "fixture", status: "failed", phase: "failed", updatedAt: "2026-09-11T00:00:00Z", attempt: 1, code: "review_response_invalid", resumable: true, ready: false, editable: false };
+  await context.route(/\/api\/plan\/(?:proposal|deck)(?:\?|$)/, async (route: any) => {
+    if (route.request().method() !== "GET") { proposalWrites++; return route.abort(); }
+    proposalReads++;
+    return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ title: "[QA] 중단된 제안서", saved: null, sourceChanged: false, affectedSlides: [], business: null, generationEnabled: false, generation }) });
+  });
+  for (const width of [390, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto(`${origin}/plan/proposal?planId=proposal-status-qa`, { waitUntil: "networkidle" });
+    assert(await page.getByRole("button", { name: "새 제안서 생성 준비 중", exact: true }).isDisabled());
+    const status = page.getByRole("status");
+    assert.match(await status.textContent(), /초안과 작업 기록.*보관.*727ee46b/);
+    assert.doesNotMatch(await status.textContent(), /다시 시도하면|검토부터 이어갑니다/);
+    const before = proposalReads;
+    const refreshed = page.waitForResponse((response: any) => response.url().includes("/api/plan/proposal?") && response.status() === 200);
+    await page.getByRole("button", { name: "제작 상태 다시 확인", exact: true }).click();
+    await refreshed;
+    assert(proposalReads > before);
+    assert.equal(await page.getByRole("link", { name: "기존 사업계획서 열기", exact: true }).getAttribute("href"), "/plan/document?planId=proposal-status-qa");
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    const screenshot = join(output, `proposal-closed-${width}.png`);
+    await page.screenshot({ path: screenshot, fullPage: true }); screenshots.push(screenshot);
+  }
+  assert.equal(proposalWrites, 0);
+  checks.push("actual proposal page explains retained failed drafts, supports GET-only status refresh and links to the original document at mobile and desktop widths");
   assert.deepEqual(errors, []);
 } catch (error) {
   errors.push(error instanceof Error ? error.message : String(error));

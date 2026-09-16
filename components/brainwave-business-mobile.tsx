@@ -6,12 +6,13 @@ import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
 import styles from "./brainwave-business-mobile.module.css";
 
-export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrder, onPick }: {
+export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrder, onPick, desktop = false }: {
   pageId: string;
   overrides: BrainwaveOverrides;
   hidden: Set<string>;
   sectionOrder: string[];
   onPick?: BrainwavePick;
+  desktop?: boolean;
 }) {
   const profile = BUSINESS_TEMPLATE_PROFILES[pageId];
   if (!profile) return null;
@@ -21,7 +22,7 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
   const manifest = businessTemplateManifest[pageId];
   // Desktop headers overlay the hero; the mobile flow places that header before it.
   const sections = overrides.order?.length ? sectionOrder : sectionOrder.toSorted((a, b) => Number(manifest.sections.find(section => section.id === b)?.name === "Header") - Number(manifest.sections.find(section => section.id === a)?.name === "Header"));
-  return <div className={`bwmob ${styles.page}`}>
+  return <div className={`bwmob ${styles.page} ${desktop ? styles.desktop : ""}`}>
     {sections.map(sectionId => {
       const section = manifest.sections.find(item => item.id === sectionId);
       if (!section || hidden.has(section.id)) return null;
@@ -58,7 +59,7 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
       if (!textIds.length && !facts.length && !imageIds.length && !buttons.length) return null;
       return <section key={section.id} data-bw-node={section.id} className={hero ? styles.hero : header ? styles.header : styles.details}>
         {textIds.map(id => id === profile.headline
-          ? <h1 key={id} {...props(id, 36)}>{text(id)}</h1>
+          ? <h1 key={id} {...props(id, desktop ? 48 : 36)}>{text(id)}</h1>
           : titles.includes(id) ? <h2 key={id} className={styles.sectionTitle} {...props(id, 24)}>{text(id)}</h2>
           : <p key={id} className={id === profile.brand ? styles.brand : styles.description} {...props(id, id === profile.brand ? 16 : 17)}>{text(id)}</p>)}
         {facts.map(fact => <div key={fact.value} className={styles.fact}>

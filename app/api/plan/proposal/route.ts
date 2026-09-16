@@ -15,11 +15,13 @@ import { rewriteCommandSchema } from "../../../../lib/plan-builder/proposal-rewr
 import { documentRefreshCommandSchema } from "../../../../lib/plan-builder/document-refresh";
 import { previewDocumentRefresh, runDocumentRefresh, documentRefreshRuntime } from "../../../../lib/plan-builder/document-refresh-service";
 import { queueProposalUpdate, type ProposalBackgroundJob } from "../../../../lib/plan-builder/proposal-background";
+import { readBoundedJson, RequestBodyError } from "../../../../lib/http/bounded-json";
 
 export const runtime = "nodejs";
 const headers = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" };
 const json = (body: unknown, status = 200) => NextResponse.json(body, { status, headers });
 const idSchema = z.string().min(1).max(60);
+const MAX_BODY_BYTES = 10_000_000;
 async function workflow(): Promise<Workflow<ProposalBackgroundJob> | null> {
   if (process.env.PROPOSAL_AI_ENABLED !== "true") return null;
   try { return (await getCloudflareContext({ async: true })).env.PLAN_SECTIONS_WORKFLOW ?? null; } catch { return null; }
@@ -34,8 +36,10 @@ async function owner(planId: string) {
   return identity.hash;
 }
 function failure(error: unknown) {
+  if (error instanceof RequestBodyError) return json({ code: error.code, message: error.message }, error.status);
   if (error instanceof ProposalError) return json({ code: error.code, message: error.message }, error.status);
   if (error instanceof Error && error.message === "PLAN_OWNER_CHANGED") return json({ code: "owner_changed", message: "로그인 상태가 바뀌었어요. 현재 계정에서 다시 열어 주세요" }, 409);
+  if (error instanceof Error && (error.message === "proposal_layout_review_required" || error.message.startsWith("proposal_layout_review_required:"))) return json({ code: "proposal_layout_review_required", message: "슬라이드의 글자 넘침이나 요소 겹침, 차트 입력을 확인해 주세요. 편집기에서 표시된 항목의 문구·판형·배치를 수정한 뒤 다시 내려받을 수 있어요. 저장된 편집본은 그대로 유지됩니다" }, 422);
   return json({ code: "unavailable", message: "서버에 연결하지 못했어요. 편집 내용은 화면에 남아 있으니 다시 시도해 주세요" }, 503);
 }
 export async function GET(request: Request) {
@@ -60,13 +64,10 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   const limited = await enforceRateLimit("proposal-save", request, { limit: 60, windowMs: 60000 });
   if (limited) return limited;
-  if (Number(request.headers.get("content-length")) > 100000) return json({ message: "수정 내용이 너무 커요" }, 413);
-  const raw = await request.text();
-  if (raw.length > 100000) return json({ message: "수정 내용이 너무 커요" }, 413);
-  let body: unknown; try { body = JSON.parse(raw); } catch { return json({ message: "입력 내용을 확인해 주세요" }, 400); }
-  const parsed = z.object({ planId: idSchema, command: z.union([proposalCommandSchema, rewriteCommandSchema, documentRefreshCommandSchema]) }).strict().safeParse(body);
-  if (!parsed.success) return json({ message: "수정 값과 배치 범위를 확인해 주세요" }, 400);
   try {
+    const body = await readBoundedJson(request, MAX_BODY_BYTES);
+    const parsed = z.object({ planId: idSchema, command: z.union([proposalCommandSchema, rewriteCommandSchema, documentRefreshCommandSchema]) }).strict().safeParse(body);
+    if (!parsed.success) return json({ message: "수정 값과 배치 범위를 확인해 주세요" }, 400);
     const hash = await owner(parsed.data.planId), command = parsed.data.command;
     if (command.type === "document_generate" || command.type === "generate") {
       await queueProposalUpdate(hash, parsed.data.planId, command, await workflow(), command.type === "document_generate" ? documentRefreshRuntime(hash) : proposalRewriteRuntime(hash));

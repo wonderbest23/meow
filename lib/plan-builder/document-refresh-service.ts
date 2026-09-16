@@ -9,6 +9,8 @@ import { DOCUMENT_REFRESH_TIMEOUT_MS, documentRefreshCommandSchema, documentRefr
 import type { RewriteTarget } from "./proposal-rewrite";
 import { proposalAIConfig } from "./proposal-ai-config";
 import { createDocumentRefreshRuntime } from "./document-refresh-runtime";
+import { artifactDocumentOutdated } from "./artifact-source-status";
+import { withConfirmedIntakeContext } from "./intake-context";
 
 type Usage = NonNullable<NonNullable<SavedProposal["documentRefresh"]>["usage"]>[number];
 export type DocumentRefreshRuntime = { target: RewriteTarget; generate(payload: DocumentRefreshPayload, onUsage?: (usage: Usage) => void): Promise<unknown> };
@@ -22,17 +24,17 @@ export function documentRefreshRuntime(ownerHash: string): DocumentRefreshRuntim
 function makePreview(ownerHash: string, plan: ServerPlan, keys: string[], target: RewriteTarget | null): DocumentRefreshPreview {
   const coach = readCoach(plan.answers), saved = readSavedProposal(plan.answers);
   if (!coach || !saved) throw new ProposalError("not_initialized", "공통 사업 정보와 저장된 제안서가 필요해요");
-  if (saved.document.deck.blueprint?.sector !== "b2b_service" || saved.document.deck.blueprint.purpose !== "sales") throw new ProposalError("unsupported_proposal", "현재는 B2B 고객 제안서의 원문을 갱신할 수 있어요", 400);
   if (!keys.length || keys.length > 3 || new Set(keys).size !== keys.length) throw new ProposalError("invalid_sections", "서로 다른 문서 항목을 최대 3개 선택해 주세요", 400);
   const entries = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => ({ key: `${chapter.id}/${section.id}`, chapterTitle: chapter.title, sectionTitle: section.title })));
   if (keys.some(key => !entries.some(entry => entry.key === key))) throw new ProposalError("invalid_sections", "이 계획서에 포함된 항목만 선택해 주세요", 400);
   const sections = entries.filter(entry => keys.includes(entry.key));
   const sourceRevision = coachDocumentRevision(coach);
+  if (sections.some(({ key }) => artifactDocumentOutdated(plan, key))) throw new ProposalError("artifact_update_required", "운영 실적과 보류한 변경은 내 사업의 결과물 변경 관리에서 함께 비교해 주세요. 기존 본문은 그대로 보관됩니다", 409);
   if (sections.some(({ key }) => plan.sections[key]?.locked)) throw new ProposalError("section_locked", "잠긴 항목은 자동 갱신하지 않아요. 문서에서 직접 확인해 주세요");
   if (sections.some(({ key }) => plan.sections[key]?.markdown && plan.sections[key].coachRevision === sourceRevision)) throw new ProposalError("already_current", "이미 최신 조건으로 검토한 항목이 있어요. 갱신할 항목을 다시 선택해 주세요");
-  const payload: DocumentRefreshPayload = { businessName: coach.business.name, businessDescription: coach.business.description, stage: coach.stage,
+  const payload: DocumentRefreshPayload = withConfirmedIntakeContext({ businessName: coach.business.name, businessDescription: coach.business.description, stage: coach.stage, sector: saved.document.deck.blueprint?.sector, purpose: saved.document.deck.blueprint?.purpose,
     fields: coach.fields.map(({ key, value, basis }) => ({ key, value, basis })), financialReference: coachFinancialReference(coach),
-    sections: sections.map(entry => ({ ...entry, markdown: plan.sections[entry.key]?.markdown ?? "" })) };
+    sections: sections.map(entry => ({ ...entry, markdown: plan.sections[entry.key]?.markdown ?? "" })) }, plan.answers);
   if (JSON.stringify(payload).length > 30000) throw new ProposalError("source_too_large", "전송 분량이 많아요. 문서 항목을 줄여서 선택해 주세요", 400);
   const data = { sourceRevision, target, payload, sections: sections.map(({ key }) => ({ key, generatedAt: plan.sections[key]?.generatedAt ?? "", manual: !!plan.sections[key]?.edited })) };
   return { ...data, hash: digest({ ownerHash, planId: plan.id, ...data }) };
@@ -75,7 +77,11 @@ export async function executeDocumentRefresh(ownerHash: string, planId: string, 
   const started = await updateSavedProposal(ownerHash, planId, (saved, _state, plan) => {
     claimed = false;
     const job = saved.documentRefresh;
-    if (!job || job.id !== id || job.status !== "running" || job.claimedAt) return null;
+    if (!job || job.id !== id || job.status !== "running") return null;
+    if (job.claimedAt) {
+      if (!documentRefreshExpired(job)) return null;
+      job.status = "failed"; job.error = "timeout"; job.finishedAt = new Date().toISOString(); return saved;
+    }
     let error: string | undefined;
     try { assertCurrent(ownerHash, plan, job.preview); } catch { error = "source_changed"; }
     if (documentRefreshExpired(job)) error = "timeout";
@@ -134,7 +140,7 @@ export async function runDocumentRefresh(ownerHash: string, planId: string, inpu
     const at = new Date(Math.max(Date.now(), (Date.parse(plan.updatedAt) || 0) + 1, ...keys.map(key => (Date.parse(plan.sections[key]?.generatedAt ?? "") || 0) + 1))).toISOString();
     for (const key of keys) {
       const old = plan.sections[key], draft = job.drafts.find(section => section.key === key)!;
-      plan.sections[key] = command.decisions[key] === "keep" ? { ...old, edited: true, generatedAt: at, coachRevision: job.preview.sourceRevision }
+      plan.sections[key] = command.decisions[key] === "keep" ? { ...old, edited: true, generatedAt: at }
         : { markdown: draft.markdown, html: draft.html, generatedAt: at, coachRevision: job.preview.sourceRevision, ...(old ? { edited: old.edited, locked: old.locked, previous: { markdown: old.markdown, html: old.html } } : {}) };
     }
     job.status = "applied"; job.decisions = command.decisions; job.appliedRevision = saved.revision + 1;

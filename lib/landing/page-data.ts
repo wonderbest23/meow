@@ -93,6 +93,15 @@ export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
 export const landingPageDataSchema = z.object({
   brainwave: brainwaveDataSchema.optional(),
   businessContent: businessContentSchema.optional(),
+  sourceSnapshot: z.object({
+    version: z.literal(1),
+    planId: z.string().max(60),
+    sourceRevision: z.string().max(160),
+    fields: z.record(z.string(), z.string().max(4000)),
+    nodes: z.record(z.string(), z.string().max(4000)),
+    visibility: z.record(z.string(), z.boolean()).default({}),
+    pendingChangeIds: z.array(z.string().max(200)).max(600).default([]),
+  }).optional(),
   root: z.object({
     props: z.record(z.string(), blockProp).optional(),
   }).passthrough(),

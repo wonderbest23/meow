@@ -8,9 +8,12 @@ import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { BrainwavePage, loadBrainwavePage, menuItemsOf, orderedSections, sectionBands, type BrainwavePageData } from "./brainwave-page";
 import { brainwaveSections } from "../lib/landing/brainwave/button-action";
-import { resizeImage, uploadImage } from "./landing-media-field";
+import { resizeImage, uploadEditorImage, discardEditorImage, type EditorImageUpload } from "./landing-media-field";
 import { useLandingEditorSave } from "./use-landing-editor-save";
 import { landingDraftFingerprint } from "../lib/landing/save-contract";
+import { mergeEditorAsyncPatch, type EditorAsyncPatch, type EditorOverrides } from "../lib/landing/editor-async";
+import { readEditorRecovery, type EditorRecovery } from "../lib/landing/editor-recovery";
+import LandingImageCrop from "./landing-image-crop";
 
 /*
  * Brainwave.io 킷 페이지 자리 편집기.
@@ -22,7 +25,7 @@ import { landingDraftFingerprint } from "../lib/landing/save-contract";
  *     노드 id 와 맞지 않으므로 버린다(물어본 뒤).
  * 칸을 옮기거나 색을 바꾸는 기능은 없다 — 킷 구조를 그대로 지키기 위해서다.
  */
-type Over = { texts: Record<string, string>; images: Record<string, string>; links: Record<string, string>; sizes: Record<string, number>; hidden: string[]; order: string[] };
+type Over = EditorOverrides;
 
 /* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로, url 은 주소, sec 는 "sec:N"(섹션 스크롤) */
 type LinkMode = "contact" | "url" | "none" | "sec";
@@ -64,8 +67,65 @@ export function BrainwaveEditor({
   const [page, setPage] = useState(init.page);
   const [contentMode, setContentMode] = useState(init.contentMode);
   const [businessContent, setBusinessContent] = useState(data.businessContent);
-  const [over, setOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) }, hidden: [...(init.hidden ?? [])], order: [...(init.order ?? [])] });
+  const [sourceSnapshot, setSourceSnapshot] = useState(data.sourceSnapshot);
+  const [over, renderOver] = useState<Over>({ texts: { ...init.texts }, images: { ...init.images }, links: { ...(init.links ?? {}) }, sizes: { ...(init.sizes ?? {}) }, hidden: [...(init.hidden ?? [])], order: [...(init.order ?? [])] });
+  const overRef = useRef(over);
+  const elementVersions = useRef<Record<string, number>>({});
+  const session = useRef(0);
+  const mounted = useRef(true);
+  const aiRequest = useRef<AbortController | null>(null);
+  const unusedImages = useRef(new Map<string, EditorImageUpload>());
+  const [imageCrop, setImageCrop] = useState<{ file: File; id: string; session: number; before: Over; versions: Record<string, number> } | null>(null);
+  const [pendingPatch, setPendingPatch] = useState<EditorAsyncPatch | null>(null);
+  const pendingPatchRef = useRef<EditorAsyncPatch | null>(null);
+  const setOver = (update: Over | ((current: Over) => Over)) => {
+    const next = typeof update === "function" ? update(overRef.current) : update;
+    for (const kind of ["texts", "images"] as const) {
+      for (const id of new Set([...Object.keys(overRef.current[kind]), ...Object.keys(next[kind])])) {
+        if (overRef.current[kind][id] !== next[kind][id]) elementVersions.current[`${kind}:${id}`] = (elementVersions.current[`${kind}:${id}`] ?? 0) + 1;
+      }
+    }
+    overRef.current = next;
+    renderOver(next);
+  };
+  const clearUnusedImage = (url: string) => {
+    const receipt = unusedImages.current.get(url);
+    if (receipt) { unusedImages.current.delete(url); void discardEditorImage(receipt); }
+  };
+  const invalidateAsync = () => {
+    session.current++;
+    aiRequest.current?.abort();
+    aiRequest.current = null;
+    for (const url of unusedImages.current.keys()) clearUnusedImage(url);
+    pendingPatchRef.current = null;
+    setPendingPatch(null);
+    setUploading(null);
+    setImageCrop(null);
+    setAi(value => ({ ...value, busy: false, note: "" }));
+  };
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      session.current++;
+      aiRequest.current?.abort();
+      for (const receipt of unusedImages.current.values()) void discardEditorImage(receipt);
+      unusedImages.current.clear();
+    };
+  }, []);
   const initial = useRef(landingDraftFingerprint({ page, ...over }));
+  const [savedFingerprint, setSavedFingerprint] = useState(initial.current);
+  const recoveryKey = projectId ? `oneul:homepage-editor:${projectId}` : null;
+  const [recovery, setRecovery] = useState<EditorRecovery | null>(null);
+  const [recoveryReady, setRecoveryReady] = useState(false);
+  const [recoveryError, setRecoveryError] = useState("");
+  useEffect(() => {
+    if (recoveryKey) {
+      try { setRecovery(readEditorRecovery(sessionStorage.getItem(recoveryKey))); }
+      catch { setRecoveryError("이 브라우저에서는 임시 복구본을 보관할 수 없어요. 편집 후 저장해 주세요."); }
+    }
+    setRecoveryReady(true);
+  }, [recoveryKey]);
   const persistence = useLandingEditorSave(onSave);
   const [history, setHistory] = useState<Over[]>([]);
   const [future, setFuture] = useState<Over[]>([]);
@@ -88,7 +148,7 @@ export function BrainwaveEditor({
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingImage = useRef<string | null>(null);
 
-  useEffect(() => { loadBrainwavePage(page).then(setMeta).catch(() => setMeta(null)); }, [page]);
+  useEffect(() => { let active = true; loadBrainwavePage(page).then(value => { if (active) setMeta(value); }).catch(() => { if (active) setMeta(null); }); return () => { active = false; }; }, [page]);
 
   /*
    * AI 로 고치기 — "전부 우리 가게 말투로", "가격은 25,000원" 같은 지시 한 줄.
@@ -106,35 +166,95 @@ export function BrainwaveEditor({
       .catch(() => {});
   }, [projectId]);
   const runAi = async () => {
-    if (!projectId || ai.busy || ai.instruction.trim().length < 2) return;
+    if (!projectId || uploading || aiRequest.current || pendingPatchRef.current || ai.instruction.trim().length < 2) return;
     const snapshot = finishText();
+    const controller = new AbortController();
+    aiRequest.current = controller;
+    const requestSession = session.current;
+    const versions = { ...elementVersions.current };
     setAi((s) => ({ ...s, busy: true, note: "" }));
     try {
       const res = await fetch(`/api/projects/${projectId}/landing/ai-edit`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instruction: ai.instruction, page, texts: snapshot.texts, business }),
+        signal: controller.signal,
       });
       const j = (await res.json().catch(() => ({}))) as { texts?: Record<string, string>; changed?: number; balance?: TokenBalance; error?: { code?: string; message?: string } };
+      if (!mounted.current || requestSession !== session.current) return;
       if (!res.ok) {
         setAi((s) => ({ ...s, busy: false, note: j.error?.message ?? "AI 수정에 실패했습니다.", balance: j.balance ?? s.balance }));
         return;
       }
-      if (j.texts && Object.keys(j.texts).length) commit({ ...snapshot, texts: { ...snapshot.texts, ...j.texts } });
-      setAi((s) => ({ ...s, busy: false, instruction: "", note: `${j.changed ?? 0}개 자리를 고쳤습니다. 마음에 안 들면 되돌리기(↶)를 누르세요.`, balance: j.balance ?? s.balance }));
+      const applied = j.texts && Object.keys(j.texts).length ? receivePatch({ session: requestSession, kind: "texts", before: snapshot.texts, changes: j.texts, versions }) : null;
+      setAi((s) => ({ ...s, busy: false, instruction: "", note: applied?.conflicts.length ? `${applied.applied.length}개 반영 · ${applied.conflicts.length}개 변경 내용 확인 필요` : `${applied?.applied.length ?? 0}개 반영`, balance: j.balance ?? s.balance }));
     } catch {
+      if (!mounted.current || requestSession !== session.current) return;
       setAi((s) => ({ ...s, busy: false, note: "연결이 끊겼습니다. 다시 시도해 주세요." }));
+    } finally {
+      if (aiRequest.current === controller) aiRequest.current = null;
     }
   };
   const tokenPayHref = ai.planId ? `/plan/pay?planId=${encodeURIComponent(ai.planId)}&product=tokens` : "";
 
   const commit = (next: Over) => {
-    setHistory((h) => [...h.slice(-40), over]);
+    const before = overRef.current;
+    setHistory((h) => [...h.slice(-40), before]);
     setFuture([]);
     setOver(next);
   };
-  const undo = () => { const prev = history.at(-1); if (!prev) return; setHistory((h) => h.slice(0, -1)); setFuture((f) => [over, ...f]); setOver(prev); };
-  const redo = () => { const nxt = future[0]; if (!nxt) return; setFuture((f) => f.slice(1)); setHistory((h) => [...h, over]); setOver(nxt); };
+  const finishTextRef = useRef<() => Over>(() => overRef.current);
+  const undo = () => {
+    const before = overRef.current;
+    const current = finishTextRef.current();
+    const pendingText = current !== before;
+    const prev = pendingText ? before : history.at(-1);
+    if (!prev) return;
+    invalidateAsync();
+    setHistory(pendingText ? history : history.slice(0, -1));
+    setFuture((f) => [current, ...f]);
+    setOver(prev);
+  };
+  const redo = () => {
+    const before = overRef.current;
+    if (finishTextRef.current() !== before) { invalidateAsync(); return; }
+    const next = future[0];
+    if (!next) return;
+    invalidateAsync();
+    setFuture((f) => f.slice(1));
+    setHistory((h) => [...h, before]);
+    setOver(next);
+  };
+  const receivePatch = (patch: EditorAsyncPatch) => {
+    if (!mounted.current || patch.session !== session.current) {
+      if (patch.kind === "images") Object.values(patch.changes).forEach(clearUnusedImage);
+      return;
+    }
+    const current = finishTextRef.current();
+    const result = mergeEditorAsyncPatch(current, session.current, patch, elementVersions.current);
+    if (result.applied.length) commit(result.state);
+    if (patch.kind === "images") for (const id of result.applied) unusedImages.current.delete(patch.changes[id]);
+    if (result.conflicts.length) {
+      const pending = { ...patch, changes: Object.fromEntries(result.conflicts.map(id => [id, patch.changes[id]])) };
+      pendingPatchRef.current = pending;
+      setPendingPatch(pending);
+    }
+    return result;
+  };
+  const resolvePatch = (id: string, useIncoming: boolean) => {
+    const pending = pendingPatchRef.current;
+    if (!pending || pending.session !== session.current) return;
+    const current = finishTextRef.current();
+    if (useIncoming) {
+      commit({ ...current, [pending.kind]: { ...current[pending.kind], [id]: pending.changes[id] } });
+      if (pending.kind === "images") unusedImages.current.delete(pending.changes[id]);
+    } else if (pending.kind === "images") clearUnusedImage(pending.changes[id]);
+    const changes = { ...pending.changes };
+    delete changes[id];
+    const next = Object.keys(changes).length ? { ...pending, changes } : null;
+    pendingPatchRef.current = next;
+    setPendingPatch(next);
+  };
 
   /*
    * 선택 툴바(Wix 식) — 요소를 '클릭'만 해도 그 위에 작은 액션 줄이 뜬다.
@@ -203,6 +323,14 @@ export function BrainwaveEditor({
   };
   /* 텍스트 판의 내용 칸 — 화면의 글자와 같은 값을 비춘다 */
   const [draftText, setDraftText] = useState("");
+  useEffect(() => {
+    if (!recoveryKey || !recoveryReady || recovery) return;
+    const local = editing ? { ...over, texts: { ...over.texts, [editing.id]: draftText } } : over;
+    if (landingDraftFingerprint({ page, ...local }) === initial.current) return;
+    const draft: LandingPageData = { ...data, businessContent, sourceSnapshot, brainwave: { page, contentMode, ...local }, content: [] };
+    try { sessionStorage.setItem(recoveryKey, JSON.stringify({ version: 1, base: initial.current, draft, savedAt: Date.now() } satisfies EditorRecovery)); }
+    catch { setRecoveryError("임시 복구본을 보관하지 못했어요. 수정 내용은 열려 있는 화면에 유지하고 있어요."); }
+  }, [over, page, businessContent, sourceSnapshot, contentMode, draftText, editing, data, recoveryKey, recoveryReady, recovery]);
   /* 판에서 한 글자라도 고치면 그 편집 전 상태를 한 번만 히스토리에 넣는다(타자마다 쌓지 않게) */
   const histPushed = useRef(false);
   /*
@@ -236,20 +364,22 @@ export function BrainwaveEditor({
   /* 고치던 글을 마무리하고, 반영된 값을 돌려준다 — 저장 때 setState 가 늦어
      옛 값을 저장하는 일이 있었다 */
   const finishText = (): Over => {
-    if (!editing) return over;
+    if (!editing) return overRef.current;
     const { id, el } = editing;
     el.contentEditable = "false";
     el.oninput = null;
     const text = el.innerText;
     const original = meta?.slots.text.find((t) => t.id === id)?.text ?? "";
-    const next = { ...over, texts: { ...over.texts } };
+    const current = overRef.current;
+    const next = { ...current, texts: { ...current.texts } };
     if (!contentMode && text === original) delete next.texts[id]; else next.texts[id] = text;
     setEditing(null);
     setSizeTarget(null);
     histPushed.current = false;
-    if (JSON.stringify(next.texts) !== JSON.stringify(over.texts)) { commit(next); return next; }
-    return over;
+    if (JSON.stringify(next.texts) !== JSON.stringify(current.texts)) { commit(next); return next; }
+    return current;
   };
+  finishTextRef.current = finishText;
 
   /*
    * 버튼 자리 — 판을 열어 글자와 '누르면 어디로'를 한 번에 고친다.
@@ -422,30 +552,47 @@ export function BrainwaveEditor({
 
   /* 사진 자리 — 파일 고르기 */
   const pickImage = (id: string, el?: HTMLElement) => { finishText(); setMenu(null); if (el) select("사진", id, el); pendingImage.current = id; fileRef.current?.click(); };
-  const onFile = async (file?: File) => {
+  const onFile = (file?: File) => {
     const id = pendingImage.current;
-    if (!file || !id) return;
+    if (!file || !id || uploading || aiRequest.current || pendingPatchRef.current) return;
+    setImageCrop({ file, id, session: session.current, before: finishText(), versions: { ...elementVersions.current } });
+    if (fileRef.current) fileRef.current.value = "";
+  };
+  const uploadCroppedImage = async (file: File) => {
+    const request = imageCrop;
+    setImageCrop(null);
+    if (!request || !mounted.current || request.session !== session.current) return;
+    const { id, before: snapshot, session: requestSession, versions } = request;
     setUploading(id); setError("");
     try {
-      const url = await uploadImage(await resizeImage(file, "hero"), "hero");
-      commit({ ...over, images: { ...over.images, [id]: url } });
+      const blob = await resizeImage(file, "hero");
+      if (!mounted.current || requestSession !== session.current) return;
+      const receipt = await uploadEditorImage(blob, "hero");
+      if (!mounted.current || requestSession !== session.current) { void discardEditorImage(receipt); return; }
+      unusedImages.current.set(receipt.url, receipt);
+      receivePatch({ session: requestSession, kind: "images", before: snapshot.images, changes: { [id]: receipt.url }, versions });
     } catch (e) {
+      if (!mounted.current || requestSession !== session.current) return;
       setError(e instanceof Error ? e.message : "사진을 올리지 못했습니다.");
     } finally {
-      setUploading(null);
-      if (fileRef.current) fileRef.current.value = "";
+      if (mounted.current && requestSession === session.current) {
+        setUploading(null);
+        if (fileRef.current) fileRef.current.value = "";
+      }
     }
   };
 
   const changePage = (next: string) => {
     if (next === page) return;
     finishText();
+    invalidateAsync();
     setMenu(null);
     setBtn(null);
     deselect();
     const source = { ...(businessContent ?? { businessName: String(data.root.props?.title || "내 사업"), offer: business.summary, description: business.summary, customer: "", price: "문의 후 안내", cta: "문의하기", image: "" }), ...(business.name ? { businessName: business.name } : {}) };
     const generated = createBusinessTemplate(source, next);
     setBusinessContent(source);
+    setSourceSnapshot(undefined);
     setOver(generated);
     setHistory([]); setFuture([]);
     setContentMode("business");
@@ -454,16 +601,36 @@ export function BrainwaveEditor({
   };
 
   const save = () => {
-    if (persistence.saving || uploading || ai.busy) return;
+    if (persistence.saving || uploading || ai.busy || pendingPatchRef.current) return;
     if (btn || menu) { setError("열려 있는 버튼이나 메뉴 설정을 먼저 적용해주세요."); return; }
     setError("");
     const final = finishText();
-    void persistence.save({ ...data, businessContent, brainwave: { page, contentMode, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden, order: final.order }, content: [] });
+    void persistence.save({ ...data, businessContent, sourceSnapshot, brainwave: { page, contentMode, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden, order: final.order }, content: [] }).then(saved => {
+      if (!saved) return;
+      initial.current = landingDraftFingerprint({ page, ...final });
+      if (mounted.current) setSavedFingerprint(initial.current);
+      if (recoveryKey) try { sessionStorage.removeItem(recoveryKey); } catch { /* The server save already succeeded. */ }
+    });
+  };
+  const restoreRecovery = () => {
+    if (!recovery?.draft.brainwave || recovery.base !== initial.current) return;
+    invalidateAsync();
+    const restored = recovery.draft.brainwave;
+    setPage(restored.page); setContentMode(restored.contentMode); setBusinessContent(recovery.draft.businessContent); setSourceSnapshot(recovery.draft.sourceSnapshot);
+    commit({ texts: restored.texts, images: restored.images, links: restored.links, sizes: restored.sizes, hidden: restored.hidden, order: restored.order });
+    setRecovery(null);
+  };
+  const downloadRecovery = () => {
+    if (!recovery) return;
+    const url = URL.createObjectURL(new Blob([JSON.stringify(recovery.draft, null, 2)], { type: "application/json" }));
+    const link = document.createElement("a"); link.href = url; link.download = "homepage-recovery.json"; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   const close = () => {
-    if (persistence.saving || uploading || ai.busy) return;
+    if (persistence.saving) return;
     const final = finishText();
-    if ((btn || menu || initial.current !== landingDraftFingerprint({ page, ...final })) && !window.confirm("수정 내용을 저장하지 않고 편집기를 닫을까요?")) return;
+    if ((btn || menu || uploading || ai.busy || pendingPatchRef.current || initial.current !== landingDraftFingerprint({ page, ...final })) && !window.confirm("수정 내용과 진행 중인 작업을 저장하지 않고 닫을까요?")) return;
+    invalidateAsync();
     onClose();
   };
 
@@ -501,11 +668,26 @@ export function BrainwaveEditor({
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /></button>
           {projectId ? <button type="button" className={`bw-editor-ai ${ai.open ? "on" : ""}`} onClick={() => setAi((s) => ({ ...s, open: !s.open }))} title="AI 로 고치기"><Sparkles /> AI</button> : null}
-          <button type="button" className="bw-editor-save" onClick={save} disabled={persistence.saving || !!uploading || ai.busy}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} {persistence.saving ? "저장 중" : "저장"}</button>
-          <button type="button" onClick={close} disabled={persistence.saving || !!uploading || ai.busy} title="닫기"><X /></button>
+          <button type="button" className="bw-editor-save" title="저장" onClick={save} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} {persistence.saving ? "저장 중" : "저장"}</button>
+          <button type="button" onClick={close} disabled={persistence.saving} title="닫기"><X /></button>
         </div>
       </header>
       {error || persistence.error ? <p className="bw-editor-error" role="alert">{error || persistence.error}</p> : null}
+      {recoveryError ? <p className="bw-editor-error" role="status">{recoveryError}</p> : null}
+      {recovery ? <section className="bw-editor-recovery" aria-label="저장하지 않은 편집 복구">
+        <p>{recovery.base === initial.current ? "이 탭에 저장하지 않은 수정 내용이 있어요" : "서버에 새 버전이 있어요. 이전 수정본을 보관한 뒤 필요한 내용을 옮겨 주세요"}</p>
+        {recovery.base === initial.current ? <button type="button" onClick={restoreRecovery}>수정 내용 복구</button> : <button type="button" onClick={downloadRecovery}>복구본 내려받기</button>}
+        <button type="button" onClick={() => { if (recoveryKey) try { sessionStorage.removeItem(recoveryKey); } catch {} setRecovery(null); }}>복구본 삭제</button>
+      </section> : null}
+      {persistence.savedAt && !persistence.saving && !persistence.error ? <span className="bw-editor-saved" role="status">{landingDraftFingerprint({ page, ...over }) === savedFingerprint && !editing ? "저장 완료" : "저장하지 않은 수정"}</span> : null}
+      {pendingPatch ? <section className="bw-editor-conflicts" aria-label="변경 내용 비교" aria-live="polite">
+        <strong>기다리는 동안 같은 내용을 수정했어요</strong>
+        {Object.entries(pendingPatch.changes).map(([id, incoming]) => <div key={id}>
+          {pendingPatch.kind === "texts" ? <><p>내 수정: {over.texts[id] ?? ""}</p><p>AI 수정: {incoming}</p></> : <div className="bw-editor-conflict-images"><img src={over.images[id]} alt="현재 사진" /><img src={incoming} alt="새로 올린 사진" /></div>}
+          <button type="button" onClick={() => resolvePatch(id, false)}>내 수정 유지</button>
+          <button type="button" onClick={() => resolvePatch(id, true)}>새 내용 적용</button>
+        </div>)}
+      </section> : null}
       {/* 선택 툴바 — 누른 요소 바로 위에 뜨는 액션 줄(Wix 식). 숨기기는 우클릭 없이 여기서 */}
       {!previewMode && sel && selPos ? (
         <div className="bw-eltool" role="toolbar" aria-label={`선택: ${sel.kind}`} style={{ left: selPos.x, top: selPos.y }} onMouseDown={(e) => e.preventDefault()}>
@@ -713,7 +895,7 @@ export function BrainwaveEditor({
               maxLength={1000}
               disabled={ai.busy}
             />
-            <button type="button" onClick={() => void runAi()} disabled={ai.busy || ai.instruction.trim().length < 2 || (ai.balance ? ai.balance.remaining < 2000 : false)}>
+            <button type="button" onClick={() => void runAi()} disabled={ai.busy || !!uploading || !!pendingPatch || ai.instruction.trim().length < 2 || (ai.balance ? ai.balance.remaining < 2000 : false)}>
               {ai.busy ? <><LoaderCircle className="spin" /> 고치는 중</> : "AI 로 고치기"}
             </button>
           </div>
@@ -738,7 +920,7 @@ export function BrainwaveEditor({
             mode={view === "mobile" ? "mobile" : "desktop"}
             onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id, el) : kind === "restore" ? restore(id) : pickButton(id, el))}
           />
-          {uploading ? <div className="bw-editor-uploading"><LoaderCircle className="spin" /> 사진 올리는 중</div> : null}
+          {uploading ? <div className="bw-editor-uploading" role="status"><LoaderCircle className="spin" aria-hidden /> 사진 올리는 중</div> : null}
         </div>
       </div>
       {btn ? (
@@ -787,6 +969,7 @@ export function BrainwaveEditor({
         </div>
       ) : null}
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
+      <LandingImageCrop file={imageCrop?.file ?? null} onApply={file => void uploadCroppedImage(file)} onCancel={() => setImageCrop(null)} />
       <p className="bw-editor-hint">
         {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 요소를 누르면 위에 뜨는 줄에서 숨기기(삭제)·섹션 지우기를 할 수 있습니다.</>}
         {changed ? <b> 고친 자리 {changed}개</b> : null}

@@ -9,6 +9,8 @@ import { LandingDomainConnector } from "./landing-domain-connector";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { applyBusinessContent } from "../lib/landing/page-data";
+import { HomepageSourceUpdate } from "./homepage-source-update";
+import { HomepageLeadNotification, useHomepageLeadNotifications } from "./homepage-lead-notifications";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -68,6 +70,7 @@ export function HomepageKitPanel({
   onPublish,
   onOpenEditor,
   onSiteUpdated,
+  onSourceApplied,
 }: {
   draft: LandingDraft;
   site: LandingSiteRecord | null;
@@ -80,6 +83,7 @@ export function HomepageKitPanel({
   onPublish: () => void;
   onOpenEditor: () => void;
   onSiteUpdated: (site: LandingSiteRecord) => void;
+  onSourceApplied?: (site: LandingSiteRecord, expectedUpdatedAt: string) => void;
 }) {
   const update = (patch: Partial<LandingDraft>) => onChange({ ...draft, ...patch });
   const busy = action === "saving" || action === "publishing";
@@ -106,6 +110,7 @@ export function HomepageKitPanel({
   const [leads, setLeads] = useState<LandingLeadRecord[] | null>(null);
   const [leadsError, setLeadsError] = useState("");
   const [leadsRefresh, setLeadsRefresh] = useState(0);
+  const notifications = useHomepageLeadNotifications(projectId, leadsRefresh);
   useEffect(() => {
     if (!projectId) return;
     const controller = new AbortController();
@@ -166,6 +171,7 @@ export function HomepageKitPanel({
           <span aria-hidden="true" className="hk-dots"><i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" /></span>
           <span className="hk-mock-url">{publicPath ? `oneulstart.com${publicPath}` : "내 사업 홈페이지"}</span>
           <span className="hk-mock-actions">
+            {projectId && site && onSourceApplied ? <HomepageSourceUpdate projectId={projectId} site={site} draft={draft} disabled={busy} onApplied={onSourceApplied} /> : null}
             <button type="button" onClick={applyBusiness} disabled={busy || !draft.businessName.trim() || !bw || !BRAINWAVE_PAGES.some(page => page.id === bw.page && page.group === "landing")} title="사업 정보 적용">
               <RefreshCw size={14} /> 사업 정보 적용
             </button>
@@ -242,6 +248,7 @@ export function HomepageKitPanel({
         hint={draft.leadCaptureEnabled ? "홈페이지 문의 양식으로 들어온 것입니다. 보유기간이 지나면 지워 주세요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
       >
         <div className="hk-fold-save"><button type="button" aria-label="문의 새로고침" title="문의 새로고침" disabled={leads === null && !leadsError} onClick={() => setLeadsRefresh(value => value + 1)}><RefreshCw size={14} /> 새로고침</button></div>
+        {notifications.error ? <p className="hk-empty" role="alert">{notifications.error}</p> : null}
         {leadsError ? <p className="hk-empty" role="alert">{leadsError}</p> : leads === null ? <p className="hk-empty">불러오는 중…</p> : leads.length === 0 ? <p className="hk-empty">아직 접수된 문의가 없습니다. 공개 주소를 알리면 여기 쌓입니다.</p> : (
           <ul className="hk-leads">
             {leads.map((lead) => (
@@ -252,6 +259,7 @@ export function HomepageKitPanel({
                   <span>{[lead.phone, lead.email].filter(Boolean).join(" · ")}</span>
                   {lead.message ? <p>{lead.message}</p> : null}
                   <small>{new Date(lead.createdAt).toLocaleString("ko-KR")}{lead.marketingAgreed ? " · 홍보 수신 동의" : ""}</small>
+                  {notifications.items ? <HomepageLeadNotification value={notifications.items.find(item => item.leadId === lead.id)} busy={notifications.retrying !== null} onRetry={() => { void notifications.retry(lead.id); }} /> : null}
                 </div>
               </li>
             ))}

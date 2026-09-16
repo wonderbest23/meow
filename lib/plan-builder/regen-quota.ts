@@ -20,33 +20,33 @@ export interface RegenQuota {
   used: number;
   /** 남은 횟수 */
   remaining: number;
+  /** Accounting could not be verified; callers must not authorize regeneration. */
+  unavailable?: true;
 }
 
-const EMPTY: RegenQuota = { allowed: REGEN_INCLUDED, used: 0, remaining: REGEN_INCLUDED };
+const UNAVAILABLE: RegenQuota = { allowed: 0, used: 0, remaining: 0, unavailable: true };
 
-/**
- * 남은 재생성 횟수. 집계용 표가 아직 없거나 조회에 실패하면 막지 않는다 —
- * 세는 쪽이 고장 났다고 해서 이미 돈을 낸 손님의 작업을 멈추게 할 수는 없다.
- */
+/** Unavailable or malformed accounting never grants a default allowance. */
 export async function resolveRegenQuota(planId?: string): Promise<RegenQuota> {
-  if (!planId) return EMPTY;
-  const supabase = getServerSupabase();
-  if (!supabase) return EMPTY;
-
   try {
+    if (!planId) return { ...UNAVAILABLE };
+    const supabase = getServerSupabase();
+    if (!supabase) return { ...UNAVAILABLE };
     const [usedRes, packRes] = await Promise.all([
       supabase.from("plan_regenerations").select("id", { count: "exact", head: true }).eq("plan_id", planId).eq("ok", true),
       supabase.from("plan_regen_packs").select("granted").eq("plan_id", planId),
     ]);
 
-    if (usedRes.error || packRes.error) return EMPTY;
+    if (usedRes.error || packRes.error || !Number.isSafeInteger(usedRes.count) || usedRes.count! < 0 || !Array.isArray(packRes.data)) return { ...UNAVAILABLE };
 
-    const purchased = (packRes.data ?? []).reduce((sum, row) => sum + (Number(row.granted) || 0), 0);
+    if (packRes.data.some(row => !row || !Number.isSafeInteger(row.granted) || row.granted < 0)) return { ...UNAVAILABLE };
+    const purchased = packRes.data.reduce((sum, row) => sum + row.granted, 0);
     const allowed = REGEN_INCLUDED + purchased;
-    const used = usedRes.count ?? 0;
+    if (!Number.isSafeInteger(allowed)) return { ...UNAVAILABLE };
+    const used = usedRes.count!;
     return { allowed, used, remaining: Math.max(0, allowed - used) };
   } catch {
-    return EMPTY;
+    return { ...UNAVAILABLE };
   }
 }
 

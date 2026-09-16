@@ -183,6 +183,16 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
       : Number(incomingProposal.revision) > Number(previousProposal.revision) ? incomingProposal : previousProposal;
     const finalPlan = byId.get(p.id);
     if (proposal && finalPlan) byId.set(p.id, { ...finalPlan, answers: { ...finalPlan.answers, [PROPOSAL_KEY]: proposal } });
+    const previousArtifacts = prev?.answers.__artifact_sources, incomingArtifacts = p.answers.__artifact_sources;
+    const artifacts = !previousArtifacts ? incomingArtifacts : !incomingArtifacts ? previousArtifacts : Number(incomingArtifacts.revision) > Number(previousArtifacts.revision) ? incomingArtifacts : previousArtifacts;
+    const artifactPlan = byId.get(p.id);
+    if (artifacts && artifactPlan) byId.set(p.id, { ...artifactPlan, answers: { ...artifactPlan.answers, __artifact_sources: artifacts } });
+    // Background document saves must not rewind independently completed intake jobs.
+    const previousIntake = prev?.answers.__business_intake, incomingIntake = p.answers.__business_intake;
+    const intakeRevision = (record: Record<string, unknown> | undefined) => Number((record?.state as { stateRevision?: number } | undefined)?.stateRevision ?? 0);
+    const intake = !previousIntake ? incomingIntake : !incomingIntake ? previousIntake : intakeRevision(incomingIntake) >= intakeRevision(previousIntake) ? incomingIntake : previousIntake;
+    const intakePlan = byId.get(p.id);
+    if (intake && intakePlan) byId.set(p.id, { ...intakePlan, answers: { ...intakePlan.answers, __business_intake: intake } });
   }
   const plans = [...byId.values()].sort((a, b) => (a.createdAt || "").localeCompare(b.createdAt || ""));
   return {
@@ -206,11 +216,16 @@ export async function claimGuestPlanState(guestHash: string, accountHash: string
     const claimed = memoryClaims.get(guestHash);
     if (claimed) return claimed === accountHash ? "claimed" : "consumed";
     const guest = memoryStore.get(guestHash) ?? EMPTY;
-    if (guest.plans.some(plan => ["__coach_job", "__deck_job"].some(key => ["queued", "running"].includes(String(plan.answers[key]?.status))))) throw new Error("PLAN_CLAIM_BUSY");
+    if ([...globalThis.__oneulArtifactUpdateStore?.values() ?? []].some(job => job.ownerHash === guestHash && ["queued", "running", "ready"].includes(job.status))) throw new Error("PLAN_CLAIM_BUSY");
+    if (guest.plans.some(plan => ["__coach_job", "__deck_job"].some(key => ["queued", "running"].includes(String(plan.answers[key]?.status))) || ["queued", "running"].includes(String((plan.answers.__business_intake?.state as { job?: { status?: string } } | undefined)?.job?.status)))) throw new Error("PLAN_CLAIM_BUSY");
     const account = memoryStore.get(accountHash) ?? EMPTY;
     if (memoryStore.has(guestHash)) memoryStore.set(accountHash, structuredClone(mergeStates(account, guest)));
     memoryStore.delete(guestHash);
     memoryClaims.set(guestHash, accountHash);
+    for (const [key, job] of globalThis.__oneulArtifactUpdateStore ?? []) if (job.ownerHash === guestHash) {
+      globalThis.__oneulArtifactUpdateStore!.delete(key);
+      globalThis.__oneulArtifactUpdateStore!.set(`${accountHash}:${job.planId}:${job.id}`, { ...job, ownerHash: accountHash });
+    }
     return "claimed";
   }
   for (let attempt = 0; attempt < 5; attempt++) {
@@ -224,7 +239,7 @@ export async function claimGuestPlanState(guestHash: string, accountHash: string
       p_guest_at: guestResult.data?.updated_at ?? null, p_account_at: accountResult.data?.updated_at ?? null,
       p_data: merged, p_title: merged.business.name || active?.title || "새 플랜", p_plan_type: active?.planType || "창업 초기 · 사업계획서",
     });
-    if (error) throw new Error("PLAN_CLAIM_FAILED");
+    if (error) throw new Error(error.message.includes("PLAN_CLAIM_BUSY") ? "PLAN_CLAIM_BUSY" : "PLAN_CLAIM_FAILED");
     if (data === "claimed" || data === "consumed") return data;
     if (data === "busy") throw new Error("PLAN_CLAIM_BUSY");
     if (data !== "conflict") throw new Error("PLAN_CLAIM_FAILED");
@@ -234,7 +249,7 @@ export async function claimGuestPlanState(guestHash: string, accountHash: string
 
 /** Browser autosaves may edit documents, but cannot create or replace server job/context records. */
 export function preserveServerCoachRecords(incoming: ServerPlanState, stored: ServerPlanState): ServerPlanState {
-  const keys = ["__business_coach", "__coach_job", "__coach_generation", "__business_edit_history", "__business_edit_receipts", "__deck_job", OPERATING_KEY, PROPOSAL_KEY];
+  const keys = ["__business_coach", "__business_intake", "__intake_legacy_job", "intake/details", "intake/period", "__coach_job", "__coach_generation", "__business_edit_history", "__business_edit_receipts", "__deck_job", "__artifact_sources", OPERATING_KEY, PROPOSAL_KEY];
   return { ...incoming, plans: incoming.plans.map(plan => {
     const saved = stored.plans.find(item => item.id === plan.id);
     const answers = { ...plan.answers };

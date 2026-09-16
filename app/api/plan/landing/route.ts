@@ -10,6 +10,7 @@ import { landingDraftFromPlan, planLandingReadiness } from "../../../../lib/land
 import { paidHomepagePlanIds, HOMEPAGE_PRODUCT_AMOUNT } from "../../../../lib/payments/plan-orders";
 import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
 import { isEditorPreviewAccount } from "../../../../lib/landing/editor-preview";
+import { seedLandingSourceSnapshot } from "../../../../lib/landing/source-update";
 
 /*
  * 운영자는 결제 없이 편집기를 연다.
@@ -117,7 +118,7 @@ export async function POST(request: Request) {
   const createdMeanwhile = await getLandingForProject(projectId, identity.hash);
   if (createdMeanwhile) return NextResponse.json({ site: createdMeanwhile, projectId, ...entitlement, created: false });
 
-  const draft = landingDraftFromPlan(source);
+  const draft = seedLandingSourceSnapshot(landingDraftFromPlan(source), plan.id, plan.updatedAt);
   try {
     const site = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt: null });
     return NextResponse.json({ site, projectId, ...entitlement, created: true }, { status: 201 });

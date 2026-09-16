@@ -4,14 +4,20 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 
 // Standard tier, conservatively including long-context/cache-write rates.
-// Verified 2026-09-14: https://developers.openai.com/api/docs/pricing
+// Reverified 2026-09-15: https://developers.openai.com/api/docs/pricing
 const rates = { "gpt-6-astra": { input: 25, output: 75 } } as const;
 export const APPROVAL_ID = "oneul-synthetic-launch-2026-09-13";
 export const EXTENSION_APPROVAL_ID = "oneul-document-proposal-additional-5usd-2026-09-14";
-type ExtensionApproval = { id: typeof EXTENSION_APPROVAL_ID; additionalUsd: 5 };
+export const INDUSTRY_APPROVAL_ID = "oneul-all-industry-additional-20usd-2026-09-15";
+type ExtensionApproval = { id: typeof EXTENSION_APPROVAL_ID; additionalUsd: 5 } | { id: typeof INDUSTRY_APPROVAL_ID; additionalUsd: 20 };
+const extensionSchema = z.discriminatedUnion("id", [
+  z.object({ id: z.literal(EXTENSION_APPROVAL_ID), additionalMicros: z.literal(5_000_000), approvedAt: z.string().datetime() }).strict(),
+  z.object({ id: z.literal(INDUSTRY_APPROVAL_ID), additionalMicros: z.literal(20_000_000), approvedAt: z.string().datetime() }).strict(),
+]);
+const callLimit = (extensions: Array<{ id: string }>) => 8 + extensions.reduce((sum, extension) => sum + (extension.id === INDUSTRY_APPROVAL_ID ? 48 : 8), 0);
 const callSchema = z.object({ id: z.string(), requestHash: z.string(), model: z.string(), reservedMicros: z.number().int().positive(), startedAt: z.string(), status: z.enum(["reserved", "completed", "http_failed", "uncertain"]), elapsedMs: z.number().optional(), inputTokens: z.number().optional(), outputTokens: z.number().optional() });
-const ledgerSchema = z.object({ version: z.literal(1), approval: z.literal(APPROVAL_ID), limitMicros: z.number().int().positive().max(10_000_000), calls: z.array(callSchema).max(16), extensions: z.array(z.object({ id: z.literal(EXTENSION_APPROVAL_ID), additionalMicros: z.literal(5_000_000), approvedAt: z.string().datetime() }).strict()).max(1).default([]) })
-  .refine(value => value.limitMicros <= 5_000_000 + value.extensions.reduce((sum, item) => sum + item.additionalMicros, 0) && value.calls.length <= 8 + value.extensions.length * 8, "Budget extension requires its explicit approval receipt");
+const ledgerSchema = z.object({ version: z.literal(1), approval: z.literal(APPROVAL_ID), limitMicros: z.number().int().positive().max(30_000_000), calls: z.array(callSchema).max(64), extensions: z.array(extensionSchema).max(2).default([]) })
+  .refine(value => new Set(value.extensions.map(item => item.id)).size === value.extensions.length && value.limitMicros <= 5_000_000 + value.extensions.reduce((sum, item) => sum + item.additionalMicros, 0) && value.calls.length <= callLimit(value.extensions), "Budget extension requires its explicit approval receipt");
 type Ledger = z.infer<typeof ledgerSchema>;
 
 export class SyntheticAiBudget {
@@ -22,8 +28,8 @@ export class SyntheticAiBudget {
   private closed = false;
   private readonly runLimitMicros: number;
   constructor(private directory: string, approvedUsd: number, extension?: ExtensionApproval) {
-    if (extension && (extension.id !== EXTENSION_APPROVAL_ID || extension.additionalUsd !== 5)) throw new Error("Unknown budget extension approval");
-    if (!Number.isFinite(approvedUsd) || approvedUsd <= 0 || approvedUsd > (extension ? 10 : 5)) throw new Error("Explicit approval limit is required");
+    if (extension && !(extension.id === EXTENSION_APPROVAL_ID && extension.additionalUsd === 5 || extension.id === INDUSTRY_APPROVAL_ID && extension.additionalUsd === 20)) throw new Error("Unknown budget extension approval");
+    if (!Number.isFinite(approvedUsd) || approvedUsd <= 0 || approvedUsd > (extension?.id === INDUSTRY_APPROVAL_ID ? 30 : extension ? 10 : 5)) throw new Error("Explicit approval limit is required");
     this.runLimitMicros = Math.floor(approvedUsd * 1_000_000);
     mkdirSync(directory, { recursive: true });
     this.path = join(directory, "budget.json");
@@ -33,8 +39,8 @@ export class SyntheticAiBudget {
       if (extension && !existsSync(this.path)) throw new Error("Preserve the original ledger before adding approval");
       this.ledger = existsSync(this.path) ? ledgerSchema.parse(JSON.parse(readFileSync(this.path, "utf8"))) : { version: 1, approval: APPROVAL_ID, limitMicros: this.runLimitMicros, calls: [], extensions: [] };
       if (extension && !this.ledger.extensions.some(item => item.id === extension.id)) {
-        this.ledger.extensions.push({ id: extension.id, additionalMicros: 5_000_000, approvedAt: new Date().toISOString() });
-        this.ledger.limitMicros += 5_000_000;
+        this.ledger.extensions.push(extensionSchema.parse({ id: extension.id, additionalMicros: extension.additionalUsd * 1_000_000, approvedAt: new Date().toISOString() }));
+        this.ledger.limitMicros += extension.additionalUsd * 1_000_000;
         this.ledger = ledgerSchema.parse(this.ledger);
       }
       this.persist();
@@ -73,7 +79,7 @@ export class SyntheticAiBudget {
       const rate = rates[raw.model as keyof typeof rates];
       const reservedMicros = Math.ceil(inputBound * rate.input + maxOutput * rate.output);
       const used = this.ledger.calls.reduce((sum, call) => sum + call.reservedMicros, 0);
-      if (this.ledger.calls.length >= 8 + this.ledger.extensions.length * 8 || used + reservedMicros > Math.min(this.ledger.limitMicros, this.runLimitMicros)) { this.halted = true; throw new Error("Approved cumulative AI budget would be exceeded; request was not sent"); }
+      if (this.ledger.calls.length >= callLimit(this.ledger.extensions) || used + reservedMicros > Math.min(this.ledger.limitMicros, this.runLimitMicros)) { this.halted = true; throw new Error("Approved cumulative AI budget would be exceeded; request was not sent"); }
       const call: Ledger["calls"][number] = { id: randomUUID(), requestHash: createHash("sha256").update(body).digest("hex"), model: raw.model, reservedMicros, startedAt: new Date().toISOString(), status: "reserved" };
       this.ledger.calls.push(call);
       this.persist(); // A timeout or process exit never returns the reservation to the budget.

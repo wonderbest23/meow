@@ -44,7 +44,7 @@ async function main() {
   await assert.rejects(() => runProposalRewrite(owner, id, { type: "apply", id: request.id, expectedRevision: ready.revision, choices: {} }), /선택/);
   const apply = { type: "apply" as const, id: request.id, expectedRevision: ready.revision, choices: { "proposal-summary": "keep_manual" as const, "proposal-offering": "use_revised" as const } };
   const applied = await runProposalRewrite(owner, id, apply);
-  assert.equal(applied.rewrite?.status, "applied"); assert.equal((await loadProposalEditor(owner, id)).sourceChanged, false);
+  assert.equal(applied.rewrite?.status, "applied"); assert.equal((await loadProposalEditor(owner, id)).sourceChanged, true, "Retained manual content requires an explicit fresh review");
   assert.equal(applied.document.edits["proposal-summary"].text?.title, "내가 쓴 고객 소개");
   assert.deepEqual(applied.document.edits["proposal-summary"].layout, manual["proposal-summary"].layout);
   assert.equal(applied.document.edits["proposal-offering"].text, undefined);

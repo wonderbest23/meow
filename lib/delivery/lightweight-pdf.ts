@@ -1,4 +1,5 @@
 import { marked, type Token, type Tokens } from "marked";
+import { summaryBasisLabel, type ExecutiveSummary } from "../plan-builder/executive-summary";
 import { CHART_FENCE_LANG, parseChartSpec, chartScale, chartTicks, shortWon } from "../plan-builder/chart";
 import { subsetTrueType } from "./font-subset";
 
@@ -7,6 +8,7 @@ type PdfDocumentInput = {
   type: string;
   versionLabel: string;
   markdown: string;
+  executiveSummary?: ExecutiveSummary;
 };
 
 type PdfProjectInput = {
@@ -24,6 +26,7 @@ const PAGE_HEIGHT = 841.89;
 const LEFT = 54;
 const CONTENT_WIDTH = PAGE_WIDTH - LEFT * 2;
 const BOTTOM = 72;
+const TOP = 62;
 
 function inlineText(tokens: Token[] | undefined, fallback = ""): string {
   if (!tokens?.length) return fallback.replace(/\s+/g, " ").trim();
@@ -165,7 +168,7 @@ class PdfLayout {
   }
 
   private newPage() {
-    const page = { commands: [], cursor: 62 };
+    const page = { commands: [], cursor: TOP };
     this.pages.push(page);
     this.page = page;
     return page;
@@ -278,15 +281,34 @@ class PdfLayout {
     this.addPage();
   }
 
+  summary(summary: ExecutiveSummary) {
+    const firstPageCount = this.pages.length;
+    this.text(summary.title, { size: 19, color: "171C24", bold: true, gap: 6 });
+    this.text(`한 장 사업 요약 | ${summary.planType}`, { size: 9, color: "596579", gap: 10 });
+    for (const block of summary.blocks) {
+      this.page.cursor += 6;
+      this.text(block.title, { size: 10.5, color: "171C24", bold: true, gap: 4 });
+      for (const line of block.lines) this.text(`${line.label}  ${line.value}  [${summaryBasisLabel(line.basis)}]`, { size: 9, color: "26303E", gap: 3 });
+    }
+    this.page.cursor += 7;
+    this.text(summary.note, { size: 7.5, color: "657286", gap: 0 });
+    if (this.pages.length !== firstPageCount) throw new Error("EXECUTIVE_SUMMARY_OVERFLOW");
+  }
+
   blocks(document: PdfDocumentInput) {
     const tokens = marked.lexer(document.markdown, { gfm: true });
     let skippedTitle = false;
-    for (const token of tokens) {
+    for (const [index, token] of tokens.entries()) {
       if (token.type === "heading") {
         if (!skippedTitle && token.depth === 1) { skippedTitle = true; continue; }
         const size = token.depth <= 2 ? 17 : token.depth === 3 ? 13 : 11;
-        this.ensure(size * 3);
-        this.page.cursor += token.depth <= 2 ? 12 : 7;
+        const gap = token.depth <= 2 ? 12 : 7;
+        const headingHeight = this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH, size).length * size * 1.55 + gap + 8;
+        const following = tokens.slice(index + 1).find(item => item.type !== "space");
+        const followingHeight = following?.type === "paragraph" ? this.wrap(inlineText(following.tokens, following.text), CONTENT_WIDTH, 10).length * 15.5 + 8 : 24;
+        const together = headingHeight + followingHeight;
+        this.ensure(together <= PAGE_HEIGHT - BOTTOM - TOP ? together : headingHeight + 24);
+        this.page.cursor += gap;
         this.text(inlineText(token.tokens, token.text), { size, color: token.depth <= 2 ? "18342A" : "0B7254", bold: true, gap: 8 });
         continue;
       }
@@ -416,10 +438,15 @@ class PdfLayout {
   private table(token: Tokens.Table) {
     const rows = [token.header, ...token.rows];
     const columnWidth = CONTENT_WIDTH / Math.max(1, token.header.length);
-    rows.forEach((row, rowIndex) => {
+    const measured = rows.map((row, rowIndex) => {
       const values = row.map((cell) => inlineText(cell.tokens, cell.text));
       const lineCounts = values.map((value) => this.wrap(value, columnWidth - 12, rowIndex === 0 ? 8.2 : 7.7).length);
       const height = Math.max(28, Math.max(...lineCounts) * 12 + 12);
+      return { values, height };
+    });
+    const totalHeight = measured.reduce((sum, row) => sum + row.height, 0);
+    if (totalHeight + 15 <= PAGE_HEIGHT - BOTTOM - TOP) this.ensure(totalHeight + 15);
+    measured.forEach(({ values, height }, rowIndex) => {
       this.ensure(height + 3);
       const top = this.page.cursor;
       values.forEach((value, columnIndex) => {
@@ -500,8 +527,13 @@ export function renderLightweightPdf(documents: PdfDocumentInput[], project: Pdf
   const font = new TrueTypeFont(Buffer.from(fontBytes));
   const layout = new PdfLayout(font);
   documents.forEach((document, index) => {
-    layout.cover(document, project, index === 0);
-    layout.blocks(document);
+    if (document.executiveSummary) {
+      if (index) layout.addPage();
+      layout.summary(document.executiveSummary);
+    } else {
+      layout.cover(document, project, index === 0);
+      layout.blocks(document);
+    }
   });
   layout.addFooters(project.title);
 

@@ -1,15 +1,31 @@
 import assert from "node:assert/strict";
+import Module, { createRequire } from "node:module";
 import { emptyCoach, generateAndSaveCoach } from "../lib/plan-builder/coach-job";
 import { COACH_KEY, COACH_TYPES, applyCoachReply, coachDocumentRevision, readCoach, type CoachReply } from "../lib/plan-builder/coach";
 import { COACH_JOB_KEY, readCoachJob, type CoachJob } from "../lib/plan-builder/coach-job-types";
 import { loadPlanState, normalizeState, savePlanState } from "../lib/plan-builder/plan-server-store";
-import { generateAndSaveSection } from "../lib/plan-builder/section-service";
 import { launchSchema, launchSteps, launchStatus, readLaunch, useOperatingWorkflow, LAUNCH_KEY } from "../lib/plan-builder/business-launch";
 import { businessChatHref } from "../lib/plan-builder/business-hub";
 import { designFixture } from "./fixtures/coach-design";
 
 async function main() {
   Object.assign(process.env, { PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "journey-test-only", ANTHROPIC_API_KEY: "" });
+  const require = createRequire(import.meta.url);
+  const quotaPath = require.resolve("../lib/plan-builder/regen-quota");
+  const previousQuota = require.cache[quotaPath];
+  const quotaFixture = new Module(quotaPath);
+  let quotaChecks = 0;
+  quotaFixture.exports = {
+    resolveRegenQuota: async (planId: string) => {
+      assert.equal(planId, "new-business");
+      quotaChecks++;
+      return { allowed: 20, used: 0, remaining: 20 };
+    },
+    recordRegen: async () => undefined,
+  };
+  quotaFixture.loaded = true;
+  require.cache[quotaPath] = quotaFixture;
+  const { generateAndSaveSection } = require("../lib/plan-builder/section-service") as typeof import("../lib/plan-builder/section-service");
   const owner = "isolated-business-journeys";
   const at = "2026-01-01T00:00:00.000Z";
   const plans = ["new-business", "existing-business", "unrelated-business"].map(id => ({ id, title: id, planType: COACH_TYPES.startup, createdAt: at, updatedAt: at, sections: {}, answers: { [COACH_KEY]: { state: emptyCoach() } } }));
@@ -111,6 +127,7 @@ async function main() {
     sectionMode = true;
     const sectionJob = { ownerHash: owner, planId: created.id, chapterId: "overview", sectionId: "summary" };
     assert.deepEqual(await generateAndSaveSection(sectionJob), { ok: true });
+    assert.equal(quotaChecks, 1, "regeneration requires an explicitly verified quota fixture");
     const generated = (await read(created.id)).sections["overview/summary"];
     assert.equal(generated.previous?.markdown, originalSection.markdown);
     assert.equal(generated.coachRevision, coachDocumentRevision(operatingCoach));
@@ -132,6 +149,10 @@ async function main() {
     assert.equal(final.plans.length, 3);
     assert.equal(readCoach((await read("unrelated-business")).answers)?.revision, 0);
     console.log("business journeys: idea -> startup -> operating, existing operator, same-business isolation, workflow records, regeneration, manual protection, replay and failure preservation passed (mock AI/memory)");
-  } finally { globalThis.fetch = originalFetch; }
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (previousQuota) require.cache[quotaPath] = previousQuota;
+    else delete require.cache[quotaPath];
+  }
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

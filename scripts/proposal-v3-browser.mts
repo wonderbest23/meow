@@ -1,0 +1,152 @@
+import assert from "node:assert/strict";
+import { spawn } from "node:child_process";
+import { constants } from "node:fs";
+import { cp, mkdtemp, readFile, symlink, writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { createServer } from "node:net";
+import { basename, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { randomUUID } from "node:crypto";
+import JSZip from "jszip";
+import { proposalFixture } from "./proposal-fixtures";
+import { normalizeState, savePlanState } from "../lib/plan-builder/plan-server-store";
+import { PROPOSAL_KEY } from "../lib/plan-builder/proposal-editor";
+import { loadProposalEditor, saveProposalEditor } from "../lib/plan-builder/proposal-editor-service";
+import { renderableProposal, upgradeProposalV3 } from "../lib/plan-builder/proposal-revision";
+import { renderDeckPptx } from "../lib/plan-builder/deck-render";
+
+const root = fileURLToPath(new URL("..", import.meta.url));
+const runtime = process.env.RUNTIME_NODE_MODULES;
+assert(runtime, "RUNTIME_NODE_MODULES is required");
+const { chromium } = createRequire(`${runtime}/package.json`)("playwright");
+const { PNG } = createRequire(`${runtime}/package.json`)("pngjs");
+const temp = await mkdtemp("/private/tmp/oneul-proposal-v3-");
+for (const entry of ["app", "components", "lib", "data", "public", "package.json", "tsconfig.json", "next-env.d.ts"]) await cp(join(root, entry), join(temp, entry), { recursive: true, mode: constants.COPYFILE_FICLONE, filter: path => !/^\.env(?:\.|$)|^\.dev\.vars|^\.git$/.test(basename(path)) });
+await cp(join(root, "scripts/prelaunch-next.config.ts"), join(temp, "next.config.ts"));
+await symlink(join(root, "node_modules"), join(temp, "node_modules"), "dir");
+const reserve = createServer(); await new Promise<void>(resolve => reserve.listen(0, "127.0.0.1", resolve));
+const address = reserve.address(); assert(address && typeof address !== "string"); const port = address.port;
+await new Promise<void>((resolve, reject) => reserve.close(error => error ? reject(error) : resolve()));
+const origin = `http://127.0.0.1:${port}`, owner = `v3-${randomUUID()}`, planId = "proposal-v3-qa", at = new Date().toISOString();
+Object.assign(process.env, { PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "" });
+const fixture = proposalFixture(), document = upgradeProposalV3({ revision: 1, ...fixture, edits: {} });
+const state = normalizeState({ plans: [{ id: planId, title: fixture.source.businessName, createdAt: at, updatedAt: at, planType: "", sections: {}, answers: { [PROPOSAL_KEY]: { version: 1, revision: 1, savedAt: at, generationToken: "fixture", fingerprint: "fixture", document, history: [], receipts: [] } } }] });
+await savePlanState(owner, state);
+const app = spawn(process.execPath, [join(root, "node_modules/next/dist/bin/next"), "dev", "--webpack", "--hostname", "127.0.0.1", "--port", String(port)], { cwd: temp, env: { PATH: process.env.PATH, HOME: process.env.HOME, TMPDIR: process.env.TMPDIR, NODE_ENV: "development", NEXT_TELEMETRY_DISABLED: "1", APP_ENV: "staging", PERSISTENCE_MODE: "demo-memory", PAYMENTS_ENABLED: "false", OPERATING_AI_ENABLED: "false", PROPOSAL_AI_ENABLED: "false", NEXT_PUBLIC_PPT_GENERATION_VERIFIED: "false" }, stdio: ["ignore", "pipe", "pipe"] });
+let logs = ""; app.stdout.on("data", data => { logs += data; }); app.stderr.on("data", data => { logs += data; });
+const exited = new Promise<void>(resolve => app.once("exit", () => resolve()));
+const errors: string[] = [], checks: string[] = [];
+let browser: any;
+try {
+  let ready = false;
+  for (let attempt = 0; attempt < 120; attempt++) {
+    if (app.exitCode !== null) throw new Error("Temporary server exited");
+    try { ready = (await fetch(`${origin}/plan/proposal?planId=${planId}`, { signal: AbortSignal.timeout(1000) })).status === 200; } catch {}
+    if (ready) break; await new Promise(resolve => setTimeout(resolve, 500));
+  }
+  assert(ready, "Temporary server did not start");
+  browser = await chromium.launch({ headless: true });
+  const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1440, height: 1000 } });
+  await context.route("**/*", (route: any) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  await context.route(/\/api\/plan\/proposal(?:\?|$)/, async (route: any) => {
+    try {
+      const url = new URL(route.request().url());
+      let view = await loadProposalEditor(owner, planId);
+      if (route.request().method() === "POST") view = await saveProposalEditor(owner, planId, route.request().postDataJSON().command);
+      if (url.searchParams.get("download") === "1") return route.fulfill({ status: 200, contentType: "application/vnd.openxmlformats-officedocument.presentationml.presentation", body: await renderDeckPptx(renderableProposal(view.saved!.document)) });
+      return route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ...view, sourceChanged: false }) });
+    } catch (error: any) { return route.fulfill({ status: error.status ?? 500, contentType: "application/json", body: JSON.stringify({ code: error.code, message: error.message }) }); }
+  });
+  const page = await context.newPage(); page.on("pageerror", (error: Error) => errors.push(error.message)); page.on("dialog", (dialog: any) => dialog.accept());
+  await page.goto(`${origin}/plan/proposal?planId=${planId}`, { waitUntil: "networkidle" });
+  const saved = () => page.getByRole("status").filter({ hasText: /^저장됨$/ }).waitFor({ timeout: 30000 });
+  const get = () => loadProposalEditor(owner, planId);
+  await page.getByLabel("슬라이드 제목", { exact: true }).fill("온결 스튜디오 제안서"); await saved();
+  await page.getByRole("button", { name: "페이지 복제", exact: true }).click(); await saved();
+  assert.equal((await get()).saved!.document.pages!.length, 13);
+  await page.getByRole("button", { name: "페이지 아래로", exact: true }).click(); await saved();
+  await page.getByRole("button", { name: "페이지 삭제", exact: true }).click(); await saved();
+  assert.equal((await get()).saved!.document.pages!.length, 12);
+  await page.getByRole("button", { name: "편집 되돌리기", exact: true }).click(); await saved();
+  assert.equal((await get()).saved!.document.pages!.length, 13);
+  await page.getByRole("button", { name: "편집 다시 실행", exact: true }).click(); await saved();
+  checks.push("page duplicate, move, delete, undo and redo persisted through real editor service");
+  const summaryIndex = fixture.deck.slides.findIndex(slide => slide.composition?.role === "summary");
+  await page.getByRole("navigation", { name: "슬라이드 목록" }).getByRole("button").nth(summaryIndex).click();
+  const originalPointId = renderableProposal((await get()).saved!.document).slides[summaryIndex].points![0].id;
+  await page.getByLabel("본문 1 제목", { exact: true }).fill("확인할 고객");
+  await page.getByLabel("본문 1 내용", { exact: true }).fill("제품 설명 자료가 필요한 소규모 제조사"); await saved();
+  await page.getByRole("button", { name: "본문 1 아래로", exact: true }).click(); await saved();
+  assert.equal(renderableProposal((await get()).saved!.document).slides[summaryIndex].points![1].id, originalPointId);
+  await page.getByRole("button", { name: "본문 항목 추가", exact: true }).click(); await saved();
+  await page.getByRole("button", { name: "본문 4 삭제", exact: true }).click(); await saved();
+  const offeringIndex = fixture.deck.slides.findIndex(slide => slide.composition?.role === "offering");
+  await page.getByRole("navigation", { name: "슬라이드 목록" }).getByRole("button").nth(offeringIndex).click();
+  await page.getByLabel("표 머리글 2열", { exact: true }).fill("제공 범위");
+  await page.getByLabel("표 1행 2열", { exact: true }).fill("제품 소개서와 편집 원본"); await saved();
+  await page.getByRole("button", { name: "행", exact: true }).click(); await saved();
+  await page.getByLabel("표 5행 1열", { exact: true }).fill("추가 확인"); await saved();
+  await page.getByRole("button", { name: "표 5행 삭제", exact: true }).click(); await saved();
+  await page.getByRole("button", { name: "열", exact: true }).click(); await saved();
+  await page.getByLabel("표 머리글 4열", { exact: true }).fill("담당"); await saved();
+  await page.getByRole("button", { name: "표 4열 삭제", exact: true }).click(); await saved();
+  assert.equal(renderableProposal((await get()).saved!.document).slides[offeringIndex].table!.rows[0][1], "제품 소개서와 편집 원본");
+  checks.push("point text, stable-ID reorder, add/delete, table cells and row/column structural edits");
+  await page.getByLabel("페이지 판형", { exact: true }).selectOption("chart");
+  await page.getByRole("button", { name: "페이지 추가", exact: true }).click(); await saved();
+  await page.getByLabel("슬라이드 제목", { exact: true }).fill("분기별 예상 매출");
+  await page.getByLabel("차트 단위", { exact: true }).fill("만원");
+  await page.getByLabel("차트 출처", { exact: true }).fill("가상 사업 시나리오 2026년 1분기");
+  await page.getByLabel("차트 계열 1", { exact: true }).fill("매출");
+  await page.getByLabel("차트 항목 1", { exact: true }).fill("1분기");
+  await page.getByLabel("차트 1행 1값", { exact: true }).fill("120");
+  const retry = page.getByRole("button", { name: "다시 저장", exact: true }); if (await retry.isVisible()) await retry.click(); await saved();
+  assert.equal(renderableProposal((await get()).saved!.document).slides.find(slide => slide.title === "분기별 예상 매출")?.chart?.series[0].values[0], 120);
+  checks.push("defined-layout chart creation requires explicit numeric input and persists data with provenance");
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    await page.getByLabel("차트 1행 1값", { exact: true }).fill(String(width)); await saved();
+    await page.getByRole("button", { name: "텍스트 center 정렬", exact: true }).click(); await saved();
+    let current = renderableProposal((await get()).saved!.document).slides.find(slide => slide.title === "분기별 예상 매출")!;
+    assert.equal(current.chart?.series[0].values[0], width); assert.equal(current.alignment?.title, "center");
+    await page.getByRole("button", { name: "편집 되돌리기", exact: true }).click(); await saved();
+    await page.getByRole("button", { name: "편집 다시 실행", exact: true }).click(); await saved();
+    await page.getByRole("button", { name: "텍스트 left 정렬", exact: true }).click(); await saved();
+    await page.getByLabel("차트 1행 1값", { exact: true }).fill("120"); await saved();
+    checks.push(`${width}px real form edit, alignment, undo/redo and persistence`);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `viewport ${width}`);
+    const canvas = page.getByLabel("제안서 슬라이드 미리보기", { exact: true });
+    const pixels = PNG.sync.read(await canvas.screenshot()); let ink = 0;
+    for (let i = 0; i < pixels.data.length; i += 4) if (pixels.data[i] < 200 || pixels.data[i + 1] < 200 || pixels.data[i + 2] < 200) ink++;
+    assert(ink / (pixels.width * pixels.height) > .02);
+    await page.screenshot({ path: join(temp, `chart-${width}.png`), fullPage: true });
+  }
+  checks.push("320/390/768/1440px responsive controls, nonblank chart pixels and screenshots");
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.getByLabel("페이지 판형", { exact: true }).selectOption("evidence");
+  await page.getByRole("button", { name: "페이지 추가", exact: true }).click(); await saved();
+  await page.getByLabel("슬라이드 제목", { exact: true }).fill("수행 결과 이미지"); await saved();
+  const bitmap = new PNG({ width: 400, height: 200 }); for (let i = 0; i < bitmap.data.length; i += 4) { bitmap.data[i] = 30; bitmap.data[i + 1] = 120; bitmap.data[i + 2] = 190; bitmap.data[i + 3] = 255; }
+  await page.locator('input[type="file"]').setInputFiles({ name: "fixture.png", mimeType: "image/png", buffer: PNG.sync.write(bitmap) });
+  await page.getByRole("button", { name: "이미지 교체", exact: true }).waitFor(); await saved();
+  await page.getByText("이미지 자르기", { exact: true }).click();
+  await page.getByLabel("이미지 자르기 w", { exact: true }).fill("0.5"); await saved();
+  const final = (await get()).saved!, photo = renderableProposal(final.document).slides.find(slide => slide.title === "수행 결과 이미지")!;
+  assert.equal(photo.image?.crop?.w, .5); assert.equal(photo.image?.width, 400);
+  await page.screenshot({ path: join(temp, "image-crop-1440.png"), fullPage: true });
+  await page.reload({ waitUntil: "networkidle" }); await page.getByLabel("슬라이드 제목", { exact: true }).waitFor();
+  assert.deepEqual((await get()).saved!.document, final.document);
+  const event = page.waitForEvent("download"); await page.getByRole("button", { name: "PPT 내려받기", exact: true }).click();
+  const download = await event; const output = join(temp, "edited-v3.pptx"); await download.saveAs(output);
+  const zip = await JSZip.loadAsync(await readFile(output)); assert.equal(zip.file(/^ppt\/charts\/chart\d+\.xml$/).length, 1);
+  assert.equal(zip.file(/^ppt\/slides\/slide\d+\.xml$/).length, final.document.pages!.length);
+  checks.push("image upload and crop, full page structure reload and actual PPTX download with native chart");
+  assert.deepEqual(errors, []);
+} catch (error) { errors.push(error instanceof Error ? error.stack ?? error.message : String(error)); process.exitCode = 1; for (const page of browser?.contexts().flatMap((c: any) => c.pages()) ?? []) await page.screenshot({ path: join(temp, "failure.png"), fullPage: true }).catch(() => {}); }
+finally {
+  await browser?.close(); app.kill("SIGTERM"); const timer = setTimeout(() => app.kill("SIGKILL"), 5000); await exited; clearTimeout(timer);
+  await writeFile(join(temp, "server.log"), logs);
+  const result = { passed: errors.length === 0, checks, errors, output: temp, httpAndAuthMocked: true, realEditorService: true, memoryPersistence: true, paidAiCalls: 0, paymentCalls: 0, serverStopped: true };
+  await writeFile(join(temp, "report.json"), JSON.stringify(result, null, 2)); console.log(JSON.stringify(result, null, 2));
+}

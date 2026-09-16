@@ -19,6 +19,16 @@ async function main() {
   fixture.deck.slides.forEach(slide => { slide.sourceSections = slide.sourceSections?.map(name => map.get(name)!); });
   state.plans[0].answers.__deck_job = { token, runId: "fixture", fingerprint: deckFingerprint(source), status: "complete", phase: "ready", attempt: 1, updatedAt: at, result: fixture.deck };
   const owner = `proposal-${randomUUID()}`; await savePlanState(owner, state);
+  const failedOwner = `proposal-failed-${randomUUID()}`, failedState = structuredClone(state);
+  failedState.plans[0].answers.__deck_job = { ...failedState.plans[0].answers.__deck_job, status: "failed", phase: "failed", result: undefined, draft: fixture.deck, code: "review_response_invalid" };
+  await savePlanState(failedOwner, failedState);
+  const failedView = await loadProposalEditor(failedOwner, "proposal-qa");
+  assert.equal(failedView.generation?.editable, false);
+  assert.equal(failedView.generation?.resumable, true);
+  assert.equal(failedView.generation?.code, "review_response_invalid");
+  assert.equal(failedView.generation?.token, token);
+  assert(!("draft" in failedView.generation!) && !("result" in failedView.generation!), "Status view does not send unreviewed slide content");
+  await assert.rejects(() => saveProposalEditor(failedOwner, "proposal-qa", { type: "initialize", requestId: randomUUID(), expectedRevision: 0, generationToken: token }), /생성이 완료/);
   await assert.rejects(() => loadProposalEditor("other", "proposal-qa"), /찾을 수/);
   const command = { type: "initialize" as const, requestId: randomUUID(), expectedRevision: 0, generationToken: token };
   const initial = await saveProposalEditor(owner, "proposal-qa", command);
@@ -51,6 +61,16 @@ async function main() {
   assert(!proposalCommandSchema.safeParse({ ...edit, edits: { "proposal-cover": { image: { data: "bad" } } } }).success);
   assert(!proposalCommandSchema.safeParse({ ...edit, edits: { "proposal-cover": { layout: { title: { x: 13, y: 0, w: 1, h: 1 } } } } }).success);
   assert(!proposalCommandSchema.safeParse({ ...edit, edits: { "proposal-offering": { content: { table: { headers: ["a", "b"], rows: [["a"]] } } } } }).success);
+  const pages = stale.saved!.document.pages!;
+  const structuredCommand = { type: "save" as const, requestId: randomUUID(), expectedRevision: 3, pages: [{ id: "user-table", layout: "table" as const }, ...pages.slice(1), { ...pages[0], id: "user-copy" }], edits: { "user-table": { text: { title: "직접 만든 표" }, content: { table: { headers: ["항목", "조건"], rows: [["납품물", "검수 후 인계"]] } } }, "user-copy": { text: { title: "보존한 표지 사본" } } } };
+  const structured = await saveProposalEditor(owner, "proposal-qa", structuredCommand);
+  assert.equal(structured.saved!.document.schemaVersion, 3);
+  assert.equal(renderableProposal(structured.saved!.document).slides[0].title, "직접 만든 표");
+  assert.equal((await loadProposalEditor(owner, "proposal-qa")).saved!.document.pages!.at(-1)!.id, "user-copy");
+  assert.equal((await saveProposalEditor(owner, "proposal-qa", structuredCommand)).saved!.revision, 4);
+  await assert.rejects(() => saveProposalEditor(owner, "proposal-qa", { ...structuredCommand, expectedRevision: 4, requestId: randomUUID(), pages: [{ id: "bad", sourceId: "another-owner-slide", layout: "table" }] }), /페이지 순서/);
+  const restoredV3 = await saveProposalEditor(owner, "proposal-qa", { type: "restore", requestId: randomUUID(), expectedRevision: 4, revision: 3 });
+  assert.deepEqual(restoredV3.saved!.document.pages, pages, "Page structure participates in version restoration");
   console.log("proposal editor: ownership, idempotency, CAS, restore, protected autosave, worker merge, shared geometry, body edits and stale-source preservation passed");
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

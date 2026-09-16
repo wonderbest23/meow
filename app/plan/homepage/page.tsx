@@ -302,6 +302,15 @@ export default function PlanHomepagePage() {
     }
     siteRef.current = next; setSite(next);
   };
+  const applySourceSite = (next: LandingSiteRecord, expectedUpdatedAt: string) => {
+    if (!mounted.current || requestRef.current || next.projectId !== projectId || siteRef.current?.updatedAt !== expectedUpdatedAt
+      || !draft || landingDraftFingerprint(draft) !== landingDraftFingerprint(siteRef.current.draft)) {
+      setMessage("초안 반영 후 현재 화면이 변경됐습니다. 저장되지 않은 수정은 유지했어요. 최신 초안을 다시 확인해주세요.");
+      return;
+    }
+    siteRef.current = next; setSite(next); setDraft(next.draft); setAction("saved");
+    setMessage("선택한 사업정보를 초안에 반영했습니다. 공개 중인 홈페이지는 바뀌지 않았습니다.");
+  };
 
   const publicPath = site ? `/launch/${site.publishedSlug ?? site.slug}` : "";
 
@@ -442,6 +451,7 @@ export default function PlanHomepagePage() {
           onPublish={publish}
           onOpenEditor={() => setBuilderOpen(true)}
           onSiteUpdated={updateSite}
+          onSourceApplied={applySourceSite}
         />
       )}
 

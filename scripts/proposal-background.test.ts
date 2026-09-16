@@ -12,6 +12,16 @@ import { proposalRewriteRuntime, previewProposalRewrite } from "../lib/plan-buil
 import { queueProposalUpdate, executeProposalUpdate, type ProposalBackgroundJob } from "../lib/plan-builder/proposal-background";
 import { callProposalUpdateService, handlePlanSectionServiceRequest } from "../lib/plan-builder/section-service";
 
+function assertStrictObjectSchemas(value: unknown) {
+  if (!value || typeof value !== "object") return;
+  const node = value as Record<string, unknown>;
+  if (node.type === "object" && node.properties && typeof node.properties === "object") {
+    assert.equal(node.additionalProperties, false);
+    assert.deepEqual([...(node.required as string[] ?? [])].sort(), Object.keys(node.properties).sort(), "Provider requires every object property, including nested objects");
+  }
+  for (const child of Object.values(node)) assertStrictObjectSchemas(child);
+}
+
 async function main() {
   Object.assign(process.env, { PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "test-only", ANTHROPIC_API_KEY: "", PROPOSAL_AI_ENABLED: "false" });
   assert.equal(proposalAIConfig("test"), null);
@@ -32,6 +42,7 @@ async function main() {
     assert.equal(String(input), "https://api.openai.com/v1/responses");
     const body = JSON.parse(String(init?.body));
     assert.equal(body.store, false);
+    assertStrictObjectSchemas(body.text?.format?.schema);
     calls++;
     if (mode === "quota") return Response.json({ error: { code: "insufficient_quota" } }, { status: 429 });
     if (mode === "limit") return Response.json({ status: "incomplete", incomplete_details: { reason: "max_output_tokens" } });

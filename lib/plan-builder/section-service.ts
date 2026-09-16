@@ -3,6 +3,7 @@ import { generateSection } from "./section-generator";
 import { renderPlanMarkdown } from "./markdown";
 import { resolveLLMConfig, resolvePlanningLLMConfig } from "../llm/config";
 import { readCoach, coachContext, coachDocumentRevision } from "./coach";
+import { confirmedIntakeContext } from "./intake-context";
 import { loadPlanState, savePlanState } from "./plan-server-store";
 import { generateAndSaveCoach } from "./coach-job";
 import type { CoachJobRequest } from "./coach-job-types";
@@ -17,6 +18,12 @@ import { contextForSection, type SectionBusinessContext } from "./context/sectio
 import { ANALYSIS_KEY } from "./analyzer/domain";
 import { resolveRegenQuota, recordRegen } from "./regen-quota";
 import { executeProposalUpdate, type ProposalBackgroundJob } from "./proposal-background";
+import { executeArtifactChunk } from "./artifact-update-service";
+import type { ArtifactJobRequest } from "./artifact-updates";
+import { z } from "zod";
+import { documentOperatingContext } from "./document-editorial";
+import { executeIntakeJob } from "./intake-service";
+import type { IntakeJobRequest } from "./intake-types";
 
 /*
  * 본문 생성을 서버 안에서 처리하기 위한 내부 통로.
@@ -37,7 +44,7 @@ export interface PlanSectionJob {
   sectionId: string;
 }
 
-type ServiceRequest = { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest } | { operation: "completeProposalUpdate"; job: ProposalBackgroundJob };
+type ServiceRequest = { operation: "intake"; job: IntakeJobRequest } | { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest } | { operation: "completeProposalUpdate"; job: ProposalBackgroundJob } | { operation: "artifactChunk"; job: ArtifactJobRequest & { index: number } };
 
 function encodeHex(value: ArrayBuffer) {
   return [...new Uint8Array(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -69,11 +76,17 @@ export async function callPlanSectionService(service: Fetcher, secret: string, j
 export async function callCoachService(service: Fetcher, secret: string, job: CoachJobRequest): Promise<{ ok: boolean }> {
   return callPlanningService(service, secret, { operation: "completeCoach", job });
 }
+export async function callIntakeService(service: Fetcher, secret: string, job: IntakeJobRequest): Promise<{ ok: boolean }> {
+  return callPlanningService(service, secret, { operation: "intake", job });
+}
 export async function callDeckService(service: Fetcher, secret: string, job: DeckJobRequest): Promise<{ ok: boolean }> {
   return callPlanningService(service, secret, { operation: "completeDeck", job });
 }
 export async function callProposalUpdateService(service: Fetcher, secret: string, job: ProposalBackgroundJob): Promise<{ ok: boolean }> {
   return callPlanningService(service, secret, { operation: "completeProposalUpdate", job });
+}
+export async function callArtifactChunkService(service: Fetcher, secret: string, job: ArtifactJobRequest & { index: number }): Promise<{ ok: boolean; done?: boolean }> {
+  return callPlanningService(service, secret, { operation: "artifactChunk", job });
 }
 
 async function callPlanningService(service: Fetcher, secret: string, input: ServiceRequest): Promise<{ ok: boolean }> {
@@ -168,11 +181,11 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   }
 
   // 앞 섹션 요약 — 뒤 섹션이 앞 내용을 이어받게 한다
-  const priorSummary = Object.entries(plan.sections)
+  const priorSections = Object.entries(plan.sections)
     .filter(([sectionKey, value]) => sectionKey !== key && (!initialCoach || value.coachRevision === revision))
-    .map(([, value]) => value.markdown)
-    .join("\n\n")
-    .slice(0, 4000) || undefined;
+    .map(([, value]) => value.markdown);
+  const priorSummary = priorSections.join("\n\n").slice(0, 4000) || undefined;
+  const operatingContext = documentOperatingContext(plan.answers);
 
   // 공식 시장 근거 — 일반 생성 경로(app/api/plan/generate)와 같은 규칙으로 같은 섹션에만
   const evidence = sectionUsesEvidence(key)
@@ -189,7 +202,10 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     planType: plan.planType,
     business: coach?.business ?? state.business,
     coachContext: coach ? coachContext(coach) : undefined,
+    intakeContext: confirmedIntakeContext(plan.answers) || undefined,
     priorSummary,
+    priorSections,
+    operatingContext,
     financialsMarkdown,
     financialsReference,
     conflicts,
@@ -218,6 +234,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     if (!target) return { ok: false, skipped: "PLAN_NOT_FOUND" };
     const current = target.sections[key];
     const targetCoach = readCoach(target.answers);
+    if (documentOperatingContext(target.answers) !== operatingContext) throw new Error("BUSINESS_CONTEXT_CHANGED");
     if (target.planType !== plan.planType || (targetCoach ? coachDocumentRevision(targetCoach) : undefined) !== revision) throw new Error("BUSINESS_CONTEXT_CHANGED");
     if (current?.edited || current?.locked) return { ok: true, skipped: "USER_EDITED" };
     if (current?.markdown && (!coach || current.coachRevision === coachDocumentRevision(coach))) return { ok: true, skipped: "ALREADY_GENERATED" };
@@ -259,7 +276,15 @@ export async function handlePlanSectionServiceRequest(request: Request, env: Clo
 
   try {
     const input = JSON.parse(body) as ServiceRequest;
+    if (input.operation === "intake") {
+      const job = z.object({ ownerHash: z.string().min(1).max(128), planId: z.string().min(1).max(60), jobId: z.string().uuid() }).strict().parse(input.job);
+      return Response.json({ result: await executeIntakeJob(job) });
+    }
     if (input.operation === "completeProposalUpdate") return Response.json({ result: await executeProposalUpdate(input.job) });
+    if (input.operation === "artifactChunk") {
+      const job = z.object({ operation: z.literal("artifact_update"), ownerHash: z.string().min(1).max(128), planId: z.string().min(1).max(60), jobId: z.string().uuid(), index: z.number().int().min(0).max(79), attempt: z.number().int().min(0).max(2) }).strict().parse(input.job);
+      return Response.json({ result: await executeArtifactChunk(job.ownerHash, job.planId, job.jobId, job.index, job.attempt) });
+    }
     const result = input.operation === "completeCoach" ? await generateAndSaveCoach(input.job) : input.operation === "completeDeck" ? await generateAndSaveDeck(input.job) : await generateAndSaveSection(input.job);
     return Response.json({ result });
   } catch (error) {

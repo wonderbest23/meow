@@ -24,6 +24,7 @@ export async function generateAndSaveCoach(request: CoachJobRequest): Promise<{ 
   const job = plan && readCoachJob(plan.answers);
   const previous = plan && readCoach(plan.answers);
   if (!plan || !job || !previous || job.token !== request.token) throw new Error("COACH_JOB_NOT_FOUND");
+  if (plan.answers.__business_intake) throw new Error("COACH_JOB_SUPERSEDED");
   if (job.status === "complete" || previous.messages.some(message => message.id === job.message.id)) return { ok: true };
   // Claim once. Concurrent deliveries cannot start another paid model request.
   if (job.status !== "queued" || previous.revision !== job.baseRevision) throw new Error("COACH_JOB_NOT_QUEUED");
@@ -40,7 +41,7 @@ export async function generateAndSaveCoach(request: CoachJobRequest): Promise<{ 
     const fresh = await loadPlanState(request.ownerHash);
     const target = fresh.plans.find(p => p.id === request.planId);
     const current = target && readCoachJob(target.answers);
-    if (!target || current?.token !== request.token) throw new Error("COACH_JOB_SUPERSEDED");
+    if (!target || current?.token !== request.token || target.answers.__business_intake) throw new Error("COACH_JOB_SUPERSEDED");
     target.answers[COACH_KEY] = { state: coach };
     target.answers[COACH_JOB_KEY] = { ...current, status: "complete", updatedAt: new Date().toISOString() };
     target.title = coach.business.name;

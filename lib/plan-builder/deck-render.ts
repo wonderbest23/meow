@@ -13,7 +13,7 @@ import JSZip from "jszip";
 import { XMLBuilder, XMLParser } from "fast-xml-parser";
 import type { DeckPlan, DeckSlide } from "./deck-plan";
 import { DEFAULT_DECK_THEME, type DeckTheme } from "./deck-themes";
-import { appendEditorialDeck } from "./deck-editorial-render";
+import { appendEditorialDeck, repairEditorialChartData } from "./deck-editorial-render";
 
 // 16:9 (13.33 x 7.5 인치)
 const W = 13.33;
@@ -546,6 +546,7 @@ export async function renderDeckPptx(plan: DeckPlan, theme: DeckTheme = DEFAULT_
 
   const data = (await pptx.write({ outputType: "nodebuffer" })) as Buffer;
   const zip = await JSZip.loadAsync(data);
+  const chartDataRepaired = plan.blueprint?.version === 2 && plan.slides.some(slide => slide.chart) ? await repairEditorialChartData(zip) : false;
   const contentTypes = zip.file("[Content_Types].xml");
   if (!contentTypes) throw new Error("PPTX content types are missing");
   const xmlOptions = { ignoreAttributes: false, parseTagValue: false };
@@ -557,7 +558,7 @@ export async function renderDeckPptx(plan: DeckPlan, theme: DeckTheme = DEFAULT_
     && /^\/ppt\/slideMasters\/slideMaster\d+\.xml$/.test(entry["@_PartName"])
     && !zip.file(entry["@_PartName"].slice(1))
   ));
-  if (manifest.Types.Override.length === overrides.length) return data;
+  if (manifest.Types.Override.length === overrides.length && !chartDataRepaired) return data;
   zip.file("[Content_Types].xml", new XMLBuilder(xmlOptions).build(manifest));
   return zip.generateAsync({ type: "nodebuffer", compression: "DEFLATE" });
 }

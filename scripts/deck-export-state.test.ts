@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { deckExportState } from "../lib/plan-builder/deck-export-state";
+import { deckExportState, proposalEntryState } from "../lib/plan-builder/deck-export-state";
 import type { PublicDeckJob } from "../lib/plan-builder/deck-job-types";
 
 const failed: PublicDeckJob = { token: "727ee46b-fixture", runId: "fixture", fingerprint: "fixture", status: "failed", phase: "failed", updatedAt: "2026-09-11T00:00:00Z", attempt: 1, code: "review_response_invalid", resumable: true, ready: false };
@@ -27,4 +27,19 @@ assert.match(invalid.message, /슬라이드 구성부터 시작/);
 const stale = deckExportState({ ...closed, generationEnabled: true, stale: true });
 assert.equal(stale.label, "최신 내용으로 PPT 만들기");
 assert.doesNotMatch(stale.message, /검토부터 이어갑니다/);
+const failedEntry = proposalEntryState({ job: failed, editable: false, generationEnabled: false });
+assert.equal(failedEntry.action, "blocked");
+assert.match(failedEntry.message, /보관.*재시도는 현재 중지.*727ee46b/);
+assert.doesNotMatch(failedEntry.message, /다시 시도하면|검토부터 이어갑니다/);
+assert.equal(proposalEntryState({ job: null, editable: false, generationEnabled: false }).action, "blocked");
+const ready = { ...failed, status: "complete" as const, phase: "ready" as const, ready: true };
+assert.equal(proposalEntryState({ job: ready, editable: true, generationEnabled: false }).action, "initialize", "Existing verified editor results remain usable when generation is closed");
+assert.equal(proposalEntryState({ job: ready, editable: false, generationEnabled: false }).action, "blocked", "Legacy PPT is not an editable v2 proposal");
+assert.match(proposalEntryState({ job: ready, editable: false, generationEnabled: true }).label, /새 형식/);
+for (const status of ["queued", "running"] as const) {
+  const active = proposalEntryState({ job: { ...failed, status, phase: "reviewing" }, editable: false, generationEnabled: false });
+  assert.equal(active.action, "wait");
+  assert.match(active.message, /계획서와 내용/);
+}
+assert.equal(proposalEntryState({ job: failed, editable: false, generationEnabled: true }).action, "generate");
 console.log("deck export state: closed generation, read-only refresh, saved downloads, stale source and conditional retry passed");

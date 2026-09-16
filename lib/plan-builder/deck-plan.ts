@@ -4,14 +4,17 @@ import { completeJson, parseJsonObject, type LLMConfig } from "../llm/complete";
 import { calculateFinancials, collectFinancialInputs } from "./financials";
 import { reviewCoachSection } from "./coach-review";
 import { createProposalBlueprint, proposalBlueprintPrompt, type ProposalBlueprint, type ProposalOptions, type ProposalSlot } from "./proposal-blueprint";
-import type { ProposalSlideEdits } from "./proposal-revision";
+import type { ProposalSlideEdits, ProposalChart, ProposalImage } from "./proposal-revision";
 
 export interface DeckSlide {
   placement?: ProposalSlideEdits["layout"];
+  alignment?: ProposalSlideEdits["alignment"];
+  appendix?: boolean;
   id?: string;
   composition?: Pick<ProposalSlot, "role" | "layout" | "treatment" | "missingEvidence">;
   table?: { headers: string[]; rows: string[][] };
-  image?: { id: string; data: string; alt: string };
+  image?: ProposalImage | null;
+  chart?: ProposalChart | null;
   /**
    * 슬라이드 성격.
    * statement = 사업 정의 한 방(청중이 "무슨 사업인지" 즉시 이해),
@@ -24,7 +27,7 @@ export interface DeckSlide {
   /** 한 줄 요약 — 표지·간지에서 크게 쓰인다 */
   lead?: string;
   /** 본문 항목 (최대 4개) */
-  points?: { label: string; detail: string }[];
+  points?: { id?: string; label: string; detail: string }[];
   /** 강조 수치 (최대 4개) */
   metrics?: { label: string; value: string; note?: string }[];
   /** 하단 보조 문장 */
@@ -34,6 +37,7 @@ export interface DeckSlide {
 }
 
 export interface DeckPlan {
+  schemaVersion?: 3;
   blueprint?: ProposalBlueprint;
   brandName: string;
   slogan: string;
@@ -59,6 +63,8 @@ const SYSTEM_PROMPT = [
   "업종별 편집 설계의 id와 역할 및 순서를 지키세요. 모든 업종을 투자 유치 이야기로 바꾸지 마세요.",
   "고객 문제와 해결은 대응 구조로, 수행 범위는 표로, 이용 과정은 단계로 편집하세요. 장식용 카드의 반복을 피하세요.",
   "현재 제공하는 것과 제안하는 것, 실제 실적과 예상 계산을 구분하세요. 상세 내용은 note로 분리하되 중요한 거래 조건을 숨기지 마세요.",
+  "제목은 이 사업의 구체적인 대상이나 근거 있는 결론을 적으세요. '범위를 명확하게', '먼저 정합니다' 같은 작성 지시나 일반론을 제목으로 쓰지 마세요.",
+  "같은 제목과 표 구성을 반복하지 말고 편집 설계에 맞춰 과정, 비교, 일정, 실제 이미지 설명을 구분하세요. 이미지나 실적이 없으면 검증 계획으로 대체하세요.",
 ].join("\n");
 
 /** 슬라이드 구성 요청에 쓰는 JSON 형식 안내 */

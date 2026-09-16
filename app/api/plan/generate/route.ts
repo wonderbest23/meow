@@ -17,6 +17,8 @@ import { buildPlanBusinessContext } from "../../../../lib/plan-builder/context/b
 import { contextForSection, type SectionBusinessContext } from "../../../../lib/plan-builder/context/section";
 import { ANALYSIS_KEY } from "../../../../lib/plan-builder/analyzer/domain";
 import { generateAndSaveSection } from "../../../../lib/plan-builder/section-service";
+import { documentOperatingContext } from "../../../../lib/plan-builder/document-editorial";
+import { withConfirmedIntakeContext } from "../../../../lib/plan-builder/intake-context";
 
 export const runtime = "nodejs";
 
@@ -217,7 +219,7 @@ export async function POST(req: Request) {
     }
   }
   const config = coach ? resolvePlanningLLMConfig(identity.hash) : resolveLLMConfig(identity.hash, "anthropic");
-  const genInput = {
+  const genInput = withConfirmedIntakeContext({
     chapter,
     section,
     answers: body.answers ?? {},
@@ -226,12 +228,14 @@ export async function POST(req: Request) {
     business: coach?.business ?? body.business,
     coachContext: coach ? coachContext(coach) : undefined,
     priorSummary: body.priorSummary,
+    operatingContext: body.planId ? documentOperatingContext(savedState.plans.find(p => p.id === body.planId)?.answers ?? {}) : undefined,
+    priorSections: body.planId ? Object.entries(savedState.plans.find(p => p.id === body.planId)?.sections ?? {}).filter(([key]) => key !== sectionKey).map(([, value]) => value.markdown) : undefined,
     financialsMarkdown,
     financialsReference,
     conflicts,
     evidence: evidence.length ? evidence : undefined,
     context,
-  };
+  }, body.planId ? savedState.plans.find(p => p.id === body.planId)?.answers ?? {} : {});
 
   // 실시간 생성 — 한 줄에 JSON 하나씩 흘려보낸다.
   if (body.stream && !coach) {

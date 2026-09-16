@@ -15,3 +15,13 @@ export function deckExportState(input: { job: PublicDeckJob | null; stale: boole
     : job?.status === "failed" ? `${deckFailureMessage(job.code, job.resumable && !["source_validation_failed", "invalid_slides", "review_json_invalid"].includes(job.code ?? ""))} 문의 번호: ${job.token.slice(0, 8)}` : "";
   return { action: "generate" as const, label: stale ? "최신 내용으로 PPT 만들기" : job?.status === "failed" ? "발표자료 다시 시도" : "발표자료 PPT", message };
 }
+
+export function proposalEntryState(input: { job: PublicDeckJob | null; editable: boolean; generationEnabled: boolean }) {
+  const { job, editable, generationEnabled } = input;
+  if (editable) return { action: "initialize" as const, label: "편집본 만들기", message: "완성된 제안서를 편집본으로 열 수 있어요" };
+  if (job?.status === "queued" || job?.status === "running") return { action: "wait" as const, label: "제안서 제작 중", message: DECK_PHASE_LABELS[job.phase] ?? "제작 상태를 확인하고 있어요" };
+  if (job?.ready) return { action: generationEnabled ? "generate" as const : "blocked" as const, label: generationEnabled ? "새 형식으로 제안서 만들기" : "새 제안서 생성 준비 중", message: "이전 형식의 PPT는 문서에서 내려받을 수 있어요. 편집하려면 새 형식의 제안서가 필요해요" + (generationEnabled ? "" : " 새 제안서 생성은 현재 준비 중입니다") };
+  const state = deckExportState({ job, generationEnabled, stale: false, loaded: true, statusError: false });
+  if (!generationEnabled) return { action: "blocked" as const, label: "새 제안서 생성 준비 중", message: state.message };
+  return { action: "generate" as const, label: job?.status === "failed" ? "제안서 다시 만들기" : "제안서 생성", message: state.message || "사업계획서를 고객 제안용 12장으로 구성합니다" };
+}

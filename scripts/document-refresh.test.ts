@@ -42,11 +42,15 @@ async function main() {
   const apply = { type: "document_apply" as const, id: command.id, expectedRevision: ready.revision, decisions };
   const applied = await runDocumentRefresh(owner, planId, apply);
   assert.equal((await runDocumentRefresh(owner, planId, apply)).revision, applied.revision);
-  assert.equal((await loadProposalEditor(owner, planId)).business?.documents.current, 3);
+  assert.equal((await loadProposalEditor(owner, planId)).business?.documents.current, 1, "Keeping prior text does not claim it reflects the new source");
   assert.deepEqual(applied.document.deck, ready.document.deck, "Document approval does not silently change PPT");
   const latest = (await loadPlanState(owner)).plans[0];
   assert(latest.sections[fixture.commercialKey].markdown.includes("180만원")); assert(latest.sections[fixture.commercialKey].previous?.markdown.includes("150만원"));
   assert.equal(latest.sections["overview/summary"].markdown, before["overview/summary"].markdown);
+  for (const key of keys.filter(key => key !== fixture.commercialKey)) {
+    const section = (await loadPlanState(owner)).plans[0].sections[key];
+    await saveDocumentEdit(owner, { planId, key, action: "review", baseGeneratedAt: section.generatedAt, sourceRevision: 2 });
+  }
   const locked = latest.sections["market/personas"];
   await saveDocumentEdit(owner, { planId, key: "market/personas", action: "review", baseGeneratedAt: locked.generatedAt, sourceRevision: 2 });
   let remaining = fixture.keys.filter(key => !keys.includes(key) && key !== "market/personas");

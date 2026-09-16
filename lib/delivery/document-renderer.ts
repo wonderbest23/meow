@@ -24,6 +24,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { renderLightweightPdf } from "./lightweight-pdf";
 import { subsetTrueType, glyphIdsForText } from "./font-subset";
+import { summaryBasisLabel, type ExecutiveSummary } from "../plan-builder/executive-summary";
 
 export type BusinessDocument = {
   id: string;
@@ -31,6 +32,7 @@ export type BusinessDocument = {
   type: string;
   versionLabel: string;
   markdown: string;
+  executiveSummary?: ExecutiveSummary;
 };
 
 export type DocumentProjectMeta = {
@@ -343,6 +345,7 @@ function collectDeliveryText(documents: BusinessDocument[], project: DocumentPro
   ];
   for (const document of documents) {
     parts.push(document.title, document.type, document.versionLabel, document.markdown);
+    if (document.executiveSummary) parts.push("한 장 사업 요약 입력 제안 계산 확인 필요", JSON.stringify(document.executiveSummary));
   }
   return parts.join("\n");
 }
@@ -352,7 +355,8 @@ export async function renderDocx(
   project: DocumentProjectMeta,
   fontData?: DeliveryFontData,
 ): Promise<Buffer> {
-  const children = documents.flatMap((document, index) => [
+  const onePage = documents.length === 1 && !!documents[0].executiveSummary;
+  const children = documents.flatMap((document, index) => document.executiveSummary ? summaryDocxBlocks(document.executiveSummary) : [
     ...coverBlocks(document, project, index === 0),
     ...docxBlocks(document),
   ]);
@@ -379,7 +383,7 @@ export async function renderDocx(
       },
     },
     sections: [{
-      properties: { page: { margin: { top: 900, right: 900, bottom: 900, left: 900 } } },
+      properties: { page: { ...(onePage ? { size: { width: 11906, height: 16838 } } : {}), margin: { top: onePage ? 760 : 900, right: 900, bottom: onePage ? 760 : 900, left: 900 } } },
       children,
       footers: {
         default: new Footer({ children: [new Paragraph({
@@ -393,6 +397,23 @@ export async function renderDocx(
     }],
   });
   return Buffer.from(await Packer.toBuffer(doc));
+}
+
+function summaryDocxBlocks(summary: ExecutiveSummary): Paragraph[] {
+  const paragraphs = [
+    new Paragraph({ style: "Title", children: [new TextRun({ text: summary.title, size: 32, bold: true, color: "171C24" })], spacing: { after: 80, line: 360 } }),
+    new Paragraph({ children: [new TextRun({ text: `한 장 사업 요약 | ${summary.planType}`, size: 18, color: "596579" })], spacing: { after: 150, line: 240 } }),
+  ];
+  for (const block of summary.blocks) {
+    paragraphs.push(new Paragraph({ children: [new TextRun({ text: block.title, size: 21, bold: true, color: "171C24" })], keepNext: true, spacing: { before: 110, after: 45, line: 250 } }));
+    for (const line of block.lines) paragraphs.push(new Paragraph({ children: [
+      new TextRun({ text: `${line.label}  `, bold: true, size: 17, color: "394659" }),
+      new TextRun({ text: line.value, size: 18, color: "26303E" }),
+      new TextRun({ text: `  [${summaryBasisLabel(line.basis)}]`, size: 15, color: "657286" }),
+    ], spacing: { after: 40, line: 245 } }));
+  }
+  paragraphs.push(new Paragraph({ children: [new TextRun({ text: summary.note, size: 15, color: "657286" })], spacing: { before: 150, after: 0, line: 220 } }));
+  return paragraphs;
 }
 
 function deliveryFontPath() {

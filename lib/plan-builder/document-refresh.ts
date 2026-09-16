@@ -5,6 +5,7 @@ import type { RewriteTarget } from "./proposal-rewrite";
 export const DOCUMENT_REFRESH_TIMEOUT_MS = 120000;
 export type DocumentRefreshPayload = {
   businessName: string; businessDescription: string; stage: string;
+  sector?: string; purpose?: string;
   fields: Array<Pick<CoachField, "key" | "value" | "basis">>;
   financialReference: string;
   sections: Array<{ key: string; chapterTitle: string; sectionTitle: string; markdown: string }>;
