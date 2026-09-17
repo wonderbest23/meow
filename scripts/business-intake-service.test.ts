@@ -58,7 +58,7 @@ async function main() {
   const failures: string[] = [];
   let passed = 0;
   try {
-    const { saveIntakeCommand, executeIntakeJob, updateIntakeJob, expireStaleIntakeJob } = await import("../lib/plan-builder/intake-service");
+    const { saveIntakeCommand, executeIntakeJob, updateIntakeJob, expireStaleIntakeJob, intakeDailyAllowance } = await import("../lib/plan-builder/intake-service");
     const { readIntake, IntakeError, intakeJobClock } = await import("../lib/plan-builder/intake-core");
     const { intakeStructureBrief } = await import("../lib/plan-builder/intake-structure-brief");
     const { COACH_KEY, COACH_TYPES, readCoach, coachDocumentRevision } = await import("../lib/plan-builder/coach");
@@ -286,6 +286,14 @@ async function main() {
       assert.equal(cleared.snapshot.structure?.basis.payer, "user");
       assert.equal(cleared.snapshot.structure?.basis.revenue, "sector", "without a KSIC code the remaining axes come from the sector default");
       assert.equal(calls.length, 0);
+    });
+
+    await check("a missing shared counter falls back to the in-memory daily allowance instead of failing every AI job", async () => {
+      assert.deepEqual(intakeDailyAllowance({ error: null, data: 5 }, () => { throw new Error("memory limiter must not run when the shared counter works"); }), { ok: true, source: "shared" });
+      assert.deepEqual(intakeDailyAllowance({ error: null, data: 25 }, () => true), { ok: false, source: "shared" }, "the shared count is authoritative when it works");
+      assert.deepEqual(intakeDailyAllowance({ error: { code: "PGRST202", message: "Could not find the function public.bump_rate_limit" }, data: null }, () => true), { ok: true, source: "memory" }, "production without migration 0018 keeps working");
+      assert.deepEqual(intakeDailyAllowance({ error: null, data: "3" }, () => false), { ok: false, source: "memory" }, "a malformed answer is not trusted and the memory limiter decides");
+      assert.deepEqual(intakeDailyAllowance(null, () => true), { ok: true, source: "memory" });
     });
 
     await check("a design job runs on the server without the screen: request time recorded, finished unattended, result waiting on return", async () => {

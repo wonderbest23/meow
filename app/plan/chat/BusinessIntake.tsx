@@ -380,6 +380,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     if (route.kind === "note") { storeComposerNote(route.intent); return; }
     void send({ action: "answer", questionId: route.questionId, value: route.value, ...(route.unknown ? { unknown: true } : {}) }, { answer: questionDraft, composer: captureComposer() });
   };
+  const settleUntil = useRef(0);
   const scrollToCurrent = useCallback(() => {
     const container = conversation.current;
     if (!container) return;
@@ -391,7 +392,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     const visibleAnswer = Math.min(box.height, Math.max(80, container.clientHeight * .35));
     const top = container.scrollTop + box.bottom - visibleAnswer - container.getBoundingClientRect().top - 16;
     manualScroll.current = false;
-    container.scrollTo({ top: Math.max(0, top), behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    // 처음 불러온 직후(분할 너비가 자리 잡는 동안 포함)에는 긴 대화를 천천히 훑지 않고 바로 최신 위치로 간다. 그 뒤의 이동만 부드럽게 한다.
+    if (!settleUntil.current) settleUntil.current = performance.now() + 1200;
+    const settling = performance.now() < settleUntil.current;
+    container.scrollTo({ top: Math.max(0, top), behavior: settling || window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     setUnseen(false);
   }, []);
   useEffect(() => {

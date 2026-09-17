@@ -178,6 +178,12 @@ export async function expireStaleIntakeJob(request: IntakeJobRequest) {
   }
 }
 
+/** 하루 AI 한도 판정. 공유 카운터가 숫자를 돌려주면 그것으로, 없거나 실패하면 메모리 한도로 판정한다(작업을 막지 않는다). */
+export function intakeDailyAllowance(shared: { error: unknown; data: unknown } | null, memoryAllows: () => boolean): { ok: boolean; source: "shared" | "memory" } {
+  if (shared && !shared.error && typeof shared.data === "number") return { ok: shared.data <= 24, source: "shared" };
+  return { ok: memoryAllows(), source: "memory" };
+}
+
 export async function executeIntakeJob(request: IntakeJobRequest): Promise<{ ok: boolean }> {
   const startedAt = Date.now();
   let queueMs = 0;
@@ -195,11 +201,13 @@ export async function executeIntakeJob(request: IntakeJobRequest): Promise<{ ok:
   try {
     if (!config) throw new IntakeError("unavailable", "AI 연결을 사용할 수 없어요");
     const supabase = getServerSupabase();
-    if (supabase) {
-      // The shared counter must succeed before a paid call; never fall back to an isolate-local allowance.
-      const allowance = await supabase.rpc("bump_rate_limit", { p_bucket: "business-intake-ai-daily", p_key: request.ownerHash, p_window_ms: 86_400_000 });
-      if (allowance.error || typeof allowance.data !== "number" || allowance.data > 24) throw new IntakeError("ai_limit", "AI 이용량을 확인하지 못했거나 한도에 도달했어요. 입력과 직접 수정은 계속할 수 있어요");
-    } else if (!rateLimit("business-intake-ai-daily", request.ownerHash, { limit: 24, windowMs: 86_400_000 }).ok) throw new IntakeError("ai_limit", "오늘 AI 정리 한도에 도달했어요. 기본 진단은 계속할 수 있어요");
+    // 하루 한도(소유자당 24회). 공유 카운터(마이그레이션 0018의 bump_rate_limit)가 동작하면 그 값으로 판정한다.
+    // 운영 DB에 함수가 없거나 호출이 실패하면 예전에는 여기서 작업을 실패시켰고, 그 결과 운영의 모든 AI 작업이 "이용량을 확인하지 못했어요"로 막혔다(2026-09-17 운영 로그로 확인).
+    // 이제는 다른 API와 같은 메모리 한도로 내려간다. 요청 단계의 한도(business-intake-ai: 소유자당 10분 24회)는 그대로 앞에 있다. 0018을 적용하면 코드 변경 없이 공유 카운터로 돌아간다.
+    const shared = supabase ? await supabase.rpc("bump_rate_limit", { p_bucket: "business-intake-ai-daily", p_key: request.ownerHash, p_window_ms: 86_400_000 }) : null;
+    const allowance = intakeDailyAllowance(shared, () => rateLimit("business-intake-ai-daily", request.ownerHash, { limit: 24, windowMs: 86_400_000 }).ok);
+    if (supabase && allowance.source === "memory") console.warn("[business-intake-job]", JSON.stringify({ event: "allowance_fallback", jobId: job.id, code: (shared?.error as { code?: string } | null)?.code ?? null, message: String((shared?.error as { message?: string } | null)?.message ?? "").slice(0, 160) }));
+    if (!allowance.ok) throw new IntakeError("ai_limit", "오늘 AI 이용 한도에 도달했어요. 기본 진단과 직접 수정은 계속할 수 있어요");
     if (job.kind === "extract") {
       const result = await extractIntakeFields(config, claimed.intake.notes.filter(note => job.noteIds.includes(note.id)).map(({ id, text }) => ({ id, text })));
       if (!result.ok) throw new IntakeError(result.reason, "자동 정리를 완료하지 못했어요. 원문은 보관되어 있어요");
