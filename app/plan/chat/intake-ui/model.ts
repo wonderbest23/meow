@@ -208,6 +208,19 @@ export function previewIntakeAnswer(snapshot: IntakeSnapshot, command: IntakeCom
   return { ...intakeSnapshot(plan, coach, intake), hasDocuments: snapshot.hasDocuments };
 }
 
+export type IntakeNextStep = "design" | "prepare" | "open" | null;
+/**
+ * 지금 해야 할 다음 단계 하나. 기본 질문 완료 → 사업안 만들기(방향 요약, 20~30초) → 사업안이 현재 입력 기준이면 계획서 만들기(전체 문서, 몇 분) → 계획서 열기.
+ * 두 제작 버튼을 동시에 보여 주지 않는다. 답변을 고쳐 사업안이 옛 기준이 되면 다시 사업안 만들기로 돌아온다.
+ */
+export function intakeNextStep(snapshot: IntakeSnapshot, prepared = false): IntakeNextStep {
+  if (!snapshot.coreComplete || !snapshot.coach.ready) return null;
+  const design = snapshot.coach.design;
+  const current = !!design && design.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision);
+  if (!current) return "design";
+  return snapshot.hasDocuments || prepared ? "open" : "prepare";
+}
+
 export type JobProgressView = { percent: number; elapsedSeconds: number; expectedSeconds: number; limitSeconds: number; slow: boolean };
 /**
  * AI 작업의 예상 진행률. 실제 신호는 접수·실행·완료뿐이므로 그 사이는 보통 걸리는 시간으로 추정한다.

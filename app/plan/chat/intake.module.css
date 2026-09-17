@@ -53,12 +53,13 @@
 .draftDot { width: 6px; height: 6px; border-radius: 50%; background: #929aa5; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1; min-height: 0; min-width: 0; }
 /* PC: 대화 | 조절 손잡이 | 요약. --chat-share는 useChatSplit이 정한다(질문 중 64%, 기본 질문 완료 후 42%, 마우스·키보드로 조절). */
-.withSummary { grid-template-columns: var(--chat-share, 64%) 12px minmax(0, 1fr); transition: grid-template-columns .45s cubic-bezier(.2, .8, .2, 1); }
+.withSummary { grid-template-columns: var(--chat-share, 64%) 14px minmax(0, 1fr); transition: grid-template-columns .45s cubic-bezier(.2, .8, .2, 1); }
 .withSummary.resizing { transition: none; }
 .resizing { cursor: col-resize; user-select: none; }
 .splitHandle { display: flex; justify-content: center; align-items: center; cursor: col-resize; touch-action: none; background: #fcfcfd; border-inline: 1px solid var(--intake-line); }
-.splitHandle span { width: 4px; height: 44px; border-radius: 4px; background: #c9d2de; transition: background .15s, height .15s; }
-.splitHandle:hover span, .splitHandle:focus-visible span, .resizing .splitHandle span { background: var(--intake-blue); height: 64px; }
+.splitHandle span { width: 5px; height: 56px; border-radius: 5px; background: #aab4c3; transition: background .15s, height .15s; }
+.splitHandle:hover { background: #eef3fb; }
+.splitHandle:hover span, .splitHandle:focus-visible span, .resizing .splitHandle span { background: var(--intake-blue); height: 84px; }
 .splitHandle:focus-visible { outline: 2px solid var(--intake-blue); outline-offset: -2px; }
 .inputPane { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
 .conversation, .summaryPane { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
@@ -257,7 +258,7 @@
   .textButton:hover:not(:disabled), .artifactLinks a:hover { text-decoration: underline; text-underline-offset: 3px; }
 }
 @media (max-width: 1100px) and (min-width: 901px) {
-  .withSummary { grid-template-columns: var(--chat-share, 60%) 12px minmax(0, 1fr); }
+  .withSummary { grid-template-columns: var(--chat-share, 60%) 14px minmax(0, 1fr); }
   .inputContent { padding-inline: 20px; }
   .summaryPane { padding-inline: 18px; }
   .modeSwitch button { gap: 5px; font-size: 12px; }
@@ -265,6 +266,7 @@
 @media (max-width: 900px) {
   .workspace, .withSummary { grid-template-columns: minmax(0, 1fr); }
   .splitHandle { display: none; }
+  .complete .editLink { display: flex; align-items: center; gap: 5px; margin: -8px 0 0 auto; padding: 6px 2px; border: 0; background: transparent; color: #245fc2; font-size: 13px; font-weight: 600; }
   .summaryToggle { display: inline-flex; }
   .summarySheetHeader { display: flex; margin: -8px 0 10px -10px; }
   .summarySheetHeader button { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 8px 10px; border: 0; background: transparent; color: #245fc2; font-size: 14px; font-weight: 600; }
@@ -388,7 +390,15 @@
 .summaryHeading + .summaryActions { margin: 18px 0 26px; }
 .nextStep { display: grid; gap: 8px; }
 .nextStep[data-active] { padding: 14px; border: 2px solid var(--intake-blue); border-radius: 14px; background: #f3f7ff; box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); animation: intake-next-pulse 2.4s ease-in-out 3; }
-.nextStep button { width: 100%; margin-bottom: 0; }
+.nextStep button, .nextStep a { width: 100%; margin-bottom: 0; }
+/* 다음 단계 버튼과 보조 버튼(상세 질문 추가)을 한 줄에 둔다. 보조 버튼이 없으면 한 칸을 다 쓴다. */
+.nextStepRow { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 10px; }
+.nextStepRow > :only-child { grid-column: 1 / -1; }
+.nextStepRow button, .nextStepRow a { padding-inline: 10px; line-height: 1.35; white-space: normal; }
+.nextStepRow .secondaryButton { background: #fff; }
+.complete .nextStep { margin-top: 14px; }
+/* 답변 수정하기: 요약이 따로 열리는 모바일에서만 보인다(PC는 요약이 옆에 있다). */
+.editLink { display: none; }
 .nextStepLabel { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--intake-blue); color: #fff; font-size: 12px; font-weight: 700; }
 .nextStepHint { display: block; color: var(--intake-muted); font-size: 12px; line-height: 1.6; }
 @keyframes intake-next-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); } 50% { box-shadow: 0 0 0 9px rgba(45, 108, 223, .04); } }

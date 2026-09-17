@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { detailQuestions, structureQuestions, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
 import { amountRanges, CHIP_GROUPS, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
-import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, onlyFilterSelected, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unfinishedAnswerText, unmatchedPieces, withCount, type AnswerDraft, jobProgress } from "./model";
+import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, onlyFilterSelected, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unfinishedAnswerText, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
 import styles from "../intake.module.css";
@@ -387,10 +387,38 @@ export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSn
   </div>;
 }
 
-export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, onDetails, onDesign, onPrepare, onStructure }: {
+/**
+ * 지금 눌러야 할 다음 단계 하나. 사업안(방향 요약) → 계획서(전체 문서) → 계획서 열기 순서로 한 번에 하나만 보인다.
+ * 작업이 돌고 있으면 버튼 자리에 진행 게이지가 나온다. secondary에는 같은 줄에 놓을 보조 버튼(상세 질문 추가)을 넣는다.
+ */
+export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false }: {
+  snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
+}) {
+  const step = intakeNextStep(snapshot, prepared);
+  if (!step) return null;
+  // 게이지는 실제로 돌고 있는 작업이 있을 때만. 그 밖의 바쁜 상태(저장 중 등)에는 버튼을 잠깐 비활성으로 둔다.
+  const jobActive = ["queued", "running"].includes(snapshot.intake.job?.status ?? "");
+  const locked = disabled || aiBusy;
+  const hint = step === "design" ? "답변을 바탕으로 AI가 시작 범위와 확인할 가정을 정리해요. 보통 20~30초 걸리고, 화면을 나가도 서버에서 계속 진행돼요."
+    : step === "prepare" ? "확인한 사업안으로 계획서 초안을 항목별로 작성해요. 몇 분 걸릴 수 있어요." : "작성한 계획서를 열어 확인하세요.";
+  return <div className={styles.nextStep} data-active data-step={step}>
+    <strong className={styles.nextStepLabel}><ArrowRight size={14} aria-hidden="true" />다음 단계</strong>
+    {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
+      {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />사업안 만들기</button>}
+      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />계획서 만들기</button>}
+      {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />계획서 열기</Link>}
+      {secondary}
+    </div>}
+    {!jobActive && <small className={styles.nextStepHint}>{hint}</small>}
+  </div>;
+}
+
+export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, onDetails, onDesign, onPrepare, onStructure, showActions = true }: {
   snapshot: IntakeSnapshot; disabled: boolean; aiBusy: boolean; prepared: boolean;
   onEdit: (questionId: string) => void; onDetails: () => void; onDesign: () => void; onPrepare: () => void;
   onStructure?: (patch: Partial<Pick<BusinessStructure, StructureAxis>>) => void;
+  /** false면 다음 단계 버튼·상세 질문 버튼을 요약에 두지 않는다(대화 쪽이 이미 보여 주는 경우). */
+  showActions?: boolean;
 }) {
   const [structureEdit, setStructureEdit] = useState<StructureAxis | null>(null);
   const detailCount = structureQuestions(snapshot.intake.mode, snapshot.structure?.values).length + detailQuestions(snapshot.intake.sector).length;
@@ -399,23 +427,12 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
   const staleDesign = !!design && design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision);
   const extraAnswers = snapshot.questions.filter(question => !snapshot.summary.some(item => item.id === (question.fieldKey ?? question.id)) && snapshot.intake.answers[question.id]);
   // 다음 단계: 기본 질문 완료 → 사업안 만들기 → (사업안이 현재 입력 기준이면) 계획서 만들기 → 결과물 열기
-  const nextStep: "design" | "prepare" | "open" | null = !snapshot.coreComplete || !snapshot.coach.ready ? null : !design || staleDesign ? "design" : snapshot.hasDocuments || prepared ? "open" : "prepare";
-  // 기본 질문이 끝나면 다음 단계 버튼을 요약 맨 위로 올린다(긴 요약을 끝까지 내려야 버튼이 보이던 혼란 제거). 그 전에는 아래쪽에 비활성으로 둔다.
-  const actions = <div className={styles.summaryActions}>
-      <div className={styles.nextStep} data-active={nextStep === "design" || undefined}>
-        {nextStep === "design" && <strong className={styles.nextStepLabel}><ArrowRight size={14} aria-hidden="true" />다음 단계</strong>}
-        <button type="button" className={nextStep === "prepare" || nextStep === "open" ? styles.secondaryButton : styles.primaryButton} disabled={disabled || aiBusy || !snapshot.coreComplete || !snapshot.coach.ready} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />이 내용으로 사업안 만들기</button>
-        {nextStep === "design" && !aiBusy && <small className={styles.nextStepHint}>답변을 바탕으로 AI가 시작 범위와 확인할 가정을 정리해요. 보통 20~30초 걸려요.</small>}
-      </div>
-      <JobProgress snapshot={snapshot} />
-      <div className={styles.nextStep} data-active={nextStep === "prepare" || undefined}>
-        {nextStep === "prepare" && <strong className={styles.nextStepLabel}><ArrowRight size={14} aria-hidden="true" />다음 단계</strong>}
-        <button type="button" className={nextStep === "prepare" ? styles.primaryButton : styles.secondaryButton} disabled={disabled || aiBusy || !snapshot.coach.ready} onClick={onPrepare}><FileText size={18} aria-hidden="true" />계획서 만들기</button>
-        {nextStep === "prepare" && <small className={styles.nextStepHint}>사업안을 확인했다면 계획서 초안을 만들어요. 항목별로 작성돼 몇 분 걸릴 수 있어요.</small>}
-      </div>
-      {!nextStep && <small className={styles.nextStepHint}>기본 질문을 마치면 다음 단계(사업안 만들기)가 열려요.</small>}
+  const nextStep = intakeNextStep(snapshot, prepared);
+  // 다음 단계 버튼은 화면에 한 곳에만 둔다. 대화의 마지막 정리 화면이 보여 주고 있으면(showActions=false) 요약에는 두지 않는다.
+  const actions = showActions ? <div className={styles.summaryActions}>
+      <NextStepAction snapshot={snapshot} prepared={prepared} disabled={disabled} aiBusy={aiBusy} onDesign={onDesign} onPrepare={onPrepare} />
       {prepared && <p role="status" className={styles.success}>계획서 작성을 시작했어요.</p>}
-    </div>;
+    </div> : null;
   return <>
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">입력한 사업 요약</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
     {nextStep && actions}
@@ -445,9 +462,9 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
       {snapshot.structure.licenseHint && <p className={styles.muted}>{snapshot.structure.licenseHint}</p>}
     </section>}
     <section className={styles.financial}><h3>금액과 운영 수치</h3><p>{readableFinancialSummary(snapshot)}</p></section>
-    {snapshot.coreComplete && !snapshot.intake.detailsRequested && <button type="button" className={styles.detailButton} disabled={disabled} onClick={onDetails}><Plus size={18} aria-hidden="true" />상세 질문 {detailCount}개 추가</button>}
+    {showActions && snapshot.coreComplete && !snapshot.intake.detailsRequested && <button type="button" className={styles.detailButton} disabled={disabled} onClick={onDetails}><Plus size={18} aria-hidden="true" />상세 질문 {detailCount}개 추가</button>}
     {design && <details className={styles.design}><summary><Sparkles size={16} aria-hidden="true" />AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
-    {!nextStep && actions}
-    {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물"><Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link><Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>사업 관리<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
+    {showActions && !nextStep && <small className={styles.nextStepHint}>{snapshot.coreComplete ? "사업 소개가 정해지면 다음 단계(사업안 만들기)가 열려요." : "기본 질문을 마치면 다음 단계(사업안 만들기)가 열려요."}</small>}
+    {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물">{showActions || nextStep !== "open" ? <Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link> : null}<Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>사업 관리<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
   </>;
 }
