@@ -17,7 +17,9 @@
 .backVisible { display:flex; }
 .menuToggle { display:flex; }.menuToggle:hover,.back:hover { background:var(--app-raised); }.page :is(.back,.menuToggle,.appRail,.menuPanel) svg { display:block; flex-shrink:0; }
 .headerMenu { position:relative; margin-left:auto; }.menuPanel { position:absolute; right:0; top:50px; width:190px; padding:8px; background:var(--app-surface); border:1px solid var(--app-line); border-radius:8px; box-shadow:0 12px 36px #191f2818; animation:arrive .18s ease-out; }
-.workspaceLink { margin-left:auto; padding:12px; min-height:44px; font-size:14px; font-weight:600; color:var(--app-accent); text-decoration:none; white-space:nowrap; border-radius:8px; background:var(--app-soft); }.workspaceLink + .headerMenu { margin-left:0; }
+/* 페이지가 넣는 헤더 버튼(요약 토글 등)은 오른쪽 메뉴 옆에 붙는다. '사업 관리'는 헤더가 아니라 왼쪽 메뉴(모바일은 ⋯ 메뉴)에 있다. */
+.headerActions { display:flex; align-items:center; gap:8px; margin-left:auto; }.headerActions + .headerMenu { margin-left:0; }
+.appRail nav .railWorkspace { min-height:42px; margin-left:14px; padding:9px 14px; font-size:14px; border-left:2px solid var(--app-line); border-radius:0 8px 8px 0; }
 .syncNotice { padding:10px 24px; background:var(--app-warning-bg); color:var(--app-warning); display:flex; align-items:center; flex-wrap:wrap; gap:12px; font-size:13px; line-height:1.6; flex-shrink:0; }.syncNotice button { border:0; background:transparent; min-height:40px; color:inherit; font-weight:600; }
 .menuPanel a { display:flex; align-items:center; gap:12px; min-height:48px; padding:12px; color:var(--app-text); font-size:15px; text-decoration:none; border-radius:6px; }.menuPanel a:hover { background:var(--app-raised); }
 .workspace { display:flex; flex:1; min-height:0; width:100%; }
@@ -146,7 +148,6 @@
 .liveChat .appRail .currentNav { background: #edf1f5; border-color: #e1e7ef; color: var(--app-text); box-shadow: inset 3px 0 0 #a4b4c7; }
 .liveChat .appRail .currentNav:hover { background: #e5ebf2; }
 .liveChat .entryOptions { margin-top: 26px; max-width: 600px; }
-.liveChat .workspaceLink { background: var(--app-raised); border-color: var(--app-line); color: var(--app-body); }
 .liveChat .menuPanel { box-shadow: 0 12px 32px #23354a16; }
 .liveChat .splitHandle { background: var(--app-raised); }
 .liveChat .splitHandle span { background: #b5c2d2; }
@@ -168,7 +169,6 @@
 .header { background: var(--app-surface); border-bottom: 1px solid var(--app-line); }
 .headerTitle strong { font-size: 19px; }
 .menuPanel { background: var(--app-surface); box-shadow: 0 12px 32px #23354a16; z-index: 20; }
-.workspaceLink { border: 1px solid var(--app-line); background: var(--app-raised); color: var(--app-body); }
 .chatPane { background: transparent; }
 .briefPane { background: var(--app-surface); }
 .hasBrief .chatPane { background: var(--app-surface); }
@@ -199,7 +199,7 @@
 .inlineField :is(input,textarea) { background: var(--app-surface); border-color: var(--app-line-strong); }
 @media (min-width: 1280px) { .sectionNav { grid-template-columns: repeat(4,minmax(0,1fr)); }.sectionNav button { gap: 6px; font-size: 13px; } }
 @media (max-width: 900px) {
-  .header { height: 68px; }.headerTitle strong { font-size: 17px; }.workspaceLink { padding: 10px 8px; font-size: 13px; }
+  .header { height: 68px; }.headerTitle strong { font-size: 17px; }
   .thread { padding-top: 28px; }.firstMessage .bubble > p:first-child { font-size: 25px; }
   .viewTabs { background: var(--app-surface); padding: 6px 16px; gap: 8px; }
   .viewTabs button { border: 1px solid transparent; border-radius: 8px; }
