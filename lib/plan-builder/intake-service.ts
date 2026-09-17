@@ -48,7 +48,7 @@ export function newIntakeJob(coach: CoachState, intake: IntakeState, kind: Intak
   if (kind === "extract" && !noteIds.length) return null;
   const id = crypto.randomUUID();
   const baseFieldRevisions = Object.fromEntries((Object.keys(COACH_FIELD_LABELS) as CoachState["fields"][number]["key"][]).map(key => [key, intakeFieldRevision(coach, intake, key)]));
-  const job: IntakeJob = { id, runId: `intake-${id}`, kind, status: "queued", noteIds, baseValues: fields(coach), baseFieldRevisions, baseDocumentRevision: coachDocumentRevision(coach), updatedAt: at, ...(request ? { request } : {}) };
+  const job: IntakeJob = { id, runId: `intake-${id}`, kind, status: "queued", noteIds, baseValues: fields(coach), baseFieldRevisions, baseDocumentRevision: coachDocumentRevision(coach), updatedAt: at, createdAt: at, ...(request ? { request } : {}) };
   intake.job = job;
   return job;
 }

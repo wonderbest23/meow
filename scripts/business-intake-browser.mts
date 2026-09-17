@@ -140,6 +140,23 @@ try {
     await page.screenshot({ path: join(output, `question-${width}.png`), fullPage: true });
   }
   await page.setViewportSize({ width: 1440, height: 1000 });
+  // PC 분할 손잡이: 실제 마우스 드래그로 대화 너비가 바뀌고 저장되며, 두 번 누르면 기본 너비로 돌아온다.
+  const splitHandle = page.getByRole("separator", { name: "채팅 영역 너비 조절" });
+  await splitHandle.waitFor();
+  const shareBefore = Number(await splitHandle.getAttribute("aria-valuenow"));
+  // hover()가 손잡이가 안정된 뒤 그 가운데로 마우스를 옮긴다(뷰포트 변경·개발 서버 재컴파일 직후의 좌표 어긋남 방지).
+  await splitHandle.hover();
+  const handleBox = (await splitHandle.boundingBox())!;
+  const handleX = handleBox.x + handleBox.width / 2, handleY = handleBox.y + handleBox.height / 2;
+  await page.mouse.down();
+  await page.mouse.move(handleX - 190, handleY, { steps: 8 });
+  await page.mouse.up();
+  const shareAfter = Number(await splitHandle.getAttribute("aria-valuenow"));
+  assert.ok(shareAfter <= shareBefore - 8, `Dragging the split handle narrows the chat (${shareBefore}% → ${shareAfter}%)`);
+  assert.ok(Number(await page.evaluate(() => localStorage.getItem("oneulstart:intake-split:answering"))) > 0, "The dragged width is remembered for this phase");
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), "Resizing causes no horizontal overflow");
+  await splitHandle.dblclick();
+  assert.equal(Number(await splitHandle.getAttribute("aria-valuenow")), shareBefore, "Double click restores the default width");
   let delayOnce = true;
   await page.route("**/api/plan/chat", async (route: any) => {
     if (!delayOnce || route.request().method() !== "POST") return route.continue();

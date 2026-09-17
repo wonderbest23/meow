@@ -8,12 +8,13 @@ import { resolvePlanningLLMConfig } from "../llm/config";
 import { serverPersistenceMode } from "../persistence";
 import { readCoach } from "./coach";
 import { loadPlanState } from "./plan-server-store";
-import { createIntake, IntakeError, intakeSnapshot, readIntake } from "./intake-core";
+import { createIntake, IntakeError, intakeSnapshot, readIntake, intakeJobClock } from "./intake-core";
 import { executeIntakeJob, expireStaleIntakeJob, intakeCommandSchema, saveIntakeCommand, updateIntakeJob } from "./intake-service";
 import { intakeFeatureEnabled, type IntakeCommand, type IntakeJobRequest, type IntakePayload } from "./intake-types";
 import { ksicPath, searchKsic, sectorForKsic } from "./ksic";
 
-const json = (body: Partial<IntakePayload>, status = 200) => Response.json({ flowVersion: 2, enabled: intakeFeatureEnabled(), ...body }, { status, headers: { "Cache-Control": "private, no-store" } });
+// 진행 중인 AI 작업이 있으면 서버 시각 기준 경과 시간을 함께 보낸다. 화면은 이 값으로 게이지를 이어 그린다.
+const json = (body: Partial<IntakePayload>, status = 200) => Response.json({ flowVersion: 2, enabled: intakeFeatureEnabled(), ...body, ...(body.plan ? { plan: { ...body.plan, jobClock: intakeJobClock(body.plan.intake.job, Date.now()) } } : {}) }, { status, headers: { "Cache-Control": "private, no-store" } });
 const ownerScope = (hash: string) => createHash("sha256").update(`intake-draft:${hash}`).digest("hex").slice(0, 32);
 async function workflowBinding() { try { return (await getCloudflareContext({ async: true })).env.PLAN_SECTIONS_WORKFLOW ?? null; } catch { return null; } }
 

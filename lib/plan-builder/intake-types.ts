@@ -16,6 +16,8 @@ export type IntakeJob = {
   baseFieldRevisions?: Partial<Record<CoachField["key"], string | null>>;
   baseDocumentRevision: number; request?: string; reply?: string; error?: string;
   updatedAt: string; dispatched?: boolean;
+  /** 요청 시각. 진행 게이지가 화면을 나갔다 와도 같은 기준으로 이어지게 한다(이전 기록에는 없을 수 있다). */
+  createdAt?: string;
 };
 export type IntakeState = {
   version: 1; stateRevision?: number; packVersion: string; mode: IntakeMode; sector: ProposalSector;
@@ -45,6 +47,8 @@ export type IntakeSnapshot = {
   questions: IntakeQuestion[]; coreComplete: boolean; coreAnswered: number; coreTotal: number;
   summary: Array<{ id: string; label: string; value: string; basis: "user" | "proposal" | "unknown" }>;
   candidateIdeas: Array<{ id: string; title: string; description: string; sector: ProposalSector; reasons: string[]; cautions: string[] }>;
+  /** 진행 중인 AI 작업의 서버 기준 경과 시간과 예상·최대 시간. 응답을 보낼 때 HTTP 층이 붙인다(기기 시계 오차와 무관). */
+  jobClock?: { elapsedMs: number; expectedMs: number; limitMs: number } | null;
   financialSummary: string; hasDocuments: boolean; pendingExtraction: boolean;
   /** 확정된 표준산업분류와 그 사업 구조 기본값 */
   ksic: { code: string; name: string; path: string; structure: BusinessStructure | null; summary: string[]; licenseHint: string | null } | null;

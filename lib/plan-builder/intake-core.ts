@@ -9,7 +9,7 @@ import { KSIC_SYNONYMS, ksicAncestors, ksicByCode, ksicEntries, ksicPath, ksicSt
 import { START_CONDITIONS } from "./intake-questions";
 import { capacityUnitOrder, licenseHint, revenueBasis, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, STRUCTURE_LABELS, structureFieldLabels, structureSummary, type BusinessStructure, type StructureAxis } from "./business-structure";
 import { PROPOSAL_SECTORS, type ProposalSector } from "./proposal-blueprint";
-import { INTAKE_KEY, INTAKE_VERSION, type IntakeCandidate, type IntakeCommand, type IntakeSnapshot, type IntakeState, type IntakeValue } from "./intake-types";
+import { INTAKE_KEY, INTAKE_VERSION, type IntakeCandidate, type IntakeCommand, type IntakeJob, type IntakeSnapshot, type IntakeState, type IntakeValue } from "./intake-types";
 import type { ServerPlan } from "./plan-server-store";
 
 export class IntakeError extends Error {
@@ -223,6 +223,17 @@ function syncIntakeDetails(plan: ServerPlan, intake: IntakeState) {
     if (!answer) return [];
     return [[detail.id, plan.answers["intake/details"]?.[detail.id] ?? { value: answer.value, unit: detail.unit ?? null, period: detail.period ?? null, messageId: answer.messageId, quote: answer.quote ?? displayIntakeValue(answer.value) }]];
   }));
+}
+
+/** AI 작업 종류별 보통 걸리는 시간과 호출 제한 시간(ms). 제한 시간은 실제 호출의 timeoutMs와 같다. */
+export const INTAKE_JOB_TIMING: Record<IntakeJob["kind"], { expectedMs: number; limitMs: number }> = {
+  design: { expectedMs: 25_000, limitMs: 60_000 }, help: { expectedMs: 8_000, limitMs: 20_000 }, extract: { expectedMs: 8_000, limitMs: 20_000 },
+};
+/** 진행 중인 작업의 서버 기준 경과 시간. 끝났거나 없으면 null. */
+export function intakeJobClock(job: IntakeJob | null | undefined, nowMs: number): IntakeSnapshot["jobClock"] {
+  if (!job || !["queued", "running"].includes(job.status)) return null;
+  const started = Date.parse(job.createdAt ?? job.updatedAt);
+  return { elapsedMs: Number.isFinite(started) ? Math.max(0, nowMs - started) : 0, ...INTAKE_JOB_TIMING[job.kind] };
 }
 
 const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "한 달": 1 };

@@ -59,7 +59,7 @@ async function main() {
   let passed = 0;
   try {
     const { saveIntakeCommand, executeIntakeJob, updateIntakeJob, expireStaleIntakeJob } = await import("../lib/plan-builder/intake-service");
-    const { readIntake, IntakeError } = await import("../lib/plan-builder/intake-core");
+    const { readIntake, IntakeError, intakeJobClock } = await import("../lib/plan-builder/intake-core");
     const { intakeStructureBrief } = await import("../lib/plan-builder/intake-structure-brief");
     const { COACH_KEY, COACH_TYPES, readCoach, coachDocumentRevision } = await import("../lib/plan-builder/coach");
     const { emptyCoach, generateAndSaveCoach } = await import("../lib/plan-builder/coach-job");
@@ -286,6 +286,33 @@ async function main() {
       assert.equal(cleared.snapshot.structure?.basis.payer, "user");
       assert.equal(cleared.snapshot.structure?.basis.revenue, "sector", "without a KSIC code the remaining axes come from the sector default");
       assert.equal(calls.length, 0);
+    });
+
+    await check("a design job runs on the server without the screen: request time recorded, finished unattended, result waiting on return", async () => {
+      configureAI(true);
+      const ownerHash = `intake-design-${randomUUID()}`;
+      const started = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: "동네 원두 정기 구독 카페", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+      const session = { ownerHash, planId: started.plan.id };
+      const queued = await send(session, { action: "design" }, true);
+      assert.equal(queued.job?.kind, "design"); assert.equal(queued.job?.status, "queued");
+      assert.ok(queued.job?.createdAt && queued.job.createdAt === queued.job.updatedAt, "the request time is recorded for the progress gauge");
+      assert.deepEqual(intakeJobClock(queued.snapshot.intake.job, Date.parse(queued.job!.createdAt!) + 12_000), { elapsedMs: 12_000, expectedMs: 25_000, limitMs: 60_000 });
+      // 화면은 아무것도 하지 않는다(상태 확인 요청 없음). 서버 실행만으로 끝나고 결과가 저장돼 있어야 한다.
+      respond = body => {
+        assert.equal(body.text?.format?.name, "intake_design");
+        return completion({ approach: "known-business", startingPlan: { scope: "월 구독 커피 패스 50명으로 시작", connectionToVision: "동네 단골 기반 구독 카페", whyThis: "고정 매출을 먼저 확인", notIncluded: ["배달"] },
+          alternatives: [{ name: "테이크아웃 전용", scope: "매장 없이 픽업만", tradeoff: "체류 고객을 포기" }], assumptions: [{ statement: "직장인이 월 3만원을 낸다", howToCheck: "사전 예약 20명 모집" }],
+          nextAction: { action: "사전 예약 페이지 열기", doneWhen: "20명 예약", usableText: "월 3만원 커피 패스 사전 예약을 받습니다." } });
+      };
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, queued)), { ok: true });
+      const returned = await load(session);
+      assert.equal(returned.intake.job?.status, "complete");
+      assert.equal(returned.coach.design?.status, "proposal");
+      assert.equal(returned.coach.design?.startingPlan.scope, "월 구독 커피 패스 50명으로 시작");
+      assert.equal(intakeJobClock(returned.intake.job, Date.now()), null, "a finished job has no running clock");
+      const legacy = { ...queued.job!, createdAt: undefined };
+      assert.equal(intakeJobClock(legacy, Date.parse(legacy.updatedAt) + 5_000)?.elapsedMs, 5_000, "older records fall back to the last status time");
+      assert.equal(calls.length, 1);
     });
 
     await check("unclassified and compound businesses flag the structure fallback without changing defaults", async () => {

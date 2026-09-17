@@ -208,6 +208,18 @@ export function previewIntakeAnswer(snapshot: IntakeSnapshot, command: IntakeCom
   return { ...intakeSnapshot(plan, coach, intake), hasDocuments: snapshot.hasDocuments };
 }
 
+export type JobProgressView = { percent: number; elapsedSeconds: number; expectedSeconds: number; limitSeconds: number; slow: boolean };
+/**
+ * AI 작업의 예상 진행률. 실제 신호는 접수·실행·완료뿐이므로 그 사이는 보통 걸리는 시간으로 추정한다.
+ * 보통 시간에 80%쯤, 그 뒤로는 천천히 95%까지만 오르고 완료 응답이 와야 100%가 된다.
+ */
+export function jobProgress(status: "queued" | "running" | "complete" | "failed", elapsedMs: number, expectedMs: number, limitMs: number): JobProgressView {
+  const elapsed = Math.max(0, elapsedMs), expected = Math.max(1000, expectedMs);
+  const estimated = Math.round(100 * (1 - Math.exp(-1.6 * elapsed / expected)));
+  const percent = status === "complete" ? 100 : status === "failed" ? 0 : Math.max(3, Math.min(95, estimated));
+  return { percent, elapsedSeconds: Math.floor(elapsed / 1000), expectedSeconds: Math.round(expected / 1000), limitSeconds: Math.round(limitMs / 1000), slow: status !== "complete" && elapsed > expected * 1.6 };
+}
+
 export function needsPolling(snapshot: IntakeSnapshot | null) {
   if (!snapshot) return false;
   return ["queued", "running"].includes(snapshot.intake.job?.status ?? "");

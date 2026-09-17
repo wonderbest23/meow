@@ -2,12 +2,12 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { detailQuestions, structureQuestions, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
 import { amountRanges, CHIP_GROUPS, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
-import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, onlyFilterSelected, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unfinishedAnswerText, unmatchedPieces, withCount, type AnswerDraft } from "./model";
+import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, onlyFilterSelected, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unfinishedAnswerText, unmatchedPieces, withCount, type AnswerDraft, jobProgress } from "./model";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
 import styles from "../intake.module.css";
@@ -355,6 +355,38 @@ export function SavedNotes({ snapshot, disabled, onExtract }: { snapshot: Intake
 
 const STRUCTURE_AXIS_LABEL: Record<StructureAxis, string> = { payer: "고객·지불자", offering: "제공하는 것", delivery: "전달 방식", revenue: "수익 방식", license: "인허가" };
 
+const JOB_TITLES: Record<"extract" | "help" | "design", string> = { extract: "저장한 메모 정리 중", design: "AI 사업안 작성 중", help: "AI 답변 작성 중" };
+const monotonicNow = () => typeof performance !== "undefined" ? performance.now() : Date.now();
+
+/**
+ * 진행 중인 AI 작업의 예상 진행률 게이지. 서버가 준 경과 시간에서 이어 세므로 화면을 나갔다 돌아와도 같은 지점에서 이어진다.
+ * 작업은 서버에서 실행되고 화면은 상태만 확인하므로, 화면을 닫아도 계속된다는 안내를 함께 보여 준다.
+ */
+export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSnapshot; announce?: boolean }) {
+  const job = snapshot.intake.job;
+  const active = !!job && (job.status === "queued" || job.status === "running");
+  const serverElapsed = snapshot.jobClock?.elapsedMs;
+  const base = active && job ? serverElapsed ?? Math.max(0, Date.now() - Date.parse(job.createdAt ?? job.updatedAt)) : 0;
+  const [sync, setSync] = useState(() => ({ base, at: monotonicNow() }));
+  const [, setTick] = useState(0);
+  // 서버 응답이 올 때마다(2.5초 간격 확인 포함) 서버 기준 경과 시간으로 다시 맞춘다.
+  useEffect(() => { setSync({ base, at: monotonicNow() }); }, [job?.id, job?.status, serverElapsed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!active) return;
+    const timer = window.setInterval(() => setTick(value => value + 1), 500);
+    return () => window.clearInterval(timer);
+  }, [active]);
+  if (!job || !active) return null;
+  const timing = snapshot.jobClock ?? { expectedMs: job.kind === "design" ? 25_000 : 8_000, limitMs: job.kind === "design" ? 60_000 : 20_000 };
+  const view = jobProgress(job.status, sync.base + (monotonicNow() - sync.at), timing.expectedMs, timing.limitMs);
+  return <div className={styles.jobProgress} data-kind={job.kind}>
+    <div className={styles.jobProgressTitle}><LoaderCircle className={styles.spinner} size={16} aria-hidden="true" /><span {...(announce ? { role: "status" } : {})}>{JOB_TITLES[job.kind]}</span><b aria-hidden="true">{view.percent}%</b></div>
+    <div className={styles.jobProgressBar} role="progressbar" aria-label={`${JOB_TITLES[job.kind]} 예상 진행률`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={view.percent}><span style={{ width: `${view.percent}%` }} /></div>
+    <small className={styles.jobProgressMeta}>예상 진행률 · {view.elapsedSeconds}초 경과 · 보통 {view.expectedSeconds}초 안팎{view.slow ? ` · 평소보다 오래 걸리고 있어요(최대 ${view.limitSeconds}초)` : ""}</small>
+    <small className={styles.jobProgressNote}>이 화면을 닫거나 다른 페이지로 가도 서버에서 계속 진행돼요. 돌아오면 결과가 여기에 표시돼요.</small>
+  </div>;
+}
+
 export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, onDetails, onDesign, onPrepare, onStructure }: {
   snapshot: IntakeSnapshot; disabled: boolean; aiBusy: boolean; prepared: boolean;
   onEdit: (questionId: string) => void; onDetails: () => void; onDesign: () => void; onPrepare: () => void;
@@ -366,8 +398,27 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
   const design = snapshot.coach.design;
   const staleDesign = !!design && design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision);
   const extraAnswers = snapshot.questions.filter(question => !snapshot.summary.some(item => item.id === (question.fieldKey ?? question.id)) && snapshot.intake.answers[question.id]);
+  // 다음 단계: 기본 질문 완료 → 사업안 만들기 → (사업안이 현재 입력 기준이면) 계획서 만들기 → 결과물 열기
+  const nextStep: "design" | "prepare" | "open" | null = !snapshot.coreComplete || !snapshot.coach.ready ? null : !design || staleDesign ? "design" : snapshot.hasDocuments || prepared ? "open" : "prepare";
+  // 기본 질문이 끝나면 다음 단계 버튼을 요약 맨 위로 올린다(긴 요약을 끝까지 내려야 버튼이 보이던 혼란 제거). 그 전에는 아래쪽에 비활성으로 둔다.
+  const actions = <div className={styles.summaryActions}>
+      <div className={styles.nextStep} data-active={nextStep === "design" || undefined}>
+        {nextStep === "design" && <strong className={styles.nextStepLabel}><ArrowRight size={14} aria-hidden="true" />다음 단계</strong>}
+        <button type="button" className={nextStep === "prepare" || nextStep === "open" ? styles.secondaryButton : styles.primaryButton} disabled={disabled || aiBusy || !snapshot.coreComplete || !snapshot.coach.ready} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />이 내용으로 사업안 만들기</button>
+        {nextStep === "design" && !aiBusy && <small className={styles.nextStepHint}>답변을 바탕으로 AI가 시작 범위와 확인할 가정을 정리해요. 보통 20~30초 걸려요.</small>}
+      </div>
+      <JobProgress snapshot={snapshot} />
+      <div className={styles.nextStep} data-active={nextStep === "prepare" || undefined}>
+        {nextStep === "prepare" && <strong className={styles.nextStepLabel}><ArrowRight size={14} aria-hidden="true" />다음 단계</strong>}
+        <button type="button" className={nextStep === "prepare" ? styles.primaryButton : styles.secondaryButton} disabled={disabled || aiBusy || !snapshot.coach.ready} onClick={onPrepare}><FileText size={18} aria-hidden="true" />계획서 만들기</button>
+        {nextStep === "prepare" && <small className={styles.nextStepHint}>사업안을 확인했다면 계획서 초안을 만들어요. 항목별로 작성돼 몇 분 걸릴 수 있어요.</small>}
+      </div>
+      {!nextStep && <small className={styles.nextStepHint}>기본 질문을 마치면 다음 단계(사업안 만들기)가 열려요.</small>}
+      {prepared && <p role="status" className={styles.success}>계획서 작성을 시작했어요.</p>}
+    </div>;
   return <>
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">입력한 사업 요약</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
+    {nextStep && actions}
     {original && <section className={styles.original}><h3>내 사업 구상</h3><p>{original}</p></section>}
     <dl className={styles.summaryFields}>{snapshot.summary.map(item => {
       const question = snapshot.questions.find(question => question.id === item.id || question.fieldKey === item.id);
@@ -396,11 +447,7 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     <section className={styles.financial}><h3>금액과 운영 수치</h3><p>{readableFinancialSummary(snapshot)}</p></section>
     {snapshot.coreComplete && !snapshot.intake.detailsRequested && <button type="button" className={styles.detailButton} disabled={disabled} onClick={onDetails}><Plus size={18} aria-hidden="true" />상세 질문 {detailCount}개 추가</button>}
     {design && <details className={styles.design}><summary><Sparkles size={16} aria-hidden="true" />AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
-    <div className={styles.summaryActions}>
-      <button type="button" className={styles.primaryButton} disabled={disabled || aiBusy || !snapshot.coreComplete || !snapshot.coach.ready} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />이 내용으로 사업안 만들기</button>
-      <button type="button" className={styles.secondaryButton} disabled={disabled || aiBusy || !snapshot.coach.ready} onClick={onPrepare}><FileText size={18} aria-hidden="true" />계획서 만들기</button>
-      {prepared && <p role="status" className={styles.success}>계획서 작성을 시작했어요.</p>}
-    </div>
+    {!nextStep && actions}
     {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물"><Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link><Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>사업 관리<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
   </>;
 }

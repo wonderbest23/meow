@@ -8,7 +8,7 @@ import type { ServerPlan } from "../lib/plan-builder/plan-server-store";
 import type { IntakeCandidate, IntakeCommand, IntakeSnapshot } from "../lib/plan-builder/intake-types";
 import { createIntake, intakeSnapshot } from "../lib/plan-builder/intake-core";
 import { structureQuestions, coreQuestions, detailQuestions, intakeSectorOptions } from "../lib/plan-builder/intake-questions";
-import { assembleHybridText, candidateConflict, customCandidateDraftKey, optionGroups, selectedCount, stepVisible, withCount, draftKey, emptyAnswer, emptyDraft, entryMessage, hasExclusiveOptions, isHybridQuestion, isPrefillQuestion, needsPolling, parseDraft, periodDates, periodPresetRange, persistDraft, plainText, previewIntakeAnswer, readIntakePayload, readableFinancialSummary, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, suggestedIntakeIndustry, summaryAnswerText, toggleChip, typedChoiceAnswer, typedEntryCommand, unfinishedAnswerText, unmatchedPieces } from "../app/plan/chat/intake-ui/model";
+import { assembleHybridText, candidateConflict, customCandidateDraftKey, optionGroups, selectedCount, stepVisible, withCount, draftKey, emptyAnswer, emptyDraft, entryMessage, hasExclusiveOptions, isHybridQuestion, isPrefillQuestion, needsPolling, parseDraft, periodDates, periodPresetRange, persistDraft, plainText, previewIntakeAnswer, readIntakePayload, readableFinancialSummary, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, suggestedIntakeIndustry, summaryAnswerText, toggleChip, typedChoiceAnswer, typedEntryCommand, unfinishedAnswerText, unmatchedPieces, jobProgress } from "../app/plan/chat/intake-ui/model";
 import { amountRanges, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
@@ -291,7 +291,7 @@ async function main() {
   const css = readFileSync(new URL("../app/plan/chat/intake.module.css", import.meta.url), "utf8");
   const cssClasses = Object.fromEntries([...css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(match => [match[1], match[1]]));
   require.extensions[".css"] = module => { module.exports = cssClasses; };
-  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping } = await import("../app/plan/chat/intake-ui/IntakePanels");
+  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress } = await import("../app/plan/chat/intake-ui/IntakePanels");
   const noop = () => {};
   const entry = renderToStaticMarkup(<EntryChoices disabled={false} onStart={noop} />);
   assert.equal((entry.match(/<button/g) ?? []).length, 3);
@@ -412,6 +412,29 @@ async function main() {
   const summary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={summarized} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
   for (const text of ["입력한 사업 요약", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", `상세 질문 ${structureQuestions(summarized.intake.mode, summarized.structure?.values).length + detailQuestions(summarized.intake.sector).length}개 추가`, "이 내용으로 사업안 만들기", "계획서 만들기"]) assert.ok(summary.includes(text));
   assert.ok(summary.includes(`/plan/document?planId=${id}`), "Existing artifacts stay navigable even during AI jobs");
+  // 다음 단계 강조: 기본 질문 완료 → 사업안 만들기 → 계획서 만들기. 지금 누를 버튼 하나에만 테두리·배지가 붙는다.
+  const nextMarkup = (patch: Partial<IntakeSnapshot>, coachPatch: Partial<CoachState>) => renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={{ ...summarized, hasDocuments: false, ...patch, coach: { ...summarized.coach, ready: true, ...coachPatch } }} disabled={false} aiBusy={false} prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
+  const needsDesign = nextMarkup({}, { design: undefined });
+  assert.equal(needsDesign.split("다음 단계").length - 1, 1, "exactly one next step is marked");
+  assert.match(needsDesign, /data-active="true"[^>]*>[\s\S]*?다음 단계[\s\S]*?이 내용으로 사업안 만들기[\s\S]*?보통 20~30초/, "after the core questions the design button is the marked next step");
+  assert.ok(needsDesign.indexOf("다음 단계") < needsDesign.indexOf("이 내용으로 사업안 만들기"));
+  const needsPlan = nextMarkup({}, { documentRevision: 5, design: { ...summarized.coach.design!, sourceRevision: 5 } });
+  assert.ok(needsPlan.indexOf("이 내용으로 사업안 만들기") < needsPlan.indexOf("다음 단계") && needsPlan.indexOf("다음 단계") < needsPlan.indexOf("계획서 만들기"), "with a current design the plan document becomes the next step");
+  const notYet = nextMarkup({ coreComplete: false }, { design: undefined });
+  assert.ok(!notYet.includes("data-active") && notYet.includes("기본 질문을 마치면 다음 단계"), "nothing is marked before the core questions are done");
+  // 예상 진행률: 서버가 준 경과 시간에서 이어 센다. 보통 시간에 80%, 95%에서 멈추고 완료 응답만 100%.
+  assert.equal(jobProgress("queued", 0, 25_000, 60_000).percent, 3);
+  assert.equal(jobProgress("running", 25_000, 25_000, 60_000).percent, 80);
+  assert.equal(jobProgress("running", 300_000, 25_000, 60_000).percent, 95);
+  assert.equal(jobProgress("complete", 1_000, 25_000, 60_000).percent, 100);
+  assert.ok(jobProgress("running", 41_000, 25_000, 60_000).slow && !jobProgress("running", 30_000, 25_000, 60_000).slow);
+  for (let t = 0, last = 0; t <= 120_000; t += 5_000) { const p = jobProgress("running", t, 25_000, 60_000).percent; assert.ok(p >= last, "the gauge never goes backwards"); last = p; }
+  const runningJob = { id: "job-1", runId: "intake-job-1", kind: "design" as const, status: "running" as const, noteIds: [], baseValues: {}, baseDocumentRevision: 1, updatedAt: new Date().toISOString(), createdAt: new Date().toISOString() };
+  const gauge = renderToStaticMarkup(<JobProgress announce snapshot={{ ...summarized, intake: { ...summarized.intake, job: runningJob }, jobClock: { elapsedMs: 25_000, expectedMs: 25_000, limitMs: 60_000 } }} />);
+  for (const text of ["AI 사업안 작성 중", "80%", 'role="progressbar"', 'aria-valuenow="80"', "25초 경과", "보통 25초 안팎", "다른 페이지로 가도 서버에서 계속 진행돼요"]) assert.ok(gauge.includes(text), `${text} in ${gauge}`);
+  assert.equal(renderToStaticMarkup(<JobProgress snapshot={summarized} />), "", "no gauge without an active job");
+  const busySummary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={{ ...summarized, intake: { ...summarized.intake, job: runningJob }, jobClock: { elapsedMs: 5_000, expectedMs: 25_000, limitMs: 60_000 } }} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
+  assert.ok(busySummary.includes('role="progressbar"') && busySummary.includes("27%"), "the gauge also shows next to the button that started the job");
   let numbered = previewIntakeAnswer(original, command({ questionId: "budget", value: "200만원" }))!;
   numbered = previewIntakeAnswer(numbered, { ...command({ questionId: "hoursPerWeek", value: "10시간" }), revision: numbered.coach.revision })!;
   assert.equal(numbered.coach.fields.find(field => field.key === "budget")?.value, "2000000원", "Storage keeps the raw coachAmount string");

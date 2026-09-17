@@ -4,27 +4,37 @@ import { useEffect, useRef, useState, type CSSProperties, type PointerEvent, typ
 
 const KEY = "oneulstart:chat-width";
 const DEFAULT = 42;
-export function useChatSplit() {
+/**
+ * 채팅과 옆 패널의 너비 분할. key가 바뀌면(예: 질문 중 → 질문 완료) 그 단계의 저장된 너비나 기본값으로 옮겨 간다.
+ * 저장은 보는 사람의 편의(localStorage)일 뿐이며 실패해도 기본값으로 동작한다.
+ */
+export type ChatSplitOptions = { key?: string; defaultShare?: number; minChatPx?: number; minSidePx?: number; maxShare?: number };
+export function useChatSplit(options: ChatSplitOptions = {}) {
+  const { key = KEY, defaultShare = DEFAULT, minChatPx = 280, minSidePx = 332, maxShare = 66 } = options;
   const ref = useRef<HTMLDivElement>(null);
-  const [preferred, setPreferred] = useState(DEFAULT);
+  const [preferred, setPreferred] = useState(defaultShare);
   const [width, setWidth] = useState(1200);
   const [dragging, setDragging] = useState(false);
-  const latest = useRef(DEFAULT);
+  const latest = useRef(defaultShare);
   useEffect(() => {
-    try { const stored = localStorage.getItem(KEY); const value = Number(stored); if (stored && Number.isFinite(value)) setPreferred(Math.max(20, Math.min(70, value))); } catch {}
+    let next = defaultShare;
+    try { const stored = localStorage.getItem(key); const value = Number(stored); if (stored && Number.isFinite(value)) next = Math.max(20, Math.min(80, value)); } catch {}
+    latest.current = next; setPreferred(next);
+  }, [key, defaultShare]);
+  useEffect(() => {
     const element = ref.current;
     if (!element) return;
     const observer = new ResizeObserver(() => setWidth(element.getBoundingClientRect().width));
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
-  const min = Math.max(24, 280 / width * 100);
-  const max = Math.max(min, Math.min(66, (width - 332) / width * 100));
+  const min = Math.max(24, minChatPx / width * 100);
+  const max = Math.max(min, Math.min(maxShare, (width - minSidePx) / width * 100));
   const value = Math.max(min, Math.min(max, preferred));
   function change(next: number, persist = false) {
     latest.current = Math.max(min, Math.min(max, next));
     setPreferred(latest.current);
-    if (persist) try { localStorage.setItem(KEY, String(latest.current)); } catch {}
+    if (persist) try { localStorage.setItem(key, String(latest.current)); } catch {}
   }
   function move(event: PointerEvent<HTMLDivElement>) {
     const bounds = ref.current?.getBoundingClientRect();
@@ -39,7 +49,7 @@ export function useChatSplit() {
       onPointerMove(event: PointerEvent<HTMLDivElement>) { if (event.currentTarget.hasPointerCapture(event.pointerId)) move(event); },
       onPointerUp(event: PointerEvent<HTMLDivElement>) { if (!event.currentTarget.hasPointerCapture(event.pointerId)) return; move(event); change(latest.current, true); event.currentTarget.releasePointerCapture(event.pointerId); setDragging(false); },
       onLostPointerCapture() { setDragging(false); },
-      onDoubleClick() { change(DEFAULT, true); },
+      onDoubleClick() { change(defaultShare, true); },
       onKeyDown(event: KeyboardEvent<HTMLDivElement>) {
         const next = { ArrowLeft: value - 2, ArrowRight: value + 2, Home: min, End: max }[event.key];
         if (next === undefined) return;
