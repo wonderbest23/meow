@@ -11,7 +11,8 @@ LOG=".claude/.post-edit-check.log"
 mkdir -p .claude
 cat >/dev/null 2>&1 || true   # drain stdin
 
-changed="$( { git diff --name-only; git ls-files --others --exclude-standard; } 2>/dev/null | grep -E '\.(ts|tsx)$' | sort -u )"
+# 생성 파일(next-env.d.ts 등 .d.ts)은 검사 대상이 아니다.
+changed="$( { git diff --name-only; git ls-files --others --exclude-standard; } 2>/dev/null | grep -E '\.(ts|tsx)$' | grep -vE '\.d\.ts$' | sort -u )"
 [ -z "$changed" ] && exit 0
 if [ -f "$STAMP" ]; then
   newer="$(printf '%s\n' "$changed" | while IFS= read -r f; do [ -n "$f" ] && [ -f "$f" ] && [ "$f" -nt "$STAMP" ] && printf '%s\n' "$f"; done)"
@@ -38,7 +39,8 @@ printf '%s\n' "$newer" | grep -qE '^lib/plan-builder/(intake-core|intake-questio
 printf '%s\n' "$newer" | grep -qE '^lib/plan-builder/intake-(service|http|core|types)\.ts$' && suites+=(scripts/business-intake-service.test.ts)
 printf '%s\n' "$newer" | grep -qE '^lib/plan-builder/(coach|coach-review|coach-document|business-hub|business-launch|coach-design)\.ts$' && suites+=(scripts/business-hub.test.ts)
 ran=0
-for s in "${suites[@]}"; do
+# 매핑된 스위트가 없을 수 있다(set -u에서 빈 배열 확장 보호).
+for s in ${suites[@]+"${suites[@]}"}; do
   [ -f "$s" ] || continue
   extra=""; [ "$s" = "scripts/business-hub.test.ts" ] && extra="--state-only"
   out="$(NODE_ENV=test PERSISTENCE_MODE=demo-memory OPENAI_API_KEY= ANTHROPIC_API_KEY= node --import tsx "$s" $extra 2>&1)" || fail "$s" "$out"
