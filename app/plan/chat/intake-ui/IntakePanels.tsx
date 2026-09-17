@@ -377,7 +377,7 @@ export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSn
     return () => window.clearInterval(timer);
   }, [active]);
   if (!job || !active) return null;
-  const timing = snapshot.jobClock ?? { expectedMs: job.kind === "design" ? 25_000 : 8_000, limitMs: job.kind === "design" ? 60_000 : 20_000 };
+  const timing = snapshot.jobClock ?? { expectedMs: job.kind === "design" ? 35_000 : 8_000, limitMs: job.kind === "design" ? 60_000 : 20_000 };
   const view = jobProgress(job.status, sync.base + (monotonicNow() - sync.at), timing.expectedMs, timing.limitMs);
   return <div className={styles.jobProgress} data-kind={job.kind}>
     <div className={styles.jobProgressTitle}><LoaderCircle className={styles.spinner} size={16} aria-hidden="true" /><span {...(announce ? { role: "status" } : {})}>{JOB_TITLES[job.kind]}</span><b aria-hidden="true">{view.percent}%</b></div>
@@ -399,7 +399,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   // 게이지는 실제로 돌고 있는 작업이 있을 때만. 그 밖의 바쁜 상태(저장 중 등)에는 버튼을 잠깐 비활성으로 둔다.
   const jobActive = ["queued", "running"].includes(snapshot.intake.job?.status ?? "");
   const locked = disabled || aiBusy;
-  const hint = step === "design" ? "답변을 바탕으로 AI가 시작 범위와 확인할 가정을 정리해요. 보통 20~30초 걸리고, 화면을 나가도 서버에서 계속 진행돼요."
+  const hint = step === "design" ? "답변을 바탕으로 AI가 시작 범위와 확인할 가정을 정리해요. 보통 30~40초 걸리고, 화면을 나가도 서버에서 계속 진행돼요."
     : step === "prepare" ? "확인한 사업안으로 계획서 초안을 항목별로 작성해요. 몇 분 걸릴 수 있어요." : "작성한 계획서를 열어 확인하세요.";
   return <div className={styles.nextStep} data-active data-step={step}>
     <strong className={styles.nextStepLabel}><ArrowRight size={14} aria-hidden="true" />다음 단계</strong>

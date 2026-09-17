@@ -225,9 +225,9 @@ function syncIntakeDetails(plan: ServerPlan, intake: IntakeState) {
   }));
 }
 
-/** AI 작업 종류별 보통 걸리는 시간과 호출 제한 시간(ms). 제한 시간은 실제 호출의 timeoutMs와 같다. */
+/** AI 작업 종류별 보통 걸리는 시간과 호출 제한 시간(ms). 제한 시간은 실제 호출의 timeoutMs와 같다. 사업안 35초는 운영 실측(2026-09-17: 대기 4초 + 모델 26초 + 저장, 합계 34초) 기준이다. */
 export const INTAKE_JOB_TIMING: Record<IntakeJob["kind"], { expectedMs: number; limitMs: number }> = {
-  design: { expectedMs: 25_000, limitMs: 60_000 }, help: { expectedMs: 8_000, limitMs: 20_000 }, extract: { expectedMs: 8_000, limitMs: 20_000 },
+  design: { expectedMs: 35_000, limitMs: 60_000 }, help: { expectedMs: 8_000, limitMs: 20_000 }, extract: { expectedMs: 8_000, limitMs: 20_000 },
 };
 /** 진행 중인 작업의 서버 기준 경과 시간. 끝났거나 없으면 null. */
 export function intakeJobClock(job: IntakeJob | null | undefined, nowMs: number): IntakeSnapshot["jobClock"] {

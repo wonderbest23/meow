@@ -304,7 +304,7 @@ async function main() {
       const queued = await send(session, { action: "design" }, true);
       assert.equal(queued.job?.kind, "design"); assert.equal(queued.job?.status, "queued");
       assert.ok(queued.job?.createdAt && queued.job.createdAt === queued.job.updatedAt, "the request time is recorded for the progress gauge");
-      assert.deepEqual(intakeJobClock(queued.snapshot.intake.job, Date.parse(queued.job!.createdAt!) + 12_000), { elapsedMs: 12_000, expectedMs: 25_000, limitMs: 60_000 });
+      assert.deepEqual(intakeJobClock(queued.snapshot.intake.job, Date.parse(queued.job!.createdAt!) + 12_000), { elapsedMs: 12_000, expectedMs: 35_000, limitMs: 60_000 });
       // 화면은 아무것도 하지 않는다(상태 확인 요청 없음). 서버 실행만으로 끝나고 결과가 저장돼 있어야 한다.
       respond = body => {
         assert.equal(body.text?.format?.name, "intake_design");

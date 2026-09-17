@@ -210,7 +210,7 @@ export function previewIntakeAnswer(snapshot: IntakeSnapshot, command: IntakeCom
 
 export type IntakeNextStep = "design" | "prepare" | "open" | null;
 /**
- * 지금 해야 할 다음 단계 하나. 기본 질문 완료 → 사업안 만들기(방향 요약, 20~30초) → 사업안이 현재 입력 기준이면 계획서 만들기(전체 문서, 몇 분) → 계획서 열기.
+ * 지금 해야 할 다음 단계 하나. 기본 질문 완료 → 사업안 만들기(방향 요약, 30~40초) → 사업안이 현재 입력 기준이면 계획서 만들기(전체 문서, 몇 분) → 계획서 열기.
  * 두 제작 버튼을 동시에 보여 주지 않는다. 답변을 고쳐 사업안이 옛 기준이 되면 다시 사업안 만들기로 돌아온다.
  */
 export function intakeNextStep(snapshot: IntakeSnapshot, prepared = false): IntakeNextStep {
