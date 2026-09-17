@@ -1,5 +1,32 @@
 .page:global(.simple-home.product-home.cinematic-home) { background: #fff; color: #191f28; }
-.page:global(.simple-home.product-home.cinematic-home > .home-header-shell) { position: sticky; top: 0; z-index: 40; background: #ffffffee; backdrop-filter: blur(16px); }
+/*
+ * 상단 서리(점진 블러). 헤더 자체에는 배경·블러를 두지 않는다(부모에 backdrop-filter가 있으면 자식 띠가 페이지를 흐리지 못한다).
+ * 헤더보다 큰 레이어에 띠 4장을 겹치고, 위 띠일수록 흐림이 세고 마스크가 짧다. 그래서 경계선 없이 위는 진하고 아래로 갈수록 선명해진다.
+ * --frost(0~1)는 app/page.tsx의 스크롤 리스너가 넣는다. 맨 위에서는 0이라 아무것도 보이지 않는다.
+ */
+.page:global(.simple-home.product-home.cinematic-home > .home-header-shell) { --frost: 0; position: sticky; top: 0; z-index: 40; background: transparent; }
+.page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost) { position: absolute; z-index: 0; top: 0; left: 0; right: 0; height: clamp(116px, 16vh, 164px); pointer-events: none; opacity: var(--frost); }
+.page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i) {
+  position: absolute; inset: 0; pointer-events: none;
+  -webkit-backdrop-filter: blur(calc(var(--frost) * var(--band-blur))) saturate(calc(1 + var(--frost) * .18));
+  backdrop-filter: blur(calc(var(--frost) * var(--band-blur))) saturate(calc(1 + var(--frost) * .18));
+  background: linear-gradient(180deg, rgba(255, 255, 255, calc(var(--frost) * var(--band-tint))) 0%, rgba(255, 255, 255, 0) 100%);
+  -webkit-mask-image: var(--band-mask); mask-image: var(--band-mask);
+}
+.page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(1)) { --band-blur: 30px; --band-tint: .78; --band-mask: linear-gradient(180deg, #000 0%, #000 22%, rgba(0, 0, 0, .55) 40%, transparent 60%); }
+.page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(2)) { --band-blur: 18px; --band-tint: .52; --band-mask: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .88) 28%, rgba(0, 0, 0, .35) 54%, transparent 76%); }
+.page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(3)) { --band-blur: 10px; --band-tint: .3; --band-mask: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .72) 36%, rgba(0, 0, 0, .22) 64%, transparent 90%); }
+.page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(4)) { --band-blur: 4px; --band-tint: .12; --band-mask: linear-gradient(180deg, rgba(0, 0, 0, .9) 0%, rgba(0, 0, 0, .45) 44%, transparent 100%); }
+/* 좁은 화면은 띠 2장만(겹친 backdrop-filter는 오래된 기기에서 스크롤을 무겁게 한다). */
+@media (max-width: 640px) {
+  .page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost) { height: clamp(96px, 14vh, 132px); }
+  .page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(2)),
+  .page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(4)) { display: none; }
+}
+/* 뒤 배경 흐림을 못 쓰는 브라우저는 예전처럼 흰 바탕으로 읽히게 한다. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .page:global(.simple-home.product-home.cinematic-home > .home-header-shell) { background: rgba(255, 255, 255, calc(var(--frost) * .94)); }
+}
 .page:global(.simple-home.product-home.cinematic-home .site-header) { height: 64px; min-height: 64px; max-width: 1280px; margin: auto; padding: 0 32px; }
 .page:global(.simple-home.product-home.cinematic-home .site-header .account-link) { background: #edf4ff; color: #3182f6; }
 .page:global(.simple-home.product-home.cinematic-home .site-header .account-link svg) { color: #3182f6; }

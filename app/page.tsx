@@ -520,6 +520,21 @@ function Home({
       .then((j: { texts?: Record<string, string>; hidden?: string[] }) => { if (j && typeof j === "object") setSiteCopy({ texts: j.texts ?? {}, hidden: j.hidden ?? [] }); })
       .catch(() => {});
   }, []);
+  /*
+   * 상단 서리(점진 블러): 맨 위에서는 헤더가 투명하고, 내려가면 헤더 뒤로 겹친 띠 4장이 뒤 배경을 흐리게 한다.
+   * 세기는 스크롤 0~120px 구간에서 0→1로 오르는 --frost 하나로 정한다(띠의 흐림·색·투명도가 모두 이 값을 따른다).
+   */
+  const headerShell = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const shell = headerShell.current;
+    if (!shell) return;
+    let frame = 0;
+    const apply = () => { frame = 0; shell.style.setProperty("--frost", Math.min(1, Math.max(0, window.scrollY / 120)).toFixed(3)); };
+    const onScroll = () => { if (!frame) frame = window.requestAnimationFrame(apply); };
+    apply();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => { window.removeEventListener("scroll", onScroll); if (frame) window.cancelAnimationFrame(frame); };
+  }, []);
   const sc = (id: string, def: string) => siteCopy.texts[id] ?? def;
   /** \n 을 <br/> 로 */
   const scBr = (id: string, def: string) => sc(id, def).split("\n").map((line, i, all) => <Fragment key={i}>{line}{i < all.length - 1 ? <br /> : null}</Fragment>);
@@ -532,7 +547,8 @@ function Home({
 
   return (
     <main className={`new-home simple-home product-home cinematic-home ${homeTypography.theme} ${homeCinematic.page}`}>
-      <div className="home-header-shell">
+      <div className="home-header-shell" ref={headerShell}>
+        <div className="home-header-frost" aria-hidden="true"><i /><i /><i /><i /></div>
         <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
       </div>
       <HomeOpening
