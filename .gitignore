@@ -19,3 +19,6 @@ supabase/.temp/
 # 멈춘 빌드를 치울 때 만든 임시 폴더 (rm 이 느려 이름만 바꿔 둔다)
 .next-broken-*
 .open-next-*
+
+# Claude Code post-edit hook state
+.claude/.post-edit-check.*

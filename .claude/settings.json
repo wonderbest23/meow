@@ -1,0 +1,18 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/hooks/post-edit-check.sh",
+            "timeout": 300,
+            "asyncRewake": true,
+            "statusMessage": "수정 직후 검증: 증분 tsc + 관련 단위 스위트"
+          }
+        ]
+      }
+    ]
+  }
+}
