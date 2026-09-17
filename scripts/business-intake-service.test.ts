@@ -324,7 +324,7 @@ async function main() {
       const nail = ideas.find(idea => idea.id === "ksic:96119");
       assert.ok(nail, `nail salon from the experience text: ${ideas.map(idea => idea.id).join(",")}`);
       assert.ok(nail!.reasons.some(reason => reason.includes("네일")), nail!.reasons.join(" | "));
-      assert.ok(nail!.description.includes("96119") && nail!.description.includes("신고·등록 필요"), nail!.description);
+      assert.ok(nail!.description.includes("96119") && nail!.description.includes("자격·면허 필요"), `미용업은 면허가 전제(공중위생관리법 제8조): ${nail!.description}`);
       assert.equal(ideas.indexOf(nail!), 3, "the experience match leads the map candidates");
       assert.ok(nail!.reasons.some(reason => reason.startsWith("흔히 부르는 말:") && reason.includes("네일")), "the dry official name comes with its colloquial names");
       assert.ok(ideas.filter(idea => idea.id.startsWith("ksic:") && !idea.reasons.some(reason => reason.includes("경험"))).length <= 2, "fillers stay at two when the experience already matches");

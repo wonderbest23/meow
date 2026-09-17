@@ -27,7 +27,20 @@ for (const [code, patch] of Object.entries(KSIC_STRUCTURE_OVERRIDES)) for (const
 // 2026-09-16 소분류 검수: 중분류 기본값의 잘못된 상속이 세세분류에서 바로잡히는지
 assert.equal(ksicStructure("56213")?.license, "registration", "호프·생맥주집은 일반음식점 신고");
 assert.equal(ksicStructure("56211")?.license, "permit", "유흥주점은 허가");
-assert.equal(ksicStructure("95213")?.license, "none", "세차업은 자동차관리사업 등록 대상 아님");
+assert.equal(ksicStructure("95213")?.license, "registration", "세차시설은 폐수배출시설 설치신고(물환경보전법 제33조)");
+// 2026-09-17 법령 검수 반영 표본(근거: docs/ksic-license-review-2026-09-17.md)
+assert.equal(ksicStructure("96119")?.license, "professional", "미용·네일은 면허가 전제(공중위생관리법 제8조)");
+assert.equal(ksicStructure("96122")?.license, "professional", "안마는 안마사 자격(의료법 제82조)");
+assert.equal(ksicStructure("91139")?.license, "none", "요가·필라테스는 자유업");
+assert.equal(ksicStructure("91134")?.license, "none", "볼링장은 신고 체육시설업이 아님");
+assert.equal(ksicStructure("91135")?.license, "registration", "당구장은 신고 체육시설업");
+assert.equal(ksicStructure("45")?.license, "none", "신차·부품 판매는 등록 제도 없음");
+assert.equal(ksicStructure("4512")?.license, "registration", "중고차 매매업 등록(자동차관리법 제53조)");
+assert.equal(ksicStructure("857")?.license, "varies", "입시컨설팅은 학원 등록 대상, 유학원은 자유업");
+assert.equal(ksicStructure("61")?.license, "registration", "기간통신사업은 등록제");
+assert.equal(ksicStructure("271")?.license, "permit", "의료기기 제조업 허가"); assert.equal(ksicStructure("27")?.license, "varies");
+assert.equal(ksicStructure("49401")?.license, "permit", "택배는 화물자동차 운송사업 허가가 전제"); assert.equal(ksicStructure("49402")?.license, "none");
+assert.equal(ksicStructure("63992")?.smallBusiness, false); assert.equal(ksicStructure("35114")?.smallBusiness, true);
 assert.equal(ksicStructure("95211")?.license, "registration", "자동차 정비는 등록");
 assert.equal(ksicStructure("91135")?.revenue, "per_hour", "당구장은 시간당");
 assert.equal(ksicStructure("91131")?.revenue, "subscription", "체력단련장은 월 회비");

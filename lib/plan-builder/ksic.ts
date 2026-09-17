@@ -20,8 +20,8 @@ const S = (sector: ProposalSector, payer: BusinessStructure["payer"], offering: 
 
 /** 중분류 77개의 사업 구조 기본값. 코드 → 구조. 검수 필요 항목은 테스트가 커버리지를 강제한다. */
 export const KSIC_DIVISION_STRUCTURES: Record<string, BusinessStructure> = {
-  "01": S("general", "mixed", "goods", "per_unit", "production", "equipment", "registration", true),
-  "02": S("general", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
+  "01": S("general", "mixed", "goods", "per_unit", "production", "equipment", "varies", true),
+  "02": S("general", "b2b", "goods", "per_unit", "production", "equipment", "varies", false),
   "03": S("general", "mixed", "goods", "per_unit", "production", "equipment", "permit", false),
   "05": S("general", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
   "06": S("general", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
@@ -33,10 +33,10 @@ export const KSIC_DIVISION_STRUCTURES: Record<string, BusinessStructure> = {
   "13": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "none", true),
   "14": S("manufacturing", "mixed", "goods", "per_unit", "production", "equipment", "none", true),
   "15": S("manufacturing", "mixed", "goods", "per_unit", "production", "equipment", "none", true),
-  "16": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "none", true),
+  "16": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "varies", true),
   "17": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "none", false),
   "18": S("manufacturing", "b2b", "goods", "project", "production", "equipment", "none", true),
-  "19": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
+  "19": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "registration", false),
   "20": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "varies", false),
   "21": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
   "22": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "none", true),
@@ -44,11 +44,11 @@ export const KSIC_DIVISION_STRUCTURES: Record<string, BusinessStructure> = {
   "24": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "none", false),
   "25": S("manufacturing", "b2b", "goods", "project", "production", "equipment", "none", true),
   "26": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "none", false),
-  "27": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
-  "28": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "registration", false),
+  "27": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "varies", false),
+  "28": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "none", false),
   "29": S("manufacturing", "b2b", "goods", "project", "production", "equipment", "none", true),
-  "30": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
-  "31": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "permit", false),
+  "30": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "varies", false),
+  "31": S("manufacturing", "b2b", "goods", "per_unit", "production", "equipment", "varies", false),
   "32": S("manufacturing", "mixed", "goods", "project", "production", "equipment", "none", true),
   "33": S("manufacturing", "mixed", "goods", "per_unit", "production", "equipment", "none", true),
   "34": S("b2b_service", "b2b", "service", "project", "visit", "equipment", "none", true),
@@ -56,22 +56,22 @@ export const KSIC_DIVISION_STRUCTURES: Record<string, BusinessStructure> = {
   "36": S("general", "mixed", "service", "subscription", "production", "equipment", "permit", false),
   "37": S("general", "b2b", "service", "project", "visit", "equipment", "permit", false),
   "38": S("local_service", "b2b", "service", "per_unit", "visit", "vehicle", "permit", true),
-  "39": S("b2b_service", "b2b", "service", "project", "visit", "equipment", "permit", false),
+  "39": S("b2b_service", "b2b", "service", "project", "visit", "equipment", "registration", false),
   "41": S("general", "mixed", "service", "project", "visit", "equipment", "registration", false), // 종합건설업 등록(건설산업기본법 9조)
   "42": S("local_service", "mixed", "service", "project", "visit", "equipment", "registration", true),
-  "45": S("retail_commerce", "b2c", "goods", "per_unit", "store", "storefront", "registration", true),
+  "45": S("retail_commerce", "b2c", "goods", "per_unit", "store", "storefront", "none", true),
   "46": S("retail_commerce", "b2b", "goods", "per_unit", "delivery", "equipment", "varies", true),
   "47": S("retail_commerce", "b2c", "goods", "per_unit", "store", "storefront", "varies", true),
   "49": S("logistics", "mixed", "service", "per_unit", "delivery", "vehicle", "permit", true),
-  "50": S("logistics", "b2b", "service", "per_unit", "delivery", "vehicle", "permit", false),
+  "50": S("logistics", "b2b", "service", "per_unit", "delivery", "vehicle", "varies", false),
   "51": S("logistics", "b2b", "service", "per_unit", "delivery", "vehicle", "permit", false),
   "52": S("logistics", "b2b", "service", "per_unit", "delivery", "equipment", "registration", true),
   "55": S("space_hospitality", "b2c", "space", "rental", "store", "storefront", "registration", true),
   "56": S("food_beverage", "b2c", "goods", "per_unit", "store", "storefront", "registration", true),
   "58": S("software", "mixed", "software", "subscription", "online", "remote", "varies", true),
-  "59": S("content_media", "mixed", "content", "project", "online", "equipment", "none", true),
-  "60": S("content_media", "b2b", "content", "mixed", "online", "equipment", "permit", false),
-  "61": S("general", "b2c", "service", "subscription", "online", "equipment", "permit", false),
+  "59": S("content_media", "mixed", "content", "project", "online", "equipment", "varies", true),
+  "60": S("content_media", "b2b", "content", "mixed", "online", "equipment", "varies", false),
+  "61": S("general", "b2c", "service", "subscription", "online", "equipment", "registration", false),
   "62": S("software", "b2b", "software", "project", "online", "remote", "none", true),
   "63": S("software", "mixed", "software", "mixed", "online", "remote", "none", true),
   "64": S("general", "b2c", "service", "commission", "online", "remote", "permit", false),
@@ -91,7 +91,7 @@ export const KSIC_DIVISION_STRUCTURES: Record<string, BusinessStructure> = {
   "87": S("local_service", "mixed", "service", "subscription", "store", "storefront", "varies", true),
   "90": S("content_media", "b2c", "content", "per_unit", "mixed", "remote", "varies", true),
   "91": S("space_hospitality", "b2c", "space", "mixed", "store", "storefront", "registration", true),
-  "94": S("general", "b2c", "service", "subscription", "mixed", "remote", "registration", false),
+  "94": S("general", "b2c", "service", "subscription", "mixed", "remote", "varies", false),
   "95": S("local_service", "b2c", "service", "per_unit", "store", "equipment", "varies", true),
   "96": S("local_service", "b2c", "service", "per_unit", "store", "storefront", "registration", true),
   "97": S("general", "b2c", "service", "per_hour", "visit", "remote", "none", false),
@@ -103,8 +103,8 @@ export const KSIC_DIVISION_STRUCTURES: Record<string, BusinessStructure> = {
 export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>> = {
   "5822": { sector: "software", offering: "software", revenue: "subscription", license: "none" },   // 소프트웨어 개발·공급(출판업 아래)
   "5811": { sector: "content_media", offering: "content", revenue: "per_unit", license: "registration" },
-  "639": { sector: "content_media", offering: "content", revenue: "mixed" },
-  "63120": { sector: "software", offering: "software", revenue: "commission" },
+  "639": { sector: "content_media", offering: "content", revenue: "mixed", license: "varies" },
+  "63120": { sector: "software", offering: "software", revenue: "commission", license: "varies" },
   "731": { sector: "local_service", payer: "b2c", offering: "service", revenue: "per_unit", delivery: "store", capital: "storefront", license: "professional" }, // 수의업(동물병원은 진료 공간 필요)
   "732": { sector: "content_media", payer: "b2b", offering: "service", revenue: "project", delivery: "online", license: "none" }, // 전문 디자인(인허가 없음)
   "733": { sector: "content_media", offering: "content", revenue: "project", delivery: "mixed", license: "none" },
@@ -115,15 +115,15 @@ export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>
   "4799": { delivery: "mixed", capital: "remote", license: "registration" },
   "7521": { sector: "b2b_service", payer: "b2c", revenue: "commission", license: "registration" },  // 여행사
   "75995": { sector: "b2b_service", revenue: "project", delivery: "online", license: "none" },       // 온라인 마케팅
-  "9021": { sector: "space_hospitality", offering: "space", revenue: "subscription", license: "registration" }, // 독서실·스터디
+  "9021": { sector: "space_hospitality", offering: "space", revenue: "subscription", license: "varies" }, // 독서실·스터디
   "9122": { revenue: "per_hour", license: "registration" },                                           // 게임방·노래연습장
   "9113": { revenue: "subscription", license: "registration" },                                       // 체력단련장 등
   "5621": { license: "permit" },                                                                      // 유흥·단란주점은 허가
-  "9611": { revenue: "per_unit", license: "registration" },                                           // 이용·미용(공중위생영업 신고)
+  "9611": { revenue: "per_unit", license: "professional" },                                           // 이용·미용(공중위생영업 신고)
   "9691": { revenue: "per_unit", license: "registration" },                                           // 세탁(공중위생영업 신고)
   "8550": { revenue: "subscription", license: "registration" }, "8562": { revenue: "subscription", license: "registration" }, "8563": { revenue: "subscription", license: "registration" },
   "85503": { delivery: "online", capital: "remote" },
-  "494": { revenue: "per_unit", capital: "vehicle", license: "registration" },                       // 택배·늘찬배달(퀵)
+  "494": { revenue: "per_unit", capital: "vehicle", license: "permit" },                       // 택배·늘찬배달(퀵)
   "87210": { payer: "mixed", revenue: "subscription", license: "permit" },
   // ── 2026-09-16 소분류 234개 검수 반영. 중분류 기본값이 틀리게 상속되는 곳만 고친다. 근거는 각 줄 주석. ──
   // 음식점·주점
@@ -135,7 +135,7 @@ export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>
   "56199": { delivery: "delivery" },                                                                 // 포장·배달 전문점
   // 소매
   "4711": { license: "registration", smallBusiness: false },                                        // 백화점·대형마트는 대규모점포 등록
-  "4512": { smallBusiness: false },                                                                  // 중고차 매매업 등록에 전시장·사무실 요건
+  "4512": { smallBusiness: false, license: "registration" },                                                                  // 중고차 매매업 등록에 전시장·사무실 요건
   "47223": { license: "registration" },                                                              // 반찬 조리·판매는 즉석판매제조·가공업 신고
   "47212": { license: "registration" },                                                              // 정육점은 식육판매업 신고
   "473": { license: "none" }, "474": { license: "none" }, "475": { license: "none" }, "476": { license: "none" }, // 가전·의류·생활용품·문화용품 소매는 인허가 없음
@@ -170,31 +170,41 @@ export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>
   "851": { license: "permit", smallBusiness: false }, "852": { license: "permit", smallBusiness: false }, "853": { license: "permit", smallBusiness: false }, "854": { license: "permit", smallBusiness: false }, // 학교 설립 인가
   "85502": { delivery: "visit", capital: "remote" },                                                 // 학습지·방문교육
   "8561": { revenue: "subscription" },                                                               // 태권도장·수영강습 월 회비
-  "857": { payer: "mixed", revenue: "per_unit", delivery: "mixed", capital: "remote", license: "none" }, // 유학원·입시상담·교육컨설팅
+  "857": { payer: "mixed", revenue: "per_unit", delivery: "mixed", capital: "remote", license: "varies" }, // 유학원·입시상담·교육컨설팅
   // 보건·복지
   "861": { smallBusiness: false },                                                                   // 병원급은 개설 허가, 소규모 창업 아님
   "871": { license: "registration" },                                                                // 요양원 등 거주 복지시설 설치 신고
   "87293": { delivery: "visit", capital: "remote", license: "registration" },                        // 방문요양·재가센터
   // 예술·스포츠·여가
   "9013": { payer: "mixed", license: "none" },                                                       // 프리랜서 예술가
-  "91134": { revenue: "per_unit" }, "91135": { revenue: "per_hour" },                                // 볼링장 게임당, 당구장 시간당(9113 구독 상속 오류)
-  "91229": { revenue: "per_unit", license: "varies" },                                               // 키즈카페·방탈출: 유원시설업 신고 또는 자유업
-  "91231": { license: "permit" },                                                                    // 낚시터업 허가
+  "91134": { revenue: "per_unit", license: "none" }, "91135": { revenue: "per_hour" },                                // 볼링장 게임당, 당구장 시간당(9113 구독 상속 오류)
+  "91229": { revenue: "per_unit", license: "varies" },                                               // 키즈카페·방탈출: 기타테마파크업 신고(관광진흥법 제5조④) 또는 자유업
+  "91231": { license: "varies" },                                                                    // 낚시터업 허가
   // 수리·개인 서비스
   "951": { license: "none" },                                                                        // 컴퓨터·휴대폰 수리
-  "9521": { license: "registration" }, "95213": { license: "none" },                                 // 자동차정비업 등록, 세차업은 대상 아님
+  "9521": { license: "registration" }, "95213": { license: "registration" },                                 // 자동차정비업 등록, 세차업은 대상 아님
   "953": { license: "none" },                                                                        // 가전·의류·신발·시계 수리
-  "96122": { license: "varies" },                                                                    // 안마원은 안마사 자격, 스포츠·타이마사지는 법적 지위가 갈림
+  "96122": { license: "professional" },                                                                    // 안마원은 안마사 자격, 스포츠·타이마사지는 법적 지위가 갈림
   "96992": { delivery: "mixed", capital: "remote", license: "none" },                                // 점술·타로
   "96993": { revenue: "per_hour", delivery: "visit", capital: "remote", license: "none" },           // 개인 간병
   "96994": { revenue: "commission", delivery: "mixed", capital: "remote" },                          // 결혼중개(신고는 기본값 유지)
   "96995": { license: "varies" },                                                                    // 동물장묘업 허가, 위탁관리업 등록
   // 제조
   "101": { license: "permit" },                                                                      // 도축·식육가공·식육포장처리는 허가(축산물위생관리법 22조)
-  "111": { license: "permit" },                                                                      // 주류 제조면허(주세법)
+  "111": { license: "permit" },                                                                      // 주류 제조면허(주류 면허 등에 관한 법률 제3조)
   "181": { payer: "mixed", license: "registration" },                                                // 인쇄사 신고, 명함·청첩장 등 개인 고객
   "2042": { payer: "mixed", license: "registration", smallBusiness: true },                          // 화장품제조업·책임판매업 등록, 소규모 브랜드 흔함
   "3391": { payer: "b2b", revenue: "project", license: "registration" },                             // 간판은 옥외광고사업 등록, 건별 시공
+  // ── 2026-09-17 법령 검수 반영(근거 조문은 docs/ksic-license-review-2026-09-17.md). 중분류 값을 잘못 상속하던 분류를 새로 고정한다. ──
+  "91139": { license: "none" },                                                                     // 요가·필라테스 등은 체육시설법 제10조 신고업종이 아닌 자유업
+  "96991": { license: "none" },                                                                     // 예식장업은 자유업
+  "271": { license: "permit" },                                                                     // 의료기기 제조업 허가(의료기기법 제6조). 27의 시계·광학은 인허가 없음
+  "47222": { license: "registration" },                                                             // 건강기능식품 판매업 신고(건강기능식품법 제6조)
+  "63992": { license: "registration", smallBusiness: false },                                       // 가상자산사업자 신고(특정금융정보법 제7조), 소규모 창업 아님
+  "9111": { smallBusiness: false }, "9112": { smallBusiness: false },                               // 경기장·골프장·스키장은 등록 체육시설(체육시설법 제19조)
+  "59141": { smallBusiness: false },                                                                // 영화관
+  "55101": { smallBusiness: false }, "55103": { smallBusiness: false },                             // 호텔·콘도
+  "35114": { smallBusiness: true },                                                                 // 태양력 발전업은 소규모 창업이 흔하다(35 기본값은 false)
 };
 
 /**

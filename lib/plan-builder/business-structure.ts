@@ -61,7 +61,7 @@ export function licenseHint(structure: BusinessStructure): string | null {
   switch (structure.license) {
     case "registration": return "이 업종은 시작 전 영업 신고·등록이 필요한 편입니다. 관할 구청·세무서 기준으로 확인해 주세요.";
     case "permit": return "이 업종은 시작 전 영업 허가가 필요한 편입니다. 관할 기관 기준으로 확인해 주세요.";
-    case "professional": return "이 업종은 자격·면허가 있어야 운영할 수 있습니다.";
+    case "professional": return "이 업종은 자격·면허가 있어야 열 수 있는 편입니다. 면허 보유 여부와 개설 신고·등록 절차를 관할 기관 기준으로 확인해 주세요.";
     case "varies": return "세부 업종에 따라 인허가가 다릅니다. 시작 전에 해당 업종 기준을 확인해 주세요.";
     default: return null;
   }
