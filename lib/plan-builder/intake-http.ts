@@ -11,6 +11,7 @@ import { loadPlanState } from "./plan-server-store";
 import { createIntake, IntakeError, intakeSnapshot, readIntake } from "./intake-core";
 import { executeIntakeJob, expireStaleIntakeJob, intakeCommandSchema, saveIntakeCommand, updateIntakeJob } from "./intake-service";
 import { intakeFeatureEnabled, type IntakeCommand, type IntakeJobRequest, type IntakePayload } from "./intake-types";
+import { ksicPath, searchKsic, sectorForKsic } from "./ksic";
 
 const json = (body: Partial<IntakePayload>, status = 200) => Response.json({ flowVersion: 2, enabled: intakeFeatureEnabled(), ...body }, { status, headers: { "Cache-Control": "private, no-store" } });
 const ownerScope = (hash: string) => createHash("sha256").update(`intake-draft:${hash}`).digest("hex").slice(0, 32);
@@ -33,7 +34,14 @@ export async function intakeGet(request: Request) {
   if (!intakeFeatureEnabled()) return json({ plan: null, code: "disabled", message: "새 사업 진단은 아직 공개 전이에요" }, 404);
   try {
     const identity = await requireGuestIdentity();
-    const plan = await currentSnapshot(identity.hash, new URL(request.url).searchParams.get("planId"));
+    const url = new URL(request.url);
+    const search = url.searchParams.get("ksic");
+    if (search !== null) {
+      // 업종 이름 검색: 규칙 기반, 저장 없음, AI 0회. 6개까지.
+      const candidates = searchKsic(search.slice(0, 80), { limit: 6, minLevel: 5 }).map(match => ({ code: match.entry.code, name: match.entry.name, path: ksicPath(match.entry.code), sector: sectorForKsic(match.entry.code) ?? "general" as const }));
+      return json({ plan: null, ksicCandidates: candidates, authenticated: !!identity.userId, ownerScope: ownerScope(identity.hash) });
+    }
+    const plan = await currentSnapshot(identity.hash, url.searchParams.get("planId"));
     return json({ plan, authenticated: !!identity.userId, ownerScope: ownerScope(identity.hash) });
   } catch { return json({ code: "load_failed", message: "저장된 진단을 불러오지 못했어요. 새로 시작하지 말고 다시 불러와 주세요" }, 503); }
 }

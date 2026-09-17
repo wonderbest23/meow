@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { coachDocumentRevision, readCoach } from "./coach";
+import { readIntake } from "./intake-core";
+import { ksicByCode, ksicStructure, licenseHint, STRUCTURE_LABELS } from "./ksic";
 import type { Plan } from "./plan-store";
 
 export const LAUNCH_KEY = "__business_launch";
@@ -45,6 +47,15 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
     : "현재 사업의 첫 운영 범위를 작게 정하고, 이미 알려준 예산과 시간으로 가능한 준비물·작업 순서·보류할 일을 구체적으로 제안해주세요. 모르는 비용을 0원이나 실제 견적으로 확정하지 마세요." });
   if (settings.workplace === "unknown") result.push({ ...base, id: "workspace-choice", title: "일할 공간이 필요한지 알아봐요", task: "사무실을 먼저 계약하지 않아도 돼요. 현재 사업에 필요한 공간부터 검토해요.", materialTitle: "작업 공간 검토 메모", material: `${context}\n\n고객이 직접 방문해야 하는지:\n장비·재고를 보관할 공간이 필요한지:\n집이나 온라인에서 할 수 있는 작업:\n별도 확인이 필요한 주소·시설 조건:`, prompt: "현재 사업에 사무실·점포가 실제로 필요한지 검토해 주세요. 온라인 운영, 집에서 작업, 소호·공유사무실, 점포 중 적용 가능한 선택지를 비교하고, 확인되지 않은 주소 사용·인허가 적합성을 확정하지 마세요." });
   if (settings.workplace === "shared" || settings.workplace === "shop") result.push({ ...base, id: "workplace", title: settings.workplace === "shared" ? "소호·공유사무실을 비교해요" : "사업장 계약 조건을 확인해요", task: "받은 견적과 이용 조건을 비교하고 계약 전 질문을 준비해요.", materialTitle: "사업장 문의 초안", material: `안녕하세요. ${business} 사업을 준비하고 있습니다.\n${settings.region ? `희망 지역은 ${settings.region}입니다.\n` : ""}다음 조건을 포함한 서면 견적을 받고 싶습니다.\n\n1. 상주 좌석 이용인지, 비상주 주소 이용인지\n2. 보증금·월 이용료·관리비·초기 비용 및 부가세 포함 여부\n3. 우편 수령·회의실·추가 인원 비용\n4. 제 업종의 사업자등록과 실제 영업에 적합한 공간인지\n5. 계약 당사자와 공간 제공 권한을 확인할 서류\n6. 이용 기간·중도 해지·자동 연장·보증금 반환 조건\n7. 주소 변경 및 폐업 시 필요한 절차\n\n계약서 초안과 전체 비용 내역을 함께 부탁드립니다.`, caution: "소호오피스도 상주형과 비상주형이 달라요. 저렴하다는 이유만으로 적합하다고 판단하지 않으며, 등록 가능 여부와 계약은 관할 기관·전문가에게 확인해야 해요. 아래는 문의 초안이지 계약서가 아니에요.", links: [LAUNCH_SOURCES.lease, LAUNCH_SOURCES.registration], prompt: "현재 사업의 사무실 견적과 계약 전 확인할 질문을 정리해 주세요. 법적 적합성·권리관계·등록 가능 여부를 확인했다고 단정하지 말고, 실제 견적이 없으면 임대료 시세를 만들지 마세요." });
+  // 확정한 표준산업분류의 인허가 기본값이 있으면 사업자등록 앞에 확인 단계를 둔다. 법적 판단이 아니라 분류 기준 안내다.
+  const intakeState = readIntake(plan.answers as Record<string, Record<string, unknown>>);
+  const ksicEntry = intakeState?.ksic ? ksicByCode(intakeState.ksic) : undefined;
+  const structure = ksicEntry ? ksicStructure(ksicEntry.code) : undefined;
+  const hint = structure ? licenseHint(structure) : null;
+  if (ksicEntry && structure && hint && !improving) result.push({ ...base, id: "license", title: "업종 인허가를 확인해요", task: hint, materialTitle: "인허가 확인 메모",
+    material: `업종: ${ksicEntry.name} (KSIC ${ksicEntry.code})\n분류 기준 절차: ${STRUCTURE_LABELS.license[structure.license]}\n확인할 기관(구청·세무서·협회 등):\n확인한 날짜:\n필요 서류·비용:\n비고:`,
+    prompt: "이 업종을 시작하기 전에 필요한 신고·허가·자격을 관할 기관 기준으로 정리해 주세요. 확인되지 않은 항목은 확인 필요로 남깁니다.", caution: "인허가 요건은 지역·규모·세부 업태에 따라 다릅니다. 여기 안내는 표준산업분류 기준의 출발점이며 최종 확인은 관할 기관에서 합니다.",
+    links: [{ title: "정부24", url: "https://www.gov.kr" }] });
   if (settings.registered !== "yes") result.push({ ...base, id: "registration", title: "사업자등록 준비를 확인해요", task: "실제로 판매를 시작할 시점에 맞춰 필요한 서류와 업종을 공식 안내에서 확인해요.", materialTitle: "등록 상담용 사업 설명", material: `${context}\n\n사업장 방식: ${settings.workplace === "remote" ? "별도 사무실 없이 운영 검토" : settings.workplace === "shared" ? "소호·공유사무실 검토" : settings.workplace === "shop" ? "점포·사업장 검토" : "미정"}\n\n확인하고 싶은 내용:\n- 사업 내용에 맞는 업종과 신청 서류\n- 주소 사용과 임차 관련 제출 자료\n- 해당 업종의 별도 인허가·신고 여부\n- 실제 개업 예정일에 맞는 신청 일정`, caution: "사업 아이디어를 확인하는 것과 실제 영업은 달라요. 여기서 준비 완료를 눌러도 사업자등록이 신청되지는 않아요.", links: [LAUNCH_SOURCES.registration], prompt: "현재 사업으로 관할 세무서에 물어볼 등록 상담 질문지를 작성해주세요. 업종코드·허가 여부·신청 완료를 임의로 확정하지 마세요." });
   result.push({ ...base, id: "tax", title: "세금 관리 방법을 정해요", task: "직접 관리할지 세무 상담을 받을지 결정할 수 있도록 사업 정보를 정리해요.", materialTitle: "세무 상담 요청 초안", material: `안녕하세요. 아래 사업의 세무 상담을 받고 싶습니다.\n\n${context}\n현재 매출(제공된 정보): ${field("sales")}\n월 비용: ${field("cost")}\n\n1. 제 사업에 필요한 신고 종류와 실제 신고 일정\n2. 직접 신고할 때 준비할 매출·매입·인건비 자료\n3. 기장료와 별도 신고 수수료, 포함 업무\n4. 증빙 전달 방식과 상담 범위\n5. 계약 해지와 자료 반환 조건\n\n상담 후 업무 범위와 비용을 서면으로 안내 부탁드립니다.`, caution: "세무사 자동 배정·예약은 아직 제공하지 않아요. 신고 종류와 일정은 사업 형태에 따라 확인해야 하며, 이 화면에서 신고가 처리되지는 않아요.", links: [LAUNCH_SOURCES.tax], prompt: "현재 사업의 세무 상담용 설명과 자료 준비 목록을 구체화해주세요. 세율·신고기한은 검증된 자료가 없으면 확정하지 말고, 현재 매출과 예상 매출을 구별해주세요." });
   result.push({ ...base, id: "website", title: "홈페이지를 준비해요", task: "사업계획서로 홈페이지를 만들거나 디자인·개발 상담을 요청할 수 있어요.", materialTitle: "홈페이지 제작 요청서", material: `${context}\n\n홈페이지의 목적: 상품 소개와 문의 접수\n필요한 내용: 상품 설명, 가격, 신청 방법, 운영자 정보\n추가로 원하는 기능:\n보유한 사진·로고:\n연결하려는 도메인:\n희망 일정:`, service: "website", caution: "디자인·개발 대행은 별도 견적과 동의 후 진행해요. 도메인 구매나 외부 서비스 개통은 자동 완료되지 않아요.", prompt: "현재 사업의 홈페이지에 넣을 제목, 상품 설명, 문의 유도 문구와 섹션 구성을 작성해주세요. 보유하지 않은 인증·후기·실적은 넣지 마세요." });

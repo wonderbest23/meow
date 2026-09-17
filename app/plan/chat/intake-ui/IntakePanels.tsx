@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
-import type { IntakeMode, IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
+import { detailQuestions, structureQuestions, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
 import { amountRanges, CHIP_GROUPS, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, onlyFilterSelected, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unfinishedAnswerText, unmatchedPieces, withCount, type AnswerDraft } from "./model";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
+import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
 import styles from "../intake.module.css";
 
 export function EntryChoices({ disabled, onStart, initialMessage }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null }) {
@@ -27,7 +28,7 @@ export function EntryChoices({ disabled, onStart, initialMessage }: { disabled: 
 
 export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange, onAnswer, onCancel, inChat = false }: {
   question: IntakeQuestion; snapshot: IntakeSnapshot; draft: AnswerDraft; editing: boolean; disabled: boolean;
-  onChange: (value: AnswerDraft) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string) => void;
+  onChange: (value: AnswerDraft) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string, extra?: { ksic?: string }) => void;
   onCancel: () => void; inChat?: boolean;
 }) {
   const [manualIndustry, setManualIndustry] = useState(editing || draft.selected.length > 0);
@@ -37,6 +38,22 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const [periodEnd, setPeriodEnd] = useState(seededPeriod?.[1] ?? "");
   const suggested = inChat && question.id === "industry" && !editing ? suggestedIntakeIndustry(snapshot) : null;
   const showSuggested = !!suggested && !manualIndustry;
+  const ksicCandidates = inChat && question.id === "industry" && !manualIndustry ? snapshot.ksicCandidates : [];
+  const [ksicQuery, setKsicQuery] = useState("");
+  const [ksicResults, setKsicResults] = useState<IntakeSnapshot["ksicCandidates"]>([]);
+  useEffect(() => {
+    const query = ksicQuery.trim();
+    if (!inChat || question.id !== "industry" || query.length < 2) { setKsicResults([]); return; }
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      fetch(`/api/plan/chat?ksic=${encodeURIComponent(query)}`, { headers: { "x-business-intake": "2" }, cache: "no-store", signal: controller.signal })
+        .then(response => response.ok ? response.json() : null)
+        .then(data => { if (!controller.signal.aborted) setKsicResults(Array.isArray(data?.ksicCandidates) ? data.ksicCandidates : []); })
+        .catch(() => { if (!controller.signal.aborted) setKsicResults([]); });
+    }, 300);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [ksicQuery, inChat, question.id]);
+  const ksicShown = ksicQuery.trim().length >= 2 ? ksicResults : ksicCandidates;
   const candidate = question.id === "candidate";
   const options = candidate ? snapshot.candidateIdeas.map(idea => ({ value: idea.id, label: idea.title })) : question.options ?? [];
   const commit = (value: IntakeValue) => { if (!disabled) onAnswer(value, false, question.id); };
@@ -80,6 +97,12 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
     {question.hint && !showSuggested && <p className={styles.questionHint}>{question.hint}</p>}
     {draft.hint && <p className={styles.draftHint}>이전 답변: {draft.hint}</p>}
     <form onSubmit={submit}>
+      {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
+        <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>
+        {ksicShown.length > 0 && <p className={styles.ksicLead}>{ksicQuery.trim().length >= 2 ? "검색한 업종입니다. 하나를 고르면 업종과 세부 분류가 함께 저장됩니다." : "설명과 가까운 업종입니다. 하나를 고르면 업종과 세부 분류가 함께 저장됩니다."}</p>}
+        {ksicQuery.trim().length >= 2 && ksicShown.length === 0 && <p className={styles.ksicLead}>맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다.</p>}
+        <div className={styles.ksicChips}>{ksicShown.map(item => <button key={item.code} type="button" className={styles.ksicChip} disabled={disabled} onClick={() => onAnswer(item.sector, false, question.id, { ksic: item.code })}><strong>{item.name}</strong><span>{item.path.split(" › ").slice(0, 2).join(" › ")}</span></button>)}</div>
+      </div>}
       {showSuggested && <div className={styles.industrySuggestion} role="group" aria-label="추천 업종">
         <div className={styles.suggestedIndustry}><CheckCircle2 size={23} aria-hidden="true" /><strong>{suggested.label}</strong></div>
         <div className={styles.suggestionActions}>
@@ -330,10 +353,15 @@ export function SavedNotes({ snapshot, disabled, onExtract }: { snapshot: Intake
   return <section className={styles.notes} aria-labelledby="intake-notes-heading"><div className={styles.sectionHeading}><h3 id="intake-notes-heading">저장한 메모</h3>{notes.some(note => ["failed", "queued"].includes(note.status)) && <button type="button" className={styles.textButton} disabled={disabled} onClick={onExtract}><Sparkles size={16} aria-hidden="true" />메모 정리</button>}</div><ul>{[...notes].reverse().map(note => <li key={note.id}><div className={styles.noteMeta}><span data-failed={note.status === "failed"}>{labels[note.status]}</span><time dateTime={note.at}>{new Date(note.at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</time></div><p>{note.text}</p>{note.status === "failed" && <small>메모 원문은 저장되어 있습니다.</small>}</li>)}</ul></section>;
 }
 
-export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, onDetails, onDesign, onPrepare }: {
+const STRUCTURE_AXIS_LABEL: Record<StructureAxis, string> = { payer: "고객·지불자", offering: "제공하는 것", delivery: "전달 방식", revenue: "수익 방식", license: "인허가" };
+
+export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, onDetails, onDesign, onPrepare, onStructure }: {
   snapshot: IntakeSnapshot; disabled: boolean; aiBusy: boolean; prepared: boolean;
   onEdit: (questionId: string) => void; onDetails: () => void; onDesign: () => void; onPrepare: () => void;
+  onStructure?: (patch: Partial<Pick<BusinessStructure, StructureAxis>>) => void;
 }) {
+  const [structureEdit, setStructureEdit] = useState<StructureAxis | null>(null);
+  const detailCount = structureQuestions(snapshot.intake.mode, snapshot.structure?.values).length + detailQuestions(snapshot.intake.sector).length;
   const original = plainText(answerText(snapshot.intake.answers.business?.value ?? null)) || plainText(snapshot.coach.ideaOrigin?.text) || plainText(snapshot.coach.fields.find(field => field.key === "business" && field.basis === "user")?.value);
   const design = snapshot.coach.design;
   const staleDesign = !!design && design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision);
@@ -347,11 +375,24 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
       const shown = plainText(item.value);
       // Display only: attach unit and period to numbers, thousands-format amounts, show candidate titles. Storage keeps the raw strings.
       const display = shown && question ? summaryAnswerText(question, item.basis === "unknown" ? null : shown, snapshot.candidateIdeas) || shown : shown;
-      return <div key={item.id}><dt><span>{item.label}</span><small>{item.basis === "proposal" ? "AI 제안" : item.basis === "unknown" ? "미정" : "입력한 내용"}</small>{editableId && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd>{display || "아직 미정"}</dd></div>;
+      const ksicLine = item.id === "industry" && snapshot.ksic ? `${snapshot.ksic.name} · KSIC ${snapshot.ksic.code}` : null;
+      return <div key={item.id}><dt><span>{item.label}</span><small>{item.basis === "proposal" ? "AI 제안" : item.basis === "unknown" ? "미정" : "입력한 내용"}</small>{editableId && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd>{display || "아직 미정"}{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
     })}{extraAnswers.map(question => <div key={question.id}><dt><span>{question.label}</span><button type="button" className={styles.iconButton} aria-label={`${question.label} 수정`} title={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={15} /></button></dt><dd>{snapshot.intake.answers[question.id].status === "unknown" ? "아직 미정" : plainText(summaryAnswerText(question, snapshot.intake.answers[question.id].value, snapshot.candidateIdeas)) || plainText(answerText(snapshot.intake.answers[question.id].value)) || "아직 미정"}</dd></div>)}</dl>
     {!snapshot.summary.length && !extraAnswers.length && <p className={styles.muted}>아직 저장한 답변이 없습니다.</p>}
+    {snapshot.structure && <section className={styles.structure} aria-labelledby="intake-structure-heading">
+      <h3 id="intake-structure-heading">사업 구조 <small>{snapshot.ksic ? "표준산업분류 기준 추정" : "업종 기준 추정"} · 다르면 바꿔 주세요</small></h3>
+      <dl className={styles.summaryFields}>{STRUCTURE_AXES.map(axis => {
+        const value = snapshot.structure!.values[axis] as string;
+        const labels = STRUCTURE_LABELS[axis] as Record<string, string>;
+        const basis = snapshot.structure!.basis[axis];
+        const open = structureEdit === axis;
+        return <div key={axis}><dt><span>{STRUCTURE_AXIS_LABEL[axis]}</span><small>{basis === "user" ? "직접 선택" : basis === "ksic" ? "분류 기준" : "업종 기준"}</small>{onStructure && <button type="button" className={styles.iconButton} aria-label={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} title={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} aria-expanded={open} disabled={disabled} onClick={() => setStructureEdit(open ? null : axis)}><PencilLine size={15} /></button>}</dt>
+          <dd>{labels[value] ?? value}{open && onStructure && <div className={styles.structureChips} role="group" aria-label={`${STRUCTURE_AXIS_LABEL[axis]} 선택`}>{Object.entries(labels).map(([key, label]) => <button key={key} type="button" className={styles.presetChip} data-selected={key === value || undefined} disabled={disabled} onClick={() => { setStructureEdit(null); if (key !== value) onStructure({ [axis]: key } as Partial<Pick<BusinessStructure, StructureAxis>>); }}>{label}</button>)}</div>}</dd></div>;
+      })}</dl>
+      {snapshot.structure.licenseHint && <p className={styles.muted}>{snapshot.structure.licenseHint}</p>}
+    </section>}
     <section className={styles.financial}><h3>금액과 운영 수치</h3><p>{readableFinancialSummary(snapshot)}</p></section>
-    {snapshot.coreComplete && !snapshot.intake.detailsRequested && <button type="button" className={styles.detailButton} disabled={disabled} onClick={onDetails}><Plus size={18} aria-hidden="true" />상세 질문 4개 추가</button>}
+    {snapshot.coreComplete && !snapshot.intake.detailsRequested && <button type="button" className={styles.detailButton} disabled={disabled} onClick={onDetails}><Plus size={18} aria-hidden="true" />상세 질문 {detailCount}개 추가</button>}
     {design && <details className={styles.design}><summary><Sparkles size={16} aria-hidden="true" />AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
     <div className={styles.summaryActions}>
       <button type="button" className={styles.primaryButton} disabled={disabled || aiBusy || !snapshot.coreComplete || !snapshot.coach.ready} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />이 내용으로 사업안 만들기</button>

@@ -15,7 +15,7 @@ export type AmountRange = { label: string; min: number | null; max: number | nul
 export const STEP_SEPARATOR = " / ";
 export const LIST_SEPARATOR = ", ";
 /** Maximum picks per multi-pick hybrid question; unlisted questions allow one. */
-export const CHIP_LIMITS: Record<string, number> = { customer: 2, problem: 2, channel: 3, "software.workflow": 2, "education.learningOutcome": 2, "general.reviewCriteria": 3 };
+export const CHIP_LIMITS: Record<string, number> = { customer: 2, problem: 2, channel: 3, conditions: 4, "software.workflow": 2, "education.learningOutcome": 2, "general.reviewCriteria": 3 };
 
 /**
  * Step (group) names used by multi-step chip questions. Single-step sets carry no group.
@@ -226,6 +226,8 @@ const BUDGET_HIGH_SECTORS: ReadonlySet<ProposalSector> = new Set(["food_beverage
 const SALES_MONTHLY = ladder([null, 100 * MAN, 300 * MAN, 1000 * MAN, 3000 * MAN, EOK, null], "korean");
 const COST_MONTHLY = ladder([null, 50 * MAN, 150 * MAN, 400 * MAN, 1000 * MAN, 3000 * MAN, null], "korean");
 const AVERAGE_TICKET = ladder([null, 5_000, 10_000, 15_000, 25_000, 35_000, 60_000, null], "digits");
+/** 건당 변동비: 디지털 상품처럼 거의 없으면 0원, 그 외 천~수십만 원. */
+const UNIT_COST = [ZERO_RANGE, ...ladder([null, 1_000, 3_000, 10_000, 30_000, 100_000, 300_000, null], "digits")];
 
 /**
  * Ascending won ranges for price / budget / sales / cost (spec appendix B). Empty when the question has no range ladder.
@@ -240,6 +242,8 @@ export function amountRanges(sector: ProposalSector | null | undefined, question
     case "budget": return copy(BUDGET_HIGH_SECTORS.has(key) ? BUDGET_HIGH : BUDGET_COMMON);
     case "sales": return copy(SALES_MONTHLY);
     case "cost": return copy(COST_MONTHLY);
+    case "structure.cost": return copy(COST_MONTHLY);
+    case "structure.unitCost": return copy(UNIT_COST);
     case "food_beverage.averageTicket": return copy(AVERAGE_TICKET);
     default: void mode; return [];
   }
@@ -290,6 +294,12 @@ const NUMBER_PRESETS: Record<string, number[]> = {
   "logistics.dailyShipments": [2, 5, 10, 20, 50, 100],
   "content_media.productionDays": [1, 3, 7, 14, 30],
   "general.trialDays": [1, 3, 7, 14, 30, 60],
+  // 구조(수익 방식) 질문: 모두 선택형 프리셋
+  "structure.retentionMonths": [1, 3, 6, 12, 24, 36],
+  "structure.occupancy": [30, 50, 70, 90],
+  "structure.takeRate": [3, 5, 10, 15, 20, 30],
+  "structure.salesCycleDays": [7, 14, 30, 60, 90],
+  "structure.billableHours": [10, 20, 30, 40],
 };
 /** Preset values for number_quick questions (hours, counts, minutes…). Empty when the question uses a range ladder or free number. */
 export function numberPresets(question: Pick<IntakeQuestion, "id" | "unit" | "period">): number[] {

@@ -24,6 +24,7 @@ suites.push("proposal-source-staleness");
 suites.push("proposal-body-reader");
 suites.push("business-intake-questions", "business-intake-core", "business-intake-extraction", "business-intake-service", "business-intake-context", "business-source-projection");
 suites.push("business-intake-prepare", "business-intake-ui");
+suites.push("ksic", "business-intake-coverage");
 const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/KEY|TOKEN|SECRET|PASSWORD|SUPABASE|DATABASE_URL/.test(key)));
 Object.assign(env, { NODE_ENV: "test", PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "" });
 let failures = 0;

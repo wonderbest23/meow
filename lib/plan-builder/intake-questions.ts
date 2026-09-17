@@ -1,6 +1,7 @@
 import type { CoachField } from "./coach";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { PROPOSAL_SECTORS, SECTOR_PROFILES, type ProposalSector } from "./proposal-blueprint";
+import { structureFieldLabels, type BusinessStructure } from "./business-structure";
 
 export type IntakeMode = "exploring" | "startup" | "operating";
 export type IntakeQuestion = {
@@ -45,6 +46,12 @@ const budget = fieldQuestion("budget", "준비에 쓸 수 있는 돈은 얼마�
 const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있나요?", { kind: "number", unit: "시간", period: "주" });
 const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "인력을 고른 뒤 하루·주·월 처리량을 정해요." });
 const goal = fieldQuestion("goal", "언제까지 무엇을 이루고 싶나요?", { hint: "목표는 현재 실적과 따로 기록돼요." });
+/** 탐색 모드 시작 조건 칩. 값은 사업 구조 축(자본·소상공인·인허가·전달·고객·수익)에 그대로 대응하고, 서버가 표준산업분류 지도에서 조건에 맞는 후보를 고른다. */
+export const START_CONDITIONS = ["무점포로 시작", "혼자 시작할 수 있는 일", "인허가 없이 시작", "온라인으로 제공", "방문·출장으로 제공", "매장·공간에서 제공", "개인 고객", "기업·사업자 고객", "월 구독·정기 수익"] as const;
+const conditions: IntakeQuestion = {
+  id: "conditions", label: "시작 조건", prompt: "어떤 조건으로 시작하고 싶나요? (최대 4개)", kind: "multi", options: [{ ...chip(START_CONDITIONS[0]), hint: "사무실·매장 없이" }, ...chips(START_CONDITIONS.slice(1))], optional: true,
+  hint: "고른 조건에 맞는 업종 후보를 표준산업분류 지도에서 찾아요. 정한 게 없으면 넘어가도 돼요.",
+};
 const industry: IntakeQuestion = {
   id: "industry", label: "업종", prompt: "어떤 업종에 가까운가요?",
   kind: "single", options: intakeSectorOptions.map(option => ({ ...option })), optional: true,
@@ -57,6 +64,7 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     fieldQuestion("experience", "해본 일이나 익숙한 활동은 무엇인가요?", { hint: "직장 경험뿐 아니라 취미·생활 경험도 좋아요. 여러 개 골라도 돼요." }),
     hours,
     budget,
+    conditions,
     { id: "candidate", label: "사업 후보", prompt: "어떤 사업 후보를 더 살펴보고 싶나요? 직접 생각한 아이디어도 이야기할 수 있어요.", kind: "single", options: [], optional: true },
     customer, problem, offer, channel, price, goal,
   ],
@@ -202,10 +210,43 @@ export function detailQuestions(sector: ProposalSector): IntakeQuestion[] {
   return DETAIL_QUESTIONS[sector].map(question => copyQuestion({ ...question, id: `${sector}.${question.id}`, optional: true }));
 }
 
-export function getIntakeQuestion(mode: IntakeMode, sector: ProposalSector | null | undefined, id: string): IntakeQuestion | undefined {
+/**
+ * 구조(수익 방식) 기준 상세 질문. 상세 팩을 요청하면 업종 팩 앞에 붙는다.
+ * 변동비·고정비는 coach 필드(unitCost·cost)로 저장되어 손익 계산에 바로 쓰이고, 나머지는 intake/details로 문서와 계산(intakeFinancialReference)에 들어간다.
+ * 모두 선택형(숫자 프리셋·금액 사다리)이며 선택 사항이다.
+ */
+type RevenueModel = BusinessStructure["revenue"];
+const STRUCTURE_UNIT: Record<RevenueModel, string> = { per_unit: "판매 1건", per_hour: "1시간", subscription: "구독자 1명(월)", rental: "대여·이용 1건", commission: "거래 1건", project: "프로젝트 1건", mixed: "판매 1건" };
+const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({
+  id: "structure.unitCost", fieldKey: "unitCost", label: structureFieldLabels({ revenue } as BusinessStructure).unitCost ?? COACH_FIELD_LABELS.unitCost, prompt: `${STRUCTURE_UNIT[revenue]}에 들어가는 변동비는 얼마쯤인가요?`, kind: "number", unit: "원", period: STRUCTURE_UNIT[revenue], optional: true,
+  hint: "재료·수수료·외주비처럼 팔 때마다 드는 비용만이에요. 임차료·고정 인건비는 월 고정비에 넣어요. 거의 없으면 0원을 골라요.",
+});
+const structureCost: IntakeQuestion = { id: "structure.cost", fieldKey: "cost", label: COACH_FIELD_LABELS.cost, prompt: "한 달 고정비는 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true, hint: "임차료·고정 인건비·구독 도구처럼 매출이 없어도 나가는 돈이에요." };
+const STRUCTURE_REVENUE_QUESTIONS: Partial<Record<RevenueModel, IntakeQuestion[]>> = {
+  subscription: [{ id: "structure.retentionMonths", label: "평균 구독 유지 기간", prompt: "구독자 한 명이 평균 몇 달 유지하나요?", kind: "number", unit: "개월", period: "구독자 1명", optional: true, hint: "이탈률과 구독자 1명의 생애 매출을 계산해요. 모르면 비슷한 서비스의 감으로 골라도 돼요." }],
+  rental: [{ id: "structure.occupancy", label: "예약·이용률", prompt: "감당할 수 있는 예약·이용 중 실제로 채워지는 비율은 얼마쯤일까요?", kind: "number", unit: "%", period: "월", optional: true, hint: "예: 좌석 10개 중 7개가 찬다면 70%. 매출 계산에 곱해요." }],
+  commission: [{ id: "structure.takeRate", label: "수수료율", prompt: "거래액의 몇 %를 수수료로 받나요?", kind: "number", unit: "%", period: "거래 1건", optional: true, hint: "거래 1건 평균 거래액을 거꾸로 계산하는 데 써요." }],
+  project: [{ id: "structure.salesCycleDays", label: "문의→계약 기간", prompt: "문의에서 계약까지 보통 며칠 걸리나요?", kind: "number", unit: "일", period: "계약 1건", optional: true, hint: "첫 입금 시점을 잡는 데 써요." }],
+  per_hour: [{ id: "structure.billableHours", label: "주당 청구 가능 시간", prompt: "한 주에 실제로 고객에게 청구할 수 있는 시간은 몇 시간인가요?", kind: "number", unit: "시간", period: "주", optional: true, hint: "이동·준비·영업 시간은 빼요. 월 판매 시간 계산에 써요." }],
+};
+
+export function structureQuestions(mode: IntakeMode, structure: Pick<BusinessStructure, "revenue"> | null | undefined): IntakeQuestion[] {
+  const revenue: RevenueModel = structure?.revenue ?? "per_unit";
+  // 운영 중 사업은 기본 질문에 월 고정비가 이미 있다.
+  return [...(STRUCTURE_REVENUE_QUESTIONS[revenue] ?? []), structureUnitCost(revenue), ...(mode === "operating" ? [] : [structureCost])].map(copyQuestion);
+}
+
+/** 라벨·옵션 조회용: 수익 방식과 무관한 구조 질문 전부(id 중복 없음). 문맥·문서 원천에서 저장된 답을 이름 붙일 때 쓴다. */
+export function allStructureQuestions(): IntakeQuestion[] {
+  const seen = new Set<string>();
+  return (Object.keys(STRUCTURE_UNIT) as RevenueModel[]).flatMap(revenue => structureQuestions("startup", { revenue })).filter(question => !seen.has(question.id) && !!seen.add(question.id));
+}
+
+export function getIntakeQuestion(mode: IntakeMode, sector: ProposalSector | null | undefined, id: string, structure?: Pick<BusinessStructure, "revenue"> | null): IntakeQuestion | undefined {
   // Free-form ideas are an alternative to candidate selection, not another required step.
   if (mode === "exploring" && id === "business") return copyQuestion(business);
   return coreQuestions(mode).find(question => question.id === id)
+    ?? (id.startsWith("structure.") ? (structure ? structureQuestions(mode, structure) : allStructureQuestions()).find(question => question.id === id) : undefined)
     ?? (sector == null ? undefined : detailQuestions(sector).find(question => question.id === id));
 }
 

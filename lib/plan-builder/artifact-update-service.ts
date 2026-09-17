@@ -17,6 +17,7 @@ import type { LandingSiteRecord } from "../landing/domain";
 import { documentOperatingContext } from "./document-editorial";
 import { operatingSourceFingerprint, proposalReviewDocument } from "./artifact-source-status";
 import { withConfirmedIntakeContext } from "./intake-context";
+import { intakeFinancialReference, readIntake } from "./intake-core";
 
 export function artifactRuntime(owner: string): ArtifactRuntime | null {
   const document = documentRefreshRuntime(owner), ppt = proposalRewriteRuntime(owner);
@@ -32,9 +33,11 @@ const initialBudget = (count: number) => ({ maxCalls: Math.min(80, count * 2 + 4
 function documentPayload(job: ArtifactUpdate, chunk: ArtifactChunk) {
   const coach = readCoach(job.snapshot.answers), entries = artifactSections(job.snapshot);
   const proposal = readSavedProposal(job.snapshot.answers);
+  // 진단이 있으면 수익 방식·처리량을 반영한 손익 문장을 문서에 넘긴다.
+  const intake = readIntake(job.snapshot.answers);
   return withConfirmedIntakeContext({ businessName: coach?.business.name || job.snapshot.title, businessDescription: coach?.business.description ?? "", stage: coach?.stage ?? "idea",
     sector: proposal?.document.deck.blueprint?.sector, purpose: proposal?.document.deck.blueprint?.purpose,
-    fields: coach?.fields.map(({ key, value, basis }) => ({ key, value, basis })) ?? [], financialReference: [coach ? coachFinancialReference(coach) : "", documentOperatingContext(job.snapshot.answers)].filter(Boolean).join("\n\n"),
+    fields: coach?.fields.map(({ key, value, basis }) => ({ key, value, basis })) ?? [], financialReference: [coach ? (intake ? intakeFinancialReference(coach, intake) : coachFinancialReference(coach)) : "", documentOperatingContext(job.snapshot.answers)].filter(Boolean).join("\n\n"),
     sections: entries.filter(section => chunk.keys.includes(section.key)).map(section => ({ key: section.key, chapterTitle: section.chapterTitle, sectionTitle: section.sectionTitle, markdown: job.snapshot.sections[section.key]?.markdown ?? "" })) }, job.snapshot.answers);
 }
 function chunks(keys: string[], size: number, kind: ArtifactChunk["kind"]): ArtifactChunk[] {

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import type { CoachJob } from "../lib/plan-builder/coach-job-types";
+import { ksicStructure } from "../lib/plan-builder/ksic";
 import type { IntakeCommand, IntakeJobRequest, IntakeSnapshot } from "../lib/plan-builder/intake-types";
 import type { IntakeMode, IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import type { IntakeExtractCandidate, IntakeExtractNote } from "../lib/plan-builder/intake-extraction";
@@ -59,6 +60,7 @@ async function main() {
   try {
     const { saveIntakeCommand, executeIntakeJob, updateIntakeJob, expireStaleIntakeJob } = await import("../lib/plan-builder/intake-service");
     const { readIntake, IntakeError } = await import("../lib/plan-builder/intake-core");
+    const { intakeStructureBrief } = await import("../lib/plan-builder/intake-structure-brief");
     const { COACH_KEY, COACH_TYPES, readCoach, coachDocumentRevision } = await import("../lib/plan-builder/coach");
     const { emptyCoach, generateAndSaveCoach } = await import("../lib/plan-builder/coach-job");
     const { COACH_JOB_KEY, readCoachJob } = await import("../lib/plan-builder/coach-job-types");
@@ -201,6 +203,138 @@ async function main() {
       await assert.rejects(() => send(session, { action: "start", mode: "startup", questionId: "business", value: "덮어쓰기 시도" }), assertIntakeError("start_exists", 409));
       assert.equal((await load(session)).coach.fields.find(field => field.key === "business")?.value, command.value);
       assert.equal(calls.length, 0);
+    });
+
+    await check("industry answer with a KSIC code stores the code, derives the sector and labels the message", async () => {
+      configureAI(true);
+      const ownerHash = `intake-ksic-${randomUUID()}`;
+      const initial = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: "동네에서 작은 카페를 하고 싶어요", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+      const session = { ownerHash, planId: initial.plan.id };
+      assert.ok(initial.snapshot.ksicCandidates.some(item => item.code === "56221"), `KSIC candidates from the business text: ${initial.snapshot.ksicCandidates.map(item => item.code).join(",")}`);
+      await assert.rejects(() => send(session, { action: "answer", questionId: "industry", value: "food_beverage", ksic: "99999" }), assertIntakeError("invalid_ksic", 400));
+      const next = await send(session, { action: "answer", questionId: "industry", value: "general", ksic: "56221" });
+      assert.equal(next.snapshot.intake.sector, "food_beverage", "the sector follows the KSIC code, not the coarse value");
+      assert.equal(next.snapshot.intake.answers.industry.value, "food_beverage");
+      assert.equal(next.snapshot.ksic?.code, "56221");
+      assert.equal(next.snapshot.ksic?.structure?.license, "registration");
+      assert.equal(next.snapshot.coach.business.industry, "카페 · 음식점");
+      assert.ok((await load(session)).coach.messages.some(message => message.role === "user" && message.text.includes("커피 전문점")), "the user message carries the KSIC name");
+      const again = await send(session, { action: "answer", questionId: "industry", value: "software" });
+      assert.equal(again.snapshot.ksic, null, "re-answering without a code clears it");
+      assert.equal(again.snapshot.intake.sector, "software");
+      // 구조 기본값 반영: 월 구독형 소프트웨어는 가격 기준이 "월 구독 1건", 요약에 구조 라벨이 붙는다
+      const saasOwner = `intake-ksic-saas2-${randomUUID()}`;
+      const saas2 = await saveIntakeCommand(saasOwner, { action: "start", mode: "startup", questionId: "business", value: "소규모 팀용 예약 관리 SaaS를 만들고 있어요", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+      const saasNext = await send({ ownerHash: saasOwner, planId: saas2.plan.id }, { action: "answer", questionId: "industry", value: "software", ksic: "58222" });
+      assert.equal(saasNext.snapshot.questions.find(question => question.id === "price")?.period, "월 구독 1건", "price basis follows the KSIC revenue structure");
+      assert.ok(saasNext.snapshot.ksic?.summary.includes("월 구독"), `summary labels: ${saasNext.snapshot.ksic?.summary.join(",")}`);
+      assert.equal(saasNext.snapshot.ksic?.licenseHint, null);
+      // 구조 기준 상세 팩과 손익 계산: 월 구독 모델은 유지 기간 → 변동비 → 고정비가 업종 상세 앞에 오고, 답이 차면 손익분기·생애 매출이 계산된다(AI 0회)
+      const saasSession = { ownerHash: saasOwner, planId: saas2.plan.id };
+      assert.ok(saasNext.snapshot.financialSummary.includes("아직 없는 값"), saasNext.snapshot.financialSummary);
+      const withDetails = await send(saasSession, { action: "details" });
+      const ids = withDetails.snapshot.questions.map(question => question.id), at = ids.indexOf("structure.retentionMonths");
+      assert.deepEqual(ids.slice(at, at + 4), ["structure.retentionMonths", "structure.unitCost", "structure.cost", "software.workflow"], ids.join(","));
+      assert.equal(withDetails.snapshot.questions.find(question => question.id === "structure.unitCost")?.period, "구독자 1명(월)");
+      await send(saasSession, { action: "answer", questionId: "price", value: "30000원" });
+      await send(saasSession, { action: "answer", questionId: "capacity", value: "대표자 혼자 / 한 달 50명" });
+      await send(saasSession, { action: "answer", questionId: "structure.retentionMonths", value: "12개월" });
+      await send(saasSession, { action: "answer", questionId: "structure.unitCost", value: "3000원" });
+      const priced = await send(saasSession, { action: "answer", questionId: "structure.cost", value: "100만원" });
+      for (const text of ["월 구독 기준", "손익분기: 월 38건", "구독 유지 평균 12개월", "생애 매출 360,000원", "월 이탈률 약 8%", "매달 신규 약 5명", "월 50명 감당 기준"]) assert.ok(priced.snapshot.financialSummary.includes(text), `${text} in: ${priced.snapshot.financialSummary}`);
+      assert.equal(priced.snapshot.intake.answers["structure.retentionMonths"]?.value, 12);
+      assert.equal(priced.snapshot.summary.find(item => item.id === "unitCost")?.label, "구독자 1명당 월 비용");
+      assert.equal(priced.snapshot.coreAnswered, saasNext.snapshot.coreAnswered + 2, "structure answers do not count toward the core progress; price and capacity do");
+      // 문서용 구조 브리프: 수익 모델 산식·입력, 인허가 체크리스트, 초기 자본 항목이 결정적으로 채워진다
+      const saasLoaded = await load(saasSession);
+      const brief = intakeStructureBrief(saasLoaded.coach, saasLoaded.intake);
+      assert.ok(brief.source.startsWith("표준산업분류 58222"), brief.source);
+      assert.equal(brief.revenueModel.kind, "월 구독"); assert.equal(brief.revenueModel.priceBasis, "월 구독 1건");
+      assert.ok(brief.revenueModel.inputs.some(input => input.startsWith("월 구독 가격: 30000원")), brief.revenueModel.inputs.join(" | "));
+      assert.ok(brief.revenueModel.metrics.some(metric => metric === "평균 구독 유지 기간: 12개월"), brief.revenueModel.metrics.join(" | "));
+      assert.equal(brief.licenseChecklist.status, "인허가 없음");
+      assert.equal(brief.capitalPlan.form, "무점포 가능");
+      assert.ok(brief.capitalPlan.inputs.some(input => input.includes("= 3,000,000원")), brief.capitalPlan.inputs.join(" | "));
+      assert.ok(brief.financialScenario.includes("손익분기: 월 38건"));
+      // 공간 제공(공유오피스)은 처리량 단위 칩이 좌석·룸부터
+      const spaceOwner = `intake-ksic-space-${randomUUID()}`;
+      const space = await saveIntakeCommand(spaceOwner, { action: "start", mode: "startup", questionId: "business", value: "공유오피스를 열려고 해요", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+      const spaceNext = await send({ ownerHash: spaceOwner, planId: space.plan.id }, { action: "answer", questionId: "industry", value: "space_hospitality", ksic: "68112" });
+      const capacityUnits = spaceNext.snapshot.questions.find(question => question.id === "capacity")?.options?.filter(option => option.group === "unit").map(option => option.label) ?? [];
+      assert.equal(capacityUnits[0], "좌석·룸", `capacity units: ${capacityUnits.join(",")}`);
+      assert.equal(spaceNext.snapshot.ksic?.summary[1], "공간 제공");
+      const spaceDetails = await send({ ownerHash: spaceOwner, planId: space.plan.id }, { action: "details" });
+      assert.ok(spaceDetails.snapshot.questions.some(question => question.id === "structure.occupancy"), "rental model asks the occupancy rate");
+      await send({ ownerHash: spaceOwner, planId: space.plan.id }, { action: "answer", questionId: "structure.occupancy", value: "70%" });
+      await assert.rejects(() => send({ ownerHash: spaceOwner, planId: space.plan.id }, { action: "answer", questionId: "structure.occupancy", value: "170%" }), assertIntakeError("invalid_number", 400));
+      // 사용자 수정이 KSIC 기본값을 덮어쓴다: 카페를 월 구독(정기 구독 커피)으로 바꾸면 가격 기준이 따라온다
+      const spaceSession = { ownerHash: spaceOwner, planId: space.plan.id };
+      const fixed = await send(spaceSession, { action: "structure", structure: { revenue: "subscription" } });
+      assert.equal(fixed.snapshot.structure?.values.revenue, "subscription");
+      assert.equal(fixed.snapshot.structure?.basis.revenue, "user");
+      assert.equal(fixed.snapshot.structure?.basis.payer, "ksic", "untouched axes keep the KSIC basis");
+      assert.ok(fixed.snapshot.questions.some(question => question.id === "structure.retentionMonths") && !fixed.snapshot.questions.some(question => question.id === "structure.occupancy"), "the structure pack follows the edited revenue model");
+      assert.equal((fixed.snapshot.intake.answers["structure.occupancy"] as { value?: unknown } | undefined)?.value, 70, "the inactive answer stays in the question audit");
+      assert.equal(fixed.snapshot.questions.find(question => question.id === "price")?.period, "월 구독 1건");
+      assert.ok((await load(spaceSession)).coach.messages.some(message => message.text.startsWith("사업 구조 수정:") && message.text.includes("월 구독")));
+      await assert.rejects(() => send(spaceSession, { action: "structure", structure: {} }), assertIntakeError("structure_required", 400));
+      await assert.rejects(() => send(spaceSession, { action: "structure", structure: { revenue: "weird" } as never }));
+      const cleared = await send(session, { action: "structure", structure: { payer: "b2b" } });
+      assert.equal(cleared.snapshot.structure?.basis.payer, "user");
+      assert.equal(cleared.snapshot.structure?.basis.revenue, "sector", "without a KSIC code the remaining axes come from the sector default");
+      assert.equal(calls.length, 0);
+    });
+
+    await check("exploring mode adds KSIC map candidates from interest, experience and start conditions, and picking one sets the code", async () => {
+      configureAI(true);
+      const ownerHash = `intake-map-${randomUUID()}`;
+      const initial = await saveIntakeCommand(ownerHash, { action: "start", mode: "exploring", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+      const session = { ownerHash, planId: initial.plan.id };
+      assert.equal(initial.snapshot.candidateIdeas.length, 3, "without any signal only the curated templates show");
+      assert.equal(initial.snapshot.coreTotal, 12);
+      await send(session, { action: "answer", questionId: "interest", value: ["local_service"] });
+      const withExperience = await send(session, { action: "answer", questionId: "experience", value: "네일아트 자격증이 있고 손님 응대를 오래 했어요" });
+      const ideas = withExperience.snapshot.candidateIdeas;
+      assert.ok(ideas.slice(0, 3).every(idea => !idea.id.startsWith("ksic:")), "curated templates stay first");
+      assert.ok(ideas.length > 3 && ideas.length <= 8, `map candidates appended: ${ideas.map(idea => idea.id).join(",")}`);
+      const nail = ideas.find(idea => idea.id === "ksic:96119");
+      assert.ok(nail, `nail salon from the experience text: ${ideas.map(idea => idea.id).join(",")}`);
+      assert.ok(nail!.reasons.some(reason => reason.includes("네일")), nail!.reasons.join(" | "));
+      assert.ok(nail!.description.includes("96119") && nail!.description.includes("신고·등록 필요"), nail!.description);
+      assert.equal(ideas.indexOf(nail!), 3, "the experience match leads the map candidates");
+      await send(session, { action: "answer", questionId: "hoursPerWeek", value: "20시간" });
+      await send(session, { action: "answer", questionId: "budget", value: "300만원" });
+      await send(session, { action: "answer", questionId: "interest", value: ["software"] });
+      await assert.rejects(() => send(session, { action: "answer", questionId: "conditions", value: ["무점포로 시작", "nope"] }), assertIntakeError("invalid_option", 400));
+      const conditioned = await send(session, { action: "answer", questionId: "conditions", value: ["무점포로 시작", "인허가 없이 시작"] });
+      assert.equal(conditioned.snapshot.nextQuestion?.id, "candidate");
+      assert.equal(conditioned.snapshot.summary.find(item => item.id === "conditions")?.value, "무점포로 시작, 인허가 없이 시작");
+      // 서로 모순되는 조건이면 지도 후보가 0개가 되고 후보 질문이 조건을 줄이라고 안내한다
+      const contradictory = await send(session, { action: "answer", questionId: "conditions", value: ["무점포로 시작", "매장·공간에서 제공"] });
+      assert.ok(!contradictory.snapshot.candidateIdeas.some(idea => idea.id.startsWith("ksic:")));
+      assert.ok(contradictory.snapshot.questions.find(question => question.id === "candidate")?.hint?.includes("시작 조건에서"), "empty map result explains how to widen");
+      const restored = await send(session, { action: "answer", questionId: "conditions", value: ["무점포로 시작", "인허가 없이 시작"] });
+      assert.equal(restored.snapshot.questions.find(question => question.id === "candidate")?.hint, undefined);
+      const mapIdeas = restored.snapshot.candidateIdeas.filter(idea => idea.id.startsWith("ksic:"));
+      assert.ok(mapIdeas.length > 0 && mapIdeas.length <= 5, `software map candidates: ${mapIdeas.map(idea => idea.id).join(",")}`);
+      for (const idea of mapIdeas) {
+        const structure = ksicStructure(idea.id.slice(5))!;
+        assert.equal(structure.capital, "remote", idea.id); assert.equal(structure.license, "none", idea.id); assert.ok(structure.smallBusiness, idea.id);
+        assert.ok(idea.reasons.some(reason => reason.includes("무점포로 시작") && reason.includes("인허가 없이 시작")), idea.reasons.join(" | "));
+        assert.equal(idea.sector, "software");
+      }
+      const chosen = mapIdeas[0];
+      const picked = await send(session, { action: "answer", questionId: "candidate", value: chosen.id });
+      assert.equal(picked.snapshot.intake.ksic, chosen.id.slice(5));
+      assert.equal(picked.snapshot.ksic?.code, chosen.id.slice(5));
+      assert.equal(picked.snapshot.coach.business.name, chosen.title);
+      assert.equal(picked.snapshot.coach.fields.find(field => field.key === "business")?.value, chosen.title);
+      assert.equal(picked.snapshot.intake.sector, "software");
+      assert.equal(picked.snapshot.structure?.basis.payer, "ksic", "the picked code becomes the structure basis");
+      await assert.rejects(() => send(session, { action: "answer", questionId: "candidate", value: "ksic:99999" }), assertIntakeError("invalid_option", 400));
+      const unpicked = await send(session, { action: "answer", questionId: "candidate", unknown: true });
+      assert.equal(unpicked.snapshot.intake.ksic, null, "clearing the candidate clears the code too");
+      assert.equal(calls.length, 0, "the map costs no AI calls");
     });
 
     await check("invalid initial answer is rejected without creating a partial conversation", async () => {

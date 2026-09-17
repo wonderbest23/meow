@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, ChevronLeft, FileText, LoaderCircle, RefreshCw, Sparkles } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
-import { getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
+import { detailQuestions, structureQuestions, getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { AnswerHistory, BusinessSummary, ChatSpeaker, ConversationHistory, EntryChoices, ExtractionReview, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
@@ -301,7 +301,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     if (busyRef.current || replyActive.current) return;
     const snapshot = planRef.current;
     if (!snapshot) return;
-    const question = snapshot.questions.find(item => item.id === id) ?? getIntakeQuestion("startup", snapshot.intake.sector, id);
+    const question = snapshot.questions.find(item => item.id === id) ?? getIntakeQuestion("startup", snapshot.intake.sector, id, snapshot.structure?.values);
     if (!question) { setError("현재 사업에서 수정할 수 없는 질문입니다. 최신 내용을 불러와 주세요."); return; }
     const existing = draftRef.current.answers[id];
     const answer = snapshot.intake.answers[id];
@@ -319,7 +319,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     writeDraft({ ...draftRef.current, editingId: null, mode: "memo", memo: [draftRef.current.memo, `${answer.label || "이전 질문 답변"}\n${content}`].filter(Boolean).join("\n\n") });
     setView("input");
   };
-  const question = plan ? draft.editingId ? plan.questions.find(item => item.id === draft.editingId) ?? getIntakeQuestion("startup", plan.intake.sector, draft.editingId) : plan.nextQuestion : null;
+  const question = plan ? draft.editingId ? plan.questions.find(item => item.id === draft.editingId) ?? getIntakeQuestion("startup", plan.intake.sector, draft.editingId, plan.structure?.values) : plan.nextQuestion : null;
   const questionDraft = question ? draft.answers[question.id] ?? emptyAnswer() : emptyAnswer();
   const blocked = busy || !!replyTurn || !!draft.pending || status === "conflict" || loadFailed || ownerChanged;
   const aiBusy = ["queued", "running"].includes(plan?.intake.job?.status ?? "");
@@ -352,10 +352,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     follow.current = true;
     void send({ action: "note", message: composerText.trim(), noteIntent: intent }, { composer: captureComposer() });
   };
-  const answerQuestion = (value: IntakeValue, unknown = false, questionId = question?.id) => {
+  const answerQuestion = (value: IntakeValue, unknown = false, questionId = question?.id, extra?: { ksic?: string }) => {
     if (!questionId || !question) return;
     follow.current = true;
-    void send({ action: "answer", questionId, value, ...(unknown ? { unknown: true } : {}) }, { answer: draftRef.current.answers[question.id] ?? emptyAnswer() });
+    void send({ action: "answer", questionId, value, ...(unknown ? { unknown: true } : {}), ...(extra?.ksic ? { ksic: extra.ksic } : {}) }, { answer: draftRef.current.answers[question.id] ?? emptyAnswer() });
   };
   const submitComposer = () => {
     if (blocked || !loaded || unfinishedText) return;
@@ -369,7 +369,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       return;
     }
     if (!composerText.trim()) { if (selectedAnswer.length) answerQuestion(question?.kind === "multi" ? selectedAnswer : selectedAnswer[0]); return; }
-    const target = question?.id === "candidate" && questionDraft.custom ? getIntakeQuestion("startup", plan.intake.sector, "business") ?? null : question;
+    const target = question?.id === "candidate" && questionDraft.custom ? getIntakeQuestion("startup", plan.intake.sector, "business", plan.structure?.values) ?? null : question;
     const route = routeComposerInput(plan, target ?? null, composerText);
     if (route.kind === "clarify") { setIntentPrompt({ text: composerText, questionId: question?.id ?? null, revision: plan.coach.revision, canAnswer: route.canAnswer }); follow.current = true; return; }
     if (route.kind === "note") { storeComposerNote(route.intent); return; }
@@ -435,7 +435,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
             {questionNote && !questionHandled && <section className={styles.noteReceipt} aria-label="저장한 질문"><p>질문을 저장했어요</p><button type="button" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: lastMessage!.text })}><Sparkles size={16} aria-hidden="true" />AI 답변 받기</button></section>}
             {memoPending && <button type="button" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</button>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn}>
-              {replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} disabled={blocked} onChange={answer => editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } })} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null })}>현재 질문으로</button></section> : <section className={styles.complete}><ChatSpeaker /><h2>이야기해 주신 내용을 정리했어요</h2><p>사업 요약을 확인하고 더 필요한 이야기를 이어가세요</p><button type="button" className={styles.mobileSummaryButton} onClick={() => setView("summary")}>입력한 사업 요약<ArrowRight size={17} aria-hidden="true" /></button>{!plan.intake.detailsRequested && plan.coreComplete && <button type="button" className={styles.secondaryButton} disabled={blocked} onClick={() => void send({ action: "details" })}>상세 질문 4개 추가</button>}</section>)}
+              {replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} disabled={blocked} onChange={answer => editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } })} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null })}>현재 질문으로</button></section> : <section className={styles.complete}><ChatSpeaker /><h2>이야기해 주신 내용을 정리했어요</h2><p>사업 요약을 확인하고 더 필요한 이야기를 이어가세요</p><button type="button" className={styles.mobileSummaryButton} onClick={() => setView("summary")}>입력한 사업 요약<ArrowRight size={17} aria-hidden="true" /></button>{!plan.intake.detailsRequested && plan.coreComplete && <button type="button" className={styles.secondaryButton} disabled={blocked} onClick={() => void send({ action: "details" })}>상세 질문 {structureQuestions(plan.intake.mode, plan.structure?.values).length + detailQuestions(plan.intake.sector).length}개 추가</button>}</section>)}
             </div>
           </>}
           {plan && draft.introMessage && <div className={styles.introMessage}><article className={styles.userMessage} data-coach-message="user"><p>{draft.introMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p></div>}
@@ -456,7 +456,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
           </form>
         </footer>}
       </main>
-      {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} disabled={blocked} aiBusy={aiBusy} prepared={prepared} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} /><AnswerHistory snapshot={plan} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
+      {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} disabled={blocked} onStructure={patch => void send({ action: "structure", structure: patch })} aiBusy={aiBusy} prepared={prepared} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} /><AnswerHistory snapshot={plan} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
     </div>
   </BusinessAppChrome></div>;
 }

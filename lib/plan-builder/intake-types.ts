@@ -1,4 +1,5 @@
 import type { CoachField, CoachState } from "./coach";
+import type { BusinessStructure, StructureAxis } from "./business-structure";
 import type { ProposalSector } from "./proposal-blueprint";
 import type { IntakeMode, IntakeQuestion } from "./intake-questions";
 
@@ -22,11 +23,19 @@ export type IntakeState = {
   notes: IntakeNote[]; candidates: IntakeCandidate[]; job: IntakeJob | null;
   receipts: Array<{ id: string; signature: string }>;
   legacyImported: boolean;
+  /** 사용자가 확정한 한국표준산업분류 세세분류 코드(5자리). 업종을 11업종으로만 고르면 null */
+  ksic?: string | null;
+  /** 사용자가 직접 고친 사업 구조 축(부분). KSIC·업종 기본값을 덮어쓴다 */
+  structure?: Partial<BusinessStructure> | null;
 };
 export type IntakeCommand = {
-  action: "start" | "answer" | "message" | "note" | "confirm-extraction" | "details" | "extract" | "extract-pending" | "help" | "design" | "prepare";
+  action: "start" | "answer" | "message" | "note" | "confirm-extraction" | "details" | "extract" | "extract-pending" | "help" | "design" | "prepare" | "structure";
   planId?: string; revision: number; requestId: string;
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;
+  /** industry 답변에 함께 보내는 KSIC 세세분류 코드. value(11업종)는 서버가 코드에서 확인한다 */
+  ksic?: string;
+  /** action "structure": 사용자가 고친 구조 축(부분) */
+  structure?: Partial<Pick<BusinessStructure, StructureAxis>>;
   message?: string; candidateIds?: string[]; rejectIds?: string[]; overwriteIds?: string[];
   noteIntent?: "memo" | "question";
 };
@@ -37,10 +46,18 @@ export type IntakeSnapshot = {
   summary: Array<{ id: string; label: string; value: string; basis: "user" | "proposal" | "unknown" }>;
   candidateIdeas: Array<{ id: string; title: string; description: string; sector: ProposalSector; reasons: string[]; cautions: string[] }>;
   financialSummary: string; hasDocuments: boolean; pendingExtraction: boolean;
+  /** 확정된 표준산업분류와 그 사업 구조 기본값 */
+  ksic: { code: string; name: string; path: string; structure: BusinessStructure | null; summary: string[]; licenseHint: string | null } | null;
+  /** 사업 설명에서 규칙으로 찾은 KSIC 후보(업종 질문용, AI 0회) */
+  ksicCandidates: Array<{ code: string; name: string; path: string; sector: ProposalSector }>;
+  /** 실제 적용 중인 사업 구조: KSIC 또는 업종 기본값 위에 사용자 수정을 얹은 값과 축별 출처 */
+  structure: { values: BusinessStructure; basis: Record<StructureAxis, "user" | "ksic" | "sector">; summary: string[]; licenseHint: string | null } | null;
 };
 export type IntakePayload = {
   flowVersion: 2; enabled: boolean; plan: IntakeSnapshot | null; authenticated?: boolean; ownerScope?: string;
   message?: string; code?: string; login?: boolean; started?: boolean; paid?: boolean;
+  /** GET ?ksic=검색어 응답: 업종 이름 검색 후보 */
+  ksicCandidates?: IntakeSnapshot["ksicCandidates"];
 };
 export type IntakeJobRequest = { ownerHash: string; planId: string; jobId: string };
 

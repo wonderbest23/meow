@@ -16,10 +16,10 @@ async function main() {
     const { emptyCoach } = await import("../lib/plan-builder/coach-job");
     const { COACH_KEY, COACH_TYPES, coachDocumentRevision } = await import("../lib/plan-builder/coach");
     const { INTAKE_KEY, INTAKE_VERSION } = await import("../lib/plan-builder/intake-types");
-    const { coreQuestions, detailQuestions, intakeCandidates, intakeSectorOptions } = await import("../lib/plan-builder/intake-questions");
+    const { coreQuestions, detailQuestions, intakeCandidates, intakeSectorOptions, structureQuestions } = await import("../lib/plan-builder/intake-questions");
     const { PROPOSAL_SECTORS, SECTOR_PROFILES } = await import("../lib/plan-builder/proposal-blueprint");
     const { IntakeError, createIntake, readIntake, intakeQuestions, answeredIntakeQuestion, intakeSnapshot,
-      applyIntakeAnswer, applyIntakeCandidates, intakeBusinessFingerprint, finishIntakeMutation, displayIntakeValue,
+      applyIntakeAnswer, applyIntakeCandidates, intakeBusinessFingerprint, finishIntakeMutation, displayIntakeValue, effectiveStructure,
     } = await import("../lib/plan-builder/intake-core");
 
     let serial = 0;
@@ -84,7 +84,7 @@ async function main() {
       if (question.id === "industry") return sector;
       if (question.id === "interest") return [sector];
       if (question.id === "period") return "2026-09-01 / 2026-09-15";
-      if (question.id === "price") return "12,000원";
+      if (question.unit === "원") return "12,000원";
       if (question.kind === "single") return question.options![0].value;
       if (question.kind === "multi") return [question.options![0].value];
       return question.kind === "number" ? 2 : `입력한 ${question.label}`;
@@ -94,11 +94,11 @@ async function main() {
       check(`matrix ${mode}/${sector}: <=11 core, 4 details, one next question, ready`, () => {
         const f = fixture(mode);
         const coreIds = coreQuestions(mode).map(question => question.id);
-        assert.equal(coreIds.length, 11);
+        assert.equal(coreIds.length, mode === "exploring" ? 12 : 11, "exploring adds the start-conditions step before the candidates");
         const visited: string[] = [];
         for (let index = 0; index < coreIds.length; index++) {
           const state = snapshot(f);
-          assert.ok(state.coreTotal <= 11);
+          assert.ok(state.coreTotal <= coreIds.length);
           assert.equal(state.coreAnswered, index);
           assert.equal(state.coreComplete, false);
           assert.equal(state.nextQuestion?.id, coreIds[index]);
@@ -107,7 +107,7 @@ async function main() {
           answer(f, question.id, sample(question, sector));
           if (mode === "operating") assert.equal(f.coach.stage, "operating");
         }
-        assert.equal(new Set(visited).size, 11);
+        assert.equal(new Set(visited).size, coreIds.length);
         assert.equal(snapshot(f).coreComplete, true);
         assert.equal(snapshot(f).nextQuestion, null);
         assert.equal(f.coach.ready, true);
@@ -118,18 +118,22 @@ async function main() {
         f.intake.detailsRequested = true;
         assert.equal(finishIntakeMutation(f.coach, beforeDetails, f.plan.answers), false);
         assert.equal(coachDocumentRevision(f.coach), revision, "Opening details is not a source edit");
-        const detailIds = detailQuestions(sector).map(question => question.id);
-        assert.equal(detailIds.length, 4);
-        assert.equal(snapshot(f).questions.length, 15);
+        // 상세 팩 = 구조(수익 방식) 질문 2~3개 + 업종 질문 4개. 필드 질문(변동비·고정비)은 coach.fields가 원천이라 intake/details에 들어가지 않는다.
+        const detailPack = [...structureQuestions(mode, effectiveStructure(f.intake).values), ...detailQuestions(sector)];
+        const detailIds = detailPack.map(question => question.id);
+        assert.equal(detailQuestions(sector).length, 4);
+        assert.ok(detailPack.filter(question => question.id.startsWith("structure.")).length >= (mode === "operating" ? 1 : 2), "operating already asks fixed cost in the core, so its pack is variable cost plus the model metric");
+        assert.equal(snapshot(f).questions.length, coreIds.length + detailIds.length);
         for (const id of detailIds) {
           const state = snapshot(f);
-          assert.equal(state.coreTotal, 11);
+          assert.equal(state.coreTotal, coreIds.length);
           assert.equal(state.coreComplete, true);
           assert.equal(state.nextQuestion?.id, id);
           answer(f, id, sample(state.nextQuestion!, sector));
         }
         assert.equal(snapshot(f).nextQuestion, null);
-        assert.deepEqual(Object.keys(f.plan.answers["intake/details"]), detailIds);
+        assert.deepEqual(Object.keys(f.plan.answers["intake/details"]), detailPack.filter(question => !question.fieldKey).map(question => question.id));
+        assert.ok(f.coach.fields.some(field => field.key === "unitCost" && field.basis === "user"), "variable cost lands in coach.fields for the calculation");
         assert.equal(f.coach.ready, true);
       });
     }
@@ -233,7 +237,7 @@ async function main() {
     for (const mode of ["exploring", "startup", "operating"] as const) {
       check(`${mode}: all core questions may be unknown without inventing a ready business`, () => {
         const f = fixture(mode);
-        for (let index = 0; index < 11; index++) {
+        for (let index = 0; index < coreQuestions(mode).length; index++) {
           const question = snapshot(f).nextQuestion;
           assert.ok(question);
           answer(f, question.id, undefined, true);

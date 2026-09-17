@@ -6,7 +6,7 @@ async function main() {
   let fetchCalls = 0;
   globalThis.fetch = () => { fetchCalls++; throw new Error("Business intake must not use the network"); };
   try {
-    const { coreQuestions, detailQuestions, getIntakeQuestion, intakeSectorOptions, intakeCandidates } = await import("../lib/plan-builder/intake-questions");
+    const { coreQuestions, detailQuestions, getIntakeQuestion, intakeSectorOptions, intakeCandidates, structureQuestions, allStructureQuestions } = await import("../lib/plan-builder/intake-questions");
     const { PROPOSAL_SECTORS, SECTOR_PROFILES } = await import("../lib/plan-builder/proposal-blueprint");
     const { coachFieldSchema } = await import("../lib/plan-builder/coach");
     const { coachAmount } = await import("../lib/plan-builder/coach-feasibility");
@@ -14,7 +14,7 @@ async function main() {
     const { descriptionSector } = await import("../lib/plan-builder/intake-sector");
     const modes: IntakeMode[] = ["exploring", "startup", "operating"];
     const expectedCore = {
-      exploring: ["interest", "experience", "hoursPerWeek", "budget", "candidate", "customer", "problem", "offer", "channel", "price", "goal"],
+      exploring: ["interest", "experience", "hoursPerWeek", "budget", "conditions", "candidate", "customer", "problem", "offer", "channel", "price", "goal"],
       startup: ["industry", "business", "customer", "problem", "offer", "channel", "price", "budget", "hoursPerWeek", "capacity", "goal"],
       operating: ["industry", "business", "customer", "offer", "problem", "period", "sales", "cost", "capacity", "channel", "goal"],
     };
@@ -94,6 +94,10 @@ async function main() {
     assert.equal(customQuestion.kind, "text");
     assert.equal(customQuestion.fieldKey, "business");
     assert.ok(!coreQuestions("exploring").some(question => question.id === "business"), "Free text is an alternative, not a forced extra question");
+    const startConditions = getIntakeQuestion("exploring", null, "conditions")!;
+    assert.equal(startConditions.kind, "multi"); assert.ok(startConditions.optional);
+    assert.deepEqual(startConditions.options!.map(option => option.value), ["무점포로 시작", "혼자 시작할 수 있는 일", "인허가 없이 시작", "온라인으로 제공", "방문·출장으로 제공", "매장·공간에서 제공", "개인 고객", "기업·사업자 고객", "월 구독·정기 수익"]);
+    assert.equal(options.CHIP_LIMITS.conditions, 4, "conditions are a bounded multi-pick");
     for (const mode of ["startup", "operating"] as const) {
       assert.equal(getIntakeQuestion(mode, null, "industry")!.fieldKey, undefined, "Industry belongs to coach.business.industry in the parent");
       assert.deepEqual(getIntakeQuestion(mode, null, "industry")!.options, intakeSectorOptions);
@@ -133,6 +137,28 @@ async function main() {
     }
     assert.deepEqual(options.numberPresets({ id: "hoursPerWeek", unit: "시간", period: "주" }), [5, 10, 20, 30, 40, 60]);
     assert.equal(options.numberPresetLabel({ id: "logistics.dailyShipments", unit: "건" }, 20), "약 20건");
+    // 구조(수익 방식) 기준 상세 팩: 모델별 지표 → 변동비 → 고정비(운영 중은 기본 질문에 있어 제외), 전부 선택형·선택 사항
+    assert.deepEqual(structureQuestions("startup", { revenue: "subscription" }).map(question => question.id), ["structure.retentionMonths", "structure.unitCost", "structure.cost"]);
+    assert.deepEqual(structureQuestions("operating", { revenue: "subscription" }).map(question => question.id), ["structure.retentionMonths", "structure.unitCost"]);
+    assert.deepEqual(structureQuestions("startup", { revenue: "per_unit" }).map(question => question.id), ["structure.unitCost", "structure.cost"]);
+    assert.deepEqual(structureQuestions("exploring", null).map(question => question.id), ["structure.unitCost", "structure.cost"], "no structure means the per-unit default");
+    for (const [revenue, id] of [["rental", "structure.occupancy"], ["commission", "structure.takeRate"], ["project", "structure.salesCycleDays"], ["per_hour", "structure.billableHours"]] as const) {
+      assert.equal(structureQuestions("startup", { revenue })[0].id, id, `${revenue} leads with its own metric`);
+    }
+    assert.equal(structureQuestions("startup", { revenue: "subscription" })[1].period, "구독자 1명(월)", "variable cost wording follows the revenue unit");
+    assert.equal(structureQuestions("startup", { revenue: "per_hour" })[1].period, "1시간");
+    const structurePack = allStructureQuestions();
+    assert.equal(structurePack.length, 7); assert.equal(new Set(structurePack.map(question => question.id)).size, 7);
+    for (const question of structurePack) {
+      assert.equal(question.kind, "number", question.id); assert.ok(question.optional, question.id); assert.ok(question.unit && question.period, question.id);
+      const selectFirst = question.unit === "원" ? options.amountRanges("software", question.id, "startup").length >= 5 : options.numberPresets(question).length >= 4;
+      assert.ok(selectFirst, `${question.id} answers by ladder or presets, never typing`);
+    }
+    assert.ok(options.amountRanges("general", "structure.unitCost", "startup").some(range => range.min === 0 && range.max === 0), "variable cost ladder offers 0원 for digital goods");
+    assert.equal(getIntakeQuestion("startup", "software", "structure.retentionMonths", { revenue: "subscription" })?.label, "평균 구독 유지 기간");
+    assert.equal(getIntakeQuestion("startup", "software", "structure.retentionMonths")?.label, "평균 구독 유지 기간", "label lookup works without knowing the structure");
+    assert.equal(getIntakeQuestion("startup", "software", "structure.occupancy", { revenue: "subscription" }), undefined, "a metric outside the active model is not offered");
+    assert.equal(detailQuestions("software").length, 4, "sector packs stay at four");
     assert.equal(options.numberPresetLabel({ id: "local_service.travelMinutes", unit: "분" }, 0), "이동 없음(0분)");
     assert.deepEqual(options.numberPresets({ id: "budget", unit: "원" }), [], "range ladders have no number presets");
 

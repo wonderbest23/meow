@@ -5,6 +5,8 @@ import { applyCoachReply, COACH_KEY, COACH_TYPES, readCoach } from "../lib/plan-
 import { applyExpertPatch, expertPatchSchema, EXPERT_HISTORY_KEY } from "../lib/plan-builder/coach-expert";
 import { LAUNCH_KEY, launchSchema, launchSteps, launchStatus, quoteTotals } from "../lib/plan-builder/business-launch";
 import type { Plan, PlanState } from "../lib/plan-builder/plan-store";
+import { createIntake } from "../lib/plan-builder/intake-core";
+import { INTAKE_KEY } from "../lib/plan-builder/intake-types";
 
 const EMPTY_BUSINESS = { name: "", description: "", role: "", industry: "", region: "", stage: "" };
 
@@ -31,6 +33,11 @@ const remote = launchSchema.parse({ workplace: "remote", registered: "yes" });
 assert.ok(!launchSteps(plan, remote).some(s => ["registration", "workplace"].includes(s.id)));
 const shared = launchSchema.parse({ workplace: "shared", registered: "no" });
 assert.ok(launchSteps(plan, shared).some(s => s.id === "workplace"));
+assert.ok(!launchSteps(plan, shared).some(s => s.id === "license"), "KSIC 미확정이면 인허가 단계 없음");
+const licensed: Plan = { ...plan, answers: { ...plan.answers, [INTAKE_KEY]: { state: { ...createIntake(coach, "startup", at), ksic: "56221" } } } };
+const licenseStep = launchSteps(licensed, shared).find(s => s.id === "license");
+assert.ok(licenseStep && /신고/.test(licenseStep.task) && licenseStep.material.includes("커피 전문점"), "확정 KSIC의 인허가 안내가 시작 준비 단계로 들어옴");
+assert.ok(launchSteps(licensed, shared).findIndex(s => s.id === "license") < launchSteps(licensed, shared).findIndex(s => s.id === "registration"), "인허가 확인은 사업자등록 앞");
 const step = launchSteps(plan, remote)[0];
 remote.records[step.id] = { status: "done", signature: step.signature, material: step.material, note: "메모 유지", at };
 assert.equal(launchStatus(remote, step), "done");

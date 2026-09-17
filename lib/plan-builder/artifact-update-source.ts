@@ -12,7 +12,7 @@ import { proposalPages, renderableProposal } from "./proposal-revision";
 import { proposalReviewDocument } from "./artifact-source-status";
 import { businessSourceProjection } from "./business-source-projection";
 import { optionLabelMap } from "./intake-context";
-import { detailQuestions, intakeSectorOptions } from "./intake-questions";
+import { detailQuestions, intakeSectorOptions, allStructureQuestions } from "./intake-questions";
 
 export const artifactDigest = (value: unknown): string => createHash("sha256").update(JSON.stringify(value, (_key, item) => item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.entries(item).sort(([a], [b]) => a.localeCompare(b))) : item)).digest("hex");
 export function artifactSections(plan: ServerPlan) {
@@ -21,7 +21,7 @@ export function artifactSections(plan: ServerPlan) {
 function artifactIntakeSources(plan: ServerPlan, revision: number): ArtifactSource[] {
   const industry = readCoach(plan.answers)?.business.industry ?? "";
   const sector = intakeSectorOptions.find(option => option.value === industry || option.label === industry)?.value;
-  const optionLabels = new Map((sector ? detailQuestions(sector) : []).map(question => [question.id, optionLabelMap(question)]));
+  const optionLabels = new Map([...(sector ? detailQuestions(sector) : []), ...allStructureQuestions()].map(question => [question.id, optionLabelMap(question)]));
   const source = (id: string, record: Record<string, unknown>, isPeriod = false, labels: Map<string, string> = new Map()): ArtifactSource => {
     const missing = record.value === null || record.value === undefined;
     // Multi answers are label arrays; choice ids map to their labels so reviewers never see internal values.

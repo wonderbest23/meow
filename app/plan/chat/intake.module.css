@@ -354,4 +354,24 @@
   .keypadRow input { font-size: 18px; }
   .unitToggle button { padding: 6px 10px; font-size: 12px; }
   .chatQuestion .formActions > button { flex: 1 1 auto; }
+  .ksicChips { grid-template-columns: minmax(0, 1fr); }
 }
+
+.ksicCandidates { display: grid; gap: 10px; margin-bottom: 16px; }
+.ksicLead { margin: 0; font-size: 13px; color: var(--intake-muted); }
+.ksicChips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.ksicChip { display: grid; gap: 3px; min-width: 0; min-height: 56px; padding: 10px 13px; border: 1px solid #e6ebf2; border-radius: 8px; background: #f8fafc; text-align: left; cursor: pointer; transition: background .16s, border-color .16s; }
+.ksicChip:hover:not(:disabled) { background: #edf3fc; border-color: #c5d6ed; }
+.ksicChip:disabled { opacity: .55; cursor: not-allowed; }
+.ksicChip strong { font-size: 14px; font-weight: 600; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ksicChip span { font-size: 11px; color: var(--intake-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ksicNote { display: block; margin-top: 4px; font-size: 12px; color: var(--intake-muted); }
+
+.ksicSearch { display: block; min-width: 0; }
+.ksicSearch input { width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid var(--intake-line); border-radius: 8px; background: white; color: inherit; font-size: 15px; }
+.ksicSearch input:focus { outline: 3px solid #719fec; outline-offset: 1px; }
+
+.structure h3 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; }
+.structure h3 small { font-size: 12px; font-weight: 400; color: var(--intake-muted); }
+.structureChips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.structureChips .presetChip { min-height: 38px; padding: 7px 12px; font-size: 13px; }

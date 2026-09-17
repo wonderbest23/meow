@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { intakeFinancialReference, readIntake } from "./intake-core";
 import { chaptersForType } from "./blueprint";
 import { coachDocumentRevision, coachFinancialReference, readCoach } from "./coach";
 import { renderPlanMarkdown } from "./markdown";
@@ -33,7 +34,7 @@ function makePreview(ownerHash: string, plan: ServerPlan, keys: string[], target
   if (sections.some(({ key }) => plan.sections[key]?.locked)) throw new ProposalError("section_locked", "잠긴 항목은 자동 갱신하지 않아요. 문서에서 직접 확인해 주세요");
   if (sections.some(({ key }) => plan.sections[key]?.markdown && plan.sections[key].coachRevision === sourceRevision)) throw new ProposalError("already_current", "이미 최신 조건으로 검토한 항목이 있어요. 갱신할 항목을 다시 선택해 주세요");
   const payload: DocumentRefreshPayload = withConfirmedIntakeContext({ businessName: coach.business.name, businessDescription: coach.business.description, stage: coach.stage, sector: saved.document.deck.blueprint?.sector, purpose: saved.document.deck.blueprint?.purpose,
-    fields: coach.fields.map(({ key, value, basis }) => ({ key, value, basis })), financialReference: coachFinancialReference(coach),
+    fields: coach.fields.map(({ key, value, basis }) => ({ key, value, basis })), financialReference: (intake => intake ? intakeFinancialReference(coach, intake) : coachFinancialReference(coach))(readIntake(plan.answers)),
     sections: sections.map(entry => ({ ...entry, markdown: plan.sections[entry.key]?.markdown ?? "" })) }, plan.answers);
   if (JSON.stringify(payload).length > 30000) throw new ProposalError("source_too_large", "전송 분량이 많아요. 문서 항목을 줄여서 선택해 주세요", 400);
   const data = { sourceRevision, target, payload, sections: sections.map(({ key }) => ({ key, generatedAt: plan.sections[key]?.generatedAt ?? "", manual: !!plan.sections[key]?.edited })) };

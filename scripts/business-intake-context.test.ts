@@ -40,6 +40,7 @@ const answers: Record<string, Record<string, unknown>> = {
 
 type Context = {
   industry: string | null; sector: string | null; guidance: string; omitted: boolean;
+  ksic?: { code: string; name: string; path: string; structure: string[]; source: string } | null;
   reportingPeriod: { value: unknown; status: string } | null;
   details: Array<{ questionId: string; label: string; value: unknown; unit: string | null; period: string | null; valueWithUnit: string | null; status: string; quote: string }>;
 };
@@ -141,6 +142,9 @@ async function main() {
   const delivery = data.details.find(detail => detail.questionId === "b2b_service.deliveryDays")!;
   assert.equal(delivery.label, detailQuestions("b2b_service").find(question => question.id === delivery.questionId)!.label);
   assert.deepEqual([delivery.value, delivery.unit, delivery.period], [12, "days", "per project"]);
+  const withStructureDetail = structuredClone(answers);
+  withStructureDetail["intake/details"]["structure.retentionMonths"] = { ...(withStructureDetail["intake/details"]["b2b_service.deliveryDays"] as Record<string, unknown>), value: 12, unit: "개월", period: "구독자 1명" };
+  assert.equal(parse(confirmedIntakeContext(withStructureDetail)).details.find(detail => detail.questionId === "structure.retentionMonths")?.label, "평균 구독 유지 기간", "structure pack answers are labeled in the prompt");
   assert.equal(data.details.find(detail => detail.questionId === "b2b_service.paymentTerms")?.valueWithUnit, "17.5 %");
   for (const value of [null, "", []]) {
     const unknown = structuredClone(answers);
@@ -288,6 +292,30 @@ async function main() {
   assert.equal(captured.length, priorCalls, "Oversized forwarded context fails before any model invocation");
   assert.deepEqual(answers, before);
   await assertServicePayloads();
+  // 확정된 KSIC 코드만 intake 상태에서 읽는다: 검증된 코드는 구조 라벨과 출처가 붙고, 잘못된 값은 null
+  const withKsic = structuredClone(answers);
+  (withKsic.__business_intake.state as Record<string, unknown>).ksic = "56221";
+  const ksicContext = parse(confirmedIntakeContext(withKsic));
+  assert.equal(ksicContext.ksic?.code, "56221");
+  assert.equal(ksicContext.ksic?.name, "커피 전문점");
+  assert(ksicContext.ksic?.structure.includes("신고·등록 필요"));
+  assert(ksicContext.ksic?.source.includes("KSIC"));
+  assert(ksicContext.guidance.includes("never override supplied answers"));
+  assert(!confirmedIntakeContext(withKsic).includes("pending-note-secret") && !confirmedIntakeContext(withKsic).includes("candidate-secret"), "Other intake state stays unread");
+  const brief = (parse(confirmedIntakeContext(withKsic)) as unknown as { structure?: { source: string; revenueModel: { formula: string; kind: string }; licenseChecklist: { status: string; items: string[] }; capitalPlan: { form: string; items: string[] }; rules: string[] } | null }).structure;
+  assert.ok(brief, "a confirmed KSIC code brings the structure brief into the prompt");
+  assert.ok(brief!.source.startsWith("표준산업분류 56221"), brief!.source);
+  assert.equal(brief!.licenseChecklist.status, "신고·등록 필요"); assert.equal(brief!.licenseChecklist.items.length, 5);
+  assert.ok(brief!.revenueModel.formula.includes("×") && brief!.revenueModel.kind === "건당 결제", brief!.revenueModel.formula);
+  assert.equal(brief!.capitalPlan.form, "매장 필요"); assert.ok(brief!.capitalPlan.items.some(item => item.includes("보증금")));
+  assert.ok(brief!.rules.some(rule => rule.includes("확인 필요")));
+  (withKsic.__business_intake.state as Record<string, unknown>).structure = { revenue: "subscription", license: "bogus" };
+  assert(parse(confirmedIntakeContext(withKsic)).ksic?.structure.includes("월 구독"), "user structure overrides reach the prompt");
+  assert(parse(confirmedIntakeContext(withKsic)).ksic?.structure.includes("신고·등록 필요"), "invalid override values are ignored");
+  (withKsic.__business_intake.state as Record<string, unknown>).ksic = "nope";
+  assert.equal(parse(confirmedIntakeContext(withKsic)).ksic ?? null, null);
+  const onlyKsic: Record<string, Record<string, unknown>> = { __business_intake: { state: { ksic: "58222" } } };
+  assert.equal(parse(confirmedIntakeContext(onlyKsic)).ksic?.code, "58222", "A confirmed KSIC alone is enough to produce a context");
   console.log(JSON.stringify({ passed: ["confirmed-only canonical input", "active-sector-only context with archived answers preserved", "all sector labels", "operating reporting period", "unknown versus explicit zero", "UI and transport invariance", "whole-entry 8000-character bound", "section and streaming prompt capture", "review prompt capture", "refresh numeric evidence", "unsupported-number rejection", "payload-builder source assertions", "refresh consent snapshot and runtime handoff", "artifact document chunk handoff"], mockRequests: captured.length, paidCalls: 0, externalCalls: 0 }));
 }
 
