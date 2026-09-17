@@ -256,6 +256,9 @@ async function main() {
       assert.equal(brief.capitalPlan.form, "무점포 가능");
       assert.ok(brief.capitalPlan.inputs.some(input => input.includes("= 3,000,000원")), brief.capitalPlan.inputs.join(" | "));
       assert.ok(brief.financialScenario.includes("손익분기: 월 38건"));
+      const { confirmedIntakeContext, intakeContextEvidence } = await import("../lib/plan-builder/intake-context");
+      const evidence = intakeContextEvidence(confirmedIntakeContext(saasLoaded.plan.answers));
+      for (const number of ["360,000원", "3,000,000원", "손익분기: 월 38건", "12개월"]) assert.ok(evidence.includes(number), `documents may cite ${number}: ${evidence}`);
       // 공간 제공(공유오피스)은 처리량 단위 칩이 좌석·룸부터
       const spaceOwner = `intake-ksic-space-${randomUUID()}`;
       const space = await saveIntakeCommand(spaceOwner, { action: "start", mode: "startup", questionId: "business", value: "공유오피스를 열려고 해요", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
@@ -285,6 +288,27 @@ async function main() {
       assert.equal(calls.length, 0);
     });
 
+    await check("unclassified and compound businesses flag the structure fallback without changing defaults", async () => {
+      const compoundOwner = `intake-compound-${randomUUID()}`;
+      const compound = await saveIntakeCommand(compoundOwner, { action: "start", mode: "startup", questionId: "business", value: "카페와 도자기 공방을 함께 운영하려고 해요", revision: 0, requestId: randomUUID() });
+      assert.equal(compound.snapshot.structure?.fallback, "compound", "two sectors joined by a connective");
+      const picked = await send({ ownerHash: compoundOwner, planId: compound.plan.id }, { action: "answer", questionId: "industry", value: "food_beverage", ksic: "56221" });
+      assert.equal(picked.snapshot.structure?.fallback, "compound", "picking the main code keeps the compound note");
+      assert.equal(picked.snapshot.structure?.values.revenue, "per_unit", "defaults follow the picked code and are not rewritten");
+      const plainOwner = `intake-plain-${randomUUID()}`;
+      const plain = await saveIntakeCommand(plainOwner, { action: "start", mode: "startup", questionId: "business", value: "소규모 팀용 예약 관리 SaaS를 만들고 있어요", revision: 0, requestId: randomUUID() });
+      assert.equal(plain.snapshot.structure?.fallback, null, "name-token noise without a connective is not compound");
+      const newOwner = `intake-unclassified-${randomUUID()}`;
+      const fresh = await saveIntakeCommand(newOwner, { action: "start", mode: "startup", questionId: "business", value: "세상에 없던 새로운 서비스를 만들고 싶어요", revision: 0, requestId: randomUUID() });
+      assert.equal(fresh.snapshot.structure?.fallback, null, "before the industry answer nothing is flagged");
+      const general = await send({ ownerHash: newOwner, planId: fresh.plan.id }, { action: "answer", questionId: "industry", value: "general" });
+      assert.equal(general.snapshot.structure?.fallback, "unclassified");
+      const chosen = await send({ ownerHash: newOwner, planId: fresh.plan.id }, { action: "structure", structure: { revenue: "subscription", payer: "b2b" } });
+      assert.equal(chosen.snapshot.structure?.fallback, "unclassified", "the note stays; the user's axes now lead");
+      assert.equal(chosen.snapshot.questions.find(question => question.id === "price")?.period, "월 구독 1건");
+      assert.equal(calls.length, 0);
+    });
+
     await check("exploring mode adds KSIC map candidates from interest, experience and start conditions, and picking one sets the code", async () => {
       configureAI(true);
       const ownerHash = `intake-map-${randomUUID()}`;
@@ -302,6 +326,8 @@ async function main() {
       assert.ok(nail!.reasons.some(reason => reason.includes("네일")), nail!.reasons.join(" | "));
       assert.ok(nail!.description.includes("96119") && nail!.description.includes("신고·등록 필요"), nail!.description);
       assert.equal(ideas.indexOf(nail!), 3, "the experience match leads the map candidates");
+      assert.ok(nail!.reasons.some(reason => reason.startsWith("흔히 부르는 말:") && reason.includes("네일")), "the dry official name comes with its colloquial names");
+      assert.ok(ideas.filter(idea => idea.id.startsWith("ksic:") && !idea.reasons.some(reason => reason.includes("경험"))).length <= 2, "fillers stay at two when the experience already matches");
       await send(session, { action: "answer", questionId: "hoursPerWeek", value: "20시간" });
       await send(session, { action: "answer", questionId: "budget", value: "300만원" });
       await send(session, { action: "answer", questionId: "interest", value: ["software"] });

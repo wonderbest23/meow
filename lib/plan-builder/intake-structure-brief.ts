@@ -2,7 +2,7 @@ import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount } from "./coach-feasibility";
 import type { CoachField, CoachState } from "./coach";
 import type { IntakeState } from "./intake-types";
-import { effectiveStructure, intakeFinancialReference } from "./intake-core";
+import { effectiveStructure, intakeFinancialReference, intakeStructureFallback } from "./intake-core";
 import { allStructureQuestions, intakeSectorOptions } from "./intake-questions";
 import { PRICE_BASIS } from "./intake-options";
 import { ksicAncestors, ksicByCode } from "./ksic";
@@ -63,7 +63,8 @@ export function intakeStructureBrief(coach: CoachState, intake: IntakeState): In
   const group = entry ? ksicAncestors(entry.code).find(ancestor => ancestor.level === 3)?.name : undefined;
   const sectorLabel = intakeSectorOptions.find(option => option.value === intake.sector)?.label ?? intake.sector;
   const userChosen = STRUCTURE_AXES.filter(axis => basis[axis] === "user").map(axis => `${AXIS_LABEL[axis]}: ${(STRUCTURE_LABELS[axis] as Record<string, string>)[structure[axis]]}`);
-  const source = `${entry ? `표준산업분류 ${entry.code} ${entry.name}${group ? `(${group})` : ""} 기본값` : `업종 기본값(${sectorLabel})`}${userChosen.length ? " + 사용자 선택" : ""}`;
+  const fallback = intakeStructureFallback(coach, intake);
+  const source = `${entry ? `표준산업분류 ${entry.code} ${entry.name}${group ? `(${group})` : ""} 기본값` : `업종 기본값(${sectorLabel})`}${userChosen.length ? " + 사용자 선택" : ""}${fallback === "compound" ? " · 복합 사업(주 업종 기준이며 다른 수익원은 사용자 입력만 따른다)" : fallback === "unclassified" ? " · 미분류(기본값이 넓으므로 사용자 선택과 입력만 근거로 쓴다)" : ""}`;
   const inputs = (["price", "unitCost", "cost", "volume", "capacity"] as const).flatMap(key => { const value = field(key); return value ? [`${labels[key]}: ${value}`] : []; });
   const structureQuestion = new Map(allStructureQuestions().map(question => [question.id, question]));
   const metrics = Object.entries(intake.answers).filter(([id, answer]) => id.startsWith("structure.") && answer.status === "answered" && answer.value !== null && !structureQuestion.get(id)?.fieldKey)

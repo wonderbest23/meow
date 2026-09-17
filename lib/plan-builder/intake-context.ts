@@ -141,9 +141,14 @@ export function intakeContextEvidence(value: unknown): string {
   let parsed: unknown;
   try { parsed = JSON.parse(context); } catch { return ""; }
   if (!parsed || typeof parsed !== "object" || !("details" in parsed) || !Array.isArray(parsed.details)) return "";
-  return parsed.details.flatMap((detail: unknown) => {
+  const details = parsed.details.flatMap((detail: unknown) => {
     if (!detail || typeof detail !== "object") return [];
     const record = detail as Record<string, unknown>;
     return record.basis === "user" && record.status === "supplied" && typeof record.valueWithUnit === "string" ? [record.valueWithUnit] : [];
-  }).join("\n");
+  });
+  // 구조 브리프의 확정 입력과 제공된 계산(손익 시나리오·예비 운전자금 산식)도 문서가 인용할 수 있는 근거다. 없는 숫자로 판정되지 않게 한다.
+  const structure = "structure" in parsed && parsed.structure && typeof parsed.structure === "object" ? parsed.structure as { revenueModel?: { inputs?: unknown; metrics?: unknown }; capitalPlan?: { inputs?: unknown }; financialScenario?: unknown } : null;
+  const strings = (value: unknown) => Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  const brief = structure ? [...strings(structure.revenueModel?.inputs), ...strings(structure.revenueModel?.metrics), ...strings(structure.capitalPlan?.inputs), ...(typeof structure.financialScenario === "string" ? [structure.financialScenario] : [])] : [];
+  return [...details, ...brief].filter(Boolean).join("\n");
 }

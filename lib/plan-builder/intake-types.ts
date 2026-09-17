@@ -51,7 +51,8 @@ export type IntakeSnapshot = {
   /** 사업 설명에서 규칙으로 찾은 KSIC 후보(업종 질문용, AI 0회) */
   ksicCandidates: Array<{ code: string; name: string; path: string; sector: ProposalSector }>;
   /** 실제 적용 중인 사업 구조: KSIC 또는 업종 기본값 위에 사용자 수정을 얹은 값과 축별 출처 */
-  structure: { values: BusinessStructure; basis: Record<StructureAxis, "user" | "ksic" | "sector">; summary: string[]; licenseHint: string | null } | null;
+  /** fallback: 업종이 미분류이거나(기본값이 넓음) 여러 업종이 섞인 복합 사업일 때 화면이 구조를 직접 고르도록 안내한다. */
+  structure: { values: BusinessStructure; basis: Record<StructureAxis, "user" | "ksic" | "sector">; summary: string[]; licenseHint: string | null; fallback: "unclassified" | "compound" | null } | null;
 };
 export type IntakePayload = {
   flowVersion: 2; enabled: boolean; plan: IntakeSnapshot | null; authenticated?: boolean; ownerScope?: string;

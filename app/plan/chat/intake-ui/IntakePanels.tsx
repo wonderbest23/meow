@@ -99,7 +99,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
     <form onSubmit={submit}>
       {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
         <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>
-        {ksicShown.length > 0 && <p className={styles.ksicLead}>{ksicQuery.trim().length >= 2 ? "검색한 업종입니다. 하나를 고르면 업종과 세부 분류가 함께 저장됩니다." : "설명과 가까운 업종입니다. 하나를 고르면 업종과 세부 분류가 함께 저장됩니다."}</p>}
+        {ksicShown.length > 0 && <p className={styles.ksicLead}>{ksicQuery.trim().length >= 2 ? "검색한 업종입니다. 하나를 고르면 업종과 세부 분류가 함께 저장됩니다." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞인 사업으로 보여요. 매출이 가장 큰 쪽을 먼저 고르면, 나머지는 요약의 사업 구조에서 복합으로 표시할 수 있어요." : "설명과 가까운 업종입니다. 하나를 고르면 업종과 세부 분류가 함께 저장됩니다."}</p>}
         {ksicQuery.trim().length >= 2 && ksicShown.length === 0 && <p className={styles.ksicLead}>맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다.</p>}
         <div className={styles.ksicChips}>{ksicShown.map(item => <button key={item.code} type="button" className={styles.ksicChip} disabled={disabled} onClick={() => onAnswer(item.sector, false, question.id, { ksic: item.code })}><strong>{item.name}</strong><span>{item.path.split(" › ").slice(0, 2).join(" › ")}</span></button>)}</div>
       </div>}
@@ -381,6 +381,8 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     {!snapshot.summary.length && !extraAnswers.length && <p className={styles.muted}>아직 저장한 답변이 없습니다.</p>}
     {snapshot.structure && <section className={styles.structure} aria-labelledby="intake-structure-heading">
       <h3 id="intake-structure-heading">사업 구조 <small>{snapshot.ksic ? "표준산업분류 기준 추정" : "업종 기준 추정"} · 다르면 바꿔 주세요</small></h3>
+      {snapshot.structure.fallback === "unclassified" && <p className={styles.muted}>업종이 미분류라 기본값이 넓게 잡혀 있어요. 아래 다섯 축을 직접 고르면 질문과 계산이 그 구조를 따라가요.</p>}
+      {snapshot.structure.fallback === "compound" && <p className={styles.muted}>여러 업종이 섞인 사업으로 보여요. 매출이 가장 큰 업종을 기준으로 두고, 섞인 축은 복합을 골라 주세요.</p>}
       <dl className={styles.summaryFields}>{STRUCTURE_AXES.map(axis => {
         const value = snapshot.structure!.values[axis] as string;
         const labels = STRUCTURE_LABELS[axis] as Record<string, string>;

@@ -59,8 +59,15 @@ const CONDITION_MATCH: Record<typeof START_CONDITIONS[number], (structure: Busin
   "월 구독·정기 수익": structure => structure.revenue === "subscription",
 };
 const isCondition = (value: unknown): value is typeof START_CONDITIONS[number] => typeof value === "string" && value in CONDITION_MATCH;
-let synonymBackedCodes: Set<string> | null = null;
-const synonymBacked = () => synonymBackedCodes ??= new Set(Object.values(KSIC_SYNONYMS).flat());
+let synonymIndex: Map<string, string[]> | null = null;
+/** 코드 → 그 업종을 부르는 구어 표현들. 표현이 많을수록 흔한 창업 업종으로 보고(임의의 코드 순 대신) 채움 후보의 순서로 쓴다. */
+function synonymsByCode(): Map<string, string[]> {
+  if (synonymIndex) return synonymIndex;
+  synonymIndex = new Map();
+  for (const [term, codes] of Object.entries(KSIC_SYNONYMS)) for (const code of codes) synonymIndex.set(code, [...(synonymIndex.get(code) ?? []), term]);
+  return synonymIndex;
+}
+const KSIC_FILLER_LIMIT_WITH_MATCHES = 2;
 /** 경험 문장 안에서 이 코드를 가리킨 구어 표현(있으면). 근거 문장에만 쓴다. */
 function matchedSynonym(code: string, text: string): string | undefined {
   const q = normalizeKsic(text);
@@ -82,15 +89,19 @@ export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState): Cand
   const matches = new Map(experience ? searchKsic(experience, { limit: 30, minLevel: 5 }).map(match => [match.entry.code, match]) : []);
   // 관심·조건이 없고 경험만 있으면 경험과 이어진 분류만 본다. 전체 1,205개를 임의로 늘어놓지 않는다.
   const pool = ksicEntries(5).filter(entry => sectors.length || chosen.length || matches.has(entry.code));
-  const scored = pool.flatMap(entry => {
+  const ranked = pool.flatMap(entry => {
     const structure = ksicStructure(entry.code);
     // 업종은 분류의 구조값(sector)으로 본다. 중분류가 소프트웨어 쪽이어도 예외표가 콘텐츠로 옮긴 분류는 콘텐츠 관심에만 나온다.
     if (!structure || !structure.smallBusiness || (sectors.length && !sectors.includes(structure.sector)) || !chosen.every(value => CONDITION_MATCH[value](structure))) return [];
-    const match = matches.get(entry.code);
-    const score = (match ? 1000 + match.score : 0) + (synonymBacked().has(entry.code) ? 100 : 0);
-    return [{ entry, structure, match, score }];
-  }).sort((a, b) => b.score - a.score || a.entry.code.localeCompare(b.entry.code)).slice(0, KSIC_CANDIDATE_LIMIT);
-  return scored.map(({ entry, structure, match }) => {
+    const match = matches.get(entry.code), terms = synonymsByCode().get(entry.code) ?? [];
+    const score = (match ? 1000 + match.score : 0) + Math.min(terms.length, 9) * 10;
+    return [{ entry, structure, match, terms, score }];
+  }).sort((a, b) => b.score - a.score || a.entry.code.localeCompare(b.entry.code));
+  // 경험과 이어진 분류가 있으면 그것이 목록의 중심이고 채움 후보는 2개까지만. 채움은 부르는 말이 있는 흔한 업종을 먼저 쓰고, 하나도 없을 때만 나머지 분류로 채운다.
+  const matched = ranked.filter(item => item.match), common = ranked.filter(item => !item.match && item.terms.length), rest = ranked.filter(item => !item.match && !item.terms.length);
+  const fillers = (common.length ? common : rest).slice(0, matched.length ? KSIC_FILLER_LIMIT_WITH_MATCHES : KSIC_CANDIDATE_LIMIT);
+  const scored = [...matched, ...fillers].slice(0, KSIC_CANDIDATE_LIMIT);
+  return scored.map(({ entry, structure, match, terms }) => {
     const group = ksicAncestors(entry.code).find(ancestor => ancestor.level === 3)?.name ?? ksicPath(entry.code);
     const sector = sectorForKsic(entry.code) ?? "general";
     const term = match ? matchedSynonym(entry.code, experience) : undefined;
@@ -98,6 +109,8 @@ export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState): Cand
       ...(match ? [term ? `경험 입력의 "${term}"과 이어지는 분류` : "경험 입력과 이름이 맞는 분류"] : []),
       ...(sectors.includes(sector) ? [`관심 분야: ${intakeSectorOptions.find(option => option.value === sector)?.label ?? sector}`] : []),
       ...(chosen.length ? [`조건 일치: ${chosen.join(", ")}`] : []),
+      // 공식 이름이 낯설어서 흔히 부르는 말을 함께 보여 준다(예: 기타 미용업 ← 네일, 왁싱).
+      ...(terms.length ? [`흔히 부르는 말: ${terms.slice(0, 3).join(", ")}`] : []),
     ];
     return { id: `ksic:${entry.code}`, title: entry.name, sector, description: `표준산업분류 ${entry.code} · ${group} · ${structureSummary(structure).join(" · ")}`, reasons,
       cautions: [licenseHint(structure) ?? "인허가는 관할 기관 기준으로 확인이 필요합니다.", "표준산업분류 세세분류 기준 후보이며 수요·수익성을 검증한 결과가 아닙니다."] };
@@ -173,7 +186,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
     intake: publicIntake, nextQuestion: questions.find(question => !answeredIntakeQuestion(intake, coach, question)) ?? null,
     questions, coreComplete: answered === core.length, coreAnswered: answered, coreTotal: core.length,
     summary, financialSummary: intakeFinancialReference(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0,
-    ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(intake),
+    ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(coach, intake),
     candidateIdeas: allCandidateIdeas(intake, coach),
     pendingExtraction: intake.notes.some(note => ["queued", "processing"].includes(note.status)) || intake.candidates.some(candidate => candidate.status === "pending"),
   };
@@ -192,9 +205,9 @@ export function effectiveStructure(intake: Pick<IntakeState, "ksic" | "sector" |
   return { values, basis };
 }
 
-function intakeStructureSnapshot(intake: IntakeState): IntakeSnapshot["structure"] {
+function intakeStructureSnapshot(coach: CoachState, intake: IntakeState): IntakeSnapshot["structure"] {
   const { values, basis } = effectiveStructure(intake);
-  return { values, basis, summary: structureSummary(values), licenseHint: licenseHint(values) };
+  return { values, basis, summary: structureSummary(values), licenseHint: licenseHint(values), fallback: intakeStructureFallback(coach, intake) };
 }
 
 /** 사용자가 고른 구조 축을 저장하고 대화 기록에 남긴다. 값은 스키마가 검증했고 여기서는 라벨 존재만 다시 확인한다. */
@@ -296,6 +309,21 @@ function intakeKsicCandidates(coach: CoachState, intake: Pick<IntakeState, "answ
   });
   if (!texts.length) return [];
   return searchKsic(texts.join(" "), { limit: 4, minLevel: 5 }).map(match => ({ code: match.entry.code, name: match.entry.name, path: ksicPath(match.entry.code), sector: sectorForKsic(match.entry.code) ?? "general" }));
+}
+
+const COMPOUND_MARKER = /(와|과|랑|및|겸|하면서|하며|같이|함께|동시에|\+|&)/;
+/**
+ * 구조 기본값을 그대로 믿기 어려운 두 경우. 복합: 사업 소개에 이음말이 있고 분류 검색의 강한 일치(구어 표현 또는 이름 2토큰 이상)가 두 업종 이상에 걸친다.
+ * 미분류: 업종을 '새로운 사업·미분류'로 두었고 분류 코드도 없다. 화면은 구조 다섯 축을 직접 고르도록 안내하고, 기본값은 바꾸지 않는다.
+ */
+export function intakeStructureFallback(coach: CoachState, intake: IntakeState): "unclassified" | "compound" | null {
+  const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim() ?? "";
+  if (!business) return null;
+  if (COMPOUND_MARKER.test(business)) {
+    const sectors = new Set(searchKsic(business, { limit: 6, minLevel: 5 }).filter(match => match.via === "synonym" || match.score >= 24).map(match => sectorForKsic(match.entry.code)).filter(sector => sector && sector !== "general"));
+    if (sectors.size >= 2) return "compound";
+  }
+  return !intake.ksic && intake.sector === "general" && (intake.mode === "exploring" || !!intake.answers.industry) ? "unclassified" : null;
 }
 
 export function displayIntakeValue(value: IntakeValue): string {
