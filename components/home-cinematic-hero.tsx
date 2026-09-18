@@ -20,7 +20,7 @@ export function HomeCinematicHero({ title, onStart }: {
     </div>
     <section className={styles.copy}>
       <h1><HomeTitleEditor title={title} /></h1>
-      <h2>가능성은 가볍게 묻고<br />시작은 구체적으로</h2>
+      <h2>가능성은 <strong>가볍게</strong> 묻고<br />시작은 <strong>구체적으로</strong></h2>
       <div className={`${styles.entry} home-hero-actions`}><HomeConversationEntry onStart={onStart} /></div>
     </section>
   </div>;

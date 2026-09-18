@@ -1,4 +1,4 @@
-.opening { position: relative; isolation: isolate; background: #f7f8fa; overflow: clip; }
+.opening { position: relative; isolation: isolate; background: var(--home-bg, #000); overflow: clip; }
 .opening[data-opening-motion="on"] [data-cinematic-hero][data-motion] [data-home-preview-window] {
   clip-path: inset(0 var(--opening-inset, 0%) round var(--opening-radius, 28px));
 }

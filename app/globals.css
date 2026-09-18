@@ -68,9 +68,8 @@ a { color: inherit; text-decoration: none; }
 .site-header.light { color: white; }
 .brand { border: 0; background: none; padding: 0; display: flex; align-items: center; cursor: pointer; }
 .brand-logo { height: var(--topbar-logo-h); width: auto; display: block; object-fit: contain; }
-.site-header.light .brand-logo, .project-sidebar .brand-logo, .home-footer .brand-logo { filter: brightness(0) invert(1); }
+.site-header.light .brand-logo, .project-sidebar .brand-logo { filter: brightness(0) invert(1); }
 .project-sidebar .brand-logo { height: 24px; width: auto; }
-.home-footer .brand-logo { height: 28px; width: auto; }
 .site-header nav { display: flex; gap: 36px; font-size: 12px; font-weight: 600; }
 .site-header nav a { opacity: .78; }
 .site-header nav a:hover { opacity: 1; color: var(--green); }
@@ -4833,17 +4832,6 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .home-faq details[open] summary svg { transform: rotate(180deg); }
 .home-faq details p { max-width: 720px; margin: -4px 40px 24px 0; color: #585667; font-size: 16px; line-height: 1.75; }
 
-.home-footer { padding: 54px max(var(--gutter), calc((100vw - var(--content-max)) / 2)); background: #0d0a2c; color: white; display: grid; grid-template-columns: 1.1fr .7fr 1.2fr; gap: 70px; align-items: start; }
-.home-footer .brand strong { color: white; }
-.home-footer > div:first-child > p { max-width: 340px; margin: 15px 0 0; color: #8b95a1; font-size: 14px; line-height: 1.7; }
-.home-footer nav { display: grid; gap: 10px; }
-.home-footer nav a { color: #b0b8c1; font-size: 15px; line-height: 1.6; }
-.home-footer-notice strong { font-size: 15px; }
-.home-footer-notice p { margin: 9px 0 18px; color: #8b95a1; font-size: 13px; line-height: 1.7; }
-.home-footer-notice small { color: #8b95a1; font-size: 13px; line-height: 1.6; }
-.home-footer-notice small a { color: #b0b8c1; text-decoration: underline; }
-.home-business-info { margin: 9px 0 12px; color: #8b95a1; display: grid; gap: 4px; font-size: 13px; line-height: 1.6; }
-
 /* Platform legal, account and launch readiness */
 .platform-legal-page { min-height: 100vh; background: #f6f5ff; }
 .platform-legal-header { height: var(--topbar-h); flex: none; padding: 0 max(24px, calc((100vw - 1120px) / 2)); border-bottom: 1px solid #cccae3; background: white; display: flex; align-items: center; justify-content: space-between; }
@@ -5164,8 +5152,6 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .home-price-options { width: min(520px, 100%); }
   .home-price-panel { width: 100%; }
   .home-faq { grid-template-columns: 1fr; gap: 35px; }
-  .home-footer { grid-template-columns: 1fr 1fr; }
-  .home-footer-notice { grid-column: 1 / -1; }
 }
 
 @media (min-width: 641px) and (max-width: 1100px) {
@@ -5290,9 +5276,6 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .home-faq h2 { font-size: 26px; }
   .home-faq summary { min-height: 68px; font-size: 15px; }
   .home-faq details p { margin-right: 0; font-size: 14px; }
-  .home-footer { padding: 42px var(--gutter); grid-template-columns: 1fr; gap: 32px; }
-  .home-footer nav { grid-template-columns: 1fr 1fr; }
-  .home-footer-notice { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -9236,10 +9219,6 @@ body {
   color: #fff !important;
 }
 
-.home-footer {
-  background: var(--text-strong);
-}
-
 /* Guided input and recommendation screens */
 .start-choice-page,
 .conversation-page,
@@ -10021,10 +10000,7 @@ body {
   .home-custom-price > div:nth-child(2) small,
   .home-custom-price > div:nth-child(2) p,
   .home-price-panel small,
-  .home-custom-price em,
-  .home-business-info,
-  .home-footer-notice p,
-  .home-footer-notice small {
+  .home-custom-price em {
     font-size: 13px;
     line-height: 1.65;
   }
@@ -11243,93 +11219,6 @@ body {
   .home-faq details p { padding-left: 13px; }
 }
 
-/* ── 푸터 — Neuros 의 Footer/1 ────────────────────────────────
- * 검정이던 것을 흰 바탕으로. 원본이 그렇기도 하고, 우리 푸터에는 사업자
- * 등록번호·통신판매 신고 같은 법정 고지가 들어 있어 잘 읽히는 편이 낫다.
- *
- * 틀: 맨 위 상호 + 가는 선 / 가운데 안내 열 / 맨 아래 가는 선 + 저작권 줄.
- * ───────────────────────────────────────────────────────────── */
-.home-footer {
-  padding: 72px max(var(--gutter), calc((100vw - var(--content-max)) / 2));
-  background: var(--surface);
-  color: var(--text-body);
-  display: block;
-}
-
-.home-footer .brand-logo { filter: none; }
-.home-footer .brand strong { color: var(--text-strong); }
-
-/* 상호 옆으로 이어지는 가는 선 — 원본의 특징이다 */
-.home-footer-top {
-  padding-bottom: 22px;
-  border-bottom: 1px solid var(--border-soft);
-  display: flex;
-  align-items: center;
-}
-
-.home-footer-cols {
-  padding: 34px 0 44px;
-  display: grid;
-  grid-template-columns: 1.1fr .7fr 1.2fr;
-  gap: 60px;
-  align-items: start;
-}
-
-.home-footer-cols > div:first-child > strong,
-.home-footer nav > strong,
-.home-footer-notice > strong {
-  display: block;
-  margin-bottom: 14px;
-  color: var(--text-strong);
-  font-size: 16px;
-  font-weight: 700;
-}
-
-.home-footer-cols > div:first-child > p {
-  max-width: 320px;
-  margin: 0;
-  color: var(--text-body);
-  font-size: 15px;
-  line-height: 1.7;
-}
-
-/*
- * 모바일에서 nav 를 2열로 두던 옛 규칙이 남아 있어, 새로 넣은 '안내' 제목이
- * 첫 칸을 차지하고 링크가 그 옆으로 흘렀다. 제목은 늘 한 줄을 다 쓴다.
- */
-.home-footer nav { display: grid; gap: 10px; }
-.home-footer nav > strong { grid-column: 1 / -1; }
-.home-footer nav a { color: var(--text-body); font-size: 15px; line-height: 1.6; }
-.home-footer nav a:hover { color: var(--blue); }
-
-.home-footer-notice p { margin: 9px 0 0; color: var(--text-body); font-size: 14px; line-height: 1.7; }
-.home-business-info { margin: 0 0 12px; color: var(--text-body); display: grid; gap: 4px; font-size: 14px; line-height: 1.6; }
-
-.home-footer-bottom {
-  padding-top: 22px;
-  border-top: 1px solid var(--border-soft);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px 24px;
-}
-/* 검정 바탕일 때는 --text-muted 로 충분했지만 흰 바탕에서는 3.04 다 */
-.home-footer-bottom small { color: #5f5c7f; font-size: 14px; }
-.home-footer-bottom a { color: var(--text-body); text-decoration: underline; }
-
-@media (max-width: 900px) {
-  .home-footer-cols { grid-template-columns: 1fr 1fr; gap: 36px; }
-  .home-footer-notice { grid-column: 1 / -1; }
-}
-
-@media (max-width: 640px) {
-  .home-footer { padding: 48px var(--gutter); }
-  .home-footer-cols { padding: 28px 0 32px; grid-template-columns: 1fr; gap: 28px; }
-  .home-footer-notice { grid-column: auto; }
-  .home-footer-bottom { flex-direction: column; align-items: flex-start; }
-}
-
 /* ── 후기 블록 ────────────────────────────────────────────────
  * 레퍼런스(쇼핑몰 리뷰 요약)와 같은 구성 — 평균 별점 · 총 개수 ·
  * 평점 분포 막대 · 후기 카드.
@@ -12351,52 +12240,6 @@ body {
   .simple-home .home-faq details p { padding: 0 22px 18px; font-size: 14px; }
   .simple-home .home-faq details { border-radius: 28px; }
   .simple-home .home-faq details[open] { border-radius: 22px; }
-}
-
-/* ── 푸터 → Footers V10: 한 줄 + 가는 선 + 가운데 저작권 ── */
-.simple-home .home-footer {
-  padding: 64px var(--gutter) 40px;
-  background: var(--surface);
-  display: grid;
-  justify-items: center;
-  gap: 0;
-}
-.simple-home .home-footer-row {
-  width: min(1220px, 100%);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 24px;
-  flex-wrap: wrap;
-}
-.simple-home .home-footer-row nav { display: flex; flex-wrap: wrap; gap: 28px; }
-.simple-home .home-footer-row nav a { color: #585667; font-size: 15px; text-decoration: none; }
-.simple-home .home-footer-row nav a:hover { color: var(--blue); }
-.simple-home .home-footer-bottom {
-  width: min(1220px, 100%);
-  margin-top: 40px;
-  padding-top: 28px;
-  border-top: 1px solid #dfdef1;
-  display: grid;
-  justify-items: center;
-}
-.simple-home .home-footer-bottom small { color: #5f5c7f; font-size: 13px; text-align: center; line-height: 1.7; }
-.simple-home .home-footer-notice {
-  width: min(1220px, 100%);
-  margin-top: 18px;
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-}
-.simple-home .home-footer-notice p,
-.simple-home .home-business-info { margin: 0; color: #7f7ca2; font-size: 13px; line-height: 1.7; text-align: center; }
-.simple-home .home-business-info { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; }
-
-@media (max-width: 640px) {
-  .simple-home .home-footer { padding: 44px var(--gutter) 32px; }
-  .simple-home .home-footer-row { flex-direction: column; align-items: flex-start; gap: 18px; }
-  .simple-home .home-footer-row nav { gap: 12px 20px; }
-  .simple-home .home-footer-bottom { margin-top: 28px; padding-top: 20px; }
 }
 
 /* ── 깨진 다섯 곳 수리 ─────────────────────────────────────────────
@@ -15374,49 +15217,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .simple-home .home-deliverables-copy ul { border-top-color: #dcdaee; }
 .simple-home .home-faq { grid-template-columns: minmax(280px, 430px) 1fr; }
 
-/* ── ④ 푸터: 한 줄 → 다열 메가 푸터(어두운 밴드) ── */
-.simple-home .home-footer {
-  padding: 92px var(--gutter) 44px;
-  background: #08070f;
-  color: #fff;
-  justify-items: stretch;
-}
-.simple-home .home-footer .brand-logo { filter: brightness(0) invert(1); }
-.simple-home .home-footer-main {
-  width: min(1220px, 100%);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr;
-  gap: 56px;
-  align-items: start;
-}
-.simple-home .home-footer-brand { display: grid; justify-items: start; gap: 16px; }
-.simple-home .home-footer-brand p { max-width: 300px; margin: 0; color: #98a0b3; font-size: 15px; line-height: 1.7; }
-.simple-home .home-footer-main nav { display: grid; justify-items: start; gap: 12px; }
-.simple-home .home-footer-main nav strong { margin-bottom: 4px; color: #8b95a1; font-size: 13px; font-weight: 800; letter-spacing: .04em; }
-.simple-home .home-footer-main nav a { color: #c3c9d4; font-size: 15px; line-height: 1.6; text-decoration: none; }
-.simple-home .home-footer-main nav a:hover { color: #fff; }
-.simple-home .home-footer-bottom {
-  width: min(1220px, 100%);
-  margin: 64px auto 0;
-  padding-top: 26px;
-  border-top: 1px solid rgba(255, 255, 255, .14);
-  justify-items: start;
-}
-.simple-home .home-footer-bottom small { color: #8b95a1; text-align: left; }
-.simple-home .home-footer-bottom small a { color: #b0b8c1; }
-.simple-home .home-footer-notice {
-  width: min(1220px, 100%);
-  margin: 14px auto 0;
-  justify-items: start;
-  gap: 6px;
-}
-.simple-home .home-footer-notice p,
-.simple-home .home-footer-notice small,
-.simple-home .home-business-info { color: #77808f; text-align: left; }
-
 @media (max-width: 900px) {
-  .simple-home .home-footer-main { grid-template-columns: 1fr; gap: 36px; }
   .simple-home .home-stats-cards { grid-template-columns: 1fr 1fr; gap: 30px 22px; }
 }
 @media (max-width: 640px) {
@@ -16919,3 +16720,105 @@ button.account-kakao-btn svg { display: inline-block !important; }
 :is(a, button):hover > .cta-arrow .cta-arrow__chev, :is(a, button):focus-visible > .cta-arrow .cta-arrow__chev { transform: translateX(2px); }
 @media (prefers-reduced-motion: reduce) { .cta-arrow line { transition: none; } }
 
+/* ── 홈 푸터 ─────────────────────────────────────────────────
+ * 가는 선으로 나눈 세 구획. ① 로고와 안내 링크 ② 접이식 상세(사업자 정보
+ * 항목표 · 이용 안내 · 디자인 출처, 기본 접힘) ③ 저작권 줄. 다섯 세대에 걸쳐 쌓였던 옛 푸터 규칙
+ * (검정 밴드·3열·V10 한 줄·메가 푸터)은 모두 걷어내고 여기 하나만 남긴다.
+ * 사업자 법정 표기와 AI 고지는 디자인이 바뀌어도 지우지 않는다.
+ * 색은 홈 검정 규칙을 따른다(순검정 바탕, 흰 글자, 가는 흰 선).
+ * ───────────────────────────────────────────────────────────── */
+html:has(main.cinematic-home), body:has(main.cinematic-home) { background: #000; }
+/* 아래 여백은 고정된 상담 버튼(60px + 아래 38px) 밑으로 마지막 줄이 깔리지 않을 만큼 둔다 */
+.home-footer {
+  padding: 64px var(--gutter) 120px;
+  background: #000;
+  color: #b6b8bf;
+  display: grid;
+  justify-items: stretch;
+  gap: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  letter-spacing: -0.005em;
+}
+.home-footer > * { width: min(1220px, 100%); margin: 0 auto; }
+.home-footer a { color: inherit; text-decoration: none; }
+.home-footer a:hover { color: #fff; }
+.home-footer .brand-logo { height: 26px; width: auto; filter: var(--home-logo-filter, none); }
+
+/* ① 로고 왼쪽, 안내 링크 오른쪽 한 줄 */
+.home-footer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 20px 40px;
+  padding-bottom: 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, .12);
+}
+.home-footer-head nav { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 10px 28px; }
+.home-footer-head nav a { color: #d5d6db; font-size: 14px; font-weight: 500; line-height: 1.5; white-space: nowrap; }
+
+/* ② 접이식 상세 — 한 줄짜리 토글, 펼치면 항목표와 목록이 두 열로 */
+.home-footer-details { border-bottom: 1px solid rgba(255, 255, 255, .12); }
+.home-footer-details > summary {
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 0;
+  color: #d5d6db;
+  font-size: 14px;
+  font-weight: 500;
+}
+.home-footer-details > summary::-webkit-details-marker { display: none; }
+.home-footer-details > summary:hover { color: #fff; }
+.home-footer-details > summary svg { width: 16px; height: 16px; color: #82848d; transition: transform .2s ease; }
+.home-footer-details[open] > summary svg { transform: rotate(180deg); }
+.home-footer-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 32px 72px;
+  padding: 6px 0 32px;
+}
+.home-footer-title { display: block; margin: 0 0 14px; color: #f2f2f3; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+.home-footer-info {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 104px minmax(0, 1fr);
+  gap: 8px 16px;
+  font-size: 13.5px;
+}
+.home-footer-info dt { margin: 0; color: #82848d; font-weight: 500; }
+.home-footer-info dd { margin: 0; color: #d5d6db; overflow-wrap: anywhere; }
+.home-footer-empty { margin: 0; max-width: 460px; color: #b6b8bf; font-size: 13.5px; line-height: 1.7; }
+.home-footer-notes { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; color: #b6b8bf; font-size: 13.5px; line-height: 1.65; }
+.home-footer-notes li { position: relative; padding-left: 14px; }
+.home-footer-notes li::before { content: ""; position: absolute; left: 0; top: .6em; width: 5px; height: 5px; border-radius: 50%; background: #4a4c55; }
+
+/* 디자인 출처는 상세 맨 아래 한 줄, 두 열을 가로지른다 */
+.home-footer-credits { grid-column: 1 / -1; margin: 0; padding-top: 22px; border-top: 1px solid rgba(255, 255, 255, .1); color: #82848d; font-size: 12.5px; line-height: 1.6; }
+.home-footer-credits a { color: #b6b8bf; text-decoration: underline; text-decoration-color: rgba(255, 255, 255, .3); text-underline-offset: 2px; }
+.home-footer-credits a:hover { color: #fff; }
+
+/* ③ 저작권 줄 */
+.home-footer-legal { padding-top: 20px; color: #82848d; font-size: 12.5px; line-height: 1.6; }
+.home-footer-legal small { font-size: inherit; color: inherit; }
+
+@media (max-width: 900px) {
+  .home-footer-body { grid-template-columns: 1fr; gap: 28px; }
+}
+@media (max-width: 640px) {
+  .home-footer { padding: 44px var(--gutter) 96px; font-size: 13px; }
+  .home-footer-head { display: grid; gap: 22px; padding-bottom: 24px; }
+  /* 폰에서는 링크 여섯 개를 두 줄짜리 격자로 — 흘러 넘치는 줄바꿈이 없다 */
+  .home-footer-head nav { display: grid; grid-template-columns: 1fr 1fr; justify-content: start; gap: 12px 16px; }
+  .home-footer-head nav a { white-space: normal; }
+  .home-footer-details > summary { padding: 16px 0; }
+  .home-footer-body { padding: 4px 0 26px; gap: 24px; }
+  .home-footer-credits { padding-top: 18px; }
+  .home-footer-info { grid-template-columns: 92px minmax(0, 1fr); gap: 8px 12px; font-size: 13px; }
+  .home-footer-empty, .home-footer-notes { font-size: 13px; }
+  .home-footer-legal { padding-top: 18px; }
+}

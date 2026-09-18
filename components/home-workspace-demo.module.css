@@ -1,6 +1,6 @@
-.demo { --demo-scale: .8; --demo-screen-height: 480px; --demo-pan: 0px; --demo-focus: 0; --demo-enter: 1; --demo-open: 0; --demo-click: 0; --demo-pointer-opacity: 0; --demo-pointer-x: 400px; --demo-pointer-y: 400px; --demo-report-pan: 0; --demo-progress: 0%; position: relative; isolation: isolate; width: 100%; aspect-ratio: 1; margin: 0; background: #e9edef; overflow: hidden; color: #202632; }
+.demo { --demo-scale: .8; --demo-screen-height: 480px; --demo-pan: 0px; --demo-focus: 0; --demo-enter: 1; --demo-open: 0; --demo-click: 0; --demo-pointer-opacity: 0; --demo-pointer-x: 400px; --demo-pointer-y: 400px; --demo-report-pan: 0; --demo-progress: 0%; position: relative; isolation: isolate; width: 100%; aspect-ratio: 1; margin: 0; background: var(--home-card, #131317); overflow: hidden; color: #e6e7eb; }
 .demo { scroll-margin-top: 84px; }
-.frame { position: absolute; inset: 24px 18px 70px; border: 1px solid #c9d0d7; border-radius: 8px; background: #fff; overflow: hidden; box-shadow: 0 3px 4px #1926350a, 0 18px 32px -12px #19263530; }
+.frame { position: absolute; inset: 24px 18px 70px; border: 1px solid var(--home-line-2, rgba(255, 255, 255, .22)); border-radius: 8px; background: #fff; overflow: hidden; box-shadow: 0 3px 4px #00000040, 0 18px 32px -12px #000000b3; }
 .app { position: absolute; top: 0; left: 0; width: var(--demo-native-width, 480px); transform: scale(var(--demo-scale)); transform-origin: top left; font-family: inherit; letter-spacing: 0; }
 .app * { box-sizing: border-box; }
 .browserBar { height: 42px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid #e1e7ef; background: #f7f9fb; color: #748090; font-size: 12px; }
@@ -55,15 +55,15 @@
 .demo .readerActions { position: absolute; left: 0; right: 0; bottom: 0; height: 78px; padding: 12px 16px; }
 .demo .readerActions button { font-size: 16px; }
 .demo .readerActions button:disabled { opacity: .45; }
-.caption { position: absolute; left: 22px; right: 22px; bottom: 34px; display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 11px; line-height: 1.5; color: #6b7684; }
-.caption > span:first-child { color: #333d4b; font-weight: 650; }
+.caption { position: absolute; left: 22px; right: 22px; bottom: 34px; display: flex; justify-content: space-between; gap: 12px; align-items: center; font-size: 11px; line-height: 1.5; color: var(--home-fg-3, #82848d); }
+.caption > span:first-child { color: #fff; font-weight: 650; }
 /* The global form surface must not paint the range input's hit area. */
 .demo .scrubber { appearance: none; -webkit-appearance: none; position: absolute; left: 22px; bottom: 3px; width: calc(100% - 44px); height: 30px; margin: 0; border: 0; border-radius: 0; padding: 0; box-shadow: none; cursor: ew-resize; background: transparent !important; }
-.scrubber::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: linear-gradient(to right, #5c738d 0 var(--demo-progress), #cbd3dc var(--demo-progress) 100%); }
-.scrubber::-moz-range-track { height: 3px; border-radius: 2px; background: #cbd3dc; }
-.scrubber::-moz-range-progress { height: 3px; background: #5c738d; }
-.scrubber::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 10px; height: 10px; margin-top: -3.5px; border-radius: 50%; background: #5c738d; border: 2px solid #e9edef; }
-.scrubber::-moz-range-thumb { width: 7px; height: 7px; border-radius: 50%; background: #5c738d; border: 2px solid #e9edef; }
+.scrubber::-webkit-slider-runnable-track { height: 3px; border-radius: 2px; background: linear-gradient(to right, #a0a2aa 0 var(--demo-progress), rgba(255, 255, 255, .2) var(--demo-progress) 100%); }
+.scrubber::-moz-range-track { height: 3px; border-radius: 2px; background: rgba(255, 255, 255, .2); }
+.scrubber::-moz-range-progress { height: 3px; background: #a0a2aa; }
+.scrubber::-webkit-slider-thumb { appearance: none; -webkit-appearance: none; width: 10px; height: 10px; margin-top: -3.5px; border-radius: 50%; background: #a0a2aa; border: 2px solid #131317; }
+.scrubber::-moz-range-thumb { width: 7px; height: 7px; border-radius: 50%; background: #a0a2aa; border: 2px solid #131317; }
 .demo .scrubber:focus-visible { outline: 2px solid #3182f6; outline-offset: 0; border-radius: 4px; }
 @media (max-width: 959px) { .demo { aspect-ratio: 4 / 5; border-radius: 8px; } .frame { inset: 22px 16px 70px; } }
 @media (max-width: 380px) { .frame { inset: 16px 10px 62px; } .caption { left: 14px; right: 14px; bottom: 31px; font-size: 10px; gap: 6px; } .caption > span:last-child { font-size: 9px; } .demo .scrubber { left: 14px; width: calc(100% - 28px); } }

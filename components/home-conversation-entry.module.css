@@ -1,12 +1,12 @@
-.ring { position: relative; isolation: isolate; display: block; width: min(580px, 100%); padding: 2px; border: 0; border-radius: 36px; background: #dce7fa; cursor: pointer; overflow: hidden; box-shadow: 0 4px 22px #4c7ceb22; transition: transform .3s, box-shadow .3s; }
-.ring::before { content: ""; position: absolute; z-index: -1; width: 160%; aspect-ratio: 1; top: 50%; left: 50%; background: conic-gradient(from 0deg, #c8def9, #3182f6, #67bcea, #b8b5ef, #e0eaf8, #3182f6, #c8def9); animation: ringOrbit 5s linear infinite; }
-.ring .inner { --send-width: 64px; display: grid; grid-template-columns: var(--send-width) minmax(0, 1fr) var(--send-width); align-items: center; gap: 4px; padding: 8px; min-height: 62px; border-radius: 34px; background: #fff; color: #414d61; font-size: 16px; font-weight: 600; letter-spacing: 0; }
-.ring .send { grid-column: 3; grid-row: 1; display: grid; place-items: center; width: var(--send-width); height: 42px; border-radius: 24px; background: #3182f6; color: #fff; font-size: 14px; font-weight: 650; white-space: nowrap; transition: background .2s; }
-.ring:hover .send { background: #246dd5; }
+.ring { position: relative; isolation: isolate; display: block; width: min(580px, 100%); padding: 2px; border: 0; border-radius: 36px; background: #1a2740; cursor: pointer; overflow: hidden; box-shadow: 0 4px 22px #3182f626; transition: transform .3s, box-shadow .3s; }
+.ring::before { content: ""; position: absolute; z-index: -1; width: 160%; aspect-ratio: 1; top: 50%; left: 50%; background: conic-gradient(from 0deg, #1e3a6b, #3182f6, #67bcea, #6f6bd6, #1e3a6b, #3182f6, #1e3a6b); animation: ringOrbit 5s linear infinite; }
+.ring .inner { --send-width: 64px; display: grid; grid-template-columns: var(--send-width) minmax(0, 1fr) var(--send-width); align-items: center; gap: 4px; padding: 8px; min-height: 62px; border-radius: 34px; background: #0f1013; color: #e6e7eb; font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.ring .send { grid-column: 3; grid-row: 1; display: grid; place-items: center; width: var(--send-width); height: 42px; border-radius: 24px; background: var(--home-btn-bg, #ededee); color: var(--home-btn-fg, #0a0a0b); font-size: 14px; font-weight: 650; white-space: nowrap; transition: background .2s; }
+.ring:hover .send { background: var(--home-btn-bg-hover, #fff); }
 .ring .send svg { display: block !important; width: 18px; height: 18px; color: currentColor; }
 .spinner { animation: sending 1s linear infinite; }
 .ring:disabled { cursor: progress; }
-.ring:hover { transform: translateY(-3px); box-shadow: 0 10px 34px #4c7ceb33; }.ring:active { transform: scale(.985); }.ring:focus-visible { outline: 3px solid #3182f6; outline-offset: 5px; }
+.ring:hover { transform: translateY(-3px); box-shadow: 0 10px 34px #3182f640; }.ring:active { transform: scale(.985); }.ring:focus-visible { outline: 3px solid #3182f6; outline-offset: 5px; }
 @keyframes ringOrbit { from { transform: translate(-50%,-50%) rotate(0); } to { transform: translate(-50%,-50%) rotate(360deg); } }
 @keyframes sending { to { transform: rotate(360deg); } }
 @media(max-width:600px) { .ring .inner { --send-width: 52px; min-height: 56px; padding: 6px; font-size: 14px; }.ring .send { height: 40px; font-size: 13px; } }
@@ -16,6 +16,6 @@
 :global(.simple-home.product-home .home-hero-actions) .entry button.ring { border-radius: 36px !important; padding: 2px !important; }
 .ring .prompt { grid-column: 2; grid-row: 1; min-width: 0; display: flex; align-items: center; justify-content: center; min-height: 24px; text-align: center; }
 .prompt .typed { position: relative; white-space: nowrap; line-height: 1.5; }
-.typed i { position: absolute; left: calc(100% + 3px); top: 50%; transform: translateY(-50%); width: 2px; height: 1.15em; background: #3182f6; animation: caretBlink 1s steps(1) infinite; }
+.typed i { position: absolute; left: calc(100% + 3px); top: 50%; transform: translateY(-50%); width: 2px; height: 1.15em; background: #fff; animation: caretBlink 1s steps(1) infinite; }
 @keyframes caretBlink { 50% { opacity: 0; } }
 @media(prefers-reduced-motion:reduce) { .typed i { animation: none; display: none; } }

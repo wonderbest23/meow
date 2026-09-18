@@ -1,6 +1,6 @@
 /*
  * 홈 행동 버튼. 각진 모서리(6px), 중간 굵기 글자, 오른쪽 화살표 하나. 그림자·그라데이션·왼쪽 아이콘은 두지 않는다.
- * 채움(solid)은 브랜드 파랑, 연한(soft)은 옅은 파랑 바탕에 파란 글자다. 색 전환은 0.22초.
+ * 검정 바탕용: 채움(solid)은 밝은 회색 바탕에 검정 글자, 연한(soft)은 반투명 흰 바탕에 흰 글자다. 색 전환은 0.22초.
  */
 .action[data-home-action] {
   display: inline-flex;
@@ -15,8 +15,8 @@
   padding: 11px 16px 11px 18px;
   border: 1px solid transparent;
   border-radius: 6px;
-  background: #eef4ff;
-  color: #1f5bc7;
+  background: var(--home-btn-soft, rgba(255, 255, 255, .12));
+  color: #fff;
   font-family: inherit;
   font-size: 16px;
   font-weight: 500;
@@ -30,13 +30,13 @@
 
 .label { min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
 .label small { display: block; margin-top: 3px; font-size: 12px; line-height: 1.45; font-weight: 400; color: inherit; opacity: .78; }
-.action[data-home-action][data-variant="solid"] { background: #3272db; border-color: #3272db; color: #fff; }
+.action[data-home-action][data-variant="solid"] { background: var(--home-btn-bg, #ededee); border-color: var(--home-btn-bg, #ededee); color: var(--home-btn-fg, #0a0a0b); }
 .action[data-home-action]:focus-visible { outline: 3px solid #3182f6; outline-offset: 4px; }
 
 @media (hover: hover) and (pointer: fine) {
-  .action[data-home-action]:hover { background: #e3ecfc; }
-  .action[data-home-action][data-variant="solid"]:hover { background: #2a64c6; border-color: #2a64c6; }
+  .action[data-home-action]:hover { background: var(--home-btn-soft-hover, rgba(255, 255, 255, .2)); }
+  .action[data-home-action][data-variant="solid"]:hover { background: var(--home-btn-bg-hover, #fff); border-color: var(--home-btn-bg-hover, #fff); }
 }
 
-.action[data-home-action]:active { background: #d7e4fb; }
-.action[data-home-action][data-variant="solid"]:active { background: #2458b3; border-color: #2458b3; }
+.action[data-home-action]:active { background: rgba(255, 255, 255, .26); }
+.action[data-home-action][data-variant="solid"]:active { background: #d9d9db; border-color: #d9d9db; }

@@ -1,4 +1,28 @@
-.page:global(.simple-home.product-home.cinematic-home) { background: #fff; color: #191f28; }
+/*
+ * 홈 색 규칙 — 테라팹처럼 순검정 바탕에 거의 흰 글자. 홈 모듈은 모두 이 토큰을 읽는다.
+ * 버튼은 밝은 회색 바탕에 검정 글자 하나로 통일하고, 파랑은 강조색으로만 아주 드물게 쓴다.
+ * 로고는 흰 글자 원본이 들어오기 전까지 파란 원본을 필터로 뒤집어 쓴다(--home-logo-filter).
+ */
+.page:global(.simple-home.product-home.cinematic-home) {
+  --home-bg: #000;
+  --home-bg-2: #0a0a0c;
+  --home-card: #131317;
+  --home-card-2: #1c1c21;
+  --home-line: rgba(255, 255, 255, .12);
+  --home-line-2: rgba(255, 255, 255, .22);
+  --home-fg: #f2f2f3;
+  --home-fg-2: #b6b8bf;
+  --home-fg-3: #82848d;
+  --home-accent: #7eb1ff;
+  --home-btn-bg: #ededee;
+  --home-btn-fg: #0a0a0b;
+  --home-btn-bg-hover: #fff;
+  --home-btn-soft: rgba(255, 255, 255, .12);
+  --home-btn-soft-hover: rgba(255, 255, 255, .2);
+  --home-logo-filter: brightness(0) invert(1);
+  background: var(--home-bg);
+  color: var(--home-fg);
+}
 /*
  * 상단 서리(점진 블러). 헤더 자체에는 배경·블러를 두지 않는다(부모에 backdrop-filter가 있으면 자식 띠가 페이지를 흐리지 못한다).
  * 헤더보다 큰 레이어에 띠 4장을 겹치고, 위 띠일수록 흐림이 세고 마스크가 짧다. 그래서 경계선 없이 위는 진하고 아래로 갈수록 선명해진다.
@@ -10,7 +34,7 @@
   position: absolute; inset: 0; pointer-events: none;
   -webkit-backdrop-filter: blur(calc(var(--frost) * var(--band-blur))) saturate(calc(1 + var(--frost) * .18));
   backdrop-filter: blur(calc(var(--frost) * var(--band-blur))) saturate(calc(1 + var(--frost) * .18));
-  background: linear-gradient(180deg, rgba(255, 255, 255, calc(var(--frost) * var(--band-tint))) 0%, rgba(255, 255, 255, 0) 100%);
+  background: linear-gradient(180deg, rgba(0, 0, 0, calc(var(--frost) * var(--band-tint))) 0%, rgba(0, 0, 0, 0) 100%);
   -webkit-mask-image: var(--band-mask); mask-image: var(--band-mask);
 }
 .page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(1)) { --band-blur: 30px; --band-tint: .78; --band-mask: linear-gradient(180deg, #000 0%, #000 22%, rgba(0, 0, 0, .55) 40%, transparent 60%); }
@@ -23,49 +47,43 @@
   .page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(2)),
   .page:global(.simple-home.product-home.cinematic-home > .home-header-shell > .home-header-frost > i:nth-child(4)) { display: none; }
 }
-/* 뒤 배경 흐림을 못 쓰는 브라우저는 예전처럼 흰 바탕으로 읽히게 한다. */
+/* 뒤 배경 흐림을 못 쓰는 브라우저는 검정 바탕으로 읽히게 한다. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .page:global(.simple-home.product-home.cinematic-home > .home-header-shell) { background: rgba(255, 255, 255, calc(var(--frost) * .94)); }
+  .page:global(.simple-home.product-home.cinematic-home > .home-header-shell) { background: rgba(0, 0, 0, calc(var(--frost) * .94)); }
 }
-.page:global(.simple-home.product-home.cinematic-home .site-header) { height: 64px; min-height: 64px; max-width: 1280px; margin: auto; padding: 0 32px; }
-/* 헤더 시작 버튼: 홈 행동 버튼과 같은 규칙(각진 6px, 중간 굵기, 오른쪽 화살표). 전역 CSS의 !important 겹침을 이 화면에서만 덮는다. */
-.page:global(.simple-home.product-home.cinematic-home .site-header .small-start) { display: inline-flex !important; align-items: center; gap: 6px; min-height: 40px !important; height: 40px; padding: 0 12px 0 16px !important; border: 1px solid #3272db; border-radius: 6px !important; background: #3272db; color: #fff; font-size: 14px !important; font-weight: 500 !important; letter-spacing: -0.005em; transition: background .22s cubic-bezier(.4, 0, .2, 1), border-color .22s cubic-bezier(.4, 0, .2, 1); }
-.page:global(.simple-home.product-home.cinematic-home .site-header .small-start:hover) { background: #2a64c6 !important; border-color: #2a64c6 !important; color: #fff !important; }
-/* 전역 규칙이 버튼 안의 아이콘을 숨기지만(글자 우선 원칙), 이 화살표는 버튼 의미의 일부라 홈에서는 보인다. */
-.page:global(.simple-home.product-home.cinematic-home .site-header .small-start .cta-arrow) { display: block !important; width: 15px; height: 15px; }
+.page:global(.simple-home.product-home.cinematic-home .site-header) { height: 64px; min-height: 64px; max-width: 1280px; margin: auto; padding: 0 32px; color: var(--home-fg); }
+.page:global(.simple-home.product-home.cinematic-home .site-header .brand-logo) { filter: var(--home-logo-filter); }
+.page:global(.simple-home.product-home.cinematic-home .site-header .home-header-nav a) { color: rgba(255, 255, 255, .72); }
+.page:global(.simple-home.product-home.cinematic-home .site-header .home-header-nav a:hover) { color: #fff; }
 .page:global(.simple-home.product-home.cinematic-home .site-header .account-link) { width: 40px; height: 40px; padding: 0; border-radius: 6px; }
-.page:global(.simple-home.product-home.cinematic-home .site-header .account-link) { background: #edf4ff; color: #3182f6; }
-.page:global(.simple-home.product-home.cinematic-home .site-header .account-link svg) { color: #3182f6; }
-.page:global(.simple-home.product-home.cinematic-home .home-footer) { background: #f5f6f8; color: #5b6574; }
-.page:global(.simple-home.product-home.cinematic-home .home-footer .brand-logo) { filter: none; }
-.page:global(.simple-home.product-home.cinematic-home .home-footer a) { color: #4e5968; opacity: 1; }
-.page:global(.simple-home.product-home.cinematic-home .home-footer :is(p,small)) { color: #5b6574; }
-.page:global(.simple-home.product-home.cinematic-home .home-footer-bottom) { border-color: #dfe4ea; }
-.page:global(.simple-home.product-home.cinematic-home .home-footer-notice) { border-color: #dfe4ea; }
-.hero { --progress: 0; position: relative; isolation: isolate; min-height: 610px; height: min(880px, calc(100svh - 104px)); margin: 0 24px; color: #191f28; }
+.page:global(.simple-home.product-home.cinematic-home .site-header .account-link) { background: var(--home-btn-soft); color: #fff; }
+.page:global(.simple-home.product-home.cinematic-home .site-header .account-link svg) { color: #fff; }
+.hero { --progress: 0; position: relative; isolation: isolate; min-height: 610px; height: min(880px, calc(100svh - 104px)); margin: 0 24px; color: var(--home-fg, #f2f2f3); }
 .stage { position: absolute; inset: 0; }
-.media { position: absolute; inset: 0; overflow: hidden; border-radius: 28px; background: #edf4f7; }
-.media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,#ffffffb8 0%,#ffffff68 32%,transparent 62%); }
+.media { position: absolute; inset: 0; overflow: hidden; border-radius: 28px; background: #000; }
+.media::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg,#000000c9 0%,#00000078 32%,transparent 62%); }
 .media img { width: 100%; height: 100%; object-fit: cover; object-position: left center; display: block; }
 .hero[data-motion="on"] .media { clip-path: inset(calc(max(0, var(--progress) - .5) * 8%) round 28px); }
 .hero[data-motion="on"] .media img { transform: scale(calc(1.08 - var(--progress) * .08)); }
 .hero .copy { position: relative; z-index: 1; display: flex; flex-direction: column; justify-content: center; width: min(1240px, 100%); height: 100%; min-height: inherit; padding: 60px 48px 90px; margin: auto; }
-.hero .copy h1 { color: #191f28; font-size: 112px; font-weight: 900; line-height: 1.1; letter-spacing: 0; margin: 0 0 32px; word-break: keep-all; max-width: 620px; overflow-wrap: anywhere; }
-.hero .copy h2 { color: #191f28; font-size: 34px; font-weight: 700; line-height: 1.4; letter-spacing: 0; margin: 0; }
-.hero .copy p { max-width: 480px; color: #4e5968; font-size: var(--home-body-size, 18px); line-height: var(--home-body-line, 1.75); word-break: keep-all; text-wrap: pretty; margin: var(--home-copy-gap, 24px) 0 0; }
+.hero .copy h1 { color: #fff; font-size: 112px; font-weight: 900; line-height: 1.1; letter-spacing: 0; margin: 0 0 32px; word-break: keep-all; max-width: 620px; overflow-wrap: anywhere; }
+/* 부제는 중간 굵기로 두고 핵심어 두 개만 굵게 — 전부 굵으면 제목과 무게가 겹친다 */
+.hero .copy h2 { color: #fff; font-size: 34px; font-weight: 500; line-height: 1.4; letter-spacing: 0; margin: 0; }
+.hero .copy h2 strong { font-weight: 700; }
+.hero .copy p { max-width: 480px; color: var(--home-fg-2, #b6b8bf); font-size: var(--home-body-size, 18px); line-height: var(--home-body-line, 1.75); word-break: keep-all; text-wrap: pretty; margin: var(--home-copy-gap, 24px) 0 0; }
 .hero .entry { width: min(480px, 100%); margin: 32px 0 0; display: block; }
-.next { position: absolute; bottom: 22px; left: 48px; right: 92px; display: flex; align-items: center; justify-content: space-between; color: #33465a; font-size: 13px; text-decoration: none; padding: 8px 0; z-index: 2; }
+.next { position: absolute; bottom: 22px; left: 48px; right: 92px; display: flex; align-items: center; justify-content: space-between; color: var(--home-fg-2, #b6b8bf); font-size: 13px; text-decoration: none; padding: 8px 0; z-index: 2; }
 .next svg { width: 22px; height: 22px; flex: none; }
 .next:focus-visible { outline: 3px solid #3182f6; outline-offset: 4px; }
-@media (max-width: 1100px) and (min-width: 701px) { .hero .copy { padding-left: 36px; }.hero .copy h1 { font-size: 96px; }.hero .copy h2 { font-size: 28px; }.media::after { background: linear-gradient(90deg,#ffffffd9,#ffffff80 45%,transparent 80%); } }
+@media (max-width: 1100px) and (min-width: 701px) { .hero .copy { padding-left: 36px; }.hero .copy h1 { font-size: 96px; }.hero .copy h2 { font-size: 28px; }.media::after { background: linear-gradient(90deg,#000000e0,#00000088 45%,transparent 80%); } }
 @media (max-width: 700px) {
   .page:global(.simple-home.product-home.cinematic-home .site-header) { height: 60px; min-height: 60px; padding: 0 20px; }
   .hero { min-height: 660px; height: calc(100svh - 90px); max-height: 860px; margin: 0 12px; }
-  .media { border-radius: 22px; background: #f5f9fc; }
+  .media { border-radius: 22px; background: #000; }
   .media img { position: absolute; bottom: 0; width: 100%; height: 65%; object-position: 70% center; }
-  .media::after { background: linear-gradient(180deg,#f5f9fc 0%,#f5f9fc 34%,#f5f9fccc 44%,transparent 61%); }
+  .media::after { background: linear-gradient(180deg,#000 0%,#000 34%,#000000cc 44%,transparent 61%); }
   .hero .copy { justify-content: flex-start; text-align: center; padding: 40px 18px 0; }
-  .hero .copy h1 { font-size: 80px; margin: 0 0 32px; max-width: 100%; }
+  .hero .copy h1 { font-size: 80px; margin: 0 0 14px; max-width: 100%; }
   .hero .copy h2 { font-size: 26px; }
   .hero .copy p { margin: var(--home-copy-gap, 20px) auto 0; max-width: 390px; }
   .hero .entry { margin: 28px auto 0; max-width: 400px; }

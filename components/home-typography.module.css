@@ -7,7 +7,7 @@
   --home-action-gap: 32px;
   --home-content-gap: 64px;
   --home-section-space: 120px;
-  color: #191f28;
+  color: var(--home-fg, #f2f2f3);
   letter-spacing: 0;
 }
 

@@ -54,6 +54,7 @@ import {
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BRAINWAVE_CREDIT } from "../lib/landing/brainwave/catalog";
+import { HOME_LOGO, HOME_LOGO_FILTER } from "../lib/landing/home-logo";
 import {
   calculateProfile,
   coreQuestions,
@@ -547,10 +548,11 @@ function Home({
 
 
   return (
-    <main className={`new-home simple-home product-home cinematic-home ${homeTypography.theme} ${homeCinematic.page}`}>
+    <main className={`new-home simple-home product-home cinematic-home ${homeTypography.theme} ${homeCinematic.page}`} style={{ "--home-logo-filter": HOME_LOGO_FILTER } as React.CSSProperties}>
       <div className="home-header-shell" ref={headerShell}>
         <div className="home-header-frost" aria-hidden="true"><i /><i /><i /><i /></div>
-        <Header light homeNav onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+        {/* 헤더에는 로고·안내·마이페이지만 둔다. 시작 단추는 본문(입력창·행동 버튼)에 있어 겹친다. */}
+        <Header light homeNav logo={HOME_LOGO} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
       </div>
       <HomeOpening
         title={sc("chatHome.title", "오늘창업")}
@@ -561,19 +563,14 @@ function Home({
       <HomeServiceOverview onStart={onStart} />
 
       {/*
-        Neuros 의 Footer/1 — 맨 위에 상호와 가는 선, 가운데에 안내 열,
-        맨 아래 다시 가는 선 아래로 저작권 한 줄. 바탕은 흰색이다.
-        검정이던 것을 흰색으로 바꾸는 김에 법정 고지가 더 잘 읽힌다.
-      */}
-      {/*
-        BRIX 'Footers V10' — 한 줄(로고·링크 줄) + 가는 선 + 가운데 저작권.
-        원본의 소셜 아이콘 자리는 우리에게 계정이 없어 비운다. 사업자 법정
-        표기와 AI 경고는 디자인이 어떻게 바뀌어도 지우지 않는다 — 저작권 줄
-        아래 작은 글씨로 남긴다.
+        푸터 — 가는 선으로 나눈 세 구획.
+        ① 로고와 안내 링크 ② 접이식 상세(사업자 정보 항목표 · 이용 안내 · 디자인 출처) ③ 저작권 줄.
+        상세는 기본으로 접어 두어 화면 아래를 길게 차지하지 않는다. 사업자 법정 표기와
+        AI 고지는 한 번 눌러 펼치는 자리에 두되, 디자인이 어떻게 바뀌어도 지우지 않는다.
       */}
       <footer className="home-footer">
-        <div className="home-footer-row">
-          <Logo onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+        <div className="home-footer-head">
+          <Logo logo={HOME_LOGO} onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
           <nav aria-label="하단 안내">
             <a href="/business-info">사업자·통신판매 정보</a>
             <a href="/privacy">개인정보처리방침</a>
@@ -583,10 +580,47 @@ function Home({
             <a href="/account">로그인·계정 복구</a>
           </nav>
         </div>
-        <div className="home-footer-bottom">
-          <small>© 2026 오늘창업 · 화면 디자인은 BRIX Templates의 Website Wireframes UI Kit와 Khoa (JAK)의 Neuros Lite를 따랐습니다 (<a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer noopener">CC BY 4.0</a>)</small>
+        <details className="home-footer-details">
+          <summary>
+            <span>사업자 정보 · 이용 안내</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6" /></svg>
+          </summary>
+          <div className="home-footer-body">
+            <div aria-labelledby="footer-business-heading">
+              <strong className="home-footer-title" id="footer-business-heading">사업자 정보</strong>
+              {businessInfo?.operatorName ? (
+                <dl className="home-footer-info">
+                  <dt>상호</dt><dd>{businessInfo.operatorName}</dd>
+                  <dt>대표</dt><dd>{businessInfo.representativeName}</dd>
+                  <dt>사업자등록번호</dt><dd>{businessInfo.businessRegistrationNumber}</dd>
+                  {/* 상태 문구가 '통신판매업 신고 완료'처럼 항목명을 되풀이하므로 값에서는 뗀다 */}
+                  <dt>통신판매업</dt><dd>{mailOrderStatusLabels[businessInfo.mailOrderStatus].replace(/^통신판매업\s*/, "")}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</dd>
+                  <dt>주소</dt><dd>{businessInfo.businessAddress}</dd>
+                  {businessInfo.supportPhone && <><dt>전화</dt><dd><a href={`tel:${businessInfo.supportPhone.replace(/[^\d+]/g, "")}`}>{businessInfo.supportPhone}</a></dd></>}
+                  {businessInfo.supportEmail && <><dt>이메일</dt><dd><a href={`mailto:${businessInfo.supportEmail}`}>{businessInfo.supportEmail}</a></dd></>}
+                  <dt>사이트</dt><dd>{businessInfo.internetDomainName}</dd>
+                  <dt>호스팅</dt><dd>{businessInfo.hostingProvider}</dd>
+                </dl>
+              ) : (
+                <p className="home-footer-empty">현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>
+              )}
+            </div>
+            <div aria-labelledby="footer-notes-heading">
+              <strong className="home-footer-title" id="footer-notes-heading">이용 안내</strong>
+              <ul className="home-footer-notes">
+                <li>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</li>
+                <li>사진과 화면 예시는 AI로 만든 브랜드 이미지와 가상 사업 예시이며 실제 고객이나 실적이 아닙니다.</li>
+                <li>전체 문서 생성과 파일 내려받기는 결제 후 이용할 수 있습니다.</li>
+              </ul>
+            </div>
+            <p className="home-footer-credits">
+              디자인 출처 · BRIX Templates의 Website Wireframes UI Kit · Khoa (JAK)의 Neuros Lite · <a href={BRAINWAVE_CREDIT.url} target="_blank" rel="noopener noreferrer">{BRAINWAVE_CREDIT.text}</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
+            </p>
+          </div>
+        </details>
+        <div className="home-footer-legal">
+          <small>© 2026 오늘창업</small>
         </div>
-        <div className="home-footer-notice">{businessInfo?.operatorName ? <div className="home-business-info"><span>{businessInfo.operatorName} · 대표 {businessInfo.representativeName}</span><span>사업자등록번호 {businessInfo.businessRegistrationNumber}</span><span>{mailOrderStatusLabels[businessInfo.mailOrderStatus]}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</span><span>{businessInfo.businessAddress}</span>{(businessInfo.supportPhone || businessInfo.supportEmail) && <span>{[businessInfo.supportPhone, businessInfo.supportEmail].filter(Boolean).join(" · ")}</span>}<span>사이트 {businessInfo.internetDomainName}</span><span>호스팅 {businessInfo.hostingProvider}</span></div> : <p>현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>}<p>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</p><p>사진과 화면 예시는 AI로 만든 브랜드 이미지와 가상 사업 예시이며 실제 고객이나 실적이 아닙니다. 전체 문서 생성과 파일 내려받기는 결제 후 이용할 수 있습니다. 홈페이지 예시 디자인 <a href={BRAINWAVE_CREDIT.url} target="_blank" rel="noopener noreferrer">{BRAINWAVE_CREDIT.text}</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a></p></div>
       </footer>
     </main>
   );

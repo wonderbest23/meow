@@ -38,7 +38,7 @@ export const BRAINWAVE_PAGES: BrainwavePageMeta[] = [
 ];
 
 export const BRAINWAVE_CREDIT = {
-  text: "디자인 Brainwave.io Landing Page UI Kit by Seju_ui_ux (CC BY 4.0)",
+  text: "Brainwave.io Landing Page UI Kit by Seju_ui_ux",
   url: "https://www.figma.com/design/AeGTjTTByOZTjZv7Pt8Ehd",
 };
 

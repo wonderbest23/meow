@@ -14,11 +14,15 @@ import { CtaArrow } from "./cta-arrow";
  * 한 곳에서 그린다. 화면마다 다른 건 넘겨받는 값으로만 갈린다.
  */
 
+/** 로고 그림 파일 — 화면마다 다른 원본을 쓸 수 있다(홈은 검정 화면용 흰 글자) */
+export type SiteLogoAsset = { src: string; width: number; height: number };
+export const DEFAULT_LOGO: SiteLogoAsset = { src: "/today-startup-logo-2026.png", width: 1288, height: 322 };
+
 /** 로고 단추 — 머리말 말고 바닥글에서도 쓴다 */
-export function SiteLogo({ onClick }: { onClick: () => void }) {
+export function SiteLogo({ onClick, logo = DEFAULT_LOGO }: { onClick: () => void; logo?: SiteLogoAsset }) {
   return (
     <button className="brand" onClick={onClick} aria-label="오늘창업 홈으로">
-      <img className="brand-logo" src="/today-startup-logo-2026.png" alt="오늘창업" width="1288" height="322" />
+      <img className="brand-logo" src={logo.src} alt="오늘창업" width={logo.width} height={logo.height} />
     </button>
   );
 }
@@ -36,6 +40,7 @@ export function SiteHeader({
    * 검색칸처럼 생긴 단추를 누르면 상담 창이 열린다.
    */
   onConsult,
+  logo = DEFAULT_LOGO,
 }: {
   onHome: () => void;
   onStart?: () => void;
@@ -43,11 +48,12 @@ export function SiteHeader({
   homeNav?: boolean;
   showAccount?: boolean;
   onConsult?: () => void;
+  logo?: SiteLogoAsset;
 }) {
   return (
     <header className={`site-header ${light ? "light" : ""}`}>
       <button className="brand" onClick={onHome} aria-label="오늘창업 홈으로">
-        <img className="brand-logo" src="/today-startup-logo-2026.png" alt="오늘창업" width="1288" height="322" />
+        <img className="brand-logo" src={logo.src} alt="오늘창업" width={logo.width} height={logo.height} />
       </button>
       {onConsult ? (
         /* V17: 링크 줄 대신 검색칸 하나 — 링크는 아래 본문 섹션이 대신한다 */

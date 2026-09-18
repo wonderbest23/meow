@@ -29,9 +29,9 @@
 .guideVertical, .guideHorizontal { position: absolute; background: #1877f2a6; pointer-events: none; opacity: 0; }
 .guideVertical { left: 50%; top: -.22em; bottom: -.18em; width: 1px; }
 .guideHorizontal { left: -.16em; right: -.16em; top: calc(100% + .035em); height: 1px; }
-.cursor { position: absolute; width: 27px; height: 27px; left: calc(100% + .045em); top: calc(100% + .035em); z-index: 2; pointer-events: none; opacity: 0; color: #172b45; filter: drop-shadow(0 2px 2px #15253b26); }
-.pointer { display: block; fill: #172b45; stroke: white; transform: translate(-3px, -2px); }
-.resize { position: absolute; top: 0; left: 0; color: var(--editor-blue); filter: drop-shadow(0 1px 1px #fff); opacity: 0; transform: translate(-50%, -50%); }
+.cursor { position: absolute; width: 27px; height: 27px; left: calc(100% + .045em); top: calc(100% + .035em); z-index: 2; pointer-events: none; opacity: 0; color: #fff; filter: drop-shadow(0 2px 2px #0008); }
+.pointer { display: block; fill: #fff; stroke: #000; transform: translate(-3px, -2px); }
+.resize { position: absolute; top: 0; left: 0; color: var(--editor-blue); filter: drop-shadow(0 1px 1px #000); opacity: 0; transform: translate(-50%, -50%); }
 .click { position: absolute; top: 0; left: 0; width: 26px; height: 26px; border: 1px solid var(--editor-blue); border-radius: 50%; transform: translate(-50%, -50%); opacity: 0; }
 
 /* One coordinated edit: marquee, select, move, resize, then snap to guides. */
