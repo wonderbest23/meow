@@ -53,6 +53,8 @@ assert.doesNotMatch(read("components/home-service-overview.tsx"), /<HomeScrollSt
 assert.match(read("app/page.tsx"), /<HomeOpening/);
 assert.match(read("components/home-website-demo.module.css"), /background: transparent !important/);
 assert.match(read("components/home-brand-closing.tsx"), /onClick=\{onStart\}/);
-assert.match(read("components/home-brand-closing.tsx"), /AI 브랜드 이미지/);
+// AI 이미지 고지는 각 절의 캡션 대신 푸터 한 줄로 모았다(소유자 요청으로 본문 잡글 제거). 고지 자체는 사라지지 않는다.
+assert.match(read("app/page.tsx"), /AI로 만든 브랜드 이미지/);
+assert.match(read("app/page.tsx"), /BRAINWAVE_CREDIT\.url/, "The CC BY credit for the homepage demo kit stays on the page");
 assert.ok(statSync("public/home-media/oneulstart-first-day.webp").size < 300_000);
 console.log("Homepage sequence: bounded reversible motion, readable holds, static fallback, isolated real-template preview and brand image passed");

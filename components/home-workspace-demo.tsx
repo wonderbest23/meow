@@ -157,7 +157,7 @@ export function HomeWorkspaceDemo({ previewProgress }: { previewProgress?: numbe
         </div>
       </div>
     </div>
-    <figcaption className={styles.caption}><span>{WORKSPACE_DEMO_STEPS[step]}</span><span>공개 샘플로 보는 이용 흐름</span></figcaption>
+    <figcaption className={styles.caption}><span>{WORKSPACE_DEMO_STEPS[step]}</span></figcaption>
     <input className={styles.scrubber} type="range" min="0" max="100" step="0.1" defaultValue="0" disabled={!ready} aria-label="내 사업 관리 미리보기 재생 위치" onFocus={() => { held.current = true; }} onBlur={() => { held.current = false; }} onPointerDown={() => { held.current = true; }} onChange={event => seek.current(event.currentTarget.valueAsNumber / 100)} />
   </figure>;
 }

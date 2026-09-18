@@ -98,7 +98,7 @@ export function HomePhoneStory({ previewProgress }: { previewProgress?: number }
         </div>
         <div className={styles.stageScene} data-phone-mount aria-hidden="true" />
         <div className={styles.source} data-phone-source><PhoneScreen /><MessageFlight /></div>
-        <div className={styles.sceneFooter}><span>가상 사업의 이용 과정 예시</span><input className={styles.scrubber} data-phone-progress type="range" min="0" max="100" step="0.1" defaultValue="0" aria-label="이용 과정 미리보기 위치" disabled={!ready} onChange={event => commands.current?.seek(event.currentTarget.valueAsNumber / 100)} /></div>
+        <div className={styles.sceneFooter}><input className={styles.scrubber} data-phone-progress type="range" min="0" max="100" step="0.1" defaultValue="0" aria-label="이용 과정 미리보기 위치" disabled={!ready} onChange={event => commands.current?.seek(event.currentTarget.valueAsNumber / 100)} /></div>
       </div>
     </div>
   </section>;

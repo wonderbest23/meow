@@ -122,7 +122,6 @@ export function HomeWebsiteDemo() {
         </div>
       </div>
       <div className={styles.footer}>
-        <span>가상 사업의 편집 예시</span>
         <input type="range" min="0" max="100" step="0.1" defaultValue="100" aria-label="홈페이지 편집 미리보기 위치"
           onChange={event => seek.current(event.currentTarget.valueAsNumber / 100)}
           onKeyDown={event => {

@@ -6,7 +6,6 @@ import { useEffect, useRef } from "react";
 import { HomeWebsiteDemo } from "./home-website-demo";
 import { HomeBrandClosing } from "./home-brand-closing";
 import { HomeResultShowcase, HomeFounderWall } from "./home-result-showcase";
-import { BRAINWAVE_CREDIT } from "../lib/landing/brainwave/catalog";
 import styles from "./home-service-overview.module.css";
 import { HomeAction } from "./home-action";
 import { useHomeCopyMotion } from "./use-home-copy-motion";
@@ -47,7 +46,7 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
         <div className={styles.planningExample}>
           <div className={styles.planningSeed} data-reveal>
             <MessageSquareText aria-hidden="true" />
-            <div><span>나의 한마디</span><blockquote>사진 찍는 걸 좋아해요<br />주 5시간으로 시작할 수 있을까요</blockquote></div>
+            <div><blockquote>사진 찍는 걸 좋아해요<br />주 5시간으로 시작할 수 있을까요</blockquote></div>
           </div>
           <ol className={styles.planningSteps} aria-label="사업 기획 흐름">
             {planningSteps.map(({ title, description, icon: Icon }) => <li key={title} data-reveal>
@@ -63,7 +62,6 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
               <div><dt>첫 시작</dt><dd>샘플 1세트를 만들어 가게에 제안하기</dd></div>
             </dl>
           </div>
-          <p className={styles.differenceNote}>이해를 돕기 위한 기획 예시예요 대화 내용에 따라 질문과 제안이 달라져요<br className={styles.desktopBreak} /> 이미 운영 중이라면 현재 문제와 매출 비용을 중심으로 개선안을 정리해요</p>
         </div>
       </div>
     </section>
@@ -75,9 +73,7 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
           <p>사업계획서 내용으로 홈페이지 초안을 자동 생성해요<br className={styles.desktopBreak} /> 내 사업에 맞춰 확인하고 필요한 만큼 다듬으세요</p>
         </header>
         <HomeWebsiteDemo />
-        <p className={styles.templateNote}>실제 홈페이지 렌더러로 구성한 가상 사업의 편집 예시예요 이미지와 수치는 실제 고객 실적이 아니에요<br /><a href={BRAINWAVE_CREDIT.url} target="_blank" rel="noopener noreferrer">{BRAINWAVE_CREDIT.text}</a> · 한글 문구 적용 · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">라이선스</a></p>
-        <div className={styles.actions}><HomeAction href="/plan/homepage" variant="solid">홈페이지 100% 자동 생성<small>맞춤 제작은 유료</small></HomeAction></div>
-        <p className={styles.websiteTerms}>사업계획서 기반 초안 미리보기는 무료이며, 편집·공개는 별도 결제가 필요해요.</p>
+        <div className={styles.actions}><HomeAction href="/plan/homepage" variant="solid">홈페이지 100% 자동 생성</HomeAction></div>
       </div>
     </section>
 

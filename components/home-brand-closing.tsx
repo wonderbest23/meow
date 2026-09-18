@@ -14,10 +14,8 @@ export function HomeBrandClosing({ onStart }: { onStart: () => void }) {
         <h2 id="home-closing-title">내 사업의 첫날<br /><strong>오늘창업</strong></h2>
         <div className={styles.actions}>
           <button type="button" onClick={onStart}>대화로 시작하기<CtaArrow /></button>
-          <a href="/plan">내 사업 이어가기</a>
         </div>
       </div>
-      <small className={styles.note}>시작을 표현한 AI 브랜드 이미지</small>
     </section>
   </div>;
 }
