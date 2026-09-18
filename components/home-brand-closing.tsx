@@ -1,6 +1,6 @@
 "use client";
 
-import { MessageSquarePlus } from "lucide-react";
+import { CtaArrow } from "./cta-arrow";
 import { useHomeScroll } from "./use-home-scroll";
 import styles from "./home-brand-closing.module.css";
 
@@ -13,7 +13,7 @@ export function HomeBrandClosing({ onStart }: { onStart: () => void }) {
         <p>완벽한 아이디어가 아니어도 괜찮아요</p>
         <h2 id="home-closing-title">내 사업의 첫날<br /><strong>오늘창업</strong></h2>
         <div className={styles.actions}>
-          <button type="button" onClick={onStart}><MessageSquarePlus aria-hidden="true" />대화로 시작하기</button>
+          <button type="button" onClick={onStart}>대화로 시작하기<CtaArrow /></button>
           <a href="/plan">내 사업 이어가기</a>
         </div>
       </div>

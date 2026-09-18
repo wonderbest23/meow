@@ -16909,3 +16909,13 @@ button.account-kakao-btn svg { display: inline-block !important; }
 /* 상담 → 담당자 권유 — 답 바로 아래 한 줄 */
 .consult-escalate { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 4px 0 2px; padding: 10px 12px; border-radius: 10px; background: #fff7ed; border: 1px solid #f3dcbf; font-size: 12.5px; color: #7a4f0f; }
 .consult-escalate button { border: 0; border-radius: 999px; background: #1c1d21; color: #fff; font: inherit; font-size: 12.5px; font-weight: 700; padding: 7px 12px; cursor: pointer; white-space: nowrap; }
+
+/* 버튼 오른쪽 화살표: 평소 꺾쇠(›), 마우스를 올리면 가로선이 자라 화살표(→)가 된다(components/cta-arrow.tsx). */
+.cta-arrow { width: 1.1em; height: 1.1em; flex: 0 0 auto; margin-right: -2px; overflow: visible; }
+.cta-arrow line { stroke: currentColor; stroke-width: 2; stroke-linecap: round; transition: transform .22s cubic-bezier(.4, 0, .2, 1), opacity .22s cubic-bezier(.4, 0, .2, 1); }
+.cta-arrow .cta-arrow__shaft { transform-origin: 17px 12px; transform: scaleX(0); opacity: 0; }
+.cta-arrow .cta-arrow__chev { transform-origin: 17px 12px; }
+:is(a, button):hover > .cta-arrow .cta-arrow__shaft, :is(a, button):focus-visible > .cta-arrow .cta-arrow__shaft { transform: scaleX(1); opacity: 1; }
+:is(a, button):hover > .cta-arrow .cta-arrow__chev, :is(a, button):focus-visible > .cta-arrow .cta-arrow__chev { transform: translateX(2px); }
+@media (prefers-reduced-motion: reduce) { .cta-arrow line { transition: none; } }
+

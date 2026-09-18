@@ -1,50 +1,42 @@
+/*
+ * 홈 행동 버튼. 각진 모서리(6px), 중간 굵기 글자, 오른쪽 화살표 하나. 그림자·그라데이션·왼쪽 아이콘은 두지 않는다.
+ * 채움(solid)은 브랜드 파랑, 연한(soft)은 옅은 파랑 바탕에 파란 글자다. 색 전환은 0.22초.
+ */
 .action[data-home-action] {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   align-self: flex-start;
-  gap: 12px;
+  gap: 8px;
   width: fit-content;
   max-width: 100%;
-  min-height: 64px;
+  min-height: 48px;
   box-sizing: border-box;
-  padding: 15px 22px;
-  border: 1px solid #c8dafa;
-  border-radius: 8px;
-  background: #edf4ff;
-  color: #245fc4;
+  padding: 11px 16px 11px 18px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: #eef4ff;
+  color: #1f5bc7;
   font-family: inherit;
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: 0;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
   text-align: left;
   text-decoration: none;
   cursor: pointer;
-  transition: background .2s ease, border-color .2s ease, color .2s ease;
+  transition: color .22s cubic-bezier(.4, 0, .2, 1), background .22s cubic-bezier(.4, 0, .2, 1), border-color .22s cubic-bezier(.4, 0, .2, 1);
 }
 
 .label { min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
-.label small { display: block; margin-top: 4px; font-size: 12px; line-height: 1.5; font-weight: 450; color: inherit; opacity: .85; }
-.icon { display: grid; place-items: center; flex: 0 0 22px; width: 22px; height: 22px; color: #2f6fe4; }
-.icon svg { display: block; width: 100%; height: 100%; stroke-width: 1.8; }
-.action[data-home-action][data-variant="solid"] { background: #2f6fe4; border-color: #2f6fe4; color: #fff; }
-.action[data-variant="solid"] .icon { color: inherit; }
+.label small { display: block; margin-top: 3px; font-size: 12px; line-height: 1.45; font-weight: 400; color: inherit; opacity: .78; }
+.action[data-home-action][data-variant="solid"] { background: #3272db; border-color: #3272db; color: #fff; }
 .action[data-home-action]:focus-visible { outline: 3px solid #3182f6; outline-offset: 4px; }
 
 @media (hover: hover) and (pointer: fine) {
-  .action[data-home-action]:hover { background: #dfeaff; border-color: #a9c7fa; }
-  .action[data-home-action][data-variant="solid"]:hover { background: #245fc4; border-color: #245fc4; }
+  .action[data-home-action]:hover { background: #e3ecfc; }
+  .action[data-home-action][data-variant="solid"]:hover { background: #2a64c6; border-color: #2a64c6; }
 }
 
-.action[data-home-action]:active { background: #d0e1ff; border-color: #8fb4f4; }
-.action[data-home-action][data-variant="solid"]:active { background: #1e52aa; border-color: #1e52aa; }
-
-@media (max-width: 700px) {
-  .action[data-home-action] { min-height: 56px; gap: 10px; padding: 13px 18px; font-size: 16px; }
-  .icon { flex-basis: 20px; width: 20px; height: 20px; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .action[data-home-action] { transition: none; }
-}
+.action[data-home-action]:active { background: #d7e4fb; }
+.action[data-home-action][data-variant="solid"]:active { background: #2458b3; border-color: #2458b3; }

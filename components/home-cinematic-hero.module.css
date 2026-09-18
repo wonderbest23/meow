@@ -28,6 +28,12 @@
   .page:global(.simple-home.product-home.cinematic-home > .home-header-shell) { background: rgba(255, 255, 255, calc(var(--frost) * .94)); }
 }
 .page:global(.simple-home.product-home.cinematic-home .site-header) { height: 64px; min-height: 64px; max-width: 1280px; margin: auto; padding: 0 32px; }
+/* 헤더 시작 버튼: 홈 행동 버튼과 같은 규칙(각진 6px, 중간 굵기, 오른쪽 화살표). 전역 CSS의 !important 겹침을 이 화면에서만 덮는다. */
+.page:global(.simple-home.product-home.cinematic-home .site-header .small-start) { display: inline-flex !important; align-items: center; gap: 6px; min-height: 40px !important; height: 40px; padding: 0 12px 0 16px !important; border: 1px solid #3272db; border-radius: 6px !important; background: #3272db; color: #fff; font-size: 14px !important; font-weight: 500 !important; letter-spacing: -0.005em; transition: background .22s cubic-bezier(.4, 0, .2, 1), border-color .22s cubic-bezier(.4, 0, .2, 1); }
+.page:global(.simple-home.product-home.cinematic-home .site-header .small-start:hover) { background: #2a64c6 !important; border-color: #2a64c6 !important; color: #fff !important; }
+/* 전역 규칙이 버튼 안의 아이콘을 숨기지만(글자 우선 원칙), 이 화살표는 버튼 의미의 일부라 홈에서는 보인다. */
+.page:global(.simple-home.product-home.cinematic-home .site-header .small-start .cta-arrow) { display: block !important; width: 15px; height: 15px; }
+.page:global(.simple-home.product-home.cinematic-home .site-header .account-link) { width: 40px; height: 40px; padding: 0; border-radius: 6px; }
 .page:global(.simple-home.product-home.cinematic-home .site-header .account-link) { background: #edf4ff; color: #3182f6; }
 .page:global(.simple-home.product-home.cinematic-home .site-header .account-link svg) { color: #3182f6; }
 .page:global(.simple-home.product-home.cinematic-home .home-footer) { background: #f5f6f8; color: #5b6574; }

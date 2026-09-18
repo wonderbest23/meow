@@ -1,6 +1,7 @@
 "use client";
 
 import { Search, UserRound } from "lucide-react";
+import { CtaArrow } from "./cta-arrow";
 
 /*
  * 화면 맨 위 띠.
@@ -66,7 +67,7 @@ export function SiteHeader({
         {showAccount && (
           <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /></a>
         )}
-        {onStart && <button className="small-start" onClick={onStart}>시작하기</button>}
+        {onStart && <button className="small-start" onClick={onStart}>시작하기<CtaArrow /></button>}
       </div>
     </header>
   );

@@ -76,15 +76,15 @@ export function HomeResultShowcase() {
     <div className={styles.panels}>
       <article className={styles.panel}>
         <AnimatedGraphic name="business-plan" alt="새벽커피 공개 PDF의 실제 표지, 사업 개요와 표, 12개월 손익 추정과 그래프 페이지" caption="공개 PDF 샘플의 실제 페이지 · 가상 사업" />
-        <div className={styles.panelCopy} data-home-copy><span>사업계획서</span><h3>내 사업을 설명하는<br />한 권의 계획</h3><p>사업 소개부터 고객과 비용 운영까지<br />PDF와 수정 가능한 Word로</p><HomeAction href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer" icon="document">PDF 샘플 열기</HomeAction></div>
+        <div className={styles.panelCopy} data-home-copy><span>사업계획서</span><h3>내 사업을 설명하는<br />한 권의 계획</h3><p>사업 소개부터 고객과 비용 운영까지<br />PDF와 수정 가능한 Word로</p><HomeAction href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer">PDF 샘플 열기</HomeAction></div>
       </article>
       <article className={`${styles.panel} ${styles.presentation}`}>
         <AnimatedGraphic name="presentation" alt="새벽커피 공개 PPT의 실제 사업 제안서 표지, 문제 정의, 재무 계획 슬라이드" caption="공개 PPT 샘플의 실제 슬라이드 · 가상 사업" />
-        <div className={styles.panelCopy} data-home-copy><span>발표자료{!PPT_GENERATION_VERIFIED && <span className={styles.availability}>제공 준비 중</span>}</span><h3>이야기는 짧게<br />핵심은 선명하게</h3><p>{PPT_GENERATION_VERIFIED ? <>정리한 사업계획서를 바탕으로<br />발표용 PPT를 만들어요</> : <>PPT 자동 생성은 준비 중이에요<br />공개 샘플을 먼저 확인해 보세요</>}</p><HomeAction href="/samples/sample_coffee.pptx" download icon="download">PPT 샘플 받기</HomeAction></div>
+        <div className={styles.panelCopy} data-home-copy><span>발표자료{!PPT_GENERATION_VERIFIED && <span className={styles.availability}>제공 준비 중</span>}</span><h3>이야기는 짧게<br />핵심은 선명하게</h3><p>{PPT_GENERATION_VERIFIED ? <>정리한 사업계획서를 바탕으로<br />발표용 PPT를 만들어요</> : <>PPT 자동 생성은 준비 중이에요<br />공개 샘플을 먼저 확인해 보세요</>}</p><HomeAction href="/samples/sample_coffee.pptx" download>PPT 샘플 받기</HomeAction></div>
       </article>
       <article className={styles.panel}>
         <HomeWorkspaceDemo />
-        <div className={styles.panelCopy} data-home-copy><span>내 사업 관리</span><h3>계획 다음의 일도<br />끊기지 않도록</h3><p>사업안과 문서 대화와 다음 할 일을<br />사업별로 이어가요</p><HomeAction href="/plan" icon="workspace">내 사업 열기</HomeAction></div>
+        <div className={styles.panelCopy} data-home-copy><span>내 사업 관리</span><h3>계획 다음의 일도<br />끊기지 않도록</h3><p>사업안과 문서 대화와 다음 할 일을<br />사업별로 이어가요</p><HomeAction href="/plan">내 사업 열기</HomeAction></div>
       </article>
     </div>
     <p className={styles.note}>가상 사업으로 표현한 이용 흐름이며, 실제 내용과 화면은 사업별로 달라져요.<br />전체 문서 생성과 파일 내려받기는 결제 후 이용하며, AI 초안은 검토·수정해서 사용해야 해요.</p>

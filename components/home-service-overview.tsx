@@ -76,7 +76,7 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
         </header>
         <HomeWebsiteDemo />
         <p className={styles.templateNote}>실제 홈페이지 렌더러로 구성한 가상 사업의 편집 예시예요 이미지와 수치는 실제 고객 실적이 아니에요<br /><a href={BRAINWAVE_CREDIT.url} target="_blank" rel="noopener noreferrer">{BRAINWAVE_CREDIT.text}</a> · 한글 문구 적용 · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">라이선스</a></p>
-        <div className={styles.actions}><HomeAction href="/plan/homepage" icon="website" variant="solid">홈페이지 100% 자동 생성<small>맞춤 제작은 유료</small></HomeAction></div>
+        <div className={styles.actions}><HomeAction href="/plan/homepage" variant="solid">홈페이지 100% 자동 생성<small>맞춤 제작은 유료</small></HomeAction></div>
         <p className={styles.websiteTerms}>사업계획서 기반 초안 미리보기는 무료이며, 편집·공개는 별도 결제가 필요해요.</p>
       </div>
     </section>

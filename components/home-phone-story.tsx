@@ -94,7 +94,7 @@ export function HomePhoneStory({ previewProgress }: { previewProgress?: number }
             <h2 aria-label={chapter.title.join(" ")}>{chapter.title.map(line => <span className={styles.copyLine} key={line}><span className={styles.copyText} data-copy-part>{line}</span></span>)}</h2>
             <p><span className={styles.copyText} data-copy-part><span className={styles.desktopCopy}>{chapter.text}</span><span className={styles.mobileCopy}>{chapter.mobileText}</span></span></p>
           </header>)}
-          <HomeAction className={styles.startLink} href="/plan/chat?new=1" icon="chat" variant="solid">내 이야기로 시작하기</HomeAction>
+          <HomeAction className={styles.startLink} href="/plan/chat?new=1" variant="solid">내 이야기로 시작하기</HomeAction>
         </div>
         <div className={styles.stageScene} data-phone-mount aria-hidden="true" />
         <div className={styles.source} data-phone-source><PhoneScreen /><MessageFlight /></div>
