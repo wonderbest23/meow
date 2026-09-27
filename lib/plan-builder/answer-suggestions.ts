@@ -1,5 +1,6 @@
 import { completeJson, type LLMConfig, type LLMFailure } from "../llm/complete";
 import { sanitizeBusinessClaimText } from "../quality/business-reality";
+import { SUGGESTION_FIELDS, type SuggestionField } from "./answer-suggestion-fields";
 
 /*
  * 첫 사업 설명에 맞춘 답변 추천(시험 기능).
@@ -8,8 +9,7 @@ import { sanitizeBusinessClaimText } from "../quality/business-reality";
  * AI를 한 번만 불러 뒤에 나올 질문(고객·문제·상품·판매 경로)의 추천을 미리 만들어 두고, 화면은 그 질문에
  * 도착했을 때 보여 준다. 추천은 사용자가 눌러 보내기 전까지 답변이 아니다. 숫자(가격·통계)는 추천하지 않는다.
  */
-export const SUGGESTION_FIELDS = ["customer", "problem", "offer", "channel"] as const;
-export type SuggestionField = typeof SUGGESTION_FIELDS[number];
+export { SUGGESTION_FIELDS, type SuggestionField };
 export type AnswerSuggestions = Partial<Record<SuggestionField, string[]>>;
 export const SUGGESTION_MAX_INPUT = 1_200;
 const PER_FIELD = 3;
@@ -51,6 +51,16 @@ export function cleanSuggestions(value: unknown): string[] {
     if (out.length === PER_FIELD) break;
   }
   return out;
+}
+
+/**
+ * 추천은 짧은 목록이라 빠른 모델로도 충분할 수 있다. INTAKE_SUGGEST_MODEL로 Claude 모델만 바꿔 끼운다
+ * (예: claude-haiku-4-5-20251001). 비어 있으면 기본 텍스트 모델을 그대로 쓴다.
+ */
+export function suggestionConfig(base: LLMConfig | null): LLMConfig | null {
+  if (!base) return null;
+  const override = process.env.INTAKE_SUGGEST_MODEL?.trim();
+  return override && base.provider === "anthropic" ? { ...base, model: override } : base;
 }
 
 export type SuggestionResult = { suggestions: AnswerSuggestions; model: string; totalMs: number; failure?: LLMFailure["code"] };

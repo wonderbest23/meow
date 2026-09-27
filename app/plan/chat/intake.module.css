@@ -504,3 +504,6 @@
 .suggestionChip { border-color: #ddd8f7; background: #fff; }
 .suggestionChip:hover:not(:disabled) { background: #f3f1ff; border-color: #bdb3f0; }
 .suggestionChip[aria-pressed="true"] { border-color: #8f80e6; background: #efecff; color: #4b3fb3; }
+.suggestionSkeleton { display: block; max-width: 100%; height: 44px; border-radius: 22px; background: linear-gradient(90deg, #f0eefc 0%, #faf9ff 50%, #f0eefc 100%); background-size: 200% 100%; animation: suggestionShimmer 1.4s ease-in-out infinite; }
+@keyframes suggestionShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .suggestionSkeleton { animation: none; } }
