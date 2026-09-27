@@ -3,7 +3,7 @@ import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../../lib/rate-limit";
 import { resolveTextLLMConfig } from "../../../../../lib/llm/config";
-import { SUGGESTION_MAX_INPUT, suggestAnswers } from "../../../../../lib/plan-builder/answer-suggestions";
+import { SUGGESTION_MAX_INPUT, suggestAnswers, suggestionConfig } from "../../../../../lib/plan-builder/answer-suggestions";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: { code: "INVALID_INPUT" } }, { status: 400, headers: noStore });
   const identity = await requireGuestIdentity();
-  const config = resolveTextLLMConfig(identity.hash);
+  const config = suggestionConfig(resolveTextLLMConfig(identity.hash));
   if (!config) return new Response(null, { status: 204, headers: noStore });
   const result = await suggestAnswers(config, parsed.data.text, parsed.data.stage, request.signal);
   console.log(`[intake-suggestions] ${JSON.stringify({ model: result.model, totalMs: result.totalMs, fields: Object.keys(result.suggestions).length, failure: result.failure })}`);

@@ -16,6 +16,7 @@ import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
 import styles from "../intake.module.css";
 import { chatTextPreview } from "./model";
+import type { QuestionSuggestions } from "./AnswerSuggestions";
 
 export function EntryChoices({ disabled, onStart, initialMessage }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null }) {
   const choices = [
@@ -36,7 +37,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   onChange: (value: AnswerDraft) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string, extra?: { ksic?: string }) => void;
   onCancel: () => void; inChat?: boolean; refining?: boolean;
   /** 첫 사업 설명에 맞춘 AI 추천(시험 기능). 누르면 입력칸에 들어가고, 보내기 전까지는 답변이 아니다. */
-  suggestions?: string[];
+  suggestions?: QuestionSuggestions;
 }) {
   const [manualIndustry, setManualIndustry] = useState(editing || draft.selected.length > 0);
   const seededPeriod = question.id === "period" ? periodDates(draft.text) : null;
@@ -140,8 +141,9 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         })}
       </fieldset>)}
       {candidate && <label className={styles.customToggle}><input type="checkbox" checked={draft.custom} onChange={event => onChange({ ...draft, custom: event.target.checked, selected: [], unknown: false, ksic: undefined })} />직접 생각한 사업 입력</label>}
-      {hybrid && inChat && !!suggestions?.length && <SuggestionChips question={question} draft={draft} disabled={disabled} suggestions={suggestions} groups={groups} onChange={onChange} />}
-      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} extraPicked={pickedSuggestions(question, draft, suggestions)} onChange={onChange} />}
+      {hybrid && inChat && suggestions?.pending && <SuggestionPlaceholder />}
+      {hybrid && inChat && suggestions && !suggestions.pending && <SuggestionChips question={question} draft={draft} disabled={disabled} suggestions={suggestions.items} groups={groups} onChange={onChange} />}
+      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} extraPicked={suggestions && !suggestions.pending ? pickedSuggestions(question, draft, suggestions.items) : 0} onChange={onChange} />}
       {ticket && <AmountLadder question={question} ranges={ticketRanges} disabled={disabled} staging={inChat} exactLabel="정확한 금액 알아요 (기록 있음)" onCommit={commit} onRange={range => stage(`${range.label} (예상)`)} onExact={amount => stage(`${formatWon(amount)} (실제 기록)`)} />}
       {prefill && <div className={styles.chipStep} role="group" aria-label="문장 시작 선택">
         <div className={styles.chipRow}>{options.map(option => <button key={option.value} type="button" className={styles.chip} data-selected={draft.text.trim() === option.label || undefined} disabled={disabled} onClick={() => onChange({ ...draft, custom: false, selected: [], unknown: false, text: option.label })}>{option.label}</button>)}</div>
@@ -191,6 +193,14 @@ const pickedSuggestions = (question: IntakeQuestion, draft: AnswerDraft, suggest
   const pieces = unmatchedPieces(question, draft.text);
   return suggestions?.filter(suggestion => pieces.includes(suggestion)).length ?? 0;
 };
+
+/** 추천이 아직 오는 중일 때 같은 자리를 잡아 둔다. 도착하면 칩으로 바뀌어 아래 선택지가 밀리지 않는다. */
+function SuggestionPlaceholder() {
+  return <div className={`${styles.chipStep} ${styles.suggestionStep}`} role="status" aria-label="이 사업에 맞춘 추천 준비 중">
+    <p className={styles.stepLegend}><Sparkles size={13} aria-hidden="true" />이 사업에 맞춘 추천<span>준비하고 있어요…</span></p>
+    <div className={styles.chipRow} aria-hidden="true">{[300, 240, 270].map(width => <span key={width} className={styles.suggestionSkeleton} style={{ width }} />)}</div>
+  </div>;
+}
 
 function SuggestionChips({ question, draft, disabled, suggestions, groups, onChange }: {
   question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; suggestions: string[]; groups: ReturnType<typeof optionGroups>; onChange: (value: AnswerDraft) => void;

@@ -53,7 +53,9 @@
     // 첫 사업 설명에 붙는 AI 참고 의견(시험 기능). 끄려면 "0". 대시보드에서 바꾼 일반 변수는 배포 때 이 목록으로 덮어써진다.
     "INTAKE_LIVE_COMMENT": "1",
     // 첫 사업 설명에 맞춘 답변 추천 칩(시험 기능). 끄려면 "0".
-    "INTAKE_ANSWER_SUGGESTIONS": "1"
+    "INTAKE_ANSWER_SUGGESTIONS": "1",
+    // 추천 칩에만 쓰는 모델(속도 비교 중). 비우면 기본 텍스트 모델(Opus)로 돌아간다.
+    "INTAKE_SUGGEST_MODEL": "claude-haiku-4-5-20251001"
   },
   "assets": {
     "directory": ".open-next/assets",

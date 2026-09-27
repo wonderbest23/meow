@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { cleanSuggestions, suggestAnswers } from "../lib/plan-builder/answer-suggestions";
+import { cleanSuggestions, suggestAnswers, suggestionConfig } from "../lib/plan-builder/answer-suggestions";
 import type { LLMConfig } from "../lib/llm/complete";
 
 const claude: LLMConfig = { provider: "anthropic", apiKey: "test-only", model: "claude-opus-5-5" };
@@ -45,13 +45,37 @@ async function main() {
     assert.deepEqual(cleanSuggestions(["가", "a".repeat(41), 42, "매출 30% 증가 보장", "월 5천만 원 매출", "평일 저녁 동네 주민", "평일 저녁 동네 주민", "첫째", "둘째", "셋째"]), ["평일 저녁 동네 주민", "첫째", "둘째"]);
     assert.deepEqual(cleanSuggestions("문자열"), []);
 
-    // 3) 실패는 조용히: 추천 없이 끝나고 실패 이유만 남긴다
+    // 3) 모델 교체: INTAKE_SUGGEST_MODEL은 Claude 설정에만, Haiku에는 추론 강도 없이 구조화 출력만 보낸다
+    const previousModel = process.env.INTAKE_SUGGEST_MODEL;
+    try {
+      process.env.INTAKE_SUGGEST_MODEL = "claude-haiku-4-5-20251001";
+      assert.equal(suggestionConfig(claude)?.model, "claude-haiku-4-5-20251001");
+      assert.equal(suggestionConfig({ provider: "openai", apiKey: "k", model: "gpt-5.6-sol" })?.model, "gpt-5.6-sol");
+      assert.equal(suggestionConfig(null), null);
+      globalThis.fetch = (async (_url: string, init?: RequestInit) => {
+        body = JSON.parse(String(init?.body));
+        return reply({ customer: ["퇴근 후 저녁이 바쁜 맞벌이 부부"], problem: [], offer: [], channel: [] });
+      }) as typeof fetch;
+      const haiku = await suggestAnswers(suggestionConfig(claude)!, "동네 반찬 가게", "startup");
+      assert.equal(haiku.model, "claude-haiku-4-5-20251001");
+      assert.equal(body.model, "claude-haiku-4-5-20251001");
+      assert.deepEqual(body.output_config, { format: { type: "json_schema", schema: (body.output_config as { format: { schema: unknown } }).format.schema } }, "Haiku에는 effort를 보내지 않는다");
+      assert.equal(body.max_tokens, 700, "Haiku에는 추론 여유를 더하지 않는다");
+      assert.deepEqual(haiku.suggestions, { customer: ["퇴근 후 저녁이 바쁜 맞벌이 부부"] });
+      delete process.env.INTAKE_SUGGEST_MODEL;
+      assert.equal(suggestionConfig(claude)?.model, "claude-opus-5-5", "비우면 기본 모델");
+    } finally {
+      if (previousModel === undefined) delete process.env.INTAKE_SUGGEST_MODEL;
+      else process.env.INTAKE_SUGGEST_MODEL = previousModel;
+    }
+
+    // 4) 실패는 조용히: 추천 없이 끝나고 실패 이유만 남긴다
     globalThis.fetch = (async () => Response.json({ error: { type: "overloaded_error", message: "busy" } }, { status: 529 })) as typeof fetch;
     const failed = await suggestAnswers(claude, "동네 반찬 가게", "operating");
     assert.deepEqual(failed.suggestions, {});
     assert.ok(failed.failure, "실패 이유를 기록");
 
-    console.log("intake-answer-suggestions: json_schema + low effort request, cleanup of claims/links/commas/duplicates, silent failure passed");
+    console.log("intake-answer-suggestions: json_schema + low effort request, Haiku override, cleanup of claims/links/commas/duplicates, silent failure passed");
   } finally {
     globalThis.fetch = originalFetch;
   }
