@@ -486,3 +486,13 @@
   .summaryPane .summaryDetails { border-bottom-color: #dde3ea; }
   .summaryPane .summaryDetails > summary { font-size: 15px; }
 }
+/* AI 참고 의견(시험 기능): 질문 흐름과 구분되는 옅은 카드. 스트리밍 중에는 끝에 깜빡이는 커서. */
+.liveComment { margin: -8px 0 28px; padding: 12px 16px 14px; border: 1px solid #dbe6f7; border-left: 3px solid var(--intake-blue); border-radius: 12px; background: #f7faff; }
+.liveCommentHead { display: flex; align-items: center; gap: 6px; min-height: 28px; color: #245fc2; }
+.liveCommentHead strong { font-size: 13px; }
+.liveCommentHead small { color: var(--intake-muted); font-size: 12px; }
+.liveCommentHead .iconButton { width: 28px; height: 28px; margin-left: auto; }
+.liveComment p { margin-top: 4px; color: #2b3a4f; font-size: 15px; line-height: 1.75; white-space: pre-wrap; }
+.liveCaret { display: inline-block; width: 7px; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--intake-blue); animation: intake-caret 1s steps(1) infinite; }
+@keyframes intake-caret { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .liveCaret { animation: none; } }

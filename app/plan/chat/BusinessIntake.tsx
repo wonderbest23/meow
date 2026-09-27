@@ -12,6 +12,7 @@ import { subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { AnswerHistory, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, DesignDirection, EntryChoices, ExtractionReview, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
+import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
 import { intakeNextStep, choiceDraftSubmission, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, type IntakeDraft, type PendingRequest } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import styles from "./intake.module.css";
@@ -50,6 +51,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const [ownerChanged, setOwnerChanged] = useState(false);
   const [intentPrompt, setIntentPrompt] = useState<{ text: string; questionId: string | null; revision: number; canAnswer: boolean } | null>(null);
   const [draft, setDraft] = useState<IntakeDraft>(emptyDraft);
+  const liveComment = useLiveComment();
   const [ideaRejectIds, setIdeaRejectIds] = useState<string[]>([]);
   const draftRef = useRef<IntakeDraft>(draft);
   const memoryDrafts = useRef(new Map<string, IntakeDraft>());
@@ -384,6 +386,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       const text = entryMessage(draftRef.current);
       if (text.length > 1200) { setError("처음 사업 설명은 1,200자 이내로 나눠 보내 주세요. 입력한 내용은 그대로 보관했어요."); return; }
       const entry = entrySubmission(text);
+      // 규격 질문은 규칙으로 바로 진행하고, AI 참고 의견은 옆에서 따로 흘러나온다(서버에서 꺼져 있으면 아무 일도 없다).
+      if (text) void liveComment.request(text);
       if (text && entry.kind === "confirm") {
         editDraft({ ...draftRef.current, memo: "", introMessage: text });
         follow.current = true;
@@ -474,8 +478,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
           onPointerDown={event => { if (event.target === event.currentTarget) manualScroll.current = true; }}
           onKeyDown={event => { if (["PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) { manualScroll.current = true; if (["PageUp", "Home", "ArrowUp"].includes(event.key)) follow.current = false; } }}
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
-          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /> : !loadFailed && <section className={styles.empty}><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section> : <>
+          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && <section className={styles.empty}><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section> : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} />
+            <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
             {updateNotice && <section className={styles.updateNotice} aria-label="변경 내용 반영 상태"><strong>저장된 결과 확인</strong><p>{updateNotice}</p><small>새로 만들기를 선택하기 전까지 기존 결과는 유지돼요.</small></section>}
             {job && <section className={styles.job} aria-label="AI 작업 상태">{aiBusy && !showCompletion && job.kind !== "design" && <JobProgress snapshot={plan} announce />}{job.status === "failed" && <div className={styles.error} role="alert"><p>{job.error || "AI 작업을 완료하지 못했어요."}</p><p>저장한 답변과 메모는 그대로 남아 있습니다.</p><button type="button" className={styles.textButton} disabled={blocked} onClick={() => void send(job.kind === "extract" ? { action: "extract" } : job.kind === "design" ? { action: "design" } : job.kind === "ideas" ? { action: "ideas", message: job.request || "현재 조건으로 다른 후보를 제안해 주세요" } : { action: "help", message: job.request || draft.help })}><RefreshCw size={16} aria-hidden="true" />다시 요청</button></div>}{job.status === "complete" && job.reply && !plan.coach.messages.some(message => message.id === `${job.id}:reply`) && <div className={styles.aiReply}><h3>{job.kind === "design" ? "AI 사업안 · 제안" : job.kind === "help" ? "AI 답변" : "메모 정리 결과"}</h3><ConversationText key={job.id} text={job.reply} /></div>}</section>}
