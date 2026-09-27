@@ -414,13 +414,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const scrollToCurrent = useCallback(() => {
     const container = conversation.current;
     if (!container) return;
-    const messages = container.querySelectorAll<HTMLElement>('[data-coach-message="user"]');
-    const target = draftRef.current.editingId ? currentTurn.current : messages[messages.length - 1] ?? currentTurn.current;
-    if (!target) return;
-    const box = target.getBoundingClientRect();
-    // Keep the last answer above the new question, including the end of long answers.
-    const visibleAnswer = Math.min(box.height, Math.max(80, container.clientHeight * .35));
-    const top = container.scrollTop + box.bottom - visibleAnswer - container.getBoundingClientRect().top - 16;
+    const turn = currentTurn.current;
+    const containerTop = container.getBoundingClientRect().top;
+    const bottom = container.scrollHeight - container.clientHeight;
+    // 채팅처럼 새 내용이 오면 맨 아래까지 따라 내려간다. 다만 선택지가 길어 맨 아래로 가면
+    // 지금 질문의 제목이 화면 위로 사라질 때는, 제목이 화면 맨 위에 오는 곳에서 멈춘다.
+    const turnTop = turn ? container.scrollTop + turn.getBoundingClientRect().top - containerTop - 16 : bottom;
+    const top = draftRef.current.editingId ? turnTop : Math.min(bottom, Math.max(0, turnTop));
     manualScroll.current = false;
     // 처음 불러온 직후(분할 너비가 자리 잡는 동안 포함)에는 긴 대화를 천천히 훑지 않고 바로 최신 위치로 간다. 그 뒤의 이동만 부드럽게 한다.
     if (!settleUntil.current) settleUntil.current = performance.now() + 1200;
@@ -441,6 +441,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       if (follow.current) frame = requestAnimationFrame(scrollToCurrent);
     });
     observer.observe(container);
+    // 대화 내용이 늘어날 때(다음 질문 등장, AI 의견 스트리밍)도 맨 아래까지 따라간다.
+    if (container.firstElementChild) observer.observe(container.firstElementChild);
     return () => { observer.disconnect(); cancelAnimationFrame(frame); };
   }, [scrollToCurrent]);
   useEffect(() => {

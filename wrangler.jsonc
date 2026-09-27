@@ -49,7 +49,9 @@
     "MANUAL_TRANSFER_ACCOUNT_NUMBER": "3333-01-4982733",
     "MANUAL_TRANSFER_ACCOUNT_HOLDER": "김주홍",
     "CLOUDFLARE_ZONE_ID": "b8bca144e4ce0ddd7ba6a375271d5c39",
-    "CLOUDFLARE_SAAS_CNAME_TARGET": "connect.oneulstart.com"
+    "CLOUDFLARE_SAAS_CNAME_TARGET": "connect.oneulstart.com",
+    // 첫 사업 설명에 붙는 AI 참고 의견(시험 기능). 끄려면 "0". 대시보드에서 바꾼 일반 변수는 배포 때 이 목록으로 덮어써진다.
+    "INTAKE_LIVE_COMMENT": "1"
   },
   "assets": {
     "directory": ".open-next/assets",
