@@ -243,21 +243,38 @@ export const KSIC_SYNONYMS: Record<string, string[]> = {
   "이사": ["49302", "49309"], "이사업체": ["49302", "49309"], "용달": ["49302"], "화물운송": ["49301"], "트럭": ["49301"],
   "심부름": ["96999", "75999"], "심부름대행": ["96999", "75999"], "생활서비스": ["96999"], "반려동물산책": ["96995"], "펫시터": ["96995"], "펫시팅": ["96995"], "캠핑장": ["55105"], "캠핑": ["55105"], "글램핑": ["55105"], "야영장": ["55105"],
   "요가스튜디오": ["91139"], "필라테스스튜디오": ["91139"], "중고명품": ["47869"], "중고의류": ["47869"], "리셀": ["47869"], "무인": ["47991", "47229"], "무인점포": ["47991", "47229"], "무인가게": ["47991", "47229"], "드론촬영": ["73301"],
+  // 2026-09-27 업종 오분류 검수: 물건 이름(건물·자동차·옷)이 제조·건설 이름에 걸리던 표현을 실제 활동으로 잇는다.
+  "사이트": ["63120"], "웹사이트": ["63120"], "홈페이지": ["63120"], "매칭": ["63120"], "매칭앱": ["63120", "58222"], "비교사이트": ["63120"], "예약앱": ["63120", "58222"], "예약사이트": ["63120"], "식당예약": ["63120", "58222"], "병원예약": ["63120", "58222"], "배달앱": ["63120", "58222"],
+  "돈을모아": ["66199", "63120"], "공동투자": ["66199", "68222"], "조각투자": ["66199", "68222"], "소액투자": ["66199"], "크라우드펀딩": ["66199", "63120"], "건물을사": ["68222", "68129"], "건물투자": ["68222", "66199"], "부동산투자": ["68222", "66199"], "빌딩투자": ["68222", "66199"],
+  "건물관리": ["68212"], "빌딩관리": ["68212"], "시설관리": ["68212"], "상가관리": ["68212"], "아파트관리": ["68211"], "집구하": ["68221", "63120"], "방구하": ["68221", "63120"], "자취방": ["68221"],
+  "집을짓": ["41111"], "주택건설": ["41111"], "전원주택": ["41111"], "건축회사": ["41111", "41119"], "건설사": ["41111", "41119"], "시공": ["42499"],
+  "중고차": ["45120"], "중고자동차": ["45120"], "신차": ["45110"], "정비": ["95211", "95212"], "자동차정비": ["95211"], "차량정비": ["95211"],
+  "휴대폰수리": ["95120"], "핸드폰수리": ["95120"], "폰수리": ["95120"], "컴퓨터수리": ["95110"], "노트북수리": ["95110"], "가전수리": ["95310"],
+  "수선": ["95391"], "옷수선": ["95391"], "의류수선": ["95391"], "리폼": ["95391", "95392"], "가방리폼": ["95392"], "가방수선": ["95392"], "신발수선": ["95392"], "구두수선": ["95392"],
+  "차를빌려": ["76110"], "차량대여": ["76110"], "카셰어링": ["76110"], "렌탈": ["76299"], "옷대여": ["76292"], "의류대여": ["76292"], "드레스대여": ["76292"],
+  "돌봄": ["87299", "96999"], "아이돌봄": ["87299"], "베이비시터": ["87299", "96999"], "육아도우미": ["87299"], "방문요양": ["87293"], "재가요양": ["87293"],
+  "태양광": ["35114", "42311"], "태양광발전": ["35114"], "전기차충전": ["35130"], "충전소": ["35130"],
+  "와인": ["46331"], "주류": ["46331"], "와인수입": ["46331"], "꽃구독": ["47851"], "꽃배달": ["47851"], "꽃정기구독": ["47851"],
+  "강아지산책": ["96995"], "산책대행": ["96995"], "도그워커": ["96995"], "반려견": ["96995", "47852"], "강아지": ["96995", "47852"], "애견": ["96995", "47852"],
+  "신발세탁": ["96912"], "운동화세탁": ["96912"], "옷공장": ["14199"], "옷만드": ["14199"], "의류제조": ["14199"], "봉제": ["14199"], "운동기록": ["58222"], "운동앱": ["58222"], "헬스앱": ["58222"],
+  "투자교육": ["85503", "85669"], "주식교육": ["85503", "85669"], "재테크교육": ["85503", "85669"], "재테크강의": ["85503"],
+  "그림": ["47841", "90132"], "미술품": ["47841"], "예술품": ["47841"], "보험비교": ["66202"], "보험대리": ["66202"], "보험설계": ["66202"], "여행가이드": ["75290"],
 };
 
-let cache: { entries: KsicEntry[]; byCode: Map<string, KsicEntry>; children: Map<string, KsicEntry[]>; normalized: Map<string, string> } | null = null;
+let cache: { entries: KsicEntry[]; byCode: Map<string, KsicEntry>; children: Map<string, KsicEntry[]>; normalized: Map<string, string[]> } | null = null;
 function data() {
   if (cache) return cache;
   const entries = (index as { entries: KsicEntry[] }).entries;
   const byCode = new Map(entries.map(e => [e.code, e]));
   const children = new Map<string, KsicEntry[]>();
   for (const e of entries) if (e.parent) { const list = children.get(e.parent) ?? []; list.push(e); children.set(e.parent, list); }
-  const normalized = new Map(entries.map(e => [e.code, normalize(e.name)]));
+  // 이름은 낱말 단위로 대조한다. 이어 붙인 문자열로 대조하면 "조사 서비스업"에 "사서"가 걸린다.
+  const normalized = new Map(entries.map(e => [e.code, e.name.normalize("NFKC").toLowerCase().split(/[\s·,()]+/).map(normalize).filter(Boolean)]));
   return (cache = { entries, byCode, children, normalized });
 }
 
 /** 공식 이름에 흔해 단독으로는 업종을 가리키지 못하는 토큰. 이름 매칭에서 제외한다(동의어 사전은 그대로). */
-const NAME_STOPWORDS = new Set(["대행", "서비스", "서비스업", "운영", "운영업", "관련", "기타", "판매", "판매업", "제조", "제조업", "도매", "도매업", "소매", "소매업", "일반", "전문", "사업", "산업", "활동", "시설", "그외", "달리", "분류", "전문점", "가게", "매장", "상점", "회사", "업체", "창업", "사업체", "온라인", "오프라인", "운영중", "하고싶어요", "하려고"].map(word => word.normalize("NFKC")));
+const NAME_STOPWORDS = new Set(["관리", "사람", "사람들", "위한", "대신", "대신해", "만들", "만들고", "싶어", "싶어요", "모아서", "주는", "해주는", "대행", "서비스", "서비스업", "운영", "운영업", "관련", "기타", "판매", "판매업", "제조", "제조업", "도매", "도매업", "소매", "소매업", "일반", "전문", "사업", "산업", "활동", "시설", "그외", "달리", "분류", "전문점", "가게", "매장", "상점", "회사", "업체", "창업", "사업체", "온라인", "오프라인", "운영중", "하고싶어요", "하려고"].map(word => word.normalize("NFKC")));
 
 export function normalize(text: string): string {
   return text.normalize("NFKC").toLowerCase().replace(/[\s·,.;:()~/\-]+/g, "");
@@ -294,6 +311,22 @@ export function ksicStructure(code: string): BusinessStructure | undefined {
 export type KsicMatch = { entry: KsicEntry; score: number; via: "synonym" | "name" };
 
 /**
+ * 공식 이름만으로 걸린 후보 중, 문장에 그 활동이 없으면 버리는 중분류.
+ * "건물을 사는 사이트"의 '건물'이 '건물 건설업'에, "자동차 정비 예약"의 '자동차'가 '자동차 제조업'에 걸리지 않게 한다.
+ * 동의어 사전 후보는 사람이 고른 연결이라 그대로 둔다.
+ */
+const NAME_ACTIVITY_GATES: Array<{ divisions: (division: number) => boolean; activity: RegExp }> = [
+  { divisions: d => d >= 10 && d <= 34, activity: /제조|생산|공장|공방|공예|수제|핸드메이드|가공|제작|조립|양조|주조|봉제|oem|odm|납품/i },
+  { divisions: d => d === 41 || d === 42, activity: /짓|시공|공사|건설|건축|설치|철거|해체|인테리어|리모델링|토목|배관/ },
+  { divisions: d => d === 46, activity: /도매|납품|유통|수입|수출|중개|b2b/i },
+  { divisions: d => d === 98, activity: /$^/ },
+];
+function nameMatchAllowed(code: string, text: string) {
+  const division = Number(code.slice(0, 2));
+  return !NAME_ACTIVITY_GATES.some(gate => gate.divisions(division) && !gate.activity.test(text));
+}
+
+/**
  * 사업 설명에서 업종 후보를 찾는다. 동의어 사전 → 이름 토큰 포함 순으로 점수를 매기고 세세분류를 우선한다.
  * 결정이 아니라 추천이다. 부정·복합 표현의 판단은 호출자가 한다.
  */
@@ -323,9 +356,10 @@ export function searchKsic(text: string, options: { limit?: number; minLevel?: K
   for (const t of [...tokens]) if (NAME_STOPWORDS.has(t)) tokens.delete(t);
   const { entries, normalized } = data();
   for (const e of entries) {
-    if (e.level < minLevel) continue;
-    const name = normalized.get(e.code)!; let score = 0;
-    for (const t of tokens) if (name.includes(t)) score += 10 + Math.min(t.length, 6) * 3;
+    if (e.level < minLevel || !nameMatchAllowed(e.code, text)) continue;
+    const words = normalized.get(e.code)!; let score = 0;
+    // 두 글자 낱말은 이름 낱말의 앞부분에서만 맞춘다("공장"이 "공공장소"에 걸리지 않게).
+    for (const t of tokens) if (words.some(word => word.startsWith(t) || t.length >= 3 && word.includes(t))) score += 10 + Math.min(t.length, 6) * 3;
     if (score) add(e.code, score + e.level, "name");
   }
   return [...scores.values()].sort((a, b) => b.score - a.score || b.entry.level - a.entry.level || a.entry.code.localeCompare(b.entry.code)).slice(0, limit);
