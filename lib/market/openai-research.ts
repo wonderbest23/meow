@@ -1,6 +1,6 @@
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
-import type { OpenAIRuntimeConfig } from "../openai/session-config";
+import type { LLMConfig } from "../llm/complete";
 import type { ProjectRecord } from "../service-domain";
 import { isOfficialEvidenceUrl, type MarketEvidence } from "./domain";
 
@@ -246,11 +246,12 @@ function projectPrompt(context: MarketResearchBusinessContext) {
   };
 }
 
-export async function researchOfficialMarketEvidence(
-  input: MarketResearchInput,
-  config: OpenAIRuntimeConfig,
-): Promise<{ evidence: MarketEvidence[]; citedSourceCount: number; model: string }> {
-  const context = isProjectRecord(input) ? projectResearchContext(input) : input;
+const RESEARCH_SYSTEM = "당신은 한국 초기 사업의 시장 근거를 조사하는 분석가입니다. 검색한 공식 원문에 실제로 적힌 사실만 구조화하고, 추정·모델 기억·홍보성 문구·존재하지 않는 수치와 주소를 만들지 마세요.";
+const RESEARCH_TIMEOUT_MS = 150_000;
+
+type SearchOutcome = { text: string; cited: Map<string, UrlCitation> };
+
+async function researchWithOpenAI(context: MarketResearchBusinessContext, config: LLMConfig): Promise<SearchOutcome> {
   let response: Response;
   try {
     response = await fetch("https://api.openai.com/v1/responses", {
@@ -289,14 +290,11 @@ export async function researchOfficialMarketEvidence(
         tool_choice: "required",
         include: ["web_search_call.action.sources"],
         input: [
-          {
-            role: "system",
-            content: "당신은 한국 초기 사업의 시장 근거를 조사하는 분석가입니다. 검색한 공식 원문에 실제로 적힌 사실만 구조화하고, 추정·모델 기억·홍보성 문구·존재하지 않는 수치와 주소를 만들지 마세요.",
-          },
+          { role: "system", content: RESEARCH_SYSTEM },
           { role: "user", content: JSON.stringify(projectPrompt(context)) },
         ],
       }),
-      signal: AbortSignal.timeout(150_000),
+      signal: AbortSignal.timeout(RESEARCH_TIMEOUT_MS),
     });
   } catch (error) {
     throw new Error(error instanceof Error && error.name === "TimeoutError"
@@ -316,8 +314,97 @@ export async function researchOfficialMarketEvidence(
     const reason = payload.incomplete_details?.reason ?? payload.status ?? "unknown";
     throw new Error(reason === "max_output_tokens" ? "WEB_SEARCH_OUTPUT_TRUNCATED" : `MARKET_RESEARCH_EMPTY:${reason}`);
   }
+  return { text, cited: extractActualSearchSources(payload) };
+}
 
-  const cited = extractActualSearchSources(payload);
+type AnthropicBlock = {
+  type?: string;
+  text?: string;
+  citations?: Array<{ url?: string; title?: string }>;
+  content?: unknown;
+};
+
+/** Claude 응답에 실제로 담긴 검색 결과·인용 주소만 모은다 — 모델이 본문에 쓴 주소는 여기 들어오지 않는다 */
+export function extractAnthropicSearchSources(blocks: AnthropicBlock[], found = new Map<string, UrlCitation>()) {
+  for (const block of blocks) {
+    if (block.type === "web_search_tool_result" && Array.isArray(block.content)) {
+      for (const result of block.content as Array<{ type?: string; url?: string; title?: string }>) {
+        if (result?.type !== "web_search_result" || !result.url) continue;
+        found.set(normalizeUrl(result.url), { url: result.url, title: result.title ?? "공식 원문" });
+      }
+    }
+    if (block.type === "text") {
+      for (const citation of block.citations ?? []) {
+        if (!citation.url) continue;
+        found.set(normalizeUrl(citation.url), { url: citation.url, title: citation.title ?? "공식 원문" });
+      }
+    }
+  }
+  return found;
+}
+
+/*
+ * Claude 웹 검색(서버 도구). 검색을 여러 번 돌면 서버가 한 번에 끝내지 않고 pause_turn 으로
+ * 멈추는데, 그때는 받은 응답을 그대로 붙여 다시 보내면 이어서 진행한다("계속" 같은 말을 덧붙이지 않는다).
+ * 최종 JSON 은 마지막 응답의 본문에서만 꺼내고, 검색 출처는 모든 응답에서 모은다.
+ */
+async function researchWithAnthropic(context: MarketResearchBusinessContext, config: LLMConfig): Promise<SearchOutcome> {
+  const deadline = Date.now() + RESEARCH_TIMEOUT_MS;
+  const messages: Array<{ role: "user" | "assistant"; content: unknown }> = [
+    { role: "user", content: JSON.stringify(projectPrompt(context)) },
+  ];
+  const cited = new Map<string, UrlCitation>();
+  for (let turn = 0; turn < 4; turn += 1) {
+    let response: Response;
+    try {
+      response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: { "x-api-key": config.apiKey, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({
+          model: config.model,
+          // 답변 몫 12,000 + 추론 여유(medium). 실제 쓴 만큼만 과금된다.
+          max_tokens: 16_000,
+          output_config: { effort: "medium" },
+          system: RESEARCH_SYSTEM,
+          tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 12, allowed_domains: [...allowedDomains] }],
+          messages,
+        }),
+        signal: AbortSignal.timeout(Math.max(1, deadline - Date.now())),
+      });
+    } catch (error) {
+      throw new Error(error instanceof Error && error.name === "TimeoutError"
+        ? "MARKET_RESEARCH_TIMEOUT"
+        : "MARKET_RESEARCH_UNAVAILABLE");
+    }
+    const payload = await response.json().catch(() => null) as { stop_reason?: string; content?: AnthropicBlock[]; error?: { message?: string } } | null;
+    if (!response.ok || !payload) {
+      throw new Error(response.status === 429
+        ? "OPENAI_429"
+        : `WEB_SEARCH_API_REJECTED:${payload?.error?.message ?? response.status}`);
+    }
+    const blocks = Array.isArray(payload.content) ? payload.content : [];
+    extractAnthropicSearchSources(blocks, cited);
+    if (payload.stop_reason === "pause_turn") {
+      messages.push({ role: "assistant", content: blocks });
+      continue;
+    }
+    if (payload.stop_reason === "max_tokens") throw new Error("WEB_SEARCH_OUTPUT_TRUNCATED");
+    const text = blocks.filter(block => block.type === "text" && typeof block.text === "string").map(block => block.text).join("");
+    if (!text) throw new Error(`MARKET_RESEARCH_EMPTY:${payload.stop_reason ?? "unknown"}`);
+    return { text, cited };
+  }
+  throw new Error("MARKET_RESEARCH_EMPTY:pause_turn");
+}
+
+export async function researchOfficialMarketEvidence(
+  input: MarketResearchInput,
+  config: LLMConfig,
+): Promise<{ evidence: MarketEvidence[]; citedSourceCount: number; model: string }> {
+  const context = isProjectRecord(input) ? projectResearchContext(input) : input;
+  const { text, cited } = config.provider === "anthropic"
+    ? await researchWithAnthropic(context, config)
+    : await researchWithOpenAI(context, config);
+
   /* 검색이 아예 돌지 않았으면 뒤 단계를 볼 필요가 없다 */
   if (!cited.size) throw new Error("WEB_SEARCH_NO_SOURCES");
 

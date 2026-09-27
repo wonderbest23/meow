@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../../lib/api-auth";
 import { isDeliveryDocumentId } from "../../../../../../lib/delivery/document-drafts";
-import { getOpenAIRuntimeConfig } from "../../../../../../lib/openai/session-config";
+import { resolveTextLLMConfig } from "../../../../../../lib/llm/config";
+import { completeJson, type LLMFailure } from "../../../../../../lib/llm/complete";
+import { aiFailureResponse, AI_NOT_CONNECTED_MESSAGE } from "../../../../../../lib/llm/failure-message";
 import { getProject } from "../../../../../../lib/project-repository";
 
 export const runtime = "nodejs";
@@ -31,17 +33,6 @@ function privateJson(body: unknown, init?: ResponseInit) {
   return response;
 }
 
-function outputText(payload: {
-  output_text?: string;
-  output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-}) {
-  return payload.output_text ?? payload.output
-    ?.flatMap((item) => item.content ?? [])
-    .filter((item) => item.type === "output_text" && typeof item.text === "string")
-    .map((item) => item.text)
-    .join("");
-}
-
 export async function POST(
   request: Request,
   context: { params: Promise<{ projectId: string }> },
@@ -53,9 +44,9 @@ export async function POST(
     if (!isDeliveryDocumentId(input.documentId)) throw new Error("DOCUMENT_NOT_FOUND");
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
-    const config = getOpenAIRuntimeConfig(identity.hash);
+    const config = resolveTextLLMConfig(identity.hash);
     if (!config) {
-      return privateJson({ error: { code: "OPENAI_NOT_CONNECTED", message: "인공지능 문장 도움을 사용하려면 운영용 OpenAI 연결이 필요합니다. 직접 수정과 저장은 지금도 가능합니다." } }, { status: 409 });
+      return privateJson({ error: { code: "OPENAI_NOT_CONNECTED", message: AI_NOT_CONNECTED_MESSAGE } }, { status: 409 });
     }
     const previous = recentRequests.get(identity.hash) ?? 0;
     if (Date.now() - previous < 3_000) {
@@ -81,60 +72,38 @@ export async function POST(
       value: item.value,
       unit: item.unit,
     }));
-    const providerResponse = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: config.model,
-        store: false,
-        reasoning: { effort: "low" },
-        max_output_tokens: 2_500,
-        text: { format: { type: "json_object" } },
-        input: [
-          {
-            role: "system",
-            content: [
-              "당신은 한국 초기 사업 문서를 다듬는 보수적인 편집자입니다.",
-              modeInstruction,
-              "표와 목록의 구조를 보존하세요.",
-              "사용자 입력과 저장 근거에 없는 사실, 수치, 실적, 논문, 인허가, 기관, 제휴 또는 출처를 새로 만들지 마세요.",
-              "JSON 객체 {replacement, summary, warnings}만 출력하세요.",
-            ].join(" "),
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              documentId: input.documentId,
-              sectionTitle: input.sectionTitle,
-              text: input.text,
-              business: {
-                title: project.title,
-                opportunity: project.opportunity,
-                founderProfile: project.founderProfile,
-                financial: project.businessAssessment?.financial ?? null,
-              },
-              savedEvidence: input.mode === "evidence" ? evidence : [],
-            }),
-          },
-        ],
+    let failure: LLMFailure["code"] | undefined;
+    const parsed = await completeJson(config, {
+      kind: "document-assist",
+      system: [
+        "당신은 한국 초기 사업 문서를 다듬는 보수적인 편집자입니다.",
+        modeInstruction,
+        "표와 목록의 구조를 보존하세요.",
+        "사용자 입력과 저장 근거에 없는 사실, 수치, 실적, 논문, 인허가, 기관, 제휴 또는 출처를 새로 만들지 마세요.",
+        "JSON 객체 {replacement, summary, warnings}만 출력하세요.",
+      ].join(" "),
+      user: JSON.stringify({
+        documentId: input.documentId,
+        sectionTitle: input.sectionTitle,
+        text: input.text,
+        business: {
+          title: project.title,
+          opportunity: project.opportunity,
+          founderProfile: project.founderProfile,
+          financial: project.businessAssessment?.financial ?? null,
+        },
+        savedEvidence: input.mode === "evidence" ? evidence : [],
       }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(55_000),
+      effort: "low",
+      maxOutputTokens: 2_500,
+      timeoutMs: 55_000,
+      onFailure: event => { failure = event.code; },
     });
-    const payload = await providerResponse.json() as {
-      output_text?: string;
-      output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-      error?: { message?: string };
-    };
-    if (!providerResponse.ok) {
-      const message = providerResponse.status === 429
-        ? "OpenAI 사용 한도 또는 요청 제한을 확인해주세요."
-        : payload.error?.message ?? "인공지능 문장 검토에 실패했습니다.";
-      return privateJson({ error: { code: "OPENAI_ASSIST_FAILED", message } }, { status: providerResponse.status });
+    if (!parsed) {
+      const { status, message } = aiFailureResponse(failure);
+      return privateJson({ error: { code: "OPENAI_ASSIST_FAILED", message } }, { status });
     }
-    const raw = outputText(payload);
-    if (!raw) throw new Error("인공지능 검토 결과가 비어 있습니다.");
-    const result = resultSchema.parse(JSON.parse(raw));
+    const result = resultSchema.parse(parsed);
     return privateJson({ result, model: config.model });
   } catch (error) {
     const message = error instanceof Error && error.name === "TimeoutError"

@@ -4,7 +4,7 @@ import { generateBusinessPlan } from "../../../../../../lib/business-plan/genera
 import { emptyMarketWorkspace } from "../../../../../../lib/market/domain";
 import { analyzeLocations } from "../../../../../../lib/market/location-engine";
 import { researchOfficialMarketEvidence } from "../../../../../../lib/market/openai-research";
-import { getOpenAIRuntimeConfig } from "../../../../../../lib/openai/session-config";
+import { resolveTextLLMConfig } from "../../../../../../lib/llm/config";
 import {
   getProject,
   saveBusinessPlan,
@@ -29,15 +29,13 @@ export async function POST(
     const identity = await requireGuestIdentity();
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
-    const sessionConfig = getOpenAIRuntimeConfig(identity.hash);
-    const apiKey = sessionConfig?.apiKey ?? process.env.OPENAI_API_KEY?.trim();
-    const model = sessionConfig?.model ?? process.env.OPENAI_MODEL?.trim() ?? "gpt-5.6-sol";
-    if (!apiKey) {
+    const config = resolveTextLLMConfig(identity.hash);
+    if (!config) {
       return privateJson({
-        error: { code: "OPENAI_NOT_CONNECTED", message: "공식 시장 근거 자동 탐색을 사용하려면 운영용 OpenAI 연결이 필요합니다." },
+        error: { code: "OPENAI_NOT_CONNECTED", message: "공식 시장 근거 자동 탐색에 필요한 인공지능 연결이 준비되지 않았습니다." },
       }, { status: 409 });
     }
-    const research = await researchOfficialMarketEvidence(project, { apiKey, model, source: sessionConfig?.source ?? "environment" });
+    const research = await researchOfficialMarketEvidence(project, config);
     const current = project.marketWorkspace ?? emptyMarketWorkspace();
     const unique = new Map(current.evidence.map((item) => [`${item.sourceUrl}|${item.metric}`, item]));
     for (const item of research.evidence) unique.set(`${item.sourceUrl}|${item.metric}`, item);
@@ -60,7 +58,7 @@ export async function POST(
     const rateLimited = detail === "OPENAI_429";
     const timeout = detail === "MARKET_RESEARCH_TIMEOUT";
     const message = rateLimited
-      ? "OpenAI 사용 한도 또는 검색 요청 제한을 확인해주세요."
+      ? "AI 사용 한도 또는 검색 요청 제한에 걸렸습니다. 잠시 후 다시 시도해주세요."
       : timeout
         ? "시장 근거 탐색 시간이 초과되었습니다. 잠시 뒤 다시 시도해주세요."
         : detail === "MARKET_RESEARCH_NO_CITED_EVIDENCE"

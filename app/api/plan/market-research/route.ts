@@ -7,7 +7,7 @@ import { planResearchContext, researchReadiness } from "../../../../lib/plan-bui
 import { researchOfficialMarketEvidence } from "../../../../lib/market/openai-research";
 import { emptyMarketWorkspace, type MarketEvidence } from "../../../../lib/market/domain";
 import { analyzeLocations } from "../../../../lib/market/location-engine";
-import { getOpenAIRuntimeConfig } from "../../../../lib/openai/session-config";
+import { resolveTextLLMConfig } from "../../../../lib/llm/config";
 import { getProject, saveMarketWorkspace } from "../../../../lib/project-repository";
 import { isSampleId } from "../../../../lib/plan-builder/samples";
 
@@ -69,7 +69,7 @@ export async function GET(request: Request) {
     evidence: publicEvidence(evidence),
     readiness,
     context,
-    configured: Boolean(getOpenAIRuntimeConfig(identity.hash)),
+    configured: Boolean(resolveTextLLMConfig(identity.hash)),
   });
 }
 
@@ -93,10 +93,10 @@ export async function POST(request: Request) {
     return privateJson({ error: { code: "RESEARCH_INPUT_REQUIRED", message: readiness.message }, readiness }, { status: 422 });
   }
 
-  const config = getOpenAIRuntimeConfig(identity.hash);
+  const config = resolveTextLLMConfig(identity.hash);
   if (!config) {
     return privateJson({
-      error: { code: "OPENAI_NOT_CONNECTED", message: "공식 시장 근거 자동 탐색을 사용하려면 운영용 OpenAI 연결이 필요합니다." },
+      error: { code: "OPENAI_NOT_CONNECTED", message: "공식 시장 근거 자동 탐색에 필요한 인공지능 연결이 준비되지 않았습니다." },
     }, { status: 409 });
   }
 
@@ -128,7 +128,7 @@ export async function POST(request: Request) {
   } catch (error) {
     const detail = error instanceof Error ? error.message : "";
     const map: Record<string, { status: number; message: string }> = {
-      OPENAI_429: { status: 429, message: "OpenAI 사용 한도 또는 검색 요청 제한을 확인해주세요. 잠시 후 다시 시도해주세요." },
+      OPENAI_429: { status: 429, message: "AI 사용 한도 또는 검색 요청 제한에 걸렸습니다. 잠시 후 다시 시도해주세요." },
       MARKET_RESEARCH_TIMEOUT: { status: 504, message: "시장 근거 탐색 시간이 초과되었습니다. 이미 저장된 근거는 그대로 있습니다. 잠시 뒤 다시 시도해주세요." },
       /*
        * 아래 네 가지는 사용자에게는 사실상 같은 상황("공식 자료를 찾지 못했다")이지만

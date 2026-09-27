@@ -113,11 +113,11 @@ async function main() {
   const recovered = await generateOperatingAnalysis(invalid.owner, invalid.planId, await prepare(invalid), mock);
   assert.equal(recovered.records.analyses[0].status, "ready", "expired job does not block explicit fresh consent");
   const originalFetch = globalThis.fetch;
-  const envKeys = ["OPERATING_AI_ENABLED", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "PLANNING_MODEL"] as const;
+  const envKeys = ["OPERATING_AI_ENABLED", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "PLANNING_MODEL", "LLM_TEXT_PROVIDER"] as const;
   const before = Object.fromEntries(envKeys.map(key => [key, process.env[key]]));
   let adapterCalls = 0;
   try {
-    Object.assign(process.env, { OPERATING_AI_ENABLED: "true", OPENAI_API_KEY: "test-only-not-a-real-key", ANTHROPIC_API_KEY: "test-only-no-fallback", PLANNING_MODEL: "fixture-model" });
+    Object.assign(process.env, { OPERATING_AI_ENABLED: "true", OPENAI_API_KEY: "test-only-not-a-real-key", ANTHROPIC_API_KEY: "test-only-no-fallback", PLANNING_MODEL: "fixture-model", LLM_TEXT_PROVIDER: "openai" });
     // The real adapter is exercised behind an in-process fake fetch, never the network.
     globalThis.fetch = async (url, init) => {
       adapterCalls++;

@@ -2248,19 +2248,19 @@ function FinalDelivery({
   const approvedArtifacts = serverProject?.stages
     .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId))
     .filter((artifact): artifact is ArtifactRecord => Boolean(artifact)) ?? [];
-  const aiGeneratedCount = approvedArtifacts.filter((artifact) => artifact.explanations.some((item) => item.includes("생성 방식: OpenAI API"))).length;
+  const aiGeneratedCount = approvedArtifacts.filter((artifact) => artifact.explanations.some((item) => /생성 방식: (?:OpenAI API|AI) · /.test(item))).length;
   const generationModel = approvedArtifacts
     .flatMap((artifact) => artifact.explanations)
-    .map((item) => item.match(/생성 방식: OpenAI API · (.+)$/)?.[1])
+    .map((item) => item.match(/생성 방식: (?:OpenAI API|AI) · (.+)$/)?.[1])
     .find((model): model is string => Boolean(model));
   const generationMode = demo ? "sample" : aiGeneratedCount === 6 ? "ai" : aiGeneratedCount > 0 ? "mixed" : "fallback";
   const generationTitle = generationMode === "ai"
-    ? `OpenAI API 핵심 문서 6종 고도화 완료${generationModel ? ` · ${generationModel}` : ""}`
+    ? `AI 핵심 문서 6종 고도화 완료${generationModel ? ` · ${generationModel}` : ""}`
     : generationMode === "mixed"
-      ? `OpenAI API 핵심 문서 ${aiGeneratedCount}/6종 적용`
+      ? `AI 핵심 문서 ${aiGeneratedCount}/6종 적용`
       : generationMode === "sample"
         ? "화면 확인용 가상 사례"
-        : "규칙 기반 안전 초안 · OpenAI API 미적용";
+        : "규칙 기반 안전 초안 · AI 미적용";
   const generationDescription = generationMode === "ai"
     ? "사업 전용 생성 규칙과 사실성 검수를 통과했습니다. 계획서·발표자료는 승인 초안과 저장된 계산을 다시 조립하며, 출처·인허가는 연결된 원문을 기준으로 최종 확인하세요."
     : generationMode === "mixed"

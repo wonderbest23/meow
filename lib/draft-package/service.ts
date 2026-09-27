@@ -23,7 +23,8 @@ import {
   updateDraftPackageRun,
   updateRefinementVersionStatus,
 } from "../project-repository";
-import type { OpenAIRuntimeConfig } from "../openai/session-config";
+import type { LLMConfig } from "../llm/complete";
+import { textLLMConfigFromEnv } from "../llm/config";
 
 const internalPath = "/__internal/draft-package";
 
@@ -140,14 +141,8 @@ async function startMilestone(params: DraftPackageWorkflowParams, stepIndex: num
   return true;
 }
 
-function environmentOpenAIConfig(env: CloudflareEnv): OpenAIRuntimeConfig | null {
-  const apiKey = env.OPENAI_API_KEY?.trim();
-  if (!apiKey) return null;
-  return {
-    apiKey,
-    model: env.OPENAI_MODEL?.trim() || "gpt-5.6-sol",
-    source: "environment",
-  };
+function environmentOpenAIConfig(env: CloudflareEnv): LLMConfig | null {
+  return textLLMConfigFromEnv(env as unknown as Record<string, string | undefined>);
 }
 
 async function dispatch(request: DraftPackageServiceRequest, env: CloudflareEnv) {

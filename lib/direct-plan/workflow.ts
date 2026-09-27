@@ -4,7 +4,8 @@ import {
   generateDirectIdeaPlan,
 } from "../direct-idea-planner";
 import type { DirectPlanInput } from "../planning-inputs";
-import type { OpenAIRuntimeConfig } from "../openai/session-config";
+import type { LLMConfig } from "../llm/complete";
+import { textLLMConfigFromEnv } from "../llm/config";
 
 export type DirectPlanWorkflowParams = {
   input: DirectPlanInput;
@@ -14,14 +15,10 @@ const retryOptions = {
   retries: { limit: 2, delay: "5 seconds", backoff: "exponential" as const },
 } as const;
 
-function environmentOpenAIConfig(env: CloudflareEnv): OpenAIRuntimeConfig {
-  const apiKey = env.OPENAI_API_KEY?.trim();
-  if (!apiKey) throw new Error("OPENAI_NOT_CONNECTED");
-  return {
-    apiKey,
-    model: env.OPENAI_MODEL?.trim() || "gpt-5.6-sol",
-    source: "environment",
-  };
+function environmentLLMConfig(env: CloudflareEnv): LLMConfig {
+  const config = textLLMConfigFromEnv(env as unknown as Record<string, string | undefined>);
+  if (!config) throw new Error("OPENAI_NOT_CONNECTED");
+  return config;
 }
 
 export class DirectPlanWorkflow extends WorkflowEntrypoint<CloudflareEnv, DirectPlanWorkflowParams> {
@@ -34,7 +31,7 @@ export class DirectPlanWorkflow extends WorkflowEntrypoint<CloudflareEnv, Direct
     const result = await step.do(
       "02 고객·상품·실행 범위 생성",
       retryOptions,
-      async () => generateDirectIdeaPlan(input, environmentOpenAIConfig(this.env)),
+      async () => generateDirectIdeaPlan(input, environmentLLMConfig(this.env)),
     );
     return step.do(
       "03 생성 결과 저장",

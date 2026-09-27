@@ -1,5 +1,6 @@
 import type { ArtifactRecord, ProjectRecord } from "./service-domain";
-import type { OpenAIRuntimeConfig } from "./openai/session-config";
+import { completeText, type LLMConfig, type LLMFailure } from "./llm/complete";
+import { textLLMConfigFromEnv } from "./llm/config";
 import {
   inspectStageArtifact,
   stageQualityRevisionInstruction,
@@ -505,82 +506,58 @@ function fallbackContent(project: ProjectRecord, stageIndex: number) {
   };
 }
 
+/** 선택된 텍스트 모델(기본 Claude 단일 모델)로 단계 문서를 생성한다. 오류 코드 이름은 호출부 호환을 위해 유지한다. */
 async function generateWithOpenAI(
   project: ProjectRecord,
   stageIndex: number,
   revisionInstruction?: string,
-  runtimeConfig?: OpenAIRuntimeConfig | null | false,
+  runtimeConfig?: LLMConfig | null | false,
   currentDraft?: Record<string, unknown>,
 ) {
   if (runtimeConfig === false) return null;
-  const apiKey = runtimeConfig?.apiKey ?? process.env.OPENAI_API_KEY;
-  if (!apiKey) return null;
-  const model = runtimeConfig?.model ?? process.env.OPENAI_MODEL ?? "gpt-5.6-sol";
+  const config = runtimeConfig ?? textLLMConfigFromEnv(process.env);
+  if (!config) return null;
   const baselineDraft = fallbackContent(project, stageIndex);
   const requiredFields = stageAIFieldKeys[stageIndex];
   if (!requiredFields) throw new Error("STAGE_SCHEMA_NOT_FOUND");
-  let response: Response;
-  try {
-    response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        store: false,
-        reasoning: { effort: "medium" },
-        max_output_tokens: stageIndex === 5 ? 9_000 : 6_000,
-        text: { format: { type: "json_object" } },
-        input: [
-          {
-            role: "system",
-            content:
-              "당신은 한국에서 실제로 실행할 사업 초안을 작성하는 선임 사업전략가입니다. 이 작업은 소설·광고 창작이 아닙니다. 사용자 입력, 저장된 계산, 연결된 원문만 완료 사실로 사용할 수 있습니다. 고객 인터뷰·설문·판매·매출·시장규모·성장률·경력·수상·특허·제휴·후기를 절대 만들어내지 마세요. 모델의 기억이나 일반 상식을 최신 한국 시장의 확정 수치로 쓰지 마세요. 근거가 없으면 반드시 검증할 가정, 목표 또는 추가 확인 필요로 표현하고 미래형·조건형 문장을 사용하세요. 가격과 손익은 businessAssessment의 계산값을 그대로 유지하고 임의의 업종 평균으로 바꾸지 마세요. 요청한 필수 필드만 출력하되(기본 초안 전체를 반복하거나 새로운 최상위 필드를 추가하지 마세요), 각 필드는 기본 초안의 일반론을 그대로 두지 말고 이 사업의 구체적 맥락 — 업종, 고객, 지역, 예산, 대표자의 가용 시간과 강점, 제공 범위, 저장된 계산값과 이전 단계 결과 — 을 반영해 오직 이 사업에만 해당하는 내용으로 깊고 상세하게 다시 작성하세요. 다른 업종이나 다른 고객에게 그대로 복사해도 말이 되는 범용 문장은 실패로 간주합니다. 고객이 실제로 문제를 겪는 상황·행동·구매 맥락을 구체적으로 묘사하고, 각 항목은 실행자가 바로 행동할 수 있도록 대상·범위·순서·통과 기준·완료 증거가 드러나는 수준으로 작성하세요. 이 문서의 목적은 고객 검증을 강요하는 것이 아니라 사업 아이템을 제대로 구성하고 상세화하는 것입니다. 고객 인터뷰·시장 확인은 창업가가 준비되면 선택할 다음 단계로 제시하고, 몇 주 안에 반드시 고객을 만나 시험하라고 압박하지 마세요. 과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사와 인터넷 주소를 금지합니다. 반드시 설명이나 마크다운 없이 유효한 JSON 객체 하나만 출력하세요.",
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              task: stageInstructions[stageIndex],
-              opportunity: project.opportunity,
-              founderProfile: project.founderProfile,
-              stageInputs: project.stages[stageIndex].inputs,
-              businessSetup: project.businessSetup,
-              businessAssessment: project.businessAssessment,
-              requiredFields,
-              baselineDraft: selectFields(baselineDraft, requiredFields),
-              priorApprovedArtifacts: project.stages
-                .slice(0, stageIndex)
-                .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.content)
-                .filter((content): content is Record<string, unknown> => Boolean(content))
-                .map(priorArtifactSummary),
-              revisionInstruction,
-              currentDraft,
-            }),
-          },
-        ],
-      }),
-      signal: AbortSignal.timeout(stageIndex === 5 ? 210_000 : 150_000),
-    });
-  } catch (error) {
-    throw new Error(error instanceof Error && error.name === "TimeoutError"
-      ? "OPENAI_TIMEOUT"
-      : "OPENAI_UNAVAILABLE");
+  let failure: LLMFailure["code"] | undefined;
+  const outputText = await completeText(config, {
+    kind: "stage-generate",
+    system:
+      "당신은 한국에서 실제로 실행할 사업 초안을 작성하는 선임 사업전략가입니다. 이 작업은 소설·광고 창작이 아닙니다. 사용자 입력, 저장된 계산, 연결된 원문만 완료 사실로 사용할 수 있습니다. 고객 인터뷰·설문·판매·매출·시장규모·성장률·경력·수상·특허·제휴·후기를 절대 만들어내지 마세요. 모델의 기억이나 일반 상식을 최신 한국 시장의 확정 수치로 쓰지 마세요. 근거가 없으면 반드시 검증할 가정, 목표 또는 추가 확인 필요로 표현하고 미래형·조건형 문장을 사용하세요. 가격과 손익은 businessAssessment의 계산값을 그대로 유지하고 임의의 업종 평균으로 바꾸지 마세요. 요청한 필수 필드만 출력하되(기본 초안 전체를 반복하거나 새로운 최상위 필드를 추가하지 마세요), 각 필드는 기본 초안의 일반론을 그대로 두지 말고 이 사업의 구체적 맥락 — 업종, 고객, 지역, 예산, 대표자의 가용 시간과 강점, 제공 범위, 저장된 계산값과 이전 단계 결과 — 을 반영해 오직 이 사업에만 해당하는 내용으로 깊고 상세하게 다시 작성하세요. 다른 업종이나 다른 고객에게 그대로 복사해도 말이 되는 범용 문장은 실패로 간주합니다. 고객이 실제로 문제를 겪는 상황·행동·구매 맥락을 구체적으로 묘사하고, 각 항목은 실행자가 바로 행동할 수 있도록 대상·범위·순서·통과 기준·완료 증거가 드러나는 수준으로 작성하세요. 이 문서의 목적은 고객 검증을 강요하는 것이 아니라 사업 아이템을 제대로 구성하고 상세화하는 것입니다. 고객 인터뷰·시장 확인은 창업가가 준비되면 선택할 다음 단계로 제시하고, 몇 주 안에 반드시 고객을 만나 시험하라고 압박하지 마세요. 과장, 성공 보장, 가상 고객 인용, 존재하지 않는 경쟁사와 인터넷 주소를 금지합니다. 반드시 설명이나 마크다운 없이 유효한 JSON 객체 하나만 출력하세요.",
+    user: JSON.stringify({
+      task: stageInstructions[stageIndex],
+      opportunity: project.opportunity,
+      founderProfile: project.founderProfile,
+      stageInputs: project.stages[stageIndex].inputs,
+      businessSetup: project.businessSetup,
+      businessAssessment: project.businessAssessment,
+      requiredFields,
+      baselineDraft: selectFields(baselineDraft, requiredFields),
+      priorApprovedArtifacts: project.stages
+        .slice(0, stageIndex)
+        .map((stage) => stage.artifacts.find((artifact) => artifact.id === stage.approvedArtifactId)?.content)
+        .filter((content): content is Record<string, unknown> => Boolean(content))
+        .map(priorArtifactSummary),
+      revisionInstruction,
+      currentDraft,
+    }),
+    jsonObject: true,
+    effort: "medium",
+    maxOutputTokens: stageIndex === 5 ? 9_000 : 6_000,
+    timeoutMs: stageIndex === 5 ? 210_000 : 150_000,
+    onFailure: event => { failure = event.code; },
+  });
+  if (!outputText) {
+    if (!failure) throw new Error("OPENAI_EMPTY_OUTPUT");
+    throw new Error(
+      failure === "timeout" ? "OPENAI_TIMEOUT"
+        : failure === "rate_limited" || failure === "quota_exhausted" ? "OPENAI_429"
+          : failure === "authentication" ? "OPENAI_401"
+            : failure === "output_limit" || failure === "invalid_json" || failure === "invalid_response" || failure === "refusal" ? `OPENAI_INVALID_OUTPUT:${failure}`
+              : "OPENAI_UNAVAILABLE",
+    );
   }
-  if (!response.ok) {
-    throw new Error(`OPENAI_${response.status}`);
-  }
-  const payload = await response.json() as {
-    output_text?: string;
-    output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-  };
-  const outputText = payload.output_text ?? payload.output
-    ?.flatMap((item) => item.content ?? [])
-    .filter((item) => item.type === "output_text" && typeof item.text === "string")
-    .map((item) => item.text)
-    .join("");
-  if (!outputText) throw new Error("OPENAI_EMPTY_OUTPUT");
   try {
     const parsed = JSON.parse(outputText) as unknown;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -608,14 +585,14 @@ export async function generateStageArtifact(
   project: ProjectRecord,
   stageIndex: number,
   revisionInstruction?: string,
-  runtimeConfig?: OpenAIRuntimeConfig | null | false,
+  runtimeConfig?: LLMConfig | null | false,
 ): Promise<Omit<ArtifactRecord, "id" | "projectId" | "stageId" | "stageIndex" | "version" | "createdAt"> & { model: string }> {
   const baselineContent = validateStageContent(stageIndex, fallbackContent(project, stageIndex));
   let aiContent: Record<string, unknown> | null = null;
   let autoRewritten = false;
   let fallbackReason = "";
   const requiresAI = runtimeConfig !== false
-    && Boolean(runtimeConfig?.apiKey ?? process.env.OPENAI_API_KEY);
+    && Boolean(runtimeConfig ?? textLLMConfigFromEnv(process.env));
   try {
     aiContent = await generateWithOpenAI(project, stageIndex, revisionInstruction, runtimeConfig);
   } catch (error) {
@@ -684,7 +661,7 @@ export async function generateStageArtifact(
     realityReview = inspectBusinessReality(project, content);
   }
   const resolvedModel = usedAI
-    ? (runtimeConfig ? runtimeConfig.model : process.env.OPENAI_MODEL) ?? "gpt-5.6-sol"
+    ? (runtimeConfig ? runtimeConfig.model : textLLMConfigFromEnv(process.env)?.model) ?? "ai"
     : "deterministic-fallback-v1";
   const inputs = project.stages[stageIndex].inputs;
   const sourceUrls = [
@@ -697,10 +674,10 @@ export async function generateStageArtifact(
     content,
     explanations: [
       usedAI
-        ? `생성 방식: OpenAI API · ${resolvedModel}`
-        : "생성 방식: 규칙 기반 안전 초안 · OpenAI API 미적용",
+        ? `생성 방식: AI · ${resolvedModel}`
+        : "생성 방식: 규칙 기반 안전 초안 · AI 미적용",
       "사용자가 저장한 단계 입력과 이전 승인 결과물을 우선 반영했습니다.",
-      ...(fallbackReason ? ["OpenAI 응답을 그대로 사용할 수 없어 출처 없는 사실을 만들지 않는 기본 초안으로 전환했습니다."] : []),
+      ...(fallbackReason ? ["AI 응답을 그대로 사용할 수 없어 출처 없는 사실을 만들지 않는 기본 초안으로 전환했습니다."] : []),
       usedAI
         ? `AI 자동 납품 검수 ${artifactQuality.score}점${autoRewritten ? " · 부족 항목을 자동으로 한 번 보강했습니다." : " · 첫 생성본이 기준을 통과했습니다."}`
         : "확인 가능한 사용자 입력과 저장된 계산만 사용해 초안을 생성했습니다.",
