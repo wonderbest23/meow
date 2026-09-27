@@ -13,6 +13,7 @@ import { AnswerHistory, BusinessSummary, ChatSpeaker, ConversationHistory, Conve
 import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
+import { useAnswerSuggestions } from "./intake-ui/AnswerSuggestions";
 import { intakeNextStep, choiceDraftSubmission, customCandidateDraftKey, draftKey, emptyAnswer, emptyDraft, entryMessage, entrySubmission, confirmedEntryCommand, isConsultationText, needsPolling, parseDraft, persistDraft, previewIntakeAnswer, readIntakePayload, routeComposerInput, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, summaryAnswerText, type IntakeDraft, type PendingRequest } from "./intake-ui/model";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import styles from "./intake.module.css";
@@ -52,6 +53,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const [intentPrompt, setIntentPrompt] = useState<{ text: string; questionId: string | null; revision: number; canAnswer: boolean } | null>(null);
   const [draft, setDraft] = useState<IntakeDraft>(emptyDraft);
   const liveComment = useLiveComment();
+  const answerSuggestions = useAnswerSuggestions(plan?.planId);
   const [ideaRejectIds, setIdeaRejectIds] = useState<string[]>([]);
   const draftRef = useRef<IntakeDraft>(draft);
   const memoryDrafts = useRef(new Map<string, IntakeDraft>());
@@ -368,6 +370,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const memoPending = plan?.intake.notes.some(note => note.status === "failed" || note.status === "queued" || note.status === "stored" && note.intent === "memo");
   const startFromCard = (mode: "exploring" | "startup" | "operating") => {
     const text = entryMessage(draftRef.current);
+    if (text && mode !== "exploring") void answerSuggestions.request(text, mode);
     void send(confirmedEntryCommand(mode, text), { text: draftRef.current.memo, intro: draftRef.current.introMessage });
   };
   const storeComposerNote = (intent: "memo" | "question") => {
@@ -391,7 +394,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       if (text && entry.kind === "confirm") {
         editDraft({ ...draftRef.current, memo: "", introMessage: text });
         follow.current = true;
-      } else if (text && entry.kind === "send") void send(entry.command, { text: draftRef.current.memo, intro: draftRef.current.introMessage });
+      } else if (text && entry.kind === "send") {
+        // 구체적인 사업 설명이면 뒤에 나올 고객·문제·상품·경로 질문의 맞춤 추천도 미리 받아 둔다.
+        if (entry.command.questionId === "business" && (entry.command.mode === "startup" || entry.command.mode === "operating")) void answerSuggestions.request(text, entry.command.mode);
+        void send(entry.command, { text: draftRef.current.memo, intro: draftRef.current.introMessage });
+      }
       return;
     }
     if (draft.mode === "ideas" && plan.intake.mode === "exploring") {
@@ -490,7 +497,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
             {questionNote && !questionHandled && <section className={styles.noteReceipt} aria-label="저장한 질문"><p>질문을 저장했어요</p><button type="button" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: lastMessage!.text })}><Sparkles size={16} aria-hidden="true" />AI 답변 받기</button></section>}
             {memoPending && <button type="button" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</button>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview}>
-              {replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} disabled={blocked} onChange={answer => editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } })} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
+              {replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={blocked} onChange={answer => editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } })} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
                 <ChatSpeaker />
                 <h2>{nextStep === "design" ? "이제 사업 방향을 정리해 볼까요?" : nextStep === "prepare" ? "사업 방향을 정리했어요" : nextStep === "open" ? "계획서가 준비됐어요" : "사업 하나만 정하면 시작할 수 있어요"}</h2>
                 <p>{nextStep === "design" ? "기본 질문은 끝났어요. 더 보완하는 건 선택이에요." : nextStep === "prepare" ? "아래 제안을 확인하고 계획서로 이어가세요." : nextStep === "open" ? "저장한 계획서를 확인하세요." : refinement?.prompt ?? "이어서 사업 내용을 정해볼까요?"}</p>

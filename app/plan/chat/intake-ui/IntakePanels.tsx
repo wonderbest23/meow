@@ -31,10 +31,12 @@ export function EntryChoices({ disabled, onStart, initialMessage }: { disabled: 
   </section>;
 }
 
-export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange, onAnswer, onCancel, inChat = false, refining = false }: {
+export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange, onAnswer, onCancel, inChat = false, refining = false, suggestions }: {
   question: IntakeQuestion; snapshot: IntakeSnapshot; draft: AnswerDraft; editing: boolean; disabled: boolean;
   onChange: (value: AnswerDraft) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string, extra?: { ksic?: string }) => void;
   onCancel: () => void; inChat?: boolean; refining?: boolean;
+  /** 첫 사업 설명에 맞춘 AI 추천(시험 기능). 누르면 입력칸에 들어가고, 보내기 전까지는 답변이 아니다. */
+  suggestions?: string[];
 }) {
   const [manualIndustry, setManualIndustry] = useState(editing || draft.selected.length > 0);
   const seededPeriod = question.id === "period" ? periodDates(draft.text) : null;
@@ -138,7 +140,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         })}
       </fieldset>)}
       {candidate && <label className={styles.customToggle}><input type="checkbox" checked={draft.custom} onChange={event => onChange({ ...draft, custom: event.target.checked, selected: [], unknown: false, ksic: undefined })} />직접 생각한 사업 입력</label>}
-      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} onChange={onChange} />}
+      {hybrid && inChat && !!suggestions?.length && <SuggestionChips question={question} draft={draft} disabled={disabled} suggestions={suggestions} groups={groups} onChange={onChange} />}
+      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} extraPicked={pickedSuggestions(question, draft, suggestions)} onChange={onChange} />}
       {ticket && <AmountLadder question={question} ranges={ticketRanges} disabled={disabled} staging={inChat} exactLabel="정확한 금액 알아요 (기록 있음)" onCommit={commit} onRange={range => stage(`${range.label} (예상)`)} onExact={amount => stage(`${formatWon(amount)} (실제 기록)`)} />}
       {prefill && <div className={styles.chipStep} role="group" aria-label="문장 시작 선택">
         <div className={styles.chipRow}>{options.map(option => <button key={option.value} type="button" className={styles.chip} data-selected={draft.text.trim() === option.label || undefined} disabled={disabled} onClick={() => onChange({ ...draft, custom: false, selected: [], unknown: false, text: option.label })}>{option.label}</button>)}</div>
@@ -183,8 +186,37 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
 }
 
 /** hybrid_text_chips (spec §2): step chips write the assembled sentence into `draft.text`; the composer only supplements it. */
-function HybridChips({ question, draft, disabled, groups, revealed, onChange }: {
-  question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; groups: ReturnType<typeof optionGroups>; revealed: (index: number) => boolean; onChange: (value: AnswerDraft) => void;
+/** 이 사업에 맞춘 AI 추천 칩. 업종 칩과 같은 답변에 자유 문장 조각으로 합쳐지고, 다시 누르면 빠진다. */
+const pickedSuggestions = (question: IntakeQuestion, draft: AnswerDraft, suggestions: string[] | undefined) => {
+  const pieces = unmatchedPieces(question, draft.text);
+  return suggestions?.filter(suggestion => pieces.includes(suggestion)).length ?? 0;
+};
+
+function SuggestionChips({ question, draft, disabled, suggestions, groups, onChange }: {
+  question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; suggestions: string[]; groups: ReturnType<typeof optionGroups>; onChange: (value: AnswerDraft) => void;
+}) {
+  const pieces = unmatchedPieces(question, draft.text);
+  // "최대 N개" 질문은 업종 칩과 추천을 합쳐 N개까지. 한 개만 고르는 질문은 추천끼리 바꿔 끼운다.
+  const limit = chipLimit(question.id);
+  const chipPicks = groups.filter(group => !isFilterGroup(group.name)).reduce((sum, group) => sum + group.options.filter(option => draft.selected.includes(option.value)).length, 0);
+  const full = limit > 1 && chipPicks + pickedSuggestions(question, draft, suggestions) >= limit;
+  const toggle = (suggestion: string) => {
+    const next = pieces.includes(suggestion) ? pieces.filter(piece => piece !== suggestion) : [...(limit > 1 ? pieces : pieces.filter(piece => !suggestions.includes(piece))), suggestion];
+    onChange({ ...draft, custom: false, unknown: false, text: assembleHybridText(question, draft.selected, next) });
+  };
+  return <div className={`${styles.chipStep} ${styles.suggestionStep}`} role="group" aria-label="이 사업에 맞춘 추천">
+    <p className={styles.stepLegend}><Sparkles size={13} aria-hidden="true" />이 사업에 맞춘 추천<span>AI 제안 · 누르면 입력칸에 들어가요</span></p>
+    <div className={styles.chipRow}>{suggestions.map(suggestion => {
+      const selected = pieces.includes(suggestion);
+      return <button key={suggestion} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && full} onClick={() => toggle(suggestion)}>{suggestion}</button>;
+    })}</div>
+  </div>;
+}
+
+function HybridChips({ question, draft, disabled, groups, revealed, extraPicked = 0, onChange }: {
+  question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; groups: ReturnType<typeof optionGroups>; revealed: (index: number) => boolean;
+  /** 같은 한도에 포함되는 맞춤 추천 선택 수 */
+  extraPicked?: number; onChange: (value: AnswerDraft) => void;
 }) {
   const limit = chipLimit(question.id);
   const update = (selected: string[]) => onChange({ ...draft, custom: false, unknown: false, selected, text: assembleHybridText(question, selected, unmatchedPieces(question, draft.text)) });
@@ -197,7 +229,7 @@ function HybridChips({ question, draft, disabled, groups, revealed, onChange }: 
     if (!revealed(index)) return null;
     const filter = isFilterGroup(group.name);
     const stepLimit = filter ? 1 : limit;
-    const picked = group.options.filter(option => draft.selected.includes(option.value)).length;
+    const picked = group.options.filter(option => draft.selected.includes(option.value)).length + (filter ? 0 : extraPicked);
     const title = groupTitle(group.name);
     return <div key={group.name ?? index} className={styles.chipStep} role="group" aria-label={title || question.label} data-step={groups.length > 1 ? index + 1 : undefined}>
       {(title || stepLimit > 1) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}</p>}
