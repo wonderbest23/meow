@@ -3,13 +3,15 @@
 .stage { height: 820px; max-height: 1000px; position: relative; max-width: 1680px; margin: auto; isolation: isolate; }
 .track[data-motion="on"] { height: calc(100svh - 64px + var(--phone-scroll-distance, 7200px)); }
 .track[data-motion="on"] .stage { position: sticky; top: 64px; height: calc(100svh - 64px); }
-.copyArea { position: absolute; z-index: 3; top: 26%; left: max(6%, calc((100% - 1180px) / 2)); width: 480px; display: grid; grid-template-columns: minmax(0, 1fr); pointer-events: none; }
+.copyArea { position: absolute; z-index: 3; top: 26%; left: max(6%, calc((100% - 1180px) / 2)); width: 540px; display: grid; grid-template-columns: minmax(0, 1fr); pointer-events: none; }
 .copy { grid-area: 1 / 1; width: 100%; visibility: hidden; }
 .track[data-active="0"] .copy:nth-child(1), .track[data-active="1"] .copy:nth-child(2), .track[data-active="2"] .copy:nth-child(3) { visibility: visible; }
 .track[data-renderer="webgl"] .copy[data-story-scene] { visibility: var(--copy-visibility, hidden); }
 .copyLine { display: block; }
 .copyText { display: block; }
 .track[data-renderer="webgl"] .copyText { opacity: var(--copy-opacity, 1); transform: translate3d(0, var(--copy-y, 0px), 0); }
+.track[data-renderer="webgl"] .startLink, .track[data-renderer="webgl"] .sceneFooter { opacity: calc(1 - var(--copy-exit, 0)); }
+.track[data-copy-exited="true"] .startLink, .track[data-copy-exited="true"] .sceneFooter { visibility: hidden; }
 .story .copy h2 { font-size: var(--home-title-size, 48px); line-height: var(--home-title-line, 1.4); letter-spacing: 0; font-weight: 700; color: #fff; margin: 0; word-break: keep-all; text-wrap: balance; }
 .story .copy p { margin: var(--home-copy-gap, 24px) 0 0; font-size: var(--home-body-size, 18px); line-height: var(--home-body-line, 1.75); color: var(--home-fg-2, #b6b8bf); word-break: keep-all; text-wrap: pretty; }
 .mobileCopy { display: none; }

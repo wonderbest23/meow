@@ -97,3 +97,6 @@
 @media(prefers-reduced-motion:reduce) {
   .overview[data-copy-motion="on"] [data-home-copy] > :is(h2, h3, p) { opacity: 1; transform: none; }
 }
+
+/* 390px 안팎의 휴대폰에서 32px 제목 한 줄("사업을 기획하는 순서로")이 넘쳐 세 줄이 되지 않도록 화면 폭에 맞춰 조금 줄인다. */
+@media (max-width: 420px) { .overview h2 { font-size: min(var(--home-title-size, 32px), 7.6vw); } }

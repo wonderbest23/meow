@@ -145,6 +145,11 @@ export function createPhoneStage(root: HTMLElement, onChapter: (index: number) =
     scrubber.value = (progress * 100).toFixed(1);
     scrubber.setAttribute("aria-valuetext", `${Math.round(progress * 100)}%`);
     const copyMotion = phoneStoryCopy(progress, manual || preview !== undefined ? 1 : copyEntry, manual || preview !== undefined ? 0 : copyExit, reduced.matches);
+    // 마지막 장면의 글이 위로 빠져나갈 때 시작 버튼과 진행 막대도 함께 사라진다(글만 사라지고 버튼이 홀로 남지 않게).
+    const exitT = manual || preview !== undefined ? 0 : THREE.MathUtils.clamp((copyExit - .16) / .84, 0, 1);
+    const actionExit = exitT * exitT * (3 - 2 * exitT);
+    root.style.setProperty("--copy-exit", actionExit.toFixed(4));
+    root.dataset.copyExited = actionExit > .98 ? "true" : "false";
     copyScenes.forEach(({ element, parts }, index) => {
       const state = copyMotion.scenes[index];
       element.style.setProperty("--copy-visibility", state.visible ? "visible" : "hidden");
