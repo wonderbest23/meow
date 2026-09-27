@@ -54,8 +54,10 @@
     "INTAKE_LIVE_COMMENT": "1",
     // 첫 사업 설명에 맞춘 답변 추천 칩(시험 기능). 끄려면 "0".
     "INTAKE_ANSWER_SUGGESTIONS": "1",
-    // 추천 칩에만 쓰는 모델(속도 비교 중). 비우면 기본 텍스트 모델(Opus)로 돌아간다.
-    "INTAKE_SUGGEST_MODEL": "claude-haiku-4-5-20251001"
+    // 추천 칩에만 쓰는 모델. 비워 두면 기본 텍스트 모델(Opus)을 쓴다.
+    // Haiku 4.5 비교(2026-09): 중간값 4.3초 vs Opus 7.9초로 빨랐지만, 세무 신고 대행처럼 법적으로 위험한 추천과
+    // 설명에 없는 위치·시간을 지어낸 추천이 나와 Opus로 되돌렸다.
+    "INTAKE_SUGGEST_MODEL": ""
   },
   "assets": {
     "directory": ".open-next/assets",
