@@ -557,7 +557,8 @@ async function main() {
   const conversationMarkup = source.slice(source.indexOf('<main ref={inputPane}'), source.indexOf('</main>'));
   assert.ok(!conversationMarkup.includes("<AnswerHistory"), "Answer history belongs in the summary, not below the next chat question");
   assert.match(source, /finishReply\(pending.command.requestId, saved\)/, "Failed saves must cancel question reveal");
-  assert.match(source, /box.bottom - visibleAnswer/, "Auto-scroll preserves the last user answer, not just the next question");
+  assert.match(source, /Math\.min\(bottom, Math\.max\(0, turnTop\)\)/, "Auto-scroll follows to the latest content but never hides the current question heading");
+  assert.match(source, /observer\.observe\(container\.firstElementChild\)/, "Auto-scroll keeps following while the conversation content grows");
   const transition = readFileSync(new URL("../app/plan/chat/intake-ui/use-reply-transition.ts", import.meta.url), "utf8");
   assert.match(transition, /prefers-reduced-motion: reduce/);
   assert.match(transition, /active.current\?\.requestId !== requestId/);
