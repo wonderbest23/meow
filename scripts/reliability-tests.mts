@@ -31,7 +31,7 @@ let failures = 0;
 for (const suite of suites) {
   const url = new URL(`./${suite}.test.${suite === "business-intake-ui" ? "tsx" : "ts"}`, import.meta.url).href;
   const directEntry = ["artifact-updates", "artifact-update-reservations", "artifact-v3-operating", "proposal-source-staleness"].includes(suite) ? `process.argv.push(${JSON.stringify(new URL(url).pathname)});` : "";
-  const result = spawnSync(process.execPath, ["--import", "tsx", "--input-type=module", "-e", `globalThis.fetch = async () => { throw new Error('External network disabled in reliability tests'); }; ${suite === "business-hub" ? "process.argv.push('--state-only');" : ""} ${directEntry} await import(${JSON.stringify(url)});`], { cwd: new URL("..", import.meta.url), env, encoding: "utf8", timeout: 60000 });
+  const result = spawnSync(process.execPath, ["--require", new URL("./ledger-test-runtime.cjs", import.meta.url).pathname, "--import", "tsx", "--input-type=module", "-e", `globalThis.fetch = async () => { throw new Error('External network disabled in reliability tests'); }; ${suite === "business-hub" ? "process.argv.push('--state-only');" : ""} ${directEntry} await import(${JSON.stringify(url)});`], { cwd: new URL("..", import.meta.url), env, encoding: "utf8", timeout: 60000 });
   console.log(`\n[${suite}] ${result.status === 0 ? "PASS" : "FAIL"}\n${result.stdout}${result.stderr}`);
   if (result.status !== 0) failures++;
 }

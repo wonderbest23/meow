@@ -144,6 +144,20 @@ const BUSINESS_PREFILL: SectorTable = {
 };
 /** Sentence starters for operating.business; the client blocks sending while "○○" remains. */
 export const BUSINESS_SENTENCE_CHIPS = ["○○ 카페를 운영합니다", "○○ 지역에서 ○○ 방문 서비스를 합니다", "○○를 온라인 판매(스마트스토어)합니다", "기업 서비스로 ○○ 대행을 합니다", "○○ 교육·수업을 합니다", "○○ 부품·제품을 제조해 납품합니다", "○○ 공간 대여·숙박을 운영합니다", "○○ 앱·소프트웨어를 운영합니다"] as const;
+/** Operating sentence starters for the chosen industry; "general" (미분류·미정) keeps the cross-industry list. */
+const OPERATING_SENTENCE: SectorTable = {
+  b2b_service: ["기업 대상으로 ○○ 대행을 합니다", "○○ 분야 컨설팅을 합니다", "기업에 ○○ 교육·워크숍을 합니다"],
+  software: ["○○ 웹 서비스를 구독형으로 운영합니다", "○○ 모바일 앱을 운영합니다", "○○ 업체용 관리 시스템을 운영합니다"],
+  food_beverage: ["○○ 지역에서 카페를 운영합니다", "○○ 식당을 운영합니다", "○○ 반찬·도시락 가게를 운영합니다", "○○ 베이커리·디저트 가게를 운영합니다"],
+  retail_commerce: ["○○를 스마트스토어에서 판매합니다", "○○ 자사몰을 운영합니다", "○○ 지역에서 ○○ 매장을 운영합니다"],
+  manufacturing: ["○○ 제품을 제조해 납품합니다", "○○ 생활 소품·굿즈를 제작해 판매합니다", "○○ 식품·화장품을 제조합니다"],
+  education: ["○○ 과목 과외·교습을 합니다", "○○ 지역에서 ○○ 학원을 운영합니다", "○○ 온라인 강의를 운영합니다"],
+  local_service: ["○○ 지역에서 ○○ 방문 서비스를 합니다", "○○ 지역에서 네일·미용샵을 운영합니다", "○○ 지역에서 청소·수리 서비스를 합니다"],
+  space_hospitality: ["○○ 지역에서 ○○ 공간 대여를 운영합니다", "○○ 지역에서 촬영 스튜디오를 운영합니다", "○○ 지역에서 숙박(펜션·게스트하우스)을 운영합니다"],
+  logistics: ["○○ 지역에서 퀵·용달 배송을 합니다", "○○ 업체에 정기 납품 배송을 합니다", "○○ 판매자 대상으로 출고 대행을 합니다"],
+  content_media: ["○○ 사진·영상 촬영을 합니다", "○○ 업체의 SNS 운영을 대행합니다", "○○ 유튜브·채널을 운영합니다"],
+  general: BUSINESS_SENTENCE_CHIPS,
+};
 export const PRICE_BASIS_CHIPS = ["시간당", "1박", "월 멤버십"] as const;
 
 const sectorOf = (sector: ProposalSector | null | undefined): ProposalSector => sector && PROPOSAL_SECTORS.includes(sector) ? sector : "general";
@@ -165,7 +179,7 @@ export function sectorChipOptions(sector: ProposalSector | null | undefined, que
       return [...chips(periods, CHIP_GROUPS.period), ...chips(GOAL_METRICS[mode ?? "startup"], CHIP_GROUPS.metric), ...chips(amounts, CHIP_GROUPS.amount)];
     }
     case "experience": return chips(EXPERIENCE_CHIPS);
-    case "business": return chips(mode === "operating" ? BUSINESS_SENTENCE_CHIPS : BUSINESS_PREFILL[key], CHIP_GROUPS.prefill);
+    case "business": return chips(mode === "operating" ? OPERATING_SENTENCE[key] : BUSINESS_PREFILL[key], CHIP_GROUPS.prefill);
     case "price": return key === "space_hospitality" ? chips(PRICE_BASIS_CHIPS, CHIP_GROUPS.priceBasis) : [];
     default: return [];
   }

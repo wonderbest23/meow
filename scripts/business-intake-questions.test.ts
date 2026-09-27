@@ -193,7 +193,10 @@ async function main() {
       const business = options.sectorChipOptions(sector, "business", "startup");
       assert.ok(business.length >= 6 && business.length <= 8, `${sector} business prefill chips`);
       assert.ok(business.every(option => option.group === options.CHIP_GROUPS.prefill && !option.label.includes("○○")));
-      assert.equal(options.sectorChipOptions(sector, "business", "operating").length, 8);
+      const operatingSentences = options.sectorChipOptions(sector, "business", "operating").map(option => option.label);
+      if (!sector || sector === "general") assert.equal(operatingSentences.length, 8, "미분류·미정은 업종 전체 예시");
+      else assert.ok(operatingSentences.length >= 3 && operatingSentences.length <= 4, `${sector} operating sentences`);
+      if (sector === "b2b_service") assert.ok(operatingSentences.every(label => !label.includes("카페")), "기업 서비스에 카페 예시가 나오면 안 된다");
       assert.ok(options.sectorChipOptions(sector, "business", "operating").every(option => option.label.includes("○○")));
       assert.deepEqual(options.sectorChipOptions(sector, "period"), []);
       assert.deepEqual(options.sectorChipOptions(sector, "budget"), []);
