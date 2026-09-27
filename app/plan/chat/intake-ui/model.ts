@@ -47,12 +47,22 @@ function entryIntent(text: string): "exploring" | "operating" | "startup" | "con
   const value = text.normalize("NFKC").trim();
   // Negated operation describes what is not happening, not a confirmed startup stage.
   if (/운영\s*(?:하고\s*있지(?:는|도)?\s*않|중이지(?:는|도)?\s*않|하고\s*있는\s*(?:건|것)(?:은|이)?\s*아니|하지\s*않)/.test(value)) return "confirm";
-  if (/아이디어.{0,20}없는\s*(?:건|것)(?:은|이)?\s*아니/.test(value)) return "confirm";
-  const exploration = /아이디어.{0,30}(?:없|못\s*정|찾|추천)|(?:무슨|어떤)\s*사업.{0,15}추천/.test(value);
+  if (/(?:아이디어|아이템).{0,20}없는\s*(?:건|것)(?:은|이)?\s*아니/.test(value)) return "confirm";
+  const exploration = /(?:아이디어|아이템).{0,30}(?:없|못\s*정|찾|추천|모르)|(?:무슨|어떤)\s*(?:사업|창업|일|아이템).{0,15}(?:추천|좋을|할지|해야)/.test(value)
+    || /(?:뭘|뭐를|뭐|무엇을|무얼)\s*(?:해야\s*할지|할지|하면\s*좋을지|할까|해야\s*하나)/.test(value)
+    || /하고\s*싶은\s*(?:사업|일|것|게)(?:이|은|을)?\s*(?:없|모르|못\s*정|아직)/.test(value);
   // Negation belongs to the operation clause, not to an unrelated budget or future plan.
   const clauses = value.split(/[.!?。！？\n]|그리고|하지만|(?<=인데|이며|이고|지만|는데)/);
-  const operating = clauses.some(clause => /운영\s*(?:중|하고\s*있)/.test(clause)
-    && !/운영\s*(?:중(?:인\s*(?:건|것))?(?:이|은)?\s*(?:아니|않)|하고\s*있지\s*않|하고\s*있는\s*(?:건|것)(?:은|이)?\s*아니|하지\s*않)/.test(clause));
+  // "3년째 필라테스 스튜디오를 하고 있어요"처럼 '운영'이라는 말 없이 기간과 현재 진행으로 운영을 말하는 경우.
+  // 준비·계획·예정을 말하는 절("3년째 창업 준비하고 있어요")은 운영으로 보지 않는다.
+  const tenure = /(?:\d+|한|두|세|네|다섯|여섯|일곱|여덟|아홉|열|몇)\s*(?:년|개월|달)\s*(?:째|차|동안|간|넘게|정도)|(?:작년|올해|지난해|재작년|\d{4}\s*년)\s*(?:부터|초부터|에\s*(?:오픈|개업|시작))|(?:오픈|개업|창업|시작)한\s*지/;
+  const ongoing = /하고\s*있|해\s*왔|해\s*오고|하는\s*중|운영|장사|영업|오픈했|개업했|됐어요|되었어요/;
+  const planning = /준비|계획|예정|하려고|할\s*거|하고\s*싶|알아보|고민|배우|공부|직장|회사|근무|재직|다니/;
+  const operating = clauses.some(clause => {
+    if (/운영\s*(?:중(?:인\s*(?:건|것))?(?:이|은)?\s*(?:아니|않)|하고\s*있지\s*않|하고\s*있는\s*(?:건|것)(?:은|이)?\s*아니|하지\s*않)/.test(clause)) return false;
+    if (/운영\s*(?:중|하고\s*있)/.test(clause) || /(?:장사|영업)\s*(?:중|하고\s*있)/.test(clause)) return true;
+    return tenure.test(clause) && ongoing.test(clause) && !planning.test(clause);
+  });
   const unclearSubject = /(?:친구|지인|남편|아내|부모|아버지|어머니|동생|형|누나|언니|그분|그 사람)(?:이|가|는|은)?.{0,25}운영/.test(value);
   const separateBusiness = /(?:별도|다른|새로운|신규).{0,15}사업.{0,20}(?:준비|계획|시작|창업)/.test(value);
   if (/(?:예전에|과거에|그만둔|접었|폐업)/.test(value) || unclearSubject || (operating && (exploration || separateBusiness))) return "confirm";

@@ -14,7 +14,8 @@ async function main() {
       const body = JSON.parse(String(init?.body));
       if (String(url).includes("openai.com")) {
         assert.equal(body.text.format.type, "json_schema");
-        return Response.json({ error: { code: "insufficient_quota" } }, { status: 429 });
+        // 한도 소진(quota)은 다른 모델로 넘기지 않는 정책이라(llm-failover.test.ts), 전환은 일시 장애로 확인한다.
+        return Response.json({ error: { type: "server_error", message: "Fixture provider outage" } }, { status: 503 });
       }
       assert.ok(body.max_tokens >= 8000);
       assert.equal(body.output_config.format.type, "json_schema");
@@ -35,7 +36,7 @@ async function main() {
     unavailable = true;
     assert.equal(await reviewCoachSection(config, "Synthetic", "Proposed service", "markdown", event => { events.push(event); }), null);
     assert.ok(events.includes("provider_unavailable"));
-    console.log("coach review: quota fallback, compact schema, truncation and invalid review rejection passed");
+    console.log("coach review: outage fallback, compact schema, truncation and invalid review rejection passed");
   } finally { globalThis.fetch = original; }
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

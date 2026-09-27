@@ -71,6 +71,17 @@ async function main() {
       assert.equal(command.questionId, undefined);
       assert.equal(command.value, undefined);
     }
+    for (const text of ["아직 뭘 할지 모르겠어요", "뭘 해야 할지 모르겠어요", "사업 아이템을 추천받고 싶어요", "하고 싶은 사업이 아직 없어요", "어떤 창업이 좋을지 모르겠어요"]) {
+      assert.equal(needsEntryConfirmation(text), false, text);
+      const command = typedEntryCommand(text);
+      assert.equal(command.mode, "exploring", text);
+      assert.equal(command.value, undefined, `${text}: 모른다는 말이 사업 소개로 저장되면 안 된다`);
+    }
+    for (const text of ["강남에서 필라테스 스튜디오를 3년째 하고 있어요", "작년부터 네일샵 하고 있어요", "창업한 지 2년 됐어요. 반찬가게예요", "동네에서 치킨집 장사하고 있어요"]) {
+      assert.equal(needsEntryConfirmation(text), false, text);
+      assert.equal(typedEntryCommand(text).mode, "operating", text);
+    }
+    for (const text of ["3년째 카페 창업을 준비하고 있어요", "10년째 회사 다니고 있는데 퇴사하고 카페 하고 싶어요"]) assert.equal(typedEntryCommand(text).mode, "startup", text);
     for (const text of ["친구가 카페를 운영 중인데 저는 뭘 할까요", "카페를 운영 중이고 다른 사업 아이디어를 찾고 있어요", "카페를 운영 중이고 별도로 새로운 사업을 준비해요", "예전에 가게를 운영했어요", "아이디어가 없는 건 아니에요"]) assert.equal(needsEntryConfirmation(text), true, text);
     for (const [text, mode] of [["아이디어가 없어요", "exploring"], ["생각한 사업이 있어요", "startup"], ["사업을 운영 중이에요", "operating"]]) assert.equal(typedEntryCommand(text).mode, mode);
   });
