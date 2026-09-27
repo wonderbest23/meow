@@ -108,7 +108,7 @@ async function main() {
      */
     const events = [
       { type: "message_start", message: { usage: { input_tokens: 900, cache_read_input_tokens: 1400, cache_creation_input_tokens: 0, output_tokens: 1 } } },
-      { type: "content_block_delta", delta: { text: "본문" } },
+      { type: "content_block_delta", delta: { type: "text_delta", text: "본문" } },
       { type: "message_delta", usage: { output_tokens: 2600 } },
     ];
     globalThis.fetch = (async () =>

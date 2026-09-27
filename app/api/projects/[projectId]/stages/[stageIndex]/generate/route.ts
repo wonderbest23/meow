@@ -8,7 +8,7 @@ import {
 } from "../../../../../../../lib/project-repository";
 import { recordServiceAudit } from "../../../../../../../lib/service-audit/repository";
 import { generateStageArtifact } from "../../../../../../../lib/stage-generator";
-import { getOpenAIRuntimeConfig } from "../../../../../../../lib/openai/session-config";
+import { resolveTextLLMConfig } from "../../../../../../../lib/llm/config";
 
 export async function POST(
   _request: Request,
@@ -37,7 +37,7 @@ export async function POST(
         { status: 404 },
       );
     }
-    const openAIConfig = getOpenAIRuntimeConfig(identity.hash);
+    const openAIConfig = resolveTextLLMConfig(identity.hash);
     const model = openAIConfig?.model ?? "deterministic-fallback-v1";
     const job = await beginGeneration(
       projectId,

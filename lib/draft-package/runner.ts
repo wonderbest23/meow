@@ -9,7 +9,8 @@ import { createLandingDraft, landingDraftSchema } from "../landing/domain";
 import { getLandingForProject, publishLanding, saveLandingDraft } from "../landing/repository";
 import { emptyMarketWorkspace } from "../market/domain";
 import { analyzeLocations } from "../market/location-engine";
-import { getOpenAIRuntimeConfig, type OpenAIRuntimeConfig } from "../openai/session-config";
+import { resolveTextLLMConfig } from "../llm/config";
+import type { LLMConfig } from "../llm/complete";
 import { assessOperations, createOperationsWorkspace, generateOperationsPackage } from "../operations/engine";
 import type { RankedOpportunity } from "../opportunity-engine";
 import {
@@ -221,7 +222,7 @@ export async function prepareDraftStageGeneration(
   params: DraftPackageWorkflowParams,
   stageIndex: number,
   context: DraftPackageBuildContext,
-  runtimeConfig?: OpenAIRuntimeConfig | null,
+  runtimeConfig?: LLMConfig | null,
 ): Promise<PreparedDraftStage> {
   let project = await getProject(params.projectId, params.guestTokenHash);
   if (!project) throw new Error("PROJECT_NOT_FOUND");
@@ -265,7 +266,7 @@ export async function prepareDraftStageGeneration(
   await saveStageInputs(params.projectId, stageIndex, params.guestTokenHash, parsedInputs);
 
   const openAIConfig = runtimeConfig === undefined
-    ? getOpenAIRuntimeConfig(params.guestTokenHash)
+    ? resolveTextLLMConfig(params.guestTokenHash)
     : runtimeConfig;
   const requestedModel = openAIConfig?.model ?? "deterministic-fallback-v1";
   const job = await beginGeneration(
@@ -284,7 +285,7 @@ export async function generatePreparedDraftStage(
   stageIndex: number,
   context: DraftPackageBuildContext,
   jobId: string,
-  runtimeConfig?: OpenAIRuntimeConfig | null,
+  runtimeConfig?: LLMConfig | null,
 ): Promise<GeneratedDraftStage> {
   await updateDraftPackageRun(
     params.projectId,
@@ -295,7 +296,7 @@ export async function generatePreparedDraftStage(
   const project = await getProject(params.projectId, params.guestTokenHash);
   if (!project) throw new Error("PROJECT_NOT_FOUND");
   const openAIConfig = runtimeConfig === undefined
-    ? getOpenAIRuntimeConfig(params.guestTokenHash)
+    ? resolveTextLLMConfig(params.guestTokenHash)
     : runtimeConfig;
 
   try {

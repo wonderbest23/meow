@@ -218,6 +218,26 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
   return text || null;
 }
 
+/*
+ * Claude(Opus 5.5 등)는 추론이 항상 켜져 있고, 추론 토큰도 max_tokens 안에서 쓴다.
+ * 답변 몫으로 잡은 한도가 추론에 먹혀 잘리지 않도록 추론 강도만큼 여유를 더한다(실제 쓴 만큼만 과금).
+ * 추론 강도는 명시하지 않으면 API 기본값(medium)이 되므로 호출부의 effort를 그대로 보낸다.
+ */
+const THINKING_HEADROOM = { low: 2_048, medium: 4_096, high: 8_192, xhigh: 16_384, max: 32_000 } as const;
+
+function anthropicOutputParams(config: LLMConfig, params: LLMCompleteParams) {
+  const effortCapable = !/haiku/i.test(config.model);
+  const effort = params.effort ?? "medium";
+  const outputConfig = {
+    ...(effortCapable ? { effort } : {}),
+    ...(params.anthropicJsonSchema && params.jsonSchema ? { format: { type: "json_schema", schema: params.jsonSchema.schema } } : {}),
+  };
+  return {
+    max_tokens: Math.min(64_000, params.maxOutputTokens + (effortCapable ? THINKING_HEADROOM[effort] : 0)),
+    ...(Object.keys(outputConfig).length ? { output_config: outputConfig } : {}),
+  };
+}
+
 async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
   // Schema-compatible callers also enable constrained JSON output at the API level.
   const system = params.jsonObject
@@ -235,8 +255,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
       },
       body: JSON.stringify({
         model: config.model,
-        max_tokens: params.maxOutputTokens,
-        ...(params.anthropicJsonSchema && params.jsonSchema ? { output_config: { format: { type: "json_schema", schema: params.jsonSchema.schema } } } : {}),
+        ...anthropicOutputParams(config, params),
         // 캐시를 쓰려면 블록 배열이어야 한다 — 문자열에는 cache_control을 달 곳이 없다
         system: params.cache
           ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
@@ -299,7 +318,7 @@ function envAlternate(config: LLMConfig): LLMConfig | null {
     return key ? { provider: "openai", apiKey: key, model: process.env.OPENAI_MODEL?.trim() || "gpt-5.6-sol" } : null;
   }
   const key = process.env.ANTHROPIC_API_KEY?.trim();
-  return key ? { provider: "anthropic", apiKey: key, model: process.env.ANTHROPIC_MODEL?.trim() || "claude-sonnet-5" } : null;
+  return key ? { provider: "anthropic", apiKey: key, model: process.env.ANTHROPIC_MODEL?.trim() || "claude-opus-5-5" } : null;
 }
 
 function completeOnce(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
@@ -477,7 +496,7 @@ async function streamOnce(
           anthropic
             ? {
                 model: config.model,
-                max_tokens: params.maxOutputTokens,
+                ...anthropicOutputParams(config, params),
                 system: params.cache
                   ? [{ type: "text", text: params.system, cache_control: { type: "ephemeral" } }]
                   : params.system,
@@ -565,7 +584,7 @@ async function streamOnce(
             params.onFailure?.({ provider: config.provider, code: "unavailable" });
           }
           const piece = anthropic
-            ? payload.type === "content_block_delta"
+            ? payload.type === "content_block_delta" && (payload.delta as { type?: string } | undefined)?.type === "text_delta"
               ? ((payload.delta as { text?: string } | undefined)?.text ?? "")
               : ""
             : payload.type === "response.output_text.delta"

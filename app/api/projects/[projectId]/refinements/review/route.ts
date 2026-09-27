@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../../lib/api-auth";
 import type { DraftRefinementInput } from "../../../../../../lib/draft-package/domain";
-import { getOpenAIRuntimeConfig } from "../../../../../../lib/openai/session-config";
+import { resolveTextLLMConfig } from "../../../../../../lib/llm/config";
+import { completeJson, type LLMFailure } from "../../../../../../lib/llm/complete";
+import { aiFailureResponse } from "../../../../../../lib/llm/failure-message";
 import { getProject } from "../../../../../../lib/project-repository";
 import { normalizeRefinementInput } from "../../../../../../lib/refinement/domain";
 
@@ -35,17 +37,6 @@ function privateJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   return response;
-}
-
-function outputText(payload: {
-  output_text?: string;
-  output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-}) {
-  return payload.output_text ?? payload.output
-    ?.flatMap((item) => item.content ?? [])
-    .filter((item) => item.type === "output_text" && typeof item.text === "string")
-    .map((item) => item.text)
-    .join("");
 }
 
 function deterministicWarnings(input: DraftRefinementInput) {
@@ -97,7 +88,7 @@ export async function POST(
     if (!project) throw new Error("PROJECT_NOT_FOUND");
     const input = normalizeRefinementInput(project, inputSchema.parse(await request.json()));
     const warnings = deterministicWarnings(input);
-    const config = getOpenAIRuntimeConfig(identity.hash);
+    const config = resolveTextLLMConfig(identity.hash);
     if (!config) {
       return privateJson({
         review: {
@@ -109,56 +100,34 @@ export async function POST(
       });
     }
 
-    const providerResponse = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${config.apiKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        model: config.model,
-        store: false,
-        reasoning: { effort: "low" },
-        max_output_tokens: 1_200,
-        text: { format: { type: "json_object" } },
-        input: [
-          {
-            role: "system",
-            content: [
-              "당신은 한국 초기 사업의 최종 결과물을 검토하는 보수적인 사업 편집자입니다.",
-              "사용자 입력에 없는 시장 수치, 실적, 기관, 제휴, 자격, 고객 반응 또는 사실을 만들지 마세요.",
-              "숫자는 수정 제안하지 말고 충돌이나 위험만 warnings에 적으세요.",
-              "brandName, customer, oneLiner 중 실제로 더 명확하게 고칠 필요가 있는 항목만 suggestions에 넣으세요.",
-              "문장은 쉬운 한국어로 쓰고 과장, 보장, 업계 1위 같은 표현을 제거하세요.",
-              "JSON 객체 {summary, suggestions, warnings}만 출력하세요.",
-            ].join(" "),
-          },
-          {
-            role: "user",
-            content: JSON.stringify({
-              business: input,
-              sector: project.opportunity.sector,
-              model: project.opportunity.model,
-              revenue: project.opportunity.revenue,
-              savedEvidenceCount: project.marketWorkspace?.evidence.length ?? 0,
-            }),
-          },
-        ],
+    let failure: LLMFailure["code"] | undefined;
+    const parsed = await completeJson(config, {
+      kind: "refinement-review",
+      system: [
+        "당신은 한국 초기 사업의 최종 결과물을 검토하는 보수적인 사업 편집자입니다.",
+        "사용자 입력에 없는 시장 수치, 실적, 기관, 제휴, 자격, 고객 반응 또는 사실을 만들지 마세요.",
+        "숫자는 수정 제안하지 말고 충돌이나 위험만 warnings에 적으세요.",
+        "brandName, customer, oneLiner 중 실제로 더 명확하게 고칠 필요가 있는 항목만 suggestions에 넣으세요.",
+        "문장은 쉬운 한국어로 쓰고 과장, 보장, 업계 1위 같은 표현을 제거하세요.",
+        "JSON 객체 {summary, suggestions, warnings}만 출력하세요.",
+      ].join(" "),
+      user: JSON.stringify({
+        business: input,
+        sector: project.opportunity.sector,
+        model: project.opportunity.model,
+        revenue: project.opportunity.revenue,
+        savedEvidenceCount: project.marketWorkspace?.evidence.length ?? 0,
       }),
-      cache: "no-store",
-      signal: AbortSignal.timeout(55_000),
+      effort: "low",
+      maxOutputTokens: 1_200,
+      timeoutMs: 55_000,
+      onFailure: event => { failure = event.code; },
     });
-    const payload = await providerResponse.json() as {
-      output_text?: string;
-      output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
-      error?: { message?: string };
-    };
-    if (!providerResponse.ok) {
-      const message = providerResponse.status === 429
-        ? "OpenAI 사용 한도 또는 요청 제한을 확인해주세요."
-        : payload.error?.message ?? "인공지능 검토에 실패했습니다.";
-      return privateJson({ error: { code: "OPENAI_REVIEW_FAILED", message } }, { status: providerResponse.status });
+    if (!parsed) {
+      const { status, message } = aiFailureResponse(failure);
+      return privateJson({ error: { code: "OPENAI_REVIEW_FAILED", message } }, { status });
     }
-    const raw = outputText(payload);
-    if (!raw) throw new Error("인공지능 검토 결과가 비어 있습니다.");
-    const review = reviewSchema.parse(normalizeReviewPayload(JSON.parse(raw)));
+    const review = reviewSchema.parse(normalizeReviewPayload(parsed));
     const suggestions = review.suggestions.filter((suggestion) => (
       suggestion.value !== String(input[suggestion.field])
     ));

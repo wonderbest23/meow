@@ -33,6 +33,8 @@ async function main() {
     NEXT_PUBLIC_SUPABASE_URL: "", NEXT_PUBLIC_SUPABASE_ANON_KEY: "", RATE_LIMIT_BACKEND: "memory",
     PLAN_ACCOUNT_LINKING_ENABLED: "false", NEXT_PUBLIC_BUSINESS_INTAKE_V2: "1",
     OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "", OPENAI_MODEL: "intake-service-fixture",
+    // 가짜 응답이 OpenAI 형식이라 예전 OpenAI 우선 경로로 고정한다(Claude 통일 기본값은 llm-config 테스트가 검사).
+    LLM_TEXT_PROVIDER: "openai",
     ANTHROPIC_MODEL: "intake-fallback-fixture", PLANNING_MODEL: "intake-service-fixture",
   });
   const originalFetch = globalThis.fetch;

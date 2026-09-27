@@ -7,7 +7,7 @@ import {
   DirectIdeaPlannerError,
   generateDirectIdeaPlan,
 } from "../../../../lib/direct-idea-planner";
-import { getOpenAIRuntimeConfig } from "../../../../lib/openai/session-config";
+import { resolveTextLLMConfig, textLLMConfigFromEnv } from "../../../../lib/llm/config";
 import type { DirectPlanWorkflowParams } from "../../../../lib/direct-plan/workflow";
 
 export const runtime = "nodejs";
@@ -109,7 +109,7 @@ export async function POST(request: Request) {
     const env = await cloudflareEnvironment();
 
     if (env?.DIRECT_PLAN_WORKFLOW) {
-      if (!env.OPENAI_API_KEY?.trim() || !env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
+      if (!textLLMConfigFromEnv(env as unknown as Record<string, string | undefined>) || !env.SUPABASE_SERVICE_ROLE_KEY?.trim()) {
         return privateJson({
           error: {
             code: "OPENAI_NOT_CONNECTED",
@@ -131,7 +131,7 @@ export async function POST(request: Request) {
       }, { status: 202 });
     }
 
-    const config = getOpenAIRuntimeConfig(identity.hash);
+    const config = resolveTextLLMConfig(identity.hash);
     if (!config) {
       return privateJson({
         error: {

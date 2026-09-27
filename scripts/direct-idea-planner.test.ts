@@ -3,7 +3,7 @@ import {
   buildDirectIdeaFallbackPlan,
   generateDirectIdeaPlan,
 } from "../lib/direct-idea-planner";
-import type { OpenAIRuntimeConfig } from "../lib/openai/session-config";
+import type { LLMConfig } from "../lib/llm/complete";
 
 const input = {
   idea: "메이플스토리 같은 게임을 만드는 플랫폼",
@@ -19,10 +19,10 @@ assert.match(fallback.draft.firstScope, /완성형 온라인 게임 전체가 �
 assert.match(fallback.opportunity.risk, /저작권|상표/);
 assert.equal(fallback.opportunity.oneLiner.includes("메이플스토리"), false);
 
-const config: OpenAIRuntimeConfig = {
+const config: LLMConfig = {
+  provider: "openai",
   apiKey: "sk-test-only",
   model: "gpt-5.6-sol",
-  source: "environment",
 };
 
 const modelOutput = {
@@ -61,7 +61,7 @@ async function main() {
       });
     };
     const generated = await generateDirectIdeaPlan(input, config);
-    assert.equal(generated.generation.source, "openai");
+    assert.equal(generated.generation.source, "ai");
     assert.equal(generated.opportunity.title, "2D 온라인 RPG 제작 플랫폼");
     assert.equal(generated.opportunity.oneLiner.includes("메이플스토리"), false);
     assert.equal(generated.draft.offerName.includes("메이플스토리"), false);

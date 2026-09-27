@@ -10,7 +10,7 @@ import {
 import { revisionRequestSchema } from "../../../../../../../lib/service-domain";
 import { recordServiceAudit } from "../../../../../../../lib/service-audit/repository";
 import { generateStageArtifact } from "../../../../../../../lib/stage-generator";
-import { getOpenAIRuntimeConfig } from "../../../../../../../lib/openai/session-config";
+import { resolveTextLLMConfig } from "../../../../../../../lib/llm/config";
 
 export async function POST(
   request: Request,
@@ -47,7 +47,7 @@ export async function POST(
     });
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
-    const openAIConfig = getOpenAIRuntimeConfig(identity.hash);
+    const openAIConfig = resolveTextLLMConfig(identity.hash);
     const model = openAIConfig?.model ?? "deterministic-fallback-v1";
     const job = await beginGeneration(
       projectId,

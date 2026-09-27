@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { generateStageArtifact } from "../lib/stage-generator";
-import type { OpenAIRuntimeConfig } from "../lib/openai/session-config";
+import type { LLMConfig } from "../lib/llm/complete";
 import type { ProjectRecord } from "../lib/service-domain";
 
 const project = {
@@ -49,10 +49,10 @@ const project = {
   updatedAt: new Date().toISOString(),
 } as unknown as ProjectRecord;
 
-const runtimeConfig: OpenAIRuntimeConfig = {
+const runtimeConfig: LLMConfig = {
+  provider: "openai",
   apiKey: "sk-test-only",
   model: "gpt-5.6-sol",
-  source: "session",
 };
 
 async function main() {

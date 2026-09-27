@@ -9,7 +9,8 @@ export type PlanningConstraints = {
   idea?: string;
   directDraft?: DirectIdeaDraft;
   draftGeneration?: {
-    source: "openai" | "fallback";
+    /** "openai"는 예전 저장 데이터용. 새 AI 초안은 모델과 무관하게 "ai". */
+    source: "ai" | "openai" | "fallback";
     model: string;
   };
 };
@@ -69,7 +70,7 @@ export function isPlanningConstraints(value: unknown): value is PlanningConstrai
       candidate.draftGeneration === undefined ||
       (
         typeof candidate.draftGeneration === "object" &&
-        (candidate.draftGeneration.source === "openai" || candidate.draftGeneration.source === "fallback") &&
+        ["ai", "openai", "fallback"].includes(candidate.draftGeneration.source) &&
         typeof candidate.draftGeneration.model === "string"
       )
     )

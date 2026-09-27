@@ -33,9 +33,9 @@ async function main() {
     );
     await assert.rejects(
       () => generateStageArtifact(project, 0, undefined, {
+        provider: "openai",
         apiKey: "sk-test-production-key",
         model: "gpt-5.6-sol",
-        source: "environment",
       }),
       /OPENAI_429/,
     );

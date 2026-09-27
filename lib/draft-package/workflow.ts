@@ -39,9 +39,9 @@ function errorDetail(error: unknown) {
 }
 
 function publicErrorMessage(detail: string) {
-  if (detail.includes("OPENAI_429")) return "서버가 여러 차례 자동으로 다시 확인했지만 OpenAI 사용 한도가 계속 막혀 있습니다. 결제·사용 한도를 확인해주세요.";
-  if (detail.includes("OPENAI_401") || detail.includes("OPENAI_403")) return "OpenAI 연결키의 권한을 확인하지 못해 제작을 멈췄습니다. 연결키를 확인한 뒤 다시 시작해주세요.";
-  if (detail.includes("OPENAI_404")) return "선택한 OpenAI 모델을 사용할 수 없어 제작을 멈췄습니다. 모델 설정을 확인한 뒤 다시 시작해주세요.";
+  if (detail.includes("OPENAI_429")) return "서버가 여러 차례 자동으로 다시 확인했지만 AI 사용 한도가 계속 막혀 있습니다. 잠시 후 다시 시작해주세요.";
+  if (detail.includes("OPENAI_401") || detail.includes("OPENAI_403")) return "AI 연결 권한을 확인하지 못해 제작을 멈췄습니다. 운영자에게 문의해주세요.";
+  if (detail.includes("OPENAI_404")) return "선택한 AI 모델을 사용할 수 없어 제작을 멈췄습니다. 운영자에게 문의해주세요.";
   if (detail.includes("OPENAI_")) return "인공지능 자료 생성 연결이 잠시 불안정합니다. 다시 시작하면 완료된 단계부터 이어집니다.";
   if (detail.includes("PROJECT_NOT_FOUND")) return "프로젝트를 다시 불러오지 못했습니다. 같은 계정이나 브라우저에서 다시 시도해주세요.";
   return "서버에서 자료를 저장하는 중 문제가 생겼습니다. 다시 시작하면 완료된 단계부터 이어집니다.";

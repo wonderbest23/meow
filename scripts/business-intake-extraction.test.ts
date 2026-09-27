@@ -55,7 +55,9 @@ function assertRequest(config: LLMConfig, name: "intake_extract" | "intake_help"
     assert.deepEqual(body.input.map((item: { role: string }) => item.role), ["system", "user"]);
     schema = body.text.format.schema;
   } else {
-    assert.equal(body.max_tokens, 1200);
+    // Claude는 추론도 max_tokens를 쓰므로 답변 몫(1200)에 추론 여유가 더해지고, 추론 강도가 함께 간다.
+    assert.ok(body.max_tokens > 1200, "thinking headroom on top of the 1200-token answer budget");
+    assert.equal(body.output_config.effort, "low");
     assert.equal(body.output_config.format.type, "json_schema");
     assert.equal(body.messages.length, 1);
     schema = body.output_config.format.schema;

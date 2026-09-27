@@ -23,7 +23,8 @@ function assertStrictObjectSchemas(value: unknown) {
 }
 
 async function main() {
-  Object.assign(process.env, { PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "test-only", ANTHROPIC_API_KEY: "", PROPOSAL_AI_ENABLED: "false" });
+  // 제안서 AI는 OpenAI로만 검증된 기능이라 OpenAI 우선 경로에서 확인한다.
+  Object.assign(process.env, { PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "test-only", ANTHROPIC_API_KEY: "", PROPOSAL_AI_ENABLED: "false", LLM_TEXT_PROVIDER: "openai" });
   assert.equal(proposalAIConfig("test"), null);
   process.env.PROPOSAL_AI_ENABLED = "true";
   process.env.OPENAI_API_KEY = ""; process.env.ANTHROPIC_API_KEY = "test-only";
