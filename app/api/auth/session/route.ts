@@ -22,6 +22,9 @@ export async function POST(request: Request) {
     const auth = createServerAuthClient();
     const result = await auth.auth.setSession({ access_token: input.accessToken, refresh_token: input.refreshToken });
     if (!result.data.session || !result.data.user || result.error) throw result.error ?? new Error("이메일 인증 정보를 확인하지 못했습니다.");
+    if (result.data.user.email && !result.data.user.email_confirmed_at) {
+      return privateJson({ error: { code: "EMAIL_NOT_CONFIRMED", message: "확인 메일의 링크로 이메일을 인증해 주세요." } }, { status: 403 });
+    }
     await claimGuestProjects(result.data.user.id, previousGuestHash);
     await setAccountSession(result.data.session);
     return privateJson({ authenticated: true, email: result.data.user.email ?? null });

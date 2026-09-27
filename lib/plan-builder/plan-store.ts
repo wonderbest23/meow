@@ -3,6 +3,7 @@
 
 import { chaptersForType, sectionKey, type PlanSectionStatus } from "./blueprint";
 import { SAMPLE_DOCS, isSampleId } from "./samples";
+import { filterQuarantinedCache, readQuarantineNotice } from "./quarantine-cache";
 
 export function isSamplePlan(planId: string | null | undefined): boolean {
   return isSampleId(planId ?? null);
@@ -29,6 +30,27 @@ function cachedOwnerKey(): string | null {
 function stateCacheKey() {
   const owner = cachedOwnerKey();
   return owner ? `${KEY}:${owner}` : KEY;
+}
+
+function safeCachedState(state: PlanState): PlanState {
+  const raw = localStorage.getItem(`${stateCacheKey()}:quarantine`);
+  return filterQuarantinedCache(state, raw ? readQuarantineNotice(JSON.parse(raw)) : null, EMPTY_BUSINESS);
+}
+
+function applyQuarantineNotice(value: unknown) {
+  const q = readQuarantineNotice(value);
+  if (!q) return;
+  const key = stateCacheKey();
+  const encoded = JSON.stringify(q);
+  if (localStorage.getItem(`${key}:quarantine`) === encoded) return;
+  const raw = localStorage.getItem(key);
+  // Preserve the original local draft before hiding it; never clear an owner's storage.
+  if (raw && (q.profileBlocked || q.blockedPlanIds.length)) {
+    const backup = `${key}:quarantine-backup:${q.revision}`;
+    if (!localStorage.getItem(backup)) localStorage.setItem(backup, raw);
+  }
+  localStorage.setItem(`${key}:quarantine`, encoded);
+  invalidateMountedOwner();
 }
 
 export interface StoredSection {
@@ -159,7 +181,7 @@ export function loadState(): PlanState {
   try {
     const raw = window.localStorage.getItem(stateCacheKey());
     if (!raw) return withSamples({ ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } });
-    return withSamples(migrate(JSON.parse(raw) as Record<string, unknown>));
+    return withSamples(safeCachedState(migrate(JSON.parse(raw) as Record<string, unknown>)));
   } catch {
     return withSamples({ ...EMPTY_STATE, business: { ...EMPTY_BUSINESS } });
   }
@@ -169,7 +191,7 @@ function persist(state: PlanState) {
   if (typeof window === "undefined") return;
   try {
     // 샘플은 화면에만 존재한다 — 저장소에 남기지 않는다
-    const clean = { ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) };
+    const clean = safeCachedState({ ...state, plans: state.plans.filter((p) => !isSamplePlan(p.id)) });
     window.localStorage.setItem(stateCacheKey(), JSON.stringify(clean));
   } catch {
     // ignore quota errors
@@ -712,7 +734,7 @@ export async function pushToServer(): Promise<boolean> {
     if (epoch !== syncEpoch) return false;
     if (res.status === 409) {
       const body = await res.json().catch(() => ({}));
-      if (body.error?.code === "PLAN_OWNER_CHANGED") {
+      if (["PLAN_OWNER_CHANGED", "PLAN_QUARANTINED"].includes(body.error?.code)) {
         invalidateMountedOwner();
         cancelPendingSync();
         ownerVerified = false;
@@ -769,6 +791,13 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
   };
   window.addEventListener("pagehide", flush);
   window.addEventListener("storage", (event: StorageEvent) => {
+    if (event.key === `${stateCacheKey()}:quarantine` && event.oldValue !== event.newValue) {
+      invalidateMountedOwner();
+      cancelPendingSync();
+      ownerVerified = false;
+      void hydrateFromServer(false);
+      return;
+    }
     if (event.key !== null && (event.key !== OWNER_KEY || event.oldValue === event.newValue)) return;
     invalidateMountedOwner();
     cancelPendingSync();
@@ -892,6 +921,7 @@ export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
         writeAuthFlag(true);
       }
       const server = migrate(payload);
+      applyQuarantineNotice(payload.quarantine);
       const local = loadState();
       /*
        * 예전에는 서버 응답으로 로컬을 통째로 덮어썼다.

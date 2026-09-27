@@ -1,0 +1,28 @@
+[Unit]
+Description=Oneulstart owner inquiry SMS relay
+After=network-online.target
+
+[Service]
+Type=simple
+User=oneul-sms
+Group=oneul-sms
+ExecStart=/usr/bin/python3 /opt/oneulstart-owner-sms/relay.py --config /etc/oneulstart-owner-sms/config.json --db /var/lib/oneulstart-owner-sms/attempts.sqlite
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/oneulstart-owner-sms
+MemoryMax=96M
+CPUQuota=20%
+TasksMax=12
+LimitNOFILE=64
+CapabilityBoundingSet=
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+StandardOutput=null
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { readPlanQuarantine } from "../../../../lib/plan-builder/quarantine.server";
 import { planAccountLinkingEnabled, planOwnerKey } from "../../../../lib/plan-builder/account-linking";
 import { loadPlanState, savePlanState, deletePlanById, normalizeState, preserveServerCoachRecords, type ServerPlanState } from "../../../../lib/plan-builder/plan-server-store";
 
@@ -12,8 +13,9 @@ export const runtime = "nodejs";
 export async function GET() {
   const identity = await requireGuestIdentity();
   const state = await loadPlanState(identity.hash);
+  const quarantine = await readPlanQuarantine(identity.hash);
   // 클라이언트가 로그아웃·세션 만료를 감지해 로컬 캐시를 비울 수 있게 인증 여부를 함께 준다
-  return NextResponse.json({ ...state, authenticated: identity.userId !== null, ...(planAccountLinkingEnabled() ? { ownerKey: planOwnerKey(identity.hash) } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ ...state, quarantine, authenticated: identity.userId !== null, ...(planAccountLinkingEnabled() ? { ownerKey: planOwnerKey(identity.hash) } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 function ownerConflict(ownerHash: string, expected: unknown) {
@@ -44,6 +46,7 @@ async function saveFromRequest(request: Request) {
     await savePlanState(identity.hash, preserveServerCoachRecords(normalizeState(body), stored));
   } catch (error) {
     if (error instanceof Error && error.message === "PLAN_OWNER_CHANGED") return ownerChangedResponse();
+    if (error instanceof Error && error.message === "PLAN_QUARANTINED") return NextResponse.json({ error: { code: "PLAN_QUARANTINED", message: "일부 이전 자료는 귀속 확인 중이에요. 원본은 보관되며 새 자료는 계속 사용할 수 있어요." } }, { status: 409 });
     throw error;
   }
   return NextResponse.json({ ok: true });
@@ -75,6 +78,7 @@ export async function DELETE(request: Request) {
     await deletePlanById(identity.hash, planId);
   } catch (error) {
     if (error instanceof Error && error.message === "PLAN_OWNER_CHANGED") return ownerChangedResponse();
+    if (error instanceof Error && error.message === "PLAN_QUARANTINED") return NextResponse.json({ error: { code: "PLAN_QUARANTINED", message: "귀속 확인 중인 자료는 변경하거나 삭제할 수 없어요." } }, { status: 409 });
     throw error;
   }
   return NextResponse.json({ ok: true });

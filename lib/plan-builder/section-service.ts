@@ -1,3 +1,4 @@
+import "server-only";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
 import { renderPlanMarkdown } from "./markdown";
@@ -6,8 +7,6 @@ import { readCoach, coachContext, coachDocumentRevision } from "./coach";
 import { confirmedIntakeContext } from "./intake-context";
 import { loadPlanState, savePlanState } from "./plan-server-store";
 import { generateAndSaveCoach } from "./coach-job";
-import type { CoachJobRequest } from "./coach-job-types";
-import type { DeckJobRequest } from "./deck-job-types";
 import { generateAndSaveDeck } from "./deck-job";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "./financials";
 import { financialTableOwner, needsMultiYear, chaptersForType } from "./blueprint";
@@ -17,102 +16,18 @@ import { buildPlanBusinessContext } from "./context/build";
 import { contextForSection, type SectionBusinessContext } from "./context/section";
 import { ANALYSIS_KEY } from "./analyzer/domain";
 import { resolveRegenQuota, recordRegen } from "./regen-quota";
-import { executeProposalUpdate, type ProposalBackgroundJob } from "./proposal-background";
+import { executeProposalUpdate, proposalBackgroundJobSchema } from "./proposal-background";
 import { executeArtifactChunk } from "./artifact-update-service";
-import type { ArtifactJobRequest } from "./artifact-updates";
 import { z } from "zod";
 import { documentOperatingContext } from "./document-editorial";
-import { executeIntakeJob } from "./intake-service";
-import type { IntakeJobRequest } from "./intake-types";
+import { runIntakeJobWithBudget } from "./intake-execution.server";
+import { betaApiBoundary } from "../staging/beta-boundary";
 
-/*
- * 본문 생성을 서버 안에서 처리하기 위한 내부 통로.
- *
- * 워크플로는 Worker 런타임에서 도는데, Supabase·LLM 설정은 Next 앱 쪽
- * 환경에서만 제대로 읽힌다. 그래서 워크플로가 자기 워커로 되돌아 호출해
- * 여기서 실제 생성을 한다(draft-package가 쓰던 방식과 같다).
- *
- * 외부에서 부를 수 없도록 서비스 롤 키로 서명한 요청만 받는다.
- */
+import { verifyBody } from "./section-signature";
+import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob } from "./section-protocol";
+export type { PlanSectionJob } from "./section-protocol";
+export { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
 
-const internalPath = "/__internal/plan-section";
-
-export interface PlanSectionJob {
-  ownerHash: string;
-  planId: string;
-  chapterId: string;
-  sectionId: string;
-}
-
-type ServiceRequest = { operation: "intake"; job: IntakeJobRequest } | { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest } | { operation: "completeProposalUpdate"; job: ProposalBackgroundJob } | { operation: "artifactChunk"; job: ArtifactJobRequest & { index: number } };
-
-function encodeHex(value: ArrayBuffer) {
-  return [...new Uint8Array(value)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
-}
-
-function decodeHex(value: string) {
-  if (!/^[a-f0-9]{64}$/i.test(value)) return null;
-  return Uint8Array.from(value.match(/.{2}/g) ?? [], (byte) => Number.parseInt(byte, 16));
-}
-
-async function hmacKey(secret: string) {
-  return crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"]);
-}
-
-async function signBody(secret: string, timestamp: string, body: string) {
-  return encodeHex(await crypto.subtle.sign("HMAC", await hmacKey(secret), new TextEncoder().encode(`${timestamp}.${body}`)));
-}
-
-async function verifyBody(secret: string, timestamp: string, body: string, signature: string) {
-  const decoded = decodeHex(signature);
-  if (!decoded) return false;
-  return crypto.subtle.verify("HMAC", await hmacKey(secret), decoded, new TextEncoder().encode(`${timestamp}.${body}`));
-}
-
-export async function callPlanSectionService(service: Fetcher, secret: string, job: PlanSectionJob): Promise<{ ok: boolean }> {
-  return callPlanningService(service, secret, { operation: "generateSection", job });
-}
-
-export async function callCoachService(service: Fetcher, secret: string, job: CoachJobRequest): Promise<{ ok: boolean }> {
-  return callPlanningService(service, secret, { operation: "completeCoach", job });
-}
-export async function callIntakeService(service: Fetcher, secret: string, job: IntakeJobRequest): Promise<{ ok: boolean }> {
-  return callPlanningService(service, secret, { operation: "intake", job });
-}
-export async function callDeckService(service: Fetcher, secret: string, job: DeckJobRequest): Promise<{ ok: boolean }> {
-  return callPlanningService(service, secret, { operation: "completeDeck", job });
-}
-export async function callProposalUpdateService(service: Fetcher, secret: string, job: ProposalBackgroundJob): Promise<{ ok: boolean }> {
-  return callPlanningService(service, secret, { operation: "completeProposalUpdate", job });
-}
-export async function callArtifactChunkService(service: Fetcher, secret: string, job: ArtifactJobRequest & { index: number }): Promise<{ ok: boolean; done?: boolean }> {
-  return callPlanningService(service, secret, { operation: "artifactChunk", job });
-}
-
-async function callPlanningService(service: Fetcher, secret: string, input: ServiceRequest): Promise<{ ok: boolean }> {
-  const body = JSON.stringify(input);
-  const timestamp = Date.now().toString();
-  const signature = await signBody(secret, timestamp, body);
-  const response = await service.fetch(`https://plan-section.internal${internalPath}`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-plan-timestamp": timestamp,
-      "x-plan-signature": signature,
-    },
-    body,
-  });
-  const payload = (await response.json()) as { result?: { ok: boolean }; error?: string };
-  if (!response.ok) throw new Error(payload.error || "PLAN_SECTION_SERVICE_FAILED");
-  return payload.result ?? { ok: false };
-}
-
-/**
- * 한 섹션을 만들어 저장한다.
- *
- * 이미 만들어져 있거나 사용자가 직접 고친 섹션은 건드리지 않는다 —
- * 뒤늦게 도착한 생성이 사람이 쓴 글을 덮으면 안 된다.
- */
 export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok: boolean; skipped?: string }> {
   const state = await loadPlanState(job.ownerHash);
   const plan = state.plans.find((item) => item.id === job.planId);
@@ -261,33 +176,47 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   throw new Error("PLAN_VERSION_CONFLICT");
 }
 
-export async function handlePlanSectionServiceRequest(request: Request, env: CloudflareEnv) {
-  if (new URL(request.url).pathname !== internalPath) return null;
+export async function handlePlanSectionServiceRequest(request: Request, env: { SUPABASE_SERVICE_ROLE_KEY?: string }) {
+  const pathname = new URL(request.url).pathname;
+  if (pathname !== PLAN_SECTION_INTERNAL_PATH && pathname !== PLAN_SECTION_API_PATH) return null;
+  const betaBlocked = betaApiBoundary(request, process.env.INTAKE_BETA_SAFETY);
+  if (betaBlocked) return betaBlocked;
   if (request.method !== "POST") return new Response(null, { status: 405 });
-
   const timestamp = request.headers.get("x-plan-timestamp") ?? "";
   const signature = request.headers.get("x-plan-signature") ?? "";
   const timestampNumber = Number(timestamp);
   const body = await request.text();
-  const recent = Number.isFinite(timestampNumber) && Math.abs(Date.now() - timestampNumber) <= 60_000;
-  const valid = recent && (await verifyBody(env.SUPABASE_SERVICE_ROLE_KEY, timestamp, body, signature));
-  // 서명이 맞지 않으면 이 경로가 있다는 사실 자체를 알리지 않는다
+  const recent = /^\d+$/.test(timestamp) && Number.isFinite(timestampNumber) && Math.abs(Date.now() - timestampNumber) <= 60_000;
+  const secret = env.SUPABASE_SERVICE_ROLE_KEY;
+  const valid = !!secret && recent && await verifyBody(secret, timestamp, body, signature);
   if (!valid) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
-
+  const owner = z.string().min(1).max(128);
+  const plan = z.string().min(1).max(60);
+  const token = z.string().min(1).max(256);
+  const schema = z.discriminatedUnion("operation", [
+    z.object({ operation: z.literal("intake"), job: z.object({ ownerHash: owner, planId: plan, jobId: z.string().uuid() }).strict() }).strict(),
+    z.object({ operation: z.literal("generateSection"), job: z.object({ ownerHash: owner, planId: plan, chapterId: z.string().min(1).max(128), sectionId: z.string().min(1).max(128) }).strict() }).strict(),
+    z.object({ operation: z.literal("completeCoach"), job: z.object({ ownerHash: owner, planId: plan, token, operation: z.literal("coach").optional() }).strict() }).strict(),
+    z.object({ operation: z.literal("completeDeck"), job: z.object({ ownerHash: owner, planId: plan, token, operation: z.literal("deck").optional() }).strict() }).strict(),
+    z.object({ operation: z.literal("completeProposalUpdate"), job: proposalBackgroundJobSchema }).strict(),
+    z.object({ operation: z.literal("artifactChunk"), job: z.object({ operation: z.literal("artifact_update"), ownerHash: owner, planId: plan, jobId: z.string().uuid(), index: z.number().int().min(0).max(79), attempt: z.number().int().min(0).max(2) }).strict() }).strict(),
+  ]);
+  let raw: unknown;
+  try { raw = JSON.parse(body); } catch { return Response.json({ error: "INVALID_REQUEST" }, { status: 400 }); }
+  const parsed = schema.safeParse(raw);
+  if (!parsed.success) return Response.json({ error: "INVALID_REQUEST" }, { status: 400 });
+  const input = parsed.data;
+  if (process.env.INTAKE_BETA_SAFETY === "1" && input.operation !== "intake") return Response.json({ error: "BETA_SCOPE_RESTRICTED" }, { status: 403 });
   try {
-    const input = JSON.parse(body) as ServiceRequest;
-    if (input.operation === "intake") {
-      const job = z.object({ ownerHash: z.string().min(1).max(128), planId: z.string().min(1).max(60), jobId: z.string().uuid() }).strict().parse(input.job);
-      return Response.json({ result: await executeIntakeJob(job) });
+    switch (input.operation) {
+      case "intake": return Response.json({ result: await runIntakeJobWithBudget(input.job) });
+      case "generateSection": return Response.json({ result: await generateAndSaveSection(input.job) });
+      case "completeCoach": return Response.json({ result: await generateAndSaveCoach(input.job) });
+      case "completeDeck": return Response.json({ result: await generateAndSaveDeck(input.job) });
+      case "completeProposalUpdate": return Response.json({ result: await executeProposalUpdate(input.job) });
+      case "artifactChunk": return Response.json({ result: await executeArtifactChunk(input.job.ownerHash, input.job.planId, input.job.jobId, input.job.index, input.job.attempt) });
     }
-    if (input.operation === "completeProposalUpdate") return Response.json({ result: await executeProposalUpdate(input.job) });
-    if (input.operation === "artifactChunk") {
-      const job = z.object({ operation: z.literal("artifact_update"), ownerHash: z.string().min(1).max(128), planId: z.string().min(1).max(60), jobId: z.string().uuid(), index: z.number().int().min(0).max(79), attempt: z.number().int().min(0).max(2) }).strict().parse(input.job);
-      return Response.json({ result: await executeArtifactChunk(job.ownerHash, job.planId, job.jobId, job.index, job.attempt) });
-    }
-    const result = input.operation === "completeCoach" ? await generateAndSaveCoach(input.job) : input.operation === "completeDeck" ? await generateAndSaveDeck(input.job) : await generateAndSaveSection(input.job);
-    return Response.json({ result });
-  } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : "PLAN_SECTION_FAILED" }, { status: 500 });
+  } catch {
+    return Response.json({ error: "PLAN_SECTION_FAILED" }, { status: 500 });
   }
 }

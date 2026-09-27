@@ -83,6 +83,8 @@ async function main() {
     function sample(question: IntakeQuestion, sector: typeof PROPOSAL_SECTORS[number]): IntakeValue {
       if (question.id === "industry") return sector;
       if (question.id === "interest") return [sector];
+      // A space business cannot also require no premises; conflict handling has its own regression case.
+      if (question.id === "conditions" && sector === "space_hospitality") return ["매장·공간에서 제공"];
       if (question.id === "period") return "2026-09-01 / 2026-09-15";
       if (question.unit === "원") return "12,000원";
       if (question.kind === "single") return question.options![0].value;

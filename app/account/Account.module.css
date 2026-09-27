@@ -53,6 +53,11 @@
 .message,.error { font-size:14px; line-height:1.7; margin:0; padding:14px 16px; border:1px solid #d6e4f8; border-radius:8px; color:#1957b5; background:#f5f9ff; }
 .error { background:#fff6f5; border-color:#f4d0cd; color:#b42318; }.fieldError { color:#b42318; font-size:12px; }
 .loading { max-width:448px; margin:80px auto; }
+.page .supportLink { display:flex; align-items:center; gap:16px; padding:20px 0; border-top:1px solid #e5e8eb; color:#246bd1; text-decoration:none; }
+.supportLink > span { flex:1; min-width:0; display:grid; gap:5px; }
+.supportLink strong { font-size:18px; font-weight:700; color:#191f28; }
+.supportLink small { font-size:14px; color:#6b7684; line-height:1.6; }
+.supportLink > svg { flex-shrink:0; }
 .page :global(.account-dashboard) { width:min(900px,calc(100% - 48px)); margin:40px auto 80px; padding:0; }
 .page :global(.account-welcome) { display:flex; align-items:center; gap:16px; padding:0 0 32px; border:0; background:transparent; box-shadow:none; }
 .page :global(.account-welcome) > div { flex:1; min-width:0; }.page :global(.account-welcome) h1 { font-size:28px; color:#191f28; margin:8px 0; }

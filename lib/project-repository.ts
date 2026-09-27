@@ -1,4 +1,5 @@
 import { getServerSupabase, serverPersistenceMode } from "./persistence";
+import { projectReadTable } from "./plan-builder/quarantine-tables";
 import type {
   ArtifactRecord,
   ProjectRecord,
@@ -209,7 +210,7 @@ export async function findProjectIdByPlan(
     return null;
   }
   const { data, error } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("id")
     .eq("guest_token_hash", guestTokenHash)
     .eq("opportunity->>planId", planId)
@@ -230,7 +231,7 @@ export async function getProject(
   }
 
   const { data: projectRow, error } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("*")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -356,7 +357,7 @@ export async function saveLaunchMissionWorkspace(
   }
 
   const { data: metadataRow, error: metadataError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -389,7 +390,7 @@ export async function saveDraftPackageRun(
   }
 
   const { data: metadataRow, error: metadataError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -432,7 +433,7 @@ export async function saveRefinementVersion(
   }
 
   const { data: metadataRow, error: metadataError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -471,7 +472,7 @@ export async function updateRefinementVersionStatus(
   }
 
   const { data: metadataRow, error: metadataError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -503,7 +504,7 @@ export async function savePresentationDecks(
   }
 
   const { data: metadataRow, error: metadataError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -535,7 +536,7 @@ export async function saveDocumentDrafts(
   }
 
   const { data: metadataRow, error: metadataError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -584,7 +585,7 @@ export async function getProjectDocumentDrafts(
     return clone(project.documentDrafts ?? {});
   }
   const { data, error } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -606,7 +607,7 @@ export async function getProjectDocumentEditState(
     return { drafts: clone(project.documentDrafts ?? {}), readyDocumentIds: demoReadyDocumentIds(project) };
   }
   const { data: projectRow, error: projectError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata,business_plan,operations_package,execution_analysis,grant_package")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)
@@ -653,7 +654,7 @@ export async function updateDraftPackageRun(
   }
 
   const { data: metadataRow, error: metadataError } = await supabase
-    .from("projects")
+    .from(projectReadTable())
     .select("metadata")
     .eq("id", projectId)
     .eq("guest_token_hash", guestTokenHash)

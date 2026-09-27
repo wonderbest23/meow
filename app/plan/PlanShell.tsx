@@ -122,7 +122,10 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
    */
   const [sync, setSync] = useState<PlanSyncStatus>("idle");
   const [ownerChanged, setOwnerChanged] = useState(false);
-  useEffect(() => subscribePlanOwnerChange(() => setOwnerChanged(true)), []);
+  useEffect(() => subscribePlanOwnerChange(() => {
+    setOwnerChanged(true);
+    window.location.reload();
+  }), []);
   useEffect(() => {
     setSync(planSyncStatus());
     return subscribePlanSync(() => setSync(planSyncStatus()));

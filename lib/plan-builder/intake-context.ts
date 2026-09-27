@@ -1,6 +1,8 @@
 import { readCoach } from "./coach";
 import { allStructureQuestions, detailQuestions, intakeSectorOptions } from "./intake-questions";
-import { readIntake } from "./intake-core";
+import { readIntake, effectiveStructure } from "./intake-core";
+import { intakeResourceSource } from "./intake-resource-context";
+import { selectedIdeaContext } from "./intake-ideas";
 import type { IntakeState } from "./intake-types";
 import type { ProposalSector } from "./proposal-blueprint";
 import { intakeStructureBrief, type IntakeStructureBrief } from "./intake-structure-brief";
@@ -19,6 +21,7 @@ export const INTAKE_CONTEXT_RULES = [
   "A range answer such as '10,000원~20,000원' or '5,000원 미만' must be quoted with its boundaries exactly as supplied; never cite a midpoint, average or single representative value for it.",
   "ksic is the user's confirmed standard industry classification (KSIC) and its structure labels are classification-based defaults for the business model shape (payer, offering, delivery, revenue, licensing); they are not verified operating facts and never override supplied answers.",
 ].join(" ");
+const RESOURCE_CONTEXT_RULES = "resources.limits are user budget/time ceilings, not actual costs, spending, revenue or operating results. Preserve raw ranges, explicit zero, unknown and units. Invalid inputs require clarification, not calculation. Resource quotes are user attestations, not independently verified facts. Do not use quotes requiring reconfirmation, mismatched context, incomplete coverage or expired validity as current evidence.";
 
 export type IntakeContextInput = { intakeContext?: string };
 type Answers = Record<string, Record<string, unknown>>;
@@ -103,10 +106,13 @@ export function confirmedIntakeContext(answers: Answers): string {
   const intakeState = briefIntakeState(answers, sector, ksic?.code ?? null), coachState = readCoach(answers);
   const brief: IntakeStructureBrief | null = intakeState && coachState ? intakeStructureBrief(coachState, intakeState) : null;
   const structure = brief && (intakeState?.ksic || brief.userChosen.length || brief.revenueModel.inputs.length) ? brief : null;
-  if (!details.length && !reportingPeriod && !ksic && !structure) return "";
+  const resources = coachState ? intakeResourceSource(coachState, intakeState, intakeState ? effectiveStructure(intakeState).values : undefined) : undefined;
+  const selectedProposal = coachState ? selectedIdeaContext(coachState, intakeState) : null;
+  if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal) return "";
 
-  const context = { guidance: INTAKE_CONTEXT_RULES, industry: industry || null, sector: sector ?? null, ksic, structure,
-    reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
+  const context = { guidance: INTAKE_CONTEXT_RULES + (resources ? ` ${RESOURCE_CONTEXT_RULES}` : ""), industry: industry || null, sector: sector ?? null, ksic, structure,
+    ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
+  while (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.resources?.quotes.length) { context.resources.quotes.pop(); context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.structure) { context.structure = { ...context.structure, financialScenario: "" }; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH) { context.structure = null; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH) { context.ksic = null; context.omitted = true; }

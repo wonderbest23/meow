@@ -167,6 +167,46 @@ async function main() {
       await assert.rejects(saveIntakeCommand(`invalid-${randomUUID()}`, { ...command, questionId: "business", value: "카페" }), assertIntakeError("invalid_start", 400));
     });
 
+    await check("selected answer and supplementary prose save atomically without confirming prose or calling AI", async () => {
+      const session = await start();
+      const request: IntakeCommand = { action: "answer", planId: session.planId, revision: session.result.snapshot.coach.revision, requestId: randomUUID(), questionId: "industry", value: "software", message: "예산: 0원. 온라인으로만 제공하고 싶어요" };
+      const before = await load(session);
+      const result = await saveIntakeCommand(session.ownerHash, request, { aiAvailable: true, aiAllowed: true });
+      assert.equal(result.snapshot.intake.answers.industry.value, "software");
+      assert.equal(result.snapshot.intake.notes.at(-1)?.text, request.message);
+      assert.equal(result.snapshot.intake.notes.at(-1)?.intent, "memo");
+      assert.equal(result.snapshot.intake.notes.at(-1)?.status, "stored");
+      assert.equal(result.snapshot.coach.fields.find(field => field.key === "budget"), undefined, "additional prose is not silently treated as a confirmed budget");
+      assert.equal(result.snapshot.intake.candidates.length, 0);
+      assert.equal(result.job, null);
+      const duplicate = await saveIntakeCommand(session.ownerHash, request);
+      assert.equal(duplicate.duplicate, true);
+      assert.equal(duplicate.snapshot.intake.notes.length, 1);
+      assert.equal(duplicate.snapshot.coach.messages.length, before.coach.messages.length + 2);
+      await assert.rejects(saveIntakeCommand(`unrelated-${randomUUID()}`, request), assertIntakeError("not_found", 404));
+      await assert.rejects(saveIntakeCommand(session.ownerHash, { ...request, requestId: randomUUID(), message: "stale note" }), assertIntakeError("revision_conflict", 409));
+      const reload = await load(session);
+      assert.equal(reload.intake.notes.length, 1);
+      assert.equal(reload.intake.notes[0].text, request.message);
+      assert.equal(calls.length, 0);
+    });
+
+    await check("explicit help stores the question once and replays the same queued job", async () => {
+      const session = await start();
+      const request: IntakeCommand = { action: "help", planId: session.planId, revision: session.result.snapshot.coach.revision, requestId: randomUUID(), message: "첫 고객을 어떻게 찾을까요?" };
+      await assert.rejects(saveIntakeCommand(session.ownerHash, request), assertIntakeError("ai_unavailable", 503));
+      assert.equal((await load(session)).intake.notes.length, 0, "rejected calls do not partially persist; the browser retains the draft");
+      const queued = await saveIntakeCommand(session.ownerHash, request, { aiAvailable: true, aiAllowed: true });
+      assert.equal(queued.snapshot.intake.notes[0].intent, "question");
+      assert.equal(queued.snapshot.coach.messages.at(-1)?.text, request.message);
+      assert.equal(queued.job?.kind, "help");
+      const replay = await saveIntakeCommand(session.ownerHash, request, { aiAvailable: true, aiAllowed: true });
+      assert.equal(replay.snapshot.intake.job?.id, queued.job!.id);
+      assert.equal(replay.snapshot.intake.notes.length, 1);
+      assert.equal(replay.snapshot.coach.messages.length, queued.snapshot.coach.messages.length);
+      assert.equal(calls.length, 0, "saving an explicit job never sends the provider request inline");
+    });
+
     await check("deferred notes preserve original input and document version even when AI is configured", async () => {
       const session = await start();
       await send(session, { action: "answer", questionId: "business", value: "사진 촬영 서비스" });

@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "../persistence";
 import { getProject } from "../project-repository";
+import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { landingDraftFingerprint } from "./save-contract";
 import {
   ensureLandingPageData,
@@ -16,6 +17,12 @@ import {
 
 function parseLandingDraft(value: unknown): LandingDraft {
   return ensureLandingPageData(landingDraftSchema.parse(value));
+}
+
+async function publishedProjectAvailable(db: SupabaseClient, projectId: string) {
+  const { data, error } = await db.from(projectReadTable()).select("id").eq("id", projectId).maybeSingle();
+  if (error) throw new Error("LANDING_SOURCE_UNAVAILABLE");
+  return Boolean(data);
 }
 
 type DemoLandingStore = {
@@ -377,6 +384,7 @@ export async function getPublishedLandingBySlug(
     .maybeSingle();
   if (error) throw error;
   if (!data || data.published_version === null) return null;
+  if (!await publishedProjectAvailable(supabase, data.project_id)) return null;
   const { data: version, error: versionError } = await supabase
     .from("landing_versions")
     .select("*")
@@ -411,6 +419,7 @@ export async function getPublishedLandingByCustomDomain(
     .maybeSingle();
   if (error) throw error;
   if (!data || data.published_version === null) return null;
+  if (!await publishedProjectAvailable(supabase, data.project_id)) return null;
   const { data: version, error: versionError } = await supabase
     .from("landing_versions")
     .select("*")

@@ -23,6 +23,9 @@ export async function POST(request: Request) {
     const previousGuestHash = await currentGuestHash();
     const { remember = true, ...credentials } = input;
     const result = await createServerAuthClient().auth.signInWithPassword(credentials);
+    if (result.error?.code === "email_not_confirmed" || (result.data.user?.email && !result.data.user.email_confirmed_at)) {
+      return NextResponse.json({ error: { code: "EMAIL_NOT_CONFIRMED", message: "확인 메일의 링크로 이메일을 인증한 후 로그인해 주세요." } }, { status: 403 });
+    }
     if (result.error || !result.data.session || !result.data.user) throw result.error ?? new Error("로그인 정보를 확인해주세요.");
     await claimGuestProjects(result.data.user.id, previousGuestHash);
     await setAccountSession(result.data.session, remember);

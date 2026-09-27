@@ -22,6 +22,7 @@ export async function completeCoachReply(config: LLMConfig, previous: CoachState
     system: COACH_SYSTEM,
     user: JSON.stringify({ existing: previous ? { title: previous.business.name, stage: previous.stage, depth: previous.depth, fields: previous.fields, ideaOrigin: previous.ideaOrigin, design: currentBusinessDesign(previous) } : null, history: previous?.messages.slice(-20) ?? [], message }),
     kind: "business-coach", effort: "medium", maxOutputTokens: 6000, timeoutMs: 120000, cache: true, onUsage,
+    validateJson: value => coachReplySchema.safeParse(value).success,
   });
   const parsed = coachReplySchema.safeParse(raw);
   if (!parsed.success) return null;
@@ -35,6 +36,7 @@ export async function completeCoachReply(config: LLMConfig, previous: CoachState
     user: source,
     jsonSchema: { name: "business_design", schema: briefJsonSchema },
     kind: "business-brief", effort: "high", maxOutputTokens: 6500, timeoutMs: 120000, onUsage,
+    validateJson: value => briefSchema.safeParse(value).success,
   });
   const completed = briefSchema.safeParse(brief);
   if (!completed.success) return null;

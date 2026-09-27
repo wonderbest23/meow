@@ -6,6 +6,7 @@ import { loadPlanState, type ServerPlan } from "./plan-server-store";
 import { ProposalError } from "./proposal-editor";
 import { artifactDigest } from "./artifact-update-source";
 import type { ArtifactUpdate } from "./artifact-updates";
+import { assertPlanAvailable } from "./quarantine.server";
 
 declare global { var __oneulArtifactUpdateStore: Map<string, ArtifactUpdate> | undefined; }
 const memory = globalThis.__oneulArtifactUpdateStore ?? (globalThis.__oneulArtifactUpdateStore = new Map());
@@ -17,6 +18,7 @@ export async function loadArtifactContext(owner: string, planId: string) {
   return { plan, site: projectId ? await getLandingForProject(projectId, owner) : null };
 }
 export async function listArtifactUpdates(owner: string, planId: string): Promise<ArtifactUpdate[]> {
+  await assertPlanAvailable(owner, [planId]);
   const db = getServerSupabase();
   if (!db) return structuredClone([...memory.values()].filter(item => item.ownerHash === owner && item.planId === planId).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
   const { data, error } = await db.from("plan_artifact_updates").select("data").eq("owner_hash", owner).eq("plan_id", planId).order("created_at", { ascending: false }).limit(30);
@@ -24,6 +26,7 @@ export async function listArtifactUpdates(owner: string, planId: string): Promis
   return data.map(row => row.data as ArtifactUpdate);
 }
 export async function readArtifactUpdate(owner: string, planId: string, id: string): Promise<ArtifactUpdate | null> {
+  await assertPlanAvailable(owner, [planId]);
   const db = getServerSupabase();
   if (!db) return structuredClone(memory.get(key(owner, planId, id)) ?? null);
   const { data, error } = await db.from("plan_artifact_updates").select("data").eq("owner_hash", owner).eq("plan_id", planId).eq("id", id).maybeSingle();
@@ -34,6 +37,7 @@ type Commit = { beforePlan?: ServerPlan; nextPlan?: ServerPlan; site?: LandingSi
 
 /** Production commits the job, selected plan, and homepage draft in one transaction. */
 export async function writeArtifactUpdate(job: ArtifactUpdate, expectedRevision: number, commit: Commit = {}): Promise<ArtifactUpdate> {
+  await assertPlanAvailable(job.ownerHash, [job.planId]);
   const db = getServerSupabase();
   if (db) {
     const { data, error } = await db.rpc("commit_artifact_update", { p_owner_hash: job.ownerHash, p_plan_id: job.planId, p_id: job.id,

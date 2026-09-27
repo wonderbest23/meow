@@ -42,6 +42,18 @@ export function actionStatus(plan: Plan, action: string) {
 }
 
 export function workspaceHref(id: string) { return `/plan/workspace?planId=${encodeURIComponent(id)}`; }
+export function businessEntryHref(plan: Plan) {
+  return readCoach(plan.answers) || readCoachJob(plan.answers) ? businessChatHref(plan.id) : workspaceHref(plan.id);
+}
+export function shouldResumeBusinessChat(plan: Plan): boolean {
+  const { coach, job, documents } = businessHubState(plan);
+  // Existing results remain accessible even after later edits make them stale.
+  if (documents.length || coach?.design) return false;
+  if (!coach) return !!job;
+  const intake = plan.answers.__business_intake?.state as { version?: number } | undefined;
+  // Intake ready means a business was selected, not that a business design exists.
+  return intake?.version === 1 || !coach.ready;
+}
 export function businessNextStep(plan: Plan) {
   const state = readLaunch(plan);
   const step = launchSteps(plan, state).find(item => ["pending", "review"].includes(launchStatus(state, item)));

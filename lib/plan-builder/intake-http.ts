@@ -5,13 +5,16 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireGuestIdentity } from "../api-auth";
 import { enforceRateLimit } from "../rate-limit";
 import { resolvePlanningLLMConfig } from "../llm/config";
+import { intakeBetaSafetyRequired } from "../llm/intake-policy";
 import { serverPersistenceMode } from "../persistence";
 import { readCoach } from "./coach";
 import { loadPlanState } from "./plan-server-store";
 import { createIntake, IntakeError, intakeSnapshot, readIntake, intakeJobClock } from "./intake-core";
-import { executeIntakeJob, expireStaleIntakeJob, intakeCommandSchema, saveIntakeCommand, updateIntakeJob } from "./intake-service";
+import { expireStaleIntakeJob, intakeCommandSchema, saveIntakeCommand, updateIntakeJob } from "./intake-service";
+import { runIntakeJobWithBudget } from "./intake-execution.server";
 import { intakeFeatureEnabled, type IntakeCommand, type IntakeJobRequest, type IntakePayload } from "./intake-types";
 import { ksicPath, searchKsic, sectorForKsic } from "./ksic";
+import { intakeJobExpired } from "./intake-timing";
 
 // 진행 중인 AI 작업이 있으면 서버 시각 기준 경과 시간을 함께 보낸다. 화면은 이 값으로 게이지를 이어 그린다.
 const json = (body: Partial<IntakePayload>, status = 200) => Response.json({ flowVersion: 2, enabled: intakeFeatureEnabled(), ...body, ...(body.plan ? { plan: { ...body.plan, jobClock: intakeJobClock(body.plan.intake.job, Date.now()) } } : {}) }, { status, headers: { "Cache-Control": "private, no-store" } });
@@ -24,7 +27,7 @@ async function currentSnapshot(ownerHash: string, planId?: string | null) {
   const coach = plan && readCoach(plan.answers);
   if (!plan || !coach) return null;
   const intake = readIntake(plan.answers) ?? createIntake(coach, coach.stage === "operating" ? "operating" : coach.stage === "exploring" ? "exploring" : "startup", plan.updatedAt);
-  if (intake.job && ["queued", "running"].includes(intake.job.status) && Date.now() - Date.parse(intake.job.updatedAt) > 120_000) {
+  if (intake.job && intakeJobExpired(intake.job, Date.now())) {
     const recovered = await expireStaleIntakeJob({ ownerHash, planId: plan.id, jobId: intake.job.id });
     if (recovered) return intakeSnapshot(recovered.plan, recovered.coach, recovered.intake);
   }
@@ -59,7 +62,7 @@ export async function dispatchIntakeJob(request: IntakeJobRequest) {
     await updateIntakeJob(request, (_plan, _coach, _intake, job) => { job.dispatched = true; }).catch(() => undefined);
   } else {
     // Local requests finish after persistence. No durable background promise is made here.
-    after(async () => { await executeIntakeJob(request).catch(() => undefined); });
+    after(async () => { await runIntakeJobWithBudget(request).catch(() => undefined); });
   }
 }
 
@@ -78,13 +81,15 @@ export async function intakePost(request: Request, prepare: (request: Request) =
     const scope = ownerScope(identity.hash);
     if (request.headers.has("x-business-intake-owner") && request.headers.get("x-business-intake-owner") !== scope) return json({ code: "owner_changed", message: "로그인 계정이 바뀌었어요. 임시 입력은 보관하고 현재 계정을 다시 확인해 주세요", ownerScope: scope }, 409);
     if (command.action === "prepare") {
+      if (intakeBetaSafetyRequired()) return json({ code: "beta_scope_restricted", message: "한정 베타에서는 사업안 저장까지 이용할 수 있어요." }, 403);
       const forwarded = new Request(request.url, { method: "POST", headers: request.headers, body: JSON.stringify({ action: "prepare", planId: command.planId, revision: command.revision, requestId: command.requestId }) });
       const result = await prepare(forwarded);
       const payload = await result.json();
       return json({ plan: await currentSnapshot(identity.hash, command.planId), authenticated: !!identity.userId, ownerScope: scope,
         message: payload.message, login: payload.login, started: payload.started, paid: payload.paid }, result.status);
     }
-    const needsAI = ["message", "extract", "extract-pending", "help", "design"].includes(command.action);
+    const needsAI = ["message", "extract", "extract-pending", "help", "design", "ideas"].includes(command.action);
+    if (needsAI && intakeBetaSafetyRequired() && !identity.userId) return json({ code: "login_required", login: true, authenticated: false, ownerScope: scope, message: "AI 생성은 로그인 후 이용할 수 있어요. 입력한 내용은 유지되며 로그인하고 이어갈 수 있어요." }, 401);
     const aiAvailable = needsAI && !!resolvePlanningLLMConfig(identity.hash);
     const aiLimited = needsAI && aiAvailable ? await enforceRateLimit("business-intake-ai", request, { key: identity.hash, limit: 24, windowMs: 600_000 }) : null;
     const result = await saveIntakeCommand(identity.hash, command, { aiAvailable, aiAllowed: !aiLimited });

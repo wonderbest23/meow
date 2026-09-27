@@ -1,6 +1,6 @@
 "use client";
 
-import { BriefcaseBusiness, ChevronRight, Receipt } from "lucide-react";
+import { BriefcaseBusiness, ChevronRight, Headphones, Receipt } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { SiteHeader } from "../../components/site-header";
@@ -305,9 +305,11 @@ export default function AccountPage() {
         await payload(await fetch("/api/auth/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recoveryTokens, password }) }));
         window.history.replaceState({}, "", "/account"); setRecoveryTokens(null); setPassword(""); setPasswordConfirm(""); setMessage("새 비밀번호를 저장했습니다."); await loadSession();
       } else if (mode === "register") {
-        const result = await payload<{ authenticated: boolean; message?: string }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
-        // 이메일 인증 없이 가입 즉시 로그인된다
-        if (result.authenticated) {
+        const result = await payload<{ authenticated: boolean; confirmationRequired?: boolean; message?: string }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
+        if (result.confirmationRequired) {
+          setMode("login"); setPassword(""); setPasswordConfirm("");
+          setMessage(result.message ?? "확인 메일의 링크로 이메일을 인증한 후 로그인해 주세요.");
+        } else if (result.authenticated) {
           rememberLocally(remember, email);
           if (goNext()) return;
           setMessage("계정을 만들었습니다."); await loadSession();
@@ -354,6 +356,12 @@ export default function AccountPage() {
         /* plan-ui: 전역 버튼 정규화(아이콘 숨김 등)에서 제외 — 플랜과 같은 체계를 쓴다 */
         <section className="account-dashboard plan-ui">
           <div className="account-welcome"><div><small>내 계정</small><h1>반가워요</h1><p>{session.email}</p></div><button disabled={busy} onClick={logout}>{busy ? <Spinner /> : null} 로그아웃</button></div>
+
+          <Link className={styles.supportLink} href="/account/support">
+            <Headphones size={23} aria-hidden="true" />
+            <span><strong>고객센터</strong><small>문의 접수 · 내 문의와 답변 확인</small></span>
+            <ChevronRight size={20} aria-hidden="true" />
+          </Link>
 
           {/* 진행 중인 사업 = 플랜 목록. 누르면 /plan 의 그 플랜에서 바로 이어진다. */}
           <div className="account-projects">

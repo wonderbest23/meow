@@ -16,6 +16,7 @@ import { hydrateFromServer, activePlan, loadState, isSamplePlan, planOwnerEpoch,
 import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import styles from "./page.module.css";
+import PlanLoading from "../PlanLoading";
 
 /*
  * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
@@ -339,11 +340,7 @@ export default function PlanHomepagePage() {
         </div>
       )}
       {phase === "loading" && (
-        <div className={styles.center}>
-          <span className={styles.dot} />
-          <p className={styles.centerTitle}>홈페이지 틀을 불러오고 있어요</p>
-          <p className={styles.centerNote}>Brainwave.io 킷 페이지를 그대로 가져옵니다. 글과 사진은 편집에서 바꿉니다.</p>
-        </div>
+        <PlanLoading fill note="홈페이지를 불러오고 있어요" />
       )}
 
       {phase === "blocked" && (

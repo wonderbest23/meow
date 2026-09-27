@@ -61,18 +61,19 @@
   .overview h3 { font-size: 20px; }
   .overview p { font-size: 15px; }
   .desktopBreak { display: none; }
-  .planningSeed { justify-content: flex-start; gap: 12px; margin-bottom: 36px; }
-  .planningSeed > svg { flex-basis: 20px; width: 20px; height: 20px; margin-top: 32px; }
-  .planningSeed blockquote { font-size: 18px; }
-  .planningSteps { grid-template-columns: minmax(0, 1fr); gap: 24px; }
-  .planningSteps li { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 20px; min-height: 64px; text-align: left; }
-  .planningSteps li:not(:last-child)::after { left: 21px; top: 44px; bottom: -24px; width: 1px; height: auto; }
-  .planningMarker { margin: 0; }
+  .planningSeed { flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-bottom: 36px; text-align: center; }
+  .planningSeed > svg { flex-basis: 22px; width: 22px; height: 22px; margin-top: 0; }
+  .planningSeed blockquote { margin: 0; font-size: 18px; }
+  .planningSteps { grid-template-columns: minmax(0, 1fr); gap: 30px; }
+  .planningSteps li { display: block; text-align: center; }
+  /* 세로 연결선은 가운데 글자를 지나가므로 폰에서는 그리지 않는다 */
+  .planningSteps li:not(:last-child)::after { display: none; }
+  .planningMarker { margin: 0 auto 14px; }
   .overview .planningSteps h3 { font-size: 18px; margin-bottom: 6px; }
-  .overview .planningSteps p { max-width: none; margin: 0; font-size: 14px; }
-  .planningOutcome { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 28px; margin-top: 36px; }
+  .overview .planningSteps p { max-width: 300px; margin: 0 auto; font-size: 14px; }
+  .planningOutcome { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 28px; margin-top: 36px; text-align: center; }
   .overview .planningOutcome h3 { font-size: 22px; }
-  .planningOutcome dl > div { grid-template-columns: 52px minmax(0, 1fr); gap: 16px; font-size: 14px; }
+  .planningOutcome dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; font-size: 14px; }
   .results { grid-template-columns: 1fr; gap: 22px; }
   .results article { padding-top: 20px; }
   .formats { padding-top: 12px; }

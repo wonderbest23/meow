@@ -47,7 +47,8 @@ const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있
 const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "인력을 고른 뒤 하루·주·월 처리량을 정해요." });
 const goal = fieldQuestion("goal", "언제까지 무엇을 이루고 싶나요?", { hint: "목표는 현재 실적과 따로 기록돼요." });
 /** 탐색 모드 시작 조건 칩. 값은 사업 구조 축(자본·소상공인·인허가·전달·고객·수익)에 그대로 대응하고, 서버가 표준산업분류 지도에서 조건에 맞는 후보를 고른다. */
-export const START_CONDITIONS = ["무점포로 시작", "혼자 시작할 수 있는 일", "인허가 없이 시작", "온라인으로 제공", "방문·출장으로 제공", "매장·공간에서 제공", "개인 고객", "기업·사업자 고객", "월 구독·정기 수익"] as const;
+import { START_CONDITIONS, candidateConditionFit, candidateTemplateFacts, selectedStartConditions, filterCandidateConditions } from "./intake-candidate-constraints";
+export { START_CONDITIONS } from "./intake-candidate-constraints";
 const conditions: IntakeQuestion = {
   id: "conditions", label: "시작 조건", prompt: "어떤 조건으로 시작하고 싶나요? (최대 4개)", kind: "multi", options: [{ ...chip(START_CONDITIONS[0]), hint: "사무실·매장 없이" }, ...chips(START_CONDITIONS.slice(1))], optional: true,
   hint: "고른 조건에 맞는 업종 후보를 표준산업분류 지도에서 찾아요. 정한 게 없으면 넘어가도 돼요.",
@@ -304,7 +305,7 @@ function hasAnswer(value: string | string[] | number | null | undefined): boolea
   return answerText(value).length > 0;
 }
 
-export function intakeCandidates(answers: Record<string, string | string[] | number | null>): Array<{ id: string; title: string; description: string; sector: ProposalSector; reasons: string[]; cautions: string[] }> {
+export function intakeCandidates(answers: Record<string, string | string[] | number | null>, limit = 3): Array<{ id: string; title: string; description: string; sector: ProposalSector; reasons: string[]; cautions: string[] }> {
   const constraints = [
     hasAnswer(answers.hoursPerWeek) ? "입력한 주당 시간과 실제 준비·영업·운영 시간을 따로 비교해야 합니다." : "주당 가능한 시간은 미입력 상태이며 0시간으로 보지 않습니다.",
     hasAnswer(answers.budget) ? "입력한 예산과 실제 초기 비용·운영비를 따로 비교해야 합니다." : "준비 예산은 미입력 상태이며 0원으로 보지 않습니다.",
@@ -320,6 +321,7 @@ export function intakeCandidates(answers: Record<string, string | string[] | num
   }
   const interest = answerText(answers.interest);
   const experience = answerText(answers.experience);
+  const conditions = selectedStartConditions(answers.conditions);
   // Order: ideas whose sector the user picked as an interest first, then explicit tag matches, with catalogue order as the stable tie-breaker.
   return CANDIDATE_IDEAS.map((idea, index) => {
     const tags = [idea.sector, SECTOR_PROFILES[idea.sector].label, ...idea.tags];
@@ -332,9 +334,12 @@ export function intakeCandidates(answers: Record<string, string | string[] | num
       ...(experienceTags.length ? [`경험 입력과 일치한 태그: ${readable(experienceTags)}`] : []),
     ];
     return { idea, index, interestSector, matches: Number(interestTags.length > 0) + Number(experienceTags.length > 0), reasons };
-  }).sort((a, b) => b.interestSector - a.interestSector || b.matches - a.matches || a.index - b.index).slice(0, 3).map(({ idea, reasons }) => ({
+  }).filter(({ idea, matches }) => {
+    const fit = candidateConditionFit(candidateTemplateFacts(idea.id), conditions);
+    return !fit.conflict && (!conditions.length || matches > 0 || !fit.unknown.length);
+  }).sort((a, b) => b.interestSector - a.interestSector || b.matches - a.matches || a.index - b.index).slice(0, limit).flatMap(({ idea, reasons }) => filterCandidateConditions({
     id: idea.id, title: idea.title, description: idea.description, sector: idea.sector,
     reasons: reasons.length ? reasons : ["일치한 관심·경험 태그가 없어 고정된 목록 순서의 예시로 제시합니다."],
     cautions: [idea.caution, ...constraints],
-  }));
+  }, candidateTemplateFacts(idea.id), conditions));
 }

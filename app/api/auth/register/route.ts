@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccountSession } from "../../../../lib/account-auth";
+import { createServerAuthClient, emailConfirmationEnabled } from "../../../../lib/account-auth";
 import { getServerSupabase } from "../../../../lib/persistence";
 import { PLATFORM_POLICY_VERSION } from "../../../../lib/platform-legal/domain";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
-import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
 
 const schema = z.object({
   email: z.string().trim().email().max(200),
@@ -14,10 +13,16 @@ const schema = z.object({
   aiNotice: z.literal(true),
 });
 
-/** Supabase가 돌려주는 '이미 등록된 이메일' 오류를 알아본다. */
-function isDuplicateEmail(message: string): boolean {
-  const m = message.toLowerCase();
-  return m.includes("already registered") || m.includes("already been registered") || m.includes("already exists") || m.includes("duplicate");
+function confirmationPending() {
+  return NextResponse.json({
+    authenticated: false,
+    confirmationRequired: true,
+    message: "확인 메일을 확인해 주세요. 메일의 링크로 인증한 후 로그인할 수 있습니다. 이미 가입했다면 로그인해 주세요.",
+  }, { status: 202, headers: { "Cache-Control": "private, no-store" } });
+}
+
+function confirmationUnavailable() {
+  return NextResponse.json({ error: { code: "EMAIL_CONFIRMATION_UNAVAILABLE", message: "이메일 확인 설정을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
 }
 
 export async function POST(request: Request) {
@@ -30,32 +35,26 @@ export async function POST(request: Request) {
 
   try {
     const input = schema.parse(await request.json());
-    const previousGuestHash = await currentGuestHash();
+    if (!await emailConfirmationEnabled()) return confirmationUnavailable();
     const auth = createServerAuthClient();
-
-    /*
-     * 이메일 인증을 요구하지 않는다 — 결제가 실제 관문이고, 확인 메일을 기다리는
-     * 단계에서 이탈이 크다. admin.createUser + email_confirm으로 바로 확정 계정을
-     * 만들고 곧바로 로그인시킨다(프로젝트의 'Confirm email' 설정과 무관하게 동작).
-     */
-    const created = await auth.auth.admin.createUser({
+    const created = await auth.auth.signUp({
       email: input.email,
       password: input.password,
-      email_confirm: true,
+      options: { emailRedirectTo: new URL("/account", request.url).href },
     });
 
-    if (created.error || !created.data.user) {
-      const message = created.error?.message ?? "계정을 만들지 못했습니다.";
-      if (isDuplicateEmail(message)) {
-        return NextResponse.json(
-          { error: { code: "EMAIL_TAKEN", message: "이미 가입된 이메일입니다. 로그인해 주세요." } },
-          { status: 409 },
-        );
+    if (created.error) {
+      if (["user_already_exists", "email_exists"].includes(created.error.code ?? "")) return confirmationPending();
+      if (["email_address_not_authorized", "over_email_send_rate_limit", "unexpected_failure"].includes(created.error.code ?? "")) {
+        return NextResponse.json({ error: { code: "EMAIL_DELIVERY_UNAVAILABLE", message: "확인 메일을 발송하지 못했습니다. 잠시 후 다시 시도하거나 다른 로그인 방법을 이용해 주세요." } }, { status: 503 });
       }
-      throw new Error(message);
+      return NextResponse.json({ error: { code: "REGISTER_FAILED", message: "가입 정보를 확인해 주세요." } }, { status: 400 });
     }
-
     const user = created.data.user;
+    if (!user || created.data.session) return confirmationUnavailable();
+    // Confirmed duplicates can be obfuscated by Auth. Never write consent to that identity.
+    if (user.identities?.length === 0) return confirmationPending();
+    if (user.email_confirmed_at) return confirmationUnavailable();
 
     // 약관 동의 기록
     const supabase = getServerSupabase();
@@ -71,32 +70,11 @@ export async function POST(request: Request) {
       if (error) throw error;
     }
 
-    // 가입 즉시 로그인 — 확인 메일을 기다리게 하지 않는다
-    const signedIn = await auth.auth.signInWithPassword({ email: input.email, password: input.password });
-    if (signedIn.error || !signedIn.data.session) {
-      // 계정은 만들어졌으니 로그인 화면으로 안내한다(계정을 지우지는 않는다)
-      return NextResponse.json(
-        { authenticated: false, confirmationRequired: false, email: user.email, message: "계정을 만들었습니다. 로그인해 주세요." },
-        { status: 200 },
-      );
-    }
-
-    await claimGuestProjects(user.id, previousGuestHash);
-    await setAccountSession(signedIn.data.session);
-
-    return NextResponse.json({ authenticated: true, confirmationRequired: false, email: user.email });
-  } catch (error) {
-    const linking = accountLinkError(error);
-    if (linking) return NextResponse.json({ error: { code: linking.code, message: `계정은 만들어졌어요. ${linking.message}` } }, { status: linking.status });
-    const raw = error instanceof Error ? error.message : "";
-    if (raw && isDuplicateEmail(raw)) {
-      return NextResponse.json(
-        { error: { code: "EMAIL_TAKEN", message: "이미 가입된 이메일입니다. 로그인해 주세요." } },
-        { status: 409 },
-      );
-    }
+    // Guest ownership and cookies are changed only by the verified login/callback routes.
+    return confirmationPending();
+  } catch {
     return NextResponse.json(
-      { error: { code: "REGISTER_FAILED", message: raw || "가입 정보를 확인해주세요." } },
+      { error: { code: "REGISTER_FAILED", message: "가입 처리를 완료하지 못했습니다. 확인 메일이 도착했다면 먼저 이메일을 인증해 주세요." } },
       { status: 400 },
     );
   }

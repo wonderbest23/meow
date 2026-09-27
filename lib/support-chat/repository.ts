@@ -139,12 +139,25 @@ export async function getCustomerChat(guestTokenHash: string, markRead = true): 
 }
 
 export async function sendCustomerMessage(guestTokenHash: string, body: string): Promise<SupportChat> {
+  return (await saveCustomerMessage(guestTokenHash, body)).chat;
+}
+
+export async function sendCustomerMessageOnce(guestTokenHash: string, body: string, messageId: string): Promise<{ chat: SupportChat; created: boolean }> {
+  return saveCustomerMessage(guestTokenHash, body, messageId);
+}
+
+async function saveCustomerMessage(guestTokenHash: string, body: string, messageId?: string): Promise<{ chat: SupportChat; created: boolean }> {
   const supabase = await supportSupabase();
   const now = new Date().toISOString();
   const preview = body.slice(0, 80);
 
   if (!supabase) {
     let stored = [...demoConversations.values()].find((item) => item.guestTokenHash === guestTokenHash);
+    const previous = messageId && stored ? demoMessages.get(stored.id)?.find((message: SupportMessage) => message.id === messageId) : undefined;
+    if (previous) {
+      if (previous.body !== body || previous.sender !== "customer") throw new Error("SUPPORT_REQUEST_CONFLICT");
+      return { chat: await getCustomerChat(guestTokenHash, false), created: false };
+    }
     if (!stored) {
       stored = {
         id: crypto.randomUUID(),
@@ -160,7 +173,7 @@ export async function sendCustomerMessage(guestTokenHash: string, body: string):
       demoMessages.set(stored.id, []);
     }
     const message: SupportMessage = {
-      id: crypto.randomUUID(),
+      id: messageId ?? crypto.randomUUID(),
       conversationId: stored.id,
       sender: "customer",
       body,
@@ -171,10 +184,10 @@ export async function sendCustomerMessage(guestTokenHash: string, body: string):
     stored.lastMessagePreview = preview;
     stored.unreadByAdmin += 1;
     stored.updatedAt = now;
-    return {
+    return { chat: {
       conversation: clone(publicConversation(stored)),
       messages: clone(demoMessages.get(stored.id)!),
-    };
+    }, created: true };
   }
 
   const { data: existing, error: findError } = await supabase
@@ -191,15 +204,44 @@ export async function sendCustomerMessage(guestTokenHash: string, body: string):
       .insert({ guest_token_hash: guestTokenHash })
       .select("*")
       .single();
-    if (error) throw error;
-    conversation = data;
+    if (error?.code === "23505") {
+      const raced = await supabase.from("support_conversations").select("*").eq("guest_token_hash", guestTokenHash).single();
+      if (raced.error) throw raced.error;
+      conversation = raced.data;
+    } else {
+      if (error) throw error;
+      conversation = data;
+    }
   }
 
+  async function replay(message: SupportMessage) {
+    if (message.conversationId !== conversation!.id || message.sender !== "customer" || message.body !== body) throw new Error("SUPPORT_REQUEST_CONFLICT");
+    // A receipt may already exist when the response or its conversation update failed.
+    if (!conversation!.last_message_preview || conversation!.updated_at < message.createdAt) {
+      const { error } = await supabase!.from("support_conversations").update({
+        status: "open", last_message_preview: preview,
+        unread_by_admin: Math.max(1, conversation!.unread_by_admin), updated_at: message.createdAt,
+      }).eq("id", conversation!.id).eq("updated_at", conversation!.updated_at);
+      if (error) throw error;
+    }
+    return { chat: await getCustomerChat(guestTokenHash, false), created: false };
+  }
+  if (messageId) {
+    const previous = await supabase.from("support_messages").select("*").eq("id", messageId).maybeSingle();
+    if (previous.error) throw previous.error;
+    if (previous.data) return replay(mapMessage(previous.data));
+  }
   const { error: messageError } = await supabase.from("support_messages").insert({
+    ...(messageId ? { id: messageId, created_at: now } : {}),
     conversation_id: conversation.id,
     sender: "customer",
     body,
   });
+  if (messageError?.code === "23505" && messageId) {
+    const previous = await supabase.from("support_messages").select("*").eq("id", messageId).single();
+    if (previous.error) throw previous.error;
+    return replay(mapMessage(previous.data));
+  }
   if (messageError) throw messageError;
 
   const { data: updated, error: updateError } = await supabase
@@ -214,10 +256,10 @@ export async function sendCustomerMessage(guestTokenHash: string, body: string):
     .select("*")
     .single();
   if (updateError) throw updateError;
-  return {
+  return { chat: {
     conversation: mapConversation(updated),
     messages: await loadSupabaseMessages(conversation.id),
-  };
+  }, created: true };
 }
 
 export async function listAdminConversations(): Promise<SupportConversation[]> {

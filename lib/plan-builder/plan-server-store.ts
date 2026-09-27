@@ -7,6 +7,7 @@ import { readCoach } from "./coach";
 import { planAccountLinkingEnabled } from "./account-linking";
 import { OPERATING_KEY } from "./operating-records";
 import { PROPOSAL_KEY } from "./proposal-editor";
+import { assertPlanAvailable, planStateReadTable, readPlanQuarantine } from "./quarantine.server";
 
 export interface ServerBusinessProfile {
   name: string;
@@ -125,12 +126,12 @@ export async function loadPlanState(ownerHash: string): Promise<ServerPlanState>
     return structuredClone(memoryStore.get(ownerHash) ?? { ...EMPTY, business: { ...EMPTY_BUSINESS } });
   }
   const { data, error } = await supabase
-    .from("plan_states")
+    .from(planStateReadTable())
     .select("data")
     .eq("owner_hash", ownerHash)
     .maybeSingle();
   if (error) throw new Error("PLAN_LOAD_FAILED");
-  if (!data) return { ...EMPTY, business: { ...EMPTY_BUSINESS } };
+  if (!data) return structuredClone(EMPTY);
   return normalizeState(data.data as Partial<ServerPlanState>);
 }
 
@@ -209,8 +210,9 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
 }
 
 /** Authenticated server code only: the browser cannot submit a source owner or imported state. */
-export async function claimGuestPlanState(guestHash: string, accountHash: string): Promise<"claimed" | "consumed"> {
+export async function claimGuestPlanState(guestHash: string, accountHash: string): Promise<"claimed" | "consumed" | "deferred"> {
   if (guestHash === accountHash) return "claimed";
+  if ((await readPlanQuarantine(guestHash)).profileBlocked || (await readPlanQuarantine(accountHash)).profileBlocked) return "deferred";
   const supabase = getServerSupabase();
   if (!supabase) {
     const claimed = memoryClaims.get(guestHash);
@@ -272,6 +274,7 @@ function checkSaveGuard(stored: ServerPlanState, guard?: PlanSaveGuard) {
 }
 
 export async function savePlanState(ownerHash: string, state: ServerPlanState, guard?: PlanSaveGuard): Promise<void> {
+  await assertPlanAvailable(ownerHash, [...state.plans.map(plan => plan.id), ...(guard ? [guard.planId] : [])]);
   const supabase = getServerSupabase();
   if (!supabase) {
     if (planAccountLinkingEnabled() && memoryClaims.has(ownerHash)) throw new Error("PLAN_OWNER_CHANGED");
@@ -287,6 +290,14 @@ export async function savePlanState(ownerHash: string, state: ServerPlanState, g
   const stored = normalizeState(row?.data as Partial<ServerPlanState> | undefined);
   checkSaveGuard(stored, guard);
   const clean = mergeStates(stored, normalizeState(state));
+  // Hidden records remain byte-for-byte intact; the database trigger also enforces this.
+  const quarantine = await readPlanQuarantine(ownerHash);
+  if (quarantine.profileBlocked && row?.data) {
+    const original = row.data as ServerPlanState;
+    clean.business = original.business;
+    clean.plans = clean.plans.map(plan => quarantine.blockedPlanIds.includes(plan.id)
+      ? original.plans.find(item => item.id === plan.id)! : plan);
+  }
   const active = clean.plans.find((p) => p.id === clean.activePlanId) ?? clean.plans[0];
   const payload = {
       owner_hash: ownerHash,
@@ -322,12 +333,20 @@ export async function savePlanState(ownerHash: string, state: ServerPlanState, g
 
 /** 플랜 삭제 — 병합 저장에서는 페이로드 누락이 삭제가 아니므로, 삭제는 이 경로로만 한다. */
 export async function deletePlanById(ownerHash: string, planId: string): Promise<void> {
+  await assertPlanAvailable(ownerHash, [planId]);
   if (planAccountLinkingEnabled() && getServerSupabase()) {
     const supabase = getServerSupabase()!;
     for (let attempt = 0; attempt < 5; attempt++) {
       const { data: row, error } = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", ownerHash).maybeSingle();
       if (error) throw new Error("PLAN_LOAD_FAILED");
       const stored = normalizeState(row?.data);
+      const quarantine = await readPlanQuarantine(ownerHash);
+      if (quarantine.profileBlocked && row?.data) {
+        const original = row.data as ServerPlanState;
+        stored.business = original.business;
+        stored.plans = stored.plans.map(plan => quarantine.blockedPlanIds.includes(plan.id)
+          ? original.plans.find(item => item.id === plan.id)! : plan);
+      }
       const plans = stored.plans.filter(plan => plan.id !== planId);
       if (plans.length === stored.plans.length) return;
       const next = { ...stored, plans, activePlanId: stored.activePlanId === planId ? plans[0]?.id ?? null : stored.activePlanId };

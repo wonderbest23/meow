@@ -16,6 +16,7 @@ import {
   Store,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { useState } from "react";
 import {
   applyLandingTemplate,
@@ -78,19 +79,6 @@ export function LandingQuickEditor({
       Object.keys(patch),
     );
     onChange({ ...next, pageData });
-  };
-  const requestExpertBuild = () => {
-    window.dispatchEvent(new CustomEvent("venture:open-support-chat", {
-      detail: {
-        message: [
-          "[전문 홈페이지 제작 상담]",
-          `사업명: ${draft.businessName || "아직 정하지 않음"}`,
-          `기본 제작비: ${CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터`,
-          "현재 자동 제작된 홈페이지를 바탕으로 전문 디자인과 추가 기능 제작 상담을 받고 싶습니다.",
-          "원하는 내용: ",
-        ].join("\n"),
-      },
-    }));
   };
 
   return (
@@ -218,7 +206,7 @@ export function LandingQuickEditor({
       <section className="landing-expert-build">
         <span><Headphones /></span>
         <div><small>선택 제작 서비스 · {CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터</small><strong>맞춤 홈페이지 제작 요청</strong><p>자동 제작본보다 세밀한 디자인이나 예약·결제 같은 추가 기능이 필요하면 상담 후 범위와 비용을 먼저 안내합니다.</p></div>
-        <button type="button" onClick={requestExpertBuild}>1:1 제작 상담 <MessageCircle /></button>
+        <Link href="/account/support?category=website" target="_blank" rel="noopener noreferrer" aria-label="홈페이지 제작 문의 (새 탭)">홈페이지 제작 문의 <MessageCircle /></Link>
       </section>
 
       {builderOpen && (

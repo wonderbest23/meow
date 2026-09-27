@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { hydrateFromServer, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
-import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, businessNextStep } from "../../../lib/plan-builder/business-hub";
+import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, businessNextStep, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
 import frame from "../chat/page.module.css";
 import styles from "../BusinessHub.module.css";
@@ -47,6 +47,10 @@ export default function BusinessWorkspace() {
         const state = await hydrateFromServer();
         const found = state.plans.find(p => p.id === id) ?? null;
         if (!alive) return;
+        if (found && shouldResumeBusinessChat(found)) {
+          router.replace(businessChatHref(found.id));
+          return;
+        }
         setPlan(found); setLoaded(true); setLoadError(false);
         if (found?.answers.__business_coach) {
           const response = await fetch(`/api/plan/chat?planId=${encodeURIComponent(id)}`, { cache:"no-store" });
@@ -59,7 +63,7 @@ export default function BusinessWorkspace() {
     const visible = () => { if (!document.hidden) void refresh(); };
     document.addEventListener("visibilitychange",visible);
     return () => { alive=false;window.clearInterval(interval);document.removeEventListener("visibilitychange",visible); };
-  }, []);
+  }, [router]);
 
   useEffect(() => { if (pendingNavigation) navigationDialog.current?.showModal(); else navigationDialog.current?.close(); }, [pendingNavigation]);
 

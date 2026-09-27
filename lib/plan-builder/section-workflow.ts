@@ -1,5 +1,5 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
-import { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService, type PlanSectionJob } from "./section-service";
+import { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService, type PlanSectionJob } from "./section-transport";
 import type { IntakeJobRequest } from "./intake-types";
 import { ARTIFACT_MAX_CHUNKS, type ArtifactJobRequest } from "./artifact-updates";
 import type { ProposalBackgroundJob } from "./proposal-background";

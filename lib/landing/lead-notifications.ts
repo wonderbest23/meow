@@ -1,4 +1,5 @@
 import { getServerSupabase } from "../persistence";
+import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { getLandingForProject } from "./repository";
 import { buildLandingLeadEmail, landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "./lead-email";
 import { LEAD_NOTIFICATION_MAX_ATTEMPTS, type LeadNotificationError, type LeadNotificationStatus, type LeadNotificationSummary } from "./lead-notification-types";
@@ -48,7 +49,7 @@ export async function processLandingLeadNotification(leadId: string, force = fal
   if (!payload) {
     const site = await db.from("landing_sites").select("project_id").eq("id", row.site_id).maybeSingle();
     if (site.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
-    const project = site.data ? await db.from("projects").select("owner_id").eq("id", site.data.project_id).maybeSingle() : null;
+    const project = site.data ? await db.from(projectReadTable()).select("owner_id").eq("id", site.data.project_id).maybeSingle() : null;
     if (project?.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
     const owner = project?.data?.owner_id ? await db.auth.admin.getUserById(project.data.owner_id) : null;
     if (owner?.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");

@@ -160,14 +160,14 @@ export function calculateFinancials(input: FinancialInputs): FinancialResult {
   const monthly: MonthlyRow[] = [];
   let breakEvenMonth: number | null = null;
   let paybackMonth: number | null = null;
-  if (unit && startingVolume != null && startingVolume > 0) {
+  if (unit && startingVolume != null && Number.isFinite(startingVolume) && startingVolume >= 0) {
     const growth = (monthlyGrowthPct ?? 0) / 100;
     const fixed = monthlyFixedCost ?? 0;
     const cap = input.monthlyCapacity;
     let cumulative = 0;
     for (let m = 1; m <= 12; m += 1) {
       const raw = Math.round(startingVolume * Math.pow(1 + growth, m - 1));
-      const volume = cap != null && cap > 0 ? Math.min(raw, cap) : raw;
+      const volume = cap != null && Number.isFinite(cap) && cap >= 0 ? Math.min(raw, cap) : raw;
       const revenue = volume * unit.unitPrice;
       const variableCost = volume * unit.unitVariableCost;
       const contribution = revenue - variableCost;
@@ -453,7 +453,7 @@ export interface YearSummary {
  */
 export function projectYears(input: FinancialInputs, years = 3): YearSummary[] {
   const { unitPrice, unitVariableCost, monthlyFixedCost, startingVolume, monthlyGrowthPct, monthlyCapacity } = input;
-  if (unitPrice == null || unitVariableCost == null || startingVolume == null || startingVolume <= 0) return [];
+  if (unitPrice == null || unitVariableCost == null || startingVolume == null || !Number.isFinite(startingVolume) || startingVolume < 0) return [];
   const growth = (monthlyGrowthPct ?? 0) / 100;
   const fixed = monthlyFixedCost ?? 0;
   const out: YearSummary[] = [];
@@ -462,7 +462,7 @@ export function projectYears(input: FinancialInputs, years = 3): YearSummary[] {
     let volume = 0, revenue = 0, variableCost = 0, fixedCost = 0;
     for (let m = (y - 1) * 12 + 1; m <= y * 12; m += 1) {
       const raw = Math.round(startingVolume * Math.pow(1 + growth, m - 1));
-      const v = monthlyCapacity != null && monthlyCapacity > 0 ? Math.min(raw, monthlyCapacity) : raw;
+      const v = monthlyCapacity != null && Number.isFinite(monthlyCapacity) && monthlyCapacity >= 0 ? Math.min(raw, monthlyCapacity) : raw;
       volume += v;
       revenue += v * unitPrice;
       variableCost += v * unitVariableCost;

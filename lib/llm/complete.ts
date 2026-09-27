@@ -2,6 +2,7 @@
 // 호출부는 provider를 신경 쓰지 않고 completeText/completeJson만 쓰면 된다.
 
 import { recordLlmUsage } from "./usage";
+import type { BudgetLease, ReserveCost } from "./budget";
 
 export type LLMProvider = "openai" | "anthropic";
 
@@ -9,8 +10,9 @@ export type LLMConfig = {
   provider: LLMProvider;
   apiKey: string;
   model: string;
+  execution?: LLMCompleteParams["failover"];
 };
-export type LLMFailure = { provider: LLMProvider; code: "quota_exhausted" | "output_limit" | "unavailable" | "invalid_json" | "timeout" | "rate_limited" };
+export type LLMFailure = { provider: LLMProvider; retryable?: boolean; code: "quota_exhausted" | "output_limit" | "unavailable" | "invalid_json" | "invalid_response" | "timeout" | "rate_limited" | "invalid_request" | "authentication" | "refusal" | "cancelled" };
 
 export type LLMCompleteParams = {
   system: string;
@@ -23,11 +25,24 @@ export type LLMCompleteParams = {
   timeoutMs?: number;
   /** Disable cross-provider retries for checkpointed, cost-bounded jobs. */
   allowFallback?: boolean;
+  /** Explicit application policy. A shared atomic cost reservation is required for every attempt. */
+  failover?: {
+    alternate: LLMConfig | null;
+    allowedErrors: readonly LLMFailure["code"][];
+    totalTimeoutMs: number;
+    attemptTimeoutMs: number;
+    minRemainingMs: number;
+    compatible: boolean;
+    reserve: ReserveCost;
+  };
+  onAttemptUsage?: LLMCompleteParams["onUsage"];
   // JSON 객체 응답을 유도한다(OpenAI는 json_object 포맷 강제).
   jsonObject?: boolean;
   jsonSchema?: { name: string; schema: Record<string, unknown> };
   /** Opt in only for schemas compatible with Anthropic's structured-output subset. */
   anthropicJsonSchema?: boolean;
+  /** Optional caller schema check before recording a structured attempt as successful. */
+  validateJson?: (value: Record<string, unknown>) => boolean | "output_limit";
   onFailure?: (failure: LLMFailure) => void;
   /** 토큰 사용량을 받는다 — 손님에게 토큰으로 파는 기능(홈페이지 AI 수정)이 차감에 쓴다 */
   onUsage?: (usage: { inputTokens: number; outputTokens: number; model: string; provider: LLMProvider }) => void;
@@ -52,9 +67,41 @@ export type LLMCompleteParams = {
 
 const DEFAULT_TIMEOUT_MS = 120_000;
 const QUOTA_CODES = new Set(["insufficient_quota", "credit_balance_exhausted", "organization_spend_limit_exceeded", "project_spend_limit_exceeded", "organization_usage_limit_exceeded"]);
+const knownTokens = (value: unknown): value is number => typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
 
 function requestFailure(signal: AbortSignal, error: unknown): LLMFailure["code"] {
-  return signal.reason?.name === "TimeoutError" || (error instanceof Error && error.name === "TimeoutError") ? "timeout" : "unavailable";
+  if (signal.reason?.name === "TimeoutError" || (error instanceof Error && error.name === "TimeoutError")) return "timeout";
+  return signal.aborted || error instanceof Error && error.name === "AbortError" ? "cancelled" : error instanceof TypeError ? "unavailable" : "invalid_response";
+}
+
+async function httpFailure(response: Response, provider: LLMProvider): Promise<Omit<LLMFailure, "provider">> {
+  const payload = await response.json().catch(() => null) as { error?: { code?: string; type?: string; message?: string } } | null;
+  const codes = [payload?.error?.code, payload?.error?.type];
+  const classify = (): LLMFailure["code"] => {
+  if (codes.some(code => code && /^(?:refusal|content_filter|content_policy_violation|safety_violation)$/.test(code))) return "refusal";
+  if (codes.some(code => code && QUOTA_CODES.has(code)) || /credit balance|no credits|insufficient.*credit|billing|spend(?:ing)? (?:limit|cap)|monthly.*(?:limit|cap)|usage (?:limit|cap)|quota/i.test(payload?.error?.message ?? "")) return "quota_exhausted";
+  if (response.status === 401 || response.status === 403 || codes.some(code => code && /authentication|permission|invalid_api_key/.test(code))) return "authentication";
+  if (codes.some(code => code && /invalid_request|not_found|invalid_argument|context_length/.test(code))) return "invalid_request";
+  const message = payload?.error?.message ?? "";
+  if (response.status === 429 && (provider === "openai"
+    ? codes.some(code => code === "rate_limit_exceeded" || code === "slow_down" || code === "rate_limit_error")
+    : codes.includes("rate_limit_error") && /(?:tokens?|requests?) per (?:minute|second)|too many requests|rate limit.*(?:minute|second)/i.test(message))) return "rate_limited";
+  if (response.status >= 500 && codes.some(code => code === "server_error" || provider === "anthropic" && (code === "overloaded_error" || code === "api_error"))) return "unavailable";
+  if (response.status === 408 && codes.some(code => code === "request_timeout" || code === "timeout_error")) return "timeout";
+  // Unknown errors fail closed, including ambiguous 429 spend-limit responses.
+  return "invalid_request";
+  };
+  const code = classify();
+  // Gateway failures are service errors for users, but ambiguous bodies do not authorize another paid attempt.
+  if (code === "invalid_request" && response.status >= 500 && !codes.some(value => value && /invalid_request|not_found|invalid_argument|context_length/.test(value))) return { code: "unavailable", retryable: false };
+  if (code === "invalid_request" && response.status === 429 && codes.includes("rate_limit_error")) return { code: "rate_limited", retryable: false };
+  if (code === "invalid_request" && !payload?.error) return { code: response.status === 429 ? "rate_limited" : response.status >= 500 ? "unavailable" : code, retryable: false };
+  return { code, retryable: ["unavailable", "timeout", "rate_limited"].includes(code) };
+}
+
+function mayFallback(params: LLMCompleteParams, failure?: LLMFailure["code"]) {
+  return params.allowFallback !== false && !params.signal?.aborted
+    && ["unavailable", "timeout", "rate_limited"].includes(failure ?? "invalid_response");
 }
 
 /** 타임아웃과 외부 중단 신호를 하나로 — 둘 중 먼저 온 쪽이 끊는다 */
@@ -105,6 +152,7 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
       body: JSON.stringify({
         model: config.model,
         store: false,
+        ...(process.env.INTAKE_BETA_SAFETY === "1" ? { service_tier: "default" } : {}),
         ...(params.effort ? { reasoning: { effort: params.effort } } : {}),
         max_output_tokens: params.maxOutputTokens,
         ...(params.jsonSchema ? { text: { format: { type: "json_schema", strict: true, ...params.jsonSchema } } } : params.jsonObject ? { text: { format: { type: "json_object" } } } : {}),
@@ -122,10 +170,9 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
     return null;
   }
   if (!response.ok) {
-    const error = await response.json().catch(() => null) as { error?: { code?: string; type?: string } } | null;
-    const code = [error?.error?.code, error?.error?.type].some(value => value && QUOTA_CODES.has(value)) ? "quota_exhausted" : response.status === 429 ? "rate_limited" : "unavailable";
+    const failure = await httpFailure(response, "openai"), { code } = failure;
     console.error(`[llm] failure kind=${params.kind ?? "etc"} provider=openai status=${response.status} code=${code}`);
-    params.onFailure?.({ provider: "openai", code });
+    params.onFailure?.({ provider: "openai", ...failure });
     return null;
   }
   const payload = (await response.json().catch(error => {
@@ -135,18 +182,30 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
     status?: string;
     model?: string;
     incomplete_details?: unknown;
+    error?: { code?: string; type?: string; message?: string } | null;
     output_text?: string;
     output?: Array<{ content?: Array<{ type?: string; text?: string }> }>;
     usage?: { input_tokens?: number; output_tokens?: number };
   } | null;
   if (!payload) return null;
-  if (params.onUsage && payload.usage) {
-    params.onUsage({ inputTokens: payload.usage.input_tokens ?? 0, outputTokens: payload.usage.output_tokens ?? 0, model: payload.model ?? config.model, provider: "openai" });
+  if (params.onUsage && knownTokens(payload.usage?.input_tokens) && knownTokens(payload.usage?.output_tokens)) {
+    params.onUsage({ inputTokens: payload.usage.input_tokens, outputTokens: payload.usage.output_tokens, model: payload.model ?? config.model, provider: "openai" });
+  }
+  if (payload.output?.some(item => item.content?.some(block => block.type === "refusal"))) {
+    params.onFailure?.({ provider: "openai", code: "refusal" });
+    return null;
+  }
+  if (payload.error) {
+    const code = payload.error.code;
+    const failure = code === "context_length_exceeded" ? { code: "output_limit" as const, retryable: false }
+      : await httpFailure(Response.json({ error: payload.error }, { status: code === "server_error" ? 503 : code === "rate_limit_exceeded" ? 429 : 400 }), "openai");
+    params.onFailure?.({ provider: "openai", ...failure, code: failure.code === "invalid_request" ? "invalid_response" : failure.code });
+    return null;
   }
   if (payload.incomplete_details || (payload.status && payload.status !== "completed")) {
     const reason = (payload.incomplete_details as { reason?: string } | undefined)?.reason;
     console.error(`[llm] incomplete kind=${params.kind ?? "etc"} provider=openai status=${payload.status ?? "unknown"} reason=${reason ?? "unknown"} output_tokens=${payload.usage?.output_tokens ?? 0}`);
-    params.onFailure?.({ provider: "openai", code: reason === "max_output_tokens" ? "output_limit" : "unavailable" });
+    params.onFailure?.({ provider: "openai", code: reason === "max_output_tokens" ? "output_limit" : reason === "content_filter" ? "refusal" : payload.status === "cancelled" ? "cancelled" : "invalid_response", retryable: false });
     return null;
   }
   const text =
@@ -193,10 +252,9 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
     return null;
   }
   if (!response.ok) {
-    const error = await response.json().catch(() => null) as { error?: { type?: string; message?: string } } | null;
-    const code = /credit balance|no credits|insufficient.*credit/i.test(error?.error?.message ?? "") ? "quota_exhausted" : response.status === 429 ? "rate_limited" : "unavailable";
+    const failure = await httpFailure(response, "anthropic"), { code } = failure;
     console.error(`[llm] failure kind=${params.kind ?? "etc"} provider=anthropic status=${response.status} code=${code}`);
-    params.onFailure?.({ provider: "anthropic", code });
+    params.onFailure?.({ provider: "anthropic", ...failure });
     return null;
   }
   const payload = (await response.json().catch(error => {
@@ -211,7 +269,7 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
   logUsage(params.kind ?? "etc", config.model, payload?.usage ?? null);
   if (params.onUsage && payload?.usage) {
     const u = payload.usage as AnthropicUsage;
-    params.onUsage({
+    if (knownTokens(u.input_tokens) && knownTokens(u.output_tokens) && knownTokens(u.cache_read_input_tokens ?? 0) && knownTokens(u.cache_creation_input_tokens ?? 0)) params.onUsage({
       inputTokens: (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
       outputTokens: u.output_tokens ?? 0,
       model: config.model,
@@ -219,9 +277,9 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
     });
   }
   if (!payload || !Array.isArray(payload.content) || (payload.stop_reason && !["end_turn", "stop_sequence"].includes(payload.stop_reason))) {
-    const code = payload?.stop_reason === "max_tokens" ? "output_limit" : "unavailable";
+    const code = payload?.stop_reason === "max_tokens" || payload?.stop_reason === "model_context_window_exceeded" ? "output_limit" : payload?.stop_reason === "refusal" ? "refusal" : "invalid_response";
     console.error(`[llm] incomplete kind=${params.kind ?? "etc"} provider=anthropic reason=${payload?.stop_reason ?? "unknown"}`);
-    params.onFailure?.({ provider: "anthropic", code });
+    params.onFailure?.({ provider: "anthropic", code, retryable: false });
     return null;
   }
   const text = payload.content
@@ -252,27 +310,86 @@ function completeOnce(config: LLMConfig, params: LLMCompleteParams): Promise<str
 
 /** provider에 맞는 모델을 호출해 원본 텍스트를 반환한다. 실패하면 반대 프로바이더로 1회 폴백. */
 export async function completeText(config: LLMConfig, params: LLMCompleteParams): Promise<string | null> {
+  if (config.execution) params = { ...params, failover: config.execution, allowFallback: true };
+  if (process.env.INTAKE_BETA_SAFETY === "1") {
+    if (!config.execution) {
+      params.onFailure?.({ provider: config.provider, code: "quota_exhausted", retryable: false });
+      return null;
+    }
+    params = { ...params, allowFallback: false, failover: { ...config.execution, alternate: null, allowedErrors: [], compatible: false } };
+  }
   if (!config.apiKey) return null;
-  const measuredCall = async (target: LLMConfig) => {
+  if (params.signal?.aborted) { params.onFailure?.({ provider: config.provider, code: requestFailure(params.signal, params.signal.reason) }); return null; }
+  const policy = params.failover;
+  const deadline = Date.now() + Math.min(params.timeoutMs ?? DEFAULT_TIMEOUT_MS, policy?.totalTimeoutMs ?? DEFAULT_TIMEOUT_MS);
+  const totalSignal = callSignal({ ...params, timeoutMs: Math.max(1, deadline - Date.now()) });
+  const bounded = async <T>(promise: Promise<T>, signal: AbortSignal, fallback: T): Promise<T> => {
+    let listener: () => void = () => {};
+    try { return await Promise.race([promise, new Promise<T>(resolve => { listener = () => resolve(fallback); if (signal.aborted) listener(); else signal.addEventListener("abort", listener, { once: true }); })]); }
+    finally { signal.removeEventListener("abort", listener); }
+  };
+  const measuredCall = async (target: LLMConfig, attempt: number) => {
     const startedAt = Date.now();
     let failure: LLMFailure["code"] | undefined;
+    let retryable: boolean | undefined;
     let usage: Parameters<NonNullable<LLMCompleteParams["onUsage"]>>[0] | undefined;
-    const result = await completeOnce(target, { ...params,
-      onFailure: event => { failure = event.code; params.onFailure?.(event); },
-      onUsage: event => { usage = event; params.onUsage?.(event); },
-    });
-    console.log("[llm] call", JSON.stringify({ kind: params.kind ?? "etc", provider: target.provider, model: usage?.model ?? target.model, ok: !!result, code: failure, elapsedMs: Date.now() - startedAt, inputTokens: usage?.inputTokens ?? null, outputTokens: usage?.outputTokens ?? null }));
-    await recordLlmUsage(params.kind ?? "etc", target.provider, !!result, usage, { model: usage?.model ?? target.model, elapsedMs: Date.now() - startedAt, failureCode: failure ?? (!result ? "empty_response" : undefined) });
-    return result;
+    let lease: BudgetLease | undefined;
+    let attemptFinished = false;
+    if (totalSignal.aborted || deadline - Date.now() < (policy?.minRemainingMs ?? 1)) return { result: null, failure: "timeout" as const };
+    if (policy) {
+      let abandoned = false;
+      const requestBytes = new TextEncoder().encode(JSON.stringify({system:params.system,user:params.user,schema:params.jsonSchema,effort:params.effort,cache:params.cache}));
+      const fingerprint = Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256", requestBytes)), n=>n.toString(16).padStart(2,"0")).join("");
+      const reservation = Promise.resolve().then(() => policy.reserve({ provider: target.provider, model: target.model, attempt, inputBytes: requestBytes.length, maxOutputTokens: params.maxOutputTokens, deadline, requestFingerprint:fingerprint })).then(async value=>{
+        if(value && typeof value!=="boolean" && (abandoned || totalSignal.aborted)){await value.cancel();return false;}
+        return value;
+      });
+      const value=await bounded(reservation.catch(()=>false),totalSignal,false);
+      if(!value || typeof value==="boolean" && process.env.NODE_ENV!=="test") { abandoned=true;params.onFailure?.({ provider: target.provider, code: totalSignal.aborted ? requestFailure(totalSignal,totalSignal.reason) : "quota_exhausted" });return {result:null,failure:"quota_exhausted" as const}; }
+      if(typeof value!=="boolean")lease=value;
+    }
+    if (totalSignal.aborted || deadline - Date.now() < (policy?.minRemainingMs ?? 1)) { await lease?.cancel().catch(()=>undefined);return { result: null, failure: "timeout" as const }; }
+    if(lease && !await bounded(lease.begin().catch(()=>false),totalSignal,false)){await lease.cancel().catch(()=>undefined);return {result:null,failure:"quota_exhausted" as const};}
+    if(totalSignal.aborted){await lease?.cancel().catch(()=>undefined);return {result:null,failure:"timeout" as const};}
+    const signal = callSignal({ signal: totalSignal, system: "", user: "", maxOutputTokens: 0, timeoutMs: Math.max(1, Math.min(deadline - Date.now(), policy?.attemptTimeoutMs ?? DEFAULT_TIMEOUT_MS)) });
+    let result = await bounded(completeOnce(target, { ...params, signal,
+      onFailure: event => { failure = event.code; retryable = event.retryable; params.onFailure?.(event); },
+      onUsage: event => { usage = event; if(attemptFinished && lease) void lease.settle(event).catch(()=>undefined);params.onAttemptUsage?.(event); if (!policy) params.onUsage?.(event); },
+    }), signal, null);
+    attemptFinished = true;
+    if(lease) {
+      const settled=await bounded(lease.settle(usage??null).then(()=>true,()=>false),totalSignal,false);
+      if(!settled){result=null;failure="quota_exhausted";params.onFailure?.({provider:target.provider,code:failure,retryable:false});}
+    }
+    if (signal.aborted) { result = null; failure = requestFailure(signal, signal.reason); params.onFailure?.({ provider: target.provider, code: failure }); }
+    const responseReceived = !!result;
+    if (result && params.jsonObject) {
+      const parsed = parseJsonObject(result);
+      if (!parsed) failure = "invalid_json";
+      else if (params.validateJson) {
+        try {
+          const validation = params.validateJson(parsed);
+          if (validation !== true) failure = validation === "output_limit" ? "output_limit" : "invalid_response";
+        }
+        catch { failure = "invalid_response"; }
+      }
+      if (failure) { result = null; params.onFailure?.({ provider: target.provider, code: failure }); }
+    }
+    console.log("[llm] call", JSON.stringify({ kind: params.kind ?? "etc", provider: target.provider, model: usage?.model ?? target.model, ok: !!result, responseReceived, validation: params.validateJson ? "schema" : params.jsonObject ? "json" : "text", code: failure, elapsedMs: Date.now() - startedAt, inputTokens: usage?.inputTokens ?? null, outputTokens: usage?.outputTokens ?? null }));
+    await bounded(recordLlmUsage(params.kind ?? "etc", target.provider, !!result, usage, { model: usage?.model ?? target.model, elapsedMs: Date.now() - startedAt, failureCode: failure ?? (!result ? "empty_response" : undefined) }), totalSignal, undefined);
+    if (totalSignal.aborted) return { result: null, failure: "timeout" as const };
+    if (result && policy && usage) params.onUsage?.(usage);
+    return { result, failure, retryable };
   };
-  const primary = await measuredCall(config);
-  if (primary) return primary;
+  const primary = await measuredCall(config, 0);
+  if (primary.result) return primary.result;
   /* 밖에서 끊은 호출은 실패가 아니다 — 폴백으로 또 부르면 끊은 의미가 없다 */
-  if (params.signal?.aborted || params.allowFallback === false) return null;
-  const alt = envAlternate(config);
+  if (primary.retryable === false || !mayFallback(params, primary.failure)) return null;
+  if (policy && (!policy.compatible || !policy.allowedErrors.includes(primary.failure ?? "invalid_response"))) return null;
+  const alt = policy ? policy.alternate : envAlternate(config);
   if (!alt) return null;
   console.error(`[llm] ${config.provider} 실패 — ${alt.provider}(${alt.model})로 폴백`);
-  return measuredCall(alt);
+  return (await measuredCall(alt, 1)).result;
 }
 
 /** 모델 출력에서 JSON 객체를 파싱한다. 코드펜스가 있으면 벗겨낸다. 실패 시 null. */
@@ -297,12 +414,7 @@ export async function completeJson(
   params: LLMCompleteParams,
 ): Promise<Record<string, unknown> | null> {
   const text = await completeText(config, { ...params, jsonObject: true });
-  const parsed = text ? parseJsonObject(text) : null;
-  if (text && !parsed) {
-    console.error(`[llm] invalid_json kind=${params.kind ?? "etc"} provider=${config.provider}`);
-    params.onFailure?.({ provider: config.provider, code: "invalid_json" });
-  }
-  return parsed;
+  return text ? parseJsonObject(text) : null;
 }
 
 /**
@@ -314,21 +426,31 @@ export async function streamText(
   params: LLMCompleteParams,
   onDelta: (chunk: string) => void,
 ): Promise<string | null> {
+  if (process.env.INTAKE_BETA_SAFETY === "1") {
+    params.onFailure?.({ provider: config.provider, code: "quota_exhausted", retryable: false });
+    return null;
+  }
+  // Feature policies use buffered JSON, never splice a second provider into a visible stream.
+  if (params.failover || config.execution) { params.onFailure?.({ provider: config.provider, code: "invalid_request" }); return null; }
+  const deadline = Date.now() + (params.timeoutMs ?? DEFAULT_TIMEOUT_MS);
+  params = { ...params, signal: callSignal(params) };
   if (!config.apiKey) return null;
-  const first = await streamOnce(config, params, onDelta);
+  if (params.signal?.aborted) { params.onFailure?.({ provider: config.provider, code: requestFailure(params.signal, params.signal.reason) }); return null; }
+  let failure: LLMFailure["code"] | undefined;
+  let retryable: boolean | undefined;
+  const first = await streamOnce(config, { ...params, onFailure: event => { failure = event.code; retryable = event.retryable; params.onFailure?.(event); } }, onDelta);
   if (first !== "setup_failed") {
     await recordLlmUsage(params.kind ?? "etc", config.provider, first !== null);
     return first;
   }
   /* 밖에서 끊은 호출은 실패가 아니다 — 폴백으로 또 부르면 끊은 의미가 없다 */
-  if (params.signal?.aborted) return null;
+  await recordLlmUsage(params.kind ?? "etc", config.provider, false);
+  if (retryable === false || !mayFallback(params, failure)) return null;
   const alt = envAlternate(config);
-  if (!alt) {
-    await recordLlmUsage(params.kind ?? "etc", config.provider, false);
-    return null;
-  }
+  if (!alt) return null;
   console.error(`[llm] ${config.provider} 스트림 실패 — ${alt.provider}(${alt.model})로 폴백`);
-  const second = await streamOnce(alt, params, onDelta);
+  if (Date.now() >= deadline) return null;
+  const second = await streamOnce(alt, { ...params, timeoutMs: Math.max(1, deadline - Date.now()) }, onDelta);
   await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== "setup_failed" && second !== null);
   return second === "setup_failed" ? null : second;
 }
@@ -340,6 +462,7 @@ async function streamOnce(
   onDelta: (chunk: string) => void,
 ): Promise<string | null | "setup_failed"> {
   const anthropic = config.provider === "anthropic";
+  const signal = callSignal(params);
 
   let response: Response;
   try {
@@ -374,15 +497,18 @@ async function streamOnce(
               },
         ),
         cache: "no-store",
-        signal: callSignal(params),
+        signal,
       },
     );
   } catch (err) {
     console.error("[llm] stream fetch 실패:", err instanceof Error ? err.message : err);
+    params.onFailure?.({ provider: config.provider, code: requestFailure(signal, err) });
     return "setup_failed";
   }
   if (!response.ok || !response.body) {
-    console.error("[llm] stream", config.provider, response.status, (await response.text().catch(() => "")).slice(0, 300));
+    const failure = response.ok ? { code: "invalid_response" as const, retryable: false } : await httpFailure(response, config.provider);
+    console.error("[llm] stream", config.provider, response.status, failure.code);
+    params.onFailure?.({ provider: config.provider, ...failure });
     return "setup_failed";
   }
 
@@ -423,10 +549,21 @@ async function streamOnce(
           if (anthropic && payload.type === "message_delta") {
             usage = { ...(usage ?? {}), ...((payload.usage as AnthropicUsage | undefined) ?? {}) };
             const reason = (payload.delta as { stop_reason?: string } | undefined)?.stop_reason;
-            if (reason === "max_tokens" || reason === "refusal") failed = true;
+            if (reason === "max_tokens" || reason === "refusal") {
+              failed = true;
+              params.onFailure?.({ provider: config.provider, code: reason === "refusal" ? "refusal" : "output_limit" });
+            }
+          }
+          if (payload.type === "response.refusal.delta" || payload.type === "response.refusal.done"
+            || payload.type === "content_block_start" && (payload.content_block as { type?: string } | undefined)?.type === "refusal") {
+            failed = true;
+            params.onFailure?.({ provider: config.provider, code: "refusal" });
           }
           if (payload.type === "message_stop" || payload.type === "response.completed") completed = true;
-          if (["error", "response.failed", "response.incomplete"].includes(String(payload.type))) failed = true;
+          if (["error", "response.failed", "response.incomplete"].includes(String(payload.type))) {
+            failed = true;
+            params.onFailure?.({ provider: config.provider, code: "unavailable" });
+          }
           const piece = anthropic
             ? payload.type === "content_block_delta"
               ? ((payload.delta as { text?: string } | undefined)?.text ?? "")
@@ -441,8 +578,9 @@ async function streamOnce(
         }
       }
     }
-  } catch {
+  } catch (error) {
     // 중간에 끊겨도 거기까지의 사용량은 청구된다 — finally에서 남긴다
+    params.onFailure?.({ provider: config.provider, code: requestFailure(signal, error) });
     return null;
   } finally {
     if (anthropic) logUsage(params.kind ?? "etc", config.model, usage);

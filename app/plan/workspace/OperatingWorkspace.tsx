@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Archive, Download, FileText, Pencil, Plus, Save, X } from "lucide-react";
 import { METRICS, comparePeriods, metricValue, oldInput, periodDays, periodInputSchema, periodLabel, previousPeriod, referenceFor, reportIsCurrent, type OperatingCommand, type OperatingPeriod, type OperatingReport, type OperatingState, type PeriodInput } from "../../../lib/plan-builder/operating-records";
 import styles from "./OperatingWorkspace.module.css";
+import PlanLoading from "../PlanLoading";
 import OperatingAnalysisPanel, { OperatingAnalysisResult } from "./OperatingAnalysisPanel";
 import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysis-contract";
 
@@ -103,7 +104,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     <div className={styles.tabs} role="group" aria-label="운영 기록 보기"><button aria-pressed={mode === "periods"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("periods")}>기간별 실적</button><button aria-pressed={mode === "reports"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("reports")}>리포트 보관함</button></div>
     {error && <div role="alert" className={styles.error}><p>{error}</p><button type="button" disabled={busy} onClick={() => void reload()}>서버 기록 다시 확인</button>{editor && <p>입력 중인 내용은 유지됩니다. 충돌한 기록은 취소 후 다시 열어 수정해 주세요.</p>}</div>}
     {notice && <p role="status" className={styles.success}>{notice}</p>}
-    {!state && !error && <p role="status">운영 기록을 불러오고 있어요</p>}
+    {!state && !error && <PlanLoading note="운영 기록을 불러오고 있어요" />}
     {editor && <form className={styles.editor} onSubmit={event => { event.preventDefault(); void save(); }}>
       <div className={styles.editorHeading}><h3>{editor.revision === null ? "새 기간 기록" : "기간 기록 수정"}</h3><button type="button" aria-label="기간 편집 닫기" title="기간 편집 닫기" disabled={busy} onClick={() => dirty ? setConfirm("discard") : setEditor(null)}><X size={20} /></button></div>
       <fieldset disabled={busy}><legend>기록 기간</legend><div className={styles.twoColumns}><label>시작일<input type="date" required value={draft.start} onChange={e => setDraft({ ...draft, start: e.target.value })} /></label><label>종료일<input type="date" required min={draft.start} value={draft.end} onChange={e => setDraft({ ...draft, end: e.target.value })} /></label></div></fieldset>

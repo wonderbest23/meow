@@ -9,6 +9,8 @@ import {
 } from "./identity-tokens";
 import { getServerSupabase } from "./persistence";
 import { claimGuestPlanState } from "./plan-builder/plan-server-store";
+import { readPlanQuarantine } from "./plan-builder/quarantine.server";
+import { projectReadTable } from "./plan-builder/quarantine-tables";
 import { planAccountLinkingEnabled } from "./plan-builder/account-linking";
 
 function authConfiguration() {
@@ -25,6 +27,24 @@ export function createServerAuthClient() {
   const config = authConfiguration();
   if (!config) throw new Error("로그인 서버가 아직 설정되지 않았습니다.");
   return createClient(config.url, config.key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false } });
+}
+
+export async function emailConfirmationEnabled(): Promise<boolean> {
+  const config = authConfiguration();
+  if (!config) return false;
+  try {
+    const response = await fetch(`${config.url.replace(/\/$/, "")}/auth/v1/settings`, {
+      headers: { apikey: config.key },
+      cache: "no-store",
+      redirect: "manual",
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!response.ok) return false;
+    const settings = await response.json();
+    return settings.mailer_autoconfirm === false && settings.external?.email === true;
+  } catch {
+    return false;
+  }
 }
 
 const cookieOptions = {
@@ -113,10 +133,13 @@ export async function claimGuestProjects(userId: string, previousGuestHash: stri
   const supabase = getServerSupabase();
   if (!supabase) return;
   const userHash = hashIdentityToken(userProjectToken(userId));
+  // Login may proceed, but an unresolved collection must not be moved wholesale.
+  if ((await readPlanQuarantine(userHash)).profileBlocked || (previousGuestHash && (await readPlanQuarantine(previousGuestHash)).profileBlocked)) return;
   if (!planAccountLinkingEnabled()) return claimLegacyProjects(userId, userHash, previousGuestHash);
   try {
     if (previousGuestHash && previousGuestHash !== userHash) {
       const claim = await claimGuestPlanState(previousGuestHash, userHash);
+      if (claim === "deferred") return;
       if (claim === "consumed") previousGuestHash = null;
     }
     // A lost guest cookie must not strand a partially completed account migration.
@@ -124,6 +147,7 @@ export async function claimGuestProjects(userId: string, previousGuestHash: stri
       .eq("account_hash", userHash).is("legacy_completed_at", null).order("claimed_at", { ascending: true });
     if (pending.error) throw pending.error;
     for (const row of pending.data ?? []) {
+      if ((await readPlanQuarantine(row.guest_hash)).profileBlocked) continue;
       await claimLegacyProjects(userId, userHash, row.guest_hash);
       const completed = await supabase.from("plan_owner_claims").update({ legacy_completed_at: new Date().toISOString() })
         .eq("guest_hash", row.guest_hash).eq("account_hash", userHash).is("legacy_completed_at", null);
@@ -204,7 +228,7 @@ export async function attachProjectToUser(projectId: string, userId: string) {
 export async function listAccountProjects(userId: string) {
   const supabase = getServerSupabase();
   if (!supabase) return [];
-  const { data, error } = await supabase.from("projects").select("id,title,status,payment_status,active_stage,created_at,updated_at").eq("owner_id", userId).order("updated_at", { ascending: false }).limit(30);
+  const { data, error } = await supabase.from(projectReadTable()).select("id,title,status,payment_status,active_stage,created_at,updated_at").eq("owner_id", userId).order("updated_at", { ascending: false }).limit(30);
   if (error) throw error;
   return (data ?? []).map((row) => ({
     id: row.id as string,

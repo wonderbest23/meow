@@ -2,6 +2,11 @@ import type { CoachField, CoachState } from "./coach";
 import type { BusinessStructure, StructureAxis } from "./business-structure";
 import type { ProposalSector } from "./proposal-blueprint";
 import type { IntakeMode, IntakeQuestion } from "./intake-questions";
+import type { ResourceContext, ResourceRecord, ResourceQuote, ResourceKey } from "./intake-candidate-resources";
+import type { ResourceFit } from "./intake-candidate-fit";
+export type IntakeIdea = { id: string; title: string; description: string; sector: ProposalSector; reasons: string[]; cautions: string[]; resourceFit?: ResourceFit; retained?: boolean; source?: "ai-generated"; proposedStructure?: Partial<BusinessStructure> };
+export type GeneratedIntakeIdea = IntakeIdea & { source: "ai-generated"; planId: string; baseInputRevision: number; generatedAt: string; customer: string; problem: string; offering: string; delivery: string; revenue: string; differences: string; unknowns: string[]; rejected?: boolean };
+export type IdeaTurn = { id: string; request: string; rejectedIds: string[]; baseInputRevision: number; at: string; status: "queued" | "complete" | "failed" };
 
 export const INTAKE_KEY = "__business_intake";
 export const INTAKE_VERSION = 1;
@@ -10,7 +15,7 @@ export type IntakeAnswer = { status: "answered" | "unknown"; value: IntakeValue;
 export type IntakeNote = { id: string; text: string; at: string; status: "queued" | "processing" | "review" | "stored" | "failed"; intent?: "memo" | "question" };
 export type IntakeCandidate = { id: string; fieldKey: CoachField["key"]; value: string; quote: string; noteId: string; baseValue: string | null; baseFieldRevision?: string | null; status: "pending" | "applied" | "rejected" };
 export type IntakeJob = {
-  id: string; runId: string; kind: "extract" | "help" | "design";
+  id: string; runId: string; kind: "extract" | "help" | "design" | "ideas";
   status: "queued" | "running" | "complete" | "failed";
   noteIds: string[]; baseValues: Partial<Record<CoachField["key"], string>>;
   baseFieldRevisions?: Partial<Record<CoachField["key"], string | null>>;
@@ -18,6 +23,7 @@ export type IntakeJob = {
   updatedAt: string; dispatched?: boolean;
   /** 요청 시각. 진행 게이지가 화면을 나갔다 와도 같은 기준으로 이어지게 한다(이전 기록에는 없을 수 있다). */
   createdAt?: string;
+  baseIdeaRevision?: number;
 };
 export type IntakeState = {
   version: 1; stateRevision?: number; packVersion: string; mode: IntakeMode; sector: ProposalSector;
@@ -29,9 +35,16 @@ export type IntakeState = {
   ksic?: string | null;
   /** 사용자가 직접 고친 사업 구조 축(부분). KSIC·업종 기본값을 덮어쓴다 */
   structure?: Partial<BusinessStructure> | null;
+  resourceContext?: ResourceContext;
+  resourceQuotes?: ResourceRecord[];
+  selectedCandidate?: IntakeIdea;
+  ideaInputRevision?: number;
+  ideaTurns?: IdeaTurn[];
+  generatedIdeas?: GeneratedIntakeIdea[];
 };
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources"] as const;
 export type IntakeCommand = {
-  action: "start" | "answer" | "message" | "note" | "confirm-extraction" | "details" | "extract" | "extract-pending" | "help" | "design" | "prepare" | "structure";
+  action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;
   mode?: IntakeMode; questionId?: string; value?: IntakeValue; unknown?: boolean;
   /** industry 답변에 함께 보내는 KSIC 세세분류 코드. value(11업종)는 서버가 코드에서 확인한다 */
@@ -40,16 +53,21 @@ export type IntakeCommand = {
   structure?: Partial<Pick<BusinessStructure, StructureAxis>>;
   message?: string; candidateIds?: string[]; rejectIds?: string[]; overwriteIds?: string[];
   noteIntent?: "memo" | "question";
+  resourceLimits?: Partial<Record<ResourceKey, string | null>>;
+  resourceContext?: ResourceContext;
+  resourceQuote?: ResourceQuote;
 };
 export type IntakeSnapshot = {
   planId: string; title: string; planType: string; updatedAt: string; coach: CoachState;
   intake: Omit<IntakeState, "receipts">; nextQuestion: IntakeQuestion | null;
   questions: IntakeQuestion[]; coreComplete: boolean; coreAnswered: number; coreTotal: number;
   summary: Array<{ id: string; label: string; value: string; basis: "user" | "proposal" | "unknown" }>;
-  candidateIdeas: Array<{ id: string; title: string; description: string; sector: ProposalSector; reasons: string[]; cautions: string[] }>;
+  candidateIdeas: IntakeIdea[];
+  resourceAssessment?: { version: string; asOf: string; total: number; excluded: IntakeIdea[]; excludedCount: number; selected?: IntakeIdea; allUnknown: boolean };
   /** 진행 중인 AI 작업의 서버 기준 경과 시간과 예상·최대 시간. 응답을 보낼 때 HTTP 층이 붙인다(기기 시계 오차와 무관). */
   jobClock?: { elapsedMs: number; expectedMs: number; limitMs: number } | null;
   financialSummary: string; hasDocuments: boolean; pendingExtraction: boolean;
+  documentStatus?: "none" | "current" | "stale" | "unverified";
   /** 확정된 표준산업분류와 그 사업 구조 기본값 */
   ksic: { code: string; name: string; path: string; structure: BusinessStructure | null; summary: string[]; licenseHint: string | null } | null;
   /** 사업 설명에서 규칙으로 찾은 KSIC 후보(업종 질문용, AI 0회) */

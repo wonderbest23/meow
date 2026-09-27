@@ -11,7 +11,7 @@
  *   1. 개발서버가 돌고 있는가 → 있으면 멈추고 사람에게 알린다(임의로 죽이지 않는다).
  *   2. 죽은 빌드가 남긴 잠금이 있는가 → 주인 프로세스가 없으면 치운다.
  */
-import { execSync } from "node:child_process";
+import { spawnSync } from "node:child_process";
 import { existsSync, rmSync } from "node:fs";
 
 /*
@@ -25,15 +25,16 @@ if (process.env.CI) {
   process.exit(0);
 }
 
-const run = (cmd) => {
-  try {
-    return execSync(cmd, { encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }).trim();
-  } catch {
-    return "";
-  }
+const findProcesses = (pattern) => {
+  // A shell wrapper can match its own command line on Linux.
+  const result = spawnSync("pgrep", ["-f", pattern], { encoding: "utf8" });
+  if (!result.error && result.status === 1) return "";
+  if (!result.error && result.status === 0) return result.stdout.trim();
+  console.error("프로세스 안전 점검을 실행하지 못해 빌드를 중단했습니다.");
+  process.exit(1);
 };
 
-const dev = run("pgrep -f 'next dev'");
+const dev = findProcesses("next dev");
 if (dev) {
   console.error("\n✖ 개발서버(next dev)가 돌고 있어 배포를 시작하지 않았습니다.");
   console.error("  개발서버와 빌드는 같은 .next 폴더를 써서 겹치면 빌드가 멈춥니다.");
@@ -42,7 +43,7 @@ if (dev) {
   process.exit(1);
 }
 
-const building = run("pgrep -f 'next build'");
+const building = findProcesses("next build");
 if (building) {
   console.error("\n✖ 이미 next build 가 실행 중입니다. 끝난 뒤에 다시 시도하세요.");
   console.error(`  (PID: ${building.split("\n").join(", ")})\n`);

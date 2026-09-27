@@ -3542,8 +3542,8 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .landing-expert-build small { color: #3272db; font-size: 9px; font-weight: 900; }
 .landing-expert-build strong { font-size: 14px; }
 .landing-expert-build p { max-width: 650px; margin: 0; color: #585667; font-size: 11px; line-height: 1.55; }
-.landing-expert-build > button { min-height: 42px; padding: 0 13px; border: 0; border-radius: 6px; background: #0d0a2c; color: white; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 900; cursor: pointer; white-space: nowrap; }
-.landing-expert-build > button svg { width: 14px; }
+.landing-expert-build > :is(button,a) { min-height: 42px; padding: 0 13px; border: 0; border-radius: 6px; background: #0d0a2c; color: white; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 900; cursor: pointer; white-space: nowrap; text-decoration:none; }
+.landing-expert-build > :is(button,a) svg { width: 14px; }
 
 /* Homepage visuals and business footer */
 .public-landing-brand { min-width: 0; display: flex; align-items: center; gap: 9px; }
@@ -3640,7 +3640,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .landing-quick-actions button { min-height: 46px; justify-content: center; }
   .landing-expert-build { grid-template-columns: 38px minmax(0, 1fr); padding: 15px; }
   .landing-expert-build > span { width: 38px; height: 38px; }
-  .landing-expert-build > button { grid-column: 1/-1; min-height: 46px; justify-content: center; }
+  .landing-expert-build > :is(button,a) { grid-column: 1/-1; min-height: 46px; justify-content: center; }
   .landing-builder-panel { margin-left: -4px; margin-right: -4px; border-radius: 12px; }
   .landing-builder-panel > header { padding: 15px 13px; align-items: flex-start; }
   .landing-builder-panel > header h3 { font-size: 15px; }

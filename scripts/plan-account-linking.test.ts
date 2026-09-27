@@ -35,9 +35,13 @@ async function main() {
   assert.equal(accountLinkError(new Error("PLAN_CLAIM_FAILED"))?.status, 503);
   assert.equal(accountLinkError(new Error("wrong password")), null);
   assert.notEqual(planOwnerKey("account-a"), planOwnerKey("account-b"));
-  for (const route of ["login", "google", "register", "reset", "session"]) {
+  for (const route of ["login", "google", "reset", "session"]) {
     assert.match(await readFile(`app/api/auth/${route}/route.ts`, "utf8"), /accountLinkError\(error\)/);
   }
+  const register = await readFile("app/api/auth/register/route.ts", "utf8");
+  assert.doesNotMatch(register, /claimGuestProjects|setAccountSession|admin\.createUser/, "unconfirmed signup must not claim or establish a session");
+  assert.match(register, /auth\.auth\.signUp/);
+  assert.match(register, /confirmationRequired: true/);
   console.log("Account linking: full server records, idempotency, single owner, busy preservation and error messages passed");
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

@@ -11,7 +11,7 @@ export type FeasibilityCheck = {
 export function coachAmount(value: string | undefined): number | undefined {
   const normalized = value?.replace(/\s/g, "") ?? "";
   if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?(?:억원?|천만원?|백만원?|만원?|천원?|백원?|원)?$/.test(normalized)) return undefined;
-  const amount = /^0(?:원)?$/.test(normalized) ? 0 : parseAmount(normalized);
+  const amount = /^0(?:\.0+)?(?:억원?|천만원?|백만원?|만원?|천원?|백원?|원)?$/.test(normalized) ? 0 : parseAmount(normalized);
   return amount != null && Number.isSafeInteger(amount) && amount >= 0 ? amount : undefined;
 }
 

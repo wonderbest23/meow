@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chatEntryIntent, planningListPlans, businessChatHref, workspaceHref } from "../lib/plan-builder/business-hub";
+import { chatEntryIntent, planningListPlans, businessChatHref, businessEntryHref, workspaceHref, shouldResumeBusinessChat, businessHubState } from "../lib/plan-builder/business-hub";
 import { applyCoachReply, COACH_KEY, COACH_TYPES } from "../lib/plan-builder/coach";
 import { COACH_JOB_KEY, type CoachJob } from "../lib/plan-builder/coach-job-types";
 import type { Plan } from "../lib/plan-builder/plan-store";
@@ -32,4 +32,23 @@ assert.equal(chat.searchParams.get("planId"), id);
 assert.equal(chat.searchParams.has("new"), false);
 assert.equal(chatEntryIntent(chat.searchParams), "resume");
 assert.equal(new URL(workspaceHref(id), chat.origin).searchParams.get("planId"), id);
+assert.equal(businessEntryHref(conversation), businessChatHref(conversation.id), "My Business opens an existing conversation in chat");
+assert.equal(businessEntryHref(pending), businessChatHref(pending.id), "An in-progress conversation opens in chat");
+assert.equal(businessEntryHref(base), workspaceHref(base.id), "Plans without a conversation retain their legacy workspace");
+assert.equal(shouldResumeBusinessChat(conversation), true, "Early conversations resume in chat");
+assert.equal(shouldResumeBusinessChat(pending), true, "First pending reply resumes in chat");
+assert.equal(shouldResumeBusinessChat(base), false, "Legacy plans remain accessible");
+const intakePlan: Plan = { ...conversation, answers: { ...conversation.answers,
+  [COACH_KEY]: { state: { ...coach, ready: true, stage: "operating" } },
+  __business_intake: { state: { version: 1 } },
+} };
+assert.equal(shouldResumeBusinessChat(intakePlan), true, "Selected business is not a completed design, including operating businesses");
+assert.equal(shouldResumeBusinessChat({ ...conversation, answers: { [COACH_KEY]: { state: { ...coach, ready: true } } } }), false, "Legacy ready plans retain their workspace");
+assert.equal(shouldResumeBusinessChat({ ...intakePlan, answers: { ...intakePlan.answers,
+  [COACH_KEY]: { state: { ...coach, design: { sourceRevision: -1 } } },
+} }), false, "An existing stale design must remain accessible");
+const sectionKey = businessHubState(intakePlan).keys[0];
+assert.ok(sectionKey);
+assert.equal(shouldResumeBusinessChat({ ...intakePlan, sections: { [sectionKey]: { markdown: "Saved document" } as Plan["sections"][string] } }), false, "Existing documents remain accessible");
+assert.equal(businessEntryHref({ ...intakePlan, sections: { [sectionKey]: { markdown: "Saved document" } as Plan["sections"][string] } }), businessChatHref(intakePlan.id), "Completed businesses still open their conversation from My Business");
 console.log("business navigation: passed (new/resume intent, planning list, selected-business links)");

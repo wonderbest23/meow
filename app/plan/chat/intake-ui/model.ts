@@ -1,4 +1,5 @@
 import type { IntakeCandidate, IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
+import { intakeCommandSchema } from "../../../../lib/plan-builder/intake-command";
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
 import { applyIntakeAnswer, finishIntakeMutation, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot } from "../../../../lib/plan-builder/intake-core";
 import type { ServerPlan } from "../../../../lib/plan-builder/plan-server-store";
@@ -7,11 +8,21 @@ import { SECTOR_PROFILES, type ProposalSector } from "../../../../lib/plan-build
 import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
 import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS } from "../../../../lib/plan-builder/intake-options";
 import { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
+import { applyIntakeResources } from "../../../../lib/plan-builder/intake-resource-update";
+import { resourceLimitsSchema, resourceQuoteSchema, type ResourceKey, type ResourceContext, type ResourceQuote } from "../../../../lib/plan-builder/intake-candidate-resources";
+import { parseResourceLimit } from "../../../../lib/plan-builder/intake-candidate-fit";
+import { z } from "zod";
+import { ideaInputFingerprint } from "../../../../lib/plan-builder/intake-ideas";
 export { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
 
-export type ComposerMode = "answer" | "memo" | "help";
+export type ComposerMode = "answer" | "memo" | "help" | "ideas";
+const resourceContextDraftSchema = z.object({ variant: z.string().max(160), region: z.string().max(100), scale: z.string().max(160) }).strict();
+const resourceEditorSchema = z.object({
+  limits: resourceLimitsSchema.optional(), context: resourceContextDraftSchema.optional(),
+  quote: resourceQuoteSchema.extend({ raw: z.string().max(120), reference: z.string().max(1000), includedItems: z.string().max(1000), context: resourceContextDraftSchema, confirmed: z.boolean(), expiresAt: z.string().max(40) }).optional(),
+}).strict();
 /** `hint` is display-only: the previous stored answer when it could not be seeded into a control (never sent). */
-export type AnswerDraft = { text: string; selected: string[]; custom: boolean; label?: string; hint?: string };
+export type AnswerDraft = { text: string; selected: string[]; custom: boolean; unknown?: boolean; ksic?: string; label?: string; hint?: string; dismissedMention?: string };
 export type PendingRequest = { command: IntakeCommand; answer?: AnswerDraft; text?: string; intro?: string | null; conflict?: boolean; composer?: { text: string; mode: ComposerMode; questionId?: string } };
 export type IntakeDraft = {
   version: 1;
@@ -23,20 +34,41 @@ export type IntakeDraft = {
   help: string;
   introMessage: string | null;
   pending: PendingRequest | null;
+  refinementSeen?: string[];
+  refiningId?: string | null;
+  resourceEditor?: { limits?: Partial<Record<ResourceKey, string | null>>; context?: ResourceContext; quote?: Omit<ResourceQuote, "confirmed"> & { confirmed: boolean } };
 };
 
 export const emptyAnswer = (): AnswerDraft => ({ text: "", selected: [], custom: false });
 export const emptyDraft = (): IntakeDraft => ({ version: 1, ownerScope: null, mode: "answer", editingId: null, answers: {}, memo: "", help: "", introMessage: null, pending: null });
 export const draftKey = (planId?: string | null, ownerScope?: string | null) => `business-intake:v2:${encodeURIComponent(ownerScope || "unverified")}:${planId || "new"}`;
 
-export function typedEntryCommand(text: string): Pick<IntakeCommand, "action" | "mode" | "questionId" | "value"> {
+function entryIntent(text: string): "exploring" | "operating" | "startup" | "confirm" {
+  const value = text.normalize("NFKC").trim();
+  // Negated operation describes what is not happening, not a confirmed startup stage.
+  if (/운영\s*(?:하고\s*있지(?:는|도)?\s*않|중이지(?:는|도)?\s*않|하고\s*있는\s*(?:건|것)(?:은|이)?\s*아니|하지\s*않)/.test(value)) return "confirm";
+  if (/아이디어.{0,20}없는\s*(?:건|것)(?:은|이)?\s*아니/.test(value)) return "confirm";
+  const exploration = /아이디어.{0,30}(?:없|못\s*정|찾|추천)|(?:무슨|어떤)\s*사업.{0,15}추천/.test(value);
+  // Negation belongs to the operation clause, not to an unrelated budget or future plan.
+  const clauses = value.split(/[.!?。！？\n]|그리고|하지만|(?<=인데|이며|이고|지만|는데)/);
+  const operating = clauses.some(clause => /운영\s*(?:중|하고\s*있)/.test(clause)
+    && !/운영\s*(?:중(?:인\s*(?:건|것))?(?:이|은)?\s*(?:아니|않)|하고\s*있지\s*않|하고\s*있는\s*(?:건|것)(?:은|이)?\s*아니|하지\s*않)/.test(clause));
+  const unclearSubject = /(?:친구|지인|남편|아내|부모|아버지|어머니|동생|형|누나|언니|그분|그 사람)(?:이|가|는|은)?.{0,25}운영/.test(value);
+  const separateBusiness = /(?:별도|다른|새로운|신규).{0,15}사업.{0,20}(?:준비|계획|시작|창업)/.test(value);
+  if (/(?:예전에|과거에|그만둔|접었|폐업)/.test(value) || unclearSubject || (operating && (exploration || separateBusiness))) return "confirm";
+  if (operating) return "operating";
+  return exploration ? "exploring" : "startup";
+}
+
+export function typedEntryCommand(text: string): Pick<IntakeCommand, "action" | "mode" | "questionId" | "value" | "message"> {
   const value = text.trim();
   const compact = value.replace(/[\s.!?。！？]/g, "");
   if (["아이디어가없어요", "아이디어없어요", "아이디어를찾고있어요", "아직아이디어가없어요"].includes(compact)) return { action: "start", mode: "exploring" };
   if (["사업을운영중이에요", "사업운영중", "운영중이에요", "운영중입니다"].includes(compact)) return { action: "start", mode: "operating" };
   if (["생각한사업이있어요", "아이디어가있어요"].includes(compact)) return { action: "start", mode: "startup" };
-  const operating = /운영\s*(?:중|하고\s*있)/.test(value) && !/(?:아니|않|아직|예정|계획)/.test(value);
-  return { action: "start", mode: operating ? "operating" : "startup", questionId: "business", value };
+  const intent = entryIntent(value);
+  if (intent === "exploring") return { action: "start", mode: "exploring", message: value };
+  return { action: "start", mode: intent === "operating" ? "operating" : "startup", questionId: "business", value };
 }
 
 export function entryMessage(draft: Pick<IntakeDraft, "memo" | "introMessage">) {
@@ -49,8 +81,21 @@ const acknowledgement = /^(?:안녕(?:하세요)?|반갑습니다|네|넵|예|�
 const compoundFields = /(?:예산|가격|고객|매출|비용|상품|서비스|시간)\s*[:：]/g;
 export const isConsultationText = (text: string) => questionIntent.test(text) || /[?？]/.test(text);
 export function needsEntryConfirmation(text: string) {
+  const intent = entryIntent(text);
+  if (intent === "confirm") return true;
+  if (intent === "exploring") return false;
   return acknowledgement.test(text.trim()) || questionIntent.test(text) || /[?？]/.test(text)
     || (text.match(compoundFields)?.length ?? 0) > 1 || /(?:예전에|과거에|그만둔|접었|폐업)/.test(text);
+}
+
+export function entrySubmission(text: string) {
+  return needsEntryConfirmation(text)
+    ? { kind: "confirm" as const, text }
+    : { kind: "send" as const, command: typedEntryCommand(text) };
+}
+
+export function confirmedEntryCommand(mode: "exploring" | "startup" | "operating", text: string): Pick<IntakeCommand, "action" | "mode" | "message" | "noteIntent"> {
+  return { action: "start", mode, ...(text ? { message: text, noteIntent: isConsultationText(text) ? "question" as const : "memo" as const } : {}) };
 }
 
 export type ComposerRoute =
@@ -70,6 +115,10 @@ export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQue
     const choice = question.kind === "multi" && hasExclusiveOptions(question) ? undefined : typedChoiceAnswer(snapshot, question, value);
     return choice === undefined ? { kind: "clarify", canAnswer: false } : { kind: "answer", questionId: question.id, value: choice };
   }
+  if (question.id === "budget" || question.id === "hoursPerWeek") {
+    const parsed = parseResourceLimit(value, question.id === "budget" ? "initialCost" : "weeklyOperatingHours");
+    return parsed.status === "known" ? { kind: "answer", questionId: question.id, value } : { kind: "clarify", canAnswer: false };
+  }
   if (question.kind === "number" && !/^[\d\s,.억만천백십원%시간분개명건회좌석룸]+$/.test(value)) return { kind: "clarify", canAnswer: false };
   if (/\n.+|그리고|그런데|하지만/.test(value) || /\d\s*만원.*\d\s*시간/.test(value)) return { kind: "clarify", canAnswer };
   return { kind: "answer", questionId: question.id, value };
@@ -86,6 +135,18 @@ export function typedChoiceAnswer(snapshot: IntakeSnapshot, question: IntakeQues
   if (question.kind === "single") return resolve(text);
   const selected = text.split(/[,\n]/).map(resolve);
   return selected.every((value): value is string => !!value) ? [...new Set(selected)] : undefined;
+}
+
+export function choiceDraftSubmission(question: IntakeQuestion | null, draft: AnswerDraft): { value: IntakeValue; unknown?: boolean; ksic?: string } | null {
+  if (!question) return null;
+  if (draft.unknown) return { value: null, unknown: true };
+  if (draft.custom || !["single", "multi"].includes(question.kind)) return null;
+  if (!draft.selected.length) return null;
+  return { value: question.kind === "multi" ? draft.selected : draft.selected[0], ...(question.id === "industry" && draft.ksic ? { ksic: draft.ksic } : {}) };
+}
+
+export function shouldShowIdeaExploration(snapshot: IntakeSnapshot | null, question: IntakeQuestion | null | undefined): boolean {
+  return snapshot?.intake.mode === "exploring" && question?.id === "candidate";
 }
 
 export function suggestedIntakeIndustry(snapshot: IntakeSnapshot): { value: ProposalSector; label: string } | null {
@@ -120,7 +181,7 @@ export function persistDraft(key: string, draft: IntakeDraft, memory: Map<string
 function isAnswer(value: unknown): value is AnswerDraft {
   if (!value || typeof value !== "object") return false;
   const answer = value as AnswerDraft;
-  return typeof answer.text === "string" && typeof answer.custom === "boolean" && Array.isArray(answer.selected) && answer.selected.every(item => typeof item === "string");
+  return typeof answer.text === "string" && typeof answer.custom === "boolean" && (answer.unknown === undefined || typeof answer.unknown === "boolean") && (answer.ksic === undefined || typeof answer.ksic === "string") && (answer.dismissedMention === undefined || typeof answer.dismissedMention === "string" && answer.dismissedMention.length <= 5000) && Array.isArray(answer.selected) && answer.selected.every(item => typeof item === "string");
 }
 
 export function parseDraft(raw: string | null, planId?: string | null, ownerScope?: string | null): IntakeDraft {
@@ -128,28 +189,47 @@ export function parseDraft(raw: string | null, planId?: string | null, ownerScop
   try {
     const value = JSON.parse(raw) as IntakeDraft;
     if (!ownerScope || value.ownerScope !== ownerScope) return emptyDraft();
-    if (value.version !== 1 || !["answer", "memo", "help"].includes(value.mode) || typeof value.memo !== "string" || typeof value.help !== "string" || !value.answers || typeof value.answers !== "object") return emptyDraft();
+    if (value.version !== 1 || !["answer", "memo", "help", "ideas"].includes(value.mode) || typeof value.memo !== "string" || typeof value.help !== "string" || !value.answers || typeof value.answers !== "object") return emptyDraft();
     const answers = Object.fromEntries(Object.entries(value.answers).filter(([, answer]) => isAnswer(answer)));
     const pending = value.pending;
-    const validPending = pending && typeof pending.command?.requestId === "string" && Number.isInteger(pending.command.revision)
-      && ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "prepare"].includes(pending.command.action)
+    const validPending = pending && Number.isInteger(pending.command?.revision)
+      && intakeCommandSchema.safeParse(pending.command).success
       && (pending.command.planId ?? null) === (planId ?? null);
-    return { ...emptyDraft(), ...value, answers, introMessage: typeof value.introMessage === "string" ? value.introMessage : null, editingId: typeof value.editingId === "string" ? value.editingId : null, pending: validPending ? pending : null };
+    const resourceEditor = resourceEditorSchema.safeParse(value.resourceEditor);
+    return { ...emptyDraft(), ...value, answers, refinementSeen: Array.isArray(value.refinementSeen) ? value.refinementSeen.filter(id => typeof id === "string").slice(0, 100) : [], refiningId: typeof value.refiningId === "string" ? value.refiningId : null, resourceEditor: resourceEditor.success ? resourceEditor.data : undefined, introMessage: typeof value.introMessage === "string" ? value.introMessage : null, editingId: typeof value.editingId === "string" ? value.editingId : null, pending: validPending ? pending : null };
   } catch { return emptyDraft(); }
 }
 
 export function sameAnswer(a: AnswerDraft | undefined, b: AnswerDraft | undefined) {
-  return !!a && !!b && a.text === b.text && a.custom === b.custom && a.selected.length === b.selected.length && a.selected.every((item, index) => item === b.selected[index]);
+  return !!a && !!b && a.text === b.text && a.custom === b.custom && !!a.unknown === !!b.unknown && a.ksic === b.ksic && a.selected.length === b.selected.length && a.selected.every((item, index) => item === b.selected[index]);
 }
 
 export function settleDraft(draft: IntakeDraft, pending: PendingRequest): IntakeDraft {
   const next = { ...draft, answers: { ...draft.answers }, pending: null };
   const command = pending.command;
+  if (command.action === "resources" && next.resourceEditor) {
+    next.resourceEditor = { ...next.resourceEditor };
+    if (command.resourceLimits && JSON.stringify(next.resourceEditor.limits) === JSON.stringify(command.resourceLimits)) delete next.resourceEditor.limits;
+    if (command.resourceContext && JSON.stringify(next.resourceEditor.context) === JSON.stringify(command.resourceContext)) delete next.resourceEditor.context;
+    const quote = next.resourceEditor.quote;
+    if (command.resourceQuote && quote && Object.entries(command.resourceQuote).every(([key, value]) => {
+      if (key === "expiresAt") return quote.expiresAt.slice(0, 10) === String(value).slice(0, 10);
+      if (key === "context") return JSON.stringify(next.resourceEditor?.context ?? quote.context) === JSON.stringify(value);
+      return quote[key as keyof typeof quote] === value;
+    })) {
+      delete next.resourceEditor.quote;
+      if (JSON.stringify(next.resourceEditor.context) === JSON.stringify(command.resourceQuote.context)) delete next.resourceEditor.context;
+    }
+  }
   if (command.action === "start" && pending.text !== undefined) {
     if (next.memo === pending.text) next.memo = "";
     if (next.introMessage === pending.intro) next.introMessage = null;
   }
   if (command.action === "answer" && command.questionId) {
+    if (next.refiningId === command.questionId) {
+      next.refinementSeen = [...new Set([...(next.refinementSeen ?? []), command.questionId])];
+      next.refiningId = null;
+    }
     // Only the candidate question's "직접 생각한 사업" toggle stores its draft under another key (candidate -> business).
     const key = customCandidateDraftKey(command.questionId, pending.answer?.custom);
     if (sameAnswer(next.answers[key], pending.answer)) {
@@ -197,15 +277,19 @@ export function readIntakePayload(value: unknown): IntakePayload | null {
 }
 
 export function previewIntakeAnswer(snapshot: IntakeSnapshot, command: IntakeCommand): IntakeSnapshot | null {
-  if (command.action !== "answer" || command.revision !== snapshot.coach.revision) return null;
+  if (!["answer", "resources"].includes(command.action) || command.revision !== snapshot.coach.revision) return null;
   const coach = structuredClone(snapshot.coach);
   const intake = { ...structuredClone(snapshot.intake), receipts: [] };
   const plan: ServerPlan = { id: snapshot.planId, title: snapshot.title, planType: snapshot.planType, createdAt: snapshot.updatedAt, updatedAt: snapshot.updatedAt, sections: {}, answers: {} };
-  const before = intakeBusinessFingerprint(coach, plan.answers);
-  applyIntakeAnswer(plan, coach, intake, command, new Date().toISOString());
-  finishIntakeMutation(coach, before, plan.answers);
+  const before = intakeBusinessFingerprint(coach, plan.answers, intake);
+  const beforeIdeas = ideaInputFingerprint(coach, intake);
+  const at = snapshot.resourceAssessment?.asOf ?? snapshot.updatedAt;
+  if (command.action === "resources") applyIntakeResources(plan, coach, intake, command, at);
+  else applyIntakeAnswer(plan, coach, intake, command, at);
+  finishIntakeMutation(coach, before, plan.answers, intake);
+  if (beforeIdeas !== ideaInputFingerprint(coach, intake)) intake.ideaInputRevision = (intake.ideaInputRevision ?? 0) + 1;
   plan.title = coach.business.name;
-  return { ...intakeSnapshot(plan, coach, intake), hasDocuments: snapshot.hasDocuments };
+  return { ...intakeSnapshot(plan, coach, intake, at), hasDocuments: snapshot.hasDocuments, documentStatus: snapshot.hasDocuments && (coach.documentRevision ?? coach.revision) !== (snapshot.coach.documentRevision ?? snapshot.coach.revision) ? "stale" : snapshot.documentStatus };
 }
 
 export type IntakeNextStep = "design" | "prepare" | "open" | null;
@@ -218,7 +302,31 @@ export function intakeNextStep(snapshot: IntakeSnapshot, prepared = false): Inta
   const design = snapshot.coach.design;
   const current = !!design && design.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision);
   if (!current) return "design";
-  return snapshot.hasDocuments || prepared ? "open" : "prepare";
+  return prepared || snapshot.hasDocuments && snapshot.documentStatus !== "stale" ? "open" : "prepare";
+}
+
+/** Offer one existing question without turning optional unknowns into required answers. */
+export function nextRefinementQuestion(snapshot: IntakeSnapshot, reviewed: readonly string[] = []): IntakeQuestion | null {
+  if (!snapshot.coreComplete) return null;
+  if (!snapshot.coach.ready) return snapshot.questions.find(question => question.id === (snapshot.intake.mode === "exploring" ? "candidate" : "business")) ?? null;
+  return snapshot.questions.find(question => {
+    if (reviewed.includes(question.id)) return false;
+    if (!question.fieldKey || question.id === "business") return false;
+    const answer = snapshot.intake.answers[question.id];
+    if (answer) return answer.status === "unknown";
+    const field = snapshot.coach.fields.find(field => field.key === question.fieldKey);
+    return !field || field.basis !== "user";
+  }) ?? null;
+}
+
+/** A verbatim preview only; the full response remains available, without another AI call. */
+export function chatTextPreview(text: string, limit = 220): string | null {
+  if (text.length <= limit) return null;
+  const paragraph = text.indexOf("\n");
+  const sentences = [...text.slice(0, limit).matchAll(/[.!?。！？](?:\s|$)/g)];
+  const sentenceEnd = sentences.at(-1);
+  const end = paragraph > 0 && paragraph <= limit ? paragraph : sentenceEnd ? sentenceEnd.index! + 1 : limit;
+  return `${text.slice(0, end).trimEnd()}…`;
 }
 
 export type JobProgressView = { percent: number; elapsedSeconds: number; expectedSeconds: number; limitSeconds: number; slow: boolean };
@@ -434,6 +542,10 @@ export function onlyFilterSelected(question: Pick<IntakeQuestion, "options">, se
   const options = question.options ?? [];
   const picked = options.filter(option => selected.includes(option.value));
   return picked.length > 0 && picked.every(option => isFilterGroup(option.group));
+}
+
+export function incompleteChoiceText(question: IntakeQuestion | null, draft: AnswerDraft) {
+  return !!question && question.kind === "text" && !!question.options?.length && (unfinishedAnswerText(draft.text) || onlyFilterSelected(question, draft.selected));
 }
 
 /** Text that must not be saved as an answer: a "○○" placeholder left in a sentence chip, or a dangling separator. */

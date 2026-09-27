@@ -7,10 +7,17 @@ import { INDUSTRY_HINTS, PRICE_BASIS, sectorChipOptions } from "./intake-options
 import { descriptionSector } from "./intake-sector";
 import { KSIC_SYNONYMS, ksicAncestors, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
 import { START_CONDITIONS } from "./intake-questions";
+import { candidateTemplateFacts, filterCandidateConditions, selectedStartConditions } from "./intake-candidate-constraints";
 import { capacityUnitOrder, licenseHint, revenueBasis, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, STRUCTURE_LABELS, structureFieldLabels, structureSummary, type BusinessStructure, type StructureAxis } from "./business-structure";
 import { PROPOSAL_SECTORS, type ProposalSector } from "./proposal-blueprint";
 import { INTAKE_KEY, INTAKE_VERSION, type IntakeCandidate, type IntakeCommand, type IntakeJob, type IntakeSnapshot, type IntakeState, type IntakeValue } from "./intake-types";
 import type { ServerPlan } from "./plan-server-store";
+import { loadResourceRecords, RESOURCE_DATA_VERSION, RESOURCE_ANSWER_IDS, resourceBusinessAssumptions, type ResourceRecord } from "./intake-candidate-resources";
+import { evaluateCandidateResources, parseResourceLimit } from "./intake-candidate-fit";
+import { generatedIdeaStructure } from "./intake-ideas";
+import { INTAKE_JOB_TIMING } from "./intake-timing";
+export { INTAKE_JOB_TIMING } from "./intake-timing";
+import { intakeResourceSource } from "./intake-resource-context";
 
 export class IntakeError extends Error {
   constructor(public code: string, message: string, public status = 400) { super(message); }
@@ -33,7 +40,8 @@ export function createIntake(coach: CoachState, mode: IntakeMode, at: string): I
 }
 
 function candidateAnswers(intake: IntakeState, coach: CoachState) {
-  return Object.fromEntries(Object.entries(intake.answers).map(([key, answer]) => [key, coach.fields.find(field => field.key === key && field.basis === "user")?.value ?? answer.value]));
+  const selectedBusiness = coach.fields.find(field => field.key === "business" && field.basis === "user")?.messageId === intake.answers.candidate?.messageId;
+  return Object.fromEntries(Object.entries(intake.answers).filter(([key]) => key !== "business" || !selectedBusiness).map(([key, answer]) => [key, coach.fields.find(field => field.key === key && field.basis === "user")?.value ?? answer.value]));
 }
 
 /** Sector for chip sets: the confirmed intake sector, else a rule-based guess from the business text, else general. No AI. */
@@ -79,14 +87,14 @@ function matchedSynonym(code: string, text: string): string | undefined {
  * 경험 문장 일치 → 구어 표현이 있는 흔한 창업 업종 → 코드 순으로 고른다. 관심·경험·조건 중 하나도 없으면 비어 있다(추측하지 않는다).
  * 소상공인 창업 후보가 아닌 분류(smallBusiness=false)는 제외한다.
  */
-export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState): CandidateIdea[] {
+export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState, entirePool = false): CandidateIdea[] {
   const interest = intake.answers.interest?.value, conditionValues = intake.answers.conditions?.value;
   const sectors = (Array.isArray(interest) ? interest : []).filter((value): value is ProposalSector => PROPOSAL_SECTORS.includes(value as ProposalSector) && value !== "general");
   const chosen = (Array.isArray(conditionValues) ? conditionValues : []).filter(isCondition);
   const experienceValue = coach.fields.find(field => field.key === "experience" && field.basis === "user")?.value ?? intake.answers.experience?.value;
   const experience = (Array.isArray(experienceValue) ? experienceValue.join(" ") : typeof experienceValue === "string" ? experienceValue : "").trim();
   if (!sectors.length && !chosen.length && !experience) return [];
-  const matches = new Map(experience ? searchKsic(experience, { limit: 30, minLevel: 5 }).map(match => [match.entry.code, match]) : []);
+  const matches = new Map(experience ? searchKsic(experience, { limit: entirePool ? Infinity : 30, minLevel: 5 }).map(match => [match.entry.code, match]) : []);
   // 관심·조건이 없고 경험만 있으면 경험과 이어진 분류만 본다. 전체 1,205개를 임의로 늘어놓지 않는다.
   const pool = ksicEntries(5).filter(entry => sectors.length || chosen.length || matches.has(entry.code));
   const ranked = pool.flatMap(entry => {
@@ -100,7 +108,7 @@ export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState): Cand
   // 경험과 이어진 분류가 있으면 그것이 목록의 중심이고 채움 후보는 2개까지만. 채움은 부르는 말이 있는 흔한 업종을 먼저 쓰고, 하나도 없을 때만 나머지 분류로 채운다.
   const matched = ranked.filter(item => item.match), common = ranked.filter(item => !item.match && item.terms.length), rest = ranked.filter(item => !item.match && !item.terms.length);
   const fillers = (common.length ? common : rest).slice(0, matched.length ? KSIC_FILLER_LIMIT_WITH_MATCHES : KSIC_CANDIDATE_LIMIT);
-  const scored = [...matched, ...fillers].slice(0, KSIC_CANDIDATE_LIMIT);
+  const scored = entirePool ? [...matched, ...common, ...rest] : [...matched, ...fillers].slice(0, KSIC_CANDIDATE_LIMIT);
   return scored.map(({ entry, structure, match, terms }) => {
     const group = ksicAncestors(entry.code).find(ancestor => ancestor.level === 3)?.name ?? ksicPath(entry.code);
     const sector = sectorForKsic(entry.code) ?? "general";
@@ -118,13 +126,49 @@ export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState): Cand
 }
 
 /** 후보 목록: 고정 템플릿(관심·경험 태그 순) 뒤에 표준산업분류 지도 후보. 후보 선택·옵션·요약이 모두 같은 목록을 본다. */
+export function resourceLimitsFor(intake: Pick<IntakeState, "answers">, coach: CoachState) {
+  return Object.fromEntries(Object.entries(RESOURCE_ANSWER_IDS).map(([metric, id]) => {
+    const answer = intake.answers[id];
+    return [metric, answer ? answer.status === "unknown" ? answer.quote || null : answer.quote || answer.value : coach.fields.find(f => f.key === id && f.basis === "user")?.value ?? null];
+  }));
+}
+
+export function evaluateIntakeCandidates(intake: IntakeState, coach: CoachState, asOf: string, records: readonly ResourceRecord[] = loadResourceRecords()) {
+  const conditions = selectedStartConditions(intake.answers.conditions?.value);
+  const templates = intakeCandidates(candidateAnswers(intake, coach), Infinity);
+  const generated = (intake.generatedIdeas ?? []).filter(idea => !idea.rejected && idea.baseInputRevision === (intake.ideaInputRevision ?? 0));
+  const collected: CandidateIdea[] = [...templates, ...ksicCandidateIdeas(intake, coach, true), ...generated];
+  const pool = collected.flatMap(idea =>
+    filterCandidateConditions(idea, idea.source === "ai-generated" ? idea.proposedStructure ?? {} : idea.id.startsWith("ksic:") ? ksicStructure(idea.id.slice(5)) ?? {} : candidateTemplateFacts(idea.id), conditions));
+  const limits = resourceLimitsFor(intake, coach);
+  const data = loadResourceRecords([...records, ...intake.resourceQuotes ?? []]).filter(r => r.candidateId !== "custom-business" || r.businessDescription === coach.business.description);
+  const structure = effectiveStructure(intake).values, business = resourceBusinessAssumptions(coach);
+  const assess = (idea: CandidateIdea): CandidateIdea => {
+    const proposal = intake.generatedIdeas?.find(item => item.id === idea.id);
+    const unselected = proposal && intake.selectedCandidate?.id !== idea.id;
+    return { ...idea, resourceFit: evaluateCandidateResources(idea.id, limits, intake.resourceContext, asOf, data, unselected ? generatedIdeaStructure(proposal) : structure, unselected ? { description: proposal.description, customer: proposal.customer, offer: proposal.offering, channel: proposal.delivery } : business) };
+  };
+  const evaluated = pool.map(assess);
+  const available = evaluated.filter(i => i.resourceFit?.status !== "exceeded");
+  // Preserve interest/experience order within each source; unknown data is not a ranking bonus or penalty.
+  const mapIdeas = available.filter(i => i.id.startsWith("ksic:"));
+  const matched = mapIdeas.filter(i => i.reasons.some(reason => reason.includes("경험")));
+  const fillers = mapIdeas.filter(i => !matched.includes(i)).slice(0, matched.length ? KSIC_FILLER_LIMIT_WITH_MATCHES : KSIC_CANDIDATE_LIMIT);
+  const ideas = [...available.filter(i => !i.id.startsWith("ksic:") && i.source !== "ai-generated").slice(0, 3), ...[...matched, ...fillers].slice(0, KSIC_CANDIDATE_LIMIT), ...available.filter(i => i.source === "ai-generated")];
+  const custom = templates.find(i => i.id === "custom-business");
+  const selectedId = custom ? null : intake.answers.candidate?.value;
+  const selectedBase = custom ?? intake.selectedCandidate ?? evaluated.find(i => i.id === selectedId) ?? (typeof selectedId === "string" ? { id: selectedId, title: coach.business.name, description: coach.business.description, sector: intake.sector, reasons: [], cautions: [] } : undefined);
+  const selected = selectedBase ? { ...assess(selectedBase), retained: !available.some(i => i.id === selectedBase.id) } : undefined;
+  if (selected && !ideas.some(i => i.id === selected.id)) ideas.push(selected);
+  const excluded = evaluated.filter(i => i.resourceFit?.status === "exceeded");
+  return { ideas, assessment: { version: RESOURCE_DATA_VERSION, asOf, total: evaluated.length, excluded: excluded.slice(0, 8), excludedCount: excluded.length, selected, allUnknown: available.length > 0 && available.every(i => i.resourceFit?.checked === 0) } };
+}
 export function allCandidateIdeas(intake: IntakeState, coach: CoachState): CandidateIdea[] {
-  return [...intakeCandidates(candidateAnswers(intake, coach)), ...ksicCandidateIdeas(intake, coach)];
+  return evaluateIntakeCandidates(intake, coach, new Date().toISOString()).ideas;
 }
 
 /** Catalogue questions with the runtime options the client needs: candidate ideas, industry hints and sector chip sets (spec §6 Phase 1). Options are never persisted. */
-export function intakeQuestions(intake: IntakeState, coach: CoachState): IntakeQuestion[] {
-  const ideas = allCandidateIdeas(intake, coach);
+export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = allCandidateIdeas(intake, coach)): IntakeQuestion[] {
   const sector = intakeChipSector(intake, coach);
   // 적용 중인 사업 구조(KSIC/업종 기본값 + 사용자 수정)가 가격 기준과 처리량 단위 순서를 정한다(질문 수·저장 형식은 그대로).
   const structure = effectiveStructure(intake).values;
@@ -133,10 +177,10 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState): IntakeQ
     .filter(question => question.id !== "candidate" || !coach.fields.some(field => field.key === "business" && field.basis === "user") || !!intake.answers.candidate)
     .map(question => {
       if (question.id === "candidate") {
-        // 조건을 골랐는데 지도 후보가 하나도 없으면 조건을 줄이라고 안내한다(템플릿 후보는 그대로).
+        // Empty means no candidate survived the same conditions, not an AI success fallback.
         const chosenConditions = intake.answers.conditions?.value;
         const mapEmpty = Array.isArray(chosenConditions) && chosenConditions.length > 0 && !ideas.some(idea => idea.id.startsWith("ksic:"));
-        return { ...question, options: ideas.map(idea => ({ value: idea.id, label: idea.title })), ...(mapEmpty ? { hint: "고른 시작 조건을 모두 만족하는 업종이 지도에 없어요. 시작 조건에서 한두 개를 빼면 후보가 늘어요." } : {}) };
+        return { ...question, options: ideas.map(idea => ({ value: idea.id, label: idea.title })), ...(!ideas.length ? { hint: "현재 조건에 맞는 후보가 없어요. 시작 조건에서 선택을 다시 확인하거나 생각한 사업을 직접 입력해 주세요." } : mapEmpty ? { hint: "분류 검색에서 조건을 모두 만족하는 후보를 찾지 못했어요. 아래 예시의 확인 필요 조건을 검토해 주세요." } : {}) };
       }
       if (question.id === "industry") return { ...question, options: question.options?.map(option => ({ ...option, hint: INDUSTRY_HINTS[option.value as ProposalSector] ?? option.hint })) };
       if (question.id === "price") {
@@ -163,8 +207,17 @@ export function answeredIntakeQuestion(intake: IntakeState, coach: CoachState, q
   return !!question.fieldKey && coach.fields.some(field => field.key === question.fieldKey && field.basis === "user");
 }
 
-export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: IntakeState): IntakeSnapshot {
-  const questions = intakeQuestions(intake, coach);
+export function intakeDocumentStatus(plan: Pick<ServerPlan, "sections">, coach: CoachState): NonNullable<IntakeSnapshot["documentStatus"]> {
+  const sections = Object.values(plan.sections);
+  if (!sections.length) return "none";
+  const revision = coachDocumentRevision(coach);
+  if (sections.some(section => typeof section.coachRevision === "number" && section.coachRevision !== revision)) return "stale";
+  return sections.every(section => section.coachRevision === revision) ? "current" : "unverified";
+}
+
+export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: IntakeState, resourceAsOf = new Date(Math.max(Date.now(), Date.parse(plan.updatedAt) || 0)).toISOString()): IntakeSnapshot {
+  const resources = evaluateIntakeCandidates(intake, coach, resourceAsOf);
+  const questions = intakeQuestions(intake, coach, resources.ideas);
   const coreIds = new Set(coreQuestions(intake.mode).map(question => question.id));
   const core = questions.filter(question => coreIds.has(question.id));
   const answered = core.filter(question => answeredIntakeQuestion(intake, coach, question)).length;
@@ -185,9 +238,10 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
   return { planId: plan.id, title: plan.title, planType: plan.planType, updatedAt: plan.updatedAt, coach,
     intake: publicIntake, nextQuestion: questions.find(question => !answeredIntakeQuestion(intake, coach, question)) ?? null,
     questions, coreComplete: answered === core.length, coreAnswered: answered, coreTotal: core.length,
-    summary, financialSummary: intakeFinancialReference(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0,
+    summary, financialSummary: intakeFinancialReference(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach),
     ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(coach, intake),
-    candidateIdeas: allCandidateIdeas(intake, coach),
+    candidateIdeas: resources.ideas,
+    resourceAssessment: resources.assessment,
     pendingExtraction: intake.notes.some(note => ["queued", "processing"].includes(note.status)) || intake.candidates.some(candidate => candidate.status === "pending"),
   };
 }
@@ -225,10 +279,6 @@ function syncIntakeDetails(plan: ServerPlan, intake: IntakeState) {
   }));
 }
 
-/** AI 작업 종류별 보통 걸리는 시간과 호출 제한 시간(ms). 제한 시간은 실제 호출의 timeoutMs와 같다. 사업안 35초는 운영 실측(2026-09-17: 대기 4초 + 모델 26초 + 저장, 합계 34초) 기준이다. */
-export const INTAKE_JOB_TIMING: Record<IntakeJob["kind"], { expectedMs: number; limitMs: number }> = {
-  design: { expectedMs: 35_000, limitMs: 60_000 }, help: { expectedMs: 8_000, limitMs: 20_000 }, extract: { expectedMs: 8_000, limitMs: 20_000 },
-};
 /** 진행 중인 작업의 서버 기준 경과 시간. 끝났거나 없으면 null. */
 export function intakeJobClock(job: IntakeJob | null | undefined, nowMs: number): IntakeSnapshot["jobClock"] {
   if (!job || !["queued", "running"].includes(job.status)) return null;
@@ -242,15 +292,23 @@ export function monthlyVolumeFromCapacity(text: string | null | undefined): { vo
   const match = text?.match(/(하루|일주일|한 달)\s*([\d,]+)\s*([가-힣·]*)/);
   if (!match) return null;
   const count = Number(match[2].replace(/,/g, ""));
-  if (!Number.isFinite(count) || count <= 0) return null;
+  if (!Number.isFinite(count) || count < 0) return null;
   const factor = CAPACITY_MONTH_FACTOR[match[1]], unit = match[3] || "건", volume = Math.round(count * factor);
   const shown = (n: number) => n.toLocaleString("ko-KR");
   return { volume, unit, note: factor === 1 ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1]} ${shown(count)}${unit} × ${factor === 26 ? "월 26일 영업" : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
 }
 
+function validStructureNumber(id: string, value: number): boolean {
+  if (!Number.isFinite(value) || value < 0 || value > 1e14) return false;
+  if (id === "structure.retentionMonths") return value > 0;
+  if (id === "structure.occupancy" || id === "structure.takeRate") return value <= 100;
+  if (id === "structure.billableHours") return value <= 168;
+  return true;
+}
+
 function structureNumber(intake: IntakeState, id: string): number | null {
   const answer = intake.answers[id];
-  return answer?.status === "answered" && typeof answer.value === "number" && answer.value > 0 ? answer.value : null;
+  return answer?.status === "answered" && typeof answer.value === "number" && validStructureNumber(id, answer.value) ? answer.value : null;
 }
 
 /**
@@ -271,10 +329,21 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   const rawVolume = fields.get("volume") ?? "";
   if (/^[\d,]+$/.test(rawVolume)) volume = Number(rawVolume.replace(/,/g, ""));
   const billable = structure.revenue === "per_hour" ? structureNumber(intake, "structure.billableHours") : null;
-  if (volume === undefined && billable) { volume = Math.round(billable * 4.3); notes.push(`주 ${billable}시간 청구 × 4.3주 = 월 ${volume}시간`); }
-  if (volume === undefined) { const capacity = monthlyVolumeFromCapacity(fields.get("capacity")); if (capacity) { volume = capacity.volume; notes.push(capacity.note); } }
+  if (volume === undefined && billable != null) { volume = Math.round(billable * 4.3); notes.push(`주 ${billable}시간 청구 × 4.3주 = 월 ${volume}시간`); }
   const occupancy = structure.revenue === "rental" ? structureNumber(intake, "structure.occupancy") : null;
-  if (volume !== undefined && occupancy != null) { const before = volume; volume = Math.round(volume * occupancy / 100); notes.push(`이용률 ${occupancy}% 반영: 월 ${before.toLocaleString("ko-KR")}건 감당 중 ${volume.toLocaleString("ko-KR")}건 판매 가정`); }
+  if (volume === undefined) {
+    const capacity = monthlyVolumeFromCapacity(fields.get("capacity"));
+    if (capacity) {
+      notes.push(capacity.note);
+      if (structure.revenue === "rental") {
+        if (occupancy == null) notes.push("이용률 미정: 최대 수용량을 예상 판매량으로 확정하지 않습니다. 이용률 또는 월 예상 판매량을 확인해 주세요.");
+        else {
+          volume = Math.round(capacity.volume * occupancy / 100);
+          notes.push(`이용률 ${occupancy}% 반영: 월 ${capacity.volume.toLocaleString("ko-KR")}${capacity.unit} 감당 중 ${volume.toLocaleString("ko-KR")}${capacity.unit} 판매 가정`);
+        }
+      } else volume = capacity.volume;
+    }
+  } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
@@ -285,8 +354,9 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   if (retention) lines.push(`- 구독 유지 평균 ${retention}개월 → 구독자 1명 생애 매출 ${won(unitPrice * retention)}, 월 이탈률 약 ${Math.round(100 / retention)}%${volume ? `, 구독자 ${volume.toLocaleString("ko-KR")}명 유지에 매달 신규 약 ${Math.ceil(volume / retention).toLocaleString("ko-KR")}명 필요` : ""}`);
   const takeRate = structure.revenue === "commission" ? structureNumber(intake, "structure.takeRate") : null;
   if (takeRate) lines.push(`- 수수료율 ${takeRate}% → 거래 1건 평균 거래액 약 ${won(unitPrice / takeRate * 100)}`);
+  if (takeRate === 0) lines.push("- 수수료율 0%: 거래액을 역산하지 않습니다. 입력한 건당 수수료와의 일치 여부를 확인해 주세요.");
   const cycle = structure.revenue === "project" ? structureNumber(intake, "structure.salesCycleDays") : null;
-  if (cycle) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
+  if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
   return [...lines, ...notes.map(note => `- ${note}`)].filter(Boolean).join("\n");
 }
 
@@ -358,6 +428,13 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
   if (value === undefined || value === null || !displayIntakeValue(value).trim()) throw new IntakeError("answer_required", "답을 입력하거나 아직 미정을 선택해 주세요");
   if (displayIntakeValue(value).length > 1200) throw new IntakeError("answer_too_long", "답변은 1,200자 이내로 입력해 주세요. 긴 내용은 자유 메모에 보관할 수 있어요");
   if (question.kind !== "multi" && Array.isArray(value)) throw new IntakeError(question.kind === "number" ? "invalid_number" : "invalid_answer", "이 질문에는 하나의 답변을 입력해 주세요");
+  if (question.id === "budget" || question.id === "hoursPerWeek") {
+    const parsed = parseResourceLimit(value, question.id === "budget" ? "initialCost" : "weeklyOperatingHours");
+    if (parsed.status === "invalid" || parsed.status === "missing") throw new IntakeError("invalid_number", "단위와 기간에 맞는 값을 입력해 주세요");
+    // Ranges remain ranges; rejected units remain in the recoverable client draft.
+    if (parsed.status !== "known" || parsed.lower !== parsed.upper) return String(value).trim();
+    return parsed.lower;
+  }
   if (question.id === "period") {
     const dates = String(value).match(/\d{4}-\d{2}-\d{2}/g) ?? [];
     const valid = dates.length === 2 && dates.every(date => {
@@ -379,6 +456,7 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
     const raw = String(value).trim();
     const number = question.unit === "원" ? coachAmount(raw) : new RegExp(`^\\d+(?:\\.\\d+)?(?:\\s*${question.unit ?? ""})?$`).test(raw) ? Number.parseFloat(raw) : undefined;
     if (number === undefined || !Number.isFinite(number) || number < 0 || number > 1e14 || question.unit === "%" && number > 100 || question.fieldKey === "hoursPerWeek" && number > 168) throw new IntakeError("invalid_number", "단위에 맞는 0 이상의 숫자를 입력해 주세요. 모르는 값은 미정으로 남겨 주세요");
+    if (question.id.startsWith("structure.") && !validStructureNumber(question.id, number)) throw new IntakeError("invalid_number", question.id === "structure.retentionMonths" ? "평균 구독 유지 기간은 0보다 큰 개월 수로 입력해 주세요" : "해당 지표의 범위에 맞는 숫자를 입력해 주세요");
     return number;
   }
   return String(value).trim();
@@ -395,28 +473,42 @@ function setField(coach: CoachState, key: CoachField["key"], value: string | nul
   }
 }
 
-export function intakeBusinessFingerprint(coach: CoachState, answers: ServerPlan["answers"]) {
+export function intakeBusinessFingerprint(coach: CoachState, answers: ServerPlan["answers"], intake = readIntake(answers)) {
   const valueOnly = (input: unknown) => {
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
     const record = input as Record<string, unknown>;
     return { value: record.value ?? null, unit: record.unit ?? null, period: record.period ?? null, basis: record.basis ?? "user", quote: record.quote ?? "" };
   };
   return JSON.stringify({ stage: coach.stage, depth: coach.depth, business: coach.business,
+    resources: intakeResourceSource(coach, intake, intake ? effectiveStructure(intake).values : undefined),
     fields: [...coach.fields].sort((a, b) => a.key.localeCompare(b.key)).map(({ key, value, basis, quote }) => ({ key, value, basis, quote })),
     details: Object.fromEntries(Object.entries(answers["intake/details"] ?? {}).sort(([a], [b]) => a.localeCompare(b)).map(([key, value]) => [key, valueOnly(value)])), period: valueOnly(answers["intake/period"]) });
 }
 
+export function storeIntakeNote(coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
+  if (!command.message) throw new IntakeError("message_required", "남길 내용을 입력해 주세요");
+  const chunks = command.message.match(/[\s\S]{1,4000}/g) ?? [];
+  if (intake.notes.length + chunks.length > 64 || intake.notes.reduce((sum, note) => sum + note.text.length, 0) + command.message.length > 100_000) throw new IntakeError("notes_limit", "메모가 많아요. 저장된 내용을 정리한 뒤 이어가 주세요", 413);
+  intake.notes.push(...chunks.map((text, index) => ({ id: `${command.requestId}:${index}`, text, at, status: "stored" as const, intent: command.noteIntent ?? "memo" as const })));
+  coach.messages.push({ id: command.requestId, role: "user", text: command.message, at });
+}
+
 export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
   const id = command.questionId;
+  if (id === "candidate" && typeof command.value === "string" && command.value.includes(":idea:")) {
+    const proposal = intake.generatedIdeas?.find(idea => idea.id === command.value && idea.planId === plan.id);
+    if (!proposal) throw new IntakeError("candidate_unknown", "이 사업에서 생성한 후보를 다시 확인해 주세요", 404);
+    if (proposal.rejected || proposal.baseInputRevision !== (intake.ideaInputRevision ?? 0)) throw new IntakeError("candidate_stale", "후보 생성 후 입력 조건이 바뀌었어요. 최신 조건으로 제안을 다시 요청해 주세요", 409);
+  }
   const questions = intakeQuestions(intake, coach);
   const question = questions.find(item => item.id === id)
-    ?? (id === "business" || id === "industry" ? getIntakeQuestion("startup", intake.sector, id) : undefined);
+    ?? (id === "business" || id === "industry" || id === "budget" || id === "hoursPerWeek" ? getIntakeQuestion("startup", intake.sector, id) : undefined);
   if (!question) throw new IntakeError("question_unknown", "이 사업의 질문을 다시 불러와 주세요");
   const previousAnswer = intake.answers[question.id];
   const value = command.unknown ? null : validatedAnswer(question, command.value);
   const quote = displayIntakeValue(command.value ?? null);
   intake.answers[question.id] = { status: command.unknown ? "unknown" : "answered", value, messageId: command.requestId, at, quote };
-  if (question.fieldKey) setField(coach, question.fieldKey, value === null ? null : `${displayIntakeValue(value)}${question.kind === "number" ? question.unit ?? "" : ""}`, command.requestId, quote);
+  if (question.fieldKey) setField(coach, question.fieldKey, value === null ? null : `${displayIntakeValue(value)}${question.kind === "number" && typeof value === "number" ? question.unit ?? "" : ""}`, command.requestId, quote);
   if (question.id === "industry") {
     // KSIC 세세분류가 함께 오면 그것이 업종의 근거다. 11업종 값은 코드에서 확인하고 어긋나면 코드 쪽을 따른다.
     const ksic = command.ksic ? ksicByCode(command.ksic) : undefined;
@@ -435,9 +527,20 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
     const ksicCode = idea.id.startsWith("ksic:") ? idea.id.slice(5) : null;
     setField(coach, "business", ksicCode ? idea.title : idea.description, command.requestId, `선택한 구상: ${idea.title}`);
     coach.business.name = idea.title; intake.sector = idea.sector; intake.ksic = ksicCode;
+    const { resourceFit: _fit, retained: _retained, ...selected } = idea;
+    intake.selectedCandidate = selected;
     coach.business.industry = intakeSectorOptions.find(option => option.value === idea.sector)?.label ?? idea.sector;
+    if (idea.source === "ai-generated") {
+      const proposal = intake.generatedIdeas!.find(item => item.id === idea.id)!;
+      intake.structure = { ...proposal.proposedStructure };
+      // Selection confirms the displayed proposal, not invented budgets or an industry code.
+      for (const [key, text] of [["customer",proposal.customer],["problem",proposal.problem],["offer",proposal.offering],["channel",proposal.delivery]] as const) setField(coach,key,text,command.requestId,`사용자가 선택한 AI 후보: ${proposal.title}`);
+      coach.business.industry = "";
+      delete intake.answers.industry;
+    }
   }
   if (question.id === "candidate" && value === null && coach.fields.some(field => field.key === "business" && field.messageId === previousAnswer?.messageId)) {
+    delete intake.selectedCandidate;
     setField(coach, "business", null, command.requestId, "");
     coach.business.name = "새 사업 구상";
     intake.sector = "general"; intake.ksic = null; coach.business.industry = "";
@@ -452,6 +555,8 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   const selected = question.options && shown !== null ? intakeValueLabel(question, shown) : undefined;
   const ksicName = question.id === "industry" && intake.ksic ? ksicByCode(intake.ksic)?.name : undefined;
   coach.messages.push({ id: command.requestId, role: "user", text: `${question.label}: ${command.unknown ? "아직 미정" : ksicName ? `${ksicName} (${selected ?? quote})` : selected ?? quote}`, at });
+  // Supplementary prose stays an unconfirmed note, in the same atomic answer save.
+  if (command.message?.trim()) storeIntakeNote(coach, intake, { ...command, requestId: `${command.requestId}:context`, noteIntent: "memo" }, at);
 }
 
 export function applyIntakeCandidates(coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
@@ -482,8 +587,8 @@ export function applyIntakeCandidates(coach: CoachState, intake: IntakeState, co
   coach.ready = coach.stage !== "exploring" && !!coach.fields.find(field => field.key === "business" && field.basis === "user")?.value;
 }
 
-export function finishIntakeMutation(coach: CoachState, before: string, answers: ServerPlan["answers"]) {
-  const changed = before !== intakeBusinessFingerprint(coach, answers);
+export function finishIntakeMutation(coach: CoachState, before: string, answers: ServerPlan["answers"], intake = readIntake(answers)) {
+  const changed = before !== intakeBusinessFingerprint(coach, answers, intake);
   const documentRevision = coachDocumentRevision(coach);
   coach.revision += 1;
   coach.documentRevision = documentRevision + Number(changed);

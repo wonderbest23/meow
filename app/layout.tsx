@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { SupportChatWidget } from "../components/support-chat-widget";
 import "@puckeditor/core/puck.css";
 import "./release-20260916.css";
 
@@ -11,7 +10,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body>{children}<SupportChatWidget /></body>
+      <body>{children}</body>
     </html>
   );
 }

@@ -39,11 +39,11 @@ async function saved(action: () => Promise<unknown>): Promise<IntakePayload> {
 /** Drive one question the way the select-first UI expects (spec §2): chips, presets, ladders and presets first; the composer only for the typing exceptions. */
 async function prepareAnswer(q: IntakeSnapshot["nextQuestion"] & object, unknown: boolean): Promise<() => Promise<unknown>> {
   const button = (name: string | RegExp) => page.getByRole("button", { name, exact: typeof name === "string" });
-  if (unknown) return () => button("아직 미정").click();
+  if (unknown) return async () => { await button("아직 정하지 않았어요").click(); await button("보내기").click(); };
   const hybrid = q.kind === "text" && q.id !== "business" && q.id !== "period" && (q.options?.length ?? 0) > 0;
-  if (q.kind === "multi") { await page.getByRole("checkbox").first().check(); return () => button(/^선택 완료\(\d+개\)$/).click(); }
-  if (q.kind === "single") return () => page.getByRole("radio").first().locator("..").click();
-  if (q.id === "period") return () => button("지난달").click();
+  if (q.kind === "multi") { await page.getByRole("checkbox").first().check(); return () => button("보내기").click(); }
+  if (q.kind === "single") return async () => { await page.getByRole("radio").first().locator("..").click(); await button("보내기").click(); };
+  if (q.id === "period") { await button("지난달").click(); return () => button("보내기").click(); }
   if (q.kind === "number" && q.unit === "원") {
     // space_hospitality price asks for a basis chip (시간당 · 1박 · 월 멤버십) before the ladder.
     if (q.options?.length) await page.locator('[data-chat-question] button[aria-pressed="false"]').first().click();
@@ -52,24 +52,25 @@ async function prepareAnswer(q: IntakeSnapshot["nextQuestion"] & object, unknown
     if (await ranges.count() > 0) { await ranges.first().click(); const exact = button("정확히 입력"); if (await exact.count() > 0) await exact.click(); }
     await button("원 단위").click();
     await page.locator(`#intake-exact-${q.id}`).fill(q.id === "price" ? "30000" : "0");
-    return () => button("이 금액으로 저장").click();
+    await button("금액 선택").click();
+    return () => button("보내기").click();
   }
   if (q.kind === "number") {
     const presets = page.locator('[aria-label="자주 고르는 값"] button');
-    if (await presets.count() > 0) return () => presets.first().click();
+    if (await presets.count() > 0) { await presets.first().click(); return () => button("보내기").click(); }
     await page.locator('[aria-label="값 조정"] input').fill("0");
-    return () => button("이 값으로 저장").click();
+    return () => button("보내기").click();
   }
   if (hybrid) {
-    // Tap the first available chip of each revealed step until the inline save is allowed (filter-only picks stay disabled).
-    for (let step = 0; step < 4 && await button("이대로 저장").isDisabled(); step++) {
+    // Chip answers are submitted by the same composer as typed answers.
+    for (let step = 0; step < 4 && await button("보내기").isDisabled(); step++) {
       const chip = page.locator('[data-chat-question] [role="group"]')
         .filter({ hasNot: page.locator('button[aria-pressed="true"]') })
         .locator('button[aria-pressed="false"]:enabled').first();
       if (await chip.count() === 0) break;
       await chip.click();
     }
-    return () => button("이대로 저장").click();
+    return () => button("보내기").click();
   }
   await page.locator(`[id="intake-answer-${q.id}"]`).fill(q.id === "business" ? "지역 소상공인의 예약과 고객 문의를 정리하는 업무 지원 서비스" : "입력한 조건을 직접 확인하는 가상 사업 테스트");
   return () => button("보내기").click();

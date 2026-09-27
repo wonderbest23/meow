@@ -52,7 +52,7 @@
 .progress::-moz-progress-bar { background: var(--intake-blue); }
 .draftDot { width: 6px; height: 6px; border-radius: 50%; background: #929aa5; }
 .workspace { display: grid; grid-template-columns: minmax(0, 1fr); flex: 1; min-height: 0; min-width: 0; }
-/* PC: 대화 | 조절 손잡이 | 요약. --chat-share는 useChatSplit이 정한다(질문 중 64%, 기본 질문 완료 후 42%, 마우스·키보드로 조절). */
+/* Keep the same conversation width throughout the flow; users can still resize it. */
 .withSummary { grid-template-columns: var(--chat-share, 64%) 14px minmax(0, 1fr); transition: grid-template-columns .45s cubic-bezier(.2, .8, .2, 1); }
 .withSummary.resizing { transition: none; }
 .resizing { cursor: col-resize; user-select: none; }
@@ -65,6 +65,8 @@
 .conversation, .summaryPane { min-width: 0; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-gutter: stable; }
 .conversation { flex: 1; overflow-anchor: none; scroll-padding-block: 16px; }
 .inputContent { max-width: 760px; padding: 28px 36px 24px; margin: 0 auto; }
+.workspace[data-loading] .conversation { display: flex; }
+.workspace[data-loading] .inputContent { display: flex; flex: 1; min-width: 0; padding: 0; }
 .summaryPane { padding: 28px 26px 36px; background: #fcfcfd; }
 .entry { max-width: 560px; padding-top: 28px; }
 .page .entry [data-coach-welcome] h2 { font-size: 30px; line-height: 1.5; }
@@ -92,6 +94,15 @@
 .page input:is([type="radio"], [type="checkbox"]) { accent-color: var(--intake-blue); width: 18px; height: 18px; flex: 0 0 18px; margin: 3px 0 0; cursor: pointer; }
 .optionDescription, .optionReason, .optionCaution { display: block; color: var(--intake-muted); font-size: 13px; margin-top: 6px; white-space: pre-wrap; }
 .optionCaution { color: #775d31; }
+.ideaOption { min-width: 0; border: 1px solid var(--intake-line); border-radius: 7px; overflow: hidden; }
+.ideaOption[data-selected="true"] { border-color: var(--intake-blue); background: #f3f7fe; }
+.ideaOption .option { border: 0; border-radius: 0; background: transparent; }
+.ideaOption > .disclosure { padding: 0 16px 8px; }
+.disclosure { margin-top: 8px; min-width: 0; }
+.disclosure > summary { min-height: 44px; padding: 10px 0; cursor: pointer; font-size: 14px; font-weight: 600; color: #245fc2; }
+.disclosure > p { white-space: pre-wrap; font-size: 14px; }
+.conversationText { min-width: 0; }
+.conversationText > p { white-space: pre-wrap; }
 .customToggle { display: flex; align-items: flex-start; gap: 9px; padding: 18px 0; font-size: 14px; cursor: pointer; }
 .answerField { min-width: 0; }
 .page textarea, .numberField { width: 100%; border: 1px solid #c9d0d9; border-radius: 7px; background: white; color: var(--intake-ink); }
@@ -116,6 +127,15 @@
 .aiReply p { white-space: pre-wrap; line-height: 1.85; }
 .review, .notes, .history { margin-top: 32px; padding-top: 24px; border-top: 1px solid var(--intake-line); }
 .review h3 > span, .history summary > span { color: var(--intake-muted); font-size: 12px; margin-left: 5px; }
+.review h3 { margin: 14px 0 6px; font-size: 20px; }
+.reviewRemaining { font-size: 13px; color: var(--intake-muted); }
+.extractionTurn { padding: 18px 0 0; }
+.extractionTurn > strong { display: block; margin-bottom: 8px; font-size: 14px; color: var(--intake-green); }
+.extractionTurn > p, .extractionTurn .conversationText { font-size: 17px; line-height: 1.8; }
+.extractionTurn .overwrite { margin-top: 16px; }
+.extractionTurn .overwrite p { font-size: 14px; margin-bottom: 10px; white-space: pre-wrap; }
+.extractionTurn blockquote { margin: 0; padding: 8px 12px; border-left: 2px solid var(--intake-line); white-space: pre-wrap; color: var(--intake-muted); }
+.review .formActions { justify-content: flex-start; margin-top: 16px; }
 .candidateList { display: grid; gap: 12px; }
 .extractedCandidate { padding: 15px; border: 1px solid var(--intake-line); border-radius: 7px; background: white; }
 .candidateSelection { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; font-size: 14px; }
@@ -145,18 +165,23 @@
 .notes li small { color: var(--intake-muted); }
 .noteMeta { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; color: var(--intake-muted); font-size: 11px; }
 .noteMeta [data-failed="true"] { color: var(--intake-danger); }
-.summaryHeading h2 { font-size: 20px; margin-bottom: 5px; }
-.summaryHeading > p:last-child { color: var(--intake-muted); font-size: 12px; }
+.summaryHeading h2 { font-size: 22px; font-weight: 700; line-height: 1.45; margin-bottom: 6px; }
+.summaryHeading > p:last-child { color: var(--intake-muted); font-size: 13px; }
+.summaryDetails { border-bottom: 1px solid var(--intake-line); padding: 12px 0; }
+.summaryDetails > summary { padding: 10px 0; min-height: 44px; cursor: pointer; font-size: 14px; font-weight: 600; }
+.summaryDetails[open] > summary { color: #245fc2; }
 .original { padding: 22px 0; border-bottom: 1px solid var(--intake-line); }
 .original h3 { color: var(--intake-green); font-size: 12px; margin-bottom: 8px; }
 .original p { white-space: pre-wrap; font-size: 14px; }
 .summaryFields { margin: 10px 0 0; }
 .summaryFields > div { padding: 12px 0; border-bottom: 1px solid var(--intake-line); }
-.summaryFields dt { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 9px; min-height: 32px; font-size: 12px; color: var(--intake-muted); }
-.summaryFields dt > span { font-weight: 600; }
-.summaryFields dt small { font-size: 10px; font-weight: 400; }
+.summaryFields dt { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 9px; min-height: 32px; font-size: 13px; color: #4d5a6b; }
+.summaryFields dt > span { font-weight: 700; }
+.summaryFields dt small { font-size: 11px; font-weight: 600; color: #42614f; }
+.summaryFields dt small[data-basis="proposal"] { color: #895c19; }
+.summaryFields dt small[data-basis="unknown"] { color: #697381; }
 .summaryFields dt .iconButton { width: 32px; height: 32px; margin-left: auto; }
-.summaryFields dd { margin: 4px 0 0; font-size: 14px; white-space: pre-wrap; }
+.summaryFields dd { margin: 4px 0 0; font-size: 15px; line-height: 1.65; font-weight: 500; white-space: pre-wrap; }
 .financial { padding: 22px 0; border-bottom: 1px solid var(--intake-line); }
 .financial h3 { font-size: 13px; }
 .financial p { font-size: 12px; color: var(--intake-muted); white-space: pre-wrap; line-height: 1.8; }
@@ -217,6 +242,11 @@
 .chatQuestion .formActions { margin-top: 10px; justify-content: flex-start; }
 .chatQuestion .unknownButton { flex: 0 0 auto; min-height: 44px; padding: 10px 16px; border: 1px solid #e3e9f1; border-radius: 8px; background: #f7f9fc; color: #546277; font-size: 14px; font-weight: 500; transition: background .16s, border-color .16s; }
 .chatQuestion .unknownButton:hover:not(:disabled) { background: #edf3fc; border-color: #c5d6ed; }
+.unknownChoice { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; width: 100%; min-height: 54px; margin-top: 8px; padding: 10px 13px; border: 1px solid #d8e0e9; border-radius: 8px; background: #f8fafc; color: #34435a; text-align: left; }
+.unknownChoice strong { font-size: 14px; font-weight: 600; }
+.unknownChoice small { color: var(--intake-muted); font-size: 12px; }
+.unknownChoice[aria-pressed="true"], .ksicChip[aria-pressed="true"] { border-color: #7daaf0; background: #edf4ff; }
+.suggestionReason { margin-bottom: 4px !important; color: #526377; font-size: 13px; line-height: 1.6; }
 .industrySuggestion { margin: 2px 0 8px; }
 .suggestedIndustry { display: flex; align-items: center; gap: 10px; min-height: 52px; padding-block: 8px 16px; color: #2868ce; }
 .suggestedIndustry svg { flex-shrink: 0; }
@@ -237,8 +267,29 @@
 .composerModes button[aria-pressed="true"] { color: #276bda; font-weight: 600; }
 .composerShell { padding: 8px 10px; border: 1px solid #dce4ee; border-radius: 8px; background: white; box-shadow: 0 3px 16px #24354b04; transition: border-color .18s, box-shadow .18s; }
 .composerShell:focus-within { border-color: #8baed6; box-shadow: 0 0 0 3px #3182f60b; }
-.composerContext { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 4px 5px 2px; color: #49698f; font-size: 11px; }
+.composerContext { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; padding: 4px 5px 2px; color: #315c95; font-size: 12px; font-weight: 600; }
 .composerContext span { color: #8491a1; }
+.composerSelection { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px; margin-bottom: 6px; border-left: 3px solid var(--intake-blue); background: #edf4ff; color: #253e64; }
+.composerSelection > span { min-width: 0; overflow-wrap: anywhere; font-size: 15px; font-weight: 600; }
+.composerSelection .iconButton { flex-shrink: 0; }
+.mention { margin: 18px 0; }
+.mention blockquote { margin: 0 0 12px; padding: 12px 16px; border-left: 3px solid #4c8b70; color: #425349; background: #f1f7f3; white-space: pre-wrap; overflow-wrap: anywhere; }
+.mention > p { margin: 12px 0; font-size: 16px; line-height: 1.6; }
+.undecidedHelp { margin-top: 14px; color: #405169; }
+.undecidedHelp summary { cursor: pointer; font-size: 14px; font-weight: 600; padding: 8px 0; }
+.undecidedHelp > p { margin: 8px 0 14px; line-height: 1.7; }
+.resumeNotice { display: flex; align-items: flex-start; gap: 12px; margin: 20px 0; padding: 12px 0; border-block: 1px solid #e3e8e6; color: #3d6150; }
+.resumeNotice p { flex: 1; margin: 0; line-height: 1.7; overflow-wrap: anywhere; }
+.resumeNotice button { flex-shrink: 0; }
+.updateNotice { margin: 20px 0; padding: 14px 0 14px 14px; border-left: 3px solid #cc9c37; }
+.updateNotice > p { margin: 8px 0; font-size: 15px; line-height: 1.7; }
+.updateNotice > small { color: #637084; line-height: 1.6; }
+.direction { padding: 16px 0; border-block: 1px solid var(--intake-line); margin: 16px 0; }
+.direction h3 { margin: 0 0 8px; font-size: 17px; }
+.direction h4 { margin: 16px 0 8px; font-size: 14px; }
+.complete .direction p { color: var(--intake-ink); font-size: 16px; line-height: 1.65; margin-bottom: 12px; }
+.direction .eyebrow, .direction h3 small { font-size: 12px; font-weight: 500; color: var(--intake-muted); }
+.nextAction { margin-top: 18px; padding-left: 12px; border-left: 3px solid var(--intake-green); }
 .composerRow { display: flex; align-items: flex-end; gap: 10px; }
 .composerRow textarea { flex: 1; min-width: 0; min-height: 44px; max-height: 128px; padding: 10px 5px; resize: none; border: 0; border-radius: 0; background: transparent; font-size: 16px; line-height: 24px; outline: none; box-shadow: none; }
 .composerRow textarea:focus-visible { outline: none; }
@@ -391,12 +442,15 @@
 .nextStep { display: grid; gap: 8px; }
 .nextStep[data-active] { padding: 14px; border: 2px solid var(--intake-blue); border-radius: 14px; background: #f3f7ff; box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); animation: intake-next-pulse 2.4s ease-in-out 3; }
 .nextStep button, .nextStep a { width: 100%; margin-bottom: 0; }
-/* 다음 단계 버튼과 보조 버튼(상세 질문 추가)을 한 줄에 둔다. 보조 버튼이 없으면 한 칸을 다 쓴다. */
+/* 마무리 선택지는 넓은 화면에서 나란히, 좁은 화면에서는 세로로 둔다. */
 .nextStepRow { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 10px; }
 .nextStepRow > :only-child { grid-column: 1 / -1; }
 .nextStepRow button, .nextStepRow a { padding-inline: 10px; line-height: 1.35; white-space: normal; }
 .nextStepRow .secondaryButton { background: #fff; }
+@media (max-width: 400px) { .nextStepRow { grid-template-columns: minmax(0, 1fr); } }
 .complete .nextStep { margin-top: 14px; }
+.complete .nextStep[data-active] { padding: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none; animation: none; }
+.complete .nextStepLabel { padding: 0; border-radius: 0; background: transparent; color: var(--intake-blue); font-size: 14px; }
 /* 답변 수정하기: 요약이 따로 열리는 모바일에서만 보인다(PC는 요약이 옆에 있다). */
 .editLink { display: none; }
 .nextStepLabel { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--intake-blue); color: #fff; font-size: 12px; font-weight: 700; }
@@ -404,10 +458,13 @@
 @keyframes intake-next-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); } 50% { box-shadow: 0 0 0 9px rgba(45, 108, 223, .04); } }
 
 /* AI 작업 예상 진행률 게이지 */
-.jobProgress { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--intake-line); border-radius: 12px; background: #fff; }
+.jobProgress { display: grid; gap: 14px; padding: 20px 0; border-block: 1px solid var(--intake-line); background: #fff; }
 .jobProgressTitle { display: flex; align-items: center; gap: 8px; color: #2b3340; font-size: 13px; font-weight: 600; }
-.jobProgressTitle b { margin-left: auto; color: var(--intake-blue); font-size: 15px; font-variant-numeric: tabular-nums; }
+.jobProgressTitle b { margin-left: auto; flex-shrink: 0; min-width: 3ch; color: var(--intake-blue); font-size: 18px; font-variant-numeric: tabular-nums; }
 .jobProgressBar { height: 8px; border-radius: 999px; background: #e6ebf2; overflow: hidden; }
 .jobProgressBar span { display: block; height: 100%; border-radius: inherit; background: var(--intake-blue); transition: width .5s linear; }
-.jobProgressMeta, .jobProgressNote { display: block; color: var(--intake-muted); font-size: 12px; line-height: 1.6; }
+.jobProgressBar .indeterminateProgress { width: 35%; animation: intakePending 1.7s ease-in-out infinite alternate; }
+@keyframes intakePending { from { transform: translateX(0); } to { transform: translateX(180%); } }
+@media (prefers-reduced-motion: reduce) { .jobProgressBar .indeterminateProgress { animation: none; } }
+.jobProgressMeta, .jobProgressNote { display: block; color: #526071; font-size: 14px; line-height: 1.7; overflow-wrap: anywhere; }
 @media (prefers-reduced-motion: reduce) { .withSummary { transition: none; } .nextStep[data-active] { animation: none; } .jobProgressBar span { transition: none; } }
