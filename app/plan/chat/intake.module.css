@@ -496,3 +496,11 @@
 .liveCaret { display: inline-block; width: 7px; height: 1em; margin-left: 2px; vertical-align: -2px; background: var(--intake-blue); animation: intake-caret 1s steps(1) infinite; }
 @keyframes intake-caret { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .liveCaret { animation: none; } }
+
+/* 이 사업에 맞춘 AI 추천(시험 기능): 업종 칩과 구분되도록 점선 테두리와 보라 계열로 표시한다. */
+.suggestionStep { margin-bottom: 14px; padding: 12px 12px 10px; border: 1px dashed #c9c3f0; border-radius: 14px; background: #faf9ff; }
+.suggestionStep .stepLegend { color: #5b4fc4; }
+.suggestionStep .stepLegend > span { color: var(--intake-muted); }
+.suggestionChip { border-color: #ddd8f7; background: #fff; }
+.suggestionChip:hover:not(:disabled) { background: #f3f1ff; border-color: #bdb3f0; }
+.suggestionChip[aria-pressed="true"] { border-color: #8f80e6; background: #efecff; color: #4b3fb3; }
