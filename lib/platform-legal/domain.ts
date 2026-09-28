@@ -60,7 +60,7 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   mailOrderStatus: "preparing",
   mailOrderSalesNumber: "",
   mailOrderExemptionReason: "",
-  internetDomainName: "today-startup.rena35200.workers.dev",
+  internetDomainName: "oneulstart.com",
   hostServerLocation: "Cloudflare 글로벌 네트워크",
   businessAddress: "",
   supportEmail: "",

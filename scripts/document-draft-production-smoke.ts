@@ -14,7 +14,7 @@ import {
 } from "../lib/project-repository";
 import { generateStageArtifact } from "../lib/stage-generator";
 
-const baseUrl = (process.env.SMOKE_BASE_URL?.trim() || "https://today-startup.rena35200.workers.dev").replace(/\/$/, "");
+const baseUrl = (process.env.SMOKE_BASE_URL?.trim() || "https://oneulstart.com").replace(/\/$/, "");
 const guestToken = randomBytes(32).toString("base64url");
 const guestTokenHash = hashIdentityToken(guestToken);
 const cookie = `${GUEST_COOKIE}=${guestToken}`;
