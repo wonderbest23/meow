@@ -41,9 +41,9 @@ assert.equal(evaluatePlatformLaunchReadiness(complete, { authConfigured: false, 
 
 const business = createLegalDocument("business", complete);
 assert.ok(business.sections[0].items?.some((item) => item.includes("123-45-67890")));
-assert.ok(business.sections.some((section) => section.items?.some((item) => item.includes("149,000원"))));
+assert.ok(business.sections.some((section) => section.items?.some((item) => item.includes("49,000원"))));
 const businessText = JSON.stringify(business);
-for (const expected of ["신용·체크카드", "나이스페이먼츠", "59,000원", "9,900원", "4,900원", "충전일부터 1년 유효"]) assert.ok(businessText.includes(expected), expected);
+for (const expected of ["신용·체크카드", "나이스페이먼츠", "49,000원", "69,000원", "사업계획서 + 홈페이지: 99,000원", "59,000원", "9,900원", "4,900원", "충전일부터 1년 유효"]) assert.ok(businessText.includes(expected), expected);
 const ai = createLegalDocument("ai", complete);
 assert.ok(ai.sections.some((section) => section.items?.some((item) => item.includes("미국, 대한민국"))));
 const privacy = createLegalDocument("privacy", complete);

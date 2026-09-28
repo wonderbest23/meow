@@ -8,7 +8,7 @@ import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
-import { REGEN_PACK_COUNT } from "../../../lib/payments/domain";
+import { BUNDLE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_COUNT } from "../../../lib/payments/domain";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -22,6 +22,7 @@ const SUPPLY: Record<string, string> = {
   plan: "결제가 승인되면 바로 이 문서의 전체 섹션이 열리고 이용이 시작됩니다.",
   homepage: "결제가 승인되면 바로 홈페이지 수정·공개 기능이 열리고 이용이 시작됩니다.",
   regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해집니다.`,
+  bundle: "결제가 승인되면 바로 이 문서의 전체 섹션과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작됩니다.",
   domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작됩니다.",
   tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 사용할 수 있습니다.",
 };
@@ -51,8 +52,11 @@ export default function PlanCheckout() {
   /* 홈페이지 부가 상품 — 도메인 연결+호스팅 1년 / AI 수정 토큰. 둘 다 홈페이지가 열린 뒤에만 */
   const isDomain = params.get("product") === "domain";
   const isTokens = params.get("product") === "tokens";
-  const product = isRegen ? "regen" : isHomepage ? "homepage" : isDomain ? "domain" : isTokens ? "tokens" : "plan";
+  /* 주력 묶음 — 계획서 + 홈페이지를 한 번에 연다 */
+  const isBundle = params.get("product") === "bundle";
+  const product = isRegen ? "regen" : isHomepage ? "homepage" : isDomain ? "domain" : isTokens ? "tokens" : isBundle ? "bundle" : "plan";
   const COPY: Record<string, { title: string; desc: string; price: number; unit: string }> = {
+    bundle: { title: "사업계획서 + 홈페이지 함께 열기", desc: `이 문서 전체 섹션과 PDF·Word 내려받기, 그리고 계획서로 만든 홈페이지의 수정·공개가 함께 열립니다. 따로 사면 ${(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원이에요.`, price: BUNDLE_PRODUCT_AMOUNT, unit: "문서 1부 + 홈페이지 1개 · 1회 결제" },
     domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결합니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.", price: 59000, unit: "홈페이지 1개 · 1년" },
     tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’ 처럼 말하면 AI 가 페이지 글을 고칩니다. 20만 토큰은 페이지 전체 고치기 25회 안팎입니다.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
   };
@@ -196,6 +200,7 @@ export default function PlanCheckout() {
           )}
         </p>
 
+        {(product === "plan" || product === "homepage" || product === "bundle") && <p className={styles.launchTag}>{LAUNCH_PRICE_LABEL}</p>}
         {extra ? (
           <div className={styles.price}>
             {extra.price.toLocaleString("ko-KR")}원
@@ -203,13 +208,14 @@ export default function PlanCheckout() {
           </div>
         ) : isHomepage ? (
           <div className={styles.price}>
-            {(homepageInfo?.price ?? 149000).toLocaleString("ko-KR")}원
+            {(homepageInfo?.price ?? HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원
             <span>홈페이지 1개 · 1회 결제 · 부가세 포함</span>
           </div>
         ) : info ? (
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
             <span>문서 1부 · 1회 결제 · 부가세 포함</span>
+            {!info.paid && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small> →</Link>}
           </div>
         ) : (
           /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */

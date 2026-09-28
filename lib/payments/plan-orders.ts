@@ -4,15 +4,16 @@
 
 import { randomUUID } from "node:crypto";
 import { getServerSupabase } from "../persistence";
-import { PACKAGE_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_NAME, TERMS_VERSION, DOMAIN_PRODUCT_NAME, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_DAYS, TOKEN_PACK_NAME, TOKEN_PACK_AMOUNT, TOKEN_PACK_TOKENS } from "./domain";
+import { PACKAGE_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, REGEN_PACK_AMOUNT, REGEN_PACK_NAME, TERMS_VERSION, DOMAIN_PRODUCT_NAME, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_DAYS, TOKEN_PACK_NAME, TOKEN_PACK_AMOUNT, TOKEN_PACK_TOKENS } from "./domain";
 
 /** 파는 것 — 계획서 / 홈페이지 / 다시 생성 묶음 / 도메인 연결+호스팅 / AI 수정 토큰 */
-export type PlanProduct = "plan" | "homepage" | "regen" | "domain" | "tokens";
+export type PlanProduct = "plan" | "homepage" | "bundle" | "regen" | "domain" | "tokens";
 
 export function productAmount(product: PlanProduct, planType: string): number {
   switch (product) {
     case "regen": return REGEN_PACK_AMOUNT;
     case "homepage": return HOMEPAGE_PRODUCT_AMOUNT;
+    case "bundle": return BUNDLE_PRODUCT_AMOUNT;
     case "domain": return DOMAIN_PRODUCT_AMOUNT;
     case "tokens": return TOKEN_PACK_AMOUNT;
     default: return planPrice(planType);
@@ -22,6 +23,7 @@ export function productName(product: PlanProduct): string {
   switch (product) {
     case "regen": return REGEN_PACK_NAME;
     case "homepage": return HOMEPAGE_PRODUCT_NAME;
+    case "bundle": return BUNDLE_PRODUCT_NAME;
     case "domain": return DOMAIN_PRODUCT_NAME;
     case "tokens": return TOKEN_PACK_NAME;
     default: return PLAN_PRODUCT_NAME;
@@ -45,15 +47,15 @@ export const PLAN_PRODUCT_AMOUNT = PACKAGE_AMOUNT;
  * 여기 없는 유형(과거 데이터)은 기본가로 판다.
  */
 export const PLAN_TYPE_PRICING: Record<string, number> = {
-  "간단 · 사업계획서": 149_000,
-  "내부용 · 사업계획서": 149_000,
-  "창업 초기 · 재무 예측": 149_000,
-  "창업 초기 · 사업계획서": 149_000,
-  "성장·확장 · 사업계획서": 149_000,
-  "정밀 · 재무 모델": 149_000,
-  "정부지원 · PSST 사업계획서": 149_000,
+  "간단 · 사업계획서": PACKAGE_AMOUNT,
+  "내부용 · 사업계획서": PACKAGE_AMOUNT,
+  "창업 초기 · 재무 예측": PACKAGE_AMOUNT,
+  "창업 초기 · 사업계획서": PACKAGE_AMOUNT,
+  "성장·확장 · 사업계획서": PACKAGE_AMOUNT,
+  "정밀 · 재무 모델": PACKAGE_AMOUNT,
+  "정부지원 · PSST 사업계획서": PACKAGE_AMOUNT,
 };
-export const PLAN_DEFAULT_PRICE = 149_000;
+export const PLAN_DEFAULT_PRICE = PACKAGE_AMOUNT;
 
 export function planPrice(planType?: string): number {
   return (planType && PLAN_TYPE_PRICING[planType]) || PLAN_DEFAULT_PRICE;
@@ -233,9 +235,9 @@ export async function paidPlanEntitlement(userId: string): Promise<PaidPlanEntit
   if (!supabase) return { allAccess: true, planIds: new Set() }; // 로컬 데모에서는 잠그지 않는다
   const { data, error } = await supabase
     .from("payment_orders")
-    .select("opportunity")
+    .select("opportunity, order_name")
     .eq("owner_id", userId)
-    .eq("order_name", PLAN_PRODUCT_NAME)
+    .in("order_name", [PLAN_PRODUCT_NAME, BUNDLE_PRODUCT_NAME])
     .eq("status", "done")
     .limit(200);
   if (error) throw error;
@@ -244,7 +246,8 @@ export async function paidPlanEntitlement(userId: string): Promise<PaidPlanEntit
   for (const row of data ?? []) {
     const planId = (row.opportunity as { planId?: string } | null)?.planId;
     if (planId) planIds.add(String(planId));
-    else allAccess = true;
+    // 과거 전체 이용권(planId 없는 계획서 주문)만 전부 연다. 묶음 주문은 항상 한 문서용이다.
+    else if (row.order_name === PLAN_PRODUCT_NAME) allAccess = true;
   }
   return { allAccess, planIds };
 }
@@ -262,7 +265,7 @@ export async function paidHomepagePlanIds(userId: string): Promise<Set<string>> 
     .from("payment_orders")
     .select("opportunity")
     .eq("owner_id", userId)
-    .eq("order_name", HOMEPAGE_PRODUCT_NAME)
+    .in("order_name", [HOMEPAGE_PRODUCT_NAME, BUNDLE_PRODUCT_NAME])
     .eq("status", "done")
     .limit(200);
   if (error) throw error;
