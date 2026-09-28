@@ -110,6 +110,14 @@ async function main() {
       answer(f, "capacity", "대표자 혼자 / 하루 5건");
       assert.ok(intakeFinancialReference(f.coach, f.intake).includes("실적 판매량이 처리량"), "actual sales above capacity is flagged");
     });
+    check("per-unit variable cost uses the same basis as the price question just before it", () => {
+      const f = fixture("operating");
+      answer(f, "industry", "food_beverage");
+      const questions = intakeQuestions(f.intake, f.coach);
+      const price = questions.find(question => question.id === "price")!, unitCost = questions.find(question => question.id === "structure.unitCost")!;
+      assert.equal(unitCost.period, price.period, `${price.period} vs ${unitCost.period}`);
+      assert.ok(unitCost.prompt.startsWith(`${price.period}에 들어가는 변동비`), unitCost.prompt);
+    });
     check("startup core answers alone produce the scenario; capacity is labelled as the maximum", () => {
       const f = fixture("startup");
       answer(f, "business", "직장인 프로필 촬영");
