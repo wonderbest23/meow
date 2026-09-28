@@ -75,3 +75,12 @@
 .page :global(.account-payments) table { width:100%; font-size:13px; table-layout:fixed; }.page :global(.account-payments) :is(td,th) { padding:16px 8px; overflow-wrap:anywhere; }
 @media(max-width:600px) { .auth { margin:32px auto 56px; }.auth h1 { font-size:26px; }.page .auth > form { gap:18px; }.page :global(.account-dashboard) { width:calc(100% - 40px); margin:28px auto 80px; }.page :global(.account-welcome) { flex-wrap:wrap; }.page :global(.account-welcome) h1 { font-size:25px; }.page :global(.account-projects) header { flex-wrap:wrap; gap:12px; }.page :global(.account-plan-list) > button { padding:16px; }.loading { margin:48px auto; } }
 @media(prefers-reduced-motion:reduce) { .page * { animation:none!important; transition:none!important; } }
+
+/* 링크 로그인 확인: 어느 계정인지 보여 주고 사용자가 확인해야 로그인한다 */
+.linkConfirm { display: grid; gap: 14px; text-align: center; }
+.linkConfirm h1 { margin: 0; font-size: 24px; line-height: 1.4; word-break: keep-all; }
+.linkAccount { margin: 0; padding: 14px 16px; border: 1px solid #e3e9f1; border-radius: 12px; background: #f7f9fc; font-size: 16px; font-weight: 700; color: #191f28; overflow-wrap: anywhere; }
+.linkAccount small { display: block; margin-top: 4px; font-size: 12px; font-weight: 500; color: #6b7684; }
+.linkNote { margin: 0; font-size: 13px; line-height: 1.65; color: #4e5968; word-break: keep-all; }
+.linkCancel { min-height: 48px; border: 1px solid #d5dce6; border-radius: 10px; background: #fff; color: #333d4b; font-size: 15px; font-weight: 600; cursor: pointer; }
+.linkCancel:disabled { opacity: .6; cursor: not-allowed; }

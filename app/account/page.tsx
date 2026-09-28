@@ -125,6 +125,11 @@ export default function AccountPage() {
   const [privacy, setPrivacy] = useState(false);
   const [aiNotice, setAiNotice] = useState(false);
   const [recoveryTokens, setRecoveryTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
+  /*
+   * 링크(이메일 인증·카카오)로 돌아온 로그인 정보. 바로 로그인하지 않고 어느 계정인지 보여 준 뒤 사용자가 확인해야 로그인한다.
+   * 남이 자기 로그인 정보를 담아 보낸 링크를 누르면 그 사람 계정으로 로그인되고 내 게스트 기획이 넘어가는 일을 막는다.
+   */
+  const [linkSignIn, setLinkSignIn] = useState<{ accessToken: string; refreshToken: string; email: string | null; provider: string | null } | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [messageError, setMessageError] = useState(false);
@@ -247,15 +252,14 @@ export default function AccountPage() {
       setRecoveryTokens({ accessToken, refreshToken }); setMode("reset"); setSession({ authenticated: false, email: null, projects: [] }); return;
     }
     if (accessToken && refreshToken) {
-      void prepareAccountSignIn().then(() => fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken, refreshToken }) }))
-        .then((response) => payload(response))
-        .then(() => {
-          const raw = safeNextPath(new URL(window.location.href).searchParams.get("next"));
-          if (raw) { window.location.assign(raw); return; }
-          /* 이메일 확인·카카오 로그인 둘 다 이 길로 돌아온다 — 어느 쪽에도 맞는 말로 */
-          window.history.replaceState({}, "", "/account"); setMessage("로그인되었습니다."); return loadSession();
-        })
-        .catch((error) => { setMessageError(true); setMessage(error.message); setSession({ authenticated: false, email: null, projects: [] }); });
+      // 주소창의 토큰은 바로 지운다(뒤로 가기·공유로 새지 않게). 토큰은 확인 전까지 메모리에만 둔다.
+      const url = new URL(window.location.href); url.hash = "";
+      window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+      setSession({ authenticated: false, email: null, projects: [] });
+      void fetch("/api/auth/session/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken }) })
+        .then((response) => payload(response) as Promise<{ email?: string | null; provider?: string | null }>)
+        .then((account) => setLinkSignIn({ accessToken, refreshToken, email: account.email ?? null, provider: account.provider ?? null }))
+        .catch((error) => { setMessageError(true); setMessage(error.message); });
       return;
     }
     void loadSession()
@@ -285,6 +289,27 @@ export default function AccountPage() {
       // 저장소를 못 쓰면 기본값(유지 켬)으로 둔다
     }
   }, []);
+
+  /** 확인 화면에서 "이 계정으로 로그인"을 눌렀을 때만 세션을 만들고 게스트 기획을 옮긴다. */
+  const confirmLinkSignIn = () => {
+    if (!linkSignIn) return;
+    setBusy(true); setMessage(""); setMessageError(false);
+    void prepareAccountSignIn().then(() => fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken: linkSignIn.accessToken, refreshToken: linkSignIn.refreshToken }) }))
+      .then((response) => payload(response))
+      .then(() => {
+        setLinkSignIn(null);
+        const raw = safeNextPath(new URL(window.location.href).searchParams.get("next"));
+        if (raw) { window.location.assign(raw); return; }
+        /* 이메일 확인·카카오 로그인 둘 다 이 길로 돌아온다 — 어느 쪽에도 맞는 말로 */
+        window.history.replaceState({}, "", "/account"); setMessage("로그인되었습니다."); return loadSession();
+      })
+      .catch((error) => { setMessageError(true); setMessage(error.message); setLinkSignIn(null); })
+      .finally(() => setBusy(false));
+  };
+  const cancelLinkSignIn = () => {
+    setLinkSignIn(null); setMessageError(false);
+    setMessage("링크로 로그인하지 않았어요. 내 계정이면 아래에서 직접 로그인해 주세요.");
+  };
 
   const valid = useMemo(() => {
     if (mode === "recover") return email.includes("@");
@@ -428,6 +453,17 @@ export default function AccountPage() {
         </section>
       ) : (
         <section className={`${styles.auth} account-auth-shell`}>
+          {linkSignIn ? (
+            <div className={styles.linkConfirm} role="dialog" aria-labelledby="link-confirm-title">
+              <span className={styles.eyebrow}>오늘창업 계정</span>
+              <h1 id="link-confirm-title">이 계정으로 로그인할까요?</h1>
+              <p className={styles.linkAccount}>{linkSignIn.email ?? (linkSignIn.provider === "kakao" ? "카카오 계정" : "이메일 없는 계정")}{linkSignIn.provider && linkSignIn.provider !== "email" ? <small>{linkSignIn.provider === "kakao" ? "카카오" : linkSignIn.provider === "google" ? "구글" : linkSignIn.provider}로 연결된 계정</small> : null}</p>
+              <p className={styles.linkNote}>내 계정이 맞을 때만 로그인하세요. 로그인하면 이 기기에서 작성 중인 기획이 이 계정으로 옮겨집니다. 내가 보낸 적 없는 링크라면 취소해 주세요.</p>
+              <button type="button" className="account-submit" disabled={busy} onClick={confirmLinkSignIn}>{busy ? <><Spinner />로그인하고 있어요</> : "이 계정으로 로그인"}</button>
+              <button type="button" className={styles.linkCancel} disabled={busy} onClick={cancelLinkSignIn}>취소</button>
+              {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
+            </div>
+          ) : (
           <form onSubmit={submit} aria-busy={busy}>
             {/*
               로그인에 필요한 건 이메일·비밀번호뿐이다.
@@ -512,6 +548,7 @@ export default function AccountPage() {
             {/* 아래는 한 가지만 남긴다 — '비밀번호 찾기'는 위 줄로 올라갔다 */}
             <footer>{mode === "login" ? <span>처음이신가요? <button type="button" onClick={() => { setMode("register"); setMessage(""); }}>회원가입</button></span> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>
           </form>
+          )}
         </section>
       )}
     </main>
