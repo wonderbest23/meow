@@ -1,7 +1,19 @@
 import { z } from "zod";
 
 const sentence = z.string().min(1).max(600);
+/*
+ * 첫 화면 문구 — 설계가 끝났을 때 '아 이 사업!' 하고 한눈에 알아보게 하는 한 줄과 이름 후보.
+ * 사용자가 처음 적은 문장이 그대로 사업명이 되면 결과물을 봐도 무슨 사업인지 와닿지 않았다.
+ */
+export const businessIdentitySchema = z.object({
+  headline: z.string().min(1).max(40),
+  pitch: z.string().min(1).max(120),
+  names: z.array(z.object({ name: z.string().min(1).max(20), why: z.string().min(1).max(80) })).min(2).max(3),
+});
+export type BusinessIdentity = z.infer<typeof businessIdentitySchema>;
 export const businessDesignSchema = z.object({
+  /** 예전에 저장한 설계에는 없다 */
+  identity: businessIdentitySchema.optional(),
   approach: z.enum(["new-concept", "known-business", "operating-improvement"]),
   startingPlan: z.object({
     scope: sentence,
@@ -14,6 +26,8 @@ export const businessDesignSchema = z.object({
   nextAction: z.object({ action: sentence, doneWhen: sentence, usableText: z.string().min(1).max(1200) }),
 });
 
+/** 새로 만드는 설계는 첫 화면 문구를 반드시 채운다 (저장된 옛 설계를 읽는 스키마와 분리) */
+export const generatedBusinessDesignSchema = z.object({ identity: businessIdentitySchema, ...businessDesignSchema.omit({ identity: true }).shape });
 export type BusinessDesign = z.infer<typeof businessDesignSchema>;
 export type SavedBusinessDesign = BusinessDesign & { sourceRevision: number; status: "proposal" };
 export type IdeaOrigin = { text: string; messageId: string };
@@ -21,6 +35,7 @@ export type IdeaOrigin = { text: string; messageId: string };
 /** Show the finalized design, not the earlier conversational draft of the same plan. */
 export function businessDesignReply(design: BusinessDesign): string {
   return [
+    ...(design.identity ? [`${design.identity.headline}\n${design.identity.pitch}`] : []),
     design.startingPlan.scope,
     `이렇게 제안한 이유\n${design.startingPlan.whyThis}`,
     `먼저 해볼 일 하나 · 선택 사항\n${design.nextAction.action}`,
@@ -40,5 +55,9 @@ feasibility는 산술 검사입니다. attention이면 현재 시작안의 제�
 notIncluded에는 당장 제공하지 않는 범위를 적습니다. alternatives는 다른 선택지 1~2개와 단점을 적습니다. 대안을 사용자가 이미 선택한 것처럼 쓰지 않습니다.
 assumptions에는 지불 의사·제작 가능성 등 아직 확인하지 못한 핵심 가정과 구체적인 확인 방법을 씁니다. 확인이 없다는 이유로 초안을 막지 않습니다.
 nextAction은 선택적으로 해볼 행동 하나, 완료 기준, 바로 사용할 소개문구·요청문·작업안 중 하나를 제공합니다. 무조건 고객 5명을 인터뷰하거나 사업자등록을 하라고 요구하지 않습니다.
+identity는 설계 결과 첫 화면에 크게 보이는 문구입니다. 사용자가 읽자마자 "아, 이 사업!" 하고 알아보게 씁니다.
+- headline: 40자 안의 한 줄. 고객이 얻는 변화나 장면을 구체적으로 씁니다. 추상어(혁신·솔루션·플랫폼 등)만 나열하지 않고, 수치·최상급(최고·1위)·보장 표현과 사업명 반복을 쓰지 않습니다.
+- pitch: 120자 안. "[누구]에게 [무엇]을 [어떻게] 제공하는 [사업 형태]" 순서로 사업을 한 문장으로 설명합니다. 사용자가 말한 고객·상품·방식을 그대로 반영합니다.
+- names: 부르기 쉬운 사업명 후보 2~3개(2~10자 권장, 20자 이내)와 짧은 이유. fields.business에 사용자가 정한 상호가 있으면 그 이름을 첫 후보로 둡니다. 유명 브랜드·기존 상표와 같은 이름, 지역명만으로 된 이름은 피합니다.
 모든 design 내용은 AI 제안입니다. 시장 수치·실적·계약·인허가 확인·성공 가능성은 새로 만들지 않습니다. 계산되지 않은 손익·매출 예측도 넣지 않습니다.
 `;

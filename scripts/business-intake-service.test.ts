@@ -354,7 +354,7 @@ async function main() {
       // 화면은 아무것도 하지 않는다(상태 확인 요청 없음). 서버 실행만으로 끝나고 결과가 저장돼 있어야 한다.
       respond = body => {
         assert.equal(body.text?.format?.name, "intake_design");
-        return completion({ approach: "known-business", startingPlan: { scope: "월 구독 커피 패스 50명으로 시작", connectionToVision: "동네 단골 기반 구독 카페", whyThis: "고정 매출을 먼저 확인", notIncluded: ["배달"] },
+        return completion({ identity: { headline: "출근길 커피, 한 달에 한 번 결제로 끝", pitch: "동네 직장인에게 월 구독 커피 패스를 파는 원두 카페", names: [{ name: "커피패스", why: "구독형이라는 게 바로 보임" }, { name: "단골원두", why: "동네 단골 느낌" }] }, approach: "known-business", startingPlan: { scope: "월 구독 커피 패스 50명으로 시작", connectionToVision: "동네 단골 기반 구독 카페", whyThis: "고정 매출을 먼저 확인", notIncluded: ["배달"] },
           alternatives: [{ name: "테이크아웃 전용", scope: "매장 없이 픽업만", tradeoff: "체류 고객을 포기" }], assumptions: [{ statement: "직장인이 월 3만원을 낸다", howToCheck: "사전 예약 20명 모집" }],
           nextAction: { action: "사전 예약 페이지 열기", doneWhen: "20명 예약", usableText: "월 3만원 커피 패스 사전 예약을 받습니다." } });
       };
@@ -363,6 +363,17 @@ async function main() {
       assert.equal(returned.intake.job?.status, "complete");
       assert.equal(returned.coach.design?.status, "proposal");
       assert.equal(returned.coach.design?.startingPlan.scope, "월 구독 커피 패스 50명으로 시작");
+      assert.equal(returned.coach.design?.identity?.headline, "출근길 커피, 한 달에 한 번 결제로 끝");
+      assert.match(returned.intake.job?.reply ?? "", /^출근길 커피/, "the chat reply opens with the headline");
+      // 이름 후보를 고르면 이름만 바뀌고, 정리한 방향은 여전히 현재 입력 기준이다
+      const docRevision = returned.coach.documentRevision;
+      const named = await send(session, { action: "name", value: "  커피패스 " });
+      assert.equal(named.plan.title, "커피패스");
+      assert.equal(named.snapshot.coach.business.name, "커피패스");
+      assert.equal(named.snapshot.coach.documentRevision, docRevision, "renaming does not mark the design or documents stale");
+      assert.equal(named.snapshot.coach.design?.sourceRevision, named.snapshot.coach.documentRevision);
+      await assert.rejects(send(session, { action: "name", value: "가".repeat(41) }), assertIntakeError("name_invalid", 400));
+      await assert.rejects(send(session, { action: "name", value: "   " }), assertIntakeError("name_invalid", 400));
       assert.equal(intakeJobClock(returned.intake.job, Date.now()), null, "a finished job has no running clock");
       const legacy = { ...queued.job!, createdAt: undefined };
       assert.equal(intakeJobClock(legacy, Date.parse(legacy.updatedAt) + 5_000)?.elapsedMs, 5_000, "older records fall back to the last status time");

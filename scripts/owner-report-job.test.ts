@@ -4,6 +4,7 @@ import Module, { createRequire } from "node:module";
 import type { IntakeCommand, IntakeJobRequest } from "../lib/plan-builder/intake-types";
 
 const design = {
+  identity: { headline: "합성 한 줄", pitch: "합성 고객에게 합성 상품을 제공하는 사업", names: [{ name: "합성가게", why: "합성 이유" }, { name: "합성상회", why: "합성 이유" }] },
   approach: "known-business", startingPlan: { scope: "합성 사업안", connectionToVision: "합성 연결", whyThis: "합성 이유", notIncluded: ["실제 검증"] },
   alternatives: [{ name: "합성 대안", scope: "합성 범위", tradeoff: "합성 차이" }], assumptions: [{ statement: "합성 가정", howToCheck: "별도 검증" }],
   nextAction: { action: "합성 행동", doneWhen: "합성 완료", usableText: "합성 문구" },

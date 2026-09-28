@@ -42,7 +42,7 @@ export type IntakeState = {
   ideaTurns?: IdeaTurn[];
   generatedIdeas?: GeneratedIntakeIdea[];
 };
-export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources"] as const;
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name"] as const;
 export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;

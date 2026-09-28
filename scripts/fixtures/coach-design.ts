@@ -2,6 +2,11 @@ import type { BusinessDesign } from "../../lib/plan-builder/coach-design";
 
 export function designFixture(scope = "동네 가게의 대표 메뉴를 촬영하고 사진과 소개문구를 전달하는 작은 상품을 제안합니다."): BusinessDesign {
   return {
+    identity: {
+      headline: "우리 가게 대표 메뉴, 사진 한 장으로 알리기",
+      pitch: "동네 가게 사장님에게 대표 메뉴 사진과 소개문구를 만들어 전달하는 촬영 서비스",
+      names: [{ name: "메뉴한컷", why: "한 장으로 메뉴를 알린다는 뜻" }, { name: "가게사진관", why: "가게 전용 사진관이라는 느낌" }],
+    },
     approach: "known-business",
     startingPlan: {
       scope,

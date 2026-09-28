@@ -487,6 +487,49 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   </div>;
 }
 
+/** 현재 입력 기준으로 만든 설계의 첫 화면 문구. 입력이 바뀌어 설계가 낡았거나 옛 설계면 없다 */
+export function currentIdentity(snapshot: IntakeSnapshot) {
+  const design = snapshot.coach.design;
+  return design && design.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision) ? design.identity : undefined;
+}
+
+/*
+ * '아, 이 사업!' — 설계가 끝나면 무슨 사업인지 한 줄로 크게 보여 주고 이름 후보를 고르게 한다.
+ * 예전에는 처음 적은 문장이 그대로 사업명이 되고 제안 본문만 이어져서, 결과가 좋아도 "이게 뭐지" 싶었다.
+ * 이름을 고르면 사업 이름만 바뀌고(정리한 방향·계획서는 그대로) 이후 만드는 계획서에 그 이름이 들어간다.
+ */
+export function BusinessIdentityHero({ snapshot, disabled, onName, compact = false }: { snapshot: IntakeSnapshot; disabled?: boolean; onName?: (name: string) => void; compact?: boolean }) {
+  const identity = currentIdentity(snapshot);
+  const [custom, setCustom] = useState<string | null>(null);
+  if (!identity) return null;
+  const current = snapshot.coach.business.name;
+  const submitCustom = (event: FormEvent) => { event.preventDefault(); const name = (custom ?? "").replace(/\s+/g, " ").trim(); if (name && onName) { onName(name); setCustom(null); } };
+  return <section className={`${styles.identity} ${compact ? styles.identityCompact : ""}`} aria-label="사업 한 줄 정리">
+    <p className={styles.identityKicker}><Sparkles size={14} aria-hidden="true" />이런 사업, 맞죠? <small>AI 제안</small></p>
+    <h2 className={styles.identityHeadline}>{identity.headline}</h2>
+    <p className={styles.identityPitch}>{identity.pitch}</p>
+    {!compact && onName && <div className={styles.identityNames}>
+      <h3>사업 이름은 이건 어때요?</h3>
+      <div className={styles.identityChoices}>
+        {identity.names.map(item => {
+          const chosen = item.name === current;
+          return <button key={item.name} type="button" aria-pressed={chosen} disabled={disabled || chosen} onClick={() => onName(item.name)}>
+            <strong>{chosen && <Check size={15} aria-hidden="true" />}{item.name}</strong><small>{item.why}</small>
+          </button>;
+        })}
+      </div>
+      {custom === null
+        ? <button type="button" className={styles.textButton} disabled={disabled} onClick={() => setCustom(identity.names.some(item => item.name === current) ? "" : current)}><PencilLine size={15} aria-hidden="true" />직접 정하기</button>
+        : <form className={styles.identityCustom} onSubmit={submitCustom}>
+            <input aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽커피" />
+            <button type="submit" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</button>
+            <button type="button" className={styles.textButton} onClick={() => setCustom(null)}>취소</button>
+          </form>}
+      <small className={styles.identityNote}>지금 이름: <b>{current}</b> · 고른 이름은 앞으로 만드는 계획서에 들어가요. 실제로 쓰기 전에 키프리스(kipris.or.kr)에서 같은 상표가 있는지 확인해 주세요.</small>
+    </div>}
+  </section>;
+}
+
 export function DesignDirection({ snapshot }: { snapshot: IntakeSnapshot }) {
   const design = snapshot.coach.design;
   if (!design || design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
@@ -536,6 +579,7 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
   return <>
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">현재까지 작성한 사업정보</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
     {nextStep && actions}
+    <BusinessIdentityHero snapshot={snapshot} compact />
     {original && <section className={styles.original}><h3>내 사업 구상</h3><ConversationText text={original} /></section>}
     {highlights.length > 0 && <dl className={styles.summaryFields}>{highlights.map(renderField)}</dl>}
     {(remaining.length > 0 || extraAnswers.length > 0) && <details className={styles.summaryDetails} open><summary>다른 답변 보기 ·{remaining.length + extraAnswers.length}개</summary><dl className={styles.summaryFields}>{remaining.map(renderField)}{extraAnswers.map(question => <div key={question.id}><dt><span>{question.label}</span><button type="button" className={styles.iconButton} aria-label={`${question.label} 수정`} title={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={15} /></button></dt><dd><ConversationText text={snapshot.intake.answers[question.id].status === "unknown" ? "아직 정하지 않았어요" : plainText(summaryAnswerText(question, snapshot.intake.answers[question.id].value, snapshot.candidateIdeas)) || plainText(answerText(snapshot.intake.answers[question.id].value)) || "아직 정하지 않았어요"} /></dd></div>)}</dl></details>}

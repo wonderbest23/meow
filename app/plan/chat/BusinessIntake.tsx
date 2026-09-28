@@ -9,7 +9,7 @@ import BusinessAppChrome from "../BusinessAppChrome";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
-import { AnswerHistory, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, DesignDirection, EntryChoices, ExtractionReview, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
+import { AnswerHistory, BusinessIdentityHero, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
@@ -499,8 +499,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview}>
               {replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={blocked} onChange={answer => editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } })} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
                 <ChatSpeaker />
+                {(nextStep === "prepare" || nextStep === "open") && currentIdentity(plan) ? <BusinessIdentityHero snapshot={plan} disabled={blocked} onName={name => void send({ action: "name", value: name })} /> : <>
                 <h2>{nextStep === "design" ? "이제 사업 방향을 정리해 볼까요?" : nextStep === "prepare" ? "사업 방향을 정리했어요" : nextStep === "open" ? "계획서가 준비됐어요" : "사업 하나만 정하면 시작할 수 있어요"}</h2>
                 <p>{nextStep === "design" ? "기본 질문은 끝났어요. 더 보완하는 건 선택이에요." : nextStep === "prepare" ? "아래 제안을 확인하고 계획서로 이어가세요." : nextStep === "open" ? "저장한 계획서를 확인하세요." : refinement?.prompt ?? "이어서 사업 내용을 정해볼까요?"}</p>
+                </>}
                 {(nextStep === "prepare" || nextStep === "open") && <DesignDirection snapshot={plan} />}
                 {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "사업 후보 정하기" : "사업 소개 정하기"}<ArrowRight size={17} aria-hidden="true" /></button>}
                 <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} secondary={detailsButton} />
