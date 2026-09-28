@@ -470,8 +470,8 @@ async function main() {
   summarized.coreComplete = true; summarized.hasDocuments = true;
   summarized.coach.design = { status: "proposal", sourceRevision: 1, approach: "new-concept", startingPlan: { scope: "AI가 제안한 시작 범위", connectionToVision: "구상과의 관계", whyThis: "제안 이유", notIncluded: [] }, alternatives: [], assumptions: [], nextAction: { action: "다음 행동", doneWhen: "완료 기준", usableText: "사용할 문구" } };
   const summary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={summarized} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
-  for (const text of ["현재까지 작성한 사업정보", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "좀 더 개선하기", "1. 사업 방향 정리"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
-  assert.equal((summary.match(/(?:사업 방향 정리하기|계획서 완성하기)<\/button>/g) ?? []).length, 1, "the summary offers one creation step");
+  for (const text of ["현재까지 작성한 사업정보", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "좀 더 개선하기", "data-state=\"current\"><span>1</span>사업 방향 요약"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
+  assert.equal((summary.match(/(?:사업 방향 정리하기|사업계획서 문서 작성하기)<\/button>/g) ?? []).length, 1, "the summary offers one creation step");
   assert.ok(summary.includes(`/plan/document?planId=${id}`), "Existing artifacts stay navigable even during AI jobs");
   // 다음 단계는 한 번에 하나, 한 곳에만: 사업안 만들기 → (사업안이 현재 입력 기준이면) 계획서 만들기 → 계획서 열기.
   const nextSnapshot = (patch: Partial<IntakeSnapshot>, coachPatch: Partial<CoachState>): IntakeSnapshot => ({ ...summarized, hasDocuments: false, ...patch, coach: { ...summarized.coach, ready: true, ...coachPatch } });
@@ -483,25 +483,26 @@ async function main() {
   assert.equal(intakeNextStep(nextSnapshot({ hasDocuments: true }, currentDesign)), "open");
   assert.equal(intakeNextStep(nextSnapshot({}, currentDesign), true), "open");
   assert.equal(intakeNextStep(nextSnapshot({ coreComplete: false }, { design: undefined })), null);
+  const STEP1 = 'data-state="current"><span>1</span>사업 방향 요약';
   const needsDesign = nextMarkup({}, { design: undefined });
-  assert.equal(needsDesign.split("1. 사업 방향 정리").length - 1, 1, "exactly one next step is marked");
-  assert.ok(needsDesign.includes("사업 방향 정리하기</button>") && !needsDesign.includes("계획서 완성하기</button>"), "only the design button shows before a design exists");
-  assert.ok(needsDesign.indexOf("기본 질문 입력 완료") < needsDesign.indexOf("1. 사업 방향 정리") && needsDesign.indexOf("1. 사업 방향 정리") < needsDesign.indexOf("내 사업 구상"), "the next step sits at the top of the summary");
+  assert.equal(needsDesign.split(STEP1).length - 1, 1, "exactly one next step is marked");
+  assert.ok(needsDesign.includes("사업 방향 정리하기</button>") && !needsDesign.includes("문서 작성하기</button>"), "only the design button shows before a design exists");
+  assert.ok(needsDesign.indexOf("기본 질문 입력 완료") < needsDesign.indexOf(STEP1) && needsDesign.indexOf(STEP1) < needsDesign.indexOf("내 사업 구상"), "the next step sits at the top of the summary");
   const needsPlan = nextMarkup({}, currentDesign);
-  assert.ok(needsPlan.includes("이 방향으로 계획서 완성하기</button>") && !needsPlan.includes("사업 방향 정리하기</button>"), "with a current design only the plan document button shows");
+  assert.ok(needsPlan.includes("사업계획서 문서 작성하기</button>") && needsPlan.includes("지금까지 만든 건 사업 방향 요약이에요") && !needsPlan.includes("사업 방향 정리하기</button>"), "with a current design only the plan document button shows");
   const opened = nextMarkup({ hasDocuments: true }, currentDesign);
-  assert.ok(opened.includes("계획서 열기</a>") && !opened.includes("완성하기</button>") && !opened.includes("정리하기</button>"), "after the documents exist the step is opening them");
+  assert.ok(opened.includes("사업계획서 문서 열기</a>") && !opened.includes("작성하기</button>") && !opened.includes("정리하기</button>"), "after the documents exist the step is opening them");
   const staleDocument = nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign);
-  assert.ok(staleDocument.includes("변경 내용으로 계획서 다시 만들기") && staleDocument.includes("이전 계획서 보기"), "an old document is kept and rebuilding is explicit");
+  assert.ok(staleDocument.includes("바뀐 내용으로 사업계획서 다시 작성하기") && staleDocument.includes("이전 계획서 보기"), "an old document is kept and rebuilding is explicit");
   const hiddenActions = nextMarkup({}, { design: undefined }, false);
-  assert.ok(!hiddenActions.includes("1. 사업 방향 정리") && !hiddenActions.includes("좀 더 개선하기"), "when the chat shows the next step the summary shows no buttons");
+  assert.ok(!hiddenActions.includes(STEP1) && !hiddenActions.includes("좀 더 개선하기"), "when the chat shows the next step the summary shows no buttons");
   const notYet = nextMarkup({ coreComplete: false }, { design: undefined });
   assert.ok(!notYet.includes("data-active") && notYet.includes("기본 질문을 마치면 사업 방향"), "nothing is marked before the core questions are done");
   const chatStep = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, { design: undefined })} prepared={false} disabled={false} aiBusy={false} onDesign={noop} onPrepare={noop} secondary={<button type="button">좀 더 개선하기</button>} />);
   assert.match(chatStep, /class="nextStepRow">[\s\S]*사업 방향 정리하기<\/button><button type="button">좀 더 개선하기<\/button><\/div>/, "the details button shares one row with the next step");
   const direction = renderToStaticMarkup(<DesignDirection snapshot={nextSnapshot({}, currentDesign)} />);
   assert.ok(direction.indexOf("다음 행동") < direction.indexOf("<details"), "the optional next action is visible before detailed evidence");
-  for (const text of ["AI 제안 · 검증 전", "선택 사항", "완료 기준", "사용할 문구"]) assert.ok(direction.includes(text));
+  for (const text of ["사업 방향 요약 (AI 제안, 검증 전)", "선택 사항", "완료 기준", "사용할 문구"]) assert.ok(direction.includes(text));
   assert.equal(renderToStaticMarkup(<DesignDirection snapshot={nextSnapshot({}, { ...currentDesign, documentRevision: 6 })} />), "", "stale directions are not shown as current actions");
   assert.equal(renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ coreComplete: false }, {})} prepared={false} disabled={false} aiBusy={false} onDesign={noop} onPrepare={noop} />), "");
   // Legacy timing estimates remain compatible but are not shown as measured progress.

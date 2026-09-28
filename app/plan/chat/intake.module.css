@@ -536,3 +536,17 @@
   .identityChoices button { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: 10px; padding: 11px 12px; }
 }
 @media (prefers-reduced-motion: reduce) { .identityChoices button { transition: none; } }
+
+/* 1단계(사업 방향 요약)와 2단계(사업계획서 문서 작성)를 눈으로 구분한다 */
+.stepper { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; font-weight: 700; color: var(--intake-muted); }
+.stepper li { display: inline-flex; align-items: center; gap: 6px; }
+.stepper li + li::before { content: ""; width: 18px; height: 1px; margin-right: 8px; background: var(--intake-line); }
+.stepper li span, .stepper li svg { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; }
+.stepper li span { border: 1px solid currentColor; }
+.stepper li[data-state="current"] { color: var(--intake-blue); }
+.stepper li[data-state="current"] span { background: var(--intake-blue); border-color: var(--intake-blue); color: #fff; }
+.stepper li[data-state="done"] { color: var(--intake-green); }
+.stepper li[data-state="done"] svg { background: color-mix(in srgb, var(--intake-green) 14%, transparent); padding: 3px; box-sizing: border-box; }
+.guestSaveNote { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--intake-muted); }
+.guestSaveNote a { color: var(--intake-blue); font-weight: 700; }
+.empty > p { max-width: 520px; margin: 0 0 4px; color: var(--intake-muted); line-height: 1.65; word-break: keep-all; }

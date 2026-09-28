@@ -118,7 +118,12 @@ export async function getAuthenticatedUser(): Promise<User | null> {
    */
   if (!refreshToken) return null;
   const refreshed = await auth.auth.refreshSession({ refresh_token: refreshToken });
-  if (!refreshed.data.session || !refreshed.data.user) return null;
+  if (!refreshed.data.session || !refreshed.data.user) {
+    // 로그인이 풀려 '저장한 사업이 없다'로 보이는 원인을 운영 로그에서 추적하려고 남긴다(토큰 값은 남기지 않는다).
+    const failure = refreshed.error as { code?: string; status?: number } | null;
+    console.warn("[auth] session_refresh_failed", JSON.stringify({ code: failure?.code ?? "no_session", status: failure?.status ?? null, hadAccessCookie: !!accessToken }));
+    return null;
+  }
   // 갱신할 때도 처음 선택한 유지 여부를 그대로 따른다
   await setAccountSession(refreshed.data.session, await sessionRemembered());
   return refreshed.data.user;
