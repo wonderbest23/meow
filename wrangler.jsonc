@@ -37,6 +37,10 @@
   "limits": {
     "cpu_ms": 300000
   },
+  // 5분마다: 홈페이지 문의 알림 중 재시도 시각이 된 것·전송 도중 끊긴 것을 다시 보낸다(cloudflare-worker.ts scheduled).
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
   "vars": {
     "OPENAI_MODEL": "gpt-5.6-sol",
     "PAYMENTS_ENABLED": "true",
