@@ -47,7 +47,7 @@ function serializeLink(mode: LinkMode, url: string, sec: number): string {
   return /^(https?:\/\/|tel:|mailto:)/i.test(u) ? u : u ? `https://${u}` : "";
 }
 
-type TokenBalance = { purchased: number; used: number; remaining: number; packSize: number };
+type TokenBalance = { purchased: number; used: number; remaining: number; packSize: number; expiresAt?: string | null };
 
 export function BrainwaveEditor({
   data,
@@ -904,6 +904,8 @@ export function BrainwaveEditor({
               <span>
                 남은 토큰 <b>{ai.balance.remaining.toLocaleString("ko-KR")}</b>
                 {ai.balance.remaining < 2000 ? " — 충전이 필요합니다" : ` (페이지 전체 고치기 약 ${Math.max(0, Math.floor(ai.balance.remaining / 8000))}회)`}
+                {/* 충전일부터 1년 유효 — 먼저 사라지는 충전분의 만료일 */}
+                {ai.balance.remaining > 0 && ai.balance.expiresAt ? ` · ${new Date(ai.balance.expiresAt).toLocaleDateString("ko-KR")}까지 사용` : ""}
               </span>
             ) : <span>토큰 잔액 확인 중…</span>}
             {tokenPayHref ? <a href={tokenPayHref}>토큰 20만 충전 · {ai.packAmount.toLocaleString("ko-KR")}원</a> : null}

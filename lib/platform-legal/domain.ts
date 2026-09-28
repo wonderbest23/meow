@@ -1,5 +1,8 @@
 import { z } from "zod";
-import { CUSTOM_HOMEPAGE_FROM_AMOUNT, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../payments/domain";
+import {
+  CUSTOM_HOMEPAGE_FROM_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT,
+  REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, TOKEN_PACK_AMOUNT, TOKEN_PACK_NAME, TOKEN_PACK_TOKENS, TOKEN_VALIDITY_DAYS,
+} from "../payments/domain";
 
 export const PLATFORM_POLICY_VERSION = "2026-07-23";
 
@@ -68,7 +71,7 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   privacyOfficer: "",
   privacyEmail: "",
   hostingProvider: "Cloudflare, Inc.",
-  policyEffectiveDate: "2026-07-23",
+  policyEffectiveDate: "2026-09-28",
   accountRetention: "회원 탈퇴 시까지 보관하며, 법령상 보존 의무가 있는 정보는 해당 기간 동안 분리 보관합니다.",
   projectRetention: "사용자가 프로젝트를 삭제하거나 회원 탈퇴를 요청할 때까지 보관합니다.",
   infrastructureRecipients: "Supabase, Inc. 및 Cloudflare, Inc.",
@@ -81,9 +84,9 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   overseasTimingAndMethod: "사용자가 인공지능 생성 기능을 실행할 때 암호화된 통신망으로 전송",
   overseasRetention: "텍스트 생성 요청은 저장 옵션을 끄고 전송합니다. 이미지 생성 등 기능별 처리 기준은 다를 수 있으며, 오남용 방지 로그는 각 인공지능 사업자의 기본 정책에 따라 최대 30일 보관될 수 있습니다. 법적 의무가 있으면 더 길어질 수 있습니다.",
   overseasRefusalImpact: "인공지능 처리를 원하지 않으면 해당 생성 기능을 사용하지 않을 수 있습니다. 이 경우 기본 계산·서식 기능은 이용할 수 있지만 맞춤 문장·이미지 생성은 제한됩니다.",
-  refundBeforeSupply: "관리자가 입금을 확인하기 전에는 주문을 취소할 수 있습니다. 이미 입금했더라도 맞춤 결과물 제작이 시작되지 않았다면 입금 사실을 확인한 뒤 전액 환급합니다.",
-  refundAfterSupply: "관리자가 입금을 확인하여 이용자 입력에 맞춘 인공지능 호출과 디지털 결과물 제작이 시작된 뒤에는 생성 비용이 발생하고 제3자에게 재판매할 수 없는 맞춤 결과물이 만들어지므로, 단순 변심에 따른 청약철회와 환불이 제한됩니다. 다만 약정한 핵심 결과물이 제공되지 않았거나 표시·광고 또는 계약 내용과 다르게 제공된 경우, 정상 이용할 수 없는 중대한 하자가 합리적인 기간 안에 고쳐지지 않은 경우와 그 밖에 관계 법령이 보장하는 경우에는 재제공, 일부 환급 또는 전액 환급을 요청할 수 있습니다.",
-  serviceSupplyTiming: "계좌이체 신청 후 관리자가 실제 입금액과 입금자명을 확인하는 시점에 맞춤 디지털 결과물 공급이 시작됩니다. 이때 이용자 입력을 바탕으로 인공지능 호출과 문서·발표자료·판매 페이지 제작을 진행하며, 입금 확인은 운영시간 기준으로 순차 처리합니다.",
+  refundBeforeSupply: "카드 결제는 승인 전까지, 계좌이체는 관리자가 입금을 확인하기 전까지 주문을 취소할 수 있습니다. 이미 결제했더라도 맞춤 결과물 생성이 실제로 시작되지 않았다면 전액 환불합니다. 카드 결제는 승인 취소로, 계좌이체는 입금 사실을 확인한 뒤 환급 계좌로 돌려드립니다.",
+  refundAfterSupply: "카드 결제가 승인되거나 관리자가 입금을 확인하여 이용자 입력에 맞춘 인공지능 호출과 디지털 결과물 제작이 시작된 뒤에는 생성 비용이 발생하고 제3자에게 재판매할 수 없는 맞춤 결과물이 만들어지므로, 단순 변심에 따른 청약철회와 환불이 제한됩니다. 다만 약정한 핵심 결과물이 제공되지 않았거나 표시·광고 또는 계약 내용과 다르게 제공된 경우, 정상 이용할 수 없는 중대한 하자가 합리적인 기간 안에 고쳐지지 않은 경우와 그 밖에 관계 법령이 보장하는 경우에는 재제공, 일부 환급 또는 전액 환급을 요청할 수 있습니다.",
+  serviceSupplyTiming: "신용·체크카드 결제는 NicePay(나이스페이먼츠) 결제 승인 즉시 해당 상품의 제공이 시작됩니다. 계좌이체는 관리자가 실제 입금액과 입금자명을 확인하는 시점에 제공이 시작되며, 입금 확인은 운영시간 기준으로 순차 처리합니다. 제공이 시작되면 이용자 입력을 바탕으로 인공지능 호출과 문서·발표자료·홈페이지 제작을 진행합니다.",
   legalReviewConfirmed: false,
   openAiRegionConfirmed: false,
   infrastructureRegionConfirmed: false,
@@ -194,6 +197,41 @@ export type LegalDocument = {
   sections: LegalSection[];
 };
 
+const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
+const tokenCount = (tokens: number) => `${(tokens / 10_000).toLocaleString("ko-KR")}만`;
+/** 도메인 환불 예시: 3개월 사용 → 12개월 중 9개월분 */
+const DOMAIN_REFUND_EXAMPLE = Math.floor((DOMAIN_PRODUCT_AMOUNT * 9) / 12);
+/** 토큰 환불 예시: 20만 중 12만 남음 */
+const TOKEN_REFUND_EXAMPLE_LEFT = 120_000;
+const TOKEN_REFUND_EXAMPLE = Math.floor((TOKEN_PACK_AMOUNT * TOKEN_REFUND_EXAMPLE_LEFT) / TOKEN_PACK_TOKENS);
+const TOKEN_VALIDITY = TOKEN_VALIDITY_DAYS === 365 ? "1년" : `${TOKEN_VALIDITY_DAYS}일`;
+
+const PAYMENT_METHODS = "신용·체크카드(결제대행: 나이스페이먼츠 NicePay), 카카오뱅크 계좌이체";
+
+const PRODUCT_ITEMS = [
+  `사업계획서(문서 1부): ${won(PACKAGE_AMOUNT)}(부가세 포함)`,
+  `사업계획서 홈페이지 수정·공개: ${won(HOMEPAGE_PRODUCT_AMOUNT)}(부가세 포함, 홈페이지 1개)`,
+  `${DOMAIN_PRODUCT_NAME}: ${won(DOMAIN_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. 도메인 등록비는 별도)`,
+  `${TOKEN_PACK_NAME}: ${won(TOKEN_PACK_AMOUNT)}(부가세 포함, ${tokenCount(TOKEN_PACK_TOKENS)} 토큰, 충전일부터 ${TOKEN_VALIDITY} 유효)`,
+  `다시 생성 ${REGEN_PACK_COUNT}회 추가: ${won(REGEN_PACK_AMOUNT)}(부가세 포함)`,
+];
+
+const DOMAIN_REFUND_ITEMS = [
+  "도메인 연결을 완료하기 전에 요청하면 전액 환불합니다.",
+  "연결을 완료한 날부터 7일 이내에 요청하면 전액 환불합니다.",
+  `그 이후에는 남은 개월 수만큼 월할로 환불합니다. 사용 기간은 결제일부터 계산하며 일부라도 사용한 달은 한 달로 봅니다. 예: 3개월 사용 후 요청 → 12개월 중 9개월분 ${won(DOMAIN_REFUND_EXAMPLE)}.`,
+  "환불 수수료는 받지 않습니다. 환불하면 해당 도메인 연결과 호스팅이 종료됩니다.",
+  "가비아 등 도메인 등록기관에서 이용자가 직접 구매한 도메인 등록비는 오늘창업이 받은 금액이 아니므로 환불 대상이 아니며, 해당 등록기관의 기준을 따릅니다.",
+];
+
+const TOKEN_REFUND_ITEMS = [
+  `충전한 토큰은 충전일부터 ${TOKEN_VALIDITY} 동안 해당 홈페이지에서 사용할 수 있습니다. 먼저 충전한 토큰부터 차감하며, 유효기간이 지난 토큰은 소멸합니다.`,
+  "인공지능이 실제로 결과를 만든 경우에만 사용한 만큼 차감하며, 실패한 요청은 차감하지 않습니다.",
+  "충전일부터 7일 이내이고 사용하지 않았다면 전액 환불합니다.",
+  `일부 사용했거나 7일이 지났다면, 유효기간 안에서 남은 토큰 비율만큼 환불합니다(원 단위 미만 버림). 예: ${tokenCount(TOKEN_PACK_TOKENS)} 중 ${tokenCount(TOKEN_REFUND_EXAMPLE_LEFT)} 남음 → ${won(TOKEN_REFUND_EXAMPLE)}.`,
+  "환불 수수료는 받지 않습니다. 유효기간이 지나 소멸한 토큰은 환불 대상이 아닙니다.",
+];
+
 function shown(value: string, fallback = "정식 출시 전 입력 예정") {
   return value.trim() || fallback;
 }
@@ -227,15 +265,19 @@ function businessDocument(settings: PlatformLegalSettings): LegalDocument {
       title: "판매 사이트 정보",
       items: [
         "판매 방식: 인터넷",
-        "취급 품목: 맞춤 사업 실행 디지털 파일, 홈페이지 자동 제작, 맞춤 홈페이지 디자인·개발",
-        `맞춤 사업 실행 파일: ${PACKAGE_AMOUNT.toLocaleString("ko-KR")}원(부가세 포함)`,
-        `맞춤 홈페이지 제작: ${CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터(상담 후 범위와 금액 확정)`,
-        "결제 방법: 카카오뱅크 계좌이체",
+        "취급 품목: 맞춤 사업계획서 등 디지털 문서, 홈페이지 자동 제작과 도메인 연결·호스팅, 홈페이지 AI 수정 토큰, 맞춤 홈페이지 디자인·개발",
+        ...PRODUCT_ITEMS,
+        `맞춤 홈페이지 제작: ${won(CUSTOM_HOMEPAGE_FROM_AMOUNT)}부터(상담 후 범위와 금액 확정)`,
+        `결제 방법: ${PAYMENT_METHODS}`,
         `서비스 제공 시기: ${settings.serviceSupplyTiming}`,
       ],
     }, {
       title: "취소·환불 확인",
-      paragraphs: [settings.refundBeforeSupply, settings.refundAfterSupply],
+      paragraphs: [
+        settings.refundBeforeSupply,
+        settings.refundAfterSupply,
+        "도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 남은 기간·수량에 따라 환불하며, 자세한 기준은 ‘취소·환불 기준’에서 확인할 수 있습니다.",
+      ],
     }],
   };
 }
@@ -251,7 +293,8 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
         items: [
           "계정: 이메일, 인증 식별자 - 로그인, 본인 확인, 계정 복구",
           "사업 설계: 경력, 관심사, 예산, 가능한 시간, 지역, 사업 아이디어와 프로젝트 입력 - 맞춤 추천과 결과물 작성",
-          "결제: 주문번호, 금액·상태, 입금자명, 연락처, 현금영수증 종류와 발급 식별정보 - 입금 확인, 현금영수증 발급, 취소·환급과 분쟁 대응. 계좌 비밀번호나 인터넷뱅킹 인증정보는 수집하지 않습니다.",
+          "결제(카드): 주문번호, 상품명, 금액·상태, 결제일시, 구매자 이메일, 결제대행사 거래번호와 승인 결과(카드사명, 일부가 가려진 카드번호, 승인번호, 할부 개월) - 결제 확인, 취소·환불과 분쟁 대응. 전체 카드번호, 유효기간, CVC와 카드 비밀번호는 결제대행사(나이스페이먼츠)가 직접 처리하며 오늘창업은 수집·저장하지 않습니다.",
+          "결제(계좌이체): 주문번호, 금액·상태, 입금자명, 연락처, 현금영수증 종류와 발급 식별정보 - 입금 확인, 현금영수증 발급, 취소·환급과 분쟁 대응. 계좌 비밀번호나 인터넷뱅킹 인증정보는 수집하지 않습니다.",
           "문의: 이메일 또는 대화 내용 - 고객 요청 처리",
           "자동 생성 정보: 접속 기록, 쿠키, 기기·브라우저 정보, IP 주소 - 보안, 오류 대응, 부정 이용 방지",
           "인공지능 연결 정보: 사용자가 직접 입력한 API 키의 끝 4자리와 연결 시각 - 연결 상태 표시. 키 원문은 데이터베이스와 브라우저 저장소에 보관하지 않고 서버 메모리에서 최대 4시간 사용합니다.",
@@ -266,31 +309,41 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
         ],
       },
       {
-        title: "3. 개인정보의 처리위탁과 국외 처리",
+        title: "3. 개인정보의 처리위탁",
+        paragraphs: ["서비스 운영을 위해 다음 업체에 개인정보 처리를 위탁합니다. 계좌이체 대금은 안내된 계좌로 직접 받고 운영자가 거래내역을 확인합니다."],
+        items: [
+          "㈜나이스페이먼츠(NicePay): 신용·체크카드 결제 처리, 결제 취소와 환불",
+          "Supabase, Inc.: 로그인·계정 복구, 데이터베이스",
+          "Cloudflare, Inc.: 웹 호스팅, 콘텐츠 전송, 보안과 오류 기록",
+          "Resend, Inc.: 로그인·결제 안내 등 서비스 이메일 발송",
+          "Anthropic, PBC·OpenAI: 인공지능 생성",
+        ],
+      },
+      {
+        title: "4. 국외 처리",
         paragraphs: [
-          "서비스 운영을 위해 Supabase(로그인·데이터베이스), Cloudflare(호스팅·보안), Anthropic·OpenAI(인공지능 생성)를 이용합니다. 현재 대금은 안내된 계좌로 직접 이체받고 운영자가 거래내역을 확인합니다.",
           `기반 서비스 국외 처리: ${shown(settings.infrastructureRecipients)} / 처리 국가 ${shown(settings.infrastructureCountries, "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력")} / ${settings.infrastructureProcessingDetails}`,
           "인공지능 사업자로 전송되는 항목, 국가, 시기와 방법, 보관 기준은 ‘인공지능 및 국외 처리 안내’에서 별도로 확인할 수 있습니다.",
         ],
       },
       {
-        title: "4. 파기 절차와 방법",
+        title: "5. 파기 절차와 방법",
         paragraphs: ["이용 목적이 끝난 개인정보는 지체 없이 삭제합니다. 법령상 보존해야 하는 정보는 별도 공간에 분리한 뒤 보존기간이 끝나면 복구하기 어려운 방법으로 삭제합니다."],
       },
       {
-        title: "5. 이용자의 권리",
+        title: "6. 이용자의 권리",
         paragraphs: ["이용자는 자신의 개인정보 열람, 정정, 삭제, 처리정지와 동의 철회를 요청할 수 있습니다. 계정 화면 또는 개인정보 문의처를 통해 요청하면 본인 확인 후 처리합니다. 만 14세 미만 이용자는 법정대리인 동의 없이 가입할 수 없습니다."],
       },
       {
-        title: "6. 안전성 확보 조치",
-        items: ["전송 구간 암호화", "비밀번호 원문 미보관", "관리자 권한 제한과 인증", "서비스 역할키의 브라우저 비공개", "접근 기록과 오류 점검"],
+        title: "7. 안전성 확보 조치",
+        items: ["전송 구간 암호화", "비밀번호 원문 미보관", "전체 카드번호·카드 인증정보 미보관(결제대행사 처리)", "관리자 권한 제한과 인증", "서비스 역할키의 브라우저 비공개", "접근 기록과 오류 점검"],
       },
       {
-        title: "7. 쿠키",
+        title: "8. 쿠키",
         paragraphs: ["로그인 상태와 비회원 프로젝트를 구분하기 위해 필수 쿠키를 사용합니다. 필수 쿠키를 차단하면 로그인 또는 저장한 프로젝트 이용이 어려울 수 있습니다."],
       },
       {
-        title: "8. 개인정보 문의",
+        title: "9. 개인정보 문의",
         items: [
           `개인정보 보호책임자: ${shown(settings.privacyOfficer)}`,
           `이메일: ${shown(settings.privacyEmail)}`,
@@ -298,7 +351,7 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
         ],
       },
       {
-        title: "9. 방침 변경",
+        title: "10. 방침 변경",
         paragraphs: ["이 방침이 바뀌면 시행 전에 서비스 화면에서 변경 내용과 시행일을 알립니다. 이용자 권리에 중대한 변경은 필요한 방식으로 별도 안내합니다."],
       },
     ],
@@ -351,11 +404,12 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
     sections: [
       { title: "1. 목적과 적용", paragraphs: ["이 약관은 운영자와 이용자 사이의 서비스 이용 조건, 권리와 책임을 정합니다. 결제 화면에 별도로 표시한 상품명, 금액, 제공 시기와 환불 조건도 계약 내용에 포함됩니다."] },
       { title: "2. 계정", items: ["이용자는 정확한 이메일로 가입하고 자신의 계정을 안전하게 관리해야 합니다.", "타인의 계정을 사용하거나 계정을 양도할 수 없습니다.", "계정 분실 시 이메일 계정 복구 절차를 이용할 수 있습니다."] },
-      { title: "3. 서비스 제공", items: ["아이디어 탐색과 무료 체험은 사업자등록 여부와 관계없이 이용할 수 있습니다.", `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "관리자의 입금 확인은 맞춤 디지털 결과물 제작 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
-      { title: "4. 인공지능 결과", paragraphs: ["일부 결과는 생성형 인공지능이 작성한 초안입니다. 이용자는 실제 사업에 사용하기 전에 사실관계, 수치, 권리침해 여부와 관계 법령을 확인해야 합니다. 운영자는 고의 또는 중대한 과실이 없는 한 이용자가 확인 없이 결과를 사용해 발생한 손해를 책임지지 않습니다."] },
-      { title: "5. 맞춤 제작과 환불 제한", paragraphs: [settings.refundAfterSupply, "결제 전 완성 결과 예시와 제공 항목을 확인할 수 있습니다. 결제 화면에서는 제작 시작 시점과 단순 변심 환불 제한을 별도로 알리고 전자적 동의를 받습니다."] },
+      { title: "3. 서비스 제공", items: ["아이디어 탐색과 무료 체험은 사업자등록 여부와 관계없이 이용할 수 있습니다.", `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "카드 결제 승인 또는 관리자의 입금 확인이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
+      { title: "4. 상품, 가격과 결제", items: [...PRODUCT_ITEMS, `결제 방법: ${PAYMENT_METHODS}. 카드 결제는 결제대행사 화면에서 이뤄지며 오늘창업은 카드번호를 받지 않습니다.`, "도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 결제한 문서 또는 홈페이지에서만 사용할 수 있고 다른 문서·홈페이지나 다른 계정으로 옮길 수 없습니다."] },
+      { title: "5. 인공지능 결과", paragraphs: ["일부 결과는 생성형 인공지능이 작성한 초안입니다. 이용자는 실제 사업에 사용하기 전에 사실관계, 수치, 권리침해 여부와 관계 법령을 확인해야 합니다. 운영자는 고의 또는 중대한 과실이 없는 한 이용자가 확인 없이 결과를 사용해 발생한 손해를 책임지지 않습니다."] },
+      { title: "6. 맞춤 제작과 환불 제한(사업계획서·홈페이지)", paragraphs: [settings.refundAfterSupply, "결제 전 완성 결과 예시와 제공 항목을 확인할 수 있습니다. 결제 화면에서는 제작 시작 시점과 단순 변심 환불 제한을 별도로 알리고 전자적 동의를 받습니다."] },
       {
-        title: "6. 다시 생성 횟수",
+        title: "7. 다시 생성 횟수",
         items: [
           `문서 1부에는 섹션 ‘다시 생성’ ${REGEN_INCLUDED}회가 포함됩니다.`,
           "작성된 글을 이용자가 직접 고쳐 쓰는 것은 횟수에 포함되지 않으며 제한이 없습니다.",
@@ -365,10 +419,12 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
           "이 조항은 이 조항을 게시한 날 이후에 결제한 문서부터 적용합니다. 그 전에 결제한 문서는 결제 당시의 조건을 그대로 따릅니다.",
         ],
       },
-      { title: "7. 이용자의 콘텐츠와 권리", paragraphs: ["이용자가 입력한 콘텐츠의 권리는 이용자에게 남습니다. 이용자는 서비스 제공에 필요한 범위에서 해당 콘텐츠를 처리할 권한을 운영자에게 부여합니다. 타인의 저작권, 상표권, 개인정보를 침해하는 내용을 입력해서는 안 됩니다."] },
-      { title: "8. 금지행위", items: ["서비스 또는 계정의 부정 사용", "보안 우회, 과도한 자동 요청, 역공학", "불법·기만적 사업이나 타인의 권리를 침해하는 결과물 제작", "생성 결과를 전문가의 확정 판단으로 허위 표시하는 행위"] },
-      { title: "9. 이용 종료", paragraphs: ["이용자는 계정 삭제를 요청할 수 있습니다. 운영자는 중대한 약관 위반이나 서비스 보안 위험이 있는 경우 사전 통지 후 이용을 제한할 수 있으며, 긴급한 위험은 먼저 제한한 뒤 사유를 알릴 수 있습니다."] },
-      { title: "10. 책임과 분쟁", paragraphs: [`문의는 ${shown(settings.supportEmail)} 또는 ${shown(settings.supportPhone)}로 접수합니다. 분쟁은 먼저 협의하여 해결하고, 해결되지 않으면 관계 법령에 따른 관할 법원이나 소비자분쟁조정 절차를 이용할 수 있습니다.`] },
+      { title: "8. 도메인 연결·호스팅", items: [`${DOMAIN_PRODUCT_NAME} 상품은 결제일부터 1년 동안 이용자의 도메인을 홈페이지에 연결하고 호스팅합니다.`, "도메인 등록(구매)은 이용자가 가비아 등 등록기관에서 직접 하며, 등록비와 등록기관의 약관은 이 계약에 포함되지 않습니다.", "기간이 끝나면 갱신을 안내하며, 갱신 전까지 홈페이지 편집이 제한될 수 있습니다.", ...DOMAIN_REFUND_ITEMS.slice(0, 3)] },
+      { title: "9. AI 수정 토큰", items: TOKEN_REFUND_ITEMS },
+      { title: "10. 이용자의 콘텐츠와 권리", paragraphs: ["이용자가 입력한 콘텐츠의 권리는 이용자에게 남습니다. 이용자는 서비스 제공에 필요한 범위에서 해당 콘텐츠를 처리할 권한을 운영자에게 부여합니다. 타인의 저작권, 상표권, 개인정보를 침해하는 내용을 입력해서는 안 됩니다."] },
+      { title: "11. 금지행위", items: ["서비스 또는 계정의 부정 사용", "보안 우회, 과도한 자동 요청, 역공학", "불법·기만적 사업이나 타인의 권리를 침해하는 결과물 제작", "생성 결과를 전문가의 확정 판단으로 허위 표시하는 행위"] },
+      { title: "12. 이용 종료", paragraphs: ["이용자는 계정 삭제를 요청할 수 있습니다. 운영자는 중대한 약관 위반이나 서비스 보안 위험이 있는 경우 사전 통지 후 이용을 제한할 수 있으며, 긴급한 위험은 먼저 제한한 뒤 사유를 알릴 수 있습니다."] },
+      { title: "13. 책임과 분쟁", paragraphs: [`문의는 ${shown(settings.supportEmail)} 또는 ${shown(settings.supportPhone)}로 접수합니다. 분쟁은 먼저 협의하여 해결하고, 해결되지 않으면 관계 법령에 따른 관할 법원이나 소비자분쟁조정 절차를 이용할 수 있습니다.`] },
     ],
   };
 }
@@ -376,17 +432,16 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
 function refundDocument(settings: PlatformLegalSettings): LegalDocument {
   return {
     title: "취소·환불 기준",
-    summary: "맞춤 제작 시작 전에는 전액 환불하며, 제작 시작 후에는 단순 변심 환불이 제한됩니다. 미제공·계약 불일치·중대한 하자 등 법정 권리는 그대로 보장합니다.",
+    summary: "사업계획서·홈페이지는 맞춤 제작 시작 전에는 전액 환불하며, 제작 시작 후에는 단순 변심 환불이 제한됩니다. 도메인 연결·AI 수정 토큰·다시 생성 추가 횟수는 남은 기간·수량만큼 환불합니다. 미제공·계약 불일치·중대한 하자 등 법정 권리는 그대로 보장합니다.",
     effectiveDate: settings.policyEffectiveDate,
     sections: [
       { title: "1. 서비스 제공 시기", paragraphs: [settings.serviceSupplyTiming] },
       { title: "2. 제공 시작 전", paragraphs: [settings.refundBeforeSupply] },
-      { title: "3. 맞춤 제작 시작 후 단순 변심", paragraphs: [settings.refundAfterSupply] },
+      { title: "3. 사업계획서·홈페이지: 제작 시작 후 단순 변심", paragraphs: [settings.refundAfterSupply, "아래 도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 이 제한 대신 각 항목의 기준을 따릅니다."] },
       { title: "4. 결제 전 확인 방법", paragraphs: ["사이트의 ‘완성 결과 예시 보기’에서 샘플 사업의 문서, 발표자료와 판매 페이지 형태를 결제 전에 확인할 수 있습니다. 결제 화면에서는 제작 시작 시점과 환불 제한을 별도 항목으로 확인하고 동의합니다."] },
       { title: "5. 하자와 계약 불이행", paragraphs: ["약정한 핵심 결과물이 제공되지 않거나 표시·광고 또는 계약 내용과 다르게 제공된 경우, 정상적으로 이용할 수 없는 중대한 하자가 있고 합리적인 기간 안에 고쳐지지 않은 경우에는 관계 법령에 따라 재제공, 일부 환급 또는 전액 환급을 요청할 수 있습니다."] },
-      { title: "6. 신청 방법과 처리", items: [`신청: ${shown(settings.supportEmail)} / ${shown(settings.supportPhone)}`, "주문번호, 입금일, 입금자명과 신청 사유를 알려주세요.", "법정 예외에 따른 환급이 승인되면 본인 확인이 가능한 환급 계좌를 안내받아 실제 송금을 진행합니다. 운영자가 환급 완료를 기록한 뒤에도 은행 처리 시간에 따라 계좌 반영이 늦어질 수 있습니다.", "중복 입금이나 금액 착오가 확인되면 실제 입금액을 기준으로 정산합니다."] },
       {
-        title: "7. 다시 생성 추가 구매",
+        title: "6. 다시 생성 추가 구매",
         paragraphs: [
           `문서 1부에는 섹션 ‘다시 생성’ ${REGEN_INCLUDED}회가 포함됩니다. 작성한 글을 직접 고쳐 쓰는 것은 횟수에 포함되지 않으며 제한이 없습니다.`,
           `포함된 횟수를 모두 사용한 뒤에는 ${REGEN_PACK_COUNT}회 묶음을 ${REGEN_PACK_AMOUNT.toLocaleString("ko-KR")}원(부가세 포함)에 추가로 구매할 수 있습니다. 추가 구매는 선택이며, 구매하지 않아도 이미 만들어진 문서의 열람과 내려받기는 그대로 이용할 수 있습니다.`,
@@ -394,7 +449,20 @@ function refundDocument(settings: PlatformLegalSettings): LegalDocument {
           "추가 구매한 횟수는 해당 문서에서만 사용할 수 있고 다른 문서로 옮길 수 없습니다. 사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있으며, 일부라도 사용한 경우에는 남은 횟수에 해당하는 금액을 환급합니다.",
         ],
       },
-      { title: "8. 법정 권리", paragraphs: ["이 기준은 전자상거래법 등 관계 법령이 보장하는 소비자의 청약철회, 계약 해제·해지, 손해배상 권리를 제한하지 않습니다."] },
+      { title: "7. 도메인 연결 + 호스팅 1년", items: DOMAIN_REFUND_ITEMS },
+      { title: "8. AI 수정 토큰", items: TOKEN_REFUND_ITEMS },
+      {
+        title: "9. 신청 방법과 처리",
+        items: [
+          `신청: ${shown(settings.supportEmail)} / ${shown(settings.supportPhone)}`,
+          "주문번호, 결제일, 결제 수단(카드 또는 계좌이체, 계좌이체는 입금자명)과 신청 사유를 알려주세요.",
+          "환불이 확정되면 3영업일 이내에 처리합니다.",
+          "카드 결제는 결제대행사(나이스페이먼츠)를 통해 승인 취소하며, 일부 환불은 부분 취소로 처리합니다. 카드사 사정에 따라 청구 내역과 한도에 반영되기까지 영업일 기준 3~7일이 더 걸릴 수 있습니다.",
+          "계좌이체 결제는 본인 확인이 가능한 환급 계좌를 안내받아 송금합니다. 운영자가 환급 완료를 기록한 뒤에도 은행 처리 시간에 따라 계좌 반영이 늦어질 수 있습니다.",
+          "중복 결제나 금액 착오가 확인되면 실제 결제액을 기준으로 정산합니다.",
+        ],
+      },
+      { title: "10. 법정 권리", paragraphs: ["이 기준은 전자상거래법 등 관계 법령이 보장하는 소비자의 청약철회, 계약 해제·해지, 손해배상 권리를 제한하지 않습니다."] },
     ],
   };
 }

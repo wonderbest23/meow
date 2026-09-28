@@ -42,15 +42,25 @@ assert.equal(evaluatePlatformLaunchReadiness(complete, { authConfigured: false, 
 const business = createLegalDocument("business", complete);
 assert.ok(business.sections[0].items?.some((item) => item.includes("123-45-67890")));
 assert.ok(business.sections.some((section) => section.items?.some((item) => item.includes("149,000원"))));
+const businessText = JSON.stringify(business);
+for (const expected of ["신용·체크카드", "나이스페이먼츠", "59,000원", "9,900원", "4,900원", "충전일부터 1년 유효"]) assert.ok(businessText.includes(expected), expected);
 const ai = createLegalDocument("ai", complete);
 assert.ok(ai.sections.some((section) => section.items?.some((item) => item.includes("미국, 대한민국"))));
 const privacy = createLegalDocument("privacy", complete);
 assert.ok(privacy.sections.some((section) => section.title.includes("개인정보")));
+const privacyText = JSON.stringify(privacy);
+for (const expected of ["나이스페이먼츠", "승인번호", "수집·저장하지 않습니다", "Resend"]) assert.ok(privacyText.includes(expected), expected);
+assert.ok(!privacyText.includes("현재 대금은 안내된 계좌로 직접 이체받고"));
+const terms = JSON.stringify(createLegalDocument("terms", complete));
+for (const expected of ["충전일부터 1년", "도메인 등록(구매)은 이용자가"]) assert.ok(terms.includes(expected), expected);
 const refund = createLegalDocument("refund", complete);
 assert.match(refund.summary, /단순 변심 환불이 제한/);
 assert.ok(refund.sections.some((section) => section.paragraphs?.some((paragraph) => paragraph.includes("표시·광고 또는 계약 내용과 다르게"))));
+const refundText = JSON.stringify(refund);
+for (const expected of ["44,250원", "5,940원", "연결을 완료한 날부터 7일 이내", "충전일부터 1년", "승인 취소", "3영업일 이내"]) assert.ok(refundText.includes(expected), expected);
 const upgradedPolicy = applyCurrentPlatformPolicy({ ...complete, policyEffectiveDate: "2026-07-19", refundAfterSupply: "이전 기준" });
-assert.equal(upgradedPolicy.policyEffectiveDate, "2026-07-23");
+assert.equal(upgradedPolicy.policyEffectiveDate, "2026-09-28");
+assert.match(upgradedPolicy.serviceSupplyTiming, /NicePay/);
 assert.match(upgradedPolicy.refundAfterSupply, /단순 변심/);
 
 process.env.AUTH_PROJECT_SECRET = "test-secret-that-is-long-enough-for-a-stable-hmac";
@@ -60,4 +70,4 @@ const otherHash = hashIdentityToken(userProjectToken("user-b"));
 assert.equal(firstHash, secondHash);
 assert.notEqual(firstHash, otherHash);
 
-console.log(JSON.stringify({ passed: 22, missingBeforeLaunch: draftReadiness.missing.length, documents: [business.title, ai.title, privacy.title, refund.title], stableAccountProjectAccess: true }, null, 2));
+console.log(JSON.stringify({ passed: 42, missingBeforeLaunch: draftReadiness.missing.length, documents: [business.title, ai.title, privacy.title, refund.title], stableAccountProjectAccess: true }, null, 2));

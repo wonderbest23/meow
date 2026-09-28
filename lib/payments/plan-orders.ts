@@ -4,7 +4,7 @@
 
 import { randomUUID } from "node:crypto";
 import { getServerSupabase } from "../persistence";
-import { PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_NAME, TERMS_VERSION, DOMAIN_PRODUCT_NAME, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_DAYS, TOKEN_PACK_NAME, TOKEN_PACK_AMOUNT, TOKEN_PACK_TOKENS } from "./domain";
+import { PACKAGE_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_NAME, TERMS_VERSION, DOMAIN_PRODUCT_NAME, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_DAYS, TOKEN_PACK_NAME, TOKEN_PACK_AMOUNT, TOKEN_PACK_TOKENS } from "./domain";
 
 /** 파는 것 — 계획서 / 홈페이지 / 다시 생성 묶음 / 도메인 연결+호스팅 / AI 수정 토큰 */
 export type PlanProduct = "plan" | "homepage" | "regen" | "domain" | "tokens";
@@ -35,7 +35,7 @@ export const PLAN_PRODUCT_NAME = "사업계획서 플랜 빌더";
  * 만든 홈페이지를 보는 것(미리보기)은 무료, 고치고 공개하는 것이 결제 대상.
  */
 export const HOMEPAGE_PRODUCT_NAME = "사업계획서 홈페이지";
-export const HOMEPAGE_PRODUCT_AMOUNT = 149_000;
+export { HOMEPAGE_PRODUCT_AMOUNT };
 export const PLAN_PRODUCT_AMOUNT = PACKAGE_AMOUNT;
 
 /*
@@ -340,6 +340,23 @@ export async function domainEntitlement(userId: string | null, planId: string): 
   }
   if (latest === null) return { active: false, expiresAt: null };
   return { active: latest > Date.now(), expiresAt: new Date(latest).toISOString() };
+}
+
+/** 토큰 충전 건별 시각·수량 — 유효기간(충전일부터 1년) 계산용. 플랜 단위. */
+export async function purchasedTokenBatches(userId: string | null, planId: string): Promise<Array<{ at: number; tokens: number }>> {
+  const supabase = getServerSupabase();
+  if (!supabase || !userId) return [];
+  const { data, error } = await supabase
+    .from("payment_orders")
+    .select("opportunity, confirmed_at, created_at")
+    .eq("owner_id", userId)
+    .eq("order_name", TOKEN_PACK_NAME)
+    .eq("status", "done")
+    .limit(500);
+  if (error) throw error;
+  return (data ?? [])
+    .filter((row) => String((row.opportunity as { planId?: string } | null)?.planId ?? "") === planId)
+    .map((row) => ({ at: new Date((row.confirmed_at as string | null) ?? (row.created_at as string)).getTime(), tokens: TOKEN_PACK_TOKENS }));
 }
 
 /** 산 토큰 합계 — 플랜 단위. 실제 잔액은 llm_usage 차감분을 뺀 값(lib/landing/ai-tokens.ts) */

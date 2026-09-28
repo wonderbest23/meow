@@ -1,5 +1,6 @@
 import { getServerSupabase } from "../persistence";
-import { purchasedTokens } from "../payments/plan-orders";
+import { purchasedTokenBatches } from "../payments/plan-orders";
+import { tokenBalanceWithExpiry } from "./token-expiry";
 import { TOKEN_PACK_TOKENS } from "../payments/domain";
 
 /*
@@ -22,24 +23,29 @@ export interface TokenBalance {
   used: number;
   remaining: number;
   packSize: number;
+  /** 남은 토큰 중 가장 먼저 사라지는 충전분의 만료 시각(충전일부터 1년). 없으면 null */
+  expiresAt?: string | null;
 }
 
 export async function resolveTokenBalance(userId: string | null, planId: string): Promise<TokenBalance> {
   const packSize = TOKEN_PACK_TOKENS;
   const supabase = getServerSupabase();
   if (!supabase || !userId) return { purchased: 0, used: 0, remaining: 0, packSize };
-  const purchased = await purchasedTokens(userId, planId).catch(() => 0);
+  const batches = await purchasedTokenBatches(userId, planId).catch(() => []);
+  const purchased = batches.reduce((sum, batch) => sum + batch.tokens, 0);
   if (!purchased) return { purchased: 0, used: 0, remaining: 0, packSize };
   const { data, error } = await supabase
     .from("llm_usage")
-    .select("input_tokens, output_tokens")
+    .select("input_tokens, output_tokens, created_at")
     .eq("kind", AI_EDIT_KIND)
     .eq("plan_id", planId)
     .eq("ok", true)
     .limit(5000);
   if (error) return { purchased, used: purchased, remaining: 0, packSize };
-  const used = (data ?? []).reduce((sum, row) => sum + (Number(row.input_tokens) || 0) + (Number(row.output_tokens) || 0), 0);
-  return { purchased, used, remaining: Math.max(0, purchased - used), packSize };
+  // 충전일부터 1년 유효, 먼저 산 토큰부터 차감(환불 기준·결제 화면에 고지한 규칙).
+  const uses = (data ?? []).map((row) => ({ at: new Date(String(row.created_at)).getTime(), tokens: (Number(row.input_tokens) || 0) + (Number(row.output_tokens) || 0) }));
+  const balance = tokenBalanceWithExpiry(batches, uses, Date.now());
+  return { purchased: balance.purchased, used: balance.used, remaining: balance.remaining, packSize, expiresAt: balance.expiresAt };
 }
 
 /** 호출 1건의 토큰을 기록한다 — 차감의 원천. 기록이 실패하면 호출 자체를 실패로 돌려 공짜 사용을 막는다. */
