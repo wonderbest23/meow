@@ -16809,6 +16809,11 @@ html:has(main.cinematic-home), body:has(main.cinematic-home) { background: #000;
 @media (max-width: 900px) {
   .home-footer-body { grid-template-columns: 1fr; gap: 28px; }
 }
+/* 태블릿 폭에서는 링크 한 줄이 넘쳐 마지막 링크 하나만 오른쪽 아래에 홀로 떨어졌다. 로고 아래 세 칸 격자로 가지런히 둔다. */
+@media (min-width: 641px) and (max-width: 1000px) {
+  .home-footer-head { display: grid; gap: 22px; }
+  .home-footer-head nav { display: grid; grid-template-columns: repeat(3, max-content); justify-content: start; gap: 12px 40px; }
+}
 @media (max-width: 640px) {
   .home-footer { padding: 44px var(--gutter) 96px; font-size: 13px; }
   .home-footer-head { display: grid; gap: 22px; padding-bottom: 24px; }
