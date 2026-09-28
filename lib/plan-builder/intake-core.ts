@@ -1,6 +1,6 @@
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, monthlyVolumeFromCapacity } from "./coach-feasibility";
-import { coachDocumentRevision, type CoachField, type CoachState } from "./coach";
+import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
 import { calculateFinancials, financialsToReference } from "./financials";
 import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
@@ -313,7 +313,16 @@ function structureNumber(intake: IntakeState, id: string): number | null {
  * 손익 시나리오 문장. 가격·변동비·고정비(coach 필드)가 모두 있어야 계산하고, 월 판매량은 volume 필드 → 처리량 환산 → 주당 청구 시간 순으로 잡는다.
  * 수익 방식이 라벨·판매량 환산·추가 지표(구독 유지, 이용률, 수수료율, 수주 기간)를 정한다. 추정치는 만들지 않는다.
  */
-export function intakeFinancialReference(coach: CoachState, intake: IntakeState): string {
+export type IntakeScenarioInputs = {
+  structure: ReturnType<typeof effectiveStructure>["values"]; labels: Record<string, string>;
+  unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; volume: number | undefined; notes: string[];
+};
+/**
+ * 손익 계산 입력(가격·변동비·고정비·월 판매량)을 한 곳에서 정한다. 문서 요약·AI 사업안·질문 화면이 같은 숫자를 쓰게 하는 단일 원천.
+ * 판매량 우선순위: volume 필드 → (운영 중) 실적 매출 ÷ 기간 ÷ 가격 → (시간제) 주당 청구 시간 → 처리량(최대치, 대여는 이용률 반영).
+ * 세 값 중 하나라도 없으면 { missing }을 돌려준다.
+ */
+export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): IntakeScenarioInputs | { missing: string[]; labels: Record<string, string> } {
   const structure = effectiveStructure(intake).values;
   const labels = { ...COACH_FIELD_LABELS, ...structureFieldLabels(structure) };
   const fields = new Map(coach.fields.map(field => [field.key, field.value]));
@@ -321,7 +330,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   const unitPrice = amount("price"), unitVariableCost = amount("unitCost"), monthlyFixedCost = amount("cost");
   const missing = ([["price", unitPrice], ["unitCost", unitVariableCost], ["cost", monthlyFixedCost]] as const).filter(([, value]) => value == null).map(([key]) => labels[key]);
-  if (unitPrice == null || unitVariableCost == null || monthlyFixedCost == null) return `세 값(${labels.price}, ${labels.unitCost}, ${labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`;
+  if (unitPrice == null || unitVariableCost == null || monthlyFixedCost == null) return { missing, labels };
   const notes: string[] = [];
   let volume: number | undefined;
   const rawVolume = fields.get("volume") ?? "";
@@ -358,6 +367,20 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
       }
     }
   } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
+  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes };
+}
+
+/** 계획 하나의 손익 참고 문장. 진단 계획이면 실적·처리량을 반영한 intake 계산, 아니면 대화 필드 계산. 모든 소비처가 이 함수를 거친다. */
+export function planFinancialReference(coach: CoachState, answers: ServerPlan["answers"]): string {
+  const intake = readIntake(answers);
+  return intake ? intakeFinancialReference(coach, intake) : coachFinancialReference(coach);
+}
+
+export function intakeFinancialReference(coach: CoachState, intake: IntakeState): string {
+  const inputs = intakeScenarioInputs(coach, intake);
+  if ("missing" in inputs) return `세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`;
+  const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes } = inputs;
+  const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
