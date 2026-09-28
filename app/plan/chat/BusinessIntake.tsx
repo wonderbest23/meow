@@ -34,6 +34,18 @@ const LAST_INTAKE_KEY = "oneul:last-intake";
 function rememberLastIntake(planId: string, signedIn: boolean) {
   try { window.localStorage.setItem(LAST_INTAKE_KEY, JSON.stringify({ planId, signedIn, at: Date.now() })); } catch { /* 저장소를 못 써도 안내만 덜 구체적일 뿐이다 */ }
 }
+/** 로그인 전 방문자에게 질문 대신 보여 주는 첫 화면. 로그인하면 지금 주소(새 대화·사업)로 돌아온다. */
+function LoginGate({ lastSignedIn }: { lastSignedIn: boolean }) {
+  const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
+  return <section className={styles.empty} aria-labelledby="intake-login-gate">
+    <h1 id="intake-login-gate">{lastSignedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "로그인하고 사업 기획을 시작하세요"}</h1>
+    <p>{lastSignedIn
+      ? "작성하던 사업은 계정에 그대로 저장돼 있어요. 다시 로그인하면 이어서 할 수 있어요."
+      : "답변과 결과가 계정에 자동으로 저장돼서, 창을 닫거나 다른 기기에서 열어도 이어서 할 수 있어요. 카카오·구글로 바로 시작할 수 있어요."}</p>
+    <Link href={`/account?next=${encodeURIComponent(next)}`} className={styles.primaryButton}>{lastSignedIn ? "로그인하고 이어가기" : "로그인하고 시작하기"}<ArrowRight size={18} aria-hidden="true" /></Link>
+  </section>;
+}
+
 function readLastIntake(): { planId: string; signedIn: boolean } | null {
   try {
     const value = JSON.parse(window.localStorage.getItem(LAST_INTAKE_KEY) ?? "null");
@@ -86,6 +98,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const [login, setLogin] = useState(false);
   // 서버가 알려 준 로그인 여부. 모르는 동안은 로그인한 것으로 두어 경고를 미리 띄우지 않는다.
   const [signedIn, setSignedIn] = useState(true);
+  // 사업 기획은 로그인 후에만 시작한다. 서버가 loginRequired 로 알려 주면 질문 대신 로그인 안내를 보여 준다.
+  const [loginGate, setLoginGate] = useState(false);
   const [preparedRevision, setPreparedRevision] = useState<number | null>(null);
   const prepared = preparedRevision !== null && preparedRevision === (plan?.coach.documentRevision ?? plan?.coach.revision);
   const [resume, setResume] = useState("");
@@ -188,7 +202,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     draftRef.current = emptyDraft(); setDraft(draftRef.current); conflictRef.current = false;
     void getSnapshot(startNew ? null : id, controller.signal).then(data => {
       if (epoch !== routeEpoch.current || controller.signal.aborted) return;
-      setSignedIn(!!data.authenticated);
+      setSignedIn(!!data.authenticated); setLoginGate(!!data.loginRequired);
       if (data.plan) rememberLastIntake(data.plan.planId, !!data.authenticated);
       restoreDraft(startNew ? null : data.plan?.planId ?? id, data.ownerScope!);
       if (!startNew && data.plan) {
@@ -246,7 +260,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       const id = planRef.current?.planId ?? new URLSearchParams(queryString).get("planId");
       const data = await getSnapshot(id, controller.signal);
       if (epoch !== routeEpoch.current) return;
-      setSignedIn(!!data.authenticated);
+      setSignedIn(!!data.authenticated); setLoginGate(!!data.loginRequired);
       if (data.ownerScope !== ownerScope.current || ownerChanged) {
         restoreDraft(newEntry ? null : data.plan?.planId ?? id, data.ownerScope!);
         setOwnerChanged(false); setPreview(null); planRef.current = null; setPlan(null);
@@ -297,6 +311,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
         conflictRef.current = true; writeDraft({ ...draftRef.current, pending: { ...pending, conflict: true }, ...(pending.command.questionId ? { editingId: customCandidateDraftKey(pending.command.questionId, pending.answer?.custom) } : {}) });
         setStatus("conflict"); setError(data?.message || "다른 곳에서 이 사업의 내용이 바뀌었어요. 최신 내용을 불러온 뒤 답변을 다시 확인해 주세요."); return;
       }
+      if (data?.loginRequired) setLoginGate(true);
       if (!response.ok || data?.login) {
         setLogin(!!data?.login || response.status === 401);
         if (response.status >= 400 && response.status < 500 || data?.code && ["ai_unavailable", "ai_limit", "business_required", "disabled"].includes(data.code)) writeDraft({ ...draftRef.current, pending: null });
@@ -508,7 +523,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
           onPointerDown={event => { if (event.target === event.currentTarget) manualScroll.current = true; }}
           onKeyDown={event => { if (["PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) { manualScroll.current = true; if (["PageUp", "Home", "ArrowUp"].includes(event.key)) follow.current = false; } }}
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
-          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section>
+          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate lastSignedIn={!!readLastIntake()?.signedIn} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
