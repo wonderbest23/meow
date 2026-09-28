@@ -34,7 +34,7 @@ function fieldQuestion(key: CoachField["key"], prompt: string, extra: Partial<Pi
 
 /** Price wording follows the pricing basis (period) the server injects per sector (spec §4-1). */
 export const PRICE_DEFAULT_PERIOD = "판매 1건";
-export const pricePrompt = (period: string) => `${period} 가격은 얼마쯤인가요?`;
+export const pricePrompt = (period: string, mode?: IntakeMode) => mode === "operating" ? `지금 받는 ${period} 평균 가격은 얼마인가요?` : `${period} 가격은 얼마쯤인가요?`;
 
 const business = fieldQuestion("business", "어떤 사업인가요? 한 문장(60자 안)으로 알려 주세요.", { hint: "칩을 누르면 입력창에 채워져요. 그대로 저장하거나 상호·지역을 덧붙여 주세요." });
 const customer = fieldQuestion("customer", "주로 누가 이용하나요? (최대 2개)");
@@ -42,6 +42,13 @@ const problem = fieldQuestion("problem", "그 고객의 어떤 불편을 해결�
 const offer = fieldQuestion("offer", "대표 상품이나 서비스는 무엇인가요?", { hint: "유형을 고른 뒤 상품명을 덧붙일 수 있어요." });
 const channel = fieldQuestion("channel", "처음 고객을 만날 곳은 어디인가요? (최대 3개)");
 const price = fieldQuestion("price", pricePrompt(PRICE_DEFAULT_PERIOD), { kind: "number", unit: "원", period: PRICE_DEFAULT_PERIOD, hint: "범위를 고른 뒤 하한·상한·정확한 금액 중 아는 값만 저장해요." });
+type RevenueModel = BusinessStructure["revenue"];
+const STRUCTURE_UNIT: Record<RevenueModel, string> = { per_unit: "판매 1건", per_hour: "1시간", subscription: "구독자 1명(월)", rental: "대여·이용 1건", commission: "거래 1건", project: "프로젝트 1건", mixed: "판매 1건" };
+const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({
+  id: "structure.unitCost", fieldKey: "unitCost", label: structureFieldLabels({ revenue } as BusinessStructure).unitCost ?? COACH_FIELD_LABELS.unitCost, prompt: `${STRUCTURE_UNIT[revenue]}에 들어가는 변동비는 얼마쯤인가요?`, kind: "number", unit: "원", period: STRUCTURE_UNIT[revenue], optional: true,
+  hint: "재료·수수료·외주비처럼 팔 때마다 드는 비용만이에요. 임차료·고정 인건비는 월 고정비에 넣어요. 거의 없으면 0원을 골라요.",
+});
+const structureCost: IntakeQuestion = { id: "structure.cost", fieldKey: "cost", label: COACH_FIELD_LABELS.cost, prompt: "한 달 고정비는 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true, hint: "임차료·고정 인건비·구독 도구처럼 매출이 없어도 나가는 돈이에요." };
 const budget = fieldQuestion("budget", "준비에 쓸 수 있는 돈은 얼마인가요?", { kind: "number", unit: "원", hint: "필요한 비용 추정치가 아니라 실제로 쓸 수 있는 금액이에요." });
 const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있나요?", { kind: "number", unit: "시간", period: "주" });
 const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "인력을 고른 뒤 하루·주·월 처리량을 정해요." });
@@ -67,14 +74,18 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     budget,
     conditions,
     { id: "candidate", label: "사업 후보", prompt: "어떤 사업 후보를 더 살펴보고 싶나요? 직접 생각한 아이디어도 이야기할 수 있어요.", kind: "single", options: [], optional: true },
-    customer, problem, offer, channel, price, goal,
+    customer, problem, offer, channel, price, structureUnitCost("per_unit"), structureCost, goal,
   ],
-  startup: [industry, business, customer, problem, offer, channel, price, budget, hours, capacity, goal],
+  // 가격·변동비·고정비가 모두 있어야 손익(손익분기·12개월)을 계산하므로 변동비·고정비도 기본 질문에서 묻는다(예전엔 선택형 추가 질문에만 있었다).
+  startup: [industry, business, customer, problem, offer, channel, price, structureUnitCost("per_unit"), structureCost, budget, hours, capacity, goal],
   operating: [
     industry,
     fieldQuestion("business", "현재 어떤 사업을 운영하나요? 한 문장으로 알려 주세요.", { hint: "문장 칩을 누른 뒤 ○○ 자리만 채워 주세요." }),
     fieldQuestion("customer", "지금 주로 누가 이용하나요? (최대 2개)"),
     fieldQuestion("offer", "지금 판매하거나 제공하는 대표 상품·서비스는 무엇인가요?", { hint: "유형을 고른 뒤 상품명을 덧붙일 수 있어요." }),
+    // 운영 중 사업도 가격이 있어야 실적 매출을 판매량으로 풀고(매출 ÷ 가격) 손익분기를 계산할 수 있다.
+    { ...price, prompt: pricePrompt(PRICE_DEFAULT_PERIOD, "operating"), hint: "여러 상품이면 가장 많이 팔리는 상품이나 평균 결제액을 골라요." },
+    structureUnitCost("per_unit"),
     fieldQuestion("problem", "지금 가장 개선하고 싶은 문제는 무엇인가요? (최대 2개)"),
     { id: "period", label: "실적 기간 (시작일 / 종료일)", prompt: "살펴볼 실적 기간은 언제인가요?", kind: "text", optional: true, hint: "기간을 고르거나 날짜를 직접 선택해요." },
     fieldQuestion("sales", "정한 시작일부터 종료일까지의 실제 매출 합계는 얼마였나요?", { kind: "number", unit: "원", period: "입력한 시작일~종료일", hint: "예상 매출·목표·총 거래액과는 구분해요." }),
@@ -216,13 +227,6 @@ export function detailQuestions(sector: ProposalSector): IntakeQuestion[] {
  * 변동비·고정비는 coach 필드(unitCost·cost)로 저장되어 손익 계산에 바로 쓰이고, 나머지는 intake/details로 문서와 계산(intakeFinancialReference)에 들어간다.
  * 모두 선택형(숫자 프리셋·금액 사다리)이며 선택 사항이다.
  */
-type RevenueModel = BusinessStructure["revenue"];
-const STRUCTURE_UNIT: Record<RevenueModel, string> = { per_unit: "판매 1건", per_hour: "1시간", subscription: "구독자 1명(월)", rental: "대여·이용 1건", commission: "거래 1건", project: "프로젝트 1건", mixed: "판매 1건" };
-const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({
-  id: "structure.unitCost", fieldKey: "unitCost", label: structureFieldLabels({ revenue } as BusinessStructure).unitCost ?? COACH_FIELD_LABELS.unitCost, prompt: `${STRUCTURE_UNIT[revenue]}에 들어가는 변동비는 얼마쯤인가요?`, kind: "number", unit: "원", period: STRUCTURE_UNIT[revenue], optional: true,
-  hint: "재료·수수료·외주비처럼 팔 때마다 드는 비용만이에요. 임차료·고정 인건비는 월 고정비에 넣어요. 거의 없으면 0원을 골라요.",
-});
-const structureCost: IntakeQuestion = { id: "structure.cost", fieldKey: "cost", label: COACH_FIELD_LABELS.cost, prompt: "한 달 고정비는 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true, hint: "임차료·고정 인건비·구독 도구처럼 매출이 없어도 나가는 돈이에요." };
 const STRUCTURE_REVENUE_QUESTIONS: Partial<Record<RevenueModel, IntakeQuestion[]>> = {
   subscription: [{ id: "structure.retentionMonths", label: "평균 구독 유지 기간", prompt: "구독자 한 명이 평균 몇 달 유지하나요?", kind: "number", unit: "개월", period: "구독자 1명", optional: true, hint: "이탈률과 구독자 1명의 생애 매출을 계산해요. 모르면 비슷한 서비스의 감으로 골라도 돼요." }],
   rental: [{ id: "structure.occupancy", label: "예약·이용률", prompt: "감당할 수 있는 예약·이용 중 실제로 채워지는 비율은 얼마쯤일까요?", kind: "number", unit: "%", period: "월", optional: true, hint: "예: 좌석 10개 중 7개가 찬다면 70%. 매출 계산에 곱해요." }],
@@ -232,15 +236,21 @@ const STRUCTURE_REVENUE_QUESTIONS: Partial<Record<RevenueModel, IntakeQuestion[]
 };
 
 export function structureQuestions(mode: IntakeMode, structure: Pick<BusinessStructure, "revenue"> | null | undefined): IntakeQuestion[] {
+  void mode;
   const revenue: RevenueModel = structure?.revenue ?? "per_unit";
-  // 운영 중 사업은 기본 질문에 월 고정비가 이미 있다.
-  return [...(STRUCTURE_REVENUE_QUESTIONS[revenue] ?? []), structureUnitCost(revenue), ...(mode === "operating" ? [] : [structureCost])].map(copyQuestion);
+  // 변동비·고정비는 기본 질문으로 옮겼다. 추가 질문은 수익 방식별 지표만 남는다.
+  return (STRUCTURE_REVENUE_QUESTIONS[revenue] ?? []).map(copyQuestion);
+}
+
+/** 기본 질문의 변동비 문구를 적용 중인 수익 방식(판매 1건·1시간·구독자 1명…)에 맞춘다. */
+export function structureUnitCostQuestion(revenue: RevenueModel | null | undefined): IntakeQuestion {
+  return copyQuestion(structureUnitCost(revenue ?? "per_unit"));
 }
 
 /** 라벨·옵션 조회용: 수익 방식과 무관한 구조 질문 전부(id 중복 없음). 문맥·문서 원천에서 저장된 답을 이름 붙일 때 쓴다. */
 export function allStructureQuestions(): IntakeQuestion[] {
   const seen = new Set<string>();
-  return (Object.keys(STRUCTURE_UNIT) as RevenueModel[]).flatMap(revenue => structureQuestions("startup", { revenue })).filter(question => !seen.has(question.id) && !!seen.add(question.id));
+  return [structureUnitCost("per_unit"), structureCost, ...(Object.keys(STRUCTURE_UNIT) as RevenueModel[]).flatMap(revenue => structureQuestions("startup", { revenue }))].map(copyQuestion).filter(question => !seen.has(question.id) && !!seen.add(question.id));
 }
 
 export function getIntakeQuestion(mode: IntakeMode, sector: ProposalSector | null | undefined, id: string, structure?: Pick<BusinessStructure, "revenue"> | null): IntakeQuestion | undefined {

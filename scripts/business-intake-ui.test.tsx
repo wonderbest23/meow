@@ -451,7 +451,7 @@ async function main() {
   assert.equal(nextRefinementQuestion(guided)?.id, "customer");
   const beforeGuided = structuredClone(guided);
   assert.equal(intakeNextStep(guided), "design", "optional unknowns must not block the business plan");
-  for (const id of ["customer", "problem", "offer", "channel", "price"]) guided = previewIntakeAnswer(guided, { ...command({ questionId: id, value: id === "price" ? "0원" : "확인한 답변" }), revision: guided.coach.revision })!;
+  for (const id of ["customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost"]) guided = previewIntakeAnswer(guided, { ...command({ questionId: id, value: id === "price" || id.startsWith("structure.") ? "0원" : "확인한 답변" }), revision: guided.coach.revision })!;
   assert.equal(nextRefinementQuestion(guided)?.id, "budget");
   guided = previewIntakeAnswer(guided, { ...command({ questionId: "budget", value: "0원" }), revision: guided.coach.revision })!;
   assert.equal(nextRefinementQuestion(guided)?.id, "hoursPerWeek", "explicit zero is resolved, not missing");

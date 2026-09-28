@@ -6,7 +6,7 @@ async function main() {
   let fetchCalls = 0;
   globalThis.fetch = () => { fetchCalls++; throw new Error("Business intake must not use the network"); };
   try {
-    const { coreQuestions, detailQuestions, getIntakeQuestion, intakeSectorOptions, intakeCandidates, structureQuestions, allStructureQuestions } = await import("../lib/plan-builder/intake-questions");
+    const { coreQuestions, detailQuestions, getIntakeQuestion, intakeSectorOptions, intakeCandidates, structureQuestions, structureUnitCostQuestion, allStructureQuestions } = await import("../lib/plan-builder/intake-questions");
     const { PROPOSAL_SECTORS, SECTOR_PROFILES } = await import("../lib/plan-builder/proposal-blueprint");
     const { coachFieldSchema } = await import("../lib/plan-builder/coach");
     const { coachAmount } = await import("../lib/plan-builder/coach-feasibility");
@@ -14,9 +14,10 @@ async function main() {
     const { descriptionSector } = await import("../lib/plan-builder/intake-sector");
     const modes: IntakeMode[] = ["exploring", "startup", "operating"];
     const expectedCore = {
-      exploring: ["interest", "experience", "hoursPerWeek", "budget", "conditions", "candidate", "customer", "problem", "offer", "channel", "price", "goal"],
-      startup: ["industry", "business", "customer", "problem", "offer", "channel", "price", "budget", "hoursPerWeek", "capacity", "goal"],
-      operating: ["industry", "business", "customer", "offer", "problem", "period", "sales", "cost", "capacity", "channel", "goal"],
+      // 가격 뒤 변동비·고정비: 손익 계산 세 값을 기본 흐름에서 모은다(2026-09-28). 운영 중은 월 고정비를 이미 묻고, 가격이 새로 들어갔다.
+      exploring: ["interest", "experience", "hoursPerWeek", "budget", "conditions", "candidate", "customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "goal"],
+      startup: ["industry", "business", "customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "budget", "hoursPerWeek", "capacity", "goal"],
+      operating: ["industry", "business", "customer", "offer", "price", "structure.unitCost", "problem", "period", "sales", "cost", "capacity", "channel", "goal"],
     };
     const expectedDetails = {
       b2b_service: ["decisionMaker", "deliverables", "deliveryDays", "paymentTerms"],
@@ -38,7 +39,8 @@ async function main() {
       assert.ok(!("value" in question) && !("defaultValue" in question), "The catalogue stores no answers or defaults");
       if (question.kind === "number") assert.ok(question.unit, `${question.id} needs an explicit unit`);
       if (question.fieldKey) {
-        assert.equal(question.id, question.fieldKey, "Direct coach mappings use canonical IDs");
+        // 구조 질문(structure.*)만 수익 방식에 따라 문구가 바뀌어 별도 ID를 쓰고, 저장은 coach 필드(unitCost·cost)로 한다.
+        if (!question.id.startsWith("structure.")) assert.equal(question.id, question.fieldKey, "Direct coach mappings use canonical IDs");
         assert.ok(coachFieldSchema.shape.key.options.includes(question.fieldKey));
       }
       if (question.kind === "single" || question.kind === "multi") {
@@ -65,7 +67,7 @@ async function main() {
     for (const mode of modes) for (const sector of PROPOSAL_SECTORS) {
       const core = coreQuestions(mode);
       const details = detailQuestions(sector);
-      assert.ok(core.length <= 12);
+      assert.ok(core.length <= 14, `${mode}: 기본 질문은 14개 이하`);
       assert.deepEqual(core.map(question => question.id), expectedCore[mode]);
       assert.equal(details.length, 4);
       assert.deepEqual(details.map(question => question.id), expectedDetails[sector].map(id => `${sector}.${id}`));
@@ -113,7 +115,9 @@ async function main() {
     assert.match(getIntakeQuestion("operating", null, "sales")!.prompt, /실제 매출/);
     assert.equal(getIntakeQuestion("operating", null, "sales")!.period, "입력한 시작일~종료일");
     assert.equal(getIntakeQuestion("startup", null, "price")!.period, "판매 1건");
-    assert.equal(getIntakeQuestion("operating", null, "price"), undefined, "operating asks sales and cost, not a unit price");
+    // 운영 중에도 가격을 묻는다: 실적 매출 ÷ 가격으로 실제 판매량을 잡고 손익분기를 계산하기 위해서다(2026-09-28).
+    assert.match(getIntakeQuestion("operating", null, "price")!.prompt, /지금 받는 .* 평균 가격/);
+    assert.equal(getIntakeQuestion("operating", null, "price")!.period, "판매 1건");
     for (const mode of ["exploring", "startup"] as const) {
       const priceQuestion = getIntakeQuestion(mode, null, "price")!;
       assert.equal(priceQuestion.kind, "number", `${mode}: price is a coachAmount number`);
@@ -137,16 +141,17 @@ async function main() {
     }
     assert.deepEqual(options.numberPresets({ id: "hoursPerWeek", unit: "시간", period: "주" }), [5, 10, 20, 30, 40, 60]);
     assert.equal(options.numberPresetLabel({ id: "logistics.dailyShipments", unit: "건" }, 20), "약 20건");
-    // 구조(수익 방식) 기준 상세 팩: 모델별 지표 → 변동비 → 고정비(운영 중은 기본 질문에 있어 제외), 전부 선택형·선택 사항
-    assert.deepEqual(structureQuestions("startup", { revenue: "subscription" }).map(question => question.id), ["structure.retentionMonths", "structure.unitCost", "structure.cost"]);
-    assert.deepEqual(structureQuestions("operating", { revenue: "subscription" }).map(question => question.id), ["structure.retentionMonths", "structure.unitCost"]);
-    assert.deepEqual(structureQuestions("startup", { revenue: "per_unit" }).map(question => question.id), ["structure.unitCost", "structure.cost"]);
-    assert.deepEqual(structureQuestions("exploring", null).map(question => question.id), ["structure.unitCost", "structure.cost"], "no structure means the per-unit default");
+    // 구조(수익 방식) 기준 추가 팩: 모델별 지표만 남는다. 변동비·고정비는 기본 질문으로 옮겼다(2026-09-28).
+    assert.deepEqual(structureQuestions("startup", { revenue: "subscription" }).map(question => question.id), ["structure.retentionMonths"]);
+    assert.deepEqual(structureQuestions("operating", { revenue: "subscription" }).map(question => question.id), ["structure.retentionMonths"]);
+    assert.deepEqual(structureQuestions("startup", { revenue: "per_unit" }).map(question => question.id), []);
+    assert.deepEqual(structureQuestions("exploring", null).map(question => question.id), [], "no structure means the per-unit default, which has no extra metric");
     for (const [revenue, id] of [["rental", "structure.occupancy"], ["commission", "structure.takeRate"], ["project", "structure.salesCycleDays"], ["per_hour", "structure.billableHours"]] as const) {
       assert.equal(structureQuestions("startup", { revenue })[0].id, id, `${revenue} leads with its own metric`);
     }
-    assert.equal(structureQuestions("startup", { revenue: "subscription" })[1].period, "구독자 1명(월)", "variable cost wording follows the revenue unit");
-    assert.equal(structureQuestions("startup", { revenue: "per_hour" })[1].period, "1시간");
+    assert.equal(structureUnitCostQuestion("subscription").period, "구독자 1명(월)", "variable cost wording follows the revenue unit");
+    assert.equal(structureUnitCostQuestion("per_hour").period, "1시간");
+    assert.equal(structureUnitCostQuestion(null).period, "판매 1건");
     const structurePack = allStructureQuestions();
     assert.equal(structurePack.length, 7); assert.equal(new Set(structurePack.map(question => question.id)).size, 7);
     for (const question of structurePack) {
