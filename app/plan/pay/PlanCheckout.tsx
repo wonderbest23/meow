@@ -8,8 +8,23 @@ import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
+import { REGEN_PACK_COUNT } from "../../../lib/payments/domain";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
+
+/** 결제 전 필수 확인(계좌이체 주문과 같은 항목). 서버(/api/payments/plan/prepare)도 모두 true인지 확인한다. */
+const AGREEMENT_KEYS = ["service", "privacy", "aiLimitations", "refund", "digitalSupply", "personalizedDigitalNoRefund"] as const;
+type Agreements = Record<(typeof AGREEMENT_KEYS)[number], boolean>;
+const NO_AGREEMENTS: Agreements = { service: false, privacy: false, aiLimitations: false, refund: false, digitalSupply: false, personalizedDigitalNoRefund: false };
+
+/** 상품별 제공 시점. 카드 결제는 승인 즉시 열린다(계좌이체처럼 관리자 확인을 기다리지 않는다). */
+const SUPPLY: Record<string, string> = {
+  plan: "결제가 승인되면 바로 이 문서의 전체 섹션이 열리고 이용이 시작됩니다.",
+  homepage: "결제가 승인되면 바로 홈페이지 수정·공개 기능이 열리고 이용이 시작됩니다.",
+  regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해집니다.`,
+  domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작됩니다.",
+  tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전됩니다.",
+};
 
 declare global {
   interface Window {
@@ -43,6 +58,9 @@ export default function PlanCheckout() {
   };
   const extra = COPY[product];
   const [phase, setPhase] = useState<Phase>("idle");
+  const [agreements, setAgreements] = useState<Agreements>(NO_AGREEMENTS);
+  const agreed = AGREEMENT_KEYS.every(key => agreements[key]);
+  const toggle = (key: keyof Agreements) => setAgreements(current => ({ ...current, [key]: !current[key] }));
   const [message, setMessage] = useState<string | null>(null);
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean } | null>(null);
   const [homepageInfo, setHomepageInfo] = useState<{ price: number; editable: boolean } | null>(null);
@@ -75,7 +93,7 @@ export default function PlanCheckout() {
   }, []);
 
   async function startPayment() {
-    if (started.current) return;
+    if (started.current || !agreed) return;
     started.current = true;
     setPhase("preparing");
     setMessage(null);
@@ -83,7 +101,7 @@ export default function PlanCheckout() {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}) }),
+        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}), terms: agreements }),
       });
       const data = (await res.json()) as {
         clientId?: string; sdkUrl?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
@@ -173,7 +191,7 @@ export default function PlanCheckout() {
             <>
               {planType ? <b>{planType}</b> : "이 문서"} 1부의 전체 섹션이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있습니다.
               {!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 제공 준비 중이며 현재 결제 제공 범위에는 포함되지 않습니다."}
-              같은 사업으로 다른 유형을 만들 땐 답변이 그대로 이어집니다.
+              {" "}같은 사업으로 다른 유형을 만들 땐 답변이 그대로 이어집니다.
             </>
           )}
         </p>
@@ -181,17 +199,17 @@ export default function PlanCheckout() {
         {extra ? (
           <div className={styles.price}>
             {extra.price.toLocaleString("ko-KR")}원
-            <span>{extra.unit}</span>
+            <span>{extra.unit} · 부가세 포함</span>
           </div>
         ) : isHomepage ? (
           <div className={styles.price}>
             {(homepageInfo?.price ?? 149000).toLocaleString("ko-KR")}원
-            <span>홈페이지 1개 · 1회 결제</span>
+            <span>홈페이지 1개 · 1회 결제 · 부가세 포함</span>
           </div>
         ) : info ? (
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
-            <span>문서 1부 · 1회 결제</span>
+            <span>문서 1부 · 1회 결제 · 부가세 포함</span>
           </div>
         ) : (
           /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */
@@ -199,6 +217,31 @@ export default function PlanCheckout() {
             <Spinner />
             <span>결제 정보를 확인하는 중…</span>
           </div>
+        )}
+
+        {!(info && !info.payable) && (
+          <section className={styles.terms} aria-label="결제 전 필수 확인">
+            <p className={styles.supply}><strong>제공 시점</strong>{SUPPLY[product]}</p>
+            <label className={styles.agreeAll}>
+              <input type="checkbox" checked={agreed} onChange={event => setAgreements(Object.fromEntries(AGREEMENT_KEYS.map(key => [key, event.target.checked])) as Agreements)} />
+              <span><strong>필수 항목에 모두 동의합니다.</strong><small>각 문서를 열어 실제 제공 조건을 확인할 수 있습니다.</small></span>
+            </label>
+            <div className={styles.agreeList}>
+              <label><input type="checkbox" checked={agreements.service} onChange={() => toggle("service")} /><span><a href="/terms" target="_blank" rel="noreferrer">이용약관</a> 동의</span></label>
+              <label><input type="checkbox" checked={agreements.privacy} onChange={() => toggle("privacy")} /><span><a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a> 동의</span></label>
+              <label><input type="checkbox" checked={agreements.aiLimitations} onChange={() => toggle("aiLimitations")} /><span><a href="/ai-notice" target="_blank" rel="noreferrer">인공지능·국외 처리 안내</a> 확인</span></label>
+              <label><input type="checkbox" checked={agreements.refund} onChange={() => toggle("refund")} /><span><a href="/refund" target="_blank" rel="noreferrer">취소·환불 기준</a> 동의</span></label>
+              <label><input type="checkbox" checked={agreements.digitalSupply} onChange={() => toggle("digitalSupply")} /><span>결제 승인 즉시 디지털 콘텐츠 제공이 시작됨을 확인</span></label>
+              <label className={styles.noRefund}><input type="checkbox" checked={agreements.personalizedDigitalNoRefund} onChange={() => toggle("personalizedDigitalNoRefund")} /><span>
+                {product === "regen" ? (
+                  <><strong>추가 횟수 환불 기준에 동의</strong><small>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</small></>
+                ) : (
+                  <><strong>제공 시작 후 단순 변심 환불 제한에 동의</strong><small>결제가 승인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한됩니다. 제공된 내용에 하자가 있거나 표시·광고와 다르게 제공된 경우에는 관계 법령에 따라 환불받을 수 있습니다.</small></>
+                )}
+              </span></label>
+            </div>
+            <p className={styles.disclaimer}>제공 자료는 사업 기획과 실행 준비를 돕는 초안이며 사업 성공, 수익, 투자 유치나 지원사업 선정을 보장하지 않습니다. <a href="/business-info" target="_blank" rel="noreferrer">판매자·사업자 정보</a></p>
+          </section>
         )}
 
         {info && !info.payable ? (
@@ -210,12 +253,13 @@ export default function PlanCheckout() {
             type="button"
             className={styles.primary}
             onClick={startPayment}
-            disabled={phase === "preparing" || phase === "opening"}
+            disabled={!agreed || phase === "preparing" || phase === "opening"}
           >
             {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : "카드로 결제하기"}
           </button>
         )}
 
+        {!agreed && !(info && !info.payable) ? <p className={styles.help}>필수 항목에 모두 동의하면 결제 버튼이 켜집니다.</p> : null}
         {message ? <p className={styles.error}>{message}</p> : null}
 
         <p className={styles.note}>

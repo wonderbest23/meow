@@ -9,12 +9,18 @@ import { authConfigured } from "../../../../../lib/account-auth";
 
 export const runtime = "nodejs";
 
+const CARD_TERMS_KEYS = ["service", "privacy", "aiLimitations", "refund", "digitalSupply", "personalizedDigitalNoRefund"] as const;
+
 // 결제창을 띄우기 전 단계.
 // 주문번호와 금액을 서버가 먼저 정해 두고, 클라이언트에는 그것만 넘긴다.
 // (금액을 브라우저에서 만들지 않게 하려는 것)
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string };
+  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string; terms?: Record<string, unknown> };
+  // 결제 전 필수 확인(약관·개인정보·AI 안내·환불 기준·제공 시점·청약철회 제한)은 계좌이체 주문과 같게 서버에서도 확인한다.
+  if (!CARD_TERMS_KEYS.every((key) => body.terms?.[key] === true)) {
+    return NextResponse.json({ error: "terms_required", message: "결제 전 필수 항목에 모두 동의해 주세요." }, { status: 400 });
+  }
   // 계획서와 홈페이지는 별개 상품이다 — 어느 쪽 결제인지 여기서 갈린다
   const product: PlanProduct = (["homepage", "regen", "domain", "tokens"] as const).find((p) => p === body.product) ?? "plan";
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
@@ -92,6 +98,7 @@ export async function POST(request: Request) {
       planId,
       planType,
       product,
+      terms: Object.fromEntries(CARD_TERMS_KEYS.map((key) => [key, true])),
     });
     return NextResponse.json(
       {
