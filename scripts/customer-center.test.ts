@@ -36,7 +36,10 @@ async function main() {
   try {
     await check("anonymous GET and POST require real server identity", async () => {
       owner = null;
-      for (const response of [await route.GET(), await route.POST(request(input()))]) {
+      const anonymousGet = await route.GET();
+      assert.equal(anonymousGet.status, 200); assert.equal((await anonymousGet.json()).loggedIn, false);
+      assert.match(anonymousGet.headers.get("cache-control")!, /private, no-store/);
+      for (const response of [await route.POST(request(input()))]) {
         assert.equal(response.status, 401); assert.equal((await response.json()).error.code, "ACCOUNT_LOGIN_REQUIRED");
         assert.match(response.headers.get("cache-control")!, /private, no-store/);
       }

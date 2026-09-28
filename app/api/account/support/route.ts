@@ -28,7 +28,11 @@ export async function GET() {
   try {
     const identity = await requireAuthenticatedIdentity();
     return json({ ownerScope: identity.hash, chat: await getCustomerChat(identity.hash) });
-  } catch (error) { return failed(error); }
+  } catch (error) {
+    // 로그인 전 조회는 오류가 아니라 정상 상태다 — 401 로 답하면 브라우저 콘솔에 오류가 찍힌다
+    if (error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED") return json({ loggedIn: false });
+    return failed(error);
+  }
 }
 
 export async function POST(request: Request) {

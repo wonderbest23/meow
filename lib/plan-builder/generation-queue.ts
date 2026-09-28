@@ -1,5 +1,5 @@
 import { rememberRegenQuota } from "./regen-store";
-import { activePlan, loadState, priorSectionsSummary, pushToServer, saveSection } from "./plan-store";
+import { activePlan, isSamplePlan, loadState, priorSectionsSummary, pushToServer, saveSection } from "./plan-store";
 
 /**
  * 본문 생성을 뒤에서 처리하는 큐.
@@ -152,6 +152,8 @@ export function totalPendingCount(): number {
 
 /** 서버에 맡긴 생성이 얼마나 남았는지 확인한다 */
 export async function refreshServerPending(planId: string): Promise<void> {
+  // 샘플 문서는 서버에 없다 — 물어보면 404 만 돌아온다
+  if (isSamplePlan(planId)) return;
   try {
     const res = await fetch(`/api/plan/queue?planId=${encodeURIComponent(planId)}`);
     if (!res.ok) return;

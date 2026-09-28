@@ -78,7 +78,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
    * 생성 응답에만 실어 오면 손님은 '한 번 써 봐야' 몇 회 남았는지 알게 된다.
    */
   useEffect(() => {
-    if (!activePlanId) return;
+    if (!activePlanId || isSamplePlan(activePlanId)) return;
     let alive = true;
     void (async () => {
       try {
@@ -321,7 +321,7 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
   const chapterBars = chapters.map((ch) => {
     const t = ch.sections.length;
     const d = ch.sections.filter((sec) => statuses[`${ch.id}/${sec.id}`] === "done").length;
-    return { id: ch.id, title: ch.title, pct: t ? Math.round((d / t) * 100) : 0 };
+    return { id: ch.id, title: ch.title, done: d, total: t, pct: t ? Math.round((d / t) * 100) : 0 };
   });
 
   return (
@@ -352,13 +352,19 @@ export default function PlanOverview({ statuses: propStatuses = {}, onOpenSectio
           </div>
 
           <div className={styles.sideBlock}>
-            <div className={styles.chart} aria-label="챕터별 완료 비율">
+            {/*
+              챕터별 진행. 예전엔 라벨 없는 세로 막대 7개라 무엇을 뜻하는지 알 수 없었다
+              (QA: 깨진 차트처럼 보임). 챕터 이름·완료 수·얇은 막대를 한 줄씩 둔다.
+            */}
+            <ul className={styles.chart} aria-label="챕터별 진행">
               {chapterBars.map((c) => (
-                <span key={c.id} className={styles.chartCol} title={`${c.title} ${c.pct}%`}>
-                  <i style={{ height: `${Math.max(6, c.pct)}%` }} />
-                </span>
+                <li key={c.id} className={styles.chartRow}>
+                  <span className={styles.chartName}>{c.title}</span>
+                  <span className={styles.chartCount}>{c.done}/{c.total}</span>
+                  <span className={styles.chartTrack} aria-hidden><i className={c.pct === 100 ? styles.chartDone : undefined} style={{ width: `${c.pct}%` }} /></span>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </aside>
 
