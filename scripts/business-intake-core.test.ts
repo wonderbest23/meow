@@ -20,6 +20,7 @@ async function main() {
     const { PROPOSAL_SECTORS, SECTOR_PROFILES } = await import("../lib/plan-builder/proposal-blueprint");
     const { IntakeError, createIntake, readIntake, intakeQuestions, answeredIntakeQuestion, intakeSnapshot,
       applyIntakeAnswer, applyIntakeCandidates, intakeBusinessFingerprint, finishIntakeMutation, displayIntakeValue, effectiveStructure,
+      intakeFinancialReference,
     } = await import("../lib/plan-builder/intake-core");
 
     let serial = 0;
@@ -92,11 +93,42 @@ async function main() {
       return question.kind === "number" ? 2 : `입력한 ${question.label}`;
     }
 
+    // 2026-09-28 질문 빈틈 보완: 기본 질문만으로 손익이 계산되고, 운영 중은 실적(매출 ÷ 기간 ÷ 가격)으로 판매량을 잡는다.
+    check("operating volume comes from actual sales ÷ period ÷ price; capacity stays a ceiling", () => {
+      const f = fixture("operating");
+      answer(f, "business", "동네 반찬 가게");
+      answer(f, "price", 10000);
+      answer(f, "structure.unitCost", 4000);
+      answer(f, "period", "2026-06-01 / 2026-08-31");
+      answer(f, "sales", 9000000);
+      answer(f, "cost", 1000000);
+      answer(f, "capacity", "대표자 혼자 / 하루 20건");
+      const text = intakeFinancialReference(f.coach, f.intake);
+      assert.ok(text.includes("매출 9,000,000원 ÷ 3개월") && text.includes("월 약 300건"), text);
+      assert.ok(text.includes("처리량 월 520건 중 약 58%"), text);
+      assert.ok(!text.includes("감당할 수 있는 최대치"), "operating does not treat capacity as sales");
+      answer(f, "capacity", "대표자 혼자 / 하루 5건");
+      assert.ok(intakeFinancialReference(f.coach, f.intake).includes("실적 판매량이 처리량"), "actual sales above capacity is flagged");
+    });
+    check("startup core answers alone produce the scenario; capacity is labelled as the maximum", () => {
+      const f = fixture("startup");
+      answer(f, "business", "직장인 프로필 촬영");
+      answer(f, "price", 50000);
+      answer(f, "structure.unitCost", 10000);
+      answer(f, "structure.cost", 500000);
+      answer(f, "capacity", "대표자 혼자 / 일주일 10건");
+      const text = intakeFinancialReference(f.coach, f.intake);
+      assert.ok(!text.includes("아직 없는 값"), text);
+      assert.ok(text.includes("감당할 수 있는 최대치"), text);
+      assert.equal(f.intake.detailsRequested ?? false, false, "no extra pack needed");
+    });
+
     for (const mode of ["exploring", "startup", "operating"] as const) for (const sector of PROPOSAL_SECTORS) {
-      check(`matrix ${mode}/${sector}: <=11 core, 4 details, one next question, ready`, () => {
+      check(`matrix ${mode}/${sector}: <=14 core, 4 details, one next question, ready`, () => {
         const f = fixture(mode);
         const coreIds = coreQuestions(mode).map(question => question.id);
-        assert.equal(coreIds.length, mode === "exploring" ? 12 : 11, "exploring adds the start-conditions step before the candidates");
+        // 변동비·고정비가 기본 질문에 들어왔다(운영 중은 가격·변동비). 탐색은 시작 조건 단계가 하나 더 있다.
+        assert.equal(coreIds.length, mode === "exploring" ? 14 : 13, "exploring adds the start-conditions step before the candidates");
         const visited: string[] = [];
         for (let index = 0; index < coreIds.length; index++) {
           const state = snapshot(f);
@@ -120,11 +152,11 @@ async function main() {
         f.intake.detailsRequested = true;
         assert.equal(finishIntakeMutation(f.coach, beforeDetails, f.plan.answers), false);
         assert.equal(coachDocumentRevision(f.coach), revision, "Opening details is not a source edit");
-        // 상세 팩 = 구조(수익 방식) 질문 2~3개 + 업종 질문 4개. 필드 질문(변동비·고정비)은 coach.fields가 원천이라 intake/details에 들어가지 않는다.
+        // 상세 팩 = 구조(수익 방식) 지표 0~1개 + 업종 질문 4개. 필드 질문(변동비·고정비)은 coach.fields가 원천이라 intake/details에 들어가지 않는다.
         const detailPack = [...structureQuestions(mode, effectiveStructure(f.intake).values), ...detailQuestions(sector)];
         const detailIds = detailPack.map(question => question.id);
         assert.equal(detailQuestions(sector).length, 4);
-        assert.ok(detailPack.filter(question => question.id.startsWith("structure.")).length >= (mode === "operating" ? 1 : 2), "operating already asks fixed cost in the core, so its pack is variable cost plus the model metric");
+        assert.ok(!detailIds.includes("structure.unitCost") && !detailIds.includes("structure.cost"), "variable and fixed cost are core questions now, so the pack only adds revenue-model metrics");
         assert.equal(snapshot(f).questions.length, coreIds.length + detailIds.length);
         for (const id of detailIds) {
           const state = snapshot(f);

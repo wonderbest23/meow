@@ -147,6 +147,7 @@ async function main() {
         business: "직장인 프로필 촬영 사업", experience: "사진 촬영과 고객 응대 경험", customer: "직장인",
         problem: "예약 가능한 촬영 시간을 찾기 어려움", offer: "프로필 촬영 1회", channel: "직접 예약",
         price: "50000원", budget: 1000000, hoursPerWeek: 10, sales: 500000, cost: 100000,
+        "structure.unitCost": 10000, "structure.cost": 100000,
         period: "2026-08-01 / 2026-08-31", goal: "다음 달 고객 반응 확인",
       };
       assert.ok(question.id in values, `add an explicit fixture for ${question.id}`);
@@ -276,7 +277,10 @@ async function main() {
       assert.ok(saasNext.snapshot.financialSummary.includes("아직 없는 값"), saasNext.snapshot.financialSummary);
       const withDetails = await send(saasSession, { action: "details" });
       const ids = withDetails.snapshot.questions.map(question => question.id), at = ids.indexOf("structure.retentionMonths");
-      assert.deepEqual(ids.slice(at, at + 4), ["structure.retentionMonths", "structure.unitCost", "structure.cost", "software.workflow"], ids.join(","));
+      assert.deepEqual(ids.slice(at, at + 2), ["structure.retentionMonths", "software.workflow"], ids.join(","));
+      // 변동비·고정비는 추가 팩이 아니라 기본 질문(가격 바로 뒤)에서 묻는다: 손익 계산 세 값이 기본 흐름에서 모두 모인다
+      assert.deepEqual(ids.slice(ids.indexOf("price"), ids.indexOf("price") + 3), ["price", "structure.unitCost", "structure.cost"], ids.join(","));
+      assert.equal(ids.filter(id => id === "structure.unitCost").length, 1, "no duplicate cost question in the extra pack");
       assert.equal(withDetails.snapshot.questions.find(question => question.id === "structure.unitCost")?.period, "구독자 1명(월)");
       await send(saasSession, { action: "answer", questionId: "price", value: "30000원" });
       await send(saasSession, { action: "answer", questionId: "capacity", value: "대표자 혼자 / 한 달 50명" });
@@ -286,7 +290,7 @@ async function main() {
       for (const text of ["월 구독 기준", "손익분기: 월 38건", "구독 유지 평균 12개월", "생애 매출 360,000원", "월 이탈률 약 8%", "매달 신규 약 5명", "월 50명 감당 기준"]) assert.ok(priced.snapshot.financialSummary.includes(text), `${text} in: ${priced.snapshot.financialSummary}`);
       assert.equal(priced.snapshot.intake.answers["structure.retentionMonths"]?.value, 12);
       assert.equal(priced.snapshot.summary.find(item => item.id === "unitCost")?.label, "구독자 1명당 월 비용");
-      assert.equal(priced.snapshot.coreAnswered, saasNext.snapshot.coreAnswered + 2, "structure answers do not count toward the core progress; price and capacity do");
+      assert.equal(priced.snapshot.coreAnswered, saasNext.snapshot.coreAnswered + 4, "price, capacity and the two core cost answers count toward core progress; the revenue-model extra does not");
       // 문서용 구조 브리프: 수익 모델 산식·입력, 인허가 체크리스트, 초기 자본 항목이 결정적으로 채워진다
       const saasLoaded = await load(saasSession);
       const brief = intakeStructureBrief(saasLoaded.coach, saasLoaded.intake);
@@ -392,7 +396,7 @@ async function main() {
       const initial = await saveIntakeCommand(ownerHash, { action: "start", mode: "exploring", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
       const session = { ownerHash, planId: initial.plan.id };
       assert.equal(initial.snapshot.candidateIdeas.length, 3, "without any signal only the curated templates show");
-      assert.equal(initial.snapshot.coreTotal, 12);
+      assert.equal(initial.snapshot.coreTotal, 14, "exploring core now includes the two cost questions after price");
       await send(session, { action: "answer", questionId: "interest", value: ["local_service"] });
       const withExperience = await send(session, { action: "answer", questionId: "experience", value: "네일아트 자격증이 있고 손님 응대를 오래 했어요" });
       const ideas = withExperience.snapshot.candidateIdeas;

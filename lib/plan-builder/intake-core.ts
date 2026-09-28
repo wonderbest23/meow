@@ -1,9 +1,9 @@
 import { COACH_FIELD_LABELS } from "./coach-presentation";
-import { coachAmount } from "./coach-feasibility";
+import { coachAmount, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, type CoachField, type CoachState } from "./coach";
 import { calculateFinancials, financialsToReference } from "./financials";
-import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, type IntakeMode, type IntakeQuestion } from "./intake-questions";
-import { INDUSTRY_HINTS, PRICE_BASIS, sectorChipOptions } from "./intake-options";
+import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
+import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
 import { KSIC_SYNONYMS, ksicAncestors, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
 import { START_CONDITIONS } from "./intake-questions";
@@ -187,8 +187,10 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
         // The pricing basis is wording only (spec §4-1): storage stays a coachAmount string under coach.fields.price.
         const period = (structure ? revenueBasis(structure) : null) ?? PRICE_BASIS[sector], options = sectorChipOptions(sector, "price", intake.mode);
         const hint = sector === "software" ? "무료 모델이면 아직 미정을 누르고 과금 기준에서 설명해요." : question.hint;
-        return { ...question, period, prompt: pricePrompt(period), ...(hint ? { hint } : {}), ...(options.length ? { options } : {}) };
+        return { ...question, period, prompt: pricePrompt(period, intake.mode), ...(hint ? { hint } : {}), ...(options.length ? { options } : {}) };
       }
+      // 변동비 문구·단위는 수익 방식(판매 1건·1시간·구독자 1명…)을 따른다. 저장 위치(coach.fields.unitCost)는 같다.
+      if (question.id === "structure.unitCost") return { ...structureUnitCostQuestion(structure?.revenue), ...(question.options ? { options: question.options } : {}) };
       if (question.kind !== "text" || question.options?.length) return question;
       const options = sectorChipOptions(sector, question.id, intake.mode);
       if (question.id === "capacity" && structure && options.length) {
@@ -286,17 +288,8 @@ export function intakeJobClock(job: IntakeJob | null | undefined, nowMs: number)
   return { elapsedMs: Number.isFinite(started) ? Math.max(0, nowMs - started) : 0, ...INTAKE_JOB_TIMING[job.kind] };
 }
 
-const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "한 달": 1 };
-/** 처리량 답변("대표자 혼자 / 하루 20건")을 월 판매량으로 환산한다. 하루는 월 26일 영업, 일주일은 4.3주 가정이며 기간이 없으면 환산하지 않는다. */
-export function monthlyVolumeFromCapacity(text: string | null | undefined): { volume: number; unit: string; note: string } | null {
-  const match = text?.match(/(하루|일주일|한 달)\s*([\d,]+)\s*([가-힣·]*)/);
-  if (!match) return null;
-  const count = Number(match[2].replace(/,/g, ""));
-  if (!Number.isFinite(count) || count < 0) return null;
-  const factor = CAPACITY_MONTH_FACTOR[match[1]], unit = match[3] || "건", volume = Math.round(count * factor);
-  const shown = (n: number) => n.toLocaleString("ko-KR");
-  return { volume, unit, note: factor === 1 ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1]} ${shown(count)}${unit} × ${factor === 26 ? "월 26일 영업" : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
-}
+// 처리량 → 월 판매량 환산은 실행 가능성 점검과 함께 쓰므로 coach-feasibility에 둔다.
+export { monthlyVolumeFromCapacity };
 
 function validStructureNumber(id: string, value: number): boolean {
   if (!Number.isFinite(value) || value < 0 || value > 1e14) return false;
@@ -328,6 +321,19 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   let volume: number | undefined;
   const rawVolume = fields.get("volume") ?? "";
   if (/^[\d,]+$/.test(rawVolume)) volume = Number(rawVolume.replace(/,/g, ""));
+  // 운영 중 사업: 실적 매출 ÷ 기간(개월) ÷ 가격으로 실제 월 판매량을 잡는다. 처리량(감당 가능한 최대치)을 판매량으로 쓰지 않는다.
+  if (volume === undefined && intake.mode === "operating") {
+    const sales = amount("sales"), periodValue = intake.answers.period?.value, months = periodMonths(typeof periodValue === "string" ? periodValue : null);
+    if (sales != null && months && unitPrice > 0) {
+      const perMonth = sales / months;
+      volume = Math.round(perMonth / unitPrice);
+      notes.push(`실적 기준 판매량: 매출 ${won(sales)} ÷ ${Math.round(months * 10) / 10}개월 ÷ ${labels.price} ${won(unitPrice)} = 월 약 ${volume.toLocaleString("ko-KR")}건`);
+      const capacity = monthlyVolumeFromCapacity(fields.get("capacity"));
+      if (capacity && capacity.volume > 0) notes.push(volume > capacity.volume
+        ? `실적 판매량이 처리량(월 ${capacity.volume.toLocaleString("ko-KR")}${capacity.unit})보다 많습니다. 가격(평균 결제액)이나 처리량 답을 확인해 주세요.`
+        : `처리량 월 ${capacity.volume.toLocaleString("ko-KR")}${capacity.unit} 중 약 ${Math.round(volume / capacity.volume * 100)}%를 쓰고 있습니다.`);
+    }
+  }
   const billable = structure.revenue === "per_hour" ? structureNumber(intake, "structure.billableHours") : null;
   if (volume === undefined && billable != null) { volume = Math.round(billable * 4.3); notes.push(`주 ${billable}시간 청구 × 4.3주 = 월 ${volume}시간`); }
   const occupancy = structure.revenue === "rental" ? structureNumber(intake, "structure.occupancy") : null;
@@ -341,7 +347,10 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
           volume = Math.round(capacity.volume * occupancy / 100);
           notes.push(`이용률 ${occupancy}% 반영: 월 ${capacity.volume.toLocaleString("ko-KR")}${capacity.unit} 감당 중 ${volume.toLocaleString("ko-KR")}${capacity.unit} 판매 가정`);
         }
-      } else volume = capacity.volume;
+      } else {
+        volume = capacity.volume;
+        notes.push("판매량은 감당할 수 있는 최대치로 잡았습니다. 실제 판매가 이보다 적으면 이익도 줄어듭니다.");
+      }
     }
   } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });

@@ -24,6 +24,14 @@ async function main() {
   assert.equal(checks[0].inputs[0].basis, "proposal", "산술 검사도 가정의 출처를 보존한다");
   assert.ok(checkCoachFeasibility([]).every(c => c.status === "unknown"));
   assert.equal(checkCoachFeasibility([field("hoursPerWeek", "200시간")])[2].status, "attention");
+  // 초기 지출을 묻지 않는 흐름에서도 예산은 월 고정비 3개월분과 비교된다(2026-09-28).
+  const reserveShort = checkCoachFeasibility([field("budget", "200만원"), field("cost", "100만원")])[0];
+  assert.equal(reserveShort.status, "attention"); assert.ok(reserveShort.detail.includes("2개월분") && reserveShort.detail.includes("3,000,000"), reserveShort.detail);
+  assert.equal(checkCoachFeasibility([field("budget", "500만원"), field("cost", "100만원")])[0].status, "within-inputs");
+  assert.equal(checkCoachFeasibility([field("budget", "500만원"), field("setupCost", "300만원"), field("cost", "100만원")])[0].detail.includes("초기 지출은 예산 이내"), true, "setupCost keeps the original comparison");
+  // 건당 작업시간을 묻지 않아도 주당 시간 ÷ 처리량으로 1건에 쓸 수 있는 평균 시간을 보여 준다(판단은 하지 않음).
+  const perSale = checkCoachFeasibility([field("hoursPerWeek", "20"), field("capacity", "대표자 혼자 / 하루 10건")])[2];
+  assert.equal(perSale.status, "unknown"); assert.ok(perSale.detail.includes("1건당 평균 20분"), perSale.detail);
   assert.equal(coachAmount("모르겠음"), undefined);
   assert.equal(coachAmount("10~20만원"), undefined);
   assert.equal(coachAmount("1..2만원"), undefined);
