@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { KSIC_DIVISION_STRUCTURES, KSIC_STRUCTURE_OVERRIDES, KSIC_SYNONYMS, SECTOR_DIVISIONS, capacityUnitOrder, ksicAncestors, ksicByCode, ksicChildren, ksicDivision, ksicEntries, ksicPath, ksicStructure, licenseHint, revenueBasis, searchKsic, structureFieldLabels, structureSummary } from "../lib/plan-builder/ksic";
+import { KSIC_DIVISION_STRUCTURES, KSIC_STRUCTURE_OVERRIDES, KSIC_SYNONYMS, SECTOR_DIVISIONS, capacityUnitOrder, ksicAncestors, ksicByCode, ksicChildren, ksicDivision, ksicEntries, ksicPath, ksicStructure, licenseHint, isFinanceKsic, FINANCE_LICENSE_HINT, revenueBasis, searchKsic, structureFieldLabels, structureSummary } from "../lib/plan-builder/ksic";
 import { STRUCTURE_LABELS } from "../lib/plan-builder/business-structure";
 
 // 1) 색인 무결성 — KSIC 11차 공표 개수
@@ -75,6 +75,14 @@ assert.match(licenseHint(ksicStructure("56221")!) ?? "", /신고/);
 assert.match(licenseHint(ksicStructure("56211")!) ?? "", /허가/);
 assert.equal(licenseHint(ksicStructure("58222")!), null, "소프트웨어 개발은 인허가 안내 없음");
 assert.match(licenseHint(ksicStructure("68221")!) ?? "", /자격·면허/);
+// 2026-09-28 금융·보험(64·65·66)은 구청·세무서가 아니라 금융위원회·금융감독원 안내. 인허가 등급(분류)은 그대로다.
+assert.equal(ksicStructure("66199")?.license, "registration", "분류는 법령 검수(자본시장법 제18조 등록) 그대로");
+assert.equal(licenseHint(ksicStructure("66199")!, "66199"), FINANCE_LICENSE_HINT);
+assert.ok(!licenseHint(ksicStructure("66199")!, "66199")!.includes("구청"), "금융업 안내에 구청·세무서가 나오지 않는다");
+assert.equal(licenseHint(ksicStructure("64201")!, "64201"), FINANCE_LICENSE_HINT);
+assert.match(licenseHint(ksicStructure("56221")!, "56221") ?? "", /관할 구청·세무서/, "다른 업종 문구는 그대로");
+assert.match(licenseHint(ksicStructure("66199")!) ?? "", /관할 구청·세무서/, "코드를 모르면 기존 등급 문구");
+assert.ok(isFinanceKsic("66202") && isFinanceKsic("65") && !isFinanceKsic("68222") && !isFinanceKsic(null));
 for (const code of Object.keys(KSIC_DIVISION_STRUCTURES)) assert.equal(structureSummary(KSIC_DIVISION_STRUCTURES[code]).length, 5, `labels for division ${code}`);
 assert.equal(structureFieldLabels(ksicStructure("58222")!).price, "월 구독 가격");
 assert.equal(structureFieldLabels(ksicStructure("58222")!).volume, "월 구독자 수");

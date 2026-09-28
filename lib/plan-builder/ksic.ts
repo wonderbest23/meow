@@ -14,7 +14,7 @@ export const KSIC_LEVEL_LABELS: Record<KsicLevel, string> = { 1: "대분류", 2:
 export const KSIC_ATTRIBUTION = "출처: 국가데이터처 국가데이터연구원, 한국표준산업분류(KSIC) 11차 / 공공데이터포털";
 
 import { type BusinessStructure } from "./business-structure";
-export { STRUCTURE_LABELS, structureSummary, revenueBasis, capacityUnitOrder, licenseHint, structureFieldLabels, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, type BusinessStructure } from "./business-structure";
+export { STRUCTURE_LABELS, structureSummary, revenueBasis, capacityUnitOrder, licenseHint, isFinanceKsic, FINANCE_LICENSE_HINT, structureFieldLabels, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, type BusinessStructure } from "./business-structure";
 
 const S = (sector: ProposalSector, payer: BusinessStructure["payer"], offering: BusinessStructure["offering"], revenue: BusinessStructure["revenue"], delivery: BusinessStructure["delivery"], capital: BusinessStructure["capital"], license: BusinessStructure["license"], smallBusiness: boolean): BusinessStructure => ({ sector, payer, offering, revenue, delivery, capital, license, smallBusiness });
 

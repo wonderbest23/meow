@@ -121,7 +121,7 @@ export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState, entir
       ...(terms.length ? [`흔히 부르는 말: ${terms.slice(0, 3).join(", ")}`] : []),
     ];
     return { id: `ksic:${entry.code}`, title: entry.name, sector, description: `표준산업분류 ${entry.code} · ${group} · ${structureSummary(structure).join(" · ")}`, reasons,
-      cautions: [licenseHint(structure) ?? "인허가는 관할 기관 기준으로 확인이 필요합니다.", "표준산업분류 세세분류 기준 후보이며 수요·수익성을 검증한 결과가 아닙니다."] };
+      cautions: [licenseHint(structure, entry.code) ?? "인허가는 관할 기관 기준으로 확인이 필요합니다.", "표준산업분류 세세분류 기준 후보이며 수요·수익성을 검증한 결과가 아닙니다."] };
   });
 }
 
@@ -268,7 +268,7 @@ export function effectiveStructure(intake: Pick<IntakeState, "ksic" | "sector" |
 
 function intakeStructureSnapshot(coach: CoachState, intake: IntakeState): IntakeSnapshot["structure"] {
   const { values, basis } = effectiveStructure(intake);
-  return { values, basis, summary: structureSummary(values), licenseHint: licenseHint(values), fallback: intakeStructureFallback(coach, intake) };
+  return { values, basis, summary: structureSummary(values), licenseHint: licenseHint(values, intake.ksic), fallback: intakeStructureFallback(coach, intake) };
 }
 
 /** 사용자가 고른 구조 축을 저장하고 대화 기록에 남긴다. 값은 스키마가 검증했고 여기서는 라벨 존재만 다시 확인한다. */
@@ -466,7 +466,7 @@ function intakeKsic(intake: Pick<IntakeState, "ksic">): IntakeSnapshot["ksic"] {
   const entry = intake.ksic ? ksicByCode(intake.ksic) : undefined;
   if (!entry) return null;
   const structure = ksicStructure(entry.code) ?? null;
-  return { code: entry.code, name: entry.name, path: ksicPath(entry.code), structure, summary: structure ? structureSummary(structure) : [], licenseHint: structure ? licenseHint(structure) : null };
+  return { code: entry.code, name: entry.name, path: ksicPath(entry.code), structure, summary: structure ? structureSummary(structure) : [], licenseHint: structure ? licenseHint(structure, entry.code) : null };
 }
 
 /** 확인된 사업 소개·상품 텍스트에서만 KSIC 후보를 찾는다(미확정 제안·메모 제외). 규칙 기반, 최대 4개. */

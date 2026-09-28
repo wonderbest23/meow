@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { coachDocumentRevision, readCoach } from "./coach";
 import { readIntake } from "./intake-core";
-import { ksicByCode, ksicStructure, licenseHint, STRUCTURE_LABELS } from "./ksic";
+import { isFinanceKsic, ksicByCode, ksicStructure, licenseHint, STRUCTURE_LABELS } from "./ksic";
 import type { Plan } from "./plan-store";
 
 export const LAUNCH_KEY = "__business_launch";
@@ -51,9 +51,9 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
   const intakeState = readIntake(plan.answers as Record<string, Record<string, unknown>>);
   const ksicEntry = intakeState?.ksic ? ksicByCode(intakeState.ksic) : undefined;
   const structure = ksicEntry ? ksicStructure(ksicEntry.code) : undefined;
-  const hint = structure ? licenseHint(structure) : null;
+  const hint = structure ? licenseHint(structure, ksicEntry?.code) : null;
   if (ksicEntry && structure && hint && !improving) result.push({ ...base, id: "license", title: "업종 인허가를 확인해요", task: hint, materialTitle: "인허가 확인 메모",
-    material: `업종: ${ksicEntry.name} (KSIC ${ksicEntry.code})\n분류 기준 절차: ${STRUCTURE_LABELS.license[structure.license]}\n확인할 기관(구청·세무서·협회 등):\n확인한 날짜:\n필요 서류·비용:\n비고:`,
+    material: `업종: ${ksicEntry.name} (KSIC ${ksicEntry.code})\n분류 기준 절차: ${STRUCTURE_LABELS.license[structure.license]}\n확인할 기관(${isFinanceKsic(ksicEntry.code) ? "금융감독원·금융위원회 등" : "구청·세무서·협회 등"}):\n확인한 날짜:\n필요 서류·비용:\n비고:`,
     prompt: "이 업종을 시작하기 전에 필요한 신고·허가·자격을 관할 기관 기준으로 정리해 주세요. 확인되지 않은 항목은 확인 필요로 남깁니다.", caution: "인허가 요건은 지역·규모·세부 업태에 따라 다릅니다. 여기 안내는 표준산업분류 기준의 출발점이며 최종 확인은 관할 기관에서 합니다.",
     links: [{ title: "정부24", url: "https://www.gov.kr" }] });
   if (settings.registered !== "yes") result.push({ ...base, id: "registration", title: "사업자등록 준비를 확인해요", task: "실제로 판매를 시작할 시점에 맞춰 필요한 서류와 업종을 공식 안내에서 확인해요.", materialTitle: "등록 상담용 사업 설명", material: `${context}\n\n사업장 방식: ${settings.workplace === "remote" ? "별도 사무실 없이 운영 검토" : settings.workplace === "shared" ? "소호·공유사무실 검토" : settings.workplace === "shop" ? "점포·사업장 검토" : "미정"}\n\n확인하고 싶은 내용:\n- 사업 내용에 맞는 업종과 신청 서류\n- 주소 사용과 임차 관련 제출 자료\n- 해당 업종의 별도 인허가·신고 여부\n- 실제 개업 예정일에 맞는 신청 일정`, caution: "사업 아이디어를 확인하는 것과 실제 영업은 달라요. 여기서 준비 완료를 눌러도 사업자등록이 신청되지는 않아요.", links: [LAUNCH_SOURCES.registration], prompt: "현재 사업으로 관할 세무서에 물어볼 등록 상담 질문지를 작성해주세요. 업종코드·허가 여부·신청 완료를 임의로 확정하지 마세요." });
