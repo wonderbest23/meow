@@ -190,7 +190,12 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
         return { ...question, period, prompt: pricePrompt(period, intake.mode), ...(hint ? { hint } : {}), ...(options.length ? { options } : {}) };
       }
       // 변동비 문구·단위는 수익 방식(판매 1건·1시간·구독자 1명…)을 따른다. 저장 위치(coach.fields.unitCost)는 같다.
-      if (question.id === "structure.unitCost") return { ...structureUnitCostQuestion(structure?.revenue), ...(question.options ? { options: question.options } : {}) };
+      if (question.id === "structure.unitCost") {
+        const base = structureUnitCostQuestion(structure?.revenue);
+        // 건당 판매 모델은 바로 앞 가격 질문과 같은 기준(대표 메뉴 1개·상품 1개…)으로 묻는다. 구독·시간제 등은 수익 방식 단위를 따른다.
+        const basis = !structure || structure.revenue === "per_unit" || structure.revenue === "mixed" ? (structure ? revenueBasis(structure) : null) ?? PRICE_BASIS[sector] : null;
+        return { ...base, ...(basis ? { period: basis, prompt: `${basis}에 들어가는 변동비는 얼마쯤인가요?` } : {}), ...(question.options ? { options: question.options } : {}) };
+      }
       if (question.kind !== "text" || question.options?.length) return question;
       const options = sectorChipOptions(sector, question.id, intake.mode);
       if (question.id === "capacity" && structure && options.length) {
