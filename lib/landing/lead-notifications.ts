@@ -71,6 +71,27 @@ export async function processLandingLeadNotification(leadId: string, force = fal
     next_attempt_at: retry ? new Date(Date.now() + notificationRetryDelay(attempts)).toISOString() : null });
 }
 
+/*
+ * 예약 실행(5분마다): 재시도 시각이 된 알림과, 보내는 도중 작업이 끊겨 임대가 만료된 알림을 다시 처리한다.
+ * 예전에는 자동 재시도를 맡은 곳이 없어서, 발송 서버가 잠깐 실패하면 사장님이 '다시 보내기'를 누르기 전까지
+ * '재시도 대기'로 멈춰 있었다. 처리 순서·임대·중복 발송 방지는 processLandingLeadNotification 이 그대로 맡는다.
+ */
+export async function sweepDueLeadNotifications(limit = 20, dependencies?: { db: SupabaseClient | null; process: (leadId: string) => Promise<void>; now?: Date }) {
+  const db = dependencies ? dependencies.db : getServerSupabase();
+  if (!db) return { due: 0, processed: 0, failed: 0 };
+  const now = (dependencies?.now ?? new Date()).toISOString();
+  const { data, error } = await db.from("landing_lead_notifications").select("lead_id")
+    .or(`and(status.in.(pending,retry),next_attempt_at.lte.${now}),and(status.eq.processing,lease_until.lt.${now})`)
+    .order("next_attempt_at", { ascending: true }).limit(limit);
+  if (error) throw new Error("LANDING_NOTIFICATIONS_UNAVAILABLE");
+  const run = dependencies?.process ?? ((leadId: string) => processLandingLeadNotification(leadId));
+  let processed = 0, failed = 0;
+  for (const row of (data ?? []) as Array<{ lead_id: string }>) {
+    try { await run(row.lead_id); processed += 1; } catch { failed += 1; }
+  }
+  return { due: data?.length ?? 0, processed, failed };
+}
+
 export async function retryLandingLeadNotification(projectId: string, ownerHash: string, leadId: string) {
   const site = await getLandingForProject(projectId, ownerHash);
   if (!site) throw new Error("LANDING_NOT_FOUND");

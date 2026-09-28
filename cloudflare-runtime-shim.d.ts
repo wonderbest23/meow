@@ -42,8 +42,15 @@ interface ExecutionContext {
   waitUntil(promise: Promise<unknown>): void;
 }
 
+interface ScheduledController {
+  readonly scheduledTime: number;
+  readonly cron: string;
+  noRetry(): void;
+}
+
 type ExportedHandler<Env> = {
   fetch(request: Request, env: Env, context: ExecutionContext): Response | Promise<Response>;
+  scheduled?(controller: ScheduledController, env: Env, context: ExecutionContext): void | Promise<void>;
 };
 
 declare module "cloudflare:workers" {

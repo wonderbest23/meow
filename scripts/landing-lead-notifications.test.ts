@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildLandingLeadEmail, landingEmailConfiguration, sendLandingLeadEmail } from "../lib/landing/lead-email";
-import { notificationIdempotencyExpired, notificationRetryDelay, processLandingLeadNotification } from "../lib/landing/lead-notifications";
+import { notificationIdempotencyExpired, notificationRetryDelay, processLandingLeadNotification, sweepDueLeadNotifications } from "../lib/landing/lead-notifications";
 
 async function main() {
   assert.equal(landingEmailConfiguration({}), null);
@@ -87,6 +87,29 @@ async function main() {
   const beforeExpired = calls.length;
   await processLandingLeadNotification("lead-1", false, { db: e.db, config, transport });
   assert.equal(e.row.status, "failed"); assert.equal(e.row.error_code, "delivery_unknown"); assert.equal(calls.length, beforeExpired);
+  // 예약 실행: 재시도 시각이 된 알림과 임대가 끊긴 알림만 골라 차례로 처리하고, 하나가 실패해도 나머지는 계속한다
+  const sweepQuery: { or?: string; order?: string; limit?: number; table?: string } = {};
+  const sweepDb = {
+    from: (table: string) => {
+      sweepQuery.table = table;
+      const query = {
+        select: () => query,
+        or: (filter: string) => { sweepQuery.or = filter; return query; },
+        order: (column: string) => { sweepQuery.order = column; return query; },
+        limit: async (count: number) => { sweepQuery.limit = count; return { data: [{ lead_id: "due-1" }, { lead_id: "due-2" }, { lead_id: "due-3" }], error: null }; },
+      };
+      return query;
+    },
+  } as unknown as SupabaseClient;
+  const swept: string[] = [];
+  const at = new Date("2026-09-28T12:00:00.000Z");
+  const result = await sweepDueLeadNotifications(20, { db: sweepDb, now: at, process: async (leadId: string) => { swept.push(leadId); if (leadId === "due-2") throw new Error("claim failed"); } });
+  assert.deepEqual(result, { due: 3, processed: 2, failed: 1 });
+  assert.deepEqual(swept, ["due-1", "due-2", "due-3"]);
+  assert.equal(sweepQuery.table, "landing_lead_notifications");
+  assert.equal(sweepQuery.or, "and(status.in.(pending,retry),next_attempt_at.lte.2026-09-28T12:00:00.000Z),and(status.eq.processing,lease_until.lt.2026-09-28T12:00:00.000Z)");
+  assert.equal(sweepQuery.order, "next_attempt_at"); assert.equal(sweepQuery.limit, 20);
+  assert.deepEqual(await sweepDueLeadNotifications(20, { db: null, process: async () => undefined }), { due: 0, processed: 0, failed: 0 });
   console.log("landing-lead-notifications: configuration, no PII payload/log error, provider rejection, retry limits, lease concurrency, durable request, duplicate-safe recovery and ambiguity cutoff passed (mock transport only)");
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

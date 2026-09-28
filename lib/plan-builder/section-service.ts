@@ -1,4 +1,5 @@
 import "server-only";
+import { sweepDueLeadNotifications } from "../landing/lead-notifications";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
 import { renderPlanMarkdown } from "./markdown";
@@ -219,13 +220,14 @@ export async function handlePlanSectionServiceRequest(request: Request, env: { S
     z.object({ operation: z.literal("completeDeck"), job: z.object({ ownerHash: owner, planId: plan, token, operation: z.literal("deck").optional() }).strict() }).strict(),
     z.object({ operation: z.literal("completeProposalUpdate"), job: proposalBackgroundJobSchema }).strict(),
     z.object({ operation: z.literal("artifactChunk"), job: z.object({ operation: z.literal("artifact_update"), ownerHash: owner, planId: plan, jobId: z.string().uuid(), index: z.number().int().min(0).max(79), attempt: z.number().int().min(0).max(2) }).strict() }).strict(),
+    z.object({ operation: z.literal("sweepLeadNotifications"), job: z.object({}).strict() }).strict(),
   ]);
   let raw: unknown;
   try { raw = JSON.parse(body); } catch { return Response.json({ error: "INVALID_REQUEST" }, { status: 400 }); }
   const parsed = schema.safeParse(raw);
   if (!parsed.success) return Response.json({ error: "INVALID_REQUEST" }, { status: 400 });
   const input = parsed.data;
-  if (process.env.INTAKE_BETA_SAFETY === "1" && input.operation !== "intake") return Response.json({ error: "BETA_SCOPE_RESTRICTED" }, { status: 403 });
+  if (process.env.INTAKE_BETA_SAFETY === "1" && input.operation !== "intake" && input.operation !== "sweepLeadNotifications") return Response.json({ error: "BETA_SCOPE_RESTRICTED" }, { status: 403 });
   try {
     switch (input.operation) {
       case "intake": return Response.json({ result: await runIntakeJobWithBudget(input.job) });
@@ -233,6 +235,7 @@ export async function handlePlanSectionServiceRequest(request: Request, env: { S
       case "completeCoach": return Response.json({ result: await generateAndSaveCoach(input.job) });
       case "completeDeck": return Response.json({ result: await generateAndSaveDeck(input.job) });
       case "completeProposalUpdate": return Response.json({ result: await executeProposalUpdate(input.job) });
+      case "sweepLeadNotifications": return Response.json({ result: { ok: true, ...(await sweepDueLeadNotifications()) } });
       case "artifactChunk": return Response.json({ result: await executeArtifactChunk(input.job.ownerHash, input.job.planId, input.job.jobId, input.job.index, input.job.attempt) });
     }
   } catch {
