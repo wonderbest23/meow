@@ -3,6 +3,9 @@ import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
 import { createPlanOrder, paidPlanEntitlement, paidHomepagePlanIds, domainEntitlement, productName, PLAN_PRODUCT_NAME, type PlanProduct } from "../../../../../lib/payments/plan-orders";
 import { nicepayClientKey, nicepayConfigured, nicepaySdkUrl } from "../../../../../lib/payments/nicepay-client";
+import { evaluatePlatformLaunchReadiness } from "../../../../../lib/platform-legal/domain";
+import { getPlatformLegalSettings } from "../../../../../lib/platform-legal/repository";
+import { authConfigured } from "../../../../../lib/account-auth";
 
 export const runtime = "nodejs";
 
@@ -30,6 +33,15 @@ export async function POST(request: Request) {
   if (!nicepayConfigured()) {
     return NextResponse.json(
       { error: "payments_unavailable", message: "결제 준비가 아직 완료되지 않았습니다. 잠시 후 다시 시도해주세요." },
+      { status: 503 },
+    );
+  }
+
+  // 카드 결제도 계좌이체 주문과 같은 출시 조건(사업자·통신판매업 표시, 인증, 결제 설정)을 통과해야 연다.
+  const readiness = evaluatePlatformLaunchReadiness(await getPlatformLegalSettings(), { authConfigured: authConfigured(), paymentsConfigured: true });
+  if (!readiness.paymentAllowed) {
+    return NextResponse.json(
+      { error: "paid_launch_blocked", message: "정식 결제 준비가 아직 완료되지 않았습니다. 잠시 후 다시 시도해주세요." },
       { status: 503 },
     );
   }

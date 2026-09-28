@@ -4,6 +4,7 @@ import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolveTextLLMConfig } from "../../../../lib/llm/config";
 import { completeJson, type LLMFailure } from "../../../../lib/llm/complete";
 import { aiFailureResponse, AI_NOT_CONNECTED_MESSAGE } from "../../../../lib/llm/failure-message";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -53,6 +54,9 @@ function privateJson(body: unknown, init?: ResponseInit) {
 }
 
 export async function POST(request: Request) {
+  // 로그인 없이 AI를 부르는 경로: 쿠키를 지워도 우회되지 않게 IP 기준으로 횟수를 제한한다.
+  const limited = await enforceRateLimit("presentation-assist", request, { limit: 20, windowMs: 10 * 60_000, message: "발표자료 도움 요청이 너무 잦습니다. 10분 뒤 다시 시도해주세요." });
+  if (limited) return limited;
   try {
     const identity = await requireGuestIdentity();
     const config = resolveTextLLMConfig(identity.hash);

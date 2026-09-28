@@ -9,6 +9,7 @@ import {
 } from "../../../../lib/direct-idea-planner";
 import { resolveTextLLMConfig, textLLMConfigFromEnv } from "../../../../lib/llm/config";
 import type { DirectPlanWorkflowParams } from "../../../../lib/direct-plan/workflow";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -103,6 +104,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // 로그인 없이 AI를 부르는 경로: 쿠키를 지워도 우회되지 않게 IP 기준으로 횟수를 제한한다.
+  const limited = await enforceRateLimit("opportunity-direct-plan", request, { limit: 5, windowMs: 10 * 60_000, message: "사업안 만들기 요청이 너무 잦습니다. 10분 뒤 다시 시도해주세요." });
+  if (limited) return limited;
   try {
     const identity = await requireGuestIdentity();
     const input = directPlanInputSchema.parse(await request.json());

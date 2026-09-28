@@ -5,6 +5,7 @@ import { resolveLLMConfig } from "../../../../lib/llm/config";
 import { proposeIdeas } from "../../../../lib/discovery/idea-proposer";
 import type { FounderProfile } from "../../../../lib/assessment";
 import type { ManualPreferences } from "../../../../lib/idea-generator";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 const preferencesSchema = z.object({
   budget: z.enum(["제한 없음", "100만원 이하", "100~1,000만원", "1,000만원 이상"]),
@@ -38,6 +39,9 @@ function privateJson(body: unknown, init?: ResponseInit) {
 }
 
 export async function POST(request: Request) {
+  // 로그인 없이 AI를 부르는 경로: 쿠키를 지워도 우회되지 않게 IP 기준으로 횟수를 제한한다.
+  const limited = await enforceRateLimit("opportunity-discover", request, { limit: 8, windowMs: 10 * 60_000, message: "사업 후보 찾기 요청이 너무 잦습니다. 10분 뒤 다시 시도해주세요." });
+  if (limited) return limited;
   try {
     const identity = await requireGuestIdentity();
     const { profile, preferences } = bodySchema.parse(await request.json());
