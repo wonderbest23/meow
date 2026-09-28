@@ -1,4 +1,4 @@
-const base = process.env.TEST_BASE_URL ?? "https://today-startup.rena35200.workers.dev";
+const base = process.env.TEST_BASE_URL ?? "https://oneulstart.com";
 let cookie = "";
 
 function absorbCookies(response) {

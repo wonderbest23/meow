@@ -2,8 +2,10 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "today-startup",
   "main": "cloudflare-worker.ts",
-  "workers_dev": true,
-  "preview_urls": true,
+  // 공개 주소는 oneulstart.com 하나만 쓴다. workers.dev·미리보기 주소는 Cloudflare Access 밖에서 관리자 화면이 열려 끈다(2026-09-28 출시 전 QA).
+  // 서버 내부 호출은 서비스 바인딩(WORKER_SELF_REFERENCE)을 써서 이 주소와 무관하다.
+  "workers_dev": false,
+  "preview_urls": false,
   "routes": [
     {
       "pattern": "oneulstart.com",
