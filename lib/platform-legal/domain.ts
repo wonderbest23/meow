@@ -282,6 +282,34 @@ function businessDocument(settings: PlatformLegalSettings): LegalDocument {
   };
 }
 
+/** 개인정보처리방침 변경 이력 (최신이 위). 방침 본문을 바꾸면 여기에 한 줄 추가한다. */
+export const PRIVACY_POLICY_HISTORY = [
+  { date: "2026-09-28", summary: "신용카드 결제(나이스페이먼츠)와 이메일 발송(Resend) 수탁사, 소셜 로그인 수집 항목, 법정 보존기간, 국외 이전 세부 항목, 권익침해 구제 방법과 변경 이력 추가" },
+  { date: "2026-07-23", summary: "맞춤 디지털 결과물 제공 시점과 결제·환불 처리 정보 정비" },
+];
+
+/** 관계 법령에 따른 보존 기간 */
+const LEGAL_RETENTION_ITEMS = [
+  "계약 또는 청약철회 등에 관한 기록: 5년 (전자상거래 등에서의 소비자보호에 관한 법률)",
+  "대금결제 및 재화 등의 공급에 관한 기록: 5년 (같은 법)",
+  "소비자의 불만 또는 분쟁처리에 관한 기록: 3년 (같은 법)",
+  "표시·광고에 관한 기록: 6개월 (같은 법)",
+  "세법상 거래 증빙 서류: 5년 (국세기본법)",
+  "서비스 접속 기록(로그인 기록, IP 주소 등): 3개월 (통신비밀보호법)",
+];
+
+/** 국외 이전 — 개인정보 보호법 제28조의8 고지 항목(이전받는 자·연락처, 국가, 항목, 시기·방법, 목적·보유기간, 거부 방법) */
+function overseasTransferItems(settings: PlatformLegalSettings) {
+  const infraCountries = shown(settings.infrastructureCountries, "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력");
+  return [
+    `Supabase, Inc.(privacy@supabase.com) / 국가: ${infraCountries} / 항목: 계정 정보, 프로젝트 입력, 주문·결제 기록 / 시기·방법: 가입·이용 시 암호화된 통신망으로 저장 / 목적: 로그인·계정 복구, 데이터베이스 운영 / 보유: 이 방침의 보유 기간과 같음`,
+    "Cloudflare, Inc.(privacyquestions@cloudflare.com) / 국가: 미국 등 이용자와 가까운 전 세계 Cloudflare 데이터센터 / 항목: 접속 기록, IP 주소, 기기·브라우저 정보, 요청 내용 / 시기·방법: 서비스 접속 시 암호화된 통신망으로 전송 / 목적: 호스팅, 콘텐츠 전송, 보안과 오류 기록 / 보유: Cloudflare 기본 정책에 따른 로그 보관 기간",
+    "Resend, Inc.(support@resend.com) / 국가: 미국 / 항목: 받는 사람 이메일, 메일 본문(결제·서비스 안내, 홈페이지 문의 알림) / 시기·방법: 메일 발송 시 암호화된 통신망으로 전송 / 목적: 서비스 이메일 발송 / 보유: 발송 기록 확인에 필요한 기간",
+    `Anthropic·OpenAI(인공지능 생성): 국가 ${shown(settings.overseasCountries, "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")} / 항목·시기·보관 기준과 연락처는 ‘인공지능 및 국외 처리 안내’에서 확인할 수 있습니다.`,
+    "국외 이전을 원하지 않으면 회원 탈퇴나 해당 기능 미사용으로 이전을 거부할 수 있습니다. 다만 Supabase·Cloudflare는 서비스 운영에 꼭 필요하므로 거부하면 서비스를 이용할 수 없고, 인공지능 생성을 거부하면 맞춤 문장·이미지 생성이 제한됩니다.",
+  ];
+}
+
 function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
   return {
     title: "개인정보처리방침",
@@ -291,7 +319,8 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
       {
         title: "1. 처리하는 개인정보와 이용 목적",
         items: [
-          "계정: 이메일, 인증 식별자 - 로그인, 본인 확인, 계정 복구",
+          "계정(이메일 가입): 이메일, 인증 식별자 - 로그인, 본인 확인, 계정 복구",
+          "계정(카카오·구글 로그인): 소셜 계정 식별자, 이메일, 이름(닉네임), 프로필 사진 - 로그인과 본인 확인. 카카오·구글이 이용자의 동의를 받아 전달하는 항목만 받으며, 동의하지 않은 항목은 받지 않습니다.",
           "사업 설계: 경력, 관심사, 예산, 가능한 시간, 지역, 사업 아이디어와 프로젝트 입력 - 맞춤 추천과 결과물 작성",
           "결제(카드): 주문번호, 상품명, 금액·상태, 결제일시, 구매자 이메일, 결제대행사 거래번호와 승인 결과(카드사명, 일부가 가려진 카드번호, 승인번호, 할부 개월) - 결제 확인, 취소·환불과 분쟁 대응. 전체 카드번호, 유효기간, CVC와 카드 비밀번호는 결제대행사(나이스페이먼츠)가 직접 처리하며 오늘창업은 수집·저장하지 않습니다.",
           "결제(계좌이체): 주문번호, 금액·상태, 입금자명, 연락처, 현금영수증 종류와 발급 식별정보 - 입금 확인, 현금영수증 발급, 취소·환급과 분쟁 대응. 계좌 비밀번호나 인터넷뱅킹 인증정보는 수집하지 않습니다.",
@@ -302,48 +331,55 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
       },
       {
         title: "2. 보유 및 이용 기간",
+        paragraphs: ["이용 목적을 달성하면 지체 없이 파기합니다. 다만 관계 법령이 보존을 요구하는 정보는 아래 기간 동안 분리 보관한 뒤 파기합니다."],
         items: [
           `계정 정보: ${settings.accountRetention}`,
           `프로젝트 정보: ${settings.projectRetention}`,
-          "계약·결제·공급 기록은 전자상거래법 등 관계 법령에서 요구하는 기간 동안 분리 보관할 수 있습니다.",
+          ...LEGAL_RETENTION_ITEMS,
         ],
       },
       {
-        title: "3. 개인정보의 처리위탁",
-        paragraphs: ["서비스 운영을 위해 다음 업체에 개인정보 처리를 위탁합니다. 계좌이체 대금은 안내된 계좌로 직접 받고 운영자가 거래내역을 확인합니다."],
+        title: "3. 개인정보의 제3자 제공",
+        paragraphs: ["이용자의 개인정보를 제3자에게 제공하지 않습니다. 다만 이용자가 미리 동의한 경우와 법령에 특별한 규정이 있거나 수사기관 등이 법령에 정한 절차에 따라 요구하는 경우에는 필요한 범위에서 제공할 수 있습니다."],
+      },
+      {
+        title: "4. 개인정보의 처리위탁",
+        paragraphs: ["서비스 운영을 위해 다음 업체에 개인정보 처리를 위탁합니다. 위탁 계약에서 목적 외 처리 금지, 안전성 확보 조치, 재위탁 제한과 관리·감독 등을 정하고 있습니다. 계좌이체 대금은 안내된 계좌로 직접 받고 운영자가 거래내역을 확인합니다."],
         items: [
           "㈜나이스페이먼츠(NicePay): 신용·체크카드 결제 처리, 결제 취소와 환불",
           "Supabase, Inc.: 로그인·계정 복구, 데이터베이스",
           "Cloudflare, Inc.: 웹 호스팅, 콘텐츠 전송, 보안과 오류 기록",
-          "Resend, Inc.: 로그인·결제 안내 등 서비스 이메일 발송",
+          "Resend, Inc.: 결제·서비스 안내와 홈페이지 문의 알림 이메일 발송",
           "Anthropic, PBC·OpenAI: 인공지능 생성",
         ],
       },
       {
-        title: "4. 국외 처리",
-        paragraphs: [
-          `기반 서비스 국외 처리: ${shown(settings.infrastructureRecipients)} / 처리 국가 ${shown(settings.infrastructureCountries, "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력")} / ${settings.infrastructureProcessingDetails}`,
-          "인공지능 사업자로 전송되는 항목, 국가, 시기와 방법, 보관 기준은 ‘인공지능 및 국외 처리 안내’에서 별도로 확인할 수 있습니다.",
-        ],
+        title: "5. 개인정보의 국외 이전",
+        paragraphs: ["서비스 제공에 필요한 범위에서 다음과 같이 개인정보를 국외로 이전(처리위탁·보관)합니다."],
+        items: overseasTransferItems(settings),
       },
       {
-        title: "5. 파기 절차와 방법",
-        paragraphs: ["이용 목적이 끝난 개인정보는 지체 없이 삭제합니다. 법령상 보존해야 하는 정보는 별도 공간에 분리한 뒤 보존기간이 끝나면 복구하기 어려운 방법으로 삭제합니다."],
+        title: "6. 이용자 홈페이지 방문자의 개인정보",
+        paragraphs: ["이용자가 오늘창업으로 만든 홈페이지에서 문의를 받으면, 방문자가 입력한 이름, 연락처, 이메일, 문의 내용과 동의 여부를 저장해 해당 홈페이지 운영자(이용자)에게 전달합니다. 이 정보의 처리자는 홈페이지 운영자이며, 오늘창업은 운영자를 위해 저장·전달을 대신하는 수탁자입니다. 방문자는 홈페이지 운영자에게 열람·삭제 등을 요청할 수 있고, 운영자가 해당 프로젝트를 삭제하면 함께 삭제됩니다."],
       },
       {
-        title: "6. 이용자의 권리",
-        paragraphs: ["이용자는 자신의 개인정보 열람, 정정, 삭제, 처리정지와 동의 철회를 요청할 수 있습니다. 계정 화면 또는 개인정보 문의처를 통해 요청하면 본인 확인 후 처리합니다. 만 14세 미만 이용자는 법정대리인 동의 없이 가입할 수 없습니다."],
+        title: "7. 파기 절차와 방법",
+        paragraphs: ["이용 목적이 끝난 개인정보는 지체 없이 삭제합니다. 법령상 보존해야 하는 정보는 별도 공간에 분리한 뒤 보존기간이 끝나면 복구하기 어려운 방법으로 삭제합니다. 전자 파일은 복구할 수 없는 방법으로 삭제하고, 종이 문서는 분쇄하거나 소각합니다."],
       },
       {
-        title: "7. 안전성 확보 조치",
+        title: "8. 이용자의 권리와 행사 방법",
+        paragraphs: ["이용자는 자신의 개인정보 열람, 정정, 삭제, 처리정지와 동의 철회를 요청할 수 있습니다. 계정 화면 또는 개인정보 문의처를 통해 요청하면 본인 확인 후 10일 이내에 처리하고 결과를 알려드립니다. 법정대리인이나 위임받은 사람을 통해서도 요청할 수 있습니다. 만 14세 미만 이용자는 법정대리인 동의 없이 가입할 수 없습니다."],
+      },
+      {
+        title: "9. 안전성 확보 조치",
         items: ["전송 구간 암호화", "비밀번호 원문 미보관", "전체 카드번호·카드 인증정보 미보관(결제대행사 처리)", "관리자 권한 제한과 인증", "서비스 역할키의 브라우저 비공개", "접근 기록과 오류 점검"],
       },
       {
-        title: "8. 쿠키",
-        paragraphs: ["로그인 상태와 비회원 프로젝트를 구분하기 위해 필수 쿠키를 사용합니다. 필수 쿠키를 차단하면 로그인 또는 저장한 프로젝트 이용이 어려울 수 있습니다."],
+        title: "10. 쿠키",
+        paragraphs: ["로그인 상태와 비회원 프로젝트를 구분하기 위해 필수 쿠키를 사용합니다. 브라우저 설정에서 쿠키 저장을 거부할 수 있지만, 필수 쿠키를 차단하면 로그인 또는 저장한 프로젝트 이용이 어려울 수 있습니다. 광고 목적의 쿠키는 사용하지 않습니다."],
       },
       {
-        title: "9. 개인정보 문의",
+        title: "11. 개인정보 보호책임자",
         items: [
           `개인정보 보호책임자: ${shown(settings.privacyOfficer)}`,
           `이메일: ${shown(settings.privacyEmail)}`,
@@ -351,8 +387,19 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
         ],
       },
       {
-        title: "10. 방침 변경",
-        paragraphs: ["이 방침이 바뀌면 시행 전에 서비스 화면에서 변경 내용과 시행일을 알립니다. 이용자 권리에 중대한 변경은 필요한 방식으로 별도 안내합니다."],
+        title: "12. 권익침해 구제 방법",
+        paragraphs: ["개인정보 침해에 대한 상담이나 분쟁 해결이 필요하면 아래 기관에 문의할 수 있습니다."],
+        items: [
+          "개인정보분쟁조정위원회: 1833-6972 (www.kopico.go.kr)",
+          "개인정보침해신고센터(한국인터넷진흥원): 국번 없이 118 (privacy.kisa.or.kr)",
+          "대검찰청: 국번 없이 1301 (www.spo.go.kr)",
+          "경찰청: 국번 없이 182 (ecrm.police.go.kr)",
+        ],
+      },
+      {
+        title: "13. 방침 변경과 이력",
+        paragraphs: ["이 방침이 바뀌면 시행 7일 전부터 서비스 화면에서 변경 내용과 시행일을 알립니다. 수집 항목이나 이용 목적이 늘어나는 등 이용자 권리에 중대한 변경은 시행 30일 전부터 알리고 필요하면 다시 동의를 받습니다."],
+        items: PRIVACY_POLICY_HISTORY.map((entry) => `${entry.date} 시행: ${entry.summary}`),
       },
     ],
   };
@@ -380,6 +427,7 @@ function aiDocument(settings: PlatformLegalSettings): LegalDocument {
         title: "3. 인공지능 국외 처리",
         items: [
           `이전받는 자: ${shown(settings.overseasRecipient)}`,
+          "연락처: Anthropic privacy@anthropic.com(국내대리인 Anthropic Korea, Limited, 02-734-0940, anthropic_privacy@kimchang.com) / OpenAI dsar@openai.com",
           `처리 국가: ${shown(settings.overseasCountries, "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")}`,
           `이전 항목: ${settings.overseasTransferredData}`,
           `목적: ${settings.overseasPurpose}`,

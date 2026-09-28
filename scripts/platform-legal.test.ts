@@ -51,6 +51,8 @@ assert.ok(privacy.sections.some((section) => section.title.includes("개인정�
 const privacyText = JSON.stringify(privacy);
 for (const expected of ["나이스페이먼츠", "승인번호", "수집·저장하지 않습니다", "Resend"]) assert.ok(privacyText.includes(expected), expected);
 assert.ok(!privacyText.includes("현재 대금은 안내된 계좌로 직접 이체받고"));
+for (const expected of ["5년 (전자상거래", "3개월 (통신비밀보호법)", "1833-6972", "118", "1301", "182", "2026-09-28 시행", "제3자에게 제공하지 않습니다", "카카오·구글", "privacy@supabase.com", "privacyquestions@cloudflare.com", "support@resend.com", "홈페이지 운영자(이용자)"]) assert.ok(privacyText.includes(expected), expected);
+assert.ok(JSON.stringify(ai).includes("anthropic_privacy@kimchang.com"));
 const terms = JSON.stringify(createLegalDocument("terms", complete));
 for (const expected of ["충전일부터 1년", "도메인 등록(구매)은 이용자가"]) assert.ok(terms.includes(expected), expected);
 const refund = createLegalDocument("refund", complete);
@@ -70,4 +72,4 @@ const otherHash = hashIdentityToken(userProjectToken("user-b"));
 assert.equal(firstHash, secondHash);
 assert.notEqual(firstHash, otherHash);
 
-console.log(JSON.stringify({ passed: 42, missingBeforeLaunch: draftReadiness.missing.length, documents: [business.title, ai.title, privacy.title, refund.title], stableAccountProjectAccess: true }, null, 2));
+console.log(JSON.stringify({ passed: 57, missingBeforeLaunch: draftReadiness.missing.length, documents: [business.title, ai.title, privacy.title, refund.title], stableAccountProjectAccess: true }, null, 2));
