@@ -13,6 +13,7 @@ import { useDocumentEdits } from "./use-document-edits";
 import { coachDocumentRevision, currentBusinessDesign, readCoach } from "../../../lib/plan-builder/coach";
 import type { DocumentReviewSource } from "./DocumentSourceReview";
 import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
+import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 export default function PlanDocumentPage() {
@@ -86,7 +87,7 @@ export default function PlanDocumentPage() {
         if (!isSamplePlan(p.id)) {
           fetch(`/api/plan/access?planType=${encodeURIComponent(p.planType)}&planId=${encodeURIComponent(p.id)}`)
             .then((r) => { if (!r.ok) throw new Error("access unavailable"); return r.json(); })
-            .then((d) => { if (alive) setAccess({ paid: !!d.paid, price: Number(d.price) || 149000 }); })
+            .then((d) => { if (alive) setAccess({ paid: !!d.paid, price: Number(d.price) || PACKAGE_AMOUNT }); })
             .catch(() => { if (alive) setAccessError(true); });
         }
       }
@@ -231,7 +232,7 @@ export default function PlanDocumentPage() {
       const response = await fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(documentPlanId)}`);
       if (!response.ok) throw new Error("access unavailable");
       const data = await response.json();
-      setAccess({ paid: !!data.paid, price: Number(data.price) || 149000 });
+      setAccess({ paid: !!data.paid, price: Number(data.price) || PACKAGE_AMOUNT });
     } catch { setAccessError(true); }
   }
 

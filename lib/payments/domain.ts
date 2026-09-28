@@ -1,11 +1,20 @@
 import { z } from "zod";
 import { opportunitySnapshotSchema } from "../service-domain";
 
-export const PACKAGE_AMOUNT = 149_000;
+/*
+ * 출시 기념가(2026-09 출시). 첫 결제 문턱을 낮춰 결제 경험자를 먼저 모은다.
+ * 할인율·종전가 표시는 하지 않는다 — 이 가격이 실제 판매가다(표시광고법상 허위 할인 방지).
+ * AI 원가(Opus 5.5 기준 계획서 1부 대략 5~6천원, 최대 2만원대)를 제하고도 남도록 잡았다.
+ */
+export const LAUNCH_PRICE_LABEL = "출시 기념가";
+export const PACKAGE_AMOUNT = 49_000;
 export const PACKAGE_LIST_AMOUNT = 199_000;
 export const CUSTOM_HOMEPAGE_FROM_AMOUNT = 490_000;
 /** 계획서로 만든 홈페이지의 수정·공개 권한 가격 (법적 고지 문서도 이 값을 쓴다) */
-export const HOMEPAGE_PRODUCT_AMOUNT = 149_000;
+export const HOMEPAGE_PRODUCT_AMOUNT = 69_000;
+/** 계획서 + 홈페이지 묶음 — 따로 사면 118,000원. 주력 상품 */
+export const BUNDLE_PRODUCT_NAME = "사업계획서 + 홈페이지";
+export const BUNDLE_PRODUCT_AMOUNT = 99_000;
 export const PACKAGE_NAME = "맞춤 사업 실행 파일";
 export const PACKAGE_SUPPLY_AMOUNT = Math.round(PACKAGE_AMOUNT / 1.1);
 export const PACKAGE_VAT_AMOUNT = PACKAGE_AMOUNT - PACKAGE_SUPPLY_AMOUNT;

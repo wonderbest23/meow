@@ -22,7 +22,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "terms_required", message: "결제 전 필수 항목에 모두 동의해 주세요." }, { status: 400 });
   }
   // 계획서와 홈페이지는 별개 상품이다 — 어느 쪽 결제인지 여기서 갈린다
-  const product: PlanProduct = (["homepage", "regen", "domain", "tokens"] as const).find((p) => p === body.product) ?? "plan";
+  const product: PlanProduct = (["homepage", "bundle", "regen", "domain", "tokens"] as const).find((p) => p === body.product) ?? "plan";
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
   const planType = typeof body.planType === "string" ? body.planType.slice(0, 120) : "";
   if (!planId || !planType) {
@@ -77,6 +77,12 @@ export async function POST(request: Request) {
     /* 만료 30일 전부터 갱신을 받는다 — 그 전에는 이미 산 것 */
     if (ent.active && ent.expiresAt && new Date(ent.expiresAt).getTime() - Date.now() > 30 * 86_400_000) {
       return NextResponse.json({ error: "already_paid", message: `이미 연결 중입니다 (${ent.expiresAt.slice(0, 10)}까지). 만료 30일 전부터 갱신할 수 있습니다.` }, { status: 409 });
+    }
+  } else if (product === "bundle") {
+    // 묶음은 계획서와 홈페이지를 한 번에 연다 — 둘 중 하나라도 이미 열려 있으면 남은 하나만 따로 사게 한다
+    const [plans, homepages] = await Promise.all([paidPlanEntitlement(identity.userId), paidHomepagePlanIds(identity.userId)]);
+    if (plans.allAccess || plans.planIds.has(planId) || homepages.has(planId)) {
+      return NextResponse.json({ error: "already_paid", message: "계획서나 홈페이지 중 하나가 이미 열려 있어요. 남은 상품만 따로 결제해 주세요." }, { status: 409 });
     }
   } else if (product === "homepage") {
     const purchased = await paidHomepagePlanIds(identity.userId);

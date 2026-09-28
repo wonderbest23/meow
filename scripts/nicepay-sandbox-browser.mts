@@ -113,7 +113,7 @@ try {
   const response = await prepared; assert.equal(response.status(), 200);
   const order = await response.json(); assert.equal(order.clientId, pg.clientKey); assert.equal(order.sdkUrl, pg.sdk);
   orderId = order.orderId; amount = order.amount;
-  assert.match(orderId, /^PB-/); assert.equal(amount, 149_000);
+  assert.match(orderId, /^PB-/); assert.equal(amount, 49_000);
   const stored = await db.from("payment_orders").select("owner_id,status,amount").eq("order_id", orderId).single();
   assert.ifError(stored.error); assert.equal(stored.data.owner_id, owner); assert.equal(stored.data.status, "created"); assert.equal(stored.data.amount, amount);
   checks.push("checkout uses the issued sandbox client key and persists the server-priced order locally");
@@ -132,7 +132,7 @@ try {
   await paymentFrame.getByText("다음", { exact: true }).click();
   await paymentFrame.locator("#chkConfirm").check();
   await page.screenshot({ path: join(output, "checkout-sdk.png"), fullPage: true });
-  await paymentFrame.getByRole("button", { name: "149,000원 결제", exact: true }).click();
+  await paymentFrame.getByRole("button", { name: "49,000원 결제", exact: true }).click();
   if (process.argv.includes("--inspect-card-auth")) {
     await page.waitForTimeout(5000);
     const surfaces = [];

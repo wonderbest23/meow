@@ -48,7 +48,7 @@ export default function PlanPayResult() {
   const homepageProduct = product === "homepage" || product === "domain" || product === "tokens";
   const doneHref = homepageProduct ? "/plan/homepage" : "/plan/overview";
   const doneLabel = product === "homepage" ? "홈페이지 고치러 가기" : product === "domain" ? "도메인 연결하러 가기" : product === "tokens" ? "AI 수정 쓰러 가기" : "이어서 작성하기";
-  const doneDesc = product === "homepage" ? "홈페이지 편집과 공개가 열렸습니다." : product === "domain" ? "1년 동안 내 도메인을 연결해 쓸 수 있습니다." : product === "tokens" ? "AI 수정 토큰 20만이 충전됐습니다." : product === "regen" ? "다시 생성 10회가 추가됐습니다." : "모든 섹션이 열렸습니다. 이어서 작성해보세요.";
+  const doneDesc = product === "homepage" ? "홈페이지 편집과 공개가 열렸습니다." : product === "domain" ? "1년 동안 내 도메인을 연결해 쓸 수 있습니다." : product === "tokens" ? "AI 수정 토큰 20만이 충전됐습니다." : product === "regen" ? "다시 생성 10회가 추가됐습니다." : product === "bundle" ? "문서 전체와 홈페이지 편집·공개가 함께 열렸습니다." : "모든 섹션이 열렸습니다. 이어서 작성해보세요.";
 
   return (
     <div className={styles.page}>

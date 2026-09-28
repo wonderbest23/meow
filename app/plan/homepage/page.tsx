@@ -17,6 +17,7 @@ import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import styles from "./page.module.css";
 import PlanLoading from "../PlanLoading";
+import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 
 /*
  * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
@@ -57,7 +58,7 @@ export default function PlanHomepagePage() {
   const [fullscreen, setFullscreen] = useState(false);
   /** 섹션 배치 편집기 — 결제한 사람만 연다 */
   const [builderOpen, setBuilderOpen] = useState(false);
-  const [price, setPrice] = useState(149000);
+  const [price, setPrice] = useState(HOMEPAGE_PRODUCT_AMOUNT);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
   const requestRef = useRef<AbortController | null>(null);
