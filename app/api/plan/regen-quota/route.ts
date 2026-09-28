@@ -17,7 +17,8 @@ export const runtime = "nodejs";
  */
 export async function GET(request: Request) {
   const user = await getAuthenticatedUser();
-  if (!user) return NextResponse.json({ error: "login_required" }, { status: 401 });
+  // 로그인 전에는 보여줄 잔여 횟수가 없다 — 오류(401) 대신 빈 값으로 답해 콘솔을 조용히 둔다
+  if (!user) return NextResponse.json({ quota: null }, { headers: { "Cache-Control": "private, no-store" } });
 
   const planId = new URL(request.url).searchParams.get("planId")?.trim() ?? "";
   if (!planId) return NextResponse.json({ error: "bad_request" }, { status: 400 });

@@ -66,7 +66,9 @@ export default function SupportCenter() {
     try {
       const response = await fetch("/api/account/support", { cache: "no-store", signal: request.signal });
       if (current !== sequence.current) return;
-      if (response.status === 401) {
+      const signedOut = response.status === 401 || (response.ok && (await response.clone().json().catch(() => null))?.loggedIn === false);
+      if (current !== sequence.current) return;
+      if (signedOut) {
         scopeRef.current = null; setScope(null); setChat(emptyChat); setDraft(null); setLoggedOut(true); return;
       }
       const result = await readReply(response);
