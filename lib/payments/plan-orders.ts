@@ -78,6 +78,8 @@ export async function createPlanOrder(input: {
   planType: string;
   /** 무엇을 사는 결제인지 — 계획서(기본) / 홈페이지 / 다시 생성 묶음 / 도메인 / 토큰 */
   product?: PlanProduct;
+  /** 결제 화면에서 받은 필수 동의 항목(모두 true). terms_agreed_at과 함께 주문에 남긴다. */
+  terms?: Record<string, boolean>;
 }): Promise<PlanOrder> {
   const now = new Date();
   const orderId = `PB-${now.getTime().toString(36)}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
@@ -111,7 +113,7 @@ export async function createPlanOrder(input: {
     // 문서 단위 권한의 연결 고리 — 어떤 플랜을 여는 결제인지 여기 남긴다
     // (opportunity는 진단 흐름의 NOT NULL jsonb 컬럼을 재사용)
     // product 를 함께 남긴다 — 승인 시 무엇을 열어 줄지 여기서 읽는다
-    opportunity: { planId: input.planId, planType: input.planType, product: input.product ?? "plan" },
+    opportunity: { planId: input.planId, planType: input.planType, product: input.product ?? "plan", ...(input.terms ? { terms: input.terms } : {}) },
     founder_profile: {},
     terms_version: TERMS_VERSION,
     terms_agreed_at: now.toISOString(),
