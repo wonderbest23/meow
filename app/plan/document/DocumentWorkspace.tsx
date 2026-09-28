@@ -19,6 +19,7 @@ import ExecutiveSummaryView from "./ExecutiveSummaryView";
 type Format = "pdf" | "docx" | "pptx";
 type Props = {
   title: string; planId: string | null; planType: string; ready: boolean;
+  identity?: { headline: string; pitch: string };
   completionKey: string | null;
   grouped: Array<[string, ReturnType<typeof assembleSections>]>;
   numbering: Map<string, { num: string; chapterNum: number }>;
@@ -102,7 +103,7 @@ export default function DocumentWorkspace(props: Props) {
           {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문">
             {!grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
-              <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} />
+              <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
               {props.notice && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
                 <DocumentChapterHeading number={index + 1} title={name} />

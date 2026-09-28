@@ -507,3 +507,46 @@
 .suggestionSkeleton { display: block; max-width: 100%; height: 44px; border-radius: 22px; background: linear-gradient(90deg, #f0eefc 0%, #faf9ff 50%, #f0eefc 100%); background-size: 200% 100%; animation: suggestionShimmer 1.4s ease-in-out infinite; }
 @keyframes suggestionShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .suggestionSkeleton { animation: none; } }
+
+/* ── '아, 이 사업!' 첫 화면 문구 ─────────────────────────────── */
+.identity { display: grid; gap: 10px; margin: 4px 0 8px; padding: 22px 22px 20px; border-radius: 16px; background: linear-gradient(135deg, color-mix(in srgb, var(--intake-blue) 10%, var(--intake-surface, #fff)), var(--intake-surface, #fff)); border: 1px solid color-mix(in srgb, var(--intake-blue) 22%, var(--intake-line)); }
+.identityKicker { display: inline-flex; align-items: center; gap: 6px; margin: 0; font-size: 13px; font-weight: 700; color: var(--intake-blue); }
+.complete .identityHeadline, .identityHeadline { margin: 0; font-size: clamp(22px, 5.6vw, 30px); line-height: 1.3; font-weight: 800; color: var(--intake-ink); word-break: keep-all; }
+.complete .identityPitch, .identityPitch { margin: 0; font-size: 15.5px; line-height: 1.6; color: var(--intake-ink); opacity: .82; word-break: keep-all; }
+.identityNames { display: grid; gap: 10px; margin-top: 8px; padding-top: 14px; border-top: 1px dashed color-mix(in srgb, var(--intake-blue) 25%, var(--intake-line)); }
+.identityNames h3 { margin: 0; font-size: 15px; }
+.identityChoices { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.identityChoices button { display: grid; gap: 4px; text-align: left; padding: 12px 14px; border-radius: 12px; border: 1px solid var(--intake-line); background: var(--intake-surface, #fff); color: var(--intake-ink); cursor: pointer; transition: border-color .15s ease, transform .1s ease; }
+.identityChoices button:hover:not(:disabled) { border-color: var(--intake-blue); }
+.identityChoices button:active:not(:disabled) { transform: scale(.98); }
+.identityChoices button[aria-pressed="true"] { border-color: var(--intake-blue); background: color-mix(in srgb, var(--intake-blue) 8%, var(--intake-surface, #fff)); cursor: default; opacity: 1; }
+.identityChoices strong { display: inline-flex; align-items: center; gap: 4px; font-size: 17px; font-weight: 800; }
+.identityChoices small { font-size: 12.5px; line-height: 1.45; color: var(--intake-muted); }
+.identityCustom { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.identityCustom input { flex: 1 1 160px; min-height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--intake-line); font-size: 16px; }
+.identityNote { font-size: 12.5px; line-height: 1.5; color: var(--intake-muted); }
+.identityCompact { padding: 16px; margin: 12px 0; }
+.identityCompact .identityHeadline { font-size: 20px; }
+.identityCompact .identityPitch { font-size: 14px; }
+.identityKicker small { font-weight: 500; color: var(--intake-muted); }
+.identityNames > .textButton { justify-self: start; }
+@media (max-width: 480px) {
+  .identity { padding: 18px 16px; }
+  .identityChoices { grid-template-columns: 1fr; }
+  .identityChoices button { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: 10px; padding: 11px 12px; }
+}
+@media (prefers-reduced-motion: reduce) { .identityChoices button { transition: none; } }
+
+/* 1단계(사업 방향 요약)와 2단계(사업계획서 문서 작성)를 눈으로 구분한다 */
+.stepper { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; font-weight: 700; color: var(--intake-muted); }
+.stepper li { display: inline-flex; align-items: center; gap: 6px; }
+.stepper li + li::before { content: ""; width: 18px; height: 1px; margin-right: 8px; background: var(--intake-line); }
+.stepper li span, .stepper li svg { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; font-size: 11px; }
+.stepper li span { border: 1px solid currentColor; }
+.stepper li[data-state="current"] { color: var(--intake-blue); }
+.stepper li[data-state="current"] span { background: var(--intake-blue); border-color: var(--intake-blue); color: #fff; }
+.stepper li[data-state="done"] { color: var(--intake-green); }
+.stepper li[data-state="done"] svg { background: color-mix(in srgb, var(--intake-green) 14%, transparent); padding: 3px; box-sizing: border-box; }
+.guestSaveNote { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--intake-muted); }
+.guestSaveNote a { color: var(--intake-blue); font-weight: 700; }
+.empty > p { max-width: 520px; margin: 0 0 4px; color: var(--intake-muted); line-height: 1.65; word-break: keep-all; }

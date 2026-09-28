@@ -5,7 +5,7 @@ import { resolveIntakeLLMConfig, intakeBetaSafetyRequired } from "../llm/intake-
 import { intakeJobExpired } from "./intake-timing";
 import { COACH_KEY, COACH_TYPES, coachContext, coachDocumentRevision, readCoach, type CoachState } from "./coach";
 import { emptyCoach } from "./coach-job";
-import { BUSINESS_DESIGN_RULES, businessDesignReply, businessDesignSchema } from "./coach-design";
+import { BUSINESS_DESIGN_RULES, businessDesignReply, generatedBusinessDesignSchema } from "./coach-design";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
 import { applyIntakeAnswer, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
@@ -74,7 +74,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       plan.answers.__intake_legacy_job = structuredClone(plan.answers.__coach_job);
       plan.answers.__coach_job = { ...plan.answers.__coach_job, token: crypto.randomUUID(), status: "failed", updatedAt: at };
     }
-    const before = intakeBusinessFingerprint(coach, plan.answers);
+    let before = intakeBusinessFingerprint(coach, plan.answers);
     const beforeIdeas = ideaInputFingerprint(coach, intake);
     if (intakeJobExpired(intake.job, Date.now())) {
       intake.job = { ...intake.job!, status: "failed", error: "응답 확인 시간이 지났어요. 원문은 보관되어 있어요", updatedAt: at };
@@ -101,6 +101,13 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     } else if (command.action === "answer") applyIntakeAnswer(plan, coach, intake, command, at);
     else if (command.action === "resources") applyIntakeResources(plan, coach, intake, command, at);
     else if (command.action === "details") intake.detailsRequested = true;
+    else if (command.action === "name") {
+      // 사업 이름만 바꾼다. 내용이 바뀐 게 아니므로 정리한 사업 방향과 계획서를 '변경됨'으로 만들지 않는다.
+      const name = typeof command.value === "string" ? command.value.replace(/\s+/g, " ").trim() : "";
+      if (!name || name.length > 40) throw new IntakeError("name_invalid", "사업 이름은 40자 안으로 적어 주세요");
+      coach.business.name = name;
+      before = intakeBusinessFingerprint(coach, plan.answers);
+    }
     else if (command.action === "structure") applyIntakeStructure(plan, coach, intake, command, at);
     else if (command.action === "confirm-extraction") applyIntakeCandidates(coach, intake, command, at);
     else if (command.action === "note") storeDeferredNote(coach, intake, command, at);
@@ -267,8 +274,8 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         }
       });
     } else {
-      const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(businessDesignSchema) }, validateJson: value => businessDesignSchema.safeParse(value).success, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 3000, effort: "low", allowFallback: false });
-      const parsed = businessDesignSchema.safeParse(raw);
+      const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => generatedBusinessDesignSchema.safeParse(value).success, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 3400, effort: "low", allowFallback: false });
+      const parsed = generatedBusinessDesignSchema.safeParse(raw);
       if (!parsed.success) throw new IntakeError("design_failed", "사업안 생성을 완료하지 못했어요. 입력 정보는 그대로 보관되어 있어요");
       await updateIntakeJob(request, (_plan, coach, _intake, current) => {
         if (current.status !== "running" || coachDocumentRevision(coach) !== job.baseDocumentRevision) throw new IntakeError("source_changed", "생성 중 사업정보가 바뀌었어요. 현재 입력을 확인한 뒤 다시 요청해 주세요", 409);

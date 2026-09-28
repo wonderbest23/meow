@@ -42,7 +42,7 @@ export type IntakeState = {
   ideaTurns?: IdeaTurn[];
   generatedIdeas?: GeneratedIntakeIdea[];
 };
-export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources"] as const;
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name"] as const;
 export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;
@@ -79,6 +79,8 @@ export type IntakeSnapshot = {
 export type IntakePayload = {
   flowVersion: 2; enabled: boolean; plan: IntakeSnapshot | null; authenticated?: boolean; ownerScope?: string;
   message?: string; code?: string; login?: boolean; started?: boolean; paid?: boolean;
+  /** 로그인해야 사업 기획을 쓸 수 있다(비로그인 방문) */
+  loginRequired?: boolean;
   /** GET ?ksic=검색어 응답: 업종 이름 검색 후보 */
   ksicCandidates?: IntakeSnapshot["ksicCandidates"];
 };

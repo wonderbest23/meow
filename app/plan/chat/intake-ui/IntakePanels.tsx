@@ -1,6 +1,7 @@
 "use client";
 import { ResourceFitDetails } from "./ResourcePanel";
 import { INTAKE_JOB_TIMING } from "../../../../lib/plan-builder/intake-timing";
+import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
@@ -472,26 +473,78 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   // 게이지는 실제로 돌고 있는 작업이 있을 때만. 그 밖의 바쁜 상태(저장 중 등)에는 버튼을 잠깐 비활성으로 둔다.
   const jobActive = ["queued", "running"].includes(snapshot.intake.job?.status ?? "");
   const locked = disabled || aiBusy;
-  const hint = step === "design" ? "답변을 바탕으로 시작할 사업 방향을 정리해요."
-    : step === "prepare" ? "이 방향으로 계획서 초안을 작성해요. 몇 분 걸릴 수 있어요." : "저장한 계획서를 언제든 다시 열 수 있어요.";
+  /*
+   * 두 단계를 분명히 나눈다. 1단계 결과(사업 방향 요약)가 계획서처럼 보여서
+   * "이미 계획서가 나왔는데 또 만들라고?" 하는 혼동이 있었다(사용자 피드백).
+   */
+  const sectionCount = chaptersForType(snapshot.planType).reduce((total, chapter) => total + chapter.sections.length, 0);
+  const hint = step === "design" ? "먼저 답변을 바탕으로 사업 방향을 한 장으로 요약해요. 사업계획서 문서는 다음 단계에서 만들어요."
+    : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서(${sectionCount}개 항목, 재무표 포함)를 작성해요. 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
+    : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   return <div className={styles.nextStep} data-active data-step={step}>
-    <strong className={styles.nextStepLabel}><ArrowRight size={14} aria-hidden="true" />{step === "design" ? "1. 사업 방향 정리" : step === "prepare" ? "2. 계획서 완성" : "완료"}</strong>
+    <ol className={styles.stepper} aria-label="진행 단계">
+      <li data-state={step === "design" ? "current" : "done"}>{step === "design" ? <span>1</span> : <Check size={13} aria-hidden="true" />}사업 방향 요약</li>
+      <li data-state={step === "prepare" ? "current" : step === "open" ? "done" : "todo"}>{step === "open" ? <Check size={13} aria-hidden="true" /> : <span>2</span>}사업계획서 문서 작성</li>
+    </ol>
     {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
       {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />사업 방향 정리하기</button>}
-      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "변경 내용으로 계획서 다시 만들기" : "이 방향으로 계획서 완성하기"}</button>}
+      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "바뀐 내용으로 사업계획서 다시 작성하기" : "사업계획서 문서 작성하기"}</button>}
       {step === "prepare" && snapshot.hasDocuments && <Link className={styles.textButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}>이전 계획서 보기</Link>}
-      {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />계획서 열기</Link>}
+      {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
       {secondary}
     </div>}
     {!jobActive && <small className={styles.nextStepHint}>{hint}</small>}
   </div>;
 }
 
+/** 현재 입력 기준으로 만든 설계의 첫 화면 문구. 입력이 바뀌어 설계가 낡았거나 옛 설계면 없다 */
+export function currentIdentity(snapshot: IntakeSnapshot) {
+  const design = snapshot.coach.design;
+  return design && design.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision) ? design.identity : undefined;
+}
+
+/*
+ * '아, 이 사업!' — 설계가 끝나면 무슨 사업인지 한 줄로 크게 보여 주고 이름 후보를 고르게 한다.
+ * 예전에는 처음 적은 문장이 그대로 사업명이 되고 제안 본문만 이어져서, 결과가 좋아도 "이게 뭐지" 싶었다.
+ * 이름을 고르면 사업 이름만 바뀌고(정리한 방향·계획서는 그대로) 이후 만드는 계획서에 그 이름이 들어간다.
+ */
+export function BusinessIdentityHero({ snapshot, disabled, onName, compact = false }: { snapshot: IntakeSnapshot; disabled?: boolean; onName?: (name: string) => void; compact?: boolean }) {
+  const identity = currentIdentity(snapshot);
+  const [custom, setCustom] = useState<string | null>(null);
+  if (!identity) return null;
+  const current = snapshot.coach.business.name;
+  const submitCustom = (event: FormEvent) => { event.preventDefault(); const name = (custom ?? "").replace(/\s+/g, " ").trim(); if (name && onName) { onName(name); setCustom(null); } };
+  return <section className={`${styles.identity} ${compact ? styles.identityCompact : ""}`} aria-label="사업 한 줄 정리">
+    <p className={styles.identityKicker}><Sparkles size={14} aria-hidden="true" />이런 사업, 맞죠? <small>AI 제안</small></p>
+    <h2 className={styles.identityHeadline}>{identity.headline}</h2>
+    <p className={styles.identityPitch}>{identity.pitch}</p>
+    {!compact && onName && <div className={styles.identityNames}>
+      <h3>사업 이름은 이건 어때요?</h3>
+      <div className={styles.identityChoices}>
+        {identity.names.map(item => {
+          const chosen = item.name === current;
+          return <button key={item.name} type="button" aria-pressed={chosen} disabled={disabled || chosen} onClick={() => onName(item.name)}>
+            <strong>{chosen && <Check size={15} aria-hidden="true" />}{item.name}</strong><small>{item.why}</small>
+          </button>;
+        })}
+      </div>
+      {custom === null
+        ? <button type="button" className={styles.textButton} disabled={disabled} onClick={() => setCustom(identity.names.some(item => item.name === current) ? "" : current)}><PencilLine size={15} aria-hidden="true" />직접 정하기</button>
+        : <form className={styles.identityCustom} onSubmit={submitCustom}>
+            <input aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽커피" />
+            <button type="submit" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</button>
+            <button type="button" className={styles.textButton} onClick={() => setCustom(null)}>취소</button>
+          </form>}
+      <small className={styles.identityNote}>지금 이름: <b>{current}</b> · 고른 이름은 앞으로 만드는 계획서에 들어가요. 실제로 쓰기 전에 키프리스(kipris.or.kr)에서 같은 상표가 있는지 확인해 주세요.</small>
+    </div>}
+  </section>;
+}
+
 export function DesignDirection({ snapshot }: { snapshot: IntakeSnapshot }) {
   const design = snapshot.coach.design;
   if (!design || design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
   return <section className={styles.direction} aria-label="정리한 사업 방향">
-    <p className={styles.eyebrow}>AI 제안 · 검증 전</p>
+    <p className={styles.eyebrow}>1단계 결과 · 사업 방향 요약 (AI 제안, 검증 전)</p>
     <h3>이렇게 시작해 볼까요?</h3>
     <ConversationText text={design.startingPlan.scope} />
     <div className={styles.nextAction}><h3>먼저 해볼 일 하나 <small>선택 사항</small></h3><ConversationText text={design.nextAction.action} /></div>
@@ -536,6 +589,7 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
   return <>
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">현재까지 작성한 사업정보</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
     {nextStep && actions}
+    <BusinessIdentityHero snapshot={snapshot} compact />
     {original && <section className={styles.original}><h3>내 사업 구상</h3><ConversationText text={original} /></section>}
     {highlights.length > 0 && <dl className={styles.summaryFields}>{highlights.map(renderField)}</dl>}
     {(remaining.length > 0 || extraAnswers.length > 0) && <details className={styles.summaryDetails} open><summary>다른 답변 보기 ·{remaining.length + extraAnswers.length}개</summary><dl className={styles.summaryFields}>{remaining.map(renderField)}{extraAnswers.map(question => <div key={question.id}><dt><span>{question.label}</span><button type="button" className={styles.iconButton} aria-label={`${question.label} 수정`} title={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={15} /></button></dt><dd><ConversationText text={snapshot.intake.answers[question.id].status === "unknown" ? "아직 정하지 않았어요" : plainText(summaryAnswerText(question, snapshot.intake.answers[question.id].value, snapshot.candidateIdeas)) || plainText(answerText(snapshot.intake.answers[question.id].value)) || "아직 정하지 않았어요"} /></dd></div>)}</dl></details>}

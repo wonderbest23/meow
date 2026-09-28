@@ -9,7 +9,7 @@ import BusinessAppChrome from "../BusinessAppChrome";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
-import { AnswerHistory, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, DesignDirection, EntryChoices, ExtractionReview, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
+import { AnswerHistory, BusinessIdentityHero, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
@@ -25,6 +25,33 @@ import { composerEnterSends, resultUpdateNotice, resumeSummary } from "./intake-
 
 type SaveStatus = "saved" | "draft" | "saving" | "failed" | "conflict";
 type CommandInput = Omit<IntakeCommand, "requestId" | "revision" | "planId">;
+
+/*
+ * 이 브라우저에서 마지막으로 연 사업과 그때의 로그인 여부. 다시 왔을 때 목록이 비어 있으면
+ * "로그인이 풀린 것"인지 "다른 브라우저인 것"인지 구분해 안내하는 데만 쓴다(내용은 저장하지 않는다).
+ */
+const LAST_INTAKE_KEY = "oneul:last-intake";
+function rememberLastIntake(planId: string, signedIn: boolean) {
+  try { window.localStorage.setItem(LAST_INTAKE_KEY, JSON.stringify({ planId, signedIn, at: Date.now() })); } catch { /* 저장소를 못 써도 안내만 덜 구체적일 뿐이다 */ }
+}
+/** 로그인 전 방문자에게 질문 대신 보여 주는 첫 화면. 로그인하면 지금 주소(새 대화·사업)로 돌아온다. */
+function LoginGate({ lastSignedIn }: { lastSignedIn: boolean }) {
+  const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
+  return <section className={styles.empty} aria-labelledby="intake-login-gate">
+    <h1 id="intake-login-gate">{lastSignedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "로그인하고 사업 기획을 시작하세요"}</h1>
+    <p>{lastSignedIn
+      ? "작성하던 사업은 계정에 그대로 저장돼 있어요. 다시 로그인하면 이어서 할 수 있어요."
+      : "답변과 결과가 계정에 자동으로 저장돼서, 창을 닫거나 다른 기기에서 열어도 이어서 할 수 있어요. 카카오·구글로 바로 시작할 수 있어요."}</p>
+    <Link href={`/account?next=${encodeURIComponent(next)}`} className={styles.primaryButton}>{lastSignedIn ? "로그인하고 이어가기" : "로그인하고 시작하기"}<ArrowRight size={18} aria-hidden="true" /></Link>
+  </section>;
+}
+
+function readLastIntake(): { planId: string; signedIn: boolean } | null {
+  try {
+    const value = JSON.parse(window.localStorage.getItem(LAST_INTAKE_KEY) ?? "null");
+    return value && typeof value.planId === "string" ? { planId: value.planId, signedIn: value.signedIn === true } : null;
+  } catch { return null; }
+}
 export type BusinessIntakeProps = {
   onPrepared?: (payload: IntakePayload) => void;
   onDesignComplete?: (snapshot: IntakeSnapshot) => void;
@@ -69,6 +96,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const [connectionError, setConnectionError] = useState(false);
   const [storageError, setStorageError] = useState(false);
   const [login, setLogin] = useState(false);
+  // 서버가 알려 준 로그인 여부. 모르는 동안은 로그인한 것으로 두어 경고를 미리 띄우지 않는다.
+  const [signedIn, setSignedIn] = useState(true);
+  // 사업 기획은 로그인 후에만 시작한다. 서버가 loginRequired 로 알려 주면 질문 대신 로그인 안내를 보여 준다.
+  const [loginGate, setLoginGate] = useState(false);
   const [preparedRevision, setPreparedRevision] = useState<number | null>(null);
   const prepared = preparedRevision !== null && preparedRevision === (plan?.coach.documentRevision ?? plan?.coach.revision);
   const [resume, setResume] = useState("");
@@ -171,6 +202,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     draftRef.current = emptyDraft(); setDraft(draftRef.current); conflictRef.current = false;
     void getSnapshot(startNew ? null : id, controller.signal).then(data => {
       if (epoch !== routeEpoch.current || controller.signal.aborted) return;
+      setSignedIn(!!data.authenticated); setLoginGate(!!data.loginRequired);
+      if (data.plan) rememberLastIntake(data.plan.planId, !!data.authenticated);
       restoreDraft(startNew ? null : data.plan?.planId ?? id, data.ownerScope!);
       if (!startNew && data.plan) {
         installPlan(data.plan, true); updateUrl(data.plan.planId);
@@ -227,6 +260,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       const id = planRef.current?.planId ?? new URLSearchParams(queryString).get("planId");
       const data = await getSnapshot(id, controller.signal);
       if (epoch !== routeEpoch.current) return;
+      setSignedIn(!!data.authenticated); setLoginGate(!!data.loginRequired);
       if (data.ownerScope !== ownerScope.current || ownerChanged) {
         restoreDraft(newEntry ? null : data.plan?.planId ?? id, data.ownerScope!);
         setOwnerChanged(false); setPreview(null); planRef.current = null; setPlan(null);
@@ -277,6 +311,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
         conflictRef.current = true; writeDraft({ ...draftRef.current, pending: { ...pending, conflict: true }, ...(pending.command.questionId ? { editingId: customCandidateDraftKey(pending.command.questionId, pending.answer?.custom) } : {}) });
         setStatus("conflict"); setError(data?.message || "다른 곳에서 이 사업의 내용이 바뀌었어요. 최신 내용을 불러온 뒤 답변을 다시 확인해 주세요."); return;
       }
+      if (data?.loginRequired) setLoginGate(true);
       if (!response.ok || data?.login) {
         setLogin(!!data?.login || response.status === 401);
         if (response.status >= 400 && response.status < 500 || data?.code && ["ai_unavailable", "ai_limit", "business_required", "disabled"].includes(data.code)) writeDraft({ ...draftRef.current, pending: null });
@@ -345,6 +380,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const blocked = busy || !!replyTurn || !!draft.pending || status === "conflict" || loadFailed || ownerChanged;
   const aiBusy = ["queued", "running"].includes(plan?.intake.job?.status ?? "");
   const job = plan?.intake.job;
+  const lastIntake = !plan && loaded && !newEntry ? readLastIntake() : null;
   const loginHref = `/account?next=${encodeURIComponent(`/plan/chat${plan ? `?planId=${encodeURIComponent(plan.planId)}` : "?new=1"}`)}`;
   const saveLabel = !plan && newEntry && status === "saved" ? "시작 전" : { saved: "저장됨", draft: "입력 중 · 이 기기에 보관", saving: "저장 중", failed: "저장 실패", conflict: "저장 충돌" }[status];
   const choiceQuestion = !!question && !questionDraft.custom && ["single", "multi"].includes(question.kind);
@@ -487,23 +523,38 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
           onPointerDown={event => { if (event.target === event.currentTarget) manualScroll.current = true; }}
           onKeyDown={event => { if (["PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) { manualScroll.current = true; if (["PageUp", "Home", "ArrowUp"].includes(event.key)) follow.current = false; } }}
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
-          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && <section className={styles.empty}><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section> : <>
+          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate lastSignedIn={!!readLastIntake()?.signedIn} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section>
+              /*
+               * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
+               * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
+               */
+              : <section className={styles.empty}>
+                <h1>{lastIntake?.signedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "이 브라우저에서 저장한 사업을 찾지 못했어요"}</h1>
+                <p>{lastIntake?.signedIn
+                  ? "작성하던 사업은 계정에 그대로 저장돼 있어요. 다시 로그인하면 이어서 할 수 있어요."
+                  : "로그인하지 않고 만든 사업은 그 브라우저에만 저장돼요. 로그인해서 만든 사업이라면 로그인하면 그대로 보여요. 다른 브라우저·앱에서 열었거나 방문 기록을 지웠다면 처음 만든 곳에서 열어 주세요."}</p>
+                <Link href={`/account?next=${encodeURIComponent(lastIntake?.planId ? `/plan/chat?planId=${encodeURIComponent(lastIntake.planId)}` : "/plan/chat")}`} className={styles.primaryButton}>로그인하고 이어가기<ArrowRight size={18} aria-hidden="true" /></Link>
+                <Link href="/plan/chat?new=1" className={styles.textLink}>새 사업 기획</Link>
+              </section>) : <>
             <ConversationHistory snapshot={plan} onEdit={editQuestion} />
             <LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} />
             {resume && <div className={styles.resumeNotice} role="status"><p>{resume}</p><button type="button" className={styles.iconButton} aria-label="이어하기 안내 닫기" onClick={() => setResume("")}><X size={16} aria-hidden="true" /></button></div>}
             {updateNotice && <section className={styles.updateNotice} aria-label="변경 내용 반영 상태"><strong>저장된 결과 확인</strong><p>{updateNotice}</p><small>새로 만들기를 선택하기 전까지 기존 결과는 유지돼요.</small></section>}
-            {job && <section className={styles.job} aria-label="AI 작업 상태">{aiBusy && !showCompletion && job.kind !== "design" && <JobProgress snapshot={plan} announce />}{job.status === "failed" && <div className={styles.error} role="alert"><p>{job.error || "AI 작업을 완료하지 못했어요."}</p><p>저장한 답변과 메모는 그대로 남아 있습니다.</p><button type="button" className={styles.textButton} disabled={blocked} onClick={() => void send(job.kind === "extract" ? { action: "extract" } : job.kind === "design" ? { action: "design" } : job.kind === "ideas" ? { action: "ideas", message: job.request || "현재 조건으로 다른 후보를 제안해 주세요" } : { action: "help", message: job.request || draft.help })}><RefreshCw size={16} aria-hidden="true" />다시 요청</button></div>}{job.status === "complete" && job.reply && !plan.coach.messages.some(message => message.id === `${job.id}:reply`) && <div className={styles.aiReply}><h3>{job.kind === "design" ? "AI 사업안 · 제안" : job.kind === "help" ? "AI 답변" : "메모 정리 결과"}</h3><ConversationText key={job.id} text={job.reply} /></div>}</section>}
+            {job && <section className={styles.job} aria-label="AI 작업 상태">{aiBusy && !showCompletion && job.kind !== "design" && <JobProgress snapshot={plan} announce />}{job.status === "failed" && <div className={styles.error} role="alert"><p>{job.error || "AI 작업을 완료하지 못했어요."}</p><p>저장한 답변과 메모는 그대로 남아 있습니다.</p><button type="button" className={styles.textButton} disabled={blocked} onClick={() => void send(job.kind === "extract" ? { action: "extract" } : job.kind === "design" ? { action: "design" } : job.kind === "ideas" ? { action: "ideas", message: job.request || "현재 조건으로 다른 후보를 제안해 주세요" } : { action: "help", message: job.request || draft.help })}><RefreshCw size={16} aria-hidden="true" />다시 요청</button></div>}{job.status === "complete" && job.reply && !plan.coach.messages.some(message => message.id === `${job.id}:reply`) && <div className={styles.aiReply}><h3>{job.kind === "design" ? "사업 방향 요약 · AI 제안" : job.kind === "help" ? "AI 답변" : "메모 정리 결과"}</h3><ConversationText key={job.id} text={job.reply} /></div>}</section>}
             {showReview ? <><ExtractionReview key={plan.planId} snapshot={plan} disabled={blocked} onCommand={command => void send(command)} /><button type="button" className={styles.textButton} disabled={blocked} onClick={() => setDeferredReview(reviewKey)}>나중에 확인하고 대화 이어가기</button></> : reviewCandidates.length > 0 && <button type="button" className={styles.textButton} disabled={blocked || hasLocalInput(draft)} onClick={() => { follow.current = true; setDeferredReview(""); }}>메모에서 찾은 내용 {reviewCandidates.length}개 확인</button>}
             {questionNote && !questionHandled && <section className={styles.noteReceipt} aria-label="저장한 질문"><p>질문을 저장했어요</p><button type="button" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: lastMessage!.text })}><Sparkles size={16} aria-hidden="true" />AI 답변 받기</button></section>}
             {memoPending && <button type="button" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</button>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview}>
               {replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={blocked} onChange={answer => editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } })} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
                 <ChatSpeaker />
-                <h2>{nextStep === "design" ? "이제 사업 방향을 정리해 볼까요?" : nextStep === "prepare" ? "사업 방향을 정리했어요" : nextStep === "open" ? "계획서가 준비됐어요" : "사업 하나만 정하면 시작할 수 있어요"}</h2>
-                <p>{nextStep === "design" ? "기본 질문은 끝났어요. 더 보완하는 건 선택이에요." : nextStep === "prepare" ? "아래 제안을 확인하고 계획서로 이어가세요." : nextStep === "open" ? "저장한 계획서를 확인하세요." : refinement?.prompt ?? "이어서 사업 내용을 정해볼까요?"}</p>
+                {(nextStep === "prepare" || nextStep === "open") && currentIdentity(plan) ? <BusinessIdentityHero snapshot={plan} disabled={blocked} onName={name => void send({ action: "name", value: name })} /> : <>
+                <h2>{nextStep === "design" ? "이제 사업 방향을 정리해 볼까요?" : nextStep === "prepare" ? "사업 방향을 정리했어요" : nextStep === "open" ? "사업계획서 문서를 만들었어요" : "사업 하나만 정하면 시작할 수 있어요"}</h2>
+                <p>{nextStep === "design" ? "기본 질문은 끝났어요. 더 보완하는 건 선택이에요." : nextStep === "prepare" ? "아직 사업계획서 문서는 만들지 않았어요. 아래 방향이 맞으면 2단계에서 문서를 작성해요." : nextStep === "open" ? "사업계획서 문서를 열어 확인하세요." : refinement?.prompt ?? "이어서 사업 내용을 정해볼까요?"}</p>
+                </>}
                 {(nextStep === "prepare" || nextStep === "open") && <DesignDirection snapshot={plan} />}
                 {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "사업 후보 정하기" : "사업 소개 정하기"}<ArrowRight size={17} aria-hidden="true" /></button>}
                 <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} secondary={detailsButton} />
+                {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}
                 <button type="button" className={styles.editLink} onClick={() => setView("summary")}><PencilLine size={14} aria-hidden="true" />지금까지 답변 보기</button>
               </section>)}
             </div>

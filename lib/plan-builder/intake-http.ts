@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { readBoundedJson, RequestBodyError } from "../http/bounded-json";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireGuestIdentity } from "../api-auth";
+import { authConfigured } from "../account-auth";
+import { intakeLoginGate } from "./intake-login";
 import { enforceRateLimit } from "../rate-limit";
 import { resolvePlanningLLMConfig } from "../llm/config";
 import { intakeBetaSafetyRequired } from "../llm/intake-policy";
@@ -34,6 +36,10 @@ async function currentSnapshot(ownerHash: string, planId?: string | null) {
   return intakeSnapshot(plan, coach, intake);
 }
 
+function loginRequired(userId: string | null) {
+  return intakeLoginGate({ authConfigured: authConfigured(), guestAllowed: process.env.INTAKE_GUEST_ALLOWED === "1", userId });
+}
+
 export async function intakeGet(request: Request) {
   if (!intakeFeatureEnabled()) return json({ plan: null, code: "disabled", message: "새 사업 진단은 아직 공개 전이에요" }, 404);
   try {
@@ -45,6 +51,8 @@ export async function intakeGet(request: Request) {
       const candidates = searchKsic(search.slice(0, 80), { limit: 6, minLevel: 5 }).map(match => ({ code: match.entry.code, name: match.entry.name, path: ksicPath(match.entry.code), sector: sectorForKsic(match.entry.code) ?? "general" as const }));
       return json({ plan: null, ksicCandidates: candidates, authenticated: !!identity.userId, ownerScope: ownerScope(identity.hash) });
     }
+    // 로그인 전에는 사업을 보여 주지 않는다. 이 브라우저에서 작성하던 사업은 로그인할 때 계정으로 옮겨진다.
+    if (loginRequired(identity.userId)) return json({ plan: null, loginRequired: true, authenticated: false, ownerScope: ownerScope(identity.hash) });
     const plan = await currentSnapshot(identity.hash, url.searchParams.get("planId"));
     return json({ plan, authenticated: !!identity.userId, ownerScope: ownerScope(identity.hash) });
   } catch { return json({ code: "load_failed", message: "저장된 진단을 불러오지 못했어요. 새로 시작하지 말고 다시 불러와 주세요" }, 503); }
@@ -79,6 +87,7 @@ export async function intakePost(request: Request, prepare: (request: Request) =
   try {
     const identity = await requireGuestIdentity();
     const scope = ownerScope(identity.hash);
+    if (loginRequired(identity.userId)) return json({ code: "login_required", login: true, loginRequired: true, authenticated: false, ownerScope: scope, message: "로그인하면 사업 기획을 시작할 수 있어요. 입력한 내용은 이 화면에 그대로 있어요" }, 401);
     if (request.headers.has("x-business-intake-owner") && request.headers.get("x-business-intake-owner") !== scope) return json({ code: "owner_changed", message: "로그인 계정이 바뀌었어요. 임시 입력은 보관하고 현재 계정을 다시 확인해 주세요", ownerScope: scope }, 409);
     if (command.action === "prepare") {
       if (intakeBetaSafetyRequired()) return json({ code: "beta_scope_restricted", message: "한정 베타에서는 사업안 저장까지 이용할 수 있어요." }, 403);

@@ -10,7 +10,7 @@ import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-b
 import { documentContext } from "../../../lib/plan-builder/document-context";
 import { useDeckExport } from "./use-deck-export";
 import { useDocumentEdits } from "./use-document-edits";
-import { coachDocumentRevision, readCoach } from "../../../lib/plan-builder/coach";
+import { coachDocumentRevision, currentBusinessDesign, readCoach } from "../../../lib/plan-builder/coach";
 import type { DocumentReviewSource } from "./DocumentSourceReview";
 import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 
@@ -19,6 +19,7 @@ export default function PlanDocumentPage() {
   const router = useRouter();
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
   const [title, setTitle] = useState("사업계획서");
+  const [identity, setIdentity] = useState<{ headline: string; pitch: string } | undefined>(undefined);
   const [planType, setPlanType] = useState("");
   const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
   const [deckError, setDeckError] = useState<string | null>(null);
@@ -77,6 +78,9 @@ export default function PlanDocumentPage() {
         }
         setDocumentPlanId(p.id);
         setTitle(p.title);
+        const coachState = readCoach(p.answers);
+        const identityNow = coachState ? currentBusinessDesign(coachState)?.identity : undefined;
+        setIdentity(identityNow ? { headline: identityNow.headline, pitch: identityNow.pitch } : undefined);
         setPlanType(p.planType);
         setIsSample(isSamplePlan(p.id));
         if (!isSamplePlan(p.id)) {
@@ -231,7 +235,7 @@ export default function PlanDocumentPage() {
     } catch { setAccessError(true); }
   }
 
-  return <DocumentWorkspace title={title} planId={documentPlanId} planType={planType} ready={ready}
+  return <DocumentWorkspace title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;
