@@ -23,7 +23,7 @@ const SUPPLY: Record<string, string> = {
   homepage: "결제가 승인되면 바로 홈페이지 수정·공개 기능이 열리고 이용이 시작됩니다.",
   regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해집니다.`,
   domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작됩니다.",
-  tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전됩니다.",
+  tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 사용할 수 있습니다.",
 };
 
 declare global {
@@ -235,6 +235,10 @@ export default function PlanCheckout() {
               <label className={styles.noRefund}><input type="checkbox" checked={agreements.personalizedDigitalNoRefund} onChange={() => toggle("personalizedDigitalNoRefund")} /><span>
                 {product === "regen" ? (
                   <><strong>추가 횟수 환불 기준에 동의</strong><small>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</small></>
+                ) : product === "domain" ? (
+                  <><strong>도메인 연결 환불 기준에 동의</strong><small>연결을 완료하기 전이나 연결 완료 후 7일 이내에는 전액 환불하고, 그 이후에는 남은 개월 수만큼 월할로 환불합니다(사용한 달은 한 달로 계산, 수수료 없음). 가비아 등에서 직접 구매한 도메인 등록비는 환불 대상이 아닙니다.</small></>
+                ) : product === "tokens" ? (
+                  <><strong>AI 수정 토큰 유효기간·환불 기준에 동의</strong><small>토큰은 충전일부터 1년 동안 이 홈페이지에서 사용할 수 있고, 기간이 지나면 남은 토큰은 소멸합니다. 사용하지 않았다면 7일 이내 전액 환불하고, 일부 사용했다면 유효기간 안에서 남은 토큰 비율만큼 환불합니다.</small></>
                 ) : (
                   <><strong>제공 시작 후 단순 변심 환불 제한에 동의</strong><small>결제가 승인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한됩니다. 제공된 내용에 하자가 있거나 표시·광고와 다르게 제공된 경우에는 관계 법령에 따라 환불받을 수 있습니다.</small></>
                 )}

@@ -4,6 +4,8 @@ import { opportunitySnapshotSchema } from "../service-domain";
 export const PACKAGE_AMOUNT = 149_000;
 export const PACKAGE_LIST_AMOUNT = 199_000;
 export const CUSTOM_HOMEPAGE_FROM_AMOUNT = 490_000;
+/** 계획서로 만든 홈페이지의 수정·공개 권한 가격 (법적 고지 문서도 이 값을 쓴다) */
+export const HOMEPAGE_PRODUCT_AMOUNT = 149_000;
 export const PACKAGE_NAME = "맞춤 사업 실행 파일";
 export const PACKAGE_SUPPLY_AMOUNT = Math.round(PACKAGE_AMOUNT / 1.1);
 export const PACKAGE_VAT_AMOUNT = PACKAGE_AMOUNT - PACKAGE_SUPPLY_AMOUNT;
@@ -22,7 +24,7 @@ export const REGEN_PACK_COUNT = 10;
 export const REGEN_PACK_AMOUNT = 4_900;
 export const REGEN_PACK_NAME = "다시 생성 10회";
 
-export const TERMS_VERSION = "2026-07-23-custom-digital";
+export const TERMS_VERSION = "2026-09-28-card-addons";
 
 export const paymentMethodSchema = z.enum(["CARD", "TOSSPAY", "TRANSFER"]);
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
@@ -157,3 +159,5 @@ export const DOMAIN_PRODUCT_DAYS = 365;
 export const TOKEN_PACK_NAME = "홈페이지 AI 수정 토큰 20만";
 export const TOKEN_PACK_AMOUNT = 9_900;
 export const TOKEN_PACK_TOKENS = 200_000;
+/** 충전한 토큰은 충전일부터 이 기간 동안 쓸 수 있다 (약관·환불 기준에 같은 값으로 고지) */
+export const TOKEN_VALIDITY_DAYS = 365;
