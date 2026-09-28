@@ -22,10 +22,11 @@ async function main() {
     const { financialTableOwner } = await import("../lib/plan-builder/blueprint");
 
     let serial = 0;
-    function operatingPlan(values: Array<[string, IntakeValue]>) {
+    function operatingPlan(values: Array<[string, IntakeValue]>, mode: "operating" | "startup" = "operating") {
       const coach: CoachState = emptyCoach();
-      coach.stage = "operating"; coach.business.stage = "운영 중";
-      const intake: IntakeState = createIntake(coach, "operating", AT);
+      coach.stage = mode; coach.business.stage = mode === "operating" ? "운영 중" : "사업 기획";
+      const intake: IntakeState = createIntake(coach, mode, AT);
+      intake.detailsRequested = true;
       const plan: ServerPlan = { id: "plan-finance-unify", title: "동네 반찬 가게", planType: COACH_TYPES.operating, createdAt: AT, updatedAt: AT, sections: {},
         answers: { [COACH_KEY]: { state: coach }, [INTAKE_KEY]: { state: intake } } };
       for (const [questionId, value] of values) {
@@ -69,11 +70,25 @@ async function main() {
     assert.equal(intakeFinancialTable(partial.plan, partial.coach, owner), undefined);
     assert.ok(planFinancialReference(partial.coach, partial.plan.answers).includes("아직 없는 값"));
 
-    // 6) 진단이 아닌(대화형) 계획은 기존 대화 필드 계산 그대로
+    // 6) 업종 상세 질문 숫자가 계산에 쓰인다(2026-09-28). 필요한 값이 없으면 줄을 만들지 않는다.
+    const lesson = operatingPlan([["business", "성인 대상 기타 레슨"], ["industry", "education"], ["hoursPerWeek", 10], ["capacity", "대표자 혼자 / 일주일 10건"], ["education.sessionMinutes", 60]], "startup");
+    const lessonText = planFinancialReference(lesson.coach, lesson.plan.answers);
+    assert.ok(lessonText.includes("아직 없는 값"), "the P&L still waits for price and costs");
+    assert.ok(lessonText.includes("업종 점검(처리량 최대치 기준): 수업 시간은 월 43건 × 60분 = 월 43시간으로, 주당 가능 시간(월 43시간)의 99%입니다."), lessonText);
+    const retail = operatingPlan([["business", "문구 스마트스토어"], ["industry", "retail_commerce"], ["structure.unitCost", 5000], ["budget", 1000000], ["retail_commerce.minimumOrder", 300]], "startup");
+    const retailText = planFinancialReference(retail.coach, retail.plan.answers);
+    assert.ok(retailText.includes("최소 발주 금액 300개 × 변동비 5,000원 = 1,500,000원, 준비 예산의 150%. 예산보다 많으므로"), retailText);
+    const delivery = operatingPlan([["business", "동네 퀵 배송"], ["industry", "logistics"], ["capacity", "대표자 혼자 / 하루 30건"], ["logistics.dailyShipments", 20]], "startup");
+    const deliveryText = planFinancialReference(delivery.coach, delivery.plan.answers);
+    assert.ok(deliveryText.includes("배송 가능량(하루 × 월 26일)은 월 최대 약 520건이고, 처리량 월 780건은 그 150%입니다. 처리 가능한 양을 넘으므로"), deliveryText);
+    assert.ok(!planFinancialReference(full.coach, full.plan.answers).includes("업종 점검"), "no detail answers, no detail lines");
+    assert.ok(intakeFinancialTable(full.plan, full.coach, owner)!.length > 0);
+
+    // 7) 진단이 아닌(대화형) 계획은 기존 대화 필드 계산 그대로
     const legacy = emptyCoach();
     assert.equal(planFinancialReference(legacy, {}), coachFinancialReference(legacy));
 
-    console.log("financial-engine-unify: shared inputs (300/month from actuals), AI context, executive summary, 12-month table owner, no invented numbers, legacy fallback passed");
+    console.log("financial-engine-unify: shared inputs (300/month from actuals), AI context, executive summary, 12-month table owner, no invented numbers, industry detail checks (lesson time, minimum order, delivery ceiling), legacy fallback passed");
   } finally {
     globalThis.fetch = originalFetch;
   }

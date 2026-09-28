@@ -370,6 +370,58 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
   return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes };
 }
 
+/**
+ * 업종 상세 질문의 숫자를 계산에 쓴다(예전엔 AI 프롬프트에 글로만 전달됐다). 필요한 값이 모두 있을 때만 한 줄씩 만들고, 추정치는 만들지 않는다.
+ * 판매량은 손익 계산의 판매량(실적·처리량 기준)을 쓰고, 없으면 처리량(감당 가능한 최대치)으로만 계산한다.
+ */
+export function intakeDetailChecks(coach: CoachState, intake: IntakeState, scenario: { volume: number; actual: boolean } | null): string[] {
+  const detail = (id: string) => { const answer = intake.answers[id]; return answer?.status === "answered" && typeof answer.value === "number" && Number.isFinite(answer.value) && answer.value >= 0 ? answer.value : null; };
+  const field = (key: CoachField["key"]) => coach.fields.find(item => item.key === key)?.value;
+  const capacity = monthlyVolumeFromCapacity(field("capacity"));
+  const volume = scenario?.volume ?? capacity?.volume ?? null;
+  const basis = scenario ? (scenario.actual ? "실적 기준" : "계획 판매량 기준") : "처리량 최대치 기준";
+  const volumeLabel = scenario ? "판매량" : "처리량";
+  const hoursMatch = field("hoursPerWeek")?.replace(/\s|,/g, "").match(/^(?:주)?(\d+(?:\.\d+)?)(?:시간)?$/);
+  const monthlyHours = hoursMatch ? Number(hoursMatch[1]) * 52 / 12 : null;
+  const budget = coachAmount(field("budget")), unitCost = coachAmount(field("unitCost"));
+  const n = (value: number) => Math.round(value).toLocaleString("ko-KR");
+  const won = (value: number) => `${n(value)}원`;
+  const share = (part: number, whole: number) => `${Math.round(part / whole * 100)}%`;
+  const lines: string[] = [];
+  const timeLine = (id: string, what: string) => {
+    const minutes = detail(id);
+    if (minutes == null || !volume) return;
+    const hours = volume * minutes / 60;
+    const tail = monthlyHours ? `으로, 주당 가능 시간(월 ${n(monthlyHours)}시간)의 ${share(hours, monthlyHours)}입니다${hours > monthlyHours ? `. 가능 시간을 넘으므로 ${volumeLabel}이나 시간을 다시 잡아야 합니다` : ""}` : "입니다";
+    lines.push(`- 업종 점검(${basis}): ${what} 월 ${n(volume)}건 × ${n(minutes)}분 = 월 ${n(hours)}시간${tail}.`);
+  };
+  timeLine("education.sessionMinutes", "수업 시간은");
+  timeLine("local_service.travelMinutes", "왕복 이동 시간은");
+  timeLine("space_hospitality.turnoverMinutes", "예약 사이 정비 시간은");
+  const ceiling = (id: string, perMonth: (value: number) => number, what: string) => {
+    const value = detail(id);
+    if (value == null || value <= 0 || !volume) return;
+    const max = perMonth(value);
+    lines.push(`- 업종 점검(${basis}): ${what} 월 최대 약 ${n(max)}건이고, ${volumeLabel} 월 ${n(volume)}건은 그 ${share(volume, max)}입니다${volume > max ? `. 처리 가능한 양을 넘으므로 인력·기간을 다시 잡아야 합니다` : ""}.`);
+  };
+  ceiling("logistics.dailyShipments", value => value * 26, "배송 가능량(하루 × 월 26일)은");
+  ceiling("b2b_service.deliveryDays", value => Math.max(1, Math.floor(30 / value)), "한 번에 한 건씩 진행하면 처리 가능한 프로젝트는");
+  ceiling("content_media.productionDays", value => Math.max(1, Math.floor(30 / value)), "한 번에 하나씩 만들면 완성 가능한 납품물은");
+  const peak = detail("food_beverage.peakOrders");
+  if (peak != null && peak > 0 && volume) lines.push(`- 업종 점검(${basis}): 하루 평균 약 ${n(volume / 26)}건(월 26일 영업), 가장 바쁜 1시간 처리 가능 ${n(peak)}건.`);
+  const cashLine = (id: string, what: string) => {
+    const quantity = detail(id);
+    if (quantity == null || quantity <= 0 || unitCost == null) return;
+    const cost = quantity * unitCost;
+    lines.push(`- 업종 점검: ${what} ${n(quantity)}개 × 변동비 ${won(unitCost)} = ${won(cost)}${budget ? `, 준비 예산의 ${share(cost, budget)}${cost > budget ? ". 예산보다 많으므로 소량 거래처나 분할 발주를 찾아야 합니다" : ""}` : ""}.`);
+  };
+  cashLine("retail_commerce.minimumOrder", "최소 발주 금액");
+  cashLine("manufacturing.minimumBatch", "1회 최소 생산비");
+  const lead = detail("manufacturing.leadDays"), batch = detail("manufacturing.minimumBatch");
+  if (lead != null && lead > 0 && batch != null && batch > 0 && unitCost != null) lines.push(`- 업종 점검: 발주 후 납품까지 ${n(lead)}일 동안 1회 생산비 ${won(batch * unitCost)}이 묶입니다. 대금을 받는 시점까지의 운전자금을 따로 확인해야 합니다.`);
+  return lines;
+}
+
 /** 계획 하나의 손익 참고 문장. 진단 계획이면 실적·처리량을 반영한 intake 계산, 아니면 대화 필드 계산. 모든 소비처가 이 함수를 거친다. */
 export function planFinancialReference(coach: CoachState, answers: ServerPlan["answers"]): string {
   const intake = readIntake(answers);
@@ -378,7 +430,7 @@ export function planFinancialReference(coach: CoachState, answers: ServerPlan["a
 
 export function intakeFinancialReference(coach: CoachState, intake: IntakeState): string {
   const inputs = intakeScenarioInputs(coach, intake);
-  if ("missing" in inputs) return `세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`;
+  if ("missing" in inputs) return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...intakeDetailChecks(coach, intake, null)].join("\n");
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
@@ -394,7 +446,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   if (takeRate === 0) lines.push("- 수수료율 0%: 거래액을 역산하지 않습니다. 입력한 건당 수수료와의 일치 여부를 확인해 주세요.");
   const cycle = structure.revenue === "project" ? structureNumber(intake, "structure.salesCycleDays") : null;
   if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
-  return [...lines, ...notes.map(note => `- ${note}`)].filter(Boolean).join("\n");
+  return [...lines, ...notes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined ? null : { volume, actual: notes.some(note => note.startsWith("실적 기준 판매량")) })].filter(Boolean).join("\n");
 }
 
 export function applyIntakeStructure(plan: ServerPlan, coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
