@@ -1,5 +1,6 @@
 import { coachDocumentRevision, currentNextAction, readCoach, type CoachField } from "./coach";
 import { coachAmount, checkCoachFeasibility } from "./coach-feasibility";
+import { intakeScenarioInputs, readIntake } from "./intake-core";
 import { buildPlanBusinessContext, type ContextField } from "./context/build";
 import { calculateFinancials, collectFinancialInputs, describeFinancialFields } from "./financials";
 import { comparePeriods, metricValue, periodDays, periodLabel, previousPeriod, readOperatingState } from "./operating-records";
@@ -50,7 +51,13 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const channel = field("판매", "channel", context.marketing.channels, 70);
   const cost = field("월 고정비", "cost", undefined, 45);
   const unitCost = field("건당 변동비", "unitCost", undefined, 45);
-  const inputs = coach ? {
+  // 진단(intake) 계획은 질문 화면·AI 사업안과 같은 판매량(실적 ÷ 가격, 처리량 등)을 쓴다.
+  const intake = coach ? readIntake(plan.answers) : null;
+  const scenario = coach && intake ? intakeScenarioInputs(coach, intake) : null;
+  const inputs = scenario && !("missing" in scenario) ? {
+    unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost,
+    startingVolume: scenario.volume, monthlyGrowthPct: 0,
+  } : coach ? {
     unitPrice: coachAmount(fields.get("price")?.value), unitVariableCost: coachAmount(fields.get("unitCost")?.value),
     monthlyFixedCost: coachAmount(fields.get("cost")?.value),
     startingVolume: /^[\d,]+$/.test(fields.get("volume")?.value ?? "") ? Number(fields.get("volume")!.value.replace(/,/g, "")) : undefined,

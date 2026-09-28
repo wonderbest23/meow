@@ -19,6 +19,7 @@ import { ANALYSIS_KEY } from "../../../../lib/plan-builder/analyzer/domain";
 import { generateAndSaveSection } from "../../../../lib/plan-builder/section-service";
 import { documentOperatingContext } from "../../../../lib/plan-builder/document-editorial";
 import { withConfirmedIntakeContext } from "../../../../lib/plan-builder/intake-context";
+import { planFinancialReference } from "../../../../lib/plan-builder/intake-core";
 
 export const runtime = "nodejs";
 
@@ -226,7 +227,7 @@ export async function POST(req: Request) {
     planTitle: body.planTitle,
     planType: body.planType,
     business: coach?.business ?? body.business,
-    coachContext: coach ? coachContext(coach) : undefined,
+    coachContext: coach ? coachContext(coach, planFinancialReference(coach, savedState.plans.find(p => p.id === body.planId)?.answers ?? {})) : undefined,
     priorSummary: body.priorSummary,
     operatingContext: body.planId ? documentOperatingContext(savedState.plans.find(p => p.id === body.planId)?.answers ?? {}) : undefined,
     priorSections: body.planId ? Object.entries(savedState.plans.find(p => p.id === body.planId)?.sections ?? {}).filter(([key]) => key !== sectionKey).map(([, value]) => value.markdown) : undefined,

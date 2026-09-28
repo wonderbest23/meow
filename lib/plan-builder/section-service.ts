@@ -3,7 +3,8 @@ import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
 import { renderPlanMarkdown } from "./markdown";
 import { resolveLLMConfig, resolvePlanningLLMConfig } from "../llm/config";
-import { readCoach, coachContext, coachDocumentRevision } from "./coach";
+import { readCoach, coachContext, coachDocumentRevision, type CoachState } from "./coach";
+import type { ServerPlan } from "./plan-server-store";
 import { confirmedIntakeContext } from "./intake-context";
 import { loadPlanState, savePlanState } from "./plan-server-store";
 import { generateAndSaveCoach } from "./coach-job";
@@ -25,8 +26,24 @@ import { betaApiBoundary } from "../staging/beta-boundary";
 
 import { verifyBody } from "./section-signature";
 import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob } from "./section-protocol";
+import { intakeScenarioInputs, planFinancialReference, readIntake } from "./intake-core";
 export type { PlanSectionJob } from "./section-protocol";
 export { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
+
+/**
+ * 진단(intake) 계획의 12개월 손익표. 질문 화면·요약·AI 사업안과 같은 입력(실적 기준 판매량 포함)을 쓰고,
+ * 손익표를 두는 섹션에만 붙인다. 가격·변동비·고정비·판매량 중 하나라도 없으면 표를 만들지 않는다(추정치 금지).
+ */
+export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answers">, coach: CoachState, key: string): string | undefined {
+  if (key !== financialTableOwner(plan.planType)) return undefined;
+  const intake = readIntake(plan.answers);
+  const scenario = intake ? intakeScenarioInputs(coach, intake) : null;
+  if (!scenario || "missing" in scenario || !scenario.volume) return undefined;
+  const result = calculateFinancials({ unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost, startingVolume: scenario.volume, monthlyGrowthPct: 0 });
+  const table = financialsToMarkdown(result, { growthLabel: null, growthPct: 0 });
+  // 판매량의 출처(실적 기준인지, 처리량 최대치인지)를 표 아래에 그대로 밝힌다.
+  return scenario.notes.length ? `${table}\n\n판매량 기준: ${scenario.notes.join(" / ")}` : table;
+}
 
 export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok: boolean; skipped?: string }> {
   const state = await loadPlanState(job.ownerHash);
@@ -81,6 +98,8 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
         financialsReference = financialsToReference(result);
       }
     }
+  } else if (initialCoach) {
+    financialsMarkdown = intakeFinancialTable(plan, initialCoach, key);
   }
 
   const all = findConsistencyIssues(plan.answers, state.business);
@@ -116,7 +135,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     planTitle: plan.title,
     planType: plan.planType,
     business: coach?.business ?? state.business,
-    coachContext: coach ? coachContext(coach) : undefined,
+    coachContext: coach ? coachContext(coach, planFinancialReference(coach, plan.answers)) : undefined,
     intakeContext: confirmedIntakeContext(plan.answers) || undefined,
     priorSummary,
     priorSections,

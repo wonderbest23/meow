@@ -18,6 +18,7 @@ import type { DeckBuildEvent } from "../../../../lib/plan-builder/deck-plan";
 import { PPT_GENERATION_VERIFIED, PPT_PREPARING_MESSAGE } from "../../../../lib/plan-builder/deck-availability";
 import { readSavedProposal } from "../../../../lib/plan-builder/proposal-editor";
 import { renderableProposal } from "../../../../lib/plan-builder/proposal-revision";
+import { planFinancialReference } from "../../../../lib/plan-builder/intake-core";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -156,7 +157,7 @@ export async function POST(req: Request) {
       body.planType = saved.planType;
       body.sections = snapshot.sections;
       body.allAnswers = saved.answers;
-      businessContext = coachContext(coach);
+      businessContext = coachContext(coach, planFinancialReference(coach, saved.answers));
     }
   }
 

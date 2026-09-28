@@ -8,7 +8,7 @@ import { emptyCoach } from "./coach-job";
 import { BUSINESS_DESIGN_RULES, businessDesignReply, businessDesignSchema } from "./coach-design";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
-import { applyIntakeAnswer, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
+import { applyIntakeAnswer, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
 import { getServerSupabase } from "../persistence";
@@ -267,7 +267,7 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         }
       });
     } else {
-      const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach)}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(businessDesignSchema) }, validateJson: value => businessDesignSchema.safeParse(value).success, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 3000, effort: "low", allowFallback: false });
+      const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(businessDesignSchema) }, validateJson: value => businessDesignSchema.safeParse(value).success, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 3000, effort: "low", allowFallback: false });
       const parsed = businessDesignSchema.safeParse(raw);
       if (!parsed.success) throw new IntakeError("design_failed", "사업안 생성을 완료하지 못했어요. 입력 정보는 그대로 보관되어 있어요");
       await updateIntakeJob(request, (_plan, coach, _intake, current) => {

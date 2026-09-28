@@ -74,8 +74,9 @@ export function applyCoachReply(previous: CoachState | null, reply: CoachReply, 
     ready: reply.ready && fields.has("business") && stage !== "exploring", suggestions: reply.suggestions, business };
 }
 
-export function coachContext(state: CoachState): string {
-  return JSON.stringify({ version: state.version, revision: coachDocumentRevision(state), stage: state.stage, depth: state.depth, ideaOrigin: state.ideaOrigin, fields: state.fields, design: currentBusinessDesign(state), userEditedAction: state.directAction?.sourceRevision === coachDocumentRevision(state) ? state.directAction : undefined, feasibility: checkCoachFeasibility(state.fields), financialScenario: coachFinancialReference(state) }, null, 2);
+/** financialScenario: 진단(intake) 계획이면 intake-core의 planFinancialReference 결과를 넘겨 질문 화면·문서와 같은 계산을 쓴다. */
+export function coachContext(state: CoachState, financialScenario?: string): string {
+  return JSON.stringify({ version: state.version, revision: coachDocumentRevision(state), stage: state.stage, depth: state.depth, ideaOrigin: state.ideaOrigin, fields: state.fields, design: currentBusinessDesign(state), userEditedAction: state.directAction?.sourceRevision === coachDocumentRevision(state) ? state.directAction : undefined, feasibility: checkCoachFeasibility(state.fields), financialScenario: financialScenario ?? coachFinancialReference(state) }, null, 2);
 }
 
 export function currentNextAction(state: CoachState) {
