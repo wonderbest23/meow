@@ -12,6 +12,7 @@ import { TYPE_META, DEFAULT_META } from "../plan/type-meta";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import PlanLoading, { Spinner } from "../plan/PlanLoading";
 import styles from "./Account.module.css";
+import { safeNextPath } from "../../lib/http/safe-next";
 
 /*
  * 구글 로그인(GIS) — 버튼이 받아 온 ID 토큰을 서버(/api/auth/google)가
@@ -204,9 +205,7 @@ export default function AccountPage() {
   const nextPath = useMemo(() => {
     if (typeof window === "undefined") return null;
     const raw = new URL(window.location.href).searchParams.get("next");
-    if (!raw) return null;
-    if (!raw.startsWith("/") || raw.startsWith("//")) return null;
-    return raw;
+    return safeNextPath(raw);
   }, []);
 
   /*
@@ -251,8 +250,8 @@ export default function AccountPage() {
       void prepareAccountSignIn().then(() => fetch("/api/auth/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ accessToken, refreshToken }) }))
         .then((response) => payload(response))
         .then(() => {
-          const raw = new URL(window.location.href).searchParams.get("next");
-          if (raw && raw.startsWith("/") && !raw.startsWith("//")) { window.location.assign(raw); return; }
+          const raw = safeNextPath(new URL(window.location.href).searchParams.get("next"));
+          if (raw) { window.location.assign(raw); return; }
           /* 이메일 확인·카카오 로그인 둘 다 이 길로 돌아온다 — 어느 쪽에도 맞는 말로 */
           window.history.replaceState({}, "", "/account"); setMessage("로그인되었습니다."); return loadSession();
         })
@@ -262,8 +261,8 @@ export default function AccountPage() {
     void loadSession()
       .then(() => {
         // 이미 로그인돼 있는데 돌아갈 곳을 들고 왔다면 붙잡아두지 않는다
-        const raw = new URL(window.location.href).searchParams.get("next");
-        if (raw && raw.startsWith("/") && !raw.startsWith("//")) {
+        const raw = safeNextPath(new URL(window.location.href).searchParams.get("next"));
+        if (raw) {
           void fetch("/api/auth/session", { cache: "no-store" })
             .then((r) => r.json())
             .then((d: SessionState) => {

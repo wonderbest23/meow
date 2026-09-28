@@ -14,6 +14,8 @@ import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
 const lowMemory = process.env.BUILD_LOW_MEMORY === "1";
 
 const nextConfig: NextConfig = {
+  // 응답 헤더에 서버 종류(x-powered-by: Next.js)를 알리지 않는다.
+  poweredByHeader: false,
   ...(lowMemory ? { experimental: { cpus: 1, workerThreads: false } } : {}),
 };
 

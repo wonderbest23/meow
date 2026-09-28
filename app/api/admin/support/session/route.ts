@@ -7,6 +7,7 @@ import {
   verifyAdminPassword,
 } from "../../../../../lib/support-chat/admin-auth";
 import { isScopeConfigured, resolveScope, type AdminScope } from "../../../../../lib/support-chat/admin-session";
+import { enforceRateLimit } from "../../../../../lib/rate-limit";
 
 const scopeSchema = z.enum(["support", "payments"]).default("support");
 const loginSchema = z.object({ password: z.string().min(1).max(200), scope: scopeSchema });
@@ -31,6 +32,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  // 공유 관리자 비밀번호를 무차별 대입하지 못하게 IP당 시도 횟수를 제한한다(Access 밖 경로에서도 막힌다).
+  const limited = await enforceRateLimit("admin-login", request, { limit: 10, windowMs: 15 * 60_000, message: "로그인 시도가 너무 많습니다. 15분 뒤 다시 시도해주세요." });
+  if (limited) return limited;
   let input: z.infer<typeof loginSchema>;
   try {
     input = loginSchema.parse(await request.json());

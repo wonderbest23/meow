@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerAuthClient } from "../../../../lib/account-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { safeNextPath } from "../../../../lib/http/safe-next";
 
 /*
  * 카카오 로그인 — Supabase OAuth 리디렉트 방식.
@@ -24,7 +25,7 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   /* 로그인 뒤 돌아갈 내부 경로 — 열린 리다이렉트가 되지 않게 내부 경로만 */
   const rawNext = url.searchParams.get("next") ?? "";
-  const next = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "";
+  const next = safeNextPath(rawNext) ?? "";
   const redirectTo = `${url.origin}/account${next ? `?next=${encodeURIComponent(next)}` : ""}`;
 
   try {
