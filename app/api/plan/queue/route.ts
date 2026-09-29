@@ -4,6 +4,7 @@ import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { resolvePlanAccess, checkSectionAccess } from "../../../../lib/plan-builder/access";
 import { PLAN_BLUEPRINT } from "../../../../lib/plan-builder/blueprint";
+import { pendingSectionKeys } from "../../../../lib/plan-builder/pending-sections";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 
 export const runtime = "nodejs";
@@ -37,11 +38,8 @@ export async function GET(request: Request) {
   const plan = state.plans.find((item) => item.id === planId);
   if (!plan) return NextResponse.json({ error: "plan not found" }, { status: 404 });
 
-  // 답변은 했는데 본문이 아직 없는 섹션 = 서버가 만들고 있거나 만들 것
-  const pending = Object.keys(plan.answers).filter((key) => {
-    const answers = plan.answers[key];
-    return answers && Object.keys(answers).length > 0 && !plan.sections[key];
-  });
+  // 답변은 했는데 본문이 아직 없는 섹션 = 서버가 만들고 있거나 만들 것(내부 저장 칸은 빼고 센다)
+  const pending = pendingSectionKeys(plan);
 
   return NextResponse.json(
     { pending: pending.length, pendingKeys: pending, supported: (await workflowBinding()) !== null },
