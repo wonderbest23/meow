@@ -120,3 +120,32 @@
 .desktop .ctaWrap { padding: 24px 24px 110px; }
 .desktop .cta { min-height: 520px; border-radius: 14px; }
 .desktop .ctaCopy h2 { font-size: 48px; line-height: 1.2; }
+
+/*
+ * 움직임(애플식) — 스크롤 값(--pass·--view)은 useKitMotion 이 준다. 값이 없으면(편집 화면) 제자리.
+ */
+/* 머리글: 스크롤해도 위에 붙어 있고, 뒤가 비치게 흐리게 */
+.header { position: sticky; top: 0; z-index: 5; background: rgba(255, 255, 255, .78); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px); }
+/* 첫 화면: 내려갈수록 사진이 당겨지고 어두워지며, 글은 위로 빠진다 */
+.heroImage { transform: scale(calc(1 + var(--pass, 0) * .16)); transform-origin: 50% 35%; will-change: transform; }
+.hero::after { content: ""; position: absolute; inset: 0; background: var(--ink); opacity: calc(var(--pass, 0) * .55); pointer-events: none; }
+.heroCopy, .heroSlot { z-index: 1; }
+.heroCopy { transform: translate3d(0, calc(var(--pass, 0) * -70px), 0); opacity: calc(1 - var(--pass, 0) * 1.1); }
+/* 카드: 올리면 살짝 뜨고 사진이 천천히 당겨진다 */
+.card { transition: transform .5s cubic-bezier(.16, 1, .3, 1), box-shadow .5s ease; }
+.card:hover { transform: translateY(-6px); box-shadow: 0 28px 60px rgba(22, 28, 45, .14); }
+.cardImage { transition: transform 1.4s cubic-bezier(.16, 1, .3, 1); }
+.card:hover .cardImage { transform: scale(1.06); }
+/* 보라 띠: 사진이 화면을 지나며 천천히 확대, 단계는 한 줄씩 */
+.violetFrame { overflow: hidden; border-radius: 8px; box-shadow: 0 30px 60px rgba(22, 28, 45, .28); }
+.violetFrame .violetImage { box-shadow: none; border-radius: 0; transform: scale(calc(1.02 + var(--view, 0) * .1)); will-change: transform; }
+.violetSteps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.violetSteps li { padding: 14px 18px; border-radius: 10px; background: rgba(255, 255, 255, .1); font-size: 16px; line-height: 1.6; }
+.desktop .violetSteps li { font-size: 17px; }
+/* 마무리: 사진이 글보다 느리게 움직이는 시차 */
+.ctaImage { transform: translate3d(0, calc((var(--view, .5) - .5) * -90px), 0) scale(1.18); will-change: transform; }
+@media (prefers-reduced-motion: reduce) {
+  .heroImage, .heroCopy, .violetFrame .violetImage, .ctaImage, .card, .cardImage { transform: none !important; transition: none !important; }
+  .hero::after { opacity: 0; }
+  .heroCopy { opacity: 1; }
+}

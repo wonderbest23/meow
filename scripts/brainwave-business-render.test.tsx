@@ -79,4 +79,21 @@ for (const option of landingTemplateOptions) {
 }
 const cafePhoto = heroImageForSector("카페", "");
 assert.ok(cafePhoto && render(createBusinessTemplate({ ...content, image: cafePhoto }, "0-1102")).includes(cafePhoto.replaceAll("&", "&amp;")), "sector photo still shows");
-console.log(JSON.stringify({ passed: 23 }));
+// 움직임: 디자인 템플릿은 자체 움직임을 갖고(섹션째 떠오르기와 겹치지 않게), 첫 화면은 스크롤 값을 받는다
+for (const pageId of ["0-290", "0-1102"]) {
+  const html = render(createBusinessTemplate(content, pageId));
+  assert.ok(html.includes("data-own-motion"), `${pageId}: owns its motion`);
+  assert.ok(html.includes("data-scroll"), `${pageId}: hero follows scroll`);
+  assert.ok(html.includes('data-reveal="title"'), `${pageId}: title reveals`);
+  assert.ok(html.includes("data-kenburns"), `${pageId}: hero photo slow zoom`);
+}
+// 여러 줄 단계는 공개 화면에서 한 줄씩(편집 화면은 한 덩어리로 그 자리에서 고친다)
+const steps = createBusinessTemplate(content, "0-1102");
+steps.texts["0:1141"] = "한 주는 이렇게 흘러가요";
+steps.texts["0:1142"] = "① 메뉴 공지\n② 신청 마감\n③ 배송";
+steps.hidden = steps.hidden.filter(id => id !== "0:1137");
+const stepsHtml = render(steps);
+const violetHtml = stepsHtml.slice(stepsHtml.indexOf('data-bw-node="0:1137"'), stepsHtml.indexOf('data-bw-node="0:1104"'));
+assert.equal(count(violetHtml, "<li"), 3);
+assert.ok(render(steps, () => {}).includes('data-bw-text="0:1142"'));
+console.log(JSON.stringify({ passed: 31 }));

@@ -515,7 +515,8 @@ export function BrainwaveStage({
      * display:contents 래퍼는 상자를 만들지 않아 관찰자가 영영 발화하지 않고,
      * opacity·transform 도 먹지 않는다 — 애니메이션 대상에서 뺀다.
      */
-    const targets = [...el.querySelectorAll<HTMLElement>(".bwmob > *, .bwm-items > *, .bw-canvas > div > div")]
+    // 자체 움직임을 가진 디자인 템플릿(data-own-motion)은 섹션째 떠오르게 하지 않는다 — 효과가 겹친다
+    const targets = [...el.querySelectorAll<HTMLElement>(".bwmob:not([data-own-motion]) > *, .bwm-items > *, .bw-canvas > div > div")]
       .filter((t) => getComputedStyle(t).display !== "contents");
     if (!targets.length) return;
     const io = new IntersectionObserver((entries) => {
