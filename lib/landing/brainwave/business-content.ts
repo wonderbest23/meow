@@ -38,10 +38,15 @@ export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
     facts: [{ label: "0:2285", value: "0:2286" }, { label: "0:2294", value: "0:2295" }, { label: "0:2301", value: "0:2302" }],
     hide: ["0:2364", "0:2371", "0:2373", "0:2374", "0:2375", "0:2377", "0:2378"],
   },
+  /*
+   * 온라인 상점 — 첫 화면(큰 제목 + 소개) 아래로 제공 내용·이용 대상·가격 카드가
+   * 겹쳐 올라오고, 사진 위 마무리 문구로 끝난다. 보라 띠(0:1137)는 채울 말이
+   * 따로 없어 새 페이지에서는 숨긴다(편집기에서 되살려 쓸 수 있다).
+   */
   "0-1102": {
-    sections: ["0:1360", "0:1321", "0:1137", "0:1104"], brand: "0:1361", headline: "0:1327", description: "0:1328", button: "I0:1140;0:4572",
-    fields: { "0:1361": "businessName", "0:1327": "headline", "0:1328": "offer", "0:1141": "detailsTitle", "0:1142": "contactDescription", "I0:1140;0:4572": "cta", "0:1111": "contactTitle", "I0:1110;0:4626": "cta" },
-    facts: [{ label: "0:1141", value: "0:1142" }],
+    sections: ["0:1360", "0:1321", "0:1329", "0:1104"], brand: "0:1361", headline: "0:1327", description: "0:1328", button: "I0:1110;0:4626",
+    fields: { "0:1361": "businessName", "0:1327": "headline", "0:1328": "description", "0:1333": "offerLabel", "0:1334": "offer", "0:1338": "customerLabel", "0:1339": "customer", "0:1343": "priceLabel", "0:1344": "price", "0:1141": "detailsTitle", "0:1142": "contactDescription", "I0:1140;0:4572": "cta", "0:1111": "contactInvite", "I0:1110;0:4626": "cta" },
+    facts: [{ label: "0:1333", value: "0:1334" }, { label: "0:1338", value: "0:1339" }, { label: "0:1343", value: "0:1344" }],
     hide: ["0:1363"],
   },
   "0-2": {
@@ -90,7 +95,7 @@ export const BUSINESS_TEMPLATE_IDS = Object.keys(BUSINESS_TEMPLATE_PROFILES);
  * Figma 디자인을 흐름 배치로 옮겨 둔 템플릿. 이 페이지들은 글 길이·사진과 상관없이
  * 늘 그 디자인으로 그린다(components/brainwave-business-*.tsx).
  */
-export const BUSINESS_DESIGNED_PAGES = new Set(["0-290"]);
+export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102"]);
 // Search-only controls are removed from business drafts; keep their remaining CTA aligned.
 export const BUSINESS_NODE_STYLES: Record<string, Record<string, string>> = {
   "0:2372": { left: "calc(50% - 110px)", right: "auto", width: "220px" },

@@ -1,0 +1,115 @@
+/* 06 ECommerce — Figma 값(글자 크기·색·간격)을 흐름 배치로 옮긴 것. 음수 자간은 쓰지 않는다. */
+.page {
+  --ink: #161c2d;
+  --accent: #473bf0;
+  --soft: #f4f7fa;
+  --mint: #68d585;
+  color: var(--ink);
+  background: #fbfcfd;
+  font-family: var(--bw-latin), Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  letter-spacing: 0;
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; }
+
+/* 버튼 — 전역 규칙(button svg 숨김)을 이기고 화살표를 살린다 */
+.button, .linkButton, .greenButton { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; border: 0; font: inherit; font-weight: 700; cursor: pointer; }
+.page .button svg, .page .linkButton svg { display: block !important; flex: 0 0 18px; }
+.page .greenButton svg { display: none !important; }
+.button span, .linkButton span, .greenButton span { min-width: 0; overflow-wrap: anywhere; }
+.button { min-height: 52px; padding: 10px 22px; border-radius: 6px; color: #fff; background: var(--accent); }
+.linkButton { justify-self: start; min-height: 44px; padding: 0; color: #fff; background: none; font-size: 16px; }
+.greenButton { justify-content: center; min-height: 52px; padding: 10px 28px; border-radius: 6px; color: var(--ink); background: var(--mint); font-size: 16px; }
+.button:focus-visible, .linkButton:focus-visible, .greenButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
+
+/* 머리글 */
+.header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; background: #fff; }
+.brand { font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
+
+/* 첫 화면 — 둥근 사진 판, 가운데 흰 큰 제목 */
+.heroWrap { padding: 0 12px; }
+.hero { position: relative; overflow: hidden; display: grid; align-content: center; min-height: 420px; border-radius: 12px; color: #fff; text-align: center; background: radial-gradient(90% 80% at 50% 0%, #3a2fd0 0%, rgba(58, 47, 208, 0) 60%), var(--ink); }
+.heroImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.heroShade { position: absolute; inset: 0; pointer-events: none; }
+.heroPhoto .heroShade { background: linear-gradient(180deg, rgba(22, 28, 45, .38) 0%, rgba(22, 28, 45, .62) 100%); }
+.heroCopy { position: relative; display: grid; justify-items: center; gap: 18px; padding: 72px 22px 96px; }
+.heroCopy h1 { max-width: 760px; font-size: 32px; line-height: 1.28; font-weight: 700; }
+.heroLead { max-width: 620px; font-size: 16px; line-height: 1.75; opacity: .82; white-space: pre-wrap; }
+.heroSlot { position: relative; justify-self: center; width: min(420px, calc(100% - 40px)); min-height: 72px; margin: -64px auto 40px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }
+
+/* 첫 화면 아래로 겹쳐 올라오는 카드 */
+.cards { position: relative; display: grid; gap: 14px; margin: -56px 20px 0; }
+.card { display: grid; align-content: start; gap: 8px; padding: 24px 22px; border-radius: 10px; background: #fff; box-shadow: 0 18px 40px rgba(22, 28, 45, .08); }
+.card h3 { font-size: 19px; line-height: 1.45; font-weight: 700; }
+.card p { font-size: 15px; line-height: 1.7; opacity: .72; white-space: pre-wrap; }
+.cardImage { display: block; width: 100%; aspect-ratio: 4 / 3; margin-top: 10px; object-fit: contain; }
+
+/* 상품 목록 */
+.band { padding: 64px 20px; }
+.bandTitle { margin-bottom: 32px !important; font-size: 26px; line-height: 1.35; font-weight: 700; text-align: center; }
+.products { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.product { display: grid; gap: 8px; text-align: center; }
+.productImage { display: grid; place-items: center; aspect-ratio: 1; overflow: hidden; border-radius: 10px; background: var(--soft); }
+.productImage img { width: 100%; height: 100%; object-fit: cover; }
+.productImage .photoSlot { height: 100%; border: 0; border-radius: 0; background: none; }
+.price { color: var(--mint); font-size: 16px; }
+.product h3 { font-size: 17px; line-height: 1.45; font-weight: 700; }
+
+/* 보라 띠 */
+.violetWrap { padding: 56px 12px 0; }
+.violet { display: grid; gap: 28px; padding: 48px 22px; border-radius: 12px; color: #fff; background: var(--accent); }
+.violetImage { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 8px; box-shadow: 0 30px 60px rgba(22, 28, 45, .28); }
+.violetSlot { min-height: 180px; border-color: rgba(255, 255, 255, .55); color: #fff; background: rgba(255, 255, 255, .08); }
+.violetCopy { display: grid; gap: 16px; }
+.violetCopy h2 { font-size: 26px; line-height: 1.35; font-weight: 700; }
+.violetLead { font-size: 16px; line-height: 1.8; opacity: .78; white-space: pre-wrap; }
+
+/* 후기 — 어두운 띠 */
+.reviewWrap { padding: 12px 12px 0; }
+.review { display: grid; gap: 18px; padding: 56px 22px; border-radius: 12px; color: #fff; background: var(--ink); }
+.quoteMark { color: var(--mint); }
+.quote { font-size: 19px; line-height: 1.7; white-space: pre-wrap; }
+.reviewer { font-size: 15px; opacity: .8; }
+
+/* 마무리 — 사진 위 가운데 흰 글 + 초록 버튼 */
+.ctaWrap { padding: 12px 12px 56px; }
+.cta { position: relative; overflow: hidden; display: grid; place-items: center; min-height: 360px; border-radius: 12px; color: #fff; text-align: center; background: radial-gradient(80% 70% at 50% 100%, rgba(104, 213, 133, .22) 0%, rgba(104, 213, 133, 0) 60%), #232838; }
+.ctaImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ctaShade { position: absolute; inset: 0; pointer-events: none; }
+.ctaPhoto .ctaShade { background: rgba(22, 28, 45, .6); }
+.ctaCopy { position: relative; display: grid; justify-items: center; gap: 26px; padding: 64px 22px; }
+.ctaCopy h2 { max-width: 640px; font-size: 28px; line-height: 1.3; font-weight: 700; }
+
+/* 편집 화면 전용 — 사진 넣기 */
+.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.photoSlot:hover { border-color: var(--accent); }
+
+/* PC — Figma 폭(1110px 본문)과 크기 */
+.desktop .header { padding: 24px max(24px, calc((100% - 1400px) / 2)); }
+.desktop .brand { font-size: 24px; }
+.desktop .heroWrap { padding: 0 24px; }
+.desktop .hero { min-height: 640px; border-radius: 14px; }
+.desktop .heroCopy { gap: 22px; padding: 120px 24px 180px; }
+.desktop .heroCopy h1 { font-size: 56px; line-height: 1.16; }
+.desktop .heroLead { font-size: 19px; }
+.desktop .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 1110px; margin: -110px auto 0; padding: 0 24px; }
+.desktop .card { min-height: 180px; padding: 32px 30px; }
+.desktop .card h3 { font-size: 22px; }
+.desktop .card p { font-size: 16px; }
+.desktop .band { max-width: 1110px; margin: 0 auto; padding: 110px 24px; }
+.desktop .bandTitle { margin-bottom: 56px !important; font-size: 32px; }
+.desktop .products { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 30px; }
+.desktop .violetWrap { padding: 110px 24px 0; }
+.desktop .violet { grid-template-columns: minmax(0, 1fr); padding: 110px max(32px, calc((100% - 1110px) / 2)); border-radius: 14px; }
+.desktop .violetWithPhoto { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 96px; align-items: center; }
+.desktop .violetCopy { max-width: 560px; }
+.desktop .violetCopy h2 { font-size: 36px; line-height: 1.33; }
+.desktop .violetLead { font-size: 18px; }
+.desktop .reviewWrap { padding: 24px 24px 0; }
+.desktop .review { padding: 110px max(32px, calc((100% - 1110px) / 2)); border-radius: 14px; }
+.desktop .quote { max-width: 620px; font-size: 24px; }
+.desktop .ctaWrap { padding: 24px 24px 110px; }
+.desktop .cta { min-height: 520px; border-radius: 14px; }
+.desktop .ctaCopy h2 { font-size: 48px; line-height: 1.2; }

@@ -3,6 +3,7 @@
 import { ArrowRight, ImagePlus } from "lucide-react";
 import { BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest } from "../lib/landing/brainwave/business-content";
 import { BusinessConsult0_290 } from "./brainwave-business-consult";
+import { BusinessShop0_1102 } from "./brainwave-business-shop";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
 import styles from "./brainwave-business-mobile.module.css";
@@ -17,6 +18,7 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
 }) {
   // Figma 디자인을 옮겨 둔 템플릿은 그 화면으로 그린다
   if (pageId === "0-290") return <BusinessConsult0_290 overrides={overrides} hidden={hidden} sectionOrder={sectionOrder} onPick={onPick} desktop={desktop} />;
+  if (pageId === "0-1102") return <BusinessShop0_1102 overrides={overrides} hidden={hidden} sectionOrder={sectionOrder} onPick={onPick} desktop={desktop} />;
   const profile = BUSINESS_TEMPLATE_PROFILES[pageId];
   if (!profile) return null;
   const text = (id: string) => hidden.has(id) ? "" : overrides.texts?.[id] ?? "";

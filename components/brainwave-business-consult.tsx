@@ -1,9 +1,8 @@
 "use client";
 
-import { ArrowRight, ImagePlus, MessageCircle } from "lucide-react";
+import { ArrowRight, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
-import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
-import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
+import { kitPieces, type BusinessDesignProps } from "./brainwave-business-pieces";
 import styles from "./brainwave-business-consult.module.css";
 
 /*
@@ -18,13 +17,6 @@ import styles from "./brainwave-business-consult.module.css";
  * 글·사진·버튼은 킷과 같은 노드 id 로 읽고 쓴다 — 편집기에서 누르면 그 자리가 고쳐진다.
  */
 
-type Props = {
-  overrides: BrainwaveOverrides;
-  hidden: Set<string>;
-  sectionOrder: string[];
-  onPick?: BrainwavePick;
-  desktop?: boolean;
-};
 
 const HERO = "0:409";
 const FACTS = "0:398";
@@ -37,44 +29,8 @@ const STATS = [["0:400", "0:401"], ["0:403", "0:404"], ["0:406", "0:407"]] as co
 const SERVICE_CARDS = [["0:372/0", "0:373"], ["0:379/0", "0:380"], ["0:386/0", "0:387"], ["0:393/0", "0:394"]] as const;
 const DRAWN = [HERO, FACTS, SERVICES, DETAILS, ALERT, CONTACT];
 
-export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, desktop = false }: Props) {
-  const text = (id: string) => (hidden.has(id) ? "" : overrides.texts?.[id] ?? "");
-  const image = (id: string) => (hidden.has(id) ? "" : overrides.images?.[id] ?? "");
-  /* 같은 사진은 공개 화면에서 한 번만 — 편집 화면은 자리마다 보여 줘 바꿀 수 있게 */
-  const shown = new Set<string>();
-  const photo = (id: string) => {
-    const url = image(id);
-    if (!url || (!onPick && shown.has(url))) return "";
-    shown.add(url);
-    return url;
-  };
-
-  /*
-   * 아래 조각들은 컴포넌트가 아니라 함수로 부른다. 렌더 안에서 만든 컴포넌트는
-   * 매번 새 종류라 다시 그릴 때마다 요소가 새로 붙고, 편집 중인 글 칸이 날아간다.
-   */
-  const Text = ({ id, as: Tag = "p", className }: { id: string; as?: "p" | "h1" | "h2" | "h3" | "strong" | "span"; className?: string }) => {
-    const value = text(id);
-    if (!value) return null;
-    return <Tag className={className} data-bw-text={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("text", id, event.currentTarget as HTMLElement); } : undefined}>{value}</Tag>;
-  };
-  const Button = ({ buttonId, textId, className }: { buttonId: string; textId: string; className?: string }) => {
-    const label = text(textId);
-    if (!label || hidden.has(buttonId)) return null;
-    return <button type="button" className={className ?? styles.button} data-bw-btn={buttonId} onClick={event => {
-      event.stopPropagation();
-      if (onPick) onPick("button", buttonId, event.currentTarget);
-      else runBrainwaveButton(overrides.links, buttonId);
-    }}><span>{label}</span><ArrowRight size={18} aria-hidden /></button>;
-  };
-  const Photo = ({ id, url, className }: { id: string; url: string; className?: string }) => (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img className={className} src={url} alt="" loading="lazy" data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />
-  );
-  /* 편집 화면에만 — 사진이 없는 자리에 사진을 넣을 곳 */
-  const PhotoSlot = ({ id, className }: { id: string; className?: string }) => onPick
-    ? <button type="button" className={`${styles.photoSlot} ${className ?? ""}`} data-bw-image={id} onClick={event => { event.stopPropagation(); onPick("image", id, event.currentTarget); }}><ImagePlus size={20} aria-hidden /> 사진 넣기</button>
-    : null;
+export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, desktop = false }: BusinessDesignProps) {
+  const { text, photo, Text, Button, Photo, PhotoSlot, ordered } = kitPieces({ overrides, hidden, sectionOrder, onPick }, { button: styles.button, photoSlot: styles.photoSlot });
 
   const sections: Record<string, () => ReactNode> = {
     [HERO]: () => {
@@ -155,8 +111,7 @@ export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, 
     },
   };
 
-  const order = [...sectionOrder.filter(id => DRAWN.includes(id)), ...DRAWN.filter(id => !sectionOrder.includes(id))];
   return <div className={`bwmob ${styles.page} ${desktop ? styles.desktop : ""}`}>
-    {order.filter(id => !hidden.has(id)).map(id => sections[id]())}
+    {ordered(sectionOrder, DRAWN).map(id => sections[id]())}
   </div>;
 }
