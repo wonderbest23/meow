@@ -49,10 +49,12 @@ export function BusinessShop0_1102({ overrides, hidden, sectionOrder, onPick, de
       return <section key={CATEGORY} data-bw-node={CATEGORY} className={styles.cards}>
         {cards.map(([title, value, imageId]) => {
           const url = photo(imageId);
-          return <article key={title} className={styles.card}>
-            {Text({ id: title, as: "h3" })}
-            {Text({ id: value })}
+          return <article key={title} className={`${styles.card} ${url ? styles.cardWithPhoto : ""}`}>
             {url ? Photo({ id: imageId, url, className: styles.cardImage }) : null}
+            <div className={styles.cardBody}>
+              {Text({ id: title, as: "h3" })}
+              {Text({ id: value })}
+            </div>
           </article>;
         })}
       </section>;
