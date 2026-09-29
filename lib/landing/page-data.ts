@@ -154,6 +154,8 @@ export function applyBusinessContent(data: LandingPageData, source: BusinessCont
 
 export type LandingPageSeed = {
   businessName: string;
+  /** 첫 화면 큰 제목 — 없으면 상호를 쓴다(계획서의 사업 한 줄 소개가 있을 때만 채운다) */
+  pageHeadline?: string;
   customer?: string;
   heroLabel: string;
   headline: string;
@@ -261,6 +263,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string,
   if (!kitOverride) {
     const businessContent = businessContentSchema.parse({
       businessName: seed.businessName,
+      ...(seed.pageHeadline?.trim() ? { headline: seed.pageHeadline.trim() } : {}),
       offer: seed.offerTitle,
       description: seed.offerDescription,
       customer: seed.customer ?? "",

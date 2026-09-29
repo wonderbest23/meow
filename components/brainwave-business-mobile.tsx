@@ -22,6 +22,12 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
   const manifest = businessTemplateManifest[pageId];
   // Desktop headers overlay the hero; the mobile flow places that header before it.
   const sections = overrides.order?.length ? sectionOrder : sectionOrder.toSorted((a, b) => Number(manifest.sections.find(section => section.id === b)?.name === "Header") - Number(manifest.sections.find(section => section.id === a)?.name === "Header"));
+  /*
+   * 같은 사진은 페이지에 한 번만 — 사업 템플릿은 사진 자리마다 대표 사진 한 장을
+   * 채우므로, 첫 화면에서 본 사진이 아래 칸에서 똑같이 한 번 더 나왔다.
+   * 편집 화면에서는 각 자리를 눌러 바꿀 수 있어야 하므로 모두 보여 준다.
+   */
+  const pageImages = new Set<string>();
   return <div className={`bwmob ${styles.page} ${desktop ? styles.desktop : ""}`}>
     {sections.map(sectionId => {
       const section = manifest.sections.find(item => item.id === sectionId);
@@ -33,10 +39,16 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
       const buttonTextIds = new Set(section.buttons.flatMap(button => button.texts));
       const seenText = new Set(facts.map(fact => text(fact.value)));
       const titles = Object.keys(profile.fields).filter(id => ["detailsTitle", "contactTitle"].includes(profile.fields[id]));
-      const priority = [profile.headline, profile.brand, ...titles, profile.description];
+      /*
+       * 상호(brand)는 큰 제목 위 작은 글씨다. 큰 제목이 상호와 같으면(예전 페이지)
+       * 상호 줄을 빼고 큰 제목만 남긴다.
+       */
+      const brandIsHeadline = section.nodes.includes(profile.headline) && text(profile.headline) === text(profile.brand);
+      const priority = [profile.brand, profile.headline, ...titles, profile.description];
       const textIds = [...new Set([...priority, ...manifest.texts])].filter(id => {
         const value = text(id);
         if (!section.nodes.includes(id) || !value || factIds.has(id) || buttonTextIds.has(id) || ["one", "two", "three"].includes(profile.fields[id])) return false;
+        if (id === profile.brand && brandIsHeadline) return false;
         if (seenText.has(value)) return false;
         seenText.add(value);
         return true;
@@ -44,8 +56,9 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
       const seenImages = new Set<string>();
       const imageIds = section.images.filter(id => {
         const url = overrides.images?.[id];
-        if (hidden.has(id) || !url || seenImages.has(url)) return false;
+        if (hidden.has(id) || !url || seenImages.has(url) || (!onPick && pageImages.has(url))) return false;
         seenImages.add(url);
+        pageImages.add(url);
         return true;
       });
       const seenButtons = new Set<string>();

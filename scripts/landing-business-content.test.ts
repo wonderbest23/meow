@@ -18,6 +18,9 @@ for (const pageId of BUSINESS_TEMPLATE_IDS) {
   for (const id of generated.hidden) assert.ok(nodes.has(id), `${pageId}: missing hidden node ${id}`);
   assert.equal(Object.keys(generated.texts).length, manifest.texts.length);
   assert.equal(generated.texts[profile.headline], source.businessName);
+  const titled = createBusinessTemplate({ ...source, headline: "메뉴 사진, 하루 만에 찍어 드려요" }, pageId);
+  assert.equal(titled.texts[profile.headline], "메뉴 사진, 하루 만에 찍어 드려요");
+  assert.equal(titled.texts[profile.brand], source.businessName, `${pageId}: brand stays the business name`);
   assert.equal(generated.texts[profile.button], source.cta);
   assert.ok(Object.values(generated.texts).some(text => text.includes(source.price)), `${pageId}: price is shown without invention`);
   for (const section of manifest.sections) {
