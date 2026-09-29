@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, ImagePlus } from "lucide-react";
 import { BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest } from "../lib/landing/brainwave/business-content";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
@@ -69,6 +69,12 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
         seenButtons.add(key);
         return true;
       });
+      /*
+       * 편집 화면에서만 — 사진이 하나도 없는 칸에 '사진 넣기' 자리를 하나 보여 준다.
+       * 사진이 없으면 사진 자리를 숨겨 두는데, 그러면 사장님이 누를 곳이 없어
+       * 자기 매장 사진을 넣을 방법을 찾지 못했다. 공개 화면에는 나오지 않는다.
+       */
+      const emptySlot = onPick && !imageIds.length ? section.images.find(id => !overrides.images?.[id]) : undefined;
       if (!textIds.length && !facts.length && !imageIds.length && !buttons.length) return null;
       return <section key={section.id} data-bw-node={section.id} className={hero ? styles.hero : header ? styles.header : styles.details}>
         {textIds.map(id => id === profile.headline
@@ -87,6 +93,7 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
             else runBrainwaveButton(overrides.links, id);
           }}><span style={overrides.sizes?.[textId] ? { fontSize: 16 * overrides.sizes[textId] } : undefined}>{text(textId)}</span><ArrowRight size={18} aria-hidden /></button>;
         })}
+        {emptySlot ? <button type="button" className={styles.photoSlot} data-bw-image={emptySlot} onClick={event => { event.stopPropagation(); onPick!("image", emptySlot, event.currentTarget); }}><ImagePlus size={20} aria-hidden /> 사진 넣기</button> : null}
         {imageIds.map(id => <img key={id} className={styles.photo} src={overrides.images![id]} alt="" data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />)}
       </section>;
     })}

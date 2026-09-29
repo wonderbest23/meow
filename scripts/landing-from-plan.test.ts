@@ -161,4 +161,12 @@ const stale = structuredClone(designed);
 stale.design!.sourceRevision -= 1;
 assert.equal(landingDraftFromPlan({ ...source, answers: { [COACH_KEY]: { state: stale } } }).headline, "카페피드");
 
+// 업종에 맞는 사진이 없으면 사진을 깔지 않는다(템플릿 기본 사진 금지)
+assert.equal(withIdentity.heroImageUrl, "", "Unmatched industry gets no stock photo");
+assert.equal(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "광고 대행업" } }).heroImageUrl, "");
+assert.match(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "커피 전문점" } }).heroImageUrl, /unsplash/);
+assert.match(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "반찬 및 식품 소매업" } }).heroImageUrl, /unsplash/);
+assert.equal(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "광고 대행업" } }).pageData?.businessContent?.image, "");
+assert.match(withIdentity.slug, /^kapepideu-[0-9a-f]{4}$/);
+
 console.log("landing-from-plan: all assertions passed");

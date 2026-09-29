@@ -9,6 +9,7 @@ import {
   landingLeadSchema,
   landingPublicationIssues,
   landingTemplateOptions,
+  romanizeHangul,
 } from "../lib/landing/domain";
 import { normalizeLandingHostname } from "../lib/landing/custom-domain";
 import {
@@ -186,3 +187,15 @@ console.log(JSON.stringify({
     privacyController: draft.privacyController,
   },
 }, null, 2));
+
+// 한글 상호는 소리 나는 대로 주소를 만든다(겹치지 않게 짧은 꼬리를 붙인다)
+assert.equal(romanizeHangul("카페피드"), "kapepideu");
+assert.equal(romanizeHangul("문앞반찬"), "munapbanchan");
+assert.equal(romanizeHangul("새벽커피 2호점"), "saebyeokkeopi 2hojeom");
+const koreanSlug = (title: string) => createLandingDraft({ title, oneLiner: "", customer: "", model: "" }).slug;
+assert.match(koreanSlug("카페피드"), /^kapepideu-[0-9a-f]{4}$/);
+assert.match(koreanSlug("오늘 창업!"), /^oneul-changeop-[0-9a-f]{4}$/);
+assert.match(koreanSlug("빵"), /^ppang-[0-9a-f]{4}$/);
+assert.equal(koreanSlug("Sunrise Bakery"), "sunrise-bakery", "Latin names keep their plain slug");
+assert.match(koreanSlug("☕"), /^launch-[0-9a-f]{8}$/);
+for (const title of ["카페피드", "아주아주아주아주아주아주아주아주아주아주긴한글상호명입니다", "한빛싱크 Studio"]) landingDraftSchema.shape.slug.parse(koreanSlug(title));
