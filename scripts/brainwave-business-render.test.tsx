@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRequire } from "node:module";
 import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
+import { heroImageForSector, landingTemplateOptions } from "../lib/landing/domain";
 import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest, createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 
 // CSS 모듈은 클래스 이름만 필요하다 — 이름을 그대로 돌려준다
@@ -72,4 +73,10 @@ for (const pageId of Object.keys(BUSINESS_TEMPLATE_PROFILES)) {
   assert.ok(!editor.includes('src="/brainwave/'), `${pageId}: editor shows a slot instead of the sample`);
 }
 assert.ok(render(createBusinessTemplate({ ...content, image: "/brainwave/0-290/imgBg.jpg" }, "0-290"), () => {}).includes("사진 넣기"));
-console.log(JSON.stringify({ passed: 21 }));
+// 템플릿 기본 사진(노트북 앞 외국인, 손목시계…)도 사업 페이지에는 싣지 않는다 — 업종 사진은 그대로
+for (const option of landingTemplateOptions) {
+  for (const pageId of ["0-290", "0-1102", "0-2385"]) assert.ok(!render(createBusinessTemplate({ ...content, image: option.heroImageUrl }, pageId)).includes(option.heroImageUrl), `${pageId}: ${option.id} stock photo hidden`);
+}
+const cafePhoto = heroImageForSector("카페", "");
+assert.ok(cafePhoto && render(createBusinessTemplate({ ...content, image: cafePhoto }, "0-1102")).includes(cafePhoto.replaceAll("&", "&amp;")), "sector photo still shows");
+console.log(JSON.stringify({ passed: 23 }));

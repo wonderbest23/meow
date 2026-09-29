@@ -14,6 +14,10 @@
 }
 .page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; }
 
+/* 편집 화면 전용 — 사진 넣기 — 자리별 규칙이 이 기본값을 덮도록 맨 앞에 둔다 */
+.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.photoSlot:hover { border-color: var(--accent); }
+
 /* 버튼 — 전역 규칙(button svg 숨김)을 이기고 화살표를 살린다 */
 .button, .linkButton, .greenButton { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; border: 0; font: inherit; font-weight: 700; cursor: pointer; }
 .page .button svg, .page .linkButton svg { display: block !important; flex: 0 0 18px; }
@@ -82,9 +86,6 @@
 .ctaCopy { position: relative; display: grid; justify-items: center; gap: 26px; padding: 64px 22px; }
 .ctaCopy h2 { max-width: 640px; font-size: 28px; line-height: 1.3; font-weight: 700; }
 
-/* 편집 화면 전용 — 사진 넣기 */
-.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
-.photoSlot:hover { border-color: var(--accent); }
 
 /* PC — Figma 폭(1110px 본문)과 크기 */
 .desktop .header { padding: 24px max(24px, calc((100% - 1400px) / 2)); }

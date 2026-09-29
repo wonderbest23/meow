@@ -14,6 +14,10 @@
 }
 .page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; }
 
+/* 편집 화면 전용 — 사진 넣기 — 자리별 규칙이 이 기본값을 덮도록 맨 앞에 둔다 */
+.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.photoSlot:hover { border-color: var(--accent); color: var(--accent); }
+
 /* 버튼 — 보라 바탕 흰 글, 오른쪽 화살표 */
 .button, .navButton, .contactButton {
   display: inline-flex; align-items: center; gap: 14px; max-width: 100%;
@@ -92,9 +96,6 @@
 .contactLead { font-size: 16px; line-height: 1.75; opacity: .72; white-space: pre-wrap; }
 .contactButton { justify-self: start; }
 
-/* 편집 화면 전용 — 사진 넣기 */
-.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
-.photoSlot:hover { border-color: var(--accent); color: var(--accent); }
 
 /* PC — Figma 폭(1110px 본문)과 크기 */
 .desktop .nav { max-width: 1110px; margin: 0 auto; padding: 28px 24px; }

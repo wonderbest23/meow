@@ -190,6 +190,18 @@ const SECTOR_HERO_IMAGES: Array<{ test: RegExp; url: string }> = [
   { test: /(꽃|플라워|공방|소품|잡화|편집숍|소매|매장)/, url: "" },
 ];
 
+/*
+ * 사업 홈페이지에 싣지 않는 사진 — 킷 견본(/brainwave/…)과 템플릿 기본 사진.
+ *
+ * 둘 다 사장님이 고른 적 없는 남의 사진이다(노트북 앞 외국인, 손목시계, 가구).
+ * 예전에 만든 페이지에는 이 사진들이 저장돼 있어 반찬가게 첫 화면에 시계가 깔렸다.
+ * 업종에 맞춰 고른 사진(SECTOR_HERO_IMAGES)과 사장님이 올린 사진은 그대로 쓴다.
+ */
+const TEMPLATE_STOCK_PHOTOS = new Set(landingTemplateOptions.map((item) => item.heroImageUrl));
+export function isPlaceholderPhoto(url: string): boolean {
+  return url.startsWith("/brainwave/") || TEMPLATE_STOCK_PHOTOS.has(url);
+}
+
 export function heroImageForSector(sector: string, fallback: string): string {
   const hit = SECTOR_HERO_IMAGES.find((item) => item.test.test(sector));
   return hit ? hit.url : fallback;
