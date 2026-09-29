@@ -5,7 +5,7 @@ import { resolveIntakeLLMConfig, intakeBetaSafetyRequired } from "../llm/intake-
 import { intakeJobExpired } from "./intake-timing";
 import { COACH_KEY, COACH_TYPES, coachContext, coachDocumentRevision, readCoach, type CoachState } from "./coach";
 import { emptyCoach } from "./coach-job";
-import { BUSINESS_DESIGN_RULES, businessDesignReply, generatedBusinessDesignSchema } from "./coach-design";
+import { BUSINESS_DESIGN_RULES, businessDesignReply, generatedBusinessDesignSchema, normalizeGeneratedDesign } from "./coach-design";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
 import { applyIntakeAnswer, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
@@ -274,14 +274,14 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         }
       });
     } else {
-      const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => generatedBusinessDesignSchema.safeParse(value).success, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 3400, effort: "low", allowFallback: false });
-      const parsed = generatedBusinessDesignSchema.safeParse(raw);
-      if (!parsed.success) throw new IntakeError("design_failed", "사업안 생성을 완료하지 못했어요. 입력 정보는 그대로 보관되어 있어요");
+      const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false });
+      const design = normalizeGeneratedDesign(raw);
+      if (!design) throw new IntakeError("design_failed", "사업안 생성을 완료하지 못했어요. 입력 정보는 그대로 보관되어 있어요");
       await updateIntakeJob(request, (_plan, coach, _intake, current) => {
         if (current.status !== "running" || coachDocumentRevision(coach) !== job.baseDocumentRevision) throw new IntakeError("source_changed", "생성 중 사업정보가 바뀌었어요. 현재 입력을 확인한 뒤 다시 요청해 주세요", 409);
         coach.documentRevision = coachDocumentRevision(coach) + 1; coach.revision += 1;
-        coach.design = { ...parsed.data, status: "proposal", sourceRevision: coach.documentRevision };
-        current.reply = businessDesignReply(parsed.data); current.status = "complete";
+        coach.design = { ...design, status: "proposal", sourceRevision: coach.documentRevision };
+        current.reply = businessDesignReply(design); current.status = "complete";
       });
     }
     console.info("[business-intake-job]", JSON.stringify({ event: "complete", jobId: job.id, kind: job.kind, elapsedMs: Date.now() - startedAt }));

@@ -5,10 +5,17 @@ const sentence = z.string().min(1).max(600);
  * 첫 화면 문구 — 설계가 끝났을 때 '아 이 사업!' 하고 한눈에 알아보게 하는 한 줄과 이름 후보.
  * 사용자가 처음 적은 문장이 그대로 사업명이 되면 결과물을 봐도 무슨 사업인지 와닿지 않았다.
  */
-export const businessIdentitySchema = z.object({
+/** 모델에게 주는 목표 길이(프롬프트의 출력 스키마). Claude 는 이 스키마를 강제하지 않고 글로만 받는다. */
+const identityGuideSchema = z.object({
   headline: z.string().min(1).max(40),
   pitch: z.string().min(1).max(120),
   names: z.array(z.object({ name: z.string().min(1).max(20), why: z.string().min(1).max(80) })).min(2).max(3),
+});
+/** 저장·검증 기준. 목표보다 조금 넘치는 답은 받아 준다(정리 함수가 한도까지 자른다) */
+export const businessIdentitySchema = z.object({
+  headline: z.string().min(1).max(60),
+  pitch: z.string().min(1).max(200),
+  names: z.array(z.object({ name: z.string().min(1).max(24), why: z.string().min(1).max(120) })).min(1).max(3),
 });
 export type BusinessIdentity = z.infer<typeof businessIdentitySchema>;
 export const businessDesignSchema = z.object({
@@ -26,8 +33,60 @@ export const businessDesignSchema = z.object({
   nextAction: z.object({ action: sentence, doneWhen: sentence, usableText: z.string().min(1).max(1200) }),
 });
 
-/** 새로 만드는 설계는 첫 화면 문구를 반드시 채운다 (저장된 옛 설계를 읽는 스키마와 분리) */
-export const generatedBusinessDesignSchema = z.object({ identity: businessIdentitySchema, ...businessDesignSchema.omit({ identity: true }).shape });
+/** 모델에게 보여 주는 출력 스키마 — 첫 화면 문구를 반드시 채우라고 요청한다 */
+export const generatedBusinessDesignSchema = z.object({ identity: identityGuideSchema, ...businessDesignSchema.omit({ identity: true }).shape });
+
+const oneLine = (value: unknown) => (typeof value === "string" ? value.replace(/\s+/g, " ").trim() : "");
+const clip = (value: unknown, max: number) => {
+  const text = typeof value === "string" ? value.trim() : "";
+  return text.length <= max ? text : `${text.slice(0, max - 1).trimEnd()}…`;
+};
+const list = (value: unknown, max: number) => (Array.isArray(value) ? value.slice(0, max) : value);
+
+function normalizeIdentity(input: unknown): BusinessIdentity | undefined {
+  if (!input || typeof input !== "object") return undefined;
+  const value = input as Record<string, unknown>;
+  const names = Array.isArray(value.names)
+    ? value.names.map(item => {
+        const entry = (item ?? {}) as Record<string, unknown>;
+        return { name: oneLine(entry.name), why: clip(oneLine(entry.why), 120) };
+      }).filter(item => item.name && item.name.length <= 24 && item.why).slice(0, 3)
+    : [];
+  const headline = clip(oneLine(value.headline), 60), pitch = clip(oneLine(value.pitch), 200);
+  if (!headline || !pitch || !names.length) return undefined;
+  return { headline, pitch, names };
+}
+
+/*
+ * 모델이 준 설계를 저장 가능한 형태로 정리한다.
+ * Claude 는 출력 스키마를 글로만 받아서 길이·개수 제한을 가끔 넘긴다. 예전엔 그 한 칸 때문에
+ * 사업안 전체가 실패했다(운영 2026-09-29). 긴 글은 한도에서 자르고, 첫 화면 문구가 쓸 수 없으면
+ * 그 부분만 빼고 사업안은 살린다. 핵심 칸이 비었거나 형식이 다르면 여전히 실패로 본다.
+ */
+export function normalizeGeneratedDesign(raw: unknown): BusinessDesign | null {
+  if (!raw || typeof raw !== "object") return null;
+  const value = raw as Record<string, unknown>;
+  const plan = (value.startingPlan ?? {}) as Record<string, unknown>;
+  const action = (value.nextAction ?? {}) as Record<string, unknown>;
+  const candidate = {
+    ...value,
+    identity: normalizeIdentity(value.identity),
+    startingPlan: { ...plan, scope: clip(plan.scope, 600), connectionToVision: clip(plan.connectionToVision, 600), whyThis: clip(plan.whyThis, 600),
+      notIncluded: Array.isArray(plan.notIncluded) ? plan.notIncluded.map(item => clip(item, 600)).filter(Boolean).slice(0, 5) : [] },
+    alternatives: list(Array.isArray(value.alternatives) ? value.alternatives.map(item => {
+      const entry = (item ?? {}) as Record<string, unknown>;
+      return { ...entry, name: clip(entry.name, 80), scope: clip(entry.scope, 600), tradeoff: clip(entry.tradeoff, 600) };
+    }) : value.alternatives, 2),
+    assumptions: list(Array.isArray(value.assumptions) ? value.assumptions.map(item => {
+      const entry = (item ?? {}) as Record<string, unknown>;
+      return { ...entry, statement: clip(entry.statement, 600), howToCheck: clip(entry.howToCheck, 600) };
+    }) : value.assumptions, 5),
+    nextAction: { ...action, action: clip(action.action, 600), doneWhen: clip(action.doneWhen, 600), usableText: clip(action.usableText, 1200) },
+  };
+  if (candidate.identity === undefined) delete (candidate as Record<string, unknown>).identity;
+  const parsed = businessDesignSchema.safeParse(candidate);
+  return parsed.success ? parsed.data : null;
+}
 export type BusinessDesign = z.infer<typeof businessDesignSchema>;
 export type SavedBusinessDesign = BusinessDesign & { sourceRevision: number; status: "proposal" };
 export type IdeaOrigin = { text: string; messageId: string };
