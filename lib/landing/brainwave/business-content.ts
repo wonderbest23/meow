@@ -4,7 +4,7 @@ import type { BrainwaveData } from "../page-data";
 
 export const businessContentSchema = z.object({
   businessName: z.string().min(1).max(120),
-  /** 첫 화면 큰 제목. 예전 페이지에는 없고, 없으면 상호가 큰 제목이 된다 */
+  /** 사업 한 줄 소개 — 첫 화면에서 상호 아래 설명으로 쓴다. 예전 페이지에는 없다 */
   headline: z.string().max(120).optional(),
   offer: z.string().max(600),
   description: z.string().max(600),
@@ -109,13 +109,21 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
   const manifest = businessTemplateManifest[page];
   if (!profile || !manifest) throw new Error("사업 홈페이지에 사용할 수 없는 템플릿입니다.");
   const value = {
-    ...content, headline: content.headline?.trim() || content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`, contactInvite: `${content.businessName}에 문의해 보세요`,
+    /*
+     * 첫 화면 큰 제목은 사업 이름, 그 아래가 한 줄 소개다.
+     * 한 줄 소개("퇴근하면 문 앞에…")를 큰 제목으로 올렸더니 무슨 사이트인지
+     * 이름부터 알 수 없었다 — 사이트는 이름을 먼저 보여주고 설명을 붙인다.
+     * 한 줄 소개는 템플릿마다 큰 제목 바로 아래 자리(profile.description)에 넣는다.
+     */
+    ...content, headline: content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`, contactInvite: `${content.businessName}에 문의해 보세요`,
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
   };
   // Empty overrides cover every original slot, including sections later restored by the editor.
   const texts = Object.fromEntries(manifest.texts.map(id => [id, ""]));
   for (const [id, field] of Object.entries(profile.fields)) texts[id] = value[field];
+  const tagline = content.headline?.trim();
+  if (tagline) texts[profile.description] = tagline;
   const hidden = manifest.sections.filter(section => !profile.sections.includes(section.id)).map(section => section.id);
   hidden.push(...(profile.hide ?? []));
   for (const fact of profile.facts) if (!texts[fact.value].trim()) hidden.push(fact.label, fact.value);

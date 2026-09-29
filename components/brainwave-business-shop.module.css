@@ -19,14 +19,14 @@
 .photoSlot:hover { border-color: var(--accent); }
 
 /* 버튼 — 전역 규칙(button svg 숨김)을 이기고 화살표를 살린다 */
-.button, .linkButton, .greenButton { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; border: 0; font: inherit; font-weight: 700; cursor: pointer; }
+.button, .linkButton, .greenButton, .heroButton { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; border: 0; font: inherit; font-weight: 700; cursor: pointer; }
 .page .button svg, .page .linkButton svg { display: block !important; flex: 0 0 18px; }
 .page .greenButton svg { display: none !important; }
-.button span, .linkButton span, .greenButton span { min-width: 0; overflow-wrap: anywhere; }
+.button span, .linkButton span, .greenButton span, .heroButton span { min-width: 0; overflow-wrap: anywhere; }
 .button { min-height: 52px; padding: 10px 22px; border-radius: 6px; color: #fff; background: var(--accent); }
 .linkButton { justify-self: start; min-height: 44px; padding: 0; color: #fff; background: none; font-size: 16px; }
 .greenButton { justify-content: center; min-height: 52px; padding: 10px 28px; border-radius: 6px; color: var(--ink); background: var(--mint); font-size: 16px; }
-.button:focus-visible, .linkButton:focus-visible, .greenButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
+.button:focus-visible, .linkButton:focus-visible, .greenButton:focus-visible, .heroButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
 
 /* 머리글 */
 .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; background: #fff; }
@@ -41,8 +41,10 @@
 .heroPhoto .heroShade { background: radial-gradient(70% 60% at 50% 48%, rgba(22, 28, 45, .72) 0%, rgba(22, 28, 45, .5) 60%, rgba(22, 28, 45, .38) 100%); }
 .heroPhoto .heroCopy h1, .heroPhoto .heroLead { text-shadow: 0 2px 18px rgba(0, 0, 0, .35); }
 .heroCopy { position: relative; display: grid; justify-items: center; gap: 18px; padding: 72px 22px 96px; }
-.heroCopy h1 { max-width: 760px; font-size: 32px; line-height: 1.28; font-weight: 700; }
-.heroLead { max-width: 620px; font-size: 16px; line-height: 1.75; opacity: .9; white-space: pre-wrap; }
+.heroCopy h1 { max-width: 760px; font-size: 40px; line-height: 1.2; font-weight: 700; }
+.heroLead { max-width: 640px; font-size: 18px; line-height: 1.6; font-weight: 500; opacity: .95; white-space: pre-wrap; }
+.heroButton { justify-content: center; white-space: nowrap; min-height: 52px; margin-top: 8px; padding: 10px 26px; border-radius: 6px; color: var(--ink); background: var(--mint); font-size: 16px; }
+.page .heroButton svg { display: block !important; flex: 0 0 18px; }
 .heroSlot { position: relative; justify-self: center; width: min(420px, calc(100% - 40px)); min-height: 72px; margin: -64px auto 40px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }
 
 /* 첫 화면 아래로 겹쳐 올라오는 카드 */
@@ -96,8 +98,8 @@
 .desktop .heroWrap { padding: 0 24px; }
 .desktop .hero { min-height: 640px; border-radius: 14px; }
 .desktop .heroCopy { gap: 22px; padding: 120px 24px 180px; }
-.desktop .heroCopy h1 { font-size: 56px; line-height: 1.16; }
-.desktop .heroLead { font-size: 19px; }
+.desktop .heroCopy h1 { font-size: 64px; line-height: 1.12; }
+.desktop .heroLead { font-size: 24px; line-height: 1.5; }
 .desktop .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 1110px; margin: -110px auto 0; padding: 0 24px; }
 .desktop .card { min-height: 180px; }
 .desktop .cardBody { padding: 28px 30px 32px; }

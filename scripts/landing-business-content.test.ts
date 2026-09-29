@@ -19,7 +19,9 @@ for (const pageId of BUSINESS_TEMPLATE_IDS) {
   assert.equal(Object.keys(generated.texts).length, manifest.texts.length);
   assert.equal(generated.texts[profile.headline], source.businessName);
   const titled = createBusinessTemplate({ ...source, headline: "메뉴 사진, 하루 만에 찍어 드려요" }, pageId);
-  assert.equal(titled.texts[profile.headline], "메뉴 사진, 하루 만에 찍어 드려요");
+  // 첫 화면 큰 제목은 사업 이름, 한 줄 소개는 그 아래 설명 자리
+  assert.equal(titled.texts[profile.headline], source.businessName, `${pageId}: headline is the business name`);
+  assert.equal(titled.texts[profile.description], "메뉴 사진, 하루 만에 찍어 드려요", `${pageId}: tagline sits under the name`);
   assert.equal(titled.texts[profile.brand], source.businessName, `${pageId}: brand stays the business name`);
   assert.equal(generated.texts[profile.button], source.cta);
   assert.ok(Object.values(generated.texts).some(text => text.includes(source.price)), `${pageId}: price is shown without invention`);

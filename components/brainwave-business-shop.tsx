@@ -38,6 +38,8 @@ export function BusinessShop0_1102({ overrides, hidden, sectionOrder, onPick, de
           <div className={styles.heroCopy}>
             {Text({ id: "0:1327", as: "h1" })}
             {Text({ id: "0:1328", className: styles.heroLead })}
+            {/* 킷 첫 화면에는 버튼이 없다 — 마무리 칸의 문의 버튼을 첫 화면에도 둔다(같은 버튼이라 글·이동이 함께 바뀐다) */}
+            {Button({ buttonId: "0:1110", textId: "I0:1110;0:4626", className: styles.heroButton })}
           </div>
           {!url ? PhotoSlot({ id: "0:1325/0/0", className: styles.heroSlot }) : null}
         </div>

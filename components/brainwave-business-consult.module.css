@@ -42,7 +42,7 @@
 .brand { font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
 .heroCopy { position: relative; display: grid; justify-items: start; gap: 18px; padding: 56px 20px 72px; }
 .heroCopy h1 { font-size: 34px; line-height: 1.25; font-weight: 700; }
-.heroLead { font-size: 16px; line-height: 1.75; opacity: .72; white-space: pre-wrap; }
+.heroLead { font-size: 18px; line-height: 1.6; font-weight: 500; opacity: .9; white-space: pre-wrap; }
 .heroCopy .button { margin-top: 10px; }
 .heroSlot { position: relative; width: calc(100% - 40px); min-height: 120px; margin: 0 20px 40px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }
 
@@ -102,7 +102,7 @@
 .desktop .brand { font-size: 26px; }
 .desktop .heroCopy { max-width: 1110px; margin: 0 auto; padding: 96px 24px 150px; }
 .desktop .heroCopy h1 { max-width: 640px; font-size: 56px; line-height: 1.15; font-weight: 700; }
-.desktop .heroLead { max-width: 560px; font-size: 19px; line-height: 1.7; }
+.desktop .heroLead { max-width: 600px; font-size: 24px; line-height: 1.5; }
 .desktop .heroSlot { width: min(1062px, calc(100% - 48px)); margin: 0 auto 48px; min-height: 140px; }
 .desktop .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1110px; margin: 0 auto; padding: 48px 24px; }
 .desktop .stat strong { font-size: 44px; }

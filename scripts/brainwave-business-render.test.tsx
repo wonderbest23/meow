@@ -27,17 +27,17 @@ assert.equal(count(legacy, 'src="/qa-light-photo.png"'), 1, "public page shows o
 assert.ok(count(render(createBusinessTemplate(content, "0-290"), () => {}), 'src="/qa-light-photo.png"') > 1, "editor shows every photo slot");
 assert.ok(!/Brainwave|Get started|consult|Easy Booking|1M\+/i.test(legacy), "no raw kit copy");
 const titled = render(createBusinessTemplate({ ...content, headline: "동네 카페 인스타, 매달 대신 채워 드려요" }, "0-290"));
-assert.match(titled, /<h1[^>]*>동네 카페 인스타, 매달 대신 채워 드려요<\/h1>/);
-assert.ok(titled.indexOf(">카페피드<") > -1 && titled.indexOf(">카페피드<") < titled.indexOf("<h1"), "brand sits above the headline");
+// 첫 화면: 큰 제목은 사업 이름, 그 아래 한 줄 소개, 그리고 버튼
+assert.match(titled, /<h1[^>]*>카페피드<\/h1><p[^>]*>동네 카페 인스타, 매달 대신 채워 드려요<\/p><button[^>]*data-bw-btn="0:416"/);
 for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원"]) assert.ok(titled.includes(label), label);
 // 소개 문장이 첫 항목(대표 상품)과 같으면 한 번만
 assert.equal(count(titled, `>${content.offer}<`), 1);
 // 온라인 상점(0-1102)도 Figma 디자인 화면 — 머리글 → 큰 제목·소개 → 제공 내용·이용 대상·가격 카드 → 마무리 문구
 assert.ok(BUSINESS_DESIGNED_PAGES.has("0-1102"));
 const shop = render(createBusinessTemplate({ ...content, headline: "퇴근하면 문 앞에 반찬이 와 있는 저녁" }, "0-1102"));
-assert.match(shop, /<h1[^>]*>퇴근하면 문 앞에 반찬이 와 있는 저녁<\/h1>/);
+assert.match(shop, /<h1[^>]*>카페피드<\/h1><p[^>]*>퇴근하면 문 앞에 반찬이 와 있는 저녁<\/p><button[^>]*data-bw-btn="0:1110"/, "name, tagline, then a button on the first screen");
 assert.ok(shop.indexOf(">카페피드<") < shop.indexOf("<h1"), "header comes first even though it overlays the hero in the kit");
-assert.ok(shop.includes(content.description), "hero shows the business description");
+assert.ok(render(createBusinessTemplate(content, "0-1102")).includes(content.description), "without a tagline the business description sits under the name");
 for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "카페피드에 문의해 보세요"]) assert.ok(shop.includes(label), label);
 assert.equal(count(shop, 'src="/qa-light-photo.png"'), 1);
 assert.ok(!/Brainwave|Living Room|Start Shopping|Explore All|\$\d/.test(shop), "no raw kit copy");
