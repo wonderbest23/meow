@@ -45,7 +45,8 @@ export type LLMCompleteParams = {
   validateJson?: (value: Record<string, unknown>) => boolean | "output_limit";
   onFailure?: (failure: LLMFailure) => void;
   /** 토큰 사용량을 받는다 — 손님에게 토큰으로 파는 기능(홈페이지 AI 수정)이 차감에 쓴다 */
-  onUsage?: (usage: { inputTokens: number; outputTokens: number; model: string; provider: LLMProvider }) => void;
+  /** inputTokens 는 캐시 읽기·쓰기를 포함한 전체 입력. 캐시 몫은 따로 알려 준다(원가 계산용, Anthropic 만) */
+  onUsage?: (usage: { inputTokens: number; outputTokens: number; model: string; provider: LLMProvider; cacheReadTokens?: number; cacheWriteTokens?: number }) => void;
   /*
    * system 블록을 프롬프트 캐시에 올린다(Anthropic).
    *
@@ -291,6 +292,8 @@ async function anthropicComplete(config: LLMConfig, params: LLMCompleteParams): 
     if (knownTokens(u.input_tokens) && knownTokens(u.output_tokens) && knownTokens(u.cache_read_input_tokens ?? 0) && knownTokens(u.cache_creation_input_tokens ?? 0)) params.onUsage({
       inputTokens: (u.input_tokens ?? 0) + (u.cache_read_input_tokens ?? 0) + (u.cache_creation_input_tokens ?? 0),
       outputTokens: u.output_tokens ?? 0,
+      cacheReadTokens: u.cache_read_input_tokens ?? 0,
+      cacheWriteTokens: u.cache_creation_input_tokens ?? 0,
       model: config.model,
       provider: "anthropic",
     });
@@ -463,7 +466,7 @@ export async function streamText(
   if (first !== "setup_failed") {
     // 스트리밍도 토큰·모델을 남긴다 — 예전엔 호출 여부만 남아 계획서 섹션 원가가 집계에서 빠졌다
     const u = firstUsage.value;
-    await recordLlmUsage(params.kind ?? "etc", config.provider, first !== null, u ? { inputTokens: u.inputTokens, outputTokens: u.outputTokens } : undefined, { model: u?.model ?? config.model, elapsedMs: Date.now() - startedAt });
+    await recordLlmUsage(params.kind ?? "etc", config.provider, first !== null, u ? { inputTokens: u.inputTokens, outputTokens: u.outputTokens, cacheReadTokens: u.cacheReadTokens, cacheWriteTokens: u.cacheWriteTokens } : undefined, { model: u?.model ?? config.model, elapsedMs: Date.now() - startedAt });
     return first;
   }
   /* 밖에서 끊은 호출은 실패가 아니다 — 폴백으로 또 부르면 끊은 의미가 없다 */
@@ -477,13 +480,13 @@ export async function streamText(
   const secondStarted = Date.now();
   const second = await streamOnce(alt, { ...params, timeoutMs: Math.max(1, deadline - Date.now()) }, onDelta, secondUsage);
   const su = secondUsage.value;
-  await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== "setup_failed" && second !== null, su ? { inputTokens: su.inputTokens, outputTokens: su.outputTokens } : undefined, { model: su?.model ?? alt.model, elapsedMs: Date.now() - secondStarted });
+  await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== "setup_failed" && second !== null, su ? { inputTokens: su.inputTokens, outputTokens: su.outputTokens, cacheReadTokens: su.cacheReadTokens, cacheWriteTokens: su.cacheWriteTokens } : undefined, { model: su?.model ?? alt.model, elapsedMs: Date.now() - secondStarted });
   return second === "setup_failed" ? null : second;
 }
 
 /** 1회 스트리밍 시도. 연결 자체가 실패하면(아직 아무 조각도 안 보냄) "setup_failed". */
 /** 스트리밍 호출의 실제 사용량 — 원가 집계(llm_usage)에 토큰·모델까지 남기려고 받는다 */
-type StreamUsage = { inputTokens: number; outputTokens: number; model: string };
+type StreamUsage = { inputTokens: number; outputTokens: number; model: string; cacheReadTokens?: number; cacheWriteTokens?: number };
 
 /** Anthropic 스트림 사용량 → 기록용. 입력에는 캐시 읽기·쓰기도 더한다(completeText 기록과 같은 기준) */
 export function anthropicStreamUsage(usage: AnthropicUsage | null, model: string): StreamUsage | null {
@@ -492,6 +495,8 @@ export function anthropicStreamUsage(usage: AnthropicUsage | null, model: string
   return {
     inputTokens: count(usage.input_tokens) + count(usage.cache_read_input_tokens) + count(usage.cache_creation_input_tokens),
     outputTokens: count(usage.output_tokens),
+    cacheReadTokens: count(usage.cache_read_input_tokens),
+    cacheWriteTokens: count(usage.cache_creation_input_tokens),
     model,
   };
 }

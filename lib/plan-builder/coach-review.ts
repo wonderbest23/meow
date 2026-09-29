@@ -14,7 +14,16 @@ feasibility의 attention을 무시한 확정 계획, unknown을 가능한 것으
 본문이나 수정본을 다시 출력하지 마세요. quote는 문제를 식별할 최소 원문(180자 이내), reason은 한 문장(240자 이내)으로 짧게 작성하세요. JSON 문자열 안의 본문을 인용할 때는 전달된 draft 문자열에 실제로 포함된 표기와 이스케이프를 유지하세요.`;
 
 export type CoachReviewEvent = "reviewing" | "repairing" | "review_response_invalid" | "review_unresolved" | "review_quote_mismatch" | "repair_empty" | "review_output_limit" | "provider_quota_exhausted" | "provider_unavailable" | "provider_timeout" | "provider_rate_limited";
-export type CoachReviewOptions = { compact?: boolean; allowFallback?: boolean };
+export type CoachReviewOptions = {
+  compact?: boolean; allowFallback?: boolean;
+  /*
+   * 검토 결과가 "고칠 점 있음"으로 끝나도 본문을 버리지 않는다(사업계획서 섹션용).
+   * 예전엔 고친 뒤 두 번째 검토에서 사소한 지적이 하나라도 남으면 섹션 전체를 버렸고, 서버는 같은 섹션을
+   * 처음부터 다시 쓰다 또 버려 문서가 '생성 중'에서 멈췄다(운영 2026-09-29, 검토·수정이 원가의 60%).
+   * 검토 자체가 실패한 경우(응답 잘림·장애)는 지금처럼 통과시키지 않는다.
+   */
+  keepUnresolved?: boolean;
+};
 
 function failureEvent(failure: string | undefined, fallback: CoachReviewEvent): CoachReviewEvent {
   if (failure === "quota_exhausted") return "provider_quota_exhausted";
@@ -38,8 +47,8 @@ export async function reviewCoachSection(config: LLMConfig, source: string, draf
       if (!source.includes(url) && !result.data.issues.some(issue => issue.quote.includes(url))) result.data.issues.push({ quote: url, reason: "원천 자료에 없는 URL입니다. 존재하거나 확인된 출처로 제시하지 마세요." });
     }
     if (!result.data.issues.length) return text;
-    if (attempt) { await onEvent?.("review_unresolved"); return null; }
-    if (result.data.issues.some(i => !text.includes(i.quote))) { await onEvent?.("review_quote_mismatch"); return null; }
+    if (attempt) { await onEvent?.("review_unresolved"); return options.keepUnresolved ? text : null; }
+    if (result.data.issues.some(i => !text.includes(i.quote))) { await onEvent?.("review_quote_mismatch"); return options.keepUnresolved ? text : null; }
     await onEvent?.("repairing");
     failure = undefined;
     const fixed = await completeText(config, { system: `한국 사업계획서 편집자입니다. 제공된 원천 정보와 검토 의견으로 본문을 수정합니다. 새로운 사실·숫자·출처를 만들지 마세요. ${format === "json" ? "원래 JSON 구조와 필드명을 유지하고 수정한 유효한 JSON만" : "수정된 마크다운 본문만"} 반환하세요.`, user: JSON.stringify({ source, draft: text, issues: result.data.issues }), kind: options.compact ? "deck-repair" : "business-plan-repair", effort: options.compact ? "medium" : "high", maxOutputTokens: 8000, timeoutMs: options.compact ? 120000 : 180000, allowFallback: options.allowFallback, onFailure: event => { failure = event.code; } });

@@ -274,7 +274,16 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         }
       });
     } else {
-      const raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false });
+      /*
+       * 형식이 깨진 응답(invalid_json·invalid_response)이면 한 번만 다시 부른다. 운영에서 첫 요청이 이렇게 실패해
+       * 사용자가 '다시 요청'을 눌러야 했다(2026-09-29). 한도·장애·시간 초과는 다시 부르지 않는다.
+       */
+      let raw: Record<string, unknown> | null = null;
+      for (let designAttempt = 0; designAttempt < 2 && !raw; designAttempt++) {
+        let designFailure: string | undefined;
+        raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });
+        if (!raw && designFailure !== "invalid_json" && designFailure !== "invalid_response") break;
+      }
       const design = normalizeGeneratedDesign(raw);
       if (!design) throw new IntakeError("design_failed", "사업안 생성을 완료하지 못했어요. 입력 정보는 그대로 보관되어 있어요");
       await updateIntakeJob(request, (_plan, coach, _intake, current) => {

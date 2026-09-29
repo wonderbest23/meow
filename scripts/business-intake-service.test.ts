@@ -380,6 +380,28 @@ async function main() {
       assert.equal(calls.length, 1);
     });
 
+    await check("a malformed design response is retried once and then saved", async () => {
+      configureAI(true);
+      const ownerHash = `intake-design-retry-${randomUUID()}`;
+      const started = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: "동네 반찬 정기배송", revision: 0, requestId: randomUUID() }, { aiAvailable: true, aiAllowed: true });
+      const session = { ownerHash, planId: started.plan.id };
+      const queued = await send(session, { action: "design" }, true);
+      let attempt = 0;
+      respond = () => {
+        attempt += 1;
+        if (attempt === 1) return completion("{\"identity\": {\"headline\": \"깨진 JSON");
+        return completion({ approach: "known-business", startingPlan: { scope: "단지 한 곳에서 주 2회 배송으로 시작", connectionToVision: "동네 구독", whyThis: "동선을 묶기 위해", notIncluded: [] },
+          alternatives: [{ name: "픽업", scope: "단지 픽업", tradeoff: "문앞 수령 포기" }], assumptions: [{ statement: "맞벌이 가정이 구독한다", howToCheck: "사전 신청 20가구" }],
+          nextAction: { action: "사전 신청 받기", doneWhen: "20가구", usableText: "반찬 구독 사전 신청을 받습니다." } });
+      };
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, queued)), { ok: true });
+      assert.equal(attempt, 2, "exactly one retry after the malformed response");
+      const returned = await load(session);
+      assert.equal(returned.intake.job?.status, "complete");
+      assert.equal(returned.coach.design?.startingPlan.scope, "단지 한 곳에서 주 2회 배송으로 시작");
+      assert.equal(returned.coach.design?.identity, undefined, "a design without identity is still saved");
+    });
+
     await check("unclassified and compound businesses flag the structure fallback without changing defaults", async () => {
       const compoundOwner = `intake-compound-${randomUUID()}`;
       const compound = await saveIntakeCommand(compoundOwner, { action: "start", mode: "startup", questionId: "business", value: "카페와 도자기 공방을 함께 운영하려고 해요", revision: 0, requestId: randomUUID() });

@@ -27,7 +27,15 @@ async function main() {
     calls.length = 0; missing = 2;
     await recordLlmUsage("deck", "mock", false, usage, meta);
     assert.equal(calls.length, 3); assert.deepEqual(calls[2], { kind: "deck", provider: "mock", ok: false });
-    calls.length = 0; unavailable = true;
+    // 캐시 몫(0037): 저장되고, 칸이 없는 옛 DB에서는 캐시 칸만 빼고 모델 정보는 지킨다
+    const cached = { inputTokens: 1000, outputTokens: 50, cacheReadTokens: 800, cacheWriteTokens: 100 };
+    calls.length = 0; missing = 0;
+    await recordLlmUsage("generate", "anthropic", true, cached, meta);
+    assert.equal(calls.length, 1); assert.equal(calls[0].cache_read_tokens, 800); assert.equal(calls[0].cache_write_tokens, 100); assert.equal(calls[0].input_tokens, 1000);
+    calls.length = 0; missing = 1;
+    await recordLlmUsage("generate", "anthropic", true, cached, meta);
+    assert.equal(calls.length, 2); assert.equal(calls[1].cache_read_tokens, undefined); assert.equal(calls[1].model, "fixture");
+    calls.length = 0; missing = 0; unavailable = true;
     await recordLlmUsage("deck", "mock", false, usage, meta);
     assert.equal(calls.length, 1, "DB failures do not create an unbounded logging retry");
     console.log("LLM usage: metadata persistence and bounded backwards-compatible logging passed");
