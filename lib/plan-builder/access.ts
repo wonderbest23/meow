@@ -1,6 +1,7 @@
 // 플랜 빌더 접근 권한 — 로그인 여부와 결제 여부를 서버 한 곳에서 판정한다.
 // 화면과 API가 같은 규칙을 보도록 판정 로직을 여기서만 정의한다.
 
+import { isEditorPreviewAccount } from "../landing/editor-preview";
 import { sectionKey, chaptersForType } from "./blueprint";
 import { getAuthenticatedUser } from "../account-auth";
 import { paidPlanEntitlement, planPrice } from "../payments/plan-orders";
@@ -84,12 +85,14 @@ export async function resolvePlanAccess(planType?: string, planId?: string): Pro
     return { authenticated: false, email: null, paid: false, allAccess: false, hasAnyPaid: false, price, freeKeys: freeSectionKeys(planType), paidPlanIds: new Set() };
   }
   const ent = await paidPlanEntitlement(user.id);
+  // 운영자 테스트 계정 — 결제 없이 모든 문서를 연다(홈페이지 편집 미리보기와 같은 목록)
+  const operator = isEditorPreviewAccount(user.email);
   return {
     authenticated: true,
     email: user.email ?? null,
-    paid: ent.allAccess || (planId ? ent.planIds.has(planId) : false),
-    allAccess: ent.allAccess,
-    hasAnyPaid: ent.allAccess || ent.planIds.size > 0,
+    paid: operator || ent.allAccess || (planId ? ent.planIds.has(planId) : false),
+    allAccess: operator || ent.allAccess,
+    hasAnyPaid: operator || ent.allAccess || ent.planIds.size > 0,
     price,
     freeKeys: freeSectionKeys(planType),
     paidPlanIds: ent.planIds,
