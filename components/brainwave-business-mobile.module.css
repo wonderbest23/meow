@@ -15,6 +15,8 @@
 .action { display: inline-flex; align-items: center; justify-content: center; gap: 16px; min-height: 48px; max-width: 100%; margin-top: 28px; padding: 12px 20px; border: 0; border-radius: 8px; color: #fff; background: #2469de; font: inherit; font-weight: 650; cursor: pointer; }
 .action svg { flex: 0 0 18px; }
 .action:focus-visible { outline: 3px solid #93b8ff; outline-offset: 3px; }
+.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 180px; margin-top: 36px; border: 1.5px dashed #b9c3cf; border-radius: 8px; color: #536273; background: #f6f8fa; font: inherit; font-weight: 650; cursor: pointer; }
+.photoSlot:hover { border-color: #2469de; color: #2469de; }
 .photo { display: block; width: 100%; height: auto; object-fit: contain; border-radius: 8px; margin-top: 36px; }
 .details { padding: 24px; }
 .sectionTitle { margin: 16px 0; font-size: 24px; line-height: 1.5; font-weight: 700; }
@@ -27,7 +29,7 @@
 .desktop .header .action { display: inline-flex; margin: 0; }
 .desktop .hero { max-width: 1184px; margin: 0 auto; padding: 64px 32px 40px; }
 .desktop .hero h1 { font-size: 48px; max-width: 100%; }
-.desktop .description { max-width: 840px; font-size: 20px; }
+.desktop .description { max-width: 840px; margin-inline: auto; font-size: 20px; }
 .desktop .hero .photo { margin-top: 48px; }
 .desktop .details { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 1184px; margin: 0 auto; padding: 40px 32px; }
 .desktop .details > :not(.fact) { grid-column: 1 / -1; }

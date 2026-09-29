@@ -1,4 +1,4 @@
-import { createLandingDraft, type LandingDraft } from "./domain";
+import { createLandingDraft, heroImageForSector, type LandingDraft } from "./domain";
 import { createLandingPageData } from "./page-data";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 
@@ -201,6 +201,14 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
      * 이미 맡고 있다. 여기는 비워 둔다.
      */
     proofItems: [],
+    /*
+     * 업종에 맞는 사진이 없으면 사진을 깔지 않는다.
+     *
+     * 예전에는 템플릿 기본 사진(노트북 앞에서 웃는 외국인 셋)이 들어갔다. 카페
+     * 인스타 대행도, 반찬가게도 같은 사진이었다 — 손님에게는 남의 사무실 사진이다.
+     * 사진 없는 첫 화면이 낫고, 편집 화면의 '사진 넣기' 자리에서 사장님이 채운다.
+     */
+    heroImageUrl: heroImageForSector(industry, ""),
     privacyController: businessName,
     businessAddress: clamp(city, 300),
     /*

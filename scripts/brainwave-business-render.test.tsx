@@ -32,4 +32,14 @@ for (const pageId of Object.keys(BUSINESS_TEMPLATE_PROFILES)) {
   assert.equal(count(html, "<h1"), 1, `${pageId}: one headline`);
   assert.ok(html.includes(">카페피드<"), `${pageId}: business name still visible`);
 }
-console.log(JSON.stringify({ passed: 7 }));
+// 사진이 없으면 공개 화면에는 사진 자리가 없고, 편집 화면에만 '사진 넣기'가 있다
+const noPhoto = createBusinessTemplate({ ...content, image: "" }, "0-290");
+assert.ok(!render(noPhoto).includes("사진 넣기"));
+assert.ok(!render(noPhoto).includes("<img"));
+const picks: string[] = [];
+const editorHtml = renderToStaticMarkup(createElement(BrainwaveBusinessMobile, { pageId: "0-290", overrides: noPhoto, hidden: new Set(noPhoto.hidden), sectionOrder: businessTemplateManifest["0-290"].sections.map(section => section.id), onPick: (_kind, id) => { picks.push(id); }, desktop: true }));
+assert.ok(count(editorHtml, "사진 넣기") >= 1, "editor offers a place to add a photo");
+assert.equal(count(editorHtml, "사진 넣기"), count(editorHtml, "data-bw-image="), "each slot button targets a real image slot");
+// 사진이 있는 칸에는 '사진 넣기'가 붙지 않는다
+assert.ok(!render(createBusinessTemplate(content, "0-290"), () => {}).includes("사진 넣기"));
+console.log(JSON.stringify({ passed: 11 }));

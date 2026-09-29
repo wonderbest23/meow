@@ -36,4 +36,9 @@ assert.equal(readEditorRecovery(JSON.stringify(recovery), 1001)?.draft.brainwave
 assert.equal(readEditorRecovery(JSON.stringify(recovery), 86_401_001), null);
 assert.equal(readEditorRecovery("{bad"), null);
 assert.equal(readEditorRecovery(JSON.stringify({ ...recovery, draft: {} })), null);
+// 사진이 없어 숨겨 둔 자리에 사진을 올리면 그 자리는 다시 보인다(다른 숨김은 그대로)
+const hiddenPhoto = mergeEditorAsyncPatch({ ...base, images: {}, hidden: ["hero", "section-b"] }, 1, { session: 1, kind: "images", before: {}, changes: { hero: "mine.jpg" } });
+assert.equal(hiddenPhoto.state.images.hero, "mine.jpg");
+assert.deepEqual(hiddenPhoto.state.hidden, ["section-b"]);
+assert.deepEqual(mergeEditorAsyncPatch({ ...base, hidden: ["title"] }, 1, patch).state.hidden, ["title"], "text patches never unhide");
 console.log("landing editor async: selective merge, element conflicts, session invalidation, cleanup ownership/signature/expiry, saved-reference guard and recovery validation passed");

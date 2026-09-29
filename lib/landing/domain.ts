@@ -174,7 +174,7 @@ export const landingTemplateOptions: Array<{
  * 그 업종의 사진을 쓴다(전부 직접 확인한 사진이다).
  */
 const SECTOR_HERO_IMAGES: Array<{ test: RegExp; url: string }> = [
-  { test: /(카페|커피|음식점|식당|베이커리|외식|주점|디저트)/, url: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1800&q=82" },
+  { test: /(카페|커피|음식점|식당|베이커리|외식|주점|디저트|반찬|도시락|밀키트|음식|요리)/, url: "https://images.unsplash.com/photo-1554118811-1e0d58224f24?auto=format&fit=crop&w=1800&q=82" },
   { test: /(미용|뷰티|헤어|네일|피부|왁싱|살롱)/, url: "https://images.unsplash.com/photo-1560066984-138dadb4c035?auto=format&fit=crop&w=1800&q=82" },
   { test: /(교육|수업|클래스|체험|학원|코칭|과외)/, url: "https://images.unsplash.com/photo-1524995997946-a1c2e315a42f?auto=format&fit=crop&w=1800&q=82" },
   /*
@@ -298,15 +298,41 @@ export const landingEventSchema = z.object({
 
 export type LandingEventInput = z.infer<typeof landingEventSchema>;
 
+/*
+ * 한글 음절 → 로마자(국어의 로마자 표기법, 음절 단위).
+ *
+ * 한글 상호는 예전에 전부 지워져 "launch-95ec6f59" 같은 주소가 붙었다. 사장님도
+ * 손님도 읽을 수 없는 주소다. 소리 나는 대로 옮기면 "카페피드" → "kapepideu"처럼
+ * 적어도 누구네 주소인지는 알아본다. 받침 뒤 연음 같은 발음 규칙은 따르지 않는다 —
+ * 주소가 글자와 한 칸씩 맞아야 사장님이 보고 고치기 쉽다.
+ */
+const ROMAN_INITIAL = ["g", "kk", "n", "d", "tt", "r", "m", "b", "pp", "s", "ss", "", "j", "jj", "ch", "k", "t", "p", "h"];
+const ROMAN_MEDIAL = ["a", "ae", "ya", "yae", "eo", "e", "yeo", "ye", "o", "wa", "wae", "oe", "yo", "u", "wo", "we", "wi", "yu", "eu", "ui", "i"];
+const ROMAN_FINAL = ["", "k", "k", "k", "n", "n", "n", "t", "l", "k", "m", "l", "l", "l", "p", "l", "m", "p", "p", "t", "t", "ng", "t", "t", "k", "t", "p", "t"];
+
+export function romanizeHangul(value: string): string {
+  return value.replace(/[\uAC00-\uD7A3]/g, (syllable) => {
+    const code = syllable.charCodeAt(0) - 0xac00;
+    return ROMAN_INITIAL[Math.floor(code / 588)] + ROMAN_MEDIAL[Math.floor((code % 588) / 28)] + ROMAN_FINAL[code % 28];
+  });
+}
+
 function slugify(value: string) {
-  const latin = value
+  const hangul = /[\uAC00-\uD7A3]/.test(value);
+  const latin = romanizeHangul(value)
     .normalize("NFKD")
     .replace(/[^\w\s-]/g, "")
     .trim()
     .toLowerCase()
     .replace(/[\s_]+/g, "-")
-    .replace(/-+/g, "-");
-  return latin.length >= 3 ? latin.slice(0, 50) : `launch-${crypto.randomUUID().slice(0, 8)}`;
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+  if (latin.length < 3) return `launch-${crypto.randomUUID().slice(0, 8)}`;
+  /*
+   * 한글 상호는 같은 이름이 흔하다("새벽커피"만 해도 여럿). 소리만 옮긴 주소는
+   * 겹치기 쉬우니 짧은 꼬리를 붙여 둔다. 사장님은 '무료 주소 끝부분'에서 바꿀 수 있다.
+   */
+  return hangul ? `${latin.slice(0, 40).replace(/-$/, "")}-${crypto.randomUUID().slice(0, 4)}` : latin.slice(0, 50);
 }
 
 export function landingCollectedItems(value: LandingDraft) {

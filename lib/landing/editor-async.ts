@@ -26,5 +26,10 @@ export function mergeEditorAsyncPatch(current: EditorOverrides, session: number,
     values[id] = value;
     applied.push(id);
   }
-  return { state: applied.length ? { ...current, [patch.kind]: values } : current, applied, conflicts, stale: false };
+  /*
+   * 새로 올린 사진은 보여야 한다. 사진이 없어 자동으로 숨겨 둔 자리에 올리면
+   * 숨김이 그대로 남아, 올렸는데 화면에 안 나오는 것처럼 보였다.
+   */
+  const hidden = patch.kind === "images" && applied.length ? current.hidden.filter(id => !applied.includes(id)) : current.hidden;
+  return { state: applied.length ? { ...current, [patch.kind]: values, hidden } : current, applied, conflicts, stale: false };
 }

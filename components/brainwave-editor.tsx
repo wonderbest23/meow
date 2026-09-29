@@ -246,7 +246,7 @@ export function BrainwaveEditor({
     if (!pending || pending.session !== session.current) return;
     const current = finishTextRef.current();
     if (useIncoming) {
-      commit({ ...current, [pending.kind]: { ...current[pending.kind], [id]: pending.changes[id] } });
+      commit({ ...current, [pending.kind]: { ...current[pending.kind], [id]: pending.changes[id] }, ...(pending.kind === "images" ? { hidden: current.hidden.filter(item => item !== id) } : {}) });
       if (pending.kind === "images") unusedImages.current.delete(pending.changes[id]);
     } else if (pending.kind === "images") clearUnusedImage(pending.changes[id]);
     const changes = { ...pending.changes };
