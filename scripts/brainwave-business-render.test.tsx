@@ -64,4 +64,12 @@ assert.ok(count(editorHtml, "사진 넣기") >= 1, "editor offers a place to add
 assert.equal(count(editorHtml, "사진 넣기"), count(editorHtml, "data-bw-image="), "each slot button targets a real image slot");
 // 사진이 있는 칸에는 '사진 넣기'가 붙지 않는다
 assert.ok(!render(createBusinessTemplate(content, "0-290"), () => {}).includes("사진 넣기"));
-console.log(JSON.stringify({ passed: 18 }));
+// 예전 페이지에 남은 킷 견본 사진(/brainwave/…)은 공개 화면에 나오지 않고, 편집 화면은 '사진 넣기'
+for (const pageId of Object.keys(BUSINESS_TEMPLATE_PROFILES)) {
+  const sample = createBusinessTemplate({ ...content, image: `/brainwave/${pageId}/imgSample.jpg` }, pageId);
+  assert.ok(!render(sample).includes("/brainwave/"), `${pageId}: kit sample photo hidden`);
+  const editor = render(sample, () => {});
+  assert.ok(!editor.includes('src="/brainwave/'), `${pageId}: editor shows a slot instead of the sample`);
+}
+assert.ok(render(createBusinessTemplate({ ...content, image: "/brainwave/0-290/imgBg.jpg" }, "0-290"), () => {}).includes("사진 넣기"));
+console.log(JSON.stringify({ passed: 21 }));
