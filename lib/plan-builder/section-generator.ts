@@ -7,7 +7,7 @@ import { questionsForSection } from "./questions";
 import { planTypeGuidanceBlock } from "./plan-type-guidance";
 import type { SectionBusinessContext } from "./context/section";
 import { COACH_WRITER_RULES } from "./coach";
-import { reviewCoachSection } from "./coach-review";
+import { reviewCoachSection, type CoachReviewEvent } from "./coach-review";
 import { documentEditorialPrompt } from "./document-editorial";
 import { checkDocumentQuality } from "./document-quality";
 import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
@@ -378,6 +378,12 @@ export function fallbackSection(input: SectionGenInput): string {
  * 예전에는 실패해도 fallback을 200으로 돌려줬고, 화면은 그걸 그대로 저장해
  * '완료'로 표시했다. 결제한 사람이 AI가 쓴 글 대신 표를 받고도 알 수 없었다.
  */
+/** 섹션 검토에서 지적이 남았거나 검토가 실패한 경우를 운영 로그로 남긴다(본문 내용은 남기지 않는다) */
+function logSectionReview(event: CoachReviewEvent) {
+  if (event === "reviewing" || event === "repairing") return;
+  console.info("[section-review]", event);
+}
+
 export async function generateSection(
   config: LLMConfig | null,
   input: SectionGenInput,
@@ -402,7 +408,7 @@ export async function generateSection(
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
     return { markdown: "", source: "failed" };
   }
-  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim()) : text.trim();
+  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
   if (!checked) return { markdown: "", source: "failed" };
   if (!validateSectionDraft(checked, input)) return { markdown: "", source: "failed" };
   return { markdown: appendFinancials(checked, input), source: "ai" };
@@ -441,7 +447,7 @@ export async function streamSection(
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
-  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim()) : text.trim();
+  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
   if (!checked || !validateSectionDraft(checked, input)) return { markdown: "", source: "failed" };
   /*
    * 스트리밍 화면에는 재무 블록이 델타로 흐르지 않지만, 최종 저장본에는 붙는다.
