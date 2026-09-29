@@ -26,12 +26,12 @@ suites.push("business-intake-questions", "business-intake-core", "business-intak
 suites.push("business-intake-prepare", "business-intake-ui");
 suites.push("ksic", "business-intake-coverage");
 suites.push("intake-live-comment", "intake-answer-suggestions", "financial-engine-unify", "safe-next");
-suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name");
+suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render");
 const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/KEY|TOKEN|SECRET|PASSWORD|SUPABASE|DATABASE_URL/.test(key)));
 Object.assign(env, { NODE_ENV: "test", PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "" });
 let failures = 0;
 for (const suite of suites) {
-  const url = new URL(`./${suite}.test.${suite === "business-intake-ui" ? "tsx" : "ts"}`, import.meta.url).href;
+  const url = new URL(`./${suite}.test.${["business-intake-ui", "brainwave-business-render"].includes(suite) ? "tsx" : "ts"}`, import.meta.url).href;
   const directEntry = ["artifact-updates", "artifact-update-reservations", "artifact-v3-operating", "proposal-source-staleness"].includes(suite) ? `process.argv.push(${JSON.stringify(new URL(url).pathname)});` : "";
   const result = spawnSync(process.execPath, ["--require", new URL("./ledger-test-runtime.cjs", import.meta.url).pathname, "--import", "tsx", "--input-type=module", "-e", `globalThis.fetch = async () => { throw new Error('External network disabled in reliability tests'); }; ${suite === "business-hub" ? "process.argv.push('--state-only');" : ""} ${directEntry} await import(${JSON.stringify(url)});`], { cwd: new URL("..", import.meta.url), env, encoding: "utf8", timeout: 60000 });
   console.log(`\n[${suite}] ${result.status === 0 ? "PASS" : "FAIL"}\n${result.stdout}${result.stderr}`);

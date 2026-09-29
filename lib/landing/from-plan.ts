@@ -1,6 +1,6 @@
 import { createLandingDraft, type LandingDraft } from "./domain";
 import { createLandingPageData } from "./page-data";
-import { readCoach } from "../plan-builder/coach";
+import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 
 /*
  * 사업계획서 → 홈페이지 초안.
@@ -47,6 +47,17 @@ function clamp(value: string, max: number): string {
   return value.length <= max ? value : `${value.slice(0, max - 1).trimEnd()}…`;
 }
 
+/*
+ * 금액에 천 단위 쉼표를 넣는다.
+ *
+ * 대화에서 받은 가격은 "390000원"처럼 쉼표 없이 오는 일이 많다. 손님은 자릿수를
+ * 세어야 얼마인지 안다. 원·만원·천원 앞의 네 자리 이상 숫자만 고치고, 이미 쉼표가
+ * 있거나 연도·수량처럼 금액이 아닌 숫자는 건드리지 않는다.
+ */
+export function formatPriceText(value: string): string {
+  return value.replace(/(?<![\d,.])(\d{4,})(?=\s*(?:원|만\s*원|천\s*원))/g, (digits) => Number(digits).toLocaleString("ko-KR"));
+}
+
 /** Readiness and generation must use the same, plan-scoped source. */
 export function resolvePlanLandingContent(source: PlanLandingSource) {
   const get = (sectionKey: string, qid: string) => source.answers?.[sectionKey]?.[qid];
@@ -60,7 +71,7 @@ export function resolvePlanLandingContent(source: PlanLandingSource) {
     city: text(business?.region) || text(get("overview/summary", "city")),
     mainOffer: text(field("offer")?.value) || text(get("market/products", "main_offer")),
     firstTarget: text(field("customer")?.value) || text(get("market/segments", "first_target")),
-    priceValue: price ? `${price.basis === "proposal" ? "제안 가격 · " : ""}${text(price.value)}` : text(get("market/products", "price_value")),
+    priceValue: formatPriceText(price ? `${price.basis === "proposal" ? "제안 가격 · " : ""}${text(price.value)}` : text(get("market/products", "price_value"))),
     // Operating problems and financial fields are internal, not public sales copy.
     offerDetail: text(get("market/products", "offer_detail")),
     whyFirst: text(get("market/segments", "why_first")),
@@ -69,11 +80,29 @@ export function resolvePlanLandingContent(source: PlanLandingSource) {
     whyBetter: text(get("overview/problem", "why_better")),
     offerTypes: list(get("market/products", "offer_type")),
     buyerTypes: list(get("overview/summary", "buyer_type")),
+    ...identityCopy(coach ? currentBusinessDesign(coach)?.identity : undefined, text(business?.name)),
   };
 }
 
+/*
+ * 사업 설계 첫 화면의 한 줄(headline)과 소개(pitch).
+ *
+ * 사용자가 설계 결과에서 "아, 이 사업!" 하고 알아본 문장이다. 예전 홈페이지는 이걸
+ * 쓰지 않고 상호만 큰 제목으로 세웠다 — 손님은 "카페피드" 네 글자만 보고는 무엇을
+ * 하는 곳인지 알 수 없었다.
+ *
+ * 다만 이름 후보를 고르기 전에 쓴 문장이라 다른 후보 이름이 들어 있을 수 있다.
+ * 확정한 상호가 아닌 후보 이름이 보이면 그 문장은 쓰지 않는다.
+ */
+function identityCopy(identity: { headline: string; pitch: string; names: Array<{ name: string }> } | undefined, businessName: string) {
+  if (!identity) return { identityHeadline: "", identityPitch: "" };
+  const others = identity.names.map((item) => item.name.trim()).filter((name) => name && name !== businessName);
+  const usable = (value: string) => (others.some((name) => value.includes(name)) ? "" : text(value));
+  return { identityHeadline: usable(identity.headline), identityPitch: usable(identity.pitch) };
+}
+
 export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
-  const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry } = resolvePlanLandingContent(source);
+  const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry, identityHeadline, identityPitch } = resolvePlanLandingContent(source);
   const contactEmail = text(source.contactEmail);
 
   // 기본 골격은 기존 템플릿이 만들고, 계획서에서 확인된 값만 덮어쓴다
@@ -96,8 +125,11 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
    *
    * 가게 홈페이지는 상호부터 보여준다. 대표 상품은 그 위 한 줄에 올려 간판 문구로
    * 쓰고, 고객층 문장은 첫 화면에서 뺀다.
+   *
+   * 사업 설계에서 받은 한 줄 소개가 있으면 그걸 큰 제목으로 쓴다. 상호는 그 위
+   * 작은 글씨(브랜드 자리)에 그대로 남는다.
    */
-  const headline = clamp(businessName || mainOffer || base.headline, 120);
+  const headline = clamp(identityHeadline || businessName || mainOffer || base.headline, 120);
   const heroTagline = clamp(mainOffer, 60);
 
   /*
@@ -109,7 +141,9 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
       ? sentence(`${problems[0]} — ${solutions[0]}`, ".")
       : whyBetter
         ? sentence(whyBetter, ".")
-        : base.subheadline,
+        : identityPitch
+          ? sentence(identityPitch, ".")
+          : base.subheadline,
     300,
   );
 
@@ -145,7 +179,15 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
       (buyerTypes.some((item) => item.includes("B2B")) ? "도입 상담을 받고 있어요" : base.heroLabel),
     benefits,
     offerTitle: mainOffer ? clamp(mainOffer, 60) : base.offerTitle,
-    offerDescription: offerDetail ? clamp(sentence(offerDetail, "."), 600) : mainOffer ? clamp(mainOffer, 600) : base.offerDescription,
+    /*
+     * 상품 설명이 따로 없으면 예전에는 상품 이름을 한 번 더 적었다. 그러면 첫 화면
+     * 설명과 '제공 내용' 칸에 같은 문장이 두 번 나왔다. 사업 소개가 있으면 그걸 쓴다.
+     */
+    offerDescription: offerDetail
+      ? clamp(sentence(offerDetail, "."), 600)
+      : identityPitch
+        ? clamp(sentence(identityPitch, "."), 600)
+        : mainOffer ? clamp(mainOffer, 600) : base.offerDescription,
     priceLabel: priceValue ? clamp(priceValue, 100) : base.priceLabel,
     /*
      * 계획서의 실적은 홈페이지에 싣지 않는다.
@@ -171,7 +213,7 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
       : base.privacyPolicy,
   };
 
-  return { ...draft, pageData: createLandingPageData({ ...draft, customer: clamp(firstTarget, 600) }, draft.templateId) };
+  return { ...draft, pageData: createLandingPageData({ ...draft, customer: clamp(firstTarget, 600), pageHeadline: identityHeadline ? headline : undefined }, draft.templateId) };
 }
 
 /** 계획서에서 홈페이지를 만들 준비가 됐는지 — 최소한 대표 상품은 있어야 한다 */

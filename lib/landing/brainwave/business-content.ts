@@ -4,6 +4,8 @@ import type { BrainwaveData } from "../page-data";
 
 export const businessContentSchema = z.object({
   businessName: z.string().min(1).max(120),
+  /** 첫 화면 큰 제목. 예전 페이지에는 없고, 없으면 상호가 큰 제목이 된다 */
+  headline: z.string().max(120).optional(),
   offer: z.string().max(600),
   description: z.string().max(600),
   customer: z.string().max(600),
@@ -97,7 +99,7 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
   const manifest = businessTemplateManifest[page];
   if (!profile || !manifest) throw new Error("사업 홈페이지에 사용할 수 없는 템플릿입니다.");
   const value = {
-    ...content, headline: content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`,
+    ...content, headline: content.headline?.trim() || content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`,
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
   };

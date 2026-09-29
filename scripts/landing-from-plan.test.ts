@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { landingDraftFromPlan, planLandingReadiness, resolvePlanLandingContent } from "../lib/landing/from-plan";
+import { formatPriceText, landingDraftFromPlan, planLandingReadiness, resolvePlanLandingContent } from "../lib/landing/from-plan";
+import { coachDocumentRevision } from "../lib/plan-builder/coach";
 import { COACH_KEY, COACH_VERSION, type CoachState } from "../lib/plan-builder/coach";
 import { landingDraftSchema } from "../lib/landing/domain";
 
@@ -114,5 +115,50 @@ for (const stage of ["startup", "operating"] as const) {
 const userPrice = structuredClone(coach);
 userPrice.fields.find(item => item.key === "price")!.basis = "user";
 assert.equal(landingDraftFromPlan({ ...source, answers: { [COACH_KEY]: { state: userPrice } } }).priceLabel, "5만원");
+
+// 쉼표 없는 금액은 자릿수를 읽기 쉽게 — 연도·수량·이미 쉼표가 있는 금액은 그대로
+assert.equal(formatPriceText("390000원"), "390,000원");
+assert.equal(formatPriceText("월 390000 원"), "월 390,000 원");
+assert.equal(formatPriceText("제안 가격 · 1200만원"), "제안 가격 · 1,200만원");
+assert.equal(formatPriceText("4,000원"), "4,000원");
+assert.equal(formatPriceText("2026년부터 5000원"), "2026년부터 5,000원");
+assert.equal(formatPriceText("990원"), "990원");
+assert.equal(formatPriceText("가격 상담"), "가격 상담");
+const rawPrice = structuredClone(userPrice);
+rawPrice.fields.find(item => item.key === "price")!.value = "390000원";
+assert.equal(landingDraftFromPlan({ ...source, answers: { [COACH_KEY]: { state: rawPrice } } }).priceLabel, "390,000원");
+
+// 사업 설계의 한 줄 소개가 첫 화면 큰 제목과 설명이 된다(상호는 그 위 작은 글씨로 남는다)
+const designed = structuredClone(userPrice);
+designed.business.name = "카페피드";
+const identity = {
+  headline: "동네 카페 인스타, 매달 대신 채워 드려요",
+  pitch: "사진 촬영부터 업로드와 월간 리포트까지 한 번에 맡기는 카페 전용 SNS 관리",
+  names: [{ name: "카페피드", why: "짧다" }, { name: "라떼로그", why: "기록" }],
+};
+designed.design = {
+  identity, approach: "known-business", status: "proposal", sourceRevision: coachDocumentRevision(designed),
+  startingPlan: { scope: "월 12회 게시", connectionToVision: "연결", whyThis: "이유", notIncluded: [] },
+  alternatives: [{ name: "대안", scope: "범위", tradeoff: "장단점" }],
+  assumptions: [{ statement: "가정", howToCheck: "확인" }],
+  nextAction: { action: "행동", doneWhen: "완료", usableText: "문구" },
+};
+const withIdentity = landingDraftFromPlan({ ...source, answers: { [COACH_KEY]: { state: designed } } });
+landingDraftSchema.parse(withIdentity);
+assert.equal(withIdentity.businessName, "카페피드");
+assert.equal(withIdentity.headline, identity.headline);
+assert.equal(withIdentity.offerDescription, `${identity.pitch}.`, "상품 설명이 없으면 상품 이름을 되풀이하지 않고 사업 소개를 쓴다");
+assert.equal(withIdentity.pageData?.businessContent?.headline, identity.headline);
+assert.equal(withIdentity.pageData?.businessContent?.businessName, "카페피드");
+// 다른 이름 후보가 든 문장은 쓰지 않는다
+const otherName = structuredClone(designed);
+otherName.design!.identity = { ...identity, headline: "라떼로그가 카페 인스타를 채워 드려요" };
+const guarded = landingDraftFromPlan({ ...source, answers: { [COACH_KEY]: { state: otherName } } });
+assert.equal(guarded.headline, "카페피드");
+assert.equal(guarded.pageData?.businessContent?.headline, undefined);
+// 설계 뒤에 사업 내용이 바뀌어 지난 설계가 되면 쓰지 않는다
+const stale = structuredClone(designed);
+stale.design!.sourceRevision -= 1;
+assert.equal(landingDraftFromPlan({ ...source, answers: { [COACH_KEY]: { state: stale } } }).headline, "카페피드");
 
 console.log("landing-from-plan: all assertions passed");

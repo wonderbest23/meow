@@ -92,7 +92,8 @@ export function HomepageKitPanel({
   const [picking, setPicking] = useState(false);
   const [contentNotice, setContentNotice] = useState("");
   const bw = draft.pageData?.brainwave;
-  const contentSource = () => ({ businessName: draft.businessName, offer: draft.offerTitle, description: draft.offerDescription, customer: draft.pageData?.businessContent?.customer ?? "", price: draft.priceLabel, cta: draft.ctaLabel, image: draft.heroImageUrl });
+  // 큰 제목(계획서의 한 줄 소개)은 폼에 칸이 없다 — 템플릿을 바꿔도 이어 쓴다
+  const contentSource = () => ({ businessName: draft.businessName, ...(draft.pageData?.businessContent?.headline ? { headline: draft.pageData.businessContent.headline } : {}), offer: draft.offerTitle, description: draft.offerDescription, customer: draft.pageData?.businessContent?.customer ?? "", price: draft.priceLabel, cta: draft.ctaLabel, image: draft.heroImageUrl });
   const applyBusiness = () => {
     if (!draft.pageData || busy || !draft.businessName.trim()) return;
     onChange({ ...draft, pageData: applyBusinessContent(draft.pageData, contentSource()) });
