@@ -105,7 +105,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       // 사업 이름만 바꾼다. 내용이 바뀐 게 아니므로 정리한 사업 방향과 계획서를 '변경됨'으로 만들지 않는다.
       const name = typeof command.value === "string" ? command.value.replace(/\s+/g, " ").trim() : "";
       if (!name || name.length > 40) throw new IntakeError("name_invalid", "사업 이름은 40자 안으로 적어 주세요");
-      coach.business.name = name;
+      coach.business.name = name; coach.business.nameConfirmed = true;
       before = intakeBusinessFingerprint(coach, plan.answers);
     }
     else if (command.action === "structure") applyIntakeStructure(plan, coach, intake, command, at);

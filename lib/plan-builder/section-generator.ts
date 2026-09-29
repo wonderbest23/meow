@@ -57,6 +57,7 @@ function formatAnswers(answers: Record<string, unknown>): string {
 
 export interface BusinessInfo {
   name?: string;
+  nameConfirmed?: boolean;
   description?: string;
   role?: string;
   industry?: string;
@@ -214,7 +215,7 @@ export function formatContext(ctx?: SectionBusinessContext, opts?: { hasFinancia
 function formatBusiness(b?: BusinessInfo): string {
   if (!b) return "";
   const lines: string[] = [];
-  if (b.name) lines.push(`- 사업명: ${b.name}`);
+  if (b.name) lines.push(b.nameConfirmed ? `- 사업명: ${b.name} (사용자가 확정한 이름입니다. '가칭'·'미확정'으로 쓰거나 다른 후보와 나란히 두지 마세요)` : `- 사업명: ${b.name}`);
   if (b.description) lines.push(`- 사업 설명: ${b.description}`);
   if (b.industry) lines.push(`- 업종: ${b.industry}`);
   if (b.region) lines.push(`- 지역: ${b.region}`);

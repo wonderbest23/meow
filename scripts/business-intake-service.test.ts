@@ -370,6 +370,7 @@ async function main() {
       const named = await send(session, { action: "name", value: "  커피패스 " });
       assert.equal(named.plan.title, "커피패스");
       assert.equal(named.snapshot.coach.business.name, "커피패스");
+      assert.equal(named.snapshot.coach.business.nameConfirmed, true, "a picked name is treated as confirmed in documents");
       assert.equal(named.snapshot.coach.documentRevision, docRevision, "renaming does not mark the design or documents stale");
       assert.equal(named.snapshot.coach.design?.sourceRevision, named.snapshot.coach.documentRevision);
       await assert.rejects(send(session, { action: "name", value: "가".repeat(41) }), assertIntakeError("name_invalid", 400));
