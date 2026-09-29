@@ -1,10 +1,11 @@
-import { BUSINESS_TEMPLATE_PROFILES } from "./business-content";
+import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_PROFILES } from "./business-content";
 import type { BrainwavePageData, BrainwaveOverrides } from "../../../components/brainwave-page";
 
 /** Fixed template masks and text coordinates are unsafe for arbitrary customer media or long copy. */
 export function businessNeedsFlow(page: Pick<BrainwavePageData, "id" | "slots">, overrides?: BrainwaveOverrides) {
   const profile = BUSINESS_TEMPLATE_PROFILES[page.id];
   if (!profile || overrides?.contentMode !== "business") return false;
+  if (BUSINESS_DESIGNED_PAGES.has(page.id)) return true;
   if (Object.entries(overrides.images ?? {}).some(([id, url]) => url && !overrides.hidden?.includes(id) && url !== page.slots.image.find(slot => slot.id === id)?.src)) return true;
   return Object.entries(overrides.texts ?? {}).some(([id, text]) => {
     if (overrides.hidden?.includes(id)) return false;

@@ -1,0 +1,126 @@
+/* 08 Consultation — Figma 값(글자 크기·색·간격)을 흐름 배치로 옮긴 것. 음수 자간은 쓰지 않는다. */
+.page {
+  --ink: #161c2d;
+  --accent: #473bf0;
+  --soft: #f4f7fa;
+  --mint: #68d585;
+  color: var(--ink);
+  background: #fff;
+  font-family: var(--bw-latin), Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+  letter-spacing: 0;
+  text-align: left;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; }
+
+/* 버튼 — 보라 바탕 흰 글, 오른쪽 화살표 */
+.button, .navButton, .contactButton {
+  display: inline-flex; align-items: center; gap: 14px; max-width: 100%;
+  min-height: 52px; padding: 10px 22px; border: 0; border-radius: 6px;
+  color: #fff; background: var(--accent); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+  transition: filter .15s ease;
+}
+.button:hover, .navButton:hover, .contactButton:hover { filter: brightness(1.08); }
+.button:focus-visible, .navButton:focus-visible, .contactButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
+/* 전역 규칙(button svg 숨김)을 이긴다 — 킷 버튼은 화살표가 디자인의 일부다 */
+.page .button svg, .page .contactButton svg { display: block !important; flex: 0 0 18px; }
+.button span, .navButton span, .contactButton span { min-width: 0; overflow-wrap: anywhere; }
+.navButton { min-height: 40px; padding: 8px 16px; font-size: 14px; }
+.page .navButton svg { display: none; }
+
+/* 첫 화면 — 사진 위 어두운 막, 흰 글 */
+.hero { position: relative; overflow: hidden; color: #fff; background: radial-gradient(120% 90% at 85% 10%, #3a2fd0 0%, rgba(58, 47, 208, 0) 55%), var(--ink); }
+.heroImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.heroShade { position: absolute; inset: 0; pointer-events: none; }
+.heroPhoto .heroShade { background: linear-gradient(90deg, rgba(22, 28, 45, .88) 0%, rgba(22, 28, 45, .62) 55%, rgba(22, 28, 45, .25) 100%); }
+.nav { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; }
+.brand { font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
+.heroCopy { position: relative; display: grid; justify-items: start; gap: 18px; padding: 56px 20px 72px; }
+.heroCopy h1 { font-size: 34px; line-height: 1.25; font-weight: 700; }
+.heroLead { font-size: 16px; line-height: 1.75; opacity: .72; white-space: pre-wrap; }
+.heroCopy .button { margin-top: 10px; }
+.heroSlot { position: relative; width: calc(100% - 40px); min-height: 120px; margin: 0 20px 40px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }
+
+/* 숫자 띠 */
+.stats { display: grid; gap: 20px; padding: 36px 20px; border-bottom: 1px solid #e7e9ed; }
+.stat { display: flex; align-items: center; gap: 14px; }
+.stat strong { font-size: 34px; line-height: 1.1; font-weight: 700; }
+.stat p { font-size: 15px; line-height: 1.6; opacity: .7; }
+
+/* 본문 띠 공통 — 가운데 제목 + 부제 */
+.band { padding: 64px 20px; }
+.soft { background: var(--soft); }
+.head { display: grid; gap: 14px; max-width: 640px; margin: 0 auto 36px; text-align: center; }
+.head h2 { font-size: 26px; line-height: 1.35; font-weight: 700; }
+.lead { font-size: 16px; line-height: 1.75; opacity: .7; white-space: pre-wrap; }
+
+/* 서비스 카드 */
+.cards { display: grid; gap: 16px; }
+.card { overflow: hidden; border-radius: 10px; background: #fff; box-shadow: 0 12px 30px rgba(22, 28, 45, .08); }
+.cardImage { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+.cardSlot { min-height: 140px; margin: 0; border-radius: 0; border-width: 0 0 1.5px; }
+.page .cardName svg { display: block !important; flex: 0 0 16px; color: var(--accent); }
+.cardName { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px; font-size: 15px; }
+
+/* 왜 우리인가 — 사진 + 번호 붙은 항목 셋 */
+.why { display: grid; gap: 28px; max-width: 1120px; margin: 0 auto; }
+.whyImage { display: block; width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border-radius: 10px; box-shadow: 0 32px 60px rgba(22, 28, 45, .16); }
+.whySlot { min-height: 200px; margin: 0; }
+.steps { display: grid; gap: 22px; margin: 0; padding: 0; list-style: none; }
+.step { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 18px; align-items: start; align-content: start; padding: 22px; border-radius: 10px; background: #fff; box-shadow: 0 10px 28px rgba(22, 28, 45, .06); }
+.stepNumber { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; color: var(--accent); background: rgba(71, 59, 240, .1); font-family: var(--bw-rubik), sans-serif; font-size: 17px; }
+.step h3 { margin-bottom: 6px; font-size: 19px; line-height: 1.45; font-weight: 700; }
+.step p { font-size: 16px; line-height: 1.75; opacity: .72; white-space: pre-wrap; }
+
+/* 알림 띠 */
+.alert { padding: 22px 20px; color: #fff; background: var(--accent); text-align: center; }
+.alert p { font-size: 15px; line-height: 1.7; }
+.pill { display: inline-block; margin-right: 8px; padding: 2px 10px; border-radius: 999px; color: var(--accent); background: #fff; font-size: 12px; font-weight: 700; }
+
+/* 문의 — 어두운 바탕, 사선 무늬 */
+.contact {
+  display: grid; gap: 28px; padding: 64px 20px; color: #fff;
+  background:
+    repeating-linear-gradient(60deg, rgba(255, 255, 255, 0) 0 118px, rgba(255, 255, 255, .05) 118px 120px),
+    repeating-linear-gradient(-60deg, rgba(255, 255, 255, 0) 0 118px, rgba(255, 255, 255, .05) 118px 120px),
+    #2b2e3c;
+}
+.contactCopy { display: grid; justify-items: start; gap: 16px; }
+.contactIcon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; color: var(--mint); background: rgba(104, 213, 133, .16); }
+.contactCopy h2 { font-size: 26px; line-height: 1.35; font-weight: 700; }
+.contactLead { font-size: 16px; line-height: 1.75; opacity: .72; white-space: pre-wrap; }
+.contactButton { justify-self: start; }
+
+/* 편집 화면 전용 — 사진 넣기 */
+.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.photoSlot:hover { border-color: var(--accent); color: var(--accent); }
+
+/* PC — Figma 폭(1110px 본문)과 크기 */
+.desktop .nav { max-width: 1110px; margin: 0 auto; padding: 28px 24px; }
+.desktop .brand { font-size: 26px; }
+.desktop .heroCopy { max-width: 1110px; margin: 0 auto; padding: 96px 24px 150px; }
+.desktop .heroCopy h1 { max-width: 640px; font-size: 56px; line-height: 1.15; font-weight: 700; }
+.desktop .heroLead { max-width: 560px; font-size: 19px; line-height: 1.7; }
+.desktop .heroSlot { width: min(1062px, calc(100% - 48px)); margin: 0 auto 48px; min-height: 140px; }
+.desktop .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1110px; margin: 0 auto; padding: 48px 24px; }
+.desktop .stat strong { font-size: 44px; }
+.desktop .band { padding: 110px 24px; }
+.desktop .head { margin-bottom: 64px; }
+.desktop .head h2 { font-size: 36px; line-height: 1.33; }
+.desktop .lead { font-size: 18px; }
+.desktop .cards { grid-template-columns: repeat(4, minmax(0, 1fr)); max-width: 1110px; margin: 0 auto; gap: 24px; }
+.desktop .why { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.desktop .why .steps { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; }
+.desktop .why .step { grid-template-columns: 1fr; padding: 32px 28px; }
+.desktop .whyWithPhoto { grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 72px; align-items: center; }
+.desktop .whyWithPhoto .steps { grid-column: auto; grid-template-columns: 1fr; gap: 28px; }
+.desktop .whyWithPhoto .step { grid-template-columns: 48px minmax(0, 1fr); padding: 0; background: none; box-shadow: none; }
+.desktop .step h3 { font-size: 21px; }
+.desktop .step p { font-size: 17px; line-height: 1.7; }
+.desktop .alert { padding: 26px 24px; }
+.desktop .contact { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 48px; padding: 120px max(24px, calc((100% - 1110px) / 2)); }
+.desktop .contactCopy h2 { font-size: 36px; line-height: 1.33; }
+.desktop .contactLead { max-width: 520px; font-size: 18px; }
+
+@media (prefers-reduced-motion: reduce) { .button, .navButton, .contactButton { transition: none; } }

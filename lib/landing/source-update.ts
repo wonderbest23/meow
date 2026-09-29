@@ -52,7 +52,7 @@ function contentFor(source: PlanLandingSource, draft: LandingDraft) {
 }
 function nodeSources(page: string, id: string): string[] {
   const field = BUSINESS_TEMPLATE_PROFILES[page]?.fields[id];
-  if (field === "businessName" || field === "headline" || field === "contactTitle") return ["business.name"];
+  if (field === "businessName" || field === "headline" || field === "contactTitle" || field === "contactInvite") return ["business.name"];
   if (field === "description" || field === "contactDescription") return ["offer"];
   if (field === "offer" || field === "customer" || field === "price") return [field];
   return [];
@@ -68,7 +68,7 @@ function canonicalSources(source: PlanLandingSource, ids: readonly string[]): st
   return [...new Set(ids.flatMap(id => id === "business.name" ? ["business:name"] : coach && id.startsWith("business.") ? [id.replace(".", ":")]
     : coach?.fields.some(field => field.key === id && field.value.trim()) ? [`field:${id}`] : legacy[id] ?? []))];
 }
-const nodeLabels: Record<string, string> = { businessName: "상호", headline: "대표 제목", contactTitle: "문의 제목", description: "사업 소개", contactDescription: "문의 안내", offer: "상품 안내", customer: "고객 안내", price: "가격 안내" };
+const nodeLabels: Record<string, string> = { businessName: "상호", headline: "대표 제목", contactTitle: "문의 제목", contactInvite: "문의 안내 제목", description: "사업 소개", contactDescription: "문의 안내", offer: "상품 안내", customer: "고객 안내", price: "가격 안내" };
 
 /** Preview only. The artifact-update transaction owns all writes and source/version checks. */
 export function buildLandingSourcePreview(context: Context): LandingSourcePreview {
