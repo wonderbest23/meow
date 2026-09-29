@@ -31,6 +31,19 @@ assert.ok(titled.indexOf(">카페피드<") > -1 && titled.indexOf(">카페피드
 for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원"]) assert.ok(titled.includes(label), label);
 // 소개 문장이 첫 항목(대표 상품)과 같으면 한 번만
 assert.equal(count(titled, `>${content.offer}<`), 1);
+// 온라인 상점(0-1102)도 Figma 디자인 화면 — 머리글 → 큰 제목·소개 → 제공 내용·이용 대상·가격 카드 → 마무리 문구
+assert.ok(BUSINESS_DESIGNED_PAGES.has("0-1102"));
+const shop = render(createBusinessTemplate({ ...content, headline: "퇴근하면 문 앞에 반찬이 와 있는 저녁" }, "0-1102"));
+assert.match(shop, /<h1[^>]*>퇴근하면 문 앞에 반찬이 와 있는 저녁<\/h1>/);
+assert.ok(shop.indexOf(">카페피드<") < shop.indexOf("<h1"), "header comes first even though it overlays the hero in the kit");
+assert.ok(shop.includes(content.description), "hero shows the business description");
+for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "카페피드에 문의해 보세요"]) assert.ok(shop.includes(label), label);
+assert.equal(count(shop, 'src="/qa-light-photo.png"'), 1);
+assert.ok(!/Brainwave|Living Room|Start Shopping|Explore All|\$\d/.test(shop), "no raw kit copy");
+// 사장님이 편집기에서 순서를 바꾸면 그 순서를 따른다
+const reordered = createBusinessTemplate(content, "0-1102");
+const reorderedHtml = renderToStaticMarkup(createElement(BrainwaveBusinessMobile, { pageId: "0-1102", overrides: { ...reordered, order: ["0:1104", "0:1360", "0:1321", "0:1329"] }, hidden: new Set(reordered.hidden), sectionOrder: ["0:1104", "0:1360", "0:1321", "0:1329"], desktop: true }));
+assert.ok(reorderedHtml.indexOf("카페피드에 문의해 보세요") < reorderedHtml.indexOf("<h1"));
 // 다른 템플릿(흐름 화면)도 같은 사진은 공개 화면에 한 번만
 for (const pageId of Object.keys(BUSINESS_TEMPLATE_PROFILES).filter(id => !BUSINESS_DESIGNED_PAGES.has(id))) {
   const html = render(createBusinessTemplate(content, pageId));
@@ -51,4 +64,4 @@ assert.ok(count(editorHtml, "사진 넣기") >= 1, "editor offers a place to add
 assert.equal(count(editorHtml, "사진 넣기"), count(editorHtml, "data-bw-image="), "each slot button targets a real image slot");
 // 사진이 있는 칸에는 '사진 넣기'가 붙지 않는다
 assert.ok(!render(createBusinessTemplate(content, "0-290"), () => {}).includes("사진 넣기"));
-console.log(JSON.stringify({ passed: 11 }));
+console.log(JSON.stringify({ passed: 18 }));
