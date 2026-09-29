@@ -2,7 +2,8 @@
 
 import { ArrowRight, MessageCircle } from "lucide-react";
 import type { ReactNode } from "react";
-import { kitPieces, type BusinessDesignProps } from "./brainwave-business-pieces";
+import { kitPieces, revealProps, useKitMotion, type BusinessDesignProps } from "./brainwave-business-pieces";
+import motion from "./brainwave-business-motion.module.css";
 import styles from "./brainwave-business-consult.module.css";
 
 /*
@@ -30,22 +31,23 @@ const SERVICE_CARDS = [["0:372/0", "0:373"], ["0:379/0", "0:380"], ["0:386/0", "
 const DRAWN = [HERO, FACTS, SERVICES, DETAILS, ALERT, CONTACT];
 
 export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, desktop = false }: BusinessDesignProps) {
+  const motionRef = useKitMotion(!onPick);
   const { text, photo, Text, Button, Photo, PhotoSlot, ordered } = kitPieces({ overrides, hidden, sectionOrder, onPick }, { button: styles.button, photoSlot: styles.photoSlot });
 
   const sections: Record<string, () => ReactNode> = {
     [HERO]: () => {
       const url = photo("0:411/0");
-      return <section key={HERO} data-bw-node={HERO} className={`${styles.hero} ${url ? styles.heroPhoto : ""}`}>
-        {url ? Photo({ id: "0:411/0", url: url, className: styles.heroImage }) : null}
+      return <section key={HERO} data-bw-node={HERO} className={`${styles.hero} ${url ? styles.heroPhoto : ""}`} data-scroll>
+        {url ? Photo({ id: "0:411/0", url: url, className: styles.heroImage, kenburns: true }) : null}
         <div className={styles.heroShade} aria-hidden />
         <header className={styles.nav}>
           {Text({ id: "0:418", as: "strong", className: styles.brand })}
           {Button({ buttonId: "0:420", textId: "I0:420;0:4613", className: styles.navButton })}
         </header>
         <div className={styles.heroCopy}>
-          {Text({ id: "0:414", as: "h1" })}
-          {Text({ id: "0:415", className: styles.heroLead })}
-          {Button({ buttonId: "0:416", textId: "I0:416;0:4460" })}
+          {Text({ id: "0:414", as: "h1", reveal: { order: 0, kind: "title" } })}
+          {Text({ id: "0:415", className: styles.heroLead, reveal: 2 })}
+          {Button({ buttonId: "0:416", textId: "I0:416;0:4460", reveal: 4 })}
         </div>
         {!url ? PhotoSlot({ id: "0:411/0", className: styles.heroSlot }) : null}
       </section>;
@@ -80,11 +82,11 @@ export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, 
       /* 소개 문장이 첫 항목과 같으면(대표 상품을 두 번 적은 셈) 한 번만 */
       const intro = text("0:364") && !steps.some(([, , body]) => text(body) === text("0:364"));
       return <section key={DETAILS} data-bw-node={DETAILS} className={`${styles.band} ${styles.soft}`}>
-        <div className={styles.head}>{Text({ id: "0:365", as: "h2" })}{intro ? Text({ id: "0:364", className: styles.lead }) : null}</div>
+        <div className={styles.head}>{Text({ id: "0:365", as: "h2", reveal: 0 })}{intro ? Text({ id: "0:364", className: styles.lead }) : null}</div>
         <div className={`${styles.why} ${url || onPick ? styles.whyWithPhoto : ""}`}>
           {url ? Photo({ id: "0:357/0/0", url: url, className: styles.whyImage }) : PhotoSlot({ id: "0:357/0/0", className: styles.whySlot })}
           <ol className={styles.steps}>
-            {steps.map(([, title, body], index) => <li key={title} className={styles.step}>
+            {steps.map(([, title, body], index) => <li key={title} className={styles.step} {...revealProps(index)}>
               <span className={styles.stepNumber} aria-hidden>{index + 1}</span>
               <div>{Text({ id: title, as: "h3" })}{Text({ id: body })}</div>
             </li>)}
@@ -103,15 +105,15 @@ export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, 
       return <section key={CONTACT} data-bw-node={CONTACT} className={styles.contact}>
         <div className={styles.contactCopy}>
           <span className={styles.contactIcon} aria-hidden><MessageCircle size={22} /></span>
-          {Text({ id: "0:309", as: "h2" })}
+          {Text({ id: "0:309", as: "h2", reveal: { order: 0, kind: "title" } })}
           {Text({ id: "0:308", className: styles.contactLead })}
         </div>
-        {Button({ buttonId: "0:302", textId: "I0:302;0:4557", className: styles.contactButton })}
+        {Button({ buttonId: "0:302", textId: "I0:302;0:4557", className: styles.contactButton, reveal: 2 })}
       </section>;
     },
   };
 
-  return <div className={`bwmob ${styles.page} ${desktop ? styles.desktop : ""}`}>
+  return <div ref={motionRef} data-own-motion className={`bwmob ${styles.page} ${motion.motion} ${desktop ? styles.desktop : ""}`}>
     {ordered(sectionOrder, DRAWN).map(id => sections[id]())}
   </div>;
 }

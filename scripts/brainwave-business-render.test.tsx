@@ -3,6 +3,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { createRequire } from "node:module";
 import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
+import { heroImageForSector, landingTemplateOptions } from "../lib/landing/domain";
 import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest, createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 
 // CSS 모듈은 클래스 이름만 필요하다 — 이름을 그대로 돌려준다
@@ -26,17 +27,17 @@ assert.equal(count(legacy, 'src="/qa-light-photo.png"'), 1, "public page shows o
 assert.ok(count(render(createBusinessTemplate(content, "0-290"), () => {}), 'src="/qa-light-photo.png"') > 1, "editor shows every photo slot");
 assert.ok(!/Brainwave|Get started|consult|Easy Booking|1M\+/i.test(legacy), "no raw kit copy");
 const titled = render(createBusinessTemplate({ ...content, headline: "동네 카페 인스타, 매달 대신 채워 드려요" }, "0-290"));
-assert.match(titled, /<h1[^>]*>동네 카페 인스타, 매달 대신 채워 드려요<\/h1>/);
-assert.ok(titled.indexOf(">카페피드<") > -1 && titled.indexOf(">카페피드<") < titled.indexOf("<h1"), "brand sits above the headline");
+// 첫 화면: 큰 제목은 사업 이름, 그 아래 한 줄 소개, 그리고 버튼
+assert.match(titled, /<h1[^>]*>카페피드<\/h1><p[^>]*>동네 카페 인스타, 매달 대신 채워 드려요<\/p><button[^>]*data-bw-btn="0:416"/);
 for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원"]) assert.ok(titled.includes(label), label);
 // 소개 문장이 첫 항목(대표 상품)과 같으면 한 번만
 assert.equal(count(titled, `>${content.offer}<`), 1);
 // 온라인 상점(0-1102)도 Figma 디자인 화면 — 머리글 → 큰 제목·소개 → 제공 내용·이용 대상·가격 카드 → 마무리 문구
 assert.ok(BUSINESS_DESIGNED_PAGES.has("0-1102"));
 const shop = render(createBusinessTemplate({ ...content, headline: "퇴근하면 문 앞에 반찬이 와 있는 저녁" }, "0-1102"));
-assert.match(shop, /<h1[^>]*>퇴근하면 문 앞에 반찬이 와 있는 저녁<\/h1>/);
+assert.match(shop, /<h1[^>]*>카페피드<\/h1><p[^>]*>퇴근하면 문 앞에 반찬이 와 있는 저녁<\/p><button[^>]*data-bw-btn="0:1110"/, "name, tagline, then a button on the first screen");
 assert.ok(shop.indexOf(">카페피드<") < shop.indexOf("<h1"), "header comes first even though it overlays the hero in the kit");
-assert.ok(shop.includes(content.description), "hero shows the business description");
+assert.ok(render(createBusinessTemplate(content, "0-1102")).includes(content.description), "without a tagline the business description sits under the name");
 for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "카페피드에 문의해 보세요"]) assert.ok(shop.includes(label), label);
 assert.equal(count(shop, 'src="/qa-light-photo.png"'), 1);
 assert.ok(!/Brainwave|Living Room|Start Shopping|Explore All|\$\d/.test(shop), "no raw kit copy");
@@ -72,4 +73,27 @@ for (const pageId of Object.keys(BUSINESS_TEMPLATE_PROFILES)) {
   assert.ok(!editor.includes('src="/brainwave/'), `${pageId}: editor shows a slot instead of the sample`);
 }
 assert.ok(render(createBusinessTemplate({ ...content, image: "/brainwave/0-290/imgBg.jpg" }, "0-290"), () => {}).includes("사진 넣기"));
-console.log(JSON.stringify({ passed: 21 }));
+// 템플릿 기본 사진(노트북 앞 외국인, 손목시계…)도 사업 페이지에는 싣지 않는다 — 업종 사진은 그대로
+for (const option of landingTemplateOptions) {
+  for (const pageId of ["0-290", "0-1102", "0-2385"]) assert.ok(!render(createBusinessTemplate({ ...content, image: option.heroImageUrl }, pageId)).includes(option.heroImageUrl), `${pageId}: ${option.id} stock photo hidden`);
+}
+const cafePhoto = heroImageForSector("카페", "");
+assert.ok(cafePhoto && render(createBusinessTemplate({ ...content, image: cafePhoto }, "0-1102")).includes(cafePhoto.replaceAll("&", "&amp;")), "sector photo still shows");
+// 움직임: 디자인 템플릿은 자체 움직임을 갖고(섹션째 떠오르기와 겹치지 않게), 첫 화면은 스크롤 값을 받는다
+for (const pageId of ["0-290", "0-1102"]) {
+  const html = render(createBusinessTemplate(content, pageId));
+  assert.ok(html.includes("data-own-motion"), `${pageId}: owns its motion`);
+  assert.ok(html.includes("data-scroll"), `${pageId}: hero follows scroll`);
+  assert.ok(html.includes('data-reveal="title"'), `${pageId}: title reveals`);
+  assert.ok(html.includes("data-kenburns"), `${pageId}: hero photo slow zoom`);
+}
+// 여러 줄 단계는 공개 화면에서 한 줄씩(편집 화면은 한 덩어리로 그 자리에서 고친다)
+const steps = createBusinessTemplate(content, "0-1102");
+steps.texts["0:1141"] = "한 주는 이렇게 흘러가요";
+steps.texts["0:1142"] = "① 메뉴 공지\n② 신청 마감\n③ 배송";
+steps.hidden = steps.hidden.filter(id => id !== "0:1137");
+const stepsHtml = render(steps);
+const violetHtml = stepsHtml.slice(stepsHtml.indexOf('data-bw-node="0:1137"'), stepsHtml.indexOf('data-bw-node="0:1104"'));
+assert.equal(count(violetHtml, "<li"), 3);
+assert.ok(render(steps, () => {}).includes('data-bw-text="0:1142"'));
+console.log(JSON.stringify({ passed: 31 }));

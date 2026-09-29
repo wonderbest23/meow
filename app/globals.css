@@ -14570,6 +14570,8 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 /* ── Brainwave 킷 페이지 무대 ───────────────────────────────────
  * 1600 캔버스를 보는 폭만큼 줄인다. 글·칸은 킷 좌표 그대로다. */
 .bw-stage { position: relative; width: 100%; overflow: hidden; background: #fff; container-type: inline-size; }
+/* 흐름 배치(사업 디자인)는 머리글이 스크롤을 따라 붙어야 한다 — hidden 은 스크롤 상자가 되어 sticky 를 끊는다 */
+.bw-stage.bw-business-flow { overflow: clip; }
 /* 비율 = 보는 폭 / 1600. tan(atan2(a, b)) 는 a/b 를 숫자로 돌려준다(길이끼리 나눗셈이 안 되므로). */
 .bw-fit { --bw-scale: tan(atan2(100cqw, calc(var(--bw-w, 1600) * 1px))); position: relative; width: 100%; height: calc(var(--bw-h, 1000) * 1px * var(--bw-scale)); }
 @supports not (width: tan(atan2(1px, 1px))) {

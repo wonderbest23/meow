@@ -14,15 +14,19 @@
 }
 .page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; }
 
+/* 편집 화면 전용 — 사진 넣기 — 자리별 규칙이 이 기본값을 덮도록 맨 앞에 둔다 */
+.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
+.photoSlot:hover { border-color: var(--accent); }
+
 /* 버튼 — 전역 규칙(button svg 숨김)을 이기고 화살표를 살린다 */
-.button, .linkButton, .greenButton { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; border: 0; font: inherit; font-weight: 700; cursor: pointer; }
+.button, .linkButton, .greenButton, .heroButton { display: inline-flex; align-items: center; gap: 12px; max-width: 100%; border: 0; font: inherit; font-weight: 700; cursor: pointer; }
 .page .button svg, .page .linkButton svg { display: block !important; flex: 0 0 18px; }
 .page .greenButton svg { display: none !important; }
-.button span, .linkButton span, .greenButton span { min-width: 0; overflow-wrap: anywhere; }
+.button span, .linkButton span, .greenButton span, .heroButton span { min-width: 0; overflow-wrap: anywhere; }
 .button { min-height: 52px; padding: 10px 22px; border-radius: 6px; color: #fff; background: var(--accent); }
 .linkButton { justify-self: start; min-height: 44px; padding: 0; color: #fff; background: none; font-size: 16px; }
 .greenButton { justify-content: center; min-height: 52px; padding: 10px 28px; border-radius: 6px; color: var(--ink); background: var(--mint); font-size: 16px; }
-.button:focus-visible, .linkButton:focus-visible, .greenButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
+.button:focus-visible, .linkButton:focus-visible, .greenButton:focus-visible, .heroButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
 
 /* 머리글 */
 .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; background: #fff; }
@@ -33,18 +37,23 @@
 .hero { position: relative; overflow: hidden; display: grid; align-content: center; min-height: 420px; border-radius: 12px; color: #fff; text-align: center; background: radial-gradient(90% 80% at 50% 0%, #3a2fd0 0%, rgba(58, 47, 208, 0) 60%), var(--ink); }
 .heroImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .heroShade { position: absolute; inset: 0; pointer-events: none; }
-.heroPhoto .heroShade { background: linear-gradient(180deg, rgba(22, 28, 45, .38) 0%, rgba(22, 28, 45, .62) 100%); }
+/* 사진이 복잡해도 글이 읽히게 — 가운데(글 자리)를 더 어둡게 */
+.heroPhoto .heroShade { background: radial-gradient(70% 60% at 50% 48%, rgba(22, 28, 45, .72) 0%, rgba(22, 28, 45, .5) 60%, rgba(22, 28, 45, .38) 100%); }
+.heroPhoto .heroCopy h1, .heroPhoto .heroLead { text-shadow: 0 2px 18px rgba(0, 0, 0, .35); }
 .heroCopy { position: relative; display: grid; justify-items: center; gap: 18px; padding: 72px 22px 96px; }
-.heroCopy h1 { max-width: 760px; font-size: 32px; line-height: 1.28; font-weight: 700; }
-.heroLead { max-width: 620px; font-size: 16px; line-height: 1.75; opacity: .82; white-space: pre-wrap; }
+.heroCopy h1 { max-width: 760px; font-size: 40px; line-height: 1.2; font-weight: 700; }
+.heroLead { max-width: 640px; font-size: 18px; line-height: 1.6; font-weight: 500; opacity: .95; white-space: pre-wrap; }
+.heroButton { justify-content: center; white-space: nowrap; min-height: 52px; margin-top: 8px; padding: 10px 26px; border-radius: 6px; color: var(--ink); background: var(--mint); font-size: 16px; }
+.page .heroButton svg { display: block !important; flex: 0 0 18px; }
 .heroSlot { position: relative; justify-self: center; width: min(420px, calc(100% - 40px)); min-height: 72px; margin: -64px auto 40px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }
 
 /* 첫 화면 아래로 겹쳐 올라오는 카드 */
 .cards { position: relative; display: grid; gap: 14px; margin: -56px 20px 0; }
-.card { display: grid; align-content: start; gap: 8px; padding: 24px 22px; border-radius: 10px; background: #fff; box-shadow: 0 18px 40px rgba(22, 28, 45, .08); }
+.card { overflow: hidden; border-radius: 10px; background: #fff; box-shadow: 0 18px 40px rgba(22, 28, 45, .08); }
+.cardBody { display: grid; align-content: start; gap: 8px; padding: 24px 22px; }
 .card h3 { font-size: 19px; line-height: 1.45; font-weight: 700; }
 .card p { font-size: 15px; line-height: 1.7; opacity: .72; white-space: pre-wrap; }
-.cardImage { display: block; width: 100%; aspect-ratio: 4 / 3; margin-top: 10px; object-fit: contain; }
+.cardImage { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; }
 
 /* 상품 목록 */
 .band { padding: 64px 20px; }
@@ -82,9 +91,6 @@
 .ctaCopy { position: relative; display: grid; justify-items: center; gap: 26px; padding: 64px 22px; }
 .ctaCopy h2 { max-width: 640px; font-size: 28px; line-height: 1.3; font-weight: 700; }
 
-/* 편집 화면 전용 — 사진 넣기 */
-.photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
-.photoSlot:hover { border-color: var(--accent); }
 
 /* PC — Figma 폭(1110px 본문)과 크기 */
 .desktop .header { padding: 24px max(24px, calc((100% - 1400px) / 2)); }
@@ -92,10 +98,11 @@
 .desktop .heroWrap { padding: 0 24px; }
 .desktop .hero { min-height: 640px; border-radius: 14px; }
 .desktop .heroCopy { gap: 22px; padding: 120px 24px 180px; }
-.desktop .heroCopy h1 { font-size: 56px; line-height: 1.16; }
-.desktop .heroLead { font-size: 19px; }
+.desktop .heroCopy h1 { font-size: 64px; line-height: 1.12; }
+.desktop .heroLead { font-size: 24px; line-height: 1.5; }
 .desktop .cards { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; max-width: 1110px; margin: -110px auto 0; padding: 0 24px; }
-.desktop .card { min-height: 180px; padding: 32px 30px; }
+.desktop .card { min-height: 180px; }
+.desktop .cardBody { padding: 28px 30px 32px; }
 .desktop .card h3 { font-size: 22px; }
 .desktop .card p { font-size: 16px; }
 .desktop .band { max-width: 1110px; margin: 0 auto; padding: 110px 24px; }
@@ -113,3 +120,32 @@
 .desktop .ctaWrap { padding: 24px 24px 110px; }
 .desktop .cta { min-height: 520px; border-radius: 14px; }
 .desktop .ctaCopy h2 { font-size: 48px; line-height: 1.2; }
+
+/*
+ * 움직임(애플식) — 스크롤 값(--pass·--view)은 useKitMotion 이 준다. 값이 없으면(편집 화면) 제자리.
+ */
+/* 머리글: 스크롤해도 위에 붙어 있고, 뒤가 비치게 흐리게 */
+.header { position: sticky; top: 0; z-index: 5; background: rgba(255, 255, 255, .78); backdrop-filter: saturate(180%) blur(18px); -webkit-backdrop-filter: saturate(180%) blur(18px); }
+/* 첫 화면: 내려갈수록 사진이 당겨지고 어두워지며, 글은 위로 빠진다 */
+.heroImage { transform: scale(calc(1 + var(--pass, 0) * .16)); transform-origin: 50% 35%; will-change: transform; }
+.hero::after { content: ""; position: absolute; inset: 0; background: var(--ink); opacity: calc(var(--pass, 0) * .55); pointer-events: none; }
+.heroCopy, .heroSlot { z-index: 1; }
+.heroCopy { transform: translate3d(0, calc(var(--pass, 0) * -70px), 0); opacity: calc(1 - var(--pass, 0) * 1.1); }
+/* 카드: 올리면 살짝 뜨고 사진이 천천히 당겨진다 */
+.card { transition: transform .5s cubic-bezier(.16, 1, .3, 1), box-shadow .5s ease; }
+.card:hover { transform: translateY(-6px); box-shadow: 0 28px 60px rgba(22, 28, 45, .14); }
+.cardImage { transition: transform 1.4s cubic-bezier(.16, 1, .3, 1); }
+.card:hover .cardImage { transform: scale(1.06); }
+/* 보라 띠: 사진이 화면을 지나며 천천히 확대, 단계는 한 줄씩 */
+.violetFrame { overflow: hidden; border-radius: 8px; box-shadow: 0 30px 60px rgba(22, 28, 45, .28); }
+.violetFrame .violetImage { box-shadow: none; border-radius: 0; transform: scale(calc(1.02 + var(--view, 0) * .1)); will-change: transform; }
+.violetSteps { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.violetSteps li { padding: 14px 18px; border-radius: 10px; background: rgba(255, 255, 255, .1); font-size: 16px; line-height: 1.6; }
+.desktop .violetSteps li { font-size: 17px; }
+/* 마무리: 사진이 글보다 느리게 움직이는 시차 */
+.ctaImage { transform: translate3d(0, calc((var(--view, .5) - .5) * -90px), 0) scale(1.18); will-change: transform; }
+@media (prefers-reduced-motion: reduce) {
+  .heroImage, .heroCopy, .violetFrame .violetImage, .ctaImage, .card, .cardImage { transform: none !important; transition: none !important; }
+  .hero::after { opacity: 0; }
+  .heroCopy { opacity: 1; }
+}
