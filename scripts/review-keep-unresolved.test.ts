@@ -28,8 +28,7 @@ async function main() {
     kinds.length = 0;
     const kept = await reviewCoachSection(config, "원천", "초안: 월 300건 판매", "markdown", event => { events.push(event); }, undefined, { keepUnresolved: true });
     assert.equal(kept, "고친 본문: 월 300건은 목표로 표시합니다.");
-    assert.ok(events.includes("review_unresolved"));
-    assert.deepEqual(kinds, ["review", "repair", "review"], "no extra repair round");
+    assert.deepEqual(kinds, ["review", "repair"], "sections skip the second review — it cannot change the result");
     // 검토자가 본문에 없는 문구를 인용하면 초안을 그대로 둔다
     assert.equal(await reviewCoachSection(config, "원천", "초안: 판매 목표 미정", "markdown", undefined, undefined, { keepUnresolved: true }), "초안: 판매 목표 미정");
     // 검토 자체가 실패(응답 잘림)하면 keepUnresolved 여도 통과시키지 않는다

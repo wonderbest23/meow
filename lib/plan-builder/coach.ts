@@ -33,7 +33,9 @@ export type CoachState = {
   design?: SavedBusinessDesign;
   directAction?: { sourceRevision: number; action: string; doneWhen: string; usableText: string; needsReview?: boolean };
   lastGeneration?: { elapsedMs: number; calls: Array<{ provider: string; model: string; inputTokens: number; outputTokens: number }> };
-  business: { name: string; description: string; role: string; industry: string; region: string; stage: string };
+  business: { name: string; description: string; role: string; industry: string; region: string; stage: string;
+    /** 사용자가 이름 후보를 고르거나 직접 적어 확정한 사업명인지 — 문서가 '가칭·미확정'으로 쓰지 않게 한다 */
+    nameConfirmed?: boolean };
 };
 
 export function readCoach(answers: Record<string, Record<string, unknown>>): CoachState | null {

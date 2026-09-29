@@ -55,6 +55,11 @@ export async function reviewCoachSection(config: LLMConfig, source: string, draf
     if (!fixed) { await onEvent?.(failureEvent(failure, "repair_empty")); return null; }
     text = fixed;
     await onRepair?.(text);
+    /*
+     * 섹션 모드(keepUnresolved)에서는 두 번째 검토가 결과를 바꾸지 못한다 — 지적이 남아도 고친 본문을 쓴다.
+     * 그런데 비용(운영 실측 1부당 약 $0.7)이 들고, 그 호출이 실패하면 섹션이 오히려 멈춘다. 고친 본문을 바로 쓴다.
+     */
+    if (options.keepUnresolved) return text;
   }
   return null;
 }

@@ -41,7 +41,7 @@ export function applyExpertPatch(answers: Record<string, Record<string, unknown>
   }
   const coach: CoachState = { ...previous, revision: previous.revision + 1, documentRevision: coachDocumentRevision(previous) + 1,
     ...(patch.nextAction ? { directAction: { ...patch.nextAction, sourceRevision: coachDocumentRevision(previous) + 1 } } : previous.directAction ? { directAction: { ...previous.directAction, sourceRevision: coachDocumentRevision(previous) + 1, needsReview: true } } : {}),
-    fields: [...fields.values()], business: { ...previous.business, name: patch.title ?? previous.business.name, description: fields.get("business")?.value ?? "" },
+    fields: [...fields.values()], business: { ...previous.business, name: patch.title ?? previous.business.name, ...(patch.title ? { nameConfirmed: true } : {}), description: fields.get("business")?.value ?? "" },
     ready: previous.ready && fields.has("business"),
     messages: [...previous.messages, message, { id: `${message.id}-reply`, role: "assistant", at, text: "직접 수정한 사업 정보를 저장했어요. 기존 문서는 유지되며, 바뀐 내용의 반영은 별도로 요청할 수 있어요." }],
   };

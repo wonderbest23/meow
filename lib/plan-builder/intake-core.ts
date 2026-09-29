@@ -615,7 +615,7 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
     // 지도 후보는 공식 이름이 사업 소개가 되고 코드가 업종·구조의 근거가 된다. 템플릿 후보는 설명 문장이 사업 소개다.
     const ksicCode = idea.id.startsWith("ksic:") ? idea.id.slice(5) : null;
     setField(coach, "business", ksicCode ? idea.title : idea.description, command.requestId, `선택한 구상: ${idea.title}`);
-    coach.business.name = idea.title; intake.sector = idea.sector; intake.ksic = ksicCode;
+    coach.business.name = idea.title; coach.business.nameConfirmed = false; intake.sector = idea.sector; intake.ksic = ksicCode;
     const { resourceFit: _fit, retained: _retained, ...selected } = idea;
     intake.selectedCandidate = selected;
     coach.business.industry = intakeSectorOptions.find(option => option.value === idea.sector)?.label ?? idea.sector;
@@ -631,7 +631,7 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   if (question.id === "candidate" && value === null && coach.fields.some(field => field.key === "business" && field.messageId === previousAnswer?.messageId)) {
     delete intake.selectedCandidate;
     setField(coach, "business", null, command.requestId, "");
-    coach.business.name = "새 사업 구상";
+    coach.business.name = "새 사업 구상"; coach.business.nameConfirmed = false;
     intake.sector = "general"; intake.ksic = null; coach.business.industry = "";
   }
   if (question.id === "industry" || question.id === "candidate") syncIntakeDetails(plan, intake);
