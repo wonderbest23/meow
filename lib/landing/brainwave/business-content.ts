@@ -14,7 +14,7 @@ export const businessContentSchema = z.object({
   image: z.string().max(900_000),
 });
 export type BusinessContent = z.infer<typeof businessContentSchema>;
-type Field = keyof BusinessContent | "headline" | "detailsTitle" | "contactTitle" | "contactDescription" | "offerLabel" | "customerLabel" | "priceLabel" | "one" | "two" | "three";
+type Field = keyof BusinessContent | "headline" | "detailsTitle" | "contactTitle" | "contactInvite" | "contactDescription" | "offerLabel" | "customerLabel" | "priceLabel" | "one" | "two" | "three";
 type Profile = {
   sections: string[];
   fields: Record<string, Field>;
@@ -28,8 +28,8 @@ type Profile = {
 
 export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
   "0-290": {
-    sections: ["0:409", "0:332"], brand: "0:418", headline: "0:414", description: "0:415", button: "I0:416;0:4460",
-    fields: { "0:418": "businessName", "0:414": "headline", "0:415": "description", "I0:416;0:4460": "cta", "I0:420;0:4613": "cta", "0:365": "detailsTitle", "0:364": "offer", "0:337": "offerLabel", "0:336": "offer", "0:343": "customerLabel", "0:342": "customer", "0:349": "priceLabel", "0:348": "price", "0:340": "one", "0:346": "two", "0:352": "three" },
+    sections: ["0:409", "0:332", "0:297"], brand: "0:418", headline: "0:414", description: "0:415", button: "I0:416;0:4460",
+    fields: { "0:418": "businessName", "0:414": "headline", "0:415": "description", "I0:416;0:4460": "cta", "I0:420;0:4613": "cta", "0:309": "contactInvite", "I0:302;0:4557": "cta", "0:365": "detailsTitle", "0:364": "offer", "0:337": "offerLabel", "0:336": "offer", "0:343": "customerLabel", "0:342": "customer", "0:349": "priceLabel", "0:348": "price", "0:340": "one", "0:346": "two", "0:352": "three" },
     facts: [{ label: "0:337", value: "0:336" }, { label: "0:343", value: "0:342" }, { label: "0:349", value: "0:348" }],
   },
   "0-2226": {
@@ -86,6 +86,11 @@ export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
 };
 
 export const BUSINESS_TEMPLATE_IDS = Object.keys(BUSINESS_TEMPLATE_PROFILES);
+/*
+ * Figma 디자인을 흐름 배치로 옮겨 둔 템플릿. 이 페이지들은 글 길이·사진과 상관없이
+ * 늘 그 디자인으로 그린다(components/brainwave-business-*.tsx).
+ */
+export const BUSINESS_DESIGNED_PAGES = new Set(["0-290"]);
 // Search-only controls are removed from business drafts; keep their remaining CTA aligned.
 export const BUSINESS_NODE_STYLES: Record<string, Record<string, string>> = {
   "0:2372": { left: "calc(50% - 110px)", right: "auto", width: "220px" },
@@ -99,7 +104,7 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
   const manifest = businessTemplateManifest[page];
   if (!profile || !manifest) throw new Error("사업 홈페이지에 사용할 수 없는 템플릿입니다.");
   const value = {
-    ...content, headline: content.headline?.trim() || content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`,
+    ...content, headline: content.headline?.trim() || content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`, contactInvite: `${content.businessName}에 문의해 보세요`,
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
   };
