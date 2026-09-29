@@ -131,4 +131,13 @@ assert.deepEqual(searchKsic(""), []);
 assert.deepEqual(searchKsic("ㅋㅋㅋ"), [], "무의미 입력은 후보 없음");
 const cafe = searchKsic("카페");
 assert.equal(cafe[0].via, "synonym");
+// "OO을 위한 …" 앞부분은 고객이다 — 고객 낱말(카페)이 업종(커피 전문점)을 정하지 않는다(운영 테스트 2026-09-29)
+{
+  const agency = searchKsic("동네 소규모 카페 사장님을 위한 인스타그램 콘텐츠 대행 서비스", { limit: 3, minLevel: 5 }).map(m => m.entry.code);
+  assert.ok(["71310", "75995"].includes(agency[0]), `marketing agency first: ${agency.join(",")}`);
+  assert.ok(agency.indexOf("56221") !== 0, "coffee shop is not the first candidate");
+  assert.equal(searchKsic("우리 동네 맞벌이 가정을 위한 반찬 정기배송 서비스", { limit: 1, minLevel: 5 })[0]?.entry.code, "47223", "the business part still decides");
+  assert.equal(searchKsic("카페를 운영하고 싶어요", { limit: 1, minLevel: 5 })[0]?.entry.code, "56221", "without a customer phrase nothing changes");
+  assert.ok(searchKsic("카페 사장님 대상으로 SNS 대행", { limit: 2, minLevel: 5 }).some(m => m.entry.code === "75995"));
+}
 console.log(`ksic: ${ksicEntries().length} entries, ${Object.keys(KSIC_DIVISION_STRUCTURES).length} division structures, ${Object.keys(KSIC_SYNONYMS).length} synonyms, sample searches passed`);
