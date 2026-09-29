@@ -457,9 +457,13 @@ export async function streamText(
   if (params.signal?.aborted) { params.onFailure?.({ provider: config.provider, code: requestFailure(params.signal, params.signal.reason) }); return null; }
   let failure: LLMFailure["code"] | undefined;
   let retryable: boolean | undefined;
-  const first = await streamOnce(config, { ...params, onFailure: event => { failure = event.code; retryable = event.retryable; params.onFailure?.(event); } }, onDelta);
+  const startedAt = Date.now();
+  const firstUsage: { value: StreamUsage | null } = { value: null };
+  const first = await streamOnce(config, { ...params, onFailure: event => { failure = event.code; retryable = event.retryable; params.onFailure?.(event); } }, onDelta, firstUsage);
   if (first !== "setup_failed") {
-    await recordLlmUsage(params.kind ?? "etc", config.provider, first !== null);
+    // 스트리밍도 토큰·모델을 남긴다 — 예전엔 호출 여부만 남아 계획서 섹션 원가가 집계에서 빠졌다
+    const u = firstUsage.value;
+    await recordLlmUsage(params.kind ?? "etc", config.provider, first !== null, u ? { inputTokens: u.inputTokens, outputTokens: u.outputTokens } : undefined, { model: u?.model ?? config.model, elapsedMs: Date.now() - startedAt });
     return first;
   }
   /* 밖에서 끊은 호출은 실패가 아니다 — 폴백으로 또 부르면 끊은 의미가 없다 */
@@ -469,16 +473,34 @@ export async function streamText(
   if (!alt) return null;
   console.error(`[llm] ${config.provider} 스트림 실패 — ${alt.provider}(${alt.model})로 폴백`);
   if (Date.now() >= deadline) return null;
-  const second = await streamOnce(alt, { ...params, timeoutMs: Math.max(1, deadline - Date.now()) }, onDelta);
-  await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== "setup_failed" && second !== null);
+  const secondUsage: { value: StreamUsage | null } = { value: null };
+  const secondStarted = Date.now();
+  const second = await streamOnce(alt, { ...params, timeoutMs: Math.max(1, deadline - Date.now()) }, onDelta, secondUsage);
+  const su = secondUsage.value;
+  await recordLlmUsage(params.kind ?? "etc", alt.provider, second !== "setup_failed" && second !== null, su ? { inputTokens: su.inputTokens, outputTokens: su.outputTokens } : undefined, { model: su?.model ?? alt.model, elapsedMs: Date.now() - secondStarted });
   return second === "setup_failed" ? null : second;
 }
 
 /** 1회 스트리밍 시도. 연결 자체가 실패하면(아직 아무 조각도 안 보냄) "setup_failed". */
+/** 스트리밍 호출의 실제 사용량 — 원가 집계(llm_usage)에 토큰·모델까지 남기려고 받는다 */
+type StreamUsage = { inputTokens: number; outputTokens: number; model: string };
+
+/** Anthropic 스트림 사용량 → 기록용. 입력에는 캐시 읽기·쓰기도 더한다(completeText 기록과 같은 기준) */
+export function anthropicStreamUsage(usage: AnthropicUsage | null, model: string): StreamUsage | null {
+  if (!usage) return null;
+  const count = (value: unknown) => (typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : 0);
+  return {
+    inputTokens: count(usage.input_tokens) + count(usage.cache_read_input_tokens) + count(usage.cache_creation_input_tokens),
+    outputTokens: count(usage.output_tokens),
+    model,
+  };
+}
+
 async function streamOnce(
   config: LLMConfig,
   params: LLMCompleteParams,
   onDelta: (chunk: string) => void,
+  usageOut?: { value: StreamUsage | null },
 ): Promise<string | null | "setup_failed"> {
   const anthropic = config.provider === "anthropic";
   const signal = callSignal(params);
@@ -578,6 +600,10 @@ async function streamOnce(
             failed = true;
             params.onFailure?.({ provider: config.provider, code: "refusal" });
           }
+          if (!anthropic && payload.type === "response.completed" && usageOut) {
+            const u = (payload.response as { usage?: { input_tokens?: number; output_tokens?: number }; model?: string } | undefined);
+            if (u?.usage) usageOut.value = { inputTokens: u.usage.input_tokens ?? 0, outputTokens: u.usage.output_tokens ?? 0, model: u.model ?? config.model };
+          }
           if (payload.type === "message_stop" || payload.type === "response.completed") completed = true;
           if (["error", "response.failed", "response.incomplete"].includes(String(payload.type))) {
             failed = true;
@@ -602,7 +628,10 @@ async function streamOnce(
     params.onFailure?.({ provider: config.provider, code: requestFailure(signal, error) });
     return null;
   } finally {
-    if (anthropic) logUsage(params.kind ?? "etc", config.model, usage);
+    if (anthropic) {
+      logUsage(params.kind ?? "etc", config.model, usage);
+      if (usageOut) usageOut.value = anthropicStreamUsage(usage, config.model);
+    }
   }
   return completed && !failed ? full || null : null;
 }
