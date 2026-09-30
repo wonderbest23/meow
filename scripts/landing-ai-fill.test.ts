@@ -32,7 +32,7 @@ const prompt = homepageFillPrompt(plan);
 for (const fact of ["문앞반찬", "주 2회 국·반찬 4종", "맞벌이", "59,000원", "건너뛰기"]) assert.ok(prompt.user.includes(fact), fact);
 assert.ok(!prompt.user.includes("비밀 재무"), "financial chapters stay out of homepage copy");
 assert.ok(!prompt.user.includes("비공개 매출"), "sales figures stay out");
-for (const rule of ["해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON", "가격 단위", "위약금", "환불 규정은 홈페이지 약관", "가격 기준(1회·월 등)"]) assert.ok(prompt.system.includes(rule), rule);
+for (const rule of ["facts", "menu", "계획서에 없는 메뉴를 지어내지 않습니다", "해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON", "가격 단위", "위약금", "환불 규정은 홈페이지 약관", "가격 기준(1회·월 등)"]) assert.ok(prompt.system.includes(rule), rule);
 const proposal = structuredClone(plan);
 (proposal.answers[COACH_KEY].state as CoachState).fields.find(f => f.key === "price")!.basis = "proposal";
 assert.ok(homepageFillPrompt(proposal).user.includes("AI 제안 가격 — 확정 전"));
@@ -104,6 +104,45 @@ assert.equal(consultFilled.texts["0:397"], copy!.cardsTitle);
 assert.equal(consultFilled.texts["0:373"], "국 1종 + 반찬 4종");
 assert.equal(consultFilled.texts["0:309"], copy!.closing);
 assert.ok(!consultFilled.hidden.includes("0:366"), "services section opens");
+
+// 동네 가게 템플릿: 좋은 점·숫자·메뉴·이용 순서·마무리, 오시는 길·영업시간은 사업자 정보에서
+const localCopy = normalizeHomepageCopy({
+  ...raw,
+  facts: [{ value: "4명", label: "한 수업 정원" }, { value: "50분", label: "수업 시간" }, { value: "많음", label: "숫자 없는 값은 버린다" }, { value: "주 2회", label: "정기권 횟수" }],
+  menu: { title: "수업·가격", intro: "정기권으로 다녀요.", items: [{ name: "4인 기구 필라테스(50분)", price: "220,000원" }, { name: "", price: "문의" }, { name: "체험 수업", price: "문의" }, { name: "개인 레슨", price: "문의" }, { name: "넘치는 메뉴", price: "" }] },
+})!;
+assert.deepEqual(localCopy.facts.map(fact => fact.value), ["4명", "50분", "주 2회"], "facts need a number");
+assert.deepEqual(localCopy.menu.items.map(item => item.name), ["4인 기구 필라테스(50분)", "체험 수업", "개인 레슨"], "unnamed item dropped, three at most");
+assert.deepEqual(copy!.facts, [], "older answers without facts still work");
+const localDraft = structuredClone(created);
+localDraft.pageData!.brainwave = createBusinessTemplate(localDraft.pageData!.businessContent!, "0-2226");
+localDraft.businessAddress = "서울 마포구 월드컵로 12, 2층";
+localDraft.openHours = "";
+const localFilled = applyHomepageCopy(localDraft, localCopy, { industry: "필라테스" });
+landingDraftSchema.parse(localFilled);
+const lbw = localFilled.pageData!.brainwave!;
+assert.equal(lbw.texts["0:2285"], "국 1종 + 반찬 4종");
+assert.equal(lbw.texts["0:2349"], "4명");
+assert.equal(lbw.texts["0:2345"], "수업·가격");
+assert.equal(lbw.texts["0:2325"], "220,000원");
+assert.equal(lbw.texts["0:2313"], "① 신청 — 채팅으로 신청해요\n② 받기 — 문 앞에서 받아요");
+assert.equal(lbw.texts["0:2237"], copy!.closing);
+assert.equal(lbw.texts["I0:2233;0:4557"], "구독 문의하기");
+assert.equal(lbw.texts["0:2282"], "서울 마포구 월드컵로 12, 2층", "address from business info");
+assert.equal(lbw.texts["0:2268"], "영업시간은 문의 주시면 안내해 드려요", "unknown hours stay as the pending note");
+for (const id of ["0:2347", "0:2322", "0:2309", "0:2349", "0:2324", "0:2325", "0:2235"]) assert.ok(!lbw.hidden.includes(id), `${id} opened`);
+// 사진 자리 — 첫 화면·메뉴 카드·이용 순서 사진(이 계획서의 대표 상품 '반찬'으로 음식 사진)
+assert.equal(lbw.images["0:2362/0/0"], food.hero);
+assert.equal(lbw.images["0:2329/0/0"], food.cards[0]);
+assert.equal(lbw.images["0:2317/0/0"], food.band);
+assert.equal(lbw.images["0:2321/0/0"], food.closing);
+// 숫자·메뉴가 없으면 그 띠는 닫힌 채
+const plainLocal = applyHomepageCopy(localDraft, copy!).pageData!.brainwave!;
+assert.ok(plainLocal.hidden.includes("0:2347") && plainLocal.hidden.includes("0:2322"));
+// 사장님이 고친 주소는 사업자 정보로 덮지 않는다
+const ownerAddress = structuredClone(localFilled);
+ownerAddress.pageData!.brainwave!.texts["0:2282"] = "망원역 2번 출구 앞 건물 2층";
+assert.equal(applyHomepageCopy(ownerAddress, localCopy).pageData!.brainwave!.texts["0:2282"], "망원역 2번 출구 앞 건물 2층");
 
 // 확정한 한 줄 소개가 있으면 AI 문구로 덮지 않는다
 const designed = structuredClone(coach);

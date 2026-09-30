@@ -50,18 +50,19 @@ export function brainwavePage(id: string): BrainwavePageMeta | undefined {
  * 업종 템플릿이 처음 쓰는 페이지 — 편집기에서 다른 템플릿으로 바꿀 수 있다.
  *
  * Figma 디자인을 옮겨 둔 템플릿(BUSINESS_DESIGNED_PAGES)으로만 보낸다. 아직 옮기지 않은
- * 템플릿은 간이 화면으로 나와, 카페·식당·교육 같은 업종이 밋밋한 페이지를 받았다.
+ * 템플릿은 간이 화면으로 나와, 교육·콘텐츠 같은 업종이 밋밋한 페이지를 받았다.
  * 업종 전용 디자인이 생기면 그 업종을 그리로 옮긴다.
- *   동네 가게·뷰티(local·wellness)는 사진 카드가 많은 '온라인 상점'
+ *   손님이 찾아오는 가게(local·wellness)는 메뉴·가격·오시는 길·영업시간이 있는 '동네 가게'
+ *   물건을 파는 곳(product)은 '온라인 상점'
  *   교육·콘텐츠·소프트웨어(class·creator·editorial·tech)는 '상담 서비스'
  */
 export const BRAINWAVE_DEFAULT_FOR_TEMPLATE: Record<string, string> = {
   service: "0-290",   // 08 Consultation
-  local: "0-1102",    // 06 ECommerce — 동네 가게 전용 디자인(03 Coworking)을 옮기기 전까지
+  local: "0-2226",    // 03 Coworking → 동네 가게
   product: "0-1102",  // 06 ECommerce
   class: "0-290",     // 08 Consultation — 교육 전용(10 B2B) 전까지
   tech: "0-290",      // 08 Consultation — 소프트웨어 전용(02 SaaS) 전까지
   creator: "0-290",   // 08 Consultation — 콘텐츠 전용(01 Agency) 전까지
-  wellness: "0-1102", // 06 ECommerce
+  wellness: "0-2226", // 03 Coworking → 동네 가게(미용·운동)
   editorial: "0-290",
 };

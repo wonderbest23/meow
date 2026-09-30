@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { kitForTemplate, type LandingKitId } from "./kits";
 import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "./brainwave/catalog";
-import { businessContentSchema, businessTemplateManifest, createBusinessTemplate, type BusinessContent } from "./brainwave/business-content";
+import { businessContentSchema, businessTemplateManifest, createBusinessTemplate, visitInfoTexts, type BusinessContent } from "./brainwave/business-content";
 
 export const landingBlockTypes = [
   "HeroSection",
@@ -280,8 +280,10 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string,
       cta: seed.ctaLabel,
       image: seed.heroImageUrl,
     });
+    const brainwave = createBusinessTemplate(businessContent, BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290");
+    Object.assign(brainwave.texts, visitInfoTexts(brainwave.page, { address: seed.businessAddress, hours: seed.openHours }));
     return landingPageDataSchema.parse({
-      brainwave: createBusinessTemplate(businessContent, BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290"),
+      brainwave,
       businessContent,
       root: { props: { title: seed.businessName } },
       content: [],

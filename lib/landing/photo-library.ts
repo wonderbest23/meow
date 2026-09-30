@@ -72,6 +72,8 @@ export const PHOTO_SET_KEYS = LIBRARY.map((entry) => entry.set.key);
 export const PHOTO_SLOTS: Record<string, { hero: string; cards: string[]; band?: string; closing?: string }> = {
   "0-1102": { hero: "0:1325/0/0", cards: ["0:1332/0/0", "0:1337/0/0", "0:1342/0/0"], band: "0:1146/0/0", closing: "0:1108/0/0" },
   "0-290": { hero: "0:411/0", cards: ["0:372/0", "0:379/0", "0:386/0", "0:393/0"], band: "0:357/0/0" },
+  // 동네 가게: 메뉴 카드 사진 셋, 이용 순서 옆 사진 둘(띠·마무리 사진)
+  "0-2226": { hero: "0:2362/0/0", cards: ["0:2329/0/0", "0:2336/0/0", "0:2343/0/0"], band: "0:2317/0/0", closing: "0:2321/0/0" },
 };
 
 /** 사진 한 벌을 템플릿의 사진 자리에 나눠 넣는다(빈 자리·첫 화면 사진과 같은 자리만 — 사장님 사진은 그대로) */

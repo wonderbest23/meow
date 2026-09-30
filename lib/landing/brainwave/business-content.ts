@@ -14,7 +14,8 @@ export const businessContentSchema = z.object({
   image: z.string().max(900_000),
 });
 export type BusinessContent = z.infer<typeof businessContentSchema>;
-type Field = keyof BusinessContent | "headline" | "detailsTitle" | "contactTitle" | "contactInvite" | "contactDescription" | "offerLabel" | "customerLabel" | "priceLabel" | "one" | "two" | "three";
+type Field = keyof BusinessContent | "headline" | "detailsTitle" | "contactTitle" | "contactInvite" | "contactDescription" | "offerLabel" | "customerLabel" | "priceLabel" | "one" | "two" | "three"
+  | "visitTitle" | "address" | "hoursLabel" | "hours";
 type Profile = {
   sections: string[];
   fields: Record<string, Field>;
@@ -32,11 +33,23 @@ export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
     fields: { "0:418": "businessName", "0:414": "headline", "0:415": "description", "I0:416;0:4460": "cta", "I0:420;0:4613": "cta", "0:309": "contactInvite", "I0:302;0:4557": "cta", "0:365": "detailsTitle", "0:364": "offer", "0:337": "offerLabel", "0:336": "offer", "0:343": "customerLabel", "0:342": "customer", "0:349": "priceLabel", "0:348": "price", "0:340": "one", "0:346": "two", "0:352": "three" },
     facts: [{ label: "0:337", value: "0:336" }, { label: "0:343", value: "0:342" }, { label: "0:349", value: "0:348" }],
   },
+  /*
+   * 동네 가게(03 Coworking 킷) — 카페·식당·미용실·필라테스처럼 손님이 찾아오는 가게.
+   * 손님이 먼저 찾는 것(무엇을 파는지·얼마인지·어디에 있는지·언제 여는지)을 한 화면씩 둔다:
+   *   첫 화면(0:2358) → 숫자 셋(0:2347) → 메뉴·가격(0:2322, 사진 카드) → 좋은 점(0:2283)
+   *   → 이용 순서(0:2309) → 오시는 길·영업시간(0:2238) → 마무리(0:2228)
+   * 숫자·메뉴·이용 순서는 AI 채우기가 계획서에서 찾았을 때만 연다.
+   */
   "0-2226": {
-    sections: ["0:2358", "0:2283"], brand: "0:2383", headline: "0:2376/0", description: "0:2376/1", button: "I0:2372;0:4557",
-    fields: { "0:2383": "businessName", "0:2376/0": "headline", "0:2376/1": "offer", "0:2377": "description", "I0:2372;0:4557": "cta", "0:2285": "offerLabel", "0:2286": "offer", "0:2294": "customerLabel", "0:2295": "customer", "0:2301": "priceLabel", "0:2302": "price" },
+    sections: ["0:2358", "0:2283", "0:2238", "0:2228"], brand: "0:2383", headline: "0:2376/0", description: "0:2377", button: "I0:2372;0:4557",
+    fields: {
+      "0:2383": "businessName", "0:2376/0": "headline", "0:2377": "description", "I0:2372;0:4557": "cta",
+      "0:2285": "offerLabel", "0:2286": "offer", "0:2294": "customerLabel", "0:2295": "customer", "0:2301": "priceLabel", "0:2302": "price",
+      "0:2281": "visitTitle", "0:2282": "address", "0:2269": "hoursLabel", "0:2268": "hours",
+      "0:2237": "contactInvite", "I0:2233;0:4557": "cta",
+    },
     facts: [{ label: "0:2285", value: "0:2286" }, { label: "0:2294", value: "0:2295" }, { label: "0:2301", value: "0:2302" }],
-    hide: ["0:2364", "0:2371", "0:2373", "0:2374", "0:2375", "0:2377", "0:2378"],
+    hide: ["0:2376/1", "0:2365", "0:2364", "0:2371", "0:2373", "0:2374", "0:2375", "0:2378", "0:2384", "0:2276", "0:2275", "0:2246", "0:2247", "0:2252", "0:2257", "0:2262", "0:2232", "0:2235", "0:2236/0", "0:2236/1"],
   },
   /*
    * 온라인 상점 — 첫 화면(큰 제목 + 소개) 아래로 제공 내용·이용 대상·가격 카드가
@@ -95,7 +108,11 @@ export const BUSINESS_TEMPLATE_IDS = Object.keys(BUSINESS_TEMPLATE_PROFILES);
  * Figma 디자인을 흐름 배치로 옮겨 둔 템플릿. 이 페이지들은 글 길이·사진과 상관없이
  * 늘 그 디자인으로 그린다(components/brainwave-business-*.tsx).
  */
-export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102"]);
+export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102", "0-2226"]);
+
+/* 동네 가게의 오시는 길·영업시간 기본 글 — 사업자 정보에 주소·영업시간이 없을 때 */
+export const LOCAL_ADDRESS_PENDING = "주소는 문의 주시면 안내해 드려요";
+export const LOCAL_HOURS_PENDING = "영업시간은 문의 주시면 안내해 드려요";
 // Search-only controls are removed from business drafts; keep their remaining CTA aligned.
 export const BUSINESS_NODE_STYLES: Record<string, Record<string, string>> = {
   "0:2372": { left: "calc(50% - 110px)", right: "auto", width: "220px" },
@@ -113,6 +130,7 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
   const values = [
     name, content.headline ?? "", content.offer, content.description, content.customer, content.price, content.cta,
     "이용 안내", "제공 내용", "이용 대상", "가격 안내", "01", "02", "03",
+    "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING,
     `${name} 문의`, `${name}에 문의해 보세요`,
     [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
   ];
@@ -133,6 +151,7 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
     ...content, headline: content.businessName, detailsTitle: "이용 안내", contactTitle: `${content.businessName} 문의`, contactInvite: `${content.businessName}에 문의해 보세요`,
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
+    visitTitle: "오시는 길·영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,
   };
   // Empty overrides cover every original slot, including sections later restored by the editor.
   const texts = Object.fromEntries(manifest.texts.map(id => [id, ""]));
@@ -156,4 +175,19 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
     }
   }
   return { page, texts, images, links, sizes: {}, hidden: [...new Set(hidden)], order: [], contentMode: "business" };
+}
+
+/**
+ * 오시는 길·영업시간 칸 — 사업자 정보의 주소·영업시간을 그 템플릿의 자리에 넣는다.
+ * 모르는 것은 빼고 돌려준다(기본 글 '문의 주시면 안내해 드려요'가 그대로 남는다).
+ */
+export function visitInfoTexts(page: string, info: { address?: string; hours?: string }): Record<string, string> {
+  const profile = BUSINESS_TEMPLATE_PROFILES[page];
+  if (!profile) return {};
+  const out: Record<string, string> = {};
+  for (const [id, field] of Object.entries(profile.fields)) {
+    if (field === "address" && info.address?.trim()) out[id] = info.address.trim();
+    if (field === "hours" && info.hours?.trim()) out[id] = info.hours.trim();
+  }
+  return out;
 }

@@ -80,7 +80,7 @@ for (const option of landingTemplateOptions) {
 const cafePhoto = heroImageForSector("카페", "");
 assert.ok(cafePhoto && render(createBusinessTemplate({ ...content, image: cafePhoto }, "0-1102")).includes(cafePhoto.replaceAll("&", "&amp;")), "sector photo still shows");
 // 움직임: 디자인 템플릿은 자체 움직임을 갖고(섹션째 떠오르기와 겹치지 않게), 첫 화면은 스크롤 값을 받는다
-for (const pageId of ["0-290", "0-1102"]) {
+for (const pageId of ["0-290", "0-1102", "0-2226"]) {
   const html = render(createBusinessTemplate(content, pageId));
   assert.ok(html.includes("data-own-motion"), `${pageId}: owns its motion`);
   assert.ok(html.includes("data-scroll"), `${pageId}: hero follows scroll`);
@@ -96,6 +96,32 @@ const stepsHtml = render(steps);
 const violetHtml = stepsHtml.slice(stepsHtml.indexOf('data-bw-node="0:1137"'), stepsHtml.indexOf('data-bw-node="0:1104"'));
 assert.equal(count(violetHtml, "<li"), 3);
 assert.ok(render(steps, () => {}).includes('data-bw-text="0:1142"'));
+// 동네 가게(0-2226): 가게 이름 띠 → 사진 첫 화면(이름·소개·버튼) → 좋은 점 → 오시는 길·영업시간 → 마무리
+assert.ok(BUSINESS_DESIGNED_PAGES.has("0-2226"));
+const local = createBusinessTemplate({ ...content, businessName: "퇴근필라", headline: "퇴근 후, 붐비지 않는 4인 기구 필라테스" }, "0-2226");
+const localHtml = render(local);
+assert.ok(localHtml.indexOf(">퇴근필라<") < localHtml.indexOf("<h1"), "brand bar first");
+assert.match(localHtml, /<h1[^>]*>퇴근필라<\/h1><p[^>]*>퇴근 후, 붐비지 않는 4인 기구 필라테스<\/p><button[^>]*data-bw-btn="0:2372"/);
+for (const label of ["제공 내용", "이용 대상", "가격 안내", "390,000원", "오시는 길·영업시간", "주소는 문의 주시면 안내해 드려요", "영업시간은 문의 주시면 안내해 드려요", "퇴근필라에 문의해 보세요"]) assert.ok(localHtml.includes(label), label);
+assert.ok(!localHtml.includes("네이버 지도"), "no map link until there is an address");
+assert.ok(!localHtml.includes('href="#visit"'), "no hours/address chips until they are known");
+assert.ok(!/Coworking|Brainwave|자리 예약|새벽커피|이메일 주소|Subscribe/.test(localHtml), "no raw kit or sample copy");
+assert.equal(count(localHtml, "data-bw-btn="), 2, "hero and closing buttons only");
+// 주소·영업시간을 알면: 첫 화면 칩(누르면 오시는 길로), 지도 링크
+local.texts["0:2282"] = "서울 마포구 월드컵로 12, 2층";
+local.texts["0:2268"] = "평일 07:00–22:00\n주말 09:00–18:00";
+const visitHtml = render(local);
+assert.ok(visitHtml.includes('href="#visit"') && visitHtml.includes(">평일 07:00–22:00<") && visitHtml.includes(">서울 마포구 월드컵로 12, 2층<"));
+assert.ok(visitHtml.includes(`href="https://map.naver.com/p/search/${encodeURIComponent("서울 마포구 월드컵로 12, 2층")}"`));
+assert.ok(!render(local, () => {}).includes("map.naver.com"), "editor does not navigate away");
+// 숫자·메뉴·이용 순서는 AI 채우기가 연 뒤에만
+for (const id of ["0:2347", "0:2322", "0:2309"]) assert.ok(local.hidden.includes(id), `${id} closed at first`);
+local.texts["0:2345"] = "수업·가격"; local.texts["0:2324"] = "4인 기구 필라테스(50분)"; local.texts["0:2325"] = "220,000원";
+local.texts["0:2349"] = "4명"; local.texts["0:2350"] = "한 수업 정원"; local.texts["0:2352"] = "50분"; local.texts["0:2353"] = "수업 시간";
+local.hidden = local.hidden.filter(id => !["0:2347", "0:2322", "0:2345", "0:2324", "0:2325", "0:2349", "0:2350", "0:2352", "0:2353"].includes(id));
+const openedHtml = render(local);
+assert.ok(openedHtml.includes(">수업·가격<") && openedHtml.includes(">220,000원<") && openedHtml.includes(">4명<") && openedHtml.includes(">한 수업 정원<"));
+assert.equal(count(openedHtml.slice(openedHtml.indexOf('data-bw-node="0:2322"'), openedHtml.indexOf('data-bw-node="0:2283"')), "<article"), 1, "only filled menu items");
 // 공개 페이지: 넣어 둔 연락처로 휴대폰 아래 고정 버튼(전화·카톡), 아무것도 없으면 없음
 // next/font 은 Next 빌드에서만 동작한다 — 테스트에서는 빈 글꼴로 바꿔 끼운다
 const NodeModule = require("node:module") as { _load: (name: string, ...rest: unknown[]) => unknown };
@@ -112,4 +138,8 @@ const publicHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slu
 assert.ok(publicHtml.includes('aria-label="빠른 연락"') && publicHtml.includes('href="tel:01012345678"') && publicHtml.includes('href="https://pf.kakao.com/_munap"'));
 assert.ok(publicHtml.includes("has-quickbar"));
 assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: publicDraft })).includes("빠른 연락"), "no contacts, no bar");
-console.log(JSON.stringify({ passed: 34 }));
+// 소개·문의 페이지의 사업자 표기는 채운 칸만('등록 전' 줄 없음), 판매 페이지는 빈 칸도 드러낸다
+const footerHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: withContact }));
+assert.ok(footerHtml.includes("전화 010-1234-5678") && !footerHtml.includes("등록 전"));
+assert.ok(renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...withContact, pageMode: "transaction" as const } })).includes("대표자 등록 전"));
+console.log(JSON.stringify({ passed: 49 }));
