@@ -7,6 +7,7 @@ import styles from "./OperatingWorkspace.module.css";
 import PlanLoading from "../PlanLoading";
 import OperatingAnalysisPanel, { OperatingAnalysisResult } from "./OperatingAnalysisPanel";
 import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysis-contract";
+import { autoInquiriesValue, type HomepageInquiries } from "../../../lib/plan-builder/operating-homepage";
 
 type Draft = Omit<PeriodInput, "metrics"> & { metrics: Record<typeof METRICS[number]["key"], string> };
 function draftFor(period?: OperatingPeriod): Draft {
@@ -43,6 +44,9 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
   const [reportRequest, setReportRequest] = useState<{ id: string; reference: ReturnType<typeof referenceFor> } | null>(null);
   const [confirm, setConfirm] = useState<"discard" | "archive" | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
+  /* 이 기간 홈페이지 문의 수 — 문의 칸이 비었거나 앞서 자동으로 넣은 값이면 채운다 */
+  const [homepage, setHomepage] = useState<HomepageInquiries | null>(null);
+  const autoInquiries = useRef<string | null>(null);
   const pending = useRef(false);
   const alive = useRef(true);
   const dirty = !!editor && editor.original !== JSON.stringify(draft);
@@ -57,6 +61,30 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     return () => window.removeEventListener("beforeunload", before);
   }, [dirty, analysisDirty]);
   useEffect(() => { if (confirm) dialog.current?.showModal(); else dialog.current?.close(); }, [confirm]);
+  useEffect(() => {
+    setHomepage(null);
+    if (!editor || !draft.start || !draft.end || draft.start > draft.end) return;
+    const controller = new AbortController();
+    const timer = setTimeout(() => {
+      const query = new URLSearchParams({ planId, start: draft.start, end: draft.end });
+      void fetch(`/api/plan/operations/homepage?${query}`, { cache: "no-store", signal: controller.signal })
+        .then(async response => response.ok ? await response.json() as HomepageInquiries : null)
+        .then(found => { if (!controller.signal.aborted && alive.current) setHomepage(found); })
+        .catch(() => undefined);
+    }, 400);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [editor?.id, draft.start, draft.end, planId]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!editor || busy) return;
+    const next = autoInquiriesValue(draft.metrics.inquiries, autoInquiries.current, homepage);
+    if (next === null) return;
+    const untouched = editor.original === JSON.stringify(draft);
+    const filled = { ...draft, metrics: { ...draft.metrics, inquiries: next } };
+    autoInquiries.current = next;
+    setDraft(filled);
+    // 열기만 하고 아무것도 안 고쳤으면 자동으로 넣은 값은 '고친 것'으로 치지 않는다
+    if (untouched) setEditor({ ...editor, original: JSON.stringify(filled) });
+  }, [homepage]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { alive.current = true; void reload(); return () => { alive.current = false; }; }, [planId]); // eslint-disable-line react-hooks/exhaustive-deps
   async function reload() {
     setError("");
@@ -69,6 +97,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
   }
   function edit(target?: OperatingPeriod) {
     const next = draftFor(target);
+    autoInquiries.current = null;
     setDraft(next); setEditor({ id: target?.id ?? crypto.randomUUID(), revision: target?.revision ?? null, original: JSON.stringify(next) });
     setError(""); setNotice("");
   }
@@ -108,7 +137,12 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     {editor && <form className={styles.editor} onSubmit={event => { event.preventDefault(); void save(); }}>
       <div className={styles.editorHeading}><h3>{editor.revision === null ? "새 기간 기록" : "기간 기록 수정"}</h3><button type="button" aria-label="기간 편집 닫기" title="기간 편집 닫기" disabled={busy} onClick={() => dirty ? setConfirm("discard") : setEditor(null)}><X size={20} /></button></div>
       <fieldset disabled={busy}><legend>기록 기간</legend><div className={styles.twoColumns}><label>시작일<input type="date" required value={draft.start} onChange={e => setDraft({ ...draft, start: e.target.value })} /></label><label>종료일<input type="date" required min={draft.start} value={draft.end} onChange={e => setDraft({ ...draft, end: e.target.value })} /></label></div></fieldset>
-      <fieldset disabled={busy}><legend>실제 실적</legend><p className={styles.note}>알 수 없는 값은 비워 두세요. 발생하지 않았다면 0을 입력하세요.</p><div className={styles.twoColumns}>{METRICS.map(m => <label key={m.key}>{m.label} ({m.unit})<input type="number" inputMode="numeric" min={0} step={1} max={m.unit === "원" ? 1_000_000_000_000 : 10_000_000} value={draft.metrics[m.key]} onChange={e => setDraft({ ...draft, metrics: { ...draft.metrics, [m.key]: e.target.value } })} /></label>)}</div></fieldset>
+      <fieldset disabled={busy}><legend>실제 실적</legend><p className={styles.note}>알 수 없는 값은 비워 두세요. 발생하지 않았다면 0을 입력하세요.</p><div className={styles.twoColumns}>{METRICS.map(m => <label key={m.key}>{m.label} ({m.unit})<input type="number" inputMode="numeric" min={0} step={1} max={m.unit === "원" ? 1_000_000_000_000 : 10_000_000} value={draft.metrics[m.key]} onChange={e => setDraft({ ...draft, metrics: { ...draft.metrics, [m.key]: e.target.value } })} /></label>)}</div>
+        {homepage?.linked && <p className={styles.note} role="status">
+          홈페이지로 들어온 문의 {homepage.inquiries.toLocaleString("ko-KR")}건(이 기간){draft.metrics.inquiries === String(homepage.inquiries) ? " — 문의 칸에 넣어 두었어요. 전화·방문 문의가 더 있으면 더해서 고쳐 주세요." : ""}
+          {draft.metrics.inquiries !== String(homepage.inquiries) && <> <button type="button" className={styles.inlineButton} onClick={() => { autoInquiries.current = String(homepage.inquiries); setDraft({ ...draft, metrics: { ...draft.metrics, inquiries: String(homepage.inquiries) } }); }}>{homepage.inquiries}건으로 넣기</button></>}
+          {!homepage.published && " 홈페이지를 공개하면 손님 문의가 여기에 저절로 쌓여요."}
+        </p>}</fieldset>
       <fieldset disabled={busy}><legend>돌아보기와 다음 행동</legend>{([
         ["feedback", "고객 반응", 3000], ["keep", "유지할 점", 1500], ["change", "바꿀 점", 1500], ["nextAction", "다음 개선 행동", 1500], ["successCriterion", "확인 기준", 1000],
       ] as const).map(([key, label, max]) => <label key={key}>{label}<textarea value={draft[key]} maxLength={max} rows={key === "feedback" ? 3 : 2} onChange={e => setDraft({ ...draft, [key]: e.target.value })} /></label>)}</fieldset>
