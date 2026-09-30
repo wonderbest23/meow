@@ -2,7 +2,8 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { ChevronDown, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Pencil, RefreshCw, Rocket, Save, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
+import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import type { LandingDraft, LandingLeadRecord, LandingSiteRecord } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
@@ -91,6 +92,23 @@ export function HomepageKitPanel({
   const update = (patch: Partial<LandingDraft>) => onChange({ ...draft, ...patch });
   const busy = action === "saving" || action === "publishing" || Boolean(aiFill?.running);
   const published = site?.status === "published";
+  /* 손님 연락 방법 — 바꾸면 문의 버튼의 이동·글이 한 번에 따라간다(applyContactMethod) */
+  const contact = draft.contact ?? DEFAULT_CONTACT;
+  const contactInfo = CONTACT_METHOD_INFO[contact.method];
+  const setContact = (patch: Partial<LandingContact>) => onChange(applyContactMethod(draft, { ...draft, contact: { ...contact, ...patch } }));
+  const setPhone = (value: string) => onChange(applyContactMethod(draft, { ...draft, businessPhone: value, businessContact: value }));
+  const contactReady = contactHref(contact, draftPhone(draft)) !== null;
+  const quickCount = quickActions(contact, draftPhone(draft), draft.leadCaptureEnabled).length;
+  /* 공개한 주소 복사·공유 — 오픈하자마자 단골·단지 커뮤니티에 뿌릴 수 있게 */
+  const [copied, setCopied] = useState(false);
+  const publicUrl = typeof window !== "undefined" && publicPath ? `${window.location.origin}${publicPath}` : publicPath;
+  const copyUrl = async () => {
+    try { await navigator.clipboard.writeText(publicUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { window.prompt("주소를 복사해 주세요", publicUrl); }
+  };
+  const shareUrl = async () => {
+    if (typeof navigator.share === "function") { try { await navigator.share({ title: draft.businessName, text: `${draft.businessName} 홈페이지`, url: publicUrl }); return; } catch { return; } }
+    await copyUrl();
+  };
   const page = BRAINWAVE_PAGES.find((p) => p.id === draft.pageData?.brainwave?.page);
   const [picking, setPicking] = useState(false);
   const [contentNotice, setContentNotice] = useState("");
@@ -150,7 +168,9 @@ export function HomepageKitPanel({
             <p className="hk-url">
               <span>{published ? "공개 중" : "아직 비공개"}</span>
               {published
-                ? <a href={publicPath} target="_blank" rel="noreferrer">{publicPath} <ExternalLink size={13} /></a>
+                ? <><a href={publicPath} target="_blank" rel="noreferrer">{publicPath} <ExternalLink size={13} /></a>
+                  <button type="button" className="hk-url-btn" onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "복사됨" : "주소 복사"}</button>
+                  <button type="button" className="hk-url-btn" onClick={shareUrl}><Share2 size={13} /> 공유</button></>
                 /* 공개 전에는 이 주소가 아직 없어서(404) 링크를 걸지 않는다 */
                 : <em className="hk-url-pending">{publicPath} — 공개하면 이 주소로 열립니다</em>}
             </p>
@@ -198,13 +218,62 @@ export function HomepageKitPanel({
       </div>
       {picking && bw ? <BrainwaveTemplatePicker current={bw.page} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}
 
+      {/* 손님 연락 방법 — 문의·예약 버튼과 휴대폰 아래 고정 버튼이 어디로 연결될지 */}
+      <Fold
+        id="hk-contact"
+        icon={<PhoneCall size={18} />}
+        title="손님 연락 방법"
+        badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : `${contactInfo.label} — 입력 필요`}</em>}
+        hint="홈페이지의 문의·예약 버튼을 누르면 어디로 연결할지 한 번에 정해요"
+      >
+        <div className="hk-contact-methods" role="radiogroup" aria-label="연결 방법">
+          {CONTACT_METHODS.map((method) => (
+            <label key={method} className={method === contact.method ? "on" : ""}>
+              <input type="radio" name="hk-contact-method" checked={method === contact.method} onChange={() => setContact({ method })} />
+              {CONTACT_METHOD_INFO[method].label}
+            </label>
+          ))}
+        </div>
+        <p className="hk-contact-hint">{contactInfo.hint} 모든 문의 버튼에 한 번에 적용돼요(버튼 하나만 따로 정한 것은 그대로예요).</p>
+        <div className="hk-grid">
+          {contactInfo.field === "phone" ? (
+            <label className="wide"><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder={contactInfo.placeholder} /></label>
+          ) : null}
+          {contactInfo.field && contactInfo.field !== "phone" ? (
+            <label className="wide"><span>{contactInfo.label} 주소</span>
+              <input inputMode="url" value={contact[contactInfo.field]} onChange={(e) => setContact({ [contactInfo.field as string]: e.target.value } as Partial<LandingContact>)}
+                onBlur={(e) => setContact({ [contactInfo.field as string]: normalizeWebUrl(e.target.value) } as Partial<LandingContact>)} placeholder={contactInfo.placeholder} />
+            </label>
+          ) : null}
+        </div>
+        {!contactReady ? <p className="hk-contact-warn">{contactInfo.field === "phone" ? "전화번호" : "주소"}를 넣으면 버튼이 연결돼요. 그 전까지는 문의 양식으로 연결돼요.</p> : null}
+        <div className="hk-contact-quick">
+          <label className="hk-switch">
+            <input type="checkbox" checked={contact.quickBar} onChange={(e) => setContact({ quickBar: e.target.checked })} />
+            <span>휴대폰 화면 아래 고정 버튼 <small>{quickCount ? `손님 휴대폰에 ${quickCount}개가 떠 있어요(전화·카톡·예약 중 넣은 것).` : "전화번호·카카오톡 채널·예약 주소 중 하나를 넣으면 나타나요."}</small></span>
+          </label>
+          {contact.quickBar ? (
+            <div className="hk-grid">
+              {contactInfo.field !== "phone" ? <label><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder="010-1234-5678" /></label> : null}
+              {contact.method !== "kakao" ? <label><span>카카오톡 채널</span><input inputMode="url" value={contact.kakaoUrl} onChange={(e) => setContact({ kakaoUrl: e.target.value })} onBlur={(e) => setContact({ kakaoUrl: normalizeWebUrl(e.target.value) })} placeholder="https://pf.kakao.com/_xxxxx" /></label> : null}
+              {contact.method !== "booking" ? <label><span>예약 페이지</span><input inputMode="url" value={contact.bookingUrl} onChange={(e) => setContact({ bookingUrl: e.target.value })} onBlur={(e) => setContact({ bookingUrl: normalizeWebUrl(e.target.value) })} placeholder="https://booking.naver.com/…" /></label> : null}
+            </div>
+          ) : null}
+        </div>
+        <div className="hk-fold-save">
+          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <LoaderCircle className="spin" size={14} /> : <Save size={14} />} 연락 방법 저장</button>
+        </div>
+      </Fold>
+
       {/* 2. 사업자 정보 — 접이식 */}
       <Fold
         id="hk-business"
         icon={<ShieldCheck size={18} />}
         title="사업자 정보"
         badge={missing.length ? <em className="hk-badge hk-badge-warn">채울 것 {missing.length}개</em> : <em className="hk-badge hk-badge-ok">완료</em>}
-        hint={missing.length ? `공개 전에 채워 주세요: ${missing.join(", ")}` : "홈페이지 맨 아래에 표시되는 법정 정보입니다."}
+        hint={missing.length
+          ? (draft.pageMode === "transaction" ? `공개 전에 채워 주세요: ${missing.join(", ")}` : `지금도 공개할 수 있어요. 결제를 받기 전에는 꼭 채워 주세요: ${missing.join(", ")}`)
+          : "홈페이지 맨 아래에 표시되는 법정 정보입니다."}
       >
         <div className="hk-grid">
           <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>

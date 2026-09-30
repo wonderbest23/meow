@@ -14770,6 +14770,18 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-card-head svg { flex: none; color: #3272db; margin-top: 2px; }
 .hk-card-head strong { display: block; font-size: 15px; }
 .hk-card-head small { color: #8181a5; font-size: 12.5px; line-height: 1.5; }
+/* 손님 연락 방법 — 방법 고르기(칩) · 안내 · 휴대폰 고정 버튼 */
+.hk-contact-methods { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.hk-contact-methods label { position: relative; display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid #e3e3ec; border-radius: 999px; background: #fff; color: #3d3d52; font-size: 13px; font-weight: 600; cursor: pointer; }
+.hk-contact-methods label.on { border-color: #1c1d21; background: #1c1d21; color: #fff; }
+.hk-contact-methods input { position: absolute; opacity: 0; pointer-events: none; }
+.hk-contact-methods label:focus-within { outline: 2px solid #3272db; outline-offset: 2px; }
+.hk-contact-hint { margin: 0 0 12px; color: #5e5e72; font-size: 12.5px; line-height: 1.6; }
+.hk-contact-warn { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: #fff6e5; color: #9a5b00; font-size: 12.5px; }
+.hk-contact-quick { display: grid; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0f0f5; }
+.hk-url-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 10px; border: 1px solid #e3e3ec; border-radius: 999px; background: #fff; color: #1c1d21; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.hk .hk-url-btn svg { display: inline-block !important; }
+.hk-url { flex-wrap: wrap; }
 .hk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
 .hk-grid label { display: grid; gap: 5px; font-size: 12.5px; color: #5e5e72; }
 .hk-grid label.wide { grid-column: 1 / -1; }
@@ -16828,4 +16840,26 @@ html:has(main.cinematic-home), body:has(main.cinematic-home) { background: #000;
   .home-footer-info { grid-template-columns: 92px minmax(0, 1fr); gap: 8px 12px; font-size: 13px; }
   .home-footer-empty, .home-footer-notes { font-size: 13px; }
   .home-footer-legal { padding-top: 18px; }
+}
+
+/*
+ * 휴대폰 화면 아래 고정 연락 버튼(전화·카톡·예약) — 동네 가게 홈페이지에서 손님이 가장 많이 누르는 자리.
+ * PC 에서는 머리글·첫 화면 버튼으로 충분해 숨긴다.
+ */
+.public-quickbar { display: none; }
+@media (max-width: 768px) {
+  .public-quickbar {
+    position: fixed; left: 12px; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); z-index: 40;
+    display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 8px; padding: 8px;
+    border-radius: 16px; background: rgba(22, 28, 45, .92); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .25);
+  }
+  .public-quickbar a {
+    display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 48px; border-radius: 12px;
+    color: #fff; background: rgba(255, 255, 255, .1); font-size: 15px; font-weight: 700; text-decoration: none;
+  }
+  .public-quickbar a:first-child { background: var(--landing-accent, #473bf0); }
+  .public-quickbar a.public-quickbar-kakao { color: #191919; background: #fee500; }
+  .public-quickbar a:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 2px; }
+  .public-landing.has-quickbar { padding-bottom: 88px; }
 }

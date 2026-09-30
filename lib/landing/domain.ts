@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { landingContactSchema } from "./contact-method";
 import {
   createLandingPageData,
   landingPageDataSchema,
@@ -80,6 +81,8 @@ export const landingDraftSchema = z.object({
   hostingProvider: z.string().trim().max(120).default("오늘창업"),
   refundPolicy: z.string().trim().max(2000).default(""),
   termsUrl: z.string().url().or(z.literal("")).default(""),
+  /* 손님 연락 방법 — 문의·예약 버튼이 어디로 가는지(전화·카톡·예약 페이지…). 예전 초안에는 없다 */
+  contact: landingContactSchema.optional(),
 }).superRefine((value, context) => {
   if (!value.collectEmail && !value.collectPhone) {
     context.addIssue({

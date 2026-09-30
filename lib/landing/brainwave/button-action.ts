@@ -3,7 +3,7 @@
  *   없거나 "contact" → 아래 문의 양식(#landing-contact)으로 스크롤
  *   "none"          → 아무 일도 하지 않음
  *   "sec:N"         → 페이지의 N번째 섹션으로 스크롤(한 장짜리 앵커 이동)
- *   그 밖           → 주소로 이동(https 는 새 창, tel:/mailto: 는 그 자리)
+ *   그 밖           → 주소로 이동(https 는 새 창, tel:/sms:/mailto: 는 그 자리)
  *
  * brainwave-page 와 brainwave-mobile 이 함께 쓴다 — 둘은 서로를 이미
  * import 하고 있어서 이 함수를 어느 한쪽에 두면 순환이 된다.
@@ -44,7 +44,7 @@ export function runBrainwaveButton(links: Record<string, string> | undefined, id
     return;
   }
   if (/^https?:\/\//i.test(action)) window.open(action, "_blank", "noopener");
-  else if (/^(tel:|mailto:)/i.test(action)) window.location.href = action;
+  else if (/^(tel:|sms:|mailto:)/i.test(action)) window.location.href = action;
 }
 
 /** 모바일 수제판의 버튼 글 자리 id("I0:416;0:4460")에서 버튼 노드 id("0:416")를 얻는다 */
