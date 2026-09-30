@@ -201,6 +201,17 @@ const SECTOR_HERO_IMAGES: Array<{ test: RegExp; url: string }> = [
  * 업종에 맞춰 고른 사진(SECTOR_HERO_IMAGES)과 사장님이 올린 사진은 그대로 쓴다.
  */
 const TEMPLATE_STOCK_PHOTOS = new Set(landingTemplateOptions.map((item) => item.heroImageUrl));
+/*
+ * 개인정보처리방침 본문의 '6. 개인정보 문의' 줄을 지금 적힌 개인정보 문의처로 맞춘다.
+ * 본문은 홈페이지를 만들 때 계정 이메일로 한 번 채워지고, 킷 편집 화면에는 본문 칸이 없다.
+ * 사장님이 문의처를 전화번호로 바꿔도 본문에는 이메일이 남아, 손님 화면의 법정 안내가
+ * 서로 다른 연락처를 가리켰다(운영 점검). 본문의 그 줄은 늘 문의처 칸을 따른다.
+ */
+export function privacyPolicyWithContact(policy: string, contact: string): string {
+  const value = contact.trim();
+  return value ? policy.replace(/^6\. 개인정보 문의: .*$/m, `6. 개인정보 문의: ${value}`) : policy;
+}
+
 export function isPlaceholderPhoto(url: string): boolean {
   return url.startsWith("/brainwave/") || TEMPLATE_STOCK_PHOTOS.has(url);
 }

@@ -5,7 +5,7 @@ import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
 import type { BrainwavePageData } from "./brainwave-page";
 import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
 import { draftPhone, quickActions } from "../lib/landing/contact-method";
-import { landingCollectedItems, type LandingDraft } from "../lib/landing/domain";
+import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 
 function getVisitorId() {
@@ -168,7 +168,7 @@ export function PublicLandingClient({
             {config.collectMessage && <label><span>문의 내용</span><textarea name="message" maxLength={2000} placeholder="현재 상황과 궁금한 점을 알려주세요." /></label>}
             <input name="website" className="landing-honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" />
             <label className="public-consent"><input type="checkbox" checked={privacyAgreed} onChange={(event) => setPrivacyAgreed(event.target.checked)} /><span><Check /></span><p><strong>[필수] 개인정보 수집·이용 동의</strong><small>처리 주체: {config.privacyController}<br />수집 항목: {landingCollectedItems(config).join(", ")}<br />목적: {config.privacyPurpose}<br />보유기간: {config.privacyRetentionPeriod}<br />거부 안내: {config.privacyRefusalNotice}</small></p></label>
-            <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{config.privacyPolicy}</p><small>문의: {config.privacyContact}</small></details>
+            <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{privacyPolicyWithContact(config.privacyPolicy, config.privacyContact)}</p><small>문의: {config.privacyContact}</small></details>
             {config.marketingOptInEnabled && <label className="public-consent"><input type="checkbox" checked={marketingAgreed} onChange={(event) => setMarketingAgreed(event.target.checked)} /><span><Check /></span><p><strong>[선택] 홍보 정보 수신 동의</strong><small>새로운 서비스와 혜택 안내를 받을 수 있습니다.</small></p></label>}
             {error && <p className="public-form-error">{error}</p>}
             <button type="submit" disabled={!privacyAgreed || submitting}>{submitting ? <LoaderCircle className="spin" /> : config.ctaLabel}<ArrowRight /></button>
@@ -178,7 +178,14 @@ export function PublicLandingClient({
 
       <footer className="public-landing-footer">
         <div className="public-footer-brand"><span>{config.logoImageUrl ? <img src={config.logoImageUrl} alt="" /> : initials}</span><strong>{config.businessName}</strong></div>
-        {(config.businessRepresentative || config.businessAddress || config.businessPhone || config.businessContact || config.businessEmail || config.businessRegistrationNumber || config.mailOrderSalesNumber) ? <div className="public-business-information"><p>대표자 {config.businessRepresentative || "등록 전"}</p><p>사업장 {config.businessAddress || "등록 전"}</p><p>전화 {config.businessPhone || config.businessContact || "등록 전"}</p><p>이메일 {config.businessEmail || "등록 전"}</p><p>사업자등록번호 {config.businessRegistrationNumber || "등록 전"}</p><p>통신판매업 {config.mailOrderSalesNumber || "해당 시 등록"}</p></div> : <p>사업자 정보는 판매 시작 전에 실제 등록 정보로 공개됩니다.</p>}
+        {/* 판매(결제) 페이지는 법정 표기라 빈 칸도 '등록 전'으로 드러내고, 소개·문의 페이지는 채운 칸만 보인다 — '등록 전' 다섯 줄은 손님 눈에 어수선했다(운영 점검) */}
+        {(() => {
+          const transaction = config.pageMode === "transaction";
+          const rows = ([["대표자", config.businessRepresentative, "등록 전"], ["사업장", config.businessAddress, "등록 전"], ["전화", config.businessPhone || config.businessContact, "등록 전"], ["이메일", config.businessEmail, "등록 전"], ["사업자등록번호", config.businessRegistrationNumber, "등록 전"], ["통신판매업", config.mailOrderSalesNumber, "해당 시 등록"]] as const)
+            .filter(([, value]) => transaction || value.trim());
+          if (!rows.some(([, value]) => value.trim())) return <p>사업자 정보는 판매 시작 전에 실제 등록 정보로 공개됩니다.</p>;
+          return <div className="public-business-information">{rows.map(([label, value, empty]) => <p key={label}>{label} {value || empty}</p>)}</div>;
+        })()}
         {config.pageMode === "transaction" && <p>교환·환불: {config.refundPolicy} · <a href={config.termsUrl} target="_blank" rel="noreferrer">거래조건·이용약관</a></p>}
         <p>{config.legalNotice}</p>
         {config.leadCaptureEnabled && <small>개인정보 문의 {config.privacyContact}</small>}

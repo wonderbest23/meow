@@ -32,7 +32,7 @@ const prompt = homepageFillPrompt(plan);
 for (const fact of ["문앞반찬", "주 2회 국·반찬 4종", "맞벌이", "59,000원", "건너뛰기"]) assert.ok(prompt.user.includes(fact), fact);
 assert.ok(!prompt.user.includes("비밀 재무"), "financial chapters stay out of homepage copy");
 assert.ok(!prompt.user.includes("비공개 매출"), "sales figures stay out");
-for (const rule of ["해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON", "가격 단위", "위약금", "환불 규정은 홈페이지 약관"]) assert.ok(prompt.system.includes(rule), rule);
+for (const rule of ["해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON", "가격 단위", "위약금", "환불 규정은 홈페이지 약관", "가격 기준(1회·월 등)"]) assert.ok(prompt.system.includes(rule), rule);
 const proposal = structuredClone(plan);
 (proposal.answers[COACH_KEY].state as CoachState).fields.find(f => f.key === "price")!.basis = "proposal";
 assert.ok(homepageFillPrompt(proposal).user.includes("AI 제안 가격 — 확정 전"));
