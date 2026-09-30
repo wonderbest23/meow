@@ -27,7 +27,8 @@ for (const pageId of BUSINESS_TEMPLATE_IDS) {
   assert.ok(Object.values(generated.texts).some(text => text.includes(source.price)), `${pageId}: price is shown without invention`);
   for (const section of manifest.sections) {
     for (const id of section.images) assert.equal(generated.images[id], source.image);
-    if (/testimonial|facts|pricing|logos|jobs|subscribe|footer/i.test(section.name)) assert.ok(generated.hidden.includes(section.id), `${pageId}: ${section.name} hidden`);
+    // 킷의 후기·구독 같은 칸은 숨긴다 — 디자인을 옮기며 역할을 바꿔 쓰는 칸(동네 가게의 구독 띠 → 마무리)은 빼고
+    if (/testimonial|facts|pricing|logos|jobs|subscribe|footer/i.test(section.name) && !profile.sections.includes(section.id)) assert.ok(generated.hidden.includes(section.id), `${pageId}: ${section.name} hidden`);
     for (const button of section.buttons) {
       const active = button.texts.some(id => profile.fields[id] === "cta");
       assert.equal(generated.links[button.id], active ? "contact" : "none");

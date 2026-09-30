@@ -18,14 +18,15 @@ const coach = (industry: string, name: string, offer: string): CoachState => ({
 });
 const draftFor = (industry: string, name: string, offer: string) => landingDraftFromPlan({ planTitle: name, business: {}, answers: { [COACH_KEY]: { state: coach(industry, name, offer) } } });
 
-// 업종별로 디자인 템플릿이 붙는다 — 카페(동네 가게)는 사진 카드가 많은 상점, 교육은 상담 디자인
-assert.equal(draftFor("카페 · 음식점", "새벽커피", "핸드드립 커피와 구움과자").pageData?.brainwave?.page, "0-1102");
+// 업종별로 디자인 템플릿이 붙는다 — 카페(동네 가게)는 동네 가게, 교육은 상담 디자인
+assert.equal(draftFor("카페 · 음식점", "새벽커피", "핸드드립 커피와 구움과자").pageData?.brainwave?.page, "0-2226");
+assert.equal(draftFor("유통 · 온라인 판매", "문앞반찬", "반찬 정기배송").pageData?.brainwave?.page, "0-1102");
 assert.equal(draftFor("교육 · 코칭", "바른글방", "초등 글쓰기 소그룹 수업").pageData?.brainwave?.page, "0-290");
 assert.equal(draftFor("소프트웨어 · 플랫폼", "장부도우미", "가게 장부 정리 앱").pageData?.brainwave?.page, "0-290");
 
 // 공유 카드: 가게 이름 + 한 줄 소개 + 첫 화면 사진(카톡 비율로 잘라서, 절대 주소)
 const cafe = draftFor("카페 · 음식점", "새벽커피", "핸드드립 커피와 구움과자");
-cafe.pageData!.brainwave!.texts["0:1328"] = "출근길에 들르는 동네 핸드드립 카페";
+cafe.pageData!.brainwave!.texts["0:2377"] = "출근길에 들르는 동네 핸드드립 카페";
 const meta = landingShareMetadata(cafe, "https://oneulstart.com");
 assert.equal(String(meta.metadataBase), "https://oneulstart.com/");
 assert.ok(String(meta.title).startsWith("새벽커피 | "));
@@ -37,10 +38,10 @@ assert.equal(og.images[0].width, 1200);
 assert.equal((meta.twitter as { card: string }).card, "summary_large_image");
 
 // 사장님이 올린 사진이 첫 화면에 있으면 그 사진
-cafe.pageData!.brainwave!.images["0:1325/0/0"] = "https://files.example.com/my-cafe.jpg";
+cafe.pageData!.brainwave!.images["0:2362/0/0"] = "https://files.example.com/my-cafe.jpg";
 assert.equal(shareImage(cafe), "https://files.example.com/my-cafe.jpg");
 // 템플릿 견본 사진뿐이면 사진 없이(남의 가게 사진이 카드에 뜨지 않게)
-for (const id of Object.keys(cafe.pageData!.brainwave!.images)) cafe.pageData!.brainwave!.images[id] = "/brainwave/0-1102/sample.jpg";
+for (const id of Object.keys(cafe.pageData!.brainwave!.images)) cafe.pageData!.brainwave!.images[id] = "/brainwave/0-2226/sample.jpg";
 cafe.heroImageUrl = "";
 assert.equal(shareImage(cafe), null);
 assert.equal((landingShareMetadata(cafe, "https://oneulstart.com").twitter as { card: string }).card, "summary");

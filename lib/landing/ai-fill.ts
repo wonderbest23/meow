@@ -1,7 +1,7 @@
 import { z } from "zod";
 import type { LandingDraft } from "./domain";
 import { landingPageDataSchema, type LandingPageData } from "./page-data";
-import { BUSINESS_TEMPLATE_PROFILES, businessTemplateDefaults, businessTemplateManifest, createBusinessTemplate } from "./brainwave/business-content";
+import { BUSINESS_TEMPLATE_PROFILES, businessTemplateDefaults, businessTemplateManifest, createBusinessTemplate, visitInfoTexts } from "./brainwave/business-content";
 import { applyPhotoSet, photoSetFor } from "./photo-library";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 import { formatPriceText } from "./from-plan";
@@ -29,6 +29,9 @@ export const homepageCopySchema = z.object({
   closing: z.string().min(1).max(40),
   closingSub: z.string().max(90),
   cta: z.string().max(14),
+  /* 동네 가게 디자인 — 계획서에 있는 숫자(정원·시간·횟수)와 메뉴·가격. 없으면 비워 두고 그 칸을 열지 않는다 */
+  facts: z.array(z.object({ value: z.string().min(1).max(12), label: z.string().min(1).max(40) })).max(3).default([]),
+  menu: z.object({ title: z.string().max(28), intro: z.string().max(90), items: z.array(z.object({ name: z.string().min(1).max(30), price: z.string().max(24) })).max(3) }).default({ title: "", intro: "", items: [] }),
 });
 export type HomepageCopy = z.infer<typeof homepageCopySchema>;
 
@@ -42,6 +45,14 @@ export function normalizeHomepageCopy(raw: unknown): HomepageCopy | null {
     .slice(0, 6);
   const process = (value.process && typeof value.process === "object" ? value.process : {}) as Record<string, unknown>;
   const steps = (Array.isArray(process.steps) ? process.steps : []).map((step) => clip(step, 80)).filter(Boolean).slice(0, 5);
+  const record = (item: unknown) => (item && typeof item === "object" ? item as Record<string, unknown> : {});
+  const facts = (Array.isArray(value.facts) ? value.facts : []).map(record)
+    .map((fact) => ({ value: clip(fact.value, 12), label: clip(fact.label, 40) }))
+    .filter((fact) => fact.value && fact.label && /\d/.test(fact.value)).slice(0, 3);
+  const menu = record(value.menu);
+  const items = (Array.isArray(menu.items) ? menu.items : []).map(record)
+    .map((item) => ({ name: clip(item.name, 30), price: clip(item.price, 24) }))
+    .filter((item) => item.name).slice(0, 3);
   const parsed = homepageCopySchema.safeParse({
     tagline: clip(value.tagline, 48),
     cardsTitle: clip(value.cardsTitle, 28),
@@ -51,6 +62,8 @@ export function normalizeHomepageCopy(raw: unknown): HomepageCopy | null {
     closing: clip(value.closing, 40),
     closingSub: clip(value.closingSub, 90),
     cta: clip(value.cta, 14),
+    facts,
+    menu: { title: clip(menu.title, 28), intro: clip(menu.intro, 90), items },
   });
   return parsed.success ? parsed.data : null;
 }
@@ -100,15 +113,17 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
     "- process 는 손님 입장의 이용 순서 2~4단계(신청 → 받기처럼). 각 단계는 '① 무엇 — 설명' 한 줄.",
     "- tagline 은 사업 이름 아래 한 줄 소개(28자 안팎). 확정한 한 줄 소개가 있으면 그 뜻을 살립니다.",
     "- closing 은 페이지 마지막 큰 문장(24자 안팎), closingSub 는 그 아래 한 문장, cta 는 버튼 글(10자 안팎, 예: 구독 문의하기).",
+    "- facts 는 손님이 한눈에 볼 숫자 0~3개: value 는 계획서에 적힌 숫자 그대로(예: 4명, 50분, 주 2회), label 은 그 뜻(예: 한 수업 정원). 매출·고객 수·목표·원가 같은 사업 숫자는 넣지 않습니다. 없으면 빈 배열.",
+    "- menu 는 손님이 고르는 메뉴·상품·수업 0~3개와 가격표: name 은 계획서에 있는 상품 이름, price 는 계획서의 금액 그대로(쉼표 포함, 단위가 적혀 있을 때만 단위)이고 금액이 없으면 '문의'. 계획서에 없는 메뉴를 지어내지 않습니다. 없으면 items 를 빈 배열로.",
     "JSON 객체 하나만 출력합니다:",
-    '{"tagline":"","cardsTitle":"","cardsIntro":"","cards":[{"title":"","body":""}],"process":{"title":"","steps":[""]},"closing":"","closingSub":"","cta":""}',
+    '{"tagline":"","cardsTitle":"","cardsIntro":"","cards":[{"title":"","body":""}],"process":{"title":"","steps":[""]},"closing":"","closingSub":"","cta":"","facts":[{"value":"","label":""}],"menu":{"title":"","intro":"","items":[{"name":"","price":""}]}}',
   ].join("\n");
   const user = ["[사업 정보]", ...facts, "", "[계획서 발췌]", ...excerpts].join("\n");
   return { system, user };
 }
 
 /*
- * 채운 글을 템플릿 자리에 넣는다 — 디자인을 옮긴 템플릿(0-1102·0-290)만 칸을 모두 쓰고,
+ * 채운 글을 템플릿 자리에 넣는다 — 디자인을 옮긴 템플릿(0-1102·0-290·0-2226)만 칸을 모두 쓰고,
  * 나머지는 큰 제목 아래 한 줄 소개만 넣는다.
  */
 function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { texts: Record<string, string>; show: string[] } {
@@ -135,6 +150,33 @@ function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { tex
     if (copy.cta) for (const id of ["I0:416;0:4460", "I0:420;0:4613", "I0:302;0:4557"]) texts[id] = copy.cta;
     return { texts, show: copy.cards.length >= 3 ? ["0:366", "0:297"] : ["0:297"] };
   }
+  if (page === "0-2226") {
+    const show = ["0:2283", "0:2238", "0:2228"];
+    // 좋은 점 카드 셋
+    [["0:2285", "0:2286"], ["0:2294", "0:2295"], ["0:2301", "0:2302"]].forEach(([title, body], index) => { texts[title] = copy.cards[index]?.title ?? ""; texts[body] = copy.cards[index]?.body ?? ""; });
+    // 숫자 셋 — 둘 이상 있을 때만 띠를 연다
+    if (copy.facts.length >= 2) {
+      [["0:2349", "0:2350"], ["0:2352", "0:2353"], ["0:2355", "0:2356"]].forEach(([value, label], index) => { texts[value] = copy.facts[index]?.value ?? ""; texts[label] = copy.facts[index]?.label ?? ""; });
+      show.push("0:2347");
+    }
+    // 메뉴·가격 — 사진 카드 셋
+    if (copy.menu.items.length) {
+      texts["0:2345"] = copy.menu.title || "메뉴·가격";
+      texts["0:2346"] = copy.menu.intro;
+      [["0:2324", "0:2325"], ["0:2331", "0:2332"], ["0:2338", "0:2339"]].forEach(([name, price], index) => { texts[name] = copy.menu.items[index]?.name ?? ""; texts[price] = copy.menu.items[index]?.price ?? ""; });
+      show.push("0:2322");
+    }
+    // 이용 순서
+    if (copy.process.steps.length) {
+      texts["0:2312/0"] = copy.process.title;
+      texts["0:2313"] = copy.process.steps.join("\n");
+      show.push("0:2309");
+    }
+    texts["0:2237"] = copy.closing;
+    texts["0:2235"] = copy.closingSub;
+    if (copy.cta) { texts["I0:2372;0:4557"] = copy.cta; texts["I0:2233;0:4557"] = copy.cta; }
+    return { texts, show };
+  }
   return { texts, show: [] };
 }
 
@@ -157,7 +199,9 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   const defaults = businessTemplateDefaults(data.businessContent);
   const untouched = (current: string | undefined, id: string, base: string | undefined) =>
     !current?.trim() || current === base || defaults.has(current.trim()) || current === last?.texts[id];
-  const { texts, show } = copyNodes(bw.page, copy, Boolean(data.businessContent.headline?.trim()));
+  const { texts: copied, show } = copyNodes(bw.page, copy, Boolean(data.businessContent.headline?.trim()));
+  // 오시는 길·영업시간은 AI 가 아니라 사업자 정보에서(적어 둔 것만)
+  const texts = { ...copied, ...visitInfoTexts(bw.page, { address: draft.businessAddress, hours: draft.openHours }) };
   const nextTexts = { ...bw.texts };
   const written: Record<string, string> = {};
   for (const [id, value] of Object.entries(texts)) {
@@ -195,4 +239,4 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   };
 }
 
-const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0" };
+const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0" };
