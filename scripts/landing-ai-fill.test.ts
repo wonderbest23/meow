@@ -5,6 +5,7 @@ import { landingDraftSchema } from "../lib/landing/domain";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { COACH_KEY, COACH_VERSION, coachDocumentRevision, type CoachState } from "../lib/plan-builder/coach";
 import { photoSetFor } from "../lib/landing/photo-library";
+import { needsAutoAiFill } from "../lib/landing/ai-fill-auto";
 
 // 계획서 — 반찬 정기배송(운영에서 쓰는 테스트 계획서와 같은 모양)
 const coach: CoachState = {
@@ -141,5 +142,13 @@ assert.ok(!photoFilled.hidden.includes("0:1325/0/0") && !photoFilled.hidden.incl
 const ownerHidden = structuredClone(legacy);
 ownerHidden.pageData!.brainwave!.texts["0:1333"] = "사장님 카드";
 assert.ok(applyHomepageCopy(ownerHidden, copy!).pageData!.brainwave!.hidden.includes("0:1329"));
+
+// 처음 열 때 자동 채우기: 만든 뒤 채우지도 고치지도 않은 홈페이지만(첫 로딩 중 새로고침해도 놓치지 않게)
+const site = (draft: typeof created, updatedAt = "2026-09-30T04:00:00.000Z", versions: unknown[] = []) => ({ createdAt: "2026-09-30T04:00:00.000Z", updatedAt, versions, draft });
+assert.equal(needsAutoAiFill(site(created)), true, "created but never filled or saved");
+assert.equal(needsAutoAiFill(site(filled)), false, "already filled");
+assert.equal(needsAutoAiFill(site(created, "2026-09-30T04:05:00.000Z")), false, "owner saved it since");
+assert.equal(needsAutoAiFill(site(created, undefined, [{}])), false, "already published");
+assert.equal(needsAutoAiFill(site({ ...created, pageData: { ...created.pageData!, brainwave: undefined } })), false, "old block pages are not filled");
 
 console.log("landing-ai-fill: prompt, normalize, shop and consult fill, owner edits kept, identity kept");

@@ -9,6 +9,7 @@ import { HomepageKitPanel } from "../../../components/homepage-kit-panel";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
+import { needsAutoAiFill } from "../../../lib/landing/ai-fill-auto";
 import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
@@ -224,8 +225,8 @@ export default function PlanHomepagePage() {
         if (data.editable && !data.site.draft.pageData?.brainwave) setBuilderOpen(true);
         if (typeof data.price === "number") setPrice(data.price);
         setPhase("ready");
-        // 방금 만든 홈페이지는 계획서로 한 번 채운다(카드·이용 순서·마무리 문구·업종 사진)
-        if (data.created && data.site.draft.pageData?.brainwave) void runAiFill(data.projectId, data.site.updatedAt, true);
+        // 방금 만든(또는 만든 뒤 채우지도 고치지도 않은) 홈페이지는 계획서로 한 번 채운다(카드·이용 순서·마무리 문구·업종 사진)
+        if ((data.created && data.site.draft.pageData?.brainwave) || needsAutoAiFill(data.site)) void runAiFill(data.projectId, data.site.updatedAt, true);
         return;
       }
 
