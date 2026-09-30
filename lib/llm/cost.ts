@@ -49,9 +49,10 @@ export type UsageRow = {
 /*
  * 홈페이지 AI 수정은 호출 한 번에 두 줄이 남는다 — 공통 기록(모델·캐시 포함)과 토큰 차감용 줄
  * (plan_id 포함, 모델 없음, lib/landing/ai-tokens.ts). 비용은 공통 기록 한 줄로만 센다.
+ * 홈페이지 AI 채우기 횟수 표시(landing-ai-fill-use, 토큰 0, lib/landing/ai-fill-usage.ts)도 호출이 아니다.
  */
 export function isBillingDuplicate(row: UsageRow): boolean {
-  return row.kind === "landing-ai-edit" && !row.model;
+  return (row.kind === "landing-ai-edit" && !row.model) || row.kind === "landing-ai-fill-use";
 }
 
 /** 한 줄의 비용(달러). 요금표에 없는 모델이면 null */

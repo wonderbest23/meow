@@ -20,6 +20,7 @@ assert.equal(rowCostUsd(row({ model: "gpt-5.6-sol", input_tokens: 1000 })), null
 // 홈페이지 AI 수정의 토큰 차감용 줄(모델 없음)은 비용에서 뺀다 — 공통 기록과 두 번 세지 않게
 assert.equal(isBillingDuplicate(row({ kind: "landing-ai-edit", model: null })), true);
 assert.equal(isBillingDuplicate(row({ kind: "landing-ai-edit" })), false);
+assert.equal(isBillingDuplicate(row({ kind: "landing-ai-fill-use", model: null, input_tokens: 0, output_tokens: 0 })), true, "AI 채우기 횟수 표시는 호출로 세지 않는다");
 
 // 한국 시간 날짜
 assert.equal(kstDay("2026-09-30T16:00:00Z"), "2026-10-01");
