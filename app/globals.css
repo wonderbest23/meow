@@ -3299,7 +3299,9 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .landing-builder-footer > button:disabled { opacity: .5; cursor: not-allowed; }
 
 /* Public landing page */
-.public-landing { --landing-accent: #1b64da; min-height: 100vh; background: #faf6eb; color: #202632; font-family: var(--font-sans); }
+/* 손님이 보는 홈페이지는 기기와 상관없이 같은 한글 글꼴(Pretendard — public-landing-client 에서 싣는다) */
+.public-landing { --landing-accent: #1b64da; --font-landing: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif; min-height: 100vh; background: #faf6eb; color: #202632; font-family: var(--font-landing); }
+.public-landing button, .public-landing input, .public-landing textarea, .public-landing select { font-family: inherit; }
 .public-landing.tone-white { background: #fff; }
 .public-landing.tone-dark { background: #191f28; color: #f7f8fa; }
 .public-landing-nav { width: min(1120px, calc(100% - 40px)); min-height: 72px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; }

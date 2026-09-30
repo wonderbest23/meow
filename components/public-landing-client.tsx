@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "react";
 import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import type { BrainwavePageData } from "./brainwave-page";
 import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
 import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";

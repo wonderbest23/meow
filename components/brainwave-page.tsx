@@ -2,6 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Urbanist, Rubik } from "next/font/google";
+/*
+ * 손님이 보는 홈페이지 한글 글꼴 — Pretendard(OFL). 글자 범위별로 92조각이라 쓰인 글자 조각만 받는다.
+ * 예전에는 이름만 적혀 있고 파일을 싣지 않아, 안드로이드·윈도에서는 기기 기본 글꼴로 나와
+ * 기기마다 모양·굵기가 달랐다. 본 서비스 화면은 애플 시스템 글꼴을 그대로 쓴다(globals.css).
+ */
+import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import { layoutPage, childBox, type MobileLayout, type Box } from "../lib/landing/brainwave/mobile-layout";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import { BUSINESS_NODE_STYLES, BUSINESS_TEMPLATE_PROFILES } from "../lib/landing/brainwave/business-content";
