@@ -64,6 +64,33 @@ export default function PlanHomepagePage() {
   const requestRef = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const siteRef = useRef(site); siteRef.current = site;
+  const [aiFilling, setAiFilling] = useState(false);
+  /*
+   * 계획서로 채우기(AI). 새로 만든 홈페이지는 한 번 자동으로 돌고, 이후엔 버튼으로 다시 돈다.
+   * 도는 동안(30초 안팎) 저장·공개·편집을 막는다 — 끝나면 서버에 저장된 초안으로 바꾼다.
+   */
+  const runAiFill = useCallback(async (targetProjectId: string, expectedUpdatedAt: string, auto: boolean) => {
+    if (requestRef.current) return;
+    const controller = new AbortController();
+    requestRef.current = controller;
+    const epoch = planOwnerEpoch();
+    const current = () => mounted.current && epoch === planOwnerEpoch();
+    setAiFilling(true);
+    setMessage(auto ? "AI가 계획서를 읽고 홈페이지를 채우고 있어요. 30초쯤 걸려요." : "AI가 계획서로 홈페이지를 다시 채우고 있어요. 30초쯤 걸려요.");
+    try {
+      const res = await fetch(`/api/projects/${targetProjectId}/landing/ai-fill`, { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt }) });
+      const data = (await res.json().catch(() => ({}))) as { site?: LandingSiteRecord; error?: { message?: string } };
+      if (!current()) return;
+      if (!res.ok || !data.site) { setMessage(data.error?.message ?? "AI 채우기를 하지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
+      siteRef.current = data.site; setSite(data.site); setDraft(data.site.draft); setAction("saved");
+      setMessage("AI가 계획서로 홈페이지를 채웠어요. 마음에 안 드는 글은 에디터에서 바로 고칠 수 있어요.");
+    } catch {
+      if (current()) setMessage("AI 채우기 연결이 끊겼어요. 잠시 후 다시 시도해 주세요.");
+    } finally {
+      if (requestRef.current === controller) requestRef.current = null;
+      if (current()) setAiFilling(false);
+    }
+  }, []);
   const unsaved = editable && (builderOpen || (!!draft && landingDraftFingerprint(draft) !== landingDraftFingerprint(site?.draft)));
 
   useEffect(() => {
@@ -178,7 +205,7 @@ export default function PlanHomepagePage() {
       if (!alive || epoch !== planOwnerEpoch()) return;
 
       if (res.ok) {
-        const data = (await res.json()) as { site: LandingSiteRecord; projectId: string; editable?: boolean; price?: number };
+        const data = (await res.json()) as { site: LandingSiteRecord; projectId: string; editable?: boolean; price?: number; created?: boolean };
         if (!alive || epoch !== planOwnerEpoch()) return;
         setSite(data.site);
         setProjectId(data.projectId);
@@ -197,6 +224,8 @@ export default function PlanHomepagePage() {
         if (data.editable && !data.site.draft.pageData?.brainwave) setBuilderOpen(true);
         if (typeof data.price === "number") setPrice(data.price);
         setPhase("ready");
+        // 방금 만든 홈페이지는 계획서로 한 번 채운다(카드·이용 순서·마무리 문구·업종 사진)
+        if (data.created && data.site.draft.pageData?.brainwave) void runAiFill(data.projectId, data.site.updatedAt, true);
         return;
       }
 
@@ -450,6 +479,13 @@ export default function PlanHomepagePage() {
           onOpenEditor={() => setBuilderOpen(true)}
           onSiteUpdated={updateSite}
           onSourceApplied={applySourceSite}
+          aiFill={projectId && site && !sample ? {
+            running: aiFilling,
+            run: () => {
+              if (draft && landingDraftFingerprint(draft) !== landingDraftFingerprint(site.draft)) { setMessage("저장하지 않은 변경이 있어요. 먼저 저장한 뒤 AI로 채워 주세요."); return; }
+              void runAiFill(projectId, site.updatedAt, false);
+            },
+          } : undefined}
         />
       )}
 

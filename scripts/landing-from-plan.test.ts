@@ -162,11 +162,16 @@ stale.design!.sourceRevision -= 1;
 assert.equal(landingDraftFromPlan({ ...source, answers: { [COACH_KEY]: { state: stale } } }).headline, "카페피드");
 
 // 업종에 맞는 사진이 없으면 사진을 깔지 않는다(템플릿 기본 사진 금지)
-assert.equal(withIdentity.heroImageUrl, "", "Unmatched industry gets no stock photo");
-assert.equal(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "광고 대행업" } }).heroImageUrl, "");
-assert.match(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "커피 전문점" } }).heroImageUrl, /unsplash/);
-assert.match(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "반찬 및 식품 소매업" } }).heroImageUrl, /unsplash/);
-assert.equal(landingDraftFromPlan({ ...source, business: { ...source.business, industry: "광고 대행업" } }).pageData?.businessContent?.image, "");
+// 업종 사진 한 벌 — 업종 이름·상호·대표 상품을 함께 보고 고른다(카페피드 → 카페 사진)
+assert.match(withIdentity.heroImageUrl, /1648462908676/, "cafe name picks the cafe set");
+const cafeImages = Object.values(withIdentity.pageData?.brainwave?.images ?? {});
+assert.ok(new Set(cafeImages.filter(Boolean)).size >= 3, "cards, band and closing get their own photos, not the hero copied everywhere");
+// 알아볼 수 없는 사업은 사진을 깔지 않는다(템플릿 기본 사진 금지)
+const unknownBusiness = { planTitle: "온결", business: { name: "온결", industry: "광고 대행업" }, answers: { "market/products": { main_offer: "기업 소개서 제작" }, "market/segments": { first_target: "중소 제조사" } } };
+assert.equal(landingDraftFromPlan(unknownBusiness).heroImageUrl, "");
+assert.equal(landingDraftFromPlan(unknownBusiness).pageData?.businessContent?.image, "");
+assert.match(landingDraftFromPlan({ ...unknownBusiness, business: { ...unknownBusiness.business, industry: "커피 전문점" } }).heroImageUrl, /unsplash/);
+assert.match(landingDraftFromPlan({ ...unknownBusiness, answers: { ...unknownBusiness.answers, "market/products": { main_offer: "주 2회 국·반찬 4종 정기배송" } } }).heroImageUrl, /1498654896293/, "offer text picks the food set");
 assert.match(withIdentity.slug, /^kapepideu-[0-9a-f]{4}$/);
 
 console.log("landing-from-plan: all assertions passed");
