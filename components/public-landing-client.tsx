@@ -3,7 +3,8 @@
 import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "react";
 import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
 import type { BrainwavePageData } from "./brainwave-page";
-import { ArrowRight, Check, ChevronDown, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
+import { draftPhone, quickActions } from "../lib/landing/contact-method";
 import { landingCollectedItems, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 
@@ -112,8 +113,11 @@ export function PublicLandingClient({
   const kit = isLandingKit(kitValue) ? kitValue : null;
   /* 킷 페이지는 머리글을 자기 안에 갖고 있다 — 우리 상단 메뉴를 겹쳐 두지 않는다 */
   const brainwave = Boolean(config.pageData?.brainwave);
+  /* 휴대폰 화면 아래 고정 연락 버튼 — 사장님이 넣어 둔 전화·카톡·예약만 */
+  const quick = quickActions(config.contact, draftPhone(config), config.leadCaptureEnabled);
+  const quickIcon = { phone: Phone, kakao: MessageCircle, booking: CalendarCheck, store: ShoppingBag, form: PencilLine } as const;
   return (
-    <main className={`public-landing tone-${config.backgroundTone} template-${config.templateId}${kit ? ` kit kit-${kit}` : ""}${brainwave ? " brainwave" : ""}`} style={style}>
+    <main className={`public-landing tone-${config.backgroundTone} template-${config.templateId}${kit ? ` kit kit-${kit}` : ""}${brainwave ? " brainwave" : ""}${quick.length ? " has-quickbar" : ""}`} style={style}>
       {!brainwave && <nav className="public-landing-nav">
         <span className="public-landing-brand">{config.logoImageUrl ? <img src={config.logoImageUrl} alt={`${config.businessName} 로고`} /> : <i>{initials}</i>}<strong>{config.businessName}</strong></span>
         <button onClick={moveToForm}>{config.ctaLabel}</button>
@@ -182,6 +186,18 @@ export function PublicLandingClient({
         {/* CC BY 4.0 — 킷 배치를 쓴 페이지는 출처를 적는다 */}
         {kit || brainwave ? <small className="public-kit-credit"><a href={landingKitCredit.url} target="_blank" rel="noreferrer">{landingKitCredit.text}</a></small> : null}
       </footer>
+      {quick.length ? (
+        <nav className="public-quickbar" aria-label="빠른 연락">
+          {quick.map((action) => {
+            const Icon = quickIcon[action.key];
+            const external = action.href.startsWith("https://");
+            return <a key={action.key} href={action.href} className={`public-quickbar-${action.key}`} {...(external ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              onClick={(event) => { if (action.key === "form") { event.preventDefault(); moveToForm(); } else void record("cta_click"); }}>
+              <Icon size={18} aria-hidden /> {action.label}
+            </a>;
+          })}
+        </nav>
+      ) : null}
       {config.analyticsEnabled && !analyticsDismissed && !analyticsAgreed && <aside className="public-analytics-consent"><p><strong>방문 분석 선택 동의</strong><span>{config.analyticsNotice}</span></p><div><button onClick={() => setAnalyticsDismissed(true)}>거부</button><button onClick={() => setAnalyticsAgreed(true)}>동의</button></div></aside>}
     </main>
   );

@@ -96,4 +96,20 @@ const stepsHtml = render(steps);
 const violetHtml = stepsHtml.slice(stepsHtml.indexOf('data-bw-node="0:1137"'), stepsHtml.indexOf('data-bw-node="0:1104"'));
 assert.equal(count(violetHtml, "<li"), 3);
 assert.ok(render(steps, () => {}).includes('data-bw-text="0:1142"'));
-console.log(JSON.stringify({ passed: 31 }));
+// 공개 페이지: 넣어 둔 연락처로 휴대폰 아래 고정 버튼(전화·카톡), 아무것도 없으면 없음
+// next/font 은 Next 빌드에서만 동작한다 — 테스트에서는 빈 글꼴로 바꿔 끼운다
+const NodeModule = require("node:module") as { _load: (name: string, ...rest: unknown[]) => unknown };
+const originalLoad = NodeModule._load;
+NodeModule._load = function (name: string, ...rest: unknown[]) {
+  if (name === "next/font/google") return new Proxy({}, { get: () => () => ({ variable: "", className: "", style: {} }) });
+  return originalLoad.call(this, name, ...rest);
+};
+const { PublicLandingClient } = require("../components/public-landing-client") as typeof import("../components/public-landing-client");
+const { landingDraftFromPlan } = require("../lib/landing/from-plan") as typeof import("../lib/landing/from-plan");
+const publicDraft = landingDraftFromPlan({ planTitle: "문앞반찬", business: {}, answers: { "market/products": { main_offer: "반찬 정기배송" }, "market/segments": { first_target: "맞벌이 부부" } } });
+const withContact = { ...publicDraft, businessPhone: "010-1234-5678", contact: { method: "phone" as const, kakaoUrl: "https://pf.kakao.com/_munap", bookingUrl: "", storeUrl: "", instagramUrl: "", quickBar: true } };
+const publicHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: withContact }));
+assert.ok(publicHtml.includes('aria-label="빠른 연락"') && publicHtml.includes('href="tel:01012345678"') && publicHtml.includes('href="https://pf.kakao.com/_munap"'));
+assert.ok(publicHtml.includes("has-quickbar"));
+assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: publicDraft })).includes("빠른 연락"), "no contacts, no bar");
+console.log(JSON.stringify({ passed: 34 }));

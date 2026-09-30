@@ -1,5 +1,6 @@
 "use client";
 
+import { phoneDigits } from "../lib/landing/contact-method";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, LayoutTemplate, List, LoaderCircle, Monitor, Pencil, Plus, Redo2, RotateCcw, Rows3, Save, Smartphone, Sparkles, Trash2, Type, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
@@ -28,23 +29,29 @@ import LandingImageCrop from "./landing-image-crop";
 type Over = EditorOverrides;
 
 /* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로, url 은 주소, sec 는 "sec:N"(섹션 스크롤) */
-type LinkMode = "contact" | "url" | "none" | "sec";
+type LinkMode = "contact" | "url" | "none" | "sec" | "tel" | "sms";
 type BtnPanel = { id: string; textId: string | null; label: string; mode: LinkMode; url: string; sec: number };
 
-/* 저장된 링크 값("contact"·"none"·"sec:N"·주소) → 판에서 고르는 모드·값 */
+/* 저장된 링크 값("contact"·"none"·"sec:N"·"tel:…"·"sms:…"·주소) → 판에서 고르는 모드·값 */
 function parseLink(saved: string): { mode: LinkMode; url: string; sec: number } {
   if (saved === "none" || saved === "contact") return { mode: saved, url: "", sec: 0 };
   const m = saved.match(/^sec:(\d+)$/);
   if (m) return { mode: "sec", url: "", sec: Number(m[1]) };
+  const phone = saved.match(/^(tel|sms):(.+)$/i);
+  if (phone) return { mode: phone[1].toLowerCase() as "tel" | "sms", url: phone[2], sec: 0 };
   return { mode: "url", url: saved, sec: 0 };
 }
 
-/* 판에서 고른 것 → 저장할 링크 값("" 은 기본 그대로 = 항목 삭제) */
+/*
+ * 판에서 고른 것 → 저장할 링크 값("" 은 기본 그대로 = 항목 삭제).
+ * 전화·문자는 번호만 받는다 — 사장님에게 'tel:' 같은 주소 형식을 요구하지 않는다.
+ */
 function serializeLink(mode: LinkMode, url: string, sec: number): string {
   if (mode === "sec") return `sec:${sec}`;
+  if (mode === "tel" || mode === "sms") { const phone = phoneDigits(url); return phone ? `${mode}:${phone}` : ""; }
   if (mode !== "url") return mode;
   const u = url.trim();
-  return /^(https?:\/\/|tel:|mailto:)/i.test(u) ? u : u ? `https://${u}` : "";
+  return /^(https?:\/\/|tel:|sms:|mailto:)/i.test(u) ? u : u ? `https://${u}` : "";
 }
 
 type TokenBalance = { purchased: number; used: number; remaining: number; packSize: number; expiresAt?: string | null };
@@ -933,7 +940,9 @@ export function BrainwaveEditor({
             {secCount > 1 ? (
               <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "sec"} onChange={() => { setBtn({ ...btn, mode: "sec" }); jumpToSection(btn.sec); }} /> 페이지 섹션으로 <small>이 페이지 안의 칸으로 내려갑니다</small></label>
             ) : null}
-            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "url"} onChange={() => setBtn({ ...btn, mode: "url" })} /> 주소(URL) 열기 <small>스마트스토어·예약 페이지·전화 등</small></label>
+            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "tel"} onChange={() => setBtn({ ...btn, mode: "tel", url: btn.mode === "sms" ? btn.url : "" })} /> 전화 걸기 <small>휴대폰에서 누르면 바로 전화가 걸려요</small></label>
+            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "sms"} onChange={() => setBtn({ ...btn, mode: "sms", url: btn.mode === "tel" ? btn.url : "" })} /> 문자 보내기 <small>휴대폰에서 누르면 문자 쓰기 화면이 열려요</small></label>
+            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "url"} onChange={() => setBtn({ ...btn, mode: "url" })} /> 주소(URL) 열기 <small>카카오톡 채널·네이버 예약·스마트스토어 등</small></label>
             <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "none"} onChange={() => setBtn({ ...btn, mode: "none" })} /> 아무 동작 없음</label>
           </div>
           {btn.mode === "sec" ? (
@@ -948,11 +957,24 @@ export function BrainwaveEditor({
               ))}
             </select>
           ) : null}
+          {btn.mode === "tel" || btn.mode === "sms" ? (
+            <input
+              className="bw-btn-url"
+              value={btn.url}
+              inputMode="tel"
+              placeholder="전화번호 (예: 010-1234-5678)"
+              maxLength={30}
+              autoFocus
+              aria-invalid={Boolean(btn.url.trim()) && !phoneDigits(btn.url)}
+              onChange={(e) => setBtn({ ...btn, url: e.target.value })}
+              onKeyDown={(e) => { if (e.key === "Enter") applyBtn(); }}
+            />
+          ) : null}
           {btn.mode === "url" ? (
             <input
               className="bw-btn-url"
               value={btn.url}
-              placeholder="예: https://smartstore.naver.com/…  또는  tel:010-0000-0000"
+              placeholder="예: https://pf.kakao.com/…  https://booking.naver.com/…  https://smartstore.naver.com/…"
               maxLength={600}
               autoFocus
               onChange={(e) => setBtn({ ...btn, url: e.target.value })}
