@@ -3,7 +3,7 @@
 import { X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
-import { BUSINESS_TEMPLATE_IDS } from "../lib/landing/brainwave/business-content";
+import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_IDS } from "../lib/landing/brainwave/business-content";
 import styles from "./brainwave-template-picker.module.css";
 
 /*
@@ -37,10 +37,12 @@ export function BrainwaveTemplatePicker({
             <section key={g.key}>
               <h4>{g.label} <small>{g.note}</small></h4>
               <div className="bwtp-grid">
-                {BRAINWAVE_PAGES.filter((p) => p.group === g.key && BUSINESS_TEMPLATE_IDS.includes(p.id)).map((p) => (
+                {/* 사업 내용에 맞춰 디자인을 옮겨 둔 템플릿을 앞에 — 나머지는 아직 간단한 화면으로 나온다 */}
+                {BRAINWAVE_PAGES.filter((p) => p.group === g.key && BUSINESS_TEMPLATE_IDS.includes(p.id))
+                  .sort((a, b) => Number(BUSINESS_DESIGNED_PAGES.has(b.id)) - Number(BUSINESS_DESIGNED_PAGES.has(a.id))).map((p) => (
                   <button key={p.id} type="button" aria-pressed={p.id === selected} className={p.id === selected ? "on" : ""} onClick={() => setSelected(p.id)}>
                     <img src={`/brainwave/thumbs/${p.id}.jpg`} alt="" loading="lazy" />
-                    <span><b>{p.ko}</b><small>{p.name}</small></span>
+                    <span><b>{p.ko}</b><small>{BUSINESS_DESIGNED_PAGES.has(p.id) ? "추천 · 사진·AI 문구가 가득 채워지는 디자인" : "간단한 화면(준비 중)"}</small></span>
                     {p.id === current ? <em>사용 중</em> : null}
                   </button>
                 ))}
