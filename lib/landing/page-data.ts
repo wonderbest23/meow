@@ -179,6 +179,8 @@ export type LandingPageSeed = {
   /* 찾아오는 길 — 계획서에서 확인된 것만 채운다. 없으면 그 칸을 통째로 뺀다 */
   businessAddress?: string;
   openHours?: string;
+  /** 업종 글로 고른 전용 디자인(병원 등) — 없으면 템플릿 종류의 기본 디자인 */
+  designPage?: string;
 };
 
 function block<T extends Record<string, string | number | boolean | null>>(
@@ -280,7 +282,7 @@ export function createLandingPageData(seed: LandingPageSeed, templateId: string,
       cta: seed.ctaLabel,
       image: seed.heroImageUrl,
     });
-    const brainwave = createBusinessTemplate(businessContent, BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290");
+    const brainwave = createBusinessTemplate(businessContent, seed.designPage ?? BRAINWAVE_DEFAULT_FOR_TEMPLATE[templateId] ?? "0-290");
     Object.assign(brainwave.texts, visitInfoTexts(brainwave.page, { address: seed.businessAddress, hours: seed.openHours }));
     return landingPageDataSchema.parse({
       brainwave,

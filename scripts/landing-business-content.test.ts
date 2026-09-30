@@ -26,7 +26,8 @@ for (const pageId of BUSINESS_TEMPLATE_IDS) {
   assert.equal(generated.texts[profile.button], source.cta);
   assert.ok(Object.values(generated.texts).some(text => text.includes(source.price)), `${pageId}: price is shown without invention`);
   for (const section of manifest.sections) {
-    for (const id of section.images) assert.equal(generated.images[id], source.image);
+    // 사장님만 채우는 사진 자리(의료진)는 비워 두고, 나머지는 대표 사진
+    for (const id of section.images) assert.equal(generated.images[id], profile.ownerPhotos?.includes(id) ? "" : source.image, `${pageId}: ${id}`);
     // 킷의 후기·구독 같은 칸은 숨긴다 — 디자인을 옮기며 역할을 바꿔 쓰는 칸(동네 가게의 구독 띠 → 마무리)은 빼고
     if (/testimonial|facts|pricing|logos|jobs|subscribe|footer/i.test(section.name) && !profile.sections.includes(section.id)) assert.ok(generated.hidden.includes(section.id), `${pageId}: ${section.name} hidden`);
     for (const button of section.buttons) {

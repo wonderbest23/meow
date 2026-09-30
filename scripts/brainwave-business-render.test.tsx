@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { createRequire } from "node:module";
 import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
 import { heroImageForSector, landingTemplateOptions } from "../lib/landing/domain";
-import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest, createBusinessTemplate } from "../lib/landing/brainwave/business-content";
+import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest, createBusinessTemplate, restorableSections } from "../lib/landing/brainwave/business-content";
 
 // CSS 모듈은 클래스 이름만 필요하다 — 이름을 그대로 돌려준다
 const require = createRequire(import.meta.url);
@@ -80,7 +80,7 @@ for (const option of landingTemplateOptions) {
 const cafePhoto = heroImageForSector("카페", "");
 assert.ok(cafePhoto && render(createBusinessTemplate({ ...content, image: cafePhoto }, "0-1102")).includes(cafePhoto.replaceAll("&", "&amp;")), "sector photo still shows");
 // 움직임: 디자인 템플릿은 자체 움직임을 갖고(섹션째 떠오르기와 겹치지 않게), 첫 화면은 스크롤 값을 받는다
-for (const pageId of ["0-290", "0-1102", "0-2226"]) {
+for (const pageId of ["0-290", "0-1102", "0-2226", "0-2385"]) {
   const html = render(createBusinessTemplate(content, pageId));
   assert.ok(html.includes("data-own-motion"), `${pageId}: owns its motion`);
   assert.ok(html.includes("data-scroll"), `${pageId}: hero follows scroll`);
@@ -122,6 +122,31 @@ local.hidden = local.hidden.filter(id => !["0:2347", "0:2322", "0:2345", "0:2324
 const openedHtml = render(local);
 assert.ok(openedHtml.includes(">수업·가격<") && openedHtml.includes(">220,000원<") && openedHtml.includes(">4명<") && openedHtml.includes(">한 수업 정원<"));
 assert.equal(count(openedHtml.slice(openedHtml.indexOf('data-bw-node="0:2322"'), openedHtml.indexOf('data-bw-node="0:2283"')), "<article"), 1, "only filled menu items");
+// 병원(0-2385): 머리글(예약 버튼) → 첫 화면(이름·소개·예약) → 진료 과목 → 진료 시간·오시는 길 → 마무리
+assert.ok(BUSINESS_DESIGNED_PAGES.has("0-2385"));
+const clinic = createBusinessTemplate({ ...content, businessName: "밝은하루치과", headline: "퇴근 후에도 들를 수 있는 동네 치과", cta: "진료 예약하기" }, "0-2385");
+const clinicHtml = render(clinic);
+assert.ok(clinicHtml.indexOf(">밝은하루치과<") < clinicHtml.indexOf("<h1") && clinicHtml.includes('data-bw-btn="0:2554"'), "brand bar with a booking button first");
+assert.match(clinicHtml, /<h1[^>]*>밝은하루치과<\/h1><p[^>]*>퇴근 후에도 들를 수 있는 동네 치과<\/p><button[^>]*data-bw-btn="0:2544"/);
+for (const label of ["진료 시간·오시는 길", "진료 시간은 문의 주시면 안내해 드려요", "주소는 문의 주시면 안내해 드려요", "밝은하루치과에 문의해 보세요"]) assert.ok(clinicHtml.includes(label), label);
+assert.ok(!/Albino|Brainwave|\$\d|Get started|Pricing|Corey|Basic|Premium/.test(clinicHtml), "no raw kit copy");
+assert.ok(!clinicHtml.includes("의료진"), "doctors stay hidden until the owner turns them on");
+assert.equal(clinic.images["0:2459/0"], "", "doctor photos are never copied from the hero");
+// 진료 시간표: 한 줄씩 요일·시간으로 나눠 표로
+clinic.texts["0:2418"] = "평일 09:30–18:30\n점심시간 13:00–14:00\n일요일·공휴일 휴진";
+clinic.texts["0:2399"] = "서울 마포구 양화로 45, 3층";
+const hoursHtml = render(clinic);
+assert.ok(hoursHtml.includes("<th scope=\"row\">평일</th><td colSpan=\"1\">09:30–18:30</td>") || hoursHtml.includes('<th scope="row">평일</th><td colspan="1">09:30–18:30</td>'));
+assert.ok(hoursHtml.includes('<th scope="row">일요일·공휴일</th>') && hoursHtml.includes(">휴진<"));
+assert.ok(hoursHtml.includes("map.naver.com") && hoursHtml.includes('href="#visit"'));
+// 의료진을 켜면: 공개 화면은 적은 사람만, 편집 화면은 빈 칸에 안내 글
+clinic.hidden = clinic.hidden.filter(id => id !== "0:2455");
+clinic.texts["0:2461"] = "김하루"; clinic.texts["0:2460"] = "대표원장";
+const doctorsHtml = render(clinic);
+assert.ok(doctorsHtml.includes(">김하루<") && !doctorsHtml.includes("원장 이름"));
+const doctorsEditor = render(clinic, () => {});
+assert.ok(doctorsEditor.includes("원장 이름") && doctorsEditor.includes("학력·경력·진료 철학"));
+assert.ok(restorableSections("0-2385").includes("0:2455"), "doctors can be turned on from the editor");
 // 공개 페이지: 넣어 둔 연락처로 휴대폰 아래 고정 버튼(전화·카톡), 아무것도 없으면 없음
 // next/font 은 Next 빌드에서만 동작한다 — 테스트에서는 빈 글꼴로 바꿔 끼운다
 const NodeModule = require("node:module") as { _load: (name: string, ...rest: unknown[]) => unknown };
@@ -142,4 +167,4 @@ assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "muna
 const footerHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: withContact }));
 assert.ok(footerHtml.includes("전화 010-1234-5678") && !footerHtml.includes("등록 전"));
 assert.ok(renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...withContact, pageMode: "transaction" as const } })).includes("대표자 등록 전"));
-console.log(JSON.stringify({ passed: 49 }));
+console.log(JSON.stringify({ passed: 62 }));

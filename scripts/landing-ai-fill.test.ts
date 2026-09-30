@@ -147,6 +147,36 @@ const ownerAddress = structuredClone(localFilled);
 ownerAddress.pageData!.brainwave!.texts["0:2282"] = "망원역 2번 출구 앞 건물 2층";
 assert.equal(applyHomepageCopy(ownerAddress, localCopy).pageData!.brainwave!.texts["0:2282"], "망원역 2번 출구 앞 건물 2층");
 
+// 병원 템플릿: 진료 과목·병원 소개·진료 순서(제목·설명으로 나눔)·자주 묻는 질문, 진료 시간은 사업자 정보에서
+const clinicCopy = normalizeHomepageCopy({
+  ...raw,
+  cards: [{ title: "충치·신경치료", body: "필요한 치료만 안내해요." }, { title: "스케일링", body: "잇몸 건강 관리" }, { title: "임플란트 상담", body: "과정을 설명드려요." }],
+  process: { title: "진료 순서", steps: ["① 접수 — 전화로 예약해 주세요", "② 검진 — 구강 촬영 뒤 설명드려요", "치료"] },
+  faq: [{ question: "예약 없이 가도 되나요?", answer: "예약 환자를 먼저 모셔요." }, { question: "", answer: "질문 없는 답은 버린다" }],
+})!;
+assert.equal(clinicCopy.faq.length, 1);
+const clinicDraft = structuredClone(created);
+clinicDraft.pageData!.brainwave = createBusinessTemplate(clinicDraft.pageData!.businessContent!, "0-2385");
+clinicDraft.openHours = "평일 09:30–18:30";
+const cbw = applyHomepageCopy(clinicDraft, clinicCopy, { industry: "치과" }).pageData!.brainwave!;
+assert.equal(cbw.texts["0:2521"], "충치·신경치료");
+assert.equal(cbw.texts["0:2512"], copy!.cardsTitle);
+assert.equal(cbw.texts["0:2474"], "접수");
+assert.equal(cbw.texts["0:2473"], "전화로 예약해 주세요");
+assert.equal(cbw.texts["0:2477"], "1");
+assert.equal(cbw.texts["0:2486"], "치료", "a step without a dash is the title");
+assert.equal(cbw.texts["0:2422"], "예약 없이 가도 되나요?");
+assert.equal(cbw.texts["0:2454/0"], "자주 묻는 질문");
+assert.equal(cbw.texts["0:2418"], "평일 09:30–18:30", "hours from business info");
+assert.equal(cbw.texts["0:2390"], copy!.closing);
+for (const id of ["0:2508", "0:2470", "0:2420", "0:2389"]) assert.ok(!cbw.hidden.includes(id), `${id} opened`);
+assert.ok(cbw.hidden.includes("0:2455"), "doctors stay hidden — the AI never writes them");
+assert.equal(cbw.images["0:2459/0"], "", "no photo in the doctor slot");
+// 사진은 업종·상호·대표 상품 글로 고른다(이 테스트 계획서의 대표 상품은 '반찬' → 음식 사진)
+assert.equal(cbw.images["0:2550/0/0"], food.hero);
+assert.equal(cbw.images["0:2491/0/0"], food.closing, "steps photo");
+for (const rule of ["의료진 이름·경력·자격은 쓰지 않습니다", "효과·치료 결과"]) assert.ok(homepageFillPrompt(plan).system.includes(rule), rule);
+
 // 확정한 한 줄 소개가 있으면 AI 문구로 덮지 않는다
 const designed = structuredClone(coach);
 designed.design = {

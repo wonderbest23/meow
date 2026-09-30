@@ -1,6 +1,7 @@
 import { createLandingDraft, heroImageForSector, type LandingDraft } from "./domain";
 import { createLandingPageData } from "./page-data";
 import { applyPhotoSet, photoSetFor } from "./photo-library";
+import { designPageForSector } from "./brainwave/catalog";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 
 /*
@@ -224,7 +225,7 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
       : base.privacyPolicy,
   };
 
-  const pageData = createLandingPageData({ ...draft, customer: clamp(firstTarget, 600), pageHeadline: identityHeadline ? headline : undefined }, draft.templateId);
+  const pageData = createLandingPageData({ ...draft, customer: clamp(firstTarget, 600), pageHeadline: identityHeadline ? headline : undefined, designPage: designPageForSector(`${industry} ${businessName} ${mainOffer}`) }, draft.templateId);
   if (photos && pageData.brainwave) pageData.brainwave = { ...pageData.brainwave, images: applyPhotoSet(pageData.brainwave.images, pageData.brainwave.page, photos) };
   return { ...draft, pageData };
 }
