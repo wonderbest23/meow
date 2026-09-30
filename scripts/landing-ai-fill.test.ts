@@ -32,7 +32,7 @@ const prompt = homepageFillPrompt(plan);
 for (const fact of ["문앞반찬", "주 2회 국·반찬 4종", "맞벌이", "59,000원", "건너뛰기"]) assert.ok(prompt.user.includes(fact), fact);
 assert.ok(!prompt.user.includes("비밀 재무"), "financial chapters stay out of homepage copy");
 assert.ok(!prompt.user.includes("비공개 매출"), "sales figures stay out");
-for (const rule of ["facts", "menu", "계획서에 없는 메뉴를 지어내지 않습니다", "해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON", "가격 단위", "위약금", "환불 규정은 홈페이지 약관", "가격 기준(1회·월 등)"]) assert.ok(prompt.system.includes(rule), rule);
+for (const rule of ["facts", "menu", "알리는 곳 이름을 연락처로 쓰지 않습니다", "메뉴판처럼 짧게", "계획서에 없는 메뉴를 지어내지 않습니다", "해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON", "가격 단위", "위약금", "환불 규정은 홈페이지 약관", "가격 기준(1회·월 등)"]) assert.ok(prompt.system.includes(rule), rule);
 const proposal = structuredClone(plan);
 (proposal.answers[COACH_KEY].state as CoachState).fields.find(f => f.key === "price")!.basis = "proposal";
 assert.ok(homepageFillPrompt(proposal).user.includes("AI 제안 가격 — 확정 전"));
@@ -90,6 +90,9 @@ const again = applyHomepageCopy(edited, { ...copy!, cards: copy!.cards.map((card
 assert.equal(again.pageData!.brainwave!.texts["0:1333"], "사장님이 직접 쓴 카드");
 assert.equal(again.pageData!.brainwave!.texts["0:1338"], "새 카드 2", "previous AI text is replaced");
 assert.equal(again.pageData!.brainwave!.images["0:1325/0/0"], "https://example.com/my-shop.jpg");
+// 문의 양식 글은 지난번 AI 버튼 글이면 새 버튼 글을 따라가고, 사장님이 쓴 글이면 그대로
+assert.equal(applyHomepageCopy(filled, { ...copy!, cta: "정기권 문의하기" }).ctaLabel, "정기권 문의하기");
+assert.equal(applyHomepageCopy({ ...filled, ctaLabel: "체험 신청" }, { ...copy!, cta: "정기권 문의하기" }).ctaLabel, "체험 신청");
 // 사장님이 숨긴 섹션은 그대로 숨김
 const hiddenByOwner = structuredClone(filled);
 hiddenByOwner.pageData!.brainwave!.hidden.push("0:1104");
