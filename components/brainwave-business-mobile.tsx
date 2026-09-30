@@ -6,6 +6,7 @@ import { BusinessConsult0_290 } from "./brainwave-business-consult";
 import { BusinessShop0_1102 } from "./brainwave-business-shop";
 import { BusinessLocal0_2226 } from "./brainwave-business-local";
 import { BusinessClinic0_2385 } from "./brainwave-business-clinic";
+import { BusinessGallery0_421 } from "./brainwave-business-gallery";
 import { isPlaceholderPhoto } from "../lib/landing/domain";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
@@ -24,6 +25,7 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
   if (pageId === "0-1102") return <BusinessShop0_1102 overrides={overrides} hidden={hidden} sectionOrder={sectionOrder} onPick={onPick} desktop={desktop} />;
   if (pageId === "0-2226") return <BusinessLocal0_2226 overrides={overrides} hidden={hidden} sectionOrder={sectionOrder} onPick={onPick} desktop={desktop} />;
   if (pageId === "0-2385") return <BusinessClinic0_2385 overrides={overrides} hidden={hidden} sectionOrder={sectionOrder} onPick={onPick} desktop={desktop} />;
+  if (pageId === "0-421") return <BusinessGallery0_421 overrides={overrides} hidden={hidden} sectionOrder={sectionOrder} onPick={onPick} desktop={desktop} />;
   const profile = BUSINESS_TEMPLATE_PROFILES[pageId];
   if (!profile) return null;
   const text = (id: string) => hidden.has(id) ? "" : overrides.texts?.[id] ?? "";

@@ -27,6 +27,12 @@ assert.equal(draftFor("소프트웨어 · 플랫폼", "장부도우미", "가게
 assert.equal(draftFor("기업 서비스", "밝은하루치과", "충치·스케일링").pageData?.brainwave?.page, "0-2385");
 assert.equal(draftFor("생활 · 지역 서비스", "온숨한의원", "침·추나").pageData?.brainwave?.page, "0-2385");
 assert.equal(draftFor("생활 · 지역 서비스", "동네세탁", "와이셔츠 세탁").pageData?.brainwave?.page, "0-2226", "other shops keep their design");
+// 사진이 곧 실력인 업종은 갤러리형, 필라테스·헤어 '스튜디오'는 동네 가게 그대로
+assert.equal(draftFor("기업 서비스", "온결 인테리어", "아파트 리모델링").pageData?.brainwave?.page, "0-421");
+assert.equal(draftFor("콘텐츠 · 미디어", "하루사진관", "프로필 촬영").pageData?.brainwave?.page, "0-421");
+assert.equal(draftFor("공간 · 숙박", "솔숲펜션", "독채 펜션").pageData?.brainwave?.page, "0-421");
+assert.equal(draftFor("생활 · 지역 서비스", "바른필라테스 스튜디오", "소그룹 필라테스").pageData?.brainwave?.page, "0-2226");
+assert.equal(draftFor("생활 · 지역 서비스", "헤어 스튜디오 온", "커트·펌").pageData?.brainwave?.page, "0-2226");
 
 // 공유 카드: 가게 이름 + 한 줄 소개 + 첫 화면 사진(카톡 비율로 잘라서, 절대 주소)
 const cafe = draftFor("카페 · 음식점", "새벽커피", "핸드드립 커피와 구움과자");

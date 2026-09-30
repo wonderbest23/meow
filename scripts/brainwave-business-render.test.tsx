@@ -80,7 +80,7 @@ for (const option of landingTemplateOptions) {
 const cafePhoto = heroImageForSector("카페", "");
 assert.ok(cafePhoto && render(createBusinessTemplate({ ...content, image: cafePhoto }, "0-1102")).includes(cafePhoto.replaceAll("&", "&amp;")), "sector photo still shows");
 // 움직임: 디자인 템플릿은 자체 움직임을 갖고(섹션째 떠오르기와 겹치지 않게), 첫 화면은 스크롤 값을 받는다
-for (const pageId of ["0-290", "0-1102", "0-2226", "0-2385"]) {
+for (const pageId of ["0-290", "0-1102", "0-2226", "0-2385", "0-421"]) {
   const html = render(createBusinessTemplate(content, pageId));
   assert.ok(html.includes("data-own-motion"), `${pageId}: owns its motion`);
   assert.ok(html.includes("data-scroll"), `${pageId}: hero follows scroll`);
@@ -147,6 +147,26 @@ assert.ok(doctorsHtml.includes(">김하루<") && !doctorsHtml.includes("원장 �
 const doctorsEditor = render(clinic, () => {});
 assert.ok(doctorsEditor.includes("원장 이름") && doctorsEditor.includes("학력·경력·진료 철학"));
 assert.ok(restorableSections("0-2385").includes("0:2455"), "doctors can be turned on from the editor");
+// 갤러리형(0-421): 머리글(문의) → 사진 첫 화면 → 작업 사례(누르면 크게) → 이런 일을 해요 → 찾아오시는 길 → 마무리(같은 문의 버튼)
+assert.ok(BUSINESS_DESIGNED_PAGES.has("0-421"));
+const gallery = createBusinessTemplate({ ...content, businessName: "온결 인테리어", headline: "오래 살아도 편한 집을 만듭니다", cta: "상담 신청하기" }, "0-421");
+gallery.images["0:875/0"] = "https://example.com/work-1.jpg"; gallery.images["0:876/0"] = "https://example.com/work-2.jpg";
+gallery.hidden = gallery.hidden.filter(id => !["0:875/0", "0:876/0"].includes(id));
+const galleryHtml = render(gallery);
+assert.ok(galleryHtml.indexOf(">온결 인테리어<") < galleryHtml.indexOf("<h1") && galleryHtml.includes('data-bw-btn="0:1101"'));
+assert.match(galleryHtml, /<h1[^>]*>온결 인테리어<\/h1><p[^>]*>오래 살아도 편한 집을 만듭니다<\/p><button[^>]*data-bw-btn="0:1090"/);
+for (const label of ["작업 사례", "이런 일을 해요", "찾아오시는 길", "운영 시간", "오시는 길", "온결 인테리어에 문의해 보세요"]) assert.ok(galleryHtml.includes(label), label);
+assert.ok(!/Brainwave|Download|Starter|Unlimited|Isaac|Team Members|\$|Company|Careers|Privacy Policy|©/.test(galleryHtml), "no raw kit copy");
+assert.equal(count(galleryHtml, 'data-bw-btn="0:1090"'), 2, "closing repeats the first-screen button");
+assert.equal(count(galleryHtml, 'aria-label="크게 보기"'), 2, "each work photo opens large on the public page");
+assert.ok(!render(gallery, () => {}).includes("크게 보기"), "editor taps change the photo instead");
+assert.ok(!galleryHtml.includes("손님 후기"), "reviews stay hidden until the owner writes real ones");
+assert.equal(gallery.images["0:616/0"], "", "review photos are never copied from the hero");
+gallery.hidden = gallery.hidden.filter(id => id !== "0:611");
+const reviewEditor = render(gallery, () => {});
+assert.ok(reviewEditor.includes("실제 손님이 남긴 후기를 적어 주세요") && reviewEditor.includes("손님 이름"));
+assert.ok(!render(gallery).includes("손님 후기"), "empty reviews never show on the public page");
+assert.ok(restorableSections("0-421").includes("0:611"));
 // 공개 페이지: 넣어 둔 연락처로 휴대폰 아래 고정 버튼(전화·카톡), 아무것도 없으면 없음
 // next/font 은 Next 빌드에서만 동작한다 — 테스트에서는 빈 글꼴로 바꿔 끼운다
 const NodeModule = require("node:module") as { _load: (name: string, ...rest: unknown[]) => unknown };
@@ -167,4 +187,4 @@ assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "muna
 const footerHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: withContact }));
 assert.ok(footerHtml.includes("전화 010-1234-5678") && !footerHtml.includes("등록 전"));
 assert.ok(renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...withContact, pageMode: "transaction" as const } })).includes("대표자 등록 전"));
-console.log(JSON.stringify({ passed: 62 }));
+console.log(JSON.stringify({ passed: 76 }));
