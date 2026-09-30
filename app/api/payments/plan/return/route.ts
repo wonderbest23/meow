@@ -26,7 +26,7 @@ export async function POST(request: Request) {
   }
   const order = await getPlanOrder(orderId).catch(() => null);
   if (!order || !/^\d+$/.test(amount) || Number(amount) !== order.amount) return redirect(request, { status: "fail", reason: "주문 정보를 확인하지 못했습니다." });
-  const context = { orderId, ...(order.planId ? { planId: order.planId } : {}), ...(order.planType ? { planType: order.planType } : {}), product: order.product };
+  const context = { orderId, ...(order.planId ? { planId: order.planId } : {}), ...(order.planType ? { planType: order.planType } : {}), product: order.product, ...(order.domain ? { domain: order.domain } : {}) };
   const result = await reconcileNicepayOrder({ orderId, tid, allowApproval: true }).catch(() => ({ status: "pending" as const }));
   return redirect(request, { ...context, ...result });
 }

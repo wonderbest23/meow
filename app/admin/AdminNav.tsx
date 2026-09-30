@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Banknote, Coins, Headphones, LayoutDashboard, LogOut, PanelsTopLeft, RotateCcw, Settings } from "lucide-react";
+import { Activity, Banknote, Coins, Globe2, Headphones, LayoutDashboard, LogOut, PanelsTopLeft, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import WorkspaceBrand from "../../components/workspace-brand";
@@ -26,6 +26,7 @@ export default function AdminNav({ title, subtitle }: { title: string; subtitle?
     { href: "/admin/ai-cost", label: "AI 비용", Icon: Coins },
     { href: "/admin/support", label: "1:1 상담", Icon: Headphones },
     { href: "/admin/payments", label: "입금 주문", Icon: Banknote },
+    { href: "/admin/domains", label: "도메인 구매", Icon: Globe2 },
     { href: "/admin/refunds", label: "환불", Icon: RotateCcw },
     { href: "/admin/legal", label: "운영 설정", Icon: Settings },
     { href: "/admin/homepage", label: "홈 문구", Icon: PanelsTopLeft },

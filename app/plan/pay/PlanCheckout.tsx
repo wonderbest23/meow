@@ -8,7 +8,8 @@ import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
-import { BUNDLE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_COUNT } from "../../../lib/payments/domain";
+import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_COUNT } from "../../../lib/payments/domain";
+import { normalizePurchaseDomain } from "../../../lib/landing/domain-purchase";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -24,6 +25,7 @@ const SUPPLY: Record<string, string> = {
   regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해집니다.`,
   bundle: "결제가 승인되면 바로 이 문서의 전체 섹션과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작됩니다.",
   domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작됩니다.",
+  "domain-purchase": "결제가 승인되면 1년 호스팅 기간이 시작되고, 영업일 1~2일 안에 이용자 명의로 도메인을 등록해 연결 준비를 마칩니다. 등록에 필요한 정보는 계정 이메일로 요청할 수 있습니다.",
   tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 사용할 수 있습니다.",
 };
 
@@ -51,13 +53,17 @@ export default function PlanCheckout() {
   const isRegen = params.get("product") === "regen";
   /* 홈페이지 부가 상품 — 도메인 연결+호스팅 1년 / AI 수정 토큰. 둘 다 홈페이지가 열린 뒤에만 */
   const isDomain = params.get("product") === "domain";
+  /* 도메인 구매 대행 — 살 주소(domain)가 함께 온다 */
+  const isDomainPurchase = params.get("product") === "domain-purchase";
+  const purchaseDomain = isDomainPurchase ? normalizePurchaseDomain(params.get("domain") ?? "") : null;
   const isTokens = params.get("product") === "tokens";
   /* 주력 묶음 — 계획서 + 홈페이지를 한 번에 연다 */
   const isBundle = params.get("product") === "bundle";
-  const product = isRegen ? "regen" : isHomepage ? "homepage" : isDomain ? "domain" : isTokens ? "tokens" : isBundle ? "bundle" : "plan";
+  const product = isRegen ? "regen" : isHomepage ? "homepage" : isDomain ? "domain" : isDomainPurchase ? "domain-purchase" : isTokens ? "tokens" : isBundle ? "bundle" : "plan";
   const COPY: Record<string, { title: string; desc: string; price: number; unit: string }> = {
     bundle: { title: "사업계획서 + 홈페이지 함께 열기", desc: `이 문서 전체 섹션과 PDF·Word 내려받기, 그리고 계획서로 만든 홈페이지의 수정·공개가 함께 열립니다. 따로 사면 ${(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원이에요.`, price: BUNDLE_PRODUCT_AMOUNT, unit: "문서 1부 + 홈페이지 1개 · 1회 결제" },
-    domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결합니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.", price: 59000, unit: "홈페이지 1개 · 1년" },
+    domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결합니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.", price: DOMAIN_PRODUCT_AMOUNT, unit: "홈페이지 1개 · 1년" },
+    "domain-purchase": { title: purchaseDomain ? `${purchaseDomain} 사서 연결하기` : "도메인 구매하고 연결하기", desc: `원하는 주소를 이용자 명의로 등록하고 이 홈페이지에 연결합니다. 첫해 등록비(${DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원)와 1년 동안의 호스팅·보안 인증서·연결 관리가 포함됩니다.`, price: DOMAIN_PURCHASE_PRODUCT_AMOUNT, unit: "주소 1개 · 1년" },
     tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’ 처럼 말하면 AI 가 페이지 글을 고칩니다. 20만 토큰은 페이지 전체 고치기 25회 안팎입니다.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
   };
   const extra = COPY[product];
@@ -105,7 +111,7 @@ export default function PlanCheckout() {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}), terms: agreements }),
+        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}), ...(purchaseDomain ? { domain: purchaseDomain } : {}), terms: agreements }),
       });
       const data = (await res.json()) as {
         clientId?: string; sdkUrl?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
@@ -166,6 +172,19 @@ export default function PlanCheckout() {
    */
   /* 도메인·토큰·다시 생성은 '이미 샀다'는 개념이 없다(서버가 중복·갱신 시점을 따로 판정) */
   const alreadyOwned = extra || isRegen ? false : isHomepage ? homepageInfo?.editable === true : info?.paid === true;
+
+  if (isDomainPurchase && !purchaseDomain) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <h1 className={styles.title}>살 주소를 먼저 골라 주세요</h1>
+          <p className={styles.desc}>홈페이지 화면의 ‘회사 이름으로 된 주소 쓰기’에서 원하는 주소(.com·.kr·.co.kr)가 비어 있는지 확인한 뒤 결제할 수 있어요.</p>
+          <Link href="/plan/homepage" className={styles.primary}>홈페이지로 돌아가기</Link>
+        </div>
+      </div>
+    );
+  }
 
   if (alreadyOwned) {
     return (
@@ -241,6 +260,8 @@ export default function PlanCheckout() {
               <label className={styles.noRefund}><input type="checkbox" checked={agreements.personalizedDigitalNoRefund} onChange={() => toggle("personalizedDigitalNoRefund")} /><span>
                 {product === "regen" ? (
                   <><strong>추가 횟수 환불 기준에 동의</strong><small>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</small></>
+                ) : product === "domain-purchase" ? (
+                  <><strong>도메인 구매·연결 환불 기준에 동의</strong><small>도메인을 등록하기 전에는 전액 환불합니다. 등록한 뒤에는 첫해 등록비 {DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원을 뺀 {DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 연결·호스팅 환불 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다. 등록한 도메인은 이용자 명의이며, 환불하거나 해지해도 도메인은 이용자에게 남습니다. 등록을 위해 등록 명의자 이름·이메일·연락처·주소를 도메인 등록기관(㈜가비아 등)에 제공하는 데 동의합니다.</small></>
                 ) : product === "domain" ? (
                   <><strong>도메인 연결 환불 기준에 동의</strong><small>연결을 완료하기 전이나 연결 완료 후 7일 이내에는 전액 환불하고, 그 이후에는 남은 개월 수만큼 월할로 환불합니다(사용한 달은 한 달로 계산, 수수료 없음). 가비아 등에서 직접 구매한 도메인 등록비는 환불 대상이 아닙니다.</small></>
                 ) : product === "tokens" ? (
