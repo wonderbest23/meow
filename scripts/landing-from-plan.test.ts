@@ -167,7 +167,9 @@ assert.match(withIdentity.heroImageUrl, /1648462908676/, "cafe name picks the ca
 const cafeImages = Object.values(withIdentity.pageData?.brainwave?.images ?? {});
 assert.ok(new Set(cafeImages.filter(Boolean)).size >= 3, "cards, band and closing get their own photos, not the hero copied everywhere");
 // 알아볼 수 없는 사업은 사진을 깔지 않는다(템플릿 기본 사진 금지)
-const unknownBusiness = { planTitle: "온결", business: { name: "온결", industry: "광고 대행업" }, answers: { "market/products": { main_offer: "기업 소개서 제작" }, "market/segments": { first_target: "중소 제조사" } } };
+const unknownBusiness = { planTitle: "온결", business: { name: "온결", industry: "무역업" }, answers: { "market/products": { main_offer: "원자재 수입" }, "market/segments": { first_target: "중소 제조사" } } };
+// 광고 대행처럼 사무실에서 하는 일은 사무·전문직 사진
+assert.match(landingDraftFromPlan({ ...unknownBusiness, business: { ...unknownBusiness.business, industry: "광고 대행업" } }).heroImageUrl, /1600880292203/);
 assert.equal(landingDraftFromPlan(unknownBusiness).heroImageUrl, "");
 assert.equal(landingDraftFromPlan(unknownBusiness).pageData?.businessContent?.image, "");
 assert.match(landingDraftFromPlan({ ...unknownBusiness, business: { ...unknownBusiness.business, industry: "커피 전문점" } }).heroImageUrl, /unsplash/);
