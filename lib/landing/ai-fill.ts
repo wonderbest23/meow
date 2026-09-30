@@ -171,10 +171,11 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   const writtenImages = Object.fromEntries(Object.entries(nextImages).filter(([id, url]) => url !== bw.images[id]));
   /*
    * 채운 칸이 든 섹션을 연다 — 기본으로 숨겨 둔 것(기준에서도 숨김)이거나, 숨겨진 채로
-   * 글이 하나도 없던 것(예전 배치에서 비어 있어 숨긴 섹션)만. 사장님이 글을 넣고 숨긴 섹션은 그대로 둔다.
+   * 사장님 글이 하나도 없던 것(비었거나 자동 문구·지난번 AI 글뿐인 섹션)만.
+   * 사장님이 글을 넣고 숨긴 섹션은 그대로 둔다.
    */
   const sectionEmpty = (id: string) => (businessTemplateManifest[bw.page].sections.find((section) => section.id === id)?.nodes ?? [])
-    .every((node) => !bw.texts[node]?.trim() || defaults.has(bw.texts[node].trim()));
+    .every((node) => untouched(bw.texts[node], node, baseline.texts[node]));
   const hidden = bw.hidden.filter((id) => !(show.includes(id) && (baseline.hidden.includes(id) || sectionEmpty(id))));
   // 채운 카드 자리 중 글이 들어간 것은 연다(기준에서 빈 사실 칸이라 숨겨 둔 라벨·값)
   const opened = new Set(Object.entries(written).filter(([, value]) => value).map(([id]) => id));

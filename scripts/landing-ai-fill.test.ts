@@ -126,6 +126,10 @@ legacyBw.texts["0:1111"] = "문앞반찬 문의";
 const legacyFilled = applyHomepageCopy(legacy, copy!).pageData!.brainwave!;
 assert.ok(!legacyFilled.hidden.includes("0:1329"), "an empty section hidden by the old layout opens");
 assert.equal(legacyFilled.texts["0:1111"], copy!.closing, "old automatic closing text is replaced");
+// 지난번 AI 글만 든 채 숨겨진 섹션도 연다(운영: 첫 채우기 때 열지 못한 예전 홈페이지를 다시 채울 때)
+const refill = structuredClone(applyHomepageCopy(legacy, copy!));
+refill.pageData!.brainwave!.hidden.push("0:1329");
+assert.ok(!applyHomepageCopy(refill, copy!).pageData!.brainwave!.hidden.includes("0:1329"));
 // 사장님이 글을 넣고 숨긴 섹션은 그대로 숨김
 const ownerHidden = structuredClone(legacy);
 ownerHidden.pageData!.brainwave!.texts["0:1333"] = "사장님 카드";
