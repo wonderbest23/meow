@@ -10,6 +10,7 @@ import {
   landingPublicationIssues,
   landingTemplateOptions,
   romanizeHangul,
+  privacyPolicyWithContact,
 } from "../lib/landing/domain";
 import { normalizeLandingHostname } from "../lib/landing/custom-domain";
 import {
@@ -199,3 +200,11 @@ assert.match(koreanSlug("빵"), /^ppang-[0-9a-f]{4}$/);
 assert.equal(koreanSlug("Sunrise Bakery"), "sunrise-bakery", "Latin names keep their plain slug");
 assert.match(koreanSlug("☕"), /^launch-[0-9a-f]{8}$/);
 for (const title of ["카페피드", "아주아주아주아주아주아주아주아주아주아주긴한글상호명입니다", "한빛싱크 Studio"]) landingDraftSchema.shape.slug.parse(koreanSlug(title));
+
+// 개인정보처리방침 본문의 문의 줄은 문의처 칸을 따른다(이메일로 만든 뒤 전화번호로 바꿔도 본문에 이메일이 남지 않게)
+{
+  const policy = "1. 수집 항목\n6. 개인정보 문의: owner@example.com\n7. 처리 위탁";
+  assert.equal(privacyPolicyWithContact(policy, "010-1234-5678"), "1. 수집 항목\n6. 개인정보 문의: 010-1234-5678\n7. 처리 위탁");
+  assert.equal(privacyPolicyWithContact(policy, "  "), policy, "an empty contact keeps the text");
+  assert.equal(privacyPolicyWithContact("직접 쓴 방침", "010-1234-5678"), "직접 쓴 방침", "custom text without the line is untouched");
+}
