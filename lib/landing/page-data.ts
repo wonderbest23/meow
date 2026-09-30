@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { LANDING_THEME_IDS } from "./themes";
 import { kitForTemplate, type LandingKitId } from "./kits";
 import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "./brainwave/catalog";
 import { businessContentSchema, businessTemplateManifest, createBusinessTemplate, visitInfoTexts, type BusinessContent } from "./brainwave/business-content";
@@ -92,6 +93,8 @@ export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
 
 export const landingPageDataSchema = z.object({
   brainwave: brainwaveDataSchema.optional(),
+  /** 분위기(색 조합) — 없으면 디자인 원래 색. lib/landing/themes.ts */
+  theme: z.enum(LANDING_THEME_IDS).optional(),
   businessContent: businessContentSchema.optional(),
   /*
    * AI 가 계획서로 채운 글·사진(마지막 한 번). 다시 채울 때 이 값과 같은 자리는

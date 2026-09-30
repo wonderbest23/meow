@@ -1,12 +1,13 @@
 /* 03 Coworking(동네 가게) — Figma 값(글자 크기·색·간격)을 흐름 배치로 옮긴 것. 음수 자간은 쓰지 않는다. */
 .page {
-  --ink: #161c2d;
-  --accent: #473bf0;
-  --mint: #68d585;
-  --soft: #f4f7fa;
+  /* 분위기(lib/landing/themes.ts)를 고르면 --t-* 로 바뀐다 — 없으면 원래 색 */
+  --ink: var(--t-ink, #161c2d);
+  --accent: var(--t-accent, #473bf0);
+  --mint: var(--t-highlight, #68d585);
+  --soft: var(--t-soft, #f4f7fa);
   --line: #e7e9ed;
   color: var(--ink);
-  background: #fff;
+  background: var(--t-paper, #fff);
   font-family: var(--bw-latin), Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   letter-spacing: 0;
   text-align: left;

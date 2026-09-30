@@ -2,6 +2,7 @@ import { createLandingDraft, heroImageForSector, type LandingDraft } from "./dom
 import { createLandingPageData } from "./page-data";
 import { applyPhotoSet, photoSetFor } from "./photo-library";
 import { designPageForSector } from "./brainwave/catalog";
+import { themeForSector } from "./themes";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 
 /*
@@ -227,6 +228,9 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
 
   const pageData = createLandingPageData({ ...draft, customer: clamp(firstTarget, 600), pageHeadline: identityHeadline ? headline : undefined, designPage: designPageForSector(`${industry} ${businessName} ${mainOffer}`) }, draft.templateId);
   if (photos && pageData.brainwave) pageData.brainwave = { ...pageData.brainwave, images: applyPhotoSet(pageData.brainwave.images, pageData.brainwave.page, photos) };
+  // 업종에 맞는 처음 분위기(카페는 따뜻한, 병원은 산뜻한…) — 못 알아보면 디자인 원래 색
+  const theme = themeForSector(`${industry} ${businessName} ${mainOffer}`);
+  if (theme && pageData.brainwave) pageData.theme = theme;
   return { ...draft, pageData };
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowRight, Check } from "lucide-react";
+import { themeStyle } from "../lib/landing/themes";
 import type { ComponentType, CSSProperties, ReactNode } from "react";
 import type { Config, Slot } from "@puckeditor/core";
 import type { LandingPageData } from "../lib/landing/page-data";
@@ -998,7 +999,10 @@ function withSlotRenderers(props: Record<string, unknown>) {
 export function LandingBlocksRenderer({ data, preloaded }: { data: LandingPageData; preloaded?: BrainwavePageData | null }) {
   /* Brainwave.io 킷 페이지 — 노드 그대로, 글·사진만 바꿔 끼운 채 그린다 */
   if (data.brainwave) {
-    return <BrainwavePage pageId={data.brainwave.page} overrides={data.brainwave} preloaded={preloaded} />;
+    const page = <BrainwavePage pageId={data.brainwave.page} overrides={data.brainwave} preloaded={preloaded} />;
+    // 분위기(색 조합) — 디자인이 읽는 색 변수를 감싸서 내려준다
+    const style = themeStyle(data.theme);
+    return style ? <div className="landing-theme" style={style}>{page}</div> : page;
   }
   /* 편집기에서 고른 강조색은 root 에 있다 — 공개 화면에도 같은 색이 걸려야 한다 */
   return (

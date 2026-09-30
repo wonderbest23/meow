@@ -187,4 +187,9 @@ assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "muna
 const footerHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: withContact }));
 assert.ok(footerHtml.includes("전화 010-1234-5678") && !footerHtml.includes("등록 전"));
 assert.ok(renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...withContact, pageMode: "transaction" as const } })).includes("대표자 등록 전"));
-console.log(JSON.stringify({ passed: 76 }));
+// 분위기: 공개 화면이 디자인을 분위기 색 변수로 감싼다(반찬 → 따뜻한), 기본이면 감싸지 않는다
+const warmHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: publicDraft }));
+assert.equal(publicDraft.pageData?.theme, "warm");
+assert.ok(warmHtml.includes('class="landing-theme"') && warmHtml.includes("--t-accent:#9a5b34"));
+assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...publicDraft, pageData: { ...publicDraft.pageData!, theme: undefined } } })).includes("landing-theme"));
+console.log(JSON.stringify({ passed: 79 }));
