@@ -31,7 +31,7 @@ const prompt = homepageFillPrompt(plan);
 for (const fact of ["문앞반찬", "주 2회 국·반찬 4종", "맞벌이", "59,000원", "건너뛰기"]) assert.ok(prompt.user.includes(fact), fact);
 assert.ok(!prompt.user.includes("비밀 재무"), "financial chapters stay out of homepage copy");
 assert.ok(!prompt.user.includes("비공개 매출"), "sales figures stay out");
-for (const rule of ["해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON"]) assert.ok(prompt.system.includes(rule), rule);
+for (const rule of ["해요체", "계획서에 있는 것만", "후기", "문의 주시면 안내해 드려요", "JSON", "가격 단위", "위약금", "환불 규정은 홈페이지 약관"]) assert.ok(prompt.system.includes(rule), rule);
 const proposal = structuredClone(plan);
 (proposal.answers[COACH_KEY].state as CoachState).fields.find(f => f.key === "price")!.basis = "proposal";
 assert.ok(homepageFillPrompt(proposal).user.includes("AI 제안 가격 — 확정 전"));
@@ -116,5 +116,19 @@ designed.design = {
 };
 const withIdentity = landingDraftFromPlan({ planTitle: plan.title, business: {}, answers: { [COACH_KEY]: { state: designed } } });
 assert.equal(applyHomepageCopy(withIdentity, copy!).pageData!.brainwave!.texts["0:1328"], "사장님이 고른 한 줄");
+
+// 예전에 만든 홈페이지: 카드 섹션이 비어 숨겨져 있고, 마무리 칸에는 예전 자동 문구('○○ 문의')가 남아 있다
+const legacy = structuredClone(created);
+const legacyBw = legacy.pageData!.brainwave!;
+for (const id of ["0:1333", "0:1334", "0:1338", "0:1339", "0:1343", "0:1344"]) legacyBw.texts[id] = "";
+legacyBw.hidden.push("0:1329");
+legacyBw.texts["0:1111"] = "문앞반찬 문의";
+const legacyFilled = applyHomepageCopy(legacy, copy!).pageData!.brainwave!;
+assert.ok(!legacyFilled.hidden.includes("0:1329"), "an empty section hidden by the old layout opens");
+assert.equal(legacyFilled.texts["0:1111"], copy!.closing, "old automatic closing text is replaced");
+// 사장님이 글을 넣고 숨긴 섹션은 그대로 숨김
+const ownerHidden = structuredClone(legacy);
+ownerHidden.pageData!.brainwave!.texts["0:1333"] = "사장님 카드";
+assert.ok(applyHomepageCopy(ownerHidden, copy!).pageData!.brainwave!.hidden.includes("0:1329"));
 
 console.log("landing-ai-fill: prompt, normalize, shop and consult fill, owner edits kept, identity kept");

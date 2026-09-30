@@ -1,9 +1,10 @@
 import { z } from "zod";
 import type { LandingDraft } from "./domain";
 import { landingPageDataSchema, type LandingPageData } from "./page-data";
-import { BUSINESS_TEMPLATE_PROFILES, businessTemplateManifest, createBusinessTemplate } from "./brainwave/business-content";
+import { BUSINESS_TEMPLATE_PROFILES, businessTemplateDefaults, businessTemplateManifest, createBusinessTemplate } from "./brainwave/business-content";
 import { applyPhotoSet, photoSetFor } from "./photo-library";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
+import { formatPriceText } from "./from-plan";
 
 /*
  * 계획서로 홈페이지 채우기(AI).
@@ -72,7 +73,7 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
     field("offer") ? `대표 상품: ${field("offer")!.value}` : "",
     field("customer") ? `주요 고객: ${field("customer")!.value}` : "",
     field("problem") ? `고객이 겪는 문제: ${field("problem")!.value}` : "",
-    price ? `가격: ${price.value}${price.basis === "proposal" ? " (AI 제안 가격 — 확정 전)" : ""}` : "가격: 정하지 않음",
+    price ? `가격: ${formatPriceText(price.value)}${price.basis === "proposal" ? " (AI 제안 가격 — 확정 전)" : ""}` : "가격: 정하지 않음",
     field("channel") ? `알리는 곳: ${field("channel")!.value}` : "",
     design?.startingPlan ? `시작 범위: ${design.startingPlan.scope}` : "",
     design?.startingPlan?.notIncluded.length ? `이번에 하지 않는 것: ${design.startingPlan.notIncluded.join(" / ")}` : "",
@@ -93,6 +94,8 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
     "- 사실은 계획서에 있는 것만 씁니다. 숫자(가격·횟수·개수·시간)도 계획서에 있는 것만. 후기, 고객 수, 만족도, 수상, '1위·최고·유일' 같은 말은 쓰지 않습니다.",
     "- 아직 정하지 않은 것(가격 단위, 배송 요일, 영업시간 등)은 단정하지 말고 '문의 주시면 안내해 드려요'처럼 씁니다.",
     "- '이번에 하지 않는 것'은 약속하지 않습니다.",
+    "- 가격 단위(1회·주·월)가 [사업 정보]의 가격에 적혀 있지 않으면 단위를 붙이지 말고, 가격 카드에 '구독 단위는 문의 주시면 안내해 드려요'라고 씁니다.",
+    "- 배송비·위약금·환불·청약철회·교환 같은 거래 조건과 '무료·없음·포함' 같은 말은 [사업 정보]나 계획서에 확정된 문장으로 있을 때만 씁니다. 계획서에 '(제안)'으로만 있으면 쓰지 않습니다. 환불 규정은 홈페이지 약관에서 따로 안내하므로 카드에 쓰지 않습니다.",
     "- cards 는 4~6장: 상품 구성·손님이 얻는 것·약속(건너뛰기·보상 같은 이용 기준)을 담고, 가격이 있으면 가격 카드를 꼭 1장 넣습니다(계획서의 금액 그대로, 쉼표 포함).",
     "- process 는 손님 입장의 이용 순서 2~4단계(신청 → 받기처럼). 각 단계는 '① 무엇 — 설명' 한 줄.",
     "- tagline 은 사업 이름 아래 한 줄 소개(28자 안팎). 확정한 한 줄 소개가 있으면 그 뜻을 살립니다.",
@@ -147,7 +150,13 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   if (!data || !bw || !data.businessContent || !businessTemplateManifest[bw.page]) return draft;
   const baseline = createBusinessTemplate(data.businessContent, bw.page);
   const last = data.aiFill;
-  const untouched = (current: string | undefined, id: string, base: string | undefined) => !current || current === base || current === last?.texts[id];
+  /*
+   * 손대지 않은 자리: 비었거나, 지금 템플릿의 기준 글이거나, 사업 정보로 자동으로 들어간 문구
+   * (예전 배치의 '○○ 문의' 같은 글 포함)이거나, 지난번 AI 글. 그 밖의 글은 사장님이 쓴 것이다.
+   */
+  const defaults = businessTemplateDefaults(data.businessContent);
+  const untouched = (current: string | undefined, id: string, base: string | undefined) =>
+    !current?.trim() || current === base || defaults.has(current.trim()) || current === last?.texts[id];
   const { texts, show } = copyNodes(bw.page, copy, Boolean(data.businessContent.headline?.trim()));
   const nextTexts = { ...bw.texts };
   const written: Record<string, string> = {};
@@ -160,8 +169,13 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   const photos = photoSetFor(`${options.industry ?? ""} ${data.businessContent.businessName} ${data.businessContent.offer}`);
   const nextImages = photos ? applyPhotoSet(bw.images, bw.page, photos) : bw.images;
   const writtenImages = Object.fromEntries(Object.entries(nextImages).filter(([id, url]) => url !== bw.images[id]));
-  // 채운 칸이 든 섹션: 기본으로 숨겨 둔 것(기준에서도 숨김)만 연다
-  const hidden = bw.hidden.filter((id) => !(show.includes(id) && baseline.hidden.includes(id)));
+  /*
+   * 채운 칸이 든 섹션을 연다 — 기본으로 숨겨 둔 것(기준에서도 숨김)이거나, 숨겨진 채로
+   * 글이 하나도 없던 것(예전 배치에서 비어 있어 숨긴 섹션)만. 사장님이 글을 넣고 숨긴 섹션은 그대로 둔다.
+   */
+  const sectionEmpty = (id: string) => (businessTemplateManifest[bw.page].sections.find((section) => section.id === id)?.nodes ?? [])
+    .every((node) => !bw.texts[node]?.trim() || defaults.has(bw.texts[node].trim()));
+  const hidden = bw.hidden.filter((id) => !(show.includes(id) && (baseline.hidden.includes(id) || sectionEmpty(id))));
   // 채운 카드 자리 중 글이 들어간 것은 연다(기준에서 빈 사실 칸이라 숨겨 둔 라벨·값)
   const opened = new Set(Object.entries(written).filter(([, value]) => value).map(([id]) => id));
   const nextHidden = hidden.filter((id) => !opened.has(id));

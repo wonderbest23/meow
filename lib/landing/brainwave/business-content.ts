@@ -104,6 +104,21 @@ export const BUSINESS_NODE_STYLES: Record<string, Record<string, string>> = {
 type Manifest = Record<string, { texts: string[]; sections: Array<{ id: string; name: string; nodes: string[]; images: string[]; buttons: Array<{ id: string; texts: string[] }> }> }>;
 export const businessTemplateManifest = manifestJson as Manifest;
 
+/*
+ * 사업 정보로 자동으로 만들어지는 글 전부(예전 템플릿 배치에서 쓰던 문구 포함).
+ * 지금 글이 이 중 하나면 '사장님이 쓴 글'이 아니라 자동 문구다 — AI 채우기가 바꿔도 된다.
+ */
+export function businessTemplateDefaults(content: BusinessContent): Set<string> {
+  const name = content.businessName;
+  const values = [
+    name, content.headline ?? "", content.offer, content.description, content.customer, content.price, content.cta,
+    "이용 안내", "제공 내용", "이용 대상", "가격 안내", "01", "02", "03",
+    `${name} 문의`, `${name}에 문의해 보세요`,
+    [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
+  ];
+  return new Set(values.map((value) => value.trim()).filter(Boolean));
+}
+
 export function createBusinessTemplate(content: BusinessContent, page: string): BrainwaveData {
   const profile = BUSINESS_TEMPLATE_PROFILES[page];
   const manifest = businessTemplateManifest[page];
