@@ -1,4 +1,5 @@
 import { after } from "next/server";
+import { withUsageContext } from "../llm/usage-context";
 import { createHash } from "node:crypto";
 import { readBoundedJson, RequestBodyError } from "../http/bounded-json";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
@@ -101,8 +102,9 @@ export async function intakePost(request: Request, prepare: (request: Request) =
     if (needsAI && intakeBetaSafetyRequired() && !identity.userId) return json({ code: "login_required", login: true, authenticated: false, ownerScope: scope, message: "AI 생성은 로그인 후 이용할 수 있어요. 입력한 내용은 유지되며 로그인하고 이어갈 수 있어요." }, 401);
     const aiAvailable = needsAI && !!resolvePlanningLLMConfig(identity.hash);
     const aiLimited = needsAI && aiAvailable ? await enforceRateLimit("business-intake-ai", request, { key: identity.hash, limit: 24, windowMs: 600_000 }) : null;
-    const result = await saveIntakeCommand(identity.hash, command, { aiAvailable, aiAllowed: !aiLimited });
-    if (result.job) await dispatchIntakeJob({ ownerHash: identity.hash, planId: result.plan.id, jobId: result.job.id });
+    // AI 사용 기록에 사업(계획서)을 붙인다 — 사업별 비용 집계
+    const result = await withUsageContext({ planId: command.planId, ownerHash: identity.hash }, () => saveIntakeCommand(identity.hash, command, { aiAvailable, aiAllowed: !aiLimited }));
+    if (result.job) await withUsageContext({ planId: result.plan.id, ownerHash: identity.hash }, () => dispatchIntakeJob({ ownerHash: identity.hash, planId: result.plan.id, jobId: result.job!.id }));
     return json({ plan: result.snapshot, authenticated: !!identity.userId, ownerScope: scope,
       ...(!aiAvailable && command.action === "message" && result.snapshot.intake.notes.some(note => note.status === "failed") ? { message: "원문은 저장했어요. 자동 정리는 나중에 다시 요청하거나 직접 항목에 입력할 수 있어요" } : {}) }, result.job ? 202 : 200);
   } catch (error) {
