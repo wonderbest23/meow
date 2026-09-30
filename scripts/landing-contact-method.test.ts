@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { applyContactMethod, contactHref, ctaButtons, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, phoneDigits, quickActions } from "../lib/landing/contact-method";
+import { applyContactMethod, contactHref, ctaButtons, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, phoneDigits, quickActions, withContactLinks } from "../lib/landing/contact-method";
+import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { landingDraftFromPlan } from "../lib/landing/from-plan";
 import { landingDraftSchema } from "../lib/landing/domain";
 
@@ -63,4 +64,17 @@ assert.deepEqual(quickActions({ ...DEFAULT_CONTACT, kakaoUrl: "javascript:alert(
 
 // 예전 초안(연락 방법 없음)도 그대로 읽힌다
 assert.equal(landingDraftSchema.parse({ ...draft, contact: undefined }).contact, undefined);
+// 공개 화면: 템플릿을 바꿔 문의 버튼이 '문의 양식'으로 돌아가도 지금 연락 방법(전화)으로 이어진다
+{
+  const switched = structuredClone(draft);
+  switched.businessPhone = "010-1234-5678";
+  switched.contact = { ...DEFAULT_CONTACT, method: "phone" };
+  switched.pageData!.brainwave = createBusinessTemplate(switched.pageData!.businessContent!, "0-2226");
+  switched.pageData!.brainwave.links["0:2233"] = "https://example.com/own";
+  const links = withContactLinks(switched)!.brainwave!.links;
+  assert.equal(links["0:2372"], "tel:01012345678");
+  assert.equal(links["0:2233"], "https://example.com/own", "a link the owner set on one button stays");
+  assert.equal(withContactLinks({ ...switched, contact: DEFAULT_CONTACT })!.brainwave!.links["0:2372"], "contact", "form method leaves the form link");
+  assert.equal(withContactLinks({ ...switched, businessPhone: "", businessContact: "" })!.brainwave!.links["0:2372"], "contact", "no number yet, keep the form");
+}
 console.log("landing-contact-method: phone/sms/kakao/booking links, labels, owner overrides, quick bar, legacy drafts");

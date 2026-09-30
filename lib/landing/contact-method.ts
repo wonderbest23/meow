@@ -130,6 +130,22 @@ export function applyContactMethod<T extends DraftLike>(previous: T, next: T): T
   return { ...next, ctaLabel, pageData: { ...next.pageData, brainwave: { ...bw, links, texts } } } as T;
 }
 
+/**
+ * 공개 화면에서 문의 버튼이 갈 곳 — 링크가 비었거나 '문의 양식'으로 남은 문의 버튼은 지금 연락 방법을 따른다.
+ * 저장된 링크는 연락 방법을 저장할 때 한 번 맞춰지는데, 그 뒤 템플릿을 바꾸면 새 템플릿의 버튼이
+ * 다시 '문의 양식'으로 만들어져 전화 연결이 풀렸다(운영 점검). 그리는 순간에 한 번 더 맞춘다.
+ * 사장님이 버튼 하나를 따로 정해 둔 링크(다른 주소·'none')는 그대로 둔다.
+ */
+export function withContactLinks<T extends DraftLike>(config: T): T["pageData"] {
+  const bw = config.pageData?.brainwave;
+  if (!bw) return config.pageData;
+  const href = contactHref(config.contact ?? DEFAULT_CONTACT, draftPhone(config));
+  if (!href || href === "contact") return config.pageData;
+  const links = { ...bw.links };
+  for (const { button } of ctaButtons(bw.page)) if (links[button] === undefined || links[button] === "contact") links[button] = href;
+  return { ...config.pageData, brainwave: { ...bw, links } };
+}
+
 export type QuickAction = { key: "phone" | "kakao" | "booking" | "store" | "form"; label: string; href: string };
 
 /** 휴대폰 화면 아래 고정 버튼 — 넣어 둔 연락처만, 최대 3개. 하나뿐이면 문의 양식을 곁들인다 */

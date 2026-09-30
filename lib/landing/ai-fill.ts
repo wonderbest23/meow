@@ -31,7 +31,7 @@ export const homepageCopySchema = z.object({
   cta: z.string().max(14),
   /* 동네 가게 디자인 — 계획서에 있는 숫자(정원·시간·횟수)와 메뉴·가격. 없으면 비워 두고 그 칸을 열지 않는다 */
   facts: z.array(z.object({ value: z.string().min(1).max(12), label: z.string().min(1).max(40) })).max(3).default([]),
-  menu: z.object({ title: z.string().max(28), intro: z.string().max(90), items: z.array(z.object({ name: z.string().min(1).max(30), price: z.string().max(24) })).max(3) }).default({ title: "", intro: "", items: [] }),
+  menu: z.object({ title: z.string().max(28), intro: z.string().max(90), items: z.array(z.object({ name: z.string().min(1).max(40), price: z.string().max(24) })).max(3) }).default({ title: "", intro: "", items: [] }),
 });
 export type HomepageCopy = z.infer<typeof homepageCopySchema>;
 
@@ -51,7 +51,7 @@ export function normalizeHomepageCopy(raw: unknown): HomepageCopy | null {
     .filter((fact) => fact.value && fact.label && /\d/.test(fact.value)).slice(0, 3);
   const menu = record(value.menu);
   const items = (Array.isArray(menu.items) ? menu.items : []).map(record)
-    .map((item) => ({ name: clip(item.name, 30), price: clip(item.price, 24) }))
+    .map((item) => ({ name: clip(item.name, 40), price: clip(item.price, 24) }))
     .filter((item) => item.name).slice(0, 3);
   const parsed = homepageCopySchema.safeParse({
     tagline: clip(value.tagline, 48),
@@ -111,10 +111,11 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
     "- 배송비·위약금·환불·청약철회·교환 같은 거래 조건과 '무료·없음·포함' 같은 말은 [사업 정보]나 계획서에 확정된 문장으로 있을 때만 씁니다. 계획서에 '(제안)'으로만 있으면 쓰지 않습니다. 환불 규정은 홈페이지 약관에서 따로 안내하므로 카드에 쓰지 않습니다.",
     "- cards 는 4~6장: 상품 구성·손님이 얻는 것·약속(건너뛰기·보상 같은 이용 기준)을 담고, 가격이 있으면 가격 카드를 꼭 1장 넣습니다(계획서의 금액 그대로, 쉼표 포함).",
     "- process 는 손님 입장의 이용 순서 2~4단계(신청 → 받기처럼). 각 단계는 '① 무엇 — 설명' 한 줄.",
+    "- [사업 정보]의 '알리는 곳'은 사장님이 홍보하는 채널이지 손님이 연락하는 곳이 아닙니다. 신청·문의 단계는 '홈페이지의 문의 버튼으로'처럼 쓰고, 알리는 곳 이름을 연락처로 쓰지 않습니다.",
     "- tagline 은 사업 이름 아래 한 줄 소개(28자 안팎). 확정한 한 줄 소개가 있으면 그 뜻을 살립니다.",
     "- closing 은 페이지 마지막 큰 문장(24자 안팎), closingSub 는 그 아래 한 문장, cta 는 버튼 글(10자 안팎, 예: 구독 문의하기).",
     "- facts 는 손님이 한눈에 볼 숫자 0~3개: value 는 계획서에 적힌 숫자 그대로(예: 4명, 50분, 주 2회), label 은 그 뜻(예: 한 수업 정원). 매출·고객 수·목표·원가 같은 사업 숫자는 넣지 않습니다. 없으면 빈 배열.",
-    "- menu 는 손님이 고르는 메뉴·상품·수업 0~3개와 가격표: name 은 계획서에 있는 상품 이름, price 는 계획서의 금액 그대로(쉼표 포함, 단위가 적혀 있을 때만 단위)이고 금액이 없으면 '문의'. 계획서에 없는 메뉴를 지어내지 않습니다. 없으면 items 를 빈 배열로.",
+    "- menu 는 손님이 고르는 메뉴·상품·수업 0~3개와 가격표: name 은 계획서에 있는 상품 이름을 메뉴판처럼 짧게(20자 안팎, 예: 4인 기구 필라테스 정기권) — 자세한 구성은 intro 나 카드에, price 는 계획서의 금액 그대로(쉼표 포함, 단위가 적혀 있을 때만 단위)이고 금액이 없으면 '문의'. 계획서에 없는 메뉴를 지어내지 않습니다. 없으면 items 를 빈 배열로.",
     "JSON 객체 하나만 출력합니다:",
     '{"tagline":"","cardsTitle":"","cardsIntro":"","cards":[{"title":"","body":""}],"process":{"title":"","steps":[""]},"closing":"","closingSub":"","cta":"","facts":[{"value":"","label":""}],"menu":{"title":"","intro":"","items":[{"name":"","price":""}]}}',
   ].join("\n");
@@ -233,7 +234,8 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   const hero = photos ? next.brainwave!.images[BUSINESS_HERO_SLOT[bw.page] ?? ""] : undefined;
   return {
     ...draft,
-    ...(copy.cta && draft.ctaLabel === "문의하기" ? { ctaLabel: copy.cta } : {}),
+    // 문의 양식 제목·버튼 글 — 기본 글이거나 지난번 AI 버튼 글이면 새 버튼 글로(페이지 버튼과 같게)
+    ...(copy.cta && (draft.ctaLabel === "문의하기" || Object.values(last?.texts ?? {}).includes(draft.ctaLabel)) ? { ctaLabel: copy.cta } : {}),
     ...(hero && !draft.heroImageUrl ? { heroImageUrl: hero } : {}),
     pageData: next,
   };

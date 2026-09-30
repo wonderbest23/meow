@@ -4,7 +4,7 @@ import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "reac
 import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
 import type { BrainwavePageData } from "./brainwave-page";
 import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
-import { draftPhone, quickActions } from "../lib/landing/contact-method";
+import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";
 import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 
@@ -123,7 +123,7 @@ export function PublicLandingClient({
         <button onClick={moveToForm}>{config.ctaLabel}</button>
       </nav>}
 
-      {config.pageData ? <LandingBlocksRenderer data={config.pageData} preloaded={brainwavePage} /> : <><section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
+      {config.pageData ? <LandingBlocksRenderer data={withContactLinks(config) ?? config.pageData} preloaded={brainwavePage} /> : <><section className={`public-landing-hero ${config.heroImageUrl ? "with-image" : "without-image"}`} style={heroStyle} aria-label={config.heroImageAlt}>
         <div className="public-landing-hero-copy">
           <span>{config.heroLabel}</span>
           <h1>{config.headline}</h1>

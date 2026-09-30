@@ -8,7 +8,7 @@ import { privacyPolicyWithContact, type LandingDraft, type LandingLeadRecord, ty
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
-import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
+import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave/business-content";
 import { applyBusinessContent } from "../lib/landing/page-data";
 import { HomepageSourceUpdate } from "./homepage-source-update";
 import { HomepageLeadNotification, useHomepageLeadNotifications } from "./homepage-lead-notifications";
@@ -124,7 +124,11 @@ export function HomepageKitPanel({
     if (!draft.pageData || !bw || busy) return;
     if (id === bw.page) { setPicking(false); return; }
     const businessContent = { ...contentSource(), businessName: draft.businessName.trim() || "내 사업" };
-    onChange({ ...draft, pageData: { ...draft.pageData, businessContent, brainwave: createBusinessTemplate(businessContent, id), content: [] } });
+    // 새 템플릿의 문의 버튼도 지금 연락 방법으로(전화면 전화) — 새로 만든 버튼은 '문의 양식'에서 시작한다
+    const brainwave = createBusinessTemplate(businessContent, id);
+    Object.assign(brainwave.texts, visitInfoTexts(id, { address: draft.businessAddress, hours: draft.openHours }));
+    const next = { ...draft, pageData: { ...draft.pageData, businessContent, brainwave, content: [] } };
+    onChange(applyContactMethod({ ...next, contact: DEFAULT_CONTACT }, next));
     setPicking(false);
   };
 
