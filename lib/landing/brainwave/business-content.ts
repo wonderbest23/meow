@@ -15,7 +15,7 @@ export const businessContentSchema = z.object({
 });
 export type BusinessContent = z.infer<typeof businessContentSchema>;
 type Field = keyof BusinessContent | "headline" | "detailsTitle" | "contactTitle" | "contactInvite" | "contactDescription" | "offerLabel" | "customerLabel" | "priceLabel" | "one" | "two" | "three"
-  | "visitTitle" | "address" | "hoursLabel" | "hours";
+  | "visitTitle" | "address" | "hoursLabel" | "hours" | "addressLabel" | "worksTitle" | "servicesTitle";
 type Value = Partial<Record<Field, string>>;
 type Profile = {
   sections: string[];
@@ -119,12 +119,32 @@ export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
     fields: { "0:1947": "businessName", "0:1944": "headline", "0:1945": "description", "I0:1943;0:4703": "cta", "I0:1949;0:4613": "cta", "0:1462": "offerLabel", "0:1463": "offer", "0:1470": "customerLabel", "0:1471": "customer", "0:1478": "priceLabel", "0:1479": "price" },
     facts: [{ label: "0:1462", value: "0:1463" }, { label: "0:1470", value: "0:1471" }, { label: "0:1478", value: "0:1479" }],
   },
+  /*
+   * 갤러리형(07 Mobile App 킷) — 인테리어·부동산·사진·웨딩·숙박처럼 사진이 곧 실력인 업종.
+   *   머리글(문의 버튼) → 첫 화면(큰 사진 위 이름·소개) → 작업 사례(사진 격자, 누르면 크게)
+   *   → 이런 일을 해요(0:558) → 작업 과정(0:743) → 패키지·가격(0:461) → 손님 후기(0:611)
+   *   → 공간 안내·오시는 길(0:892) → 마무리(맨 아래 0:422, 첫 화면과 같은 문의 버튼)
+   * 작업 과정·패키지는 AI 채우기가 계획서에서 찾았을 때만, 후기는 사장님이 켜서 직접 적는다.
+   */
   "0-421": {
-    sections: ["0:1098", "0:968", "0:743"], brand: "0:1099", headline: "0:1091", description: "0:1092", button: "I0:1090;0:4557",
-    fields: { "0:1099": "businessName", "0:1091": "headline", "0:1092": "description", "I0:1090;0:4557": "cta", "I0:1101;0:4613": "cta", "0:745": "detailsTitle", "0:746": "offer", "0:754": "offerLabel", "0:753": "offer", "0:760": "customerLabel", "0:759": "customer", "0:766": "priceLabel", "0:765": "price", "0:752": "one", "0:758": "two", "0:764": "three" },
-    facts: [{ label: "0:754", value: "0:753" }, { label: "0:760", value: "0:759" }, { label: "0:766", value: "0:765" }],
-    hide: ["0:1096", "0:1097"],
+    sections: ["0:1098", "0:968", "0:767", "0:558", "0:892", "0:422"], brand: "0:1099", headline: "0:1091", description: "0:1092", button: "I0:1090;0:4557",
+    fields: {
+      "0:1099": "businessName", "0:1091": "headline", "0:1092": "description", "I0:1090;0:4557": "cta", "I0:1101;0:4613": "cta",
+      "0:890": "worksTitle", "0:609/0": "servicesTitle",
+      "0:565": "offerLabel", "0:566": "offer", "0:571": "customerLabel", "0:572": "customer", "0:577": "priceLabel", "0:578": "price",
+      "0:900": "visitTitle", "0:896": "addressLabel", "0:895": "address", "0:899": "hoursLabel", "0:898": "hours",
+      "0:436": "contactInvite", "I0:535;0:4557": "cta", "I0:557;0:4557": "cta",
+    },
+    facts: [{ label: "0:565", value: "0:566" }, { label: "0:571", value: "0:572" }, { label: "0:577", value: "0:578" }],
+    hide: ["0:1100", "0:1094", "0:1083/0/0", "0:1096/0/0", "0:1097/0/0", "0:891", "0:885", "0:886", "0:888", "0:889", "0:609/1", "0:583", "0:584", "0:591", "0:592", "0:601", "0:602",
+      "0:901", "0:961", "0:962", "0:964/0/0", "0:965/0/0", "0:966/0/0", "0:967/0/0",
+      "0:424", "0:425/0", "0:425/1", "0:425/2", "0:425/3", "0:427", "0:428/0", "0:428/1", "0:428/2", "0:428/3", "0:428/4", "0:430", "0:431/0", "0:431/1", "0:431/2", "0:457", "0:435/0/0",
+      "0:517", "0:521", "0:525", "0:529", "0:533", "0:534/0", "0:539", "0:543", "0:547", "0:551", "0:555", "0:556/0", "0:630"],
+    optional: ["0:611", "0:743", "0:461"],
+    labels: { visitTitle: "찾아오시는 길", hoursLabel: "운영 시간" },
+    ownerPhotos: ["0:616/0", "0:621/0", "0:626/0"],
   },
+
 };
 
 export const BUSINESS_TEMPLATE_IDS = Object.keys(BUSINESS_TEMPLATE_PROFILES);
@@ -132,7 +152,7 @@ export const BUSINESS_TEMPLATE_IDS = Object.keys(BUSINESS_TEMPLATE_PROFILES);
  * Figma 디자인을 흐름 배치로 옮겨 둔 템플릿. 이 페이지들은 글 길이·사진과 상관없이
  * 늘 그 디자인으로 그린다(components/brainwave-business-*.tsx).
  */
-export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102", "0-2226", "0-2385"]);
+export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102", "0-2226", "0-2385", "0-421"]);
 
 /** 편집기의 '숨긴 섹션 되살리기'로 켤 수 있는 섹션 — 기본으로 보이는 섹션과 켜서 쓰는 섹션 */
 export function restorableSections(page: string): string[] {
@@ -161,7 +181,7 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
   const values = [
     name, content.headline ?? "", content.offer, content.description, content.customer, content.price, content.cta,
     "이용 안내", "제공 내용", "이용 대상", "가격 안내", "01", "02", "03",
-    "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING,
+    "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING, "찾아오시는 길", "운영 시간", "오시는 길", "작업 사례", "이런 일을 해요",
     `${name} 문의`, `${name}에 문의해 보세요`,
     [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
   ];
@@ -183,6 +203,7 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
     visitTitle: "오시는 길·영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,
+    addressLabel: "오시는 길", worksTitle: "작업 사례", servicesTitle: "이런 일을 해요",
     ...profile.labels,
   };
   // Empty overrides cover every original slot, including sections later restored by the editor.

@@ -132,9 +132,16 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
 }
 
 /*
- * 채운 글을 템플릿 자리에 넣는다 — 디자인을 옮긴 템플릿(0-1102·0-290·0-2226)만 칸을 모두 쓰고,
+ * 채운 글을 템플릿 자리에 넣는다 — 디자인을 옮긴 템플릿(0-1102·0-290·0-2226·0-2385·0-421)만 칸을 모두 쓰고,
  * 나머지는 큰 제목 아래 한 줄 소개만 넣는다.
  */
+/** '① 접수 — 설명' 한 줄을 번호·제목·설명 칸으로 나눈다(대시가 없으면 제목만) */
+function stepTexts(line: string | undefined, index: number, number: string, title: string, body: string): Record<string, string> {
+  const step = line?.replace(/^(?:[\u2460-\u2473]|\d{1,2}[.)])\s*/, "").trim() ?? "";
+  const [head, ...rest] = step.split(/\s+[—–-]\s+/);
+  return { [number]: step ? String(index + 1) : "", [title]: rest.length ? head.trim() : step, [body]: rest.join(" — ").trim() };
+}
+
 function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { texts: Record<string, string>; show: string[] } {
   const texts: Record<string, string> = {};
   const profile = BUSINESS_TEMPLATE_PROFILES[page];
@@ -186,6 +193,29 @@ function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { tex
     if (copy.cta) { texts["I0:2372;0:4557"] = copy.cta; texts["I0:2233;0:4557"] = copy.cta; }
     return { texts, show };
   }
+  if (page === "0-421") {
+    const show = ["0:558", "0:422"];
+    // 이런 일을 해요 — 여섯까지
+    if (copy.cardsTitle) texts["0:609/0"] = copy.cardsTitle;
+    [["0:565", "0:566"], ["0:571", "0:572"], ["0:577", "0:578"], ["0:583", "0:584"], ["0:591", "0:592"], ["0:601", "0:602"]].forEach(([title, body], index) => { texts[title] = copy.cards[index]?.title ?? ""; texts[body] = copy.cards[index]?.body ?? ""; });
+    // 작업 과정 — 제목·설명으로 나눈 세 단계
+    if (copy.process.steps.length >= 2) {
+      texts["0:745"] = copy.process.title;
+      [["0:752", "0:754", "0:753"], ["0:758", "0:760", "0:759"], ["0:764", "0:766", "0:765"]].forEach(([number, title, body], index) => Object.assign(texts, stepTexts(copy.process.steps[index], index, number, title, body)));
+      show.push("0:743");
+    }
+    // 패키지·가격 — 두 개까지(계획서 금액 그대로, 없으면 '문의')
+    if (copy.menu.items.length) {
+      texts["0:512"] = copy.menu.title || "패키지·가격";
+      texts["0:513"] = copy.menu.intro;
+      [["0:531", "0:534/1"], ["0:553", "0:556/1"]].forEach(([name, price], index) => { texts[name] = copy.menu.items[index]?.name ?? ""; texts[price] = copy.menu.items[index]?.price ?? ""; });
+      show.push("0:461");
+    }
+    texts["0:436"] = copy.closing;
+    texts["0:457"] = copy.closingSub;
+    if (copy.cta) for (const id of ["I0:1090;0:4557", "I0:1101;0:4613", "I0:535;0:4557", "I0:557;0:4557"]) texts[id] = copy.cta;
+    return { texts, show };
+  }
   if (page === "0-2385") {
     const show = ["0:2519", "0:2393", "0:2387"];
     // 진료 과목 셋
@@ -200,13 +230,7 @@ function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { tex
     // 진료 순서 — '① 접수 — 설명' 을 제목과 설명으로 나눠 세 단계까지
     if (copy.process.steps.length >= 2) {
       texts["0:2496"] = copy.process.title;
-      [["0:2477", "0:2474", "0:2473"], ["0:2483", "0:2480", "0:2479"], ["0:2489", "0:2486", "0:2485"]].forEach(([number, title, body], index) => {
-        const step = copy.process.steps[index]?.replace(/^(?:[\u2460-\u2473]|\d{1,2}[.)])\s*/, "") ?? "";
-        const [head, ...rest] = step.split(/\s+[—–-]\s+/);
-        texts[number] = step ? String(index + 1) : "";
-        texts[title] = rest.length ? head.trim() : step;
-        texts[body] = rest.join(" — ").trim();
-      });
+      [["0:2477", "0:2474", "0:2473"], ["0:2483", "0:2480", "0:2479"], ["0:2489", "0:2486", "0:2485"]].forEach(([number, title, body], index) => Object.assign(texts, stepTexts(copy.process.steps[index], index, number, title, body)));
       show.push("0:2470");
     }
     // 자주 묻는 질문
@@ -283,4 +307,4 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   };
 }
 
-const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0", "0-2385": "0:2550/0/0" };
+const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0", "0-2385": "0:2550/0/0", "0-421": "0:1082/0/0" };

@@ -177,6 +177,25 @@ assert.equal(cbw.images["0:2550/0/0"], food.hero);
 assert.equal(cbw.images["0:2491/0/0"], food.closing, "steps photo");
 for (const rule of ["의료진 이름·경력·자격은 쓰지 않습니다", "효과·치료 결과"]) assert.ok(homepageFillPrompt(plan).system.includes(rule), rule);
 
+// 갤러리형: 이런 일을 해요(여섯까지)·작업 과정·패키지(두 개)·마무리, 운영 시간·주소는 사업자 정보에서
+const galleryDraft = structuredClone(created);
+galleryDraft.pageData!.brainwave = createBusinessTemplate(galleryDraft.pageData!.businessContent!, "0-421");
+galleryDraft.businessAddress = "경기 성남시 분당구 정자일로 95";
+const gbw = applyHomepageCopy(galleryDraft, { ...localCopy, process: clinicCopy.process }, { industry: "인테리어" }).pageData!.brainwave!;
+assert.equal(gbw.texts["0:565"], "국 1종 + 반찬 4종");
+assert.equal(gbw.texts["0:583"], "가격 59,000원", "fourth card fills the fourth service");
+assert.equal(gbw.texts["0:754"], "접수");
+assert.equal(gbw.texts["0:753"], "전화로 예약해 주세요");
+assert.equal(gbw.texts["0:531"], "4인 기구 필라테스(50분)");
+assert.equal(gbw.texts["0:534/1"], "220,000원");
+assert.equal(gbw.texts["0:553"], "체험 수업", "two packages at most");
+assert.equal(gbw.texts["0:436"], copy!.closing);
+assert.equal(gbw.texts["0:895"], "경기 성남시 분당구 정자일로 95");
+for (const id of ["0:743", "0:461", "0:457", "0:583"]) assert.ok(!gbw.hidden.includes(id), `${id} opened`);
+assert.ok(gbw.hidden.includes("0:611"), "reviews stay hidden — the AI never writes them");
+assert.equal(gbw.images["0:875/0"], food.cards[0]);
+assert.equal(gbw.images["0:958/0/0"], food.band, "studio photo");
+
 // 확정한 한 줄 소개가 있으면 AI 문구로 덮지 않는다
 const designed = structuredClone(coach);
 designed.design = {
