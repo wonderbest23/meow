@@ -40,6 +40,11 @@ export function useKitMotion(enabled: boolean) {
   useEffect(() => {
     const root = ref.current;
     if (!root || !enabled || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    /*
+     * 홈페이지 관리 화면의 미리보기 상자는 스크롤되지 않는 축소 화면이다. 거기서 등장 효과를 켜면
+     * 상자 아래쪽 섹션은 화면에 '들어오는' 일이 없어 빈 색 상자로 남았다 — 미리보기는 정지 화면으로 둔다.
+     */
+    if (root.closest(".hk-preview-body")) return;
     root.dataset.motion = "on";
     const reveals = [...root.querySelectorAll<HTMLElement>("[data-reveal]")];
     let observed = false;
