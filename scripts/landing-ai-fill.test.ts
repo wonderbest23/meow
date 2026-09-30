@@ -130,6 +130,13 @@ assert.equal(legacyFilled.texts["0:1111"], copy!.closing, "old automatic closing
 const refill = structuredClone(applyHomepageCopy(legacy, copy!));
 refill.pageData!.brainwave!.hidden.push("0:1329");
 assert.ok(!applyHomepageCopy(refill, copy!).pageData!.brainwave!.hidden.includes("0:1329"));
+// 사진 없이 만든 페이지는 사진 자리가 숨김으로 저장돼 있다 — 사진을 넣으면서 그 자리를 연다
+const noPhoto = structuredClone(created);
+const noPhotoBw = noPhoto.pageData!.brainwave!;
+for (const id of Object.keys(noPhotoBw.images)) { noPhotoBw.images[id] = ""; noPhotoBw.hidden.push(id); }
+const photoFilled = applyHomepageCopy(noPhoto, copy!, { industry: "유통 · 온라인 판매" }).pageData!.brainwave!;
+assert.equal(photoFilled.images["0:1325/0/0"], food.hero);
+assert.ok(!photoFilled.hidden.includes("0:1325/0/0") && !photoFilled.hidden.includes("0:1332/0/0"), "filled photo slots are shown");
 // 사장님이 글을 넣고 숨긴 섹션은 그대로 숨김
 const ownerHidden = structuredClone(legacy);
 ownerHidden.pageData!.brainwave!.texts["0:1333"] = "사장님 카드";

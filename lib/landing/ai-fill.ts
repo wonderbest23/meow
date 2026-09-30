@@ -178,7 +178,8 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
     .every((node) => untouched(bw.texts[node], node, baseline.texts[node]));
   const hidden = bw.hidden.filter((id) => !(show.includes(id) && (baseline.hidden.includes(id) || sectionEmpty(id))));
   // 채운 카드 자리 중 글이 들어간 것은 연다(기준에서 빈 사실 칸이라 숨겨 둔 라벨·값)
-  const opened = new Set(Object.entries(written).filter(([, value]) => value).map(([id]) => id));
+  // 사진을 넣은 자리도 연다 — 사진 없이 만든 페이지는 사진 자리가 숨김으로 저장돼 있어, 넣어도 안 보였다
+  const opened = new Set([...Object.entries(written).filter(([, value]) => value).map(([id]) => id), ...Object.keys(writtenImages)]);
   const nextHidden = hidden.filter((id) => !opened.has(id));
   const next: LandingPageData = landingPageDataSchema.parse({
     ...data,
