@@ -1,12 +1,13 @@
 /* 02 SaaS 킷 → 병원·클리닉. 킷의 흰 바탕·둥근 카드·여백은 그대로, 색만 신뢰감 있는 청록으로. 음수 자간은 쓰지 않는다. */
 .page {
-  --ink: #10233d;
-  --teal: #0f8f80;
-  --teal-dark: #0b6f63;
-  --soft: #eef7f5;
+  /* 분위기(lib/landing/themes.ts)를 고르면 --t-* 로 바뀐다 — 없으면 원래 색 */
+  --ink: var(--t-ink, #10233d);
+  --teal: var(--t-accent, #0f8f80);
+  --teal-dark: var(--t-strong, #0b6f63);
+  --soft: var(--t-soft, #eef7f5);
   --line: #e2eceb;
   color: var(--ink);
-  background: #fff;
+  background: var(--t-paper, #fff);
   font-family: var(--bw-latin), Pretendard, "Pretendard Variable", "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
   letter-spacing: 0;
   text-align: left;

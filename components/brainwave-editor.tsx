@@ -1,6 +1,7 @@
 "use client";
 
 import { phoneDigits } from "../lib/landing/contact-method";
+import { themeStyle } from "../lib/landing/themes";
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical, LayoutTemplate, List, LoaderCircle, Monitor, Pencil, Plus, Redo2, RotateCcw, Rows3, Save, Smartphone, Sparkles, Trash2, Type, Undo2, X } from "lucide-react";
 import type { LandingPageData } from "../lib/landing/page-data";
@@ -922,7 +923,8 @@ export function BrainwaveEditor({
       ) : null}
       {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
       <div className="bw-editor-stage" inert={persistence.saving} onClick={() => { finishText(); deselect(); }} onContextMenu={onStageContext}>
-        <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view] }}>
+        {/* 분위기(색 조합)도 편집 화면에 그대로 */}
+        <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view], ...themeStyle(data.theme) }}>
           <BrainwavePage
             pageId={page}
             overrides={{ ...over, contentMode }}

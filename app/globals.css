@@ -16193,6 +16193,13 @@ button.account-kakao-btn svg { display: inline-block !important; }
 .hk-mock-actions button:hover { border-color: #b9b6d6; }
 .hk-mock-actions .hk-mock-edit { border-color: #3272db; background: #3272db; color: #fff; }
 .hk-mock-actions .hk-mock-edit:hover { background: #2a63c2; }
+/* 분위기(색 조합) 고르기 — 목업 바 아래 한 줄 */
+.hk-themes { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 10px 14px; border-bottom: 1px solid #ecebf3; background: #fbfbfe; }
+.hk-themes-label { display: inline-flex; align-items: center; gap: 5px; margin-right: 4px; color: #55536b; font-size: 12.5px; font-weight: 700; }
+.hk-themes button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 4px 10px 4px 5px; border: 1px solid #e3e2ee; border-radius: 999px; color: #2c2a44; background: #fff; font: inherit; font-size: 12.5px; font-weight: 650; cursor: pointer; }
+.hk-themes button i { display: block; width: 18px; height: 18px; border-radius: 50%; background: conic-gradient(#473bf0 0 50%, #68d585 50% 100%); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .08); }
+.hk-themes button.on { border-color: #3272db; box-shadow: 0 0 0 2px rgba(50, 114, 219, .18); color: #1d4fa3; }
+.hk-themes button:disabled { opacity: .55; cursor: default; }
 @media (max-width: 640px) {
   .hk-mock-bar { flex-wrap: wrap; }
   .hk-mock-actions { flex: 1 0 100%; flex-wrap: wrap; }

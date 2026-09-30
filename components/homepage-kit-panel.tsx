@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { privacyPolicyWithContact, type LandingDraft, type LandingLeadRecord, type LandingSiteRecord } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
@@ -12,6 +12,7 @@ import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave
 import { applyBusinessContent } from "../lib/landing/page-data";
 import { HomepageSourceUpdate } from "./homepage-source-update";
 import { HomepageLeadNotification, useHomepageLeadNotifications } from "./homepage-lead-notifications";
+import { LANDING_THEMES } from "../lib/landing/themes";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -214,6 +215,23 @@ export function HomepageKitPanel({
             </button>
           </span>
         </div>
+        {/*
+          분위기(색 조합) — 배치는 그대로, 색만 바꾼다. 디자인 하나를 여러 느낌으로 쓰게.
+          누르면 미리보기가 바로 바뀌고, 저장하면 공개 화면에도 걸린다.
+        */}
+        {bw && draft.pageData ? (
+          <div className="hk-themes" role="radiogroup" aria-label="분위기">
+            <span className="hk-themes-label"><Palette size={14} aria-hidden /> 분위기</span>
+            {[{ id: undefined, label: "기본", note: "디자인 원래 색", tokens: null }, ...LANDING_THEMES].map((theme) => {
+              const on = (draft.pageData?.theme ?? undefined) === theme.id;
+              return <button key={theme.id ?? "base"} type="button" role="radio" aria-checked={on} className={on ? "on" : ""} disabled={busy} title={theme.note}
+                onClick={() => onChange({ ...draft, pageData: { ...draft.pageData!, theme: theme.id } })}>
+                <i aria-hidden style={theme.tokens ? { background: `linear-gradient(135deg, ${theme.tokens.accent} 0 50%, ${theme.tokens.highlight} 50% 100%)` } : undefined} />
+                {theme.label}
+              </button>;
+            })}
+          </div>
+        ) : null}
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} className="hk-preview-body" onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
           <LandingBlocksRenderer data={draft.pageData!} />
