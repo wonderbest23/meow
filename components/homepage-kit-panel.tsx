@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { ChevronDown, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Pencil, RefreshCw, Rocket, Save, ShieldCheck } from "lucide-react";
+import { ChevronDown, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Pencil, RefreshCw, Rocket, Save, ShieldCheck, Sparkles } from "lucide-react";
 import type { LandingDraft, LandingLeadRecord, LandingSiteRecord } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
@@ -71,6 +71,7 @@ export function HomepageKitPanel({
   onOpenEditor,
   onSiteUpdated,
   onSourceApplied,
+  aiFill,
 }: {
   draft: LandingDraft;
   site: LandingSiteRecord | null;
@@ -84,9 +85,11 @@ export function HomepageKitPanel({
   onOpenEditor: () => void;
   onSiteUpdated: (site: LandingSiteRecord) => void;
   onSourceApplied?: (site: LandingSiteRecord, expectedUpdatedAt: string) => void;
+  /** 계획서로 채우기(AI) — 카드·이용 순서·마무리 문구와 업종 사진 */
+  aiFill?: { running: boolean; run: () => void };
 }) {
   const update = (patch: Partial<LandingDraft>) => onChange({ ...draft, ...patch });
-  const busy = action === "saving" || action === "publishing";
+  const busy = action === "saving" || action === "publishing" || Boolean(aiFill?.running);
   const published = site?.status === "published";
   const page = BRAINWAVE_PAGES.find((p) => p.id === draft.pageData?.brainwave?.page);
   const [picking, setPicking] = useState(false);
@@ -172,6 +175,9 @@ export function HomepageKitPanel({
           <span aria-hidden="true" className="hk-dots"><i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" /></span>
           <span className="hk-mock-url">{publicPath ? `oneulstart.com${publicPath}` : "내 사업 홈페이지"}</span>
           <span className="hk-mock-actions">
+            {aiFill ? <button type="button" onClick={aiFill.run} disabled={busy} title="계획서 내용으로 카드·이용 순서·마무리 문구와 업종 사진을 채워요. 직접 고친 글·사진은 그대로 둬요.">
+              {aiFill.running ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />} {aiFill.running ? "채우는 중…" : "AI로 채우기"}
+            </button> : null}
             {projectId && site && onSourceApplied ? <HomepageSourceUpdate projectId={projectId} site={site} draft={draft} disabled={busy} onApplied={onSourceApplied} /> : null}
             <button type="button" onClick={applyBusiness} disabled={busy || !draft.businessName.trim() || !bw || !BRAINWAVE_PAGES.some(page => page.id === bw.page && page.group === "landing")} title="사업 정보 적용">
               <RefreshCw size={14} /> 사업 정보 적용

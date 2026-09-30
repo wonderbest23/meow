@@ -1,5 +1,6 @@
 import { createLandingDraft, heroImageForSector, type LandingDraft } from "./domain";
 import { createLandingPageData } from "./page-data";
+import { applyPhotoSet, photoSetFor } from "./photo-library";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 
 /*
@@ -104,6 +105,8 @@ function identityCopy(identity: { headline: string; pitch: string; names: Array<
 export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
   const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry, identityHeadline, identityPitch } = resolvePlanLandingContent(source);
   const contactEmail = text(source.contactEmail);
+  // 업종 사진 한 벌 — 업종 이름만으로는 넓어서('유통·온라인 판매') 상호·대표 상품 글까지 함께 본다
+  const photos = photoSetFor(`${industry} ${businessName} ${mainOffer}`);
 
   // 기본 골격은 기존 템플릿이 만들고, 계획서에서 확인된 값만 덮어쓴다
   const base = createLandingDraft({
@@ -208,7 +211,7 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
      * 인스타 대행도, 반찬가게도 같은 사진이었다 — 손님에게는 남의 사무실 사진이다.
      * 사진 없는 첫 화면이 낫고, 편집 화면의 '사진 넣기' 자리에서 사장님이 채운다.
      */
-    heroImageUrl: heroImageForSector(industry, ""),
+    heroImageUrl: photos?.hero ?? heroImageForSector(industry, ""),
     privacyController: businessName,
     businessAddress: clamp(city, 300),
     /*
@@ -221,7 +224,9 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
       : base.privacyPolicy,
   };
 
-  return { ...draft, pageData: createLandingPageData({ ...draft, customer: clamp(firstTarget, 600), pageHeadline: identityHeadline ? headline : undefined }, draft.templateId) };
+  const pageData = createLandingPageData({ ...draft, customer: clamp(firstTarget, 600), pageHeadline: identityHeadline ? headline : undefined }, draft.templateId);
+  if (photos && pageData.brainwave) pageData.brainwave = { ...pageData.brainwave, images: applyPhotoSet(pageData.brainwave.images, pageData.brainwave.page, photos) };
+  return { ...draft, pageData };
 }
 
 /** 계획서에서 홈페이지를 만들 준비가 됐는지 — 최소한 대표 상품은 있어야 한다 */

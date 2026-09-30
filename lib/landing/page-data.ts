@@ -93,6 +93,15 @@ export type BrainwaveData = z.infer<typeof brainwaveDataSchema>;
 export const landingPageDataSchema = z.object({
   brainwave: brainwaveDataSchema.optional(),
   businessContent: businessContentSchema.optional(),
+  /*
+   * AI 가 계획서로 채운 글·사진(마지막 한 번). 다시 채울 때 이 값과 같은 자리는
+   * '아직 사장님이 손대지 않은 자리'로 보고 새 글로 바꾼다 — 고친 자리는 그대로 둔다.
+   */
+  aiFill: z.object({
+    at: z.string().max(40),
+    texts: z.record(z.string(), z.string().max(4000)).default({}),
+    images: z.record(z.string(), z.string().max(2000)).default({}),
+  }).optional(),
   sourceSnapshot: z.object({
     version: z.literal(1),
     planId: z.string().max(60),
