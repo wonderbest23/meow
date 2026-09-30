@@ -10,7 +10,7 @@ export type BrainwavePageMeta = { id: string; node: string; name: string; group:
 
 export const BRAINWAVE_PAGES: BrainwavePageMeta[] = [
   { id: "0-2555", node: "0:2555", name: "01-Agency",            group: "landing", h: 7713, ko: "에이전시" },
-  { id: "0-2385", node: "0:2385", name: "02-SaaS Subscription", group: "landing", h: 6035, ko: "구독 서비스" },
+  { id: "0-2385", node: "0:2385", name: "02-SaaS Subscription", group: "landing", h: 6035, ko: "병원·클리닉" },
   { id: "0-2226", node: "0:2226", name: "03-Coworking",         group: "landing", h: 5719, ko: "동네 가게" },
   { id: "0-1950", node: "0:1950", name: "04-Job Site",          group: "landing", h: 5951, ko: "채용 사이트" },
   { id: "0-1371", node: "0:1371", name: "05-Web Application",   group: "landing", h: 5107, ko: "웹 서비스" },
@@ -66,3 +66,16 @@ export const BRAINWAVE_DEFAULT_FOR_TEMPLATE: Record<string, string> = {
   wellness: "0-2226", // 03 Coworking → 동네 가게(미용·운동)
   editorial: "0-290",
 };
+
+/*
+ * 업종 글(업종·상호·대표 상품)로 고르는 전용 디자인 — 템플릿 종류(service·local…)만으로는
+ * 병원이 '일반 서비스'로 묶여 상담 디자인을 받았다. 전용 디자인이 있는 업종은 여기서 먼저 고른다.
+ */
+const DESIGN_FOR_SECTOR: Array<{ test: RegExp; page: string }> = [
+  { test: /(병원|의원|치과|한의원|진료|의료|약국|물리치료|재활|검진|피부과|안과|소아과|정형외과|내과|요양)/, page: "0-2385" },
+];
+
+export function designPageForSector(text: string): string | undefined {
+  const value = text.replace(/\s+/g, " ");
+  return DESIGN_FOR_SECTOR.find((entry) => entry.test.test(value))?.page;
+}

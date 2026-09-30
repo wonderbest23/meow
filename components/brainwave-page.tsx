@@ -10,7 +10,7 @@ import { Urbanist, Rubik } from "next/font/google";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import { layoutPage, childBox, type MobileLayout, type Box } from "../lib/landing/brainwave/mobile-layout";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
-import { BUSINESS_NODE_STYLES, BUSINESS_TEMPLATE_PROFILES } from "../lib/landing/brainwave/business-content";
+import { BUSINESS_NODE_STYLES, restorableSections } from "../lib/landing/brainwave/business-content";
 import { renderBrainwaveMobile } from "./brainwave-mobile";
 import { BrainwaveBusinessMobile } from "./brainwave-business-mobile";
 import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
@@ -546,7 +546,7 @@ export function BrainwaveStage({
     const sections = orderedSections(sectionBands(page), overrides.hidden, overrides.order).map(section => section.id);
     return <div ref={ref} className={`bw-stage bw-business-flow ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
       <BrainwaveBusinessMobile pageId={page.id} overrides={overrides} hidden={expandHidden(page.root, overrides.hidden)} sectionOrder={sections} onPick={onPick} desktop />
-      {onPick ? collapsed.strips.filter(strip => BUSINESS_TEMPLATE_PROFILES[page.id]?.sections.includes(strip.id)).map(strip => <button key={strip.id} type="button" onClick={event => { event.stopPropagation(); onPick("restore", strip.id, event.currentTarget); }}>숨긴 섹션 되살리기</button>) : null}
+      {onPick ? collapsed.strips.filter(strip => restorableSections(page.id).includes(strip.id)).map(strip => <button key={strip.id} type="button" onClick={event => { event.stopPropagation(); onPick("restore", strip.id, event.currentTarget); }}>숨긴 섹션 되살리기</button>) : null}
     </div>;
   }
   /*
@@ -580,7 +580,7 @@ export function BrainwaveStage({
         <div className="bw-canvas" style={{ width: page.w, height: collapsed.h }}>
           <BrainwaveNodeView node={collapsed.root} overrides={overrides} onPick={onPick} />
           {/* 숨긴 섹션의 빈 자리 — 편집기에서만 '되살리기' 줄이 그 위치에 뜬다 */}
-          {onPick ? collapsed.strips.filter(strip => overrides?.contentMode !== "business" || BUSINESS_TEMPLATE_PROFILES[page.id]?.sections.includes(strip.id)).map((strip) => (
+          {onPick ? collapsed.strips.filter(strip => overrides?.contentMode !== "business" || restorableSections(page.id).includes(strip.id)).map((strip) => (
             <button
               key={strip.id}
               type="button"

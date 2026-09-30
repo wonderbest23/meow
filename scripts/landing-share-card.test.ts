@@ -23,6 +23,10 @@ assert.equal(draftFor("카페 · 음식점", "새벽커피", "핸드드립 커�
 assert.equal(draftFor("유통 · 온라인 판매", "문앞반찬", "반찬 정기배송").pageData?.brainwave?.page, "0-1102");
 assert.equal(draftFor("교육 · 코칭", "바른글방", "초등 글쓰기 소그룹 수업").pageData?.brainwave?.page, "0-290");
 assert.equal(draftFor("소프트웨어 · 플랫폼", "장부도우미", "가게 장부 정리 앱").pageData?.brainwave?.page, "0-290");
+// 병원·치과·한의원은 업종 글로 병원 디자인(템플릿 종류와 상관없이)
+assert.equal(draftFor("기업 서비스", "밝은하루치과", "충치·스케일링").pageData?.brainwave?.page, "0-2385");
+assert.equal(draftFor("생활 · 지역 서비스", "온숨한의원", "침·추나").pageData?.brainwave?.page, "0-2385");
+assert.equal(draftFor("생활 · 지역 서비스", "동네세탁", "와이셔츠 세탁").pageData?.brainwave?.page, "0-2226", "other shops keep their design");
 
 // 공유 카드: 가게 이름 + 한 줄 소개 + 첫 화면 사진(카톡 비율로 잘라서, 절대 주소)
 const cafe = draftFor("카페 · 음식점", "새벽커피", "핸드드립 커피와 구움과자");

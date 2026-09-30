@@ -108,10 +108,15 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
    * 아래 조각들은 컴포넌트가 아니라 함수로 부른다. 렌더 안에서 만든 컴포넌트는
    * 매번 새 종류라 다시 그릴 때마다 요소가 새로 붙고, 편집 중인 글 칸이 날아간다.
    */
-  const Text = ({ id, as: Element = "p", className, reveal }: { id: string; as?: Tag; className?: string; reveal?: Reveal }) => {
+  /*
+   * placeholder — 편집 화면에서만, 빈 칸을 흐린 안내 글로 보여 줘 눌러서 채우게 한다
+   * (의료진처럼 AI 가 채울 수 없고 사장님이 직접 적는 칸). 공개 화면에는 나오지 않는다.
+   */
+  const Text = ({ id, as: Element = "p", className, reveal, placeholder }: { id: string; as?: Tag; className?: string; reveal?: Reveal; placeholder?: string }) => {
     const value = text(id);
-    if (!value) return null;
-    return <Element className={className} {...revealProps(reveal)} data-bw-text={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("text", id, event.currentTarget as HTMLElement); } : undefined}>{value}</Element>;
+    const hint = !value && onPick && placeholder && !hidden.has(id);
+    if (!value && !hint) return null;
+    return <Element className={className} style={hint ? { opacity: .45, fontStyle: "italic" } : undefined} {...revealProps(reveal)} data-bw-text={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("text", id, event.currentTarget as HTMLElement); } : undefined}>{value || placeholder}</Element>;
   };
   const Button = ({ buttonId, textId, className, reveal }: { buttonId: string; textId: string; className?: string; reveal?: Reveal }) => {
     const label = text(textId);

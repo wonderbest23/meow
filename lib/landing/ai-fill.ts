@@ -32,6 +32,8 @@ export const homepageCopySchema = z.object({
   /* 동네 가게 디자인 — 계획서에 있는 숫자(정원·시간·횟수)와 메뉴·가격. 없으면 비워 두고 그 칸을 열지 않는다 */
   facts: z.array(z.object({ value: z.string().min(1).max(12), label: z.string().min(1).max(40) })).max(3).default([]),
   menu: z.object({ title: z.string().max(28), intro: z.string().max(90), items: z.array(z.object({ name: z.string().min(1).max(40), price: z.string().max(24) })).max(3) }).default({ title: "", intro: "", items: [] }),
+  /* 자주 묻는 질문 — 계획서에 답이 있는 것만(예약 방법·주차·준비물). 병원 디자인이 쓴다 */
+  faq: z.array(z.object({ question: z.string().min(1).max(40), answer: z.string().min(1).max(160) })).max(4).default([]),
 });
 export type HomepageCopy = z.infer<typeof homepageCopySchema>;
 
@@ -53,6 +55,9 @@ export function normalizeHomepageCopy(raw: unknown): HomepageCopy | null {
   const items = (Array.isArray(menu.items) ? menu.items : []).map(record)
     .map((item) => ({ name: clip(item.name, 40), price: clip(item.price, 24) }))
     .filter((item) => item.name).slice(0, 3);
+  const faq = (Array.isArray(value.faq) ? value.faq : []).map(record)
+    .map((item) => ({ question: clip(item.question, 40), answer: clip(item.answer, 160) }))
+    .filter((item) => item.question && item.answer).slice(0, 4);
   const parsed = homepageCopySchema.safeParse({
     tagline: clip(value.tagline, 48),
     cardsTitle: clip(value.cardsTitle, 28),
@@ -64,6 +69,7 @@ export function normalizeHomepageCopy(raw: unknown): HomepageCopy | null {
     cta: clip(value.cta, 14),
     facts,
     menu: { title: clip(menu.title, 28), intro: clip(menu.intro, 90), items },
+    faq,
   });
   return parsed.success ? parsed.data : null;
 }
@@ -116,8 +122,10 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
     "- closing 은 페이지 마지막 큰 문장(24자 안팎), closingSub 는 그 아래 한 문장, cta 는 버튼 글(10자 안팎, 예: 구독 문의하기).",
     "- facts 는 손님이 한눈에 볼 숫자 0~3개: value 는 계획서에 적힌 숫자 그대로(예: 4명, 50분, 주 2회), label 은 그 뜻(예: 한 수업 정원). 매출·고객 수·목표·원가 같은 사업 숫자는 넣지 않습니다. 없으면 빈 배열.",
     "- menu 는 손님이 고르는 메뉴·상품·수업 0~3개와 가격표: name 은 계획서에 있는 상품 이름을 메뉴판처럼 짧게(20자 안팎, 예: 4인 기구 필라테스 정기권) — 자세한 구성은 intro 나 카드에, price 는 계획서의 금액 그대로(쉼표 포함, 단위가 적혀 있을 때만 단위)이고 금액이 없으면 '문의'. 계획서에 없는 메뉴를 지어내지 않습니다. 없으면 items 를 빈 배열로.",
+    "- faq 는 손님이 자주 물을 질문 0~4개와 답: 답이 [사업 정보]나 계획서에 있는 것만(예약 방법, 준비물, 이용 시간, 주차처럼). 효과·치료 결과·부작용 없음 같은 약속, 다른 곳과의 비교는 쓰지 않습니다. 답이 없으면 빈 배열.",
+    "- 병원·의원·치과·약국이면 cards 는 진료 과목·진료 항목, process 는 접수부터 진료 뒤까지의 순서로 쓰고, 의료진 이름·경력·자격은 쓰지 않습니다(사장님이 직접 적습니다).",
     "JSON 객체 하나만 출력합니다:",
-    '{"tagline":"","cardsTitle":"","cardsIntro":"","cards":[{"title":"","body":""}],"process":{"title":"","steps":[""]},"closing":"","closingSub":"","cta":"","facts":[{"value":"","label":""}],"menu":{"title":"","intro":"","items":[{"name":"","price":""}]}}',
+    '{"tagline":"","cardsTitle":"","cardsIntro":"","cards":[{"title":"","body":""}],"process":{"title":"","steps":[""]},"closing":"","closingSub":"","cta":"","facts":[{"value":"","label":""}],"menu":{"title":"","intro":"","items":[{"name":"","price":""}]},"faq":[{"question":"","answer":""}]}',
   ].join("\n");
   const user = ["[사업 정보]", ...facts, "", "[계획서 발췌]", ...excerpts].join("\n");
   return { system, user };
@@ -176,6 +184,40 @@ function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { tex
     texts["0:2237"] = copy.closing;
     texts["0:2235"] = copy.closingSub;
     if (copy.cta) { texts["I0:2372;0:4557"] = copy.cta; texts["I0:2233;0:4557"] = copy.cta; }
+    return { texts, show };
+  }
+  if (page === "0-2385") {
+    const show = ["0:2519", "0:2393", "0:2387"];
+    // 진료 과목 셋
+    [["0:2521", "0:2522"], ["0:2528", "0:2529"], ["0:2534", "0:2535"]].forEach(([title, body], index) => { texts[title] = copy.cards[index]?.title ?? ""; texts[body] = copy.cards[index]?.body ?? ""; });
+    // 병원 소개(사진 넷 위 제목·소개)
+    if (copy.cardsTitle) { texts["0:2512"] = copy.cardsTitle; texts["0:2511"] = copy.cardsIntro; show.push("0:2508"); }
+    // 숫자 셋 — 둘 이상일 때만
+    if (copy.facts.length >= 2) {
+      [["0:2499", "0:2500"], ["0:2502", "0:2503"], ["0:2505", "0:2506"]].forEach(([value, label], index) => { texts[value] = copy.facts[index]?.value ?? ""; texts[label] = copy.facts[index]?.label ?? ""; });
+      show.push("0:2497");
+    }
+    // 진료 순서 — '① 접수 — 설명' 을 제목과 설명으로 나눠 세 단계까지
+    if (copy.process.steps.length >= 2) {
+      texts["0:2496"] = copy.process.title;
+      [["0:2477", "0:2474", "0:2473"], ["0:2483", "0:2480", "0:2479"], ["0:2489", "0:2486", "0:2485"]].forEach(([number, title, body], index) => {
+        const step = copy.process.steps[index]?.replace(/^(?:[\u2460-\u2473]|\d{1,2}[.)])\s*/, "") ?? "";
+        const [head, ...rest] = step.split(/\s+[—–-]\s+/);
+        texts[number] = step ? String(index + 1) : "";
+        texts[title] = rest.length ? head.trim() : step;
+        texts[body] = rest.join(" — ").trim();
+      });
+      show.push("0:2470");
+    }
+    // 자주 묻는 질문
+    if (copy.faq.length) {
+      texts["0:2454/0"] = "자주 묻는 질문";
+      [["0:2422", "0:2423"], ["0:2431", "0:2432"], ["0:2439", "0:2440"], ["0:2447", "0:2448"]].forEach(([question, answer], index) => { texts[question] = copy.faq[index]?.question ?? ""; texts[answer] = copy.faq[index]?.answer ?? ""; });
+      show.push("0:2420");
+    }
+    texts["0:2390"] = copy.closing;
+    texts["0:2389"] = copy.closingSub;
+    if (copy.cta) for (const id of ["I0:2546;0:4460", "I0:2554;0:4613", "I0:2391;0:4460"]) texts[id] = copy.cta;
     return { texts, show };
   }
   return { texts, show: [] };
@@ -241,4 +283,4 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
   };
 }
 
-const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0" };
+const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0", "0-2385": "0:2550/0/0" };

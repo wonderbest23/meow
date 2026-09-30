@@ -16,6 +16,7 @@ export const businessContentSchema = z.object({
 export type BusinessContent = z.infer<typeof businessContentSchema>;
 type Field = keyof BusinessContent | "headline" | "detailsTitle" | "contactTitle" | "contactInvite" | "contactDescription" | "offerLabel" | "customerLabel" | "priceLabel" | "one" | "two" | "three"
   | "visitTitle" | "address" | "hoursLabel" | "hours";
+type Value = Partial<Record<Field, string>>;
 type Profile = {
   sections: string[];
   fields: Record<string, Field>;
@@ -25,6 +26,12 @@ type Profile = {
   button: string;
   facts: Array<{ label: string; value: string }>;
   hide?: string[];
+  /** 처음엔 숨기지만 편집기의 '숨긴 섹션 되살리기'로 켤 수 있는 섹션(예: 의료진 — 사장님이 직접 적는다) */
+  optional?: string[];
+  /** 이 템플릿에서만 다른 기본 글(예: 병원은 '영업시간' 대신 '진료 시간') */
+  labels?: Value;
+  /** 사장님만 채우는 사진 자리(의료진 얼굴 등) — 대표 사진을 복사해 두지 않는다 */
+  ownerPhotos?: string[];
 };
 
 export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
@@ -68,10 +75,27 @@ export const BUSINESS_TEMPLATE_PROFILES: Record<string, Profile> = {
     facts: [{ label: "0:72", value: "0:70" }, { label: "0:78", value: "0:76" }, { label: "0:84", value: "0:82" }],
     hide: ["0:171"],
   },
+  /*
+   * 병원·클리닉(02 SaaS 킷) — 병원·치과·한의원·약국·재활. 손님(환자)이 찾는 것:
+   * 무엇을 진료하는지·언제 여는지·어디인지·어떻게 예약하는지.
+   *   머리글(예약 버튼) → 첫 화면(사진 옆 이름·소개·예약) → 숫자 셋(0:2497) → 진료 과목(0:2519)
+   *   → 병원 소개·사진 넷(0:2508) → 진료 순서(0:2470) → 의료진(0:2455) → 진료 시간·오시는 길(0:2393)
+   *   → 자주 묻는 질문(0:2420) → 마무리(0:2387)
+   * 의료진은 AI 가 지어낼 수 없어 처음엔 숨기고, 사장님이 켜서 직접 적는다.
+   */
   "0-2385": {
-    sections: ["0:2551", "0:2540", "0:2519", "0:2387"], brand: "0:2552", headline: "0:2542", description: "0:2543", button: "I0:2546;0:4460",
-    fields: { "0:2552": "businessName", "0:2542": "headline", "0:2543": "description", "I0:2546;0:4460": "cta", "I0:2554;0:4613": "cta", "0:2521": "offerLabel", "0:2522": "offer", "0:2528": "customerLabel", "0:2529": "customer", "0:2534": "priceLabel", "0:2535": "price", "0:2390": "contactTitle", "0:2389": "offer", "I0:2391;0:4460": "cta" },
+    sections: ["0:2551", "0:2540", "0:2519", "0:2393", "0:2387"], brand: "0:2552", headline: "0:2542", description: "0:2543", button: "I0:2546;0:4460",
+    fields: {
+      "0:2552": "businessName", "0:2542": "headline", "0:2543": "description", "I0:2546;0:4460": "cta", "I0:2554;0:4613": "cta",
+      "0:2521": "offerLabel", "0:2522": "offer", "0:2528": "customerLabel", "0:2529": "customer", "0:2534": "priceLabel", "0:2535": "price",
+      "0:2419": "visitTitle", "0:2418": "hours", "0:2399": "address",
+      "0:2390": "contactInvite", "I0:2391;0:4460": "cta",
+    },
     facts: [{ label: "0:2521", value: "0:2522" }, { label: "0:2528", value: "0:2529" }, { label: "0:2534", value: "0:2535" }],
+    hide: ["0:2553", "I0:2545;0:4626", "0:2389", "I0:2400;0:4561", "0:2401", "0:2402", "0:2406", "I0:2407;0:4561", "0:2408", "0:2409", "0:2413", "I0:2414;0:4561", "0:2415", "0:2416", "0:2454/1"],
+    optional: ["0:2455", "0:2420", "0:2508", "0:2470", "0:2497"],
+    labels: { visitTitle: "진료 시간·오시는 길", hours: "진료 시간은 문의 주시면 안내해 드려요" },
+    ownerPhotos: ["0:2459/0", "0:2465/0"],
   },
   "0-2555": {
     sections: ["0:3342", "0:3269", "0:2912"], brand: "6:1738", headline: "0:3276", description: "0:3278", button: "I0:3275;0:4557",
@@ -108,11 +132,18 @@ export const BUSINESS_TEMPLATE_IDS = Object.keys(BUSINESS_TEMPLATE_PROFILES);
  * Figma 디자인을 흐름 배치로 옮겨 둔 템플릿. 이 페이지들은 글 길이·사진과 상관없이
  * 늘 그 디자인으로 그린다(components/brainwave-business-*.tsx).
  */
-export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102", "0-2226"]);
+export const BUSINESS_DESIGNED_PAGES = new Set(["0-290", "0-1102", "0-2226", "0-2385"]);
+
+/** 편집기의 '숨긴 섹션 되살리기'로 켤 수 있는 섹션 — 기본으로 보이는 섹션과 켜서 쓰는 섹션 */
+export function restorableSections(page: string): string[] {
+  const profile = BUSINESS_TEMPLATE_PROFILES[page];
+  return profile ? [...profile.sections, ...(profile.optional ?? [])] : [];
+}
 
 /* 동네 가게의 오시는 길·영업시간 기본 글 — 사업자 정보에 주소·영업시간이 없을 때 */
 export const LOCAL_ADDRESS_PENDING = "주소는 문의 주시면 안내해 드려요";
 export const LOCAL_HOURS_PENDING = "영업시간은 문의 주시면 안내해 드려요";
+export const CLINIC_HOURS_PENDING = "진료 시간은 문의 주시면 안내해 드려요";
 // Search-only controls are removed from business drafts; keep their remaining CTA aligned.
 export const BUSINESS_NODE_STYLES: Record<string, Record<string, string>> = {
   "0:2372": { left: "calc(50% - 110px)", right: "auto", width: "220px" },
@@ -130,7 +161,7 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
   const values = [
     name, content.headline ?? "", content.offer, content.description, content.customer, content.price, content.cta,
     "이용 안내", "제공 내용", "이용 대상", "가격 안내", "01", "02", "03",
-    "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING,
+    "오시는 길·영업시간", "영업시간", LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING, "진료 시간·오시는 길", CLINIC_HOURS_PENDING,
     `${name} 문의`, `${name}에 문의해 보세요`,
     [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
   ];
@@ -152,6 +183,7 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
     contactDescription: [content.offer, content.customer && `이용 대상: ${content.customer}`, content.price && `가격: ${content.price}`].filter(Boolean).join("\n"),
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
     visitTitle: "오시는 길·영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,
+    ...profile.labels,
   };
   // Empty overrides cover every original slot, including sections later restored by the editor.
   const texts = Object.fromEntries(manifest.texts.map(id => [id, ""]));
@@ -165,7 +197,8 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
   const images: Record<string, string> = {};
   for (const section of manifest.sections) {
     for (const id of section.images) {
-      if (content.image) images[id] = content.image;
+      if (profile.ownerPhotos?.includes(id)) images[id] = "";
+      else if (content.image) images[id] = content.image;
       else hidden.push(id);
     }
     for (const { id, texts: buttonTexts } of section.buttons) {
