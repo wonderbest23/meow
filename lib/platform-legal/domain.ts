@@ -374,7 +374,7 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
           "Cloudflare, Inc.: 웹 호스팅, 콘텐츠 전송, 보안과 오류 기록",
           "Resend, Inc.: 결제·서비스 안내와 홈페이지 문의 알림 이메일 발송",
           "알리고(Aligo): 홈페이지 문의·주간 리포트·운영 안내 문자 발송(받는 번호와 정해진 안내 문구만 전달하며 문의 내용은 보내지 않습니다)",
-          "Amazon Web Services, Inc.(Lightsail): 문자 발송 중계 서버 호스팅(문자 발송사가 정해진 서버 주소에서만 요청을 받아 그 서버를 거칩니다)",
+          "Amazon Web Services, Inc.(Lightsail, 서울 리전): 문자 발송 중계 서버 호스팅(문자 발송사가 정해진 서버 주소에서만 요청을 받아 그 서버를 거칩니다)",
           "Anthropic, PBC·OpenAI: 인공지능 생성",
         ],
       },
