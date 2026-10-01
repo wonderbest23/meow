@@ -7,6 +7,7 @@ import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, 
 import { privacyPolicyWithContact, type LandingDraft, type LandingLeadRecord, type LandingSiteRecord } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
+import { WeeklyReportToggle } from "./weekly-report-toggle";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave/business-content";
 import { applyBusinessContent } from "../lib/landing/page-data";
@@ -345,6 +346,7 @@ export function HomepageKitPanel({
         badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건</em>}
         hint={draft.leadCaptureEnabled ? "홈페이지 문의 양식으로 들어온 것입니다. 보유기간이 지나면 지워 주세요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
       >
+        <WeeklyReportToggle projectId={projectId} />
         <div className="hk-fold-save"><button type="button" aria-label="문의 새로고침" title="문의 새로고침" disabled={leads === null && !leadsError} onClick={() => setLeadsRefresh(value => value + 1)}><RefreshCw size={14} /> 새로고침</button></div>
         {notifications.error ? <p className="hk-empty" role="alert">{notifications.error}</p> : null}
         {leadsError ? <p className="hk-empty" role="alert">{leadsError}</p> : leads === null ? <p className="hk-empty">불러오는 중…</p> : leads.length === 0 ? <p className="hk-empty">아직 접수된 문의가 없습니다. 공개 주소를 알리면 여기 쌓입니다.</p> : (

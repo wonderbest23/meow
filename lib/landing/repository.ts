@@ -205,6 +205,25 @@ export async function landingSiteSummaryForProject(projectId: string): Promise<{
   return data ? { id: data.id as string, published: data.published_version !== null } : null;
 }
 
+/*
+ * 주간 리포트 받기 설정(landing_sites.weekly_report_opt_out, 마이그레이션 0038).
+ * 칸이 없으면 null — 화면은 '준비 중'으로 보여 주고 리포트도 보내지 않는다.
+ */
+export async function getWeeklyReportEnabled(siteId: string): Promise<boolean | null> {
+  const supabase = getServerSupabase();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("landing_sites").select("weekly_report_opt_out").eq("id", siteId).maybeSingle();
+  if (error || !data) return null;
+  return !data.weekly_report_opt_out;
+}
+
+export async function setWeeklyReportEnabled(siteId: string, enabled: boolean): Promise<boolean> {
+  const supabase = getServerSupabase();
+  if (!supabase) return false;
+  const { data, error } = await supabase.from("landing_sites").update({ weekly_report_opt_out: !enabled }).eq("id", siteId).select("id");
+  return !error && Boolean(data?.length);
+}
+
 /** [from, to) 사이에 들어온 문의 수 — 운영 기록의 '문의' 칸을 채울 때 쓴다 */
 export async function countLandingLeadsBetween(
   siteId: string,
