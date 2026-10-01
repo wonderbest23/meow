@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { listDomainPurchaseOrders, markDomainRegistered } from "../../../../lib/payments/plan-orders";
-import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
+import { listDomainPurchaseOrders, markDomainRegistered } from "../../../../../lib/payments/plan-orders";
+import { hasAdminSession } from "../../../../../lib/support-chat/admin-auth";
 
 export const runtime = "nodejs";
 

@@ -25,7 +25,7 @@ export default function DomainOrdersAdminPage() {
   const load = useCallback(async () => {
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/admin/domain-orders", { cache: "no-store" });
+      const response = await fetch("/api/admin/payments/domain-orders", { cache: "no-store" });
       const data = await response.json();
       setLogin(response.status === 401);
       if (!response.ok) throw new Error(data.error?.message ?? "불러오지 못했습니다");
@@ -39,7 +39,7 @@ export default function DomainOrdersAdminPage() {
     if (busy || !window.confirm(`${order.domain} 등록과 www CNAME(${cnameTarget}) 설정을 마쳤나요? 고객 화면에 '연결 시작'이 열립니다.`)) return;
     setBusy(true); setError("");
     try {
-      const response = await fetch("/api/admin/domain-orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.orderId }) });
+      const response = await fetch("/api/admin/payments/domain-orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.orderId }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message ?? "바꾸지 못했습니다");
       setOrders(data.orders);
