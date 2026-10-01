@@ -185,6 +185,26 @@ export async function listLandingLeads(
   }));
 }
 
+/**
+ * 홈페이지 id·공개 여부만 — 버전 본문·지표까지 읽는 getLandingForProject 는 운영 기록 한 칸 채우기에 무겁다.
+ * 호출하는 쪽이 프로젝트 주인을 이미 확인했어야 한다(findProjectIdByPlan 은 주인 해시로 찾는다).
+ */
+export async function landingSiteSummaryForProject(projectId: string): Promise<{ id: string; published: boolean } | null> {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const siteId = demo.projectIndex.get(projectId);
+    const site = siteId ? demo.sites.get(siteId) : null;
+    return site ? { id: site.id, published: site.publishedVersion !== null } : null;
+  }
+  const { data, error } = await supabase
+    .from("landing_sites")
+    .select("id, published_version")
+    .eq("project_id", projectId)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? { id: data.id as string, published: data.published_version !== null } : null;
+}
+
 /** [from, to) 사이에 들어온 문의 수 — 운영 기록의 '문의' 칸을 채울 때 쓴다 */
 export async function countLandingLeadsBetween(
   siteId: string,

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { autoInquiriesValue, kstPeriodRange } from "../lib/plan-builder/operating-homepage";
-import { countLandingLeadsBetween } from "../lib/landing/repository";
+import { countLandingLeadsBetween, landingSiteSummaryForProject } from "../lib/landing/repository";
 
 // 한국 시간 기간 → [시작 0시, 종료 다음 날 0시)
 assert.deepEqual(kstPeriodRange("2026-09-01", "2026-09-30"), { from: "2026-08-31T15:00:00.000Z", to: "2026-09-30T15:00:00.000Z" });
@@ -27,5 +27,10 @@ assert.equal(autoInquiriesValue("", null, { linked: true, published: false, inqu
   store.leads.push(lead("site-a", "2026-08-31T14:59:59.000Z"), lead("site-a", "2026-08-31T15:00:00.000Z"), lead("site-a", "2026-09-15T03:00:00.000Z"), lead("site-a", "2026-09-30T15:00:00.000Z"), lead("site-b", "2026-09-15T03:00:00.000Z"));
   const range = kstPeriodRange("2026-09-01", "2026-09-30")!;
   assert.equal(await countLandingLeadsBetween("site-a", range.from, range.to), 2, "경계: 9월 1일 0시 포함, 10월 1일 0시 제외, 다른 홈페이지 제외");
+  // 홈페이지 id·공개 여부만 가볍게
+  store.sites.set("site-c", { id: "site-c", publishedVersion: 2 } as never);
+  store.projectIndex.set("project-c", "site-c");
+  assert.deepEqual(await landingSiteSummaryForProject("project-c"), { id: "site-c", published: true });
+  assert.equal(await landingSiteSummaryForProject("project-none"), null);
   console.log("operating-homepage: KST range, auto-fill rules, lead count by period");
 })().catch((error) => { console.error(error); process.exit(1); });
