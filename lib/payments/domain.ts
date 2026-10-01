@@ -33,7 +33,7 @@ export const REGEN_PACK_COUNT = 10;
 export const REGEN_PACK_AMOUNT = 4_900;
 export const REGEN_PACK_NAME = "다시 생성 10회";
 
-export const TERMS_VERSION = "2026-09-28-card-addons";
+export const TERMS_VERSION = "2026-09-30-domain-purchase";
 
 export const paymentMethodSchema = z.enum(["CARD", "TOSSPAY", "TRANSFER"]);
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;
@@ -164,6 +164,11 @@ export type TossPaymentResponse = {
 export const DOMAIN_PRODUCT_NAME = "내 도메인 연결 + 호스팅 1년";
 export const DOMAIN_PRODUCT_AMOUNT = 59_000;
 export const DOMAIN_PRODUCT_DAYS = 365;
+/* 도메인이 없는 분 — 운영자가 사장님 명의로 사서 연결한다(첫해 등록비 포함, .com·.kr·.co.kr) */
+export const DOMAIN_PURCHASE_PRODUCT_NAME = "도메인 구매 + 연결·호스팅 1년";
+export const DOMAIN_PURCHASE_PRODUCT_AMOUNT = 79_000;
+/** 등록한 뒤에는 돌려받을 수 없는 등록비 몫 — 나머지는 연결·호스팅 환불 기준을 따른다 */
+export const DOMAIN_PURCHASE_REGISTRATION_AMOUNT = DOMAIN_PURCHASE_PRODUCT_AMOUNT - DOMAIN_PRODUCT_AMOUNT;
 
 export const TOKEN_PACK_NAME = "홈페이지 AI 수정 토큰 20만";
 export const TOKEN_PACK_AMOUNT = 9_900;

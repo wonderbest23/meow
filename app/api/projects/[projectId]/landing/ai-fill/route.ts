@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { withUsageContext } from "../../../../../../lib/llm/usage-context";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../../../lib/rate-limit";
@@ -59,7 +60,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const config = resolveLLMConfig(identity.hash, "anthropic");
   if (!config) return NextResponse.json({ error: { code: "AI_UNAVAILABLE", message: "지금은 AI 채우기를 쓸 수 없습니다." } }, { status: 503 });
   const prompt = homepageFillPrompt(plan);
-  const raw = await completeJson(config, { kind: "landing-ai-fill", system: prompt.system, user: prompt.user, maxOutputTokens: 3000, jsonObject: true, timeoutMs: 120_000 });
+  const raw = await withUsageContext({ planId, ownerHash: identity.hash }, () => completeJson(config, { kind: "landing-ai-fill", system: prompt.system, user: prompt.user, maxOutputTokens: 3000, jsonObject: true, timeoutMs: 120_000 }));
   const copy = normalizeHomepageCopy(raw);
   if (!copy) return NextResponse.json({ error: { code: "AI_FAILED", message: "AI 가 홈페이지 글을 만들지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 502 });
 

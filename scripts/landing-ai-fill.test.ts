@@ -5,7 +5,7 @@ import { landingDraftSchema } from "../lib/landing/domain";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { COACH_KEY, COACH_VERSION, coachDocumentRevision, type CoachState } from "../lib/plan-builder/coach";
 import { photoSetFor } from "../lib/landing/photo-library";
-import { needsAutoAiFill } from "../lib/landing/ai-fill-auto";
+import { aiFillLanded, aiFillMark, needsAutoAiFill } from "../lib/landing/ai-fill-auto";
 
 // 계획서 — 반찬 정기배송(운영에서 쓰는 테스트 계획서와 같은 모양)
 const coach: CoachState = {
@@ -241,5 +241,14 @@ assert.equal(needsAutoAiFill(site(filled)), false, "already filled");
 assert.equal(needsAutoAiFill(site(created, "2026-09-30T04:05:00.000Z")), false, "owner saved it since");
 assert.equal(needsAutoAiFill(site(created, undefined, [{}])), false, "already published");
 assert.equal(needsAutoAiFill(site({ ...created, pageData: { ...created.pageData!, brainwave: undefined } })), false, "old block pages are not filled");
+
+// 채우기 답을 못 받았을 때: 서버에 새 채우기 기록이 생겼으면 채워진 것으로 본다
+const refilled = { draft: { pageData: { aiFill: { at: "2026-09-30T13:50:57.019Z" } } } };
+assert.equal(aiFillMark(site(created)), "");
+assert.equal(aiFillLanded("", refilled), true, "first fill landed");
+assert.equal(aiFillLanded("2026-09-30T13:40:00.000Z", refilled), true, "refill landed");
+assert.equal(aiFillLanded("2026-09-30T13:50:57.019Z", refilled), false, "same fill as before");
+assert.equal(aiFillLanded("", site(created)), false, "not filled yet");
+assert.equal(aiFillLanded("", null), false);
 
 console.log("landing-ai-fill: prompt, normalize, shop and consult fill, owner edits kept, identity kept");

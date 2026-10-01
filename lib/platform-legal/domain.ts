@@ -1,6 +1,6 @@
 import { z } from "zod";
 import {
-  BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, CUSTOM_HOMEPAGE_FROM_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT,
+  BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, CUSTOM_HOMEPAGE_FROM_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_NAME, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT,
   REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, TOKEN_PACK_AMOUNT, TOKEN_PACK_NAME, TOKEN_PACK_TOKENS, TOKEN_VALIDITY_DAYS,
 } from "../payments/domain";
 
@@ -213,6 +213,7 @@ const PRODUCT_ITEMS = [
   `사업계획서 홈페이지 수정·공개: ${won(HOMEPAGE_PRODUCT_AMOUNT)}(부가세 포함, 홈페이지 1개)`,
   `${BUNDLE_PRODUCT_NAME}: ${won(BUNDLE_PRODUCT_AMOUNT)}(부가세 포함, 같은 사업의 문서 1부와 홈페이지 1개를 함께 제공)`,
   `${DOMAIN_PRODUCT_NAME}: ${won(DOMAIN_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. 도메인 등록비는 별도)`,
+  `${DOMAIN_PURCHASE_PRODUCT_NAME}: ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. .com·.kr·.co.kr 주소의 첫해 등록비 ${won(DOMAIN_PURCHASE_REGISTRATION_AMOUNT)} 포함)`,
   `${TOKEN_PACK_NAME}: ${won(TOKEN_PACK_AMOUNT)}(부가세 포함, ${tokenCount(TOKEN_PACK_TOKENS)} 토큰, 충전일부터 ${TOKEN_VALIDITY} 유효)`,
   `다시 생성 ${REGEN_PACK_COUNT}회 추가: ${won(REGEN_PACK_AMOUNT)}(부가세 포함)`,
 ];
@@ -223,6 +224,20 @@ const DOMAIN_REFUND_ITEMS = [
   `그 이후에는 남은 개월 수만큼 월할로 환불합니다. 사용 기간은 결제일부터 계산하며 일부라도 사용한 달은 한 달로 봅니다. 예: 3개월 사용 후 요청 → 12개월 중 9개월분 ${won(DOMAIN_REFUND_EXAMPLE)}.`,
   "환불 수수료는 받지 않습니다. 환불하면 해당 도메인 연결과 호스팅이 종료됩니다.",
   "가비아 등 도메인 등록기관에서 이용자가 직접 구매한 도메인 등록비는 오늘창업이 받은 금액이 아니므로 환불 대상이 아니며, 해당 등록기관의 기준을 따릅니다.",
+];
+
+const DOMAIN_PURCHASE_ITEMS = [
+  `${DOMAIN_PURCHASE_PRODUCT_NAME} 상품은 이용자가 고른 주소(.com·.kr·.co.kr)를 오늘창업이 이용자 명의로 등록기관에 등록하고, 결제일부터 1년 동안 홈페이지에 연결해 호스팅합니다.`,
+  "결제 후 영업일 1~2일 안에 등록을 진행하며, 등록에 필요한 정보(이름·연락처 등)는 계정 이메일로 요청할 수 있습니다. 결제 전에 보여 드리는 '비어 있음' 확인은 등록소 조회 결과를 옮긴 참고 정보입니다.",
+  "등록할 수 없는 주소(이미 등록됨, 등록기관이 거절한 주소 등)로 확인되면 이용자와 다른 주소를 정하거나 전액 환불합니다.",
+  "등록한 도메인은 이용자 소유입니다. 환불·해지 뒤에도 도메인은 이용자에게 남으며, 요청하면 등록기관의 이전 절차를 안내합니다.",
+  `2년째부터는 같은 상품(${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)})으로 등록 갱신과 호스팅을 함께 연장합니다. 만료 30일 전부터 갱신할 수 있으며, 갱신하지 않으면 등록기관 기준에 따라 도메인이 만료될 수 있습니다.`,
+];
+
+const DOMAIN_PURCHASE_REFUND_ITEMS = [
+  "도메인을 등록하기 전에 요청하면 전액 환불합니다.",
+  `등록한 뒤에는 첫해 등록비 ${won(DOMAIN_PURCHASE_REGISTRATION_AMOUNT)}을 뺀 ${won(DOMAIN_PRODUCT_AMOUNT)}에 위 도메인 연결·호스팅 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다.`,
+  "환불하면 홈페이지 연결과 호스팅이 종료되며, 등록한 도메인은 이용자 소유로 남습니다.",
 ];
 
 const TOKEN_REFUND_ITEMS = [
@@ -285,6 +300,7 @@ function businessDocument(settings: PlatformLegalSettings): LegalDocument {
 
 /** 개인정보처리방침 변경 이력 (최신이 위). 방침 본문을 바꾸면 여기에 한 줄 추가한다. */
 export const PRIVACY_POLICY_HISTORY = [
+  { date: "2026-09-30", summary: "도메인 구매 대행(선택 상품)의 수집 항목과 도메인 등록기관 제공 추가" },
   { date: "2026-09-28", summary: "신용카드 결제(나이스페이먼츠)와 이메일 발송(Resend) 수탁사, 소셜 로그인 수집 항목, 법정 보존기간, 국외 이전 세부 항목, 권익침해 구제 방법과 변경 이력 추가" },
   { date: "2026-07-23", summary: "맞춤 디지털 결과물 제공 시점과 결제·환불 처리 정보 정비" },
 ];
@@ -325,6 +341,7 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
           "사업 설계: 경력, 관심사, 예산, 가능한 시간, 지역, 사업 아이디어와 프로젝트 입력 - 맞춤 추천과 결과물 작성",
           "결제(카드): 주문번호, 상품명, 금액·상태, 결제일시, 구매자 이메일, 결제대행사 거래번호와 승인 결과(카드사명, 일부가 가려진 카드번호, 승인번호, 할부 개월) - 결제 확인, 취소·환불과 분쟁 대응. 전체 카드번호, 유효기간, CVC와 카드 비밀번호는 결제대행사(나이스페이먼츠)가 직접 처리하며 오늘창업은 수집·저장하지 않습니다.",
           "결제(계좌이체): 주문번호, 금액·상태, 입금자명, 연락처, 현금영수증 종류와 발급 식별정보 - 입금 확인, 현금영수증 발급, 취소·환급과 분쟁 대응. 계좌 비밀번호나 인터넷뱅킹 인증정보는 수집하지 않습니다.",
+          "도메인 구매 대행(선택): 원하는 주소, 등록 명의자 이름·이메일·연락처·주소 - 이용자 명의 도메인 등록과 갱신. 이 상품을 결제한 경우에만 계정 이메일로 요청해 받습니다.",
           "문의: 이메일 또는 대화 내용 - 고객 요청 처리",
           "자동 생성 정보: 접속 기록, 쿠키, 기기·브라우저 정보, IP 주소 - 보안, 오류 대응, 부정 이용 방지",
           "인공지능 연결 정보: 사용자가 직접 입력한 API 키의 끝 4자리와 연결 시각 - 연결 상태 표시. 키 원문은 데이터베이스와 브라우저 저장소에 보관하지 않고 서버 메모리에서 최대 4시간 사용합니다.",
@@ -342,6 +359,9 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
       {
         title: "3. 개인정보의 제3자 제공",
         paragraphs: ["이용자의 개인정보를 제3자에게 제공하지 않습니다. 다만 이용자가 미리 동의한 경우와 법령에 특별한 규정이 있거나 수사기관 등이 법령에 정한 절차에 따라 요구하는 경우에는 필요한 범위에서 제공할 수 있습니다."],
+        items: [
+          "도메인 구매 대행을 결제하며 동의한 경우 — 제공받는 자: 도메인 등록기관(㈜가비아 등, 실제 등록한 기관은 등록 완료 때 알립니다) / 목적: 이용자 명의 도메인 등록·관리와 등록기관의 법정 의무 이행(도메인 등록정보 관리 등) / 항목: 등록 명의자 이름, 이메일, 연락처, 주소 / 보유: 도메인 등록 기간과 등록기관이 정한 기간. 동의하지 않으면 도메인 구매 대행을 이용할 수 없고, 직접 산 도메인의 연결 상품은 그대로 이용할 수 있습니다.",
+        ],
       },
       {
         title: "4. 개인정보의 처리위탁",
@@ -468,7 +488,7 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
           "이 조항은 이 조항을 게시한 날 이후에 결제한 문서부터 적용합니다. 그 전에 결제한 문서는 결제 당시의 조건을 그대로 따릅니다.",
         ],
       },
-      { title: "8. 도메인 연결·호스팅", items: [`${DOMAIN_PRODUCT_NAME} 상품은 결제일부터 1년 동안 이용자의 도메인을 홈페이지에 연결하고 호스팅합니다.`, "도메인 등록(구매)은 이용자가 가비아 등 등록기관에서 직접 하며, 등록비와 등록기관의 약관은 이 계약에 포함되지 않습니다.", "기간이 끝나면 갱신을 안내하며, 갱신 전까지 홈페이지 편집이 제한될 수 있습니다.", ...DOMAIN_REFUND_ITEMS.slice(0, 3)] },
+      { title: "8. 도메인 연결·호스팅", items: [`${DOMAIN_PRODUCT_NAME} 상품은 결제일부터 1년 동안 이용자의 도메인을 홈페이지에 연결하고 호스팅합니다.`, `${DOMAIN_PRODUCT_NAME} 상품에서 도메인 등록(구매)은 이용자가 가비아 등 등록기관에서 직접 하며, 등록비와 등록기관의 약관은 이 계약에 포함되지 않습니다.`, "기간이 끝나면 갱신을 안내하며, 갱신 전까지 홈페이지 편집이 제한될 수 있습니다.", ...DOMAIN_REFUND_ITEMS.slice(0, 3), ...DOMAIN_PURCHASE_ITEMS] },
       { title: "9. AI 수정 토큰", items: TOKEN_REFUND_ITEMS },
       { title: "10. 이용자의 콘텐츠와 권리", paragraphs: ["이용자가 입력한 콘텐츠의 권리는 이용자에게 남습니다. 이용자는 서비스 제공에 필요한 범위에서 해당 콘텐츠를 처리할 권한을 운영자에게 부여합니다. 타인의 저작권, 상표권, 개인정보를 침해하는 내용을 입력해서는 안 됩니다."] },
       { title: "11. 금지행위", items: ["서비스 또는 계정의 부정 사용", "보안 우회, 과도한 자동 요청, 역공학", "불법·기만적 사업이나 타인의 권리를 침해하는 결과물 제작", "생성 결과를 전문가의 확정 판단으로 허위 표시하는 행위"] },
@@ -498,7 +518,7 @@ function refundDocument(settings: PlatformLegalSettings): LegalDocument {
           "추가 구매한 횟수는 해당 문서에서만 사용할 수 있고 다른 문서로 옮길 수 없습니다. 사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있으며, 일부라도 사용한 경우에는 남은 횟수에 해당하는 금액을 환급합니다.",
         ],
       },
-      { title: "7. 도메인 연결 + 호스팅 1년", items: DOMAIN_REFUND_ITEMS },
+      { title: "7. 도메인 연결 + 호스팅 1년", items: [...DOMAIN_REFUND_ITEMS, ...DOMAIN_PURCHASE_REFUND_ITEMS.map((item) => `${DOMAIN_PURCHASE_PRODUCT_NAME}: ${item}`)] },
       { title: "8. AI 수정 토큰", items: TOKEN_REFUND_ITEMS },
       {
         title: "9. 신청 방법과 처리",

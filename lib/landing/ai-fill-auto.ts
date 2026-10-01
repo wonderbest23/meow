@@ -10,3 +10,19 @@ export function needsAutoAiFill(site: { createdAt: string; updatedAt: string; ve
   const created = Date.parse(site.createdAt), updated = Date.parse(site.updatedAt);
   return Number.isFinite(created) && Number.isFinite(updated) && updated - created < 2000;
 }
+
+type FillMark = { draft: { pageData?: { aiFill?: { at?: string } | null } | null } };
+
+/** 채우기 기록 시각(없으면 "") — 요청 전후를 견줘 새로 채워졌는지 본다 */
+export function aiFillMark(site: FillMark | null | undefined): string {
+  return site?.draft.pageData?.aiFill?.at ?? "";
+}
+
+/*
+ * 채우기 답을 못 받았을 때(연결이 30초 남짓에서 끊김 등) 서버에는 이미 저장됐을 수 있다 — 운영 점검에서
+ * 화면은 '하지 못했어요'인데 초안은 채워져 있었다. 요청 전과 채우기 기록이 달라졌으면 채워진 것으로 본다.
+ */
+export function aiFillLanded(before: string, site: FillMark | null | undefined): boolean {
+  const after = aiFillMark(site);
+  return Boolean(after) && after !== before;
+}

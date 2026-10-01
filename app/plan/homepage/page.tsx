@@ -9,7 +9,7 @@ import { HomepageKitPanel } from "../../../components/homepage-kit-panel";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
-import { needsAutoAiFill } from "../../../lib/landing/ai-fill-auto";
+import { aiFillLanded, aiFillMark, needsAutoAiFill } from "../../../lib/landing/ai-fill-auto";
 import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
@@ -78,15 +78,37 @@ export default function PlanHomepagePage() {
     const current = () => mounted.current && epoch === planOwnerEpoch();
     setAiFilling(true);
     setMessage(auto ? "AI가 계획서를 읽고 홈페이지를 채우고 있어요. 30초쯤 걸려요." : "AI가 계획서로 홈페이지를 다시 채우고 있어요. 30초쯤 걸려요.");
+    const before = aiFillMark(siteRef.current);
+    const done = (filled: LandingSiteRecord) => {
+      siteRef.current = filled; setSite(filled); setDraft(filled.draft); setAction("saved");
+      setMessage("AI가 계획서로 홈페이지를 채웠어요. 마음에 안 드는 글은 에디터에서 바로 고칠 수 있어요.");
+    };
+    /* 답을 못 받았으면 서버가 저장을 마쳤는지 잠깐(최대 1분) 확인한다 */
+    const recover = async () => {
+      for (let i = 0; i < 12 && current() && !controller.signal.aborted; i++) {
+        const res = await fetch(`/api/projects/${targetProjectId}/landing`, { cache: "no-store", signal: controller.signal }).catch(() => null);
+        const data = res?.ok ? (await res.json().catch(() => ({}))) as { site?: LandingSiteRecord } : {};
+        if (aiFillLanded(before, data.site)) return data.site!;
+        await new Promise(resolve => setTimeout(resolve, 5000));
+      }
+      return null;
+    };
     try {
       const res = await fetch(`/api/projects/${targetProjectId}/landing/ai-fill`, { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt }) });
       const data = (await res.json().catch(() => ({}))) as { site?: LandingSiteRecord; error?: { message?: string } };
       if (!current()) return;
-      if (!res.ok || !data.site) { setMessage(data.error?.message ?? "AI 채우기를 하지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
-      siteRef.current = data.site; setSite(data.site); setDraft(data.site.draft); setAction("saved");
-      setMessage("AI가 계획서로 홈페이지를 채웠어요. 마음에 안 드는 글은 에디터에서 바로 고칠 수 있어요.");
+      if (res.ok && data.site) { done(data.site); return; }
+      // 서버가 이유를 알려 준 실패(한도·AI 실패·충돌)는 그대로 보여 준다. 이유가 없으면 중간 연결이 끊긴 것
+      const filled = data.error ? null : await recover();
+      if (!current()) return;
+      if (filled) done(filled);
+      else setMessage(data.error?.message ?? "AI 채우기를 하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } catch {
-      if (current()) setMessage("AI 채우기 연결이 끊겼어요. 잠시 후 다시 시도해 주세요.");
+      if (controller.signal.aborted || !current()) return;
+      const filled = await recover().catch(() => null);
+      if (!current()) return;
+      if (filled) done(filled);
+      else setMessage("AI 채우기 연결이 끊겼어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
       if (current()) setAiFilling(false);

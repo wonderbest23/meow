@@ -1,4 +1,5 @@
 import "server-only";
+import { withUsageContext } from "../llm/usage-context";
 import { sweepDueLeadNotifications } from "../landing/lead-notifications";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
@@ -196,6 +197,20 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   throw new Error("PLAN_VERSION_CONFLICT");
 }
 
+/* 내부 작업 요청 — Workflow 가 서명해서 보낸다 */
+const ownerId = z.string().min(1).max(128);
+const planIdSchema = z.string().min(1).max(60);
+const token = z.string().min(1).max(256);
+const serviceRequestSchema = z.discriminatedUnion("operation", [
+  z.object({ operation: z.literal("intake"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, jobId: z.string().uuid() }).strict() }).strict(),
+  z.object({ operation: z.literal("generateSection"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, chapterId: z.string().min(1).max(128), sectionId: z.string().min(1).max(128) }).strict() }).strict(),
+  z.object({ operation: z.literal("completeCoach"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, token, operation: z.literal("coach").optional() }).strict() }).strict(),
+  z.object({ operation: z.literal("completeDeck"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, token, operation: z.literal("deck").optional() }).strict() }).strict(),
+  z.object({ operation: z.literal("completeProposalUpdate"), job: proposalBackgroundJobSchema }).strict(),
+  z.object({ operation: z.literal("artifactChunk"), job: z.object({ operation: z.literal("artifact_update"), ownerHash: ownerId, planId: planIdSchema, jobId: z.string().uuid(), index: z.number().int().min(0).max(79), attempt: z.number().int().min(0).max(2) }).strict() }).strict(),
+  z.object({ operation: z.literal("sweepLeadNotifications"), job: z.object({}).strict() }).strict(),
+]);
+
 export async function handlePlanSectionServiceRequest(request: Request, env: { SUPABASE_SERVICE_ROLE_KEY?: string }) {
   const pathname = new URL(request.url).pathname;
   if (pathname !== PLAN_SECTION_INTERNAL_PATH && pathname !== PLAN_SECTION_API_PATH) return null;
@@ -210,24 +225,18 @@ export async function handlePlanSectionServiceRequest(request: Request, env: { S
   const secret = env.SUPABASE_SERVICE_ROLE_KEY;
   const valid = !!secret && recent && await verifyBody(secret, timestamp, body, signature);
   if (!valid) return Response.json({ error: "NOT_FOUND" }, { status: 404 });
-  const owner = z.string().min(1).max(128);
-  const plan = z.string().min(1).max(60);
-  const token = z.string().min(1).max(256);
-  const schema = z.discriminatedUnion("operation", [
-    z.object({ operation: z.literal("intake"), job: z.object({ ownerHash: owner, planId: plan, jobId: z.string().uuid() }).strict() }).strict(),
-    z.object({ operation: z.literal("generateSection"), job: z.object({ ownerHash: owner, planId: plan, chapterId: z.string().min(1).max(128), sectionId: z.string().min(1).max(128) }).strict() }).strict(),
-    z.object({ operation: z.literal("completeCoach"), job: z.object({ ownerHash: owner, planId: plan, token, operation: z.literal("coach").optional() }).strict() }).strict(),
-    z.object({ operation: z.literal("completeDeck"), job: z.object({ ownerHash: owner, planId: plan, token, operation: z.literal("deck").optional() }).strict() }).strict(),
-    z.object({ operation: z.literal("completeProposalUpdate"), job: proposalBackgroundJobSchema }).strict(),
-    z.object({ operation: z.literal("artifactChunk"), job: z.object({ operation: z.literal("artifact_update"), ownerHash: owner, planId: plan, jobId: z.string().uuid(), index: z.number().int().min(0).max(79), attempt: z.number().int().min(0).max(2) }).strict() }).strict(),
-    z.object({ operation: z.literal("sweepLeadNotifications"), job: z.object({}).strict() }).strict(),
-  ]);
   let raw: unknown;
   try { raw = JSON.parse(body); } catch { return Response.json({ error: "INVALID_REQUEST" }, { status: 400 }); }
-  const parsed = schema.safeParse(raw);
+  const parsed = serviceRequestSchema.safeParse(raw);
   if (!parsed.success) return Response.json({ error: "INVALID_REQUEST" }, { status: 400 });
   const input = parsed.data;
   if (process.env.INTAKE_BETA_SAFETY === "1" && input.operation !== "intake" && input.operation !== "sweepLeadNotifications") return Response.json({ error: "BETA_SCOPE_RESTRICTED" }, { status: 403 });
+  // 이 작업에서 부르는 AI 호출 기록에 사업(계획서)을 붙인다 — 사업별 비용 집계(lib/llm/usage-context.ts)
+  const owner = input.job as { planId?: string; ownerHash?: string };
+  return await withUsageContext({ planId: owner.planId, ownerHash: owner.ownerHash }, () => runServiceOperation(input));
+}
+
+async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) {
   try {
     switch (input.operation) {
       case "intake": return Response.json({ result: await runIntakeJobWithBudget(input.job) });

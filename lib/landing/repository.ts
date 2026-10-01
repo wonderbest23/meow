@@ -185,6 +185,24 @@ export async function listLandingLeads(
   }));
 }
 
+/** [from, to) 사이에 들어온 문의 수 — 운영 기록의 '문의' 칸을 채울 때 쓴다 */
+export async function countLandingLeadsBetween(
+  siteId: string,
+  from: string,
+  to: string,
+): Promise<number> {
+  const supabase = getServerSupabase();
+  if (!supabase) return demo.leads.filter((lead) => lead.siteId === siteId && lead.createdAt >= from && lead.createdAt < to).length;
+  const { count, error } = await supabase
+    .from("landing_leads")
+    .select("id", { count: "exact", head: true })
+    .eq("site_id", siteId)
+    .gte("created_at", from)
+    .lt("created_at", to);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function saveLandingDraft(
   projectId: string,
   guestTokenHash: string,
