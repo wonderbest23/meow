@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { isBillingDuplicate, kstDay, krwPerUsd, priceFor, rowCostUsd, summarizeUsage, type UsageRow } from "../lib/llm/cost";
 import { usageContext, withUsageContext } from "../lib/llm/usage-context";
+import { currentUsageContext } from "../lib/llm/usage-context-reader";
 
 // 요금표: 더 구체적인 모델 이름이 먼저(opus-5-5 가 opus-5 로 잡히지 않게), 날짜 붙은 id 도
 assert.equal(priceFor("claude-opus-5-5")?.label, "Claude Opus 5.5");
@@ -53,6 +54,7 @@ void (async () => {
 await withUsageContext({ planId: "plan_x", ownerHash: "owner" }, async () => {
   await new Promise(resolve => setTimeout(resolve, 5));
   assert.equal(usageContext()?.planId, "plan_x");
+  assert.equal(currentUsageContext()?.planId, "plan_x", "기록 쪽은 node:async_hooks 없이 전역 읽기 함수로 본다");
   await withUsageContext({ planId: "plan_y" }, async () => { assert.deepEqual(usageContext(), { planId: "plan_y", ownerHash: "owner" }); });
   assert.equal(usageContext()?.planId, "plan_x");
 });
