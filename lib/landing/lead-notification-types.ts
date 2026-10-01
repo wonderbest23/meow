@@ -10,10 +10,10 @@ export type LeadNotificationSummary = {
 };
 export const LEAD_NOTIFICATION_MAX_ATTEMPTS = 5;
 export const LEAD_NOTIFICATION_LABELS: Record<LeadNotificationStatus, string> = {
-  pending: "메일 알림 대기",
-  processing: "메일 발송 중",
-  sent: "메일 발송 접수됨",
-  retry: "메일 재시도 대기",
-  blocked: "메일 설정 확인 필요",
-  failed: "메일 발송 확인 필요",
+  pending: "알림 대기",
+  processing: "알림 보내는 중",
+  sent: "알림 보냄",
+  retry: "알림 재시도 대기",
+  blocked: "알림 설정 확인 필요",
+  failed: "알림 발송 확인 필요",
 };

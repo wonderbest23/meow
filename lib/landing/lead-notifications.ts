@@ -4,6 +4,7 @@ import { getLandingForProject } from "./repository";
 import { buildLandingLeadEmail, landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "./lead-email";
 import { LEAD_NOTIFICATION_MAX_ATTEMPTS, type LeadNotificationError, type LeadNotificationStatus, type LeadNotificationSummary } from "./lead-notification-types";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { customerSmsConfig, sendCustomerSms, type CustomerSmsConfig } from "../notify/customer-sms";
 
 type OutboxRow = {
   lead_id: string; site_id: string; status: LeadNotificationStatus; attempts: number;
@@ -27,8 +28,12 @@ export async function listLandingLeadNotifications(projectId: string, ownerHash:
   return (data ?? []).map(row => summary(row as OutboxRow));
 }
 
-/** A lease and provider idempotency key protect retries after response loss or process termination. */
-export async function processLandingLeadNotification(leadId: string, force = false, dependencies?: { db: SupabaseClient | null; config: ReturnType<typeof landingEmailConfiguration>; transport: typeof fetch }): Promise<void> {
+/*
+ * A lease and provider idempotency key protect retries after response loss or process termination.
+ * 알림 수단: 사장님이 '문자 받을 휴대폰'을 등록했고 문자가 켜져 있으면 문자(알리고 중계), 아니면 메일 설정이 있을 때 메일.
+ * 문자는 문의 id 가 중계의 eventId 라서, 응답을 놓쳐 다시 보내도 중계가 앞선 결과를 돌려준다(두 번 가지 않는다).
+ */
+export async function processLandingLeadNotification(leadId: string, force = false, dependencies?: { db: SupabaseClient | null; config: ReturnType<typeof landingEmailConfiguration>; transport: typeof fetch; sms?: CustomerSmsConfig | null; smsTransport?: typeof fetch }): Promise<void> {
   const db = dependencies ? dependencies.db : getServerSupabase();
   if (!db) return;
   const token = crypto.randomUUID();
@@ -40,8 +45,30 @@ export async function processLandingLeadNotification(leadId: string, force = fal
     const { error, data } = await db.from("landing_lead_notifications").update({ ...patch, lease_token: null, lease_until: null, updated_at: new Date().toISOString() }).eq("lead_id", leadId).eq("lease_token", token).select("lead_id");
     if (error || !data?.length) throw new Error("LANDING_NOTIFICATION_SAVE_FAILED");
   };
+  const sms = dependencies ? dependencies.sms ?? null : customerSmsConfig();
+  if (sms) {
+    const site = await db.from("landing_sites").select("alert_phone").eq("id", row.site_id).maybeSingle();
+    const phone = site.error ? null : (site.data?.alert_phone as string | null | undefined) ?? null;
+    if (phone) {
+      const attempts = row.attempts + 1;
+      const prepared = await db.from("landing_lead_notifications").update({ attempts, first_attempt_at: row.first_attempt_at ?? new Date().toISOString(), delivery_uncertain: true }).eq("lead_id", leadId).eq("lease_token", token).select("lead_id");
+      if (prepared.error || !prepared.data?.length) throw new Error("LANDING_NOTIFICATION_SAVE_FAILED");
+      const sent = await sendCustomerSms(sms, { eventId: leadId, eventType: "homepage-lead", recipient: phone, params: {} }, dependencies?.smsTransport);
+      if (sent.status === "accepted" || sent.status === "test_accepted") {
+        await finish({ status: "sent", provider_id: `sms:${sent.code}`.slice(0, 200), accepted_at: new Date().toISOString(), error_code: null, delivery_uncertain: false, next_attempt_at: null });
+        return;
+      }
+      // 한도·꺼짐(blocked)과 거절은 다시 보내도 같다 — 멈춘다. 확인 불가는 같은 eventId 로 다시 물어본다
+      const retry = sent.status === "uncertain" && attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS;
+      await finish({ status: retry ? "retry" : sent.status === "uncertain" ? "failed" : "blocked",
+        error_code: sent.status === "rejected" ? "provider_rejected" : sent.status === "blocked" ? "provider_unavailable" : "delivery_unknown",
+        delivery_uncertain: sent.status === "uncertain", next_attempt_at: retry ? new Date(Date.now() + notificationRetryDelay(attempts)).toISOString() : null });
+      return;
+    }
+  }
   const config = dependencies ? dependencies.config : landingEmailConfiguration();
-  if (!config) { await finish({ status: "blocked", error_code: "missing_email_config", next_attempt_at: null }); return; }
+  // 문자는 켜져 있는데 번호가 없으면 '받을 곳 없음', 둘 다 없으면 '발송 설정 없음'
+  if (!config) { await finish({ status: "blocked", error_code: sms ? "recipient_missing" : "missing_email_config", next_attempt_at: null }); return; }
   if (notificationIdempotencyExpired(row.first_attempt_at, row.delivery_uncertain)) {
     await finish({ status: "failed", error_code: "delivery_unknown", next_attempt_at: null }); return;
   }

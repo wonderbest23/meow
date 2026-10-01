@@ -94,3 +94,22 @@ Checked 2026-09-27:
 - [Aligo API authentication settings](https://smartsms.aligo.in/admin/api/auth.html): the owner's existing key, approved sender and sending-server IP registrations were inspected read-only. No private values reproduced.
 - [Cloudflare dedicated egress and Workers](https://developers.cloudflare.com/smart-shield/configuration/dedicated-egress-ips/other-products/): special egress options exist, but no such configuration or entitlement was verified for this project. Do not assume its regular Worker fetch has one registered static IP.
 - [Supabase RPC](https://supabase.com/docs/reference/javascript/rpc) and [abort signal](https://supabase.com/docs/reference/javascript/using-modifiers-abortsignal): shared atomic counter with bounded request lifetime.
+
+## Homepage-owner SMS (relay v3, 2026-10-01)
+
+Homepage owners ("사장님") can register a mobile number in the homepage panel ("접수된 문의" → "문의 알림 문자 받을 휴대폰", explicit consent). New homepage inquiries and the Monday weekly report then go to that number by SMS. Email is used only as a fallback when no number is registered and email is configured.
+
+- Request v3 carries only `recipient` (010 mobile) and an event type: `homepage-lead` (no params) or `weekly-report` (`leads`, `prevLeads`, `views` integers). The relay builds the text from fixed templates; free text, sender and message fields are rejected. Both templates fit one SMS (≤ 90 EUC-KR bytes) at the largest allowed numbers.
+- The phone is stored in `landing_sites.alert_phone` (+ `alert_phone_agreed_at`, migration `0039_landing_alert_phone.sql`), never in the public homepage draft.
+- Event IDs: the lead ID for inquiries, and a stable UUID per homepage+week for reports, so app-side retries return the relay's recorded result instead of sending again.
+- Relay limits: `customerDailyLimit` (all owner SMS per UTC day) and `perRecipientDailyLimit` (per number per day), counted separately from the operator's own alerts (`dailyLimit`, max 10). Blocked/rejected results stop; only unconfirmed results are retried with the same event ID.
+- Sender: `customerSender` must be a number pre-registered in Aligo. It is what owners see. Decide deliberately whether to use the operator's personal number.
+
+### Upgrade the installed relay
+
+1. Upload `ops/owner-sms/relay.py` and `ops/owner-sms/upgrade_customer.py` to the server (same directory).
+2. `sudo python3 upgrade_customer.py` — asks for the sender number, daily limit (default 300) and per-number limit (default 20), and whether to enable now. It backs up the current relay and config (`*.before-v3-<time>`), validates the new config, restarts the service and rolls back on failure. The attempts database is migrated in place (existing rows become operator alerts).
+3. On the Worker set `CUSTOMER_SMS_ENABLED=1` (the relay URL, secret and `OWNER_SMS_MODE` are shared with operator alerts).
+4. Apply migration `0039_landing_alert_phone.sql` in Supabase.
+
+To stop owner SMS: set `customerEnabled` to `false` in the relay config (or `CUSTOMER_SMS_ENABLED=0` on the Worker). Operator alerts are unaffected.

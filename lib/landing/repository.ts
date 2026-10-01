@@ -217,6 +217,24 @@ export async function getWeeklyReportEnabled(siteId: string): Promise<boolean | 
   return !data.weekly_report_opt_out;
 }
 
+/** 문자 알림 받을 휴대폰(마이그레이션 0039). 칸이 없으면 undefined, 비어 있으면 null */
+export async function getLandingAlertPhone(siteId: string): Promise<string | null | undefined> {
+  const supabase = getServerSupabase();
+  if (!supabase) return undefined;
+  const { data, error } = await supabase.from("landing_sites").select("alert_phone").eq("id", siteId).maybeSingle();
+  if (error || !data) return undefined;
+  return (data.alert_phone as string | null) ?? null;
+}
+
+/** 번호를 저장하면 동의 시각도 함께 남긴다(지우면 둘 다 지운다) */
+export async function setLandingAlertPhone(siteId: string, phone: string | null): Promise<boolean> {
+  const supabase = getServerSupabase();
+  if (!supabase) return false;
+  const { data, error } = await supabase.from("landing_sites")
+    .update({ alert_phone: phone, alert_phone_agreed_at: phone ? new Date().toISOString() : null }).eq("id", siteId).select("id");
+  return !error && Boolean(data?.length);
+}
+
 export async function setWeeklyReportEnabled(siteId: string, enabled: boolean): Promise<boolean> {
   const supabase = getServerSupabase();
   if (!supabase) return false;
