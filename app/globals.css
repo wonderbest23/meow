@@ -14778,6 +14778,9 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-badge-info { background: #e8f0fd; color: #3272db; }
 /* 도메인 카드의 자체 제목은 요약 줄과 겹쳐서 숨긴다 — 연결 상태 표시(em)는 남긴다 */
 .hk-fold-body .domain-connector-title > svg, .hk-fold-body .domain-connector-title > span { display: none; }
+/* 접이식 머리에 이미 제목이 있다 — 상태 배지(연결 완료 등)가 없으면 빈 띠가 남지 않게 접는다 */
+.hk-fold-body .domain-connector-title { min-height: 0; padding: 8px 12px; justify-content: flex-end; }
+.hk-fold-body .domain-connector-title:not(:has(> em)) { display: none; }
 .hk-fold-body .landing-domain-connector { border: 0; padding: 0; box-shadow: none; }
 
 .hk-preview { border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; overflow: hidden; }
