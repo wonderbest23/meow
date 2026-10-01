@@ -107,7 +107,7 @@ function fakeDb(data: { sites: Row[]; leads: Row[]; events: Row[]; projects: Row
   const deps = { db: fake.db, config, secret, transport, now, operatingRecorded: async () => false };
 
   assert.deepEqual(await runWeeklyReports({ ...deps, now: at("2026-10-05T08:00:00+09:00") }), { due: false, reason: "not_due", candidates: 0, sent: 0, skipped: 0, failed: 0 });
-  assert.equal((await runWeeklyReports({ ...deps, config: null })).reason, "missing_email_config", "메일 설정이 없으면 아무것도 안 한다");
+  assert.equal((await runWeeklyReports({ ...deps, config: null })).reason, "missing_notification_config", "문자·메일 설정이 모두 없으면 아무것도 안 한다");
   assert.equal(fake.reports.length, 0);
 
   const first = await runWeeklyReports(deps);
@@ -140,6 +140,23 @@ function fakeDb(data: { sites: Row[]; leads: Row[]; events: Row[]; projects: Row
   await runWeeklyReports({ ...deps, db: rejected.db, transport: (async () => new Response("{}", { status: 422 })) as typeof fetch });
   rejected.reports[0].updated_at = new Date(now - 60 * 60_000).toISOString();
   assert.equal((await runWeeklyReports({ ...deps, db: rejected.db })).candidates, 0, "발송 거절은 다시 시도하지 않는다");
+
+  // 문자: '문자 받을 휴대폰'이 있으면 메일 대신 짧은 문자(숫자만), 같은 주에는 같은 eventId
+  const smsFake = fakeDb({
+    sites: [site("phone", { alert_phone: "01012345678" }), site("nophone")],
+    leads: [{ site_id: "phone", created_at: "2026-09-29T03:00:00Z" }], events: [{ site_id: "nophone", event_type: "page_view", created_at: "2026-09-30T03:00:00Z" }],
+    projects: [{ id: "p-phone", owner_id: "u1", guest_token_hash: "h", opportunity: {} }, { id: "p-nophone", owner_id: "u2", guest_token_hash: "h", opportunity: {} }],
+    users: { u1: { email: "a@example.com", email_confirmed_at: "2026-01-01" }, u2: { email: "b@example.com", email_confirmed_at: "2026-01-01" } },
+  });
+  const smsBodies: Row[] = [];
+  const smsTransport = (async (_url: unknown, init?: RequestInit) => { const body = JSON.parse(String(init?.body)); smsBodies.push(body); return new Response(JSON.stringify({ eventId: body.eventId, mode: "live", status: "accepted", code: "PROVIDER_ACCEPTED" }), { status: 200 }); }) as typeof fetch;
+  const sms = { endpoint: "https://api.example.com/_oneulstart/support-owner-sms", secret: "s".repeat(43), mode: "live" as const };
+  const smsRun = await runWeeklyReports({ db: smsFake.db, config: null, secret, now, sms, smsTransport, transport: (async () => { throw new Error("no email"); }) as typeof fetch });
+  assert.deepEqual([smsRun.sent, smsRun.skipped], [1, 1], "번호 있는 곳은 문자, 번호도 메일 설정도 없는 곳은 쉼");
+  assert.equal(smsBodies.length, 1);
+  assert.deepEqual([smsBodies[0].eventType, smsBodies[0].recipient, smsBodies[0].params], ["weekly-report", "01012345678", { leads: 1, prevLeads: 0, views: 0 }]);
+  assert.match(String(smsBodies[0].eventId), /^[0-9a-f-]{36}$/);
+  assert.deepEqual(smsFake.reports.map((row) => [row.site_id, row.status, row.error_code ?? null]).sort(), [["nophone", "skipped", "recipient_missing"], ["phone", "sent", null]]);
 
   console.log("weekly-report: week window, tips, email, unsubscribe token, inactive skip, send once per week, retry");
 })().catch((error) => { console.error(error); process.exit(1); });

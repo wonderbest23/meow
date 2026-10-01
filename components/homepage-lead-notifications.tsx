@@ -25,21 +25,21 @@ export function useHomepageLeadNotifications(projectId: string | null, refresh: 
       const body = await response.json();
       if (!response.ok || !Array.isArray(body.notifications)) throw new Error();
       if (!controller.signal.aborted) setItems(body.notifications);
-    } catch { if (!controller.signal.aborted) setError("메일 재시도 결과를 확인하지 못했습니다 새로고침해 확인해주세요"); }
+    } catch { if (!controller.signal.aborted) setError("알림 재시도 결과를 확인하지 못했습니다. 새로고침해 확인해 주세요"); }
     finally { if (!controller.signal.aborted) setRetrying(null); }
   }
   return { items, error, retrying, retry };
 }
 
 export function HomepageLeadNotification({ value, busy, onRetry }: { value: LeadNotificationSummary | undefined; busy: boolean; onRetry: () => void }) {
-  if (!value) return <small>메일 알림 기록 없음</small>;
-  const message = value.errorCode === "missing_email_config" ? "발송 설정이 없어 문의 목록에만 저장됐습니다"
-    : value.errorCode === "recipient_missing" ? "계정 이메일 확인이 필요합니다"
+  if (!value) return <small>알림 기록 없음</small>;
+  const message = value.errorCode === "missing_email_config" ? "알림 발송 준비 전이라 문의 목록에만 저장됐습니다"
+    : value.errorCode === "recipient_missing" ? "위 '문자 받을 휴대폰'을 등록해 주세요"
     : value.errorCode === "delivery_unknown" ? "발송 여부 확인이 필요합니다"
-    : value.errorCode === "provider_rejected" ? "메일 서비스에서 발송을 거절했습니다" : "";
+    : value.errorCode === "provider_rejected" ? "발송 서비스에서 거절했습니다(하루 한도 등)" : "";
   const canRetry = value.attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS && ["pending", "retry", "blocked"].includes(value.status);
   return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
     <small>{LEAD_NOTIFICATION_LABELS[value.status]}{message ? ` · ${message}` : ""}</small>
-    {canRetry ? <button type="button" disabled={busy} onClick={onRetry} title="문의 알림 이메일 재시도" aria-label="문의 알림 이메일 재시도" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", border: "1px solid #d8e1ed", borderRadius: 6, background: "transparent", color: "#365f98", fontSize: 12 }}>{busy ? <LoaderCircle size={13} className="spin" /> : <RefreshCw size={13} />} 재시도</button> : null}
+    {canRetry ? <button type="button" disabled={busy} onClick={onRetry} title="문의 알림 다시 보내기" aria-label="문의 알림 다시 보내기" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", border: "1px solid #d8e1ed", borderRadius: 6, background: "transparent", color: "#365f98", fontSize: 12 }}>{busy ? <LoaderCircle size={13} className="spin" /> : <RefreshCw size={13} />} 재시도</button> : null}
   </div>;
 }

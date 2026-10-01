@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "./lead-email";
+import { sendCustomerSms, stableEventId, type CustomerSmsConfig } from "../notify/customer-sms";
 
 /*
  * 주간 사장님 리포트 — 매주 월요일 오전 9시(한국 시간)부터, 공개한 홈페이지 주인에게 지난주(월~일) 성적표를 보낸다.
@@ -129,7 +130,7 @@ export function weeklyReportInactive(stats: WeeklyStats, siteCreatedAt: string, 
   return quiet && Number.isFinite(created) && now - created > 35 * DAY;
 }
 
-type SiteRow = { id: string; project_id: string; slug: string; published_slug: string | null; custom_domain: string | null; created_at: string; businessName: string | null };
+type SiteRow = { id: string; project_id: string; slug: string; published_slug: string | null; custom_domain: string | null; created_at: string; businessName: string | null; alert_phone?: string | null };
 type ReportRow = { site_id: string; status: string; attempts: number; updated_at: string; lease_until: string | null };
 
 export type WeeklyReportDependencies = {
@@ -137,6 +138,9 @@ export type WeeklyReportDependencies = {
   config: ReturnType<typeof landingEmailConfiguration>;
   secret: string;
   transport?: typeof fetch;
+  /** 사장님 문자(알리고 중계) — '문자 받을 휴대폰'이 있으면 메일 대신 짧은 문자 한 통 */
+  sms?: CustomerSmsConfig | null;
+  smsTransport?: typeof fetch;
   now?: number;
   /** 지난주를 덮는 운영 기록이 있는지 — 모르면 null(안내를 빼고 보낸다) */
   operatingRecorded?: (ownerHash: string, planId: string, weekStart: string) => Promise<boolean | null>;
@@ -152,19 +156,22 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
   if (!week.due) return { ...result, reason: "not_due" };
   const { db, config } = deps;
   if (!db) return { ...result, reason: "no_database" };
-  if (!config) return { ...result, reason: "missing_email_config" };
+  const sms = deps.sms ?? null;
+  if (!config && !sms) return { ...result, reason: "missing_notification_config" };
   if (!deps.secret) return { ...result, reason: "missing_secret" };
 
-  const sites = await db.from("landing_sites")
-    .select("id, project_id, slug, published_slug, custom_domain, created_at, businessName:draft->>businessName")
-    .not("published_version", "is", null).eq("weekly_report_opt_out", false).order("id").limit(2000);
+  const columns = "id, project_id, slug, published_slug, custom_domain, created_at, businessName:draft->>businessName";
+  const pick = (select: string) => db.from("landing_sites").select(select).not("published_version", "is", null).eq("weekly_report_opt_out", false).order("id").limit(2000);
+  // 문자 번호 칸(0039)이 아직 없으면 번호 없이 — 메일만 가능
+  let sites = sms ? await pick(`${columns}, alert_phone`) : await pick(columns);
+  if (sites.error && sms) sites = await pick(columns);
   if (sites.error) return { ...result, reason: "migration_required" };
   const reports = await db.from("landing_weekly_reports").select("site_id, status, attempts, updated_at, lease_until").eq("week_start", week.weekStart).limit(5000);
   if (reports.error) return { ...result, reason: "migration_required" };
   const byId = new Map(((reports.data ?? []) as ReportRow[]).map((row) => [row.site_id, row]));
   const retryable = (row: ReportRow) => (row.status === "failed" && row.attempts < WEEKLY_REPORT_MAX_ATTEMPTS && now - Date.parse(row.updated_at) > 30 * 60_000)
     || (row.status === "processing" && row.lease_until !== null && Date.parse(row.lease_until) < now && row.attempts < WEEKLY_REPORT_MAX_ATTEMPTS);
-  const due = ((sites.data ?? []) as SiteRow[]).filter((site) => { const row = byId.get(site.id); return !row || retryable(row); });
+  const due = ((sites.data ?? []) as unknown as SiteRow[]).filter((site) => { const row = byId.get(site.id); return !row || retryable(row); });
   result.candidates = due.length;
 
   for (const site of due.slice(0, limit)) {
@@ -180,11 +187,8 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
     const finish = (patch: Record<string, unknown>) => db.from("landing_weekly_reports")
       .update({ attempts, ...patch, lease_until: null, updated_at: new Date(now).toISOString() }).eq("site_id", site.id).eq("week_start", week.weekStart);
     try {
-      const project = await db.from(projectReadTable()).select("owner_id, guest_token_hash, opportunity").eq("id", site.project_id).maybeSingle();
-      const ownerId = project.data?.owner_id as string | undefined;
-      const owner = ownerId ? await db.auth.admin.getUserById(ownerId) : null;
-      const recipient = owner?.data?.user?.email_confirmed_at ? owner.data.user.email : null;
-      if (!recipient) { await finish({ status: "skipped", error_code: "recipient_missing" }); result.skipped += 1; continue; }
+      const phone = sms ? site.alert_phone ?? null : null;
+      if (!phone && !config) { await finish({ status: "skipped", error_code: "recipient_missing" }); result.skipped += 1; continue; }
 
       const count = async (table: "landing_leads" | "landing_events", from: string, to: string, eventType?: string) => {
         let query = db.from(table).select("id", { count: "exact", head: true }).eq("site_id", site.id).gte("created_at", from).lt("created_at", to);
@@ -200,6 +204,20 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
       ]);
       const stats = { leads, prevLeads, views, prevViews, clicks, prevClicks };
       if (weeklyReportInactive(stats, site.created_at, now)) { await finish({ status: "skipped", error_code: "inactive" }); result.skipped += 1; continue; }
+
+      if (phone && sms) {
+        // 같은 홈페이지·주에는 늘 같은 eventId — 재시도해도 중계가 앞선 결과를 돌려줘 두 번 가지 않는다
+        const sent = await sendCustomerSms(sms, { eventId: await stableEventId(`weekly-report:${site.id}:${week.weekStart}`), eventType: "weekly-report", recipient: phone, params: { leads: Math.min(leads, 9999), prevLeads: Math.min(prevLeads, 9999), views: Math.min(views, 99999) } }, deps.smsTransport);
+        if (sent.status === "accepted" || sent.status === "test_accepted") { await finish({ status: "sent", provider_id: `sms:${sent.code}`, error_code: null }); result.sent += 1; }
+        else { await finish({ status: "failed", error_code: `sms_${sent.status}`, ...(sent.status === "uncertain" ? {} : { attempts: WEEKLY_REPORT_MAX_ATTEMPTS }) }); result.failed += 1; }
+        continue;
+      }
+      if (!config) { await finish({ status: "skipped", error_code: "recipient_missing" }); result.skipped += 1; continue; }
+      const project = await db.from(projectReadTable()).select("owner_id, guest_token_hash, opportunity").eq("id", site.project_id).maybeSingle();
+      const ownerId = project.data?.owner_id as string | undefined;
+      const owner = ownerId ? await db.auth.admin.getUserById(ownerId) : null;
+      const recipient = owner?.data?.user?.email_confirmed_at ? owner.data.user.email : null;
+      if (!recipient) { await finish({ status: "skipped", error_code: "recipient_missing" }); result.skipped += 1; continue; }
 
       const planId = String((project.data?.opportunity as { planId?: unknown } | null)?.planId ?? "");
       const ownerHash = String(project.data?.guest_token_hash ?? "");
