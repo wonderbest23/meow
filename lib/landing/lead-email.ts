@@ -1,6 +1,7 @@
 import type { LeadNotificationError } from "./lead-notification-types";
 
-export type LeadEmailPayload = { from: string; to: string; subject: string; text: string };
+/** html·headers 는 주간 리포트가 쓴다(문의 알림은 글만) */
+export type LeadEmailPayload = { from: string; to: string; subject: string; text: string; html?: string; headers?: Record<string, string> };
 export type LeadEmailResult = { ok: true; providerId: string } | { ok: false; code: LeadNotificationError; retryable: boolean; ambiguous: boolean };
 
 export function landingEmailConfiguration(env: Record<string, string | undefined> = process.env) {

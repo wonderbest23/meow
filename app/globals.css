@@ -14776,6 +14776,13 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-badge-warn { background: #fdeaea; color: #c0392b; }
 .hk-badge-ok { background: #e6f6ec; color: #1d7a45; }
 .hk-badge-info { background: #e8f0fd; color: #3272db; }
+/* 접수된 문의 — 주간 리포트 받기 */
+.hk-weekly { display: flex; align-items: flex-start; gap: 10px; margin: 0 0 12px; padding: 12px 14px; border: 1px solid #e6e6ee; border-radius: 10px; background: #fafbff; cursor: pointer; }
+.hk-weekly input { width: 18px; height: 18px; margin: 2px 0 0; flex: 0 0 auto; accent-color: #3272db; }
+.hk-weekly span { display: grid; gap: 3px; min-width: 0; }
+.hk-weekly strong { font-size: 13.5px; color: #191f28; }
+.hk-weekly small { font-size: 12px; line-height: 1.5; color: #6b7684; }
+.hk-weekly .hk-weekly-error { color: #c0392b; }
 /* 도메인 카드의 자체 제목은 요약 줄과 겹쳐서 숨긴다 — 연결 상태 표시(em)는 남긴다 */
 .hk-fold-body .domain-connector-title > svg, .hk-fold-body .domain-connector-title > span { display: none; }
 /* 접이식 머리에 이미 제목이 있다 — 상태 배지(연결 완료 등)가 없으면 빈 띠가 남지 않게 접는다 */

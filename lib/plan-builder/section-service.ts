@@ -1,6 +1,7 @@
 import "server-only";
 import { withUsageContext } from "../llm/usage-context";
 import { sweepDueLeadNotifications } from "../landing/lead-notifications";
+import { runWeeklyReportsNow } from "../landing/weekly-report-runner";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
 import { renderPlanMarkdown } from "./markdown";
@@ -244,7 +245,12 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
       case "completeCoach": return Response.json({ result: await generateAndSaveCoach(input.job) });
       case "completeDeck": return Response.json({ result: await generateAndSaveDeck(input.job) });
       case "completeProposalUpdate": return Response.json({ result: await executeProposalUpdate(input.job) });
-      case "sweepLeadNotifications": return Response.json({ result: { ok: true, ...(await sweepDueLeadNotifications()) } });
+      case "sweepLeadNotifications": {
+        // 같은 5분 예약 실행에서 주간 리포트도 몇 곳씩 보낸다 — 리포트가 실패해도 문의 알림 재시도는 그대로
+        const leads = await sweepDueLeadNotifications();
+        const weekly = await runWeeklyReportsNow().catch(() => ({ error: "WEEKLY_REPORT_FAILED" }));
+        return Response.json({ result: { ok: true, ...leads, weekly } });
+      }
       case "artifactChunk": return Response.json({ result: await executeArtifactChunk(input.job.ownerHash, input.job.planId, input.job.jobId, input.job.index, input.job.attempt) });
     }
   } catch {
