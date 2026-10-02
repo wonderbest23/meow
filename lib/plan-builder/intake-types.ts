@@ -66,7 +66,7 @@ export type IntakeSnapshot = {
   resourceAssessment?: { version: string; asOf: string; total: number; excluded: IntakeIdea[]; excludedCount: number; selected?: IntakeIdea; allUnknown: boolean };
   /** 진행 중인 AI 작업의 서버 기준 경과 시간과 예상·최대 시간. 응답을 보낼 때 HTTP 층이 붙인다(기기 시계 오차와 무관). */
   jobClock?: { elapsedMs: number; expectedMs: number; limitMs: number } | null;
-  financialSummary: string; hasDocuments: boolean; pendingExtraction: boolean;
+  financialSummary: string; financialWarning?: { message: string; fields: Array<"price" | "unitCost" | "cost"> } | null; hasDocuments: boolean; pendingExtraction: boolean;
   documentStatus?: "none" | "current" | "stale" | "unverified";
   /** 확정된 표준산업분류와 그 사업 구조 기본값 */
   ksic: { code: string; name: string; path: string; structure: BusinessStructure | null; summary: string[]; licenseHint: string | null } | null;

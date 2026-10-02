@@ -588,6 +588,10 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
   };
   return <>
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">현재까지 작성한 사업정보</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
+    {snapshot.financialWarning && <div className={styles.financialWarning} role="note">
+      <p>{snapshot.financialWarning.message}</p>
+      {onEdit && <div>{snapshot.financialWarning.fields.map(key => { const id = key === "price" ? "price" : key === "unitCost" ? "structure.unitCost" : "structure.cost"; const label = key === "price" ? "가격 다시 입력" : key === "unitCost" ? "변동비 다시 입력" : "고정비 다시 입력"; return <button key={key} type="button" className={styles.presetChip} disabled={disabled} onClick={() => onEdit(id)}><PencilLine size={14} aria-hidden="true" />{label}</button>; })}</div>}
+    </div>}
     {nextStep && actions}
     <BusinessIdentityHero snapshot={snapshot} compact />
     {original && <section className={styles.original}><h3>내 사업 구상</h3><ConversationText text={original} /></section>}

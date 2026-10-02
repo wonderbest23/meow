@@ -550,3 +550,9 @@
 .guestSaveNote { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--intake-muted); }
 .guestSaveNote a { color: var(--intake-blue); font-weight: 700; }
 .empty > p { max-width: 520px; margin: 0 0 4px; color: var(--intake-muted); line-height: 1.65; word-break: keep-all; }
+
+/* 계획서를 만들기 전 숫자 점검 — 팔수록 손해이거나 다 팔아도 본전이 안 될 때 */
+.financialWarning { display: grid; gap: 10px; margin: 0 0 16px; padding: 14px 16px; border: 1px solid #f3d19e; border-radius: 10px; background: #fff8ec; color: #6a4a12; }
+.financialWarning p { margin: 0; font-size: 14px; line-height: 1.65; }
+.financialWarning > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.financialWarning button { display: inline-flex; align-items: center; gap: 6px; }

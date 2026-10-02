@@ -50,6 +50,15 @@ async function main() {
     assert.ok(sectionSystemPrompt({ ...base, outline: "- overview/problem: 문제 정의" }).includes("[문서 설계도"));
     assert.ok(!sectionSystemPrompt(base).includes("[문서 설계도"), "no outline → prompt unchanged");
 
+    // 확인 목록은 마지막 섹션(핵심 요약)에만 — 다른 섹션은 '참고 사항' 목록을 만들지 않는다
+    const { buildUserPrompt } = await import("../lib/plan-builder/section-generator");
+    const summaryChapter = PLAN_BLUEPRINT.find(c => c.id === "summary")!;
+    const executive = { chapter: summaryChapter, section: summaryChapter.sections.find(s => s.id === "executive")!, answers: {}, planTitle: "새벽커피" };
+    assert.ok(buildUserPrompt(executive).includes("실행 전 확인 목록"), "the last section collects the checklist");
+    assert.ok(!buildUserPrompt(base).includes("## 실행 전 확인 목록"), "other sections do not");
+    assert.ok(sectionSystemPrompt(base).includes("섹션마다 '참고 사항'"), "system prompt forbids per-section note lists");
+    assert.ok(!/섹션 끝에 '추가 정의 필요 항목' 목록 하나로 모으세요/.test(sectionSystemPrompt(base)), "old per-section rule removed");
+
     // 4개 섹션을 동시에 저장해도 하나도 사라지지 않는다(저장 충돌은 다시 불러와 저장만 다시 한다)
     const store = await import("../lib/plan-builder/plan-server-store");
     const { generateAndSaveSection, generatePlanOutline } = await import("../lib/plan-builder/section-service");

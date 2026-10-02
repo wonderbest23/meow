@@ -2,7 +2,7 @@
 // 리얼리티 게이트 철학 유지: 근거 없는 경쟁사 실명·시장수치·인터뷰를 지어내지 않고 "추가 정의 필요"로 표기.
 
 import { completeText, streamText, type LLMConfig } from "../llm/complete";
-import type { PlanChapterDef, PlanSectionDef } from "./blueprint";
+import { financialTableOwner, type PlanChapterDef, type PlanSectionDef } from "./blueprint";
 import { questionsForSection } from "./questions";
 import { planTypeGuidanceBlock } from "./plan-type-guidance";
 import type { SectionBusinessContext } from "./context/section";
@@ -18,8 +18,14 @@ const SYSTEM_PROMPT = [
   "고객 인터뷰·설문·매출·시장규모·성장률·경쟁사 실명·수상·특허·제휴·후기 같은 사실을 스스로 만들어내지 마세요.",
   "단, [공식 원문 검색을 통해 확보한 시장 근거] 블록이 제공되면 그 안의 정보는 사용할 수 있습니다. 그 블록의 수치·기관명·기준일·URL은 변경하거나 추정하지 말고 전달된 값 그대로 쓰세요.",
   "근거가 없는 수치나 주장은 반드시 '추가 정의 필요' 또는 '검증 필요'로 표기하고, 미래형·조건형 문장을 사용하세요.",
-  "다만 그 표기를 문장마다 반복하지 마세요. 본문에서는 미확정임이 드러나게 서술만 하고, 섹션 끝에 '추가 정의 필요 항목' 목록 하나로 모으세요. 같은 표기가 한 섹션에 세 번을 넘으면 실패로 간주합니다.",
-  "그 목록의 각 항목에는 '어디서 어떻게 확인하는지'를 한 줄로 붙이세요. 모른다고만 하는 문서는 읽는 사람이 다음 행동을 할 수 없습니다. 예: 상권·유동인구는 소상공인 상권정보시스템(sg.sbiz.or.kr), 업종·시장 통계는 KOSIS 국가통계포털, 임대료·설비 비용은 실제 견적서 2~3곳 비교, 인허가는 관할 시·군·구청 담당 부서 문의.",
+  "다만 그 표기를 문장마다 반복하지 마세요. 본문에서는 미확정인 값 뒤에 '(확인 필요)'를 한 번만 붙이고 넘어갑니다. 같은 표기가 한 섹션에 세 번을 넘으면 실패로 간주합니다.",
+  /*
+   * 확인 목록은 문서 전체에 하나만 둔다. 예전엔 섹션마다 '참고 사항' 목록이 붙어 9개 섹션에서 같은 항목(상호 확정·인허가 문의·수요 설문)이
+   * 아홉 번 반복됐다(운영 2026-09-30 실제 문서). 돈을 낸 사람에게는 분량 채우기로 읽힌다.
+   */
+  "섹션마다 '참고 사항'·'추가 정의 필요 항목' 같은 확인 목록을 만들지 마세요. 확인할 일은 문서 마지막 섹션(핵심 요약)의 '실행 전 확인 목록' 한 곳에만 모읍니다.",
+  "그 확인 목록의 각 항목에는 '어디서 어떻게 확인하는지'를 한 줄로 붙입니다. 모른다고만 하는 문서는 읽는 사람이 다음 행동을 할 수 없습니다. 예: 상권·유동인구는 소상공인 상권정보시스템(sg.sbiz.or.kr), 업종·시장 통계는 KOSIS 국가통계포털, 임대료·설비 비용은 실제 견적서 2~3곳 비교, 인허가는 관할 시·군·구청 담당 부서 문의.",
+  "출처 표시는 AI가 제안하거나 가정한 내용에만 짧게 '(제안)'·'(가정)'으로 붙입니다. 사용자가 알려 준 내용에는 표시하지 않고, 표에 출처 구분 열을 만들지 않습니다.",
   "섹션은 소제목(##, ###)으로 구조화하고, 비교·구성·수치 정리에 적합하면 마크다운 표를 사용하세요.",
   "각 문단은 이 사업에만 해당하는 구체적 내용으로 쓰고, 다른 업종에 복붙해도 말이 되는 범용 문장은 실패로 간주합니다.",
   "과장, 성공 보장, 가상 고객 인용을 금지하고, 존재하지 않는 경쟁사·URL을 만들지 마세요. 단, 시장 근거 블록에 제공된 sourceUrl 은 실제 검색 인용에서 확인된 주소이므로 인용할 수 있습니다.",
@@ -159,7 +165,7 @@ function formatConflicts(conflicts?: Array<{ title: string; detail: string }>): 
     "해당 내용을 단정적으로 서술하지 마세요. 두 값(또는 두 진술)이 모두 존재한다는 사실을 밝히고 '확정 필요'로 표기하세요.",
     "임의로 한쪽을 골라 사실처럼 쓰거나, 평균·중간값을 내어 새로운 수치를 만들지 마세요.",
     "충돌과 무관한 내용은 평소대로 작성하세요.",
-    "충돌 설명은 본문에서 한 문단 이내로만 다루세요. 어느 값이 어떻게 다른지에 대한 상세한 서술은 섹션 끝의 '추가 정의 필요 항목'으로 보내고, 본문이 충돌 설명으로 채워지지 않게 하세요.",
+    "충돌 설명은 본문에서 한 문단 이내로만 다루고 '(확정 필요)'로 표시하세요. 본문이 충돌 설명으로 채워지지 않게 하세요.",
   ].join("\n");
 }
 
@@ -240,6 +246,8 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
   const biz = formatBusiness(input.business);
   return [
     SYSTEM_PROMPT,
+    /* 계산 수치(손익분기·처리량·1인당 시간)는 섹션마다 다시 풀면 같은 숫자가 아홉 번 나온다 — 한 섹션에서만 자세히 */
+    financialTableOwner(input.planType) ? `계산 블록의 수치(손익분기·처리량·건당 시간 등)를 표와 함께 자세히 쓰는 곳은 재무 섹션(${financialTableOwner(input.planType)}) 하나입니다. 다른 섹션에서는 필요할 때 결론만 한 문장으로 언급하고 같은 계산을 다시 풀거나 표로 옮기지 않습니다.` : "",
     biz ? `\n[사업 정보]\n${biz}` : `\n사업명: ${input.planTitle ?? "(미정)"}`,
     planTypeGuidanceBlock(input.planType),
     documentEditorialPrompt(input),
@@ -254,7 +262,7 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
 /** 사용자 프롬프트 조립 (테스트에서 직접 확인할 수 있게 공개) */
 export function buildUserPrompt(input: SectionGenInput): string {
   return [
-    input.coachContext ? `[공통 사업 정보 — 사용자 제공과 AI 제안을 구분]\n${input.coachContext}` : "",
+    input.coachContext ? `[공통 사업 정보 — user는 사용자가 알려 준 것, proposal은 AI 제안]\n${input.coachContext}` : "",
     boundedIntakeContext(input.intakeContext),
     input.operatingContext ?? "",
     `챕터: ${input.chapter.title}`,
@@ -289,12 +297,15 @@ export function buildUserPrompt(input: SectionGenInput): string {
     formatContext(input.context, { hasFinancialBlock: Boolean(input.financialsMarkdown || input.financialsReference) }),
     formatEvidence(input.evidence),
     input.coachContext
-      ? "\n공통 사업 정보의 사용자 제공 내용과 AI 제안을 구분해서 실제 사업안 본문을 작성하세요. 이미 정리한 제안을 빈칸으로 되돌리지 마세요. 불확실한 사실·추가 확인은 마지막 참고 사항에만 모으세요."
+      ? "\n공통 사업 정보로 실제 사업안 본문을 작성하세요. AI 제안을 쓸 때만 '(제안)'을 붙이고, 이미 정리한 제안을 빈칸으로 되돌리지 마세요."
       : input.evidence?.length
       ? "\n위 사업 정보·답변·시장 근거만 바탕으로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 목록에 없는 값은 '추가 정의 필요'로 표기하세요."
       : "\n위 사업 정보와 답변만 근거로, 이 섹션의 본문을 소제목으로 구조화해 작성하세요. 근거 없는 값은 '추가 정의 필요'로 표기하세요.",
     input.priorSummary
       ? "앞서 작성한 섹션과 용어·숫자·전략 방향이 어긋나지 않게 하고, 같은 내용을 그대로 반복하지 말고 이 섹션의 관점에서 이어서 쓰세요."
+      : "",
+    `${input.chapter.id}/${input.section.id}` === "summary/executive"
+      ? "\n이 섹션은 문서의 마지막입니다. 끝에 '## 실행 전 확인 목록'을 하나 만드세요. 앞 섹션들에서 (확인 필요)·(확정 필요)로 남긴 항목과 이 사업을 시작하기 전에 확인할 일을 중복 없이 5~10개로 모으고, 항목마다 어디서 어떻게 확인하는지 한 줄을 붙이세요."
       : "",
   ]
     .filter(Boolean)

@@ -20,7 +20,7 @@ async function main() {
     const { PROPOSAL_SECTORS, SECTOR_PROFILES } = await import("../lib/plan-builder/proposal-blueprint");
     const { IntakeError, createIntake, readIntake, intakeQuestions, answeredIntakeQuestion, intakeSnapshot,
       applyIntakeAnswer, applyIntakeCandidates, intakeBusinessFingerprint, finishIntakeMutation, displayIntakeValue, effectiveStructure,
-      intakeFinancialReference,
+      intakeFinancialReference, intakeFinancialWarning,
     } = await import("../lib/plan-builder/intake-core");
     const { intakeStructureBrief } = await import("../lib/plan-builder/intake-structure-brief");
 
@@ -151,6 +151,21 @@ async function main() {
       const brief = intakeStructureBrief(f.coach, f.intake);
       assert.ok(brief.playbook.some(line => line.startsWith("무료+유료 전환")) && brief.playbook.some(line => line.startsWith("양면 시장")), JSON.stringify(brief.playbook));
       assert.ok(brief.labels.includes("양면(공급자+이용자)"), brief.labels.join(","));
+    });
+    // 2026-10 계획서를 만들기 전 숫자 점검: 팔수록 손해 / 다 팔아도 본전이 안 될 때만 알려 주고, 운영 실적에는 띄우지 않는다.
+    check("financial warning flags a plan that loses money even at full capacity", () => {
+      const f = fixture("startup");
+      answer(f, "business", "평일 저녁 진료 치과");
+      answer(f, "price", 15000);
+      answer(f, "structure.unitCost", 5000);
+      answer(f, "structure.cost", 35000000);
+      answer(f, "capacity", "대표자 혼자 / 하루 40건");
+      const warning = intakeFinancialWarning(f.coach, f.intake);
+      assert.ok(warning && warning.message.includes("3,500건") && warning.fields.includes("price"), JSON.stringify(warning));
+      answer(f, "price", 150000);
+      assert.equal(intakeFinancialWarning(f.coach, f.intake), null, "a plan that breaks even within capacity is not flagged");
+      answer(f, "structure.unitCost", 200000);
+      assert.deepEqual(intakeFinancialWarning(f.coach, f.intake)?.fields, ["price", "unitCost"], "price below variable cost is flagged first");
     });
     check("structure defaults to one-sided when classification has no market value", () => {
       const f = fixture("startup");
