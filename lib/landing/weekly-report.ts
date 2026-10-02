@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { SnsWeek } from "../marketing/kit";
 import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "./lead-email";
 import { sendCustomerSms, stableEventId, type CustomerSmsConfig } from "../notify/customer-sms";
@@ -57,6 +58,10 @@ export type WeeklyReportInput = {
   stats: WeeklyStats; homepageUrl: string; unsubscribeUrl: string;
   /** 지난주 운영 기록을 아직 안 적었으면 적으러 가는 링크 */
   recordUrl: string | null;
+  /** 홍보 키트의 이번 주 SNS 할 일(없으면 빼고 보낸다) */
+  sns?: SnsWeek | null;
+  /** 홍보 키트·운영표를 열거나 새로 만드는 곳 */
+  snsUrl?: string | null;
 };
 
 export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPayload {
@@ -65,12 +70,17 @@ export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPaylo
   const range = `${input.weekStart.slice(5).replace("-", "/")}~${input.weekEnd.slice(5).replace("-", "/")}`;
   const rows: Array<[string, number, number, string]> = [["홈페이지 문의", stats.leads, stats.prevLeads, "건"], ["방문(동의한 손님)", stats.views, stats.prevViews, "회"], ["버튼 누름", stats.clicks, stats.prevClicks, "회"]];
   const tip = weeklyTip(stats);
+  const sns = input.sns ?? null;
+  const snsLines = !sns ? [] : "finished" in sns
+    ? ["4주 SNS 운영표를 다 썼어요. 지난 4주 반응을 보고 새 운영표를 만들어 보세요."]
+    : [`이번 주 SNS 할 일 (${sns.week}주차 · ${sns.theme})`, ...sns.posts.map(post => `· ${post.day} ${post.format}: ${post.idea}`)];
   const text = [
     `${name} 지난주(${range}) 홈페이지 성적표`,
     "",
     ...rows.map(([label, now, before, unit]) => `· ${label}: ${now}${unit} (${change(now, before, unit)})`),
     "",
     `이번 주 해 볼 일: ${tip}`,
+    ...(snsLines.length ? ["", ...snsLines, ...(input.snsUrl ? [`올릴 글 보기: ${input.snsUrl}`] : [])] : []),
     ...(input.recordUrl ? ["", `지난주 매출·주문을 아직 안 적으셨어요. 한 칸만 적어 두면 다음 주부터 비교해 드려요: ${input.recordUrl}`] : []),
     "",
     `홈페이지 고치기·문의 보기: https://oneulstart.com/plan/homepage`,
@@ -88,6 +98,7 @@ export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPaylo
 ${rows.map(([label, now, before, unit]) => `<tr><td style="${cell}color:#4e5968;">${escapeHtml(label)}</td><td style="${cell}text-align:right;"><strong style="font-size:18px;">${now}</strong>${unit}<br><span style="color:#8b95a1;font-size:12px;">${escapeHtml(change(now, before, unit))}</span></td></tr>`).join("\n")}
 </table>
 <div style="margin:16px 0;padding:14px 16px;background:#eef4ff;border-radius:12px;font-size:14px;line-height:1.6;"><strong>이번 주 해 볼 일</strong><br>${escapeHtml(tip)}</div>
+${snsLines.length ? `<div style="margin:0 0 16px;padding:14px 16px;background:#f3f0ff;border-radius:12px;font-size:14px;line-height:1.7;"><strong>${escapeHtml(snsLines[0])}</strong>${snsLines.slice(1).map(line => `<br>${escapeHtml(line)}`).join("")}${input.snsUrl ? `<br><a href="${escapeHtml(input.snsUrl)}" style="color:#6b4fd8;font-weight:700;">${sns && "finished" in sns ? "새 운영표 만들기" : "올릴 글 보기"} →</a>` : ""}</div>` : ""}
 ${input.recordUrl ? `<div style="margin:0 0 16px;padding:14px 16px;background:#fff7e6;border-radius:12px;font-size:14px;line-height:1.6;">지난주 매출·주문을 아직 안 적으셨어요. 한 칸만 적어 두면 다음 주부터 비교해 드려요.<br><a href="${escapeHtml(input.recordUrl)}" style="color:#3272db;font-weight:700;">지난주 기록 적기 →</a></div>` : ""}
 <p style="margin:0 0 20px;"><a href="https://oneulstart.com/plan/homepage" style="display:inline-block;padding:12px 18px;background:#3272db;color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">홈페이지 고치기·문의 보기</a></p>
 <p style="margin:0;color:#8b95a1;font-size:12px;line-height:1.6;">방문 수는 방문 기록에 동의한 손님만 셉니다. 실제 방문은 이보다 많을 수 있어요.<br>내 홈페이지: <a href="${escapeHtml(input.homepageUrl)}" style="color:#8b95a1;">${escapeHtml(input.homepageUrl)}</a><br><a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#8b95a1;">이 메일 그만 받기</a></p>
@@ -144,6 +155,8 @@ export type WeeklyReportDependencies = {
   now?: number;
   /** 지난주를 덮는 운영 기록이 있는지 — 모르면 null(안내를 빼고 보낸다) */
   operatingRecorded?: (ownerHash: string, planId: string, weekStart: string) => Promise<boolean | null>;
+  /** 홍보 키트의 이번 주 SNS 할 일 — 없거나 읽지 못하면 null(빼고 보낸다) */
+  snsWeek?: (ownerHash: string, planId: string, now: number) => Promise<SnsWeek | null>;
 };
 
 export type WeeklyReportRun = { due: boolean; reason?: string; candidates: number; sent: number; skipped: number; failed: number };
@@ -227,6 +240,8 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
         homepageUrl: site.custom_domain ? `https://${site.custom_domain}` : `https://oneulstart.com/launch/${site.published_slug ?? site.slug}`,
         unsubscribeUrl: await weeklyReportUnsubscribeUrl(site.id, deps.secret),
         recordUrl: recorded === false ? `https://oneulstart.com/plan/workspace?planId=${encodeURIComponent(planId)}&tab=operations` : null,
+        sns: planId && ownerHash && deps.snsWeek ? await deps.snsWeek(ownerHash, planId, now).catch(() => null) : null,
+        snsUrl: planId ? `https://oneulstart.com/plan/workspace?planId=${encodeURIComponent(planId)}` : null,
       });
       const sent = await sendLandingLeadEmail(payload, config.key, `weekly-report/${site.id}/${week.weekStart}`, deps.transport);
       if (sent.ok) { await finish({ status: "sent", provider_id: sent.providerId, error_code: null }); result.sent += 1; }

@@ -5,6 +5,7 @@ import { readOperatingState } from "../plan-builder/operating-records";
 import { landingEmailConfiguration } from "./lead-email";
 import { runWeeklyReports, weeklyReportSecret } from "./weekly-report";
 import { customerSmsConfig } from "../notify/customer-sms";
+import { MARKETING_KIT_KEY, snsWeekFor } from "../marketing/kit";
 
 /** 지난주(weekStart 부터)를 덮는 운영 기록이 하나라도 있는지 — 읽지 못하면 null */
 export function operatingRecordedSince(answers: Record<string, unknown> | undefined, weekStart: string): boolean | null {
@@ -22,6 +23,10 @@ export async function runWeeklyReportsNow(limit = 10) {
     operatingRecorded: async (ownerHash, planId, weekStart) => {
       const plan = (await loadPlanState(ownerHash)).plans.find((item) => item.id === planId);
       return plan ? operatingRecordedSince(plan.answers, weekStart) : null;
+    },
+    snsWeek: async (ownerHash, planId, now) => {
+      const plan = (await loadPlanState(ownerHash)).plans.find((item) => item.id === planId);
+      return plan ? snsWeekFor(plan.answers[MARKETING_KIT_KEY], now) : null;
     },
   }, limit);
 }
