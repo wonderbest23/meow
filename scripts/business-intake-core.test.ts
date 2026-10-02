@@ -22,6 +22,7 @@ async function main() {
       applyIntakeAnswer, applyIntakeCandidates, intakeBusinessFingerprint, finishIntakeMutation, displayIntakeValue, effectiveStructure,
       intakeFinancialReference,
     } = await import("../lib/plan-builder/intake-core");
+    const { intakeStructureBrief } = await import("../lib/plan-builder/intake-structure-brief");
 
     let serial = 0;
     let passed = 0;
@@ -129,6 +130,31 @@ async function main() {
       assert.ok(!text.includes("아직 없는 값"), text);
       assert.ok(text.includes("감당할 수 있는 최대치"), text);
       assert.equal(f.intake.detailsRequested ?? false, false, "no extra pack needed");
+    });
+
+    // 2026-10 플랫폼 수익 방식·양면 시장: 모델별 지표가 계산 줄로 이어지고, 문서 원천에 작성 관점(playbook)이 붙는다.
+    check("freemium two-sided platform: conversion and supply lines, playbook in the brief", () => {
+      const f = fixture("startup");
+      answer(f, "business", "동네 레슨 선생님과 수강생을 잇는 예약 앱");
+      f.intake.structure = { revenue: "freemium", sides: "two" };
+      f.intake.detailsRequested = true;
+      answer(f, "price", 9900);
+      answer(f, "structure.unitCost", 1000);
+      answer(f, "structure.cost", 2000000);
+      answer(f, "capacity", "대표자 혼자 / 한 달 200건");
+      answer(f, "structure.conversionRate", 5);
+      answer(f, "structure.supplyTarget", 20);
+      const text = intakeFinancialReference(f.coach, f.intake);
+      assert.ok(text.includes("무료 이용자 약 4,000명"), text);
+      assert.ok(text.includes("공급자 1곳당 월 약 10건"), text);
+      assert.equal(effectiveStructure(f.intake).values.sides, "two");
+      const brief = intakeStructureBrief(f.coach, f.intake);
+      assert.ok(brief.playbook.some(line => line.startsWith("무료+유료 전환")) && brief.playbook.some(line => line.startsWith("양면 시장")), JSON.stringify(brief.playbook));
+      assert.ok(brief.labels.includes("양면(공급자+이용자)"), brief.labels.join(","));
+    });
+    check("structure defaults to one-sided when classification has no market value", () => {
+      const f = fixture("startup");
+      assert.equal(effectiveStructure(f.intake).values.sides, "one");
     });
 
     for (const mode of ["exploring", "startup", "operating"] as const) for (const sector of PROPOSAL_SECTORS) {

@@ -104,7 +104,7 @@ export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>
   "5822": { sector: "software", offering: "software", revenue: "subscription", license: "none" },   // 소프트웨어 개발·공급(출판업 아래)
   "5811": { sector: "content_media", offering: "content", revenue: "per_unit", license: "registration" },
   "639": { sector: "content_media", offering: "content", revenue: "mixed", license: "varies" },
-  "63120": { sector: "software", offering: "software", revenue: "commission", license: "varies" },
+  "63120": { sector: "software", offering: "software", revenue: "commission", sides: "two", license: "varies" },
   "731": { sector: "local_service", payer: "b2c", offering: "service", revenue: "per_unit", delivery: "store", capital: "storefront", license: "professional" }, // 수의업(동물병원은 진료 공간 필요)
   "732": { sector: "content_media", payer: "b2b", offering: "service", revenue: "project", delivery: "online", license: "none" }, // 전문 디자인(인허가 없음)
   "733": { sector: "content_media", offering: "content", revenue: "project", delivery: "mixed", license: "none" },
@@ -141,7 +141,7 @@ export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>
   "473": { license: "none" }, "474": { license: "none" }, "475": { license: "none" }, "476": { license: "none" }, // 가전·의류·생활용품·문화용품 소매는 인허가 없음
   "47822": { license: "professional" },                                                              // 안경업소는 안경사 면허
   "47852": { license: "varies" },                                                                    // 동물 판매 시 동물판매업 허가, 용품만이면 없음
-  "47911": { payer: "mixed", offering: "service", revenue: "commission" },                            // 오픈마켓·중개 플랫폼은 판매자 수수료
+  "47911": { payer: "mixed", offering: "service", revenue: "commission", sides: "two" },                            // 오픈마켓·중개 플랫폼은 판매자 수수료
   "4792": { delivery: "visit", capital: "vehicle" },                                                 // 노점·이동 소매
   // 운송·물류
   "49402": { license: "none" },                                                                      // 이륜차 퀵·배달대행은 별도 인허가 없음(494 등록은 택배)

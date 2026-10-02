@@ -13,7 +13,8 @@ export const ideaReplySchema = z.object({ ideas: z.array(z.object({
     payer: z.enum(["b2c", "b2b", "b2g", "mixed"]).nullable(),
     offering: z.enum(["goods", "service", "software", "space", "content", "mixed"]).nullable(),
     delivery: z.enum(["store", "visit", "online", "delivery", "production", "mixed"]).nullable(),
-    revenue: z.enum(["per_unit", "per_hour", "subscription", "rental", "commission", "project", "mixed"]).nullable(),
+    revenue: z.enum(["per_unit", "per_hour", "subscription", "rental", "commission", "project", "advertising", "freemium", "lead_fee", "listing_fee", "mixed"]).nullable(),
+    sides: z.enum(["one", "two"]).nullable().optional(),
   }).strict(),
 }).strict()).min(2).max(3) }).strict();
 

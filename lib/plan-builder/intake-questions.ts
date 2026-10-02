@@ -43,7 +43,7 @@ const offer = fieldQuestion("offer", "대표 상품이나 서비스는 무엇인
 const channel = fieldQuestion("channel", "처음 고객을 만날 곳은 어디인가요? (최대 3개)");
 const price = fieldQuestion("price", pricePrompt(PRICE_DEFAULT_PERIOD), { kind: "number", unit: "원", period: PRICE_DEFAULT_PERIOD, hint: "범위를 고른 뒤 하한·상한·정확한 금액 중 아는 값만 저장해요." });
 type RevenueModel = BusinessStructure["revenue"];
-const STRUCTURE_UNIT: Record<RevenueModel, string> = { per_unit: "판매 1건", per_hour: "1시간", subscription: "구독자 1명(월)", rental: "대여·이용 1건", commission: "거래 1건", project: "프로젝트 1건", mixed: "판매 1건" };
+const STRUCTURE_UNIT: Record<RevenueModel, string> = { per_unit: "판매 1건", per_hour: "1시간", subscription: "구독자 1명(월)", rental: "대여·이용 1건", commission: "거래 1건", project: "프로젝트 1건", advertising: "활성 이용자 1명(월)", freemium: "유료 이용자 1명(월)", lead_fee: "전달 문의 1건", listing_fee: "입점 업체 1곳(월)", mixed: "판매 1건" };
 const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({
   id: "structure.unitCost", fieldKey: "unitCost", label: structureFieldLabels({ revenue } as BusinessStructure).unitCost ?? COACH_FIELD_LABELS.unitCost, prompt: `${STRUCTURE_UNIT[revenue]}에 들어가는 변동비는 얼마쯤인가요?`, kind: "number", unit: "원", period: STRUCTURE_UNIT[revenue], optional: true,
   hint: "재료·수수료·외주비처럼 팔 때마다 드는 비용만이에요. 임차료·고정 인건비는 월 고정비에 넣어요. 거의 없으면 0원을 골라요.",
@@ -232,14 +232,21 @@ const STRUCTURE_REVENUE_QUESTIONS: Partial<Record<RevenueModel, IntakeQuestion[]
   rental: [{ id: "structure.occupancy", label: "예약·이용률", prompt: "감당할 수 있는 예약·이용 중 실제로 채워지는 비율은 얼마쯤일까요?", kind: "number", unit: "%", period: "월", optional: true, hint: "예: 좌석 10개 중 7개가 찬다면 70%. 매출 계산에 곱해요." }],
   commission: [{ id: "structure.takeRate", label: "수수료율", prompt: "거래액의 몇 %를 수수료로 받나요?", kind: "number", unit: "%", period: "거래 1건", optional: true, hint: "거래 1건 평균 거래액을 거꾸로 계산하는 데 써요." }],
   project: [{ id: "structure.salesCycleDays", label: "문의→계약 기간", prompt: "문의에서 계약까지 보통 며칠 걸리나요?", kind: "number", unit: "일", period: "계약 1건", optional: true, hint: "첫 입금 시점을 잡는 데 써요." }],
+  freemium: [{ id: "structure.conversionRate", label: "무료→유료 전환율", prompt: "무료 이용자 100명 중 몇 명이 유료로 바꿀 것 같나요?", kind: "number", unit: "%", period: "무료 이용자", optional: true, hint: "유료 이용자 목표를 채우려면 무료 이용자가 몇 명 필요한지 계산해요. 모르면 비워 두세요." }],
+  advertising: [{ id: "structure.paidShare", label: "광고 외 유료 매출 비중", prompt: "광고 말고 이용자가 직접 내는 매출이 있다면 전체의 몇 %쯤인가요?", kind: "number", unit: "%", period: "월 매출", optional: true, hint: "광고만으로 운영되는지 확인해요. 없으면 0%를 골라요." }],
+  lead_fee: [{ id: "structure.leadsPerProvider", label: "업체 1곳당 월 문의 수", prompt: "업체 1곳이 한 달에 몇 건의 문의를 받아야 계속 돈을 낼까요?", kind: "number", unit: "건", period: "업체 1곳(월)", optional: true, hint: "필요한 업체 수와 문의 수를 맞춰 보는 데 써요." }],
+  listing_fee: [{ id: "structure.providerMonths", label: "업체 평균 유지 기간", prompt: "입점 업체 한 곳이 평균 몇 달 유지할 것 같나요?", kind: "number", unit: "개월", period: "업체 1곳", optional: true, hint: "매달 새로 모아야 하는 업체 수를 계산해요." }],
   per_hour: [{ id: "structure.billableHours", label: "주당 청구 가능 시간", prompt: "한 주에 실제로 고객에게 청구할 수 있는 시간은 몇 시간인가요?", kind: "number", unit: "시간", period: "주", optional: true, hint: "이동·준비·영업 시간은 빼요. 월 판매 시간 계산에 써요." }],
 };
 
-export function structureQuestions(mode: IntakeMode, structure: Pick<BusinessStructure, "revenue"> | null | undefined): IntakeQuestion[] {
+/** 양면 시장 — 거래는 공급자가 먼저 있어야 생긴다. 첫 공급자 목표를 묻고 계산에서 공급자 1곳당 거래로 나눠 본다 */
+const SUPPLY_QUESTION: IntakeQuestion = { id: "structure.supplyTarget", label: "첫 3개월 공급자 목표", prompt: "처음 3개월 안에 모을 공급자(업체·판매자·전문가)는 몇 곳인가요?", kind: "number", unit: "곳", period: "3개월", optional: true, hint: "이용자보다 공급자가 먼저 있어야 거래가 생겨요. 직접 모을 수 있는 수로 골라요." };
+
+export function structureQuestions(mode: IntakeMode, structure: Pick<BusinessStructure, "revenue" | "sides"> | null | undefined): IntakeQuestion[] {
   void mode;
   const revenue: RevenueModel = structure?.revenue ?? "per_unit";
   // 변동비·고정비는 기본 질문으로 옮겼다. 추가 질문은 수익 방식별 지표만 남는다.
-  return (STRUCTURE_REVENUE_QUESTIONS[revenue] ?? []).map(copyQuestion);
+  return [...(STRUCTURE_REVENUE_QUESTIONS[revenue] ?? []), ...(structure?.sides === "two" ? [SUPPLY_QUESTION] : [])].map(copyQuestion);
 }
 
 /** 기본 질문의 변동비 문구를 적용 중인 수익 방식(판매 1건·1시간·구독자 1명…)에 맞춘다. */
@@ -250,10 +257,10 @@ export function structureUnitCostQuestion(revenue: RevenueModel | null | undefin
 /** 라벨·옵션 조회용: 수익 방식과 무관한 구조 질문 전부(id 중복 없음). 문맥·문서 원천에서 저장된 답을 이름 붙일 때 쓴다. */
 export function allStructureQuestions(): IntakeQuestion[] {
   const seen = new Set<string>();
-  return [structureUnitCost("per_unit"), structureCost, ...(Object.keys(STRUCTURE_UNIT) as RevenueModel[]).flatMap(revenue => structureQuestions("startup", { revenue }))].map(copyQuestion).filter(question => !seen.has(question.id) && !!seen.add(question.id));
+  return [structureUnitCost("per_unit"), structureCost, ...(Object.keys(STRUCTURE_UNIT) as RevenueModel[]).flatMap(revenue => structureQuestions("startup", { revenue, sides: "two" }))].map(copyQuestion).filter(question => !seen.has(question.id) && !!seen.add(question.id));
 }
 
-export function getIntakeQuestion(mode: IntakeMode, sector: ProposalSector | null | undefined, id: string, structure?: Pick<BusinessStructure, "revenue"> | null): IntakeQuestion | undefined {
+export function getIntakeQuestion(mode: IntakeMode, sector: ProposalSector | null | undefined, id: string, structure?: Pick<BusinessStructure, "revenue" | "sides"> | null): IntakeQuestion | undefined {
   // Free-form ideas are an alternative to candidate selection, not another required step.
   if (mode === "exploring" && id === "business") return copyQuestion(business);
   return coreQuestions(mode).find(question => question.id === id)

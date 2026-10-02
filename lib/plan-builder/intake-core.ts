@@ -257,7 +257,8 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
 export function effectiveStructure(intake: Pick<IntakeState, "ksic" | "sector" | "structure">): { values: BusinessStructure; basis: Record<StructureAxis, "user" | "ksic" | "sector"> } {
   const fromKsic = intake.ksic ? ksicStructure(intake.ksic) : undefined;
   const base = fromKsic ?? SECTOR_DEFAULT_STRUCTURE[intake.sector] ?? SECTOR_DEFAULT_STRUCTURE.general;
-  const values: BusinessStructure = { ...base };
+  // 시장 구조(sides)는 분류 기본값에 거의 없다 — 없으면 한쪽 고객으로 본다
+  const values: BusinessStructure = { ...base, sides: base.sides ?? "one" };
   const basis = Object.fromEntries(STRUCTURE_AXES.map(axis => [axis, fromKsic ? "ksic" : "sector"])) as Record<StructureAxis, "user" | "ksic" | "sector">;
   for (const axis of STRUCTURE_AXES) {
     const override = intake.structure?.[axis];
@@ -444,6 +445,17 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   const takeRate = structure.revenue === "commission" ? structureNumber(intake, "structure.takeRate") : null;
   if (takeRate) lines.push(`- 수수료율 ${takeRate}% → 거래 1건 평균 거래액 약 ${won(unitPrice / takeRate * 100)}`);
   if (takeRate === 0) lines.push("- 수수료율 0%: 거래액을 역산하지 않습니다. 입력한 건당 수수료와의 일치 여부를 확인해 주세요.");
+  const conversion = structure.revenue === "freemium" ? structureNumber(intake, "structure.conversionRate") : null;
+  if (conversion && volume) lines.push(`- 무료→유료 전환율 ${conversion}% → 유료 이용자 ${volume.toLocaleString("ko-KR")}명이 되려면 무료 이용자 약 ${Math.ceil(volume / conversion * 100).toLocaleString("ko-KR")}명이 필요합니다(가정).`);
+  const paidShare = structure.revenue === "advertising" ? structureNumber(intake, "structure.paidShare") : null;
+  if (paidShare === 0) lines.push("- 광고 외 유료 매출 없음: 이용자가 모이기 전까지 매출이 거의 없습니다. 이용자 확보 기간의 고정비를 준비 예산으로 버틸 수 있는지 먼저 봅니다.");
+  const perProvider = structure.revenue === "lead_fee" ? structureNumber(intake, "structure.leadsPerProvider") : null;
+  if (perProvider && volume) lines.push(`- 업체 1곳당 월 문의 ${perProvider}건 기준 → 월 문의 ${volume.toLocaleString("ko-KR")}건을 받아 줄 업체 약 ${Math.ceil(volume / perProvider).toLocaleString("ko-KR")}곳이 필요합니다.`);
+  const providerMonths = structure.revenue === "listing_fee" ? structureNumber(intake, "structure.providerMonths") : null;
+  if (providerMonths && volume) lines.push(`- 업체 평균 유지 ${providerMonths}개월 → 입점 ${volume.toLocaleString("ko-KR")}곳을 유지하려면 매달 새 업체 약 ${Math.ceil(volume / providerMonths).toLocaleString("ko-KR")}곳을 모아야 합니다.`);
+  const supply = structure.sides === "two" ? structureNumber(intake, "structure.supplyTarget") : null;
+  if (supply && volume) lines.push(`- 양면 시장: 첫 3개월 공급자 ${supply.toLocaleString("ko-KR")}곳 목표 → 공급자 1곳당 월 약 ${Math.round(volume / supply).toLocaleString("ko-KR")}건의 거래가 있어야 이 판매량이 나옵니다.`);
+  else if (structure.sides === "two") lines.push("- 양면 시장: 공급자 목표가 정해지지 않았습니다. 공급자 1곳당 거래 수를 확인하기 전까지 판매량은 공급 측이 받쳐 준다는 가정입니다.");
   const cycle = structure.revenue === "project" ? structureNumber(intake, "structure.salesCycleDays") : null;
   if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
   return [...lines, ...notes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined ? null : { volume, actual: notes.some(note => note.startsWith("실적 기준 판매량")) })].filter(Boolean).join("\n");
@@ -455,8 +467,8 @@ export function applyIntakeStructure(plan: ServerPlan, coach: CoachState, intake
   if (!entries.length) throw new IntakeError("structure_required", "바꿀 사업 구조 항목을 골라 주세요");
   const before = effectiveStructure(intake).values;
   intake.structure = { ...(intake.structure ?? {}), ...Object.fromEntries(entries) };
-  const axisLabel: Record<StructureAxis, string> = { payer: "고객·지불자", offering: "제공하는 것", delivery: "전달 방식", revenue: "수익 방식", license: "인허가" };
-  const changes = entries.map(([axis, value]) => `${axisLabel[axis]}: ${(STRUCTURE_LABELS[axis] as Record<string, string>)[before[axis]]} → ${(STRUCTURE_LABELS[axis] as Record<string, string>)[value]}`);
+  const axisLabel: Record<StructureAxis, string> = { payer: "고객·지불자", offering: "제공하는 것", delivery: "전달 방식", revenue: "수익 방식", sides: "시장 구조", license: "인허가" };
+  const changes = entries.map(([axis, value]) => `${axisLabel[axis]}: ${(STRUCTURE_LABELS[axis] as Record<string, string>)[before[axis] ?? "one"]} → ${(STRUCTURE_LABELS[axis] as Record<string, string>)[value]}`);
   coach.messages.push({ id: command.requestId, role: "user", text: `사업 구조 수정: ${changes.join(", ")}`, at });
   // 수익 방식이 바뀌면 구조 팩 구성도 바뀌므로 문서 원천의 상세 답을 다시 맞춘다.
   syncIntakeDetails(plan, intake);
