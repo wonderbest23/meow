@@ -128,7 +128,7 @@ export function summarizeUsage(rows: UsageRow[], rate = krwPerUsd()): CostSummar
 /* 관리자 화면에 보일 호출 종류 이름 */
 export const USAGE_KIND_LABELS: Record<string, string> = {
   "generate": "계획서 장 작성", "stage-generate": "단계별 계획서 작성", "direct-plan": "계획서 바로 만들기",
-  "business-plan-review": "계획서 검토", "deck-review": "발표자료 검토", "plan-review": "계획서 리뷰",
+  "business-plan-review": "계획서 검토", "business-plan-repair": "계획서 보완", "business-plan-patch": "계획서 부분 보완", "deck-review": "발표자료 검토", "plan-review": "계획서 리뷰",
   "deck": "발표자료(PPT)", "presentation-assist": "발표자료 도움",
   "intake-design": "사업 설계", "intake-extract": "답변 정리", "intake-suggestions": "답변 추천", "intake-help": "질문 도움말", "intake-ideas": "아이디어 추천",
   "business-coach": "사업 대화", "business-brief": "사업 요약", "idea": "아이디어 제안",
