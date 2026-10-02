@@ -67,7 +67,8 @@ export async function sendCustomerSms(config: CustomerSmsConfig, input: { eventI
       method: "POST", redirect: "error", signal: AbortSignal.timeout(timeoutMs),
       headers: { "Content-Type": "application/json", "x-oneul-time": timestamp, "x-oneul-signature": signature }, body,
     });
-  } catch {
+  } catch (error) {
+    console.warn(`[customer-sms] 중계 연결 실패: ${error instanceof Error ? `${error.name} ${error.message}` : String(error)}`.slice(0, 300));
     return { status: "uncertain", code: "RELAY_UNREACHABLE" };
   }
   const text = await response.text().catch(() => "");
