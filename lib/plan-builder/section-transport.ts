@@ -3,13 +3,17 @@ import type { CoachJobRequest } from "./coach-job-types";
 import type { DeckJobRequest } from "./deck-job-types";
 import type { ProposalBackgroundJob } from "./proposal-background";
 import type { ArtifactJobRequest } from "./artifact-updates";
-import { PLAN_SECTION_INTERNAL_PATH as internalPath, type PlanSectionJob } from "./section-protocol";
+import { PLAN_SECTION_INTERNAL_PATH as internalPath, type PlanSectionJob, type PlanOutlineJob } from "./section-protocol";
 import { signBody } from "./section-signature";
-export type { PlanSectionJob } from "./section-protocol";
-type ServiceRequest = { operation: "intake"; job: IntakeJobRequest } | { operation: "generateSection"; job: PlanSectionJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest } | { operation: "completeProposalUpdate"; job: ProposalBackgroundJob } | { operation: "artifactChunk"; job: ArtifactJobRequest & { index: number } };
+export type { PlanSectionJob, PlanOutlineJob } from "./section-protocol";
+type ServiceRequest = { operation: "intake"; job: IntakeJobRequest } | { operation: "generateSection"; job: PlanSectionJob } | { operation: "planOutline"; job: PlanOutlineJob } | { operation: "completeCoach"; job: CoachJobRequest } | { operation: "completeDeck"; job: DeckJobRequest } | { operation: "completeProposalUpdate"; job: ProposalBackgroundJob } | { operation: "artifactChunk"; job: ArtifactJobRequest & { index: number } };
 
 export async function callPlanSectionService(service: Fetcher, secret: string, job: PlanSectionJob): Promise<{ ok: boolean }> {
   return callPlanningService(service, secret, { operation: "generateSection", job });
+}
+
+export async function callPlanOutlineService(service: Fetcher, secret: string, job: PlanOutlineJob): Promise<{ ok: boolean; outline?: string }> {
+  return callPlanningService(service, secret, { operation: "planOutline", job });
 }
 
 export async function callCoachService(service: Fetcher, secret: string, job: CoachJobRequest): Promise<{ ok: boolean }> {

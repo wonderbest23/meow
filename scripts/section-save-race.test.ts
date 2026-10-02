@@ -86,7 +86,7 @@ async function main() {
 
     seed(); repeatRace = true; race = changed;
     await assert.rejects(generateAndSaveSection(job), /PLAN_VERSION_CONFLICT/);
-    assert.equal(finalReads, 4, "commit contention must stop after a bounded number of attempts");
+    assert.equal(finalReads, 8, "commit contention must stop after a bounded number of attempts (8: up to 4 sibling sections save at once)");
     assert.equal(aiCalls, 2); assert.equal(regenRecords, 0);
 
     seed(); generated += "\n\n월 매출은 999만원입니다.";

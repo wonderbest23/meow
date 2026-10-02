@@ -4,6 +4,7 @@ import { sweepDueLeadNotifications } from "../landing/lead-notifications";
 import { runWeeklyReportsNow } from "../landing/weekly-report-runner";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
+import { buildSectionOutline, OUTLINE_MAX_CHARS } from "./section-outline";
 import { renderPlanMarkdown } from "./markdown";
 import { resolveLLMConfig, resolvePlanningLLMConfig } from "../llm/config";
 import { readCoach, coachContext, coachDocumentRevision, type CoachState } from "./coach";
@@ -28,10 +29,10 @@ import { runIntakeJobWithBudget } from "./intake-execution.server";
 import { betaApiBoundary } from "../staging/beta-boundary";
 
 import { verifyBody } from "./section-signature";
-import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob } from "./section-protocol";
+import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob, type PlanOutlineJob } from "./section-protocol";
 import { intakeScenarioInputs, planFinancialReference, readIntake } from "./intake-core";
-export type { PlanSectionJob } from "./section-protocol";
-export { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
+export type { PlanSectionJob, PlanOutlineJob } from "./section-protocol";
+export { callPlanSectionService, callPlanOutlineService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
 
 /**
  * 진단(intake) 계획의 12개월 손익표. 질문 화면·요약·AI 사업안과 같은 입력(실적 기준 판매량 포함)을 쓰고,
@@ -46,6 +47,22 @@ export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answer
   const table = financialsToMarkdown(result, { growthLabel: null, growthPct: 0 });
   // 판매량의 출처(실적 기준인지, 처리량 최대치인지)를 표 아래에 그대로 밝힌다.
   return scenario.notes.length ? `${table}\n\n판매량 기준: ${scenario.notes.join(" / ")}` : table;
+}
+
+/* 섹션을 최대 4개씩 동시에 저장하므로 충돌이 늘어난다(section-workflow.ts) */
+const COMMIT_ATTEMPTS = 8;
+
+/** 문서 설계도 — 저장하지 않고 워크플로에 돌려준다(워크플로가 단계 결과로 보관) */
+export async function generatePlanOutline(job: PlanOutlineJob): Promise<{ ok: boolean; outline?: string }> {
+  const state = await loadPlanState(job.ownerHash);
+  const plan = state.plans.find((item) => item.id === job.planId);
+  if (!plan) return { ok: false };
+  const coach = readCoach(plan.answers);
+  const config = coach ? resolvePlanningLLMConfig(job.ownerHash) : resolveLLMConfig(job.ownerHash, "anthropic");
+  if (!config) return { ok: false };
+  const context = coach ? coachContext(coach, planFinancialReference(coach, plan.answers)) : JSON.stringify(state.business ?? {});
+  const outline = await buildSectionOutline(config, { planTitle: plan.title, planType: plan.planType, context, keys: job.sections.map(s => `${s.chapterId}/${s.sectionId}`) });
+  return outline ? { ok: true, outline } : { ok: false };
 }
 
 export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok: boolean; skipped?: string }> {
@@ -148,6 +165,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     conflicts,
     evidence: evidence.length ? evidence : undefined,
     context,
+    outline: job.outline,
   });
 
   /*
@@ -164,8 +182,8 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     html = markdown.replace(/\n/g, "<br>");
   }
 
-  // Retry only the commit, not the paid model call, when another tab saves meanwhile.
-  for (let attempt = 0; attempt < 4; attempt++) {
+  // Retry only the commit, not the paid model call, when another tab or a sibling section saves meanwhile.
+  for (let attempt = 0; attempt < COMMIT_ATTEMPTS; attempt++) {
     const fresh = await loadPlanState(job.ownerHash);
     const target = fresh.plans.find((item) => item.id === job.planId);
     if (!target) return { ok: false, skipped: "PLAN_NOT_FOUND" };
@@ -189,7 +207,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
     try {
       await savePlanState(job.ownerHash, fresh, { planId: target.id, coachRevision: targetCoach?.revision ?? 0, planUpdatedAt: updatedAt });
     } catch (error) {
-      if (error instanceof Error && error.message === "PLAN_VERSION_CONFLICT" && attempt < 3) continue;
+      if (error instanceof Error && error.message === "PLAN_VERSION_CONFLICT" && attempt < COMMIT_ATTEMPTS - 1) { await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 250)); continue; }
       throw error;
     }
     if (existing && coach) await recordRegen(job.planId, job.ownerHash, key, true);
@@ -204,7 +222,8 @@ const planIdSchema = z.string().min(1).max(60);
 const token = z.string().min(1).max(256);
 const serviceRequestSchema = z.discriminatedUnion("operation", [
   z.object({ operation: z.literal("intake"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, jobId: z.string().uuid() }).strict() }).strict(),
-  z.object({ operation: z.literal("generateSection"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, chapterId: z.string().min(1).max(128), sectionId: z.string().min(1).max(128) }).strict() }).strict(),
+  z.object({ operation: z.literal("generateSection"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, chapterId: z.string().min(1).max(128), sectionId: z.string().min(1).max(128), outline: z.string().max(OUTLINE_MAX_CHARS).optional() }).strict() }).strict(),
+  z.object({ operation: z.literal("planOutline"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, sections: z.array(z.object({ chapterId: z.string().min(1).max(128), sectionId: z.string().min(1).max(128) }).strict()).min(1).max(40) }).strict() }).strict(),
   z.object({ operation: z.literal("completeCoach"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, token, operation: z.literal("coach").optional() }).strict() }).strict(),
   z.object({ operation: z.literal("completeDeck"), job: z.object({ ownerHash: ownerId, planId: planIdSchema, token, operation: z.literal("deck").optional() }).strict() }).strict(),
   z.object({ operation: z.literal("completeProposalUpdate"), job: proposalBackgroundJobSchema }).strict(),
@@ -242,6 +261,7 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
     switch (input.operation) {
       case "intake": return Response.json({ result: await runIntakeJobWithBudget(input.job) });
       case "generateSection": return Response.json({ result: await generateAndSaveSection(input.job) });
+      case "planOutline": return Response.json({ result: await generatePlanOutline(input.job) });
       case "completeCoach": return Response.json({ result: await generateAndSaveCoach(input.job) });
       case "completeDeck": return Response.json({ result: await generateAndSaveDeck(input.job) });
       case "completeProposalUpdate": return Response.json({ result: await executeProposalUpdate(input.job) });

@@ -96,6 +96,8 @@ export interface SectionGenInput extends IntakeContextInput {
    */
   context?: SectionBusinessContext;
   coachContext?: string;
+  /** 문서 설계도 — 섹션을 동시에 쓸 때 각 섹션이 맡을 범위(한 실행의 모든 섹션에 똑같다) */
+  outline?: string;
   operatingContext?: string;
   /** Complete current paragraphs for deterministic duplication checks, never used as numeric evidence. */
   priorSections?: string[];
@@ -243,6 +245,7 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
     documentEditorialPrompt(input),
     input.coachContext ? COACH_WRITER_RULES : "",
     input.intakeContext ? INTAKE_CONTEXT_RULES : "",
+    input.outline ? `\n[문서 설계도 — 다른 섹션도 동시에 작성 중입니다]\n이 섹션 키에 배정된 범위를 중심으로 쓰고, 다른 섹션에 맡긴 내용은 한두 문장으로만 언급하세요.\n${input.outline}` : "",
   ]
     .filter(Boolean)
     .join("\n");
