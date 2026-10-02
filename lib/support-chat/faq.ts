@@ -23,10 +23,10 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     label: "시작·문서 유형",
     description: "어떤 문서를 골라야 할지",
     items: [
-      { id: "start-how", question: "사업계획서는 어떻게 만드나요?", answer: "‘새 문서 시작’에서 문서 유형을 고르고 사업에 대한 질문에 답하면, 인공지능이 답변을 근거로 섹션별 문서를 작성합니다. 답을 저장할 때마다 이어서 진행되고, 완성 문서는 ‘문서 보기’에서 확인합니다.", keywords: ["어떻게 만들", "시작 방법", "사업계획서 만들", "뭐부터"], link: { href: "/plan/start", label: "새 문서 시작하기" } },
-      { id: "start-types", question: "문서 유형은 무엇이 있나요?", answer: "간단 사업계획서, 내부용 사업계획서, 창업 초기 사업계획서, 성장·확장 사업계획서, 정부지원 PSST 사업계획서, 창업 초기 재무 예측, 정밀 재무 모델 — 총 7가지입니다. 유형마다 질문 수, 구성과 문체가 다릅니다.", keywords: ["유형", "종류", "7가지", "어떤 문서", "PSST가 뭐"], link: { href: "/plan/start", label: "유형 살펴보기" } },
-      { id: "start-which", question: "어떤 유형을 골라야 할지 모르겠어요.", answer: "정부지원사업에 내면 ‘정부지원 PSST’, 대출·투자 검토용이면 ‘창업 초기’ 또는 ‘성장·확장’, 팀 내부 실행용이면 ‘내부용’, 숫자 계획만 필요하면 ‘재무 예측’이나 ‘정밀 재무 모델’, 짧게 훑을 용도면 ‘간단’을 고르세요. 시작 화면에 유형별 설명과 예상 소요 시간이 함께 표시됩니다.", keywords: ["뭘 골라", "추천", "어떤 유형", "고민"], link: { href: "/plan/start", label: "유형 고르러 가기" } },
-      { id: "start-psst", question: "정부지원 PSST 유형은 무엇이 다른가요?", answer: "예비창업패키지 같은 정부지원사업 심사 기준에 맞춰, 완성 문서가 문제인식·실현가능성·성장전략·팀구성 4부로 재배치됩니다. 작성은 다른 유형과 같은 방식으로 진행하면 됩니다.", keywords: ["PSST", "정부지원", "예비창업", "심사"], link: { href: "/plan/start", label: "PSST로 시작하기" } },
+      { id: "start-how", question: "사업계획서는 어떻게 만드나요?", answer: "‘새 문서 시작’에서 문서 유형을 고르고 사업에 대한 질문에 답하면, 인공지능이 답변을 근거로 섹션별 문서를 작성합니다. 답을 저장할 때마다 이어서 진행되고, 완성 문서는 ‘문서 보기’에서 확인합니다.", keywords: ["어떻게 만들", "시작 방법", "사업계획서 만들", "뭐부터"], link: { href: "/plan/chat?new=1", label: "새 문서 시작하기" } },
+      { id: "start-types", question: "문서 유형은 무엇이 있나요?", answer: "간단 사업계획서, 내부용 사업계획서, 창업 초기 사업계획서, 성장·확장 사업계획서, 정부지원 PSST 사업계획서, 창업 초기 재무 예측, 정밀 재무 모델 — 총 7가지입니다. 유형마다 질문 수, 구성과 문체가 다릅니다.", keywords: ["유형", "종류", "7가지", "어떤 문서", "PSST가 뭐"], link: { href: "/plan/chat?new=1", label: "유형 살펴보기" } },
+      { id: "start-which", question: "어떤 유형을 골라야 할지 모르겠어요.", answer: "정부지원사업에 내면 ‘정부지원 PSST’, 대출·투자 검토용이면 ‘창업 초기’ 또는 ‘성장·확장’, 팀 내부 실행용이면 ‘내부용’, 숫자 계획만 필요하면 ‘재무 예측’이나 ‘정밀 재무 모델’, 짧게 훑을 용도면 ‘간단’을 고르세요. 시작 화면에 유형별 설명과 예상 소요 시간이 함께 표시됩니다.", keywords: ["뭘 골라", "추천", "어떤 유형", "고민"], link: { href: "/plan/chat?new=1", label: "유형 고르러 가기" } },
+      { id: "start-psst", question: "정부지원 PSST 유형은 무엇이 다른가요?", answer: "예비창업패키지 같은 정부지원사업 심사 기준에 맞춰, 완성 문서가 문제인식·실현가능성·성장전략·팀구성 4부로 재배치됩니다. 작성은 다른 유형과 같은 방식으로 진행하면 됩니다.", keywords: ["PSST", "정부지원", "예비창업", "심사"], link: { href: "/plan/chat?new=1", label: "PSST로 시작하기" } },
       { id: "start-time", question: "작성에 시간이 얼마나 걸리나요?", answer: "유형마다 질문 수가 달라 간단 유형은 20분 안팎, 정밀 유형은 1시간 이상 걸릴 수 있습니다. 시작 화면의 유형 카드에 예상 시간이 표시되며, 중간에 저장하고 나중에 이어서 작성할 수 있습니다.", keywords: ["시간", "얼마나 걸", "소요", "오래"] },
     ],
   },
@@ -36,7 +36,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     description: "질문 답변과 문서 생성",
     items: [
       { id: "write-flow", question: "작성은 어떤 순서로 진행되나요?", answer: "섹션마다 필요한 질문에 답하고 ‘이 섹션 만들기’를 누르면 인공지능이 해당 섹션 글을 작성합니다. 마음에 들지 않으면 답을 고쳐 다시 만들 수 있고, 모든 섹션이 완성되면 ‘문서 보기’에서 전체 문서로 확인합니다.", keywords: ["순서", "진행", "섹션", "다시 만들"], link: { href: "/plan", label: "내 문서로 가기" } },
-      { id: "write-reuse", question: "같은 사업으로 다른 유형도 만들 수 있나요?", answer: "네. 새 문서를 만들면 가장 최근에 작성한 문서의 답변이 그대로 이어져, 겹치는 질문은 다시 입력할 필요가 없습니다. 유형별 결제는 문서 1부 단위로 각각 진행됩니다.", keywords: ["다른 유형", "답변 재사용", "또 만들", "여러 개"], link: { href: "/plan/start", label: "새 문서 시작하기" } },
+      { id: "write-reuse", question: "같은 사업으로 다른 유형도 만들 수 있나요?", answer: "네. 새 문서를 만들면 가장 최근에 작성한 문서의 답변이 그대로 이어져, 겹치는 질문은 다시 입력할 필요가 없습니다. 유형별 결제는 문서 1부 단위로 각각 진행됩니다.", keywords: ["다른 유형", "답변 재사용", "또 만들", "여러 개"], link: { href: "/plan/chat?new=1", label: "새 문서 시작하기" } },
       { id: "write-finance", question: "재무 숫자도 계산해주나요?", answer: "가격, 원가, 고정비 같은 답변을 근거로 12개월 손익표를 자동으로 계산해 문서에 넣습니다. 정밀 재무 모델은 3년 추정까지 제공하며, 월 처리 가능량을 적으면 그 한계를 넘지 않게 계산합니다.", keywords: ["재무", "손익", "숫자 계산", "3년", "매출 추정"] },
       { id: "write-facts", question: "인공지능이 없는 실적을 지어내지 않나요?", answer: "확인되지 않은 매출·고객·제휴를 완료 사실처럼 쓰지 않고, 근거가 부족한 부분은 ‘추가 정의 필요’로 표시해 확인할 곳(상권정보시스템, 통계청 등)을 안내합니다. 입력한 답변이 구체적일수록 문서도 정확해집니다.", keywords: ["지어내", "허구", "가짜", "정확", "사실"] },
       { id: "write-continue", question: "중간에 나가면 작성 내용이 사라지나요?", answer: "아니요. 답변과 완성된 섹션은 자동 저장됩니다. 로그인 상태라면 서버에도 보관되어 다른 기기에서 이어서 작성할 수 있습니다.", keywords: ["중간에 나가", "사라지", "저장되", "이어서"], link: { href: "/plan", label: "이어서 작성하기" } },
@@ -47,7 +47,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     label: "가격·결제",
     description: "유형별 가격과 결제 방식",
     items: [
-      { id: "pay-price", question: "가격은 얼마인가요?", answer: `모든 문서 유형이 동일하게 1부당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL})입니다. 계획서로 만든 홈페이지까지 함께 열면 ${won(BUNDLE_PRODUCT_AMOUNT)}, 홈페이지만 따로 열면 ${won(HOMEPAGE_PRODUCT_AMOUNT)}입니다. 모두 1회 결제이며 구독이 아닙니다.`, keywords: ["가격", "얼마", "비용", "요금"], link: { href: "/plan/start", label: "유형별 가격 보기" } },
+      { id: "pay-price", question: "가격은 얼마인가요?", answer: `모든 문서 유형이 동일하게 1부당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL})입니다. 계획서로 만든 홈페이지까지 함께 열면 ${won(BUNDLE_PRODUCT_AMOUNT)}, 홈페이지만 따로 열면 ${won(HOMEPAGE_PRODUCT_AMOUNT)}입니다. 모두 1회 결제이며 구독이 아닙니다.`, keywords: ["가격", "얼마", "비용", "요금"], link: { href: "/plan/chat?new=1", label: "유형별 가격 보기" } },
       { id: "pay-scope", question: "결제하면 무엇이 열리나요?", answer: "결제한 문서의 모든 섹션 생성과 PDF·Word 내려받기, 발표자료(PPT) 만들기가 열립니다. 결제는 해당 문서 1부에 적용되며, 같은 사업으로 다른 유형을 만들 땐 답변이 이어지고 결제는 따로 진행합니다.", keywords: ["결제하면", "뭐가 열려", "포함", "범위"] },
       { id: "pay-method", question: "결제 수단은 무엇인가요?", answer: "신용·체크카드로 결제할 수 있으며 나이스페이 결제창에서 안전하게 진행됩니다. 결제 완료 즉시 문서가 열립니다.", keywords: ["결제 수단", "카드", "계좌이체", "카카오페이", "토스"] },
       { id: "pay-multi", question: "한 계정으로 여러 번 결제할 수 있나요?", answer: "네. 문서마다 따로 결제하는 방식이라 한 계정에서 여러 문서를 각각 결제할 수 있습니다. 결제 내역과 열린 문서는 마이페이지에서 확인합니다.", keywords: ["여러 번", "여러 문서", "추가 결제", "또 결제"], link: { href: "/plan/me", label: "마이페이지 열기" } },
@@ -70,7 +70,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     label: "샘플·무료 범위",
     description: "결제 전에 확인할 수 있는 것",
     items: [
-      { id: "sample-free", question: "결제 전에는 어디까지 무료인가요?", answer: "로그인 없이도 내 문서 목록에서 완성 샘플 3부를 전체 열람할 수 있고, 로그인하면 각 문서의 앞 2개 섹션을 무료로 생성해 품질을 직접 확인할 수 있습니다. 나머지 섹션 생성과 파일 내려받기는 결제 후 열립니다.", keywords: ["어디까지 무료", "무료 범위", "결제 전", "체험"], link: { href: "/plan/start", label: "무료로 시작하기" } },
+      { id: "sample-free", question: "결제 전에는 어디까지 무료인가요?", answer: "로그인 없이도 내 문서 목록에서 완성 샘플 3부를 전체 열람할 수 있고, 로그인하면 각 문서의 앞 2개 섹션을 무료로 생성해 품질을 직접 확인할 수 있습니다. 나머지 섹션 생성과 파일 내려받기는 결제 후 열립니다.", keywords: ["어디까지 무료", "무료 범위", "결제 전", "체험"], link: { href: "/plan/chat?new=1", label: "무료로 시작하기" } },
       { id: "sample-docs", question: "완성본 샘플을 미리 볼 수 있나요?", answer: "네. 내 문서 목록 아래에 실제 인공지능으로 만든 샘플 문서 3부(창업 초기 카페, 정부지원 PSST 무인꽃집, 정밀 재무 모델 무인꽃집)가 있습니다. 전체 내용을 읽어볼 수 있는 읽기 전용 문서입니다.", keywords: ["샘플", "미리 보", "예시", "완성본"], link: { href: "/plan", label: "샘플 문서 보기" } },
       { id: "sample-quality", question: "샘플과 내 문서 품질이 같은가요?", answer: "네. 샘플은 별도 손질 없이 실제 서비스와 같은 인공지능·같은 과정으로 만든 문서입니다. 입력한 답변이 구체적일수록 결과도 더 구체적으로 나옵니다.", keywords: ["품질", "샘플과 같", "진짜로 이렇게"] },
     ],

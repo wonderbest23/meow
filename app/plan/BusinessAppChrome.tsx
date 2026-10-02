@@ -2,9 +2,10 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, FolderClosed, LayoutDashboard, MessageCircle, MoreHorizontal, SquarePen, X } from "lucide-react";
+import { ChevronLeft, CircleHelp, FolderClosed, Headphones, LayoutDashboard, MessageCircle, MoreHorizontal, SquarePen, UserRound, X } from "lucide-react";
 import styles from "./chat/page.module.css";
-import WorkspaceBrand from "../../components/workspace-brand";
+import shell from "./PlanShell.module.css";
+import RailMenu from "./RailMenu";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
 export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", workspaceHref, showRail = true }: {
@@ -22,11 +23,8 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
   }, [open]);
   return <>
-    {showRail && <aside className={styles.appRail} aria-label="작업 메뉴">
-      <Link className={styles.brand} href="/" aria-label="오늘창업 홈"><WorkspaceBrand /></Link>
-      <Link className={styles.newChat} href="/plan/chat?new=1" aria-current={active === "new" ? "page" : undefined}><SquarePen size={19} />새 대화</Link>
-      <nav><Link href="/plan/planning" className={active === "chat" ? styles.currentNav : ""} aria-current={active === "chat" ? "page" : undefined}><MessageCircle size={19} />사업 기획</Link><Link href="/plan" className={active === "plans" ? styles.currentNav : ""} aria-current={active === "plans" ? "page" : undefined}><FolderClosed size={19} />내 사업</Link>{workspaceHref && <Link href={workspaceHref} className={styles.railWorkspace} title="지금 보고 있는 사업의 결과물·시작 준비·운영 기록"><LayoutDashboard size={18} />사업 관리</Link>}</nav>
-      <span className={styles.railCaption}>아이디어에서 시작하는 내 사업</span>
+    {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost}`} aria-label="작업 메뉴">
+      <RailMenu active={active} workspaceHref={workspaceHref} />
     </aside>}
     <div className={styles.appSurface}>
       <header className={styles.header}>
@@ -40,6 +38,9 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
             <Link href="/plan/planning" onClick={() => setOpen(false)} aria-current={active === "chat" ? "page" : undefined}><MessageCircle size={18} />사업 기획</Link>
             <Link href="/plan" onClick={() => setOpen(false)} aria-current={active === "plans" ? "page" : undefined}><FolderClosed size={18} />내 사업</Link>
             {workspaceHref && <Link href={workspaceHref} onClick={() => setOpen(false)}><LayoutDashboard size={18} />사업 관리</Link>}
+            <Link href="/plan/info" onClick={() => setOpen(false)}><CircleHelp size={18} />이용 안내</Link>
+            <Link href="/account/support" onClick={() => setOpen(false)}><Headphones size={18} />고객센터</Link>
+            <Link href="/plan/me" onClick={() => setOpen(false)}><UserRound size={18} />내 계정</Link>
             <Link href="/">홈으로</Link>
           </nav>}
         </div>

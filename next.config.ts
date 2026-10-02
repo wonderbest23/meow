@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
   // 응답 헤더에 서버 종류(x-powered-by: Next.js)를 알리지 않는다.
   poweredByHeader: false,
   ...(lowMemory ? { experimental: { cpus: 1, workerThreads: false } } : {}),
+  // 예전 문서 시작 화면 — 이제 새 사업은 대화(사업 기획)로 시작한다. 옛 링크·즐겨찾기는 그쪽으로 보낸다.
+  async redirects() {
+    return [{ source: "/plan/start", destination: "/plan/chat?new=1", permanent: false }];
+  },
 };
 
 export default nextConfig;

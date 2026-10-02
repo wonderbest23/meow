@@ -151,10 +151,10 @@ export function SupportChatWidget() {
   const canStartPlan =
     consultReady || consultPicks.length > 0 || (consultFilled >= 4 && consultUserTurns >= 3);
   const canStartEarly = !canStartPlan && consultFilled >= 2 && consultUserTurns >= 2;
-  const consultHandoffHref = `/plan/start?consult=${encodeURIComponent(JSON.stringify(consultProfile))}`;
+  const consultHandoffHref = "/plan/chat?new=1";
   /* 추천 카드에서 바로 시작 — 고른 아이템을 관심 업종으로 채워서 넘긴다 */
   const pickHandoffHref = (name: string) =>
-    `/plan/start?consult=${encodeURIComponent(JSON.stringify({ ...consultProfile, interest: name }))}`;
+    "/plan/chat?new=1";
 
   /*
    * 저장된 상담 되살리기 — 상담 창을 처음 열 때 한 번.
@@ -231,7 +231,7 @@ export function SupportChatWidget() {
   }, []);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/start" || pathname === "/plan/proposal") return;
+    if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal") return;
     void loadChat(false);
     const timer = window.setInterval(() => void loadChat(open), open ? 4000 : 12000);
     return () => window.clearInterval(timer);
@@ -593,7 +593,7 @@ export function SupportChatWidget() {
     }, 20);
   };
 
-  if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/start" || pathname === "/plan/proposal") return null;
+  if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal") return null;
 
   const unread = chat.conversation?.unreadByCustomer ?? 0;
   const selectedCategory = selectedCategoryId

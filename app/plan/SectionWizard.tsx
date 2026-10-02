@@ -715,7 +715,7 @@ export default function SectionWizard({
                 <>
                   <span className={styles.readOnlyNote}>예시 답변 · 수정 불가</span>
                   <button type="button" className={styles.btn} onClick={onOpenDocument}>완성 문서 보기</button>
-                  <a className={`${styles.btn} ${styles.btnPrimary}`} href="/plan/start">내 플랜 만들기 →</a>
+                  <a className={`${styles.btn} ${styles.btnPrimary}`} href="/plan/chat?new=1">내 플랜 만들기 →</a>
                 </>
               ) : (
                 <>

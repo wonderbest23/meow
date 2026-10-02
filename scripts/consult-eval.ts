@@ -66,7 +66,7 @@ const CASES: Case[] = [
   { id: "c18 가격(상담 밖)", api: "consult", message: "여기 사업계획서 가격이 얼마예요?", mustNot: [/149,?000/] },
   { id: "c19 공유주방", api: "consult", message: "배달 전문 공유주방 생각 중", must: [/수수료|배달앱|리뷰|피크|인력|조리|고용|직접/] },
   { id: "c20 되묻기", api: "consult", message: "지인이 창업 하지 말라는데 어떻게 생각하세요?", must: [/\?/] },
-  { id: "a01 가격", api: "assistant", message: "가격이 얼마예요?", must: [/149,?000/], linkHref: "/plan/start" },
+  { id: "a01 가격", api: "assistant", message: "가격이 얼마예요?", must: [/149,?000/], linkHref: "/plan/chat?new=1" },
   { id: "a02 환불", api: "assistant", message: "환불 되나요?", must: [/환불/], linkHref: "/plan/info?doc=refund" },
   { id: "a03 파일", api: "assistant", message: "PDF로 받을 수 있어요?", must: [/PDF|Word|워드/] },
   { id: "a04 저장", api: "assistant", message: "중간에 나가면 작성한 게 사라져요?", must: [/저장|보관/] },
