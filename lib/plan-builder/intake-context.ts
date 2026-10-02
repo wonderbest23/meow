@@ -1,4 +1,5 @@
 import { readCoach } from "./coach";
+import { playbookContext, playbookForKsic } from "./industry-playbooks";
 import { allStructureQuestions, detailQuestions, intakeSectorOptions } from "./intake-questions";
 import { readIntake, effectiveStructure } from "./intake-core";
 import { intakeResourceSource } from "./intake-resource-context";
@@ -102,17 +103,23 @@ export function confirmedIntakeContext(answers: Answers): string {
   const periodInput = answers["intake/period"];
   const reportingPeriod = periodInput?.basis === "user" ? answerRecord("period", "Operating reporting period", periodInput) : null;
   const ksic = confirmedKsic(answers);
+  // 업종 가이드(준비물·신고 순서·자주 놓치는 것) — 그 업종을 모르는 사람의 계획서가 시작 절차를 구체적으로 다루게 한다
+  const playbook = ksic ? playbookForKsic(ksic.code) : null;
   // 사업 구조 브리프: 분류 코드가 있거나, 사용자가 구조를 직접 골랐거나, 손익 입력(가격·변동비·고정비 등)이 있을 때만 붙는다. 그 밖에는 추측이 되므로 넣지 않는다.
   const intakeState = briefIntakeState(answers, sector, ksic?.code ?? null), coachState = readCoach(answers);
   const brief: IntakeStructureBrief | null = intakeState && coachState ? intakeStructureBrief(coachState, intakeState) : null;
   const structure = brief && (intakeState?.ksic || brief.userChosen.length || brief.revenueModel.inputs.length) ? brief : null;
   const resources = coachState ? intakeResourceSource(coachState, intakeState, intakeState ? effectiveStructure(intakeState).values : undefined) : undefined;
   const selectedProposal = coachState ? selectedIdeaContext(coachState, intakeState) : null;
-  if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal) return "";
+  if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal && !playbook) return "";
 
   const context = { guidance: INTAKE_CONTEXT_RULES + (resources ? ` ${RESOURCE_CONTEXT_RULES}` : ""), industry: industry || null, sector: sector ?? null, ksic, structure,
-    ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
+    ...(playbook ? { industryGuide: playbookContext(playbook) } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
   while (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.resources?.quotes.length) { context.resources.quotes.pop(); context.omitted = true; }
+  // 넘치면 업종 가이드부터 줄인다 — 사업 구조·계산(structure)이 더 중요하다
+  const guided = context as typeof context & { industryGuide?: ReturnType<typeof playbookContext> };
+  if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && guided.industryGuide) { guided.industryGuide = { ...guided.industryGuide, needs: [], pitfalls: [] }; context.omitted = true; }
+  if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && guided.industryGuide) { delete guided.industryGuide; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.structure) { context.structure = { ...context.structure, financialScenario: "" }; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH) { context.structure = null; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH) { context.ksic = null; context.omitted = true; }
