@@ -94,7 +94,8 @@ async function main() {
       assert.equal(response.status, 200); assert.equal(claims, 1); assert.equal(sessions, 1);
     });
     await check("confirmation pending UI distinguishes email confirmation from login", async () => {
-      const source = readFileSync("app/account/page.tsx", "utf8");
+      // 로그인 폼은 로그인 화면과 팝업이 같이 쓰는 컴포넌트로 옮겼다
+      const source = readFileSync("components/account-auth-form.tsx", "utf8");
       assert.ok(/result\.confirmationRequired/.test(source), "missing confirmation pending UI branch");
       assert.ok(/확인 메일/.test(source), "missing confirmation email guidance");
     });

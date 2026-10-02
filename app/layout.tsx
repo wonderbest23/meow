@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "@puckeditor/core/puck.css";
 import "./release-20260916.css";
+import { LoginDialogHost } from "../components/login-dialog";
 
 export const metadata: Metadata = {
   title: "오늘창업 | 나만의 사업 가능성 탐색",
@@ -10,7 +11,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="ko">
-      <body>{children}</body>
+      <body>{children}<LoginDialogHost /></body>
     </html>
   );
 }
