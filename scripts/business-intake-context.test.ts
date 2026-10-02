@@ -298,6 +298,12 @@ async function main() {
   const ksicContext = parse(confirmedIntakeContext(withKsic));
   assert.equal(ksicContext.ksic?.code, "56221");
   assert.equal(ksicContext.ksic?.name, "커피 전문점");
+  // 업종 가이드가 있는 업종(커피 전문점)은 신고 순서와 자주 놓치는 것이 작성 맥락에 들어간다
+  const guide = (ksicContext as Context & { industryGuide?: { name: string; steps: string[]; rule: string } }).industryGuide;
+  assert.equal(guide?.name, "카페(휴게음식점)");
+  assert(guide?.steps.some(step => step.startsWith("휴게음식점 영업 신고")), JSON.stringify(guide?.steps));
+  assert(guide?.rule.includes("관할 기관 확인"));
+  assert(confirmedIntakeContext(withKsic).length <= 8000);
   assert(ksicContext.ksic?.structure.includes("신고·등록 필요"));
   assert(ksicContext.ksic?.source.includes("KSIC"));
   assert(ksicContext.guidance.includes("never override supplied answers"));
