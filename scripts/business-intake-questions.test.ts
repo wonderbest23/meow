@@ -254,6 +254,11 @@ async function main() {
     }
     assert.equal(options.wonAnswer(120000), "12만원");
     assert.equal(options.wonAnswer(1234567), "1234567원");
+    // 원가로 판매가 잡기: 원가 ÷ 비율, 1,000원 이상은 100원 단위로 올림
+    assert.deepEqual(options.suggestPriceFromCost(1500, 30), { price: 5000, margin: 3500 });
+    assert.deepEqual(options.suggestPriceFromCost(1234, 35), { price: 3600, margin: 2366 });
+    assert.deepEqual(options.suggestPriceFromCost(200, 40), { price: 500, margin: 300 });
+    assert.equal(options.suggestPriceFromCost(0, 30), null); assert.equal(options.suggestPriceFromCost(1000, 100), null);
     assert.equal(coachAmount(options.numberAnswer(12000, "원")), 12000);
     assert.equal(options.numberAnswer(1000, "개"), "1000개", "non-won units carry no thousands separator");
     for (const range of options.amountRanges("food_beverage", "price")) for (const bound of [range.min, range.max]) if (bound !== null && bound > 0) assert.equal(coachAmount(options.wonAnswer(bound)), bound);

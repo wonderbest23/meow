@@ -375,3 +375,17 @@ export function wonAnswer(value: number): string {
 export function validChipLabel(label: string, maxLength = 40): boolean {
   return label.trim().length > 0 && label.length <= maxLength && !label.includes("/") && !label.includes(LIST_SEPARATOR) && !/,\s*$/.test(label);
 }
+
+/*
+ * 원가로 판매가 잡기 — 업종을 모르는 사람이 "얼마에 팔아야 하나"에서 막히지 않게 한다.
+ * 시장 가격을 지어내지 않고, 사용자가 아는 1개당 원가와 고른 원가 비율로만 계산한다.
+ * 판매가 = 원가 ÷ 원가 비율. 1,000원 이상은 100원 단위, 그보다 작으면 10원 단위로 올린다.
+ */
+export const COST_RATIO_PRESETS = [25, 30, 35, 40, 50, 60] as const;
+export function suggestPriceFromCost(unitCost: number, ratioPct: number): { price: number; margin: number } | null {
+  if (!Number.isFinite(unitCost) || unitCost <= 0 || !Number.isFinite(ratioPct) || ratioPct <= 0 || ratioPct >= 100) return null;
+  const raw = unitCost / (ratioPct / 100);
+  const step = raw >= 1000 ? 100 : 10;
+  const price = Math.ceil(raw / step) * step;
+  return { price, margin: price - unitCost };
+}
