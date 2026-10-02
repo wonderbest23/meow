@@ -49,8 +49,8 @@ assert.ok(!buildWeeklyReportEmail({ ...{ from: "a", to: "b", businessName: "", w
   const common = { from: "a", to: "b", businessName: "빵집", weekStart: "2026-09-28", weekEnd: "2026-10-04", stats: base, homepageUrl: "h", unsubscribeUrl: "u", recordUrl: null, snsUrl: "https://oneulstart.com/plan/workspace?planId=p" };
   const withSns = buildWeeklyReportEmail({ ...common, sns: snsWeekFor(saved, start + 8 * day) });
   assert.ok(withSns.text.includes("이번 주 SNS 할 일 (2주차 · 주제2)") && withSns.text.includes("월 사진: 아이디어2"), withSns.text);
-  assert.ok(withSns.html.includes("올릴 글 보기"));
-  assert.ok(buildWeeklyReportEmail({ ...common, sns: { finished: true } }).html.includes("새 운영표 만들기"));
+  assert.ok(withSns.html?.includes("올릴 글 보기"));
+  assert.ok(buildWeeklyReportEmail({ ...common, sns: { finished: true } }).html?.includes("새 운영표 만들기"));
   assert.ok(!buildWeeklyReportEmail({ ...common, sns: null }).text.includes("SNS"), "no kit → no SNS block");
 }
 
