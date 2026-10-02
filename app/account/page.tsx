@@ -366,6 +366,10 @@ export default function AccountPage() {
   };
 
 
+  useEffect(() => {
+    if (session?.authenticated) router.replace(nextPath ?? "/plan/me");
+  }, [session?.authenticated, nextPath, router]);
+
   if (!session) return <main className={`${styles.page} plan-ui`}><SiteHeader light showAccount={false} onHome={() => router.push("/")} /><div className={styles.loading}><PlanLoading count={2} note="내 계정을 확인하고 있어요" /></div></main>;
 
   return (
@@ -375,82 +379,11 @@ export default function AccountPage() {
         * 아래 테두리가 달랐고, 오른쪽에 놓이는 것도 홈과 어긋났다.
         * 마이페이지 아이콘은 끈다 — 지금 보고 있는 화면으로 다시 보내는 단추다.
         */}
-      <SiteHeader light showAccount={false} onHome={() => router.push("/")} onStart={() => router.push("/plan/start")} />
+      <SiteHeader light showAccount={false} onHome={() => router.push("/")} onStart={() => router.push("/plan/chat?new=1")} />
       {session.authenticated ? (
         /* plan-ui: 전역 버튼 정규화(아이콘 숨김 등)에서 제외 — 플랜과 같은 체계를 쓴다 */
-        <section className="account-dashboard plan-ui">
-          <div className="account-welcome"><div><small>내 계정</small><h1>반가워요</h1><p>{session.email}</p></div><button disabled={busy} onClick={logout}>{busy ? <Spinner /> : null} 로그아웃</button></div>
-
-          <Link className={styles.supportLink} href="/account/support">
-            <Headphones size={23} aria-hidden="true" />
-            <span><strong>고객센터</strong><small>문의 접수 · 내 문의와 답변 확인</small></span>
-            <ChevronRight size={20} aria-hidden="true" />
-          </Link>
-
-          {/* 진행 중인 사업 = 플랜 목록. 누르면 /plan 의 그 플랜에서 바로 이어진다. */}
-          <div className="account-projects">
-            <header>
-              <div><strong>진행 중인 사업</strong><p>작성 중인 사업계획서를 눌러 이어서 쓰세요.</p></div>
-              <Link href="/plan/chat?new=1">새 사업 시작</Link>
-            </header>
-            {plans === null ? (
-              <PlanLoading count={2} note="내 사업을 불러오고 있어요" />
-            ) : plans.length === 0 ? (
-              <div className="account-empty"><BriefcaseBusiness /><strong>아직 만든 플랜이 없습니다.</strong><p>새 플랜을 만들면 여기에서 이어서 쓸 수 있습니다.</p></div>
-            ) : (
-              <div className="account-plan-list">
-                {[...plans].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || "")).map((plan) => {
-                  const meta = TYPE_META[plan.planType] ?? DEFAULT_META;
-                  const pct = planPct(plan);
-                  return (
-                    <button type="button" key={plan.id} onClick={() => openPlan(plan.id)}>
-                      <span style={{ background: `${meta.accent}14`, color: meta.accent }}><meta.Icon /></span>
-                      <div>
-                        <strong>{plan.title}</strong>
-                        <small>{meta.short} · {pct === 100 ? "완성" : `${pct}% 작성`} · {new Date(plan.updatedAt).toLocaleDateString("ko-KR")} 수정</small>
-                      </div>
-                      <em style={{ background: "#edf4ff", color: "#246bd1" }}>{pct === 100 ? "완성" : "이어쓰기"}</em>
-                      <ChevronRight />
-                    </button>
-                  );
-                })}
-                <Link className="account-plan-all" href="/plan">내 사업 전체 보기</Link>
-              </div>
-            )}
-          </div>
-          <div className="account-payments">
-            <header>
-              <div>
-                <strong>결제 내역</strong>
-                <p>결제한 상품과 금액을 확인할 수 있습니다.</p>
-              </div>
-            </header>
-            {payments === null ? <PlanLoading variant="compact" note="결제 내역을 확인하고 있어요" /> : payments.length === 0 ? (
-              <div className="account-empty">
-                <Receipt />
-                <strong>아직 결제 내역이 없습니다.</strong>
-                <p>플랜 빌더를 결제하면 여기에 남습니다.</p>
-              </div>
-            ) : (
-              <table>
-                <thead>
-                  <tr><th>상품</th><th>금액</th><th>상태</th><th>일시</th></tr>
-                </thead>
-                <tbody>
-                  {payments.map((item) => (
-                    <tr key={item.orderId}>
-                      <td>{item.orderName || "-"}</td>
-                      <td className="account-payment-amount">{item.amount.toLocaleString("ko-KR")}원</td>
-                      <td><span className={`account-payment-status is-${item.status}`}>{PAYMENT_STATUS[item.status] ?? item.status}</span></td>
-                      <td>{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-          {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
-        </section>
+        /* 로그인한 사람의 계정 정보는 왼쪽 메뉴의 '내 계정'(/plan/me) 한 곳에 둔다 — 여기는 로그인 화면만 */
+        <div className={styles.loading}><PlanLoading count={2} note="내 계정으로 이동하고 있어요" /></div>
       ) : (
         <section className={`${styles.auth} account-auth-shell`}>
           {linkSignIn ? (

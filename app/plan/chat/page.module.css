@@ -107,7 +107,7 @@
 .note,.briefSection .note { color:var(--app-muted); font-size:13px; line-height:1.7; margin:10px 0; }
 @media(max-width:900px) {
   .splitHandle { display:none; }
-  .appRail { display:none; }.header { height:72px; padding:0 12px; gap:8px; }.back { display:flex; }
+  .appRail,.railHost { display:none; }.header { height:72px; padding:0 12px; gap:8px; }.back { display:flex; }
   .viewTabs { display:grid; grid-template-columns:1fr 1fr; flex-shrink:0; padding:0 16px; border-bottom:1px solid var(--app-line); background:var(--app-surface); }.viewTabs button { height:48px; border:0; border-bottom:2px solid transparent; background:none; color:var(--app-muted); font-size:15px; font-weight:600; display:flex; justify-content:center; align-items:center; gap:6px; }.viewTabs button[aria-pressed=true] { border-bottom-color:var(--app-primary); color:var(--app-accent); }.updateDot { width:5px; height:5px; background:var(--app-primary); border-radius:50%; }
   .mobileHidden { display:none; }.briefPane { flex:1; max-width:none; border:0; }
   .thread { padding:24px 24px 18px; }.assistant { margin-right:8px; }.bubble,.assistant > p,.assistant > details { padding:0; }.assistant p,.user p { font-size:16px; line-height:1.85; }.firstMessage { margin-right:0; }.firstMessage .bubble { padding:8px 0 0; }.firstMessage .bubble > p:first-child { font-size:24px; line-height:1.5; }.entryOptions { margin-top:28px; max-width:none; }.entryOptions button { min-height:72px; padding:17px 18px; gap:14px; font-size:16px; }

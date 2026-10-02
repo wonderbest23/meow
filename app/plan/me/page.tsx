@@ -189,7 +189,7 @@ export default function PlanMePage() {
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>내 사업</h2>
-          <Link href="/plan/start" className={styles.cardAction}>사업 정보 수정</Link>
+          <Link href="/plan" className={styles.cardAction}>내 사업 보기</Link>
         </div>
         {biz?.name ? (
           <dl className={styles.rows}>

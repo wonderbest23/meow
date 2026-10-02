@@ -430,7 +430,7 @@ export default function PlanHomepagePage() {
             </div>
             <div className={styles.payActions}>
               {sample ? (
-                <a className={styles.cta} href="/plan/start">내 플랜 만들기 →</a>
+                <a className={styles.cta} href="/plan/chat?new=1">내 플랜 만들기 →</a>
               ) : (
                 <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
                   홈페이지 에디터 →

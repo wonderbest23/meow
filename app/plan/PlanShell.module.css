@@ -700,3 +700,32 @@
   .rail, .logo, .railBtn { animation: none; }
   .railBtn:hover, .railBtn:active, .railBtn:hover svg, .railToggle:active, .menuFab:active { transform: none; }
 }
+
+/*
+ * ── 공통 왼쪽 메뉴(RailMenu) ──────────────────────────────────────
+ * 대화 화면과 문서 화면이 같은 메뉴를 쓴다. 항목은 40px 한 줄로 촘촘하게, 아이콘은 19px.
+ * 새 대화만 테두리로 구분하고, 이용 안내·고객센터·내 계정은 아래에 모은다.
+ */
+.rail { gap: 2px; padding: 16px 12px 14px; }
+.logo { margin: 2px 0 14px 4px; }
+.railBtn { min-height: 40px; gap: 10px; padding: 0 10px; border-radius: 9px; }
+.railBtn svg { width: 19px; height: 19px; }
+.railLabel { font-size: 14px; font-weight: 600; min-width: 0; }
+.railNew { border: 1px solid var(--app-line-strong, var(--app-line)); background: var(--app-surface); margin-bottom: 8px; }
+.railNew:hover { background: var(--app-raised); }
+.railSub { min-height: 36px; margin-left: 18px; padding-left: 10px; border-left: 2px solid var(--app-line); border-radius: 0 9px 9px 0; }
+.railSub .railLabel { font-size: 13px; }
+.railAccount { min-height: 48px; margin-top: 6px; border-top: 1px solid var(--app-line); border-radius: 0 0 9px 9px; padding-top: 6px; }
+.railAccount .railLabel { display: grid; line-height: 1.25; overflow: hidden; }
+.railAccountName { font-size: 13.5px; font-weight: 700; }
+.railAccountMail { font-size: 11.5px; font-weight: 500; color: var(--app-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 대화·내 사업 화면: 같은 메뉴를 고정이 아닌 흐름 안에 둔다 */
+.railStatic { position: relative; top: auto; bottom: auto; left: auto; flex: 0 0 var(--rail-w, 208px); width: var(--rail-w, 208px); height: auto; min-height: 100%; z-index: auto; overflow-y: auto; }
+
+@media (max-width: 640px) {
+  .railNew { border: 0; margin-bottom: 0; background: transparent; }
+  .railSub { margin-left: 0; border-left: 0; }
+  .railAccount { border-top: 0; margin-top: 0; padding-top: 0; min-height: 42px; }
+  .railOpen .railNew { border: 1px solid var(--app-line); margin-bottom: 8px; }
+}

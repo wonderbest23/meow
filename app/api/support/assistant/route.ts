@@ -27,7 +27,7 @@ const requestSchema = z.object({
  * 주소를 지어내면 안 되므로, 여기 정의된 id 만 고르게 하고 주소는 서버가 단다.
  */
 const ASSISTANT_LINKS = {
-  "plan-start": { href: "/plan/start", label: "새 문서 시작하기" },
+  "plan-start": { href: "/plan/chat?new=1", label: "새 사업 기획 시작하기" },
   "plan-samples": { href: "/plan", label: "샘플 문서 보기" },
   "plan-document": { href: "/plan/document", label: "문서 보기 열기" },
   "plan-me": { href: "/plan/me", label: "마이페이지 열기" },
