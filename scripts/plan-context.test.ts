@@ -314,7 +314,8 @@ assert.ok(!legacySec || legacySec.metrics.length === 0);
 /* ───── 충돌 설명 길이 제한 지시 ───── */
 const conflictPrompt = buildUserPrompt({ ...legacyBase, conflicts: [{ title: "t", detail: "d" }] });
 assert.ok(conflictPrompt.includes("충돌 설명은 본문에서 한 문단 이내로만"));
-assert.ok(conflictPrompt.includes("'추가 정의 필요 항목'으로 보내고"));
+// 2026-10: 섹션별 참고 사항 목록을 없앴다 — 충돌은 본문에 (확정 필요)로 표시하고 마지막 확인 목록에서 모은다
+assert.ok(conflictPrompt.includes("(확정 필요)"));
 
 /* ───── 지표 블록 분량 ───── */
 const withMetrics = formatContext(contextForSection("overview/summary", cCtx)!, {});

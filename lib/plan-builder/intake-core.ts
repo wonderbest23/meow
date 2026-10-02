@@ -245,7 +245,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
   return { planId: plan.id, title: plan.title, planType: plan.planType, updatedAt: plan.updatedAt, coach,
     intake: publicIntake, nextQuestion: questions.find(question => !answeredIntakeQuestion(intake, coach, question)) ?? null,
     questions, coreComplete: answered === core.length, coreAnswered: answered, coreTotal: core.length,
-    summary, financialSummary: intakeFinancialReference(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach),
+    summary, financialSummary: intakeFinancialReference(coach, intake), financialWarning: intakeFinancialWarning(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach),
     ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(coach, intake),
     candidateIdeas: resources.ideas,
     resourceAssessment: resources.assessment,
@@ -427,6 +427,26 @@ export function intakeDetailChecks(coach: CoachState, intake: IntakeState, scena
 export function planFinancialReference(coach: CoachState, answers: ServerPlan["answers"]): string {
   const intake = readIntake(answers);
   return intake ? intakeFinancialReference(coach, intake) : coachFinancialReference(coach);
+}
+
+/*
+ * 계획서를 만들기 전에 숫자부터 바로잡는다. 예전엔 치과를 '건당 15,000원'으로 넣어도 그대로 문서를 만들어,
+ * 9개 섹션 내내 "숫자가 안 맞는다"는 말만 반복하는 계획서가 나왔다(운영 2026-09-30).
+ * 시작 전 계획(운영 실적이 아닌 값)에서 팔수록 손해이거나, 감당할 수 있는 양을 다 팔아도 본전이 안 되면 한 줄로 알려 준다.
+ * 판단만 하고 숫자를 바꾸지는 않는다 — 고칠지는 사용자가 정한다.
+ */
+export function intakeFinancialWarning(coach: CoachState, intake: IntakeState): { message: string; fields: Array<"price" | "unitCost" | "cost"> } | null {
+  if (intake.mode === "operating") return null;
+  const inputs = intakeScenarioInputs(coach, intake);
+  if ("missing" in inputs) return null;
+  const { labels, unitPrice, unitVariableCost, monthlyFixedCost, volume } = inputs;
+  const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
+  const contribution = unitPrice - unitVariableCost;
+  if (unitPrice > 0 && contribution <= 0) return { message: `${labels.price} ${won(unitPrice)}이 ${labels.unitCost} ${won(unitVariableCost)}보다 낮거나 같아서 팔수록 손해예요. 계획서를 만들기 전에 두 값을 다시 확인해 주세요.`, fields: ["price", "unitCost"] };
+  if (!volume || contribution <= 0 || monthlyFixedCost <= 0) return null;
+  const breakEven = Math.ceil(monthlyFixedCost / contribution);
+  if (breakEven <= volume) return null;
+  return { message: `지금 ${labels.price} ${won(unitPrice)}와 월 고정비 ${won(monthlyFixedCost)}로는 한 달에 ${breakEven.toLocaleString("ko-KR")}건을 팔아야 본전인데, 감당할 수 있는 양(월 ${volume.toLocaleString("ko-KR")}건)을 넘어요. 가격이 평균 결제액보다 낮게 들어갔거나 고정비가 크게 잡히지 않았는지 확인해 주세요. 맞다면 그대로 진행해도 돼요.`, fields: ["price", "cost"] };
 }
 
 export function intakeFinancialReference(coach: CoachState, intake: IntakeState): string {
