@@ -21,6 +21,7 @@ import {
 import { ensurePaidStarterLanding } from "../lib/landing/auto-publish";
 import { getPublishedLandingBySlug } from "../lib/landing/repository";
 import { getProject } from "../lib/project-repository";
+import { approveNicepayPayment, cancelNicepayPayment, lookupNicepayPayment } from "../lib/payments/nicepay-client";
 
 async function main() {
 const opportunity = {
@@ -199,8 +200,47 @@ assert.equal(canceledTransfer.status, "canceled");
   assert.ok(!src.includes("cancelNicepayPayment"), "DB 응답 유실만으로 승인된 주문을 취소하지 않는다");
 }
 
+/*
+ * Cloudflare Workers 의 fetch 는 redirect "error" 를 받지 않고 던진다(문자 발송에서 운영 로그로 확인).
+ * 나이스페이 승인·조회·취소는 "manual" 로 보내고, 3xx 는 따라가지 않고 실패로 남긴다.
+ */
+{
+  const savedEnv = { ...process.env };
+  const savedFetch = globalThis.fetch;
+  Object.assign(process.env, { NICEPAY_ENVIRONMENT: "sandbox", NICEPAY_SANDBOX_CLIENT_KEY: "fixture-client", NICEPAY_SANDBOX_SECRET_KEY: "fixture-secret" });
+  delete process.env.NICEPAY_CLIENT_KEY; delete process.env.NICEPAY_SECRET_KEY;
+  const calls: Array<{ url: string; method?: string; redirect?: RequestRedirect; cache?: RequestCache; signal: boolean }> = [];
+  let reply = () => Response.json({ resultCode: "0000", tid: "tid-1", orderId: "order-1", amount: 100, currency: "KRW", status: "paid" });
+  globalThis.fetch = (async (input: string | URL | Request, init?: RequestInit) => {
+    calls.push({ url: String(input), method: init?.method, redirect: init?.redirect, cache: init?.cache, signal: Boolean(init?.signal) });
+    if (init?.redirect !== "manual") throw new TypeError('Invalid redirect value, must be one of "follow" or "manual"');
+    return reply();
+  }) as typeof fetch;
+  try {
+    assert.equal((await approveNicepayPayment("tid-1", 100)).ok, true, "Workers 가 받는 redirect 값으로 승인해야 한다");
+    assert.equal((await lookupNicepayPayment("tid-1", 100)).ok, true, "Workers 가 받는 redirect 값으로 조회해야 한다");
+    reply = () => Response.json({ resultCode: "0000" });
+    assert.equal(await cancelNicepayPayment("tid-1", "테스트"), true, "Workers 가 받는 redirect 값으로 취소해야 한다");
+    assert.deepEqual(calls.map(call => [call.method, call.redirect, call.cache, call.signal]), [
+      ["POST", "manual", "no-store", true], ["GET", "manual", "no-store", true], ["POST", "manual", "no-store", true],
+    ], "시간 제한·캐시 금지는 그대로 유지한다");
+
+    calls.length = 0;
+    reply = () => new Response(null, { status: 302, headers: { Location: "https://redirect.invalid/payments" } });
+    await assert.rejects(() => approveNicepayPayment("tid-1", 100), /NICEPAY_REDIRECTED/, "승인 응답이 3xx 면 성공으로 보지 않는다");
+    await assert.rejects(() => lookupNicepayPayment("tid-1", 100), /NICEPAY_REDIRECTED/, "조회 응답이 3xx 면 성공으로 보지 않는다");
+    assert.equal(await cancelNicepayPayment("tid-1", "테스트"), false, "취소 응답이 3xx 면 취소되지 않은 것으로 본다");
+    assert.equal(calls.length, 3, "다른 주소로 보내라는 답은 따라가지 않는다");
+    assert.ok(calls.every(call => !call.url.includes("redirect.invalid")));
+  } finally {
+    globalThis.fetch = savedFetch;
+    for (const key of Object.keys(process.env)) if (!(key in savedEnv)) delete process.env[key];
+    Object.assign(process.env, savedEnv);
+  }
+}
+
 console.log(JSON.stringify({
-  passed: 37,
+  passed: 46,
   sample: {
     orderAmount: order.amount,
     orderStatus: canceled.status,
