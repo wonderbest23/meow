@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { snsWeekFor } from "../lib/marketing/kit";
 import { buildWeeklyReportEmail, reportWeek, runWeeklyReports, verifyWeeklyReportUnsubscribe, weeklyReportInactive, weeklyReportUnsubscribeToken, weeklyReportUnsubscribeUrl, weeklyTip, type WeeklyStats } from "../lib/landing/weekly-report";
 import { operatingRecordedSince } from "../lib/landing/weekly-report-runner";
 
@@ -31,6 +32,27 @@ assert.ok(email.html?.includes("퇴근길&lt;script&gt;") && !email.html.include
 assert.ok(email.html?.includes("u?x=1&amp;y=2"));
 assert.deepEqual(email.headers, { "List-Unsubscribe": "<https://oneulstart.com/u?x=1&y=2>", "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" });
 assert.ok(!buildWeeklyReportEmail({ ...{ from: "a", to: "b", businessName: "", weekStart: "2026-09-28", weekEnd: "2026-10-04", stats: base, homepageUrl: "h", unsubscribeUrl: "u", recordUrl: null } }).text.includes("아직 안 적으셨어요"));
+
+// 이번 주 SNS 할 일: 홍보 키트를 만든 날부터 몇 주째인지로 고르고, 4주가 지나면 새 운영표를 안내한다
+{
+  const kitWeek = (n: number) => ({ week: n, theme: `주제${n}`, posts: [{ day: "월", format: "사진", idea: `아이디어${n}`, caption: "글" }, { day: "목", format: "글", idea: `둘째${n}`, caption: "글" }] });
+  const saved = { generatedAt: "2026-09-01T00:00:00.000Z", kit: {
+    placeIntro: "소개", openingMessage: "안내", flyer: { headline: "제목", body: "본문", cta: "행동" },
+    posts: [1, 2, 3].map(() => ({ channel: "인스타그램", body: "게시물", hashtags: ["#빵"] })), reviewRequest: "리뷰 부탁", calendar: [1, 2, 3, 4].map(kitWeek),
+  } };
+  const day = 24 * 60 * 60_000, start = Date.parse(saved.generatedAt);
+  assert.equal((snsWeekFor(saved, start + day) as { week: number }).week, 1);
+  assert.equal((snsWeekFor(saved, start + 8 * day) as { week: number }).week, 2);
+  assert.deepEqual(snsWeekFor(saved, start + 29 * day), { finished: true });
+  assert.equal(snsWeekFor({ generatedAt: "x", kit: saved.kit }, start), null);
+  assert.equal(snsWeekFor(null, start), null);
+  const common = { from: "a", to: "b", businessName: "빵집", weekStart: "2026-09-28", weekEnd: "2026-10-04", stats: base, homepageUrl: "h", unsubscribeUrl: "u", recordUrl: null, snsUrl: "https://oneulstart.com/plan/workspace?planId=p" };
+  const withSns = buildWeeklyReportEmail({ ...common, sns: snsWeekFor(saved, start + 8 * day) });
+  assert.ok(withSns.text.includes("이번 주 SNS 할 일 (2주차 · 주제2)") && withSns.text.includes("월 사진: 아이디어2"), withSns.text);
+  assert.ok(withSns.html.includes("올릴 글 보기"));
+  assert.ok(buildWeeklyReportEmail({ ...common, sns: { finished: true } }).html.includes("새 운영표 만들기"));
+  assert.ok(!buildWeeklyReportEmail({ ...common, sns: null }).text.includes("SNS"), "no kit → no SNS block");
+}
 
 // 오래 조용한 홈페이지는 쉰다
 assert.equal(weeklyReportInactive(base, "2026-08-01T00:00:00Z", at("2026-10-05T09:00:00+09:00")), true);

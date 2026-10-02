@@ -79,3 +79,19 @@ export function normalizeMarketingKit(raw: unknown): MarketingKit | null {
 }
 
 export const MARKETING_KIT_OUTPUT_SCHEMA = outputSchema;
+
+/*
+ * 이번 주 SNS 할 일 — 주간 리포트가 홍보 키트를 만든 날부터 몇 주째인지 세어 그 주의 게시물을 보여 준다.
+ * 4주가 지나면 새 운영표를 만들라고 안내한다(같은 글을 다시 돌리지 않는다).
+ */
+export type SnsWeek = { week: number; theme: string; posts: Array<{ day: string; format: string; idea: string }> } | { finished: true };
+export function snsWeekFor(saved: unknown, now = Date.now()): SnsWeek | null {
+  const value = saved as { kit?: unknown; generatedAt?: unknown } | null | undefined;
+  const kit = normalizeMarketingKit(value?.kit);
+  const at = typeof value?.generatedAt === "string" ? Date.parse(value.generatedAt) : NaN;
+  if (!kit || !Number.isFinite(at) || now < at) return null;
+  const index = Math.floor((now - at) / (7 * 24 * 60 * 60_000));
+  if (index >= 4) return { finished: true };
+  const week = kit.calendar[index];
+  return week ? { week: week.week, theme: week.theme, posts: week.posts.map(({ day, format, idea }) => ({ day, format, idea })) } : null;
+}
