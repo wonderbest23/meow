@@ -556,3 +556,14 @@
 .financialWarning p { margin: 0; font-size: 14px; line-height: 1.65; }
 .financialWarning > div { display: flex; flex-wrap: wrap; gap: 8px; }
 .financialWarning button { display: inline-flex; align-items: center; gap: 6px; }
+
+/* 원가로 판매가 계산 */
+.costHelper { margin: 4px 0 12px; padding: 12px 14px; border: 1px dashed #c9d6ea; border-radius: 10px; background: #f8fbff; }
+.costHelper > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: #246bd1; }
+.costHelper[open] { display: grid; gap: 10px; }
+.costHelperInput { display: flex; align-items: center; gap: 8px; }
+.costHelperInput span { font-size: 13px; font-weight: 600; color: #333d4b; min-width: 72px; }
+.costHelperInput input { flex: 1; min-width: 0; height: 40px; padding: 0 10px; border: 1px solid #dce1e8; border-radius: 8px; font-size: 15px; }
+.costHelperInput em { font-style: normal; color: #6b7684; }
+.costHelperResult { display: grid; gap: 8px; }
+.costHelperResult p { margin: 0; font-size: 14px; line-height: 1.6; }

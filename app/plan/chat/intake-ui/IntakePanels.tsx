@@ -10,7 +10,7 @@ import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, Lis
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
-import { amountRanges, CHIP_GROUPS, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
+import { amountRanges, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
 import { mentionedAnswer, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
@@ -154,6 +154,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         <p className={styles.stepLegend}>가격 기준</p>
         <div className={styles.chipRow}>{basisOptions.map(option => <button key={option.value} type="button" className={styles.chip} aria-pressed={draft.selected.includes(option.value)} data-selected={draft.selected.includes(option.value) || undefined} disabled={disabled} onClick={() => onChange({ ...draft, custom: false, unknown: false, selected: [option.value] })}>{option.label}</button>)}</div>
       </div>}
+      {numeric && question.id === "price" && snapshot.intake.mode !== "operating" && <CostPriceHelper disabled={disabled} onCommit={commit} />}
       {numeric && !candidate && (question.unit === "원"
         ? (!basisOptions.length || basis) && <AmountLadder key={basis ?? "ladder"} question={question} ranges={ranges} legend={months && months > 1 ? `${months}개월 합계 기준` : undefined} disabled={disabled} staging={inChat} onCommit={commit} />
         : <NumberQuick question={question} draft={draft} presets={numberPresets(question)} disabled={disabled} staging={inChat} onChange={onChange} onCommit={commit} />)}
@@ -290,6 +291,24 @@ function NumberQuick({ question, draft, presets, disabled, staging, onChange, on
 }
 
 /** range_chips_with_exact (spec §2): a won ladder, then lower / upper / exact (만원 keypad with a 원 toggle). Only "0원" sends from step 1. */
+/** 원가로 판매가 계산 — 1개당 원가와 원가 비율을 고르면 판매가를 제안하고, 누르면 가격 답으로 넣는다 */
+function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: (value: IntakeValue) => void }) {
+  const [costText, setCostText] = useState("");
+  const [ratio, setRatio] = useState<number>(30);
+  const cost = /^\d+$/.test(costText.replace(/,/g, "")) ? Number(costText.replace(/,/g, "")) : null;
+  const result = cost ? suggestPriceFromCost(cost, ratio) : null;
+  return <details className={styles.costHelper}>
+    <summary>가격을 모르겠다면 원가로 계산해 보기</summary>
+    <p className={styles.chipHelp}>상품 1개(서비스 1건)를 만드는 데 드는 재료·포장·외주비를 넣고, 판매가에서 원가가 차지할 비율을 골라 주세요. 업종마다 다르니 내 원가 구조에 맞는 비율을 고르면 돼요.</p>
+    <label className={styles.costHelperInput}><span>1개당 원가</span><input inputMode="numeric" value={costText} placeholder="예: 1500" disabled={disabled} onChange={event => setCostText(event.target.value.replace(/[^\d,]/g, ""))} /><em>원</em></label>
+    <div className={styles.chipRow} role="group" aria-label="원가 비율">{COST_RATIO_PRESETS.map(value => <button key={value} type="button" className={styles.chip} aria-pressed={ratio === value} data-selected={ratio === value || undefined} disabled={disabled} onClick={() => setRatio(value)}>원가 {value}%</button>)}</div>
+    {result && <div className={styles.costHelperResult}>
+      <p>제안 판매가 <strong>{formatWon(result.price)}</strong> · 1개 팔 때마다 원가를 빼고 {formatWon(result.margin)}이 남아요 (원가 {ratio}% 기준).</p>
+      <button type="button" className={styles.secondaryButton} disabled={disabled} onClick={() => onCommit(wonAnswer(result.price))}>이 가격으로 입력<Check size={17} aria-hidden="true" /></button>
+    </div>}
+  </details>;
+}
+
 function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel = "정확히 입력", onCommit, onRange, onExact }: {
   question: IntakeQuestion; ranges: AmountRange[]; legend?: string; disabled: boolean; staging: boolean; exactLabel?: string;
   /** Number mode sends wonAnswer() through onCommit; text mode (onRange + onExact) writes into the draft instead. */
