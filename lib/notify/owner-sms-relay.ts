@@ -44,9 +44,11 @@ export async function sendOwnerSmsRelay(config: z.infer<typeof configSchema>, ev
   const signature = await hmac(config.secret, `${timestamp}\nPOST\n${PATH}\n${body}`);
   signal.throwIfAborted();
   const response = await fetch(config.endpoint, {
-    method: "POST", redirect: "error", signal,
+    method: "POST", redirect: "manual", signal,
     headers: { "Content-Type": "application/json", "x-oneul-time": timestamp, "x-oneul-signature": signature }, body,
   });
+  // Workers 의 fetch 는 redirect "error" 를 받지 않는다 — "manual" 로 받고 3xx 는 따라가지 않고 거절한다
+  if (response.status >= 300 && response.status < 400) return { status: "rejected", code: "RELAY_REDIRECTED" };
   if (!response.body) return { status: "uncertain", code: "RELAY_EMPTY_RESPONSE" };
   const reader = response.body.getReader();
   let bytes = 0;

@@ -96,13 +96,15 @@ export async function notifyOwnerBySms(eventId?: string, eventType: OwnerSmsEven
     }
     if (!config) return result("blocked", "SMS_CONFIG_REQUIRED");
     response = await fetch(ENDPOINT, {
-      method: "POST", redirect: "error", signal: controller.signal,
+      method: "POST", redirect: "manual", signal: controller.signal,
       headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
       body: new URLSearchParams({
         key: config.apiKey, user_id: config.userId, sender: config.from, receiver: config.to,
         msg: MESSAGE, msg_type: "SMS", testmode_yn: config.mode === "test" ? "Y" : "N",
       }),
     });
+    // Workers 의 fetch 는 redirect "error" 를 받지 않는다 — "manual" 로 받고 3xx 는 따라가지 않고 거절한다
+    if (response.status >= 300 && response.status < 400) return result("rejected", "PROVIDER_REDIRECTED");
     if (!response.ok) return result(response.status >= 400 && response.status < 500 ? "rejected" : "uncertain", `PROVIDER_HTTP_${response.status}`);
     const receipt = await readReceipt(response);
     if (!receipt.success) return result("uncertain", "INVALID_PROVIDER_RECEIPT");

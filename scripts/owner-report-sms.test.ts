@@ -31,7 +31,7 @@ async function main() {
     const body = JSON.parse(String(init!.body)), headers = new Headers(init!.headers);
     assert.deepEqual(body, { version: 2, eventId, mode: "live", recipientCheck: sign("recipient:01000000001"), service: "oneulstart", eventType: "business-plan-ready" });
     assert.equal(headers.get("x-oneul-signature"), sign(`${headers.get("x-oneul-time")}\nPOST\n/_oneulstart/support-owner-sms\n${init!.body}`));
-    assert.equal(init!.redirect, "error");
+    assert.equal(init!.redirect, "manual");
     assert.equal(String(init!.body).includes("01000000001"), false);
     return Response.json({ eventId, eventType: wrongEvent ? "support-inquiry" : "business-plan-ready", mode: "live", status: "accepted", code: "PROVIDER_ACCEPTED" });
   };

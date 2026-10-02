@@ -64,13 +64,15 @@ export async function sendCustomerSms(config: CustomerSmsConfig, input: { eventI
   let response: Response;
   try {
     response = await transport(config.endpoint, {
-      method: "POST", redirect: "error", signal: AbortSignal.timeout(timeoutMs),
+      method: "POST", redirect: "manual", signal: AbortSignal.timeout(timeoutMs),
       headers: { "Content-Type": "application/json", "x-oneul-time": timestamp, "x-oneul-signature": signature }, body,
     });
   } catch (error) {
     console.warn(`[customer-sms] 중계 연결 실패: ${error instanceof Error ? `${error.name} ${error.message}` : String(error)}`.slice(0, 300));
     return { status: "uncertain", code: "RELAY_UNREACHABLE" };
   }
+  // Workers 의 fetch 는 redirect "error" 를 받지 않는다 — "manual" 로 받고 3xx 는 따라가지 않고 거절한다
+  if (response.status >= 300 && response.status < 400) return { status: "rejected", code: "RELAY_REDIRECTED" };
   const text = await response.text().catch(() => "");
   if (text.length > 4096) return { status: "uncertain", code: "RELAY_INVALID_RECEIPT" };
   let json: unknown = null;
