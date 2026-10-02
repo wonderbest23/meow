@@ -30,21 +30,25 @@ async function hmacHex(secret: string, text: string) {
   assert.notEqual(id, await stableEventId("weekly-report:site:2026-10-05"));
 
   // 요청: 받는 번호와 숫자만, 서명은 대표 알림과 같은 방식
-  const calls: Array<{ url: string; headers: Headers; body: string }> = [];
+  const calls: Array<{ url: string; headers: Headers; body: string; redirect?: RequestRedirect }> = [];
   let reply = (body: Record<string, unknown>) => new Response(JSON.stringify({ eventId: body.eventId, mode: "live", status: "accepted", code: "PROVIDER_ACCEPTED", duplicate: false }), { status: 200 });
-  const transport = (async (url: string, init?: RequestInit) => { calls.push({ url, headers: new Headers(init?.headers), body: String(init?.body) }); return reply(JSON.parse(String(init?.body))); }) as unknown as typeof fetch;
+  const transport = (async (url: string, init?: RequestInit) => { calls.push({ url, headers: new Headers(init?.headers), body: String(init?.body), redirect: init?.redirect }); return reply(JSON.parse(String(init?.body))); }) as unknown as typeof fetch;
   const eventId = crypto.randomUUID();
   assert.deepEqual(await sendCustomerSms(config, { eventId, eventType: "weekly-report", recipient: "01012345678", params: { leads: 3, prevLeads: 1, views: 42 } }, transport), { status: "accepted", code: "PROVIDER_ACCEPTED" });
   const sent = JSON.parse(calls[0].body);
   assert.deepEqual(sent, { version: 3, eventId, mode: "live", service: "oneulstart", eventType: "weekly-report", recipient: "01012345678", params: { leads: 3, prevLeads: 1, views: 42 } });
   assert.equal(calls[0].headers.get("x-oneul-signature"), await hmacHex(SECRET, `${calls[0].headers.get("x-oneul-time")}\nPOST\n/_oneulstart/support-owner-sms\n${calls[0].body}`));
   assert.ok(!calls[0].body.includes("msg") && !calls[0].body.includes("sender"), "문구·발신번호는 중계가 정한다");
+  // Cloudflare Workers 의 fetch 는 redirect "error" 를 던진다(운영에서 모든 발송이 RELAY_UNREACHABLE 이던 원인)
+  assert.equal(calls[0].redirect, "manual", "Workers 가 받는 redirect 값만 쓴다");
 
   assert.equal((await sendCustomerSms(config, { eventId, eventType: "homepage-lead", recipient: "0212345678", params: {} }, transport)).code, "CUSTOMER_SMS_INPUT_INVALID");
   assert.equal(calls.length, 1, "잘못된 번호는 중계에 보내지도 않는다");
 
   reply = (body) => new Response(JSON.stringify({ eventId: body.eventId, mode: "live", eventType: "homepage-lead", status: "blocked", code: "RECIPIENT_DAILY_LIMIT_REACHED" }), { status: 429 });
   assert.deepEqual(await sendCustomerSms(config, { eventId, eventType: "homepage-lead", recipient: "01012345678", params: {} }, transport), { status: "blocked", code: "RECIPIENT_DAILY_LIMIT_REACHED" });
+  reply = () => new Response(null, { status: 301, headers: { Location: "https://example.com/" } });
+  assert.deepEqual(await sendCustomerSms(config, { eventId, eventType: "homepage-lead", recipient: "01012345678", params: {} }, transport), { status: "rejected", code: "RELAY_REDIRECTED" }, "다른 곳으로 보내라는 답은 따라가지 않는다");
   reply = () => new Response("bad gateway", { status: 502 });
   assert.equal((await sendCustomerSms(config, { eventId, eventType: "homepage-lead", recipient: "01012345678", params: {} }, transport)).status, "uncertain");
   reply = () => new Response(JSON.stringify({ eventId: crypto.randomUUID(), mode: "live", status: "accepted", code: "PROVIDER_ACCEPTED" }), { status: 200 });

@@ -23,7 +23,7 @@ async function main() {
   globalThis.fetch = async (url, init) => {
     calls++;
     assert.equal(String(url), process.env.OWNER_SMS_RELAY_URL);
-    assert.equal(init!.redirect, "error"); assert.equal(init!.method, "POST");
+    assert.equal(init!.redirect, "manual"); assert.equal(init!.method, "POST");
     const body = JSON.parse(String(init!.body)), headers = new Headers(init!.headers);
     assert.deepEqual(Object.keys(body), ["version", "eventId", "mode", "recipientCheck"]);
     assert.equal(body.recipientCheck, sign("recipient:01000000001"));

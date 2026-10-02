@@ -100,7 +100,7 @@ async function main() {
       assert.deepEqual(await notifyOwnerBySms(), { status: "accepted", code: "PROVIDER_ACCEPTED" });
       assert.equal(sends, 1); assert.equal(count, 1);
       const init = lastRequest!;
-      assert.equal(init.method, "POST"); assert.equal(init.redirect, "error");
+      assert.equal(init.method, "POST"); assert.equal(init.redirect, "manual");
       assert.equal(new Headers(init.headers).get("Content-Type"), "application/x-www-form-urlencoded;charset=UTF-8");
       assert.ok(init.body instanceof URLSearchParams);
       const body = Object.fromEntries(init.body);
