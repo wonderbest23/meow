@@ -58,6 +58,7 @@ export async function processLandingLeadNotification(leadId: string, force = fal
         await finish({ status: "sent", provider_id: `sms:${sent.code}`.slice(0, 200), accepted_at: new Date().toISOString(), error_code: null, delivery_uncertain: false, next_attempt_at: null });
         return;
       }
+      console.warn(`[landing-notification] 사장님 문자 미접수 status=${sent.status} code=${sent.code} attempt=${attempts}`);
       // 한도·꺼짐(blocked)과 거절은 다시 보내도 같다 — 멈춘다. 확인 불가는 같은 eventId 로 다시 물어본다
       const retry = sent.status === "uncertain" && attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS;
       await finish({ status: retry ? "retry" : sent.status === "uncertain" ? "failed" : "blocked",
