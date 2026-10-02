@@ -314,6 +314,11 @@ const NUMBER_PRESETS: Record<string, number[]> = {
   "structure.takeRate": [3, 5, 10, 15, 20, 30],
   "structure.salesCycleDays": [7, 14, 30, 60, 90],
   "structure.billableHours": [10, 20, 30, 40],
+  "structure.conversionRate": [1, 2, 3, 5, 10],
+  "structure.paidShare": [0, 10, 30, 50],
+  "structure.leadsPerProvider": [3, 5, 10, 20, 50],
+  "structure.providerMonths": [3, 6, 12, 24],
+  "structure.supplyTarget": [5, 10, 20, 50, 100],
 };
 /** Preset values for number_quick questions (hours, counts, minutes…). Empty when the question uses a range ladder or free number. */
 export function numberPresets(question: Pick<IntakeQuestion, "id" | "unit" | "period">): number[] {

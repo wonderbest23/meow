@@ -11,8 +11,16 @@ export type BusinessStructure = {
   payer: "b2c" | "b2b" | "b2g" | "mixed";
   /** 무엇을 제공하는가 */
   offering: "goods" | "service" | "software" | "space" | "content" | "mixed";
-  /** 어떻게 청구하는가 */
-  revenue: "per_unit" | "per_hour" | "subscription" | "rental" | "commission" | "project" | "mixed";
+  /**
+   * 어떻게 청구하는가. advertising·freemium·lead_fee·listing_fee 는 플랫폼·앱 사업(2026-10)용 —
+   * 업종보다 돈 버는 방식이 사업계획서의 논리를 정한다(예: 반려동물·병원·레슨 예약 앱은 같은 예약·중개 논리).
+   */
+  revenue: "per_unit" | "per_hour" | "subscription" | "rental" | "commission" | "project" | "advertising" | "freemium" | "lead_fee" | "listing_fee" | "mixed";
+  /**
+   * 시장 구조 — two 는 공급자(업체·판매자·전문가)와 이용자를 모두 모아야 거래가 생기는 양면 시장.
+   * 없으면 한쪽 고객(one)으로 본다(표준산업분류 기본값 대부분에 이 값이 없다).
+   */
+  sides?: "one" | "two";
   /** 어디서 어떻게 전달하는가 */
   delivery: "store" | "visit" | "online" | "delivery" | "production" | "mixed";
   /** 시작에 필요한 자본 형태 */
@@ -27,7 +35,8 @@ export type BusinessStructure = {
 export const STRUCTURE_LABELS = {
   payer: { b2c: "개인 고객", b2b: "기업·사업자 고객", b2g: "공공기관 고객", mixed: "개인·기업 고객" },
   offering: { goods: "실물 상품", service: "서비스", software: "소프트웨어", space: "공간 제공", content: "콘텐츠", mixed: "복합 제공" },
-  revenue: { per_unit: "건당 결제", per_hour: "시간당 결제", subscription: "월 구독", rental: "대여·이용료", commission: "수수료", project: "프로젝트 단위 계약", mixed: "복합 수익" },
+  revenue: { per_unit: "건당 결제", per_hour: "시간당 결제", subscription: "월 구독", rental: "대여·이용료", commission: "거래 수수료", project: "프로젝트 단위 계약", advertising: "광고 수익(이용자 무료)", freemium: "무료+유료 전환", lead_fee: "문의·연결 건당 과금", listing_fee: "입점·등록료", mixed: "복합 수익" },
+  sides: { one: "한쪽 고객", two: "양면(공급자+이용자)" },
   delivery: { store: "매장 방문", visit: "출장·방문", online: "온라인", delivery: "배송", production: "생산·납품", mixed: "복합 전달" },
   capital: { storefront: "매장 필요", equipment: "설비 필요", remote: "무점포 가능", vehicle: "차량 필요", mixed: "자본 형태 복합" },
   license: { none: "인허가 없음", registration: "신고·등록 필요", permit: "허가 필요", professional: "자격·면허 필요", varies: "세부 업종별 인허가 확인" },
@@ -35,12 +44,12 @@ export const STRUCTURE_LABELS = {
 
 /** 요약 한 줄용 라벨 5개: 지불자 · 제공 형태 · 전달 · 수익 · 인허가 */
 export function structureSummary(structure: BusinessStructure): string[] {
-  return [STRUCTURE_LABELS.payer[structure.payer], STRUCTURE_LABELS.offering[structure.offering], STRUCTURE_LABELS.delivery[structure.delivery], STRUCTURE_LABELS.revenue[structure.revenue], STRUCTURE_LABELS.license[structure.license]];
+  return [STRUCTURE_LABELS.payer[structure.payer], STRUCTURE_LABELS.offering[structure.offering], STRUCTURE_LABELS.delivery[structure.delivery], STRUCTURE_LABELS.revenue[structure.revenue], ...(structure.sides === "two" ? [STRUCTURE_LABELS.sides.two] : []), STRUCTURE_LABELS.license[structure.license]];
 }
 
 /** 수익 방식이 정하는 가격 질문의 기준 단위. null이면 업종 기본(PRICE_BASIS)을 쓴다. */
 export function revenueBasis(structure: BusinessStructure): string | null {
-  const basis: Partial<Record<BusinessStructure["revenue"], string>> = { subscription: "월 구독 1건", rental: "1회 대여(1박·1시간 등)", per_hour: "1시간", commission: "거래 1건(수수료)", project: "프로젝트 1건" };
+  const basis: Partial<Record<BusinessStructure["revenue"], string>> = { subscription: "월 구독 1건", rental: "1회 대여(1박·1시간 등)", per_hour: "1시간", commission: "거래 1건(수수료)", project: "프로젝트 1건", advertising: "월 활성 이용자 1명당 광고 수익", freemium: "유료 플랜 월 1명", lead_fee: "업체에 전달하는 문의 1건", listing_fee: "업체 1곳 월 입점료" };
   return basis[structure.revenue] ?? null;
 }
 
@@ -80,12 +89,16 @@ export function structureFieldLabels(structure: BusinessStructure): Partial<Reco
     case "rental": return { price: "1회 대여·이용 가격", volume: "월 대여·이용 건수", unitCost: "1건당 비용", minutesPerSale: "1건 준비·정비 시간" };
     case "commission": return { price: "거래 1건 수수료", volume: "월 거래 건수", unitCost: "거래 1건당 비용", minutesPerSale: "거래 1건 처리 시간" };
     case "project": return { price: "프로젝트 1건 가격", volume: "월 프로젝트 수", unitCost: "프로젝트 1건당 비용", minutesPerSale: "프로젝트 1건 소요 시간" };
+    case "advertising": return { price: "이용자 1명당 월 광고 수익", volume: "월 활성 이용자 수", unitCost: "이용자 1명당 월 비용", minutesPerSale: "이용자 1명 응대 시간" };
+    case "freemium": return { price: "유료 플랜 월 가격", volume: "월 유료 이용자 수", unitCost: "유료 이용자 1명당 월 비용", minutesPerSale: "유료 이용자 1명 응대 시간" };
+    case "lead_fee": return { price: "문의 1건 전달 가격", volume: "월 전달 문의 수", unitCost: "문의 1건 확보 비용", minutesPerSale: "문의 1건 처리 시간" };
+    case "listing_fee": return { price: "업체 1곳 월 입점료", volume: "입점 업체 수", unitCost: "업체 1곳당 월 비용", minutesPerSale: "업체 1곳 관리 시간" };
     default: return {};
   }
 }
 
 /** 사용자가 직접 고칠 수 있는 축과 표시 순서(인허가 포함, 자본 형태·소규모 여부는 제외). */
-export const STRUCTURE_AXES = ["payer", "offering", "delivery", "revenue", "license"] as const;
+export const STRUCTURE_AXES = ["payer", "offering", "delivery", "revenue", "sides", "license"] as const;
 export type StructureAxis = (typeof STRUCTURE_AXES)[number];
 
 /** KSIC 코드가 아직 없을 때 11업종에서 쓰는 기본 구조. 추정이며 사용자가 고칠 수 있다. */

@@ -153,7 +153,10 @@ async function main() {
     assert.equal(structureUnitCostQuestion("per_hour").period, "1시간");
     assert.equal(structureUnitCostQuestion(null).period, "판매 1건");
     const structurePack = allStructureQuestions();
-    assert.equal(structurePack.length, 7); assert.equal(new Set(structurePack.map(question => question.id)).size, 7);
+    // 7 + 플랫폼 수익 방식 4개(전환율·광고 외 매출·업체당 문의·업체 유지) + 양면 시장 공급자 목표 1개
+    assert.equal(structurePack.length, 12); assert.equal(new Set(structurePack.map(question => question.id)).size, 12);
+    assert.deepEqual(structureQuestions("startup", { revenue: "freemium", sides: "two" }).map(q => q.id), ["structure.conversionRate", "structure.supplyTarget"], "two-sided adds the supply target after the revenue metric");
+    assert.deepEqual(structureQuestions("startup", { revenue: "freemium", sides: "one" }).map(q => q.id), ["structure.conversionRate"]);
     for (const question of structurePack) {
       assert.equal(question.kind, "number", question.id); assert.ok(question.optional, question.id); assert.ok(question.unit && question.period, question.id);
       const selectFirst = question.unit === "원" ? options.amountRanges("software", question.id, "startup").length >= 5 : options.numberPresets(question).length >= 4;
