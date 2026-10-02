@@ -1,10 +1,11 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
-import { callPlanSectionService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService, type PlanSectionJob } from "./section-transport";
+import { callPlanSectionService, callPlanOutlineService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService, type PlanSectionJob } from "./section-transport";
 import type { IntakeJobRequest } from "./intake-types";
 import { ARTIFACT_MAX_CHUNKS, type ArtifactJobRequest } from "./artifact-updates";
 import type { ProposalBackgroundJob } from "./proposal-background";
 import type { CoachJobRequest } from "./coach-job-types";
 import type { DeckJobRequest } from "./deck-job-types";
+import { SECTION_CONCURRENCY, sectionWaves } from "./section-waves";
 
 /*
  * 본문 생성을 브라우저 밖에서 끝까지 돌리는 워크플로.
@@ -13,8 +14,12 @@ import type { DeckJobRequest } from "./deck-job-types";
  * 섹션이 사라졌다. 이제 '다음 단계'를 누르면 서버가 이어서 만든다 —
  * 사용자가 창을 닫아도, 휴대폰을 꺼도 계속된다.
  *
- * 앞 섹션 결과를 뒤 섹션이 참고하므로 한 번에 하나씩 순서대로 만든다.
+ * 먼저 문서 설계도(섹션별로 맡을 범위)를 만들고, 섹션은 최대 SECTION_CONCURRENCY개씩 동시에 만든다.
+ * 예전엔 앞 섹션 본문을 뒤 섹션이 참고하느라 하나씩 만들어 한 부에 약 20분 걸렸다(운영 2026-09-29~30).
+ * 전체를 정리하는 요약(summary/executive)은 다른 섹션이 끝난 뒤 마지막에 만든다.
+ * 설계도를 못 만들면 예전처럼 하나씩 차례로 만든다.
  */
+
 
 export type PlanSectionsWorkflowParams = ArtifactJobRequest | ProposalBackgroundJob | ({ operation: "intake" } & IntakeJobRequest) | ({ operation: "coach" } & CoachJobRequest) | ({ operation: "deck" } & DeckJobRequest) | {
   operation?: "sections";
@@ -81,15 +86,31 @@ export class PlanSectionsWorkflow extends WorkflowEntrypoint<CloudflareEnv, Plan
       });
     }
     if (!("sections" in event.payload)) throw new Error("UNSUPPORTED_PLAN_OPERATION");
-    const { ownerHash, planId, sections } = event.payload;
+    const { ownerHash, planId, sections, reviewedBusiness } = event.payload;
     const done: string[] = [];
     const failed: string[] = [];
 
-    for (const [index, target] of sections.entries()) {
-      const key = `${target.chapterId}/${target.sectionId}`;
-      const job: PlanSectionJob = { ownerHash, planId, ...target };
+    let outline: string | undefined;
+    if (sections.length >= 3) {
       try {
-        await step.do(`${String(index + 1).padStart(2, "0")} ${key}`, event.payload.reviewedBusiness ? { timeout: "30 minutes", retries: { limit: 1, delay: "30 seconds", backoff: "exponential" } } : retryOptions, async () => {
+        const result = await step.do("00 문서 설계도", { timeout: "3 minutes", retries: { limit: 1, delay: "10 seconds" } }, async () => {
+          const service = this.env.WORKER_SELF_REFERENCE;
+          if (!service) throw new Error("SELF_REFERENCE_MISSING");
+          return callPlanOutlineService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, { ownerHash, planId, sections });
+        });
+        outline = result.ok ? result.outline : undefined;
+      } catch {
+        outline = undefined;
+      }
+    }
+
+    const order = sections.map(target => `${target.chapterId}/${target.sectionId}`);
+    const runSection = async (key: string) => {
+      const index = order.indexOf(key);
+      const [chapterId, sectionId] = key.split("/");
+      const job: PlanSectionJob = { ownerHash, planId, chapterId, sectionId, ...(outline ? { outline } : {}) };
+      try {
+        await step.do(`${String(index + 1).padStart(2, "0")} ${key}`, reviewedBusiness ? { timeout: "30 minutes", retries: { limit: 1, delay: "30 seconds", backoff: "exponential" } } : retryOptions, async () => {
           const service = this.env.WORKER_SELF_REFERENCE;
           if (!service) throw new Error("SELF_REFERENCE_MISSING");
           return callPlanSectionService(service, this.env.SUPABASE_SERVICE_ROLE_KEY, job);
@@ -99,8 +120,13 @@ export class PlanSectionsWorkflow extends WorkflowEntrypoint<CloudflareEnv, Plan
         // 이 섹션은 포기하고 다음으로 — 개요 화면에서 다시 시도할 수 있다
         failed.push(key);
       }
+    };
+
+    // 설계도가 없으면 앞 섹션 본문이 겹침을 막아 주도록 예전처럼 하나씩 만든다
+    for (const wave of sectionWaves(order, outline ? SECTION_CONCURRENCY : 1)) {
+      await Promise.all(wave.map(runSection));
     }
 
-    return { done, failed };
+    return { done, failed, parallel: !!outline };
   }
 }
