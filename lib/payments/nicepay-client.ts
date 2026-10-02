@@ -68,6 +68,19 @@ export interface NicepayApproveResult {
   raw: Record<string, unknown>;
 }
 
+/**
+ * 나이스페이 API 호출. Workers 의 fetch 는 redirect "error" 를 받지 않고 던진다 —
+ * "manual" 로 받고 3xx 는 따라가지 않고 실패로 던진다(예전 "error" 와 같은 결과).
+ */
+async function nicepayFetch(url: string, init: RequestInit): Promise<Response> {
+  const response = await fetch(url, { ...init, cache: "no-store", redirect: "manual" });
+  if (response.status >= 300 && response.status < 400) {
+    await response.body?.cancel().catch(() => undefined);
+    throw new Error("NICEPAY_REDIRECTED");
+  }
+  return response;
+}
+
 async function paymentResult(response: Response, amount: number): Promise<NicepayApproveResult> {
   const value: unknown = await response.json().catch(() => null);
   const raw = value && typeof value === "object" && !Array.isArray(value) ? value as Record<string, unknown> : {};
@@ -87,9 +100,8 @@ async function paymentResult(response: Response, amount: number): Promise<Nicepa
 
 /** Read-only recovery after an approval response is lost. Never resubmit approval. */
 export async function lookupNicepayPayment(tid: string, amount: number): Promise<NicepayApproveResult> {
-  const response = await fetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}`, {
-    method: "GET", headers: { Authorization: basicAuthHeader() }, cache: "no-store",
-    redirect: "error", signal: AbortSignal.timeout(15_000),
+  const response = await nicepayFetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}`, {
+    method: "GET", headers: { Authorization: basicAuthHeader() }, signal: AbortSignal.timeout(15_000),
   });
   return paymentResult(response, amount);
 }
@@ -99,15 +111,13 @@ export async function lookupNicepayPayment(tid: string, amount: number): Promise
  * amount는 우리가 알고 있는 주문 금액을 보내며, 응답 금액도 다시 대조한다.
  */
 export async function approveNicepayPayment(tid: string, amount: number): Promise<NicepayApproveResult> {
-  const response = await fetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}`, {
+  const response = await nicepayFetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}`, {
     method: "POST",
     headers: {
       Authorization: basicAuthHeader(),
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ amount }),
-    cache: "no-store",
-    redirect: "error",
     signal: AbortSignal.timeout(20_000),
   });
 
@@ -117,12 +127,10 @@ export async function approveNicepayPayment(tid: string, amount: number): Promis
 /** 승인된 결제를 취소한다(금액 불일치 등으로 되돌려야 할 때). */
 export async function cancelNicepayPayment(tid: string, reason: string): Promise<boolean> {
   try {
-    const response = await fetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}/cancel`, {
+    const response = await nicepayFetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}/cancel`, {
       method: "POST",
       headers: { Authorization: basicAuthHeader(), "Content-Type": "application/json" },
       body: JSON.stringify({ reason, orderId: `cancel_${Date.now()}` }),
-      cache: "no-store",
-      redirect: "error",
       signal: AbortSignal.timeout(20_000),
     });
     const raw = (await response.json().catch(() => ({}))) as Record<string, unknown>;

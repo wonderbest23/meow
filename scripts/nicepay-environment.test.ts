@@ -27,7 +27,7 @@ async function main() {
       calls++;
       const url = new URL(String(input));
       assert.equal(url.origin, "https://sandbox-api.nicepay.co.kr");
-      assert.equal(init?.redirect, "error"); assert(init?.signal);
+      assert.equal(init?.redirect, "manual"); assert(init?.signal);
       assert.equal(init?.method, "POST");
       assert.equal(new Headers(init?.headers).get("authorization"), `Basic ${Buffer.from("fixture-test-client:fixture-test-secret").toString("base64")}`);
       return Response.json({ resultCode: "0000", status: "paid", amount: 100, orderId: "fixture-order", tid: "fixture-tid" });
