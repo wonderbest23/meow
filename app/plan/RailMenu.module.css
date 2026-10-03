@@ -1,0 +1,59 @@
+/*
+ * 왼쪽 메뉴의 생김새 — 로그인 화면과 같은 규칙으로 맞춘다.
+ * 글씨는 두 단계(메뉴 14 · 작은 글씨 12), 칸 높이 40, 모서리 8, 아이콘 18.
+ * 선택된 칸은 연한 회색 바탕 + 진한 글자(파란색으로 튀게 하지 않는다).
+ *
+ * 레일 자체의 자리·접기·폰 서랍은 PlanShell.module.css 가 맡고, 여기는 칸의 모양만 정한다.
+ * 그쪽 규칙이 여러 겹이라 .menu 아래에 두 단계로 써서 이 파일이 이긴다.
+ */
+.menu { display: flex; flex-direction: column; gap: 2px; flex: 1; min-height: 0; }
+
+/* 로고 줄 — 오른쪽 대화 머리말(높이 80, 아래 테두리)과 한 줄로 이어지게 */
+.menu .brand { display: flex; align-items: center; height: 80px; margin: -16px -12px 16px; padding: 0 20px; border-bottom: 1px solid #e1e7ef; text-decoration: none; }
+.menu .brand img { display: block; width: auto; height: 26px; }
+.menu .logoMark { display: none !important; }
+
+.menu .item { display: flex; align-items: center; gap: 10px; min-height: 40px; margin: 0; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; color: #4e5968; font-size: 14px; font-weight: 500; line-height: 1.3; text-decoration: none; transform: none; }
+.menu .item svg { flex: none; width: 18px; height: 18px; color: #8b95a1; stroke-width: 1.9; transform: none; }
+.menu .item:hover { background: #f2f4f6; color: #191f28; transform: none; }
+.menu .item:hover svg { color: #4e5968; transform: none; }
+.menu .item[aria-current="page"] { background: #f2f4f6; color: #191f28; font-weight: 600; }
+.menu .item[aria-current="page"] svg { color: #191f28; }
+
+/* 새 대화 — 맨 위 한 칸만 테두리 단추로 */
+.menu .newChat { margin-bottom: 12px; border: 1px solid #d1d6db; background: #fff; color: #191f28; font-weight: 600; }
+.menu .newChat svg { color: #191f28; }
+.menu .newChat:hover { background: #f9fafb; }
+.menu .newChat[aria-current="page"] { border-color: #191f28; background: #fff; }
+
+/* 지금 보고 있는 사업 아래 칸 — 한 단계 들여쓴다 */
+.menu .sub { min-height: 36px; margin-left: 22px; padding-left: 10px; font-size: 13px; }
+
+.menu .spring { flex: 1; min-height: 16px; }
+.menu .divider { height: 1px; margin: 8px 4px; background: #e5e8eb; }
+
+/* 로그인 전 — 머리말과 같은 '로그인 · 회원가입' 두 단추 */
+.menu .auth { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 4px 0 0; }
+.menu .auth a { display: flex; align-items: center; justify-content: center; height: 38px; border-radius: 8px; font-size: 14px; font-weight: 600; text-decoration: none; }
+.menu .login { border: 1px solid #d1d6db; background: #fff; color: #191f28; }
+.menu .login:hover { background: #f9fafb; }
+.menu .signup { border: 1px solid #1f2125; background: #1f2125; color: #fff; }
+.menu .signup:hover { background: #000; }
+
+/* 로그인 후 — 동그란 머리글자 + 내 계정 / 이메일 */
+.menu .account { min-height: 52px; gap: 10px; }
+.menu .avatar { display: grid; place-items: center; flex: none; width: 28px; height: 28px; border-radius: 50%; background: #e8f0fd; color: #246bd1; font-size: 13px; font-weight: 700; }
+.menu .accountText { display: grid; min-width: 0; line-height: 1.3; }
+.menu .accountName { color: #191f28; font-size: 14px; font-weight: 600; }
+.menu .accountMail { overflow: hidden; color: #8b95a1; font-size: 12px; font-weight: 400; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 폰의 아이콘 띠(56px, PlanShell) — 로고는 심볼만, 로그인은 한 단추로 */
+@media (max-width: 640px) {
+  .menu .brand { justify-content: center; height: auto; margin: 0 0 14px; padding: 0; border: 0; }
+  .menu .brand .logoFull { display: none; }
+  .menu .logoMark { display: block !important; width: 36px; height: 36px; }
+  .menu .newChat { margin-bottom: 8px; }
+  .menu .auth { grid-template-columns: 1fr; }
+  .menu .signup { display: none; }
+  .menu .auth a { height: 36px; font-size: 12px; }
+}
