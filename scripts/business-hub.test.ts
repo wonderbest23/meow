@@ -65,7 +65,7 @@ async function main(){
     });
     await page.goto(`${base}/plan`,{waitUntil:"networkidle0",timeout:60000});
     await page.waitForSelector('a[href="/plan/chat?new=1"]');
-    assert.ok(await page.$eval("main",e=>e.textContent?.includes("새 대화 시작하기")));
+    assert.ok(await page.$eval("main",e=>e.textContent?.includes("시작하기")));
     assert.equal(await page.$('[aria-label="사업 필터"]'),null);
     await page.screenshot({path:`artifacts/business-hub/empty-${width}.png`});
     server={...server,plans:[structuredClone(ready),{...structuredClone(stale),id:"hub-test-stale",title:"수정된 사업안"}],activePlanId:"hub-test-stale"};

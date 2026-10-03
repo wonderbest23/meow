@@ -1,9 +1,11 @@
-// 결제 전 노출되는 샘플 문서 3종 — 어드민이 실제 AI로 만든 완성본.
+// 결제 전 노출되는 샘플 문서 — 실제 AI로 만든 완성본.
+// 퇴근필라(2026-09-30, Opus 5.5)가 최신이고 내 사업 목록에는 이것만 보인다(LISTED_SAMPLE_IDS). 나머지 3종은 홈의 PDF·PPT 예시·문서 화면 링크에서 계속 쓴다.
 // 저장되지 않는 읽기 전용 데이터로, 목록·개요·문서 화면에서만 존재한다.
 
 import { SAMPLE as COFFEE } from "./coffee";
 import { SAMPLE as FLOWER_PSST } from "./flower-psst";
 import { SAMPLE as FLOWER_FM } from "./flower-fm";
+import { SAMPLE as PILATES, SAMPLE_ANSWERS as PILATES_ANSWERS } from "./pilates";
 import { SAMPLE_ANSWERS as COFFEE_ANSWERS } from "../sample-answers";
 import { FLOWER_ANSWERS } from "../sample-answers-flower";
 
@@ -23,6 +25,7 @@ export interface SampleDoc {
 }
 
 const SAMPLE_ANSWER_SETS: Record<string, Record<string, Record<string, unknown>>> = {
+  sample_pilates: PILATES_ANSWERS,
   sample_coffee: COFFEE_ANSWERS,
   /* 꽃집 둘은 같은 사업을 다른 양식으로 쓴 것이라 답변을 공유한다 */
   sample_flower_psst: FLOWER_ANSWERS,
@@ -30,12 +33,13 @@ const SAMPLE_ANSWER_SETS: Record<string, Record<string, Record<string, unknown>>
 };
 
 const SAMPLE_INDUSTRIES: Record<string, string> = {
+  sample_pilates: "수업·예약",
   sample_coffee: "카페·음식점",
   sample_flower_psst: "매장·소매",
   sample_flower_fm: "매장·소매",
 };
 
-export const SAMPLE_DOCS: SampleDoc[] = [COFFEE, FLOWER_PSST, FLOWER_FM].map((s) => ({
+export const SAMPLE_DOCS: SampleDoc[] = [PILATES, COFFEE, FLOWER_PSST, FLOWER_FM].map((s) => ({
   id: s.id,
   title: s.title,
   planType: s.planType,
@@ -43,6 +47,9 @@ export const SAMPLE_DOCS: SampleDoc[] = [COFFEE, FLOWER_PSST, FLOWER_FM].map((s)
   industry: SAMPLE_INDUSTRIES[s.id] ?? "",
   answers: SAMPLE_ANSWER_SETS[s.id] ?? {},
 }));
+
+/** 내 사업 목록의 '완성 예시'에 보이는 샘플 */
+export const LISTED_SAMPLE_IDS: ReadonlySet<string> = new Set(["sample_pilates"]);
 
 /** 샘플은 id 접두사로 판별 — 고치기·지우기·서버 저장 대상이 아니다 */
 export function isSampleId(id: string | null | undefined): boolean {

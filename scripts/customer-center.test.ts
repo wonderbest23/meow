@@ -154,8 +154,9 @@ async function main() {
       for (const path of ["components/landing-quick-editor.tsx", "app/plan/workspace/LaunchWorkspace.tsx", "app/plan/document/DocumentWorkspace.tsx"]) {
         const source = readFileSync(path, "utf8"); assert.doesNotMatch(source, /venture:open-support-chat/); assert.match(source, /\/account\/support/);
       }
-      // 계정 화면의 로그인 폼(계정 화면·팝업 공용)에서 '로그인에 문제가 있으신가요?'가 고객센터로 간다
-      assert.match(readFileSync("components/account-auth-form.tsx", "utf8"), /href="\/account\/support"/);
+      // 고객센터는 모든 사업 화면의 왼쪽 메뉴와 상담 창 설정 탭에서 간다
+      assert.match(readFileSync("app/plan/RailMenu.tsx", "utf8"), /href="\/account\/support"/);
+      assert.match(readFileSync("components/support-chat-home.tsx", "utf8"), /href="\/account\/support"/);
       assert.doesNotMatch(readFileSync("app/account/support/SupportCenter.tsx", "utf8"), /\/api\/(consult|support\/assistant)/);
       assert.equal(externalCalls, 0);
     });
