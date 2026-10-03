@@ -32,6 +32,13 @@ export function openLogin(next?: string | null) {
   window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { next: target } }));
 }
 
+/** 화면 안에 바로 펼친 로그인 — 안내 문구와 버튼을 한 번 더 거치지 않고 그 자리에서 로그인한다 */
+export function InlineLogin({ next, title, text }: { next: string; title: string; text: string }) {
+  return <div className={`${accountStyles.page} ${styles.inline}`}>
+    <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm next={safeNextPath(next) ?? "/plan"} intro={{ title, text }} titleId="inline-login-title" /></div>
+  </div>;
+}
+
 /** 로그인 화면으로 가는 링크 자리 — 누르면 팝업을 연다(새 탭 열기 등은 그대로 링크로 동작) */
 export function LoginLink({ next, className, children, title, ariaLabel }: { next?: string | null; className?: string; children: ReactNode; title?: string; ariaLabel?: string }) {
   const onClick = (event: MouseEvent<HTMLAnchorElement>) => {
