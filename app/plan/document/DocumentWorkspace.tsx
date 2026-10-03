@@ -54,13 +54,29 @@ export default function DocumentWorkspace(props: Props) {
    */
   const [zoomTable, setZoomTable] = useState<string | null>(null);
   const zoomDialog = useRef<HTMLDialogElement>(null);
+  const zoomBody = useRef<HTMLDivElement>(null);
+  /* PDF처럼 처음엔 표 전체를 화면 폭에 맞춰 줄여 보여 주고, '크게 보기'면 원래 크기로 상하좌우 스크롤 */
+  const [zoomFit, setZoomFit] = useState(true);
+  const [zoomScale, setZoomScale] = useState(1);
+  useEffect(() => {
+    if (!zoomTable) return;
+    const measure = () => {
+      const body = zoomBody.current, table = body?.querySelector("table");
+      if (!body || !table) return;
+      const available = body.clientWidth - 32;
+      setZoomScale(Math.min(1, available / Math.max(1, table.scrollWidth)));
+    };
+    const frame = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("resize", measure); };
+  }, [zoomTable]);
   useEffect(() => {
     const node = scroll.current;
     if (!node) return;
     const open = (event: MouseEvent) => {
       if (!window.matchMedia("(max-width: 640px)").matches) return;
       const table = (event.target as Element | null)?.closest?.(".tiptap[contenteditable=false] table");
-      if (table) setZoomTable(table.outerHTML);
+      if (table) { setZoomFit(true); setZoomScale(1); setZoomTable(table.outerHTML); }
     };
     node.addEventListener("click", open);
     return () => node.removeEventListener("click", open);
@@ -161,9 +177,14 @@ export default function DocumentWorkspace(props: Props) {
       </div>}
     </dialog>
   {zoomTable && <dialog ref={zoomDialog} className={styles.tableZoom} aria-label="표 크게 보기" onClose={() => setZoomTable(null)}>
-      <header><strong>표 크게 보기</strong><button type="button" onClick={() => zoomDialog.current?.close()} aria-label="닫기"><X size={22} /></button></header>
+      <header><strong>표 보기</strong>
+        <div className={styles.tableZoomModes} role="group" aria-label="표 크기">
+          <button type="button" aria-pressed={zoomFit} onClick={() => setZoomFit(true)}>화면에 맞추기</button>
+          <button type="button" aria-pressed={!zoomFit} onClick={() => setZoomFit(false)}>크게 보기</button>
+        </div>
+        <button type="button" className={styles.tableZoomClose} onClick={() => zoomDialog.current?.close()} aria-label="닫기"><X size={22} /></button></header>
       {/* 이 화면에 이미 그려진 문서의 표를 그대로 옮긴다 */}
-      <div className={styles.tableZoomBody} dangerouslySetInnerHTML={{ __html: zoomTable }} />
+      <div ref={zoomBody} className={styles.tableZoomBody}><div className={styles.tableZoomSheet} style={{ zoom: zoomFit ? zoomScale : 1 }} dangerouslySetInnerHTML={{ __html: zoomTable }} /></div>
     </dialog>}
     </main>;
 }

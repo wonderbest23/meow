@@ -61,14 +61,17 @@
 /* 표 크게 보기 — 전체 화면, 표는 상하좌우로 스크롤 */
 .tableZoom { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; margin:0; padding:0; border:0; background:#fff; }
 .tableZoom::backdrop { background:rgba(9,16,28,.5); }
-.tableZoom > header { position:sticky; top:0; z-index:2; display:flex; align-items:center; justify-content:space-between; height:56px; padding:0 8px 0 20px; border-bottom:1px solid var(--app-line); background:#fff; }
+.tableZoom > header { display:flex; align-items:center; gap:10px; height:56px; padding:0 6px 0 16px; border-bottom:1px solid var(--app-line); background:#fff; }
 .tableZoom > header strong { font-size:16px; }
-.tableZoom > header button { display:grid; place-items:center; width:44px; height:44px; border:0; background:transparent; color:var(--app-text); }
+.tableZoomModes { display:flex; gap:4px; margin-left:auto; padding:3px; border-radius:10px; background:#f2f4f6; }
+.tableZoomModes button { height:32px; padding:0 10px; border:0; border-radius:8px; background:transparent; color:#6b7684; font-size:13px; font-weight:600; }
+.tableZoomModes button[aria-pressed=true] { background:#fff; color:#191f28; box-shadow:0 1px 2px rgba(16,24,40,.12); }
+.tableZoomClose { display:grid; place-items:center; width:44px; height:44px; border:0; background:transparent; color:var(--app-text); }
 .tableZoomBody { overflow:auto; height:calc(100dvh - 56px); padding:16px; }
-.tableZoomBody table { border-collapse:collapse; width:max-content; min-width:100%; font-size:14px; line-height:1.55; }
+.tableZoomSheet { width:max-content; }
+.tableZoomBody table { border-collapse:collapse; width:max-content; background:#fff; font-size:14px; line-height:1.55; }
 .tableZoomBody :is(th,td) { min-width:120px; max-width:260px; padding:10px 12px; border:1px solid var(--app-line); text-align:left; vertical-align:top; white-space:normal; word-break:keep-all; }
 .tableZoomBody th { background:var(--app-raised); font-weight:700; }
-.tableZoomBody :is(th,td):first-child { position:sticky; left:0; z-index:1; background:#f8fafc; min-width:96px; }
 .tableZoomBody p { margin:0; }
 .body :global(.tiptap) :is(th,td) { padding:12px; min-width:90px; vertical-align:top; border-color:var(--app-line); }
 .body :global(.tiptap) th { background:var(--app-raised); font-weight:600; }
