@@ -47,7 +47,8 @@ export default function PlanDocumentPage() {
     const coach = readCoach(plan.answers), snapshot = coachDocumentSnapshot(plan);
     setCompletionKey(isSamplePlan(plan.id) ? null : completedDocumentKey(plan));
     setReviewSource(coach ? { revision: coachDocumentRevision(coach), fields: coach.fields, sections: Object.fromEntries(Object.entries(plan.sections).filter(([, section]) => section.coachRevision !== coachDocumentRevision(coach)).map(([key, section]) => [key, section.generatedAt])) } : null);
-    setContextNotice(snapshot?.stale.length ? "공통 사업 조건이 바뀌었어요. 문서를 갱신하거나 각 항목을 확인해 주세요" : snapshot?.manualReview.length ? "직접 수정한 항목을 최신 사업 조건과 비교해 검토해 주세요" : "");
+    /* 예시는 읽기 전용 — 갱신·검토 안내를 띄우지 않는다 */
+    setContextNotice(isSamplePlan(plan.id) ? "" : snapshot?.stale.length ? "공통 사업 조건이 바뀌었어요. 문서를 갱신하거나 각 항목을 확인해 주세요" : snapshot?.manualReview.length ? "직접 수정한 항목을 최신 사업 조건과 비교해 검토해 주세요" : "");
   }
   const deck = useDeckExport(documentPlanId, !isSample && !!access?.paid, title);
   const edits = useDocumentEdits((key, section) => {

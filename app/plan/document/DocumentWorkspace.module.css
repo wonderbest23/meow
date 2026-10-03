@@ -34,7 +34,9 @@
 .heading { padding-bottom:28px; border-bottom:1px solid var(--app-line); margin-bottom:36px; }
 .heading p { font-size:13px; color:var(--app-muted); margin:0 0 10px; }
 .heading h1 { font-size:26px; font-weight:700; line-height:1.45; margin:0; color:var(--app-text); word-break:keep-all; overflow-wrap:anywhere; text-wrap:balance; }
-.identity { display:grid; gap:6px; margin-top:14px; padding:14px 16px; border-radius:12px; background:var(--app-raised); border-left:3px solid var(--app-accent); }
+.fieldLabel { display:block; margin:0 0 6px; font-size:12px; font-weight:600; color:var(--app-muted); }
+.heading h1 + .fieldLabel { margin-top:20px; }
+.identity { display:grid; gap:6px; margin-top:0; padding:14px 16px; border-radius:12px; background:var(--app-raised); border-left:3px solid var(--app-accent); }
 .identity strong { font-size:17px; line-height:1.45; color:var(--app-text); word-break:keep-all; }
 .identity span { font-size:14px; line-height:1.6; color:var(--app-muted); word-break:keep-all; }
 .chapter + .chapter { margin-top:56px; }

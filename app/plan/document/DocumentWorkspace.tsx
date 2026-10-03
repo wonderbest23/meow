@@ -92,8 +92,6 @@ export default function DocumentWorkspace(props: Props) {
           <div className={styles.readingBar}>
             <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} />목차</button>
             <span>{summaryMode ? "한 장 요약" : continuous ? "전체 이어 읽기" : grouped.length ? `${chapter + 1} / ${grouped.length}장` : "사업계획서"}</span>
-            <span className={styles.mode}>{isSample ? "예시 문서" : editing ? "수정 중" : "읽기"}</span>
-            <Link className={styles.help} href="/account/support?category=plan" target="_blank" rel="noopener noreferrer" aria-label="고객센터 문의 (새 탭)">문의</Link>
           </div>
           {props.summary && <div className={styles.viewSelector} role="group" aria-label="문서 보기 방식">
             <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
