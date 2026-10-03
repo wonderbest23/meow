@@ -502,7 +502,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const nextStep = plan ? intakeNextStep(plan, prepared) : null;
   const updateNotice = savedPlan ? resultUpdateNotice(savedPlan) : null;
   const refinement = plan ? nextRefinementQuestion(plan, draft.refinementSeen) : null;
-  const detailsButton = plan && (nextStep === "design" || nextStep === "prepare") && (refinement || !plan.intake.detailsRequested) ? <button type="button" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => refinement ? editQuestion(refinement.id, true) : void send({ action: "details" })}>좀 더 개선하기</button> : undefined;
+  /* '좀 더 개선하기'는 뺐다 — 만든 뒤에 고치는 게 맞고(사용자 피드백), 답을 바꾸려면 '지금까지 답변 보기'의 연필로 고친다 */
   /*
    * 기본 질문이 끝나면 사업 방향 정리를 바로 시작한다 — 예전엔 '사업 방향 정리하기'와 '계획서 만들기'를 차례로 눌러야 해서
    * 시작 단추가 두 번 나와 헷갈렸다(사용자 피드백). 정리는 짧고 싸니 자동으로, 손님이 누를 단추는 '계획서 만들기' 하나만 남긴다.
@@ -572,7 +572,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
                 </>}
                 {(nextStep === "prepare" || nextStep === "open") && <DesignDirection snapshot={plan} />}
                 {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "사업 후보 정하기" : "사업 소개 정하기"}<ArrowRight size={17} aria-hidden="true" /></button>}
-                <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} secondary={detailsButton} />
+                <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />
                 {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}
                 <button type="button" className={styles.editLink} onClick={() => setView("summary")}><PencilLine size={14} aria-hidden="true" />지금까지 답변 보기</button>
               </section>)}
