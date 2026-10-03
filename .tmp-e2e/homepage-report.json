@@ -1,0 +1,38 @@
+[
+ {
+  "biz": "pt",
+  "draft": "201 editable=true",
+  "publish": "200",
+  "alerts": "503 {\"error\":{\"code\":\"ALERT_SETTINGS_UNAVAILABLE\",\"message\":\"알림 설정을 불러오지 못했습니다.\"}}",
+  "lead": "201",
+  "siteKeys": "id,projectId,slug,status,draft,publishedVersion,versions,customDomain,createdAt,updatedAt,metrics,publishedSlug",
+  "collect": "email+message"
+ },
+ {
+  "biz": "photo",
+  "draft": "201 editable=true",
+  "publish": "200",
+  "alerts": "503 {\"error\":{\"code\":\"ALERT_SETTINGS_UNAVAILABLE\",\"message\":\"알림 설정을 불러오지 못했습니다.\"}}",
+  "lead": "201",
+  "siteKeys": "id,projectId,slug,status,draft,publishedVersion,versions,customDomain,createdAt,updatedAt,metrics,publishedSlug",
+  "collect": "email+message"
+ },
+ {
+  "biz": "stay",
+  "draft": "201 editable=true",
+  "publish": "200",
+  "alerts": "503 {\"error\":{\"code\":\"ALERT_SETTINGS_UNAVAILABLE\",\"message\":\"알림 설정을 불러오지 못했습니다.\"}}",
+  "lead": "201",
+  "siteKeys": "id,projectId,slug,status,draft,publishedVersion,versions,customDomain,createdAt,updatedAt,metrics,publishedSlug",
+  "collect": "email+message"
+ },
+ {
+  "biz": "app",
+  "draft": "201 editable=true",
+  "publish": "200",
+  "alerts": "503 {\"error\":{\"code\":\"ALERT_SETTINGS_UNAVAILABLE\",\"message\":\"알림 설정을 불러오지 못했습니다.\"}}",
+  "lead": "201",
+  "siteKeys": "id,projectId,slug,status,draft,publishedVersion,versions,customDomain,createdAt,updatedAt,metrics,publishedSlug",
+  "collect": "email+message"
+ }
+]
