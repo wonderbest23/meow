@@ -14,8 +14,6 @@
 .auth { width: 100%; margin: 0; }
 /* 새 대화 화면 안에 펼친 로그인 — 팝업 카드 없이 대화 영역 가운데에 */
 .inline { min-height: 0; max-width: 400px; margin: 0 auto; padding: clamp(24px, 8vh, 72px) 0 40px; background: transparent; }
-/* 계정 화면은 제목을 왼쪽에 두지만, 대화 영역 가운데에 놓일 땐 제목·설명도 가운데로(같은 우선순위 규칙을 이기도록 클래스를 겹쳐 쓴다) */
-.inline.inline .auth > form > header, .inline.inline .auth > form > header > * { text-align: center; }
 .auth h1 { font-size: 24px; }
 .close {
   position: absolute;

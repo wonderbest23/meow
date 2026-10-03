@@ -1,0 +1,72 @@
+/*
+ * 로그인·회원가입 폼 — 계정 화면·로그인 팝업·새 대화 안 로그인이 모두 이 모양을 쓴다.
+ * 놓이는 화면의 제목·입력칸 규칙이 섞여 들지 않게 모든 요소에 이 파일의 클래스를 붙이고 .root .form 아래로 쓴다
+ * (대화 화면의 `.page :-webkit-any(button, input)` 같은 공통 규칙보다 한 단계 높게).
+ * 크기는 네 단계뿐: 제목 26 · 입력·버튼 16 · 안내 15 · 작은 글씨 13(칸 이름표 12).
+ */
+.root { width: 100%; color: #191f28; letter-spacing: 0; }
+.root * { box-sizing: border-box; }
+.root .form { display: grid; gap: 12px; margin: 0; padding: 0; border: 0; background: transparent; box-shadow: none; }
+
+.root .form .header { display: grid; gap: 8px; margin: 0 0 20px; padding: 0; border: 0; text-align: center; }
+.root .form .title { margin: 0; font-size: 26px; line-height: 1.35; font-weight: 700; color: #191f28; text-align: center; }
+.root .form .sub { margin: 0; font-size: 15px; line-height: 1.6; color: #6b7684; text-align: center; }
+.root .form .link { display: inline; min-height: 0; margin: 0 0 0 4px; padding: 0; border: 0; background: transparent; color: #246bd1; font-size: 15px; font-weight: 600; cursor: pointer; }
+.root .form .link:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* 입력칸 — 이름표를 칸 안 위쪽에 작게 */
+.root .form .field { position: relative; display: grid; gap: 6px; margin: 0; }
+.root .form .fieldBox { display: flex; align-items: center; gap: 4px; height: 56px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 12px; background: #fff; }
+.root .form .fieldBox:focus-within { border-color: #246bd1; box-shadow: 0 0 0 1px #246bd1; }
+.root .form .fieldLabel { position: absolute; top: 8px; left: 15px; z-index: 1; color: #6b7684; font-size: 12px; font-weight: 500; line-height: 1.4; pointer-events: none; }
+.root .form .input { flex: 1; min-width: 0; width: 100%; height: 54px; margin: 0; padding: 18px 0 2px; border: 0; outline: none; background: transparent; box-shadow: none; color: #191f28; font-size: 16px; line-height: 1.5; }
+.root .form .input::placeholder { color: #a5adb6; }
+.root .form .input:disabled { opacity: .65; }
+.root .form .toggle { flex-shrink: 0; min-width: 44px; min-height: 40px; padding: 0 6px; border: 0; border-radius: 8px; background: transparent; color: #4e5968; font-size: 13px; cursor: pointer; }
+.root .form .hint { margin: 0 2px; color: #6b7684; font-size: 13px; }
+.root .form .fieldError { margin: 0 2px; color: #b42318; font-size: 13px; }
+
+/* 버튼 — 주 버튼·구글·카카오 모두 같은 높이·모서리·글씨 */
+.root .form .primary,
+.root .form .social { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; height: 52px; margin: 0; padding: 0 16px; border-radius: 12px; font-size: 16px; font-weight: 600; line-height: 1; cursor: pointer; transition: background .15s, opacity .15s, transform .15s; }
+.root .form .primary { border: 0; background: #246bd1; color: #fff; }
+.root .form .primary:hover:not(:disabled) { background: #1b5bb7; }
+.root .form .primary:disabled { opacity: .45; cursor: default; }
+.root .form .primary:active:not(:disabled), .root .form .social:active:not(:disabled) { transform: scale(.99); }
+.root .form[aria-busy=true] .primary { opacity: 1; background: #edf4ff; color: #246bd1; }
+
+.root .form .divider { display: flex; align-items: center; gap: 14px; margin: 8px 0; color: #8b95a1; font-size: 13px; }
+.root .form .divider::before, .root .form .divider::after { content: ""; flex: 1; height: 1px; background: #e5e8eb; }
+
+.root .form .socials { display: grid; gap: 10px; }
+.root .form[aria-busy=true] .socials { pointer-events: none; opacity: .6; }
+.root .form .social { position: relative; overflow: hidden; border: 1px solid #d1d6db; background: #fff; color: #191f28; }
+.root .form .social:hover:not(:disabled) { background: #f9fafb; }
+.root .form .social svg { position: absolute; left: 18px; width: 20px; height: 20px; flex: none; }
+.root .form .kakao { border-color: #fee500; background: #fee500; color: rgba(0, 0, 0, .85); }
+.root .form .kakao:hover:not(:disabled) { background: #f5dc00; }
+.root .form .kakao svg { fill: rgba(0, 0, 0, .9); }
+.root .form .social:disabled { opacity: .5; cursor: default; }
+/*
+ * 구글 — 로그인은 구글 공식 버튼(GIS)이 받아야 해서, 같은 모양의 버튼 위에 공식 버튼을 투명하게 덮는다.
+ * 공식 버튼 높이(40)를 칸 높이(52)에 맞게 늘려 어디를 눌러도 공식 버튼이 받는다.
+ */
+.root .form .googleReal { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; opacity: .001; transform: scaleY(1.3); }
+.root .form .googleReal:empty { display: none; }
+.root .form .googleState { margin: 0; color: #6b7684; font-size: 13px; line-height: 1.6; text-align: center; }
+.root .form .consentNote { margin: 2px 0 0; color: #6b7684; font-size: 13px; line-height: 1.6; text-align: center; }
+.root .form .consentNote a { color: #4e5968; text-decoration: underline; }
+
+/* 로그인 유지 · 비밀번호 찾기 */
+.root .form .options { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0; }
+.root .form .remember { display: flex; align-items: center; gap: 8px; min-height: 40px; color: #4e5968; font-size: 13px; cursor: pointer; }
+.root .form .remember input, .root .form .consents input { width: 18px; height: 18px; margin: 0; flex-shrink: 0; accent-color: #246bd1; }
+.root .form .textButton { min-height: 40px; padding: 0; border: 0; background: transparent; color: #4e5968; font-size: 13px; cursor: pointer; }
+
+.root .form .consents { display: grid; gap: 10px; padding: 14px 16px; border: 1px solid #e5e8eb; border-radius: 12px; background: #f9fafb; }
+.root .form .consents label { display: flex; align-items: center; gap: 10px; color: #4e5968; font-size: 13px; line-height: 1.6; }
+.root .form .consents a { color: #246bd1; font-weight: 600; text-decoration: underline; }
+
+.root .form .footer { display: flex; justify-content: center; gap: 16px; margin: 12px 0 0; padding: 16px 0 0; border-top: 1px solid #f2f4f6; }
+.root .form .footer a { color: #8b95a1; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; }
+.root .form .back { display: flex; justify-content: center; margin: 4px 0 0; }
