@@ -69,7 +69,7 @@ function rememberLocally(remember: boolean, email: string) {
   }
 }
 
-export default function AccountAuthForm({ next, initialMode = "login", initialMessage = "", recoveryTokens = null, onReset, titleId }: {
+export default function AccountAuthForm({ next, initialMode = "login", initialMessage = "", recoveryTokens = null, onReset, titleId, intro }: {
   /** 로그인 뒤 돌아갈 내부 경로(검증된 값만). 없으면 내 사업 목록 */
   next: string | null;
   initialMode?: AuthMode;
@@ -80,6 +80,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   onReset?: () => void | Promise<void>;
   /** 팝업이 제목으로 이름을 붙일 수 있게 */
   titleId?: string;
+  /** 화면 안에 바로 띄울 때(새 대화의 로그인 안내) 로그인 모드의 제목·설명을 그 화면 말로 바꾼다 */
+  intro?: { title: string; text: string };
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
@@ -236,9 +238,9 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     <form onSubmit={submit} aria-busy={busy}>
       {/* 레퍼런스(월렛 앱): 가운데 굵은 인사말 하나 — 설명은 필요한 화면에만 */}
       <header>
-        <span className={styles.eyebrow}>오늘창업 계정</span>
-        <h1 id={titleId}>{mode === "register" ? "함께 시작해 볼까요?" : mode === "recover" ? "비밀번호를 잊으셨나요?" : mode === "reset" ? "새 비밀번호를 정해요" : "내 사업을 이어가세요"}</h1>
-        {(mode === "login" || mode === "register") && <p>{mode === "login" ? "저장한 대화와 자료가 기다리고 있어요." : "대화부터 사업계획서까지 한곳에서."}</p>}
+        {!intro && <span className={styles.eyebrow}>오늘창업 계정</span>}
+        <h1 id={titleId}>{mode === "register" ? "함께 시작해 볼까요?" : mode === "recover" ? "비밀번호를 잊으셨나요?" : mode === "reset" ? "새 비밀번호를 정해요" : intro?.title ?? "내 사업을 이어가세요"}</h1>
+        {(mode === "login" || mode === "register") && <p>{mode === "login" ? intro?.text ?? "저장한 대화와 자료가 기다리고 있어요." : "대화부터 사업계획서까지 한곳에서."}</p>}
         {(mode === "recover" || mode === "reset") && (
           <p>{mode === "recover" ? "가입한 이메일로 복구 링크를 보내드립니다." : "8자 이상으로 새 비밀번호를 정해주세요."}</p>
         )}

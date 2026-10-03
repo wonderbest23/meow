@@ -18,6 +18,7 @@ import { intakeNextStep, choiceDraftSubmission, customCandidateDraftKey, draftKe
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
+import { InlineLogin } from "../../../components/login-dialog";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
 import { incompleteChoiceText, nextRefinementQuestion } from "./intake-ui/model";
@@ -34,17 +35,14 @@ const LAST_INTAKE_KEY = "oneul:last-intake";
 function rememberLastIntake(planId: string, signedIn: boolean) {
   try { window.localStorage.setItem(LAST_INTAKE_KEY, JSON.stringify({ planId, signedIn, at: Date.now() })); } catch { /* 저장소를 못 써도 안내만 덜 구체적일 뿐이다 */ }
 }
-/** 로그인 전 방문자에게 질문 대신 보여 주는 첫 화면. 로그인하면 지금 주소(새 대화·사업)로 돌아온다. */
+/** 로그인 전 방문자에게 질문 대신 보여 주는 첫 화면 — 안내 버튼을 한 번 더 누르지 않게 로그인 폼을 바로 펼친다. 로그인하면 지금 주소(새 대화·사업)로 돌아온다. */
 function LoginGate({ lastSignedIn }: { lastSignedIn: boolean }) {
   const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
-  return <section className={styles.empty} aria-labelledby="intake-login-gate">
-    <div className={styles.emptyIcon} aria-hidden="true"><LogIn size={28} strokeWidth={1.8} /></div>
-    <h1 id="intake-login-gate">{lastSignedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "로그인하고 사업 기획을 시작하세요"}</h1>
-    <p>{lastSignedIn
-      ? "작성하던 사업은 계정에 그대로 저장돼 있어요. 다시 로그인하면 이어서 할 수 있어요."
-      : "답변과 결과가 계정에 자동으로 저장돼서, 창을 닫거나 다른 기기에서 열어도 이어서 할 수 있어요. 카카오·구글로 바로 시작할 수 있어요."}</p>
-    <Link href={`/account?next=${encodeURIComponent(next)}`} className={styles.primaryButton}>{lastSignedIn ? "로그인하고 이어가기" : "로그인하고 시작하기"}<ArrowRight size={18} aria-hidden="true" /></Link>
-  </section>;
+  return <InlineLogin
+    next={next}
+    title={lastSignedIn ? "다시 로그인해 주세요" : "로그인하고 사업 기획을 시작하세요"}
+    text={lastSignedIn ? "작성하던 사업은 계정에 그대로 저장돼 있어요." : "답변과 결과가 계정에 저장돼 어느 기기에서든 이어서 할 수 있어요."}
+  />;
 }
 
 function readLastIntake(): { planId: string; signedIn: boolean } | null {
@@ -455,9 +453,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     void send({ action: "answer", questionId: route.questionId, value: route.value, ...(route.unknown ? { unknown: true } : {}) }, { answer: questionDraft, composer: captureComposer() });
   };
   const settleUntil = useRef(0);
+  /* 로그인 폼이 펼쳐져 있을 땐 채팅처럼 맨 아래로 내려가지 않는다 — 제목부터 보여야 한다 */
+  const loginGateShown = useRef(false);
+  useEffect(() => { loginGateShown.current = loginGate; if (loginGate) conversation.current?.scrollTo({ top: 0 }); }, [loginGate]);
   const scrollToCurrent = useCallback(() => {
     const container = conversation.current;
     if (!container) return;
+    if (loginGateShown.current) { container.scrollTo({ top: 0 }); return; }
     const turn = currentTurn.current;
     const containerTop = container.getBoundingClientRect().top;
     const bottom = container.scrollHeight - container.clientHeight;
