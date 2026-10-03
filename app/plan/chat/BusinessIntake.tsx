@@ -503,6 +503,22 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const updateNotice = savedPlan ? resultUpdateNotice(savedPlan) : null;
   const refinement = plan ? nextRefinementQuestion(plan, draft.refinementSeen) : null;
   const detailsButton = plan && (nextStep === "design" || nextStep === "prepare") && (refinement || !plan.intake.detailsRequested) ? <button type="button" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => refinement ? editQuestion(refinement.id, true) : void send({ action: "details" })}>좀 더 개선하기</button> : undefined;
+  /*
+   * 기본 질문이 끝나면 사업 방향 정리를 바로 시작한다 — 예전엔 '사업 방향 정리하기'와 '계획서 만들기'를 차례로 눌러야 해서
+   * 시작 단추가 두 번 나와 헷갈렸다(사용자 피드백). 정리는 짧고 싸니 자동으로, 손님이 누를 단추는 '계획서 만들기' 하나만 남긴다.
+   * 같은 답변 기준으로는 한 번만 보내고, 실패하면 화면의 '사업 방향 정리하기'로 다시 시도한다.
+   */
+  const autoDesigned = useRef<string | null>(null);
+  const designFailed = plan?.intake.job?.kind === "design" && plan.intake.job.status === "failed";
+  useEffect(() => {
+    if (!plan || nextStep !== "design" || !showCompletion || blocked || aiBusy || loginGate || designFailed) return;
+    const key = `${plan.planId}:${plan.coach.documentRevision ?? plan.coach.revision}`;
+    if (autoDesigned.current === key) return;
+    autoDesigned.current = key;
+    void send({ action: "design" });
+    // send는 렌더마다 새로 만들어지지만 위의 key로 한 번만 보낸다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [plan, nextStep, showCompletion, blocked, aiBusy, loginGate, designFailed]);
   // Keep unsent text and failed requests visible; otherwise the completed step is a choice, not another chat turn.
   // 로그인 안내 화면에서는 입력창을 두지 않는다(보내도 서버가 로그인 필요로 거절한다)
   const showComposer = !loginGate && !showReview && (!showCompletion || !nextStep || !!draft.pending || nextStep === "design" && (!!composerText.trim() || !!draft.memo.trim() || !!draft.help.trim()));
@@ -551,8 +567,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
               {replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={blocked} onChange={answer => editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } })} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
                 <ChatSpeaker />
                 {(nextStep === "prepare" || nextStep === "open") && currentIdentity(plan) ? <BusinessIdentityHero snapshot={plan} disabled={blocked} onName={name => void send({ action: "name", value: name })} /> : <>
-                <h2>{nextStep === "design" ? "이제 사업 방향을 정리해 볼까요?" : nextStep === "prepare" ? "사업 방향을 정리했어요" : nextStep === "open" ? "사업계획서 문서를 만들었어요" : "사업 하나만 정하면 시작할 수 있어요"}</h2>
-                <p>{nextStep === "design" ? "기본 질문은 끝났어요. 더 보완하는 건 선택이에요." : nextStep === "prepare" ? "아직 사업계획서 문서는 만들지 않았어요. 아래 방향이 맞으면 2단계에서 문서를 작성해요." : nextStep === "open" ? "사업계획서 문서를 열어 확인하세요." : refinement?.prompt ?? "이어서 사업 내용을 정해볼까요?"}</p>
+                <h2>{nextStep === "design" ? (designFailed ? "사업 방향을 정리하지 못했어요" : "답변으로 사업 방향을 정리하고 있어요") : nextStep === "prepare" ? "사업 방향을 정리했어요" : nextStep === "open" ? "사업계획서 문서를 만들었어요" : "사업 하나만 정하면 시작할 수 있어요"}</h2>
+                <p>{nextStep === "design" ? (designFailed ? "저장한 답변은 그대로예요. 아래에서 다시 정리해 주세요." : "기본 질문이 끝나서 바로 정리를 시작했어요. 30~40초 뒤에 사업계획서를 만들 수 있어요.") : nextStep === "prepare" ? "아직 사업계획서 문서는 만들지 않았어요. 아래 방향이 맞으면 2단계에서 문서를 작성해요." : nextStep === "open" ? "사업계획서 문서를 열어 확인하세요." : refinement?.prompt ?? "이어서 사업 내용을 정해볼까요?"}</p>
                 </>}
                 {(nextStep === "prepare" || nextStep === "open") && <DesignDirection snapshot={plan} />}
                 {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "사업 후보 정하기" : "사업 소개 정하기"}<ArrowRight size={17} aria-hidden="true" /></button>}
