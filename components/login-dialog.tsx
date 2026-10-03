@@ -33,9 +33,9 @@ export function openLogin(next?: string | null) {
 }
 
 /** 화면 안에 바로 펼친 로그인 — 안내 문구와 버튼을 한 번 더 거치지 않고 그 자리에서 로그인한다 */
-export function InlineLogin({ next, title }: { next: string; title: string }) {
+export function InlineLogin({ next }: { next: string }) {
   return <div className={`${accountStyles.page} ${styles.inline}`}>
-    <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm next={safeNextPath(next) ?? "/plan"} intro={{ title }} titleId="inline-login-title" /></div>
+    <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm next={safeNextPath(next) ?? "/plan"} titleId="inline-login-title" /></div>
   </div>;
 }
 
