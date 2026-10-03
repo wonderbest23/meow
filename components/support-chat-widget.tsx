@@ -16,6 +16,7 @@ import type { SupportChat } from "../lib/support-chat/repository";
 import { trackFunnel } from "../lib/funnel/client";
 import { escalationReason } from "../lib/consult/escalation";
 import { activePlan, isSamplePlan } from "../lib/plan-builder/plan-store";
+import { SupportHome, SupportSettings, SupportTabs, SUPPORT_BADGE_KEY, type SupportTab } from "./support-chat-home";
 import {
   CONSULT_INPUT_EXAMPLES,
   SUPPORT_INPUT_EXAMPLES,
@@ -71,6 +72,11 @@ export function SupportChatWidget() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"consult" | "support">("support");
+  /* 메신저형 탭 — 버튼으로 열면 홈부터, 다른 화면이 질문을 들고 열면 바로 대화 */
+  const [tab, setTab] = useState<SupportTab>("home");
+  const [badge, setBadge] = useState(true);
+  useEffect(() => { try { setBadge(window.localStorage.getItem(SUPPORT_BADGE_KEY) !== "0"); } catch { /* 저장소를 못 쓰면 켬 */ } }, []);
+  const changeBadge = (value: boolean) => { setBadge(value); try { window.localStorage.setItem(SUPPORT_BADGE_KEY, value ? "1" : "0"); } catch { /* 이 창에서만 적용 */ } };
   const [consultTurns, setConsultTurns] = useState<ConsultTurn[]>([]);
   const [consultProfile, setConsultProfile] = useState<ConsultProfile>({});
   const [consultChoices, setConsultChoices] = useState<string[]>([]);
@@ -278,6 +284,7 @@ export function SupportChatWidget() {
     const openWithMessage = (event: Event) => {
       const detail = (event as CustomEvent<{ message?: string; mode?: "consult" | "support" }>).detail;
       setOpen(true);
+      setTab("chat");
       /*
        * 어느 창으로 열지 부르는 쪽이 정한다.
        * 이 창은 한 번 문의 쪽으로 넘어가면 그대로 있어서, 홈에서 '창업 상담'을
@@ -596,6 +603,21 @@ export function SupportChatWidget() {
   if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal") return null;
 
   const unread = chat.conversation?.unreadByCustomer ?? 0;
+  /* 처음 화면으로 — 나눈 대화와 파악한 조건을 비우고 새로 시작(설정 탭의 '상담 기록 지우기'도 같은 일) */
+  const resetConsult = () => {
+    setConsultTurns([]);
+    setConsultProfile({});
+    setConsultChoices([]);
+    setConsultSummary([]);
+    setConsultPicks([]);
+    setConsultReady(false);
+    /*
+     * 서버 보관본도 지운다 — 안 지우면 새로고침 때 방금 버린 대화가
+     * 되살아난다. 하루 사용량은 서버가 지키므로 여기서 초기화되지 않는다.
+     */
+    void fetch("/api/consult", { method: "DELETE" }).catch(() => {});
+  };
+  const shownUnread = badge ? unread : 0;
   const selectedCategory = selectedCategoryId
     ? supportFaqCategories.find((category) => category.id === selectedCategoryId) ?? null
     : null;
@@ -604,7 +626,10 @@ export function SupportChatWidget() {
   return (
     <div className={`support-chat-widget ${open ? "open" : ""}`}>
       {open && (
-        <section className={`support-chat-panel mode-${mode}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
+        <section className={`support-chat-panel mode-${mode} tab-${tab}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
+          {tab === "home" && <SupportHome open={open} onClose={() => setOpen(false)} onInquiry={() => { setMode("support"); setTab("chat"); }} onConsult={() => { setMode("consult"); setTab("chat"); }} />}
+          {tab === "settings" && <SupportSettings open={open} badge={badge} onBadge={changeBadge} onClearConsult={resetConsult} onClose={() => setOpen(false)} />}
+          {tab === "chat" && <>
           <header>
             <span><img src="/support-agent-avatar-2026.png" alt="" width="48" height="48" /></span>
             <div>
@@ -615,20 +640,7 @@ export function SupportChatWidget() {
               <button
                 type="button"
                 className="chat-restart"
-                onClick={() => {
-                  /* 처음 화면으로 — 나눈 대화와 파악한 조건을 비우고 새로 시작 */
-                  setConsultTurns([]);
-                  setConsultProfile({});
-                  setConsultChoices([]);
-                  setConsultSummary([]);
-                  setConsultPicks([]);
-                  setConsultReady(false);
-                  /*
-                   * 서버 보관본도 지운다 — 안 지우면 새로고침 때 방금 버린 대화가
-                   * 되살아난다. 하루 사용량은 서버가 지키므로 여기서 초기화되지 않는다.
-                   */
-                  void fetch("/api/consult", { method: "DELETE" }).catch(() => {});
-                }}
+                onClick={resetConsult}
               >새 상담</button>
             )}
             <button type="button" className="chat-close" onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기"><X aria-hidden="true" /></button>
@@ -988,20 +1000,22 @@ export function SupportChatWidget() {
               </form>
             </div>
           </div>
+          </>}
+          <SupportTabs tab={tab} onTab={setTab} unread={shownUnread} />
         </section>
       )}
       {!open && (
         <button
           type="button"
           className="support-chat-toggle"
-          onClick={() => { setMode("support"); setOpen(true); }}
+          onClick={() => { setMode("support"); setTab("home"); setOpen(true); }}
           aria-expanded="false"
           aria-label="서비스 이용 문의 열기"
           title="서비스 이용 문의"
         >
           <img src="/support-agent-avatar-2026.png" alt="" width="54" height="54" />
           <span>이용 문의</span>
-          {unread > 0 && <em>{unread > 9 ? "9+" : unread}</em>}
+          {shownUnread > 0 && <em>{shownUnread > 9 ? "9+" : shownUnread}</em>}
         </button>
       )}
     </div>
