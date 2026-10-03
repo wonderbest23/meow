@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
-import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, Bookmark, ChevronLeft, FileText, LoaderCircle, PencilLine, RefreshCw, Sparkles, X } from "lucide-react";
+import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, Bookmark, ChevronLeft, FileText, FolderOpen, LoaderCircle, LogIn, PencilLine, RefreshCw, Sparkles, X } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
@@ -38,6 +38,7 @@ function rememberLastIntake(planId: string, signedIn: boolean) {
 function LoginGate({ lastSignedIn }: { lastSignedIn: boolean }) {
   const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
   return <section className={styles.empty} aria-labelledby="intake-login-gate">
+    <div className={styles.emptyIcon} aria-hidden="true"><LogIn size={28} strokeWidth={1.8} /></div>
     <h1 id="intake-login-gate">{lastSignedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "로그인하고 사업 기획을 시작하세요"}</h1>
     <p>{lastSignedIn
       ? "작성하던 사업은 계정에 그대로 저장돼 있어요. 다시 로그인하면 이어서 할 수 있어요."
@@ -524,12 +525,13 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
           onPointerDown={event => { if (event.target === event.currentTarget) manualScroll.current = true; }}
           onKeyDown={event => { if (["PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) { manualScroll.current = true; if (["PageUp", "Home", "ArrowUp"].includes(event.key)) follow.current = false; } }}
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
-          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate lastSignedIn={!!readLastIntake()?.signedIn} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section>
+          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate lastSignedIn={!!readLastIntake()?.signedIn} /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
                */
               : <section className={styles.empty}>
+                <div className={styles.emptyIcon} aria-hidden="true">{lastIntake?.signedIn ? <LogIn size={28} strokeWidth={1.8} /> : <FolderOpen size={28} strokeWidth={1.8} />}</div>
                 <h1>{lastIntake?.signedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "이 브라우저에서 저장한 사업을 찾지 못했어요"}</h1>
                 <p>{lastIntake?.signedIn
                   ? "작성하던 사업은 계정에 그대로 저장돼 있어요. 다시 로그인하면 이어서 할 수 있어요."

@@ -202,8 +202,12 @@
 .complete h2 { font-size: 22px; margin-bottom: 12px; }
 .complete p { color: var(--intake-muted); font-size: 14px; margin-bottom: 22px; }
 .complete button { margin-bottom: 12px; }
-.empty { padding-top: 40px; display: grid; justify-items: start; gap: 12px; }
-.empty h1 { font-size: 23px; }
+/* 빈 화면(로그인 안내·사업 없음) — 대화 영역 가운데에 아이콘·제목·설명·버튼을 세로로 모은다 */
+.empty { display: grid; justify-items: center; gap: 12px; max-width: 440px; margin: 0 auto; padding: clamp(40px, 14vh, 140px) 0 40px; text-align: center; }
+.empty h1 { margin: 4px 0 0; font-size: 23px; line-height: 1.4; word-break: keep-all; }
+.emptyIcon { display: grid; place-items: center; width: 60px; height: 60px; margin-bottom: 8px; border-radius: 16px; background: color-mix(in srgb, var(--intake-blue) 10%, transparent); color: var(--intake-blue); }
+.empty .primaryButton { width: 100%; max-width: 320px; min-height: 50px; margin-top: 12px; font-size: 15px !important; }
+.empty .textLink { justify-content: center; }
 .muted { color: var(--intake-muted); font-size: 13px; margin-top: 20px !important; }
 .error { color: var(--intake-danger); font-size: 13px; }
 .error p + p { margin-top: 6px; }
@@ -549,7 +553,7 @@
 .stepper li[data-state="done"] svg { background: color-mix(in srgb, var(--intake-green) 14%, transparent); padding: 3px; box-sizing: border-box; }
 .guestSaveNote { margin: 12px 0 0; font-size: 13px; line-height: 1.6; color: var(--intake-muted); }
 .guestSaveNote a { color: var(--intake-blue); font-weight: 700; }
-.empty > p { max-width: 520px; margin: 0 0 4px; color: var(--intake-muted); line-height: 1.65; word-break: keep-all; }
+.empty > p { max-width: 400px; margin: 0; color: var(--intake-muted); line-height: 1.7; word-break: keep-all; }
 
 /* 계획서를 만들기 전 숫자 점검 — 팔수록 손해이거나 다 팔아도 본전이 안 될 때 */
 .financialWarning { display: grid; gap: 10px; margin: 0 0 16px; padding: 14px 16px; border: 1px solid #f3d19e; border-radius: 10px; background: #fff8ec; color: #6a4a12; }
