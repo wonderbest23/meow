@@ -13,7 +13,7 @@ import { aiFillLanded, aiFillMark, needsAutoAiFill } from "../../../lib/landing/
 import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
-import { hydrateFromServer, activePlan, loadState, isSamplePlan, planOwnerEpoch, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, activePlan, loadState, isSamplePlan, planOwnerEpoch, setActivePlan, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import styles from "./page.module.css";
@@ -154,9 +154,12 @@ export default function PlanHomepagePage() {
     let alive = true;
     let loadEpoch = planOwnerEpoch();
     (async () => {
-      const state = await hydrateFromServer();
+      let state = await hydrateFromServer();
       const epoch = planOwnerEpoch();
       loadEpoch = epoch;
+      /* 문서 화면의 '홈페이지 만들기'처럼 주소로 사업을 고르면 그 사업으로 연다 */
+      const requested = new URLSearchParams(window.location.search).get("planId");
+      if (requested && state.plans.some(item => item.id === requested)) { setActivePlan(requested); state = { ...state, activePlanId: requested }; }
       const plan = activePlan(state);
       if (!alive) return;
       if (!plan) {

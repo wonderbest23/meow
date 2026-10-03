@@ -24,6 +24,10 @@ type Props = {
   grouped: Array<[string, ReturnType<typeof assembleSections>]>;
   numbering: Map<string, { num: string; chapterNum: number }>;
   isSample: boolean; coachHref: string | null; notice: string;
+  /** 만드는 중이면 진행(완성 수·지금 쓰는 장) — 문서 위에 '쓰는 중' 표시 */
+  writing?: { done: number; total: number; current: string | null } | null;
+  /** 방금 새로 받은 장 — 문단이 차례로 나타난다 */
+  freshKeys?: ReadonlySet<string>;
   editStates: Record<string, EditState>;
   restoreKeys: string[]; onRestore: (key: string) => void; onRetrySave: (key: string) => void; onDiscardDraft: (key: string) => void;
   onSave: (key: string, html: string) => void;
@@ -36,6 +40,17 @@ type Props = {
   reviewSource?: DocumentReviewSource | null;
   onReviewed?: (key: string, section: StoredSection, updatedAt: string) => void;
 };
+
+/** 쓰는 중 — 지금 쓰는 장 이름 뒤에 깜빡이는 커서, 아래로 글줄이 차오르는 듯한 자리 */
+function WritingStatus({ done, total, current }: { done: number; total: number; current: string | null }) {
+  return <div className={styles.writing} role="status" aria-live="polite">
+    <div className={styles.writingHead}><strong>사업계획서를 작성하고 있어요</strong><span>{done} / {total}</span></div>
+    <progress value={done} max={total || 1} aria-label="작성한 항목" />
+    {current && <p className={styles.writingNow}>지금 쓰는 중 · <b>{current}</b><i className={styles.caret} aria-hidden="true" /></p>}
+    <div className={styles.writingLines} aria-hidden="true"><i /><i /><i /></div>
+    <small>새 항목이 끝날 때마다 아래에 바로 나타나요. 창을 닫아도 계속 만들어져요.</small>
+  </div>;
+}
 
 export default function DocumentWorkspace(props: Props) {
   const { title, planId, grouped, ready, isSample, coachHref, onSave } = props;
@@ -98,7 +113,16 @@ export default function DocumentWorkspace(props: Props) {
   useEffect(() => {
     if (modal) dialog.current?.showModal(); else dialog.current?.close();
   }, [modal]);
-  useEffect(() => { if (ready && !grouped.length && props.summary) setSummaryMode(true); }, [ready, grouped.length, props.summary]);
+  /*
+   * 상세 항목이 하나도 없을 때만 잠깐 한 장 요약을 보여 주고, 상세 항목이 생기면 상세 계획서로 돌아온다.
+   * 예전엔 만드는 도중(0장)에 열면 요약으로 넘어간 채 고정돼, 다 만든 뒤에도 요약이 먼저 보였다(사용자 피드백).
+   * 만드는 중이면 요약 대신 '쓰는 중' 화면을 보여 준다.
+   */
+  const autoSummary = useRef(false);
+  useEffect(() => {
+    if (ready && !grouped.length && props.summary && !props.writing) { autoSummary.current = true; setSummaryMode(true); }
+    else if (grouped.length && autoSummary.current) { autoSummary.current = false; setSummaryMode(false); }
+  }, [ready, grouped.length, props.summary, props.writing]);
   useEffect(() => {
     const hash = window.location.hash.slice(1);
     const index = grouped.findIndex(([, list]) => list.some(s => `sec-${s.key.replace("/", "-")}` === hash));
@@ -132,16 +156,22 @@ export default function DocumentWorkspace(props: Props) {
             <button aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroll.current?.scrollTo({ top: 0 }); }}>상세 계획서</button>
           </div>}
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
-          {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
+          {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요. 다음은 홈페이지예요.</p>{planId && <Link className={styles.nextLink} href={`/plan/homepage?planId=${encodeURIComponent(planId)}`}>이 계획서로 홈페이지 만들기</Link>}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문">
-            {!grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
+            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} />{!isSample && planId && !props.writing && grouped.length > 0 && (continuous || chapter === grouped.length - 1) && !summaryMode && <nav className={styles.nextSteps} aria-label="다음 단계">
+                <strong>계획서 다음 단계</strong>
+                <Link href={`/plan/homepage?planId=${encodeURIComponent(planId)}`}><span>홈페이지 만들기</span><small>이 계획서 내용으로 초안을 바로 만들어요</small></Link>
+                <Link href={`/plan/workspace?planId=${encodeURIComponent(planId)}&tab=launch`}><span>사업 시작 준비</span><small>신고·홍보·결제 준비를 단계별로 해요</small></Link>
+              </nav>}
+              </article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
-              {props.notice && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
+              {props.writing && <WritingStatus {...props.writing} />}
+              {props.notice && !props.writing && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
                 <DocumentChapterHeading number={index + 1} title={name} />
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
-                  <div className={styles.body}><InlineDocEditor html={section.html} readOnly={isSample || !editing} status={props.editStates[section.key]?.status ?? "idle"} onDraft={html => props.onDraft(section.key, html)} onChange={html => onSave(section.key, html)} /></div>
+                  <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}><InlineDocEditor html={section.html} readOnly={isSample || !editing} status={props.editStates[section.key]?.status ?? "idle"} onDraft={html => props.onDraft(section.key, html)} onChange={html => onSave(section.key, html)} /></div>
                   {!isSample && <div className={styles.saveState}>
                     {props.editStates[section.key]?.status === "failed" ? <><p role="alert">{props.editStates[section.key].message}</p><button onClick={() => props.onRetrySave(section.key)}><RefreshCw size={15} />다시 저장</button><button onClick={() => props.onDiscardDraft(section.key)}>서버 내용 불러오기</button></> : !editing && props.editStates[section.key] && <span role="status">{props.editStates[section.key].status === "saving" ? "서버에 저장 중…" : "서버에 저장됨"}</span>}
                     {editing && props.restoreKeys.includes(section.key) && !["saving", "failed"].includes(props.editStates[section.key]?.status ?? "") && <button onClick={() => props.onRestore(section.key)}><RotateCcw size={15} />직전 내용으로 되돌리기</button>}

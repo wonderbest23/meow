@@ -19,6 +19,7 @@ import { readChatResponse } from "../../../lib/http/read-chat-response";
 import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import ChatLoading from "./loading";
+import { GenerationDialog, useGenerationProgress } from "../GenerationProgress";
 import { InlineLogin } from "../../../components/login-dialog";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
@@ -331,7 +332,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       saved = true;
       setIntentPrompt(null);
       setStatus(hasLocalInput(settled) ? "draft" : "saved");
-      if (pending.command.action === "prepare" && data.started) { setPreparedRevision(data.plan.coach.documentRevision ?? data.plan.coach.revision); try { onPrepared?.(data); } catch { /* The saved document workflow is independent of parent navigation. */ } }
+      if (pending.command.action === "prepare" && data.started) { setPreparedRevision(data.plan.coach.documentRevision ?? data.plan.coach.revision); setGenerationOpen(true); generation.restart(); try { onPrepared?.(data); } catch { /* The saved document workflow is independent of parent navigation. */ } }
       if (pending.command.action === "details") { writeDraft({ ...draftRef.current, mode: "answer", editingId: null }); setView("input"); }
     } catch (caught) {
       if (epoch === routeEpoch.current) { setStatus("failed"); setError(caught instanceof Error && !controller.signal.aborted ? caught.message : "저장 결과를 확인하지 못했어요. 입력을 보관했으니 같은 요청으로 다시 시도해 주세요."); }
@@ -508,6 +509,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
    * 시작 단추가 두 번 나와 헷갈렸다(사용자 피드백). 정리는 짧고 싸니 자동으로, 손님이 누를 단추는 '계획서 만들기' 하나만 남긴다.
    * 같은 답변 기준으로는 한 번만 보내고, 실패하면 화면의 '사업 방향 정리하기'로 다시 시도한다.
    */
+  /* 사업계획서 만드는 중 — 접수되면 팝업으로 진행을 보여 주고, 닫아도 '작성 중 n/m · 진행 보기'로 다시 연다 */
+  const [generationOpen, setGenerationOpen] = useState(false);
+  const generation = useGenerationProgress(plan?.planId, !!plan && (prepared || plan.hasDocuments || nextStep === "open"));
+  const generating = !!generation.state?.active && !["errored", "terminated"].includes(generation.state.runStatus ?? "");
   const autoDesigned = useRef<string | null>(null);
   const designFailed = plan?.intake.job?.kind === "design" && plan.intake.job.status === "failed";
   useEffect(() => {
@@ -573,6 +578,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
                 {(nextStep === "prepare" || nextStep === "open") && <DesignDirection snapshot={plan} />}
                 {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "사업 후보 정하기" : "사업 소개 정하기"}<ArrowRight size={17} aria-hidden="true" /></button>}
                 <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />
+                {generating && generation.state && <button type="button" className={styles.secondaryButton} onClick={() => setGenerationOpen(true)}>사업계획서 작성 중 {generation.state.done}/{generation.state.total} · 진행 보기</button>}
                 {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}
                 <button type="button" className={styles.editLink} onClick={() => setView("summary")}><PencilLine size={14} aria-hidden="true" />지금까지 답변 보기</button>
               </section>)}
@@ -602,5 +608,6 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       {plan && <div {...split.separator} aria-controls="intake-input-panel" className={styles.splitHandle} title="드래그해서 너비 조절 · 두 번 누르면 기본 너비"><span /></div>}
       {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} showActions={false} disabled={blocked} onStructure={patch => void send({ action: "structure", structure: patch })} aiBusy={aiBusy} prepared={prepared} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} /><ResourcePanel snapshot={plan} draft={draft.resourceEditor} disabled={blocked} onDraft={resourceEditor => editDraft({ ...draftRef.current, resourceEditor })} onCommand={command => void send(command)} /><AnswerHistory snapshot={plan} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
     </div>
-  </BusinessAppChrome></div>;
+  {plan && <GenerationDialog planId={plan.planId} open={generationOpen} state={generation.state} onClose={() => setGenerationOpen(false)} />}
+    </BusinessAppChrome></div>;
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useGenerationProgress } from "../GenerationProgress";
 import { useRouter } from "next/navigation";
 import DocumentWorkspace from "./DocumentWorkspace";
 import { hydrateFromServer, assembleSections, activePlan, loadState, isSamplePlan, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
@@ -30,6 +31,29 @@ export default function PlanDocumentPage() {
   const [access, setAccess] = useState<{ paid: boolean; price: number } | null>(null);
   const [accessError, setAccessError] = useState(false);
   const [documentPlanId, setDocumentPlanId] = useState<string | null>(null);
+  /*
+   * 만드는 중이면 몇 초마다 진행을 묻고, 새로 끝난 장만 서버에서 다시 받아 붙인다 — 새로고침하지 않아도 장이 하나씩 생긴다.
+   * 이미 보이던 장(사람이 보고 있거나 고치는 중일 수 있다)은 건드리지 않는다. 새 장은 '쓰이는 것처럼' 문단이 차례로 나타난다.
+   */
+  const generation = useGenerationProgress(documentPlanId && !isSample ? documentPlanId : null, true, 4000);
+  const seenDone = useRef<Set<string> | null>(null);
+  const [freshKeys, setFreshKeys] = useState<ReadonlySet<string>>(new Set());
+  useEffect(() => {
+    const progress = generation.state;
+    if (!progress || !documentPlanId) return;
+    const doneKeys = new Set(progress.sections.filter(section => section.done).map(section => section.key));
+    if (seenDone.current === null) { seenDone.current = doneKeys; return; }
+    const added = [...doneKeys].filter(key => !seenDone.current!.has(key));
+    if (!added.length) return;
+    seenDone.current = doneKeys;
+    hydrateFromServer().then(state => {
+      const fresh = assembleSections({ ...state, activePlanId: documentPlanId });
+      setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !added.includes(item.key) ? shown : item; }));
+      setFreshKeys(new Set(added));
+    }).catch(() => { /* 다음 차례에 다시 받는다 */ });
+  }, [generation.state, documentPlanId]);
+  const writing = generation.state?.active && !["errored", "terminated"].includes(generation.state.runStatus ?? "")
+    ? { done: generation.state.done, total: generation.state.total, current: generation.state.sections.find(section => !section.done)?.title ?? null } : null;
   const [coachHref, setCoachHref] = useState<string | null>(null);
   const [contextNotice, setContextNotice] = useState("");
   const [completionKey, setCompletionKey] = useState<string | null>(null);
@@ -237,7 +261,7 @@ export default function PlanDocumentPage() {
     } catch { setAccessError(true); }
   }
 
-  return <DocumentWorkspace title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
+  return <DocumentWorkspace writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;
