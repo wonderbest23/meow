@@ -38,11 +38,7 @@ function rememberLastIntake(planId: string, signedIn: boolean) {
 /** 로그인 전 방문자에게 질문 대신 보여 주는 첫 화면 — 안내 버튼을 한 번 더 누르지 않게 로그인 폼을 바로 펼친다. 로그인하면 지금 주소(새 대화·사업)로 돌아온다. */
 function LoginGate({ lastSignedIn }: { lastSignedIn: boolean }) {
   const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
-  return <InlineLogin
-    next={next}
-    title={lastSignedIn ? "다시 로그인해 주세요" : "로그인하고 사업 기획을 시작하세요"}
-    text={lastSignedIn ? "작성하던 사업은 계정에 그대로 저장돼 있어요." : "답변과 결과가 계정에 저장돼 어느 기기에서든 이어서 할 수 있어요."}
-  />;
+  return <InlineLogin next={next} title={lastSignedIn ? "다시 로그인해 주세요" : "로그인하고 시작하기"} />;
 }
 
 function readLastIntake(): { planId: string; signedIn: boolean } | null {

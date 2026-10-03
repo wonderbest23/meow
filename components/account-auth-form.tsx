@@ -80,8 +80,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   onReset?: () => void | Promise<void>;
   /** 팝업이 제목으로 이름을 붙일 수 있게 */
   titleId?: string;
-  /** 화면 안에 바로 띄울 때(새 대화의 로그인 안내) 로그인 모드의 제목·설명을 그 화면 말로 바꾼다 */
-  intro?: { title: string; text: string };
+  /** 화면 안에 바로 띄울 때(새 대화의 로그인 안내) 로그인 모드의 제목을 그 화면 말로 바꾼다 */
+  intro?: { title: string };
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
@@ -100,6 +100,10 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const [message, setMessage] = useState(initialMessage);
   const [messageError, setMessageError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  /* 로그인은 이메일부터 받고, '이메일로 계속하기'를 누르면 비밀번호 칸을 연다 — 첫 화면을 칸 하나로 단순하게 */
+  const [emailStep, setEmailStep] = useState(true);
+  const passwordInput = useRef<HTMLInputElement>(null);
+  const switchMode = (next: AuthMode) => { setMode(next); setMessage(""); setMessageError(false); setEmailStep(true); };
   const [googleReady, setGoogleReady] = useState(false);
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
   /* 구글 버튼이 그려질 자리 — GIS 가 이 안에 iframe 버튼을 그린다 */
@@ -167,7 +171,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             size: "large",
             shape: "rectangular",
             logo_alignment: "center",
-            text: mode === "register" ? "signup_with" : "signin_with",
+            text: "continue_with",
             locale: "ko",
             /* GIS 버튼 최대 폭은 400 — 자기 칸 폭에 맞춘다 */
             width: Math.min(400, parent.clientWidth || 400),
@@ -197,11 +201,14 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     if (mode === "recover") return email.includes("@");
     if (mode === "reset") return password.length >= 8 && password === passwordConfirm && Boolean(recoveryTokens);
     if (mode === "register") return email.includes("@") && password.length >= 8 && password === passwordConfirm && terms && privacy && aiNotice;
+    if (emailStep) return email.includes("@");
     return email.includes("@") && password.length >= 8;
-  }, [aiNotice, email, mode, password, passwordConfirm, privacy, recoveryTokens, terms]);
+  }, [aiNotice, email, emailStep, mode, password, passwordConfirm, privacy, recoveryTokens, terms]);
 
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (!valid || busy) return; setBusy(true); setMessage(""); setMessageError(false);
+    event.preventDefault(); if (!valid || busy) return;
+    if (mode === "login" && emailStep) { setEmailStep(false); requestAnimationFrame(() => passwordInput.current?.focus()); return; }
+    setBusy(true); setMessage(""); setMessageError(false);
     try {
       if (mode !== "recover") await prepareAccountSignIn();
       if (mode === "recover") {
@@ -213,14 +220,14 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
       } else if (mode === "register") {
         const result = await payload<{ authenticated: boolean; confirmationRequired?: boolean; message?: string }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
         if (result.confirmationRequired) {
-          setMode("login"); setPassword(""); setPasswordConfirm("");
+          setMode("login"); setEmailStep(false); setPassword(""); setPasswordConfirm("");
           setMessage(result.message ?? "확인 메일의 링크로 이메일을 인증한 후 로그인해 주세요.");
         } else if (result.authenticated) {
           rememberLocally(remember, email);
           goNext();
           return;
         } else {
-          setMode("login"); setPassword(""); setPasswordConfirm("");
+          setMode("login"); setEmailStep(false); setPassword(""); setPasswordConfirm("");
           setMessage(result.message ?? "계정을 만들었습니다. 로그인해 주세요.");
         }
       } else {
@@ -234,27 +241,50 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     } catch (error) { setMessageError(true); setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했습니다."); } finally { setBusy(false); }
   };
 
+  const entry = mode === "login" || mode === "register";
+  const emailOnly = mode === "login" && emailStep;
+  const textButton = (label: string, to: AuthMode) => <button type="button" onClick={() => switchMode(to)}>{label}</button>;
+
+  /* 레퍼런스: 가운데 제목 한 줄 → 이메일 → 계속하기 → 또는 → 구글·카카오 → 약관. 설명 문단은 두지 않는다 */
   return (
     <form onSubmit={submit} aria-busy={busy}>
-      {/* 레퍼런스(월렛 앱): 가운데 굵은 인사말 하나 — 설명은 필요한 화면에만 */}
       <header>
-        {!intro && <span className={styles.eyebrow}>오늘창업 계정</span>}
-        <h1 id={titleId}>{mode === "register" ? "함께 시작해 볼까요?" : mode === "recover" ? "비밀번호를 잊으셨나요?" : mode === "reset" ? "새 비밀번호를 정해요" : intro?.title ?? "내 사업을 이어가세요"}</h1>
-        {(mode === "login" || mode === "register") && <p>{mode === "login" ? intro?.text ?? "저장한 대화와 자료가 기다리고 있어요." : "대화부터 사업계획서까지 한곳에서."}</p>}
-        {(mode === "recover" || mode === "reset") && (
-          <p>{mode === "recover" ? "가입한 이메일로 복구 링크를 보내드립니다." : "8자 이상으로 새 비밀번호를 정해주세요."}</p>
-        )}
+        <h1 id={titleId}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 찾기" : mode === "reset" ? "새 비밀번호 정하기" : intro?.title ?? "로그인"}</h1>
+        {mode === "login" && <p>계정이 없으신가요? {textButton("회원가입", "register")}</p>}
+        {mode === "register" && <p>이미 계정이 있으신가요? {textButton("로그인", "login")}</p>}
+        {(mode === "recover" || mode === "reset") && <p>{mode === "recover" ? "가입한 이메일로 재설정 링크를 보내드려요." : "8자 이상으로 새 비밀번호를 정해 주세요."}</p>}
       </header>
-      {/* 간편 로그인 — 레퍼런스처럼 입력칸 위에 나란히 */}
-      {(mode === "login" || mode === "register") && (
+      {mode !== "reset" && <label><span>이메일</span><div><input type="email" required disabled={busy} placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></div></label>}
+      {/*
+        * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
+        * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 된다. 규칙이 필요한 화면에서만 칸 아래 안내로 붙인다.
+        */}
+      {mode !== "recover" && !emailOnly && (
+        <label>
+          <span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span>
+          <div><input ref={passwordInput} type={showPassword ? "text" : "password"} required disabled={busy} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /><button className={styles.passwordToggle} type="button" aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? "숨기기" : "보기"}</button></div>
+          {mode !== "login" && <small className="account-hint">8자 이상</small>}
+        </label>
+      )}
+      {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><input type="password" required disabled={busy} value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div>{passwordConfirm && password !== passwordConfirm && <small className={styles.fieldError}>비밀번호가 서로 달라요.</small>}</label>}
+      {mode === "register" && <div className="account-consents"><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
+      {mode === "login" && !emailStep && (
+        <div className="account-optionrow">
+          <label className="account-remember">
+            <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
+            <span>로그인 상태 유지</span>
+          </label>
+          <button type="button" onClick={() => switchMode("recover")}>비밀번호 찾기</button>
+        </div>
+      )}
+      {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
+      <button className="account-submit" disabled={!valid || busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : emailOnly ? "이메일로 계속하기" : mode === "register" ? "계정 만들기" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
+      {entry && <>
+        <div className={styles.divider}>또는</div>
         <div className="account-google">
-          {/* Google은 SDK가 제공하는 공식 버튼을 그대로 표시한다. */}
+          {/* Google은 SDK가 제공하는 공식 버튼을 그대로 표시한다. 카카오는 카카오 로그인 디자인 가이드대로 노란 버튼을 쓴다 */}
           <div className="account-social-row">
             <div className="account-google-btn" aria-busy={!googleReady && !googleUnavailable}>
-              <span className="account-social-visual" aria-hidden="true">
-                <svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg>
-                구글로 계속하기
-              </span>
               <div ref={googleButtonRef} className="account-google-real" />
               {!googleReady && <p className={styles.googleState}>{googleUnavailable ? "구글 연결이 지연돼요. 이메일로 로그인해 주세요." : "구글 로그인 준비 중…"}</p>}
             </div>
@@ -274,36 +304,10 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             </small>
           )}
         </div>
-      )}
-      {(mode === "login" || mode === "register") && <div className={styles.divider}>이메일로 계속하기</div>}
-      {mode !== "reset" && <label><span>이메일</span><div><input type="email" required disabled={busy} placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></div></label>}
-      {/*
-        * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
-        * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 된다. 규칙이 필요한 화면에서만 칸 아래 안내로 붙인다.
-        */}
-      {mode !== "recover" && (
-        <label>
-          <span>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span>
-          <div><input type={showPassword ? "text" : "password"} required disabled={busy} placeholder={mode === "reset" ? "새 비밀번호" : "비밀번호 입력"} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /><button className={styles.passwordToggle} type="button" aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? "숨기기" : "보기"}</button></div>
-          {mode !== "login" && <small className="account-hint">8자 이상</small>}
-        </label>
-      )}
-      {(mode === "register" || mode === "reset") && <label><span>비밀번호 확인</span><div><input type="password" required disabled={busy} placeholder="비밀번호를 다시 입력하세요" value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div>{passwordConfirm && password !== passwordConfirm && <small className={styles.fieldError}>비밀번호가 서로 달라요.</small>}</label>}
-      {mode === "register" && <div className="account-consents"><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
-      {(mode === "login" || mode === "register") && (
-        <div className="account-optionrow">
-          <label className="account-remember">
-            <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-            <span>로그인 상태 유지</span>
-          </label>
-          {mode === "login" && (
-            <button type="button" onClick={() => { setMode("recover"); setMessage(""); }}>비밀번호 찾기</button>
-          )}
-        </div>
-      )}
-      {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
-      <button className="account-submit" disabled={!valid || busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "계정 만들기" : mode === "recover" ? "복구 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
-      <footer>{mode === "login" ? <span>처음이신가요? <button type="button" onClick={() => { setMode("register"); setMessage(""); }}>회원가입</button></span> : <button type="button" onClick={() => { setMode("login"); setMessage(""); }}>로그인으로 돌아가기</button>}</footer>
+      </>}
+      {mode === "login"
+        ? <footer className={styles.legal}><Link href="/terms" target="_blank">이용약관</Link><Link href="/privacy" target="_blank">개인정보처리방침</Link></footer>
+        : !entry && <footer>{textButton("로그인으로 돌아가기", "login")}</footer>}
     </form>
   );
 }
