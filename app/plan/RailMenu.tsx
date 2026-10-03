@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleHelp, FolderClosed, Headphones, LayoutDashboard, MessageCircle, SquarePen } from "lucide-react";
+import { CircleHelp, FolderClosed, Headphones, LayoutDashboard, SquarePen } from "lucide-react";
 import styles from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
 import { DEFAULT_LOGO } from "../../components/site-header";
@@ -19,14 +19,15 @@ function activeFor(pathname: string): RailActive | undefined {
   if (pathname.startsWith("/plan/info")) return "info";
   if (pathname.startsWith("/plan/me")) return "me";
   if (pathname.startsWith("/account/support")) return "support";
-  if (pathname.startsWith("/plan/planning")) return "chat";
   if (pathname.startsWith("/plan")) return "plans";
   return undefined;
 }
 
 export default function RailMenu({ active, workspaceHref, children }: { active?: RailActive; workspaceHref?: string; children?: ReactNode }) {
   const pathname = usePathname() || "";
-  const current = active ?? activeFor(pathname);
+  /* 사업 대화 화면(chat)은 그 사업이 속한 '내 사업'을 켠다 — 사업 기획 목록은 내 사업으로 합쳤다 */
+  const picked = active ?? activeFor(pathname);
+  const current = picked === "chat" ? "plans" : picked;
   const [account, setAccount] = useState<{ authenticated: boolean; email: string | null } | null>(null);
   useEffect(() => {
     let alive = true;
@@ -52,9 +53,6 @@ export default function RailMenu({ active, workspaceHref, children }: { active?:
     </Link>
     <Link href="/plan/chat?new=1" className={item(menu.newChat)} title="새 대화" aria-current={here("new")}>
       <SquarePen /><span className={styles.railLabel}>새 대화</span>
-    </Link>
-    <Link href="/plan/planning" className={item()} title="사업 기획" aria-current={here("chat")}>
-      <MessageCircle /><span className={styles.railLabel}>사업 기획</span>
     </Link>
     <Link href="/plan" className={item()} title="내 사업" aria-current={here("plans")}>
       <FolderClosed /><span className={styles.railLabel}>내 사업</span>

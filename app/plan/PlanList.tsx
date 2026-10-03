@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight, MoreHorizontal, FileText, MessageSquareText } from "lucide-react";
 import { currentBusinessDesign } from "../../lib/plan-builder/coach";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
-import { businessHubState, businessEntryHref, planningListPlans } from "../../lib/plan-builder/business-hub";
+import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
 import PlanLoading from "./PlanLoading";
@@ -14,11 +14,22 @@ import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
 import list from "./BusinessListPreview.module.css";
 
-export default function PlanList({ mode = "plans" }: { mode?: "plans" | "planning" }) {
-  const planning = mode === "planning";
+/*
+ * 내 사업 목록 하나. 예전엔 '사업 기획'(/plan/planning, 대화로 만든 사업만)과 '내 사업'(/plan, 전체)이
+ * 같은 목록을 필터 이름만 바꿔 두 번 보여 줬다 — 사업은 새 대화로만 만들어져 두 목록이 사실상 같았다. 하나로 합치고 필터를 한 줄로 모았다.
+ */
+type PlanFilter = "all" | "chatting" | "ready" | "complete";
+const FILTERS: Array<[PlanFilter, string]> = [["all", "전체"], ["chatting", "대화 중"], ["ready", "사업안 준비됨"], ["complete", "문서 완성"]];
+function stageOf(status: ReturnType<typeof businessHubState>): Exclude<PlanFilter, "all"> {
+  if (status.complete && !status.stale) return "complete";
+  if (status.coach?.ready) return "ready";
+  return "chatting";
+}
+
+export default function PlanList() {
   const router = useRouter();
   const [state, setState] = useState<PlanState | null>(null);
-  const [filter, setFilter] = useState("all");
+  const [filter, setFilter] = useState<PlanFilter>("all");
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
@@ -31,9 +42,9 @@ export default function PlanList({ mode = "plans" }: { mode?: "plans" | "plannin
     return () => { alive = false; window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", visible); };
   }, []);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
-  const plans = planning ? planningListPlans(allPlans) : allPlans;
+  const plans = allPlans;
   const samples = state?.plans.filter(p => isSamplePlan(p.id)) ?? [];
-  const filtered = plans.filter(p => { const status=businessHubState(p); const current=planning ? !!status.coach?.ready : status.complete && !status.stale; return filter === "all" || (filter === "complete" ? current : !current); });
+  const filtered = plans.filter(p => filter === "all" || stageOf(businessHubState(p)) === filter);
   function rename(id: string) {
     if (!name.trim()) { setError("사업 이름을 입력해 주세요."); return; }
     renamePlan(id, name.trim()); setState(loadState()); setEditing(null); setError("");
@@ -43,11 +54,11 @@ export default function PlanList({ mode = "plans" }: { mode?: "plans" | "plannin
     deletePlan(id); setState(loadState());
   }
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
-  return <main className={frame.page} data-plan-view={mode}><BusinessAppChrome title={planning ? "사업 기획" : "내 사업"} active={planning ? "chat" : "plans"} backHref="/">
-    {!state ? <PlanLoading fill variant="compact" note={planning ? "사업 기획을 불러오고 있어요" : "내 사업을 불러오고 있어요"} /> : <div className={styles.scroll}><div className={styles.content}>
-        {plans.length === 0 ? <BusinessEmptyState kind={planning ? "planning" : "plans"} /> : <>
-          <div className={styles.heading}><div><span className={styles.eyebrow}>{planning ? "이어서 다듬어요" : "자료와 다음 할 일을 한곳에서"}</span><h1>{planning ? "사업 기획" : "내 사업"}</h1></div><Link className={styles.secondary} href="/plan/chat?new=1">새 대화</Link></div>
-          <nav className={styles.filters} aria-label="사업 필터">{[["all","전체"],["progress",planning ? "대화 중" : "진행 중"],["complete",planning ? "사업안 준비됨" : "문서 완성"]].map(([id,label]) => <button key={id} aria-pressed={filter===id} onClick={() => setFilter(id)}>{label}</button>)}</nav>
+  return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="plans" backHref="/">
+    {!state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
+        {plans.length === 0 ? <BusinessEmptyState kind="plans" /> : <>
+          <div className={styles.heading}><div><span className={styles.eyebrow}>대화와 자료, 다음 할 일을 한곳에서</span><h1>내 사업</h1></div><Link className={styles.secondary} href="/plan/chat?new=1">새 대화</Link></div>
+          <nav className={styles.filters} aria-label="사업 필터">{FILTERS.map(([id,label]) => <button key={id} aria-pressed={filter===id} onClick={() => setFilter(id)}>{label}</button>)}</nav>
           <div className={list.businessList}>
             {filtered.map(p => { const status=businessHubState(p); const introduction = (status.coach && currentBusinessDesign(status.coach)?.startingPlan.scope) || status.coach?.business.description || ""; const Icon = introduction || status.documents.length ? FileText : MessageSquareText; return <article key={p.id} className={list.businessRow}>
               <div className={styles.rowTop}><span className={styles.status}>{status.status}</span><details className={styles.rowMenu}><summary aria-label={`${p.title} 관리`}><MoreHorizontal size={22} /></summary><div><button onClick={() => {setEditing(p.id);setName(p.title);}}>이름 변경</button><button onClick={() => remove(p.id,p.title)}>삭제</button></div></details></div>
@@ -61,7 +72,7 @@ export default function PlanList({ mode = "plans" }: { mode?: "plans" | "plannin
           </div>
         </>}
         {error && <p role="alert" className={styles.error}>{error}</p>}
-        {!planning && !!samples.length && <details className={styles.samples}><summary>완성 예시 보기</summary><p className={styles.muted}>예시 자료예요. 내 사업과는 별도로 볼 수 있어요.</p>{samples.map(p=><button className={styles.sampleRow} key={p.id} onClick={()=>sample(p.id)}><span>{p.title.replace(/^샘플 · /,"")}</span><ChevronRight size={18}/></button>)}</details>}
+        {!!samples.length && <details className={styles.samples}><summary>완성 예시 보기</summary><p className={styles.muted}>예시 자료예요. 내 사업과는 별도로 볼 수 있어요.</p>{samples.map(p=><button className={styles.sampleRow} key={p.id} onClick={()=>sample(p.id)}><span>{p.title.replace(/^샘플 · /,"")}</span><ChevronRight size={18}/></button>)}</details>}
     </div></div>}
   </BusinessAppChrome></main>;
 }

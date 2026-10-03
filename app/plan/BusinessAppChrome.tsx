@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, CircleHelp, FolderClosed, Headphones, LayoutDashboard, MessageCircle, MoreHorizontal, SquarePen, UserRound, X } from "lucide-react";
+import { ChevronLeft, CircleHelp, FolderClosed, Headphones, LayoutDashboard, MoreHorizontal, SquarePen, UserRound, X } from "lucide-react";
 import styles from "./chat/page.module.css";
 import shell from "./PlanShell.module.css";
 import RailMenu from "./RailMenu";
@@ -35,8 +35,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
           <button className={styles.menuToggle} aria-label={open ? "대화 메뉴 닫기" : "대화 메뉴 열기"} aria-expanded={open} aria-controls="chat-navigation" onClick={() => setOpen(!open)}>{open ? <X size={22} /> : <MoreHorizontal size={24} />}</button>
           {open && <nav id="chat-navigation" className={styles.menuPanel} aria-label="대화 메뉴">
             <Link href="/plan/chat?new=1" onClick={() => setOpen(false)} aria-current={active === "new" ? "page" : undefined}><SquarePen size={18} />새 대화</Link>
-            <Link href="/plan/planning" onClick={() => setOpen(false)} aria-current={active === "chat" ? "page" : undefined}><MessageCircle size={18} />사업 기획</Link>
-            <Link href="/plan" onClick={() => setOpen(false)} aria-current={active === "plans" ? "page" : undefined}><FolderClosed size={18} />내 사업</Link>
+            <Link href="/plan" onClick={() => setOpen(false)} aria-current={active === "plans" || active === "chat" ? "page" : undefined}><FolderClosed size={18} />내 사업</Link>
             {workspaceHref && <Link href={workspaceHref} onClick={() => setOpen(false)}><LayoutDashboard size={18} />사업 관리</Link>}
             <Link href="/plan/info" onClick={() => setOpen(false)}><CircleHelp size={18} />이용 안내</Link>
             <Link href="/account/support" onClick={() => setOpen(false)}><Headphones size={18} />고객센터</Link>
