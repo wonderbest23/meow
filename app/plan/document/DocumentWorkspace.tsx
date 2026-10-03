@@ -48,6 +48,24 @@ export default function DocumentWorkspace(props: Props) {
   const announced = useRef<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
   const scroll = useRef<HTMLDivElement>(null);
+  /*
+   * 폰에서 표 크게 보기 — 좁은 화면에서 표는 옆으로 밀어야 보여서 끝까지 읽기 어려웠다.
+   * 읽기 중인 표를 누르면 그 표만 전체 화면으로 띄운다(고치는 중에는 칸을 눌러야 하니 띄우지 않는다).
+   */
+  const [zoomTable, setZoomTable] = useState<string | null>(null);
+  const zoomDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    const node = scroll.current;
+    if (!node) return;
+    const open = (event: MouseEvent) => {
+      if (!window.matchMedia("(max-width: 640px)").matches) return;
+      const table = (event.target as Element | null)?.closest?.(".tiptap[contenteditable=false] table");
+      if (table) setZoomTable(table.outerHTML);
+    };
+    node.addEventListener("click", open);
+    return () => node.removeEventListener("click", open);
+  }, [ready]);
+  useEffect(() => { if (zoomTable && zoomDialog.current && !zoomDialog.current.open) zoomDialog.current.showModal(); }, [zoomTable]);
   const back = planId && !isSample ? `/plan/workspace?planId=${encodeURIComponent(planId)}&tab=documents` : "/plan";
 
   useEffect(() => {
@@ -142,5 +160,10 @@ export default function DocumentWorkspace(props: Props) {
         {props.error && <p role="alert">{props.error}</p>}
       </div>}
     </dialog>
-  </main>;
+  {zoomTable && <dialog ref={zoomDialog} className={styles.tableZoom} aria-label="표 크게 보기" onClose={() => setZoomTable(null)}>
+      <header><strong>표 크게 보기</strong><button type="button" onClick={() => zoomDialog.current?.close()} aria-label="닫기"><X size={22} /></button></header>
+      {/* 이 화면에 이미 그려진 문서의 표를 그대로 옮긴다 */}
+      <div className={styles.tableZoomBody} dangerouslySetInnerHTML={{ __html: zoomTable }} />
+    </dialog>}
+    </main>;
 }
