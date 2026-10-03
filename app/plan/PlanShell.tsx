@@ -36,26 +36,17 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || "";
   const back = backTarget(pathname);
 
-  /* 레일 접기 — 좁은 화면에서 본문이 전체 폭을 쓰도록. 선택은 기억한다. */
-  const [railHidden, setRailHidden] = useState(false);
-  useEffect(() => {
-    try { setRailHidden(localStorage.getItem("plan-rail-hidden") === "1"); } catch { /* 무해 */ }
-  }, []);
+  /*
+   * PC 메뉴 접기는 뺐다 — 이 화면들에만 있고 대화·내 사업 화면에는 없어 화면마다 달랐고,
+   * 로고 옆에 떠서 쓰임새를 알기 어려웠다. 예전에 접어 둔 기록(plan-rail-hidden)은 더 읽지 않는다(늘 펼침).
+   */
 
   /*
    * 폰에서는 레일이 아이콘 폭(56px)이라 목차가 들어갈 자리가 없다.
-   * 손잡이를 누르면 서랍처럼 넓게 펼치고, 뒤 배경을 누르면 닫는다 —
+   * 상단 바의 메뉴 단추를 누르면 서랍처럼 넓게 펼치고, 뒤 배경을 누르면 닫는다 —
    * PC와 같은 목차를 폰에서도 쓰게 한다.
    */
-  const [phone, setPhone] = useState(false);
   const [drawer, setDrawer] = useState(false);
-  useEffect(() => {
-    const mq = window.matchMedia("(max-width: 640px)");
-    const apply = () => setPhone(mq.matches);
-    apply();
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, []);
 
   // 화면을 옮기면 서랍은 닫는다 — 열어 둔 채 넘어가면 본문을 가린다
   useEffect(() => { setDrawer(false); }, [pathname]);
@@ -66,17 +57,6 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [drawer]);
-
-  function toggleRail() {
-    if (phone) {
-      setDrawer((v) => !v);
-      return;
-    }
-    setRailHidden((v) => {
-      try { localStorage.setItem("plan-rail-hidden", v ? "0" : "1"); } catch { /* 무해 */ }
-      return !v;
-    });
-  }
 
   /*
    * 저장 상태 — 예전에는 실패해도 아무 표시가 없었다.
@@ -112,23 +92,12 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
         해시되지 않는 표시를 하나 남긴다.
       */}
       <nav
-        className={`${styles.rail} ${railHidden ? styles.railOff : ""} ${drawer ? styles.railOpen : ""}`}
+        className={`${styles.rail} ${drawer ? styles.railOpen : ""}`}
         data-rail-open={drawer ? "" : undefined}
-        data-rail-hidden={railHidden ? "" : undefined}
         aria-label="주요 메뉴"
       >
         <RailMenu><PlanRailNav /></RailMenu>
       </nav>
-      <button
-        type="button"
-        className={`${styles.railToggle} ${railHidden ? styles.railToggleOff : ""} ${drawer ? styles.railToggleOpen : ""}`}
-        onClick={toggleRail}
-        aria-label={(phone ? drawer : !railHidden) ? "메뉴 접기" : "메뉴 펼치기"}
-        title={(phone ? drawer : !railHidden) ? "메뉴 접기" : "메뉴 펼치기"}
-      >
-        {/* 킷(CRM UI Kit)의 상단바 Menu icon — 석 줄 햄버거. 레일 가장자리 손잡이는 킷에 없다 */}
-        <span className={styles.burger} aria-hidden="true"><i /><i /><i /></span>
-      </button>
       {/*
         폰 상단 바 — 사이트 다른 화면처럼 로고가 보이는 머리 영역.
         예전에는 머리 없이 본문이 바로 시작해 여기가 어느 서비스인지
@@ -152,7 +121,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
           )}
         </button>
       </header>
-      <div className={`${styles.content} ${railHidden ? styles.contentWide : ""}`}>
+      <div className={styles.content}>
         {back && (
           <Link href={back.href} className={styles.shellBack} aria-label={`${back.label}(으)로 돌아가기`}>
             <span aria-hidden="true">←</span> {back.label}
