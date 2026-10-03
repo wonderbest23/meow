@@ -1,0 +1,35 @@
+/* 사업계획서 만드는 중 팝업 — 가운데 흰 카드, 폰에서는 아래에서 올라온 시트 */
+.dialog { width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 48px); padding: 24px; border: 0; border-radius: 20px; background: #fff; color: #191f28; box-shadow: 0 24px 64px rgba(16, 24, 40, .24); overflow: auto; }
+.dialog::backdrop { background: rgba(9, 16, 28, .45); }
+.dialog > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.dialog h2 { margin: 0; font-size: 20px; line-height: 1.4; font-weight: 700; }
+.close { display: grid; place-items: center; width: 36px; height: 36px; margin: -6px -8px 0 0; border: 0; border-radius: 10px; background: transparent; color: #6b7684; cursor: pointer; }
+.close:hover { background: #f2f4f6; }
+.lead { margin: 8px 0 18px; color: #6b7684; font-size: 14px; line-height: 1.6; }
+.meter { display: grid; gap: 6px; margin-bottom: 16px; }
+.meter span { font-size: 13px; font-weight: 600; color: #246bd1; }
+.meter progress { width: 100%; height: 8px; border: 0; border-radius: 8px; overflow: hidden; appearance: none; background: #e5e8eb; }
+.meter progress::-webkit-progress-bar { background: #e5e8eb; border-radius: 8px; }
+.meter progress::-webkit-progress-value { background: #246bd1; border-radius: 8px; transition: width .4s ease; }
+.meter progress::-moz-progress-bar { background: #246bd1; }
+.list { display: grid; gap: 2px; margin: 0 0 20px; padding: 0; list-style: none; }
+.list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: #8b95a1; font-size: 14px; }
+.list li small { margin-left: auto; font-size: 12px; color: #b0b8c1; }
+.list li[data-state="done"] { color: #191f28; }
+.list li[data-state="done"] small { color: #246bd1; }
+.list li[data-state="current"] { color: #191f28; font-weight: 600; }
+.list li[data-state="current"] small { color: #246bd1; }
+.mark { display: grid; place-items: center; flex: none; width: 20px; height: 20px; border-radius: 50%; border: 1.5px solid #d1d6db; color: #fff; }
+li[data-state="done"] .mark { border-color: #246bd1; background: #246bd1; }
+li[data-state="current"] .mark { border-color: #246bd1; }
+li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid #246bd1; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.dialog > footer { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.secondary, .primary { display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 12px; font-size: 15px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.secondary { border: 1px solid #d1d6db; background: #fff; color: #191f28; }
+.primary { border: 0; background: #246bd1; color: #fff; }
+.primary[aria-disabled="true"] { opacity: .45; cursor: default; }
+@media (max-width: 640px) {
+  .dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) { li[data-state="current"] .mark i { animation-duration: 2s; } }
