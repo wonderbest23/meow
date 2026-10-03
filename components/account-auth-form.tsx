@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { googleClientId } from "../lib/google-client-id";
 import { prepareAccountSignIn } from "../lib/plan-builder/plan-store";
 import { Spinner } from "../app/plan/PlanLoading";
+import { DEFAULT_LOGO } from "./site-header";
 import accountStyles from "../app/account/Account.module.css";
 import styles from "./account-auth-form.module.css";
 
@@ -98,11 +99,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialMessage);
   const [messageError, setMessageError] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  /* 로그인은 이메일부터 받고, '이메일로 계속하기'를 누르면 비밀번호 칸을 연다 — 첫 화면을 칸 하나로 단순하게 */
-  const [emailStep, setEmailStep] = useState(true);
-  const passwordInput = useRef<HTMLInputElement>(null);
-  const switchMode = (next: AuthMode) => { setMode(next); setMessage(""); setMessageError(false); setEmailStep(true); };
+  const switchMode = (next: AuthMode) => { setMode(next); setMessage(""); setMessageError(false); };
   const [googleReady, setGoogleReady] = useState(false);
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
   /* 구글 버튼이 그려질 자리 — GIS 가 이 안에 iframe 버튼을 그린다 */
@@ -166,14 +163,12 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           });
           parent.innerHTML = "";
           gis.renderButton(parent, {
+            /* 공식 원형 아이콘 버튼 — 카카오 원형 버튼과 나란히 둔다 */
+            type: "icon",
             theme: "outline",
             size: "large",
-            shape: "rectangular",
-            logo_alignment: "center",
-            text: "continue_with",
+            shape: "circle",
             locale: "ko",
-            /* GIS 버튼 최대 폭은 400 — 자기 칸 폭에 맞춘다 */
-            width: Math.min(400, parent.clientWidth || 400),
           });
           if (parent.childElementCount > 0) { setGoogleReady(true); setGoogleUnavailable(false); window.clearTimeout(timeout); return; }
         }
@@ -200,13 +195,11 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     if (mode === "recover") return email.includes("@");
     if (mode === "reset") return password.length >= 8 && password === passwordConfirm && Boolean(recoveryTokens);
     if (mode === "register") return email.includes("@") && password.length >= 8 && password === passwordConfirm && terms && privacy && aiNotice;
-    if (emailStep) return email.includes("@");
     return email.includes("@") && password.length >= 8;
-  }, [aiNotice, email, emailStep, mode, password, passwordConfirm, privacy, recoveryTokens, terms]);
+  }, [aiNotice, email, mode, password, passwordConfirm, privacy, recoveryTokens, terms]);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault(); if (!valid || busy) return;
-    if (mode === "login" && emailStep) { setEmailStep(false); requestAnimationFrame(() => passwordInput.current?.focus()); return; }
     setBusy(true); setMessage(""); setMessageError(false);
     try {
       if (mode !== "recover") await prepareAccountSignIn();
@@ -219,14 +212,14 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
       } else if (mode === "register") {
         const result = await payload<{ authenticated: boolean; confirmationRequired?: boolean; message?: string }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
         if (result.confirmationRequired) {
-          setMode("login"); setEmailStep(false); setPassword(""); setPasswordConfirm("");
+          setMode("login"); setPassword(""); setPasswordConfirm("");
           setMessage(result.message ?? "확인 메일의 링크로 이메일을 인증한 후 로그인해 주세요.");
         } else if (result.authenticated) {
           rememberLocally(remember, email);
           goNext();
           return;
         } else {
-          setMode("login"); setEmailStep(false); setPassword(""); setPasswordConfirm("");
+          setMode("login"); setPassword(""); setPasswordConfirm("");
           setMessage(result.message ?? "계정을 만들었습니다. 로그인해 주세요.");
         }
       } else {
@@ -241,69 +234,63 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   };
 
   const entry = mode === "login" || mode === "register";
-  const emailOnly = mode === "login" && emailStep;
-  const link = (label: string, to: AuthMode) => <button type="button" className={styles.link} onClick={() => switchMode(to)}>{label}</button>;
   const kakao = () => window.location.assign(`/api/auth/kakao${next ? `?next=${encodeURIComponent(next)}` : ""}`);
+  const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string) => <label className={styles.cell}>
+    <span className={styles.srOnly}>{label}</span>
+    <input className={styles.input} type="password" required disabled={busy} minLength={8} placeholder={label} value={value} onChange={(event) => set(event.target.value)} autoComplete={autoComplete} />
+  </label>;
 
-  /* 레퍼런스: 가운데 제목 한 줄 → 이메일 → 계속하기 → 또는 → 구글·카카오(같은 모양) → 약관 */
+  /*
+   * 레퍼런스(오늘의집 로그인): 로고 → 이메일·비밀번호를 한 상자로 → 로그인 → 비밀번호 재설정 · 회원가입
+   * → SNS 간편 로그인 원형 아이콘 → 로그인 문의. 제목·설명 문단은 두지 않는다.
+   */
   return (
     <div className={styles.root}>
-      <form className={styles.form} onSubmit={submit} aria-busy={busy}>
+      <form className={styles.form} onSubmit={submit} aria-busy={busy} aria-labelledby={titleId}>
         <header className={styles.header}>
-          <h1 id={titleId} className={styles.title}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 찾기" : mode === "reset" ? "새 비밀번호" : "로그인"}</h1>
-          {mode === "login" && <p className={styles.sub}>계정이 없으신가요?{link("회원가입", "register")}</p>}
-          {mode === "register" && <p className={styles.sub}>이미 계정이 있으신가요?{link("로그인", "login")}</p>}
+          <Link href="/" className={styles.logoLink} aria-label="오늘창업 홈">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={styles.logo} src={DEFAULT_LOGO.src} alt="오늘창업" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
+          </Link>
+          <h1 id={titleId} className={mode === "login" ? styles.srOnly : styles.title}>{mode === "register" ? "회원가입" : mode === "recover" ? "비밀번호 재설정" : mode === "reset" ? "새 비밀번호" : "로그인"}</h1>
           {mode === "recover" && <p className={styles.sub}>가입한 이메일로 재설정 링크를 보내드려요.</p>}
           {mode === "reset" && <p className={styles.sub}>8자 이상으로 정해 주세요.</p>}
         </header>
-        {mode !== "reset" && <label className={styles.field}><span className={styles.fieldLabel}>이메일</span><div className={styles.fieldBox}><input className={styles.input} type="email" required disabled={busy} placeholder="name@example.com" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></div></label>}
-        {/*
-          * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
-          * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 된다. 규칙이 필요한 화면에서만 칸 아래 안내로 붙인다.
-          */}
-        {mode !== "recover" && !emailOnly && (
-          <label className={styles.field}>
-            <span className={styles.fieldLabel}>{mode === "reset" ? "새 비밀번호" : "비밀번호"}</span>
-            <div className={styles.fieldBox}><input ref={passwordInput} className={styles.input} type={showPassword ? "text" : "password"} required disabled={busy} minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} autoComplete={mode === "login" ? "current-password" : "new-password"} /><button className={styles.toggle} type="button" aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? "숨기기" : "보기"}</button></div>
-            {mode !== "login" && <small className={styles.hint}>8자 이상</small>}
-          </label>
-        )}
-        {(mode === "register" || mode === "reset") && <label className={styles.field}><span className={styles.fieldLabel}>비밀번호 확인</span><div className={styles.fieldBox}><input className={styles.input} type="password" required disabled={busy} value={passwordConfirm} onChange={(event) => setPasswordConfirm(event.target.value)} autoComplete="new-password" /></div>{passwordConfirm && password !== passwordConfirm && <small className={styles.fieldError}>비밀번호가 서로 달라요.</small>}</label>}
+        <div className={styles.group}>
+          {mode !== "reset" && <label className={styles.cell}><span className={styles.srOnly}>이메일</span><input className={styles.input} type="email" required disabled={busy} placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>}
+          {/*
+            * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
+            * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 된다. 규칙이 필요한 화면에서만 칸 아래 안내로 붙인다.
+            */}
+          {mode !== "recover" && passwordField(mode === "reset" ? "새 비밀번호 (8자 이상)" : mode === "register" ? "비밀번호 (8자 이상)" : "비밀번호", password, setPassword, mode === "login" ? "current-password" : "new-password")}
+          {(mode === "register" || mode === "reset") && passwordField("비밀번호 확인", passwordConfirm, setPasswordConfirm, "new-password")}
+        </div>
+        {passwordConfirm && password !== passwordConfirm && <small className={styles.fieldError}>비밀번호가 서로 달라요.</small>}
         {mode === "register" && <div className={styles.consents}><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
-        {mode === "login" && !emailStep && (
-          <div className={styles.options}>
-            <label className={styles.remember}>
-              <input type="checkbox" checked={remember} onChange={(event) => setRemember(event.target.checked)} />
-              <span>로그인 상태 유지</span>
-            </label>
-            <button type="button" className={styles.textButton} onClick={() => switchMode("recover")}>비밀번호 찾기</button>
-          </div>
-        )}
         {message && <p role={messageError ? "alert" : "status"} className={messageError ? accountStyles.error : accountStyles.message}>{message}</p>}
-        <button className={styles.primary} disabled={!valid || busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : emailOnly ? "이메일로 계속하기" : mode === "register" ? "계정 만들기" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
-        {entry && <>
-          <div className={styles.divider}>또는</div>
-          <div className={styles.socials}>
-            {/* 구글은 공식 버튼(GIS)을 같은 모양 버튼 위에 투명하게 덮어 받는다. 카카오는 디자인 가이드대로 노란 바탕 */}
-            <div className={`${styles.social} ${styles.google}`} aria-busy={!googleReady && !googleUnavailable}>
-              <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg>
-              구글로 계속하기
+        <button className={styles.primary} disabled={!valid || busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
+        <nav className={styles.links} aria-label="계정 메뉴">
+          {mode === "login"
+            ? <><button type="button" onClick={() => switchMode("recover")}>비밀번호 재설정</button><button type="button" onClick={() => switchMode("register")}>회원가입</button></>
+            : <button type="button" onClick={() => switchMode("login")}>{mode === "register" ? "이미 계정이 있어요 · 로그인" : "로그인으로 돌아가기"}</button>}
+        </nav>
+        {entry && <section className={styles.sns} aria-label="SNS 간편 로그인">
+          <p className={styles.snsTitle}>SNS계정으로 간편 로그인/회원가입</p>
+          <div className={styles.snsRow}>
+            {/* 구글은 공식 원형 아이콘 버튼(GIS)을 그대로 쓴다. 카카오는 노란 바탕 원형 */}
+            <div className={styles.google} aria-busy={!googleReady && !googleUnavailable}>
+              <span className={styles.googlePlaceholder} aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg></span>
               <div ref={googleButtonRef} className={styles.googleReal} />
             </div>
-            {!googleReady && googleUnavailable && <p className={styles.googleState}>구글 연결이 지연돼요. 이메일이나 카카오로 로그인해 주세요.</p>}
-            <button type="button" className={`${styles.social} ${styles.kakao}`} disabled={busy} onClick={kakao}>
+            <button type="button" className={styles.kakao} disabled={busy} onClick={kakao} aria-label="카카오로 로그인">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.9 3 2.8 6.2 2.8 10.1c0 2.5 1.7 4.7 4.2 6l-.9 3.3c-.1.3.3.6.6.4l3.9-2.6c.5.1 1 .1 1.4.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z" /></svg>
-              카카오로 계속하기
             </button>
           </div>
-          {mode === "register" && (
-            <p className={styles.consentNote}>
-              구글·카카오로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.
-            </p>
-          )}
-        </>}
-        {mode === "login" && <footer className={styles.footer}><Link href="/terms" target="_blank">이용약관</Link><Link href="/privacy" target="_blank">개인정보처리방침</Link></footer>}
-        {!entry && <div className={styles.back}>{link("로그인으로 돌아가기", "login")}</div>}
+          {googleUnavailable && <p className={styles.note}>구글 연결이 지연돼요. 이메일이나 카카오로 로그인해 주세요.</p>}
+          {mode === "register" && <p className={styles.note}>SNS로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.</p>}
+        </section>}
+        {mode === "login" && <Link className={styles.help} href="/account/support">로그인에 문제가 있으신가요?</Link>}
+        <footer className={styles.footer}><Link href="/terms" target="_blank">이용약관</Link><Link href="/privacy" target="_blank">개인정보처리방침</Link></footer>
       </form>
     </div>
   );

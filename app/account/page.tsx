@@ -101,8 +101,9 @@ export default function AccountPage() {
 
   return (
     <main className={`${styles.page} account-page plan-ui`}>
-      {/* 머리말은 홈과 같은 것을 쓴다. 마이페이지 아이콘은 끈다 — 지금 보고 있는 화면으로 다시 보내는 단추다. */}
-      <SiteHeader light showAccount={false} onHome={() => router.push("/")} onStart={() => router.push("/plan/chat?new=1")} />
+      {/* 머리말은 홈과 같은 것을 쓴다. 마이페이지 아이콘은 끈다 — 지금 보고 있는 화면으로 다시 보내는 단추다.
+          로그인 폼은 위에 로고(홈 링크)를 직접 두므로, 로그인 전에는 머리말을 빼 로고가 두 번 보이지 않게 한다. */}
+      {session.authenticated && <SiteHeader light showAccount={false} onHome={() => router.push("/")} onStart={() => router.push("/plan/chat?new=1")} />}
       {session.authenticated ? (
         <div className={styles.loading}><PlanLoading count={2} note="내 계정으로 이동하고 있어요" /></div>
       ) : (
