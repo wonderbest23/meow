@@ -9,14 +9,11 @@ import { HomeResultShowcase, HomeFounderWall } from "./home-result-showcase";
 import styles from "./home-service-overview.module.css";
 import { HomeAction } from "./home-action";
 import { useHomeCopyMotion } from "./use-home-copy-motion";
-import { Lightbulb, MessageSquareText, Send, SlidersHorizontal, UsersRound } from "lucide-react";
+import { CoachMessage } from "./coach-chat-ui";
+import chatUi from "./coach-chat-ui.module.css";
 
-const planningSteps = [
-  { title: "관심과 경험", description: "좋아하는 일에서 아이템을 찾고", icon: Lightbulb },
-  { title: "고객과 상품", description: "누구에게 무엇을 팔지 정하고", icon: UsersRound },
-  { title: "가격과 운영", description: "내 조건에 맞는 시작안을 만들고", icon: SlidersHorizontal },
-  { title: "첫 실행 방법", description: "처음 해볼 일까지 제안해요", icon: Send },
-];
+/* 실제 새 대화처럼 — 한마디를 하면 AI가 기획 순서대로 질문 하나와 고를 수 있는 답을 준다 */
+const chatChoices = ["음식·가게 사진", "사람·프로필 사진", "행사·스냅 사진", "아직 잘 모르겠어요"];
 
 export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
   const root = useRef<HTMLDivElement>(null);
@@ -43,25 +40,10 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
           <h2 id="home-difference-title">사업을 기획하는 순서로<br />대화를 이끌어요</h2>
           <p>무엇을 물어볼지 고민하지 않아도 괜찮아요<br />고객과 상품부터 시작할 방법까지 함께 정리해요</p>
         </header>
-        <div className={styles.planningExample}>
-          <div className={styles.planningSeed} data-reveal>
-            <MessageSquareText aria-hidden="true" />
-            <div><blockquote>사진 찍는 걸 좋아해요<br />주 5시간으로 시작할 수 있을까요</blockquote></div>
-          </div>
-          <ol className={styles.planningSteps} aria-label="사업 기획 흐름">
-            {planningSteps.map(({ title, description, icon: Icon }) => <li key={title} data-reveal>
-              <span className={styles.planningMarker} aria-hidden="true"><Icon /></span>
-              <div><h3>{title}</h3><p>{description}</p></div>
-            </li>)}
-          </ol>
-          <div className={styles.planningOutcome} data-reveal>
-            <header><span>함께 정리한 시작안</span><h3>동네 가게<br />메뉴 사진 제작</h3></header>
-            <dl>
-              <div><dt>고객</dt><dd>가까운 음식점과 카페</dd></div>
-              <div><dt>상품</dt><dd>메뉴 1개의 사진과 소개문구</dd></div>
-              <div><dt>첫 시작</dt><dd>샘플 1세트를 만들어 가게에 제안하기</dd></div>
-            </dl>
-          </div>
+        <div className={`${styles.chatDemo} ${chatUi.theme}`} data-reveal aria-label="대화 예시">
+          <CoachMessage role="user"><p>사진 찍는 걸 좋아해요. 이걸 사업으로 할 수 있는 방법이 없을까요?</p></CoachMessage>
+          <CoachMessage role="assistant"><p>좋아요, 사진으로 시작할 수 있는 길은 여러 가지예요. 먼저 하나만 여쭤볼게요. 주로 어떤 사진을 찍으세요?</p></CoachMessage>
+          <ul className={styles.chatChoices} aria-label="고를 수 있는 답">{chatChoices.map(choice => <li key={choice}>{choice}</li>)}</ul>
         </div>
       </div>
     </section>

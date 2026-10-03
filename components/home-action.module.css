@@ -1,5 +1,5 @@
 /*
- * 홈 행동 버튼. 각진 모서리(6px), 중간 굵기 글자, 오른쪽 화살표 하나. 그림자·그라데이션·왼쪽 아이콘은 두지 않는다.
+ * 홈 행동 버튼. 둥근 모서리(10px), 넉넉한 높이(52)와 좌우 여백, 오른쪽 꺾쇠(>) 하나. 그림자·그라데이션·왼쪽 아이콘은 두지 않는다.
  * 검정 바탕용: 채움(solid)은 밝은 회색 바탕에 검정 글자, 연한(soft)은 반투명 흰 바탕에 흰 글자다. 색 전환은 0.22초.
  */
 .action[data-home-action] {
@@ -7,18 +7,18 @@
   align-items: center;
   justify-content: center;
   align-self: flex-start;
-  gap: 8px;
+  gap: 20px;
   width: fit-content;
   max-width: 100%;
-  min-height: 48px;
+  min-height: 52px;
   box-sizing: border-box;
-  padding: 11px 16px 11px 18px;
+  padding: 12px 18px 12px 22px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 10px;
   background: var(--home-btn-soft, rgba(255, 255, 255, .12));
   color: #fff;
   font-family: inherit;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 500;
   line-height: 1.3;
   letter-spacing: -0.005em;
@@ -28,6 +28,7 @@
   transition: color .22s cubic-bezier(.4, 0, .2, 1), background .22s cubic-bezier(.4, 0, .2, 1), border-color .22s cubic-bezier(.4, 0, .2, 1);
 }
 
+.chevron { flex: none; opacity: .9; }
 .label { min-width: 0; word-break: keep-all; overflow-wrap: anywhere; }
 .label small { display: block; margin-top: 3px; font-size: 12px; line-height: 1.45; font-weight: 400; color: inherit; opacity: .78; }
 .action[data-home-action][data-variant="solid"] { background: var(--home-btn-bg, #ededee); border-color: var(--home-btn-bg, #ededee); color: var(--home-btn-fg, #0a0a0b); }
