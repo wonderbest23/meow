@@ -32,7 +32,7 @@ async function main() {
           default: respond({ texts: {}, hidden: [], chat: { conversation: null, messages: [] } });
         }
       });
-      for (const route of ["/admin", "/admin/support", "/admin/payments", "/admin/refunds", "/admin/legal", "/admin/homepage", "/plan", "/plan/planning", "/plan/workspace", "/plan/info", "/plan/me"]) {
+      for (const route of ["/admin", "/admin/support", "/admin/payments", "/admin/refunds", "/admin/legal", "/admin/homepage", "/plan", "/plan/workspace", "/plan/info", "/plan/me"]) {
         await page.goto(`http://localhost:8083${route}`, { waitUntil: "networkidle0", timeout: 60000 });
         await page.waitForSelector('[data-workspace-theme="light"]');
         assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, `${route} overflow at ${width}`);

@@ -257,7 +257,7 @@ function BusinessCoach() {
   </>;
 
   return <main ref={pageRef} data-chat-theme="light" className={`${styles.page} ${styles.liveChat} ${chatUi.theme} ${!started ? styles.welcomePage : ""} ${hasBrief ? styles.hasBrief : ""}`}>
-    <BusinessAppChrome title={entryMode === "new" && !started ? "새 대화" : "사업 기획"} active={entryMode === "new" && !plan ? "new" : "chat"} backHref="/plan/planning" workspaceHref={plan ? workspaceHref(plan.planId) : undefined}>
+    <BusinessAppChrome title={entryMode === "new" && !started ? "새 대화" : "사업 기획"} active={entryMode === "new" && !plan ? "new" : "chat"} backHref="/plan" workspaceHref={plan ? workspaceHref(plan.planId) : undefined}>
     {hasBrief && <nav className={styles.viewTabs} aria-label="화면 선택"><button aria-pressed={view === "chat"} disabled={editDirty} onClick={() => setView("chat")}>대화</button><button aria-pressed={view === "brief"} onClick={() => setView("brief")}>내 사업안{changed.length > 0 && <span className={styles.updateDot} aria-label="수정됨" />}</button></nav>}
     {!loaded ? <PlanLoading fill variant="compact" note="대화를 불러오고 있어요" /> : entryMode === "new" || plan ? <div ref={split.ref} style={split.style} className={`${styles.workspace} ${split.dragging ? styles.resizing : ""}`}>
       <section id="business-chat-pane" className={`${styles.chatPane} ${view !== "chat" ? styles.mobileHidden : ""}`} aria-label="사업 기획 대화">
@@ -294,7 +294,7 @@ function BusinessCoach() {
       {hasBrief && <div {...split.separator} aria-controls="business-chat-pane" className={styles.splitHandle} title="드래그로 너비 조절 · 두 번 클릭하면 기본 너비"><span /></div>}
       {hasBrief && plan && <aside className={`${styles.briefPane} ${view !== "brief" ? styles.mobileHidden : ""}`} aria-label="내 사업안 결과"><BusinessBrief coach={plan.coach} changed={changed} onEdit={edit} onSave={saveBrief} onDirty={setEditDirty} disabled={blocked} actions={actions} />{error && view === "brief" && <p className={styles.error} role="alert">{error}</p>}</aside>}
     </div> : <div className={hubStyles.scroll}><div className={hubStyles.content}>
-      {loadFailed ? <section className={hubStyles.empty}><h1>기획을 불러오지 못했어요</h1><p role="alert">{error}</p><button className={hubStyles.secondary} onClick={() => { setLoaded(false); void refresh(searchParams.get("planId") ?? undefined).catch(e => setError(e.message)).finally(() => setLoaded(true)); }}>다시 불러오기</button><Link className={hubStyles.textButton} href="/plan/planning">사업 기획 목록으로</Link></section> : <BusinessEmptyState kind={searchParams.get("planId") ? "missing" : "planning"} />}
+      {loadFailed ? <section className={hubStyles.empty}><h1>기획을 불러오지 못했어요</h1><p role="alert">{error}</p><button className={hubStyles.secondary} onClick={() => { setLoaded(false); void refresh(searchParams.get("planId") ?? undefined).catch(e => setError(e.message)).finally(() => setLoaded(true)); }}>다시 불러오기</button><Link className={hubStyles.textButton} href="/plan">내 사업 목록으로</Link></section> : <BusinessEmptyState kind={searchParams.get("planId") ? "missing" : "planning"} />}
     </div></div>}
     </BusinessAppChrome>
   </main>;

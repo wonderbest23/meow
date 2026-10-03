@@ -19,7 +19,11 @@ const nextConfig: NextConfig = {
   ...(lowMemory ? { experimental: { cpus: 1, workerThreads: false } } : {}),
   // 예전 문서 시작 화면 — 이제 새 사업은 대화(사업 기획)로 시작한다. 옛 링크·즐겨찾기는 그쪽으로 보낸다.
   async redirects() {
-    return [{ source: "/plan/start", destination: "/plan/chat?new=1", permanent: false }];
+    return [
+      { source: "/plan/start", destination: "/plan/chat?new=1", permanent: false },
+      /* 사업 기획 목록은 내 사업 목록과 같은 목록이라 하나로 합쳤다 */
+      { source: "/plan/planning", destination: "/plan", permanent: false },
+    ];
   },
 };
 

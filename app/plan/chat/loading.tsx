@@ -12,5 +12,5 @@ const readNew = () => new URLSearchParams(window.location.search).get("new") ===
 
 export default function ChatLoading() {
   const isNew = useSyncExternalStore(noop, readNew, () => false);
-  return <main className={`${ui.theme} ${styles.page}`}><BusinessAppChrome title={isNew ? "새 대화" : "사업 기획"} active={isNew ? "new" : "chat"} backHref="/plan/planning"><PlanLoading fill variant="compact" note="대화를 불러오고 있어요" /></BusinessAppChrome></main>;
+  return <main className={`${ui.theme} ${styles.page}`}><BusinessAppChrome title={isNew ? "새 대화" : "사업 기획"} active={isNew ? "new" : "chat"} backHref="/plan"><PlanLoading fill variant="compact" note="대화를 불러오고 있어요" /></BusinessAppChrome></main>;
 }
