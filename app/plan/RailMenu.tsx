@@ -5,7 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { CircleHelp, FolderClosed, Headphones, LayoutDashboard, MessageCircle, SquarePen } from "lucide-react";
 import styles from "./PlanShell.module.css";
-import WorkspaceBrand from "../../components/workspace-brand";
+import menu from "./RailMenu.module.css";
+import { DEFAULT_LOGO } from "../../components/site-header";
 
 /*
  * 왼쪽 메뉴 하나 — 대화·내 사업 화면(BusinessAppChrome)과 문서·결제 화면(PlanShell)이 같이 쓴다.
@@ -36,42 +37,51 @@ export default function RailMenu({ active, workspaceHref, children }: { active?:
     return () => { alive = false; };
   }, [pathname]);
   const initial = account?.email ? account.email.trim().charAt(0).toUpperCase() : null;
-  const item = (key: RailActive) => `${styles.railBtn} ${current === key ? styles.on : ""}`;
+  /* PlanShell 의 railBtn·railLabel 은 폰에서 아이콘만 남기는 동작용으로 같이 붙이고, 모양은 RailMenu.module.css 가 정한다 */
+  const item = (extra = "") => `${styles.railBtn} ${menu.item} ${extra}`;
   const here = (key: RailActive) => (current === key ? "page" as const : undefined);
+  const loginNext = encodeURIComponent(pathname || "/plan");
 
-  return <>
-    <Link href="/" className={styles.logo} title="오늘창업 홈" aria-label="오늘창업 홈"><WorkspaceBrand /></Link>
-    <Link href="/plan/chat?new=1" className={`${item("new")} ${styles.railNew}`} title="새 대화" aria-current={here("new")}>
+  return <div className={menu.menu}>
+    <Link href="/" className={menu.brand} title="오늘창업 홈" aria-label="오늘창업 홈">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className={menu.logoFull} src={DEFAULT_LOGO.src} alt="" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img className={menu.logoMark} src="/today-startup-mark-2026.png" alt="" width="38" height="38" />
+    </Link>
+    <Link href="/plan/chat?new=1" className={item(menu.newChat)} title="새 대화" aria-current={here("new")}>
       <SquarePen /><span className={styles.railLabel}>새 대화</span>
     </Link>
-    <Link href="/plan/planning" className={item("chat")} title="사업 기획" aria-current={here("chat")}>
+    <Link href="/plan/planning" className={item()} title="사업 기획" aria-current={here("chat")}>
       <MessageCircle /><span className={styles.railLabel}>사업 기획</span>
     </Link>
-    <Link href="/plan" className={item("plans")} title="내 사업" aria-current={here("plans")}>
+    <Link href="/plan" className={item()} title="내 사업" aria-current={here("plans")}>
       <FolderClosed /><span className={styles.railLabel}>내 사업</span>
     </Link>
-    {workspaceHref && <Link href={workspaceHref} className={`${styles.railBtn} ${styles.railSub}`} title="지금 보고 있는 사업의 결과물·시작 준비·운영 기록">
+    {workspaceHref && <Link href={workspaceHref} className={item(menu.sub)} title="지금 보고 있는 사업의 결과물·시작 준비·운영 기록">
       <LayoutDashboard /><span className={styles.railLabel}>사업 관리</span>
     </Link>}
     {/* 플랜을 열어 둔 화면이면 그 목차가 여기 붙는다 */}
     {children}
-    <div className={styles.spring} />
-    <Link href="/plan/info" className={item("info")} title="이용 안내" aria-current={here("info")}>
+    <div className={`${styles.spring} ${menu.spring}`} />
+    <Link href="/plan/info" className={item()} title="이용 안내" aria-current={here("info")}>
       <CircleHelp /><span className={styles.railLabel}>이용 안내</span>
     </Link>
-    <Link href="/account/support" className={item("support")} title="고객센터" aria-current={here("support")}>
+    <Link href="/account/support" className={item()} title="고객센터" aria-current={here("support")}>
       <Headphones /><span className={styles.railLabel}>고객센터</span>
     </Link>
-    {account?.authenticated ? (
-      <Link href="/plan/me" className={`${item("me")} ${styles.railAccount}`} title={`내 계정 · ${account.email ?? ""}`} aria-label={`내 계정 (${account.email ?? "로그인됨"})`} aria-current={here("me")}>
-        <span className={styles.meAvatar}>{initial ?? "나"}</span>
-        <span className={styles.railLabel}><span className={styles.railAccountName}>내 계정</span><span className={styles.railAccountMail}>{account.email}</span></span>
+    <div className={menu.divider} />
+    {account === null ? null : account.authenticated ? (
+      <Link href="/plan/me" className={item(menu.account)} title={`내 계정 · ${account.email ?? ""}`} aria-label={`내 계정 (${account.email ?? "로그인됨"})`} aria-current={here("me")}>
+        <span className={`${styles.meAvatar} ${menu.avatar}`}>{initial ?? "나"}</span>
+        <span className={`${styles.railLabel} ${menu.accountText}`}><span className={menu.accountName}>내 계정</span><span className={menu.accountMail}>{account.email}</span></span>
       </Link>
     ) : (
-      <Link href={`/account?next=${encodeURIComponent(pathname || "/plan")}`} className={`${styles.railBtn} ${styles.signIn}`} title="로그인" aria-label="로그인">
-        <span className={styles.signInText}>로그인</span>
-        <span className={styles.railLabel}>로그인 · 계정 만들기</span>
-      </Link>
+      /* /account?next= 는 로그인 팝업이 받아 이 화면에서 연다 */
+      <div className={menu.auth}>
+        <a className={menu.login} href={`/account?next=${loginNext}`}>로그인</a>
+        <a className={menu.signup} href={`/account?mode=register&next=${loginNext}`}>회원가입</a>
+      </div>
     )}
-  </>;
+  </div>;
 }
