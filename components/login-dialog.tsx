@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { X } from "lucide-react";
-import AccountAuthForm from "./account-auth-form";
+import AccountAuthForm, { type AuthMode } from "./account-auth-form";
 import { safeNextPath } from "../lib/http/safe-next";
 import accountStyles from "../app/account/Account.module.css";
 import styles from "./login-dialog.module.css";
@@ -25,11 +25,11 @@ export function loginHref(next?: string | null) {
   return `/account?next=${encodeURIComponent(next ?? "/plan")}`;
 }
 
-/** 로그인 팝업을 연다. next 가 없으면 지금 보고 있는 화면으로 돌아온다 */
-export function openLogin(next?: string | null) {
+/** 로그인 팝업을 연다. next 가 없으면 지금 보고 있는 화면으로 돌아온다. mode 로 회원가입 화면부터 열 수 있다 */
+export function openLogin(next?: string | null, mode: AuthMode = "login") {
   const target = safeNextPath(next ?? currentPath()) ?? "/plan";
-  if (!hostMounted) { window.location.assign(loginHref(target)); return; }
-  window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { next: target } }));
+  if (!hostMounted) { window.location.assign(`${loginHref(target)}${mode === "register" ? "&mode=register" : ""}`); return; }
+  window.dispatchEvent(new CustomEvent(OPEN_EVENT, { detail: { next: target, mode } }));
 }
 
 /** 화면 안에 바로 펼친 로그인 — 안내 문구와 버튼을 한 번 더 거치지 않고 그 자리에서 로그인한다 */
@@ -53,12 +53,14 @@ export function LoginDialogHost() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [next, setNext] = useState<string | null>(null);
   const [opened, setOpened] = useState(0);
+  const [mode, setMode] = useState<AuthMode>("login");
 
   useEffect(() => {
     hostMounted = true;
     const open = (event: Event) => {
-      const detail = (event as CustomEvent<{ next?: string }>).detail;
+      const detail = (event as CustomEvent<{ next?: string; mode?: AuthMode }>).detail;
       setNext(detail?.next ?? null);
+      setMode(detail?.mode === "register" ? "register" : "login");
       setOpened(count => count + 1);
     };
     /*
@@ -76,6 +78,7 @@ export function LoginDialogHost() {
       event.preventDefault();
       event.stopPropagation();
       setNext(safeNextPath(url.searchParams.get("next")) ?? "/plan");
+      setMode(url.searchParams.get("mode") === "register" ? "register" : "login");
       setOpened(count => count + 1);
     };
     window.addEventListener(OPEN_EVENT, open);
@@ -96,7 +99,7 @@ export function LoginDialogHost() {
         <div className={`${accountStyles.page} ${styles.scope}`}>
           <button type="button" className={styles.close} onClick={close} aria-label="로그인 닫기"><X size={20} /></button>
           {/* 열 때마다 새 폼 — 이전 입력·메시지를 남기지 않는다 */}
-          <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm key={opened} next={next} titleId="login-dialog-title" /></div>
+          <div className={`${accountStyles.auth} ${styles.auth}`}><AccountAuthForm key={opened} next={next} initialMode={mode} titleId="login-dialog-title" /></div>
         </div>
       )}
     </dialog>

@@ -25,7 +25,8 @@ async function payload<T>(response: Response): Promise<T> {
 
 export default function AccountPage() {
   const router = useRouter();
-  const [mode, setMode] = useState<AuthMode>("login");
+  /* 머리말 '회원가입'은 /account?mode=register 로 온다(팝업이 없을 때) */
+  const [mode, setMode] = useState<AuthMode>(() => typeof window !== "undefined" && new URL(window.location.href).searchParams.get("mode") === "register" ? "register" : "login");
   const [session, setSession] = useState<SessionState | null>(null);
   const [recoveryTokens, setRecoveryTokens] = useState<{ accessToken: string; refreshToken: string } | null>(null);
   /*

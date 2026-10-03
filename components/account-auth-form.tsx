@@ -245,7 +245,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
    * → SNS 간편 로그인 원형 아이콘 → 로그인 문의. 제목·설명 문단은 두지 않는다.
    */
   return (
-    <div className={styles.root}>
+    /* plan-ui: 홈처럼 옛 전역 규칙(버튼 속 아이콘 숨김·모서리 강제)이 남은 화면에서 팝업으로 떠도 카카오·구글 아이콘이 보이게 */
+    <div className={`${styles.root} plan-ui`}>
       <form className={styles.form} onSubmit={submit} aria-busy={busy} aria-labelledby={titleId}>
         <header className={styles.header}>
           <Link href="/" className={styles.logoLink} aria-label="오늘창업 홈">
