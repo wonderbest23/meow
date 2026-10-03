@@ -151,7 +151,8 @@ async function main() {
       // 2026-10-03: 대표 요청으로 상담 창을 메신저형(홈·대화·설정)으로 다시 붙였다. 화면 안의 '문의' 링크는 계속 고객센터로 간다
       assert.match(readFileSync("app/layout.tsx", "utf8"), /<SupportChatWidget \/>/);
       assert.match(readFileSync("components/support-chat-widget.tsx", "utf8"), /<SupportTabs /);
-      for (const path of ["components/landing-quick-editor.tsx", "app/plan/workspace/LaunchWorkspace.tsx", "app/plan/document/DocumentWorkspace.tsx"]) {
+      // 문서 화면의 '문의' 링크는 2026-10-03에 뺐다(고객센터는 왼쪽 메뉴·상담 창에서)
+      for (const path of ["components/landing-quick-editor.tsx", "app/plan/workspace/LaunchWorkspace.tsx"]) {
         const source = readFileSync(path, "utf8"); assert.doesNotMatch(source, /venture:open-support-chat/); assert.match(source, /\/account\/support/);
       }
       // 고객센터는 모든 사업 화면의 왼쪽 메뉴와 상담 창 설정 탭에서 간다

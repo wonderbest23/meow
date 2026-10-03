@@ -27,7 +27,9 @@ export function resourceBusinessAssumptions(coach: CoachState) {
   return { description: coach.business.description, ...Object.fromEntries(["customer", "offer", "price", "volume", "channel", "capacity", "minutesPerSale"].map(key => [key, coach.fields.find(f => f.key === key && f.basis === "user")?.value ?? ""])) };
 }
 export function resourceAssumptionsMatch(record: ResourceRecord, structure: BusinessStructure, business?: Record<string, string>) {
-  return !!record.structureAssumptions && Object.entries(structure).every(([key, value]) => record.structureAssumptions?.[key] === value)
+  /* sides(양면 시장)는 나중에 생긴 축 — 그 전에 저장한 자료엔 없으니, 없으면 기본값 '한쪽'과 같은 것으로 본다 */
+  const recorded = (key: string) => record.structureAssumptions?.[key] ?? (key === "sides" ? "one" : undefined);
+  return !!record.structureAssumptions && Object.entries(structure).every(([key, value]) => recorded(key) === value)
     && (!business || record.source.kind !== "user-confirmed" || !!record.businessAssumptions && Object.entries(business).every(([key, value]) => record.businessAssumptions?.[key] === value));
 }
 export const resourceLimitsSchema = z.object({ initialCost: z.string().max(120).nullable().optional(), monthlyOperatingCost: z.string().max(120).nullable().optional(), preparationHours: z.string().max(120).nullable().optional(), weeklyOperatingHours: z.string().max(120).nullable().optional() }).strict();

@@ -56,7 +56,8 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
   // 업종 가이드가 있는 업종은 준비물·신고 순서·자주 놓치는 것까지 체크리스트로 준다(빵집을 처음 여는 사람도 순서대로 따라갈 수 있게)
   const playbook = ksicEntry && !improving ? playbookForKsic(ksicEntry.code) : null;
   if (playbook) result.push({ ...base, id: "license", title: `${playbook.name} 시작 준비: 준비물과 신고 순서`, task: "아래 순서대로 준비하면 영업 신고와 사업자등록, 가게를 온라인에 여는 단계까지 이어져요. 단계마다 관할 기관에서 확인한 날짜를 적어 두세요.", materialTitle: `${playbook.name} 준비 체크리스트`,
-    material: playbookChecklist(playbook), prompt: `${playbook.name}을 시작하기 전에 필요한 준비물·신고 순서·자주 놓치는 점을 내 사업(위치·규모·판매 방식)에 맞춰 구체화해 주세요. 관할 기관에서 확인하지 않은 기한·수수료·면적 기준은 만들지 말고 확인 필요로 남겨 주세요.`,
+    /* 확정한 업종 이름·코드를 맨 위에 — 무슨 업종 기준의 준비물인지 체크리스트만 봐도 알게 */
+    material: `${ksicEntry ? `업종: ${ksicEntry.name} (KSIC ${ksicEntry.code})\n\n` : ""}${playbookChecklist(playbook)}`, prompt: `${playbook.name}을 시작하기 전에 필요한 준비물·신고 순서·자주 놓치는 점을 내 사업(위치·규모·판매 방식)에 맞춰 구체화해 주세요. 관할 기관에서 확인하지 않은 기한·수수료·면적 기준은 만들지 말고 확인 필요로 남겨 주세요.`,
     caution: "업종별로 일반적인 순서를 정리한 출발점이에요. 지역·규모·세부 판매 방식에 따라 다르니 각 단계는 관할 기관에서 확인해 주세요.", links: playbook.links });
   else if (ksicEntry && structure && hint && !improving) result.push({ ...base, id: "license", title: "업종 인허가를 확인해요", task: hint, materialTitle: "인허가 확인 메모",
     material: `업종: ${ksicEntry.name} (KSIC ${ksicEntry.code})\n분류 기준 절차: ${STRUCTURE_LABELS.license[structure.license]}\n확인할 기관(${isFinanceKsic(ksicEntry.code) ? "금융감독원·금융위원회 등" : "구청·세무서·협회 등"}):\n확인한 날짜:\n필요 서류·비용:\n비고:`,

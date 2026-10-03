@@ -38,9 +38,11 @@ const demoCss = readFileSync("components/home-workspace-demo.module.css", "utf8"
 assert.match(demoCss, /\.demo \.scrubber\s*\{[^}]*background:\s*transparent !important/);
 assert.match(demoCss, /\.demo \.scrubber:focus-visible/);
 const copy = readFileSync("components/home-service-overview.tsx", "utf8");
-for (const text of ["사업을 기획하는 순서로", "관심과 경험", "고객과 상품", "가격과 운영", "첫 실행 방법", "함께 정리한 시작안", "기획 예시예요", "질문과 제안이 달라져요"]) assert.ok(copy.includes(text), text);
+// 2026-10-03: 4단계 아이콘·시작안 표 대신 실제 새 대화와 같은 말풍선 예시 하나
+for (const text of ["사업을 기획하는 순서로", "사진 찍는 걸 좋아해요. 이걸 사업으로 할 수 있는 방법이 없을까요?", "주로 어떤 사진을 찍으세요?"]) assert.ok(copy.includes(text), text);
 for (const text of ["챗GPT로", "입력 근거 대조", "별도 계산 로직", "문서 버전 비교", "모든 사업에 최적화"]) assert.ok(!copy.includes(text), text);
-assert.match(copy, /<ol className=\{styles.planningSteps\} aria-label="사업 기획 흐름">/);
+assert.match(copy, /aria-label="대화 예시"/);
+assert.match(copy, /<CoachMessage role="user">/);
 assert.match(COACH_SYSTEM, /경험·관심사/);
 assert.match(COACH_SYSTEM, /한 번에 질문 하나만/);
 assert.match(COACH_WRITER_RULES, /고객 → 상품 구성 → 제안 가격과 이유 → 최소 운영 방식 → 첫 판매 방법/);
