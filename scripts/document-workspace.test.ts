@@ -75,7 +75,7 @@ async function main() {
       if (width <= 760) { await click(page, "목차"); await page.waitForSelector("dialog[open]"); }
       await click(page, "전체 이어 읽기");
       assert.ok(await page.$$("article h2").then(x => x.length > 1));
-      await click(page, "내려받기");
+      await click(page, "사업계획서 내려받기");
       await page.waitForSelector("dialog[open]");
       await page.screenshot({ path: `artifacts/document-workspace/download-${width}.png` });
       const pdf = await page.$("dialog button:has(strong)"); assert.ok(pdf); await pdf.click();
@@ -87,7 +87,7 @@ async function main() {
       paid = false;
       await page.reload({ waitUntil: "networkidle0" });
       assert.equal(await page.$('[aria-label="완료 알림 닫기"]'), null, "같은 문서 완료 알림은 재접속 시 반복하지 않음");
-      await click(page, "내려받기");
+      await click(page, "사업계획서 내려받기");
       await page.waitForFunction(() => document.querySelector("dialog")?.textContent?.includes("결제 후"));
       const unpaidPdf = await page.$("dialog button:has(strong)"); await unpaidPdf!.click();
       await page.waitForFunction(() => location.pathname === "/plan/pay");
@@ -98,7 +98,7 @@ async function main() {
         assert.equal(await page.$('.tiptap[contenteditable="true"]'), null, "예시 문서는 읽기 전용");
         assert.ok(await page.$eval("footer button", el => (el as HTMLButtonElement).disabled));
         await page.screenshot({ path: "artifacts/document-workspace/sample-390.png" });
-        await click(page, "내려받기");
+        await click(page, "사업계획서 내려받기");
         assert.ok(await page.$eval("dialog button:has(strong)", el => !(el as HTMLButtonElement).disabled), "예시 PDF는 결제 없이 정적 파일 제공");
       }
       assert.deepEqual(errors, []);

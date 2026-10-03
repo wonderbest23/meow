@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Globe, ListChecks, Wrench } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
@@ -52,6 +52,20 @@ function WritingStatus({ done, total, current }: { done: number; total: number; 
   </div>;
 }
 
+/** 계획서 다음 단계 — 홈페이지, 사업 시작 준비, 운영 관리 */
+function NextSteps({ planId, compact, className }: { planId: string; compact?: boolean; className?: string }) {
+  const id = encodeURIComponent(planId);
+  const steps = [
+    { href: `/plan/homepage?planId=${id}`, Icon: Globe, title: "홈페이지 만들기", note: "이 계획서 내용으로 초안을 바로 만들어요" },
+    { href: `/plan/workspace?planId=${id}&tab=launch`, Icon: ListChecks, title: "사업 시작 준비", note: "신고·홍보·결제 준비를 단계별로 해요" },
+    { href: `/plan/workspace?planId=${id}&tab=operations`, Icon: Wrench, title: "운영·유지 관리", note: "실적을 기록하고 개선할 점을 찾아요" },
+  ];
+  return <nav className={`${styles.nextSteps} ${compact ? styles.nextStepsCompact : ""} ${className ?? ""}`} aria-label="계획서 다음 단계">
+    <strong>다음 단계</strong>
+    {steps.map(({ href, Icon, title, note }, index) => <Link key={href} href={href} data-primary={index === 0 || undefined}><Icon size={20} aria-hidden="true" /><span><b>{title}</b><small>{note}</small></span><ChevronRight size={18} aria-hidden="true" /></Link>)}
+  </nav>;
+}
+
 export default function DocumentWorkspace(props: Props) {
   const { title, planId, grouped, ready, isSample, coachHref, onSave } = props;
   const [chapter, setChapter] = useState(0);
@@ -97,6 +111,8 @@ export default function DocumentWorkspace(props: Props) {
     return () => node.removeEventListener("click", open);
   }, [ready]);
   useEffect(() => { if (zoomTable && zoomDialog.current && !zoomDialog.current.open) zoomDialog.current.showModal(); }, [zoomTable]);
+  /* 계획서가 다 만들어지면 오른쪽에 다음 단계를 늘 띄워 둔다(좁은 화면에서는 문서 위에) */
+  const showNext = !isSample && !!planId && !!props.completionKey && !props.writing;
   const back = planId && !isSample ? `/plan/workspace?planId=${encodeURIComponent(planId)}&tab=documents` : "/plan";
 
   useEffect(() => {
@@ -106,8 +122,6 @@ export default function DocumentWorkspace(props: Props) {
       try { if (sessionStorage.getItem(key)) return; sessionStorage.setItem(key, "1"); } catch {}
       announced.current = key; setCelebrate(true);
     }
-    const timer = window.setTimeout(() => setCelebrate(false), 5000);
-    return () => window.clearTimeout(timer);
   }, [ready, props.completionKey, isSample]);
 
   useEffect(() => {
@@ -152,19 +166,15 @@ export default function DocumentWorkspace(props: Props) {
             <span>{summaryMode ? "한 장 요약" : continuous ? "전체 이어 읽기" : grouped.length ? `${chapter + 1} / ${grouped.length}장` : "사업계획서"}</span>
           </div>
           {props.summary && <div className={styles.viewSelector} role="group" aria-label="문서 보기 방식">
-            <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
             <button aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroll.current?.scrollTo({ top: 0 }); }}>상세 계획서</button>
+            <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
           </div>}
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
           {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요. 다음은 홈페이지예요.</p>{planId && <Link className={styles.nextLink} href={`/plan/homepage?planId=${encodeURIComponent(planId)}`}>이 계획서로 홈페이지 만들기</Link>}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문">
-            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} />{!isSample && planId && !props.writing && grouped.length > 0 && (continuous || chapter === grouped.length - 1) && !summaryMode && <nav className={styles.nextSteps} aria-label="다음 단계">
-                <strong>계획서 다음 단계</strong>
-                <Link href={`/plan/homepage?planId=${encodeURIComponent(planId)}`}><span>홈페이지 만들기</span><small>이 계획서 내용으로 초안을 바로 만들어요</small></Link>
-                <Link href={`/plan/workspace?planId=${encodeURIComponent(planId)}&tab=launch`}><span>사업 시작 준비</span><small>신고·홍보·결제 준비를 단계별로 해요</small></Link>
-              </nav>}
-              </article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
+            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
+              {showNext && planId && <NextSteps planId={planId} compact className={styles.nextStepsTop} />}
               {props.writing && <WritingStatus {...props.writing} />}
               {props.notice && !props.writing && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
@@ -180,26 +190,23 @@ export default function DocumentWorkspace(props: Props) {
                 </section>)}
               </div>)}
               {!summaryMode && !continuous && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
-              {!isSample && planId && props.completionKey && (continuous || chapter === grouped.length - 1) && <div className={styles.nextStep}><h3>계획을 실제 준비로 이어가요</h3><Link href={`/plan/workspace?planId=${encodeURIComponent(planId)}&tab=launch`}>이 사업의 준비 과정 보기<ChevronRight size={18} /></Link></div>}
+              {showNext && planId && <NextSteps planId={planId} className={styles.nextStepsInline} />}
             </article>}
           </div>
           <footer className={styles.actions}>
             <button className={styles.secondary} disabled={!grouped.length || isSample} onClick={() => { if (summaryMode) { setSummaryMode(false); setEditing(true); } else setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : summaryMode ? "상세 문서 수정" : editing ? "수정 마치기" : "수정하기"}</button>
-            <button className={styles.primary} disabled={!grouped.length && !(summaryMode && props.summary)} onClick={() => setModal("download")}>내려받기</button>
+            <button className={styles.primary} disabled={!grouped.length} onClick={() => setModal("download")}>사업계획서 내려받기</button>
           </footer>
         </div>
+        {showNext && planId && <aside className={styles.nextPanel}><NextSteps planId={planId} /></aside>}
       </div>}
     </BusinessAppChrome>
     <dialog ref={dialog} className={styles.dialog} onCancel={() => setModal(null)} onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setModal(null); } }} aria-labelledby="document-dialog-title">
       <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : "파일 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
       {modal === "toc" ? toc() : <div className={styles.downloads}>
-        {props.summary && <div className={styles.viewSelector} role="group" aria-label="내려받을 문서">
-          <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); }}>한 장 요약</button>
-          <button aria-pressed={!summaryMode} onClick={() => setSummaryMode(false)}>상세 계획서</button>
-        </div>}
         {props.locked && <p className={styles.notice}>파일 내려받기는 결제 후 이용할 수 있어요. 형식을 선택하면 결제로 이어져요.</p>}
         {props.accessError ? <div className={styles.notice} role="alert">이용 권한을 확인하지 못했어요. <button className={styles.help} onClick={props.onRetryAccess}>다시 확인</button></div> : props.accessPending && <p role="status">이용 권한을 확인하고 있어요.</p>}
-        {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const).filter(item => !summaryMode || item.format !== "pptx").map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format, summaryMode ? "summary" : "detailed")} onClick={() => props.onDownload(format, summaryMode ? "summary" : "detailed")}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : `${summaryMode ? "한 장 요약 " : ""}${name}`}</strong><small>{description}</small></span><ChevronRight size={20} /></button>)}
+        {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const).map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format)} onClick={() => props.onDownload(format)}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : name}</strong><small>{description}</small></span><ChevronRight size={20} /></button>)}
         {props.deckStatus && <p role="status" aria-live="polite">{props.deckStatus}</p>}
         {!isSample && planId && <Link href={`/plan/proposal?planId=${encodeURIComponent(planId)}`}>제안서 편집·제작 상태 확인</Link>}
         {Object.values(props.editStates).some(state => state.status !== "saved") && <p role="status">저장이 끝난 뒤 파일을 받을 수 있어요. 저장에 실패한 항목은 본문에서 확인해주세요.</p>}

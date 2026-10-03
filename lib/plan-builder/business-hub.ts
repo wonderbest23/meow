@@ -42,7 +42,10 @@ export function actionStatus(plan: Plan, action: string) {
 }
 
 export function workspaceHref(id: string) { return `/plan/workspace?planId=${encodeURIComponent(id)}`; }
+export function documentHref(id: string) { return `/plan/document?planId=${encodeURIComponent(id)}`; }
+/** 내 사업에서 누르면 — 완성된 계획서가 있으면 문서부터, 아니면 대화(없으면 예전 작업 공간)로 */
 export function businessEntryHref(plan: Plan) {
+  if (businessHubState(plan).complete) return documentHref(plan.id);
   return readCoach(plan.answers) || readCoachJob(plan.answers) ? businessChatHref(plan.id) : workspaceHref(plan.id);
 }
 export function shouldResumeBusinessChat(plan: Plan): boolean {

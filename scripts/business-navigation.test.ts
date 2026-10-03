@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { chatEntryIntent, planningListPlans, businessChatHref, businessEntryHref, workspaceHref, shouldResumeBusinessChat, businessHubState } from "../lib/plan-builder/business-hub";
+import { chatEntryIntent, planningListPlans, businessChatHref, businessEntryHref, documentHref, workspaceHref, shouldResumeBusinessChat, businessHubState } from "../lib/plan-builder/business-hub";
 import { applyCoachReply, COACH_KEY, COACH_TYPES } from "../lib/plan-builder/coach";
 import { COACH_JOB_KEY, type CoachJob } from "../lib/plan-builder/coach-job-types";
 import type { Plan } from "../lib/plan-builder/plan-store";
@@ -50,5 +50,7 @@ assert.equal(shouldResumeBusinessChat({ ...intakePlan, answers: { ...intakePlan.
 const sectionKey = businessHubState(intakePlan).keys[0];
 assert.ok(sectionKey);
 assert.equal(shouldResumeBusinessChat({ ...intakePlan, sections: { [sectionKey]: { markdown: "Saved document" } as Plan["sections"][string] } }), false, "Existing documents remain accessible");
-assert.equal(businessEntryHref({ ...intakePlan, sections: { [sectionKey]: { markdown: "Saved document" } as Plan["sections"][string] } }), businessChatHref(intakePlan.id), "Completed businesses still open their conversation from My Business");
+assert.equal(businessEntryHref({ ...intakePlan, sections: { [sectionKey]: { markdown: "Saved document" } as Plan["sections"][string] } }), businessChatHref(intakePlan.id), "Partly written businesses still open their conversation from My Business");
+const completedSections = Object.fromEntries(businessHubState(intakePlan).keys.map(key => [key, { markdown: "Saved document" } as Plan["sections"][string]]));
+assert.equal(businessEntryHref({ ...intakePlan, sections: completedSections }), documentHref(intakePlan.id), "Completed businesses open their plan document first");
 console.log("business navigation: passed (new/resume intent, planning list, selected-business links)");
