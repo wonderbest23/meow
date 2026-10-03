@@ -470,7 +470,9 @@ async function main() {
   summarized.coreComplete = true; summarized.hasDocuments = true;
   summarized.coach.design = { status: "proposal", sourceRevision: 1, approach: "new-concept", startingPlan: { scope: "AI가 제안한 시작 범위", connectionToVision: "구상과의 관계", whyThis: "제안 이유", notIncluded: [] }, alternatives: [], assumptions: [], nextAction: { action: "다음 행동", doneWhen: "완료 기준", usableText: "사용할 문구" } };
   const summary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={summarized} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
-  for (const text of ["현재까지 작성한 사업정보", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "좀 더 개선하기", "data-state=\"current\"><span>1</span>사업 방향 요약"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
+  // '좀 더 개선하기'는 2026-10-03에 뺐다(만든 뒤에 고친다)
+  assert.ok(!summary.includes("좀 더 개선하기"), "no refine-more button in the summary");
+  for (const text of ["현재까지 작성한 사업정보", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "data-state=\"current\"><span>1</span>사업 방향 요약"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
   assert.equal((summary.match(/(?:사업 방향 정리하기|사업계획서 문서 작성하기)<\/button>/g) ?? []).length, 1, "the summary offers one creation step");
   assert.ok(summary.includes(`/plan/document?planId=${id}`), "Existing artifacts stay navigable even during AI jobs");
   // 다음 단계는 한 번에 하나, 한 곳에만: 사업안 만들기 → (사업안이 현재 입력 기준이면) 계획서 만들기 → 계획서 열기.
