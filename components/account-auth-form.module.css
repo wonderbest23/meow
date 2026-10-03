@@ -52,10 +52,12 @@
 .root .form .snsRow { display: flex; justify-content: center; gap: 20px; }
 .root .form .google,
 .root .form .kakao { position: relative; display: grid; place-items: center; width: 48px; height: 48px; margin: 0; padding: 0; border-radius: 50%; }
-/* 구글 공식 원형 버튼(지름 40)을 48로 키워 카카오와 크기를 맞추고, 같은 모양의 자리표시 위에 얹는다(공식 버튼이 늦거나 못 뜨면 자리표시가 보인다) */
+/* 구글 공식 원형 버튼(지름 40)을 48로 키워 G 아이콘 원 아래에 깐다 */
 .root .form .googleReal { position: absolute; inset: 0; display: grid; place-items: center; transform: scale(1.2); }
 .root .form .googleReal:empty { display: none; }
-.root .form .googlePlaceholder { display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #dadce0; border-radius: 50%; background: #fff; }
+/* 보이는 원은 우리가 그린 G 아이콘(공식 원형 버튼과 같은 모양) — 누르면 아래 공식 버튼이 받도록 포인터는 통과시킨다 */
+.root .form .googlePlaceholder { position: absolute; inset: 0; z-index: 1; display: grid; place-items: center; width: 48px; height: 48px; border: 1px solid #dadce0; border-radius: 50%; background: #fff; pointer-events: none; }
+.root .form .google:hover .googlePlaceholder { background: #f8f9fa; }
 .root .form .googlePlaceholder svg { width: 20px; height: 20px; }
 .root .form .kakao { border: 0; background: #fee500; cursor: pointer; }
 .root .form .kakao:hover:not(:disabled) { background: #f5dc00; }

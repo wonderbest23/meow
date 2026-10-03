@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Search, UserRound } from "lucide-react";
 import { CtaArrow } from "./cta-arrow";
 
@@ -25,6 +26,27 @@ export function SiteLogo({ onClick, logo = DEFAULT_LOGO }: { onClick: () => void
       <img className="brand-logo" src={logo.src} alt="오늘창업" width={logo.width} height={logo.height} />
     </button>
   );
+}
+
+/** 머리말 오른쪽 — 로그인했으면 마이페이지 아이콘, 아니면 '로그인 · 회원가입' 두 단추(헷갈리지 않게 글자로) */
+function AccountActions() {
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then(response => response.json())
+      .then((data: { authenticated?: boolean }) => { if (alive) setSignedIn(!!data.authenticated); })
+      .catch(() => { if (alive) setSignedIn(false); });
+    return () => { alive = false; };
+  }, []);
+  /* 확인 전에는 비워 둔다 — 로그인 단추가 잠깐 보였다 바뀌지 않게 */
+  if (signedIn === null) return null;
+  if (signedIn) return <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /></a>;
+  /* /account?next= 링크는 로그인 팝업(login-dialog)이 받아 이 화면에서 연다 */
+  return <>
+    <a className="header-login" href="/account?next=%2Fplan">로그인</a>
+    <a className="header-signup" href="/account?mode=register&next=%2Fplan">회원가입</a>
+  </>;
 }
 
 export function SiteHeader({
@@ -70,9 +92,7 @@ export function SiteHeader({
         </nav>
       ) : null}
       <div className="header-actions">
-        {showAccount && (
-          <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /></a>
-        )}
+        {showAccount && <AccountActions />}
         {onStart && <button className="small-start" onClick={onStart}>시작하기<CtaArrow /></button>}
       </div>
     </header>
