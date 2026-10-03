@@ -73,17 +73,9 @@ try {
     assert(await page.getByLabel("한 장 사업 요약", { exact: true }).innerText().then((value: string) => value.includes("5,400,000원") && value.includes("지출 미입력")));
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: join(output, `summary-${width}.png`) });
-    await page.getByRole("button", { name: "내려받기", exact: true }).click();
+    await page.getByRole("button", { name: "사업계획서 내려받기", exact: true }).click();
     const dialog = page.getByRole("dialog");
-    assert(await dialog.getByRole("button", { name: "한 장 요약", exact: true }).getAttribute("aria-pressed") === "true");
-    for (const format of ["PDF", "Word"]) {
-      const pending = page.waitForEvent("download");
-      await dialog.getByRole("button", { name: new RegExp(`한 장 요약 ${format}`) }).click();
-      const download = await pending; await download.saveAs(join(output, `${width}.${format === "PDF" ? "pdf" : "docx"}`));
-      assert(download.suggestedFilename().includes("한 장 요약"));
-    }
-    assert.equal(exports.length, 2); assert(exports.every(item => item.view === "summary"));
-    await dialog.getByRole("button", { name: "상세 계획서", exact: true }).click();
+    assert.equal(await dialog.getByRole("button", { name: /한 장 요약/ }).count(), 0, "the one-page summary is read on screen, not downloaded");
     await dialog.getByRole("button", { name: "PDF 인쇄하거나 공유할 때", exact: true }).click();
     await page.waitForTimeout(200);
     assert.equal(exports.at(-1).view, "detailed");
@@ -95,10 +87,9 @@ try {
     await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
     await page.reload({ waitUntil: "networkidle" });
     await page.getByLabel("한 장 사업 요약", { exact: true }).waitFor();
-    await page.getByRole("button", { name: "내려받기", exact: true }).click();
-    assert(await page.getByRole("dialog").getByRole("button", { name: /한 장 요약 PDF/ }).isEnabled(), "saved business facts can be summarized before detailed sections exist");
+    assert(await page.getByRole("button", { name: "사업계획서 내려받기", exact: true }).isDisabled(), "nothing to download before detailed sections exist");
     assert.deepEqual(errors, []);
-    checks.push(`${width}px: summary selection, PDF/Word downloads with actual rendered bytes, detailed request, reload, summary before detailed generation, no overflow/errors`);
+    checks.push(`${width}px: summary on screen, detailed-only download, reload, summary before detailed generation, no overflow/errors`);
     await context.close();
   }
   await writeFile(join(output, "report.json"), JSON.stringify({ checks, mode: "isolated Next app; mocked business state/access/export transport; real summary renderer; no paid calls" }, null, 2));
