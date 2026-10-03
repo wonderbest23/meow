@@ -12,7 +12,8 @@ export const MARKETING_KIT_KEY = "__marketing_kit";
 
 const text = (max: number) => z.string().trim().min(1).max(max);
 const postSchema = z.object({ channel: text(30), body: text(900), hashtags: z.array(text(40)).max(10) });
-const calendarPostSchema = z.object({ day: text(10), format: text(20), idea: text(160), caption: text(600) });
+/* 요일·형식은 "1주차 월요일 저녁", "짧은 영상(릴스)"처럼 조금 길게 와도 받아 준다 — 한 칸이 넘쳐 키트 전체가 실패하지 않게 */
+const calendarPostSchema = z.object({ day: text(24), format: text(30), idea: text(200), caption: text(600) });
 export const marketingKitSchema = z.object({
   placeIntro: text(500),
   openingMessage: text(200),
