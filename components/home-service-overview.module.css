@@ -11,25 +11,6 @@
 .overview h3 { font-size: 22px; line-height: 1.5; font-weight: 650; color: #fff; margin: 0 0 12px; letter-spacing: 0; }
 .overview p { font-size: 16px; line-height: var(--home-body-line, 1.75); color: var(--home-fg-2, #b6b8bf); margin: 0; word-break: keep-all; overflow-wrap: anywhere; text-wrap: pretty; }
 .difference { background: var(--home-bg-2, #0a0a0c); scroll-margin-top: 70px; }
-.planningExample { max-width: 960px; margin: auto; }
-.planningSeed { display: flex; justify-content: center; align-items: flex-start; gap: 16px; margin-bottom: 48px; }
-.planningSeed > svg { flex: 0 0 24px; width: 24px; height: 24px; color: #fff; margin-top: 32px; }
-.planningSeed span, .planningOutcome header > span { font-size: 13px; font-weight: 550; line-height: 1.6; color: var(--home-fg-3, #82848d); }
-.planningSeed blockquote { margin: 8px 0 0; font-size: 22px; font-weight: 550; line-height: 1.65; color: #e6e7eb; word-break: keep-all; }
-.planningSteps { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 32px; margin: 0; padding: 0; list-style: none; }
-.planningSteps li { position: relative; min-width: 0; text-align: center; }
-.planningSteps li:not(:last-child)::after { content: ""; position: absolute; top: 22px; left: calc(50% + 22px); width: calc(100% - 12px); height: 1px; background: var(--home-line, rgba(255, 255, 255, .12)); }
-.planningMarker { position: relative; z-index: 1; display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 20px; box-sizing: border-box; border: 1px solid var(--home-line-2, rgba(255, 255, 255, .22)); border-radius: 8px; background: var(--home-card, #131317); color: #fff; }
-.planningMarker svg { width: 22px; height: 22px; stroke-width: 1.8; }
-.overview .planningSteps h3 { font-size: 19px; margin: 0 0 8px; }
-.overview .planningSteps p { max-width: 180px; margin: auto; font-size: 15px; line-height: 1.7; }
-.planningOutcome { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 40px; border-top: 2px solid #fff; padding-top: 32px; margin-top: 48px; }
-.overview .planningOutcome h3 { font-size: 26px; line-height: 1.45; margin: 12px 0 0; }
-.planningOutcome dl { margin: 0; }
-.planningOutcome dl > div { display: grid; grid-template-columns: 60px minmax(0, 1fr); gap: 20px; padding: 14px 0; border-bottom: 1px solid var(--home-line, rgba(255, 255, 255, .12)); font-size: 15px; line-height: 1.65; }
-.planningOutcome dl > div:first-child { padding-top: 0; }
-.planningOutcome dt { color: var(--home-fg-3, #82848d); }
-.planningOutcome dd { min-width: 0; margin: 0; color: #e6e7eb; font-weight: 550; word-break: keep-all; }
 .overview .differenceNote { margin: 28px 0 0; font-size: 12px; color: var(--home-fg-3, #82848d); line-height: 1.8; }
 .results { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; }
 .results article { min-width: 0; padding-top: 24px; border-top: 1px solid var(--home-line, rgba(255, 255, 255, .12)); display: flex; flex-direction: column; }
@@ -61,19 +42,7 @@
   .overview h3 { font-size: 20px; }
   .overview p { font-size: 15px; }
   .desktopBreak { display: none; }
-  .planningSeed { flex-direction: column; align-items: center; justify-content: center; gap: 12px; margin-bottom: 36px; text-align: center; }
-  .planningSeed > svg { flex-basis: 22px; width: 22px; height: 22px; margin-top: 0; }
-  .planningSeed blockquote { margin: 0; font-size: 18px; }
-  .planningSteps { grid-template-columns: minmax(0, 1fr); gap: 30px; }
-  .planningSteps li { display: block; text-align: center; }
   /* 세로 연결선은 가운데 글자를 지나가므로 폰에서는 그리지 않는다 */
-  .planningSteps li:not(:last-child)::after { display: none; }
-  .planningMarker { margin: 0 auto 14px; }
-  .overview .planningSteps h3 { font-size: 18px; margin-bottom: 6px; }
-  .overview .planningSteps p { max-width: 300px; margin: 0 auto; font-size: 14px; }
-  .planningOutcome { grid-template-columns: minmax(0, 1fr); gap: 24px; padding-top: 28px; margin-top: 36px; text-align: center; }
-  .overview .planningOutcome h3 { font-size: 22px; }
-  .planningOutcome dl > div { grid-template-columns: minmax(0, 1fr); gap: 4px; font-size: 14px; }
   .results { grid-template-columns: 1fr; gap: 22px; }
   .results article { padding-top: 20px; }
   .formats { padding-top: 12px; }
@@ -100,3 +69,14 @@
 
 /* 390px 안팎의 휴대폰에서 32px 제목 한 줄("사업을 기획하는 순서로")이 넘쳐 세 줄이 되지 않도록 화면 폭에 맞춰 조금 줄인다. */
 @media (max-width: 420px) { .overview h2 { font-size: min(var(--home-title-size, 32px), 7.6vw); } }
+
+/* 대화 예시 — 실제 새 대화와 같은 말풍선(coach-chat-ui)을 밝은 카드 위에 */
+.chatDemo { display: grid; gap: 18px; max-width: 560px; margin: 0 auto; padding: 28px 24px 24px; border-radius: 20px; background: #fff; text-align: left; }
+/* .overview p(회색 16px)가 말풍선 글자까지 덮지 않게 */
+.overview .chatDemo p { color: inherit; font-size: 15px; line-height: 1.65; }
+.chatChoices { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 0 46px; padding: 0; list-style: none; }
+.chatChoices li { padding: 9px 14px; border: 1px solid #d1d6db; border-radius: 999px; background: #fff; color: #333d4b; font-size: 14px; font-weight: 500; line-height: 1.4; }
+@media (max-width: 640px) {
+  .chatDemo { padding: 22px 16px 18px; border-radius: 16px; }
+  .chatChoices { margin-left: 0; }
+}
