@@ -1,0 +1,5 @@
+shots/
+results*.json
+*-report.json
+*.log
+origin.txt

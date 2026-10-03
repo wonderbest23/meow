@@ -4,9 +4,26 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 8083,
       "autoPort": true
+    },
+    {
+      "name": "dev-intake",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NEXT_PUBLIC_BUSINESS_INTAKE_V2=1",
+        "npm",
+        "run",
+        "dev",
+        "--",
+        "-p",
+        "8093"
+      ],
+      "port": 8093
     }
   ]
 }
