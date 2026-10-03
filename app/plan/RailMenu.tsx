@@ -42,7 +42,8 @@ export default function RailMenu({ active, workspaceHref, children }: { active?:
   const here = (key: RailActive) => (current === key ? "page" as const : undefined);
   const loginNext = encodeURIComponent(pathname || "/plan");
 
-  return <div className={menu.menu}>
+  /* data-app-rail: 화면 로딩 표시(PlanLoading)가 메뉴 폭만큼 본문 가운데로 옮겨 가는 기준 */
+  return <div className={menu.menu} data-app-rail>
     <Link href="/" className={menu.brand} title="오늘창업 홈" aria-label="오늘창업 홈">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className={menu.logoFull} src={DEFAULT_LOGO.src} alt="" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
