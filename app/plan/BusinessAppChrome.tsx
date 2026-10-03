@@ -29,7 +29,8 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     <div className={styles.appSurface}>
       <header className={styles.header}>
         <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>
-        <div className={styles.headerTitle}><strong>{title}</strong><span>{subtitle ?? `오늘창업${active !== "plans" ? " AI 파트너" : ""}`}</span></div>
+        {/* 부제는 화면이 따로 줄 때만(예: 질문 3/12) — 늘 붙던 '오늘창업'·'오늘창업 AI 파트너'는 왼쪽 로고와 겹쳐 뺐다 */}
+        <div className={styles.headerTitle}><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</div>
         {actions && <div className={styles.headerActions}>{actions}</div>}
         <div className={styles.headerMenu} ref={menu}>
           <button className={styles.menuToggle} aria-label={open ? "대화 메뉴 닫기" : "대화 메뉴 열기"} aria-expanded={open} aria-controls="chat-navigation" onClick={() => setOpen(!open)}>{open ? <X size={22} /> : <MoreHorizontal size={24} />}</button>

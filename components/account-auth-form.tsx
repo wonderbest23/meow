@@ -290,7 +290,6 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           {googleUnavailable && <p className={styles.note}>구글 연결이 지연돼요. 이메일이나 카카오로 로그인해 주세요.</p>}
           {mode === "register" && <p className={styles.note}>SNS로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.</p>}
         </section>}
-        {mode === "login" && <Link className={styles.help} href="/account/support">로그인에 문제가 있으신가요?</Link>}
         <footer className={styles.footer}><Link href="/terms" target="_blank">이용약관</Link><Link href="/privacy" target="_blank">개인정보처리방침</Link></footer>
       </form>
     </div>

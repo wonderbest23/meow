@@ -7,6 +7,7 @@ import { ChevronRight, MoreHorizontal, FileText, MessageSquareText } from "lucid
 import { currentBusinessDesign } from "../../lib/plan-builder/coach";
 import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
+import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
 import PlanLoading from "./PlanLoading";
@@ -43,7 +44,7 @@ export default function PlanList() {
   }, []);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
-  const samples = state?.plans.filter(p => isSamplePlan(p.id)) ?? [];
+  const samples = state?.plans.filter(p => isSamplePlan(p.id) && LISTED_SAMPLE_IDS.has(p.id)) ?? [];
   const filtered = plans.filter(p => filter === "all" || stageOf(businessHubState(p)) === filter);
   function rename(id: string) {
     if (!name.trim()) { setError("사업 이름을 입력해 주세요."); return; }

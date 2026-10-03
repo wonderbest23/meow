@@ -206,6 +206,7 @@ export default function PlanHomepagePage() {
          *   무인꽃집(소매) → 06 ECommerce(온라인 상점)
          */
         const samplePage: Record<string, string> = {
+          sample_pilates: "0-2226",
           sample_coffee: "0-2226",
           sample_flower_psst: "0-1102",
           sample_flower_fm: "0-1102",
