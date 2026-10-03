@@ -147,12 +147,15 @@ async function main() {
       for (const method of ["GET", "POST"]) assert.equal(betaApiBoundary(new Request("https://local.example.invalid/api/account/support", { method }), "1"), null);
       for (const [path, method] of [["/api/account/support", "DELETE"], ["/api/support/assistant", "POST"], ["/api/consult", "POST"], ["/api/plan/export", "POST"], ["/__internal/plan-section", "POST"], ["/api/internal/plan-section", "POST"]]) assert.equal(betaApiBoundary(new Request(`https://local.example.invalid${path}`, { method }), "1")?.status, 403);
     });
-    await check("global widget removed and all existing inquiry links rerouted", () => {
-      assert.doesNotMatch(readFileSync("app/layout.tsx", "utf8"), /SupportChatWidget/);
+    await check("messenger widget is back with home/chat/settings tabs, and page inquiry links still go to the customer center", () => {
+      // 2026-10-03: 대표 요청으로 상담 창을 메신저형(홈·대화·설정)으로 다시 붙였다. 화면 안의 '문의' 링크는 계속 고객센터로 간다
+      assert.match(readFileSync("app/layout.tsx", "utf8"), /<SupportChatWidget \/>/);
+      assert.match(readFileSync("components/support-chat-widget.tsx", "utf8"), /<SupportTabs /);
       for (const path of ["components/landing-quick-editor.tsx", "app/plan/workspace/LaunchWorkspace.tsx", "app/plan/document/DocumentWorkspace.tsx"]) {
         const source = readFileSync(path, "utf8"); assert.doesNotMatch(source, /venture:open-support-chat/); assert.match(source, /\/account\/support/);
       }
-      assert.match(readFileSync("app/account/page.tsx", "utf8"), /href="\/account\/support"/);
+      // 계정 화면의 로그인 폼(계정 화면·팝업 공용)에서 '로그인에 문제가 있으신가요?'가 고객센터로 간다
+      assert.match(readFileSync("components/account-auth-form.tsx", "utf8"), /href="\/account\/support"/);
       assert.doesNotMatch(readFileSync("app/account/support/SupportCenter.tsx", "utf8"), /\/api\/(consult|support\/assistant)/);
       assert.equal(externalCalls, 0);
     });
