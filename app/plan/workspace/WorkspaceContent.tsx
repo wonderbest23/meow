@@ -6,6 +6,9 @@ import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import styles from "../BusinessHub.module.css";
 import ArtifactUpdatePanel from "./ArtifactUpdatePanel";
+import Link from "next/link";
+import { homepageHref } from "../../../lib/plan-builder/journey";
+import type { HomepageStatus } from "../../../lib/plan-builder/journey";
 
 export type WorkspaceView = "summary" | "documents" | "action" | "launch" | "operations";
 
@@ -18,7 +21,7 @@ export function WorkspaceNavigation({ view, onChange, children, operating = fals
     <button aria-pressed={view === "summary"} onClick={() => onChange("summary")}>사업 요약</button>
     <button data-workspace-documents aria-pressed={view === "documents"} onClick={() => onChange("documents")}>내 자료</button>
     <button aria-pressed={view === "launch" || view === "action"} onClick={() => onChange("launch")}>{operating ? "운영 개선하기" : "사업 시작하기"}</button>
-    <button aria-pressed={view === "operations"} onClick={() => onChange("operations")}>실적과 개선 기록</button>
+    <button aria-pressed={view === "operations"} onClick={() => onChange("operations")}>유지보수</button>
     {children}
   </nav>;
 }
@@ -50,4 +53,16 @@ export function WorkspaceDocumentStatus({ complete, count, total, stale, onOpen,
     <p className={styles.downloadNote}>내려받기는 문서에서 · 이용 권한에 따라 결제 필요</p>
     <ArtifactUpdatePanel key={businessId} businessId={businessId} />
   </>;
+}
+
+/** 유지보수 ① 홈페이지 — 공개한 홈페이지를 고치고, 아직이면 만들러 간다 */
+export function WorkspaceHomepageCare({ planId, status, publicPath }: { planId: string; status: HomepageStatus; publicPath: string | null }) {
+  return <div className={styles.careBlock} data-workspace-homepage-care>
+    <h2>홈페이지 관리</h2>
+    <p>{status === "published" ? "홈페이지가 공개되어 있어요. 글·사진·가격이 바뀌면 바로 고쳐 주세요. 문의는 알림 문자로 받아요." : status === "draft" ? "만들어 둔 홈페이지가 아직 공개 전이에요. 다듬어서 공개하면 문의를 받을 수 있어요." : status === "none" ? "아직 홈페이지가 없어요. 사업계획서 내용으로 초안을 바로 만들 수 있어요." : "홈페이지 상태를 확인하고 있어요."}</p>
+    <div className={styles.careActions}>
+      <Link className={styles.primary} href={homepageHref(planId)}>{status === "published" ? "홈페이지 고치기" : status === "draft" ? "홈페이지 다듬고 공개하기" : "홈페이지 만들기"}</Link>
+      {publicPath && <a className={styles.secondary} href={publicPath} target="_blank" rel="noopener">공개된 홈페이지 보기</a>}
+    </div>
+  </div>;
 }

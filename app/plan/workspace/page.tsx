@@ -15,7 +15,8 @@ import ExpertEditor from "./ExpertEditor";
 import launchStyles from "./LaunchWorkspace.module.css";
 import OperatingWorkspace from "./OperatingWorkspace";
 import operatingStyles from "./OperatingWorkspace.module.css";
-import { WorkspaceDocumentStatus, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
+import JourneyBar, { useHomepage } from "../JourneyBar";
+import { WorkspaceDocumentStatus, WorkspaceHomepageCare, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
 
 type View = WorkspaceView;
 export default function BusinessWorkspace() {
@@ -78,6 +79,7 @@ export default function BusinessWorkspace() {
   function openDocument() { if(plan){setActivePlan(plan.id);router.push(`/plan/document?planId=${encodeURIComponent(plan.id)}`);} }
   function openLegacy() { if(plan){setActivePlan(plan.id);router.push("/plan/overview");} }
   const hub=plan ? businessHubState(plan,runStatus) : null;
+  const homepage=useHomepage(plan?.id);
   const design=hub?.coach ? currentBusinessDesign(hub.coach) : null;
   const action=hub?.coach ? currentNextAction(hub.coach) : undefined;
   const done=plan && action ? actionStatus(plan,action.action) : "pending";
@@ -96,14 +98,15 @@ export default function BusinessWorkspace() {
     const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
     if (!anchor || anchor.hasAttribute("download") || anchor.target === "_blank") return;
     event.preventDefault(); event.stopPropagation(); setPendingNavigation({ href: anchor.href });
-  }}><BusinessAppChrome title="내 사업 관리">
+  }}><BusinessAppChrome title="내 사업 관리" journey={plan && <JourneyBar planId={plan.id} plan={plan} runStatus={runStatus} homepage={homepage.status} current={view==="operations" ? "care" : null} />}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p><Link className={styles.primary} href="/plan">내 사업으로</Link><Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인합니다.</p>}
         <WorkspaceIdentity title={plan.title} status={hub.status} />
         <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"}>{hub.coach ? <Link href={chat}>대화 이어가기</Link> : <button onClick={openLegacy}>기존 작업 열기</button>}</WorkspaceNavigation>
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={()=>{ if (!expertDirty || window.confirm("저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?")) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
-        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "실적과 개선 기록" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
+        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
+          {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} />}
           {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} />}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
           {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "기존에 작성한 사업계획서를 이어서 확인할 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
