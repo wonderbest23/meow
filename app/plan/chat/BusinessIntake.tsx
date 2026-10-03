@@ -18,6 +18,7 @@ import { intakeNextStep, choiceDraftSubmission, customCandidateDraftKey, draftKe
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import styles from "./intake.module.css";
 import chatUi from "../../../components/coach-chat-ui.module.css";
+import ChatLoading from "./loading";
 import { InlineLogin } from "../../../components/login-dialog";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
@@ -58,7 +59,8 @@ function hasLocalInput(draft: IntakeDraft) {
 }
 
 export default function BusinessIntake(props: BusinessIntakeProps) {
-  return <Suspense fallback={<PlanLoading fill note="대화를 불러오고 있어요" />}><IntakeWorkspace {...props} /></Suspense>;
+  /* 바깥 로딩(ChatLoading)과 같은 틀 — 왼쪽 메뉴가 사라졌다 나타나지 않게 */
+  return <Suspense fallback={<ChatLoading />}><IntakeWorkspace {...props} /></Suspense>;
 }
 
 function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) {

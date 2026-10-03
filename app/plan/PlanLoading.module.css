@@ -5,13 +5,18 @@
 .dots i { display:block; width:8px; height:8px; border-radius:50%; background:var(--app-primary,#3182f6); animation:loadingDot 1.4s ease-in-out infinite; }
 .dots i:nth-child(2) { animation-delay:.16s; }
 .dots i:nth-child(3) { animation-delay:.32s; }
-.wrap > .status { flex-direction:column; gap:22px; width:100%; text-align:center; }
-.wrap > .status p { max-width:28em; font-size:22px; font-weight:650; line-height:1.6; }
-.wrap > .status .dots { height:32px; gap:10px; }
-.wrap > .status .dots i { width:12px; height:12px; }
+/* 화면 로딩: 얇은 원(트랙 + 돌아가는 호) + 작은 회색 글씨 */
+.loader { display:flex; flex-direction:column; align-items:center; gap:16px; text-align:center; opacity:0; animation:loaderIn .24s ease .15s forwards; }
+.loader p { max-width:24em; margin:0; color:#8b95a1; font-size:14px; font-weight:500; line-height:1.6; word-break:keep-all; }
+.ring { display:block; width:32px; height:32px; box-sizing:border-box; border:3px solid #e5e8eb; border-top-color:var(--app-primary,#246bd1); border-radius:50%; animation:loadingSpin .75s cubic-bezier(.45,.05,.55,.95) infinite; }
 .fullPage { min-height:100dvh; }
 .fill { flex:1; min-height:240px; max-width:none; }
+/* 화면을 채우는 로딩은 틀과 상관없이 화면 한가운데에 고정 — 메뉴·머리말은 그대로 눌린다 */
+.pinned .loader { position:fixed; top:50%; left:50%; z-index:30; transform:translate(-50%,-50%); pointer-events:none; }
+/* PC에서 왼쪽 메뉴(208px)가 보이면 본문 가운데로 — 메뉴 폭의 절반만큼 오른쪽 */
+@media (min-width:901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .pinned .loader { left:calc(50% + 104px); } }
 .spinner { display:inline-block; flex-shrink:0; width:1.15em; height:1.15em; vertical-align:-.12em; border:2px solid currentColor; border-right-color:transparent; border-radius:50%; animation:loadingSpin .8s linear infinite; }
 @keyframes loadingDot { 0%,70%,100% { opacity:.4; transform:translateY(0); } 35% { opacity:1; transform:translateY(-4px); } }
 @keyframes loadingSpin { to { transform:rotate(360deg); } }
-@media(prefers-reduced-motion:reduce) { .dots i,.spinner { animation:none; } }
+@keyframes loaderIn { to { opacity:1; } }
+@media(prefers-reduced-motion:reduce) { .dots i,.spinner { animation:none; } .ring { animation-duration:1.6s; } .loader { animation:none; opacity:1; } }

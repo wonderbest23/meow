@@ -114,6 +114,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
       <nav
         className={`${styles.rail} ${railHidden ? styles.railOff : ""} ${drawer ? styles.railOpen : ""}`}
         data-rail-open={drawer ? "" : undefined}
+        data-rail-hidden={railHidden ? "" : undefined}
         aria-label="주요 메뉴"
       >
         <RailMenu><PlanRailNav /></RailMenu>
