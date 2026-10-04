@@ -5,6 +5,7 @@
   "scripts": {
     "test:business-coach": "tsx scripts/business-coach.test.ts",
     "test:business-design": "tsx scripts/business-design.test.ts",
+    "test:journey": "tsx scripts/journey.test.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",

@@ -68,3 +68,9 @@
 .nextStep > span { color: #5e7187; font-size: 13px; font-weight: 600; }
 .nextStep h3 { margin: 8px 0; font-size: 20px; }
 .nextStep p { margin: 0 0 16px; font-size: 15px; }
+
+.careBlock { margin-bottom:28px; padding-bottom:28px; border-bottom:1px solid var(--app-line); }
+.careBlock h2 { margin:0 0 8px; }
+.careBlock p { margin:0 0 16px; }
+.careActions { display:flex; flex-wrap:wrap; gap:10px; }
+.careActions a { text-decoration:none; }

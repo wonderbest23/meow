@@ -8,8 +8,10 @@ import shell from "./PlanShell.module.css";
 import RailMenu from "./RailMenu";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", workspaceHref, showRail = true }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", workspaceHref, showRail = true, journey }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new"; backHref?: string; workspaceHref?: string; showRail?: boolean;
+  /** 대화 → 계획서 → 홈페이지 → 유지보수 단계 표시(JourneyBar) — 머리줄 바로 아래 */
+  journey?: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -45,6 +47,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
           </nav>}
         </div>
       </header>
+      {journey}
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}
       {children}
     </div>

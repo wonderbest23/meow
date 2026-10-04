@@ -15,6 +15,7 @@ import { coachDocumentRevision, currentBusinessDesign, readCoach } from "../../.
 import type { DocumentReviewSource } from "./DocumentSourceReview";
 import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
+import { businessHubState } from "../../../lib/plan-builder/business-hub";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 export default function PlanDocumentPage() {
@@ -57,6 +58,8 @@ export default function PlanDocumentPage() {
   const [coachHref, setCoachHref] = useState<string | null>(null);
   const [contextNotice, setContextNotice] = useState("");
   const [completionKey, setCompletionKey] = useState<string | null>(null);
+  /** 모든 항목이 써졌는지 — 사업 조건이 바뀌어 다시 볼 곳이 있어도 다음 단계는 보여 준다 */
+  const [allWritten, setAllWritten] = useState(false);
   const [reviewSource, setReviewSource] = useState<DocumentReviewSource | null>(null);
   const [summary, setSummary] = useState<ExecutiveSummary | null>(null);
   const [summaryError, setSummaryError] = useState("");
@@ -70,6 +73,7 @@ export default function PlanDocumentPage() {
     }
     const coach = readCoach(plan.answers), snapshot = coachDocumentSnapshot(plan);
     setCompletionKey(isSamplePlan(plan.id) ? null : completedDocumentKey(plan));
+    setAllWritten(!isSamplePlan(plan.id) && businessHubState(plan).complete);
     setReviewSource(coach ? { revision: coachDocumentRevision(coach), fields: coach.fields, sections: Object.fromEntries(Object.entries(plan.sections).filter(([, section]) => section.coachRevision !== coachDocumentRevision(coach)).map(([key, section]) => [key, section.generatedAt])) } : null);
     /* 예시는 읽기 전용 — 갱신·검토 안내를 띄우지 않는다 */
     setContextNotice(isSamplePlan(plan.id) ? "" : snapshot?.stale.length ? "공통 사업 조건이 바뀌었어요. 문서를 갱신하거나 각 항목을 확인해 주세요" : snapshot?.manualReview.length ? "직접 수정한 항목을 최신 사업 조건과 비교해 검토해 주세요" : "");
@@ -267,7 +271,7 @@ export default function PlanDocumentPage() {
       if (!documentPlanId) return;
       edits.acceptReviewed(documentPlanId, key, section, updatedAt);
     }}
-    completionKey={completionKey}
+    completionKey={completionKey} allWritten={allWritten}
     grouped={grouped} numbering={numbering} isSample={isSample} coachHref={coachHref}
     notice={contextNotice} editStates={edits.states} onSave={saveEdit} onDraft={edits.stage}
     restoreKeys={edits.restoreKeys} onRestore={edits.restore} onRetrySave={edits.retry} onDiscardDraft={edits.discard}

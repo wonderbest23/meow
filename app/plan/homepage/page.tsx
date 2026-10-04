@@ -18,6 +18,7 @@ import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import styles from "./page.module.css";
 import PlanLoading from "../PlanLoading";
+import JourneyBar from "../JourneyBar";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 
 /*
@@ -55,6 +56,8 @@ export default function PlanHomepagePage() {
   const [draft, setDraft] = useState<LandingDraft | null>(null);
   const [editable, setEditable] = useState(false);
   const [sample, setSample] = useState(false);
+  /** 위쪽 단계 표시(대화 → 계획서 → 홈페이지 → 유지보수)에 쓸 사업 */
+  const [journeyPlanId, setJourneyPlanId] = useState<string | null>(null);
   /** 앱 껍데기를 걷어내고 홈페이지만 화면 가득 — 실제로 어떻게 보이는지 확인용 */
   const [fullscreen, setFullscreen] = useState(false);
   /** 섹션 배치 편집기 — 결제한 사람만 연다 */
@@ -162,6 +165,7 @@ export default function PlanHomepagePage() {
       if (requested && state.plans.some(item => item.id === requested)) { setActivePlan(requested); state = { ...state, activePlanId: requested }; }
       const plan = activePlan(state);
       if (!alive) return;
+      setJourneyPlanId(plan && !isSamplePlan(plan.id) ? plan.id : null);
       if (!plan) {
         setBlocked({ title: "먼저 사업계획서를 만들어주세요", detail: "홈페이지는 계획서에 답한 내용으로 만듭니다.", missing: [], cta: "plan" });
         setPhase("blocked");
@@ -385,6 +389,7 @@ export default function PlanHomepagePage() {
 
   return (
     <>
+      {journeyPlanId && phase !== "loading" && <JourneyBar planId={journeyPlanId} current="homepage" homepage={site ? (site.status === "published" ? "published" : "draft") : undefined} />}
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (
         <div className={styles.fullscreen} role="dialog" aria-label="홈페이지 전체 화면">

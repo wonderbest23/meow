@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Globe, ListChecks, Wrench } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Globe, Wrench } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
@@ -15,12 +15,17 @@ import DocumentSourceReview, { type DocumentReviewSource } from "./DocumentSourc
 import type { StoredSection } from "../../../lib/plan-builder/plan-store";
 import type { ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 import ExecutiveSummaryView from "./ExecutiveSummaryView";
+import JourneyBar, { useHomepageStatus } from "../JourneyBar";
+import { careHref, journeyNext, type HomepageStatus } from "../../../lib/plan-builder/journey";
+import { loadState } from "../../../lib/plan-builder/plan-store";
 
 type Format = "pdf" | "docx" | "pptx";
 type Props = {
   title: string; planId: string | null; planType: string; ready: boolean;
   identity?: { headline: string; pitch: string };
   completionKey: string | null;
+  /** 모든 항목이 써졌는지 — 다음 단계 칸을 띄우는 기준 */
+  allWritten?: boolean;
   grouped: Array<[string, ReturnType<typeof assembleSections>]>;
   numbering: Map<string, { num: string; chapterNum: number }>;
   isSample: boolean; coachHref: string | null; notice: string;
@@ -52,14 +57,13 @@ function WritingStatus({ done, total, current }: { done: number; total: number; 
   </div>;
 }
 
-/** 계획서 다음 단계 — 홈페이지, 사업 시작 준비, 운영 관리 */
-function NextSteps({ planId, compact, className }: { planId: string; compact?: boolean; className?: string }) {
-  const id = encodeURIComponent(planId);
-  const steps = [
-    { href: `/plan/homepage?planId=${id}`, Icon: Globe, title: "홈페이지 만들기", note: "이 계획서 내용으로 초안을 바로 만들어요" },
-    { href: `/plan/workspace?planId=${id}&tab=launch`, Icon: ListChecks, title: "사업 시작 준비", note: "신고·홍보·결제 준비를 단계별로 해요" },
-    { href: `/plan/workspace?planId=${id}&tab=operations`, Icon: Wrench, title: "운영·유지 관리", note: "실적을 기록하고 개선할 점을 찾아요" },
-  ];
+/** 계획서 다음 단계 — 지금 할 일 하나를 크게, 유지보수는 그 아래 작게 */
+function NextSteps({ planId, homepage, compact, className }: { planId: string; homepage: HomepageStatus; compact?: boolean; className?: string }) {
+  const plan = loadState().plans.find(item => item.id === planId);
+  if (!plan) return null;
+  const next = journeyNext(plan, homepage);
+  const steps = [{ ...next, Icon: next.step === "care" ? Wrench : Globe }];
+  if (next.step !== "care") steps.push({ step: "care", title: "유지보수", note: "홈페이지를 공개한 뒤 고치고, 문의와 실적을 관리해요", href: careHref(planId), Icon: Wrench });
   return <nav className={`${styles.nextSteps} ${compact ? styles.nextStepsCompact : ""} ${className ?? ""}`} aria-label="계획서 다음 단계">
     <strong>다음 단계</strong>
     {steps.map(({ href, Icon, title, note }, index) => <Link key={href} href={href} data-primary={index === 0 || undefined}><Icon size={20} aria-hidden="true" /><span><b>{title}</b><small>{note}</small></span><ChevronRight size={18} aria-hidden="true" /></Link>)}
@@ -112,7 +116,8 @@ export default function DocumentWorkspace(props: Props) {
   }, [ready]);
   useEffect(() => { if (zoomTable && zoomDialog.current && !zoomDialog.current.open) zoomDialog.current.showModal(); }, [zoomTable]);
   /* 계획서가 다 만들어지면 오른쪽에 다음 단계를 늘 띄워 둔다(좁은 화면에서는 문서 위에) */
-  const showNext = !isSample && !!planId && !!props.completionKey && !props.writing;
+  const showNext = !isSample && !!planId && (!!props.completionKey || !!props.allWritten) && !props.writing;
+  const homepage = useHomepageStatus(isSample ? null : planId);
   const back = planId && !isSample ? `/plan/workspace?planId=${encodeURIComponent(planId)}&tab=documents` : "/plan";
 
   useEffect(() => {
@@ -157,7 +162,8 @@ export default function DocumentWorkspace(props: Props) {
   </nav>;
 
   return <main className={`${frame.page} ${styles.page}`}>
-    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={false}>
+    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={false}
+      journey={!isSample && ready && <JourneyBar planId={planId} current="document" homepage={homepage} version={`${props.completionKey}:${grouped.length}:${props.writing?.done ?? ""}`} />}>
       {!ready ? <PlanLoading fill variant="compact" note="문서를 불러오고 있어요" /> : <div className={styles.layout}>
         {grouped.length > 0 && <aside className={styles.sidebar}><h2>목차</h2>{toc()}</aside>}
         <div className={styles.document}>
@@ -174,7 +180,7 @@ export default function DocumentWorkspace(props: Props) {
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문">
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
-              {showNext && planId && <NextSteps planId={planId} compact className={styles.nextStepsTop} />}
+              {showNext && planId && <NextSteps planId={planId} homepage={homepage} compact className={styles.nextStepsTop} />}
               {props.writing && <WritingStatus {...props.writing} />}
               {props.notice && !props.writing && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
@@ -190,7 +196,7 @@ export default function DocumentWorkspace(props: Props) {
                 </section>)}
               </div>)}
               {!summaryMode && !continuous && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
-              {showNext && planId && <NextSteps planId={planId} className={styles.nextStepsInline} />}
+              {showNext && planId && <NextSteps planId={planId} homepage={homepage} className={styles.nextStepsInline} />}
             </article>}
           </div>
           <footer className={styles.actions}>
@@ -198,7 +204,7 @@ export default function DocumentWorkspace(props: Props) {
             <button className={styles.primary} disabled={!grouped.length} onClick={() => setModal("download")}>사업계획서 내려받기</button>
           </footer>
         </div>
-        {showNext && planId && <aside className={styles.nextPanel}><NextSteps planId={planId} /></aside>}
+        {showNext && planId && <aside className={styles.nextPanel}><NextSteps planId={planId} homepage={homepage} /></aside>}
       </div>}
     </BusinessAppChrome>
     <dialog ref={dialog} className={styles.dialog} onCancel={() => setModal(null)} onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setModal(null); } }} aria-labelledby="document-dialog-title">
