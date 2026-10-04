@@ -549,7 +549,8 @@ export default function PlanHomepagePage() {
           action={action}
           message={message}
           published={site?.status === "published"}
-          publicPath={publicPath}
+          /* 공개 전 주소는 아직 없다(열면 404) — 공개한 뒤에만 주소와 '열기'를 보인다 */
+          publicPath={site?.status === "published" ? publicPath : ""}
           projectId={projectId}
           customDomain={site?.customDomain ?? ""}
           demo={false}
@@ -557,7 +558,7 @@ export default function PlanHomepagePage() {
           onReset={() => site && setDraft(site.draft)}
           onSave={save}
           onPublish={publish}
-          onPreview={() => publicPath && window.open(publicPath, "_blank", "noopener")}
+          onPreview={() => (site?.status === "published" && publicPath ? window.open(publicPath, "_blank", "noopener") : setFullscreen(true))}
           onSiteUpdated={updateSite}
         />
       )}

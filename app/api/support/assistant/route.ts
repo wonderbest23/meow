@@ -28,8 +28,8 @@ const requestSchema = z.object({
  */
 const ASSISTANT_LINKS = {
   "plan-start": { href: "/plan/chat?new=1", label: "새 사업 기획 시작하기" },
-  "plan-samples": { href: "/plan", label: "샘플 문서 보기" },
-  "plan-document": { href: "/plan/document", label: "문서 보기 열기" },
+  "plan-samples": { href: "/plan", label: "내 사업 열기" },
+  "plan-document": { href: "/plan", label: "내 사업에서 계획서 열기" },
   "plan-me": { href: "/plan/me", label: "마이페이지 열기" },
   "refund-info": { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" },
 } as const;
@@ -137,9 +137,9 @@ export async function POST(request: Request) {
         "세무·법률·투자 판단은 대행하거나 확정하지 말고 서비스 지원 범위를 설명하세요.",
         "서비스 지식으로 확정할 수 없거나 실제 주문·계정·프로젝트 확인이 필요하면 needsOperator를 true로 하세요.",
         "답의 다음 행동이 아래 화면 중 하나면 link에 그 id를 넣으세요. 해당 없으면 link를 생략하세요.",
-        "- plan-start: 새 문서 시작(유형 선택·가격 확인 포함)",
-        "- plan-samples: 완성 샘플 문서 보기 / 내 문서 목록",
-        "- plan-document: 완성 문서 보기·내려받기·발표자료",
+        "- plan-start: 새 대화로 사업 시작하기",
+        "- plan-samples: 내 사업 목록 / 완성 예시 보기",
+        "- plan-document: 사업계획서 보기·내려받기",
         "- plan-me: 마이페이지(결제 내역·계정)",
         "- refund-info: 취소·환불 기준 안내",
         "JSON 객체 {answer, needsOperator, link?}만 출력하세요.",
