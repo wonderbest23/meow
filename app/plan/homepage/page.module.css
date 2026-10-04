@@ -298,3 +298,15 @@
 }
 
 
+
+/* 다른 화면(대화·계획서·유지보수)과 같은 틀 안의 스크롤 영역 */
+.frameScroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--app-raised); }
+.frameInner { max-width: 1180px; margin: 0 auto; padding: 24px 28px 80px; }
+@media (max-width: 640px) { .frameInner { padding: 12px 12px 56px; } }
+
+/* 머리줄 오른쪽 저장·공개 — 편집 화면 위쪽에 따로 버튼 줄을 두지 않는다 */
+.headerActions { display: flex; align-items: center; gap: 8px; }
+.headerActions button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-surface); color: var(--app-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.headerActions button:disabled { opacity: .5; cursor: default; }
+.headerActions .headerPrimary { border-color: #3272db; background: #3272db; color: #fff; }
+@media (max-width: 480px) { .headerActions button { padding: 0 10px; } .headerActions button:not(.headerPrimary) span { display: none; } }

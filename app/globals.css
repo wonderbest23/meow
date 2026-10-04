@@ -16920,3 +16920,22 @@ html:has(main.cinematic-home), body:has(main.cinematic-home) { background: #000;
 @media (min-width: 761px) {
   .support-chat-widget.open .support-chat-panel { border: 0; border-radius: 24px; box-shadow: 0 24px 64px rgba(16, 24, 40, .22), 0 0 0 1px rgba(16, 24, 40, .06); }
 }
+
+/* ── 홈페이지 패널 3차 — 도구를 두 줄로, 미리보기 안내는 겹치지 않게 ──
+ * 주소창 옆 버튼 다섯 개가 한 줄로 몰려 겹쳤고, 미리보기 아래쪽 안내 띠가
+ * 첫 화면의 '문의하기' 버튼을 덮었다(사용자 지적, 2026-10).
+ */
+.hk-tools { display: grid; gap: 0; border-bottom: 1px solid #ecebf3; background: #fbfbfe; }
+.hk-tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 10px 14px; }
+.hk-tool-row + .hk-tool-row { border-top: 1px solid #f0eff6; }
+.hk-tool-label { display: inline-flex; align-items: center; gap: 5px; min-width: 92px; color: #55586a; font-size: 12.5px; font-weight: 700; }
+.hk-tool-row > button, .hk-tool-btn { min-height: 32px; padding: 0 11px; border: 1px solid #dfe3ea; border-radius: 8px; background: #fff; color: #3d3a52; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+.hk-tool-row > button:hover:not(:disabled) { border-color: #b9b6d6; }
+.hk-tool-row > button:disabled { opacity: .5; cursor: default; }
+.hk-tools .hk-themes { display: inline-flex; flex-wrap: wrap; gap: 6px; padding: 0; border: 0; background: transparent; }
+.hk-preview-hint { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 0; padding: 8px 14px; border-bottom: 1px solid #ecebf3; background: #fff; color: #55586a; font-size: 12.5px; font-weight: 600; text-align: center; }
+.hk-top[data-in-chrome] { min-height: 0; }
+@media (max-width: 640px) {
+  .hk-tool-label { min-width: 0; width: 100%; }
+  .hk-mock-url { font-size: 11px; }
+}
