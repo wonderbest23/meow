@@ -20,3 +20,6 @@ li[data-here] .step i { border-color:#246bd1; background:#246bd1; color:#fff; }
   .step i { width:22px; height:22px; font-size:11px; }
 }
 @media(max-width:400px) { .step { font-size:12px; padding-right:4px; }.bar li + li::before { width:5px; } }
+
+/* PC에서는 왼쪽 메뉴의 '내 사업' 나무가 같은 네 단계를 보여 준다 — 위 띠는 메뉴가 숨는 폭에서만 */
+@media(min-width:901px) { .bar { display:none; } }

@@ -1,0 +1,47 @@
+/*
+ * 왼쪽 메뉴의 '내 사업' 나무 — 사업 목록 → 사업 하나의 목차(4단계) → 지금 화면의 세부 목차.
+ * 칸 모양은 RailMenu.module.css 와 같은 규칙(글씨 14·13, 모서리 8, 선택은 연한 회색 바탕).
+ */
+.tree { display:flex; flex-direction:column; gap:2px; min-height:0; flex:0 1 auto; }
+.head { width:100%; text-align:left; cursor:pointer; font:inherit; }
+.head > span { flex:1; }
+.caret { flex:none; width:14px !important; height:14px !important; transition:transform .15s ease; }
+.tree .caret[data-open] { transform:rotate(90deg); }
+
+.list { display:flex; flex-direction:column; gap:2px; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:2px 0 6px 10px; }
+.empty { margin:4px 8px 8px; color:#8b95a1; font-size:12px; line-height:1.5; }
+
+.plan { display:flex; flex-direction:column; }
+.tree .planRow { display:flex; align-items:center; gap:6px; width:100%; min-height:36px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:#4e5968; font:inherit; font-size:13px; font-weight:600; text-align:left; cursor:pointer; }
+.tree .planRow:hover { background:#f2f4f6; color:#191f28; }
+.tree .planRow[data-current] { color:#191f28; }
+.planRow > span { flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.planRow .caret { color:#8b95a1; }
+
+.steps { display:flex; flex-direction:column; gap:1px; margin:2px 0 6px 14px; padding:0 0 0 8px; border-left:1px solid #e5e8eb; list-style:none; }
+.step { display:flex; align-items:center; gap:8px; min-height:34px; padding:0 8px; border-radius:8px; color:#4e5968; font-size:13px; font-weight:500; text-decoration:none; }
+a.step:hover { background:#f2f4f6; color:#191f28; }
+.step[aria-current="page"] { background:#e8f0fd; color:#1b4f9c; font-weight:700; }
+.step[aria-disabled="true"] { color:#b0b8c1; cursor:default; }
+.step i { display:grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid #d1d6db; font-style:normal; font-size:10px; font-weight:700; color:#8b95a1; background:#fff; }
+.step i[data-state="done"] { border-color:#246bd1; background:#246bd1; color:#fff; }
+.step i[data-state="active"] { border-color:#246bd1; color:#246bd1; }
+.step[aria-current="page"] i { border-color:#246bd1; background:#246bd1; color:#fff; }
+
+.parts { display:flex; flex-direction:column; gap:1px; margin:2px 0 4px 18px; padding:0; list-style:none; }
+.tree .parts button { display:flex; align-items:baseline; gap:8px; width:100%; min-height:30px; padding:6px 8px; border:0; border-radius:6px; background:transparent; color:#4e5968; font:inherit; font-size:12.5px; line-height:1.45; text-align:left; cursor:pointer; word-break:keep-all; }
+.tree .parts button:hover { background:#f2f4f6; color:#191f28; }
+.tree .parts button[aria-current="true"] { color:#1b4f9c; font-weight:700; background:#f2f6fd; }
+.parts b { flex:none; font-size:11px; font-weight:600; color:#8b95a1; font-variant-numeric:tabular-nums; }
+
+.all { margin:4px 0 0; padding:8px; border-radius:8px; color:#6b7684; font-size:12.5px; text-decoration:none; }
+.all:hover { background:#f2f4f6; color:#191f28; }
+.all[aria-current="page"] { color:#191f28; font-weight:600; }
+
+/* 폰의 아이콘 띠(PlanShell) — 목록은 서랍을 열었을 때만 */
+@media (max-width:640px) {
+  .head .caret { display:none; }
+  .list { display:none; }
+  :global([data-rail-open]) .list { display:flex; }
+  :global([data-rail-open]) .head .caret { display:block; }
+}

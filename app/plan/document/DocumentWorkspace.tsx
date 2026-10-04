@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Globe, Wrench } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
@@ -16,7 +16,7 @@ import type { StoredSection } from "../../../lib/plan-builder/plan-store";
 import type { ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 import ExecutiveSummaryView from "./ExecutiveSummaryView";
 import JourneyBar, { useHomepageStatus } from "../JourneyBar";
-import { careHref, journeyNext, type HomepageStatus } from "../../../lib/plan-builder/journey";
+import { journeyNext, type HomepageStatus } from "../../../lib/plan-builder/journey";
 import { loadState } from "../../../lib/plan-builder/plan-store";
 
 type Format = "pdf" | "docx" | "pptx";
@@ -57,17 +57,15 @@ function WritingStatus({ done, total, current }: { done: number; total: number; 
   </div>;
 }
 
-/** 계획서 다음 단계 — 지금 할 일 하나를 크게, 유지보수는 그 아래 작게 */
-function NextSteps({ planId, homepage, compact, className }: { planId: string; homepage: HomepageStatus; compact?: boolean; className?: string }) {
+/**
+ * 다음 단계 버튼 — 화면 맨 아래, 수정·내려받기 옆 늘 같은 자리에 하나만 둔다.
+ * 오른쪽 칸·문서 위 카드·완료 알림에 흩어져 있던 다음 단계 안내를 여기 하나로 모았다(사용자 피드백 2026-10).
+ */
+function NextStepButton({ planId, homepage }: { planId: string; homepage: HomepageStatus }) {
   const plan = loadState().plans.find(item => item.id === planId);
   if (!plan) return null;
   const next = journeyNext(plan, homepage);
-  const steps = [{ ...next, Icon: next.step === "care" ? Wrench : Globe }];
-  if (next.step !== "care") steps.push({ step: "care", title: "유지보수", note: "홈페이지를 공개한 뒤 고치고, 문의와 실적을 관리해요", href: careHref(planId), Icon: Wrench });
-  return <nav className={`${styles.nextSteps} ${compact ? styles.nextStepsCompact : ""} ${className ?? ""}`} aria-label="계획서 다음 단계">
-    <strong>다음 단계</strong>
-    {steps.map(({ href, Icon, title, note }, index) => <Link key={href} href={href} data-primary={index === 0 || undefined}><Icon size={20} aria-hidden="true" /><span><b>{title}</b><small>{note}</small></span><ChevronRight size={18} aria-hidden="true" /></Link>)}
-  </nav>;
+  return <Link className={styles.nextButton} href={next.href}><span>다음 단계</span><b>{next.title}</b><ChevronRight size={20} aria-hidden="true" /></Link>;
 }
 
 export default function DocumentWorkspace(props: Props) {
@@ -151,6 +149,12 @@ export default function DocumentWorkspace(props: Props) {
     return () => clearTimeout(timer);
   }, [grouped.length]);
 
+  function readAll() { setContinuous(true); setSummaryMode(false); setModal(null); scroll.current?.scrollTo({ top: 0 }); }
+  /* PC에서는 목차가 왼쪽 메뉴의 이 사업 아래에 붙는다(내 사업 → 사업 → 사업계획서 → 장) */
+  const documentToc = planId && !isSample && grouped.length > 0 ? {
+    planId, chapters: grouped.map(([name]) => name), current: continuous && !summaryMode ? "all" as const : chapter,
+    onSelect: (index: number | "all") => index === "all" ? readAll() : selectChapter(index),
+  } : undefined;
   function selectChapter(index: number) {
     setChapter(index); setContinuous(false); setSummaryMode(false); setModal(null);
     scroll.current?.scrollTo({ top: 0, behavior: "instant" });
@@ -158,14 +162,15 @@ export default function DocumentWorkspace(props: Props) {
 
   const toc = () => <nav className={styles.toc} aria-label="문서 목차">
     {grouped.map(([name], index) => <button key={name} aria-current={!summaryMode && !continuous && chapter === index ? "page" : undefined} onClick={() => selectChapter(index)}><span>{String(index + 1).padStart(2, "0")}</span><strong>{name}</strong></button>)}
-    <button className={styles.continuous} aria-current={continuous && !summaryMode ? "page" : undefined} onClick={() => { setContinuous(true); setSummaryMode(false); setModal(null); scroll.current?.scrollTo({ top: 0 }); }}>전체 이어 읽기</button>
+    <button className={styles.continuous} aria-current={continuous && !summaryMode ? "page" : undefined} onClick={readAll}>전체 이어 읽기</button>
   </nav>;
 
   return <main className={`${frame.page} ${styles.page}`}>
-    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={false}
+    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={!isSample} documentToc={documentToc}
       journey={!isSample && ready && <JourneyBar planId={planId} current="document" homepage={homepage} version={`${props.completionKey}:${grouped.length}:${props.writing?.done ?? ""}`} />}>
       {!ready ? <PlanLoading fill variant="compact" note="문서를 불러오고 있어요" /> : <div className={styles.layout}>
-        {grouped.length > 0 && <aside className={styles.sidebar}><h2>목차</h2>{toc()}</aside>}
+        {/* 예시 문서는 왼쪽 메뉴에 사업이 없으니 문서 옆에 목차를 그대로 둔다 */}
+        {isSample && grouped.length > 0 && <aside className={styles.sidebar}><h2>목차</h2>{toc()}</aside>}
         <div className={styles.document}>
           <div className={styles.readingBar}>
             <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} />목차</button>
@@ -176,12 +181,11 @@ export default function DocumentWorkspace(props: Props) {
             <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
           </div>}
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
-          {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요. 다음은 홈페이지예요.</p>{planId && <Link className={styles.nextLink} href={`/plan/homepage?planId=${encodeURIComponent(planId)}`}>이 계획서로 홈페이지 만들기</Link>}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
+          {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요. 준비되면 아래 <b>다음 단계</b> 버튼을 눌러 이어가세요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문">
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
-              {showNext && planId && <NextSteps planId={planId} homepage={homepage} compact className={styles.nextStepsTop} />}
-              {props.writing && <WritingStatus {...props.writing} />}
+                            {props.writing && <WritingStatus {...props.writing} />}
               {props.notice && !props.writing && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
                 <DocumentChapterHeading number={index + 1} title={name} />
@@ -196,15 +200,14 @@ export default function DocumentWorkspace(props: Props) {
                 </section>)}
               </div>)}
               {!summaryMode && !continuous && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
-              {showNext && planId && <NextSteps planId={planId} homepage={homepage} className={styles.nextStepsInline} />}
-            </article>}
+                          </article>}
           </div>
-          <footer className={styles.actions}>
+          <footer className={styles.actions} data-next={showNext || undefined}>
             <button className={styles.secondary} disabled={!grouped.length || isSample} onClick={() => { if (summaryMode) { setSummaryMode(false); setEditing(true); } else setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : summaryMode ? "상세 문서 수정" : editing ? "수정 마치기" : "수정하기"}</button>
-            <button className={styles.primary} disabled={!grouped.length} onClick={() => setModal("download")}>사업계획서 내려받기</button>
+            <button className={showNext ? styles.secondary : styles.primary} disabled={!grouped.length} onClick={() => setModal("download")}>{showNext ? "내려받기" : "사업계획서 내려받기"}</button>
+            {showNext && planId && <NextStepButton planId={planId} homepage={homepage} />}
           </footer>
         </div>
-        {showNext && planId && <aside className={styles.nextPanel}><NextSteps planId={planId} homepage={homepage} /></aside>}
       </div>}
     </BusinessAppChrome>
     <dialog ref={dialog} className={styles.dialog} onCancel={() => setModal(null)} onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setModal(null); } }} aria-labelledby="document-dialog-title">

@@ -6,12 +6,15 @@ import { ChevronLeft, CircleHelp, FolderClosed, Headphones, LayoutDashboard, Mor
 import styles from "./chat/page.module.css";
 import shell from "./PlanShell.module.css";
 import RailMenu from "./RailMenu";
+import type { DocumentToc } from "./BusinessRailTree";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", workspaceHref, showRail = true, journey }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", workspaceHref, showRail = true, journey, documentToc }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new"; backHref?: string; workspaceHref?: string; showRail?: boolean;
   /** 대화 → 계획서 → 홈페이지 → 유지보수 단계 표시(JourneyBar) — 머리줄 바로 아래 */
   journey?: ReactNode;
+  /** 문서 화면의 목차 — 왼쪽 메뉴의 그 사업 아래에 붙는다 */
+  documentToc?: DocumentToc;
 }) {
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
@@ -26,7 +29,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
   }, [open]);
   return <>
     {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost}`} aria-label="작업 메뉴">
-      <RailMenu active={active} workspaceHref={workspaceHref} />
+      <RailMenu active={active} documentToc={documentToc} />
     </aside>}
     <div className={styles.appSurface}>
       <header className={styles.header}>

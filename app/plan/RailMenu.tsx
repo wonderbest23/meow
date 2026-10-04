@@ -3,10 +3,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleHelp, FolderClosed, Headphones, LayoutDashboard, SquarePen } from "lucide-react";
+import { CircleHelp, Headphones, SquarePen } from "lucide-react";
 import styles from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
 import { DEFAULT_LOGO } from "../../components/site-header";
+import BusinessRailTree, { type DocumentToc } from "./BusinessRailTree";
 
 /*
  * 왼쪽 메뉴 하나 — 대화·내 사업 화면(BusinessAppChrome)과 문서·결제 화면(PlanShell)이 같이 쓴다.
@@ -23,7 +24,7 @@ function activeFor(pathname: string): RailActive | undefined {
   return undefined;
 }
 
-export default function RailMenu({ active, workspaceHref, children }: { active?: RailActive; workspaceHref?: string; children?: ReactNode }) {
+export default function RailMenu({ active, children, documentToc }: { active?: RailActive; children?: ReactNode; documentToc?: DocumentToc }) {
   const pathname = usePathname() || "";
   /* 사업 대화 화면(chat)은 그 사업이 속한 '내 사업'을 켠다 — 사업 기획 목록은 내 사업으로 합쳤다 */
   const picked = active ?? activeFor(pathname);
@@ -54,12 +55,8 @@ export default function RailMenu({ active, workspaceHref, children }: { active?:
     <Link href="/plan/chat?new=1" className={item(menu.newChat)} title="새 대화" aria-current={here("new")}>
       <SquarePen /><span className={styles.railLabel}>새 대화</span>
     </Link>
-    <Link href="/plan" className={item()} title="내 사업" aria-current={here("plans")}>
-      <FolderClosed /><span className={styles.railLabel}>내 사업</span>
-    </Link>
-    {workspaceHref && <Link href={workspaceHref} className={item(menu.sub)} title="지금 보고 있는 사업의 결과물·시작 준비·운영 기록">
-      <LayoutDashboard /><span className={styles.railLabel}>사업 관리</span>
-    </Link>}
+    {/* 내 사업 — 누르면 사업 목록이, 사업을 누르면 그 사업의 목차가 바로 아래 펼쳐진다 */}
+    <BusinessRailTree documentToc={documentToc} />
     {/* 플랜을 열어 둔 화면이면 그 목차가 여기 붙는다 */}
     {children}
     <div className={`${styles.spring} ${menu.spring}`} />
