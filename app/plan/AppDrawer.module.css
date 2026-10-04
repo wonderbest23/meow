@@ -1,0 +1,10 @@
+/* 폰·좁은 화면에서 여는 메뉴 서랍 — 안에는 PC 왼쪽 메뉴(RailMenu)가 그대로 들어간다 */
+.scrim { position:fixed; inset:0; z-index:90; background:#191f2859; animation:fade .18s ease-out; }
+.drawer.drawer { position:fixed; top:0; bottom:0; left:0; z-index:91; width:min(300px,86vw); height:auto; padding:16px 12px max(16px,env(safe-area-inset-bottom)); align-items:stretch; overflow-y:auto; overscroll-behavior:contain; background:#fff; box-shadow:8px 0 32px #191f2826; animation:slide .2s ease-out; }
+.close { position:absolute; top:22px; right:10px; z-index:1; display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:50%; background:transparent; color:#4e5968; cursor:pointer; }
+.close:hover { background:#f2f4f6; }
+/* 왼쪽 메뉴가 보이는 PC 폭에서는 서랍 단추를 숨긴다 */
+@media (min-width:901px) { .narrowOnly { display:none !important; } }
+@keyframes slide { from { transform:translateX(-100%); } to { transform:none; } }
+@keyframes fade { from { opacity:0; } to { opacity:1; } }
+@media (prefers-reduced-motion:reduce) { .scrim,.drawer.drawer { animation:none; } }

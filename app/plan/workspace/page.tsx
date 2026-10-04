@@ -15,7 +15,7 @@ import ExpertEditor from "./ExpertEditor";
 import launchStyles from "./LaunchWorkspace.module.css";
 import OperatingWorkspace from "./OperatingWorkspace";
 import operatingStyles from "./OperatingWorkspace.module.css";
-import JourneyBar, { useHomepage } from "../JourneyBar";
+import { useHomepage } from "../use-homepage";
 import { WorkspaceDocumentStatus, WorkspaceHomepageCare, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
 
 type View = WorkspaceView;
@@ -98,7 +98,7 @@ export default function BusinessWorkspace() {
     const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
     if (!anchor || anchor.hasAttribute("download") || anchor.target === "_blank") return;
     event.preventDefault(); event.stopPropagation(); setPendingNavigation({ href: anchor.href });
-  }}><BusinessAppChrome title="내 사업 관리" journey={plan && <JourneyBar planId={plan.id} plan={plan} runStatus={runStatus} homepage={homepage.status} current={view==="operations" ? "care" : null} />}>
+  }}><BusinessAppChrome title="내 사업 관리">
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p><Link className={styles.primary} href="/plan">내 사업으로</Link><Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인합니다.</p>}
