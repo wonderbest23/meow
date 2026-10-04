@@ -310,3 +310,10 @@
 .headerActions button:disabled { opacity: .5; cursor: default; }
 .headerActions .headerPrimary { border-color: #3272db; background: #3272db; color: #fff; }
 @media (max-width: 480px) { .headerActions button { padding: 0 10px; } .headerActions button:not(.headerPrimary) span { display: none; } }
+
+/* 공개한 뒤 다음 단계 — 계획서 화면의 '다음 단계' 버튼과 같은 자리(본문 끝), 같은 모양 */
+.nextCare { display:grid; gap:2px; margin:24px 0 8px; padding:16px 18px; border-radius:12px; background:#246bd1; color:#fff; text-decoration:none; }
+.nextCare span { font-size:12px; opacity:.85; }
+.nextCare strong { font-size:16px; font-weight:700; }
+.nextCare small { font-size:13px; opacity:.9; }
+.nextCare:hover { background:#1b5bb8; }
