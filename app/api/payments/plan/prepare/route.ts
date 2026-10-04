@@ -107,7 +107,7 @@ export async function POST(request: Request) {
   } else {
     const ent = await paidPlanEntitlement(identity.userId);
     if (ent.allAccess || ent.planIds.has(planId)) {
-      return NextResponse.json({ error: "already_paid", message: "이미 이 플랜은 열려 있습니다." }, { status: 409 });
+      return NextResponse.json({ error: "already_paid", message: "이미 이 사업계획서는 열려 있습니다." }, { status: 409 });
     }
   }
 

@@ -81,16 +81,20 @@ export default function PlanCheckout() {
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean; unavailable?: boolean } | null>(null);
   const [homepageInfo, setHomepageInfo] = useState<{ price: number; editable: boolean } | null>(null);
   const started = useRef(false);
+  /* 결제 정보를 아예 받지 못함 — 예전엔 '확인하는 중…'에서 영원히 돌았다. 다시 확인 단추를 보인다 */
+  const [infoFailed, setInfoFailed] = useState(false);
+  const [infoAttempt, setInfoAttempt] = useState(0);
 
   useEffect(() => {
     let alive = true;
+    setInfoFailed(false);
     fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(planId)}`)
       .then((r) => r.json())
       .then((d) => {
         if (alive) setInfo({ price: d.price, productName: d.productName, paid: d.paid, payable: d.payable, authenticated: d.authenticated, unavailable: d.unavailable === true });
       })
       .catch(() => {
-        if (alive) setInfo(null);
+        if (alive) { setInfo(null); setInfoFailed(true); }
       });
     if (isHomepage && planId) {
       // 홈페이지 가격·구매 여부는 홈페이지 API가 안다
@@ -106,7 +110,7 @@ export default function PlanCheckout() {
     return () => {
       alive = false;
     };
-  }, []);
+  }, [infoAttempt]);
 
   async function startPayment() {
     if (started.current || !agreed) return;
@@ -256,6 +260,11 @@ export default function PlanCheckout() {
             {info.price.toLocaleString("ko-KR")}원
             <span>문서 1부 · 1회 결제 · 부가세 포함</span>
             {!info.paid && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small> →</Link>}
+          </div>
+        ) : infoFailed ? (
+          <div className={styles.price} role="alert">
+            <span>결제 정보를 확인하지 못했어요. 연결을 확인해 주세요.</span>
+            <button type="button" className={styles.back} onClick={() => setInfoAttempt((n) => n + 1)}>다시 확인</button>
           </div>
         ) : (
           /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */

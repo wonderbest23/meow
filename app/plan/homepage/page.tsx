@@ -388,7 +388,9 @@ export default function PlanHomepagePage() {
     /* 계획서를 마저 쓸 곳은 그 사업의 대화 — 옛 '플랜 개요'로 보내지 않는다 */
     /* 사업이 아직 없으면(첫 화면에서 바로 온 사람) 이어 쓸 계획서가 없다 — 새 대화로 */
     if (cta !== "pay") return screenPlanId ? businessChatHref(screenPlanId) : "/plan/chat?new=1";
-    const plan = activePlan(loadState());
+    /* 결제할 사업은 지금 화면의 사업 — 작업 중 사업(activePlan)이 다를 수 있다 */
+    const state = loadState();
+    const plan = (screenPlanId ? state.plans.find((p) => p.id === screenPlanId) : null) ?? activePlan(state);
     const query = plan
       ? `?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=homepage`
       : "?product=homepage";
@@ -460,7 +462,7 @@ export default function PlanHomepagePage() {
             </div>
             <div className={styles.payActions}>
               {sample ? (
-                <a className={styles.cta} href="/plan/chat?new=1">내 플랜 만들기 →</a>
+                <a className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기 →</a>
               ) : (
                 <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
                   홈페이지 에디터 →

@@ -1,5 +1,6 @@
 "use client";
 
+import { FREE_PLAN_LIMIT, FREE_SECTION_COUNT } from "../lib/plan-builder/free-tier";
 import {
   ArrowUp,
   ChevronRight,
@@ -777,7 +778,7 @@ export function SupportChatWidget() {
                         onClick={() => trackFunnel("consult_cta_click", { variant: "soft" })}
                       >
                         지금까지 답한 내용으로 사업계획서를 시작할 수 있어요
-                        <b>{consultFilled}개 항목이 그대로 넘어가고, 앞 2개 섹션은 무료예요 →</b>
+                        <b>{consultFilled}개 항목이 그대로 넘어가고, 로그인하면 앞 {FREE_SECTION_COUNT}개 항목은 무료예요 →</b>
                       </a>
                     )}
                     {/*
@@ -796,7 +797,7 @@ export function SupportChatWidget() {
                         {/* 결제 문턱이 아니라 무료 문턱을 보여 준다 — 앞 2개 섹션은 실제로 무료다 */}
                         <span>
                           <strong>이 내용으로 사업계획서 시작하기</strong>
-                          <small>앞 2개 섹션은 무료로 만들어 볼 수 있어요</small>
+                          <small>로그인하면 앞 {FREE_SECTION_COUNT}개 항목을 무료로 만들어 볼 수 있어요(계정당 사업 {FREE_PLAN_LIMIT}개까지)</small>
                         </span>
                       </a>
                     )}
@@ -828,7 +829,7 @@ export function SupportChatWidget() {
                             <Sparkles />
                             <span>
                               <strong>지금까지 내용으로 사업계획서 시작하기</strong>
-                              <small>{consultFilled}개 항목이 그대로 넘어가요 · 앞 2개 섹션 무료</small>
+                              <small>{consultFilled}개 항목이 그대로 넘어가요 · 로그인하면 앞 {FREE_SECTION_COUNT}개 항목 무료</small>
                             </span>
                           </a>
                         )}
