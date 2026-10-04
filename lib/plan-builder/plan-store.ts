@@ -196,6 +196,15 @@ function persist(state: PlanState) {
   } catch {
     // ignore quota errors
   }
+  /* 왼쪽 메뉴의 사업 목록처럼 저장된 사업을 보여 주는 곳이 다시 그리도록 알린다 */
+  queueMicrotask(() => { for (const fn of stateListeners) fn(); });
+}
+
+const stateListeners = new Set<() => void>();
+/** 저장된 사업이 바뀔 때마다 부른다(같은 탭 안). 반환값으로 구독을 끊는다 */
+export function subscribePlanState(fn: () => void): () => void {
+  stateListeners.add(fn);
+  return () => void stateListeners.delete(fn);
 }
 
 /** Cache an acknowledged server version without launching another whole-state autosave. */

@@ -149,6 +149,12 @@ export default function DocumentWorkspace(props: Props) {
     return () => clearTimeout(timer);
   }, [grouped.length]);
 
+  function readAll() { setContinuous(true); setSummaryMode(false); setModal(null); scroll.current?.scrollTo({ top: 0 }); }
+  /* PC에서는 목차가 왼쪽 메뉴의 이 사업 아래에 붙는다(내 사업 → 사업 → 사업계획서 → 장) */
+  const documentToc = planId && !isSample && grouped.length > 0 ? {
+    planId, chapters: grouped.map(([name]) => name), current: continuous && !summaryMode ? "all" as const : chapter,
+    onSelect: (index: number | "all") => index === "all" ? readAll() : selectChapter(index),
+  } : undefined;
   function selectChapter(index: number) {
     setChapter(index); setContinuous(false); setSummaryMode(false); setModal(null);
     scroll.current?.scrollTo({ top: 0, behavior: "instant" });
@@ -156,14 +162,15 @@ export default function DocumentWorkspace(props: Props) {
 
   const toc = () => <nav className={styles.toc} aria-label="문서 목차">
     {grouped.map(([name], index) => <button key={name} aria-current={!summaryMode && !continuous && chapter === index ? "page" : undefined} onClick={() => selectChapter(index)}><span>{String(index + 1).padStart(2, "0")}</span><strong>{name}</strong></button>)}
-    <button className={styles.continuous} aria-current={continuous && !summaryMode ? "page" : undefined} onClick={() => { setContinuous(true); setSummaryMode(false); setModal(null); scroll.current?.scrollTo({ top: 0 }); }}>전체 이어 읽기</button>
+    <button className={styles.continuous} aria-current={continuous && !summaryMode ? "page" : undefined} onClick={readAll}>전체 이어 읽기</button>
   </nav>;
 
   return <main className={`${frame.page} ${styles.page}`}>
-    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={false}
+    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={!isSample} documentToc={documentToc}
       journey={!isSample && ready && <JourneyBar planId={planId} current="document" homepage={homepage} version={`${props.completionKey}:${grouped.length}:${props.writing?.done ?? ""}`} />}>
       {!ready ? <PlanLoading fill variant="compact" note="문서를 불러오고 있어요" /> : <div className={styles.layout}>
-        {grouped.length > 0 && <aside className={styles.sidebar}><h2>목차</h2>{toc()}</aside>}
+        {/* 예시 문서는 왼쪽 메뉴에 사업이 없으니 문서 옆에 목차를 그대로 둔다 */}
+        {isSample && grouped.length > 0 && <aside className={styles.sidebar}><h2>목차</h2>{toc()}</aside>}
         <div className={styles.document}>
           <div className={styles.readingBar}>
             <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} />목차</button>
