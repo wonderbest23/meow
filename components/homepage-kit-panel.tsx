@@ -75,6 +75,7 @@ export function HomepageKitPanel({
   onSiteUpdated,
   onSourceApplied,
   aiFill,
+  inChrome = false,
 }: {
   draft: LandingDraft;
   site: LandingSiteRecord | null;
@@ -90,6 +91,8 @@ export function HomepageKitPanel({
   onSourceApplied?: (site: LandingSiteRecord, expectedUpdatedAt: string) => void;
   /** 계획서로 채우기(AI) — 카드·이용 순서·마무리 문구와 업종 사진 */
   aiFill?: { running: boolean; run: () => void };
+  /** 앱 머리줄(← 홈페이지 · 저장 · 공개) 안에 놓일 때 — 이 패널의 뒤로가기·제목·저장/공개 줄을 빼고 주소 상태만 남긴다 */
+  inChrome?: boolean;
 }) {
   const update = (patch: Partial<LandingDraft>) => onChange({ ...draft, ...patch });
   const busy = action === "saving" || action === "publishing" || Boolean(aiFill?.running);
@@ -165,11 +168,11 @@ export function HomepageKitPanel({
 
   return (
     <section className="hk">
-      <header className="hk-top">
+      <header className="hk-top" data-in-chrome={inChrome || undefined}>
         {/* 개요·문서·섹션 화면과 같은 머리 규칙 — [←] 제목 20px · 아래 13px */}
-        <a href="/plan/overview" className="hk-back" aria-label="플랜 개요로">←</a>
+        {!inChrome && <a href="/plan/overview" className="hk-back" aria-label="플랜 개요로">←</a>}
         <div>
-          <h3>내 사업 홈페이지</h3>
+          {!inChrome && <h3>내 사업 홈페이지</h3>}
           {publicPath ? (
             <p className="hk-url">
               <span>{published ? "공개 중" : "아직 비공개"}</span>
@@ -182,10 +185,10 @@ export function HomepageKitPanel({
             </p>
           ) : <p className="hk-url">첫 공개 후 주소가 생깁니다</p>}
         </div>
-        <div className="hk-actions">
+        {!inChrome && <div className="hk-actions">
           <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />} 저장</button>
           <button type="button" className="hk-primary" disabled={busy} onClick={onPublish}>{action === "publishing" ? <LoaderCircle className="spin" size={15} /> : <Rocket size={15} />} {published ? "새 버전 공개" : "공개하기"}</button>
-        </div>
+        </div>}
       </header>
       {message ? <p className="hk-msg">{message}</p> : null}
       {contentNotice ? <p className="hk-msg" role="status">{contentNotice}</p> : null}
@@ -201,42 +204,47 @@ export function HomepageKitPanel({
           <span aria-hidden="true" className="hk-dots"><i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" /></span>
           <span className="hk-mock-url">{publicPath ? `oneulstart.com${publicPath}` : "내 사업 홈페이지"}</span>
           <span className="hk-mock-actions">
-            {aiFill ? <button type="button" onClick={aiFill.run} disabled={busy} title="계획서 내용으로 카드·이용 순서·마무리 문구와 업종 사진을 채워요. 직접 고친 글·사진은 그대로 둬요.">
-              {aiFill.running ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />} {aiFill.running ? "채우는 중…" : "AI로 채우기"}
-            </button> : null}
-            {projectId && site && onSourceApplied ? <HomepageSourceUpdate projectId={projectId} site={site} draft={draft} disabled={busy} onApplied={onSourceApplied} /> : null}
-            <button type="button" onClick={applyBusiness} disabled={busy || !draft.businessName.trim() || !bw || !BRAINWAVE_PAGES.some(page => page.id === bw.page && page.group === "landing")} title="사업 정보 적용">
-              <RefreshCw size={14} /> 사업 정보 적용
-            </button>
-            <button type="button" disabled={busy} onClick={() => setPicking(true)} title={page ? `지금 템플릿: ${page.ko}` : "디자인 고르기"}>
-              <LayoutTemplate size={14} /> 템플릿
-            </button>
             <button type="button" className="hk-mock-edit" disabled={busy} onClick={onOpenEditor}>
               <Pencil size={14} /> 에디터 열기
             </button>
           </span>
         </div>
         {/*
-          분위기(색 조합) — 배치는 그대로, 색만 바꾼다. 디자인 하나를 여러 느낌으로 쓰게.
-          누르면 미리보기가 바로 바뀌고, 저장하면 공개 화면에도 걸린다.
+          도구 두 줄 — 예전엔 주소창 옆에 버튼 다섯 개가 한 줄로 몰려 좁은 폭에서 겹쳤다(사용자 지적).
+          '디자인'(템플릿·분위기)과 '내용 채우기'(AI·최신 사업정보·사업 정보 적용)로 나눠 각자 한 줄씩.
         */}
-        {bw && draft.pageData ? (
-          <div className="hk-themes" role="radiogroup" aria-label="분위기">
-            <span className="hk-themes-label"><Palette size={14} aria-hidden /> 분위기</span>
-            {[{ id: undefined, label: "기본", note: "디자인 원래 색", tokens: null }, ...LANDING_THEMES].map((theme) => {
-              const on = (draft.pageData?.theme ?? undefined) === theme.id;
-              return <button key={theme.id ?? "base"} type="button" role="radio" aria-checked={on} className={on ? "on" : ""} disabled={busy} title={theme.note}
-                onClick={() => onChange({ ...draft, pageData: { ...draft.pageData!, theme: theme.id } })}>
-                <i aria-hidden style={theme.tokens ? { background: `linear-gradient(135deg, ${theme.tokens.accent} 0 50%, ${theme.tokens.highlight} 50% 100%)` } : undefined} />
-                {theme.label}
-              </button>;
-            })}
+        <div className="hk-tools">
+          {bw && draft.pageData ? <div className="hk-tool-row" role="radiogroup" aria-label="분위기">
+            <span className="hk-tool-label"><Palette size={14} aria-hidden /> 디자인</span>
+            <button type="button" className="hk-tool-btn" disabled={busy} onClick={() => setPicking(true)} title={page ? `지금 템플릿: ${page.ko}` : "디자인 고르기"}>
+              <LayoutTemplate size={14} /> 템플릿 바꾸기
+            </button>
+            <span className="hk-themes">
+              {[{ id: undefined, label: "기본", note: "디자인 원래 색", tokens: null }, ...LANDING_THEMES].map((theme) => {
+                const on = (draft.pageData?.theme ?? undefined) === theme.id;
+                return <button key={theme.id ?? "base"} type="button" role="radio" aria-checked={on} className={on ? "on" : ""} disabled={busy} title={theme.note}
+                  onClick={() => onChange({ ...draft, pageData: { ...draft.pageData!, theme: theme.id } })}>
+                  <i aria-hidden style={theme.tokens ? { background: `linear-gradient(135deg, ${theme.tokens.accent} 0 50%, ${theme.tokens.highlight} 50% 100%)` } : undefined} />
+                  {theme.label}
+                </button>;
+              })}
+            </span>
+          </div> : null}
+          <div className="hk-tool-row">
+            <span className="hk-tool-label"><Sparkles size={14} aria-hidden /> 내용 채우기</span>
+            {aiFill ? <button type="button" className="hk-tool-btn" onClick={aiFill.run} disabled={busy} title="계획서 내용으로 카드·이용 순서·마무리 문구와 업종 사진을 채워요. 직접 고친 글·사진은 그대로 둬요.">
+              {aiFill.running ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />} {aiFill.running ? "채우는 중…" : "AI로 채우기"}
+            </button> : null}
+            {projectId && site && onSourceApplied ? <HomepageSourceUpdate projectId={projectId} site={site} draft={draft} disabled={busy} onApplied={onSourceApplied} /> : null}
+            <button type="button" className="hk-tool-btn" onClick={applyBusiness} disabled={busy || !draft.businessName.trim() || !bw || !BRAINWAVE_PAGES.some(page => page.id === bw.page && page.group === "landing")} title="사업자 정보에 적은 상호·연락처를 홈페이지 글에 넣어요">
+              <RefreshCw size={14} /> 사업 정보 적용
+            </button>
           </div>
-        ) : null}
+        </div>
+        <p className="hk-preview-hint"><Pencil size={14} aria-hidden /> 아래 미리보기를 누르면 에디터가 열려요 — 글은 그 자리에서, 사진은 눌러서 바꿔요</p>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} className="hk-preview-body" onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
           <LandingBlocksRenderer data={draft.pageData!} />
-          <span className="hk-preview-cover"><Pencil size={18} /> 누르면 에디터가 열립니다 — 글은 그 자리에서, 사진은 눌러서 바꿉니다</span>
         </div>
       </div>
       {picking && bw ? <BrainwaveTemplatePicker current={bw.page} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}

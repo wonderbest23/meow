@@ -18,6 +18,9 @@ import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import styles from "./page.module.css";
 import PlanLoading from "../PlanLoading";
+import BusinessAppChrome from "../BusinessAppChrome";
+import frame from "../chat/page.module.css";
+import { Rocket, Save, LoaderCircle } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 
 /*
@@ -55,6 +58,8 @@ export default function PlanHomepagePage() {
   const [draft, setDraft] = useState<LandingDraft | null>(null);
   const [editable, setEditable] = useState(false);
   const [sample, setSample] = useState(false);
+  /** 이 화면이 보여 주는 사업 — 머리줄 뒤로가기(그 사업의 계획서)에 쓴다 */
+  const [screenPlanId, setScreenPlanId] = useState<string | null>(null);
   /** 앱 껍데기를 걷어내고 홈페이지만 화면 가득 — 실제로 어떻게 보이는지 확인용 */
   const [fullscreen, setFullscreen] = useState(false);
   /** 섹션 배치 편집기 — 결제한 사람만 연다 */
@@ -162,6 +167,7 @@ export default function PlanHomepagePage() {
       if (requested && state.plans.some(item => item.id === requested)) { setActivePlan(requested); state = { ...state, activePlanId: requested }; }
       const plan = activePlan(state);
       if (!alive) return;
+      setScreenPlanId(plan?.id ?? null);
       if (!plan) {
         setBlocked({ title: "먼저 사업계획서를 만들어주세요", detail: "홈페이지는 계획서에 답한 내용으로 만듭니다.", missing: [], cta: "plan" });
         setPhase("blocked");
@@ -383,8 +389,22 @@ export default function PlanHomepagePage() {
     return `/plan/pay${query}`;
   }
 
+  /*
+   * 대화·계획서·유지보수 화면과 같은 틀 — 머리줄(← 홈페이지 ☰)과 왼쪽 메뉴.
+   * 예전엔 이 화면만 옛 틀(PlanShell)이라 폰에서 머리줄 모양과 메뉴가 달랐다.
+   * 저장·공개는 머리줄 오른쪽으로 올려, 편집 화면 위쪽에 버튼이 줄줄이 쌓이지 않게 한다.
+   */
+  const kitEditing = phase === "ready" && !!draft && editable && !!draft.pageData?.brainwave;
+  const busy = action === "saving" || action === "publishing";
+  const headerActions = kitEditing ? <div className={styles.headerActions}>
+    <button type="button" disabled={busy} onClick={() => void save()}>{action === "saving" ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}<span>저장</span></button>
+    <button type="button" className={styles.headerPrimary} disabled={busy} onClick={() => void publish()}>{action === "publishing" ? <LoaderCircle className="spin" size={15} /> : <Rocket size={15} />}<span>{site?.status === "published" ? "새 버전 공개" : "공개하기"}</span></button>
+  </div> : undefined;
+  const back = screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
+
   return (
-    <>
+    <main className={frame.page}><BusinessAppChrome title="홈페이지" backHref={back} actions={headerActions}>
+    <div className={styles.frameScroll}><div className={styles.frameInner}>
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (
         <div className={styles.fullscreen} role="dialog" aria-label="홈페이지 전체 화면">
@@ -494,6 +514,7 @@ export default function PlanHomepagePage() {
       {/* 킷 페이지 — 편집은 미리보기를 눌러 열고, 밖에는 사업자 정보·도메인·문의만 */}
       {phase === "ready" && draft && editable && draft.pageData?.brainwave && (
         <HomepageKitPanel
+          inChrome
           draft={draft}
           site={site}
           projectId={projectId}
@@ -534,6 +555,7 @@ export default function PlanHomepagePage() {
           onSiteUpdated={updateSite}
         />
       )}
-    </>
+    </div></div>
+    </BusinessAppChrome></main>
   );
 }
