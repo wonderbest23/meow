@@ -299,7 +299,9 @@ export function previewIntakeAnswer(snapshot: IntakeSnapshot, command: IntakeCom
   finishIntakeMutation(coach, before, plan.answers, intake);
   if (beforeIdeas !== ideaInputFingerprint(coach, intake)) intake.ideaInputRevision = (intake.ideaInputRevision ?? 0) + 1;
   plan.title = coach.business.name;
-  return { ...intakeSnapshot(plan, coach, intake, at), hasDocuments: snapshot.hasDocuments, documentStatus: snapshot.hasDocuments && (coach.documentRevision ?? coach.revision) !== (snapshot.coach.documentRevision ?? snapshot.coach.revision) ? "stale" : snapshot.documentStatus };
+  const changed = snapshot.hasDocuments && (coach.documentRevision ?? coach.revision) !== (snapshot.coach.documentRevision ?? snapshot.coach.revision);
+  /* 화면에서 먼저 그리는 상태에는 계획서 본문이 없다 — 다시 쓸 항목 수는 서버 응답이 올 때까지 모른다 */
+  return { ...intakeSnapshot(plan, coach, intake, at), hasDocuments: snapshot.hasDocuments, documentStatus: changed ? "stale" : snapshot.documentStatus, rewriteCount: changed ? undefined : snapshot.rewriteCount };
 }
 
 export type IntakeNextStep = "design" | "prepare" | "open" | null;

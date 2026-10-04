@@ -15,6 +15,7 @@ import { checkSectionAccess, freePlanLimitReached, resolvePlanAccess } from "../
 import { COACH_KEY, COACH_TYPES, readCoach, coachDocumentRevision } from "../../../../lib/plan-builder/coach";
 import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
 import { resolveRegenQuota } from "../../../../lib/plan-builder/regen-quota";
+import { staleRewriteCount } from "../../../../lib/plan-builder/intake-core";
 import { loadConsultSession, saveConsultTurn, consultLimitFor } from "../../../../lib/consult/repository";
 import { intakeGet, intakePost } from "../../../../lib/plan-builder/intake-http";
 import { intakeFeatureEnabled } from "../../../../lib/plan-builder/intake-types";
@@ -81,7 +82,7 @@ async function generationStatus(workflow: PrepareWorkflow, runId: string) {
 }
 
 async function prepareQuota(plan: ServerPlan, keys: string[], revision: number) {
-  const count = keys.filter(key => { const value = plan.sections[key]; return value && !value.edited && !value.locked && value.coachRevision !== revision; }).length;
+  const count = staleRewriteCount(plan.sections, revision, keys);
   if (!count) return null;
   const quota = await resolveRegenQuota(plan.id);
   if (quota.unavailable) return json({ code: "quota_unavailable", message: "재작성 이용량을 확인하지 못했어요. 기존 문서는 보관되어 있고 제작은 시작하지 않았어요." }, 503);

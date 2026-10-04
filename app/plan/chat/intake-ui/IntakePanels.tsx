@@ -484,6 +484,31 @@ export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSn
  * 지금 눌러야 할 다음 단계 하나. 사업안(방향 요약) → 계획서(전체 문서) → 계획서 열기 순서로 한 번에 하나만 보인다.
  * 작업이 돌고 있으면 버튼 자리에 진행 게이지가 나온다. secondary에는 선택형 구체화 버튼을 놓는다.
  */
+type RegenQuota = { allowed: number; used: number; remaining: number; unavailable?: true };
+
+/**
+ * 계획서에 다시 반영하기 전에 비용을 먼저 보여 준다 — 다시 쓸 항목 수와 남은 다시 쓰기 횟수.
+ * 예전엔 버튼을 눌러 막힌 뒤에야(402) 횟수가 모자란 걸 알았다(사용자 피드백 2026-10).
+ */
+function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
+  const [quota, setQuota] = useState<{ quota: RegenQuota | null; pack?: { count: number; amount: number } } | null>(null);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/api/plan/regen-quota?planId=${encodeURIComponent(snapshot.planId)}`, { cache: "no-store" })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => { if (alive) setQuota(data); })
+      .catch(() => { /* 횟수를 모르면 항목 수만 보여 준다 */ });
+    return () => { alive = false; };
+  }, [snapshot.planId, snapshot.updatedAt]);
+  const count = snapshot.rewriteCount;
+  const known = quota?.quota && !quota.quota.unavailable ? quota.quota : null;
+  const short = !!known && count !== undefined && count > known.remaining;
+  return <p className={styles.rewriteCost} data-short={short || undefined} role="status">
+    {count === undefined ? <>바뀐 내용과 맞지 않는 항목만 다시 써요 · 항목마다 다시 쓰기 횟수 1회가 차감돼요{known ? <> (남은 횟수 {known.remaining}/{known.allowed}회)</> : null}</> : count > 0 ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요{known ? <> · 다시 쓰기 횟수 <b>{count}회</b> 차감 (남은 횟수 {known.remaining}/{known.allowed}회)</> : <> · 항목마다 다시 쓰기 횟수 1회가 차감돼요</>}</> : "직접 고친 항목은 그대로 두고, 바뀐 내용과 맞지 않는 항목만 다시 써요."}
+    {short && <> — 횟수가 {count! - known!.remaining}회 모자라요. <Link href={`/plan/pay?planId=${encodeURIComponent(snapshot.planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`}>{quota?.pack ? `${quota.pack.count}회 추가 (${quota.pack.amount.toLocaleString("ko-KR")}원)` : "다시 쓰기 횟수 추가"}</Link></>}
+  </p>;
+}
+
 export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
 }) {
@@ -500,6 +525,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   const hint = step === "design" ? "먼저 답변을 바탕으로 사업 방향을 한 장으로 요약해요. 사업계획서 문서는 다음 단계에서 만들어요."
     : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서(${sectionCount}개 항목, 재무표 포함)를 작성해요. 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
+  const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
   return <div className={styles.nextStep} data-active data-step={step}>
     <ol className={styles.stepper} aria-label="진행 단계">
       <li data-state={step === "design" ? "current" : "done"}>{step === "design" ? <span>1</span> : <Check size={13} aria-hidden="true" />}사업 방향 요약</li>
@@ -512,7 +538,8 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
       {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
       {secondary}
     </div>}
-    {!jobActive && <small className={styles.nextStepHint}>{hint}</small>}
+    {!jobActive && reapply && <RewriteCost snapshot={snapshot} />}
+    {!jobActive && <small className={styles.nextStepHint}>{reapply ? "대화는 무료예요. 계획서에 반영할 때만 다시 쓰기 횟수가 차감되고, 반영하기 전까지 기존 계획서는 그대로예요." : snapshot.hasDocuments ? `${hint} 대화로 내용을 더 다듬는 건 무료예요. 계획서에 반영할 때만 다시 쓰기 횟수가 차감돼요.` : hint}</small>}
   </div>;
 }
 
