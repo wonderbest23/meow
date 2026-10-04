@@ -75,7 +75,8 @@ export default function PlanPayResult() {
         ) : (
           <Link href={retryHref} className={styles.primary}>{planId ? "다시 시도하기" : "내 사업으로 가기"}</Link>
         )}
-        <Link href={homepageProduct ? siteHref : planHref} className={styles.back}>← {homepageProduct ? "홈페이지로" : planId ? "사업계획서로" : "내 사업으로"} 돌아가기</Link>
+        {/* 큰 단추와 같은 곳으로 가는 작은 링크는 두지 않는다 — 다음 할 일은 단추 하나 */}
+        {!ok && (pending || planId) && <Link href={homepageProduct ? siteHref : planHref} className={styles.back}>← {homepageProduct ? "홈페이지로" : planId ? "사업계획서로" : "내 사업으로"} 돌아가기</Link>}
       </div>
     </div>
   );
