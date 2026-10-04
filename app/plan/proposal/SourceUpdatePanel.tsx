@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { Check, FileDiff, LoaderCircle, X } from "lucide-react";
 import type { SavedProposal } from "../../../lib/plan-builder/proposal-editor";
 import { rewriteErrorMessage, rewriteExpired, type RewriteCommand, type RewritePreview } from "../../../lib/plan-builder/proposal-rewrite";
@@ -63,8 +62,6 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
     {retainedCharts.length > 0 && <p role="status">차트 확인 필요 {retainedCharts.length}개 페이지. 본문 갱신은 차트 값을 바꾸거나 최신으로 확인하지 않습니다</p>}
     <div className={styles.updateHeading}><FileDiff size={19} /><div><strong>{job?.status === "ready" ? "검토할 새 문안이 있어요" : "원문과 제안서의 변경분"}</strong><p>현재 제안서는 승인 전까지 그대로 유지됩니다</p></div>
       <button disabled={!canUpdate || loading} onClick={() => { if (open) setOpen(false); else if (pending) setOpen(true); else void inspect(); }}>{open ? "접기" : job?.status === "ready" ? "새 문안 검토" : "변경분 확인"}</button>
-      <Link href={`/plan/document?planId=${encodeURIComponent(planId)}`}>원문 수정</Link>
-      <Link href={`/plan/workspace?planId=${encodeURIComponent(planId)}&tab=documents`}>결과물 변경 관리</Link>
     </div>
     {open && <div className={styles.updateBody}>
       {message && <p role="alert">{message}</p>}

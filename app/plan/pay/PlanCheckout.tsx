@@ -7,7 +7,7 @@ import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { documentHref } from "../../../lib/plan-builder/business-hub";
-import { homepageHref } from "../../../lib/plan-builder/journey";
+import { homepageHref, payBackHref } from "../../../lib/plan-builder/journey";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_COUNT } from "../../../lib/payments/domain";
@@ -69,6 +69,8 @@ export default function PlanCheckout() {
     tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’ 처럼 말하면 AI 가 페이지 글을 고칩니다. 20만 토큰은 페이지 전체 고치기 25회 안팎입니다.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
   };
   const extra = COPY[product];
+  /* '나중에 하기'는 머리줄 ← 와 같은 곳 — 그 사업의 계획서, 홈페이지 쪽 상품이면 그 사업의 홈페이지 */
+  const laterHref = payBackHref(product, planId);
   const [phase, setPhase] = useState<Phase>("idle");
   const [agreements, setAgreements] = useState<Agreements>(NO_AGREEMENTS);
   const agreed = AGREEMENT_KEYS.every(key => agreements[key]);
@@ -174,7 +176,7 @@ export default function PlanCheckout() {
           <h1 className={styles.title}>로그인이 필요합니다</h1>
           <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아옵니다.</p>
           <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={styles.primary}>로그인 · 회원가입</Link>
-          <Link href={planHref} className={styles.back}>← 나중에 하기</Link>
+          <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
         </div>
       </div>
     );
@@ -197,7 +199,7 @@ export default function PlanCheckout() {
           <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>살 주소를 먼저 골라 주세요</h1>
           <p className={styles.desc}>홈페이지 화면의 ‘회사 이름으로 된 주소 쓰기’에서 원하는 주소(.com·.kr·.co.kr)가 비어 있는지 확인한 뒤 결제할 수 있어요.</p>
-          <Link href="/plan/homepage" className={styles.primary}>홈페이지로 돌아가기</Link>
+          <Link href={laterHref} className={styles.primary}>홈페이지로 돌아가기</Link>
         </div>
       </div>
     );
@@ -313,7 +315,7 @@ export default function PlanCheckout() {
         <p className={styles.note}>
           {extra ? "결제가 끝나면 홈페이지 화면으로 돌아갑니다." : "지금까지 답한 내용은 그대로 남아 있습니다. 결제가 끝나면 이어서 작성됩니다."}
         </p>
-        <Link href={extra || isHomepage ? "/plan/homepage" : planHref} className={styles.back}>← 나중에 하기</Link>
+        <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
       </div>
     </div>
   );

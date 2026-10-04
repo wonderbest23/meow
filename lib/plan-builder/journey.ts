@@ -21,6 +21,18 @@ export const JOURNEY_LABELS: Record<JourneyStepId, string> = {
 export function homepageHref(id: string) { return `/plan/homepage?planId=${encodeURIComponent(id)}`; }
 export function careHref(id: string) { return `${workspaceHref(id)}&tab=operations`; }
 
+/* 결제 화면에서 '나중에 하기'·← 가 돌아갈 곳 — 홈페이지 쪽 상품은 그 사업의 홈페이지, 나머지는 그 사업의 계획서 */
+const PAY_HOMEPAGE_PRODUCTS = ["homepage", "domain", "domain-purchase", "tokens", "bundle"];
+const RESULT_HOMEPAGE_PRODUCTS = ["homepage", "domain", "domain-purchase", "tokens"];
+function payReturn(homepageSide: boolean, planId: string | null | undefined) {
+  if (homepageSide) return planId ? homepageHref(planId) : "/plan/homepage";
+  return planId ? documentHref(planId) : "/plan";
+}
+/** 결제 화면(/plan/pay)에서 돌아갈 곳 */
+export function payBackHref(product: string | null | undefined, planId: string | null | undefined) { return payReturn(PAY_HOMEPAGE_PRODUCTS.includes(product ?? ""), planId); }
+/** 결제 결과 화면(/plan/pay/result)에서 돌아갈 곳 — 묶음 상품은 결제가 끝나면 계획서부터 */
+export function payResultBackHref(product: string | null | undefined, planId: string | null | undefined) { return payReturn(RESULT_HOMEPAGE_PRODUCTS.includes(product ?? ""), planId); }
+
 export function journeySteps(plan: Plan, homepage: HomepageStatus, runStatus?: string | null) {
   const hub = businessHubState(plan, runStatus);
   const state: Record<JourneyStepId, JourneyState> = {

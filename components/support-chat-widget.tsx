@@ -22,7 +22,7 @@ import {
   SUPPORT_INPUT_EXAMPLES,
   PROFILE_LABELS,
   type ConsultPick,
-  type ConsultProfile, profileLines } from "../lib/consult/domain";
+  type ConsultProfile, profileLines, consultChatHref } from "../lib/consult/domain";
 
 /*
  * 이 위젯은 두 가지를 한다.
@@ -157,10 +157,10 @@ export function SupportChatWidget() {
   const canStartPlan =
     consultReady || consultPicks.length > 0 || (consultFilled >= 4 && consultUserTurns >= 3);
   const canStartEarly = !canStartPlan && consultFilled >= 2 && consultUserTurns >= 2;
-  const consultHandoffHref = "/plan/chat?new=1";
-  /* 추천 카드에서 바로 시작 — 고른 아이템을 관심 업종으로 채워서 넘긴다 */
-  const pickHandoffHref = (name: string) =>
-    "/plan/chat?new=1";
+  /* 상담에서 들은 조건을 새 대화의 첫 메시지 칸에 채워서 넘긴다 */
+  const consultHandoffHref = consultChatHref(consultProfile);
+  /* 추천 카드에서 바로 시작 — 고른 아이템 이름까지 함께 넘긴다 */
+  const pickHandoffHref = (name: string) => consultChatHref(consultProfile, name);
 
   /*
    * 저장된 상담 되살리기 — 상담 창을 처음 열 때 한 번.
@@ -674,14 +674,11 @@ export function SupportChatWidget() {
                         </ul>
                         <div className="welcome-actions">
                           {/*
-                            상담 없이 바로 만들 사람의 문.
-
-                            예전에는 /plan/start 로 직행했는데, 그 화면은 사업 정보부터 받으므로
-                            처음 온 사람이 무엇을 받는지 보기도 전에 로그인 벽을 만난다.
-                            홈의 '무료로 시작하기'와 같은 곳(/plan)으로 보낸다 — 완성 샘플을 먼저 보고,
-                            실제로 플랜을 추가할 때 로그인을 요구하는 순서다.
+                            상담 없이 바로 만들 사람의 문 — 다른 시작 단추와 같이 새 사업 대화로 보낸다.
+                            (예전엔 내 사업 목록(/plan)으로 보내 샘플을 먼저 보게 했는데, 샘플은 이제 접혀 있어
+                            시작하러 온 사람이 목록 화면에서 한 번 더 길을 찾아야 했다.)
                           */}
-                          <a className="welcome-start" href="/plan" onClick={() => trackFunnel("consult_cta_click", { variant: "welcome" })}>바로 시작하기</a>
+                          <a className="welcome-start" href="/plan/chat?new=1" onClick={() => trackFunnel("consult_cta_click", { variant: "welcome" })}>바로 시작하기</a>
                           <button type="button" className="welcome-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
                             <MessageCircleQuestion /> 서비스 이용 문의는 여기
                           </button>

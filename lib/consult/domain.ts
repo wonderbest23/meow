@@ -235,6 +235,20 @@ export function profileLines(profile: ConsultProfile): string[] {
     .filter(Boolean);
 }
 
+/**
+ * 상담에서 새 사업 대화로 넘어가는 주소 — 상담에서 들은 조건을 첫 메시지 칸에 채워 둔다.
+ * 예전엔 모든 시작 단추가 빈 새 대화(/plan/chat?new=1)로 가서, 'N개 항목이 그대로 넘어가요'라는
+ * 안내와 달리 아무것도 넘어가지 않았고, 추천 카드마다 단 단추도 고른 아이템을 버렸다.
+ */
+export function consultChatHref(profile: ConsultProfile, pick?: string): string {
+  const lines = profileLines(profile);
+  const head = pick ? `상담에서 추천받은 ‘${pick}’(으)로 사업계획서를 만들고 싶어요.` : lines.length ? "상담에서 정리한 조건으로 사업계획서를 만들고 싶어요." : "";
+  const prompt = [head, ...lines.map((line) => `- ${line}`)].filter(Boolean).join("\n").slice(0, 2500);
+  const query = new URLSearchParams({ new: "1" });
+  if (prompt) query.set("prompt", prompt);
+  return `/plan/chat?${query}`;
+}
+
 /*
  * 상담에서 사업계획서로 넘기기.
  *

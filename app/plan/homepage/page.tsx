@@ -16,10 +16,12 @@ import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domai
 import { hydrateFromServer, activePlan, loadState, isSamplePlan, planOwnerEpoch, setActivePlan, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
+import Link from "next/link";
 import styles from "./page.module.css";
 import PlanLoading from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
+import { careHref, homepageHref } from "../../../lib/plan-builder/journey";
 import frame from "../chat/page.module.css";
 import { Rocket, Save, LoaderCircle } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
@@ -381,9 +383,11 @@ export default function PlanHomepagePage() {
 
   /** 막힌 이유마다 다음 행동이 다르다 — 결제·로그인·계획서 이어쓰기 */
   function blockedHref(cta: "pay" | "plan" | "login"): string {
-    if (cta === "login") return `/account?next=${encodeURIComponent("/plan/homepage")}`;
+    /* 로그인하고 돌아올 곳도 그 사업의 홈페이지 — 사업 정보를 빠뜨리면 다른 사업이 열릴 수 있다 */
+    if (cta === "login") return `/account?next=${encodeURIComponent(screenPlanId ? homepageHref(screenPlanId) : "/plan/homepage")}`;
     /* 계획서를 마저 쓸 곳은 그 사업의 대화 — 옛 '플랜 개요'로 보내지 않는다 */
-    if (cta !== "pay") return screenPlanId ? businessChatHref(screenPlanId) : "/plan";
+    /* 사업이 아직 없으면(첫 화면에서 바로 온 사람) 이어 쓸 계획서가 없다 — 새 대화로 */
+    if (cta !== "pay") return screenPlanId ? businessChatHref(screenPlanId) : "/plan/chat?new=1";
     const plan = activePlan(loadState());
     const query = plan
       ? `?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=homepage`
@@ -434,7 +438,7 @@ export default function PlanHomepagePage() {
             </ul>
           )}
           <button type="button" className={styles.cta} onClick={() => router.push(blockedHref(blocked.cta))}>
-            {blocked.cta === "pay" ? "결제하러 가기 →" : blocked.cta === "login" ? "로그인하기 →" : "계획서 이어 쓰기 →"}
+            {blocked.cta === "pay" ? "결제하러 가기 →" : blocked.cta === "login" ? "로그인하기 →" : screenPlanId ? "계획서 이어 쓰기 →" : "대화로 사업 시작하기 →"}
           </button>
         </div>
       )}
@@ -556,6 +560,15 @@ export default function PlanHomepagePage() {
           onPreview={() => publicPath && window.open(publicPath, "_blank", "noopener")}
           onSiteUpdated={updateSite}
         />
+      )}
+
+      {/* 공개한 뒤의 다음 단계는 하나 — 유지보수(홈페이지 고치기, 문의·실적 관리) */}
+      {phase === "ready" && site?.status === "published" && screenPlanId && !sample && (
+        <Link className={styles.nextCare} href={careHref(screenPlanId)}>
+          <span>다음 단계</span>
+          <strong>유지보수 하기 →</strong>
+          <small>홈페이지를 고치고, 들어온 문의와 실적을 관리해요</small>
+        </Link>
       )}
     </div></div>
     </BusinessAppChrome></main>
