@@ -1,5 +1,5 @@
 import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, TOKEN_PACK_AMOUNT } from "../payments/domain";
-import { FREE_PLAN_LIMIT, FREE_SECTION_COUNT } from "../plan-builder/access";
+import { FREE_PLAN_LIMIT, FREE_SECTION_COUNT } from "../plan-builder/free-tier";
 import { PPT_GENERATION_VERIFIED } from "../plan-builder/deck-availability";
 
 const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
