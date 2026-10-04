@@ -6,19 +6,9 @@ import { sectionKey, chaptersForType } from "./blueprint";
 import { getAuthenticatedUser } from "../account-auth";
 import { paidPlanEntitlement, planPrice } from "../payments/plan-orders";
 
-/** 결제 없이 볼 수 있는 섹션 수 (앞에서부터) — 1.1, 1.2 */
-export const FREE_SECTION_COUNT = 2;
-
-/**
- * 결제 없이 AI 본문을 맛볼 수 있는 문서 수.
- *
- * 무료 2개 섹션은 '문서마다' 열린다. 그런데 문서는 몇 개든 만들 수 있어서,
- * 문서를 열 개 만들면 결제 없이 본문 스무 개가 나갔다 — 그만큼이 실비다.
- * 사업 아이템을 몇 개 견주어 보는 것은 정상적인 사용이라 문서 만들기 자체를
- * 막지는 않는다. 대신 '무료로 본문을 써 본 문서'를 세 개까지만 센다.
- * 계정당 무료 생성은 3 × 2 = 6회가 상한이 된다.
- */
-export const FREE_PLAN_LIMIT = 3;
+/* 무료 범위 숫자는 화면(클라이언트)에서도 쓰므로 서버 모듈이 없는 free-tier.ts 에 둔다 */
+export { FREE_PLAN_LIMIT, FREE_SECTION_COUNT } from "./free-tier";
+import { FREE_PLAN_LIMIT, FREE_SECTION_COUNT } from "./free-tier";
 
 /**
  * 이 문서에서 무료 생성을 더 해도 되는지.
