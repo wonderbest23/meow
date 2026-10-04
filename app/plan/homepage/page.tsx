@@ -19,6 +19,7 @@ import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import styles from "./page.module.css";
 import PlanLoading from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
+import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import frame from "../chat/page.module.css";
 import { Rocket, Save, LoaderCircle } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
@@ -381,7 +382,8 @@ export default function PlanHomepagePage() {
   /** 막힌 이유마다 다음 행동이 다르다 — 결제·로그인·계획서 이어쓰기 */
   function blockedHref(cta: "pay" | "plan" | "login"): string {
     if (cta === "login") return `/account?next=${encodeURIComponent("/plan/homepage")}`;
-    if (cta !== "pay") return "/plan/overview";
+    /* 계획서를 마저 쓸 곳은 그 사업의 대화 — 옛 '플랜 개요'로 보내지 않는다 */
+    if (cta !== "pay") return screenPlanId ? businessChatHref(screenPlanId) : "/plan";
     const plan = activePlan(loadState());
     const query = plan
       ? `?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=homepage`

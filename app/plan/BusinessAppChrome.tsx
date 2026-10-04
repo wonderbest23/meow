@@ -11,7 +11,7 @@ import RailMenu from "./RailMenu";
 import type { DocumentToc } from "./BusinessRailTree";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", showRail = true, documentToc }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", showRail = true, documentToc }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new"; backHref?: string; workspaceHref?: string; showRail?: boolean;
   /** 문서 화면의 목차 — 왼쪽 메뉴의 그 사업 아래에 붙는다 */
   documentToc?: DocumentToc;

@@ -4,7 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import Link from "next/link";
 import PlanLoading from "../PlanLoading";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Check, Download, History, LoaderCircle, Plus, RefreshCw, Save, Undo2, Redo2, RotateCcw, ChevronLeft, ChevronRight, Copy, Trash2, ArrowUp, ArrowDown, AlignLeft, AlignCenter, AlignRight, PanelTop, Scissors } from "lucide-react";
+import { Check, Download, History, LoaderCircle, Plus, RefreshCw, Save, Undo2, Redo2, RotateCcw, ChevronLeft, ChevronRight, Copy, Trash2, ArrowUp, ArrowDown, AlignLeft, AlignCenter, AlignRight, PanelTop, Scissors } from "lucide-react";
 import type { SavedProposal, ProposalCommand } from "../../../lib/plan-builder/proposal-editor";
 import { proposalEditsSchema } from "../../../lib/plan-builder/proposal-editor";
 import { renderableProposal, validateProposalBox, proposalPages, proposalElementLabel, splitProposalPage, type ProposalPage, type ProposalBox, type ProposalElement, type ProposalSlideEdits } from "../../../lib/plan-builder/proposal-revision";
@@ -19,6 +19,8 @@ import BusinessConditionsPanel from "./BusinessConditionsPanel";
 import DocumentRefreshPanel from "./DocumentRefreshPanel";
 import type { BusinessConditionsView } from "../../../lib/plan-builder/proposal-business";
 import styles from "./proposal.module.css";
+import BusinessAppChrome from "../BusinessAppChrome";
+import frame from "../chat/page.module.css";
 
 type View = { title: string; saved: Omit<SavedProposal, "receipts"> | null; sourceChanged: boolean; affectedSlides: string[]; business: BusinessConditionsView | null; generationEnabled: boolean; generation: (PublicDeckJob & { editable: boolean }) | null };
 type Edits = Record<string, ProposalSlideEdits>;
@@ -183,10 +185,11 @@ function Editor() {
 
   const stateLabel = { saved: "저장됨", dirty: "수정 중", saving: "저장 중", failed: "저장 확인 필요", conflict: "버전 충돌" }[status];
   const entry = proposalEntryState({ job: view?.generation ?? null, editable: view?.generation?.editable ?? false, generationEnabled: view?.generationEnabled ?? false });
-  return <main className={styles.page}>
-    <header className={styles.header}><Link href={planId ? `/plan/document?planId=${encodeURIComponent(planId)}` : "/plan"} aria-label="사업계획서로 돌아가기" title="사업계획서로 돌아가기"><ArrowLeft size={21} /></Link><div className={styles.heading}><h1>{view?.title ?? "제안서 편집"}</h1><span>{view?.saved?.document.deck.blueprint ? PURPOSE_LABELS[view.saved.document.deck.blueprint.purpose] : "제안서"}{view?.saved ? ` · v${view.saved.revision}` : ""}</span></div>
-      {view?.saved && <><span className={styles.status} role="status">{status === "saving" ? <LoaderCircle size={15} className={styles.spin} /> : status === "saved" ? <Check size={15} /> : null}{stateLabel}</span><button title="저장" aria-label="저장" disabled={status === "saved" || status === "saving" || status === "conflict"} onClick={save}><Save size={19} /></button><button title="버전 기록" aria-label="버전 기록" aria-pressed={historyOpen} onClick={() => setHistoryOpen(!historyOpen)}><History size={19} /></button><button className={styles.primary} aria-label="PPT 내려받기" disabled={busy || status !== "saved" || !!layoutIssues.length} onClick={() => void download()}><Download size={18} /><span>PPT 내려받기</span></button></>}
-    </header>
+  const backToPlan = planId ? `/plan/document?planId=${encodeURIComponent(planId)}` : "/plan";
+  /* 다른 화면과 같은 머리줄(← 제목 ☰)과 메뉴 — 편집 칸이 넓어야 해서 고정 왼쪽 메뉴는 두지 않고 ☰ 서랍으로 연다 */
+  return <main className={frame.page}><BusinessAppChrome title={view?.title ?? "제안서 편집"} subtitle={`${view?.saved?.document.deck.blueprint ? PURPOSE_LABELS[view.saved.document.deck.blueprint.purpose] : "제안서"}${view?.saved ? ` · v${view.saved.revision}` : ""}`} backHref={backToPlan} showRail={false}
+    actions={view?.saved ? <div className={styles.headerTools}><span className={styles.status} role="status">{status === "saving" ? <LoaderCircle size={15} className={styles.spin} /> : status === "saved" ? <Check size={15} /> : null}{stateLabel}</span><button title="저장" aria-label="저장" disabled={status === "saved" || status === "saving" || status === "conflict"} onClick={save}><Save size={19} /></button><button title="버전 기록" aria-label="버전 기록" aria-pressed={historyOpen} onClick={() => setHistoryOpen(!historyOpen)}><History size={19} /></button><button className={styles.primary} aria-label="PPT 내려받기" disabled={busy || status !== "saved" || !!layoutIssues.length} onClick={() => void download()}><Download size={18} /><span>PPT 내려받기</span></button></div> : undefined}>
+  <div className={`${styles.page} ${styles.inChrome}`}>
     {message && <div className={styles.notice} role="alert"><span>{message}</span>{status === "failed" && <button onClick={save}><RefreshCw size={15} />다시 저장</button>}{status === "conflict" && <><button onClick={keepLocalCopy}>내 수정본 보관</button><button onClick={() => { if (window.confirm("화면의 미저장 수정 대신 서버의 최신 버전을 불러올까요?")) void refresh(true); }}>최신 버전 불러오기</button></>}{!view && !access && <button onClick={() => void refresh(true)}>다시 불러오기</button>}</div>}
     {view?.saved && view.business && <BusinessConditionsPanel key={planId} planId={planId} business={view.business} sourceChanged={view.sourceChanged} canUpdate={status === "saved" && !busy && !sourceWorking && !documentWorking} onUpdated={refresh} onWorking={setBusinessWorking} />}
     {view?.saved && view.business && <DocumentRefreshPanel key={`document-${planId}`} planId={planId} business={view.business} saved={view.saved} canUpdate={status === "saved" && !busy && !sourceWorking && !businessWorking} onUpdated={refresh} onWorking={setDocumentWorking} />}
@@ -210,6 +213,7 @@ function Editor() {
         <label>발표자 노트<textarea aria-label="발표자 노트" maxLength={4000} rows={4} value={slide.note ?? ""} onChange={event => patch({ text: { note: event.target.value } })} /></label>
       </aside>
     </div>}
-  </main>;
+  </div>
+  </BusinessAppChrome></main>;
 }
 export default function ProposalPage() { return <Suspense fallback={<PlanLoading fullPage note="제안서를 불러오고 있어요" />}><Editor /></Suspense>; }

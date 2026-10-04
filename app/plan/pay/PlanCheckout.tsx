@@ -6,6 +6,8 @@ import Link from "next/link";
 import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
+import { documentHref } from "../../../lib/plan-builder/business-hub";
+import { homepageHref } from "../../../lib/plan-builder/journey";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_COUNT } from "../../../lib/payments/domain";
@@ -45,8 +47,8 @@ export default function PlanCheckout() {
   const params = useSearchParams();
   const planId = params.get("planId") ?? "";
   const planType = params.get("planType") ?? "";
-  const isCoach = ["일반 사업계획서", "사업 운영·개선 계획서"].includes(planType);
-  const planHref = isCoach ? `/plan/chat?planId=${encodeURIComponent(planId)}` : "/plan/overview";
+  /* 돌아갈 곳은 그 사업의 계획서 — 옛 '플랜 개요'로 보내지 않는다 */
+  const planHref = planId ? documentHref(planId) : "/plan";
   // 계획서 결제와 홈페이지 결제는 같은 화면을 쓰되 금액과 안내가 다르다
   const isHomepage = params.get("product") === "homepage";
   /* 다시 생성 묶음 — 문서를 여는 결제가 아니라 횟수만 더한다 */
@@ -72,7 +74,7 @@ export default function PlanCheckout() {
   const agreed = AGREEMENT_KEYS.every(key => agreements[key]);
   const toggle = (key: keyof Agreements) => setAgreements(current => ({ ...current, [key]: !current[key] }));
   const [message, setMessage] = useState<string | null>(null);
-  const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean } | null>(null);
+  const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean; unavailable?: boolean } | null>(null);
   const [homepageInfo, setHomepageInfo] = useState<{ price: number; editable: boolean } | null>(null);
   const started = useRef(false);
 
@@ -81,7 +83,7 @@ export default function PlanCheckout() {
     fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(planId)}`)
       .then((r) => r.json())
       .then((d) => {
-        if (alive) setInfo({ price: d.price, productName: d.productName, paid: d.paid, payable: d.payable, authenticated: d.authenticated });
+        if (alive) setInfo({ price: d.price, productName: d.productName, paid: d.paid, payable: d.payable, authenticated: d.authenticated, unavailable: d.unavailable === true });
       })
       .catch(() => {
         if (alive) setInfo(null);
@@ -149,6 +151,21 @@ export default function PlanCheckout() {
     }
   }
 
+  /* 결제 여부를 확인하지 못했으면 결제를 권하지 않는다 — 이미 산 사람이 두 번 결제하지 않게 */
+  if (info?.unavailable && info.authenticated) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <h1 className={styles.title}>결제 상태를 확인하지 못했어요</h1>
+          <p className={styles.desc}>이미 결제했을 수도 있어요. 잠시 후 다시 확인해 주세요. 결제는 아직 진행되지 않았습니다.</p>
+          <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 확인하기</button>
+          <Link href={planHref} className={styles.back}>← 사업계획서로 돌아가기</Link>
+        </div>
+      </div>
+    );
+  }
+
   if (info && !info.authenticated) {
     return (
       <div className={styles.page}>
@@ -193,7 +210,7 @@ export default function PlanCheckout() {
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{isHomepage ? "홈페이지는 이미 열려 있습니다" : "이 문서는 이미 열려 있습니다"}</h1>
           <p className={styles.desc}>{isHomepage ? "결제가 확인되어 사진·글·버튼을 고치고 공개할 수 있습니다." : "결제가 확인되어 전체 섹션을 쓸 수 있습니다."}</p>
-          <Link href={isHomepage ? "/plan/homepage" : planHref} className={styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "플랜으로 돌아가기"}</Link>
+          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}</Link>
         </div>
       </div>
     );
