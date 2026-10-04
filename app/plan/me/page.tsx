@@ -3,7 +3,8 @@
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { hydrateFromServer, clearLocalState, type PlanState } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, clearLocalState, isSamplePlan, type PlanState } from "../../../lib/plan-builder/plan-store";
+import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
@@ -19,6 +20,9 @@ import PlanLoading from "../PlanLoading";
 
 const STATUS_LABEL: Record<string, string> = {
   created: "결제 대기",
+  awaiting_deposit: "입금 대기",
+  deposit_reported: "입금 확인 중",
+  refunded: "환불됨",
   confirming: "승인 중",
   done: "결제 완료",
   canceled: "취소됨",
@@ -40,7 +44,10 @@ const REFUND_LABEL: Record<RefundInfo["status"], string> = {
 
 export default function PlanMePage() {
   const router = useRouter();
-  const [account, setAccount] = useState<{ authenticated: boolean; email: string | null; paid: boolean } | null>(null);
+  /* usage — 모든 문서 / 결제한 문서 있음 / 무료 / 확인 못 함 */
+  const [account, setAccount] = useState<{ authenticated: boolean; email: string | null; usage: "all" | "some" | "free" | "unknown" } | null>(null);
+  /** 결제 내역을 불러오지 못함 — '결제 내역 없음'으로 보이지 않게 */
+  const [paymentsFailed, setPaymentsFailed] = useState(false);
   const [payments, setPayments] = useState<PaymentHistoryItem[] | null>(null);
   const [state, setState] = useState<PlanState | null>(null);
   /** orderId → 환불 요청 상태 */
@@ -66,17 +73,19 @@ export default function PlanMePage() {
      */
     Promise.all([
       fetch("/api/auth/session", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("session unavailable"); return r.json() as Promise<{ authenticated?: boolean; email?: string | null }>; }),
-      fetch("/api/plan/access", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<{ paid?: boolean } | null>,
+      fetch("/api/plan/access", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<{ allAccess?: boolean; hasAnyPaid?: boolean; unavailable?: boolean } | null>,
     ])
       .then(([session, access]) => {
         if (!alive) return;
         const authenticated = !!session.authenticated;
-        setAccount({ authenticated, email: session.email ?? null, paid: !!access?.paid });
+        /* 문서마다 결제하는 사람도 있다 — 예전엔 '전체 이용권(paid)'만 봐서 결제한 사람에게도 '무료 구간'이라고 했다 */
+        const usage = !access || access.unavailable ? "unknown" : access.allAccess ? "all" : access.hasAnyPaid ? "some" : "free";
+        setAccount({ authenticated, email: session.email ?? null, usage });
         if (!authenticated) return;
         void fetch("/api/auth/payments", { cache: "no-store" })
-          .then((r) => (r.ok ? r.json() : { payments: [] }))
+          .then((r) => { if (!r.ok) throw new Error("payments unavailable"); return r.json(); })
           .then((data: { payments?: PaymentHistoryItem[] }) => alive && setPayments(data.payments ?? []))
-          .catch(() => alive && setPayments([]));
+          .catch(() => { if (alive) { setPayments([]); setPaymentsFailed(true); } });
         void fetch("/api/plan/refund", { cache: "no-store" })
           .then((r) => (r.ok ? r.json() : { requests: [] }))
           .then((data: { requests?: RefundInfo[] }) => {
@@ -120,7 +129,7 @@ export default function PlanMePage() {
 
   async function deleteAccount() {
     if (deleteBusy) return;
-    if (!window.confirm("정말 탈퇴하시겠어요?\n작성한 플랜과 문서가 모두 삭제되며 되돌릴 수 없습니다.")) return;
+    if (!window.confirm("정말 탈퇴하시겠어요?\n작성한 사업과 문서가 모두 삭제되며 되돌릴 수 없습니다.")) return;
     setDeleteBusy(true);
     setDeleteMessage("");
     try {
@@ -168,8 +177,8 @@ export default function PlanMePage() {
     );
   }
 
-  const biz = state?.business;
-  const planCount = state?.plans.length ?? 0;
+  /* 내 사업 — 예시 문서는 빼고, 최근에 손댄 순서로. 예전엔 옛 '사업 정보' 칸만 봐서 사업이 있어도 '없습니다'라고 했다 */
+  const myPlans = (state?.plans ?? []).filter((plan) => !isSamplePlan(plan.id)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 
   return (
     <div className={styles.page}>
@@ -187,11 +196,11 @@ export default function PlanMePage() {
           </div>
           <div className={styles.row}>
             <dt>이용 상태</dt>
-            <dd>{account.paid ? "전체 섹션 이용 중" : "무료 구간 이용 중"}</dd>
+            <dd>{account.usage === "all" ? "모든 사업계획서 이용 중" : account.usage === "some" ? "결제한 사업계획서 이용 중" : account.usage === "free" ? "무료로 이용 중" : "확인하지 못했어요"}</dd>
           </div>
           <div className={styles.row}>
-            <dt>만든 플랜</dt>
-            <dd>{planCount}개</dd>
+            <dt>내 사업</dt>
+            <dd>{myPlans.length}개</dd>
           </div>
         </dl>
       </section>
@@ -201,17 +210,17 @@ export default function PlanMePage() {
           <h2 className={styles.cardTitle}>내 사업</h2>
           <Link href="/plan" className={styles.cardAction}>내 사업 보기</Link>
         </div>
-        {biz?.name ? (
+        {myPlans.length ? (
           <dl className={styles.rows}>
-            <div className={styles.row}><dt>사업명</dt><dd>{biz.name}</dd></div>
-            {biz.industry ? <div className={styles.row}><dt>업종</dt><dd>{biz.industry}</dd></div> : null}
-            {biz.region ? <div className={styles.row}><dt>지역</dt><dd>{biz.region}</dd></div> : null}
-            {biz.stage ? <div className={styles.row}><dt>진행 단계</dt><dd>{biz.stage}</dd></div> : null}
-            {biz.role ? <div className={styles.row}><dt>역할</dt><dd>{biz.role}</dd></div> : null}
-            {biz.description ? <div className={styles.row}><dt>소개</dt><dd>{biz.description}</dd></div> : null}
+            {myPlans.slice(0, 5).map((plan) => (
+              <div className={styles.row} key={plan.id}>
+                <dt>{businessHubState(plan).complete ? "계획서 완성" : "진행 중"}</dt>
+                <dd><Link href={businessEntryHref(plan)}>{plan.title || "이름 없는 사업"}</Link></dd>
+              </div>
+            ))}
           </dl>
         ) : (
-          <p className={styles.empty}>아직 등록한 사업이 없습니다.</p>
+          <p className={styles.empty}>아직 시작한 사업이 없습니다. <Link href="/plan/chat?new=1">새 대화로 시작하기</Link></p>
         )}
       </section>
 
@@ -220,7 +229,7 @@ export default function PlanMePage() {
           <h2 className={styles.cardTitle}>결제 내역</h2>
         </div>
         {payments === null ? null : payments.length === 0 ? (
-          <p className={styles.empty}>아직 결제 내역이 없습니다.</p>
+          <p className={styles.empty}>{paymentsFailed ? "결제 내역을 불러오지 못했어요. 새로고침해 주세요." : "아직 결제 내역이 없습니다."}</p>
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -293,7 +302,7 @@ export default function PlanMePage() {
         {!showDelete ? (
           <>
             <p className={styles.empty}>
-              계정과 작성한 플랜·문서가 모두 삭제됩니다. 결제·환불 기록은 법령상 보존 의무가 있어
+              계정과 작성한 사업·문서가 모두 삭제됩니다. 결제·환불 기록은 법령상 보존 의무가 있어
               사람과 연결되지 않는 형태로만 남습니다.
             </p>
             <button type="button" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>

@@ -27,8 +27,12 @@ export async function POST(request: Request) {
   const product: PlanProduct = (["homepage", "bundle", "regen", "domain", "domain-purchase", "tokens"] as const).find((p) => p === body.product) ?? "plan";
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
   const planType = typeof body.planType === "string" ? body.planType.slice(0, 120) : "";
-  if (!planId || !planType) {
-    return NextResponse.json({ error: "plan_required", message: "결제할 플랜 정보가 없습니다. 플랜 화면에서 다시 시도해주세요." }, { status: 400 });
+  /*
+   * 문서 종류(planType)는 계획서 값(종류별 가격)을 정할 때만 쓴다.
+   * 홈페이지에서 여는 도메인·토큰 결제는 종류를 모르고 오므로, 예전처럼 모든 상품에 요구하면 결제가 늘 막혔다.
+   */
+  if (!planId || (product === "plan" && !planType)) {
+    return NextResponse.json({ error: "plan_required", message: "결제할 사업 정보가 없습니다. 사업계획서 화면에서 다시 시도해 주세요." }, { status: 400 });
   }
   /* 도메인 구매 대행은 살 주소가 있어야 한다(.com·.kr·.co.kr) */
   const purchaseDomain = product === "domain-purchase" ? normalizePurchaseDomain(typeof body.domain === "string" ? body.domain : "") : null;
