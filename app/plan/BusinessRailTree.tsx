@@ -7,7 +7,7 @@ import { Check, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, setActivePlan, subscribePlanState, type Plan } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, type JourneyStepId } from "../../lib/plan-builder/journey";
-import { useHomepageStatus } from "./JourneyBar";
+import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
 import styles from "./BusinessRailTree.module.css";

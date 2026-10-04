@@ -1,35 +1,46 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { ChevronLeft, CircleHelp, FolderClosed, Headphones, LayoutDashboard, MoreHorizontal, SquarePen, UserRound, X } from "lucide-react";
+import { ChevronLeft, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import drawer from "./AppDrawer.module.css";
 import styles from "./chat/page.module.css";
 import shell from "./PlanShell.module.css";
 import RailMenu from "./RailMenu";
 import type { DocumentToc } from "./BusinessRailTree";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", workspaceHref, showRail = true, journey, documentToc }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active = "plans", backHref = "/plan", showRail = true, documentToc }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new"; backHref?: string; workspaceHref?: string; showRail?: boolean;
-  /** 대화 → 계획서 → 홈페이지 → 유지보수 단계 표시(JourneyBar) — 머리줄 바로 아래 */
-  journey?: ReactNode;
   /** 문서 화면의 목차 — 왼쪽 메뉴의 그 사업 아래에 붙는다 */
   documentToc?: DocumentToc;
 }) {
   const [open, setOpen] = useState(false);
-  const menu = useRef<HTMLDivElement>(null);
+  const pathname = usePathname();
   const [sync, setSync] = useState<PlanSyncStatus>("idle");
   useEffect(() => { setSync(planSyncStatus());return subscribePlanSync(() => setSync(planSyncStatus())); }, []);
+  /* 화면을 옮기면 서랍은 닫는다 */
+  useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
     if (!open) return;
-    const dismiss = (event: PointerEvent) => { if (!menu.current?.contains(event.target as Node)) setOpen(false); };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); menu.current?.querySelector("button")?.focus(); } };
-    document.addEventListener("pointerdown", dismiss); document.addEventListener("keydown", escape);
-    return () => { document.removeEventListener("pointerdown", dismiss); document.removeEventListener("keydown", escape); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    document.addEventListener("keydown", escape);
+    return () => document.removeEventListener("keydown", escape);
   }, [open]);
   return <>
     {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost}`} aria-label="작업 메뉴">
       <RailMenu active={active} documentToc={documentToc} />
+    </aside>}
+    {/*
+      폰·좁은 화면 메뉴 — PC 왼쪽 메뉴와 똑같은 것(내 사업 → 사업 → 목차)을 서랍으로 연다.
+      예전엔 여기만 따로 만든 링크 목록이어서 PC와 폰의 메뉴가 달랐다.
+    */}
+    {open && <div className={drawer.scrim} onClick={() => setOpen(false)} aria-hidden="true" />}
+    {open && <aside id="app-drawer" className={`${shell.rail} ${shell.railOpen} ${drawer.drawer}`} data-rail-open="" aria-label="메뉴">
+      <button type="button" className={drawer.close} aria-label="메뉴 닫기" onClick={() => setOpen(false)}><X size={22} /></button>
+      {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
+      <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
     <div className={styles.appSurface}>
       <header className={styles.header}>
@@ -37,20 +48,10 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
         {/* 부제는 화면이 따로 줄 때만(예: 질문 3/12) — 늘 붙던 '오늘창업'·'오늘창업 AI 파트너'는 왼쪽 로고와 겹쳐 뺐다 */}
         <div className={styles.headerTitle}><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</div>
         {actions && <div className={styles.headerActions}>{actions}</div>}
-        <div className={styles.headerMenu} ref={menu}>
-          <button className={styles.menuToggle} aria-label={open ? "대화 메뉴 닫기" : "대화 메뉴 열기"} aria-expanded={open} aria-controls="chat-navigation" onClick={() => setOpen(!open)}>{open ? <X size={22} /> : <MoreHorizontal size={24} />}</button>
-          {open && <nav id="chat-navigation" className={styles.menuPanel} aria-label="대화 메뉴">
-            <Link href="/plan/chat?new=1" onClick={() => setOpen(false)} aria-current={active === "new" ? "page" : undefined}><SquarePen size={18} />새 대화</Link>
-            <Link href="/plan" onClick={() => setOpen(false)} aria-current={active === "plans" || active === "chat" ? "page" : undefined}><FolderClosed size={18} />내 사업</Link>
-            {workspaceHref && <Link href={workspaceHref} onClick={() => setOpen(false)}><LayoutDashboard size={18} />사업 관리</Link>}
-            <Link href="/plan/info" onClick={() => setOpen(false)}><CircleHelp size={18} />이용 안내</Link>
-            <Link href="/account/support" onClick={() => setOpen(false)}><Headphones size={18} />고객센터</Link>
-            <Link href="/plan/me" onClick={() => setOpen(false)}><UserRound size={18} />내 계정</Link>
-            <Link href="/">홈으로</Link>
-          </nav>}
+        <div className={`${styles.headerMenu} ${showRail ? drawer.narrowOnly : ""}`}>
+          <button className={styles.menuToggle} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls="app-drawer" onClick={() => setOpen(!open)}><Menu size={24} /></button>
         </div>
       </header>
-      {journey}
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}
       {children}
     </div>

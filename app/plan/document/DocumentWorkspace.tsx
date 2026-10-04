@@ -15,7 +15,7 @@ import DocumentSourceReview, { type DocumentReviewSource } from "./DocumentSourc
 import type { StoredSection } from "../../../lib/plan-builder/plan-store";
 import type { ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 import ExecutiveSummaryView from "./ExecutiveSummaryView";
-import JourneyBar, { useHomepageStatus } from "../JourneyBar";
+import { useHomepageStatus } from "../use-homepage";
 import { journeyNext, type HomepageStatus } from "../../../lib/plan-builder/journey";
 import { loadState } from "../../../lib/plan-builder/plan-store";
 
@@ -166,8 +166,7 @@ export default function DocumentWorkspace(props: Props) {
   </nav>;
 
   return <main className={`${frame.page} ${styles.page}`}>
-    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={!isSample} documentToc={documentToc}
-      journey={!isSample && ready && <JourneyBar planId={planId} current="document" homepage={homepage} version={`${props.completionKey}:${grouped.length}:${props.writing?.done ?? ""}`} />}>
+    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={!isSample} documentToc={documentToc}>
       {!ready ? <PlanLoading fill variant="compact" note="문서를 불러오고 있어요" /> : <div className={styles.layout}>
         {/* 예시 문서는 왼쪽 메뉴에 사업이 없으니 문서 옆에 목차를 그대로 둔다 */}
         {isSample && grouped.length > 0 && <aside className={styles.sidebar}><h2>목차</h2>{toc()}</aside>}

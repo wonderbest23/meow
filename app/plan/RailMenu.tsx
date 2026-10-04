@@ -31,11 +31,17 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
   const current = picked === "chat" ? "plans" : picked;
   const [account, setAccount] = useState<{ authenticated: boolean; email: string | null } | null>(null);
   useEffect(() => {
+    /*
+     * 로그인 여부는 로그인 전용 주소로 확인한다(사이트 머리말과 같은 곳).
+     * 예전엔 결제 권한 주소(/api/plan/access)를 썼는데, 그 주소는 권한 확인에 실패하면
+     * '로그인 안 됨'으로 답해 로그인한 사람에게도 로그인·회원가입 단추가 보였다.
+     * 확인하지 못했으면 단추를 바꾸지 않고 직전 상태를 둔다.
+     */
     let alive = true;
-    fetch("/api/plan/access")
-      .then(r => r.json())
-      .then(d => { if (alive) setAccount({ authenticated: !!d.authenticated, email: d.email ?? null }); })
-      .catch(() => { if (alive) setAccount({ authenticated: false, email: null }); });
+    fetch("/api/auth/session", { cache: "no-store" })
+      .then(r => { if (!r.ok) throw new Error("session unavailable"); return r.json(); })
+      .then((d: { authenticated?: boolean; email?: string | null }) => { if (alive) setAccount({ authenticated: !!d.authenticated, email: d.email ?? null }); })
+      .catch(() => { /* 직전 상태 유지 — 처음이면 아무것도 그리지 않는다 */ });
     return () => { alive = false; };
   }, [pathname]);
   const initial = account?.email ? account.email.trim().charAt(0).toUpperCase() : null;
