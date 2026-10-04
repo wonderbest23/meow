@@ -183,3 +183,13 @@
   .inspector .tableRow input { font-size: 13px; } .notice { padding: 12px 16px; }
 }
 @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }
+
+/* 앱 머리줄 안의 저장·버전·PPT 단추 — 예전 자체 머리줄(.header)과 같은 모양 */
+.headerTools { display: flex; align-items: center; gap: 6px; }
+.headerTools > button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-width: 40px; height: 40px; padding: 0 8px; flex-shrink: 0; border: 1px solid transparent; border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.headerTools > button:hover:not(:disabled) { background: #edf2fa; }
+.headerTools > button:disabled { opacity: .45; cursor: default; }
+.headerTools > button.primary { padding: 0 14px; border-color: #276cdb; background: #276cdb; color: #fff; font-weight: 600; }
+@media (max-width: 640px) { .headerTools .status { display: none; } .headerTools > button.primary span { display: none; } }
+/* 앱 틀 안에서는 화면 높이를 채우는 대신 남은 칸에서 스크롤한다 */
+.inChrome { min-height: 0; flex: 1; overflow-y: auto; }

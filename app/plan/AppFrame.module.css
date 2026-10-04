@@ -1,0 +1,2 @@
+.scroll { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; background: var(--app-raised); }
+.inner { min-height: 100%; }
