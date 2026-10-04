@@ -55,15 +55,24 @@ export default function PlanMePage() {
   const [deleteEmail, setDeleteEmail] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
+  /** 로그인 확인 자체가 실패함 — 로그인 안내 대신 다시 시도 안내를 보인다 */
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     let alive = true;
-    fetch("/api/plan/access")
-      .then((r) => r.json())
-      .then((d) => {
+    /*
+     * 로그인 여부는 로그인 전용 주소(/api/auth/session)로 정한다 — 왼쪽 메뉴와 같은 곳.
+     * 결제 정보(/api/plan/access)는 이용 상태 표시에만 쓰고, 그게 실패해도 로그인 안내로 바꾸지 않는다.
+     */
+    Promise.all([
+      fetch("/api/auth/session", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("session unavailable"); return r.json() as Promise<{ authenticated?: boolean; email?: string | null }>; }),
+      fetch("/api/plan/access", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<{ paid?: boolean } | null>,
+    ])
+      .then(([session, access]) => {
         if (!alive) return;
-        setAccount({ authenticated: !!d.authenticated, email: d.email ?? null, paid: !!d.paid });
-        if (!d.authenticated) return;
+        const authenticated = !!session.authenticated;
+        setAccount({ authenticated, email: session.email ?? null, paid: !!access?.paid });
+        if (!authenticated) return;
         void fetch("/api/auth/payments", { cache: "no-store" })
           .then((r) => (r.ok ? r.json() : { payments: [] }))
           .then((data: { payments?: PaymentHistoryItem[] }) => alive && setPayments(data.payments ?? []))
@@ -78,7 +87,7 @@ export default function PlanMePage() {
           })
           .catch(() => undefined);
       })
-      .catch(() => alive && setAccount({ authenticated: false, email: null, paid: false }));
+      .catch(() => alive && setLoadFailed(true));
     void hydrateFromServer().then((s) => alive && setState(s));
     return () => {
       alive = false;
@@ -148,6 +157,7 @@ export default function PlanMePage() {
     router.push("/plan");
   }
 
+  if (account === null && loadFailed) return <div className={styles.page}><h1 className={styles.title}>마이페이지</h1><p>계정 정보를 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p></div>;
   if (account === null) return <div className={styles.page}><PlanLoading variant="rows" count={3} note="계정 정보를 불러오는 중…" /></div>;
   if (!account.authenticated) {
     return (

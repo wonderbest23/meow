@@ -116,7 +116,8 @@ export default function DocumentWorkspace(props: Props) {
   /* 계획서가 다 만들어지면 오른쪽에 다음 단계를 늘 띄워 둔다(좁은 화면에서는 문서 위에) */
   const showNext = !isSample && !!planId && (!!props.completionKey || !!props.allWritten) && !props.writing;
   const homepage = useHomepageStatus(isSample ? null : planId);
-  const back = planId && !isSample ? `/plan/workspace?planId=${encodeURIComponent(planId)}&tab=documents` : "/plan";
+  /* ← 는 내 사업 목록으로 — 예전엔 사업 관리 문서 탭으로 가서, 거기 큰 단추('사업계획서 열기')가 다시 여기로 돌려보냈다 */
+  const back = "/plan";
 
   useEffect(() => {
     if (!ready || !props.completionKey || isSample) { setCelebrate(false); return; }
@@ -166,7 +167,7 @@ export default function DocumentWorkspace(props: Props) {
   </nav>;
 
   return <main className={`${frame.page} ${styles.page}`}>
-    <BusinessAppChrome title="사업계획서" backHref={back} workspaceHref={isSample ? undefined : back} showRail={!isSample} documentToc={documentToc}>
+    <BusinessAppChrome title="사업계획서" backHref={back} showRail={!isSample} documentToc={documentToc}>
       {!ready ? <PlanLoading fill variant="compact" note="문서를 불러오고 있어요" /> : <div className={styles.layout}>
         {/* 예시 문서는 왼쪽 메뉴에 사업이 없으니 문서 옆에 목차를 그대로 둔다 */}
         {isSample && grouped.length > 0 && <aside className={styles.sidebar}><h2>목차</h2>{toc()}</aside>}

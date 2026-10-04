@@ -35,6 +35,9 @@ assert.equal(new URL(workspaceHref(id), chat.origin).searchParams.get("planId"),
 assert.equal(businessEntryHref(conversation), businessChatHref(conversation.id), "My Business opens an existing conversation in chat");
 assert.equal(businessEntryHref(pending), businessChatHref(pending.id), "An in-progress conversation opens in chat");
 assert.equal(businessEntryHref(base), workspaceHref(base.id), "Plans without a conversation retain their legacy workspace");
+const legacyKey = businessHubState(base).keys[0];
+assert.ok(legacyKey);
+assert.equal(businessEntryHref({ ...base, sections: { [legacyKey]: { markdown: "Saved document" } as Plan["sections"][string] } }), documentHref(base.id), "Legacy plans with a written document open that document, not the old editor");
 assert.equal(shouldResumeBusinessChat(conversation), true, "Early conversations resume in chat");
 assert.equal(shouldResumeBusinessChat(pending), true, "First pending reply resumes in chat");
 assert.equal(shouldResumeBusinessChat(base), false, "Legacy plans remain accessible");
