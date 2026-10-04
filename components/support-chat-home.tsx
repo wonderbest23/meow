@@ -27,9 +27,10 @@ function useSession(open: boolean) {
     if (!open) return;
     let alive = true;
     fetch("/api/auth/session", { cache: "no-store" })
-      .then(response => response.json())
+      .then(response => { if (!response.ok) throw new Error("session unavailable"); return response.json(); })
       .then((data: { authenticated?: boolean; email?: string | null }) => { if (alive) setSession({ authenticated: !!data.authenticated, email: data.email ?? null }); })
-      .catch(() => { if (alive) setSession({ authenticated: false, email: null }); });
+      /* 확인하지 못했으면 직전 상태를 둔다 — 로그인한 사람을 로그아웃 상태로 그리지 않게 */
+      .catch(() => {});
     return () => { alive = false; };
   }, [open]);
   return session;

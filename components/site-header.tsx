@@ -34,9 +34,10 @@ function AccountActions() {
   useEffect(() => {
     let alive = true;
     fetch("/api/auth/session", { cache: "no-store" })
-      .then(response => response.json())
+      .then(response => { if (!response.ok) throw new Error("session unavailable"); return response.json(); })
       .then((data: { authenticated?: boolean }) => { if (alive) setSignedIn(!!data.authenticated); })
-      .catch(() => { if (alive) setSignedIn(false); });
+      /* 확인하지 못했으면 아무것도 그리지 않는다 — 로그인한 사람에게 로그인 단추가 뜨지 않게 */
+      .catch(() => {});
     return () => { alive = false; };
   }, []);
   /* 확인 전에는 비워 둔다 — 로그인 단추가 잠깐 보였다 바뀌지 않게 */

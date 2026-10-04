@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { hydrateFromServer, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
-import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, businessNextStep, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
+import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
+import { journeyNext } from "../../../lib/plan-builder/journey";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
 import frame from "../chat/page.module.css";
 import styles from "../BusinessHub.module.css";
@@ -77,8 +78,9 @@ export default function BusinessWorkspace() {
     window.requestAnimationFrame(() => heading.current?.focus());
   }
   function openDocument() { if(plan){setActivePlan(plan.id);router.push(`/plan/document?planId=${encodeURIComponent(plan.id)}`);} }
-  function openLegacy() { if(plan){setActivePlan(plan.id);router.push("/plan/overview");} }
   const hub=plan ? businessHubState(plan,runStatus) : null;
+  /* 대화 없이 쓴 예전 사업 — 써 둔 계획서가 있으면 그 문서로, 하나도 없을 때만 예전 작성 화면으로 */
+  function openLegacy() { if(!plan)return; if(hub?.documents.length){openDocument();return;} setActivePlan(plan.id);router.push("/plan/overview"); }
   const homepage=useHomepage(plan?.id);
   const design=hub?.coach ? currentBusinessDesign(hub.coach) : null;
   const action=hub?.coach ? currentNextAction(hub.coach) : undefined;
@@ -118,8 +120,8 @@ export default function BusinessWorkspace() {
               <WorkspaceDocumentStatus businessId={plan.id} complete={hub.complete} count={hub.documents.length} total={hub.keys.length} stale={hub.stale} onOpen={openDocument} />
             </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지의 대화는 그대로 사용합니다.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button>}</>}
             {hub.coach && !!hub.documents.length && <Link className={styles.secondary} href={chat}>{hub.stale ? "수정 내용 반영하러 가기" : "자료를 더 다듬기"}</Link>}
-            {hub.complete && !hub.stale && <div className={styles.nextStep}><span>계획 다음 단계</span><h3>{businessNextStep(plan).title}</h3><p>지금 선택한 사업의 상품·운영·홈페이지 준비를 이어가요.</p><Link className={styles.secondary} href={businessNextStep(plan).href}>준비 과정 이어가기</Link></div>}
-            <details><summary>홈페이지도 필요하신가요?</summary><p>사업계획서로 고객에게 보여줄 홈페이지를 만들 수 있어요. 이용 권한에 따라 결제가 필요할 수 있어요.</p><button className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push("/plan/homepage"); }}>홈페이지 만들기</button></details>
+            {/* 다음 단계는 계획서 화면과 같은 답 하나 — 홈페이지 만들기 → 다듬고 공개하기 → 유지보수 */}
+            {hub.complete && !hub.stale && (() => { const next = journeyNext(plan, homepage.status); return <div className={styles.nextStep}><span>다음 단계</span><h3>{next.title}</h3><p>{next.note}</p><Link className={styles.secondary} href={next.href} onClick={() => setActivePlan(plan.id)}>{next.title}</Link></div>; })()}
           </>}
           {view==="launch" && <><button className={styles.textButton} onClick={()=>tab("operations")}>기간별 실적과 개선 리포트 보기</button>{action && <button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}
           {view==="action" && <>
