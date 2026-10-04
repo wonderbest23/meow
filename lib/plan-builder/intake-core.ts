@@ -214,6 +214,14 @@ export function answeredIntakeQuestion(intake: IntakeState, coach: CoachState, q
   return !!question.fieldKey && coach.fields.some(field => field.key === question.fieldKey && field.basis === "user");
 }
 
+/**
+ * 바뀐 사업 조건을 계획서에 반영할 때 AI 가 다시 쓰는 항목 수 — 다시 쓰기 횟수가 이만큼 차감된다.
+ * 직접 고친 항목·잠근 항목·이미 최신인 항목은 다시 쓰지 않는다(제작 접수 화면과 서버 판정이 같은 기준).
+ */
+export function staleRewriteCount(sections: ServerPlan["sections"], revision: number, keys?: readonly string[]): number {
+  return (keys ?? Object.keys(sections)).filter(key => { const value = sections[key]; return !!value && !value.edited && !value.locked && value.coachRevision !== revision; }).length;
+}
+
 export function intakeDocumentStatus(plan: Pick<ServerPlan, "sections">, coach: CoachState): NonNullable<IntakeSnapshot["documentStatus"]> {
   const sections = Object.values(plan.sections);
   if (!sections.length) return "none";
@@ -245,7 +253,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
   return { planId: plan.id, title: plan.title, planType: plan.planType, updatedAt: plan.updatedAt, coach,
     intake: publicIntake, nextQuestion: questions.find(question => !answeredIntakeQuestion(intake, coach, question)) ?? null,
     questions, coreComplete: answered === core.length, coreAnswered: answered, coreTotal: core.length,
-    summary, financialSummary: intakeFinancialReference(coach, intake), financialWarning: intakeFinancialWarning(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach),
+    summary, financialSummary: intakeFinancialReference(coach, intake), financialWarning: intakeFinancialWarning(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach), rewriteCount: staleRewriteCount(plan.sections, coachDocumentRevision(coach)),
     ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(coach, intake),
     candidateIdeas: resources.ideas,
     resourceAssessment: resources.assessment,

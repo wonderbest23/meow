@@ -458,6 +458,10 @@
 /* 답변 수정하기: 요약이 따로 열리는 모바일에서만 보인다(PC는 요약이 옆에 있다). */
 .editLink { display: none; }
 .nextStepLabel { display: inline-flex; align-items: center; gap: 6px; justify-self: start; padding: 4px 10px; border-radius: 999px; background: var(--intake-blue); color: #fff; font-size: 12px; font-weight: 700; }
+.rewriteCost { margin: 0; padding: 10px 12px; border-radius: 8px; background: #f2f6fd; color: #33475b; font-size: 13px; line-height: 1.6; word-break: keep-all; }
+.rewriteCost b { color: #1b4f9c; font-weight: 700; }
+.rewriteCost[data-short] { background: #fff4e5; color: #7a4a00; }
+.rewriteCost a { color: #1b4f9c; font-weight: 700; text-decoration: underline; }
 .nextStepHint { display: block; color: var(--intake-muted); font-size: 12px; line-height: 1.6; }
 @keyframes intake-next-pulse { 0%, 100% { box-shadow: 0 0 0 4px rgba(45, 108, 223, .1); } 50% { box-shadow: 0 0 0 9px rgba(45, 108, 223, .04); } }
 

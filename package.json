@@ -7,6 +7,7 @@
     "test:business-design": "tsx scripts/business-design.test.ts",
     "test:journey": "tsx scripts/journey.test.ts",
     "test:plain-language": "tsx scripts/plain-language-prompt.test.ts",
+    "test:rewrite-cost": "tsx scripts/rewrite-cost.test.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
