@@ -6,6 +6,7 @@
     "test:business-coach": "tsx scripts/business-coach.test.ts",
     "test:business-design": "tsx scripts/business-design.test.ts",
     "test:journey": "tsx scripts/journey.test.ts",
+    "test:plain-language": "tsx scripts/plain-language-prompt.test.ts",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
