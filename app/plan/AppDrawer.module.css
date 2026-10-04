@@ -3,6 +3,12 @@
 .drawer.drawer { position:fixed; top:0; bottom:0; left:0; z-index:91; width:min(300px,86vw); height:auto; padding:16px 12px max(16px,env(safe-area-inset-bottom)); align-items:stretch; overflow-y:auto; overscroll-behavior:contain; background:#fff; box-shadow:8px 0 32px #191f2826; animation:slide .2s ease-out; }
 .close { position:absolute; top:22px; right:10px; z-index:1; display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:50%; background:transparent; color:#4e5968; cursor:pointer; }
 .close:hover { background:#f2f4f6; }
+/*
+ * 왼쪽 고정 메뉴는 PC 폭에서만. 예전엔 chat/page.module.css 의 .railHost 규칙 하나로 숨겼는데,
+ * 운영 빌드에서 PlanShell.module.css(.rail{display:flex})가 뒤에 실리는 화면(문서)에서는 그 규칙이 져서
+ * 폰 문서 화면에 메뉴가 깔리고 본문이 밀려났다. 순서와 상관없이 이기도록 여기서 못박는다.
+ */
+@media (max-width:900px) { .wideOnly.wideOnly { display:none !important; } }
 /* 왼쪽 메뉴가 보이는 PC 폭에서는 서랍 단추를 숨긴다 */
 @media (min-width:901px) { .narrowOnly { display:none !important; } }
 @keyframes slide { from { transform:translateX(-100%); } to { transform:none; } }

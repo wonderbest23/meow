@@ -29,7 +29,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     return () => document.removeEventListener("keydown", escape);
   }, [open]);
   return <>
-    {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost}`} aria-label="작업 메뉴">
+    {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost} ${drawer.wideOnly}`} aria-label="작업 메뉴">
       <RailMenu active={active} documentToc={documentToc} />
     </aside>}
     {/*
