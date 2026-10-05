@@ -14,6 +14,7 @@ import { applyBusinessContent } from "../lib/landing/page-data";
 import { HomepageSourceUpdate } from "./homepage-source-update";
 import { HomepageLeadNotification, useHomepageLeadNotifications } from "./homepage-lead-notifications";
 import { LANDING_THEMES } from "../lib/landing/themes";
+import PlanLoading from "../app/plan/PlanLoading";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -96,6 +97,19 @@ export function HomepageKitPanel({
 }) {
   const update = (patch: Partial<LandingDraft>) => onChange({ ...draft, ...patch });
   const busy = action === "saving" || action === "publishing" || Boolean(aiFill?.running);
+  /*
+   * 미리보기는 휴대폰 모양이 먼저 — PC 모양은 화면에 다 안 들어와 '눌러서 고치는 건지' 헷갈렸다(사용자 지적).
+   * 휴대폰 틀(390px) 안에서는 템플릿이 폭을 보고 스스로 모바일 배치로 그린다.
+   */
+  const [view, setView] = useState<"mobile" | "pc">("mobile");
+  /* AI 채우기 진행 — 보통 30초. 몇 초째인지 보여 줘야 언제까지 기다릴지 안다 */
+  const [fillSeconds, setFillSeconds] = useState(0);
+  useEffect(() => {
+    if (!aiFill?.running) { setFillSeconds(0); return; }
+    const started = Date.now();
+    const timer = window.setInterval(() => setFillSeconds(Math.floor((Date.now() - started) / 1000)), 1000);
+    return () => window.clearInterval(timer);
+  }, [aiFill?.running]);
   const published = site?.status === "published";
   /* 손님 연락 방법 — 바꾸면 문의 버튼의 이동·글이 한 번에 따라간다(applyContactMethod) */
   const contact = draft.contact ?? DEFAULT_CONTACT;
@@ -245,10 +259,22 @@ export function HomepageKitPanel({
             </button>
           </div>
         </div>
-        <p className="hk-preview-hint"><Pencil size={14} aria-hidden /> 아래 미리보기를 누르면 에디터가 열려요 — 글은 그 자리에서, 사진은 눌러서 바꿔요</p>
+        <div className="hk-preview-hint">
+          <span><Pencil size={14} aria-hidden /> 미리보기를 누르면 에디터가 열려요</span>
+          <span className="hk-view-switch" role="radiogroup" aria-label="미리보기 모양">
+            <button type="button" role="radio" aria-checked={view === "mobile"} className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")}>휴대폰</button>
+            <button type="button" role="radio" aria-checked={view === "pc"} className={view === "pc" ? "on" : ""} onClick={() => setView("pc")}>PC</button>
+          </span>
+        </div>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
-        <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} className="hk-preview-body" onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
-          <LandingBlocksRenderer data={draft.pageData!} />
+        <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-busy={aiFill?.running || undefined} className={`hk-preview-body ${view === "mobile" ? "hk-preview-phone" : ""}`} onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
+          {view === "mobile"
+            ? <div className="hk-phone"><LandingBlocksRenderer data={draft.pageData!} /></div>
+            : <LandingBlocksRenderer data={draft.pageData!} />}
+          {/* AI가 채우는 동안 — 다른 화면과 같은 로딩 모양으로, 몇 초째인지 함께 */}
+          {aiFill?.running ? <div className="hk-preview-loading">
+            <PlanLoading note={`AI가 계획서를 읽고 홈페이지를 채우고 있어요. 보통 30초쯤 걸려요 · ${fillSeconds}초`} />
+          </div> : null}
         </div>
       </div>
       {picking && bw ? <BrainwaveTemplatePicker current={bw.page} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}

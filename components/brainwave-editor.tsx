@@ -143,11 +143,10 @@ export function BrainwaveEditor({
   const [picking, setPicking] = useState(false);
   /*
    * 보는 폭 — 제품 정책과 같게 둘뿐이다: PC / 모바일 (태블릿 모드 없음, ≤640 은 모바일).
-   * 폰에서 열면 모바일 모드로 시작한다 — 지금 기기에서 보이는 그대로를 고치게.
+   * 늘 모바일로 시작한다 — 손님 대부분이 휴대폰으로 보고, PC 폭은 화면에 다 안 들어와
+   * 어디를 눌러 고치는지 헷갈렸다(사용자 지적). 홈페이지 화면의 미리보기도 휴대폰이 먼저다.
    */
-  const [view, setView] = useState<"pc" | "mobile">(() =>
-    typeof window !== "undefined" && window.matchMedia("(max-width: 640px)").matches ? "mobile" : "pc",
-  );
+  const [view, setView] = useState<"pc" | "mobile">("mobile");
   const VIEW_W = { pc: 1600, mobile: 390 } as const;
   /* 미리보기 — 손님이 보는 그대로(테두리·클릭 없음) */
   const [previewMode, setPreviewMode] = useState(false);

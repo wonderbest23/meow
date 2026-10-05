@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { HomepageKitPanel } from "../../../components/homepage-kit-panel";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
 import type { LandingDraft } from "../../../lib/landing/domain";
@@ -17,6 +17,9 @@ const SAMPLE = landingDraftFromPlan({
 
 export function DevKitPanel() {
   const [draft, setDraft] = useState<LandingDraft>(SAMPLE);
+  /* ?fill=1 — AI 채우기 중 화면(로딩) 확인용 */
+  const [filling, setFilling] = useState(false);
+  useEffect(() => { setFilling(new URLSearchParams(window.location.search).has("fill")); }, []);
   return (
     <HomepageKitPanel
       draft={draft}
@@ -30,6 +33,7 @@ export function DevKitPanel() {
       onPublish={() => {}}
       onOpenEditor={() => {}}
       onSiteUpdated={() => {}}
+      aiFill={{ running: filling, run: () => {} }}
     />
   );
 }
