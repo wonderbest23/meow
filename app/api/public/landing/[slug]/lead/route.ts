@@ -51,12 +51,26 @@ export async function POST(
     } catch { console.warn("[landing-notification] dispatch unavailable; durable outbox retained"); }
     return NextResponse.json({ ok: true, leadId: lead.id }, { status: 201 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "신청을 접수하지 못했습니다.";
+    const raw = error instanceof Error ? error.message : "";
+    /*
+     * 방문자에게는 내부 코드(LEAD_CAPTURE_DISABLED 등)나 입력 검사 원문(JSON)을 보여 주지 않는다.
+     * 예: 이름에 빈칸만 넣으면 브라우저 검사는 통과하지만 서버 검사에서 걸려 JSON 이 그대로 보였다.
+     */
+    const visitorMessage: Record<string, string> = {
+      LANDING_NOT_FOUND: "공개되지 않은 페이지입니다.",
+      LEAD_CAPTURE_DISABLED: "지금은 온라인 신청을 받지 않고 있어요. 페이지에 적힌 연락처로 문의해 주세요.",
+      EMAIL_NOT_COLLECTED: "이 페이지는 이메일을 받지 않아요. 이메일 칸을 비우고 다시 보내 주세요.",
+      PHONE_NOT_COLLECTED: "이 페이지는 전화번호를 받지 않아요. 전화번호 칸을 비우고 다시 보내 주세요.",
+      MESSAGE_NOT_COLLECTED: "이 페이지는 문의 내용을 받지 않아요. 내용 칸을 비우고 다시 보내 주세요.",
+    };
+    const message = error instanceof z.ZodError
+      ? "입력한 내용을 다시 확인해 주세요. 이름과 연락처, 개인정보 동의는 꼭 필요해요."
+      : visitorMessage[raw] ?? (/[가-힣]/.test(raw) ? raw : "신청을 접수하지 못했어요. 잠시 후 다시 시도해 주세요.");
     return NextResponse.json(
       {
         error: {
-          code: message === "LANDING_NOT_FOUND" ? message : "LEAD_INVALID",
-          message: message === "LANDING_NOT_FOUND" ? "공개되지 않은 페이지입니다." : message,
+          code: raw === "LANDING_NOT_FOUND" ? raw : "LEAD_INVALID",
+          message,
         },
       },
       { status: message === "LANDING_NOT_FOUND" ? 404 : 400 },
