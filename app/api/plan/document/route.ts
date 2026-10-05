@@ -161,10 +161,10 @@ export async function POST(req: Request) {
       ? await renderDocx([document], project, fontData)
       : await renderPdf([document], project, fontData);
   } catch (error) {
-    // 큰 문서에서만 재현되는 렌더 실패를 추적하려고 원인을 로그와 응답에 남긴다
-    const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
-    console.error("plan document render failed", { format, sections: sections.length, chars: assembled.length, message });
-    return new Response(JSON.stringify({ error: "render_failed", message }), { status: 500, headers: { "Content-Type": "application/json" } });
+    // 큰 문서에서만 재현되는 렌더 실패를 추적하려고 원인은 서버 로그에 남긴다 — 응답에는 내부 오류 원문을 싣지 않는다
+    const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+    console.error("plan document render failed", { format, sections: sections.length, chars: assembled.length, detail });
+    return new Response(JSON.stringify({ error: "render_failed", message: "문서 파일을 만들지 못했습니다. 잠시 후 다시 시도해주세요." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
   const safe = `${title}${summary ? " 한 장 요약" : ""}`.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-").slice(0, 60);
   // 헤더는 Latin-1만 허용 → ASCII 폴백 + RFC 5987(UTF-8)로 한글 파일명 전달

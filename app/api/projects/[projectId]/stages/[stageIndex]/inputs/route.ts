@@ -3,6 +3,7 @@ import { requireGuestIdentity } from "../../../../../../../lib/api-auth";
 import { saveStageInputs } from "../../../../../../../lib/project-repository";
 import { parseStageInput } from "../../../../../../../lib/service-domain";
 import { recordServiceAudit } from "../../../../../../../lib/service-audit/repository";
+import { publicErrorMessage } from "../../../../../../../lib/api-errors";
 
 export async function PATCH(
   request: Request,
@@ -38,7 +39,7 @@ export async function PATCH(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "STAGE_INPUT_INVALID",
-          message,
+          message: publicErrorMessage(error, "단계 입력을 저장하지 못했습니다."),
           retryable: status >= 500,
         },
       },

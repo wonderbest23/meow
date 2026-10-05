@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../lib/api-auth";
 import { getPaymentOrder } from "../../../../lib/payments/repository";
 import { MANUAL_TRANSFER_BANK } from "../../../../lib/payments/manual-transfer";
+import { publicErrorMessage } from "../../../../lib/api-errors";
 
 export async function POST(request: Request) {
   /*
@@ -44,6 +45,6 @@ export async function GET(request: Request) {
     if (error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED") {
       return NextResponse.json({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "주문을 확인하려면 로그인해주세요." } }, { status: 401 });
     }
-    return NextResponse.json({ error: { code: "PAYMENT_ORDER_LOAD_FAILED", message: error instanceof Error ? error.message : "주문을 불러오지 못했습니다." } }, { status: 400 });
+    return NextResponse.json({ error: { code: "PAYMENT_ORDER_LOAD_FAILED", message: publicErrorMessage(error, "주문을 불러오지 못했습니다.") } }, { status: 400 });
   }
 }

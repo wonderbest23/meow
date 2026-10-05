@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../../lib/account-auth";
 import { listPaymentHistory } from "../../../../lib/payments/plan-orders";
 import { createRefundRequest, listMyRefundRequests } from "../../../../lib/payments/refund-requests";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { notifyOperator } from "../../../../lib/ops-alerts";
 
 export const runtime = "nodejs";
 
@@ -54,6 +55,15 @@ export async function POST(request: Request) {
       amount: order.amount,
       reason: input.reason,
     });
+    // 약관상 영업일 안에 처리해야 한다 — 운영자가 바로 알게 한다. 알림 실패는 접수 결과를 바꾸지 않는다.
+    await notifyOperator("환불 요청이 접수됐습니다", [
+      `주문: ${order.orderName} (${order.orderId})`,
+      `금액: ${order.amount.toLocaleString("ko-KR")}원`,
+      `고객: ${user.email ?? "(이메일 없음)"}`,
+      `사유: ${input.reason.slice(0, 800)}`,
+      "",
+      "처리하기: https://oneulstart.com/admin/refunds",
+    ]);
     return privateJson({ request: created });
   } catch (error) {
     const code = error instanceof Error ? error.message : "REFUND_REQUEST_FAILED";

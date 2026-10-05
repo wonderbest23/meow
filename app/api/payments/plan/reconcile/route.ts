@@ -2,6 +2,8 @@ import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../../lib/rate-limit";
 import { reconcileNicepayOrder } from "../../../../../lib/payments/nicepay-reconciliation";
 import { isPaymentSameOrigin } from "../../../../../lib/payments/request-origin";
+import { getPlanOrder } from "../../../../../lib/payments/plan-orders";
+import { notifyDomainPurchasePaid } from "../../../../../lib/ops-alerts";
 
 export async function POST(request: Request) {
   if (!isPaymentSameOrigin(request)) return Response.json({ error: "ORIGIN_NOT_ALLOWED" }, { status: 403 });
@@ -12,7 +14,12 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => null);
   if (typeof body?.orderId !== "string" || body.orderId.length > 128) return Response.json({ error: "ORDER_REQUIRED" }, { status: 400 });
   try {
+    const before = await getPlanOrder(body.orderId).catch(() => null);
     const result = await reconcileNicepayOrder({ orderId: body.orderId, ownerId: identity.userId });
+    // 결제 복귀를 놓쳐 여기서 완료된 도메인 구매도 운영자에게 알린다(return 경로와 같은 조건)
+    if (result.status === "ok" && before && before.status !== "done" && before.product === "domain-purchase" && before.ownerId === identity.userId) {
+      await notifyDomainPurchasePaid(before);
+    }
     return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const notFound = error instanceof Error && error.message === "PAYMENT_ORDER_NOT_FOUND";

@@ -12,6 +12,8 @@ import {
   saveGrantWorkspace,
 } from "../../../../../lib/project-repository";
 import { recordServiceAudit } from "../../../../../lib/service-audit/repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
+import { requireProjectAiAccess } from "../../../../../lib/project-ai-access";
 
 export async function GET(
   _request: Request,
@@ -29,7 +31,7 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "지원사업 정보를 불러오지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message, message } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "GRANT_LOAD_FAILED", message: publicErrorMessage(error, "지원사업 정보를 불러오지 못했습니다.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }
@@ -44,6 +46,9 @@ export async function PUT(
     const identity = await requireGuestIdentity();
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
+    // 저장할 때마다 두 모델로 문서를 다시 다듬는다 — 결제한 사업만, 사람 단위 호출 한도 안에서
+    const denied = await requireProjectAiAccess(request, project, identity);
+    if (denied) return denied;
     const workspace = grantWorkspaceSchema.parse(await request.json());
     const analysis = analyzeGrants(project, workspace);
     const generatedPackage = generateGrantPackage(project, workspace, analysis);
@@ -97,7 +102,7 @@ export async function PUT(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "GRANT_WORKSPACE_INVALID",
-          message,
+          message: publicErrorMessage(error, "지원사업 정보를 저장하지 못했습니다."),
         },
       },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },

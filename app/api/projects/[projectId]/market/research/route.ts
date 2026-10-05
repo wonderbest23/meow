@@ -10,6 +10,7 @@ import {
   saveBusinessPlan,
   saveMarketWorkspace,
 } from "../../../../../../lib/project-repository";
+import { requireProjectAiAccess } from "../../../../../../lib/project-ai-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 180;
@@ -21,7 +22,7 @@ function privateJson(body: unknown, init?: ResponseInit) {
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ projectId: string }> },
 ) {
   try {
@@ -29,6 +30,9 @@ export async function POST(
     const identity = await requireGuestIdentity();
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
+    // 웹검색 + 모델 호출이라 한 번에 비용이 크다 — 결제한 사업만, 사람 단위 호출 한도 안에서
+    const denied = await requireProjectAiAccess(request, project, identity);
+    if (denied) return denied;
     const config = resolveTextLLMConfig(identity.hash);
     if (!config) {
       return privateJson({
@@ -64,8 +68,10 @@ export async function POST(
         : detail === "MARKET_RESEARCH_NO_CITED_EVIDENCE"
           ? "공식 원문과 함께 확인된 시장 수치를 찾지 못했습니다. 사업 지역이나 고객 범위를 더 구체적으로 정한 뒤 다시 시도해주세요."
           : notFound ? "프로젝트를 찾지 못했습니다." : "공식 시장 근거를 자동 탐색하지 못했습니다.";
+    // 내부 오류 원문(detail)은 고객 응답에 싣지 않고 서버 로그에만 남긴다
+    if (!notFound) console.error("[market-research]", error);
     return privateJson(
-      { error: { code: notFound ? "PROJECT_NOT_FOUND" : "MARKET_RESEARCH_FAILED", message, detail } },
+      { error: { code: notFound ? "PROJECT_NOT_FOUND" : "MARKET_RESEARCH_FAILED", message } },
       { status: notFound ? 404 : rateLimited ? 429 : 400 },
     );
   }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { getProject, persistenceMode } from "../../../../../lib/project-repository";
 import { listServiceAudit } from "../../../../../lib/service-audit/repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 export async function GET(
   _request: Request,
@@ -25,7 +26,7 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "서비스 감사 로그를 불러오지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "SERVICE_AUDIT_FAILED", message } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "SERVICE_AUDIT_FAILED", message: publicErrorMessage(error, "서비스 감사 로그를 불러오지 못했습니다.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }

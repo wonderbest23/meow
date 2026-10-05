@@ -6,6 +6,8 @@ import { resolveTextLLMConfig } from "../../../../../../lib/llm/config";
 import { completeJson, type LLMFailure } from "../../../../../../lib/llm/complete";
 import { aiFailureResponse, AI_NOT_CONNECTED_MESSAGE } from "../../../../../../lib/llm/failure-message";
 import { getProject } from "../../../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../../../lib/api-errors";
+import { requireProjectAiAccess } from "../../../../../../lib/project-ai-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -44,6 +46,9 @@ export async function POST(
     if (!isDeliveryDocumentId(input.documentId)) throw new Error("DOCUMENT_NOT_FOUND");
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
+    // 문장 검토도 모델 호출이다 — 결제한 사업만, 사람 단위 호출 한도 안에서
+    const denied = await requireProjectAiAccess(request, project, identity);
+    if (denied) return denied;
     const config = resolveTextLLMConfig(identity.hash);
     if (!config) {
       return privateJson({ error: { code: "OPENAI_NOT_CONNECTED", message: AI_NOT_CONNECTED_MESSAGE } }, { status: 409 });
@@ -111,7 +116,10 @@ export async function POST(
       : error instanceof z.ZodError
         ? "인공지능 검토 결과를 정리하지 못했습니다. 다시 눌러주세요."
         : error instanceof Error ? error.message : "문장을 검토하지 못했습니다.";
-    return privateJson({ error: { code: "DOCUMENT_ASSIST_FAILED", message } }, { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 });
+    return privateJson(
+      { error: { code: "DOCUMENT_ASSIST_FAILED", message: publicErrorMessage(error, "문장을 검토하지 못했습니다.", { DOCUMENT_NOT_FOUND: "문서를 찾을 수 없습니다." }) } },
+      { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
+    );
   }
 }
 

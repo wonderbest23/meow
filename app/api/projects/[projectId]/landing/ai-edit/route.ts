@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../../lib/api-auth";
+import { enforceRateLimit } from "../../../../../../lib/rate-limit";
 import { getProject } from "../../../../../../lib/project-repository";
 import { checkLandingEditAccess, landingEditErrorResponse } from "../../../../../../lib/landing/plan-entitlement";
 import { resolveTokenBalance, recordAiEditUsage } from "../../../../../../lib/landing/ai-tokens";
@@ -29,6 +30,9 @@ const bodySchema = z.object({
 const MIN_TOKENS = 2_000;
 
 export async function POST(request: Request, context: { params: Promise<{ projectId: string }> }) {
+  // 토큰 잔액이 남아 있어도 연타·스크립트 반복으로 모델 호출이 몰리지 않도록 묶는다(ai-fill 과 같은 방식)
+  const limited = await enforceRateLimit("landing-ai-edit", request, { limit: 30, windowMs: 10 * 60_000, message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  if (limited) return limited;
   const { projectId } = await context.params;
   const identity = await requireGuestIdentity();
   const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId, identity.email);

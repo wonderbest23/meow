@@ -8,9 +8,11 @@ import {
   getProject,
   saveBusinessPlan,
 } from "../../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
+import { requireProjectAiAccess } from "../../../../../lib/project-ai-access";
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ projectId: string }> },
 ) {
   try {
@@ -18,6 +20,9 @@ export async function POST(
     const identity = await requireGuestIdentity();
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
+    // 두 모델을 연달아 부르는 유료 문서 — 결제한 사업만, 호출 횟수도 묶는다
+    const denied = await requireProjectAiAccess(request, project, identity);
+    if (denied) return denied;
     const workspace = project.marketWorkspace ?? emptyMarketWorkspace();
     const analysis = project.marketAnalysis ?? analyzeLocations(workspace);
     const plan = generateBusinessPlan(project, workspace, analysis);
@@ -29,7 +34,7 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "사업계획서를 생성하지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "BUSINESS_PLAN_FAILED", message } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "BUSINESS_PLAN_FAILED", message: publicErrorMessage(error, "사업계획서를 생성하지 못했습니다.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

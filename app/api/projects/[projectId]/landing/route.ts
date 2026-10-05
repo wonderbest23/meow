@@ -10,6 +10,7 @@ import {
 import { getProject } from "../../../../../lib/project-repository";
 import { checkLandingEditAccess, landingEditErrorResponse } from "../../../../../lib/landing/plan-entitlement";
 import { LANDING_CONFLICT_MESSAGE } from "../../../../../lib/landing/save-contract";
+import { publicErrorCode, publicErrorMessage } from "../../../../../lib/api-errors";
 
 const saveRequestSchema = z.object({ draft: landingDraftSchema, expectedUpdatedAt: z.string().datetime({ offset: true }).nullable() });
 
@@ -54,7 +55,7 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "랜딩페이지를 불러오지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message, message } },
+      { error: { code: publicErrorCode(error, "LANDING_LOAD_FAILED"), message: publicErrorMessage(error, "랜딩페이지를 불러오지 못했습니다.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }
@@ -90,7 +91,7 @@ export async function PUT(
       {
         error: {
           code,
-          message: message === "SLUG_TAKEN" ? "이미 사용 중인 공개 주소입니다." : message,
+          message: publicErrorMessage(error, "랜딩페이지를 저장하지 못했습니다.", { SLUG_TAKEN: "이미 사용 중인 공개 주소입니다." }),
         },
       },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },

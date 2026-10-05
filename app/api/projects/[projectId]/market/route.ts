@@ -4,6 +4,7 @@ import { analyzeLocations } from "../../../../../lib/market/location-engine";
 import { marketWorkspaceSchema } from "../../../../../lib/market/domain";
 import { normalizeAttestedMarketWorkspaceInput } from "../../../../../lib/market/evidence-attestation";
 import { saveMarketWorkspace } from "../../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 export async function PUT(
   request: Request,
@@ -29,7 +30,7 @@ export async function PUT(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "MARKET_WORKSPACE_INVALID",
-          message,
+          message: publicErrorMessage(error, "시장·입지 정보를 저장하지 못했습니다."),
           retryable: false,
         },
       },

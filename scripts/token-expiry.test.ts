@@ -46,4 +46,14 @@ const afterExpiry = tokenBalanceWithExpiry(
 assert.equal(afterExpiry.remaining, 170_000);
 assert.equal(afterExpiry.expired, 200_000);
 
-console.log(JSON.stringify({ passed: 13 }));
+// 환불한 충전분 — 환불 전에 그 충전분에서 쓴 양이 다른 충전분에서 다시 빠지지 않는다
+const refunded = tokenBalanceWithExpiry(
+  [{ at: t0, tokens: 200_000, endsAt: t0 + 5 * DAY }, { at: t0 + DAY, tokens: 200_000 }],
+  [{ at: t0 + 2 * DAY, tokens: 80_000 }, { at: t0 + 6 * DAY, tokens: 10_000 }],
+  t0 + 7 * DAY,
+);
+assert.equal(refunded.remaining, 190_000);
+assert.equal(refunded.purchased, 200_000);
+assert.equal(refunded.expired, 0);
+
+console.log(JSON.stringify({ passed: 16 }));

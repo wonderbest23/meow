@@ -4,6 +4,7 @@ import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../../lib/api-auth";
 import { rollbackLanding } from "../../../../../../lib/landing/repository";
 import { LANDING_CONFLICT_MESSAGE } from "../../../../../../lib/landing/save-contract";
+import { publicErrorCode, publicErrorMessage } from "../../../../../../lib/api-errors";
 
 const schema = z.object({ version: z.number().int().positive(), expectedUpdatedAt: z.string().datetime({ offset: true }) });
 
@@ -28,7 +29,7 @@ export async function POST(
     const message = error instanceof Error ? error.message : "이전 버전으로 되돌리지 못했습니다.";
     if (message === "LANDING_DRAFT_CONFLICT") return NextResponse.json({ error: { code: message, message: LANDING_CONFLICT_MESSAGE } }, { status: 409 });
     return NextResponse.json(
-      { error: { code: message, message } },
+      { error: { code: publicErrorCode(error, "LANDING_ROLLBACK_FAILED"), message: publicErrorMessage(error, "이전 버전으로 되돌리지 못했습니다.", { LANDING_NOT_FOUND: "홈페이지를 찾을 수 없습니다." }) } },
       { status: message.includes("NOT_FOUND") ? 404 : 400 },
     );
   }

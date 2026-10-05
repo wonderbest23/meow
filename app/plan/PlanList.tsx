@@ -51,7 +51,7 @@ export default function PlanList() {
     renamePlan(id, name.trim()); setState(loadState()); setEditing(null); setError("");
   }
   function remove(id: string, title: string) {
-    if (!window.confirm(`‘${title}’ 사업을 삭제할까요? 대화와 작성한 자료도 함께 삭제됩니다.`)) return;
+    if (!window.confirm(`‘${title}’ 사업을 삭제할까요? 대화·사업계획서와 이 사업의 홈페이지(공개 중인 사이트·받은 문의 포함)도 함께 삭제되고 되돌릴 수 없어요.`)) return;
     deletePlan(id); setState(loadState());
   }
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }

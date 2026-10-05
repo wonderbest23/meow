@@ -3,6 +3,7 @@ import { nicepayClientKey, verifyAuthSignature } from "../../../../../lib/paymen
 import { getPlanOrder } from "../../../../../lib/payments/plan-orders";
 import { reconcileNicepayOrder } from "../../../../../lib/payments/nicepay-reconciliation";
 import { paymentRequestOrigin } from "../../../../../lib/payments/request-origin";
+import { notifyDomainPurchasePaid } from "../../../../../lib/ops-alerts";
 
 export const runtime = "nodejs";
 
@@ -39,5 +40,13 @@ export async function POST(request: Request) {
   if (!order || !/^\d+$/.test(amount) || Number(amount) !== order.amount) return redirect(request, { status: "fail", reason: "주문 정보를 확인하지 못했습니다." });
   const context = { orderId, ...(order.planId ? { planId: order.planId } : {}), ...(order.planType ? { planType: order.planType } : {}), product: order.product, ...(order.domain ? { domain: order.domain } : {}) };
   const result = await reconcileNicepayOrder({ orderId, tid, allowApproval: true }).catch(() => ({ status: "pending" as const }));
+  /*
+   * 도메인 구매는 운영자가 등록기관에서 손으로 사서 연결해야 끝난다 — 결제됐다고 바로 알린다.
+   * 이번 요청에서 처음 완료된 경우만(들어올 때 done 이 아니었던 주문) 보내 같은 복귀가 다시 와도 메일이 겹치지 않는다.
+   * notifyOperator 는 던지지 않고 짧게 끊으므로 결제 결과 화면 이동은 알림 성패와 무관하다.
+   */
+  if (result.status === "ok" && order.status !== "done" && order.product === "domain-purchase") {
+    await notifyDomainPurchasePaid(order);
+  }
   return redirect(request, { ...context, ...result });
 }

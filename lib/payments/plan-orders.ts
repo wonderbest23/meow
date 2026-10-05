@@ -279,8 +279,10 @@ export async function paidHomepagePlanIds(userId: string): Promise<Set<string>> 
   if (error) throw error;
   const planIds = new Set<string>();
   for (const row of data ?? []) {
-    const planId = (row.opportunity as { planId?: string } | null)?.planId;
-    if (planId) planIds.add(String(planId));
+    const opportunity = row.opportunity as { planId?: string; homepageRefunded?: boolean } | null;
+    // 묶음을 일부 환불해 홈페이지만 닫은 주문(refund-execution.ts) — 계획서는 남고 홈페이지는 아니다
+    if (opportunity?.homepageRefunded) continue;
+    if (opportunity?.planId) planIds.add(String(opportunity.planId));
   }
   return planIds;
 }
@@ -339,14 +341,18 @@ export type DomainPurchaseInfo = DomainRequest & { orderId: string; paidAt: stri
 export function summarizeDomainOrders(rows: Array<{ order_id?: unknown; order_name?: unknown; opportunity?: unknown; confirmed_at?: unknown; created_at?: unknown }>, planId: string, now = Date.now()): { active: boolean; expiresAt: string | null; purchase: DomainPurchaseInfo | null } {
   let latest: number | null = null;
   let purchase: (DomainPurchaseInfo & { at: number }) | null = null;
-  for (const row of rows) {
+  /*
+   * 갱신은 이어 붙인다 — 결제 순서대로, 각 1년은 '결제일'과 '그때까지의 만료일' 중 늦은 날부터 센다.
+   * 예전엔 결제일부터만 세서, 만료 30일 전에 갱신하면 남은 30일이 사라졌다(1년을 사고 335일).
+   */
+  const paidRows = rows.map(row => ({ row, paidAt: String(row.confirmed_at ?? row.created_at ?? "") }))
+    .map(item => ({ ...item, paid: new Date(item.paidAt).getTime() }))
+    .sort((a, b) => a.paid - b.paid);
+  for (const { row, paidAt, paid } of paidRows) {
     const opportunity = (row.opportunity ?? null) as { planId?: string; domainRequest?: unknown } | null;
     if (String(opportunity?.planId ?? "") !== planId) continue;
-    const paidAt = String(row.confirmed_at ?? row.created_at ?? "");
-    const paid = new Date(paidAt).getTime();
     if (!Number.isFinite(paid)) continue;
-    const at = paid + DOMAIN_PRODUCT_DAYS * 86_400_000;
-    if (latest === null || at > latest) latest = at;
+    latest = Math.max(paid, latest ?? paid) + DOMAIN_PRODUCT_DAYS * 86_400_000;
     const request = row.order_name === DOMAIN_PURCHASE_PRODUCT_NAME ? readDomainRequest(opportunity?.domainRequest) : null;
     if (request && (!purchase || paid > purchase.at)) purchase = { ...request, orderId: String(row.order_id ?? ""), paidAt, at: paid };
   }
@@ -417,20 +423,26 @@ export async function markDomainRegistered(orderId: string, at = new Date().toIS
 }
 
 /** 토큰 충전 건별 시각·수량 — 유효기간(충전일부터 1년) 계산용. 플랜 단위. */
-export async function purchasedTokenBatches(userId: string | null, planId: string): Promise<Array<{ at: number; tokens: number }>> {
+export async function purchasedTokenBatches(userId: string | null, planId: string): Promise<Array<{ at: number; tokens: number; endsAt?: number }>> {
   const supabase = getServerSupabase();
   if (!supabase || !userId) return [];
+  // 환불한 충전분도 가져온다(환불 시각까지만 유효) — 차감 순서가 어긋나지 않게(lib/landing/token-expiry.ts)
   const { data, error } = await supabase
     .from("payment_orders")
-    .select("opportunity, confirmed_at, created_at")
+    .select("opportunity, confirmed_at, created_at, updated_at, status")
     .eq("owner_id", userId)
     .eq("order_name", TOKEN_PACK_NAME)
-    .eq("status", "done")
+    .in("status", ["done", "refunded", "partial_canceled"])
     .limit(500);
   if (error) throw error;
   return (data ?? [])
     .filter((row) => String((row.opportunity as { planId?: string } | null)?.planId ?? "") === planId)
-    .map((row) => ({ at: new Date((row.confirmed_at as string | null) ?? (row.created_at as string)).getTime(), tokens: TOKEN_PACK_TOKENS }));
+    .filter((row) => row.status === "done" || row.confirmed_at)
+    .map((row) => ({
+      at: new Date((row.confirmed_at as string | null) ?? (row.created_at as string)).getTime(),
+      tokens: TOKEN_PACK_TOKENS,
+      ...(row.status === "done" ? {} : { endsAt: new Date((row.updated_at as string | null) ?? Date.now()).getTime() }),
+    }));
 }
 
 /** 산 토큰 합계 — 플랜 단위. 실제 잔액은 llm_usage 차감분을 뺀 값(lib/landing/ai-tokens.ts) */

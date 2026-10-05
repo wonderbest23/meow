@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { buildFinancialWorkbook } from "../../../../lib/delivery/financial-workbook";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { publicErrorMessage } from "../../../../lib/api-errors";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -51,9 +52,10 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const detail = error instanceof Error ? error.message : "손익 엑셀을 만들지 못했습니다.";
+    // 내부 오류 원문은 응답에 싣지 않고 서버 로그에만 남긴다
+    console.error("[financial-workbook]", error);
     return NextResponse.json(
-      { error: { code: "FINANCIAL_WORKBOOK_FAILED", message: "12개월 손익 엑셀을 만들지 못했습니다.", detail } },
+      { error: { code: "FINANCIAL_WORKBOOK_FAILED", message: publicErrorMessage(error, "12개월 손익 엑셀을 만들지 못했습니다.") } },
       { status: 400 },
     );
   }

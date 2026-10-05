@@ -7,6 +7,8 @@ import { completeJson, type LLMFailure } from "../../../../../../lib/llm/complet
 import { aiFailureResponse } from "../../../../../../lib/llm/failure-message";
 import { getProject } from "../../../../../../lib/project-repository";
 import { normalizeRefinementInput } from "../../../../../../lib/refinement/domain";
+import { publicErrorMessage } from "../../../../../../lib/api-errors";
+import { requireProjectAiAccess } from "../../../../../../lib/project-ai-access";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -99,6 +101,9 @@ export async function POST(
         model: "기본 검토",
       });
     }
+    // 규칙 검토는 누구나, 모델 검토는 결제한 사업만 — 사람 단위 호출 한도 안에서
+    const denied = await requireProjectAiAccess(request, project, identity);
+    if (denied) return denied;
 
     let failure: LLMFailure["code"] | undefined;
     const parsed = await completeJson(config, {
@@ -142,7 +147,7 @@ export async function POST(
         ? "인공지능 검토 결과를 정리하지 못했습니다. 다시 누르면 새로 검토합니다."
       : error instanceof Error ? error.message : "전체 내용을 검토하지 못했습니다.";
     return privateJson(
-      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "REFINEMENT_REVIEW_FAILED", message } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "REFINEMENT_REVIEW_FAILED", message: publicErrorMessage(error, "전체 내용을 검토하지 못했습니다.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

@@ -5,6 +5,7 @@ import {
   getProject,
   saveLaunchMissionWorkspace,
 } from "../../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 export async function GET(
   _request: Request,
@@ -19,7 +20,7 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "실행 미션을 불러오지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message, message } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "MISSION_LOAD_FAILED", message: publicErrorMessage(error, "실행 미션을 불러오지 못했습니다.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }
@@ -41,7 +42,7 @@ export async function PUT(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "MISSION_WORKSPACE_INVALID",
-          message,
+          message: publicErrorMessage(error, "실행 미션을 저장하지 못했습니다."),
         },
       },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },

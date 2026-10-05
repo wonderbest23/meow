@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../../../lib/api-auth";
 import { getProject } from "../../../../../../lib/project-repository";
 import { refreshLegalSources } from "../../../../../../lib/quality/legal-monitor";
+import { publicErrorMessage } from "../../../../../../lib/api-errors";
 
 async function requireProjectAccess(projectId: string) {
   const identity = await requireGuestIdentity();
@@ -21,7 +22,7 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "법령 원문을 확인하지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "LEGAL_REFRESH_FAILED", message } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "LEGAL_REFRESH_FAILED", message: publicErrorMessage(error, "법령 원문을 확인하지 못했습니다.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }

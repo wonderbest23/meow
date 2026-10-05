@@ -11,6 +11,7 @@ import {
   getProjectDocumentEditState,
   saveDocumentDrafts,
 } from "../../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 const requestSchema = z.discriminatedUnion("action", [
   z.object({
@@ -48,7 +49,7 @@ export async function GET(
     return privateJson({ drafts });
   } catch (error) {
     const message = error instanceof Error ? error.message : "문서 수정본을 불러오지 못했습니다.";
-    return privateJson({ error: { code: message === "PROJECT_NOT_FOUND" ? message : "DOCUMENT_DRAFT_LOAD_FAILED", message } }, { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 });
+    return privateJson({ error: { code: message === "PROJECT_NOT_FOUND" ? message : "DOCUMENT_DRAFT_LOAD_FAILED", message: publicErrorMessage(error, "문서 수정본을 불러오지 못했습니다.") } }, { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 });
   }
 }
 
@@ -97,11 +98,13 @@ export async function PUT(
     const status = message === "PROJECT_NOT_FOUND" || message === "DOCUMENT_NOT_FOUND"
       ? 404
       : message === "DOCUMENT_NOT_READY" || message === "DOCUMENT_VERSION_NOT_FOUND" ? 409 : 400;
-    const userMessage = message === "DOCUMENT_NOT_READY"
-      ? "먼저 이 문서의 기본 초안을 만들어주세요."
-      : message === "DOCUMENT_VERSION_NOT_FOUND"
-        ? "되돌릴 판을 찾지 못했습니다. 화면을 새로 열어주세요."
-        : message;
-    return privateJson({ error: { code: message, message: userMessage } }, { status });
+    // 코드 자리에도 DB 오류 원문이 실리지 않도록 알려진 코드만 그대로 둔다
+    const knownCodes = ["PROJECT_NOT_FOUND", "DOCUMENT_NOT_FOUND", "DOCUMENT_NOT_READY", "DOCUMENT_VERSION_NOT_FOUND"];
+    const userMessage = publicErrorMessage(error, "문서 수정본을 저장하지 못했습니다.", {
+      DOCUMENT_NOT_FOUND: "문서를 찾을 수 없습니다.",
+      DOCUMENT_NOT_READY: "먼저 이 문서의 기본 초안을 만들어주세요.",
+      DOCUMENT_VERSION_NOT_FOUND: "되돌릴 판을 찾지 못했습니다. 화면을 새로 열어주세요.",
+    });
+    return privateJson({ error: { code: knownCodes.includes(message) ? message : "DOCUMENT_DRAFT_SAVE_FAILED", message: userMessage } }, { status });
   }
 }

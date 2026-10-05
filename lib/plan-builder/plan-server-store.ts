@@ -259,7 +259,17 @@ export function preserveServerCoachRecords(incoming: ServerPlanState, stored: Se
       if (saved?.answers[key]) answers[key] = saved.answers[key];
       else delete answers[key];
     }
-    return { ...plan, answers };
+    /*
+     * 화면이 보낸 상태로는 서버에 본문이 있는 섹션을 지우지 못한다(빈 본문으로 덮기·빼기 모두).
+     * '다시 생성' 횟수는 서버에 저장된 본문이 있는지로 세는데(app/api/plan/generate),
+     * 화면에서 본문을 비워 보내면 횟수 확인을 건너뛰고 AI를 무제한으로 쓸 수 있었다.
+     * 서버 안의 정당한 비우기(문서 갱신 등)는 이 함수를 거치지 않으므로 영향이 없다.
+     */
+    const sections = { ...plan.sections };
+    for (const [key, value] of Object.entries(saved?.sections ?? {})) {
+      if (value?.markdown?.trim() && !sections[key]?.markdown?.trim()) sections[key] = value;
+    }
+    return { ...plan, answers, sections };
   }) };
 }
 
