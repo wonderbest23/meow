@@ -416,11 +416,13 @@ export async function cancelManualTransferOrder(orderId: string, adminNote: stri
     stored.updatedAt = new Date().toISOString();
     return clone(stored);
   }
+  // 읽은 뒤 그 사이에 입금 확인이 끝났으면 덮어쓰지 않는다(조건부 갱신)
   const { data, error } = await supabase.from("payment_orders").update({
     status: "canceled",
     admin_note: adminNote || null,
-  }).eq("order_id", orderId).select().single();
+  }).eq("order_id", orderId).in("status", ["created", "awaiting_deposit", "deposit_reported"]).select().maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("PAID_ORDER_CANNOT_BE_CANCELED");
   return mapOrder(data);
 }
 
@@ -441,8 +443,9 @@ export async function refundManualTransferOrder(orderId: string, adminNote: stri
   const { data, error } = await supabase.from("payment_orders").update({
     status: "refunded",
     admin_note: adminNote || null,
-  }).eq("order_id", orderId).select().single();
+  }).eq("order_id", orderId).eq("status", "done").select().maybeSingle();
   if (error) throw error;
+  if (!data) throw new Error("PAYMENT_ORDER_NOT_REFUNDABLE");
   await updateProjectPaymentStatus(order.projectId, "refunded");
   return mapOrder(data);
 }

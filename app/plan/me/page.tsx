@@ -34,10 +34,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 const BAD_STATUS = new Set(["canceled", "partial_canceled", "aborted", "expired", "failed"]);
 
-type RefundInfo = { orderId: string; status: "received" | "done" | "rejected" };
+type RefundInfo = { orderId: string; status: "received" | "processing" | "done" | "rejected"; adminNote?: string };
 
 const REFUND_LABEL: Record<RefundInfo["status"], string> = {
   received: "환불 접수됨",
+  processing: "환불 처리 중",
   done: "환불 완료",
   rejected: "환불 거절",
 };
@@ -121,7 +122,7 @@ export default function PlanMePage() {
       setRefunds((current) => ({ ...current, [orderId]: { orderId, status: "received" } }));
       setRefundFor(null);
       setRefundReason("");
-      setRefundMessage("환불 요청이 접수됐습니다. 처리 결과는 이 화면과 이메일로 안내됩니다.");
+      setRefundMessage("환불 요청이 접수됐습니다. 처리 결과는 이 화면에서 확인할 수 있어요.");
     } catch (error) {
       setRefundMessage(error instanceof Error ? error.message : "환불 요청을 접수하지 못했습니다.");
     } finally {
@@ -260,12 +261,16 @@ export default function PlanMePage() {
                     </td>
                     <td data-label="일시">{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
                     <td data-label="환불">
-                      {item.status !== "done" ? (
+                      {/* 환불이 끝나면 주문은 '환불됨'으로 바뀐다 — 그래도 요청 결과는 보여 준다 */}
+                      {refund ? (
+                        <>
+                          <span className={`${styles.status} ${refund.status === "done" ? styles.statusDone : refund.status === "rejected" ? styles.statusBad : ""}`}>
+                            {REFUND_LABEL[refund.status]}
+                          </span>
+                          {refund.status === "rejected" && refund.adminNote ? <small style={{ display: "block", marginTop: 4, color: "var(--text-soft, #667085)" }}>사유: {refund.adminNote}</small> : null}
+                        </>
+                      ) : item.status !== "done" ? (
                         <span className={styles.refundNa}>—</span>
-                      ) : refund ? (
-                        <span className={`${styles.status} ${refund.status === "done" ? styles.statusDone : refund.status === "rejected" ? styles.statusBad : ""}`}>
-                          {REFUND_LABEL[refund.status]}
-                        </span>
                       ) : (
                         <button type="button" className={styles.refundBtn} onClick={() => { setRefundFor(refundFor === item.orderId ? null : item.orderId); setRefundReason(""); setRefundMessage(""); }}>
                           환불 요청
