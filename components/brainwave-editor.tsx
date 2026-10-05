@@ -16,7 +16,7 @@ import { landingDraftFingerprint } from "../lib/landing/save-contract";
 import { mergeEditorAsyncPatch, type EditorAsyncPatch, type EditorOverrides } from "../lib/landing/editor-async";
 import { readEditorRecovery, type EditorRecovery } from "../lib/landing/editor-recovery";
 import LandingImageCrop from "./landing-image-crop";
-import { photoSetFor } from "../lib/landing/photo-library";
+import { photoSetContaining, photoSetFor } from "../lib/landing/photo-library";
 import { sectionNameKo } from "../lib/landing/brainwave/section-names";
 
 type KitNode = { id?: string; name?: string; ch?: KitNode[] };
@@ -594,9 +594,14 @@ export function BrainwaveEditor({
   };
   /* 업종에 맞는 추천 사진(lib/landing/photo-library.ts) — 업종을 못 알아보면 비어 있다 */
   const suggestedPhotos = useMemo(() => {
-    const set = photoSetFor([business.name, business.summary, businessContent?.businessName, businessContent?.offer, businessContent?.description].filter(Boolean).join(" "));
+    /*
+     * 홈페이지에 이미 깔린 사진의 업종 모음을 먼저 쓴다(만들 때 업종으로 고른 것).
+     * 없으면 상호·대표 상품으로 찾는다 — 설명·손님 글까지 섞으면 꽃집의 '카페·공방 손님'이 카페 사진을 불렀다.
+     */
+    const set = photoSetContaining(Object.values(init.images ?? {}))
+      ?? photoSetFor([businessContent?.businessName ?? business.name, businessContent?.offer].filter(Boolean).join(" "));
     return set ? [...new Set([set.hero, ...set.cards, set.band, set.closing])] : [];
-  }, [business.name, business.summary, businessContent?.businessName, businessContent?.offer, businessContent?.description]);
+  }, [init.images, business.name, businessContent?.businessName, businessContent?.offer]);
   const usePhoto = (id: string, url: string) => {
     setPhotoFor(null);
     commit({ ...overRef.current, images: { ...overRef.current.images, [id]: url } });
