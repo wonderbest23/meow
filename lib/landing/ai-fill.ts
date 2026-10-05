@@ -252,7 +252,7 @@ function copyNodes(page: string, copy: HomepageCopy, hasTagline: boolean): { tex
  * 지금 글이 비었거나, 처음 만든 글(기준)과 같거나, 지난번 AI 가 쓴 글과 같을 때만 바꾼다.
  * 기본으로 숨겨 둔 섹션은 채우면서 연다 — 사장님이 직접 숨긴 섹션은 그대로 둔다.
  */
-export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, options: { industry?: string; now?: string } = {}): LandingDraft {
+export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, options: { industry?: string; description?: string; now?: string } = {}): LandingDraft {
   const now = options.now ?? new Date().toISOString();
   const data = draft.pageData;
   const bw = data?.brainwave;
@@ -277,7 +277,7 @@ export function applyHomepageCopy(draft: LandingDraft, copy: HomepageCopy, optio
     written[id] = value;
   }
   // 사진 — 업종 사진 한 벌(빈 자리·첫 화면 사진이 복사된 자리·템플릿 기본 사진만 바꾼다)
-  const photos = photoSetFor(`${options.industry ?? ""} ${data.businessContent.businessName} ${data.businessContent.offer}`);
+  const photos = photoSetFor(`${options.industry ?? ""} ${data.businessContent.businessName} ${(options.description ?? "").slice(0, 200)} ${data.businessContent.offer}`);
   const nextImages = photos ? applyPhotoSet(bw.images, bw.page, photos) : bw.images;
   const writtenImages = Object.fromEntries(Object.entries(nextImages).filter(([id, url]) => url !== bw.images[id]));
   /*
