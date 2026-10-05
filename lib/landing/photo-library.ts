@@ -104,6 +104,12 @@ export function photoSetFor(text: string): PhotoSet | null {
 
 export const PHOTO_SET_KEYS = LIBRARY.map((entry) => entry.set.key);
 
+/** 홈페이지에 이미 깔린 사진이 어느 업종 모음인지 — 편집기 '추천 사진'이 같은 업종을 보여 주게 */
+export function photoSetContaining(urls: string[]): PhotoSet | null {
+  const used = new Set(urls.map((url) => url.split("?")[0]));
+  return LIBRARY.find(({ set }) => [set.hero, ...set.cards, set.band, set.closing].some((url) => used.has(url.split("?")[0])))?.set ?? null;
+}
+
 /*
  * 사진 자리 — 디자인을 옮긴 템플릿마다 첫 화면·카드·띠·마무리가 어느 노드인지.
  * 흐름 화면 템플릿은 첫 화면 사진(모든 자리에 같은 사진)만 쓴다.
