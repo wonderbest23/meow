@@ -54,15 +54,26 @@ export default function AdminHomepagePage() {
   }, []);
   useEffect(() => { pushDraft(texts, hidden); }, [texts, hidden, pushDraft]);
 
+  /* 목록이나 미리보기에서 고르면 미리보기가 그 섹션으로 내려가고 글 조각 테두리를 보인다 */
+  const selectSection = useCallback((id: string) => {
+    setSelected(id);
+    frameRef.current?.contentWindow?.postMessage({ type: "sc-selected", id }, window.location.origin);
+  }, []);
+
   /* 미리보기에서 온 신호 — 섹션 고르기·삭제·되살리기 */
   useEffect(() => {
     const onMessage = (event: MessageEvent) => {
       if (event.origin !== window.location.origin) return;
       const data = event.data as { type?: string; id?: string } | null;
-      if (data?.type === "sc-ready") { pushDraft(texts, hidden); return; }
+      if (data?.type === "sc-ready") {
+        pushDraft(texts, hidden);
+        // 미리보기가 새로 뜨면 지금 고른 섹션도 알려 준다 — 그래야 글 조각 테두리가 보인다
+        if (selected) frameRef.current?.contentWindow?.postMessage({ type: "sc-selected", id: selected }, window.location.origin);
+        return;
+      }
       if (!data?.id) return;
       const sectionOf = (id: string) => id.split(".")[0];
-      if (data.type === "sc-select") setSelected(data.id);
+      if (data.type === "sc-select") selectSection(data.id);
       if (data.type === "sc-field") {
         setSelected(sectionOf(data.id));
         window.setTimeout(() => {
@@ -76,13 +87,7 @@ export default function AdminHomepagePage() {
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [texts, hidden, pushDraft]);
-
-  /* 목록에서 고르면 미리보기가 그 섹션으로 내려간다 */
-  const selectSection = (id: string) => {
-    setSelected(id);
-    frameRef.current?.contentWindow?.postMessage({ type: "sc-selected", id }, window.location.origin);
-  };
+  }, [texts, hidden, pushDraft, selected, selectSection]);
 
   const login = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setMessage("");
