@@ -71,6 +71,14 @@ function topicChoiceLabel(label: string) {
 
 export function SupportChatWidget() {
   const pathname = usePathname();
+  /*
+   * 사장님이 공개한 홈페이지(/launch/…, 내 도메인)에는 오늘창업 상담 버튼을 띄우지 않는다.
+   * 그 손님들에게 우리 '이용 문의'가 보이고, 폰에서는 홈페이지의 전화·카톡 버튼을 가렸다.
+   * 내 도메인은 주소로 알 수 없어서 공개 홈페이지 본문(.public-landing)이 있는지로 본다.
+   */
+  const [onPublicSite, setOnPublicSite] = useState(false);
+  useEffect(() => { setOnPublicSite(Boolean(document.querySelector(".public-landing"))); }, [pathname]);
+  const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"consult" | "support">("support");
   /* 메신저형 탭 — 버튼으로 열면 홈부터, 다른 화면이 질문을 들고 열면 바로 대화 */
@@ -115,6 +123,7 @@ export function SupportChatWidget() {
   const [error, setError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
   /* 홈 히어로 검색창에서 온 질문을 리스너([] deps)가 최신 함수로 부를 수 있게 */
   const askConsultRef = useRef<(m: string) => Promise<void>>(async () => {});
 
@@ -238,11 +247,11 @@ export function SupportChatWidget() {
   }, []);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal") return;
+    if (hiddenHere) return;
     void loadChat(false);
     const timer = window.setInterval(() => void loadChat(open), open ? 4000 : 12000);
     return () => window.clearInterval(timer);
-  }, [loadChat, open, pathname]);
+  }, [loadChat, open, pathname, hiddenHere]);
 
   useEffect(() => {
     if (!open) return;
@@ -280,6 +289,21 @@ export function SupportChatWidget() {
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
   }, []);
+
+  /*
+   * 창 밖을 누르면 닫는다. 예전엔 홈·설정 화면에 닫기 단추가 없어, 열고 나면 Esc 말고는 닫을 방법이 없었다.
+   * 상담 창이 띄운 로그인 창(<dialog>) 안을 누른 것은 밖으로 치지 않는다.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const closeOnOutside = (event: PointerEvent) => {
+      const target = event.target as Element | null;
+      if (!target || widgetRef.current?.contains(target) || target.closest("dialog")) return;
+      setOpen(false);
+    };
+    document.addEventListener("pointerdown", closeOnOutside);
+    return () => document.removeEventListener("pointerdown", closeOnOutside);
+  }, [open]);
 
   useEffect(() => {
     const openWithMessage = (event: Event) => {
@@ -601,7 +625,7 @@ export function SupportChatWidget() {
     }, 20);
   };
 
-  if (pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal") return null;
+  if (hiddenHere) return null;
 
   const unread = chat.conversation?.unreadByCustomer ?? 0;
   /* 처음 화면으로 — 나눈 대화와 파악한 조건을 비우고 새로 시작(설정 탭의 '상담 기록 지우기'도 같은 일) */
@@ -625,9 +649,11 @@ export function SupportChatWidget() {
   const hiddenMessageCount = chat.messages.length;
 
   return (
-    <div className={`support-chat-widget ${open ? "open" : ""}`}>
+    <div ref={widgetRef} className={`support-chat-widget ${open ? "open" : ""}`}>
       {open && (
         <section className={`support-chat-panel mode-${mode} tab-${tab}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
+          {/* 홈·설정 화면에도 닫기 — 대화 화면은 머리줄에 이미 있다 */}
+          {tab !== "chat" && <button type="button" className="support-pane-close" onClick={() => setOpen(false)} aria-label="상담 창 닫기" title="닫기"><X aria-hidden="true" /></button>}
           {tab === "home" && <SupportHome open={open} onClose={() => setOpen(false)} onInquiry={() => { setMode("support"); setTab("chat"); }} onConsult={() => { setMode("consult"); setTab("chat"); }} />}
           {tab === "settings" && <SupportSettings open={open} badge={badge} onBadge={changeBadge} onClearConsult={resetConsult} onClose={() => setOpen(false)} />}
           {tab === "chat" && <>

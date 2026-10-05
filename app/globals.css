@@ -16939,3 +16939,19 @@ html:has(main.cinematic-home), body:has(main.cinematic-home) { background: #000;
   .hk-tool-label { min-width: 0; width: 100%; }
   .hk-mock-url { font-size: 11px; }
 }
+
+/* 상담 창 홈·설정 화면의 닫기 단추 — 오른쪽 위 고정 */
+.support-chat-widget .support-chat-panel { position: relative; }
+.support-chat-widget .support-chat-panel > button.support-pane-close {
+  position: absolute; top: 12px; right: 12px; z-index: 2;
+  width: 36px; height: 36px; padding: 0; border: 0; border-radius: 10px;
+  background: rgba(255,255,255,.9); color: #4e5968;
+  display: grid; place-items: center; cursor: pointer;
+}
+.support-chat-widget .support-chat-panel > button.support-pane-close:hover { background: #f0f0f3; color: #1c1d21; }
+.support-chat-widget .support-chat-panel > button.support-pane-close svg { display: inline-block !important; width: 20px !important; height: 20px !important; color: #4e5968 !important; stroke: currentColor !important; }
+.support-chat-widget .support-chat-panel > button.support-pane-close { border: 1px solid #e5e8eb !important; }
+
+/* 공개 홈페이지와 홈페이지 전체 화면 미리보기 위에는 상담 버튼을 띄우지 않는다(손님 화면을 가림) */
+body:has(.public-landing) .support-chat-widget,
+body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { display: none !important; }

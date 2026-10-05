@@ -216,10 +216,12 @@ function BusinessCoach() {
     } catch (e) { if (epoch === routeEpoch.current) setError(e instanceof Error ? e.message : "연결을 확인해 주세요. 입력은 그대로 남아 있어요."); }
     finally { if (epoch === routeEpoch.current) { setBusy(false); setOptimistic(null); submitting.current = false; } }
   }
+  /* 계획서를 여는 중 — 서버와 맞추는 동안 단추를 잠가 여러 번 눌러 동기화가 겹치지 않게 */
+  const [opening, setOpening] = useState(false);
   async function openDocument(pay = false) {
-    if (!plan) return; setError("");
+    if (!plan || opening) return; setError(""); setOpening(true);
     try { await hydrateFromServer(); setActivePlan(plan.planId); router.push(pay ? `/plan/pay?planId=${encodeURIComponent(plan.planId)}&planType=${encodeURIComponent(plan.planType)}` : `/plan/document?planId=${encodeURIComponent(plan.planId)}`); }
-    catch { setError("계획서를 열지 못했어요. 잠시 후 다시 시도해 주세요."); }
+    catch { setError("계획서를 열지 못했어요. 잠시 후 다시 시도해 주세요."); setOpening(false); }
   }
   async function attach(selected: File) {
     setError("");
@@ -248,10 +250,10 @@ function BusinessCoach() {
   }
 
   const actions = <>
-    {generating ? <div className={styles.generation} role="status"><span>계획서를 작성하고 있어요</span><progress aria-label="문서 제작 진행" value={completed} max={targetKeys.length} /><small>{completed}/{targetKeys.length}개 항목 완료 · 서버에서 계속 제작합니다.</small></div> : documentCurrent ? <><p className={styles.completionLabel}><Check size={15} aria-hidden="true" />{completed >= (plan?.total ?? Infinity) ? "계획서 작성 완료" : "미리보기 준비 완료"}</p><button className={`${styles.primary} ${styles.finishButton}`} onClick={() => void openDocument()}><FileCheck2 size={22} aria-hidden="true" /><span>계획서 보기</span><ChevronRight size={20} aria-hidden="true" /></button>{!paid && <button className={styles.textButton} onClick={() => void openDocument(true)}>전체 문서와 파일 제작 신청</button>}</> : <>
+    {generating ? <div className={styles.generation} role="status"><span>계획서를 작성하고 있어요</span><progress aria-label="문서 제작 진행" value={completed} max={targetKeys.length} /><small>{completed}/{targetKeys.length}개 항목 완료 · 서버에서 계속 제작합니다.</small></div> : documentCurrent ? <><p className={styles.completionLabel}><Check size={15} aria-hidden="true" />{completed >= (plan?.total ?? Infinity) ? "계획서 작성 완료" : "미리보기 준비 완료"}</p><button className={`${styles.primary} ${styles.finishButton}`} disabled={opening} onClick={() => void openDocument()}><FileCheck2 size={22} aria-hidden="true" /><span>{opening ? "계획서를 여는 중…" : "계획서 보기"}</span><ChevronRight size={20} aria-hidden="true" /></button>{!paid && <button className={styles.textButton} disabled={opening} onClick={() => void openDocument(true)}>전체 문서와 파일 제작 신청</button>}</> : <>
       <small>{plan?.hasDocuments ? "업데이트 필요 · 기존 문서는 그대로 보관 중이에요." : !authenticated ? "로그인 후 제작할 수 있어요. 지금 대화는 그대로 이어집니다." : !paid ? `무료로 앞 ${FREE_SECTION_COUNT}개 항목을 만들어요(계정당 사업 ${FREE_PLAN_LIMIT}개까지). 전체 제작은 선택 사항이에요.` : "확인한 사업안으로 문서를 만들어요."}</small>
       {!authenticated ? <Link className={styles.primary} href={loginHref}>로그인하고 계획서 만들기</Link> : <button className={styles.primary} disabled={blocked} onClick={() => void submit("", "prepare")}>{plan?.hasDocuments ? "수정 내용을 계획서에 반영하기" : "이 내용으로 계획서 만들기"}</button>}
-      {(plan?.hasDocuments || !!plan?.completed.length) && <button className={styles.textButton} onClick={() => void openDocument()}>기존 계획서 보기</button>}
+      {(plan?.hasDocuments || !!plan?.completed.length) && <button className={styles.textButton} disabled={opening} onClick={() => void openDocument()}>기존 계획서 보기</button>}
     </>}
     {!!plan?.manualReview?.length && <details><summary>직접 고친 항목 {plan.manualReview.length}개는 유지했어요</summary><p>새 사업안과 함께 확인해 주세요. {plan.manualReview.join(", ")}</p></details>}
     {(runStatus === "complete" && completed < targetKeys.length || ["errored", "terminated", "unknown"].includes(runStatus ?? "")) && <p className={styles.note}>완료한 내용은 남아 있어요. 다시 반영하면 남은 항목을 이어서 제작합니다.</p>}
