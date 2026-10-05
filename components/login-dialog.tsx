@@ -92,9 +92,11 @@ export function LoginDialogHost() {
   }, [opened]);
 
   const close = () => dialog.current?.close();
+  /* 바깥 클릭으로 닫는 것은 '누르기 시작'도 바깥이었을 때만 — 글자를 끌어 선택하다 밖에서 놓으면 닫히던 문제 */
+  const pressedOnBackdrop = useRef(false);
 
   return (
-    <dialog ref={dialog} className={styles.dialog} aria-labelledby="login-dialog-title" onClick={event => { if (event.target === dialog.current) close(); }}>
+    <dialog ref={dialog} className={styles.dialog} aria-labelledby="login-dialog-title" onPointerDown={event => { pressedOnBackdrop.current = event.target === dialog.current; }} onClick={event => { if (pressedOnBackdrop.current && event.target === dialog.current) close(); pressedOnBackdrop.current = false; }}>
       {opened > 0 && (
         <div className={`${accountStyles.page} ${styles.scope}`}>
           <button type="button" className={styles.close} onClick={close} aria-label="로그인 닫기"><X size={20} /></button>

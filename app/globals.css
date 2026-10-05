@@ -16955,3 +16955,6 @@ html:has(main.cinematic-home), body:has(main.cinematic-home) { background: #000;
 /* 공개 홈페이지와 홈페이지 전체 화면 미리보기 위에는 상담 버튼을 띄우지 않는다(손님 화면을 가림) */
 body:has(.public-landing) .support-chat-widget,
 body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { display: none !important; }
+
+/* 예전 항목별 작성 화면(폰): 아래 고정된 '다음' 줄을 상담 버튼이 가리지 않게 숨긴다 */
+@media (max-width: 560px) { body:has([data-wizard-foot]) .support-chat-widget { display: none !important; } }

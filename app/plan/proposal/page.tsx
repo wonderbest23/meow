@@ -38,7 +38,10 @@ function Editor() {
   const [slideIndex, setSlideIndex] = useState(0); const [element, setElement] = useState<ProposalElement>("title");
   const [status, setStatus] = useState<SaveStatus>("saved"); const [message, setMessage] = useState("");
   const [access, setAccess] = useState(0); const [loading, setLoading] = useState(true); const [busy, setBusy] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false); const [generationMessage, setGenerationMessage] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  /* 폰에서는 편집 칸이 캔버스 아래로 내려가서, 버전 기록을 열어도 화면 밖에 생겼다 — 열면 그 자리로 옮겨 준다 */
+  const versionsRef = useRef<HTMLElement>(null);
+  useEffect(() => { if (historyOpen) versionsRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }); }, [historyOpen]); const [generationMessage, setGenerationMessage] = useState("");
   const [sourceWorking, setSourceWorking] = useState(false);
   const [businessWorking, setBusinessWorking] = useState(false);
   const [documentWorking, setDocumentWorking] = useState(false);
@@ -204,7 +207,7 @@ function Editor() {
         <div className={styles.sources}><span>원문 근거</span>{slide.sourceSections?.join(" · ")}</div>
       </section>
       <aside className={styles.inspector} aria-label="슬라이드 편집" inert={sourceWorking || businessWorking || documentWorking}>
-        {historyOpen && <section className={styles.versions}><h2>버전 기록</h2><p>현재 v{view?.saved?.revision}</p>{[...(view?.saved?.history ?? [])].reverse().map(item => <button key={item.revision} disabled={status !== "saved"} onClick={() => { if (window.confirm(`v${item.revision}의 편집 상태로 복원할까요? 현재 상태도 기록에 남습니다.`)) void send({ type: "restore", requestId: crypto.randomUUID(), expectedRevision: view!.saved!.revision, revision: item.revision }, edits); }}><History size={15} /><span>v{item.revision}<small>{new Date(item.savedAt).toLocaleString("ko-KR")}</small></span><RotateCcw size={15} /></button>)}</section>}
+        {historyOpen && <section ref={versionsRef} className={styles.versions}><h2>버전 기록</h2><p>현재 v{view?.saved?.revision}</p>{[...(view?.saved?.history ?? [])].reverse().map(item => <button key={item.revision} disabled={status !== "saved"} onClick={() => { if (window.confirm(`v${item.revision}의 편집 상태로 복원할까요? 현재 상태도 기록에 남습니다.`)) void send({ type: "restore", requestId: crypto.randomUUID(), expectedRevision: view!.saved!.revision, revision: item.revision }, edits); }}><History size={15} /><span>v{item.revision}<small>{new Date(item.savedAt).toLocaleString("ko-KR")}</small></span><RotateCcw size={15} /></button>)}</section>}
         <div className={styles.editScope}><h2>이 페이지 편집</h2><Link href={`/plan/document?planId=${encodeURIComponent(planId)}`}>공통 원문 수정</Link></div><label>제목<textarea aria-label="슬라이드 제목" maxLength={60} rows={3} value={slide.title} onChange={event => patch({ text: { title: event.target.value } })} /></label>
         <label>설명<textarea aria-label="슬라이드 설명" maxLength={140} rows={3} value={slide.lead ?? ""} onChange={event => patch({ text: { lead: event.target.value } })} /></label>
         <label>분류<input aria-label="슬라이드 분류" maxLength={40} value={slide.eyebrow} onChange={event => patch({ text: { eyebrow: event.target.value } })} /></label>
