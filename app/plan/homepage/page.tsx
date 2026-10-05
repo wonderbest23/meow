@@ -506,7 +506,8 @@ export default function PlanHomepagePage() {
           onClose={() => setBuilderOpen(false)}
           onSave={async (pageData) => {
             await saveDraft({ ...draft, pageData });
-            setBuilderOpen(false);
+            // 킷 에디터는 자동 저장하며 열려 있어야 한다(닫기는 에디터의 닫기로). 옛 블록 편집기만 저장하면 닫는다
+            if (!pageData.brainwave) setBuilderOpen(false);
           }}
         />
       )}
