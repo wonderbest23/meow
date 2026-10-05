@@ -237,9 +237,10 @@ export default function PlanCheckout() {
             </>
           ) : (
             <>
-              {planType ? <b>{planType}</b> : "이 문서"} 1부의 전체 섹션이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있습니다.
+              {/* 문서 종류를 고르는 화면은 없어졌다 — 종류 이름(planType)이나 '다른 유형' 안내 대신 이 사업의 계획서로 말한다 */}
+              이 사업의 사업계획서 전체 항목이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있습니다.
               {!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 제공 준비 중이며 현재 결제 제공 범위에는 포함되지 않습니다."}
-              {" "}같은 사업으로 다른 유형을 만들 땐 답변이 그대로 이어집니다.
+              {" "}대화로 정리한 내용은 그대로 이어집니다.
             </>
           )}
         </p>
@@ -264,7 +265,7 @@ export default function PlanCheckout() {
         ) : infoFailed ? (
           <div className={styles.price} role="alert">
             <span>결제 정보를 확인하지 못했어요. 연결을 확인해 주세요.</span>
-            <button type="button" className={styles.back} onClick={() => setInfoAttempt((n) => n + 1)}>다시 확인</button>
+            <button type="button" className={styles.retry} onClick={() => setInfoAttempt((n) => n + 1)}>다시 확인하기</button>
           </div>
         ) : (
           /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */
