@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { LandingVisualBuilder } from "../../../components/landing-visual-builder";
 import { HomepageKitPanel } from "../../../components/homepage-kit-panel";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
 import type { LandingDraft } from "../../../lib/landing/domain";
@@ -19,8 +20,12 @@ export function DevKitPanel() {
   const [draft, setDraft] = useState<LandingDraft>(SAMPLE);
   /* ?fill=1 — AI 채우기 중 화면(로딩) 확인용 */
   const [filling, setFilling] = useState(false);
+  /* ?editor=1 — 실제 편집기(LandingVisualBuilder)를 바로 연다(화면 확인용) */
+  const [editor, setEditor] = useState(false);
+  useEffect(() => { setEditor(new URLSearchParams(window.location.search).has("editor")); }, []);
   useEffect(() => { setFilling(new URLSearchParams(window.location.search).has("fill")); }, []);
-  return (
+  return (<>
+    {editor && draft.pageData ? <LandingVisualBuilder data={draft.pageData} businessName={draft.businessName} onClose={() => setEditor(false)} onSave={async pageData => { setDraft({ ...draft, pageData }); setEditor(false); }} /> : null}
     <HomepageKitPanel
       draft={draft}
       site={null}
@@ -31,9 +36,9 @@ export function DevKitPanel() {
       onChange={setDraft}
       onSave={() => {}}
       onPublish={() => {}}
-      onOpenEditor={() => {}}
+      onOpenEditor={() => setEditor(true)}
       onSiteUpdated={() => {}}
       aiFill={{ running: filling, run: () => {} }}
     />
-  );
+  </>);
 }
