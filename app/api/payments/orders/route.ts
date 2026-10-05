@@ -1,102 +1,18 @@
 import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../lib/api-auth";
-import { createPaymentOrderSchema } from "../../../../lib/payments/domain";
-import {
-  createPaymentOrder,
-  getPaymentOrder,
-  paymentPersistenceMode,
-} from "../../../../lib/payments/repository";
-import { paymentsEnabled } from "../../../../lib/payments/config";
-import { MANUAL_TRANSFER_BANK, manualTransferPaymentConfigured } from "../../../../lib/payments/manual-transfer";
-import { evaluatePlatformLaunchReadiness } from "../../../../lib/platform-legal/domain";
-import { getPlatformLegalSettings } from "../../../../lib/platform-legal/repository";
-import { authConfigured } from "../../../../lib/account-auth";
+import { getPaymentOrder } from "../../../../lib/payments/repository";
+import { MANUAL_TRANSFER_BANK } from "../../../../lib/payments/manual-transfer";
 
 export async function POST(request: Request) {
-  try {
-    if (!paymentsEnabled()) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "BETA_FREE_ACCESS_ACTIVE",
-            message: "현재 베타 테스트 기간에는 결제 없이 바로 이용할 수 있습니다.",
-            retryable: false,
-          },
-        },
-        { status: 409 },
-      );
-    }
-    const persistence = paymentPersistenceMode();
-    const legalSettings = await getPlatformLegalSettings();
-    const readiness = evaluatePlatformLaunchReadiness(legalSettings, {
-      authConfigured: authConfigured(),
-      paymentsConfigured: manualTransferPaymentConfigured() && persistence === "supabase",
-    });
-    if (!readiness.paymentAllowed) {
-      return NextResponse.json(
-        { error: { code: "PAID_LAUNCH_BLOCKED", message: `정식 결제 준비가 완료되지 않았습니다: ${readiness.missing.join(", ")}`, retryable: false } },
-        { status: 503 },
-      );
-    }
-    const input = createPaymentOrderSchema.parse(await request.json());
-    const identity = await requireAuthenticatedIdentity();
-    if (input.method !== "TRANSFER") {
-      return NextResponse.json(
-        { error: { code: "PAYMENT_METHOD_NOT_AVAILABLE", message: "현재는 계좌이체로만 신청할 수 있습니다.", retryable: false } },
-        { status: 400 },
-      );
-    }
-    if (process.env.NODE_ENV === "production" && (!manualTransferPaymentConfigured() || persistence !== "supabase")) {
-      return NextResponse.json(
-        {
-          error: {
-            code: "PAYMENT_NOT_CONFIGURED",
-            message: "운영 결제 또는 영구 저장소가 설정되지 않아 주문을 받을 수 없습니다.",
-            retryable: false,
-          },
-        },
-        { status: 503 },
-      );
-    }
-    const order = await createPaymentOrder({
-      guestTokenHash: identity.hash,
-      ownerId: identity.userId,
-      customerEmail: identity.email,
-      opportunity: input.opportunity,
-      founderProfile: input.founderProfile,
-      method: input.method,
-      customer: input.customer,
-    });
-    return NextResponse.json(
-      {
-        order: {
-          orderId: order.orderId,
-          amount: order.amount,
-          currency: order.currency,
-          orderName: order.orderName,
-          method: order.method,
-          expiresAt: order.expiresAt,
-        },
-        paymentMode: "manual_transfer",
-        bankAccount: MANUAL_TRANSFER_BANK,
-      },
-      { status: 201 },
-    );
-  } catch (error) {
-    if (error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED") {
-      return NextResponse.json({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "결제 전에 로그인해주세요.", retryable: false } }, { status: 401 });
-    }
-    return NextResponse.json(
-      {
-        error: {
-          code: "PAYMENT_ORDER_CREATE_FAILED",
-          message: error instanceof Error ? error.message : "결제 주문을 생성하지 못했습니다.",
-          retryable: true,
-        },
-      },
-      { status: 400 },
-    );
-  }
+  /*
+   * 예전 계좌이체 신청 창구 — 결제는 이제 카드(/plan/pay)로만 받는다(약관 2026-10-05).
+   * 이미 받은 계좌이체 주문의 조회(GET)·환불은 그대로 둔다.
+   */
+  void request;
+  return NextResponse.json(
+    { error: { code: "PAYMENT_METHOD_NOT_AVAILABLE", message: "계좌이체 신청은 종료됐어요. 결제는 사업계획서 화면에서 카드로 진행해 주세요.", retryable: false } },
+    { status: 410 },
+  );
 }
 
 export async function GET(request: Request) {

@@ -250,8 +250,14 @@ function directPlanResultFromPayload(payload: DirectPlanApiPayload) {
   } satisfies DirectPlanResult;
 }
 
-const resumableScreens: Screen[] = ["start", "direct", "assessment", "conversation", "profile", "explore", "preview"];
-const directScreens: Screen[] = [...resumableScreens, "checkout", "project", "sample", "delivery"];
+/*
+ * 예전 흐름(진단·탐색·미리보기·계좌이체 결제·샘플)은 더 이상 열지 않는다.
+ * 지금 서비스는 새 대화(/plan/chat)로 시작하고 카드로만 결제한다(약관 2026-10-05).
+ * 주소로 직접 열 수 있는 것은 예전에 결제한 결과물(project)과 새 대화로 넘기는 start 뿐.
+ * 마지막 화면을 기억했다가 다시 여는 것도 그만둔다 — 한 번 start 에 머문 사람은 첫 화면을 다시 볼 수 없었다.
+ */
+const resumableScreens: Screen[] = [];
+const directScreens: Screen[] = ["start", "project"];
 
 async function fetchWithTransientRetry(
   input: RequestInfo | URL,
@@ -602,7 +608,7 @@ function Home({
                   <dt>호스팅</dt><dd>{businessInfo.hostingProvider}</dd>
                 </dl>
               ) : (
-                <p className="home-footer-empty">현재는 결제 없는 베타 서비스입니다. 실제 판매자 정보가 확인되기 전에는 유료 결제가 열리지 않습니다.</p>
+                <p className="home-footer-empty">사업자 정보를 불러오지 못했어요. <a href="/business-info">사업자 정보 보기</a></p>
               )}
             </div>
             <div aria-labelledby="footer-notes-heading">
@@ -4268,8 +4274,8 @@ export default function Page() {
       return "home";
     };
     const requested = screenFromLocation();
-    const saved = window.localStorage.getItem("venture-current-screen") as Screen | null;
-    const initial = requested !== "home" ? requested : saved && resumableScreens.includes(saved) ? saved : "home";
+    window.localStorage.removeItem("venture-current-screen");
+    const initial = requested;
     if (initial !== "home") {
       const url = new URL(window.location.href);
       url.searchParams.set("view", initial);

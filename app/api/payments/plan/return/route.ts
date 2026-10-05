@@ -17,7 +17,18 @@ export async function POST(request: Request) {
   try { form = await request.formData(); }
   catch { return redirect(request, { status: "fail", reason: "잘못된 응답을 받았습니다." }); }
   const get = (key: string) => typeof form.get(key) === "string" ? String(form.get(key)) : "";
-  if (get("authResultCode") !== "0000") return redirect(request, { status: "fail", reason: "결제가 취소되었거나 인증되지 않았습니다." });
+  if (get("authResultCode") !== "0000") {
+    /*
+     * 취소·인증 실패에도 어느 사업의 어떤 상품이었는지 넘긴다 — 예전엔 빠져서 결과 화면에 '내 사업으로 가기'만 남고
+     * 다시 시도하거나 그 사업으로 돌아갈 길이 없었다. 주문을 못 찾으면 예전처럼 사유만 넘긴다.
+     */
+    const cancelled = get("orderId") ? await getPlanOrder(get("orderId")).catch(() => null) : null;
+    return redirect(request, {
+      status: "fail", reason: "결제가 취소되었거나 인증되지 않았습니다.",
+      ...(cancelled?.planId ? { planId: cancelled.planId } : {}), ...(cancelled?.planType ? { planType: cancelled.planType } : {}),
+      ...(cancelled?.product ? { product: cancelled.product } : {}), ...(cancelled?.domain ? { domain: cancelled.domain } : {}),
+    });
+  }
   const orderId = get("orderId"), tid = get("tid"), clientId = get("clientId"), amount = get("amount");
   if (!tid || tid.length > 128 || !orderId || orderId.length > 128 || !get("authToken")
     || clientId !== nicepayClientKey()

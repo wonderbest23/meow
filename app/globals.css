@@ -16958,3 +16958,7 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 
 /* 예전 항목별 작성 화면(폰): 아래 고정된 '다음' 줄을 상담 버튼이 가리지 않게 숨긴다 */
 @media (max-width: 560px) { body:has([data-wizard-foot]) .support-chat-widget { display: none !important; } }
+
+/* 홈페이지 편집 칸 잠금 — 모양은 그대로, 잠긴 동안만 흐리게 */
+.hk .hk-lock { border: 0; margin: 0; padding: 0; min-width: 0; display: contents; }
+.hk[aria-busy="true"] .hk-lock input, .hk[aria-busy="true"] .hk-lock textarea, .hk[aria-busy="true"] .hk-lock select { opacity: .6; }

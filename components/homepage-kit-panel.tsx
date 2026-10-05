@@ -169,7 +169,9 @@ export function HomepageKitPanel({
   ].filter(Boolean) as string[];
 
   return (
-    <section className="hk">
+    <section className="hk" aria-busy={busy}>
+      {/* AI 채우기·저장·공개 중에는 입력 칸을 잠근다 — 예전엔 입력이 받아지는 것처럼 보였지만 고친 글이 조용히 버려졌다 */}
+      <fieldset className="hk-lock" disabled={busy}>
       <header className="hk-top" data-in-chrome={inChrome || undefined}>
         {/* 개요·문서·섹션 화면과 같은 머리 규칙 — [←] 제목 20px · 아래 13px */}
         {!inChrome && <a href="/plan/overview" className="hk-back" aria-label="플랜 개요로">←</a>}
@@ -380,6 +382,7 @@ export function HomepageKitPanel({
           </ul>
         )}
       </Fold>
+      </fieldset>
     </section>
   );
 }
