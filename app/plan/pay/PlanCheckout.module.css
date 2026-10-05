@@ -89,6 +89,25 @@
   cursor: default;
 }
 
+/* 결제 정보를 다시 불러오는 단추 — 결제 단추(파랑)와 헷갈리지 않게 파란 테두리, 같은 둥근 모양 */
+.retry {
+  display: block;
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid var(--blue, var(--app-primary));
+  background: #fff;
+  color: var(--blue, var(--app-primary));
+  font: inherit;
+  font-weight: 700;
+  font-size: 14px;
+  padding: 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.retry:hover {
+  background: #f2f6fd;
+}
+
 .statusAction {
   display: flex;
   align-items: center;
