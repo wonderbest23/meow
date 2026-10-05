@@ -20,6 +20,18 @@ const cases: Array<[string, string | null]> = [
 ];
 for (const [text, key] of cases) assert.equal(photoSetFor(text)?.key ?? null, key, text);
 
+// 상호·대표 상품에 다른 업종 말이 섞여도 먼저 나온 업종(그 사업 자신)을 따른다 — 카페 규칙이 맨 앞이라 다 카페 사진이 되던 문제
+const mixed: Array<[string, string]> = [
+  [" 플로라 꽃집 카페·식당에 납품하는 꽃 장식", "flower"],
+  [" 헤어온 미용실 카페 같은 분위기의 헤어 컷", "beauty"],
+  [" 엄마손 반찬 도시락과 커피 세트", "food"],
+  [" 멍스타일 애견미용 강아지 미용과 펫카페 이용권", "pet"],
+  [" 수학공방 학원 중학생 수학 과외와 스터디카페", "education"],
+  [" 냥이호텔 고양이 호텔", "pet"],
+  ["모던스타일 헤어", "beauty"],
+];
+for (const [text, key] of mixed) assert.equal(photoSetFor(text)?.key, key, text);
+
 // 모든 한 벌: 무료 Unsplash 사진(images.unsplash.com), 한 벌 안에서 같은 사진이 두 번 나오지 않는다
 assert.ok(PHOTO_SET_KEYS.length >= 15);
 assert.equal(new Set(PHOTO_SET_KEYS).size, PHOTO_SET_KEYS.length);

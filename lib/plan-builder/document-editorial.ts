@@ -1,5 +1,6 @@
 import type { SectionGenInput } from "./section-generator";
 import { comparePeriods, metricValue, periodDays, periodLabel, previousPeriod, readOperatingState } from "./operating-records";
+import { firstSectorMatch } from "../sector-match";
 
 export const DOCUMENT_SECTOR_FOCUS = {
   b2b_service: "수행 범위, 납품물, 검수 기준, 견적과 일정",
@@ -27,8 +28,9 @@ const sectorPatterns: Array<[DocumentSector, RegExp]> = [
 export function documentSector(input: Pick<SectionGenInput, "business">): DocumentSector {
   const industry = input.business?.industry ?? "";
   if (industry in DOCUMENT_SECTOR_FOCUS) return industry as DocumentSector;
-  const explicit = sectorPatterns.find(([, pattern]) => pattern.test(industry));
-  return explicit?.[0] ?? sectorPatterns.find(([, pattern]) => pattern.test(`${input.business?.name ?? ""} ${input.business?.description ?? ""}`))?.[0] ?? "general";
+  // 업종 칸이 먼저, 비었으면(채팅으로 만든 사업) 상호·설명 — 둘 다 글에서 먼저 나온 업종 말을 따른다
+  const pick = (value: string) => firstSectorMatch(sectorPatterns, value, ([, pattern]) => pattern)?.[0];
+  return pick(industry) ?? pick(`${input.business?.name ?? ""} ${input.business?.description ?? ""}`) ?? "general";
 }
 
 export function documentEditorialPrompt(input: Pick<SectionGenInput, "business" | "planType">): string {

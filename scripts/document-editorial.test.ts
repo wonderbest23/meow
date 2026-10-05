@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { checkDocumentQuality } from "../lib/plan-builder/document-quality";
 import { PLAN_BLUEPRINT } from "../lib/plan-builder/blueprint";
 import { generateSection, streamSection, buildUserPrompt, validateSectionDraft, type SectionGenInput } from "../lib/plan-builder/section-generator";
-import { documentOperatingContext } from "../lib/plan-builder/document-editorial";
+import { documentOperatingContext, documentSector } from "../lib/plan-builder/document-editorial";
 import { executiveFixture } from "./executive-summary-fixture";
 import { planTypeGuidanceBlock } from "../lib/plan-builder/plan-type-guidance";
 import { withoutRepeatedSectionHeading } from "../lib/delivery/document-section";
@@ -67,3 +67,10 @@ async function main() {
   console.log("document editorial: deterministic numeric/duplicate/missing/source checks, operating context, generation and streaming failures passed (mock LLM, no paid calls)");
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });
+
+// 업종 칸이 빈 채팅 사업: 설명에 '카페'가 섞여도 상호·설명에서 먼저 나온 업종 관점으로 쓴다
+const sectorOf = (name: string, description: string, industry = "") => documentSector({ business: { name, description, industry } } as never);
+assert.equal(sectorOf("플로라 꽃집", "카페·식당에 납품하는 꽃 장식"), "local_service");
+assert.equal(sectorOf("수학공방 학원", "중학생 수학 과외와 스터디카페"), "education");
+assert.equal(sectorOf("모먼트", "스페셜티 커피와 디저트"), "cafe_food");
+assert.equal(sectorOf("플로라", "카페 납품", "교육"), "education", "industry field wins");

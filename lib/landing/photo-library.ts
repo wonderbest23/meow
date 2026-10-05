@@ -11,6 +11,7 @@
  */
 
 import { isPlaceholderPhoto } from "./domain";
+import { firstSectorMatch } from "../sector-match";
 
 export type PhotoSet = {
   key: string;
@@ -45,7 +46,7 @@ const LIBRARY: Array<{ test: RegExp; set: PhotoSet }> = [
   },
   {
     // '애견 미용'·'동물병원'은 미용·병원보다 먼저 반려동물로
-    test: /(반려|애견|애완|펫|강아지|고양이|동물병원|펫호텔|훈련소)/,
+    test: /(반려|애견|애완|펫|강아지|고양이|냥이|동물병원|펫호텔|훈련소)/,
     set: set("pet", "1548199973-03cce0bbc87b", ["1516734212186-a967f81ad0d7", "1450778869180-41d0601e046e", "1596492784531-6e6eb5ea9993"], "1576201836106-db1758fd1c97", "1587300003388-59208cc962cb"),
   },
   {
@@ -70,7 +71,8 @@ const LIBRARY: Array<{ test: RegExp; set: PhotoSet }> = [
     set: set("interior", "1618221195710-dd6b41faaea6", ["1586023492125-27b2c045efd7", "1600607687939-ce8a6c25118c", "1484154218962-a197022b5858"], "1616486338812-3dadae4b4ace", "1600585154340-be6161a56a0c"),
   },
   {
-    test: /(수리|설비|전기|배관|보일러|철물|목공|용접|방수|도배|타일|공사)/,
+    // '타일'은 상호의 '스타일'(멍스타일·헤어스타일)과 겹치지 않게
+    test: /(수리|설비|전기|배관|보일러|철물|목공|용접|방수|도배|(?<!스)타일|공사)/,
     set: set("repair", "1621905252507-b35492cc74b4", ["1504148455328-c376907d081c", "1581244277943-fe4a9c777189", "1558618666-fcd25c85cd64"], "1584820927498-cfe5211fd8bf", "1600585152220-90363fe7e115"),
   },
   {
@@ -99,7 +101,7 @@ const LIBRARY: Array<{ test: RegExp; set: PhotoSet }> = [
 /** 업종·상호·대표 상품 글을 합쳐 넣으면 맞는 사진 한 벌을 돌려준다. 못 알아보면 null */
 export function photoSetFor(text: string): PhotoSet | null {
   const value = text.replace(/\s+/g, " ");
-  return LIBRARY.find((entry) => entry.test.test(value))?.set ?? null;
+  return firstSectorMatch(LIBRARY, value, (entry) => entry.test)?.set ?? null;
 }
 
 export const PHOTO_SET_KEYS = LIBRARY.map((entry) => entry.set.key);
