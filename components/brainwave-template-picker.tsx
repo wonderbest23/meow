@@ -7,7 +7,8 @@ import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_IDS } from "../lib/landing/b
 import styles from "./brainwave-template-picker.module.css";
 
 /*
- * 템플릿 고르기 — 사업용 홈페이지 10장을 미리 고른 뒤 적용한다.
+ * 템플릿 고르기 — 사업 내용에 맞춰 디자인을 옮겨 둔 홈페이지 중에서 미리 고른 뒤 적용한다.
+ * 아직 간단한 화면으로만 나오는 템플릿('준비 중')은 보여 주지 않는다 — 지금 쓰고 있는 것만 예외.
  * 홈페이지 화면과 편집기 양쪽에서 같은 창을 쓴다.
  */
 export function BrainwaveTemplatePicker({
@@ -22,9 +23,8 @@ export function BrainwaveTemplatePicker({
   const [selected, setSelected] = useState(current);
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { dialog.current?.showModal(); }, []);
-  const groups: Array<{ key: "landing" | "inner"; label: string; note: string }> = [
-    { key: "landing", label: "랜딩 페이지 10", note: "첫 화면부터 문의까지 한 장에 담긴 홈페이지" },
-  ];
+  const pages = BRAINWAVE_PAGES.filter((p) => p.group === "landing" && BUSINESS_TEMPLATE_IDS.includes(p.id)
+    && (BUSINESS_DESIGNED_PAGES.has(p.id) || p.id === current));
   return (
     <dialog ref={dialog} className={styles.dialog} aria-label="템플릿 선택" onCancel={event => { event.preventDefault(); onClose(); }}>
       <div className={`bwtp-sheet ${styles.sheet}`}>
@@ -33,22 +33,18 @@ export function BrainwaveTemplatePicker({
           <button type="button" onClick={onClose} aria-label="닫기"><X size={18} /></button>
         </header>
         <div className="bwtp-body">
-          {groups.map((g) => (
-            <section key={g.key}>
-              <h4>{g.label} <small>{g.note}</small></h4>
-              <div className="bwtp-grid">
-                {/* 사업 내용에 맞춰 디자인을 옮겨 둔 템플릿을 앞에 — 나머지는 아직 간단한 화면으로 나온다 */}
-                {BRAINWAVE_PAGES.filter((p) => p.group === g.key && BUSINESS_TEMPLATE_IDS.includes(p.id))
-                  .sort((a, b) => Number(BUSINESS_DESIGNED_PAGES.has(b.id)) - Number(BUSINESS_DESIGNED_PAGES.has(a.id))).map((p) => (
-                  <button key={p.id} type="button" aria-pressed={p.id === selected} className={p.id === selected ? "on" : ""} onClick={() => setSelected(p.id)}>
-                    <img src={`/brainwave/thumbs/${p.id}.jpg`} alt="" loading="lazy" />
-                    <span><b>{p.ko}</b><small>{BUSINESS_DESIGNED_PAGES.has(p.id) ? "추천 · 사진·AI 문구가 가득 채워지는 디자인" : "간단한 화면(준비 중)"}</small></span>
-                    {p.id === current ? <em>사용 중</em> : null}
-                  </button>
-                ))}
-              </div>
-            </section>
-          ))}
+          <section>
+            <h4>홈페이지 {pages.length} <small>첫 화면부터 문의까지 한 장에 담긴 홈페이지</small></h4>
+            <div className="bwtp-grid">
+              {pages.map((p) => (
+                <button key={p.id} type="button" aria-pressed={p.id === selected} className={p.id === selected ? "on" : ""} onClick={() => setSelected(p.id)}>
+                  <img src={`/brainwave/thumbs/${p.id}.jpg`} alt="" loading="lazy" />
+                  <span><b>{p.ko}</b><small>{BUSINESS_DESIGNED_PAGES.has(p.id) ? "사진·AI 문구가 가득 채워지는 디자인" : "간단한 화면"}</small></span>
+                  {p.id === current ? <em>사용 중</em> : null}
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
         <footer className={styles.footer}>
           <p>{selected === current ? "현재 사용 중인 템플릿입니다." : "사업 정보는 유지되며 직접 고친 글과 사진, 배치는 초기화됩니다."}</p>
