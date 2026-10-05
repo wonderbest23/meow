@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
@@ -325,7 +326,7 @@ export default function PlanHomepagePage() {
       setAction("saved");
       setMessage("서버에 저장했습니다.");
     } catch (error) {
-      if (current()) { setAction("idle"); setMessage(error instanceof Error ? error.message : "저장하지 못했습니다."); }
+      if (current()) { setAction("idle"); setMessage(userErrorMessage(error, "저장하지 못했습니다.")); }
       throw error;
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
@@ -360,7 +361,7 @@ export default function PlanHomepagePage() {
       siteRef.current = data.site; setSite(data.site);
       setMessage("홈페이지를 공개했습니다.");
     } catch (error) {
-      if (current()) setMessage(`${draftSaved ? "초안은 서버에 저장됐습니다. 공개는 확인하지 못했습니다. " : ""}${error instanceof Error ? error.message : "연결을 확인하고 다시 시도해주세요."}`);
+      if (current()) setMessage(`${draftSaved ? "초안은 서버에 저장됐습니다. 공개는 확인하지 못했습니다. " : ""}${userErrorMessage(error, "연결을 확인하고 다시 시도해주세요.")}`);
     } finally {
       clearTimeout(timeout);
       if (requestRef.current === controller) requestRef.current = null;
@@ -524,7 +525,7 @@ export default function PlanHomepagePage() {
           <span className={styles.builderOpenIcon}><LayoutTemplate size={18} /></span>
           <span className={styles.builderOpenText}>
             <strong>자유 편집 열기</strong>
-            <small>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다. 26가지 페이지 중 고를 수 있어요</small>
+            <small>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다. 다른 디자인으로도 바꿀 수 있어요</small>
           </span>
           <ArrowRight size={16} />
         </button>
@@ -573,6 +574,7 @@ export default function PlanHomepagePage() {
           onPublish={publish}
           onPreview={() => (site?.status === "published" && publicPath ? window.open(publicPath, "_blank", "noopener") : setFullscreen(true))}
           onSiteUpdated={updateSite}
+          onOpenEditor={() => setBuilderOpen(true)}
         />
       )}
 

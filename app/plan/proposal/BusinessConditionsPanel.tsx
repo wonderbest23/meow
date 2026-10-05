@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, FileText, LoaderCircle, Save, SlidersHorizontal } from "lucide-react";
@@ -49,7 +50,7 @@ export default function BusinessConditionsPanel({ planId, business, sourceChange
       if (!response.ok) {
         if (response.status === 409) { setConflict(true); pending.current = null; }
         else if (response.status < 500) pending.current = null;
-        throw new Error(data.message);
+        throw new Error(apiMessage(data, ""));
       }
       const coach = readCoach(data.plan.answers);
       if (!coach) throw new Error("저장 결과를 확인하지 못했어요");
@@ -57,7 +58,7 @@ export default function BusinessConditionsPanel({ planId, business, sourceChange
       const latest = { ...business, revision: coach.revision, fields: coach.fields };
       setBase(latest); setValues(valuesFor(latest)); setMessage("공통 조건을 저장했어요. 기존 문서와 제안서는 보관되어 있어요");
       await onUpdated();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "저장 응답을 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요"); }
+    } catch (error) { setMessage(userErrorMessage(error, "저장 응답을 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요")); }
     finally { setBusy(false); }
   }
   function reset() {

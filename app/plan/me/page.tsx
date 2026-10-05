@@ -3,7 +3,7 @@
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { hydrateFromServer, clearLocalState, isSamplePlan, type PlanState } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import PlanGate from "../PlanGate";
@@ -64,6 +64,8 @@ export default function PlanMePage() {
   const [deleteMessage, setDeleteMessage] = useState("");
   /** 로그인 확인 자체가 실패함 — 로그인 안내 대신 다시 시도 안내를 보인다 */
   const [loadFailed, setLoadFailed] = useState(false);
+  const [logoutBusy, setLogoutBusy] = useState(false);
+  const [logoutMessage, setLogoutMessage] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -97,7 +99,7 @@ export default function PlanMePage() {
           .catch(() => undefined);
       })
       .catch(() => alive && setLoadFailed(true));
-    void hydrateFromServer().then((s) => alive && setState(s));
+    void hydrateFromServer().catch(() => loadState()).then((s) => alive && setState(s));
     return () => {
       alive = false;
     };
@@ -151,6 +153,11 @@ export default function PlanMePage() {
   }
 
   async function logout() {
+    if (logoutBusy) return;
+    setLogoutMessage(""); setLogoutBusy(true);
+    try { await doLogout(); } finally { setLogoutBusy(false); }
+  }
+  async function doLogout() {
     /*
      * 서버 세션이 실제로 끊겼는지 확인한다.
      * 예전에는 응답을 보지 않고 화면만 정리했다 — 통신이 실패하면
@@ -158,7 +165,8 @@ export default function PlanMePage() {
      */
     const res = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
     if (!res || !res.ok) {
-      setDeleteMessage("로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해주세요.");
+      /* 예전엔 탈퇴 칸 안에 적어서(열려 있을 때만 보임) 실패해도 아무 안내가 없었다 */
+      setLogoutMessage("로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해주세요.");
       return;
     }
     // 로컬 플랜 캐시도 함께 비운다 — 로그아웃 후에도 이전 계정 플랜이 보이던 버그
@@ -187,7 +195,7 @@ export default function PlanMePage() {
       <section className={styles.card}>
         <div className={styles.cardHead}>
           <h2 className={styles.cardTitle}>내 정보</h2>
-          <button type="button" className={styles.logout} onClick={logout}>로그아웃</button>
+          <button type="button" className={styles.logout} disabled={logoutBusy} onClick={() => void logout()}>{logoutBusy ? "로그아웃 중…" : "로그아웃"}</button>
         </div>
         <dl className={styles.rows}>
           <div className={styles.row}>
@@ -203,6 +211,7 @@ export default function PlanMePage() {
             <dd>{myPlans.length}개</dd>
           </div>
         </dl>
+        {logoutMessage && <p className={styles.empty} role="alert">{logoutMessage}</p>}
       </section>
 
       <section className={styles.card}>

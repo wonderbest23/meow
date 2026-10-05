@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import type { CoachField } from "../../../lib/plan-builder/coach";
@@ -20,10 +21,10 @@ export default function DocumentSourceReview({ planId, sectionKey, source, disab
     const epoch = planOwnerEpoch();
     try {
       const response = await fetch("/api/plan/document/section", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, key: sectionKey, action: "review", baseGeneratedAt: source.sections[sectionKey], sourceRevision: source.revision }), signal: AbortSignal.timeout(20000) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.message);
+      const data = await response.json(); if (!response.ok) throw new Error(apiMessage(data, ""));
       if (epoch !== planOwnerEpoch()) return;
       onReviewed(sectionKey, data.section, data.updatedAt);
-    } catch (e) { setError(e instanceof Error ? e.message : "검토 저장을 확인하지 못했어요. 새로고침 후 상태를 확인해 주세요"); }
+    } catch (e) { setError(userErrorMessage(e, "검토 저장을 확인하지 못했어요. 새로고침 후 상태를 확인해 주세요")); }
     finally { setBusy(false); }
   }
   return <div className={styles.sourceReview} aria-label="최신 사업 조건 검토">

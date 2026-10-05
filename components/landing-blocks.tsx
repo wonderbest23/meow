@@ -319,7 +319,7 @@ export const landingBlockConfig: Config<LandingBlockProps> = {
     fields: {
       kit: {
         type: "select",
-        label: "페이지 배치 (Brainwave.io 킷)",
+        label: "페이지 배치",
         options: landingKitOptions.map((o) => ({ label: `${o.name} — ${o.description}`, value: o.id })),
       },
       accent: { type: "select", label: "페이지 강조색", options: ACCENT_OPTIONS },

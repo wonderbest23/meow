@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import PlanLoading from "../PlanLoading";
@@ -61,12 +62,12 @@ function Editor() {
       if (currentPlan.current !== planId) return;
       if (!response.ok) {
         if ([401, 402, 404].includes(response.status)) { setAccess(response.status); setView(null); }
-        throw new Error(data.message);
+        throw new Error(apiMessage(data, ""));
       }
       setAccess(0);
       if (force || !viewRef.current || statusRef.current === "saved") accept(data);
       else if (data.saved?.revision !== viewRef.current.saved?.revision) { setStatus("conflict"); setMessage("다른 탭에서 새 버전을 저장했어요. 내 수정본을 보관한 뒤 최신 버전을 불러와 주세요"); }
-    } catch (error) { if (currentPlan.current === planId) setMessage(error instanceof Error ? error.message : "불러오지 못했어요"); }
+    } catch (error) { if (currentPlan.current === planId) setMessage(userErrorMessage(error, "불러오지 못했어요")); }
     finally { if (currentPlan.current === planId) setLoading(false); }
   }, [planId, accept]);
 
@@ -94,7 +95,7 @@ function Editor() {
         if (response.status === 409) { setStatus("conflict"); pending.current = null; }
         else { setStatus("failed"); if (response.status < 500) pending.current = null; }
         if ([401, 402, 404].includes(response.status)) { setAccess(response.status); setView(null); }
-        setMessage(data.message ?? "저장하지 못했어요"); return;
+        setMessage(apiMessage(data, "저장하지 못했어요")); return;
       }
       pending.current = null; setView(data);
       if (sentVersion === version.current && JSON.stringify(snapshot) === JSON.stringify(editRef.current) && JSON.stringify(snapshotPages) === JSON.stringify(pageRef.current)) { setEdits(data.saved.document.edits); const nextPages = proposalPages(data.saved.document); setPages(nextPages); pageRef.current = nextPages; setSlideIndex(index => Math.min(index, nextPages.length - 1)); setStatus("saved"); }
@@ -158,10 +159,10 @@ function Editor() {
     setBusy(true); setMessage("");
     try {
       const response = await fetch(`/api/plan/proposal?planId=${encodeURIComponent(planId)}&download=1&revision=${view.saved.revision}`, { cache: "no-store", signal: AbortSignal.timeout(90000) });
-      if (!response.ok) { const data = await response.json(); throw new Error(data.message); }
+      if (!response.ok) { const data = await response.json(); throw new Error(apiMessage(data, "")); }
       const url = URL.createObjectURL(await response.blob()); const a = window.document.createElement("a");
       a.href = url; a.download = `${view.title} 제안서 v${view.saved.revision}.pptx`; a.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "내려받지 못했어요"); } finally { setBusy(false); }
+    } catch (error) { setMessage(userErrorMessage(error, "내려받지 못했어요")); } finally { setBusy(false); }
   }
   function keepLocalCopy() {
     const url = URL.createObjectURL(new Blob([JSON.stringify({ planId, revision: view?.saved?.revision, edits, pages }, null, 2)], { type: "application/json" }));
@@ -171,8 +172,8 @@ function Editor() {
     if (busy || !view?.generationEnabled) return; setBusy(true); setMessage("");
     try {
       const response = await fetch("/api/plan/deck", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, background: true, presentation: { sector, purpose } }), signal: AbortSignal.timeout(20000) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.message); await refresh(true);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "생성 상태를 확인해 주세요"); await refresh(); } finally { setBusy(false); }
+      const data = await response.json(); if (!response.ok) throw new Error(apiMessage(data, "")); await refresh(true);
+    } catch (error) { setMessage(userErrorMessage(error, "생성 상태를 확인해 주세요")); await refresh(); } finally { setBusy(false); }
   }
   useEffect(() => {
     if (!view?.generation || !["queued", "running"].includes(view.generation.status)) return;

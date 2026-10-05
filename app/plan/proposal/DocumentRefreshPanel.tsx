@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useEffect, useRef, useState } from "react";
 import { Check, FilePenLine, LoaderCircle, X } from "lucide-react";
 import type { BusinessConditionsView } from "../../../lib/plan-builder/proposal-business";
@@ -31,8 +32,8 @@ export default function DocumentRefreshPanel({ planId, business, saved, canUpdat
     try {
       const query = new URLSearchParams({ planId, preview: "document" }); keys.forEach(key => query.append("section", key));
       const response = await fetch(`/api/plan/proposal?${query}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.message); setPreview(data);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "갱신할 자료를 불러오지 못했어요"); }
+      const data = await response.json(); if (!response.ok) throw new Error(apiMessage(data, "")); setPreview(data);
+    } catch (error) { setMessage(userErrorMessage(error, "갱신할 자료를 불러오지 못했어요")); }
     finally { setLoading(false); }
   }
   async function command(value: DocumentRefreshCommand) {
@@ -41,10 +42,10 @@ export default function DocumentRefreshPanel({ planId, business, saved, canUpdat
     try {
       const response = await fetch("/api/plan/proposal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, command: value }), signal: AbortSignal.timeout(20000) });
       const data = await response.json();
-      if (!response.ok) { if (response.status < 500) request.current = null; throw new Error(data.message); }
+      if (!response.ok) { if (response.status < 500) request.current = null; throw new Error(apiMessage(data, "")); }
       request.current = null; setPreview(null); setConsent(false); setKeys([]); setDecisions({});
       setOpen(value.type === "document_generate");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "응답을 확인하지 못했어요. 저장된 요청 상태를 다시 불러옵니다"); }
+    } catch (error) { setMessage(userErrorMessage(error, "응답을 확인하지 못했어요. 저장된 요청 상태를 다시 불러옵니다")); }
     finally { await onUpdated(); setLoading(false); onWorking(false); }
   }
   if (!candidates.length && !pending) return null;

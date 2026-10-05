@@ -53,6 +53,7 @@ export function LandingQuickEditor({
   onPublish,
   onPreview,
   onSiteUpdated,
+  onOpenEditor,
 }: {
   draft: LandingDraft;
   action: EditorAction;
@@ -68,6 +69,8 @@ export function LandingQuickEditor({
   onPublish: () => void;
   onPreview: () => void;
   onSiteUpdated: (site: LandingSiteRecord) => void;
+  /** 화면이 가진 편집기(서버에 저장됨)를 연다 — 없으면 이 안의 편집기(초안에만 반영)를 쓴다. 두 편집기가 따로 저장되어 고친 것이 사라지던 문제 */
+  onOpenEditor?: () => void;
 }) {
   const [step, setStep] = useState<EditorStep>("design");
   const [builderOpen, setBuilderOpen] = useState(false);
@@ -124,9 +127,9 @@ export function LandingQuickEditor({
           <section className="landing-advanced-edit-callout">
             <span><PanelsTopLeft /></span>
             {draft.pageData?.brainwave
-              ? <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong><p>Brainwave.io 킷 페이지를 그대로 씁니다. 26가지 페이지 중 다른 것으로 바꿀 수도 있습니다.</p></div>
+              ? <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong><p>다른 디자인으로 바꿀 수도 있습니다.</p></div>
               : <div><small>더 자유롭게 만들기</small><strong>섹션을 직접 추가하고 순서를 바꾸세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있습니다.</p></div>}
-            <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
+            <button type="button" onClick={() => (onOpenEditor ? onOpenEditor() : setBuilderOpen(true))}>자유 편집 열기 <PanelsTopLeft /></button>
           </section>
           <div className="landing-media-grid">
             <LandingMediaField key={`hero:${projectId}:${draft.templateId}`} label="대표 이미지" description="첫 화면을 채우는 사진입니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => update({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} />
@@ -146,7 +149,7 @@ export function LandingQuickEditor({
           <section className="landing-advanced-edit-callout">
             <span><PanelsTopLeft /></span>
             <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong></div>
-            <button type="button" onClick={() => setBuilderOpen(true)}>자유 편집 열기 <PanelsTopLeft /></button>
+            <button type="button" onClick={() => (onOpenEditor ? onOpenEditor() : setBuilderOpen(true))}>자유 편집 열기 <PanelsTopLeft /></button>
           </section>
         </div>
       )}

@@ -245,7 +245,7 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
         recordUrl: recorded === false ? `https://oneulstart.com/plan/workspace?planId=${encodeURIComponent(planId)}&tab=operations` : null,
         sns: planId && ownerHash && deps.snsWeek ? await deps.snsWeek(ownerHash, planId, now).catch(() => null) : null,
         /* 홍보 키트(SNS 운영표)는 '사업 시작하기' 탭에 있다 — 요약 탭으로 열리지 않게 */
-        snsUrl: planId ? `https://oneulstart.com/plan/workspace?planId=${encodeURIComponent(planId)}&tab=launch` : null,
+        snsUrl: planId ? `https://oneulstart.com/plan/workspace?planId=${encodeURIComponent(planId)}&tab=launch&step=marketing` : null,
         manageUrl: homepageManageUrl(planId || null),
       });
       const sent = await sendLandingLeadEmail(payload, config.key, `weekly-report/${site.id}/${week.weekStart}`, deps.transport);

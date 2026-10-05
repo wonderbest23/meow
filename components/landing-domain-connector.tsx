@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../lib/client/user-error";
 import {
   CheckCircle2,
   CircleAlert,
@@ -66,7 +67,7 @@ export function LandingDomainConnector({
       siteUpdatedRef.current(payload.site);
       if (!quiet) setMessage(payload.connection?.ready ? "도메인 연결이 완료되었습니다." : "");
     } catch (error) {
-      if (!quiet && !controller.signal.aborted) setMessage(error instanceof Error ? error.message : "도메인 상태를 확인하지 못했습니다.");
+      if (!quiet && !controller.signal.aborted) setMessage(userErrorMessage(error, "도메인 상태를 확인하지 못했습니다."));
     } finally {
       if (loadRequestRef.current === controller) {
         loadRequestRef.current = null;
@@ -106,7 +107,7 @@ export function LandingDomainConnector({
         ? "도메인 연결이 완료되었습니다."
         : "연결 신청을 완료했습니다. 아래 DNS 설정 한 줄만 추가해주세요.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "도메인을 연결하지 못했습니다.");
+      setMessage(userErrorMessage(error, "도메인을 연결하지 못했습니다."));
     } finally {
       setAction("idle");
     }
@@ -125,7 +126,7 @@ export function LandingDomainConnector({
       onSiteUpdated(payload.site);
       setMessage("개인 도메인 연결을 해제했습니다. 무료 주소는 그대로 사용할 수 있습니다.");
     } catch (error) {
-      setMessage(error instanceof Error ? error.message : "도메인 연결을 해제하지 못했습니다.");
+      setMessage(userErrorMessage(error, "도메인 연결을 해제하지 못했습니다."));
     } finally {
       setAction("idle");
     }
@@ -238,7 +239,7 @@ function DomainPurchaseForm({ planQuery, price, initial }: { planQuery: string; 
       setResult({ domain: payload.domain, availability: payload.availability });
       setValue(payload.domain);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "주소를 확인하지 못했어요.");
+      setError(userErrorMessage(e, "주소를 확인하지 못했어요."));
     } finally {
       setChecking(false);
     }

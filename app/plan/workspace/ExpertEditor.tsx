@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { currentNextAction, readCoach, type CoachField } from "../../../lib/plan-builder/coach";
@@ -52,14 +53,14 @@ export default function ExpertEditor({ plan, onSaved, onDirtyChange }: { plan: P
       const response = await fetch("/api/plan/expert", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: plan.id, revision: base.revision, requestId: crypto.randomUUID(), title: title.trim() || base.business.name, fields, nextAction }) });
       const payload = await response.json();
       if (ownerEpoch.current !== planOwnerEpoch()) return;
-      if (!response.ok) { setConflict(response.status === 409); throw new Error(payload.message || "저장하지 못했어요."); }
+      if (!response.ok) { setConflict(response.status === 409); throw new Error(apiMessage(payload, "저장하지 못했어요.")); }
       const next = payload.plan as Plan;
       const updated = readCoach(next.answers)!;
       setBase(updated); setValues(Object.fromEntries(updated.fields.map(f => [f.key, f.value]))); setTitle(updated.business.name);
       onSaved(next); setReview(false); setConflict(false); setNextAction(undefined);
       await hydrateFromServer();
       setMessage("사업 정보를 저장했어요. 기존 문서는 보존되며, 문서 반영은 아래 대화에서 요청할 수 있어요.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "저장하지 못했어요."); }
+    } catch (error) { setMessage(userErrorMessage(error, "저장하지 못했어요.")); }
     finally { setBusy(false); }
   }
   async function reload() {

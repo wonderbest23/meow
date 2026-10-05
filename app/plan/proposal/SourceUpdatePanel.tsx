@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useEffect, useRef, useState } from "react";
 import { Check, FileDiff, LoaderCircle, X } from "lucide-react";
 import type { SavedProposal } from "../../../lib/plan-builder/proposal-editor";
@@ -43,8 +44,8 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
     setOpen(true); setLoading(true); setMessage("");
     try {
       const response = await fetch(`/api/plan/proposal?planId=${encodeURIComponent(planId)}&preview=source`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.message); setPreview(data);
-    } catch (error) { setMessage(error instanceof Error ? error.message : "변경분을 불러오지 못했어요"); } finally { setLoading(false); }
+      const data = await response.json(); if (!response.ok) throw new Error(apiMessage(data, "")); setPreview(data);
+    } catch (error) { setMessage(userErrorMessage(error, "변경분을 불러오지 못했어요")); } finally { setLoading(false); }
   }
   async function command(value: RewriteCommand) {
     if (!canUpdate || loading) return;
@@ -52,9 +53,9 @@ export default function SourceUpdatePanel({ planId, saved, sourceChanged, canUpd
     try {
       const response = await fetch("/api/plan/proposal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, command: value }), signal: AbortSignal.timeout(20000) });
       const data = await response.json();
-      if (!response.ok) { if (response.status < 500) generationRequest.current = null; throw new Error(data.message); }
+      if (!response.ok) { if (response.status < 500) generationRequest.current = null; throw new Error(apiMessage(data, "")); }
       generationRequest.current = null; setPreview(null); setOpen(value.type === "generate");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "응답을 확인하지 못했어요. 저장된 처리 상태를 다시 불러옵니다"); }
+    } catch (error) { setMessage(userErrorMessage(error, "응답을 확인하지 못했어요. 저장된 처리 상태를 다시 불러옵니다")); }
     finally { await onUpdated(); setLoading(false); onWorking(false); }
   }
   if (!sourceChanged && !pending) return null;

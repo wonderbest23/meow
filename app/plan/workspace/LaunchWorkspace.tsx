@@ -14,8 +14,14 @@ import MarketingKitPanel from "./MarketingKit";
 export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved: (plan: Plan) => void }) {
   const router = useRouter();
   const [state, setState] = useState(() => readLaunch(plan));
-  const [config, setConfig] = useState<number | null>(state.configured ? null : 0);
-  const [selected, setSelected] = useState<string | null>(() => launchSteps(plan, state).find(s => ["pending", "review"].includes(launchStatus(state, s)))?.id ?? null);
+  /* 주소의 step(예: 주간 리포트 메일의 '올릴 글 보기' → marketing)이 있으면 그 단계를 바로 연다 */
+  const [requestedStep] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const step = new URLSearchParams(window.location.search).get("step");
+    return step && launchSteps(plan, readLaunch(plan)).some(s => s.id === step) ? step : null;
+  });
+  const [config, setConfig] = useState<number | null>(state.configured || requestedStep ? null : 0);
+  const [selected, setSelected] = useState<string | null>(() => requestedStep ?? launchSteps(plan, state).find(s => ["pending", "review"].includes(launchStatus(state, s)))?.id ?? null);
   const [note, setNote] = useState<string | null>(null);
   const [material, setMaterial] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);

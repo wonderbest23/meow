@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useGenerationProgress } from "../GenerationProgress";
 import { useRouter } from "next/navigation";
@@ -88,7 +89,8 @@ export default function PlanDocumentPage() {
 
   useEffect(() => {
     let alive = true;
-    hydrateFromServer().then((s) => {
+    /* 서버 확인이 실패해도 끝없이 '불러오는 중'에 머물지 않게 — 이 기기의 저장본으로 이어서 연다 */
+    hydrateFromServer().catch(() => loadState()).then((s) => {
       if (!alive) return;
       const requested = new URLSearchParams(window.location.search).get("planId");
       if (requested) {
@@ -219,7 +221,7 @@ export default function PlanDocumentPage() {
       a.remove();
       URL.revokeObjectURL(url);
     } catch (error) {
-      setDeckError(error instanceof Error ? error.message : "파일을 만들지 못했습니다. 저장된 문서는 유지되어 있습니다.");
+      setDeckError(userErrorMessage(error, "파일을 만들지 못했습니다. 저장된 문서는 유지되어 있습니다."));
     } finally {
       setExporting(null);
     }
