@@ -1,4 +1,5 @@
 "use client";
+import { FREE_SECTION_COUNT } from "../../../../lib/plan-builder/free-tier";
 import { ResourceFitDetails } from "./ResourcePanel";
 import { INTAKE_JOB_TIMING } from "../../../../lib/plan-builder/intake-timing";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
@@ -523,7 +524,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
    */
   const sectionCount = chaptersForType(snapshot.planType).reduce((total, chapter) => total + chapter.sections.length, 0);
   const hint = step === "design" ? "먼저 답변을 바탕으로 사업 방향을 한 장으로 요약해요. 사업계획서 문서는 다음 단계에서 만들어요."
-    : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서(${sectionCount}개 항목, 재무표 포함)를 작성해요. 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
+    : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서를 작성해요. 전체는 ${sectionCount}개 항목(재무표 포함)이고, 결제 전에는 앞 ${FREE_SECTION_COUNT}개 항목을 무료로 만들어요. 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
   return <div className={styles.nextStep} data-active data-step={step}>

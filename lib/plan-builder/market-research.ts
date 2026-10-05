@@ -204,4 +204,5 @@ export function sectionUsesEvidence(sectionKey: string): boolean {
 }
 
 /** 화면에서 '공식 시장자료 자동검색' 단추를 두는 섹션 */
-export const RESEARCH_BUTTON_SECTIONS = ["overview/problem", "market/segments", "market/competitors"] as const;
+/* 화면(SectionWizard)도 쓰는 상수 — 이 파일은 서버 데이터 계층을 불러오므로 상수는 따로 둔다 */
+export { RESEARCH_BUTTON_SECTIONS } from "./research-sections";

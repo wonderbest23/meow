@@ -35,7 +35,7 @@ import { Sparkles, PenLine, Lock, Unlock, Undo2, RefreshCw } from "lucide-react"
 import styles from "./SectionWizard.module.css";
 import RegionInput from "../../components/region-input";
 import MarketEvidencePanel from "./MarketEvidencePanel";
-import { RESEARCH_BUTTON_SECTIONS } from "../../lib/plan-builder/market-research";
+import { RESEARCH_BUTTON_SECTIONS } from "../../lib/plan-builder/research-sections";
 
 /** 지역을 묻는 질문인지 — id 나 예시 문구로 가린다 */
 function isRegionQuestion(q: QuestionDef): boolean {

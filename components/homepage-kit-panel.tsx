@@ -102,7 +102,9 @@ export function HomepageKitPanel({
   const contactInfo = CONTACT_METHOD_INFO[contact.method];
   const setContact = (patch: Partial<LandingContact>) => onChange(applyContactMethod(draft, { ...draft, contact: { ...contact, ...patch } }));
   const setPhone = (value: string) => onChange(applyContactMethod(draft, { ...draft, businessPhone: value, businessContact: value }));
-  const contactReady = contactHref(contact, draftPhone(draft)) !== null;
+  /* '문의 양식'인데 양식이 꺼져 있으면 손님 문의 버튼이 갈 곳이 없다 — 준비 안 됨으로 알린다 */
+  const formOff = contact.method === "form" && !draft.leadCaptureEnabled;
+  const contactReady = contactHref(contact, draftPhone(draft)) !== null && !formOff;
   const quickCount = quickActions(contact, draftPhone(draft), draft.leadCaptureEnabled).length;
   /* 공개한 주소 복사·공유 — 오픈하자마자 단골·단지 커뮤니티에 뿌릴 수 있게 */
   const [copied, setCopied] = useState(false);
@@ -254,7 +256,7 @@ export function HomepageKitPanel({
         id="hk-contact"
         icon={<PhoneCall size={18} />}
         title="손님 연락 방법"
-        badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : `${contactInfo.label} — 입력 필요`}</em>}
+        badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : formOff ? "문의 양식 — 꺼져 있음" : `${contactInfo.label} — 입력 필요`}</em>}
         hint="홈페이지의 문의·예약 버튼을 누르면 어디로 연결할지 한 번에 정해요"
       >
         <div className="hk-contact-methods" role="radiogroup" aria-label="연결 방법">
@@ -266,6 +268,7 @@ export function HomepageKitPanel({
           ))}
         </div>
         <p className="hk-contact-hint">{contactInfo.hint} 모든 문의 버튼에 한 번에 적용돼요(버튼 하나만 따로 정한 것은 그대로예요).</p>
+        {formOff && <p className="hk-contact-hint" role="status">문의 양식이 꺼져 있어 손님이 문의 버튼을 눌러도 신청할 수 없어요. 아래 ‘사업자 정보’에서 문의 양식을 켜거나, 전화·카카오톡 등 다른 연결 방법을 골라 주세요.</p>}
         <div className="hk-grid">
           {contactInfo.field === "phone" ? (
             <label className="wide"><span>전화번호</span><input inputMode="tel" value={draft.businessPhone} onChange={(e) => setPhone(e.target.value)} placeholder={contactInfo.placeholder} /></label>

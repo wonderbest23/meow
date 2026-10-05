@@ -158,7 +158,14 @@ export function PublicLandingClient({
       <section id="landing-contact" className={`public-lead-section ${config.leadCaptureEnabled ? "" : "brochure"}`} ref={formRef}>
         <div><small>신청하기</small><h2>{config.ctaLabel}</h2><p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p></div>
         {!config.leadCaptureEnabled ? (
-          <div className="public-lead-ready"><ShieldCheck /><h3>홈페이지가 먼저 준비되었습니다</h3><p>사업자 연락처와 개인정보 문의 정보를 확인한 뒤 신청폼을 켤 수 있습니다.</p></div>
+          /* 신청폼이 꺼져 있을 때 — 방문자에게는 사장님용 안내('신청폼을 켤 수 있습니다') 대신 연락할 방법을 보여 준다 */
+          (() => {
+            const phone = draftPhone(config);
+            const email = config.businessEmail.trim();
+            return <div className="public-lead-ready"><ShieldCheck /><h3>{phone || email ? "아래 연락처로 문의해 주세요" : "온라인 신청은 준비 중이에요"}</h3>
+              {phone || email ? <p>{phone && <a href={`tel:${phone}`}>{config.businessPhone || config.businessContact || phone}</a>}{phone && email ? " · " : ""}{email && <a href={`mailto:${email}`}>{email}</a>}</p>
+                : <p>지금은 사업 소개만 공개되어 있어요. 곧 신청을 받을 수 있게 준비하고 있습니다.</p>}</div>;
+          })()
         ) : submitted ? (
           <div className="public-lead-success"><Check /><h3>신청이 접수되었습니다</h3><p>입력하신 연락처로 안내드리겠습니다.</p></div>
         ) : (
