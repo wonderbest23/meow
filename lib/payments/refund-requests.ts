@@ -3,11 +3,11 @@ import { getServerSupabase } from "../persistence";
 /**
  * 환불 요청 접수함.
  * 사용자: 결제 완료(done) 주문에 대해 사유와 함께 접수.
- * 어드민: received → done(환불 완료) | rejected(거절) 처리.
- * 실제 환급(카드 취소·계좌 이체)은 외부에서 하고 여기에는 결과만 기록한다.
+ * 어드민: received → processing(카드 취소 중) → done(환불 완료) | rejected(거절).
+ * 실제 환급과 상태 변경은 refund-execution.ts 가 맡는다 — 여기는 읽기와 접수만.
  */
 
-export type RefundStatus = "received" | "done" | "rejected";
+export type RefundStatus = "received" | "processing" | "done" | "rejected";
 
 export interface RefundRequest {
   id: string;
@@ -104,17 +104,12 @@ export async function listAllRefundRequests(): Promise<RefundRequest[]> {
   return (data ?? []).map((row) => mapRow(row));
 }
 
-export async function updateRefundRequest(id: string, status: RefundStatus, adminNote: string): Promise<RefundRequest> {
+export async function getRefundRequest(id: string): Promise<RefundRequest | null> {
   const supabase = getServerSupabase();
-  if (!supabase) throw new Error("REFUND_STORE_UNAVAILABLE");
-  const { data, error } = await supabase
-    .from("refund_requests")
-    .update({ status, admin_note: adminNote, updated_at: new Date().toISOString() })
-    .eq("id", id)
-    .select("*")
-    .single();
+  if (!supabase) return null;
+  const { data, error } = await supabase.from("refund_requests").select("*").eq("id", id).maybeSingle();
   if (error) throw error;
-  return mapRow(data as Record<string, unknown>);
+  return data ? mapRow(data as Record<string, unknown>) : null;
 }
 
 /** 접수 상태(대기) 건수 — 대시보드용. 테이블 없으면 null. */

@@ -64,7 +64,9 @@ export async function GET() {
     const orders = await listManualTransferOrders();
     return privateJson({ orders: orders.map(adminOrder) });
   } catch (error) {
-    return privateJson({ error: { code: "MANUAL_ORDERS_LOAD_FAILED", message: error instanceof Error ? error.message : "입금 주문을 불러오지 못했습니다." } }, { status: 400 });
+    // DB 오류 원문은 관리자 화면에 그대로 노출하지 않는다 — 로그로만 남긴다
+    console.error("[admin/payments/orders] load failed", error);
+    return privateJson({ error: { code: "MANUAL_ORDERS_LOAD_FAILED", message: "입금 주문을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
   }
 }
 
@@ -101,6 +103,9 @@ export async function PATCH(request: Request) {
     await recordPaymentEvent(`manual-${input.action}:${input.orderId}`, `MANUAL_TRANSFER_${input.action.toUpperCase()}`, { orderId: input.orderId, note: input.note });
     return privateJson({ order: adminOrder(order) });
   } catch (error) {
+    if (error instanceof z.ZodError || error instanceof SyntaxError) {
+      return privateJson({ error: { code: "INVALID_INPUT", message: "입력값을 확인해 주세요." } }, { status: 400 });
+    }
     const code = error instanceof Error ? error.message : "MANUAL_ORDER_UPDATE_FAILED";
     const messages: Record<string, string> = {
       PAYMENT_ORDER_NOT_FOUND: "주문을 찾을 수 없습니다.",
@@ -112,6 +117,11 @@ export async function PATCH(request: Request) {
       CASH_RECEIPT_NOT_REQUESTED: "현금영수증을 신청하지 않은 주문입니다.",
       CASH_RECEIPT_PAYMENT_NOT_CONFIRMED: "입금 확인을 완료한 뒤 현금영수증을 발급해주세요.",
     };
-    return privateJson({ error: { code, message: messages[code] ?? "입금 주문을 처리하지 못했습니다." } }, { status: code === "PAYMENT_ORDER_NOT_FOUND" ? 404 : 400 });
+    // 알려진 코드가 아니면 DB 오류 원문일 수 있다 — code로도 내보내지 않고 로그로만 남긴다
+    if (!messages[code]) {
+      console.error("[admin/payments/orders] update failed", error);
+      return privateJson({ error: { code: "MANUAL_ORDER_UPDATE_FAILED", message: "입금 주문을 처리하지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
+    }
+    return privateJson({ error: { code, message: messages[code] } }, { status: code === "PAYMENT_ORDER_NOT_FOUND" ? 404 : 400 });
   }
 }

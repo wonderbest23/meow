@@ -637,7 +637,7 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">현재까지 작성한 사업정보</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
     {snapshot.financialWarning && <div className={styles.financialWarning} role="note">
       <p>{snapshot.financialWarning.message}</p>
-      {onEdit && <div>{snapshot.financialWarning.fields.map(key => { const id = key === "price" ? "price" : key === "unitCost" ? "structure.unitCost" : "structure.cost"; const label = key === "price" ? "가격 다시 입력" : key === "unitCost" ? "변동비 다시 입력" : "고정비 다시 입력"; return <button key={key} type="button" className={styles.presetChip} disabled={disabled} onClick={() => onEdit(id)}><PencilLine size={14} aria-hidden="true" />{label}</button>; })}</div>}
+      {onEdit && <div>{snapshot.financialWarning.fields.map(key => { const id = key === "price" ? "price" : key === "unitCost" ? "structure.unitCost" : "structure.cost"; const label = key === "price" ? "가격 다시 입력" : key === "unitCost" ? "변동비 다시 입력" : "고정비 다시 입력"; return <button key={key} type="button" className={styles.presetChip} disabled={disabled} onClick={() => { if (id.startsWith("structure.") && !snapshot.intake.detailsRequested) onDetails(); else onEdit(id); }}><PencilLine size={14} aria-hidden="true" />{label}</button>; })}</div>}
     </div>}
     {nextStep && actions}
     <BusinessIdentityHero snapshot={snapshot} compact />
@@ -661,6 +661,14 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
       {snapshot.structure.licenseHint && <p className={styles.muted}>{snapshot.structure.licenseHint}</p>}
     </details>}
     <details className={`${styles.financial} ${styles.summaryDetails}`}><summary>금액과 운영 수치 보기</summary><p>{readableFinancialSummary(snapshot)}</p></details>
+    {/*
+      상세 질문(수익 방식·업종별 수치) — 예전엔 여는 단추가 없어 아무도 답할 수 없었다.
+      기본 질문을 마친 뒤 원하는 사람만. 답하면 손익 계산의 변동비·고정비가 정확해진다.
+    */}
+    {snapshot.coreComplete && !snapshot.intake.detailsRequested && <div className={styles.nextStepHint}>
+      <button type="button" className={styles.presetChip} disabled={disabled} onClick={onDetails}><PencilLine size={14} aria-hidden="true" />더 자세히 답하기 (선택)</button>
+      <small> 업종에 맞는 비용·매출 질문 몇 개로 손익 계산을 더 정확하게 해요.</small>
+    </div>}
     {design && <details className={styles.design}><summary><Sparkles size={16} aria-hidden="true" />AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
     {showActions && !nextStep && <small className={styles.nextStepHint}>{snapshot.coreComplete ? "사업 소개를 정하면 사업 방향을 정리할 수 있어요." : "기본 질문을 마치면 사업 방향을 정리할 수 있어요."}</small>}
     {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물">{showActions || nextStep !== "open" ? <Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link> : null}<Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>사업 관리<ArrowRight size={16} aria-hidden="true" /></Link></nav>}

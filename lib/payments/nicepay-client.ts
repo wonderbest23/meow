@@ -126,16 +126,26 @@ export async function approveNicepayPayment(tid: string, amount: number): Promis
 
 /** 승인된 결제를 취소한다(금액 불일치 등으로 되돌려야 할 때). */
 export async function cancelNicepayPayment(tid: string, reason: string): Promise<boolean> {
+  return (await cancelNicepayPaymentDetailed(tid, reason)).ok;
+}
+
+/**
+ * 결제 취소 — 결과와 실패 사유를 함께 돌려준다(관리자 환불 화면에 그대로 보여 준다).
+ * cancelAmount 를 주면 그 금액만 부분 취소, 없으면 전액 취소.
+ */
+export async function cancelNicepayPaymentDetailed(tid: string, reason: string, cancelAmount?: number): Promise<{ ok: boolean; message: string }> {
   try {
     const response = await nicepayFetch(`${nicepayEnvironment().api}/payments/${encodeURIComponent(tid)}/cancel`, {
       method: "POST",
       headers: { Authorization: basicAuthHeader(), "Content-Type": "application/json" },
-      body: JSON.stringify({ reason, orderId: `cancel_${Date.now()}` }),
+      body: JSON.stringify({ reason, orderId: `cancel_${Date.now()}`, ...(cancelAmount ? { cancelAmt: cancelAmount } : {}) }),
       signal: AbortSignal.timeout(20_000),
     });
     const raw = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-    return response.ok && raw.resultCode === "0000";
+    if (response.ok && raw.resultCode === "0000") return { ok: true, message: "" };
+    const providerMessage = typeof raw.resultMsg === "string" && raw.resultMsg.trim() ? raw.resultMsg.trim() : `응답 코드 ${String(raw.resultCode ?? response.status)}`;
+    return { ok: false, message: providerMessage };
   } catch {
-    return false;
+    return { ok: false, message: "나이스페이에 연결하지 못했습니다" };
   }
 }

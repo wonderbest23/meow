@@ -16,12 +16,13 @@ type RefundRequest = {
   orderName: string;
   amount: number;
   reason: string;
-  status: "received" | "done" | "rejected";
+  status: "received" | "processing" | "done" | "rejected";
   adminNote: string;
 };
 
 const statusText: Record<RefundRequest["status"], string> = {
   received: "접수됨",
+  processing: "처리 중",
   done: "환불 완료",
   rejected: "거절",
 };
@@ -42,6 +43,10 @@ export default function AdminRefundsPage() {
   const [requests, setRequests] = useState<RefundRequest[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [note, setNote] = useState("");
+  /* 환불 금액 — 비우면 요청 금액 전액. 도메인 월할·토큰 잔량 환불처럼 일부만 돌려줄 때 적는다 */
+  const [amount, setAmount] = useState("");
+  /* 옛 계좌이체 주문 — 카드 취소가 없으니 계좌로 직접 돌려준 뒤 기록만 */
+  const [manualTransfer, setManualTransfer] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -69,23 +74,29 @@ export default function AdminRefundsPage() {
     } catch (error) { setMessage(error instanceof Error ? error.message : "로그인하지 못했습니다."); } finally { setBusy(false); }
   };
 
+  const refundAmount = amount.trim() ? Number(amount.replace(/[^\d]/g, "")) : selected?.amount ?? 0;
   const act = async (status: "done" | "rejected") => {
     if (!selected || busy) return;
     const warning = status === "done"
-      ? "고객 카드 취소·계좌 환급을 실제로 완료했나요? 완료로 기록합니다."
-      : "이 환불 요청을 거절 처리할까요? 사유를 처리 메모에 남겨주세요.";
+      ? manualTransfer
+        ? `고객 계좌로 ${refundAmount.toLocaleString("ko-KR")}원을 직접 돌려드렸나요? 환불 완료로 기록하고 이 상품 이용을 닫습니다.`
+        : `나이스페이로 ${refundAmount.toLocaleString("ko-KR")}원을 카드 취소합니다. 취소되면 이 상품 이용이 바로 닫히고 되돌릴 수 없습니다. 진행할까요?`
+      : "이 환불 요청을 거절할까요? 처리 메모가 고객 화면에 거절 사유로 보입니다.";
     if (!window.confirm(warning)) return;
     setBusy(true); setMessage("");
     try {
       const data = await payload<{ request: RefundRequest }>(await fetch("/api/admin/refunds", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: selected.id, status, note }),
+        body: JSON.stringify({ id: selected.id, status, note, ...(status === "done" ? { amount: refundAmount, manualTransfer } : {}) }),
       }));
       setRequests((current) => current.map((item) => (item.id === data.request.id ? data.request : item)));
-      setNote("");
-      setMessage(status === "done" ? "환불 완료로 기록했습니다." : "거절로 기록했습니다.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "처리하지 못했습니다."); } finally { setBusy(false); }
+      setNote(""); setAmount(""); setManualTransfer(false);
+      setMessage(status === "done" ? (manualTransfer ? "환불 완료로 기록하고 상품 이용을 닫았습니다." : "카드 취소를 마치고 상품 이용을 닫았습니다.") : "거절로 기록했습니다. 고객 화면에 사유가 보입니다.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "처리하지 못했습니다.");
+      void load().catch(() => undefined);
+    } finally { setBusy(false); }
   };
 
   if (!session) return <main className="admin-support-loading"><RefreshCw /> 환불 요청을 불러오는 중입니다.</main>;
@@ -110,7 +121,7 @@ export default function AdminRefundsPage() {
       <AdminNav title="환불 접수함" subtitle="고객 환불 요청 확인·처리" />
       <section className="admin-payment-summary">
         <div><RotateCcw /><span><small>처리 대기</small><strong>{pending}건</strong></span></div>
-        <p>실제 환급(카드 취소·계좌 이체)을 먼저 완료한 뒤 ‘환불 완료’로 기록하세요. 단순 변심은 생성 시작 후 제한됩니다.</p>
+        <p>‘카드 취소하고 환불 완료’를 누르면 나이스페이로 실제 취소하고 그 상품 이용을 닫습니다. 일부만 돌려줄 때는 금액을 적으세요.</p>
         <button onClick={() => void load()}><RefreshCw /> 새로고침</button>
       </section>
       <div className="admin-payment-workspace">
@@ -119,7 +130,7 @@ export default function AdminRefundsPage() {
           <div>
             {requests.length === 0 && <p>아직 접수된 환불 요청이 없습니다.</p>}
             {requests.map((item) => (
-              <button key={item.id} className={selectedId === item.id ? "selected" : ""} onClick={() => { setSelectedId(item.id); setNote(item.adminNote ?? ""); }}>
+              <button key={item.id} className={selectedId === item.id ? "selected" : ""} onClick={() => { setSelectedId(item.id); setNote(item.status === "received" ? "" : item.adminNote ?? ""); setAmount(""); setManualTransfer(false); setMessage(""); }}>
                 <span><strong>{item.customerEmail || "이메일 미확인"}</strong><em className={`status-${item.status === "done" ? "done" : item.status === "rejected" ? "canceled" : "deposit_reported"}`}>{statusText[item.status]}</em></span>
                 <p>{item.orderName || item.orderId}</p>
                 <small>{item.amount.toLocaleString("ko-KR")}원 · {dateTime(item.createdAt)}</small>
@@ -139,12 +150,18 @@ export default function AdminRefundsPage() {
                 <div><dt>마지막 처리</dt><dd>{dateTime(selected.updatedAt)}</dd></div>
               </dl>
               <section className="admin-cash-receipt"><header><RotateCcw /><div><strong>고객 요청 사유</strong><small>접수 당시 고객이 남긴 내용</small></div></header><p>{selected.reason}</p></section>
-              <label className="admin-payment-note"><span>처리 메모</span><textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="예: 8월 12일 나이스페이 카드 취소 완료 / 생성 시작 이후 단순 변심으로 거절" /></label>
+              <label className="admin-payment-note"><span>처리 메모</span><textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="예: 도메인 3개월 사용 — 9개월분 월할 환불 / 거절이면 고객에게 보일 사유" /></label>
+              {selected.status === "received" && (
+                <>
+                  <label className="admin-payment-note"><span>환불 금액(원) — 비우면 {selected.amount.toLocaleString("ko-KR")}원 전액</span><input inputMode="numeric" value={amount} onChange={(event) => setAmount(event.target.value)} placeholder={String(selected.amount)} /></label>
+                  <label className="admin-payment-note" style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" checked={manualTransfer} onChange={(event) => setManualTransfer(event.target.checked)} style={{ width: "auto" }} /><span>옛 계좌이체 주문이라 고객 계좌로 직접 돌려드렸어요(카드 취소 없이 기록만)</span></label>
+                </>
+              )}
               {message && <p className="admin-payment-message">{message}</p>}
               <footer>
                 {selected.status === "received" && (
                   <>
-                    <button className="confirm" disabled={busy} onClick={() => void act("done")}><CheckCircle2 /> 환불 완료로 기록</button>
+                    <button className="confirm" disabled={busy || !(refundAmount > 0 && refundAmount <= selected.amount)} onClick={() => void act("done")}><CheckCircle2 /> {busy ? "처리 중…" : manualTransfer ? "계좌로 환급 완료" : "카드 취소하고 환불 완료"}</button>
                     <button disabled={busy || note.trim().length < 5} onClick={() => void act("rejected")} title={note.trim().length < 5 ? "거절 사유를 처리 메모에 적어주세요." : undefined}><XCircle /> 거절</button>
                   </>
                 )}

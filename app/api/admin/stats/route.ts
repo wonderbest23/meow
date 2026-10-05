@@ -18,11 +18,16 @@ function daysAgoIso(days: number) {
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
 }
 
+// '오늘'은 한국 시간 0시부터 — 서버(Cloudflare)는 UTC라 setHours(0)이면 오전 9시가 경계가 된다.
+// ai-cost 라우트와 같은 방식으로 KST 자정을 구한다.
 function todayStartIso() {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  return now.toISOString();
+  const kst = new Date(Date.now() + 9 * 60 * 60_000);
+  kst.setUTCHours(0, 0, 0, 0);
+  return new Date(kst.getTime() - 9 * 60 * 60_000).toISOString();
 }
+
+const PAGE = 1000;
+const MAX_PAID_ROWS = 100_000;
 
 export async function GET() {
   if (!(await hasAdminSession("support"))) {
@@ -55,10 +60,26 @@ export async function GET() {
   if (supabase) {
     const paid = await supabase
       .from("payment_orders")
-      .select("amount", { count: "exact" })
+      .select("order_id", { count: "exact", head: true })
       .eq("status", "done");
     paidCount = paid.count ?? null;
-    paidAmount = (paid.data ?? []).reduce((sum, row) => sum + Number((row as { amount?: number }).amount ?? 0), 0);
+    // Supabase는 한 번에 최대 1000행만 돌려준다 — 그대로 합치면 1000건 이후 매출이 빠진다.
+    // 페이지 단위로 끝까지 읽어 합산하고, 중간에 실패하면 틀린 숫자 대신 null로 둔다.
+    let sum = 0;
+    let complete = true;
+    for (let offset = 0; offset < MAX_PAID_ROWS; offset += PAGE) {
+      const { data, error } = await supabase
+        .from("payment_orders")
+        .select("amount")
+        .eq("status", "done")
+        .order("order_id", { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (error) { complete = false; break; }
+      const rows = data ?? [];
+      sum += rows.reduce((acc, row) => acc + Number((row as { amount?: number }).amount ?? 0), 0);
+      if (rows.length < PAGE) break;
+    }
+    paidAmount = complete ? sum : null;
     const paidRecent = await supabase
       .from("payment_orders")
       .select("order_id", { count: "exact", head: true })

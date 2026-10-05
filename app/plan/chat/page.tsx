@@ -14,7 +14,7 @@ import { changedCoachFields } from "../../../lib/plan-builder/coach-presentation
 import { hydrateFromServer, setActivePlan } from "../../../lib/plan-builder/plan-store";
 import BusinessBrief from "./BusinessBrief";
 import BusinessAppChrome from "../BusinessAppChrome";
-import { businessChatHref, chatEntryIntent, workspaceHref } from "../../../lib/plan-builder/business-hub";
+import { businessChatHref, chatEntryIntent } from "../../../lib/plan-builder/business-hub";
 import BusinessEmptyState from "../BusinessEmptyState";
 import hubStyles from "../BusinessHub.module.css";
 import ChatLoading from "./loading";
@@ -260,7 +260,7 @@ function BusinessCoach() {
   </>;
 
   return <main ref={pageRef} data-chat-theme="light" className={`${styles.page} ${styles.liveChat} ${chatUi.theme} ${!started ? styles.welcomePage : ""} ${hasBrief ? styles.hasBrief : ""}`}>
-    <BusinessAppChrome title={entryMode === "new" && !started ? "새 대화" : "사업 기획"} active={entryMode === "new" && !plan ? "new" : "chat"} backHref="/plan" workspaceHref={plan ? workspaceHref(plan.planId) : undefined}>
+    <BusinessAppChrome title={entryMode === "new" && !started ? "새 대화" : "사업 기획"} active={entryMode === "new" && !plan ? "new" : "chat"} backHref="/plan">
     {hasBrief && <nav className={styles.viewTabs} aria-label="화면 선택"><button aria-pressed={view === "chat"} disabled={editDirty} onClick={() => setView("chat")}>대화</button><button aria-pressed={view === "brief"} onClick={() => setView("brief")}>내 사업안{changed.length > 0 && <span className={styles.updateDot} aria-label="수정됨" />}</button></nav>}
     {!loaded ? <PlanLoading fill variant="compact" note="대화를 불러오고 있어요" /> : entryMode === "new" || plan ? <div ref={split.ref} style={split.style} className={`${styles.workspace} ${split.dragging ? styles.resizing : ""}`}>
       <section id="business-chat-pane" className={`${styles.chatPane} ${view !== "chat" ? styles.mobileHidden : ""}`} aria-label="사업 기획 대화">

@@ -30,7 +30,7 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
    */
   const pathname = usePathname();
   const search = typeof window === "undefined" ? "" : window.location.search;
-  const backTo = `/account?next=${encodeURIComponent((pathname || "/plan/overview") + search)}`;
+  const backTo = `/account?next=${encodeURIComponent((pathname || "/plan") + search)}`;
 
   if (reason === "login_required") {
     return (
