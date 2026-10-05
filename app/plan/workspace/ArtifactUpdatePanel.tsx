@@ -2,8 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, RefreshCw, X } from "lucide-react";
+import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { artifactErrorMessage, artifactSlideText, type ArtifactCommand, type ArtifactPreview, type ArtifactUpdateView } from "../../../lib/plan-builder/artifact-updates";
 import styles from "./ArtifactUpdatePanel.module.css";
+
+/** 항목 이름 — 제목이 있으면 제목, 없으면 키 */
+function artifactItemTitle(item: { title?: unknown; key?: unknown; id?: unknown }): string {
+  return typeof item.title === "string" && item.title.trim() ? item.title : String(item.key ?? item.id ?? "");
+}
 
 type Choices = Record<string, "replace" | "keep">;
 const statuses: Record<ArtifactUpdateView["status"], string> = { queued: "접수됨", running: "변경안 작성 중", ready: "비교 후 반영", failed: "작업 중단", stale: "원문 변경됨", cancelled: "닫은 변경안", applied: "반영됨" };
@@ -59,9 +65,14 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
     {message && <p role="status">{message}</p>}
     {pending.current && !busy && <button onClick={() => void send(pending.current!)}><RefreshCw size={16} /> 같은 요청 다시 확인</button>}
     {preview && <div className={styles.preview}>
-      <p>사업계획서 {preview.documents.length}항목 · PPT {preview.slides.length}장 · 홈페이지 {preview.homepage?.changed.length ?? 0}항목</p>
+      {/* PPT 는 제공 준비 중이면 세지 않는다 — 'PPT 0장'은 없는 결과물처럼 보인다 */}
+      <p>사업계획서 {preview.documents.length}항목{PPT_GENERATION_VERIFIED ? ` · PPT ${preview.slides.length}장` : ""} · 홈페이지 {preview.homepage?.changed.length ?? 0}항목</p>
       {!!preview.documents.filter(item => item.locked).length && <p>잠긴 문서는 유지하며 최신 상태로 처리하지 않아요</p>}
-      <details><summary>전송 자료와 변경 대상</summary><pre>{JSON.stringify({ sources: preview.sources, documents: preview.documents, slides: preview.slides }, null, 2)}</pre></details>
+      {/* 프로그램용 원본(JSON) 대신 바뀔 항목 이름만 읽기 쉽게 */}
+      {(preview.documents.length > 0 || (PPT_GENERATION_VERIFIED && preview.slides.length > 0)) && <details><summary>바뀔 수 있는 항목 보기</summary><ul>
+        {preview.documents.map(item => <li key={item.key}>사업계획서 · {artifactItemTitle(item)}{item.locked ? " (잠금 · 유지)" : ""}</li>)}
+        {PPT_GENERATION_VERIFIED && preview.slides.map(item => <li key={item.id}>PPT · {artifactItemTitle(item)}</li>)}
+      </ul></details>}
       {preview.homepage && <label><input type="checkbox" checked={includeHomepage} onChange={event => setIncludeHomepage(event.target.checked)} /> 홈페이지 초안도 함께 비교</label>}
       {aiNeeded && <label><input type="checkbox" checked={consent} onChange={event => setConsent(event.target.checked)} /> {preview.target ? `${preview.target.provider} ${preview.target.model}에 선택한 사업 자료를 전송하는 데 동의합니다` : "AI 연동 갱신은 아직 제공 준비 중이에요"}</label>}
       <button disabled={busy || Boolean(aiNeeded && (!preview.target || !consent))} onClick={() => void send({ type: "generate", id: crypto.randomUUID(), hash: preview.hash, base: preview.base, consent: true, includeHomepage })}>변경안 만들기</button>

@@ -197,7 +197,7 @@ export function LandingDomainConnector({
         <div className="domain-connect-form">
           <label><span>{purchase ? "연결할 주소" : "구매한 도메인"}</span><input value={hostname} onChange={(event) => setHostname(event.target.value)} placeholder="www.mybrand.com" autoCapitalize="none" autoCorrect="off" /></label>
           <button disabled={!published || busy || hostname.trim().length < 4 || (waitingRegistration && hostname.trim().toLowerCase() === purchasedHostname)} onClick={() => void connect()}>{action === "connecting" ? <LoaderCircle className="spin" /> : <Globe2 />} 연결 시작</button>
-          {!published && <small>먼저 위의 ‘저장하고 공개’를 눌러 홈페이지를 공개해주세요.</small>}
+          {!published && <small>먼저 위의 ‘공개하기’를 눌러 홈페이지를 공개해주세요.</small>}
         </div>
       ) : (
         <div className="domain-connection-progress">

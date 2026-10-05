@@ -305,8 +305,11 @@ export function HomepageKitPanel({
         icon={<ShieldCheck size={18} />}
         title="사업자 정보"
         badge={missing.length ? <em className="hk-badge hk-badge-warn">채울 것 {missing.length}개</em> : <em className="hk-badge hk-badge-ok">완료</em>}
+        /* 문의 양식을 켠 채 개인정보 문의처가 비면 공개가 막힌다(landingPublicationIssues) — '지금도 공개할 수 있어요'라고 하지 않는다 */
         hint={missing.length
-          ? (draft.pageMode === "transaction" ? `공개 전에 채워 주세요: ${missing.join(", ")}` : `지금도 공개할 수 있어요. 결제를 받기 전에는 꼭 채워 주세요: ${missing.join(", ")}`)
+          ? (draft.pageMode === "transaction" || missing.includes("개인정보 문의처")
+            ? `공개 전에 채워 주세요: ${missing.join(", ")}`
+            : `지금도 공개할 수 있어요. 결제를 받기 전에는 꼭 채워 주세요: ${missing.join(", ")}`)
           : "홈페이지 맨 아래에 표시되는 법정 정보입니다."}
       >
         <div className="hk-grid">

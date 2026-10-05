@@ -77,13 +77,14 @@ export async function processLandingLeadNotification(leadId: string, force = fal
   if (!payload) {
     const site = await db.from("landing_sites").select("project_id").eq("id", row.site_id).maybeSingle();
     if (site.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
-    const project = site.data ? await db.from(projectReadTable()).select("owner_id").eq("id", site.data.project_id).maybeSingle() : null;
+    const project = site.data ? await db.from(projectReadTable()).select("owner_id, opportunity").eq("id", site.data.project_id).maybeSingle() : null;
     if (project?.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
     const owner = project?.data?.owner_id ? await db.auth.admin.getUserById(project.data.owner_id) : null;
     if (owner?.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
     const recipient = owner?.data?.user?.email;
     if (!recipient || !owner?.data?.user?.email_confirmed_at) { await finish({ status: "blocked", error_code: "recipient_missing", next_attempt_at: null }); return; }
-    payload = buildLandingLeadEmail(config.from, recipient);
+    const planId = (project?.data?.opportunity as { planId?: unknown } | null)?.planId;
+    payload = buildLandingLeadEmail(config.from, recipient, typeof planId === "string" ? planId : null);
   }
   const attempts = row.attempts + 1;
   // Persist the immutable request before sending, so every retry uses exactly the same content.
