@@ -14624,8 +14624,10 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 @media (max-width: 640px) { .bw-btn-panel { top: auto; right: 10px; left: 10px; bottom: 10px; width: auto; max-height: 60dvh; } }
 .bw-btn-panel > strong { font-size: 15px; }
 .bw-btn-opts { display: grid; gap: 8px; }
-.bw-btn-opts label { display: flex; align-items: baseline; gap: 8px; font-size: 14px; font-weight: 700; cursor: pointer; }
-.bw-btn-opts small { font-weight: 400; color: #8181a5; font-size: 12px; }
+/* 선택지 이름은 한 줄, 설명은 그 아래 줄 — 좁은 칸에서 이름이 두세 줄로 꺾이던 문제 */
+.bw-btn-opts label { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; font-size: 14px; font-weight: 700; cursor: pointer; }
+.bw-btn-opts label > input { grid-row: span 2; margin: 0; align-self: start; margin-top: 3px; }
+.bw-btn-opts small { grid-column: 2; font-weight: 400; color: #8181a5; font-size: 12px; line-height: 1.4; }
 .bw-btn-url, .bw-btn-label input { min-height: 42px; padding: 0 12px; border: 1px solid #dfe3ea; border-radius: 8px; font-size: 14px; width: 100%; }
 .bw-btn-label { display: grid; gap: 5px; font-size: 12.5px; color: #5e5e72; }
 .bw-btn-actions { display: flex; justify-content: flex-end; gap: 8px; }
@@ -14655,8 +14657,10 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
   .bw-editor-pick, .bw-editor-preview { padding: 0 9px; }
   .bw-editor-views button { padding: 0 9px; }
   .bw-editor-right { order: 1; flex: 1 1 100%; width: 100%; min-width: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
-  .bw-editor-right button { min-width: 0; min-height: 42px; padding: 0; justify-content: center; font-size: 0; }
+  /* 아이콘만 남기지 않는다 — 아이콘 아래에 짧은 이름 */
+  .bw-editor-right button { min-width: 0; min-height: 48px; padding: 4px 0; justify-content: center; flex-direction: column; gap: 2px; font-size: 0; }
   .bw-editor-right button svg { flex: none; }
+  .bw-editor-right .bw-bar-label { display: block; font-size: 10.5px; font-weight: 700; line-height: 1.1; white-space: nowrap; }
   .bw-editor-stage { padding: 10px; }
   .bw-editor-canvas.view-mobile { border: 0; border-radius: 12px; overflow: hidden; }
   .bw-ai { padding: 10px; }
@@ -16286,6 +16290,8 @@ button.account-kakao-btn svg { display: inline-block !important; }
   max-height: calc(100dvh - 130px);
   overflow: auto;
   display: grid;
+  /* 칸 폭을 판 폭에 묶는다 — 긴 이름이 판 밖으로 밀어내던 문제 */
+  grid-template-columns: minmax(0, 1fr);
   gap: 14px;
   padding: 14px;
   border-radius: 14px;
@@ -16500,7 +16506,7 @@ button.account-kakao-btn svg { display: inline-block !important; }
 .bw-editor-hiddenbtn { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; }
 .bw-editor-hiddenbtn.on { background: #161c2d; color: #fff; }
 .bw-editor-hiddenbtn.on svg { stroke: #fff; }
-.bw-hidden-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.bw-hidden-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 6px; }
 .bw-hidden-list li {
   display: flex;
   align-items: center;
@@ -16512,7 +16518,8 @@ button.account-kakao-btn svg { display: inline-block !important; }
   font-size: 12.5px;
   color: #3d3a52;
 }
-.bw-hidden-list li span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bw-hidden-list li span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bw-hidden-list li button { flex: none; }
 .bw-hidden-list li button {
   flex: none;
   display: inline-flex;
@@ -16976,3 +16983,15 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 @media (max-width: 768px) {
   body:has(.public-landing.has-quickbar) .public-analytics-consent { bottom: 88px; }
 }
+
+/* 편집기 머리 줄 이름 — 되돌리기·다시·닫기 이름은 PC 에서는 아이콘만(널리 아는 모양), 폰에서만 글자 */
+.bw-editor-right .bw-bar-mobile { display: none; }
+@media (max-width: 640px) { .bw-editor-right .bw-bar-mobile { display: block; } }
+/* 떠 있는 줄 — 위에 자리가 없으면 고른 것 아래에 */
+.bw-eltool.below { transform: translate(-50%, 10px); }
+/* 추천 사진 판 */
+.bw-photo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.bw-photo-grid button { padding: 0; border: 2px solid transparent; border-radius: 10px; overflow: hidden; background: #f1f2f6; aspect-ratio: 4 / 3; cursor: pointer; }
+.bw-photo-grid button.on { border-color: #473bf0; }
+.bw-photo-grid img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.bw-photo-panel .bw-ins-done { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
