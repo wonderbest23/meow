@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { deleteProject, getProject, persistenceMode, updateProjectOpportunity } from "../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../lib/api-errors";
 
 const updateSchema = z.object({
   customer: z.string().trim().min(2).max(300).optional(),
@@ -28,7 +29,7 @@ export async function GET(
       {
         error: {
           code: "PROJECT_LOAD_FAILED",
-          message: error instanceof Error ? error.message : "프로젝트를 불러오지 못했습니다.",
+          message: publicErrorMessage(error, "프로젝트를 불러오지 못했습니다."),
           retryable: true,
         },
       },
@@ -57,7 +58,7 @@ export async function DELETE(
       {
         error: {
           code: "PROJECT_DELETE_FAILED",
-          message: error instanceof Error ? error.message : "프로젝트를 삭제하지 못했습니다.",
+          message: publicErrorMessage(error, "프로젝트를 삭제하지 못했습니다."),
           retryable: true,
         },
       },
@@ -82,7 +83,7 @@ export async function PATCH(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "PROJECT_UPDATE_FAILED",
-          message,
+          message: publicErrorMessage(error, "사업 기본정보를 수정하지 못했습니다."),
           retryable: message !== "PROJECT_NOT_FOUND",
         },
       },

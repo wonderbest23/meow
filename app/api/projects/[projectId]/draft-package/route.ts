@@ -19,6 +19,8 @@ import {
 } from "../../../../../lib/project-repository";
 import { normalizeRefinementInput } from "../../../../../lib/refinement/domain";
 import type { ProjectRecord } from "../../../../../lib/service-domain";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
+import { requireProjectAiAccess } from "../../../../../lib/project-ai-access";
 
 const refinementSchema = z.object({
   brandName: z.string().trim().min(2).max(100),
@@ -98,7 +100,12 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "제작 상태를 불러오지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message, message: message === "PROJECT_NOT_FOUND" ? "프로젝트를 찾을 수 없습니다." : message } },
+      {
+        error: {
+          code: message === "PROJECT_NOT_FOUND" ? message : "DRAFT_PACKAGE_STATUS_FAILED",
+          message: publicErrorMessage(error, "제작 상태를 불러오지 못했습니다."),
+        },
+      },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 500 },
     );
   }
@@ -127,6 +134,9 @@ export async function POST(
     if (!input.force && packageReady(project)) {
       return NextResponse.json({ run: existing ?? null, packageReady: true });
     }
+    // 여기부터 전체 자료를 모델로 새로 만든다 — 결제한 사업만, 사람 단위 호출 한도 안에서
+    const denied = await requireProjectAiAccess(request, project, identity);
+    if (denied) return denied;
 
     const runId = `draft-${crypto.randomUUID()}`;
     const refinement = input.refinement
@@ -161,8 +171,10 @@ export async function POST(
     return NextResponse.json({ run, packageReady: false }, { status: 202 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "자료 제작을 시작하지 못했습니다.";
+    // 실패 기록(run)도 고객 화면에 그대로 보이므로 내부 오류 원문 대신 고객용 문구를 남긴다
+    const publicMessage = publicErrorMessage(error, "자료 제작을 시작하지 못했습니다.");
     if (run && identityHash && projectId) {
-      run = failDraftPackageRun(run, message);
+      run = failDraftPackageRun(run, publicMessage);
       await saveDraftPackageRun(projectId, identityHash, run).catch(() => undefined);
     }
     if (refinementRunId && identityHash && projectId) {
@@ -174,7 +186,7 @@ export async function POST(
         run,
         error: {
           code: notFound ? message : "DRAFT_PACKAGE_START_FAILED",
-          message: notFound ? "프로젝트를 찾을 수 없습니다." : message,
+          message: publicMessage,
         },
       },
       { status: notFound ? 404 : 500 },

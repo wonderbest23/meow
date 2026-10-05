@@ -11,6 +11,7 @@ import {
 } from "../../../../../../../lib/quality/engine";
 import { getLegalSnapshots } from "../../../../../../../lib/quality/legal-monitor";
 import { recordServiceAudit } from "../../../../../../../lib/service-audit/repository";
+import { publicErrorMessage } from "../../../../../../../lib/api-errors";
 
 const bodySchema = z.object({ artifactId: z.string().uuid() });
 
@@ -57,7 +58,7 @@ export async function POST(
     const message = error instanceof Error ? error.message : "결과물을 승인하지 못했습니다.";
     const status = message.endsWith("_NOT_FOUND") ? 404 : 400;
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "APPROVAL_FAILED", message, retryable: false } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "APPROVAL_FAILED", message: publicErrorMessage(error, "결과물을 승인하지 못했습니다."), retryable: false } },
       { status },
     );
   }

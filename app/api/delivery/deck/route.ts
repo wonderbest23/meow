@@ -2,6 +2,7 @@ import PptxGenJS from "pptxgenjs";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { publicErrorMessage } from "../../../../lib/api-errors";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { resolveLLMConfig, resolveAlternateLLMConfig } from "../../../../lib/llm/config";
 import { enrichDeckNarrative } from "../../../../lib/delivery/deck-narrative";
@@ -635,7 +636,7 @@ export async function POST(request: Request) {
       {
         error: {
           code: "DECK_GENERATION_FAILED",
-          message: error instanceof Error ? error.message : "파워포인트 파일(PPTX)을 만들지 못했습니다.",
+          message: publicErrorMessage(error, "파워포인트 파일(PPTX)을 만들지 못했습니다."),
         },
       },
       { status: 400 },

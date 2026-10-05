@@ -8,6 +8,7 @@ import {
   type DocumentProjectMeta,
 } from "../../../../lib/delivery/document-renderer";
 import { clientKey, enforceRateLimit } from "../../../../lib/rate-limit";
+import { publicErrorMessage } from "../../../../lib/api-errors";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -118,10 +119,14 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
+    const raw = error instanceof Error ? error.message : "";
+    const retryable = raw.startsWith("DOCUMENT_ARCHIVE_PART_FAILED") || raw.startsWith("DOCUMENT_ARCHIVE_PART_UNAVAILABLE");
+    // 입력 검증 안내(한국어)는 그대로, 렌더러·내부 호출 오류 원문(상태 코드 등)은 서버 로그에만 남긴다
     const message = error instanceof z.ZodError
       ? error.issues.map((issue) => issue.message).join(", ")
-      : error instanceof Error ? error.message : "문서를 만들지 못했습니다.";
-    const retryable = message.startsWith("DOCUMENT_ARCHIVE_PART_FAILED") || message.startsWith("DOCUMENT_ARCHIVE_PART_UNAVAILABLE");
+      : retryable
+        ? (console.error("[delivery-document]", error), "문서 파일을 나눠 만드는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.")
+        : publicErrorMessage(error, "문서를 만들지 못했습니다.");
     return NextResponse.json({ error: { code: "DOCUMENT_GENERATION_FAILED", message } }, { status: retryable ? 503 : 400 });
   }
 }

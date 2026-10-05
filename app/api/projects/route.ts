@@ -5,6 +5,7 @@ import { createProjectSchema } from "../../../lib/service-domain";
 import { paymentsEnabled } from "../../../lib/payments/config";
 import { ensurePaidStarterLanding } from "../../../lib/landing/auto-publish";
 import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
+import { publicErrorMessage } from "../../../lib/api-errors";
 
 export async function POST(request: Request) {
   try {
@@ -44,7 +45,7 @@ export async function POST(request: Request) {
       {
         error: {
           code: "PROJECT_CREATE_FAILED",
-          message: error instanceof Error ? error.message : "프로젝트 생성에 실패했습니다.",
+          message: publicErrorMessage(error, "프로젝트 생성에 실패했습니다."),
           retryable: true,
         },
       },

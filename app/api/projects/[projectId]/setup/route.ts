@@ -3,6 +3,7 @@ import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { businessSetupSchema } from "../../../../../lib/business/domain";
 import { assessBusinessSetup } from "../../../../../lib/business/korea-rules";
 import { saveBusinessSetup } from "../../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 export async function PUT(
   request: Request,
@@ -27,7 +28,7 @@ export async function PUT(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "BUSINESS_SETUP_INVALID",
-          message,
+          message: publicErrorMessage(error, "사업 설정을 저장하지 못했습니다."),
           retryable: false,
         },
       },

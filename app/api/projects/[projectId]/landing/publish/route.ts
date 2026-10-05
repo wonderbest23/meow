@@ -4,6 +4,7 @@ import { requireGuestIdentity } from "../../../../../../lib/api-auth";
 import { publishLanding } from "../../../../../../lib/landing/repository";
 import { z } from "zod";
 import { LANDING_CONFLICT_MESSAGE } from "../../../../../../lib/landing/save-contract";
+import { publicErrorCode, publicErrorMessage } from "../../../../../../lib/api-errors";
 
 const schema = z.object({ expectedUpdatedAt: z.string().datetime({ offset: true }) });
 
@@ -28,7 +29,7 @@ export async function POST(
     const message = error instanceof Error ? error.message : "랜딩페이지를 공개하지 못했습니다.";
     if (message === "LANDING_DRAFT_CONFLICT") return NextResponse.json({ error: { code: message, message: LANDING_CONFLICT_MESSAGE } }, { status: 409 });
     return NextResponse.json(
-      { error: { code: message, message } },
+      { error: { code: publicErrorCode(error, "LANDING_PUBLISH_FAILED"), message: publicErrorMessage(error, "랜딩페이지를 공개하지 못했습니다.", { LANDING_NOT_FOUND: "홈페이지를 찾을 수 없습니다." }) } },
       { status: message === "PROJECT_NOT_FOUND" || message === "LANDING_NOT_FOUND" ? 404 : 400 },
     );
   }

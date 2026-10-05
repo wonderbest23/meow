@@ -5,6 +5,7 @@ import { getProject } from "../../../../../../lib/project-repository";
 import { fetchNearbyStores } from "../../../../../../lib/market/sbiz-connector";
 import { signMarketEvidence } from "../../../../../../lib/market/evidence-attestation";
 import type { MarketEvidence } from "../../../../../../lib/market/domain";
+import { publicErrorMessage } from "../../../../../../lib/api-errors";
 
 const requestSchema = z.object({
   longitude: z.number().min(124).max(132),
@@ -55,7 +56,7 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "주변 상가를 조회하지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "NEARBY_LOOKUP_INVALID", message } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "NEARBY_LOOKUP_INVALID", message: publicErrorMessage(error, "주변 상가를 조회하지 못했습니다.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

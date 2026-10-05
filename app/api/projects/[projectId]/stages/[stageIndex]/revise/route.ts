@@ -11,6 +11,8 @@ import { revisionRequestSchema } from "../../../../../../../lib/service-domain";
 import { recordServiceAudit } from "../../../../../../../lib/service-audit/repository";
 import { generateStageArtifact } from "../../../../../../../lib/stage-generator";
 import { resolveTextLLMConfig } from "../../../../../../../lib/llm/config";
+import { publicErrorMessage } from "../../../../../../../lib/api-errors";
+import { requireProjectAiAccess } from "../../../../../../../lib/project-ai-access";
 
 export async function POST(
   request: Request,
@@ -27,6 +29,11 @@ export async function POST(
     const input = revisionRequestSchema.parse(await request.json());
     const identity = await requireGuestIdentity();
     guestHash = identity.hash;
+    // 수정 요청을 접수하기 전에 결제·호출 한도부터 본다 — 접수만 쌓이고 생성이 막히지 않도록
+    const owned = await getProject(projectId, identity.hash);
+    if (!owned) throw new Error("PROJECT_NOT_FOUND");
+    const denied = await requireProjectAiAccess(request, owned, identity);
+    if (denied) return denied;
     await requestRevision(
       projectId,
       stageIndex,
@@ -96,8 +103,10 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "수정 결과를 생성하지 못했습니다.";
     const code = message.startsWith("OPENAI_") ? message : "REVISION_FAILED";
+    // 작업 기록·감사 로그도 고객 화면에 보이므로 내부 오류 원문 대신 고객용 문구를 남긴다
+    const publicMessage = publicErrorMessage(error, "수정 결과를 생성하지 못했습니다.");
     if (projectId && jobId && guestHash) {
-      await failGeneration(projectId, stageIndex, guestHash, jobId, code, message).catch(() => undefined);
+      await failGeneration(projectId, stageIndex, guestHash, jobId, code, publicMessage).catch(() => undefined);
       await recordServiceAudit({
         projectId,
         guestTokenHash: guestHash,
@@ -106,12 +115,12 @@ export async function POST(
         resourceType: "generation_job",
         resourceId: jobId,
         status: "error",
-        detail: message,
+        detail: publicMessage,
         metadata: { code, revision: true },
       }).catch(() => undefined);
     }
     return NextResponse.json(
-      { error: { code, message, retryable: true } },
+      { error: { code, message: publicMessage, retryable: true } },
       { status: 500 },
     );
   }

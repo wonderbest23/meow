@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { getProject, savePresentationDecks } from "../../../../../lib/project-repository";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 const slideOverrideSchema = z.object({
   title: z.string().trim().max(180).optional(),
@@ -47,7 +48,7 @@ export async function GET(
     return privateJson({
       error: {
         code: "PRESENTATION_LOAD_FAILED",
-        message: error instanceof Error ? error.message : "발표자료 수정본을 불러오지 못했습니다.",
+        message: publicErrorMessage(error, "발표자료 수정본을 불러오지 못했습니다."),
       },
     }, { status: 500 });
   }
@@ -68,7 +69,7 @@ export async function PUT(
     return privateJson({
       error: {
         code: message === "PROJECT_NOT_FOUND" ? message : "PRESENTATION_SAVE_FAILED",
-        message,
+        message: publicErrorMessage(error, "발표자료 수정본을 저장하지 못했습니다."),
       },
     }, { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 });
   }

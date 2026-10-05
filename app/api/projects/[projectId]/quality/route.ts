@@ -7,6 +7,7 @@ import {
 } from "../../../../../lib/project-repository";
 import { runQualityAudit } from "../../../../../lib/quality/engine";
 import { getLegalSnapshots } from "../../../../../lib/quality/legal-monitor";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 async function auditProject(projectId: string, guestTokenHash: string) {
   const project = await getProject(projectId, guestTokenHash);
@@ -30,7 +31,7 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "품질 감사를 실행하지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message: publicErrorMessage(error, "품질 감사를 실행하지 못했습니다.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }
@@ -49,7 +50,7 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "품질 감사를 저장하지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message: publicErrorMessage(error, "품질 감사를 저장하지 못했습니다.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }

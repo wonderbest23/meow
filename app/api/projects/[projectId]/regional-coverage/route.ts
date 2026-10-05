@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { getProject } from "../../../../../lib/project-repository";
 import { analyzeRegionalCoverage } from "../../../../../lib/regional-data/engine";
+import { publicErrorMessage } from "../../../../../lib/api-errors";
 
 export async function GET(
   _request: Request,
@@ -26,7 +27,7 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "지역 데이터 커버리지를 계산하지 못했습니다.";
     return NextResponse.json(
-      { error: { code: message, message } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "REGIONAL_COVERAGE_FAILED", message: publicErrorMessage(error, "지역 데이터 커버리지를 계산하지 못했습니다.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

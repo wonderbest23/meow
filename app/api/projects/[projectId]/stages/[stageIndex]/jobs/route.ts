@@ -10,6 +10,8 @@ import {
 import { recordServiceAudit } from "../../../../../../../lib/service-audit/repository";
 import { generateStageArtifact } from "../../../../../../../lib/stage-generator";
 import { resolveTextLLMConfig } from "../../../../../../../lib/llm/config";
+import { publicErrorMessage } from "../../../../../../../lib/api-errors";
+import { requireProjectAiAccess } from "../../../../../../../lib/project-ai-access";
 
 export async function GET(
   _request: Request,
@@ -24,14 +26,14 @@ export async function GET(
   } catch (error) {
     const message = error instanceof Error ? error.message : "생성 작업 상태를 불러오지 못했습니다.";
     return NextResponse.json(
-      { error: { code: "GENERATION_JOB_FAILED", message } },
+      { error: { code: "GENERATION_JOB_FAILED", message: publicErrorMessage(error, "생성 작업 상태를 불러오지 못했습니다.") } },
       { status: 400 },
     );
   }
 }
 
 export async function POST(
-  _request: Request,
+  request: Request,
   context: { params: Promise<{ projectId: string; stageIndex: string }> },
 ) {
   let projectId = "";
@@ -46,6 +48,9 @@ export async function POST(
     guestHash = identity.hash;
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
+    // 단계 결과물은 모델로 만든다 — 결제한 사업만, 사람 단위 호출 한도 안에서
+    const denied = await requireProjectAiAccess(request, project, identity);
+    if (denied) return denied;
     const openAIConfig = resolveTextLLMConfig(identity.hash);
     const model = openAIConfig?.model ?? "deterministic-fallback-v1";
     const job = await retryGenerationJob(
@@ -94,8 +99,10 @@ export async function POST(
     const code = message.startsWith("GENERATION_") || message.startsWith("OPENAI_")
       ? message
       : "GENERATION_RETRY_FAILED";
+    // 작업 기록·감사 로그도 고객 화면에 보이므로 내부 오류 원문 대신 고객용 문구를 남긴다
+    const publicMessage = publicErrorMessage(error, "결과물 재생성에 실패했습니다.");
     if (projectId && jobId && guestHash) {
-      await failGeneration(projectId, stageIndex, guestHash, jobId, code, message).catch(() => undefined);
+      await failGeneration(projectId, stageIndex, guestHash, jobId, code, publicMessage).catch(() => undefined);
       await recordServiceAudit({
         projectId,
         guestTokenHash: guestHash,
@@ -104,7 +111,7 @@ export async function POST(
         resourceType: "generation_job",
         resourceId: jobId,
         status: "error",
-        detail: message,
+        detail: publicMessage,
         metadata: { code, retried: true },
       }).catch(() => undefined);
     }
@@ -112,7 +119,7 @@ export async function POST(
       {
         error: {
           code: message.startsWith("GENERATION_") ? message : "GENERATION_RETRY_FAILED",
-          message,
+          message: publicMessage,
           retryable: message !== "GENERATION_RETRY_LIMIT",
         },
       },
