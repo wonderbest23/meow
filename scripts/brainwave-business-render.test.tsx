@@ -173,6 +173,7 @@ const NodeModule = require("node:module") as { _load: (name: string, ...rest: un
 const originalLoad = NodeModule._load;
 NodeModule._load = function (name: string, ...rest: unknown[]) {
   if (name === "next/font/google") return new Proxy({}, { get: () => () => ({ variable: "", className: "", style: {} }) });
+  if (name === "next/font/local") return { __esModule: true, default: () => ({ variable: "", className: "", style: {} }) };
   return originalLoad.call(this, name, ...rest);
 };
 const { PublicLandingClient } = require("../components/public-landing-client") as typeof import("../components/public-landing-client");

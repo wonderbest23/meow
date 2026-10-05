@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { firstSectorMatch } from "../sector-match";
 
 /*
  * 홈페이지 분위기(색 조합) — 디자인(배치)은 그대로 두고 색만 바꾼다.
@@ -45,11 +46,11 @@ const THEME_FOR_SECTOR: Array<{ test: RegExp; theme: LandingThemeId }> = [
   { test: /(카페|커피|베이커리|빵집|제과|디저트|브런치|반찬|도시락|한식|공방|꽃집|플라워)/, theme: "warm" },
   { test: /(병원|의원|치과|한의원|약국|재활|필라테스|요가|피트니스|헬스|운동|청소|세탁|방역)/, theme: "fresh" },
   { test: /(웨딩|호텔|펜션|숙박|리조트|세무|회계|법률|법무|노무)/, theme: "luxe" },
-  { test: /(미용|헤어|네일|뷰티|속눈썹|반려|애견|펫|키즈|아동)/, theme: "vivid" },
+  { test: /(미용|헤어|네일|뷰티|속눈썹|반려|애견|펫|강아지|고양이|냥이|키즈|아동)/, theme: "vivid" },
   { test: /(인테리어|리모델링|건축|사진|촬영|스튜디오|소프트웨어|플랫폼|앱|개발)/, theme: "modern" },
 ];
 
 export function themeForSector(text: string): LandingThemeId | undefined {
   const value = text.replace(/\s+/g, " ");
-  return THEME_FOR_SECTOR.find((entry) => entry.test.test(value))?.theme;
+  return firstSectorMatch(THEME_FOR_SECTOR, value, (entry) => entry.test)?.theme;
 }

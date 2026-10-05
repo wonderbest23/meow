@@ -31,6 +31,9 @@ const cases: Array<[string, string | undefined]> = [
   ["인테리어", "modern"], ["프로필 사진", "modern"], ["가게 장부 앱", "modern"], ["무역업", undefined],
 ];
 for (const [text, theme] of cases) assert.equal(themeForSector(text), theme, text);
+// 대표 상품 설명에 '카페'가 섞여도 그 사업 자신의 분위기(먼저 나온 업종 말)
+assert.equal(themeForSector(" 헤어온 미용실 카페 같은 분위기의 헤어 컷"), "vivid");
+assert.equal(themeForSector(" 냥이호텔 고양이 호텔"), "vivid");
 
 const coach = (industry: string, name: string, offer: string): CoachState => ({
   version: COACH_VERSION, revision: 1, stage: "startup", depth: "quick", ready: true, messages: [], suggestions: [],

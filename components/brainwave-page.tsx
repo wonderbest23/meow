@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from "react";
-import { Urbanist, Rubik } from "next/font/google";
+import localFont from "next/font/local";
 /*
  * 손님이 보는 홈페이지 한글 글꼴 — Pretendard(OFL). 글자 범위별로 92조각이라 쓰인 글자 조각만 받는다.
  * 예전에는 이름만 적혀 있고 파일을 싣지 않아, 안드로이드·윈도에서는 기기 기본 글꼴로 나와
@@ -22,8 +22,9 @@ import { sectionNameKo } from "../lib/landing/brainwave/section-names";
  * 칸이 고정이라 아래 글과 겹쳤다(상담 페이지 "Get a free consultancy…").
  * 빌드 때 내려받아 같이 배포하므로 보는 쪽에서 외부 요청이 없다.
  */
-const latin = Urbanist({ subsets: ["latin"], weight: ["400", "500", "600", "700", "800"], variable: "--bw-latin", display: "swap" });
-const rubik = Rubik({ subsets: ["latin"], weight: ["400", "500", "700"], variable: "--bw-rubik", display: "swap" });
+// 글꼴은 저장소에 둔다(Google Fonts 라틴 가변 글꼴, SIL OFL) — 빌드 중 Google 에서 받다가 끊기면 배포가 통째로 실패했다
+const latin = localFont({ src: "./fonts/urbanist-latin.woff2", weight: "400 800", variable: "--bw-latin", display: "swap" });
+const rubik = localFont({ src: "./fonts/rubik-latin.woff2", weight: "400 700", variable: "--bw-rubik", display: "swap" });
 
 /*
  * Brainwave.io 킷 페이지를 노드 그대로 그린다.

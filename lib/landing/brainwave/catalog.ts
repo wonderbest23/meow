@@ -1,3 +1,4 @@
+import { firstSectorMatch } from "../../sector-match";
 /*
  * Brainwave.io Landing Page UI Kit (Figma Community, Seju_ui_ux, CC BY 4.0)
  * 파일 키 AeGTjTTByOZTjZv7Pt8Ehd — 페이지 26장을 노드 그대로 옮겼다.
@@ -73,13 +74,13 @@ export const BRAINWAVE_DEFAULT_FOR_TEMPLATE: Record<string, string> = {
  */
 const DESIGN_FOR_SECTOR: Array<{ test: RegExp; page: string }> = [
   { test: /(병원|의원|치과|한의원|진료|의료|약국|물리치료|재활|검진|피부과|안과|소아과|정형외과|내과|요양)/, page: "0-2385" },
-  // 운동·미용 '스튜디오'는 동네 가게 디자인 그대로(메뉴·가격·영업시간이 먼저) — 아래 갤러리형보다 먼저 거른다
-  { test: /(필라테스|요가|헬스|피트니스|미용|헤어|네일|뷰티|속눈썹|왁싱)/, page: "" },
+  // 운동·미용 '스튜디오'·반려동물 '호텔'은 동네 가게 디자인 그대로(메뉴·가격·영업시간이 먼저) — 아래 갤러리형보다 먼저 거른다
+  { test: /(필라테스|요가|헬스|피트니스|미용|헤어|네일|뷰티|속눈썹|왁싱|반려|애견|펫|강아지|고양이|냥이)/, page: "" },
   // 사진이 곧 실력인 업종 — 작업 사례를 크게 보여 주는 갤러리형
   { test: /(인테리어|리모델링|부동산|공인중개|건축|시공|사진|스튜디오|촬영|웨딩|포토|숙박|펜션|호텔|게스트하우스|민박|글램핑|스테이)/, page: "0-421" },
 ];
 
 export function designPageForSector(text: string): string | undefined {
   const value = text.replace(/\s+/g, " ");
-  return DESIGN_FOR_SECTOR.find((entry) => entry.test.test(value))?.page || undefined;
+  return firstSectorMatch(DESIGN_FOR_SECTOR, value, (entry) => entry.test)?.page || undefined;
 }
