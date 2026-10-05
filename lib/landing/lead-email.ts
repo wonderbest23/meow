@@ -11,11 +11,16 @@ export function landingEmailConfiguration(env: Record<string, string | undefined
   return key && from && !/onboarding@resend\.dev/i.test(from) ? { key, from } : null;
 }
 
-export function buildLandingLeadEmail(from: string, to: string): LeadEmailPayload {
+/** 메일 속 '홈페이지·문의' 링크 — 사업이 여럿이면 그 사업의 홈페이지가 열리게 사업 번호를 붙이고, 접수된 문의 칸으로 내려간다 */
+export function homepageManageUrl(planId?: string | null): string {
+  return planId ? `https://oneulstart.com/plan/homepage?planId=${encodeURIComponent(planId)}#hk-leads` : "https://oneulstart.com/plan/homepage";
+}
+
+export function buildLandingLeadEmail(from: string, to: string, planId?: string | null): LeadEmailPayload {
   return {
     from, to,
     subject: "오늘창업 홈페이지에 새 문의가 접수됐습니다",
-    text: "홈페이지에 새 문의가 접수되어 안전하게 저장됐습니다.\n\n오늘창업에 로그인한 뒤 내 사업 홈페이지의 접수된 문의에서 확인해주세요.\nhttps://oneulstart.com/plan/homepage\n\n이 메일에는 문의자의 개인정보를 포함하지 않습니다.",
+    text: `홈페이지에 새 문의가 접수되어 안전하게 저장됐습니다.\n\n오늘창업에 로그인한 뒤 내 사업 홈페이지의 접수된 문의에서 확인해주세요.\n${homepageManageUrl(planId)}\n\n이 메일에는 문의자의 개인정보를 포함하지 않습니다.`,
   };
 }
 

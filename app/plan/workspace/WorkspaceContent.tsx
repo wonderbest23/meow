@@ -59,7 +59,7 @@ export function WorkspaceDocumentStatus({ complete, count, total, stale, onOpen,
 export function WorkspaceHomepageCare({ planId, status, publicPath }: { planId: string; status: HomepageStatus; publicPath: string | null }) {
   return <div className={styles.careBlock} data-workspace-homepage-care>
     <h2>홈페이지 관리</h2>
-    <p>{status === "published" ? "홈페이지가 공개되어 있어요. 글·사진·가격이 바뀌면 바로 고쳐 주세요. 문의는 알림 문자로 받아요." : status === "draft" ? "만들어 둔 홈페이지가 아직 공개 전이에요. 다듬어서 공개하면 문의를 받을 수 있어요." : status === "none" ? "아직 홈페이지가 없어요. 사업계획서 내용으로 초안을 바로 만들 수 있어요." : "홈페이지 상태를 확인하고 있어요."}</p>
+    <p>{status === "published" ? "홈페이지가 공개되어 있어요. 글·사진·가격이 바뀌면 바로 고쳐 주세요. 새 문의는 ‘접수된 문의’에 쌓이고, 번호를 등록하면 문자로도 알려 드려요." : status === "draft" ? "만들어 둔 홈페이지가 아직 공개 전이에요. 다듬어서 공개하면 문의를 받을 수 있어요." : status === "none" ? "아직 홈페이지가 없어요. 사업계획서 내용으로 초안을 바로 만들 수 있어요." : "홈페이지 상태를 확인하고 있어요."}</p>
     <div className={styles.careActions}>
       <Link className={styles.primary} href={homepageHref(planId)}>{status === "published" ? "홈페이지 고치기" : status === "draft" ? "홈페이지 다듬고 공개하기" : "홈페이지 만들기"}</Link>
       {publicPath && <a className={styles.secondary} href={publicPath} target="_blank" rel="noopener">공개된 홈페이지 보기</a>}

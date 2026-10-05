@@ -39,6 +39,9 @@ export default function MarketingKitPanel({ plan, onSaved }: { plan: Plan; onSav
       setSaved(next);
       const latest = loadState().plans.find(item => item.id === plan.id); if (latest) onSaved(latest);
       setMessage(await pushToServer() ? "홍보 키트를 만들어 저장했어요." : "이 기기에 저장했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해 주세요.");
+    } catch {
+      /* 연결이 끊기면 예전엔 아무 말 없이 멈췄다 */
+      setMessage("연결이 끊겨 홍보 키트를 만들지 못했어요. 잠시 후 다시 눌러 주세요.");
     } finally { setBusy(false); }
   }
 
@@ -55,7 +58,7 @@ export default function MarketingKitPanel({ plan, onSaved }: { plan: Plan; onSav
       <div><strong>홍보 키트 · SNS 4주 운영표</strong><p>계획서의 상품·고객·채널로 지도 소개, 시작 안내 문자, 전단지 문구, 첫 게시물 3개, 리뷰 요청 문구, 4주 SNS 운영표를 한 번에 만들어요.</p></div>
     </div>
     <button type="button" className={kit ? styles.secondary : styles.primary} disabled={busy} onClick={() => void generate()}>{busy ? "만드는 중… (1분 안팎)" : kit ? <><RefreshCw size={16} aria-hidden="true" />다시 만들기</> : "홍보 키트 만들기"}</button>
-    {needsPayment && <Link className={styles.textLink} href={`/plan/pay?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}`}>결제하고 홍보 키트 열기</Link>}
+    {needsPayment && <Link className={styles.textLink} href={`/plan/pay?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=plan`}>사업계획서 결제하고 홍보 키트 열기</Link>}
     {message && <p role="status">{message}</p>}
     {kit && <>
       <small>만든 날 {new Date(saved!.generatedAt).toLocaleDateString("ko-KR")} · [가격]·[주소]처럼 대괄호는 직접 채워 주세요. 후기·실적은 넣지 않았어요.</small>
