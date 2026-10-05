@@ -53,6 +53,12 @@ summary = summarizeDomainOrders([
 ], "plan_a", now);
 assert.equal(summary.purchase?.orderId, "o-new", "가장 최근 주문");
 assert.equal(summary.expiresAt, "2027-09-01T00:00:00.000Z");
+// 만료 30일 전에 갱신해도 남은 30일은 사라지지 않는다 — 새 1년은 기존 만료일부터
+summary = summarizeDomainOrders([
+  row(DOMAIN_PRODUCT_NAME, "plan_a", "2025-10-31T00:00:00Z"),
+  row(DOMAIN_PRODUCT_NAME, "plan_a", "2026-10-01T00:00:00Z"),
+], "plan_a", now);
+assert.equal(summary.expiresAt, new Date(Date.parse("2025-10-31T00:00:00Z") + 2 * 365 * 86_400_000).toISOString(), "조기 갱신은 이어 붙인다");
 summary = summarizeDomainOrders([row(DOMAIN_PURCHASE_PRODUCT_NAME, "plan_a", "2025-01-01T00:00:00Z", { domain: "mybrand.com", status: "registered" })], "plan_a", now);
 assert.equal(summary.active, false, "1년 지나면 만료(갱신 안내)");
 assert.equal(summary.purchase?.domain, "mybrand.com", "만료돼도 어떤 주소였는지는 안다(갱신 링크)");

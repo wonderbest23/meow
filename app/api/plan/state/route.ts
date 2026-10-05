@@ -4,6 +4,7 @@ import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { readPlanQuarantine } from "../../../../lib/plan-builder/quarantine.server";
 import { planAccountLinkingEnabled, planOwnerKey } from "../../../../lib/plan-builder/account-linking";
 import { loadPlanState, savePlanState, deletePlanById, normalizeState, preserveServerCoachRecords, type ServerPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { deletePlanHomepage } from "../../../../lib/plan-builder/plan-homepage-cleanup";
 
 export const runtime = "nodejs";
 
@@ -76,6 +77,8 @@ export async function DELETE(request: Request) {
   if (!planId) return NextResponse.json({ error: "planId required" }, { status: 400 });
   try {
     await deletePlanById(identity.hash, planId);
+    // 그 사업으로 만든 홈페이지(공개 사이트·문의·도메인 연결)도 함께 — 화면이 '함께 삭제'를 약속한다
+    await deletePlanHomepage(identity.hash, planId).catch(error => console.error("[plan-delete] homepage cleanup failed", planId, error));
   } catch (error) {
     if (error instanceof Error && error.message === "PLAN_OWNER_CHANGED") return ownerChangedResponse();
     if (error instanceof Error && error.message === "PLAN_QUARANTINED") return NextResponse.json({ error: { code: "PLAN_QUARANTINED", message: "귀속 확인 중인 자료는 변경하거나 삭제할 수 없어요." } }, { status: 409 });

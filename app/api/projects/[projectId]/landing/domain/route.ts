@@ -139,11 +139,10 @@ export async function DELETE(
   try {
     const { projectId } = await context.params;
     const identity = await requireGuestIdentity();
-    const reason = await checkLandingEditAccess(projectId, identity.hash, identity.userId, identity.email);
-    if (reason !== "ok") {
-      const { status, body } = landingEditErrorResponse(reason);
-      return NextResponse.json(body, { status });
-    }
+    /*
+     * 연결 해제는 결제 확인 없이 — 본인 사이트이기만 하면 된다(getLandingForProject 가 소유자로 거른다).
+     * 예전엔 홈페이지 결제를 요구해, 환불한 사람이 자기 도메인 연결을 스스로 끊을 수 없었다.
+     */
     const site = await getLandingForProject(projectId, identity.hash);
     if (!site) throw new Error("LANDING_NOT_FOUND");
     if (site.customDomain && cloudflareSaasConfigured()) {

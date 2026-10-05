@@ -4,6 +4,7 @@ import { cancelNicepayPaymentDetailed } from "./nicepay-client";
 import { nicepayEnvironment } from "./nicepay-environment";
 import { getPaymentOrder } from "./repository";
 import { getRefundRequest, type RefundRequest } from "./refund-requests";
+import { closeRefundedProduct, orderProduct } from "./refund-effects";
 
 /*
  * 관리자 환불 처리 — '환불 완료'가 기록만 바꾸던 것을 실제 환급까지 잇는다.
@@ -12,7 +13,8 @@ import { getRefundRequest, type RefundRequest } from "./refund-requests";
  *  1. 요청을 received → processing 으로 '잡는다'(조건부 갱신). 두 탭·두 관리자가 동시에 눌러도 한 번만 통과한다.
  *  2. 카드 주문이면 나이스페이로 취소(전액 또는 입력한 금액만). 실패하면 요청을 received 로 되돌리고 사유를 그대로 보여 준다.
  *     옛 계좌이체 주문은 카드 취소가 없으니, 관리자가 계좌로 직접 돌려준 뒤 '계좌로 환급 완료'로만 기록할 수 있다.
- *  3. 주문을 refunded(전액) / partial_canceled(일부)로 바꾼다 — 이용 권한은 done 주문만 보므로 이 순간 그 상품이 닫힌다.
+ *  3. 주문을 refunded(전액) / partial_canceled(일부)로 바꾼다 — 이용 권한은 done 주문만 보므로 결제 확인이 닫히고,
+ *     이미 만들어진 것(다시 생성 추가분·공개 홈페이지·연결한 도메인)은 refund-effects.ts 가 닫는다.
  *  4. 요청을 done 으로.
  * 2가 성공한 뒤 3·4에서 실패해도 돈은 이미 돌아갔다. 요청을 received 로 되돌리면 다시 눌러 이중 취소가 되므로,
  * 그때는 done 으로 두고 메모에 '확인 필요'를 남긴다.
@@ -90,12 +92,19 @@ export async function completeRefundRequest(id: string, input: { amount: number;
   // 3·4. 주문 닫기와 요청 완료 — 여기서 실패해도 되돌리지 않는다(위 설명)
   const how = card ? (full ? "카드 전액 취소" : "카드 부분 취소") : "계좌 환급";
   const summary = `${won(amount)} ${how}${input.note.trim() ? ` · ${input.note.trim()}` : ""}`;
+  /*
+   * 묶음(계획서+홈페이지)을 일부만 돌려주면 홈페이지만 닫고 계획서는 남긴다(운영 정책).
+   * 권한은 done 주문만 보므로 주문은 done 으로 두고 '홈페이지 환불됨' 표시만 단다(paidHomepagePlanIds 가 거른다).
+   */
+  const bundlePartial = orderProduct(order) === "bundle" && !full;
   let warning = "";
   try {
     const supabase = getServerSupabase()!;
     const { error } = await supabase
       .from("payment_orders")
-      .update({ status: full ? "refunded" : "partial_canceled", admin_note: summary })
+      .update(bundlePartial
+        ? { admin_note: summary, opportunity: { ...order.opportunity, homepageRefunded: true } }
+        : { status: full ? "refunded" : "partial_canceled", admin_note: summary })
       .eq("order_id", order.orderId)
       .eq("status", "done");
     if (error) throw error;
@@ -103,6 +112,9 @@ export async function completeRefundRequest(id: string, input: { amount: number;
   } catch {
     warning = " (주문 상태 자동 변경 실패 — 결제 주문을 직접 확인해 주세요)";
   }
+  // 이미 만들어진 것 닫기 — 다시 생성 추가분, 공개 홈페이지, 연결한 도메인
+  const effects = await closeRefundedProduct(order, { homepageOnly: bundlePartial });
+  if (effects) warning += ` (${effects})`;
   const done = await setRequestStatus(id, "processing", "done", summary + warning);
   if (!done) throw new RefundError(`환급은 끝났지만 요청 기록을 바꾸지 못했습니다. 새로고침 후 확인해 주세요.${warning}`, 500);
   return done;

@@ -1,6 +1,7 @@
 import { createServerAuthClient } from "./account-auth";
 import { hashIdentityToken, userProjectToken } from "./identity-tokens";
 import { getServerSupabase } from "./persistence";
+import { disconnectProjectDomains } from "./plan-builder/plan-homepage-cleanup";
 
 /**
  * 회원 탈퇴 — 개인정보처리방침의 기준을 그대로 따른다.
@@ -28,7 +29,9 @@ export async function deleteAccount(userId: string): Promise<AccountDeleteResult
     const plans = await supabase.from("plan_states").delete({ count: "exact" }).eq("owner_hash", ownerHash);
     result.deleted.plans = plans.count ?? 0;
 
-    // 2) 프로젝트(옛 서비스 산출물 포함)
+    // 2) 프로젝트(옛 서비스 산출물 포함) — 연결한 내 도메인은 Cloudflare 쪽부터 끊는다(행을 지우면 주소를 모른다)
+    const owned = await supabase.from("projects").select("id").eq("owner_id", userId);
+    await disconnectProjectDomains((owned.data ?? []).map((row) => (row as { id: string }).id)).catch((error) => console.error("[account-delete] domain disconnect failed", error));
     const projects = await supabase.from("projects").delete({ count: "exact" }).eq("owner_id", userId);
     result.deleted.projects = projects.count ?? 0;
 

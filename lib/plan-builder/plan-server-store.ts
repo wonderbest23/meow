@@ -155,6 +155,11 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
       const newest = incomingRevision < previousRevision ? prev : incomingRevision > previousRevision ? p : (p.updatedAt || "") >= (prev.updatedAt || "") ? p : prev;
       const sections = { ...prev.sections };
       for (const [key, value] of Object.entries(p.sections)) {
+        /*
+         * 서버에 본문이 있는 섹션을 빈 본문으로 덮지 않는다. '다시 생성' 횟수는 서버에 저장된 본문이
+         * 있는지로 세는데(app/api/plan/generate), 화면에서 빈 본문을 보내 지우면 횟수 확인을 건너뛰었다.
+         */
+        if (sections[key]?.markdown?.trim() && !value?.markdown?.trim()) continue;
         if (!sections[key] || value.generatedAt >= sections[key].generatedAt) sections[key] = value;
       }
       const previousJob = prev.answers.__coach_job;
@@ -169,7 +174,12 @@ function mergeStates(stored: ServerPlanState, incoming: ServerPlanState): Server
       const previousDeck = prev?.answers.__deck_job;
       const incomingDeck = p.answers.__deck_job;
       const deck = !incomingDeck ? previousDeck : !previousDeck ? incomingDeck : String(incomingDeck.updatedAt ?? "") >= String(previousDeck.updatedAt ?? "") ? incomingDeck : previousDeck;
-      byId.set(p.id, { ...p, answers: { ...p.answers, ...(deck ? { __deck_job: deck } : {}) } });
+      // 위와 같은 이유로, 서버에 본문이 있던 섹션은 빠지거나 빈 본문으로 와도 남긴다
+      const sections = { ...p.sections };
+      for (const [key, value] of Object.entries(prev?.sections ?? {})) {
+        if (value?.markdown?.trim() && !sections[key]?.markdown?.trim()) sections[key] = value;
+      }
+      byId.set(p.id, { ...p, answers: { ...p.answers, ...(deck ? { __deck_job: deck } : {}) }, sections });
     }
     // Coach/document workers can finish with an older snapshot of operating history.
     const previousOperations = prev?.answers[OPERATING_KEY];
