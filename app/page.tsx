@@ -51,6 +51,7 @@ import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { SiteHeader, SiteLogo } from "../components/site-header";
 import { HomeOpening } from "../components/home-opening";
 import { HomeServiceOverview } from "../components/home-service-overview";
+import { HomeCopyChrome } from "../components/home-copy-chrome";
 import homeTypography from "../components/home-typography.module.css";
 import homeCinematic from "../components/home-cinematic-hero.module.css";
 import { needsPhysicalLocationAnalysis } from "../lib/business/domain";
@@ -311,6 +312,29 @@ function Home({
       .catch(() => {});
   }, []);
   /*
+   * 어드민 편집 미리보기(/admin/homepage 의 iframe, ?copyEdit=1) — 저장 전 초안을 받아 바로 그리고,
+   * 섹션 테두리(HomeCopyChrome)를 얹어 누르면 어드민 쪽 입력칸으로 간다.
+   * 예전엔 이 연결이 빠져 있어 미리보기가 저장 전에는 바뀌지 않고 눌러도 아무 일이 없었다.
+   */
+  const [copyEdit, setCopyEdit] = useState(false);
+  const [copySelected, setCopySelected] = useState<string | null>(null);
+  useEffect(() => {
+    if (window.parent === window || new URL(window.location.href).searchParams.get("copyEdit") !== "1") return;
+    setCopyEdit(true);
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || event.source !== window.parent) return;
+      const data = event.data as { type?: string; id?: string; texts?: Record<string, string>; hidden?: string[] } | null;
+      if (data?.type === "sc-draft") setSiteCopy({ texts: data.texts ?? {}, hidden: data.hidden ?? [] });
+      if (data?.type === "sc-selected" && data.id) {
+        setCopySelected(data.id);
+        document.querySelector(`[data-sc-section="${data.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    };
+    window.addEventListener("message", onMessage);
+    window.parent.postMessage({ type: "sc-ready" }, window.location.origin);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+  /*
    * 상단 서리(점진 블러): 맨 위에서는 헤더가 투명하고, 내려가면 헤더 뒤로 겹친 띠 4장이 뒤 배경을 흐리게 한다.
    * 세기는 스크롤 0~120px 구간에서 0→1로 오르는 --frost 하나로 정한다(띠의 흐림·색·투명도가 모두 이 값을 따른다).
    */
@@ -344,11 +368,13 @@ function Home({
       </div>
       <HomeOpening
         title={sc("chatHome.title", "오늘창업")}
-        subtitle={scBr("chatHome.subtitle", "아이디어만 있어도 이미 운영 중이어도 괜찮아요\n대화로 정리하고 내 사업에 맞는 계획으로 만드세요")}
+        subtitle={siteCopy.texts["chatHome.subtitle"] ? scBr("chatHome.subtitle", "") : undefined}
+        hidden={siteCopy.hidden}
         onStart={openConsult}
       />
 
       <HomeServiceOverview onStart={onStart} />
+      {copyEdit ? <HomeCopyChrome hidden={siteCopy.hidden} selected={copySelected} /> : null}
 
       {/*
         푸터 — 가는 선으로 나눈 세 구획.

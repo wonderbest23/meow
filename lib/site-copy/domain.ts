@@ -21,7 +21,8 @@ export type SiteCopyField = {
 
 export const SITE_COPY_FIELDS: SiteCopyField[] = [
   { id: "chatHome.title", group: "첫 화면", label: "큰 제목", def: "오늘창업" },
-  { id: "chatHome.subtitle", group: "첫 화면", label: "설명", def: "아이디어만 있어도 이미 운영 중이어도 괜찮아요\n대화로 정리하고 내 사업에 맞는 계획으로 만드세요", multiline: true },
+  /* 제목 아래 굵은 두 줄(h2). 예전 기본값은 화면에 없는 문장이라 고쳐도 아무 데도 안 나왔다 */
+  { id: "chatHome.subtitle", group: "첫 화면", label: "제목 아래 문구", def: "가능성은 가볍게 묻고\n시작은 구체적으로", multiline: true },
 ];
 
 /** 이용 조건과 기능 안내는 구현에 맞춰 코드에서 관리한다. */
