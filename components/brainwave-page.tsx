@@ -14,6 +14,7 @@ import { BUSINESS_NODE_STYLES, restorableSections } from "../lib/landing/brainwa
 import { renderBrainwaveMobile } from "./brainwave-mobile";
 import { BrainwaveBusinessMobile } from "./brainwave-business-mobile";
 import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
+import { sectionNameKo } from "../lib/landing/brainwave/section-names";
 
 /*
  * 킷 글꼴 Gilroy 는 유료라 못 싣는다. 폭·굵기가 가장 가까운 무료 글꼴 Urbanist 를
@@ -546,7 +547,7 @@ export function BrainwaveStage({
     const sections = orderedSections(sectionBands(page), overrides.hidden, overrides.order).map(section => section.id);
     return <div ref={ref} className={`bw-stage bw-business-flow ${latin.variable} ${rubik.variable} ${className ?? ""}`} style={{ maxWidth }}>
       <BrainwaveBusinessMobile pageId={page.id} overrides={overrides} hidden={expandHidden(page.root, overrides.hidden)} sectionOrder={sections} onPick={onPick} desktop />
-      {onPick ? collapsed.strips.filter(strip => restorableSections(page.id).includes(strip.id)).map(strip => <button key={strip.id} type="button" onClick={event => { event.stopPropagation(); onPick("restore", strip.id, event.currentTarget); }}>숨긴 섹션 되살리기</button>) : null}
+      {onPick ? collapsed.strips.filter(strip => restorableSections(page.id).includes(strip.id)).map(strip => <button key={strip.id} type="button" onClick={event => { event.stopPropagation(); onPick("restore", strip.id, event.currentTarget); }}>숨긴 구역 되살리기</button>) : null}
     </div>;
   }
   /*
@@ -587,7 +588,7 @@ export function BrainwaveStage({
               className="bw-restore-strip"
               style={{ top: strip.y }}
               onClick={(e) => { e.stopPropagation(); onPick("restore", strip.id, e.currentTarget); }}
-            >+ 숨긴 섹션 되살리기{strip.name ? ` — ${strip.name}` : ""}</button>
+            >+ 숨긴 구역 되살리기{strip.name ? ` — ${sectionNameKo(strip.name)}` : ""}</button>
           )) : null}
         </div>
       </div>
