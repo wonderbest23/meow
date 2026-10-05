@@ -124,8 +124,6 @@ export function SupportChatWidget() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messageListRef = useRef<HTMLDivElement>(null);
   const widgetRef = useRef<HTMLDivElement>(null);
-  /* 홈 히어로 검색창에서 온 질문을 리스너([] deps)가 최신 함수로 부를 수 있게 */
-  const askConsultRef = useRef<(m: string) => Promise<void>>(async () => {});
 
   /*
    * 입력창 예시 돌리기.
@@ -304,33 +302,6 @@ export function SupportChatWidget() {
     document.addEventListener("pointerdown", closeOnOutside);
     return () => document.removeEventListener("pointerdown", closeOnOutside);
   }, [open]);
-
-  useEffect(() => {
-    const openWithMessage = (event: Event) => {
-      const detail = (event as CustomEvent<{ message?: string; mode?: "consult" | "support" }>).detail;
-      setOpen(true);
-      setTab("chat");
-      /*
-       * 어느 창으로 열지 부르는 쪽이 정한다.
-       * 이 창은 한 번 문의 쪽으로 넘어가면 그대로 있어서, 홈에서 '창업 상담'을
-       * 눌렀는데 지난번에 보던 문의 화면이 나오는 일이 있었다.
-       */
-      setMode(detail?.mode ?? "support");
-      const text = detail?.message?.trim();
-      if (!text) return;
-      if (detail?.mode === "consult") {
-        /* 히어로 검색창에서 친 질문 — 열리자마자 바로 보낸다. 다시 치게 하지 않는다. */
-        void askConsultRef.current(text);
-      } else {
-        setShowQuickMenu(false);
-        setOperatorMode(true);
-        setMessage(text);
-        window.setTimeout(() => textareaRef.current?.focus(), 80);
-      }
-    };
-    window.addEventListener("venture:open-support-chat", openWithMessage);
-    return () => window.removeEventListener("venture:open-support-chat", openWithMessage);
-  }, []);
 
   const appendFaqAnswer = (faq: SupportFaqItem, customerText = faq.question) => {
     const now = Date.now();
@@ -515,7 +486,6 @@ export function SupportChatWidget() {
       setConsultThinking(false);
     }
   };
-  askConsultRef.current = askConsult;
 
   const askSupportAssistant = async (nextMessage: string) => {
     const customerCreatedAt = new Date().toISOString();

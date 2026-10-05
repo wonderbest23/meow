@@ -177,7 +177,9 @@ export default function AdminSupportPage() {
         <aside className="admin-conversation-list">
           <header><strong>문의 목록</strong><em>{conversations.filter((item) => item.status === "open").length}건 진행 중</em></header>
           <div>
-            {conversations.length === 0 && <p className="admin-empty-list"><MessageCircle /> 아직 접수된 문의가 없습니다.</p>}
+            {/* 답장 폼은 대화를 고른 뒤에만 보인다 — 목록 로딩 실패는 여기서 보여줘야 빈 화면으로 묻히지 않는다 */}
+            {error && !chat.conversation && <p className="admin-login-error" role="alert">{error}</p>}
+            {conversations.length === 0 && !error && <p className="admin-empty-list"><MessageCircle /> 아직 접수된 문의가 없습니다.</p>}
             {conversations.map((item) => (
               <button type="button" key={item.id} className={selectedId === item.id ? "selected" : ""} onClick={() => setSelectedId(item.id)}>
                 <span><strong>{shortCustomerName(item.id)}</strong><time>{dateLabel(item.updatedAt)}</time></span>

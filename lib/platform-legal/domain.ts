@@ -320,11 +320,35 @@ const LEGAL_RETENTION_ITEMS = [
 ];
 
 /** 국외 이전 — 개인정보 보호법 제28조의8 고지 항목(이전받는 자·연락처, 국가, 항목, 시기·방법, 목적·보유기간, 거부 방법) */
-function overseasTransferItems(settings: PlatformLegalSettings) {
-  const infraCountries = shown(settings.infrastructureCountries, "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력");
+/*
+ * 관리자 화면의 '기반 서비스 이전받는 자·처리 내용'이 비어 있거나 기본값 그대로면 업체별로 연락처·항목을
+ * 나눠 적은 기존 고지 문구를 쓴다. 저장된 설정 대부분이 기본값을 그대로 담고 있으므로, 기본값과 같을 때도
+ * '수정하지 않음'으로 봐야 관리자가 직접 고치기 전까지 공개 방침 문구가 바뀌지 않는다.
+ */
+function editedInfrastructureText(value: string, defaultValue: string) {
+  const trimmed = value.trim();
+  return trimmed && trimmed !== defaultValue.trim() ? trimmed : null;
+}
+
+function infrastructureTransferItems(settings: PlatformLegalSettings, infraCountries: string) {
+  const recipients = editedInfrastructureText(settings.infrastructureRecipients, defaultPlatformLegalSettings.infrastructureRecipients);
+  const details = editedInfrastructureText(settings.infrastructureProcessingDetails, defaultPlatformLegalSettings.infrastructureProcessingDetails);
+  if (recipients || details) {
+    // 한쪽만 고쳤으면 다른 쪽은 기본 문구로 채워 이전받는 자·처리 내용이 빠지지 않게 한다
+    return [
+      `${recipients ?? defaultPlatformLegalSettings.infrastructureRecipients} / 국가: ${infraCountries} / 항목: 계정 정보, 프로젝트 입력, 주문·결제 기록, 접속 기록, IP 주소, 기기·브라우저 정보, 요청 내용 / 시기·방법: 가입·서비스 이용 시 암호화된 통신망으로 전송·저장 / 처리 내용: ${details ?? defaultPlatformLegalSettings.infrastructureProcessingDetails} / 보유: 이 방침의 보유 기간과 같으며, 접속 기록은 각 사 기본 정책에 따른 로그 보관 기간`,
+    ];
+  }
   return [
     `Supabase, Inc.(privacy@supabase.com) / 국가: ${infraCountries} / 항목: 계정 정보, 프로젝트 입력, 주문·결제 기록 / 시기·방법: 가입·이용 시 암호화된 통신망으로 저장 / 목적: 로그인·계정 복구, 데이터베이스 운영 / 보유: 이 방침의 보유 기간과 같음`,
     "Cloudflare, Inc.(privacyquestions@cloudflare.com) / 국가: 미국 등 이용자와 가까운 전 세계 Cloudflare 데이터센터 / 항목: 접속 기록, IP 주소, 기기·브라우저 정보, 요청 내용 / 시기·방법: 서비스 접속 시 암호화된 통신망으로 전송 / 목적: 호스팅, 콘텐츠 전송, 보안과 오류 기록 / 보유: Cloudflare 기본 정책에 따른 로그 보관 기간",
+  ];
+}
+
+function overseasTransferItems(settings: PlatformLegalSettings) {
+  const infraCountries = shown(settings.infrastructureCountries, "실제 Supabase 프로젝트와 Cloudflare 계약의 처리 지역 확인 후 입력");
+  return [
+    ...infrastructureTransferItems(settings, infraCountries),
     "Resend, Inc.(support@resend.com) / 국가: 미국 / 항목: 받는 사람 이메일, 메일 본문(결제·서비스 안내, 홈페이지 문의 알림) / 시기·방법: 메일 발송 시 암호화된 통신망으로 전송 / 목적: 서비스 이메일 발송 / 보유: 발송 기록 확인에 필요한 기간",
     `Anthropic·OpenAI(인공지능 생성): 국가 ${shown(settings.overseasCountries, "운영 중인 Anthropic·OpenAI 계정의 실제 처리 지역 확인 후 입력")} / 항목·시기·보관 기준과 연락처는 ‘인공지능 및 국외 처리 안내’에서 확인할 수 있습니다.`,
     "국외 이전을 원하지 않으면 회원 탈퇴나 해당 기능 미사용으로 이전을 거부할 수 있습니다. 다만 Supabase·Cloudflare는 서비스 운영에 꼭 필요하므로 거부하면 서비스를 이용할 수 없고, 인공지능 생성을 거부하면 맞춤 문장·이미지 생성이 제한됩니다.",

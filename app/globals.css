@@ -4339,17 +4339,6 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .grant-matcher-panel > footer button { min-height: 46px; justify-content: center; }
 }
 
-.payment-result-page { min-height: 100vh; padding: 24px; background: radial-gradient(circle at top, #eef4ff, #f7f8fb 50%); display: grid; place-items: center; color: #1b2a47; }
-.payment-result-page > section { width: min(520px, 100%); padding: 42px 34px; border: 1px solid #dce3ef; border-radius: 22px; background: white; box-shadow: 0 22px 70px #253a6814; text-align: center; }
-.payment-result-page > section > svg { width: 46px; height: 46px; color: #345daf; }
-.payment-result-page > section > svg.error { color: #b83d50; }
-.payment-result-page small { display: block; margin-top: 18px; font-size: 12px; font-weight: 900; letter-spacing: .09em; color: #65779a; }
-.payment-result-page h1 { margin: 8px 0 10px; font-size: 26px; line-height: 1.35; }
-.payment-result-page p { margin: 0 auto; max-width: 420px; color: #68748a; font-size: 15px; line-height: 1.65; }
-.payment-result-page em { display: block; margin-top: 13px; color: #8a5260; font-size: 12px; font-style: normal; }
-.payment-result-page button, .payment-result-page a { min-height: 46px; margin: 20px 4px 0; border: 1px solid #ccd6e7; border-radius: 10px; padding: 0 16px; background: white; color: #294a88; display: inline-flex; align-items: center; justify-content: center; gap: 7px; font-size: 14px; font-weight: 900; text-decoration: none; }
-.payment-result-page button { border-color: #294a88; background: #294a88; color: white; }
-.payment-result-page button svg, .payment-result-page a svg { width: 17px; }
 
 @media (max-width: 640px) {
   .payment-result-page { padding: 16px; }

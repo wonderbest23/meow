@@ -132,7 +132,10 @@ export async function retryLandingLeadNotification(projectId: string, ownerHash:
   await processLandingLeadNotification(leadId, true);
 }
 
-/** Manually invoked operator drain. No scheduled handler is installed. */
+/**
+ * Manual operator drain. 정기 재시도는 cloudflare-worker.ts의 5분 cron(scheduled → sweepLeadNotifications →
+ * sweepDueLeadNotifications)이 맡는다. 예전 /api/admin/landing-notifications 수동 호출 경로는 호출처가 없어 삭제했다.
+ */
 export async function drainLandingLeadNotifications(limit = 20) {
   const db = getServerSupabase();
   if (!db) return { checked: 0, failed: 0 };

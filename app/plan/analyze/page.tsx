@@ -1,8 +1,6 @@
-import AnalyzeFlow from "./AnalyzeFlow";
+import LegacyPlanRedirect from "../LegacyPlanRedirect";
 
-export const metadata = { title: "AI와 사업 정리하기 — 오늘창업" };
-
-// /plan/analyze — 사업 설명 → AI 분석 → 이해 확인 → 꼭 필요한 질문만 (기존 위저드 앞단의 빠른 길)
-export default function PlanAnalyzePage() {
-  return <AnalyzeFlow />;
+// 예전 흐름 주소 — 지금 흐름(사업계획서)으로 보낸다
+export default function Page() {
+  return <LegacyPlanRedirect />;
 }

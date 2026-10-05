@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 import { paymentsEnabled } from "../../../../lib/payments/config";
 import { manualTransferPaymentConfigured } from "../../../../lib/payments/manual-transfer";
 import {
@@ -36,7 +37,9 @@ export async function GET() {
     const settings = await getPlatformLegalSettings();
     return privateJson({ settings, readiness: readiness(settings) });
   } catch (error) {
-    return privateJson({ error: { code: "LEGAL_SETTINGS_LOAD_FAILED", message: error instanceof Error ? error.message : "운영 설정을 불러오지 못했습니다." } }, { status: 400 });
+    // DB 오류 원문은 관리자 화면에 그대로 노출하지 않는다 — 로그로만 남긴다
+    console.error("[admin/legal] load failed", error);
+    return privateJson({ error: { code: "LEGAL_SETTINGS_LOAD_FAILED", message: "운영 설정을 불러오지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
   }
 }
 
@@ -47,6 +50,11 @@ export async function PUT(request: Request) {
     const settings = await savePlatformLegalSettings(platformLegalSettingsSchema.parse(await request.json()));
     return privateJson({ settings, readiness: readiness(settings) });
   } catch (error) {
-    return privateJson({ error: { code: "LEGAL_SETTINGS_SAVE_FAILED", message: error instanceof Error ? error.message : "운영 설정을 저장하지 못했습니다." } }, { status: 400 });
+    // zod·DB 오류 원문 대신 고정 문구를 보여주고, 원문은 로그로만 남긴다
+    console.error("[admin/legal] save failed", error);
+    if (error instanceof z.ZodError || error instanceof SyntaxError) {
+      return privateJson({ error: { code: "LEGAL_SETTINGS_INVALID", message: "입력값을 확인해 주세요." } }, { status: 400 });
+    }
+    return privateJson({ error: { code: "LEGAL_SETTINGS_SAVE_FAILED", message: "운영 설정을 저장하지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
   }
 }

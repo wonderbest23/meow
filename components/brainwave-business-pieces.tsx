@@ -1,7 +1,7 @@
 "use client";
 
 import { ArrowRight, ImagePlus } from "lucide-react";
-import { useEffect, useRef, type CSSProperties } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
 import { isPlaceholderPhoto } from "../lib/landing/domain";
@@ -112,11 +112,19 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
    * placeholder — 편집 화면에서만, 빈 칸을 흐린 안내 글로 보여 줘 눌러서 채우게 한다
    * (의료진처럼 AI 가 채울 수 없고 사장님이 직접 적는 칸). 공개 화면에는 나오지 않는다.
    */
+  /*
+   * 편집기 '글씨 크기'(배율 0.7~1.5) — 예전엔 이 디자인들(고를 수 있는 5개 전부)이 배율을 읽지 않아
+   * 슬라이더를 움직여도 글씨가 그대로였다. 안쪽 span 을 em 으로 키우면 그 글 자리의 원래 크기를 기준으로 커진다.
+   */
+  const scaled = (id: string, content: ReactNode) => {
+    const scale = overrides.sizes?.[id];
+    return scale && scale !== 1 ? <span style={{ fontSize: `${scale}em` }}>{content}</span> : content;
+  };
   const Text = ({ id, as: Element = "p", className, reveal, placeholder }: { id: string; as?: Tag; className?: string; reveal?: Reveal; placeholder?: string }) => {
     const value = text(id);
     const hint = !value && onPick && placeholder && !hidden.has(id);
     if (!value && !hint) return null;
-    return <Element className={className} style={hint ? { opacity: .45, fontStyle: "italic" } : undefined} {...revealProps(reveal)} data-bw-text={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("text", id, event.currentTarget as HTMLElement); } : undefined}>{value || placeholder}</Element>;
+    return <Element className={className} style={hint ? { opacity: .45, fontStyle: "italic" } : undefined} {...revealProps(reveal)} data-bw-text={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("text", id, event.currentTarget as HTMLElement); } : undefined}>{scaled(id, value || placeholder)}</Element>;
   };
   const Button = ({ buttonId, textId, className, reveal }: { buttonId: string; textId: string; className?: string; reveal?: Reveal }) => {
     const label = text(textId);
@@ -125,7 +133,7 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
       event.stopPropagation();
       if (onPick) onPick("button", buttonId, event.currentTarget);
       else runBrainwaveButton(overrides.links, buttonId);
-    }}><span>{label}</span><ArrowRight size={18} aria-hidden /></button>;
+    }}><span>{scaled(textId, label)}</span><ArrowRight size={18} aria-hidden /></button>;
   };
   const Photo = ({ id, url, className, kenburns }: { id: string; url: string; className?: string; kenburns?: boolean }) => (
     // eslint-disable-next-line @next/next/no-img-element
