@@ -288,7 +288,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             </button>
           </div>
           {googleUnavailable && <p className={styles.note}>구글 연결이 지연돼요. 이메일이나 카카오로 로그인해 주세요.</p>}
-          {mode === "register" && <p className={styles.note}>SNS로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.</p>}
+          {/* 로그인 탭에서도 보인다 — 처음 쓰는 SNS 계정은 로그인 버튼으로 바로 가입된다 */}
+          <p className={styles.note}>SNS로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.</p>
         </section>}
         <footer className={styles.footer}><Link href="/terms" target="_blank">이용약관</Link><Link href="/privacy" target="_blank">개인정보처리방침</Link></footer>
       </form>

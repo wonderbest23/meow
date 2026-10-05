@@ -91,11 +91,12 @@ export function PublicLandingClient({
           source: "public_landing",
         }),
       });
-      const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message ?? "신청을 접수하지 못했습니다.");
+      /* 방문자에게는 서버가 준 한국어 안내만 — 연결 끊김·HTML 오류 페이지의 영어 원문(Failed to fetch 등)은 보이지 않는다 */
+      const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
+      if (!response.ok) { setError(payload?.error?.message ?? "신청을 접수하지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
       setSubmitted(true);
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "신청 중 오류가 발생했습니다.");
+    } catch {
+      setError("연결이 불안정해 신청을 보내지 못했어요. 인터넷 연결을 확인한 뒤 다시 보내 주세요.");
     } finally {
       setSubmitting(false);
     }

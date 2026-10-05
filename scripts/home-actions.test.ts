@@ -17,7 +17,7 @@ for (const name of ["home-phone-story.tsx", "home-result-showcase.tsx", "home-se
   visit(source);
 }
 
-assert.deepEqual(actions.map(action => action.href), ["/plan/chat?new=1", "/samples/sample_coffee.pdf", "/samples/sample_coffee.pptx", "/plan", "/plan/homepage"]);
+assert.deepEqual(actions.map(action => action.href), ["/plan/chat?new=1", "/samples/sample_coffee.pdf", "/samples/sample_coffee.pptx", "/plan", "/plan/chat?new=1"]);
 assert.equal(actions[1].target, "_blank");
 assert.equal(actions[1].rel, "noopener noreferrer");
 assert.equal(actions[2].download, true);

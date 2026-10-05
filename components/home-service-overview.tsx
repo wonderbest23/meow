@@ -1,6 +1,6 @@
 "use client";
 
-import { PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
+import { BUNDLE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
 import { PPT_GENERATION_VERIFIED } from "../lib/plan-builder/deck-availability";
 import { useEffect, useRef } from "react";
 import { HomeWebsiteDemo } from "./home-website-demo";
@@ -55,7 +55,7 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
           <p>사업계획서 내용으로 홈페이지 초안을 자동 생성해요<br className={styles.desktopBreak} /> 내 사업에 맞춰 확인하고 필요한 만큼 다듬으세요</p>
         </header>
         <HomeWebsiteDemo />
-        <div className={styles.actions}><HomeAction href="/plan/homepage" variant="solid">홈페이지 100% 자동 생성</HomeAction></div>
+        <div className={styles.actions}>{/* 홈페이지는 계획서로 만든 초안에서 시작한다 — 사업이 없는 사람이 홈페이지 화면으로 가면 막힌 안내만 본다 */}<HomeAction href="/plan/chat?new=1" variant="solid">대화로 시작해 홈페이지 초안 받기</HomeAction></div>
       </div>
     </section>
 
@@ -63,9 +63,9 @@ export function HomeServiceOverview({ onStart }: { onStart: () => void }) {
       <header className={styles.heading} data-home-copy><h2 id="home-usage-title">시작 전에 궁금한 것</h2></header>
       <div className={styles.faq}>
         <details><summary>아이디어가 없거나 이미 사업 중이어도 되나요?</summary><p>네. 관심 있는 일, 해 본 일, 지금 사업에서 바꾸고 싶은 점을 이야기해 주세요. 사업자등록 없이도 사업안을 기획할 수 있어요.</p></details>
-        <details><summary>어디까지 무료이고, 언제 결제하나요?</summary><p>로그인 후 계정당 최대 3개 문서에서 앞 2개 항목을 무료로 생성할 수 있어요. 전체 문서 생성과 {PPT_GENERATION_VERIFIED ? "PDF·Word·PPT" : "PDF·Word"} 내려받기는 문서 1부당 {PACKAGE_AMOUNT.toLocaleString("ko-KR")}원 결제 후 이용해요. 섹션 다시 생성 {REGEN_INCLUDED}회가 포함되며, 최종 금액과 제공 범위는 결제 화면에서 확인해 주세요.{!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 제공 준비 중이며 현재 결제 제공 범위에 포함되지 않아요."}</p></details>
+        <details><summary>어디까지 무료이고, 언제 결제하나요?</summary><p>로그인 후 계정당 사업 3개까지 각 사업계획서의 앞 2개 항목을 무료로 만들 수 있어요. 전체 문서 생성과 {PPT_GENERATION_VERIFIED ? "PDF·Word·PPT" : "PDF·Word"} 내려받기는 사업 하나당 {PACKAGE_AMOUNT.toLocaleString("ko-KR")}원 결제 후 이용해요. 다시 쓰기 {REGEN_INCLUDED}회가 포함되며, 최종 금액과 제공 범위는 결제 화면에서 확인해 주세요.{!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 제공 준비 중이며 현재 결제 제공 범위에 포함되지 않아요."}</p></details>
         <details><summary>완성한 내용을 그대로 제출해도 되나요?</summary><p>내용과 수치를 직접 확인한 뒤 사용해 주세요. 시장 조사나 전문가 검토를 대신하지 않으며, 지원사업 제출 적합성이나 사업 성공을 보장하지 않아요.</p></details>
-        <details><summary>홈페이지 제작이나 사업자등록도 자동으로 되나요?</summary><p>사업계획서에 정리한 내용으로 홈페이지 초안을 자동 생성해요. 초안 미리보기는 무료이며, 편집·공개는 별도 결제가 필요해요. 맞춤 제작은 범위와 비용을 따로 상담해요. 사업자등록·세무·계약이 자동으로 완료되는 서비스는 아니에요.</p></details>
+        <details><summary>홈페이지 제작이나 사업자등록도 자동으로 되나요?</summary><p>사업계획서에 정리한 내용으로 홈페이지 초안을 자동 생성해요. 초안 미리보기는 무료이며, 편집·공개는 홈페이지 {HOMEPAGE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원(계획서와 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원) 결제 후 이용해요. 맞춤 제작은 범위와 비용을 따로 상담해요. 사업자등록·세무·계약이 자동으로 완료되는 서비스는 아니에요.</p></details>
       </div>
     </section>
     <HomeBrandClosing onStart={onStart} />

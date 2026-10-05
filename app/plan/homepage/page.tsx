@@ -368,7 +368,10 @@ export default function PlanHomepagePage() {
     }
   }, [projectId, draft, editable]);
 
-  const updateDraft = (next: LandingDraft) => { if (requestRef.current) return; setDraft(next); setAction("idle"); setMessage("저장되지 않은 변경사항이 있습니다."); };
+  const updateDraft = (next: LandingDraft) => {
+    if (requestRef.current) { setMessage(aiFilling ? "AI가 내용을 채우는 중이에요. 끝난 뒤에 고쳐 주세요." : "저장·공개하는 중이에요. 끝난 뒤에 고쳐 주세요."); return; }
+    setDraft(next); setAction("idle"); setMessage("저장되지 않은 변경사항이 있습니다.");
+  };
   const updateSite = (next: LandingSiteRecord) => {
     if (site && landingDraftFingerprint(site.draft) !== landingDraftFingerprint(next.draft)) {
       setMessage("다른 화면에서 초안이 변경됐습니다. 현재 수정 내용은 유지했어요. 최신 내용을 확인해주세요.");
@@ -410,7 +413,8 @@ export default function PlanHomepagePage() {
    * 저장·공개는 머리줄 오른쪽으로 올려, 편집 화면 위쪽에 버튼이 줄줄이 쌓이지 않게 한다.
    */
   const kitEditing = phase === "ready" && !!draft && editable && !!draft.pageData?.brainwave;
-  const busy = action === "saving" || action === "publishing";
+  /* AI 채우기 중에도 머리줄 저장·공개를 잠근다 — 예전엔 눌러도 '저장할 수 없는 상태' 안내만 나오거나 아무 반응이 없었다 */
+  const busy = action === "saving" || action === "publishing" || aiFilling;
   const headerActions = kitEditing ? <div className={styles.headerActions}>
     <button type="button" disabled={busy} onClick={() => void save()}>{action === "saving" ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}<span>저장</span></button>
     <button type="button" className={styles.headerPrimary} disabled={busy} onClick={() => void publish()}>{action === "publishing" ? <LoaderCircle className="spin" size={15} /> : <Rocket size={15} />}<span>{site?.status === "published" ? "새 버전 공개" : "공개하기"}</span></button>
