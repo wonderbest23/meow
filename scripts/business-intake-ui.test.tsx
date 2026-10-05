@@ -498,11 +498,11 @@ async function main() {
   assert.ok(staleDocument.includes("바뀐 내용으로 사업계획서 다시 작성하기") && staleDocument.includes("이전 계획서 보기"), "an old document is kept and rebuilding is explicit");
   // 반영하기 전에 비용을 먼저 보여 준다(다시 쓸 항목 수 · 대화는 무료)
   const staleCost = nextMarkup({ hasDocuments: true, documentStatus: "stale", rewriteCount: 4 }, currentDesign);
-  assert.ok(staleCost.includes("<b>4개 항목</b>을 다시 써요") && staleCost.includes("항목마다 다시 쓰기 횟수 1회가 차감돼요"), "the rewrite count is shown before rebuilding");
-  assert.ok(staleCost.includes("대화는 무료예요. 계획서에 반영할 때만 다시 쓰기 횟수가 차감되고"), "chatting is free, only applying to the document costs");
+  assert.ok(staleCost.includes("<b>4개 항목</b>을 다시 써요") && staleCost.includes("항목마다 다시 생성 횟수 1회가 차감돼요"), "the rewrite count is shown before rebuilding");
+  assert.ok(staleCost.includes("대화는 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감되고"), "chatting is free, only applying to the document costs");
   assert.ok(nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign).includes("바뀐 내용과 맞지 않는 항목만 다시 써요"), "unknown count still explains the cost");
   assert.ok(opened.includes("대화로 내용을 더 다듬는 건 무료예요"), "a finished document tells that further chat is free");
-  assert.ok(!needsPlan.includes("다시 쓰기 횟수"), "the first document shows no rewrite cost");
+  assert.ok(!needsPlan.includes("다시 생성 횟수"), "the first document shows no rewrite cost");
   const hiddenActions = nextMarkup({}, { design: undefined }, false);
   assert.ok(!hiddenActions.includes(STEP1) && !hiddenActions.includes("좀 더 개선하기"), "when the chat shows the next step the summary shows no buttons");
   const notYet = nextMarkup({ coreComplete: false }, { design: undefined });

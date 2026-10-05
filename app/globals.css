@@ -16962,3 +16962,8 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 /* 홈페이지 편집 칸 잠금 — 모양은 그대로, 잠긴 동안만 흐리게 */
 .hk .hk-lock { border: 0; margin: 0; padding: 0; min-width: 0; display: contents; }
 .hk[aria-busy="true"] .hk-lock input, .hk[aria-busy="true"] .hk-lock textarea, .hk[aria-busy="true"] .hk-lock select { opacity: .6; }
+
+/* 공개 홈페이지(폰): 방문 기록 동의 상자가 아래 고정 연락 버튼(전화·카톡)을 덮지 않게 그 위로 올린다 */
+@media (max-width: 768px) {
+  body:has(.public-landing.has-quickbar) .public-analytics-consent { bottom: 88px; }
+}

@@ -157,7 +157,7 @@ export function PublicLandingClient({
       )}</>}
 
       <section id="landing-contact" className={`public-lead-section ${config.leadCaptureEnabled ? "" : "brochure"}`} ref={formRef}>
-        <div><small>신청하기</small><h2>{config.ctaLabel}</h2><p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p></div>
+        <div><small>{config.leadCaptureEnabled ? "신청하기" : "문의하기"}</small><h2>{config.ctaLabel}</h2>{config.leadCaptureEnabled && <p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p>}</div>
         {!config.leadCaptureEnabled ? (
           /* 신청폼이 꺼져 있을 때 — 방문자에게는 사장님용 안내('신청폼을 켤 수 있습니다') 대신 연락할 방법을 보여 준다 */
           (() => {

@@ -597,7 +597,7 @@ function setField(coach: CoachState, key: CoachField["key"], value: string | nul
   coach.fields = fields;
   if (key === "business") {
     coach.business.description = value ?? "";
-    if (value && (!coach.business.name || ["새 사업 구상", "새 사업 진단"].includes(coach.business.name))) coach.business.name = value.slice(0, 60);
+    if (value && (!coach.business.name || ["새 사업 구상", "새 사업 진단", "새 사업"].includes(coach.business.name))) coach.business.name = value.slice(0, 60);
     if (value && !coach.ideaOrigin) coach.ideaOrigin = { text: value, messageId };
   }
 }

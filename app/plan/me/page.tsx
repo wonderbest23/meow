@@ -251,15 +251,15 @@ export default function PlanMePage() {
                   return (
                   <Fragment key={item.orderId}>
                   <tr>
-                    <td>{item.orderName || "-"}</td>
-                    <td className={styles.amount}>{item.amount.toLocaleString("ko-KR")}원</td>
-                    <td>
+                    <td data-label="상품">{item.orderName || "-"}</td>
+                    <td data-label="금액" className={styles.amount}>{item.amount.toLocaleString("ko-KR")}원</td>
+                    <td data-label="상태">
                       <span className={`${styles.status} ${item.status === "done" ? styles.statusDone : BAD_STATUS.has(item.status) ? styles.statusBad : ""}`}>
                         {STATUS_LABEL[item.status] ?? item.status}
                       </span>
                     </td>
-                    <td>{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
-                    <td>
+                    <td data-label="일시">{new Date(item.paidAt ?? item.createdAt).toLocaleDateString("ko-KR")}</td>
+                    <td data-label="환불">
                       {item.status !== "done" ? (
                         <span className={styles.refundNa}>—</span>
                       ) : refund ? (
@@ -278,6 +278,7 @@ export default function PlanMePage() {
                       <td colSpan={5}>
                         <div className={styles.refundForm}>
                           <textarea
+                            aria-label="환불 사유"
                             rows={2}
                             value={refundReason}
                             onChange={(event) => setRefundReason(event.target.value)}
@@ -324,6 +325,7 @@ export default function PlanMePage() {
               되돌릴 수 없습니다. 계속하려면 로그인한 이메일 <b>{account.email}</b>을(를) 입력해 주세요.
             </p>
             <input
+              aria-label="탈퇴 확인용 이메일"
               type="email"
               value={deleteEmail}
               onChange={(event) => setDeleteEmail(event.target.value)}

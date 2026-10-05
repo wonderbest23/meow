@@ -66,7 +66,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     const oldAt = plan?.updatedAt ?? null, at = nextTimestamp(oldAt ?? undefined);
     const coach = structuredClone(previous ?? emptyCoach());
     if (!plan) {
-      plan = { id: `plan_${command.requestId}`, title: "새 사업 진단", planType: COACH_TYPES.startup, createdAt: at, updatedAt: at, answers: {}, sections: {} };
+      plan = { id: `plan_${command.requestId}`, title: "새 사업", planType: COACH_TYPES.startup, createdAt: at, updatedAt: at, answers: {}, sections: {} };
       state.plans.push(plan);
     }
     const intake = structuredClone(savedIntake ?? createIntake(coach, command.mode ?? (coach.stage === "operating" ? "operating" : "startup"), at));
@@ -83,7 +83,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     }
     let created: IntakeJob | null = null;
     if (command.action === "start") {
-      if (savedIntake && command.mode && command.mode !== intake.mode) throw new IntakeError("mode_conflict", "진행 중인 사업 유형은 새 사업 진단에서 선택해 주세요", 409);
+      if (savedIntake && command.mode && command.mode !== intake.mode) throw new IntakeError("mode_conflict", "진행 중인 사업 유형은 새 대화에서 선택해 주세요", 409);
       if (command.message && (savedIntake || command.questionId !== undefined || command.value !== undefined)) throw new IntakeError("invalid_start", "처음 남긴 이야기와 답변은 구분해 저장해 주세요");
       if (command.questionId !== undefined || command.value !== undefined) {
         if (savedIntake) throw new IntakeError("start_exists", "이미 시작한 대화에서는 답변 수정으로 이어가 주세요", 409);

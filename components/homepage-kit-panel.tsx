@@ -282,7 +282,7 @@ export function HomepageKitPanel({
             </label>
           ) : null}
         </div>
-        {!contactReady ? <p className="hk-contact-warn">{contactInfo.field === "phone" ? "전화번호" : "주소"}를 넣으면 버튼이 연결돼요. 그 전까지는 문의 양식으로 연결돼요.</p> : null}
+        {!contactReady && !formOff ? <p className="hk-contact-warn">{contactInfo.field === "phone" ? "전화번호" : "주소"}를 넣으면 버튼이 연결돼요. {draft.leadCaptureEnabled ? " 그 전까지는 문의 양식으로 연결돼요." : " 지금은 문의 양식도 꺼져 있어 손님이 연락할 곳이 없어요."}</p> : null}
         <div className="hk-contact-quick">
           <label className="hk-switch">
             <input type="checkbox" checked={contact.quickBar} onChange={(e) => setContact({ quickBar: e.target.checked })} />
@@ -360,7 +360,7 @@ export function HomepageKitPanel({
         icon={<Inbox size={18} />}
         title="접수된 문의"
         badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건</em>}
-        hint={draft.leadCaptureEnabled ? "홈페이지 문의 양식으로 들어온 것입니다. 보유기간이 지나면 지워 주세요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
+        hint={draft.leadCaptureEnabled ? "홈페이지 문의 양식으로 들어온 것입니다. 개인정보가 들어 있으니 상담이 끝나면 외부로 옮기거나 공유하지 마세요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
       >
         <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />
         <div className="hk-fold-save"><button type="button" aria-label="문의 새로고침" title="문의 새로고침" disabled={leads === null && !leadsError} onClick={() => setLeadsRefresh(value => value + 1)}><RefreshCw size={14} /> 새로고침</button></div>

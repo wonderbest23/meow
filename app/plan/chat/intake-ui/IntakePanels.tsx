@@ -488,7 +488,7 @@ export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSn
 type RegenQuota = { allowed: number; used: number; remaining: number; unavailable?: true };
 
 /**
- * 계획서에 다시 반영하기 전에 비용을 먼저 보여 준다 — 다시 쓸 항목 수와 남은 다시 쓰기 횟수.
+ * 계획서에 다시 반영하기 전에 비용을 먼저 보여 준다 — 다시 쓸 항목 수와 남은 다시 생성 횟수.
  * 예전엔 버튼을 눌러 막힌 뒤에야(402) 횟수가 모자란 걸 알았다(사용자 피드백 2026-10).
  */
 function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
@@ -505,8 +505,8 @@ function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
   const known = quota?.quota && !quota.quota.unavailable ? quota.quota : null;
   const short = !!known && count !== undefined && count > known.remaining;
   return <p className={styles.rewriteCost} data-short={short || undefined} role="status">
-    {count === undefined ? <>바뀐 내용과 맞지 않는 항목만 다시 써요 · 항목마다 다시 쓰기 횟수 1회가 차감돼요{known ? <> (남은 횟수 {known.remaining}/{known.allowed}회)</> : null}</> : count > 0 ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요{known ? <> · 다시 쓰기 횟수 <b>{count}회</b> 차감 (남은 횟수 {known.remaining}/{known.allowed}회)</> : <> · 항목마다 다시 쓰기 횟수 1회가 차감돼요</>}</> : "직접 고친 항목은 그대로 두고, 바뀐 내용과 맞지 않는 항목만 다시 써요."}
-    {short && <> — 횟수가 {count! - known!.remaining}회 모자라요. <Link href={`/plan/pay?planId=${encodeURIComponent(snapshot.planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`}>{quota?.pack ? `${quota.pack.count}회 추가 (${quota.pack.amount.toLocaleString("ko-KR")}원)` : "다시 쓰기 횟수 추가"}</Link></>}
+    {count === undefined ? <>바뀐 내용과 맞지 않는 항목만 다시 써요 · 항목마다 다시 생성 횟수 1회가 차감돼요{known ? <> (남은 횟수 {known.remaining}/{known.allowed}회)</> : null}</> : count > 0 ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요{known ? <> · 다시 생성 횟수 <b>{count}회</b> 차감 (남은 횟수 {known.remaining}/{known.allowed}회)</> : <> · 항목마다 다시 생성 횟수 1회가 차감돼요</>}</> : "직접 고친 항목은 그대로 두고, 바뀐 내용과 맞지 않는 항목만 다시 써요."}
+    {short && <> — 횟수가 {count! - known!.remaining}회 모자라요. <Link href={`/plan/pay?planId=${encodeURIComponent(snapshot.planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`}>{quota?.pack ? `${quota.pack.count}회 추가 (${quota.pack.amount.toLocaleString("ko-KR")}원)` : "다시 생성 횟수 추가"}</Link></>}
   </p>;
 }
 
@@ -540,7 +540,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
       {secondary}
     </div>}
     {!jobActive && reapply && <RewriteCost snapshot={snapshot} />}
-    {!jobActive && <small className={styles.nextStepHint}>{reapply ? "대화는 무료예요. 계획서에 반영할 때만 다시 쓰기 횟수가 차감되고, 반영하기 전까지 기존 계획서는 그대로예요." : snapshot.hasDocuments ? `${hint} 대화로 내용을 더 다듬는 건 무료예요. 계획서에 반영할 때만 다시 쓰기 횟수가 차감돼요.` : hint}</small>}
+    {!jobActive && <small className={styles.nextStepHint}>{reapply ? "대화는 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감되고, 반영하기 전까지 기존 계획서는 그대로예요." : snapshot.hasDocuments ? `${hint} 대화로 내용을 더 다듬는 건 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감돼요.` : hint}</small>}
   </div>;
 }
 

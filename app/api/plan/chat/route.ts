@@ -229,7 +229,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   if (request.headers.get("x-business-intake") === "2") return intakePost(request, postLegacyChat);
-  if (intakeFeatureEnabled()) return json({ message: "새 사업 진단 화면을 불러와 주세요. 입력은 그대로 보관해 주세요.", code: "flow_upgrade" }, 409);
+  if (intakeFeatureEnabled()) return json({ message: "새 대화 화면을 다시 불러와 주세요. 입력은 그대로 보관해 주세요.", code: "flow_upgrade" }, 409);
   return postLegacyChat(request);
 }
 

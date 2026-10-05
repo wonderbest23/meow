@@ -3,6 +3,7 @@ import { z } from "zod";
 export const inquiryCategories = [
   { value: "account", label: "로그인·계정" },
   { value: "plan", label: "대화·사업계획서·저장" },
+  { value: "payment", label: "결제·환불" },
   { value: "website", label: "홈페이지 제작" },
   { value: "other", label: "기타 문의" },
 ] as const;
@@ -10,7 +11,7 @@ export type InquiryCategory = typeof inquiryCategories[number]["value"];
 export type InquiryDraft = { category: InquiryCategory; subject: string; message: string; requestId: string };
 
 export const inquirySchema = z.object({
-  category: z.enum(["account", "plan", "website", "other"]),
+  category: z.enum(["account", "plan", "payment", "website", "other"]),
   subject: z.string().trim().min(1, "제목을 입력해주세요.").max(80, "제목은 80자까지 입력할 수 있어요.").refine(value => !/[\r\n]/.test(value), "제목은 한 줄로 입력해주세요."),
   message: z.string().trim().min(1, "문의 내용을 입력해주세요.").max(1800, "문의 내용은 1,800자까지 입력할 수 있어요."),
   requestId: z.uuid(),

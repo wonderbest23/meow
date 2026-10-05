@@ -42,7 +42,7 @@ function loginRequired(userId: string | null) {
 }
 
 export async function intakeGet(request: Request) {
-  if (!intakeFeatureEnabled()) return json({ plan: null, code: "disabled", message: "새 사업 진단은 아직 공개 전이에요" }, 404);
+  if (!intakeFeatureEnabled()) return json({ plan: null, code: "disabled", message: "새 사업 기획은 아직 공개 전이에요" }, 404);
   try {
     const identity = await requireGuestIdentity();
     const url = new URL(request.url);
@@ -56,7 +56,7 @@ export async function intakeGet(request: Request) {
     if (loginRequired(identity.userId)) return json({ plan: null, loginRequired: true, authenticated: false, ownerScope: ownerScope(identity.hash) });
     const plan = await currentSnapshot(identity.hash, url.searchParams.get("planId"));
     return json({ plan, authenticated: !!identity.userId, ownerScope: ownerScope(identity.hash) });
-  } catch { return json({ code: "load_failed", message: "저장된 진단을 불러오지 못했어요. 새로 시작하지 말고 다시 불러와 주세요" }, 503); }
+  } catch { return json({ code: "load_failed", message: "저장된 대화를 불러오지 못했어요. 새로 시작하지 말고 다시 불러와 주세요" }, 503); }
 }
 
 export async function dispatchIntakeJob(request: IntakeJobRequest) {
@@ -76,7 +76,7 @@ export async function dispatchIntakeJob(request: IntakeJobRequest) {
 }
 
 export async function intakePost(request: Request, prepare: (request: Request) => Promise<Response>) {
-  if (!intakeFeatureEnabled()) return json({ plan: null, code: "disabled", message: "새 사업 진단은 아직 공개 전이에요" }, 404);
+  if (!intakeFeatureEnabled()) return json({ plan: null, code: "disabled", message: "새 사업 기획은 아직 공개 전이에요" }, 404);
   const limited = await enforceRateLimit("business-intake-save", request, { limit: 120, windowMs: 600_000 });
   if (limited) return json({ code: "rate_limited", message: "입력은 그대로 두고 잠시 후 저장해 주세요" }, 429);
   let body: unknown;

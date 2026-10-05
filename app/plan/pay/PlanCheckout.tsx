@@ -67,7 +67,7 @@ export default function PlanCheckout() {
     domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결합니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.", price: DOMAIN_PRODUCT_AMOUNT, unit: "홈페이지 1개 · 1년" },
     "domain-purchase": { title: purchaseDomain ? `${purchaseDomain} 사서 연결하기` : "도메인 구매하고 연결하기", desc: `원하는 주소를 이용자 명의로 등록하고 이 홈페이지에 연결합니다. 첫해 등록비(${DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원)와 1년 동안의 호스팅·보안 인증서·연결 관리가 포함됩니다.`, price: DOMAIN_PURCHASE_PRODUCT_AMOUNT, unit: "주소 1개 · 1년" },
     /* 다시 생성 묶음 — 예전엔 여기 없어서 '이 문서 전체 열기 · 49,000원'이 보였다(실제 결제는 이 금액) */
-    regen: { title: `${REGEN_PACK_NAME} 추가`, desc: `이 문서의 ‘다시 쓰기’ 횟수가 ${REGEN_PACK_COUNT}회 더해집니다. 대화로 바꾼 내용을 계획서에 다시 반영할 때 씁니다.`, price: REGEN_PACK_AMOUNT, unit: `${REGEN_PACK_COUNT}회 · 이 문서` },
+    regen: { title: `${REGEN_PACK_NAME} 추가`, desc: `이 문서의 ‘다시 생성’ 횟수가 ${REGEN_PACK_COUNT}회 더해집니다. 대화로 바꾼 내용을 계획서에 다시 반영할 때 씁니다.`, price: REGEN_PACK_AMOUNT, unit: `${REGEN_PACK_COUNT}회 · 이 문서` },
     tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’ 처럼 말하면 AI 가 페이지 글을 고칩니다. 20만 토큰은 페이지 전체 고치기 25회 안팎입니다.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
   };
   const extra = COPY[product];
