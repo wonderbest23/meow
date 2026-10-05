@@ -13,7 +13,7 @@ export function useHomepageLeadNotifications(projectId: string | null, refresh: 
     setItems(null); setError(""); setRetrying(null);
     if (projectId) fetch(`/api/projects/${projectId}/landing/notifications`, { cache: "no-store", signal: controller.signal })
       .then(async response => { const body = await response.json(); if (!response.ok || !Array.isArray(body.notifications)) throw new Error(); if (!controller.signal.aborted) setItems(body.notifications); })
-      .catch(() => { if (!controller.signal.aborted) setError("메일 알림 상태를 확인하지 못했습니다 문의 내용은 아래에서 확인할 수 있습니다"); });
+      .catch(() => { if (!controller.signal.aborted) setError("메일 알림 상태를 확인하지 못했습니다. 문의 내용은 아래에서 확인할 수 있습니다"); });
     return () => { controller.abort(); retryRequest.current?.abort(); };
   }, [projectId, refresh]);
   async function retry(leadId: string) {

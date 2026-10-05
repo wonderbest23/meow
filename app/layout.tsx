@@ -5,8 +5,10 @@ import { LoginDialogHost } from "../components/login-dialog";
 import { SupportChatWidget } from "../components/support-chat-widget";
 
 export const metadata: Metadata = {
-  title: "오늘창업 | 나만의 사업 가능성 탐색",
-  description: "대화와 질문을 통해 나에게 맞는 사업 가능성을 찾고 실행 자료까지 만드는 오늘창업 서비스입니다.",
+  metadataBase: new URL("https://oneulstart.com"),
+  title: "오늘창업 | 대화로 만드는 사업계획서와 홈페이지",
+  description: "하려는 사업을 대화로 이야기하면 사업계획서를 만들고, 그 내용으로 홈페이지를 만들어 공개하고 관리까지 이어가는 오늘창업 서비스입니다.",
+  openGraph: { siteName: "오늘창업", locale: "ko_KR", type: "website", title: "오늘창업 | 대화로 만드는 사업계획서와 홈페이지", description: "대화 → 사업계획서 → 홈페이지 → 유지보수까지 한 곳에서" },
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

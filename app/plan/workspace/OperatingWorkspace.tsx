@@ -161,7 +161,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
       <label className={styles.reportSelect}>보관한 리포트<select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map((r, i) => <option key={r.id} value={r.id}>{periodLabel(r.period)} · 보관 {state.reports.length - i}</option>)}</select></label>
       <article className={styles.report} aria-label="보관된 개선 리포트">
         <header><h3>{report.businessTitle} 운영 개선 리포트</h3><p>{periodLabel(report.period)} · {periodDays(report.period)}일</p><p className={styles.meta}>{new Date(report.createdAt).toLocaleString("ko-KR")} 보관</p></header>
-        <p className={styles.note}>{report.source === "ai-assisted" ? "사용자 입력과 AI 가설 선택한 행동을 구분해 보관했어요 실적이나 원인을 검증한 결과는 아니에요" : "사용자 입력과 기간 비교를 보관한 기록이에요. AI 분석이나 실적 검증 결과는 아니에요."}</p>
+        <p className={styles.note}>{report.source === "ai-assisted" ? "사용자 입력과 AI 가설과 선택한 행동을 구분해 보관했어요. 실적이나 원인을 검증한 결과는 아니에요" : "사용자 입력과 기간 비교를 보관한 기록이에요. AI 분석이나 실적 검증 결과는 아니에요."}</p>
         {!reportIsCurrent(state, report) && <p className={styles.warning}>보관 이후 원본이나 비교 기간이 바뀌었어요. 이 리포트는 보관 당시 내용을 유지해요.</p>}
         <Comparison period={report.period} baseline={report.baseline} /><PeriodNotes period={report.period} archivedAnalysis={report.source === "ai-assisted"} />
         {report.analysis && <OperatingAnalysisResult analysis={report.analysis} chosenAction={report.chosenAction} />}

@@ -330,3 +330,14 @@
   font-size: 13px;
   color: var(--app-danger);
 }
+
+/* 폰: 결제 내역 표를 한 건씩 카드로 — 다섯 칸을 한 줄에 두면 환불 단추가 화면 밖으로 밀렸다 */
+@media (max-width: 560px) {
+  .table thead { display: none; }
+  .table, .table tbody, .table tr, .table td { display: block; width: 100%; }
+  .table tr { padding: 10px 0; border-bottom: 1px solid var(--border-soft, var(--app-line)); }
+  .table td { display: flex; justify-content: space-between; gap: 12px; padding: 4px 0; border-bottom: 0; white-space: normal; }
+  .table td[data-label]::before { content: attr(data-label); color: var(--text-muted, var(--app-muted)); font-size: 13px; flex: none; }
+  .table td[colspan] { display: block; }
+  .table textarea { width: 100%; max-width: 100%; box-sizing: border-box; }
+}

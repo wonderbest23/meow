@@ -128,7 +128,7 @@ export default function SupportCenter() {
       if (current !== sequence.current) return;
       if (response.status === 401 || response.status === 409 && (await response.clone().json()).error?.code === "ACCOUNT_CHANGED") {
         scopeRef.current = null; setScope(null); setChat(emptyChat); setDraft(null); setLoggedOut(response.status === 401);
-        throw new Error("로그인 계정이 바뀌었어요. 고객센터를 다시 불러와주세요.");
+        throw new Error(response.status === 401 ? "로그인이 끝났어요. 다시 로그인한 뒤 문의해 주세요." : "로그인 계정이 바뀌었어요. 고객센터를 다시 불러와주세요.");
       }
       const result = await readReply(response);
       if (current !== sequence.current) return;
@@ -147,7 +147,7 @@ export default function SupportCenter() {
   return <main className={`${styles.page} plan-ui`}>
     <SiteHeader light showAccount={false} onHome={() => router.push("/")} />
     <div className={styles.content}>
-      <Link className={styles.back} href="/account"><ArrowLeft size={18} aria-hidden="true" />마이페이지</Link>
+      <Link className={styles.back} href="/plan/me"><ArrowLeft size={18} aria-hidden="true" />마이페이지</Link>
       <header className={styles.heading}><Headphones size={28} aria-hidden="true" /><h1>고객센터</h1></header>
       {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨주세요</h2><Link className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기</Link></section> : <>
         {scope && <>
