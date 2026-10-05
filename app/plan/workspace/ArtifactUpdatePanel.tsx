@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, RefreshCw, X } from "lucide-react";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
@@ -34,16 +35,16 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
     const result = await response.json(); if (!response.ok) throw new Error(result.message ?? "변경 기록을 불러오지 못했어요");
     setJobs(result.jobs); setSelected(previous => previous || result.jobs[0]?.id || "");
   }, [planId]);
-  useEffect(() => { if (!planId) return; let alive = true; const load = () => { if (!document.hidden) void refresh().catch(error => { if (alive) setMessage(error.message); }); }; load(); const timer = setInterval(load, 5000); return () => { alive = false; clearInterval(timer); }; }, [planId, refresh]);
+  useEffect(() => { if (!planId) return; let alive = true; const load = () => { if (!document.hidden) void refresh().catch(error => { if (alive) setMessage(userErrorMessage(error, "변경 상태를 불러오지 못했어요")); }); }; load(); const timer = setInterval(load, 5000); return () => { alive = false; clearInterval(timer); }; }, [planId, refresh]);
   const job = jobs.find(item => item.id === selected);
   useEffect(() => { setDocuments({}); setSlides({}); setHomepage({}); }, [selected]);
   async function compare() {
     if (lock.current) return; lock.current = true; setBusy(true); setMessage("");
     try {
       const response = await fetch(`/api/plan/artifact-updates?planId=${encodeURIComponent(planId)}&preview=1`, { cache: "no-store" });
-      const data = await response.json(); if (!response.ok) throw new Error(data.message);
+      const data = await response.json(); if (!response.ok) throw new Error(apiMessage(data, ""));
       setPreview(data); setConsent(false); setIncludeHomepage(false); pending.current = null;
-    } catch (error) { setMessage(error instanceof Error ? error.message : "변경 범위를 확인하지 못했어요"); }
+    } catch (error) { setMessage(userErrorMessage(error, "변경 범위를 확인하지 못했어요")); }
     finally { lock.current = false; setBusy(false); }
   }
   async function send(command: ArtifactCommand) {
@@ -51,10 +52,10 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
     pending.current = command;
     try {
       const response = await fetch("/api/plan/artifact-updates", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, command }) });
-      const data = await response.json(); if (!response.ok) throw new Error(data.message ?? artifactErrorMessage(data.code));
+      const data = await response.json(); if (!response.ok) throw new Error(apiMessage(data, artifactErrorMessage(data.code)));
       pending.current = null; setSelected(data.job.id); setPreview(null); await refresh();
       setMessage(data.job.status === "applied" ? data.job.staleItems?.length ? "선택한 항목을 반영했어요. 유지한 이전 내용은 아직 최신이 아니에요" : "반영했어요. 홈페이지 공개는 별도로 진행해 주세요" : "요청을 저장했어요");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "응답을 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요"); }
+    } catch (error) { setMessage(userErrorMessage(error, "응답을 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요")); }
     finally { lock.current = false; setBusy(false); }
   }
   if (!planId) return null;

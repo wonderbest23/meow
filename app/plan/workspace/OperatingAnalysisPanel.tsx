@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useEffect, useRef, useState } from "react";
 import { Archive, ClipboardCheck, RefreshCw } from "lucide-react";
 import { analysisIsRunning, analysisTargetLabel, type AnalysisPayload, type AnalysisSelection, type AnalysisTarget, type ChosenAction } from "../../../lib/plan-builder/operating-analysis-contract";
@@ -70,7 +71,7 @@ export default function OperatingAnalysisPanel({ planId, period, baseline, recor
     try {
       const response = await fetch(`/api/plan/operations?planId=${encodeURIComponent(planId)}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
+      if (!response.ok) throw new Error(apiMessage(data, ""));
       if (alive.current) onState(data.records);
     } catch { if (alive.current) setError("저장 상태를 확인하지 못했어요 연결을 확인한 뒤 다시 확인해 주세요"); }
   }
@@ -80,9 +81,9 @@ export default function OperatingAnalysisPanel({ planId, period, baseline, recor
     try {
       const response = await fetch("/api/plan/operations/analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "preview", planId, reference: referenceFor(period, baseline), selection }), signal: AbortSignal.timeout(20000) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
+      if (!response.ok) throw new Error(apiMessage(data, ""));
       if (alive.current) { setConsent(false); setPreview(data.preview); requestId.current = crypto.randomUUID(); }
-    } catch (e) { if (alive.current) setError(e instanceof Error ? e.message : "분석할 내용을 불러오지 못했어요"); }
+    } catch (e) { if (alive.current) setError(userErrorMessage(e, "분석할 내용을 불러오지 못했어요")); }
     finally { pending.current = false; if (alive.current) setBusy(false); }
   }
   async function generate() {
@@ -92,11 +93,11 @@ export default function OperatingAnalysisPanel({ planId, period, baseline, recor
     try {
       const response = await fetch("/api/plan/operations/analysis", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "generate", planId, id: requestId.current, reference: preview.reference, selection: preview.selection, consent: { accepted: true, version: preview.version, hash: preview.hash, target: preview.target } }), signal: AbortSignal.timeout(70000) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
+      if (!response.ok) throw new Error(apiMessage(data, ""));
       if (alive.current) { onState(data.records); setSelected(data.analysisId); setChosen(null); setNow(Date.now()); }
     } catch (e) {
       if (alive.current) {
-        setError(e instanceof Error && !["TimeoutError", "AbortError", "TypeError"].includes(e.name) ? e.message : "분석 응답을 확인하지 못했어요 자동으로 다시 요청하지 않습니다 저장 상태를 먼저 확인해 주세요");
+        setError(userErrorMessage(e, "분석 응답을 확인하지 못했어요 자동으로 다시 요청하지 않습니다 저장 상태를 먼저 확인해 주세요"));
         await refresh();
       }
     } finally { pending.current = false; if (alive.current) setBusy(false); }

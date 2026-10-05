@@ -74,3 +74,5 @@
 .careBlock p { margin:0 0 16px; }
 .careActions { display:flex; flex-wrap:wrap; gap:10px; }
 .careActions a { text-decoration:none; }
+/* PC 폭이 넉넉하지 않을 때(본문이 화면 오른쪽 끝까지 닿을 때) 오른쪽 아래 상담 버튼이 오른쪽 정렬 단추(변경 범위 확인 등)를 덮었다 — 그만큼 비워 둔다 */
+@media (min-width: 901px) and (max-width: 1440px) { .content { padding-right: 96px; } }

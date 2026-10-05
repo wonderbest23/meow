@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Archive, Download, FileText, Pencil, Plus, Save, X } from "lucide-react";
 import { METRICS, comparePeriods, metricValue, oldInput, periodDays, periodInputSchema, periodLabel, previousPeriod, referenceFor, reportIsCurrent, type OperatingCommand, type OperatingPeriod, type OperatingReport, type OperatingState, type PeriodInput } from "../../../lib/plan-builder/operating-records";
@@ -91,9 +92,9 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     try {
       const response = await fetch(`/api/plan/operations?planId=${encodeURIComponent(planId)}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
+      if (!response.ok) throw new Error(apiMessage(data, ""));
       if (alive.current) { acceptState(data.records); setAnalysisTarget(data.analysisTarget ?? null); setSelected(current => current || data.records.periods[0]?.id || ""); setReportId(current => current || data.records.reports[0]?.id || ""); }
-    } catch (e) { if (alive.current) setError(e instanceof Error ? e.message : "기록을 불러오지 못했어요."); }
+    } catch (e) { if (alive.current) setError(userErrorMessage(e, "기록을 불러오지 못했어요.")); }
   }
   function edit(target?: OperatingPeriod) {
     const next = draftFor(target);
@@ -107,13 +108,13 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     try {
       const response = await fetch("/api/plan/operations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, command }), signal: AbortSignal.timeout(20000) });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.message);
+      if (!response.ok) throw new Error(apiMessage(data, ""));
       if (!alive.current) return false;
       acceptState(data.records);
       if (command.action === "save") { setSelected(command.id); setEditor(null); setNotice("기간 기록을 서버에 저장했어요"); }
       else { setReportId(command.id); setMode("reports"); setReportRequest(null); setNotice("이 시점의 기록과 개선 계획을 리포트로 보관했어요"); }
       return true;
-    } catch (e) { if (alive.current) setError(e instanceof Error && !["TimeoutError", "AbortError", "TypeError"].includes(e.name) ? e.message : "저장 응답을 확인하지 못했어요. 입력은 그대로 남아 있어요. 다시 저장해도 기록이 중복되지 않아요."); return false; }
+    } catch (e) { if (alive.current) setError(userErrorMessage(e, "저장 응답을 확인하지 못했어요. 입력은 그대로 남아 있어요. 다시 저장해도 기록이 중복되지 않아요.")); return false; }
     finally { pending.current = false; if (alive.current) setBusy(false); }
   }
   async function save() {

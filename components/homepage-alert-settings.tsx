@@ -1,5 +1,6 @@
 "use client";
 
+import { apiMessage, userErrorMessage } from "../lib/client/user-error";
 import { useEffect, useState } from "react";
 
 type Settings = { phone: string | null; phoneReady: boolean; weeklyEnabled: boolean | null; published: boolean; smsReady: boolean; emailReady: boolean };
@@ -39,7 +40,7 @@ export function HomepageAlertSettings({ projectId, suggestedPhone }: { projectId
       const data = await response.json() as Settings & { error?: { message?: string } };
       if (!response.ok) throw new Error(data.error?.message ?? "저장하지 못했어요.");
       setSettings(data); setPhone(data.phone ? pretty(data.phone) : ""); setAgreed(false); setMessage(done);
-    } catch (e) { setMessage(e instanceof Error ? e.message : "저장하지 못했어요."); }
+    } catch (e) { setMessage(userErrorMessage(e, "저장하지 못했어요.")); }
     finally { setBusy(false); }
   };
   const typed = phone.replace(/[\s-]/g, "");

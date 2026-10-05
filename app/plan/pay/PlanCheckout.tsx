@@ -96,8 +96,8 @@ export default function PlanCheckout() {
       .catch(() => {
         if (alive) { setInfo(null); setInfoFailed(true); }
       });
-    if (isHomepage && planId) {
-      // 홈페이지 가격·구매 여부는 홈페이지 API가 안다
+    if ((isHomepage || isBundle || product === "plan") && planId) {
+      // 홈페이지 가격·구매 여부는 홈페이지 API가 안다 — 계획서·묶음 화면도 묶음 권유를 정하려고 함께 본다
       fetch(`/api/plan/landing?planId=${encodeURIComponent(planId)}`)
         .then((r) => r.json())
         .then((d) => {
@@ -196,7 +196,10 @@ export default function PlanCheckout() {
    * 불가능했다 — 파는 쪽이 못 팔게 막고 있었다. 상품마다 따로 본다.
    */
   /* 도메인·토큰·다시 생성은 '이미 샀다'는 개념이 없다(서버가 중복·갱신 시점을 따로 판정) */
-  const alreadyOwned = extra || isRegen ? false : isHomepage ? homepageInfo?.editable === true : info?.paid === true;
+  /* 묶음은 계획서나 홈페이지 중 하나라도 이미 있으면 살 수 없다(서버 기준과 같게) — 동의를 다 받은 뒤 거절하지 않게 미리 알린다 */
+  const bundleBlocked = isBundle && (info?.paid === true || homepageInfo?.editable === true);
+  const bothOwned = info?.paid === true && homepageInfo?.editable === true;
+  const alreadyOwned = bundleBlocked ? true : extra || isRegen ? false : isHomepage ? homepageInfo?.editable === true : info?.paid === true;
 
   if (isDomainPurchase && !purchaseDomain) {
     return (
@@ -216,9 +219,10 @@ export default function PlanCheckout() {
       <div className={styles.page}>
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
-          <h1 className={styles.title}>{isHomepage ? "홈페이지는 이미 열려 있습니다" : "이 문서는 이미 열려 있습니다"}</h1>
-          <p className={styles.desc}>{isHomepage ? "결제가 확인되어 사진·글·버튼을 고치고 공개할 수 있습니다." : "결제가 확인되어 전체 섹션을 쓸 수 있습니다."}</p>
-          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}</Link>
+          <h1 className={styles.title}>{bundleBlocked && bothOwned ? "사업계획서와 홈페이지가 모두 열려 있습니다" : bundleBlocked ? "묶음 대신 남은 상품만 결제해 주세요" : isHomepage ? "홈페이지는 이미 열려 있습니다" : "이 사업계획서는 이미 열려 있습니다"}</h1>
+          <p className={styles.desc}>{bundleBlocked && bothOwned ? "따로 결제할 것이 없어요." : bundleBlocked ? `${info?.paid ? "사업계획서" : "홈페이지"}는 이미 열려 있어요. ${info?.paid ? "홈페이지" : "사업계획서"}만 따로 결제하면 돼요.` : isHomepage ? "결제가 확인되어 사진·글·버튼을 고치고 공개할 수 있습니다." : "결제가 확인되어 전체 항목을 쓸 수 있습니다."}</p>
+          {bundleBlocked && !bothOwned && planId && <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, ...(info?.paid ? { product: "homepage" } : {}) }).toString()}`} className={styles.primary}>{info?.paid ? "홈페이지만 결제하기" : "사업계획서만 결제하기"}</Link>}
+          <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}</Link>
         </div>
       </div>
     );
@@ -260,7 +264,7 @@ export default function PlanCheckout() {
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
             <span>문서 1부 · 1회 결제 · 부가세 포함</span>
-            {!info.paid && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small> →</Link>}
+            {!info.paid && homepageInfo?.editable !== true && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small> →</Link>}
           </div>
         ) : infoFailed ? (
           <div className={styles.price} role="alert">

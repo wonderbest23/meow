@@ -18,6 +18,7 @@ import ExecutiveSummaryView from "./ExecutiveSummaryView";
 import { useHomepageStatus } from "../use-homepage";
 import { journeyNext, type HomepageStatus } from "../../../lib/plan-builder/journey";
 import { loadState } from "../../../lib/plan-builder/plan-store";
+import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 
 type Format = "pdf" | "docx" | "pptx";
 type Props = {
@@ -216,9 +217,11 @@ export default function DocumentWorkspace(props: Props) {
       {modal === "toc" ? toc() : <div className={styles.downloads}>
         {props.locked && <p className={styles.notice}>파일 내려받기는 결제 후 이용할 수 있어요. 형식을 선택하면 결제로 이어져요.</p>}
         {props.accessError ? <div className={styles.notice} role="alert">이용 권한을 확인하지 못했어요. <button className={styles.help} onClick={props.onRetryAccess}>다시 확인</button></div> : props.accessPending && <p role="status">이용 권한을 확인하고 있어요.</p>}
-        {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const).map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format)} onClick={() => props.onDownload(format)}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : name}</strong><small>{description}</small></span><ChevronRight size={20} /></button>)}
-        {props.deckStatus && <p role="status" aria-live="polite">{props.deckStatus}</p>}
-        {!isSample && planId && <Link href={`/plan/proposal?planId=${encodeURIComponent(planId)}`}>제안서 편집·제작 상태 확인</Link>}
+        {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const)
+          /* PPT 는 제공 준비 중이면 줄 자체를 두지 않는다 — 결제 전 사람에게 'PPT 상태 다시 확인'이 보였다 */
+          .filter(({ format }) => format !== "pptx" || PPT_GENERATION_VERIFIED).map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format)} onClick={() => props.onDownload(format)}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : name}</strong><small>{description}</small></span><ChevronRight size={20} /></button>)}
+        {PPT_GENERATION_VERIFIED && props.deckStatus && <p role="status" aria-live="polite">{props.deckStatus}</p>}
+        {PPT_GENERATION_VERIFIED && !isSample && planId && <Link href={`/plan/proposal?planId=${encodeURIComponent(planId)}`}>제안서 편집·제작 상태 확인</Link>}
         {Object.values(props.editStates).some(state => state.status !== "saved") && <p role="status">저장이 끝난 뒤 파일을 받을 수 있어요. 저장에 실패한 항목은 본문에서 확인해주세요.</p>}
         {props.error && <p role="alert">{props.error}</p>}
       </div>}

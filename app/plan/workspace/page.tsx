@@ -86,6 +86,19 @@ export default function BusinessWorkspace() {
   const action=hub?.coach ? currentNextAction(hub.coach) : undefined;
   const done=plan && action ? actionStatus(plan,action.action) : "pending";
   const chat=plan ? businessChatHref(plan.id) : "/plan/chat?new=1";
+  /*
+   * 메일·문자 링크를 다른 기기에서 열면 사업을 찾지 못한다 — 로그인하지 않은 경우면 로그인 후 이 화면으로 돌아오게 한다.
+   * (예전엔 '먼저 사업을 선택해 주세요'만 있어 로그인할 길이 없었다)
+   */
+  const [signedOut, setSignedOut] = useState(false);
+  const [currentPath, setCurrentPath] = useState("/plan");
+  useEffect(() => {
+    if (!loaded || plan) return;
+    setCurrentPath(`${window.location.pathname}${window.location.search}`);
+    let alive = true;
+    fetch("/api/auth/session", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then((d: { authenticated?: boolean } | null) => { if (alive && d) setSignedOut(!d.authenticated); }).catch(() => {});
+    return () => { alive = false; };
+  }, [loaded, plan]);
   async function mark(status: "done" | "skipped" | "pending") {
     if(!plan || !action || saving)return;
     setSaving(true);setNotice("");
@@ -102,7 +115,7 @@ export default function BusinessWorkspace() {
     event.preventDefault(); event.stopPropagation(); setPendingNavigation({ href: anchor.href });
   }}><BusinessAppChrome title="내 사업 관리">
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
-      {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p><Link className={styles.primary} href="/plan">내 사업으로</Link><Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
+      {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기</Link> : <Link className={styles.primary} href="/plan">내 사업으로</Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인합니다.</p>}
         <WorkspaceIdentity title={plan.title} status={hub.status} />
         <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"}>{hub.coach ? <Link href={chat}>대화 이어가기</Link> : <button onClick={openLegacy}>기존 작업 열기</button>}</WorkspaceNavigation>
