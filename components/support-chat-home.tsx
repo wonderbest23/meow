@@ -98,11 +98,13 @@ export function SupportSettings({ open, badge, onBadge, onClearConsult, onClose 
   const session = useSession(open);
   const [cleared, setCleared] = useState(false);
   const [logoutFailed, setLogoutFailed] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   /* 마이페이지 로그아웃과 같은 순서 — 실패하면 알리고, 성공하면 이 기기의 사업 목록도 비운다(다음 사람에게 보이지 않게) */
   const logout = async () => {
-    setLogoutFailed(false);
+    if (loggingOut) return;
+    setLogoutFailed(false); setLoggingOut(true);
     const response = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
-    if (!response || !response.ok) { setLogoutFailed(true); return; }
+    if (!response || !response.ok) { setLogoutFailed(true); setLoggingOut(false); return; }
     clearLocalState();
     window.location.reload();
   };
@@ -116,7 +118,7 @@ export function SupportSettings({ open, badge, onBadge, onClearConsult, onClose 
           <p className={styles.account}>{session.email ?? "로그인됨"}</p>
           <div className={styles.row}>
             <Link className={styles.ghost} href="/plan/me" onClick={onClose}>내 계정 · 결제 내역</Link>
-            <button type="button" className={styles.ghost} onClick={() => void logout()}>로그아웃</button>
+            <button type="button" className={styles.ghost} disabled={loggingOut} onClick={() => void logout()}>{loggingOut ? "로그아웃 중…" : "로그아웃"}</button>
           </div>
           {logoutFailed && <p className={styles.muted} role="alert">로그아웃하지 못했어요. 연결을 확인하고 다시 눌러 주세요.</p>}
         </> : <div className={styles.row}>

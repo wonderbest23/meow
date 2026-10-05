@@ -65,6 +65,13 @@ export default function PlanHomepagePage() {
   const [screenPlanId, setScreenPlanId] = useState<string | null>(null);
   /** 앱 껍데기를 걷어내고 홈페이지만 화면 가득 — 실제로 어떻게 보이는지 확인용 */
   const [fullscreen, setFullscreen] = useState(false);
+  /* 전체 화면 미리보기는 Esc 로도 닫는다 */
+  useEffect(() => {
+    if (!fullscreen) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setFullscreen(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [fullscreen]);
   /** 섹션 배치 편집기 — 결제한 사람만 연다 */
   const [builderOpen, setBuilderOpen] = useState(false);
   const [price, setPrice] = useState(HOMEPAGE_PRODUCT_AMOUNT);
@@ -415,7 +422,7 @@ export default function PlanHomepagePage() {
     <div className={styles.frameScroll}><div className={styles.frameInner}>
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (
-        <div className={styles.fullscreen} role="dialog" aria-label="홈페이지 전체 화면">
+        <div className={styles.fullscreen} role="dialog" aria-modal="true" aria-label="홈페이지 전체 화면">
           <button type="button" className={styles.fullscreenClose} onClick={() => setFullscreen(false)}>
             닫기 ✕
           </button>

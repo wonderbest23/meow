@@ -37,7 +37,11 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       예전엔 여기만 따로 만든 링크 목록이어서 PC와 폰의 메뉴가 달랐다.
     */}
     {open && <div className={drawer.scrim} onClick={() => setOpen(false)} aria-hidden="true" />}
-    {open && <aside id="app-drawer" className={`${shell.rail} ${shell.railOpen} ${drawer.drawer}`} data-rail-open="" aria-label="메뉴">
+    {/* 서랍 안에서 다른 화면·사업으로 가는 링크나 홈페이지 칸 이동을 누르면 닫는다 — 같은 주소에 사업만 바뀌면 예전엔 서랍이 그대로 덮고 있었다 */}
+    {open && <aside id="app-drawer" className={`${shell.rail} ${shell.railOpen} ${drawer.drawer}`} data-rail-open="" aria-label="메뉴" onClickCapture={event => {
+      const target = event.target as Element;
+      if (target.closest("a[href]") || target.closest('ul[aria-label="홈페이지 목차"] button')) setOpen(false);
+    }}>
       <button type="button" className={drawer.close} aria-label="메뉴 닫기" onClick={() => setOpen(false)}><X size={22} /></button>
       {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
