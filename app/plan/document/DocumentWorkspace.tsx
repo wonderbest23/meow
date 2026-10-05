@@ -85,6 +85,7 @@ export default function DocumentWorkspace(props: Props) {
    */
   const [zoomTable, setZoomTable] = useState<string | null>(null);
   const zoomDialog = useRef<HTMLDialogElement>(null);
+  const zoomPressOnBackdrop = useRef(false);
   const zoomBody = useRef<HTMLDivElement>(null);
   /* PDF처럼 처음엔 표 전체를 화면 폭에 맞춰 줄여 보여 주고, '크게 보기'면 원래 크기로 상하좌우 스크롤 */
   const [zoomFit, setZoomFit] = useState(true);
@@ -222,7 +223,9 @@ export default function DocumentWorkspace(props: Props) {
         {props.error && <p role="alert">{props.error}</p>}
       </div>}
     </dialog>
-  {zoomTable && <dialog ref={zoomDialog} className={styles.tableZoom} aria-label="표 크게 보기" onClose={() => setZoomTable(null)}>
+  {zoomTable && <dialog ref={zoomDialog} className={styles.tableZoom} aria-label="표 크게 보기" onClose={() => setZoomTable(null)}
+    onPointerDown={event => { zoomPressOnBackdrop.current = event.target === zoomDialog.current; }}
+    onClick={event => { if (zoomPressOnBackdrop.current && event.target === zoomDialog.current) zoomDialog.current?.close(); zoomPressOnBackdrop.current = false; }}>
       <header><strong>표 보기</strong>
         <div className={styles.tableZoomModes} role="group" aria-label="표 크기">
           <button type="button" aria-pressed={zoomFit} onClick={() => setZoomFit(true)}>화면에 맞추기</button>

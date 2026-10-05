@@ -698,7 +698,7 @@ export default function SectionWizard({
 
             {/* 잠긴 화면(로그인·결제 안내)에는 하단 바가 필요 없다 — 빈 띠만 남았다 */}
             {gate && !readOnly ? null : (
-            <div className={styles.foot}>
+            <div className={styles.foot} data-wizard-foot="">
               {/* 진행 게이지 — 하단 바 위쪽 끝에 꽉 차게. 지나온 묶음은 초록. */}
               {stepCount > 1 && (
                 <span className={styles.gauge} aria-hidden="true">

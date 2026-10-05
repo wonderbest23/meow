@@ -193,3 +193,6 @@
 @media (max-width: 640px) { .headerTools .status { display: none; } .headerTools > button.primary span { display: none; } }
 /* 앱 틀 안에서는 화면 높이를 채우는 대신 남은 칸에서 스크롤한다 */
 .inChrome { min-height: 0; flex: 1; overflow-y: auto; }
+
+/* 공통 머리줄(80px) 안에서는 스크롤 칸이 이미 머리줄 아래부터라, 예전 76px 기준이면 편집 칸 아래 80px가 닿지 않았다 */
+.inChrome .inspector { top: 0; max-height: 100%; }
