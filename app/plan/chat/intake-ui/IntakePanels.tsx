@@ -10,7 +10,7 @@ import { LoadingStatus } from "../../PlanLoading";
 import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
-import { COACH_FIELD_LABELS } from "../../../../lib/plan-builder/coach-presentation";
+import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
 import { amountRanges, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
 import { mentionedAnswer, undecidedHelp } from "./guidance";
@@ -409,7 +409,9 @@ export function AnswerHistory({ snapshot, drafts, onEdit, onKeepAsMemo }: { snap
   if (!questions.length && !orphaned.length) return null;
   return <>{orphaned.length > 0 && <section className={styles.recoveredDrafts} aria-labelledby="intake-recovered-heading"><h3 id="intake-recovered-heading">이전 질문에 입력한 내용</h3>{orphaned.map(id => <div key={id}><strong>{drafts[id].label || "이전 질문 답변"}</strong><p>{drafts[id].text || drafts[id].selected.join(", ") || "빈 답변"}</p><button type="button" className={styles.textButton} onClick={() => onKeepAsMemo(id)}>자유 메모로 가져오기</button></div>)}</section>}{questions.length > 0 && <details className={styles.history}><summary>이전 답변 <span>{questions.length}</span></summary><ul>{questions.map(question => {
     const answer = snapshot.intake.answers[question.id];
-    const value = answer ? answer.status === "unknown" ? "아직 정하지 않았어요" : Array.isArray(answer.value) ? answer.value.map(item => question.options?.find(option => option.value === item)?.label ?? item).join(", ") : question.options?.find(option => option.value === answer.value)?.label ?? answerText(answer.value) : snapshot.coach.fields.find(field => field.key === question.fieldKey)?.value;
+    const labelled = answer && answer.status !== "unknown" ? Array.isArray(answer.value) ? answer.value.map(item => question.options?.find(option => option.value === item)?.label ?? item).join(", ") : question.options?.find(option => option.value === answer.value)?.label ?? (summaryAnswerText(question, answer.value, snapshot.candidateIdeas) || answerText(answer.value)) : "";
+    /* 업종은 고른 세부 업종(화초 및 식물 소매업)을 앞에 — 큰 분류만 보이면 다른 걸 고른 줄 안다 */
+    const value = answer ? answer.status === "unknown" ? "아직 정하지 않았어요" : question.id === "industry" && snapshot.ksic ? `${snapshot.ksic.name} · ${labelled}` : labelled : coachFieldDisplay(snapshot.coach.fields.find(field => field.key === question.fieldKey)?.value ?? "");
     return <li key={question.id}><div><strong>{question.label}</strong><p>{plainText(value) || "아직 저장하지 않은 답변"}</p>{draftIds.includes(question.id) && <small>이 기기에 입력 중인 내용이 있어요</small>}</div><button className={styles.iconButton} type="button" title={`${question.label} 수정`} aria-label={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={17} /></button></li>;
   })}</ul></details>}</>;
 }
@@ -630,8 +632,11 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     const editableId = question?.id ?? (["business", "industry"].includes(item.id) ? item.id : null);
     const shown = plainText(item.value);
     const display = shown && question ? summaryAnswerText(question, item.basis === "unknown" ? null : shown, snapshot.candidateIdeas) || shown : shown;
-    const ksicLine = item.id === "industry" && snapshot.ksic ? `${snapshot.ksic.name} · KSIC ${snapshot.ksic.code}` : null;
-    return <div key={item.id}><dt><span>{item.label}</span><small data-basis={item.basis}>{item.basis === "proposal" ? "AI 제안" : item.basis === "unknown" ? "아직 안 정함" : "내가 입력함"}</small>{editableId && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={display || "아직 정하지 않았어요"} />{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
+    const ksic = item.id === "industry" && snapshot.ksic ? snapshot.ksic : null;
+    // 업종 줄은 고른 세부 업종을 크게, 큰 분류와 코드는 아래 작은 줄로
+    const ksicLine = ksic ? `${display || shown} · KSIC ${ksic.code}` : null;
+    const main = ksic ? ksic.name : display;
+    return <div key={item.id}><dt><span>{item.label}</span><small data-basis={item.basis}>{item.basis === "proposal" ? "AI 제안" : item.basis === "unknown" ? "아직 안 정함" : "내가 입력함"}</small>{editableId && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={main || "아직 정하지 않았어요"} />{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
   };
   return <>
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">현재까지 작성한 사업정보</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>

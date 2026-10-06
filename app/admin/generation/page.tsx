@@ -1,5 +1,6 @@
 "use client";
 
+import { USAGE_KIND_LABELS } from "../../../lib/llm/cost";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
@@ -50,7 +51,7 @@ export default function GenerationAdminPage() {
           <div className={styles.pagination}><button title="이전 페이지" aria-label="이전 페이지" disabled={offset === 0 || busy} onClick={() => setOffset(value => Math.max(0, value - 20))}><ChevronLeft size={18} /></button><span>{offset / 20 + 1}</span><button title="다음 페이지" aria-label="다음 페이지" disabled={data.nextOffset === null || busy} onClick={() => setOffset(data.nextOffset!)}><ChevronRight size={18} /></button></div>
         </section>
         <section className={styles.section}><header><h2>최근 AI 호출</h2><p>최근 25건 · 토큰은 입력 / 출력 기준 · 실제 청구액은 제공업체에서 확인</p></header>
-          {data.usage === null ? <p role="alert">호출 기록을 조회하지 못했습니다. DB와 마이그레이션을 확인해 주세요</p> : <><div className={styles.table}><table><thead><tr><th>시각</th><th>유형</th><th>제공업체와 모델</th><th>결과</th><th>처리 시간</th><th>토큰</th></tr></thead><tbody>{data.usage.map(call => <tr key={call.id}><td>{date(call.created_at)}</td><td>{call.kind}</td><td>{call.provider}<small>{call.model ?? "모델 미기록"}</small></td><td><span data-state={call.ok ? "complete" : "failed"}>{call.ok ? "응답 수신" : "실패"}</span>{call.failure_code && <small className={styles.failure}>{call.failure_code}</small>}</td><td>{duration(call.elapsed_ms)}</td><td>{tokens(call.input_tokens, call.output_tokens)}</td></tr>)}</tbody></table></div>{data.usage.length === 0 && <p className={styles.empty}>저장된 AI 호출 기록이 없습니다</p>}</>}
+          {data.usage === null ? <p role="alert">호출 기록을 조회하지 못했습니다. DB와 마이그레이션을 확인해 주세요</p> : <><div className={styles.table}><table><thead><tr><th>시각</th><th>유형</th><th>제공업체와 모델</th><th>결과</th><th>처리 시간</th><th>토큰</th></tr></thead><tbody>{data.usage.map(call => <tr key={call.id}><td>{date(call.created_at)}</td><td>{USAGE_KIND_LABELS[call.kind] ?? call.kind}</td><td>{call.provider}<small>{call.model ?? "모델 미기록"}</small></td><td><span data-state={call.ok ? "complete" : "failed"}>{call.ok ? "응답 수신" : "실패"}</span>{call.failure_code && <small className={styles.failure}>{call.failure_code}</small>}</td><td>{duration(call.elapsed_ms)}</td><td>{tokens(call.input_tokens, call.output_tokens)}</td></tr>)}</tbody></table></div>{data.usage.length === 0 && <p className={styles.empty}>저장된 AI 호출 기록이 없습니다</p>}</>}
         </section>
       </>}
     </div>

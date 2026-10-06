@@ -1,4 +1,5 @@
 import { coachDocumentRevision, currentNextAction, readCoach, type CoachField } from "./coach";
+import { coachFieldDisplay } from "./coach-presentation";
 import { coachAmount, checkCoachFeasibility } from "./coach-feasibility";
 import { intakeScenarioInputs, readIntake } from "./intake-core";
 import { buildPlanBusinessContext, type ContextField } from "./context/build";
@@ -40,7 +41,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   };
   const field = (label: string, key: CoachField["key"], fallback?: ContextField<unknown>, max?: number) => {
     const item = fields.get(key);
-    const value = item?.value ?? (fallback?.value != null ? Array.isArray(fallback.value) ? fallback.value.join(", ") : String(fallback.value) : undefined);
+    const value = (item?.value != null ? coachFieldDisplay(item.value) : undefined) ?? (fallback?.value != null ? Array.isArray(fallback.value) ? fallback.value.join(", ") : String(fallback.value) : undefined);
     return line(label, value, item?.basis ?? (fallback?.status === "inferred" ? "proposal" : "user"), [item ? `coach.${key}` : `context.${key}`], max);
   };
 
@@ -84,7 +85,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
     for (const pair of [rows.slice(0, 2), rows.slice(2)]) evidenceLines.push(line("입력 실적", pair.map(row => `${row.label} ${metricValue(row.current, row.unit)}${row.delta === null ? "" : ` (이전 대비 ${row.delta > 0 ? "+" : ""}${metricValue(row.delta, row.unit)})`}`).join(" / "), "user", pair.map(row => `operations.${period.id}.${row.key}`), 150));
   } else {
     const sales = fields.get("sales");
-    evidenceLines.push(sales?.basis === "user" ? line("매출 진술", sales.value, "user", ["coach.sales"], 120) : line("실적", undefined, "missing", []));
+    evidenceLines.push(sales?.basis === "user" ? line("매출 진술", coachFieldDisplay(sales.value), "user", ["coach.sales"], 120) : line("실적", undefined, "missing", []));
     const experience = field("관련 경험", "experience", context.team.ownerExperience, 120);
     if (experience.basis === "user") evidenceLines.push(experience);
   }

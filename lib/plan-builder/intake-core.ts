@@ -186,7 +186,7 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
       if (question.id === "price") {
         // The pricing basis is wording only (spec §4-1): storage stays a coachAmount string under coach.fields.price.
         const period = (structure ? revenueBasis(structure) : null) ?? PRICE_BASIS[sector], options = sectorChipOptions(sector, "price", intake.mode);
-        const hint = sector === "software" ? "무료 모델이면 아직 미정을 누르고 과금 기준에서 설명해요." : question.hint;
+        const hint = sector === "software" ? "무료 모델이면 ‘아직 정하지 않았어요’를 누르고 과금 기준에서 설명해요." : question.hint;
         return { ...question, period, prompt: pricePrompt(period, intake.mode), ...(hint ? { hint } : {}), ...(options.length ? { options } : {}) };
       }
       // 변동비 문구·단위는 수익 방식(판매 1건·1시간·구독자 1명…)을 따른다. 저장 위치(coach.fields.unitCost)는 같다.

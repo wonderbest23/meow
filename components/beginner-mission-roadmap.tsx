@@ -426,7 +426,7 @@ export function BeginnerMissionRoadmap({
       const initials = name.replaceAll(" ", "").slice(0, 2).toUpperCase();
       const dataUrl = await imageDataUrlFromSvg(createLogoSymbolSvg(workspace.brand.markStyle, workspace.brand.accentColor, initials));
       await onLogoCreated(dataUrl);
-      setLogoMessage("선택한 시안을 홈페이지 로고에 적용했습니다.");
+      setLogoMessage("선택한 시안을 홈페이지 로고에 넣었어요. 이미 공개한 홈페이지는 홈페이지 탭에서 ‘수정하고 공개’를 눌러야 바뀌어요.");
     } catch (error) {
       setLogoMessage(error instanceof Error ? error.message : "로고를 적용하지 못했습니다.");
     } finally {
@@ -467,7 +467,7 @@ export function BeginnerMissionRoadmap({
     setLogoState("applying");
     try {
       await onLogoCreated(generatedLogo);
-      setLogoMessage("인공지능 로고를 홈페이지에 적용했습니다.");
+      setLogoMessage("인공지능 로고를 홈페이지 로고에 넣었어요. 이미 공개한 홈페이지는 홈페이지 탭에서 ‘수정하고 공개’를 눌러야 바뀌어요.");
     } catch (error) {
       setLogoMessage(error instanceof Error ? error.message : "로고를 적용하지 못했습니다.");
     } finally {

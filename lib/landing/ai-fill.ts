@@ -53,7 +53,7 @@ export function normalizeHomepageCopy(raw: unknown): HomepageCopy | null {
     .filter((fact) => fact.value && fact.label && /\d/.test(fact.value)).slice(0, 3);
   const menu = record(value.menu);
   const items = (Array.isArray(menu.items) ? menu.items : []).map(record)
-    .map((item) => ({ name: clip(item.name, 40), price: clip(item.price, 24) }))
+    .map((item) => ({ name: clip(item.name, 40), price: formatPriceText(clip(item.price, 24)) }))
     .filter((item) => item.name).slice(0, 3);
   const faq = (Array.isArray(value.faq) ? value.faq : []).map(record)
     .map((item) => ({ question: clip(item.question, 40), answer: clip(item.answer, 160) }))

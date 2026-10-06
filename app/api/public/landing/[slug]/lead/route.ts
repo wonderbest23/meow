@@ -75,7 +75,7 @@ export async function POST(
           message,
         },
       },
-      { status: message === "LANDING_NOT_FOUND" ? 404 : 400 },
+      { status: raw === "LANDING_NOT_FOUND" ? 404 : 400 },
     );
   }
 }

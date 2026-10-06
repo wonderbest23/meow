@@ -16,7 +16,7 @@ import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, loadState, isSamplePlan, planOwnerEpoch, setActivePlan, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { persistLandingDraft } from "../../../lib/landing/save-client";
-import { landingDraftFingerprint } from "../../../lib/landing/save-contract";
+import { hasUnpublishedEdits, landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import Link from "next/link";
 import styles from "./page.module.css";
 import PlanLoading from "../PlanLoading";
@@ -504,6 +504,7 @@ export default function PlanHomepagePage() {
           businessName={draft.businessName}
           projectId={projectId}
           businessSummary={draft.subheadline || draft.offerDescription}
+          published={site?.status === "published"}
           onClose={() => setBuilderOpen(false)}
           onSave={async (pageData) => {
             await saveDraft({ ...draft, pageData });
@@ -565,6 +566,7 @@ export default function PlanHomepagePage() {
           action={action}
           message={message}
           published={site?.status === "published"}
+          unpublishedEdits={hasUnpublishedEdits(site, draft)}
           /* 공개 전 주소는 아직 없다(열면 404) — 공개한 뒤에만 주소와 '열기'를 보인다 */
           publicPath={site?.status === "published" ? publicPath : ""}
           projectId={projectId}
