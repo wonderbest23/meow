@@ -224,10 +224,20 @@
 .chatSpeaker img { width: 28px; height: 28px; border-radius: 50%; }
 .assistantMessage { margin: 0 0 24px; font-size: 16px; line-height: 1.85; }
 .assistantMessage > p, .userMessage > p { white-space: pre-wrap; }
-.userMessage { position: relative; width: fit-content; max-width: 88%; margin: 0 0 32px auto; padding: 13px 17px; border-radius: 16px 4px 16px 16px; background: #edf4ff; color: #243850; font-size: 16px; line-height: 1.75; }
-.messageEdit { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: 2px -5px -6px 0; float: right; border: 0; border-radius: 4px; background: transparent; color: #657b9b; }
-.userMessage:has(.messageEdit)::after { content: ""; display: block; clear: both; }
-.messageStatus { margin: -22px 0 28px auto !important; max-width: 88%; text-align: right; font-size: 11px; color: var(--intake-muted); }
+/* Messenger bubbles: the coach's short lines sit in a soft grey bubble, the user's in solid blue. */
+.assistantMessage > p, .assistantMessage > .conversationText { width: fit-content; max-width: 88%; margin: 0; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; color: var(--intake-ink); line-height: 1.7; }
+.userMessage { position: relative; width: fit-content; max-width: 88%; margin: 0 0 32px auto; padding: 10px 16px; border-radius: 20px; background: var(--intake-blue); color: #fff; font-size: 16px; line-height: 1.7; transform-origin: 100% 100%; }
+.messageEdit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 32px; height: 32px; margin: -6px -10px -6px 0; border: 0; border-radius: 50%; background: transparent; color: #ffffffd9; }
+.userMessage:has(.messageEdit) { display: flex; align-items: center; gap: 4px; }
+.messageStatus { margin: -26px 0 28px auto !important; max-width: 88%; text-align: right; font-size: 11px; color: var(--intake-muted); transform-origin: 100% 0; animation: intake-receipt .4s ease; }
+.speakerStatus { color: transparent; background: linear-gradient(90deg, #8a96a8 0 35%, #2b3340 50%, #8a96a8 65% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; font-weight: 500; animation: intake-status-shimmer 2s ease infinite; }
+.speakerStatus::before { content: "·"; margin-right: 7px; color: #b3bccb; }
+.typingBubble { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 56px; height: 38px; border-radius: 20px; background: #f2f5fa; transform-origin: 0 50%; animation: intake-bubble-in .18s cubic-bezier(.2, .8, .2, 1); }
+.typingBubble i { width: 7px; height: 7px; border-radius: 50%; background: #2b3340; opacity: .2; animation: intake-typing-glow 1.2s ease-in-out infinite; }
+.typingBubble i:nth-child(2) { animation-delay: .3s; }
+.typingBubble i:nth-child(3) { animation-delay: .6s; }
+.jobChat { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 0 8px; }
+.jobChatNote { margin-top: 8px; color: var(--intake-muted); font-size: 12px; line-height: 1.6; }
 .chatQuestion { display: flex; flex-direction: column; }
 .chatQuestion h2 { font-size: 18px; font-weight: 600; line-height: 1.85; margin-bottom: 18px; }
 .chatQuestion .chatSpeaker { align-self: flex-start; }
@@ -302,8 +312,16 @@
 .sendButton:disabled { opacity: 1 !important; background: #f3f5f8; color: #c0c9d5; }
 .newMessage { position: absolute; right: 24px; bottom: 150px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--intake-line); border-radius: 8px; color: #49698f; background: white; box-shadow: 0 3px 16px #24354b10; font-size: 12px !important; }
 .introMessage { margin-top: 24px; }
-.chatQuestion, .chatTurn:last-child > .userMessage, .replyTyping { animation: intake-message .24s ease-out; }
+.chatQuestion, .replyTyping { animation: intake-message .24s ease-out; }
+/* The newest answer rises from the composer with a small spring (about 5% overshoot), like a sent message. */
+.chatTurn:last-child > .userMessage { animation: intake-send .6s linear(0, .03 3%, .1 7%, .19 10%, .3 14%, .47 19%, .63 24%, .77 29%, .87 34%, .95 40%, 1 45%, 1.03 50%, 1.05 56%, 1.04 63%, 1.02 72%, 1 85%, 1); }
+.aiReply, .jobChat { animation: intake-message .25s ease-out; }
 @keyframes intake-message { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes intake-send { from { opacity: .3; transform: translateY(48px) scale(.97); } 30% { opacity: 1; } to { transform: none; } }
+@keyframes intake-bubble-in { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes intake-typing-glow { 0%, 100% { opacity: .2; } 40% { opacity: .7; } }
+@keyframes intake-receipt { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes intake-status-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 @keyframes intake-typing { 0%, 60%, 100% { opacity: .4; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
 @keyframes intake-spin { to { transform: rotate(360deg); } }
 @media (hover: hover) {
@@ -361,10 +379,12 @@
   .chatQuestion h2 { font-size: 17px; }
   .chatQuestion .option { padding: 9px 10px; }
   .chatQuestion .option strong { font-size: 13px; }
-  .userMessage { font-size: 15px; padding: 11px 14px; }
+  .userMessage, .assistantMessage > p, .assistantMessage > .conversationText { font-size: 15px; padding: 9px 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .speakerStatus { color: #4c596d; background: none; }
+  .typingBubble i:nth-child(2) { opacity: .45; }
 }
 
 .periodPicker { display: grid; gap: 12px; margin-bottom: 6px; }

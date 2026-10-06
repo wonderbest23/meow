@@ -528,6 +528,12 @@ async function main() {
   const queuedGauge = renderToStaticMarkup(<JobProgress snapshot={{ ...summarized, intake: { ...summarized.intake, job: { ...runningJob, status: "queued" } }, jobClock: { elapsedMs: 0, expectedMs: 25_000, limitMs: 60_000 } }} />);
   assert.ok(queuedGauge.includes("요청을 접수했어요") && queuedGauge.includes('aria-valuetext="처리 대기 중"'));
   assert.equal(renderToStaticMarkup(<JobProgress snapshot={summarized} />), "", "no gauge without an active job");
+  const chatJob = renderToStaticMarkup(<JobProgress announce variant="chat" snapshot={{ ...summarized, intake: { ...summarized.intake, job: runningJob }, jobClock: { elapsedMs: 25_000, expectedMs: 25_000, limitMs: 60_000 } }} />);
+  assert.ok(chatJob.includes("data-job-chat") && chatJob.includes("사업 방향 정리 중") && chatJob.includes('role="status"') && chatJob.includes("보통 30~40초 걸려요"),"in the conversation the job reads as the coach replying");
+  assert.ok(!chatJob.includes("progressbar") && !chatJob.includes("초 경과") && !chatJob.includes("평소보다"), "no gauge or ticking clock while the job is on time");
+  const slowChatJob = renderToStaticMarkup(<JobProgress variant="chat" snapshot={{ ...summarized, intake: { ...summarized.intake, job: runningJob }, jobClock: { elapsedMs: 41_000, expectedMs: 25_000, limitMs: 60_000 } }} />);
+  assert.ok(slowChatJob.includes("평소보다 오래 걸리고 있어요 · 41초") && !slowChatJob.includes('role="status"'), "elapsed time appears only once the job runs long");
+  assert.equal(renderToStaticMarkup(<JobProgress variant="chat" snapshot={summarized} />), "", "no chat reply bubble without an active job");
   const busySummary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={{ ...nextSnapshot({}, { design: undefined }), intake: { ...summarized.intake, job: runningJob }, jobClock: { elapsedMs: 5_000, expectedMs: 25_000, limitMs: 60_000 } }} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
   assert.ok(busySummary.includes('role="progressbar"') && !busySummary.includes("aria-valuenow") && !busySummary.includes("사업 방향 정리하기</button>"), "while the job runs its state indicator takes the button's place");
   let numbered = previewIntakeAnswer(original, command({ questionId: "budget", value: "200만원" }))!;

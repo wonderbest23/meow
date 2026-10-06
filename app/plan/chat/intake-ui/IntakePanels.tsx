@@ -360,12 +360,17 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
   </div>;
 }
 
-export function ChatSpeaker() {
-  return <span className={styles.chatSpeaker}><img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" /><span>오늘창업</span></span>;
+export function ChatSpeaker({ status }: { status?: string }) {
+  return <span className={styles.chatSpeaker}><img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" /><span>오늘창업</span>{status && <span className={styles.speakerStatus}>{status}</span>}</span>;
+}
+
+/** Messenger-style "typing" bubble; the dots only change brightness, so the layout never jumps. */
+function TypingBubble() {
+  return <span className={styles.typingBubble} aria-hidden="true"><i /><i /><i /></span>;
 }
 
 export function ReplyTyping() {
-  return <div className={styles.replyTyping} data-reply-typing><ChatSpeaker /><LoadingStatus note="다음 질문을 준비하고 있어요" /></div>;
+  return <div className={styles.replyTyping} data-reply-typing><ChatSpeaker /><TypingBubble /><span className={styles.srOnly} role="status" aria-live="polite">다음 질문을 준비하고 있어요</span></div>;
 }
 
 export function ConversationText({ text }: { text: string }) {
@@ -458,7 +463,7 @@ const JOB_TITLES: Record<"extract" | "help" | "design" | "ideas", string> = { ex
 const monotonicNow = () => typeof performance !== "undefined" ? performance.now() : Date.now();
 
 /** Show server status and elapsed time without presenting an estimated completion percentage. */
-export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSnapshot; announce?: boolean }) {
+export function JobProgress({ snapshot, announce = false, variant = "gauge" }: { snapshot: IntakeSnapshot; announce?: boolean; variant?: "gauge" | "chat" }) {
   const job = snapshot.intake.job;
   const active = !!job && (job.status === "queued" || job.status === "running");
   const serverElapsed = snapshot.jobClock?.elapsedMs;
@@ -475,6 +480,15 @@ export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSn
   if (!job || !active) return null;
   const timing = snapshot.jobClock ?? INTAKE_JOB_TIMING[job.kind];
   const view = jobProgress(job.status, sync.base + (monotonicNow() - sync.at), timing.expectedMs, timing.limitMs);
+  const title = job.status === "queued" ? "요청을 접수했어요" : JOB_TITLES[job.kind];
+  // In the conversation the job reads like the coach replying: current step beside the name, a typing bubble,
+  // and elapsed time only once it runs longer than usual.
+  if (variant === "chat") return <div className={styles.jobChat} data-kind={job.kind} data-job-chat>
+    <ChatSpeaker status={title} />
+    <TypingBubble />
+    {announce && <span className={styles.srOnly} role="status" aria-live="polite">{title}</span>}
+    <small className={styles.jobChatNote}>{view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초` : job.kind === "design" ? "기본 질문이 끝나서 바로 정리를 시작했어요. 보통 30~40초 걸려요." : "답변은 저장돼 있어요. 나가도 결과는 여기 남아요."}</small>
+  </div>;
   return <div className={styles.jobProgress} data-kind={job.kind}>
     <div className={styles.jobProgressTitle}><LoadingStatus note={job.status === "queued" ? "요청을 접수했어요" : JOB_TITLES[job.kind]} announce={announce} /></div>
     <div className={styles.jobProgressBar} role="progressbar" aria-label={JOB_TITLES[job.kind]} aria-valuetext={job.status === "queued" ? "처리 대기 중" : "처리 중"}><span className={styles.indeterminateProgress} /></div>
