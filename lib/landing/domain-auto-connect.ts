@@ -59,7 +59,34 @@ export async function startRegisteredDomainConnection(orderId: string, dependenc
     if (site.error) site = await pick("id, project_id, slug, status, custom_domain");
     const row = site.data as unknown as SiteRow | null;
     if (site.error || !row) return warn("이 사업의 홈페이지를 찾지 못해 자동 연결을 하지 않았어요.");
-    if (row.status !== "published") return warn("홈페이지가 아직 공개 전이라 자동 연결을 미뤘어요. 공개한 뒤 사장님 화면의 '연결 시작'으로 연결돼요.");
+    // 이미 이 주소로 연결돼 있으면(갱신 결제·다시 누름) 다시 연결하거나 '연결을 시작했어요'를 또 보내지 않는다
+    if (row.custom_domain === hostname) return { ...result, connected: true };
+    const ownerEmail = async () => {
+      const saved = (order.data?.customer_email as string | null | undefined)?.trim();
+      if (saved) return saved;
+      const owner = await db.auth.admin.getUserById(ownerId).catch(() => null);
+      return owner?.data?.user?.email_confirmed_at ? owner.data.user.email ?? null : null;
+    };
+    if (row.status !== "published") {
+      // 등록은 끝났는데 공개 전이면 연결을 미룬다 — 예전엔 운영자 메일에만 적혀 사장님은 아무 연락도 못 받았다
+      const to = await ownerEmail();
+      let mailed = false;
+      if (to && deps.email) {
+        const sent = await sendLandingLeadEmail({
+          from: deps.email.from, to,
+          subject: `[오늘창업] 도메인 ${request.domain} 등록을 마쳤어요`,
+          text: [
+            `${request.domain} 을(를) 사장님 명의로 등록했어요.`,
+            "",
+            `홈페이지를 공개한 뒤, 홈페이지 화면의 '회사 이름으로 된 주소 쓰기'에서 '연결 시작'을 누르면 ${hostname} 으로 열려요.`,
+            homepageManageUrl(planId),
+          ].join("\n"),
+        }, deps.email.key, `domain-registered-unpublished/${orderId}`, deps.emailTransport);
+        mailed = sent.ok;
+        if (sent.ok) result.notified.push("email");
+      }
+      return warn(`홈페이지가 아직 공개 전이라 자동 연결을 미뤘어요. ${mailed ? "사장님께 '공개 후 연결 시작' 안내 메일을 보냈어요." : "사장님께 안내 메일을 보내지 못했어요 — 직접 알려 주세요."}`);
+    }
     if (row.custom_domain && row.custom_domain !== hostname) return warn(`이미 다른 도메인(${row.custom_domain})이 연결돼 있어 바꾸지 않았어요.`);
     if (!deps.configured) return warn("Cloudflare 도메인 연결 설정이 없어 자동 연결을 하지 않았어요.");
 
@@ -80,11 +107,7 @@ export async function startRegisteredDomainConnection(orderId: string, dependenc
       const sent = await sendRelayV4(deps.sms, { eventId: await stableEventId(`domain-connect:${orderId}`), eventType: "domain-connect-started", recipient: phone, params: { domain: hostname } }, deps.smsTransport);
       if (sent.status === "accepted" || sent.status === "test_accepted") result.notified.push("sms"); else problems.push(`문자 ${sent.code}`);
     }
-    let to = (order.data?.customer_email as string | null | undefined)?.trim() || null;
-    if (!to) {
-      const owner = await db.auth.admin.getUserById(ownerId).catch(() => null);
-      to = owner?.data?.user?.email_confirmed_at ? owner.data.user.email ?? null : null;
-    }
+    const to = await ownerEmail();
     if (to && deps.email) {
       const sent = await sendLandingLeadEmail({
         from: deps.email.from, to,

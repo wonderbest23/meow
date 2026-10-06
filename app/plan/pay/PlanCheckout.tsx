@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
@@ -12,6 +12,7 @@ import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, REGEN_PACK_NAME } from "../../../lib/payments/domain";
 import { normalizePurchaseDomain, validateRegistrant } from "../../../lib/landing/domain-purchase";
+import { AddressSearchButton } from "../../../components/address-search";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -85,6 +86,7 @@ export default function PlanCheckout() {
   /* 도메인 명의자 — 이용자 명의 등록에 필요(예전엔 결제 뒤 이메일로 받았다). .com 은 결제 직후 자동 등록 */
   const [registrant, setRegistrant] = useState({ name: "", phone: "", postalCode: "", address: "", addressDetail: "" });
   const registrantCheck = isDomainPurchase ? validateRegistrant(registrant) : null;
+  const pickAddress = useCallback((picked: { postalCode: string; address: string }) => setRegistrant(current => ({ ...current, postalCode: picked.postalCode, address: picked.address })), []);
   const setReg = (key: keyof typeof registrant) => (event: { target: { value: string } }) => setRegistrant(current => ({ ...current, [key]: event.target.value }));
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean; unavailable?: boolean } | null>(null);
   const [homepageInfo, setHomepageInfo] = useState<{ price: number; editable: boolean } | null>(null);
@@ -296,10 +298,12 @@ export default function PlanCheckout() {
               <legend>도메인 명의자 <small>(도메인은 이 분 이름으로 등록돼요)</small></legend>
               <label className={styles.phone}><span>이름(실명)</span><input autoComplete="name" value={registrant.name} onChange={setReg("name")} placeholder="홍길동" /></label>
               <label className={styles.phone}><span>휴대폰</span><input type="tel" inputMode="numeric" autoComplete="tel" value={registrant.phone} onChange={setReg("phone")} placeholder="01012345678" maxLength={13} /></label>
+              {/* 주소는 카카오 우편번호 검색으로 채운다(오타·우편번호 누락 방지) — 못 불러오면 손으로 적어도 된다 */}
               <div className={styles.registrantRow}>
                 <label className={styles.phone}><span>우편번호</span><input inputMode="numeric" autoComplete="postal-code" value={registrant.postalCode} onChange={setReg("postalCode")} placeholder="03900" maxLength={5} /></label>
-                <label className={styles.phone}><span>주소</span><input autoComplete="street-address" value={registrant.address} onChange={setReg("address")} placeholder="서울특별시 마포구 월드컵로 12" /></label>
+                <div className={styles.phone}><span>주소</span><AddressSearchButton onPick={pickAddress} label={registrant.address ? "다시 검색" : "주소 검색"} /></div>
               </div>
+              <label className={styles.phone}><input aria-label="주소" autoComplete="street-address" value={registrant.address} onChange={setReg("address")} placeholder="주소 검색을 누르면 채워져요" /></label>
               <label className={styles.phone}><span>상세 주소 <small>(선택)</small></span><input value={registrant.addressDetail} onChange={setReg("addressDetail")} placeholder="2층 201호" /></label>
               <small>등록기관(도메인 관리 기관)에 그대로 전달돼요. 사업자등록증의 주소와 같으면 좋아요.</small>
             </fieldset> : null}

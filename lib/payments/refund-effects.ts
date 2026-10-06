@@ -3,6 +3,9 @@ import { cloudflareSaasConfigured, deleteLandingDomainConnection } from "../land
 import { BUNDLE_PRODUCT_NAME, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_NAME, REGEN_PACK_NAME, TOKEN_PACK_NAME } from "./domain";
 import { HOMEPAGE_PRODUCT_NAME, type PlanProduct } from "./plan-orders";
 import type { PaymentOrder } from "./domain";
+import { setAutoRenew } from "../landing/domain-registrar";
+import { registrarConfig, registrarSupports } from "../landing/registrar-config";
+import { readDomainRequest } from "../landing/domain-purchase";
 
 /*
  * 환불한 상품을 실제로 닫는다.
@@ -98,6 +101,17 @@ export async function closeRefundedProduct(order: PaymentOrder, options: { homep
         if (error) throw error;
       }
     });
+  }
+
+  // 자동 등록한 .com — 환불하면 Cloudflare 자동 갱신을 끈다(안 끄면 내년에 우리 결제수단으로 갱신된다). 도메인은 사장님 명의로 남는다
+  if (product === "domain-purchase") {
+    const domain = readDomainRequest((order.opportunity as { domainRequest?: unknown } | null)?.domainRequest)?.domain ?? "";
+    const config = registrarConfig();
+    if (config && registrarSupports(domain)) {
+      await attempt("도메인 자동 갱신 끄기", async () => {
+        if (!(await setAutoRenew(config, domain, false))) throw new Error("AUTO_RENEW_OFF_FAILED");
+      });
+    }
   }
 
   // 도메인 연결·호스팅 — 같은 사업에 남은 도메인 주문(갱신분)이 없을 때만 연결을 끊는다

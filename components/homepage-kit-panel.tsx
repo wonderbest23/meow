@@ -17,6 +17,7 @@ import { HomepageLeadActions } from "./homepage-lead-actions";
 import { formatKoreanPhone } from "../lib/contact-links";
 import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading from "../app/plan/PlanLoading";
+import { AddressSearchButton } from "./address-search";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -349,7 +350,7 @@ export function HomepageKitPanel({
           <label><span>이메일</span><input type="email" value={draft.businessEmail} onChange={(e) => update({ businessEmail: e.target.value })} placeholder="hello@mybusiness.kr" /></label>
           <label><span>사업자등록번호</span><input value={draft.businessRegistrationNumber} onChange={(e) => update({ businessRegistrationNumber: e.target.value })} placeholder="000-00-00000" /></label>
           <label><span>통신판매업 신고번호</span><input value={draft.mailOrderSalesNumber} onChange={(e) => update({ mailOrderSalesNumber: e.target.value })} placeholder="없으면 비워 두세요" /></label>
-          <label className="wide"><span>사업장 주소</span><input value={draft.businessAddress} onChange={(e) => update({ businessAddress: e.target.value })} placeholder="고객 문의를 처리할 수 있는 실제 주소" /></label>
+          <div className="wide address-field"><label><span>사업장 주소</span><input value={draft.businessAddress} onChange={(e) => update({ businessAddress: e.target.value })} placeholder="고객 문의를 처리할 수 있는 실제 주소" /></label><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
           <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>
           <label className="wide hk-switch">
             <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />

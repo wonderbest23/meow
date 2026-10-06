@@ -11,6 +11,7 @@
  * 늦어지거나 실패하면 주객전도다.
  */
 import { notifyOwnerByEmail } from "./notify/owner-email";
+import { registrarConfig, registrarSupports } from "./landing/registrar-config";
 
 /** 응답을 붙잡아 두는 최대 시간 — owner-email 자체 제한(6초)보다 짧게 끊는다 */
 const OPS_ALERT_WAIT_MS = 3000;
@@ -29,10 +30,14 @@ export async function notifyOperator(subject: string, lines: string[]): Promise<
 }
 
 /** 도메인 구매 결제 완료 — 결제 복귀(return)와 결과 확인(reconcile) 어느 쪽에서 완료돼도 같은 알림 */
-export async function notifyDomainPurchasePaid(order: { orderId: string; amount: number; domain: string | null }): Promise<void> {
+export async function notifyDomainPurchasePaid(order: { orderId: string; amount: number; domain: string | null; renewal?: boolean }): Promise<void> {
   // .com 은 자동 등록(lib/landing/domain-registrar.ts)이 켜져 있으면 손댈 일이 없다 — 실패하면 따로 '손으로 처리' 메일이 간다
-  const auto = Boolean(process.env.CLOUDFLARE_REGISTRAR_TOKEN?.trim()) && /^[^.]+\.com$/.test(order.domain ?? "");
-  await notifyOperator(auto ? "도메인 구매 결제 완료 — 자동 등록 중(.com)" : "도메인 구매 결제가 완료됐습니다 — 등록 처리 필요", [
+  // 자동 등록과 같은 판단(토큰 + 계정 ID + .com) — 토큰만 보고 '할 일 없음'이라 했다가 실제로는 꺼져 있던 일을 막는다
+  const auto = registrarConfig() !== null && registrarSupports(order.domain ?? "");
+  const renewal = order.renewal === true;
+  await notifyOperator(renewal
+    ? (auto ? "도메인 갱신 결제 완료(.com) — Cloudflare 자동 갱신 유지 확인" : "도메인 갱신 결제 완료 — 등록기관에서 1년 갱신 필요")
+    : auto ? "도메인 구매 결제 완료 — 자동 등록 중(.com)" : "도메인 구매 결제가 완료됐습니다 — 등록 처리 필요", [
     `주소: ${order.domain ?? "(주소 정보 없음)"}`,
     `금액: ${order.amount.toLocaleString("ko-KR")}원`,
     `주문번호: ${order.orderId}`,
