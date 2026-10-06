@@ -51,7 +51,7 @@ export function weeklyTip(stats: WeeklyStats): string {
   return "이번 주에는 사진 한 장만 최근 모습으로 바꿔 보세요. 지금 가게·작업 모습이 보이면 손님이 믿고 연락하기 쉬워요.";
 }
 
-const change = (now: number, before: number, unit: string) => now === before ? "지난주와 같아요" : now > before ? `지난주보다 ${now - before}${unit} 늘었어요` : `지난주보다 ${before - now}${unit} 줄었어요`;
+const change = (now: number, before: number, unit: string) => now === before ? "지난주와 같아요" : now > before ? `지난주보다 ${(now - before).toLocaleString("ko-KR")}${unit} 늘었어요` : `지난주보다 ${(before - now).toLocaleString("ko-KR")}${unit} 줄었어요`;
 const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 
 export type WeeklyReportInput = {
@@ -80,7 +80,7 @@ export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPaylo
   const text = [
     `${name} 지난주(${range}) 홈페이지 성적표`,
     "",
-    ...rows.map(([label, now, before, unit]) => `· ${label}: ${now}${unit} (${change(now, before, unit)})`),
+    ...rows.map(([label, now, before, unit]) => `· ${label}: ${now.toLocaleString("ko-KR")}${unit} (${change(now, before, unit)})`),
     "",
     `이번 주 해 볼 일: ${tip}`,
     ...(snsLines.length ? ["", ...snsLines, ...(input.snsUrl ? [`올릴 글 보기: ${input.snsUrl}`] : [])] : []),
@@ -98,7 +98,7 @@ export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPaylo
 <p style="margin:0 0 4px;color:#6b7684;font-size:13px;">오늘창업 주간 리포트 · ${escapeHtml(range)}</p>
 <h1 style="margin:0 0 16px;font-size:20px;line-height:1.4;">${escapeHtml(name)} 지난주 성적표</h1>
 <table role="presentation" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;">
-${rows.map(([label, now, before, unit]) => `<tr><td style="${cell}color:#4e5968;">${escapeHtml(label)}</td><td style="${cell}text-align:right;"><strong style="font-size:18px;">${now}</strong>${unit}<br><span style="color:#8b95a1;font-size:12px;">${escapeHtml(change(now, before, unit))}</span></td></tr>`).join("\n")}
+${rows.map(([label, now, before, unit]) => `<tr><td style="${cell}color:#4e5968;">${escapeHtml(label)}</td><td style="${cell}text-align:right;"><strong style="font-size:18px;">${now.toLocaleString("ko-KR")}</strong>${unit}<br><span style="color:#8b95a1;font-size:12px;">${escapeHtml(change(now, before, unit))}</span></td></tr>`).join("\n")}
 </table>
 <div style="margin:16px 0;padding:14px 16px;background:#eef4ff;border-radius:12px;font-size:14px;line-height:1.6;"><strong>이번 주 해 볼 일</strong><br>${escapeHtml(tip)}</div>
 ${snsLines.length ? `<div style="margin:0 0 16px;padding:14px 16px;background:#f3f0ff;border-radius:12px;font-size:14px;line-height:1.7;"><strong>${escapeHtml(snsLines[0])}</strong>${snsLines.slice(1).map(line => `<br>${escapeHtml(line)}`).join("")}${input.snsUrl ? `<br><a href="${escapeHtml(input.snsUrl)}" style="color:#6b4fd8;font-weight:700;">${sns && "finished" in sns ? "새 운영표 만들기" : "올릴 글 보기"} →</a>` : ""}</div>` : ""}

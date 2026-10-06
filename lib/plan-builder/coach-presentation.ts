@@ -38,7 +38,7 @@ export function coachTurnSummary(previous: CoachState | null, next: CoachState):
     : "첫 사업안을 만들었어요. 어떤 상품을 누구에게 제공할지 정리했으니, 내 사업안에서 확인해 주세요.";
   const changed = changedCoachFields(previous, next);
   const conditions = next.fields.filter(field => changed.includes(field.key) && ["price", "budget", "hoursPerWeek"].includes(field.key));
-  if (conditions.length) return `${conditions.map(field => `${COACH_FIELD_LABELS[field.key]} ${field.value}`).join(" · ")}으로 반영했어요. 바뀐 사업안을 확인해 주세요.`;
+  if (conditions.length) return `${conditions.map(field => `${COACH_FIELD_LABELS[field.key]} ${coachFieldDisplay(field.value)}`).join(" · ")}으로 반영했어요. 바뀐 사업안을 확인해 주세요.`;
   return "요청하신 내용을 사업안에 반영했어요. 더 바꾸고 싶은 부분은 편하게 말씀해 주세요.";
 }
 

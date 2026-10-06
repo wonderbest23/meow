@@ -40,6 +40,7 @@ import {
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BRAINWAVE_CREDIT } from "../lib/landing/brainwave/catalog";
 import { HOME_LOGO, HOME_LOGO_FILTER } from "../lib/landing/home-logo";
+import { hasUnpublishedEdits } from "../lib/landing/save-contract";
 import {
   founderLabels,
   type FounderAxis,
@@ -1197,7 +1198,7 @@ function FinalDelivery({
   const applyLogoToHomepage = async (logoImageUrl: string) => {
     const next = { ...landingDraft, logoImageUrl };
     setLandingDraft(next);
-    setLandingMessage("새 로고를 홈페이지에 반영했습니다.");
+    setLandingMessage(landingSite?.status === "published" ? "새 로고를 홈페이지 초안에 넣었어요. 손님 화면은 ‘수정하고 공개’를 눌러야 바뀌어요." : "새 로고를 홈페이지에 반영했습니다.");
     if (demo) {
       window.localStorage.setItem("venture-paid-report-landing-demo", JSON.stringify(next));
       return;
@@ -1748,6 +1749,7 @@ function FinalDelivery({
                   action={landingAction}
                   message={landingMessage}
                   published={demo || landingSite?.status === "published"}
+                  unpublishedEdits={!demo && hasUnpublishedEdits(landingSite, landingDraft)}
                   publicPath={demo ? `/launch/${landingDraft.slug}` : landingSite ? `/launch/${landingSite.publishedSlug ?? landingSite.slug}` : ""}
                   projectId={serverProject?.id ?? null}
                   customDomain={landingSite?.customDomain ?? ""}

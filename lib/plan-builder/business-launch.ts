@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { coachFieldDisplay } from "./coach-presentation";
 import { coachDocumentRevision, readCoach } from "./coach";
 import { readIntake } from "./intake-core";
 import { isFinanceKsic, ksicByCode, ksicStructure, licenseHint, STRUCTURE_LABELS } from "./ksic";
@@ -35,7 +36,7 @@ export const LAUNCH_SOURCES = {
 export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
   const coach = readCoach(plan.answers);
   const improving = settings.purpose === "improve";
-  const field = (key: string, fallback = "아직 정하지 않음") => coach?.fields.find(f => f.key === key)?.value ?? fallback;
+  const field = (key: string, fallback = "아직 정하지 않음") => { const value = coach?.fields.find(f => f.key === key)?.value; return value != null ? coachFieldDisplay(value) : fallback; };
   const business = field("business", plan.title), offer = field("offer"), customer = field("customer"), price = field("price"), channel = field("channel");
   const context = `사업: ${plan.title}\n소개: ${business}\n상품: ${offer}\n고객: ${customer}\n가격: ${price}`;
   const base = { signature: JSON.stringify([coach ? coachDocumentRevision(coach) : plan.title, settings.purpose, settings.workplace, settings.registered]) };

@@ -4,7 +4,7 @@ import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useState } from "react";
 import { Check, LoaderCircle } from "lucide-react";
 import type { CoachField } from "../../../lib/plan-builder/coach";
-import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
+import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
 import { planOwnerEpoch, type StoredSection } from "../../../lib/plan-builder/plan-store";
 import styles from "./DocumentWorkspace.module.css";
 
@@ -29,7 +29,7 @@ export default function DocumentSourceReview({ planId, sectionKey, source, disab
   }
   return <div className={styles.sourceReview} aria-label="최신 사업 조건 검토">
     <strong>이 항목은 이전 사업 조건으로 작성됐어요</strong>
-    <details><summary>현재 사업 조건 확인</summary><dl>{source.fields.map(field => <div key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}</dt><dd>{field.value}</dd></div>)}</dl></details>
+    <details><summary>현재 사업 조건 확인</summary><dl>{source.fields.map(field => <div key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}</dt><dd>{coachFieldDisplay(field.value)}</dd></div>)}</dl></details>
     <label><input type="checkbox" disabled={busy || disabled} checked={checked} onChange={event => setChecked(event.target.checked)} />위 본문과 현재 조건을 비교했고 필요한 수정을 마쳤습니다</label>
     <button disabled={!checked || disabled || busy} onClick={() => void review()}>{busy ? <LoaderCircle size={15} /> : <Check size={15} />}현재 조건으로 검토 완료</button>
     {error && <p role="alert">{error}</p>}

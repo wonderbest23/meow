@@ -73,7 +73,10 @@ export function BrainwaveEditor({
   onSave,
   projectId = null,
   business = { name: "", summary: "" },
+  published = false,
 }: {
+  /** 공개 중인 홈페이지 — 저장만으로는 손님 화면이 안 바뀐다('새 버전 공개' 필요) */
+  published?: boolean;
   data: LandingPageData;
   onClose: () => void;
   onSave: (data: LandingPageData) => void | Promise<void>;
@@ -794,7 +797,7 @@ export function BrainwaveEditor({
         {recovery.base === initial.current ? <button type="button" onClick={restoreRecovery}>수정 내용 복구</button> : <button type="button" onClick={downloadRecovery}>복구본 내려받기</button>}
         <button type="button" onClick={() => { if (recoveryKey) try { sessionStorage.removeItem(recoveryKey); } catch {} setRecovery(null); }}>복구본 삭제</button>
       </section> : null}
-      {persistence.savedAt && !persistence.saving && !persistence.error ? <span className="bw-editor-saved" role="status">{landingDraftFingerprint({ page, ...over }) === savedFingerprint && !editing ? "저장 완료" : "저장하지 않은 수정"}</span> : null}
+      {persistence.savedAt && !persistence.saving && !persistence.error ? <span className="bw-editor-saved" role="status">{landingDraftFingerprint({ page, ...over }) === savedFingerprint && !editing ? (published ? "저장 완료 · 손님 화면은 ‘새 버전 공개’ 후 바뀌어요" : "저장 완료") : "저장하지 않은 수정"}</span> : null}
       {pendingPatch ? <section className="bw-editor-conflicts" aria-label="변경 내용 비교" aria-live="polite">
         <strong>기다리는 동안 같은 내용을 수정했어요</strong>
         {Object.entries(pendingPatch.changes).map(([id, incoming]) => <div key={id}>

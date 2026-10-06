@@ -5,7 +5,7 @@ import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { privacyPolicyWithContact, type LandingDraft, type LandingLeadRecord, type LandingSiteRecord } from "../lib/landing/domain";
-import { landingDraftFingerprint } from "../lib/landing/save-contract";
+import { hasUnpublishedEdits } from "../lib/landing/save-contract";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
 import { HomepageAlertSettings } from "./homepage-alert-settings";
@@ -122,8 +122,8 @@ export function HomepageKitPanel({
   }, [aiFill?.running]);
   const published = site?.status === "published";
   /* 저장은 됐지만 아직 '새 버전 공개'를 안 누른 고친 내용 — '공개 중'만 보고 손님 화면도 바뀐 줄 알기 쉽다 */
-  const liveConfig = published ? site?.versions?.find(version => version.version === site.publishedVersion)?.config : undefined;
-  const unpublishedEdits = Boolean(liveConfig && site && landingDraftFingerprint(liveConfig) !== landingDraftFingerprint(site.draft));
+  const unpublishedEdits = hasUnpublishedEdits(site);
+  const [domainReady, setDomainReady] = useState(false);
   /* 손님 연락 방법 — 바꾸면 문의 버튼의 이동·글이 한 번에 따라간다(applyContactMethod) */
   const contact = draft.contact ?? DEFAULT_CONTACT;
   const contactInfo = CONTACT_METHOD_INFO[contact.method];
@@ -152,7 +152,7 @@ export function HomepageKitPanel({
   const applyBusiness = () => {
     if (!draft.pageData || busy || !draft.businessName.trim()) return;
     onChange({ ...draft, pageData: applyBusinessContent(draft.pageData, contentSource()) });
-    setContentNotice("사업 정보를 반영했어요. 직접 고친 글과 사진은 유지됩니다. 저장하면 적용됩니다.");
+    setContentNotice(`사업 정보를 반영했어요. 직접 고친 글과 사진은 유지됩니다. ${published ? "저장한 뒤 ‘새 버전 공개’를 눌러야 손님 화면에 바뀌어요." : "저장하면 적용됩니다."}`);
   };
   const pickTemplate = (id: string) => {
     if (!draft.pageData || !bw || busy) return;
@@ -394,10 +394,11 @@ export function HomepageKitPanel({
         id="hk-domain"
         icon={<Globe2 size={18} />}
         title="내 도메인 연결"
-        badge={site?.customDomain ? <em className="hk-badge hk-badge-ok">{site.customDomain}</em> : null}
+        badge={site?.customDomain ? <em className={`hk-badge ${domainReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{domainReady ? site.customDomain : `${site.customDomain} · 연결 확인 중`}</em> : null}
         hint="www.mybrand.com 같은 내 주소 붙이기 · 호스팅 1년"
       >
         <LandingDomainConnector
+          onReadyChange={setDomainReady}
           projectId={projectId}
           initialCustomDomain={site?.customDomain ?? ""}
           published={Boolean(published)}

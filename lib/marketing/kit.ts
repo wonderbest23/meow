@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { readCoach } from "../plan-builder/coach";
+import { formatPriceText } from "../landing/from-plan";
 import type { ServerPlan } from "../plan-builder/plan-server-store";
 
 /*
@@ -58,7 +59,7 @@ export function marketingKitPrompt(plan: Pick<ServerPlan, "title" | "answers">) 
     nameConfirmed: !!coach?.business.nameConfirmed,
     business: field("business") || coach?.business.description || "",
     region: coach?.business.region ?? "",
-    customer: field("customer"), problem: field("problem"), offer: field("offer"), price: field("price"), channel: field("channel"),
+    customer: field("customer"), problem: field("problem"), offer: field("offer"), price: formatPriceText(field("price")), channel: field("channel"),
     startingPlan: coach?.design?.startingPlan?.scope ?? "",
   };
   return { system: SYSTEM, user: JSON.stringify({ business: facts, note: facts.nameConfirmed ? "" : "상호가 확정되지 않았으면 이름 자리에 [상호]를 씁니다." }) };

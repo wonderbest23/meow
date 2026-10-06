@@ -32,12 +32,15 @@ export function LandingDomainConnector({
   published,
   demo,
   onSiteUpdated,
+  onReadyChange,
 }: {
   projectId: string | null;
   initialCustomDomain: string;
   published: boolean;
   demo: boolean;
   onSiteUpdated: (site: LandingSiteRecord) => void;
+  /** 연결이 실제로 열렸는지(DNS·인증서까지) — 접힌 카드 머리의 배지가 '연결됨'을 너무 일찍 보이지 않게 */
+  onReadyChange?: (ready: boolean) => void;
 }) {
   const [hostname, setHostname] = useState(initialCustomDomain);
   const [connection, setConnection] = useState<LandingDomainConnection | null>(null);
@@ -49,6 +52,7 @@ export function LandingDomainConnector({
   const loadRequestRef = useRef<AbortController | null>(null);
 
   useEffect(() => { siteUpdatedRef.current = onSiteUpdated; }, [onSiteUpdated]);
+  useEffect(() => { onReadyChange?.(Boolean(connection?.ready)); }, [connection?.ready, onReadyChange]);
 
   const load = useCallback(async (quiet = false) => {
     if (!projectId || demo || loadRequestRef.current) return;

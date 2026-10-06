@@ -55,7 +55,10 @@ export function LandingQuickEditor({
   onPreview,
   onSiteUpdated,
   onOpenEditor,
+  unpublishedEdits = false,
 }: {
+  /** 공개 중인데 고친 내용이 아직 공개 전 — '공개 중'만 보면 손님 화면도 바뀐 줄 안다 */
+  unpublishedEdits?: boolean;
   draft: LandingDraft;
   action: EditorAction;
   message: string;
@@ -101,7 +104,7 @@ export function LandingQuickEditor({
         <span><Check /></span>
         {/* 내 도메인 연결은 따로 파는 상품이다 — '도메인만 사 오면 된다'고 하면 연결비를 숨기는 셈이 된다 */}
         <div><strong>결제 금액에 홈페이지 제작과 무료 주소가 포함됩니다.</strong><p>별도 제작비 없이 무료 주소로 바로 공개됩니다. 내 도메인(예: mybusiness.kr)으로 연결하려면 도메인 연결 상품({DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원/1년)을 따로 신청해요.</p></div>
-        <em>{published || demo ? "공개 중" : "공개 전"}</em>
+        <em>{published || demo ? (unpublishedEdits ? "공개 중 · 고친 내용은 아직 공개 전" : "공개 중") : "공개 전"}</em>
       </div>
 
       {publicPath && <div className="landing-public-address"><Globe2 /><span><small>현재 무료 주소</small><strong>{publicPath}</strong></span>{!demo && <a href={publicPath} target="_blank" rel="noreferrer">열기 <ExternalLink /></a>}</div>}
