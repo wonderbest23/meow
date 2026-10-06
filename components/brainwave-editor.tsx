@@ -283,6 +283,30 @@ export function BrainwaveEditor({
   const [selPos, setSelPos] = useState<{ x: number; y: number; below: boolean } | null>(null);
   /* 추천 사진 판을 연 사진 자리 */
   const [photoFor, setPhotoFor] = useState<string | null>(null);
+  /* '사진 바꾸기' 목록 — PC 화면에서 첫 화면 큰 사진은 글이 위에 덮여 눌러도 사진이 잡히지 않았다 */
+  const [photoList, setPhotoList] = useState<Array<{ id: string; src: string }> | null>(null);
+  const openPhotoList = () => {
+    finishText(); setMenu(null); setBtn(null); setSecPanel(false); setHiddenOpen(false); setPhotoFor(null);
+    if (photoList) { setPhotoList(null); return; }
+    const canvas = document.querySelector(".bw-editor-canvas");
+    const seen = new Set<string>();
+    const items: Array<{ id: string; src: string }> = [];
+    canvas?.querySelectorAll<HTMLElement>("[data-bw-image]").forEach((el) => {
+      const id = el.dataset.bwImage!;
+      if (seen.has(id) || !el.getClientRects().length) return;
+      seen.add(id);
+      const img = el.tagName === "IMG" ? (el as HTMLImageElement) : el.querySelector("img");
+      const bg = getComputedStyle(el).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
+      items.push({ id, src: over.images[id] || img?.currentSrc || img?.src || bg || "" });
+    });
+    setPhotoList(items);
+  };
+  const choosePhoto = (id: string) => {
+    setPhotoList(null);
+    document.querySelector(`.bw-editor-canvas [data-bw-image="${CSS.escape(id)}"]`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+    pendingImage.current = id;
+    if (suggestedPhotos.length) setPhotoFor(id); else fileRef.current?.click();
+  };
   /*
    * 떠 있는 줄은 고른 것 바로 위 — 위에 자리가 없으면(맨 위 메뉴에 걸리면) 아래에 띄운다.
    * 예전엔 첫 화면 글을 누르면 줄이 위쪽 메뉴를 덮었다.
@@ -745,18 +769,21 @@ export function BrainwaveEditor({
         </div>
         <div className="bw-editor-right">
           {/* 휴대폰에서도 아이콘만 남지 않게 — 짧은 이름(bw-bar-label)을 아이콘 아래에 둔다 */}
-          <button type="button" className={`bw-editor-hiddenbtn ${secPanel ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setHiddenOpen(false); setPhotoFor(null); setSecPanel((v) => !v); }} title="구역 순서 바꾸기">
+          <button type="button" className={`bw-editor-hiddenbtn ${photoList ? "on" : ""}`} onClick={openPhotoList} title="이 페이지 사진 바꾸기">
+            <ImageIcon /> <span className="bw-bar-label">사진 바꾸기</span>
+          </button>
+          <button type="button" className={`bw-editor-hiddenbtn ${secPanel ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setHiddenOpen(false); setPhotoFor(null); setPhotoList(null); setSecPanel((v) => !v); }} title="구역 순서 바꾸기">
             <Rows3 /> <span className="bw-bar-label">순서 바꾸기</span>
           </button>
           {userHidden.length ? (
-            <button type="button" className={`bw-editor-hiddenbtn ${hiddenOpen ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setSecPanel(false); setPhotoFor(null); setHiddenOpen((v) => !v); }} title="숨긴 것 보기·되살리기">
+            <button type="button" className={`bw-editor-hiddenbtn ${hiddenOpen ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setSecPanel(false); setPhotoFor(null); setPhotoList(null); setHiddenOpen((v) => !v); }} title="숨긴 것 보기·되살리기">
               <EyeOff /> <span className="bw-bar-label">숨긴 것 {userHidden.length}</span>
             </button>
           ) : null}
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /><span className="bw-bar-label bw-bar-mobile">되돌리기</span></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /><span className="bw-bar-label bw-bar-mobile">다시</span></button>
           {projectId ? <button type="button" className={`bw-editor-ai ${ai.open ? "on" : ""}`} onClick={() => setAi((s) => ({ ...s, open: !s.open }))} title="AI 로 고치기"><Sparkles /> <span className="bw-bar-label">AI</span></button> : null}
-          <button type="button" className="bw-editor-save" title="저장" onClick={save} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : "저장"}</span></button>
+          <button type="button" className="bw-editor-save" title="저장" onClick={save} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : currentFingerprint === savedFingerprint && !editing ? "저장됨" : "저장"}</span></button>
           <button type="button" onClick={close} disabled={persistence.saving} title="닫기"><X /><span className="bw-bar-label bw-bar-mobile">닫기</span></button>
         </div>
       </header>
@@ -808,16 +835,8 @@ export function BrainwaveEditor({
             <small>화면의 글자를 직접 눌러 고쳐도 됩니다.</small>
           </label>
           <div className="bw-ins-field">
-            <span>글씨 크기 <b>{Math.round((over.sizes[sizeTarget] ?? 1) * 100)}%</b></span>
-            <input
-              type="range"
-              min={70}
-              max={150}
-              step={5}
-              value={Math.round((over.sizes[sizeTarget] ?? 1) * 100)}
-              onChange={(e) => applySize(Number(e.target.value) / 100)}
-              aria-label="글씨 크기(%)"
-            />
+            {/* 슬라이더(70~150%)와 단추 넷이 같이 있어 무엇을 쓸지 헷갈렸다 — 단추만 */}
+            <span>글씨 크기</span>
             <div className="bw-ins-steps" role="group" aria-label="크기 프리셋">
               {SIZE_STEPS.map(([scale, label]) => (
                 <button
@@ -1005,7 +1024,16 @@ export function BrainwaveEditor({
         </div>
       ) : null}
       {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
-      <div className="bw-editor-stage" inert={persistence.saving} onClick={() => { finishText(); deselect(); }} onContextMenu={onStageContext}>
+      {/*
+        * 빈 곳을 누르면 선택 해제 — 다만 그 아래에 사진이 깔려 있으면(첫 화면 큰 사진 위의 어두운 덮개·글 상자 빈칸) 그 사진을 고른다.
+        * 예전엔 PC 화면에서 첫 화면 사진을 아무리 눌러도 잡히지 않았다.
+        */}
+      <div className="bw-editor-stage" inert={persistence.saving} onContextMenu={onStageContext} onClick={(event) => {
+        finishText();
+        const under = previewMode ? undefined : document.elementsFromPoint(event.clientX, event.clientY)
+          .find((el): el is HTMLElement => el instanceof HTMLElement && el.matches(".bw-editor-canvas [data-bw-image]"));
+        if (under) pickImage(under.dataset.bwImage!, under); else deselect();
+      }}>
         {/* 분위기(색 조합)도 편집 화면에 그대로 */}
         <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view], ...themeStyle(data.theme) }}>
           <BrainwavePage
@@ -1017,6 +1045,23 @@ export function BrainwaveEditor({
           {uploading ? <div className="bw-editor-uploading" role="status"><LoaderCircle className="spin" aria-hidden /> 사진 올리는 중</div> : null}
         </div>
       </div>
+      {photoList && !previewMode ? (
+        <aside className="bw-inspector bw-photo-panel" role="dialog" aria-label="이 페이지 사진">
+          <header>
+            <strong><ImageIcon size={15} /> 바꿀 사진 고르기</strong>
+            <button type="button" onClick={() => setPhotoList(null)} title="닫기"><X size={16} /></button>
+          </header>
+          <p className="bw-menu-hint">바꿀 사진을 누르면 내 사진을 올리거나 추천 사진으로 바꿀 수 있어요.</p>
+          {photoList.length ? <div className="bw-photo-grid">
+            {photoList.map((item) => (
+              <button key={item.id} type="button" onClick={() => choosePhoto(item.id)} title="이 사진 바꾸기">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                {item.src ? <img src={item.src.replace(/w=\d+/, "w=360")} alt="" loading="lazy" /> : <span className="bw-photo-empty">빈 사진 자리</span>}
+              </button>
+            ))}
+          </div> : <p className="bw-menu-hint">이 디자인에는 바꿀 사진이 없어요.</p>}
+        </aside>
+      ) : null}
       {photoFor && !previewMode ? (
         <aside className="bw-inspector bw-photo-panel" role="dialog" aria-label="추천 사진">
           <header>
