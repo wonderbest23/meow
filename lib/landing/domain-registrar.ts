@@ -147,8 +147,9 @@ export async function startAutoRegistration(orderId: string, deps: { config?: Re
     if (readAuto(order.opportunity)) return { started: false, reason: "ALREADY_STARTED" };
     // 이용자 명의로만 등록한다 — 명의자 정보·이메일이 없으면(옛 주문) 운영자가 받아서 손으로
     const email = order.customer_email?.trim() ?? "";
-    if (!request.registrant || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { await handOver(order, request.domain, "명의자 정보 또는 이메일이 없음 — 사장님께 받아 주세요"); return { started: false, state: "manual" }; }
+    // 먼저 이 실행이 맡는다 — 동시에 온 다른 실행은 여기서 멈춰 '손으로 처리' 메일도 한 번만 간다
     if (!(await claimAuto(order, { state: "checking", at: new Date().toISOString() }))) return { started: false, reason: "ALREADY_STARTED" };
+    if (!request.registrant || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { await handOver(order, request.domain, "명의자 정보 또는 이메일이 없음 — 사장님께 받아 주세요"); return { started: false, state: "manual" }; }
     const check = await checkDomain(config, request.domain, deps.fetcher);
     if (!check) { await handOver(order, request.domain, "등록 가능 여부를 확인하지 못함(API 오류)"); return { started: false, state: "manual" }; }
     if (!check.registrable) { await handOver(order, request.domain, `등록 불가${check.reason ? ` (${check.reason})` : " — 이미 누가 등록했을 수 있음"}`); return { started: false, state: "manual" }; }
