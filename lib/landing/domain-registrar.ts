@@ -97,6 +97,19 @@ async function saveAuto(order: OrderRow, auto: AutoRegistration): Promise<void> 
   order.opportunity = next;
 }
 
+/* 자동 등록을 이 실행이 맡는다 — 결제 복귀와 결과 확인이 동시에 와도 한쪽만 true(같은 도메인을 두 번 등록하지 않게) */
+async function claimAuto(order: OrderRow, auto: AutoRegistration): Promise<boolean> {
+  const opportunity = order.opportunity ?? {};
+  const request = (opportunity.domainRequest ?? {}) as Record<string, unknown>;
+  const next = { ...opportunity, domainRequest: { ...request, auto } };
+  const { data, error } = await getServerSupabase()!.from("payment_orders").update({ opportunity: next, updated_at: new Date().toISOString() })
+    .eq("order_id", order.order_id).eq("status", "done").is("opportunity->domainRequest->auto", null).select("order_id");
+  if (error) throw error;
+  if (!data?.length) return false;
+  order.opportunity = next;
+  return true;
+}
+
 export function readAuto(opportunity: Record<string, unknown> | null | undefined): AutoRegistration | null {
   const auto = (opportunity?.domainRequest as { auto?: AutoRegistration } | undefined)?.auto;
   return auto && typeof auto.state === "string" ? auto : null;
@@ -135,7 +148,7 @@ export async function startAutoRegistration(orderId: string, deps: { config?: Re
     // 이용자 명의로만 등록한다 — 명의자 정보·이메일이 없으면(옛 주문) 운영자가 받아서 손으로
     const email = order.customer_email?.trim() ?? "";
     if (!request.registrant || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { await handOver(order, request.domain, "명의자 정보 또는 이메일이 없음 — 사장님께 받아 주세요"); return { started: false, state: "manual" }; }
-    await saveAuto(order, { state: "checking", at: new Date().toISOString() });
+    if (!(await claimAuto(order, { state: "checking", at: new Date().toISOString() }))) return { started: false, reason: "ALREADY_STARTED" };
     const check = await checkDomain(config, request.domain, deps.fetcher);
     if (!check) { await handOver(order, request.domain, "등록 가능 여부를 확인하지 못함(API 오류)"); return { started: false, state: "manual" }; }
     if (!check.registrable) { await handOver(order, request.domain, `등록 불가${check.reason ? ` (${check.reason})` : " — 이미 누가 등록했을 수 있음"}`); return { started: false, state: "manual" }; }
