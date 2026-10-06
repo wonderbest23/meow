@@ -88,7 +88,12 @@ export function buildTaxCalendar(project: ProjectRecord): TaxCalendarItem[] {
  */
 export type TaxDeadlineKind = "income" | "vat";
 export type TaxDeadline = { kind: TaxDeadlineKind; title: string; date: string };
-export const TAX_DEADLINE_OVERRIDES: Record<string, string> = {};
+/*
+ * 2026~2032 의 공휴일을 마감일(5/31·1/25·7/25)과 대 보았다 — 겹치는 해는 2028년 1/25 하나(설 연휴 1/25~27, 화~목).
+ * 그 다음 날 중 첫 평일은 1/28(금). 부처님오신날·선거일은 이 기간 마감일과 겹치지 않는다.
+ * 실제 날짜는 그해 국세청 세무일정 공지(data.go.kr '국세청_세무일정')로 한 번 더 확인한다.
+ */
+export const TAX_DEADLINE_OVERRIDES: Record<string, string> = { "2028-01-25": "2028-01-28" };
 const TAX_DEADLINE_DAYS = [["income", "종합소득세", "05-31"], ["vat", "부가세", "01-25"], ["vat", "부가세", "07-25"]] as const;
 export const TAX_REMINDER_DAYS_BEFORE = [7, 1] as const;
 

@@ -6,7 +6,7 @@ import { nicepayClientKey, nicepayConfigured, nicepaySdkUrl } from "../../../../
 import { evaluatePlatformLaunchReadiness } from "../../../../../lib/platform-legal/domain";
 import { getPlatformLegalSettings } from "../../../../../lib/platform-legal/repository";
 import { authConfigured } from "../../../../../lib/account-auth";
-import { normalizePurchaseDomain } from "../../../../../lib/landing/domain-purchase";
+import { normalizePurchaseDomain, validateRegistrant } from "../../../../../lib/landing/domain-purchase";
 import { checkDomainAvailability } from "../../../../../lib/landing/domain-availability";
 import { normalizeAlertPhone } from "../../../../../lib/notify/customer-sms";
 
@@ -19,7 +19,7 @@ const CARD_TERMS_KEYS = ["service", "privacy", "aiLimitations", "refund", "digit
 // (금액을 브라우저에서 만들지 않게 하려는 것)
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string; domain?: string; noticePhone?: string; terms?: Record<string, unknown> };
+  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string; domain?: string; noticePhone?: string; registrant?: unknown; terms?: Record<string, unknown> };
   /* 결제 안내 문자 받을 휴대폰(선택) — 비우면 문자 없이 메일만. 적었는데 틀리면 결제 전에 알려 고치게 한다 */
   const rawPhone = typeof body.noticePhone === "string" ? body.noticePhone.slice(0, 30) : "";
   const noticePhone = rawPhone.trim() ? normalizeAlertPhone(rawPhone) : null;
@@ -43,6 +43,9 @@ export async function POST(request: Request) {
   }
   /* 도메인 구매 대행은 살 주소가 있어야 한다(.com·.kr·.co.kr) */
   const purchaseDomain = product === "domain-purchase" ? normalizePurchaseDomain(typeof body.domain === "string" ? body.domain : "") : null;
+  // 도메인 구매는 이용자 명의로 등록한다 — 결제 전에 명의자 정보를 받는다(.com 은 결제 직후 자동 등록에 그대로 쓴다)
+  const registrant = product === "domain-purchase" ? validateRegistrant(body.registrant) : null;
+  if (registrant && !registrant.ok) return NextResponse.json({ error: "registrant_invalid", message: registrant.message }, { status: 400 });
   if (product === "domain-purchase" && !purchaseDomain) {
     return NextResponse.json({ error: "domain_required", message: "살 도메인 주소를 확인해 주세요. .com, .kr, .co.kr 주소만 대신 사 드릴 수 있어요." }, { status: 400 });
   }
@@ -127,7 +130,7 @@ export async function POST(request: Request) {
       planType,
       product,
       terms: Object.fromEntries(CARD_TERMS_KEYS.map((key) => [key, true])),
-      ...(purchaseDomain ? { domainRequest: { domain: purchaseDomain, status: "requested" as const } } : {}),
+      ...(purchaseDomain ? { domainRequest: { domain: purchaseDomain, status: "requested" as const, ...(registrant?.ok ? { registrant: registrant.value } : {}) } } : {}),
       ...(noticePhone ? { noticePhone } : {}),
     });
     return NextResponse.json(

@@ -26,7 +26,7 @@ export type ServiceSignals = {
   homepagePublished: boolean;
 };
 
-export type ServiceBadge = { tone: "need" | "first" | "check" | "suggest"; label: string; reason: string };
+export type ServiceBadge = { tone: "need" | "first" | "check" | "suggest" | "done"; label: string; reason: string };
 
 /* 판매 경로 글에 이런 말이 있으면 온라인 판매로 본다. '인스타'처럼 홍보만 하는 곳은 넣지 않는다 */
 const ONLINE_SELLING_WORDS = /온라인\s*(판매|주문|쇼핑|몰|스토어)|스마트\s*스토어|쇼핑몰|오픈\s*마켓|자사몰|쿠팡|11번가|지마켓|G마켓|옥션|위메프|티몬|에이블리|지그재그|아이디어스|라이브\s*커머스|통신\s*판매|택배\s*(판매|배송)|전국\s*배송|온라인\s*결제/i;
@@ -66,7 +66,7 @@ export function serviceBadges(signals: ServiceSignals): Record<string, ServiceBa
   return badges;
 }
 
-const TONE_ORDER: Record<ServiceBadge["tone"], number> = { first: 0, need: 1, check: 2, suggest: 3 };
+const TONE_ORDER: Record<ServiceBadge["tone"], number> = { first: 0, need: 1, check: 2, suggest: 3, done: 10 };
 
 /** 배지 있는 서비스를 앞으로(먼저 해요 → 필요해요 → 확인해요 → 추천), 나머지는 목록 순서 그대로 */
 export function orderServices(items: readonly ServiceItem[], badges: Record<string, ServiceBadge>): ServiceItem[] {

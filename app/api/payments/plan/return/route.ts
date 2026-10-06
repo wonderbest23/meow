@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { schedulePaymentNotice } from "../../../../../lib/payments/paid-notice-schedule";
+import { scheduleDomainAutoRegistration, schedulePaymentNotice } from "../../../../../lib/payments/paid-notice-schedule";
 import { nicepayClientKey, verifyAuthSignature } from "../../../../../lib/payments/nicepay-client";
 import { getPlanOrder } from "../../../../../lib/payments/plan-orders";
 import { reconcileNicepayOrder } from "../../../../../lib/payments/nicepay-reconciliation";
@@ -48,6 +48,7 @@ export async function POST(request: Request) {
    */
   if (result.status === "ok" && order.status !== "done" && order.product === "domain-purchase") {
     await notifyDomainPurchasePaid(order);
+    scheduleDomainAutoRegistration(orderId);
   }
   // 결제 완료 문자·메일(운영자·구매자) — 응답을 보낸 뒤에. 주문마다 한 번은 paid-notifications 가 지킨다
   if (result.status === "ok") schedulePaymentNotice(orderId, order.status !== "done");

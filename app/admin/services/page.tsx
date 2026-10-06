@@ -15,7 +15,7 @@ function date(value?: string) { return value && Number.isFinite(Date.parse(value
 const ACTION_LABELS: Record<ServiceRequestStatus, string> = { received: "접수로 되돌리기", contacted: "연락함", done: "완료", canceled: "취소" };
 
 /*
- * 서비스 신청함 — '다음 단계'에서 들어온 대행 상담 신청.
+ * 서비스 신청함 — '다음 단계'에서 들어온 상담 신청.
  * 신청이 들어오면 메일이 오고, 여기서 전화한 뒤 '연락함' → 끝나면 '완료'를 누른다.
  * 상태는 사장님 화면(유지보수 → 다음 단계)에 그대로 보인다.
  */
@@ -55,7 +55,7 @@ export default function ServiceRequestsAdminPage() {
 
   const waiting = requests?.filter((item) => item.status === "received").length ?? 0;
   return <main className={styles.page}>
-    {!login && <AdminNav title="서비스 신청" subtitle="다음 단계(행정·마케팅 대행) 상담 신청 처리함" />}
+    {!login && <AdminNav title="서비스 신청" subtitle="다음 단계(창업 행정 도움·마케팅) 상담 신청 처리함" />}
     <div className={styles.content}>
       <div className={styles.toolbar}>
         <button title="새로고침" aria-label="새로고침" disabled={busy} onClick={() => void load()}><RefreshCw size={18} /></button>

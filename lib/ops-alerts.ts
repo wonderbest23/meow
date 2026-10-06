@@ -30,7 +30,9 @@ export async function notifyOperator(subject: string, lines: string[]): Promise<
 
 /** 도메인 구매 결제 완료 — 결제 복귀(return)와 결과 확인(reconcile) 어느 쪽에서 완료돼도 같은 알림 */
 export async function notifyDomainPurchasePaid(order: { orderId: string; amount: number; domain: string | null }): Promise<void> {
-  await notifyOperator("도메인 구매 결제가 완료됐습니다 — 등록 처리 필요", [
+  // .com 은 자동 등록(lib/landing/domain-registrar.ts)이 켜져 있으면 손댈 일이 없다 — 실패하면 따로 '손으로 처리' 메일이 간다
+  const auto = Boolean(process.env.CLOUDFLARE_REGISTRAR_TOKEN?.trim()) && /^[^.]+\.com$/.test(order.domain ?? "");
+  await notifyOperator(auto ? "도메인 구매 결제 완료 — 자동 등록 중(.com)" : "도메인 구매 결제가 완료됐습니다 — 등록 처리 필요", [
     `주소: ${order.domain ?? "(주소 정보 없음)"}`,
     `금액: ${order.amount.toLocaleString("ko-KR")}원`,
     `주문번호: ${order.orderId}`,
