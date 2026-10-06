@@ -1757,7 +1757,9 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
   .document-editor-mode button { flex: 1; }
   .document-editor-assist-tools { display: grid; grid-template-columns: 1fr 1fr; }
   .document-editor-assist-tools button { justify-content: center; }
-  .document-editor-field textarea { min-height: 430px; padding: 17px 15px; font-size: 13px; }
+  /* 폰에서는 글칸이 화면보다 커서 아래 AI 제안·자료 넣기까지 긴 글을 다 넘겨야 닿았다 — 화면 절반 높이로 */
+  .document-editor-field textarea { min-height: 0; height: min(420px, 50dvh); padding: 17px 15px; font-size: 13px; }
+  .document-editor-suggestion > div { max-height: 40dvh; }
   .document-editor-rendered .delivery-document-body { padding: 28px 20px 44px; }
   .document-editor-suggestion > footer { display: grid; grid-template-columns: 1fr 1fr; }
   .document-editor-suggestion > footer button { justify-content: center; }
