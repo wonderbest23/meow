@@ -29,9 +29,13 @@ export function brainwaveSections(root: ParentNode = document): HTMLElement[] {
   return out.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
 }
 
+/* 공개 페이지가 '버튼 누름'을 세게 알린다(public-landing-client 가 동의한 방문만 기록) — 킷 버튼은 세지 않아 늘 0이었다 */
+export const BRAINWAVE_CTA_EVENT = "oneul:cta-click";
+
 export function runBrainwaveButton(links: Record<string, string> | undefined, id: string) {
   const action = links?.[id] ?? "contact";
   if (action === "none") return;
+  if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(BRAINWAVE_CTA_EVENT, { detail: { id } }));
   if (action === "contact") {
     document.getElementById("landing-contact")?.scrollIntoView({ behavior: "smooth", block: "start" });
     return;

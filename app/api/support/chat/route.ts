@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
-import { getCustomerChat, sendCustomerMessage } from "../../../../lib/support-chat/repository";
+import { getCustomerChat, sendCustomerMessageOnce } from "../../../../lib/support-chat/repository";
 import { notifyOwnerByEmail } from "../../../../lib/notify/owner-email";
+import { notifyOwnerBySms } from "../../../../lib/notify/owner-sms";
 import { publicErrorMessage } from "../../../../lib/api-errors";
 
 const messageSchema = z.object({
@@ -41,25 +42,28 @@ export async function POST(request: Request) {
   try {
     const identity = await requireGuestIdentity();
     const input = messageSchema.parse(await request.json());
-    const chat = await sendCustomerMessage(identity.hash, input.message);
+    // 메시지 id 를 미리 정해 문자 중계의 eventId 로도 쓴다 — 같은 메시지로 두 번 가지 않게
+    const messageId = crypto.randomUUID();
+    const { chat } = await sendCustomerMessageOnce(identity.hash, input.message, messageId);
     /*
-     * 사장님 이메일 알림 — 제작 상담은 매번, 일반 문의는 '관리자가 마지막으로 읽은
-     * 뒤 첫 메시지'만(unreadByAdmin===1). 대화가 길어질 때 메시지마다 메일이
-     * 쏟아지지 않게 하려는 것이다. 실패해도 접수는 그대로 성공한다.
+     * 사장님 알림(이메일 + 문자) — 일반 문의는 '관리자가 마지막으로 읽은 뒤 첫 메시지'만(unreadByAdmin===1).
+     * 대화가 길어질 때 메시지마다 알림이 쏟아지지 않게 하려는 것이다. 실패해도 접수는 그대로 성공한다.
+     * 자동 상담이 못 푼 질문은 손님이 이미 한 번 막힌 뒤라 매번 바로 알린다. (계정 고객센터 /api/account/support 와 같은 문자)
      */
-    const isConsult = input.message.startsWith("[맞춤 홈페이지 제작");
-    /* 자동 상담이 못 푼 질문 — 손님이 이미 한 번 막힌 뒤라 매번 바로 알린다 */
     const isHandoff = input.message.startsWith("[상담에서 넘어온 문의]");
-    if (isConsult || isHandoff || chat.conversation?.unreadByAdmin === 1) {
-      await notifyOwnerByEmail(
-        isConsult ? "[오늘창업] 맞춤 홈페이지 제작 상담이 접수됐습니다" : isHandoff ? "[오늘창업] 챗봇이 못 푼 문의 — 담당자 답변 필요" : "[오늘창업] 새 1:1 문의가 도착했습니다",
-        [
-          input.message.slice(0, 800),
-          "",
-          `접수 시각: ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`,
-          "답변하기: https://oneulstart.com/admin/support",
-        ].join("\n"),
-      );
+    if (isHandoff || chat.conversation?.unreadByAdmin === 1) {
+      await Promise.allSettled([
+        notifyOwnerBySms(messageId),
+        notifyOwnerByEmail(
+          isHandoff ? "[오늘창업] 챗봇이 못 푼 문의 — 담당자 답변 필요" : "[오늘창업] 새 1:1 문의가 도착했습니다",
+          [
+            input.message.slice(0, 800),
+            "",
+            `접수 시각: ${new Date().toLocaleString("ko-KR", { timeZone: "Asia/Seoul" })}`,
+            "답변하기: https://oneulstart.com/admin/support",
+          ].join("\n"),
+        ),
+      ]);
     }
     return privateJson({ chat }, { status: 201 });
   } catch (error) {

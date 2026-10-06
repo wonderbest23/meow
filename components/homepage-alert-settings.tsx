@@ -59,7 +59,7 @@ export function HomepageAlertSettings({ projectId, suggestedPhone }: { projectId
       {settings.weeklyEnabled !== null ? (
         <label className="hk-alerts-weekly">
           <input type="checkbox" checked={settings.weeklyEnabled} disabled={busy} onChange={(event) => void save({ weeklyEnabled: event.target.checked }, event.target.checked ? "주간 리포트를 켰어요." : "주간 리포트를 껐어요.")} />
-          <span><strong>주간 리포트 받기</strong><small>매주 월요일 아침, 지난주 문의·방문 수를 {settings.smsReady && settings.phone ? "문자로" : "가입한 이메일로"} 보내 드려요{settings.published ? "" : "(홈페이지를 공개한 뒤부터)"}.{settings.smsReady && settings.phone ? " 세금 신고 마감 7일·1일 전 문자도 함께 가요." : ""}</small></span>
+          <span><strong>주간 리포트 받기</strong><small>매주 월요일 아침, 지난주 문의·방문 수를 {settings.smsReady && settings.phone ? "문자로" : settings.emailReady ? "가입한 이메일로" : "문자나 이메일로"} 보내 드려요{settings.published ? "" : "(홈페이지를 공개한 뒤부터)"}.{!(settings.smsReady && settings.phone) && !settings.emailReady ? " 지금은 보낼 방법이 준비 중이라, 준비되면 그때부터 가요." : ""}{settings.smsReady && settings.phone ? " 세금 신고 마감 7일·1일 전 문자도 함께 가요." : ""}</small></span>
         </label>
       ) : null}
       {message ? <p className="hk-alerts-msg" role="status">{message}</p> : null}

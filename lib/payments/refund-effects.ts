@@ -1,7 +1,7 @@
 import { getServerSupabase } from "../persistence";
 import { cloudflareSaasConfigured, deleteLandingDomainConnection } from "../landing/custom-domain";
-import { BUNDLE_PRODUCT_NAME, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_NAME, REGEN_PACK_NAME, TOKEN_PACK_NAME } from "./domain";
-import { HOMEPAGE_PRODUCT_NAME, type PlanProduct } from "./plan-orders";
+import { BUNDLE_PRODUCT_NAME, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_NAME, REGEN_INCLUDED, REGEN_PACK_NAME, TOKEN_PACK_NAME } from "./domain";
+import { HOMEPAGE_PRODUCT_NAME, summarizeDomainOrders, type PlanProduct } from "./plan-orders";
 import type { PaymentOrder } from "./domain";
 import { setAutoRenew } from "../landing/domain-registrar";
 import { registrarConfig, registrarSupports } from "../landing/registrar-config";
@@ -54,13 +54,14 @@ async function disconnectDomain(site: { id: string; custom_domain: string | null
 async function otherDomainOrderActive(ownerId: string, planId: string, orderId: string) {
   const { data, error } = await getServerSupabase()!
     .from("payment_orders")
-    .select("order_id, opportunity")
+    .select("order_id, order_name, opportunity, confirmed_at, created_at")
     .eq("owner_id", ownerId)
     .in("order_name", [DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_NAME])
     .eq("status", "done")
     .limit(50);
   if (error) throw error;
-  return (data ?? []).some(row => row.order_id !== orderId && String((row.opportunity as { planId?: string } | null)?.planId ?? "") === planId);
+  // '남아 있다'가 아니라 '지금 유효하다'로 — 지난해 만료된 1년차 주문이 갱신분 환불 뒤에도 연결을 붙잡지 않게
+  return summarizeDomainOrders((data ?? []).filter(row => row.order_id !== orderId), planId).active;
 }
 
 /**
@@ -80,10 +81,28 @@ export async function closeRefundedProduct(order: PaymentOrder, options: { homep
     }
   };
 
-  // 다시 생성 묶음 — 횟수는 이 표에서만 세므로 그 주문 줄을 지운다
+  /*
+   * 다시 생성 묶음 — 줄을 통째로 지우면 그 묶음에서 이미 쓴 횟수는 '쓴 횟수'에 그대로 남아 다른 묶음이 깎였다.
+   * 기본 횟수 → 산 순서대로 썼다고 보고, 이 묶음에서 이미 쓴 만큼만 남긴다(granted = 쓴 몫).
+   */
   if (product === "regen") {
     await attempt("다시 생성 추가분 회수", async () => {
-      const { error } = await supabase.from("plan_regen_packs").delete().eq("order_id", order.orderId);
+      const planId = String((order.opportunity as { planId?: string } | null)?.planId ?? "");
+      const [packs, used] = await Promise.all([
+        supabase.from("plan_regen_packs").select("order_id, granted, created_at").eq("plan_id", planId).order("created_at", { ascending: true }),
+        supabase.from("plan_regenerations").select("id", { count: "exact", head: true }).eq("plan_id", planId).eq("ok", true),
+      ]);
+      if (packs.error || used.error) throw packs.error ?? used.error;
+      let left = Math.max(0, (used.count ?? 0) - REGEN_INCLUDED);
+      let keep = 0;
+      for (const pack of packs.data ?? []) {
+        const usedHere = Math.min(left, Number(pack.granted) || 0);
+        left -= usedHere;
+        if (pack.order_id === order.orderId) { keep = usedHere; break; }
+      }
+      const { error } = keep > 0
+        ? await supabase.from("plan_regen_packs").update({ granted: keep }).eq("order_id", order.orderId)
+        : await supabase.from("plan_regen_packs").delete().eq("order_id", order.orderId);
       if (error) throw error;
     });
   }

@@ -17034,3 +17034,4 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 .address-field { display: flex; align-items: flex-end; gap: 8px; }
 .address-field > label { flex: 1; min-width: 0; }
 @media (max-width: 640px) { .address-field { flex-direction: column; align-items: stretch; } }
+.hk-lead-fields { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-left: 4px; }

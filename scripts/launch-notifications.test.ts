@@ -274,8 +274,10 @@ function mail() {
   assert.deepEqual(dueTaxReminders(at("2027-01-18T12:00:00")).map((item) => item.date), ["2027-01-25"], "1월 마감 D-7");
   {
     const tables: Record<string, Row[]> = {
-      landing_sites: [{ alert_phone: "01012345678", published_version: 1, weekly_report_opt_out: false }, { alert_phone: "01012345678", published_version: 2, weekly_report_opt_out: false },
-        { alert_phone: "01055556666", published_version: 1, weekly_report_opt_out: true }, { alert_phone: null, published_version: 1, weekly_report_opt_out: false }],
+      landing_sites: [{ alert_phone: "01012345678", published_version: 1, status: "published", weekly_report_opt_out: false }, { alert_phone: "01012345678", published_version: 2, status: "published", weekly_report_opt_out: false },
+        { alert_phone: "01055556666", published_version: 1, status: "published", weekly_report_opt_out: true }, { alert_phone: null, published_version: 1, status: "published", weekly_report_opt_out: false },
+        // 환불로 내린 홈페이지(published_version 은 남아 있다)에는 보내지 않는다
+        { alert_phone: "01077778888", published_version: 1, status: "unpublished", weekly_report_opt_out: false }],
       tax_reminder_sends: [],
     };
     const s = relay();

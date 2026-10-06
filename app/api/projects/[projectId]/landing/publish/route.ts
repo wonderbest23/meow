@@ -28,6 +28,12 @@ export async function POST(
   } catch (error) {
     const message = error instanceof Error ? error.message : "랜딩페이지를 공개하지 못했습니다.";
     if (message === "LANDING_DRAFT_CONFLICT") return NextResponse.json({ error: { code: message, message: LANDING_CONFLICT_MESSAGE } }, { status: 409 });
+    // 'LANDING_COMPLIANCE_BLOCKED:항목 / 항목' — 코드 문자열이 화면에 그대로 보이지 않게 한국어 안내로
+    if (message.startsWith("LANDING_COMPLIANCE_BLOCKED:")) {
+      const items = message.slice("LANDING_COMPLIANCE_BLOCKED:".length).trim();
+      return NextResponse.json({ error: { code: "LANDING_COMPLIANCE_BLOCKED", message: `공개 전에 이것부터 채워 주세요: ${items}`, items: items.split(" / ").filter(Boolean) } }, { status: 400 });
+    }
+    if (message === "SLUG_TAKEN") return NextResponse.json({ error: { code: message, message: "이 공개 주소는 다른 홈페이지가 쓰고 있어요. 주소를 바꿔 다시 공개해 주세요." } }, { status: 409 });
     return NextResponse.json(
       { error: { code: publicErrorCode(error, "LANDING_PUBLISH_FAILED"), message: publicErrorMessage(error, "랜딩페이지를 공개하지 못했습니다.", { LANDING_NOT_FOUND: "홈페이지를 찾을 수 없습니다." }) } },
       { status: message === "PROJECT_NOT_FOUND" || message === "LANDING_NOT_FOUND" ? 404 : 400 },

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import PlanCheckout from "./PlanCheckout";
 import AppFrame from "../AppFrame";
 import { payBackHref } from "../../../lib/plan-builder/journey";
+import { landingEmailConfiguration } from "../../../lib/landing/lead-email";
 
 export const metadata = { title: "결제 · 오늘창업" };
 
@@ -14,7 +15,8 @@ export default async function PlanPayPage({ searchParams }: { searchParams: Prom
   return (
     <AppFrame title="결제" backHref={payBackHref(one(query.product), one(query.planId))}>
       <Suspense fallback={null}>
-        <PlanCheckout />
+        {/* 영수증 메일은 발송 설정이 있을 때만 약속한다 */}
+        <PlanCheckout receiptByEmail={landingEmailConfiguration() !== null} />
       </Suspense>
     </AppFrame>
   );

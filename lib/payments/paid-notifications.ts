@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "../persistence";
 import { productName, type PlanProduct } from "./plan-orders";
+import { DOMAIN_PURCHASE_PRODUCT_NAME } from "./domain";
 import { landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "../landing/lead-email";
 import { customerSmsConfig, operatorRelayConfig, relayUnsupported, sendRelayV4, stableEventId, type CustomerSmsConfig, type CustomerSmsResult } from "../notify/customer-sms";
 import { notifyOperator } from "../ops-alerts";
@@ -109,7 +110,14 @@ export async function notifyPaymentComplete(orderId: string, firstCompletion: bo
     const result: PaymentNoticeResult = { claimed };
 
     const operatorTask = async () => {
-      if (!deps.operator) { result.operator = "disabled"; return; }
+      if (!deps.operator) {
+        result.operator = "disabled";
+        // 문자 설정이 꺼져 있어도 결제는 알아야 한다 — 도메인 구매는 등록 안내 메일(notifyDomainPurchasePaid)이 따로 간다
+        if (paid.order_name === DOMAIN_PURCHASE_PRODUCT_NAME) return;
+        await deps.operatorEmail(`결제 완료 · ${paid.order_name} ${won(paid.amount)}`, [`상품: ${paid.order_name}`, `금액: ${won(paid.amount)}`, `주문번호: ${paid.order_id}`]);
+        result.operator += ":email";
+        return;
+      }
       const sent = await sendRelayV4(deps.operator, { eventId: await stableEventId(`payment-paid:${paid.order_id}`), eventType: "payment-paid", ownerPhone: deps.operator.ownerPhone, params: { product, amount: paid.amount, orderId: paid.order_id } }, deps.smsTransport);
       result.operator = `sms:${sent.status}:${sent.code}`;
       if (delivered(sent)) return;

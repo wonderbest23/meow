@@ -381,7 +381,8 @@ export function landingPublicationIssues(value: LandingDraft) {
   if (/(?:개인가|개인를|합니다\.를|하세요\.로)/.test(`${value.headline} ${value.subheadline}`)) {
     issues.push("공개 문구의 조사·문장 오류");
   }
-  if (/(?:테스트|example\.com|테스트로\s*\d+)/i.test(JSON.stringify(value))) {
+  // 상호·업종에 '테스트'가 들어갈 수 있다(코딩테스트 학원, 테스트키친) — 자리표시 문구·예시 주소만 막는다
+  if (/example\.(?:com|org|net)|\(테스트\)|\[테스트\]|테스트\s*(?:용|입니다|데이터|문구|계정|번호|중(?![가-힣]))|테스트로\s*\d+|"테스트"/i.test(JSON.stringify(value)) || /(?:^|\s)테스트$/.test(value.businessName.trim())) {
     issues.push("테스트·예시 데이터 제거");
   }
   if (value.pageMode === "transaction") {
@@ -452,18 +453,19 @@ export function createLandingDraft(input: {
       { question: "어떤 내용을 남기면 되나요?", answer: "필요하신 내용과 연락 가능한 시간을 함께 남겨주시면 더 빠르게 안내해 드립니다." },
     ],
     collectEmail: true,
-    collectPhone: false,
+    // 휴대폰을 받아야 사장님 문자에 연락처가 실리고 [전화]·[문자]로 바로 답할 수 있다
+    collectPhone: true,
     collectMessage: true,
     privacyController: input.title,
     privacyContact: "",
     privacyPurpose: "상담 신청 확인 및 서비스 안내를 위한 연락",
-    privacyRetentionPeriod: "상담 종료 후 3개월 또는 동의 철회 시까지",
+    privacyRetentionPeriod: "상담 종료(처리 완료) 후 3개월 또는 동의 철회 시까지(처리 표시가 없으면 접수 후 1년)",
     privacyRefusalNotice: "동의를 거부할 수 있으나, 필수 연락정보가 없으면 상담 신청을 접수할 수 없습니다.",
     privacyPolicy: [
       `${input.title}은 상담 신청 처리를 위해 개인정보를 처리합니다.`,
       "1. 처리 목적: 상담 신청 확인, 문의 답변, 서비스 안내",
-      "2. 처리 항목: 이름, 이메일, 문의 내용 중 신청폼에 표시된 항목",
-      "3. 보유 기간: 상담 종료 후 3개월 또는 동의 철회 시까지",
+      "2. 처리 항목: 이름, 휴대폰 번호, 이메일, 문의 내용 중 신청폼에 표시된 항목",
+      "3. 보유 기간: 상담 종료(처리 완료) 후 3개월 또는 동의 철회 시까지(처리 표시가 없으면 접수 후 1년)",
       "4. 파기: 보유 목적 달성 또는 기간 종료 후 복구할 수 없는 방법으로 지체 없이 파기",
       "5. 정보주체 권리: 열람, 정정, 삭제, 처리정지를 요청할 수 있습니다.",
       "6. 개인정보 문의: 공개 전 담당 연락처를 입력해야 합니다.",

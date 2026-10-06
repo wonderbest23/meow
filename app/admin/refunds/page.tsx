@@ -64,6 +64,18 @@ export default function AdminRefundsPage() {
   }, [load]);
 
   const selected = useMemo(() => requests.find((item) => item.id === selectedId) ?? null, [requests, selectedId]);
+  /* 약관대로 계산할 근거 — 고를 때마다 불러온다 */
+  const [basis, setBasis] = useState<{ lines: string[]; suggested: number | null; suggestedWhy: string } | null>(null);
+  useEffect(() => {
+    setBasis(null);
+    if (!selectedId) return;
+    let alive = true;
+    void fetch(`/api/admin/refunds?basis=${encodeURIComponent(selectedId)}`, { cache: "no-store" })
+      .then((response) => response.ok ? response.json() : { basis: null })
+      .then((data: { basis?: typeof basis }) => { if (alive) setBasis(data.basis ?? null); })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [selectedId]);
   const pending = requests.filter((item) => item.status === "received").length;
 
   const login = async (event: FormEvent) => {
@@ -75,9 +87,11 @@ export default function AdminRefundsPage() {
   };
 
   const refundAmount = amount.trim() ? Number(amount.replace(/[^\d]/g, "")) : selected?.amount ?? 0;
-  const act = async (status: "done" | "rejected") => {
+  const act = async (status: "done" | "rejected" | "recover") => {
     if (!selected || busy) return;
-    const warning = status === "done"
+    const warning = status === "recover"
+      ? "처리 중에 멈춘 요청을 마무리할까요? 주문이 이미 환불 상태면 완료로 기록하고, 아니면 '접수됨'으로 되돌려 다시 처리할 수 있게 합니다(카드가 이미 취소됐으면 다시 누를 때 확인해서 두 번 취소하지 않아요)."
+      : status === "done"
       ? manualTransfer
         ? `고객 계좌로 ${refundAmount.toLocaleString("ko-KR")}원을 직접 돌려드렸나요? 환불 완료로 기록하고 이 상품 이용을 닫습니다.`
         : `나이스페이로 ${refundAmount.toLocaleString("ko-KR")}원을 카드 취소합니다. 취소되면 이 상품 이용이 바로 닫히고 되돌릴 수 없습니다. 진행할까요?`
@@ -92,7 +106,7 @@ export default function AdminRefundsPage() {
       }));
       setRequests((current) => current.map((item) => (item.id === data.request.id ? data.request : item)));
       setNote(""); setAmount(""); setManualTransfer(false);
-      setMessage(status === "done" ? (manualTransfer ? "환불 완료로 기록하고 상품 이용을 닫았습니다." : "카드 취소를 마치고 상품 이용을 닫았습니다.") : "거절로 기록했습니다. 고객 화면에 사유가 보입니다.");
+      setMessage(status === "recover" ? (data.request.status === "done" ? "주문이 이미 환불 상태라 완료로 기록했습니다." : "'접수됨'으로 되돌렸습니다. 금액을 확인하고 다시 처리해 주세요.") : status === "done" ? (manualTransfer ? "환불 완료로 기록하고 상품 이용을 닫았습니다." : "카드 취소를 마치고 상품 이용을 닫았습니다.") : "거절로 기록했습니다. 고객 화면에 사유가 보입니다.");
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "처리하지 못했습니다.");
       void load().catch(() => undefined);
@@ -149,6 +163,12 @@ export default function AdminRefundsPage() {
                 <div><dt>접수 일시</dt><dd>{dateTime(selected.createdAt)}</dd></div>
                 <div><dt>마지막 처리</dt><dd>{dateTime(selected.updatedAt)}</dd></div>
               </dl>
+              {basis ? (
+                <section className="admin-cash-receipt"><header><RotateCcw /><div><strong>환불 판단 근거</strong><small>약관의 남은 만큼 환불 기준으로 계산한 값 — 최종 금액은 직접 정해요</small></div></header>
+                  {basis.lines.map((line) => <p key={line} style={{ margin: "2px 0" }}>{line}</p>)}
+                  {basis.suggested !== null ? <p style={{ marginTop: 6 }}><strong>제안 {basis.suggested.toLocaleString("ko-KR")}원</strong> · {basis.suggestedWhy}{selected.status === "received" ? <> <button type="button" style={{ marginLeft: 6 }} onClick={() => setAmount(String(basis.suggested))}>금액에 넣기</button></> : null}</p> : null}
+                </section>
+              ) : null}
               <section className="admin-cash-receipt"><header><RotateCcw /><div><strong>고객 요청 사유</strong><small>접수 당시 고객이 남긴 내용</small></div></header><p>{selected.reason}</p></section>
               <label className="admin-payment-note"><span>처리 메모</span><textarea rows={3} value={note} onChange={(event) => setNote(event.target.value)} placeholder="예: 도메인 3개월 사용 — 9개월분 월할 환불 / 거절이면 고객에게 보일 사유" /></label>
               {selected.status === "received" && (
@@ -159,6 +179,9 @@ export default function AdminRefundsPage() {
               )}
               {message && <p className="admin-payment-message">{message}</p>}
               <footer>
+                {selected.status === "processing" && (
+                  <button className="confirm" disabled={busy} onClick={() => void act("recover")}><RefreshCw /> {busy ? "확인 중…" : "멈춘 처리 마무리"}</button>
+                )}
                 {selected.status === "received" && (
                   <>
                     <button className="confirm" disabled={busy || !(refundAmount > 0 && refundAmount <= selected.amount)} onClick={() => void act("done")}><CheckCircle2 /> {busy ? "처리 중…" : manualTransfer ? "계좌로 환급 완료" : "카드 취소하고 환불 완료"}</button>

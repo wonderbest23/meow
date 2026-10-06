@@ -115,9 +115,9 @@ function fakeDb(data: { sites: Row[]; leads: Row[]; events: Row[]; projects: Row
   assert.ok((await weeklyReportUnsubscribeUrl("site-a", secret)).startsWith("https://oneulstart.com/api/public/weekly-report/unsubscribe?site=site-a&token="));
 
   const now = at("2026-10-05T10:00:00+09:00");
-  const site = (id: string, extra: Row = {}) => ({ id, project_id: `p-${id}`, slug: id, published_slug: id, custom_domain: null, created_at: "2026-09-01T00:00:00Z", published_version: 1, weekly_report_opt_out: false, businessName: `사업 ${id}`, ...extra });
+  const site = (id: string, extra: Row = {}) => ({ id, project_id: `p-${id}`, slug: id, published_slug: id, custom_domain: null, created_at: "2026-09-01T00:00:00Z", published_version: 1, status: "published", weekly_report_opt_out: false, businessName: `사업 ${id}`, ...extra });
   const fake = fakeDb({
-    sites: [site("active"), site("quiet", { created_at: "2026-07-01T00:00:00Z" }), site("noemail"), site("off", { weekly_report_opt_out: true }), site("draft", { published_version: null })],
+    sites: [site("active"), site("quiet", { created_at: "2026-07-01T00:00:00Z" }), site("noemail"), site("off", { weekly_report_opt_out: true }), site("draft", { published_version: null }), site("refunded", { status: "unpublished" })],
     leads: [{ site_id: "active", created_at: "2026-09-29T03:00:00Z" }, { site_id: "active", created_at: "2026-10-02T03:00:00Z" }, { site_id: "active", created_at: "2026-09-22T03:00:00Z" }, { site_id: "active", created_at: "2026-10-05T00:30:00Z" }],
     events: [{ site_id: "active", event_type: "page_view", created_at: "2026-09-30T03:00:00Z" }],
     projects: ["active", "quiet", "noemail", "off", "draft"].map((id) => ({ id: `p-${id}`, owner_id: `u-${id}`, guest_token_hash: `h-${id}`, opportunity: { planId: `plan-${id}` } })),
@@ -179,6 +179,20 @@ function fakeDb(data: { sites: Row[]; leads: Row[]; events: Row[]; projects: Row
   assert.deepEqual([smsBodies[0].eventType, smsBodies[0].recipient, smsBodies[0].params], ["weekly-report", "01012345678", { leads: 1, prevLeads: 0, views: 0 }]);
   assert.match(String(smsBodies[0].eventId), /^[0-9a-f-]{36}$/);
   assert.deepEqual(smsFake.reports.map((row) => [row.site_id, row.status, row.error_code ?? null]).sort(), [["nophone", "skipped", "recipient_missing"], ["phone", "sent", null]]);
+
+  // 막힌·거절된 문자는 가입 메일로 넘어간다(갔는지 모를 때만 문자로 재시도)
+  const blockedFake = fakeDb({
+    sites: [site("phone", { alert_phone: "01012345678" })],
+    leads: [{ site_id: "phone", created_at: "2026-09-29T03:00:00Z" }], events: [],
+    projects: [{ id: "p-phone", owner_id: "u1", guest_token_hash: "h", opportunity: {} }],
+    users: { u1: { email: "a@example.com", email_confirmed_at: "2026-01-01" } },
+  });
+  const mails: Row[] = [];
+  const blockedRun = await runWeeklyReports({ db: blockedFake.db, config, secret, now, sms,
+    smsTransport: (async (_url: unknown, init?: RequestInit) => new Response(JSON.stringify({ eventId: JSON.parse(String(init?.body)).eventId, mode: "live", status: "blocked", code: "DAILY_LIMIT" }), { status: 200 })) as typeof fetch,
+    transport: (async (_url: unknown, init?: RequestInit) => { mails.push(JSON.parse(String(init?.body))); return new Response(JSON.stringify({ id: "m1" }), { status: 200 }); }) as typeof fetch });
+  assert.equal(blockedRun.sent, 1, "문자가 막히면 메일로");
+  assert.deepEqual(mails[0]?.to, ["a@example.com"]);
 
   console.log("weekly-report: week window, tips, email, unsubscribe token, inactive skip, send once per week, retry");
 })().catch((error) => { console.error(error); process.exit(1); });
