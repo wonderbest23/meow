@@ -58,6 +58,24 @@ export default function PlanMePage() {
   const [refundReason, setRefundReason] = useState("");
   const [refundBusy, setRefundBusy] = useState(false);
   const [refundMessage, setRefundMessage] = useState("");
+  /* 승인 응답을 놓쳐 '승인 중'에 멈춘 카드 결제 — 결과 화면을 닫았어도 여기서 다시 확인한다 */
+  const [recheckBusy, setRecheckBusy] = useState<string | null>(null);
+  const [recheckMessage, setRecheckMessage] = useState<Record<string, string>>({});
+  const recheck = async (orderId: string) => {
+    setRecheckBusy(orderId);
+    try {
+      const response = await fetch("/api/payments/plan/reconcile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId }) });
+      const data = await response.json().catch(() => ({})) as { status?: string; reason?: string };
+      if (data.status === "ok") {
+        setPayments((current) => current?.map((item) => item.orderId === orderId ? { ...item, status: "done" } : item) ?? current);
+        setRecheckMessage((current) => ({ ...current, [orderId]: "결제가 확인됐어요. 이제 바로 쓸 수 있어요." }));
+      } else {
+        setRecheckMessage((current) => ({ ...current, [orderId]: data.status === "fail" ? (data.reason ?? "완료되지 않은 결제예요.") : "아직 카드사 확인 중이에요. 잠시 뒤 다시 눌러 주세요. 다시 결제하지는 마세요." }));
+      }
+    } catch {
+      setRecheckMessage((current) => ({ ...current, [orderId]: "확인하지 못했어요. 잠시 뒤 다시 눌러 주세요." }));
+    } finally { setRecheckBusy(null); }
+  };
   /** 회원 탈퇴 — 실수 방지를 위해 이메일을 다시 입력받는다 */
   const [showDelete, setShowDelete] = useState(false);
   const [deleteEmail, setDeleteEmail] = useState("");
@@ -268,6 +286,13 @@ export default function PlanMePage() {
                             {REFUND_LABEL[refund.status]}
                           </span>
                           {refund.status === "rejected" && refund.adminNote ? <small style={{ display: "block", marginTop: 4, color: "var(--text-soft, #667085)" }}>사유: {refund.adminNote}</small> : null}
+                        </>
+                      ) : item.status === "confirming" ? (
+                        <>
+                          <button type="button" className={styles.refundBtn} disabled={recheckBusy === item.orderId} onClick={() => void recheck(item.orderId)}>
+                            {recheckBusy === item.orderId ? "확인 중…" : "결제 다시 확인"}
+                          </button>
+                          {recheckMessage[item.orderId] ? <small style={{ display: "block", marginTop: 4, color: "var(--text-soft, #667085)" }}>{recheckMessage[item.orderId]}</small> : null}
                         </>
                       ) : item.status !== "done" ? (
                         <span className={styles.refundNa}>—</span>

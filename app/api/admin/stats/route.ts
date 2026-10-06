@@ -29,6 +29,12 @@ function todayStartIso() {
 const PAGE = 1000;
 const MAX_PAID_ROWS = 100_000;
 
+/** 환불 처리 메모의 맨 앞 금액 — completeRefundRequest 가 '12,000원 …' 으로 남긴다 */
+function refundedWon(note: unknown): number {
+  const match = /^\s*([\d,]+)원/.exec(String(note ?? ""));
+  return match ? Number(match[1].replace(/,/g, "")) || 0 : 0;
+}
+
 export async function GET() {
   if (!(await hasAdminSession("support"))) {
     return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, { status: 401 });
@@ -68,10 +74,11 @@ export async function GET() {
     let sum = 0;
     let complete = true;
     for (let offset = 0; offset < MAX_PAID_ROWS; offset += PAGE) {
+      // 부분 환불분도 받은 돈이다 — done·partial_canceled·refunded 를 모두 더하고 실제로 돌려준 금액을 아래에서 뺀다
       const { data, error } = await supabase
         .from("payment_orders")
         .select("amount")
-        .eq("status", "done")
+        .in("status", ["done", "partial_canceled", "refunded"])
         .order("order_id", { ascending: true })
         .range(offset, offset + PAGE - 1);
       if (error) { complete = false; break; }
@@ -79,7 +86,21 @@ export async function GET() {
       sum += rows.reduce((acc, row) => acc + Number((row as { amount?: number }).amount ?? 0), 0);
       if (rows.length < PAGE) break;
     }
-    paidAmount = complete ? sum : null;
+    // 돌려준 금액은 환불 요청의 처리 메모 맨 앞('12,000원 카드 취소 …')에만 남는다 — 그것을 읽어 뺀다
+    let refundedSum = 0;
+    for (let offset = 0; complete && offset < MAX_PAID_ROWS; offset += PAGE) {
+      const { data, error } = await supabase
+        .from("refund_requests")
+        .select("admin_note")
+        .eq("status", "done")
+        .order("id", { ascending: true })
+        .range(offset, offset + PAGE - 1);
+      if (error) { complete = false; break; }
+      const rows = data ?? [];
+      refundedSum += rows.reduce((acc, row) => acc + refundedWon((row as { admin_note?: string }).admin_note), 0);
+      if (rows.length < PAGE) break;
+    }
+    paidAmount = complete ? Math.max(0, sum - refundedSum) : null;
     const paidRecent = await supabase
       .from("payment_orders")
       .select("order_id", { count: "exact", head: true })

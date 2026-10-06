@@ -177,7 +177,7 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
   if (!deps.secret) return { ...result, reason: "missing_secret" };
 
   const columns = "id, project_id, slug, published_slug, custom_domain, created_at, businessName:draft->>businessName";
-  const pick = (select: string) => db.from("landing_sites").select(select).not("published_version", "is", null).eq("weekly_report_opt_out", false).order("id").limit(2000);
+  const pick = (select: string) => db.from("landing_sites").select(select).not("published_version", "is", null).eq("status", "published").eq("weekly_report_opt_out", false).order("id").limit(2000);
   // 문자 번호 칸(0039)이 아직 없으면 번호 없이 — 메일만 가능
   let sites = sms ? await pick(`${columns}, alert_phone`) : await pick(columns);
   if (sites.error && sms) sites = await pick(columns);
@@ -224,9 +224,9 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
       if (phone && sms) {
         // 같은 홈페이지·주에는 늘 같은 eventId — 재시도해도 중계가 앞선 결과를 돌려줘 두 번 가지 않는다
         const sent = await sendCustomerSms(sms, { eventId: await stableEventId(`weekly-report:${site.id}:${week.weekStart}`), eventType: "weekly-report", recipient: phone, params: { leads: Math.min(leads, 9999), prevLeads: Math.min(prevLeads, 9999), views: Math.min(views, 99999) } }, deps.smsTransport);
-        if (sent.status === "accepted" || sent.status === "test_accepted") { await finish({ status: "sent", provider_id: `sms:${sent.code}`, error_code: null }); result.sent += 1; }
-        else { await finish({ status: "failed", error_code: `sms_${sent.status}`, ...(sent.status === "uncertain" ? {} : { attempts: WEEKLY_REPORT_MAX_ATTEMPTS }) }); result.failed += 1; }
-        continue;
+        if (sent.status === "accepted" || sent.status === "test_accepted") { await finish({ status: "sent", provider_id: `sms:${sent.code}`, error_code: null }); result.sent += 1; continue; }
+        // 갔는지 모를 때만 문자로 다시 — 막히거나 거절된 번호는 아래 이메일로 넘어간다(이메일도 없으면 실패로 끝)
+        if (sent.status === "uncertain" || !config) { await finish({ status: "failed", error_code: `sms_${sent.status}`, ...(sent.status === "uncertain" ? {} : { attempts: WEEKLY_REPORT_MAX_ATTEMPTS }) }); result.failed += 1; continue; }
       }
       if (!config) { await finish({ status: "skipped", error_code: "recipient_missing" }); result.skipped += 1; continue; }
       const project = await db.from(projectReadTable()).select("owner_id, guest_token_hash, opportunity").eq("id", site.project_id).maybeSingle();

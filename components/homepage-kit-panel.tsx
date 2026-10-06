@@ -65,6 +65,12 @@ function Fold({ icon, title, badge, hint, children, defaultOpen, id }: {
   );
 }
 
+/* 방침 '처리 항목' 줄을 실제로 받는 연락처에 맞춘다(사장님이 손댄 문구면 그 줄만 바꾼다) */
+function leadPolicyItems(policy: string, phone: boolean, email: boolean): string {
+  const items = ["이름", ...(phone ? ["휴대폰 번호"] : []), ...(email ? ["이메일"] : []), "문의 내용"].join(", ");
+  return policy.replace(/^2\. 처리 항목: .*$/m, `2. 처리 항목: ${items} 중 신청폼에 표시된 항목`);
+}
+
 export function HomepageKitPanel({
   draft,
   site,
@@ -355,6 +361,18 @@ export function HomepageKitPanel({
           <label className="wide hk-switch">
             <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />
             <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 접수된 문의가 아래 칸에 쌓입니다.</small></span>
+          </label>
+          {/*
+           * 받을 연락처 — 예전 편집 화면에 있던 토글이 사라져 휴대폰 칸을 켤 방법이 없었다. 그래서 '문의자 이름·연락처 문자',
+           * 손님 '접수됐어요' 문자, [전화]·[문자] 바로 답하기가 늘 비어 있었다. 켜면 방침의 처리 항목도 함께 맞춘다
+           */}
+          {draft.leadCaptureEnabled ? <div className="wide hk-lead-fields">
+            <label className="hk-switch"><input type="checkbox" checked={draft.collectPhone} onChange={(e) => update({ collectPhone: e.target.checked, ...(e.target.checked || draft.collectEmail ? {} : { collectEmail: true }), privacyPolicy: leadPolicyItems(draft.privacyPolicy, e.target.checked, e.target.checked || draft.collectEmail ? draft.collectEmail : true) })} /><span>휴대폰 번호 받기 <small>전화·문자로 바로 연락할 수 있어요(추천)</small></span></label>
+            <label className="hk-switch"><input type="checkbox" checked={draft.collectEmail} onChange={(e) => update({ collectEmail: e.target.checked, ...(e.target.checked || draft.collectPhone ? {} : { collectPhone: true }), privacyPolicy: leadPolicyItems(draft.privacyPolicy, e.target.checked || draft.collectPhone ? draft.collectPhone : true, e.target.checked) })} /><span>이메일 받기</span></label>
+          </div> : null}
+          <label className="wide hk-switch">
+            <input type="checkbox" checked={draft.analyticsEnabled} onChange={(e) => update({ analyticsEnabled: e.target.checked })} />
+            <span>방문 수 세기 <small>동의한 손님만 세요. 주간 리포트의 '방문'과 '버튼 누름'이 여기서 나와요(끄면 0).</small></span>
           </label>
           {draft.leadCaptureEnabled ? <label><span>개인정보 문의처</span><input value={draft.privacyContact} onChange={(e) => update({ privacyContact: e.target.value, privacyPolicy: privacyPolicyWithContact(draft.privacyPolicy, e.target.value) })} placeholder="이메일 또는 전화번호" /></label> : null}
           <label><span>문의 버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(e) => update({ ctaLabel: e.target.value })} /></label>

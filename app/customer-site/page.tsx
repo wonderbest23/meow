@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PublicLandingClient } from "../../components/public-landing-client";
 import { loadBrainwavePageServer } from "../../lib/landing/brainwave/load";
 import { getPublishedLandingByCustomDomain } from "../../lib/landing/repository";
+import { landingShareMetadata } from "../../lib/landing/share-card";
 
 async function currentHostname() {
   const headerStore = await headers();
@@ -15,13 +16,11 @@ async function currentHostname() {
 }
 
 export async function generateMetadata(): Promise<Metadata> {
-  const published = await getPublishedLandingByCustomDomain(await currentHostname());
+  const hostname = await currentHostname();
+  const published = await getPublishedLandingByCustomDomain(hostname);
   if (!published) return { title: "연결된 홈페이지를 찾을 수 없습니다" };
-  return {
-    title: `${published.config.businessName} | ${published.config.headline}`,
-    description: published.config.subheadline,
-    robots: { index: true, follow: true },
-  };
+  // /launch 주소와 같은 카톡·검색 카드(대표 사진·소개 문구) — 내 도메인으로 공유해도 사진이 보이게
+  return landingShareMetadata(published.config, `https://${hostname}`);
 }
 
 export default async function CustomerSitePage() {

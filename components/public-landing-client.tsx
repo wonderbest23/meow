@@ -8,6 +8,7 @@ import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCir
 import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";
 import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
+import { BRAINWAVE_CTA_EVENT } from "../lib/landing/brainwave/button-action";
 
 function getVisitorId() {
   const key = "venture-landing-visitor";
@@ -64,6 +65,13 @@ export function PublicLandingClient({
     viewed.current = true;
     void record("page_view");
   }, [analyticsAgreed]);
+
+  // 킷 디자인의 버튼(runBrainwaveButton)도 '버튼 누름'으로 센다
+  useEffect(() => {
+    const onCta = () => { void record("cta_click"); };
+    window.addEventListener(BRAINWAVE_CTA_EVENT, onCta);
+    return () => window.removeEventListener(BRAINWAVE_CTA_EVENT, onCta);
+  });
 
   const moveToForm = () => {
     void record("cta_click");

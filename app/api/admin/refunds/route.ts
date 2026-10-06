@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getRefundRequest, listAllRefundRequests } from "../../../../lib/payments/refund-requests";
-import { RefundError, completeRefundRequest, rejectRefundRequest } from "../../../../lib/payments/refund-execution";
+import { refundBasis } from "../../../../lib/payments/refund-basis";
+import { RefundError, completeRefundRequest, recoverStuckRefund, rejectRefundRequest } from "../../../../lib/payments/refund-execution";
 import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
 
 export const runtime = "nodejs";
@@ -10,7 +11,8 @@ export const runtime = "nodejs";
 
 const patchSchema = z.object({
   id: z.string().uuid(),
-  status: z.enum(["done", "rejected"]),
+  /** recover — '처리 중'에 멈춘 요청 마무리 */
+  status: z.enum(["done", "rejected", "recover"]),
   note: z.string().trim().max(500).default(""),
   /** 환불 금액(원). 비우면 요청 금액 전액 */
   amount: z.number().int().positive().optional(),
@@ -29,9 +31,16 @@ async function authorize() {
   return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, { status: 401 });
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const unauthorized = await authorize();
   if (unauthorized) return unauthorized;
+  // ?basis=요청id — 그 요청의 환불 판단 근거(결제일·사용량·약관대로 계산한 제안 금액)
+  const basisFor = new URL(request.url).searchParams.get("basis");
+  if (basisFor) {
+    if (!z.string().uuid().safeParse(basisFor).success) return privateJson({ error: { code: "BAD_REQUEST", message: "요청을 다시 골라 주세요." } }, { status: 400 });
+    try { return privateJson({ basis: await refundBasis(basisFor) }); }
+    catch (error) { console.error("[admin/refunds] basis failed", error); return privateJson({ basis: null }); }
+  }
   try {
     return privateJson({ requests: await listAllRefundRequests() });
   } catch (error) {
@@ -48,6 +57,7 @@ export async function PATCH(request: Request) {
   const input = parsed.data;
   try {
     if (input.status === "rejected") return privateJson({ request: await rejectRefundRequest(input.id, input.note) });
+    if (input.status === "recover") return privateJson({ request: await recoverStuckRefund(input.id) });
     const current = await getRefundRequest(input.id);
     return privateJson({ request: await completeRefundRequest(input.id, { amount: input.amount ?? current?.amount ?? 0, note: input.note, manualTransfer: input.manualTransfer }) });
   } catch (error) {

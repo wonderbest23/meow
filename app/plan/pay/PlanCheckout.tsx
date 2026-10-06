@@ -43,7 +43,7 @@ declare global {
  * 주문번호·금액은 서버가 정하고(/api/payments/plan/prepare), 여기서는 결제창만 연다.
  * 승인은 returnUrl(/api/payments/plan/return)에서 서버가 처리한다.
  */
-export default function PlanCheckout() {
+export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmail?: boolean }) {
   // 어느 문서를 여는 결제인지 — 관문에서 붙여 보낸다
   const params = useSearchParams();
   const planId = params.get("planId") ?? "";
@@ -310,7 +310,7 @@ export default function PlanCheckout() {
             <label className={styles.phone}>
               <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
               <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} />
-              <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : "적으면 결제 완료를 문자로 한 번 알려 드려요. 영수증은 계정 이메일로도 가요."}</small>
+              <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : `적으면 결제 완료를 문자로 한 번 알려 드려요.${receiptByEmail ? " 영수증은 가입한 이메일로도 가요." : ""}`}</small>
             </label>
             <label className={styles.agreeAll}>
               <input type="checkbox" checked={agreed} onChange={event => setAgreements(Object.fromEntries(AGREEMENT_KEYS.map(key => [key, event.target.checked])) as Agreements)} />

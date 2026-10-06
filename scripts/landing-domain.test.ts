@@ -32,6 +32,9 @@ assert.match(draft.slug, /^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 assert.equal(landingDraftSchema.parse(draft).collectEmail, true);
 assert.ok(landingPublicationIssues(draft).includes("개인정보 문의 연락처"));
 assert.ok(landingPublicationIssues({ ...draft, privacyContact: "privacy@sample.kr" }).includes("테스트·예시 데이터 제거"));
+// 상호·업종 안의 '테스트'는 통과, 자리표시 문구는 막힌다
+assert.ok(!landingPublicationIssues({ ...draft, businessName: "코딩테스트 학원", headline: "코딩테스트 합격반", privacyContact: "privacy@sample.kr" }).includes("테스트·예시 데이터 제거"));
+assert.ok(landingPublicationIssues({ ...draft, businessName: "코딩 학원", headline: "테스트 문구입니다", privacyContact: "privacy@sample.kr" }).includes("테스트·예시 데이터 제거"));
 const publishable = createLandingDraft({
   title: "첫 사업 안내",
   oneLiner: "처음 시작하는 사람의 사업 준비를 간단하게 만듭니다.",

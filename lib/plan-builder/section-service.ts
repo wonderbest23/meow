@@ -3,6 +3,8 @@ import { withUsageContext } from "../llm/usage-context";
 import { sweepDueLeadNotifications } from "../landing/lead-notifications";
 import { runWeeklyReportsNow } from "../landing/weekly-report-runner";
 import { pollAutoRegistrations } from "../landing/domain-registrar";
+import { purgeExpiredLeadsNow } from "../landing/lead-retention";
+import { sweepConfirmingOrders } from "../payments/stuck-confirming";
 import { runTaxRemindersNow } from "../operations/tax-reminders";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
@@ -276,7 +278,11 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
         const tax = await runTaxRemindersNow().catch(() => ({ error: "TAX_REMINDER_FAILED" }));
         // 도메인 자동 등록(.com) 진행 상태 확인 — 끝나면 등록 완료·연결·알림까지
         const domains = await pollAutoRegistrations().catch(() => ({ error: "DOMAIN_REGISTRAR_FAILED" }));
-        return Response.json({ result: { ok: true, ...leads, weekly, tax, domains } });
+        // 승인 응답을 놓쳐 '확인 중'에 멈춘 카드 결제 다시 맞추기
+        const payments = await sweepConfirmingOrders().catch(() => ({ error: "PAYMENT_SWEEP_FAILED" }));
+        // 보관 기간이 지난 홈페이지 문의 지우기(개인정보 안내문의 보유 기간)
+        const purged = await purgeExpiredLeadsNow().catch(() => ({ error: "LEAD_PURGE_FAILED" }));
+        return Response.json({ result: { ok: true, ...leads, weekly, tax, domains, purged, payments } });
       }
       case "artifactChunk": return Response.json({ result: await executeArtifactChunk(input.job.ownerHash, input.job.planId, input.job.jobId, input.job.index, input.job.attempt) });
     }

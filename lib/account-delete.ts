@@ -11,7 +11,7 @@ import { disconnectProjectDomains } from "./plan-builder/plan-homepage-cleanup";
  *   대신 계정 식별자(owner_id)를 끊어 사람과 연결되지 않게 분리한다.
  */
 export interface AccountDeleteResult {
-  deleted: { plans: number; projects: number; conversations: number; preferences: number };
+  deleted: { plans: number; projects: number; conversations: number; preferences: number; consultSessions?: number; serviceRequests?: number; businessChecks?: number };
   keptForLegalRetention: { paymentOrders: number; refundRequests: number };
 }
 
@@ -44,6 +44,16 @@ export async function deleteAccount(userId: string): Promise<AccountDeleteResult
       result.deleted.conversations = removed.count ?? 0;
     }
 
+    // 3-2) 무료 상담 대화·'다음 단계' 서비스 신청(전화·메모)·사업자 확인 — 예전엔 남았다(표가 없으면 건너뜀)
+    const optionalDelete = async (table: string, column: string, value: string) => {
+      const removed = await supabase.from(table).delete({ count: "exact" }).eq(column, value);
+      if (removed.error && !/does not exist|PGRST205|42P01/.test(`${removed.error.code} ${removed.error.message}`)) throw removed.error;
+      return removed.count ?? 0;
+    };
+    result.deleted.consultSessions = await optionalDelete("consult_sessions", "owner_hash", ownerHash);
+    result.deleted.serviceRequests = await optionalDelete("service_requests", "owner_id", userId);
+    result.deleted.businessChecks = await optionalDelete("business_checks", "owner_id", userId);
+
     // 4) 추천 선호
     const prefs = await supabase.from("opportunity_preferences").delete({ count: "exact" }).eq("owner_id", userId);
     result.deleted.preferences = prefs.count ?? 0;
@@ -52,11 +62,28 @@ export async function deleteAccount(userId: string): Promise<AccountDeleteResult
      * 5) 결제·환불 — 법정 보존 대상이라 지우지 않는다.
      *    소유자 연결만 끊어 남은 기록에서 사람을 식별할 수 없게 한다.
      */
-    const orders = await supabase
-      .from("payment_orders")
-      .update({ owner_id: null, guest_token_hash: null }, { count: "exact" })
-      .eq("owner_id", userId);
-    result.keptForLegalRetention.paymentOrders = orders.count ?? 0;
+    /*
+     *    guest_token_hash 는 not null 이라 null 로 바꾸면 update 가 통째로 실패했다(에러를 안 봐서 몰랐다) —
+     *    'deleted' 로 바꾸고, 보존 대상이 아닌 개인 정보(결제 안내 휴대폰·도메인 명의자·이메일)는 지운다.
+     *    금액·상품·일시·주문번호는 남는다(전자상거래법 대금결제 기록).
+     */
+    const paidOrders = await supabase.from("payment_orders").select("order_id, opportunity").eq("owner_id", userId);
+    if (paidOrders.error) throw paidOrders.error;
+    let kept = 0;
+    for (const row of paidOrders.data ?? []) {
+      const opportunity = { ...((row.opportunity ?? {}) as Record<string, unknown>) };
+      delete opportunity.noticePhone;
+      if (opportunity.domainRequest && typeof opportunity.domainRequest === "object") {
+        const { registrant: _registrant, ...rest } = opportunity.domainRequest as Record<string, unknown>;
+        opportunity.domainRequest = rest;
+      }
+      const updated = await supabase.from("payment_orders")
+        .update({ owner_id: null, guest_token_hash: "deleted", customer_email: null, opportunity })
+        .eq("order_id", row.order_id as string);
+      if (updated.error) throw updated.error;
+      kept++;
+    }
+    result.keptForLegalRetention.paymentOrders = kept;
 
     const refunds = await supabase
       .from("refund_requests")

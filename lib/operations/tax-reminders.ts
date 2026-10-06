@@ -34,7 +34,7 @@ export async function runTaxReminders(deps: TaxReminderDependencies, limit = 50)
   if (!db) return { ...result, reason: "no_database" };
   if (!sms) return { ...result, reason: "sms_disabled" };
 
-  const sites = await db.from("landing_sites").select("alert_phone").not("alert_phone", "is", null).not("published_version", "is", null).eq("weekly_report_opt_out", false).limit(5000);
+  const sites = await db.from("landing_sites").select("alert_phone").not("alert_phone", "is", null).not("published_version", "is", null).eq("status", "published").eq("weekly_report_opt_out", false).limit(5000);
   if (sites.error) return { ...result, reason: "migration_required" };
   const phones = [...new Set(((sites.data ?? []) as Array<{ alert_phone: string | null }>).map((row) => row.alert_phone ?? "").filter((phone) => /^010\d{8}$/.test(phone)))];
 
@@ -57,6 +57,12 @@ export async function runTaxReminders(deps: TaxReminderDependencies, limit = 50)
       if (relayUnsupported(sent)) {
         await row.delete().eq("recipient_key", key).eq("deadline", deadline.date).eq("days_before", deadline.daysBefore);
         return { ...result, reason: "relay_upgrade_required" };
+      }
+      if (sent.status === "uncertain") {
+        // 갔는지 모르면 맡은 줄을 풀어 다음 실행(5분 뒤)에 다시 — 같은 eventId 라 중계가 두 번 보내지 않는다. 그날 21시까지만.
+        await row.delete().eq("recipient_key", key).eq("deadline", deadline.date).eq("days_before", deadline.daysBefore).eq("status", "processing");
+        result.failed += 1;
+        continue;
       }
       const ok = sent.status === "accepted" || sent.status === "test_accepted";
       await row.update({ status: ok ? "sent" : "failed", error_code: ok ? null : sent.code.slice(0, 80), updated_at: new Date(now).toISOString() })

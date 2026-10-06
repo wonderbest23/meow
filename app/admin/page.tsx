@@ -164,7 +164,7 @@ export default function AdminDashboardPage() {
           <span className="admin-dash-icon pay"><Banknote /></span>
           <small>결제</small>
           <strong>{num(stats?.payments.paidCount ?? null)}건 · {won(stats?.payments.paidAmount ?? null)}</strong>
-          <em>최근 7일 {num(stats?.payments.paid7d ?? null)}건</em>
+          <em>최근 7일 {num(stats?.payments.paid7d ?? null)}건 · 금액은 환불을 뺀 값</em>
         </article>
         <article>
           <span className="admin-dash-icon refund"><RotateCcw /></span>
