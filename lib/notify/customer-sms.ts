@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { sendAlimtalk, type AlimtalkEvent } from "./alimtalk";
 
 /*
  * 사장님(홈페이지 주인)·구매자·방문자 휴대폰으로 보내는 문자 — 알리고 중계(ops/owner-sms/relay.py v3·v4)를 거친다.
@@ -59,9 +58,6 @@ const receiptSchema = z.object({
 
 export async function sendCustomerSms(config: CustomerSmsConfig, input: { eventId: string; eventType: CustomerSmsEvent; recipient: string; params: CustomerSmsParams }, transport: typeof fetch = fetch, timeoutMs = 6000): Promise<CustomerSmsResult> {
   if (!/^010\d{8}$/.test(input.recipient) || !z.string().uuid().safeParse(input.eventId).success) return { status: "blocked", code: "CUSTOMER_SMS_INPUT_INVALID" };
-  // 알림톡이 켜져 있고 템플릿이 승인돼 있으면 먼저 — 못 보내면 지금처럼 문자
-  const talk = config.mode === "live" ? await sendAlimtalk(input.eventType, input.recipient, input.params as Record<string, unknown>) : null;
-  if (talk) return talk;
   return postRelay(config, { version: 3, eventId: input.eventId, mode: config.mode, service: "oneulstart", eventType: input.eventType, recipient: input.recipient, params: input.params }, input.eventId, transport, timeoutMs);
 }
 
@@ -84,11 +80,6 @@ export type RelayV4Input = { eventId: string; eventType: RelayV4Event; params: R
 export async function sendRelayV4(config: CustomerSmsConfig, input: RelayV4Input, transport: typeof fetch = fetch, timeoutMs = 6000): Promise<CustomerSmsResult> {
   const target = "recipient" in input ? input.recipient : input.ownerPhone;
   if (!/^010\d{8}$/.test(target) || !z.string().uuid().safeParse(input.eventId).success) return { status: "blocked", code: "CUSTOMER_SMS_INPUT_INVALID" };
-  // 손님·사장님께 가는 알림은 알림톡을 먼저(운영자 결제 알림은 문자 그대로) — 못 보내면 지금처럼 중계 문자
-  if ("recipient" in input && config.mode === "live" && input.eventType !== "payment-paid") {
-    const talk = await sendAlimtalk(input.eventType as AlimtalkEvent, input.recipient, input.params as Record<string, unknown>);
-    if (talk) return talk;
-  }
   const route = "recipient" in input ? { recipient: input.recipient } : { recipientCheck: await hmacHex(config.secret, `recipient:${input.ownerPhone}`) };
   return postRelay(config, { version: 4, eventId: input.eventId, mode: config.mode, service: "oneulstart", eventType: input.eventType, ...route, params: input.params }, input.eventId, transport, timeoutMs);
 }

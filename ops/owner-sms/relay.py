@@ -1,6 +1,7 @@
 """Oneulstart-only Aligo relay. Standard library; no customer inquiry content.
 
 v1/v2: fixed owner alerts. v3: fixed-template alerts to a homepage owner's own phone (opt-in, capped).
+v5: customer alerts go out as Kakao AlimTalk through Aligo first when an approved template is configured.
 v4: fixed templates filled only with strictly validated params (payment, lead contact, visitor receipt,
 domain start, tax deadline). Long ones may go as LMS with a fixed title; v1-v3 bodies keep working unchanged."""
 import hashlib
@@ -86,6 +87,13 @@ def load_config(path):
                 raise ValueError("CUSTOMER_DAILY_LIMIT_REQUIRED")
             if type(config.get("perRecipientDailyLimit")) is not int or not 1 <= config["perRecipientDailyLimit"] <= 50:
                 raise ValueError("PER_RECIPIENT_LIMIT_REQUIRED")
+    if "alimtalk" in config:
+        # v5 알림톡(알리고 카카오) — 채널 발신 프로필 키 + 승인된 템플릿 코드. 없는 알림은 지금처럼 문자
+        talk = config["alimtalk"]
+        if (not isinstance(talk, dict) or not re.fullmatch(r"[A-Za-z0-9]{20,64}", str(talk.get("senderKey", "")))
+                or not isinstance(talk.get("templates"), dict)
+                or any(event not in ALIMTALK_TEMPLATES or not re.fullmatch(r"[A-Za-z0-9_-]{2,40}", str(code)) for event, code in talk["templates"].items())):
+            raise ValueError("ALIMTALK_CONFIG_INVALID")
     return config
 
 
@@ -252,9 +260,94 @@ def aligo_send(config, event_type="support-inquiry", recipient=None, message=Non
             "receiptId": str(message_id)}
 
 
+ALIMTALK_PROVIDER = "https://kakaoapi.aligo.in/akv10/alimtalk/send/"
+ALIMTALK_SUBJECT = "오늘창업 알림"
+MYPAGE = "https://oneulstart.com/plan/me"
+HOMEPAGE_ADMIN = "https://oneulstart.com/plan/homepage"
+# 카카오 검수에 올린 글과 한 글자도 달라선 안 된다(docs/alimtalk-templates.md 와 같다). #{변수}만 값으로 바뀐다
+ALIMTALK_TEMPLATES = {
+    "payment-receipt": ("[오늘창업] 결제가 완료됐어요.\n\n상품: #{상품}\n주문번호: #{주문번호}\n\n결제 내역과 영수증은 오늘창업 마이페이지에서 볼 수 있어요.", [("마이페이지", MYPAGE)]),
+    "homepage-lead-contact": ("[오늘창업] 홈페이지에 새 문의가 들어왔어요.\n\n이름: #{이름}\n연락처: #{연락처}\n\n빠르게 연락드리면 상담으로 이어질 가능성이 높아요.", [("문의 확인", HOMEPAGE_ADMIN)]),
+    "homepage-lead": ("[오늘창업] 홈페이지에 새 문의가 들어왔어요. 오늘창업에서 내용을 확인해 주세요.", [("문의 확인", HOMEPAGE_ADMIN)]),
+    "lead-received": ("[#{가게}] 문의가 접수됐어요.\n\n남겨 주신 연락처로 곧 연락드릴게요. 감사합니다.", []),
+    "domain-connect-started": ("[오늘창업] 도메인 #{도메인} 연결을 시작했어요.\n\n연결이 끝나면 이 주소로 홈페이지가 열려요. 보통 수 분~몇 시간 걸려요.", []),
+    "tax-deadline": ("[오늘창업] #{세금} 신고 마감이 #{남은날}일 남았어요.\n\n마감일: #{마감일}\n\n홈택스에서 신고·납부할 수 있어요. 늦으면 가산세가 붙어요.", [("홈택스", "https://hometax.go.kr")]),
+    "weekly-report": ("[오늘창업] 지난주 홈페이지 리포트\n\n문의: #{문의}건 (전주 #{전주문의}건)\n방문: #{방문}회", [("자세히 보기", HOMEPAGE_ADMIN)]),
+}
+
+
+def alimtalk_values(event_type, params):
+    """템플릿 #{변수} 값 — 문자 틀(customer_message·v4_message)이 이미 검사한 params 에서만 만든다"""
+    if event_type == "payment-receipt":
+        return {"상품": PRODUCTS[params["product"]], "주문번호": params["orderId"]}
+    if event_type == "homepage-lead-contact":
+        phone = params["phone"]
+        shown = "%s-%s-%s" % (phone[:3], phone[3:-4], phone[-4:]) if len(phone) in (10, 11) else (phone or "남기지 않음")
+        return {"이름": clean_text(params["name"], 10, r"[가-힣A-Za-z ]") or "이름 없음", "연락처": shown}
+    if event_type == "homepage-lead":
+        return {}
+    if event_type == "lead-received":
+        return {"가게": clean_text(params["store"], 12, r"[가-힣A-Za-z0-9 ]")}
+    if event_type == "domain-connect-started":
+        return {"도메인": params["domain"]}
+    if event_type == "tax-deadline":
+        return {"세금": TAX_KINDS[params["kind"]], "남은날": str(params["days"]), "마감일": "%d월 %d일" % (params["month"], params["day"])}
+    if event_type == "weekly-report":
+        return {"문의": str(params["leads"]), "전주문의": str(params["prevLeads"]), "방문": str(params["views"])}
+    return None
+
+
+def alimtalk_text(event_type, params):
+    template = ALIMTALK_TEMPLATES.get(event_type)
+    values = alimtalk_values(event_type, params) if template else None
+    if values is None:
+        return None
+    text = template[0]
+    for key, value in values.items():
+        text = text.replace("#{%s}" % key, value)
+    return text
+
+
+def alimtalk_send(config, event_type, recipient, sms_text, params):
+    """알림톡 먼저(알리고 카카오, failover=Y 로 실패하면 알리고가 같은 내용을 문자로).
+    None 이면 알림톡을 쓸 수 없음 — 부르는 쪽이 지금처럼 문자로 보낸다. 응답을 모르면(시간 초과) 다시 보내지 않게 uncertain."""
+    talk = config.get("alimtalk") or {}
+    code = (talk.get("templates") or {}).get(event_type)
+    text = alimtalk_text(event_type, params) if code else None
+    if not text:
+        return None
+    buttons = [{"name": name, "linkType": "WL", "linkMo": url, "linkPc": url} for name, url in ALIMTALK_TEMPLATES[event_type][1]]
+    fields = {
+        "apikey": config["aligoKey"], "userid": config["aligoUser"], "senderkey": talk["senderKey"], "tpl_code": code,
+        "sender": config["customerSender"], "receiver_1": recipient, "subject_1": ALIMTALK_SUBJECT, "message_1": text,
+        "failover": "Y", "fsubject_1": LMS_TITLE, "fmessage_1": sms_text, "testMode": "Y" if config["mode"] == "test" else "N",
+    }
+    if buttons:
+        fields["button_1"] = json.dumps({"button": buttons}, ensure_ascii=False)
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect(),
+                                        urllib.request.HTTPSHandler(context=ssl.create_default_context()))
+    request = urllib.request.Request(ALIMTALK_PROVIDER, data=urllib.parse.urlencode(fields).encode(), method="POST",
+                                     headers={"Content-Type": "application/x-www-form-urlencoded;charset=UTF-8"})
+    try:
+        with opener.open(request, timeout=4) as response:
+            receipt = json.loads(response.read(MAX_RECEIPT + 1)[:MAX_RECEIPT])
+    except urllib.error.HTTPError as error:
+        error.close()
+        return None
+    except Exception:
+        return {"status": "uncertain", "code": "ALIMTALK_UNCONFIRMED"}
+    if not isinstance(receipt, dict) or receipt_integer(receipt.get("code")) != 0:
+        return None  # 거절(템플릿·채널 문제 등) — 문자로
+    info = receipt.get("info") if isinstance(receipt.get("info"), dict) else {}
+    mid = receipt_integer(info.get("mid"))
+    return {"status": "test_accepted" if config["mode"] == "test" else "accepted",
+            "code": "ALIMTALK_TEST_ACCEPTED" if config["mode"] == "test" else "ALIMTALK_ACCEPTED",
+            "receiptId": str(mid) if mid else ""}
+
+
 class Relay:
-    def __init__(self, config, db_path, sender=aligo_send, clock=time.time):
-        self.config, self.db_path, self.sender, self.clock = config, str(db_path), sender, clock
+    def __init__(self, config, db_path, sender=aligo_send, clock=time.time, talker=alimtalk_send):
+        self.config, self.db_path, self.sender, self.clock, self.talker = config, str(db_path), sender, clock, talker
         with self.connect() as db:
             db.execute("PRAGMA journal_mode=WAL")
             db.execute("""CREATE TABLE IF NOT EXISTS attempts (
@@ -365,6 +458,11 @@ class Relay:
             return 503, {**base, "status": "uncertain", "code": "RECEIPT_STORE_UNCONFIRMED"}
         return 200, {**base, "status": receipt["status"], "code": receipt["code"], "duplicate": False}
 
+    def send_customer(self, event_type, recipient, message, params):
+        """v5 — 승인된 알림톡 템플릿이 있으면 알림톡(실패 시 알리고가 문자로 대체), 없으면 지금처럼 문자"""
+        talked = self.talker(self.config, event_type, recipient, message, params)
+        return talked if talked is not None else self.sender(self.config, event_type, recipient, message)
+
     def handle_customer(self, data, body):
         """v3 — 사장님 휴대폰으로 고정 문구 하나. 서명은 이미 확인됐다."""
         expected = {"version", "eventId", "mode", "service", "eventType", "recipient", "params"}
@@ -381,7 +479,7 @@ class Relay:
             return 409, {**base, "status": "blocked", "code": "PRIVATE_CONFIG_MISMATCH"}
         if not self.config["enabled"] or self.config.get("customerEnabled") is not True:
             return 503, {**base, "status": "blocked", "code": "CUSTOMER_SMS_DISABLED"}
-        return self.attempt("customer", data, body, base, data["recipient"], lambda: self.sender(self.config, event_type, data["recipient"], message))
+        return self.attempt("customer", data, body, base, data["recipient"], lambda: self.send_customer(event_type, data["recipient"], message, data["params"]))
 
     def handle_v4(self, data, body):
         """v4 — 검사한 값만 고정 틀에 채운다. 운영자 알림은 v1 처럼 번호 대신 recipientCheck 로 설정 일치를 확인한다."""
@@ -411,7 +509,7 @@ class Relay:
             return 409, {**base, "status": "blocked", "code": "PRIVATE_CONFIG_MISMATCH"}
         if not self.config["enabled"] or self.config.get("customerEnabled") is not True:
             return 503, {**base, "status": "blocked", "code": "CUSTOMER_SMS_DISABLED"}
-        return self.attempt("customer", data, body, base, data["recipient"], lambda: self.sender(self.config, event_type, data["recipient"], message))
+        return self.attempt("customer", data, body, base, data["recipient"], lambda: self.send_customer(event_type, data["recipient"], message, data["params"]))
 
 
 def serve(config_path, db_path, port):

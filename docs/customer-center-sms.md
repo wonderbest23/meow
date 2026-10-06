@@ -145,3 +145,14 @@ Relay v4 adds fixed templates that are filled only with values the relay validat
 6. Worker: set `OWNER_SMS_PAYMENT_ENABLED=1` for operator payment SMS (also needs `OWNER_SMS_ENABLED=1`, `OWNER_SMS_TRANSPORT=relay`, `OWNER_SMS_TO`, relay URL/secret/mode). Buyer, lead-contact, visitor, domain and tax SMS use the existing `CUSTOMER_SMS_ENABLED=1`. Email receipts need `RESEND_API_KEY` and a verified `NOTIFY_FROM_EMAIL` (not `onboarding@resend.dev`).
 
 Rollback: `sudo cp /opt/oneulstart-owner-sms/relay.py.before-v4-<time> /opt/oneulstart-owner-sms/relay.py`, restore the config backup, `sudo systemctl restart oneulstart-owner-sms`. The app falls back automatically (operator email, v3 lead text, email receipts).
+
+
+## v5 — 카카오 알림톡(알리고)
+
+손님·사장님께 가는 알림(결제 완료, 새 문의, 문의 접수 확인, 도메인 연결, 세금 마감, 주간 리포트)을
+알리고 카카오 알림톡으로 먼저 보냅니다. 알림톡이 거절되면 지금 문자 그대로, 알리고 쪽에서 실패하면 failover 문자로 갑니다.
+운영자 알림은 문자 그대로입니다. 템플릿 글과 등록 순서는 `docs/alimtalk-templates.md`.
+
+서버에서: `relay.py`, `upgrade_v5.py` 를 같은 폴더에 올리고 `sudo python3 upgrade_v5.py`
+(발신 프로필 키·템플릿 코드 입력, 실패하면 자동으로 되돌림). config.json 에 `"alimtalk": {"senderKey", "templates"}` 한 칸이 생깁니다.
+되돌리기: `/opt/oneulstart-owner-sms/relay.py.before-v5-<시각>` 과 `config.before-v5-<시각>.json` 을 원래 이름으로 복사하고 서비스 재시작.
