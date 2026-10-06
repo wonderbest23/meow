@@ -24,7 +24,8 @@ import type { Plan } from "../lib/plan-builder/plan-store";
   for (const id of ["business-registration", "mail-order-report", "industry-license", "soho-office", "blog-distribution", "press-release", "sns-management", "full-marketing"]) assert.ok(findService(id), `빠진 서비스: ${id}`);
   assert.equal(findService("nope"), undefined);
   assert.equal(servicePriceLabel({ ...SERVICE_CATALOG[0], price: "월 99,000원" }), "월 99,000원", "가격을 넣으면 그 값");
-  assert.equal(SERVICE_PRICE_PENDING, "상담 신청 · 가격은 상담 후 안내");
+  assert.equal(SERVICE_PRICE_PENDING, "가격은 상담 후 안내");
+  for (const item of SERVICE_CATALOG) assert.ok(item.short && item.includes.length >= 2 && item.steps.length === 3 && item.prepare.length, `${item.id}: 상품 카드 내용`);
 }
 
 // 2) 신청 검사 — 없는 서비스·이상한 번호는 저장 전에 돌려보낸다

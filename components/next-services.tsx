@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowRight, CheckCircle2, LoaderCircle } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, Camera, Check, CheckCircle2, ChevronRight, Clock3, LoaderCircle, Megaphone, Newspaper, PenLine, ShieldCheck, ShoppingBag, X, type LucideIcon } from "lucide-react";
 import { formatKoreanPhone, normalizeMobilePhone } from "../lib/contact-links";
-import { findService, SERVICE_CATALOG, SERVICE_GROUPS, servicePriceLabel, servicesInGroup, type ServiceItem } from "../lib/services/catalog";
+import { findService, SERVICE_CATALOG, SERVICE_GROUPS, servicePriceLabel, type ServiceGroupId, type ServiceIcon, type ServiceItem } from "../lib/services/catalog";
 import { EMPTY_SIGNALS, orderServices, serviceBadges, serviceSignalsFromPlan } from "../lib/services/recommend";
 import { SERVICE_REQUEST_STATUS_LABELS, type MyServiceRequest } from "../lib/services/requests";
 import { careHref } from "../lib/plan-builder/journey";
@@ -26,9 +26,16 @@ type LoadState = { requests: MyServiceRequest[]; suggestedPhone: string; login: 
 
 const OPEN_STATUSES = new Set(["received", "contacted"]);
 
+/* 글만 늘어서 있으면 사장님이 무엇을 사는지 몰라 주저했다 — 쇼핑몰 상품처럼 그림·짧은 이름·포함 내용으로 */
+const ICONS: Record<ServiceIcon, LucideIcon> = { badge: BadgeCheck, cart: ShoppingBag, shield: ShieldCheck, building: Building2, pen: PenLine, news: Newspaper, camera: Camera, megaphone: Megaphone };
+/* 연락 시간 — 직접 쓰지 않고 누르기만 */
+const TIME_CHOICES = ["아무 때나", "오전", "오후", "저녁"];
+
 export function NextServices({ plan, homepagePublished }: { plan: Plan; homepagePublished: boolean }) {
   const [state, setState] = useState<LoadState | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"all" | ServiceGroupId>("all");
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [phone, setPhone] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
   const [memo, setMemo] = useState("");
@@ -79,55 +86,89 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
       if (response.status === 401) { setState((current) => current && { ...current, login: true }); throw new Error("로그인 후 신청할 수 있어요."); }
       if (!response.ok) throw new Error(data.error?.message ?? "신청하지 못했어요. 잠시 후 다시 시도해 주세요.");
       setState((current) => current && { ...current, requests: [data.request, ...current.requests] });
-      setOpenId(null); setMemo(""); setPreferredTime("");
+      setOpenId(null); setDetailId(null); setMemo(""); setPreferredTime("");
       setDone(`${item.title} 신청됐어요. 담당자가 연락드릴게요.`);
     } catch (error) {
       setFormError(error instanceof Error ? error.message : "신청하지 못했어요.");
     } finally { setSending(false); }
   }
 
+  const detail = detailId ? findService(detailId) : undefined;
+  const shown = orderServices(SERVICE_CATALOG, badges).filter((item) => tab === "all" || item.group === tab);
+  useEffect(() => {
+    if (!detailId) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setDetailId(null); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [detailId]);
+  const openDetail = (item: ServiceItem) => { setDetailId(item.id); start(item); };
+
   return <section className={styles.root} id={NEXT_SERVICES_ANCHOR} aria-labelledby="next-services-title">
     <span className={styles.eyebrow}>다음 단계</span>
-    <h2 id="next-services-title">이제 맡길 일을 골라 보세요</h2>
-    <p className={styles.lead}>홈페이지 다음으로 사장님이 직접 하기 번거로운 일이에요. 신청하면 담당자가 전화로 안내해요. 가격은 상담 후 알려 드려요.</p>
+    <h2 id="next-services-title">필요한 일, 골라서 맡기세요</h2>
+    <p className={styles.lead}>눌러서 무엇을 해 주는지 보고 바로 신청하세요. 담당자가 전화로 안내해요.</p>
     {done ? <p className={styles.done} role="status"><CheckCircle2 size={18} aria-hidden /> {done}</p> : null}
     {state?.error ? <p className={styles.error} role="alert">{state.error}</p> : null}
 
-    {SERVICE_GROUPS.map((group) => <div key={group.id} className={styles.group}>
-      <h3>{group.title} <small>{group.note}</small></h3>
-      <ul className={styles.list}>
-        {orderServices(servicesInGroup(group.id), badges).map((item) => {
-          const badge = badges[item.id];
-          const pending = openRequest(item.id);
-          return <li key={item.id} className={styles.card} data-badge={badge?.tone}>
-            <div className={styles.cardHead}>
-              <strong>{item.title}</strong>
-              {badge ? <em className={styles.badge} data-tone={badge.tone}>{badge.label}</em> : null}
+    <div className={styles.tabs} role="tablist" aria-label="서비스 종류">
+      {[{ id: "all" as const, title: "전체" }, ...SERVICE_GROUPS].map((group) => <button key={group.id} type="button" role="tab" aria-selected={tab === group.id} className={tab === group.id ? styles.tabOn : ""} onClick={() => setTab(group.id)}>{group.title}</button>)}
+    </div>
+
+    <ul className={styles.shop}>
+      {shown.map((item) => {
+        const badge = badges[item.id];
+        const pending = openRequest(item.id);
+        const Icon = ICONS[item.icon];
+        return <li key={item.id}>
+          <button type="button" className={styles.product} data-badge={badge?.tone} onClick={() => openDetail(item)} aria-label={`${item.title} 자세히 보기`}>
+            {badge ? <em className={styles.ribbon} data-tone={badge.tone}>{badge.label}</em> : null}
+            <span className={styles.icon} data-tone={item.tone}><Icon aria-hidden /></span>
+            <strong>{item.short}</strong>
+            <span className={styles.tagline}>{item.summary}</span>
+            <span className={styles.meta}><Clock3 size={13} aria-hidden /> {item.duration}</span>
+            <span className={styles.buy}>
+              {pending ? <b className={styles.requested}>신청함 · {SERVICE_REQUEST_STATUS_LABELS[pending.status]}</b> : <><b>{item.price?.trim() ? item.price : "가격 상담"}</b><i>자세히 <ChevronRight size={15} aria-hidden /></i></>}
+            </span>
+          </button>
+        </li>;
+      })}
+    </ul>
+
+    {detail ? (() => {
+      const Icon = ICONS[detail.icon];
+      const badge = badges[detail.id];
+      const pending = openRequest(detail.id);
+      return <div className={styles.overlay} onClick={() => setDetailId(null)}>
+        <div className={styles.sheet} role="dialog" aria-modal="true" aria-labelledby="svc-detail-title" onClick={(event) => event.stopPropagation()}>
+          <button type="button" className={styles.close} onClick={() => setDetailId(null)} aria-label="닫기"><X size={20} /></button>
+          <div className={styles.sheetHead}>
+            <span className={styles.icon} data-tone={detail.tone}><Icon aria-hidden /></span>
+            <div>
+              <h3 id="svc-detail-title">{detail.title}</h3>
+              <p>{detail.summary}</p>
             </div>
-            <p>{item.summary}</p>
-            <small className={styles.who}>이런 분께: {item.who}</small>
-            {badge ? <small className={styles.reason}>{badge.reason}</small> : null}
-            <div className={styles.cardFoot}>
-              <span className={styles.price}>{servicePriceLabel(item)}</span>
-              {pending ? <span className={styles.requested}>신청함 · {SERVICE_REQUEST_STATUS_LABELS[pending.status]}</span>
-                : state?.login ? <Link className={styles.action} href={`/account?next=${encodeURIComponent(loginNext)}`}>로그인하고 신청</Link>
-                : openId === item.id ? null
-                : <button type="button" className={styles.action} disabled={!state} onClick={() => start(item)}>상담 신청</button>}
-            </div>
-            {openId === item.id && !pending ? <form className={styles.form} onSubmit={(event) => void submit(event, item)}>
-              <label><span>연락받을 휴대폰</span><input inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} onBlur={() => { if (normalizeMobilePhone(phone)) setPhone(formatKoreanPhone(phone)); }} placeholder="010-1234-5678" required /></label>
-              <label><span>희망 연락 시간 <small>(선택)</small></span><input value={preferredTime} maxLength={100} onChange={(event) => setPreferredTime(event.target.value)} placeholder="예: 평일 오후 2시 이후" /></label>
-              <label><span>메모 <small>(선택)</small></span><textarea value={memo} maxLength={1000} rows={3} onChange={(event) => setMemo(event.target.value)} placeholder="궁금한 점이나 상황을 적어 주세요" /></label>
-              {formError ? <p className={styles.error} role="alert">{formError}</p> : null}
-              <div className={styles.formActions}>
-                <button type="button" className={styles.ghost} disabled={sending} onClick={() => { setOpenId(null); setFormError(""); }}>취소</button>
-                <button type="submit" className={styles.action} disabled={sending}>{sending ? <LoaderCircle className="spin" size={16} aria-hidden /> : null} 신청하기</button>
+          </div>
+          {badge ? <p className={styles.reason}><em className={styles.ribbon} data-tone={badge.tone}>{badge.label}</em> {badge.reason}</p> : null}
+          <div className={styles.priceRow}><span>{servicePriceLabel(detail)}</span><span><Clock3 size={14} aria-hidden /> {detail.duration}</span></div>
+          <h4>이렇게 해 드려요</h4>
+          <ul className={styles.checks}>{detail.includes.map((line) => <li key={line}><Check size={16} aria-hidden /> {line}</li>)}</ul>
+          <ol className={styles.steps}>{detail.steps.map((line, index) => <li key={line}><b>{index + 1}</b><span>{line}</span></li>)}</ol>
+          <p className={styles.prepare}><strong>준비하면 빨라요</strong> {detail.prepare.join(" · ")}</p>
+          {pending ? <p className={styles.requestedBox}>이미 신청했어요 · {SERVICE_REQUEST_STATUS_LABELS[pending.status]}</p>
+            : state?.login ? <Link className={styles.cta} href={`/account?next=${encodeURIComponent(loginNext)}`}>로그인하고 신청하기</Link>
+            : <form className={styles.form} onSubmit={(event) => void submit(event, detail)}>
+              <label><span>연락받을 휴대폰</span><input inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-1234-5678" /></label>
+              <div className={styles.times} role="radiogroup" aria-label="연락 받기 좋은 시간">
+                {TIME_CHOICES.map((choice) => <button key={choice} type="button" role="radio" aria-checked={(preferredTime || "아무 때나") === choice} className={(preferredTime || "아무 때나") === choice ? styles.timeOn : ""} onClick={() => setPreferredTime(choice === "아무 때나" ? "" : choice)}>{choice}</button>)}
               </div>
-            </form> : null}
-          </li>;
-        })}
-      </ul>
-    </div>)}
+              <label><span>남길 말 <small>(선택)</small></span><input value={memo} maxLength={500} onChange={(event) => setMemo(event.target.value)} placeholder="예: 다음 주 안에 하고 싶어요" /></label>
+              {formError ? <p className={styles.error} role="alert">{formError}</p> : null}
+              <button type="submit" className={styles.cta} disabled={sending || !state}>{sending ? <LoaderCircle className="spin" size={18} aria-hidden /> : null} 신청하기</button>
+              <small className={styles.note}>신청은 무료예요. 상담 후 진행 여부를 정하시면 돼요.</small>
+            </form>}
+        </div>
+      </div>;
+    })() : null}
 
     {state && state.requests.length ? <div className={styles.history}>
       <h3>내 신청</h3>
