@@ -51,15 +51,15 @@ export function HomepageAlertSettings({ projectId, suggestedPhone }: { projectId
         <label className="hk-alerts-phone"><span>문의 알림 문자 받을 휴대폰</span>
           <input value={phone} onChange={(event) => { setPhone(event.target.value); setMessage(""); }} inputMode="tel" placeholder="010-1234-5678" autoComplete="tel" />
         </label>
-        {changed && typed ? <label className="hk-alerts-agree"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span>새 문의와 주간 리포트를 이 번호로 문자로 받는 데 동의합니다. 번호는 알림에만 쓰고 홈페이지에 공개하지 않아요.</span></label> : null}
+        {changed && typed ? <label className="hk-alerts-agree"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span>새 문의(문의자 이름·연락처 포함), 주간 리포트, 세금 신고 마감·도메인 연결 안내를 이 번호로 문자로 받는 데 동의합니다. 번호는 알림에만 쓰고 홈페이지에 공개하지 않아요.</span></label> : null}
         <button type="submit" disabled={busy || !changed || (Boolean(typed) && !agreed)}>{typed ? "저장" : "문자 끄기"}</button>
       </form>
       <small>{!settings.smsReady ? "문자 발송 준비가 끝나면 이 번호로 알림이 가요. 지금 들어온 문의는 아래 목록에 그대로 쌓여요."
-        : settings.phone ? `새 문의가 들어오면 ${pretty(settings.phone)}로 바로 문자를 보내 드려요.` : "번호를 등록하면 새 문의가 들어올 때 바로 문자를 보내 드려요."}</small>
+        : settings.phone ? `새 문의가 들어오면 ${pretty(settings.phone)}로 문의자 이름·연락처를 바로 문자로 보내 드려요.` : "번호를 등록하면 새 문의가 들어올 때 바로 문자를 보내 드려요."}</small>
       {settings.weeklyEnabled !== null ? (
         <label className="hk-alerts-weekly">
           <input type="checkbox" checked={settings.weeklyEnabled} disabled={busy} onChange={(event) => void save({ weeklyEnabled: event.target.checked }, event.target.checked ? "주간 리포트를 켰어요." : "주간 리포트를 껐어요.")} />
-          <span><strong>주간 리포트 받기</strong><small>매주 월요일 아침, 지난주 문의·방문 수를 {settings.smsReady && settings.phone ? "문자로" : "가입한 이메일로"} 보내 드려요{settings.published ? "" : "(홈페이지를 공개한 뒤부터)"}.</small></span>
+          <span><strong>주간 리포트 받기</strong><small>매주 월요일 아침, 지난주 문의·방문 수를 {settings.smsReady && settings.phone ? "문자로" : "가입한 이메일로"} 보내 드려요{settings.published ? "" : "(홈페이지를 공개한 뒤부터)"}.{settings.smsReady && settings.phone ? " 세금 신고 마감 7일·1일 전 문자도 함께 가요." : ""}</small></span>
         </label>
       ) : null}
       {message ? <p className="hk-alerts-msg" role="status">{message}</p> : null}

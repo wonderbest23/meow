@@ -81,6 +81,38 @@ export function buildTaxCalendar(project: ProjectRecord): TaxCalendarItem[] {
   return items;
 }
 
+/*
+ * 문자로 알리는 신고 마감(개인사업자 기준) — 종합소득세 5/31, 부가가치세 확정신고 1/25·7/25.
+ * 기한이 토·일이면 다음 월요일이 마감이다(국세기본법 제5조). 공휴일(설 연휴 등)과 겹치는 해는
+ * TAX_DEADLINE_OVERRIDES 에 국세청 공지 날짜를 적는다 — 틀린 날짜를 보내느니 그 해만 손으로 고친다.
+ */
+export type TaxDeadlineKind = "income" | "vat";
+export type TaxDeadline = { kind: TaxDeadlineKind; title: string; date: string };
+export const TAX_DEADLINE_OVERRIDES: Record<string, string> = {};
+const TAX_DEADLINE_DAYS = [["income", "종합소득세", "05-31"], ["vat", "부가세", "01-25"], ["vat", "부가세", "07-25"]] as const;
+export const TAX_REMINDER_DAYS_BEFORE = [7, 1] as const;
+
+const DAY_MS = 86_400_000;
+const isoDay = (time: number) => new Date(time).toISOString().slice(0, 10);
+
+export function taxDeadlines(year: number): TaxDeadline[] {
+  return TAX_DEADLINE_DAYS.map(([kind, title, monthDay]) => {
+    const legal = `${year}-${monthDay}`;
+    let time = Date.parse(`${legal}T00:00:00Z`);
+    while ([0, 6].includes(new Date(time).getUTCDay())) time += DAY_MS;
+    return { kind, title, date: TAX_DEADLINE_OVERRIDES[legal] ?? isoDay(time) };
+  });
+}
+
+/** 오늘(한국 날짜)이 마감 7일 전·1일 전인 것 — 연말에 다음 해 1월 마감도 본다 */
+export function dueTaxReminders(now = Date.now()): Array<TaxDeadline & { daysBefore: 1 | 7 }> {
+  const today = isoDay(now + 9 * 60 * 60_000);
+  const year = Number(today.slice(0, 4));
+  return [...taxDeadlines(year), ...taxDeadlines(year + 1)].flatMap((deadline) => TAX_REMINDER_DAYS_BEFORE
+    .filter((days) => isoDay(Date.parse(`${deadline.date}T00:00:00Z`) - days * DAY_MS) === today)
+    .map((days) => ({ ...deadline, daysBefore: days })));
+}
+
 export function taxCalendarMarkdown(items: TaxCalendarItem[]) {
   return [
     "## 세금·증빙 일정표",

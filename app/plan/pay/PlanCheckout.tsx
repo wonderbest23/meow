@@ -78,6 +78,10 @@ export default function PlanCheckout() {
   const agreed = AGREEMENT_KEYS.every(key => agreements[key]);
   const toggle = (key: keyof Agreements) => setAgreements(current => ({ ...current, [key]: !current[key] }));
   const [message, setMessage] = useState<string | null>(null);
+  /* 결제 안내 문자 받을 휴대폰(선택) — 비우면 계정 이메일로만 안내한다 */
+  const [noticePhone, setNoticePhone] = useState("");
+  const phoneDigits = noticePhone.replace(/[\s-]/g, "");
+  const phoneInvalid = phoneDigits !== "" && !/^010\d{8}$/.test(phoneDigits);
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean; unavailable?: boolean } | null>(null);
   const [homepageInfo, setHomepageInfo] = useState<{ price: number; editable: boolean } | null>(null);
   const started = useRef(false);
@@ -114,6 +118,7 @@ export default function PlanCheckout() {
 
   async function startPayment() {
     if (started.current || !agreed) return;
+    if (phoneInvalid) { setPhase("error"); setMessage("휴대폰 번호를 010으로 시작하는 11자리로 적어 주세요. 비워 둬도 결제할 수 있어요."); return; }
     started.current = true;
     setPhase("preparing");
     setMessage(null);
@@ -121,7 +126,7 @@ export default function PlanCheckout() {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}), ...(purchaseDomain ? { domain: purchaseDomain } : {}), terms: agreements }),
+        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}), ...(purchaseDomain ? { domain: purchaseDomain } : {}), ...(phoneDigits ? { noticePhone: phoneDigits } : {}), terms: agreements }),
       });
       const data = (await res.json()) as {
         clientId?: string; sdkUrl?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
@@ -282,6 +287,11 @@ export default function PlanCheckout() {
         {!(info && !info.payable) && (
           <section className={styles.terms} aria-label="결제 전 필수 확인">
             <p className={styles.supply}><strong>제공 시점</strong>{SUPPLY[product]}</p>
+            <label className={styles.phone}>
+              <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
+              <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} />
+              <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : "적으면 결제 완료를 문자로 한 번 알려 드려요. 영수증은 계정 이메일로도 가요."}</small>
+            </label>
             <label className={styles.agreeAll}>
               <input type="checkbox" checked={agreed} onChange={event => setAgreements(Object.fromEntries(AGREEMENT_KEYS.map(key => [key, event.target.checked])) as Agreements)} />
               <span><strong>필수 항목에 모두 동의합니다.</strong><small>각 문서를 열어 실제 제공 조건을 확인할 수 있습니다.</small></span>
