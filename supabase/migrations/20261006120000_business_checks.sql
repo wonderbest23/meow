@@ -18,3 +18,4 @@ do $$ begin
 exception when duplicate_object then null; end $$;
 alter table public.business_checks enable row level security;
 revoke all on public.business_checks from public, anon, authenticated;
+grant all on public.business_checks to service_role;
