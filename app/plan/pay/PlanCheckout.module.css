@@ -185,3 +185,11 @@
 /* 계획서 결제 화면에서 묶음으로 넘어가는 링크 */
 .upsell { margin-top: 8px; font-size: 14px; font-weight: 700; color: var(--app-primary, #4a3aff); text-decoration: none; }
 .upsell small { margin-left: 4px; font-weight: 500; color: var(--app-muted, #6b7280); }
+
+/* 결제 안내 받을 휴대폰(선택) */
+.phone { display: grid; gap: 6px; font-size: 13px; color: var(--text-body, #333d4b); }
+.phone span { font-weight: 700; color: var(--text-strong, #191f28); }
+.phone span small { font-weight: 500; color: var(--text-muted, #6b7684); }
+.phone input { width: 100%; box-sizing: border-box; padding: 11px 12px; border: 1px solid var(--border-soft, #e5e8eb); border-radius: 10px; font-size: 15px; background: var(--surface, #fff); color: inherit; }
+.phone input[aria-invalid="true"] { border-color: #f04452; }
+.phone > small { font-size: 12px; color: var(--text-muted, #6b7684); }

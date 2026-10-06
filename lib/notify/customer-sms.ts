@@ -1,7 +1,7 @@
 import { z } from "zod";
 
 /*
- * 사장님(홈페이지 주인) 휴대폰으로 보내는 문자 — 알리고 중계(ops/owner-sms/relay.py v3)를 거친다.
+ * 사장님(홈페이지 주인)·구매자·방문자 휴대폰으로 보내는 문자 — 알리고 중계(ops/owner-sms/relay.py v3·v4)를 거친다.
  *
  * 알리고는 등록된 고정 IP 에서만 받는데 Cloudflare Workers 는 고정 IP 가 없어, 대표 알림과 같은 중계 서버를 쓴다.
  * 요청에는 받는 번호와 숫자 몇 개만 싣고, 문구는 중계가 고정 문구로 만든다(자유 글 없음).
@@ -58,7 +58,47 @@ const receiptSchema = z.object({
 
 export async function sendCustomerSms(config: CustomerSmsConfig, input: { eventId: string; eventType: CustomerSmsEvent; recipient: string; params: CustomerSmsParams }, transport: typeof fetch = fetch, timeoutMs = 6000): Promise<CustomerSmsResult> {
   if (!/^010\d{8}$/.test(input.recipient) || !z.string().uuid().safeParse(input.eventId).success) return { status: "blocked", code: "CUSTOMER_SMS_INPUT_INVALID" };
-  const body = JSON.stringify({ version: 3, eventId: input.eventId, mode: config.mode, service: "oneulstart", eventType: input.eventType, recipient: input.recipient, params: input.params });
+  return postRelay(config, { version: 3, eventId: input.eventId, mode: config.mode, service: "oneulstart", eventType: input.eventType, recipient: input.recipient, params: input.params }, input.eventId, transport, timeoutMs);
+}
+
+/*
+ * 중계 v4 — 정해진 틀에 검사한 값(상품 열쇠·금액·주문번호·이름·번호·가게 이름·도메인·마감일)만 싣는다.
+ * 문구는 여전히 중계가 만든다. 예전 중계(v3)는 v4 를 400 으로 거절한다 → relayUnsupported 로 알아보고
+ * 부르는 쪽이 메일이나 v3 고정 문구로 물러선다(결제·문의 접수 경로로 오류를 던지지 않는다).
+ */
+export type RelayV4Event = "payment-paid" | "payment-receipt" | "homepage-lead-contact" | "lead-received" | "domain-connect-started" | "tax-deadline";
+export type RelayV4Params =
+  | { product: string; amount: number; orderId: string }
+  | { product: string; orderId: string }
+  | { name: string; phone: string }
+  | { store: string }
+  | { domain: string }
+  | { kind: "income" | "vat"; days: 1 | 7; month: number; day: number };
+/** 받는 번호(recipient) 또는 운영자 번호(ownerPhone — 요청에는 번호 대신 HMAC 확인값만 간다) */
+export type RelayV4Input = { eventId: string; eventType: RelayV4Event; params: RelayV4Params } & ({ recipient: string } | { ownerPhone: string });
+
+export async function sendRelayV4(config: CustomerSmsConfig, input: RelayV4Input, transport: typeof fetch = fetch, timeoutMs = 6000): Promise<CustomerSmsResult> {
+  const target = "recipient" in input ? input.recipient : input.ownerPhone;
+  if (!/^010\d{8}$/.test(target) || !z.string().uuid().safeParse(input.eventId).success) return { status: "blocked", code: "CUSTOMER_SMS_INPUT_INVALID" };
+  const route = "recipient" in input ? { recipient: input.recipient } : { recipientCheck: await hmacHex(config.secret, `recipient:${input.ownerPhone}`) };
+  return postRelay(config, { version: 4, eventId: input.eventId, mode: config.mode, service: "oneulstart", eventType: input.eventType, ...route, params: input.params }, input.eventId, transport, timeoutMs);
+}
+
+/** 중계가 이 요청 모양을 모른다(예전 중계) 또는 값이 틀을 벗어났다 — 다시 보내도 같다. 물러설 곳으로 */
+export function relayUnsupported(result: CustomerSmsResult) {
+  return result.code === "INVALID_REQUEST" || result.code === "RELAY_HTTP_400";
+}
+
+/** 운영자 결제 알림 — OWNER_SMS_ENABLED=1, OWNER_SMS_PAYMENT_ENABLED=1, 중계 전송, 운영자 번호(OWNER_SMS_TO)가 모두 있어야 */
+export function operatorRelayConfig(env: Record<string, string | undefined> = process.env): (CustomerSmsConfig & { ownerPhone: string }) | null {
+  if (env.OWNER_SMS_ENABLED !== "1" || env.OWNER_SMS_PAYMENT_ENABLED !== "1" || env.OWNER_SMS_TRANSPORT !== "relay") return null;
+  const parsed = configSchema.safeParse({ endpoint: env.OWNER_SMS_RELAY_URL, secret: env.OWNER_SMS_RELAY_SECRET, mode: env.OWNER_SMS_MODE });
+  const ownerPhone = env.OWNER_SMS_TO?.trim() ?? "";
+  return parsed.success && /^010\d{8}$/.test(ownerPhone) ? { ...parsed.data, ownerPhone } : null;
+}
+
+async function postRelay(config: CustomerSmsConfig, payload: Record<string, unknown>, eventId: string, transport: typeof fetch, timeoutMs: number): Promise<CustomerSmsResult> {
+  const body = JSON.stringify(payload);
   const timestamp = String(Math.floor(Date.now() / 1000));
   const signature = await hmacHex(config.secret, `${timestamp}\nPOST\n${PATH}\n${body}`);
   let response: Response;
@@ -81,7 +121,7 @@ export async function sendCustomerSms(config: CustomerSmsConfig, input: { eventI
   // 막힘(한도·꺼짐)은 중계가 이유를 담아 4xx/5xx 로 준다 — 이유를 그대로 살린다
   if (parsed.success && parsed.data.status === "blocked") return { status: "blocked", code: parsed.data.code };
   if (!response.ok) return { status: response.status >= 400 && response.status < 500 ? "rejected" : "uncertain", code: `RELAY_HTTP_${response.status}` };
-  if (!parsed.success || parsed.data.eventId !== input.eventId || parsed.data.mode !== config.mode
+  if (!parsed.success || parsed.data.eventId !== eventId || parsed.data.mode !== config.mode
     || (parsed.data.status === "accepted" && (config.mode !== "live" || parsed.data.code !== "PROVIDER_ACCEPTED"))
     || (parsed.data.status === "test_accepted" && (config.mode !== "test" || parsed.data.code !== "ALIGO_TEST_ACCEPTED"))) {
     return { status: "uncertain", code: "RELAY_INVALID_RECEIPT" };

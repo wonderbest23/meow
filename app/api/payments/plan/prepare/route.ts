@@ -8,6 +8,7 @@ import { getPlatformLegalSettings } from "../../../../../lib/platform-legal/repo
 import { authConfigured } from "../../../../../lib/account-auth";
 import { normalizePurchaseDomain } from "../../../../../lib/landing/domain-purchase";
 import { checkDomainAvailability } from "../../../../../lib/landing/domain-availability";
+import { normalizeAlertPhone } from "../../../../../lib/notify/customer-sms";
 
 export const runtime = "nodejs";
 
@@ -18,7 +19,13 @@ const CARD_TERMS_KEYS = ["service", "privacy", "aiLimitations", "refund", "digit
 // (금액을 브라우저에서 만들지 않게 하려는 것)
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string; domain?: string; terms?: Record<string, unknown> };
+  const body = (await request.json().catch(() => ({}))) as { planId?: string; planType?: string; product?: string; domain?: string; noticePhone?: string; terms?: Record<string, unknown> };
+  /* 결제 안내 문자 받을 휴대폰(선택) — 비우면 문자 없이 메일만. 적었는데 틀리면 결제 전에 알려 고치게 한다 */
+  const rawPhone = typeof body.noticePhone === "string" ? body.noticePhone.slice(0, 30) : "";
+  const noticePhone = rawPhone.trim() ? normalizeAlertPhone(rawPhone) : null;
+  if (rawPhone.trim() && !noticePhone) {
+    return NextResponse.json({ error: "phone_invalid", message: "휴대폰 번호를 010으로 시작하는 11자리로 적어 주세요. 비워 둬도 결제할 수 있어요." }, { status: 400 });
+  }
   // 결제 전 필수 확인(약관·개인정보·AI 안내·환불 기준·제공 시점·청약철회 제한)은 계좌이체 주문과 같게 서버에서도 확인한다.
   if (!CARD_TERMS_KEYS.every((key) => body.terms?.[key] === true)) {
     return NextResponse.json({ error: "terms_required", message: "결제 전 필수 항목에 모두 동의해 주세요." }, { status: 400 });
@@ -121,6 +128,7 @@ export async function POST(request: Request) {
       product,
       terms: Object.fromEntries(CARD_TERMS_KEYS.map((key) => [key, true])),
       ...(purchaseDomain ? { domainRequest: { domain: purchaseDomain, status: "requested" as const } } : {}),
+      ...(noticePhone ? { noticePhone } : {}),
     });
     return NextResponse.json(
       {

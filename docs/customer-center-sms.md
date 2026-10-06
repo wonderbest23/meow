@@ -22,7 +22,7 @@ Status (2026-09-27): The separately authenticated fixed-egress relay and matchin
 - Report alerts require the relay transport; they cannot fall back to the legacy direct adapter. Inquiry and report attempts share the existing `support-owner-sms`/`oneulstart` counter and the relay's maximum ten daily attempts. There is no new independent quota, automatic retry or refund of uncertain attempts.
 - Notification failures do not mark a saved business plan as failed. Invalid AI output, failed saves and stale results do not send completion alerts. The existing post-save crash window remains: this is at-most-once attempt handling, not guaranteed eventual delivery.
 - Physical Lightsail resources and Aligo prepaid balance remain shared as previously approved. The Oneulstart service identity, exact signed endpoint, private settings, fixed recipient and attempt database are separate. No Art&Bridge application, credentials, recipient list or counter is modified.
-- Payment/refund notifications, customer email/SMS, support-reply customer notifications and other usage events remain unimplemented in this owner-only phase. Payment and beta API policies are unchanged.
+- Refund notifications, support-reply customer notifications and other usage events remain unimplemented. Payment-complete, lead-contact, visitor-receipt, domain and tax alerts were added later in relay v4 (see the last section).
 
 ## Private Server Configuration
 
@@ -79,6 +79,7 @@ node -r ./scripts/ledger-test-runtime.cjs --import tsx scripts/owner-sms-relay.t
 node -r ./scripts/ledger-test-runtime.cjs --import tsx scripts/owner-report-sms.test.ts
 node -r ./scripts/ledger-test-runtime.cjs --import tsx scripts/owner-report-job.test.ts
 python3 -B ops/owner-sms/test_relay.py
+node -r ./scripts/ledger-test-runtime.cjs --import tsx scripts/launch-notifications.test.ts
 node --import tsx scripts/customer-center.test.ts
 node --import tsx scripts/customer-center-storage.test.ts
 node node_modules/typescript/bin/tsc --noEmit --incremental false
@@ -113,3 +114,34 @@ Homepage owners ("사장님") can register a mobile number in the homepage panel
 4. Apply migration `0039_landing_alert_phone.sql` in Supabase.
 
 To stop owner SMS: set `customerEnabled` to `false` in the relay config (or `CUSTOMER_SMS_ENABLED=0` on the Worker). Operator alerts are unaffected.
+
+## Launch notifications (relay v4, 2026-10-06)
+
+Relay v4 adds fixed templates that are filled only with values the relay validates itself. v1–v3 request bodies, receipts and the attempts database are unchanged, so the old Worker keeps working against the new relay, and the new Worker degrades when it still talks to an old relay (an old relay answers v4 with HTTP 400 `INVALID_REQUEST`; the app treats that as "unsupported" and falls back, never throwing into the payment or lead path).
+
+| Event | To | Text (built in the relay) | Params the relay accepts | If unsupported / failed |
+| --- | --- | --- | --- | --- |
+| `payment-paid` | operator (`ownerPhone`, `recipientCheck` like v1) | `[오늘창업] 결제 {상품} {금액}원 {주문번호}` | `product` key (plan, homepage, bundle, regen, domain, domain-purchase, tokens), `amount` 1–10,000,000, `orderId` `PB-…` | operator email (`OWNER_NOTIFY_EMAIL`) |
+| `payment-receipt` | buyer phone from checkout (optional) | `[오늘창업] 결제 완료 {상품} 주문 {주문번호}` | `product`, `orderId` | buyer still gets the email receipt |
+| `homepage-lead-contact` | homepage owner `alert_phone` | `[오늘창업] 새 문의 {이름} {연락처} 확인 oneulstart.com/plan/homepage` | `name` (Korean/Latin only, max 10 chars, others stripped; empty → `이름 없음`), `phone` digits `0…` 9–11 or empty | v3 `homepage-lead` fixed text (same event ID) |
+| `lead-received` | the visitor's 010 number | `[{가게이름 ≤12자}] 문의가 접수됐어요. 곧 연락드릴게요.` | `store` (Korean/Latin/digits/space, max 12 chars) | not sent |
+| `domain-connect-started` | homepage owner `alert_phone` | `[오늘창업] 도메인 {www.주소} 연결을 시작했어요` | `domain` `.com/.kr/.co.kr`, optional `www.` | owner email only |
+| `tax-deadline` | homepage owner `alert_phone` | `[오늘창업] 종합소득세 신고 마감 D-7 (5/31)` | `kind` income/vat, `days` 1 or 7, `month`, `day` | not sent; retried the same day after upgrade |
+
+- Byte limits: every template is SMS (≤ 90 EUC-KR bytes) at its largest allowed values except `domain-connect-started` with a long domain, which goes as LMS (fixed title `오늘창업 알림`, ≤ 2000 bytes). The receipt check requires the same `msg_type` that was sent. Hangul outside KS X 1001 (e.g. 똠) is stripped from names because it would be sent as an 8-byte composition sequence.
+- Privacy: the lead-contact SMS deliberately carries the inquirer's name and phone (operator decision, so the owner can call back). The inquiry text is never sent. The privacy policy (`lib/platform-legal/domain.ts`, history 2026-10-06) says so; decide whether the new effective date needs the 7-day notice before enabling.
+- Limits: `payment-paid` counts toward `dailyLimit` (operator alerts; the maximum is now 200 instead of 10). Everything else counts toward `customerDailyLimit` and `perRecipientDailyLimit`. The visitor-receipt SMS goes to a number typed into a public form, so the per-number daily cap and the lead form's IP limit are the anti-abuse controls.
+- Once per event: payment events use `payment_orders.paid_notified_at` (conditional update, migration `0040`) plus stable event IDs per order; the email receipt uses Resend `Idempotency-Key: payment-receipt/{orderId}`. Orders confirmed more than 24 hours ago are not notified. Tax reminders use `tax_reminder_sends` (hashed phone + deadline + days before; no raw number) and run from the 5-minute cron only on D-7/D-1 between 09:00 and 21:00 KST. Without migration `0040` tax reminders are skipped and payment alerts are sent only from the request that completed the order.
+- Tax deadlines: 5/31, 1/25, 7/25, moved to Monday when they fall on a weekend. Public holidays are not computed — add the NTS-announced date to `TAX_DEADLINE_OVERRIDES` in `lib/operations/tax-calendar.ts` for such years (e.g. check 2028-01-25 against the Seollal holidays).
+- Domain: marking a domain-purchase order "registered" in `/admin/domains` now also creates the Cloudflare custom hostname `www.{domain}` for that plan's published homepage, saves it on the site and notifies the owner. Any failure (homepage not published, another domain attached, Cloudflare not configured or erroring) leaves the order registered and shows a warning in the admin screen; the owner can still press "연결 시작".
+
+### Upgrade the installed relay to v4
+
+1. If the relay is still v1/v2 (no `customerSender` in config), do the v3 upgrade above first — it installs the same new `relay.py`.
+2. Upload `ops/owner-sms/relay.py` and `ops/owner-sms/upgrade_v4.py` to the server (same directory), e.g. `scp relay.py upgrade_v4.py <server>:~/oneul-v4/`.
+3. On the server: `cd ~/oneul-v4 && python3 -B test_relay.py` is optional (upload `test_relay.py` too); then `sudo python3 upgrade_v4.py`. It asks for the operator daily limit (1–200, default 100) and whether to turn on operator payment SMS (`paymentEnabled`, default no). It backs up `relay.py.before-v4-<time>` and `config.before-v4-<time>.json`, validates the new config with the new relay, replaces `/opt/oneulstart-owner-sms/relay.py`, runs `systemctl restart oneulstart-owner-sms`, checks it is active and rolls back on failure.
+4. New relay config keys: `paymentEnabled` (bool, optional, default off). Changed: `dailyLimit` now accepts 1–200. Customer v4 events reuse `customerEnabled`, `customerSender`, `customerDailyLimit`, `perRecipientDailyLimit`.
+5. Apply migration `0040_payment_notice_and_tax_reminders.sql` in Supabase.
+6. Worker: set `OWNER_SMS_PAYMENT_ENABLED=1` for operator payment SMS (also needs `OWNER_SMS_ENABLED=1`, `OWNER_SMS_TRANSPORT=relay`, `OWNER_SMS_TO`, relay URL/secret/mode). Buyer, lead-contact, visitor, domain and tax SMS use the existing `CUSTOMER_SMS_ENABLED=1`. Email receipts need `RESEND_API_KEY` and a verified `NOTIFY_FROM_EMAIL` (not `onboarding@resend.dev`).
+
+Rollback: `sudo cp /opt/oneulstart-owner-sms/relay.py.before-v4-<time> /opt/oneulstart-owner-sms/relay.py`, restore the config backup, `sudo systemctl restart oneulstart-owner-sms`. The app falls back automatically (operator email, v3 lead text, email receipts).

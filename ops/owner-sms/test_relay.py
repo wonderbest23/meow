@@ -9,7 +9,7 @@ import unittest
 import uuid
 from pathlib import Path
 from unittest.mock import patch
-from relay import PATH, Relay, aligo_send, customer_message, load_config, signature, sms_bytes
+from relay import PATH, Relay, aligo_send, customer_message, load_config, message_fits, signature, sms_bytes, v4_message
 
 NOW = 1800000000
 CONFIG = {"secret": "syntheticSecret" + "x" * 40, "ownerPhone": "01000000001",
@@ -105,7 +105,10 @@ class RelayTests(unittest.TestCase):
         path.chmod(0o644)
         with self.assertRaises(ValueError): load_config(path)
         path.chmod(0o600)
-        for extra in [{"dailyLimit": 11}, {"ownerPhone": "01000000001,01000000002"}, {"mode": "auto"}, {"reportReadyEnabled": "true"}]:
+        self.assertEqual(load_config(path)["dailyLimit"], 10)
+        path.write_text(json.dumps({**CONFIG, "dailyLimit": 200}))
+        self.assertEqual(load_config(path)["dailyLimit"], 200, "v4: 결제 알림 때문에 200 까지")
+        for extra in [{"dailyLimit": 201}, {"dailyLimit": 0}, {"ownerPhone": "01000000001,01000000002"}, {"mode": "auto"}, {"reportReadyEnabled": "true"}, {"paymentEnabled": 1}]:
             path.write_text(json.dumps({**CONFIG, **extra}))
             with self.assertRaises(ValueError): load_config(path)
 
@@ -330,6 +333,135 @@ class CustomerRelayTests(unittest.TestCase):
         import urllib.parse
         body = urllib.parse.parse_qs(sent[0].data.decode())
         self.assertEqual((body["sender"], body["receiver"], body["msg"], body["msg_type"]), (["0212345678"], ["01012345678"], [message], ["SMS"]))
+
+
+V4 = {**CUSTOMER, "paymentEnabled": True, "customerDailyLimit": 50, "perRecipientDailyLimit": 5}
+ORDER = "PB-mg1abc2d-0123456789ab"
+
+
+def v4_request(event_type, params, recipient="01012345678", event_id=None, mode="live", extra=None, **more):
+    data = {"version": 4, "eventId": event_id or str(uuid.uuid4()), "mode": mode, "service": "oneulstart", "eventType": event_type, "params": params}
+    if event_type in ("payment-paid",):
+        data["recipientCheck"] = hmac.new(CONFIG["secret"].encode(), ("recipient:" + CONFIG["ownerPhone"]).encode(), hashlib.sha256).hexdigest()
+    else:
+        data["recipient"] = recipient
+    data.update(extra or {})
+    data.update(more)
+    body = json.dumps(data, separators=(",", ":")).encode()
+    stamp = str(NOW)
+    return {"x-oneul-time": stamp, "x-oneul-signature": signature(CONFIG["secret"], stamp, body)}, body
+
+
+class V4RelayTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory(prefix="oneul-sms-v4-")
+        self.db = Path(self.temp.name) / "attempts.sqlite"
+        self.sent = []
+        def sender(config, event_type, recipient=None, message=None):
+            self.sent.append((event_type, recipient, message))
+            return {"status": "accepted", "code": "PROVIDER_ACCEPTED", "receiptId": str(len(self.sent))}
+        self.relay = Relay(V4, self.db, sender, lambda: NOW)
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def test_templates(self):
+        self.assertEqual(v4_message("payment-paid", {"product": "bundle", "amount": 99000, "orderId": ORDER}), "[오늘창업] 결제 계획서+홈페이지 99,000원 " + ORDER)
+        self.assertEqual(v4_message("payment-receipt", {"product": "plan", "orderId": ORDER}), "[오늘창업] 결제 완료 사업계획서 주문 " + ORDER)
+        self.assertEqual(v4_message("homepage-lead-contact", {"name": "김 철수<script>", "phone": "01012345678"}), "[오늘창업] 새 문의 김 철수script 01012345678 확인 oneulstart.com/plan/homepage")
+        self.assertEqual(v4_message("homepage-lead-contact", {"name": "!!!", "phone": ""}), "[오늘창업] 새 문의 이름 없음 확인 oneulstart.com/plan/homepage")
+        self.assertEqual(v4_message("lead-received", {"store": "오늘 카페\n☎ 010"}), "[오늘 카페 010] 문의가 접수됐어요. 곧 연락드릴게요.")
+        self.assertEqual(v4_message("domain-connect-started", {"domain": "www.mybrand.co.kr"}), "[오늘창업] 도메인 www.mybrand.co.kr 연결을 시작했어요")
+        self.assertEqual(v4_message("tax-deadline", {"kind": "income", "days": 7, "month": 5, "day": 31}), "[오늘창업] 종합소득세 신고 마감 D-7 (5/31)")
+        # 완성형에 없는 한글은 빼고, 이름은 10자·가게 이름은 12자까지
+        self.assertEqual(v4_message("homepage-lead-contact", {"name": "똠양꿍" + "가" * 20, "phone": ""}).split(" ")[3], "양꿍" + "가" * 8)
+        self.assertEqual(v4_message("lead-received", {"store": "가" * 30}), "[" + "가" * 12 + "] 문의가 접수됐어요. 곧 연락드릴게요.")
+        for event, bad in [("payment-paid", {"product": "other", "amount": 1, "orderId": ORDER}), ("payment-paid", {"product": "plan", "amount": "1", "orderId": ORDER}),
+                           ("payment-paid", {"product": "plan", "amount": 0, "orderId": ORDER}), ("payment-paid", {"product": "plan", "amount": True, "orderId": ORDER}),
+                           ("payment-receipt", {"product": "plan", "orderId": "PB-광고-x"}), ("payment-receipt", {"product": "plan", "orderId": ORDER, "msg": "x"}),
+                           ("homepage-lead-contact", {"name": "a", "phone": "010-1234-5678"}), ("homepage-lead-contact", {"name": "a" * 101, "phone": ""}),
+                           ("homepage-lead-contact", {"name": 1, "phone": ""}), ("lead-received", {"store": "!!!"}), ("lead-received", {}),
+                           ("domain-connect-started", {"domain": "evil.example.org"}), ("domain-connect-started", {"domain": "a.com/광고"}),
+                           ("tax-deadline", {"kind": "income", "days": 3, "month": 5, "day": 31}), ("tax-deadline", {"kind": "corp", "days": 1, "month": 5, "day": 31}),
+                           ("tax-deadline", {"kind": "vat", "days": 1, "month": 13, "day": 1}), ("support-inquiry", {})]:
+            self.assertIsNone(v4_message(event, bad), (event, bad))
+
+    def test_sizes_sms_or_lms(self):
+        self.assertLessEqual(sms_bytes(v4_message("tax-deadline", {"kind": "income", "days": 7, "month": 12, "day": 31})), 90)
+        self.assertLessEqual(sms_bytes(v4_message("lead-received", {"store": "가" * 12})), 90, "방문자 확인 문자는 늘 SMS")
+        self.assertLessEqual(sms_bytes(v4_message("homepage-lead-contact", {"name": "가" * 10, "phone": "01012345678"})), 90, "이름 10자·번호 11자리여도 SMS")
+        self.assertLessEqual(sms_bytes(v4_message("payment-paid", {"product": "bundle", "amount": 10000000, "orderId": ORDER})), 90)
+        self.assertLessEqual(sms_bytes(v4_message("payment-receipt", {"product": "bundle", "orderId": ORDER})), 90)
+        longest = v4_message("domain-connect-started", {"domain": "www." + "a" * 61 + ".co.kr"})
+        self.assertGreater(sms_bytes(longest), 90)
+        self.assertTrue(message_fits("domain-connect-started", longest), "길면 LMS")
+        self.assertFalse(message_fits("lead-received", "가" * 50), "LMS 가 아닌 이벤트는 90바이트까지만")
+
+    def test_sends_each_event_to_the_right_phone(self):
+        cases = [("payment-paid", {"product": "plan", "amount": 49000, "orderId": ORDER}, None),
+                 ("payment-receipt", {"product": "plan", "orderId": ORDER}, "01012345678"),
+                 ("homepage-lead-contact", {"name": "김철수", "phone": "01099998888"}, "01012345678"),
+                 ("lead-received", {"store": "오늘카페"}, "01099998888"),
+                 ("domain-connect-started", {"domain": "www.mybrand.com"}, "01012345678"),
+                 ("tax-deadline", {"kind": "vat", "days": 1, "month": 7, "day": 27}, "01012345678")]
+        for event, params, recipient in cases:
+            status, result = self.relay.handle(PATH, *v4_request(event, params, recipient=recipient or "01012345678"))
+            self.assertEqual((status, result["status"], result["eventType"]), (200, "accepted", event), event)
+        self.assertEqual([(event, recipient) for event, recipient, _ in self.sent], [(event, recipient) for event, _, recipient in cases])
+        self.assertEqual(self.sent[0][2], "[오늘창업] 결제 사업계획서 49,000원 " + ORDER)
+
+    def test_invalid_requests_and_opt_ins(self):
+        for args in [("payment-paid", {"product": "plan", "amount": 1, "orderId": ORDER}, "01012345678", None, "live", {"recipient": "01012345678"}),
+                     ("lead-received", {"store": "카페"}, "0212345678", None, "live", {}),
+                     ("lead-received", {"store": "카페"}, "01012345678", None, "live", {"msg": "광고"}),
+                     ("lead-received", {"store": "카페"}, "01012345678", None, "live", {"service": "other"}),
+                     ("unknown-event", {}, "01012345678", None, "live", {})]:
+            event, params, recipient, event_id, mode, extra = args
+            self.assertEqual(self.relay.handle(PATH, *v4_request(event, params, recipient, event_id, mode, extra))[0], 400, args)
+        wrong = v4_request("payment-paid", {"product": "plan", "amount": 1, "orderId": ORDER}, recipientCheck="0" * 64)
+        self.assertEqual(self.relay.handle(PATH, *wrong)[1]["code"], "PRIVATE_CONFIG_MISMATCH")
+        self.assertEqual(self.relay.handle(PATH, *v4_request("lead-received", {"store": "카페"}, mode="test"))[0], 409)
+        paused = Relay({**V4, "paymentEnabled": False}, Path(self.temp.name) / "p.sqlite", lambda *a: {"status": "accepted", "code": "PROVIDER_ACCEPTED"}, lambda: NOW)
+        self.assertEqual(paused.handle(PATH, *v4_request("payment-paid", {"product": "plan", "amount": 1, "orderId": ORDER}))[1]["code"], "PAYMENT_SMS_DISABLED", "결제 알림은 따로 켠다")
+        no_customer = Relay(CONFIG, Path(self.temp.name) / "c.sqlite", lambda *a: {"status": "accepted", "code": "PROVIDER_ACCEPTED"}, lambda: NOW)
+        self.assertEqual(no_customer.handle(PATH, *v4_request("tax-deadline", {"kind": "vat", "days": 1, "month": 1, "day": 25}))[1]["code"], "CUSTOMER_SMS_DISABLED")
+        self.assertEqual(self.sent, [])
+
+    def test_duplicates_and_limits(self):
+        headers, body = v4_request("payment-receipt", {"product": "plan", "orderId": ORDER})
+        self.assertFalse(self.relay.handle(PATH, headers, body)[1]["duplicate"])
+        self.assertTrue(self.relay.handle(PATH, headers, body)[1]["duplicate"], "같은 주문의 문자는 한 번")
+        for _ in range(4):
+            self.relay.handle(PATH, *v4_request("lead-received", {"store": "카페"}))
+        self.assertEqual(self.relay.handle(PATH, *v4_request("lead-received", {"store": "카페"}))[1]["code"], "RECIPIENT_DAILY_LIMIT_REACHED", "같은 번호는 하루 한도까지")
+        limited = Relay({**V4, "dailyLimit": 1}, self.db, lambda *a: {"status": "accepted", "code": "PROVIDER_ACCEPTED"}, lambda: NOW)
+        self.assertEqual(limited.handle(PATH, *v4_request("payment-paid", {"product": "plan", "amount": 1, "orderId": ORDER}))[0], 200)
+        self.assertEqual(limited.handle(PATH, *v4_request("payment-paid", {"product": "plan", "amount": 1, "orderId": ORDER}))[1]["code"], "DAILY_LIMIT_REACHED", "운영자 결제 알림은 dailyLimit 을 쓴다")
+
+    def test_provider_uses_lms_with_fixed_title_only_when_long(self):
+        sent = []
+        class Response:
+            def __init__(self, kind): self.chunks = [json.dumps({"result_code": "1", "msg_id": "9", "success_cnt": 1, "error_cnt": 0, "msg_type": kind}).encode(), b""]
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read1(self, _size): return self.chunks.pop(0)
+        class Opener:
+            def open(self, request, timeout):
+                sent.append(request)
+                return Response(urllib.parse.parse_qs(request.data.decode())["msg_type"][0])
+        import urllib.parse
+        long_text = v4_message("domain-connect-started", {"domain": "www." + "a" * 61 + ".co.kr"})
+        with patch("relay.urllib.request.build_opener", return_value=Opener()):
+            self.assertEqual(aligo_send(V4, "domain-connect-started", "01012345678", long_text)["status"], "accepted")
+            self.assertEqual(aligo_send(V4, "payment-paid", None, "[오늘창업] 결제 사업계획서 49,000원 " + ORDER)["status"], "accepted")
+            self.assertEqual(aligo_send(V4, "lead-received", "01012345678", "가" * 50)["code"], "CUSTOMER_MESSAGE_INVALID")
+            self.assertEqual(aligo_send(V4, "payment-paid", "01012345678", None)["code"], "CUSTOMER_MESSAGE_INVALID")
+            self.assertEqual(aligo_send(V4, "support-inquiry", None, "임의 문구")["code"], "EVENT_TYPE_INVALID", "v1 이벤트에는 문구를 받지 않는다")
+        lms = urllib.parse.parse_qs(sent[0].data.decode())
+        self.assertEqual((lms["msg_type"], lms["title"], lms["sender"]), (["LMS"], ["오늘창업 알림"], [V4["customerSender"]]))
+        sms = urllib.parse.parse_qs(sent[1].data.decode())
+        self.assertEqual((sms["msg_type"], sms["sender"], sms["receiver"]), (["SMS"], [CONFIG["ownerPhone"]], [CONFIG["ownerPhone"]]))
+        self.assertNotIn("title", sms)
 
 
 if __name__ == "__main__":

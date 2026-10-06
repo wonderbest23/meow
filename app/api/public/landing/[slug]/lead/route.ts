@@ -6,7 +6,7 @@ import {
   getPublishedLandingBySlug,
 } from "../../../../../../lib/landing/repository";
 import { enforceRateLimit } from "../../../../../../lib/rate-limit";
-import { processLandingLeadNotification } from "../../../../../../lib/landing/lead-notifications";
+import { processLandingLeadNotification, sendLeadVisitorConfirmation } from "../../../../../../lib/landing/lead-notifications";
 
 const requestSchema = landingLeadSchema.and(z.object({
   website: z.string().max(0).default(""),
@@ -47,6 +47,8 @@ export async function POST(
       after(async () => {
         try { await processLandingLeadNotification(lead.id); }
         catch { console.warn("[landing-notification] dispatch deferred; durable outbox retained"); }
+        // 방문자에게 접수 확인 문자(010 번호를 남겼을 때만) — 실패해도 문의는 이미 저장됐다
+        await sendLeadVisitorConfirmation({ leadId: lead.id, phone: body.phone, store: published.config.businessName }).catch(() => undefined);
       });
     } catch { console.warn("[landing-notification] dispatch unavailable; durable outbox retained"); }
     return NextResponse.json({ ok: true, leadId: lead.id }, { status: 201 });
