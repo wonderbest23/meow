@@ -14756,6 +14756,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 
 /* 공개 전 주소 — 링크가 아니라 안내 */
 .hk-url-pending { font-style: normal; color: #8181a5; }
+.hk-url-dirty { flex-basis: 100%; font-style: normal; font-size: 12px; font-weight: 700; color: #b45309; }
 
 /* 접이식 카드 */
 .hk-fold { border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; }
@@ -14818,7 +14819,8 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 @media (max-width: 640px) {
   .hk-view-switch { display: none; }
   .hk-preview-body.hk-preview-phone { padding: 0; background: #f5f5fa; }
-  .hk-phone { width: 100%; height: auto; max-height: 560px; border: 0; border-radius: 0; box-shadow: none; }
+  /* 폰에서 미리보기 끝까지 내리면 바깥 화면(문의 설정·사업자 정보·접수된 문의)으로 이어서 내려가게 — contain 이면 손가락이 미리보기 안에 갇힌다 */
+  .hk-phone { width: 100%; height: auto; max-height: min(480px, 58vh); border: 0; border-radius: 0; box-shadow: none; overscroll-behavior: auto; }
 }
 .hk-preview-cover { position: absolute; left: 0; right: 0; bottom: 0; padding: 34px 16px 14px; background: linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.96) 55%); color: #1c1d21; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 8px; text-align: center; }
 .hk-card { border: 1px solid #e6e6ee; border-radius: 14px; background: #fff; padding: 18px; }

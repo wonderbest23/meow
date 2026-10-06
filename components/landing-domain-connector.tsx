@@ -169,7 +169,7 @@ export function LandingDomainConnector({
   if (needsPurchase && !connectedHostname) {
     return (
       <section className="landing-domain-connector">
-        <div className="domain-connector-title"><Globe2 /><span><strong>회사 이름으로 된 주소 쓰기</strong><p>www.우리가게.com 처럼 내 주소로 홈페이지를 엽니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.</p></span></div>
+        <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>www.우리가게.com 처럼 내 주소로 홈페이지를 엽니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.</p></span></div>
         {planQuery ? <DomainPurchaseForm planQuery={planQuery} price={entitlement?.purchasePrice ?? 79000} initial={purchase?.domain ?? ""} /> : null}
         <div className="domain-own-option">
           <strong>이미 도메인이 있어요</strong>

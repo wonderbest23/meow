@@ -41,3 +41,8 @@ export function coachTurnSummary(previous: CoachState | null, next: CoachState):
   if (conditions.length) return `${conditions.map(field => `${COACH_FIELD_LABELS[field.key]} ${field.value}`).join(" · ")}으로 반영했어요. 바뀐 사업안을 확인해 주세요.`;
   return "요청하신 내용을 사업안에 반영했어요. 더 바꾸고 싶은 부분은 편하게 말씀해 주세요.";
 }
+
+/** 화면에 보일 답 — 저장값('20000000원')은 그대로 두고 금액만 천 단위 쉼표로('20,000,000원'). 연도·전화번호는 건드리지 않는다 */
+export function coachFieldDisplay(value: string): string {
+  return value.replace(/(?<![\d.,])\d{4,}(?=\s*원)/g, digits => Number(digits).toLocaleString("ko-KR"));
+}

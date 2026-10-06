@@ -5,6 +5,7 @@ import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { privacyPolicyWithContact, type LandingDraft, type LandingLeadRecord, type LandingSiteRecord } from "../lib/landing/domain";
+import { landingDraftFingerprint } from "../lib/landing/save-contract";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
 import { HomepageAlertSettings } from "./homepage-alert-settings";
@@ -120,6 +121,9 @@ export function HomepageKitPanel({
     return () => window.clearInterval(timer);
   }, [aiFill?.running]);
   const published = site?.status === "published";
+  /* 저장은 됐지만 아직 '새 버전 공개'를 안 누른 고친 내용 — '공개 중'만 보고 손님 화면도 바뀐 줄 알기 쉽다 */
+  const liveConfig = published ? site?.versions?.find(version => version.version === site.publishedVersion)?.config : undefined;
+  const unpublishedEdits = Boolean(liveConfig && site && landingDraftFingerprint(liveConfig) !== landingDraftFingerprint(site.draft));
   /* 손님 연락 방법 — 바꾸면 문의 버튼의 이동·글이 한 번에 따라간다(applyContactMethod) */
   const contact = draft.contact ?? DEFAULT_CONTACT;
   const contactInfo = CONTACT_METHOD_INFO[contact.method];
@@ -203,6 +207,7 @@ export function HomepageKitPanel({
           {publicPath ? (
             <p className="hk-url">
               <span>{published ? "공개 중" : "아직 비공개"}</span>
+              {unpublishedEdits ? <em className="hk-url-dirty">고친 내용은 아직 공개 전 · ‘새 버전 공개’를 누르면 손님 화면에 반영돼요</em> : null}
               {published
                 ? <><a href={publicPath} target="_blank" rel="noreferrer">{publicPath} <ExternalLink size={13} /></a>
                   <button type="button" className="hk-url-btn" onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "복사됨" : "주소 복사"}</button>

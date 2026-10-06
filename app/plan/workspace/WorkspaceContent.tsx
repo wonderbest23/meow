@@ -2,7 +2,7 @@
 
 import type { ReactNode, Ref } from "react";
 import type { CoachField } from "../../../lib/plan-builder/coach";
-import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
+import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import styles from "../BusinessHub.module.css";
 import ArtifactUpdatePanel from "./ArtifactUpdatePanel";
@@ -34,7 +34,7 @@ export function WorkspaceSummary({ description, fields, stale, headingRef, child
     <p>{description}</p>
     {stale && <div className={styles.notice}><p>대화에서 바꾼 내용이 기존 문서와 달라요. 내 자료에서 확인해 주세요.</p></div>}
     {fields && <dl className={styles.keyFacts} data-workspace-facts>{fields.filter(field => ["customer", "offer", "price", "budget", "hoursPerWeek"].includes(field.key)).map(field => <div className={styles.fact} key={field.key}>
-      <dt>{COACH_FIELD_LABELS[field.key]}<span>{field.basis === "user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd>{field.value}</dd>
+      <dt>{COACH_FIELD_LABELS[field.key]}<span>{field.basis === "user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd>{coachFieldDisplay(field.value)}</dd>
     </div>)}</dl>}
     {children}
   </>;
