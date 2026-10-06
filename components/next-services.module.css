@@ -1,0 +1,57 @@
+/* '다음 단계' 서비스 목록 — 유지보수 화면. 앱 색 토큰(--app-*)을 쓰고, 없을 때 값도 함께 둔다 */
+.root { margin: 0 0 28px; padding: 0 0 28px; border-bottom: 1px solid var(--app-line, #e1e7ef); scroll-margin-top: 80px; }
+.root .eyebrow { display: block; margin-bottom: 6px; color: var(--app-primary, #3182f6); font-size: 13px; font-weight: 700; }
+.root h2 { margin: 0 0 8px; }
+.root .lead { margin: 0 0 18px; font-size: 15px; line-height: 1.7; color: var(--app-body, #465365); }
+.root .group { margin-top: 18px; }
+.root .group h3 { margin: 0 0 10px; font-size: 17px; }
+.root .group h3 small { margin-left: 6px; color: var(--app-muted, #6d7b8e); font-size: 13px; font-weight: 400; }
+.list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.card { display: flex; flex-direction: column; gap: 6px; padding: 16px; border: 1px solid var(--app-line, #e1e7ef); border-radius: 12px; background: var(--app-surface, #fff); min-width: 0; }
+.card[data-badge="first"], .card[data-badge="need"] { border-color: #9cc0f5; box-shadow: 0 0 0 1px #9cc0f5 inset; }
+.cardHead { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.cardHead strong { font-size: 16px; color: var(--app-text, #202632); }
+.root .card p { margin: 0; font-size: 14px; line-height: 1.6; color: var(--app-body, #465365); }
+.who, .reason { display: block; font-size: 13px; line-height: 1.5; color: var(--app-muted, #6d7b8e); }
+.reason { color: var(--app-selected-text, #244e84); }
+.badge { flex: none; padding: 3px 9px; border-radius: 999px; font-style: normal; font-size: 12px; font-weight: 700; background: var(--app-soft, #edf3fc); color: var(--app-selected-text, #244e84); }
+.badge[data-tone="first"] { background: #3182f6; color: #fff; }
+.badge[data-tone="need"] { background: var(--app-warning-bg, #fff8e8); color: var(--app-warning, #795914); }
+.badge[data-tone="suggest"] { background: var(--app-success-bg, #eef8f2); color: var(--app-success, #267959); }
+.cardFoot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 8px; flex-wrap: wrap; }
+.price { font-size: 12.5px; color: var(--app-muted, #6d7b8e); }
+.action { min-height: 44px; padding: 0 18px; border: 0; border-radius: 10px; background: var(--app-primary, #3182f6); color: #fff !important; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; cursor: pointer; }
+.action:disabled { opacity: .6; cursor: default; }
+.ghost { min-height: 44px; padding: 0 16px; border: 1px solid var(--app-line-strong, #c6d1de); border-radius: 10px; background: var(--app-surface, #fff); color: var(--app-body, #465365); font-size: 15px; font-weight: 600; cursor: pointer; }
+.requested { font-size: 13px; font-weight: 700; color: var(--app-success, #267959); }
+.form { display: grid; gap: 10px; margin-top: 10px; padding-top: 12px; border-top: 1px dashed var(--app-line, #e1e7ef); }
+.form label { display: grid; gap: 4px; }
+.form label > span { font-size: 13px; font-weight: 600; color: var(--app-text, #202632); }
+.form label small { color: var(--app-muted, #6d7b8e); font-weight: 400; }
+.form input, .form textarea { width: 100%; min-height: 44px; padding: 10px 12px; border: 1px solid var(--app-line-strong, #c6d1de); border-radius: 10px; background: var(--app-surface, #fff); color: var(--app-text, #202632); font: inherit; font-size: 16px; }
+.form textarea { resize: vertical; }
+.formActions { display: flex; justify-content: flex-end; gap: 8px; }
+.root .done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: var(--app-success-bg, #eef8f2); color: var(--app-success, #267959); font-size: 15px; font-weight: 600; }
+.root .error { margin: 0; font-size: 14px; color: var(--app-danger, #b23b47); }
+.history { margin-top: 22px; }
+.history h3 { margin: 0 0 10px; font-size: 17px; }
+.history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.history li { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; border-radius: 10px; background: var(--app-raised, #f2f5f8); }
+.history li span { display: grid; gap: 2px; min-width: 0; }
+.history li strong { font-size: 15px; }
+.history li small { font-size: 12.5px; color: var(--app-muted, #6d7b8e); }
+.history em { flex: none; font-style: normal; font-size: 13px; font-weight: 700; color: var(--app-selected-text, #244e84); }
+.history em[data-status="done"] { color: var(--app-success, #267959); }
+.history em[data-status="canceled"] { color: var(--app-muted, #6d7b8e); }
+@media (max-width: 640px) {
+  .list { grid-template-columns: 1fr; }
+  .cardFoot .action { flex: 1; }
+  .formActions > * { flex: 1; }
+}
+
+/* 홈페이지 화면의 작은 카드 — 위 '유지보수 하기' 카드와 같은 크기, 색만 옅게 */
+.card2 { display: grid; gap: 2px; margin: 8px 0; padding: 16px 18px; border-radius: 12px; border: 1px solid #c9dbf6; background: #f1f6fe; color: #1d3f72; text-decoration: none; }
+.card2 span { font-size: 12px; opacity: .85; }
+.card2 strong { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; }
+.card2 small { font-size: 13px; opacity: .9; }
+.card2:hover { background: #e6effc; }
