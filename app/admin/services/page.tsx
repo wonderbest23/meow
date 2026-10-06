@@ -77,7 +77,8 @@ export default function ServiceRequestsAdminPage() {
               <td>{tel ? <a href={tel}>{formatKoreanPhone(item.phone)}</a> : item.phone}<small>{item.preferredTime ? `희망: ${item.preferredTime}` : "희망 시간 없음"}</small></td>
               <td style={{ maxWidth: 260, whiteSpace: "pre-wrap" }}>{item.memo || "-"}</td>
               <td>{item.status === "received" ? <strong className={styles.failure}>{SERVICE_REQUEST_STATUS_LABELS[item.status]}</strong> : <strong>{SERVICE_REQUEST_STATUS_LABELS[item.status]}</strong>}<small>{date(item.updatedAt)}</small></td>
-              <td>{SERVICE_REQUEST_NEXT[item.status].map((next) => <button key={next} disabled={busy} onClick={() => void move(item, next)}>{ACTION_LABELS[next]}</button>)}</td>
+              {/* 단추가 좁은 칸에서 글자째 접혀 겹쳤다 — 줄을 바꿔 쌓고 글자는 한 줄로 */}
+              <td><div style={{ display: "flex", flexWrap: "wrap", gap: 6, minWidth: 150 }}>{SERVICE_REQUEST_NEXT[item.status].map((next) => <button key={next} disabled={busy} style={{ whiteSpace: "nowrap", width: "auto", padding: "0 12px", height: 36, borderRadius: 6 }} onClick={() => void move(item, next)}>{ACTION_LABELS[next]}</button>)}</div></td>
             </tr>;
           })}</tbody>
         </table></div>
