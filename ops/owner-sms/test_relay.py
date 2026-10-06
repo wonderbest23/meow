@@ -9,7 +9,7 @@ import unittest
 import uuid
 from pathlib import Path
 from unittest.mock import patch
-from relay import ALIMTALK_TEMPLATES, PATH, Relay, aligo_send, alimtalk_send, alimtalk_text, customer_message, load_config, message_fits, signature, sms_bytes, v4_message
+from relay import PATH, Relay, aligo_send, customer_message, load_config, message_fits, signature, sms_bytes, v4_message
 
 NOW = 1800000000
 CONFIG = {"secret": "syntheticSecret" + "x" * 40, "ownerPhone": "01000000001",
@@ -462,80 +462,6 @@ class V4RelayTests(unittest.TestCase):
         sms = urllib.parse.parse_qs(sent[1].data.decode())
         self.assertEqual((sms["msg_type"], sms["sender"], sms["receiver"]), (["SMS"], [CONFIG["ownerPhone"]], [CONFIG["ownerPhone"]]))
         self.assertNotIn("title", sms)
-
-
-TALK = {**CUSTOMER, "alimtalk": {"senderKey": "a" * 40, "templates": {"payment-receipt": "TA_0001", "lead-received": "TA_0004"}}}
-
-
-class AlimtalkTests(unittest.TestCase):
-    def test_template_text_fills_only_variables(self):
-        text = alimtalk_text("payment-receipt", {"product": "homepage", "orderId": "PB-abc123-0123456789ab"})
-        self.assertEqual(text, "[오늘창업] 결제가 완료됐어요.\n\n상품: 홈페이지\n주문번호: PB-abc123-0123456789ab\n\n결제 내역과 영수증은 오늘창업 마이페이지에서 볼 수 있어요.")
-        self.assertEqual(alimtalk_text("homepage-lead-contact", {"name": "김민지", "phone": "01098765432"}).split("\n")[2:4], ["이름: 김민지", "연락처: 010-9876-5432"])
-        self.assertIn("마감일: 1월 28일", alimtalk_text("tax-deadline", {"kind": "vat", "days": 7, "month": 1, "day": 28}))
-        for event in ALIMTALK_TEMPLATES:
-            self.assertIsNotNone(alimtalk_text(event, {"payment-receipt": {"product": "plan", "orderId": "PB-abc123-0123456789ab"}, "homepage-lead-contact": {"name": "a", "phone": ""},
-                "homepage-lead": {}, "lead-received": {"store": "플로라"}, "domain-connect-started": {"domain": "www.flora.com"},
-                "tax-deadline": {"kind": "income", "days": 1, "month": 5, "day": 31}, "weekly-report": {"leads": 1, "prevLeads": 0, "views": 9}}[event]))
-            self.assertNotIn("#{", alimtalk_text(event, {"payment-receipt": {"product": "plan", "orderId": "PB-abc123-0123456789ab"}, "homepage-lead-contact": {"name": "a", "phone": ""},
-                "homepage-lead": {}, "lead-received": {"store": "플로라"}, "domain-connect-started": {"domain": "www.flora.com"},
-                "tax-deadline": {"kind": "income", "days": 1, "month": 5, "day": 31}, "weekly-report": {"leads": 1, "prevLeads": 0, "views": 9}}[event]), event)
-
-    def test_config_validation(self):
-        with tempfile.TemporaryDirectory() as folder:
-            path = Path(folder) / "c.json"
-            for bad in ({"senderKey": "short", "templates": {}}, {"senderKey": "a" * 40, "templates": {"nope": "TA"}}, {"senderKey": "a" * 40, "templates": {"payment-receipt": "bad code!"}}):
-                path.write_text(json.dumps({**TALK, "alimtalk": bad})); os.chmod(path, 0o600)
-                with self.assertRaises(ValueError): load_config(path)
-            path.write_text(json.dumps(TALK)); os.chmod(path, 0o600)
-            self.assertEqual(load_config(path)["alimtalk"]["templates"]["payment-receipt"], "TA_0001")
-
-    def _opener(self, sent, reply):
-        class Response:
-            def __enter__(self): return self
-            def __exit__(self, *args): return False
-            def read(self, _size): return json.dumps(reply).encode()
-        class Opener:
-            def open(self, request, timeout): sent.append(request); return Response()
-        return Opener()
-
-    def test_send_uses_aligo_kakao_with_sms_failover(self):
-        import urllib.parse
-        sent = []
-        params = {"product": "plan", "orderId": "PB-abc123-0123456789ab"}
-        with patch("relay.urllib.request.build_opener", return_value=self._opener(sent, {"code": 0, "message": "성공", "info": {"mid": 555}})):
-            self.assertEqual(alimtalk_send(TALK, "payment-receipt", "01012345678", "[오늘창업] 결제 완료 사업계획서 주문 PB-abc123-0123456789ab", params), {"status": "accepted", "code": "ALIMTALK_ACCEPTED", "receiptId": "555"})
-        body = urllib.parse.parse_qs(sent[0].data.decode())
-        self.assertEqual(sent[0].full_url, "https://kakaoapi.aligo.in/akv10/alimtalk/send/")
-        self.assertEqual((body["senderkey"], body["tpl_code"], body["sender"], body["receiver_1"], body["failover"], body["testMode"]), (["a" * 40], ["TA_0001"], ["0212345678"], ["01012345678"], ["Y"], ["N"]))
-        self.assertEqual(body["message_1"], [alimtalk_text("payment-receipt", params)])
-        self.assertEqual(json.loads(body["button_1"][0]), {"button": [{"name": "마이페이지", "linkType": "WL", "linkMo": "https://oneulstart.com/plan/me", "linkPc": "https://oneulstart.com/plan/me"}]})
-        # 거절이면 None(문자로), 템플릿이 없는 알림도 None
-        with patch("relay.urllib.request.build_opener", return_value=self._opener([], {"code": -99, "message": "템플릿 없음"})):
-            self.assertIsNone(alimtalk_send(TALK, "payment-receipt", "01012345678", "x", params))
-        self.assertIsNone(alimtalk_send(TALK, "tax-deadline", "01012345678", "x", {"kind": "vat", "days": 1, "month": 1, "day": 25}))
-        self.assertIsNone(alimtalk_send(CUSTOMER, "payment-receipt", "01012345678", "x", params), "설정이 없으면 문자")
-
-    def test_docs_match_relay_templates(self):
-        # 카카오에 등록하는 글(docs)과 중계가 보내는 글이 다르면 알림톡이 거절된다 — 한 글자까지 같아야
-        import re as regex
-        doc = (Path(__file__).resolve().parents[2] / "docs" / "alimtalk-templates.md").read_text()
-        for event, (text, buttons) in ALIMTALK_TEMPLATES.items():
-            block = regex.search(r"### %s .*?```\n(.*?)\n```" % regex.escape(event), doc, regex.S)
-            self.assertIsNotNone(block, event)
-            self.assertEqual(block.group(1), text, event)
-            for name, url in buttons:
-                self.assertIn("`%s` → %s" % (name, url), doc, event)
-
-    def test_relay_prefers_alimtalk_then_sms(self):
-        with tempfile.TemporaryDirectory() as folder:
-            sms = []
-            relay = Relay(TALK, Path(folder) / "db.sqlite", sender=lambda *args: sms.append(args) or {"status": "accepted", "code": "PROVIDER_ACCEPTED"},
-                          clock=lambda: NOW, talker=lambda config, event, recipient, message, params: {"status": "accepted", "code": "ALIMTALK_ACCEPTED"} if event == "lead-received" else None)
-            self.assertEqual(relay.send_customer("lead-received", "01012345678", "sms", {"store": "플로라"})["code"], "ALIMTALK_ACCEPTED")
-            self.assertEqual(sms, [])
-            self.assertEqual(relay.send_customer("weekly-report", "01012345678", "sms", {})["code"], "PROVIDER_ACCEPTED")
-            self.assertEqual(len(sms), 1)
 
 
 if __name__ == "__main__":
