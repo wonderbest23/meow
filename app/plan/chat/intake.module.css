@@ -224,12 +224,25 @@
 .chatSpeaker img { width: 28px; height: 28px; border-radius: 50%; }
 .assistantMessage { margin: 0 0 24px; font-size: 16px; line-height: 1.85; }
 .assistantMessage > p, .userMessage > p { white-space: pre-wrap; }
-.userMessage { position: relative; width: fit-content; max-width: 88%; margin: 0 0 32px auto; padding: 13px 17px; border-radius: 16px 4px 16px 16px; background: #edf4ff; color: #243850; font-size: 16px; line-height: 1.75; }
-.messageEdit { display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; margin: 2px -5px -6px 0; float: right; border: 0; border-radius: 4px; background: transparent; color: #657b9b; }
-.userMessage:has(.messageEdit)::after { content: ""; display: block; clear: both; }
-.messageStatus { margin: -22px 0 28px auto !important; max-width: 88%; text-align: right; font-size: 11px; color: var(--intake-muted); }
+/* Messenger bubbles: the coach's short lines sit in a soft grey bubble, the user's in solid blue. */
+.assistantMessage > p, .assistantMessage > .conversationText { width: fit-content; max-width: 88%; margin: 0; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; color: var(--intake-ink); line-height: 1.7; }
+.userMessage { position: relative; width: fit-content; max-width: 88%; margin: 0 0 32px auto; padding: 10px 16px; border-radius: 20px; background: var(--intake-blue); color: #fff; font-size: 16px; line-height: 1.7; transform-origin: 100% 100%; }
+.messageEdit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 32px; height: 32px; margin: -6px -10px -6px 0; border: 0; border-radius: 50%; background: transparent; color: #ffffffd9; }
+.userMessage:has(.messageEdit) { display: flex; align-items: center; gap: 4px; }
+.messageStatus { margin: -26px 0 28px auto !important; max-width: 88%; text-align: right; font-size: 11px; color: var(--intake-muted); transform-origin: 100% 0; animation: intake-receipt .4s ease; }
+.speakerStatus { color: transparent; background: linear-gradient(90deg, #8a96a8 0 35%, #2b3340 50%, #8a96a8 65% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; font-weight: 500; animation: intake-status-shimmer 2s ease infinite; }
+.speakerStatus::before { content: "·"; margin-right: 7px; color: #b3bccb; }
+.typingBubble { display: inline-flex; align-items: center; justify-content: center; gap: 4px; width: 56px; height: 38px; border-radius: 20px; background: #f2f5fa; transform-origin: 0 50%; animation: intake-bubble-in .18s cubic-bezier(.2, .8, .2, 1); }
+.typingBubble i { width: 7px; height: 7px; border-radius: 50%; background: #2b3340; opacity: .2; animation: intake-typing-glow 1.2s ease-in-out infinite; }
+.typingBubble i:nth-child(2) { animation-delay: .3s; }
+.typingBubble i:nth-child(3) { animation-delay: .6s; }
+.jobChat { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 0 8px; }
+.jobChatNote { margin-top: 8px; color: var(--intake-muted); font-size: 12px; line-height: 1.6; }
 .chatQuestion { display: flex; flex-direction: column; }
-.chatQuestion h2 { font-size: 18px; font-weight: 600; line-height: 1.85; margin-bottom: 18px; }
+/* The question arrives as a coach bubble first; its choices follow a beat later, like a reply in a messenger. */
+.chatQuestion h2 { align-self: flex-start; width: fit-content; max-width: 88%; margin-bottom: 14px; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; font-size: 16px; font-weight: 500; line-height: 1.6; animation: intake-bubble-in .2s cubic-bezier(.2, .8, .2, 1); transform-origin: 0 50%; }
+.chatQuestion > :not(h2):not(.chatSpeaker) { animation: intake-message .3s ease-out .35s both; }
+.chatQuestion .questionHint { margin: -6px 0 14px 4px !important; }
 .chatQuestion .chatSpeaker { align-self: flex-start; }
 .chatQuestion .questionMeta { order: 3; margin: 0; min-height: 0; justify-content: flex-start; }
 .chatQuestion .questionMeta:has(button) { min-height: 36px; }
@@ -302,8 +315,16 @@
 .sendButton:disabled { opacity: 1 !important; background: #f3f5f8; color: #c0c9d5; }
 .newMessage { position: absolute; right: 24px; bottom: 150px; z-index: 2; display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid var(--intake-line); border-radius: 8px; color: #49698f; background: white; box-shadow: 0 3px 16px #24354b10; font-size: 12px !important; }
 .introMessage { margin-top: 24px; }
-.chatQuestion, .chatTurn:last-child > .userMessage, .replyTyping { animation: intake-message .24s ease-out; }
+.chatQuestion, .replyTyping { animation: intake-message .24s ease-out; }
+/* The newest answer rises from the composer with a small spring (about 5% overshoot), like a sent message. */
+.chatTurn:last-child > .userMessage { animation: intake-send .6s linear(0, .03 3%, .1 7%, .19 10%, .3 14%, .47 19%, .63 24%, .77 29%, .87 34%, .95 40%, 1 45%, 1.03 50%, 1.05 56%, 1.04 63%, 1.02 72%, 1 85%, 1); }
+.aiReply, .jobChat { animation: intake-message .25s ease-out; }
 @keyframes intake-message { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes intake-send { from { opacity: .3; transform: translateY(48px) scale(.97); } 30% { opacity: 1; } to { transform: none; } }
+@keyframes intake-bubble-in { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+@keyframes intake-typing-glow { 0%, 100% { opacity: .2; } 40% { opacity: .7; } }
+@keyframes intake-receipt { from { opacity: 0; transform: scale(.6); } to { opacity: 1; transform: none; } }
+@keyframes intake-status-shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
 @keyframes intake-typing { 0%, 60%, 100% { opacity: .4; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
 @keyframes intake-spin { to { transform: rotate(360deg); } }
 @media (hover: hover) {
@@ -358,13 +379,15 @@
   .composer { padding-inline: 14px; padding-bottom: max(12px, env(safe-area-inset-bottom)); }
   .composerModes { gap: 12px; }
   .composerModes button { gap: 4px; font-size: 11px; }
-  .chatQuestion h2 { font-size: 17px; }
+  .chatQuestion h2 { font-size: 15px; padding: 9px 14px; }
   .chatQuestion .option { padding: 9px 10px; }
   .chatQuestion .option strong { font-size: 13px; }
-  .userMessage { font-size: 15px; padding: 11px 14px; }
+  .userMessage, .assistantMessage > p, .assistantMessage > .conversationText { font-size: 15px; padding: 9px 14px; }
 }
 @media (prefers-reduced-motion: reduce) {
   .page *, .page *::before, .page *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  .speakerStatus { color: #4c596d; background: none; }
+  .typingBubble i:nth-child(2) { opacity: .45; }
 }
 
 .periodPicker { display: grid; gap: 12px; margin-bottom: 6px; }
@@ -575,3 +598,83 @@
 .costHelperInput em { font-style: normal; color: #6b7684; }
 .costHelperResult { display: grid; gap: 8px; }
 .costHelperResult p { margin: 0; font-size: 14px; line-height: 1.6; }
+
+/* ── Coach chat (NEXT_PUBLIC_INTAKE_COACH_CHAT=1): one messenger thread, chips that send on their own ── */
+.page[data-coach] .inputContent { max-width: 720px; }
+.page[data-coach] .chatSpeaker { display: none; }
+.page[data-coach] .assistantMessage { margin: 0 0 14px; }
+.page[data-coach] .assistantMessage > p, .page[data-coach] .assistantMessage > .conversationText, .page[data-coach] .chatQuestion h2 { max-width: 84%; padding: 9px 16px; border-radius: 22px; background: #f1f3f5; color: #111418; font-size: 16px; font-weight: 400; line-height: 22px; }
+.page[data-coach] .chatQuestion h2 { margin-bottom: 0; }
+.page[data-coach] .chatQuestion .questionHint { margin: 6px 0 0 6px !important; color: #6b7280; font-size: 13px; line-height: 18px; }
+.page[data-coach] .userMessage { padding: 9px 16px; border-radius: 22px; font-size: 16px; line-height: 22px; margin-bottom: 18px; }
+.page[data-coach] .messageStatus { margin-top: -14px !important; color: #8b929c; }
+.page[data-coach] .replyTyping { min-height: 0; padding-bottom: 12px; }
+.page[data-coach] .typingBubble { width: 58px; height: 40px; border-radius: 22px; background: #f1f3f5; }
+.page[data-coach] .typingBubble i { background: #111418; }
+.page[data-coach] .chatQuestion form { margin-top: 10px; }
+/* Choices: small pills under the coach's question, visibly lighter than the chat bubbles. */
+.page[data-coach] .chatQuestion .options, .page[data-coach] .ksicChips, .page[data-coach] .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.page[data-coach] .chatQuestion .option, .page[data-coach] .chip, .page[data-coach] .ksicChip, .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial, .page[data-coach] .presetChip { display: inline-flex; flex-direction: row; align-items: center; width: auto; min-height: 34px; padding: 7px 13px; border: 1px solid #d5dae0; border-radius: 17px; background: #fff; color: #2b3036; font-size: 13px; font-weight: 400; line-height: 18px; cursor: pointer; }
+.page[data-coach] .chatQuestion .option strong, .page[data-coach] .chip, .page[data-coach] .ksicChip strong, .page[data-coach] .unknownChoice strong { font-size: 13px; font-weight: 400; line-height: 18px; color: inherit; white-space: normal; }
+.page[data-coach] .chatQuestion .option:hover, .page[data-coach] .chip:hover:not(:disabled), .page[data-coach] .ksicChip:hover { background: #f5f6f8; border-color: #9ca3af; }
+.page[data-coach] .chatQuestion .option[data-selected="true"], .page[data-coach] .chip[aria-pressed="true"], .page[data-coach] .chip[data-selected="true"], .page[data-coach] .ksicChip[aria-pressed="true"] { border-color: #111418; background: #111418; color: #fff; }
+.page[data-coach] .chatQuestion .optionHint, .page[data-coach] .chipHint, .page[data-coach] .ksicChip span, .page[data-coach] .chipHelp { display: none; }
+.page[data-coach] .unknownChoice, .page[data-coach] .sendPartial { margin-top: 6px; border-color: #e5e7eb; color: #6b7280; }
+.page[data-coach] .unknownChoice[aria-pressed="true"] { border-color: #111418; background: #111418; color: #fff; }
+.page[data-coach] .chipSteps { gap: 10px; }
+.page[data-coach] .stepLegend, .page[data-coach] .ksicLead { color: #6b7280; font-size: 12px; font-weight: 500; }
+.page[data-coach] .ksicCandidates { display: grid; gap: 8px; margin-bottom: 8px; }
+/* Composer: one grey pill, round grey send button. */
+.page[data-coach] .composer { padding: 8px max(16px, calc((100% - 688px) / 2)) max(16px, env(safe-area-inset-bottom)); }
+.page[data-coach] .composerModes { display: none; }
+.page[data-coach] .composerShell { padding: 4px 6px 4px 18px; border: 0; border-radius: 26px; background: #f1f3f5; box-shadow: none; transition: background .15s, box-shadow .15s; }
+.page[data-coach] .composerShell:focus-within { background: #fff; box-shadow: 0 0 0 1px #c7ccd3; }
+.page[data-coach] .composerRow { align-items: center; gap: 6px; }
+.page[data-coach] .composerRow textarea { min-height: 44px; padding: 11px 0; color: #111418; }
+.page[data-coach] .composerRow textarea::placeholder { color: #8b929c; }
+.page[data-coach] .sendButton { flex-basis: 38px; width: 38px; height: 38px; background: #4b5563; }
+.page[data-coach] .sendButton:disabled { background: #d1d5db; color: #fff; }
+/* PC: chat alone while answering; the summary slides in when asked for or when the result is ready. */
+@media (min-width: 901px) {
+  .page[data-coach] .summaryToggle { display: inline-flex; }
+  .page[data-coach] .workspace[data-coach-layout="chat"] { grid-template-columns: minmax(0, 1fr) 0px 0px; }
+  .page[data-coach] .workspace[data-coach-layout="chat"] > .splitHandle, .page[data-coach] .workspace[data-coach-layout="chat"] > .summaryPane { visibility: hidden; overflow: hidden; padding: 0; border: 0; }
+}
+.page[data-coach] [data-coach-entry] { padding-top: 12px; }
+.page[data-coach] [data-coach-entry] .chipRow { margin-top: 10px; }
+.page[data-coach] [data-coach-entry] .textLink { display: inline-block; margin-top: 18px; color: #6b7280; font-size: 12px; }
+.page[data-coach] .composerRow textarea, .page[data-coach] .composerRow textarea:focus, .page[data-coach] .composerRow textarea:focus-visible { border: 0; outline: none; box-shadow: none; background: transparent; }
+.page[data-coach] .sendPartial { justify-self: start; }
+/* No blue rings in the coach chat: mouse/touch focus is silent, keyboard focus gets a quiet dark ring. */
+.page[data-coach] .chatQuestion .option:focus-within, .page[data-coach] .chip:focus, .page[data-coach] .ksicChip:focus, .page[data-coach] .unknownChoice:focus, .page[data-coach] .sendPartial:focus, .page[data-coach] .sendButton:focus { outline: none; }
+.page[data-coach] .chatQuestion .option:has(input:focus-visible), .page[data-coach] .chip:focus-visible, .page[data-coach] .ksicChip:focus-visible, .page[data-coach] .unknownChoice:focus-visible, .page[data-coach] .sendPartial:focus-visible, .page[data-coach] .sendButton:focus-visible { outline: 2px solid #111418; outline-offset: 2px; }
+.page[data-coach] .composerShell:focus-within { background: #f1f3f5; box-shadow: none; }
+.page[data-coach] .composerRow textarea:focus-visible { outline: none !important; box-shadow: none !important; }
+/* One input per turn: the stepper duplicates the composer, and helper links stay grey instead of blue. */
+.page[data-coach] .stepper { display: none; }
+.page[data-coach] .chatQuestion .textButton, .page[data-coach] .chatQuestion summary { color: #4b5563; }
+/* Problems as a coach message: a grey bubble with its actions as small pills, no red banner. */
+.page[data-coach] [data-coach-notices] { max-height: none; overflow: visible; border: 0; display: grid; gap: 8px; margin: 14px 0 6px; }
+.page[data-coach] [data-coach-notices] .notice { justify-self: start; max-width: 84%; padding: 9px 16px; border-radius: 22px; background: #f1f3f5; color: #111418; font-size: 15px; line-height: 22px; }
+.page[data-coach] [data-coach-notices] .notice > p { margin: 0; }
+.page[data-coach] [data-coach-notices] .noticeActions { gap: 6px; margin-top: 8px; }
+.page[data-coach] [data-coach-notices] .notice button, .page[data-coach] [data-coach-notices] .notice a { min-height: 32px; padding: 6px 12px; border: 1px solid #d5dae0; border-radius: 16px; background: #fff; color: #2b3036; font-size: 13px; font-weight: 400; text-decoration: none; }
+.page[data-coach] [data-coach-notices] .notice > button { margin-top: 8px; }
+/* PC split: the chat already shows the full result card, so the summary drops its compact copy of it. */
+@media (min-width: 901px) {
+  .page[data-coach] .summaryPane .identityCompact { display: none; }
+}
+/* "여기서부터 이어갈게요" reads as the coach talking, not a banner. */
+.page[data-coach] .resumeNotice { width: fit-content; max-width: 84%; margin: 14px 0 4px; padding: 9px 10px 9px 16px; border: 0; border-radius: 22px; background: #f1f3f5; color: #111418; align-items: center; }
+.page[data-coach] .resumeNotice p { margin: 0; font-size: 15px; line-height: 22px; }
+.page[data-coach] .resumeNotice button { color: #8b929c; }
+.page[data-coach] .chatQuestion .option input[type="checkbox"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.page[data-coach] .chatQuestion .sendPartial { color: #111418; border-color: #9ca3af; }
+/* AI business candidates are cards, not pills: full width, title + short description, quiet "자세히 보기". */
+.page[data-coach] .chatQuestion .options:has(.ideaOption) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.page[data-coach] .chatQuestion .ideaOption { width: 100%; }
+.page[data-coach] .chatQuestion .ideaOption .option { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 16px; border-radius: 18px; }
+.page[data-coach] .chatQuestion .ideaOption .option strong { font-size: 15px; font-weight: 600; line-height: 21px; }
+.page[data-coach] .chatQuestion .ideaOption .option span, .page[data-coach] .chatQuestion .ideaOption .option small { font-size: 13px; line-height: 19px; color: #4b5563; }
+.page[data-coach] .chatQuestion .ideaOption .option[data-selected="true"] span, .page[data-coach] .chatQuestion .ideaOption .option[data-selected="true"] small { color: #e5e7eb; }
+.page[data-coach] .chatQuestion .ideaOption .disclosure { margin: 4px 0 0 6px; font-size: 13px; }

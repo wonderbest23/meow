@@ -11,8 +11,8 @@ import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, Lis
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
-import { amountRanges, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
-import { answerText, assembleHybridText, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
+import { amountRanges, rangeMidpoint, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
+import { answerText, assembleHybridText, hybridComplete, incompleteChoiceText, COUNT_PREFIX, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
 import { mentionedAnswer, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
@@ -20,12 +20,22 @@ import styles from "../intake.module.css";
 import { chatTextPreview } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
 
-export function EntryChoices({ disabled, onStart, initialMessage }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null }) {
+export function EntryChoices({ disabled, onStart, initialMessage, coach = false }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean }) {
   const choices = [
     { mode: "exploring" as const, label: "아이디어를 찾고 있어요", Icon: Lightbulb },
     { mode: "startup" as const, label: "생각한 사업이 있어요", Icon: FileText },
     { mode: "operating" as const, label: "사업을 운영 중이에요", Icon: Store },
   ];
+  // Coach chat opens like a messenger: a short greeting, the first question as a bubble, three pills to tap.
+  if (coach) return <section className={styles.chatHistory} aria-labelledby="intake-entry-heading" data-coach-entry>
+    {initialMessage ? <><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p></>
+      : <div className={styles.assistantMessage}><p>안녕하세요. 몇 가지 질문에 답해 주시면 사업 방향을 정리해 드려요.</p></div>}
+    <div className={`${styles.question} ${styles.chatQuestion}`}>
+      <h2 id="intake-entry-heading">{initialMessage ? "지금 어느 단계에 계신가요?" : "어떤 사업을 생각하고 계세요?"}</h2>
+      <div className={styles.chipRow} role="group" aria-label="대화 시작 선택지">{choices.map(({ mode, label }) => <button type="button" key={mode} className={styles.chip} disabled={disabled} onClick={() => onStart(mode)}>{label}</button>)}</div>
+    </div>
+    <Link className={styles.textLink} href="/plan">저장한 사업 불러오기</Link>
+  </section>;
   return <section className={styles.entry} aria-labelledby="intake-entry-heading">
     <div id="intake-entry-heading"><CoachWelcome tagline={false} /></div>
     {initialMessage && <div className={styles.introMessage}><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p><div className={styles.assistantMessage}><ChatSpeaker /><p>지금 어느 단계에 계신가요?<br />이 이야기부터 이어갈게요</p></div></div>}
@@ -34,13 +44,18 @@ export function EntryChoices({ disabled, onStart, initialMessage }: { disabled: 
   </section>;
 }
 
-export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange, onAnswer, onCancel, inChat = false, refining = false, suggestions }: {
+export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange: change, onAnswer, onCancel, inChat = false, refining = false, suggestions, coach = false, ksicQuery: composerQuery }: {
   question: IntakeQuestion; snapshot: IntakeSnapshot; draft: AnswerDraft; editing: boolean; disabled: boolean;
-  onChange: (value: AnswerDraft) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string, extra?: { ksic?: string }) => void;
+  /** `submit`: in coach chat a finished pick is sent right away, as if the send button were pressed. */
+  onChange: (value: AnswerDraft, submit?: boolean) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string, extra?: { ksic?: string }) => void;
   onCancel: () => void; inChat?: boolean; refining?: boolean;
   /** 첫 사업 설명에 맞춘 AI 추천(시험 기능). 누르면 입력칸에 들어가고, 보내기 전까지는 답변이 아니다. */
   suggestions?: QuestionSuggestions;
+  /** Coach chat: chips send on their own, and the composer doubles as the industry search box. */
+  coach?: boolean; ksicQuery?: string;
 }) {
+  const onChange = (value: AnswerDraft) => change(value);
+  const send = (value: AnswerDraft) => change(value, coach);
   const [manualIndustry, setManualIndustry] = useState(editing || draft.selected.length > 0);
   const seededPeriod = question.id === "period" ? periodDates(draft.text) : null;
   const [customPeriod, setCustomPeriod] = useState(!!seededPeriod);
@@ -52,7 +67,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const showMention = !!mention && draft.dismissedMention !== mention.key && !draft.text && !draft.selected.length && !draft.unknown;
   const undecided = undecidedHelp(question);
   const ksicCandidates = inChat && question.id === "industry" && !manualIndustry ? snapshot.ksicCandidates : [];
-  const [ksicQuery, setKsicQuery] = useState("");
+  const [ownKsicQuery, setKsicQuery] = useState("");
+  const ksicQuery = coach ? composerQuery ?? "" : ownKsicQuery;
   const [ksicResults, setKsicResults] = useState<IntakeSnapshot["ksicCandidates"]>([]);
   useEffect(() => {
     const query = ksicQuery.trim();
@@ -69,11 +85,11 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const ksicShown = ksicQuery.trim().length >= 2 ? ksicResults : ksicCandidates;
   const candidate = question.id === "candidate";
   const options = candidate ? snapshot.candidateIdeas.map(idea => ({ value: idea.id, label: idea.title })) : question.options ?? [];
-  const stage = (value: IntakeValue) => onChange({ ...draft, text: String(value ?? ""), unknown: false });
+  const stage = (value: IntakeValue) => send({ ...draft, text: String(value ?? ""), unknown: false });
   const commit = (value: IntakeValue) => { if (!disabled) { if (inChat) stage(value); else onAnswer(value, false, question.id); } };
   const choose = (value: string) => {
     const selected = question.kind === "multi" ? toggleChip(question, draft.selected, value) : [value];
-    onChange({ ...draft, custom: false, selected, unknown: false, ksic: undefined });
+    (question.kind === "multi" ? onChange : send)({ ...draft, custom: false, selected, unknown: false, ksic: undefined });
   };
   const choice = !draft.custom && ["single", "multi"].includes(question.kind);
   const hybrid = isHybridQuestion(question);
@@ -105,29 +121,29 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       {editing && <button type="button" className={styles.textButton} onClick={onCancel}>{snapshot.coreComplete ? "마무리로 돌아가기" : "현재 질문으로"}</button>}
     </div>}
     <h2 id="intake-question-heading" tabIndex={-1}>{showMention ? `${question.label}, 앞서 말한 내용으로 이어갈까요?` : showSuggested ? "이 업종으로 정리할까요?" : question.prompt}</h2>
-    {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{question.hint}</p>}
+    {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{coach && numeric && question.unit === "원" && ladder.length > 0 ? "대략 고르면 가운데 값으로 계산해요. 정확히 알면 입력창에 적어 주세요." : question.hint}</p>}
     {draft.hint && <p className={styles.draftHint}>이전 답변: {draft.hint}</p>}
     <form onSubmit={submit}>
       {showMention && <div className={styles.mention} aria-label="이전 대화에서 찾은 답변">
         <blockquote>{mention.quote}</blockquote>
         <p>답변으로 쓸 내용: <strong>{mention.value}</strong></p>
         <div className={styles.suggestionActions}>
-          <button type="button" className={styles.primaryButton} disabled={disabled} onClick={() => onChange({ ...draft, text: mention.value, selected: [], unknown: false, dismissedMention: mention.key })}>이 내용 선택<Check size={17} aria-hidden="true" /></button>
+          <button type="button" className={styles.primaryButton} disabled={disabled} onClick={() => send({ ...draft, text: mention.value, selected: [], unknown: false, dismissedMention: mention.key })}>이 내용 선택<Check size={17} aria-hidden="true" /></button>
           <button type="button" className={styles.textButton} disabled={disabled} onClick={() => onChange({ ...draft, dismissedMention: mention.key })}>다르게 답하기</button>
         </div>
       </div>}
       <div hidden={showMention}>
       {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
-        <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>
-        {ksicShown.length > 0 && <p className={styles.ksicLead}>{snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
-        {ksicQuery.trim().length >= 2 && ksicShown.length === 0 && <p className={styles.ksicLead}>맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다.</p>}
-        <div className={styles.ksicChips}>{ksicShown.map(item => <button key={item.code} type="button" className={styles.ksicChip} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => onChange({ ...draft, custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{item.name}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>)}</div>
+        {!coach && <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>}
+        {ksicShown.length > 0 && <p className={styles.ksicLead}>{coach && ksicQuery.trim().length >= 2 ? "찾은 업종이에요. 가까운 걸 눌러 주세요." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
+        {ksicQuery.trim().length >= 2 && ksicShown.length === 0 && <p className={styles.ksicLead}>{coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
+        <div className={styles.ksicChips}>{ksicShown.map(item => <button key={item.code} type="button" className={styles.ksicChip} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{item.name}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>)}</div>
       </div>}
       {showSuggested && <div className={styles.industrySuggestion} role="group" aria-label="추천 업종">
         <p className={styles.suggestionReason}>입력하신 사업 내용을 보면 이 업종에 가까워 보여요. 맞는지 확인해 주세요.</p>
         <div className={styles.suggestedIndustry}><CheckCircle2 size={23} aria-hidden="true" /><strong>{suggested.label}</strong></div>
         <div className={styles.suggestionActions}>
-          <button className={styles.primaryButton} type="button" disabled={disabled} aria-pressed={draft.selected.includes(suggested.value)} onClick={() => onChange({ ...draft, custom: false, selected: [suggested.value], unknown: false, ksic: undefined })}>이 업종 선택<Check size={17} aria-hidden="true" /></button>
+          <button className={styles.primaryButton} type="button" disabled={disabled} aria-pressed={draft.selected.includes(suggested.value)} onClick={() => send({ ...draft, custom: false, selected: [suggested.value], unknown: false, ksic: undefined })}>이 업종 선택<Check size={17} aria-hidden="true" /></button>
           <button className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />직접 선택하기</button>
         </div>
       </div>}
@@ -142,10 +158,11 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
           </label>{idea && <details className={styles.disclosure}><summary>{option.label} 자세히 보기</summary><p>{idea.description}</p>{idea.reasons.length > 0 && <p className={styles.optionReason}>{idea.reasons.join(" · ")}</p>}{idea.cautions.length > 0 && <p className={styles.optionCaution}>확인할 점: {idea.cautions.join(" · ")}</p>}<ResourceFitDetails fit={idea.resourceFit} /></details>}</div>;
         })}
       </fieldset>)}
+      {coach && choice && question.kind === "multi" && draft.selected.length > 0 && <button type="button" className={styles.sendPartial} disabled={disabled} onClick={() => send(draft)}>다 골랐어요 ({draft.selected.length})</button>}
       {candidate && <label className={styles.customToggle}><input type="checkbox" checked={draft.custom} onChange={event => onChange({ ...draft, custom: event.target.checked, selected: [], unknown: false, ksic: undefined })} />직접 생각한 사업 입력</label>}
       {hybrid && inChat && suggestions?.pending && <SuggestionPlaceholder />}
       {hybrid && inChat && suggestions && !suggestions.pending && <SuggestionChips question={question} draft={draft} disabled={disabled} suggestions={suggestions.items} groups={groups} onChange={onChange} />}
-      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} extraPicked={suggestions && !suggestions.pending ? pickedSuggestions(question, draft, suggestions.items) : 0} onChange={onChange} />}
+      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} extraPicked={suggestions && !suggestions.pending ? pickedSuggestions(question, draft, suggestions.items) : 0} onChange={onChange} coach={coach} onSend={send} />}
       {ticket && <AmountLadder question={question} ranges={ticketRanges} disabled={disabled} staging={inChat} exactLabel="정확한 금액 알아요 (기록 있음)" onCommit={commit} onRange={range => stage(`${range.label} (예상)`)} onExact={amount => stage(`${formatWon(amount)} (실제 기록)`)} />}
       {prefill && <div className={styles.chipStep} role="group" aria-label="문장 시작 선택">
         <div className={styles.chipRow}>{options.map(option => <button key={option.value} type="button" className={styles.chip} data-selected={draft.text.trim() === option.label || undefined} disabled={disabled} onClick={() => onChange({ ...draft, custom: false, selected: [], unknown: false, text: option.label })}>{option.label}</button>)}</div>
@@ -157,7 +174,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       </div>}
       {numeric && question.id === "price" && snapshot.intake.mode !== "operating" && <CostPriceHelper disabled={disabled} onCommit={commit} />}
       {numeric && !candidate && (question.unit === "원"
-        ? (!basisOptions.length || basis) && <AmountLadder key={basis ?? "ladder"} question={question} ranges={ranges} legend={months && months > 1 ? `${months}개월 합계 기준` : undefined} disabled={disabled} staging={inChat} onCommit={commit} />
+        ? (!basisOptions.length || basis) && <AmountLadder key={basis ?? "ladder"} quick={coach} question={question} ranges={ranges} legend={months && months > 1 ? `${months}개월 합계 기준` : undefined} disabled={disabled} staging={inChat} onCommit={commit} />
         : <NumberQuick question={question} draft={draft} presets={numberPresets(question)} disabled={disabled} staging={inChat} onChange={onChange} onCommit={commit} />)}
       {period && <div className={styles.periodPicker} role="group" aria-label="실적 기간 선택">
         <div className={styles.presetChips}>
@@ -170,7 +187,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
           <button type="button" className={styles.secondaryButton} disabled={disabled || !customPeriodValid} onClick={() => commit(`${periodStart} / ${periodEnd}`)}>{inChat ? "기간 선택" : "이 기간으로 저장"}<Check size={17} aria-hidden="true" /></button>
         </div>}
       </div>}
-      {inChat && <button type="button" className={styles.unknownChoice} aria-pressed={!!draft.unknown} disabled={disabled} onClick={() => onChange({ ...draft, text: "", custom: false, selected: [], unknown: !draft.unknown, ksic: undefined })}><strong>아직 정하지 않았어요</strong></button>}
+      {inChat && <button type="button" className={styles.unknownChoice} aria-pressed={!!draft.unknown} disabled={disabled} onClick={() => (draft.unknown ? onChange : send)({ ...draft, text: "", custom: false, selected: [], unknown: !draft.unknown, ksic: undefined })}><strong>{coach ? "잘 모르겠어요" : "아직 정하지 않았어요"}</strong></button>}
       {inChat && draft.unknown && <details className={styles.undecidedHelp}><summary>{undecided.examples.length ? "예시를 보고 정할래요" : "무엇을 정하는 건가요?"}</summary>
         <p>{undecided.text}</p>
         {undecided.examples.length > 0 && <div className={styles.chipRow} role="group" aria-label={`${question.label} 예시`}>{undecided.examples.map(example => <button key={example} type="button" className={styles.chip} disabled={disabled} onClick={() => onChange({ ...draft, text: example, selected: [], unknown: false, custom: false })}>{example}</button>)}</div>}
@@ -226,13 +243,20 @@ function SuggestionChips({ question, draft, disabled, suggestions, groups, onCha
   </div>;
 }
 
-function HybridChips({ question, draft, disabled, groups, revealed, extraPicked = 0, onChange }: {
+function HybridChips({ question, draft, disabled, groups, revealed, extraPicked = 0, onChange, coach = false, onSend }: {
   question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; groups: ReturnType<typeof optionGroups>; revealed: (index: number) => boolean;
   /** 같은 한도에 포함되는 맞춤 추천 선택 수 */
   extraPicked?: number; onChange: (value: AnswerDraft) => void;
+  /** Coach chat: send as soon as every step is filled; a partial pick gets a quiet "이대로 보내기". */
+  coach?: boolean; onSend?: (value: AnswerDraft) => void;
 }) {
   const limit = chipLimit(question.id);
-  const update = (selected: string[]) => onChange({ ...draft, custom: false, unknown: false, selected, text: assembleHybridText(question, selected, unmatchedPieces(question, draft.text)) });
+  const next = (selected: string[]): AnswerDraft => ({ ...draft, custom: false, unknown: false, selected, text: assembleHybridText(question, selected, unmatchedPieces(question, draft.text)) });
+  const update = (selected: string[]) => {
+    const value = next(selected);
+    (coach && onSend && !extraPicked && hybridComplete(question, selected) ? onSend : onChange)(value);
+  };
+  const partial = coach && !!onSend && draft.selected.some(value => !value.startsWith(COUNT_PREFIX)) && !hybridComplete(question, draft.selected) && !incompleteChoiceText(question, draft);
   const tap = (value: string) => update(toggleChip(question, draft.selected, value));
   const picked = (group: string) => (question.options ?? []).find(option => option.group === group && draft.selected.includes(option.value));
   // Count step: capacity after its unit chip, goal for an "N건" metric. The count lives in draft.selected as "#n".
@@ -245,13 +269,14 @@ function HybridChips({ question, draft, disabled, groups, revealed, extraPicked 
     const picked = group.options.filter(option => draft.selected.includes(option.value)).length + (filter ? 0 : extraPicked);
     const title = groupTitle(group.name);
     return <div key={group.name ?? index} className={styles.chipStep} role="group" aria-label={title || question.label} data-step={groups.length > 1 ? index + 1 : undefined}>
-      {(title || stepLimit > 1) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}</p>}
+      {(title || stepLimit > 1) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{coach ? `${stepLimit}개를 고르면 바로 넘어가요 · ${picked}/${stepLimit}` : `최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}</p>}
       <div className={styles.chipRow}>{group.options.map(option => {
         const selected = draft.selected.includes(option.value);
         return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{option.label}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
       })}</div>
     </div>;
-  }), countUnit !== undefined && <CountStep key="count" question={question} unit={countUnit} count={count} disabled={disabled} onCount={value => update(withCount(draft.selected, value))} />]}</div>;
+  }), countUnit !== undefined && <CountStep key="count" question={question} unit={countUnit} count={count} disabled={disabled} onCount={value => update(withCount(draft.selected, value))} />,
+    partial && <button key="send-partial" type="button" className={styles.sendPartial} disabled={disabled} onClick={() => onSend!(draft)}>이대로 보내기</button>]}</div>;
 }
 
 /** Preset chips + stepper for a count inside a hybrid answer; the composer sends the final answer. */
@@ -310,8 +335,10 @@ function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: 
   </details>;
 }
 
-function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel = "정확히 입력", onCommit, onRange, onExact }: {
+function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel = "정확히 입력", onCommit, onRange, onExact, quick = false }: {
   question: IntakeQuestion; ranges: AmountRange[]; legend?: string; disabled: boolean; staging: boolean; exactLabel?: string;
+  /** Coach chat: one tap on a range saves its middle value (owner decision 2026-10-07); exact amounts go through the composer. */
+  quick?: boolean;
   /** Number mode sends wonAnswer() through onCommit; text mode (onRange + onExact) writes into the draft instead. */
   onCommit: (value: IntakeValue) => void; onRange?: (range: AmountRange) => void; onExact?: (amount: number) => void;
 }) {
@@ -328,6 +355,7 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
     const item = ranges[index];
     if (onRange) { onRange(item); return; } // text mode: the range label itself becomes the answer text
     if (item.min === 0 && item.max === 0 || item.max === 0) return onCommit("0원");
+    if (quick) return onCommit(wonAnswer(rangeMidpoint(item)));
     setRangeIndex(index); setKeypad(false);
   };
   const parsed = /^\d+(?:\.\d+)?$/.test(amountText.replace(/,/g, "")) ? Number.parseFloat(amountText.replace(/,/g, "")) : null;
@@ -360,12 +388,17 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
   </div>;
 }
 
-export function ChatSpeaker() {
-  return <span className={styles.chatSpeaker}><img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" /><span>오늘창업</span></span>;
+export function ChatSpeaker({ status }: { status?: string }) {
+  return <span className={styles.chatSpeaker}><img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" /><span>오늘창업</span>{status && <span className={styles.speakerStatus}>{status}</span>}</span>;
+}
+
+/** Messenger-style "typing" bubble; the dots only change brightness, so the layout never jumps. */
+function TypingBubble() {
+  return <span className={styles.typingBubble} aria-hidden="true"><i /><i /><i /></span>;
 }
 
 export function ReplyTyping() {
-  return <div className={styles.replyTyping} data-reply-typing><ChatSpeaker /><LoadingStatus note="다음 질문을 준비하고 있어요" /></div>;
+  return <div className={styles.replyTyping} data-reply-typing><ChatSpeaker /><TypingBubble /><span className={styles.srOnly} role="status" aria-live="polite">다음 질문을 준비하고 있어요</span></div>;
 }
 
 export function ConversationText({ text }: { text: string }) {
@@ -378,7 +411,8 @@ export function ConversationText({ text }: { text: string }) {
   </div>;
 }
 
-export function ConversationHistory({ snapshot, onEdit }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void }) {
+export function ConversationHistory({ snapshot, onEdit, receipt }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string }) {
+  const lastUserId = [...snapshot.coach.messages].reverse().find(message => message.role === "user")?.id;
   const mode = { exploring: "아이디어를 찾고 있어요", startup: "생각한 사업이 있어요", operating: "사업을 운영 중이에요" }[snapshot.intake.mode];
   return <div className={styles.chatHistory} aria-label="지금까지의 대화">
     <div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div>
@@ -393,9 +427,10 @@ export function ConversationHistory({ snapshot, onEdit }: { snapshot: IntakeSnap
       return <div key={message.id} className={styles.chatTurn}>
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{question.prompt}</p></div>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{text}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{/^\d{4,}원$/.test(text) ? formatWon(Number(text.slice(0, -1))) : text}</p>}
           {answerEntry && question && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
+        {receipt && message.id === lastUserId && !notes.length && <p className={styles.messageStatus} data-receipt>{receipt}</p>}
         {notes.length > 0 && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}
       </div>;
     })}
@@ -458,7 +493,7 @@ const JOB_TITLES: Record<"extract" | "help" | "design" | "ideas", string> = { ex
 const monotonicNow = () => typeof performance !== "undefined" ? performance.now() : Date.now();
 
 /** Show server status and elapsed time without presenting an estimated completion percentage. */
-export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSnapshot; announce?: boolean }) {
+export function JobProgress({ snapshot, announce = false, variant = "gauge" }: { snapshot: IntakeSnapshot; announce?: boolean; variant?: "gauge" | "chat" }) {
   const job = snapshot.intake.job;
   const active = !!job && (job.status === "queued" || job.status === "running");
   const serverElapsed = snapshot.jobClock?.elapsedMs;
@@ -475,6 +510,15 @@ export function JobProgress({ snapshot, announce = false }: { snapshot: IntakeSn
   if (!job || !active) return null;
   const timing = snapshot.jobClock ?? INTAKE_JOB_TIMING[job.kind];
   const view = jobProgress(job.status, sync.base + (monotonicNow() - sync.at), timing.expectedMs, timing.limitMs);
+  const title = job.status === "queued" ? "요청을 접수했어요" : JOB_TITLES[job.kind];
+  // In the conversation the job reads like the coach replying: current step beside the name, a typing bubble,
+  // and elapsed time only once it runs longer than usual.
+  if (variant === "chat") return <div className={styles.jobChat} data-kind={job.kind} data-job-chat>
+    <ChatSpeaker status={title} />
+    <TypingBubble />
+    {announce && <span className={styles.srOnly} role="status" aria-live="polite">{title}</span>}
+    <small className={styles.jobChatNote}>{view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초` : job.kind === "design" ? "기본 질문이 끝나서 바로 정리를 시작했어요. 보통 30~40초 걸려요." : "답변은 저장돼 있어요. 나가도 결과는 여기 남아요."}</small>
+  </div>;
   return <div className={styles.jobProgress} data-kind={job.kind}>
     <div className={styles.jobProgressTitle}><LoadingStatus note={job.status === "queued" ? "요청을 접수했어요" : JOB_TITLES[job.kind]} announce={announce} /></div>
     <div className={styles.jobProgressBar} role="progressbar" aria-label={JOB_TITLES[job.kind]} aria-valuetext={job.status === "queued" ? "처리 대기 중" : "처리 중"}><span className={styles.indeterminateProgress} /></div>

@@ -51,5 +51,8 @@ globalThis.fetch = async (input, init) => {
   const wantsJson = !!schema || /유효한 JSON 객체 하나만/.test(system);
   const text = schema ? JSON.stringify(gen(schema)) : wantsJson ? "{}" : markdown(body.messages?.[0]?.content);
   console.log(`[fake-anthropic] ${schema ? "json" : wantsJson ? "json-noschema" : "text"} ${text.length}b`);
+  // Optional pause so waiting screens (typing bubble, "정리 중") stay visible long enough to check.
+  const delay = Number(process.env.SYNTHETIC_AI_DELAY_MS) || 0;
+  if (delay > 0) await new Promise(resolve => setTimeout(resolve, delay));
   return new Response(JSON.stringify({ id: "msg_synthetic", type: "message", role: "assistant", stop_reason: "end_turn", content: [{ type: "text", text }], usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
 };

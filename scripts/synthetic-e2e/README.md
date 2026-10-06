@@ -12,3 +12,5 @@ npx tsx scripts/synthetic-e2e/drive.mts "$(cat scripts/synthetic-e2e/origin.txt)
 ```
 
 같은 IP에서 10분에 상담 저장 120번 제한이 있어 한 번에 8개 정도까지 돕니다. 알림 번호·주간 리포트 설정과 문의 알림 발송은 Supabase가 있어야 해서 여기서는 확인하지 않습니다. 화면 확인에는 맥의 Google Chrome(puppeteer-core)을 씁니다.
+
+`SYNTHETIC_AI_DELAY_MS=15000`을 붙여 띄우면 가짜 AI가 매번 그만큼 기다렸다 답해서, "정리 중" 같은 기다림 화면을 눈으로 확인할 수 있습니다.
