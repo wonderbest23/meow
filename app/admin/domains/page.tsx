@@ -20,6 +20,7 @@ export default function DomainOrdersAdminPage() {
   const [cnameTarget, setCnameTarget] = useState("connect.oneulstart.com");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [login, setLogin] = useState(false);
 
   const load = useCallback(async () => {
@@ -36,13 +37,15 @@ export default function DomainOrdersAdminPage() {
   useEffect(() => { void load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function registered(order: Order) {
-    if (busy || !window.confirm(`${order.domain} 등록과 www CNAME(${cnameTarget}) 설정을 마쳤나요? 고객 화면에 '연결 시작'이 열립니다.`)) return;
+    if (busy || !window.confirm(`${order.domain} 등록과 www CNAME(${cnameTarget}) 설정을 마쳤나요? 연결을 바로 시작하고 고객에게 알립니다.`)) return;
     setBusy(true); setError("");
     try {
       const response = await fetch("/api/admin/payments/domain-orders", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.orderId }) });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message ?? "바꾸지 못했습니다");
       setOrders(data.orders);
+      // 자동 연결·사장님 알림 결과 — 실패는 경고로만 온다(등록 완료는 이미 저장됨)
+      setNotice(data.warning ? `등록 완료로 바꿨어요. ${data.warning}` : data.connection?.connected ? `${data.connection.hostname} 연결을 시작하고 사장님께 알렸어요(${(data.connection.notified ?? []).join("·") || "알림 없음"}).` : "");
     } catch (e) { setError(e instanceof Error ? e.message : "바꾸지 못했습니다"); }
     finally { setBusy(false); }
   }
@@ -73,13 +76,14 @@ export default function DomainOrdersAdminPage() {
         {orders && <small>처리 대기 {waiting}건 · 전체 {orders.length}건</small>}
       </div>
       {error && <p role="alert" className={styles.error}>{error}</p>}
+      {notice && <p role="status" style={{ margin: 0, fontSize: 14, lineHeight: 1.6 }}>{notice}</p>}
       {login && <Link href="/admin">관리자 로그인</Link>}
       <section className={styles.section}>
         <header><h2>처리 순서</h2></header>
         <ol style={{ margin: 0, paddingLeft: 20, lineHeight: 1.8, fontSize: 14 }}>
           <li>가비아 등 등록기관에서 <strong>고객 명의</strong>로 주소를 등록합니다(필요한 정보는 고객 이메일로 요청).</li>
           <li>그 주소의 DNS에 <code>www</code> CNAME → <code>{cnameTarget}</code> 를 추가합니다.</li>
-          <li>아래 ‘등록 완료’를 누르면 고객 화면에 ‘연결 시작’이 열립니다. 살 수 없는 주소면 고객과 다른 주소를 정하거나, ‘전액 환불’로 카드 결제를 취소합니다(환불 접수함에도 기록됩니다).</li>
+          <li>아래 ‘등록 완료’를 누르면 그 홈페이지에 www 주소 연결을 바로 시작하고 고객에게 문자·메일로 알립니다(안 되면 경고가 보이고, 고객 화면의 ‘연결 시작’으로도 연결할 수 있습니다). 살 수 없는 주소면 고객과 다른 주소를 정하거나, ‘전액 환불’로 카드 결제를 취소합니다(환불 접수함에도 기록됩니다).</li>
         </ol>
       </section>
       {orders && <section className={styles.section}>

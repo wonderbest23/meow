@@ -87,6 +87,8 @@ export async function createPlanOrder(input: {
   terms?: Record<string, boolean>;
   /** 도메인 구매 대행 — 사 달라고 한 주소. 운영자가 등록하면 status 가 registered 로 바뀐다 */
   domainRequest?: DomainRequest;
+  /** 결제 안내 문자 받을 휴대폰(선택, 010 11자리) — 결제 완료 문자에만 쓴다(lib/payments/paid-notifications.ts) */
+  noticePhone?: string;
 }): Promise<PlanOrder> {
   const now = new Date();
   const orderId = `PB-${now.getTime().toString(36)}-${randomUUID().replaceAll("-", "").slice(0, 12)}`;
@@ -120,7 +122,7 @@ export async function createPlanOrder(input: {
     // 문서 단위 권한의 연결 고리 — 어떤 플랜을 여는 결제인지 여기 남긴다
     // (opportunity는 진단 흐름의 NOT NULL jsonb 컬럼을 재사용)
     // product 를 함께 남긴다 — 승인 시 무엇을 열어 줄지 여기서 읽는다
-    opportunity: { planId: input.planId, planType: input.planType, product: input.product ?? "plan", ...(input.terms ? { terms: input.terms } : {}), ...(input.domainRequest ? { domainRequest: input.domainRequest } : {}) },
+    opportunity: { planId: input.planId, planType: input.planType, product: input.product ?? "plan", ...(input.terms ? { terms: input.terms } : {}), ...(input.domainRequest ? { domainRequest: input.domainRequest } : {}), ...(input.noticePhone && /^010\d{8}$/.test(input.noticePhone) ? { noticePhone: input.noticePhone } : {}) },
     founder_profile: {},
     terms_version: TERMS_VERSION,
     terms_agreed_at: now.toISOString(),

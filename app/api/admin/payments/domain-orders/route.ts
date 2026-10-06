@@ -3,6 +3,7 @@ import { z } from "zod";
 import { listDomainPurchaseOrders, markDomainRegistered } from "../../../../../lib/payments/plan-orders";
 import { hasAdminSession } from "../../../../../lib/support-chat/admin-auth";
 import { RefundError, refundOrderByAdmin } from "../../../../../lib/payments/refund-execution";
+import { startRegisteredDomainConnection } from "../../../../../lib/landing/domain-auto-connect";
 
 export const runtime = "nodejs";
 
@@ -56,7 +57,9 @@ export async function PATCH(request: Request) {
   }
   try {
     if (!(await markDomainRegistered(parsed.data.orderId))) return privateJson({ error: { code: "NOT_FOUND", message: "결제된 도메인 구매 주문을 찾을 수 없습니다." } }, { status: 404 });
-    return privateJson({ orders: await listDomainPurchaseOrders() });
+    // 등록 완료와 함께 연결도 시작하고 사장님께 알린다 — 실패해도 등록 완료는 그대로, 경고만 보인다
+    const connection = await startRegisteredDomainConnection(parsed.data.orderId);
+    return privateJson({ orders: await listDomainPurchaseOrders(), connection: { connected: connection.connected, hostname: connection.hostname, notified: connection.notified }, warning: connection.warning });
   } catch {
     return privateJson({ error: { code: "DOMAIN_ORDER_UPDATE_FAILED", message: "등록 완료로 바꾸지 못했습니다." } }, { status: 503 });
   }

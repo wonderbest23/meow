@@ -312,6 +312,8 @@ export type LandingLeadRecord = LandingLeadInput & {
   id: string;
   siteId: string;
   createdAt: string;
+  /** 사장님이 '처리 완료'를 누른 시각. null 이면 처리 전, undefined 면 칸이 아직 없다(마이그레이션 전 — 단추를 숨긴다) */
+  handledAt?: string | null;
 };
 
 export const landingEventSchema = z.object({
