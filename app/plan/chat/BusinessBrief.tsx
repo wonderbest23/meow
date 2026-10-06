@@ -4,7 +4,7 @@ import { useState, type ReactNode } from "react";
 import { MessageSquareText, PencilLine } from "lucide-react";
 import { currentBusinessDesign, currentNextAction, type CoachField, type CoachState } from "../../../lib/plan-builder/coach";
 import BriefEditor, { type BriefPatch } from "./BriefEditor";
-import { briefTextParts, COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
+import { briefTextParts, COACH_FIELD_LABELS, coachFieldDisplay } from "../../../lib/plan-builder/coach-presentation";
 import styles from "./page.module.css";
 
 function BriefText({ text }: { text: string }) {
@@ -24,7 +24,7 @@ export default function BusinessBrief({ coach, changed, onEdit, onSave, onDirty,
     const field = coach.fields.find(item => item.key === key);
     if (!field) return null;
     return <div key={key} className={`${styles.fact} ${changed.includes(key) ? styles.changed : ""}`}>
-      <dt><span className={styles.factLabel}>{COACH_FIELD_LABELS[key]}</span><span className={styles.basis}>{field.basis === "user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd><BriefText text={field.value} /></dd>
+      <dt><span className={styles.factLabel}>{COACH_FIELD_LABELS[key]}</span><span className={styles.basis}>{field.basis === "user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd><BriefText text={coachFieldDisplay(field.value)} /></dd>
     </div>;
   });
   if (editing) return <BriefEditor coach={coach} section={section} onDirty={onDirty} onClose={() => setEditing(false)} onSave={async patch => { await onSave(patch); setSaved(true); }} />;

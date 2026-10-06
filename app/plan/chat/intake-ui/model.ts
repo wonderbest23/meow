@@ -22,7 +22,7 @@ const resourceEditorSchema = z.object({
   quote: resourceQuoteSchema.extend({ raw: z.string().max(120), reference: z.string().max(1000), includedItems: z.string().max(1000), context: resourceContextDraftSchema, confirmed: z.boolean(), expiresAt: z.string().max(40) }).optional(),
 }).strict();
 /** `hint` is display-only: the previous stored answer when it could not be seeded into a control (never sent). */
-export type AnswerDraft = { text: string; selected: string[]; custom: boolean; unknown?: boolean; ksic?: string; label?: string; hint?: string; dismissedMention?: string };
+export type AnswerDraft = { text: string; selected: string[]; custom: boolean; unknown?: boolean; ksic?: string; /** 고른 세부 업종 이름(화초 및 식물 소매업) — 입력칸에 큰 분류 대신 보인다 */ ksicName?: string; label?: string; hint?: string; dismissedMention?: string };
 export type PendingRequest = { command: IntakeCommand; answer?: AnswerDraft; text?: string; intro?: string | null; conflict?: boolean; composer?: { text: string; mode: ComposerMode; questionId?: string } };
 export type IntakeDraft = {
   version: 1;

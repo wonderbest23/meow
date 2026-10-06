@@ -219,7 +219,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>살 주소를 먼저 골라 주세요</h1>
-          <p className={styles.desc}>홈페이지 화면의 ‘회사 이름으로 된 주소 쓰기’에서 원하는 주소(.com·.kr·.co.kr)가 비어 있는지 확인한 뒤 결제할 수 있어요.</p>
+          <p className={styles.desc}>홈페이지 화면 아래 ‘내 도메인 연결’에서 원하는 주소(.com·.kr·.co.kr)가 비어 있는지 확인한 뒤 결제할 수 있어요.</p>
           <Link href={laterHref} className={styles.primary}>홈페이지로 돌아가기</Link>
         </div>
       </div>

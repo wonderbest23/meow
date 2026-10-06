@@ -78,7 +78,7 @@ export async function startRegisteredDomainConnection(orderId: string, dependenc
           text: [
             `${request.domain} 을(를) 사장님 명의로 등록했어요.`,
             "",
-            `홈페이지를 공개한 뒤, 홈페이지 화면의 '회사 이름으로 된 주소 쓰기'에서 '연결 시작'을 누르면 ${hostname} 으로 열려요.`,
+            `홈페이지를 공개한 뒤, 홈페이지 화면 아래 '내 도메인 연결'에서 '연결 시작'을 누르면 ${hostname} 으로 열려요.`,
             homepageManageUrl(planId),
           ].join("\n"),
         }, deps.email.key, `domain-registered-unpublished/${orderId}`, deps.emailTransport);
@@ -116,7 +116,7 @@ export async function startRegisteredDomainConnection(orderId: string, dependenc
           `${request.domain} 등록을 마치고 홈페이지 연결을 시작했어요.`,
           "",
           `보안 인증서가 발급되면 ${hostname} 으로 홈페이지가 열려요. 보통 몇 분에서 하루 안에 끝나요.`,
-          "따로 하실 일은 없어요. 진행 상황은 홈페이지 화면의 '회사 이름으로 된 주소 쓰기'에서 볼 수 있어요.",
+          "따로 하실 일은 없어요. 진행 상황은 홈페이지 화면 아래 '내 도메인 연결'에서 볼 수 있어요.",
           homepageManageUrl(planId),
         ].join("\n"),
       }, deps.email.key, `domain-connect/${orderId}`, deps.emailTransport);
