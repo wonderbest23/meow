@@ -182,7 +182,44 @@ export async function listLandingLeads(
     marketingAgreed: lead.marketing_agreed,
     source: lead.source,
     createdAt: lead.created_at,
+    // 칸이 없으면(마이그레이션 20261006090000 전) 키 자체가 없다 — undefined 로 두어 화면이 단추를 숨긴다
+    ...("handled_at" in lead ? { handledAt: (lead.handled_at as string | null) ?? null } : {}),
   }));
+}
+
+/**
+ * 문의 '처리 완료' 표시·해제 — 이 프로젝트 홈페이지의 문의일 때만.
+ * 주인 확인은 getLandingForProject(주인 해시로 프로젝트를 찾는다)가 한다.
+ * 결과: 바뀐 처리 시각 / null(이 홈페이지의 문의가 아님) / "unsupported"(칸이 아직 없음)
+ */
+export async function setLandingLeadHandled(
+  projectId: string,
+  guestTokenHash: string,
+  leadId: string,
+  handled: boolean,
+): Promise<{ handledAt: string | null } | null | "unsupported"> {
+  const site = await getLandingForProject(projectId, guestTokenHash);
+  if (!site) return null;
+  const handledAt = handled ? new Date().toISOString() : null;
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const lead = demo.leads.find((item) => item.id === leadId && item.siteId === site.id);
+    if (!lead) return null;
+    lead.handledAt = handledAt;
+    return { handledAt };
+  }
+  const { data, error } = await supabase
+    .from("landing_leads")
+    .update({ handled_at: handledAt })
+    .eq("id", leadId)
+    .eq("site_id", site.id)
+    .select("id, handled_at");
+  if (error) {
+    if (error.message?.includes("handled_at")) return "unsupported";
+    throw error;
+  }
+  if (!data?.length) return null;
+  return { handledAt: (data[0].handled_at as string | null) ?? null };
 }
 
 /**
@@ -520,6 +557,7 @@ export async function createLandingLead(
       id: crypto.randomUUID(),
       siteId,
       createdAt: now,
+      handledAt: null,
     };
     demo.leads.push(record);
     return clone(record);

@@ -14857,6 +14857,18 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-leads span { font-size: 13px; color: #1c1d21; }
 .hk-leads p { margin: 6px 0 0; font-size: 13px; color: #5e5e72; white-space: pre-wrap; }
 .hk-leads small { display: block; margin-top: 4px; color: #8181a5; font-size: 11.5px; }
+/* 문의 바로 답하기 — 휴대폰에서 엄지로 누르기 쉽게 44px, 좁으면 두 줄로 */
+.hk-leads li > div { min-width: 0; flex: 1; }
+.hk-leads li[data-handled] { background: #f7f8fa; }
+.hk-leads li[data-handled] i { background: #a7adbb; }
+.hk-leads strong .hk-badge { margin-left: 6px; vertical-align: middle; }
+.hk-lead-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.hk-lead-btn { min-height: 44px; padding: 0 14px; border: 1px solid #d8dce6; border-radius: 10px; background: #fff; color: #1c1d21; font-size: 14px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; cursor: pointer; }
+.hk-lead-btn:hover { border-color: #3272db; color: #3272db; }
+.hk-lead-done.on { border-color: #1f9d55; color: #1f9d55; background: #effaf3; }
+.hk-lead-btn:disabled { opacity: .6; cursor: default; }
+.hk-lead-error { flex-basis: 100%; color: #c0392b !important; }
+@media (max-width: 640px) { .hk-lead-actions .hk-lead-btn { flex: 1 1 calc(50% - 4px); } }
 @media (max-width: 640px) { .hk-grid { grid-template-columns: 1fr; } .hk-actions { width: 100%; } .hk-actions button { flex: 1; justify-content: center; } }
 .hk { padding-top: 10px; }
 /* 킷 코드가 사진에 pointer-events:none 을 박아 둔다 — 편집 중에는 눌러야 한다 */

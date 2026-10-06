@@ -23,6 +23,7 @@ import PlanLoading from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import { careHref, homepageHref } from "../../../lib/plan-builder/journey";
+import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
 import { Rocket, Save, LoaderCircle } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
@@ -587,6 +588,8 @@ export default function PlanHomepagePage() {
           <small>홈페이지를 고치고, 들어온 문의와 실적을 관리해요</small>
         </Link>
       )}
+      {/* 그다음 — 사업자등록·신고·홍보 대행 상담(목록은 유지보수 화면 한 곳에) */}
+      {phase === "ready" && site?.status === "published" && screenPlanId && !sample && <NextServicesCard planId={screenPlanId} />}
     </div></div>
     </BusinessAppChrome></main>
   );
