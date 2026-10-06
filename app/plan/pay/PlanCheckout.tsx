@@ -11,7 +11,7 @@ import { homepageHref, payBackHref } from "../../../lib/plan-builder/journey";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, REGEN_PACK_NAME } from "../../../lib/payments/domain";
-import { normalizePurchaseDomain } from "../../../lib/landing/domain-purchase";
+import { normalizePurchaseDomain, validateRegistrant } from "../../../lib/landing/domain-purchase";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -27,7 +27,7 @@ const SUPPLY: Record<string, string> = {
   regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해집니다.`,
   bundle: "결제가 승인되면 바로 이 문서의 전체 섹션과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작됩니다.",
   domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작됩니다.",
-  "domain-purchase": "결제가 승인되면 1년 호스팅 기간이 시작되고, 영업일 1~2일 안에 이용자 명의로 도메인을 등록해 연결 준비를 마칩니다. 등록에 필요한 정보는 계정 이메일로 요청할 수 있습니다.",
+  "domain-purchase": "결제가 승인되면 1년 호스팅 기간이 시작되고, 아래 명의자 이름으로 도메인을 등록해 연결 준비를 마칩니다(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일).",
   tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 사용할 수 있습니다.",
 };
 
@@ -82,6 +82,10 @@ export default function PlanCheckout() {
   const [noticePhone, setNoticePhone] = useState("");
   const phoneDigits = noticePhone.replace(/[\s-]/g, "");
   const phoneInvalid = phoneDigits !== "" && !/^010\d{8}$/.test(phoneDigits);
+  /* 도메인 명의자 — 이용자 명의 등록에 필요(예전엔 결제 뒤 이메일로 받았다). .com 은 결제 직후 자동 등록 */
+  const [registrant, setRegistrant] = useState({ name: "", phone: "", postalCode: "", address: "", addressDetail: "" });
+  const registrantCheck = isDomainPurchase ? validateRegistrant(registrant) : null;
+  const setReg = (key: keyof typeof registrant) => (event: { target: { value: string } }) => setRegistrant(current => ({ ...current, [key]: event.target.value }));
   const [info, setInfo] = useState<{ price: number; productName: string; paid: boolean; payable: boolean; authenticated: boolean; unavailable?: boolean } | null>(null);
   const [homepageInfo, setHomepageInfo] = useState<{ price: number; editable: boolean } | null>(null);
   const started = useRef(false);
@@ -119,6 +123,7 @@ export default function PlanCheckout() {
   async function startPayment() {
     if (started.current || !agreed) return;
     if (phoneInvalid) { setPhase("error"); setMessage("휴대폰 번호를 010으로 시작하는 11자리로 적어 주세요. 비워 둬도 결제할 수 있어요."); return; }
+    if (registrantCheck && !registrantCheck.ok) { setPhase("error"); setMessage(registrantCheck.message); return; }
     started.current = true;
     setPhase("preparing");
     setMessage(null);
@@ -126,7 +131,7 @@ export default function PlanCheckout() {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}), ...(purchaseDomain ? { domain: purchaseDomain } : {}), ...(phoneDigits ? { noticePhone: phoneDigits } : {}), terms: agreements }),
+        body: JSON.stringify({ planId, planType, ...(product !== "plan" ? { product } : {}), ...(purchaseDomain ? { domain: purchaseDomain } : {}), ...(phoneDigits ? { noticePhone: phoneDigits } : {}), ...(registrantCheck?.ok ? { registrant: registrantCheck.value } : {}), terms: agreements }),
       });
       const data = (await res.json()) as {
         clientId?: string; sdkUrl?: string; orderId?: string; amount?: number; goodsName?: string; buyerEmail?: string | null;
@@ -287,6 +292,17 @@ export default function PlanCheckout() {
         {!(info && !info.payable) && (
           <section className={styles.terms} aria-label="결제 전 필수 확인">
             <p className={styles.supply}><strong>제공 시점</strong>{SUPPLY[product]}</p>
+            {isDomainPurchase ? <fieldset className={styles.registrant}>
+              <legend>도메인 명의자 <small>(도메인은 이 분 이름으로 등록돼요)</small></legend>
+              <label className={styles.phone}><span>이름(실명)</span><input autoComplete="name" value={registrant.name} onChange={setReg("name")} placeholder="홍길동" /></label>
+              <label className={styles.phone}><span>휴대폰</span><input type="tel" inputMode="numeric" autoComplete="tel" value={registrant.phone} onChange={setReg("phone")} placeholder="01012345678" maxLength={13} /></label>
+              <div className={styles.registrantRow}>
+                <label className={styles.phone}><span>우편번호</span><input inputMode="numeric" autoComplete="postal-code" value={registrant.postalCode} onChange={setReg("postalCode")} placeholder="03900" maxLength={5} /></label>
+                <label className={styles.phone}><span>주소</span><input autoComplete="street-address" value={registrant.address} onChange={setReg("address")} placeholder="서울특별시 마포구 월드컵로 12" /></label>
+              </div>
+              <label className={styles.phone}><span>상세 주소 <small>(선택)</small></span><input value={registrant.addressDetail} onChange={setReg("addressDetail")} placeholder="2층 201호" /></label>
+              <small>등록기관(도메인 관리 기관)에 그대로 전달돼요. 사업자등록증의 주소와 같으면 좋아요.</small>
+            </fieldset> : null}
             <label className={styles.phone}>
               <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
               <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} />
@@ -306,7 +322,7 @@ export default function PlanCheckout() {
                 {product === "regen" ? (
                   <><strong>추가 횟수 환불 기준에 동의</strong><small>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</small></>
                 ) : product === "domain-purchase" ? (
-                  <><strong>도메인 구매·연결 환불 기준에 동의</strong><small>도메인을 등록하기 전에는 전액 환불합니다. 등록한 뒤에는 첫해 등록비 {DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원을 뺀 {DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 연결·호스팅 환불 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다. 등록한 도메인은 이용자 명의이며, 환불하거나 해지해도 도메인은 이용자에게 남습니다. 등록을 위해 등록 명의자 이름·이메일·연락처·주소를 도메인 등록기관(㈜가비아 등)에 제공하는 데 동의합니다.</small></>
+                  <><strong>도메인 구매·연결 환불 기준에 동의</strong><small>도메인을 등록하기 전에는 전액 환불합니다. 등록한 뒤에는 첫해 등록비 {DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원을 뺀 {DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 연결·호스팅 환불 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다. 등록한 도메인은 이용자 명의이며, 환불하거나 해지해도 도메인은 이용자에게 남습니다. 등록을 위해 등록 명의자 이름·이메일·연락처·주소를 도메인 등록기관(.com 은 Cloudflare, Inc.(미국), .kr·.co.kr 은 ㈜가비아 등)에 제공하는 데 동의합니다.</small></>
                 ) : product === "domain" ? (
                   <><strong>도메인 연결 환불 기준에 동의</strong><small>연결을 완료하기 전이나 연결 완료 후 7일 이내에는 전액 환불하고, 그 이후에는 남은 개월 수만큼 월할로 환불합니다(사용한 달은 한 달로 계산, 수수료 없음). 가비아 등에서 직접 구매한 도메인 등록비는 환불 대상이 아닙니다.</small></>
                 ) : product === "tokens" ? (
@@ -329,7 +345,7 @@ export default function PlanCheckout() {
             type="button"
             className={styles.primary}
             onClick={startPayment}
-            disabled={!agreed || phase === "preparing" || phase === "opening"}
+            disabled={!agreed || phase === "preparing" || phase === "opening" || (registrantCheck !== null && !registrantCheck.ok)}
           >
             {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : "카드로 결제하기"}
           </button>

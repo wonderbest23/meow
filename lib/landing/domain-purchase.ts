@@ -25,7 +25,33 @@ export function normalizePurchaseDomain(input: string): string | null {
 }
 
 export type DomainRequestStatus = "requested" | "registered";
-export type DomainRequest = { domain: string; status: DomainRequestStatus; registeredAt?: string };
+/*
+ * 도메인 명의자 — 이용자 명의로 등록하려면 등록기관에 실명·연락처·주소가 필요하다.
+ * 예전엔 결제 뒤 계정 이메일로 따로 받았다. 결제 화면에서 받아 두면 .com 은 자동 등록, .kr 은 운영자가 바로 등록한다.
+ */
+export type DomainRegistrant = { name: string; phone: string; postalCode: string; address: string; addressDetail: string };
+export type DomainRequest = { domain: string; status: DomainRequestStatus; registeredAt?: string; registrant?: DomainRegistrant };
+
+export function validateRegistrant(input: unknown): { ok: true; value: DomainRegistrant } | { ok: false; message: string } {
+  const record = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
+  const text = (key: string, max: number) => (typeof record[key] === "string" ? (record[key] as string).replace(/\s+/g, " ").trim().slice(0, max) : "");
+  const name = text("name", 40), phone = text("phone", 20).replace(/[\s-]/g, ""), postalCode = text("postalCode", 10).replace(/\D/g, ""), address = text("address", 120), addressDetail = text("addressDetail", 80);
+  if (name.length < 2) return { ok: false, message: "도메인 명의자 이름(실명)을 적어 주세요." };
+  if (!/^01[016789]\d{7,8}$/.test(phone)) return { ok: false, message: "명의자 휴대폰 번호를 확인해 주세요." };
+  if (!/^\d{5}$/.test(postalCode)) return { ok: false, message: "우편번호 5자리를 적어 주세요." };
+  if (address.split(" ").length < 3) return { ok: false, message: "주소를 시·도부터 도로명까지 적어 주세요(예: 서울특별시 마포구 월드컵로 12)." };
+  return { ok: true, value: { name, phone, postalCode, address, addressDetail } };
+}
+
+/** 등록기관 형식 — 시·도 / 시·군·구 / 나머지, 전화 +82.10… */
+export function registrantContact(registrant: DomainRegistrant, email: string) {
+  const [state, city, ...rest] = registrant.address.split(" ");
+  return {
+    email,
+    phone: `+82.${registrant.phone.replace(/^0/, "")}`,
+    postal_info: { name: registrant.name, address: { street: [rest.join(" "), registrant.addressDetail].filter(Boolean).join(", "), city, state, postal_code: registrant.postalCode, country_code: "KR" } },
+  };
+}
 
 export function readDomainRequest(value: unknown): DomainRequest | null {
   if (!value || typeof value !== "object") return null;
@@ -33,7 +59,8 @@ export function readDomainRequest(value: unknown): DomainRequest | null {
   const domain = typeof record.domain === "string" ? normalizePurchaseDomain(record.domain) : null;
   if (!domain) return null;
   const status: DomainRequestStatus = record.status === "registered" ? "registered" : "requested";
-  return { domain, status, ...(typeof record.registeredAt === "string" ? { registeredAt: record.registeredAt } : {}) };
+  const registrant = record.registrant ? validateRegistrant(record.registrant) : null;
+  return { domain, status, ...(typeof record.registeredAt === "string" ? { registeredAt: record.registeredAt } : {}), ...(registrant?.ok ? { registrant: registrant.value } : {}) };
 }
 
 /* 등록 여부 확인(RDAP) — 등록돼 있으면 200, 없으면 404. 그 밖은 '모름' */

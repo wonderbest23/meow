@@ -2,6 +2,7 @@ import "server-only";
 import { withUsageContext } from "../llm/usage-context";
 import { sweepDueLeadNotifications } from "../landing/lead-notifications";
 import { runWeeklyReportsNow } from "../landing/weekly-report-runner";
+import { pollAutoRegistrations } from "../landing/domain-registrar";
 import { runTaxRemindersNow } from "../operations/tax-reminders";
 import { PLAN_BLUEPRINT } from "./blueprint";
 import { generateSection } from "./section-generator";
@@ -272,7 +273,9 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
         const weekly = await runWeeklyReportsNow().catch(() => ({ error: "WEEKLY_REPORT_FAILED" }));
         // 세금 신고 마감 문자 — 마감 7일·1일 전 9시 이후에만 일한다(그 밖에는 바로 돌아온다)
         const tax = await runTaxRemindersNow().catch(() => ({ error: "TAX_REMINDER_FAILED" }));
-        return Response.json({ result: { ok: true, ...leads, weekly, tax } });
+        // 도메인 자동 등록(.com) 진행 상태 확인 — 끝나면 등록 완료·연결·알림까지
+        const domains = await pollAutoRegistrations().catch(() => ({ error: "DOMAIN_REGISTRAR_FAILED" }));
+        return Response.json({ result: { ok: true, ...leads, weekly, tax, domains } });
       }
       case "artifactChunk": return Response.json({ result: await executeArtifactChunk(input.job.ownerHash, input.job.planId, input.job.jobId, input.job.index, input.job.attempt) });
     }
