@@ -8,6 +8,8 @@ import { findService, SERVICE_CATALOG, SERVICE_GROUPS, servicePriceLabel, type S
 import { EMPTY_SIGNALS, orderServices, serviceBadges, serviceSignalsFromPlan } from "../lib/services/recommend";
 import { SERVICE_REQUEST_STATUS_LABELS, type MyServiceRequest } from "../lib/services/requests";
 import { careHref } from "../lib/plan-builder/journey";
+import { businessStateLabel, formatBusinessNumber, mailOrderStateLabel, normalizeBusinessNumber, type BusinessCheck } from "../lib/public-data/business-check";
+import type { ServiceBadge } from "../lib/services/recommend";
 import { loadState, type Plan } from "../lib/plan-builder/plan-store";
 import styles from "./next-services.module.css";
 
@@ -44,7 +46,47 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
   const [done, setDone] = useState("");
   const [loginNext, setLoginNext] = useState("/plan");
 
-  const badges = useMemo(() => serviceBadges(serviceSignalsFromPlan(plan, homepagePublished)), [plan, homepagePublished]);
+  const baseBadges = useMemo(() => serviceBadges(serviceSignalsFromPlan(plan, homepagePublished)), [plan, homepagePublished]);
+  /* 내 사업자 확인 — 국세청·공정위 조회로 이미 끝난 일은 '완료'로(그 카드는 뒤로) */
+  const [check, setCheck] = useState<BusinessCheck | null>(null);
+  const [checkAvailable, setCheckAvailable] = useState(false);
+  const [bno, setBno] = useState("");
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState("");
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(`/api/plan/business-check?planId=${encodeURIComponent(plan.id)}`, { cache: "no-store", signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const data = await response.json().catch(() => ({}));
+        setCheckAvailable(data.available === true || Boolean(data.check));
+        if (data.check) { setCheck(data.check); setBno(formatBusinessNumber(data.check.businessNumber)); }
+      })
+      .catch(() => undefined);
+    return () => controller.abort();
+  }, [plan.id]);
+  const badges = useMemo(() => {
+    const merged: Record<string, ServiceBadge> = { ...baseBadges };
+    if (check?.business?.state === "active") {
+      merged["business-registration"] = { tone: "done", label: "완료", reason: "국세청에서 사업자등록이 확인됐어요." };
+      if (merged["soho-office"]?.tone === "first") delete merged["soho-office"];
+    }
+    if (check?.mailOrder?.state === "reported") merged["mail-order-report"] = { tone: "done", label: "완료", reason: `통신판매업 신고가 확인됐어요${check.mailOrder.reportNo ? ` (${check.mailOrder.reportNo})` : ""}.` };
+    return merged;
+  }, [baseBadges, check]);
+  async function runCheck(event: FormEvent) {
+    event.preventDefault();
+    if (checking) return;
+    if (!normalizeBusinessNumber(bno)) { setCheckError("사업자등록번호 10자리를 확인해 주세요."); return; }
+    setChecking(true); setCheckError("");
+    try {
+      const response = await fetch("/api/plan/business-check", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: plan.id, businessNumber: bno }) });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error?.message ?? "확인하지 못했어요.");
+      setCheck(data.check);
+    } catch (error) { setCheckError(error instanceof Error ? error.message : "확인하지 못했어요."); }
+    finally { setChecking(false); }
+  }
 
   useEffect(() => {
     setLoginNext(`${window.location.pathname}${window.location.search}#${NEXT_SERVICES_ANCHOR}`);
@@ -109,6 +151,20 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
     <p className={styles.lead}>눌러서 무엇을 해 주는지 보고 바로 신청하세요. 담당자가 전화로 안내해요.</p>
     {done ? <p className={styles.done} role="status"><CheckCircle2 size={18} aria-hidden /> {done}</p> : null}
     {state?.error ? <p className={styles.error} role="alert">{state.error}</p> : null}
+
+    {checkAvailable ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>
+      <div className={styles.verifyHead}><BadgeCheck size={18} aria-hidden /><strong>이미 등록·신고하셨나요?</strong><small>번호만 넣으면 국세청·공정위에서 바로 확인해요</small></div>
+      <div className={styles.verifyRow}>
+        <input inputMode="numeric" autoComplete="off" value={bno} onChange={(event) => setBno(event.target.value)} placeholder="사업자등록번호 10자리" aria-label="사업자등록번호" />
+        <button type="submit" disabled={checking}>{checking ? <LoaderCircle className="spin" size={16} aria-hidden /> : null} 확인</button>
+      </div>
+      {checkError ? <p className={styles.error} role="alert">{checkError}</p> : null}
+      {check ? <ul className={styles.verifyResult}>
+        <li data-ok={check.business?.state === "active" || undefined}><span>사업자등록</span><b>{businessStateLabel(check.business)}{check.business?.taxType ? ` · ${check.business.taxType.replace(/^부가가치세\s*/, "")}` : ""}</b></li>
+        <li data-ok={check.mailOrder?.state === "reported" || undefined}><span>통신판매업</span><b>{mailOrderStateLabel(check.mailOrder)}</b></li>
+        <li><small>{new Date(check.checkedAt).toLocaleString("ko-KR")} 기준</small></li>
+      </ul> : null}
+    </form> : null}
 
     <div className={styles.tabs} role="tablist" aria-label="서비스 종류">
       {[{ id: "all" as const, title: "전체" }, ...SERVICE_GROUPS].map((group) => <button key={group.id} type="button" role="tab" aria-selected={tab === group.id} className={tab === group.id ? styles.tabOn : ""} onClick={() => setTab(group.id)}>{group.title}</button>)}

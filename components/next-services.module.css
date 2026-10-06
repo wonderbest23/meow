@@ -129,3 +129,19 @@
   .overlay { place-items: end center; padding: 0; }
   .sheet { width: 100%; max-height: 92dvh; border-radius: 20px 20px 0 0; padding: 22px 18px calc(18px + env(safe-area-inset-bottom)); }
 }
+
+/* 내 사업자 확인 — 번호 하나로 등록·신고 여부 */
+.verify { margin: 4px 0 16px; padding: 14px 16px; border: 1px solid #d7e5f8; border-radius: 14px; background: #f5f9ff; }
+.verifyHead { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; color: #1d5fd1; }
+.verifyHead strong { color: #202632; font-size: 15px; }
+.verifyHead small { color: #5d6b7e; font-size: 13px; }
+.verifyRow { display: flex; gap: 8px; margin-top: 10px; }
+.verifyRow input { flex: 1; min-width: 0; min-height: 46px; padding: 0 12px; border: 1px solid #cfdcec; border-radius: 10px; background: #fff; font: inherit; font-size: 16px; }
+.verifyRow button { display: inline-flex; align-items: center; gap: 6px; min-height: 46px; padding: 0 18px; border: 0; border-radius: 10px; background: #202632; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+.verifyResult { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 6px; }
+.verifyResult li { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; }
+.verifyResult li span { color: #5d6b7e; }
+.verifyResult li[data-ok] b { color: #16824f; }
+.verifyResult li small { color: #8a96a8; font-size: 12px; }
+.ribbon[data-tone="done"] { background: #16a34a; color: #fff; }
+.product[data-badge="done"] { opacity: .78; }

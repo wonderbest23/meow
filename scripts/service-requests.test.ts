@@ -25,6 +25,11 @@ import type { Plan } from "../lib/plan-builder/plan-store";
   assert.equal(findService("nope"), undefined);
   assert.equal(servicePriceLabel({ ...SERVICE_CATALOG[0], price: "월 99,000원" }), "월 99,000원", "가격을 넣으면 그 값");
   assert.equal(SERVICE_PRICE_PENDING, "가격은 상담 후 안내");
+  // 창업 행정은 대행이 아니라 안내·전문가 연결(세무사법·행정사법) — 대신 신청·제출·대행 표현 금지
+  for (const item of SERVICE_CATALOG.filter(item => item.group === "admin")) {
+    const text = [item.title, item.summary, ...item.includes, ...item.steps].join(" ");
+    assert.doesNotMatch(text, /대행|대신\s*(신청|제출|해|챙겨)|작성·제출/, `${item.id}: 대행 표현`);
+  }
   for (const item of SERVICE_CATALOG) assert.ok(item.short && item.includes.length >= 2 && item.steps.length === 3 && item.prepare.length, `${item.id}: 상품 카드 내용`);
 }
 

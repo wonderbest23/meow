@@ -49,18 +49,23 @@ export const SERVICE_GROUPS: readonly ServiceGroup[] = [
 ];
 
 export const SERVICE_CATALOG: readonly ServiceItem[] = [
-  { id: "business-registration", group: "admin", title: "사업자등록 대행", short: "사업자등록", icon: "badge", tone: "blue", duration: "보통 3~5일",
-    summary: "업종 코드 고르기부터 세무서 신청까지 대신 챙겨 드려요.", who: "아직 사업자등록증이 없는 분",
-    includes: ["내 사업에 맞는 업종 코드 골라 드림", "간이·일반 과세 중 유리한 쪽 안내", "홈택스 신청과 등록증 받기까지"],
-    steps: ["전화로 사업 내용 확인", "필요 서류 받고 신청", "사업자등록증 전달"], prepare: ["신분증", "사업장 주소(임대차계약서 또는 비상주 계약서)"] },
-  { id: "mail-order-report", group: "admin", title: "통신판매업 신고 대행", short: "통신판매업 신고", icon: "cart", tone: "green", duration: "보통 3~7일",
-    summary: "온라인으로 팔기 전에 필요한 구청 신고를 대신 해 드려요.", who: "홈페이지·스마트스토어·SNS로 주문을 받는 분",
-    includes: ["구매안전서비스 확인증 발급 안내", "정부24 신고서 작성·제출", "신고증 받기와 면허세 안내"],
-    steps: ["판매 방식 확인", "서류 준비·신고", "신고증 전달"], prepare: ["사업자등록증", "통장 사본(구매안전서비스용)"] },
-  { id: "industry-license", group: "admin", title: "업종별 인허가·영업신고 대행", short: "인허가·영업신고", icon: "shield", tone: "violet", duration: "업종마다 달라요",
-    summary: "음식점·미용실처럼 따로 신고가 필요한 업종의 서류를 준비해 드려요.", who: "식품·위생·교육 등 신고 업종을 하는 분",
-    includes: ["내 업종에 필요한 신고·허가 확인", "위생교육·보건증 등 준비물 정리", "구청 신고서 작성·제출"],
-    steps: ["업종·장소 확인", "준비물 안내·서류 작성", "신고 완료 안내"], prepare: ["사업장 주소", "업종 설명(무엇을 파는지)"] },
+  /*
+   * 창업 행정 4종은 '대행'이 아니다 — 세무사법(세무대리·알선 금지)·행정사법(보수 받는 서류 작성·제출 금지) 때문에
+   * 오늘창업은 신청 방법 안내·서류 준비 도움·자격 있는 전문가(세무사·행정사) 연결까지만 한다. 제출은 사장님 본인이 한다.
+   * 변호사 확인 전까지 '대신 신청/제출/대행' 표현을 쓰지 않는다(scripts/service-requests.test.ts 가 막는다).
+   */
+  { id: "business-registration", group: "admin", title: "사업자등록 도움", short: "사업자등록", icon: "badge", tone: "blue", duration: "보통 3~5일",
+    summary: "업종 코드·과세 유형 고르기와 홈택스 신청을 차근차근 도와드려요.", who: "아직 사업자등록증이 없는 분",
+    includes: ["내 사업에 맞는 업종 코드 찾기", "간이·일반 과세 중 무엇이 맞는지 설명", "홈택스 신청 화면 따라 하기 안내", "필요하면 세무사 연결"],
+    steps: ["전화로 사업 내용 확인", "준비물·신청 방법 안내", "등록증 나오면 자동 확인"], prepare: ["신분증", "사업장 주소(임대차계약서 또는 비상주 계약서)"] },
+  { id: "mail-order-report", group: "admin", title: "통신판매업 신고 도움", short: "통신판매업 신고", icon: "cart", tone: "green", duration: "보통 3~7일",
+    summary: "온라인으로 팔기 전에 필요한 구청 신고를 빠르게 끝내게 도와드려요.", who: "홈페이지·스마트스토어·SNS로 주문을 받는 분",
+    includes: ["구매안전서비스 확인증 받는 법", "정부24 신고 화면 따라 하기 안내", "면허세 납부까지 체크리스트", "필요하면 행정사 연결"],
+    steps: ["판매 방식 확인", "준비물·신고 방법 안내", "신고되면 자동 확인"], prepare: ["사업자등록증", "통장 사본(구매안전서비스용)"] },
+  { id: "industry-license", group: "admin", title: "업종별 인허가·영업신고 도움", short: "인허가·영업신고", icon: "shield", tone: "violet", duration: "업종마다 달라요",
+    summary: "음식점·미용실처럼 따로 신고가 필요한 업종인지 확인하고 준비를 도와드려요.", who: "식품·위생·교육 등 신고 업종을 하는 분",
+    includes: ["내 업종에 필요한 신고·허가 확인", "위생교육·보건증 등 준비물 정리", "구청 신고 순서 안내", "필요하면 행정사 연결"],
+    steps: ["업종·장소 확인", "준비물·순서 안내", "필요하면 전문가 연결"], prepare: ["사업장 주소", "업종 설명(무엇을 파는지)"] },
   { id: "soho-office", group: "admin", title: "소호·비상주 사무실 계약", short: "비상주 사무실", icon: "building", tone: "teal", duration: "보통 1~2일",
     summary: "사업자등록에 쓸 수 있는 저렴한 주소지를 찾아 계약을 도와드려요.", who: "집 주소로 등록하기 어렵거나 사무실이 따로 없는 분",
     includes: ["원하는 지역의 저렴한 주소지 추천", "사업자등록에 쓸 수 있는지 확인", "계약과 우편물 받기 안내"],

@@ -588,7 +588,7 @@ export default function PlanHomepagePage() {
           <small>홈페이지를 고치고, 들어온 문의와 실적을 관리해요</small>
         </Link>
       )}
-      {/* 그다음 — 사업자등록·신고·홍보 대행 상담(목록은 유지보수 화면 한 곳에) */}
+      {/* 그다음 — 사업자등록·신고 도움·홍보 상담(목록은 유지보수 화면 한 곳에) */}
       {phase === "ready" && site?.status === "published" && screenPlanId && !sample && <NextServicesCard planId={screenPlanId} />}
     </div></div>
     </BusinessAppChrome></main>
