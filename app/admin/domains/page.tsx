@@ -10,6 +10,8 @@ type Order = { orderId: string; domain: string; status: "requested" | "registere
   registrant?: { name: string; phone: string; postalCode: string; address: string; addressDetail: string };
   auto?: { state: string; at: string; reason: string } };
 
+const BUTTON = { width: "auto", height: 36, padding: "0 12px", gap: 4, whiteSpace: "nowrap" as const, borderRadius: 6 };
+
 /* 자동 등록(.com) 상태 — 손으로 할 일인지 한눈에 */
 const AUTO_LABEL: Record<string, string> = { checking: "자동 등록 확인 중", in_progress: "자동 등록 중", succeeded: "자동 등록 완료", manual: "손으로 처리 필요" };
 
@@ -104,10 +106,11 @@ export default function DomainOrdersAdminPage() {
             <td>{order.customerEmail ?? "-"}<small>{order.planId}</small>
               {order.registrant ? <small>명의자: {order.registrant.name} · {order.registrant.phone} · ({order.registrant.postalCode}) {order.registrant.address} {order.registrant.addressDetail}</small> : <small>명의자 정보 없음(옛 주문 — 고객에게 요청)</small>}</td>
             <td>{order.amount.toLocaleString("ko-KR")}원<small>{date(order.paidAt)}</small></td>
-            <td>{order.status === "requested" && <>
-              <button disabled={busy} onClick={() => void registered(order)}><CheckCircle2 size={16} /> 등록 완료</button>
-              <button disabled={busy} onClick={() => void refund(order)}>전액 환불</button>
-            </>}</td>
+            {/* 자동 등록이 도는 중(확인·등록 중)이면 손 단추를 숨긴다 — 같이 누르면 두 길이 겹친다. 단추는 좁은 칸에서 글자가 접히지 않게 */}
+            <td>{order.status === "requested" && !(order.auto && (order.auto.state === "checking" || order.auto.state === "in_progress")) && <div style={{ display: "flex", flexWrap: "wrap", gap: 6, minWidth: 170 }}>
+              <button style={BUTTON} disabled={busy} onClick={() => void registered(order)}><CheckCircle2 size={16} /> 등록 완료</button>
+              <button style={BUTTON} disabled={busy} onClick={() => void refund(order)}>전액 환불</button>
+            </div>}</td>
           </tr>)}</tbody>
         </table></div>
         {orders.length === 0 && <p className={styles.empty}>아직 도메인 구매 주문이 없습니다</p>}
