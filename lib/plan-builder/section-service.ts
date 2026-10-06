@@ -269,7 +269,8 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
       case "completeProposalUpdate": return Response.json({ result: await executeProposalUpdate(input.job) });
       case "sweepLeadNotifications": {
         // 같은 5분 예약 실행에서 주간 리포트도 몇 곳씩 보낸다 — 리포트가 실패해도 문의 알림 재시도는 그대로
-        const leads = await sweepDueLeadNotifications();
+        // 문의 재시도 조회가 실패해도 아래 주간 리포트·세금·도메인 확인은 이번 회차에 돈다
+        const leads = await sweepDueLeadNotifications().catch((error) => { console.error("[sweep] lead notifications failed", error); return { error: "LEAD_SWEEP_FAILED" }; });
         const weekly = await runWeeklyReportsNow().catch(() => ({ error: "WEEKLY_REPORT_FAILED" }));
         // 세금 신고 마감 문자 — 마감 7일·1일 전 9시 이후에만 일한다(그 밖에는 바로 돌아온다)
         const tax = await runTaxRemindersNow().catch(() => ({ error: "TAX_REMINDER_FAILED" }));

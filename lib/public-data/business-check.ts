@@ -67,7 +67,8 @@ export function parseFtcMailOrder(json: unknown): MailOrderStatus | null {
 type Fetch = typeof fetch;
 
 function serviceKey(): string {
-  return (process.env.DATA_GO_KR_SERVICE_KEY ?? "").trim();
+  // 같은 공공데이터포털 계정 키 — 상권 API 에 쓰는 DATA_GO_KR_API_KEY 만 있어도 쓴다
+  return (process.env.DATA_GO_KR_SERVICE_KEY || process.env.DATA_GO_KR_API_KEY || "").trim();
 }
 
 export function publicDataConfigured(): boolean {

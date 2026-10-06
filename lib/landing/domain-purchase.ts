@@ -30,7 +30,8 @@ export type DomainRequestStatus = "requested" | "registered";
  * 예전엔 결제 뒤 계정 이메일로 따로 받았다. 결제 화면에서 받아 두면 .com 은 자동 등록, .kr 은 운영자가 바로 등록한다.
  */
 export type DomainRegistrant = { name: string; phone: string; postalCode: string; address: string; addressDetail: string };
-export type DomainRequest = { domain: string; status: DomainRequestStatus; registeredAt?: string; registrant?: DomainRegistrant };
+/** renewal — 이미 사 드린 주소의 1년 갱신 결제(새로 등록하지 않는다) */
+export type DomainRequest = { domain: string; status: DomainRequestStatus; registeredAt?: string; registrant?: DomainRegistrant; renewal?: boolean };
 
 export function validateRegistrant(input: unknown): { ok: true; value: DomainRegistrant } | { ok: false; message: string } {
   const record = (input && typeof input === "object" ? input : {}) as Record<string, unknown>;
@@ -60,7 +61,7 @@ export function readDomainRequest(value: unknown): DomainRequest | null {
   if (!domain) return null;
   const status: DomainRequestStatus = record.status === "registered" ? "registered" : "requested";
   const registrant = record.registrant ? validateRegistrant(record.registrant) : null;
-  return { domain, status, ...(typeof record.registeredAt === "string" ? { registeredAt: record.registeredAt } : {}), ...(registrant?.ok ? { registrant: registrant.value } : {}) };
+  return { domain, status, ...(typeof record.registeredAt === "string" ? { registeredAt: record.registeredAt } : {}), ...(registrant?.ok ? { registrant: registrant.value } : {}), ...(record.renewal === true ? { renewal: true } : {}) };
 }
 
 /* 등록 여부 확인(RDAP) — 등록돼 있으면 200, 없으면 404. 그 밖은 '모름' */

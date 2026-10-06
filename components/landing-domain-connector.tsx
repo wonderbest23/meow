@@ -192,7 +192,7 @@ export function LandingDomainConnector({
       {purchase && !connectedHostname && entitlement?.active ? (
         <div className="domain-service-note purchase" role="status"><CheckCircle2 /><p>{purchase.status === "registered"
           ? <><strong>{purchase.domain}</strong> 등록을 마쳤어요. 연결 설정(DNS)도 해 두었으니 아래 ‘연결 시작’만 눌러 주세요.</>
-          : <><strong>{purchase.domain}</strong> 등록을 진행하고 있어요. 보통 영업일 1~2일 걸리고, 등록에 필요한 정보는 계정 이메일로 여쭤볼 수 있어요. 끝나면 이 화면에서 ‘연결 시작’만 누르면 됩니다.</>}</p></div>
+          : <><strong>{purchase.domain}</strong> 등록을 진행하고 있어요. .com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일 걸려요. 결제 때 적어 주신 명의자 이름으로 등록해요. 끝나면 이 화면에서 ‘연결 시작’만 누르면 됩니다.</>}</p></div>
       ) : null}
       {!connectedHostname ? (
         <div className="domain-connect-form">

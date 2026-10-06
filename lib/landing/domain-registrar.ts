@@ -21,21 +21,12 @@ import { startRegisteredDomainConnection } from "./domain-auto-connect";
  * Cloudflare 대시보드에서 결제수단·기본 등록인 연락처·등록 약관 동의가 먼저 돼 있어야 한다.
  */
 
-export const REGISTRAR_API_TLDS = ["com"] as const;
+export { REGISTRAR_API_TLDS, registrarConfig, registrarSupports, type RegistrarConfig } from "./registrar-config";
+import { registrarConfig, registrarSupports, type RegistrarConfig } from "./registrar-config";
 export type AutoRegistrationState = "checking" | "in_progress" | "succeeded" | "manual";
-export type AutoRegistration = { state: AutoRegistrationState; at: string; reason?: string; cost?: string };
+export type AutoRegistration = { state: AutoRegistrationState; at: string; reason?: string; cost?: string; autoRenewOff?: boolean };
 
 type Fetch = typeof fetch;
-export type RegistrarConfig = { token: string; accountId: string };
-
-export function registrarConfig(env: Record<string, string | undefined> = process.env): RegistrarConfig | null {
-  const token = env.CLOUDFLARE_REGISTRAR_TOKEN?.trim() ?? "", accountId = env.CLOUDFLARE_REGISTRAR_ACCOUNT_ID?.trim() ?? "";
-  return token && /^[a-f0-9]{32}$/.test(accountId) ? { token, accountId } : null;
-}
-
-export function registrarSupports(domain: string): boolean {
-  return REGISTRAR_API_TLDS.some((tld) => domain.endsWith(`.${tld}`) && domain.split(".").length === 2);
-}
 
 const base = (config: RegistrarConfig) => `https://api.cloudflare.com/client/v4/accounts/${config.accountId}/registrar`;
 const authHeaders = (config: RegistrarConfig) => ({ Authorization: `Bearer ${config.token}`, "Content-Type": "application/json" });
@@ -73,6 +64,16 @@ export async function registrationStatus(config: RegistrarConfig, domain: string
   const response = await fetcher(`${base(config)}/registrations/${encodeURIComponent(domain)}/registration-status`, { headers: authHeaders(config) });
   if (!response.ok) return "unknown";
   return readState(await response.json().catch(() => null));
+}
+
+/*
+ * 자동 갱신 켜고 끄기 — 등록은 auto_renew 로 해 두는데(갱신 API 가 아직 없다), 환불했거나 1년 갱신 결제가 없으면
+ * Cloudflare 가 우리 결제수단으로 계속 갱신했다 → 환불 때·만료 30일 전까지 갱신 결제가 없을 때 끈다.
+ */
+export async function setAutoRenew(config: RegistrarConfig, domain: string, autoRenew: boolean, fetcher: Fetch = fetch): Promise<boolean> {
+  const response = await fetcher(`${base(config)}/registrations/${encodeURIComponent(domain)}`, { method: "PATCH", headers: authHeaders(config), body: JSON.stringify({ auto_renew: autoRenew }) });
+  if (!response.ok) console.error("[domain-registrar] auto_renew update failed", domain, response.status);
+  return response.ok;
 }
 
 /* ── 주문에 진행 상태 남기기 ── */
@@ -183,6 +184,15 @@ export async function startAutoRegistration(orderId: string, deps: { config?: Re
     if (!order || !request || request.status === "registered") return { started: false, reason: "NOT_PENDING" };
     if (!registrarSupports(request.domain)) return { started: false, reason: "TLD_MANUAL" };
     if (readAuto(order.opportunity)) return { started: false, reason: "ALREADY_STARTED" };
+    // 갱신 결제 — 새로 등록하지 않는다. Cloudflare 자동 갱신을 켜 두고(만료 전 꺼 뒀을 수 있다) 등록 완료로만 표시
+    if (request.renewal) {
+      if (!(await claimAuto(order, { state: "checking", at: new Date().toISOString() }))) return { started: false, reason: "ALREADY_STARTED" };
+      const renewed = await setAutoRenew(config, request.domain, true, deps.fetcher).catch(() => false);
+      if (!renewed) { await handOver(order, request.domain, "갱신 결제 — Cloudflare 자동 갱신을 켜지 못함, 대시보드에서 자동 갱신 확인"); return { started: false, state: "manual" }; }
+      await saveAuto(order, { state: "succeeded", at: new Date().toISOString(), reason: "갱신 — Cloudflare 자동 갱신 켬" });
+      await markDomainRegistered(order.order_id);
+      return { started: false, reason: "RENEWAL" };
+    }
     // 이용자 명의로만 등록한다 — 명의자 정보·이메일이 없으면(옛 주문) 운영자가 받아서 손으로
     const email = order.customer_email?.trim() ?? "";
     // 먼저 이 실행이 맡는다 — 동시에 온 다른 실행은 여기서 멈춰 '손으로 처리' 메일도 한 번만 간다
@@ -216,7 +226,18 @@ export async function pollAutoRegistrations(deps: { config?: RegistrarConfig | n
   for (const row of (data ?? []) as OrderRow[]) {
     const auto = readAuto(row.opportunity);
     const request = readDomainRequest(row.opportunity?.domainRequest);
-    if (!request || request.status === "registered" || auto?.state !== "in_progress") continue;
+    if (!request || request.status === "registered" || !auto) continue;
+    // 'checking' 에서 멈춘 것(응답 뒤 실행이 끊김·API 예외) — 30분 지나면 등록이 나갔는지 확인해 이어서 하거나 사람에게
+    if (auto.state === "checking") {
+      if (Date.now() - Date.parse(auto.at) < 30 * 60_000 || request.renewal) continue;
+      result.checked++;
+      const stuck = await registrationStatus(config, request.domain, deps.fetcher);
+      if (stuck === "succeeded") { if ((await finish(row, request.domain, config, deps.fetcher)) === "done") result.done++; }
+      else if (stuck === "in_progress") await saveAuto(row, { ...auto, state: "in_progress", at: new Date().toISOString() });
+      else { await handOver(row, request.domain, stuck === "unknown" ? "자동 등록이 중간에 멈춤 — 등록 요청이 나갔는지 Cloudflare 대시보드에서 확인" : `등록 ${stuck}`); result.manual++; }
+      continue;
+    }
+    if (auto.state !== "in_progress") continue;
     result.checked++;
     const state = await registrationStatus(config, request.domain, deps.fetcher);
     if (state === "succeeded") { if ((await finish(row, request.domain, config, deps.fetcher)) === "done") result.done++; }
@@ -224,5 +245,32 @@ export async function pollAutoRegistrations(deps: { config?: RegistrarConfig | n
     // 하루가 넘도록 진행 중이면 사람이 본다
     else if (Date.now() - Date.parse(auto.at) > 86_400_000) { await handOver(row, request.domain, "하루 넘게 진행 중"); result.manual++; }
   }
+  await turnOffLapsedAutoRenew(config, deps.fetcher).catch((error) => console.error("[domain-registrar] lapse check failed", error));
   return result;
 }
+
+/** 자동 등록한 .com 중 1년이 다 돼 가는데(335일) 같은 주소의 갱신 결제가 없으면 자동 갱신을 끄고 운영자에게 알린다 */
+async function turnOffLapsedAutoRenew(config: RegistrarConfig, fetcher: Fetch = fetch) {
+  const supabase = getServerSupabase();
+  if (!supabase) return;
+  const since = new Date(Date.now() - 400 * 86_400_000).toISOString();
+  const { data, error } = await supabase.from("payment_orders").select("order_id, opportunity, amount, customer_email, created_at")
+    .eq("order_name", DOMAIN_PURCHASE_PRODUCT_NAME).eq("status", "done").gte("created_at", since).limit(500);
+  if (error) throw error;
+  const rows = (data ?? []) as Array<OrderRow & { created_at: string }>;
+  for (const row of rows) {
+    const auto = readAuto(row.opportunity);
+    const request = readDomainRequest(row.opportunity?.domainRequest);
+    if (!request || auto?.state !== "succeeded" || auto.autoRenewOff || !registrarSupports(request.domain)) continue;
+    if (Date.now() - Date.parse(row.created_at) < 335 * 86_400_000) continue;
+    const renewedLater = rows.some((other) => other.order_id !== row.order_id && Date.parse(other.created_at) > Date.parse(row.created_at) && readDomainRequest(other.opportunity?.domainRequest)?.domain === request.domain);
+    if (renewedLater) continue;
+    const off = await setAutoRenew(config, request.domain, false, fetcher).catch(() => false);
+    await saveAuto(row, { ...auto, autoRenewOff: off });
+    await notifyOperator(off ? `도메인 자동 갱신 끔(갱신 결제 없음): ${request.domain}` : `도메인 자동 갱신을 끄지 못함 — 직접 확인: ${request.domain}`, [
+      `주문번호: ${row.order_id}`, `결제일: ${row.created_at.slice(0, 10)} — 1년이 다 돼 가는데 같은 주소의 갱신 결제가 없어요.`,
+      off ? "사장님이 갱신 결제를 하면 자동 갱신을 다시 켭니다." : "Cloudflare 대시보드 → 도메인 등록 → 이 주소의 자동 갱신을 꺼 주세요(안 끄면 우리 카드로 갱신됩니다).",
+    ]);
+  }
+}
+

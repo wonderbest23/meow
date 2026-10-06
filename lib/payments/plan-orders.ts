@@ -148,6 +148,8 @@ export async function getPlanOrder(orderId: string): Promise<{
   product: PlanProduct;
   /** 도메인 구매 대행 주문이면 살 주소 */
   domain: string | null;
+  /** 도메인 구매 주문이 이미 사 드린 주소의 갱신인지 */
+  renewal?: boolean;
 } | null> {
   const supabase = getServerSupabase();
   if (!supabase) return null;
@@ -172,6 +174,7 @@ export async function getPlanOrder(orderId: string): Promise<{
     /* 옛 주문에는 product 가 없다 — 그때는 전부 계획서 결제였다 */
     product: (((data.opportunity as { product?: string } | null)?.product ?? "plan") as PlanProduct),
     domain: readDomainRequest((data.opportunity as { domainRequest?: unknown } | null)?.domainRequest)?.domain ?? null,
+    renewal: readDomainRequest((data.opportunity as { domainRequest?: unknown } | null)?.domainRequest)?.renewal === true,
   };
 }
 
@@ -419,7 +422,8 @@ export async function markDomainRegistered(orderId: string, at = new Date().toIS
   if (request.status === "registered") return true;
   const { error: updateError } = await supabase
     .from("payment_orders")
-    .update({ opportunity: { ...opportunity, domainRequest: { ...request, status: "registered", registeredAt: at } }, updated_at: at })
+    // 원래 domainRequest 를 펼쳐 쓴다 — readDomainRequest 는 자동 등록 상태(auto)를 버려, 등록 완료 뒤 관리자 화면에서 사라졌다
+    .update({ opportunity: { ...opportunity, domainRequest: { ...(opportunity.domainRequest as Record<string, unknown>), ...request, status: "registered", registeredAt: at } }, updated_at: at })
     .eq("order_id", orderId)
     .eq("status", "done");
   if (updateError) throw updateError;

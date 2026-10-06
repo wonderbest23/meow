@@ -44,6 +44,7 @@ export async function POST(request: Request) {
   /* 도메인 구매 대행은 살 주소가 있어야 한다(.com·.kr·.co.kr) */
   const purchaseDomain = product === "domain-purchase" ? normalizePurchaseDomain(typeof body.domain === "string" ? body.domain : "") : null;
   // 도메인 구매는 이용자 명의로 등록한다 — 결제 전에 명의자 정보를 받는다(.com 은 결제 직후 자동 등록에 그대로 쓴다)
+  let renewal = false;
   const registrant = product === "domain-purchase" ? validateRegistrant(body.registrant) : null;
   if (registrant && !registrant.ok) return NextResponse.json({ error: "registrant_invalid", message: registrant.message }, { status: 400 });
   if (product === "domain-purchase" && !purchaseDomain) {
@@ -95,6 +96,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "homepage_required", message: "홈페이지를 먼저 열어야 도메인을 연결할 수 있습니다." }, { status: 409 });
     }
     const ent = await domainEntitlement(identity.userId, planId);
+    // 이미 사 드린 주소를 다시 결제하면 갱신 — 새로 등록하지 않고(자동 등록·연결 알림 건너뜀) 운영자에게 '갱신'으로 알린다
+    renewal = Boolean(purchaseDomain && ent.purchase?.domain === purchaseDomain);
     /* 만료 30일 전부터 갱신을 받는다 — 그 전에는 이미 산 것 */
     if (ent.active && ent.expiresAt && new Date(ent.expiresAt).getTime() - Date.now() > 30 * 86_400_000) {
       return NextResponse.json({ error: "already_paid", message: `이미 연결 중입니다 (${ent.expiresAt.slice(0, 10)}까지). 만료 30일 전부터 갱신할 수 있습니다.` }, { status: 409 });
@@ -130,7 +133,7 @@ export async function POST(request: Request) {
       planType,
       product,
       terms: Object.fromEntries(CARD_TERMS_KEYS.map((key) => [key, true])),
-      ...(purchaseDomain ? { domainRequest: { domain: purchaseDomain, status: "requested" as const, ...(registrant?.ok ? { registrant: registrant.value } : {}) } } : {}),
+      ...(purchaseDomain ? { domainRequest: { domain: purchaseDomain, status: "requested" as const, ...(registrant?.ok ? { registrant: registrant.value } : {}), ...(renewal ? { renewal: true } : {}) } } : {}),
       ...(noticePhone ? { noticePhone } : {}),
     });
     return NextResponse.json(

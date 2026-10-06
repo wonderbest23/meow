@@ -78,6 +78,7 @@ export async function processLandingLeadNotification(leadId: string, force = fal
     if (error || !data?.length) throw new Error("LANDING_NOTIFICATION_SAVE_FAILED");
   };
   const sms = dependencies ? dependencies.sms ?? null : customerSmsConfig();
+  let smsFailure: string | null = null;
   if (sms) {
     const site = await db.from("landing_sites").select("alert_phone").eq("id", row.site_id).maybeSingle();
     const phone = site.error ? null : (site.data?.alert_phone as string | null | undefined) ?? null;
@@ -97,17 +98,23 @@ export async function processLandingLeadNotification(leadId: string, force = fal
         return;
       }
       console.warn(`[landing-notification] 사장님 문자 미접수 status=${sent.status} code=${sent.code} attempt=${attempts}`);
-      // 한도·꺼짐(blocked)과 거절은 다시 보내도 같다 — 멈춘다. 확인 불가는 같은 eventId 로 다시 물어본다
-      const retry = sent.status === "uncertain" && attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS;
-      await finish({ status: retry ? "retry" : sent.status === "uncertain" ? "failed" : "blocked",
-        error_code: sent.status === "rejected" ? "provider_rejected" : sent.status === "blocked" ? "provider_unavailable" : "delivery_unknown",
-        delivery_uncertain: sent.status === "uncertain", next_attempt_at: retry ? new Date(Date.now() + notificationRetryDelay(attempts)).toISOString() : null });
-      return;
+      // 확인 불가는 같은 eventId 로 다시 물어본다(문자가 이미 갔을 수 있어 메일로 겹쳐 보내지 않는다)
+      if (sent.status === "uncertain") {
+        const retry = attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS;
+        await finish({ status: retry ? "retry" : "failed", error_code: "delivery_unknown", delivery_uncertain: true,
+          next_attempt_at: retry ? new Date(Date.now() + notificationRetryDelay(attempts)).toISOString() : null });
+        return;
+      }
+      /*
+       * 한도·꺼짐(blocked)·거절은 문자로 다시 보내도 같다 — 예전엔 여기서 멈춰, 하루 문자 한도가 찬 날의 문의는
+       * 사장님께 아무 알림도 안 갔는데 손님은 '곧 연락드릴게요' 문자를 받았다 → 메일로 이어서 보낸다.
+       */
+      smsFailure = sent.status === "rejected" ? "provider_rejected" : "provider_unavailable";
     }
   }
   const config = dependencies ? dependencies.config : landingEmailConfiguration();
   // 문자는 켜져 있는데 번호가 없으면 '받을 곳 없음', 둘 다 없으면 '발송 설정 없음'
-  if (!config) { await finish({ status: "blocked", error_code: sms ? "recipient_missing" : "missing_email_config", next_attempt_at: null }); return; }
+  if (!config) { await finish({ status: "blocked", error_code: smsFailure ?? (sms ? "recipient_missing" : "missing_email_config"), next_attempt_at: null }); return; }
   if (notificationIdempotencyExpired(row.first_attempt_at, row.delivery_uncertain)) {
     await finish({ status: "failed", error_code: "delivery_unknown", next_attempt_at: null }); return;
   }

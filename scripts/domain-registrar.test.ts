@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { checkDomain, ensureWwwRecord, registerDomain, registrarConfig, registrarSupports, registrationStatus } from "../lib/landing/domain-registrar";
+import { checkDomain, ensureWwwRecord, setAutoRenew, registerDomain, registrarConfig, registrarSupports, registrationStatus } from "../lib/landing/domain-registrar";
 import { registrantContact, validateRegistrant } from "../lib/landing/domain-purchase";
 
 void (async () => {
@@ -68,6 +68,13 @@ void (async () => {
   assert.match(dnsCalls[0].url, /\/zones\?name=flora\.com&account\.id=0123456789abcdef0123456789abcdef$/);
   assert.deepEqual(dnsCalls[2], { url: "https://api.cloudflare.com/client/v4/zones/z1/dns_records", method: "POST", body: { type: "CNAME", name: "www.flora.com", content: "connect.oneulstart.com", proxied: false, ttl: 1, comment: "oneulstart homepage" } });
   assert.equal(await ensureWwwRecord(config, "flora.com", "connect.oneulstart.com", dnsFake([200, { result: [{ id: "z1" }] }], { result: [] }, 403)), "forbidden");
+
+  // 자동 갱신 끄기·켜기 — 환불·갱신 결제 없음·갱신 결제
+  const patches: Array<{ url: string; method: string; body: unknown }> = [];
+  const patchFake = (status: number) => (async (input: RequestInfo | URL, init?: RequestInit) => { patches.push({ url: String(input), method: init?.method ?? "GET", body: JSON.parse(String(init?.body)) }); return new Response("{}", { status }); }) as typeof fetch;
+  assert.equal(await setAutoRenew(config, "flora.com", false, patchFake(200)), true);
+  assert.deepEqual(patches[0], { url: "https://api.cloudflare.com/client/v4/accounts/0123456789abcdef0123456789abcdef/registrar/registrations/flora.com", method: "PATCH", body: { auto_renew: false } });
+  assert.equal(await setAutoRenew(config, "flora.com", true, patchFake(403)), false);
 
   console.log("domain-registrar: .com 만 자동, Cloudflare Registrar 확인·등록(비동기)·상태 해석");
 })().catch((error) => { console.error(error); process.exit(1); });
