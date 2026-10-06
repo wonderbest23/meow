@@ -25,7 +25,7 @@ export function DevKitPanel() {
   useEffect(() => { setEditor(new URLSearchParams(window.location.search).has("editor")); }, []);
   useEffect(() => { setFilling(new URLSearchParams(window.location.search).has("fill")); }, []);
   return (<>
-    {editor && draft.pageData ? <LandingVisualBuilder data={draft.pageData} businessName={draft.businessName} onClose={() => setEditor(false)} onSave={async pageData => { setDraft({ ...draft, pageData }); setEditor(false); }} /> : null}
+    {editor && draft.pageData ? <LandingVisualBuilder data={draft.pageData} businessName={draft.businessName} onClose={() => setEditor(false)} onSave={async pageData => { setDraft({ ...draft, pageData }); }} /> : null}
     <HomepageKitPanel
       draft={draft}
       site={null}

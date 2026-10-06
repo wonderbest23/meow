@@ -64,7 +64,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const copy = normalizeHomepageCopy(raw);
   if (!copy) return NextResponse.json({ error: { code: "AI_FAILED", message: "AI 가 홈페이지 글을 만들지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 502 });
 
-  const draft = applyHomepageCopy(site.draft, copy, { industry: readCoach(plan.answers)?.business.industry ?? "" });
+  const draft = applyHomepageCopy(site.draft, copy, { industry: readCoach(plan.answers)?.business.industry ?? "", description: readCoach(plan.answers)?.business.description ?? "" });
   try {
     const saved = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt: site.updatedAt });
     await recordAiFill(planId, identity.hash);

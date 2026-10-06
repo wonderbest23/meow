@@ -666,6 +666,21 @@ export function BrainwaveEditor({
       if (recoveryKey) try { sessionStorage.removeItem(recoveryKey); } catch { /* The server save already succeeded. */ }
     });
   };
+
+  /*
+   * 자동 저장 — 고치고 2.5초 동안 손을 떼면 서버에 저장한다. 예전엔 '저장'을 눌러야만 남아,
+   * 저장을 잊고 창을 닫거나 다른 화면으로 가면 고친 글·사진이 사라졌다.
+   * 글을 쓰는 중·버튼/메뉴 설정이 열린 중·올리는 중·지난 저장이 실패한 뒤(충돌 확인 필요)에는 기다린다.
+   */
+  const saveRef = useRef(save);
+  saveRef.current = save;
+  const currentFingerprint = landingDraftFingerprint({ page, ...over });
+  const autoSaveBlocked = !recoveryReady || !!recovery || !!editing || !!btn || !!menu || uploading || ai.busy || persistence.saving || !!persistence.error;
+  useEffect(() => {
+    if (autoSaveBlocked || currentFingerprint === savedFingerprint) return;
+    const timer = window.setTimeout(() => saveRef.current(), 2500);
+    return () => window.clearTimeout(timer);
+  }, [autoSaveBlocked, currentFingerprint, savedFingerprint]);
   const restoreRecovery = () => {
     if (!recovery?.draft.brainwave || recovery.base !== initial.current) return;
     invalidateAsync();
@@ -683,7 +698,19 @@ export function BrainwaveEditor({
   const close = () => {
     if (persistence.saving) return;
     const final = finishText();
-    if ((btn || menu || uploading || ai.busy || pendingPatchRef.current || initial.current !== landingDraftFingerprint({ page, ...final })) && !window.confirm("수정 내용과 진행 중인 작업을 저장하지 않고 닫을까요?")) return;
+    if ((btn || menu || uploading || ai.busy || pendingPatchRef.current) && !window.confirm("진행 중인 작업을 마치지 않고 닫을까요?")) return;
+    const dirty = initial.current !== landingDraftFingerprint({ page, ...final });
+    // 고친 것이 남았으면 닫으면서 저장한다 — 저장이 실패하면 닫지 않고 오류를 보여 준다
+    if (dirty && !btn && !menu && !uploading && !ai.busy && !pendingPatchRef.current) {
+      void persistence.save({ ...data, businessContent, sourceSnapshot, brainwave: { page, contentMode, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden, order: final.order }, content: [] }).then(saved => {
+        if (!saved) return;
+        if (recoveryKey) try { sessionStorage.removeItem(recoveryKey); } catch { /* saved on the server */ }
+        invalidateAsync();
+        onClose();
+      });
+      return;
+    }
+    if (dirty && !window.confirm("수정 내용을 저장하지 않고 닫을까요?")) return;
     invalidateAsync();
     onClose();
   };

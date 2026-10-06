@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { LANDING_THEMES, themeForSector, themeStyle } from "../lib/landing/themes";
 import { landingPageDataSchema } from "../lib/landing/page-data";
 import { landingDraftFromPlan } from "../lib/landing/from-plan";
+import { photoSetFor } from "../lib/landing/photo-library";
 import { COACH_KEY, COACH_VERSION, type CoachState } from "../lib/plan-builder/coach";
 
 // 분위기 다섯 + 기본. 고르면 디자인이 읽는 색 변수(--t-*)와 문의 양식 색이 같이 내려간다
@@ -44,5 +45,8 @@ const draftFor = (industry: string, name: string, offer: string) => landingDraft
 assert.equal(draftFor("카페 · 음식점", "새벽커피", "핸드드립").pageData?.theme, "warm");
 assert.equal(draftFor("기업 서비스", "밝은하루치과", "스케일링").pageData?.theme, "fresh");
 assert.equal(draftFor("무역", "온결무역", "원자재 수입").pageData?.theme, undefined, "unknown business keeps the design's colors");
+// 상호에 업종 말이 없으면(플로라 마포) 사업 설명으로 — 대표 상품에 '카페'가 섞여도 꽃집 사진
+const flora = landingDraftFromPlan({ planTitle: "플로라 마포", business: { name: "플로라 마포", description: "망원동 1인 꽃집", industry: "" }, answers: { "market/products": { main_offer: "카페·식당에 납품하는 꽃 장식" } } } as never);
+assert.equal(flora.heroImageUrl, photoSetFor("꽃집")!.hero, "description names the business");
 
 console.log("landing-themes: 5 themes, every design reads them, saved safely, sector defaults");
