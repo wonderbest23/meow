@@ -365,6 +365,17 @@ export function formatWon(value: number): string {
   return `${new Intl.NumberFormat("ko-KR").format(Math.round(value))}원`;
 }
 
+/**
+ * One number for a picked range (coach chat, owner decision 2026-10-07): the middle of a closed range,
+ * the floor of an open-ended one ("300,000원 이상" → 300,000원), rounded to a tidy unit.
+ */
+export function rangeMidpoint(range: Pick<AmountRange, "min" | "max">): number {
+  if (range.max === null) return Math.max(0, range.min ?? 0);
+  const value = ((range.min ?? 0) + range.max) / 2;
+  const unit = value >= 100_000 ? 10_000 : value >= 10_000 ? 1_000 : 100;
+  return Math.round(value / unit) * unit;
+}
+
 /** Storage string for an exact won amount chosen in the UI: "120만원" when it is a whole 만원, otherwise "1234567원". */
 export function wonAnswer(value: number): string {
   const rounded = Math.round(value);

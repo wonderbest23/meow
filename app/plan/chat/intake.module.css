@@ -653,3 +653,28 @@
 /* One input per turn: the stepper duplicates the composer, and helper links stay grey instead of blue. */
 .page[data-coach] .stepper { display: none; }
 .page[data-coach] .chatQuestion .textButton, .page[data-coach] .chatQuestion summary { color: #4b5563; }
+/* Problems as a coach message: a grey bubble with its actions as small pills, no red banner. */
+.page[data-coach] [data-coach-notices] { max-height: none; overflow: visible; border: 0; display: grid; gap: 8px; margin: 14px 0 6px; }
+.page[data-coach] [data-coach-notices] .notice { justify-self: start; max-width: 84%; padding: 9px 16px; border-radius: 22px; background: #f1f3f5; color: #111418; font-size: 15px; line-height: 22px; }
+.page[data-coach] [data-coach-notices] .notice > p { margin: 0; }
+.page[data-coach] [data-coach-notices] .noticeActions { gap: 6px; margin-top: 8px; }
+.page[data-coach] [data-coach-notices] .notice button, .page[data-coach] [data-coach-notices] .notice a { min-height: 32px; padding: 6px 12px; border: 1px solid #d5dae0; border-radius: 16px; background: #fff; color: #2b3036; font-size: 13px; font-weight: 400; text-decoration: none; }
+.page[data-coach] [data-coach-notices] .notice > button { margin-top: 8px; }
+/* PC split: the chat already shows the full result card, so the summary drops its compact copy of it. */
+@media (min-width: 901px) {
+  .page[data-coach] .summaryPane .identityCompact { display: none; }
+}
+/* "여기서부터 이어갈게요" reads as the coach talking, not a banner. */
+.page[data-coach] .resumeNotice { width: fit-content; max-width: 84%; margin: 14px 0 4px; padding: 9px 10px 9px 16px; border: 0; border-radius: 22px; background: #f1f3f5; color: #111418; align-items: center; }
+.page[data-coach] .resumeNotice p { margin: 0; font-size: 15px; line-height: 22px; }
+.page[data-coach] .resumeNotice button { color: #8b929c; }
+.page[data-coach] .chatQuestion .option input[type="checkbox"] { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.page[data-coach] .chatQuestion .sendPartial { color: #111418; border-color: #9ca3af; }
+/* AI business candidates are cards, not pills: full width, title + short description, quiet "자세히 보기". */
+.page[data-coach] .chatQuestion .options:has(.ideaOption) { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.page[data-coach] .chatQuestion .ideaOption { width: 100%; }
+.page[data-coach] .chatQuestion .ideaOption .option { display: flex; width: 100%; flex-direction: column; align-items: flex-start; gap: 4px; padding: 12px 16px; border-radius: 18px; }
+.page[data-coach] .chatQuestion .ideaOption .option strong { font-size: 15px; font-weight: 600; line-height: 21px; }
+.page[data-coach] .chatQuestion .ideaOption .option span, .page[data-coach] .chatQuestion .ideaOption .option small { font-size: 13px; line-height: 19px; color: #4b5563; }
+.page[data-coach] .chatQuestion .ideaOption .option[data-selected="true"] span, .page[data-coach] .chatQuestion .ideaOption .option[data-selected="true"] small { color: #e5e7eb; }
+.page[data-coach] .chatQuestion .ideaOption .disclosure { margin: 4px 0 0 6px; font-size: 13px; }

@@ -9,7 +9,7 @@ import type { IntakeCandidate, IntakeCommand, IntakeSnapshot } from "../lib/plan
 import { createIntake, intakeSnapshot } from "../lib/plan-builder/intake-core";
 import { structureQuestions, coreQuestions, detailQuestions, intakeSectorOptions } from "../lib/plan-builder/intake-questions";
 import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCandidateDraftKey, optionGroups, selectedCount, stepVisible, withCount, draftKey, emptyAnswer, emptyDraft, entryMessage, hasExclusiveOptions, isHybridQuestion, isPrefillQuestion, needsPolling, parseDraft, periodDates, periodPresetRange, persistDraft, plainText, previewIntakeAnswer, readIntakePayload, readableFinancialSummary, seedAnswerDraft, settleDraft, shouldAcceptSnapshot, shouldShowIdeaExploration, suggestedIntakeIndustry, summaryAnswerText, toggleChip, typedChoiceAnswer, typedEntryCommand, unfinishedAnswerText, unmatchedPieces, jobProgress, intakeNextStep } from "../app/plan/chat/intake-ui/model";
-import { amountRanges, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
+import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
 import { needsEntryConfirmation, routeComposerInput } from "../app/plan/chat/intake-ui/model";
@@ -225,6 +225,11 @@ async function main() {
   assert.equal(hybridComplete(customerChips, ["개인", "가족"]), false, "one of two customers is not finished yet");
   assert.equal(hybridComplete(customerChips, picks), true, "two customers fill the step");
   assert.equal(hybridComplete(customerChips, []), false);
+  // One tap on an amount range saves its middle (owner decision 2026-10-07).
+  assert.equal(rangeMidpoint({ min: 5000, max: 10000 }), 7500);
+  assert.equal(rangeMidpoint({ min: 1_500_000, max: 4_000_000 }), 2_750_000);
+  assert.equal(rangeMidpoint({ min: 0, max: 1000 }), 500, "an 'under' range halves its ceiling");
+  assert.equal(rangeMidpoint({ min: 300_000, max: null }), 300_000, "an open-ended range keeps its floor");
   assert.equal(assembleHybridText(customerChips, ["개인", "가족"], ["마포구 아파트 단지"]), "주거 상권 가족·주부 / 마포구 아파트 단지");
   assert.deepEqual(unmatchedPieces(customerChips, "주거 상권 가족·주부 / 마포구 아파트 단지"), ["마포구 아파트 단지"]);
   for (const text of ["○○ 카페를 운영합니다", "커피·음료 —", "베이커리 / ", "고객, ", "납품:", ""]) assert.equal(unfinishedAnswerText(text), true, text);

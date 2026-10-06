@@ -11,7 +11,7 @@ import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, Lis
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
-import { amountRanges, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
+import { amountRanges, rangeMidpoint, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { answerText, assembleHybridText, hybridComplete, incompleteChoiceText, COUNT_PREFIX, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
 import { mentionedAnswer, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
@@ -121,7 +121,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       {editing && <button type="button" className={styles.textButton} onClick={onCancel}>{snapshot.coreComplete ? "마무리로 돌아가기" : "현재 질문으로"}</button>}
     </div>}
     <h2 id="intake-question-heading" tabIndex={-1}>{showMention ? `${question.label}, 앞서 말한 내용으로 이어갈까요?` : showSuggested ? "이 업종으로 정리할까요?" : question.prompt}</h2>
-    {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{question.hint}</p>}
+    {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{coach && numeric && question.unit === "원" && ladder.length > 0 ? "대략 고르면 가운데 값으로 계산해요. 정확히 알면 입력창에 적어 주세요." : question.hint}</p>}
     {draft.hint && <p className={styles.draftHint}>이전 답변: {draft.hint}</p>}
     <form onSubmit={submit}>
       {showMention && <div className={styles.mention} aria-label="이전 대화에서 찾은 답변">
@@ -158,6 +158,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
           </label>{idea && <details className={styles.disclosure}><summary>{option.label} 자세히 보기</summary><p>{idea.description}</p>{idea.reasons.length > 0 && <p className={styles.optionReason}>{idea.reasons.join(" · ")}</p>}{idea.cautions.length > 0 && <p className={styles.optionCaution}>확인할 점: {idea.cautions.join(" · ")}</p>}<ResourceFitDetails fit={idea.resourceFit} /></details>}</div>;
         })}
       </fieldset>)}
+      {coach && choice && question.kind === "multi" && draft.selected.length > 0 && <button type="button" className={styles.sendPartial} disabled={disabled} onClick={() => send(draft)}>다 골랐어요 ({draft.selected.length})</button>}
       {candidate && <label className={styles.customToggle}><input type="checkbox" checked={draft.custom} onChange={event => onChange({ ...draft, custom: event.target.checked, selected: [], unknown: false, ksic: undefined })} />직접 생각한 사업 입력</label>}
       {hybrid && inChat && suggestions?.pending && <SuggestionPlaceholder />}
       {hybrid && inChat && suggestions && !suggestions.pending && <SuggestionChips question={question} draft={draft} disabled={disabled} suggestions={suggestions.items} groups={groups} onChange={onChange} />}
@@ -173,7 +174,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       </div>}
       {numeric && question.id === "price" && snapshot.intake.mode !== "operating" && <CostPriceHelper disabled={disabled} onCommit={commit} />}
       {numeric && !candidate && (question.unit === "원"
-        ? (!basisOptions.length || basis) && <AmountLadder key={basis ?? "ladder"} question={question} ranges={ranges} legend={months && months > 1 ? `${months}개월 합계 기준` : undefined} disabled={disabled} staging={inChat} onCommit={commit} />
+        ? (!basisOptions.length || basis) && <AmountLadder key={basis ?? "ladder"} quick={coach} question={question} ranges={ranges} legend={months && months > 1 ? `${months}개월 합계 기준` : undefined} disabled={disabled} staging={inChat} onCommit={commit} />
         : <NumberQuick question={question} draft={draft} presets={numberPresets(question)} disabled={disabled} staging={inChat} onChange={onChange} onCommit={commit} />)}
       {period && <div className={styles.periodPicker} role="group" aria-label="실적 기간 선택">
         <div className={styles.presetChips}>
@@ -334,8 +335,10 @@ function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: 
   </details>;
 }
 
-function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel = "정확히 입력", onCommit, onRange, onExact }: {
+function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel = "정확히 입력", onCommit, onRange, onExact, quick = false }: {
   question: IntakeQuestion; ranges: AmountRange[]; legend?: string; disabled: boolean; staging: boolean; exactLabel?: string;
+  /** Coach chat: one tap on a range saves its middle value (owner decision 2026-10-07); exact amounts go through the composer. */
+  quick?: boolean;
   /** Number mode sends wonAnswer() through onCommit; text mode (onRange + onExact) writes into the draft instead. */
   onCommit: (value: IntakeValue) => void; onRange?: (range: AmountRange) => void; onExact?: (amount: number) => void;
 }) {
@@ -352,6 +355,7 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
     const item = ranges[index];
     if (onRange) { onRange(item); return; } // text mode: the range label itself becomes the answer text
     if (item.min === 0 && item.max === 0 || item.max === 0) return onCommit("0원");
+    if (quick) return onCommit(wonAnswer(rangeMidpoint(item)));
     setRangeIndex(index); setKeypad(false);
   };
   const parsed = /^\d+(?:\.\d+)?$/.test(amountText.replace(/,/g, "")) ? Number.parseFloat(amountText.replace(/,/g, "")) : null;
@@ -423,7 +427,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt }: { snapshot: I
       return <div key={message.id} className={styles.chatTurn}>
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{question.prompt}</p></div>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{text}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{/^\d{4,}원$/.test(text) ? formatWon(Number(text.slice(0, -1))) : text}</p>}
           {answerEntry && question && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
         {receipt && message.id === lastUserId && !notes.length && <p className={styles.messageStatus} data-receipt>{receipt}</p>}
