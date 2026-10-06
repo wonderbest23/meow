@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { checkDomain, registerDomain, registrarConfig, registrarSupports, registrationStatus } from "../lib/landing/domain-registrar";
+import { checkDomain, ensureWwwRecord, registerDomain, registrarConfig, registrarSupports, registrationStatus } from "../lib/landing/domain-registrar";
 import { registrantContact, validateRegistrant } from "../lib/landing/domain-purchase";
 
 void (async () => {
@@ -52,5 +52,22 @@ void (async () => {
   // 진행 상태
   assert.equal(await registrationStatus(config, "flora.com", fake({ "/registration-status": [200, { success: true, result: { state: "action_required" } }] })), "action_required");
   assert.equal(await registrationStatus(config, "flora.com", fake({ "/registration-status": [500, {}] })), "unknown");
+  // 새 존에 www CNAME — 손으로 하던 DNS 단계를 자동 등록에서도(존이 아직 없으면 기다림, 권한 없으면 운영자에게)
+  const dnsCalls: Array<{ url: string; method: string; body: unknown }> = [];
+  const dnsFake = (zones: [number, unknown], records: unknown, create: number) => (async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input); dnsCalls.push({ url, method: init?.method ?? "GET", body: init?.body ? JSON.parse(String(init.body)) : null });
+    if (url.includes("/zones?name=")) return new Response(JSON.stringify(zones[1]), { status: zones[0] });
+    if (url.includes("/dns_records?")) return Response.json(records);
+    return new Response("{}", { status: create });
+  }) as typeof fetch;
+  assert.equal(await ensureWwwRecord(config, "flora.com", "connect.oneulstart.com", dnsFake([200, { result: [] }], {}, 200)), "zone_pending");
+  assert.equal(await ensureWwwRecord(config, "flora.com", "connect.oneulstart.com", dnsFake([403, {}], {}, 200)), "forbidden");
+  assert.equal(await ensureWwwRecord(config, "flora.com", "connect.oneulstart.com", dnsFake([200, { result: [{ id: "z1" }] }], { result: [{ content: "connect.oneulstart.com" }] }, 500)), "ok", "이미 있으면 그대로");
+  dnsCalls.length = 0;
+  assert.equal(await ensureWwwRecord(config, "flora.com", "connect.oneulstart.com", dnsFake([200, { result: [{ id: "z1" }] }], { result: [] }, 200)), "ok");
+  assert.match(dnsCalls[0].url, /\/zones\?name=flora\.com&account\.id=0123456789abcdef0123456789abcdef$/);
+  assert.deepEqual(dnsCalls[2], { url: "https://api.cloudflare.com/client/v4/zones/z1/dns_records", method: "POST", body: { type: "CNAME", name: "www.flora.com", content: "connect.oneulstart.com", proxied: false, ttl: 1, comment: "oneulstart homepage" } });
+  assert.equal(await ensureWwwRecord(config, "flora.com", "connect.oneulstart.com", dnsFake([200, { result: [{ id: "z1" }] }], { result: [] }, 403)), "forbidden");
+
   console.log("domain-registrar: .com 만 자동, Cloudflare Registrar 확인·등록(비동기)·상태 해석");
 })().catch((error) => { console.error(error); process.exit(1); });

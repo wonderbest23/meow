@@ -395,7 +395,9 @@ export async function listDomainPurchaseOrders(limit = 100): Promise<DomainPurch
     const opportunity = (row.opportunity ?? null) as { planId?: string; domainRequest?: unknown } | null;
     const request = readDomainRequest(opportunity?.domainRequest);
     if (!request) return [];
-    return [{ ...request, orderId: String(row.order_id), paidAt: String(row.confirmed_at ?? row.created_at ?? ""), customerEmail: (row.customer_email as string | null) ?? null, planId: String(opportunity?.planId ?? ""), amount: Number(row.amount ?? 0) }];
+    // 자동 등록(.com) 진행 상태 — lib/landing/domain-registrar.ts 가 domainRequest.auto 에 남긴다
+    const auto = ((opportunity?.domainRequest ?? null) as { auto?: { state?: string; at?: string; reason?: string } } | null)?.auto;
+    return [{ ...request, orderId: String(row.order_id), paidAt: String(row.confirmed_at ?? row.created_at ?? ""), customerEmail: (row.customer_email as string | null) ?? null, planId: String(opportunity?.planId ?? ""), amount: Number(row.amount ?? 0), ...(auto?.state ? { auto: { state: auto.state, at: auto.at ?? "", reason: auto.reason ?? "" } } : {}) }];
   });
 }
 
