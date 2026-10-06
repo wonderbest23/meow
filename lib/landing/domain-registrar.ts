@@ -123,11 +123,49 @@ async function handOver(order: OrderRow, domain: string, reason: string) {
   ]);
 }
 
-async function finish(order: OrderRow, domain: string) {
-  await saveAuto(order, { ...(readAuto(order.opportunity) ?? { at: new Date().toISOString() }), state: "succeeded", at: new Date().toISOString() });
+/*
+ * 새로 산 .com 은 우리 Cloudflare 계정의 존(zone)으로 생긴다. 손으로 할 때는 운영자가 www CNAME 을 넣었는데
+ * 자동 등록에서는 아무도 넣지 않아, '연결을 시작했어요' 문자가 가도 주소가 열리지 않을 뻔했다 → 여기서 넣는다.
+ * 토큰에 'Zone - DNS - Edit' 권한이 필요하다(없으면 운영자에게 넣을 레코드를 그대로 알려 준다).
+ */
+export type DnsResult = "ok" | "zone_pending" | "forbidden" | "failed";
+
+export async function ensureWwwRecord(config: RegistrarConfig, domain: string, target: string, fetcher: Fetch = fetch): Promise<DnsResult> {
+  const api = "https://api.cloudflare.com/client/v4";
+  const zones = await fetcher(`${api}/zones?name=${encodeURIComponent(domain)}&account.id=${config.accountId}`, { headers: authHeaders(config) });
+  if (zones.status === 401 || zones.status === 403) return "forbidden";
+  const zoneBody = await zones.json().catch(() => null) as { result?: Array<{ id?: string }> } | null;
+  const zoneId = zoneBody?.result?.[0]?.id;
+  if (!zones.ok) return "failed";
+  if (!zoneId) return "zone_pending";
+  const name = `www.${domain}`;
+  const existing = await fetcher(`${api}/zones/${zoneId}/dns_records?type=CNAME&name=${encodeURIComponent(name)}`, { headers: authHeaders(config) });
+  if (existing.status === 401 || existing.status === 403) return "forbidden";
+  const records = await existing.json().catch(() => null) as { result?: Array<{ content?: string }> } | null;
+  if (records?.result?.some((record) => record.content === target)) return "ok";
+  const created = await fetcher(`${api}/zones/${zoneId}/dns_records`, {
+    method: "POST", headers: authHeaders(config),
+    body: JSON.stringify({ type: "CNAME", name, content: target, proxied: false, ttl: 1, comment: "oneulstart homepage" }),
+  });
+  if (created.status === 401 || created.status === 403) return "forbidden";
+  return created.ok ? "ok" : "failed";
+}
+
+async function finish(order: OrderRow, domain: string, config: RegistrarConfig, fetcher: Fetch = fetch): Promise<"done" | "waiting"> {
+  const target = process.env.CLOUDFLARE_SAAS_CNAME_TARGET?.trim() || "connect.oneulstart.com";
+  const dns = await ensureWwwRecord(config, domain, target, fetcher).catch(() => "failed" as const);
+  const auto = readAuto(order.opportunity);
+  // 등록 직후엔 존이 아직 안 보일 수 있다 — 한 시간까지는 다음 예약 실행에서 다시
+  if (dns === "zone_pending" && auto && Date.now() - Date.parse(auto.at) < 3_600_000) return "waiting";
+  await saveAuto(order, { ...(auto ?? { at: new Date().toISOString() }), state: "succeeded", at: new Date().toISOString() });
   await markDomainRegistered(order.order_id);
   const connection = await startRegisteredDomainConnection(order.order_id);
-  if (connection.warning) await notifyOperator(`도메인 등록 완료, 연결은 확인 필요: ${domain}`, [`주문번호: ${order.order_id}`, `경고: ${connection.warning}`]);
+  const warnings = [
+    ...(dns === "ok" ? [] : [`DNS 레코드를 넣지 못함(${dns}) — Cloudflare 대시보드 → ${domain} → DNS 에 CNAME www → ${target} (프록시 끔) 을 추가해 주세요.${dns === "forbidden" ? " API 토큰에 'Zone - DNS - Edit' 권한을 더하면 다음부터 자동입니다." : ""}`]),
+    ...(connection.warning ? [`연결: ${connection.warning}`] : []),
+  ];
+  if (warnings.length) await notifyOperator(`도메인 등록 완료, 확인 필요: ${domain}`, [`주문번호: ${order.order_id}`, ...warnings]);
+  return "done";
 }
 
 export type AutoRegisterResult = { started: boolean; state?: AutoRegistrationState | RegistrationState; reason?: string };
@@ -155,7 +193,7 @@ export async function startAutoRegistration(orderId: string, deps: { config?: Re
     if (!check.registrable) { await handOver(order, request.domain, `등록 불가${check.reason ? ` (${check.reason})` : " — 이미 누가 등록했을 수 있음"}`); return { started: false, state: "manual" }; }
     if (check.premium) { await handOver(order, request.domain, `프리미엄 도메인(${check.cost}) — 결제 금액 확인 필요`); return { started: false, state: "manual" }; }
     const state = await registerDomain(config, request.domain, { registrant: request.registrant, email }, deps.fetcher);
-    if (state === "succeeded") { await finish(order, request.domain); return { started: true, state }; }
+    if (state === "succeeded") { await saveAuto(order, { state: "in_progress", at: new Date().toISOString(), cost: check.cost }); await finish(order, request.domain, config, deps.fetcher); return { started: true, state }; }
     if (state === "in_progress" || state === "unknown") { await saveAuto(order, { state: "in_progress", at: new Date().toISOString(), cost: check.cost }); return { started: true, state: "in_progress" }; }
     await handOver(order, request.domain, `등록 요청 거절(${state})`);
     return { started: false, state: "manual" };
@@ -181,7 +219,7 @@ export async function pollAutoRegistrations(deps: { config?: RegistrarConfig | n
     if (!request || request.status === "registered" || auto?.state !== "in_progress") continue;
     result.checked++;
     const state = await registrationStatus(config, request.domain, deps.fetcher);
-    if (state === "succeeded") { await finish(row, request.domain); result.done++; }
+    if (state === "succeeded") { if ((await finish(row, request.domain, config, deps.fetcher)) === "done") result.done++; }
     else if (state === "failed" || state === "action_required" || state === "blocked") { await handOver(row, request.domain, `등록 ${state}`); result.manual++; }
     // 하루가 넘도록 진행 중이면 사람이 본다
     else if (Date.now() - Date.parse(auto.at) > 86_400_000) { await handOver(row, request.domain, "하루 넘게 진행 중"); result.manual++; }
