@@ -502,6 +502,28 @@ export function chipLimit(questionId: string) {
   return CHIP_LIMITS[questionId] ?? CHIP_LIMITS[questionId.split(".").pop() ?? questionId] ?? (questionId === "experience" ? 3 : 1);
 }
 
+/**
+ * Coach chat sends a hybrid chip answer on its own once nothing is left to pick: every visible step has a pick,
+ * multi-pick steps are full (or hold an exclusive "없음" chip), and a required count step is filled.
+ */
+export function hybridComplete(question: Pick<IntakeQuestion, "id" | "kind" | "options">, selected: string[]): boolean {
+  const groups = optionGroups(question.options);
+  const limit = chipLimit(question.id);
+  let steps = 0;
+  for (const [index, group] of groups.entries()) {
+    if (isFilterGroup(group.name)) continue;
+    if (!stepVisible(question, groups, index, selected)) continue;
+    const picks = group.options.filter(option => selected.includes(option.value));
+    if (!picks.length) return false;
+    if (limit > 1 && picks.length < limit && !picks.some(option => isExclusiveOption(option.label))) return false;
+    steps++;
+  }
+  if (!steps) return false;
+  const picked = (group: string) => (question.options ?? []).find(option => option.group === group && selected.includes(option.value))?.label;
+  const needsCount = question.id === "capacity" || question.id === "goal" && metricNeedsCount(picked(CHIP_GROUPS.metric));
+  return !needsCount || selectedCount(selected) !== undefined;
+}
+
 /** "없음 / 해당 없음 / 아님" chips clear the rest of their step and are cleared by any other pick (client-only rule, spec §7). */
 export const isExclusiveOption = (label: string) => /없음|아님|모름/.test(label) || label.startsWith(SKIP_VALUE_PREFIX);
 export const hasExclusiveOptions = (question: Pick<IntakeQuestion, "options">) => !!question.options?.some(option => isExclusiveOption(option.label));

@@ -14,7 +14,7 @@ import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
 import { needsEntryConfirmation, routeComposerInput } from "../app/plan/chat/intake-ui/model";
 import { readChatResponse } from "../lib/http/read-chat-response";
-import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview } from "../app/plan/chat/intake-ui/model";
+import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete } from "../app/plan/chat/intake-ui/model";
 
 const scope = "test-owner-guest";
 const id = "plan_ui-fixture";
@@ -221,6 +221,10 @@ async function main() {
   assert.deepEqual(picks, ["개인", "가족", "학생"]);
   assert.deepEqual(toggleChip(customerChips, picks, "점심 직장인"), picks, "customer keeps at most 2 picks in a step");
   assert.equal(assembleHybridText(customerChips, picks), "주거 상권 가족·주부, 대학가·학원가 학생", "filter picks are never written into the answer");
+  // Coach chat sends on its own only once nothing is left to pick.
+  assert.equal(hybridComplete(customerChips, ["개인", "가족"]), false, "one of two customers is not finished yet");
+  assert.equal(hybridComplete(customerChips, picks), true, "two customers fill the step");
+  assert.equal(hybridComplete(customerChips, []), false);
   assert.equal(assembleHybridText(customerChips, ["개인", "가족"], ["마포구 아파트 단지"]), "주거 상권 가족·주부 / 마포구 아파트 단지");
   assert.deepEqual(unmatchedPieces(customerChips, "주거 상권 가족·주부 / 마포구 아파트 단지"), ["마포구 아파트 단지"]);
   for (const text of ["○○ 카페를 운영합니다", "커피·음료 —", "베이커리 / ", "고객, ", "납품:", ""]) assert.equal(unfinishedAnswerText(text), true, text);
@@ -256,6 +260,11 @@ async function main() {
   assert.equal(stepVisible(goalChips, goalGroups, 2, ["6개월 안에", "첫 유료 고객·첫 판매"]), false, "amount step only for N원 metrics");
   assert.equal(stepVisible(goalChips, goalGroups, 2, ["6개월 안에", "월 매출 N원"]), true);
   assert.equal(assembleHybridText(goalChips, ["6개월 안에"]), "", "a period alone is not a goal");
+  assert.equal(hybridComplete(capacityChips, ["대표자 혼자", "하루", "건"]), false, "capacity waits for its count");
+  assert.equal(hybridComplete(capacityChips, capacityPicks), true, "people, period, unit and count finish capacity");
+  assert.equal(hybridComplete(goalChips, ["6개월 안에"]), false, "a period alone does not send the goal");
+  assert.equal(hybridComplete(goalChips, ["6개월 안에", "첫 유료 고객·첫 판매"]), true, "a plain metric finishes the goal");
+  assert.equal(hybridComplete(goalChips, ["6개월 안에", "월 매출 N원"]), false, "an N원 metric waits for its amount");
   assert.equal(assembleHybridText(goalChips, ["6개월 안에", "월 매출 N원"]), "6개월 안에 월 매출 N원");
   assert.equal(unfinishedAnswerText("6개월 안에 월 매출 N원"), true, "an unfilled N원 placeholder blocks the save");
   assert.equal(assembleHybridText(goalChips, ["6개월 안에", "월 매출 N원", "1,000만원"]), "6개월 안에 월 매출 1,000만원");
@@ -423,6 +432,9 @@ async function main() {
   assert.ok(typing.includes("다음 질문을 준비하고 있어요"));
   assert.equal((typing.match(/<i>/g) ?? []).length, 3);
   const chatHistory = renderToStaticMarkup(<ConversationHistory snapshot={preview} onEdit={noop} />);
+  const sending = renderToStaticMarkup(<ConversationHistory snapshot={preview} onEdit={noop} receipt="보내는 중" />);
+  assert.equal((sending.match(/data-receipt/g) ?? []).length, 1, "only the newest answer carries a receipt");
+  assert.ok(sending.includes("보내는 중") && !chatHistory.includes("data-receipt"), "the receipt follows the caller's real send state");
   assert.equal((chatHistory.match(/data-coach-message="user"/g) ?? []).length, 2);
   assert.ok(chatHistory.includes(original.nextQuestion!.prompt));
   assert.ok(chatHistory.includes("업종 답변 수정"));
