@@ -289,7 +289,9 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
       }
       case "artifactChunk": return Response.json({ result: await executeArtifactChunk(input.job.ownerHash, input.job.planId, input.job.jobId, input.job.index, input.job.attempt) });
     }
-  } catch {
+  } catch (error) {
+    // 실패 이름을 남긴다(본문·개인정보 없이). 예전엔 버려서 로그에 "500"만 보였다.
+    console.error("[plan-service] failed", JSON.stringify({ operation: input.operation, error: error instanceof Error ? error.message.slice(0, 120) : "UNKNOWN" }));
     return Response.json({ error: "PLAN_SECTION_FAILED" }, { status: 500 });
   }
 }

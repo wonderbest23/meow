@@ -55,7 +55,7 @@ export function checkDocumentQuality(markdown: string, source: string, priorSect
   }
   const allowed = new Set(quantities(source));
   const missing = [...new Set(quantities(text).filter(value => !allowed.has(value)))];
-  if (missing.length) issue("unsupported_number", "입력 또는 시스템 계산에 없는 금액이나 비율이 있습니다.");
+  if (missing.length) issue("unsupported_number", `입력 또는 시스템 계산에 없는 금액이나 비율이 있습니다: ${missing.slice(0, 8).join(", ")}`);
   for (const url of text.match(/https?:\/\/[^\s<>"\])]+/g) ?? []) if (!source.includes(url)) issue("unsupported_url", "제공된 자료에 없는 출처 주소가 있습니다.");
   if (!/근거|입력|기록|제공|가정/.test(text) || !/행동|확인|실행|검토|다음/.test(text)) issue("missing_structure", "근거와 다음 행동을 함께 확인해야 합니다.", "warning");
   return { ok: !issues.some(item => item.severity === "error"), issues };
