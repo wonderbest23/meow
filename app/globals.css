@@ -17061,3 +17061,21 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 .bw-save-actions button:disabled { opacity: .7; cursor: default; }
 .bw-save-actions svg { width: 16px; height: 16px; }
 .bw-save-popup .bw-save-url > div > button, .bw-save-popup .bw-save-url > div > a { height: 44px; min-height: 44px; padding: 0 12px; }
+
+/* 휴대폰 틀 없애기 — 테두리·둥근 모서리 없이 모바일 폭(390px) 화면만. 틀이 커서 고칠 곳이 좁아 보였다(소유자 피드백 2026-10-07) */
+.hk-phone { border: 0; border-radius: 0; box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .08); }
+.bw-editor-canvas.view-mobile { border: 0; border-radius: 0; height: min(844px, 100%); box-shadow: 0 1px 2px rgba(15, 23, 42, .06), 0 8px 24px rgba(15, 23, 42, .1); }
+
+/* 공개 페이지에 자동으로 붙는 문의 양식 미리보기(에디터·홈페이지 미리보기 맨 아래) */
+.public-appendix-preview { position: relative; padding: 28px 20px 24px; border-top: 2px dashed #c9cfdb; background: #fafbfd; color: #161c2d; }
+.public-appendix-note { margin: 0 0 16px; padding: 8px 10px; border-radius: 8px; background: #eef2ff; color: #3730a3; font-size: 12px; line-height: 1.5; }
+.public-appendix-preview section { display: grid; gap: 6px; max-width: 560px; margin: 0 auto; }
+.public-appendix-preview small { color: #6b7280; font-size: 12px; font-weight: 600; }
+.public-appendix-preview h2 { margin: 0; font-size: 22px; }
+.public-appendix-preview p { margin: 0; color: #4b5161; font-size: 14px; }
+.public-appendix-fields { display: grid; gap: 8px; margin-top: 10px; }
+.public-appendix-fields span { display: block; padding: 11px 12px; border: 1px solid #d6dbe5; border-radius: 8px; background: #fff; color: #9aa1ad; font-size: 13px; }
+.public-appendix-fields span.tall { min-height: 64px; }
+.public-appendix-fields span.consent { border: 0; padding: 4px 0; background: transparent; color: #4b5161; }
+.public-appendix-fields b { display: block; padding: 12px; border-radius: 8px; background: #161c2d; color: #fff; text-align: center; font-size: 14px; }
+.public-appendix-preview footer { max-width: 560px; margin: 20px auto 0; padding-top: 14px; border-top: 1px solid #e3e6ee; color: #6b7280; font-size: 13px; font-weight: 600; }

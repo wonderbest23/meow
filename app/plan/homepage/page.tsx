@@ -1,5 +1,6 @@
 "use client";
 
+import { appendixFromDraft } from "../../../components/public-appendix-preview";
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -511,6 +512,7 @@ export default function PlanHomepagePage() {
           businessSummary={draft.subheadline || draft.offerDescription}
           published={site?.status === "published"}
           liveUrl={site?.status === "published" && typeof window !== "undefined" ? `${window.location.origin}${publicPath}` : null}
+          appendix={appendixFromDraft(draft)}
           onPublish={async () => {
             const result = await publish();
             return result.ok ? { url: `${window.location.origin}/launch/${result.site.publishedSlug ?? result.site.slug}` } : { error: result.message };

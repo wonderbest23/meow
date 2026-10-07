@@ -1,5 +1,6 @@
 "use client";
 
+import { PublicAppendixPreview, type PublicAppendix } from "./public-appendix-preview";
 import { phoneDigits } from "../lib/landing/contact-method";
 import { themeStyle } from "../lib/landing/themes";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -76,7 +77,10 @@ export function BrainwaveEditor({
   published = false,
   liveUrl = null,
   onPublish,
+  appendix,
 }: {
+  /** 공개 페이지 맨 아래에 자동으로 붙는 문의 양식 — 에디터에도 같은 자리에 보여 준다 */
+  appendix?: PublicAppendix;
   /** 공개 중인 홈페이지 — 저장만으로는 손님 화면이 안 바뀐다('새 버전 공개' 필요) */
   published?: boolean;
   /** 손님이 보는 주소(공개 중일 때) */
@@ -708,13 +712,16 @@ export function BrainwaveEditor({
   };
   const publishFromPopup = async () => {
     if (!onPublish) return;
-    // 공개가 끝난 뒤 새 탭을 열면 팝업 차단에 걸린다 — 누른 순간 빈 탭을 먼저 열어 두고 주소를 넣는다.
-    const tab = window.open("", "_blank");
+    // 새 탭은 공개가 끝난 뒤에 연다 — 예전엔 빈 탭이 먼저 떠 공개될 때까지 한참 비어 있었다(소유자 지적).
+    // 오래 걸려 브라우저가 새 탭을 막으면 팝업의 '새 탭에서 보기'를 누르면 된다.
     setSavePopup({ phase: "publishing" });
     const result = await onPublish();
-    if (!mounted.current) { tab?.close(); return; }
-    if ("url" in result) { setSavePopup({ phase: "live", url: result.url }); if (tab) tab.location.href = result.url; }
-    else { tab?.close(); setSavePopup({ phase: "error", message: result.error }); }
+    if (!mounted.current) return;
+    if ("url" in result) {
+      const tab = window.open(result.url, "_blank");
+      if (tab) tab.opener = null;
+      setSavePopup({ phase: "live", url: result.url, message: tab ? undefined : "브라우저가 새 탭을 막았어요. 아래 '새 탭에서 보기'를 눌러 주세요." });
+    } else setSavePopup({ phase: "error", message: result.error });
   };
   const copyLink = async (url: string) => {
     try { await navigator.clipboard.writeText(url); setCopied(true); } catch { setCopied(false); window.prompt("아래 주소를 복사해 주세요", url); }
@@ -827,7 +834,7 @@ export function BrainwaveEditor({
           <div className="bw-save-popup" role="dialog" aria-modal="true" aria-labelledby="bw-save-title" onClick={(event) => event.stopPropagation()}>
             <h2 id="bw-save-title">{savePopup.phase === "live" ? "공개했어요" : savePopup.phase === "publishing" ? "공개하는 중이에요" : savePopup.phase === "error" ? "공개하지 못했어요" : "저장했어요"}</h2>
             {savePopup.phase === "saved" && <p>{published ? "방금 고친 내용은 '새 버전 공개'를 눌러야 손님 화면에 보여요." : "아직 공개 전이에요. 공개하면 손님이 볼 수 있는 주소가 생겨요."}</p>}
-            {savePopup.phase === "live" && <p>새 탭에서 손님이 보는 화면을 열었어요. 주소를 복사해 손님에게 보내 보세요.</p>}
+            {savePopup.phase === "live" && <p>{savePopup.message ?? "새 탭에서 손님이 보는 화면을 열었어요. 주소를 복사해 손님에게 보내 보세요."}</p>}
             {savePopup.phase === "error" && <p role="alert">{savePopup.message}</p>}
             {savePopup.url && savePopup.phase !== "publishing" ? (
               <div className="bw-save-url">
@@ -1095,6 +1102,7 @@ export function BrainwaveEditor({
             mode={view === "mobile" ? "mobile" : "desktop"}
             onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id, el) : kind === "restore" ? restore(id) : pickButton(id, el))}
           />
+          {appendix ? <PublicAppendixPreview appendix={appendix} /> : null}
           {uploading ? <div className="bw-editor-uploading" role="status"><LoaderCircle className="spin" aria-hidden /> 사진 올리는 중</div> : null}
         </div>
       </div>

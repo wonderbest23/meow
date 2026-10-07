@@ -1,5 +1,6 @@
 "use client";
 
+import { appendixFromDraft, PublicAppendixPreview } from "./public-appendix-preview";
 import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
@@ -283,8 +284,8 @@ export function HomepageKitPanel({
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-busy={aiFill?.running || undefined} className={`hk-preview-body ${view === "mobile" ? "hk-preview-phone" : ""}`} onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="에디터 열기">
           {view === "mobile"
-            ? <div className="hk-phone"><LandingBlocksRenderer data={draft.pageData!} /></div>
-            : <LandingBlocksRenderer data={draft.pageData!} />}
+            ? <div className="hk-phone"><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></div>
+            : <><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></>}
           {/* AI가 채우는 동안 — 다른 화면과 같은 로딩 모양으로, 몇 초째인지 함께 */}
           {aiFill?.running ? <div className="hk-preview-loading">
             <PlanLoading note={`AI가 계획서를 읽고 홈페이지를 채우고 있어요. 보통 30초쯤 걸려요 · ${fillSeconds}초`} />
