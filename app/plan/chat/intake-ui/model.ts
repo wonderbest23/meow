@@ -524,8 +524,22 @@ export function hybridComplete(question: Pick<IntakeQuestion, "id" | "kind" | "o
   return !needsCount || selectedCount(selected) !== undefined;
 }
 
-/** "없음 / 해당 없음 / 아님" chips clear the rest of their step and are cleared by any other pick (client-only rule, spec §7). */
-export const isExclusiveOption = (label: string) => /없음|아님|모름/.test(label) || label.startsWith(SKIP_VALUE_PREFIX);
+/**
+ * "None" chips ("규정 없음", "별도 피드백 없음", "숙박 아님", "아직 모름·해당 없음") clear the rest of their step and are
+ * cleared by any other pick (client-only rule, spec §7). Problem statements that merely end in 없음 ("…배송이 없음",
+ * "…곳이 없음"), notes in parentheses ("디지털 상품(배송 없음)") and labelled list items ("제외: 보증·AS 없음") stay
+ * ordinary chips, so they can be picked together with others.
+ */
+export const isExclusiveOption = (label: string) => {
+  if (label.startsWith(SKIP_VALUE_PREFIX) || /해당\s*없음|모름/.test(label)) return true;
+  if (/^[^:]+:/.test(label)) return false;
+  const core = label.replace(/\([^)]*\)/g, "").trim();
+  const match = core.match(/^(.*?)\s*(?:없음|아님)$/);
+  if (!match) return false;
+  const words = match[1].split(/\s+/).filter(Boolean);
+  // Two words at most, and no subject/object particle right before 없음 — a short "no X" answer, not a sentence.
+  return words.length <= 2 && !/[이가을를은는도]$/.test(words.at(-1) ?? "");
+};
 export const hasExclusiveOptions = (question: Pick<IntakeQuestion, "options">) => !!question.options?.some(option => isExclusiveOption(option.label));
 
 /** Toggle one chip inside its step, applying exclusivity and the per-step limit (limit 1 replaces). */

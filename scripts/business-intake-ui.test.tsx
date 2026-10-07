@@ -14,7 +14,7 @@ import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
 import { needsEntryConfirmation, routeComposerInput } from "../app/plan/chat/intake-ui/model";
 import { readChatResponse } from "../lib/http/read-chat-response";
-import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete } from "../app/plan/chat/intake-ui/model";
+import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption } from "../app/plan/chat/intake-ui/model";
 
 const scope = "test-owner-guest";
 const id = "plan_ui-fixture";
@@ -239,6 +239,12 @@ async function main() {
   assert.equal(hasExclusiveOptions(exploringFixture.nextQuestion!), false);
   assert.deepEqual(toggleChip(feedbackMulti, ["과제 첨삭", "테스트·퀴즈"], "별도 피드백 없음"), ["별도 피드백 없음"], "an exclusive chip clears its step");
   assert.deepEqual(toggleChip(feedbackMulti, ["별도 피드백 없음"], "과제 첨삭"), ["과제 첨삭"], "any other pick clears the exclusive chip");
+  // Only short "none" answers are exclusive; problem statements that end in 없음 combine like any other chip.
+  for (const label of ["규정 없음", "별도 피드백 없음", "특수 조건 없음", "필요 없음(확인 완료)", "숙박 아님(신고 불필요)", "아직 모름·해당 없음", "사용처: 해당 없음", "없음"]) assert.equal(isExclusiveOption(label), true, label);
+  for (const label of ["당일·시간 지정 배송이 없음", "필요한데 해주는 곳이 없음", "전문 인력을 채용할 여유가 없음", "직접 만들 시간·기술이 없음", "디지털 상품(배송 없음)", "매장·작업장으로 고객이 방문(출장 없음)", "제외: 보증·AS 없음", "납품 후 일정 기간 이상 없음"]) assert.equal(isExclusiveOption(label), false, label);
+  const problemChips: IntakeQuestion = { id: "problem", label: "해결할 문제", prompt: "어떤 불편?", kind: "text", options: ["당일·시간 지정 배송이 없음", "요금이 불투명함", "파손·분실 책임이 불명확함"].map(label => ({ value: label, label })) };
+  assert.deepEqual(toggleChip(problemChips, ["당일·시간 지정 배송이 없음"], "요금이 불투명함"), ["당일·시간 지정 배송이 없음", "요금이 불투명함"], "a problem ending in 없음 combines with another problem");
+  assert.equal(hybridComplete(problemChips, ["당일·시간 지정 배송이 없음"]), false, "coach chat waits for the second problem instead of sending at once");
   // Lib conventions (intake-options.ts CHIP_GROUPS): channel "common"+"sector" is one 8-chip step, capacity people → period → unit + count, goal period → metric → amount / count.
   const channelChips: IntakeQuestion = { ...startupQuestions.find(question => question.id === "channel")!, options: sectorChipOptions("food_beverage", "channel", "startup") };
   assert.equal(optionGroups(channelChips.options).length, 1, "common and sector chips render as a single step");
