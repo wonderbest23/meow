@@ -177,9 +177,17 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
       const workflow = await binding();
       if (!workflow) return prepareUnavailable();
       const revision = coachDocumentRevision(coach);
-      const reusable = existing?.revision === revision && existing.paid === access.paid && JSON.stringify(existing.keys) === JSON.stringify(keys);
+      let reusable = existing?.revision === revision && existing.paid === access.paid && JSON.stringify(existing.keys) === JSON.stringify(keys);
       if (receipt && (!reusable || receipt.runId !== existing?.runId)) return prepareConflict();
       if (receipt && existing) return await dispatchPreparedPlan(ownerHash, planId, existing.runId, workflow);
+      // 끝난 작업에 못 쓴 항목이 남았으면(한 항목이 두 번 실패해 건너뜀) 같은 기준이어도 새 작업으로 남은 항목만 이어 쓴다.
+      // 예전엔 끝난 작업을 그대로 돌려줘서 '다시 작성하기'를 눌러도 아무 일도 일어나지 않았다(운영 확인 2026-10-07).
+      const unwritten = keys.some(key => { const section = plan.sections[key]; return !section || !section.edited && !section.locked && section.coachRevision !== revision; });
+      if (reusable && existing!.dispatchState === "dispatched" && unwritten) {
+        const status = await generationStatus(workflow, existing!.runId);
+        if (status === null) return prepareUnavailable();
+        if (status === "complete") reusable = false;
+      }
       if ((existing?.receipts.length ?? 0) >= 128) return json({ code: "prepare_limit", message: "제작 요청 보관 한도에 도달했어요. 기존 요청과 문서를 확인해주세요." }, 429);
       // A reservation with no dispatch claim can be superseded without paid work.
       if (existing && !reusable && existing.dispatchState !== "reserved") {
@@ -187,11 +195,13 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
         if (status === null) return prepareUnavailable();
         if (!["complete", "errored", "terminated"].includes(status)) return prepareConflict();
       }
-      const free = !reusable && staleRewriteCount(plan.sections, revision, keys) > 0 && freeReflectsLeft(existing) > 0;
+      // Finishing a free reflect's skipped sections stays free and does not use another free reflect.
+      const resumesFree = !reusable && existing?.revision === revision && existing.free === true;
+      const free = resumesFree || !reusable && staleRewriteCount(plan.sections, revision, keys) > 0 && freeReflectsLeft(existing) > 0;
       const quota = !reusable && !free && await prepareQuota(plan, keys, revision);
       if (quota) return quota;
       const runId = reusable ? existing!.runId : `coach-${createHash("sha256").update(`${ownerHash}\0${planId}\0${input.requestId}`).digest("hex").slice(0, 48)}`;
-      const freeReflects = [...recentFreeReflects(existing), ...(free ? [new Date().toISOString()] : [])];
+      const freeReflects = [...recentFreeReflects(existing), ...(free && !resumesFree ? [new Date().toISOString()] : [])];
       const generation: PrepareGeneration = reusable ? existing! : { revision, runId, keys, paid: access.paid, receipts: existing?.receipts ?? [], dispatchState: "reserved", ...(free ? { free: true } : {}), ...(freeReflects.length ? { freeReflects } : {}) };
       generation.receipts.push({ id: input.requestId, signature, runId, paid: access.paid, accepted: reusable && existing!.dispatchState === "dispatched" });
       const updatedAt = plan.updatedAt;

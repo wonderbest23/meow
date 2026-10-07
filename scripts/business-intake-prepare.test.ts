@@ -336,6 +336,26 @@ async function main() {
       usage = { error: null, count: 0 };
     });
 
+    await check("a finished run with a skipped section resumes it at the same revision, still free", async () => {
+      usage = { error: null, count: 20 };
+      const id = await seed({ section: true });
+      assert.equal((await prepare(id, randomUUID())).status, 200);
+      const first = (await read(id)).generation as Generation & { free?: boolean; freeReflects?: string[] };
+      assert.equal(first.free, true); assert.equal(first.freeReflects?.length, 1);
+      // The run ends but the one section was never rewritten (it failed twice and was skipped).
+      workflows.set(first.runId, "complete");
+      assert.equal((await prepare(id, randomUUID())).status, 200, "pressing rewrite again starts a new run");
+      const second = (await read(id)).generation as Generation & { free?: boolean; freeReflects?: string[] };
+      assert.notEqual(second.runId, first.runId); assert.equal(attempts.length, 2);
+      assert.equal(second.free, true); assert.equal(second.freeReflects?.length, 1, "resuming does not use another free reflect");
+      // Once every section is written, the finished run is reused and nothing new starts.
+      workflows.set(second.runId, "complete");
+      await mutate(id, plan => { for (const key of second.keys) plan.sections[key] = { markdown: "Written", html: "<p>Written</p>", generatedAt: new Date().toISOString(), coachRevision: 2 }; });
+      assert.equal((await prepare(id, randomUUID())).status, 200);
+      assert.equal(attempts.length, 2); assert.equal((await read(id)).generation!.runId, second.runId);
+      usage = { error: null, count: 0 };
+    });
+
     await check("quota failure after reservation recovers only its original reserved ID", async () => {
       const id = await seed({ section: true, freeUsed: true }), requestId = randomUUID();
       saveHook = async state => {
