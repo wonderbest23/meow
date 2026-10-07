@@ -7,7 +7,7 @@ import type { IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/inta
 import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
-import { QuestionForm, RewriteCost } from "../chat/intake-ui/IntakePanels";
+import { QuestionForm, RewriteConfirm } from "../chat/intake-ui/IntakePanels";
 import { choiceDraftSubmission, emptyAnswer, incompleteChoiceText, readIntakePayload, summaryAnswerText, type AnswerDraft } from "../chat/intake-ui/model";
 import intake from "../chat/intake.module.css";
 import styles from "./DocumentWorkspace.module.css";
@@ -108,10 +108,7 @@ export function FactCard({ edit, onPick, onReflect }: { edit: ReturnType<typeof 
     {!edit.snapshot && !edit.error && <p>사업 정보를 불러오고 있어요…</p>}
     {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{fact.display}</button>)}</div>}
     <p>노란 부분을 누르면 고칠 수 있어요. 여러 곳을 고친 뒤 한 번에 계획서에 반영해요.</p>
-    {stale && edit.snapshot && <div className={styles.factReflect} data-fact-reflect>
-      <div><b>고친 내용이 아직 계획서에 반영되지 않았어요</b><RewriteCost snapshot={edit.snapshot} /></div>
-      <button type="button" className={styles.primary} disabled={edit.busy} onClick={onReflect}>계획서에 반영하기</button>
-    </div>}
+    {stale && edit.snapshot && <div className={styles.factReflect} data-fact-reflect><RewriteConfirm snapshot={edit.snapshot} disabled={edit.busy} label="계획서에 반영하기" className={styles.primary} onConfirm={onReflect} /></div>}
     {edit.error && <p className={styles.factError} role="alert">{edit.error.message} {edit.error.href && <Link href={edit.error.href}>{edit.error.label}</Link>}</p>}
   </section>;
 }

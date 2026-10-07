@@ -8,7 +8,7 @@ function str(key = "", schema = {}) {
   if (k === "day") return ["월요일", "수요일", "금요일"][n % 3];
   if (k === "format") return ["사진", "짧은 영상", "글"][n % 3];
   if (k === "channel") return "인스타그램";
-  let s = /name|title|headline/.test(k) ? `테스트 ${KO[n % KO.length]}` : /url|href|link/.test(k) ? "https://example.com" : /date|at$/.test(k) ? "2026-10-03" : `${key || "내용"}: ${KO[n % KO.length]} 기준의 합성 설명입니다.`;
+  let s = /name|title|headline/.test(k) ? `테스트 ${KO[n % KO.length]}` : /url|href|link/.test(k) ? "https://example.com" : /date|at$/.test(k) ? "2026-10-03" : `${KO[n % KO.length]} 기준의 합성 설명입니다.`;
   if (schema.enum) return schema.enum[0];
   if (schema.const !== undefined) return schema.const;
   if (schema.maxLength) s = s.slice(0, schema.maxLength);

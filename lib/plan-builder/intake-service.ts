@@ -122,7 +122,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         // Each change goes through the same validation as a typed answer; one invalid value stops the whole set.
         job.proposal.forEach((change, index) => applyIntakeAnswer(plan!, coach, intake, { ...command, action: "answer", questionId: change.questionId, value: change.value, unknown: false, requestId: `${command.requestId}:${index}` }, at));
         job.proposalStatus = "applied";
-        coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "바꿨어요. 계획서에 반영하기를 누르면 바뀐 내용으로 계획서를 다시 써요.", at });
+        coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "바꿨어요. 아래 \"계획서 다시 작성하기\"를 누르면 바뀐 내용으로 다시 써요.", at });
       } else {
         job.proposalStatus = "dismissed";
         coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "그대로 둘게요. 다른 바꿀 내용이 있으면 말씀해 주세요.", at });

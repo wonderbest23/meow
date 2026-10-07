@@ -6,6 +6,7 @@ import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { LoadingStatus } from "../../PlanLoading";
 import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
@@ -410,7 +411,6 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }:
         const after = question ? summaryAnswerText(question, change.value, snapshot.candidateIdeas) : String(change.value);
         return <p key={change.questionId}><span>{question?.label ?? change.questionId}</span>{before && <s>{before}</s>}<strong>{after}</strong></p>;
       })}
-      <small>바꾸면 사업 정보가 먼저 바뀌어요. 계획서는 "계획서에 반영하기"를 눌러야 다시 써져요.</small>
       <div className={styles.chipRow}><button type="button" className={`${styles.chip} ${styles.chipStrong}`} disabled={disabled} onClick={onApply}>바꾸기</button><button type="button" className={styles.chip} disabled={disabled} onClick={onDismiss}>취소</button></div>
     </div>}
     {!running && !pending && <div className={styles.chipRow}>{EDIT_EXAMPLES.map(text => <button key={text} type="button" className={styles.chip} disabled={disabled} onClick={() => onSend(text)}>{text}</button>)}</div>}
@@ -598,6 +598,31 @@ export function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
   </p>;
 }
 
+/**
+ * 계획서를 다시 쓰는 버튼 하나. 횟수·안내는 누른 뒤 확인창에서만 보여 준다 —
+ * 버튼 옆에 설명을 늘어놓으면 헷갈린다는 소유자 피드백(2026-10-07).
+ */
+export function RewriteConfirm({ snapshot, disabled, label = "계획서 다시 작성하기", className, onConfirm }: { snapshot: IntakeSnapshot; disabled: boolean; label?: string; className?: string; onConfirm: () => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [open]);
+  return <>
+    <button type="button" className={className ?? styles.primaryButton} disabled={disabled} onClick={() => setOpen(true)} data-rewrite-open><FileText size={18} aria-hidden="true" />{label}</button>
+    {open && createPortal(<div className={styles.confirmBackdrop} onClick={() => setOpen(false)}>
+      <div className={styles.confirmBox} role="dialog" aria-modal="true" aria-labelledby="rewrite-confirm-title" data-rewrite-confirm onClick={event => event.stopPropagation()}>
+        <h3 id="rewrite-confirm-title">바뀐 내용으로 다시 쓸까요?</h3>
+        <RewriteCost snapshot={snapshot} />
+        <p>다 쓸 때까지 지금 계획서는 그대로 남아 있어요.</p>
+        <div className={styles.confirmActions}><button type="button" onClick={() => setOpen(false)}>취소</button><button type="button" autoFocus onClick={() => { setOpen(false); onConfirm(); }}>다시 작성하기</button></div>
+      </div>
+    </div>, document.body)}
+  </>;
+}
+
 export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
 }) {
@@ -615,6 +640,8 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서를 작성해요. 전체는 ${sectionCount}개 항목(재무표 포함)이고, 결제 전에는 앞 ${FREE_SECTION_COUNT}개 항목을 무료로 만들어요. 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
+  // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
+  if (step === "prepare" && snapshot.hasDocuments) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} />}</div>;
   return <div className={styles.nextStep} data-active data-step={step}>
     <ol className={styles.stepper} aria-label="진행 단계">
       <li data-state={step === "design" ? "current" : "done"}>{step === "design" ? <span>1</span> : <Check size={13} aria-hidden="true" />}사업 방향 요약</li>
@@ -623,7 +650,6 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
       {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />사업 방향 정리하기</button>}
       {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "바뀐 내용으로 사업계획서 다시 작성하기" : "사업계획서 문서 작성하기"}</button>}
-      {step === "prepare" && snapshot.hasDocuments && <Link className={styles.textButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}>이전 계획서 보기</Link>}
       {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
       {secondary}
     </div>}

@@ -699,3 +699,19 @@
 .changeCard p strong { color: #111418; }
 .changeCard small { color: #6b7280; font-size: 12px; line-height: 1.6; }
 .page[data-coach] .chip.chipStrong { background: #111418; border-color: #111418; color: #fff; }
+
+/* 계획서가 있을 때 다시 쓰기는 버튼 하나, 안내는 확인창에서 */
+.rewriteAction { display: grid; }
+.rewriteAction > button { width: 100%; margin-bottom: 0; }
+.confirmBackdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(15, 23, 42, .32); animation: intake-confirm-fade .16s ease-out; }
+.confirmBox { width: min(400px, 100%); display: grid; gap: 10px; padding: 22px; border-radius: 18px; background: #fff; box-shadow: 0 18px 48px rgba(15, 23, 42, .18); animation: intake-confirm-pop .2s cubic-bezier(.2, .8, .2, 1); }
+.confirmBox h3 { margin: 0; font-size: 17px; }
+.confirmBox p { margin: 0; color: var(--intake-muted); font-size: 14px; line-height: 1.6; }
+.confirmActions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.confirmActions button { width: 100%; min-height: 46px; margin: 0; border-radius: 12px; font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; outline: none; }
+.confirmActions button:first-child { border: 1px solid #e5e7eb; background: #fff; color: #374151; }
+.confirmActions button:last-child { border: 0; background: #2d6cdf; color: #fff; }
+.confirmActions button:focus-visible { box-shadow: 0 0 0 3px rgba(17, 24, 39, .12); }
+@keyframes intake-confirm-fade { from { opacity: 0; } }
+@keyframes intake-confirm-pop { from { opacity: 0; transform: translateY(8px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .confirmBackdrop, .confirmBox { animation: none; } }
