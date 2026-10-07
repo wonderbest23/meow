@@ -7,7 +7,8 @@ import type { GenerationProgress } from "../../lib/plan-builder/generation-progr
 import styles from "./GenerationProgress.module.css";
 
 export type GenerationState = GenerationProgress & { runStatus: string | null };
-const FAILED = ["errored", "terminated"];
+// "complete" here means the run ended with sections still missing (the route only asks while done < total): a section failed twice and was skipped.
+const FAILED = ["errored", "terminated", "complete"];
 
 /*
  * 사업계획서 제작 진행을 몇 초마다 묻는다. 다 됐거나 작업이 멈췄으면 더 묻지 않는다.

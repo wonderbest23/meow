@@ -55,7 +55,8 @@ export default function PlanDocumentPage() {
       setFreshKeys(new Set(added));
     }).catch(() => { /* 다음 차례에 다시 받는다 */ });
   }, [generation.state, documentPlanId]);
-  const writing = generation.state?.active && !["errored", "terminated"].includes(generation.state.runStatus ?? "")
+  // A finished run with a section still missing stopped there (that section failed twice) — stop showing "writing".
+  const writing = generation.state?.active && !["errored", "terminated", "complete"].includes(generation.state.runStatus ?? "")
     ? { done: generation.state.done, total: generation.state.total, current: generation.state.sections.find(section => !section.done)?.title ?? null } : null;
   const [coachHref, setCoachHref] = useState<string | null>(null);
   const [contextNotice, setContextNotice] = useState("");
