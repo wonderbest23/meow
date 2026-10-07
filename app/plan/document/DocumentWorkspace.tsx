@@ -19,6 +19,10 @@ import { useHomepageStatus } from "../use-homepage";
 import { journeyNext, type HomepageStatus } from "../../../lib/plan-builder/journey";
 import { loadState } from "../../../lib/plan-builder/plan-store";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
+import { FactCard, FactPopover, highlightFacts, useFactEdit } from "./FactEdit";
+
+/** Chat edits after the plan exists (phase B); the choice stays hidden until the server side is live. */
+const EDIT_CHAT = process.env.NEXT_PUBLIC_INTAKE_EDIT_CHAT === "1";
 
 type Format = "pdf" | "docx" | "pptx";
 type Props = {
@@ -45,6 +49,10 @@ type Props = {
   summary?: ExecutiveSummary | null; summaryError?: string;
   reviewSource?: DocumentReviewSource | null;
   onReviewed?: (key: string, section: StoredSection, updatedAt: string) => void;
+  /** The owner re-applied changed facts: the document is being rewritten, so restart the progress polling. */
+  onReflected?: () => void;
+  /** A fact was saved from the document; amounts may have been swapped into the text on the server. */
+  onFactsSaved?: () => void;
 };
 
 /** 쓰는 중 — 지금 쓰는 장 이름 뒤에 깜빡이는 커서, 아래로 글줄이 차오르는 듯한 자리 */
@@ -75,7 +83,24 @@ export default function DocumentWorkspace(props: Props) {
   const [continuous, setContinuous] = useState(false);
   const [editing, setEditing] = useState(false);
   const [summaryMode, setSummaryMode] = useState(false);
-  const [modal, setModal] = useState<"toc" | "download" | null>(null);
+  const [modal, setModal] = useState<"toc" | "download" | "edit" | null>(null);
+  /*
+   * 계획서가 있는 사업의 "수정하기"(소유자 결정 2026-10-07): 본문 전체 자유 편집 대신 핵심 사실만 고친다.
+   * 고친 내용은 모아 두었다가 "계획서에 반영하기" 한 번으로 다시 쓴다 — 항목마다 전체를 다시 쓰지 않도록.
+   */
+  const factEditable = !!coachHref && !!planId && !isSample;
+  const [factMode, setFactMode] = useState(false);
+  const [factPick, setFactPick] = useState<{ id: string; rect: DOMRect } | null>(null);
+  const facts = useFactEdit(planId, factEditable && factMode);
+  useEffect(() => { if (factEditable && new URLSearchParams(location.search).get("edit") === "facts") setFactMode(true); }, [factEditable]);
+  const pickFact = (target: EventTarget | null) => {
+    const mark = target instanceof Element ? target.closest<HTMLElement>("mark[data-fact]") : null;
+    if (mark) setFactPick({ id: mark.dataset.fact!, rect: mark.getBoundingClientRect() });
+  };
+  async function reflectFacts() {
+    const result = await facts.post({ action: "prepare" });
+    if (result) { setFactMode(false); setFactPick(null); props.onReflected?.(); }
+  }
   const [celebrate, setCelebrate] = useState(false);
   const announced = useRef<string | null>(null);
   const dialog = useRef<HTMLDialogElement>(null);
@@ -168,8 +193,11 @@ export default function DocumentWorkspace(props: Props) {
     <button className={styles.continuous} aria-current={continuous && !summaryMode ? "page" : undefined} onClick={readAll}>전체 이어 읽기</button>
   </nav>;
 
-  const actionButtons = <>
-    <button className={styles.secondary} disabled={!grouped.length || isSample} onClick={() => { if (summaryMode) { setSummaryMode(false); setEditing(true); } else setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : summaryMode ? "상세 문서 수정" : editing ? "수정 마치기" : "수정하기"}</button>
+  const actionButtons = factMode ? <>
+    <span className={styles.factHint}>노란 부분만 고칠 수 있어요</span>
+    <button className={styles.secondary} onClick={() => { setFactMode(false); setFactPick(null); }}>수정 마치기</button>
+  </> : <>
+    <button className={styles.secondary} disabled={!grouped.length || isSample || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { setModal("edit"); return; } if (summaryMode) { setSummaryMode(false); setEditing(true); } else setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : summaryMode ? "상세 문서 수정" : editing ? "수정 마치기" : "수정하기"}</button>
     <button className={showNext ? styles.secondary : styles.primary} disabled={!grouped.length} onClick={() => setModal("download")}>{showNext ? "내려받기" : "사업계획서 내려받기"}</button>
     {showNext && planId && <NextStepButton planId={planId} homepage={homepage} />}
   </>;
@@ -192,16 +220,19 @@ export default function DocumentWorkspace(props: Props) {
           </div>
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
           {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요. 준비되면 <b>다음 단계</b> 버튼을 눌러 이어가세요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
-          <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문">
+          <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
                             {props.writing && <WritingStatus {...props.writing} />}
-              {props.notice && !props.writing && <div className={styles.notice} role="status">{props.notice} {coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
+              {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
+              {props.notice && !props.writing && !factMode && <div className={styles.notice} role="status">{props.notice} {factEditable ? <button className={styles.help} onClick={() => { setSummaryMode(false); setFactMode(true); }}>고친 내용 반영하기</button> : coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
                 <DocumentChapterHeading number={index + 1} title={name} />
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
-                  <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}><InlineDocEditor html={section.html} readOnly={isSample || !editing} status={props.editStates[section.key]?.status ?? "idle"} onDraft={html => props.onDraft(section.key, html)} onChange={html => onSave(section.key, html)} /></div>
+                  <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}>{factMode
+                    ? <div className={`tiptap ${styles.factBody}`} onClick={event => pickFact(event.target)} onKeyDown={event => { if (event.key === "Enter") pickFact(event.target); }} dangerouslySetInnerHTML={{ __html: highlightFacts(section.html, facts.facts) }} />
+                    : <InlineDocEditor html={section.html} readOnly={isSample || !editing} status={props.editStates[section.key]?.status ?? "idle"} onDraft={html => props.onDraft(section.key, html)} onChange={html => onSave(section.key, html)} />}</div>
                   {!isSample && <div className={styles.saveState}>
                     {props.editStates[section.key]?.status === "failed" ? <><p role="alert">{props.editStates[section.key].message}</p><button onClick={() => props.onRetrySave(section.key)}><RefreshCw size={15} />다시 저장</button><button onClick={() => props.onDiscardDraft(section.key)}>서버 내용 불러오기</button></> : !editing && props.editStates[section.key] && <span role="status">{props.editStates[section.key].status === "saving" ? "서버에 저장 중…" : "서버에 저장됨"}</span>}
                     {editing && props.restoreKeys.includes(section.key) && !["saving", "failed"].includes(props.editStates[section.key]?.status ?? "") && <button onClick={() => props.onRestore(section.key)}><RotateCcw size={15} />직전 내용으로 되돌리기</button>}
@@ -217,8 +248,12 @@ export default function DocumentWorkspace(props: Props) {
       </div>}
     </BusinessAppChrome>
     <dialog ref={dialog} className={styles.dialog} onCancel={() => setModal(null)} onClose={() => setModal(null)} onClick={event => { if (event.target === event.currentTarget) { const r = event.currentTarget.getBoundingClientRect(); if (event.clientX < r.left || event.clientX > r.right || event.clientY < r.top || event.clientY > r.bottom) setModal(null); } }} aria-labelledby="document-dialog-title">
-      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : "파일 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
-      {modal === "toc" ? toc() : <div className={styles.downloads}>
+      <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : "파일 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
+      {modal === "edit" ? <div className={styles.editChoices}>
+        <p>계획서 내용 중 이 사업에 관한 것만 고칠 수 있어요.</p>
+        {EDIT_CHAT && coachHref && <Link href={`${coachHref}&edit=chat`} onClick={() => setModal(null)}><strong>채팅으로 수정하기</strong><small>“가격을 올려줘”처럼 말하면 바뀔 내용을 정리해 보여 드려요</small></Link>}
+        <button onClick={() => { setModal(null); setSummaryMode(false); setFactMode(true); }}><strong>문장에서 바로 고치기</strong><small>고칠 수 있는 숫자·사실만 표시돼요. 누르고 바꾸면 돼요</small></button>
+      </div> : modal === "toc" ? toc() : <div className={styles.downloads}>
         {props.locked && <p className={styles.notice}>파일 내려받기는 결제 후 이용할 수 있어요. 형식을 선택하면 결제로 이어져요.</p>}
         {props.accessError ? <div className={styles.notice} role="alert">이용 권한을 확인하지 못했어요. <button className={styles.help} onClick={props.onRetryAccess}>다시 확인</button></div> : props.accessPending && <p role="status">이용 권한을 확인하고 있어요.</p>}
         {([{ format: "pdf", name: "PDF", description: "인쇄하거나 공유할 때", Icon: FileDown }, { format: "docx", name: "Word", description: "문서를 직접 고쳐 쓸 때", Icon: FileText }, { format: "pptx", name: props.deckLabel || "발표자료 PPT", description: "계획서를 발표자료로 만들 때", Icon: Presentation }] as const)
@@ -230,6 +265,7 @@ export default function DocumentWorkspace(props: Props) {
         {props.error && <p role="alert">{props.error}</p>}
       </div>}
     </dialog>
+  {factMode && factPick && <FactPopover key={factPick.id} edit={facts} questionId={factPick.id} anchor={factPick.rect} onClose={() => setFactPick(null)} onSaved={() => { setFactPick(null); props.onFactsSaved?.(); }} />}
   {zoomTable && <dialog ref={zoomDialog} className={styles.tableZoom} aria-label="표 크게 보기" onClose={() => setZoomTable(null)}
     onPointerDown={event => { zoomPressOnBackdrop.current = event.target === zoomDialog.current; }}
     onClick={event => { if (zoomPressOnBackdrop.current && event.target === zoomDialog.current) zoomDialog.current?.close(); zoomPressOnBackdrop.current = false; }}>

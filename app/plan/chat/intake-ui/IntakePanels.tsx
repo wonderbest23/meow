@@ -6,6 +6,7 @@ import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
 
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
+import { createPortal } from "react-dom";
 import { LoadingStatus } from "../../PlanLoading";
 import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
@@ -388,6 +389,47 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
   </div>;
 }
 
+const EDIT_EXAMPLES = ["가격을 6만 5천원으로 바꿔줘", "주 고객을 1인 가구로 바꿔줘", "목표를 1년 안에 단골 100명으로"];
+
+/**
+ * "채팅으로 수정하기" turn: a short intro with examples, the AI's tidy-up while it runs, then the proposed changes
+ * to confirm or cancel. Requests outside this business never reach the AI (server-side filter).
+ */
+export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }: { snapshot: IntakeSnapshot; disabled: boolean; onSend: (text: string) => void; onApply: () => void; onDismiss: () => void }) {
+  const job = snapshot.intake.job?.kind === "edit" ? snapshot.intake.job : null;
+  const running = !!job && ["queued", "running"].includes(job.status);
+  const pending = !!job && job.status === "complete" && !!job.proposal?.length && !job.proposalStatus;
+  return <section className={styles.editTurn} aria-label="계획서 수정" data-edit-chat>
+    {!job && <div className={styles.assistantMessage}><p>계획서에서 바꾸고 싶은 내용을 말씀해 주세요. 이 사업 안의 내용(가격·고객·상품·목표 등)만 고칠 수 있어요.</p></div>}
+    {running && <JobProgress snapshot={snapshot} announce variant="chat" />}
+    {pending && <div className={styles.changeCard} data-edit-proposal>
+      <b>이렇게 바꿀게요</b>
+      {job!.proposal!.map(change => {
+        const question = snapshot.questions.find(item => item.id === change.questionId);
+        const current = snapshot.intake.answers[change.questionId];
+        const before = question && current?.status === "answered" ? summaryAnswerText(question, current.value, snapshot.candidateIdeas) : "";
+        const after = question ? summaryAnswerText(question, change.value, snapshot.candidateIdeas) : String(change.value);
+        return <p key={change.questionId}><span>{question?.label ?? change.questionId}</span>{before && <s>{before}</s>}<strong>{after}</strong></p>;
+      })}
+      <div className={styles.chipRow}><button type="button" className={`${styles.chip} ${styles.chipStrong}`} disabled={disabled} onClick={onApply}>바꾸기</button><button type="button" className={styles.chip} disabled={disabled} onClick={onDismiss}>취소</button></div>
+    </div>}
+    {!running && !pending && <div className={styles.chipRow}>{EDIT_EXAMPLES.map(text => <button key={text} type="button" className={styles.chip} disabled={disabled} onClick={() => onSend(text)}>{text}</button>)}</div>}
+  </section>;
+}
+
+/** After the plan document exists the chat is a record: no new questions or free chat, edits happen from the document. */
+export function DocumentLockedTurn({ planId, chatEdit }: { planId: string; chatEdit: boolean }) {
+  const id = encodeURIComponent(planId);
+  return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
+    <div className={styles.assistantMessage}><p>사업계획서를 만들었어요. 이 대화는 기록으로 남겨 두고, 고칠 내용은 계획서에서 바꿀 수 있어요.</p></div>
+    <div className={styles.chipRow}>
+      <Link className={styles.chip} href={`/plan/document?planId=${id}&edit=facts`}>문장에서 바로 고치기</Link>
+      {chatEdit && <Link className={styles.chip} href={`/plan/chat?planId=${id}&edit=chat`}>채팅으로 수정하기</Link>}
+      <Link className={styles.chip} href={`/plan/document?planId=${id}`}>계획서 보기</Link>
+    </div>
+  </section>;
+}
+
 export function ChatSpeaker({ status }: { status?: string }) {
   return <span className={styles.chatSpeaker}><img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" /><span>오늘창업</span>{status && <span className={styles.speakerStatus}>{status}</span>}</span>;
 }
@@ -411,7 +453,7 @@ export function ConversationText({ text }: { text: string }) {
   </div>;
 }
 
-export function ConversationHistory({ snapshot, onEdit, receipt }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string }) {
+export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = false }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string; readOnly?: boolean }) {
   const lastUserId = [...snapshot.coach.messages].reverse().find(message => message.role === "user")?.id;
   const mode = { exploring: "아이디어를 찾고 있어요", startup: "생각한 사업이 있어요", operating: "사업을 운영 중이에요" }[snapshot.intake.mode];
   return <div className={styles.chatHistory} aria-label="지금까지의 대화">
@@ -428,7 +470,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt }: { snapshot: I
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{question.prompt}</p></div>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
           {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{/^\d{4,}원$/.test(text) ? formatWon(Number(text.slice(0, -1))) : text}</p>}
-          {answerEntry && question && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
+          {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
         {receipt && message.id === lastUserId && !notes.length && <p className={styles.messageStatus} data-receipt>{receipt}</p>}
         {notes.length > 0 && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}
@@ -437,7 +479,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt }: { snapshot: I
   </div>;
 }
 
-export function AnswerHistory({ snapshot, drafts, onEdit, onKeepAsMemo }: { snapshot: IntakeSnapshot; drafts: Record<string, AnswerDraft>; onEdit: (id: string) => void; onKeepAsMemo: (id: string) => void }) {
+export function AnswerHistory({ snapshot, drafts, onEdit, onKeepAsMemo, readOnly = false }: { snapshot: IntakeSnapshot; drafts: Record<string, AnswerDraft>; onEdit: (id: string) => void; onKeepAsMemo: (id: string) => void; readOnly?: boolean }) {
   const draftIds = Object.keys(drafts);
   const orphaned = draftIds.filter(id => !snapshot.questions.some(question => question.id === id) && !["business", "industry"].includes(id));
   const questions = snapshot.questions.filter(question => snapshot.intake.answers[question.id] || (question.fieldKey && snapshot.coach.fields.some(field => field.key === question.fieldKey && field.basis === "user")) || draftIds.includes(question.id));
@@ -447,7 +489,7 @@ export function AnswerHistory({ snapshot, drafts, onEdit, onKeepAsMemo }: { snap
     const labelled = answer && answer.status !== "unknown" ? Array.isArray(answer.value) ? answer.value.map(item => question.options?.find(option => option.value === item)?.label ?? item).join(", ") : question.options?.find(option => option.value === answer.value)?.label ?? (summaryAnswerText(question, answer.value, snapshot.candidateIdeas) || answerText(answer.value)) : "";
     /* 업종은 고른 세부 업종(화초 및 식물 소매업)을 앞에 — 큰 분류만 보이면 다른 걸 고른 줄 안다 */
     const value = answer ? answer.status === "unknown" ? "아직 정하지 않았어요" : question.id === "industry" && snapshot.ksic ? `${snapshot.ksic.name} · ${labelled}` : labelled : coachFieldDisplay(snapshot.coach.fields.find(field => field.key === question.fieldKey)?.value ?? "");
-    return <li key={question.id}><div><strong>{question.label}</strong><p>{plainText(value) || "아직 저장하지 않은 답변"}</p>{draftIds.includes(question.id) && <small>이 기기에 입력 중인 내용이 있어요</small>}</div><button className={styles.iconButton} type="button" title={`${question.label} 수정`} aria-label={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={17} /></button></li>;
+    return <li key={question.id}><div><strong>{question.label}</strong><p>{plainText(value) || "아직 저장하지 않은 답변"}</p>{draftIds.includes(question.id) && <small>이 기기에 입력 중인 내용이 있어요</small>}</div>{!readOnly && <button className={styles.iconButton} type="button" title={`${question.label} 수정`} aria-label={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={17} /></button>}</li>;
   })}</ul></details>}</>;
 }
 
@@ -489,7 +531,7 @@ export function SavedNotes({ snapshot, disabled, onExtract }: { snapshot: Intake
 
 const STRUCTURE_AXIS_LABEL: Record<StructureAxis, string> = { payer: "고객·지불자", offering: "제공하는 것", delivery: "전달 방식", revenue: "수익 방식", sides: "시장 구조", license: "인허가" };
 
-const JOB_TITLES: Record<"extract" | "help" | "design" | "ideas", string> = { extract: "저장한 메모 정리 중", design: "사업 방향 정리 중", help: "AI 답변 작성 중", ideas: "새 사업 후보 제안 중" };
+const JOB_TITLES: Record<"extract" | "help" | "design" | "ideas" | "edit", string> = { edit: "바꿀 내용 정리 중", extract: "저장한 메모 정리 중", design: "사업 방향 정리 중", help: "AI 답변 작성 중", ideas: "새 사업 후보 제안 중" };
 const monotonicNow = () => typeof performance !== "undefined" ? performance.now() : Date.now();
 
 /** Show server status and elapsed time without presenting an estimated completion percentage. */
@@ -537,7 +579,7 @@ type RegenQuota = { allowed: number; used: number; remaining: number; unavailabl
  * 계획서에 다시 반영하기 전에 비용을 먼저 보여 준다 — 다시 쓸 항목 수와 남은 다시 생성 횟수.
  * 예전엔 버튼을 눌러 막힌 뒤에야(402) 횟수가 모자란 걸 알았다(사용자 피드백 2026-10).
  */
-function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
+export function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
   const [quota, setQuota] = useState<{ quota: RegenQuota | null; pack?: { count: number; amount: number } } | null>(null);
   useEffect(() => {
     let alive = true;
@@ -549,11 +591,39 @@ function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
   }, [snapshot.planId, snapshot.updatedAt]);
   const count = snapshot.rewriteCount;
   const known = quota?.quota && !quota.quota.unavailable ? quota.quota : null;
-  const short = !!known && count !== undefined && count > known.remaining;
+  const free = (snapshot.freeReflects ?? 0) > 0 && count !== 0;
+  const short = !free && !!known && count !== undefined && count > known.remaining;
+  // 고친 내용 반영은 하루 몇 번까지 무료(lib/plan-builder/free-reflect.ts)
+  if (free) return <p className={styles.rewriteCost} role="status">{count ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요</> : "바뀐 내용과 맞지 않는 항목만 다시 써요"} · <b>무료</b>예요 (오늘 {snapshot.freeReflects}번 남음)</p>;
   return <p className={styles.rewriteCost} data-short={short || undefined} role="status">
     {count === undefined ? <>바뀐 내용과 맞지 않는 항목만 다시 써요 · 항목마다 다시 생성 횟수 1회가 차감돼요{known ? <> (남은 횟수 {known.remaining}/{known.allowed}회)</> : null}</> : count > 0 ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요{known ? <> · 다시 생성 횟수 <b>{count}회</b> 차감 (남은 횟수 {known.remaining}/{known.allowed}회)</> : <> · 항목마다 다시 생성 횟수 1회가 차감돼요</>}</> : "직접 고친 항목은 그대로 두고, 바뀐 내용과 맞지 않는 항목만 다시 써요."}
     {short && <> — 횟수가 {count! - known!.remaining}회 모자라요. <Link href={`/plan/pay?planId=${encodeURIComponent(snapshot.planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`}>{quota?.pack ? `${quota.pack.count}회 추가 (${quota.pack.amount.toLocaleString("ko-KR")}원)` : "다시 생성 횟수 추가"}</Link></>}
   </p>;
+}
+
+/**
+ * 계획서를 다시 쓰는 버튼 하나. 횟수·안내는 누른 뒤 확인창에서만 보여 준다 —
+ * 버튼 옆에 설명을 늘어놓으면 헷갈린다는 소유자 피드백(2026-10-07).
+ */
+export function RewriteConfirm({ snapshot, disabled, label = "계획서 다시 작성하기", className, onConfirm }: { snapshot: IntakeSnapshot; disabled: boolean; label?: string; className?: string; onConfirm: () => void }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (!open) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setOpen(false); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [open]);
+  return <>
+    <button type="button" className={className ?? styles.primaryButton} disabled={disabled} onClick={() => setOpen(true)} data-rewrite-open><FileText size={18} aria-hidden="true" />{label}</button>
+    {open && createPortal(<div className={styles.confirmBackdrop} onClick={() => setOpen(false)}>
+      <div className={styles.confirmBox} role="dialog" aria-modal="true" aria-labelledby="rewrite-confirm-title" data-rewrite-confirm onClick={event => event.stopPropagation()}>
+        <h3 id="rewrite-confirm-title">바뀐 내용으로 다시 쓸까요?</h3>
+        <RewriteCost snapshot={snapshot} />
+        <p>다 쓸 때까지 지금 계획서는 그대로 남아 있어요.</p>
+        <div className={styles.confirmActions}><button type="button" onClick={() => setOpen(false)}>취소</button><button type="button" autoFocus onClick={() => { setOpen(false); onConfirm(); }}>다시 작성하기</button></div>
+      </div>
+    </div>, document.body)}
+  </>;
 }
 
 export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false }: {
@@ -573,6 +643,8 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서를 작성해요. 전체는 ${sectionCount}개 항목(재무표 포함)이고, 결제 전에는 앞 ${FREE_SECTION_COUNT}개 항목을 무료로 만들어요. 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
+  // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
+  if (step === "prepare" && snapshot.hasDocuments) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} />}</div>;
   return <div className={styles.nextStep} data-active data-step={step}>
     <ol className={styles.stepper} aria-label="진행 단계">
       <li data-state={step === "design" ? "current" : "done"}>{step === "design" ? <span>1</span> : <Check size={13} aria-hidden="true" />}사업 방향 요약</li>
@@ -581,7 +653,6 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
       {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />사업 방향 정리하기</button>}
       {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "바뀐 내용으로 사업계획서 다시 작성하기" : "사업계획서 문서 작성하기"}</button>}
-      {step === "prepare" && snapshot.hasDocuments && <Link className={styles.textButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}>이전 계획서 보기</Link>}
       {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
       {secondary}
     </div>}
@@ -650,9 +721,9 @@ export function DesignDirection({ snapshot }: { snapshot: IntakeSnapshot }) {
   </section>;
 }
 
-export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, onDetails, onDesign, onPrepare, onStructure, showActions = true }: {
+export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, onDetails, onDesign, onPrepare, onStructure, showActions = true, readOnly = false }: {
   snapshot: IntakeSnapshot; disabled: boolean; aiBusy: boolean; prepared: boolean;
-  onEdit: (questionId: string) => void; onDetails: () => void; onDesign: () => void; onPrepare: () => void;
+  onEdit: (questionId: string) => void; onDetails: () => void; onDesign: () => void; onPrepare: () => void; readOnly?: boolean;
   onStructure?: (patch: Partial<Pick<BusinessStructure, StructureAxis>>) => void;
   /** false면 다음 단계 버튼·상세 질문 버튼을 요약에 두지 않는다(대화 쪽이 이미 보여 주는 경우). */
   showActions?: boolean;
@@ -680,19 +751,19 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     // 업종 줄은 고른 세부 업종을 크게, 큰 분류와 코드는 아래 작은 줄로
     const ksicLine = ksic ? `${display || shown} · KSIC ${ksic.code}` : null;
     const main = ksic ? ksic.name : display;
-    return <div key={item.id}><dt><span>{item.label}</span><small data-basis={item.basis}>{item.basis === "proposal" ? "AI 제안" : item.basis === "unknown" ? "아직 안 정함" : "내가 입력함"}</small>{editableId && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={main || "아직 정하지 않았어요"} />{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
+    return <div key={item.id}><dt><span>{item.label}</span><small data-basis={item.basis}>{item.basis === "proposal" ? "AI 제안" : item.basis === "unknown" ? "아직 안 정함" : "내가 입력함"}</small>{editableId && !readOnly && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={main || "아직 정하지 않았어요"} />{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
   };
   return <>
     <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">현재까지 작성한 사업정보</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
     {snapshot.financialWarning && <div className={styles.financialWarning} role="note">
       <p>{snapshot.financialWarning.message}</p>
-      {onEdit && <div>{snapshot.financialWarning.fields.map(key => { const id = key === "price" ? "price" : key === "unitCost" ? "structure.unitCost" : "structure.cost"; const label = key === "price" ? "가격 다시 입력" : key === "unitCost" ? "변동비 다시 입력" : "고정비 다시 입력"; return <button key={key} type="button" className={styles.presetChip} disabled={disabled} onClick={() => { if (id.startsWith("structure.") && !snapshot.intake.detailsRequested) onDetails(); else onEdit(id); }}><PencilLine size={14} aria-hidden="true" />{label}</button>; })}</div>}
+      {!readOnly && <div>{snapshot.financialWarning.fields.map(key => { const id = key === "price" ? "price" : key === "unitCost" ? "structure.unitCost" : "structure.cost"; const label = key === "price" ? "가격 다시 입력" : key === "unitCost" ? "변동비 다시 입력" : "고정비 다시 입력"; return <button key={key} type="button" className={styles.presetChip} disabled={disabled} onClick={() => { if (id.startsWith("structure.") && !snapshot.intake.detailsRequested) onDetails(); else onEdit(id); }}><PencilLine size={14} aria-hidden="true" />{label}</button>; })}</div>}
     </div>}
     {nextStep && actions}
     <BusinessIdentityHero snapshot={snapshot} compact />
     {original && <section className={styles.original}><h3>내 사업 구상</h3><ConversationText text={original} /></section>}
     {highlights.length > 0 && <dl className={styles.summaryFields}>{highlights.map(renderField)}</dl>}
-    {(remaining.length > 0 || extraAnswers.length > 0) && <details className={styles.summaryDetails} open><summary>다른 답변 보기 ·{remaining.length + extraAnswers.length}개</summary><dl className={styles.summaryFields}>{remaining.map(renderField)}{extraAnswers.map(question => <div key={question.id}><dt><span>{question.label}</span><button type="button" className={styles.iconButton} aria-label={`${question.label} 수정`} title={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={15} /></button></dt><dd><ConversationText text={snapshot.intake.answers[question.id].status === "unknown" ? "아직 정하지 않았어요" : plainText(summaryAnswerText(question, snapshot.intake.answers[question.id].value, snapshot.candidateIdeas)) || plainText(answerText(snapshot.intake.answers[question.id].value)) || "아직 정하지 않았어요"} /></dd></div>)}</dl></details>}
+    {(remaining.length > 0 || extraAnswers.length > 0) && <details className={styles.summaryDetails} open><summary>다른 답변 보기 ·{remaining.length + extraAnswers.length}개</summary><dl className={styles.summaryFields}>{remaining.map(renderField)}{extraAnswers.map(question => <div key={question.id}><dt><span>{question.label}</span>{!readOnly && <button type="button" className={styles.iconButton} aria-label={`${question.label} 수정`} title={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={snapshot.intake.answers[question.id].status === "unknown" ? "아직 정하지 않았어요" : plainText(summaryAnswerText(question, snapshot.intake.answers[question.id].value, snapshot.candidateIdeas)) || plainText(answerText(snapshot.intake.answers[question.id].value)) || "아직 정하지 않았어요"} /></dd></div>)}</dl></details>}
     {!snapshot.summary.length && !extraAnswers.length && <p className={styles.muted}>아직 저장한 답변이 없습니다.</p>}
     {snapshot.structure && <details className={`${styles.structure} ${styles.summaryDetails}`}>
       <summary>고객·제공 방식 바꾸기</summary>
@@ -704,7 +775,7 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
         const labels = STRUCTURE_LABELS[axis] as Record<string, string>;
         const basis = snapshot.structure!.basis[axis];
         const open = structureEdit === axis;
-        return <div key={axis}><dt><span>{STRUCTURE_AXIS_LABEL[axis]}</span><small>{basis === "user" ? "직접 선택" : basis === "ksic" ? "분류 기준" : "업종 기준"}</small>{onStructure && <button type="button" className={styles.iconButton} aria-label={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} title={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} aria-expanded={open} disabled={disabled} onClick={() => setStructureEdit(open ? null : axis)}><PencilLine size={15} /></button>}</dt>
+        return <div key={axis}><dt><span>{STRUCTURE_AXIS_LABEL[axis]}</span><small>{basis === "user" ? "직접 선택" : basis === "ksic" ? "분류 기준" : "업종 기준"}</small>{onStructure && !readOnly && <button type="button" className={styles.iconButton} aria-label={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} title={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} aria-expanded={open} disabled={disabled} onClick={() => setStructureEdit(open ? null : axis)}><PencilLine size={15} /></button>}</dt>
           <dd>{labels[value] ?? value}{open && onStructure && <div className={styles.structureChips} role="group" aria-label={`${STRUCTURE_AXIS_LABEL[axis]} 선택`}>{Object.entries(labels).map(([key, label]) => <button key={key} type="button" className={styles.presetChip} data-selected={key === value || undefined} disabled={disabled} onClick={() => { setStructureEdit(null); if (key !== value) onStructure({ [axis]: key } as Partial<Pick<BusinessStructure, StructureAxis>>); }}>{label}</button>)}</div>}</dd></div>;
       })}</dl>
       {snapshot.structure.licenseHint && <p className={styles.muted}>{snapshot.structure.licenseHint}</p>}

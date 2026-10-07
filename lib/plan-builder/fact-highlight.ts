@@ -1,0 +1,53 @@
+/**
+ * "문장에서 바로 고치기" (owner decision 2026-10-07): only the business's core facts — the intake answers the plan is
+ * built from — are editable from the document. Each fact carries the strings it is likely to appear as in the text,
+ * so the document can mark those spots. Matching is best-effort; the fact list itself is always shown.
+ */
+export const EDITABLE_FACT_IDS = ["customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "budget", "hoursPerWeek", "capacity", "goal"] as const;
+
+export type EditableFact = { questionId: string; label: string; display: string; needles: string[] };
+
+const won = (value: number) => `${new Intl.NumberFormat("ko-KR").format(Math.round(value))}원`;
+
+/** Ways one amount tends to be written: 7,500원 / 7500원, 120만원 / 120만 원 / 1,200,000원. */
+export function amountForms(text: string): string[] {
+  const plain = text.replace(/\s+/g, "");
+  const wonMatch = plain.match(/^([\d,]+)원$/);
+  const manMatch = plain.match(/^([\d,.]+)만원$/);
+  const value = wonMatch ? Number(wonMatch[1].replace(/,/g, "")) : manMatch ? Number(manMatch[1].replace(/,/g, "")) * 10_000 : NaN;
+  if (!Number.isFinite(value) || value <= 0) return [];
+  const forms = [won(value), `${Math.round(value)}원`];
+  if (value % 10_000 === 0) { const man = value / 10_000; forms.push(`${new Intl.NumberFormat("ko-KR").format(man)}만원`, `${new Intl.NumberFormat("ko-KR").format(man)}만 원`); }
+  return forms;
+}
+
+/** Pieces of a displayed answer worth looking for in prose ("A, B / 하루 20건" → "A", "B", "하루 20건"). */
+export function factNeedles(display: string): string[] {
+  // Split picks on ", " and " / " only — commas inside amounts ("10,000원") stay.
+  const pieces = display.split(/\s*\/\s*|,\s+/).map(piece => piece.replace(/\s*\((?:예상|실제 기록)\)$/, "").trim()).filter(Boolean);
+  const needles = new Set<string>();
+  for (const piece of [display.trim(), ...pieces]) {
+    if (piece.length < 2 || /^(?:기타|없음|미정)$/.test(piece)) continue;
+    needles.add(piece);
+    for (const form of amountForms(piece)) needles.add(form);
+  }
+  // Longest first, so "6개월 안에 단골 50가구" wins over "50가구".
+  return [...needles].sort((a, b) => b.length - a.length);
+}
+
+/** Non-overlapping [start, end, questionId] ranges of fact needles inside one text run. */
+export function findFactRanges(text: string, facts: Pick<EditableFact, "questionId" | "needles">[]): Array<[number, number, string]> {
+  const ranges: Array<[number, number, string]> = [];
+  const all = facts.flatMap(fact => fact.needles.map(needle => ({ needle, id: fact.questionId }))).sort((a, b) => b.needle.length - a.needle.length);
+  for (const { needle, id } of all) {
+    let from = 0;
+    for (;;) {
+      const at = text.indexOf(needle, from);
+      if (at < 0) break;
+      const end = at + needle.length;
+      if (!ranges.some(([start, stop]) => at < stop && end > start)) ranges.push([at, end, id]);
+      from = end;
+    }
+  }
+  return ranges.sort((a, b) => a[0] - b[0]);
+}

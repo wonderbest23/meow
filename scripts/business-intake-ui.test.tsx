@@ -312,7 +312,7 @@ async function main() {
   const css = readFileSync(new URL("../app/plan/chat/intake.module.css", import.meta.url), "utf8");
   const cssClasses = Object.fromEntries([...css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(match => [match[1], match[1]]));
   require.extensions[".css"] = module => { module.exports = cssClasses; };
-  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction } = await import("../app/plan/chat/intake-ui/IntakePanels");
+  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
   const noop = () => {};
   const entry = renderToStaticMarkup(<EntryChoices disabled={false} onStart={noop} />);
   assert.equal((entry.match(/<button/g) ?? []).length, 3);
@@ -518,12 +518,14 @@ async function main() {
   const opened = nextMarkup({ hasDocuments: true }, currentDesign);
   assert.ok(opened.includes("사업계획서 문서 열기</a>") && !opened.includes("작성하기</button>") && !opened.includes("정리하기</button>"), "after the documents exist the step is opening them");
   const staleDocument = nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign);
-  assert.ok(staleDocument.includes("바뀐 내용으로 사업계획서 다시 작성하기") && staleDocument.includes("이전 계획서 보기"), "an old document is kept and rebuilding is explicit");
+  assert.ok(staleDocument.includes("계획서 다시 작성하기</button>") && !staleDocument.includes("이전 계획서 보기") && !staleDocument.includes("진행 단계") && !staleDocument.includes("다시 생성 횟수"), "a stale document shows one rewrite button; the cost note waits for the confirm popup");
   // 반영하기 전에 비용을 먼저 보여 준다(다시 쓸 항목 수 · 대화는 무료)
-  const staleCost = nextMarkup({ hasDocuments: true, documentStatus: "stale", rewriteCount: 4 }, currentDesign);
-  assert.ok(staleCost.includes("<b>4개 항목</b>을 다시 써요") && staleCost.includes("항목마다 다시 생성 횟수 1회가 차감돼요"), "the rewrite count is shown before rebuilding");
-  assert.ok(staleCost.includes("대화는 무료예요. 계획서에 반영할 때만 다시 생성 횟수가 차감되고"), "chatting is free, only applying to the document costs");
-  assert.ok(nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign).includes("바뀐 내용과 맞지 않는 항목만 다시 써요"), "unknown count still explains the cost");
+  // 횟수 안내는 버튼을 누른 뒤 확인창(RewriteCost)에서 보여 준다
+  const staleCost = renderToStaticMarkup(<RewriteCost snapshot={nextSnapshot({ hasDocuments: true, documentStatus: "stale", rewriteCount: 4, freeReflects: 0 }, currentDesign)} />);
+  assert.ok(staleCost.includes("<b>4개 항목</b>을 다시 써요") && staleCost.includes("항목마다 다시 생성 횟수 1회가 차감돼요"), "the rewrite count is shown in the confirm popup");
+  const freeCost = renderToStaticMarkup(<RewriteCost snapshot={nextSnapshot({ hasDocuments: true, documentStatus: "stale", rewriteCount: 4, freeReflects: 2 }, currentDesign)} />);
+  assert.ok(freeCost.includes("<b>4개 항목</b>을 다시 써요") && freeCost.includes("<b>무료</b>예요 (오늘 2번 남음)") && !freeCost.includes("차감"), "a free reflect says so instead of a deduction");
+  assert.ok(renderToStaticMarkup(<RewriteCost snapshot={nextSnapshot({ hasDocuments: true, documentStatus: "stale", freeReflects: 0 }, currentDesign)} />).includes("바뀐 내용과 맞지 않는 항목만 다시 써요"), "unknown count still explains the cost");
   assert.ok(opened.includes("대화로 내용을 더 다듬는 건 무료예요"), "a finished document tells that further chat is free");
   assert.ok(!needsPlan.includes("다시 생성 횟수"), "the first document shows no rewrite cost");
   const hiddenActions = nextMarkup({}, { design: undefined }, false);

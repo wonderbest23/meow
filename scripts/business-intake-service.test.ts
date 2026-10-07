@@ -804,6 +804,70 @@ async function main() {
       assert.equal(calls.length, 24);
     });
 
+    /** A finished plan: answers in place and one generated section written for the current facts. */
+    async function withDocument(session: Session) {
+      await send(session, { action: "answer", questionId: "customer", value: "맞벌이 30대 부부" });
+      await send(session, { action: "answer", questionId: "price", value: 59000 });
+      const state = await loadPlanState(session.ownerHash);
+      const plan = state.plans.find(item => item.id === session.planId)!;
+      plan.sections["market/customer"] = { markdown: "맞벌이 30대 부부를 위한 반찬, 한 세트 59,000원", html: "<p>맞벌이 30대 부부를 위한 반찬, 한 세트 59,000원</p>", generatedAt: new Date().toISOString(), coachRevision: coachDocumentRevision(readCoach(plan.answers)!) } as never;
+      plan.updatedAt = new Date(Date.now() + 1000).toISOString();
+      await savePlanState(session.ownerHash, state);
+    }
+
+    await check("a typed price change swaps the amount in the document and keeps it stale for a rewrite", async () => {
+      const session = await start();
+      await withDocument(session);
+      const saved = await send(session, { action: "answer", questionId: "price", value: 49000 });
+      const section = (await loadPlanState(session.ownerHash)).plans.find(item => item.id === session.planId)!.sections["market/customer"];
+      assert.ok(section.markdown.endsWith("한 세트 49,000원"));
+      assert.equal(saved.snapshot.documentStatus, "stale");
+      assert.equal(saved.snapshot.freeReflects, 3, "fact reflects start with today's free allowance");
+    });
+
+    await check("plan edit chat needs a document and answers off-topic requests without any AI call", async () => {
+      configureAI(true);
+      const session = await start();
+      await assert.rejects(send(session, { action: "edit", message: "가격을 6만 5천원으로" }, true), (error: unknown) => error instanceof IntakeError && error.code === "edit_requires_document");
+      await withDocument(session);
+      for (const message of ["그냥 카페 사업으로 할래", "말투를 더 공손하게 해줘", "오늘 날씨 어때"]) {
+        const saved = await send(session, { action: "edit", message }, true);
+        assert.equal(saved.job, null, `${message}: no AI job`);
+      }
+      const current = await load(session);
+      const replies = current.coach.messages.filter(item => item.role === "assistant").map(item => item.text);
+      assert.ok(replies.some(text => text.includes("새 대화")) && replies.some(text => text.includes("말투")) && replies.some(text => text.includes("계획서 내용 수정만")), "each kind gets its fixed reply");
+      assert.equal(calls.length, 0, "filtered requests never reach the provider");
+    });
+
+    await check("plan edit chat proposes only valid fact changes; apply marks the document stale, dismiss leaves it", async () => {
+      configureAI(true);
+      const session = await start();
+      await withDocument(session);
+      respond = () => completion({ changes: [{ questionId: "customer", value: "1인 가구" }, { questionId: "price", value: "65000원" }, { questionId: "customer", value: "중복" }] });
+      const queued = await send(session, { action: "edit", message: "고객을 1인 가구로, 가격은 6만 5천원으로 바꿔줘" }, true);
+      assert.equal(queued.job?.kind, "edit");
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, queued)), { ok: true });
+      const proposed = await load(session);
+      assert.deepEqual(proposed.intake.job?.proposal?.map(change => change.questionId), ["customer", "price"], "one change per fact, in order");
+      assert.equal(proposed.intake.answers.customer.value, "맞벌이 30대 부부", "nothing changes before the owner confirms");
+      const applied = await send(session, { action: "edit-apply" });
+      assert.equal(applied.snapshot.intake.answers.customer.value, "1인 가구");
+      assert.equal(applied.snapshot.intake.job?.proposalStatus, "applied");
+      assert.equal(applied.snapshot.documentStatus, "stale", "the plan must be re-applied after a fact change");
+      const swapped = (await loadPlanState(session.ownerHash)).plans.find(item => item.id === session.planId)!.sections["market/customer"];
+      assert.ok(swapped.markdown.includes("한 세트 65,000원") && swapped.html.includes("한 세트 65,000원"), "the new price is written into the document right away, without AI");
+      await assert.rejects(send(session, { action: "edit-apply" }), (error: unknown) => error instanceof IntakeError && error.code === "edit_missing", "a proposal applies once");
+
+      respond = () => completion({ changes: [{ questionId: "price", value: "7만원" }] });
+      const again = await send(session, { action: "edit", message: "가격을 7만원으로" }, true);
+      assert.deepEqual(await executeIntakeJob(jobRequest(session, again)), { ok: true });
+      const before = (await load(session)).intake.answers.price.value;
+      const dismissed = await send(session, { action: "edit-dismiss" });
+      assert.equal(dismissed.snapshot.intake.job?.proposalStatus, "dismissed");
+      assert.equal((await load(session)).intake.answers.price.value, before, "a dismissed proposal changes nothing");
+    });
+
     await check("background document saves cannot rewind independently completed intake jobs", async () => {
       const session = await start();
       const queued = await send(session, { action: "message", message: "새로운 고객을 찾으면서 업무를 정리하고 싶어요" }, true);

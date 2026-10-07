@@ -46,8 +46,9 @@ export default function PlanDocumentPage() {
     const doneKeys = new Set(progress.sections.filter(section => section.done).map(section => section.key));
     if (seenDone.current === null) { seenDone.current = doneKeys; return; }
     const added = [...doneKeys].filter(key => !seenDone.current!.has(key));
-    if (!added.length) return;
+    // Always remember the latest set: a section being rewritten drops out and comes back, and must count as new then.
     seenDone.current = doneKeys;
+    if (!added.length) return;
     hydrateFromServer().then(state => {
       const fresh = assembleSections({ ...state, activePlanId: documentPlanId });
       setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !added.includes(item.key) ? shown : item; }));
@@ -267,7 +268,17 @@ export default function PlanDocumentPage() {
     } catch { setAccessError(true); }
   }
 
-  return <DocumentWorkspace writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
+  // 문서에서 금액을 고치면 서버가 본문 금액을 바로 바꿔 넣는다 — 새로고침 없이 보이게 다시 불러온다.
+  const reloadSections = () => {
+    if (!documentPlanId) return;
+    hydrateFromServer().then(s => {
+      const plan = s.plans.find(item => item.id === documentPlanId);
+      if (!plan) return;
+      setSections(assembleSections({ ...s, activePlanId: documentPlanId }));
+      updateSourceStatus(plan);
+    }).catch(() => undefined);
+  };
+  return <DocumentWorkspace onReflected={() => generation.restart()} onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;

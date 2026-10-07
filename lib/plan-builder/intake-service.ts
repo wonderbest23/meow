@@ -1,4 +1,6 @@
+import { patchDocumentAmounts } from "./fact-patch";
 import { createHash } from "node:crypto";
+import { classifyEditRequest, EDIT_REPLIES, type EditRoute } from "./intake-edit-filter";
 import { z } from "zod";
 import { completeJson } from "../llm/complete";
 import { resolveIntakeLLMConfig, intakeBetaSafetyRequired } from "../llm/intake-policy";
@@ -10,7 +12,8 @@ import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-sto
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
 import { applyIntakeAnswer, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
-import { extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
+import { editIntake, extractIntakeFields, helpIntake, parseIntakeNote } from "./intake-extraction";
+import { EDITABLE_FACT_IDS } from "./fact-highlight";
 import { getServerSupabase } from "../persistence";
 import { notifyOwnerBySms } from "../notify/owner-sms";
 import { rateLimit } from "../rate-limit";
@@ -41,7 +44,7 @@ export function newIntakeJob(coach: CoachState, intake: IntakeState, kind: Intak
   return job;
 }
 
-export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand, options: { aiAvailable?: boolean; aiAllowed?: boolean } = {}) {
+export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand, options: { aiAvailable?: boolean; aiAllowed?: boolean; editRoute?: EditRoute } = {}) {
   const parsed = intakeCommandSchema.safeParse(input);
   if (!parsed.success) {
     if (parsed.error.issues.some(issue => issue.code === "custom" && issue.path[0] === "structure")) throw new IntakeError("structure_required", "바꿀 사업 구조 항목을 골라 주세요");
@@ -98,7 +101,41 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         plan.answers.__intake_legacy_job = structuredClone(plan.answers.__coach_job);
         plan.answers.__coach_job = { ...plan.answers.__coach_job, token: crypto.randomUUID(), status: "failed", updatedAt: at };
       }
-    } else if (command.action === "answer") applyIntakeAnswer(plan, coach, intake, command, at);
+    } else if (command.action === "answer") {
+      const beforeAnswers = structuredClone(intake.answers);
+      applyIntakeAnswer(plan, coach, intake, command, at);
+      // 계획서가 있으면 고친 금액을 본문에 바로 바꿔 넣는다(AI 없음). 계산된 다른 값은 다시 작성하기로 맞춘다.
+      patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
+    }
+    else if (command.action === "edit") {
+      // 계획서가 있는 사업의 채팅 수정. 범위 밖 요청은 AI 없이 정해진 답으로 끝내고, 사실 변경 요청만 AI 작업으로 넘긴다.
+      if (!Object.keys(plan.sections).length) throw new IntakeError("edit_requires_document", "사업계획서를 만든 뒤에 채팅으로 고칠 수 있어요", 409);
+      const text = command.message?.trim() ?? "";
+      if (text.length > 1200) throw new IntakeError("edit_too_long", "바꿀 내용을 1,200자 이내로 적어 주세요");
+      const route = options.editRoute ?? classifyEditRequest(text);
+      if (text) coach.messages.push({ id: command.requestId, role: "user", text, at });
+      if (route !== "in_scope") coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: EDIT_REPLIES[route], at });
+      else {
+        if (active(intake.job)) throw new IntakeError("ai_busy", "앞선 요청을 정리하고 있어요. 잠시 후 다시 보내 주세요", 409);
+        if (!options.aiAvailable) throw new IntakeError("ai_unavailable", "지금은 채팅 수정을 쓸 수 없어요. 계획서에서 문장으로 바로 고칠 수 있어요", 503);
+        if (!options.aiAllowed) throw new IntakeError("ai_limit", "오늘 이 계획서의 수정 요청 한도에 도달했어요. 계획서에서 문장으로 바로 고치기는 계속 쓸 수 있어요", 429);
+        created = newIntakeJob(coach, intake, "edit", at, text);
+      }
+    } else if (command.action === "edit-apply" || command.action === "edit-dismiss") {
+      const job = intake.job;
+      if (!job || job.kind !== "edit" || job.status !== "complete" || !job.proposal?.length || job.proposalStatus) throw new IntakeError("edit_missing", "바꿀 내용을 다시 요청해 주세요", 409);
+      if (command.action === "edit-apply") {
+        // Each change goes through the same validation as a typed answer; one invalid value stops the whole set.
+        const beforeAnswers = structuredClone(intake.answers);
+        job.proposal.forEach((change, index) => applyIntakeAnswer(plan!, coach, intake, { ...command, action: "answer", questionId: change.questionId, value: change.value, unknown: false, requestId: `${command.requestId}:${index}` }, at));
+        patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
+        job.proposalStatus = "applied";
+        coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "바꿨어요. 아래 \"계획서 다시 작성하기\"를 누르면 바뀐 내용으로 다시 써요.", at });
+      } else {
+        job.proposalStatus = "dismissed";
+        coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "그대로 둘게요. 다른 바꿀 내용이 있으면 말씀해 주세요.", at });
+      }
+    }
     else if (command.action === "resources") applyIntakeResources(plan, coach, intake, command, at);
     else if (command.action === "details") intake.detailsRequested = true;
     else if (command.action === "name") {
@@ -259,6 +296,41 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         intake.candidates.push(...result.candidates.map((candidate, index) => ({ ...candidate, id: `${job.id}:${index}`, baseValue: job.baseValues[candidate.fieldKey] ?? null, ...(job.baseFieldRevisions ? { baseFieldRevision: job.baseFieldRevisions[candidate.fieldKey] ?? null } : {}), status: "pending" as const })));
         intake.notes = intake.notes.map(note => job.noteIds.includes(note.id) ? { ...note, status: result.candidates.some(candidate => candidate.noteId === note.id) ? "review" : "stored" } : note);
         current.status = "complete";
+      });
+    } else if (job.kind === "edit") {
+      // The AI only sees the editable facts and returns changes; every value is tried on a copy before it is offered.
+      const snapshot = intakeSnapshot(claimed.plan, claimed.coach, claimed.intake);
+      const editable = new Set<string>(EDITABLE_FACT_IDS);
+      const questions = snapshot.questions.filter(question => editable.has(question.id));
+      const shown = (value: unknown) => Array.isArray(value) ? value.join(", ") : value === null || value === undefined ? "" : String(value);
+      const facts = questions.map(question => ({ questionId: question.id, label: question.label, current: shown(claimed.intake.answers[question.id]?.value), ...(question.options?.length ? { choices: question.options.map(option => option.label).slice(0, 24) } : {}) }));
+      const result = await editIntake(config, facts, job.request ?? "");
+      if (!result.ok) throw new IntakeError(result.reason, "바꿀 내용을 정리하지 못했어요. 바꿀 항목과 값을 함께 적어 다시 보내 주세요");
+      const toValue = (questionId: string, text: string) => {
+        const question = questions.find(item => item.id === questionId)!;
+        if (!["single", "multi"].includes(question.kind)) return text;
+        const resolve = (piece: string) => question.options?.find(option => [option.value, option.label].some(label => label.replace(/\s+/g, "") === piece.replace(/\s+/g, "")))?.value;
+        if (question.kind === "single") return resolve(text);
+        const picks = text.split(/,\s*/).map(resolve);
+        return picks.every((pick): pick is string => !!pick) ? picks : undefined;
+      };
+      const proposal: Array<{ questionId: string; value: string | string[] }> = [];
+      for (const change of result.changes) {
+        if (proposal.some(item => item.questionId === change.questionId)) continue;
+        const value = toValue(change.questionId, change.value.trim());
+        if (value === undefined) continue;
+        try { applyIntakeAnswer(structuredClone(claimed.plan), structuredClone(claimed.coach), structuredClone(claimed.intake), { action: "answer", revision: 0, requestId: crypto.randomUUID(), questionId: change.questionId, value }, new Date().toISOString()); }
+        catch { continue; }
+        proposal.push({ questionId: change.questionId, value });
+      }
+      await updateIntakeJob(request, (_plan, coach, _intake, current) => {
+        if (current.status !== "running" || coachDocumentRevision(coach) !== job.baseDocumentRevision) throw new IntakeError("source_changed", "정리하는 중 사업정보가 바뀌었어요. 다시 요청해 주세요", 409);
+        current.proposal = proposal; current.status = "complete";
+        const id = `${current.id}:reply`;
+        if (!coach.messages.some(message => message.id === id)) {
+          coach.messages.push({ id, role: "assistant", text: proposal.length ? "바꿀 내용을 정리했어요. 아래에서 확인해 주세요." : "어떤 내용을 어떻게 바꿀지 찾지 못했어요. 예: 가격을 6만 5천원으로, 주 고객을 1인 가구로", at: new Date().toISOString() });
+          coach.revision += 1;
+        }
       });
     } else if (job.kind === "help") {
       const context = JSON.stringify({ stage: claimed.coach.stage, business: claimed.coach.business.name, fields: claimed.coach.fields.map(field => ({ key: field.key, value: field.value.slice(0, 180), basis: field.basis })), excerpted: true });
