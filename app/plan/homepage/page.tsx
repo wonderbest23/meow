@@ -1,5 +1,6 @@
 "use client";
 
+import { announceHomepageStatus } from "../use-homepage";
 import { appendixFromDraft } from "../../../components/public-appendix-preview";
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -398,6 +399,12 @@ export default function PlanHomepagePage() {
   };
 
   const publicPath = site ? `/launch/${site.publishedSlug ?? site.slug}` : "";
+  /* 공개·공개 중지가 끝나면 왼쪽 목록(유지보수 단계)에 바로 알린다 — 새로 고침 없이 '유지보수'가 열린다 */
+  useEffect(() => {
+    if (!screenPlanId || !site) return;
+    const published = site.status === "published";
+    announceHomepageStatus(screenPlanId, { status: published ? "published" : "draft", publicPath: published ? `/launch/${site.publishedSlug ?? site.slug}` : null });
+  }, [screenPlanId, site?.status, site?.slug, site?.publishedSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** 막힌 이유마다 다음 행동이 다르다 — 결제·로그인·계획서 이어쓰기 */
   function blockedHref(cta: "pay" | "plan" | "login"): string {
@@ -595,15 +602,16 @@ export default function PlanHomepagePage() {
       )}
 
       {/* 공개한 뒤의 다음 단계는 하나 — 유지보수(홈페이지 고치기, 문의·실적 관리) */}
-      {phase === "ready" && site?.status === "published" && screenPlanId && !sample && (
+      {/* 다음 단계 두 개를 나란히 — 예전엔 화면 끝까지 넓은 띠 두 개라 글씨만 작아 보였다(소유자 지적 2026-10-07) */}
+      {phase === "ready" && site?.status === "published" && screenPlanId && !sample && <div className={styles.nextRow}>
         <Link className={styles.nextCare} href={careHref(screenPlanId)}>
           <span>다음 단계</span>
           <strong>유지보수 하기 →</strong>
           <small>홈페이지를 고치고, 들어온 문의와 실적을 관리해요</small>
         </Link>
-      )}
-      {/* 그다음 — 사업자등록·신고 도움·홍보 상담(목록은 유지보수 화면 한 곳에) */}
-      {phase === "ready" && site?.status === "published" && screenPlanId && !sample && <NextServicesCard planId={screenPlanId} />}
+        {/* 그다음 — 사업자등록·신고 도움·홍보 상담(목록은 유지보수 화면 한 곳에) */}
+        <NextServicesCard planId={screenPlanId} className={styles.nextCard} />
+      </div>}
     </div></div>
     </BusinessAppChrome></main>
   );

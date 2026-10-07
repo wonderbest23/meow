@@ -42,7 +42,9 @@ import { AddressSearchButton } from "./address-search";
 type Action = "idle" | "saving" | "saved" | "publishing";
 
 /* 접이식 카드 — 요약 줄(아이콘·제목·상태 배지)만 보이다가 누르면 펼쳐진다 */
-function Fold({ icon, title, badge, hint, children, defaultOpen, id }: {
+function Fold({ icon, title, badge, hint, children, defaultOpen, id, step }: {
+  /** 화면 순서 번호 — 왼쪽 목록의 홈페이지 목차와 같은 번호(소유자 지적: 순서가 헷갈림) */
+  step?: number;
   icon: ReactNode;
   title: string;
   badge?: ReactNode;
@@ -55,6 +57,7 @@ function Fold({ icon, title, badge, hint, children, defaultOpen, id }: {
   return (
     <details className="hk-fold" open={defaultOpen} id={id}>
       <summary>
+        {step ? <b className="hk-step-no" aria-label={`${step}번`}>{step}</b> : null}
         <span className="hk-fold-ic">{icon}</span>
         <span className="hk-fold-tt">
           <strong>{title} {badge}</strong>
@@ -232,6 +235,7 @@ export function HomepageKitPanel({
         템플릿·에디터 버튼은 목업 바 오른쪽의 작은 버튼으로 — 예전의 큰 버튼
         두 개는 미리보기보다 목소리가 컸다(사용자 지적).
       */}
+      <p className="hk-step-head"><b className="hk-step-no" aria-hidden="true">1</b> 미리보기·에디터</p>
       <div className="hk-preview hk-mock" id="hk-preview">
         <div className="hk-mock-bar">
           <span aria-hidden="true" className="hk-dots"><i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" /></span>
@@ -296,6 +300,7 @@ export function HomepageKitPanel({
 
       {/* 손님 연락 방법 — 문의·예약 버튼과 휴대폰 아래 고정 버튼이 어디로 연결될지 */}
       <Fold
+        step={2}
         id="hk-contact"
         icon={<PhoneCall size={18} />}
         title="손님 연락 방법"
@@ -344,6 +349,7 @@ export function HomepageKitPanel({
 
       {/* 2. 사업자 정보 — 접이식 */}
       <Fold
+        step={3}
         id="hk-business"
         icon={<ShieldCheck size={18} />}
         title="사업자 정보"
@@ -392,6 +398,7 @@ export function HomepageKitPanel({
 
       {/* 3. 도메인 — 접이식. 카드 안의 자체 제목은 CSS 로 숨긴다(요약 줄과 중복) */}
       <Fold
+        step={4}
         id="hk-domain"
         icon={<Globe2 size={18} />}
         title="내 도메인 연결"
@@ -410,6 +417,7 @@ export function HomepageKitPanel({
 
       {/* 4. 접수된 문의 — 접이식 */}
       <Fold
+        step={5}
         id="hk-leads"
         icon={<Inbox size={18} />}
         title="접수된 문의"
