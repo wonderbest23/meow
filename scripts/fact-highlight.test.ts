@@ -20,4 +20,5 @@ const ranges = findFactRanges(text, [
   { questionId: "other", needles: ["50가구"] },
 ]);
 assert.deepEqual(ranges.map(([start, end, id]) => [text.slice(start, end), id]), [["맞벌이 30대 부부", "customer"], ["7,500원", "price"], ["6개월 안에 단골 50가구", "goal"]], "longest match wins and ranges never overlap");
+assert.deepEqual(findFactRanges("공헌이익 -2,950,000원, 판매가 50,000원", [{ questionId: "price", needles: ["50,000원"] }]), [[22, 29, "price"]], "an amount inside a longer number is not marked");
 console.log("fact-highlight tests passed");

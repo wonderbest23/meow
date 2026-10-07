@@ -80,7 +80,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const [preview, setPreview] = useState<IntakeSnapshot | null>(null);
   const plan = preview ?? savedPlan;
   // Keep the conversation primary at completion, without shifting the panes.
-  const split = useChatSplit({ key: "oneulstart:intake-split:answering", defaultShare: 64, minChatPx: 300, minSidePx: 300, maxShare: 75 });
+  // 채팅에 집중: 오른쪽 요약은 늘 끌어서 줄일 수 있는 최소 너비로 시작한다(소유자 결정 2026-10-07). 끌어서 넓혀도 다음에 열면 다시 최소.
+  const split = useChatSplit({ key: "oneulstart:intake-split:answering", defaultShare: 100, minChatPx: 300, minSidePx: 300, maxShare: 85, remember: false });
   const planRef = useRef<IntakeSnapshot | null>(null);
   const ownerScope = useRef<string | null>(null);
   const [ownerChanged, setOwnerChanged] = useState(false);

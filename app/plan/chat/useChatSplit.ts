@@ -8,9 +8,9 @@ const DEFAULT = 42;
  * 채팅과 옆 패널의 너비 분할. key가 바뀌면(예: 질문 중 → 질문 완료) 그 단계의 저장된 너비나 기본값으로 옮겨 간다.
  * 저장은 보는 사람의 편의(localStorage)일 뿐이며 실패해도 기본값으로 동작한다.
  */
-export type ChatSplitOptions = { key?: string; defaultShare?: number; minChatPx?: number; minSidePx?: number; maxShare?: number };
+export type ChatSplitOptions = { key?: string; defaultShare?: number; minChatPx?: number; minSidePx?: number; maxShare?: number; remember?: boolean };
 export function useChatSplit(options: ChatSplitOptions = {}) {
-  const { key = KEY, defaultShare = DEFAULT, minChatPx = 280, minSidePx = 332, maxShare = 66 } = options;
+  const { key = KEY, defaultShare = DEFAULT, minChatPx = 280, minSidePx = 332, maxShare = 66, remember = true } = options;
   const ref = useRef<HTMLDivElement>(null);
   const [preferred, setPreferred] = useState(defaultShare);
   const [width, setWidth] = useState(1200);
@@ -18,7 +18,7 @@ export function useChatSplit(options: ChatSplitOptions = {}) {
   const latest = useRef(defaultShare);
   useEffect(() => {
     let next = defaultShare;
-    try { const stored = localStorage.getItem(key); const value = Number(stored); if (stored && Number.isFinite(value)) next = Math.max(20, Math.min(80, value)); } catch {}
+    if (remember) try { const stored = localStorage.getItem(key); const value = Number(stored); if (stored && Number.isFinite(value)) next = Math.max(20, Math.min(80, value)); } catch {}
     latest.current = next; setPreferred(next);
   }, [key, defaultShare]);
   useEffect(() => {
@@ -34,7 +34,7 @@ export function useChatSplit(options: ChatSplitOptions = {}) {
   function change(next: number, persist = false) {
     latest.current = Math.max(min, Math.min(max, next));
     setPreferred(latest.current);
-    if (persist) try { localStorage.setItem(key, String(latest.current)); } catch {}
+    if (persist && remember) try { localStorage.setItem(key, String(latest.current)); } catch {}
   }
   function move(event: PointerEvent<HTMLDivElement>) {
     const bounds = ref.current?.getBoundingClientRect();

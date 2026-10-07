@@ -45,7 +45,9 @@ export function findFactRanges(text: string, facts: Pick<EditableFact, "question
       const at = text.indexOf(needle, from);
       if (at < 0) break;
       const end = at + needle.length;
-      if (!ranges.some(([start, stop]) => at < stop && end > start)) ranges.push([at, end, id]);
+      // An amount must stand alone: "50,000원" inside "-2,950,000원" is a different number.
+      const glued = /^\d/.test(needle) && /[\d,.]/.test(text[at - 1] ?? "");
+      if (!glued && !ranges.some(([start, stop]) => at < stop && end > start)) ranges.push([at, end, id]);
       from = end;
     }
   }
