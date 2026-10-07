@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { amountReplacements, patchDocumentAmounts } from "../lib/plan-builder/fact-patch";
-import { FREE_REFLECTS_PER_DAY, freeReflectsLeft, isFreeReflect, recentFreeReflects } from "../lib/plan-builder/free-reflect";
+import { FREE_REFLECTS_TOTAL, freeReflectsLeft, isFreeReflect, usedFreeReflects } from "../lib/plan-builder/free-reflect";
 
 // Each written style keeps its style.
 assert.deepEqual(new Map(amountReplacements(7500, 9000)), new Map([["7,500원", "9,000원"], ["7500원", "9000원"]]));
@@ -29,12 +29,13 @@ assert.equal(patchDocumentAmounts(shared, { price: { value: 10000 }, "structure.
 // Ranges or unknowns are not plain amounts.
 assert.equal(patchDocumentAmounts(shared, { price: { value: "8000~12000" } }, { price: { value: 9000 } }, at), 0);
 
-// Free reflects: a daily allowance kept inside the protected generation record.
-const now = Date.parse(at);
-assert.equal(freeReflectsLeft(undefined, now), FREE_REFLECTS_PER_DAY);
+// Free reflects: five per plan in total, kept inside the protected generation record.
+assert.equal(FREE_REFLECTS_TOTAL, 5);
+assert.equal(freeReflectsLeft(undefined), FREE_REFLECTS_TOTAL);
 const used = { freeReflects: ["2026-10-07T02:00:00.000Z", "2026-10-06T01:00:00.000Z", 5] };
-assert.deepEqual(recentFreeReflects(used, now), ["2026-10-07T02:00:00.000Z"], "older than 24 hours or malformed entries do not count");
-assert.equal(freeReflectsLeft({ freeReflects: Array(5).fill("2026-10-07T02:00:00.000Z") }, now), 0);
+assert.deepEqual(usedFreeReflects(used), ["2026-10-07T02:00:00.000Z", "2026-10-06T01:00:00.000Z"], "old uses still count (no daily reset); malformed entries do not");
+assert.equal(freeReflectsLeft(used), 3);
+assert.equal(freeReflectsLeft({ freeReflects: Array(5).fill("2026-10-01T02:00:00.000Z") }), 0, "five uses, even on earlier days, use up the free reflects");
 assert.equal(isFreeReflect({ free: true, revision: 4 }, 4), true);
 assert.equal(isFreeReflect({ free: true, revision: 3 }, 4), false, "a free flag only covers its own revision");
 assert.equal(isFreeReflect({ revision: 4 }, 4), false);

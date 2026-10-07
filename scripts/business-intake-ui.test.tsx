@@ -524,7 +524,7 @@ async function main() {
   const staleCost = renderToStaticMarkup(<RewriteCost snapshot={nextSnapshot({ hasDocuments: true, documentStatus: "stale", rewriteCount: 4, freeReflects: 0 }, currentDesign)} />);
   assert.ok(staleCost.includes("<b>4개 항목</b>을 다시 써요") && staleCost.includes("항목마다 다시 생성 횟수 1회가 차감돼요"), "the rewrite count is shown in the confirm popup");
   const freeCost = renderToStaticMarkup(<RewriteCost snapshot={nextSnapshot({ hasDocuments: true, documentStatus: "stale", rewriteCount: 4, freeReflects: 2 }, currentDesign)} />);
-  assert.ok(freeCost.includes("<b>4개 항목</b>을 다시 써요") && freeCost.includes("<b>무료</b>예요 (오늘 2번 남음)") && !freeCost.includes("차감"), "a free reflect says so instead of a deduction");
+  assert.ok(freeCost.includes("<b>4개 항목</b>을 다시 써요") && freeCost.includes("<b>무료</b>예요 (무료 2번 남음)") && !freeCost.includes("차감"), "a free reflect says so instead of a deduction");
   assert.ok(renderToStaticMarkup(<RewriteCost snapshot={nextSnapshot({ hasDocuments: true, documentStatus: "stale", freeReflects: 0 }, currentDesign)} />).includes("바뀐 내용과 맞지 않는 항목만 다시 써요"), "unknown count still explains the cost");
   assert.ok(opened.includes("대화로 내용을 더 다듬는 건 무료예요"), "a finished document tells that further chat is free");
   assert.ok(!needsPlan.includes("다시 생성 횟수"), "the first document shows no rewrite cost");
