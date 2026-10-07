@@ -53,3 +53,18 @@ export function findFactRanges(text: string, facts: Pick<EditableFact, "question
   }
   return ranges.sort((a, b) => a[0] - b[0]);
 }
+
+/**
+ * "6만 5천", "65,000", "65000원" → 65000. 금액 칸은 숫자를 바로 적는 게 가장 쉽다(운영 확인 2026-10-07:
+ * 구간 버튼만 있어 정확한 금액을 넣을 수 없었고, 가격은 기준을 다시 골라야 해서 원래 기준을 지킬 수 없었다).
+ */
+export function parseWon(text: string): number | null {
+  const plain = text.replace(/[\s,원]/g, "");
+  if (!plain) return null;
+  if (/^\d+$/.test(plain)) return Number(plain) || null;
+  const match = plain.match(/^(?:(\d+(?:\.\d+)?)억)?(?:(\d+(?:\.\d+)?)만)?(?:(\d+(?:\.\d+)?)천)?(\d+)?$/);
+  if (!match || !match.slice(1).some(Boolean)) return null;
+  const [, eok, man, cheon, rest] = match;
+  const value = Math.round(Number(eok ?? 0) * 100_000_000 + Number(man ?? 0) * 10_000 + Number(cheon ?? 0) * 1_000 + Number(rest ?? 0));
+  return value > 0 ? value : null;
+}

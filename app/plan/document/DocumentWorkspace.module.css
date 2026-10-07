@@ -253,3 +253,13 @@
 @media (prefers-reduced-motion: reduce) { .factCard, .factPopover, .factBody :global(mark[data-fact]) { animation:none; } }
 .factPopover header > div { display:grid; gap:2px; min-width:0; }
 .factPopover header small { font-size:12px; color:#6b7280; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+
+/* 금액 고치기: 입력칸 하나 */
+.factAmount { display:grid; gap:6px; padding:4px 0 2px; }
+.factAmount label { font-size:13px; font-weight:600; color:#374151; }
+.factAmount > div { display:flex; align-items:center; gap:8px; padding:0 14px; border:1px solid #d1d5db; border-radius:12px; background:#fff; }
+.factAmount > div:focus-within { border-color:#9ca3af; }
+.factAmount input { flex:1; min-width:0; height:46px; border:0; outline:none; background:transparent; font:inherit; font-size:17px; }
+.factAmount span { color:#6b7280; font-size:15px; }
+.factAmount small { min-height:18px; color:#6b7280; font-size:12px; }
+.factPopover .factAmount input:focus, .factPopover .factAmount input:focus-visible { outline: none; box-shadow: none; }
