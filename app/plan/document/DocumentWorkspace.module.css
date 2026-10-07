@@ -205,3 +205,16 @@
 
 /* 왼쪽 메뉴가 숨는 폭(900px 이하)에서는 목차 단추로 연다 — PC에서는 왼쪽 메뉴에 목차가 있다 */
 @media(max-width:900px) { .tocToggle { display:flex; } }
+/* One slim toolbar (owner feedback 2026-10-07): view toggle + page count + actions in a single row on PC, so the
+   document gets the height that the separate reading bar, view selector and bottom action bar used to take. */
+.readingBar { min-height:56px; padding:8px 24px; gap:12px; flex-wrap:wrap; }
+.readingBar .viewSelector { margin:0; align-self:center; padding:3px; max-width:none; }
+.readingBar .viewSelector button { min-height:32px; padding:4px 12px; font-size:13px; }
+.pageCount { color:var(--app-muted); font-size:13px; white-space:nowrap; }
+.toolbarActions { display:flex; align-items:center; gap:8px; margin-left:auto; }
+.toolbarActions button, .toolbarActions .nextButton { min-height:38px; padding:7px 14px; border-radius:8px; font-size:14px; font-weight:600; white-space:nowrap; }
+.toolbarActions .secondary { background:var(--app-panel-fill); color:var(--app-accent); border:1px solid var(--app-line-strong); }
+.toolbarActions .primary { background:var(--app-primary); color:#fff; border:1px solid var(--app-primary); }
+.toolbarActions .nextButton span { font-size:12px; }
+@media (min-width:901px) { .actions { display:none; } }
+@media (max-width:900px) { .toolbarActions { display:none; } .readingBar { padding:8px 16px; } }

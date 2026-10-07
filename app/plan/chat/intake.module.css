@@ -678,3 +678,5 @@
 .page[data-coach] .chatQuestion .ideaOption .option span, .page[data-coach] .chatQuestion .ideaOption .option small { font-size: 13px; line-height: 19px; color: #4b5563; }
 .page[data-coach] .chatQuestion .ideaOption .option[data-selected="true"] span, .page[data-coach] .chatQuestion .ideaOption .option[data-selected="true"] small { color: #e5e7eb; }
 .page[data-coach] .chatQuestion .ideaOption .disclosure { margin: 4px 0 0 6px; font-size: 13px; }
+/* The next question appears while the answer is still saving (a split second); keep its chips at full strength instead of flashing grey. */
+.page[data-coach] .chatQuestion .option:has(input:disabled), .page[data-coach] .chatQuestion .chip:disabled, .page[data-coach] .chatQuestion .ksicChip:disabled { opacity: 1; }
