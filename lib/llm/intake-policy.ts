@@ -5,7 +5,7 @@ import { IDEA_CALL_TIMEOUT_MS } from "../plan-builder/intake-timing";
 
 export const intakeBetaSafetyRequired = () => process.env.INTAKE_BETA_SAFETY === "1";
 
-export type IntakeFeature = "ideas" | "design" | "help" | "extract";
+export type IntakeFeature = "ideas" | "design" | "help" | "extract" | "edit";
 export type IntakeCostReservation = NonNullable<LLMCompleteParams["failover"]>["reserve"];
 const provider = z.enum(["openai", "anthropic"]);
 const policySchema = z.object({

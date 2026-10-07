@@ -15,7 +15,7 @@ export type IntakeAnswer = { status: "answered" | "unknown"; value: IntakeValue;
 export type IntakeNote = { id: string; text: string; at: string; status: "queued" | "processing" | "review" | "stored" | "failed"; intent?: "memo" | "question" };
 export type IntakeCandidate = { id: string; fieldKey: CoachField["key"]; value: string; quote: string; noteId: string; baseValue: string | null; baseFieldRevision?: string | null; status: "pending" | "applied" | "rejected" };
 export type IntakeJob = {
-  id: string; runId: string; kind: "extract" | "help" | "design" | "ideas";
+  id: string; runId: string; kind: "extract" | "help" | "design" | "ideas" | "edit";
   status: "queued" | "running" | "complete" | "failed";
   noteIds: string[]; baseValues: Partial<Record<CoachField["key"], string>>;
   baseFieldRevisions?: Partial<Record<CoachField["key"], string | null>>;
@@ -24,6 +24,9 @@ export type IntakeJob = {
   /** 요청 시각. 진행 게이지가 화면을 나갔다 와도 같은 기준으로 이어지게 한다(이전 기록에는 없을 수 있다). */
   createdAt?: string;
   baseIdeaRevision?: number;
+  /** kind "edit": the fact changes the AI proposed (validated), and what the owner did with them. */
+  proposal?: Array<{ questionId: string; value: IntakeValue }>;
+  proposalStatus?: "applied" | "dismissed";
 };
 export type IntakeState = {
   version: 1; stateRevision?: number; packVersion: string; mode: IntakeMode; sector: ProposalSector;
@@ -42,7 +45,7 @@ export type IntakeState = {
   ideaTurns?: IdeaTurn[];
   generatedIdeas?: GeneratedIntakeIdea[];
 };
-export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name"] as const;
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss"] as const;
 export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;

@@ -46,8 +46,9 @@ export default function PlanDocumentPage() {
     const doneKeys = new Set(progress.sections.filter(section => section.done).map(section => section.key));
     if (seenDone.current === null) { seenDone.current = doneKeys; return; }
     const added = [...doneKeys].filter(key => !seenDone.current!.has(key));
-    if (!added.length) return;
+    // Always remember the latest set: a section being rewritten drops out and comes back, and must count as new then.
     seenDone.current = doneKeys;
+    if (!added.length) return;
     hydrateFromServer().then(state => {
       const fresh = assembleSections({ ...state, activePlanId: documentPlanId });
       setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !added.includes(item.key) ? shown : item; }));
@@ -267,7 +268,7 @@ export default function PlanDocumentPage() {
     } catch { setAccessError(true); }
   }
 
-  return <DocumentWorkspace writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
+  return <DocumentWorkspace onReflected={() => generation.restart()} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;

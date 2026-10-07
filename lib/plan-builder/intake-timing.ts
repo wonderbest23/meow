@@ -8,6 +8,7 @@ export const INTAKE_JOB_TIMING: Record<IntakeJob["kind"], { expectedMs: number; 
   design: { expectedMs: 35_000, limitMs: 60_000 },
   help: { expectedMs: 8_000, limitMs: 20_000 },
   extract: { expectedMs: 8_000, limitMs: 20_000 },
+  edit: { expectedMs: 8_000, limitMs: 20_000 },
 };
 
 export function intakeJobExpired(job: IntakeJob | null | undefined, nowMs: number): boolean {

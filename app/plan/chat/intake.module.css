@@ -680,3 +680,22 @@
 .page[data-coach] .chatQuestion .ideaOption .disclosure { margin: 4px 0 0 6px; font-size: 13px; }
 /* The next question appears while the answer is still saving (a split second); keep its chips at full strength instead of flashing grey. */
 .page[data-coach] .chatQuestion .option:has(input:disabled), .page[data-coach] .chatQuestion .chip:disabled, .page[data-coach] .chatQuestion .ksicChip:disabled { opacity: 1; }
+/* Plan document exists: the chat ends with a coach note and links to edit from the document. */
+.lockedTurn { display: grid; gap: 10px; margin-top: 8px; }
+.lockedTurn .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.lockedTurn .chip { text-decoration: none; }
+/* The intake question reused inside the document's fact popover: same coach look, no full-page shell. */
+.page.factScope { display: block; height: auto; overflow: visible; background: transparent; font-size: 14px; }
+.factScope .chatQuestion h2 { display: none; }
+.factScope .chatQuestion form { margin-top: 0; }
+/* Plan edit chat: intro, examples, and the proposed changes to confirm. */
+.editTurn { display: grid; gap: 10px; margin-top: 8px; }
+.editTurn .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
+.changeCard { display: grid; gap: 6px; width: min(100%, 520px); padding: 14px 16px; border: 1px solid #e3e6ea; border-radius: 18px; background: #fff; }
+.changeCard b { font-size: 14px; }
+.changeCard p { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; margin: 0; font-size: 14px; line-height: 1.6; }
+.changeCard p span { color: #6b7280; font-size: 13px; }
+.changeCard p s { color: #9ca3af; }
+.changeCard p strong { color: #111418; }
+.changeCard small { color: #6b7280; font-size: 12px; line-height: 1.6; }
+.page[data-coach] .chip.chipStrong { background: #111418; border-color: #111418; color: #fff; }
