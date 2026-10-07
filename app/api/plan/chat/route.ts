@@ -1,4 +1,4 @@
-import { freeReflectsLeft, recentFreeReflects } from "../../../../lib/plan-builder/free-reflect";
+import { freeReflectsLeft, usedFreeReflects } from "../../../../lib/plan-builder/free-reflect";
 import { NextResponse } from "next/server";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -201,7 +201,7 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
       const quota = !reusable && !free && await prepareQuota(plan, keys, revision);
       if (quota) return quota;
       const runId = reusable ? existing!.runId : `coach-${createHash("sha256").update(`${ownerHash}\0${planId}\0${input.requestId}`).digest("hex").slice(0, 48)}`;
-      const freeReflects = [...recentFreeReflects(existing), ...(free && !resumesFree ? [new Date().toISOString()] : [])];
+      const freeReflects = [...usedFreeReflects(existing), ...(free && !resumesFree ? [new Date().toISOString()] : [])];
       const generation: PrepareGeneration = reusable ? existing! : { revision, runId, keys, paid: access.paid, receipts: existing?.receipts ?? [], dispatchState: "reserved", ...(free ? { free: true } : {}), ...(freeReflects.length ? { freeReflects } : {}) };
       generation.receipts.push({ id: input.requestId, signature, runId, paid: access.paid, accepted: reusable && existing!.dispatchState === "dispatched" });
       const updatedAt = plan.updatedAt;

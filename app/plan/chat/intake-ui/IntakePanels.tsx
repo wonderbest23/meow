@@ -594,7 +594,7 @@ export function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
   const free = (snapshot.freeReflects ?? 0) > 0 && count !== 0;
   const short = !free && !!known && count !== undefined && count > known.remaining;
   // 고친 내용 반영은 하루 몇 번까지 무료(lib/plan-builder/free-reflect.ts)
-  if (free) return <p className={styles.rewriteCost} role="status">{count ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요</> : "바뀐 내용과 맞지 않는 항목만 다시 써요"} · <b>무료</b>예요 (오늘 {snapshot.freeReflects}번 남음)</p>;
+  if (free) return <p className={styles.rewriteCost} role="status">{count ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요</> : "바뀐 내용과 맞지 않는 항목만 다시 써요"} · <b>무료</b>예요 (무료 {snapshot.freeReflects}번 남음)</p>;
   return <p className={styles.rewriteCost} data-short={short || undefined} role="status">
     {count === undefined ? <>바뀐 내용과 맞지 않는 항목만 다시 써요 · 항목마다 다시 생성 횟수 1회가 차감돼요{known ? <> (남은 횟수 {known.remaining}/{known.allowed}회)</> : null}</> : count > 0 ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요{known ? <> · 다시 생성 횟수 <b>{count}회</b> 차감 (남은 횟수 {known.remaining}/{known.allowed}회)</> : <> · 항목마다 다시 생성 횟수 1회가 차감돼요</>}</> : "직접 고친 항목은 그대로 두고, 바뀐 내용과 맞지 않는 항목만 다시 써요."}
     {short && <> — 횟수가 {count! - known!.remaining}회 모자라요. <Link href={`/plan/pay?planId=${encodeURIComponent(snapshot.planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`}>{quota?.pack ? `${quota.pack.count}회 추가 (${quota.pack.amount.toLocaleString("ko-KR")}원)` : "다시 생성 횟수 추가"}</Link></>}
