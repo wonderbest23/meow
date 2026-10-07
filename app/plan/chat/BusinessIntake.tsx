@@ -297,7 +297,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     catch (caught) { setStatus("failed"); setError(caught instanceof Error ? caught.message : "답변 형식을 확인해 주세요."); return; }
     const epoch = routeEpoch.current;
     let saved = false;
-    if (["start", "answer", "details"].includes(pending.command.action)) {
+    // Coach chat: when the next question is already known on this device (rule-based), show it at once — no typing pause.
+    const instantNext = coach && pending.command.action === "answer" && !!optimistic?.nextQuestion;
+    if (["start", "answer", "details"].includes(pending.command.action) && !instantNext) {
       const initialText = pending.command.action === "start" ? pending.command.message ?? (typeof pending.command.value === "string" ? pending.command.value : { exploring: "아이디어를 찾고 있어요", startup: "생각한 사업이 있어요", operating: "사업을 운영 중이에요" }[pending.command.mode ?? "startup"]) : null;
       beginReply(pending.command.requestId, initialText);
     }
