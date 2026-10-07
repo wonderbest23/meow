@@ -16,6 +16,8 @@ await page.setViewport({ width: 1440, height: 900 });
 await page.setCookie({ name: "syn_uid", value: uid, url: origin });
 const doc = `${origin}/plan/document?planId=${encodeURIComponent(planId)}`;
 const log: Record<string, unknown> = {};
+let stateLoads = 0;
+page.on("request", request => { if (request.url().includes("/api/plan/state")) stateLoads++; });
 
 await page.goto(doc, { waitUntil: "networkidle0", timeout: 120000 }); await wait(1500);
 const clickText = (text: string) => page.evaluate((label: string) => { const el = [...document.querySelectorAll<HTMLElement>("button, a")].find(node => node.innerText.trim().startsWith(label) && node.getBoundingClientRect().width > 0); el?.click(); return !!el; }, text);
@@ -30,11 +32,16 @@ log.popover = await page.evaluate(() => document.querySelector("[data-fact-popov
 await page.screenshot({ path: `${out}fact-3-popover.png` });
 log.pickOption = await page.evaluate(() => { const pop = document.querySelector("[data-fact-popover]"); const options = [...(pop?.querySelectorAll<HTMLElement>("button, label") ?? [])].filter(el => el.closest("[data-chat-question]") && el.getAttribute("aria-pressed") !== "true" && !/잘 모르겠어요|이대로/.test(el.innerText)); const target = options.find(el => !el.innerText.includes("맞벌이")) ?? options[0]; target?.click(); return target?.innerText ?? null; });
 await wait(400);
+const loadsBeforeSave = stateLoads;
 log.finish = await page.evaluate(() => { const pop = document.querySelector("[data-fact-popover]"); if (!pop) return "auto-sent"; const button = [...pop.querySelectorAll<HTMLButtonElement>("button")].find(el => /이대로 보내기|바꾸기/.test(el.innerText) && !el.disabled); button?.click(); return button?.innerText ?? "none"; });
 await wait(2500);
 log.afterSave = await page.evaluate(() => ({ popover: !!document.querySelector("[data-fact-popover]"), reflect: document.querySelector("[data-fact-reflect]")?.textContent?.slice(0, 140) ?? null, customerChip: document.querySelector("[data-fact-chip=customer]")?.textContent }));
+log.reloadedAfterSave = stateLoads > loadsBeforeSave;
 await page.screenshot({ path: `${out}fact-4-stale.png` });
-log.reflect = await clickText("계획서에 반영하기"); await wait(2500);
+log.reflect = await clickText("계획서에 반영하기"); await wait(800);
+log.reflectPopup = await page.evaluate(() => document.querySelector("[data-rewrite-confirm]")?.textContent ?? null);
+await page.screenshot({ path: `${out}fact-4b-free-popup.png` });
+log.confirm = await page.evaluate(() => { const button = [...document.querySelectorAll<HTMLButtonElement>("[data-rewrite-confirm] button")].find(b => b.innerText === "다시 작성하기"); button?.click(); return !!button; }); await wait(2500);
 log.afterReflect = await page.evaluate(() => ({ factMode: !!document.querySelector("[data-fact-card]"), error: document.querySelector("[data-fact-card] [role=alert]")?.textContent ?? null }));
 
 await page.goto(`${origin}/plan/chat?planId=${encodeURIComponent(planId)}`, { waitUntil: "networkidle0", timeout: 120000 }); await wait(3000);
@@ -58,7 +65,7 @@ const t0 = Date.now();
 await sendText("그냥 카페 사업으로 할래"); await wait(1500);
 log.offTopic = await page.evaluate(() => ({ lastReply: [...document.querySelectorAll("[data-coach-message=assistant]")].at(-1)?.textContent ?? null, job: !!document.querySelector("[data-job-chat]") }));
 log.offTopicMs = Date.now() - t0;
-await sendText("가격을 6만 5천원으로 바꿔줘"); await wait(1200);
+await sendText("배달도 같이 할래"); await wait(1200);
 log.running = await page.evaluate(() => ({ job: !!document.querySelector("[data-job-chat]"), subtitle: document.querySelector("header span")?.textContent }));
 for (let i = 0; i < 30 && !(await page.$("[data-edit-proposal]")); i++) await wait(1000);
 log.proposal = await page.evaluate(() => document.querySelector("[data-edit-proposal]")?.textContent?.slice(0, 160) ?? null);

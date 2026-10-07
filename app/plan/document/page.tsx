@@ -268,7 +268,17 @@ export default function PlanDocumentPage() {
     } catch { setAccessError(true); }
   }
 
-  return <DocumentWorkspace onReflected={() => generation.restart()} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
+  // 문서에서 금액을 고치면 서버가 본문 금액을 바로 바꿔 넣는다 — 새로고침 없이 보이게 다시 불러온다.
+  const reloadSections = () => {
+    if (!documentPlanId) return;
+    hydrateFromServer().then(s => {
+      const plan = s.plans.find(item => item.id === documentPlanId);
+      if (!plan) return;
+      setSections(assembleSections({ ...s, activePlanId: documentPlanId }));
+      updateSourceStatus(plan);
+    }).catch(() => undefined);
+  };
+  return <DocumentWorkspace onReflected={() => generation.restart()} onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;

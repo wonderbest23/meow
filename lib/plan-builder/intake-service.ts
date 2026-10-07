@@ -1,3 +1,4 @@
+import { patchDocumentAmounts } from "./fact-patch";
 import { createHash } from "node:crypto";
 import { classifyEditRequest, EDIT_REPLIES, type EditRoute } from "./intake-edit-filter";
 import { z } from "zod";
@@ -100,7 +101,12 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         plan.answers.__intake_legacy_job = structuredClone(plan.answers.__coach_job);
         plan.answers.__coach_job = { ...plan.answers.__coach_job, token: crypto.randomUUID(), status: "failed", updatedAt: at };
       }
-    } else if (command.action === "answer") applyIntakeAnswer(plan, coach, intake, command, at);
+    } else if (command.action === "answer") {
+      const beforeAnswers = structuredClone(intake.answers);
+      applyIntakeAnswer(plan, coach, intake, command, at);
+      // 계획서가 있으면 고친 금액을 본문에 바로 바꿔 넣는다(AI 없음). 계산된 다른 값은 다시 작성하기로 맞춘다.
+      patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
+    }
     else if (command.action === "edit") {
       // 계획서가 있는 사업의 채팅 수정. 범위 밖 요청은 AI 없이 정해진 답으로 끝내고, 사실 변경 요청만 AI 작업으로 넘긴다.
       if (!Object.keys(plan.sections).length) throw new IntakeError("edit_requires_document", "사업계획서를 만든 뒤에 채팅으로 고칠 수 있어요", 409);
@@ -120,7 +126,9 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       if (!job || job.kind !== "edit" || job.status !== "complete" || !job.proposal?.length || job.proposalStatus) throw new IntakeError("edit_missing", "바꿀 내용을 다시 요청해 주세요", 409);
       if (command.action === "edit-apply") {
         // Each change goes through the same validation as a typed answer; one invalid value stops the whole set.
+        const beforeAnswers = structuredClone(intake.answers);
         job.proposal.forEach((change, index) => applyIntakeAnswer(plan!, coach, intake, { ...command, action: "answer", questionId: change.questionId, value: change.value, unknown: false, requestId: `${command.requestId}:${index}` }, at));
+        patchDocumentAmounts(plan, beforeAnswers, intake.answers, at);
         job.proposalStatus = "applied";
         coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "바꿨어요. 아래 \"계획서 다시 작성하기\"를 누르면 바뀐 내용으로 다시 써요.", at });
       } else {

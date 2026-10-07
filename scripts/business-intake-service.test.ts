@@ -810,10 +810,20 @@ async function main() {
       await send(session, { action: "answer", questionId: "price", value: 59000 });
       const state = await loadPlanState(session.ownerHash);
       const plan = state.plans.find(item => item.id === session.planId)!;
-      plan.sections["market/customer"] = { markdown: "맞벌이 30대 부부를 위한 반찬", html: "<p>맞벌이 30대 부부를 위한 반찬</p>", generatedAt: new Date().toISOString(), coachRevision: coachDocumentRevision(readCoach(plan.answers)!) } as never;
+      plan.sections["market/customer"] = { markdown: "맞벌이 30대 부부를 위한 반찬, 한 세트 59,000원", html: "<p>맞벌이 30대 부부를 위한 반찬, 한 세트 59,000원</p>", generatedAt: new Date().toISOString(), coachRevision: coachDocumentRevision(readCoach(plan.answers)!) } as never;
       plan.updatedAt = new Date(Date.now() + 1000).toISOString();
       await savePlanState(session.ownerHash, state);
     }
+
+    await check("a typed price change swaps the amount in the document and keeps it stale for a rewrite", async () => {
+      const session = await start();
+      await withDocument(session);
+      const saved = await send(session, { action: "answer", questionId: "price", value: 49000 });
+      const section = (await loadPlanState(session.ownerHash)).plans.find(item => item.id === session.planId)!.sections["market/customer"];
+      assert.ok(section.markdown.endsWith("한 세트 49,000원"));
+      assert.equal(saved.snapshot.documentStatus, "stale");
+      assert.equal(saved.snapshot.freeReflects, 3, "fact reflects start with today's free allowance");
+    });
 
     await check("plan edit chat needs a document and answers off-topic requests without any AI call", async () => {
       configureAI(true);
@@ -845,6 +855,8 @@ async function main() {
       assert.equal(applied.snapshot.intake.answers.customer.value, "1인 가구");
       assert.equal(applied.snapshot.intake.job?.proposalStatus, "applied");
       assert.equal(applied.snapshot.documentStatus, "stale", "the plan must be re-applied after a fact change");
+      const swapped = (await loadPlanState(session.ownerHash)).plans.find(item => item.id === session.planId)!.sections["market/customer"];
+      assert.ok(swapped.markdown.includes("한 세트 65,000원") && swapped.html.includes("한 세트 65,000원"), "the new price is written into the document right away, without AI");
       await assert.rejects(send(session, { action: "edit-apply" }), (error: unknown) => error instanceof IntakeError && error.code === "edit_missing", "a proposal applies once");
 
       respond = () => completion({ changes: [{ questionId: "price", value: "7만원" }] });

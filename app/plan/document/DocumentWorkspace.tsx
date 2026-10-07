@@ -51,6 +51,8 @@ type Props = {
   onReviewed?: (key: string, section: StoredSection, updatedAt: string) => void;
   /** The owner re-applied changed facts: the document is being rewritten, so restart the progress polling. */
   onReflected?: () => void;
+  /** A fact was saved from the document; amounts may have been swapped into the text on the server. */
+  onFactsSaved?: () => void;
 };
 
 /** 쓰는 중 — 지금 쓰는 장 이름 뒤에 깜빡이는 커서, 아래로 글줄이 차오르는 듯한 자리 */
@@ -263,7 +265,7 @@ export default function DocumentWorkspace(props: Props) {
         {props.error && <p role="alert">{props.error}</p>}
       </div>}
     </dialog>
-  {factMode && factPick && <FactPopover key={factPick.id} edit={facts} questionId={factPick.id} anchor={factPick.rect} onClose={() => setFactPick(null)} onSaved={() => setFactPick(null)} />}
+  {factMode && factPick && <FactPopover key={factPick.id} edit={facts} questionId={factPick.id} anchor={factPick.rect} onClose={() => setFactPick(null)} onSaved={() => { setFactPick(null); props.onFactsSaved?.(); }} />}
   {zoomTable && <dialog ref={zoomDialog} className={styles.tableZoom} aria-label="표 크게 보기" onClose={() => setZoomTable(null)}
     onPointerDown={event => { zoomPressOnBackdrop.current = event.target === zoomDialog.current; }}
     onClick={event => { if (zoomPressOnBackdrop.current && event.target === zoomDialog.current) zoomDialog.current?.close(); zoomPressOnBackdrop.current = false; }}>

@@ -25,6 +25,7 @@ import { buildPlanBusinessContext } from "./context/build";
 import { contextForSection, type SectionBusinessContext } from "./context/section";
 import { ANALYSIS_KEY } from "./analyzer/domain";
 import { resolveRegenQuota, recordRegen } from "./regen-quota";
+import { isFreeReflect } from "./free-reflect";
 import { executeProposalUpdate, proposalBackgroundJobSchema } from "./proposal-background";
 import { executeArtifactChunk } from "./artifact-update-service";
 import { z } from "zod";
@@ -86,7 +87,9 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   if (initialCoach && !chaptersForType(plan.planType).some(c => c.id === job.chapterId && c.sections.some(s => s.id === job.sectionId))) throw new Error("SECTION_OUT_OF_SCOPE");
   const revision = initialCoach ? coachDocumentRevision(initialCoach) : undefined;
   if (existing && revision != null && existing.coachRevision === revision) return { ok: true, skipped: "ALREADY_GENERATED" };
-  if (existing && revision != null && (await resolveRegenQuota(plan.id)).remaining <= 0) throw new Error("REGEN_QUOTA_EXCEEDED");
+  // 고친 사업 정보를 반영하는 무료 다시 쓰기는 횟수를 확인·차감하지 않는다(free-reflect.ts).
+  const freeReflect = revision != null && isFreeReflect(plan.answers.__coach_generation, revision);
+  if (existing && revision != null && !freeReflect && (await resolveRegenQuota(plan.id)).remaining <= 0) throw new Error("REGEN_QUOTA_EXCEEDED");
 
   const answers = plan.answers[key];
   if (!answers || Object.keys(answers).length === 0) return { ok: true, skipped: "NO_ANSWERS" };
@@ -214,7 +217,7 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
       if (error instanceof Error && error.message === "PLAN_VERSION_CONFLICT" && attempt < COMMIT_ATTEMPTS - 1) { await new Promise(resolve => setTimeout(resolve, 50 + Math.random() * 250)); continue; }
       throw error;
     }
-    if (existing && coach) await recordRegen(job.planId, job.ownerHash, key, true);
+    if (existing && coach && !freeReflect) await recordRegen(job.planId, job.ownerHash, key, true);
     return { ok: true };
   }
   throw new Error("PLAN_VERSION_CONFLICT");

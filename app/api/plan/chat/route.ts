@@ -1,3 +1,4 @@
+import { freeReflectsLeft, recentFreeReflects } from "../../../../lib/plan-builder/free-reflect";
 import { NextResponse } from "next/server";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -69,6 +70,8 @@ const prepareGenerationSchema = z.object({
   receipts: z.array(prepareReceiptSchema).max(128).default([]),
   dispatchState: z.enum(["reserved", "dispatching", "uncertain", "dispatched"]).optional(),
   dispatchAt: z.string().optional(), dispatchToken: z.string().optional(),
+  // 고친 사업 정보 반영은 하루 몇 번까지 다시 생성 횟수 없이(lib/plan-builder/free-reflect.ts)
+  free: z.boolean().optional(), freeReflects: z.array(z.string()).max(32).optional(),
 }).passthrough();
 type PrepareGeneration = z.infer<typeof prepareGenerationSchema>;
 type PrepareWorkflow = NonNullable<Awaited<ReturnType<typeof binding>>>;
@@ -120,7 +123,7 @@ async function dispatchPreparedPlan(ownerHash: string, planId: string, runId: st
     if (generation.dispatchState === "dispatched") return json({ plan: publicPlan(plan), started: true, paid: generation.paid }, 202);
     if (generation.dispatchState === "dispatching" && Date.now() - Date.parse(generation.dispatchAt ?? "") < 60_000) return json({ plan: publicPlan(plan), started: false, message: "저장된 제작 요청의 접수를 확인하고 있어요." }, 202);
     if (coachDocumentRevision(coach) !== generation.revision) return prepareConflict();
-    const quota = await prepareQuota(plan, generation.keys, generation.revision);
+    const quota = generation.free ? null : await prepareQuota(plan, generation.keys, generation.revision);
     if (quota) return quota;
     const updatedAt = plan.updatedAt, token = randomUUID();
     generation.dispatchState = "dispatching";
@@ -184,10 +187,12 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
         if (status === null) return prepareUnavailable();
         if (!["complete", "errored", "terminated"].includes(status)) return prepareConflict();
       }
-      const quota = !reusable && await prepareQuota(plan, keys, revision);
+      const free = !reusable && staleRewriteCount(plan.sections, revision, keys) > 0 && freeReflectsLeft(existing) > 0;
+      const quota = !reusable && !free && await prepareQuota(plan, keys, revision);
       if (quota) return quota;
       const runId = reusable ? existing!.runId : `coach-${createHash("sha256").update(`${ownerHash}\0${planId}\0${input.requestId}`).digest("hex").slice(0, 48)}`;
-      const generation: PrepareGeneration = reusable ? existing! : { revision, runId, keys, paid: access.paid, receipts: existing?.receipts ?? [], dispatchState: "reserved" };
+      const freeReflects = [...recentFreeReflects(existing), ...(free ? [new Date().toISOString()] : [])];
+      const generation: PrepareGeneration = reusable ? existing! : { revision, runId, keys, paid: access.paid, receipts: existing?.receipts ?? [], dispatchState: "reserved", ...(free ? { free: true } : {}), ...(freeReflects.length ? { freeReflects } : {}) };
       generation.receipts.push({ id: input.requestId, signature, runId, paid: access.paid, accepted: reusable && existing!.dispatchState === "dispatched" });
       const updatedAt = plan.updatedAt;
       for (const key of keys) plan.answers[key] ??= { planning_source: "사업 기획 대화의 공통 정보" };

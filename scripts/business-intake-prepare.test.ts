@@ -131,7 +131,8 @@ async function main() {
         console.log(`PASS ${name}`);
       } catch (error) { failures.push(name); console.error(`FAIL ${name}`, error); }
     }
-    async function seed(options: { intake?: boolean; section?: boolean } = {}) {
+    // freeUsed: today's free fact reflects are already spent, so a rewrite goes through the regen quota.
+    async function seed(options: { intake?: boolean; section?: boolean; freeUsed?: boolean } = {}) {
       const at = new Date().toISOString(), id = randomUUID();
       const coach = { ...emptyCoach(), revision: 2, documentRevision: 2, stage: "startup" as const, ready: true };
       coach.fields = [{ key: "business", value: "Fixture photo service", basis: "user", quote: "Fixture photo service", messageId: "fixture-business" }];
@@ -140,6 +141,7 @@ async function main() {
         sections: options.section ? { "overview/summary": { markdown: "Original document", html: "<p>Original document</p>", generatedAt: at, coachRevision: 1 } } : {},
         answers: { [COACH_KEY]: { state: coach } } };
       if (options.intake) plan.answers[INTAKE_KEY] = { state: createIntake(coach, "startup", at) };
+      if (options.freeUsed) plan.answers.__coach_generation = { revision: 1, runId: "coach-earlier", keys: [], paid: false, receipts: [], dispatchState: "reserved", freeReflects: [at, at, at] };
       await store.savePlanState(owner, store.normalizeState({ plans: [plan], activePlanId: id }));
       return id;
     }
@@ -306,7 +308,7 @@ async function main() {
     });
 
     await check("quota outage and exhaustion prevent reservation and all external work", async () => {
-      const id = await seed({ section: true }), requestId = randomUUID(), saved = (await read(id)).state;
+      const id = await seed({ section: true, freeUsed: true }), requestId = randomUUID(), saved = (await read(id)).state;
       usage = { error: "offline", count: null };
       const failed = await prepare(id, requestId);
       assert.equal(failed.status, 503); assert.equal(failed.body.code, "quota_unavailable");
@@ -319,8 +321,23 @@ async function main() {
       assert.equal(attempts.length, 1);
     });
 
+    await check("free fact reflects skip the regen quota three times a day, then the quota applies", async () => {
+      usage = { error: null, count: 20 };
+      const id = await seed({ section: true });
+      for (let round = 0; round < 3; round++) {
+        assert.equal((await prepare(id, randomUUID(), { revision: 2 + round })).status, 200, `free reflect ${round + 1}`);
+        const generation = (await read(id)).generation as Generation & { free?: boolean; freeReflects?: string[] };
+        assert.equal(generation.free, true); assert.equal(generation.freeReflects?.length, round + 1);
+        workflows.set(generation.runId, "complete");
+        await mutate(id, plan => { const coach = readCoach(plan.answers)!; coach.revision++; coach.documentRevision = coach.revision; plan.answers[COACH_KEY] = { state: coach }; });
+      }
+      assert.equal((await prepare(id, randomUUID(), { revision: 5 })).status, 402, "the fourth reflect today needs the quota, which is used up");
+      assert.equal(attempts.length, 3);
+      usage = { error: null, count: 0 };
+    });
+
     await check("quota failure after reservation recovers only its original reserved ID", async () => {
-      const id = await seed({ section: true }), requestId = randomUUID();
+      const id = await seed({ section: true, freeUsed: true }), requestId = randomUUID();
       saveHook = async state => {
         if (state.plans.find(plan => plan.id === id)?.answers.__coach_generation?.dispatchState === "reserved") quotaAvailable = false;
       };
@@ -430,7 +447,7 @@ async function main() {
     });
 
     await check("new source generation retains old receipts and checks verified regeneration quota", async () => {
-      const id = await seed({ section: true }), originalRequest = randomUUID();
+      const id = await seed({ section: true, freeUsed: true }), originalRequest = randomUUID();
       assert.equal((await prepare(id, originalRequest)).status, 200);
       const originalRun = (await read(id)).generation!.runId;
       workflows.set(originalRun, "complete");
