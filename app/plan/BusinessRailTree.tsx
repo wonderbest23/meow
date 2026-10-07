@@ -75,7 +75,8 @@ export default function BusinessRailTree({ documentToc }: { documentToc?: Docume
   const [mounted, setMounted] = useState(false);
   const [tick, setTick] = useState(0);
   const [listOpen, setListOpen] = useState(true);
-  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  /* 한 번에 한 사업만 펼친다(소유자 피드백 2026-10-07: 여러 개가 열려 헷갈림). undefined = 지금 보는 사업 */
+  const [openId, setOpenId] = useState<string | null | undefined>(undefined);
   const [urlPlanId, setUrlPlanId] = useState<string | null>(null);
   useEffect(() => {
     setMounted(true);
@@ -107,6 +108,8 @@ export default function BusinessRailTree({ documentToc }: { documentToc?: Docume
   const step = stepFor(pathname);
   /* 지금 화면이 보여 주는 사업 — 주소에 있으면 그것, 홈페이지처럼 주소에 없으면 작업 중인 사업 */
   const currentId = urlPlanId ?? (step ? state?.activePlanId ?? null : null);
+  // 다른 사업 화면으로 옮기면 그 사업만 펼친 상태로 돌아간다.
+  useEffect(() => { setOpenId(undefined); }, [currentId]);
 
   function toggleList() {
     const next = !listOpen;
@@ -123,9 +126,9 @@ export default function BusinessRailTree({ documentToc }: { documentToc?: Docume
       {checked && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요. 새 대화로 시작해 보세요.</p>}
       {plans.map(plan => {
         const isCurrent = plan.id === currentId;
-        const open = toggled[plan.id] ?? isCurrent;
+        const open = openId === undefined ? isCurrent : openId === plan.id;
         return <div key={plan.id} className={styles.plan}>
-          <button type="button" className={styles.planRow} data-current={isCurrent || undefined} aria-expanded={open} title={plan.title} onClick={() => setToggled(prev => ({ ...prev, [plan.id]: !open }))}>
+          <button type="button" className={styles.planRow} data-current={isCurrent || undefined} aria-expanded={open} title={plan.title} onClick={() => setOpenId(open ? null : plan.id)}>
             <ChevronRight className={styles.caret} data-open={open || undefined} aria-hidden="true" />
             <span>{plan.title || "이름 없는 사업"}</span>
           </button>
