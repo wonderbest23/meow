@@ -264,3 +264,7 @@
 .factAmount span { color:#6b7280; font-size:15px; }
 .factAmount small { min-height:18px; color:#6b7280; font-size:12px; }
 .factPopover .factAmount input:focus, .factPopover .factAmount input:focus-visible { outline: none; box-shadow: none; }
+/* 위쪽 도구 막대와 완료 알림을 본문 글 폭에 맞춘다(소유자 피드백 2026-10-07: 본문은 폭이 제한되는데 버튼은 화면 끝까지 퍼져 통일감이 없음).
+   본문(.article)은 최대 1020px 안에 좌우 44px(1100px 이하 28px) 여백이다. */
+@media (min-width:901px) { .readingBar, .completionNotice { padding-inline:max(24px, calc((100% - 1020px) / 2 + 44px)); } }
+@media (min-width:901px) and (max-width:1100px) { .readingBar, .completionNotice { padding-inline:max(24px, calc((100% - 1020px) / 2 + 28px)); } }
