@@ -43,12 +43,19 @@ export interface ServiceItem {
 
 export type ServiceIcon = "badge" | "cart" | "shield" | "building" | "pen" | "news" | "camera" | "megaphone";
 
-export const SERVICE_GROUPS: readonly ServiceGroup[] = [
+const ALL_SERVICE_GROUPS: readonly ServiceGroup[] = [
   { id: "admin", title: "창업 행정", note: "등록·신고처럼 한 번은 꼭 해야 하는 일" },
   { id: "marketing", title: "마케팅", note: "손님이 가게를 찾아오게 하는 일" },
 ];
 
-export const SERVICE_CATALOG: readonly ServiceItem[] = [
+/*
+ * 지금 신청받는 것은 마케팅뿐이다(소유자 결정 2026-10-07). 창업 행정 4종은 처리할 제휴 전문가·가격·흐름이 없어
+ * '상담 신청'만 받고 끝나는 어설픈 상태라 신청 화면에서 뺐다. 예전 신청 기록은 관리자 화면에서 그대로 보이게
+ * findServiceRecord 로 찾는다. 다시 열려면 OFFERED_GROUPS 에 "admin" 을 넣으면 된다.
+ */
+const OFFERED_GROUPS: readonly ServiceGroupId[] = ["marketing"];
+
+const ALL_SERVICES: readonly ServiceItem[] = [
   /*
    * 창업 행정 4종은 '대행'이 아니다 — 세무사법(세무대리·알선 금지)·행정사법(보수 받는 서류 작성·제출 금지) 때문에
    * 오늘창업은 신청 방법 안내·서류 준비 도움·자격 있는 전문가(세무사·행정사) 연결까지만 한다. 제출은 사장님 본인이 한다.
@@ -88,11 +95,25 @@ export const SERVICE_CATALOG: readonly ServiceItem[] = [
     steps: ["목표·예산 확인", "계획 세우고 운영", "월말 보고"], prepare: ["한 달 예산", "가장 팔고 싶은 상품"] },
 ];
 
+export const SERVICE_GROUPS: readonly ServiceGroup[] = ALL_SERVICE_GROUPS.filter((group) => OFFERED_GROUPS.includes(group.id));
+export const SERVICE_CATALOG: readonly ServiceItem[] = ALL_SERVICES.filter((item) => OFFERED_GROUPS.includes(item.group));
+
 /** 가격이 없을 때 보이는 문구 */
 export const SERVICE_PRICE_PENDING = "가격은 상담 후 안내";
 
+/** 지금 신청받는 서비스 — 새 신청은 이것으로만 받는다 */
 export function findService(id: string): ServiceItem | undefined {
   return SERVICE_CATALOG.find((item) => item.id === id);
+}
+
+/** 예전에 받던 서비스까지 — 지난 신청 기록을 보여 줄 때만 쓴다 */
+export function findServiceRecord(id: string): ServiceItem | undefined {
+  return ALL_SERVICES.find((item) => item.id === id);
+}
+
+/** 지난 신청 기록의 분류 이름 */
+export function serviceGroupRecord(id: ServiceGroupId | undefined): ServiceGroup | undefined {
+  return ALL_SERVICE_GROUPS.find((group) => group.id === id);
 }
 
 export function servicePriceLabel(item: ServiceItem): string {

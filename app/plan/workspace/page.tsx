@@ -124,7 +124,7 @@ export default function BusinessWorkspace() {
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={()=>{ if (!expertDirty || window.confirm("저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?")) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
           {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} />}
-          {/* 다음 단계 — 홈페이지 다음으로 맡길 일(창업 행정·마케팅) 상담 신청 */}
+          {/* 다음 단계 — 홈페이지 다음으로 맡길 일(마케팅) 상담 신청 */}
           {view==="operations" && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} />}
           {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} />}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}

@@ -74,7 +74,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   if (ownerChanged) return <PlanLoading fill note="현재 계정의 사업을 다시 확인하고 있어요" />;
-  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname === "/plan/proposal" || pathname.startsWith("/plan/homepage") || pathname.startsWith("/plan/pay") || pathname.startsWith("/plan/me") || pathname.startsWith("/plan/info") || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat")) return <>{children}</>;
+  if (pathname === "/plan" || pathname === "/plan/" || pathname === "/plan/document" || pathname === "/plan/proposal" || pathname.startsWith("/plan/homepage") || pathname.startsWith("/plan/pay") || pathname.startsWith("/plan/me") || pathname.startsWith("/plan/info") || pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/chat") || pathname.startsWith("/plan/inquiries")) return <>{children}</>;
 
   return (
     <div className={styles.shell}>

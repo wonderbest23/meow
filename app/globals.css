@@ -17083,3 +17083,9 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 /* 홈페이지 화면 순서 번호(1 미리보기·에디터 ~ 5 접수된 문의) — 왼쪽 목록의 홈페이지 목차와 같은 번호 */
 .hk-step-no { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #161c2d; color: #fff; font-size: 13px; font-weight: 700; }
 .hk-step-head { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; font-weight: 700; color: #161c2d; }
+
+/* 홈페이지 5번 칸: 문의는 '내 문의'에서 */
+.hk-inquiries-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 14px 16px; border: 1px solid #c9dbf6; border-radius: 12px; background: #f1f6fe; color: #1d3f72; text-decoration: none; }
+.hk-inquiries-link span { display: grid; gap: 2px; }
+.hk-inquiries-link strong { font-size: 15px; }
+.hk-inquiries-link small { font-size: 13px; color: #4b6a99; }

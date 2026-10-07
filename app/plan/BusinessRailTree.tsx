@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
@@ -71,23 +71,28 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
  * 대화·문서·홈페이지·사업 관리 어느 화면에서든 같은 자리, 같은 모양이다.
  */
 /*
- * 이 탭에서 한 번 그린 뒤로는 화면을 옮겨도 바로 그린다 — 예전엔 화면마다 목록이 비었다가 다시 나타나
- * '유지보수' 체크가 풀렸다 돌아오는 것처럼 깜빡였다(소유자 지적 2026-10-07). 첫 화면(서버가 그린 것)만 기다린다.
+ * 서버가 그린 첫 화면을 맞출 때만 '아직'으로 그리고, 화면을 옮겨 새로 그릴 때는 바로 그린다 — 예전엔 화면마다
+ * 목록이 비었다가 다시 나타나 '유지보수' 체크가 풀렸다 돌아오는 것처럼 깜빡였다(소유자 지적 2026-10-07).
+ * useSyncExternalStore 는 서버 화면을 맞출 때 getServerSnapshot 을, 그 밖에는 getSnapshot 을 쓴다.
  */
-let railHydrated = false;
+const noSubscribe = () => () => {};
+const onClient = () => true;
+const onServer = () => false;
+const readPlanId = () => new URLSearchParams(window.location.search).get("planId");
+const noPlanId = () => null;
 
 export default function BusinessRailTree({ documentToc }: { documentToc?: DocumentToc }) {
   const pathname = usePathname() || "";
   /* 저장된 사업은 브라우저에만 있다 — 서버가 그린 첫 화면과 어긋나지 않게 올라온 뒤에 그린다 */
-  const [mounted, setMounted] = useState(railHydrated);
+  const mounted = useSyncExternalStore(noSubscribe, onClient, onServer);
   const [tick, setTick] = useState(0);
   const [listOpen, setListOpen] = useState(true);
   /* 한 번에 한 사업만 펼친다(소유자 피드백 2026-10-07: 여러 개가 열려 헷갈림). undefined = 지금 보는 사업 */
   const [openId, setOpenId] = useState<string | null | undefined>(undefined);
-  const [urlPlanId, setUrlPlanId] = useState<string | null>(() => railHydrated ? new URLSearchParams(window.location.search).get("planId") : null);
+  const [tickPlanId, setUrlPlanId] = useState<string | null>(null);
+  const livePlanId = useSyncExternalStore(noSubscribe, readPlanId, noPlanId);
+  const urlPlanId = tickPlanId ?? livePlanId;
   useEffect(() => {
-    railHydrated = true;
-    setMounted(true);
     try { if (localStorage.getItem(LIST_OPEN_KEY) === "0") setListOpen(false); } catch { /* 기본은 펼침 */ }
     const refresh = () => setTick(n => n + 1);
     const offState = subscribePlanState(refresh), offGeneration = subscribeGeneration(refresh);

@@ -14,9 +14,6 @@ import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave/business-content";
 import { applyBusinessContent } from "../lib/landing/page-data";
 import { HomepageSourceUpdate } from "./homepage-source-update";
-import { HomepageLeadNotification, useHomepageLeadNotifications } from "./homepage-lead-notifications";
-import { HomepageLeadActions } from "./homepage-lead-actions";
-import { formatKoreanPhone } from "../lib/contact-links";
 import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading from "../app/plan/PlanLoading";
 import { AddressSearchButton } from "./address-search";
@@ -173,8 +170,6 @@ export function HomepageKitPanel({
   /* 접수된 문의 — 같은 프로젝트의 landing API 가 돌려준다 */
   const [leads, setLeads] = useState<LandingLeadRecord[] | null>(null);
   const [leadsError, setLeadsError] = useState("");
-  const [leadsRefresh, setLeadsRefresh] = useState(0);
-  const notifications = useHomepageLeadNotifications(projectId, leadsRefresh);
   useEffect(() => {
     if (!projectId) return;
     const controller = new AbortController();
@@ -187,7 +182,7 @@ export function HomepageKitPanel({
       })
       .catch(() => { if (!controller.signal.aborted) setLeadsError("문의를 불러오지 못했습니다. 새로고침해 다시 확인해주세요."); });
     return () => controller.abort();
-  }, [projectId, leadsRefresh]);
+  }, [projectId]);
 
   /* 공개 전에 비어 있으면 안 되는 것 — 법정 표기 */
   const missing = [
@@ -415,36 +410,21 @@ export function HomepageKitPanel({
         />
       </Fold>
 
-      {/* 4. 접수된 문의 — 접이식 */}
+      {/* 5. 문의 알림 번호 — 문의 목록은 '내 문의' 화면에 */}
       <Fold
         step={5}
         id="hk-leads"
         icon={<Inbox size={18} />}
-        title="접수된 문의"
+        title="문의 알림 · 내 문의"
         badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{leads.some(lead => lead.handledAt === null) ? ` · 답할 것 ${leads.filter(lead => lead.handledAt === null).length}건` : ""}</em>}
         hint={draft.leadCaptureEnabled ? "홈페이지 문의 양식으로 들어온 것입니다. 개인정보가 들어 있으니 상담이 끝나면 외부로 옮기거나 공유하지 마세요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
       >
         <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />
-        <div className="hk-fold-save"><button type="button" aria-label="문의 새로고침" title="문의 새로고침" disabled={leads === null && !leadsError} onClick={() => setLeadsRefresh(value => value + 1)}><RefreshCw size={14} /> 새로고침</button></div>
-        {notifications.error ? <p className="hk-empty" role="alert">{notifications.error}</p> : null}
-        {leadsError ? <p className="hk-empty" role="alert">{leadsError}</p> : leads === null ? <p className="hk-empty">불러오는 중…</p> : leads.length === 0 ? <p className="hk-empty">아직 접수된 문의가 없습니다. 공개 주소를 알리면 여기 쌓입니다.</p> : (
-          <ul className="hk-leads">
-            {leads.map((lead) => (
-              <li key={lead.id} data-handled={lead.handledAt ? "" : undefined}>
-                <i>{lead.name.slice(0, 1)}</i>
-                <div>
-                  <strong>{lead.name}{lead.handledAt ? <em className="hk-badge hk-badge-ok">처리 완료</em> : null}</strong>
-                  <span>{[lead.phone && formatKoreanPhone(lead.phone), lead.email].filter(Boolean).join(" · ")}</span>
-                  {lead.message ? <p>{lead.message}</p> : null}
-                  <small>{new Date(lead.createdAt).toLocaleString("ko-KR")}{lead.marketingAgreed ? " · 홍보 수신 동의" : ""}</small>
-                  {/* 바로 답하기 — 전화·문자(첫 인사 채움)·이메일, 연락을 마치면 처리 완료 */}
-                  <HomepageLeadActions projectId={projectId} lead={lead} businessName={draft.businessName} onHandled={(leadId, handledAt) => setLeads(current => current?.map(item => item.id === leadId ? { ...item, handledAt } : item) ?? null)} />
-                  {notifications.items ? <HomepageLeadNotification value={notifications.items.find(item => item.leadId === lead.id)} busy={notifications.retrying !== null} onRetry={() => { void notifications.retry(lead.id); }} /> : null}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
+        {/* 문의 목록은 왼쪽 메뉴 '내 문의'에서 메신저처럼 본다(소유자 요청 2026-10-07). 여기서는 알림 번호만 정한다 */}
+        <a className="hk-inquiries-link" href="/plan/inquiries">
+          <span><strong>내 문의에서 보기</strong><small>{leads === null ? "문의를 확인하고 있어요" : leads.length ? `받은 문의 ${leads.length}건${leads.some(lead => lead.handledAt === null) ? ` · 답할 것 ${leads.filter(lead => lead.handledAt === null).length}건` : ""}` : "아직 들어온 문의가 없어요"}</small></span>
+          <ChevronDown size={18} aria-hidden style={{ transform: "rotate(-90deg)" }} />
+        </a>
       </Fold>
       </fieldset>
     </section>
