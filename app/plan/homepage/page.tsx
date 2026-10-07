@@ -339,8 +339,9 @@ export default function PlanHomepagePage() {
     try { await saveDraft(draft); } catch { /* The draft and visible failure message are retained. */ }
   }, [draft, saveDraft]);
 
-  const publish = useCallback(async () => {
-    if (!projectId || !draft || !editable || requestRef.current) return;
+  /** 공개 결과 — 에디터 저장 팝업이 주소를 바로 보여 주려고 쓴다. 실패면 손님에게 보일 문장 */
+  const publish = useCallback(async (): Promise<{ ok: true; site: LandingSiteRecord } | { ok: false; message: string }> => {
+    if (!projectId || !draft || !editable || requestRef.current) return { ok: false, message: "지금은 공개할 수 없어요. 잠시 후 다시 시도해 주세요." };
     const controller = new AbortController();
     requestRef.current = controller;
     const timeout = setTimeout(() => controller.abort(), 60_000);
@@ -351,18 +352,22 @@ export default function PlanHomepagePage() {
     let draftSaved = false;
     try {
       const saved = await persistLandingDraft(projectId, draft, siteRef.current?.updatedAt ?? null, { signal: controller.signal });
-      if (!current()) return;
+      if (!current()) return { ok: false, message: "다른 화면으로 바뀌어 공개를 멈췄어요." };
       draftSaved = true;
       siteRef.current = saved; setSite(saved);
       setDraft(value => value === draft ? saved.draft : value);
       const res = await fetch(`/api/projects/${projectId}/landing/publish`, { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt: saved.updatedAt }) });
       const data = await res.json();
-      if (!current()) return;
+      // 화면이 바뀌어도 서버 공개는 이미 끝났을 수 있다 — 결과는 그대로 알려 준다.
+      if (!current()) return res.ok && data.site ? { ok: true, site: data.site as LandingSiteRecord } : { ok: false, message: data.error?.message ?? "공개 결과를 확인하지 못했습니다." };
       if (!res.ok || !data.site) throw new Error(data.error?.message ?? "공개 결과를 확인하지 못했습니다.");
       siteRef.current = data.site; setSite(data.site);
       setMessage("홈페이지를 공개했습니다.");
+      return { ok: true, site: data.site as LandingSiteRecord };
     } catch (error) {
-      if (current()) setMessage(`${draftSaved ? "초안은 서버에 저장됐습니다. 공개는 확인하지 못했습니다. " : ""}${userErrorMessage(error, "연결을 확인하고 다시 시도해주세요.")}`);
+      const message = `${draftSaved ? "초안은 서버에 저장됐습니다. 공개는 확인하지 못했습니다. " : ""}${userErrorMessage(error, "연결을 확인하고 다시 시도해주세요.")}`;
+      if (current()) setMessage(message);
+      return { ok: false, message };
     } finally {
       clearTimeout(timeout);
       if (requestRef.current === controller) requestRef.current = null;
@@ -505,6 +510,11 @@ export default function PlanHomepagePage() {
           projectId={projectId}
           businessSummary={draft.subheadline || draft.offerDescription}
           published={site?.status === "published"}
+          liveUrl={site?.status === "published" && typeof window !== "undefined" ? `${window.location.origin}${publicPath}` : null}
+          onPublish={async () => {
+            const result = await publish();
+            return result.ok ? { url: `${window.location.origin}/launch/${result.site.publishedSlug ?? result.site.slug}` } : { error: result.message };
+          }}
           onClose={() => setBuilderOpen(false)}
           onSave={async (pageData) => {
             await saveDraft({ ...draft, pageData });

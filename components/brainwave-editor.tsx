@@ -74,9 +74,15 @@ export function BrainwaveEditor({
   projectId = null,
   business = { name: "", summary: "" },
   published = false,
+  liveUrl = null,
+  onPublish,
 }: {
   /** 공개 중인 홈페이지 — 저장만으로는 손님 화면이 안 바뀐다('새 버전 공개' 필요) */
   published?: boolean;
+  /** 손님이 보는 주소(공개 중일 때) */
+  liveUrl?: string | null;
+  /** 저장 팝업에서 바로 공개 — 성공하면 손님 주소 */
+  onPublish?: () => Promise<{ url: string } | { error: string }>;
   data: LandingPageData;
   onClose: () => void;
   onSave: (data: LandingPageData) => void | Promise<void>;
@@ -681,7 +687,13 @@ export function BrainwaveEditor({
     setPage(next);
   };
 
-  const save = () => {
+  /*
+   * '저장'을 직접 누르면 저장 뒤 팝업으로 주소·링크 복사·새 탭 보기를 바로 보여 준다(소유자 피드백 2026-10-07:
+   * 그냥 '저장됨'만 바뀌어 초보자는 어디서 보는지 몰랐다). 자동 저장에는 팝업을 띄우지 않는다.
+   */
+  const [savePopup, setSavePopup] = useState<null | { phase: "saved" | "publishing" | "live" | "error"; url?: string; message?: string }>(null);
+  const [copied, setCopied] = useState(false);
+  const save = (manual = false) => {
     if (persistence.saving || uploading || ai.busy || pendingPatchRef.current) return;
     if (btn || menu) { setError("열려 있는 버튼이나 메뉴 설정을 먼저 적용해주세요."); return; }
     setError("");
@@ -691,7 +703,21 @@ export function BrainwaveEditor({
       initial.current = landingDraftFingerprint({ page, ...final });
       if (mounted.current) setSavedFingerprint(initial.current);
       if (recoveryKey) try { sessionStorage.removeItem(recoveryKey); } catch { /* The server save already succeeded. */ }
+      if (manual && mounted.current) { setCopied(false); setSavePopup({ phase: "saved", url: liveUrl ?? undefined }); }
     });
+  };
+  const publishFromPopup = async () => {
+    if (!onPublish) return;
+    // 공개가 끝난 뒤 새 탭을 열면 팝업 차단에 걸린다 — 누른 순간 빈 탭을 먼저 열어 두고 주소를 넣는다.
+    const tab = window.open("", "_blank");
+    setSavePopup({ phase: "publishing" });
+    const result = await onPublish();
+    if (!mounted.current) { tab?.close(); return; }
+    if ("url" in result) { setSavePopup({ phase: "live", url: result.url }); if (tab) tab.location.href = result.url; }
+    else { tab?.close(); setSavePopup({ phase: "error", message: result.error }); }
+  };
+  const copyLink = async (url: string) => {
+    try { await navigator.clipboard.writeText(url); setCopied(true); } catch { setCopied(false); window.prompt("아래 주소를 복사해 주세요", url); }
   };
 
   /*
@@ -785,8 +811,7 @@ export function BrainwaveEditor({
           ) : null}
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /><span className="bw-bar-label bw-bar-mobile">되돌리기</span></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /><span className="bw-bar-label bw-bar-mobile">다시</span></button>
-          {projectId ? <button type="button" className={`bw-editor-ai ${ai.open ? "on" : ""}`} onClick={() => setAi((s) => ({ ...s, open: !s.open }))} title="AI 로 고치기"><Sparkles /> <span className="bw-bar-label">AI</span></button> : null}
-          <button type="button" className="bw-editor-save" title="저장" onClick={save} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : currentFingerprint === savedFingerprint && !editing ? "저장됨" : "저장"}</span></button>
+          <button type="button" className="bw-editor-save" title="저장" onClick={() => save(true)} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : currentFingerprint === savedFingerprint && !editing ? "저장됨" : "저장"}</span></button>
           <button type="button" onClick={close} disabled={persistence.saving} title="닫기"><X /><span className="bw-bar-label bw-bar-mobile">닫기</span></button>
         </div>
       </header>
@@ -797,6 +822,31 @@ export function BrainwaveEditor({
         {recovery.base === initial.current ? <button type="button" onClick={restoreRecovery}>수정 내용 복구</button> : <button type="button" onClick={downloadRecovery}>복구본 내려받기</button>}
         <button type="button" onClick={() => { if (recoveryKey) try { sessionStorage.removeItem(recoveryKey); } catch {} setRecovery(null); }}>복구본 삭제</button>
       </section> : null}
+      {savePopup ? (
+        <div className="bw-save-backdrop" onClick={() => savePopup.phase !== "publishing" && setSavePopup(null)}>
+          <div className="bw-save-popup" role="dialog" aria-modal="true" aria-labelledby="bw-save-title" onClick={(event) => event.stopPropagation()}>
+            <h2 id="bw-save-title">{savePopup.phase === "live" ? "공개했어요" : savePopup.phase === "publishing" ? "공개하는 중이에요" : savePopup.phase === "error" ? "공개하지 못했어요" : "저장했어요"}</h2>
+            {savePopup.phase === "saved" && <p>{published ? "방금 고친 내용은 '새 버전 공개'를 눌러야 손님 화면에 보여요." : "아직 공개 전이에요. 공개하면 손님이 볼 수 있는 주소가 생겨요."}</p>}
+            {savePopup.phase === "live" && <p>새 탭에서 손님이 보는 화면을 열었어요. 주소를 복사해 손님에게 보내 보세요.</p>}
+            {savePopup.phase === "error" && <p role="alert">{savePopup.message}</p>}
+            {savePopup.url && savePopup.phase !== "publishing" ? (
+              <div className="bw-save-url">
+                <span>{savePopup.phase === "live" ? "손님이 보는 주소" : "지금 공개된 주소"}</span>
+                <input readOnly value={savePopup.url} onFocus={(event) => event.currentTarget.select()} aria-label="홈페이지 주소" />
+                <div>
+                  <button type="button" onClick={() => void copyLink(savePopup.url!)}>{copied ? "복사했어요" : "링크 복사"}</button>
+                  <a href={savePopup.url} target="_blank" rel="noopener noreferrer">새 탭에서 보기</a>
+                </div>
+              </div>
+            ) : null}
+            <div className="bw-save-actions">
+              <button type="button" className="secondary" disabled={savePopup.phase === "publishing"} onClick={() => setSavePopup(null)}>{savePopup.phase === "live" ? "닫기" : "계속 고치기"}</button>
+              {onPublish && (savePopup.phase === "saved" || savePopup.phase === "error") ? <button type="button" className="primary" onClick={() => void publishFromPopup()}>{published ? "새 버전 공개하기" : "공개하고 주소 받기"}</button> : null}
+              {savePopup.phase === "publishing" ? <button type="button" className="primary" disabled><LoaderCircle className="spin" /> 공개하는 중</button> : null}
+            </div>
+          </div>
+        </div>
+      ) : null}
       {persistence.savedAt && !persistence.saving && !persistence.error ? <span className="bw-editor-saved" role="status">{landingDraftFingerprint({ page, ...over }) === savedFingerprint && !editing ? (published ? "저장 완료 · 손님 화면은 ‘새 버전 공개’ 후 바뀌어요" : "저장 완료") : "저장하지 않은 수정"}</span> : null}
       {pendingPatch ? <section className="bw-editor-conflicts" aria-label="변경 내용 비교" aria-live="polite">
         <strong>기다리는 동안 같은 내용을 수정했어요</strong>

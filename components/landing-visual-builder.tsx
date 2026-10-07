@@ -197,9 +197,15 @@ export function LandingVisualBuilder({
   onClose,
   onSave,
   published = false,
+  liveUrl = null,
+  onPublish,
 }: {
   /** 공개 중이면 킷 에디터의 '저장 완료'에 '새 버전 공개 후 반영'을 붙인다 */
   published?: boolean;
+  /** 손님이 보는 주소(공개 중일 때) — 저장 팝업에 보여 준다 */
+  liveUrl?: string | null;
+  /** 저장 팝업의 '공개하고 주소 받기' */
+  onPublish?: () => Promise<{ url: string } | { error: string }>;
   data: LandingPageData;
   businessName: string;
   /** AI 수정(토큰)에 쓴다 — 없으면 AI 단추가 숨는다 */
@@ -218,7 +224,7 @@ export function LandingVisualBuilder({
   const current = switched ?? data;
   /* Brainwave.io 킷 페이지는 블록 편집기(Puck)가 아니라 자리 편집기로 고친다 */
   if (current.brainwave) {
-    return <BrainwaveEditor data={current} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} published={published} />;
+    return <BrainwaveEditor data={current} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} published={published} liveUrl={liveUrl} onPublish={onPublish} />;
   }
   const switchToKit = () => {
     if (!window.confirm("10가지 홈페이지 템플릿을 사용하는 편집기로 바꿉니다. 지금 블록으로 꾸민 내용은 사라지고 사업 정보로 새 초안을 만듭니다. 바꿀까요?")) return;

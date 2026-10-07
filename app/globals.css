@@ -17039,3 +17039,25 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 .address-field > label { flex: 1; min-width: 0; }
 @media (max-width: 640px) { .address-field { flex-direction: column; align-items: stretch; } }
 .hk-lead-fields { display: flex; flex-wrap: wrap; gap: 8px 18px; padding-left: 4px; }
+
+/* 홈페이지 에디터: 모바일 보기는 실제 휴대폰 크기(390×844) 화면 안에서 페이지가 스크롤된다 — 아래가 잘려 실제 모습을 알 수 없던 문제(2026-10-07) */
+.bw-editor-stage:has(> .bw-editor-canvas.view-mobile) { display: flex; align-items: center; justify-content: center; min-height: 0; overflow: hidden; }
+.bw-editor-canvas.view-mobile { width: 390px; flex: none; height: min(864px, 100%); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; margin: 0 auto; }
+.bw-editor-canvas.view-mobile::-webkit-scrollbar { display: none; }
+/* 저장 팝업: 주소 · 링크 복사 · 새 탭에서 보기 */
+.bw-save-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(15, 23, 42, .36); }
+.bw-save-popup { width: min(440px, 100%); display: grid; gap: 12px; padding: 22px; border-radius: 16px; background: #fff; box-shadow: 0 18px 48px rgba(15, 23, 42, .2); }
+.bw-save-popup h2 { margin: 0; font-size: 18px; color: #161c2d; }
+.bw-save-popup p { margin: 0; color: #4b5161; font-size: 14px; line-height: 1.6; }
+.bw-save-url { display: grid; gap: 6px; padding: 12px; border-radius: 12px; background: #f3f5f9; }
+.bw-save-url span { font-size: 12px; font-weight: 600; color: #5d6270; }
+.bw-save-url input { width: 100%; height: 40px; padding: 0 10px; border: 1px solid #d6dbe5; border-radius: 8px; background: #fff; font: inherit; font-size: 14px; color: #161c2d; outline: none; }
+.bw-save-url > div { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bw-save-url button, .bw-save-url a { box-sizing: border-box; margin: 0; font-family: inherit; line-height: 1; display: inline-flex; align-items: center; justify-content: center; height: 40px; border: 1px solid #d6dbe5; border-radius: 8px; background: #fff; color: #161c2d; font-size: 14px; font-weight: 600; text-decoration: none; cursor: pointer; }
+.bw-save-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 4px; }
+.bw-save-actions button { display: inline-flex; align-items: center; gap: 6px; height: 42px; padding: 0 16px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; }
+.bw-save-actions .secondary { border: 1px solid #d6dbe5; background: #fff; color: #161c2d; }
+.bw-save-actions .primary { border: 0; background: #4f46e5; color: #fff; }
+.bw-save-actions button:disabled { opacity: .7; cursor: default; }
+.bw-save-actions svg { width: 16px; height: 16px; }
+.bw-save-popup .bw-save-url > div > button, .bw-save-popup .bw-save-url > div > a { height: 44px; min-height: 44px; padding: 0 12px; }
