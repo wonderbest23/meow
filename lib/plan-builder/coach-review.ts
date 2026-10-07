@@ -93,3 +93,14 @@ export async function reviewCoachSection(config: LLMConfig, source: string, draf
   }
   return null;
 }
+
+/**
+ * 품질 검사에 걸린 곳만 고친다 — 섹션을 버리고 처음부터 다시 쓰는 대신 한 번의 짧은 보완 호출로.
+ * 고친 본문은 호출한 쪽이 품질 검사를 다시 통과해야 쓴다.
+ */
+export async function patchSectionIssues(config: LLMConfig, source: string, draft: string, issues: Array<{ quote: string; reason: string }>): Promise<string | null> {
+  if (!issues.length) return null;
+  const raw = await completeJson(config, { system: PATCH, user: JSON.stringify({ source, draft, issues }), kind: "business-plan-quality-patch", effort: "medium", maxOutputTokens: 4000, timeoutMs: 90000, jsonSchema: patchOutputSchema, anthropicJsonSchema: true });
+  const patch = patchSchema.safeParse(raw);
+  return patch.success ? applySectionEdits(draft, patch.data.edits) : null;
+}

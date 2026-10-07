@@ -7,9 +7,9 @@ import { questionsForSection } from "./questions";
 import { planTypeGuidanceBlock } from "./plan-type-guidance";
 import type { SectionBusinessContext } from "./context/section";
 import { COACH_WRITER_RULES } from "./coach";
-import { reviewCoachSection, type CoachReviewEvent } from "./coach-review";
+import { patchSectionIssues, reviewCoachSection, type CoachReviewEvent } from "./coach-review";
 import { documentEditorialPrompt } from "./document-editorial";
-import { checkDocumentQuality } from "./document-quality";
+import { checkDocumentQuality, qualityRepairIssues } from "./document-quality";
 import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
 
 const SYSTEM_PROMPT = [
@@ -437,14 +437,32 @@ export async function generateSection(
   }
   const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
   if (!checked) return { markdown: "", source: "failed" };
-  if (!validateSectionDraft(checked, input)) return { markdown: "", source: "failed" };
-  return { markdown: appendFinancials(checked, input), source: "ai" };
+  const passed = await passQualityCheck(config, checked, input);
+  if (!passed) return { markdown: "", source: "failed" };
+  return { markdown: appendFinancials(passed, input), source: "ai" };
+}
+
+function qualitySource(input: SectionGenInput): string {
+  return [formatAnswers(input.answers), formatBusiness(input.business), input.coachContext, intakeContextEvidence(input.intakeContext), input.operatingContext,
+    input.financialsMarkdown, input.financialsReference, formatEvidence(input.evidence), formatContext(input.context), formatConflicts(input.conflicts)].filter(Boolean).join("\n");
+}
+
+/**
+ * 품질 검사를 통과한 본문을 돌려준다. 걸리면 버리지 않고 걸린 곳만 한 번 고쳐 다시 검사한다(소유자 결정 2026-10-07).
+ * 두 번째에도 걸리면 예전처럼 실패 — 근거 없는 숫자가 계획서에 들어가는 일은 없다.
+ */
+async function passQualityCheck(config: LLMConfig, draft: string, input: SectionGenInput): Promise<string | null> {
+  if (validateSectionDraft(draft, input)) return draft;
+  const issues = qualityRepairIssues(draft, qualitySource(input), input.priorSections);
+  if (!issues.length) return null;
+  const patched = await patchSectionIssues(config, buildUserPrompt(input), draft, issues);
+  if (!patched || !validateSectionDraft(patched, input)) return null;
+  console.info("[section-quality] repaired", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}`, fixed: issues.length }));
+  return patched;
 }
 
 export function validateSectionDraft(markdown: string, input: SectionGenInput): boolean {
-  const source = [formatAnswers(input.answers), formatBusiness(input.business), input.coachContext, intakeContextEvidence(input.intakeContext), input.operatingContext,
-    input.financialsMarkdown, input.financialsReference, formatEvidence(input.evidence), formatContext(input.context), formatConflicts(input.conflicts)].filter(Boolean).join("\n");
-  const result = checkDocumentQuality(markdown, source, input.priorSections);
+  const result = checkDocumentQuality(markdown, qualitySource(input), input.priorSections);
   /*
    * 버리는 이유를 남긴다 — 예전엔 이유 없이 섹션이 실패해 원인을 알 수 없었다
    * (운영 2026-10-07 캠핑 계획서 '가격 전략': AI 작성·검토·보완은 모두 성공했는데 이 검사에서 두 번 버려짐).
@@ -482,10 +500,11 @@ export async function streamSection(
   );
   if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
   const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
-  if (!checked || !validateSectionDraft(checked, input)) return { markdown: "", source: "failed" };
+  const passed = checked ? await passQualityCheck(config, checked, input) : null;
+  if (!passed) return { markdown: "", source: "failed" };
   /*
    * 스트리밍 화면에는 재무 블록이 델타로 흐르지 않지만, 최종 저장본에는 붙는다.
    * 클라이언트는 마지막 done 페이로드의 markdown/html로 갈아끼우므로 문제없다.
    */
-  return { markdown: appendFinancials(checked, input), source: "ai" };
+  return { markdown: appendFinancials(passed, input), source: "ai" };
 }

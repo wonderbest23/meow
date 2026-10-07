@@ -47,9 +47,12 @@ async function main() {
 
   const originalFetch = globalThis.fetch;
   let responseText = `${body}\n\n납품 가격은 280만원입니다.`;
+  let repairText = "";
   globalThis.fetch = async (url, init) => {
     assert.equal(new URL(String(url)).hostname, "api.anthropic.com", "only intercepted fixture traffic is allowed");
     const payload = JSON.parse(String(init?.body));
+    // The quality repair call gets exact-line edits back (removes the unsupported amount).
+    if (repairText && JSON.stringify(payload).includes("입력값이나 시스템 계산에 없는")) return Response.json({ content: [{ type: "text", text: JSON.stringify({ edits: [{ quote: "납품 가격은 280만원입니다.", replacement: repairText }] }) }], usage: { input_tokens: 0, output_tokens: 0 } });
     if (payload.stream) {
       const event = `event: content_block_delta\ndata: ${JSON.stringify({ type: "content_block_delta", delta: { type: "text_delta", text: responseText } })}\n\nevent: message_stop\ndata: {"type":"message_stop"}\n\n`;
       return new Response(event, { headers: { "Content-Type": "text/event-stream" } });
@@ -60,6 +63,14 @@ async function main() {
     const config = { provider: "anthropic" as const, apiKey: "test-only-not-real", model: "local-editorial-test" };
     assert.equal((await generateSection(config, input)).source, "failed", "mechanical numeric rejection is an actual generation failure");
     assert.equal((await streamSection(config, input, () => {})).source, "failed", "streaming cannot bypass the quality gate");
+    // 품질 검사에 걸린 줄만 고쳐 통과하면 버리지 않고 쓴다(소유자 결정 2026-10-07).
+    repairText = "납품 가격은 추가 정의가 필요합니다.";
+    const repaired = await generateSection(config, input);
+    assert.equal(repaired.source, "ai", "a quality repair keeps the paid draft");
+    assert.ok(repaired.markdown.includes("납품 가격은 추가 정의가 필요합니다.") && !repaired.markdown.includes("280만원"));
+    repairText = "납품 가격은 350만원입니다.";
+    assert.equal((await generateSection(config, input)).source, "failed", "a repair that still invents a number is rejected");
+    repairText = "";
     responseText = body;
     assert.equal((await generateSection(config, input)).source, "ai");
     assert.equal((await streamSection(config, input, () => {})).source, "ai");
