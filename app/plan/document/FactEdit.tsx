@@ -5,7 +5,7 @@ import Link from "next/link";
 import { X } from "lucide-react";
 import type { IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
-import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
+import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, parseWon, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { QuestionForm, RewriteConfirm } from "../chat/intake-ui/IntakePanels";
 import { choiceDraftSubmission, emptyAnswer, incompleteChoiceText, readIntakePayload, summaryAnswerText, type AnswerDraft } from "../chat/intake-ui/model";
@@ -113,11 +113,12 @@ export function FactCard({ edit, onPick, onReflect }: { edit: ReturnType<typeof 
   </section>;
 }
 
-/** Small editor next to a fact: the intake question in coach-chat form; a finished pick saves at once. */
+/** Small editor next to a fact: amounts get one input; other facts use the intake question in coach-chat form. */
 export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { edit: ReturnType<typeof useFactEdit>; questionId: string; anchor: DOMRect; onClose: () => void; onSaved: () => void }) {
   const fact = edit.facts.find(item => item.questionId === questionId);
   // Start empty: a fact edit replaces the answer, it does not add to it. The current value is shown in the header.
   const [draft, setDraft] = useState<AnswerDraft>(emptyAnswer);
+  const [amountText, setAmountText] = useState("");
   const box = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ top: anchor.bottom + 8, left: anchor.left });
   useLayoutEffect(() => {
@@ -131,6 +132,13 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
     return () => removeEventListener("keydown", close);
   }, [onClose]);
   if (!fact || !edit.snapshot) return null;
+  const amount = fact.question.kind === "number" && fact.question.unit === "원";
+  const won = amount ? parseWon(amountText) : null;
+  const saveAmount = async () => {
+    if (won === null) return;
+    const result = await edit.post({ action: "answer", questionId: fact.questionId, value: won });
+    if (result) onSaved();
+  };
   const save = async (value: AnswerDraft) => {
     const submission = draftSubmission(fact.question, value);
     if (!submission) return;
@@ -139,11 +147,15 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
   };
   return <div ref={box} className={styles.factPopover} style={{ top: position.top, left: position.left }} role="dialog" aria-label={`${fact.label} 바꾸기`} data-fact-popover>
     <header><div><b>{fact.label} 바꾸기</b><small>지금: {fact.display}</small></div><button type="button" aria-label="닫기" onClick={onClose}><X size={16} /></button></header>
-    <div className={`${intake.page} ${intake.factScope}`} data-coach>
+    {amount ? <form className={styles.factAmount} onSubmit={event => { event.preventDefault(); void saveAmount(); }}>
+      <label htmlFor="fact-amount">새 금액</label>
+      <div><input id="fact-amount" autoFocus inputMode="numeric" autoComplete="off" maxLength={20} placeholder="예: 60000 또는 6만" value={amountText} disabled={edit.busy} onChange={event => setAmountText(event.target.value)} /><span>원</span></div>
+      <small aria-live="polite">{won !== null ? `${new Intl.NumberFormat("ko-KR").format(won)}원으로 바꿔요` : amountText.trim() ? "숫자로 적어 주세요" : "\u00a0"}</small>
+    </form> : <div className={`${intake.page} ${intake.factScope}`} data-coach>
       <QuestionForm question={fact.question} snapshot={edit.snapshot} draft={draft} editing={false} disabled={edit.busy} inChat coach
         onChange={(answer, submit) => { setDraft(answer); if (submit) void save(answer); }}
         onAnswer={value => void save({ ...emptyAnswer(), text: String(value ?? "") })} onCancel={onClose} />
-    </div>
-    <footer><small>바꾸면 계획서에 반영하기 전까지 기존 문서는 그대로예요</small><button type="button" className={styles.primary} disabled={edit.busy || !draftSubmission(fact.question, draft)} onClick={() => void save(draft)}>바꾸기</button></footer>
+    </div>}
+    <footer><small>{amount ? "금액은 계획서 본문에 바로 바뀌어요. 계산된 다른 숫자는 \"계획서에 반영하기\"로 맞춰요" : "바꾼 내용은 \"계획서에 반영하기\"를 누르면 계획서에 들어가요"}</small><button type="button" className={styles.primary} disabled={edit.busy || (amount ? won === null : !draftSubmission(fact.question, draft))} onClick={() => void (amount ? saveAmount() : save(draft))}>바꾸기</button></footer>
   </div>;
 }
