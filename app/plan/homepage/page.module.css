@@ -317,3 +317,9 @@
 .nextCare strong { font-size:16px; font-weight:700; }
 .nextCare small { font-size:13px; opacity:.9; }
 .nextCare:hover { background:#1b5bb8; }
+
+/* 다음 단계 두 개를 나란히, 글에 맞는 크기로(소유자 지적 2026-10-07: 띠만 넓고 글씨는 작았다) */
+.nextRow { display:grid; grid-template-columns:repeat(auto-fit, minmax(260px, 1fr)); gap:12px; max-width:760px; margin:24px 0 8px; }
+.nextRow .nextCare, .nextRow .nextCard { margin:0; padding:18px 20px; gap:4px; border-radius:14px; }
+.nextRow .nextCare strong, .nextRow .nextCard strong { font-size:17px; }
+.nextRow .nextCare small, .nextRow .nextCard small { font-size:14px; line-height:1.5; }

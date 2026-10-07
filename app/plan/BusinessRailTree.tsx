@@ -27,7 +27,8 @@ function stepFor(pathname: string): JourneyStepId | null {
 }
 
 /* 홈페이지 화면 안의 칸 — 누르면 그 자리로 내려간다 */
-const HOMEPAGE_PARTS: Array<[string, string]> = [["hk-preview", "미리보기·에디터"], ["hk-business", "사업자 정보"], ["hk-domain", "내 도메인 연결"], ["hk-leads", "접수된 문의"]];
+/* 홈페이지 화면의 번호(1~5)와 같은 순서 */
+const HOMEPAGE_PARTS: Array<[string, string]> = [["hk-preview", "미리보기·에디터"], ["hk-contact", "손님 연락 방법"], ["hk-business", "사업자 정보"], ["hk-domain", "내 도메인 연결"], ["hk-leads", "접수된 문의"]];
 function jump(id: string) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -69,16 +70,23 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
  * 사업을 누르면 그 사업의 목차(대화 → 사업계획서 → 홈페이지 → 유지보수)가 펼쳐진다.
  * 대화·문서·홈페이지·사업 관리 어느 화면에서든 같은 자리, 같은 모양이다.
  */
+/*
+ * 이 탭에서 한 번 그린 뒤로는 화면을 옮겨도 바로 그린다 — 예전엔 화면마다 목록이 비었다가 다시 나타나
+ * '유지보수' 체크가 풀렸다 돌아오는 것처럼 깜빡였다(소유자 지적 2026-10-07). 첫 화면(서버가 그린 것)만 기다린다.
+ */
+let railHydrated = false;
+
 export default function BusinessRailTree({ documentToc }: { documentToc?: DocumentToc }) {
   const pathname = usePathname() || "";
   /* 저장된 사업은 브라우저에만 있다 — 서버가 그린 첫 화면과 어긋나지 않게 올라온 뒤에 그린다 */
-  const [mounted, setMounted] = useState(false);
+  const [mounted, setMounted] = useState(railHydrated);
   const [tick, setTick] = useState(0);
   const [listOpen, setListOpen] = useState(true);
   /* 한 번에 한 사업만 펼친다(소유자 피드백 2026-10-07: 여러 개가 열려 헷갈림). undefined = 지금 보는 사업 */
   const [openId, setOpenId] = useState<string | null | undefined>(undefined);
-  const [urlPlanId, setUrlPlanId] = useState<string | null>(null);
+  const [urlPlanId, setUrlPlanId] = useState<string | null>(() => railHydrated ? new URLSearchParams(window.location.search).get("planId") : null);
   useEffect(() => {
+    railHydrated = true;
     setMounted(true);
     try { if (localStorage.getItem(LIST_OPEN_KEY) === "0") setListOpen(false); } catch { /* 기본은 펼침 */ }
     const refresh = () => setTick(n => n + 1);

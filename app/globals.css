@@ -17079,3 +17079,7 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 .public-appendix-fields span.consent { border: 0; padding: 4px 0; background: transparent; color: #4b5161; }
 .public-appendix-fields b { display: block; padding: 12px; border-radius: 8px; background: #161c2d; color: #fff; text-align: center; font-size: 14px; }
 .public-appendix-preview footer { max-width: 560px; margin: 20px auto 0; padding-top: 14px; border-top: 1px solid #e3e6ee; color: #6b7280; font-size: 13px; font-weight: 600; }
+
+/* 홈페이지 화면 순서 번호(1 미리보기·에디터 ~ 5 접수된 문의) — 왼쪽 목록의 홈페이지 목차와 같은 번호 */
+.hk-step-no { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: #161c2d; color: #fff; font-size: 13px; font-weight: 700; }
+.hk-step-head { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; font-weight: 700; color: #161c2d; }
