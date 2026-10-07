@@ -444,7 +444,14 @@ export async function generateSection(
 export function validateSectionDraft(markdown: string, input: SectionGenInput): boolean {
   const source = [formatAnswers(input.answers), formatBusiness(input.business), input.coachContext, intakeContextEvidence(input.intakeContext), input.operatingContext,
     input.financialsMarkdown, input.financialsReference, formatEvidence(input.evidence), formatContext(input.context), formatConflicts(input.conflicts)].filter(Boolean).join("\n");
-  return checkDocumentQuality(markdown, source, input.priorSections).ok;
+  const result = checkDocumentQuality(markdown, source, input.priorSections);
+  /*
+   * 버리는 이유를 남긴다 — 예전엔 이유 없이 섹션이 실패해 원인을 알 수 없었다
+   * (운영 2026-10-07 캠핑 계획서 '가격 전략': AI 작성·검토·보완은 모두 성공했는데 이 검사에서 두 번 버려짐).
+   * 본문은 남기지 않고 걸린 규칙과 숫자만 남긴다.
+   */
+  if (!result.ok) console.warn("[section-quality] rejected", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}`, issues: result.issues.filter(item => item.severity === "error").map(item => ({ code: item.code, detail: item.detail })) }));
+  return result.ok;
 }
 
 /**
