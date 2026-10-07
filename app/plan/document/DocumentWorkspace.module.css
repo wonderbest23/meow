@@ -268,3 +268,9 @@
    본문(.article)은 최대 1020px 안에 좌우 44px(1100px 이하 28px) 여백이다. */
 @media (min-width:901px) { .readingBar, .completionNotice { padding-inline:max(24px, calc((100% - 1020px) / 2 + 44px)); } }
 @media (min-width:901px) and (max-width:1100px) { .readingBar, .completionNotice { padding-inline:max(24px, calc((100% - 1020px) / 2 + 28px)); } }
+
+/* 바뀐 사업 조건 안내: 글은 왼쪽, 할 일은 오른쪽 버튼으로(소유자 피드백 2026-10-07: 글씨처럼 보여 누르는 곳인지 몰랐음) */
+.noticeRow { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+.noticeRow > span { flex:1; min-width:200px; }
+.noticeAction { flex:none; display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:7px 14px; border:1px solid var(--app-primary); border-radius:8px; background:var(--app-primary); color:#fff !important; font-size:13px; font-weight:600; line-height:1; text-decoration:none; cursor:pointer; }
+.noticeAction:hover { filter:brightness(.95); }

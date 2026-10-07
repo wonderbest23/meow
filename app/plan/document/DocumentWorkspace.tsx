@@ -225,7 +225,7 @@ export default function DocumentWorkspace(props: Props) {
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
                             {props.writing && <WritingStatus {...props.writing} />}
               {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
-              {props.notice && !props.writing && !factMode && <div className={styles.notice} role="status">{props.notice} {factEditable ? <button className={styles.help} onClick={() => { setSummaryMode(false); setFactMode(true); }}>고친 내용 반영하기</button> : coachHref && <Link href={coachHref}>대화로 수정하기</Link>}</div>}
+              {props.notice && !props.writing && !factMode && <div className={`${styles.notice} ${styles.noticeRow}`} role="status"><span>{props.notice}</span>{factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>고친 내용 반영하기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
                 <DocumentChapterHeading number={index + 1} title={name} />
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
