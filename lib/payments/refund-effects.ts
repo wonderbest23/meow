@@ -93,6 +93,8 @@ export async function closeRefundedProduct(order: PaymentOrder, options: { homep
         supabase.from("plan_regenerations").select("id", { count: "exact", head: true }).eq("plan_id", planId).eq("ok", true),
       ]);
       if (packs.error || used.error) throw packs.error ?? used.error;
+      // 쓴 횟수를 모르면 0번으로 보고 돌려주지 않는다
+      if (used.count === null) throw new Error("REGEN_USAGE_UNKNOWN");
       let left = Math.max(0, (used.count ?? 0) - REGEN_INCLUDED);
       let keep = 0;
       for (const pack of packs.data ?? []) {

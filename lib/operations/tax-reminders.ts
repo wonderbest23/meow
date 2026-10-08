@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "../persistence";
 import { customerSmsConfig, relayUnsupported, sendRelayV4, stableEventId, type CustomerSmsConfig } from "../notify/customer-sms";
 import { dueTaxReminders } from "./tax-calendar";
+import { schemaFailureReason } from "../schema-readiness";
 
 /*
  * 세금 신고 마감 문자 — 마감 7일 전·1일 전 오전 9시(한국 시간)부터, 홈페이지에 '문자 받을 휴대폰'을 등록하고
@@ -35,13 +36,13 @@ export async function runTaxReminders(deps: TaxReminderDependencies, limit = 50)
   if (!sms) return { ...result, reason: "sms_disabled" };
 
   const sites = await db.from("landing_sites").select("alert_phone").not("alert_phone", "is", null).not("published_version", "is", null).eq("status", "published").eq("weekly_report_opt_out", false).limit(5000);
-  if (sites.error) return { ...result, reason: "migration_required" };
+  if (sites.error) return { ...result, reason: schemaFailureReason(sites.error) };
   const phones = [...new Set(((sites.data ?? []) as Array<{ alert_phone: string | null }>).map((row) => row.alert_phone ?? "").filter((phone) => /^010\d{8}$/.test(phone)))];
 
   let budget = limit;
   for (const deadline of due) {
     const done = await db.from("tax_reminder_sends").select("recipient_key").eq("deadline", deadline.date).eq("days_before", deadline.daysBefore).limit(10000);
-    if (done.error) return { ...result, reason: "migration_required" };
+    if (done.error) return { ...result, reason: schemaFailureReason(done.error) };
     const taken = new Set(((done.data ?? []) as Array<{ recipient_key: string }>).map((row) => row.recipient_key));
     const keyed = await Promise.all(phones.map(async (phone) => ({ phone, key: await recipientKey(phone) })));
     const todo = keyed.filter((item) => !taken.has(item.key));

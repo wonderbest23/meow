@@ -179,6 +179,10 @@ export async function POST(req: Request) {
     const existing = plan?.sections?.[sectionKey];
     if (existing?.markdown) {
       const quota = await resolveRegenQuota(body.planId);
+      // 횟수를 확인하지 못한 것을 '다 썼으니 사세요'로 안내하지 않는다
+      if (quota.unavailable) {
+        return NextResponse.json({ error: "quota_unavailable", message: "다시 생성 횟수를 확인하지 못했어요. 기존 문서는 그대로 있어요. 잠시 후 다시 시도해 주세요." }, { status: 503 });
+      }
       if (quota.remaining <= 0) {
         return NextResponse.json(
           {

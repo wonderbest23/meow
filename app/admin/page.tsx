@@ -69,6 +69,8 @@ export default function AdminDashboardPage() {
   const [session, setSession] = useState<SessionState | null>(null);
   const [password, setPassword] = useState("");
   const [stats, setStats] = useState<Stats | null>(null);
+  /* 운영 DB에 빠진 마이그레이션 — 상담 저장(0024)이 없어도 화면은 멀쩡해 보였다 */
+  const [schema, setSchema] = useState<{ ready: boolean; missing: number; unknown: number } | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -94,6 +96,19 @@ export default function AdminDashboardPage() {
     const timer = window.setInterval(() => void loadStats().catch(() => undefined), 30_000);
       return () => window.clearInterval(timer);
   }, [loadStats, session?.authenticated]);
+
+  useEffect(() => {
+    if (!session?.authenticated) return;
+    let alive = true;
+    void fetch("/api/admin/schema", { cache: "no-store" })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((report: { ready: boolean; source: string; summary: { missing: number; partial: number; unknown: number } } | null) => {
+        // DB 없이 띄운 로컬 데모는 알리지 않는다
+        if (alive && report && report.source !== "none") setSchema({ ready: report.ready, missing: report.summary.missing + report.summary.partial, unknown: report.summary.unknown });
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [session?.authenticated]);
 
   const login = async (event: FormEvent) => {
     event.preventDefault();
@@ -146,6 +161,12 @@ export default function AdminDashboardPage() {
         지금 고장났는지를 맨 위에서 알린다.
         카드의 숫자만으로는 지나친다 — 크레딧이 떨어진 날에도 화면은 멀쩡해 보였다.
       */}
+      {schema && !schema.ready && (schema.missing > 0 || schema.unknown > 0) && (
+        <div className="admin-dash-alert" role="alert">
+          <strong>{schema.missing > 0 ? `운영 DB에 빠진 마이그레이션이 ${schema.missing}개 있습니다` : `DB 마이그레이션 ${schema.unknown}개를 확인하지 못했습니다`}</strong>
+          <span>빠진 기능은 오류 없이 조용히 동작하지 않습니다. <Link href="/admin/schema">DB 준비 상태에서 실행할 파일 보기 →</Link></span>
+        </div>
+      )}
       {llmAlert && (
         <div className="admin-dash-alert" role="alert">
           <strong>AI 호출 실패가 이어지고 있습니다</strong>

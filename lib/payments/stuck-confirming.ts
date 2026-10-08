@@ -25,7 +25,7 @@ export async function sweepConfirmingOrders(limit = 10, now = Date.now()): Promi
     .eq("status", "confirming").like("provider_status", "NICEPAY_%")
     .lt("created_at", new Date(now - MIN_AGE_MS).toISOString()).gt("created_at", new Date(now - MAX_AGE_MS).toISOString())
     .order("created_at", { ascending: true }).limit(limit);
-  if (error) return { checked: 0, settled: 0, alerted: 0, reason: "query_failed" };
+  if (error) return { checked: 0, settled: 0, alerted: 0, reason: `query_failed:${error.code ?? "unknown"}` };
   const result = { checked: 0, settled: 0, alerted: 0 };
   for (const row of (data ?? []) as Array<{ order_id: string; order_name: string; amount: number; created_at: string }>) {
     result.checked += 1;

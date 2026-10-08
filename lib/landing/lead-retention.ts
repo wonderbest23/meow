@@ -19,10 +19,10 @@ export async function purgeExpiredLeads(db: SupabaseClient | null, now = Date.no
   const handled = await db.from("landing_leads").select("id").lt("handled_at", iso(LEAD_RETENTION_AFTER_HANDLED_DAYS)).limit(BATCH);
   const stale = await db.from("landing_leads").select("id").lt("created_at", iso(LEAD_RETENTION_UNHANDLED_DAYS)).limit(BATCH);
   const ids = [...new Set([...(handled.error ? [] : handled.data ?? []), ...(stale.error ? [] : stale.data ?? [])].map((row) => String((row as { id: string }).id)))];
-  if (handled.error && stale.error) return { deleted: 0, reason: "query_failed" };
+  if (handled.error && stale.error) return { deleted: 0, reason: `query_failed:${stale.error.code ?? "unknown"}` };
   if (ids.length) {
     const removed = await db.from("landing_leads").delete().in("id", ids).select("id");
-    if (removed.error) return { deleted: 0, reason: "delete_failed" };
+    if (removed.error) return { deleted: 0, reason: `delete_failed:${removed.error.code ?? "unknown"}` };
     deleted = removed.data?.length ?? 0;
   }
   return { deleted };

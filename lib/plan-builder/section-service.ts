@@ -274,18 +274,25 @@ async function runServiceOperation(input: z.infer<typeof serviceRequestSchema>) 
       case "completeProposalUpdate": return Response.json({ result: await executeProposalUpdate(input.job) });
       case "sweepLeadNotifications": {
         // 같은 5분 예약 실행에서 주간 리포트도 몇 곳씩 보낸다 — 리포트가 실패해도 문의 알림 재시도는 그대로
-        // 문의 재시도 조회가 실패해도 아래 주간 리포트·세금·도메인 확인은 이번 회차에 돈다
-        const leads = await sweepDueLeadNotifications().catch((error) => { console.error("[sweep] lead notifications failed", error); return { error: "LEAD_SWEEP_FAILED" }; });
-        const weekly = await runWeeklyReportsNow().catch(() => ({ error: "WEEKLY_REPORT_FAILED" }));
+        // 하나가 실패해도 나머지는 이번 회차에 돈다. 실패는 이름과 함께 남긴다(예전엔 사유 없이 버려 아무도 몰랐다).
+        const step = <T,>(name: string, run: () => Promise<T>) => run().catch((error: unknown) => {
+          console.error("[sweep] failed", JSON.stringify({ step: name, message: error instanceof Error ? error.message.slice(0, 160) : String(error).slice(0, 160), code: (error as { code?: string } | null)?.code ?? null }));
+          return { error: `${name.toUpperCase()}_FAILED` };
+        });
+        const leads = await step("lead_notifications", sweepDueLeadNotifications);
+        const weekly = await step("weekly_report", runWeeklyReportsNow);
         // 세금 신고 마감 문자 — 마감 7일·1일 전 9시 이후에만 일한다(그 밖에는 바로 돌아온다)
-        const tax = await runTaxRemindersNow().catch(() => ({ error: "TAX_REMINDER_FAILED" }));
+        const tax = await step("tax_reminder", runTaxRemindersNow);
         // 도메인 자동 등록(.com) 진행 상태 확인 — 끝나면 등록 완료·연결·알림까지
-        const domains = await pollAutoRegistrations().catch(() => ({ error: "DOMAIN_REGISTRAR_FAILED" }));
+        const domains = await step("domain_registrar", () => pollAutoRegistrations());
         // 승인 응답을 놓쳐 '확인 중'에 멈춘 카드 결제 다시 맞추기
-        const payments = await sweepConfirmingOrders().catch(() => ({ error: "PAYMENT_SWEEP_FAILED" }));
+        const payments = await step("payment_sweep", () => sweepConfirmingOrders());
         // 보관 기간이 지난 홈페이지 문의 지우기(개인정보 안내문의 보유 기간)
-        const purged = await purgeExpiredLeadsNow().catch(() => ({ error: "LEAD_PURGE_FAILED" }));
-        return Response.json({ result: { ok: true, ...leads, weekly, tax, domains, purged, payments } });
+        const purged = await step("lead_purge", purgeExpiredLeadsNow);
+        const result = { ok: true, ...leads, weekly, tax, domains, purged, payments };
+        // 실패·마이그레이션 필요 사유가 있으면 전체 결과를 남긴다(예약 실행 로그는 앞 200자만 남겨 뒤쪽 결과가 잘렸다)
+        if (/_FAILED|query_failed|migration_required|delete_failed/.test(JSON.stringify(result))) console.warn("[sweep] attention", JSON.stringify(result).slice(0, 2000));
+        return Response.json({ result });
       }
       case "artifactChunk": return Response.json({ result: await executeArtifactChunk(input.job.ownerHash, input.job.planId, input.job.jobId, input.job.index, input.job.attempt) });
     }

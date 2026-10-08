@@ -36,7 +36,7 @@ function envSettings(): PlatformLegalSettings {
 }
 
 function isMissingTable(error: { code?: string; message?: string } | null) {
-  return error?.code === "42P01" || error?.code === "PGRST205" || error?.message?.includes("platform_legal_settings");
+  return error?.code === "42P01" || error?.code === "PGRST205";
 }
 
 export async function getPlatformLegalSettings(): Promise<PlatformLegalSettings> {

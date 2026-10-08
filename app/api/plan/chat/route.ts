@@ -4,7 +4,7 @@ import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
-import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { checkRateLimit, enforceRateLimit } from "../../../../lib/rate-limit";
 import { resolvePlanningLLMConfig } from "../../../../lib/llm/config";
 import { emptyCoach, generateAndSaveCoach, updateCoachJob } from "../../../../lib/plan-builder/coach-job";
 import { COACH_JOB_KEY, readCoachJob, isCoachJobActive, isCoachJobStale, type CoachJob } from "../../../../lib/plan-builder/coach-job-types";
@@ -283,7 +283,9 @@ async function postLegacyChat(request: Request) {
   // 상담 기록(하루 횟수)을 못 읽어도 사업 기획 대화는 막지 않는다 — 횟수 저장은 아래에서 건너뛴다
   const session = await loadConsultSession(identity.hash).catch(() => null);
   const limit = consultLimitFor(identity.userId);
-  if (!retry && (session?.turnsToday ?? 0) >= limit) return json({ message: identity.userId ? "오늘 대화 이용량을 모두 사용했습니다. 저장된 계획은 계속 확인할 수 있습니다." : "로그인하면 지금 대화에서 이어갈 수 있습니다.", login: !identity.userId }, 429);
+  // 상담 저장소를 못 읽으면 요청 수로 센다(/api/consult 와 같은 한도 칸) — 한도를 건너뛰지 않게
+  const overLimit = !retry && (session ? session.turnsToday >= limit : !(await checkRateLimit("consult-owner-day", identity.hash, { limit, windowMs: 24 * 60 * 60_000 })).ok);
+  if (overLimit) return json({ message: identity.userId ? "오늘 대화 이용량을 모두 사용했습니다. 저장된 계획은 계속 확인할 수 있습니다." : "로그인하면 지금 대화에서 이어갈 수 있습니다.", login: !identity.userId }, 429);
   if (!resolvePlanningLLMConfig(identity.hash)) return json({ message: "사업 기획 AI 연결을 준비 중입니다. 잠시 후 다시 시도해주세요." }, 503);
   if ((previous?.messages.length ?? 0) >= 160) return json({ message: "대화가 길어졌습니다. 작성한 문서에서 이어서 수정해주세요." }, 400);
   if ((previous?.messages.reduce((total, m) => total + m.text.length, 0) ?? 0) + input.message.length > 240000) return json({ message: "첨부한 대화 자료가 많습니다. 필요한 부분만 나누어 새 대화에서 이어가주세요." }, 413);

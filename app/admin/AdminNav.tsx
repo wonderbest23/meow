@@ -1,6 +1,6 @@
 "use client";
 
-import { Activity, Banknote, BriefcaseBusiness, Coins, Globe2, Headphones, LayoutDashboard, LogOut, PanelsTopLeft, RotateCcw, Settings } from "lucide-react";
+import { Activity, Banknote, BriefcaseBusiness, Coins, Database, Globe2, Headphones, LayoutDashboard, LogOut, PanelsTopLeft, RotateCcw, Settings } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import WorkspaceBrand from "../../components/workspace-brand";
@@ -31,6 +31,7 @@ export default function AdminNav({ title, subtitle }: { title: string; subtitle?
     { href: "/admin/services", label: "서비스 신청", Icon: BriefcaseBusiness },
     { href: "/admin/legal", label: "운영 설정", Icon: Settings },
     { href: "/admin/homepage", label: "홈 문구", Icon: PanelsTopLeft },
+    { href: "/admin/schema", label: "DB 준비 상태", Icon: Database },
   ];
 
   return (

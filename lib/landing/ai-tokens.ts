@@ -35,16 +35,28 @@ export async function resolveTokenBalance(userId: string | null, planId: string)
   const batches = await purchasedTokenBatches(userId, planId);
   const purchased = batches.reduce((sum, batch) => sum + batch.tokens, 0);
   if (!purchased) return { purchased: 0, used: 0, remaining: 0, packSize };
-  const { data, error } = await supabase
-    .from("llm_usage")
-    .select("input_tokens, output_tokens, created_at")
-    .eq("kind", AI_EDIT_KIND)
-    .eq("plan_id", planId)
-    .eq("ok", true)
-    .limit(5000);
-  if (error) throw error;
+  /*
+   * 사용 기록을 끝까지 읽는다 — DB 한 번 응답은 최대 1000줄(supabase/config.toml max_rows)이라 예전처럼 한 번만 읽으면
+   * 1000번을 넘게 쓴 사업은 잔액이 실제보다 많아 보였다.
+   */
+  const PAGE = 1000;
+  const data: Array<{ input_tokens: unknown; output_tokens: unknown; created_at: unknown }> = [];
+  for (let from = 0; from < 100_000; from += PAGE) {
+    const page = await supabase
+      .from("llm_usage")
+      .select("input_tokens, output_tokens, created_at")
+      .eq("kind", AI_EDIT_KIND)
+      .eq("plan_id", planId)
+      .eq("ok", true)
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (page.error) throw page.error;
+    data.push(...(page.data ?? []));
+    if ((page.data?.length ?? 0) < PAGE) break;
+  }
   // 충전일부터 1년 유효, 먼저 산 토큰부터 차감(환불 기준·결제 화면에 고지한 규칙).
-  const uses = (data ?? []).map((row) => ({ at: new Date(String(row.created_at)).getTime(), tokens: (Number(row.input_tokens) || 0) + (Number(row.output_tokens) || 0) }));
+  const uses = data.map((row) => ({ at: new Date(String(row.created_at)).getTime(), tokens: (Number(row.input_tokens) || 0) + (Number(row.output_tokens) || 0) }));
   const balance = tokenBalanceWithExpiry(batches, uses, Date.now());
   return { purchased: balance.purchased, used: balance.used, remaining: balance.remaining, packSize, expiresAt: balance.expiresAt };
 }

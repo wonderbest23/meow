@@ -295,7 +295,7 @@ function mail() {
     assert.equal((await runTaxReminders({ ...deps, sms: null, now: at("2027-05-24T09:10:00") })).reason, "sms_disabled");
     // 표(0040)가 없으면 조용히 건너뛴다
     const missing = await runTaxReminders({ db: fakeDb({ landing_sites: tables.landing_sites }), sms, transport: s.transport, now: at("2027-05-30T09:00:00") });
-    assert.equal(missing.reason, "migration_required");
+    assert.match(missing.reason ?? "", /^migration_required:42P01$/, "표가 없을 때만 '마이그레이션 필요'(오류 코드 함께)");
     // 예전 중계면 맡은 줄을 지우고 멈춘다(업그레이드 뒤 그날 다시)
     const oldTables: Record<string, Row[]> = { landing_sites: tables.landing_sites, tax_reminder_sends: [] };
     const stopped = await runTaxReminders({ db: fakeDb(oldTables), sms, transport: relay("old").transport, now: at("2027-05-30T09:00:00") });

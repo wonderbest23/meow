@@ -50,7 +50,8 @@ function mine({ ownerId: _ownerId, customerEmail: _email, ...rest }: ServiceRequ
 
 /** 테이블 미생성(마이그레이션 전) 오류인지 */
 function isMissingTable(error: { message?: string; code?: string } | null): boolean {
-  return Boolean(error?.code === "42P01" || error?.code === "PGRST205" || error?.message?.includes("service_requests"));
+  // 오류 코드로만 본다 — 메시지에 표 이름이 든 다른 오류(권한·제약)를 '신청 없음'으로 보이지 않게
+  return error?.code === "42P01" || error?.code === "PGRST205";
 }
 
 export class ServiceRequestError extends Error {

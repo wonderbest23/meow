@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../lib/api-auth";
-import { enforceRateLimit } from "../../../lib/rate-limit";
+import { checkRateLimit, enforceRateLimit } from "../../../lib/rate-limit";
 import { resolveLLMConfig } from "../../../lib/llm/config";
 import { streamText, parseJsonObject } from "../../../lib/llm/complete";
 import { loadPlanState } from "../../../lib/plan-builder/plan-server-store";
@@ -96,7 +96,8 @@ export async function GET() {
 /* '새 상담' — 대화·카드만 지운다. 오늘 쓴 횟수는 남는다(한도 초기화 구멍 방지). */
 export async function DELETE() {
   const identity = await requireGuestIdentity();
-  await resetConsultSession(identity.hash).catch(() => {});
+  try { await resetConsultSession(identity.hash); }
+  catch { return NextResponse.json({ ok: false, error: "consult_unavailable", message: "지난 상담을 지우지 못했어요." }, { status: 503, headers: { "Cache-Control": "private, no-store" } }); }
   return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
@@ -127,9 +128,18 @@ export async function POST(request: Request) {
    * 위의 IP 제한은 순간 폭주만 막는다(10분에 40번). 한 사람이 하루 종일 쓰는 것은
    * 그걸로 막히지 않으므로 계정 기준으로 따로 센다.
    */
-  const session = await loadConsultSession(identity.hash).catch(() => null);
+  const session = await loadConsultSession(identity.hash).catch((error: unknown) => {
+    console.warn("[consult]", JSON.stringify({ event: "session_unavailable", code: (error as { code?: string } | null)?.code ?? null, message: String((error as { message?: string } | null)?.message ?? error).slice(0, 160) }));
+    return null;
+  });
   const limit = consultLimitFor(identity.userId);
-  if (session && session.turnsToday >= limit) {
+  /*
+   * 상담 저장소를 못 읽어도 하루 한도를 건너뛰지 않는다 — 예전엔 운영 DB에 consult_sessions(0024)가 없어
+   * 손님 하루 3번 제한이 한 번도 걸리지 않았다. 그때는 저장된 횟수 대신 요청 수를 같은 한도로 센다.
+   */
+  const ownerDay = session ? null : await checkRateLimit("consult-owner-day", identity.hash, { limit, windowMs: 24 * 60 * 60_000 });
+  const overLimit = session ? session.turnsToday >= limit : !ownerDay!.ok;
+  if (overLimit) {
     return NextResponse.json(
       {
         error: "consult_limit",
@@ -281,7 +291,7 @@ export async function POST(request: Request) {
       if (!reply) {
         const fb = fallback();
         if (sentLen === 0) send({ t: "delta", v: fb.message });
-        send({ t: "done", ...fb, profile: input.profile, remainingToday: Math.max(0, limit - (session?.turnsToday ?? 0)), isGuest: !identity.userId });
+        send({ t: "done", ...fb, profile: input.profile, remainingToday: ownerDay ? ownerDay.remaining : Math.max(0, limit - (session?.turnsToday ?? 0)), isGuest: !identity.userId });
         controller.close();
         return;
       }
@@ -303,14 +313,17 @@ export async function POST(request: Request) {
           { role: "assistant", text: reply.message, at },
         ],
         turnsToday: (session?.turnsToday ?? 0) + 1,
-      }).catch(() => {});
+      }).catch((error: unknown) => {
+        // 상담은 이어 가되 저장 실패는 남긴다(대화 기록·하루 횟수가 안 남는다)
+        console.warn("[consult]", JSON.stringify({ event: "save_failed", code: (error as { code?: string } | null)?.code ?? null, message: String((error as { message?: string } | null)?.message ?? error).slice(0, 160) }));
+      });
 
       send({
         t: "done",
         ...reply,
         /* 화면에도 저장본과 같은 '합쳐진' 카드를 준다 — 모델이 한 항목을 빠뜨려도 조건이 사라지지 않게 */
         profile: merged,
-        remainingToday: Math.max(0, limit - ((session?.turnsToday ?? 0) + 1)),
+        remainingToday: ownerDay ? ownerDay.remaining : Math.max(0, limit - ((session?.turnsToday ?? 0) + 1)),
         isGuest: !identity.userId,
       });
       controller.close();

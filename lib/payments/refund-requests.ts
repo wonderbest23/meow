@@ -39,9 +39,12 @@ function mapRow(row: Record<string, unknown>): RefundRequest {
   };
 }
 
-/** 테이블 미생성(마이그레이션 전) 오류인지 */
-function isMissingTable(error: { message?: string } | null): boolean {
-  return Boolean(error?.message?.includes("refund_requests"));
+/**
+ * 테이블 미생성(마이그레이션 전) 오류인지 — 오류 코드로만 본다. 예전엔 메시지에 표 이름만 있어도(권한·칸 오류 포함)
+ * '환불 요청 없음'으로 보여 환불 단추가 다시 나왔다.
+ */
+function isMissingTable(error: { code?: string; message?: string } | null): boolean {
+  return error?.code === "42P01" || error?.code === "PGRST205";
 }
 
 export async function listMyRefundRequests(ownerId: string): Promise<RefundRequest[]> {

@@ -80,7 +80,7 @@ export async function saveConsultTurn(
     memory.set(ownerHash, { profile: next.profile, messages, turnsToday: next.turnsToday, day: today() });
     return;
   }
-  await supabase.from("consult_sessions").upsert(
+  const { error } = await supabase.from("consult_sessions").upsert(
     {
       owner_hash: ownerHash,
       profile: next.profile,
@@ -91,6 +91,8 @@ export async function saveConsultTurn(
     },
     { onConflict: "owner_hash" },
   );
+  // 저장 실패를 삼키지 않는다 — 부르는 쪽이 기록을 남긴다
+  if (error) throw error;
 }
 
 /*
@@ -106,10 +108,11 @@ export async function resetConsultSession(ownerHash: string): Promise<void> {
     if (held) memory.set(ownerHash, { profile: {}, messages: [], turnsToday: held.turnsToday, day: held.day });
     return;
   }
-  await supabase
+  const { error } = await supabase
     .from("consult_sessions")
     .update({ profile: {}, messages: [], updated_at: new Date().toISOString() })
     .eq("owner_hash", ownerHash);
+  if (error) throw error;
 }
 
 /*

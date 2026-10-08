@@ -137,12 +137,6 @@ export function normalizeState(input: Partial<ServerPlanState> | null | undefine
 }
 
 /** 원본 표에서(격리 보기 없이) — 지운 사업 기록처럼 화면용 보기에 없는 칸이 필요할 때만 */
-async function loadRawPlanState(ownerHash: string): Promise<ServerPlanState> {
-  const { data, error } = await getServerSupabase()!.from("plan_states").select("data").eq("owner_hash", ownerHash).maybeSingle();
-  if (error) throw new Error("PLAN_LOAD_FAILED");
-  return normalizeState((data?.data ?? null) as Partial<ServerPlanState> | null);
-}
-
 /** 이 주인이 지운 사업 번호 — 다른 기기의 옛 사본을 화면에서 지우게 /api/plan/state 가 함께 준다 */
 export async function loadDeletedPlanIds(ownerHash: string): Promise<string[]> {
   if (!getServerSupabase()) return structuredClone(memoryStore.get(ownerHash)?.deletedPlanIds ?? []);
@@ -407,30 +401,49 @@ export async function deletePlanById(ownerHash: string, planId: string): Promise
     }
     throw new Error("PLAN_VERSION_CONFLICT");
   }
-  // 지운 기록(deletedPlanIds)은 화면용 읽기 뷰에 없으므로 원본 표에서 읽는다
-  const stored = getServerSupabase() ? await loadRawPlanState(ownerHash) : await loadPlanState(ownerHash);
-  const plans = stored.plans.filter((p) => p.id !== planId);
-  if (plans.length === stored.plans.length && stored.deletedPlanIds?.includes(planId)) return;
-  const next: ServerPlanState = {
-    business: stored.business,
-    plans,
-    activePlanId: stored.activePlanId === planId ? plans[0]?.id ?? null : stored.activePlanId,
-    deletedPlanIds: withDeleted(stored, planId),
-  };
   const supabase = getServerSupabase();
+  const deleteFrom = (stored: ServerPlanState): ServerPlanState | null => {
+    const plans = stored.plans.filter((p) => p.id !== planId);
+    if (plans.length === stored.plans.length && stored.deletedPlanIds?.includes(planId)) return null;
+    return {
+      business: stored.business,
+      plans,
+      activePlanId: stored.activePlanId === planId ? plans[0]?.id ?? null : stored.activePlanId,
+      deletedPlanIds: withDeleted(stored, planId),
+    };
+  };
   if (!supabase) {
-    memoryStore.set(ownerHash, next);
+    const next = deleteFrom(await loadPlanState(ownerHash));
+    if (next) memoryStore.set(ownerHash, next);
     return;
   }
-  const active = next.plans.find((p) => p.id === next.activePlanId) ?? next.plans[0];
-  await supabase.from("plan_states").upsert(
-    {
+  /*
+   * 저장 결과를 보고, 그사이 다른 저장(문서 작성 작업 등)이 끼면 다시 읽어 지운다 — 예전엔 결과를 보지 않는 덮어쓰기라
+   * 실패해도 홈페이지·문의까지 지운 뒤 '삭제됨'이라고 답했고(새로 고치면 사업이 돌아옴), 그사이 저장된 문서를 덮어 지웠다.
+   * 지운 기록(deletedPlanIds)은 화면용 읽기 뷰에 없으므로 원본 표에서 읽는다.
+   */
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const { data: row, error: readError } = await supabase.from("plan_states").select("data,updated_at").eq("owner_hash", ownerHash).maybeSingle();
+    if (readError) throw new Error("PLAN_LOAD_FAILED");
+    const next = deleteFrom(normalizeState((row?.data ?? null) as Partial<ServerPlanState> | null));
+    if (!next) return;
+    const active = next.plans.find((p) => p.id === next.activePlanId) ?? next.plans[0];
+    const payload = {
       owner_hash: ownerHash,
       title: next.business.name || active?.title || "새 플랜",
       plan_type: active?.planType || "창업 초기 · 사업계획서",
       data: next,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "owner_hash" },
-  );
+      updated_at: new Date(Math.max(Date.now(), Date.parse(row?.updated_at ?? "") + 1 || 0)).toISOString(),
+    };
+    if (!row) {
+      const { error } = await supabase.from("plan_states").insert(payload);
+      if (!error) return;
+      if (error.code === "23505") continue;
+      throw new Error("PLAN_SAVE_FAILED");
+    }
+    const { data, error } = await supabase.from("plan_states").update(payload).eq("owner_hash", ownerHash).eq("updated_at", row.updated_at).select("owner_hash");
+    if (error) throw new Error("PLAN_SAVE_FAILED");
+    if (data?.length) return;
+  }
+  throw new Error("PLAN_VERSION_CONFLICT");
 }

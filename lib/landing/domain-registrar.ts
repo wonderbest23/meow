@@ -220,13 +220,27 @@ export async function pollAutoRegistrations(deps: { config?: RegistrarConfig | n
   const result = { checked: 0, done: 0, manual: 0 };
   if (!config || !supabase) return result;
   const since = new Date(Date.now() - 14 * 86_400_000).toISOString();
-  const { data, error } = await supabase.from("payment_orders").select("order_id, opportunity, amount, customer_email")
+  const { data, error } = await supabase.from("payment_orders").select("order_id, opportunity, amount, customer_email, created_at")
     .eq("order_name", DOMAIN_PURCHASE_PRODUCT_NAME).eq("status", "done").gte("created_at", since).limit(100);
   if (error) throw error;
-  for (const row of (data ?? []) as OrderRow[]) {
+  for (const row of (data ?? []) as Array<OrderRow & { created_at?: string }>) {
     const auto = readAuto(row.opportunity);
     const request = readDomainRequest(row.opportunity?.domainRequest);
-    if (!request || request.status === "registered" || !auto) continue;
+    if (!request || request.status === "registered") continue;
+    /*
+     * 결제는 끝났는데 자동 등록 표시가 없는 주문 — 결제 직후 시작이 DB 오류로 표시 전에 멈췄거나 결제 확정 경로가 주문을
+     * 못 읽어 시작하지 못한 경우다. 예전엔 여기서 건너뛰어 카드 결제만 되고 등록은 영영 안 됐다(운영자 메일은 '자동 등록 중').
+     * 결제 10분 뒤부터 이틀 안의 주문만 — 그보다 오래된 것은 사람이 손으로 처리했을 수 있다.
+     */
+    if (!auto) {
+      const age = Date.now() - Date.parse(row.created_at ?? "");
+      if (!registrarSupports(request.domain) || !(age >= 10 * 60_000 && age <= 2 * 86_400_000)) continue;
+      result.checked++;
+      console.warn("[domain-registrar]", JSON.stringify({ event: "start_missed", orderId: row.order_id }));
+      const started = await startAutoRegistration(row.order_id, deps);
+      if (started.state === "manual") result.manual++;
+      continue;
+    }
     // 'checking' 에서 멈춘 것(응답 뒤 실행이 끊김·API 예외) — 30분 지나면 등록이 나갔는지 확인해 이어서 하거나 사람에게
     if (auto.state === "checking") {
       if (Date.now() - Date.parse(auto.at) < 30 * 60_000 || request.renewal) continue;

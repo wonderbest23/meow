@@ -4,6 +4,7 @@ import type { SnsWeek } from "../marketing/kit";
 import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "./lead-email";
 import { sendCustomerSms, stableEventId, type CustomerSmsConfig } from "../notify/customer-sms";
+import { schemaFailureReason } from "../schema-readiness";
 
 /*
  * 주간 사장님 리포트 — 매주 월요일 오전 9시(한국 시간)부터, 공개한 홈페이지 주인에게 지난주(월~일) 성적표를 보낸다.
@@ -182,9 +183,9 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
   // 문자 번호 칸(0039)이 아직 없으면 번호 없이 — 메일만 가능
   let sites = sms ? await pick(`${columns}, alert_phone`) : await pick(columns);
   if (sites.error && sms) sites = await pick(columns);
-  if (sites.error) return { ...result, reason: "migration_required" };
+  if (sites.error) return { ...result, reason: schemaFailureReason(sites.error) };
   const reports = await db.from("landing_weekly_reports").select("site_id, status, attempts, updated_at, lease_until").eq("week_start", week.weekStart).limit(5000);
-  if (reports.error) return { ...result, reason: "migration_required" };
+  if (reports.error) return { ...result, reason: schemaFailureReason(reports.error) };
   const byId = new Map(((reports.data ?? []) as ReportRow[]).map((row) => [row.site_id, row]));
   const retryable = (row: ReportRow) => (row.status === "failed" && row.attempts < WEEKLY_REPORT_MAX_ATTEMPTS && now - Date.parse(row.updated_at) > 30 * 60_000)
     || (row.status === "processing" && row.lease_until !== null && Date.parse(row.lease_until) < now && row.attempts < WEEKLY_REPORT_MAX_ATTEMPTS);
@@ -231,8 +232,11 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
       }
       if (!config) { await finish({ status: "skipped", error_code: "recipient_missing" }); result.skipped += 1; continue; }
       const project = await db.from(projectReadTable()).select("owner_id, guest_token_hash, opportunity").eq("id", site.project_id).maybeSingle();
+      // 받는 사람을 읽지 못한 것은 '받을 곳 없음'(다시 안 보냄)이 아니라 실패 — 30분 뒤 다시 시도한다
+      if (project.error) { await finish({ status: "failed", error_code: "owner_read_failed" }); result.failed += 1; continue; }
       const ownerId = project.data?.owner_id as string | undefined;
       const owner = ownerId ? await db.auth.admin.getUserById(ownerId) : null;
+      if (owner?.error) { await finish({ status: "failed", error_code: "owner_read_failed" }); result.failed += 1; continue; }
       const recipient = owner?.data?.user?.email_confirmed_at ? owner.data.user.email : null;
       if (!recipient) { await finish({ status: "skipped", error_code: "recipient_missing" }); result.skipped += 1; continue; }
 

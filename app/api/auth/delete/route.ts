@@ -39,16 +39,19 @@ export async function POST(request: Request) {
     await clearAccountSession();
     return NextResponse.json({ ok: true, result }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   } catch (error) {
+    const badInput = error instanceof z.ZodError;
+    // 지우다 실패한 것은 서버 오류다 — 무엇이 남았는지 운영 기록에 남긴다
+    if (!badInput) console.error("[account-delete]", JSON.stringify({ userId: user.id, message: error instanceof Error ? error.message : String(error), cause: String((error as { cause?: { code?: string; message?: string } } | null)?.cause?.code ?? (error as { cause?: { message?: string } } | null)?.cause?.message ?? "") }));
     return NextResponse.json(
       {
         error: {
           code: "ACCOUNT_DELETE_FAILED",
-          message: error instanceof Error && error.message.includes("email")
+          message: badInput
             ? "이메일을 다시 확인해주세요."
             : "탈퇴 처리에 실패했습니다. 잠시 후 다시 시도하거나 1:1 문의로 알려주세요.",
         },
       },
-      { status: 400 },
+      { status: badInput ? 400 : 500 },
     );
   }
 }
