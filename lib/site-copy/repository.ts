@@ -11,7 +11,7 @@ declare global {
 }
 
 function isMissingTable(error: { code?: string; message?: string } | null) {
-  return error?.code === "42P01" || error?.code === "PGRST205" || Boolean(error?.message?.includes("site_copy"));
+  return error?.code === "42P01" || error?.code === "PGRST205";
 }
 
 export async function getSiteCopy(): Promise<SiteCopy> {

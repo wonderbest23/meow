@@ -5,6 +5,7 @@ import { buildLandingLeadEmail, landingEmailConfiguration, sendLandingLeadEmail,
 import { LEAD_NOTIFICATION_MAX_ATTEMPTS, type LeadNotificationError, type LeadNotificationStatus, type LeadNotificationSummary } from "./lead-notification-types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { customerSmsConfig, normalizeAlertPhone, relayUnsupported, sendCustomerSms, sendRelayV4, stableEventId, type CustomerSmsConfig, type CustomerSmsResult } from "../notify/customer-sms";
+import { isMissingSchemaError } from "../schema-readiness";
 
 /** 문자에 실을 문의자 이름·연락처 — 이름은 중계가 다시 거른다(한글·영문 10자). 번호는 숫자만, 형식이 아니면 빈칸 */
 export function leadContactParams(name: unknown, phone: unknown): { name: string; phone: string } {
@@ -81,6 +82,8 @@ export async function processLandingLeadNotification(leadId: string, force = fal
   let smsFailure: string | null = null;
   if (sms) {
     const site = await db.from("landing_sites").select("alert_phone").eq("id", row.site_id).maybeSingle();
+    // 번호 칸(0039)이 없을 때만 '번호 없음' — 잠깐 읽지 못한 것은 던져서 다음 회차에 다시(예전엔 '받을 번호 없음'으로 끝나 다시 보내지 않았다)
+    if (site.error && !isMissingSchemaError(site.error)) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
     const phone = site.error ? null : (site.data?.alert_phone as string | null | undefined) ?? null;
     if (phone) {
       const attempts = row.attempts + 1;

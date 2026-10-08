@@ -15,6 +15,9 @@ export interface AccountDeleteResult {
   keptForLegalRetention: { paymentOrders: number; refundRequests: number };
 }
 
+/** 표가 없다는 오류 코드 — 그 표에는 지울 것이 없다 */
+const MISSING_TABLE = new Set(["PGRST205", "42P01"]);
+
 export async function deleteAccount(userId: string): Promise<AccountDeleteResult> {
   const supabase = getServerSupabase();
   const ownerHash = hashIdentityToken(userProjectToken(userId));
@@ -24,38 +27,46 @@ export async function deleteAccount(userId: string): Promise<AccountDeleteResult
     keptForLegalRetention: { paymentOrders: 0, refundRequests: 0 },
   };
 
+  /*
+   * 지우다 실패하면 던진다 — 예전엔 오류를 보지 않고 count ?? 0 으로 넘어가 사업·홈페이지(손님 연락처)가 남았는데도
+   * '탈퇴 완료'라고 답했다. 표 자체가 없을 때(아직 적용 안 한 마이그레이션)만 지울 것이 없는 것으로 본다.
+   */
+  const checked = <T extends { error: { code?: string; message?: string } | null; count?: number | null }>(response: T, table: string): T => {
+    if (response.error && !MISSING_TABLE.has(response.error.code ?? "")) {
+      throw Object.assign(new Error(`ACCOUNT_DELETE_FAILED:${table}`), { cause: response.error });
+    }
+    return response;
+  };
+
   if (supabase) {
     // 1) 플랜 빌더 데이터
-    const plans = await supabase.from("plan_states").delete({ count: "exact" }).eq("owner_hash", ownerHash);
+    const plans = checked(await supabase.from("plan_states").delete({ count: "exact" }).eq("owner_hash", ownerHash), "plan_states");
     result.deleted.plans = plans.count ?? 0;
 
     // 2) 프로젝트(옛 서비스 산출물 포함) — 연결한 내 도메인은 Cloudflare 쪽부터 끊는다(행을 지우면 주소를 모른다)
-    const owned = await supabase.from("projects").select("id").eq("owner_id", userId);
+    const owned = checked(await supabase.from("projects").select("id").eq("owner_id", userId), "projects");
     await disconnectProjectDomains((owned.data ?? []).map((row) => (row as { id: string }).id)).catch((error) => console.error("[account-delete] domain disconnect failed", error));
-    const projects = await supabase.from("projects").delete({ count: "exact" }).eq("owner_id", userId);
+    const projects = checked(await supabase.from("projects").delete({ count: "exact" }).eq("owner_id", userId), "projects");
     result.deleted.projects = projects.count ?? 0;
 
     // 3) 1:1 상담 — 메시지는 대화 삭제 시 함께 정리된다(FK cascade). 아니면 먼저 지운다.
-    const convos = await supabase.from("support_conversations").select("id").eq("guest_token_hash", ownerHash);
+    const convos = checked(await supabase.from("support_conversations").select("id").eq("guest_token_hash", ownerHash), "support_conversations");
     const convoIds = (convos.data ?? []).map((row) => (row as { id: string }).id);
     if (convoIds.length) {
-      await supabase.from("support_messages").delete().in("conversation_id", convoIds);
-      const removed = await supabase.from("support_conversations").delete({ count: "exact" }).in("id", convoIds);
+      checked(await supabase.from("support_messages").delete().in("conversation_id", convoIds), "support_messages");
+      const removed = checked(await supabase.from("support_conversations").delete({ count: "exact" }).in("id", convoIds), "support_conversations");
       result.deleted.conversations = removed.count ?? 0;
     }
 
     // 3-2) 무료 상담 대화·'다음 단계' 서비스 신청(전화·메모)·사업자 확인 — 예전엔 남았다(표가 없으면 건너뜀)
-    const optionalDelete = async (table: string, column: string, value: string) => {
-      const removed = await supabase.from(table).delete({ count: "exact" }).eq(column, value);
-      if (removed.error && !/does not exist|PGRST205|42P01/.test(`${removed.error.code} ${removed.error.message}`)) throw removed.error;
-      return removed.count ?? 0;
-    };
+    const optionalDelete = async (table: string, column: string, value: string) =>
+      checked(await supabase.from(table).delete({ count: "exact" }).eq(column, value), table).count ?? 0;
     result.deleted.consultSessions = await optionalDelete("consult_sessions", "owner_hash", ownerHash);
     result.deleted.serviceRequests = await optionalDelete("service_requests", "owner_id", userId);
     result.deleted.businessChecks = await optionalDelete("business_checks", "owner_id", userId);
 
     // 4) 추천 선호
-    const prefs = await supabase.from("opportunity_preferences").delete({ count: "exact" }).eq("owner_id", userId);
+    const prefs = checked(await supabase.from("opportunity_preferences").delete({ count: "exact" }).eq("owner_id", userId), "opportunity_preferences");
     result.deleted.preferences = prefs.count ?? 0;
 
     /*
@@ -85,15 +96,19 @@ export async function deleteAccount(userId: string): Promise<AccountDeleteResult
     }
     result.keptForLegalRetention.paymentOrders = kept;
 
-    const refunds = await supabase
+    const refunds = checked(await supabase
       .from("refund_requests")
       .update({ owner_id: "deleted", customer_email: "" }, { count: "exact" })
-      .eq("owner_id", userId);
+      .eq("owner_id", userId), "refund_requests");
     result.keptForLegalRetention.refundRequests = refunds.count ?? 0;
   }
 
-  // 6) 마지막으로 로그인 계정 자체를 삭제한다 — 실패하면 탈퇴가 완료된 게 아니다
-  await createServerAuthClient().auth.admin.deleteUser(userId);
+  // 6) 마지막으로 로그인 계정 자체를 삭제한다 — 실패하면 탈퇴가 완료된 게 아니다(오류를 돌려줄 뿐 던지지 않으므로 직접 본다).
+  //    이미 지워진 계정(다시 시도)은 완료로 본다.
+  const removedUser = await createServerAuthClient().auth.admin.deleteUser(userId);
+  if (removedUser.error && removedUser.error.status !== 404) {
+    throw Object.assign(new Error("ACCOUNT_DELETE_FAILED:auth_user"), { cause: removedUser.error });
+  }
 
   return result;
 }

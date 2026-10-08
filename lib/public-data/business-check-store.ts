@@ -12,8 +12,9 @@ declare global {
 const memory = globalThis.__oneulBusinessChecks ?? (globalThis.__oneulBusinessChecks = new Map());
 const keyOf = (ownerId: string, planId: string) => `${ownerId}\u0000${planId}`;
 
+// 오류 코드로만 본다 — 예전엔 메시지에 표 이름이 든 제약 오류까지 '표 없음'으로 삼켜 확인 결과가 조용히 저장되지 않았다
 const missingTable = (error: { code?: string; message?: string } | null) =>
-  Boolean(error?.code === "42P01" || error?.code === "PGRST205" || error?.message?.includes("business_checks"));
+  error?.code === "42P01" || error?.code === "PGRST205";
 
 export async function loadBusinessCheck(ownerId: string, planId: string): Promise<BusinessCheck | null> {
   const supabase = getServerSupabase();

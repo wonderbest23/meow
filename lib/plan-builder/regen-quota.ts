@@ -58,9 +58,11 @@ export async function recordRegen(planId: string, ownerHash: string, sectionKey:
   try {
     const supabase = getServerSupabase();
     if (!supabase) return;
-    await supabase.from("plan_regenerations").insert({ plan_id: planId, owner_hash: ownerHash, section_key: sectionKey, ok });
-  } catch {
-    // 집계 실패가 생성을 막으면 안 된다
+    const { error } = await supabase.from("plan_regenerations").insert({ plan_id: planId, owner_hash: ownerHash, section_key: sectionKey, ok });
+    // 집계 실패가 생성을 막으면 안 된다 — 다만 남긴다(세지 못한 재생성은 남은 횟수가 줄지 않는다)
+    if (error) console.error("[regen-quota]", JSON.stringify({ event: "record_failed", planId, sectionKey, ok, code: error.code ?? null }));
+  } catch (error) {
+    console.error("[regen-quota]", JSON.stringify({ event: "record_failed", planId, sectionKey, ok, message: error instanceof Error ? error.message.slice(0, 120) : "UNKNOWN" }));
   }
 }
 

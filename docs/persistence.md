@@ -24,4 +24,4 @@ curl http://localhost:8083/api/health/persistence
 npm run test:persistence
 ```
 
-The health endpoint checks all tables required by migrations `0001` through `0011`. The smoke test writes a temporary project, reads it with a new Supabase client, and deletes it.
+The health endpoint checks every migration the app uses (`lib/schema-readiness.ts`) and reports only counts. The admin page `/admin/schema` (DB 준비 상태) lists which migration files are missing and in what order to run them. The smoke test writes a temporary project, reads it with a new Supabase client, and deletes it.

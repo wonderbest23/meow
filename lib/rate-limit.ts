@@ -73,6 +73,15 @@ function distributedEnabled() {
   return process.env.RATE_LIMIT_BACKEND?.trim() === "supabase";
 }
 
+// 공유 카운터가 실패하면 서버(isolate)마다 따로 세는 메모리 한도로 내려간다 — 예전엔 아무 기록 없이 내려가
+// 운영 DB에 bump_rate_limit(0018)이 없어도 몰랐다. isolate 하나에서 같은 오류는 한 번만 남긴다.
+const reportedFallbacks = new Set<string>();
+function reportFallback(code: string, message: string) {
+  if (reportedFallbacks.has(code)) return;
+  reportedFallbacks.add(code);
+  console.warn("[rate-limit]", JSON.stringify({ event: "distributed_fallback", code, message: message.slice(0, 160) }));
+}
+
 // Strongly-consistent counter via Supabase. Returns null (so the caller falls back to the
 // in-memory limiter) when the backend is disabled, unavailable, or errors.
 async function rateLimitDistributed(
@@ -89,15 +98,24 @@ async function rateLimitDistributed(
       p_key: key,
       p_window_ms: options.windowMs,
     });
-    if (error || typeof data !== "number") return null;
+    if (error || typeof data !== "number") {
+      reportFallback(error?.code ?? "not_a_number", error?.message ?? `unexpected ${typeof data}`);
+      return null;
+    }
     const count = data;
     if (count > options.limit) {
       return { ok: false, remaining: 0, retryAfterSeconds: Math.max(1, Math.ceil(options.windowMs / 1000)) };
     }
     return { ok: true, remaining: Math.max(0, options.limit - count), retryAfterSeconds: 0 };
-  } catch {
+  } catch (error) {
+    reportFallback("exception", error instanceof Error ? error.message : String(error));
     return null;
   }
+}
+
+/** 한도를 한 번 센다 — 공유 카운터, 안 되면 메모리. 응답 모양을 직접 정해야 할 때 쓴다 */
+export async function checkRateLimit(name: string, key: string, options: { limit: number; windowMs: number }): Promise<RateLimitResult> {
+  return (await rateLimitDistributed(name, key, options)) ?? rateLimit(name, key, options);
 }
 
 export function tooManyRequests(retryAfterSeconds: number, message = "요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.") {
