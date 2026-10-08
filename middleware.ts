@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { adminClosedOnHost, closedForLaunch } from "./lib/launch-scope";
 import { adminCookieName, resolveScope, verifyAdminSessionToken } from "./lib/support-chat/admin-session";
 
 // Admin API endpoints that must stay reachable without an existing admin session:
@@ -28,6 +29,15 @@ function withSecurityHeaders(response: NextResponse) {
 // Node 전용 proxy.ts 대신 이 파일을 사용한다. 세션 검증은 Web Crypto 기반이라 Edge에서 동작한다.
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // 오픈 범위 밖(개발용 화면·덜 만든 기능·옛 기능)은 운영에서 없는 주소로 답한다(lib/launch-scope.ts)
+  const closed = closedForLaunch(pathname) ?? adminClosedOnHost(pathname, request.headers.get("host") ?? request.nextUrl.hostname);
+  if (closed === "api") {
+    const gone = NextResponse.json({ error: { code: "NOT_FOUND", message: "없는 주소입니다." } }, { status: 404 });
+    gone.headers.set("Cache-Control", "no-store");
+    return withSecurityHeaders(gone);
+  }
+  if (closed === "page") return withSecurityHeaders(NextResponse.rewrite(new URL("/__closed", request.url), { status: 404 }));
 
   // Default-deny gate for the admin API surface. Even if a new /api/admin/* route
   // forgets its own hasAdminSession() check, unauthenticated access is refused here.

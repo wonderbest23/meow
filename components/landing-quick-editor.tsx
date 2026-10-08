@@ -5,10 +5,8 @@ import {
   Check,
   ExternalLink,
   Globe2,
-  Headphones,
   Image as ImageIcon,
   Maximize2,
-  MessageCircle,
   PanelsTopLeft,
   RefreshCw,
   Rocket,
@@ -17,14 +15,12 @@ import {
   Store,
 } from "lucide-react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useState } from "react";
 import {
   applyLandingTemplate,
   landingTemplateOptions,
   type LandingDraft,
 } from "../lib/landing/domain";
-import { CUSTOM_HOMEPAGE_FROM_AMOUNT } from "../lib/payments/domain";
 import type { LandingSiteRecord } from "../lib/landing/domain";
 import { createLandingPageData, syncLandingPageData } from "../lib/landing/page-data";
 import { LandingDomainConnector } from "./landing-domain-connector";
@@ -212,11 +208,6 @@ export function LandingQuickEditor({
         <button disabled={busy} onClick={onPublish}><Rocket /> {action === "publishing" ? "공개 중" : "저장하고 공개"}</button>
       </footer>
 
-      <section className="landing-expert-build">
-        <span><Headphones /></span>
-        <div><small>선택 제작 서비스 · {CUSTOM_HOMEPAGE_FROM_AMOUNT.toLocaleString("ko-KR")}원부터</small><strong>맞춤 홈페이지 제작 요청</strong><p>자동 제작본보다 세밀한 디자인이나 예약·결제 같은 추가 기능이 필요하면 상담 후 범위와 비용을 먼저 안내합니다.</p></div>
-        <Link href="/account/support?category=website" target="_blank" rel="noopener noreferrer" aria-label="홈페이지 제작 문의 (새 탭)">홈페이지 제작 문의 <MessageCircle /></Link>
-      </section>
 
       {builderOpen && (
         <LandingVisualBuilder

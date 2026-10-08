@@ -48,10 +48,11 @@ export async function POST(request: Request) {
     /*
      * 사장님 알림(이메일 + 문자) — 일반 문의는 '관리자가 마지막으로 읽은 뒤 첫 메시지'만(unreadByAdmin===1).
      * 대화가 길어질 때 메시지마다 알림이 쏟아지지 않게 하려는 것이다. 실패해도 접수는 그대로 성공한다.
-     * 자동 상담이 못 푼 질문은 손님이 이미 한 번 막힌 뒤라 매번 바로 알린다. (계정 고객센터 /api/account/support 와 같은 문자)
+     * 자동 상담이 못 푼 질문(머리말 '[상담에서 넘어온 문의]')은 메일 제목만 달리한다. 예전엔 머리말만 붙으면 메시지마다
+     * 문자를 보냈는데, 머리말은 손님 화면이 붙여 누구나 흉내 낼 수 있어 사장님 문자 한도를 쉽게 써 버릴 수 있었다.
      */
     const isHandoff = input.message.startsWith("[상담에서 넘어온 문의]");
-    if (isHandoff || chat.conversation?.unreadByAdmin === 1) {
+    if (chat.conversation?.unreadByAdmin === 1) {
       await Promise.allSettled([
         notifyOwnerBySms(messageId),
         notifyOwnerByEmail(

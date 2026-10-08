@@ -56,7 +56,9 @@ export async function registerDomain(config: RegistrarConfig, domain: string, ow
   });
   const body = await response.json().catch(() => null);
   if (response.status === 201 || response.status === 200 || response.status === 202) return readState(body) === "unknown" ? (response.status === 202 ? "in_progress" : "succeeded") : readState(body);
-  console.error("[domain-registrar] register rejected", response.status, JSON.stringify(body).slice(0, 300));
+  // 응답 본문을 통째로 남기지 않는다(명의자 이름·연락처가 되돌아올 수 있다) — 오류 코드만
+  const errors = Array.isArray((body as { errors?: unknown } | null)?.errors) ? (body as { errors: Array<{ code?: unknown; message?: unknown }> }).errors : [];
+  console.error("[domain-registrar] register rejected", response.status, JSON.stringify(errors.map(error => error.code ?? String(error.message ?? "").slice(0, 60))));
   return "failed";
 }
 

@@ -180,7 +180,7 @@ export function LandingDomainConnector({
     return (
       <section className="landing-domain-connector">
         <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>www.우리가게.com 처럼 내 주소로 홈페이지를 엽니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.</p></span></div>
-        {planQuery ? <DomainPurchaseForm planQuery={planQuery} price={entitlement?.purchasePrice ?? 79000} initial={purchase?.domain ?? ""} /> : null}
+        {/* 도메인 대신 사 드리기는 오픈 범위 밖(2026-10-08) — 이미 가진 도메인 연결만 받는다. 갱신은 아래 '1년 갱신' 링크로 */}
         <div className="domain-own-option">
           <strong>이미 도메인이 있어요</strong>
           <p>가비아 등에서 산 주소를 이 홈페이지에 연결만 합니다.</p>
@@ -234,7 +234,8 @@ export function LandingDomainConnector({
  * 도메인 구매 대행 — 주소를 적고 비어 있는지 확인한 뒤 결제로 보낸다.
  * 확인은 등록소 답을 그대로 옮긴 참고값이라, 모를 때도 결제는 열어 둔다(등록 때 다시 확인).
  */
-function DomainPurchaseForm({ planQuery, price, initial }: { planQuery: string; price: number; initial: string }) {
+/** 도메인 대신 사 드리기 입력 — 오픈 범위 밖(2026-10-08)이라 지금은 그리지 않는다. 다시 열 때 위 구매 카드에서 그린다 */
+export function DomainPurchaseForm({ planQuery, price, initial }: { planQuery: string; price: number; initial: string }) {
   const [value, setValue] = useState(initial);
   const [result, setResult] = useState<{ domain: string; availability: DomainAvailability } | null>(null);
   const [checking, setChecking] = useState(false);

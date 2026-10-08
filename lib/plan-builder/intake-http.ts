@@ -38,6 +38,11 @@ async function currentSnapshot(ownerHash: string, planId?: string | null) {
   return intakeSnapshot(plan, coach, intake);
 }
 
+/** 사업 기획 대화와 같은 로그인 규칙 — 대화 보조(첫 설명 의견·답변 추천)도 이것을 따른다 */
+export function intakeLoginRequired(userId: string | null) {
+  return loginRequired(userId);
+}
+
 function loginRequired(userId: string | null) {
   return intakeLoginGate({ authConfigured: authConfigured(), guestAllowed: process.env.INTAKE_GUEST_ALLOWED === "1", userId });
 }

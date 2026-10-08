@@ -155,7 +155,8 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
       <Comparison period={period} baseline={baseline} /><PeriodNotes period={period} />
       <div className={styles.actions}><button className={styles.primary} disabled={busy || analysisDirty || !period.nextAction || !period.successCriterion || state.reports.some(r => r.source === "user-records" && JSON.stringify(referenceFor(r.period, r.baseline)) === JSON.stringify(referenceFor(period, baseline)))} onClick={requestArchive}><Archive size={18} />리포트 보관</button></div>
       {(!period.nextAction || !period.successCriterion) && <p className={styles.note}>다음 개선 행동과 확인 기준을 적으면 리포트로 보관할 수 있어요.</p>}
-      <OperatingAnalysisPanel key={period.id} planId={planId} period={period} baseline={baseline} records={state} target={analysisTarget} onState={acceptState} onArchive={run} onDirtyChange={setAnalysisDirty} />
+      {/* AI 개선안은 운영에서 AI 분석을 켰을 때만(꺼져 있으면 '준비 중'만 보였다) */}
+      {analysisTarget && <OperatingAnalysisPanel key={period.id} planId={planId} period={period} baseline={baseline} records={state} target={analysisTarget} onState={acceptState} onArchive={run} onDirtyChange={setAnalysisDirty} />}
     </> : <div className={styles.empty}><FileText size={30} /><h3>아직 기간 기록이 없어요</h3><p>첫 실적과 고객 반응을 남겨 보세요</p></div>)}
     {state && !editor && mode === "reports" && (report ? <>
       <label className={styles.reportSelect}>보관한 리포트<select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map((r, i) => <option key={r.id} value={r.id}>{periodLabel(r.period)} · 보관 {state.reports.length - i}</option>)}</select></label>

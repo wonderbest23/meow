@@ -44,7 +44,9 @@ assert.ok(business.sections[0].items?.some((item) => item.includes("123-45-67890
 assert.ok(business.sections.some((section) => section.items?.some((item) => item.includes("49,000원"))));
 const businessText = JSON.stringify(business);
 assert.ok(!businessText.includes("카카오뱅크 계좌이체"), "받지 않는 결제 수단을 안내하지 않는다");
-for (const expected of ["신용·체크카드", "나이스페이먼츠", "49,000원", "69,000원", "사업계획서 + 홈페이지: 99,000원", "59,000원", "9,900원", "4,900원", "충전일부터 1년 유효"]) assert.ok(businessText.includes(expected), expected);
+for (const expected of ["신용·체크카드", "나이스페이먼츠", "49,000원", "69,000원", "사업계획서 + 홈페이지: 99,000원", "59,000원", "4,900원"]) assert.ok(businessText.includes(expected), expected);
+// 오픈 범위(2026-10-08): 팔지 않는 상품(AI 수정 토큰·맞춤 홈페이지 제작)은 판매 목록에 없다
+for (const closed of ["9,900원", "맞춤 홈페이지 제작", "홈페이지 AI 수정 토큰, 맞춤 홈페이지 디자인"]) assert.ok(!businessText.includes(closed), closed);
 const ai = createLegalDocument("ai", complete);
 assert.ok(ai.sections.some((section) => section.items?.some((item) => item.includes("미국, 대한민국"))));
 const privacy = createLegalDocument("privacy", complete);

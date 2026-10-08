@@ -4,6 +4,7 @@ import { getAuthenticatedUser } from "../../../lib/account-auth";
 import { enforceRateLimit } from "../../../lib/rate-limit";
 import { hashIdentityToken, userProjectToken } from "../../../lib/identity-tokens";
 import { containsUploadReference, issueUploadCleanupToken, readUploadCleanupToken } from "../../../lib/landing/upload-cleanup";
+import { isEditorPreviewAccount } from "../../../lib/landing/editor-preview";
 
 export const runtime = "nodejs";
 
@@ -41,6 +42,18 @@ export async function POST(req: Request) {
 
   const supabase = getServerSupabase();
   if (!supabase) return NextResponse.json({ error: "storage_unavailable" }, { status: 503 });
+
+  /*
+   * 홈페이지 편집은 결제 뒤에만 열린다 — 사진도 결제한 계정(또는 편집 미리보기 계정)만 올린다.
+   * 예전엔 로그인만 하면 누구나 공개 저장소에 10분에 40장씩 올릴 수 있어 무료 파일 보관소처럼 쓰일 수 있었다.
+   */
+  if (!isEditorPreviewAccount(user.email)) {
+    const paid = await supabase.from("payment_orders").select("order_id").eq("owner_id", user.id).eq("status", "done").limit(1);
+    if (paid.error) return NextResponse.json({ error: "storage_unavailable", message: "잠시 후 다시 시도해주세요." }, { status: 503 });
+    if (!paid.data?.length) return NextResponse.json({ error: "payment_required", message: "사진은 홈페이지를 연 뒤에 올릴 수 있어요." }, { status: 402 });
+  }
+  const daily = await enforceRateLimit("upload-image-day", req, { key: user.id, limit: 200, windowMs: 24 * 60 * 60_000, message: "오늘은 사진을 더 올릴 수 없어요. 내일 다시 시도해주세요." });
+  if (daily) return daily;
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");

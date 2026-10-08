@@ -32,7 +32,9 @@ export async function notifyOwnerByEmail(subject: string, text: string): Promise
       signal: AbortSignal.timeout(6000),
     });
     if (!res.ok) {
-      console.warn(`[notify] 이메일 발송 실패 status=${res.status} body=${(await res.text().catch(() => "")).slice(0, 200)}`);
+      // 받는 주소가 되돌아올 수 있어 본문은 남기지 않고 오류 이름만
+      const failure = await res.json().catch(() => null) as { name?: string } | null;
+      console.warn(`[notify] 이메일 발송 실패 status=${res.status} name=${String(failure?.name ?? "unknown").slice(0, 60)}`);
       return false;
     }
     return true;
