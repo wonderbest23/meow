@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, Building2, Camera, Check, CheckCircle2, ChevronRight, Clock3, LoaderCircle, Megaphone, Newspaper, PenLine, ShieldCheck, ShoppingBag, X, type LucideIcon } from "lucide-react";
 import { formatKoreanPhone, normalizeMobilePhone } from "../lib/contact-links";
-import { findService, SERVICE_CATALOG, SERVICE_GROUPS, servicePriceLabel, type ServiceGroupId, type ServiceIcon, type ServiceItem } from "../lib/services/catalog";
+import { findService, findServiceRecord, SERVICE_CATALOG, SERVICE_GROUPS, servicePriceLabel, type ServiceGroupId, type ServiceIcon, type ServiceItem } from "../lib/services/catalog";
 import { EMPTY_SIGNALS, orderServices, serviceBadges, serviceSignalsFromPlan } from "../lib/services/recommend";
 import { SERVICE_REQUEST_STATUS_LABELS, type MyServiceRequest } from "../lib/services/requests";
 import { careHref } from "../lib/plan-builder/journey";
@@ -14,7 +14,7 @@ import { loadState, type Plan } from "../lib/plan-builder/plan-store";
 import styles from "./next-services.module.css";
 
 /*
- * '다음 단계' — 홈페이지 다음으로 맡길 수 있는 일(창업 행정·마케팅).
+ * '다음 단계' — 홈페이지 다음으로 맡길 수 있는 일(마케팅).
  *
  * 오늘창업은 대화 → 계획서 → 홈페이지에서 끝나지 않는다. 가게를 연 사장님이 다음에 막히는
  * 사업자등록·통신판매업 신고·블로그 배포 같은 일을 여기서 바로 상담 신청한다.
@@ -53,7 +53,10 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
   const [bno, setBno] = useState("");
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState("");
+  /* 등록·신고 확인은 창업 행정 서비스를 받을 때만 쓴다 — 마케팅만 받는 동안은 부르지 않는다 */
+  const adminOffered = SERVICE_GROUPS.some((group) => group.id === "admin");
   useEffect(() => {
+    if (!adminOffered) return;
     const controller = new AbortController();
     fetch(`/api/plan/business-check?planId=${encodeURIComponent(plan.id)}`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
@@ -64,7 +67,7 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, [plan.id]);
+  }, [plan.id, adminOffered]);
   const badges = useMemo(() => {
     const merged: Record<string, ServiceBadge> = { ...baseBadges };
     if (check?.business?.state === "active") {
@@ -152,7 +155,8 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
     {done ? <p className={styles.done} role="status"><CheckCircle2 size={18} aria-hidden /> {done}</p> : null}
     {state?.error ? <p className={styles.error} role="alert">{state.error}</p> : null}
 
-    {checkAvailable ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>
+    {/* 등록·신고 확인은 창업 행정 서비스를 받을 때만 의미가 있다 — 지금은 마케팅만 받는다 */}
+    {checkAvailable && adminOffered ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>
       <div className={styles.verifyHead}><BadgeCheck size={18} aria-hidden /><strong>이미 등록·신고하셨나요?</strong><small>번호만 넣으면 국세청·공정위에서 바로 확인해요</small></div>
       <div className={styles.verifyRow}>
         <input inputMode="numeric" autoComplete="off" value={bno} onChange={(event) => setBno(event.target.value)} placeholder="사업자등록번호 10자리" aria-label="사업자등록번호" />
@@ -166,9 +170,9 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
       </ul> : null}
     </form> : null}
 
-    <div className={styles.tabs} role="tablist" aria-label="서비스 종류">
+    {SERVICE_GROUPS.length > 1 && <div className={styles.tabs} role="tablist" aria-label="서비스 종류">
       {[{ id: "all" as const, title: "전체" }, ...SERVICE_GROUPS].map((group) => <button key={group.id} type="button" role="tab" aria-selected={tab === group.id} className={tab === group.id ? styles.tabOn : ""} onClick={() => setTab(group.id)}>{group.title}</button>)}
-    </div>
+    </div>}
 
     <ul className={styles.shop}>
       {shown.map((item) => {
@@ -230,7 +234,7 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
       <h3>내 신청</h3>
       <ul>
         {state.requests.map((item) => <li key={item.id}>
-          <span><strong>{findService(item.serviceId)?.title ?? item.serviceId}</strong><small>{new Date(item.createdAt).toLocaleDateString("ko-KR")} · {formatKoreanPhone(item.phone)}</small></span>
+          <span><strong>{findServiceRecord(item.serviceId)?.title ?? item.serviceId}</strong><small>{new Date(item.createdAt).toLocaleDateString("ko-KR")} · {formatKoreanPhone(item.phone)}</small></span>
           <em data-status={item.status}>{SERVICE_REQUEST_STATUS_LABELS[item.status]}</em>
         </li>)}
       </ul>
@@ -247,11 +251,12 @@ export function NextServicesCard({ planId, className }: { planId: string; classN
   useEffect(() => {
     const plan = loadState().plans.find((item) => item.id === planId);
     const badges = serviceBadges(plan ? serviceSignalsFromPlan(plan, true) : { ...EMPTY_SIGNALS, homepagePublished: true });
-    setHighlights(orderServices(SERVICE_CATALOG, badges).filter((item) => badges[item.id]).slice(0, 2).map((item) => item.title));
+    // '먼저 필요해 보여요'는 꼭 필요한 것(먼저 해요·필요해요·확인해요)만 — '추천'만 있으면 모든 사업에 같은 말이 붙는다
+    setHighlights(orderServices(SERVICE_CATALOG, badges).filter((item) => badges[item.id] && badges[item.id].tone !== "suggest").slice(0, 2).map((item) => item.title));
   }, [planId]);
   return <Link className={`${styles.card2} ${className ?? ""}`} href={`${careHref(planId)}#${NEXT_SERVICES_ANCHOR}`}>
     <span>다음 단계</span>
-    <strong>사업자등록·신고·홍보 맡기기 <ArrowRight size={16} aria-hidden /></strong>
-    <small>{highlights.length ? `이 사업에 먼저 필요해 보여요: ${highlights.join(", ")}` : "창업 행정과 마케팅을 상담 신청할 수 있어요"}</small>
+    <strong>홍보 맡기기 <ArrowRight size={16} aria-hidden /></strong>
+    <small>{highlights.length ? `이 사업에 먼저 필요해 보여요: ${highlights.join(", ")}` : "블로그·SNS·언론보도 같은 홍보를 상담 신청할 수 있어요"}</small>
   </Link>;
 }

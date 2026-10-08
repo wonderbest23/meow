@@ -12,7 +12,7 @@ async function main() {
   assert.ok(notificationIdempotencyExpired(new Date(Date.now() - 24 * 60 * 60_000).toISOString(), true));
   assert.ok(!notificationIdempotencyExpired(new Date().toISOString(), true));
   const payload = buildLandingLeadEmail("alerts@example.com", "owner@example.com");
-  assert.match(buildLandingLeadEmail("alerts@example.com", "owner@example.com", "plan_1").text, /plan\/homepage\?planId=plan_1#hk-leads/, "문의 알림 메일은 그 사업의 접수된 문의로 연결");
+  assert.match(buildLandingLeadEmail("alerts@example.com", "owner@example.com", "plan_1").text, /oneulstart\.com\/plan\/inquiries/, "문의 알림 메일은 '내 문의'로 연결");
   const calls: Array<{ headers: Headers; body: Record<string, unknown> }> = [];
   const transport = (async (_url: unknown, init?: RequestInit) => {
     calls.push({ headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) });

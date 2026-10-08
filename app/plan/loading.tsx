@@ -22,7 +22,7 @@ export default function Loading() {
   const care = useSyncExternalStore(noop, readCareTab, () => false);
   if (pathname === "/plan/chat" || pathname === "/plan/chat/") return <ChatLoading />;
   const path = pathname.replace(/\/$/, "");
-  const titles: Record<string, string> = { "/plan": "내 사업", "/plan/workspace": care ? "유지보수" : "내 사업 관리", "/plan/document": "사업계획서", "/plan/homepage": "홈페이지" };
-  if (titles[path]) return <main className={frame.page}><BusinessAppChrome title={titles[path]} active="plans"><PlanLoading fill variant="compact" note="화면을 불러오고 있어요" /></BusinessAppChrome></main>;
+  const titles: Record<string, string> = { "/plan": "내 사업", "/plan/workspace": care ? "유지보수" : "내 사업 관리", "/plan/document": "사업계획서", "/plan/homepage": "홈페이지", "/plan/inquiries": "내 문의" };
+  if (titles[path]) return <main className={frame.page}><BusinessAppChrome title={titles[path]} active={path === "/plan/inquiries" ? "inquiries" : "plans"}><PlanLoading fill variant="compact" note="화면을 불러오고 있어요" /></BusinessAppChrome></main>;
   return <PlanLoading variant="rows" note="불러오는 중…" />;
 }

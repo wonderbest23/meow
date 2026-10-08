@@ -5,7 +5,7 @@ import Link from "next/link";
 import { RefreshCw } from "lucide-react";
 import AdminNav from "../AdminNav";
 import styles from "../generation/page.module.css";
-import { findService, SERVICE_GROUPS } from "../../../lib/services/catalog";
+import { findServiceRecord, serviceGroupRecord } from "../../../lib/services/catalog";
 import { formatKoreanPhone, telHref } from "../../../lib/contact-links";
 import { SERVICE_REQUEST_NEXT, SERVICE_REQUEST_STATUS_LABELS, type ServiceRequestRecord, type ServiceRequestStatus } from "../../../lib/services/requests";
 
@@ -55,7 +55,7 @@ export default function ServiceRequestsAdminPage() {
 
   const waiting = requests?.filter((item) => item.status === "received").length ?? 0;
   return <main className={styles.page}>
-    {!login && <AdminNav title="서비스 신청" subtitle="다음 단계(창업 행정 도움·마케팅) 상담 신청 처리함" />}
+    {!login && <AdminNav title="서비스 신청" subtitle="다음 단계(마케팅) 상담 신청 처리함 · 예전 창업 행정 신청 기록도 보여요" />}
     <div className={styles.content}>
       <div className={styles.toolbar}>
         <button title="새로고침" aria-label="새로고침" disabled={busy} onClick={() => void load()}><RefreshCw size={18} /></button>
@@ -68,8 +68,8 @@ export default function ServiceRequestsAdminPage() {
         <div className={styles.table}><table>
           <thead><tr><th>서비스</th><th>사업</th><th>연락처</th><th>메모</th><th>상태</th><th></th></tr></thead>
           <tbody>{requests.map((item) => {
-            const service = findService(item.serviceId);
-            const group = SERVICE_GROUPS.find((g) => g.id === service?.group);
+            const service = findServiceRecord(item.serviceId);
+            const group = serviceGroupRecord(service?.group);
             const tel = telHref(item.phone);
             return <tr key={item.id}>
               <td><strong>{service?.title ?? item.serviceId}</strong><small>{group?.title ?? "알 수 없는 서비스"} · {date(item.createdAt)}</small></td>

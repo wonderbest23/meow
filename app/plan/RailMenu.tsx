@@ -3,7 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleHelp, Headphones, SquarePen } from "lucide-react";
+import { CircleHelp, Headphones, MessagesSquare, SquarePen } from "lucide-react";
+import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
 import styles from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
 import { DEFAULT_LOGO } from "../../components/site-header";
@@ -14,11 +15,12 @@ import BusinessRailTree, { type DocumentToc } from "./BusinessRailTree";
  * 예전엔 두 화면이 메뉴를 따로 그려서 폭(232px/208px)·항목·모양이 달랐고, 계정·이용 안내는 한쪽에만 있었다.
  * 계정은 아래 한 줄(내 계정)로 모으고, 마이페이지(/account)를 따로 찾아가지 않게 한다.
  */
-export type RailActive = "new" | "chat" | "plans" | "info" | "support" | "me";
+export type RailActive = "new" | "chat" | "plans" | "info" | "support" | "me" | "inquiries";
 
 function activeFor(pathname: string): RailActive | undefined {
   if (pathname.startsWith("/plan/info")) return "info";
   if (pathname.startsWith("/plan/me")) return "me";
+  if (pathname.startsWith("/plan/inquiries")) return "inquiries";
   if (pathname.startsWith("/account/support")) return "support";
   if (pathname.startsWith("/plan")) return "plans";
   return undefined;
@@ -49,6 +51,9 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
   const item = (extra = "") => `${styles.railBtn} ${menu.item} ${extra}`;
   const here = (key: RailActive) => (current === key ? "page" as const : undefined);
   const loginNext = encodeURIComponent(pathname || "/plan");
+  /* 내 문의 — 답할 문의 수(로그인했을 때만 센다 — 로그인 전에는 부르지 않는다) */
+  const inquiries = useInquiries(account?.authenticated === true);
+  const openInquiries = inquiries.items ? unansweredCount(inquiries.items) : 0;
 
   /* data-app-rail: 화면 로딩 표시(PlanLoading)가 메뉴 폭만큼 본문 가운데로 옮겨 가는 기준 */
   return <div className={menu.menu} data-app-rail>
@@ -63,6 +68,10 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
     </Link>
     {/* 내 사업 — 누르면 사업 목록이, 사업을 누르면 그 사업의 목차가 바로 아래 펼쳐진다 */}
     <BusinessRailTree documentToc={documentToc} />
+    {/* 내 문의 — 홈페이지로 들어온 손님 문의를 메신저처럼(소유자 요청 2026-10-07) */}
+    <Link href="/plan/inquiries" className={item()} title="내 문의" aria-current={here("inquiries")}>
+      <MessagesSquare /><span className={styles.railLabel}>내 문의</span>{openInquiries ? <b className={menu.count} aria-label={`답할 문의 ${openInquiries}건`}>{openInquiries}</b> : null}
+    </Link>
     {/* 플랜을 열어 둔 화면이면 그 목차가 여기 붙는다 */}
     {children}
     <div className={`${styles.spring} ${menu.spring}`} />

@@ -64,3 +64,6 @@
   .menu .signup { display: none; }
   .menu .auth a { height: 36px; font-size: 12px; }
 }
+
+/* 내 문의 — 답할 문의 수 */
+.count { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #e5484d; color: #fff; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }

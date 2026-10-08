@@ -197,6 +197,27 @@ export async function createProject(
  * 홈페이지(랜딩)는 프로젝트 단위로 저장된다. 플랜 빌더에는 프로젝트가 없으므로
  * 플랜당 하나의 담는 그릇을 만들어 두고, opportunity.planId로 다시 찾는다.
  */
+/** 이 주인의 프로젝트 목록(가볍게) — 내 문의처럼 여러 사업을 한 번에 훑을 때 */
+export async function listOwnedProjectRefs(guestTokenHash: string): Promise<Array<{ id: string; title: string; planId: string | null }>> {
+  const supabase = getServerSupabase();
+  const planIdOf = (opportunity: unknown) => {
+    const value = (opportunity as Record<string, unknown> | null)?.planId;
+    return typeof value === "string" && value ? value : null;
+  };
+  if (!supabase) {
+    return [...demoStore.values()]
+      .filter(project => project.guestTokenHash === guestTokenHash)
+      .map(project => ({ id: project.id, title: project.title, planId: planIdOf(project.opportunity) }));
+  }
+  const { data, error } = await supabase
+    .from(projectReadTable())
+    .select("id, title, opportunity")
+    .eq("guest_token_hash", guestTokenHash)
+    .limit(200);
+  if (error) throw error;
+  return (data ?? []).map(row => ({ id: String(row.id), title: String(row.title ?? ""), planId: planIdOf(row.opportunity) }));
+}
+
 export async function findProjectIdByPlan(
   planId: string,
   guestTokenHash: string,
