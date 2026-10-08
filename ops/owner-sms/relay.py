@@ -29,6 +29,8 @@ MESSAGES = {
 # 사장님(고객) 알림 — 받는 번호만 요청에서 받고, 글은 여기 고정 문구로만 만든다(숫자 외 자유 글 없음).
 CUSTOMER_EVENTS = ("homepage-lead", "weekly-report")
 SITE = "oneulstart.com/plan/homepage"
+# 새 문의 문자는 '내 문의'로 바로 — 홈페이지 화면의 문의 목록은 그리로 옮겼다(가장 긴 문자도 86바이트, 90 안)
+INQUIRIES = "oneulstart.com/plan/inquiries"
 MAX_SMS_BYTES = 90
 # v4 — 운영자(ownerPhone) 알림과 받는 번호가 있는 알림. 문구는 v4_message 가 고정 틀에 검사한 값만 채운다.
 OPERATOR_EVENTS = ("payment-paid",)
@@ -100,7 +102,7 @@ def customer_message(event_type, params):
     if event_type == "homepage-lead":
         if params:
             return None
-        return "[오늘창업] 홈페이지에 새 문의가 들어왔어요. 확인: " + SITE
+        return "[오늘창업] 홈페이지에 새 문의가 들어왔어요. 확인: " + INQUIRIES
     if event_type == "weekly-report":
         limits = {"leads": 9999, "prevLeads": 9999, "views": 99999}
         if set(params) != set(limits) or any(type(params[key]) is not int or not 0 <= params[key] <= top for key, top in limits.items()):
@@ -149,7 +151,7 @@ def v4_message(event_type, params):
         name = clean_text(params["name"], 10, r"[가-힣A-Za-z ]")
         if name is None:
             return None
-        return " ".join(["[오늘창업] 새 문의", name or "이름 없음"] + ([params["phone"]] if params["phone"] else []) + ["확인", SITE])
+        return " ".join(["[오늘창업] 새 문의", name or "이름 없음"] + ([params["phone"]] if params["phone"] else []) + ["확인", INQUIRIES])
     if event_type == "lead-received":
         store = clean_text(params.get("store"), 12, r"[가-힣A-Za-z0-9 ]") if keys == {"store"} else None
         if not store:

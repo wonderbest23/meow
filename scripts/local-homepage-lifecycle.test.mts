@@ -198,14 +198,15 @@ try {
     assert.equal((await client.request("/api/auth/logout", "POST")).status, 200);
     assert.equal((await client.request(path())).status, 404);
     const reconnect = new Client(); await reconnect.login(a.email);
-    const result = await read(reconnect); assert.equal(result.site.id, site.id); assert.equal(result.site.versions.length, 2); assert.equal(result.leads.length, 1);
+    const result = await read(reconnect); assert.equal(result.site.id, site.id); assert.equal(result.site.versions.length, 2);
+    const inquiries = await reconnect.request("/api/plan/inquiries"); assert.equal(inquiries.status, 200); assert.equal((inquiries.data as { items: unknown[] }).items.length, 1);
     await client.login(a.email); site = result.site;
   });
   await check("disabled lead capture is enforced from the published snapshot", async () => {
     await save({ ...site.draft, leadCaptureEnabled: false });
     const result = await publish(); assert.equal(result.status, 200); site = result.data.site;
     const response = await visitor.request(`/api/public/landing/${site.slug}/lead`, "POST", { name: "가상", email: "no-contact@example.invalid", privacyAgreed: true });
-    assert.equal(response.status, 400); assert.equal((await read()).leads.length, 1);
+    assert.equal(response.status, 400); assert.equal(((await client.request("/api/plan/inquiries")).data as { items: unknown[] }).items.length, 1);
   });
   await check("refund prevents editing publishing and rollback without erasing data", async () => {
     const before = (await read()).site;

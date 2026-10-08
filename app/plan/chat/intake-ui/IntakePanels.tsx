@@ -70,20 +70,25 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const ksicCandidates = inChat && question.id === "industry" && !manualIndustry ? snapshot.ksicCandidates : [];
   const [ownKsicQuery, setKsicQuery] = useState("");
   const ksicQuery = coach ? composerQuery ?? "" : ownKsicQuery;
-  const [ksicResults, setKsicResults] = useState<IntakeSnapshot["ksicCandidates"]>([]);
+  /*
+   * 어떤 검색어의 결과인지, 검색이 실패했는지 같이 둔다 — 예전엔 연결이 끊겨도 '맞는 업종을 못 찾았어요'라고 했고,
+   * 검색이 끝나기 전에도 같은 말이 잠깐 보였다.
+   */
+  const [ksicSearch, setKsicSearch] = useState<{ query: string; items: IntakeSnapshot["ksicCandidates"]; failed: boolean }>({ query: "", items: [], failed: false });
   useEffect(() => {
     const query = ksicQuery.trim();
-    if (!inChat || question.id !== "industry" || query.length < 2) { setKsicResults([]); return; }
+    if (!inChat || question.id !== "industry" || query.length < 2) { setKsicSearch({ query: "", items: [], failed: false }); return; }
     const controller = new AbortController();
     const timer = setTimeout(() => {
       fetch(`/api/plan/chat?ksic=${encodeURIComponent(query)}`, { headers: { "x-business-intake": "2" }, cache: "no-store", signal: controller.signal })
-        .then(response => response.ok ? response.json() : null)
-        .then(data => { if (!controller.signal.aborted) setKsicResults(Array.isArray(data?.ksicCandidates) ? data.ksicCandidates : []); })
-        .catch(() => { if (!controller.signal.aborted) setKsicResults([]); });
+        .then(response => { if (!response.ok) throw new Error("KSIC_SEARCH_FAILED"); return response.json(); })
+        .then(data => { if (!controller.signal.aborted) setKsicSearch({ query, items: Array.isArray(data?.ksicCandidates) ? data.ksicCandidates : [], failed: false }); })
+        .catch(() => { if (!controller.signal.aborted) setKsicSearch({ query, items: [], failed: true }); });
     }, 300);
     return () => { clearTimeout(timer); controller.abort(); };
   }, [ksicQuery, inChat, question.id]);
-  const ksicShown = ksicQuery.trim().length >= 2 ? ksicResults : ksicCandidates;
+  const ksicSearched = ksicSearch.query !== "" && ksicSearch.query === ksicQuery.trim();
+  const ksicShown = ksicQuery.trim().length >= 2 ? ksicSearch.items : ksicCandidates;
   const candidate = question.id === "candidate";
   const options = candidate ? snapshot.candidateIdeas.map(idea => ({ value: idea.id, label: idea.title })) : question.options ?? [];
   const stage = (value: IntakeValue) => send({ ...draft, text: String(value ?? ""), unknown: false });
@@ -137,7 +142,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
         {!coach && <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>}
         {ksicShown.length > 0 && <p className={styles.ksicLead}>{coach && ksicQuery.trim().length >= 2 ? "찾은 업종이에요. 가까운 걸 눌러 주세요." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
-        {ksicQuery.trim().length >= 2 && ksicShown.length === 0 && <p className={styles.ksicLead}>{coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
+        {ksicQuery.trim().length >= 2 && ksicSearched && ksicShown.length === 0 && <p className={styles.ksicLead}>{ksicSearch.failed ? "업종 검색이 잠시 연결되지 않았어요. 아래에서 골라 주시거나 잠시 후 다시 입력해 주세요." : coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
         <div className={styles.ksicChips}>{ksicShown.map(item => <button key={item.code} type="button" className={styles.ksicChip} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{item.name}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>)}</div>
       </div>}
       {showSuggested && <div className={styles.industrySuggestion} role="group" aria-label="추천 업종">

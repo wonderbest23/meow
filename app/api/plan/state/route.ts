@@ -3,7 +3,7 @@ import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { readPlanQuarantine } from "../../../../lib/plan-builder/quarantine.server";
 import { planAccountLinkingEnabled, planOwnerKey } from "../../../../lib/plan-builder/account-linking";
-import { loadPlanState, savePlanState, deletePlanById, normalizeState, preserveServerCoachRecords, type ServerPlanState } from "../../../../lib/plan-builder/plan-server-store";
+import { loadPlanState, savePlanState, deletePlanById, normalizeState, preserveServerCoachRecords, type ServerPlanState, loadDeletedPlanIds } from "../../../../lib/plan-builder/plan-server-store";
 import { deletePlanHomepage } from "../../../../lib/plan-builder/plan-homepage-cleanup";
 
 export const runtime = "nodejs";
@@ -15,8 +15,10 @@ export async function GET() {
   const identity = await requireGuestIdentity();
   const state = await loadPlanState(identity.hash);
   const quarantine = await readPlanQuarantine(identity.hash);
+  // 지운 사업 번호 — 다른 기기에 남은 옛 사본을 화면이 지우게(읽지 못하면 빈 목록: 지우지 않을 뿐 해는 없다)
+  const deletedPlanIds = await loadDeletedPlanIds(identity.hash).catch(() => [] as string[]);
   // 클라이언트가 로그아웃·세션 만료를 감지해 로컬 캐시를 비울 수 있게 인증 여부를 함께 준다
-  return NextResponse.json({ ...state, quarantine, authenticated: identity.userId !== null, ...(planAccountLinkingEnabled() ? { ownerKey: planOwnerKey(identity.hash) } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
+  return NextResponse.json({ ...state, deletedPlanIds, quarantine, authenticated: identity.userId !== null, ...(planAccountLinkingEnabled() ? { ownerKey: planOwnerKey(identity.hash) } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 function ownerConflict(ownerHash: string, expected: unknown) {

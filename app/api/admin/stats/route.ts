@@ -62,7 +62,7 @@ export async function GET() {
   let paidAmount: number | null = null;
   let paid7d: number | null = null;
   let refundCount: number | null = null;
-  let recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; createdAt: string }> = [];
+  let recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; createdAt: string }> | null = [];
   if (supabase) {
     const paid = await supabase
       .from("payment_orders")
@@ -117,7 +117,8 @@ export async function GET() {
       .select("order_id, order_name, amount, status, created_at")
       .order("created_at", { ascending: false })
       .limit(5);
-    recentOrders = (recent.data ?? []).map((row) => {
+    // 못 읽었으면 '주문 없음'이 아니라 모름(null)
+    recentOrders = recent.error ? null : (recent.data ?? []).map((row) => {
       const r = row as Record<string, unknown>;
       return {
         orderId: String(r.order_id ?? ""),
@@ -130,8 +131,9 @@ export async function GET() {
   }
 
   // 문의 — 실제 메시지가 있는 대화만 (repository가 이미 걸러준다)
-  const conversations = await listAdminConversations().catch(() => []);
-  const inquiries = {
+  // 못 읽었으면 '문의 0건'이 아니라 모름(null) — 안 읽은 고객 메시지를 놓치지 않게
+  const conversations = await listAdminConversations().catch(() => null);
+  const inquiries = conversations === null ? null : {
     open: conversations.filter((c) => c.status === "open").length,
     unread: conversations.reduce((sum, c) => sum + (c.unreadByAdmin ?? 0), 0),
     total: conversations.length,

@@ -105,6 +105,9 @@ async function main() {
     await deletePlanById(hash, "plan_017");
     const got = await loadPlanState(hash);
     assert.deepEqual(ids(got), expect(1, 35).filter((id) => id !== "plan_017"), "G: 지목한 플랜 하나만 사라져야 한다");
+    // 지운 플랜을 든 옛 기기가 전체를 다시 저장해도 되살아나지 않는다
+    await savePlanState(hash, normalizeState(stateOf(Array.from({ length: 35 }, (_, i) => makePlan(i + 1)))));
+    assert.deepEqual(ids(await loadPlanState(hash)), expect(1, 35).filter((id) => id !== "plan_017"), "G: 옛 사본 저장으로 지운 플랜이 되살아나면 안 된다");
   }
 
   // ── H. merge: local 1~35 + remote 20~50 → 고유 1~50 전부

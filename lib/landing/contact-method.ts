@@ -33,7 +33,7 @@ export type LandingContact = z.infer<typeof landingContactSchema>;
 export const DEFAULT_CONTACT: LandingContact = { method: "form", kakaoUrl: "", bookingUrl: "", storeUrl: "", instagramUrl: "", quickBar: true };
 
 export const CONTACT_METHOD_INFO: Record<ContactMethod, { label: string; cta: string; hint: string; field?: LinkField | "phone"; placeholder?: string }> = {
-  form: { label: "문의 양식", cta: "문의하기", hint: "페이지 아래 문의 양식으로 내려가요. 들어온 문의는 '접수된 문의'에 쌓여요." },
+  form: { label: "문의 양식", cta: "문의하기", hint: "페이지 아래 문의 양식으로 내려가요. 들어온 문의는 '내 문의'에 쌓여요." },
   phone: { label: "전화 걸기", cta: "전화로 문의하기", hint: "휴대폰에서 누르면 바로 전화가 걸려요.", field: "phone", placeholder: "010-1234-5678" },
   sms: { label: "문자 보내기", cta: "문자로 문의하기", hint: "휴대폰에서 누르면 문자 쓰기 화면이 열려요.", field: "phone", placeholder: "010-1234-5678" },
   kakao: { label: "카카오톡 채널", cta: "카카오톡으로 문의하기", hint: "카카오톡 채널 채팅이 열려요.", field: "kakaoUrl", placeholder: "https://pf.kakao.com/_xxxxx" },

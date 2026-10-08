@@ -78,6 +78,8 @@ function fallback(): ConsultReply {
 export async function GET() {
   const identity = await requireGuestIdentity();
   const session = await loadConsultSession(identity.hash).catch(() => null);
+  // 못 읽었으면 '빈 상담'이라고 답하지 않는다 — 화면은 다음에 다시 불러온다
+  if (!session) return NextResponse.json({ error: "consult_unavailable", message: "지난 상담을 불러오지 못했어요." }, { status: 503, headers: { "Cache-Control": "private, no-store" } });
   const limit = consultLimitFor(identity.userId);
   return NextResponse.json(
     {

@@ -280,7 +280,8 @@ async function postLegacyChat(request: Request) {
   if (input.retry && !retry) return json({ message: "다시 시도할 작업을 찾지 못했어요. 대화를 새로 불러와 주세요." }, 409);
   if (retry && oldJob!.attempt >= 3) return json({ message: "여러 번 완성하지 못했어요. 잠시 후 내용을 짧게 정리해 다시 보내주세요." }, 429);
   if (!retry && !input.message) return json({ message: "메시지를 입력해주세요." }, 400);
-  const session = await loadConsultSession(identity.hash);
+  // 상담 기록(하루 횟수)을 못 읽어도 사업 기획 대화는 막지 않는다 — 횟수 저장은 아래에서 건너뛴다
+  const session = await loadConsultSession(identity.hash).catch(() => null);
   const limit = consultLimitFor(identity.userId);
   if (!retry && (session?.turnsToday ?? 0) >= limit) return json({ message: identity.userId ? "오늘 대화 이용량을 모두 사용했습니다. 저장된 계획은 계속 확인할 수 있습니다." : "로그인하면 지금 대화에서 이어갈 수 있습니다.", login: !identity.userId }, 429);
   if (!resolvePlanningLLMConfig(identity.hash)) return json({ message: "사업 기획 AI 연결을 준비 중입니다. 잠시 후 다시 시도해주세요." }, 503);
@@ -310,7 +311,7 @@ async function postLegacyChat(request: Request) {
   } catch { return json({ message: "저장 상태가 변경됐어요. 대화를 새로 불러온 뒤 이어가 주세요." }, 409); }
   try {
     // Reserve the turn before dispatch. Retrying this saved request does not count a new turn.
-    if (!retry) await saveConsultTurn(identity.hash, { profile: session?.profile ?? {}, appended: [], turnsToday: (session?.turnsToday ?? 0) + 1 });
+    if (!retry && session) await saveConsultTurn(identity.hash, { profile: session.profile ?? {}, appended: [], turnsToday: (session.turnsToday ?? 0) + 1 }).catch(() => {});
     if (durable) {
       try { await workflow!.create({ id: job.runId, params: { operation: "coach", ...requestJob } }); }
       catch (error) {

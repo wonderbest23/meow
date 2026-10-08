@@ -28,14 +28,29 @@ export default function ArtifactUpdatePanel({ businessId }: { businessId?: strin
   const [busy, setBusy] = useState(false), [message, setMessage] = useState(""), [consent, setConsent] = useState(false), [includeHomepage, setIncludeHomepage] = useState(false);
   const [documents, setDocuments] = useState<Choices>({}), [slides, setSlides] = useState<Choices>({}), [homepage, setHomepage] = useState<Choices>({});
   const lock = useRef(false), pending = useRef<ArtifactCommand | null>(null);
+  /*
+   * 늦게 온 옛 목록이 방금 반영한 상태를 덮지 않게 마지막 요청만 받는다(예전엔 '반영됨' 직후 먼저 출발한
+   * 5초 새로고침이 '비교 후 반영'으로 되돌려 같은 반영을 또 누르게 했다). 5초 새로고침은 만드는 중인 작업이
+   * 있을 때만, 그리고 요청을 보내는 동안에는 쉰다.
+   */
+  const latest = useRef(0), active = useRef(true);
   useEffect(() => { if (!businessId) setFallbackId(new URLSearchParams(window.location.search).get("planId") ?? ""); }, [businessId]);
   const refresh = useCallback(async () => {
     if (!planId) return;
+    const request = ++latest.current;
     const response = await fetch(`/api/plan/artifact-updates?planId=${encodeURIComponent(planId)}`, { cache: "no-store" });
     const result = await response.json(); if (!response.ok) throw new Error(result.message ?? "변경 기록을 불러오지 못했어요");
+    if (request !== latest.current) return;
+    active.current = (result.jobs as ArtifactUpdateView[]).some(item => item.status === "queued" || item.status === "running");
     setJobs(result.jobs); setSelected(previous => previous || result.jobs[0]?.id || "");
   }, [planId]);
-  useEffect(() => { if (!planId) return; let alive = true; const load = () => { if (!document.hidden) void refresh().catch(error => { if (alive) setMessage(userErrorMessage(error, "변경 상태를 불러오지 못했어요")); }); }; load(); const timer = setInterval(load, 5000); return () => { alive = false; clearInterval(timer); }; }, [planId, refresh]);
+  useEffect(() => {
+    if (!planId) return;
+    let alive = true; active.current = true;
+    const load = () => { if (!document.hidden && !lock.current && active.current) void refresh().catch(error => { if (alive) setMessage(userErrorMessage(error, "변경 상태를 불러오지 못했어요")); }); };
+    load(); const timer = setInterval(load, 5000);
+    return () => { alive = false; clearInterval(timer); };
+  }, [planId, refresh]);
   const job = jobs.find(item => item.id === selected);
   useEffect(() => { setDocuments({}); setSlides({}); setHomepage({}); }, [selected]);
   async function compare() {

@@ -46,6 +46,8 @@ export function LandingDomainConnector({
   const [connection, setConnection] = useState<LandingDomainConnection | null>(null);
   const [entitlement, setEntitlement] = useState<DomainEntitlement | null>(null);
   const [action, setAction] = useState<"idle" | "loading" | "connecting" | "removing">("idle");
+  const actionRef = useRef(action);
+  actionRef.current = action;
   const [message, setMessage] = useState("");
   const [copied, setCopied] = useState(false);
   const siteUpdatedRef = useRef(onSiteUpdated);
@@ -88,12 +90,15 @@ export function LandingDomainConnector({
 
   useEffect(() => {
     if (!connection?.hostname || connection.ready || !connection.configured || !projectId) return;
-    const timer = window.setInterval(() => void load(true), 8000);
+    // 연결·해제를 처리하는 동안은 확인하지 않는다
+    const timer = window.setInterval(() => { if (actionRef.current === "idle") void load(true); }, 8000);
     return () => window.clearInterval(timer);
   }, [connection?.configured, connection?.hostname, connection?.ready, load, projectId]);
 
   const connect = async () => {
     if (!projectId || action !== "idle") return;
+    // 진행 중인 상태 확인을 멈춘다 — 늦게 오면 방금 바꾼 연결 상태를 옛것으로 덮었다
+    loadRequestRef.current?.abort(); loadRequestRef.current = null;
     setAction("connecting");
     setMessage("");
     try {
@@ -119,6 +124,7 @@ export function LandingDomainConnector({
 
   const remove = async () => {
     if (!projectId || action !== "idle") return;
+    loadRequestRef.current?.abort(); loadRequestRef.current = null;
     setAction("removing");
     setMessage("");
     try {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
@@ -103,24 +103,44 @@ export default function BusinessRailTree({ documentToc }: { documentToc?: Docume
   const state = useMemo(() => (mounted ? loadState() : null), [mounted, tick, pathname]);
   const local = useMemo(() => (state?.plans ?? []).filter(plan => !isSamplePlan(plan.id)), [state]);
   /*
-   * 이 기기에 저장된 사업이 없으면(새 기기에서 대화 주소로 바로 들어온 경우) 서버 목록을 읽기만 한다.
+   * 서버 목록도 읽어 이 기기 저장본과 합친다(읽기만) — 예전엔 이 기기에 사업이 하나라도 있으면 서버를 보지 않아
+   * 휴대폰에서 만든 사업이 PC 왼쪽 목록에 없었다. 처음 한 번, 그리고 지금 보는 사업이 목록에 없을 때 다시 읽는다.
    * hydrateFromServer 는 쓰지 않는다 — 화면이 부른 것과 겹치면 먼저 부른 쪽이 옛 상태를 받는다.
+   * 못 불러오면 '사업 없음' 대신 안내를 보이고, 다음 화면 이동 때 다시 읽는다.
    */
   const [remote, setRemote] = useState<Plan[] | null>(null);
+  const [remoteFailed, setRemoteFailed] = useState(false);
+  const [remoteTick, setRemoteTick] = useState(0);
+  const askedFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!mounted || local.length || remote) return;
+    if (!mounted) return;
     let alive = true;
     fetch("/api/plan/state", { cache: "no-store" })
-      .then(response => response.ok ? response.json() : null)
-      .then((data: { plans?: Plan[] } | null) => { if (alive) setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); })
-      .catch(() => { if (alive) setRemote([]); });
+      .then(response => { if (!response.ok) throw new Error("PLAN_STATE_UNAVAILABLE"); return response.json(); })
+      .then((data: { plans?: Plan[] }) => { if (!alive) return; setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); setRemoteFailed(false); })
+      .catch(() => { if (alive) setRemoteFailed(true); });
     return () => { alive = false; };
-  }, [mounted, local.length, remote]);
-  const plans = useMemo(() => [...(local.length ? local : remote ?? [])].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)), [local, remote]);
-  const checked = local.length > 0 || remote !== null;
+  }, [mounted, remoteTick]);
+  const plans = useMemo(() => {
+    const byId = new Map<string, Plan>();
+    for (const plan of [...(remote ?? []), ...local]) {
+      const held = byId.get(plan.id);
+      if (!held || plan.updatedAt.localeCompare(held.updatedAt) > 0) byId.set(plan.id, plan);
+    }
+    return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [local, remote]);
+  const checked = remote !== null || (remoteFailed && local.length > 0);
   const step = stepFor(pathname);
   /* 지금 화면이 보여 주는 사업 — 주소에 있으면 그것, 홈페이지처럼 주소에 없으면 작업 중인 사업 */
   const currentId = urlPlanId ?? (step ? state?.activePlanId ?? null : null);
+  // 지금 보는 사업이 목록에 없으면(다른 기기·방금 대화에서 만든 사업) 서버 목록을 한 번 더 읽는다
+  useEffect(() => {
+    if (!mounted || !currentId || isSamplePlan(currentId) || plans.some(plan => plan.id === currentId) || askedFor.current === currentId) return;
+    askedFor.current = currentId;
+    setRemoteTick(n => n + 1);
+  }, [mounted, currentId, plans]);
+  // 못 불러왔으면 화면을 옮길 때 다시 읽는다
+  useEffect(() => { if (remoteFailed) setRemoteTick(n => n + 1); }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
   // 다른 사업 화면으로 옮기면 그 사업만 펼친 상태로 돌아간다.
   useEffect(() => { setOpenId(undefined); }, [currentId]);
 
@@ -136,7 +156,8 @@ export default function BusinessRailTree({ documentToc }: { documentToc?: Docume
       <ChevronRight className={styles.caret} data-open={listOpen || undefined} aria-hidden="true" />
     </button>
     {listOpen && mounted && <div className={styles.list}>
-      {checked && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요. 새 대화로 시작해 보세요.</p>}
+      {remoteFailed && plans.length === 0 ? <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>
+        : checked && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요. 새 대화로 시작해 보세요.</p>}
       {plans.map(plan => {
         const isCurrent = plan.id === currentId;
         const open = openId === undefined ? isCurrent : openId === plan.id;

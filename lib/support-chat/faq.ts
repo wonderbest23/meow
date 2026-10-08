@@ -76,6 +76,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
       { id: "files-edit", question: "완성 문서를 수정할 수 있나요?", answer: "계획서 화면에서 글을 직접 고칠 수 있고, 사업 내용 자체를 바꾸려면 같은 사업의 대화에서 말하면 됩니다. 세부 서식은 Word로 내려받아 자유롭게 편집하세요.", keywords: ["수정", "고치", "편집", "문구 변경"] },
       { id: "files-ppt", question: "발표자료(PPT)도 만들어주나요?", answer: PPT_NOTE, keywords: ["발표자료", "PPT", "슬라이드", "피칭"] },
       { id: "files-homepage", question: "홈페이지는 어떻게 만들고 공개하나요?", answer: `사업계획서가 완성되면 계획서 화면 아래 ‘다음 단계 · 홈페이지 만들기’를 누르세요. 계획서 내용으로 초안이 바로 만들어지고, 미리 볼 수 있습니다. 고치고 인터넷에 공개하려면 홈페이지 상품(${won(HOMEPAGE_PRODUCT_AMOUNT)})이 필요하며, 무료 주소로 공개됩니다. 내 도메인을 쓰려면 도메인 연결(${won(DOMAIN_PRODUCT_AMOUNT)}/1년)을 따로 신청합니다.`, keywords: ["홈페이지", "공개", "도메인", "사이트"] },
+      { id: "files-inquiries", question: "홈페이지로 들어온 손님 문의는 어디서 보나요?", answer: "왼쪽 메뉴 ‘내 문의’에서 모든 사업의 홈페이지 문의를 최신순으로 봅니다. 문의를 누르면 손님 메시지와 연락처가 보이고, 전화·문자·메일로 바로 연락하거나 ‘처리 완료’로 표시할 수 있습니다. 새 문의를 문자로 받을 휴대폰은 홈페이지 화면 5번 ‘문의 알림’에서 정합니다.", keywords: ["문의 확인", "손님 문의", "들어온 문의", "내 문의", "문의 어디", "신청 확인"], link: { href: "/plan/inquiries", label: "내 문의 열기" } },
     ],
   },
   {
@@ -115,7 +116,7 @@ export const supportFaqCategories: SupportFaqCategory[] = [
 ];
 
 export const supportPlatformFacts = [
-  "오늘창업은 대화로 사업안을 정리하고(‘새 대화’, /plan/chat?new=1), 그 내용으로 사업계획서를 만들고(/plan/document), 계획서로 홈페이지를 만들고(/plan/homepage), 공개 후 유지보수(홈페이지 고치기·문의와 실적 관리)까지 한 사업 안에서 이어가는 서비스입니다. 만든 사업은 왼쪽 메뉴 ‘내 사업’(/plan)에 모입니다. 문서 유형을 고르는 화면이나 섹션마다 누르는 ‘이 섹션 만들기’ 버튼은 없습니다.",
+  "오늘창업은 대화로 사업안을 정리하고(‘새 대화’, /plan/chat?new=1), 그 내용으로 사업계획서를 만들고(/plan/document), 계획서로 홈페이지를 만들고(/plan/homepage), 공개 후 유지보수(홈페이지 고치기·실적 관리)까지 한 사업 안에서 이어가는 서비스입니다. 만든 사업은 왼쪽 메뉴 ‘내 사업’(/plan)에, 홈페이지로 들어온 손님 문의는 모든 사업 것이 왼쪽 메뉴 ‘내 문의’(/plan/inquiries)에 모입니다. 문서 유형을 고르는 화면이나 섹션마다 누르는 ‘이 섹션 만들기’ 버튼은 없습니다.",
   `가격: 사업계획서 사업 하나당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL}), 홈페이지 편집·공개 ${won(HOMEPAGE_PRODUCT_AMOUNT)}, 계획서+홈페이지 묶음 ${won(BUNDLE_PRODUCT_AMOUNT)}, 내 도메인 연결 1년 ${won(DOMAIN_PRODUCT_AMOUNT)}, 도메인 구매·연결 ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}, 홈페이지 AI 수정 토큰 ${won(TOKEN_PACK_AMOUNT)}, 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가 ${won(REGEN_PACK_AMOUNT)}. 모두 1회 결제이며 구독이 아닙니다.`,
   "결제 수단은 신용·체크카드이며 나이스페이 결제창에서 진행됩니다. 결제가 승인되면 바로 열립니다.",
   `무료 범위: 대화와 무료 창업 상담은 무료입니다. ${FREE_RULE}. 나머지 항목 작성과 파일 내려받기는 결제 후 열립니다.`,

@@ -32,6 +32,7 @@ const ASSISTANT_LINKS = {
   "plan-document": { href: "/plan", label: "내 사업에서 계획서 열기" },
   "plan-me": { href: "/plan/me", label: "마이페이지 열기" },
   "refund-info": { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" },
+  inquiries: { href: "/plan/inquiries", label: "내 문의 열기" },
 } as const;
 
 type AssistantLinkId = keyof typeof ASSISTANT_LINKS;
@@ -142,6 +143,7 @@ export async function POST(request: Request) {
         "- plan-document: 사업계획서 보기·내려받기",
         "- plan-me: 마이페이지(결제 내역·계정)",
         "- refund-info: 취소·환불 기준 안내",
+        "- inquiries: 내 문의(홈페이지로 들어온 손님 문의 모아 보기)",
         "JSON 객체 {answer, needsOperator, link?}만 출력하세요.",
         "",
         "오늘창업 서비스 지식:",

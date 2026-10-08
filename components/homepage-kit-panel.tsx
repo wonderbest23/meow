@@ -126,6 +126,20 @@ export function HomepageKitPanel({
   /* 저장은 됐지만 아직 '새 버전 공개'를 안 누른 고친 내용 — '공개 중'만 보고 손님 화면도 바뀐 줄 알기 쉽다 */
   const unpublishedEdits = hasUnpublishedEdits(site);
   const [domainReady, setDomainReady] = useState(false);
+  /*
+   * 주소 끝의 #hk-… 로 왔으면(내 문의의 '번호 등록하러 가기' 등) 그 칸을 펼쳐 내려 준다 —
+   * 이 화면은 늦게 그려져 브라우저가 스스로 그 칸을 못 찾고, 칸이 접혀 있으면 찾아도 안 보인다.
+   */
+  useEffect(() => {
+    const id = window.location.hash.slice(1);
+    if (!/^hk-[a-z-]+$/.test(id)) return;
+    const timer = window.setTimeout(() => {
+      const target = document.getElementById(id);
+      if (target instanceof HTMLDetailsElement) target.open = true;
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 150);
+    return () => window.clearTimeout(timer);
+  }, []);
   /* 손님 연락 방법 — 바꾸면 문의 버튼의 이동·글이 한 번에 따라간다(applyContactMethod) */
   const contact = draft.contact ?? DEFAULT_CONTACT;
   const contactInfo = CONTACT_METHOD_INFO[contact.method];
@@ -357,7 +371,7 @@ export function HomepageKitPanel({
           <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>
           <label className="wide hk-switch">
             <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />
-            <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 접수된 문의가 아래 칸에 쌓입니다.</small></span>
+            <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 들어온 문의는 왼쪽 메뉴 ‘내 문의’에 쌓입니다.</small></span>
           </label>
           {/*
            * 받을 연락처 — 예전 편집 화면에 있던 토글이 사라져 휴대폰 칸을 켤 방법이 없었다. 그래서 '문의자 이름·연락처 문자',

@@ -184,7 +184,8 @@ export function SupportChatWidget() {
     void (async () => {
       try {
         const response = await fetch("/api/consult", { cache: "no-store" });
-        if (!response.ok) return;
+        // 못 불러왔으면 다음에 열 때 다시 — 지난 대화는 서버에 그대로 있다
+        if (!response.ok) { consultRestored.current = false; return; }
         const payload = await response.json() as {
           profile?: ConsultProfile;
           messages?: Array<{ role: "user" | "assistant"; text: string; at?: string }>;
@@ -210,7 +211,8 @@ export function SupportChatWidget() {
         }
         setConsultIsGuest(Boolean(payload.isGuest));
       } catch {
-        // 복원 실패는 조용히 — 새 상담으로 시작하면 된다
+        // 복원 실패는 조용히 — 다음에 열 때 다시 불러온다(지난 대화는 서버에 그대로)
+        consultRestored.current = false;
       }
     })();
   }, [open, mode]);
@@ -231,10 +233,14 @@ export function SupportChatWidget() {
     else if (canStartEarly) seen("soft");
   }, [open, mode, canStartPlan, canStartEarly]);
 
+  /* 늦게 온 옛 응답이 방금 보낸 메시지를 지우지 않게 마지막 요청만 받는다 */
+  const chatRequest = useRef(0);
   const loadChat = useCallback(async (markRead: boolean) => {
+    const request = ++chatRequest.current;
     try {
       const response = await fetch(`/api/support/chat${markRead ? "" : "?peek=1"}`, { cache: "no-store" });
       const payload = await readPayload(response);
+      if (request !== chatRequest.current) return;
       setChat(payload.chat);
       setError("");
     } catch (loadError) {
@@ -247,7 +253,8 @@ export function SupportChatWidget() {
   useEffect(() => {
     if (hiddenHere) return;
     void loadChat(false);
-    const timer = window.setInterval(() => void loadChat(open), open ? 4000 : 12000);
+    // 다른 탭을 보는 동안에는 쉰다
+    const timer = window.setInterval(() => { if (!document.hidden) void loadChat(open); }, open ? 4000 : 12000);
     return () => window.clearInterval(timer);
   }, [loadChat, open, pathname, hiddenHere]);
 
@@ -352,8 +359,10 @@ export function SupportChatWidget() {
     setConsultTurns((current) => [...current, asked]);
     try {
       /* 손님이 쓰는 계획서가 있으면 알린다 — 상담사가 그 내용을 근거로 답한다(예시 플랜은 제외) */
+      // 지금 화면의 사업(주소의 planId)을 먼저 — 마지막에 열었던 사업(activePlan)은 다른 사업일 수 있다
+      const urlPlanId = new URLSearchParams(window.location.search).get("planId");
       const plan = activePlan();
-      const planId = plan && !isSamplePlan(plan.id) ? plan.id : undefined;
+      const planId = urlPlanId && !isSamplePlan(urlPlanId) ? urlPlanId : plan && !isSamplePlan(plan.id) ? plan.id : undefined;
       const response = await fetch("/api/consult", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -559,6 +568,7 @@ export function SupportChatWidget() {
     setOperatorMode(true);
     setSending(true);
     setError("");
+    chatRequest.current += 1;
     try {
       const response = await fetch("/api/support/chat", {
         method: "POST",
@@ -566,6 +576,7 @@ export function SupportChatWidget() {
         body: JSON.stringify({ message: nextMessage }),
       });
       const payload = await readPayload(response);
+      chatRequest.current += 1;
       setChat(payload.chat);
       setMessage("");
       setShowAllHistory(true);

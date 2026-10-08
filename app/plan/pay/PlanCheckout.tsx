@@ -249,7 +249,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           {extra ? extra.desc : isHomepage ? (
             <>
               계획서 내용으로 만든 홈페이지를 직접 고치고 인터넷에 공개할 수 있습니다.
-              신청 폼으로 들어온 문의도 이곳에서 확인합니다.
+              신청 폼으로 들어온 문의는 왼쪽 메뉴 ‘내 문의’에서 한곳에 모아 봅니다.
             </>
           ) : (
             <>

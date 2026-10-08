@@ -99,25 +99,28 @@ try {
   const desktopPath = `${root}${fixture.runId}-public-desktop.png`;
   await publicPage.screenshot({ path: desktopPath, fullPage: true }); screenshotPaths.push(desktopPath);
   await publicPage.close();
-  await page.locator("#hk-leads > summary").click();
-  await page.getByRole("button", { name: "문의 새로고침" }).click();
-  await page.locator("#hk-leads").getByText(leadEmail, { exact: true }).waitFor();
-  checks.push("owner refresh shows the inquiry submitted through the public form");
+  // 문의 목록은 왼쪽 메뉴 '내 문의'(/plan/inquiries)로 옮겼다 — 홈페이지 화면 5번 칸은 알림 번호와 링크만
+  const inquiries = await context.newPage();
+  await inquiries.goto(`${LAB_URL}/plan/inquiries`);
+  await inquiries.getByRole("button", { name: "문의 새로고침" }).click();
+  await inquiries.getByText(leadEmail, { exact: true }).waitFor();
+  checks.push("내 문의 shows the inquiry submitted through the public form");
   const failedLeadLoad = (route: any) => route.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: "local simulated outage" }) });
-  await context.route(`${LAB_URL}${apiPath}`, failedLeadLoad);
-  await page.getByRole("button", { name: "문의 새로고침" }).click();
-  await page.locator("#hk-leads [role=alert]").waitFor();
-  assert(!(await page.locator("#hk-leads").innerText()).includes("0건"));
-  await context.unroute(`${LAB_URL}${apiPath}`, failedLeadLoad);
-  await page.getByRole("button", { name: "문의 새로고침" }).click();
-  await page.locator("#hk-leads").getByText(leadEmail, { exact: true }).waitFor();
+  await context.route(`${LAB_URL}/api/plan/inquiries`, failedLeadLoad);
+  await inquiries.getByRole("button", { name: "문의 새로고침" }).click();
+  await inquiries.locator("[aria-label='문의 목록'] [role=alert]").waitFor();
+  assert(!(await inquiries.locator("main").innerText()).includes("아직 들어온 문의가 없어요"));
+  await context.unroute(`${LAB_URL}/api/plan/inquiries`, failedLeadLoad);
+  await inquiries.getByRole("button", { name: "다시 불러오기" }).click();
+  await inquiries.getByText(leadEmail, { exact: true }).waitFor();
   checks.push("a failed inquiry refresh shows an error, not zero inquiries, and retries successfully");
+  await inquiries.close();
   await page.setViewportSize({ width: 390, height: 844 });
   await save("로컬 모바일 검증 평일 10:00-17:00");
   checks.push("390px mobile editor saves and restores the changed field");
   await publish(); checks.push("mobile publish reaches the version-checked API");
   await page.locator("#hk-leads > summary").click();
-  await page.locator("#hk-leads").getByText(leadEmail, { exact: true }).waitFor();
+  await page.locator("#hk-leads .hk-inquiries-link").waitFor();
   const toolbarVisible = await page.locator(".hk-mock-actions").evaluate((element: HTMLElement) => {
     const frame = element.closest(".hk-mock")!.getBoundingClientRect();
     return [...element.querySelectorAll("button")].every(button => {

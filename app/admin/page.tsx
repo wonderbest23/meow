@@ -16,14 +16,14 @@ type Stats = {
     paid7d: number | null;
     refundCount: number | null;
     refundPending: number | null;
-    recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; createdAt: string }>;
+    recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; createdAt: string }> | null;
   };
   inquiries: {
     open: number;
     unread: number;
     total: number;
     recent: Array<{ id: string; preview: string; status: string; updatedAt: string; unread: number }>;
-  };
+  } | null;
   llm: {
     today: number;
     last7d: number;
@@ -175,8 +175,8 @@ export default function AdminDashboardPage() {
         <article>
           <span className="admin-dash-icon inquiry"><Headphones /></span>
           <small>1:1 문의</small>
-          <strong>{stats ? `${stats.inquiries.open}건 진행 중` : "—"}</strong>
-          <em>안 읽음 {stats?.inquiries.unread ?? "—"} · 누적 {stats?.inquiries.total ?? "—"}</em>
+          <strong>{stats?.inquiries ? `${stats.inquiries.open}건 진행 중` : stats ? "불러오지 못함" : "—"}</strong>
+          <em>안 읽음 {stats?.inquiries?.unread ?? "—"} · 누적 {stats?.inquiries?.total ?? "—"}</em>
         </article>
         <article>
           <span className="admin-dash-icon llm"><Zap /></span>
@@ -208,11 +208,13 @@ export default function AdminDashboardPage() {
             <strong>최근 1:1 문의</strong>
             <Link href="/admin/support">전체 보기 →</Link>
           </header>
-          {(stats?.inquiries.recent ?? []).length === 0 ? (
-            <p className="admin-dash-empty">아직 접수된 문의가 없습니다.</p>
+          {stats && !stats.inquiries ? (
+            <p className="admin-dash-empty" role="alert">문의 목록을 불러오지 못했어요. 문의함에서 직접 확인해 주세요.</p>
+          ) : (stats?.inquiries?.recent ?? []).length === 0 ? (
+            <p className="admin-dash-empty">{stats ? "아직 접수된 문의가 없습니다." : "불러오는 중…"}</p>
           ) : (
             <ul>
-              {stats!.inquiries.recent.map((item) => (
+              {stats!.inquiries!.recent.map((item) => (
                 <li key={item.id}>
                   <span className={`admin-dash-badge ${item.status}`}>{item.status === "open" ? "진행 중" : "완료"}</span>
                   <p>{item.preview || "새 상담"}</p>
@@ -229,11 +231,13 @@ export default function AdminDashboardPage() {
             <strong>최근 주문</strong>
             <Link href="/admin/payments">전체 보기 →</Link>
           </header>
-          {(stats?.payments.recentOrders ?? []).length === 0 ? (
-            <p className="admin-dash-empty">아직 주문이 없습니다.</p>
+          {stats && stats.payments.recentOrders === null ? (
+            <p className="admin-dash-empty" role="alert">최근 주문을 불러오지 못했어요.</p>
+          ) : (stats?.payments.recentOrders ?? []).length === 0 ? (
+            <p className="admin-dash-empty">{stats ? "아직 주문이 없습니다." : "불러오는 중…"}</p>
           ) : (
             <ul>
-              {stats!.payments.recentOrders.map((order) => (
+              {stats!.payments.recentOrders!.map((order) => (
                 <li key={order.orderId}>
                   <span className={`admin-dash-badge ${order.status}`}>{orderStatusText[order.status] ?? order.status}</span>
                   <p>{order.orderName || order.orderId}</p>

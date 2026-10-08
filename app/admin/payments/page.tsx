@@ -3,7 +3,7 @@
 import { Banknote, CheckCircle2, Clock3, ExternalLink, FileCheck2, RefreshCw, RotateCcw, XCircle } from "lucide-react";
 import Link from "next/link";
 import AdminNav from "../AdminNav";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 type SessionState = { authenticated: boolean; configured: boolean };
 type AdminTransferOrder = {
@@ -58,10 +58,20 @@ export default function AdminPaymentsPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  const [loadError, setLoadError] = useState("");
+  /* 입금 확인 등을 처리하는 동안은 5초 새로고침을 쉰다 — 늦게 온 옛 목록이 '입금 대기'로 되돌렸다 */
+  const busyRef = useRef(false);
   const load = useCallback(async () => {
-    const data = await payload<{ orders: AdminTransferOrder[] }>(await fetch("/api/admin/payments/orders", { cache: "no-store" }));
-    setOrders(data.orders);
-    setSelectedId((current) => current ?? data.orders[0]?.orderId ?? null);
+    try {
+      const data = await payload<{ orders: AdminTransferOrder[] }>(await fetch("/api/admin/payments/orders", { cache: "no-store" }));
+      if (busyRef.current) return;
+      setOrders(data.orders);
+      setLoadError("");
+      setSelectedId((current) => current ?? data.orders[0]?.orderId ?? null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "주문을 불러오지 못했습니다.");
+      throw error;
+    }
   }, []);
 
   useEffect(() => {
@@ -73,7 +83,7 @@ export default function AdminPaymentsPage() {
 
   useEffect(() => {
     if (!session?.authenticated) return;
-    const timer = window.setInterval(() => void load().catch(() => undefined), 5000);
+    const timer = window.setInterval(() => { if (!busyRef.current) void load().catch(() => undefined); }, 5000);
     return () => window.clearInterval(timer);
   }, [load, session?.authenticated]);
 
@@ -95,7 +105,7 @@ export default function AdminPaymentsPage() {
         : action === "cash_receipt_issued" ? "홈택스에서 현금영수증 발급을 완료했나요?"
           : "이 주문을 취소할까요?";
     if (!window.confirm(warning)) return;
-    setBusy(true); setMessage("");
+    setBusy(true); busyRef.current = true; setMessage("");
     try {
       const data = await payload<{ order: AdminTransferOrder }>(await fetch("/api/admin/payments/orders", {
         method: "PATCH",
@@ -108,8 +118,9 @@ export default function AdminPaymentsPage() {
         : action === "refund" ? "법정 예외 환급 완료 상태로 기록했습니다."
           : action === "cash_receipt_issued" ? "현금영수증 발급 완료로 기록했습니다."
             : "주문을 취소했습니다.");
+      busyRef.current = false;
       await load();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "주문을 처리하지 못했습니다."); } finally { setBusy(false); }
+    } catch (error) { setMessage(error instanceof Error ? error.message : "주문을 처리하지 못했습니다."); } finally { setBusy(false); busyRef.current = false; }
   };
 
   if (!session) return <main className="admin-support-loading"><RefreshCw /> 입금 주문을 불러오는 중입니다.</main>;
@@ -119,7 +130,7 @@ export default function AdminPaymentsPage() {
     <AdminNav title="입금 주문" subtitle="계좌이체 확인·환불·현금영수증 처리" />
     <section className="admin-payment-summary"><div><Clock3 /><span><small>확인할 주문</small><strong>{waitingCount}건</strong></span></div><p>고객의 ‘입금했어요’ 알림만 믿지 말고 카카오뱅크 거래내역의 금액과 입금자명을 직접 대조하세요.</p><button onClick={() => void load()}><RefreshCw /> 새로고침</button></section>
     <div className="admin-payment-workspace">
-      <aside className="admin-payment-orders"><header><strong>최근 계좌이체 주문</strong><span>{orders.length}건</span></header><div>{orders.length === 0 && <p>아직 계좌이체 주문이 없습니다.</p>}{orders.map((order) => <button key={order.orderId} className={selectedId === order.orderId ? "selected" : ""} onClick={() => { setSelectedId(order.orderId); setNote(order.adminNote ?? ""); }}><span><strong>{order.depositorName || "입금자 미입력"}</strong><em className={`status-${order.status}`}>{statusText[order.status] ?? order.status}</em></span><p>{order.opportunityTitle}</p><small>{order.amount.toLocaleString("ko-KR")}원 · {dateTime(order.createdAt)}</small></button>)}</div></aside>
+      <aside className="admin-payment-orders"><header><strong>최근 계좌이체 주문</strong><span>{orders.length}건</span></header><div>{loadError ? <p role="alert">{loadError}</p> : orders.length === 0 && <p>아직 계좌이체 주문이 없습니다.</p>}{orders.map((order) => <button key={order.orderId} className={selectedId === order.orderId ? "selected" : ""} onClick={() => { setSelectedId(order.orderId); setNote(order.adminNote ?? ""); }}><span><strong>{order.depositorName || "입금자 미입력"}</strong><em className={`status-${order.status}`}>{statusText[order.status] ?? order.status}</em></span><p>{order.opportunityTitle}</p><small>{order.amount.toLocaleString("ko-KR")}원 · {dateTime(order.createdAt)}</small></button>)}</div></aside>
       <article className="admin-payment-detail">
         {!selected ? <div className="admin-chat-placeholder"><Banknote /><strong>확인할 주문을 선택하세요</strong><p>입금 대기 주문의 금액과 입금자명을 확인할 수 있습니다.</p></div> : <>
           <header><div><small>{selected.orderId}</small><h1>{selected.opportunityTitle}</h1><span className={`status-${selected.status}`}>{statusText[selected.status] ?? selected.status}</span></div>{selected.projectId && <Link href={`/?view=project&project=${selected.projectId}`} target="_blank">프로젝트 열기 <ExternalLink /></Link>}</header>

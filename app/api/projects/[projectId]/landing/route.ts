@@ -4,7 +4,6 @@ import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { createLandingDraft, landingDraftSchema } from "../../../../../lib/landing/domain";
 import {
   getLandingForProject,
-  listLandingLeads,
   saveLandingDraft,
 } from "../../../../../lib/landing/repository";
 import { getProject } from "../../../../../lib/project-repository";
@@ -24,7 +23,7 @@ export async function GET(
     const project = await getProject(projectId, identity.hash);
     if (!project) throw new Error("PROJECT_NOT_FOUND");
     const site = await getLandingForProject(projectId, identity.hash);
-    const leads = site ? await listLandingLeads(projectId, identity.hash) : [];
+    // 문의(손님 개인정보)는 여기서 보내지 않는다 — '내 문의'가 /api/plan/inquiries 로 따로 읽는다
     const stage = project.stages[4];
     const artifact = stage?.artifacts.find((item) => item.id === stage.approvedArtifactId)
       ?? stage?.artifacts[0];
@@ -51,7 +50,7 @@ export async function GET(
         suggestedDraft.proofItems = proof.items.filter((item): item is string => typeof item === "string");
       }
     }
-    return NextResponse.json({ site, leads, suggestedDraft }, { headers: { "Cache-Control": "private, no-store" } });
+    return NextResponse.json({ site, suggestedDraft }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
     const message = error instanceof Error ? error.message : "랜딩페이지를 불러오지 못했습니다.";
     return NextResponse.json(

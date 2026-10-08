@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
-import { hydrateFromServer, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, lastHydrationFailed, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
 import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
+import { isCoachJobActive, readCoachJob } from "../../../lib/plan-builder/coach-job-types";
 import { journeyNext } from "../../../lib/plan-builder/journey";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
 import frame from "../chat/page.module.css";
@@ -19,6 +20,7 @@ import operatingStyles from "./OperatingWorkspace.module.css";
 import { useHomepage } from "../use-homepage";
 import { NextServices } from "../../../components/next-services";
 import { WorkspaceDocumentStatus, WorkspaceHomepageCare, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
+import { loadAuthSession } from "../../../lib/client/auth-session";
 
 type View = WorkspaceView;
 export default function BusinessWorkspace() {
@@ -42,7 +44,11 @@ export default function BusinessWorkspace() {
     const id = query.get("planId");
     if (["summary","documents","action","launch","operations"].includes(query.get("tab") ?? "")) setView(query.get("tab") as View);
     if (!id) { setLoaded(true); return; }
-    let alive = true, inFlight = false;
+    /*
+     * 10초마다 다시 읽는 것은 문서를 만드는 중이거나 불러오지 못했을 때만 — 예전엔 화면을 열어 둔 내내
+     * 10초마다 사업 전체를 서버에서 다시 읽었다. 화면으로 돌아오면(visibilitychange) 언제든 다시 읽는다.
+     */
+    let alive = true, inFlight = false, keepPolling = true;
     const refresh = async () => {
       if (inFlight || document.hidden) return;
       inFlight = true;
@@ -54,15 +60,20 @@ export default function BusinessWorkspace() {
           router.replace(businessChatHref(found.id));
           return;
         }
-        setPlan(found); setLoaded(true); setLoadError(false);
+        // 서버 목록을 못 불러왔는데 이 사업도 없으면 '선택해 주세요'가 아니라 '불러오지 못했어요'
+        // 전문가 저장 직후 먼저 출발한 새로고침이 늦게 오면 옛 사업으로 되돌리지 않는다
+        setPlan(current => current && found && current.id === found.id && found.updatedAt.localeCompare(current.updatedAt) < 0 ? current : found);
+        setLoaded(true); setLoadError(lastHydrationFailed());
+        let status: string | null = null;
         if (found?.answers.__business_coach) {
           const response = await fetch(`/api/plan/chat?planId=${encodeURIComponent(id)}`, { cache:"no-store" });
-          if (response.ok) { const data=await response.json(); if(alive)setRunStatus(data.runStatus ?? null); }
-          else if(alive)setRunStatus(null);
+          if (response.ok) { const data=await response.json(); status = data.runStatus ?? null; }
+          if(alive)setRunStatus(status);
         }
-      } catch { if(alive){setLoaded(true);setLoadError(true);setRunStatus(null);} } finally { inFlight = false; }
+        keepPolling = lastHydrationFailed() || (!!found && (isCoachJobActive(readCoachJob(found.answers)) || businessHubState(found, status).running));
+      } catch { keepPolling = true; if(alive){setLoaded(true);setLoadError(true);setRunStatus(null);} } finally { inFlight = false; }
     };
-    void refresh(); const interval = window.setInterval(() => void refresh(),10000);
+    void refresh(); const interval = window.setInterval(() => { if (keepPolling) void refresh(); },10000);
     const visible = () => { if (!document.hidden) void refresh(); };
     document.addEventListener("visibilitychange",visible);
     return () => { alive=false;window.clearInterval(interval);document.removeEventListener("visibilitychange",visible); };
@@ -97,7 +108,7 @@ export default function BusinessWorkspace() {
     if (!loaded || plan) return;
     setCurrentPath(`${window.location.pathname}${window.location.search}`);
     let alive = true;
-    fetch("/api/auth/session", { cache: "no-store" }).then(r => r.ok ? r.json() : null).then((d: { authenticated?: boolean } | null) => { if (alive && d) setSignedOut(!d.authenticated); }).catch(() => {});
+    loadAuthSession().then(d => { if (alive) setSignedOut(!d.authenticated); }).catch(() => {});
     return () => { alive = false; };
   }, [loaded, plan]);
   async function mark(status: "done" | "skipped" | "pending") {

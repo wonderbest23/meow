@@ -50,10 +50,18 @@ export default function AdminRefundsPage() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
 
+  /* 목록을 못 불러왔을 때 — '요청 없음'과 구분해 목록 자리에 보인다 */
+  const [loadError, setLoadError] = useState("");
   const load = useCallback(async () => {
-    const data = await payload<{ requests: RefundRequest[] }>(await fetch("/api/admin/refunds", { cache: "no-store" }));
-    setRequests(data.requests);
-    setSelectedId((current) => current ?? data.requests[0]?.id ?? null);
+    try {
+      const data = await payload<{ requests: RefundRequest[] }>(await fetch("/api/admin/refunds", { cache: "no-store" }));
+      setRequests(data.requests);
+      setLoadError("");
+      setSelectedId((current) => current ?? data.requests[0]?.id ?? null);
+    } catch (error) {
+      setLoadError(error instanceof Error ? error.message : "환불 요청을 불러오지 못했습니다.");
+      throw error;
+    }
   }, []);
 
   useEffect(() => {
@@ -136,13 +144,14 @@ export default function AdminRefundsPage() {
       <section className="admin-payment-summary">
         <div><RotateCcw /><span><small>처리 대기</small><strong>{pending}건</strong></span></div>
         <p>‘카드 취소하고 환불 완료’를 누르면 나이스페이로 실제 취소하고 그 상품 이용을 닫습니다. 일부만 돌려줄 때는 금액을 적으세요.</p>
-        <button onClick={() => void load()}><RefreshCw /> 새로고침</button>
+        {/* 카드 취소 중에는 새로고침하지 않는다 — 늦게 온 옛 목록이 '처리 중'으로 되돌렸다 */}
+        <button disabled={busy} onClick={() => void load().catch(() => undefined)}><RefreshCw /> 새로고침</button>
       </section>
       <div className="admin-payment-workspace">
         <aside className="admin-payment-orders">
           <header><strong>환불 요청</strong><span>{requests.length}건</span></header>
           <div>
-            {requests.length === 0 && <p>아직 접수된 환불 요청이 없습니다.</p>}
+            {loadError ? <p role="alert">{loadError}</p> : requests.length === 0 && <p>아직 접수된 환불 요청이 없습니다.</p>}
             {requests.map((item) => (
               <button key={item.id} className={selectedId === item.id ? "selected" : ""} onClick={() => { setSelectedId(item.id); setNote(item.status === "received" ? "" : item.adminNote ?? ""); setAmount(""); setManualTransfer(false); setMessage(""); }}>
                 <span><strong>{item.customerEmail || "이메일 미확인"}</strong><em className={`status-${item.status === "done" ? "done" : item.status === "rejected" ? "canceled" : "deposit_reported"}`}>{statusText[item.status]}</em></span>

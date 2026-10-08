@@ -9,6 +9,7 @@ import styles from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
 import { DEFAULT_LOGO } from "../../components/site-header";
 import BusinessRailTree, { type DocumentToc } from "./BusinessRailTree";
+import { loadAuthSession } from "../../lib/client/auth-session";
 
 /*
  * 왼쪽 메뉴 하나 — 대화·내 사업 화면(BusinessAppChrome)과 문서·결제 화면(PlanShell)이 같이 쓴다.
@@ -40,9 +41,8 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
      * 확인하지 못했으면 단추를 바꾸지 않고 직전 상태를 둔다.
      */
     let alive = true;
-    fetch("/api/auth/session", { cache: "no-store" })
-      .then(r => { if (!r.ok) throw new Error("session unavailable"); return r.json(); })
-      .then((d: { authenticated?: boolean; email?: string | null }) => { if (alive) setAccount({ authenticated: !!d.authenticated, email: d.email ?? null }); })
+    loadAuthSession()
+      .then(d => { if (alive) setAccount({ authenticated: !!d.authenticated, email: d.email ?? null }); })
       .catch(() => { /* 직전 상태 유지 — 처음이면 아무것도 그리지 않는다 */ });
     return () => { alive = false; };
   }, [pathname]);
