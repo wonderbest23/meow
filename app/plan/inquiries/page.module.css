@@ -53,3 +53,6 @@
   .back { display: grid; }
   .thread { padding: 0 16px 24px; }
 }
+
+.retry { margin-left: 6px; padding: 2px 8px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
+.notifyError { display: block; margin-top: 6px; color: #ad343d; font-size: 12px; }

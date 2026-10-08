@@ -51,8 +51,8 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
   const item = (extra = "") => `${styles.railBtn} ${menu.item} ${extra}`;
   const here = (key: RailActive) => (current === key ? "page" as const : undefined);
   const loginNext = encodeURIComponent(pathname || "/plan");
-  /* 내 문의 — 답할 문의 수(로그인했을 때만 센다) */
-  const inquiries = useInquiries();
+  /* 내 문의 — 답할 문의 수(로그인했을 때만 센다 — 로그인 전에는 부르지 않는다) */
+  const inquiries = useInquiries(account?.authenticated === true);
   const openInquiries = inquiries.items ? unansweredCount(inquiries.items) : 0;
 
   /* data-app-rail: 화면 로딩 표시(PlanLoading)가 메뉴 폭만큼 본문 가운데로 옮겨 가는 기준 */

@@ -23,7 +23,7 @@ async function verified(request: Request) {
 export async function GET(request: Request) {
   const limited = await enforceRateLimit("weekly-report-unsubscribe", request, { limit: 30, windowMs: 60_000 });
   if (limited) return limited;
-  if (!(await verified(request))) return page("링크를 확인하지 못했어요", "메일에 있는 링크를 그대로 열어 주세요. 홈페이지 화면의 '접수된 문의'에서도 주간 리포트를 끌 수 있어요.");
+  if (!(await verified(request))) return page("링크를 확인하지 못했어요", "메일에 있는 링크를 그대로 열어 주세요. 홈페이지 화면 5번 '문의 알림'에서도 주간 리포트를 끌 수 있어요.");
   const action = new URL(request.url);
   return page("주간 리포트를 그만 받을까요?", "매주 월요일 아침 지난주 문의·방문 수를 알려 드리는 메일이에요. 끄더라도 홈페이지 문의 알림은 그대로 받습니다.",
     `<form method="post" action="${action.pathname}${action.search.replace(/"/g, "&quot;")}"><button type="submit" style="width:100%;min-height:48px;margin-bottom:16px;border:0;border-radius:10px;background:#3272db;color:#fff;font-size:15px;font-weight:700;">주간 리포트 끄기</button></form>`);
@@ -34,6 +34,6 @@ export async function POST(request: Request) {
   if (limited) return limited;
   const site = await verified(request);
   if (!site) return page("링크를 확인하지 못했어요", "메일에 있는 링크를 그대로 열어 주세요.");
-  if (!(await setWeeklyReportEnabled(site, false))) return page("지금은 끄지 못했어요", "잠시 후 다시 눌러 주세요. 홈페이지 화면의 '접수된 문의'에서도 끌 수 있어요.");
-  return page("주간 리포트를 껐어요", "다시 받고 싶으면 홈페이지 화면의 '접수된 문의'에서 켤 수 있어요.");
+  if (!(await setWeeklyReportEnabled(site, false))) return page("지금은 끄지 못했어요", "잠시 후 다시 눌러 주세요. 홈페이지 화면 5번 '문의 알림'에서도 끌 수 있어요.");
+  return page("주간 리포트를 껐어요", "다시 받고 싶으면 홈페이지 화면 5번 '문의 알림'에서 켤 수 있어요.");
 }

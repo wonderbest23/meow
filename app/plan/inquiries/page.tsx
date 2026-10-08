@@ -43,13 +43,14 @@ export default function InquiriesPage() {
       <aside className={styles.list} aria-label="문의 목록">
         <div className={styles.listHead}>
           <div className={styles.filters} role="tablist" aria-label="문의 보기">
-            <button type="button" role="tab" aria-selected={filter === "all"} onClick={() => setFilter("all")}>전체 {items?.length ?? 0}</button>
-            <button type="button" role="tab" aria-selected={filter === "open"} onClick={() => setFilter("open")}>답할 것 {open}</button>
+            <button type="button" role="tab" aria-selected={filter === "all"} onClick={() => setFilter("all")}>전체{items ? ` ${items.length}` : ""}</button>
+            <button type="button" role="tab" aria-selected={filter === "open"} onClick={() => setFilter("open")}>답할 것{items ? ` ${open}` : ""}</button>
           </div>
           <button type="button" className={styles.refresh} onClick={() => refresh(true)} aria-label="문의 새로고침" title="새로고침"><RefreshCw size={16} /></button>
         </div>
-        {error ? <p className={styles.notice} role="alert">{error}</p> : null}
-        {shown.length === 0 ? <div className={styles.empty}>
+        {error ? <p className={styles.notice} role="alert">{error} <button type="button" className={styles.retry} onClick={() => refresh(true)}>다시 불러오기</button></p> : null}
+        {/* 불러오지 못했으면 '문의 없음'이라고 하지 않는다 — 있는 문의를 없다고 믿게 된다 */}
+        {items === null ? null : shown.length === 0 ? <div className={styles.empty}>
           <Inbox size={28} aria-hidden />
           <strong>{filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"}</strong>
           <p>홈페이지를 공개하면 손님 문의가 여기로 모여요. 들어오면 알림 받을 번호로 문자도 보내 드려요.</p>
@@ -98,7 +99,8 @@ function InquiryDetail({ item, onBack }: { item: Inquiry; onBack: () => void }) 
     </dl>
     <div className={styles.actions}>
       <HomepageLeadActions projectId={item.projectId} lead={lead} businessName={item.businessName} onHandled={(leadId, handledAt) => { setLead(current => ({ ...current, handledAt })); markInquiryHandled(leadId, handledAt); }} />
-      {notifications.items ? <HomepageLeadNotification value={notifications.items.find(entry => entry.leadId === lead.id)} busy={notifications.retrying !== null} onRetry={() => { void notifications.retry(lead.id); }} /> : null}
+      {notifications.items ? <HomepageLeadNotification value={notifications.items.find(entry => entry.leadId === lead.id)} busy={notifications.retrying !== null} onRetry={() => { void notifications.retry(lead.id); }} phoneHref={item.planId ? `${homepageHref(item.planId)}#hk-leads` : undefined} /> : null}
+      {notifications.error ? <small className={styles.notifyError} role="alert">{notifications.error}</small> : null}
     </div>
     <p className={styles.privacy}>손님 개인정보예요. 상담이 끝나면 외부로 옮기거나 공유하지 마세요.</p>
   </div>;

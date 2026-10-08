@@ -13,7 +13,7 @@ export function useHomepageLeadNotifications(projectId: string | null, refresh: 
     setItems(null); setError(""); setRetrying(null);
     if (projectId) fetch(`/api/projects/${projectId}/landing/notifications`, { cache: "no-store", signal: controller.signal })
       .then(async response => { const body = await response.json(); if (!response.ok || !Array.isArray(body.notifications)) throw new Error(); if (!controller.signal.aborted) setItems(body.notifications); })
-      .catch(() => { if (!controller.signal.aborted) setError("메일 알림 상태를 확인하지 못했습니다. 문의 내용은 아래에서 확인할 수 있습니다"); });
+      .catch(() => { if (!controller.signal.aborted) setError("알림 상태를 확인하지 못했어요. 문의 내용과 연락처는 그대로 볼 수 있어요."); });
     return () => { controller.abort(); retryRequest.current?.abort(); };
   }, [projectId, refresh]);
   async function retry(leadId: string) {
@@ -25,21 +25,23 @@ export function useHomepageLeadNotifications(projectId: string | null, refresh: 
       const body = await response.json();
       if (!response.ok || !Array.isArray(body.notifications)) throw new Error();
       if (!controller.signal.aborted) setItems(body.notifications);
-    } catch { if (!controller.signal.aborted) setError("알림 재시도 결과를 확인하지 못했습니다. 새로고침해 확인해 주세요"); }
+    } catch { if (!controller.signal.aborted) setError("알림을 다시 보내지 못했어요. 잠시 후 다시 눌러 주세요."); }
     finally { if (!controller.signal.aborted) setRetrying(null); }
   }
   return { items, error, retrying, retry };
 }
 
-export function HomepageLeadNotification({ value, busy, onRetry }: { value: LeadNotificationSummary | undefined; busy: boolean; onRetry: () => void }) {
+/** phoneHref — 알림 받을 번호가 없을 때 번호를 등록하는 곳(홈페이지 화면 5번 '문의 알림') */
+export function HomepageLeadNotification({ value, busy, onRetry, phoneHref }: { value: LeadNotificationSummary | undefined; busy: boolean; onRetry: () => void; phoneHref?: string }) {
   if (!value) return <small>알림 기록 없음</small>;
   const message = value.errorCode === "missing_email_config" ? "알림 발송 준비 전이라 문의 목록에만 저장됐습니다"
-    : value.errorCode === "recipient_missing" ? "위 '문자 받을 휴대폰'을 등록해 주세요"
+    : value.errorCode === "recipient_missing" ? "문자 받을 휴대폰이 아직 없어요"
     : value.errorCode === "delivery_unknown" ? "발송 여부 확인이 필요합니다"
     : value.errorCode === "provider_rejected" ? "발송 서비스에서 거절했습니다(하루 한도 등)" : "";
   const canRetry = value.attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS && ["pending", "retry", "blocked"].includes(value.status);
   return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
     <small>{LEAD_NOTIFICATION_LABELS[value.status]}{message ? ` · ${message}` : ""}</small>
+    {value.errorCode === "recipient_missing" && phoneHref ? <a href={phoneHref} style={{ fontSize: 12, fontWeight: 700, color: "#365f98" }}>번호 등록하러 가기 →</a> : null}
     {canRetry ? <button type="button" disabled={busy} onClick={onRetry} title="문의 알림 다시 보내기" aria-label="문의 알림 다시 보내기" style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "4px 8px", border: "1px solid #d8e1ed", borderRadius: 6, background: "transparent", color: "#365f98", fontSize: 12 }}>{busy ? <LoaderCircle size={13} className="spin" /> : <RefreshCw size={13} />} 재시도</button> : null}
   </div>;
 }

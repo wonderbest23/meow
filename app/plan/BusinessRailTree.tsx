@@ -28,7 +28,7 @@ function stepFor(pathname: string): JourneyStepId | null {
 
 /* 홈페이지 화면 안의 칸 — 누르면 그 자리로 내려간다 */
 /* 홈페이지 화면의 번호(1~5)와 같은 순서 */
-const HOMEPAGE_PARTS: Array<[string, string]> = [["hk-preview", "미리보기·에디터"], ["hk-contact", "손님 연락 방법"], ["hk-business", "사업자 정보"], ["hk-domain", "내 도메인 연결"], ["hk-leads", "접수된 문의"]];
+const HOMEPAGE_PARTS: Array<[string, string]> = [["hk-preview", "미리보기·에디터"], ["hk-contact", "손님 연락 방법"], ["hk-business", "사업자 정보"], ["hk-domain", "내 도메인 연결"], ["hk-leads", "문의 알림"]];
 function jump(id: string) {
   const el = document.getElementById(id);
   if (!el) return;

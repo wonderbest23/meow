@@ -53,7 +53,10 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
   const [bno, setBno] = useState("");
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState("");
+  /* 등록·신고 확인은 창업 행정 서비스를 받을 때만 쓴다 — 마케팅만 받는 동안은 부르지 않는다 */
+  const adminOffered = SERVICE_GROUPS.some((group) => group.id === "admin");
   useEffect(() => {
+    if (!adminOffered) return;
     const controller = new AbortController();
     fetch(`/api/plan/business-check?planId=${encodeURIComponent(plan.id)}`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
@@ -64,7 +67,7 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, [plan.id]);
+  }, [plan.id, adminOffered]);
   const badges = useMemo(() => {
     const merged: Record<string, ServiceBadge> = { ...baseBadges };
     if (check?.business?.state === "active") {
@@ -153,7 +156,7 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
     {state?.error ? <p className={styles.error} role="alert">{state.error}</p> : null}
 
     {/* 등록·신고 확인은 창업 행정 서비스를 받을 때만 의미가 있다 — 지금은 마케팅만 받는다 */}
-    {checkAvailable && SERVICE_GROUPS.some((group) => group.id === "admin") ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>
+    {checkAvailable && adminOffered ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>
       <div className={styles.verifyHead}><BadgeCheck size={18} aria-hidden /><strong>이미 등록·신고하셨나요?</strong><small>번호만 넣으면 국세청·공정위에서 바로 확인해요</small></div>
       <div className={styles.verifyRow}>
         <input inputMode="numeric" autoComplete="off" value={bno} onChange={(event) => setBno(event.target.value)} placeholder="사업자등록번호 10자리" aria-label="사업자등록번호" />
@@ -248,7 +251,8 @@ export function NextServicesCard({ planId, className }: { planId: string; classN
   useEffect(() => {
     const plan = loadState().plans.find((item) => item.id === planId);
     const badges = serviceBadges(plan ? serviceSignalsFromPlan(plan, true) : { ...EMPTY_SIGNALS, homepagePublished: true });
-    setHighlights(orderServices(SERVICE_CATALOG, badges).filter((item) => badges[item.id]).slice(0, 2).map((item) => item.title));
+    // '먼저 필요해 보여요'는 꼭 필요한 것(먼저 해요·필요해요·확인해요)만 — '추천'만 있으면 모든 사업에 같은 말이 붙는다
+    setHighlights(orderServices(SERVICE_CATALOG, badges).filter((item) => badges[item.id] && badges[item.id].tone !== "suggest").slice(0, 2).map((item) => item.title));
   }, [planId]);
   return <Link className={`${styles.card2} ${className ?? ""}`} href={`${careHref(planId)}#${NEXT_SERVICES_ANCHOR}`}>
     <span>다음 단계</span>

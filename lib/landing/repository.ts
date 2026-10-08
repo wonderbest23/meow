@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "../persistence";
-import { getProject } from "../project-repository";
+import { getProject, listOwnedProjectRefs } from "../project-repository";
 import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { landingDraftFingerprint } from "./save-contract";
 import {
@@ -171,20 +171,64 @@ export async function listLandingLeads(
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) throw error;
-  return (data ?? []).map((lead) => ({
-    id: lead.id,
-    siteId: lead.site_id,
-    name: lead.name,
-    email: lead.email ?? "",
-    phone: lead.phone ?? "",
-    message: lead.message ?? "",
-    privacyAgreed: lead.privacy_agreed,
-    marketingAgreed: lead.marketing_agreed,
-    source: lead.source,
-    createdAt: lead.created_at,
+  return (data ?? []).map(mapLeadRow);
+}
+
+function mapLeadRow(lead: Record<string, unknown>): LandingLeadRecord {
+  return {
+    id: lead.id as string,
+    siteId: lead.site_id as string,
+    name: lead.name as string,
+    email: (lead.email as string | null) ?? "",
+    phone: (lead.phone as string | null) ?? "",
+    message: (lead.message as string | null) ?? "",
+    privacyAgreed: lead.privacy_agreed as boolean,
+    marketingAgreed: lead.marketing_agreed as boolean,
+    source: lead.source as string,
+    createdAt: lead.created_at as string,
     // 칸이 없으면(마이그레이션 20261006090000 전) 키 자체가 없다 — undefined 로 두어 화면이 단추를 숨긴다
     ...("handled_at" in lead ? { handledAt: (lead.handled_at as string | null) ?? null } : {}),
-  }));
+  } as LandingLeadRecord;
+}
+
+export type OwnerInquiry = { lead: LandingLeadRecord; projectId: string; planId: string | null; projectTitle: string; businessName: string };
+
+/**
+ * 내 문의 — 이 주인의 모든 홈페이지 문의를 한 번에(최신순, 최대 300건).
+ * 예전엔 화면이 사업마다 두 번씩 불렀다(사업 8개면 16번) — 서버에서 표 세 번(프로젝트·홈페이지·문의)으로 끝낸다.
+ * 이 기기에 저장된 사업만이 아니라 서버의 모든 사업을 본다.
+ */
+export async function listOwnerInquiries(guestTokenHash: string, limit = 300): Promise<OwnerInquiry[]> {
+  const projects = await listOwnedProjectRefs(guestTokenHash);
+  if (!projects.length) return [];
+  const byProject = new Map(projects.map(project => [project.id, project]));
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const sites = projects.map(project => demo.sites.get(demo.projectIndex.get(project.id) ?? "")).filter((site): site is LandingSiteRecord => Boolean(site));
+    const siteById = new Map(sites.map(site => [site.id, site]));
+    return demo.leads
+      .filter(lead => siteById.has(lead.siteId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit)
+      .map(lead => {
+        const site = siteById.get(lead.siteId)!;
+        const project = byProject.get(site.projectId)!;
+        return { lead: clone(lead), projectId: site.projectId, planId: project.planId, projectTitle: project.title, businessName: site.draft.businessName || project.title };
+      });
+  }
+  const sites = await supabase.from("landing_sites").select("id, project_id, business_name:draft->>businessName").in("project_id", [...byProject.keys()]);
+  if (sites.error) throw sites.error;
+  const siteRows = (sites.data ?? []) as Array<{ id: string; project_id: string; business_name: string | null }>;
+  if (!siteRows.length) return [];
+  const siteById = new Map(siteRows.map(site => [site.id, site]));
+  const leads = await supabase.from("landing_leads").select("*").in("site_id", [...siteById.keys()]).order("created_at", { ascending: false }).limit(limit);
+  if (leads.error) throw leads.error;
+  return (leads.data ?? []).map(row => {
+    const lead = mapLeadRow(row as Record<string, unknown>);
+    const site = siteById.get(lead.siteId)!;
+    const project = byProject.get(site.project_id)!;
+    return { lead, projectId: site.project_id, planId: project.planId, projectTitle: project.title, businessName: site.business_name || project.title };
+  });
 }
 
 /**

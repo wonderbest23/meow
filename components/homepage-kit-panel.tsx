@@ -5,7 +5,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
-import { privacyPolicyWithContact, type LandingDraft, type LandingLeadRecord, type LandingSiteRecord } from "../lib/landing/domain";
+import { privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
+import { unansweredCount, useInquiries } from "../app/plan/inquiries/use-inquiries";
 import { hasUnpublishedEdits } from "../lib/landing/save-contract";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
@@ -167,22 +168,11 @@ export function HomepageKitPanel({
     setPicking(false);
   };
 
-  /* 접수된 문의 — 같은 프로젝트의 landing API 가 돌려준다 */
-  const [leads, setLeads] = useState<LandingLeadRecord[] | null>(null);
-  const [leadsError, setLeadsError] = useState("");
-  useEffect(() => {
-    if (!projectId) return;
-    const controller = new AbortController();
-    setLeads(null); setLeadsError("");
-    fetch(`/api/projects/${projectId}/landing`, { cache: "no-store", signal: controller.signal })
-      .then(async response => {
-        const data = await response.json();
-        if (!response.ok || !Array.isArray(data.leads)) throw new Error("LEADS_LOAD_FAILED");
-        if (!controller.signal.aborted) setLeads(data.leads);
-      })
-      .catch(() => { if (!controller.signal.aborted) setLeadsError("문의를 불러오지 못했습니다. 새로고침해 다시 확인해주세요."); });
-    return () => controller.abort();
-  }, [projectId]);
+  /* 접수된 문의 수 — '내 문의'와 같은 목록을 함께 쓴다(따로 무거운 landing API 를 다시 부르지 않는다) */
+  const inquiries = useInquiries(Boolean(projectId));
+  const leads = inquiries.items ? inquiries.items.filter(item => item.projectId === projectId).map(item => item.lead) : null;
+  const leadsError = inquiries.items ? "" : inquiries.error;
+  const openLeads = leads ? unansweredCount(leads) : 0;
 
   /* 공개 전에 비어 있으면 안 되는 것 — 법정 표기 */
   const missing = [
@@ -416,13 +406,13 @@ export function HomepageKitPanel({
         id="hk-leads"
         icon={<Inbox size={18} />}
         title="문의 알림 · 내 문의"
-        badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{leads.some(lead => lead.handledAt === null) ? ` · 답할 것 ${leads.filter(lead => lead.handledAt === null).length}건` : ""}</em>}
-        hint={draft.leadCaptureEnabled ? "홈페이지 문의 양식으로 들어온 것입니다. 개인정보가 들어 있으니 상담이 끝나면 외부로 옮기거나 공유하지 마세요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
+        badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{openLeads ? ` · 답할 것 ${openLeads}건` : ""}</em>}
+        hint={draft.leadCaptureEnabled ? "새 문의를 문자로 받을 번호를 정해요. 들어온 문의는 왼쪽 메뉴 '내 문의'에서 봐요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
       >
         <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />
         {/* 문의 목록은 왼쪽 메뉴 '내 문의'에서 메신저처럼 본다(소유자 요청 2026-10-07). 여기서는 알림 번호만 정한다 */}
         <a className="hk-inquiries-link" href="/plan/inquiries">
-          <span><strong>내 문의에서 보기</strong><small>{leads === null ? "문의를 확인하고 있어요" : leads.length ? `받은 문의 ${leads.length}건${leads.some(lead => lead.handledAt === null) ? ` · 답할 것 ${leads.filter(lead => lead.handledAt === null).length}건` : ""}` : "아직 들어온 문의가 없어요"}</small></span>
+          <span><strong>내 문의에서 보기</strong><small>{leadsError ? "문의 수를 불러오지 못했어요 · 내 문의에서 다시 확인해 주세요" : leads === null ? "문의를 확인하고 있어요" : leads.length ? `받은 문의 ${leads.length}건${openLeads ? ` · 답할 것 ${openLeads}건` : ""}` : "아직 들어온 문의가 없어요"}</small></span>
           <ChevronDown size={18} aria-hidden style={{ transform: "rotate(-90deg)" }} />
         </a>
       </Fold>

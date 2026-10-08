@@ -173,5 +173,20 @@ const RETIRED = ["business-registration", "mail-order-report", "industry-license
   assert.ok(handled && handled !== "unsupported" && handled.handledAt);
   assert.ok((await listLandingLeads(project.id, "lead-owner"))[0].handledAt, "처리 완료가 목록에 남는다");
   assert.deepEqual(await setLandingLeadHandled(project.id, "lead-owner", lead.id, false), { handledAt: null }, "되돌리기");
+
+  // 8) 내 문의 — 이 주인의 모든 사업 문의를 한 번에(최신순), 남의 문의는 섞이지 않는다
+  const { listOwnerInquiries } = await import("../lib/landing/repository");
+  const second = await createProject({ opportunity: { title: "lead-test-2", planId: "plan_two" }, founderProfile: {}, paymentStatus: "paid", packagePrice: 0 }, "lead-owner");
+  const secondSite = await saveLandingDraft(second.id, "lead-owner", createLandingDraft({ title: "빵집", oneLiner: "빵", customer: "동네", model: "", sector: "" }), { expectedUpdatedAt: null });
+  await new Promise(resolve => setTimeout(resolve, 5));
+  const newer = await createLandingLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?", privacyAgreed: true, marketingAgreed: false, source: "landing" });
+  const other = await createProject({ opportunity: { title: "someone-else" }, founderProfile: {}, paymentStatus: "paid", packagePrice: 0 }, "other-owner");
+  const otherSite = await saveLandingDraft(other.id, "other-owner", createLandingDraft({ title: "남의 가게", oneLiner: "x", customer: "x", model: "", sector: "" }), { expectedUpdatedAt: null });
+  await createLandingLead(otherSite.id, { name: "남의 손님", email: "c@example.com", phone: "", message: "", privacyAgreed: true, marketingAgreed: false, source: "landing" });
+  const mine = await listOwnerInquiries("lead-owner");
+  assert.deepEqual(mine.map(item => item.lead.id), [newer.id, lead.id], "두 사업의 문의를 최신순으로, 남의 문의는 빼고");
+  assert.equal(mine[0].planId, "plan_two");
+  assert.equal(mine[0].projectId, second.id);
+  assert.equal((await listOwnerInquiries("nobody")).length, 0);
   console.log("service-requests: ok");
 })().catch((error) => { console.error(error); process.exitCode = 1; });
