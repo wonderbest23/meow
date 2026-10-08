@@ -243,7 +243,7 @@ class CustomerRelayTests(unittest.TestCase):
         self.temp.cleanup()
 
     def test_fixed_templates_fit_one_sms(self):
-        self.assertEqual(customer_message("homepage-lead", {}), "[오늘창업] 홈페이지에 새 문의가 들어왔어요. 확인: oneulstart.com/plan/homepage")
+        self.assertEqual(customer_message("homepage-lead", {}), "[오늘창업] 홈페이지에 새 문의가 들어왔어요. 확인: oneulstart.com/plan/inquiries")
         biggest = customer_message("weekly-report", {"leads": 9999, "prevLeads": 9999, "views": 99999})
         self.assertLessEqual(sms_bytes(biggest), 90)
         self.assertLessEqual(sms_bytes(customer_message("homepage-lead", {})), 90)
@@ -368,8 +368,8 @@ class V4RelayTests(unittest.TestCase):
     def test_templates(self):
         self.assertEqual(v4_message("payment-paid", {"product": "bundle", "amount": 99000, "orderId": ORDER}), "[오늘창업] 결제 계획서+홈페이지 99,000원 " + ORDER)
         self.assertEqual(v4_message("payment-receipt", {"product": "plan", "orderId": ORDER}), "[오늘창업] 결제 완료 사업계획서 주문 " + ORDER)
-        self.assertEqual(v4_message("homepage-lead-contact", {"name": "김 철수<script>", "phone": "01012345678"}), "[오늘창업] 새 문의 김 철수script 01012345678 확인 oneulstart.com/plan/homepage")
-        self.assertEqual(v4_message("homepage-lead-contact", {"name": "!!!", "phone": ""}), "[오늘창업] 새 문의 이름 없음 확인 oneulstart.com/plan/homepage")
+        self.assertEqual(v4_message("homepage-lead-contact", {"name": "김 철수<script>", "phone": "01012345678"}), "[오늘창업] 새 문의 김 철수script 01012345678 확인 oneulstart.com/plan/inquiries")
+        self.assertEqual(v4_message("homepage-lead-contact", {"name": "!!!", "phone": ""}), "[오늘창업] 새 문의 이름 없음 확인 oneulstart.com/plan/inquiries")
         self.assertEqual(v4_message("lead-received", {"store": "오늘 카페\n☎ 010"}), "[오늘 카페 010] 문의가 접수됐어요. 곧 연락드릴게요.")
         self.assertEqual(v4_message("domain-connect-started", {"domain": "www.mybrand.co.kr"}), "[오늘창업] 도메인 www.mybrand.co.kr 연결을 시작했어요")
         self.assertEqual(v4_message("tax-deadline", {"kind": "income", "days": 7, "month": 5, "day": 31}), "[오늘창업] 종합소득세 신고 마감 D-7 (5/31)")

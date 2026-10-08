@@ -98,7 +98,7 @@ Checked 2026-09-27:
 
 ## Homepage-owner SMS (relay v3, 2026-10-01)
 
-Homepage owners ("사장님") can register a mobile number in the homepage panel ("접수된 문의" → "문의 알림 문자 받을 휴대폰", explicit consent). New homepage inquiries and the Monday weekly report then go to that number by SMS. Email is used only as a fallback when no number is registered and email is configured.
+Homepage owners ("사장님") can register a mobile number in the homepage panel ("내 문의" → "문의 알림 문자 받을 휴대폰", explicit consent). New homepage inquiries and the Monday weekly report then go to that number by SMS. Email is used only as a fallback when no number is registered and email is configured.
 
 - Request v3 carries only `recipient` (010 mobile) and an event type: `homepage-lead` (no params) or `weekly-report` (`leads`, `prevLeads`, `views` integers). The relay builds the text from fixed templates; free text, sender and message fields are rejected. Both templates fit one SMS (≤ 90 EUC-KR bytes) at the largest allowed numbers.
 - The phone is stored in `landing_sites.alert_phone` (+ `alert_phone_agreed_at`, migration `0039_landing_alert_phone.sql`), never in the public homepage draft.

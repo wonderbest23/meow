@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Bot, ChevronRight, CircleUserRound, Home, MessageCircle, MessagesSquare, Send, Settings } from "lucide-react";
-import { clearLocalState, hydrateFromServer, isSamplePlan, type Plan } from "../lib/plan-builder/plan-store";
+import { clearLocalState, hydrateFromServer, lastHydrationFailed, isSamplePlan, type Plan } from "../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../lib/plan-builder/business-hub";
 import { openLogin } from "./login-dialog";
 import styles from "./support-chat-home.module.css";
+import { loadAuthSession } from "../lib/client/auth-session";
 
 /*
  * 상담 창의 홈·설정 탭과 아래 탭 막대 — 메신저형(홈 · 대화 · 설정) 상담 창.
@@ -26,9 +27,8 @@ function useSession(open: boolean) {
   useEffect(() => {
     if (!open) return;
     let alive = true;
-    fetch("/api/auth/session", { cache: "no-store" })
-      .then(response => { if (!response.ok) throw new Error("session unavailable"); return response.json(); })
-      .then((data: { authenticated?: boolean; email?: string | null }) => { if (alive) setSession({ authenticated: !!data.authenticated, email: data.email ?? null }); })
+    loadAuthSession()
+      .then(data => { if (alive) setSession({ authenticated: !!data.authenticated, email: data.email ?? null }); })
       /* 확인하지 못했으면 직전 상태를 둔다 — 로그인한 사람을 로그아웃 상태로 그리지 않게 */
       .catch(() => {});
     return () => { alive = false; };
@@ -38,14 +38,19 @@ function useSession(open: boolean) {
 
 /** 로그인한 사람의 사업 — 최근에 손댄 순서로 세 개까지 */
 function useRecentPlans(session: Session | null) {
-  const [plans, setPlans] = useState<Plan[] | null>(null);
+  const [plans, setPlans] = useState<Plan[] | null | undefined>(null);
   useEffect(() => {
     if (!session?.authenticated) { setPlans(null); return; }
     let alive = true;
     /* 읽기만 한다 — 이 기기에만 있는 변경을 서버로 올리는 건 사업 화면이 맡는다 */
     hydrateFromServer(false)
-      .then(state => { if (alive) setPlans(state.plans.filter(plan => !isSamplePlan(plan.id)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 3)); })
-      .catch(() => { if (alive) setPlans([]); });
+      .then(state => {
+        if (!alive) return;
+        const list = state.plans.filter(plan => !isSamplePlan(plan.id)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 3);
+        // 서버 목록을 못 불러왔는데 저장본도 없으면 '사업 없음'이 아니라 못 불러온 것 — 칸을 숨긴다
+        setPlans(!list.length && lastHydrationFailed() ? undefined : list);
+      })
+      .catch(() => { if (alive) setPlans(undefined); });
     return () => { alive = false; };
   }, [session?.authenticated]);
   return plans;
@@ -76,7 +81,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
       <button type="button" className={styles.secondary} onClick={onConsult}>무료 창업 상담 시작하기</button>
     </section>
 
-    {session?.authenticated && <section className={styles.card} aria-label="내 사업 진행">
+    {session?.authenticated && plans !== undefined && <section className={styles.card} aria-label="내 사업 진행">
       <div className={styles.cardHead}><b>내 사업 진행</b><Link href="/plan" onClick={onClose}>전체 보기</Link></div>
       {plans === null ? <p className={styles.muted}>불러오고 있어요…</p>
         : plans.length === 0 ? <div className={styles.emptyPlans}><p className={styles.muted}>아직 시작한 사업이 없어요.</p><Link href="/plan/chat?new=1" onClick={onClose}>새 대화로 시작하기</Link></div>

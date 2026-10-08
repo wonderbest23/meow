@@ -191,12 +191,13 @@ export function BrainwaveEditor({
     open: false, instruction: "", busy: false, note: "", balance: null, planId: "", packAmount: 9900,
   });
   useEffect(() => {
-    if (!projectId) return;
+    // AI 칸을 열었을 때만 잔액을 읽는다(지금은 AI 고치기 단추가 없어 칸이 열리지 않는다 — 쓸데없는 요청을 안 보낸다)
+    if (!projectId || !ai.open) return;
     fetch(`/api/projects/${projectId}/landing/ai-tokens`, { cache: "no-store" })
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error("TOKENS_UNAVAILABLE"); return r.json(); })
       .then((j: { planId?: string; balance?: TokenBalance; pack?: { amount: number } }) => setAi((s) => ({ ...s, balance: j.balance ?? null, planId: j.planId ?? "", packAmount: j.pack?.amount ?? 9900 })))
-      .catch(() => {});
-  }, [projectId]);
+      .catch(() => setAi((s) => ({ ...s, note: "토큰 잔액을 확인하지 못했어요. 잠시 후 다시 열어 주세요." })));
+  }, [projectId, ai.open]);
   const runAi = async () => {
     if (!projectId || uploading || aiRequest.current || pendingPatchRef.current || ai.instruction.trim().length < 2) return;
     const snapshot = finishText();

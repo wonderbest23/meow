@@ -36,26 +36,38 @@ export default function AdminSupportPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const messageListRef = useRef<HTMLDivElement>(null);
+  /*
+   * 늦게 온 옛 응답을 버리기 위한 번호 — 대화를 바꾼 직후 앞 대화가 늦게 와서 화면을 덮거나,
+   * 답장 직후 먼저 출발한 4초 새로고침이 방금 보낸 답장을 지우던 것을 막는다.
+   */
+  const chatRequest = useRef(0);
+  const listRequest = useRef(0);
+  const selectedRef = useRef<string | null>(null);
+  selectedRef.current = selectedId;
 
   const loadConversations = useCallback(async () => {
+    const request = ++listRequest.current;
     const response = await fetch("/api/admin/support/chat", { cache: "no-store" });
     if (response.status === 401) {
       setSession((current) => ({ authenticated: false, configured: current?.configured ?? true }));
       return [];
     }
     const payload = await responsePayload(response) as { conversations: SupportConversation[] };
+    if (request !== listRequest.current) return payload.conversations;
     setConversations(payload.conversations);
     setSelectedId((current) => current ?? payload.conversations[0]?.id ?? null);
     return payload.conversations;
   }, []);
 
   const loadChat = useCallback(async (conversationId: string) => {
+    const request = ++chatRequest.current;
     const response = await fetch(`/api/admin/support/chat?conversationId=${encodeURIComponent(conversationId)}`, { cache: "no-store" });
     if (response.status === 401) {
       setSession((current) => ({ authenticated: false, configured: current?.configured ?? true }));
       return;
     }
     const payload = await responsePayload(response) as { chat: SupportChat };
+    if (request !== chatRequest.current || selectedRef.current !== conversationId) return;
     setChat(payload.chat);
     setConversations((current) => current.map((item) => item.id === conversationId ? { ...item, unreadByAdmin: 0 } : item));
   }, []);
@@ -82,6 +94,8 @@ export default function AdminSupportPage() {
       setChat({ conversation: null, messages: [] });
       return;
     }
+    // 다른 대화를 고르면 앞 대화를 남겨 두지 않는다 — 답장은 새로 고른 대화로 간다
+    setChat((current) => current.conversation?.id === selectedId ? current : { conversation: null, messages: [] });
     void loadChat(selectedId).catch((loadError) => setError(loadError instanceof Error ? loadError.message : "대화를 불러오지 못했습니다."));
   }, [loadChat, selectedId, session?.authenticated]);
 
@@ -114,13 +128,15 @@ export default function AdminSupportPage() {
     if (!selectedId || !message || busy) return;
     setBusy(true);
     setError("");
+    chatRequest.current += 1;
     try {
       const payload = await responsePayload(await fetch("/api/admin/support/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId: selectedId, message }),
       })) as { chat: SupportChat };
-      setChat(payload.chat);
+      chatRequest.current += 1;
+      if (selectedRef.current === payload.chat.conversation?.id) setChat(payload.chat);
       setReply("");
       await loadConversations();
     } catch (sendError) {
@@ -134,13 +150,15 @@ export default function AdminSupportPage() {
     if (!chat.conversation || busy) return;
     const status = chat.conversation.status === "open" ? "closed" : "open";
     setBusy(true);
+    chatRequest.current += 1;
     try {
       const payload = await responsePayload(await fetch("/api/admin/support/chat", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ conversationId: chat.conversation.id, status }),
       })) as { conversation: SupportConversation };
-      setChat((current) => ({ ...current, conversation: payload.conversation }));
+      chatRequest.current += 1;
+      setChat((current) => current.conversation?.id === payload.conversation.id ? { ...current, conversation: payload.conversation } : current);
       await loadConversations();
     } catch (statusError) {
       setError(statusError instanceof Error ? statusError.message : "상담 상태를 바꾸지 못했습니다.");

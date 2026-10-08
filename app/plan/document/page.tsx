@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useGenerationProgress } from "../GenerationProgress";
 import { useRouter } from "next/navigation";
 import DocumentWorkspace from "./DocumentWorkspace";
-import { hydrateFromServer, assembleSections, activePlan, loadState, isSamplePlan, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, lastHydrationFailed, assembleSections, activePlan, loadState, isSamplePlan, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
@@ -28,6 +28,8 @@ export default function PlanDocumentPage() {
   const [exporting, setExporting] = useState<"pdf" | "docx" | "pptx" | null>(null);
   const [deckError, setDeckError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  /* 주소의 사업을 못 찾았는데 서버 목록도 못 불러왔을 때 — 목록으로 보내지 않고 다시 시도하게 */
+  const [loadFailed, setLoadFailed] = useState(false);
   const [isSample, setIsSample] = useState(false);
   /** 이 문서의 결제 상태 — null이면 확인 중. 잠겨 있으면 버튼에 미리 보여준다 */
   const [access, setAccess] = useState<{ paid: boolean; price: number } | null>(null);
@@ -96,7 +98,8 @@ export default function PlanDocumentPage() {
       if (!alive) return;
       const requested = new URLSearchParams(window.location.search).get("planId");
       if (requested) {
-        if (!s.plans.some(p => p.id === requested)) { router.replace("/plan"); return; }
+        // 서버 목록을 못 불러와서 못 찾은 것이면 목록으로 보내지 않는다(목록도 비어 보인다) — 다시 시도하게
+        if (!s.plans.some(p => p.id === requested)) { if (lastHydrationFailed()) { setLoadFailed(true); setReady(true); return; } router.replace("/plan"); return; }
         s = { ...s, activePlanId: requested }; setActivePlan(requested);
       }
       setSections(assembleSections(s));
@@ -120,7 +123,8 @@ export default function PlanDocumentPage() {
         if (!isSamplePlan(p.id)) {
           fetch(`/api/plan/access?planType=${encodeURIComponent(p.planType)}&planId=${encodeURIComponent(p.id)}`)
             .then((r) => { if (!r.ok) throw new Error("access unavailable"); return r.json(); })
-            .then((d) => { if (alive) setAccess({ paid: !!d.paid, price: Number(d.price) || PACKAGE_AMOUNT }); })
+            // 결제 확인을 못 했다(unavailable)를 '미결제'로 읽지 않는다 — 결제한 사람에게 결제하라고 했다
+            .then((d) => { if (d.unavailable) throw new Error("access unavailable"); if (alive) setAccess({ paid: !!d.paid, price: Number(d.price) || PACKAGE_AMOUNT }); })
             .catch(() => { if (alive) setAccessError(true); });
         }
       }
@@ -265,6 +269,7 @@ export default function PlanDocumentPage() {
       const response = await fetch(`/api/plan/access?planType=${encodeURIComponent(planType)}&planId=${encodeURIComponent(documentPlanId)}`);
       if (!response.ok) throw new Error("access unavailable");
       const data = await response.json();
+      if (data.unavailable) throw new Error("access unavailable");
       setAccess({ paid: !!data.paid, price: Number(data.price) || PACKAGE_AMOUNT });
     } catch { setAccessError(true); }
   }
@@ -279,6 +284,9 @@ export default function PlanDocumentPage() {
       updateSourceStatus(plan);
     }).catch(() => undefined);
   };
+  if (loadFailed) return <main style={{ minHeight: "60vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
+    <div><h1 style={{ fontSize: 20, margin: "0 0 8px" }}>사업계획서를 불러오지 못했어요</h1><p style={{ color: "#667085", margin: "0 0 16px" }}>연결을 확인하고 다시 불러와 주세요. 작성한 내용은 서버에 그대로 있어요.</p><button type="button" onClick={() => window.location.reload()} style={{ padding: "10px 18px", borderRadius: 10, border: 0, background: "#236be5", color: "#fff", fontWeight: 700 }}>다시 불러오기</button></div>
+  </main>;
   return <DocumentWorkspace onReflected={() => generation.restart()} onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {

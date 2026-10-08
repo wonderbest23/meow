@@ -13,6 +13,7 @@ export async function GET(_: Request, context: { params: Promise<{ projectId: st
   const project = await getProject(projectId, identity.hash);
   if (!project) return NextResponse.json({ error: { code: "PROJECT_NOT_FOUND" } }, { status: 404 });
   const planId = String((project.opportunity as { planId?: string } | null)?.planId ?? "");
-  const balance = planId ? await resolveTokenBalance(identity.userId, planId) : { purchased: 0, used: 0, remaining: 0, packSize: TOKEN_PACK_TOKENS };
+  const balance = planId ? await resolveTokenBalance(identity.userId, planId).catch(() => null) : { purchased: 0, used: 0, remaining: 0, packSize: TOKEN_PACK_TOKENS };
+  if (!balance) return NextResponse.json({ error: { code: "TOKENS_UNAVAILABLE", message: "토큰 잔액을 확인하지 못했어요. 잠시 후 다시 확인해 주세요." } }, { status: 503 });
   return NextResponse.json({ planId, balance, pack: { amount: TOKEN_PACK_AMOUNT, tokens: TOKEN_PACK_TOKENS } });
 }

@@ -53,7 +53,9 @@ export async function loadConsultSession(ownerHash: string): Promise<ConsultSess
     .select("profile, messages, turns_today, turns_day")
     .eq("owner_hash", ownerHash)
     .maybeSingle();
-  if (error || !data) return { ...EMPTY };
+  // 읽기 실패를 '빈 상담'으로 바꾸지 않는다 — 예전엔 그 빈 상담에 새 대화를 붙여 저장해 지난 대화가 지워지고 하루 횟수도 0이 됐다
+  if (error) throw error;
+  if (!data) return { ...EMPTY };
   const profile = consultProfileSchema.safeParse(data.profile ?? {});
   return {
     profile: profile.success ? profile.data : {},
@@ -63,12 +65,15 @@ export async function loadConsultSession(ownerHash: string): Promise<ConsultSess
   };
 }
 
-/** 한 번 주고받은 뒤 상태를 갱신한다. 저장에 실패해도 상담은 계속된다. */
+/**
+ * 한 번 주고받은 뒤 상태를 갱신한다. 부르는 쪽은 실패를 무시해도 상담은 계속된다.
+ * 지난 대화를 읽지 못하면 저장하지 않는다(던진다) — 빈 대화로 덮어써 기록을 지우지 않게.
+ */
 export async function saveConsultTurn(
   ownerHash: string,
   next: { profile: ConsultProfile; appended: ConsultTurn[]; turnsToday: number },
 ): Promise<void> {
-  const prev = await loadConsultSession(ownerHash).catch(() => ({ ...EMPTY }));
+  const prev = await loadConsultSession(ownerHash);
   const messages = [...prev.messages, ...next.appended].slice(-MAX_MESSAGES);
   const supabase = getServerSupabase();
   if (!supabase) {

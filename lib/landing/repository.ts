@@ -294,6 +294,8 @@ export async function getWeeklyReportEnabled(siteId: string): Promise<boolean | 
   const supabase = getServerSupabase();
   if (!supabase) return null;
   const { data, error } = await supabase.from("landing_sites").select("weekly_report_opt_out").eq("id", siteId).maybeSingle();
+  // 칸이 없을 때(42703)만 '준비 전' — 그 밖의 읽기 실패는 던져 화면이 '불러오지 못했어요'를 보이게(예전엔 설정 칸이 조용히 사라졌다)
+  if (error && error.code !== "42703") throw error;
   if (error || !data) return null;
   return !data.weekly_report_opt_out;
 }
@@ -303,6 +305,7 @@ export async function getLandingAlertPhone(siteId: string): Promise<string | nul
   const supabase = getServerSupabase();
   if (!supabase) return undefined;
   const { data, error } = await supabase.from("landing_sites").select("alert_phone").eq("id", siteId).maybeSingle();
+  if (error && error.code !== "42703") throw error;
   if (error || !data) return undefined;
   return (data.alert_phone as string | null) ?? null;
 }

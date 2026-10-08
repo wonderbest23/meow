@@ -31,7 +31,8 @@ export async function resolveTokenBalance(userId: string | null, planId: string)
   const packSize = TOKEN_PACK_TOKENS;
   const supabase = getServerSupabase();
   if (!supabase || !userId) return { purchased: 0, used: 0, remaining: 0, packSize };
-  const batches = await purchasedTokenBatches(userId, planId).catch(() => []);
+  // 읽기 실패를 '잔액 0'으로 바꾸지 않는다(던진다) — 산 사람에게 다시 충전하라고 했다
+  const batches = await purchasedTokenBatches(userId, planId);
   const purchased = batches.reduce((sum, batch) => sum + batch.tokens, 0);
   if (!purchased) return { purchased: 0, used: 0, remaining: 0, packSize };
   const { data, error } = await supabase
@@ -41,7 +42,7 @@ export async function resolveTokenBalance(userId: string | null, planId: string)
     .eq("plan_id", planId)
     .eq("ok", true)
     .limit(5000);
-  if (error) return { purchased, used: purchased, remaining: 0, packSize };
+  if (error) throw error;
   // 충전일부터 1년 유효, 먼저 산 토큰부터 차감(환불 기준·결제 화면에 고지한 규칙).
   const uses = (data ?? []).map((row) => ({ at: new Date(String(row.created_at)).getTime(), tokens: (Number(row.input_tokens) || 0) + (Number(row.output_tokens) || 0) }));
   const balance = tokenBalanceWithExpiry(batches, uses, Date.now());

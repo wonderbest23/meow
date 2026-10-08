@@ -31,6 +31,8 @@ export default function InquiriesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const shown = useMemo(() => (items ?? []).filter(item => filter === "all" || item.lead.handledAt === null), [items, filter]);
   const selected = shown.find(item => item.lead.id === selectedId) ?? (items ?? []).find(item => item.lead.id === selectedId) ?? null;
+  // 알림 기록은 홈페이지(사업) 단위 — 같은 사업의 다른 문의를 눌러도 다시 읽지 않게 여기서 한 번 읽는다
+  const notifications = useHomepageLeadNotifications(selected?.projectId ?? null, 0);
   // PC 는 처음에 가장 최근 문의를 열어 둔다(휴대폰은 목록부터)
   useEffect(() => {
     if (selectedId || !items?.length || window.matchMedia("(max-width: 760px)").matches) return;
@@ -69,15 +71,14 @@ export default function InquiriesPage() {
         </ul>}
       </aside>
       <section className={styles.detail} aria-label="문의 내용">
-        {selected ? <InquiryDetail key={selected.lead.id} item={selected} onBack={() => setSelectedId(null)} /> : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>왼쪽에서 문의를 골라 주세요</p></div>}
+        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} onBack={() => setSelectedId(null)} /> : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>왼쪽에서 문의를 골라 주세요</p></div>}
       </section>
     </div>}
   </BusinessAppChrome></main>;
 }
 
-function InquiryDetail({ item, onBack }: { item: Inquiry; onBack: () => void }) {
+function InquiryDetail({ item, notifications, onBack }: { item: Inquiry; notifications: ReturnType<typeof useHomepageLeadNotifications>; onBack: () => void }) {
   const [lead, setLead] = useState(item.lead);
-  const notifications = useHomepageLeadNotifications(item.projectId, 0);
   const at = new Date(lead.createdAt).toLocaleString("ko-KR", { month: "long", day: "numeric", weekday: "short", hour: "numeric", minute: "2-digit" });
   return <div className={styles.thread}>
     <header className={styles.threadHead}>

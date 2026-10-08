@@ -382,8 +382,23 @@ export function setActivePlan(planId: string) {
 }
 
 /** 플랜 삭제 — 서버는 병합 저장이라, 삭제는 명시적 DELETE로 알려야 지워진다. */
+/*
+ * 이 기기에서 지운 사업 — 서버가 지운 것을 확인하기 전에 늦게 온 목록·다른 탭이 되살리지 않게 잠시 기억한다.
+ * (서버도 지운 사업 번호를 남겨 다른 기기의 옛 사본을 받지 않는다)
+ */
+const LOCAL_DELETED_KEY = "plan-builder-deleted-ids";
+function localDeletedIds(): string[] {
+  try { const value = JSON.parse(localStorage.getItem(LOCAL_DELETED_KEY) || "[]"); return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string").slice(-50) : []; } catch { return []; }
+}
+function rememberDeleted(planId: string) {
+  try { localStorage.setItem(LOCAL_DELETED_KEY, JSON.stringify([...localDeletedIds().filter(id => id !== planId), planId].slice(-50))); } catch { /* 이번 화면에서만 */ }
+}
+
 export function deletePlan(planId: string) {
   if (readOnlyPlan(planId)) return;
+  // 지금 오가는 서버 불러오기는 버린다 — 지우기 전 목록이 늦게 오면 이 사업을 되살렸다
+  hydrationRequest++;
+  rememberDeleted(planId);
   const s = loadState();
   s.plans = s.plans.filter((p) => p.id !== planId);
   if (s.activePlanId === planId) s.activePlanId = s.plans[0]?.id ?? null;
@@ -883,6 +898,15 @@ function stateSignature(s: PlanState): string {
     .join("|");
 }
 
+/*
+ * 마지막 서버 불러오기가 실패했는지 — 실패하면 이 기기 저장본을 돌려주는데, 그것만 보고 '사업이 없어요'라고
+ * 하면 다른 기기에서 만든 사업이 없는 줄 안다. 화면은 이것으로 '목록을 확인하지 못했어요'를 띄운다.
+ */
+let hydrationFailed = false;
+export function lastHydrationFailed(): boolean {
+  return hydrationFailed;
+}
+
 /** 서버에서 상태를 불러와 로컬과 병합한다(최신 것이 이긴다) */
 export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
   if (typeof window === "undefined") return loadState();
@@ -939,13 +963,25 @@ export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
        * 이제는 플랜·섹션 단위로 최신 것을 남기고, 로컬에만 있는 내용은 올린다.
        */
       const merged = mergeStates(server, local);
+      // 서버·이 기기에서 지운 사업은 옛 사본이 남아 있어도 뺀다(다른 기기에서 지운 사업이 되살아나지 않게)
+      const deleted = new Set([...(Array.isArray(payload.deletedPlanIds) ? payload.deletedPlanIds.filter((id): id is string => typeof id === "string") : []), ...localDeletedIds()]);
+      // 이 기기에서 지웠는데 서버에 아직 남아 있으면(지우기 요청이 실패했으면) 다시 지운다
+      for (const id of localDeletedIds()) {
+        if (server.plans.some(plan => plan.id === id)) void fetch(`/api/plan/state?planId=${encodeURIComponent(id)}${nextOwner ? `&ownerKey=${encodeURIComponent(nextOwner)}` : ""}`, { method: "DELETE" }).catch(() => {});
+      }
+      if (deleted.size) {
+        merged.plans = merged.plans.filter(plan => !deleted.has(plan.id));
+        if (merged.activePlanId && deleted.has(merged.activePlanId)) merged.activePlanId = merged.plans[0]?.id ?? null;
+      }
       persist(merged);
+      hydrationFailed = false;
       if (autoPush && stateSignature(merged) !== stateSignature(server)) void pushToServer();
     } else if (request === hydrationRequest) {
       ownerVerified = false;
+      hydrationFailed = true;
     }
   } catch {
-    if (request === hydrationRequest) ownerVerified = false;
+    if (request === hydrationRequest) { ownerVerified = false; hydrationFailed = true; }
     // 서버 실패 → 로컬 캐시 사용
   }
   return loadState();

@@ -48,7 +48,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   if (!parsed.success) return NextResponse.json({ error: { code: "BAD_REQUEST", message: "지시문을 확인해 주세요." } }, { status: 400 });
   const body = parsed.data;
 
-  const balance = await resolveTokenBalance(identity.userId, planId);
+  const balance = await resolveTokenBalance(identity.userId, planId).catch(() => null);
+  if (!balance) return NextResponse.json({ error: { code: "TOKENS_UNAVAILABLE", message: "토큰 잔액을 확인하지 못했어요. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
   if (balance.remaining < MIN_TOKENS) {
     return NextResponse.json({ error: { code: "TOKENS_REQUIRED", message: "AI 수정 토큰이 부족합니다. 토큰을 충전해 주세요." }, balance }, { status: 402 });
   }
@@ -98,6 +99,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   for (const [id, value] of Object.entries(result ?? {})) {
     if (known.has(id) && typeof value === "string" && value.trim()) texts[id] = value.slice(0, 4000);
   }
-  const after = await resolveTokenBalance(identity.userId, planId);
+  // 고친 결과는 이미 나왔다 — 잔액을 다시 못 읽어도 결과는 돌려준다(화면은 잔액을 그대로 둔다)
+  const after = await resolveTokenBalance(identity.userId, planId).catch(() => null);
   return NextResponse.json({ texts, changed: Object.keys(texts).length, usage, balance: after });
 }

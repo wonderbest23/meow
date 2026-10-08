@@ -27,7 +27,8 @@ export async function GET() {
   try {
     return privateJson({ requests: await listMyRefundRequests(user.id) });
   } catch {
-    return privateJson({ requests: [] });
+    // 빈 목록으로 답하지 않는다 — 화면이 '환불 접수됨'을 지우고 '환불 요청' 단추를 다시 보였다
+    return privateJson({ error: { code: "REFUND_LIST_UNAVAILABLE", message: "환불 상태를 확인하지 못했어요." } }, { status: 503 });
   }
 }
 

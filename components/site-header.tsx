@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Search, UserRound } from "lucide-react";
 import { CtaArrow } from "./cta-arrow";
+import { loadAuthSession } from "../lib/client/auth-session";
 
 /*
  * 화면 맨 위 띠.
@@ -33,9 +34,8 @@ function AccountActions() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => {
     let alive = true;
-    fetch("/api/auth/session", { cache: "no-store" })
-      .then(response => { if (!response.ok) throw new Error("session unavailable"); return response.json(); })
-      .then((data: { authenticated?: boolean }) => { if (alive) setSignedIn(!!data.authenticated); })
+    loadAuthSession()
+      .then(data => { if (alive) setSignedIn(!!data.authenticated); })
       /* 확인하지 못했으면 아무것도 그리지 않는다 — 로그인한 사람에게 로그인 단추가 뜨지 않게 */
       .catch(() => {});
     return () => { alive = false; };

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, MoreHorizontal, FileText, MessageSquareText } from "lucide-react";
 import { currentBusinessDesign } from "../../lib/plan-builder/coach";
-import { hydrateFromServer, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
+import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
@@ -36,7 +36,9 @@ export default function PlanList() {
   const [error, setError] = useState("");
   useEffect(() => {
     let alive = true;
-    const refresh = () => { void hydrateFromServer().then(s => { if (alive) { setState(s); setError(""); } }).catch(() => { if (alive) { setState(loadState()); setError("최신 목록을 확인하지 못했어요. 기기에 저장된 내용을 표시합니다."); } }); };
+    const failed = "최신 목록을 확인하지 못했어요. 기기에 저장된 내용을 표시합니다.";
+    // hydrateFromServer 는 실패해도 기기 저장본을 돌려준다 — 실패 여부는 따로 확인한다
+    const refresh = () => { void hydrateFromServer().then(s => { if (alive) { setState(s); setError(lastHydrationFailed() ? failed : ""); } }).catch(() => { if (alive) { setState(loadState()); setError(failed); } }); };
     refresh();
     const visible = () => { if (!document.hidden) refresh(); };
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible);
@@ -57,7 +59,7 @@ export default function PlanList() {
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
   return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="plans" backHref="/">
     {!state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
-        {plans.length === 0 ? <BusinessEmptyState kind="plans" /> : <>
+        {plans.length === 0 && error ? <p role="alert" className={styles.error}>사업 목록을 불러오지 못했어요. 연결을 확인하고 새로고침해 주세요.</p> : plans.length === 0 ? <BusinessEmptyState kind="plans" /> : <>
           <div className={styles.heading}><div><span className={styles.eyebrow}>대화와 자료, 다음 할 일을 한곳에서</span><h1>내 사업</h1></div><Link className={styles.secondary} href="/plan/chat?new=1">새 대화</Link></div>
           <nav className={styles.filters} aria-label="사업 필터">{FILTERS.map(([id,label]) => <button key={id} aria-pressed={filter===id} onClick={() => setFilter(id)}>{label}</button>)}</nav>
           <div className={list.businessList}>

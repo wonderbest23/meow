@@ -16,7 +16,7 @@ import { aiFillLanded, aiFillMark, needsAutoAiFill } from "../../../lib/landing/
 import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
-import { hydrateFromServer, activePlan, loadState, isSamplePlan, planOwnerEpoch, setActivePlan, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, activePlan, lastHydrationFailed, loadState, isSamplePlan, planOwnerEpoch, setActivePlan, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { hasUnpublishedEdits, landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import Link from "next/link";
@@ -179,6 +179,16 @@ export default function PlanHomepagePage() {
       /* 문서 화면의 '홈페이지 만들기'처럼 주소로 사업을 고르면 그 사업으로 연다 */
       const requested = new URLSearchParams(window.location.search).get("planId");
       if (requested && state.plans.some(item => item.id === requested)) { setActivePlan(requested); state = { ...state, activePlanId: requested }; }
+      else if (requested) {
+        /*
+         * 주소로 고른 사업을 못 찾았으면 다른 사업으로 넘어가지 않는다 — 예전엔 마지막에 보던 사업으로 넘어가
+         * 그 사업의 홈페이지를 만들고 AI 채우기까지 시작했다(다른 기기에서 만든 사업·목록을 못 불러온 때).
+         */
+        if (!alive) return;
+        setBlocked({ title: "이 사업을 찾지 못했어요", detail: lastHydrationFailed() ? "사업 목록을 불러오지 못했어요. 연결을 확인하고 새로고침해 주세요." : "삭제했거나 다른 계정의 사업일 수 있어요. 내 사업에서 다시 골라 주세요.", missing: [], cta: "plan" });
+        setPhase("blocked");
+        return;
+      }
       const plan = activePlan(state);
       if (!alive) return;
       setScreenPlanId(plan?.id ?? null);
@@ -382,6 +392,12 @@ export default function PlanHomepagePage() {
     setDraft(next); setAction("idle"); setMessage("저장되지 않은 변경사항이 있습니다.");
   };
   const updateSite = (next: LandingSiteRecord) => {
+    /*
+     * 지금 가진 것보다 옛 홈페이지 정보면 버린다 — 도메인 상태 확인(8초마다)이 공개·저장 직전에 읽은 정보를
+     * 늦게 돌려주면, 화면이 '아직 비공개'로 돌아가고 유지보수가 다시 잠겼다.
+     */
+    const held = siteRef.current;
+    if (held && held.id === next.id && next.updatedAt < held.updatedAt) return;
     if (site && landingDraftFingerprint(site.draft) !== landingDraftFingerprint(next.draft)) {
       setMessage("다른 화면에서 초안이 변경됐습니다. 현재 수정 내용은 유지했어요. 최신 내용을 확인해주세요.");
       return;

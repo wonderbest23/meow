@@ -130,7 +130,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     setConfirm("archive");
   }
   return <div className={styles.root}>
-    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2><p>운영 기록 {state?.periods.length ?? 0}개 <span aria-hidden="true">·</span> 개선 리포트 {state?.reports.length ?? 0}개</p></div>{state && !editor && mode === "periods" && <button className={styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
+    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{state ? <p>운영 기록 {state.periods.length}개 <span aria-hidden="true">·</span> 개선 리포트 {state.reports.length}개</p> : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{state && !editor && mode === "periods" && <button className={styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
     <div className={styles.tabs} role="group" aria-label="운영 기록 보기"><button aria-pressed={mode === "periods"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("periods")}>기간별 실적</button><button aria-pressed={mode === "reports"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("reports")}>리포트 보관함</button></div>
     {error && <div role="alert" className={styles.error}><p>{error}</p><button type="button" disabled={busy} onClick={() => void reload()}>서버 기록 다시 확인</button>{editor && <p>입력 중인 내용은 유지됩니다. 충돌한 기록은 취소 후 다시 열어 수정해 주세요.</p>}</div>}
     {notice && <p role="status" className={styles.success}>{notice}</p>}

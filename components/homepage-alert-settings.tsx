@@ -1,7 +1,7 @@
 "use client";
 
 import { apiMessage, userErrorMessage } from "../lib/client/user-error";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Settings = { phone: string | null; phoneReady: boolean; weeklyEnabled: boolean | null; published: boolean; smsReady: boolean; emailReady: boolean };
 
@@ -17,20 +17,34 @@ export function HomepageAlertSettings({ projectId, suggestedPhone }: { projectId
   const [agreed, setAgreed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [loadError, setLoadError] = useState(false);
+  const [reload, setReload] = useState(0);
+  /*
+   * 가게 전화(제안 번호)는 처음 채울 때만 쓴다 — 예전엔 사업자 정보 칸에 전화번호를 한 글자 칠 때마다
+   * 설정을 다시 불러와, 여기 적던 알림 번호가 지워졌다.
+   */
+  const suggestedRef = useRef(suggestedPhone);
+  const touched = useRef(false);
+  useEffect(() => { suggestedRef.current = suggestedPhone; }, [suggestedPhone]);
   useEffect(() => {
     if (!projectId) return;
     const controller = new AbortController();
+    setLoadError(false);
     void fetch(`/api/projects/${projectId}/landing/alerts`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
-        if (!response.ok) return;
+        // 404(홈페이지 없음)·401(로그인 전)은 칸을 숨기고, 그 밖의 실패는 '불러오지 못했어요'
+        if (response.status === 404 || response.status === 401) return;
+        if (!response.ok) throw new Error("ALERT_SETTINGS_UNAVAILABLE");
         const data = await response.json() as Settings;
         setSettings(data);
-        const suggested = (suggestedPhone ?? "").replace(/[\s-]/g, "");
+        if (touched.current) return;
+        const suggested = (suggestedRef.current ?? "").replace(/[\s-]/g, "");
         setPhone(data.phone ? pretty(data.phone) : /^010\d{8}$/.test(suggested) ? pretty(suggested) : "");
       })
-      .catch(() => undefined);
+      .catch(() => { if (!controller.signal.aborted) setLoadError(true); });
     return () => controller.abort();
-  }, [projectId, suggestedPhone]);
+  }, [projectId, reload]);
+  if (projectId && loadError && !settings) return <div className="hk-alerts"><p className="hk-empty" role="alert">문자 알림 설정을 불러오지 못했어요. <button type="button" className="hk-url-btn" onClick={() => setReload((n) => n + 1)}>다시 불러오기</button></p></div>;
   if (!projectId || !settings || !settings.phoneReady) return null;
 
   const save = async (body: Record<string, unknown>, done: string) => {
@@ -49,12 +63,12 @@ export function HomepageAlertSettings({ projectId, suggestedPhone }: { projectId
     <div className="hk-alerts">
       <form onSubmit={(event) => { event.preventDefault(); void save({ phone: typed, agreed }, typed ? "문자 받을 휴대폰을 저장했어요." : "문자 알림을 껐어요."); }}>
         <label className="hk-alerts-phone"><span>문의 알림 문자 받을 휴대폰</span>
-          <input value={phone} onChange={(event) => { setPhone(event.target.value); setMessage(""); }} inputMode="tel" placeholder="010-1234-5678" autoComplete="tel" />
+          <input value={phone} onChange={(event) => { touched.current = true; setPhone(event.target.value); setMessage(""); }} inputMode="tel" placeholder="010-1234-5678" autoComplete="tel" />
         </label>
         {changed && typed ? <label className="hk-alerts-agree"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span>새 문의(문의자 이름·연락처 포함), 주간 리포트, 세금 신고 마감·도메인 연결 안내를 이 번호로 문자로 받는 데 동의합니다. 번호는 알림에만 쓰고 홈페이지에 공개하지 않아요.</span></label> : null}
         <button type="submit" disabled={busy || !changed || (Boolean(typed) && !agreed)}>{typed ? "저장" : "문자 끄기"}</button>
       </form>
-      <small>{!settings.smsReady ? "문자 발송 준비가 끝나면 이 번호로 알림이 가요. 지금 들어온 문의는 아래 목록에 그대로 쌓여요."
+      <small>{!settings.smsReady ? "문자 발송 준비가 끝나면 이 번호로 알림이 가요. 지금 들어온 문의는 왼쪽 메뉴 ‘내 문의’에 그대로 쌓여요."
         : settings.phone ? `새 문의가 들어오면 ${pretty(settings.phone)}로 문의자 이름·연락처를 바로 문자로 보내 드려요.` : "번호를 등록하면 새 문의가 들어올 때 바로 문자를 보내 드려요."}</small>
       {settings.weeklyEnabled !== null ? (
         <label className="hk-alerts-weekly">

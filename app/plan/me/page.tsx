@@ -3,12 +3,13 @@
 import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { hydrateFromServer, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
 import PlanLoading from "../PlanLoading";
+import { loadAuthSession } from "../../../lib/client/auth-session";
 
 /*
  * /plan/me — 마이페이지.
@@ -51,8 +52,11 @@ export default function PlanMePage() {
   const [paymentsFailed, setPaymentsFailed] = useState(false);
   const [payments, setPayments] = useState<PaymentHistoryItem[] | null>(null);
   const [state, setState] = useState<PlanState | null>(null);
+  /* 서버 목록을 못 불러와 이 기기 저장본만 보이는지 — 그때 0개를 '사업 없음'이라고 하지 않는다 */
+  const [plansStale, setPlansStale] = useState(false);
   /** orderId → 환불 요청 상태 */
   const [refunds, setRefunds] = useState<Record<string, RefundInfo>>({});
+  const [refundsFailed, setRefundsFailed] = useState(false);
   /** 환불 사유 입력을 연 주문 */
   const [refundFor, setRefundFor] = useState<string | null>(null);
   const [refundReason, setRefundReason] = useState("");
@@ -93,7 +97,7 @@ export default function PlanMePage() {
      * 결제 정보(/api/plan/access)는 이용 상태 표시에만 쓰고, 그게 실패해도 로그인 안내로 바꾸지 않는다.
      */
     Promise.all([
-      fetch("/api/auth/session", { cache: "no-store" }).then((r) => { if (!r.ok) throw new Error("session unavailable"); return r.json() as Promise<{ authenticated?: boolean; email?: string | null }>; }),
+      loadAuthSession(),
       fetch("/api/plan/access", { cache: "no-store" }).then((r) => (r.ok ? r.json() : null)).catch(() => null) as Promise<{ allAccess?: boolean; hasAnyPaid?: boolean; unavailable?: boolean } | null>,
     ])
       .then(([session, access]) => {
@@ -108,17 +112,19 @@ export default function PlanMePage() {
           .then((data: { payments?: PaymentHistoryItem[] }) => alive && setPayments(data.payments ?? []))
           .catch(() => { if (alive) { setPayments([]); setPaymentsFailed(true); } });
         void fetch("/api/plan/refund", { cache: "no-store" })
-          .then((r) => (r.ok ? r.json() : { requests: [] }))
+          .then((r) => { if (!r.ok) throw new Error("refunds unavailable"); return r.json(); })
           .then((data: { requests?: RefundInfo[] }) => {
             if (!alive) return;
             const map: Record<string, RefundInfo> = {};
             for (const item of data.requests ?? []) map[item.orderId] = item;
-            setRefunds(map);
+            // 그사이 이 화면에서 접수한 요청은 남긴다(늦게 온 목록이 지우지 않게)
+            setRefunds((current) => ({ ...current, ...map }));
+            setRefundsFailed(false);
           })
-          .catch(() => undefined);
+          .catch(() => { if (alive) setRefundsFailed(true); });
       })
       .catch(() => alive && setLoadFailed(true));
-    void hydrateFromServer().catch(() => loadState()).then((s) => alive && setState(s));
+    void hydrateFromServer().catch(() => loadState()).then((s) => { if (!alive) return; setState(s); setPlansStale(lastHydrationFailed()); });
     return () => {
       alive = false;
     };
@@ -227,7 +233,7 @@ export default function PlanMePage() {
           </div>
           <div className={styles.row}>
             <dt>내 사업</dt>
-            <dd>{myPlans.length}개</dd>
+            <dd>{plansStale && !myPlans.length ? "확인하지 못했어요" : `${myPlans.length}개${plansStale ? " (이 기기 기준)" : ""}`}</dd>
           </div>
         </dl>
         {logoutMessage && <p className={styles.empty} role="alert">{logoutMessage}</p>}
@@ -248,7 +254,7 @@ export default function PlanMePage() {
             ))}
           </dl>
         ) : (
-          <p className={styles.empty}>아직 시작한 사업이 없습니다. <Link href="/plan/chat?new=1">새 대화로 시작하기</Link></p>
+          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <p className={styles.empty}>아직 시작한 사업이 없습니다. <Link href="/plan/chat?new=1">새 대화로 시작하기</Link></p>
         )}
       </section>
 
@@ -296,6 +302,9 @@ export default function PlanMePage() {
                         </>
                       ) : item.status !== "done" ? (
                         <span className={styles.refundNa}>—</span>
+                      ) : refundsFailed ? (
+                        /* 환불 상태를 못 읽었으면 '환불 요청'을 다시 보이지 않는다(이미 접수했을 수 있다) */
+                        <small style={{ color: "var(--text-soft, #667085)" }}>환불 상태를 확인하지 못했어요</small>
                       ) : (
                         <button type="button" className={styles.refundBtn} onClick={() => { setRefundFor(refundFor === item.orderId ? null : item.orderId); setRefundReason(""); setRefundMessage(""); }}>
                           환불 요청
