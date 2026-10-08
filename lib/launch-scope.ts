@@ -36,12 +36,22 @@ export const CLOSED_API_PATTERNS: readonly RegExp[] = [
   /^\/api\/projects\/[^/]+\/landing\/(ai-edit|ai-tokens|rollback)\/?$/, // 홈페이지 AI 수정(단추 없음)·되돌리기(부르는 곳 없음)
 ];
 
+/*
+ * 운영 여부는 빌드 때 값이 박히는 형태(process.env.NODE_ENV 를 그대로 쓴 식)로 읽는다. 예전엔 기본값을 process.env 객체로
+ * 넘겨 실행 중에 읽었는데, Cloudflare 에서는 새로 뜬 isolate 의 첫 요청 때 process.env.NODE_ENV 가 비어 있어
+ * 닫은 주소가 서버마다 열렸다 닫혔다 했다(2026-10-08 운영 확인).
+ */
+type ScopeEnv = { NODE_ENV?: string; APP_ENV?: string };
+function runtimeEnv(): ScopeEnv {
+  return { NODE_ENV: process.env.NODE_ENV, APP_ENV: process.env.APP_ENV || process.env.NEXT_PUBLIC_APP_ENV };
+}
+
 function matches(pathname: string, prefixes: readonly string[]) {
   return prefixes.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 /** 운영 손님에게 닫힌 주소인지 — env 는 시험용으로 넘길 수 있다 */
-export function closedForLaunch(pathname: string, env: { NODE_ENV?: string; APP_ENV?: string } = process.env): "page" | "api" | null {
+export function closedForLaunch(pathname: string, env: ScopeEnv = runtimeEnv()): "page" | "api" | null {
   if (env.NODE_ENV !== "production") return null;
   if (env.APP_ENV === "staging" || env.APP_ENV === "prelaunch") return null;
   if (matches(pathname, CLOSED_API_PREFIXES) || CLOSED_API_PATTERNS.some(pattern => pattern.test(pathname))) return "api";
@@ -55,7 +65,7 @@ export function closedForLaunch(pathname: string, env: { NODE_ENV?: string; APP_
  */
 const ADMIN_HOSTS = new Set(["oneulstart.com", "www.oneulstart.com"]);
 
-export function adminClosedOnHost(pathname: string, hostname: string, env: { NODE_ENV?: string; APP_ENV?: string } = process.env): "page" | "api" | null {
+export function adminClosedOnHost(pathname: string, hostname: string, env: ScopeEnv = runtimeEnv()): "page" | "api" | null {
   if (env.NODE_ENV !== "production" || env.APP_ENV === "staging" || env.APP_ENV === "prelaunch") return null;
   const admin = matches(pathname, ["/api/admin"]) ? "api" : matches(pathname, ["/admin"]) ? "page" : null;
   if (!admin) return null;
