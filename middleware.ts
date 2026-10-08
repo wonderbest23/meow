@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { closedForLaunch } from "./lib/launch-scope";
+import { adminClosedOnHost, closedForLaunch } from "./lib/launch-scope";
 import { adminCookieName, resolveScope, verifyAdminSessionToken } from "./lib/support-chat/admin-session";
 
 // Admin API endpoints that must stay reachable without an existing admin session:
@@ -31,7 +31,7 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // 오픈 범위 밖(개발용 화면·덜 만든 기능·옛 기능)은 운영에서 없는 주소로 답한다(lib/launch-scope.ts)
-  const closed = closedForLaunch(pathname);
+  const closed = closedForLaunch(pathname) ?? adminClosedOnHost(pathname, request.headers.get("host") ?? request.nextUrl.hostname);
   if (closed === "api") {
     const gone = NextResponse.json({ error: { code: "NOT_FOUND", message: "없는 주소입니다." } }, { status: 404 });
     gone.headers.set("Cache-Control", "no-store");

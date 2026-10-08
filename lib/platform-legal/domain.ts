@@ -216,7 +216,6 @@ const PRODUCT_ITEMS = [
   `${BUNDLE_PRODUCT_NAME}: ${won(BUNDLE_PRODUCT_AMOUNT)}(부가세 포함, 같은 사업의 문서 1부와 홈페이지 1개를 함께 제공)`,
   `${DOMAIN_PRODUCT_NAME}: ${won(DOMAIN_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. 도메인 등록비는 별도)`,
   `${DOMAIN_PURCHASE_PRODUCT_NAME}: ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. .com·.kr·.co.kr 주소의 첫해 등록비 ${won(DOMAIN_PURCHASE_REGISTRATION_AMOUNT)} 포함)`,
-  `${TOKEN_PACK_NAME}: ${won(TOKEN_PACK_AMOUNT)}(부가세 포함, ${tokenCount(TOKEN_PACK_TOKENS)} 토큰, 충전일부터 ${TOKEN_VALIDITY} 유효)`,
   `다시 생성 ${REGEN_PACK_COUNT}회 추가: ${won(REGEN_PACK_AMOUNT)}(부가세 포함)`,
 ];
 
@@ -283,9 +282,9 @@ function businessDocument(settings: PlatformLegalSettings): LegalDocument {
       title: "판매 사이트 정보",
       items: [
         "판매 방식: 인터넷",
-        "취급 품목: 맞춤 사업계획서 등 디지털 문서, 홈페이지 자동 제작과 도메인 연결·호스팅, 홈페이지 AI 수정 토큰, 맞춤 홈페이지 디자인·개발",
+        // 오픈 범위(2026-10-08): AI 수정 토큰·맞춤 홈페이지 제작은 팔지 않는다(이미 산 토큰의 환불 기준은 아래 그대로)
+        "취급 품목: 맞춤 사업계획서 등 디지털 문서, 홈페이지 자동 제작과 도메인 연결·호스팅",
         ...PRODUCT_ITEMS,
-        `맞춤 홈페이지 제작: ${won(CUSTOM_HOMEPAGE_FROM_AMOUNT)}부터(상담 후 범위와 금액 확정)`,
         `결제 방법: ${PAYMENT_METHODS}`,
         `서비스 제공 시기: ${settings.serviceSupplyTiming}`,
       ],
@@ -302,6 +301,7 @@ function businessDocument(settings: PlatformLegalSettings): LegalDocument {
 
 /** 개인정보처리방침 변경 이력 (최신이 위). 방침 본문을 바꾸면 여기에 한 줄 추가한다. */
 export const PRIVACY_POLICY_HISTORY = [
+  { date: "2026-10-08", summary: "홈페이지 방문자에게 보내던 접수 확인 문자 중단(방문자 휴대폰 번호는 홈페이지 운영자 전달에만 사용)" },
   { date: "2026-10-06", summary: "도메인 명의자 정보를 결제 화면에서 받고, .com 도메인 등록기관 Cloudflare(미국) 국외 이전 추가. 결제 완료 안내 문자(선택 휴대폰), 세금 신고 마감·도메인 연결 문자, 홈페이지 문의자 이름·연락처의 운영자 문자 전달과 방문자 접수 확인 문자 추가" },
   { date: "2026-10-05", summary: "결제 수단을 신용·체크카드로 한정하고, 계좌이체 관련 항목은 이전 주문의 처리 기준으로 정리" },
   { date: "2026-10-01", summary: "홈페이지 문의·주간 리포트 문자 알림(선택)의 휴대폰 번호 수집과 문자 발송 수탁사(알리고) 추가" },
@@ -415,7 +415,7 @@ function privacyDocument(settings: PlatformLegalSettings): LegalDocument {
       },
       {
         title: "6. 이용자 홈페이지 방문자의 개인정보",
-        paragraphs: ["이용자가 오늘창업으로 만든 홈페이지에서 문의를 받으면, 방문자가 입력한 이름, 연락처, 이메일, 문의 내용과 동의 여부를 저장해 해당 홈페이지 운영자(이용자)에게 전달합니다. 운영자가 문자 알림을 켜 두었으면 문의자의 이름·연락처가 홈페이지 운영자에게 문자로 전달되고(문의 내용은 빠집니다), 방문자가 휴대폰 번호를 남기면 접수 확인 문자를 한 번 보냅니다. 이 정보의 처리자는 홈페이지 운영자이며, 오늘창업은 운영자를 위해 저장·전달을 대신하는 수탁자입니다. 방문자는 홈페이지 운영자에게 열람·삭제 등을 요청할 수 있고, 운영자가 해당 프로젝트를 삭제하면 함께 삭제됩니다."],
+        paragraphs: ["이용자가 오늘창업으로 만든 홈페이지에서 문의를 받으면, 방문자가 입력한 이름, 연락처, 이메일, 문의 내용과 동의 여부를 저장해 해당 홈페이지 운영자(이용자)에게 전달합니다. 운영자가 문자 알림을 켜 두었으면 문의자의 이름·연락처가 홈페이지 운영자에게 문자로 전달되고(문의 내용은 빠집니다). 이 정보의 처리자는 홈페이지 운영자이며, 오늘창업은 운영자를 위해 저장·전달을 대신하는 수탁자입니다. 방문자는 홈페이지 운영자에게 열람·삭제 등을 요청할 수 있고, 운영자가 해당 프로젝트를 삭제하면 함께 삭제됩니다."],
       },
       {
         title: "7. 파기 절차와 방법",

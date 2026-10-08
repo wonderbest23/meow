@@ -73,15 +73,16 @@ function AnimatedGraphic({ name, alt, caption }: { name: "business-plan" | "pres
 export function HomeResultShowcase() {
   return <section id="deliverables" className={styles.results} aria-labelledby="home-results-title">
     <header className={styles.heading} data-home-copy><h2 id="home-results-title">이제 생각을 꺼내 쓰세요</h2><p>읽고 고치고 다음 일을 이어가는 내 사업 자료</p></header>
-    <div className={styles.panels}>
+    {/* PPT 자동 생성이 꺼져 있으면 발표자료 카드를 빼고 두 칸으로('제공 준비 중' 카드를 첫 화면에 두지 않는다) */}
+    <div className={styles.panels} data-count={PPT_GENERATION_VERIFIED ? 3 : 2}>
       <article className={styles.panel}>
         <AnimatedGraphic name="business-plan" alt="새벽커피 공개 PDF의 실제 표지, 사업 개요와 표, 12개월 손익 추정과 그래프 페이지" />
         <div className={styles.panelCopy} data-home-copy><span>사업계획서</span><h3>내 사업을 설명하는<br />한 권의 계획</h3><p>사업 소개부터 고객과 비용 운영까지<br />PDF와 수정 가능한 Word로</p><HomeAction href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer">PDF 샘플 열기</HomeAction></div>
       </article>
-      <article className={`${styles.panel} ${styles.presentation}`}>
+      {PPT_GENERATION_VERIFIED && <article className={`${styles.panel} ${styles.presentation}`}>
         <AnimatedGraphic name="presentation" alt="새벽커피 공개 PPT의 실제 사업 제안서 표지, 문제 정의, 재무 계획 슬라이드" />
         <div className={styles.panelCopy} data-home-copy><span>발표자료{!PPT_GENERATION_VERIFIED && <span className={styles.availability}>제공 준비 중</span>}</span><h3>이야기는 짧게<br />핵심은 선명하게</h3><p>{PPT_GENERATION_VERIFIED ? <>정리한 사업계획서를 바탕으로<br />발표용 PPT를 만들어요</> : <>PPT 자동 생성은 준비 중이에요<br />공개 샘플을 먼저 확인해 보세요</>}</p><HomeAction href="/samples/sample_coffee.pptx" download>PPT 샘플 받기</HomeAction></div>
-      </article>
+      </article>}
       <article className={styles.panel}>
         <HomeWorkspaceDemo />
         <div className={styles.panelCopy} data-home-copy><span>내 사업 관리</span><h3>계획 다음의 일도<br />끊기지 않도록</h3><p>사업안과 문서 대화와 다음 할 일을<br />사업별로 이어가요</p><HomeAction href="/plan">내 사업 열기</HomeAction></div>

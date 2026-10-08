@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../../lib/rate-limit";
+import { intakeLoginRequired } from "../../../../../lib/plan-builder/intake-http";
 import { resolveTextLLMConfig } from "../../../../../lib/llm/config";
 import { LIVE_COMMENT_MAX_INPUT, liveCommentConfig, streamLiveComment } from "../../../../../lib/plan-builder/live-comment";
 
@@ -18,6 +19,8 @@ const noStore = { "Cache-Control": "private, no-store" };
  */
 export async function POST(request: Request) {
   if (process.env.INTAKE_LIVE_COMMENT !== "1" || process.env.INTAKE_BETA_SAFETY === "1") return new Response(null, { status: 204, headers: noStore });
+  // 대화 화면과 같은 로그인 규칙 — 예전엔 주소를 직접 부르면 로그인 없이도 AI 가 돌았다
+  if (intakeLoginRequired((await requireGuestIdentity()).userId)) return new Response(null, { status: 204, headers: noStore });
   const limited = await enforceRateLimit("intake-live-comment", request, { limit: 12, windowMs: 10 * 60_000, message: "잠시 후 다시 시도해주세요." });
   if (limited) return limited;
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { RefreshCw } from "lucide-react";
 import AdminNav from "../AdminNav";
 import type { MigrationReport, MigrationStatus, ReadinessReport } from "../../../lib/schema-readiness";
+import type { ConfigCheck } from "../../../lib/ops-config-readiness";
 import styles from "../generation/page.module.css";
 
 /*
@@ -34,7 +35,7 @@ function Rows({ items }: { items: MigrationReport[] }) {
 }
 
 export default function SchemaAdminPage() {
-  const [data, setData] = useState<ReadinessReport | null>(null);
+  const [data, setData] = useState<(ReadinessReport & { config?: ConfigCheck[] }) | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const [login, setLogin] = useState(false);
@@ -79,6 +80,17 @@ export default function SchemaAdminPage() {
           </div>}
           {attention.length > 0 ? <Rows items={attention} /> : <p className={styles.empty}>빠진 마이그레이션이 없어요.</p>}
         </section>
+        {data.config && <section className={styles.section}>
+          <header><h2>운영 설정</h2><p>비밀값이 들어가 있는지만 봐요(값은 보여 주지 않아요). Cloudflare → Workers → today-startup → 설정 → 변수와 비밀에서 넣어요.</p></header>
+          <div className={styles.table}><table>
+            <thead><tr><th>상태</th><th>기능</th><th>확인할 설정</th></tr></thead>
+            <tbody>{data.config.map(item => <tr key={item.key}>
+              <td data-state={item.ok ? "complete" : item.required ? "failed" : undefined}><strong>{item.ok ? "있음" : item.required ? "없음 · 오픈 전 필요" : "없음"}</strong></td>
+              <td>{item.label}</td>
+              <td><small>{item.note}</small></td>
+            </tr>)}</tbody>
+          </table></div>
+        </section>}
         <section className={styles.section}>
           <header><h2>사진 저장소</h2><p>마이그레이션이 만들지 않아 Supabase 화면에서 직접 만들어야 해요.</p></header>
           <p data-state={data.bucket.status === "ok" ? "complete" : undefined}><code>{data.bucket.name}</code> — {BUCKET_TEXT[data.bucket.status]}</p>

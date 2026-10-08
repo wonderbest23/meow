@@ -111,6 +111,14 @@ export async function POST(request: Request) {
     message: "오늘은 자동 답변을 더 드리기 어렵습니다. 운영자 문의로 남겨주세요.",
   });
   if (dayLimited) return dayLimited;
+  // 서비스 전체 하루 상한 — IP 를 바꿔 가며 부르면 IP 한도만으로는 비용이 끝없이 나간다
+  const allLimited = await enforceRateLimit("support-assistant-all-day", request, {
+    key: "all",
+    limit: 3000,
+    windowMs: 24 * 60 * 60_000,
+    message: "오늘은 자동 답변을 더 드리기 어렵습니다. 운영자 문의로 남겨주세요.",
+  });
+  if (allLimited) return allLimited;
 
   try {
     const identity = await requireGuestIdentity();

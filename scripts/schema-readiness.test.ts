@@ -99,3 +99,18 @@ assert.equal(schemaFailureReason(null), "query_failed:unknown");
 
 console.log(`schema-readiness: 마이그레이션 ${files.length}개 모두 점검 목록에 있음, 묶기·0줄 읽기·사유 통과`);
 })().catch(error => { console.error(error); process.exitCode = 1; });
+
+// 8) 운영 설정 확인 — 있음/없음만, 값은 내보내지 않는다
+import("../lib/ops-config-readiness").then(({ checkOpsConfig }) => {
+  const secret = "sk-live-SECRET-VALUE-123";
+  const empty = checkOpsConfig({});
+  assert.ok(empty.filter(item => item.required).every(item => !item.ok), "아무것도 없으면 필수 설정이 모두 '없음'");
+  const full = checkOpsConfig({ ANTHROPIC_API_KEY: secret, NICEPAY_CLIENT_KEY: secret, NICEPAY_SECRET_KEY: secret, RESEND_API_KEY: secret, NOTIFY_FROM_EMAIL: "a@b.c", CLOUDFLARE_SAAS_API_TOKEN: secret, CLOUDFLARE_ZONE_ID: "z", CUSTOMER_SMS_ENABLED: "1", OWNER_SMS_RELAY_URL: "https://relay.example.com/v1", OWNER_SMS_RELAY_SECRET: "x".repeat(40), OWNER_SMS_MODE: "live" });
+  assert.ok(full.filter(item => item.required).every(item => item.ok), "필수 설정이 다 있으면 '있음'");
+  assert.ok(!JSON.stringify(full).includes(secret), "비밀값을 내보내지 않는다");
+  const sandbox = checkOpsConfig({ NICEPAY_CLIENT_KEY: "k", NICEPAY_SECRET_KEY: "s", NICEPAY_ENVIRONMENT: "sandbox" }).find(item => item.key === "payments")!;
+  assert.equal(sandbox.ok, false, "시험 결제 환경은 '없음'으로(유료 기능이 공짜로 열린다)");
+  const testSms = checkOpsConfig({ CUSTOMER_SMS_ENABLED: "1", OWNER_SMS_RELAY_URL: "https://relay.example.com/v1", OWNER_SMS_RELAY_SECRET: "x".repeat(40), OWNER_SMS_MODE: "test" }).find(item => item.key === "customer-sms")!;
+  assert.equal(testSms.ok, false, "시험 문자 모드는 실제로 안 나가므로 '없음'");
+  console.log("ops-config-readiness: 있음/없음만, 비밀값 숨김, 시험 결제·시험 문자 경고");
+}).catch(error => { console.error(error); process.exitCode = 1; });

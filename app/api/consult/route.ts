@@ -119,6 +119,14 @@ export async function POST(request: Request) {
     message: "오늘 상담 요청이 많았습니다. 내일 다시 이용해주세요.",
   });
   if (dayLimited) return dayLimited;
+  // 서비스 전체 하루 상한 — 쿠키·IP 를 바꿔 가며 부르면 위 한도로는 비용이 끝없이 나간다
+  const allLimited = await enforceRateLimit("consult-all-day", request, {
+    key: "all",
+    limit: 1500,
+    windowMs: 24 * 60 * 60_000,
+    message: "오늘 상담 요청이 많아 잠시 쉬어요. 내일 다시 이용해주세요.",
+  });
+  if (allLimited) return allLimited;
 
   const identity = await requireGuestIdentity();
 

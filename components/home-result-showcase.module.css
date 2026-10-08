@@ -3,6 +3,7 @@
 .results .heading h2 { font-size: var(--home-title-size, 48px); font-weight: 700; line-height: var(--home-title-line, 1.4); color: #fff; letter-spacing: 0; margin: 0; word-break: keep-all; text-wrap: balance; }
 .results .heading p { font-size: var(--home-body-size, 18px); line-height: var(--home-body-line, 1.75); color: var(--home-fg-2, #b6b8bf); margin: var(--home-copy-gap, 24px) auto 0; max-width: 660px; }
 .panels { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 1600px; margin: auto; gap: 2px; }
+.panels[data-count="2"] { grid-template-columns: repeat(2, minmax(0, 1fr)); max-width: 1100px; }
 .panel { min-width: 0; display: flex; flex-direction: column; }
 .visual { position: relative; width: 100%; aspect-ratio: 1; overflow: hidden; background: var(--home-card, #131317); isolation: isolate; }
 .presentation .visual { background: var(--home-bg-2, #0a0a0c); }
@@ -65,7 +66,7 @@
   .panelCopy { padding-left: 24px; padding-right: 24px; }.results .panelCopy h3 { font-size: 28px; }
 }
 @media (max-width: 959px) {
-  .panels { grid-template-columns: 1fr; gap: 64px; max-width: 530px; padding: 0 20px; }
+  .panels, .panels[data-count="2"] { grid-template-columns: 1fr; gap: 64px; max-width: 530px; padding: 0 20px; }
   .visual { border-radius: 8px; }
   .panelCopy { padding: 32px 4px 0; }
 }

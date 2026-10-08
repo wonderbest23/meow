@@ -11,6 +11,7 @@ import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
 import { coachDocumentSnapshot, completedDocumentKey } from "../../../lib/plan-builder/coach-document";
 import { documentContext } from "../../../lib/plan-builder/document-context";
 import { useDeckExport } from "./use-deck-export";
+import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { useDocumentEdits } from "./use-document-edits";
 import { coachDocumentRevision, currentBusinessDesign, readCoach } from "../../../lib/plan-builder/coach";
 import type { DocumentReviewSource } from "./DocumentSourceReview";
@@ -83,7 +84,8 @@ export default function PlanDocumentPage() {
     /* 예시는 읽기 전용 — 갱신·검토 안내를 띄우지 않는다 */
     setContextNotice(isSamplePlan(plan.id) ? "" : snapshot?.stale.length ? "공통 사업 조건이 바뀌었어요. 문서를 갱신하거나 각 항목을 확인해 주세요" : snapshot?.manualReview.length ? "직접 수정한 항목을 최신 사업 조건과 비교해 검토해 주세요" : "");
   }
-  const deck = useDeckExport(documentPlanId, !isSample && !!access?.paid, title);
+  // PPT 자동 생성이 꺼져 있으면 제작 상태를 묻지 않는다(오픈 범위 밖 — lib/launch-scope.ts)
+  const deck = useDeckExport(documentPlanId, PPT_GENERATION_VERIFIED && !isSample && !!access?.paid, title);
   const edits = useDocumentEdits((key, section) => {
     setSections(current => current.map(item => item.key === key ? { ...item, markdown: section.markdown, html: section.html } : item));
     const plan = loadState().plans.find(item => item.id === documentPlanId);
