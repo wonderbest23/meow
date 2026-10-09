@@ -9,14 +9,15 @@ export type GenerationProgress = {
 
 export function generationProgress(
   generation: { keys?: string[]; revision?: number; dispatchAt?: string } | undefined,
-  sections: Record<string, { markdown?: string; html?: string; coachRevision?: number } | undefined>,
+  sections: Record<string, { markdown?: string; html?: string; coachRevision?: number; edited?: boolean; locked?: boolean } | undefined>,
   titles: Record<string, string>,
 ): GenerationProgress {
   const keys = Array.isArray(generation?.keys) ? generation!.keys : [];
   const list = keys.map(key => {
     const section = sections[key];
     const written = !!(section?.markdown?.trim() || section?.html?.trim());
-    return { key, title: titles[key] ?? key, done: written && (generation?.revision == null || section?.coachRevision === generation.revision) };
+    // 직접 고치거나 잠근 장은 작업이 다시 쓰지 않고 건너뛴다(section-service) — 끝난 것으로 세야 '다 됐다'에 닿는다
+    return { key, title: titles[key] ?? key, done: written && (generation?.revision == null || section?.coachRevision === generation.revision || !!section?.edited || !!section?.locked) };
   });
   const done = list.filter(item => item.done).length;
   return { total: list.length, done, active: list.length > 0 && done < list.length, startedAt: generation?.dispatchAt ?? null, sections: list };

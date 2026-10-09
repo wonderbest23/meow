@@ -62,7 +62,7 @@ function WritingStatus({ done, total, current }: { done: number; total: number; 
     <progress value={done} max={total || 1} aria-label="작성한 항목" />
     {current && <p className={styles.writingNow}>지금 쓰는 중 · <b>{current}</b><i className={styles.caret} aria-hidden="true" /></p>}
     <div className={styles.writingLines} aria-hidden="true"><i /><i /><i /></div>
-    <small>새 항목이 끝날 때마다 아래에 바로 나타나요. 창을 닫아도 계속 만들어져요.</small>
+    <small>새 항목이 끝날 때마다 바로 나타나요. 다른 장에 써지면 알려 드려요. 창을 닫아도 계속 만들어져요.</small>
   </div>;
 }
 
@@ -142,6 +142,18 @@ export default function DocumentWorkspace(props: Props) {
   useEffect(() => { if (zoomTable && zoomDialog.current && !zoomDialog.current.open) zoomDialog.current.showModal(); }, [zoomTable]);
   /* 계획서가 다 만들어지면 오른쪽에 다음 단계를 늘 띄워 둔다(좁은 화면에서는 문서 위에) */
   const showNext = !isSample && !!planId && (!!props.completionKey || !!props.allWritten) && !props.writing;
+  /* 작성 중 새 항목이 지금 보고 있지 않은 장에 써지면 알려 주고 누르면 그 장으로 간다 — 예전엔 장 번호만 바뀌어 새로고침해야 하는 줄 알았다 */
+  const [arrival, setArrival] = useState<{ index: number; title: string; id: string } | null>(null);
+  useEffect(() => {
+    if (!props.freshKeys?.size || continuous) return;
+    for (const key of props.freshKeys) {
+      const index = grouped.findIndex(([, list]) => list.some(section => section.key === key));
+      if (index < 0 || index === chapter) continue;
+      const section = grouped[index][1].find(item => item.key === key)!;
+      setArrival({ index, title: section.sectionTitle, id: `sec-${key.replace("/", "-")}` });
+      return;
+    }
+  }, [props.freshKeys]); // eslint-disable-line react-hooks/exhaustive-deps
   const homepage = useHomepageStatus(isSample ? null : planId);
   /* ← 는 내 사업 목록으로 — 예전엔 사업 관리 문서 탭으로 가서, 거기 큰 단추('사업계획서 열기')가 다시 여기로 돌려보냈다 */
   const back = "/plan";
@@ -224,6 +236,7 @@ export default function DocumentWorkspace(props: Props) {
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
                             {props.writing && <WritingStatus {...props.writing} />}
+                            {arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기 →</button>}
               {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
               {props.notice && !props.writing && !factMode && <div className={`${styles.notice} ${styles.noticeRow}`} role="status"><span>{props.notice}</span>{factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>고친 내용 반영하기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 수정하기</Link>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>

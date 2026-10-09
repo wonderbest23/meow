@@ -20,6 +20,14 @@ import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { businessHubState } from "../../../lib/plan-builder/business-hub";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
+/** 이 장이 이번 제작(__coach_generation.revision) 기준으로 써졌는지 — 직접 고치거나 잠근 장은 다시 쓰지 않으니 써진 것으로 본다 */
+function writtenForCurrentRun(plan: Plan, key: string): boolean {
+  const section = plan.sections[key] as (Plan["sections"][string] & { coachRevision?: number; edited?: boolean; locked?: boolean }) | undefined;
+  if (!section || !(section.markdown?.trim() || section.html?.trim())) return false;
+  const revision = (plan.answers.__coach_generation as { revision?: number } | undefined)?.revision;
+  return revision == null || section.coachRevision === revision || !!section.edited || !!section.locked;
+}
+
 export default function PlanDocumentPage() {
   const router = useRouter();
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
@@ -41,23 +49,38 @@ export default function PlanDocumentPage() {
    * 이미 보이던 장(사람이 보고 있거나 고치는 중일 수 있다)은 건드리지 않는다. 새 장은 '쓰이는 것처럼' 문단이 차례로 나타난다.
    */
   const generation = useGenerationProgress(documentPlanId && !isSample ? documentPlanId : null, true, 4000);
-  const seenDone = useRef<Set<string> | null>(null);
+  /*
+   * 화면에 붙인 장(이번 제작 기준으로 써진 것) — 서버가 다 썼다고 하는데 아직 안 붙인 장을 매번 다시 받아 붙인다.
+   * 예전엔 '본 적 있음'을 받기 전에 표시해서, 받아 오다 한 번 실패하거나 처음 열 때 사이에 끝난 장은 새로고침 전까지 안 보였다.
+   * 끝나면(진행 중 → 끝) 한 번 더 맞추고 완료 안내·다음 단계를 띄운다(updateSourceStatus).
+   */
+  const appliedKeys = useRef<Set<string>>(new Set());
+  const wasActive = useRef(false);
+  const syncing = useRef(false);
   const [freshKeys, setFreshKeys] = useState<ReadonlySet<string>>(new Set());
   useEffect(() => {
     const progress = generation.state;
     if (!progress || !documentPlanId) return;
-    const doneKeys = new Set(progress.sections.filter(section => section.done).map(section => section.key));
-    if (seenDone.current === null) { seenDone.current = doneKeys; return; }
-    const added = [...doneKeys].filter(key => !seenDone.current!.has(key));
-    // Always remember the latest set: a section being rewritten drops out and comes back, and must count as new then.
-    seenDone.current = doneKeys;
-    if (!added.length) return;
-    hydrateFromServer().then(state => {
-      const fresh = assembleSections({ ...state, activePlanId: documentPlanId });
-      setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !added.includes(item.key) ? shown : item; }));
-      setFreshKeys(new Set(added));
-    }).catch(() => { /* 다음 차례에 다시 받는다 */ });
-  }, [generation.state, documentPlanId]);
+    const pending = progress.sections.filter(section => section.done && !appliedKeys.current.has(section.key)).map(section => section.key);
+    const finished = wasActive.current && !progress.active;
+    if (progress.active) wasActive.current = true;
+    if ((!pending.length && !finished) || syncing.current) return;
+    syncing.current = true;
+    // 전체 상태를 다시 올리지 않는다(autoPush=false) — 받기만 한다
+    hydrateFromServer(false).then(state => {
+      const plan = state.plans.find(item => item.id === documentPlanId);
+      if (!plan) return;
+      const arrived = pending.filter(key => writtenForCurrentRun(plan, key));
+      if (arrived.length) {
+        const fresh = assembleSections({ ...state, activePlanId: documentPlanId });
+        setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !arrived.includes(item.key) ? shown : item; }));
+        for (const key of arrived) appliedKeys.current.add(key);
+        setFreshKeys(new Set(arrived));
+      }
+      if (arrived.length || finished) updateSourceStatus(plan);
+      if (finished) wasActive.current = false;
+    }).catch(() => { /* 다음 차례에 다시 받는다 */ }).finally(() => { syncing.current = false; });
+  }, [generation.state, documentPlanId]); // eslint-disable-line react-hooks/exhaustive-deps
   // A finished run with a section still missing stopped there (that section failed twice) — stop showing "writing".
   const writing = generation.state?.active && !["errored", "terminated", "complete"].includes(generation.state.runStatus ?? "")
     ? { done: generation.state.done, total: generation.state.total, current: generation.state.sections.find(section => !section.done)?.title ?? null } : null;
@@ -106,6 +129,8 @@ export default function PlanDocumentPage() {
       }
       setSections(assembleSections(s));
       const p = activePlan(s);
+      // 처음 열 때 이미 화면에 있는 장 — 이번 제작 기준으로 써진 것만 '붙였음'으로 센다(나머지는 진행 확인 때 받아 붙인다)
+      if (p) appliedKeys.current = new Set(Object.keys(p.sections).filter(key => writtenForCurrentRun(p, key)));
       if (p) {
         const recovered = isSamplePlan(p.id) ? {} : edits.initialize(p);
         setSections(assembleSections(s).map(section => recovered[section.key] ? { ...section, html: recovered[section.key], markdown: htmlToMarkdown(recovered[section.key]) } : section));
