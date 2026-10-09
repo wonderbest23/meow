@@ -38,6 +38,8 @@ async function main() {
       return method === "HEAD" ? new Response(null, { headers: { "content-range": "*/0" } }) : Response.json([]);
     }
     if (table === "plan_regen_packs") return Response.json([]);
+    // 포함 횟수는 결제 주문의 약관 버전으로 정한다(regen-quota.ts) — 주문이 없으면 예전 포함량
+    if (table === "payment_orders") return Response.json([]);
     assert.equal(table, "plan_states");
     if (method === "GET") {
       const snapshot = structuredClone(stored);

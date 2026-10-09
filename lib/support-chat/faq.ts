@@ -1,5 +1,4 @@
-import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, TOKEN_PACK_AMOUNT } from "../payments/domain";
-import { FREE_PLAN_LIMIT, FREE_SECTION_COUNT } from "../plan-builder/free-tier";
+import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT } from "../payments/domain";
 import { PPT_GENERATION_VERIFIED } from "../plan-builder/deck-availability";
 
 const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
@@ -8,7 +7,8 @@ const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
  * 예전 문구는 '새 문서 시작에서 유형 고르기', '이 섹션 만들기', /plan/start, 샘플 3부, 늘 되는 PPT 를 안내해
  * 상담 도우미(AI)까지 없는 기능을 약속했다.
  */
-const FREE_RULE = `로그인하면 계정당 사업 ${FREE_PLAN_LIMIT}개까지 각 사업계획서의 앞 ${FREE_SECTION_COUNT}개 항목을 무료로 만들어 볼 수 있습니다`;
+/* 무료 체험은 없다(소유자 결정 2026-10-09) — 사업계획서 본문은 결제 후에만 쓴다 */
+const FREE_RULE = "사업계획서 문서 작성과 파일 내려받기는 결제한 뒤에 시작합니다(문서를 무료로 써 보는 체험은 없습니다). 결제 전에는 완성 예시로 결과물을 미리 볼 수 있습니다";
 const FILES = PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word";
 const PPT_NOTE = PPT_GENERATION_VERIFIED
   ? "완성한 계획서로 발표용 슬라이드(PPTX)도 만들 수 있습니다."
@@ -59,8 +59,8 @@ export const supportFaqCategories: SupportFaqCategory[] = [
     label: "가격·결제",
     description: "상품별 가격과 결제 방식",
     items: [
-      { id: "pay-price", question: "가격은 얼마인가요?", answer: `사업계획서는 사업 하나당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL}), 그 계획서로 만든 홈페이지를 고치고 공개하려면 ${won(HOMEPAGE_PRODUCT_AMOUNT)}, 둘을 함께 열면 ${won(BUNDLE_PRODUCT_AMOUNT)}입니다. 내 도메인 연결(1년)은 ${won(DOMAIN_PRODUCT_AMOUNT)}, 도메인 구매까지 맡기면 ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}, 홈페이지 AI 수정 토큰은 ${won(TOKEN_PACK_AMOUNT)}입니다. 모두 1회 결제이며 구독이 아닙니다.`, keywords: ["가격", "얼마", "비용", "요금"] },
-      { id: "pay-scope", question: "결제하면 무엇이 열리나요?", answer: `사업계획서를 결제하면 그 사업의 계획서 전체 항목 작성과 ${FILES} 내려받기가 열립니다. ${PPT_NOTE} 홈페이지 편집·공개는 홈페이지 상품(또는 묶음)으로 따로 열립니다.`, keywords: ["결제하면", "뭐가 열려", "포함", "범위"] },
+      { id: "pay-price", question: "가격은 얼마인가요?", answer: `사업계획서는 사업 하나당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL}), 사업계획서와 그 계획서로 만든 홈페이지(고치기·공개)를 함께 열면 ${won(BUNDLE_PRODUCT_AMOUNT)}, 사업계획서를 먼저 결제했다면 홈페이지만 ${won(HOMEPAGE_PRODUCT_AMOUNT)}입니다. 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가는 ${won(REGEN_PACK_AMOUNT)}, 내 도메인 연결(1년)은 ${won(DOMAIN_PRODUCT_AMOUNT)}입니다. 모두 1회 결제이며 구독이 아닙니다.`, keywords: ["가격", "얼마", "비용", "요금"] },
+      { id: "pay-scope", question: "결제하면 무엇이 열리나요?", answer: `사업계획서를 결제하면 그 사업의 계획서 전체 항목 작성과 ${FILES} 내려받기가 열립니다. ${PPT_NOTE} 홈페이지 편집·공개는 사업계획서 + 홈페이지 묶음으로 함께 열거나, 계획서를 결제한 뒤 홈페이지 상품으로 엽니다.`, keywords: ["결제하면", "뭐가 열려", "포함", "범위"] },
       { id: "pay-method", question: "결제 수단은 무엇인가요?", answer: "신용·체크카드로 결제할 수 있으며 나이스페이 결제창에서 안전하게 진행됩니다. 결제가 승인되면 바로 열립니다.", keywords: ["결제 수단", "카드", "계좌이체", "카카오페이", "토스"] },
       { id: "pay-multi", question: "한 계정으로 여러 사업을 결제할 수 있나요?", answer: "네. 사업마다 따로 결제하는 방식이라 한 계정에서 여러 사업을 각각 결제할 수 있습니다. 결제 내역은 마이페이지에서 확인합니다.", keywords: ["여러 번", "여러 사업", "여러 문서", "추가 결제", "또 결제"], link: { href: "/plan/me", label: "마이페이지 열기" } },
       { id: "pay-refund", question: "환불은 어떻게 되나요?", answer: "인공지능 작성이 시작되기 전에는 전액 환불을 요청할 수 있습니다. 결제 후 유료 항목 작성이 시작되면 작성 비용이 발생해 단순 변심 환불이 제한되며, 결과물 미제공이나 중대한 하자 등 법정 예외는 재제작·환급을 요청할 수 있습니다. 도메인·토큰 등 상품별 기준은 취소·환불 안내에서 확인하세요.", keywords: ["환불", "취소", "환급", "변심"], link: { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" } },
@@ -75,16 +75,16 @@ export const supportFaqCategories: SupportFaqCategory[] = [
       { id: "files-download", question: "어떤 파일로 받을 수 있나요?", answer: `${FILES} 파일로 내려받을 수 있습니다. 내려받기는 계획서 화면 아래 ‘내려받기’에서 하며, 그 사업을 결제한 뒤 열립니다.`, keywords: ["PDF", "워드", "PPT", "파일", "내려받"] },
       { id: "files-edit", question: "완성 문서를 수정할 수 있나요?", answer: "계획서 화면에서 글을 직접 고칠 수 있고, 사업 내용 자체를 바꾸려면 같은 사업의 대화에서 말하면 됩니다. 세부 서식은 Word로 내려받아 자유롭게 편집하세요.", keywords: ["수정", "고치", "편집", "문구 변경"] },
       { id: "files-ppt", question: "발표자료(PPT)도 만들어주나요?", answer: PPT_NOTE, keywords: ["발표자료", "PPT", "슬라이드", "피칭"] },
-      { id: "files-homepage", question: "홈페이지는 어떻게 만들고 공개하나요?", answer: `사업계획서가 완성되면 계획서 화면 아래 ‘다음 단계 · 홈페이지 만들기’를 누르세요. 계획서 내용으로 초안이 바로 만들어지고, 미리 볼 수 있습니다. 고치고 인터넷에 공개하려면 홈페이지 상품(${won(HOMEPAGE_PRODUCT_AMOUNT)})이 필요하며, 무료 주소로 공개됩니다. 내 도메인을 쓰려면 도메인 연결(${won(DOMAIN_PRODUCT_AMOUNT)}/1년)을 따로 신청합니다.`, keywords: ["홈페이지", "공개", "도메인", "사이트"] },
+      { id: "files-homepage", question: "홈페이지는 어떻게 만들고 공개하나요?", answer: `사업계획서가 완성되면 계획서 화면 아래 ‘다음 단계 · 홈페이지 만들기’를 누르세요. 계획서 내용으로 초안이 바로 만들어지고, 미리 볼 수 있습니다. 고치고 인터넷에 공개하려면 홈페이지 상품(계획서와 함께 ${won(BUNDLE_PRODUCT_AMOUNT)}, 계획서를 이미 결제했다면 ${won(HOMEPAGE_PRODUCT_AMOUNT)})이 필요하며, 무료 주소로 공개됩니다. 내 도메인을 쓰려면 도메인 연결(${won(DOMAIN_PRODUCT_AMOUNT)}/1년)을 따로 신청합니다.`, keywords: ["홈페이지", "공개", "도메인", "사이트"] },
       { id: "files-inquiries", question: "홈페이지로 들어온 손님 문의는 어디서 보나요?", answer: "왼쪽 메뉴 ‘내 문의’에서 모든 사업의 홈페이지 문의를 최신순으로 봅니다. 문의를 누르면 손님 메시지와 연락처가 보이고, 전화·문자·메일로 바로 연락하거나 ‘처리 완료’로 표시할 수 있습니다. 새 문의를 문자로 받을 휴대폰은 홈페이지 화면 5번 ‘문의 알림’에서 정합니다.", keywords: ["문의 확인", "손님 문의", "들어온 문의", "내 문의", "문의 어디", "신청 확인"], link: { href: "/plan/inquiries", label: "내 문의 열기" } },
     ],
   },
   {
     id: "sample",
-    label: "예시·무료 범위",
+    label: "예시·결제 전 범위",
     description: "결제 전에 확인할 수 있는 것",
     items: [
-      { id: "sample-free", question: "결제 전에는 어디까지 무료인가요?", answer: `대화와 사업안 정리는 무료입니다. ${FREE_RULE}. 나머지 항목 작성과 파일 내려받기는 결제 후 열립니다.`, keywords: ["어디까지 무료", "무료 범위", "결제 전", "체험"], link: { href: "/plan/chat?new=1", label: "무료로 시작하기" } },
+      { id: "sample-free", question: "결제 전에는 어디까지 무료인가요?", answer: `사업 이야기를 나누고 사업 방향을 한 장으로 정리하는 데까지는 무료입니다. ${FREE_RULE}.`, keywords: ["어디까지 무료", "무료 범위", "결제 전", "체험", "무료 체험"], link: { href: "/plan/chat?new=1", label: "사업 이야기 시작하기" } },
       { id: "sample-docs", question: "완성본 예시를 미리 볼 수 있나요?", answer: "네. ‘내 사업’ 화면 아래 ‘완성 예시 보기’를 펼치면 실제 인공지능으로 만든 완성 예시(소그룹 필라테스 ‘퇴근필라’)를 처음부터 끝까지 읽어볼 수 있습니다. 첫 화면에서는 다른 예시의 PDF도 받아볼 수 있어요.", keywords: ["샘플", "미리 보", "예시", "완성본"], link: { href: "/plan", label: "완성 예시 보기" } },
       { id: "sample-quality", question: "예시와 내 계획서 품질이 같은가요?", answer: "네. 예시는 별도 손질 없이 실제 서비스와 같은 인공지능·같은 과정으로 만든 문서입니다. 대화에서 구체적으로 알려 주실수록 결과도 더 구체적으로 나옵니다.", keywords: ["품질", "샘플과 같", "예시와 같", "진짜로 이렇게"] },
     ],
@@ -117,13 +117,13 @@ export const supportFaqCategories: SupportFaqCategory[] = [
 
 export const supportPlatformFacts = [
   "오늘창업은 대화로 사업안을 정리하고(‘새 대화’, /plan/chat?new=1), 그 내용으로 사업계획서를 만들고(/plan/document), 계획서로 홈페이지를 만들고(/plan/homepage), 공개 후 유지보수(홈페이지 고치기·실적 관리)까지 한 사업 안에서 이어가는 서비스입니다. 만든 사업은 왼쪽 메뉴 ‘내 사업’(/plan)에, 홈페이지로 들어온 손님 문의는 모든 사업 것이 왼쪽 메뉴 ‘내 문의’(/plan/inquiries)에 모입니다. 문서 유형을 고르는 화면이나 섹션마다 누르는 ‘이 섹션 만들기’ 버튼은 없습니다.",
-  `가격: 사업계획서 사업 하나당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL}), 홈페이지 편집·공개 ${won(HOMEPAGE_PRODUCT_AMOUNT)}, 계획서+홈페이지 묶음 ${won(BUNDLE_PRODUCT_AMOUNT)}, 내 도메인 연결 1년 ${won(DOMAIN_PRODUCT_AMOUNT)}, 도메인 구매·연결 ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}, 홈페이지 AI 수정 토큰 ${won(TOKEN_PACK_AMOUNT)}, 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가 ${won(REGEN_PACK_AMOUNT)}. 모두 1회 결제이며 구독이 아닙니다.`,
+  `가격: 사업계획서 사업 하나당 ${won(PACKAGE_AMOUNT)}(${LAUNCH_PRICE_LABEL}), 계획서+홈페이지 묶음 ${won(BUNDLE_PRODUCT_AMOUNT)}, 계획서를 결제한 사업의 홈페이지 편집·공개 ${won(HOMEPAGE_PRODUCT_AMOUNT)}(계획서 없이 홈페이지만은 살 수 없음), 내 도메인 연결 1년 ${won(DOMAIN_PRODUCT_AMOUNT)}, 이미 산 도메인의 갱신 ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}, 계획서 다시 생성 ${REGEN_PACK_COUNT}회 추가 ${won(REGEN_PACK_AMOUNT)}. 모두 1회 결제이며 구독이 아닙니다.`,
   "결제 수단은 신용·체크카드이며 나이스페이 결제창에서 진행됩니다. 결제가 승인되면 바로 열립니다.",
-  `무료 범위: 대화와 무료 창업 상담은 무료입니다. ${FREE_RULE}. 나머지 항목 작성과 파일 내려받기는 결제 후 열립니다.`,
+  `무료 범위: 대화, 무료 창업 상담, 사업 방향 정리는 무료입니다. ${FREE_RULE}.`,
   `사업계획서를 결제하면 그 사업의 전체 항목 작성과 ${FILES} 내려받기가 열립니다. ${PPT_NOTE}`,
   `완성한 계획서는 같은 사업의 대화에서 고칠 수 있습니다. 바뀐 내용에 맞춰 항목을 다시 쓰는 것은 사업계획서마다 ${REGEN_INCLUDED}회 포함, 더 필요하면 ${REGEN_PACK_COUNT}회를 ${won(REGEN_PACK_AMOUNT)}에 추가합니다. 대화와 직접 글 고치기는 무료입니다.`,
   "완성 예시는 ‘내 사업’ 화면 아래 ‘완성 예시 보기’에 있는 소그룹 필라테스 ‘퇴근필라’ 사업계획서입니다. 로그인 없이 전체를 읽을 수 있습니다.",
-  `홈페이지는 완성한 계획서 화면의 ‘다음 단계 · 홈페이지 만들기’에서 초안을 만들고 미리 봅니다. 편집과 공개는 홈페이지 상품 결제 후 열리며 무료 주소로 공개됩니다. 내 도메인 연결은 별도 상품(${won(DOMAIN_PRODUCT_AMOUNT)}/1년)입니다.`,
+  `홈페이지는 완성한 계획서 화면의 ‘다음 단계 · 홈페이지 만들기’에서 초안을 만들고 미리 봅니다. 편집과 공개는 홈페이지 상품(계획서와 함께 ${won(BUNDLE_PRODUCT_AMOUNT)}, 계획서 결제 후 ${won(HOMEPAGE_PRODUCT_AMOUNT)}) 결제 후 열리며 무료 주소로 공개됩니다. 내 도메인 연결은 별도 상품(${won(DOMAIN_PRODUCT_AMOUNT)}/1년)입니다.`,
   "재무 숫자는 대화에서 알려 준 가격·원가·고정비 등을 근거로 12개월 손익표를 계산해 넣습니다. 확인되지 않은 매출·고객·제휴를 완료 사실처럼 쓰지 않으며, 근거가 부족한 부분은 ‘추가 정의 필요’로 표시합니다.",
   "대화와 계획서는 자동 저장됩니다. 로그인하면 서버에 보관되어 휴대전화와 PC에서 같은 계정으로 이어서 할 수 있고, 로그인하지 않은 작업은 사용한 브라우저에만 남습니다.",
   "마이페이지(/plan/me)에서 계정 정보, 내 사업 목록, 결제 내역을 확인하고 환불을 요청합니다. 비밀번호를 잊었으면 로그인 화면의 ‘비밀번호 재설정’에서 가입 이메일로 다시 정합니다.",

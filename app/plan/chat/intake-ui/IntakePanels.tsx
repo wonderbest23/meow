@@ -1,5 +1,4 @@
 "use client";
-import { FREE_SECTION_COUNT } from "../../../../lib/plan-builder/free-tier";
 import { ResourceFitDetails } from "./ResourcePanel";
 import { INTAKE_JOB_TIMING } from "../../../../lib/plan-builder/intake-timing";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
@@ -598,7 +597,7 @@ export function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
   const known = quota?.quota && !quota.quota.unavailable ? quota.quota : null;
   const free = (snapshot.freeReflects ?? 0) > 0 && count !== 0;
   const short = !free && !!known && count !== undefined && count > known.remaining;
-  // 고친 내용 반영은 하루 몇 번까지 무료(lib/plan-builder/free-reflect.ts)
+  // 고친 내용 반영은 계획서마다 정해진 번수까지 무료(lib/plan-builder/free-reflect.ts)
   if (free) return <p className={styles.rewriteCost} role="status">{count ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요</> : "바뀐 내용과 맞지 않는 항목만 다시 써요"} · <b>무료</b>예요 (무료 {snapshot.freeReflects}번 남음)</p>;
   return <p className={styles.rewriteCost} data-short={short || undefined} role="status">
     {count === undefined ? <>바뀐 내용과 맞지 않는 항목만 다시 써요 · 항목마다 다시 생성 횟수 1회가 차감돼요{known ? <> (남은 횟수 {known.remaining}/{known.allowed}회)</> : null}</> : count > 0 ? <>바뀐 내용에 맞춰 <b>{count}개 항목</b>을 다시 써요{known ? <> · 다시 생성 횟수 <b>{count}회</b> 차감 (남은 횟수 {known.remaining}/{known.allowed}회)</> : <> · 항목마다 다시 생성 횟수 1회가 차감돼요</>}</> : "직접 고친 항목은 그대로 두고, 바뀐 내용과 맞지 않는 항목만 다시 써요."}
@@ -645,9 +644,11 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
    */
   const sectionCount = chaptersForType(snapshot.planType).reduce((total, chapter) => total + chapter.sections.length, 0);
   const hint = step === "design" ? "먼저 답변을 바탕으로 사업 방향을 한 장으로 요약해요. 사업계획서 문서는 다음 단계에서 만들어요."
-    : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서를 작성해요. 전체는 ${sectionCount}개 항목(재무표 포함)이고, 결제 전에는 앞 ${FREE_SECTION_COUNT}개 항목을 무료로 만들어요. 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
+    : step === "prepare" ? `지금까지 만든 건 사업 방향 요약이에요. 이 버튼을 누르면 이 내용으로 정식 사업계획서 문서를 작성해요. 전체는 ${sectionCount}개 항목(재무표 포함)이고, 결제한 뒤에 작성을 시작해요(결제 전이면 결제 화면으로 이동해요). 몇 분 걸리고, 다 되면 바로 열 수 있어요.`
     : "사업계획서 문서는 언제든 다시 열 수 있어요.";
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
+  // 바뀐 내용은 없고 아직 안 쓴 항목만 남았으면(예전 무료 체험으로 앞 2개만 있음, 작성 중 실패) 남은 항목만 이어서 쓴다 — 다시 생성 횟수를 쓰지 않는다
+  if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />남은 {snapshot.missingSections}개 항목 이어서 작성하기</button>}</div>;
   // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
   if (step === "prepare" && snapshot.hasDocuments) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} />}</div>;
   return <div className={styles.nextStep} data-active data-step={step}>

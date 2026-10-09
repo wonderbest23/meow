@@ -327,6 +327,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
         setStatus("conflict"); setError(data?.message || "다른 곳에서 이 사업의 내용이 바뀌었어요. 최신 내용을 불러온 뒤 답변을 다시 확인해 주세요."); return;
       }
       if (data?.loginRequired) setLoginGate(true);
+      // 결제 전 계획서는 작성하지 않는다(무료 체험 없음) — 이 사업의 결제 화면으로 보낸다. 결제가 끝나면 ?start=1 로 돌아와 이어서 작성한다.
+      if (response.status === 402 && data?.code === "payment_required" && pending.command.action === "prepare" && planRef.current) {
+        writeDraft({ ...draftRef.current, pending: null });
+        window.location.assign(`/plan/pay?${new URLSearchParams({ planId: planRef.current.planId, planType: planRef.current.planType }).toString()}`);
+        return;
+      }
       if (!response.ok || data?.login) {
         setLogin(!!data?.login || response.status === 401);
         if (response.status >= 400 && response.status < 500 || data?.code && ["ai_unavailable", "ai_limit", "business_required", "disabled"].includes(data.code)) writeDraft({ ...draftRef.current, pending: null });
@@ -528,7 +534,24 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const reviewKey = `${plan?.planId}:${reviewCandidates.map(candidate => candidate.id).join(",")}`;
   const showReview = reviewCandidates.length > 0 && deferredReview !== reviewKey && !draft.editingId && !replyTurn && !intentConfirmation && !draft.pending && !hasLocalInput(draft);
   const showCompletion = !!plan && !showReview && !replyTurn && !intentConfirmation && !question && !draft.editingId;
-  const nextStep = plan ? intakeNextStep(plan, prepared) : null;
+  /* 사업계획서 만드는 중 — 접수되면 팝업으로 진행을 보여 주고, 닫아도 '작성 중 n/m · 진행 보기'로 다시 연다 */
+  const [generationOpen, setGenerationOpen] = useState(false);
+  const generation = useGenerationProgress(plan?.planId, !!plan && (prepared || plan.hasDocuments));
+  const generating = !!generation.state?.active && !["errored", "terminated"].includes(generation.state.runStatus ?? "");
+  // 작성 중에는 아직 안 쓴 항목이 있어도 '이어서 작성' 대신 진행 중으로 본다
+  const started = prepared || generating;
+  const nextStep = plan ? intakeNextStep(plan, started) : null;
+  /* 결제 직후(?start=1)에는 손님이 다시 누르지 않아도 사업계획서 작성을 한 번 시작한다 — 결제 결과 화면이 여기로 보낸다 */
+  const autoStarted = useRef(false);
+  useEffect(() => {
+    if (autoStarted.current || !plan || !loaded || blocked || aiBusy) return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("start") !== "1") return;
+    autoStarted.current = true;
+    url.searchParams.delete("start");
+    window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    if (nextStep === "prepare" && url.searchParams.get("planId") === plan.planId) void send({ action: "prepare" });
+  });
   const updateNotice = savedPlan ? resultUpdateNotice(savedPlan) : null;
   const refinement = plan ? nextRefinementQuestion(plan, draft.refinementSeen) : null;
   /* '좀 더 개선하기'는 뺐다 — 만든 뒤에 고치는 게 맞고(사용자 피드백), 답을 바꾸려면 '지금까지 답변 보기'의 연필로 고친다 */
@@ -537,10 +560,6 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
    * 시작 단추가 두 번 나와 헷갈렸다(사용자 피드백). 정리는 짧고 싸니 자동으로, 손님이 누를 단추는 '계획서 만들기' 하나만 남긴다.
    * 같은 답변 기준으로는 한 번만 보내고, 실패하면 화면의 '사업 방향 정리하기'로 다시 시도한다.
    */
-  /* 사업계획서 만드는 중 — 접수되면 팝업으로 진행을 보여 주고, 닫아도 '작성 중 n/m · 진행 보기'로 다시 연다 */
-  const [generationOpen, setGenerationOpen] = useState(false);
-  const generation = useGenerationProgress(plan?.planId, !!plan && (prepared || plan.hasDocuments || nextStep === "open"));
-  const generating = !!generation.state?.active && !["errored", "terminated"].includes(generation.state.runStatus ?? "");
   const autoDesigned = useRef<string | null>(null);
   const designFailed = plan?.intake.job?.kind === "design" && plan.intake.job.status === "failed";
   // While the direction summary is being written, the coach "replies" (typing bubble + current step) instead of a heading and gauge.
@@ -623,7 +642,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
             {!locked && questionNote && !questionHandled && <section className={styles.noteReceipt} aria-label="저장한 질문"><p>질문을 저장했어요</p><button type="button" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: lastMessage!.text })}><Sparkles size={16} aria-hidden="true" />AI 답변 받기</button></section>}
             {!locked && memoPending && <button type="button" className={styles.textButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "extract" })}><RefreshCw size={15} aria-hidden="true" />저장한 메모 정리</button>}
             <div ref={currentTurn} className={styles.currentTurn} aria-busy={!!replyTurn} hidden={showReview}>
-              {editTurn && !replyTurn ? <><EditChatTurn snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />}</> : locked && !replyTurn ? <><DocumentLockedTurn planId={plan.planId} chatEdit={COACH_EDIT_CHAT} />{nextStep === "prepare" && <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={blocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
+              {editTurn && !replyTurn ? <><EditChatTurn snapshot={plan} disabled={blocked || aiBusy} onSend={text => void send({ action: "edit", message: text })} onApply={() => void send({ action: "edit-apply" })} onDismiss={() => void send({ action: "edit-dismiss" })} />{nextStep === "prepare" && <NextStepAction snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />}</> : locked && !replyTurn ? <><DocumentLockedTurn planId={plan.planId} chatEdit={COACH_EDIT_CHAT} />{nextStep === "prepare" && <NextStepAction snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />}</> : replyTurn ? <ReplyTyping /> : intentConfirmation || (question ? <QuestionForm key={`${question.id}:${draft.editingId ?? "current"}`} inChat question={question} snapshot={plan} draft={questionDraft} editing={!!draft.editingId} refining={draft.refiningId === question.id} suggestions={answerSuggestions.forQuestion(question.id)} disabled={blocked} onChange={(answer, submit) => { editDraft({ ...draftRef.current, mode: "answer", answers: { ...draftRef.current.answers, [question.id]: { ...answer, label: question.label } } }); if (submit) autoSubmit.current = question.id; }} coach={coach} ksicQuery={coach && question.id === "industry" ? questionDraft.text : undefined} onAnswer={answerQuestion} onCancel={() => { follow.current = true; writeDraft({ ...draftRef.current, editingId: null, refiningId: null }); }} /> : draft.editingId ? <section className={styles.complete}><h2>이전 질문의 입력이 남아 있어요</h2><p>현재 사업 정보에 맞춰 질문 구성이 달라졌습니다.</p><button type="button" className={styles.secondaryButton} onClick={() => writeDraft({ ...draftRef.current, editingId: null, refiningId: null })}>현재 질문으로</button></section> : <section className={styles.complete}>
                 {designRunning ? <JobProgress snapshot={plan} announce variant="chat" /> : <>
                 <ChatSpeaker />
                 {(nextStep === "prepare" || nextStep === "open") && currentIdentity(plan) ? <BusinessIdentityHero snapshot={plan} disabled={blocked} onName={name => void send({ action: "name", value: name })} /> : <>
@@ -632,7 +651,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
                 </>}
                 {(nextStep === "prepare" || nextStep === "open") && <DesignDirection snapshot={plan} />}
                 {!nextStep && refinement && <button type="button" className={styles.primaryButton} disabled={blocked || aiBusy} onClick={() => editQuestion(refinement.id)}>{refinement.id === "candidate" ? "사업 후보 정하기" : "사업 소개 정하기"}<ArrowRight size={17} aria-hidden="true" /></button>}
-                <NextStepAction snapshot={plan} prepared={prepared} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />
+                <NextStepAction snapshot={plan} prepared={started} disabled={blocked} aiBusy={aiBusy} announce onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} />
                 </>}
                 {generating && generation.state && <button type="button" className={styles.secondaryButton} onClick={() => setGenerationOpen(true)}>사업계획서 작성 중 {generation.state.done}/{generation.state.total} · 진행 보기</button>}
                 {!signedIn && <p className={styles.guestSaveNote}>로그인하지 않으면 이 브라우저에만 저장돼요. <Link href={loginHref}>로그인</Link>하면 다른 기기·브라우저에서도 이어서 볼 수 있어요.</p>}
@@ -664,7 +683,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
         </footer>}
       </main>
       {plan && <div {...split.separator} aria-controls="intake-input-panel" className={styles.splitHandle} title="드래그해서 너비 조절 · 두 번 누르면 기본 너비"><span /></div>}
-      {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} showActions={false} readOnly={documentFixed} disabled={blocked} onStructure={patch => void send({ action: "structure", structure: patch })} aiBusy={aiBusy} prepared={prepared} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} /><ResourcePanel snapshot={plan} draft={draft.resourceEditor} disabled={blocked} onDraft={resourceEditor => editDraft({ ...draftRef.current, resourceEditor })} onCommand={command => void send(command)} /><AnswerHistory snapshot={plan} readOnly={documentFixed} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
+      {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} showActions={false} readOnly={documentFixed} disabled={blocked} onStructure={patch => void send({ action: "structure", structure: patch })} aiBusy={aiBusy} prepared={started} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={() => void send({ action: "prepare" })} /><ResourcePanel snapshot={plan} draft={draft.resourceEditor} disabled={blocked} onDraft={resourceEditor => editDraft({ ...draftRef.current, resourceEditor })} onCommand={command => void send(command)} /><AnswerHistory snapshot={plan} readOnly={documentFixed} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
     </div>
   {plan && <GenerationDialog planId={plan.planId} open={generationOpen} state={generation.state} onClose={() => setGenerationOpen(false)} />}
     </BusinessAppChrome></div>;

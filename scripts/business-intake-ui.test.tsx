@@ -499,13 +499,16 @@ async function main() {
   assert.equal((summary.match(/(?:사업 방향 정리하기|사업계획서 문서 작성하기)<\/button>/g) ?? []).length, 1, "the summary offers one creation step");
   assert.ok(summary.includes(`/plan/document?planId=${id}`), "Existing artifacts stay navigable even during AI jobs");
   // 다음 단계는 한 번에 하나, 한 곳에만: 사업안 만들기 → (사업안이 현재 입력 기준이면) 계획서 만들기 → 계획서 열기.
-  const nextSnapshot = (patch: Partial<IntakeSnapshot>, coachPatch: Partial<CoachState>): IntakeSnapshot => ({ ...summarized, hasDocuments: false, ...patch, coach: { ...summarized.coach, ready: true, ...coachPatch } });
+  const nextSnapshot = (patch: Partial<IntakeSnapshot>, coachPatch: Partial<CoachState>): IntakeSnapshot => ({ ...summarized, hasDocuments: false, missingSections: 0, ...patch, coach: { ...summarized.coach, ready: true, ...coachPatch } });
   const nextMarkup = (patch: Partial<IntakeSnapshot>, coachPatch: Partial<CoachState>, showActions = true) => renderToStaticMarkup(<BusinessSummary onStructure={noop} showActions={showActions} snapshot={nextSnapshot(patch, coachPatch)} disabled={false} aiBusy={false} prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
   const currentDesign = { documentRevision: 5, design: { ...summarized.coach.design!, sourceRevision: 5 } };
   assert.equal(intakeNextStep(nextSnapshot({}, { design: undefined })), "design");
   assert.equal(intakeNextStep(nextSnapshot({}, { documentRevision: 6, design: { ...summarized.coach.design!, sourceRevision: 5 } })), "design", "an edited answer sends the user back to the design step");
   assert.equal(intakeNextStep(nextSnapshot({}, currentDesign)), "prepare");
   assert.equal(intakeNextStep(nextSnapshot({ hasDocuments: true }, currentDesign)), "open");
+  // 쓰지 않은 항목이 남으면(예전 무료 체험으로 앞 2개만 있음, 작성 중 실패) 이어서 작성하기로 돌아온다 — 작성 중이면 진행 중으로 본다
+  assert.equal(intakeNextStep(nextSnapshot({ hasDocuments: true, missingSections: 8 }, currentDesign)), "prepare");
+  assert.equal(intakeNextStep(nextSnapshot({ hasDocuments: true, missingSections: 8 }, currentDesign), true), "open");
   assert.equal(intakeNextStep(nextSnapshot({}, currentDesign), true), "open");
   assert.equal(intakeNextStep(nextSnapshot({ coreComplete: false }, { design: undefined })), null);
   const STEP1 = 'data-state="current"><span>1</span>사업 방향 요약';
@@ -517,6 +520,9 @@ async function main() {
   assert.ok(needsPlan.includes("사업계획서 문서 작성하기</button>") && needsPlan.includes("지금까지 만든 건 사업 방향 요약이에요") && !needsPlan.includes("사업 방향 정리하기</button>"), "with a current design only the plan document button shows");
   const opened = nextMarkup({ hasDocuments: true }, currentDesign);
   assert.ok(opened.includes("사업계획서 문서 열기</a>") && !opened.includes("작성하기</button>") && !opened.includes("정리하기</button>"), "after the documents exist the step is opening them");
+  const resumeMissing = nextMarkup({ hasDocuments: true, missingSections: 8 }, currentDesign);
+  assert.ok(resumeMissing.includes("남은 8개 항목 이어서 작성하기</button>") && !resumeMissing.includes("계획서 다시 작성하기") && !resumeMissing.includes("다시 생성 횟수"), "unwritten sections resume without a rewrite confirm");
+  assert.ok(needsPlan.includes("결제한 뒤에 작성을 시작해요") && !needsPlan.includes("무료로 만들어요"), "the first document step says it starts after payment (no free trial)");
   const staleDocument = nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign);
   assert.ok(staleDocument.includes("계획서 다시 작성하기</button>") && !staleDocument.includes("이전 계획서 보기") && !staleDocument.includes("진행 단계") && !staleDocument.includes("다시 생성 횟수"), "a stale document shows one rewrite button; the cost note waits for the confirm popup");
   // 반영하기 전에 비용을 먼저 보여 준다(다시 쓸 항목 수 · 대화는 무료)

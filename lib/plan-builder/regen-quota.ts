@@ -1,5 +1,7 @@
 import { getServerSupabase } from "../persistence";
-import { REGEN_INCLUDED, REGEN_PACK_COUNT } from "../payments/domain";
+import { BUNDLE_PRODUCT_NAME, isCurrentAllowanceTerms, LEGACY_REGEN_INCLUDED, REGEN_INCLUDED, REGEN_PACK_COUNT } from "../payments/domain";
+import { PLAN_PRODUCT_NAME } from "../payments/plan-orders";
+import { FREE_REFLECTS_TOTAL, LEGACY_FREE_REFLECTS_TOTAL } from "./free-reflect";
 
 /*
  * 섹션 '다시 생성' 잔여 횟수.
@@ -14,7 +16,7 @@ import { REGEN_INCLUDED, REGEN_PACK_COUNT } from "../payments/domain";
  */
 
 export interface RegenQuota {
-  /** 이 플랜에 허용된 총 횟수 (기본 + 구매한 묶음) */
+  /** 이 플랜에 허용된 총 횟수 (결제 때 약속한 기본 + 구매한 묶음) */
   allowed: number;
   /** 지금까지 쓴 횟수 (실패한 호출은 빼고) */
   used: number;
@@ -26,22 +28,53 @@ export interface RegenQuota {
 
 const UNAVAILABLE: RegenQuota = { allowed: 0, used: 0, remaining: 0, unavailable: true };
 
+/** 계획서 결제에 딸린 포함량 — 다시 생성 횟수와 무료 반영 횟수 */
+export interface PlanAllowance { regenIncluded: number; freeReflects: number }
+const CURRENT_ALLOWANCE: PlanAllowance = { regenIncluded: REGEN_INCLUDED, freeReflects: FREE_REFLECTS_TOTAL };
+const LEGACY_ALLOWANCE: PlanAllowance = { regenIncluded: LEGACY_REGEN_INCLUDED, freeReflects: LEGACY_FREE_REFLECTS_TOTAL };
+
+/*
+ * 포함량은 손님이 결제할 때 동의한 약관 버전으로 정한다(2026-10-09 가격 개편).
+ * 이 계획서의 결제 주문이 모두 새 약관이면 새 포함량, 하나라도 예전 약관이거나 주문을 찾지 못하면 예전 포함량이다.
+ * 주문이 없는 경우는 개편 전 전체 이용권·운영자 계정처럼 결제 날짜로 가를 수 없는 경우뿐이라 손님 쪽으로 넉넉하게 본다
+ * (결제 전 계획서는 본문을 쓰지 않으므로 포함량을 쓸 일이 없다). 조회가 실패하면 null — 호출한 쪽이 막는다.
+ */
+export async function resolvePlanAllowance(planId: string): Promise<PlanAllowance | null> {
+  try {
+    const supabase = getServerSupabase();
+    if (!supabase) return null;
+    const { data, error } = await supabase
+      .from("payment_orders")
+      .select("terms_version")
+      .eq("status", "done")
+      .in("order_name", [PLAN_PRODUCT_NAME, BUNDLE_PRODUCT_NAME])
+      .eq("opportunity->>planId", planId)
+      .limit(20);
+    if (error || !Array.isArray(data)) return null;
+    if (!data.length || data.some(row => !isCurrentAllowanceTerms(row?.terms_version))) return { ...LEGACY_ALLOWANCE };
+    return { ...CURRENT_ALLOWANCE };
+  } catch {
+    return null;
+  }
+}
+
 /** Unavailable or malformed accounting never grants a default allowance. */
 export async function resolveRegenQuota(planId?: string): Promise<RegenQuota> {
   try {
     if (!planId) return { ...UNAVAILABLE };
     const supabase = getServerSupabase();
     if (!supabase) return { ...UNAVAILABLE };
-    const [usedRes, packRes] = await Promise.all([
+    const [usedRes, packRes, allowance] = await Promise.all([
       supabase.from("plan_regenerations").select("id", { count: "exact", head: true }).eq("plan_id", planId).eq("ok", true),
       supabase.from("plan_regen_packs").select("granted").eq("plan_id", planId),
+      resolvePlanAllowance(planId),
     ]);
 
-    if (usedRes.error || packRes.error || !Number.isSafeInteger(usedRes.count) || usedRes.count! < 0 || !Array.isArray(packRes.data)) return { ...UNAVAILABLE };
+    if (!allowance || usedRes.error || packRes.error || !Number.isSafeInteger(usedRes.count) || usedRes.count! < 0 || !Array.isArray(packRes.data)) return { ...UNAVAILABLE };
 
     if (packRes.data.some(row => !row || !Number.isSafeInteger(row.granted) || row.granted < 0)) return { ...UNAVAILABLE };
     const purchased = packRes.data.reduce((sum, row) => sum + row.granted, 0);
-    const allowed = REGEN_INCLUDED + purchased;
+    const allowed = allowance.regenIncluded + purchased;
     if (!Number.isSafeInteger(allowed)) return { ...UNAVAILABLE };
     const used = usedRes.count!;
     return { allowed, used, remaining: Math.max(0, allowed - used) };

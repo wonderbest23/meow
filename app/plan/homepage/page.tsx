@@ -291,7 +291,7 @@ export default function PlanHomepagePage() {
       if (res.status === 401) {
         setBlocked({ title: "로그인이 필요합니다", detail: "홈페이지는 내 계정에 저장됩니다.", missing: [], cta: "login" });
       } else if (res.status === 402) {
-        setBlocked({ title: "결제 후 이용할 수 있습니다", detail: "홈페이지 편집·공개는 홈페이지 상품(또는 계획서+홈페이지 묶음)을 결제하면 열려요.", missing: [], cta: "pay" });
+        setBlocked({ title: "결제 후 이용할 수 있습니다", detail: "홈페이지 편집·공개는 결제 후 열려요. 사업계획서를 결제했다면 홈페이지만, 아직이라면 사업계획서 + 홈페이지로 함께 결제할 수 있어요.", missing: [], cta: "pay" });
       } else if (error.error === "plan_incomplete") {
         setBlocked({
           title: "홈페이지에 실을 내용이 조금 부족해요",

@@ -71,7 +71,7 @@ export default async function PlanInfoPage({
 
       {!readiness.ready ? (
         <div className={styles.notice}>
-          <strong>{readiness.siteOpen ? "사이트와 무료 체험은 정상 공개 중입니다." : "신고용 공개 정보를 준비하고 있습니다."}</strong>
+          <strong>{readiness.siteOpen ? "사이트는 정상 공개 중입니다." : "신고용 공개 정보를 준비하고 있습니다."}</strong>
           <p>통신판매업 신고번호 또는 면제 근거와 실제 운영 정보를 확인하기 전에는 유료 결제만 제한됩니다.</p>
         </div>
       ) : null}

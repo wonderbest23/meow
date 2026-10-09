@@ -44,9 +44,9 @@ assert.ok(business.sections[0].items?.some((item) => item.includes("123-45-67890
 assert.ok(business.sections.some((section) => section.items?.some((item) => item.includes("49,000원"))));
 const businessText = JSON.stringify(business);
 assert.ok(!businessText.includes("카카오뱅크 계좌이체"), "받지 않는 결제 수단을 안내하지 않는다");
-for (const expected of ["신용·체크카드", "나이스페이먼츠", "49,000원", "69,000원", "사업계획서 + 홈페이지: 99,000원", "59,000원", "4,900원"]) assert.ok(businessText.includes(expected), expected);
-// 오픈 범위(2026-10-08): 팔지 않는 상품(AI 수정 토큰·맞춤 홈페이지 제작)은 판매 목록에 없다
-for (const closed of ["9,900원", "맞춤 홈페이지 제작", "홈페이지 AI 수정 토큰, 맞춤 홈페이지 디자인"]) assert.ok(!businessText.includes(closed), closed);
+for (const expected of ["신용·체크카드", "나이스페이먼츠", "49,000원", "19,000원", "사업계획서 + 홈페이지: 59,000원", "59,000원", "다시 생성 10회 추가: 9,900원"]) assert.ok(businessText.includes(expected), expected);
+// 오픈 범위(2026-10-08): 팔지 않는 상품(AI 수정 토큰·맞춤 홈페이지 제작)은 판매 목록에 없다. 토큰 묶음은 다시 생성 묶음과 값이 같아(9,900원) 이름으로 본다
+for (const closed of ["홈페이지 AI 수정 토큰 20만", "맞춤 홈페이지 제작", "홈페이지 AI 수정 토큰, 맞춤 홈페이지 디자인"]) assert.ok(!businessText.includes(closed), closed);
 const ai = createLegalDocument("ai", complete);
 assert.ok(ai.sections.some((section) => section.items?.some((item) => item.includes("미국, 대한민국"))));
 const privacy = createLegalDocument("privacy", complete);
@@ -64,7 +64,7 @@ assert.ok(refund.sections.some((section) => section.paragraphs?.some((paragraph)
 const refundText = JSON.stringify(refund);
 for (const expected of ["44,250원", "5,940원", "연결을 완료한 날부터 7일 이내", "충전일부터 1년", "승인 취소", "3영업일 이내"]) assert.ok(refundText.includes(expected), expected);
 const upgradedPolicy = applyCurrentPlatformPolicy({ ...complete, policyEffectiveDate: "2026-07-19", refundAfterSupply: "이전 기준" });
-assert.equal(upgradedPolicy.policyEffectiveDate, "2026-10-05");
+assert.equal(upgradedPolicy.policyEffectiveDate, "2026-10-09");
 assert.match(upgradedPolicy.serviceSupplyTiming, /NicePay/);
 assert.match(upgradedPolicy.refundAfterSupply, /단순 변심/);
 

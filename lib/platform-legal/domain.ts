@@ -1,7 +1,7 @@
 import { z } from "zod";
 import {
   BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, CUSTOM_HOMEPAGE_FROM_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_NAME, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT,
-  REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, TOKEN_PACK_AMOUNT, TOKEN_PACK_NAME, TOKEN_PACK_TOKENS, TOKEN_VALIDITY_DAYS,
+  LEGACY_REGEN_INCLUDED, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, TOKEN_PACK_AMOUNT, TOKEN_PACK_NAME, TOKEN_PACK_TOKENS, TOKEN_VALIDITY_DAYS,
 } from "../payments/domain";
 
 export const PLATFORM_POLICY_VERSION = "2026-07-23";
@@ -71,8 +71,9 @@ export const defaultPlatformLegalSettings: PlatformLegalSettings = {
   privacyOfficer: "",
   privacyEmail: "",
   hostingProvider: "Cloudflare, Inc.",
-  /* 2026-10-05: 결제 수단을 카드로 한정(계좌이체 삭제), 제공 범위에서 발표자료(PPT) 삭제 */
-  policyEffectiveDate: "2026-10-05",
+  /* 2026-10-05: 결제 수단을 카드로 한정(계좌이체 삭제), 제공 범위에서 발표자료(PPT) 삭제
+   * 2026-10-09: 가격 개편(묶음 59,000원·홈페이지는 계획서 구매자 전용 19,000원·다시 생성 10회 9,900원), 포함 다시 생성 10회, 무료 체험 없음 */
+  policyEffectiveDate: "2026-10-09",
   accountRetention: "회원 탈퇴 시까지 보관하며, 법령상 보존 의무가 있는 정보는 해당 기간 동안 분리 보관합니다.",
   projectRetention: "사용자가 프로젝트를 삭제하거나 회원 탈퇴를 요청할 때까지 보관합니다.",
   infrastructureRecipients: "Supabase, Inc. 및 Cloudflare, Inc.",
@@ -212,7 +213,7 @@ const PAYMENT_METHODS = "신용·체크카드(결제대행: 나이스페이먼�
 
 const PRODUCT_ITEMS = [
   `사업계획서(문서 1부): ${won(PACKAGE_AMOUNT)}(부가세 포함)`,
-  `사업계획서 홈페이지 수정·공개: ${won(HOMEPAGE_PRODUCT_AMOUNT)}(부가세 포함, 홈페이지 1개)`,
+  `사업계획서 홈페이지 수정·공개: ${won(HOMEPAGE_PRODUCT_AMOUNT)}(부가세 포함, 홈페이지 1개. 같은 사업의 사업계획서를 결제한 경우에만 구매할 수 있습니다)`,
   `${BUNDLE_PRODUCT_NAME}: ${won(BUNDLE_PRODUCT_AMOUNT)}(부가세 포함, 같은 사업의 문서 1부와 홈페이지 1개를 함께 제공)`,
   `${DOMAIN_PRODUCT_NAME}: ${won(DOMAIN_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. 도메인 등록비는 별도)`,
   `${DOMAIN_PURCHASE_PRODUCT_NAME}: ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. .com·.kr·.co.kr 주소의 첫해 등록비 ${won(DOMAIN_PURCHASE_REGISTRATION_AMOUNT)} 포함)`,
@@ -507,7 +508,7 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
     sections: [
       { title: "1. 목적과 적용", paragraphs: ["이 약관은 운영자와 이용자 사이의 서비스 이용 조건, 권리와 책임을 정합니다. 결제 화면에 별도로 표시한 상품명, 금액, 제공 시기와 환불 조건도 계약 내용에 포함됩니다."] },
       { title: "2. 계정", items: ["이용자는 정확한 이메일로 가입하고 자신의 계정을 안전하게 관리해야 합니다.", "타인의 계정을 사용하거나 계정을 양도할 수 없습니다.", "계정 분실 시 이메일 계정 복구 절차를 이용할 수 있습니다."] },
-      { title: "3. 서비스 제공", items: ["아이디어 탐색과 무료 체험은 사업자등록 여부와 관계없이 이용할 수 있습니다.", `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "카드 결제 승인이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
+      { title: "3. 서비스 제공", items: ["아이디어 탐색과 사업 방향 정리는 사업자등록 여부와 관계없이 무료로 이용할 수 있습니다. 사업계획서 문서 작성은 결제한 뒤에 시작하며, 문서를 무료로 써 보는 체험은 제공하지 않습니다.", `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "카드 결제 승인이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
       { title: "4. 상품, 가격과 결제", items: [...PRODUCT_ITEMS, `결제 방법: ${PAYMENT_METHODS}. 카드 결제는 결제대행사 화면에서 이뤄지며 오늘창업은 카드번호를 받지 않습니다.`, "도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 결제한 문서 또는 홈페이지에서만 사용할 수 있고 다른 문서·홈페이지나 다른 계정으로 옮길 수 없습니다."] },
       { title: "5. 인공지능 결과", paragraphs: ["일부 결과는 생성형 인공지능이 작성한 초안입니다. 이용자는 실제 사업에 사용하기 전에 사실관계, 수치, 권리침해 여부와 관계 법령을 확인해야 합니다. 운영자는 고의 또는 중대한 과실이 없는 한 이용자가 확인 없이 결과를 사용해 발생한 손해를 책임지지 않습니다."] },
       { title: "6. 맞춤 제작과 환불 제한(사업계획서·홈페이지)", paragraphs: [settings.refundAfterSupply, "결제 전 완성 결과 예시와 제공 항목을 확인할 수 있습니다. 결제 화면에서는 제작 시작 시점과 단순 변심 환불 제한을 별도로 알리고 전자적 동의를 받습니다."] },
@@ -519,7 +520,7 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
           "인공지능이 실제로 본문을 만들어 낸 경우에만 1회로 계산하며, 생성에 실패한 요청은 차감하지 않습니다.",
           `포함 횟수를 모두 사용하면 ${REGEN_PACK_COUNT}회 묶음을 ${REGEN_PACK_AMOUNT.toLocaleString("ko-KR")}원(부가세 포함)에 추가로 구매할 수 있습니다. 추가 구매는 선택이며, 구매하지 않아도 이미 만들어진 문서의 열람과 내려받기는 계속 이용할 수 있습니다.`,
           "추가 구매한 횟수는 해당 문서에서만 사용할 수 있습니다.",
-          "이 조항은 이 조항을 게시한 날 이후에 결제한 문서부터 적용합니다. 그 전에 결제한 문서는 결제 당시의 조건을 그대로 따릅니다.",
+          `포함 횟수(${REGEN_INCLUDED}회)는 2026년 10월 9일 이후에 결제한 문서부터 적용합니다. 그 전에 결제한 문서는 결제 당시의 조건(다시 생성 ${LEGACY_REGEN_INCLUDED}회 포함)을 그대로 따릅니다.`,
         ],
       },
       { title: "8. 도메인 연결·호스팅", items: [`${DOMAIN_PRODUCT_NAME} 상품은 결제일부터 1년 동안 이용자의 도메인을 홈페이지에 연결하고 호스팅합니다.`, `${DOMAIN_PRODUCT_NAME} 상품에서 도메인 등록(구매)은 이용자가 가비아 등 등록기관에서 직접 하며, 등록비와 등록기관의 약관은 이 계약에 포함되지 않습니다.`, "기간이 끝나면 갱신을 안내하며, 갱신 전까지 홈페이지 편집이 제한될 수 있습니다.", ...DOMAIN_REFUND_ITEMS.slice(0, 3), ...DOMAIN_PURCHASE_ITEMS] },
@@ -546,7 +547,7 @@ function refundDocument(settings: PlatformLegalSettings): LegalDocument {
       {
         title: "6. 다시 생성 추가 구매",
         paragraphs: [
-          `문서 1부에는 섹션 ‘다시 생성’ ${REGEN_INCLUDED}회가 포함됩니다. 작성한 글을 직접 고쳐 쓰는 것은 횟수에 포함되지 않으며 제한이 없습니다.`,
+          `문서 1부에는 섹션 ‘다시 생성’ ${REGEN_INCLUDED}회가 포함됩니다(2026년 10월 9일 전에 결제한 문서는 결제 당시 조건대로 ${LEGACY_REGEN_INCLUDED}회). 작성한 글을 직접 고쳐 쓰는 것은 횟수에 포함되지 않으며 제한이 없습니다.`,
           `포함된 횟수를 모두 사용한 뒤에는 ${REGEN_PACK_COUNT}회 묶음을 ${REGEN_PACK_AMOUNT.toLocaleString("ko-KR")}원(부가세 포함)에 추가로 구매할 수 있습니다. 추가 구매는 선택이며, 구매하지 않아도 이미 만들어진 문서의 열람과 내려받기는 그대로 이용할 수 있습니다.`,
           "인공지능이 실제로 본문을 만들어 낸 경우에만 1회로 계산합니다. 생성에 실패한 요청은 횟수에서 차감하지 않습니다.",
           "추가 구매한 횟수는 해당 문서에서만 사용할 수 있고 다른 문서로 옮길 수 없습니다. 사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있으며, 일부라도 사용한 경우에는 남은 횟수에 해당하는 금액을 환급합니다.",

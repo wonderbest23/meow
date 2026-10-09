@@ -822,7 +822,7 @@ async function main() {
       const section = (await loadPlanState(session.ownerHash)).plans.find(item => item.id === session.planId)!.sections["market/customer"];
       assert.ok(section.markdown.endsWith("한 세트 49,000원"));
       assert.equal(saved.snapshot.documentStatus, "stale");
-      assert.equal(saved.snapshot.freeReflects, 5, "a plan starts with five free fact reflects");
+      assert.equal(saved.snapshot.freeReflects, 2, "a plan paid under the 2026-10-09 terms starts with two free fact reflects");
     });
 
     await check("plan edit chat needs a document and answers off-topic requests without any AI call", async () => {

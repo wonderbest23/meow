@@ -16,6 +16,7 @@ import { createIntake, IntakeError, intakeSnapshot, readIntake, intakeJobClock }
 import { expireStaleIntakeJob, intakeCommandSchema, saveIntakeCommand, updateIntakeJob } from "./intake-service";
 import { runIntakeJobWithBudget } from "./intake-execution.server";
 import { intakeFeatureEnabled, type IntakeCommand, type IntakeJobRequest, type IntakePayload } from "./intake-types";
+import { PLAN_FREE_AI_CAP_MESSAGE, planFreeAiCapReached } from "../llm/plan-cost-cap";
 import { ksicPath, searchKsic, sectorForKsic } from "./ksic";
 import { intakeJobExpired } from "./intake-timing";
 import { classifyEditRequest, EDIT_DAILY_LIMIT } from "./intake-edit-filter";
@@ -102,7 +103,7 @@ export async function intakePost(request: Request, prepare: (request: Request) =
       const result = await prepare(forwarded);
       const payload = await result.json();
       return json({ plan: await currentSnapshot(identity.hash, command.planId), authenticated: !!identity.userId, ownerScope: scope,
-        message: payload.message, login: payload.login, started: payload.started, paid: payload.paid }, result.status);
+        message: payload.message, code: payload.code, login: payload.login, started: payload.started, paid: payload.paid }, result.status);
     }
     // 계획서 채팅 수정: 규칙으로 먼저 거른다. 범위 밖 요청은 AI·AI 한도를 건드리지 않고 정해진 답으로 끝난다.
     const editRoute = command.action === "edit" ? classifyEditRequest(command.message ?? "") : undefined;
@@ -112,8 +113,11 @@ export async function intakePost(request: Request, prepare: (request: Request) =
     const aiLimited = needsAI && aiAvailable ? await enforceRateLimit("business-intake-ai", request, { key: identity.hash, limit: 24, windowMs: 600_000 }) : null;
     // 같은 계획서의 수정 요청은 하루 20번까지 — 계정 한도와 별개로, 한 계획서를 끝없이 고치며 AI를 쓰지 않도록.
     const editLimited = editRoute === "in_scope" && aiAvailable && !aiLimited ? await enforceRateLimit("business-intake-edit-daily", request, { key: `${identity.hash}:${command.planId ?? ""}`, limit: EDIT_DAILY_LIMIT, windowMs: 86_400_000 }) : null;
+    // 사업 1건당 무료 AI 비용 상한(lib/llm/plan-cost-cap.ts). 원문 메모 저장은 AI 없이 계속되고, AI 작업만 멈춘다.
+    const capReached = needsAI && aiAvailable && !aiLimited && !editLimited ? await planFreeAiCapReached(command.planId) : false;
+    if (capReached && command.action !== "message") return json({ code: "ai_limit", message: PLAN_FREE_AI_CAP_MESSAGE }, 429);
     // AI 사용 기록에 사업(계획서)을 붙인다 — 사업별 비용 집계
-    const result = await withUsageContext({ planId: command.planId, ownerHash: identity.hash }, () => saveIntakeCommand(identity.hash, command, { aiAvailable, aiAllowed: !aiLimited && !editLimited, editRoute }));
+    const result = await withUsageContext({ planId: command.planId, ownerHash: identity.hash }, () => saveIntakeCommand(identity.hash, command, { aiAvailable, aiAllowed: !aiLimited && !editLimited && !capReached, editRoute }));
     if (result.job) await withUsageContext({ planId: result.plan.id, ownerHash: identity.hash }, () => dispatchIntakeJob({ ownerHash: identity.hash, planId: result.plan.id, jobId: result.job!.id }));
     return json({ plan: result.snapshot, authenticated: !!identity.userId, ownerScope: scope,
       ...(!aiAvailable && command.action === "message" && result.snapshot.intake.notes.some(note => note.status === "failed") ? { message: "원문은 저장했어요. 자동 정리는 나중에 다시 요청하거나 직접 항목에 입력할 수 있어요" } : {}) }, result.job ? 202 : 200);

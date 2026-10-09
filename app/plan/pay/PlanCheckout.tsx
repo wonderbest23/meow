@@ -213,6 +213,21 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   const bothOwned = info?.paid === true && homepageInfo?.editable === true;
   const alreadyOwned = bundleBlocked ? true : extra || isRegen ? false : isHomepage ? homepageInfo?.editable === true : info?.paid === true;
 
+  /* 홈페이지 단독 가격은 그 사업의 계획서를 결제한 분 전용(서버도 같은 기준으로 막는다) — 아직이면 묶음으로 안내한다 */
+  if (isHomepage && planId && info && !info.unavailable && info.paid === false && homepageInfo?.editable !== true) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <h1 className={styles.title}>홈페이지는 사업계획서와 함께 열어요</h1>
+          <p className={styles.desc}>홈페이지 단독 {HOMEPAGE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원은 이 사업의 사업계획서를 결제한 분 전용이에요. 사업계획서 + 홈페이지를 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 함께 결제해 주세요.</p>
+          <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`} className={styles.primary}>사업계획서 + 홈페이지 결제하기</Link>
+          <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
+        </div>
+      </div>
+    );
+  }
+
   if (isDomainPurchase && !purchaseDomain) {
     return (
       <div className={styles.page}>
@@ -361,9 +376,9 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <p className={styles.note}>
           {/* 결제 뒤 실제로 가는 곳(결제 결과 화면의 단추)과 같은 말 */}
           {product === "regen" ? "결제가 끝나면 사업계획서로 돌아가 이어서 고칠 수 있습니다."
-            : product === "bundle" ? "결제가 끝나면 사업계획서로 돌아갑니다. 홈페이지 편집·공개도 함께 열립니다."
+            : product === "bundle" ? "결제가 끝나면 바로 사업계획서 작성을 시작해요. 홈페이지 편집·공개도 함께 열립니다."
             : extra ? "결제가 끝나면 홈페이지 화면으로 돌아갑니다."
-            : "지금까지 답한 내용은 그대로 남아 있습니다. 결제가 끝나면 이어서 작성됩니다."}
+            : "지금까지 답한 내용은 그대로 남아 있습니다. 결제가 끝나면 바로 사업계획서 작성을 시작해요."}
         </p>
         <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
       </div>

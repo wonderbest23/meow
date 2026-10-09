@@ -4,17 +4,21 @@ import { opportunitySnapshotSchema } from "../service-domain";
 /*
  * 출시 기념가(2026-09 출시). 첫 결제 문턱을 낮춰 결제 경험자를 먼저 모은다.
  * 할인율·종전가 표시는 하지 않는다 — 이 가격이 실제 판매가다(표시광고법상 허위 할인 방지).
- * AI 원가(Opus 5.5 기준 계획서 1부 대략 5~6천원, 최대 2만원대)를 제하고도 남도록 잡았다.
+ *
+ * 가격 구조(소유자 결정 2026-10-09): 무료 체험은 없다 — 사업계획서 본문은 결제 후에만 쓴다.
+ * 입구(첫 결제)는 싸게, 만든 뒤 고치고 다듬는 비용(다시 생성 묶음)과 도메인 연결로 계속 받는다.
+ * 운영 실측 AI 원가(Opus 5.5, 2026-08~10 llm_usage): 계획서 1부 약 5~8천원, 항목 하나 다시 쓰기 약 430원,
+ * 홈페이지 AI 채우기 1회 약 120원.
  */
 export const LAUNCH_PRICE_LABEL = "출시 기념가";
 export const PACKAGE_AMOUNT = 49_000;
 export const PACKAGE_LIST_AMOUNT = 199_000;
 export const CUSTOM_HOMEPAGE_FROM_AMOUNT = 490_000;
-/** 계획서로 만든 홈페이지의 수정·공개 권한 가격 (법적 고지 문서도 이 값을 쓴다) */
-export const HOMEPAGE_PRODUCT_AMOUNT = 69_000;
-/** 계획서 + 홈페이지 묶음 — 따로 사면 118,000원. 주력 상품 */
+/** 계획서로 만든 홈페이지의 수정·공개 권한 가격 — 그 사업의 계획서를 결제한 분만 살 수 있다(법적 고지 문서도 이 값을 쓴다) */
+export const HOMEPAGE_PRODUCT_AMOUNT = 19_000;
+/** 계획서 + 홈페이지 묶음 — 따로 사면 68,000원. 주력 상품(첫 결제 입구) */
 export const BUNDLE_PRODUCT_NAME = "사업계획서 + 홈페이지";
-export const BUNDLE_PRODUCT_AMOUNT = 99_000;
+export const BUNDLE_PRODUCT_AMOUNT = 59_000;
 export const PACKAGE_NAME = "맞춤 사업 실행 파일";
 export const PACKAGE_SUPPLY_AMOUNT = Math.round(PACKAGE_AMOUNT / 1.1);
 export const PACKAGE_VAT_AMOUNT = PACKAGE_AMOUNT - PACKAGE_SUPPLY_AMOUNT;
@@ -28,12 +32,21 @@ export const PACKAGE_VAT_AMOUNT = PACKAGE_AMOUNT - PACKAGE_SUPPLY_AMOUNT;
  * 여기서 세는 것은 '이미 쓰인 섹션을 AI 로 다시 만드는 것'뿐이다. 손님이
  * 직접 글을 고쳐 쓰는 것은 비용이 들지 않으므로 제한하지 않는다.
  */
-export const REGEN_INCLUDED = 20;
+export const REGEN_INCLUDED = 10;
+/** 2026-10-09 약관 이전에 결제한 계획서는 결제 당시 약속대로 20회 — 기존 구매자 조건은 줄이지 않는다 */
+export const LEGACY_REGEN_INCLUDED = 20;
+/** 이 날짜(약관 버전 앞 10자리)부터 결제한 계획서에 새 포함량(다시 생성·무료 반영)을 적용한다 */
+export const ALLOWANCE_TERMS_FROM = "2026-10-09";
 export const REGEN_PACK_COUNT = 10;
-export const REGEN_PACK_AMOUNT = 4_900;
+export const REGEN_PACK_AMOUNT = 9_900;
 export const REGEN_PACK_NAME = "다시 생성 10회";
 
-export const TERMS_VERSION = "2026-09-30-domain-purchase";
+/** 결제 주문에 남은 약관 버전으로 새 포함량 대상인지 본다. 버전이 없거나 그 전이면 예전 조건 */
+export function isCurrentAllowanceTerms(termsVersion: unknown): boolean {
+  return typeof termsVersion === "string" && termsVersion.slice(0, 10) >= ALLOWANCE_TERMS_FROM;
+}
+
+export const TERMS_VERSION = "2026-10-09-paid-first-pricing";
 
 export const paymentMethodSchema = z.enum(["CARD", "TOSSPAY", "TRANSFER"]);
 export type PaymentMethod = z.infer<typeof paymentMethodSchema>;

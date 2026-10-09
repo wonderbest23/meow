@@ -73,8 +73,10 @@ export type IntakeSnapshot = {
   documentStatus?: "none" | "current" | "stale" | "unverified";
   /** 지금 계획서에 반영하면 AI 가 다시 쓰는 항목 수(다시 쓰기 횟수 차감량) */
   rewriteCount?: number;
-  /** Free reflects of edited facts left today (see free-reflect.ts). */
+  /** 이 계획서에 남은 무료 반영 번수(free-reflect.ts) */
   freeReflects?: number;
+  /** 아직 한 번도 쓰지 않은 항목 수 — 예전 무료 체험으로 앞 2개만 있거나 작성 중 실패로 건너뛴 항목. 있으면 '이어서 작성'을 보여 준다 */
+  missingSections?: number;
   /** 확정된 표준산업분류와 그 사업 구조 기본값 */
   ksic: { code: string; name: string; path: string; structure: BusinessStructure | null; summary: string[]; licenseHint: string | null } | null;
   /** 사업 설명에서 규칙으로 찾은 KSIC 후보(업종 질문용, AI 0회) */

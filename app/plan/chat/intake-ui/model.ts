@@ -301,7 +301,7 @@ export function previewIntakeAnswer(snapshot: IntakeSnapshot, command: IntakeCom
   plan.title = coach.business.name;
   const changed = snapshot.hasDocuments && (coach.documentRevision ?? coach.revision) !== (snapshot.coach.documentRevision ?? snapshot.coach.revision);
   /* 화면에서 먼저 그리는 상태에는 계획서 본문이 없다 — 다시 쓸 항목 수는 서버 응답이 올 때까지 모른다 */
-  return { ...intakeSnapshot(plan, coach, intake, at), hasDocuments: snapshot.hasDocuments, documentStatus: changed ? "stale" : snapshot.documentStatus, rewriteCount: changed ? undefined : snapshot.rewriteCount };
+  return { ...intakeSnapshot(plan, coach, intake, at), hasDocuments: snapshot.hasDocuments, missingSections: snapshot.missingSections, freeReflects: snapshot.freeReflects, documentStatus: changed ? "stale" : snapshot.documentStatus, rewriteCount: changed ? undefined : snapshot.rewriteCount };
 }
 
 export type IntakeNextStep = "design" | "prepare" | "open" | null;
@@ -314,7 +314,8 @@ export function intakeNextStep(snapshot: IntakeSnapshot, prepared = false): Inta
   const design = snapshot.coach.design;
   const current = !!design && design.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision);
   if (!current) return "design";
-  return prepared || snapshot.hasDocuments && snapshot.documentStatus !== "stale" ? "open" : "prepare";
+  // 쓰지 않은 항목이 남아 있으면(예전 무료 체험으로 앞 2개만 있음, 작성 중 실패로 건너뜀) 이어서 작성하기로 돌아온다
+  return prepared || snapshot.hasDocuments && snapshot.documentStatus !== "stale" && !snapshot.missingSections ? "open" : "prepare";
 }
 
 /** Offer one existing question without turning optional unknowns into required answers. */

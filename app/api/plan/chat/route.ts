@@ -1,4 +1,4 @@
-import { freeReflectsLeft, usedFreeReflects } from "../../../../lib/plan-builder/free-reflect";
+import { freeReflectsLeft, storedFreeReflectsTotal, usedFreeReflects } from "../../../../lib/plan-builder/free-reflect";
 import { NextResponse } from "next/server";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
@@ -12,10 +12,10 @@ import { reconcileCoachJob } from "../../../../lib/plan-builder/coach-job-status
 import { serverPersistenceMode } from "../../../../lib/persistence";
 import { loadPlanState, savePlanState, type ServerPlan } from "../../../../lib/plan-builder/plan-server-store";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
-import { checkSectionAccess, freePlanLimitReached, resolvePlanAccess } from "../../../../lib/plan-builder/access";
+import { checkSectionAccess, resolvePlanAccess } from "../../../../lib/plan-builder/access";
 import { COACH_KEY, COACH_TYPES, readCoach, coachDocumentRevision } from "../../../../lib/plan-builder/coach";
 import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
-import { resolveRegenQuota } from "../../../../lib/plan-builder/regen-quota";
+import { resolvePlanAllowance, resolveRegenQuota } from "../../../../lib/plan-builder/regen-quota";
 import { staleRewriteCount } from "../../../../lib/plan-builder/intake-core";
 import { loadConsultSession, saveConsultTurn, consultLimitFor } from "../../../../lib/consult/repository";
 import { intakeGet, intakePost } from "../../../../lib/plan-builder/intake-http";
@@ -70,8 +70,8 @@ const prepareGenerationSchema = z.object({
   receipts: z.array(prepareReceiptSchema).max(128).default([]),
   dispatchState: z.enum(["reserved", "dispatching", "uncertain", "dispatched"]).optional(),
   dispatchAt: z.string().optional(), dispatchToken: z.string().optional(),
-  // 고친 사업 정보 반영은 하루 몇 번까지 다시 생성 횟수 없이(lib/plan-builder/free-reflect.ts)
-  free: z.boolean().optional(), freeReflects: z.array(z.string()).max(32).optional(),
+  // 고친 사업 정보 반영은 계획서마다 정해진 번수까지 다시 생성 횟수 없이(lib/plan-builder/free-reflect.ts)
+  free: z.boolean().optional(), freeReflects: z.array(z.string()).max(32).optional(), freeReflectsTotal: z.number().int().nonnegative().optional(),
 }).passthrough();
 type PrepareGeneration = z.infer<typeof prepareGenerationSchema>;
 type PrepareWorkflow = NonNullable<Awaited<ReturnType<typeof binding>>>;
@@ -168,11 +168,12 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
       const access = await resolvePlanAccess(plan.planType, plan.id);
       if (!access.authenticated) return json({ message: "대화는 보관했습니다. 로그인 후 초안을 만들 수 있습니다.", login: true }, 401);
       if (receipt?.accepted) return json({ plan: publicPlan(plan), started: true, paid: receipt.paid });
+      // 무료 체험은 없다(소유자 결정 2026-10-09) — 사업계획서 본문은 결제한 계획서만 쓴다. 화면은 이 응답을 받으면 결제 화면으로 보낸다.
+      if (!access.paid) return json({ code: "payment_required", message: "사업계획서 문서는 결제 후에 작성해요. 결제 화면으로 이동할게요.", pay: true }, 402);
       if (coach.revision !== input.revision) return prepareConflict();
       if (!coach.ready) return json({ message: "먼저 어떤 사업인지 대화로 알려주세요." }, 400);
       const coachJob = readCoachJob(plan.answers);
       if (isCoachJobActive(coachJob) && !isCoachJobStale(coachJob!)) return prepareConflict();
-      if (!access.paid && freePlanLimitReached(plan.id, state.plans, access.paidPlanIds)) return json({ message: "무료 초안 이용 범위를 모두 사용했습니다. 기존 문서에서 이어가거나 결제 후 제작해주세요." }, 402);
       const keys = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)).filter(key => checkSectionAccess(access, key) === "ok");
       const workflow = await binding();
       if (!workflow) return prepareUnavailable();
@@ -197,12 +198,18 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
       }
       // Finishing a free reflect's skipped sections stays free and does not use another free reflect.
       const resumesFree = !reusable && existing?.revision === revision && existing.free === true;
-      const free = resumesFree || !reusable && staleRewriteCount(plan.sections, revision, keys) > 0 && freeReflectsLeft(existing) > 0;
+      // 무료 반영 번수는 결제할 때 동의한 조건으로(2026-10-09 이후 결제 2번, 그 전 5번). 다시 쓸 항목이 있을 때 확인하지 못하면 시작하지 않는다 —
+      // 첫 작성처럼 다시 쓸 항목이 없으면 번수를 쓰지 않으니 확인 실패로 막지 않는다
+      const stale = !reusable && staleRewriteCount(plan.sections, revision, keys) > 0;
+      const allowance = reusable ? null : await resolvePlanAllowance(plan.id);
+      if (stale && !resumesFree && !allowance) return json({ code: "quota_unavailable", message: "무료 반영 횟수를 확인하지 못했어요. 기존 문서는 보관되어 있고 제작은 시작하지 않았어요." }, 503);
+      const freeReflectsTotal = allowance?.freeReflects ?? (typeof existing?.freeReflectsTotal === "number" ? existing.freeReflectsTotal : undefined);
+      const free = resumesFree || stale && freeReflectsLeft(existing, freeReflectsTotal ?? storedFreeReflectsTotal(existing)) > 0;
       const quota = !reusable && !free && await prepareQuota(plan, keys, revision);
       if (quota) return quota;
       const runId = reusable ? existing!.runId : `coach-${createHash("sha256").update(`${ownerHash}\0${planId}\0${input.requestId}`).digest("hex").slice(0, 48)}`;
       const freeReflects = [...usedFreeReflects(existing), ...(free && !resumesFree ? [new Date().toISOString()] : [])];
-      const generation: PrepareGeneration = reusable ? existing! : { revision, runId, keys, paid: access.paid, receipts: existing?.receipts ?? [], dispatchState: "reserved", ...(free ? { free: true } : {}), ...(freeReflects.length ? { freeReflects } : {}) };
+      const generation: PrepareGeneration = reusable ? existing! : { revision, runId, keys, paid: access.paid, receipts: existing?.receipts ?? [], dispatchState: "reserved", ...(free ? { free: true } : {}), ...(freeReflects.length ? { freeReflects } : {}), ...(freeReflectsTotal !== undefined ? { freeReflectsTotal } : {}) };
       generation.receipts.push({ id: input.requestId, signature, runId, paid: access.paid, accepted: reusable && existing!.dispatchState === "dispatched" });
       const updatedAt = plan.updatedAt;
       for (const key of keys) plan.answers[key] ??= { planning_source: "사업 기획 대화의 공통 정보" };
