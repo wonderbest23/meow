@@ -1,6 +1,7 @@
 import { getServerSupabase } from "../persistence";
 import { cloudflareSaasConfigured, deleteLandingDomainConnection } from "../landing/custom-domain";
-import { BUNDLE_PRODUCT_NAME, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_NAME, REGEN_INCLUDED, REGEN_PACK_NAME, TOKEN_PACK_NAME } from "./domain";
+import { BUNDLE_PRODUCT_NAME, DOMAIN_PRODUCT_NAME, DOMAIN_PURCHASE_PRODUCT_NAME, REGEN_PACK_NAME, TOKEN_PACK_NAME } from "./domain";
+import { resolvePlanAllowance } from "../plan-builder/regen-quota";
 import { HOMEPAGE_PRODUCT_NAME, summarizeDomainOrders, type PlanProduct } from "./plan-orders";
 import type { PaymentOrder } from "./domain";
 import { setAutoRenew } from "../landing/domain-registrar";
@@ -88,14 +89,17 @@ export async function closeRefundedProduct(order: PaymentOrder, options: { homep
   if (product === "regen") {
     await attempt("다시 생성 추가분 회수", async () => {
       const planId = String((order.opportunity as { planId?: string } | null)?.planId ?? "");
-      const [packs, used] = await Promise.all([
+      const [packs, used, allowance] = await Promise.all([
         supabase.from("plan_regen_packs").select("order_id, granted, created_at").eq("plan_id", planId).order("created_at", { ascending: true }),
         supabase.from("plan_regenerations").select("id", { count: "exact", head: true }).eq("plan_id", planId).eq("ok", true),
+        resolvePlanAllowance(planId),
       ]);
       if (packs.error || used.error) throw packs.error ?? used.error;
+      // 기본 포함 횟수(결제 때 약속한 10회 또는 예전 20회)를 모르면 묶음에서 얼마나 썼는지도 모른다
+      if (!allowance) throw new Error("REGEN_ALLOWANCE_UNKNOWN");
       // 쓴 횟수를 모르면 0번으로 보고 돌려주지 않는다
       if (used.count === null) throw new Error("REGEN_USAGE_UNKNOWN");
-      let left = Math.max(0, (used.count ?? 0) - REGEN_INCLUDED);
+      let left = Math.max(0, (used.count ?? 0) - allowance.regenIncluded);
       let keep = 0;
       for (const pack of packs.data ?? []) {
         const usedHere = Math.min(left, Number(pack.granted) || 0);

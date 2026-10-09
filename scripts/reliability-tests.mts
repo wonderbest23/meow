@@ -26,7 +26,7 @@ suites.push("business-intake-questions", "business-intake-core", "business-intak
 suites.push("business-intake-prepare", "business-intake-ui");
 suites.push("ksic", "business-intake-coverage");
 suites.push("intake-live-comment", "intake-answer-suggestions", "financial-engine-unify", "safe-next");
-suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render", "landing-ai-fill", "landing-contact-method", "landing-share-card", "landing-photo-library", "landing-themes", "llm-cost", "operating-homepage", "domain-purchase", "weekly-report", "customer-sms", "parallel-sections", "industry-playbooks", "marketing-kit", "plan-section-guard");
+suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "plan-cost-cap", "fact-patch", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render", "landing-ai-fill", "landing-contact-method", "landing-share-card", "landing-photo-library", "landing-themes", "llm-cost", "operating-homepage", "domain-purchase", "weekly-report", "customer-sms", "parallel-sections", "industry-playbooks", "marketing-kit", "plan-section-guard");
 suites.push("launch-notifications");
 suites.push("service-requests");
 suites.push("public-data");

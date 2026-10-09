@@ -1,4 +1,5 @@
 import { freeReflectsLeft } from "./free-reflect";
+import { chaptersForType, sectionKey } from "./blueprint";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
@@ -231,6 +232,11 @@ export function intakeDocumentStatus(plan: Pick<ServerPlan, "sections">, coach: 
   return sections.every(section => section.coachRevision === revision) ? "current" : "unverified";
 }
 
+/** 이 계획서 유형의 항목 중 아직 본문이 없는 항목 수 */
+function missingSectionCount(plan: ServerPlan): number {
+  return chaptersForType(plan.planType).reduce((total, chapter) => total + chapter.sections.filter(section => !plan.sections[sectionKey(chapter.id, section.id)]).length, 0);
+}
+
 export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: IntakeState, resourceAsOf = new Date(Math.max(Date.now(), Date.parse(plan.updatedAt) || 0)).toISOString()): IntakeSnapshot {
   const resources = evaluateIntakeCandidates(intake, coach, resourceAsOf);
   const questions = intakeQuestions(intake, coach, resources.ideas);
@@ -254,7 +260,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
   return { planId: plan.id, title: plan.title, planType: plan.planType, updatedAt: plan.updatedAt, coach,
     intake: publicIntake, nextQuestion: questions.find(question => !answeredIntakeQuestion(intake, coach, question)) ?? null,
     questions, coreComplete: answered === core.length, coreAnswered: answered, coreTotal: core.length,
-    summary, financialSummary: intakeFinancialReference(coach, intake), financialWarning: intakeFinancialWarning(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach), rewriteCount: staleRewriteCount(plan.sections, coachDocumentRevision(coach)), freeReflects: freeReflectsLeft(plan.answers.__coach_generation),
+    summary, financialSummary: intakeFinancialReference(coach, intake), financialWarning: intakeFinancialWarning(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach), rewriteCount: staleRewriteCount(plan.sections, coachDocumentRevision(coach)), freeReflects: freeReflectsLeft(plan.answers.__coach_generation), missingSections: missingSectionCount(plan),
     ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(coach, intake),
     candidateIdeas: resources.ideas,
     resourceAssessment: resources.assessment,

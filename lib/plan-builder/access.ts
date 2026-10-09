@@ -45,7 +45,7 @@ export interface PlanAccess {
   hasAnyPaid: boolean;
   /** 이 유형의 가격 */
   price: number;
-  /** 무료로 열리는 섹션 키 (플랜 유형 기준 앞 2개) */
+  /** 무료로 열리는 섹션 키 — 무료 체험이 없어 지금은 항상 비어 있다(free-tier.ts) */
   freeKeys: string[];
   /** 결제로 열린 문서 id — 무료 문서 수를 셀 때 제외한다 */
   paidPlanIds: Set<string>;
@@ -54,6 +54,7 @@ export interface PlanAccess {
 /** 유형에 맞는 순서에서 앞 N개 섹션 키 */
 export function freeSectionKeys(planType?: string): string[] {
   const out: string[] = [];
+  if (FREE_SECTION_COUNT <= 0) return out;
   for (const ch of chaptersForType(planType)) {
     for (const s of ch.sections) {
       out.push(sectionKey(ch.id, s.id));
@@ -91,7 +92,7 @@ export async function resolvePlanAccess(planType?: string, planId?: string): Pro
 
 /**
  * 이 섹션을 생성할 수 있는지 판정한다.
- * 로그인하지 않았으면 아무것도 못 하고, 결제 전에는 앞 2개만 된다.
+ * 로그인하지 않았으면 아무것도 못 하고, 결제 전에는 아무 항목도 쓰지 않는다(무료 체험 없음).
  */
 export function checkSectionAccess(access: PlanAccess, key: string): AccessReason {
   if (!access.authenticated) return "login_required";

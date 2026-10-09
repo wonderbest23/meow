@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import Module, { createRequire } from "node:module";
 import type { ServerPlan, ServerPlanState } from "../lib/plan-builder/plan-server-store";
+import { TERMS_VERSION } from "../lib/payments/domain";
 
 type Generation = {
   revision: number; runId: string; keys: string[]; paid: boolean;
@@ -47,15 +48,19 @@ async function main() {
   let quotaAvailable = true, quotaThrows = false, quotaReads = 0;
   let usage: QuotaResult = { error: null, count: 0 };
   let packs: QuotaResult = { error: null, data: [] };
+  // 포함량은 결제 주문의 약관 버전으로 정한다(regen-quota.ts resolvePlanAllowance) — 기본은 주문 없음 = 예전 포함량(20회·무료 반영 5번)
+  let orders: QuotaResult = { error: null, data: [] };
   const quotaDatabase = {
     from(table: string) {
-      assert.ok(["plan_regenerations", "plan_regen_packs"].includes(table));
+      assert.ok(["plan_regenerations", "plan_regen_packs", "payment_orders"].includes(table));
       const query = {
         select: () => query,
         eq: () => query,
+        in: () => query,
+        limit: () => query,
         then: (resolve: (value: QuotaResult) => unknown, reject: (error: unknown) => unknown) => {
-          quotaReads++;
-          return Promise.resolve(table === "plan_regenerations" ? usage : packs).then(resolve, reject);
+          if (table !== "payment_orders") quotaReads++;
+          return Promise.resolve(table === "plan_regenerations" ? usage : table === "payment_orders" ? orders : packs).then(resolve, reject);
         },
       };
       return query;
@@ -120,7 +125,7 @@ async function main() {
       owner = `prepare-test-${randomUUID()}`;
       authenticated = paid = quotaAvailable = bindingAvailable = true;
       quotaThrows = statusUnavailable = false; quotaReads = 0;
-      usage = { count: 0, error: null }; packs = { data: [], error: null };
+      usage = { count: 0, error: null }; packs = { data: [], error: null }; orders = { data: [], error: null };
       attempts.length = networkCalls.length = 0; workflows.clear();
       saveHook = async () => undefined; accessHook = async () => undefined; createHook = async () => undefined;
       process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 = "0";
@@ -334,6 +339,40 @@ async function main() {
       assert.equal((await prepare(id, randomUUID(), { revision: 7 })).status, 402, "the sixth reflect needs the quota, which is used up");
       assert.equal(attempts.length, 5);
       usage = { error: null, count: 0 };
+    });
+
+    await check("plans paid under the 2026-10-09 terms get 10 included regenerations and two free reflects; older orders keep 20 and five", async () => {
+      orders = { error: null, data: [{ terms_version: TERMS_VERSION }] };
+      assert.deepEqual(await quota.resolveRegenQuota("fixture"), { allowed: 10, used: 0, remaining: 10 });
+      orders = { error: null, data: [{ terms_version: "2026-09-30-domain-purchase" }] };
+      assert.deepEqual(await quota.resolveRegenQuota("fixture"), { allowed: 20, used: 0, remaining: 20 });
+      orders = { error: null, data: [{ terms_version: TERMS_VERSION }, { terms_version: null }] };
+      assert.deepEqual(await quota.resolveRegenQuota("fixture"), { allowed: 20, used: 0, remaining: 20 }, "any older order keeps the older allowance");
+      orders = { error: "offline", data: null };
+      assert.deepEqual(await quota.resolveRegenQuota("fixture"), { allowed: 0, used: 0, remaining: 0, unavailable: true });
+      orders = { error: null, data: [{ terms_version: TERMS_VERSION }] };
+      usage = { error: null, count: 10 };
+      const id = await seed({ section: true });
+      for (let round = 0; round < 2; round++) {
+        assert.equal((await prepare(id, randomUUID(), { revision: 2 + round })).status, 200, `free reflect ${round + 1}`);
+        const generation = (await read(id)).generation as Generation & { free?: boolean; freeReflects?: string[]; freeReflectsTotal?: number };
+        assert.equal(generation.free, true); assert.equal(generation.freeReflects?.length, round + 1); assert.equal(generation.freeReflectsTotal, 2);
+        workflows.set(generation.runId, "complete");
+        await mutate(id, plan => { const coach = readCoach(plan.answers)!; coach.revision++; coach.documentRevision = coach.revision; plan.answers[COACH_KEY] = { state: coach }; });
+      }
+      assert.equal((await prepare(id, randomUUID(), { revision: 4 })).status, 402, "the third reflect needs the quota, which is used up");
+      assert.equal(attempts.length, 2);
+      orders = { error: "offline", data: null };
+      assert.equal((await prepare(id, randomUUID(), { revision: 4 })).status, 503, "a rewrite whose allowance cannot be verified does not start");
+      assert.equal(attempts.length, 2);
+    });
+
+    await check("unpaid plans are sent to payment and never start a workflow (no free trial)", async () => {
+      paid = false;
+      const id = await seed(), saved = (await read(id)).state;
+      const response = await prepare(id);
+      assert.equal(response.status, 402); assert.equal(response.body.code, "payment_required");
+      assert.deepEqual((await read(id)).state, saved); assert.equal(attempts.length, 0);
     });
 
     await check("a finished run with a skipped section resumes it at the same revision, still free", async () => {

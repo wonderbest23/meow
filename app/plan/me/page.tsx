@@ -229,7 +229,7 @@ export default function PlanMePage() {
           </div>
           <div className={styles.row}>
             <dt>이용 상태</dt>
-            <dd>{account.usage === "all" ? "모든 사업계획서 이용 중" : account.usage === "some" ? "결제한 사업계획서 이용 중" : account.usage === "free" ? "무료로 이용 중" : "확인하지 못했어요"}</dd>
+            <dd>{account.usage === "all" ? "모든 사업계획서 이용 중" : account.usage === "some" ? "결제한 사업계획서 이용 중" : account.usage === "free" ? "결제한 사업계획서 없음" : "확인하지 못했어요"}</dd>
           </div>
           <div className={styles.row}>
             <dt>내 사업</dt>

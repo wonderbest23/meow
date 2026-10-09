@@ -64,7 +64,7 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
             이어서 나머지 섹션을 작성하려면 결제가 필요합니다.
           </>
         ) : (
-          <>앞부분을 무료로 써보신 뒤, 이어서 작성하려면 결제가 필요합니다.</>
+          <>사업계획서 문서는 결제한 뒤에 작성합니다.</>
         )}
       </p>
       {price ? (

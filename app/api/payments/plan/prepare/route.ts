@@ -2,6 +2,7 @@ import { loadPlanState } from "../../../../../lib/plan-builder/plan-server-store
 import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../../lib/api-auth";
 import { createPlanOrder, paidPlanEntitlement, paidHomepagePlanIds, domainEntitlement, productName, PLAN_PRODUCT_NAME, type PlanProduct } from "../../../../../lib/payments/plan-orders";
+import { BUNDLE_PRODUCT_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT } from "../../../../../lib/payments/domain";
 import { nicepayClientKey, nicepayConfigured, nicepaySdkUrl } from "../../../../../lib/payments/nicepay-client";
 import { evaluatePlatformLaunchReadiness } from "../../../../../lib/platform-legal/domain";
 import { getPlatformLegalSettings } from "../../../../../lib/platform-legal/repository";
@@ -120,9 +121,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "already_paid", message: "계획서나 홈페이지 중 하나가 이미 열려 있어요. 남은 상품만 따로 결제해 주세요." }, { status: 409 });
     }
   } else if (product === "homepage") {
-    const purchased = await paidHomepagePlanIds(identity.userId);
+    const [plans, purchased] = await Promise.all([paidPlanEntitlement(identity.userId), paidHomepagePlanIds(identity.userId)]);
     if (purchased.has(planId)) {
       return NextResponse.json({ error: "already_paid", message: "이미 이 홈페이지는 열려 있습니다." }, { status: 409 });
+    }
+    // 홈페이지 단독 가격은 그 사업의 계획서를 결제한 분 전용이다(2026-10-09 가격 개편) — 아직이면 묶음으로 함께 사게 한다
+    if (!plans.allAccess && !plans.planIds.has(planId)) {
+      return NextResponse.json({ error: "plan_required", product: "bundle", message: `홈페이지는 이 사업의 사업계획서를 결제한 뒤 ${HOMEPAGE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 열 수 있어요. 아직이라면 사업계획서 + 홈페이지(${BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원)로 함께 결제해 주세요.` }, { status: 409 });
     }
   } else {
     const ent = await paidPlanEntitlement(identity.userId);
