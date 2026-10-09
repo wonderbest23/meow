@@ -24,13 +24,22 @@ export function useGenerationProgress(planId: string | null | undefined, enabled
     const poll = async () => {
       try {
         const response = await fetch(`/api/plan/generation?planId=${encodeURIComponent(planId)}`, { cache: "no-store" });
-        if (response.ok) { const data = await response.json() as GenerationState; if (!alive) return; setState(data); if (!data.active || FAILED.includes(data.runStatus ?? "")) return; }
+        // 바뀐 게 없으면 상태를 새로 만들지 않는다 — 몇 초마다 문서 전체가 다시 그려져 버벅이던 원인
+        if (response.ok) { const data = await response.json() as GenerationState; if (!alive) return; setState(current => current && JSON.stringify(current) === JSON.stringify(data) ? current : data); if (!data.active || FAILED.includes(data.runStatus ?? "")) return; }
       } catch { /* 연결이 잠깐 끊겨도 다음 차례에 다시 묻는다 */ }
       if (alive) timer = window.setTimeout(poll, intervalMs);
     };
     void poll();
     return () => { alive = false; window.clearTimeout(timer); };
   }, [planId, enabled, intervalMs, tick]);
+  // 다른 탭에서 시작한 작성도 이 화면에 돌아오면 다시 확인한다(멈춘 확인을 다시 켠다)
+  useEffect(() => {
+    if (!planId || !enabled) return;
+    const wake = () => { if (document.visibilityState === "visible") setTick(value => value + 1); };
+    document.addEventListener("visibilitychange", wake);
+    window.addEventListener("focus", wake);
+    return () => { document.removeEventListener("visibilitychange", wake); window.removeEventListener("focus", wake); };
+  }, [planId, enabled]);
   /** 새 제작을 시작한 직후처럼 다시 묻기 시작하게 한다 */
   const restart = () => setTick(value => value + 1);
   return { state, restart };

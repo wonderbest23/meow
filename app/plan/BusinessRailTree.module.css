@@ -23,6 +23,16 @@
 a.step:hover { background:#f2f4f6; color:#191f28; }
 .step[aria-current="page"] { background:#e8f0fd; color:#1b4f9c; font-weight:700; }
 .step[aria-disabled="true"] { color:#b0b8c1; cursor:default; }
+button.step { width:100%; border:0; background:transparent; font:inherit; text-align:left; }
+button.step[aria-disabled="true"] { cursor:pointer; }
+button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
+.lockDialog { width:min(380px, calc(100% - 40px)); padding:24px 22px 18px; border:0; border-radius:16px; box-shadow:0 20px 50px rgb(16 24 36 / .18); color:#191f28; }
+.lockDialog::backdrop { background:rgb(16 24 36 / .35); }
+.lockDialog p { margin:0 0 20px; font-size:15px; font-weight:600; line-height:1.6; word-break:keep-all; }
+.lockDialog div { display:flex; justify-content:flex-end; gap:8px; }
+.lockDialog button, .lockDialog a { min-height:40px; padding:0 16px; border-radius:10px; font:inherit; font-size:14px; font-weight:600; display:inline-flex; align-items:center; text-decoration:none; cursor:pointer; }
+.lockDialog button { border:1px solid #d1d6db; background:#fff; color:#4e5968; }
+.lockDialog a { border:0; background:#246bd1; color:#fff; }
 .step i { display:grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid #d1d6db; font-style:normal; font-size:10px; font-weight:700; color:#8b95a1; background:#fff; }
 .step i[data-state="done"] { border-color:#246bd1; background:#246bd1; color:#fff; }
 .step i[data-state="active"] { border-color:#246bd1; color:#246bd1; }

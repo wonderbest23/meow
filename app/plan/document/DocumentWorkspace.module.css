@@ -160,6 +160,11 @@
 @media(max-width:760px) { .executiveSummary dl > div { grid-template-columns: 65px minmax(0, 1fr); gap: 10px; }.executiveSummary h2 { font-size: 17px; } }
 
 /* 만드는 중 — 진행 막대, 지금 쓰는 장 + 깜빡이는 커서, 차오르는 글줄 */
+.arrival { display:flex; align-items:center; gap:6px; width:100%; margin:-16px 0 24px; padding:12px 16px; border:1px solid #bcd3f7; border-radius:12px; background:#fff; color:#1b4f9c; font:inherit; font-size:14px; text-align:left; cursor:pointer; animation:arrival-in .3s ease-out; }
+.arrival b { font-weight:700; }
+.arrival:hover { background:#f5f9ff; }
+@keyframes arrival-in { from { opacity:0; transform:translateY(-6px); } to { opacity:1; transform:none; } }
+@media (prefers-reduced-motion: reduce) { .arrival { animation:none; } }
 .writing { display:grid; gap:10px; margin:0 0 28px; padding:18px 18px 16px; border:1px solid #d7e5fb; border-radius:14px; background:#f5f9ff; }
 .writingHead { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .writingHead strong { font-size:15px; color:#191f28; }

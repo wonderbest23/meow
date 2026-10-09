@@ -376,6 +376,8 @@ function readOnlyPlan(planId: string | null | undefined): boolean {
 export function setActivePlan(planId: string) {
   const s = loadState();
   if (!s.plans.some((p) => p.id === planId)) return;
+  // 이미 그 사업이면 아무것도 올리지 않는다 — 화면을 열 때마다 전체 상태를 올려 서버의 계획서 작성과 부딪혔다
+  if (s.activePlanId === planId) return;
   s.activePlanId = planId;
   persist(s);
   if (!isSamplePlan(planId)) void pushToServer();

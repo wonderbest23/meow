@@ -8,6 +8,17 @@ import { ensureProjectForPlan } from "../../../../lib/plan-builder/project-bridg
 import { getLandingForProject, saveLandingDraft } from "../../../../lib/landing/repository";
 import { landingDraftFromPlan, planLandingReadiness } from "../../../../lib/landing/from-plan";
 import { paidHomepagePlanIds, HOMEPAGE_PRODUCT_AMOUNT } from "../../../../lib/payments/plan-orders";
+import { BUNDLE_PRODUCT_AMOUNT } from "../../../../lib/payments/domain";
+
+/*
+ * 홈페이지를 열 때 보여 줄 가격 — 홈페이지 단독(19,000원)은 그 사업의 계획서를 결제한 분 전용이고,
+ * 아니면 계획서와 묶음(59,000원)이다(2026-10-09). 예전엔 늘 단독 가격만 보여 줘, 누르면 다른 값이 나왔다.
+ */
+async function offerFor(plan: { id: string; planType: string }) {
+  const access = await resolvePlanAccess(plan.planType, plan.id).catch(() => null);
+  const planPaid = !!access?.paid;
+  return { planPaid, price: planPaid ? HOMEPAGE_PRODUCT_AMOUNT : BUNDLE_PRODUCT_AMOUNT };
+}
 import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
 import { isEditorPreviewAccount } from "../../../../lib/landing/editor-preview";
 import { seedLandingSourceSnapshot } from "../../../../lib/landing/source-update";
@@ -58,7 +69,7 @@ export async function GET(request: Request) {
   const site = await getLandingForProject(projectId, identity.hash);
   const purchased = identity.userId ? await paidHomepagePlanIds(identity.userId) : new Set<string>();
   return NextResponse.json(
-    { site, projectId, editable: await editableFor(planId, purchased, identity.email), price: HOMEPAGE_PRODUCT_AMOUNT },
+    { site, projectId, editable: await editableFor(planId, purchased, identity.email), ...(await offerFor(plan)) },
     { headers: { "Cache-Control": "private, no-store" } },
   );
 }
@@ -88,7 +99,7 @@ export async function POST(request: Request) {
    * 미리보기만 하는 사람에게도 초안은 만들어 준다 — 사기 전에 봐야 살지 정한다.
    */
   const purchased = identity.userId ? await paidHomepagePlanIds(identity.userId) : new Set<string>();
-  const entitlement = { editable: await editableFor(plan.id, purchased, identity.email), price: HOMEPAGE_PRODUCT_AMOUNT };
+  const entitlement = { editable: await editableFor(plan.id, purchased, identity.email), planPaid: access.paid, price: access.paid ? HOMEPAGE_PRODUCT_AMOUNT : BUNDLE_PRODUCT_AMOUNT };
 
   const linkedProjectId = await findProjectIdByPlan(plan.id, identity.hash);
   const existing = linkedProjectId ? await getLandingForProject(linkedProjectId, identity.hash) : null;

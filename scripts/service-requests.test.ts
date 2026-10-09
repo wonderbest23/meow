@@ -26,7 +26,10 @@ const RETIRED = ["business-registration", "mail-order-report", "industry-license
   for (const id of ["blog-distribution", "press-release", "sns-management", "full-marketing"]) assert.ok(findService(id), `빠진 서비스: ${id}`);
   // 창업 행정 4종은 신청받지 않는다(소유자 결정 2026-10-07) — 지난 신청 기록을 보이려고 기록으로만 찾는다
   for (const id of RETIRED) { assert.equal(findService(id), undefined, `신청받지 않는 서비스: ${id}`); assert.ok(findServiceRecord(id), `기록은 남는다: ${id}`); }
-  assert.ok(SERVICE_CATALOG.every((item) => item.group === "marketing") && SERVICE_GROUPS.map((group) => group.id).join() === "marketing", "지금은 마케팅만");
+  // 지금 신청받는 것: 마케팅 + 홈페이지 전문가 상담(2026-10-09). 창업 행정은 닫혀 있다
+  assert.equal(SERVICE_GROUPS.map((group) => group.id).join(), "marketing,homepage", "마케팅과 홈페이지 개선만");
+  assert.ok(SERVICE_CATALOG.every((item) => item.group === "marketing" || item.group === "homepage"), "창업 행정은 신청받지 않는다");
+  assert.ok(findService("homepage-expert"), "홈페이지 6번 전문가 상담");
   assert.equal(findService("nope"), undefined);
   assert.equal(servicePriceLabel({ ...SERVICE_CATALOG[0], price: "월 99,000원" }), "월 99,000원", "가격을 넣으면 그 값");
   assert.equal(SERVICE_PRICE_PENDING, "가격은 상담 후 안내");

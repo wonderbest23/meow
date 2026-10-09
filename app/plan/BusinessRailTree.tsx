@@ -28,7 +28,7 @@ function stepFor(pathname: string): JourneyStepId | null {
 
 /* 홈페이지 화면 안의 칸 — 누르면 그 자리로 내려간다 */
 /* 홈페이지 화면의 번호(1~5)와 같은 순서 */
-const HOMEPAGE_PARTS: Array<[string, string]> = [["hk-preview", "미리보기·에디터"], ["hk-contact", "손님 연락 방법"], ["hk-business", "사업자 정보"], ["hk-domain", "내 도메인 연결"], ["hk-leads", "문의 알림"]];
+const HOMEPAGE_PARTS: Array<[string, string]> = [["hk-preview", "미리보기·에디터"], ["hk-contact", "손님 연락 방법"], ["hk-business", "사업자 정보"], ["hk-domain", "내 도메인 연결"], ["hk-leads", "문의 알림"], ["hk-expert", "전문가 상담"]];
 function jump(id: string) {
   const el = document.getElementById(id);
   if (!el) return;
@@ -36,11 +36,31 @@ function jump(id: string) {
   el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+/*
+ * 아직 열리지 않은 단계를 누르면 왜 막혔는지와 갈 곳을 안내창으로 보여 준다 — 예전엔 마우스를 올려야 뜨는 말풍선뿐이라
+ * 휴대폰에서는 눌러도 아무 일이 없었다(소유자 피드백 2026-10-09).
+ */
+const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: string; back: number; label: string }> = {
+  document: { message: "사업 방향 정리를 마쳐야 사업계획서를 만들 수 있어요.", back: 0, label: "대화로 가기" },
+  homepage: { message: "사업계획서를 완성해야 홈페이지를 만들 수 있어요.", back: 1, label: "사업계획서로 가기" },
+  care: { message: "홈페이지를 제작해 공개해야 유지보수를 진행할 수 있어요.", back: 2, label: "홈페이지로 가기" },
+};
+
 /** 사업 하나를 펼친 목차 — 대화 · 사업계획서 · 홈페이지 · 유지보수 */
 function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: JourneyStepId | null; documentToc?: DocumentToc; pathname: string }) {
   const homepage = useHomepageStatus(plan.id);
   const steps = journeySteps(plan, homepage);
-  return <ol className={styles.steps}>
+  const [locked, setLocked] = useState<{ message: string; href: string; label: string } | null>(null);
+  const lockDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => { if (locked && lockDialog.current && !lockDialog.current.open) lockDialog.current.showModal(); }, [locked]);
+  const openLocked = (id: JourneyStepId) => {
+    if (id === "chat") return;
+    // 홈페이지 공개 여부를 아직 모르면(불러오는 중·실패) 막혔다고 말하지 않는다
+    if (id === "care" && homepage === null) return;
+    const guide = LOCKED_GUIDE[id];
+    setLocked({ message: guide.message, href: steps[guide.back].href, label: guide.label });
+  };
+  return <><ol className={styles.steps}>
     {steps.map((step, index) => {
       const current = here === step.id;
       const reachable = step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
@@ -51,7 +71,7 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
       return <li key={step.id}>
         {reachable
           ? <Link className={styles.step} href={step.href} aria-current={current ? "page" : undefined} onClick={() => setActivePlan(plan.id)}>{body}</Link>
-          : <span className={styles.step} aria-disabled="true" title="앞 단계를 마치면 열려요">{body}</span>}
+          : <button type="button" className={styles.step} aria-disabled="true" title="앞 단계를 마치면 열려요" onClick={() => openLocked(step.id)}>{body}</button>}
         {/* 문서를 보고 있으면 그 문서의 목차를 바로 아래에 */}
         {step.id === "document" && current && documentToc?.planId === plan.id && documentToc.chapters.length > 0 && <ul className={styles.parts} aria-label="사업계획서 목차">
           {documentToc.chapters.map((name, chapter) => <li key={name}><button type="button" aria-current={documentToc.current === chapter ? "true" : undefined} onClick={() => documentToc.onSelect(chapter)}><b>{String(chapter + 1).padStart(2, "0")}</b>{name}</button></li>)}
@@ -62,7 +82,14 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
         </ul>}
       </li>;
     })}
-  </ol>;
+  </ol>
+  <dialog ref={lockDialog} className={styles.lockDialog} onClose={() => setLocked(null)}>
+    <p>{locked?.message}</p>
+    <div>
+      <button type="button" onClick={() => lockDialog.current?.close()}>닫기</button>
+      {locked && <Link href={locked.href} onClick={() => { lockDialog.current?.close(); setActivePlan(plan.id); }}>{locked.label}</Link>}
+    </div>
+  </dialog></>;
 }
 
 /**

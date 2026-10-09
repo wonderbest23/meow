@@ -54,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const used = await countAiFills(planId);
   if (used === null) return NextResponse.json({ error: { code: "AI_FILL_UNAVAILABLE", message: "지금은 AI 채우기를 쓸 수 없습니다. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
   if (used >= limit) {
-    return NextResponse.json({ error: { code: "AI_FILL_LIMIT", message: reason === "ok" ? `AI 채우기는 홈페이지마다 ${limit}번까지 쓸 수 있어요. 글은 에디터에서 직접 고치거나 AI 수정을 써 주세요.` : "미리보기에서는 AI 채우기를 한 번만 쓸 수 있어요. 결제하면 다시 채울 수 있어요." } }, { status: 429 });
+    return NextResponse.json({ error: { code: "AI_FILL_LIMIT", message: reason === "ok" ? `AI 채우기는 홈페이지마다 ${limit}번까지 쓸 수 있어요. 글은 에디터에서 직접 고칠 수 있어요.` : "미리보기에서는 AI 채우기를 한 번만 쓸 수 있어요. 결제하면 다시 채울 수 있어요." } }, { status: 429 });
   }
 
   const config = resolveLLMConfig(identity.hash, "anthropic");

@@ -238,6 +238,26 @@
 .typingBubble i:nth-child(3) { animation-delay: .6s; }
 .jobChat { display: flex; flex-direction: column; align-items: flex-start; gap: 0; padding: 4px 0 8px; }
 .jobChatNote { margin-top: 8px; color: var(--intake-muted); font-size: 12px; line-height: 1.6; }
+/* 코치 채팅 1단계 결과(DesignResult): 이름 · 요약 · 버튼만 */
+.result { display: grid; gap: 20px; width: 100%; margin-top: 6px; }
+.resultBlock { display: grid; gap: 10px; }
+.resultLabel { margin: 0; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: .02em; }
+.resultName { margin: 0; color: #111418; font-size: 24px; font-weight: 700; line-height: 1.3; word-break: keep-all; }
+.resultNames { display: flex; flex-wrap: wrap; gap: 8px; }
+.resultHeadline { margin: 0; color: #111418; font-size: 17px; font-weight: 600; line-height: 1.5; word-break: keep-all; }
+.resultSummary { display: grid; gap: 12px; margin: 0; padding: 16px; border: 1px solid #e5e7eb; border-radius: 16px; background: #fff; }
+.resultSummary > div { display: grid; gap: 4px; }
+.resultSummary dt { color: #6b7280; font-size: 13px; font-weight: 600; }
+.resultSummary dd { margin: 0; color: #1f2937; font-size: 15px; line-height: 1.65; }
+.resultAction { display: grid; justify-items: start; gap: 8px; margin-top: 18px; }
+/* 사업 방향 정리 진행(DesignProgress): 막대 + 단계 체크 */
+.designProgress { display: grid; gap: 12px; width: min(100%, 360px); margin-top: 10px; padding: 14px 16px; border: 1px solid #e5e7eb; border-radius: 16px; background: #fff; }
+.designSteps { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.designSteps li { display: flex; align-items: center; gap: 8px; color: #9ca3af; font-size: 13px; line-height: 1.4; transition: color .3s ease; }
+.designSteps li > span { width: 14px; height: 14px; border: 1.5px solid #d1d5db; border-radius: 999px; }
+.designSteps li[data-state="current"] { color: #111418; font-weight: 600; }
+.designSteps li[data-state="done"] { color: #374151; }
+.designSteps li[data-state="done"] svg { color: var(--intake-blue); }
 .chatQuestion { display: flex; flex-direction: column; }
 /* The question arrives as a coach bubble first; its choices follow a beat later, like a reply in a messenger. */
 .chatQuestion h2 { align-self: flex-start; width: fit-content; max-width: 88%; margin-bottom: 14px; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; font-size: 16px; font-weight: 500; line-height: 1.6; animation: intake-bubble-in .2s cubic-bezier(.2, .8, .2, 1); transform-origin: 0 50%; }
@@ -618,6 +638,8 @@
 .page[data-coach] .chatQuestion .option strong, .page[data-coach] .chip, .page[data-coach] .ksicChip strong, .page[data-coach] .unknownChoice strong { font-size: 13px; font-weight: 400; line-height: 18px; color: inherit; white-space: normal; }
 .page[data-coach] .chatQuestion .option:hover, .page[data-coach] .chip:hover:not(:disabled), .page[data-coach] .ksicChip:hover { background: #f5f6f8; border-color: #9ca3af; }
 .page[data-coach] .chatQuestion .option[data-selected="true"], .page[data-coach] .chip[aria-pressed="true"], .page[data-coach] .chip[data-selected="true"], .page[data-coach] .ksicChip[aria-pressed="true"] { border-color: #111418; background: #111418; color: #fff; }
+/* 고른 칩에 마우스가 올라가 있어도(휴대폰은 누른 뒤 계속) 고른 모양을 지킨다 — 위 :hover 가 더 구체적이라 연한 배경이 흰 글자를 가렸다 */
+.page[data-coach] .chatQuestion .option[data-selected="true"]:hover, .page[data-coach] .chip[aria-pressed="true"]:hover:not(:disabled), .page[data-coach] .chip[data-selected="true"]:hover:not(:disabled), .page[data-coach] .ksicChip[aria-pressed="true"]:hover { border-color: #2b2f36; background: #2b2f36; color: #fff; }
 .page[data-coach] .chatQuestion .optionHint, .page[data-coach] .chipHint, .page[data-coach] .ksicChip span, .page[data-coach] .chipHelp { display: none; }
 .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial { margin-top: 6px; border-color: #e5e7eb; color: #6b7280; }
 .page[data-coach] .unknownChoice[aria-pressed="true"] { border-color: #111418; background: #111418; color: #fff; }

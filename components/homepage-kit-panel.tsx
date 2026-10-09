@@ -11,6 +11,7 @@ import { hasUnpublishedEdits } from "../lib/landing/save-contract";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
 import { HomepageAlertSettings } from "./homepage-alert-settings";
+import { HomepageExpertConsult } from "./homepage-expert-consult";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave/business-content";
 import { applyBusinessContent } from "../lib/landing/page-data";
@@ -89,7 +90,10 @@ export function HomepageKitPanel({
   onSourceApplied,
   aiFill,
   inChrome = false,
+  planId,
 }: {
+  /** 이 홈페이지의 사업 — 6번 전문가 상담 신청에 쓴다 */
+  planId?: string | null;
   draft: LandingDraft;
   site: LandingSiteRecord | null;
   projectId: string | null;
@@ -429,6 +433,11 @@ export function HomepageKitPanel({
           <span><strong>내 문의에서 보기</strong><small>{leadsError ? "문의 수를 불러오지 못했어요 · 내 문의에서 다시 확인해 주세요" : leads === null ? "문의를 확인하고 있어요" : leads.length ? `받은 문의 ${leads.length}건${openLeads ? ` · 답할 것 ${openLeads}건` : ""}` : "아직 들어온 문의가 없어요"}</small></span>
           <ChevronDown size={18} aria-hidden style={{ transform: "rotate(-90deg)" }} />
         </a>
+      </Fold>
+
+      {/* 6. 전문가 상담 — 담당자가 직접 고쳐 주는 개별 상담. 신청하면 운영자에게 문자가 간다 */}
+      <Fold step={6} id="hk-expert" icon={<PhoneCall size={18} />} title="전문가 상담" hint="담당자가 사진·문구·디자인을 직접 다듬어 드려요">
+        <HomepageExpertConsult planId={planId ?? null} />
       </Fold>
       </fieldset>
     </section>
