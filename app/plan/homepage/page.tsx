@@ -79,6 +79,8 @@ export default function PlanHomepagePage() {
   /** 섹션 배치 편집기 — 결제한 사람만 연다 */
   const [builderOpen, setBuilderOpen] = useState(false);
   const [price, setPrice] = useState(HOMEPAGE_PRODUCT_AMOUNT);
+  /* 이 사업의 계획서를 결제했는지 — 아니면 홈페이지는 계획서와 묶음으로만 열린다 */
+  const [planPaid, setPlanPaid] = useState(true);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
   const requestRef = useRef<AbortController | null>(null);
@@ -262,7 +264,7 @@ export default function PlanHomepagePage() {
       if (!alive || epoch !== planOwnerEpoch()) return;
 
       if (res.ok) {
-        const data = (await res.json()) as { site: LandingSiteRecord; projectId: string; editable?: boolean; price?: number; created?: boolean };
+        const data = (await res.json()) as { site: LandingSiteRecord; projectId: string; editable?: boolean; price?: number; planPaid?: boolean; created?: boolean };
         if (!alive || epoch !== planOwnerEpoch()) return;
         setSite(data.site);
         setProjectId(data.projectId);
@@ -280,6 +282,7 @@ export default function PlanHomepagePage() {
         /* 옛 블록 페이지만 편집기를 바로 연다 — 킷 페이지는 화면(미리보기·사업자·문의)부터 보여준다 */
         if (data.editable && !data.site.draft.pageData?.brainwave) setBuilderOpen(true);
         if (typeof data.price === "number") setPrice(data.price);
+        if (typeof data.planPaid === "boolean") setPlanPaid(data.planPaid);
         setPhase("ready");
         // 방금 만든(또는 만든 뒤 채우지도 고치지도 않은) 홈페이지는 계획서로 한 번 채운다(카드·이용 순서·마무리 문구·업종 사진)
         if ((data.created && data.site.draft.pageData?.brainwave) || needsAutoAiFill(data.site)) void runAiFill(data.projectId, data.site.updatedAt, true);
@@ -433,7 +436,7 @@ export default function PlanHomepagePage() {
     const state = loadState();
     const plan = (screenPlanId ? state.plans.find((p) => p.id === screenPlanId) : null) ?? activePlan(state);
     const query = plan
-      ? `?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=homepage`
+      ? `?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=${planPaid ? "homepage" : "bundle"}`
       : "?product=homepage";
     return `/plan/pay${query}`;
   }
@@ -495,11 +498,12 @@ export default function PlanHomepagePage() {
         <div className={styles.previewWrap}>
           <div className={styles.payBar}>
             <div>
-              <strong className={styles.payTitle}>킷 페이지로 만든 홈페이지</strong>
+              <strong className={styles.payTitle}>{sample ? "예시 홈페이지" : planPaid ? "홈페이지 편집·공개" : "사업계획서 + 홈페이지"}</strong>
               <p className={styles.payNote}>
                 {sample
                   ? "예시 홈페이지입니다. 내 사업으로 만들면 이 페이지의 글과 사진을 바꿔 쓰게 됩니다."
-                  : `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 홈페이지 에디터가 필요합니다. ${price.toLocaleString("ko-KR")}원.`}
+                  : planPaid ? `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 결제가 필요해요. ${price.toLocaleString("ko-KR")}원.`
+                    : `홈페이지는 사업계획서와 함께 열어요. 둘 다 ${price.toLocaleString("ko-KR")}원.`}
               </p>
             </div>
             <div className={styles.payActions}>
@@ -507,7 +511,7 @@ export default function PlanHomepagePage() {
                 <a className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기 →</a>
               ) : (
                 <button type="button" className={styles.cta} onClick={() => router.push(blockedHref("pay"))}>
-                  홈페이지 에디터 →
+                  {planPaid ? "홈페이지 에디터 →" : "함께 결제하기 →"}
                 </button>
               )}
             </div>
