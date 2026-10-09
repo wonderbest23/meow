@@ -573,6 +573,7 @@ export default function PlanHomepagePage() {
       {phase === "ready" && draft && editable && draft.pageData?.brainwave && (
         <HomepageKitPanel
           inChrome
+          planId={screenPlanId}
           draft={draft}
           site={site}
           projectId={projectId}

@@ -6,7 +6,7 @@
  * id 는 DB(service_requests.service_id)에 그대로 남으니 한 번 정하면 바꾸지 않는다 — 이름만 바꾼다.
  */
 
-export type ServiceGroupId = "admin" | "marketing";
+export type ServiceGroupId = "admin" | "marketing" | "homepage";
 
 export interface ServiceGroup {
   id: ServiceGroupId;
@@ -46,6 +46,7 @@ export type ServiceIcon = "badge" | "cart" | "shield" | "building" | "pen" | "ne
 const ALL_SERVICE_GROUPS: readonly ServiceGroup[] = [
   { id: "admin", title: "창업 행정", note: "등록·신고처럼 한 번은 꼭 해야 하는 일" },
   { id: "marketing", title: "마케팅", note: "손님이 가게를 찾아오게 하는 일" },
+  { id: "homepage", title: "홈페이지 개선", note: "담당자가 직접 손봐 드리는 일" },
 ];
 
 /*
@@ -53,9 +54,17 @@ const ALL_SERVICE_GROUPS: readonly ServiceGroup[] = [
  * '상담 신청'만 받고 끝나는 어설픈 상태라 신청 화면에서 뺐다. 예전 신청 기록은 관리자 화면에서 그대로 보이게
  * findServiceRecord 로 찾는다. 다시 열려면 OFFERED_GROUPS 에 "admin" 을 넣으면 된다.
  */
-const OFFERED_GROUPS: readonly ServiceGroupId[] = ["marketing"];
+const OFFERED_GROUPS: readonly ServiceGroupId[] = ["marketing", "homepage"];
+
+/** 홈페이지 6번 '전문가 상담' — 담당자가 전화로 듣고 직접 고쳐 주는 개별 상담(소유자 요청 2026-10-09) */
+export const HOMEPAGE_EXPERT_SERVICE_ID = "homepage-expert";
 
 const ALL_SERVICES: readonly ServiceItem[] = [
+  /* 세무·법률 상담이 아니다 — 홈페이지 품질(사진·문구·디자인)을 담당자가 직접 다듬는 일만 다룬다 */
+  { id: HOMEPAGE_EXPERT_SERVICE_ID, group: "homepage", title: "전문가 상담 · 홈페이지 고퀄리티 개선", short: "전문가 상담", icon: "pen", tone: "indigo", duration: "상담 후 안내",
+    summary: "담당자가 전화로 원하는 부분을 듣고 사진·문구·디자인을 직접 다듬어 드려요.", who: "홈페이지를 더 완성도 있게 바꾸고 싶은 분",
+    includes: ["원하는 수정 사항을 전화로 확인", "사진·문구·디자인을 담당자가 직접 수정", "비용과 일정은 상담 후 안내"],
+    steps: ["상담 신청", "담당자 전화 상담", "수정 반영"], prepare: ["고치고 싶은 부분", "참고할 홈페이지(있으면)"] },
   /*
    * 창업 행정 4종은 '대행'이 아니다 — 세무사법(세무대리·알선 금지)·행정사법(보수 받는 서류 작성·제출 금지) 때문에
    * 오늘창업은 신청 방법 안내·서류 준비 도움·자격 있는 전문가(세무사·행정사) 연결까지만 한다. 제출은 사장님 본인이 한다.

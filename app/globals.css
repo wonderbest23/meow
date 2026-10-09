@@ -17085,6 +17085,16 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 .hk-step-head { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 15px; font-weight: 700; color: #161c2d; }
 
 /* 홈페이지 5번 칸: 문의는 '내 문의'에서 */
+/* 홈페이지 6번 전문가 상담 */
+.hk-expert { display: grid; gap: 12px; }
+.hk-expert label { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: #374151; }
+.hk-expert input, .hk-expert textarea { width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 10px; font: inherit; font-size: 15px; font-weight: 400; color: #111418; background: #fff; }
+.hk-expert textarea { resize: vertical; min-height: 76px; }
+.hk-expert-note { margin: 0; color: #4b5563; font-size: 14px; line-height: 1.6; display: flex; align-items: center; gap: 6px; }
+.hk-expert-done { margin: 0; display: flex; align-items: center; gap: 8px; padding: 12px 14px; border-radius: 12px; background: #ecfdf3; color: #067647; font-weight: 600; font-size: 14px; }
+.hk-expert-error { margin: 0; color: #b42318; font-size: 13px; }
+.hk-spin { animation: hk-expert-spin 1s linear infinite; }
+@keyframes hk-expert-spin { to { transform: rotate(360deg); } }
 .hk-inquiries-link { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 12px; padding: 14px 16px; border: 1px solid #c9dbf6; border-radius: 12px; background: #f1f6fe; color: #1d3f72; text-decoration: none; }
 .hk-inquiries-link span { display: grid; gap: 2px; }
 .hk-inquiries-link strong { font-size: 15px; }

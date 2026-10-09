@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireAuthenticatedIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { notifyOperator } from "../../../../lib/ops-alerts";
+import { notifyOwnerBySms } from "../../../../lib/notify/owner-sms";
 import { findService } from "../../../../lib/services/catalog";
 import { formatKoreanPhone } from "../../../../lib/contact-links";
 import { validateServiceRequest } from "../../../../lib/services/requests";
@@ -61,8 +62,9 @@ export async function POST(request: Request) {
     const identity = await requireAuthenticatedIdentity();
     const { request: created, planTitle } = await createServiceRequest({ ...checked.value, ownerId: identity.userId, ownerHash: identity.hash, customerEmail: identity.email ?? "" });
     const service = findService(created.serviceId);
-    // 상담 신청은 빨리 전화해야 의미가 있다 — 운영자가 바로 알게. 알림 실패는 접수 결과를 바꾸지 않는다(notifyOperator 는 던지지 않는다)
-    await notifyOperator(`서비스 상담 신청: ${service?.title ?? created.serviceId}`, [
+    // 상담 신청은 빨리 전화해야 의미가 있다 — 운영자에게 메일과 문자를 함께 보낸다. 알림 실패는 접수 결과를 바꾸지 않는다(둘 다 던지지 않는다).
+    // 문자는 중계 서버의 고정 문구(support-inquiry, '새 고객센터 문의')를 쓴다 — 자세한 내용은 메일과 /admin/services 에서 본다
+    await Promise.allSettled([notifyOwnerBySms(created.id), notifyOperator(`서비스 상담 신청: ${service?.title ?? created.serviceId}`, [
       `서비스: ${service?.title ?? created.serviceId}`,
       `사업: ${planTitle || "(이름 없음)"}`,
       `연락처: ${formatKoreanPhone(created.phone)}`,
@@ -71,7 +73,7 @@ export async function POST(request: Request) {
       `계정: ${identity.email ?? "(이메일 없음)"}`,
       "",
       "처리하기: https://oneulstart.com/admin/services",
-    ]);
+    ])]);
     return NextResponse.json({ ok: true, request: created }, { headers });
   } catch (error) {
     return failure(error);
