@@ -252,7 +252,7 @@ function HybridChips({ question, draft, disabled, groups, revealed, extraPicked 
   question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; groups: ReturnType<typeof optionGroups>; revealed: (index: number) => boolean;
   /** 같은 한도에 포함되는 맞춤 추천 선택 수 */
   extraPicked?: number; onChange: (value: AnswerDraft) => void;
-  /** Coach chat: send as soon as every step is filled; a partial pick gets a quiet "이대로 보내기". */
+  /** Coach chat: send as soon as every step is filled; a partial pick is sent from the composer, where the picked chips appear as text. */
   coach?: boolean; onSend?: (value: AnswerDraft) => void;
 }) {
   const limit = chipLimit(question.id);
@@ -261,7 +261,7 @@ function HybridChips({ question, draft, disabled, groups, revealed, extraPicked 
     const value = next(selected);
     (coach && onSend && !extraPicked && hybridComplete(question, selected) ? onSend : onChange)(value);
   };
-  const partial = coach && !!onSend && draft.selected.some(value => !value.startsWith(COUNT_PREFIX)) && !hybridComplete(question, draft.selected) && !incompleteChoiceText(question, draft);
+  // 덜 고른 답은 입력창(코치 채팅에서는 고른 칩이 글로 채워진다)의 보내기로 보낸다 — 칩 옆에 '이대로 보내기'를 따로 두면 보낼 곳이 둘이라 헷갈린다(소유자 피드백 2026-10-09)
   const tap = (value: string) => update(toggleChip(question, draft.selected, value));
   const picked = (group: string) => (question.options ?? []).find(option => option.group === group && draft.selected.includes(option.value));
   // Count step: capacity after its unit chip, goal for an "N건" metric. The count lives in draft.selected as "#n".
@@ -280,8 +280,7 @@ function HybridChips({ question, draft, disabled, groups, revealed, extraPicked 
         return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{option.label}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
       })}</div>
     </div>;
-  }), countUnit !== undefined && <CountStep key="count" question={question} unit={countUnit} count={count} disabled={disabled} onCount={value => update(withCount(draft.selected, value))} />,
-    partial && <button key="send-partial" type="button" className={styles.sendPartial} disabled={disabled} onClick={() => onSend!(draft)}>이대로 보내기</button>]}</div>;
+  }), countUnit !== undefined && <CountStep key="count" question={question} unit={countUnit} count={count} disabled={disabled} onCount={value => update(withCount(draft.selected, value))} />]}</div>;
 }
 
 /** Preset chips + stepper for a count inside a hybrid answer; the composer sends the final answer. */
@@ -538,6 +537,39 @@ const STRUCTURE_AXIS_LABEL: Record<StructureAxis, string> = { payer: "고객·�
 const JOB_TITLES: Record<"extract" | "help" | "design" | "ideas" | "edit", string> = { edit: "바꿀 내용 정리 중", extract: "저장한 메모 정리 중", design: "사업 방향 정리 중", help: "AI 답변 작성 중", ideas: "새 사업 후보 제안 중" };
 const monotonicNow = () => typeof performance !== "undefined" ? performance.now() : Date.now();
 
+/*
+ * 사업 방향 정리(30~40초) 진행 화면 — 코치 채팅용. 예전엔 회색 제목이 가만히 있다가 점 세 개 말풍선 뒤에 결과가 '짠' 하고
+ * 나타나 멈춘 것처럼 보였다(소유자 피드백 2026-10-09). 마지막 답을 보낸 순간부터 막대와 단계 표시를 보여 준다.
+ * 막대는 서버 기준 경과 시간으로 추정한 값이라 95%에서 멈추고, 끝나면 결과 화면으로 바뀐다. 오래 걸리면 그렇다고 말한다.
+ */
+const DESIGN_STEPS = ["답변 모으기", "고객과 문제 연결하기", "돈 버는 구조 점검하기", "시작 범위 제안하기"];
+export function DesignProgress({ snapshot, announce = false }: { snapshot: IntakeSnapshot; announce?: boolean }) {
+  const job = snapshot.intake.job?.kind === "design" ? snapshot.intake.job : null;
+  const active = !!job && (job.status === "queued" || job.status === "running");
+  const serverElapsed = snapshot.jobClock?.elapsedMs;
+  const base = active && job ? serverElapsed ?? Math.max(0, Date.now() - Date.parse(job.createdAt ?? job.updatedAt)) : 0;
+  const [sync, setSync] = useState(() => ({ base, at: monotonicNow() }));
+  const [, setTick] = useState(0);
+  useEffect(() => { setSync({ base, at: monotonicNow() }); }, [job?.id, job?.status, serverElapsed]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const timer = window.setInterval(() => setTick(value => value + 1), 500);
+    return () => window.clearInterval(timer);
+  }, []);
+  const timing = snapshot.jobClock ?? INTAKE_JOB_TIMING.design;
+  // 서버가 작업을 받기 전(마지막 답 저장 중)에도 첫 단계부터 움직이게 시작한다
+  const view = active && job ? jobProgress(job.status, sync.base + (monotonicNow() - sync.at), timing.expectedMs, timing.limitMs) : { percent: 3, elapsedSeconds: 0, slow: false };
+  const current = Math.min(DESIGN_STEPS.length - 1, Math.floor(view.percent / (100 / DESIGN_STEPS.length)));
+  return <div className={styles.jobChat} data-kind="design" data-design-progress>
+    <ChatSpeaker status="사업 방향 정리 중" />
+    <div className={styles.designProgress}>
+      <div className={styles.jobProgressBar} role="progressbar" aria-label="사업 방향 정리" aria-valuemin={0} aria-valuemax={100} aria-valuenow={view.percent}><span style={{ width: `${view.percent}%` }} /></div>
+      <ol className={styles.designSteps}>{DESIGN_STEPS.map((step, index) => <li key={step} data-state={index < current ? "done" : index === current ? "current" : "todo"}>{index < current ? <Check size={14} aria-hidden="true" /> : index === current ? <LoaderCircle size={14} className={styles.spinner} aria-hidden="true" /> : <span aria-hidden="true" />}{step}</li>)}</ol>
+    </div>
+    {announce && <span className={styles.srOnly} role="status" aria-live="polite">사업 방향 정리 중 · {DESIGN_STEPS[current]}</span>}
+    <small className={styles.jobChatNote}>{view.slow ? `평소보다 오래 걸리고 있어요 · ${view.elapsedSeconds}초. 답변은 저장돼 있어요.` : "답변을 바탕으로 사업 방향을 한 장으로 정리하고 있어요. 보통 30~40초 걸려요."}</small>
+  </div>;
+}
+
 /** Show server status and elapsed time without presenting an estimated completion percentage. */
 export function JobProgress({ snapshot, announce = false, variant = "gauge" }: { snapshot: IntakeSnapshot; announce?: boolean; variant?: "gauge" | "chat" }) {
   const job = snapshot.intake.job;
@@ -630,8 +662,10 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서 다시 �
   </>;
 }
 
-export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false }: {
+export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
+  /** 코치 채팅 결과 화면: 단계 표시·긴 설명 없이 버튼과 한 줄만(DesignResult 아래) */
+  minimal?: boolean;
 }) {
   const step = intakeNextStep(snapshot, prepared);
   if (!step) return null;
@@ -649,6 +683,11 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   const reapply = step === "prepare" && snapshot.hasDocuments && snapshot.documentStatus === "stale";
   // 바뀐 내용은 없고 아직 안 쓴 항목만 남았으면(예전 무료 체험으로 앞 2개만 있음, 작성 중 실패) 남은 항목만 이어서 쓴다 — 다시 생성 횟수를 쓰지 않는다
   if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />남은 {snapshot.missingSections}개 항목 이어서 작성하기</button>}</div>;
+  if (minimal && !jobActive && (step === "prepare" && !snapshot.hasDocuments || step === "open")) return <div className={styles.resultAction} data-step={step}>
+    {step === "prepare" ? <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />사업계획서 만들기</button>
+      : <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 열기</Link>}
+    {step === "prepare" && <small className={styles.nextStepHint}>결제하면 바로 작성을 시작해요. 몇 분 걸려요.</small>}
+  </div>;
   // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
   if (step === "prepare" && snapshot.hasDocuments) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} />}</div>;
   return <div className={styles.nextStep} data-active data-step={step}>
@@ -707,6 +746,44 @@ export function BusinessIdentityHero({ snapshot, disabled, onName, compact = fal
           </form>}
       <small className={styles.identityNote}>지금 이름: <b>{current}</b> · 고른 이름은 앞으로 만드는 계획서에 들어가요. 실제로 쓰기 전에 키프리스(kipris.or.kr)에서 같은 상표가 있는지 확인해 주세요.</small>
     </div>}
+  </section>;
+}
+
+/*
+ * 코치 채팅의 1단계 결과 — 사업 이름 추천과 직접 수정하기, 사업 방향 요약만 둔다. 그 아래 '사업계획서 만들기'(결제로 이어짐) 하나.
+ * 예전엔 'AI 제안' 아이콘, 이름마다 붙은 이유, 상표 안내, 제안 이유 펼치기까지 붙어 읽기 어려웠다(소유자 피드백 2026-10-09).
+ * 자세한 제안 이유·확인할 내용은 요약 패널(DesignDirection)에 그대로 남아 있다.
+ */
+export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeSnapshot; disabled?: boolean; onName?: (name: string) => void }) {
+  const identity = currentIdentity(snapshot);
+  const [custom, setCustom] = useState<string | null>(null);
+  const design = snapshot.coach.design;
+  if (!identity || !design) return null;
+  const current = snapshot.coach.business.name;
+  const submitCustom = (event: FormEvent) => { event.preventDefault(); const name = (custom ?? "").replace(/\s+/g, " ").trim(); if (name && onName) { onName(name); setCustom(null); } };
+  return <section className={styles.result} aria-label="1단계 결과">
+    <div className={styles.resultBlock}>
+      <p className={styles.resultLabel}>사업 이름</p>
+      <h2 className={styles.resultName}>{current}</h2>
+      {onName && (custom === null
+        ? <div className={styles.resultNames} role="group" aria-label="추천 이름">
+            {identity.names.filter(item => item.name !== current).map(item => <button key={item.name} type="button" className={styles.chip} disabled={disabled} onClick={() => onName(item.name)}>{item.name}</button>)}
+            <button type="button" className={styles.chip} disabled={disabled} onClick={() => setCustom(identity.names.some(item => item.name === current) ? "" : current)}>직접 수정하기</button>
+          </div>
+        : <form className={styles.identityCustom} onSubmit={submitCustom}>
+            <input aria-label="사업 이름 직접 입력" maxLength={40} value={custom} autoFocus onChange={event => setCustom(event.target.value)} placeholder="예: 새벽반찬" />
+            <button type="submit" className={styles.secondaryButton} disabled={disabled || !custom.trim()}>이 이름으로</button>
+            <button type="button" className={styles.textButton} onClick={() => setCustom(null)}>취소</button>
+          </form>)}
+    </div>
+    <div className={styles.resultBlock}>
+      <p className={styles.resultLabel}>1단계 결과 요약</p>
+      <p className={styles.resultHeadline}>{identity.headline}</p>
+      <dl className={styles.resultSummary}>
+        <div><dt>이렇게 시작해요</dt><dd><ConversationText text={design.startingPlan.scope} /></dd></div>
+        <div><dt>먼저 해볼 일</dt><dd><ConversationText text={design.nextAction.action} /></dd></div>
+      </dl>
+    </div>
   </section>;
 }
 

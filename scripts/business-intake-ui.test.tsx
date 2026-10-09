@@ -312,7 +312,7 @@ async function main() {
   const css = readFileSync(new URL("../app/plan/chat/intake.module.css", import.meta.url), "utf8");
   const cssClasses = Object.fromEntries([...css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(match => [match[1], match[1]]));
   require.extensions[".css"] = module => { module.exports = cssClasses; };
-  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
+  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, DesignProgress, DesignResult, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
   const noop = () => {};
   const entry = renderToStaticMarkup(<EntryChoices disabled={false} onStart={noop} />);
   assert.equal((entry.match(/<button/g) ?? []).length, 3);
@@ -544,6 +544,16 @@ async function main() {
   assert.ok(direction.indexOf("다음 행동") < direction.indexOf("<details"), "the optional next action is visible before detailed evidence");
   for (const text of ["사업 방향 요약 (AI 제안, 검증 전)", "선택 사항", "완료 기준", "사용할 문구"]) assert.ok(direction.includes(text));
   assert.equal(renderToStaticMarkup(<DesignDirection snapshot={nextSnapshot({}, { ...currentDesign, documentRevision: 6 })} />), "", "stale directions are not shown as current actions");
+  // 코치 채팅 1단계 결과: 이름 추천·직접 수정하기·요약만, AI 아이콘·이름별 이유·상표 안내·펼치기 없음(소유자 피드백 2026-10-09)
+  const identityDesign = { ...currentDesign, design: { ...currentDesign.design, identity: { headline: "맞벌이 가정에 반찬을 정기배송하는 동네 반찬가게", pitch: "설명 문장", names: [{ name: "새벽반찬", why: "이유 하나" }, { name: "동네찬방", why: "이유 둘" }] } } } as unknown as Partial<CoachState>;
+  const result = renderToStaticMarkup(<DesignResult snapshot={nextSnapshot({}, identityDesign)} onName={noop} />);
+  for (const text of ["사업 이름", "새벽반찬", "동네찬방", "직접 수정하기", "1단계 결과 요약", "맞벌이 가정에 반찬을 정기배송하는 동네 반찬가게", "이렇게 시작해요", "먼저 해볼 일"]) assert.ok(result.includes(text), `result is missing: ${text}`);
+  for (const text of ["AI 제안", "이유 하나", "키프리스", "<details", "설명 문장"]) assert.ok(!result.includes(text), `result should not include: ${text}`);
+  const minimalPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal onDesign={noop} onPrepare={noop} />);
+  assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("결제하면 바로 작성을 시작해요") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");
+  // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 막대와 단계가 보인다(작업 접수 전에도)
+  const starting = renderToStaticMarkup(<DesignProgress snapshot={nextSnapshot({}, { design: undefined })} />);
+  assert.ok(starting.includes('role="progressbar"') && starting.includes("답변 모으기") && starting.includes("시작 범위 제안하기") && starting.includes("보통 30~40초"), "design progress shows a bar and steps before the job is accepted");
   assert.equal(renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({ coreComplete: false }, {})} prepared={false} disabled={false} aiBusy={false} onDesign={noop} onPrepare={noop} />), "");
   // Legacy timing estimates remain compatible but are not shown as measured progress.
   assert.equal(jobProgress("queued", 0, 25_000, 60_000).percent, 3);
