@@ -41,13 +41,24 @@ export { callPlanSectionService, callPlanOutlineService, callCoachService, callD
 
 /**
  * 진단(intake) 계획의 12개월 손익표. 질문 화면·요약·AI 사업안과 같은 입력(실적 기준 판매량 포함)을 쓰고,
- * 손익표를 두는 섹션에만 붙인다. 가격·변동비·고정비·판매량 중 하나라도 없으면 표를 만들지 않는다(추정치 금지).
+ * 손익표를 두는 섹션에만 붙인다. 가격·변동비·고정비 중 하나라도 없으면 표를 만들지 않고(추정치 금지),
+ * 판매량만 없으면 건당 이익·손익분기점까지만 넣는다.
  */
 export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answers">, coach: CoachState, key: string): string | undefined {
   if (key !== financialTableOwner(plan.planType)) return undefined;
   const intake = readIntake(plan.answers);
   const scenario = intake ? intakeScenarioInputs(coach, intake) : null;
-  if (!scenario || "missing" in scenario || !scenario.volume) return undefined;
+  if (!scenario || "missing" in scenario) return undefined;
+  if (!scenario.volume) {
+    /*
+     * 판매량을 아직 모르면 12개월 표는 만들지 않는다(추정치 금지). 다만 건당 이익과 손익분기점은 가격·변동비·고정비만으로
+     * 계산되니 넣는다 — 예전엔 판매량 하나가 없다고 재무 숫자가 통째로 빠져, 계획서에 표·숫자가 거의 없었다.
+     */
+    const partial = calculateFinancials({ unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost, monthlyGrowthPct: 0 });
+    if (!partial.unit) return undefined;
+    const goal = partial.breakEven ? ` 한 달에 ${partial.breakEven.units.toLocaleString("ko-KR")}건 이상 팔면 고정비를 넘어 이익이 나요. 이 숫자를 첫 판매 목표로 삼아 보세요.` : "";
+    return `${financialsToMarkdown(partial)}\n\n판매량을 아직 정하지 않아 12개월 손익표는 넣지 않았어요.${goal}`;
+  }
   const result = calculateFinancials({ unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost, startingVolume: scenario.volume, monthlyGrowthPct: 0 });
   const table = financialsToMarkdown(result, { growthLabel: null, growthPct: 0 });
   // 판매량의 출처(실적 기준인지, 처리량 최대치인지)를 표 아래에 그대로 밝힌다.

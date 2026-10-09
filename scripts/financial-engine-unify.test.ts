@@ -69,6 +69,11 @@ async function main() {
     assert.ok("missing" in intakeScenarioInputs(partial.coach, partial.intake));
     assert.equal(intakeFinancialTable(partial.plan, partial.coach, owner), undefined);
     assert.ok(planFinancialReference(partial.coach, partial.plan.answers).includes("아직 없는 값"));
+    // 5-1) 판매량만 없으면 12개월 표는 만들지 않고, 건당 이익과 손익분기점(입력만으로 계산됨)은 넣는다(2026-10-09)
+    const noVolume = operatingPlan([["business", "동네 반찬 가게"], ["industry", "food_beverage"], ["price", 10000], ["structure.unitCost", 4000], ["cost", 1000000]]);
+    const noVolumeTable = intakeFinancialTable(noVolume.plan, noVolume.coach, owner);
+    assert.ok(noVolumeTable && noVolumeTable.includes("건당 단위경제") && noVolumeTable.includes("손익분기점") && noVolumeTable.includes("월 167건"), noVolumeTable ?? "no table");
+    assert.ok(!noVolumeTable!.includes("12개월 손익 추정") && noVolumeTable!.includes("판매량을 아직 정하지 않아"), "no invented monthly volume");
 
     // 6) 업종 상세 질문 숫자가 계산에 쓰인다(2026-09-28). 필요한 값이 없으면 줄을 만들지 않는다.
     const lesson = operatingPlan([["business", "성인 대상 기타 레슨"], ["industry", "education"], ["hoursPerWeek", 10], ["capacity", "대표자 혼자 / 일주일 10건"], ["education.sessionMinutes", 60]], "startup");
