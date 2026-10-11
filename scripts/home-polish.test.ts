@@ -47,5 +47,6 @@ assert.match(COACH_SYSTEM, /경험·관심사/);
 assert.match(COACH_SYSTEM, /한 번에 질문 하나만/);
 assert.match(COACH_WRITER_RULES, /고객 → 상품 구성 → 제안 가격과 이유 → 최소 운영 방식 → 첫 판매 방법/);
 assert.match(BUSINESS_DESIGN_RULES, /nextAction은 선택적으로 해볼 행동 하나/);
+assert.match(BUSINESS_DESIGN_RULES, /영업 신고·등록이 필요한 업종이면 nextAction에 돈을 받는 판매나 예약 결제를 넣지 않고/, "the first action never sells before the licence");
 assert.match(readFileSync("public/_headers", "utf8"), /\/home-media\/\*\s+Cache-Control: public,max-age=0,must-revalidate/, "Homepage assets revalidate after a new deployment");
 console.log("Home polish: mobile clipping, transparent range and grounded business-planning process example passed");

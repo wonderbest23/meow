@@ -79,7 +79,8 @@ export function checkCoachFeasibility(fields: CoachField[]): FeasibilityCheck[] 
     if (capacity && capacity.volume > 0) {
       const perSale = hours * 52 / 12 * 60 / capacity.volume;
       workloadCheck.inputs = inputs("hoursPerWeek", "capacity");
-      workloadCheck.detail = `주 ${format(hours)}시간으로 처리량 월 ${format(capacity.volume)}${capacity.unit}을 모두 소화하려면 1${capacity.unit}당 평균 ${format(perSale)}분 안에 끝내야 합니다(준비·영업·관리 시간 포함 전). 실제 건당 작업시간이 이보다 길면 처리량이나 가능 시간을 다시 잡아야 합니다.`;
+      // 2026-10-10 진단: '포함 전'이 장마다 다르게 읽혔다 — 이 값은 주당 시간 전부를 처리량으로 나눈 것이라 판매·정리 시간까지 들어 있다
+      workloadCheck.detail = `주 ${format(hours)}시간을 모두 쓴다고 보면 처리량 월 ${format(capacity.volume)}${capacity.unit}의 1${capacity.unit}에 쓸 수 있는 시간은 평균 ${format(perSale)}분입니다. 이 시간 안에 만들기뿐 아니라 판매·정리·장보기까지 들어가야 하므로, 만드는 데 쓸 시간은 이보다 짧습니다. 실제로 1${capacity.unit}을 만드는 시간을 재서 비교합니다.`;
     }
   } else if (volume != null && hours != null && minutes != null && Number.isSafeInteger(volume * minutes)) {
     const required = volume * minutes / 60, available = hours * 52 / 12;

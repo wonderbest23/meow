@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { gradeCashflow, gradeCustomer, gradeMonthlyMetrics, gradePersonalLiving, gradeReadability, gradeStartFunds, gradeUnitEconomics, gradeWeeklyPlan, markdownTables, THRESHOLDS } from "./plan-eval/grade-code";
-import { graderPrompt, parseScores } from "./plan-eval/grade-ai";
+import { graderPrompt, lastJsonObject, parseScores } from "./plan-eval/grade-ai";
 import { EVAL_CASES } from "./plan-eval/cases";
 
 // 사업계획서 품질 채점(docs/사업계획서-품질기준-최종본-2026-10-09.md) — 채점 코드가 맞게 재는지 고정 예시로 확인한다
@@ -55,5 +55,10 @@ assert.ok(prompt.system.includes("정부 지원사업 제출용이 아니라"));
 assert.deepEqual(parseScores({ scores: { 1: 4, 2: 3, 3: 5, 5: 1, 7: 2, 8: 3, 10: 4, 12: 5 } }), { 1: 4, 2: 3, 3: 5, 5: 1, 7: 2, 8: 3, 10: 4, 12: 5 });
 assert.equal(parseScores({ scores: { 1: 6, 2: 3, 3: 5, 5: 1, 7: 2, 8: 3, 10: 4, 12: 5 } }), null, "out-of-range scores are rejected");
 assert.equal(parseScores(null), null);
+// 마지막 완전한 JSON 값을 읽는다(앞에 말이나 다른 중괄호가 있어도)
+const graded = { scores: { 1: 4, 2: 3, 3: 5, 5: 1, 7: 2, 8: 3, 10: 4, 12: 5 }, reasons: { 1: "근거" } };
+assert.deepEqual(lastJsonObject(`채점합니다 {"note": 1}\n${JSON.stringify(graded)}`), graded);
+assert.equal(lastJsonObject("점수 없음"), null);
+assert.ok(prompt.system.endsWith("Think the problem through before you answer."), "Sonnet 5.5 guide: think-first line at the end of the system prompt");
 
 console.log("plan-eval grader tests passed");

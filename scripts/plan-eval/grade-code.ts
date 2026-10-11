@@ -86,7 +86,8 @@ export function gradeCashflow(all: string): ItemResult {
 // 7. 내 생활비와 내 월급
 export function gradePersonalLiving(all: string): ItemResult {
   const living = /생활비/.test(all);
-  const salary = /내\s*월급|대표(?:자)?\s*(?:인건비|월급|급여)|가져갈\s*돈|사장님?\s*월급/.test(all);
+  // 생활비 질문(2026-10-10) 뒤로 계획서는 대표 몫을 '사업에서 생활비를 가져간다'로 쓴다
+  const salary = /내\s*월급|대표(?:자)?\s*(?:인건비|월급|급여)|가져갈\s*돈|사장님?\s*월급|생활비를?\s*가져(?:가|갈|올)/.test(all);
   return { item: 7, name: "내 생활비와 내 월급", pass: living && salary, detail: `생활비 ${living ? "있음" : "없음"} · 대표 월급 ${salary ? "있음" : "없음"}` };
 }
 

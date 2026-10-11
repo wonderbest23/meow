@@ -14,28 +14,44 @@ assert.equal(plain.setupLimit, 37_228_800);
 assert.equal(plain.scenarios[2].volumes.at(-1), 2667, "goal: 12,000,000 ÷ 4,500, reached in month 6");
 assert.ok(plain.scenarios.every(s => s.volumes.every(v => v <= 3120)), "no case sells above the stated capacity");
 
-// 생활비 월 200만 원: 생활비까지 버는 판매량 월 2,000개, 매달 -3,897,600원, 5개월차부터 생활비, 한도 13,228,800원
-const living = buildCashflowScenarios({ ...bakery, livingCost: "2000000원" })!;
+// 생활비 월 200만 원: 생활비까지 버는 판매량 월 2,000개, 매달 -3,897,600원, 5개월차부터 생활비.
+// 초기 지출 한도 = 6,000만 − 12개월 부족 46,771,200 − 준비 기간(3개월) 생활비 6,000,000 = 7,228,800원(2026-10-10 진단: 준비 기간 생활비가 빠져 있었다)
+const living = buildCashflowScenarios({ ...bakery, livingCost: "2000000원", offer: "식빵·소금빵 아침 세트" })!;
 assert.equal(living.livingBreakEven, 2000);
 assert.equal(living.scenarios[1].label, "생활비까지 버는 경우");
 assert.equal(living.scenarios[0].net[0], -3_897_600);
 assert.equal(living.payFromMonth, 5);
-assert.equal(living.setupLimit, 13_228_800);
-assert.deepEqual(living.survival.map(row => [row.spend, row.months]), [[12_000_000, 12], [24_000_000, 9], [36_000_000, 6], [48_000_000, 3]]);
+assert.equal(living.prepLiving, 6_000_000);
+assert.equal(living.setupLimit, 7_228_800);
+assert.deepEqual(living.survival.map(row => [row.spend, row.months]), [[12_000_000, 10], [24_000_000, 7], [36_000_000, 4], [48_000_000, 1]]);
+assert.equal(living.stopReserve, 11_692_800, "3 months of the careful-case shortfall");
+assert.deepEqual(living.priceAlternatives.map(alt => [alt.price, alt.breakEven, alt.livingLine]), [[4000, 1584, 2417], [5000, 1118, 1706], [5500, 975, 1488]]);
+assert.match(living.unitNote ?? "", /판매 단위\(세트\)를 같다고 보고/, "capacity in 개 vs a set offer is flagged");
+assert.equal(plain.unitNote, null, "no offer → no unit note");
 assert.deepEqual([living.decision.go, living.decision.floor], [2000, 656], "go line = living break-even, not half of break-even");
 
 const md = cashflowMarkdown(living);
 assert.match(md, /### 세 가지 경우로 본 한 달/);
 assert.match(md, /하루 약 50개\(월 26일 영업 기준\)/, "daily businesses get the per-day line");
 assert.equal((md.match(/^\| \d+개월차 \|/gm) ?? []).length, 12, "12 monthly rows");
-assert.match(md, /\| 36,000,000원 \| 24,000,000원 \| 약 6개월 \|/);
+// 남는 준비 예산 = 6,000만 − 초기 지출 3,600만 − 준비 기간 생활비 600만(2026-10-11 블라인드 검토: 이 칸만 생활비를 빼지 않았다)
+assert.match(md, /\| 초기 지출 \| 남는 준비 예산\(준비 기간 생활비 뺀 뒤\) \| 버티는 기간 \|/);
+assert.match(md, /\| 36,000,000원 \| 18,000,000원 \| 약 4개월 \|/);
+assert.match(md, /준비 기간 생활비 6,000,000원을 먼저 뺌/);
 assert.doesNotMatch(md, /12개월 손익 추정|흑자 전환/, "the old max-capacity profit table is gone");
 assert.equal((md.match(/```plan-chart/g) ?? []).length, 1, "one chart");
 
 const ref = cashflowReference(living, { basis: "건당 결제 기준" });
 assert.match(ref, /건당 결제 기준으로 판매량을 하나로 정하지 않고/);
-assert.match(ref, /판단 기준\(실행 장에서 씀, 같은 기간끼리 비교\).*하루 약 77개 \/ 일주일 약 465개 \/ 한 달 2,000개/);
+assert.match(ref, /판단 기준\(실행 장에서 씀\): 이 판단은 계약처럼 큰돈을 쓰기 전에 합니다.*같은 기간 기준과 비교.*하루 약 77개 \/ 일주일 약 465개 \/ 한 달 2,000개/);
+// 신고 전에는 돈을 받지 않은 의사 수로 판단하고 한계를 밝힌다. 줄이는 결정은 계약 전에(2026-10-11 v4.2 검토: 계약 뒤 '공간 줄이기')
+assert.match(ref, /신고 전이라 아직 팔 수 없으면 돈을 받지 않고 모은 예약 의사 수를.*실제 구매보다 많게 나오기 쉬우므로/);
+assert.match(ref, /시작 규모\(공간·장비·상품 수\)를 줄여 계약합니다. 본전의 절반 이하면 계약하지 않고 시작안을 바꿉니다/);
 assert.match(ref, /5개월차부터 한 달 매출로 고정비와 생활비를 모두 메워/);
+assert.match(ref, /목표 경우 월별 판매선.*1개월차 656개, 2개월차 1,058개.*6개월차 2,667개/);
+assert.match(ref, /가격을 바꾸면\(500원씩,.*4,000원 → 본전 하루 약 61개/, "the price step is a sourced number too");
+assert.match(ref, /관심 글의 댓글·공감 수는 판매 수가 아니므로/);
+assert.match(ref, /남은 준비 예산이 11,692,800원\(조심스러운 경우 3개월 적자분\) 아래로/);
 
 // 0원은 '고정비에 넣음'이라는 답 — 없음과 다르다
 assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, livingCost: "0원" })!), /대표 생활비는 고정비에 들어 있다고 답했고/);

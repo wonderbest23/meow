@@ -25,6 +25,11 @@ function quantityMatches(text: string): Array<{ raw: string; value: string }> {
   return values;
 }
 
+/** 근거로 인정하는 숫자. 계산 표의 적자(-8,592,700원)를 본문은 '8,592,700원이 빠집니다'처럼 부호 없이 쓰므로 크기도 넣는다. */
+function sourceQuantities(source: string): Set<string> {
+  return new Set(quantities(source).flatMap(value => [value, value.replace(/^-/, "")]));
+}
+
 /** KRW/percentage equality and structural checks only; counts, dates and semantic claims still require review. */
 export function checkDocumentQuality(markdown: string, source: string, priorSections: string[] = []): DocumentQualityResult {
   const issues: DocumentQualityIssue[] = [];
@@ -58,7 +63,7 @@ export function checkDocumentQuality(markdown: string, source: string, priorSect
     if (seen.has(paragraph)) issue("duplicate_paragraph", "같은 문단이 반복되거나 다른 항목에서 복사되었습니다.");
     seen.add(paragraph);
   }
-  const allowed = new Set(quantities(source));
+  const allowed = sourceQuantities(source);
   const missing = [...new Set(quantities(text).filter(value => !allowed.has(value)))];
   if (missing.length) issue("unsupported_number", `입력 또는 시스템 계산에 없는 금액이나 비율이 있습니다: ${missing.slice(0, 8).join(", ")}`);
   for (const url of text.match(/https?:\/\/[^\s<>"\])]+/g) ?? []) if (!source.includes(url)) issue("unsupported_url", "제공된 자료에 없는 출처 주소가 있습니다.");
@@ -78,7 +83,7 @@ export function qualityRepairIssues(markdown: string, source: string, priorSecti
   const lineOf = (needle: string) => lines.map(line => line.trim()).find(line => line.includes(needle) && unique(line));
   const out: Array<{ quote: string; reason: string }> = [];
   const add = (quote: string | undefined, reason: string) => { if (quote && unique(quote) && !out.some(item => item.quote === quote)) out.push({ quote, reason }); };
-  const allowed = new Set(quantities(source));
+  const allowed = sourceQuantities(source);
   for (const { raw, value } of quantityMatches(text)) {
     if (allowed.has(value)) continue;
     add(lineOf(raw), `"${raw}"은(는) 입력값이나 시스템 계산에 없는 금액·비율입니다. 이 숫자를 지우고, 필요하면 제공 자료에 있는 숫자로만 설명하거나 "금액은 추가 정의 필요"처럼 바꾸세요. 새 숫자를 만들지 마세요.`);

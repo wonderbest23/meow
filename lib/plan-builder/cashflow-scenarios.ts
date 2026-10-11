@@ -18,6 +18,8 @@ export type CashflowInputs = {
   capacity?: string; goal?: string; budget?: string; setupCost?: string;
   /** 대표 한 달 생활비. 0이면 고정비에 이미 들어 있다는 답이다(없음과 다르다) */
   livingCost?: string;
+  /** 대표 상품 — '세트'처럼 처리량과 다른 단위로 파는지 알아보는 데만 쓴다 */
+  offer?: string;
 };
 type Scenario = { key: "careful" | "breakeven" | "goal"; label: string; volumes: number[]; net: number[]; cumulative: number[] };
 export type CashflowScenarios = {
@@ -29,9 +31,19 @@ export type CashflowScenarios = {
   decision: { go: number; goLabel: string; floor: number };
   /** 조심스러운 경우 초기 지출에 따라 버티는 개월 수(초기 지출을 모를 때 대표가 정할 수 있게) */
   survival: Array<{ spend: number; months: number }>;
+  /** 문 열기 전 준비 기간(12주) 동안 수입 없이 나가는 생활비 — 실행 장의 12주와 같은 가정 */
+  prepLiving: number;
+  /** 남은 준비 예산이 이 아래로 내려가면 계속할지 다시 정한다(조심스러운 경우 3개월 적자분) */
+  stopReserve: number | null;
+  /** 가격을 바꾸면 본전·생활비선이 어떻게 되는지(한 건당 비용은 같다고 가정) */
+  priceAlternatives: Array<{ price: number; breakEven: number; livingLine: number | null }>;
+  /** 처리량 단위와 판매 단위가 다를 수 있다는 알림(예: 하루 120개 vs 세트) */
+  unitNote: string | null;
 };
 
 const MONTHS = 12;
+/** 문 열기 전 준비 기간(개월) — 실행 장 '12주 할 일'과 같은 가정 */
+const PREP_MONTHS = 3;
 const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
 const count = (value: number, unit: string) => `${Math.round(value).toLocaleString("ko-KR")}${unit}`;
 /*
@@ -100,7 +112,9 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   }
   const budget = coachAmount(input.budget) ?? null, setupCost = coachAmount(input.setupCost) ?? null;
   const carefulWorst = Math.min(0, ...scenarios[0].cumulative);
-  const setupLimit = budget != null && setupCost == null ? budget + carefulWorst : null;
+  // 2026-10-10 진단: 문 열기 전 약 3개월은 수입 없이 생활비만 나간다 — 빼지 않으면 초기 지출 한도가 그만큼 느슨해진다
+  const prepLiving = (living ?? 0) * PREP_MONTHS;
+  const setupLimit = budget != null && setupCost == null ? budget + carefulWorst - prepLiving : null;
   // 초기 지출을 알면 실제 통장 잔고(준비 예산 − 초기 지출 + 누적)가 바닥나는 달을 센다
   const runOut = budget != null && setupCost != null
     ? scenarios.flatMap(s => { const month = s.cumulative.findIndex(value => budget - setupCost + value < 0); return month >= 0 ? [{ label: s.label, month: month + 1 }] : []; })
@@ -116,9 +130,18 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   // 초기 지출에 따라 버티는 기간 — 준비 예산의 20·40·60·80%를 100만 원 단위로
   const shortfall = -scenarios[0].net[0];
   const survival = budget != null && shortfall > 0
-    ? [...new Set([0.2, 0.4, 0.6, 0.8].map(share => Math.round(budget * share / 1_000_000) * 1_000_000))].filter(spend => spend > 0 && spend < budget).map(spend => ({ spend, months: Math.floor((budget - spend) / shortfall) }))
+    ? [...new Set([0.2, 0.4, 0.6, 0.8].map(share => Math.round(budget * share / 1_000_000) * 1_000_000))].filter(spend => spend > 0 && spend < budget).map(spend => ({ spend, months: Math.max(0, Math.floor((budget - spend - prepLiving) / shortfall)) }))
     : [];
-  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival };
+  const stopReserve = shortfall > 0 ? shortfall * 3 : null;
+  // 대안 가격: 가격 크기에 맞는 단위(500원·1,000원·1만 원)로 한 칸 낮게, 한두 칸 높게
+  const step = input.unitPrice < 10_000 ? 500 : input.unitPrice < 100_000 ? 1_000 : 10_000;
+  const priceAlternatives = [input.unitPrice - step, input.unitPrice + step, input.unitPrice + step * 2]
+    .filter(price => price - input.unitVariableCost > 0)
+    .map(price => ({ price, breakEven: Math.ceil(input.monthlyFixedCost / (price - input.unitVariableCost)), livingLine: living ? Math.ceil((input.monthlyFixedCost + living) / (price - input.unitVariableCost)) : null }));
+  const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
+    ? `처리량(${capacityParsed.note})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
+    : null;
+  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepLiving, stopReserve, priceAlternatives, unitNote };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < (result.livingBreakEven ?? result.breakEven);
@@ -136,9 +159,12 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   const careful = result.scenarios[0];
   if (result.living) lines.push(`대표 생활비 월 ${won(result.living)}을 나가는 돈에 넣었습니다. 생활비까지 벌려면 팔아야 하는 양은 월 ${count(result.livingBreakEven!, result.unit)}${perDay(result.daily, result.livingBreakEven!, result.unit, text => `, ${text}`)}입니다.`);
   if (careful.net[0] < 0) lines.push(`조심스러운 경우 매달 ${won(-careful.net[0])}씩 모자라, 12개월 동안 ${result.living ? "생활비를 포함해 " : "사업에서 "}모자라는 돈은 ${won(-result.carefulWorst)}입니다.`);
+  if (result.prepLiving > 0) lines.push(`문 열기 전 준비 기간(12주, 약 3개월)에도 생활비 ${won(result.prepLiving)}이 수입 없이 준비 예산에서 나갑니다.`);
   if (result.setupLimit != null) lines.push(result.setupLimit > 0
-    ? `준비 예산 ${won(result.budget!)}에서 초기 지출을 ${won(result.setupLimit)} 이하로 써야 조심스러운 경우에도 12개월을 버팁니다.`
-    : `조심스러운 경우 12개월 동안 모자라는 돈이 준비 예산 ${won(result.budget!)}보다 많습니다. 초기 지출 전에 이미 모자랍니다.`);
+    ? `준비 예산 ${won(result.budget!)}에서 ${result.prepLiving > 0 ? "준비 기간 생활비를 빼고 " : ""}초기 지출을 ${won(result.setupLimit)} 이하로 써야 조심스러운 경우에도 문 연 뒤 12개월을 버팁니다.`
+    : `조심스러운 경우 ${result.prepLiving > 0 ? "준비 기간 생활비와 " : ""}12개월 동안 모자라는 돈이 준비 예산 ${won(result.budget!)}보다 많습니다. 초기 지출 전에 이미 모자랍니다.`);
+  if (result.stopReserve != null && result.budget != null) lines.push(`문을 연 뒤 남은 준비 예산이 ${won(result.stopReserve)}(조심스러운 경우 3개월 적자분) 아래로 내려가면 계속할지 다시 정합니다.`);
+  if (result.unitNote) lines.push(result.unitNote);
   for (const item of result.runOut) lines.push(`${item.label}에는 준비 예산에서 초기 지출을 뺀 돈이 ${item.month}개월차에 바닥납니다.`);
   const goal = result.scenarios.find(s => s.key === "goal");
   const recover = goal ? goal.cumulative.findIndex(value => value >= 0) : -1;
@@ -148,6 +174,14 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   return lines;
 }
 
+/** 목표 경우의 월별 판매선 — 실행 장의 '매달 볼 숫자' 목표로 쓴다 */
+function goalLine(result: CashflowScenarios): string {
+  const goal = result.scenarios.find(s => s.key === "goal");
+  if (!goal || !result.goal) return "";
+  const months = goal.volumes.slice(0, result.goal.months).map((volume, i) => `${i + 1}개월차 ${count(volume, result.unit)}`);
+  return `- 목표 경우 월별 판매선(매달 볼 숫자의 목표, 실행 장에서 씀): ${months.join(", ")}`;
+}
+
 /** 같은 기간끼리 비교하도록 하루(월 26일)·일주일(월 4.3주)·한 달을 함께 쓴다 */
 const periods = (daily: boolean, monthly: number, unit: string) => [perDay(daily, monthly, unit, text => text), monthly / 4.3 >= 1 ? `일주일 약 ${count(monthly / 4.3, unit)}` : "", `한 달 ${count(monthly, unit)}`].filter(Boolean).join(" / ");
 const monthsText = (months: number) => (months >= 12 ? "12개월 이상" : months < 1 ? "1개월도 못 버팀" : `약 ${months}개월`);
@@ -155,8 +189,8 @@ const monthsText = (months: number) => (months >= 12 ? "12개월 이상" : month
 function decisionLines(result: CashflowScenarios): string[] {
   const { decision, unit } = result;
   return [
-    `판단 기준(실행 장에서 씀, 같은 기간끼리 비교): 계약처럼 큰돈을 쓰기 전에 시범 판매나 사전 예약이 ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로 진행합니다.`,
-    `그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 시작 규모(공간·장비·상품 수)를 줄여 시작합니다. 본전의 절반 이하면 시작안을 바꿉니다.`,
+    `판단 기준(실행 장에서 씀): 이 판단은 계약처럼 큰돈을 쓰기 전에 합니다. 계약 뒤에는 시작 규모를 줄일 수 없기 때문입니다. 돈을 받고 팔 수 있으면 시범 판매의 실제 수를, 신고 전이라 아직 팔 수 없으면 돈을 받지 않고 모은 예약 의사 수를 같은 기간 기준과 비교합니다. 예약 의사 수는 실제 구매보다 많게 나오기 쉬우므로, 의사 수로 판단할 때는 그 한계를 함께 씁니다. ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로 진행합니다.`,
+    `그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 시작 규모(공간·장비·상품 수)를 줄여 계약합니다. 본전의 절반 이하면 계약하지 않고 시작안을 바꿉니다. 문을 연 뒤에는 매달 볼 숫자와 중단선으로 판단합니다. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
   ];
 }
 
@@ -200,11 +234,11 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
       "",
       "### 초기 지출에 따라 버티는 기간",
       "",
-      `조심스러운 경우(매달 ${won(-result.scenarios[0].net[0])} 모자람)에 준비 예산 ${won(result.budget!)}으로 버티는 기간입니다. 초기 지출 견적을 받으면 이 표로 판단합니다.`,
+      `조심스러운 경우(매달 ${won(-result.scenarios[0].net[0])} 모자람)에 준비 예산 ${won(result.budget!)}으로 문 연 뒤 버티는 기간입니다${result.prepLiving > 0 ? `(준비 기간 생활비 ${won(result.prepLiving)}을 먼저 뺌)` : ""}. 초기 지출 견적을 받으면 이 표로 판단합니다.`,
       "",
-      "| 초기 지출 | 남는 준비 예산 | 버티는 기간 |",
+      `| 초기 지출 | 남는 준비 예산${result.prepLiving > 0 ? "(준비 기간 생활비 뺀 뒤)" : ""} | 버티는 기간 |`,
       "| ---: | ---: | --- |",
-      ...result.survival.map(row => `| ${won(row.spend)} | ${won(result.budget! - row.spend)} | ${monthsText(row.months)} |`),
+      ...result.survival.map(row => `| ${won(row.spend)} | ${won(result.budget! - row.spend - result.prepLiving)} | ${monthsText(row.months)} |`),
     ] : []),
     "",
     // 그래프는 하나만(2026-10-10 빵집 시험: 표 3개·그래프 2개로 재무 장이 길다는 채점) — 목표 경우가 있으면 모자랐다가 메워지는 모습을 보인다
@@ -228,7 +262,9 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
     ...result.scenarios.map(s => `- ${s.label}(${scenarioBasis(result, s)}): 월 ${count(s.volumes.at(-1)!, result.unit)}${perDay(result.daily, s.volumes.at(-1)!, result.unit, text => `(${text})`)}${s.volumes[0] !== s.volumes.at(-1) ? `, 첫 달 월 ${count(s.volumes[0], result.unit)}${perDay(result.daily, s.volumes[0], result.unit, text => `(${text})`)}` : ""}, 한 달에 ${won(s.net.at(-1)!)}, 12개월 누적 ${won(s.cumulative.at(-1)!)}`),
     ...cashflowFindings(result).map(line => `- ${line}`),
     ...decisionLines(result).map(line => `- ${line}`),
-    result.survival.length ? `- 초기 지출별 버티는 기간(조심스러운 경우): ${result.survival.map(row => `${won(row.spend)}이면 ${monthsText(row.months)}`).join(", ")}` : "",
+    result.survival.length ? `- 초기 지출별 버티는 기간(조심스러운 경우${result.prepLiving > 0 ? ", 준비 기간 생활비를 먼저 뺌" : ""}): ${result.survival.map(row => `${won(row.spend)}이면 ${monthsText(row.months)}`).join(", ")}` : "",
+    goalLine(result),
+    result.priceAlternatives.length ? `- 가격을 바꾸면(${won(Math.abs(result.priceAlternatives[0].price - result.unitPrice))}씩, 한 건당 비용은 같다고 가정, 가격 장에서 씀): ${result.priceAlternatives.map(alt => `${won(alt.price)} → 본전 ${periods(result.daily, alt.breakEven, result.unit)}${alt.livingLine ? `, 생활비선 ${periods(result.daily, alt.livingLine, result.unit)}` : ""}`).join(" / ")}` : "",
     result.living != null ? "- 초기 지출(입력이 없으면)과 부가세·소득세는 이 계산에 빠져 있습니다." : "- 초기 지출(입력이 없으면), 대표 생활비(고정비에 없다면), 부가세·소득세는 이 계산에 빠져 있습니다.",
   ].filter(Boolean).join("\n");
 }
@@ -236,5 +272,5 @@ export function cashflowReference(result: CashflowScenarios, options: { basis?: 
 /** 대화에서 모은 값(가격·변동비·고정비 + 처리량·목표·예산·초기 지출)으로 세 경우를 만든다 */
 export function cashflowFromFields(fields: Array<{ key: string; value: string }>, money: { unitPrice: number; unitVariableCost: number; monthlyFixedCost: number }): CashflowScenarios | null {
   const get = (key: string) => fields.find(field => field.key === key)?.value;
-  return buildCashflowScenarios({ ...money, capacity: get("capacity"), goal: get("goal"), budget: get("budget"), setupCost: get("setupCost"), livingCost: get("livingCost") });
+  return buildCashflowScenarios({ ...money, capacity: get("capacity"), goal: get("goal"), budget: get("budget"), setupCost: get("setupCost"), livingCost: get("livingCost"), offer: get("offer") });
 }
