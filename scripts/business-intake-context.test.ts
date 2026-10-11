@@ -308,6 +308,15 @@ async function main() {
   assert(guide?.steps.some(step => step.startsWith("휴게음식점 영업 신고")), JSON.stringify(guide?.steps));
   assert(guide?.rule.includes("관할 기관 확인"));
   assert(confirmedIntakeContext(withKsic).length <= 8000);
+  // 업종 코드가 없어도 사업 설명으로 가이드를 찾고, 그렇게 찾았다고 밝힌다. 큰 분류 이름('카페 · 음식점')만으로는 붙이지 않는다
+  const described = structuredClone(answers);
+  (described[COACH_KEY].state as CoachState).business.description = "아파트 상가 아침 빵집";
+  const describedGuide = (parse(confirmedIntakeContext(described)) as Context & { industryGuide?: { name: string; matchedBy?: string } }).industryGuide;
+  assert.equal(describedGuide?.name, "빵집(제과점)");
+  assert.match(describedGuide?.matchedBy ?? "", /사업 설명으로 찾은 업종/);
+  const sectorOnly = structuredClone(answers);
+  (sectorOnly[COACH_KEY].state as CoachState).business.industry = intakeSectorOptions.find(option => option.label.includes("카페"))?.label ?? "카페 · 음식점";
+  assert.equal((parse(confirmedIntakeContext(sectorOnly)) as Context & { industryGuide?: unknown }).industryGuide, undefined, "a sector label alone is not a business description");
   assert(ksicContext.ksic?.structure.includes("신고·등록 필요"));
   assert(ksicContext.ksic?.source.includes("KSIC"));
   assert(ksicContext.guidance.includes("never override supplied answers"));
