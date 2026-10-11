@@ -68,7 +68,12 @@ const SECTION_MAX_TOKENS = 8000;
  * 한도를 늘렸으니 오래 걸리는 응답도 생긴다. 기본 제한(120초)에 걸려
  * 실패하면 잘림을 고치려다 통째로 못 받는 게 되므로 함께 늘린다.
  */
-const SECTION_TIMEOUT_MS = 180_000;
+/*
+ * 장 하나 쓰는 데 기다리는 시간. 실측(2026-10-11, Opus 5.5): 초당 약 107~111토큰, 가장 긴 장(비용) 89초·9,574토큰.
+ * 출력 상한(본문 8,000 + 생각 여유분 8,192 = 16,192토큰)을 다 쓰면 약 150초라 180초는 여유가 30초뿐이었다 — API가 붐빌 때 느려지는 것까지 240초로 둔다.
+ * 장마다 워크플로 단계 시간(15~30분) 안에서 돈다.
+ */
+const SECTION_TIMEOUT_MS = 240_000;
 
 function formatAnswers(answers: Record<string, unknown>): string {
   const lines: string[] = [];

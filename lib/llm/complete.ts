@@ -400,7 +400,8 @@ export async function completeText(config: LLMConfig, params: LLMCompleteParams)
     }
     console.log("[llm] call", JSON.stringify({ kind: params.kind ?? "etc", provider: target.provider, model: usage?.model ?? target.model, ok: !!result, responseReceived, validation: params.validateJson ? "schema" : params.jsonObject ? "json" : "text", code: failure, elapsedMs: Date.now() - startedAt, inputTokens: usage?.inputTokens ?? null, outputTokens: usage?.outputTokens ?? null }));
     await bounded(recordLlmUsage(params.kind ?? "etc", target.provider, !!result, usage, { model: usage?.model ?? target.model, elapsedMs: Date.now() - startedAt, failureCode: failure ?? (!result ? "empty_response" : undefined) }), totalSignal, undefined);
-    if (totalSignal.aborted) return { result: null, failure: "timeout" as const };
+    // 응답을 이미 받았으면 사용량 기록이 마감을 넘겨도 버리지 않는다 — 돈은 이미 냈고, 버리면 같은 장을 다시 사야 한다
+    if (totalSignal.aborted && !result) return { result: null, failure: "timeout" as const };
     if (result && policy && usage) params.onUsage?.(usage);
     return { result, failure, retryable };
   };
