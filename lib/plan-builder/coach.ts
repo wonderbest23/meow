@@ -7,7 +7,7 @@ export const COACH_KEY = "__business_coach";
 export const COACH_VERSION = "2026-09-07.2";
 export const COACH_TYPES = { startup: "일반 사업계획서", operating: "사업 운영·개선 계획서" } as const;
 export const coachFieldSchema = z.object({
-  key: z.enum(["business", "customer", "offer", "price", "budget", "cost", "unitCost", "volume", "sales", "channel", "capacity", "problem", "experience", "goal", "setupCost", "hoursPerWeek", "minutesPerSale"]),
+  key: z.enum(["business", "customer", "offer", "price", "budget", "cost", "unitCost", "volume", "sales", "channel", "capacity", "problem", "experience", "goal", "setupCost", "hoursPerWeek", "minutesPerSale", "livingCost"]),
   value: z.string().min(1).max(1200),
   basis: z.enum(["user", "proposal"]),
   quote: z.string().max(1600).default(""),

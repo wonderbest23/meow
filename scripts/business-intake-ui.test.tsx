@@ -477,7 +477,9 @@ async function main() {
   for (const id of ["customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost"]) guided = previewIntakeAnswer(guided, { ...command({ questionId: id, value: id === "price" || id.startsWith("structure.") ? "0원" : "확인한 답변" }), revision: guided.coach.revision })!;
   assert.equal(nextRefinementQuestion(guided)?.id, "budget");
   guided = previewIntakeAnswer(guided, { ...command({ questionId: "budget", value: "0원" }), revision: guided.coach.revision })!;
-  assert.equal(nextRefinementQuestion(guided)?.id, "hoursPerWeek", "explicit zero is resolved, not missing");
+  assert.equal(nextRefinementQuestion(guided)?.id, "livingCost", "explicit zero is resolved, not missing");
+  guided = previewIntakeAnswer(guided, { ...command({ questionId: "livingCost", value: "0원" }), revision: guided.coach.revision })!;
+  assert.equal(nextRefinementQuestion(guided)?.id, "hoursPerWeek", "living cost 0원(고정비에 넣음) is an answer, not missing");
   assert.equal(nextRefinementQuestion(beforeGuided)?.id, "customer", "suggesting a next question does not mutate answers");
   assert.equal(nextRefinementQuestion(beforeGuided, ["customer"])?.id, "problem", "a deferred optional question does not immediately repeat");
   const refiningDraft = { ...emptyDraft(), ownerScope: scope, editingId: "customer", refiningId: "customer", refinementSeen: [], answers: { customer: { ...emptyAnswer(), unknown: true } } };

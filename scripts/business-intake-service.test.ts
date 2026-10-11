@@ -146,7 +146,7 @@ async function main() {
       const values: Record<string, string | number> = {
         business: "직장인 프로필 촬영 사업", experience: "사진 촬영과 고객 응대 경험", customer: "직장인",
         problem: "예약 가능한 촬영 시간을 찾기 어려움", offer: "프로필 촬영 1회", channel: "직접 예약",
-        price: "50000원", budget: 1000000, hoursPerWeek: 10, sales: 500000, cost: 100000,
+        price: "50000원", budget: 1000000, livingCost: 1500000, hoursPerWeek: 10, sales: 500000, cost: 100000,
         "structure.unitCost": 10000, "structure.cost": 100000,
         period: "2026-08-01 / 2026-08-31", goal: "다음 달 고객 반응 확인",
       };

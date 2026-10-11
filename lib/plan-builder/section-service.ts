@@ -36,6 +36,7 @@ import { betaApiBoundary } from "../staging/beta-boundary";
 import { verifyBody } from "./section-signature";
 import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob, type PlanOutlineJob } from "./section-protocol";
 import { intakeScenarioInputs, planFinancialReference, readIntake } from "./intake-core";
+import { cashflowFromFields, cashflowMarkdown, cashflowScenariosEnabled } from "./cashflow-scenarios";
 export type { PlanSectionJob, PlanOutlineJob } from "./section-protocol";
 export { callPlanSectionService, callPlanOutlineService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
 
@@ -49,6 +50,10 @@ export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answer
   const intake = readIntake(plan.answers);
   const scenario = intake ? intakeScenarioInputs(coach, intake) : null;
   if (!scenario || "missing" in scenario) return undefined;
+  // 돈 장 시험판(cashflow-scenarios.ts): 판매량 하나 대신 세 경우의 12개월 통장 흐름 — 신규 사업만
+  const flow = cashflowScenariosEnabled() && intake?.mode !== "operating" ? cashflowFromFields(coach.fields, scenario) : null;
+  // 건당 남는 돈·본전 판매량은 세 경우 표 위 한 줄에 있다(따로 표를 두면 같은 숫자가 두 번 나온다)
+  if (flow) return cashflowMarkdown(flow);
   if (!scenario.volume) {
     /*
      * 판매량을 아직 모르면 12개월 표는 만들지 않는다(추정치 금지). 다만 건당 이익과 손익분기점은 가격·변동비·고정비만으로

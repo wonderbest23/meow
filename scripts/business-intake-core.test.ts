@@ -128,7 +128,9 @@ async function main() {
       answer(f, "capacity", "대표자 혼자 / 일주일 10건");
       const text = intakeFinancialReference(f.coach, f.intake);
       assert.ok(!text.includes("아직 없는 값"), text);
-      assert.ok(text.includes("감당할 수 있는 최대치"), text);
+      // 돈 장(cashflow-scenarios.ts): 처리량은 판매량이 아니라 넘지 않는 최대치로만 쓴다
+      assert.ok(text.includes("처리량 최대치를 넘지 않음") && text.includes("일주일 10건 × 월 4.3주 = 월 43건"), text);
+      assert.ok(!text.includes("12개월 합계"), "the max-capacity 12-month total is gone");
       assert.equal(f.intake.detailsRequested ?? false, false, "no extra pack needed");
     });
 
@@ -176,8 +178,8 @@ async function main() {
       check(`matrix ${mode}/${sector}: <=14 core, 4 details, one next question, ready`, () => {
         const f = fixture(mode);
         const coreIds = coreQuestions(mode).map(question => question.id);
-        // 변동비·고정비가 기본 질문에 들어왔다(운영 중은 가격·변동비). 탐색은 시작 조건 단계가 하나 더 있다.
-        assert.equal(coreIds.length, mode === "exploring" ? 14 : 13, "exploring adds the start-conditions step before the candidates");
+        // 변동비·고정비가 기본 질문에 들어왔다(운영 중은 가격·변동비). 탐색은 시작 조건 단계가 하나 더 있다. 신규는 대표 생활비 질문이 하나 더 있다(2026-10-10).
+        assert.equal(coreIds.length, mode === "operating" ? 13 : 14, "exploring adds the start-conditions step; startup adds the owner's living-cost question");
         const visited: string[] = [];
         for (let index = 0; index < coreIds.length; index++) {
           const state = snapshot(f);

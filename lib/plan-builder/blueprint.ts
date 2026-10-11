@@ -119,6 +119,8 @@ export const PLAN_BLUEPRINT: PlanChapterDef[] = [
     rest: "다음 단계",
     tone: 1,
     sections: [
+      /* 실행 장(품질기준 8·9·10번, 2026-10-10 도입) — '일반'·'운영' 계획서만 쓴다. 예전 종류(전체 목록)에는 넣지 않는다(chaptersForType) */
+      { id: "roadmap", title: "12주 할 일과 매달 볼 숫자", summary: "먼저 확인할 가정과 판단 기준, 12주 동안 할 일, 매달 볼 숫자와 계획을 다시 보는 때", estMinutes: 5 },
       { id: "executive", title: "실행 요약", summary: "계획 전체를 한 장으로 압축", estMinutes: 5 },
     ],
   },
@@ -158,8 +160,8 @@ export function flatSections(): Array<{
  * 키는 플랜에 저장되는 planType 문자열과 같아야 한다.
  */
 export const PLAN_TYPE_SECTIONS: Record<string, string[]> = {
-  "일반 사업계획서": ["overview/summary", "overview/problem", "market/products", "market/personas", "strategy/price", "strategy/distribution", "strategy/promotion", "financials/expenses", "summary/executive"],
-  "사업 운영·개선 계획서": ["overview/summary", "overview/problem", "market/products", "market/personas", "strategy/product", "strategy/price", "strategy/promotion", "strategy/people", "financials/expenses", "summary/executive"],
+  "일반 사업계획서": ["overview/summary", "overview/problem", "market/products", "market/personas", "strategy/price", "strategy/distribution", "strategy/promotion", "financials/expenses", "summary/roadmap", "summary/executive"],
+  "사업 운영·개선 계획서": ["overview/summary", "overview/problem", "market/products", "market/personas", "strategy/product", "strategy/price", "strategy/promotion", "strategy/people", "financials/expenses", "summary/roadmap", "summary/executive"],
   /*
    * 창업 초기는 전체 25개를 쓴다(목록에 넣지 않는다).
    * 아직 검증되지 않은 사업이라 '문제와 해결', '미션·비전'처럼
@@ -293,15 +295,25 @@ export function sectionKeysForType(planType?: string): Set<string> | null {
  * 유형에 맞게 걸러낸 챕터 목록.
  * 섹션이 하나도 없는 챕터는 빠지고, 챕터·섹션 순서는 원래 청사진을 따른다.
  */
+/** 실행 장 키 — 유형 목록에 있는 계획서('일반'·'운영')만 쓴다 */
+export const ROADMAP_KEY = "summary/roadmap";
+const LEGACY_FULL_BLUEPRINT = PLAN_BLUEPRINT.map((ch) => ({ ...ch, sections: ch.sections.filter((s) => sectionKey(ch.id, s.id) !== ROADMAP_KEY) }));
+
 export function chaptersForType(planType?: string): PlanChapterDef[] {
   const keys = sectionKeysForType(planType);
-  if (!keys) return PLAN_BLUEPRINT;
+  // 목록이 없는 예전 종류는 실행 장이 생기기 전의 전체 25개 그대로(이미 만든 문서에 빈 장이 새로 생기지 않게)
+  if (!keys) return LEGACY_FULL_BLUEPRINT;
   const out: PlanChapterDef[] = [];
   for (const ch of PLAN_BLUEPRINT) {
     const sections = ch.sections.filter((s) => keys.has(sectionKey(ch.id, s.id)));
     if (sections.length) out.push({ ...ch, sections });
   }
   return out;
+}
+
+/** 이 유형의 계획서에 실행 장이 있는지 — 다른 장은 할 일·판단 기준을 그 장에 맡긴다 */
+export function hasRoadmap(planType?: string): boolean {
+  return !!sectionKeysForType(planType)?.has(ROADMAP_KEY);
 }
 
 /** 유형별 섹션 개수 */

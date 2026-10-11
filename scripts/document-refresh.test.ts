@@ -60,7 +60,7 @@ async function main() {
     const draft = await runDocumentRefresh(owner, planId, r, runtime);
     await runDocumentRefresh(owner, planId, { type: "document_apply", id: r.id, expectedRevision: draft.revision, decisions: Object.fromEntries(batch.map(key => [key, "replace" as const])) });
   }
-  assert.equal((await loadProposalEditor(owner, planId)).business?.documents.current, 9);
+  assert.equal((await loadProposalEditor(owner, planId)).business?.documents.current, 10);
   const pptRuntime = { target: runtime.target, generate: async (payload: Parameters<typeof mockRewrite>[0]) => ({ result: mockRewrite(payload) }) };
   const pp = await previewProposalRewrite(owner, planId, pptRuntime); assert.equal(pp.impact.affected.length, 3);
   const pr = rewriteRequest(pp), pd = await runProposalRewrite(owner, planId, pr, pptRuntime);

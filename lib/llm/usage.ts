@@ -1,12 +1,22 @@
 import { getServerSupabase } from "../persistence";
 import { currentUsageContext } from "./usage-context-reader";
 
+type UsageEntry = { kind: string; provider: string; ok: boolean; model: string | null; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number };
+let usageListener: ((entry: UsageEntry) => void) | null = null;
+/** 시험 도구(scripts/plan-eval)가 DB 없이 호출별 원가를 모으는 자리 — 운영에서는 비어 있다 */
+export function setLlmUsageListener(listener: ((entry: UsageEntry) => void) | null) { usageListener = listener; }
+
 /**
  * LLM 호출 1건을 기록한다 — 어드민 대시보드의 'API 사용량' 원천.
  * 로깅 실패가 본 기능을 깨면 안 되므로 어떤 오류도 삼킨다.
  * (llm_usage 테이블이 아직 없으면 그냥 조용히 넘어간다)
  */
 export async function recordLlmUsage(kind: string, provider: string, ok: boolean, usage?: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }, metadata?: { model: string; elapsedMs: number; failureCode?: string }): Promise<void> {
+  try {
+    usageListener?.({ kind, provider, ok, model: metadata?.model ?? null, inputTokens: usage?.inputTokens ?? 0, outputTokens: usage?.outputTokens ?? 0, cacheReadTokens: usage?.cacheReadTokens ?? 0, cacheWriteTokens: usage?.cacheWriteTokens ?? 0 });
+  } catch {
+    // 집계용 — 무시
+  }
   try {
     const supabase = getServerSupabase();
     if (!supabase) return;

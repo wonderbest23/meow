@@ -13,7 +13,7 @@ async function main() {
   Object.assign(process.env, { PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "" });
   const owner = randomUUID(), planId = "business-linked", fixture = await seedBusinessRewriteFixture(owner, planId);
   const original = await loadProposalEditor(owner, planId);
-  assert.equal(original.business!.documents.current, 9);
+  assert.equal(original.business!.documents.current, 10, "일반 계획서 10장(실행 장 포함)");
   assert.equal(proposalFinancialPreview(original.business!.fields)?.operatingProfit, 1900000);
   assert.equal(proposalFinancialPreview(original.business!.fields.filter(field => field.key !== "cost")), null);
   assert.equal(proposalFinancialPreview(original.business!.fields.map(field => field.key === "volume" ? { ...field, value: "0" } : field))?.operatingProfit, -500000);
@@ -43,7 +43,7 @@ async function main() {
     await saveDocumentEdit(owner, { planId, key, action: "review", baseGeneratedAt: edited.generatedAt, sourceRevision: 2 });
   }
   const reviewed = await loadProposalEditor(owner, planId);
-  assert.equal(reviewed.business?.documents.current, 9); assert(reviewed.sourceChanged);
+  assert.equal(reviewed.business?.documents.current, 10); assert(reviewed.sourceChanged);
   let calls = 0, finish!: () => void;
   const runtime: RewriteRuntime = { target: { provider: "mock", model: "local-only" }, generate: payload => { calls++; return new Promise(resolve => { finish = () => resolve({ result: mockRewrite(payload) }); }); } };
   const preview = await previewProposalRewrite(owner, planId, runtime), request = rewriteRequest(preview);

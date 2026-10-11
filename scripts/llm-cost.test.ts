@@ -5,6 +5,7 @@ import { currentUsageContext } from "../lib/llm/usage-context-reader";
 
 // 요금표: 더 구체적인 모델 이름이 먼저(opus-5-5 가 opus-5 로 잡히지 않게), 날짜 붙은 id 도
 assert.equal(priceFor("claude-opus-5-5")?.label, "Claude Opus 5.5");
+assert.equal(priceFor("claude-sonnet-5-5")?.price.output, 10, "plan-eval grader (Sonnet 5.5) is priced");
 assert.equal(priceFor("claude-opus-5-20260601")?.label, "Claude Opus 5");
 assert.equal(priceFor("gpt-5.6-sol"), null, "unknown models are not priced");
 assert.equal(priceFor(null), null);

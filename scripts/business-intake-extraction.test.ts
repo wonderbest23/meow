@@ -71,7 +71,7 @@ function assertRequest(config: LLMConfig, name: "intake_extract" | "intake_help"
     assert.equal(item.additionalProperties, false);
     assert.deepEqual(item.required, ["fieldKey", "value", "quote", "noteId"]);
     assert.deepEqual(item.properties.fieldKey.enum, coachFieldSchema.shape.key.options);
-    assert.equal(item.properties.fieldKey.enum.length, 17);
+    assert.equal(item.properties.fieldKey.enum.length, 18, "17 fields + livingCost (대표 생활비, 2026-10-10)");
     assert.equal(item.properties.value.maxLength, 1200);
     assert.equal(item.properties.quote.maxLength, 1600);
   } else {
