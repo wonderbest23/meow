@@ -314,6 +314,11 @@ async function main() {
   const describedGuide = (parse(confirmedIntakeContext(described)) as Context & { industryGuide?: { name: string; matchedBy?: string } }).industryGuide;
   assert.equal(describedGuide?.name, "빵집(제과점)");
   assert.match(describedGuide?.matchedBy ?? "", /사업 설명으로 찾은 업종/);
+  // 사업 유형도 같은 설명으로 정해지고, 그렇게 정했다고 밝힌다(docs/사업-유형-지도-2026-10-11.md)
+  const describedType = (parse(confirmedIntakeContext(described)) as Context & { businessType?: { id: string; basis?: string; roadmap: string[] } }).businessType;
+  assert.equal(describedType?.id, "store");
+  assert.match(describedType?.basis ?? "", /사업 설명으로 정한 유형/);
+  assert.ok(describedType!.roadmap.length >= 8);
   const sectorOnly = structuredClone(answers);
   (sectorOnly[COACH_KEY].state as CoachState).business.industry = intakeSectorOptions.find(option => option.label.includes("카페"))?.label ?? "카페 · 음식점";
   assert.equal((parse(confirmedIntakeContext(sectorOnly)) as Context & { industryGuide?: unknown }).industryGuide, undefined, "a sector label alone is not a business description");

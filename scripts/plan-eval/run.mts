@@ -12,7 +12,7 @@
  *         --max-krw 30000  실제 원가 누적이 이 금액에 닿으면 다음 사업을 시작하지 않는다(기본 3만 원)
  */
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 const argv = process.argv.slice(2);
@@ -52,8 +52,16 @@ if (spend) {
  */
 const capture = flag("capture-prompts");
 const captured: Record<string, { system: string; user: string }> = {};
+/*
+ * --offline <폴더>: 사업 방향 정리·설계도(사업마다 두 번)도 실제 AI 대신 파일 답을 쓴다(0원).
+ * 답 파일이 없는 요청은 '<폴더>/<사업>/call-N.request.json'으로 남기고 가짜 답으로 넘어간다.
+ * 세션 안의 Claude가 그 요청에 답해 'call-N.response.txt'를 쓰고 다시 돌리면 다음 요청(설계 답을 받은 설계도)으로 넘어간다.
+ */
+const offlineDir = option("offline");
+const offlineMissing: string[] = [];
+let offlineCase = "", offlineCall = 0;
 if (capture) {
-  if (!spend) throw new Error("--capture-prompts 는 사업 방향 정리·설계도에 실제 AI가 필요합니다(--spend --yes).");
+  if (!spend && !offlineDir) throw new Error("--capture-prompts 는 사업 방향 정리·설계도에 실제 AI가 필요합니다(--spend --yes, 또는 --offline <폴더>).");
   const real = globalThis.fetch;
   await import("../synthetic-e2e/fake-anthropic.mjs");
   const fake = globalThis.fetch;
@@ -70,6 +78,18 @@ if (capture) {
         return new Response(JSON.stringify({ id: "capture", type: "message", role: "assistant", model: "claude-opus-5-5", content: [{ type: "text", text: placeholder }], stop_reason: "end_turn", usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
       }
       if (user.trimStart().startsWith('{"source"')) return fake(input, init);
+      if (offlineDir) {
+        const base = join(offlineDir, offlineCase, `call-${++offlineCall}`);
+        if (existsSync(`${base}.response.txt`)) {
+          const answer = readFileSync(`${base}.response.txt`, "utf8").trim();
+          return new Response(JSON.stringify({ id: "offline", type: "message", role: "assistant", model: "claude-opus-5-5", content: [{ type: "text", text: answer }], stop_reason: "end_turn", usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
+        }
+        const { messages: _messages, system: _system, ...rest } = body as Record<string, unknown>;
+        mkdirSync(join(offlineDir, offlineCase), { recursive: true });
+        writeFileSync(`${base}.request.json`, JSON.stringify({ settings: rest, system, user }, null, 1));
+        offlineMissing.push(`${base}.request.json`);
+        return fake(input, init);
+      }
     }
     return real(input, init);
   };
@@ -194,6 +214,7 @@ for (const c of cases) {
   // 상한: 사업 하나가 끝날 때마다 누적 원가를 보고, 닿았으면 다음 사업을 시작하지 않는다
   if (spend && costOf(calls).krw >= MAX_KRW) { stoppedAt = c.id; console.log(`[plan-eval] 상한 ${MAX_KRW.toLocaleString()}원에 닿아 ${c.id}부터 멈춤`); break; }
   const started = Date.now(), before = calls.length;
+  offlineCase = c.id; offlineCall = 0;
   let entry;
   try { entry = await runCase(c); }
   catch (error) { entry = { id: c.id, label: c.label, tags: c.tags, error: error instanceof Error ? error.message : String(error) }; }
@@ -249,3 +270,4 @@ for (const item of ok) {
   writeFileSync(join(outDir, "expert", `${item.id}.md`), sheet.join("\n"));
 }
 console.log(`[plan-eval] 완료 → ${join(outDir, "report.md")}`);
+if (offlineMissing.length) console.log(`[plan-eval] 파일 답이 없는 요청 ${offlineMissing.length}개 — 각 사업의 가장 앞 번호부터 답을 쓰고 다시 돌리세요:\n${offlineMissing.join("\n")}`);

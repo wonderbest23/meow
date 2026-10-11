@@ -5,9 +5,9 @@ import { EVAL_CASES } from "./plan-eval/cases";
 
 // 사업계획서 품질 채점(docs/사업계획서-품질기준-최종본-2026-10-09.md) — 채점 코드가 맞게 재는지 고정 예시로 확인한다
 
-// 시험 사업 20개: id가 겹치지 않고, 미분류·운영 중·값 빠짐이 섞여 있다
-assert.equal(EVAL_CASES.length, 20);
-assert.equal(new Set(EVAL_CASES.map(item => item.id)).size, 20);
+// 시험 사업 22개(유형 지도의 플랫폼·앱 추가): id가 겹치지 않고, 미분류·운영 중·값 빠짐이 섞여 있다
+assert.equal(EVAL_CASES.length, 22);
+assert.equal(new Set(EVAL_CASES.map(item => item.id)).size, 22);
 assert.ok(EVAL_CASES.some(item => item.sector === "general") && EVAL_CASES.some(item => item.mode === "operating") && EVAL_CASES.some(item => item.answers["structure.cost"] === undefined));
 
 // 1. 막연한 고객 표현이 남으면 실패, 나이·지역이 구체적이면 통과

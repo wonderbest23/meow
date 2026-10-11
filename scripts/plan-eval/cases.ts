@@ -55,6 +55,11 @@ export const EVAL_CASES: EvalCase[] = [
     answers: { business: "동네 가게 인스타그램 운영 대행", customer: "SNS를 못 하는 동네 음식점 사장님", problem: "홍보할 시간과 방법을 모름", offer: "월 12회 게시물 제작·업로드", channel: "직접 방문 영업", price: 300000, "structure.unitCost": 30000, "structure.cost": 500000, budget: 3000000, livingCost: 1500000, hoursPerWeek: 35, capacity: "대표자 혼자 / 월 12곳", goal: "6개월 안에 고객 가게 10곳" } },
   { id: "plant-care", label: "반려식물 방문 돌봄(미분류·소자본)", mode: "startup", sector: "general", tags: ["업종 미분류", "적은 자금", "막연한 고객"],
     answers: { business: "출장 가는 사람의 반려식물을 방문해서 돌봐 주는 서비스", customer: "특정 지역 주민", problem: "집을 비우면 식물이 죽음", offer: "방문 물주기·관리 1회", channel: "당근마켓", price: 20000, "structure.unitCost": 2000, budget: 1000000, hoursPerWeek: 10, goal: "3개월 안에 단골 20명" } },
+  // 사업 유형 지도(docs/사업-유형-지도-2026-10-11.md)의 연결 플랫폼형·앱형 — 이 둘이 없어 추가(2026-10-11)
+  { id: "petsitter-match", label: "펫시터 연결 서비스(플랫폼)", mode: "startup", sector: "local_service", tags: ["양면 시장", "수수료"],
+    answers: { business: "반려견 보호자와 동네 펫시터를 연결해 주는 예약 서비스", customer: "출장·야근이 잦은 1인 가구 반려견 보호자", problem: "급할 때 믿고 맡길 사람을 찾기 어려움", offer: "펫시터 방문 돌봄 1회 예약 연결", channel: "당근마켓, 반려견 커뮤니티", price: 5000, "structure.unitCost": 500, "structure.cost": 1500000, budget: 10000000, livingCost: 2000000, hoursPerWeek: 50, capacity: "대표자 혼자 / 하루 매칭 20건", goal: "6개월 안에 월 거래 600건" } },
+  { id: "recipe-app", label: "1인 가구 레시피 앱(앱)", mode: "startup", sector: "software", tags: ["이용자 먼저", "무료+유료"],
+    answers: { business: "냉장고에 남은 재료로 1인분 요리를 추천하는 앱", customer: "자취하는 20~30대 1인 가구", problem: "재료가 남아 버리게 되고 매번 메뉴 고민", offer: "기본 추천 무료, 월 4,900원 프리미엄 식단", channel: "인스타그램, 자취 커뮤니티", price: 4900, "structure.unitCost": 500, "structure.cost": 800000, budget: 5000000, livingCost: 0, hoursPerWeek: 30, goal: "1년 안에 유료 구독 500명" } },
   { id: "gimbap-op", label: "운영 중: 동네 김밥집 매출 정체", mode: "operating", sector: "food_beverage", tags: ["운영 중", "매출 정체"],
     answers: { business: "주택가에서 3년째 운영 중인 김밥집", customer: "주변 직장인과 주민", problem: "매출이 정체·감소하고 있다", offer: "김밥·라면·분식", channel: "배달앱, 포장", price: 4500, "structure.unitCost": 2000, cost: 6000000, period: "2026-06-01 / 2026-08-31", sales: 54000000, budget: 5000000, hoursPerWeek: 70, capacity: "대표자 부부와 아르바이트 1명 / 하루 250줄", goal: "6개월 안에 월 매출 2,200만원 회복" } },
   { id: "fashion-op", label: "운영 중: 온라인 의류몰 재구매 낮음", mode: "operating", sector: "retail_commerce", tags: ["운영 중", "재구매 낮음"],

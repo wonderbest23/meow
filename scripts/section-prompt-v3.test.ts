@@ -84,6 +84,15 @@ assert.match(roadmap, /수요 판단은 계약 전 주에 둡니다/);
 // 업종 가이드(위생교육·건강진단·건축물 용도 등)는 빠짐없이 12주 표 주차로(2026-10-11: 공식 원문 대조 후 계획서에 넣음)
 assert.match(roadmap, /업종 가이드\(intake.industryGuide\)가 있으면 그 steps를 하나도 빼지 않고 순서대로/);
 assert.match(system, /industryGuide는 오늘창업이 공식 기관 안내로 정리한 업종별 준비물·신고 순서/);
+// 사업 유형(docs/사업-유형-지도-2026-10-11.md): 12주는 유형의 순서를 뼈대로, 가정 표는 유형의 가정으로
+assert.match(system, /businessType은 오늘창업이 규칙으로 정한 사업 유형/);
+assert.match(roadmap, /사업 유형\(intake.businessType\)이 있으면 그 roadmap 순서를 12주의 뼈대로 삼고/);
+assert.match(roadmap, /사업 유형\(intake.businessType\)이 있으면 그 assumptions를 이 표의 가정으로 삼습니다/);
+// 업종 자료에 유형이 있으면 장 역할에 그 유형의 초점이 붙고, 모든 장의 시스템 지시문은 여전히 같다
+const typedIntake = JSON.stringify({ businessType: { id: "platform", name: "연결 플랫폼형" } });
+const typedSystems = keys.map(key => sectionSystemPrompt(base(key, { intakeContext: typedIntake })));
+assert.ok(typedSystems.every(item => item === typedSystems[0]), "same system prompt across chapters with a business type");
+assert.match(typedSystems[0], /이 사업 유형에서는 공급자 모집을 먼저도 이 장이 다룬다/);
 assert.match(roadmap, /이미 신고된 공간\(공유주방·팝업 매장 등\)을 빌려 돈을 받고 팔아 보는 안/);
 assert.match(executive, /그 시점에 할 수 없는 행동\(계약 뒤에 공간을 줄이는 것 등\)은 쓰지 않습니다/);
 assert.doesNotMatch(buildUserPrompt(base("market/personas")), /실행 전 확인 목록/);
