@@ -231,15 +231,20 @@ const PLAYBOOK_WORDS: Array<[string, RegExp]> = [
   ["beauty", /미용실|헤어\s*(숍|샵)|네일\s*(숍|샵|아트)?|피부\s*관리|속눈썹/],
   ["academy", /학원|교습소|공부방|과외/],
   ["gym", /헬스장|체력\s*단련장|피트니스\s*(센터|클럽)/],
-  ["lodging", /민박|게스트\s*하우스|공유\s*숙박|에어비앤비/],
+  ["lodging", /민박|펜션|게스트\s*하우스|공유\s*숙박|에어비앤비/],
   ["rental-room", /연습실|스터디\s*룸|파티\s*룸|시간\s*대여/],
   ["brokerage", /연결해\s*주|이어\s*주는|중개|매칭|소개팅|소개해\s*주/],
   ["online-store", /스마트스토어|온라인\s*(쇼핑몰|판매|스토어)|쇼핑몰|오픈마켓/],
 ];
 
-export function playbookForText(text: string | null | undefined): IndustryPlaybook | null {
+/* 그 업종 사장님을 상대로 하는 서비스('음식점 메뉴 사진 촬영', '미용실 예약 대행')는 그 업종이 아니다 — 매장 업종 가이드를 붙이지 않는다(2026-10-11 사전 점검) */
+const BUSINESS_CUSTOMER = /사장님|업체|기업|회사|소상공인|원장|법인/;
+const PREMISES_PLAYBOOKS = new Set(["bakery", "cafe", "restaurant", "snack", "side-dish", "beauty", "gym", "academy", "lodging"]);
+
+export function playbookForText(text: string | null | undefined, options: { customer?: string | null } = {}): IndustryPlaybook | null {
   if (!text?.trim()) return null;
   const id = PLAYBOOK_WORDS.find(([, words]) => words.test(text))?.[0];
+  if (id && PREMISES_PLAYBOOKS.has(id) && options.customer && BUSINESS_CUSTOMER.test(options.customer)) return null;
   return INDUSTRY_PLAYBOOKS.find(playbook => playbook.id === id) ?? null;
 }
 

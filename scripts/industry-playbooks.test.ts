@@ -29,6 +29,11 @@ const described: Array<[string, string | null]> = [
   ["홍대 근처 댄스·보컬 연습실 시간 대여", "rental-room"],
 ];
 for (const [text, id] of described) assert.equal(playbookForText(text)?.id ?? null, id, `${text} → ${id}`);
+// 사전 점검(2026-10-11, 시험 사업 22개): 그 업종 사장님을 상대로 하는 서비스에는 매장 업종 가이드를 붙이지 않고, 펜션은 민박 가이드
+assert.equal(playbookForText("동네 음식점 메뉴 사진을 찍어 주는 출장 사진 서비스", { customer: "배달앱에 입점한 동네 음식점 사장님" }), null);
+assert.equal(playbookForText("동네 미용실 예약을 대신 받아 주는 월 구독 서비스", { customer: "1인 미용실 사장님" }), null);
+assert.equal(playbookForText("아파트 상가 아침 빵집", { customer: "출근 전 30~40대 직장인" })?.id, "bakery");
+assert.equal(playbookForText("제주 서귀포에서 독채 펜션 2동 운영")?.id, "lodging");
 
 for (const playbook of INDUSTRY_PLAYBOOKS) {
   for (const prefix of playbook.ksic) assert.ok(ksicByCode(prefix), `${playbook.id}: KSIC ${prefix} exists`);
