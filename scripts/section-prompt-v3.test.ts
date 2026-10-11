@@ -62,6 +62,16 @@ const user = buildUserPrompt(base("market/personas"));
 assert.ok(user.indexOf("<business_data>") < user.indexOf("<task>"));
 assert.ok(user.trimEnd().endsWith("</task>"));
 assert.ok(!user.includes("messageId") && user.includes("4500원"));
+// 같은 돈 계산(financialScenario)은 한 번만 — 공통 사업 정보와 업종 자료에 똑같이 들어가 장마다 약 2,000자가 겹쳤다(2026-10-11 사전 점검)
+const scenario = "판단 기준(실행 장에서 씀): 생활비까지 버는 판매량 이상이면 계획대로";
+const coachWithScenario = JSON.stringify({ ...JSON.parse(coachContext), financialScenario: scenario });
+const intakeWithScenario = JSON.stringify({ guidance: "x", structure: { source: "업종 기본값", financialScenario: scenario } });
+const deduped = buildUserPrompt(base("market/personas", { coachContext: coachWithScenario, intakeContext: intakeWithScenario }));
+assert.equal(deduped.split(scenario).length - 1, 1, "the cashflow reference appears once");
+assert.match(deduped, /financialScenarioIn/);
+// 내용이 다르면 둘 다 둔다
+const differs = buildUserPrompt(base("market/personas", { coachContext: coachWithScenario, intakeContext: JSON.stringify({ structure: { financialScenario: "다른 계산" } }) }));
+assert.ok(differs.includes(scenario) && differs.includes("다른 계산"));
 
 const roadmap = buildUserPrompt(base("summary/roadmap"));
 assert.match(roadmap, /## 먼저 확인할 가정/);
