@@ -24,6 +24,9 @@ const described: Array<[string, string | null]> = [
   ["역 앞 커피 전문점", "cafe"], ["네이버 카페로 홍보하는 꽃집", null], ["동네 반찬 가게", "side-dish"], ["떡볶이 포장 전문", "snack"],
   ["주택가 한식 식당", "restaurant"], ["1인 네일숍", "beauty"], ["초등 영어 공부방", "academy"], ["24시간 헬스장", "gym"],
   ["농촌 민박", "lodging"], ["핸드메이드 액세서리 스마트스토어", "online-store"], ["꽃집", null], ["필라테스 스튜디오", null], ["", null],
+  // 2026-10-11 공식 원문 확인 뒤 추가: 온라인 중개, 공간 시간 대여
+  ["반려견 보호자와 동네 펫시터를 연결해 주는 예약 서비스", "brokerage"], ["혼자 지내는 어르신을 서로 소개해 주는 소개팅 서비스", "brokerage"],
+  ["홍대 근처 댄스·보컬 연습실 시간 대여", "rental-room"],
 ];
 for (const [text, id] of described) assert.equal(playbookForText(text)?.id ?? null, id, `${text} → ${id}`);
 
@@ -50,6 +53,11 @@ const license = steps.find(step => step.id === "license");
 assert.ok(license?.title.startsWith("빵집(제과점) 시작 준비"), String(license?.title));
 assert.ok(license?.material.includes("식품위생교육") && license.material.includes("제과점 영업 신고"), String(license?.material));
 assert.ok(steps.findIndex(step => step.id === "license") < steps.findIndex(step => step.id === "website"), "license comes before the website step");
+// 캔들·디퓨저는 팔기 전 안전확인 신고(화학제품안전법), 중개는 거래 당사자가 아님을 알림(전자상거래법), 연습실은 반주기·볼룸댄스 구분
+const online = INDUSTRY_PLAYBOOKS.find(item => item.id === "online-store")!;
+assert.match(online.steps[0].detail, /캔들·디퓨저·방향제 같은 생활화학제품은 팔기 전에 지정 시험기관에서 안전기준 검사를 받고 한국환경산업기술원에 신고/);
+assert.ok(INDUSTRY_PLAYBOOKS.find(item => item.id === "brokerage")!.steps.some(step => /거래 당사자가 아니라 중개자/.test(step.detail)));
+assert.ok(INDUSTRY_PLAYBOOKS.find(item => item.id === "rental-room")!.steps.some(step => /노래연습장업 등록/.test(step.detail)));
 // 설명으로 찾은 가이드는 그렇다고 밝혀, 사업과 다르면 쓰지 않게 한다
 assert.match(playbookContext(playbookForText("빵집")!, "description").matchedBy ?? "", /사업 설명으로 찾은 업종/);
 assert.equal(playbookContext(playbookForText("빵집")!).matchedBy, undefined);
