@@ -1,5 +1,5 @@
 import { readCoach } from "./coach";
-import { playbookContext, playbookForKsic } from "./industry-playbooks";
+import { playbookContext, playbookForKsic, playbookForText } from "./industry-playbooks";
 import { allStructureQuestions, detailQuestions, intakeSectorOptions } from "./intake-questions";
 import { readIntake, effectiveStructure } from "./intake-core";
 import { intakeResourceSource } from "./intake-resource-context";
@@ -104,7 +104,11 @@ export function confirmedIntakeContext(answers: Answers): string {
   const reportingPeriod = periodInput?.basis === "user" ? answerRecord("period", "Operating reporting period", periodInput) : null;
   const ksic = confirmedKsic(answers);
   // 업종 가이드(준비물·신고 순서·자주 놓치는 것) — 그 업종을 모르는 사람의 계획서가 시작 절차를 구체적으로 다루게 한다
-  const playbook = ksic ? playbookForKsic(ksic.code) : null;
+  // 업종 코드가 없으면 사업 설명(무엇을 하는 사업인지, 팔 것)으로 찾는다 — 상담으로 시작한 사업은 대부분 코드가 없다.
+  // 큰 분류 이름(business.industry, 예: '카페 · 음식점')은 보지 않는다. 식당이 카페 가이드를 받게 되기 때문이다
+  const coachForGuide = readCoach(answers);
+  const describedAs = coachForGuide ? [coachForGuide.business.description, ...coachForGuide.fields.filter(field => field.key === "business" || field.key === "offer").map(field => field.value)].join(" ") : "";
+  const playbook = ksic ? playbookForKsic(ksic.code) : playbookForText(describedAs);
   // 사업 구조 브리프: 분류 코드가 있거나, 사용자가 구조를 직접 골랐거나, 손익 입력(가격·변동비·고정비 등)이 있을 때만 붙는다. 그 밖에는 추측이 되므로 넣지 않는다.
   const intakeState = briefIntakeState(answers, sector, ksic?.code ?? null), coachState = readCoach(answers);
   const brief: IntakeStructureBrief | null = intakeState && coachState ? intakeStructureBrief(coachState, intakeState) : null;
@@ -114,7 +118,7 @@ export function confirmedIntakeContext(answers: Answers): string {
   if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal && !playbook) return "";
 
   const context = { guidance: INTAKE_CONTEXT_RULES + (resources ? ` ${RESOURCE_CONTEXT_RULES}` : ""), industry: industry || null, sector: sector ?? null, ksic, structure,
-    ...(playbook ? { industryGuide: playbookContext(playbook) } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
+    ...(playbook ? { industryGuide: playbookContext(playbook, ksic ? "ksic" : "description") } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
   while (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.resources?.quotes.length) { context.resources.quotes.pop(); context.omitted = true; }
   // 넘치면 업종 가이드부터 줄인다 — 사업 구조·계산(structure)이 더 중요하다
   const guided = context as typeof context & { industryGuide?: ReturnType<typeof playbookContext> };

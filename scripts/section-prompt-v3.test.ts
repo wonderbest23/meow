@@ -81,6 +81,9 @@ assert.match(roadmap, /견적 합계가 계산 자료의 초기 지출 한도 �
 assert.match(roadmap, /계산에 쓴 월 고정비를 넘으면 숫자를 다시 계산하는 일/);
 assert.match(roadmap, /실제 장소와 설비로 계획한 하루\(또는 일주일\) 양을 만들어 보는 주/);
 assert.match(roadmap, /수요 판단은 계약 전 주에 둡니다/);
+// 업종 가이드(위생교육·건강진단·건축물 용도 등)는 빠짐없이 12주 표 주차로(2026-10-11: 공식 원문 대조 후 계획서에 넣음)
+assert.match(roadmap, /업종 가이드\(intake.industryGuide\)가 있으면 그 steps를 하나도 빼지 않고 순서대로/);
+assert.match(system, /industryGuide는 오늘창업이 공식 기관 안내로 정리한 업종별 준비물·신고 순서/);
 assert.match(roadmap, /이미 신고된 공간\(공유주방·팝업 매장 등\)을 빌려 돈을 받고 팔아 보는 안/);
 assert.match(executive, /그 시점에 할 수 없는 행동\(계약 뒤에 공간을 줄이는 것 등\)은 쓰지 않습니다/);
 assert.doesNotMatch(buildUserPrompt(base("market/personas")), /실행 전 확인 목록/);
