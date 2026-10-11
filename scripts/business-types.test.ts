@@ -48,6 +48,20 @@ for (const type of Object.values(BUSINESS_TYPES)) {
 // 플랫폼·앱은 앱 개발을 판단 기준을 넘은 뒤로 미룬다
 assert.match(BUSINESS_TYPES.platform.roadmap.join(" "), /앱 개발은 판단 기준을 넘은 뒤/);
 assert.match(BUSINESS_TYPES.app.roadmap.join(" "), /앱 개발·외주는 판단 기준을 넘은 뒤/);
+// 가장 정확한 수요 신호를 순서에 고정(2026-10-11 유형 시뮬레이션: 본문 '검토'로만 두면 두 번 쓸 때 위치가 흔들렸다)
+const order = (id: BusinessTypeId, step: RegExp, before: RegExp) => {
+  const steps = BUSINESS_TYPES[id].roadmap, a = steps.findIndex(item => step.test(item)), b = steps.findIndex(item => before.test(item));
+  assert.ok(a >= 0 && b >= 0 && a < b, `${id}: ${step} before ${before}`);
+};
+order("store", /이미 신고된 공간을 빌려 실제로 팔아 보기/, /^계약\(/);
+order("lesson", /계약 전 체험 수업/, /^계약\(/);
+order("b2b", /무료로 맡은 곳이 돈을 내고 이어 가는지/, /판단/);
+order("platform", /손 매칭으로 실제 거래와 연결비/, /판단/);
+order("platform", /중개 인허가 확인/, /손 매칭으로 실제 거래와 연결비/);
+order("app", /개인정보·약관/, /첫 이용자 모집/);
+order("app", /재방문 비율 확인/, /유료 기능/);
+// 인허가가 없을 수 있는 유형은 사업자등록을 앞에 둔다
+for (const id of ["visit", "b2b"] as BusinessTypeId[]) assert.ok(BUSINESS_TYPES[id].roadmap.findIndex(item => /사업자등록/.test(item)) <= 1, `${id}: register early`);
 
 // 자료: 설명으로 정했으면 그렇다고 밝힌다
 const described = businessTypeContext(businessTypeFor({ description: "아파트 상가 빵집" })!);

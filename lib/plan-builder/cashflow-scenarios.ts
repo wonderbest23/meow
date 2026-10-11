@@ -186,11 +186,22 @@ function goalLine(result: CashflowScenarios): string {
 const periods = (daily: boolean, monthly: number, unit: string) => [perDay(daily, monthly, unit, text => text), monthly / 4.3 >= 1 ? `일주일 약 ${count(monthly / 4.3, unit)}` : "", `한 달 ${count(monthly, unit)}`].filter(Boolean).join(" / ");
 const monthsText = (months: number) => (months >= 12 ? "12개월 이상" : months < 1 ? "1개월도 못 버팀" : `약 ${months}개월`);
 
+/*
+ * 판단 기준 — 출시 전과 문 연 뒤 두 번(2026-10-11 유형 시뮬레이션 검토: 출시 전에 판매량 기준을 그대로 쓰면
+ * 새로 모은 예약 의사로는 닿을 수 없거나 너무 느슨했다). 출시 전에는 작은 표본의 실제 비율과 '닿아야 하는 사람 수'로 본다.
+ * 비율별 사람 수는 여기서 계산한다 — 본문이 숫자를 만들지 않게.
+ */
 function decisionLines(result: CashflowScenarios): string[] {
   const { decision, unit } = result;
+  const reach = (rate: number) => {
+    const monthly = Math.ceil(decision.go / rate);
+    return result.daily ? `하루 약 ${Math.ceil(monthly / 26).toLocaleString("ko-KR")}명` : monthly / 4.3 >= 1 ? `일주일 약 ${Math.ceil(monthly / 4.3).toLocaleString("ko-KR")}명` : `한 달 ${monthly.toLocaleString("ko-KR")}명`;
+  };
   return [
-    `판단 기준(실행 장에서 씀): 이 판단은 계약처럼 큰돈을 쓰기 전에 합니다. 계약 뒤에는 시작 규모를 줄일 수 없기 때문입니다. 돈을 받고 팔 수 있으면 시범 판매의 실제 수를, 신고 전이라 아직 팔 수 없으면 돈을 받지 않고 모은 예약 의사 수를 같은 기간 기준과 비교합니다. 예약 의사 수는 실제 구매보다 많게 나오기 쉬우므로, 의사 수로 판단할 때는 그 한계를 함께 씁니다. ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로 진행합니다.`,
-    `그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 시작 규모(공간·장비·상품 수)를 줄여 계약합니다. 본전의 절반 이하면 계약하지 않고 시작안을 바꿉니다. 문을 연 뒤에는 매달 볼 숫자와 중단선으로 판단합니다. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
+    `판단 기준(실행 장에서 씀): ${decision.goLabel}(${periods(result.daily, decision.go, unit)}) 이상이면 계획대로, 그보다 적고 본전의 절반(${periods(result.daily, decision.floor, unit)})보다 많으면 규모(공간·장비·상품 수)를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다. 판단은 계약처럼 큰돈을 쓰기 전(출시 전)에 한 번, 문을 연 뒤에 다시 합니다.`,
+    `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 의견을 준 사람 중 날짜·수량까지 남긴 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다.`,
+    `${decision.goLabel}을 채우려면 닿아야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람에게 닿을 길(지나가는 사람, 단지 세대, 커뮤니티 회원 등)이 있어야 진행합니다.`,
+    `문을 연 뒤: 실제 판매 수를 위 기준과 매달 비교하고, 남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
   ];
 }
 
