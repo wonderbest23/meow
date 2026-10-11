@@ -137,7 +137,7 @@ const DESCRIPTION_WORDS: Array<[BusinessTypeId, RegExp]> = [
 ];
 /* 고객이 사업자면 사장님 대상 서비스형 — 매장·출장 같은 말보다 먼저 본다(메뉴 사진 출장 촬영은 사장님 대상 서비스) */
 const BUSINESS_CUSTOMER = /사장님|업체|기업|회사|매장|가게|소상공인|원장|병원|학원|법인/;
-const PLAYBOOK_TYPE: Record<string, BusinessTypeId> = { bakery: "store", cafe: "store", restaurant: "store", snack: "store", beauty: "store", gym: "store", academy: "lesson", "online-store": "ship", lodging: "space", "rental-room": "space", brokerage: "platform" };
+const PLAYBOOK_TYPE: Record<string, BusinessTypeId> = { bakery: "store", cafe: "store", restaurant: "store", snack: "store", beauty: "store", gym: "store", academy: "lesson", "online-store": "ship", lodging: "space", "rental-room": "space", brokerage: "platform", "pet-treat": "ship", "moving-truck": "visit", laundry: "visit" };
 
 export type BusinessTypeBasis = "structure" | "description" | "industry" | "sector";
 

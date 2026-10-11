@@ -224,9 +224,21 @@ export const SECTION_PROMPT_V3_EXAMPLES = `<examples>
 </examples>`;
 
 /** 업종 자료(JSON)에서 영어 규칙 문단(guidance)을 뺀다 — 같은 규칙을 <sources>에 한국어로 옮겼다 */
-export function intakeDataOnly(intakeContext: string): string {
+export function intakeDataOnly(intakeContext: string, coachContext?: string): string {
   try {
     const { guidance: _guidance, ...rest } = JSON.parse(intakeContext) as Record<string, unknown>;
+    // 같은 돈 계산(financialScenario)이 공통 사업 정보에도 있으면 업종 자료 쪽은 뺀다 — 장마다 약 2,000자가 두 번 들어가고,
+    // 검토 단계도 같은 자료를 받아 계획서 하나에 수만 자가 겹쳤다(2026-10-11 사전 점검). 내용이 다르면 둘 다 둔다
+    const structure = rest.structure as Record<string, unknown> | null | undefined;
+    if (coachContext && structure && typeof structure.financialScenario === "string" && structure.financialScenario) {
+      try {
+        const coach = JSON.parse(coachContext) as { financialScenario?: unknown };
+        if (coach.financialScenario === structure.financialScenario) {
+          const { financialScenario: _same, ...others } = structure;
+          rest.structure = { ...others, financialScenarioIn: "coach.financialScenario" };
+        }
+      } catch { /* 공통 사업 정보가 JSON이 아니면 그대로 둔다 */ }
+    }
     return JSON.stringify(rest);
   } catch {
     return intakeContext;

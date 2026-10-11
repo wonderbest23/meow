@@ -339,7 +339,7 @@ function buildUserPromptV3(input: SectionGenInput): string {
   const intake = boundedIntakeContext(input.intakeContext);
   const data = [
     tag("coach", input.coachContext && compactCoachContext(input.coachContext)),
-    tag("intake", intake && intakeDataOnly(intake)),
+    tag("intake", intake && intakeDataOnly(intake, input.coachContext)),
     tag("operating", input.operatingContext),
     tag("section_answers", answered.length ? formatAnswers(input.answers) : ""),
     tag("financials", md, ' role="이 장이 싣는 계산 결과"'),

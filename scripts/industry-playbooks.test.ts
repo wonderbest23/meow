@@ -34,6 +34,14 @@ assert.equal(playbookForText("동네 음식점 메뉴 사진을 찍어 주는 �
 assert.equal(playbookForText("동네 미용실 예약을 대신 받아 주는 월 구독 서비스", { customer: "1인 미용실 사장님" }), null);
 assert.equal(playbookForText("아파트 상가 아침 빵집", { customer: "출근 전 30~40대 직장인" })?.id, "bakery");
 assert.equal(playbookForText("제주 서귀포에서 독채 펜션 2동 운영")?.id, "lodging");
+// 사전 점검 2차(공식 원문 확인): 반려동물 간식은 사료, 용달·이사는 화물 운송 허가, 세탁 수거는 세탁업
+assert.equal(playbookForText("반려견 수제간식을 만들어 온라인으로 판매")?.id, "pet-treat");
+assert.equal(playbookForText("원룸 1인 소형 이사 전문 용달")?.id, "moving-truck");
+assert.equal(playbookForText("아파트 단지 세탁물 수거·배달 서비스")?.id, "laundry");
+assert.equal(playbookForText("천연 세탁 세제를 스마트스토어로 판매")?.id, "online-store", "selling detergent is not a laundry business");
+assert.equal(playbookForKsic("10901")?.id, "pet-treat"); assert.equal(playbookForKsic("49302")?.id, "moving-truck"); assert.equal(playbookForKsic("96912")?.id, "laundry");
+assert.ok(INDUSTRY_PLAYBOOKS.find(item => item.id === "moving-truck")!.steps.some(step => /새 허가는 원칙적으로 나오지 않아/.test(step.detail)));
+assert.ok(INDUSTRY_PLAYBOOKS.find(item => item.id === "pet-treat")!.steps.some(step => /사람 음식이 아니라 사료/.test(step.detail)));
 
 for (const playbook of INDUSTRY_PLAYBOOKS) {
   for (const prefix of playbook.ksic) assert.ok(ksicByCode(prefix), `${playbook.id}: KSIC ${prefix} exists`);
