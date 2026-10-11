@@ -16,7 +16,7 @@ async function main() {
     const expectedCore = {
       // 가격 뒤 변동비·고정비: 손익 계산 세 값을 기본 흐름에서 모은다(2026-09-28). 운영 중은 월 고정비를 이미 묻고, 가격이 새로 들어갔다.
       exploring: ["interest", "experience", "hoursPerWeek", "budget", "conditions", "candidate", "customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "goal"],
-      startup: ["industry", "business", "customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "budget", "hoursPerWeek", "capacity", "goal"],
+      startup: ["industry", "business", "customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "budget", "livingCost", "hoursPerWeek", "capacity", "goal"],
       operating: ["industry", "business", "customer", "offer", "price", "structure.unitCost", "problem", "period", "sales", "cost", "capacity", "channel", "goal"],
     };
     const expectedDetails = {

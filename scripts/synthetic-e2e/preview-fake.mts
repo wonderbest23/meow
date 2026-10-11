@@ -26,7 +26,8 @@ await cp(join(root, "scripts/synthetic-e2e/inject"), directory, { recursive: tru
 }
 await symlink(join(root, "node_modules"), join(directory, "node_modules"), "dir");
 const reservation = createServer();
-await new Promise<void>((resolve, reject) => { reservation.once("error", reject); reservation.listen(0, "127.0.0.1", resolve); });
+// PREVIEW_PORT: 미리보기 창(.claude/launch.json 'preview-fake')이 붙을 포트를 고정한다. 없으면 빈 포트를 고른다
+await new Promise<void>((resolve, reject) => { reservation.once("error", reject); reservation.listen(Number(process.env.PREVIEW_PORT) || 0, "127.0.0.1", resolve); });
 const address = reservation.address();
 if (!address || typeof address === "string") throw new Error("Local preview port unavailable");
 const port = address.port;

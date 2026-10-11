@@ -1,5 +1,6 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
+import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
@@ -469,12 +470,14 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   if ("missing" in inputs) return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...intakeDetailChecks(coach, intake, null)].join("\n");
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
+  // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
+  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
-  const lines = [
+  const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준`, unitLines: financialsToReference(calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, monthlyGrowthPct: 0 })) })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
     financialsToReference(result),
   ];
-  if (volume === undefined) lines.push(`- 월 판매량: 처리량에서 하루·일주일·한 달을 고르면 ${labels.volume}으로 환산해 12개월 손익을 계산합니다.`);
+  if (volume === undefined && !flow) lines.push(`- 월 판매량: 처리량에서 하루·일주일·한 달을 고르면 ${labels.volume}으로 환산해 12개월 손익을 계산합니다.`);
   const retention = structure.revenue === "subscription" ? structureNumber(intake, "structure.retentionMonths") : null;
   if (retention) lines.push(`- 구독 유지 평균 ${retention}개월 → 구독자 1명 생애 매출 ${won(unitPrice * retention)}, 월 이탈률 약 ${Math.round(100 / retention)}%${volume ? `, 구독자 ${volume.toLocaleString("ko-KR")}명 유지에 매달 신규 약 ${Math.ceil(volume / retention).toLocaleString("ko-KR")}명 필요` : ""}`);
   const takeRate = structure.revenue === "commission" ? structureNumber(intake, "structure.takeRate") : null;
@@ -493,7 +496,8 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   else if (structure.sides === "two") lines.push("- 양면 시장: 공급자 목표가 정해지지 않았습니다. 공급자 1곳당 거래 수를 확인하기 전까지 판매량은 공급 측이 받쳐 준다는 가정입니다.");
   const cycle = structure.revenue === "project" ? structureNumber(intake, "structure.salesCycleDays") : null;
   if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
-  return [...lines, ...notes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined ? null : { volume, actual: notes.some(note => note.startsWith("실적 기준 판매량")) })].filter(Boolean).join("\n");
+  const shownNotes = flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치")) : notes;
+  return [...lines, ...shownNotes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined ? null : { volume, actual: notes.some(note => note.startsWith("실적 기준 판매량")) })].filter(Boolean).join("\n");
 }
 
 export function applyIntakeStructure(plan: ServerPlan, coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {

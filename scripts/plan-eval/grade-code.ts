@@ -112,7 +112,8 @@ export function gradeWeeklyPlan(all: string, hoursPerWeek?: number): ItemResult 
 export function gradeMonthlyMetrics(all: string): ItemResult {
   const monthly = /매달|매월|한 달에 한 번|월 1회/.test(all);
   const metric = /볼\s*숫자|지표|확인할\s*숫자|살펴볼\s*숫자/.test(all);
-  const review = /다시\s*보|점검일|검토일|돌아보/.test(all);
+  // '다시 봅니다'·'다시 봐요'도 잡는다(2026-10-10 빵집 실행 장: '매달 마지막 주에 … 다시 봅니다'를 놓쳤다)
+  const review = /다시\s*(?:보|봅|봐|볼)|점검일|검토일|돌아보/.test(all);
   return { item: 10, name: "매달 볼 숫자와 다시 보기", pass: monthly && metric && review, detail: `매달 ${monthly ? "○" : "×"} · 지표 ${metric ? "○" : "×"} · 다시 보기 ${review ? "○" : "×"}` };
 }
 

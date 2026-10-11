@@ -240,6 +240,8 @@ const BUDGET_HIGH_SECTORS: ReadonlySet<ProposalSector> = new Set(["food_beverage
 const SALES_MONTHLY = ladder([null, 100 * MAN, 300 * MAN, 1000 * MAN, 3000 * MAN, EOK, null], "korean");
 const COST_MONTHLY = ladder([null, 50 * MAN, 150 * MAN, 400 * MAN, 1000 * MAN, 3000 * MAN, null], "korean");
 const AVERAGE_TICKET = ladder([null, 5_000, 10_000, 15_000, 25_000, 35_000, 60_000, null], "digits");
+/** 대표 한 달 생활비: 고정비에 이미 넣었으면 0원, 그 외 100만~300만 원대 */
+const LIVING_MONTHLY = [{ ...ZERO_RANGE, label: "0원(고정비에 넣음)" }, ...ladder([null, 100 * MAN, 150 * MAN, 200 * MAN, 300 * MAN, null], "korean")];
 /** 건당 변동비: 디지털 상품처럼 거의 없으면 0원, 그 외 천~수십만 원. */
 const UNIT_COST = [ZERO_RANGE, ...ladder([null, 1_000, 3_000, 10_000, 30_000, 100_000, 300_000, null], "digits")];
 
@@ -258,6 +260,7 @@ export function amountRanges(sector: ProposalSector | null | undefined, question
     case "cost": return copy(COST_MONTHLY);
     case "structure.cost": return copy(COST_MONTHLY);
     case "structure.unitCost": return copy(UNIT_COST);
+    case "livingCost": return copy(LIVING_MONTHLY);
     case "food_beverage.averageTicket": return copy(AVERAGE_TICKET);
     default: void mode; return [];
   }

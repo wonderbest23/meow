@@ -2,15 +2,22 @@
 // 리얼리티 게이트 철학 유지: 근거 없는 경쟁사 실명·시장수치·인터뷰를 지어내지 않고 "추가 정의 필요"로 표기.
 
 import { completeText, streamText, type LLMConfig } from "../llm/complete";
-import { financialTableOwner, type PlanChapterDef, type PlanSectionDef } from "./blueprint";
+import { financialTableOwner, hasRoadmap, type PlanChapterDef, type PlanSectionDef } from "./blueprint";
 import { questionsForSection } from "./questions";
 import { planTypeGuidanceBlock } from "./plan-type-guidance";
 import type { SectionBusinessContext } from "./context/section";
 import { COACH_WRITER_RULES } from "./coach";
 import { patchSectionIssues, reviewCoachSection, type CoachReviewEvent } from "./coach-review";
-import { documentEditorialPrompt } from "./document-editorial";
+import { DOCUMENT_SECTOR_FOCUS, documentEditorialPrompt, documentSector } from "./document-editorial";
 import { checkDocumentQuality, qualityRepairIssues } from "./document-quality";
 import { boundedIntakeContext, intakeContextEvidence, INTAKE_CONTEXT_RULES, type IntakeContextInput } from "./intake-context";
+import { compactCoachContext, intakeDataOnly, SECTION_PROMPT_V3_EXAMPLES, sectionPromptV3Rules } from "./section-prompt-v3";
+
+/*
+ * 장 작성 지시문 v3(section-prompt-v3.ts) — 상담으로 만든 계획서(공통 사업 정보가 있는 것)의 기본(2026-10-10 블라인드 검토 3회로 결정).
+ * 예전 방식으로 만든 계획서(섹션별 답변만 있는 것)는 기존 지시문을 쓴다. PLAN_SECTION_PROMPT=v1 이면 모두 기존 지시문(되돌리는 스위치).
+ */
+const promptV3 = (input: Pick<SectionGenInput, "coachContext">) => !!input.coachContext && process.env.PLAN_SECTION_PROMPT !== "v1";
 
 const SYSTEM_PROMPT = [
   "당신은 한국에서 실제로 실행할 사업계획서의 한 섹션을 작성하는 선임 사업전략가입니다.",
@@ -256,6 +263,7 @@ function formatBusiness(b?: BusinessInfo): string {
  */
 export function sectionSystemPrompt(input: SectionGenInput): string {
   const biz = formatBusiness(input.business);
+  if (promptV3(input)) return sectionSystemPromptV3(input, biz);
   return [
     SYSTEM_PROMPT,
     /* 계산 수치(손익분기·처리량·1인당 시간)는 섹션마다 다시 풀면 같은 숫자가 아홉 번 나온다 — 한 섹션에서만 자세히 */
@@ -271,8 +279,90 @@ export function sectionSystemPrompt(input: SectionGenInput): string {
     .join("\n");
 }
 
+/*
+ * v3: 장 작성 규칙을 section-prompt-v3.ts 한 곳에서 다시 쓴다(옛 규칙 묶음과 자료 블록 안의 규칙을 옮김, '스스로 점검' 지시는 뺌).
+ * '일반'·'운영' 계획서가 아닌 옛 종류만 그 종류 안내를 덧붙인다.
+ */
+function sectionSystemPromptV3(input: SectionGenInput, biz: string): string {
+  const operating = /운영|성장|확장/.test(`${input.business?.stage} ${input.planType}`);
+  const known = !input.planType || input.planType === "일반 사업계획서" || input.planType === "사업 운영·개선 계획서";
+  return [
+    sectionPromptV3Rules({ operating, sectorFocus: DOCUMENT_SECTOR_FOCUS[documentSector(input)], financialOwner: financialTableOwner(input.planType) ?? undefined, executionChapter: hasRoadmap(input.planType) }),
+    known ? "" : `<plan_type_note>\n${planTypeGuidanceBlock(input.planType).trim()}\n</plan_type_note>`,
+    SECTION_PROMPT_V3_EXAMPLES,
+    `<business>\n${biz || `사업명: ${input.planTitle ?? "(미정)"}`}\n</business>`,
+    input.outline ? `<outline>\n다른 장도 동시에 쓰는 중입니다. 이 장 키에 배정된 범위를 중심으로 쓰고, 다른 장에 맡긴 내용은 한두 문장으로만 짚습니다.\n${input.outline}\n</outline>` : "",
+  ].filter(Boolean).join("\n");
+}
+
+/* v3 자료 블록: 규칙 문장 없이 자료만(규칙은 시스템 <sources>에 한 번) */
+function contextDataV3(ctx: SectionBusinessContext | undefined, hasFinancialBlock: boolean): string {
+  if (!ctx) return "";
+  const list = (title: string, rows: string[]) => (rows.length ? [`${title}:`, ...rows.map(row => `- ${row}`)] : []);
+  return [
+    ...list("confirmed", ctx.confirmed.map(c => `${c.label}: ${c.value}`)),
+    ...list("inferred", ctx.inferred.map(c => `${c.label}: ${c.value}`)),
+    ...list("metrics", ctx.metrics.map(m => `${m.label}: ${m.value}${m.unit && !m.value.includes(m.unit) ? m.unit : ""}${m.source === "calculation" ? " (계산값 — 사용자 확인함)" : ""}`)),
+    ...list("hints", ctx.hints),
+    ...(ctx.finance && !hasFinancialBlock ? ["finance:", ctx.finance] : []),
+    ...(ctx.unknowns.length ? [`unknowns: ${ctx.unknowns.join(", ")}`] : []),
+  ].join("\n");
+}
+function evidenceDataV3(evidence?: PromptEvidence[]): string {
+  return (evidence ?? []).map((e, i) => [
+    `<item index="${i + 1}">`, `지표: ${e.metric}`, `값: ${e.value}${e.unit && !e.value.includes(e.unit) ? ` ${e.unit}` : ""}`, `기관: ${e.sourceName}`,
+    `기준일: ${e.observedAt || "원문 확인 필요"}`, `원문: ${e.sourceUrl}`, e.note ? `적용 시 주의: ${e.note}` : "",
+    `확인 상태: ${e.verification === "verified" ? "공식 API 확인" : e.verification === "user_supplied" ? "사용자 입력" : "원문 재확인 권장"}`, "</item>",
+  ].filter(Boolean).join("\n")).join("\n");
+}
+
+function buildUserPromptV3(input: SectionGenInput): string {
+  const tag = (name: string, body: string | undefined, attrs = "") => (body?.trim() ? `<${name}${attrs}>\n${body.trim()}\n</${name}>` : "");
+  const key = `${input.chapter.id}/${input.section.id}`, executive = key === "summary/executive", roadmap = key === "summary/roadmap";
+  const operating = /운영|성장|확장/.test(`${input.business?.stage} ${input.planType}`);
+  const md = input.financialsMarkdown, ref = !md ? input.financialsReference : undefined;
+  const answered = Object.entries(input.answers).filter(([, v]) => v != null && v !== "");
+  const intake = boundedIntakeContext(input.intakeContext);
+  const data = [
+    tag("coach", input.coachContext && compactCoachContext(input.coachContext)),
+    tag("intake", intake && intakeDataOnly(intake)),
+    tag("operating", input.operatingContext),
+    tag("section_answers", answered.length ? formatAnswers(input.answers) : ""),
+    tag("financials", md, ' role="이 장이 싣는 계산 결과"'),
+    tag("financials", ref, ' role="참고 — 재무 장에 표로 실림"'),
+    tag("conflicts", (input.conflicts ?? []).map(c => `- ${c.title}: ${c.detail}`).join("\n")),
+    tag("context", contextDataV3(input.context, Boolean(md || ref))),
+    tag("market_evidence", evidenceDataV3(input.evidence)),
+    tag("prior_sections", input.priorSummary),
+  ].filter(Boolean).join("\n");
+  const task = [
+    `작성할 장: ${input.chapter.title} > ${input.section.title} (${key})${executive ? " — 문서의 마지막 장" : ""}`,
+    `이 장이 맡는 것: ${input.section.summary}`,
+    md ? "<financials>의 표와 그래프는 시스템이 본문 끝에 그대로 붙입니다. 본문에는 이 숫자가 무엇을 뜻하는지, 어떤 가정 위에 있는지, 무엇을 조심해야 하는지 해석을 씁니다. 표를 옮겨 적으면 같은 표가 두 번 나오기 때문입니다." : "",
+    ref ? "<financials>의 숫자는 재무 장에 표로 실립니다. 이 장에서는 필요한 값만 문장 속에서 인용합니다." : "",
+    input.coachContext ? "공통 사업 정보로 실제 사업안 본문을 씁니다. 이미 정리된 AI 제안은 빈칸으로 되돌리지 않고 살려 씁니다." : "위 자료만 근거로 이 장의 본문을 씁니다.",
+    executive ? "첫 소제목과 첫 문단에서 이 사업의 결론(누구에게 무엇을 얼마에 팔고, 숫자로 보면 어떤지)을 말합니다. 끝에 '## 실행 전 확인 목록' 표를 하나 만들고, 앞 장들이 (확인 필요)로 남긴 것과 시작 전에 확인할 일을 겹치지 않게 5~8개로 모읍니다. 항목마다 어디서 어떻게 확인하는지 한 줄을 붙입니다." : "",
+    executive && hasRoadmap(input.planType) ? "가정 확인 방법, 12주 할 일, 매달 볼 숫자는 '12주 할 일과 매달 볼 숫자' 장이 맡습니다. 이 장에서는 가장 먼저 할 행동 하나만 쓰고 그 장을 가리킵니다. 같은 표가 두 장에 나오면 대표가 같은 내용을 두 번 읽기 때문입니다." : "",
+    roadmap && operating ? [
+      "이 장은 운영 중인 대표가 앞으로 12주 동안 실제로 할 개선을 정하는 장입니다. 원인은 짐작이라 틀릴 수 있으므로, 돈과 시간을 많이 쓰기 전에 원인 가설을 싸게 확인하고 매달 숫자를 보며 고치게 하려는 것입니다. 다음 세 부분을 이 순서로 씁니다.",
+      "1) '## 먼저 확인할 원인 가설' — 지금 문제의 원인 가설 3개를 표(가설 | 싸게 확인하는 방법 | 이 결과면 바꾼다)로 씁니다. 기준은 자료에 있는 실적·계산 숫자로 세우고, 같은 기간끼리 비교합니다.",
+      "2) '## 12주 할 일' — 표(주차 | 할 일 | 걸리는 시간 | 끝났다고 볼 기준)로 1주부터 12주까지 한 줄씩 씁니다. 매주 걸리는 시간의 합은 대표의 주당 가능 시간(hoursPerWeek)에서 영업에 드는 시간을 뺀 범위 안에 들어가게 합니다. 가설 확인이 큰 지출보다 먼저 옵니다.",
+      "3) '## 매달 볼 숫자' — 매달 볼 숫자 3개를 표(숫자 | 목표 | 어디서 세는지)로 쓰고, 목표는 자료의 실적·목표 숫자에서 가져옵니다. 표 아래에 계획서를 다시 보는 때를 한 줄로 씁니다.",
+    ].join("\n") : "",
+    roadmap && !operating ? [
+      "이 장은 대표가 앞으로 12주 동안 실제로 할 일을 정하는 장입니다. 계획은 틀리기 마련이라, 큰돈을 쓰기 전에 가장 틀리기 쉬운 가정을 싸게 확인하고 매달 숫자를 보며 고치게 하려는 것입니다. 다음 세 부분을 이 순서로 씁니다.",
+      "1) '## 먼저 확인할 가정' — 틀리기 쉬운 가정 3개를 표(가정 | 싸게 확인하는 방법 | 이 결과면 바꾼다)로 씁니다. 수요 가정의 기준은 계산 자료의 '판단 기준' 줄(진행·축소·변경 판매량)을 그대로 쓰고, 확인 방법과 같은 기간(하루·일주일)의 숫자로 비교합니다. 다른 가정의 기준도 자료에 있는 숫자로 세우고, 못 미치면 무엇을 어떻게 바꿀지 씁니다.",
+      "2) '## 12주 할 일' — 표(주차 | 할 일 | 걸리는 시간 | 끝났다고 볼 기준)로 1주부터 12주까지 한 줄씩 씁니다. 매주 걸리는 시간의 합은 대표의 주당 가능 시간(hoursPerWeek) 안에 들어가게 합니다. 가정 확인이 계약·인테리어처럼 큰돈 쓰는 일보다 먼저 오고, 영업 신고·사업자등록처럼 순서가 정해진 일은 그 순서대로 넣습니다. 인허가·신고가 필요한 업종이면 돈을 받고 파는 시범 판매나 예약 결제는 신고·등록을 마친 주 뒤에 둡니다. 그 전에는 돈을 받지 않고 관심과 예약 의사만 모읍니다. 신고 전에 팔면 법을 어길 수 있기 때문입니다.",
+      "3) '## 매달 볼 숫자' — 매달 볼 숫자 3개를 표(숫자 | 목표 | 어디서 세는지)로 쓰고, 목표는 자료의 숫자에서 가져옵니다. 표 아래에 계획서를 다시 보는 때(매달 마지막 주, 12주가 끝날 때 등)를 한 줄로 씁니다.",
+    ].join("\n") : "",
+    `분량: 표를 빼고 ${executive ? "1,500~2,200자" : roadmap ? "600~1,200자" : "900~1,500자"}, 소제목 ${roadmap ? "3개" : "2~4개"}.`,
+  ].filter(Boolean).join("\n");
+  return `<business_data>\n${data}\n</business_data>\n<task>\n${task}\n</task>`;
+}
+
 /** 사용자 프롬프트 조립 (테스트에서 직접 확인할 수 있게 공개) */
 export function buildUserPrompt(input: SectionGenInput): string {
+  if (promptV3(input)) return buildUserPromptV3(input);
   return [
     input.coachContext ? `[공통 사업 정보 — user는 사용자가 알려 준 것, proposal은 AI 제안]\n${input.coachContext}` : "",
     boundedIntakeContext(input.intakeContext),

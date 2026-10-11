@@ -41,6 +41,7 @@ assert.equal(gradeWeeklyPlan("1주 차에 사업자등록", 20).pass, false, "no
 
 // 10. 매달 볼 숫자와 다시 보기
 assert.equal(gradeMonthlyMetrics("매달 볼 숫자 3개: 방문 수, 재구매율, 객단가. 매월 마지막 주에 다시 보기").pass, true);
+assert.equal(gradeMonthlyMetrics("## 매달 볼 숫자\n매달 숫자 세 개만 봅니다. 계획서는 매달 마지막 주에 이 표를 채우며 다시 봅니다.").pass, true, "'다시 봅니다' counts as a review date");
 
 // 12. 같은 숫자 반복은 표 바깥 글에서만 센다
 const repeatedProse = Array.from({ length: THRESHOLDS.repeatedNumberMax + 1 }, () => "손익분기는 22명입니다.").join("\n");

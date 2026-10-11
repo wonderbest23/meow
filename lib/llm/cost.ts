@@ -19,6 +19,7 @@ export const MODEL_PRICES: Array<{ prefix: string; label: string; price: ModelPr
   { prefix: "claude-opus-5", label: "Claude Opus 5", price: price(5, 25, 0.5) },
   { prefix: "claude-fable-5-1", label: "Claude Fable 5.1", price: price(10, 50, 0.25) },
   { prefix: "claude-fable-5", label: "Claude Fable 5", price: price(10, 50, 1) },
+  { prefix: "claude-sonnet-5-5", label: "Claude Sonnet 5.5", price: price(2, 10, 0.2) },
 ];
 
 export function priceFor(model: string | null | undefined): { label: string; price: ModelPrice } | null {

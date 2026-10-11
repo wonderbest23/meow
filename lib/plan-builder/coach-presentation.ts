@@ -5,7 +5,7 @@ export const COACH_FIELD_LABELS: Record<CoachField["key"], string> = {
   budget: "준비 예산", cost: "매달 나가는 비용", unitCost: "한 건당 비용", volume: "월 판매 목표",
   sales: "현재 매출", channel: "고객을 만나는 곳", capacity: "운영 범위", problem: "해결할 문제",
   experience: "경험", goal: "목표", setupCost: "처음 드는 비용", hoursPerWeek: "주당 가능한 시간",
-  minutesPerSale: "한 건에 필요한 시간",
+  minutesPerSale: "한 건에 필요한 시간", livingCost: "내 생활비",
 };
 
 // Presentation only: retain every character and never infer business facts.

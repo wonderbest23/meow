@@ -8,7 +8,8 @@
  *   node --require ./scripts/ledger-test-runtime.cjs --import tsx scripts/plan-eval/run.mts                # 가짜 AI, 20개 전부
  *   node --require ./scripts/ledger-test-runtime.cjs --import tsx scripts/plan-eval/run.mts --cases bakery,senior-match
  *   ANTHROPIC_API_KEY=… node --require ./scripts/ledger-test-runtime.cjs --import tsx scripts/plan-eval/run.mts --spend --yes
- *   옵션: --sections market/personas,financials/expenses,summary/executive  --no-ai-grade  --key-from <.env 파일>  --out <폴더>
+ *   옵션: --sections market/personas,financials/expenses,summary/roadmap,summary/executive  --legacy  --no-ai-grade  --dump-prompts  --key-from <.env 파일>  --out <폴더>
+ *         --max-krw 30000  실제 원가 누적이 이 금액에 닿으면 다음 사업을 시작하지 않는다(기본 3만 원)
  */
 import { randomUUID } from "node:crypto";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -18,6 +19,14 @@ const argv = process.argv.slice(2);
 const flag = (name: string) => argv.includes(`--${name}`);
 const option = (name: string) => { const index = argv.indexOf(`--${name}`); return index >= 0 ? argv[index + 1] : undefined; };
 const spend = flag("spend");
+/*
+ * 기본은 지금 운영 방식(v3 지시문 + 돈 장 + 실행 장 + 생활비 질문, 2026-10-10 채택).
+ * --legacy: 예전 지시문(PLAN_SECTION_PROMPT=v1)과 예전 손익표(PLAN_CASHFLOW_SCENARIOS=0)로 — 바꾸기 전과 비교하는 용도.
+ * 실행 장과 생활비 질문은 장 목록·질문 목록에 들어가 있어 legacy 에서도 남는다.
+ */
+const legacy = flag("legacy");
+const variant = legacy ? "legacy" : "current";
+if (legacy) Object.assign(process.env, { PLAN_SECTION_PROMPT: "v1", PLAN_CASHFLOW_SCENARIOS: "0" });
 if (spend && !flag("yes")) throw new Error("실제 AI 비용이 듭니다. --spend --yes 를 함께 주세요.");
 
 // ---- 환경: 운영 DB 차단, AI 제공자 고정 ------------------------------------------------------------
@@ -36,6 +45,18 @@ if (spend) {
   await import("../synthetic-e2e/fake-anthropic.mjs");
 }
 
+// --dump-prompts: AI에 실제로 보낸 지시문을 파일로 남긴다(프롬프트를 고치기 전후 비교용, 키 값은 남기지 않음)
+const promptDumps: Array<{ model?: string; system?: unknown; messages?: unknown }> = [];
+if (flag("dump-prompts")) {
+  const inner = globalThis.fetch;
+  globalThis.fetch = async (input, init) => {
+    if (String(input instanceof Request ? input.url : input).includes("api.anthropic.com") && typeof init?.body === "string") {
+      try { const body = JSON.parse(init.body); promptDumps.push({ model: body.model, system: body.system, messages: body.messages }); } catch { /* 본문이 JSON이 아니면 건너뜀 */ }
+    }
+    return inner(input, init);
+  };
+}
+
 const { EVAL_CASES } = await import("./cases");
 const { gradeByCode, MUST_PASS } = await import("./grade-code");
 const { gradeByAi, AI_ITEMS, RUBRIC } = await import("./grade-ai");
@@ -45,15 +66,36 @@ const { generatePlanOutline, generateAndSaveSection, intakeFinancialTable } = aw
 const { chaptersForType, financialTableOwner } = await import("../../lib/plan-builder/blueprint");
 const { readCoach, coachContext } = await import("../../lib/plan-builder/coach");
 const { planFinancialReference } = await import("../../lib/plan-builder/intake-core");
+const { setLlmUsageListener } = await import("../../lib/llm/usage");
+const { rowCostUsd, krwPerUsd } = await import("../../lib/llm/cost");
 
-const SECTIONS = (option("sections") ?? "market/personas,financials/expenses,summary/executive").split(",");
+// ---- 실제 원가: 호출마다 토큰(캐시 포함)을 요금표로 원화 환산해 모은다 ----------------------------------
+const MAX_KRW = Number(option("max-krw") ?? 30000);
+const KRW_PER_USD = krwPerUsd();
+type Call = { kind: string; model: string | null; ok: boolean; inputTokens: number; outputTokens: number; cacheReadTokens: number; cacheWriteTokens: number; krw: number | null };
+const calls: Call[] = [];
+setLlmUsageListener(entry => {
+  const usd = spend ? rowCostUsd({ kind: entry.kind, model: entry.model, ok: entry.ok, input_tokens: entry.inputTokens, output_tokens: entry.outputTokens, cache_read_tokens: entry.cacheReadTokens, cache_write_tokens: entry.cacheWriteTokens, created_at: "" }) : 0;
+  calls.push({ ...entry, krw: usd === null ? null : usd * KRW_PER_USD });
+});
+function costOf(list: Call[]) {
+  return {
+    krw: Math.round(list.reduce((sum, call) => sum + (call.krw ?? 0), 0)),
+    calls: list.length, failed: list.filter(call => !call.ok).length,
+    unpriced: list.filter(call => call.krw === null && call.inputTokens + call.outputTokens > 0).length,
+    inputTokens: list.reduce((sum, call) => sum + call.inputTokens, 0), outputTokens: list.reduce((sum, call) => sum + call.outputTokens, 0),
+    cacheReadTokens: list.reduce((sum, call) => sum + call.cacheReadTokens, 0),
+  };
+}
+
+const SECTIONS = (option("sections") ?? "market/personas,financials/expenses,summary/roadmap,summary/executive").split(",");
 const only = option("cases")?.split(",");
 const cases = EVAL_CASES.filter(item => !only || only.includes(item.id));
 const runId = new Date().toISOString().replace(/[:.]/g, "-");
-const outDir = option("out") ?? join(".tmp-e2e", "plan-eval", `${runId}${spend ? "" : "-fake"}`);
+const outDir = option("out") ?? join(".tmp-e2e", "plan-eval", `${runId}-${variant}${spend ? "" : "-fake"}`);
 mkdirSync(join(outDir, "expert"), { recursive: true });
 
-if (spend) console.log(`[plan-eval] 실제 AI: 사업 ${cases.length}개 × (사업 방향 1 + 설계도 1 + 장 ${SECTIONS.length}개 + 채점 1). 장 1개 약 430원 기준 예상 약 ${Math.round(cases.length * (SECTIONS.length * 430 + 300) / 1000)}천 원`);
+if (spend) console.log(`[plan-eval] 실제 AI: 사업 ${cases.length}개 × (사업 방향 1 + 설계도 1 + 장 ${SECTIONS.length}개 + 채점 1). 장 1개 약 430원 기준 예상 약 ${Math.round(cases.length * (SECTIONS.length * 430 + 300) / 1000)}천 원 · 상한 ${MAX_KRW.toLocaleString()}원`);
 
 type Case = typeof EVAL_CASES[number];
 async function runCase(c: Case) {
@@ -101,18 +143,27 @@ async function runCase(c: Case) {
   const facts = { price: num("price"), unitCost: num("structure.unitCost"), fixedCost: num("structure.cost"), budget: num("budget"), hoursPerWeek: num("hoursPerWeek") };
   const code = gradeByCode({ caseId: c.id, sections, source, facts });
   const factsText = Object.entries(c.answers).map(([key, value]) => `${key}: ${value}`).join("\n");
-  const ai = flag("no-ai-grade") || !spend ? null : await gradeByAi({ provider: "anthropic", apiKey: process.env.ANTHROPIC_API_KEY!, model: "claude-sonnet-5-5" }, { caseLabel: c.label, facts: factsText, sections });
-  return { id: c.id, label: c.label, tags: c.tags, design: !!coach.design, title: final.title, sections, code, ai, log };
+  const graded = flag("no-ai-grade") || !spend ? null : await gradeByAi({ provider: "anthropic", apiKey: process.env.ANTHROPIC_API_KEY!, model: "claude-sonnet-5-5" }, { caseLabel: c.label, facts: factsText, sections });
+  return { id: c.id, label: c.label, tags: c.tags, design: !!coach.design, title: final.title, sections, code, ai: graded?.scores ?? null, aiReasons: graded?.reasons ?? null, log };
 }
 
 const results = [];
+let stoppedAt: string | null = null;
 for (const c of cases) {
-  const started = Date.now();
-  try { results.push(await runCase(c)); }
-  catch (error) { results.push({ id: c.id, label: c.label, tags: c.tags, error: error instanceof Error ? error.message : String(error) }); }
-  console.log(`[plan-eval] ${c.id} ${Math.round((Date.now() - started) / 1000)}초`);
+  // 상한: 사업 하나가 끝날 때마다 누적 원가를 보고, 닿았으면 다음 사업을 시작하지 않는다
+  if (spend && costOf(calls).krw >= MAX_KRW) { stoppedAt = c.id; console.log(`[plan-eval] 상한 ${MAX_KRW.toLocaleString()}원에 닿아 ${c.id}부터 멈춤`); break; }
+  const started = Date.now(), before = calls.length;
+  let entry;
+  try { entry = await runCase(c); }
+  catch (error) { entry = { id: c.id, label: c.label, tags: c.tags, error: error instanceof Error ? error.message : String(error) }; }
+  // 실패한 사업도 그때까지 쓴 원가를 남긴다
+  const cost = costOf(calls.slice(before));
+  results.push({ ...entry, cost });
+  console.log(`[plan-eval] ${c.id} ${Math.round((Date.now() - started) / 1000)}초 · ${cost.krw.toLocaleString()}원(호출 ${cost.calls}${cost.unpriced ? `, 요금 미확인 ${cost.unpriced}` : ""}) · 누적 ${costOf(calls).krw.toLocaleString()}원 / 상한 ${MAX_KRW.toLocaleString()}원`);
   writeFileSync(join(outDir, "results.json"), JSON.stringify(results, null, 1));
 }
+writeFileSync(join(outDir, "calls.json"), JSON.stringify(calls, null, 1));
+if (promptDumps.length) writeFileSync(join(outDir, "prompts.json"), JSON.stringify(promptDumps, null, 1));
 
 // ---- 보고서: 사업 × 항목 표, 반드시 통과 항목, AI 점수 평균 -----------------------------------------
 const mark = (pass: boolean | null) => pass === null ? "–" : pass ? "○" : "×";
@@ -120,7 +171,7 @@ const ok = results.filter((item): item is Extract<typeof item, { code: unknown }
 const codeItems = ok[0]?.code.map(item => item.item) ?? [];
 const lines = [
   `# 사업계획서 품질 시험 결과 (${spend ? "실제 AI" : "가짜 AI — 배선 확인용, 점수 의미 없음"})`,
-  "", `- 실행: ${runId} · 사업 ${results.length}개 · 장: ${SECTIONS.join(", ")}`, `- 기준: docs/사업계획서-품질기준-최종본-2026-10-09.md`, "",
+  "", `- 실행: ${runId} · ${legacy ? "예전 방식(비교용)" : "지금 방식"} · 사업 ${results.length}개 · 장: ${SECTIONS.join(", ")}`, `- 기준: docs/사업계획서-품질기준-최종본-2026-10-09.md`, "",
   "## 코드 채점(○ 통과 · × 실패 · – 입력 부족)", "",
   `| 사업 | ${codeItems.map(item => `${item}${MUST_PASS.includes(item) ? "*" : ""}`).join(" | ")} | 반드시 통과 |`,
   `| --- | ${codeItems.map(() => "---").join(" | ")} | --- |`,
@@ -130,6 +181,14 @@ const lines = [
   ...codeItems.map(item => { const rows = ok.map(entry => entry.code.find(result => result.item === item)!).filter(result => result.pass !== null); return `- ${item}. ${rows[0]?.name ?? ""}: ${rows.filter(result => result.pass).length}/${rows.length}`; }),
   "", "## AI 채점 평균(1~5)", "",
   ...(ok.some(item => item.ai) ? AI_ITEMS.map(item => { const scores = ok.map(entry => entry.ai?.[item]).filter((score): score is number => typeof score === "number"); return `- ${item}. ${RUBRIC[item].name}: ${scores.length ? (scores.reduce((sum, score) => sum + score, 0) / scores.length).toFixed(2) : "–"}`; }) : ["- (가짜 AI 실행이라 채점하지 않음)"]),
+  "", "## 실제 원가(요금표 × 토큰, 1달러 " + KRW_PER_USD.toLocaleString() + "원)", "",
+  ...(spend ? [
+    `- 합계 ${costOf(calls).krw.toLocaleString()}원 · 호출 ${calls.length}건${stoppedAt ? ` · 상한에 닿아 ${stoppedAt}부터 실행 안 함` : ""}`, "",
+    "| 사업 | 원 | 호출 | 입력 토큰 | 출력 토큰 |", "| --- | --- | --- | --- | --- |",
+    ...results.map(item => `| ${item.label} | ${item.cost.krw.toLocaleString()} | ${item.cost.calls} | ${item.cost.inputTokens.toLocaleString()} | ${item.cost.outputTokens.toLocaleString()} |`),
+    "", "| 단계(kind) | 원 | 호출 |", "| --- | --- | --- |",
+    ...[...new Set(calls.map(call => call.kind))].map(kind => { const cost = costOf(calls.filter(call => call.kind === kind)); return `| ${kind} | ${cost.krw.toLocaleString()} | ${cost.calls} |`; }),
+  ] : ["- (가짜 AI 실행이라 0원)"]),
   "", "## 세부", "",
   ...ok.flatMap(item => [`### ${item.label}`, ...item.code.map(result => `- ${result.item}. ${result.name}: ${mark(result.pass)} — ${result.detail}`), ...(item.log.length ? [`- 기록: ${item.log.join(" / ")}`] : []), ""]),
   ...results.filter(item => "error" in item).map(item => `- 실패: ${item.label} — ${(item as { error: string }).error}`),

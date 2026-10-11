@@ -61,7 +61,7 @@ export async function seedBusinessRewriteFixture(owner: string, planId: string, 
     const slide = fixture.deck.slides.find(item => item.composition?.role === section.sectionTitle);
     const content = slide ? [slide.title, slide.lead, ...slide.points?.map(point => `${point.label}: ${point.detail}`) ?? [], ...slide.table?.rows.map(row => row.join(" / ")) ?? []].filter(Boolean).join("\n") : section.markdown;
     return "가상 검증 자료이며 실제 사업이나 계약이 아닙니다\n" + (key === "strategy/price" ? content : content.replaceAll("150만원", "가격은 거래 조건 항목 참조"));
-  }).join("\n\n");
+  }).join("\n\n") || (key === "summary/roadmap" ? "가상 검증 자료이며 실제 사업이나 계약이 아닙니다\n## 12주 할 일\n1주에 첫 고객 후보 3곳에 연락하고, 매달 마지막 주에 계약 건수를 다시 봅니다." : "");
   const coach: CoachState = { version: COACH_VERSION, revision: 1, documentRevision: 1, stage: "operating", depth: "practical", ready: true, suggestions: [], messages: [],
     business: { name: fixture.source.businessName, description: fixture.source.businessDescription!, role: "", industry: "B2B", region: "", stage: "운영 중" },
     fields: Object.entries({ business: fixture.source.businessDescription!, offer: "제품 소개서 12쪽과 편집 원본", customer: "소규모 제조사", price: "150만원", unitCost: "30만원", cost: "50만원", volume: "2" }).map(([key, value]) => ({ key: key as CoachState["fields"][number]["key"], value, basis: "user", quote: value, messageId: "synthetic-input" })) };
