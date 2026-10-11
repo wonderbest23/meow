@@ -343,7 +343,8 @@ export async function completeText(config: LLMConfig, params: LLMCompleteParams)
   if (!config.apiKey) return null;
   if (params.signal?.aborted) { params.onFailure?.({ provider: config.provider, code: requestFailure(params.signal, params.signal.reason) }); return null; }
   const policy = params.failover;
-  const deadline = Date.now() + Math.min(params.timeoutMs ?? DEFAULT_TIMEOUT_MS, policy?.totalTimeoutMs ?? DEFAULT_TIMEOUT_MS);
+  // 정책이 없으면 호출자가 정한 시간(장 작성 180초 등)을 그대로 쓴다 — 예전에는 기본 120초로 다시 잘려 긴 장이 끊겼다(2026-10-11 12주 장 실측)
+  const deadline = Date.now() + Math.min(params.timeoutMs ?? DEFAULT_TIMEOUT_MS, policy?.totalTimeoutMs ?? Number.POSITIVE_INFINITY);
   const totalSignal = callSignal({ ...params, timeoutMs: Math.max(1, deadline - Date.now()) });
   const bounded = async <T>(promise: Promise<T>, signal: AbortSignal, fallback: T): Promise<T> => {
     let listener: () => void = () => {};
@@ -373,7 +374,7 @@ export async function completeText(config: LLMConfig, params: LLMCompleteParams)
     if (totalSignal.aborted || deadline - Date.now() < (policy?.minRemainingMs ?? 1)) { await lease?.cancel().catch(()=>undefined);return { result: null, failure: "timeout" as const }; }
     if(lease && !await bounded(lease.begin().catch(()=>false),totalSignal,false)){await lease.cancel().catch(()=>undefined);return {result:null,failure:"quota_exhausted" as const};}
     if(totalSignal.aborted){await lease?.cancel().catch(()=>undefined);return {result:null,failure:"timeout" as const};}
-    const signal = callSignal({ signal: totalSignal, system: "", user: "", maxOutputTokens: 0, timeoutMs: Math.max(1, Math.min(deadline - Date.now(), policy?.attemptTimeoutMs ?? DEFAULT_TIMEOUT_MS)) });
+    const signal = callSignal({ signal: totalSignal, system: "", user: "", maxOutputTokens: 0, timeoutMs: Math.max(1, Math.min(deadline - Date.now(), policy?.attemptTimeoutMs ?? Number.POSITIVE_INFINITY)) });
     let result = await bounded(completeOnce(target, { ...params, signal,
       onFailure: event => { failure = event.code; retryable = event.retryable; params.onFailure?.(event); },
       onUsage: event => { usage = event; if(attemptFinished && lease) void lease.settle(event).catch(()=>undefined);params.onAttemptUsage?.(event); if (!policy) params.onUsage?.(event); },
