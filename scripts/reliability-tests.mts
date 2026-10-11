@@ -2,7 +2,7 @@ import { spawnSync } from "node:child_process";
 
 // Each suite runs in memory with credentials removed and external fetch disabled.
 const suites = ["deck-job", "coach-deck-context", "coach-review-fallback", "llm", "llm-cache", "plan-section-service", "section-save-race", "document-edit", "document-table-roundtrip", "document-context", "coach-job-status", "plan-guest-persist", "plan-sync", "plan-account-linking", "plan-demo-store", "auth-session-input", "plan-cache-owner", "payment-security", "plan-payment-status", "business-hub", "business-journeys", "operating-records", "operating-analysis", "business-navigation", "launch-missions", "landing-from-plan", "plan-landing-chain", "landing-save", "landing-business-content"];
-suites.push("synthetic-ai-budget", "admin-jobs", "llm-usage", "llm-alert", "landing-publication");
+suites.push("synthetic-ai-budget", "admin-jobs", "llm-usage", "llm-alert", "llm-stability", "landing-publication");
 suites.push("staging-safety");
 suites.push("prelaunch-db-safety");
 suites.push("prelaunch-lifecycle-safety");

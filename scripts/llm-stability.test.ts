@@ -70,6 +70,19 @@ async function main() {
     assert.equal(await completeText(config, { ...params, signal: controller.signal, onFailure: event => failures.push(event) }), null);
     assert(calls <= 1); assert.equal(failures.at(-1)?.code, "cancelled");
   });
+  // 정책 없는 호출은 호출자가 정한 시간을 그대로 쓴다(장 작성 180초) — 예전엔 기본 120초로 다시 잘려 12주 장이 끊겼다(2026-10-11)
+  await check("E caller timeout above the default is kept when there is no policy", async () => {
+    const original = AbortSignal.timeout.bind(AbortSignal);
+    const asked: number[] = [];
+    AbortSignal.timeout = (ms: number) => { asked.push(ms); return original(ms); };
+    try {
+      globalThis.fetch = async () => sse({ type: "response.output_text.delta", delta: "ok" }, { type: "response.completed", response: { status: "completed", usage: { input_tokens: 1, output_tokens: 1 } } });
+      await completeText(config, { ...params, timeoutMs: 180_000 });
+      assert.ok(asked.length > 0, "a timeout signal is created");
+      assert.ok(Math.max(...asked) >= 179_000, `longest timeout ${Math.max(...asked)}ms`);
+      assert.ok(asked.every(ms => ms <= 180_000), "never longer than the caller asked");
+    } finally { AbortSignal.timeout = original; }
+  });
   console.log(`LLM stability results: ${failed} failed`); process.exitCode = failed ? 1 : 0;
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
