@@ -62,7 +62,7 @@ const SYSTEM_PROMPT = [
  * 줄어든다. 측정된 평균이 3,663이라 4,000에는 여유가 없었다.
  * 한도를 늘려도 필요 없는 섹션은 예전만큼만 쓰므로 대부분의 비용은 그대로다.
  */
-const SECTION_MAX_TOKENS = 8000;
+export const SECTION_MAX_TOKENS = 8000;
 
 /*
  * 한도를 늘렸으니 오래 걸리는 응답도 생긴다. 기본 제한(120초)에 걸려
@@ -73,7 +73,7 @@ const SECTION_MAX_TOKENS = 8000;
  * 출력 상한(본문 8,000 + 생각 여유분 8,192 = 16,192토큰)을 다 쓰면 약 150초라 180초는 여유가 30초뿐이었다 — API가 붐빌 때 느려지는 것까지 240초로 둔다.
  * 장마다 워크플로 단계 시간(15~30분) 안에서 돈다.
  */
-const SECTION_TIMEOUT_MS = 240_000;
+export const SECTION_TIMEOUT_MS = 240_000;
 
 function formatAnswers(answers: Record<string, unknown>): string {
   const lines: string[] = [];

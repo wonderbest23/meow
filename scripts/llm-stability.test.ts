@@ -83,6 +83,14 @@ async function main() {
       assert.ok(asked.every(ms => ms <= 180_000), "never longer than the caller asked");
     } finally { AbortSignal.timeout = original; }
   });
+  // 사전 점검(2026-10-11): 장 하나가 출력 상한(본문 + high 생각 여유분)을 다 써도 시간 안에 끝나야 한다.
+  // 실측 초당 약 107~111토큰(Opus 5.5) — API가 붐빌 때를 생각해 초당 80토큰으로 계산한다
+  await check("E section timeout covers the longest possible chapter at a slow pace", async () => {
+    const { SECTION_MAX_TOKENS, SECTION_TIMEOUT_MS } = await import("../lib/plan-builder/section-generator");
+    const { THINKING_HEADROOM } = await import("../lib/llm/complete");
+    const worstSeconds = (SECTION_MAX_TOKENS + THINKING_HEADROOM.high) / 80;
+    assert.ok(SECTION_TIMEOUT_MS / 1000 >= worstSeconds, `timeout ${SECTION_TIMEOUT_MS / 1000}s < worst ${Math.ceil(worstSeconds)}s`);
+  });
   console.log(`LLM stability results: ${failed} failed`); process.exitCode = failed ? 1 : 0;
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });

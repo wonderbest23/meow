@@ -109,7 +109,7 @@ export function confirmedIntakeContext(answers: Answers): string {
   // 큰 분류 이름(business.industry, 예: '카페 · 음식점')은 보지 않는다. 식당이 카페 가이드를 받게 되기 때문이다
   const coachForGuide = readCoach(answers);
   const describedAs = coachForGuide ? [coachForGuide.business.description, ...coachForGuide.fields.filter(field => field.key === "business" || field.key === "offer").map(field => field.value)].join(" ") : "";
-  const playbook = ksic ? playbookForKsic(ksic.code) : playbookForText(describedAs);
+  const playbook = ksic ? playbookForKsic(ksic.code) : playbookForText(describedAs, { customer: coachForGuide?.fields.find(field => field.key === "customer")?.value });
   // 사업 구조 브리프: 분류 코드가 있거나, 사용자가 구조를 직접 골랐거나, 손익 입력(가격·변동비·고정비 등)이 있을 때만 붙는다. 그 밖에는 추측이 되므로 넣지 않는다.
   const intakeState = briefIntakeState(answers, sector, ksic?.code ?? null), coachState = readCoach(answers);
   const brief: IntakeStructureBrief | null = intakeState && coachState ? intakeStructureBrief(coachState, intakeState) : null;

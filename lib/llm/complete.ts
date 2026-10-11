@@ -224,7 +224,7 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
  * 답변 몫으로 잡은 한도가 추론에 먹혀 잘리지 않도록 추론 강도만큼 여유를 더한다(실제 쓴 만큼만 과금).
  * 추론 강도는 명시하지 않으면 API 기본값(medium)이 되므로 호출부의 effort를 그대로 보낸다.
  */
-const THINKING_HEADROOM = { low: 2_048, medium: 4_096, high: 8_192, xhigh: 16_384, max: 32_000 } as const;
+export const THINKING_HEADROOM = { low: 2_048, medium: 4_096, high: 8_192, xhigh: 16_384, max: 32_000 } as const;
 
 function anthropicOutputParams(config: LLMConfig, params: LLMCompleteParams) {
   const effortCapable = !/haiku/i.test(config.model);
