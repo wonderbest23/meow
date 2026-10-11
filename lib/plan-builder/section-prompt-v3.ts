@@ -1,3 +1,5 @@
+import { businessTypeFocus } from "./business-types";
+
 /*
  * 장 작성 지시문 v3 — 상담으로 만든 계획서의 기본 지시문(section-generator.ts promptV3). 2026-10-10 시험판(v2)을 공식 원문과 대조했더니 지시문의 46%가 옛 규칙 그대로였다.
  * v3는 장 작성에 쓰던 규칙 묶음 전부(사업 기획 원칙 COACH_WRITER_RULES, 문서 편집 기준 documentEditorialPrompt,
@@ -32,7 +34,7 @@ export const CHAPTER_ROLES: Record<string, string> = {
   "summary/executive": "가장 큰 위험 2~3개와 지금 정해야 할 결정, 가장 먼저 할 행동 하나(한 줄). 다른 장의 소개, 숫자 설명, 계산·확인 방법을 반복하지 않는다",
 };
 
-export function sectionPromptV3Rules(input: { operating: boolean; sectorFocus: string; financialOwner?: string; executionChapter?: boolean; chapters?: Array<{ key: string; title: string; summary: string }> }): string {
+export function sectionPromptV3Rules(input: { operating: boolean; sectorFocus: string; financialOwner?: string; executionChapter?: boolean; chapters?: Array<{ key: string; title: string; summary: string }>; businessTypeId?: string | null }): string {
   const order = input.operating
     ? "이미 사업을 하는 대표가 무엇을 유지하고 무엇을 바꿀지 정하는 문서입니다. 장의 내용은 대체로 이 순서로 생각합니다: 지금 생긴 문제 → 원인으로 짐작되는 것(가설) → 유지할 것 → 바꿀 것 → 드는 돈과 시간 → 결과를 판단할 기준. 원인은 확인하기 전까지 '가설'이라고 씁니다. 짐작이 사실처럼 읽히면 엉뚱한 곳에 돈을 쓰게 되기 때문입니다. 확장과 채용은 숫자가 뒷받침할 때만 권하고, 추가 비용과 일이 적은 개선안을 먼저 씁니다."
     : "창업자는 이 문서를 보고 누구에게 무엇을 팔지, 돈이 얼마 들고 언제 모자라는지, 지금 가진 시간과 돈으로 무엇부터 할지 정합니다. 장의 내용은 대체로 이 순서로 생각합니다: 손님 → 팔 것의 구성 → 제안 가격과 이유 → 감당할 수 있는 시작 범위 → 첫 판매 방법 → 다음 행동과 확인할 숫자. 아직 없는 실적은 '목표'로 씁니다.";
@@ -51,7 +53,7 @@ ${order}
 - coach: basis가 user인 값은 사용자가 알려 준 것입니다. 따로 확인된 사실은 아니므로 '사용자가 정한 값'으로 다룹니다. basis가 proposal인 값은 AI 제안이므로 '(제안)'으로 구분합니다. 사업 내용은 사용자가 가장 최근에 고친 business 값을 따릅니다.
 - coach.design: startingPlan은 이번 계획의 시작안이고 alternatives는 고르지 않은 다른 안입니다. 본문은 시작안의 가격과 범위로 쓰고, 다른 안은 비교할 때만 짧게 씁니다. 두 안의 숫자가 섞이면 대표가 어느 안을 실행하는지 헷갈리기 때문입니다. ideaOrigin은 처음 떠올린 장기 구상이므로, 시작안이 그 구상과 어떻게 이어지는지 한두 문장으로 씁니다. assumptions는 아직 확인하지 않은 가정이라 확인 방법과 함께 씁니다. nextAction은 권하는 다음 행동이고, 안 해도 문서는 쓸 수 있습니다.
 - coach.feasibility: 입력값끼리 맞는지 본 산술 검사이고 사업성 검증이 아닙니다. within-inputs는 '입력한 숫자끼리는 맞는다'는 뜻으로만 씁니다. attention이면 줄인 시작안이나 조정 조건을 제안합니다. unknown이면 그 부분만 '아직 모름'으로 두고 나머지는 계속 씁니다.
-- intake: 업종 질문에 대한 사용자 답과 예산·시간 한도(resources.limits)입니다. 한도는 쓸 수 있는 최대치이지 실제로 쓴 돈이나 실적이 아닙니다. 범위로 답한 값('1만~2만 원')은 경계까지 그대로 씁니다. 가운데 값을 내면 사용자가 말하지 않은 숫자가 되기 때문입니다. 비어 있거나 모른다고 한 값은 0이 아니라 '모름'이고, 사용자가 직접 0이라고 한 값만 0입니다. 단위·기간·조건은 받은 그대로 씁니다. 실적은 기록된 숫자만 쓰고, 기간(reportingPeriod)만 있으면 실적은 '기록 없음'으로 둡니다. 인용(quote)에 옛 값이 보이면 현재 값(value)을 따릅니다. omitted가 true면 일부 항목이 길이 때문에 빠진 것이므로, 받은 항목만 씁니다. ksic 구조 이름표는 업종 분류의 기본값이라 사용자 답과 다르면 사용자 답을 따릅니다. 견적은 지금 유효한 것만 근거로 쓰고, 다시 확인이 필요하거나 기한이 지난 견적은 '(확인 필요)'로 둡니다. industryGuide는 오늘창업이 공식 기관 안내로 정리한 업종별 준비물·신고 순서·자주 놓치는 것입니다. 순서와 기관 이름은 그대로 쓰고, 여기에 없는 기한·수수료·면적은 만들지 않습니다. matchedBy가 있으면 사업 설명으로 찾은 업종이라, 사업 내용과 다르면 쓰지 않습니다.
+- intake: 업종 질문에 대한 사용자 답과 예산·시간 한도(resources.limits)입니다. 한도는 쓸 수 있는 최대치이지 실제로 쓴 돈이나 실적이 아닙니다. 범위로 답한 값('1만~2만 원')은 경계까지 그대로 씁니다. 가운데 값을 내면 사용자가 말하지 않은 숫자가 되기 때문입니다. 비어 있거나 모른다고 한 값은 0이 아니라 '모름'이고, 사용자가 직접 0이라고 한 값만 0입니다. 단위·기간·조건은 받은 그대로 씁니다. 실적은 기록된 숫자만 쓰고, 기간(reportingPeriod)만 있으면 실적은 '기록 없음'으로 둡니다. 인용(quote)에 옛 값이 보이면 현재 값(value)을 따릅니다. omitted가 true면 일부 항목이 길이 때문에 빠진 것이므로, 받은 항목만 씁니다. ksic 구조 이름표는 업종 분류의 기본값이라 사용자 답과 다르면 사용자 답을 따릅니다. 견적은 지금 유효한 것만 근거로 쓰고, 다시 확인이 필요하거나 기한이 지난 견적은 '(확인 필요)'로 둡니다. industryGuide는 오늘창업이 공식 기관 안내로 정리한 업종별 준비물·신고 순서·자주 놓치는 것입니다. 순서와 기관 이름은 그대로 쓰고, 여기에 없는 기한·수수료·면적은 만들지 않습니다. matchedBy가 있으면 사업 설명으로 찾은 업종이라, 사업 내용과 다르면 쓰지 않습니다. businessType은 오늘창업이 규칙으로 정한 사업 유형(일하는 방식)입니다. question은 이 계획서가 답할 질문, capacity는 처리량의 뜻과 판단 단위, assumptions는 큰돈을 쓰기 전에 확인할 가정, roadmap은 12주 순서의 뼈대입니다. 같은 유형의 사업은 같은 순서와 판단 단위로 써야 대표가 믿고 따를 수 있기 때문입니다. basis가 있으면 설명이나 업종으로 정한 유형이라, 사업 내용과 다르면 쓰지 않습니다.
 - context: confirmed는 사실로 씁니다. inferred(추정)는 사업 구조를 이해하는 참고라서, 쓸 때는 '~라면'처럼 조건으로 씁니다. 숫자·가격·경쟁사·고객 행동은 confirmed와 계산 값에서만 가져옵니다. metrics 가운데 이름에 (예상)이 붙은 값은 계획이므로 '목표'로 씁니다. hints는 생각할 관점이고 사실이 아닙니다. unknowns는 '(확인 필요)'로 둡니다. 같은 맥락이 모든 장에 들어가므로, 이 장에 필요한 것만 골라 씁니다.
 - financials: 사용자 입력에 산식을 적용한 확정 계산입니다. 다시 계산하지 않고 그대로 인용합니다. 합계·이익·성장률·달성률은 이 블록에 있는 값만 씁니다. 판매량을 세 경우(조심스러운 경우·본전·목표 경우)로 나눈 통장 흐름이 있으면, 조심스러운 경우에 돈이 얼마나 모자라는지와 버티기 위한 조건(초기 지출 한도 등)을 먼저 해석합니다. 대표가 가장 먼저 알아야 할 위험이기 때문입니다.
 - operating: 사용자가 기록한 실제 운영 실적입니다. 비교는 기간 길이가 같을 때만 하고, 길이가 다르면 '기간이 달라 바로 비교할 수 없음'이라고 씁니다. 합계 차이만으로 원인을 정하지 않고 가설로 씁니다.
@@ -93,7 +95,7 @@ ${input.financialOwner ? `
 ` : ""}
 ${input.chapters?.length ? `<chapter_roles>
 이 계획서의 장과 장마다 맡을 일입니다. 지금 쓰는 장은 맡은 일을 빠짐없이 하고, 다른 장이 맡은 내용(특히 숫자)은 다시 풀지 않고 결론 한 줄과 장 이름만 씁니다. 다른 장을 가리킬 때는 아래 장 이름만 쓰고, 같은 장을 가리키는 말은 한 장에 한 번만 씁니다. 장마다 같은 설명이 반복되면 대표가 어디를 믿을지 헷갈리고, 없는 장을 가리키면 찾을 수 없기 때문입니다.
-${input.chapters.map(chapter => `- ${chapter.title}: ${CHAPTER_ROLES[chapter.key] ?? chapter.summary}`).join("\n")}
+${input.chapters.map(chapter => { const focus = businessTypeFocus(input.businessTypeId, chapter.key); return `- ${chapter.title}: ${CHAPTER_ROLES[chapter.key] ?? chapter.summary}${focus ? `. 이 사업 유형에서는 ${focus}도 이 장이 다룬다` : ""}`; }).join("\n")}
 </chapter_roles>
 ` : ""}
 <length>

@@ -1,4 +1,5 @@
 import { readCoach } from "./coach";
+import { businessTypeContext, businessTypeFor } from "./business-types";
 import { playbookContext, playbookForKsic, playbookForText } from "./industry-playbooks";
 import { allStructureQuestions, detailQuestions, intakeSectorOptions } from "./intake-questions";
 import { readIntake, effectiveStructure } from "./intake-core";
@@ -115,15 +116,22 @@ export function confirmedIntakeContext(answers: Answers): string {
   const structure = brief && (intakeState?.ksic || brief.userChosen.length || brief.revenueModel.inputs.length) ? brief : null;
   const resources = coachState ? intakeResourceSource(coachState, intakeState, intakeState ? effectiveStructure(intakeState).values : undefined) : undefined;
   const selectedProposal = coachState ? selectedIdeaContext(coachState, intakeState) : null;
-  if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal && !playbook) return "";
+  // 사업 유형(일하는 방식) — 12주 뼈대·확인할 가정·처리량의 뜻(docs/사업-유형-지도-2026-10-11.md). 사용자가 고른 구조 → 설명 → 업종 가이드 → 기본 구조
+  const effective = intakeState ? effectiveStructure(intakeState) : null;
+  const chosen = effective ? Object.fromEntries(STRUCTURE_AXES.flatMap(axis => effective.basis[axis] === "user" && effective.values[axis] ? [[axis, effective.values[axis]]] : [])) as Partial<BusinessStructure> : null;
+  const typed = businessTypeFor({ chosen, description: describedAs, customer: coachForGuide?.fields.find(field => field.key === "customer")?.value,
+    playbookId: playbook?.id, structure: effective?.values ?? (sector ? SECTOR_DEFAULT_STRUCTURE[sector] : null) });
+  if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal && !playbook && !typed) return "";
 
   const context = { guidance: INTAKE_CONTEXT_RULES + (resources ? ` ${RESOURCE_CONTEXT_RULES}` : ""), industry: industry || null, sector: sector ?? null, ksic, structure,
-    ...(playbook ? { industryGuide: playbookContext(playbook, ksic ? "ksic" : "description") } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
+    ...(playbook ? { industryGuide: playbookContext(playbook, ksic ? "ksic" : "description") } : {}), ...(typed ? { businessType: businessTypeContext(typed) } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
   while (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.resources?.quotes.length) { context.resources.quotes.pop(); context.omitted = true; }
   // 넘치면 업종 가이드부터 줄인다 — 사업 구조·계산(structure)이 더 중요하다
   const guided = context as typeof context & { industryGuide?: ReturnType<typeof playbookContext> };
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && guided.industryGuide) { guided.industryGuide = { ...guided.industryGuide, needs: [], pitfalls: [] }; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && guided.industryGuide) { delete guided.industryGuide; context.omitted = true; }
+  const typedContext = context as typeof context & { businessType?: unknown };
+  if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && typedContext.businessType) { delete typedContext.businessType; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.structure) { context.structure = { ...context.structure, financialScenario: "" }; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH) { context.structure = null; context.omitted = true; }
   if (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH) { context.ksic = null; context.omitted = true; }
