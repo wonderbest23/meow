@@ -161,7 +161,12 @@ export async function generateAndSaveSection(job: PlanSectionJob): Promise<{ ok:
   const priorSections = Object.entries(plan.sections)
     .filter(([sectionKey, value]) => sectionKey !== key && (!initialCoach || value.coachRevision === revision))
     .map(([, value]) => value.markdown);
-  const priorSummary = priorSections.join("\n\n").slice(0, 4000) || undefined;
+  /*
+   * 실행 장·실행 요약은 앞 장 전체를 보고 확인할 일·위험을 모아야 한다(2026-10-11: 4,000자로 잘려 9번째 장이 앞 3장만 봤다).
+   * 다른 장은 겹침을 막는 정도면 되므로 예전처럼 짧게.
+   */
+  const priorLimit = key === "summary/roadmap" || key === "summary/executive" ? 16_000 : 4_000;
+  const priorSummary = priorSections.join("\n\n").slice(0, priorLimit) || undefined;
   const operatingContext = documentOperatingContext(plan.answers);
 
   // 공식 시장 근거 — 일반 생성 경로(app/api/plan/generate)와 같은 규칙으로 같은 섹션에만

@@ -45,6 +45,36 @@ if (spend) {
   await import("../synthetic-e2e/fake-anthropic.mjs");
 }
 
+/*
+ * --capture-prompts: 사업 방향 정리·설계도만 실제 AI로 돌리고, 장 작성·검토는 가짜로 넘기면서 장마다 보낼 지시문을 모은다.
+ * 모은 지시문으로 세션 안의 Claude가 장을 써서 API 비용 없이 지시문을 비교한다(compose-prompts.mts, grade-files.mts).
+ * 장 작성 요청(시스템 지시문에 <role>·<sources>)과 검토·고치기 요청(사용자 쪽이 {"source"…})만 가짜로 보낸다.
+ */
+const capture = flag("capture-prompts");
+const captured: Record<string, { system: string; user: string }> = {};
+if (capture) {
+  if (!spend) throw new Error("--capture-prompts 는 사업 방향 정리·설계도에 실제 AI가 필요합니다(--spend --yes).");
+  const real = globalThis.fetch;
+  await import("../synthetic-e2e/fake-anthropic.mjs");
+  const fake = globalThis.fetch;
+  const text = (value: unknown) => (typeof value === "string" ? value : Array.isArray(value) ? value.map(block => (block as { text?: string }).text ?? "").join("\n") : "");
+  globalThis.fetch = async (input, init) => {
+    if (String(input instanceof Request ? input.url : input).includes("api.anthropic.com") && typeof init?.body === "string") {
+      const body = JSON.parse(init.body) as { system?: unknown; messages?: Array<{ content: unknown }> };
+      const system = text(body.system), user = text(body.messages?.[0]?.content);
+      const key = user.match(/작성할 장: [^\n]*\(([a-z]+\/[a-z]+)\)/)?.[1];
+      if (key && system.includes("<role>") && system.includes("<sources>")) {
+        captured[key] = { system, user };
+        // 다음 묶음의 지시문도 모으려면 이 장이 저장돼야 한다 — 품질 검사를 통과하는 자리 글을 돌려준다
+        const placeholder = `## ${key} 자리\n\n[[CHAPTER:${key}]] 세션에서 쓸 본문 자리입니다. 근거는 입력 자료이고, 다음 행동은 확인입니다.`;
+        return new Response(JSON.stringify({ id: "capture", type: "message", role: "assistant", model: "claude-opus-5-5", content: [{ type: "text", text: placeholder }], stop_reason: "end_turn", usage: { input_tokens: 0, output_tokens: 0 } }), { status: 200, headers: { "content-type": "application/json" } });
+      }
+      if (user.trimStart().startsWith('{"source"')) return fake(input, init);
+    }
+    return real(input, init);
+  };
+}
+
 // --dump-prompts: AI에 실제로 보낸 지시문을 파일로 남긴다(프롬프트를 고치기 전후 비교용, 키 값은 남기지 않음)
 const promptDumps: Array<{ model?: string; system?: unknown; messages?: unknown }> = [];
 if (flag("dump-prompts")) {
@@ -66,6 +96,7 @@ const { generatePlanOutline, generateAndSaveSection, intakeFinancialTable } = aw
 const { chaptersForType, financialTableOwner } = await import("../../lib/plan-builder/blueprint");
 const { readCoach, coachContext } = await import("../../lib/plan-builder/coach");
 const { planFinancialReference } = await import("../../lib/plan-builder/intake-core");
+const { sectionWaves, SECTION_CONCURRENCY } = await import("../../lib/plan-builder/section-waves");
 const { setLlmUsageListener } = await import("../../lib/llm/usage");
 const { rowCostUsd, krwPerUsd } = await import("../../lib/llm/cost");
 
@@ -95,7 +126,8 @@ const runId = new Date().toISOString().replace(/[:.]/g, "-");
 const outDir = option("out") ?? join(".tmp-e2e", "plan-eval", `${runId}-${variant}${spend ? "" : "-fake"}`);
 mkdirSync(join(outDir, "expert"), { recursive: true });
 
-if (spend) console.log(`[plan-eval] 실제 AI: 사업 ${cases.length}개 × (사업 방향 1 + 설계도 1 + 장 ${SECTIONS.length}개 + 채점 1). 장 1개 약 430원 기준 예상 약 ${Math.round(cases.length * (SECTIONS.length * 430 + 300) / 1000)}천 원 · 상한 ${MAX_KRW.toLocaleString()}원`);
+const sectionCount = SECTIONS[0] === "all" ? 10 : SECTIONS.length;
+if (spend) console.log(`[plan-eval] 실제 AI: 사업 ${cases.length}개 × (사업 방향 1 + 설계도 1 + 장 ${sectionCount}개 + 채점 1). 장 1개 약 430원 기준 예상 약 ${Math.round(cases.length * (sectionCount * 430 + 300) / 1000)}천 원 · 상한 ${MAX_KRW.toLocaleString()}원`);
 
 type Case = typeof EVAL_CASES[number];
 async function runCase(c: Case) {
@@ -132,8 +164,11 @@ async function runCase(c: Case) {
   for (const { chapterId, sectionId } of allKeys) plan.answers[`${chapterId}/${sectionId}`] ??= { planning_source: "사업 기획 대화의 공통 정보" };
   await savePlanState(owner, state);
   const outline = await generatePlanOutline({ ownerHash: owner, planId, sections: allKeys });
-  const keys = SECTIONS.filter(key => allKeys.some(item => `${item.chapterId}/${item.sectionId}` === key));
-  await Promise.all(keys.map(key => { const [chapterId, sectionId] = key.split("/"); return generateAndSaveSection({ ownerHash: owner, planId, chapterId, sectionId, ...(outline.ok && outline.outline ? { outline: outline.outline } : {}) }).catch(error => { log.push(`장 ${key} 실패: ${error instanceof Error ? error.message : error}`); }); }));
+  // --sections all: 계획서 전체(장 순서대로). 실제 서비스처럼 4개씩 묶어 쓰고 실행 요약은 마지막 묶음(section-workflow.ts)
+  const keys = SECTIONS[0] === "all" ? allKeys.map(item => `${item.chapterId}/${item.sectionId}`) : SECTIONS.filter(key => allKeys.some(item => `${item.chapterId}/${item.sectionId}` === key));
+  for (const wave of sectionWaves(keys, outline.ok && outline.outline ? SECTION_CONCURRENCY : 1)) {
+    await Promise.all(wave.map(key => { const [chapterId, sectionId] = key.split("/"); return generateAndSaveSection({ ownerHash: owner, planId, chapterId, sectionId, ...(outline.ok && outline.outline ? { outline: outline.outline } : {}) }).catch(error => { log.push(`장 ${key} 실패: ${error instanceof Error ? error.message : error}`); }); }));
+  }
   // 결과 모으기
   const final = (await loadPlanState(owner)).plans.find(item => item.id === planId)!, coach = readCoach(final.answers)!;
   const sections = Object.fromEntries(keys.map(key => [key, final.sections[key]?.markdown ?? ""]));
@@ -143,7 +178,13 @@ async function runCase(c: Case) {
   const facts = { price: num("price"), unitCost: num("structure.unitCost"), fixedCost: num("structure.cost"), budget: num("budget"), hoursPerWeek: num("hoursPerWeek") };
   const code = gradeByCode({ caseId: c.id, sections, source, facts });
   const factsText = Object.entries(c.answers).map(([key, value]) => `${key}: ${value}`).join("\n");
-  const graded = flag("no-ai-grade") || !spend ? null : await gradeByAi({ provider: "anthropic", apiKey: process.env.ANTHROPIC_API_KEY!, model: "claude-sonnet-5-5" }, { caseLabel: c.label, facts: factsText, sections });
+  const graded = flag("no-ai-grade") || !spend || capture ? null : await gradeByAi({ provider: "anthropic", apiKey: process.env.ANTHROPIC_API_KEY!, model: "claude-sonnet-5-5" }, { caseLabel: c.label, facts: factsText, sections });
+  if (capture) {
+    const dir = join(outDir, "capture", c.id);
+    mkdirSync(dir, { recursive: true });
+    const waves = sectionWaves(keys, outline.ok && outline.outline ? SECTION_CONCURRENCY : 1);
+    writeFileSync(join(dir, "capture.json"), JSON.stringify({ caseId: c.id, label: c.label, waves, prompts: captured, financials: tableKey ? { key: tableKey, markdown: intakeFinancialTable(final, coach, tableKey) ?? "" } : null, facts, source }, null, 1));
+  }
   return { id: c.id, label: c.label, tags: c.tags, design: !!coach.design, title: final.title, sections, code, ai: graded?.scores ?? null, aiReasons: graded?.reasons ?? null, log };
 }
 

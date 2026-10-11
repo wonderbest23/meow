@@ -32,6 +32,9 @@ const patched = applySectionEdits(draft, [
 ]);
 assert.ok(patched);
 assert.equal(checkDocumentQuality(patched!, source).ok, true);
+// 표의 적자 숫자를 본문이 부호 없이 '빠진다'고 쓰면 근거 있음. 표에 없는 크기는 여전히 잡는다
+assert.equal(checkDocumentQuality("## 통장\n\n가장 깊을 때 8,592,700원이 빠집니다. 이 숫자는 계산 근거의 4개월차 누적이고 다음 행동은 예산 확인입니다.", "| 4개월차 | -8,592,700원 |").ok, true);
+assert.equal(checkDocumentQuality("## 통장\n\n가장 깊을 때 9,000,000원이 빠집니다. 이 숫자는 계산 근거의 4개월차 누적이고 다음 행동은 예산 확인입니다.", "| 4개월차 | -8,592,700원 |").ok, false);
 
 // Amounts that are in the input are never flagged.
 assert.deepEqual(qualityRepairIssues("판매가 50,000원과 비용 300만원을 비교합니다. 근거를 확인하고 다음 행동을 정합니다.", source), []);
