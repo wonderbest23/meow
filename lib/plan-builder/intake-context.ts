@@ -1,4 +1,5 @@
 import { readCoach } from "./coach";
+import { bigIndustryContext, bigIndustryFor } from "./big-industry-paths";
 import { businessTypeContext, businessTypeFor } from "./business-types";
 import { playbookContext, playbookForKsic, playbookForText } from "./industry-playbooks";
 import { allStructureQuestions, detailQuestions, intakeSectorOptions } from "./intake-questions";
@@ -121,10 +122,13 @@ export function confirmedIntakeContext(answers: Answers): string {
   const chosen = effective ? Object.fromEntries(STRUCTURE_AXES.flatMap(axis => effective.basis[axis] === "user" && effective.values[axis] ? [[axis, effective.values[axis]]] : [])) as Partial<BusinessStructure> : null;
   const typed = businessTypeFor({ chosen, description: describedAs, customer: coachForGuide?.fields.find(field => field.key === "customer")?.value,
     playbookId: playbook?.id, structure: effective?.values ?? (sector ? SECTOR_DEFAULT_STRUCTURE[sector] : null) });
-  if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal && !playbook && !typed) return "";
+  // 큰 사업(가이드에서 뺀 업종)을 꿈꾸면 작게 들어가는 길을 함께 준다 — 업종 코드가 있으면 코드로, 없으면 설명으로
+  const big = bigIndustryFor({ ksic: ksic?.code, text: describedAs });
+  const bigIdea = big ? bigIndustryContext(big, ksic && big.ksic.includes(ksic.code) ? "ksic" : "description") : null;
+  if (!details.length && !reportingPeriod && !ksic && !structure && !resources && !selectedProposal && !playbook && !typed && !bigIdea) return "";
 
   const context = { guidance: INTAKE_CONTEXT_RULES + (resources ? ` ${RESOURCE_CONTEXT_RULES}` : ""), industry: industry || null, sector: sector ?? null, ksic, structure,
-    ...(playbook ? { industryGuide: playbookContext(playbook, ksic ? "ksic" : "description") } : {}), ...(typed ? { businessType: businessTypeContext(typed) } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
+    ...(playbook ? { industryGuide: playbookContext(playbook, ksic ? "ksic" : "description") } : {}), ...(typed ? { businessType: businessTypeContext(typed) } : {}), ...(bigIdea ? { bigIdea } : {}), ...(resources ? { resources } : {}), ...(selectedProposal ? { selectedProposal } : {}), reportingPeriod: null as typeof reportingPeriod, details: [] as typeof details, omitted: false };
   while (JSON.stringify(context).length > INTAKE_CONTEXT_MAX_LENGTH && context.resources?.quotes.length) { context.resources.quotes.pop(); context.omitted = true; }
   // 넘치면 업종 가이드부터 줄인다 — 사업 구조·계산(structure)이 더 중요하다
   const guided = context as typeof context & { industryGuide?: ReturnType<typeof playbookContext> };
