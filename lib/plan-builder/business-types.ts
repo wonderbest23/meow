@@ -137,7 +137,21 @@ const DESCRIPTION_WORDS: Array<[BusinessTypeId, RegExp]> = [
 ];
 /* 고객이 사업자면 사장님 대상 서비스형 — 매장·출장 같은 말보다 먼저 본다(메뉴 사진 출장 촬영은 사장님 대상 서비스) */
 const BUSINESS_CUSTOMER = /사장님|업체|기업|회사|매장|가게|소상공인|원장|병원|학원|법인/;
-const PLAYBOOK_TYPE: Record<string, BusinessTypeId> = { bakery: "store", cafe: "store", restaurant: "store", snack: "store", beauty: "store", gym: "store", academy: "lesson", "online-store": "ship", lodging: "space", "rental-room": "space", brokerage: "platform", "pet-treat": "ship", "moving-truck": "visit", laundry: "visit" };
+const PLAYBOOK_TYPE: Record<string, BusinessTypeId> = { bakery: "store", cafe: "store", restaurant: "store", snack: "store", beauty: "store", gym: "store", academy: "lesson", "online-store": "ship", lodging: "space", "rental-room": "space", brokerage: "platform", "pet-treat": "ship", "moving-truck": "visit", laundry: "visit",
+  // 확장 가이드(2026-10-12) — 설명의 말로 유형이 안 정해질 때 쓰는 기본값
+  "meat-retail": "store", "food-retail": "store", "health-food": "store", tobacco: "store", nightlife: "store", "food-truck": "store", "used-car": "store", "used-goods": "store",
+  "auto-repair": "store", "car-care": "store", barber: "store", bathhouse: "store", "sports-facility": "store", "entertainment-venue": "store", "pet-business": "store",
+  medical: "store", pharmacy: "store", "optical-dental-lab": "store", "vet-clinic": "store", "massage-clinic": "store", "real-estate-agency": "store", "free-store": "store",
+  "food-manufacture": "ship", "food-packaging": "ship", "meat-processing": "ship", "liquor-making": "ship", "manufacturing-general": "ship", "wood-production": "ship",
+  "household-chemical": "ship", "product-safety-kc": "ship", cosmetics: "ship", "medical-products": "ship", agriculture: "ship", "agri-inputs": "ship", livestock: "ship", fishery: "ship",
+  catering: "visit", construction: "visit", "electric-telecom-fire": "visit", "construction-equipment": "visit", "building-service": "visit", "property-management": "visit",
+  "passenger-transport": "visit", delivery: "visit", parcel: "visit", ambulance: "visit", "welfare-care": "visit", "security-guard": "visit", "direct-sales": "visit",
+  "public-hygiene-facility": "space", gosiwon: "space", "tourism-facility": "space", "parking-lot": "space", "property-lease": "space", "car-rental": "space", "water-leisure": "space", fishing: "space",
+  "lifelong-education": "lesson", childcare: "lesson", kindergarten: "lesson",
+  engineering: "b2b", "professional-license": "b2b", "it-service": "b2b", "free-b2b-service": "b2b", "free-wholesale": "b2b", "freight-forwarding": "b2b", logistics: "b2b",
+  "outdoor-ad": "b2b", "liquor-wholesale": "b2b", "medical-device-sales": "b2b", chemical: "b2b", "emission-facility": "b2b", "insurance-agency": "b2b", "finance-registration": "b2b",
+  "job-agency": "platform", "content-business": "app", publishing: "app",
+};
 
 export type BusinessTypeBasis = "structure" | "description" | "industry" | "sector";
 
