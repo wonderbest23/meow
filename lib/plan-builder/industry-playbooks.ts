@@ -18,6 +18,8 @@
  *   사전 점검 추가: 사료관리법·사료 등의 기준 및 규격(반려동물 간식), 화물자동차 운수사업법·공급기준(용달·이사),
  *   공중위생관리법 세탁업·소비자분쟁해결기준(세탁 수거·배달).
  */
+import { EXTENDED_PLAYBOOKS, EXTENDED_PLAYBOOK_WORDS } from "./industry-playbooks-extended";
+
 export type IndustryPlaybook = {
   id: string;
   name: string;
@@ -67,7 +69,7 @@ const LIGHT_FOOD_BUILDING = "휴게음식점·제과점은 같은 건물에서 �
 const FULL_RESTAURANT_BUILDING = "일반음식점은 제2종 근린생활시설이어야 해요.";
 const PRICE_BOARD = "메뉴 가격표는 손님이 보기 쉬운 곳에 게시해야 해요.";
 
-export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [
+const BASE_PLAYBOOKS: IndustryPlaybook[] = [
   {
     id: "bakery", name: "빵집(제과점)", ksic: ["5615"],
     needs: ["오븐·발효기·반죽기·작업대·냉장·냉동 설비", "판매 진열대와 포장재", "밀가루·버터 등 원재료 거래처", "위생교육 수료증과 건강진단결과서", "메뉴별 원가표(재료비·포장비)"],
@@ -86,14 +88,14 @@ export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [
     links: [LINK.foodsafety, LINK.gov24, LINK.building, LINK.easylaw, LINK.nts],
   },
   {
-    id: "restaurant", name: "음식점(일반음식점)", ksic: ["5611", "5612"],
+    id: "restaurant", name: "음식점(일반음식점)", ksic: ["5611", "5612", "56162", "56213", "56219"],
     needs: ["조리 설비·환기 설비·냉장·냉동 설비", "식기·테이블·포장 용기", "식재료 거래처", "위생교육 수료증과 건강진단결과서", "메뉴별 원가표"],
     steps: FOOD_SERVICE_STEPS("일반음식점", "업종 단체 지정 교육기관(외식업 관련 협회 등)", FULL_RESTAURANT_BUILDING),
-    pitfalls: ["원산지 표시 대상 메뉴가 많아요. 배달 메뉴도 포함해 메뉴판에 원산지를 적는 기준을 확인하세요.", "배달 수수료·배달비를 원가에 넣지 않으면 배달 주문이 늘수록 손해가 날 수 있어요.", "주방 환기·배수 공사는 계약 전에 가능한지 확인하세요.", PRICE_BOARD],
+    pitfalls: ["원산지 표시 대상 메뉴가 많아요. 배달 메뉴도 포함해 메뉴판에 원산지를 적는 기준을 확인하세요.", "배달 수수료·배달비를 원가에 넣지 않으면 배달 주문이 늘수록 손해가 날 수 있어요.", "주방 환기·배수 공사는 계약 전에 가능한지 확인하세요.", "호프·주점도 일반음식점이지만 술만 팔 수는 없어요. 노래 반주기를 두거나 손님이 노래하게 하면 단란주점 허가, 접객원을 두면 유흥주점 허가 대상이에요.", "주로 술을 파는 호프·소주방은 청소년을 고용할 수 없어요. 배달 앱으로 술을 팔 때는 직접 만든 음식과 함께, 주류 금액이 주문 금액의 절반 이하일 때만 돼요.", "사업자등록 신청서에 주류 판매를 적으면 주류 판매 신고가 된 것으로 봐요.", PRICE_BOARD],
     links: [LINK.foodsafety, LINK.gov24, LINK.building, LINK.easylaw, LINK.nts],
   },
   {
-    id: "snack", name: "분식·간이음식점", ksic: ["5619"],
+    id: "snack", name: "분식·간이음식점", ksic: ["5619", "56161"],
     needs: ["조리 설비·냉장 설비", "포장 용기", "식재료 거래처", "위생교육 수료증과 건강진단결과서", "메뉴별 원가표"],
     steps: FOOD_SERVICE_STEPS("휴게음식점(술을 팔면 일반음식점)", "업종 단체 지정 교육기관(휴게음식업·외식업 관련 협회 등)", `${LIGHT_FOOD_BUILDING} 술을 팔아 일반음식점이 되면 제2종 근린생활시설이어야 해요.`),
     pitfalls: ["술 판매 여부에 따라 신고 업종이 달라져요.", "휴게음식점도 원산지 표시 대상이에요. 메뉴판에 원산지를 적는 기준을 확인하세요.", "포장·배달 위주라면 매장 면적보다 조리 동선과 포장 시간이 처리량을 정해요.", PRICE_BOARD],
@@ -114,10 +116,10 @@ export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [
     links: [LINK.foodsafety, LINK.gov24, LINK.building, LINK.easylaw, LINK.nts],
   },
   {
-    id: "beauty", name: "미용실·네일·피부관리", ksic: ["96112", "96113", "96119"],
+    id: "beauty", name: "미용실·네일·피부관리", ksic: ["96112", "96113", "96119", "96129"],
     needs: ["해당 분야 미용사 면허(일반·피부·네일·메이크업)", "시술 의자·기구·소독 설비", "요금표", "위생교육 수료증"],
     steps: [
-      { title: "면허 확인", where: "국가기술자격을 따거나 미용 관련 학과를 졸업한 뒤 시·군·구청에서 면허 발급", detail: "미용업은 세부 업종(일반·피부·네일·화장·분장, 여러 분야를 함께 하면 종합)에 맞는 미용사 면허가 있어야 신고할 수 있어요. 면허 종류와 할 시술이 맞는지 먼저 확인해요." },
+      { title: "면허 확인", where: "국가기술자격을 따거나 미용 관련 학과를 졸업한 뒤 시·군·구청에서 면허 발급", detail: "미용업은 세부 업종(일반·피부·네일·화장·분장, 여러 분야를 함께 하면 종합)에 맞는 미용사 면허가 있어야 신고할 수 있어요. 면허 종류와 할 시술이 맞는지 먼저 확인해요. 다이어트·체형 관리는 손이나 미용기기로 몸에 직접 하는 관리면 피부미용업이고, 식단·운동 코칭만 하면 신고 대상이 아니에요." },
       { title: "건축물 용도 확인", where: "정부24 건축물대장", detail: "미용원은 제1종 근린생활시설이에요. 그 점포가 이 용도인지 계약 전에 확인해요." },
       { title: "시설·설비 갖추기", where: "시공 업체 · 장비 업체", detail: "소독기·자외선살균기 같은 소독 장비와, 소독한 기구와 안 한 기구를 나눠 보관하는 용기를 갖춰요. 신고는 시설·설비 기준을 갖춘 뒤에 해요." },
       { title: "위생교육 받기", where: "업종 단체 지정 교육기관", detail: "영업 신고 전에 받아야 해요. 천재지변, 본인 질병·사고, 업무상 국외 출장이나 교육 기관 사정으로 미리 못 받으면 영업을 시작한 뒤 정해진 기간 안에 받을 수 있어요. 문을 연 뒤에도 해마다 받아야 해요." },
@@ -129,7 +131,7 @@ export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [
     links: [LINK.gov24, LINK.building, LINK.law, LINK.nts],
   },
   {
-    id: "academy", name: "학원·교습소·과외", ksic: ["85501", "85502", "8562", "8563", "85691"],
+    id: "academy", name: "학원·교습소·과외", ksic: ["85501", "85502", "8562", "8563", "85691", "85613", "85669", "85699", "90212"],
     needs: ["가르칠 과목과 커리큘럼", "강의 공간과 수강생 안전 설비", "교습비등(수강료·기타경비) 기준표와 법령 반환 기준에 맞춘 환불 안내"],
     steps: [
       { title: "운영 형태 정하기", where: "관할 교육지원청", detail: "같은 시간에 법이 정한 인원 이상(또는 불특정 다수)을 일정 기간 이상 가르치면 학원(등록), 그보다 적은 인원을 교습자 혼자 한 장소에서 한 과목만 가르치면 교습소(신고), 내 집이나 학생 집에서 가르치면 개인과외교습자(신고)예요. 교습소·개인과외는 유아·초중고생 등을 가르칠 때 해당하고, 교습소에는 강사를 둘 수 없어요. 대학생은 개인과외 신고 대상이 아니지만 휴학생은 신고해야 해요." },
@@ -170,7 +172,7 @@ export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [
     links: [LINK.gov24, LINK.building, LINK.law, LINK.nts],
   },
   {
-    id: "brokerage", name: "온라인 중개(연결) 서비스", ksic: [],
+    id: "brokerage", name: "온라인 중개(연결) 서비스", ksic: ["47911", "63120", "52919"],
     needs: ["공급자 모집 기준과 신원 확인 방법", "신청서·예약 창구(처음엔 무료 도구)", "중개자 고지와 이용약관", "사고·분쟁 때 처리 기준"],
     steps: [
       { title: "공급자가 하는 일의 인허가 확인", where: "관할 시·군·구청", detail: "중개하는 일이 따로 등록해야 하는 영업인지 먼저 확인해요. 예를 들어 반려견을 보호자 집에서 돌보는 방문 돌봄은 등록 영업이 아니지만, 시터가 자기 집이나 다른 공간에 데려가 맡으면 시설을 갖춰 등록하는 위탁관리업이 돼요. 결혼을 목적으로 사람을 소개하고 돈을 받으면 국내결혼중개업 신고 대상이에요." },
@@ -179,7 +181,7 @@ export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [
       { title: "통신판매업 신고가 필요한지 확인", where: "관할 시·군·구청", detail: "중개만 하면 신고 의무가 없다는 공정거래위원회 답변이 있지만, 운영 방식에 따라 달라질 수 있어 시작 전에 확인해요." },
       { title: "신청 받을 곳 열기", where: "오늘창업 홈페이지 · 무료 신청서 도구", detail: "공급자 모집과 이용 신청을 한곳에서 받고, 앱 개발은 실제 거래가 쌓인 뒤로 미뤄요." },
     ],
-    pitfalls: ["중개자라는 사실을 알리지 않으면 공급자가 낸 사고의 손해를 함께 물어야 할 수 있어요.", "공급자와 이용자가 처음 연결된 뒤 직접 거래로 빠져나가기 쉬워요. 다시 이 창구로 예약할 이유(대체 공급자, 기록, 보증)를 정해 두세요.", "결혼과 상관없는 친목·대화 상대 소개만 한다면 결혼중개업에 해당하는지가 분명하지 않으니 관할 구청에 확인하세요."],
+    pitfalls: ["중개자라는 사실을 알리지 않으면 공급자가 낸 사고의 손해를 함께 물어야 할 수 있어요.", "공급자와 이용자가 처음 연결된 뒤 직접 거래로 빠져나가기 쉬워요. 다시 이 창구로 예약할 이유(대체 공급자, 기록, 보증)를 정해 두세요.", "결혼과 상관없는 친목·대화 상대 소개만 한다면 결혼중개업에 해당하는지가 분명하지 않으니 관할 구청에 확인하세요.", "앱·웹으로 서비스를 운영하면 부가통신사업 신고 대상이에요(자본금이 작으면 신고한 것으로 봐요). 구인·구직을 연결하면 직업정보제공사업 신고가 따로 필요해요."],
     links: [LINK.ftc, LINK.gov24, LINK.law, LINK.nts],
   },
   {
@@ -246,10 +248,13 @@ export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [
       { title: "사업자등록", where: "관할 세무서 또는 홈택스", detail: "신고확인증·관광사업 등록증·영업신고증을 첨부해요." },
       { title: "예약 받을 곳 열기", where: "오늘창업 홈페이지 · 숙박 예약 플랫폼", detail: "객실·가격·체크인 규칙·환불 규정을 공개해요." },
     ],
-    pitfalls: ["신고 없이 공유숙박 플랫폼에 올리면 불법 영업이 될 수 있어요.", "농어촌민박은 해마다 서비스·안전 교육과 전기·가스 안전점검이 있고, 출입문과 홈페이지에 농어촌민박 표시와 요금표를 게시해야 해요. 객실에 카메라를 두면 안 돼요.", "비수기 가동률을 낮게 잡고 손익을 계산하세요."],
+    pitfalls: ["신고 없이 공유숙박 플랫폼에 올리면 불법 영업이 될 수 있어요.", "숙박업으로 신고했다면 접객대뿐 아니라 예약 플랫폼 화면에도 숙박요금표를 게시해야 해요.", "농어촌민박은 해마다 서비스·안전 교육과 전기·가스 안전점검이 있고, 출입문과 홈페이지에 농어촌민박 표시와 요금표를 게시해야 해요. 객실에 카메라를 두면 안 돼요.", "비수기 가동률을 낮게 잡고 손익을 계산하세요."],
     links: [LINK.gov24, LINK.building, LINK.law, LINK.nts],
   },
 ];
+
+/* 기본 가이드 + 확장 가이드(표준산업분류 묶음별, 2026-10-12 공식 원문 확인). 업종 코드는 가장 길게 맞는 가이드가 이긴다 */
+export const INDUSTRY_PLAYBOOKS: IndustryPlaybook[] = [...BASE_PLAYBOOKS, ...EXTENDED_PLAYBOOKS];
 
 /** KSIC 코드에 맞는 가이드. 앞자리가 가장 길게 맞는 것을 고른다 */
 export function playbookForKsic(code: string | null | undefined): IndustryPlaybook | null {
@@ -266,27 +271,44 @@ export function playbookForKsic(code: string | null | undefined): IndustryPlaybo
  * 2026-10-11 빵집 시험: 업종 코드가 없어 위생교육·건강진단·건축물 용도가 계획서에서 빠졌다.
  * 위에서부터 처음 맞는 것을 쓴다 — 매장 업종을 온라인 판매보다 먼저 본다(빵을 온라인으로도 파는 빵집은 빵집).
  */
-const PLAYBOOK_WORDS: Array<[string, RegExp]> = [
+const BASE_PLAYBOOK_WORDS: Array<[string, RegExp]> = [
   ["bakery", /빵집|베이커리|제과점|제과\s*(가게|매장)|빵\s*(가게|매장)/],
-  ["cafe", /(?<!네이버\s?|다음\s?)카페|커피\s*(전문점|가게|매장|숍|샵)/],
+  ["cafe", /(?<!네이버\s?|다음\s?|스터디\s?)카페|커피\s*(전문점|가게|매장|숍|샵)/],
   ["side-dish", /반찬\s*(가게|매장|배달)?|도시락\s*(가게|전문점|배달)/],
-  ["snack", /분식|김밥\s*(집|가게)|떡볶이/],
-  ["restaurant", /음식점|식당|한식집|중식당|일식집|레스토랑|고깃집/],
+  ["snack", /분식|김밥\s*(집|가게)|떡볶이|피자|햄버거|버거\s*(?:집|가게|매장)|샌드위치\s*(?:가게|매장)/],
+  ["restaurant", /음식점|식당|한식집|중식당|일식집|레스토랑|고깃집|치킨\s*(?:집|가게|매장|전문점)|호프|(?<!유흥\s?|단란\s?|노래\s?)주점|포차|이자카야|와인\s*바|술집/],
   ["beauty", /미용실|헤어\s*(숍|샵)|네일\s*(숍|샵|아트)?|피부\s*관리|속눈썹/],
-  ["academy", /학원|교습소|공부방|과외/],
+  ["academy", /학원|교습소|공부방|과외|독서실/],
   ["gym", /헬스장|체력\s*단련장|피트니스\s*(센터|클럽)/],
   ["lodging", /민박|펜션|게스트\s*하우스|공유\s*숙박|에어비앤비/],
-  ["rental-room", /연습실|스터디\s*룸|파티\s*룸|시간\s*대여/],
+  ["rental-room", /연습실|스터디\s*(?:룸|카페)|파티\s*룸|시간\s*대여/],
   ["pet-treat", /반려(?:견|묘|동물)?\s*(?:수제\s*)?간식|강아지\s*간식|고양이\s*간식|펫\s*푸드|사료\s*(?:제조|판매)/],
   ["moving-truck", /용달|이삿짐|소형\s*이사|원룸\s*이사|화물\s*운송/],
   ["laundry", /세탁(?:소|업|물|\s*(?:수거|배달|대행|서비스|픽업))|빨래\s*(?:대행|수거|배달)/],
   ["brokerage", /연결해\s*주|이어\s*주는|중개|매칭|소개팅|소개해\s*주/],
   ["online-store", /스마트스토어|온라인\s*(쇼핑몰|판매|스토어)|쇼핑몰|오픈마켓/],
 ];
+/*
+ * 찾는 순서(2026-10-12 시험 문장 56개로 맞춤):
+ * 1. 중개 말이 들어가도 전용 가이드가 있는 업종(대부·보험·부동산·직업소개·화물 주선·유흥주점)
+ * 2. '연결해 주는·소개해 주는' 사업은 업종 말(펫시터 등)보다 먼저 온라인 중개로
+ * 3. 확장 가이드(구체적인 말) → 4. 기본 가이드 — 온라인 판매는 언제나 마지막
+ */
+const OWN_GUIDE_OVER_BROKERAGE = new Set(["job-agency", "finance-registration", "insurance-agency", "real-estate-agency", "freight-forwarding", "nightlife"]);
+const PLAYBOOK_WORDS: Array<[string, RegExp]> = [
+  ...EXTENDED_PLAYBOOK_WORDS.filter(([id]) => OWN_GUIDE_OVER_BROKERAGE.has(id)),
+  ["brokerage", /연결해\s*주|이어\s*주는|소개해\s*주|소개팅/],
+  ...EXTENDED_PLAYBOOK_WORDS.filter(([id]) => !OWN_GUIDE_OVER_BROKERAGE.has(id)),
+  ...BASE_PLAYBOOK_WORDS,
+];
 
 /* 그 업종 사장님을 상대로 하는 서비스('음식점 메뉴 사진 촬영', '미용실 예약 대행')는 그 업종이 아니다 — 매장 업종 가이드를 붙이지 않는다(2026-10-11 사전 점검) */
 const BUSINESS_CUSTOMER = /사장님|업체|기업|회사|소상공인|원장|법인/;
-const PREMISES_PLAYBOOKS = new Set(["bakery", "cafe", "restaurant", "snack", "side-dish", "beauty", "gym", "academy", "lodging"]);
+const PREMISES_PLAYBOOKS = new Set(["bakery", "cafe", "restaurant", "snack", "side-dish", "beauty", "gym", "academy", "lodging",
+  // 확장 가이드 가운데 손님이 찾아오는 업종(2026-10-12)
+  "meat-retail", "food-retail", "nightlife", "food-truck", "catering", "used-car", "used-goods", "auto-repair", "car-care", "barber", "bathhouse", "sports-facility",
+  "entertainment-venue", "pet-business", "medical", "pharmacy", "optical-dental-lab", "vet-clinic", "massage-clinic", "public-hygiene-facility", "gosiwon",
+  "tourism-facility", "fishing", "real-estate-agency", "childcare", "kindergarten", "welfare-care"]);
 
 export function playbookForText(text: string | null | undefined, options: { customer?: string | null } = {}): IndustryPlaybook | null {
   if (!text?.trim()) return null;
