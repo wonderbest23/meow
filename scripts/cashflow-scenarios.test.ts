@@ -287,4 +287,8 @@ assert.match(roomRef, /판매선은 목표입니다. 판매선에 못 미쳐도 
 assert.match(petRef, /다만 손님이 늘어나는 처음 4개월은 '한도까지 느는 경우' 판매선\(1개월차 167건, 2개월차 238건, 3개월차 308건, 4개월차 379건\)/);
 assert.doesNotMatch(cashflowReference(buildCashflowScenarios({ ...bakery, goal: undefined })!), /다만 손님이 늘어나는/, "no goal path → no ramp line");
 
+// 실제 API 8건(2026-10-13): 생활비를 안 적은 사업도 생활비를 가져갈 선을 예시 두 금액으로 보인다 — (20만 + 100만) ÷ 40,000 = 30번
+assert.match(tutorRef, /대표 생활비가 계산에 빠져 있습니다. 나중에 사업에서 생활비를 가져가려면 월 1,000,000원이면 생활비까지 버는 판매량 월 30번, 월 1,500,000원이면 생활비까지 버는 판매량 월 43번입니다\(예시 금액\)/);
+assert.doesNotMatch(ref, /대표 생활비가 계산에/, "living cost given → no example line");
+
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");

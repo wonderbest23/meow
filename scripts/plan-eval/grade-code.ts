@@ -106,7 +106,9 @@ export function gradeWeeklyPlan(all: string, hoursPerWeek?: number): ItemResult 
     const weekCol = table[0].findIndex(cell => /주차|주$|기간/.test(cell));
     const hourCol = table[0].findIndex(cell => /시간/.test(cell));
     if (weekCol < 0) continue;
-    const rows = table.slice(1).filter(row => /\d+\s*주/.test(row[weekCol] ?? ""));
+    // '주차' 칸이면 '1'처럼 숫자만 적은 줄도 주차다(2026-10-13 실제 API: 한국어 과외의 12주 표를 못 읽었다)
+    const bare = /주차/.test(table[0][weekCol] ?? "");
+    const rows = table.slice(1).filter(row => /\d+\s*주/.test(row[weekCol] ?? "") || (bare && /^\d{1,2}$/.test((row[weekCol] ?? "").trim())));
     if (rows.length < THRESHOLDS.weeklyRowsMin) continue;
     if (hourCol < 0) return { item: 9, name: "주차별 할 일", pass: false, value: rows.length, detail: `주차 ${rows.length}줄 표 있음 · 시간 칸 없음(${head})` };
     const byWeek = new Map<string, number>();

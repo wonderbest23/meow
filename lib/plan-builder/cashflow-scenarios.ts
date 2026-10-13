@@ -363,6 +363,12 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   // 9차 맞대결(펫시터): 목표(월 600건)가 한도(월 520건)를 넘는다고만 하고 대신 볼 목표가 없었다
   const goalTarget = result.goal ? Math.ceil(result.goal.revenue / result.unitPrice) : null;
   if (goalTarget && result.capacity && goalTarget > result.capacity.volume) lines.push(`대표 목표(월 ${count(goalTarget, result.unit)})가 처리 한도(월 ${count(result.capacity.volume, result.unit)})보다 많아 그대로는 닿을 수 없습니다. 한도를 늘릴 방법(사람·시간·자동화)을 정하기 전까지 매달 볼 판매 목표는 한도의 80%인 월 ${count(Math.floor(result.capacity.volume * 0.8), result.unit)}으로 둡니다.${result.livingBreakEven && result.livingBreakEven > result.capacity.volume ? " 다만 이 목표에 닿아도 생활비선이 한도 안에 들어오기 전까지는 매달 모자라므로 '계획대로'로 보지 않습니다." : ""}`);
+  // 실제 API 8건(2026-10-13): 생활비를 안 적었거나 0원인 사업은 대표가 언제 생활비를 가져갈 수 있는지가 계획서에 없었다 — 흔한 두 금액으로 선을 보인다
+  if (!result.living) {
+    const lineFor = (amount: number) => Math.ceil((result.monthlyFixedCost + amount) / result.contribution);
+    const examples = [1_000_000, 1_500_000].map(amount => `월 ${won(amount)}이면 생활비까지 버는 판매량 월 ${count(lineFor(amount), result.unit)}${result.capacity && lineFor(amount) > result.capacity.volume ? "(처리 한도를 넘음)" : ""}`);
+    lines.push(`대표 생활비가 계산에 ${result.living === 0 ? "0원으로 들어가" : "빠져"} 있습니다. 나중에 사업에서 생활비를 가져가려면 ${examples.join(", ")}입니다(예시 금액). 1주차에 실제 생활비를 정하면 이 선부터 고칩니다.`);
+  }
   if (result.unitNote) lines.push(result.unitNote);
   if (result.sessionNote) lines.push(result.sessionNote);
   for (const item of result.runOut) lines.push(`${item.label}에는 준비 예산에서 초기 지출을 뺀 돈이 ${item.month}개월차에 바닥납니다.`);
