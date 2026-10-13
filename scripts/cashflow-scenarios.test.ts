@@ -125,7 +125,8 @@ const snsRef = cashflowReference(sns);
 assert.match(snsRef, /문 연 뒤에 볼 중단선을 둘 수 없습니다.*1개월도 버티지 못합니다.*하나를 정합니다/);
 assert.doesNotMatch(snsRef, /석 달 적자분\) 아래로 내려가면/, "no broken stop line");
 // 대신 멈출 기준: 메운 돈을 더한 잔고가 한 달 지출(50만 + 150만) 아래로(맞대결: 멈출 기준이 아예 없었다)
-assert.match(snsRef, /메운 돈을 더한 통장 잔고가 한 달에 나가는 돈\(2,000,000원\) 아래로/);
+// 9차: 계획대로 가도 잔고가 2,000,000원 아래로 내려가는 달이 있으면 절대 금액 대신 표의 같은 줄과 견준다
+assert.match(snsRef, /메운 돈을 더한 통장 잔고를 표의 '판단선대로 느는 경우' 줄\(메운 돈을 더한 값\)과 매달 견주어, 그보다 한 달에 나가는 돈\(2,000,000원\) 이상 적어지면/);
 assert.match(snsRef, /이 금액은 최소치입니다\(초기 지출 0원, 세금·해지 빼고/);
 assert.match(snsRef, /그달 돈을 내는 손님 수.*생활비선 8곳을 6개월 안에 채우려면 해지가 없을 때 매달 새로 약 2곳씩/);
 // 판단선과 매달 목표는 한 줄: 생활비선 8곳을 6개월에 → 2·3·4·6·7·8곳(2026-10-13 2차: 두 줄이 같은 달 결론을 갈랐다)
@@ -201,5 +202,19 @@ assert.match(gimbap, /'건'은 판매 가격 4,500원짜리 1개 기준/);
 assert.match(gimbap, /\| 1개월차 \| 4,000,000원 \| 4,000 \| 4,000,000원 \| 0원 \|/);
 assert.match(gimbap, /\| 12개월차 \| 4,000,000원 \| 4,889 \|/);
 assert.match(gimbap, /판매가 10%\(월 약 400건\) 줄면 한 달에 약 1,000,000원이 더 모자랍니다/);
+
+// 9차: 생활비선이 처리 한도를 넘으면 가격별로 한도 안에 드는 고정비 상한 / 목표가 한도를 넘으면 임시 목표
+{
+  const petGoal = buildCashflowScenarios({ unitPrice: 5000, unitVariableCost: 500, monthlyFixedCost: 1_500_000, capacity: "대표자 혼자 / 하루 매칭 20건", budget: "10000000원", livingCost: "2000000원", goal: "6개월 안에 월 거래 600건" })!;
+  const ref = cashflowReference(petGoal);
+  assert.match(ref, /가격 5,000원이면 월 고정비 340,000원 이하, 가격 5,500원이면 월 고정비 600,000원 이하, 가격 6,000원이면 월 고정비 860,000원 이하/);
+  assert.match(ref, /대표 목표\(월 600건\)가 처리 한도\(월 520건\)보다 많아.*한도의 80%인 월 416건/);
+  assert.deepEqual(parseVolumeGoal("6개월 안에 월 거래 600건"), { volume: 600, months: 6 });
+  // 조심스러운 경우로 재방문 목표에 닿을 수 없으면 밝힌다
+  const nailRepeat = buildCashflowScenarios({ unitPrice: 45000, unitVariableCost: 6000, monthlyFixedCost: 1_800_000, livingCost: "1800000원", capacity: "대표자 혼자 / 하루 6건", goal: "6개월 안에 재방문 고객 100명", budget: "15000000원", premises: true, businessTypeId: "store" })!;
+  assert.match(cashflowReference(nailRepeat), /조심스러운 경우\(월 24건\)로는 6개월 판매가 144건이라.*최소 200건\)에 닿지 않습니다/);
+}
+// 9차: 운영 중 가게는 부가세가 들어 있을 때의 생활비선과 지금 실적의 부족분
+assert.match(operatingFlowMarkdown({ unitPrice: 4500, unitVariableCost: 2000, monthlyFixedCost: 6_000_000, volume: 4000, livingCost: "4000000원", goal: "6개월 안에 월 매출 2,200만원 회복" }), /생활비까지 버는 선은 월 4,783건입니다. 지금 실적\(월 4,000건\)으로는 생활비를 가져간 뒤 한 달에 약 1,636,364원 모자랍니다/);
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
