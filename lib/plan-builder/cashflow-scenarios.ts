@@ -85,6 +85,7 @@ export type CashflowScenarios = {
   recurringPace: { months: number; perMonth: number } | null;
   /** 재방문·단골 수 목표(매달 판매량이 아닌 목표) */
   repeatGoal: { count: number; months: number; unit: string; label: string } | null;
+  businessTypeId: string | null;
   /** 가격을 바꾸면 본전·생활비선이 어떻게 되는지(한 건당 비용은 같다고 가정) */
   priceAlternatives: Array<{ price: number; breakEven: number; livingLine: number | null }>;
   /** 처리량 단위와 판매 단위가 다를 수 있다는 알림(예: 하루 120개 vs 세트) */
@@ -255,7 +256,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
     ? `처리량(${capacityParsed.note})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
-  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, slowShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, repeatGoal: recurring ? null : parseRepeatGoal(input.goal), priceAlternatives, unitNote };
+  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, slowShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, repeatGoal: recurring ? null : parseRepeatGoal(input.goal), businessTypeId: input.businessTypeId ?? null, priceAlternatives, unitNote };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < (result.livingBreakEven ?? result.breakEven);
@@ -339,7 +340,7 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   const thinNet = thin && thin.key === "breakeven" && !result.recurring ? thin.net[0] : null;
   if (thinNet != null && thinNet >= 0 && thinNet < result.monthlyFixedCost * 0.1 && Number.isFinite(result.vat.line)) {
     const vatNet = Math.round(thin.volumes[0] * result.vat.contribution - result.monthlyFixedCost - (result.living ?? 0));
-    if (vatNet < 0) lines.push(`'${thin.label}'도 한 달에 ${won(thinNet)}만 남습니다(세금 전). 판매가에 부가세가 들어 있으면(일반과세자) 이 경우도 매달 약 ${won(-vatNet)}씩 모자라고, 카드 결제 수수료도 이 계산에 빠져 있습니다. 이 줄을 '버는 경우'로 읽지 않습니다.`);
+    if (vatNet < 0) lines.push(`'${thin.label}'도 한 달에 ${won(thinNet)}만 남습니다(세금 전). 판매가에 부가세가 들어 있으면(일반과세자) 이 경우도 매달 약 ${won(-vatNet)}씩 모자라고, 결제 수수료(카드·오픈마켓)도 이 계산에 빠져 있습니다. 이 줄을 '버는 경우'로 읽지 않습니다.`);
   }
   if (Number.isFinite(result.vat.line)) lines.push(`판매가 ${won(result.unitPrice)}에 부가세가 들어 있다면(일반과세자) 한 건에 남는 돈은 약 ${won(result.vat.contribution)}으로 줄고, ${result.livingBreakEven ? "생활비선" : "본전"}은 월 ${count(result.vat.line, result.unit)}이 됩니다. 간이과세자는 계산이 다르므로, 사업자등록 때 과세 유형과 가격에 부가세를 넣을지를 함께 정합니다.`);
   return lines;
@@ -383,12 +384,20 @@ function decisionLines(result: CashflowScenarios): string[] {
   const vatGo = Number.isFinite(result.vat.line) && result.vat.line > decision.go && !(result.capacity && result.capacity.volume < decision.go)
     ? ` 판매가에 부가세가 들어 있으면(일반과세자) 이 선은 월 ${count(result.vat.line, unit)}으로 바뀝니다. 매달 볼 숫자에 두 선을 함께 적고, 사업자등록 뒤 과세 유형에 맞는 선 하나만 남깁니다.`
     : "";
+  // 업종 점검(2026-10-13): 앱은 결제 손님 수만, 공간 대여는 대화 비율로 판단해 그 업종의 판단 단위와 어긋났다
+  const typeJudge: Record<string, string> = {
+    app: "앱·콘텐츠형은 결제 손님 수보다 먼저 그달 실제로 쓴 사람(활성 이용자)과 2주 안 재방문 비율을 매달 봅니다. 위 손님 수 선은 돈이 버티는지 보는 참고선이고, 1~3개월차 판단은 활성 이용자·재방문·결제 비율로 합니다.",
+    space: "공간 대여는 신고 전에 돈을 받을 수 없으므로, 출시 전 판단은 대화 비율보다 비슷한 공간의 예약 달력(가동률)과 문의 수로 합니다.",
+    platform: "연결형은 공급자(돌봄·서비스를 하는 사람)를 먼저 확인·등록합니다. 신청 창구는 하루 처리량을 감당할 공급자가 등록된 뒤 엽니다.",
+  };
+  const typeLine = result.businessTypeId && typeJudge[result.businessTypeId] ? [typeJudge[result.businessTypeId]] : [];
   return [
     first + unreachable + vatGo,
     `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 시범 판매가 일부 시간·자리만 쓰면(예: 남의 가게 저녁 한 자리 2주) 판매 수를 그대로 비교하지 않고 연 시간 중 채운 비율과 재예약으로 봅니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 문의한 사람 중 날짜를 잡거나 돈을 낸 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다. 비율의 분모는 직접 이야기를 나눈 사람(찾아간 곳·체험한 사람·문의한 사람), 분자는 날짜를 잡거나 돈을 낸 사람입니다. 글을 본 사람 수(노출)는 분모로 쓰지 않고, 질문에 얼마나 꼼꼼히 답했는지도 비율로 쓰지 않습니다. 노출 대비 비율은 아래 10~30%보다 훨씬 낮아 기준이 늘 못 미치게 되기 때문입니다. 이야기를 나눈 수가 10보다 적으면 비율로 판단하지 않고 더 모읍니다(몇 곳 중 몇 곳으로 적음).`,
     `${pace ? `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면` : `${decision.goLabel}을 채우려면`} 직접 이야기를 나눠야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 이 수는 문을 연 뒤 필요한 손님 흐름을 가늠하는 참고값이고, 계약할지 가르는 기준이 아닙니다. 계약 판단은 위 '출시 전 판단'(이야기를 나눈 사람 중 날짜를 잡거나 돈을 낸 수와 비율)으로 합니다. 이 수는 판매가 모두 새 손님이라고 본 값이라, 다시 오는 손님이 많을수록 새로 이야기할 사람은 줄어듭니다.`,
     `문을 연 뒤: 실제 판매 수를 위 기준과 매달 비교하고, ${result.stopBroken ? "중단선 대신 시작 전에 정한 결정(다른 수입·생활비 줄이기·예산 늘리기)을 지킵니다" : "남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다"}. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
     ...repeatGoalLines(result),
+    ...typeLine,
   ];
 }
 

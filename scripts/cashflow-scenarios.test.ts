@@ -240,4 +240,8 @@ assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 5000, unitVar
   assert.match(op, /판매가 지금부터 매달 2%씩 줄면\(가정\) 6개월차에 월 약 3,543건/);
 }
 
+// 업종 점검: 유형마다 맞는 판단 단위(앱은 활성 이용자, 공간은 예약 달력)
+assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 4900, unitVariableCost: 500, monthlyFixedCost: 800_000, livingCost: "0원", budget: "5000000원", recurring: true, businessTypeId: "app", goal: "1년 안에 유료 구독 500명" })!), /활성 이용자\)과 2주 안 재방문 비율/);
+assert.doesNotMatch(cashflowReference(buildCashflowScenarios({ unitPrice: 45000, unitVariableCost: 6000, monthlyFixedCost: 1_800_000, livingCost: "1800000원", budget: "15000000원", premises: true, businessTypeId: "store" })!), /활성 이용자|예약 달력\(가동률\)과 문의 수로/);
+
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
