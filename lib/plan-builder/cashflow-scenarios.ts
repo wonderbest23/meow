@@ -58,6 +58,10 @@ export type CashflowScenarios = {
   recurring: boolean;
   /** 문 여는 날 남는 돈(초기 지출을 모르면 0원으로 본 최대치)과 조심스러운 경우 그 돈으로 버티는 개월 수 */
   opening: { cash: number; months: number } | null;
+  /** 조심스러운 경우 문 연 뒤 6개월을 버티는 데 모자라는 돈(중단선을 둘 수 없을 때 시작 전 결정이 메울 금액) */
+  coverNeeded: number | null;
+  /** 매달 돈 내는 사업이 판단선대로 늘어도 통장이 바닥나는 달(문 연 뒤) */
+  paceRunOut: number | null;
   /** 매달 돈을 내는 사업: 생활비선(없으면 본전)의 손님 수를 채우는 기간과 그동안 매달 새로 늘어야 하는 손님 수(해지 없을 때) */
   recurringPace: { months: number; perMonth: number } | null;
   /** 가격을 바꾸면 본전·생활비선이 어떻게 되는지(한 건당 비용은 같다고 가정) */
@@ -191,6 +195,18 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const capacityNet = capacity && capacity.volume < (livingBreakEven ?? breakEven) ? capacity.volume * contribution - input.monthlyFixedCost - (living ?? 0) : null;
   const paceMonths = goal?.months ?? RECURRING_RAMP_MONTHS;
   const recurringPace = recurring ? { months: paceMonths, perMonth: Math.ceil((livingBreakEven ?? breakEven) / paceMonths) } : null;
+  // 2026-10-13 2차 검토: '메울 길을 정하라'만 있고 얼마인지 없었다 / 판단선대로 가도 5개월차에 바닥나는 걸 알리지 않았다
+  const sixMonthLow = Math.min(0, ...careful0.cumulative.slice(0, 6));
+  const coverNeeded = stopBroken && openingMax != null && openingMax + sixMonthLow < 0 ? Math.ceil(-(openingMax + sixMonthLow) / 10_000) * 10_000 : null;
+  let paceRunOut: number | null = null;
+  if (recurringPace && openingMax != null) {
+    let cash = openingMax;
+    for (let month = 1; month <= MONTHS; month++) {
+      const active = Math.ceil((livingBreakEven ?? breakEven) * Math.min(month, paceMonths) / paceMonths);
+      cash += active * contribution - input.monthlyFixedCost - (living ?? 0);
+      if (cash < 0) { paceRunOut = month; break; }
+    }
+  }
   // 대안 가격: 가격 크기에 맞는 단위(500원·1,000원·1만 원)로 한 칸 낮게, 한두 칸 높게
   const step = input.unitPrice < 10_000 ? 500 : input.unitPrice < 100_000 ? 1_000 : 10_000;
   const priceAlternatives = [input.unitPrice - step, input.unitPrice + step, input.unitPrice + step * 2]
@@ -199,7 +215,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
     ? `처리량(${capacityParsed.note})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
-  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepLiving, prepFixed, stopReserve, stopBroken, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, opening, recurringPace, priceAlternatives, unitNote };
+  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepLiving, prepFixed, stopReserve, stopBroken, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, opening, coverNeeded, paceRunOut, recurringPace, priceAlternatives, unitNote };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < (result.livingBreakEven ?? result.breakEven);
@@ -232,7 +248,7 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   if (result.setupLimit != null) lines.push(result.setupLimit > 0
     ? `준비 예산 ${won(result.budget!)}에서 ${prepOut(result) > 0 ? "준비 기간에 나가는 돈을 빼고 " : ""}초기 지출을 ${won(result.setupLimit)} 이하로 써야 조심스러운 경우에도 문 연 뒤 12개월을 버팁니다. 보증금처럼 나중에 돌려받는 돈도 문 여는 날 통장에서는 빠지므로 초기 지출에 넣습니다.`
     : `조심스러운 경우 ${prepOut(result) > 0 ? "준비 기간에 나가는 돈과 " : ""}12개월 동안 모자라는 돈이 준비 예산 ${won(result.budget!)}보다 많습니다. 초기 지출 전에 이미 모자랍니다.`);
-  if (result.stopBroken && result.opening) lines.push(`초기 지출이 ${result.setupCost != null ? won(result.setupCost) : "0원"}이어도 문 여는 날 남는 돈(${won(Math.max(0, result.opening.cash))})이 조심스러운 경우 석 달 적자분(${won(result.stopReserve!)})보다 적어, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 조심스러운 경우 이 돈으로 문 연 뒤 ${monthsText(result.opening.months)}입니다. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.`);
+  if (result.stopBroken && result.opening) lines.push(`초기 지출이 ${result.setupCost != null ? won(result.setupCost) : "0원"}이어도 문 여는 날 남는 돈(${won(Math.max(0, result.opening.cash))})이 조심스러운 경우 석 달 적자분(${won(result.stopReserve!)})보다 적어, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 조심스러운 경우 이 돈으로 문 연 뒤 ${monthsText(result.opening.months)}입니다. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` 조심스러운 경우 문 연 뒤 6개월을 버티려면 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다(다른 수입이나 줄인 생활비로 매달 메우면 한 달에 약 ${won(result.coverNeeded / 6)}).` : ""}`);
   else if (result.stopReserve != null && result.budget != null) lines.push(`문을 연 뒤 남은 준비 예산이 ${won(result.stopReserve)}(조심스러운 경우 석 달 적자분) 아래로 내려가면 계속할지 다시 정합니다.${result.setupBeforeStop != null ? ` 문 여는 날 이 선 위에서 시작하려면 초기 지출을 ${won(result.setupBeforeStop)} 이하로 씁니다.` : ""}`);
   if (result.unitNote) lines.push(result.unitNote);
   for (const item of result.runOut) lines.push(`${item.label}에는 준비 예산에서 초기 지출을 뺀 돈이 ${item.month}개월차에 바닥납니다.`);
@@ -243,6 +259,7 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   // 본전과 생활비선을 따로 말한다 — 예전엔 생활비선에 못 미쳐도 '본전에 못 미친다'고 써 틀렸다(펫시터: 한도 520건 > 본전 334건)
   if (result.capacity && result.capacity.volume < result.breakEven) lines.push(`처리량 최대치(${result.capacity.note})를 다 팔아도 본전에 못 미칩니다. 가격·고정비·처리량을 다시 봐야 합니다.`);
   else if (result.capacityNet != null && result.livingBreakEven) lines.push(`처리량 최대치(${result.capacity!.note})를 다 팔아도 생활비까지는 못 법니다. 다 판 달에도 생활비를 넣으면 ${won(-result.capacityNet)}이 모자랍니다. 판매를 늘리는 것보다 가격·수수료·처리량을 먼저 다시 정해야 합니다.`);
+  if (result.paceRunOut) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 통장은 문 연 뒤 ${result.paceRunOut}개월차에 바닥납니다. 그 전에 메울 돈(다른 수입·예산 늘리기)을 정해 두지 않으면 잘 되고 있어도 멈춰야 합니다.`);
   // 부가세(2026-10-12 시뮬레이션: 다섯 사업 모두 가격에 부가세가 들었는지 정하지 않아 한 건에 남는 돈이 부풀려졌다)
   if (Number.isFinite(result.vat.line)) lines.push(`판매가 ${won(result.unitPrice)}에 부가세가 들어 있다면(일반과세자) 한 건에 남는 돈은 약 ${won(result.vat.contribution)}으로 줄고, ${result.livingBreakEven ? "생활비선" : "본전"}은 월 ${count(result.vat.line, result.unit)}이 됩니다. 간이과세자는 계산이 다르므로, 사업자등록 때 과세 유형과 가격에 부가세를 넣을지를 함께 정합니다.`);
   return lines;
@@ -284,8 +301,8 @@ function decisionLines(result: CashflowScenarios): string[] {
   };
   return [
     first + unreachable,
-    `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 시범 판매가 일부 시간·자리만 쓰면(예: 남의 가게 저녁 한 자리 2주) 판매 수를 그대로 비교하지 않고 연 시간 중 채운 비율과 재예약으로 봅니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 본 사람 중 날짜를 잡거나 돈을 낸 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다. 비율의 분모는 닿은 사람(본 사람·찾아간 곳), 분자는 날짜를 잡거나 돈을 낸 사람이고, 질문에 얼마나 꼼꼼히 답했는지는 비율로 쓰지 않습니다. 닿은 수가 10보다 적으면 비율로 판단하지 않고 더 모읍니다(몇 곳 중 몇 곳으로 적음).`,
-    `${pace ? `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면` : `${decision.goLabel}을 채우려면`} 닿아야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람에게 닿을 길(지나가는 사람, 단지 세대, 커뮤니티 회원 등)이 있어야 진행합니다.`,
+    `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 시범 판매가 일부 시간·자리만 쓰면(예: 남의 가게 저녁 한 자리 2주) 판매 수를 그대로 비교하지 않고 연 시간 중 채운 비율과 재예약으로 봅니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 문의한 사람 중 날짜를 잡거나 돈을 낸 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다. 비율의 분모는 직접 이야기를 나눈 사람(찾아간 곳·체험한 사람·문의한 사람), 분자는 날짜를 잡거나 돈을 낸 사람입니다. 글을 본 사람 수(노출)는 분모로 쓰지 않고, 질문에 얼마나 꼼꼼히 답했는지도 비율로 쓰지 않습니다. 노출 대비 비율은 아래 10~30%보다 훨씬 낮아 기준이 늘 못 미치게 되기 때문입니다. 이야기를 나눈 수가 10보다 적으면 비율로 판단하지 않고 더 모읍니다(몇 곳 중 몇 곳으로 적음).`,
+    `${pace ? `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면` : `${decision.goLabel}을 채우려면`} 직접 이야기를 나눠야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 그만큼의 사람과 이야기를 나눌 길(찾아갈 가게, 체험 자리, 커뮤니티 문의 등)이 있어야 진행합니다.`,
     `문을 연 뒤: 실제 판매 수를 위 기준과 매달 비교하고, ${result.stopBroken ? "중단선 대신 시작 전에 정한 결정(다른 수입·생활비 줄이기·예산 늘리기)을 지킵니다" : "남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다"}. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
   ];
 }

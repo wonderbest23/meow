@@ -50,8 +50,8 @@ assert.match(ref, /판단 기준\(실행 장에서 씀\): 생활비까지 버는
 assert.match(ref, /규모\(쓰는 돈·시간·상품 수\)를 줄여서, 본전의 절반 이하면 시작안을 바꿉니다. 판단은 계약처럼 큰돈을 쓰기 전\(출시 전\)에 한 번, 문을 연 뒤에 다시 합니다/);
 // 출시 전: 팔 수 있으면 실제 판매 수, 못 팔면 판매량 기준 대신 잰 비율·경쟁 자료(2026-10-11 유형 시뮬레이션: 의사 수로는 닿을 수 없는 기준이 됐다)
 assert.match(ref, /출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면.*아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다/);
-// 비율별로 닿아야 하는 사람 수는 코드가 계산한다: 2,000 ÷ 10% = 20,000명/월 → 하루 약 770명(26일)
-assert.match(ref, /닿아야 하는 사람 수.*비율 10%면 하루 약 770명, 20%면 하루 약 385명, 30%면 하루 약 257명/);
+// 비율별로 이야기를 나눠야 하는 사람 수는 코드가 계산한다: 2,000 ÷ 10% = 20,000명/월 → 하루 약 770명(26일)
+assert.match(ref, /직접 이야기를 나눠야 하는 사람 수.*비율 10%면 하루 약 770명, 20%면 하루 약 385명, 30%면 하루 약 257명/);
 assert.match(ref, /문을 연 뒤: 실제 판매 수를 위 기준과 매달 비교/);
 assert.match(ref, /5개월차부터 한 달 매출로 고정비와 생활비를 모두 메워/);
 assert.match(ref, /목표 경우 월별 판매선.*1개월차 656개, 2개월차 1,058개.*6개월차 2,667개/);
@@ -120,6 +120,11 @@ assert.match(cashflowMarkdown(sns), /\| 1개월차 \| -5,000,000원 \|/);
 // 닿아야 하는 사람 수는 매달 새로 늘 손님(2곳) 기준: 2 ÷ 20% = 10곳/월 → 일주일 약 3명
 assert.match(snsRef, /매달 새로 늘어야 하는 손님\(약 2곳\)을 채우려면.*20%면 일주일 약 3명/);
 assert.match(snsRef, /중단선 대신 시작 전에 정한 결정/);
+// 시작 전 결정이 메울 금액: 문 여는 날 −300만 + 6개월 누적 −1,092만 → 약 1,392만 원(2026-10-13 2차: '메울 길'만 있고 금액이 없었다)
+assert.equal(sns.coverNeeded, 13_920_000);
+assert.match(snsRef, /6개월을 버티려면 약 13,920,000원을 이 방법들로 메워야/);
+// 분모는 이야기를 나눈 사람 — 노출 수가 아니다(2차: '본 사람의 20%'는 늘 못 미쳤다)
+assert.match(snsRef, /글을 본 사람 수\(노출\)는 분모로 쓰지 않고/);
 
 // 처리 한도를 다 채워도 생활비까지 못 버는 사업(펫시터 연결: 5,000원, 비용 500원, 고정비 150만, 생활비 200만, 하루 20건)
 const pet = buildCashflowScenarios({ unitPrice: 5000, unitVariableCost: 500, monthlyFixedCost: 1_500_000, capacity: "대표자 혼자 / 하루 매칭 20건", budget: "10000000원", livingCost: "2000000원" })!;
@@ -127,7 +132,7 @@ const pet = buildCashflowScenarios({ unitPrice: 5000, unitVariableCost: 500, mon
 assert.equal(pet.capacityNet, -1_160_000);
 assert.match(cashflowReference(pet), /다 판 달에도 생활비를 넣으면 1,160,000원이 모자랍니다/);
 assert.match(cashflowReference(pet), /생활비까지 버는 판매량\(월 778건\)이 처리 한도\(월 520건\)보다 많아 판매량만으로는 닿을 수 없습니다/);
-assert.match(cashflowReference(pet), /닿은 수가 10보다 적으면 비율로 판단하지 않고/);
+assert.match(cashflowReference(pet), /이야기를 나눈 수가 10보다 적으면 비율로 판단하지 않고/);
 
 // 앱(구독, 생활비 0 = 고정비에 들어 있음): 도구·서버비가 준비 기간 내내 나가고, 구독자는 0명에서 쌓인다
 const app = buildCashflowScenarios({ unitPrice: 4900, unitVariableCost: 500, monthlyFixedCost: 800_000, budget: "5000000원", livingCost: "0원", goal: "1년 안에 유료 구독 500명", recurring: true })!;
@@ -136,5 +141,8 @@ assert.equal(app.prepFixed, 2_400_000);
 assert.equal(app.scenarios[0].volumes[0], 15, "91 ÷ 6 in month 1, not 91");
 assert.ok(app.survival.every(row => row.months < 12) || app.survival.length === 0);
 assert.doesNotMatch(cashflowMarkdown(app), /12개월 이상/);
+// 판단선(본전 182명을 12개월에)대로 늘어도 260만 원은 5개월차에 바닥난다
+assert.equal(app.paceRunOut, 5);
+assert.match(cashflowReference(app), /판단선대로 손님이 늘어도\(계획대로인 경우\) 통장은 문 연 뒤 5개월차에 바닥납니다/);
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
