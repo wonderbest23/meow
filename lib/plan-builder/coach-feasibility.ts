@@ -15,10 +15,11 @@ export function coachAmount(value: string | undefined): number | undefined {
   return amount != null && Number.isSafeInteger(amount) && amount >= 0 ? amount : undefined;
 }
 
-const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "한 달": 1 };
+// '월 12곳'처럼 직접 적은 답도 한 달로 읽고, '하루 매칭 20건'처럼 사이에 낀 말 하나는 건너뛴다(2026-10-12 시뮬레이션: 처리 한도가 계산에서 빠졌다)
+const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "한 달": 1, "월": 1 };
 /** 처리량 답변("대표자 혼자 / 하루 20건")을 월 판매량으로 환산한다. 하루는 월 26일 영업, 일주일은 4.3주 가정이며 기간이 없으면 환산하지 않는다. */
 export function monthlyVolumeFromCapacity(text: string | null | undefined): { volume: number; unit: string; note: string } | null {
-  const match = text?.match(/(하루|일주일|한 달)\s*([\d,]+)\s*([가-힣·]*)/);
+  const match = text?.match(/(하루|일주일|한 달|(?<![가-힣])월)\s*(?:[가-힣]+\s+)?([\d,]+)\s*([가-힣·]*)/);
   if (!match) return null;
   const count = Number(match[2].replace(/,/g, ""));
   if (!Number.isFinite(count) || count < 0) return null;

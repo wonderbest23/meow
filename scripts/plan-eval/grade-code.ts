@@ -71,9 +71,16 @@ export function gradeUnitEconomics(all: string, facts: EvalFacts): ItemResult {
 
 // 5. 시작 자금 — 항목별 금액(보증금·권리금·인테리어·설비·재고·인허가·홍보·예비비) 중 몇 개가 나오는지
 const START_ITEMS = [/보증금/, /권리금/, /인테리어|공사/, /설비|장비|집기/, /초기\s*재고|재료\s*구입|첫\s*재고/, /인허가|사업자\s*등록|등록비/, /홍보비|광고비|마케팅\s*비/, /예비비|운영\s*자금|운영\s*예비/];
+/*
+ * 공간을 빌리지 않는 사업(앱·대행·플랫폼)은 보증금·권리금·인테리어·재고가 없다 — 매장 목록으로 세면 늘 떨어진다(2026-10-12 시뮬레이션).
+ * 그런 사업은 준비 기간에 나가는 돈(생활비·고정비)과 도구·개발비를 항목으로 센다.
+ */
+const REMOTE_START_ITEMS = [/준비\s*기간에\s*나가는\s*돈|준비\s*기간.*생활비/, /도구|노트북|개발|외주|서버/, /인허가|사업자\s*등록|등록비/, /홍보비|광고비|마케팅\s*비/, /예비비|운영\s*자금|운영\s*예비|버티는\s*기간/];
 export function gradeStartFunds(all: string): ItemResult {
-  const found = START_ITEMS.filter(pattern => pattern.test(all)).length;
-  return { item: 5, name: "시작 자금", pass: found >= THRESHOLDS.startFundItemsMin, value: found, detail: `시작 자금 항목 ${found}/${START_ITEMS.length}개 언급` };
+  const premises = /보증금|임대|월세|인테리어/.test(all);
+  const items = premises ? START_ITEMS : REMOTE_START_ITEMS;
+  const found = items.filter(pattern => pattern.test(all)).length;
+  return { item: 5, name: "시작 자금", pass: found >= THRESHOLDS.startFundItemsMin, value: found, detail: `시작 자금 항목 ${found}/${items.length}개 언급${premises ? "" : "(공간 없는 사업 기준)"}` };
 }
 
 // 6. 12개월 돈 흐름 — 통장(현금) 흐름을 다룬 12개월 표가 있는지(손익표와 별개)
@@ -87,7 +94,8 @@ export function gradeCashflow(all: string): ItemResult {
 export function gradePersonalLiving(all: string): ItemResult {
   const living = /생활비/.test(all);
   // 생활비 질문(2026-10-10) 뒤로 계획서는 대표 몫을 '사업에서 생활비를 가져간다'로 쓴다
-  const salary = /내\s*월급|대표(?:자)?\s*(?:인건비|월급|급여)|가져갈\s*돈|사장님?\s*월급|생활비를?\s*가져(?:가|갈|올)/.test(all);
+  // '생활비까지 버는 선'도 대표 몫을 계산한 말이다(2026-10-12: 이 말만 있는 계획서가 모두 떨어졌다)
+  const salary = /내\s*월급|대표(?:자)?\s*(?:인건비|월급|급여)|가져갈\s*돈|사장님?\s*월급|생활비를?\s*가져(?:가|갈|올)|생활비까지\s*(?:버는|벌)|생활비선/.test(all);
   return { item: 7, name: "내 생활비와 내 월급", pass: living && salary, detail: `생활비 ${living ? "있음" : "없음"} · 대표 월급 ${salary ? "있음" : "없음"}` };
 }
 

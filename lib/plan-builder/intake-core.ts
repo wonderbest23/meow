@@ -1,6 +1,8 @@
 import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
-import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled } from "./cashflow-scenarios";
+import { businessTypeFor } from "./business-types";
+import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled, parseRevenueGoal } from "./cashflow-scenarios";
+import { playbookForKsic, playbookForText } from "./industry-playbooks";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
 import { coachAmount, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
@@ -333,7 +335,24 @@ function structureNumber(intake: IntakeState, id: string): number | null {
 export type IntakeScenarioInputs = {
   structure: ReturnType<typeof effectiveStructure>["values"]; labels: Record<string, string>;
   unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; volume: number | undefined; notes: string[];
+  /** 공간(매장·대여 공간)을 빌려 여는 사업인지 — 준비 기간 고정비를 문 열기 한 달 전부터 셀지 정한다 */
+  premises: boolean;
 };
+
+/*
+ * 공간을 빌려 여는 사업인가 — 구조(매장·점포 자본)나 사업 유형(매장형·공간 대여형)으로 본다.
+ * 2026-10-12 시뮬레이션: 오피스텔 네일숍은 업종 기본 구조가 '복합'이라 공간 없는 사업으로 잡혀 월세를 석 달 치 셌다.
+ */
+function rentsPremises(coach: CoachState, intake: IntakeState, structure: BusinessStructure): boolean {
+  if (structure.capital === "storefront" || structure.delivery === "store") return true;
+  const effective = effectiveStructure(intake);
+  const chosen = Object.fromEntries(STRUCTURE_AXES.flatMap(axis => effective.basis[axis] === "user" && effective.values[axis] ? [[axis, effective.values[axis]]] : [])) as Partial<BusinessStructure>;
+  const description = [coach.business.description, ...coach.fields.filter(field => field.key === "business" || field.key === "offer").map(field => field.value)].join(" ");
+  const customer = coach.fields.find(field => field.key === "customer")?.value;
+  const playbook = intake.ksic ? playbookForKsic(intake.ksic) : playbookForText(description, { customer });
+  const typed = businessTypeFor({ chosen, description, customer, playbookId: playbook?.id, structure });
+  return typed?.type.id === "store" || typed?.type.id === "space";
+}
 /**
  * 손익 계산 입력(가격·변동비·고정비·월 판매량)을 한 곳에서 정한다. 문서 요약·AI 사업안·질문 화면이 같은 숫자를 쓰게 하는 단일 원천.
  * 판매량 우선순위: volume 필드 → (운영 중) 실적 매출 ÷ 기간 ÷ 가격 → (시간제) 주당 청구 시간 → 처리량(최대치, 대여는 이용률 반영).
@@ -384,7 +403,7 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
       }
     }
   } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
-  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes };
+  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, premises: rentsPremises(coach, intake, structure) };
 }
 
 /**
@@ -471,7 +490,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
-  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost }) : null;
+  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, structure, premises: inputs.premises }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준`, unitLines: financialsToReference(calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, monthlyGrowthPct: 0 })) })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
@@ -496,6 +515,17 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   else if (structure.sides === "two") lines.push("- 양면 시장: 공급자 목표가 정해지지 않았습니다. 공급자 1곳당 거래 수를 확인하기 전까지 판매량은 공급 측이 받쳐 준다는 가정입니다.");
   const cycle = structure.revenue === "project" ? structureNumber(intake, "structure.salesCycleDays") : null;
   if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
+  /*
+   * 운영 중 사업의 매출 목표를 판매량으로(2026-10-12 김밥집 시뮬레이션: '2,200만 원 회복'이 하루 몇 건인지 없어
+   * 개선 비교에서 '조금 늘었다'를 성공으로 읽었다). 지금 판매량은 실적에서 잡은 값이다.
+   */
+  const revenueGoal = intake.mode === "operating" && volume ? parseRevenueGoal(coach.fields.find(field => field.key === "goal")?.value) : null;
+  if (revenueGoal && volume) {
+    const target = Math.ceil(revenueGoal.revenue / unitPrice), gap = target - volume;
+    lines.push(gap > 0
+      ? `- 매출 목표 ${won(revenueGoal.revenue)}(${revenueGoal.months}개월 안에) → 월 약 ${target.toLocaleString("ko-KR")}건. 지금(실적 기준 월 ${volume.toLocaleString("ko-KR")}건)보다 월 약 ${gap.toLocaleString("ko-KR")}건, 하루(월 26일 영업) 약 ${Math.ceil(gap / 26).toLocaleString("ko-KR")}건 더 팔아야 합니다. 개선을 비교할 때는 늘어난 건수를 이 차이와 견줍니다.`
+      : `- 매출 목표 ${won(revenueGoal.revenue)}는 지금 실적(월 약 ${volume.toLocaleString("ko-KR")}건)으로 이미 닿는 수준입니다.`);
+  }
   const shownNotes = flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치")) : notes;
   return [...lines, ...shownNotes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined ? null : { volume, actual: notes.some(note => note.startsWith("실적 기준 판매량")) })].filter(Boolean).join("\n");
 }

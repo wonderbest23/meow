@@ -215,6 +215,8 @@ for (const c of cases) {
   if (spend && costOf(calls).krw >= MAX_KRW) { stoppedAt = c.id; console.log(`[plan-eval] 상한 ${MAX_KRW.toLocaleString()}원에 닿아 ${c.id}부터 멈춤`); break; }
   const started = Date.now(), before = calls.length;
   offlineCase = c.id; offlineCall = 0;
+  // 사업마다 새로 모은다 — 앞 사업의 장(예: 운영 계획서에 없는 유통 장)이 섞이지 않게
+  for (const key of Object.keys(captured)) delete captured[key];
   let entry;
   try { entry = await runCase(c); }
   catch (error) { entry = { id: c.id, label: c.label, tags: c.tags, error: error instanceof Error ? error.message : String(error) }; }
