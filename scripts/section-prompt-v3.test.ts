@@ -84,7 +84,7 @@ assert.match(executive, /## 지금 정할 것/);
 assert.doesNotMatch(executive, /## 실행 전 확인 목록/);
 assert.match(roadmap, /\(확인 필요\)로 남긴 일과 계약 전에 확인할 일.*해당 주차에 넣습니다/);
 assert.match(roadmap, /계속할지 다시 정하는 선/);
-assert.match(roadmap, /1주차는 앞 장들\(<prior_sections>\)이 '가장 먼저 할 일'로 쓴 일로 시작하고/);
+assert.match(roadmap, /1주차는 앞 장들\(<prior_sections>\)이 '이번 주 할 일'·'가장 먼저 할 일'로 쓴 일을 그대로 넣어 시작하고/);
 assert.match(executive, /1주차 할 일과 같은 일로 씁니다/);
 // 12주 표: 계약은 한도 안에서만, 견적의 월 비용이 고정비를 넘으면 다시 계산, 문 열기 전 실제 설비로 만들어 보기
 assert.match(roadmap, /견적 합계가 계산 자료의 초기 지출 한도 안일 때만/);
