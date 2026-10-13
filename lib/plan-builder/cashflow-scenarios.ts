@@ -270,8 +270,8 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   if (result.setupLimit != null) lines.push(result.setupLimit > 0
     ? `준비 예산 ${won(result.budget!)}에서 ${prepOut(result) > 0 ? "준비 기간에 나가는 돈을 빼고 " : ""}초기 지출을 ${won(result.setupLimit)} 이하로 써야 조심스러운 경우에도 문 연 뒤 12개월을 버팁니다. 보증금처럼 나중에 돌려받는 돈도 문 여는 날 통장에서는 빠지므로 초기 지출에 넣습니다.`
     : `조심스러운 경우 ${prepOut(result) > 0 ? "준비 기간에 나가는 돈과 " : ""}12개월 동안 모자라는 돈이 준비 예산 ${won(result.budget!)}보다 많습니다. 초기 지출 전에 이미 모자랍니다.`);
-  if (result.stopBrokenOnPlan && result.opening) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 석 달 안에 남은 준비 예산이 중단선(문 연 뒤 이 아래로 내려가면 계속할지 다시 정하는 선, ${won(result.stopReserve!)}) 아래로 내려가, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다.` : ""}`);
-  else if (result.stopBroken && result.opening) lines.push(`초기 지출이 ${result.setupCost != null ? won(result.setupCost) : "0원"}이어도 문 여는 날 남는 돈(${won(Math.max(0, result.opening.cash))})이 조심스러운 경우 석 달 적자분(${won(result.stopReserve!)})보다 적어, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 조심스러운 경우 이 돈으로 문 연 뒤 ${result.opening.months < 1 ? "1개월도 버티지 못합니다" : result.opening.months >= 12 ? "12개월 이상 버팁니다" : `약 ${result.opening.months}개월 버팁니다`}. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` ${result.recurring ? "판단선대로 가도" : "조심스러운 경우"} 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 준비 예산 밖에서 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다.` : ""}`);
+  if (result.stopBrokenOnPlan && result.opening) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 석 달 안에 남은 준비 예산이 중단선(문 연 뒤 이 아래로 내려가면 계속할지 다시 정하는 선, ${won(result.stopReserve!)}) 아래로 내려가, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다(초기 지출 ${result.setupCost != null ? won(result.setupCost) : "0원"}일 때 — 견적이 나오면 그만큼 더 필요합니다).` : ""}`);
+  else if (result.stopBroken && result.opening) lines.push(`초기 지출이 ${result.setupCost != null ? won(result.setupCost) : "0원"}이어도 문 여는 날 남는 돈(${won(Math.max(0, result.opening.cash))})이 조심스러운 경우 석 달 적자분(${won(result.stopReserve!)})보다 적어, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 조심스러운 경우 이 돈으로 문 연 뒤 ${result.opening.months < 1 ? "1개월도 버티지 못합니다" : result.opening.months >= 12 ? "12개월 이상 버팁니다" : `약 ${result.opening.months}개월 버팁니다`}. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` ${result.recurring ? "판단선대로 가도" : "조심스러운 경우"} 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 준비 예산 밖에서 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다(초기 지출 ${result.setupCost != null ? won(result.setupCost) : "0원"}일 때 — 견적이 나오면 그만큼 더 필요합니다).` : ""}`);
   else if (result.stopReserve != null && result.budget != null) lines.push(`중단선: 문을 연 뒤 남은 준비 예산이 ${won(result.stopReserve)}(조심스러운 경우 석 달 적자분) 아래로 내려가면 계속할지 다시 정합니다.${result.setupBeforeStop != null ? ` 문 여는 날 이 선 위에서 시작하려면 초기 지출을 ${won(result.setupBeforeStop)} 이하로 씁니다.` : ""}`);
   if (result.unitNote) lines.push(result.unitNote);
   for (const item of result.runOut) lines.push(`${item.label}에는 준비 예산에서 초기 지출을 뺀 돈이 ${item.month}개월차에 바닥납니다.`);
@@ -427,4 +427,35 @@ export function cashflowFromFields(
 /** 매달 돈을 내는 사업인가 — 구독 구조이거나, 대표 상품이 '월 12회 게시물'·'월 4,900원 프리미엄'·'정기'처럼 한 달 단위다 */
 export function isRecurring(revenue: string | undefined, offer: string | undefined): boolean {
   return revenue === "subscription" || /(?:^|\s)월\s*[\d,]+\s*(?:원|회|번)|매달|매월|정기\s*(?:결제|구독|관리|배송)|구독/.test(offer ?? "");
+}
+
+/*
+ * 운영 중 사업의 돈 표(2026-10-13 5차 검토: 매출이 줄고 있는 가게에 같은 숫자를 12달 복사한 표, 달력 '1월~12월', '흑자 전환 1개월차'가 붙었다).
+ * '지금 그대로'와 '목표까지 가는 길'을 나란히 보이고, 대표 생활비를 뺀 뒤의 남는 돈까지 적는다. 세금 전이라는 점과 '건'의 단위를 밝힌다.
+ */
+export function operatingFlowMarkdown(input: { unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; volume: number; livingCost?: string; goal?: string }): string {
+  const contribution = input.unitPrice - input.unitVariableCost;
+  const living = coachAmount(input.livingCost) ?? null;
+  const breakEven = contribution > 0 ? Math.ceil(input.monthlyFixedCost / contribution) : null;
+  const livingLine = living && contribution > 0 ? Math.ceil((input.monthlyFixedCost + living) / contribution) : null;
+  const goal = parseRevenueGoal(input.goal);
+  const target = goal ? Math.ceil(goal.revenue / input.unitPrice) : null;
+  const months = goal?.months ?? 6;
+  const net = (volume: number) => volume * contribution - input.monthlyFixedCost;
+  const path = Array.from({ length: months }, (_, i) => (target && target > input.volume ? Math.round(input.volume + (target - input.volume) * (i + 1) / months) : input.volume));
+  const head = living ? "| 개월차 | 지금 그대로 남는 돈 | 목표 길 판매(건) | 목표 길 남는 돈 | 목표 길에서 생활비 뺀 뒤 |" : "| 개월차 | 지금 그대로 남는 돈 | 목표 길 판매(건) | 목표 길 남는 돈 |";
+  const rows = path.map((volume, i) => `| ${i + 1}개월차 | ${won(net(input.volume))} | ${count(volume, "")} | ${won(net(volume))} |${living ? ` ${won(net(volume) - living)} |` : ""}`);
+  return [
+    "### 지금 한 달과 목표까지 가는 길",
+    "",
+    `판매가 ${won(input.unitPrice)}에서 한 건당 비용 ${won(input.unitVariableCost)}을 빼면 한 건에 ${won(contribution)}이 남습니다. 지금 실적은 월 약 ${count(input.volume, "건")}이고, 고정비 ${won(input.monthlyFixedCost)}을 빼면 한 달에 ${won(net(input.volume))}이 남습니다(세금 전).${breakEven ? ` 본전은 월 ${count(breakEven, "건")}` : ""}${livingLine ? `, 대표 생활비 월 ${won(living!)}까지 버는 선은 월 ${count(livingLine, "건")}입니다.` : breakEven ? "입니다." : ""}`,
+    "",
+    head,
+    `| --- | ---: | ---: | ---: |${living ? " ---: |" : ""}`,
+    ...rows,
+    "",
+    target ? `- 목표 길: 지금 월 ${count(input.volume, "건")}에서 ${months}개월 뒤 월 ${count(target, "건")}(매출 목표 ${won(goal!.revenue)})까지 매달 같은 폭으로 는다고 본 계산입니다.` : "- 매출 목표가 없어 지금 그대로만 계산했습니다.",
+    `- '건'은 판매 가격 ${won(input.unitPrice)}짜리 1개 기준이라 주문 건수와 다릅니다. 비교할 때는 매출 ÷ ${won(input.unitPrice)}로 바꿔 셉니다.`,
+    "- 남는 돈은 부가세·소득세를 내기 전 금액입니다. 매출이 줄고 있다면 '지금 그대로'보다 실제가 낮을 수 있습니다.",
+  ].join("\n");
 }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildCashflowScenarios, cashflowMarkdown, cashflowReference, isRecurring, parseActiveGoal, parseRevenueGoal, parseVolumeGoal } from "../lib/plan-builder/cashflow-scenarios";
+import { buildCashflowScenarios, cashflowMarkdown, cashflowReference, isRecurring, operatingFlowMarkdown, parseActiveGoal, parseRevenueGoal, parseVolumeGoal } from "../lib/plan-builder/cashflow-scenarios";
 
 // 돈 장(품질기준 6·7번) — 숫자는 코드가 계산하고 AI는 해석만 한다. 빵집 시험(2026-10-10) 숫자로 고정한다.
 const bakery = { unitPrice: 4500, unitVariableCost: 1600, monthlyFixedCost: 3_800_000, capacity: "대표자 혼자 / 하루 120개", goal: "6개월 안에 월 매출 1,200만원", budget: "60000000원", premises: true };
@@ -163,5 +163,13 @@ assert.match(appRef, /판단선대로 손님이 늘어도\(계획대로인 경�
 if (appTyped.paceRunOut) assert.match(appRef, new RegExp(`${appTyped.paceRunOut}개월차에 바닥납니다. 그 전에 약 [\\d,]+원을 메울 길`));
 // 하루 10건이 안 되면 소수 한 자리(반올림이 차이를 부풀리지 않게)
 assert.match(cashflowReference(pet), /하루 약 6.4건/);
+
+// ── 2026-10-13 5차: 운영 중 사업은 같은 판매량을 12달 복사한 손익표 대신 '지금 그대로'와 '목표까지 가는 길'
+const gimbap = operatingFlowMarkdown({ unitPrice: 4500, unitVariableCost: 2000, monthlyFixedCost: 6_000_000, volume: 4000, livingCost: "4000000원", goal: "6개월 안에 월 매출 2,200만원 회복" });
+assert.doesNotMatch(gimbap, /1월|흑자 전환/, "no calendar months, no startup wording");
+assert.match(gimbap, /한 달에 4,000,000원이 남습니다\(세금 전\)/);
+assert.match(gimbap, /대표 생활비 월 4,000,000원까지 버는 선은 월 4,000건/);
+assert.match(gimbap, /\| 6개월차 \| 4,000,000원 \| 4,889 \| 6,222,500원 \| 2,222,500원 \|/);
+assert.match(gimbap, /'건'은 판매 가격 4,500원짜리 1개 기준/);
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
