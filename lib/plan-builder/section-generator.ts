@@ -75,6 +75,20 @@ export const SECTION_MAX_TOKENS = 8000;
  */
 export const SECTION_TIMEOUT_MS = 240_000;
 
+/*
+ * 12주 실행 장은 표 셋(12주·가정·매달 볼 숫자)과 규칙이 가장 많아 본문과 생각이 함께 길다.
+ * 2026-10-13 실제 API 네일샵: 생각 깊게(high) 쓰다 16,192토큰(본문 8,000 + 생각 8,192)에 걸려 장이 통째로 비었다.
+ * 쓴 만큼만 과금되므로 이 장만 한도를 올리고, 시간도 (14,000 + 8,192) ÷ 초당 80토큰 ≈ 277초보다 길게 둔다.
+ */
+export const ROADMAP_MAX_TOKENS = 14_000;
+export const ROADMAP_TIMEOUT_MS = 300_000;
+
+function outputBudget(input: SectionGenInput) {
+  return `${input.chapter.id}/${input.section.id}` === "summary/roadmap"
+    ? { maxOutputTokens: ROADMAP_MAX_TOKENS, timeoutMs: ROADMAP_TIMEOUT_MS }
+    : { maxOutputTokens: SECTION_MAX_TOKENS, timeoutMs: SECTION_TIMEOUT_MS };
+}
+
 function formatAnswers(answers: Record<string, unknown>): string {
   const lines: string[] = [];
   for (const [k, v] of Object.entries(answers)) {
@@ -524,17 +538,25 @@ export async function generateSection(
   if (!config) {
     return { markdown: fallbackSection(input), source: "fallback" };
   }
-  const text = await completeText(config, {
+  const effort = input.coachContext ? "high" : "medium";
+  let failure: string | undefined;
+  const call = (level: "high" | "medium") => completeText(config, {
     kind: "generate",
     system: sectionSystemPrompt(input),
     user: buildUserPrompt(input),
-    maxOutputTokens: SECTION_MAX_TOKENS,
-    effort: input.coachContext ? "high" : "medium",
-    timeoutMs: SECTION_TIMEOUT_MS,
+    ...outputBudget(input),
+    effort: level,
     // 한 플랜당 25번 부른다 — 앞부분을 캐시에 올려 두면 24번은 읽기 요금만 낸다
     cache: true,
     signal,
+    onFailure: event => { failure = event.code; },
   });
+  let text = await call(effort);
+  // 한도에 걸려 잘렸으면 생각을 줄여 한 번 더 쓴다 — 같은 설정으로 다시 부르면 또 잘린다
+  if (!text && failure === "output_limit" && effort === "high" && !signal?.aborted) {
+    console.warn("[section] output_limit, retry with medium effort", JSON.stringify({ section: `${input.chapter.id}/${input.section.id}` }));
+    text = await call("medium");
+  }
   if (!text || text.trim().length < 40) {
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
     return { markdown: "", source: "failed" };
@@ -594,9 +616,8 @@ export async function streamSection(
       kind: "generate",
       system: sectionSystemPrompt(input),
       user: buildUserPrompt(input),
-      maxOutputTokens: SECTION_MAX_TOKENS,
+      ...outputBudget(input),
       effort: "medium",
-      timeoutMs: SECTION_TIMEOUT_MS,
       cache: true,
       signal,
     },

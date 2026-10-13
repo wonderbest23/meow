@@ -90,6 +90,9 @@ async function main() {
     const { THINKING_HEADROOM } = await import("../lib/llm/complete");
     const worstSeconds = (SECTION_MAX_TOKENS + THINKING_HEADROOM.high) / 80;
     assert.ok(SECTION_TIMEOUT_MS / 1000 >= worstSeconds, `timeout ${SECTION_TIMEOUT_MS / 1000}s < worst ${Math.ceil(worstSeconds)}s`);
+    const { ROADMAP_MAX_TOKENS, ROADMAP_TIMEOUT_MS } = await import("../lib/plan-builder/section-generator");
+    const roadmapWorst = (ROADMAP_MAX_TOKENS + THINKING_HEADROOM.high) / 80;
+    assert.ok(ROADMAP_TIMEOUT_MS / 1000 >= roadmapWorst, `roadmap timeout ${ROADMAP_TIMEOUT_MS / 1000}s < worst ${Math.ceil(roadmapWorst)}s`);
   });
   console.log(`LLM stability results: ${failed} failed`); process.exitCode = failed ? 1 : 0;
 }
