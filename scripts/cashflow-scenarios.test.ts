@@ -112,7 +112,10 @@ assert.equal(sns.prepFixed, 1_500_000);
 assert.equal(sns.stopBroken, true);
 const snsRef = cashflowReference(sns);
 assert.match(snsRef, /문 연 뒤에 볼 중단선을 둘 수 없습니다.*1개월도 버티지 못합니다.*하나를 정합니다/);
-assert.doesNotMatch(snsRef, /아래로 내려가면 계속할지 다시 정합니다/);
+assert.doesNotMatch(snsRef, /석 달 적자분\) 아래로 내려가면/, "no broken stop line");
+// 대신 멈출 기준: 메운 돈을 더한 잔고가 한 달 지출(50만 + 150만) 아래로(맞대결: 멈출 기준이 아예 없었다)
+assert.match(snsRef, /메운 돈을 더한 통장 잔고가 한 달에 나가는 돈\(2,000,000원\) 아래로/);
+assert.match(snsRef, /이 금액은 최소치입니다\(초기 지출 0원, 세금·해지 빼고/);
 assert.match(snsRef, /그달 돈을 내는 손님 수.*생활비선 8곳을 6개월 안에 채우려면 해지가 없을 때 매달 새로 약 2곳씩/);
 // 판단선과 매달 목표는 한 줄: 생활비선 8곳을 6개월에 → 2·3·4·6·7·8곳(2026-10-13 2차: 두 줄이 같은 달 결론을 갈랐다)
 assert.match(snsRef, /1개월차 2곳, 2개월차 3곳, 3개월차 4곳, 4개월차 6곳, 5개월차 7곳, 6개월차 8곳 이상이면 계획대로/);
@@ -135,6 +138,11 @@ const pet = buildCashflowScenarios({ unitPrice: 5000, unitVariableCost: 500, mon
 // 하루 20건 × 26일 = 520건 × 4,500 = 2,340,000 − 3,500,000 = −1,160,000
 assert.equal(pet.capacityNet, -1_160_000);
 assert.match(cashflowReference(pet), /다 판 달에도 생활비를 넣으면 1,160,000원이 모자랍니다/);
+// 처리 한도에 막힌 줄은 이름도 근거대로, 판단표 맨 윗줄에 닿을 수 없는 숫자를 쓰지 않는다
+assert.equal(pet.scenarios[1].label, "처리 한도를 다 채운 경우");
+assert.match(cashflowReference(pet), /판단표 맨 윗줄에 닿을 수 없는 월 778건을 쓰지 않습니다/);
+// 공간 없는 사업: 고정비가 절반이면(75만) 본전 167건, 생활비선 612건
+assert.match(cashflowReference(pet), /고정비가 절반\(750,000원\)이면 본전은 월 167건, 생활비선은 월 612건/);
 assert.match(cashflowReference(pet), /생활비까지 버는 판매량\(월 778건\)이 처리 한도\(월 520건\)보다 많아 판매량만으로는 닿을 수 없습니다/);
 assert.match(cashflowReference(pet), /이야기를 나눈 수가 10보다 적으면 비율로 판단하지 않고/);
 
