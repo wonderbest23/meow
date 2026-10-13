@@ -181,7 +181,9 @@ const appTyped = buildCashflowScenarios({ unitPrice: 4900, unitVariableCost: 500
 assert.equal(appTyped.prepFixed, 1_600_000);
 assert.equal(appTyped.stopBrokenOnPlan, true);
 const appRef = cashflowReference(appTyped);
-assert.match(appRef, /판단선대로 손님이 늘어도\(계획대로인 경우\) 석 달 안에 남은 준비 예산이 중단선/);
+assert.match(appRef, /판단선대로 손님이 늘어도\(계획대로인 경우\) 석 달 안에 남은 준비 예산이 석 달 버틸 돈보다 적어져, 남은 준비 예산으로 정하는 중단선은 둘 수 없습니다/);
+// 10차: 중단선을 둘 수 없을 때 내부 계산값(석 달 적자분)을 보이지 않는다
+assert.doesNotMatch(appRef, /중단선\(문 연 뒤 이 아래로/);
 if (appTyped.paceRunOut) assert.match(appRef, new RegExp(`${appTyped.paceRunOut}개월차에 바닥납니다. 그 전에 약 [\\d,]+원을 메울 길`));
 // 7차: 메울 금액을 판단선 최소치만이 아니라 '느리면'까지 범위로
 if (appTyped.slowShortfall) assert.match(appRef, new RegExp(`느리면 약 ${appTyped.slowShortfall.toLocaleString("ko-KR")}원`));
@@ -216,5 +218,26 @@ assert.match(gimbap, /판매가 10%\(월 약 400건\) 줄면 한 달에 약 1,00
 }
 // 9차: 운영 중 가게는 부가세가 들어 있을 때의 생활비선과 지금 실적의 부족분
 assert.match(operatingFlowMarkdown({ unitPrice: 4500, unitVariableCost: 2000, monthlyFixedCost: 6_000_000, volume: 4000, livingCost: "4000000원", goal: "6개월 안에 월 매출 2,200만원 회복" }), /생활비까지 버는 선은 월 4,783건입니다. 지금 실적\(월 4,000건\)으로는 생활비를 가져간 뒤 한 달에 약 1,636,364원 모자랍니다/);
+
+// 10차: 상대 기준은 매달 돈 내는 사업만 — 네일(매장)은 다시 잔고 금액 하나로
+{
+  const nailStop = buildCashflowScenarios({ unitPrice: 45000, unitVariableCost: 6000, monthlyFixedCost: 1_800_000, livingCost: "1800000원", capacity: "대표자 혼자 / 하루 6건", goal: "6개월 안에 재방문 고객 100명", budget: "15000000원", premises: true, businessTypeId: "store" })!;
+  const ref = cashflowReference(nailStop);
+  assert.match(ref, /메운 돈을 더한 통장 잔고가 한 달에 나가는 돈\(3,600,000원\) 아래로 내려가면 계속할지 다시 정합니다/);
+  assert.doesNotMatch(ref, /표의 '조심스러운 경우' 줄/);
+  // 부가세가 들어 있으면 바뀌는 생활비선을 판단 기준에 함께
+  assert.match(ref, /판매가에 부가세가 들어 있으면\(일반과세자\) 이 선은 월 104건으로 바뀝니다/);
+  // 이야기할 사람 수는 계약 기준이 아니다
+  assert.match(ref, /계약할지 가르는 기준이 아닙니다/);
+  assert.match(cashflowMarkdown(nailStop), /개월차는 첫 유료 판매를 시작한 주부터 셉니다/);
+}
+// 10차: 임시 목표에 닿아도 생활비선이 한도 밖이면 '계획대로'가 아니다
+assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 5000, unitVariableCost: 500, monthlyFixedCost: 1_500_000, capacity: "대표자 혼자 / 하루 매칭 20건", budget: "10000000원", livingCost: "2000000원", goal: "6개월 안에 월 거래 600건" })!), /이 목표에 닿아도 생활비선이 한도 안에 들어오기 전까지는 매달 모자라므로 '계획대로'로 보지 않습니다/);
+// 10차: 운영 중 목표 길은 가정이고 3개월차에 점검, 감소가 이어질 때를 함께
+{
+  const op = operatingFlowMarkdown({ unitPrice: 4500, unitVariableCost: 2000, monthlyFixedCost: 6_000_000, volume: 4000, livingCost: "4000000원", goal: "6개월 안에 월 매출 2,200만원 회복" });
+  assert.match(op, /목표에서 거꾸로 잡은 값\(가정\).*3개월차 실적이 목표 길\(월 4,356건\)보다 20% 넘게 밑이면/);
+  assert.match(op, /판매가 지금부터 매달 2%씩 줄면\(가정\) 6개월차에 월 약 3,543건/);
+}
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
