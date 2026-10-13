@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { buildCashflowScenarios, cashflowMarkdown, cashflowReference, isRecurring, operatingFlowMarkdown, parseActiveGoal, parseRevenueGoal, parseVolumeGoal } from "../lib/plan-builder/cashflow-scenarios";
+import { buildCashflowScenarios, cashflowMarkdown, cashflowReference, isRecurring, operatingFlowMarkdown, parseActiveGoal, parseRepeatGoal, parseRevenueGoal, parseVolumeGoal } from "../lib/plan-builder/cashflow-scenarios";
 
 // 돈 장(품질기준 6·7번) — 숫자는 코드가 계산하고 AI는 해석만 한다. 빵집 시험(2026-10-10) 숫자로 고정한다.
 const bakery = { unitPrice: 4500, unitVariableCost: 1600, monthlyFixedCost: 3_800_000, capacity: "대표자 혼자 / 하루 120개", goal: "6개월 안에 월 매출 1,200만원", budget: "60000000원", premises: true };
@@ -82,6 +82,17 @@ assert.deepEqual(parseRevenueGoal("6개월 안에 월 매출 1,200만원"), { re
 assert.deepEqual(parseVolumeGoal("3개월 안에 하루 150잔"), { volume: 3900, months: 3 });
 assert.deepEqual(parseVolumeGoal("1년 안에 월 40건"), { volume: 40, months: 12 });
 assert.equal(parseVolumeGoal("6개월 안에 재방문 고객 100명"), null);
+// 8차: 재방문·단골 목표는 매달 진도와 필요한 첫 방문 수로 나눈다(판매량 목표로 바꾸지는 않는다)
+assert.deepEqual(parseRepeatGoal("6개월 안에 재방문 고객 100명"), { count: 100, months: 6, unit: "명", label: "재방문 고객 100명" });
+assert.equal(parseRepeatGoal("6개월 안에 월 40건"), null);
+{
+  const nailRepeat = buildCashflowScenarios({ unitPrice: 45000, unitVariableCost: 6000, monthlyFixedCost: 1_800_000, livingCost: "1800000원", capacity: "대표자 혼자 / 하루 6건", goal: "6개월 안에 재방문 고객 100명", budget: "15000000원", premises: true, businessTypeId: "store" })!;
+  const ref = cashflowReference(nailRepeat);
+  assert.match(ref, /대표 목표 '재방문 고객 100명'\(6개월\)는 한 달 판매량이 아니라 다시 온 손님 수입니다. 매달 약 17명씩 늘어야 합니다/);
+  assert.match(ref, /20%·30%·50%면 6개월 동안 첫 방문 손님이 각각 약 500·334·200명\(한 달 약 84·56·34명\)/);
+  // 생활비선 93건 × 39,000 − 360만 = 27,000원 → 부가세를 넣으면 적자
+  assert.match(ref, /'생활비까지 버는 경우'도 한 달에 27,000원만 남습니다\(세금 전\). 판매가에 부가세가 들어 있으면\(일반과세자\) 이 경우도 매달 약 [\d,]+원씩 모자라고/);
+}
 assert.equal(parseRevenueGoal("3개월 안에 흑자"), null);
 
 // 팔수록 손해면 계산하지 않는다(질문 화면 경고가 맡는다)
@@ -161,7 +172,9 @@ assert.match(cashflowReference(app), /판단선대로 손님이 늘어도\(계�
 const snsB2b = buildCashflowScenarios({ unitPrice: 300_000, unitVariableCost: 30_000, monthlyFixedCost: 500_000, capacity: "대표자 혼자 / 월 12곳", goal: "6개월 안에 고객 가게 10곳", budget: "3000000원", livingCost: "1500000원", recurring: true, businessTypeId: "b2b" })!;
 assert.equal(snsB2b.prepWeeks, 6);
 assert.deepEqual([snsB2b.prepLiving, snsB2b.prepFixed], [2_250_000, 750_000], "6 weeks = 1.5 months of living and fixed cost");
-assert.match(cashflowReference(snsB2b), /준비 기간을 가장 길게 6주로 잡았습니다.*한 주에 약 500,000원씩 더 나갑니다. 앞당기면 준비 기간 지출이 1주 약 500,000원 · 2주 약 1,000,000원/);
+assert.match(cashflowReference(snsB2b), /준비 기간을 가장 길게 6주로 잡았습니다.*한 주 약 500,000원\)은 문 연 뒤에도 그대로 나가므로, 같은 날짜로 견주면 나아지는 돈은 그 기간에 판 돈뿐입니다.*문 여는 날 잔고는 한 주에 약 500,000원씩 줄어듭니다/);
+// 8차: '앞당기면 지출이 줄어든다'고 쓰지 않는다
+assert.doesNotMatch(cashflowReference(snsB2b), /준비 기간 지출이 .*줄어듭니다/);
 // 앱: 판단선대로 가도 석 달 안에 중단선 아래 → 중단선 대신 시작 전 결정과 메울 금액, 바닥나는 달에도 금액
 const appTyped = buildCashflowScenarios({ unitPrice: 4900, unitVariableCost: 500, monthlyFixedCost: 800_000, budget: "5000000원", livingCost: "0원", goal: "1년 안에 유료 구독 500명", recurring: true, businessTypeId: "app" })!;
 assert.equal(appTyped.prepFixed, 1_600_000);
@@ -174,7 +187,7 @@ if (appTyped.slowShortfall) assert.match(appRef, new RegExp(`느리면 약 ${app
 // 하루 10건이 안 되면 소수 한 자리(반올림이 차이를 부풀리지 않게)
 assert.match(cashflowReference(pet), /하루 약 6.4건/);
 // 7차: 앞당긴 주수별 절약액을 계산 자료에 미리 준다(실행 장이 곱셈한 숫자가 근거 없는 숫자로 잡혔다)
-assert.match(cashflowReference(pet), /앞당기면 준비 기간 지출이 1주 약 [\d,]+원 · 2주 약 [\d,]+원/);
+assert.match(cashflowReference(pet), /그 기간에 판 돈뿐입니다\(조심스러운 경우 1주 약 [\d,]+원 · 2주 약 [\d,]+원/);
 assert.doesNotMatch(cashflowReference(pet), /실행 장의 첫 유료 판매 주차와 같음/);
 
 // ── 2026-10-13 5차: 운영 중 사업은 같은 판매량을 12달 복사한 손익표 대신 '지금 그대로'와 '목표까지 가는 길'
