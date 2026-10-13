@@ -534,7 +534,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   if (revenueGoal && volume) {
     const target = Math.ceil(revenueGoal.revenue / unitPrice), gap = target - volume;
     lines.push(gap > 0
-      ? `- 매출 목표 ${won(revenueGoal.revenue)}(${revenueGoal.months}개월 안에) → 월 약 ${target.toLocaleString("ko-KR")}건. 지금(실적 기준 월 ${volume.toLocaleString("ko-KR")}건)보다 월 약 ${gap.toLocaleString("ko-KR")}건, 하루(월 26일 영업) 약 ${Math.ceil(gap / 26).toLocaleString("ko-KR")}건 더 팔아야 합니다. 여기서 '건'은 판매 가격 ${won(unitPrice)}짜리 1개 기준이라 주문 건수와 다르므로, 비교할 때는 매출 ÷ ${won(unitPrice)}로 바꿔 셉니다.`
+      ? `- 매출 목표 ${won(revenueGoal.revenue)}(${revenueGoal.months}개월 안에) → 월 약 ${target.toLocaleString("ko-KR")}건. 지금(실적 기준 월 ${volume.toLocaleString("ko-KR")}건)보다 월 약 ${gap.toLocaleString("ko-KR")}건, 하루(월 26일 영업) 약 ${(Math.round(gap / 26 * 10) / 10).toLocaleString("ko-KR")}건 더 팔아야 합니다. 여기서 '건'은 판매 가격 ${won(unitPrice)}짜리 1개 기준이라 주문 건수와 다르므로, 비교할 때는 매출 ÷ ${won(unitPrice)}로 바꿔 셉니다.`
       : `- 매출 목표 ${won(revenueGoal.revenue)}는 지금 실적(월 약 ${volume.toLocaleString("ko-KR")}건)으로 이미 닿는 수준입니다.`);
   }
   const shownNotes = flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치")) : notes;

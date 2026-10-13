@@ -64,6 +64,8 @@ export type CashflowScenarios = {
   stopBrokenOnPlan: boolean;
   /** 판단선대로 가도 통장이 바닥날 때, 그때까지 메워야 하는 돈 */
   paceShortfall: number | null;
+  /** 조심스러운 경우 12개월 동안 통장을 0원 위로 두려면 메울 돈(판단선 기준 최소치보다 클 때만) */
+  slowShortfall: number | null;
   /** 초기 지출을 이 금액 이하로 써야 문 여는 날 중단선 위에서 시작한다(초기 지출을 모를 때) */
   setupBeforeStop: number | null;
   /** 판매가에 부가세 10%가 들어 있다고 볼 때(일반과세자) 한 건에 남는 돈과 생활비선(없으면 본전) */
@@ -225,6 +227,9 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const paceIndex = pacePath && openingMax != null ? pacePath.findIndex(value => openingMax + value < 0) : -1;
   const paceRunOut = paceIndex >= 0 ? paceIndex + 1 : null;
   const paceShortfall = pacePath && openingMax != null && paceRunOut ? roundUp(-(openingMax + Math.min(...pacePath))) : null;
+  // 7차 맞대결: 판단선 기준 최소치만 주면 손님이 더 느리게 늘 때 첫 결정이 모자란다 — 조심스러운 경우 금액을 나란히 준다
+  const carefulLow = openingMax != null ? openingMax + Math.min(...careful0.cumulative) : 0;
+  const slowShortfall = paceShortfall && carefulLow < 0 && roundUp(-carefulLow) > paceShortfall ? roundUp(-carefulLow) : null;
   // 판단선대로 가도 석 달 안에 중단선 아래로 내려가면, 중단선은 처음부터 쓸 수 없는 선이다
   const stopBrokenOnPlan = !!(pacePath && stopReserve != null && openingMax != null && openingMax > stopReserve && pacePath.slice(0, 3).some(value => openingMax + value < stopReserve));
   const sixMonthLow = Math.min(0, ...planPath.slice(0, 6));
@@ -239,7 +244,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const unitNote = /세트/.test(input.offer ?? "") && capacityParsed && !/세트/.test(capacityParsed.unit)
     ? `처리량(${capacityParsed.note})과 판매 단위(세트)를 같다고 보고 계산했습니다. 세트 하나에 상품이 여러 개 들어가면 팔 수 있는 세트 수가 그만큼 줄어듭니다.`
     : null;
-  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, priceAlternatives, unitNote };
+  return { unit, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, slowShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, priceAlternatives, unitNote };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < (result.livingBreakEven ?? result.breakEven);
@@ -269,7 +274,12 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   if (careful.net.some(value => value < 0)) lines.push(careful.net.every(value => value === careful.net[0])
     ? `조심스러운 경우 매달 ${won(-careful.net[0])}씩 모자라, 12개월 동안 ${result.living ? "생활비를 포함해 " : "사업에서 "}모자라는 돈은 ${won(-result.carefulWorst)}입니다.`
     : `조심스러운 경우 첫 달 ${won(-careful.net[0])}이 모자라고, 12개월 동안 ${result.living ? "생활비를 포함해 " : "사업에서 "}가장 많이 모자라는 때의 누적은 ${won(-result.carefulWorst)}입니다.`);
-  if (prepOut(result) > 0) lines.push(`첫 유료 판매 전 준비 기간을 ${result.prepWeeks}주로 잡으면(실행 장의 첫 유료 판매 주차와 같음), 그동안 ${prepText(result)}이 수입 없이 준비 예산에서 나갑니다. 첫 판매가 늦어지면 한 주에 약 ${won(((result.living ?? 0) + result.monthlyFixedCost) / 4)}씩 더 나갑니다.`);
+  if (prepOut(result) > 0) {
+    const weekly = ((result.living ?? 0) + result.monthlyFixedCost) / 4;
+    // 실행 장이 첫 판매를 앞당기면 줄어드는 돈을 직접 곱해 쓰지 않도록 미리 준다(7차: 근거 없는 숫자로 잡혔다)
+    const earlier = Array.from({ length: Math.min(result.prepWeeks - 1, 6) }, (_, i) => `${i + 1}주 약 ${won(weekly * (i + 1))}`);
+    lines.push(`이 계산은 첫 유료 판매 전 준비 기간을 가장 길게 ${result.prepWeeks}주로 잡았습니다(통장 표의 시작 잔고도 이 기준). 그동안 ${prepText(result)}이 수입 없이 준비 예산에서 나갑니다. 첫 판매가 늦어지면 한 주에 약 ${won(weekly)}씩 더 나갑니다.${earlier.length ? ` 앞당기면 준비 기간 지출이 ${earlier.join(" · ")} 줄어듭니다.` : ""}`);
+  }
   if (result.setupLimit != null) lines.push(result.setupLimit > 0
     ? `준비 예산 ${won(result.budget!)}에서 ${prepOut(result) > 0 ? "준비 기간에 나가는 돈을 빼고 " : ""}초기 지출을 ${won(result.setupLimit)} 이하로 써야 조심스러운 경우에도 문 연 뒤 12개월을 버팁니다. 보증금처럼 나중에 돌려받는 돈도 문 여는 날 통장에서는 빠지므로 초기 지출에 넣습니다.`
     : `조심스러운 경우 ${prepOut(result) > 0 ? "준비 기간에 나가는 돈과 " : ""}12개월 동안 모자라는 돈이 준비 예산 ${won(result.budget!)}보다 많습니다. 초기 지출 전에 이미 모자랍니다.`);
@@ -288,7 +298,7 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   // 본전과 생활비선을 따로 말한다 — 예전엔 생활비선에 못 미쳐도 '본전에 못 미친다'고 써 틀렸다(펫시터: 한도 520건 > 본전 334건)
   if (result.capacity && result.capacity.volume < result.breakEven) lines.push(`처리량 최대치(${result.capacity.note})를 다 팔아도 본전에 못 미칩니다. 가격·고정비·처리량을 다시 봐야 합니다.`);
   else if (result.capacityNet != null && result.livingBreakEven) lines.push(`처리량 최대치(${result.capacity!.note})를 다 팔아도 생활비까지는 못 법니다. 다 판 달에도 생활비를 넣으면 ${won(-result.capacityNet)}이 모자랍니다. 판매를 늘리는 것보다 가격·수수료·처리량을 먼저 다시 정해야 합니다.`);
-  if (result.paceRunOut) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 통장은 문 연 뒤 ${result.paceRunOut}개월차에 바닥납니다. 그 전에 약 ${won(result.paceShortfall ?? 0)}을 메울 길(다른 수입·예산 늘리기)을 정해 두지 않으면 잘 되고 있어도 멈춰야 합니다.`);
+  if (result.paceRunOut) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 통장은 문 연 뒤 ${result.paceRunOut}개월차에 바닥납니다. 그 전에 약 ${won(result.paceShortfall ?? 0)}을 메울 길(다른 수입·예산 늘리기)을 정해 두지 않으면 잘 되고 있어도 멈춰야 합니다.${result.slowShortfall ? ` 이 금액은 판단선대로 늘 때의 최소치입니다. 손님이 더 느리게 늘면(조심스러운 경우) 12개월 동안 약 ${won(result.slowShortfall)}이 필요합니다. 메울 금액은 '최소 ${won(result.paceShortfall ?? 0)}, 느리면 약 ${won(result.slowShortfall)}'으로 잡습니다.` : ""}`);
   // 공간 없는 사업의 고정비는 나뉘지 않은 경우가 많다 — 절반이면 결론이 어떻게 바뀌는지(맞대결: 모든 결론이 나뉘지 않은 고정비 하나에 달려 있었다)
   if (!result.premises && result.monthlyFixedCost > 0) {
     const half = result.monthlyFixedCost / 2;
@@ -377,7 +387,7 @@ export function cashflowMarkdown(result: CashflowScenarios): string {
     ...rows,
     "",
     ...cashflowFindings(result).map(line => `- ${line}`),
-    `- ${opening != null ? `통장 잔고는 준비 예산 ${won(result.budget!)}에서 ${prepOut(result) > 0 ? `준비 기간에 나가는 돈 ${won(prepOut(result))}${result.setupCost != null ? "과 " : "을 "}` : ""}${result.setupCost != null ? `초기 지출 ${won(result.setupCost)}을 ` : ""}뺀 ${won(opening)}에서 시작합니다.${result.setupCost == null ? " 초기 지출을 쓰면 그만큼 모든 달의 잔고가 줄어듭니다." : ""}` : "통장 누적은 사업에서 들어오고 나간 돈만 더한 값입니다. 초기 지출은 빠져 있습니다."} ${result.living ? "대표 생활비는 나가는 돈에 들어 있고, " : result.living === 0 ? "대표 생활비는 고정비에 들어 있다고 답했고, " : `대표 생활비(고정비 ${won(result.monthlyFixedCost)}에 들어 있지 않다면)와 `}부가세·소득세는 빠져 있습니다.`,
+    `- ${opening != null ? `통장 잔고는 준비 예산 ${won(result.budget!)}에서 ${prepOut(result) > 0 ? `준비 기간에 나가는 돈 ${won(prepOut(result))}${result.setupCost != null ? "과 " : "을 "}` : ""}${result.setupCost != null ? `초기 지출 ${won(result.setupCost)}을 ` : ""}뺀 ${won(opening)}에서 시작합니다.${result.setupCost == null ? " 초기 지출을 쓰면 그만큼 모든 달의 잔고가 줄어듭니다." : ""}` : "통장 누적은 사업에서 들어오고 나간 돈만 더한 값입니다. 초기 지출은 빠져 있습니다."} ${result.living ? "대표 생활비는 나가는 돈에 들어 있고, " : result.living === 0 ? "대표 생활비는 0원으로 넣으셨고(고정비에 이미 넣었거나 다른 수입으로 메우는 경우), " : `대표 생활비(고정비 ${won(result.monthlyFixedCost)}에 들어 있지 않다면)와 `}부가세·소득세는 빠져 있습니다.`,
     result.capacity ? `- 처리량 최대치: ${result.capacity.note}. 어느 경우도 이보다 많이 팔지 않는다고 계산했습니다.` : undefined,
     // 어느 초기 지출이든 1개월도 못 버티면 표 대신 위의 '시작 전 결정' 한 줄로 충분하다(같은 줄 네 번 반복)
     ...(result.survival.some(row => row.months > 0) ? [
@@ -452,9 +462,10 @@ export function operatingFlowMarkdown(input: { unitPrice: number; unitVariableCo
   const livingLine = living && contribution > 0 ? Math.ceil((input.monthlyFixedCost + living) / contribution) : null;
   const goal = parseRevenueGoal(input.goal);
   const target = goal ? Math.ceil(goal.revenue / input.unitPrice) : null;
-  const months = goal?.months ?? 6;
+  const months = Math.min(goal?.months ?? 6, 12);
   const net = (volume: number) => volume * contribution - input.monthlyFixedCost;
-  const path = Array.from({ length: months }, (_, i) => (target && target > input.volume ? Math.round(input.volume + (target - input.volume) * (i + 1) / months) : input.volume));
+  // 7차 맞대결: 6개월만 보이고, 고치기도 전인 1개월차부터 늘었다 — 12개월로 보이고 1개월차는 지금 그대로(고친 효과는 다음 달부터)
+  const path = Array.from({ length: 12 }, (_, i) => (target && target > input.volume && months > 1 ? Math.round(input.volume + (target - input.volume) * Math.min(i, months - 1) / (months - 1)) : input.volume));
   const head = living ? "| 개월차 | 지금 그대로 남는 돈 | 목표 길 판매(건) | 목표 길 남는 돈 | 목표 길에서 생활비 뺀 뒤 |" : "| 개월차 | 지금 그대로 남는 돈 | 목표 길 판매(건) | 목표 길 남는 돈 |";
   const rows = path.map((volume, i) => `| ${i + 1}개월차 | ${won(net(input.volume))} | ${count(volume, "")} | ${won(net(volume))} |${living ? ` ${won(net(volume) - living)} |` : ""}`);
   return [
@@ -466,7 +477,8 @@ export function operatingFlowMarkdown(input: { unitPrice: number; unitVariableCo
     `| --- | ---: | ---: | ---: |${living ? " ---: |" : ""}`,
     ...rows,
     "",
-    target ? `- 목표 길: 지금 월 ${count(input.volume, "건")}에서 ${months}개월 뒤 월 ${count(target, "건")}(매출 목표 ${won(goal!.revenue)})까지 매달 같은 폭으로 는다고 본 계산입니다.` : "- 매출 목표가 없어 지금 그대로만 계산했습니다.",
+    target ? `- 목표 길: 1개월차는 고치는 중이라 지금 그대로 두고, 2개월차부터 ${months}개월차 월 ${count(target, "건")}(매출 목표 ${won(goal!.revenue)})까지 매달 같은 폭으로 는다고 본 계산입니다. 그 뒤는 목표 수준이 이어진다고 봤습니다.` : "- 매출 목표가 없어 지금 그대로만 계산했습니다.",
+    ...(livingLine && livingLine >= input.volume ? [`- 지금 실적이 생활비까지 버는 선(월 ${count(livingLine, "건")})${livingLine > input.volume ? "보다 낮아" : "과 같아"} 판매가 줄면 바로 생활비가 모자랍니다. 판매가 10%(월 약 ${count(Math.round(input.volume / 10), "건")}) 줄면 한 달에 약 ${won(Math.round(input.volume / 10) * contribution)}이 더 모자랍니다. 쓸 수 있는 비상금(통장 잔고)을 1주차에 적고, 비상금을 한 달에 모자라는 돈으로 나눠 버티는 달 수를 셉니다.`] : []),
     `- '건'은 판매 가격 ${won(input.unitPrice)}짜리 1개 기준이라 주문 건수와 다릅니다. 비교할 때는 매출 ÷ ${won(input.unitPrice)}로 바꿔 셉니다.`,
     "- 남는 돈은 부가세·소득세를 내기 전 금액입니다. 매출이 줄고 있다면 '지금 그대로'보다 실제가 낮을 수 있습니다.",
   ].join("\n");

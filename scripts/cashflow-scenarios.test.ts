@@ -67,7 +67,7 @@ assert.match(ref, /부가세가 들어 있다면\(일반과세자\) 한 건에 �
 assert.match(ref, /일부 시간·자리만 쓰면.*연 시간 중 채운 비율/);
 
 // 0원은 '고정비에 넣음'이라는 답 — 없음과 다르다
-assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, livingCost: "0원" })!), /대표 생활비는 고정비에 들어 있다고 답했고/);
+assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, livingCost: "0원" })!), /대표 생활비는 0원으로 넣으셨고\(고정비에 이미 넣었거나 다른 수입으로 메우는 경우\)/);
 assert.match(cashflowMarkdown(plain), /대표 생활비\(고정비 3,800,000원에 들어 있지 않다면\)/);
 
 // 주·월 단위로 일하는 사업에는 하루 기준을 붙이지 않는다(출장 촬영 '일주일 8건')
@@ -161,7 +161,7 @@ assert.match(cashflowReference(app), /판단선대로 손님이 늘어도\(계�
 const snsB2b = buildCashflowScenarios({ unitPrice: 300_000, unitVariableCost: 30_000, monthlyFixedCost: 500_000, capacity: "대표자 혼자 / 월 12곳", goal: "6개월 안에 고객 가게 10곳", budget: "3000000원", livingCost: "1500000원", recurring: true, businessTypeId: "b2b" })!;
 assert.equal(snsB2b.prepWeeks, 6);
 assert.deepEqual([snsB2b.prepLiving, snsB2b.prepFixed], [2_250_000, 750_000], "6 weeks = 1.5 months of living and fixed cost");
-assert.match(cashflowReference(snsB2b), /준비 기간을 6주로 잡으면\(실행 장의 첫 유료 판매 주차와 같음\).*한 주에 약 500,000원씩 더 나갑니다/);
+assert.match(cashflowReference(snsB2b), /준비 기간을 가장 길게 6주로 잡았습니다.*한 주에 약 500,000원씩 더 나갑니다. 앞당기면 준비 기간 지출이 1주 약 500,000원 · 2주 약 1,000,000원/);
 // 앱: 판단선대로 가도 석 달 안에 중단선 아래 → 중단선 대신 시작 전 결정과 메울 금액, 바닥나는 달에도 금액
 const appTyped = buildCashflowScenarios({ unitPrice: 4900, unitVariableCost: 500, monthlyFixedCost: 800_000, budget: "5000000원", livingCost: "0원", goal: "1년 안에 유료 구독 500명", recurring: true, businessTypeId: "app" })!;
 assert.equal(appTyped.prepFixed, 1_600_000);
@@ -169,8 +169,13 @@ assert.equal(appTyped.stopBrokenOnPlan, true);
 const appRef = cashflowReference(appTyped);
 assert.match(appRef, /판단선대로 손님이 늘어도\(계획대로인 경우\) 석 달 안에 남은 준비 예산이 중단선/);
 if (appTyped.paceRunOut) assert.match(appRef, new RegExp(`${appTyped.paceRunOut}개월차에 바닥납니다. 그 전에 약 [\\d,]+원을 메울 길`));
+// 7차: 메울 금액을 판단선 최소치만이 아니라 '느리면'까지 범위로
+if (appTyped.slowShortfall) assert.match(appRef, new RegExp(`느리면 약 ${appTyped.slowShortfall.toLocaleString("ko-KR")}원`));
 // 하루 10건이 안 되면 소수 한 자리(반올림이 차이를 부풀리지 않게)
 assert.match(cashflowReference(pet), /하루 약 6.4건/);
+// 7차: 앞당긴 주수별 절약액을 계산 자료에 미리 준다(실행 장이 곱셈한 숫자가 근거 없는 숫자로 잡혔다)
+assert.match(cashflowReference(pet), /앞당기면 준비 기간 지출이 1주 약 [\d,]+원 · 2주 약 [\d,]+원/);
+assert.doesNotMatch(cashflowReference(pet), /실행 장의 첫 유료 판매 주차와 같음/);
 
 // ── 2026-10-13 5차: 운영 중 사업은 같은 판매량을 12달 복사한 손익표 대신 '지금 그대로'와 '목표까지 가는 길'
 const gimbap = operatingFlowMarkdown({ unitPrice: 4500, unitVariableCost: 2000, monthlyFixedCost: 6_000_000, volume: 4000, livingCost: "4000000원", goal: "6개월 안에 월 매출 2,200만원 회복" });
@@ -179,5 +184,9 @@ assert.match(gimbap, /한 달에 4,000,000원이 남습니다\(세금 전\)/);
 assert.match(gimbap, /대표 생활비 월 4,000,000원까지 버는 선은 월 4,000건/);
 assert.match(gimbap, /\| 6개월차 \| 4,000,000원 \| 4,889 \| 6,222,500원 \| 2,222,500원 \|/);
 assert.match(gimbap, /'건'은 판매 가격 4,500원짜리 1개 기준/);
+// 7차: 12개월을 보이고, 1개월차는 고치는 중이라 지금 그대로 / 생활비선에 걸린 가게는 비상금으로 버티는 달 수를 센다
+assert.match(gimbap, /\| 1개월차 \| 4,000,000원 \| 4,000 \| 4,000,000원 \| 0원 \|/);
+assert.match(gimbap, /\| 12개월차 \| 4,000,000원 \| 4,889 \|/);
+assert.match(gimbap, /판매가 10%\(월 약 400건\) 줄면 한 달에 약 1,000,000원이 더 모자랍니다/);
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
