@@ -104,6 +104,9 @@ assert.deepEqual([sns.breakEven, sns.livingBreakEven], [2, 8]);
 assert.deepEqual(sns.scenarios[0].volumes.slice(0, 7), [0, 0, 1, 1, 1, 1, 1]);
 assert.deepEqual(sns.scenarios[2].volumes.slice(0, 6), [2, 3, 5, 7, 8, 10]);
 assert.deepEqual(sns.recurringPace, { months: 6, perMonth: 2 });
+// 표의 둘째 줄은 판단선 그대로(첫 달부터 8곳이 아니다 — 4차: 메울 금액의 근거 줄이 표에 없었다)
+assert.equal(sns.scenarios[1].label, "판단선대로 느는 경우");
+assert.deepEqual(sns.scenarios[1].volumes.slice(0, 7), [2, 3, 4, 6, 7, 8, 8]);
 // 준비 기간 3개월: 생활비 450만 + 고정비 150만(공간 없는 사업은 준비 기간 내내) = 600만 > 예산 300만 → 중단선이 처음부터 깨짐
 assert.equal(sns.prepFixed, 1_500_000);
 assert.equal(sns.stopBroken, true);
