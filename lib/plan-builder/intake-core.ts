@@ -335,7 +335,7 @@ function structureNumber(intake: IntakeState, id: string): number | null {
 export type IntakeScenarioInputs = {
   structure: ReturnType<typeof effectiveStructure>["values"]; labels: Record<string, string>;
   unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; volume: number | undefined; notes: string[];
-  /** 공간(매장·대여 공간)을 빌려 여는 사업인지 — 준비 기간 고정비를 문 열기 한 달 전부터 셀지 정한다 */
+  /** 공간(매장·대여 공간)을 빌려 여는 사업인지 — 준비 기간 고정비를 문 열기 두 달 전부터 셀지 정한다 */
   premises: boolean;
   /** 사업 유형(business-types.ts) — 첫 유료 판매까지의 준비 기간을 정한다 */
   businessTypeId: string | null;

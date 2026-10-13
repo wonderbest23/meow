@@ -6,14 +6,14 @@ import { monthlyVolumeFromCapacity } from "../lib/plan-builder/coach-feasibility
 const bakery = { unitPrice: 4500, unitVariableCost: 1600, monthlyFixedCost: 3_800_000, capacity: "대표자 혼자 / 하루 120개", goal: "6개월 안에 월 매출 1,200만원", budget: "60000000원", premises: true };
 
 // 생활비를 모르면: 본전 월 1,311개, 조심스러운 경우(본전의 절반) 매달 -1,897,600원
-// 초기 지출 한도 = 6,000만 − 12개월 부족 22,771,200 − 개업 전 한 달 고정비 3,800,000 = 33,428,800원(2026-10-12: 매장은 문 열기 한 달 전부터 월세가 나간다)
+// 초기 지출 한도 = 6,000만 − 12개월 부족 22,771,200 − 개업 전 두 달 고정비 7,600,000 = 29,628,800원(2026-10-12: 매장은 문 열기 전부터 월세가 나간다. 2026-10-13 실제 API: 계약부터 첫 판매까지 약 7주라 두 달로 셈) — 예전 메모: 매장은 문 열기 한 달 전부터 월세가 나간다)
 const plain = buildCashflowScenarios(bakery)!;
 assert.equal(plain.breakEven, 1311);
 assert.deepEqual(plain.scenarios.map(s => s.key), ["careful", "breakeven", "goal"]);
 assert.equal(plain.scenarios[0].volumes[0], 656);
 assert.equal(plain.scenarios[0].net[0], -1_897_600);
-assert.equal(plain.setupLimit, 33_428_800);
-assert.equal(plain.prepFixed, 3_800_000);
+assert.equal(plain.setupLimit, 29_628_800);
+assert.equal(plain.prepFixed, 7_600_000);
 assert.equal(plain.scenarios[2].volumes.at(-1), 2667, "goal: 12,000,000 ÷ 4,500, reached in month 6");
 assert.ok(plain.scenarios.every(s => s.volumes.every(v => v <= 3120)), "no case sells above the stated capacity");
 
@@ -25,8 +25,8 @@ assert.equal(living.scenarios[1].label, "생활비까지 버는 경우");
 assert.equal(living.scenarios[0].net[0], -3_897_600);
 assert.equal(living.payFromMonth, 5);
 assert.equal(living.prepLiving, 6_000_000);
-assert.equal(living.setupLimit, 3_428_800);
-assert.deepEqual(living.survival.map(row => [row.spend, row.months]), [[12_000_000, 9], [24_000_000, 6], [36_000_000, 3], [48_000_000, 0]]);
+assert.equal(living.setupLimit, -371_200, "two months of rent before opening leave no room for the 12-month careful case");
+assert.deepEqual(living.survival.map(row => [row.spend, row.months]), [[12_000_000, 8], [24_000_000, 5], [36_000_000, 2], [48_000_000, 0]]);
 assert.equal(living.stopReserve, 11_692_800, "3 months of the careful-case shortfall");
 assert.deepEqual(living.priceAlternatives.map(alt => [alt.price, alt.breakEven, alt.livingLine]), [[4000, 1584, 2417], [5000, 1118, 1706], [5500, 975, 1488]]);
 assert.match(living.unitNote ?? "", /판매 단위\(세트\)를 같다고 보고/, "capacity in 개 vs a set offer is flagged");
@@ -37,11 +37,11 @@ const md = cashflowMarkdown(living);
 assert.match(md, /### 세 가지 경우로 본 한 달/);
 assert.match(md, /하루 약 50개\(월 26일 영업 기준\)/, "daily businesses get the per-day line");
 assert.equal((md.match(/^\| \d+개월차 \|/gm) ?? []).length, 12, "12 monthly rows");
-// 남는 준비 예산 = 6,000만 − 초기 지출 3,600만 − 준비 기간에 나가는 돈 980만(생활비 600만 + 개업 전 고정비 380만)
+// 남는 준비 예산 = 6,000만 − 초기 지출 3,600만 − 준비 기간에 나가는 돈 1,360만(생활비 600만 + 개업 전 두 달 고정비 760만)
 assert.match(md, /\| 초기 지출 \| 남는 준비 예산\(준비 기간에 나가는 돈 뺀 뒤\) \| 버티는 기간 \|/);
-assert.match(md, /\| 36,000,000원 \| 14,200,000원 \| 약 3개월 \|/);
-assert.match(md, /준비 기간에 나가는 돈 9,800,000원을 먼저 뺌/);
-assert.match(md, /생활비 6,000,000원과 고정비 3,800,000원\(문 열기 한 달 전부터\)/);
+assert.match(md, /\| 36,000,000원 \| 10,400,000원 \| 약 2개월 \|/);
+assert.match(md, /준비 기간에 나가는 돈 13,600,000원을 먼저 뺌/);
+assert.match(md, /생활비 6,000,000원과 고정비 7,600,000원\(문 열기 두 달 전부터\)/);
 assert.doesNotMatch(md, /12개월 손익 추정|흑자 전환/, "the old max-capacity profit table is gone");
 assert.equal((md.match(/```plan-chart/g) ?? []).length, 1, "one chart");
 
@@ -59,8 +59,8 @@ assert.match(ref, /목표 경우 월별 판매선.*1개월차 656개, 2개월차
 assert.match(ref, /가격을 바꾸면\(500원씩,.*4,000원 → 본전 하루 약 61개/, "the price step is a sourced number too");
 assert.match(ref, /관심 글의 댓글·공감 수는 판매 수가 아니므로/);
 assert.match(ref, /남은 준비 예산이 11,692,800원\(조심스러운 경우 석 달 적자분\) 아래로/);
-// 중단선 위에서 시작: 6,000만 − 980만 − 11,692,800 = 38,507,200원. 16차: 목표 경우의 가장 낮은 누적(4개월차 −8,592,700원)에도 선 위에 남도록 → 29,914,500원
-assert.match(ref, /'목표 경우'대로 갈 때도 이 선 아래로 내려가지 않으려면 초기 지출을 29,914,500원 이하로 씁니다/);
+// 중단선 위에서 시작: 6,000만 − 1,360만 − 11,692,800 = 34,707,200원. 16차: 목표 경우의 가장 낮은 누적(4개월차 −8,592,700원)에도 선 위에 남도록 → 26,114,500원
+assert.match(ref, /'목표 경우'대로 갈 때도 이 선 아래로 내려가지 않으려면 초기 지출을 26,114,500원 이하로 씁니다/);
 assert.equal(living.stopBroken, false);
 // 부가세: 4,500 ÷ 1.1 − 1,600 = 약 2,491원 → 생활비선 (380만 + 200만) ÷ 2,490.9 = 2,329개
 assert.match(ref, /부가세가 들어 있다면\(일반과세자\) 한 건에 남는 돈은 약 2,491원으로 줄고, 생활비선은 월 2,329개/);
@@ -272,7 +272,7 @@ assert.match(tutorRef, /다만 '판단선대로 느는 경우'대로 가도.*초
 assert.equal(buildCashflowScenarios({ unitPrice: 300_000, unitVariableCost: 30_000, monthlyFixedCost: 500_000, capacity: "대표자 혼자 / 월 12곳", goal: "6개월 안에 고객 가게 10곳", budget: "3000000원", livingCost: "1500000원", recurring: true })!.sessionNote, null, "monthly packages are not per-session");
 // 16차 맞대결(펫시터): 목표(월 600건)가 한도(월 520건)를 넘으면 '목표 경우'라고 부르지 않는다
 const petRef = cashflowReference(buildCashflowScenarios({ unitPrice: 5000, unitVariableCost: 500, monthlyFixedCost: 1_500_000, capacity: "대표자 혼자 / 하루 매칭 20건", goal: "6개월 안에 월 거래 600건", budget: "10000000원", livingCost: "2000000원" })!);
-assert.match(petRef, /- 한도까지 느는 경우\(대표 목표\(월 600건\)는 처리 한도\(월 520건\)를 넘어 닿을 수 없으므로/);
+assert.match(petRef, /- 한도의 80%까지 느는 경우\(대표 목표\(월 600건\)는 처리 한도\(월 520건\)를 넘어 닿을 수 없으므로, 한도의 80%\(월 416건\)까지/);
 assert.doesNotMatch(petRef, /목표 경우/);
 
 // 17차 맞대결(연습실): '가동률 50%' 목표 → 처리 한도(하루 30시간 × 26일 = 월 780시간)의 50% = 월 390시간
@@ -284,7 +284,9 @@ assert.match(roomRef, /목표 경우\(대표 목표\(가동률 50% = 처리 한�
 assert.match(roomRef, /다만 손님이 늘어나는 처음 2개월은 '목표 경우' 판매선\(1개월차 97시간, 2개월차 156시간\)을 그 달의 '계획대로' 선으로 씁니다.*3개월차부터 위 선을 씁니다/);
 assert.match(roomRef, /판매선은 목표입니다. 판매선에 못 미쳐도 판단 기준의 '계획대로' 선 이상이면 계획대로/);
 // 펫시터: 한도(520건)에 막혀 '계획대로'는 한도의 80%(416건) — 판매선이 그 아래인 처음 4개월은 판매선으로 판정
-assert.match(petRef, /다만 손님이 늘어나는 처음 4개월은 '한도까지 느는 경우' 판매선\(1개월차 167건, 2개월차 238건, 3개월차 308건, 4개월차 379건\)/);
+// 실제 API 8건: 경로도 매달 볼 목표(한도의 80%, 416건)에서 멈춘다 → 판매선 167→416건, 닿기 전 5개월은 그 달 판매선으로 판정
+assert.match(petRef, /다만 손님이 늘어나는 처음 5개월은 '한도의 80%까지 느는 경우' 판매선\(1개월차 167건, 2개월차 217건, 3개월차 267건, 4개월차 316건, 5개월차 366건\)/);
+assert.match(petRef, /6개월차 416건\. 판매선은 목표입니다/);
 assert.doesNotMatch(cashflowReference(buildCashflowScenarios({ ...bakery, goal: undefined })!), /다만 손님이 늘어나는/, "no goal path → no ramp line");
 
 // 실제 API 8건(2026-10-13): 생활비를 안 적은 사업도 생활비를 가져갈 선을 예시 두 금액으로 보인다 — (20만 + 100만) ÷ 40,000 = 30번

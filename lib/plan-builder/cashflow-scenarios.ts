@@ -37,6 +37,8 @@ export type CashflowInputs = {
  */
 export const PREP_WEEKS_BY_TYPE: Record<string, number> = { store: 12, space: 12, lesson: 8, ship: 8, platform: 8, app: 8, visit: 6, b2b: 6 };
 const DEFAULT_PREP_WEEKS = 12;
+/** 공간을 빌리는 사업은 계약부터 첫 판매까지(공사·신고) 월세가 나간다 — 두 달로 센다 */
+const PREMISES_PREP_MONTHS = 2;
 type Scenario = { key: "careful" | "breakeven" | "goal"; label: string; volumes: number[]; net: number[]; cumulative: number[] };
 export type CashflowScenarios = {
   unit: string; daily: boolean; unitPrice: number; monthlyFixedCost: number; contribution: number; breakEven: number; capacity: { volume: number; note: string } | null;
@@ -51,7 +53,7 @@ export type CashflowScenarios = {
   prepWeeks: number;
   /** 준비 기간 동안 수입 없이 나가는 생활비 */
   prepLiving: number;
-  /** 준비 기간에 나가는 고정비 — 공간을 빌리는 사업은 문 열기 한 달 전부터(계약·설치), 아니면 준비 기간 내내 */
+  /** 준비 기간에 나가는 고정비 — 공간을 빌리는 사업은 문 열기 두 달 전부터(계약·공사·신고), 아니면 준비 기간 내내 */
   prepFixed: number;
   /** 남은 준비 예산이 이 아래로 내려가면 계속할지 다시 정한다(조심스러운 경우 3개월 적자분) */
   stopReserve: number | null;
@@ -200,12 +202,14 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
       : livingBreakEven ? make("breakeven", capacity && capacity.volume < livingBreakEven ? "처리 한도를 다 채운 경우" : "생활비까지 버는 경우", flat(cap(livingBreakEven))) : make("breakeven", capacity && capacity.volume < breakEven ? "처리 한도를 다 채운 경우" : "본전", flat(cap(breakEven))),
   ];
   if (goal) {
-    const target = cap(Math.ceil(goal.revenue / input.unitPrice));
+    // 실제 API 8건(캔들·펫시터): 목표가 한도를 넘으면 매달 볼 목표는 한도의 80%인데 표의 경로는 한도 100%까지 늘어 숫자가 갈렸다 — 경로도 80%에서 멈춘다
+    const wanted = Math.ceil(goal.revenue / input.unitPrice);
+    const target = capacity && wanted > capacity.volume ? Math.floor(capacity.volume * 0.8) : cap(wanted);
     const ramp = recurring
       ? rampFromZero(target, goal.months, cap)
       : Array.from({ length: MONTHS }, (_, i) => (i + 1 >= goal.months || goal.months <= 1 ? target : cap(careful + (target - careful) * i / (goal.months - 1))));
     // 16차 맞대결(펫시터): 목표(월 600건)가 한도(월 520건)를 넘어 한도에서 멈추는데 이름이 '목표 경우'라 목표에 닿는 것처럼 읽혔다
-    scenarios.push(make("goal", capacity && Math.ceil(goal.revenue / input.unitPrice) > capacity.volume ? "한도까지 느는 경우" : "목표 경우", ramp));
+    scenarios.push(make("goal", capacity && Math.ceil(goal.revenue / input.unitPrice) > capacity.volume ? "한도의 80%까지 느는 경우" : "목표 경우", ramp));
   }
   const budget = coachAmount(input.budget) ?? null, setupCost = coachAmount(input.setupCost) ?? null;
   const carefulWorst = Math.min(0, ...scenarios[0].cumulative);
@@ -214,7 +218,8 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const prepMonths = prepWeeks / 4; // 12주 = 3개월(실행 장의 12주와 같은 셈)
   const prepLiving = Math.round((living ?? 0) * prepMonths);
   // 2026-10-12 시뮬레이션: 앱의 도구·서버비, 매장의 개업 전 월세처럼 준비 기간에도 고정비가 나간다
-  const prepFixed = Math.round(input.monthlyFixedCost * (input.premises ? Math.min(1, prepMonths) : prepMonths));
+  // 실제 API 8건(2026-10-13, 연습실): 실행표는 계약(4주)부터 첫 판매(11주)까지 약 7주인데 월세를 한 달만 뺐다 — 계약·공사·신고 기간 두 달로 센다
+  const prepFixed = Math.round(input.monthlyFixedCost * (input.premises ? Math.min(PREMISES_PREP_MONTHS, prepMonths) : prepMonths));
   const prepOut = prepLiving + prepFixed;
   const setupLimit = budget != null && setupCost == null ? budget + carefulWorst - prepOut : null;
   // 초기 지출을 알면 실제 통장 잔고(준비 예산 − 준비 기간에 나간 돈 − 초기 지출 + 누적)가 바닥나는 달을 센다
@@ -304,14 +309,14 @@ function scenarioBasis(result: CashflowScenarios, s: Scenario): string {
   if (s.key === "breakeven" && result.livingBreakEven) return capacityShort(result) ? `처리량 최대치로도 고정비와 생활비(월 ${count(result.livingBreakEven, result.unit)})를 못 메움` : `고정비와 대표 생활비 월 ${won(result.living!)}을 겨우 메우는 ${result.recurring ? "돈 내는 손님 수" : "판매량"}`;
   if (s.key === "breakeven") return capacityShort(result) ? `처리량 최대치로도 본전(월 ${count(result.breakEven, result.unit)})에 못 미침` : `고정비를 겨우 메우는 ${result.recurring ? "돈 내는 손님 수" : "판매량"}`;
   const wanted = Math.ceil(result.goal!.revenue / result.unitPrice);
-  if (result.capacity && wanted > result.capacity.volume) return `대표 목표(월 ${count(wanted, result.unit)})는 처리 한도(월 ${count(result.capacity.volume, result.unit)})를 넘어 닿을 수 없으므로, 한도까지 ${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
+  if (result.capacity && wanted > result.capacity.volume) return `대표 목표(월 ${count(wanted, result.unit)})는 처리 한도(월 ${count(result.capacity.volume, result.unit)})를 넘어 닿을 수 없으므로, 한도의 80%(월 ${count(Math.floor(result.capacity.volume * 0.8), result.unit)})까지 ${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
   return `대표 목표(${result.goalNote ?? `월 매출 ${won(result.goal!.revenue)}`})까지 ${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
 }
 
 /** 준비 기간에 나가는 돈의 설명 — 생활비와 고정비 */
 const prepOut = (result: CashflowScenarios) => result.prepLiving + result.prepFixed;
 function prepText(result: CashflowScenarios): string {
-  const parts = [result.prepLiving > 0 ? `생활비 ${won(result.prepLiving)}` : "", result.prepFixed > 0 ? `고정비 ${won(result.prepFixed)}(${result.prepFixed < Math.round(result.monthlyFixedCost * result.prepWeeks / 4) ? "문 열기 한 달 전부터" : "준비 기간 내내"})` : ""].filter(Boolean);
+  const parts = [result.prepLiving > 0 ? `생활비 ${won(result.prepLiving)}` : "", result.prepFixed > 0 ? `고정비 ${won(result.prepFixed)}(${result.prepFixed < Math.round(result.monthlyFixedCost * result.prepWeeks / 4) ? "문 열기 두 달 전부터" : "준비 기간 내내"})` : ""].filter(Boolean);
   return parts.join("과 ");
 }
 
@@ -392,7 +397,7 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   const thinNet = thin && thin.key === "breakeven" && !result.recurring ? thin.net[0] : null;
   if (thinNet != null && thinNet >= 0 && thinNet < result.monthlyFixedCost * 0.1 && Number.isFinite(result.vat.line)) {
     const vatNet = Math.round(thin.volumes[0] * result.vat.contribution - result.monthlyFixedCost - (result.living ?? 0));
-    if (vatNet < 0) lines.push(`'${thin.label}'도 한 달에 ${won(thinNet)}만 남습니다(세금 전). 판매가에 부가세가 들어 있으면(일반과세자) 이 경우도 매달 약 ${won(-vatNet)}씩 모자라고, 결제 수수료(카드·오픈마켓)도 이 계산에 빠져 있습니다. 이 줄을 '버는 경우'로 읽지 않습니다.`);
+    if (vatNet < 0) lines.push(`'${thin.label}'도 한 달에 ${won(thinNet)}만 남습니다(세금 전). 판매가에 부가세가 들어 있으면(일반과세자) 이 경우도 매달 약 ${won(-vatNet)}씩 모자라고, 결제 수수료(카드 수수료, 판매·예약 플랫폼 이용료)도 이 계산에 빠져 있습니다. 이 줄을 '버는 경우'로 읽지 않습니다.`);
   }
   if (Number.isFinite(result.vat.line)) lines.push(`판매가 ${won(result.unitPrice)}에 부가세가 들어 있다면(일반과세자) 한 건에 남는 돈은 약 ${won(result.vat.contribution)}으로 줄고, ${result.livingBreakEven ? "생활비선" : "본전"}은 월 ${count(result.vat.line, result.unit)}이 됩니다. 간이과세자는 계산이 다르므로, 사업자등록 때 과세 유형과 가격에 부가세를 넣을지를 함께 정합니다.`);
   return lines;

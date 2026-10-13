@@ -341,7 +341,8 @@ export function playbookContext(playbook: IndustryPlaybook, matchedBy: "ksic" | 
     ...(matchedBy === "description" ? { matchedBy: "사업 설명으로 찾은 업종입니다. 사업 내용과 다르면 이 가이드는 쓰지 않습니다." } : {}),
     rule: "오늘창업이 공식 기관 안내를 바탕으로 정리한 일반적인 순서입니다. 지역·규모·세부 업태에 따라 다르므로 계획서에는 '관할 기관 확인'을 붙여 쓰고, 여기에 없는 기한·수수료·면적 기준은 만들지 않습니다.",
     needs: playbook.needs,
-    steps: playbook.steps.map(step => `${step.title} (${step.where})`),
+    // 실제 API 8건(2026-10-13, 이사): 단계 이름만 넘겨 '새 허가는 나오지 않아 넘겨받는다' 같은 핵심 사실이 빠졌고, 계획서가 '허가 신청'으로 썼다
+    steps: playbook.steps.map(step => `${step.title} (${step.where}) — ${step.detail}`),
     pitfalls: playbook.pitfalls,
   };
 }
