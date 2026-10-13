@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { buildCashflowScenarios, cashflowMarkdown, cashflowReference, isRecurring, operatingFlowMarkdown, parseActiveGoal, parseRepeatGoal, parseRevenueGoal, parseVolumeGoal } from "../lib/plan-builder/cashflow-scenarios";
+import { monthlyVolumeFromCapacity } from "../lib/plan-builder/coach-feasibility";
 
 // 돈 장(품질기준 6·7번) — 숫자는 코드가 계산하고 AI는 해석만 한다. 빵집 시험(2026-10-10) 숫자로 고정한다.
 const bakery = { unitPrice: 4500, unitVariableCost: 1600, monthlyFixedCost: 3_800_000, capacity: "대표자 혼자 / 하루 120개", goal: "6개월 안에 월 매출 1,200만원", budget: "60000000원", premises: true };
@@ -243,5 +244,15 @@ assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 5000, unitVar
 // 업종 점검: 유형마다 맞는 판단 단위(앱은 활성 이용자, 공간은 예약 달력)
 assert.match(cashflowReference(buildCashflowScenarios({ unitPrice: 4900, unitVariableCost: 500, monthlyFixedCost: 800_000, livingCost: "0원", budget: "5000000원", recurring: true, businessTypeId: "app", goal: "1년 안에 유료 구독 500명" })!), /활성 이용자\)과 2주 안 재방문 비율/);
 assert.doesNotMatch(cashflowReference(buildCashflowScenarios({ unitPrice: 45000, unitVariableCost: 6000, monthlyFixedCost: 1_800_000, livingCost: "1800000원", budget: "15000000원", premises: true, businessTypeId: "store" })!), /활성 이용자|예약 달력\(가동률\)과 문의 수로/);
+
+// 15차 업종 점검: '주 40개'처럼 '주' 한 글자 일주일도 처리 한도로 읽고, '누가 / 얼마나'에서 앞쪽 '주 2회'는 읽지 않는다
+assert.equal(monthlyVolumeFromCapacity("대표자 혼자 / 주 40개")?.volume, 172);
+assert.match(monthlyVolumeFromCapacity("대표자 혼자 / 주 8건")?.note ?? "", /^일주일 8건 × 월 4.3주 = 월 34건$/);
+assert.deepEqual([monthlyVolumeFromCapacity("주 2회 수업 / 월 40명")?.volume, monthlyVolumeFromCapacity("주 2회 수업 / 월 40명")?.unit], [40, "명"]);
+assert.equal(monthlyVolumeFromCapacity("대표자 혼자 / 하루 매칭 20건")?.volume, 520);
+// 15차 업종 점검(이사): 목표대로 가도 첫 달 잔고가 중단선 아래면 첫 석 달은 표의 같은 줄과 견준다
+const moving = buildCashflowScenarios({ unitPrice: 150_000, unitVariableCost: 40_000, monthlyFixedCost: 2_200_000, capacity: "대표자 혼자 / 하루 2건", goal: "6개월 안에 월 40건", budget: "18000000원", livingCost: "2000000원", businessTypeId: "visit" })!;
+assert.match(cashflowReference(moving), /다만 '목표 경우'대로 가도 문 연 뒤 1개월차 잔고가 이 선보다 낮아집니다. 그래서 첫 석 달은 잔고를 표의 '목표 경우' 줄과 견주어.*4개월차부터 이 선을 씁니다/);
+assert.doesNotMatch(ref, /4개월차부터 이 선을 씁니다/, "bakery: the goal path stays above the stop line");
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
