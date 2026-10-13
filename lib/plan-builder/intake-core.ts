@@ -337,21 +337,23 @@ export type IntakeScenarioInputs = {
   unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; volume: number | undefined; notes: string[];
   /** 공간(매장·대여 공간)을 빌려 여는 사업인지 — 준비 기간 고정비를 문 열기 한 달 전부터 셀지 정한다 */
   premises: boolean;
+  /** 사업 유형(business-types.ts) — 첫 유료 판매까지의 준비 기간을 정한다 */
+  businessTypeId: string | null;
 };
 
 /*
- * 공간을 빌려 여는 사업인가 — 구조(매장·점포 자본)나 사업 유형(매장형·공간 대여형)으로 본다.
+ * 공간을 빌려 여는 사업인가와 사업 유형 — 구조(매장·점포 자본)나 사업 유형(매장형·공간 대여형)으로 본다. 유형은 첫 판매까지의 준비 기간도 정한다.
  * 2026-10-12 시뮬레이션: 오피스텔 네일숍은 업종 기본 구조가 '복합'이라 공간 없는 사업으로 잡혀 월세를 석 달 치 셌다.
  */
-function rentsPremises(coach: CoachState, intake: IntakeState, structure: BusinessStructure): boolean {
-  if (structure.capital === "storefront" || structure.delivery === "store") return true;
+function planShape(coach: CoachState, intake: IntakeState, structure: BusinessStructure): { premises: boolean; businessTypeId: string | null } {
   const effective = effectiveStructure(intake);
   const chosen = Object.fromEntries(STRUCTURE_AXES.flatMap(axis => effective.basis[axis] === "user" && effective.values[axis] ? [[axis, effective.values[axis]]] : [])) as Partial<BusinessStructure>;
   const description = [coach.business.description, ...coach.fields.filter(field => field.key === "business" || field.key === "offer").map(field => field.value)].join(" ");
   const customer = coach.fields.find(field => field.key === "customer")?.value;
   const playbook = intake.ksic ? playbookForKsic(intake.ksic) : playbookForText(description, { customer });
   const typed = businessTypeFor({ chosen, description, customer, playbookId: playbook?.id, structure });
-  return typed?.type.id === "store" || typed?.type.id === "space";
+  const businessTypeId = typed?.type.id ?? null;
+  return { premises: structure.capital === "storefront" || structure.delivery === "store" || businessTypeId === "store" || businessTypeId === "space", businessTypeId };
 }
 /**
  * 손익 계산 입력(가격·변동비·고정비·월 판매량)을 한 곳에서 정한다. 문서 요약·AI 사업안·질문 화면이 같은 숫자를 쓰게 하는 단일 원천.
@@ -403,7 +405,7 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
       }
     }
   } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
-  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, premises: rentsPremises(coach, intake, structure) };
+  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, ...planShape(coach, intake, structure) };
 }
 
 /**
@@ -490,7 +492,7 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
-  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, structure, premises: inputs.premises }) : null;
+  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, structure, premises: inputs.premises, businessTypeId: inputs.businessTypeId }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준`, unitLines: financialsToReference(calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, monthlyGrowthPct: 0 })) })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
@@ -526,13 +528,13 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
     const livingLine = ownerLiving > 0 ? Math.ceil((monthlyFixedCost + ownerLiving) / contribution) : null;
     lines.push(ownerLiving === 0
       ? `- 대표 생활비: 고정비에 대표 인건비가 들어 있다고 답했습니다. 지금 실적으로 한 달 남는 돈은 ${won(monthlyNet)}(세금 전)입니다.`
-      : `- 대표 생활비 월 ${won(ownerLiving)}: 지금 실적으로 한 달 남는 돈 ${won(monthlyNet)}(세금 전)에서 빼면 ${won(monthlyNet - ownerLiving)}입니다. 생활비까지 버는 판매량은 월 약 ${livingLine!.toLocaleString("ko-KR")}건이고, 지금(월 ${volume.toLocaleString("ko-KR")}건)보다 ${livingLine! > volume ? `월 약 ${(livingLine! - volume).toLocaleString("ko-KR")}건 모자랍니다. 계속할지 다시 볼 선은 본전이 아니라 이 판매량입니다.` : "많이 팔고 있습니다."}`);
+      : `- 대표 생활비 월 ${won(ownerLiving)}: 지금 실적으로 한 달 남는 돈 ${won(monthlyNet)}(세금 전)에서 빼면 ${won(monthlyNet - ownerLiving)}입니다. 부가세·소득세를 내면 실제로 가져갈 돈은 이보다 적습니다. 생활비까지 버는 판매량은 월 약 ${livingLine!.toLocaleString("ko-KR")}건이고, 지금(월 ${volume.toLocaleString("ko-KR")}건)${livingLine! > volume ? `보다 월 약 ${(livingLine! - volume).toLocaleString("ko-KR")}건 모자랍니다. 계속할지 다시 볼 선은 본전이 아니라 이 판매량입니다.` : livingLine === volume ? "과 같아 생활비를 가져가면 남는 돈이 없습니다. 판매가 조금만 줄어도 생활비가 모자랍니다." : "보다 많이 팔고 있습니다."}`);
   }
   const revenueGoal = intake.mode === "operating" && volume ? parseRevenueGoal(coach.fields.find(field => field.key === "goal")?.value) : null;
   if (revenueGoal && volume) {
     const target = Math.ceil(revenueGoal.revenue / unitPrice), gap = target - volume;
     lines.push(gap > 0
-      ? `- 매출 목표 ${won(revenueGoal.revenue)}(${revenueGoal.months}개월 안에) → 월 약 ${target.toLocaleString("ko-KR")}건. 지금(실적 기준 월 ${volume.toLocaleString("ko-KR")}건)보다 월 약 ${gap.toLocaleString("ko-KR")}건, 하루(월 26일 영업) 약 ${Math.ceil(gap / 26).toLocaleString("ko-KR")}건 더 팔아야 합니다. 개선을 비교할 때는 늘어난 건수를 이 차이와 견줍니다.`
+      ? `- 매출 목표 ${won(revenueGoal.revenue)}(${revenueGoal.months}개월 안에) → 월 약 ${target.toLocaleString("ko-KR")}건. 지금(실적 기준 월 ${volume.toLocaleString("ko-KR")}건)보다 월 약 ${gap.toLocaleString("ko-KR")}건, 하루(월 26일 영업) 약 ${Math.ceil(gap / 26).toLocaleString("ko-KR")}건 더 팔아야 합니다. 여기서 '건'은 판매 가격 ${won(unitPrice)}짜리 1개 기준이라 주문 건수와 다르므로, 비교할 때는 매출 ÷ ${won(unitPrice)}로 바꿔 셉니다.`
       : `- 매출 목표 ${won(revenueGoal.revenue)}는 지금 실적(월 약 ${volume.toLocaleString("ko-KR")}건)으로 이미 닿는 수준입니다.`);
   }
   const shownNotes = flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치")) : notes;

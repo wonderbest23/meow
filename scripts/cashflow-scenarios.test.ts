@@ -120,9 +120,10 @@ assert.match(cashflowMarkdown(sns), /\| 1개월차 \| -5,000,000원 \|/);
 // 닿아야 하는 사람 수는 매달 새로 늘 손님(2곳) 기준: 2 ÷ 20% = 10곳/월 → 일주일 약 3명
 assert.match(snsRef, /매달 새로 늘어야 하는 손님\(약 2곳\)을 채우려면.*20%면 일주일 약 3명/);
 assert.match(snsRef, /중단선 대신 시작 전에 정한 결정/);
-// 시작 전 결정이 메울 금액: 문 여는 날 −300만 + 6개월 누적 −1,092만 → 약 1,392만 원(2026-10-13 2차: '메울 길'만 있고 금액이 없었다)
-assert.equal(sns.coverNeeded, 13_920_000);
-assert.match(snsRef, /6개월을 버티려면 약 13,920,000원을 이 방법들로 메워야/);
+// 시작 전 결정이 메울 금액은 판단선(2·3·4·6·7·8곳)대로 갈 때로 센다(3차: 접어야 할 조심스러운 경우로 세면 따를 수 없는 숫자였다)
+// 문 여는 날 −300만 + 6개월 중 가장 낮은 누적 −406만 → 약 706만 원
+assert.equal(sns.coverNeeded, 7_060_000);
+assert.match(snsRef, /판단선대로 가도 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 준비 예산 밖에서 약 7,060,000원/);
 // 분모는 이야기를 나눈 사람 — 노출 수가 아니다(2차: '본 사람의 20%'는 늘 못 미쳤다)
 assert.match(snsRef, /글을 본 사람 수\(노출\)는 분모로 쓰지 않고/);
 
@@ -144,5 +145,20 @@ assert.doesNotMatch(cashflowMarkdown(app), /12개월 이상/);
 // 판단선(본전 182명을 12개월에)대로 늘어도 260만 원은 5개월차에 바닥난다
 assert.equal(app.paceRunOut, 5);
 assert.match(cashflowReference(app), /판단선대로 손님이 늘어도\(계획대로인 경우\) 통장은 문 연 뒤 5개월차에 바닥납니다/);
+
+// ── 2026-10-13 3차: 준비 기간은 사업 유형마다(B2B 6주, 앱 8주, 매장 12주) — 12주 장의 첫 판매 주차와 맞춘다
+const snsB2b = buildCashflowScenarios({ unitPrice: 300_000, unitVariableCost: 30_000, monthlyFixedCost: 500_000, capacity: "대표자 혼자 / 월 12곳", goal: "6개월 안에 고객 가게 10곳", budget: "3000000원", livingCost: "1500000원", recurring: true, businessTypeId: "b2b" })!;
+assert.equal(snsB2b.prepWeeks, 6);
+assert.deepEqual([snsB2b.prepLiving, snsB2b.prepFixed], [2_250_000, 750_000], "6 weeks = 1.5 months of living and fixed cost");
+assert.match(cashflowReference(snsB2b), /준비 기간을 6주로 잡으면\(실행 장의 첫 유료 판매 주차와 같음\).*한 주에 약 500,000원씩 더 나갑니다/);
+// 앱: 판단선대로 가도 석 달 안에 중단선 아래 → 중단선 대신 시작 전 결정과 메울 금액, 바닥나는 달에도 금액
+const appTyped = buildCashflowScenarios({ unitPrice: 4900, unitVariableCost: 500, monthlyFixedCost: 800_000, budget: "5000000원", livingCost: "0원", goal: "1년 안에 유료 구독 500명", recurring: true, businessTypeId: "app" })!;
+assert.equal(appTyped.prepFixed, 1_600_000);
+assert.equal(appTyped.stopBrokenOnPlan, true);
+const appRef = cashflowReference(appTyped);
+assert.match(appRef, /판단선대로 손님이 늘어도\(계획대로인 경우\) 석 달 안에 남은 준비 예산이 중단선/);
+if (appTyped.paceRunOut) assert.match(appRef, new RegExp(`${appTyped.paceRunOut}개월차에 바닥납니다. 그 전에 약 [\\d,]+원을 메울 길`));
+// 하루 10건이 안 되면 소수 한 자리(반올림이 차이를 부풀리지 않게)
+assert.match(cashflowReference(pet), /하루 약 6.4건/);
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
