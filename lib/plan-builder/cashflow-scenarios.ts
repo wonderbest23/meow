@@ -94,6 +94,8 @@ export type CashflowScenarios = {
   priceAlternatives: Array<{ price: number; breakEven: number; livingLine: number | null }>;
   /** 처리량 단위와 판매 단위가 다를 수 있다는 알림(예: 하루 120개 vs 세트) */
   unitNote: string | null;
+  /** 목표를 판매량으로 바꾼 근거(예: '가동률 50% = 월 390시간') — 없으면 매출로 보인다 */
+  goalNote: string | null;
   /** 1회 값을 파는데 목표가 사람 수일 때의 환산(판매량은 '회') */
   sessionNote: string | null;
 };
@@ -176,7 +178,10 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const careful = cap(Math.ceil(breakEven / 2));
   const recurring = !!input.recurring;
   const revenueGoal = parseRevenueGoal(input.goal), parsedVolume = revenueGoal ? null : parseVolumeGoal(input.goal) ?? (recurring ? parseActiveGoal(input.goal) : null);
-  const volumeGoal = session && parsedVolume ? { volume: session.people * session.perPerson, months: parsedVolume.months } : parsedVolume;
+  // 17차 맞대결(연습실, 두 차수 연속): '6개월 안에 가동률 50%'를 읽지 못해 목표 경우 줄이 없었다 — 처리 한도 × 비율로 바꾼다
+  const utilization = !revenueGoal && !parsedVolume && capacity ? Number(input.goal?.match(/가동률\s*(\d+(?:\.\d+)?)\s*%/)?.[1] ?? 0) : 0;
+  const utilizationGoal = utilization > 0 && utilization <= 100 ? { volume: Math.round(capacity!.volume * utilization / 100), months: goalMonths(input.goal) } : null;
+  const volumeGoal = session && parsedVolume ? { volume: session.people * session.perPerson, months: parsedVolume.months } : parsedVolume ?? utilizationGoal;
   // 판매량 목표는 매출로 바꿔 같은 계산을 쓴다(표의 '대표 목표'도 매출로 보인다)
   const goal = revenueGoal ?? (volumeGoal ? { revenue: volumeGoal.volume * input.unitPrice, months: volumeGoal.months } : null);
   const make = (key: Scenario["key"], label: string, volumes: number[]): Scenario => {
@@ -249,15 +254,17 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const roundUp = (value: number) => Math.ceil(value / 10_000) * 10_000;
   const paceIndex = pacePath && openingMax != null ? pacePath.findIndex(value => openingMax + value < 0) : -1;
   const paceRunOut = paceIndex >= 0 ? paceIndex + 1 : null;
-  const paceShortfall = pacePath && openingMax != null && paceRunOut ? roundUp(-(openingMax + Math.min(...pacePath))) : null;
+  // 17차 맞대결(레시피 앱·SNS): 메울 돈이 계획 경로의 바닥(0원)만 메워, 메운 뒤에도 '한 달에 나가는 돈 아래면 다시 정함' 선에 바로 걸렸다 — 한 달 나가는 돈만큼 남게 센다
+  const outPerMonth = input.monthlyFixedCost + (living ?? 0);
+  const paceShortfall = pacePath && openingMax != null && paceRunOut ? roundUp(outPerMonth - (openingMax + Math.min(...pacePath))) : null;
   // 7차 맞대결: 판단선 기준 최소치만 주면 손님이 더 느리게 늘 때 첫 결정이 모자란다 — 조심스러운 경우 금액을 나란히 준다
   // 10차 맞대결(SNS): 12개월 끝까지 세면 판단에서 멈춰야 할 실패 경로를 끝까지 버틸 돈처럼 읽혔다 — 메울 금액과 같은 6개월까지
   const carefulLow = openingMax != null ? openingMax + Math.min(...careful0.cumulative.slice(0, 6)) : 0;
-  const slowShortfall = paceShortfall && carefulLow < 0 && roundUp(-carefulLow) > paceShortfall ? roundUp(-carefulLow) : null;
+  const slowShortfall = paceShortfall && carefulLow < 0 && roundUp(outPerMonth - carefulLow) > paceShortfall ? roundUp(outPerMonth - carefulLow) : null;
   // 판단선대로 가도 석 달 안에 중단선 아래로 내려가면, 중단선은 처음부터 쓸 수 없는 선이다
   const stopBrokenOnPlan = !!(pacePath && stopReserve != null && openingMax != null && openingMax > stopReserve && pacePath.slice(0, 3).some(value => openingMax + value < stopReserve));
   const sixMonthLow = Math.min(0, ...planPath.slice(0, 6));
-  const coverNeeded = (stopBrokenAtOpen || stopBrokenOnPlan) && openingMax != null && openingMax + sixMonthLow < 0 ? roundUp(-(openingMax + sixMonthLow)) : null;
+  const coverNeeded = (stopBrokenAtOpen || stopBrokenOnPlan) && openingMax != null && openingMax + sixMonthLow < outPerMonth ? roundUp(outPerMonth - (openingMax + sixMonthLow)) : null;
   const stopBroken = stopBrokenAtOpen || stopBrokenOnPlan;
   const stopStart = stopReserve != null && budget != null && setupCost == null && !stopBroken ? budget - prepOut - stopReserve : null;
   /*
@@ -285,7 +292,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const sessionNote = session
     ? `가격 ${won(input.unitPrice)}은 1회 값이라 판매량은 '번(수업 횟수)'으로 셉니다. ${session.who} 1명이 주 ${session.weekly}회(한 달 ${session.perPerson}번, 가정)라면 목표 ${session.who} ${session.people.toLocaleString("ko-KR")}명은 월 ${count(session.people * session.perPerson, "번")}, ${livingBreakEven ? "생활비까지 버는 판매량" : "본전"} 월 ${count(livingBreakEven ?? breakEven, "번")}은 ${session.who} 약 ${Math.ceil((livingBreakEven ?? breakEven) / session.perPerson).toLocaleString("ko-KR")}명입니다. 실제 수업 횟수를 정하면 이 환산부터 고칩니다.`
     : null;
-  return { unit, sessionNote, setupOnPlan, planDip, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, slowShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, repeatGoal: recurring ? null : parseRepeatGoal(input.goal), businessTypeId: input.businessTypeId ?? null, priceAlternatives, unitNote };
+  return { unit, sessionNote, goalNote: utilizationGoal ? `가동률 ${utilization}% = 처리 한도 월 ${count(capacity!.volume, unit)}의 ${utilization}%, 월 ${count(utilizationGoal.volume, unit)}` : null, setupOnPlan, planDip, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, slowShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, repeatGoal: recurring ? null : parseRepeatGoal(input.goal), businessTypeId: input.businessTypeId ?? null, priceAlternatives, unitNote };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < (result.livingBreakEven ?? result.breakEven);
@@ -298,7 +305,7 @@ function scenarioBasis(result: CashflowScenarios, s: Scenario): string {
   if (s.key === "breakeven") return capacityShort(result) ? `처리량 최대치로도 본전(월 ${count(result.breakEven, result.unit)})에 못 미침` : `고정비를 겨우 메우는 ${result.recurring ? "돈 내는 손님 수" : "판매량"}`;
   const wanted = Math.ceil(result.goal!.revenue / result.unitPrice);
   if (result.capacity && wanted > result.capacity.volume) return `대표 목표(월 ${count(wanted, result.unit)})는 처리 한도(월 ${count(result.capacity.volume, result.unit)})를 넘어 닿을 수 없으므로, 한도까지 ${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
-  return `대표 목표(월 매출 ${won(result.goal!.revenue)})까지 ${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
+  return `대표 목표(${result.goalNote ?? `월 매출 ${won(result.goal!.revenue)}`})까지 ${result.goal!.months}개월 동안 같은 폭으로 는다고 가정`;
 }
 
 /** 준비 기간에 나가는 돈의 설명 — 생활비와 고정비 */
@@ -343,8 +350,8 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   const fallbackStop = result.recurring && planLow < monthlyOut
     ? `대신 문 연 뒤에는 메운 돈을 더한 통장 잔고를 표의 '${planRow.label}' 줄(메운 돈을 더한 값)과 매달 견주어, 그보다 한 달에 나가는 돈(${won(monthlyOut)}) 이상 적어지면 계속할지 다시 정합니다. 계획대로 가도 잔고가 ${won(monthlyOut)} 아래로 내려가는 달이 있어, 잔고 금액 하나로 정하면 잘 되는 중에도 멈추게 되기 때문입니다.`
     : `대신 문 연 뒤에는 메운 돈을 더한 통장 잔고가 한 달에 나가는 돈(${won(monthlyOut)}) 아래로 내려가면 계속할지 다시 정합니다.`;
-  if (result.stopBrokenOnPlan && result.opening) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 석 달 안에 남은 준비 예산이 석 달 버틸 돈보다 적어져, 남은 준비 예산으로 정하는 중단선은 둘 수 없습니다. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다. 이 금액은 최소치입니다(초기 지출 ${result.setupCost != null ? won(result.setupCost) : "0원"}, 세금${result.recurring ? "·해지" : ""} 빼고 — 견적이 나오면 그만큼 더 필요합니다).` : ""} ${fallbackStop}`);
-  else if (result.stopBroken && result.opening) lines.push(`초기 지출이 ${result.setupCost != null ? won(result.setupCost) : "0원"}이어도 문 여는 날 남는 돈(${won(Math.max(0, result.opening.cash))})이 조심스러운 경우 석 달 적자분(${won(result.stopReserve!)})보다 적어, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 조심스러운 경우 이 돈으로 문 연 뒤 ${result.opening.months < 1 ? "1개월도 버티지 못합니다" : result.opening.months >= 12 ? "12개월 이상 버팁니다" : `약 ${result.opening.months}개월 버팁니다`}. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` ${result.recurring ? "판단선대로 가도" : "조심스러운 경우"} 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 준비 예산 밖에서 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다. 이 금액은 최소치입니다(초기 지출 ${result.setupCost != null ? won(result.setupCost) : "0원"}, 세금${result.recurring ? "·해지" : ""} 빼고 — 견적이 나오면 그만큼 더 필요합니다).` : ""} ${fallbackStop}`);
+  if (result.stopBrokenOnPlan && result.opening) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 석 달 안에 남은 준비 예산이 석 달 버틸 돈보다 적어져, 남은 준비 예산으로 정하는 중단선은 둘 수 없습니다. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` 문 연 뒤 6개월 동안 통장에 한 달 나가는 돈(${won(result.monthlyFixedCost + (result.living ?? 0))})이 남아 있으려면 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다. 이 금액은 최소치입니다(초기 지출 ${result.setupCost != null ? won(result.setupCost) : "0원"}, 세금${result.recurring ? "·해지" : ""} 빼고 — 견적이 나오면 그만큼 더 필요합니다).` : ""} ${fallbackStop}`);
+  else if (result.stopBroken && result.opening) lines.push(`초기 지출이 ${result.setupCost != null ? won(result.setupCost) : "0원"}이어도 문 여는 날 남는 돈(${won(Math.max(0, result.opening.cash))})이 조심스러운 경우 석 달 적자분(${won(result.stopReserve!)})보다 적어, 문 연 뒤에 볼 중단선을 둘 수 없습니다. 조심스러운 경우 이 돈으로 문 연 뒤 ${result.opening.months < 1 ? "1개월도 버티지 못합니다" : result.opening.months >= 12 ? "12개월 이상 버팁니다" : `약 ${result.opening.months}개월 버팁니다`}. 시작하기 전에 다른 수입을 이어 갈지, 생활비·고정비를 줄일지, 준비 예산을 늘릴지 하나를 정합니다.${result.coverNeeded ? ` ${result.recurring ? "판단선대로 가도" : "조심스러운 경우"} 문 연 뒤 6개월 동안 통장에 한 달 나가는 돈(${won(result.monthlyFixedCost + (result.living ?? 0))})이 남아 있으려면 준비 예산 밖에서 약 ${won(result.coverNeeded)}을 이 방법들로 메워야 합니다. 이 금액은 최소치입니다(초기 지출 ${result.setupCost != null ? won(result.setupCost) : "0원"}, 세금${result.recurring ? "·해지" : ""} 빼고 — 견적이 나오면 그만큼 더 필요합니다).` : ""} ${fallbackStop}`);
   else if (result.stopReserve != null && result.budget != null) {
     const dip = result.planDip;
     const start = result.setupBeforeStop != null && !dip ? ` 문 여는 날 이 선 위에서 시작${result.setupOnPlan ? `하고 '${result.setupOnPlan}'대로 갈 때도 이 선 아래로 내려가지 않으${"려면"}` : "하려면"} 초기 지출을 ${won(result.setupBeforeStop)} 이하로 씁니다.` : "";
@@ -366,7 +373,7 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   // 본전과 생활비선을 따로 말한다 — 예전엔 생활비선에 못 미쳐도 '본전에 못 미친다'고 써 틀렸다(펫시터: 한도 520건 > 본전 334건)
   if (result.capacity && result.capacity.volume < result.breakEven) lines.push(`처리량 최대치(${result.capacity.note})를 다 팔아도 본전에 못 미칩니다. 가격·고정비·처리량을 다시 봐야 합니다.`);
   else if (result.capacityNet != null && result.livingBreakEven) lines.push(`처리량 최대치(${result.capacity!.note})를 다 팔아도 생활비까지는 못 법니다. 다 판 달에도 생활비를 넣으면 ${won(-result.capacityNet)}이 모자랍니다. 판매를 늘리는 것보다 가격·수수료·처리량을 먼저 다시 정해야 합니다.${capacityFixLine(result)}`);
-  if (result.paceRunOut) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 통장은 문 연 뒤 ${result.paceRunOut}개월차에 바닥납니다. 그 전에 약 ${won(result.paceShortfall ?? 0)}을 메울 길(다른 수입·예산 늘리기)을 정해 두지 않으면 잘 되고 있어도 멈춰야 합니다.${result.slowShortfall ? ` 이 금액은 판단선대로 늘 때의 최소치입니다. 손님이 더 느리게 늘면(조심스러운 경우) 문 연 뒤 6개월까지 약 ${won(result.slowShortfall)}이 필요합니다. 그때까지 판단선의 절반에도 못 미치면 시작안을 바꾸므로, 그 뒤 적자를 메울 돈은 따로 마련하지 않습니다. 메울 금액은 '최소 ${won(result.paceShortfall ?? 0)}, 느리면 약 ${won(result.slowShortfall)}'으로 잡습니다.` : ""}`);
+  if (result.paceRunOut) lines.push(`판단선대로 손님이 늘어도(계획대로인 경우) 통장은 문 연 뒤 ${result.paceRunOut}개월차에 바닥납니다. 그 전에 약 ${won(result.paceShortfall ?? 0)}(가장 낮은 달에도 한 달 나가는 돈이 남는 금액)을 메울 길(다른 수입·예산 늘리기)을 정해 두지 않으면 잘 되고 있어도 멈춰야 합니다.${result.slowShortfall ? ` 이 금액은 판단선대로 늘 때의 최소치입니다. 손님이 더 느리게 늘면(조심스러운 경우) 문 연 뒤 6개월까지 약 ${won(result.slowShortfall)}이 필요합니다. 그때까지 판단선의 절반에도 못 미치면 시작안을 바꾸므로, 그 뒤 적자를 메울 돈은 따로 마련하지 않습니다. 메울 금액은 '최소 ${won(result.paceShortfall ?? 0)}, 느리면 약 ${won(result.slowShortfall)}'으로 잡습니다.` : ""}`);
   // 공간 없는 사업의 고정비는 나뉘지 않은 경우가 많다 — 절반이면 결론이 어떻게 바뀌는지(맞대결: 모든 결론이 나뉘지 않은 고정비 하나에 달려 있었다)
   if (!result.premises && result.monthlyFixedCost > 0) {
     const half = result.monthlyFixedCost / 2;
@@ -391,7 +398,8 @@ function goalLine(result: CashflowScenarios): string {
   // 매달 돈을 내는 사업은 판단 기준 줄의 월별 선이 매달 볼 목표다 — 두 줄이면 같은 달 결론이 갈린다
   if (!goal || !result.goal || result.recurring) return "";
   const months = goal.volumes.slice(0, result.goal.months).map((volume, i) => `${i + 1}개월차 ${count(volume, result.unit)}`);
-  return `- ${goal.label} 월별 판매선(매달 볼 숫자의 목표, 실행 장에서 씀): ${months.join(", ")}`;
+  // 17차 맞대결(캔들): 판매선(45개)과 '계획대로' 선(25개)이 함께 있어 30개를 판 달을 어떻게 읽을지 알 수 없었다
+  return `- ${goal.label} 월별 판매선(매달 볼 숫자의 목표, 실행 장에서 씀): ${months.join(", ")}. 판매선은 목표입니다. 판매선에 못 미쳐도 판단 기준의 '계획대로' 선 이상이면 계획대로이고(목표보다 느리므로 알리는 방법을 손봄), 판정은 판단 기준 줄 하나로 합니다.`;
 }
 
 /** 같은 기간끼리 비교하도록 하루(월 26일)·일주일(월 4.3주)·한 달을 함께 쓴다 */
@@ -430,8 +438,19 @@ function decisionLines(result: CashflowScenarios): string[] {
     platform: "연결형은 공급자(돌봄·서비스를 하는 사람)를 먼저 확인·등록합니다. 신청 창구는 하루 처리량을 감당할 공급자가 등록된 뒤 엽니다.",
   };
   const typeLine = result.businessTypeId && typeJudge[result.businessTypeId] ? [typeJudge[result.businessTypeId]] : [];
+  /*
+   * 17차 맞대결(펫시터·캔들·연습실): 목표 경우는 첫 달 조심스러운 경우(=본전의 절반)에서 출발해 늘어나는데, 판단 기준은 첫 달부터 생활비선(본전)이라
+   * 목표대로 가도 '줄여서'·'바꿈'으로 판정됐다. 늘어나는 동안은 그 달 판매선을 '계획대로' 선으로 쓴다(매달 돈 내는 사업의 판단선과 같은 방식).
+   */
+  const goalPath = !pace ? result.scenarios.find(s => s.key === "goal") : undefined;
+  const goEff = result.capacity && result.capacity.volume < decision.go ? Math.ceil(result.capacity.volume * 0.8) : decision.go;
+  const rampMonths = goalPath && result.goal ? goalPath.volumes.slice(0, result.goal.months).findIndex(volume => volume >= goEff) : -1;
+  const rampCount = goalPath && result.goal ? (rampMonths < 0 ? Math.min(result.goal.months, MONTHS) : rampMonths) : 0;
+  const ramp = goalPath && rampCount > 0
+    ? ` 다만 손님이 늘어나는 처음 ${rampCount}개월은 '${goalPath.label}' 판매선(${goalPath.volumes.slice(0, rampCount).map((volume, i) => `${i + 1}개월차 ${count(volume, unit)}`).join(", ")})을 그 달의 '계획대로' 선으로 씁니다. 그 선 이상이면 계획대로, 그 절반 이상이면 규모를 줄여서, 절반 미만이면 시작안을 바꿉니다.${rampCount < MONTHS ? ` ${rampCount + 1}개월차부터 위 선을 씁니다.` : ""}`
+    : "";
   return [
-    first + unreachable + vatGo,
+    first + unreachable + ramp + vatGo,
     `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 시범 판매가 일부 시간·자리만 쓰면(예: 남의 가게 저녁 한 자리 2주) 판매 수를 그대로 비교하지 않고 연 시간 중 채운 비율과 재예약으로 봅니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 문의한 사람 중 날짜를 잡거나 돈을 낸 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다. 비율의 분모는 직접 이야기를 나눈 사람(찾아간 곳·체험한 사람·문의한 사람), 분자는 날짜를 잡거나 돈을 낸 사람입니다. 글을 본 사람 수(노출)는 분모로 쓰지 않고, 질문에 얼마나 꼼꼼히 답했는지도 비율로 쓰지 않습니다. 노출 대비 비율은 아래 10~30%보다 훨씬 낮아 기준이 늘 못 미치게 되기 때문입니다. 이야기를 나눈 수가 10보다 적으면 비율로 판단하지 않고 더 모읍니다(몇 곳 중 몇 곳으로 적음).`,
     `${pace ? `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면` : `${decision.goLabel}을 채우려면`} 직접 이야기를 나눠야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 이 수는 문을 연 뒤 필요한 손님 흐름을 가늠하는 참고값이고, 계약할지 가르는 기준이 아닙니다. 계약 판단은 위 '출시 전 판단'(이야기를 나눈 사람 중 날짜를 잡거나 돈을 낸 수와 비율)으로 합니다. 이 수는 판매가 모두 새 손님이라고 본 값이라, 다시 오는 손님이 많을수록 새로 이야기할 사람은 줄어듭니다.`,
     `문을 연 뒤: 실제 판매 수를 위 기준과 매달 비교하고, ${result.stopBroken ? "중단선 대신 시작 전에 정한 결정(다른 수입·생활비 줄이기·예산 늘리기)을 지킵니다" : (result.planDip ? `잔고가 표의 '${result.planDip.label}' 줄에서 실제로 쓴 초기 지출과 한 달 적자분을 뺀 값보다 낮으면 계속할지 다시 정합니다${result.planDip.recovery ? `(${result.planDip.recovery}개월차부터는 중단선)` : ""}` : "남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다")}. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,

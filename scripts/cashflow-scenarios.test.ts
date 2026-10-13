@@ -126,8 +126,8 @@ const snsRef = cashflowReference(sns);
 assert.match(snsRef, /문 연 뒤에 볼 중단선을 둘 수 없습니다.*1개월도 버티지 못합니다.*하나를 정합니다/);
 assert.doesNotMatch(snsRef, /석 달 적자분\) 아래로 내려가면/, "no broken stop line");
 // 대신 멈출 기준: 메운 돈을 더한 잔고가 한 달 지출(50만 + 150만) 아래로(맞대결: 멈출 기준이 아예 없었다)
-// 9차: 계획대로 가도 잔고가 2,000,000원 아래로 내려가는 달이 있으면 절대 금액 대신 표의 같은 줄과 견준다
-assert.match(snsRef, /메운 돈을 더한 통장 잔고를 표의 '판단선대로 느는 경우' 줄\(메운 돈을 더한 값\)과 매달 견주어, 그보다 한 달에 나가는 돈\(2,000,000원\) 이상 적어지면/);
+// 17차: 메울 돈에 한 달 지출(200만)을 더해 세므로 계획대로 가면 잔고가 200만 위에 남는다 → 절대 금액 선을 쓴다(9차의 '표의 같은 줄' 대체는 메울 돈이 모자랄 때만)
+assert.match(snsRef, /대신 문 연 뒤에는 메운 돈을 더한 통장 잔고가 한 달에 나가는 돈\(2,000,000원\) 아래로 내려가면 계속할지 다시 정합니다/);
 assert.match(snsRef, /이 금액은 최소치입니다\(초기 지출 0원, 세금·해지 빼고/);
 assert.match(snsRef, /그달 돈을 내는 손님 수.*생활비선 8곳을 6개월 안에 채우려면 해지가 없을 때 매달 새로 약 2곳씩/);
 // 판단선과 매달 목표는 한 줄: 생활비선 8곳을 6개월에 → 2·3·4·6·7·8곳(2026-10-13 2차: 두 줄이 같은 달 결론을 갈랐다)
@@ -140,9 +140,9 @@ assert.match(cashflowMarkdown(sns), /\| 1개월차 \| -5,000,000원 \|/);
 assert.match(snsRef, /매달 새로 늘어야 하는 손님\(약 2곳\)을 채우려면.*20%면 일주일 약 3명/);
 assert.match(snsRef, /중단선 대신 시작 전에 정한 결정/);
 // 시작 전 결정이 메울 금액은 판단선(2·3·4·6·7·8곳)대로 갈 때로 센다(3차: 접어야 할 조심스러운 경우로 세면 따를 수 없는 숫자였다)
-// 문 여는 날 −300만 + 6개월 중 가장 낮은 누적 −406만 → 약 706만 원
-assert.equal(sns.coverNeeded, 7_060_000);
-assert.match(snsRef, /판단선대로 가도 문 연 뒤 6개월 동안 통장이 0원 아래로 내려가지 않으려면 준비 예산 밖에서 약 7,060,000원/);
+// 문 여는 날 −300만 + 6개월 중 가장 낮은 누적 −406만 → 바닥 −706만, 17차: 한 달 지출 200만이 남게 → 약 906만 원
+assert.equal(sns.coverNeeded, 9_060_000);
+assert.match(snsRef, /판단선대로 가도 문 연 뒤 6개월 동안 통장에 한 달 나가는 돈\(2,000,000원\)이 남아 있으려면 준비 예산 밖에서 약 9,060,000원/);
 // 분모는 이야기를 나눈 사람 — 노출 수가 아니다(2차: '본 사람의 20%'는 늘 못 미쳤다)
 assert.match(snsRef, /글을 본 사람 수\(노출\)는 분모로 쓰지 않고/);
 
@@ -185,7 +185,7 @@ const appRef = cashflowReference(appTyped);
 assert.match(appRef, /판단선대로 손님이 늘어도\(계획대로인 경우\) 석 달 안에 남은 준비 예산이 석 달 버틸 돈보다 적어져, 남은 준비 예산으로 정하는 중단선은 둘 수 없습니다/);
 // 10차: 중단선을 둘 수 없을 때 내부 계산값(석 달 적자분)을 보이지 않는다
 assert.doesNotMatch(appRef, /중단선\(문 연 뒤 이 아래로/);
-if (appTyped.paceRunOut) assert.match(appRef, new RegExp(`${appTyped.paceRunOut}개월차에 바닥납니다. 그 전에 약 [\\d,]+원을 메울 길`));
+if (appTyped.paceRunOut) assert.match(appRef, new RegExp(`${appTyped.paceRunOut}개월차에 바닥납니다. 그 전에 약 [\\d,]+원\\(가장 낮은 달에도 한 달 나가는 돈이 남는 금액\\)을 메울 길`));
 // 7차: 메울 금액을 판단선 최소치만이 아니라 '느리면'까지 범위로
 if (appTyped.slowShortfall) assert.match(appRef, new RegExp(`느리면 약 ${appTyped.slowShortfall.toLocaleString("ko-KR")}원`));
 // 하루 10건이 안 되면 소수 한 자리(반올림이 차이를 부풀리지 않게)
@@ -274,5 +274,17 @@ assert.equal(buildCashflowScenarios({ unitPrice: 300_000, unitVariableCost: 30_0
 const petRef = cashflowReference(buildCashflowScenarios({ unitPrice: 5000, unitVariableCost: 500, monthlyFixedCost: 1_500_000, capacity: "대표자 혼자 / 하루 매칭 20건", goal: "6개월 안에 월 거래 600건", budget: "10000000원", livingCost: "2000000원" })!);
 assert.match(petRef, /- 한도까지 느는 경우\(대표 목표\(월 600건\)는 처리 한도\(월 520건\)를 넘어 닿을 수 없으므로/);
 assert.doesNotMatch(petRef, /목표 경우/);
+
+// 17차 맞대결(연습실): '가동률 50%' 목표 → 처리 한도(하루 30시간 × 26일 = 월 780시간)의 50% = 월 390시간
+const room = buildCashflowScenarios({ unitPrice: 15_000, unitVariableCost: 500, monthlyFixedCost: 2_800_000, capacity: "방 3개 / 하루 30시간", goal: "6개월 안에 가동률 50%", budget: "25000000원", premises: true, businessTypeId: "space" })!;
+assert.equal(room.scenarios[2]?.volumes.at(-1), 390);
+const roomRef = cashflowReference(room);
+assert.match(roomRef, /목표 경우\(대표 목표\(가동률 50% = 처리 한도 월 780시간의 50%, 월 390시간\)까지 6개월/);
+// 17차: 목표 경우가 본전(194시간)에 닿기 전 두 달은 그 달 판매선이 '계획대로' 선(목표대로 가도 '바꿈'이 되던 문제)
+assert.match(roomRef, /다만 손님이 늘어나는 처음 2개월은 '목표 경우' 판매선\(1개월차 97시간, 2개월차 156시간\)을 그 달의 '계획대로' 선으로 씁니다.*3개월차부터 위 선을 씁니다/);
+assert.match(roomRef, /판매선은 목표입니다. 판매선에 못 미쳐도 판단 기준의 '계획대로' 선 이상이면 계획대로/);
+// 펫시터: 한도(520건)에 막혀 '계획대로'는 한도의 80%(416건) — 판매선이 그 아래인 처음 4개월은 판매선으로 판정
+assert.match(petRef, /다만 손님이 늘어나는 처음 4개월은 '한도까지 느는 경우' 판매선\(1개월차 167건, 2개월차 238건, 3개월차 308건, 4개월차 379건\)/);
+assert.doesNotMatch(cashflowReference(buildCashflowScenarios({ ...bakery, goal: undefined })!), /다만 손님이 늘어나는/, "no goal path → no ramp line");
 
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
