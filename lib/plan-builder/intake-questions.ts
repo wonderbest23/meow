@@ -96,6 +96,8 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     { id: "period", label: "실적 기간 (시작일 / 종료일)", prompt: "살펴볼 실적 기간은 언제인가요?", kind: "text", optional: true, hint: "기간을 고르거나 날짜를 직접 선택해요." },
     fieldQuestion("sales", "정한 시작일부터 종료일까지의 실제 매출 합계는 얼마였나요?", { kind: "number", unit: "원", period: "입력한 시작일~종료일", hint: "예상 매출·목표·총 거래액과는 구분해요." }),
     { ...fieldQuestion("cost", "한 달 고정비는 대략 얼마인가요? 월 고정비(임차료·고정 인건비 등)만 넣고 건당 변동비나 실적 기간 전체 비용과는 구분해 주세요.", { kind: "number", unit: "원", period: "월" }), label: `${COACH_FIELD_LABELS.cost} (월 고정비)` },
+    // 운영 중 사업도 대표(가족) 몫을 알아야 '본전을 넘었다'가 살림이 되는지 판단한다(2026-10-13 김밥집 시뮬레이션: 부부 몫을 묻지 않아 판단이 막혔다)
+    { ...living, prompt: "대표님(함께 일하는 가족 포함)이 이 사업에서 한 달에 가져가야 하는 생활비는 얼마인가요?", hint: "월 고정비에 대표 인건비를 이미 넣었다면 0원을 골라요." },
     fieldQuestion("capacity", "지금은 누가, 얼마나 감당하나요?", { hint: "인력을 고른 뒤 하루·주·월 처리량을 정해요." }),
     fieldQuestion("channel", "지금 고객을 만나거나 판매하는 주요 경로는 어디인가요? (최대 3개)"),
     goal,

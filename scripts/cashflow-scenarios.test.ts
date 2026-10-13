@@ -75,7 +75,7 @@ const photo = buildCashflowScenarios({ unitPrice: 150_000, unitVariableCost: 20_
 assert.equal(photo.daily, false);
 assert.doesNotMatch(cashflowMarkdown(photo) + cashflowReference(photo), /하루 약/);
 assert.match(cashflowMarkdown(photo), /### 두 가지 경우로 본 한 달/, "no revenue/volume goal → two cases");
-assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, budget: "5000000원", livingCost: "1500000원" })!), /1개월도 못 버팀/);
+assert.match(cashflowMarkdown(buildCashflowScenarios({ ...bakery, budget: "5000000원", livingCost: "1500000원" })!), /1개월도 (못 버팀|버티지 못합니다)/);
 
 // 목표 읽기: 매출·판매량 목표만 숫자로 바꾸고, 판매량이 아닌 목표는 바꾸지 않는다
 assert.deepEqual(parseRevenueGoal("6개월 안에 월 매출 1,200만원"), { revenue: 12_000_000, months: 6 });
@@ -108,7 +108,7 @@ assert.deepEqual(sns.recurringPace, { months: 6, perMonth: 2 });
 assert.equal(sns.prepFixed, 1_500_000);
 assert.equal(sns.stopBroken, true);
 const snsRef = cashflowReference(sns);
-assert.match(snsRef, /문 연 뒤에 볼 중단선을 둘 수 없습니다.*1개월도 못 버팀.*하나를 정합니다/);
+assert.match(snsRef, /문 연 뒤에 볼 중단선을 둘 수 없습니다.*1개월도 버티지 못합니다.*하나를 정합니다/);
 assert.doesNotMatch(snsRef, /아래로 내려가면 계속할지 다시 정합니다/);
 assert.match(snsRef, /그달 돈을 내는 손님 수.*생활비선 8곳을 6개월 안에 채우려면 해지가 없을 때 매달 새로 약 2곳씩/);
 // 판단선과 매달 목표는 한 줄: 생활비선 8곳을 6개월에 → 2·3·4·6·7·8곳(2026-10-13 2차: 두 줄이 같은 달 결론을 갈랐다)

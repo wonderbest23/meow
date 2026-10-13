@@ -519,6 +519,15 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
    * 운영 중 사업의 매출 목표를 판매량으로(2026-10-12 김밥집 시뮬레이션: '2,200만 원 회복'이 하루 몇 건인지 없어
    * 개선 비교에서 '조금 늘었다'를 성공으로 읽었다). 지금 판매량은 실적에서 잡은 값이다.
    */
+  // 운영 중 사업: 지금 실적으로 대표(가족) 생활비까지 남는지 — '본전을 넘었다'와 '살림이 된다'를 가른다
+  const ownerLiving = intake.mode === "operating" && volume ? coachAmount(coach.fields.find(field => field.key === "livingCost")?.value) : undefined;
+  if (ownerLiving != null && volume) {
+    const contribution = unitPrice - unitVariableCost, monthlyNet = volume * contribution - monthlyFixedCost;
+    const livingLine = ownerLiving > 0 ? Math.ceil((monthlyFixedCost + ownerLiving) / contribution) : null;
+    lines.push(ownerLiving === 0
+      ? `- 대표 생활비: 고정비에 대표 인건비가 들어 있다고 답했습니다. 지금 실적으로 한 달 남는 돈은 ${won(monthlyNet)}(세금 전)입니다.`
+      : `- 대표 생활비 월 ${won(ownerLiving)}: 지금 실적으로 한 달 남는 돈 ${won(monthlyNet)}(세금 전)에서 빼면 ${won(monthlyNet - ownerLiving)}입니다. 생활비까지 버는 판매량은 월 약 ${livingLine!.toLocaleString("ko-KR")}건이고, 지금(월 ${volume.toLocaleString("ko-KR")}건)보다 ${livingLine! > volume ? `월 약 ${(livingLine! - volume).toLocaleString("ko-KR")}건 모자랍니다. 계속할지 다시 볼 선은 본전이 아니라 이 판매량입니다.` : "많이 팔고 있습니다."}`);
+  }
   const revenueGoal = intake.mode === "operating" && volume ? parseRevenueGoal(coach.fields.find(field => field.key === "goal")?.value) : null;
   if (revenueGoal && volume) {
     const target = Math.ceil(revenueGoal.revenue / unitPrice), gap = target - volume;
