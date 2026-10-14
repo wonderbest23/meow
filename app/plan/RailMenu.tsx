@@ -85,12 +85,12 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
     )}
     {/* 플랜을 열어 둔 화면이면 그 목차가 여기 붙는다 */}
     {children}
-    {/* 이용 안내·고객센터 — 맨 아래로 떨어뜨리지 않고 주 메뉴 바로 밑에 작게 붙인다(대표 요청 2026-10-14). 맨 아래에는 내 계정만 */}
+    {/* 이용 안내·고객센터 — 맨 아래로 떨어뜨리지 않고 주 메뉴 바로 밑에, 같은 크기로(대표 요청 2026-10-14). 맨 아래에는 내 계정만 */}
     <div className={menu.divider} />
-    <Link href="/plan/info" className={item(menu.minor)} title="이용 안내" aria-current={here("info")}>
+    <Link href="/plan/info" className={item(menu.main)} title="이용 안내" aria-current={here("info")}>
       <CircleHelp /><span className={styles.railLabel}>이용 안내</span>
     </Link>
-    <Link href="/account/support" className={item(menu.minor)} title="고객센터" aria-current={here("support")}>
+    <Link href="/account/support" className={item(menu.main)} title="고객센터" aria-current={here("support")}>
       <Headphones /><span className={styles.railLabel}>고객센터</span>
     </Link>
     <div className={`${styles.spring} ${menu.spring}`} />

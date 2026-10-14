@@ -28,17 +28,12 @@
 .menu .item[aria-current="page"] svg { color: #191f28; }
 
 /*
- * 주 메뉴 세 칸(새 대화 · 내 사업 · 내 문의) — 같은 모양, 큰 글씨(대표 요청 2026-10-14).
+ * 메뉴 칸(새 대화 · 내 사업 · 내 문의 · 이용 안내 · 고객센터) — 모두 같은 모양, 큰 글씨(대표 요청 2026-10-14).
  * 이름표(PlanShell .railLabel)가 13.5px 로 못박혀 있어 칸만 키우면 글씨가 그대로였다 — 이름표까지 키운다.
  */
 .menu .main { min-height: 46px; gap: 12px; color: #191f28; }
 .menu .main > span { font-size: 16px; font-weight: 600; }
 .menu .main svg { width: 20px; height: 20px; color: #333d4b; }
-
-/* 보조 칸(이용 안내 · 고객센터) — 주 메뉴 바로 밑에 작고 옅게 */
-.menu .minor { min-height: 38px; color: #6b7684; }
-.menu .minor > span { font-size: 13.5px; font-weight: 500; }
-.menu .minor svg { width: 17px; height: 17px; }
 
 /* 사업이 없을 때의 내 문의 — 누를 수 없고 왜 막혔는지 한 줄로 */
 .menu .disabled { cursor: default; opacity: .5; }
@@ -90,9 +85,6 @@
 :global([data-rail-open]) .menu .main { min-height: 54px; }
 :global([data-rail-open]) .menu .main > span { font-size: 17px; }
 :global([data-rail-open]) .menu .main svg { width: 22px; height: 22px; }
-:global([data-rail-open]) .menu .minor { min-height: 46px; }
-:global([data-rail-open]) .menu .minor > span { font-size: 15px; }
-:global([data-rail-open]) .menu .minor svg { width: 20px; height: 20px; }
 :global([data-rail-open]) .menu .disabledText small { font-size: 13px; }
 :global([data-rail-open]) .menu .sub { min-height: 46px; margin-left: 26px; font-size: 15px; }
 :global([data-rail-open]) .menu .account { min-height: 60px; }
