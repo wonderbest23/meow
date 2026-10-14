@@ -49,3 +49,29 @@ export async function nativeIdToken(provider: "google" | "apple", ids: { googleW
   if (!token) throw new Error("로그인을 마치지 못했습니다. 다시 시도해 주세요.");
   return token;
 }
+
+type NativePurchasesPlugin = {
+  purchaseProduct: (options: { productIdentifier: string; productType: "inapp"; quantity: number; appAccountToken: string; isConsumable: boolean; autoAcknowledgePurchases: boolean }) => Promise<{ transactionId: string; jwsRepresentation?: string; purchaseToken?: string }>;
+  acknowledgePurchase: (options: { purchaseToken: string }) => Promise<void>;
+};
+
+function purchasesPlugin(): NativePurchasesPlugin {
+  const plugin = capacitor()?.Plugins?.NativePurchases as NativePurchasesPlugin | undefined;
+  if (!plugin) throw new Error("앱의 결제 기능을 찾지 못했습니다. 앱을 최신으로 업데이트해 주세요.");
+  return plugin;
+}
+
+/**
+ * 스토어 결제창을 열고, 결제가 끝나면 서버가 확인할 영수증을 돌려준다.
+ * 영수증은 서버가 반영한 뒤에 finishNativePurchase 로 마무리한다 — 반영 전에 마무리하면 결제만 되고 열리지 않을 수 있다.
+ * 안드로이드의 소모 처리는 서버가 한다(같은 상품을 다른 사업에 다시 살 수 있게).
+ */
+export async function nativePurchase(productId: string, appAccountToken: string): Promise<{ transactionId: string; jws?: string; purchaseToken?: string }> {
+  const transaction = await purchasesPlugin().purchaseProduct({ productIdentifier: productId, productType: "inapp", quantity: 1, appAccountToken, isConsumable: false, autoAcknowledgePurchases: false });
+  return { transactionId: transaction.transactionId, jws: transaction.jwsRepresentation, purchaseToken: transaction.purchaseToken };
+}
+
+/** 아이폰: 서버가 반영한 거래를 마무리한다(마무리하지 않은 거래는 앱을 열 때마다 다시 온다) */
+export async function finishNativePurchase(transactionId: string): Promise<void> {
+  await purchasesPlugin().acknowledgePurchase({ purchaseToken: transactionId });
+}
