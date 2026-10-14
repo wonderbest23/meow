@@ -71,6 +71,7 @@ export const MIGRATION_CHECKS: MigrationCheck[] = [
   { file: "20261006090000_landing_lead_handled.sql", feature: "문의 '처리 완료' 표시(없으면 버튼이 보이지 않아요)", columns: [["landing_leads", "handled_at"]] },
   { file: "20261006090100_service_requests.sql", feature: "다음 단계 서비스 신청(없으면 관리자 신청 목록이 비어 보여요)", tables: ["service_requests"] },
   { file: "20261006120000_business_checks.sql", feature: "사업자등록 확인 결과 저장", tables: ["business_checks"] },
+  { file: "20261014120000_iap_payment_methods.sql", feature: "앱 인앱결제(애플·구글) 결제 기록(없으면 앱 결제가 반영되지 않아요)", manual: "payment_orders 결제 수단 제약에 APPLE_IAP·GOOGLE_IAP 가 있는지 SQL 편집기에서 확인" },
 ];
 
 /** 코드가 쓰지만 마이그레이션이 만들지 않는 것 — 손으로 만들어야 한다 */
