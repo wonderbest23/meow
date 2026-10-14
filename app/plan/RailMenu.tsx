@@ -53,6 +53,8 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
   const loginNext = encodeURIComponent(pathname || "/plan");
   /* 내 문의 — 답할 문의 수(로그인했을 때만 센다 — 로그인 전에는 부르지 않는다) */
   const inquiries = useInquiries(account?.authenticated === true);
+  /* 사업 수 — 모르는 동안(null)은 내 문의를 막지 않는다 */
+  const [planCount, setPlanCount] = useState<number | null>(null);
   const openInquiries = inquiries.items ? unansweredCount(inquiries.items) : 0;
 
   /* data-app-rail: 화면 로딩 표시(PlanLoading)가 메뉴 폭만큼 본문 가운데로 옮겨 가는 기준 */
@@ -63,24 +65,35 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className={menu.logoMark} src="/today-startup-mark-2026.png" alt="" width="38" height="38" />
     </Link>
-    <Link href="/plan/chat?new=1" className={item(menu.newChat)} title="새 대화" aria-current={here("new")}>
+    {/*
+      주 메뉴 세 칸(새 대화 · 내 사업 · 내 문의)은 같은 모양·같은 크기로(대표 요청 2026-10-14: 새 대화만 테두리가 있어 튀고, 글씨가 작았다).
+    */}
+    <Link href="/plan/chat?new=1" className={item(menu.main)} title="새 대화" aria-current={here("new")}>
       <SquarePen /><span className={styles.railLabel}>새 대화</span>
     </Link>
     {/* 내 사업 — 누르면 사업 목록이, 사업을 누르면 그 사업의 목차가 바로 아래 펼쳐진다 */}
-    <BusinessRailTree documentToc={documentToc} />
-    {/* 내 문의 — 홈페이지로 들어온 손님 문의를 메신저처럼(소유자 요청 2026-10-07) */}
-    <Link href="/plan/inquiries" className={item()} title="내 문의" aria-current={here("inquiries")}>
-      <MessagesSquare /><span className={styles.railLabel}>내 문의</span>{openInquiries ? <b className={menu.count} aria-label={`답할 문의 ${openInquiries}건`}>{openInquiries}</b> : null}
-    </Link>
+    <BusinessRailTree documentToc={documentToc} onPlanCount={setPlanCount} />
+    {/* 내 문의 — 홈페이지로 들어온 손님 문의를 메신저처럼(소유자 요청 2026-10-07). 사업이 하나도 없으면 받을 문의가 없으니 막아 둔다 */}
+    {planCount === 0 && !openInquiries ? (
+      <span className={item(`${menu.main} ${menu.disabled}`)} aria-disabled="true" title="사업을 시작하면 열려요">
+        <MessagesSquare /><span className={`${styles.railLabel} ${menu.disabledText}`}>내 문의<small>사업을 시작하면 열려요</small></span>
+      </span>
+    ) : (
+      <Link href="/plan/inquiries" className={item(menu.main)} title="내 문의" aria-current={here("inquiries")}>
+        <MessagesSquare /><span className={styles.railLabel}>내 문의</span>{openInquiries ? <b className={menu.count} aria-label={`답할 문의 ${openInquiries}건`}>{openInquiries}</b> : null}
+      </Link>
+    )}
     {/* 플랜을 열어 둔 화면이면 그 목차가 여기 붙는다 */}
     {children}
-    <div className={`${styles.spring} ${menu.spring}`} />
-    <Link href="/plan/info" className={item()} title="이용 안내" aria-current={here("info")}>
+    {/* 이용 안내·고객센터 — 맨 아래로 떨어뜨리지 않고 주 메뉴 바로 밑에 작게 붙인다(대표 요청 2026-10-14). 맨 아래에는 내 계정만 */}
+    <div className={menu.divider} />
+    <Link href="/plan/info" className={item(menu.minor)} title="이용 안내" aria-current={here("info")}>
       <CircleHelp /><span className={styles.railLabel}>이용 안내</span>
     </Link>
-    <Link href="/account/support" className={item()} title="고객센터" aria-current={here("support")}>
+    <Link href="/account/support" className={item(menu.minor)} title="고객센터" aria-current={here("support")}>
       <Headphones /><span className={styles.railLabel}>고객센터</span>
     </Link>
+    <div className={`${styles.spring} ${menu.spring}`} />
     <div className={menu.divider} />
     {account === null ? null : account.authenticated ? (
       <Link href="/plan/me" className={item(menu.account)} title={`내 계정 · ${account.email ?? ""}`} aria-label={`내 계정 (${account.email ?? "로그인됨"})`} aria-current={here("me")}>

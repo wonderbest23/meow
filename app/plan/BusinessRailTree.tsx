@@ -108,7 +108,11 @@ const onServer = () => false;
 const readPlanId = () => new URLSearchParams(window.location.search).get("planId");
 const noPlanId = () => null;
 
-export default function BusinessRailTree({ documentToc }: { documentToc?: DocumentToc }) {
+export default function BusinessRailTree({ documentToc, onPlanCount }: {
+  documentToc?: DocumentToc;
+  /** 사업이 몇 개인지 확인되면 알려 준다(못 불러왔으면 부르지 않는다) — 사업이 없으면 메뉴가 '내 문의'를 막는다 */
+  onPlanCount?: (count: number) => void;
+}) {
   const pathname = usePathname() || "";
   /* 저장된 사업은 브라우저에만 있다 — 서버가 그린 첫 화면과 어긋나지 않게 올라온 뒤에 그린다 */
   const mounted = useSyncExternalStore(noSubscribe, onClient, onServer);
@@ -157,6 +161,7 @@ export default function BusinessRailTree({ documentToc }: { documentToc?: Docume
     return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [local, remote]);
   const checked = remote !== null || (remoteFailed && local.length > 0);
+  useEffect(() => { if (checked) onPlanCount?.(plans.length); }, [checked, plans.length, onPlanCount]);
   const step = stepFor(pathname);
   /* 지금 화면이 보여 주는 사업 — 주소에 있으면 그것, 홈페이지처럼 주소에 없으면 작업 중인 사업 */
   const currentId = urlPlanId ?? (step ? state?.activePlanId ?? null : null);
@@ -178,7 +183,7 @@ export default function BusinessRailTree({ documentToc }: { documentToc?: Docume
   }
 
   return <div className={styles.tree}>
-    <button type="button" className={`${shell.railBtn} ${menu.item} ${styles.head}`} aria-expanded={listOpen} aria-current={pathname === "/plan" || pathname === "/plan/" ? "page" : undefined} onClick={toggleList} title="내 사업">
+    <button type="button" className={`${shell.railBtn} ${menu.item} ${menu.main} ${styles.head}`} aria-expanded={listOpen} aria-current={pathname === "/plan" || pathname === "/plan/" ? "page" : undefined} onClick={toggleList} title="내 사업">
       <FolderClosed /><span className={shell.railLabel}>내 사업</span>
       <ChevronRight className={styles.caret} data-open={listOpen || undefined} aria-hidden="true" />
     </button>

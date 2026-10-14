@@ -27,11 +27,24 @@
 .menu .item[aria-current="page"] { background: #f2f4f6; color: #191f28; font-weight: 600; }
 .menu .item[aria-current="page"] svg { color: #191f28; }
 
-/* 새 대화 — 맨 위 한 칸만 테두리 단추로 */
-.menu .newChat { margin-bottom: 12px; border: 1px solid #d1d6db; background: #fff; color: #191f28; font-weight: 600; }
-.menu .newChat svg { color: #191f28; }
-.menu .newChat:hover { background: #f9fafb; }
-.menu .newChat[aria-current="page"] { border-color: #191f28; background: #fff; }
+/*
+ * 주 메뉴 세 칸(새 대화 · 내 사업 · 내 문의) — 같은 모양, 큰 글씨(대표 요청 2026-10-14).
+ * 이름표(PlanShell .railLabel)가 13.5px 로 못박혀 있어 칸만 키우면 글씨가 그대로였다 — 이름표까지 키운다.
+ */
+.menu .main { min-height: 46px; gap: 12px; color: #191f28; }
+.menu .main > span { font-size: 16px; font-weight: 600; }
+.menu .main svg { width: 20px; height: 20px; color: #333d4b; }
+
+/* 보조 칸(이용 안내 · 고객센터) — 주 메뉴 바로 밑에 작고 옅게 */
+.menu .minor { min-height: 38px; color: #6b7684; }
+.menu .minor > span { font-size: 13.5px; font-weight: 500; }
+.menu .minor svg { width: 17px; height: 17px; }
+
+/* 사업이 없을 때의 내 문의 — 누를 수 없고 왜 막혔는지 한 줄로 */
+.menu .disabled { cursor: default; opacity: .5; }
+.menu .disabled:hover { background: transparent; transform: none; }
+.menu .disabledText { display: grid; gap: 2px; line-height: 1.25; }
+.menu .disabledText small { color: #6b7684; font-size: 12px; font-weight: 500; }
 
 /* 지금 보고 있는 사업 아래 칸 — 한 단계 들여쓴다 */
 .menu .sub { min-height: 36px; margin-left: 22px; padding-left: 10px; font-size: 13px; }
@@ -59,7 +72,6 @@
   .menu .brand { justify-content: center; height: auto; margin: 0 0 14px; padding: 0; border: 0; }
   .menu .brand .logoFull { display: none; }
   .menu .logoMark { display: block !important; width: 36px; height: 36px; }
-  .menu .newChat { margin-bottom: 8px; }
   .menu .auth { grid-template-columns: 1fr; }
   .menu .signup { display: none; }
   .menu .auth a { height: 36px; font-size: 12px; }
@@ -75,7 +87,13 @@
 :global([data-rail-open]) .menu { gap: 4px; }
 :global([data-rail-open]) .menu .item { min-height: 52px; gap: 14px; padding: 0 14px; border-radius: 12px; font-size: 16px; }
 :global([data-rail-open]) .menu .item svg { width: 22px; height: 22px; }
-:global([data-rail-open]) .menu .newChat { min-height: 56px; margin-bottom: 10px; border-color: #191f28; font-size: 17px; font-weight: 700; }
+:global([data-rail-open]) .menu .main { min-height: 54px; }
+:global([data-rail-open]) .menu .main > span { font-size: 17px; }
+:global([data-rail-open]) .menu .main svg { width: 22px; height: 22px; }
+:global([data-rail-open]) .menu .minor { min-height: 46px; }
+:global([data-rail-open]) .menu .minor > span { font-size: 15px; }
+:global([data-rail-open]) .menu .minor svg { width: 20px; height: 20px; }
+:global([data-rail-open]) .menu .disabledText small { font-size: 13px; }
 :global([data-rail-open]) .menu .sub { min-height: 46px; margin-left: 26px; font-size: 15px; }
 :global([data-rail-open]) .menu .account { min-height: 60px; }
 :global([data-rail-open]) .menu .avatar { width: 34px; height: 34px; font-size: 15px; }
