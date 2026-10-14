@@ -344,5 +344,11 @@ export function playbookContext(playbook: IndustryPlaybook, matchedBy: "ksic" | 
     // 실제 API 8건(2026-10-13, 이사): 단계 이름만 넘겨 '새 허가는 나오지 않아 넘겨받는다' 같은 핵심 사실이 빠졌고, 계획서가 '허가 신청'으로 썼다
     steps: playbook.steps.map(step => `${step.title} (${step.where}) — ${step.detail}`),
     pitfalls: playbook.pitfalls,
+    // 대표 결정(2026-10-14): 가이드의 '오늘창업 홈페이지'가 계획서에 이름만 나와 검토자가 근거 없는 줄로 읽었다 — 무엇인지 한 줄 붙인다
+    ...(playbook.steps.some(step => step.where.includes(OWN_HOMEPAGE)) ? { ownService: OWN_HOMEPAGE_NOTE } : {}),
   };
 }
+
+const OWN_HOMEPAGE = "오늘창업 홈페이지";
+/** 계획서에 '오늘창업 홈페이지'를 쓸 때 붙일 설명 — 실제 기능(lib/landing/contact-method.ts)과 같아야 한다 */
+export const OWN_HOMEPAGE_NOTE = "'오늘창업 홈페이지'는 오늘창업에서 만드는 가게 소개 홈페이지입니다. 소개와 함께 문의 양식·전화·카카오톡·외부 예약 페이지(네이버 예약 등)로 손님을 연결하고, 예약이나 결제를 직접 받지는 않습니다. 계획서에 처음 쓸 때 이 설명을 한 줄 붙이고, 예약·결제는 따로 정한 곳으로 씁니다.";
