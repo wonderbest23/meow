@@ -100,6 +100,8 @@ export type CashflowScenarios = {
   goalNote: string | null;
   /** 1회 값을 파는데 목표가 사람 수일 때의 환산(판매량은 '회') */
   sessionNote: string | null;
+  /** 그때 한 사람이 한 달에 사는 횟수(가정) — 이야기할 사람 수는 횟수가 아니라 사람으로 센다 */
+  sessionsPerPerson: number | null;
 };
 
 const MONTHS = 12;
@@ -297,7 +299,7 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
   const sessionNote = session
     ? `가격 ${won(input.unitPrice)}은 1회 값이라 판매량은 '번(수업 횟수)'으로 셉니다. ${session.who} 1명이 주 ${session.weekly}회(한 달 ${session.perPerson}번, 가정)라면 목표 ${session.who} ${session.people.toLocaleString("ko-KR")}명은 월 ${count(session.people * session.perPerson, "번")}, ${livingBreakEven ? "생활비까지 버는 판매량" : "본전"} 월 ${count(livingBreakEven ?? breakEven, "번")}은 ${session.who} 약 ${Math.ceil((livingBreakEven ?? breakEven) / session.perPerson).toLocaleString("ko-KR")}명입니다. 실제 수업 횟수를 정하면 이 환산부터 고칩니다.`
     : null;
-  return { unit, sessionNote, goalNote: utilizationGoal ? `가동률 ${utilization}% = 처리 한도 월 ${count(capacity!.volume, unit)}의 ${utilization}%, 월 ${count(utilizationGoal.volume, unit)}` : null, setupOnPlan, planDip, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, slowShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, repeatGoal: recurring ? null : parseRepeatGoal(input.goal), businessTypeId: input.businessTypeId ?? null, priceAlternatives, unitNote };
+  return { unit, sessionNote, sessionsPerPerson: session?.perPerson ?? null, goalNote: utilizationGoal ? `가동률 ${utilization}% = 처리 한도 월 ${count(capacity!.volume, unit)}의 ${utilization}%, 월 ${count(utilizationGoal.volume, unit)}` : null, setupOnPlan, planDip, daily: /하루/.test(input.capacity ?? ""), unitPrice: input.unitPrice, monthlyFixedCost: input.monthlyFixedCost, contribution, breakEven, capacity, living, livingBreakEven, payFromMonth: payIndex >= 0 ? payIndex + 1 : null, goal, budget, setupCost, scenarios, carefulWorst, setupLimit, runOut, decision, survival, prepWeeks, prepLiving, prepFixed, stopReserve, stopBroken, stopBrokenOnPlan, paceShortfall, slowShortfall, setupBeforeStop, vat: { contribution: vatContribution, line: vatLine }, capacityNet, recurring, premises: !!input.premises, opening, coverNeeded, paceRunOut, recurringPace, repeatGoal: recurring ? null : parseRepeatGoal(input.goal), businessTypeId: input.businessTypeId ?? null, priceAlternatives, unitNote };
 }
 
 const capacityShort = (result: CashflowScenarios) => !!result.capacity && result.capacity.volume < (result.livingBreakEven ?? result.breakEven);
@@ -435,7 +437,8 @@ function decisionLines(result: CashflowScenarios): string[] {
     ? ` 다만 ${decision.goLabel}(월 ${count(decision.go, unit)})이 처리 한도(월 ${count(result.capacity.volume, unit)})보다 많아 판매량만으로는 닿을 수 없습니다. 그래서 '계획대로'는 한도의 80% 이상을 채우고 가격·수수료를 바꾼 안의 생활비선이 한도 안에 들어올 때로 봅니다. 판단표 맨 윗줄에 닿을 수 없는 월 ${count(decision.go, unit)}을 쓰지 않습니다.`
     : "";
   const reach = (rate: number) => {
-    const monthly = Math.ceil((pace ? pace.perMonth : decision.go) / rate);
+    // 1회 값 판매는 횟수를 사람으로 바꿔 센다(실제 API: '매달 새로 2번'을 2명과 이야기할 수로 읽었다)
+    const monthly = Math.ceil((pace ? pace.perMonth : decision.go) / (result.sessionsPerPerson ?? 1) / rate);
     return result.daily ? `하루 약 ${Math.ceil(monthly / 26).toLocaleString("ko-KR")}명` : monthly / 4.3 >= 1 ? `일주일 약 ${Math.ceil(monthly / 4.3).toLocaleString("ko-KR")}명` : `한 달 ${monthly.toLocaleString("ko-KR")}명`;
   };
   // 10차 맞대결(네일·SNS): 부가세 주석이 기준선을 바꾸는데 매달 목표에는 바뀐 선이 없었다
@@ -463,7 +466,7 @@ function decisionLines(result: CashflowScenarios): string[] {
   return [
     first + unreachable + ramp + vatGo,
     `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 시범 판매가 일부 시간·자리만 쓰면(예: 남의 가게 저녁 한 자리 2주) 판매 수를 그대로 비교하지 않고 연 시간 중 채운 비율과 재예약으로 봅니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 문의한 사람 중 날짜를 잡거나 돈을 낸 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다. 비율의 분모는 직접 이야기를 나눈 사람(찾아간 곳·체험한 사람·문의한 사람), 분자는 날짜를 잡거나 돈을 낸 사람입니다. 글을 본 사람 수(노출)는 분모로 쓰지 않고, 질문에 얼마나 꼼꼼히 답했는지도 비율로 쓰지 않습니다. 노출 대비 비율은 아래 10~30%보다 훨씬 낮아 기준이 늘 못 미치게 되기 때문입니다. 이야기를 나눈 수가 10보다 적으면 비율로 판단하지 않고 더 모읍니다(몇 곳 중 몇 곳으로 적음).`,
-    `${pace ? `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면` : `${decision.goLabel}을 채우려면`} 직접 이야기를 나눠야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 이 수는 문을 연 뒤 필요한 손님 흐름을 가늠하는 참고값이고, 계약할지 가르는 기준이 아닙니다. 계약 판단은 위 '출시 전 판단'(이야기를 나눈 사람 중 날짜를 잡거나 돈을 낸 수와 비율)으로 합니다. 이 수는 판매가 모두 새 손님이라고 본 값이라, 다시 오는 손님이 많을수록 새로 이야기할 사람은 줄어듭니다.`,
+    `${pace ? (result.sessionsPerPerson ? `매달 새로 늘어야 하는 수업(약 ${count(pace.perMonth, unit)}, 사람으로 약 ${Math.ceil(pace.perMonth / result.sessionsPerPerson).toLocaleString("ko-KR")}명)을 채우려면` : `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면`) : `${decision.goLabel}을 채우려면`} 직접 이야기를 나눠야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 손님이 두 단계를 거쳐 돈을 내면(이야기 → 체험 → 등록, 써 봄 → 다시 옴 → 결제처럼) 두 비율을 곱해서 셉니다: 30% × 30%(9%)면 ${reach(0.09)}, 20% × 20%(4%)면 ${reach(0.04)}. 이 수는 문을 연 뒤 필요한 손님 흐름을 가늠하는 참고값이고, 계약할지 가르는 기준이 아닙니다. 계약 판단은 위 '출시 전 판단'(이야기를 나눈 사람 중 날짜를 잡거나 돈을 낸 수와 비율)으로 합니다. 이 수는 판매가 모두 새 손님이라고 본 값이라, 다시 오는 손님이 많을수록 새로 이야기할 사람은 줄어듭니다.`,
     `문을 연 뒤: 실제 판매 수를 위 기준과 매달 비교하고, ${result.stopBroken ? "중단선 대신 시작 전에 정한 결정(다른 수입·생활비 줄이기·예산 늘리기)을 지킵니다" : (result.planDip ? `잔고가 표의 '${result.planDip.label}' 줄에서 실제로 쓴 초기 지출과 한 달 적자분을 뺀 값보다 낮으면 계속할지 다시 정합니다${result.planDip.recovery ? `(${result.planDip.recovery}개월차부터는 중단선)` : ""}` : "남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다")}. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
     ...repeatGoalLines(result),
     ...typeLine,

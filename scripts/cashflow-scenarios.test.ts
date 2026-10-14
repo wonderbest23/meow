@@ -293,4 +293,9 @@ assert.doesNotMatch(cashflowReference(buildCashflowScenarios({ ...bakery, goal: 
 assert.match(tutorRef, /대표 생활비가 계산에 빠져 있습니다. 나중에 사업에서 생활비를 가져가려면 월 1,000,000원이면 생활비까지 버는 판매량 월 30번, 월 1,500,000원이면 생활비까지 버는 판매량 월 43번입니다\(예시 금액\)/);
 assert.doesNotMatch(ref, /대표 생활비가 계산에/, "living cost given → no example line");
 
+// 실제 API 8건(레시피 앱·한국어 과외): 두 단계 전환을 한 비율로 세어 이야기할 사람 수가 적게 나왔다 — 곱한 비율도 보인다
+assert.match(snsRef, /두 비율을 곱해서 셉니다: 30% × 30%\(9%\)면 .*20% × 20%\(4%\)면/);
+// 1회 값 판매는 횟수를 사람으로 바꿔 센다: 매달 새로 2번 = 학생 약 1명
+assert.match(tutorRef, /매달 새로 늘어야 하는 수업\(약 2번, 사람으로 약 1명\)을 채우려면/);
+
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");
