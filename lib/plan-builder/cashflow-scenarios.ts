@@ -116,6 +116,15 @@ const count = (value: number, unit: string) => `${Math.round(value).toLocaleStri
 // 하루 10건이 안 되면 소수 한 자리까지 — '약 3건'과 '약 4건'처럼 반올림이 차이를 부풀리지 않게(2026-10-13 3차 검토: 3.46건과 3.58건)
 const perDayCount = (value: number, unit: string) => (value < 10 ? `${Number(value.toFixed(1)).toLocaleString("ko-KR")}${unit}` : count(value, unit));
 const perDay = (daily: boolean, monthly: number, unit: string, wrap: (text: string) => string) => (daily && monthly / 26 >= 1 ? wrap(`하루 약 ${perDayCount(monthly / 26, unit)}`) : "");
+// 실제 API 8건 두 번째: 수수료 이름이 업종과 맞지 않았다(캔들에 '예약 플랫폼') — 유형별로 실제로 빠지는 수수료를 쓴다
+const FEE_LABELS: Record<string, string> = {
+  ship: "카드 수수료, 스마트스토어·오픈마켓 판매 수수료",
+  app: "앱 마켓·결제대행 수수료",
+  platform: "결제대행 수수료",
+  b2b: "카드 수수료(계좌이체면 없음)",
+  space: "카드 수수료, 공간 예약 플랫폼 수수료",
+};
+const feeLabel = (typeId: string | null) => (typeId && FEE_LABELS[typeId]) || "카드 수수료, 예약·중개 플랫폼을 쓰면 그 이용료";
 /** 경우가 두 개(목표가 매출이 아닐 때)인지 세 개인지 */
 const kinds = (result: { scenarios: unknown[] }) => (result.scenarios.length === 3 ? "세 가지" : "두 가지");
 
@@ -399,7 +408,7 @@ function cashflowFindings(result: CashflowScenarios): string[] {
   const thinNet = thin && thin.key === "breakeven" && !result.recurring ? thin.net[0] : null;
   if (thinNet != null && thinNet >= 0 && thinNet < result.monthlyFixedCost * 0.1 && Number.isFinite(result.vat.line)) {
     const vatNet = Math.round(thin.volumes[0] * result.vat.contribution - result.monthlyFixedCost - (result.living ?? 0));
-    if (vatNet < 0) lines.push(`'${thin.label}'도 한 달에 ${won(thinNet)}만 남습니다(세금 전). 판매가에 부가세가 들어 있으면(일반과세자) 이 경우도 매달 약 ${won(-vatNet)}씩 모자라고, 결제 수수료(카드 수수료, 판매·예약 플랫폼 이용료)도 이 계산에 빠져 있습니다. 이 줄을 '버는 경우'로 읽지 않습니다.`);
+    if (vatNet < 0) lines.push(`'${thin.label}'도 한 달에 ${won(thinNet)}만 남습니다(세금 전). 판매가에 부가세가 들어 있으면(일반과세자) 이 경우도 매달 약 ${won(-vatNet)}씩 모자라고, 결제 수수료(${feeLabel(result.businessTypeId)})도 이 계산에 빠져 있습니다. 이 줄을 '버는 경우'로 읽지 않습니다.`);
   }
   if (Number.isFinite(result.vat.line)) lines.push(`판매가 ${won(result.unitPrice)}에 부가세가 들어 있다면(일반과세자) 한 건에 남는 돈은 약 ${won(result.vat.contribution)}으로 줄고, ${result.livingBreakEven ? "생활비선" : "본전"}은 월 ${count(result.vat.line, result.unit)}이 됩니다. 간이과세자는 계산이 다르므로, 사업자등록 때 과세 유형과 가격에 부가세를 넣을지를 함께 정합니다.`);
   return lines;
@@ -466,11 +475,12 @@ function decisionLines(result: CashflowScenarios): string[] {
   return [
     first + unreachable + ramp + vatGo,
     `출시 전 판단: 돈을 받고 실제로 팔아 볼 수 있으면(이미 신고된 공간·시범 판매) 실제 판매 수를 위 기준과 같은 기간끼리 비교합니다. 시범 판매가 일부 시간·자리만 쓰면(예: 남의 가게 저녁 한 자리 2주) 판매 수를 그대로 비교하지 않고 연 시간 중 채운 비율과 재예약으로 봅니다. 아직 팔 수 없으면 판매량 기준을 그대로 쓰지 않습니다. 새로 모은 예약 의사 수는 수요보다 '얼마나 닿았는지'를 재기 때문입니다. 대신 작은 표본에서 잰 실제 비율(체험한 사람 중 등록한 비율, 찾아간 곳 중 계약한 비율, 문의한 사람 중 날짜를 잡거나 돈을 낸 비율)과 경쟁 자료(비슷한 가게의 빈자리·예약 달력·가동률)로 판단합니다. 비율의 분모는 직접 이야기를 나눈 사람(찾아간 곳·체험한 사람·문의한 사람), 분자는 날짜를 잡거나 돈을 낸 사람입니다. 글을 본 사람 수(노출)는 분모로 쓰지 않고, 질문에 얼마나 꼼꼼히 답했는지도 비율로 쓰지 않습니다. 노출 대비 비율은 아래 10~30%보다 훨씬 낮아 기준이 늘 못 미치게 되기 때문입니다. 이야기를 나눈 수가 10보다 적으면 비율로 판단하지 않고 더 모읍니다(몇 곳 중 몇 곳으로 적음).`,
-    `${pace ? (result.sessionsPerPerson ? `매달 새로 늘어야 하는 수업(약 ${count(pace.perMonth, unit)}, 사람으로 약 ${Math.ceil(pace.perMonth / result.sessionsPerPerson).toLocaleString("ko-KR")}명)을 채우려면` : `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면`) : `${decision.goLabel}을 채우려면`} 직접 이야기를 나눠야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 손님이 두 단계를 거쳐 돈을 내면(이야기 → 체험 → 등록, 써 봄 → 다시 옴 → 결제처럼) 두 비율을 곱해서 셉니다: 30% × 30%(9%)면 ${reach(0.09)}, 20% × 20%(4%)면 ${reach(0.04)}. 이 수는 문을 연 뒤 필요한 손님 흐름을 가늠하는 참고값이고, 계약할지 가르는 기준이 아닙니다. 계약 판단은 위 '출시 전 판단'(이야기를 나눈 사람 중 날짜를 잡거나 돈을 낸 수와 비율)으로 합니다. 이 수는 판매가 모두 새 손님이라고 본 값이라, 다시 오는 손님이 많을수록 새로 이야기할 사람은 줄어듭니다.`,
+    // 실제 API 8건 두 번째(연습실): 공간 대여는 문의 없이 바로 예약해 '하루 ○명과 이야기' 계산이 맞지 않는다 — 판단은 예약 달력(위 유형 줄)으로 한다
+    result.businessTypeId === "space" ? "" : `${pace ? (result.sessionsPerPerson ? `매달 새로 늘어야 하는 수업(약 ${count(pace.perMonth, unit)}, 사람으로 약 ${Math.ceil(pace.perMonth / result.sessionsPerPerson).toLocaleString("ko-KR")}명)을 채우려면` : `매달 새로 늘어야 하는 손님(약 ${count(pace.perMonth, unit)})을 채우려면`) : `${decision.goLabel}을 채우려면`} 직접 이야기를 나눠야 하는 사람 수(잰 비율에 맞춰 고름): 비율 10%면 ${reach(0.1)}, 20%면 ${reach(0.2)}, 30%면 ${reach(0.3)}. 손님이 두 단계를 거쳐 돈을 내면(이야기 → 체험 → 등록, 써 봄 → 다시 옴 → 결제처럼) 두 비율을 곱해서 셉니다: 30% × 30%(9%)면 ${reach(0.09)}, 20% × 20%(4%)면 ${reach(0.04)}. 이 수는 문을 연 뒤 필요한 손님 흐름을 가늠하는 참고값이고, 계약할지 가르는 기준이 아닙니다. 계약 판단은 위 '출시 전 판단'(이야기를 나눈 사람 중 날짜를 잡거나 돈을 낸 수와 비율)으로 합니다. 이 수는 판매가 모두 새 손님이라고 본 값이라, 다시 오는 손님이 많을수록 새로 이야기할 사람은 줄어듭니다.`,
     `문을 연 뒤: 실제 판매 수를 위 기준과 매달 비교하고, ${result.stopBroken ? "중단선 대신 시작 전에 정한 결정(다른 수입·생활비 줄이기·예산 늘리기)을 지킵니다" : (result.planDip ? `잔고가 표의 '${result.planDip.label}' 줄에서 실제로 쓴 초기 지출과 한 달 적자분을 뺀 값보다 낮으면 계속할지 다시 정합니다${result.planDip.recovery ? `(${result.planDip.recovery}개월차부터는 중단선)` : ""}` : "남은 준비 예산이 중단선 아래로 내려가면 계속할지 다시 정합니다")}. 관심 글의 댓글·공감 수는 판매 수가 아니므로 이 기준과 바로 비교하지 않습니다.`,
     ...repeatGoalLines(result),
     ...typeLine,
-  ];
+  ].filter(Boolean);
 }
 
 /*

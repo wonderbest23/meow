@@ -298,4 +298,10 @@ assert.match(snsRef, /두 비율을 곱해서 셉니다: 30% × 30%\(9%\)면 .*2
 // 1회 값 판매는 횟수를 사람으로 바꿔 센다: 매달 새로 2번 = 학생 약 1명
 assert.match(tutorRef, /매달 새로 늘어야 하는 수업\(약 2번, 사람으로 약 1명\)을 채우려면/);
 
+// 실제 API 8건 두 번째: 공간 대여는 '하루 ○명과 이야기' 계산을 넣지 않는다(바로 예약) · 하루 처리량 환산은 주 6일 가정을 밝힌다
+assert.doesNotMatch(roomRef, /직접 이야기를 나눠야 하는 사람 수/);
+assert.match(room.capacity?.note ?? "", /월 26일 영업\(주 6일 가정\)/);
+assert.match(snsRef, /직접 이야기를 나눠야 하는 사람 수/);
+assert.equal(monthlyVolumeFromCapacity("대표자 혼자 / 하루 6건")?.note, "하루 6건 × 월 26일 영업(주 6일 가정) = 월 156건");
+
 console.log("cashflow-scenarios: bakery numbers, living cost, survival table, per-day only for daily businesses, goal parsing passed");

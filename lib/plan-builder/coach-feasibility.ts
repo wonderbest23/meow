@@ -28,7 +28,7 @@ export function monthlyVolumeFromCapacity(text: string | null | undefined): { vo
   if (!Number.isFinite(count) || count < 0) return null;
   const factor = CAPACITY_MONTH_FACTOR[match[1]], unit = match[3] || "건", volume = Math.round(count * factor);
   const shown = (n: number) => n.toLocaleString("ko-KR");
-  return { volume, unit, note: factor === 1 ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1] === "주" ? "일주일" : match[1]} ${shown(count)}${unit} × ${factor === 26 ? "월 26일 영업" : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
+  return { volume, unit, note: factor === 1 ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1] === "주" ? "일주일" : match[1]} ${shown(count)}${unit} × ${factor === 26 ? "월 26일 영업(주 6일 가정)" : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
 }
 
 /** These are arithmetic checks on supplied/proposed inputs, not a business viability score. */
