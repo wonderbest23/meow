@@ -35,8 +35,13 @@ async function main() {
   assert.equal(accountLinkError(new Error("PLAN_CLAIM_FAILED"))?.status, 503);
   assert.equal(accountLinkError(new Error("wrong password")), null);
   assert.notEqual(planOwnerKey("account-a"), planOwnerKey("account-b"));
-  for (const route of ["login", "google", "reset", "session"]) {
+  for (const route of ["login", "reset", "session"]) {
     assert.match(await readFile(`app/api/auth/${route}/route.ts`, "utf8"), /accountLinkError\(error\)/);
+  }
+  // 구글·애플(ID 토큰) 로그인은 공용 함수가 계정 연결 오류를 처리한다
+  assert.match(await readFile("lib/id-token-sign-in.ts", "utf8"), /accountLinkError\(error\)/);
+  for (const route of ["google", "apple"]) {
+    assert.match(await readFile(`app/api/auth/${route}/route.ts`, "utf8"), new RegExp(`signInWithProviderIdToken\\("${route}"`));
   }
   const register = await readFile("app/api/auth/register/route.ts", "utf8");
   assert.doesNotMatch(register, /claimGuestProjects|setAccountSession|admin\.createUser/, "unconfirmed signup must not claim or establish a session");

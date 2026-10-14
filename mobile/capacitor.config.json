@@ -7,7 +7,9 @@
     "cleartext": false,
     "allowNavigation": [
       "oneulstart.com",
-      "www.oneulstart.com"
+      "www.oneulstart.com",
+      "*.kakao.com",
+      "*.supabase.co"
     ]
   },
   "ios": {
