@@ -42,3 +42,23 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         return config
     }
 }
+
+/// 앱 화면 — 아이폰 상태바·홈 막대 자리(안전 영역)를 페이지 바탕색으로 칠한다.
+/// Capacitor 는 이 자리를 한 가지 색(설정의 backgroundColor)으로 고정해서, 흰 화면 위아래에 검은 띠가 생겼다.
+/// WebKit 이 계산하는 페이지 바탕색(underPageBackgroundColor)을 지켜보다가 바뀔 때마다 안전 영역에 옮겨 칠한다
+/// (검은 첫 화면은 검게, 흰 화면은 희게).
+class MainViewController: CAPBridgeViewController {
+    private var pageColorObservation: NSKeyValueObservation?
+
+    override func capacitorDidLoad() {
+        super.capacitorDidLoad()
+        guard let webView = webView else { return }
+        webView.underPageBackgroundColor = nil
+        pageColorObservation = webView.observe(\.underPageBackgroundColor, options: [.initial, .new]) { [weak self] webView, _ in
+            guard let color = webView.underPageBackgroundColor else { return }
+            webView.backgroundColor = color
+            webView.scrollView.backgroundColor = color
+            self?.view.backgroundColor = color
+        }
+    }
+}

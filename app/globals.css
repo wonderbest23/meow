@@ -17099,3 +17099,15 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 .hk-inquiries-link span { display: grid; gap: 2px; }
 .hk-inquiries-link strong { font-size: 15px; }
 .hk-inquiries-link small { font-size: 13px; color: #4b6a99; }
+
+/*
+ * 손가락으로 누르는 순간 단추가 살짝 작아져 '눌렀다'는 느낌을 준다(대표 요청 2026-10-14).
+ * 터치 화면에서만. transform 대신 scale 속성을 써서 단추마다 원래 있던 transform(밀기·회전)을 건드리지 않는다.
+ */
+@media (hover: none) and (pointer: coarse) {
+  :where(a[href], button, [role="button"], summary, label:has(> input)) { transition: scale .12s ease; -webkit-tap-highlight-color: transparent; }
+  :where(a[href], button, [role="button"], summary, label:has(> input)):active:not(:disabled) { scale: .96; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(a[href], button, [role="button"], summary, label:has(> input)):active { scale: none; }
+}
