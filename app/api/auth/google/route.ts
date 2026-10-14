@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { claimGuestProjects, createServerAuthClient, currentGuestHash, setAccountSession } from "../../../../lib/account-auth";
-import { getServerSupabase } from "../../../../lib/persistence";
-import { PLATFORM_POLICY_VERSION } from "../../../../lib/platform-legal/domain";
+import { signInWithProviderIdToken } from "../../../../lib/id-token-sign-in";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
-import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
 
 /*
  * 구글 로그인.
@@ -32,66 +29,11 @@ export async function POST(request: Request) {
   });
   if (limited) return limited;
 
+  let input: z.infer<typeof schema>;
   try {
-    const input = schema.parse(await request.json());
-    const previousGuestHash = await currentGuestHash();
-    const auth = createServerAuthClient();
-
-    const result = await auth.auth.signInWithIdToken({ provider: "google", token: input.credential });
-    if (result.error || !result.data.session || !result.data.user) {
-      const raw = result.error?.message ?? "";
-      /* 설정이 빠진 경우는 사용자 잘못이 아니다 — 운영자가 알아볼 말로 남긴다 */
-      const notConfigured = /provider is not enabled|unsupported provider|unacceptable audience|audience/i.test(raw);
-      console.error("[auth-google] 실패:", raw);
-      return NextResponse.json(
-        {
-          error: {
-            code: "GOOGLE_LOGIN_FAILED",
-            message: notConfigured
-              ? "구글 로그인이 아직 준비되지 않았습니다. 이메일로 로그인해 주세요."
-              : "구글 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.",
-          },
-        },
-        { status: 401 },
-      );
-    }
-
-    const user = result.data.user;
-
-    /*
-     * 약관 동의 기록 — 버튼 아래 고지("계속하면 …에 동의하게 됩니다")로 받는다.
-     * 이미 기록이 있으면 덮지 않는다(처음 가입 시각을 남겨 두려고).
-     */
-    const supabase = getServerSupabase();
-    if (supabase) {
-      await supabase
-        .from("account_consents")
-        .upsert(
-          {
-            user_id: user.id,
-            policy_version: PLATFORM_POLICY_VERSION,
-            terms_agreed: true,
-            privacy_agreed: true,
-            ai_notice_confirmed: true,
-            agreed_at: new Date().toISOString(),
-          },
-          { onConflict: "user_id", ignoreDuplicates: true },
-        )
-        .then(({ error }) => {
-          if (error) console.error("[auth-google] 동의 기록 실패:", error.message);
-        });
-    }
-
-    await claimGuestProjects(user.id, previousGuestHash);
-    await setAccountSession(result.data.session, input.remember ?? true);
-    return NextResponse.json({ authenticated: true, email: user.email ?? null });
-  } catch (error) {
-    const linking = accountLinkError(error);
-    if (linking) return NextResponse.json({ error: { code: linking.code, message: linking.message } }, { status: linking.status });
-    console.error("[auth-google] 오류:", error instanceof Error ? error.message : error);
-    return NextResponse.json(
-      { error: { code: "GOOGLE_LOGIN_FAILED", message: "구글 로그인에 실패했습니다. 잠시 후 다시 시도해주세요." } },
-      { status: 401 },
-    );
+    input = schema.parse(await request.json());
+  } catch {
+    return NextResponse.json({ error: { code: "GOOGLE_LOGIN_FAILED", message: "구글 로그인에 실패했습니다. 잠시 후 다시 시도해주세요." } }, { status: 401 });
   }
+  return signInWithProviderIdToken("google", input.credential, input.remember);
 }

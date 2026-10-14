@@ -51,6 +51,7 @@
 .root .form .snsTitle { margin: 0; color: #757575; font-size: 13px; }
 .root .form .snsRow { display: flex; justify-content: center; gap: 20px; }
 .root .form .google,
+.root .form .apple,
 .root .form .kakao { position: relative; display: grid; place-items: center; width: 48px; height: 48px; margin: 0; padding: 0; border-radius: 50%; }
 /* 구글 공식 원형 버튼(지름 40)을 48로 키워 G 아이콘 원 아래에 깐다 */
 .root .form .googleReal { position: absolute; inset: 0; display: grid; place-items: center; transform: scale(1.2); }
@@ -60,6 +61,12 @@
 .root .form .google:hover .googlePlaceholder { background: #f8f9fa; }
 .root .form .googlePlaceholder svg { width: 20px; height: 20px; }
 .root .form .kakao { border: 0; background: #fee500; cursor: pointer; }
+/* 앱 안: 휴대폰 로그인 창을 여는 버튼(구글은 위의 G 원을 그대로 보이고, 애플은 검은 원) */
+.root .form button.google { border: 0; background: transparent; cursor: pointer; }
+.root .form button.google:disabled,
+.root .form .apple:disabled { opacity: .5; cursor: default; }
+.root .form .apple { border: 0; background: #000; cursor: pointer; }
+.root .form .apple svg { width: 22px; height: 22px; fill: #fff; }
 .root .form .kakao:hover:not(:disabled) { background: #f5dc00; }
 .root .form .kakao:disabled { opacity: .5; cursor: default; }
 .root .form .kakao svg { width: 22px; height: 22px; fill: #191919; }

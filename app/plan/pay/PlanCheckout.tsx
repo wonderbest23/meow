@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
+import { finishNativePurchase, nativePlatform, nativePurchase } from "../../../lib/native-app";
 import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { documentHref } from "../../../lib/plan-builder/business-hub";
@@ -94,6 +95,13 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   /* 결제 정보를 아예 받지 못함 — 예전엔 '확인하는 중…'에서 영원히 돌았다. 다시 확인 단추를 보인다 */
   const [infoFailed, setInfoFailed] = useState(false);
   const [infoAttempt, setInfoAttempt] = useState(0);
+  /*
+   * 앱(아이폰·안드로이드) 안에서는 스토어 결제(인앱결제)로만 판다 — 스토어 규칙상 앱 안 디지털 상품은 카드 결제창을 띄울 수 없다.
+   * 도메인은 앱에서 팔지 않는다(lib/payments/iap-products.ts).
+   */
+  const [native, setNative] = useState<"ios" | "android" | null>(null);
+  useEffect(() => { setNative(nativePlatform()); }, []);
+  const appSellable = product === "plan" || product === "bundle" || product === "homepage" || product === "regen";
 
   useEffect(() => {
     let alive = true;
@@ -164,6 +172,42 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           started.current = false;
         },
       });
+    } catch {
+      setPhase("error");
+      setMessage("결제창을 여는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.");
+      started.current = false;
+    }
+  }
+
+  /* 앱 결제: 서버가 규칙을 보고(시작) → 스토어 결제창 → 서버가 영수증 확인·반영(완료) → 아이폰은 거래 마무리 → 결제한 곳으로 */
+  async function startAppPayment() {
+    if (started.current || !agreed || !native) return;
+    started.current = true;
+    setPhase("preparing");
+    setMessage(null);
+    try {
+      const startRes = await fetch("/api/payments/iap/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, product, terms: agreements }) });
+      const start = (await startRes.json().catch(() => ({}))) as { productId?: string; appAccountToken?: string; message?: string };
+      if (!startRes.ok || !start.productId || !start.appAccountToken) {
+        setPhase("error"); setMessage(start.message ?? "결제를 시작하지 못했습니다."); started.current = false; return;
+      }
+      setPhase("opening");
+      let purchase: Awaited<ReturnType<typeof nativePurchase>>;
+      try {
+        purchase = await nativePurchase(start.productId, start.appAccountToken);
+      } catch (error) {
+        const text = error instanceof Error ? error.message : "";
+        // 결제창을 닫은 경우는 오류로 보이지 않는다
+        if (/cancel|취소/i.test(text)) { setPhase("idle"); started.current = false; return; }
+        throw error;
+      }
+      const doneRes = await fetch("/api/payments/iap/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform: native, product, planId, planType, jws: purchase.jws, purchaseToken: purchase.purchaseToken }) });
+      const done = (await doneRes.json().catch(() => ({}))) as { ok?: boolean; message?: string };
+      if (!doneRes.ok || !done.ok) {
+        setPhase("error"); setMessage(done.message ?? "결제는 되었지만 반영하지 못했습니다. 앱을 다시 열면 다시 시도합니다."); started.current = false; return;
+      }
+      if (native === "ios") await finishNativePurchase(purchase.transactionId).catch(() => undefined);
+      window.location.assign(laterHref);
     } catch {
       setPhase("error");
       setMessage("결제창을 여는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.");
@@ -322,11 +366,12 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
               <label className={styles.phone}><span>상세 주소 <small>(선택)</small></span><input value={registrant.addressDetail} onChange={setReg("addressDetail")} placeholder="2층 201호" /></label>
               <small>등록기관(도메인 관리 기관)에 그대로 전달돼요. 사업자등록증의 주소와 같으면 좋아요.</small>
             </fieldset> : null}
-            <label className={styles.phone}>
+            {/* 결제 안내 문자는 카드 결제용 — 앱 결제는 스토어가 영수증을 보낸다 */}
+            {!native && <label className={styles.phone}>
               <span>결제 안내 받을 휴대폰 <small>(선택)</small></span>
               <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} />
               <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : `적으면 결제 완료를 문자로 한 번 알려 드려요.${receiptByEmail ? " 영수증은 가입한 이메일로도 가요." : ""}`}</small>
-            </label>
+            </label>}
             <label className={styles.agreeAll}>
               <input type="checkbox" checked={agreed} onChange={event => setAgreements(Object.fromEntries(AGREEMENT_KEYS.map(key => [key, event.target.checked])) as Agreements)} />
               <span><strong>필수 항목에 모두 동의합니다.</strong><small>각 문서를 열어 실제 제공 조건을 확인할 수 있습니다.</small></span>
@@ -355,7 +400,15 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           </section>
         )}
 
-        {info && !info.payable ? (
+        {native ? (
+          appSellable ? (
+            <button type="button" className={styles.primary} onClick={startAppPayment} disabled={!agreed || phase === "preparing" || phase === "opening"}>
+              {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : "앱에서 결제하기"}
+            </button>
+          ) : (
+            <p className={styles.notice}>이 상품은 앱에서 결제할 수 없어요.</p>
+          )
+        ) : info && !info.payable ? (
           <p className={styles.notice}>
             결제 준비가 아직 완료되지 않았습니다. 잠시 후 다시 시도해주세요.
           </p>
@@ -370,7 +423,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           </button>
         )}
 
-        {!agreed && !(info && !info.payable) ? <p className={styles.help}>필수 항목에 모두 동의하면 결제 버튼이 켜집니다.</p> : null}
+        {!agreed && (native ? appSellable : !(info && !info.payable)) ? <p className={styles.help}>필수 항목에 모두 동의하면 결제 버튼이 켜집니다.</p> : null}
         {message ? <p className={styles.error}>{message}</p> : null}
 
         <p className={styles.note}>

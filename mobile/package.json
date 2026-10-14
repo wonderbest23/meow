@@ -1,0 +1,21 @@
+{
+  "name": "oneulstart-mobile",
+  "private": true,
+  "version": "1.0.0",
+  "description": "오늘창업 iOS·안드로이드 앱 — 운영 사이트(oneulstart.com)를 앱으로 감싼다",
+  "scripts": {
+    "sync": "cap sync",
+    "ios": "cap open ios",
+    "android": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2",
+    "@capgo/capacitor-social-login": "^8.5.12",
+    "@capgo/native-purchases": "^8.8.1"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.5.2"
+  }
+}

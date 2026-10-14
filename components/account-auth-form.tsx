@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { googleClientId } from "../lib/google-client-id";
+import { nativeIdToken, nativePlatform } from "../lib/native-app";
 import { prepareAccountSignIn } from "../lib/plan-builder/plan-store";
 import { Spinner } from "../app/plan/PlanLoading";
 import { DEFAULT_LOGO } from "./site-header";
@@ -17,6 +18,8 @@ import styles from "./account-auth-form.module.css";
  * 클라이언트 ID 는 공개값이라 코드에 둬도 되고, 환경변수로 바꿀 수 있게 열어 둔다.
  */
 const GOOGLE_CLIENT_ID = googleClientId(process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID, process.env.NEXT_PUBLIC_APP_ENV);
+/* 아이폰 앱의 구글 로그인 창이 쓰는 iOS 클라이언트 ID — 없으면 아이폰 앱에서는 구글 버튼을 숨긴다 */
+const GOOGLE_IOS_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_IOS_CLIENT_ID ?? "";
 
 type GoogleAccountsId = {
   initialize: (config: { client_id: string; callback: (response: { credential?: string }) => void }) => void;
@@ -104,6 +107,9 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
   /* 구글 버튼이 그려질 자리 — GIS 가 이 안에 iframe 버튼을 그린다 */
   const googleButtonRef = useRef<HTMLDivElement>(null);
+  /* 앱(아이폰·안드로이드) 안이면 휴대폰 로그인 창을 쓴다 — 구글은 앱 안 웹 화면 로그인을 막는다 */
+  const [native, setNative] = useState<"ios" | "android" | null>(null);
+  useEffect(() => { setNative(nativePlatform()); }, []);
 
   useEffect(() => { setMode(initialMode); }, [initialMode]);
 
@@ -121,8 +127,48 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
    * 구글 버튼 그리기.
    * remember·mode 가 바뀌면 콜백이 그 값을 새로 물도록 다시 초기화한다.
    */
+  /* 구글·애플 ID 토큰을 서버에 넘겨 로그인한다(웹의 구글 버튼과 앱의 휴대폰 로그인 창이 함께 쓴다) */
+  const finishIdTokenLogin = (provider: "google" | "apple", credential: string) => {
+    setBusy(true);
+    setMessage("");
+    setMessageError(false);
+    void prepareAccountSignIn().then(() => fetch(`/api/auth/${provider}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ credential, remember }),
+    }))
+      .then((r) => payload<{ authenticated: boolean; email: string | null }>(r))
+      .then((data) => {
+        rememberLocally(remember, data.email ?? "");
+        goNext();
+      })
+      .catch((error) => {
+        setMessageError(true);
+        setMessage(error instanceof Error ? error.message : `${provider === "apple" ? "애플" : "구글"} 로그인에 실패했습니다.`);
+        setBusy(false);
+      });
+  };
+
+  /* 앱 안: 휴대폰 로그인 창을 열고, 받은 토큰으로 위와 같이 로그인한다. 창을 닫으면 조용히 돌아온다 */
+  const nativeLogin = (provider: "google" | "apple") => {
+    if (busy) return;
+    setMessage(""); setMessageError(false);
+    void nativeIdToken(provider, { googleWebClientId: GOOGLE_CLIENT_ID, googleIosClientId: GOOGLE_IOS_CLIENT_ID })
+      .then((token) => finishIdTokenLogin(provider, token))
+      .catch((error) => {
+        const text = error instanceof Error ? error.message : "";
+        /* 사용자가 창을 닫은 경우(애플 1001, 구글 cancel)는 조용히 돌아온다 */
+        if (/cancel|취소|error 1001/i.test(text)) return;
+        setMessageError(true);
+        /* 휴대폰이 주는 영어 오류문은 그대로 보이지 않는다 */
+        setMessage(/[가-힣]/.test(text) ? text : `${provider === "apple" ? "애플" : "구글"} 로그인을 마치지 못했습니다. 잠시 후 다시 시도하거나 이메일로 로그인해 주세요.`);
+      });
+  };
+  const nativeGoogle = native === "android" ? Boolean(GOOGLE_CLIENT_ID) : native === "ios" ? Boolean(GOOGLE_IOS_CLIENT_ID) : false;
+
   useEffect(() => {
     if (mode !== "login" && mode !== "register") return;
+    if (native) return;
     if (!GOOGLE_CLIENT_ID) { setGoogleReady(false); setGoogleUnavailable(true); return; }
     let alive = true;
     setGoogleReady(false); setGoogleUnavailable(false);
@@ -141,24 +187,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             client_id: GOOGLE_CLIENT_ID,
             callback: (response) => {
               if (!response.credential) return;
-              setBusy(true);
-              setMessage("");
-              setMessageError(false);
-              void prepareAccountSignIn().then(() => fetch("/api/auth/google", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ credential: response.credential, remember }),
-              }))
-                .then((r) => payload<{ authenticated: boolean; email: string | null }>(r))
-                .then((data) => {
-                  rememberLocally(remember, data.email ?? "");
-                  goNext();
-                })
-                .catch((error) => {
-                  setMessageError(true);
-                  setMessage(error instanceof Error ? error.message : "구글 로그인에 실패했습니다.");
-                  setBusy(false);
-                });
+              finishIdTokenLogin("google", response.credential);
             },
           });
           parent.innerHTML = "";
@@ -177,7 +206,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     })();
     return () => { alive = false; window.clearTimeout(timeout); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, remember]);
+  }, [mode, remember, native]);
 
   // 지난번 선택과 이메일을 되살린다
   useEffect(() => {
@@ -279,15 +308,20 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           <p className={styles.snsTitle}>SNS계정으로 간편 로그인/회원가입</p>
           <div className={styles.snsRow}>
             {/* 구글은 공식 원형 아이콘 버튼(GIS)을 그대로 쓴다. 카카오는 노란 바탕 원형 */}
-            <div className={styles.google} aria-busy={!googleReady && !googleUnavailable}>
+            {native === "ios" && <button type="button" className={styles.apple} disabled={busy} onClick={() => nativeLogin("apple")} aria-label="애플로 로그인">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.02-1.5-2.62-1.7-3.19-1.72-1.36-.14-2.65.8-3.34.8-.69 0-1.75-.78-2.88-.76-1.48.02-2.85.86-3.61 2.19-1.54 2.67-.39 6.62 1.11 8.79.73 1.06 1.6 2.25 2.75 2.21 1.1-.04 1.52-.71 2.85-.71 1.33 0 1.71.71 2.88.69 1.19-.02 1.94-1.08 2.67-2.15.84-1.23 1.19-2.42 1.21-2.48-.03-.01-2.32-.89-2.33-3.53zM14.18 6.13c.61-.74 1.02-1.76.91-2.78-.88.04-1.94.59-2.57 1.32-.56.65-1.06 1.69-.93 2.69.98.08 1.98-.5 2.59-1.23z" /></svg>
+            </button>}
+            {native ? nativeGoogle && <button type="button" className={styles.google} disabled={busy} onClick={() => nativeLogin("google")} aria-label="구글로 로그인">
+              <span className={styles.googlePlaceholder} aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg></span>
+            </button> : <div className={styles.google} aria-busy={!googleReady && !googleUnavailable}>
               <span className={styles.googlePlaceholder} aria-hidden="true"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" /><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" /><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z" /><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" /></svg></span>
               <div ref={googleButtonRef} className={styles.googleReal} />
-            </div>
+            </div>}
             <button type="button" className={styles.kakao} disabled={busy} onClick={kakao} aria-label="카카오로 로그인">
               <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3C6.9 3 2.8 6.2 2.8 10.1c0 2.5 1.7 4.7 4.2 6l-.9 3.3c-.1.3.3.6.6.4l3.9-2.6c.5.1 1 .1 1.4.1 5.1 0 9.2-3.2 9.2-7.2S17.1 3 12 3z" /></svg>
             </button>
           </div>
-          {googleUnavailable && <p className={styles.note}>구글 연결이 지연돼요. 이메일이나 카카오로 로그인해 주세요.</p>}
+          {!native && googleUnavailable && <p className={styles.note}>구글 연결이 지연돼요. 이메일이나 카카오로 로그인해 주세요.</p>}
           {/* 로그인 탭에서도 보인다 — 처음 쓰는 SNS 계정은 로그인 버튼으로 바로 가입된다 */}
           <p className={styles.note}>SNS로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.</p>
         </section>}
