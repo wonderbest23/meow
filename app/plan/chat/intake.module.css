@@ -78,6 +78,17 @@
 .entryChoices button:nth-child(2) > svg:first-child { color: var(--intake-blue); }
 .entryChoices button:nth-child(3) > svg:first-child { color: var(--intake-green); }
 .entryChoices button > svg:last-child { color: #98a0aa; }
+/*
+ * 시작 선택지 — 단추라는 걸 알아보게 하나씩 살짝 커지며 떠오르고, 한 번 가볍게 부풀었다 돌아온다(대표 요청 2026-10-14).
+ * 누를 때는 조금 작아진다. 계속 움직이면 거슬려서 처음 한 번만. 부풀기는 끝나면 손을 떼야(fill 없음) 누를 때 작아지는 효과가 먹는다.
+ */
+.entryChoices button { animation: entry-choice-in .42s cubic-bezier(.2, .8, .2, 1) both, entry-choice-nudge .5s ease-in-out 1.1s; transition: scale .12s ease, border-color .15s ease, background .15s ease; }
+.entryChoices button:nth-child(2) { animation-delay: .08s, 1.25s; }
+.entryChoices button:nth-child(3) { animation-delay: .16s, 1.4s; }
+.entryChoices button:active:not(:disabled) { scale: .97; }
+@keyframes entry-choice-in { from { opacity: 0; transform: translateY(8px) scale(.96); } to { opacity: 1; transform: none; } }
+@keyframes entry-choice-nudge { 0%, 100% { scale: 1; } 50% { scale: 1.025; } }
+@media (prefers-reduced-motion: reduce) { .entryChoices button { animation: none; } }
 .textLink { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; color: var(--intake-muted); font-size: 14px; text-underline-offset: 3px; }
 .modeSwitch { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; padding: 4px; margin-bottom: 28px; border: 1px solid var(--intake-line); border-radius: 7px; background: var(--intake-soft); }
 .modeSwitch button { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 44px; padding: 8px 5px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: var(--intake-muted); font-size: 13px; font-weight: 600; }

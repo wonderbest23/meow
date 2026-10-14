@@ -67,3 +67,18 @@
 
 /* 내 문의 — 답할 문의 수 */
 .count { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #e5484d; color: #fff; font-size: 12px; font-weight: 700; line-height: 20px; text-align: center; }
+
+/*
+ * 폰 서랍(data-rail-open) — 손가락으로 누르기 쉽게 크게(대표 요청 2026-10-14: 왼쪽 위에 작게 몰려 있고 여백만 많았다).
+ * 칸 높이 52 · 글씨 16 · 아이콘 22. PC 왼쪽 메뉴는 그대로 둔다.
+ */
+:global([data-rail-open]) .menu { gap: 4px; }
+:global([data-rail-open]) .menu .item { min-height: 52px; gap: 14px; padding: 0 14px; border-radius: 12px; font-size: 16px; }
+:global([data-rail-open]) .menu .item svg { width: 22px; height: 22px; }
+:global([data-rail-open]) .menu .newChat { min-height: 56px; margin-bottom: 10px; border-color: #191f28; font-size: 17px; font-weight: 700; }
+:global([data-rail-open]) .menu .sub { min-height: 46px; margin-left: 26px; font-size: 15px; }
+:global([data-rail-open]) .menu .account { min-height: 60px; }
+:global([data-rail-open]) .menu .avatar { width: 34px; height: 34px; font-size: 15px; }
+:global([data-rail-open]) .menu .accountName { font-size: 16px; }
+:global([data-rail-open]) .menu .accountMail { font-size: 13px; }
+:global([data-rail-open]) .menu .auth a { height: 48px; font-size: 16px; }

@@ -34,13 +34,11 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false 
       <h2 id="intake-entry-heading">{initialMessage ? "지금 어느 단계에 계신가요?" : "어떤 사업을 생각하고 계세요?"}</h2>
       <div className={styles.chipRow} role="group" aria-label="대화 시작 선택지">{choices.map(({ mode, label }) => <button type="button" key={mode} className={styles.chip} disabled={disabled} onClick={() => onStart(mode)}>{label}</button>)}</div>
     </div>
-    <Link className={styles.textLink} href="/plan">저장한 사업 불러오기</Link>
   </section>;
   return <section className={styles.entry} aria-labelledby="intake-entry-heading">
     <div id="intake-entry-heading"><CoachWelcome tagline={false} /></div>
     {initialMessage && <div className={styles.introMessage}><article className={styles.userMessage} data-coach-message="user"><p>{initialMessage}</p></article><p className={styles.messageStatus}>이 기기에 보관 중</p><div className={styles.assistantMessage}><ChatSpeaker /><p>지금 어느 단계에 계신가요?<br />이 이야기부터 이어갈게요</p></div></div>}
     <div className={styles.entryChoices} aria-label="대화 시작 선택지">{choices.map(({ mode, label, Icon }) => <button type="button" key={mode} disabled={disabled} onClick={() => onStart(mode)}><Icon size={23} aria-hidden="true" /><span>{label}</span><ChevronRight size={20} aria-hidden="true" /></button>)}</div>
-    <Link className={styles.textLink} href="/plan">저장한 사업 불러오기</Link>
   </section>;
 }
 
