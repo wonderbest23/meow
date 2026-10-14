@@ -3,8 +3,12 @@
  * 칸 모양은 RailMenu.module.css 와 같은 규칙(글씨 14·13, 모서리 8, 선택은 연한 회색 바탕).
  */
 .tree { display:flex; flex-direction:column; gap:2px; min-height:0; flex:0 1 auto; }
-.head { width:100%; text-align:left; cursor:pointer; font:inherit; }
+.headRow { display:flex; align-items:center; gap:2px; }
+.head { flex:1; min-width:0; text-align:left; cursor:pointer; font:inherit; }
 .head > span { flex:1; }
+/* 펼치기·접기 화살표 — '내 사업' 오른쪽 */
+.toggle { flex:none; display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:8px; background:transparent; color:#8b95a1; cursor:pointer; }
+.toggle:hover { background:#f2f4f6; color:#191f28; }
 .caret { flex:none; width:14px !important; height:14px !important; transition:transform .15s ease; }
 .tree .caret[data-open] { transform:rotate(90deg); }
 
@@ -44,16 +48,12 @@ button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
 .tree .parts button[aria-current="true"] { color:#1b4f9c; font-weight:700; background:#f2f6fd; }
 .parts b { flex:none; font-size:11px; font-weight:600; color:#8b95a1; font-variant-numeric:tabular-nums; }
 
-.all { margin:4px 0 0; padding:8px; border-radius:8px; color:#6b7684; font-size:12.5px; text-decoration:none; }
-.all:hover { background:#f2f4f6; color:#191f28; }
-.all[aria-current="page"] { color:#191f28; font-weight:600; }
-
 /* 폰의 아이콘 띠(PlanShell) — 목록은 서랍을 열었을 때만 */
 @media (max-width:640px) {
-  .head .caret { display:none; }
+  .toggle { display:none; }
   .list { display:none; }
   :global([data-rail-open]) .list { display:flex; }
-  :global([data-rail-open]) .head .caret { display:block; }
+  :global([data-rail-open]) .toggle { display:grid; }
 }
 
 /* 폰 서랍(data-rail-open) — 사업 이름·단계·목차도 손가락으로 누르기 쉽게 크게(대표 요청 2026-10-14) */
@@ -62,5 +62,5 @@ button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
 :global([data-rail-open]) .step i { width: 22px; height: 22px; font-size: 12px; }
 :global([data-rail-open]) .tree .parts button { min-height: 40px; font-size: 14.5px; }
 :global([data-rail-open]) .parts b { font-size: 12px; }
-:global([data-rail-open]) .all { padding: 12px 10px; font-size: 14.5px; }
+:global([data-rail-open]) .toggle { width: 48px; height: 48px; }
 :global([data-rail-open]) .empty { font-size: 14px; }

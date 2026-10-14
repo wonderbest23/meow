@@ -183,10 +183,18 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
   }
 
   return <div className={styles.tree}>
-    <button type="button" className={`${shell.railBtn} ${menu.item} ${menu.main} ${styles.head}`} aria-expanded={listOpen} aria-current={pathname === "/plan" || pathname === "/plan/" ? "page" : undefined} onClick={toggleList} title="내 사업">
-      <FolderClosed /><span className={shell.railLabel}>내 사업</span>
-      <ChevronRight className={styles.caret} data-open={listOpen || undefined} aria-hidden="true" />
-    </button>
+    {/*
+      '내 사업'은 누르면 사업 목록 화면으로 간다. 펼치기·접기는 오른쪽 화살표로만(대표 요청 2026-10-14) —
+      예전엔 '내 사업'이 펼치기 단추여서 목록 화면으로 가는 '모든 사업 한눈에 보기' 링크가 따로 있었고, 둘이 겹쳐 보였다.
+    */}
+    <div className={styles.headRow}>
+      <Link href="/plan" className={`${shell.railBtn} ${menu.item} ${menu.main} ${styles.head}`} aria-current={pathname === "/plan" || pathname === "/plan/" ? "page" : undefined} title="내 사업">
+        <FolderClosed /><span className={shell.railLabel}>내 사업</span>
+      </Link>
+      <button type="button" className={styles.toggle} aria-expanded={listOpen} aria-label={listOpen ? "사업 목록 접기" : "사업 목록 펼치기"} onClick={toggleList}>
+        <ChevronRight className={styles.caret} data-open={listOpen || undefined} aria-hidden="true" />
+      </button>
+    </div>
     {listOpen && mounted && <div className={styles.list}>
       {remoteFailed && plans.length === 0 ? <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>
         : checked && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요. 새 대화로 시작해 보세요.</p>}
@@ -201,7 +209,6 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
           {open && <PlanBranch plan={plan} here={isCurrent ? step : null} documentToc={documentToc} pathname={pathname} />}
         </div>;
       })}
-      {plans.length > 0 && <Link className={styles.all} href="/plan" aria-current={pathname === "/plan" || pathname === "/plan/" ? "page" : undefined}>모든 사업 한눈에 보기</Link>}
     </div>}
   </div>;
 }
