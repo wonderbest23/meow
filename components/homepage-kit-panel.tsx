@@ -3,7 +3,7 @@
 import { appendixFromDraft, PublicAppendixPreview } from "./public-appendix-preview";
 import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
 import { unansweredCount, useInquiries } from "../app/plan/inquiries/use-inquiries";
@@ -15,7 +15,6 @@ import { HomepageExpertConsult } from "./homepage-expert-consult";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave/business-content";
 import { applyBusinessContent } from "../lib/landing/page-data";
-import { HomepageSourceUpdate } from "./homepage-source-update";
 import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading from "../app/plan/PlanLoading";
 import { AddressSearchButton } from "./address-search";
@@ -75,6 +74,12 @@ function leadPolicyItems(policy: string, phone: boolean, email: boolean): string
   return policy.replace(/^2\. 처리 항목: .*$/m, `2. 처리 항목: ${items} 중 신청폼에 표시된 항목`);
 }
 
+/** 홈페이지 글에 바로 들어가는 사업 정보 칸 — 고치면 applyBusinessContent 로 곧바로 반영한다 */
+const BUSINESS_CONTENT_KEYS: Array<keyof LandingDraft> = ["businessName", "offerTitle", "offerDescription", "priceLabel", "ctaLabel", "heroImageUrl"];
+function contentSourceOf(draft: LandingDraft) {
+  return { businessName: draft.businessName, ...(draft.pageData?.businessContent?.headline ? { headline: draft.pageData.businessContent.headline } : {}), offer: draft.offerTitle, description: draft.offerDescription, customer: draft.pageData?.businessContent?.customer ?? "", price: draft.priceLabel, cta: draft.ctaLabel, image: draft.heroImageUrl };
+}
+
 export function HomepageKitPanel({
   draft,
   site,
@@ -111,7 +116,20 @@ export function HomepageKitPanel({
   /** 앱 머리줄(← 홈페이지 · 저장 · 공개) 안에 놓일 때 — 이 패널의 뒤로가기·제목·저장/공개 줄을 빼고 주소 상태만 남긴다 */
   inChrome?: boolean;
 }) {
-  const update = (patch: Partial<LandingDraft>) => onChange({ ...draft, ...patch });
+  /*
+   * 사업 정보 칸(상호·소개·가격·버튼 문구·대표 사진)을 고치면 홈페이지 글에 바로 넣는다 — 예전엔 '사업 정보 적용' 단추를 따로 눌러야 했다.
+   * 직접 고친 글과 사진은 그대로 둔다(applyBusinessContent). 랜딩 템플릿일 때만.
+   */
+  const update = (patch: Partial<LandingDraft>) => {
+    const next = { ...draft, ...patch };
+    const brainwave = next.pageData?.brainwave;
+    const landing = Boolean(brainwave && BRAINWAVE_PAGES.some(page => page.id === brainwave.page && page.group === "landing"));
+    if (next.pageData && landing && next.businessName.trim() && BUSINESS_CONTENT_KEYS.some(key => key in patch)) {
+      onChange({ ...next, pageData: applyBusinessContent(next.pageData, contentSourceOf(next)) });
+      return;
+    }
+    onChange(next);
+  };
   const busy = action === "saving" || action === "publishing" || Boolean(aiFill?.running);
   /*
    * 미리보기는 휴대폰 모양이 먼저 — PC 모양은 화면에 다 안 들어와 '눌러서 고치는 건지' 헷갈렸다(사용자 지적).
@@ -165,15 +183,9 @@ export function HomepageKitPanel({
   };
   const page = BRAINWAVE_PAGES.find((p) => p.id === draft.pageData?.brainwave?.page);
   const [picking, setPicking] = useState(false);
-  const [contentNotice, setContentNotice] = useState("");
   const bw = draft.pageData?.brainwave;
   // 큰 제목(계획서의 한 줄 소개)은 폼에 칸이 없다 — 템플릿을 바꿔도 이어 쓴다
-  const contentSource = () => ({ businessName: draft.businessName, ...(draft.pageData?.businessContent?.headline ? { headline: draft.pageData.businessContent.headline } : {}), offer: draft.offerTitle, description: draft.offerDescription, customer: draft.pageData?.businessContent?.customer ?? "", price: draft.priceLabel, cta: draft.ctaLabel, image: draft.heroImageUrl });
-  const applyBusiness = () => {
-    if (!draft.pageData || busy || !draft.businessName.trim()) return;
-    onChange({ ...draft, pageData: applyBusinessContent(draft.pageData, contentSource()) });
-    setContentNotice(`사업 정보를 반영했어요. 직접 고친 글과 사진은 유지됩니다. ${published ? "저장한 뒤 ‘새 버전 공개’를 눌러야 손님 화면에 바뀌어요." : "저장하면 적용됩니다."}`);
-  };
+  const contentSource = () => contentSourceOf(draft);
   const pickTemplate = (id: string) => {
     if (!draft.pageData || !bw || busy) return;
     if (id === bw.page) { setPicking(false); return; }
@@ -215,12 +227,15 @@ export function HomepageKitPanel({
             <p className="hk-url">
               <span>{published ? "공개 중" : "아직 비공개"}</span>
               {unpublishedEdits ? <em className="hk-url-dirty">고친 내용은 아직 공개 전 · ‘새 버전 공개’를 누르면 손님 화면에 반영돼요</em> : null}
+              {/*
+                긴 주소(/launch/영문-이름-번호)는 글자로 늘어놓지 않는다(대표 요청 2026-10-15: URL 이 과하게 보인다).
+                공개 뒤에는 열기·주소 복사·공유 단추만, 공개 전에는 한 줄 안내만(그 주소는 아직 없어서 404).
+              */}
               {published
-                ? <><a href={publicPath} target="_blank" rel="noreferrer">{publicPath} <ExternalLink size={13} /></a>
+                ? <><a className="hk-url-btn" href={publicPath} target="_blank" rel="noreferrer"><ExternalLink size={13} /> 홈페이지 열기</a>
                   <button type="button" className="hk-url-btn" onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "복사됨" : "주소 복사"}</button>
                   <button type="button" className="hk-url-btn" onClick={shareUrl}><Share2 size={13} /> 공유</button></>
-                /* 공개 전에는 이 주소가 아직 없어서(404) 링크를 걸지 않는다 */
-                : <em className="hk-url-pending">{publicPath} — 공개하면 이 주소로 열립니다</em>}
+                : <em className="hk-url-pending">공개하면 주소가 생겨요</em>}
             </p>
           ) : <p className="hk-url">첫 공개 후 주소가 생깁니다</p>}
         </div>
@@ -230,19 +245,17 @@ export function HomepageKitPanel({
         </div>}
       </header>
       {message ? <p className="hk-msg">{message}</p> : null}
-      {contentNotice ? <p className="hk-msg" role="status">{contentNotice}</p> : null}
 
       {/*
-        미리보기 — 브라우저 목업(신호등 점 + 주소창) 안에 담는다.
-        '이게 실제로 손님 브라우저에서 열리는 화면'이라는 게 한눈에 읽힌다.
+        미리보기 — 예전엔 가짜 브라우저 창(신호등 점 + 주소창)에 담았는데 꾸밈이 많고 폰에서 옆으로 밀렸다(대표 요청 2026-10-15).
+        '미리보기' 이름과 에디터 버튼만 둔 줄 하나로.
         템플릿·에디터 버튼은 목업 바 오른쪽의 작은 버튼으로 — 예전의 큰 버튼
         두 개는 미리보기보다 목소리가 컸다(사용자 지적).
       */}
       <p className="hk-step-head"><b className="hk-step-no" aria-hidden="true">1</b> 미리보기·에디터</p>
       <div className="hk-preview hk-mock" id="hk-preview">
         <div className="hk-mock-bar">
-          <span aria-hidden="true" className="hk-dots"><i className="hk-dot r" /><i className="hk-dot y" /><i className="hk-dot g" /></span>
-          <span className="hk-mock-url">{publicPath ? `oneulstart.com${publicPath}` : "내 사업 홈페이지"}</span>
+          <span className="hk-mock-title">미리보기</span>
           <span className="hk-mock-actions">
             <button type="button" className="hk-mock-edit" disabled={busy} onClick={onOpenEditor}>
               <Pencil size={14} /> 에디터 열기
@@ -250,8 +263,8 @@ export function HomepageKitPanel({
           </span>
         </div>
         {/*
-          도구 두 줄 — 예전엔 주소창 옆에 버튼 다섯 개가 한 줄로 몰려 좁은 폭에서 겹쳤다(사용자 지적).
-          '디자인'(템플릿·분위기)과 '내용 채우기'(AI·최신 사업정보·사업 정보 적용)로 나눠 각자 한 줄씩.
+          도구 한 줄 — '디자인'(템플릿·분위기)만. '내용 채우기'(AI로 채우기·최신 사업정보·사업 정보 적용) 줄은 뺐다
+          (대표 요청 2026-10-15: AI 비용만 나가고, 사업 정보는 아래 칸을 고치면 바로 반영되면 된다).
         */}
         <div className="hk-tools">
           {bw && draft.pageData ? <div className="hk-tool-row" role="radiogroup" aria-label="분위기">
@@ -264,22 +277,12 @@ export function HomepageKitPanel({
                 const on = (draft.pageData?.theme ?? undefined) === theme.id;
                 return <button key={theme.id ?? "base"} type="button" role="radio" aria-checked={on} className={on ? "on" : ""} disabled={busy} title={theme.note}
                   onClick={() => onChange({ ...draft, pageData: { ...draft.pageData!, theme: theme.id } })}>
-                  <i aria-hidden style={theme.tokens ? { background: `linear-gradient(135deg, ${theme.tokens.accent} 0 50%, ${theme.tokens.highlight} 50% 100%)` } : undefined} />
+                  <i aria-hidden style={theme.tokens ? { background: theme.tokens.accent } : undefined} />
                   {theme.label}
                 </button>;
               })}
             </span>
           </div> : null}
-          <div className="hk-tool-row">
-            <span className="hk-tool-label"><Sparkles size={14} aria-hidden /> 내용 채우기</span>
-            {aiFill ? <button type="button" className="hk-tool-btn" onClick={aiFill.run} disabled={busy} title="계획서 내용으로 카드·이용 순서·마무리 문구와 업종 사진을 채워요. 직접 고친 글·사진은 그대로 둬요.">
-              {aiFill.running ? <LoaderCircle className="spin" size={14} /> : <Sparkles size={14} />} {aiFill.running ? "채우는 중…" : "AI로 채우기"}
-            </button> : null}
-            {projectId && site && onSourceApplied ? <HomepageSourceUpdate projectId={projectId} site={site} draft={draft} disabled={busy} onApplied={onSourceApplied} /> : null}
-            <button type="button" className="hk-tool-btn" onClick={applyBusiness} disabled={busy || !draft.businessName.trim() || !bw || !BRAINWAVE_PAGES.some(page => page.id === bw.page && page.group === "landing")} title="사업자 정보에 적은 상호·연락처를 홈페이지 글에 넣어요">
-              <RefreshCw size={14} /> 사업 정보 적용
-            </button>
-          </div>
         </div>
         <div className="hk-preview-hint">
           <span><Pencil size={14} aria-hidden /> 미리보기를 누르면 에디터가 열려요</span>

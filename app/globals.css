@@ -17111,3 +17111,17 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 @media (prefers-reduced-motion: reduce) {
   :where(a[href], button, [role="button"], summary, label:has(> input)):active { scale: none; }
 }
+
+/*
+ * 홈페이지 미리보기 — 가짜 브라우저 창(신호등 점·주소창)을 빼고 '미리보기' 이름 + 에디터 버튼 한 줄로(대표 요청 2026-10-15).
+ * 큰 그림자도 걷고, 폰에서 미리보기가 화면 밖으로 밀리지 않게 폭을 못박는다.
+ */
+.hk-mock { min-width: 0; max-width: 100%; box-shadow: none; border-color: #e5e8eb; }
+.hk-mock-bar { justify-content: space-between; background: #fff; border-bottom-color: #eef0f3; }
+.hk-mock-title { color: #191f28; font-size: 13.5px; font-weight: 700; }
+.hk-tools, .hk-preview-hint { background: #fff; }
+.hk-preview-body { min-width: 0; max-width: 100%; overflow: hidden; }
+.hk-themes button i { background: #c9ced6; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .1); }
+/* 홈페이지 화면 한 줄 칸 — 미리보기 안의 넓은 PC 화면 때문에 칸이 533px 로 늘어나 폰에서 오른쪽이 잘렸다 */
+.hk { grid-template-columns: minmax(0, 1fr); }
+.hk-url a.hk-url-btn { text-decoration: none; }

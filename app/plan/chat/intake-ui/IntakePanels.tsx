@@ -7,7 +7,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LoadingStatus } from "../../PlanLoading";
-import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
@@ -220,7 +220,7 @@ const pickedSuggestions = (question: IntakeQuestion, draft: AnswerDraft, suggest
 /** 추천이 아직 오는 중일 때 같은 자리를 잡아 둔다. 도착하면 칩으로 바뀌어 아래 선택지가 밀리지 않는다. */
 function SuggestionPlaceholder() {
   return <div className={`${styles.chipStep} ${styles.suggestionStep}`} role="status" aria-label="이 사업에 맞춘 추천 준비 중">
-    <p className={styles.stepLegend}><Sparkles size={13} aria-hidden="true" />이 사업에 맞춘 추천<span>준비하고 있어요…</span></p>
+    <p className={styles.stepLegend}>이 사업에 맞춘 추천<span>준비하고 있어요…</span></p>
     <div className={styles.chipRow} aria-hidden="true">{[300, 240, 270].map(width => <span key={width} className={styles.suggestionSkeleton} style={{ width }} />)}</div>
   </div>;
 }
@@ -238,7 +238,7 @@ function SuggestionChips({ question, draft, disabled, suggestions, groups, onCha
     onChange({ ...draft, custom: false, unknown: false, text: assembleHybridText(question, draft.selected, next) });
   };
   return <div className={`${styles.chipStep} ${styles.suggestionStep}`} role="group" aria-label="이 사업에 맞춘 추천">
-    <p className={styles.stepLegend}><Sparkles size={13} aria-hidden="true" />이 사업에 맞춘 추천<span>AI 제안 · 누르면 입력칸에 들어가요</span></p>
+    <p className={styles.stepLegend}>이 사업에 맞춘 추천<span>AI 초안 · 누르면 입력칸에 들어가요</span></p>
     <div className={styles.chipRow}>{suggestions.map(suggestion => {
       const selected = pieces.includes(suggestion);
       return <button key={suggestion} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && full} onClick={() => toggle(suggestion)}>{suggestion}</button>;
@@ -527,7 +527,7 @@ export function SavedNotes({ snapshot, disabled, onExtract }: { snapshot: Intake
   const labels = { queued: "정리 대기", processing: "정리 중", review: "확인 필요", stored: "보관됨", failed: "정리 실패" };
   const notes = snapshot.intake.notes;
   if (!notes.length) return <p className={styles.muted}>저장한 메모가 없습니다.</p>;
-  return <section className={styles.notes} aria-labelledby="intake-notes-heading"><div className={styles.sectionHeading}><h3 id="intake-notes-heading">저장한 메모</h3>{notes.some(note => ["failed", "queued"].includes(note.status)) && <button type="button" className={styles.textButton} disabled={disabled} onClick={onExtract}><Sparkles size={16} aria-hidden="true" />메모 정리</button>}</div><ul>{[...notes].reverse().map(note => <li key={note.id}><div className={styles.noteMeta}><span data-failed={note.status === "failed"}>{labels[note.status]}</span><time dateTime={note.at}>{new Date(note.at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</time></div><p>{note.text}</p>{note.status === "failed" && <small>메모 원문은 저장되어 있습니다.</small>}</li>)}</ul></section>;
+  return <section className={styles.notes} aria-labelledby="intake-notes-heading"><div className={styles.sectionHeading}><h3 id="intake-notes-heading">저장한 메모</h3>{notes.some(note => ["failed", "queued"].includes(note.status)) && <button type="button" className={styles.textButton} disabled={disabled} onClick={onExtract}>메모 정리</button>}</div><ul>{[...notes].reverse().map(note => <li key={note.id}><div className={styles.noteMeta}><span data-failed={note.status === "failed"}>{labels[note.status]}</span><time dateTime={note.at}>{new Date(note.at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</time></div><p>{note.text}</p>{note.status === "failed" && <small>메모 원문은 저장되어 있습니다.</small>}</li>)}</ul></section>;
 }
 
 const STRUCTURE_AXIS_LABEL: Record<StructureAxis, string> = { payer: "고객·지불자", offering: "제공하는 것", delivery: "전달 방식", revenue: "수익 방식", sides: "시장 구조", license: "인허가" };
@@ -694,7 +694,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
       <li data-state={step === "prepare" ? "current" : step === "open" ? "done" : "todo"}>{step === "open" ? <Check size={13} aria-hidden="true" /> : <span>2</span>}사업계획서 문서 작성</li>
     </ol>
     {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
-      {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}><Sparkles size={18} aria-hidden="true" />사업 방향 정리하기</button>}
+      {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}>사업 방향 정리하기</button>}
       {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "바뀐 내용으로 사업계획서 다시 작성하기" : "사업계획서 문서 작성하기"}</button>}
       {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
       {secondary}
@@ -722,7 +722,7 @@ export function BusinessIdentityHero({ snapshot, disabled, onName, compact = fal
   const current = snapshot.coach.business.name;
   const submitCustom = (event: FormEvent) => { event.preventDefault(); const name = (custom ?? "").replace(/\s+/g, " ").trim(); if (name && onName) { onName(name); setCustom(null); } };
   return <section className={`${styles.identity} ${compact ? styles.identityCompact : ""}`} aria-label="사업 한 줄 정리">
-    <p className={styles.identityKicker}><Sparkles size={14} aria-hidden="true" />이런 사업, 맞죠? <small>AI 제안</small></p>
+    <p className={styles.identityKicker}>사업 방향 <small>AI 초안</small></p>
     <h2 className={styles.identityHeadline}>{identity.headline}</h2>
     <p className={styles.identityPitch}>{identity.pitch}</p>
     {!compact && onName && <div className={styles.identityNames}>
@@ -789,7 +789,7 @@ export function DesignDirection({ snapshot }: { snapshot: IntakeSnapshot }) {
   const design = snapshot.coach.design;
   if (!design || design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
   return <section className={styles.direction} aria-label="정리한 사업 방향">
-    <p className={styles.eyebrow}>1단계 결과 · 사업 방향 요약 (AI 제안, 검증 전)</p>
+    <p className={styles.eyebrow}>사업 방향 요약</p>
     <h3>이렇게 시작해 볼까요?</h3>
     <ConversationText text={design.startingPlan.scope} />
     <div className={styles.nextAction}><h3>먼저 해볼 일 하나 <small>선택 사항</small></h3><ConversationText text={design.nextAction.action} /></div>
@@ -799,6 +799,8 @@ export function DesignDirection({ snapshot }: { snapshot: IntakeSnapshot }) {
       {design.startingPlan.notIncluded.length > 0 && <><h4>이번에 포함하지 않은 것</h4><ul>{design.startingPlan.notIncluded.map((text, index) => <li key={index}>{text}</li>)}</ul></>}
       {design.assumptions.length > 0 && <><h4>아직 확인할 내용</h4><ul>{design.assumptions.map((item, index) => <li key={index}>{item.statement}<p>{item.howToCheck}</p></li>)}</ul></>}
     </details>
+    {/* AI 결과 표시(인공지능기본법) — 제목 괄호 대신 맨 아래 한 줄로(대표 요청 2026-10-15: 'AI 제안, 검증 전' 꼬리표가 AI 같고 어색하다) */}
+    <p className={styles.aiNote}>AI가 만든 초안이에요. 내 상황과 다르면 대화로 고쳐 주세요.</p>
   </section>;
 }
 
@@ -870,7 +872,7 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
       <button type="button" className={styles.presetChip} disabled={disabled} onClick={onDetails}><PencilLine size={14} aria-hidden="true" />더 자세히 답하기 (선택)</button>
       <small> 업종에 맞는 비용·매출 질문 몇 개로 손익 계산을 더 정확하게 해요.</small>
     </div>}
-    {design && <details className={styles.design}><summary><Sparkles size={16} aria-hidden="true" />AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
+    {design && <details className={styles.design}><summary>AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
     {showActions && !nextStep && <small className={styles.nextStepHint}>{snapshot.coreComplete ? "사업 소개를 정하면 사업 방향을 정리할 수 있어요." : "기본 질문을 마치면 사업 방향을 정리할 수 있어요."}</small>}
     {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물">{showActions || nextStep !== "open" ? <Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link> : null}<Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>사업 관리<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
   </>;
