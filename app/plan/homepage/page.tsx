@@ -88,7 +88,7 @@ export default function PlanHomepagePage() {
   const siteRef = useRef(site); siteRef.current = site;
   const [aiFilling, setAiFilling] = useState(false);
   /*
-   * 계획서로 채우기(AI). 새로 만든 홈페이지는 한 번 자동으로 돌고, 이후엔 버튼으로 다시 돈다.
+   * 계획서로 채우기(AI). 새로 만든 홈페이지에서 한 번만 자동으로 돈다 — 다시 채우는 단추는 뺐다(대표 요청 2026-10-15: AI 비용만 나간다).
    * 도는 동안(30초 안팎) 저장·공개·편집을 막는다 — 끝나면 서버에 저장된 초안으로 바꾼다.
    */
   const runAiFill = useCallback(async (targetProjectId: string, expectedUpdatedAt: string, auto: boolean) => {
@@ -98,11 +98,12 @@ export default function PlanHomepagePage() {
     const epoch = planOwnerEpoch();
     const current = () => mounted.current && epoch === planOwnerEpoch();
     setAiFilling(true);
-    setMessage(auto ? "AI가 계획서를 읽고 홈페이지를 채우고 있어요. 30초쯤 걸려요." : "AI가 계획서로 홈페이지를 다시 채우고 있어요. 30초쯤 걸려요.");
+    /* 처음 한 번 저절로 채울 때는 위쪽 안내 문구를 띄우지 않는다 — 미리보기 위 로딩 표시로 충분하다(대표 요청 2026-10-15: AI 문구가 어색하다) */
+    if (!auto) setMessage("AI가 계획서로 홈페이지를 다시 채우고 있어요. 30초쯤 걸려요.");
     const before = aiFillMark(siteRef.current);
     const done = (filled: LandingSiteRecord) => {
       siteRef.current = filled; setSite(filled); setDraft(filled.draft); setAction("saved");
-      setMessage("AI가 계획서로 홈페이지를 채웠어요. 마음에 안 드는 글은 에디터에서 바로 고칠 수 있어요.");
+      setMessage(auto ? "" : "AI가 계획서로 홈페이지를 채웠어요. 마음에 안 드는 글은 에디터에서 바로 고칠 수 있어요.");
     };
     /* 답을 못 받았으면 서버가 저장을 마쳤는지 잠깐(최대 1분) 확인한다 */
     const recover = async () => {
@@ -123,13 +124,14 @@ export default function PlanHomepagePage() {
       const filled = data.error ? null : await recover();
       if (!current()) return;
       if (filled) done(filled);
-      else setMessage(data.error?.message ?? "AI 채우기를 하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      /* 처음 자동 채우기가 실패하면 알리지 않는다 — 다음에 열 때 한 번 더 저절로 채운다(needsAutoAiFill) */
+      else setMessage(auto ? "" : data.error?.message ?? "AI 채우기를 하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } catch {
       if (controller.signal.aborted || !current()) return;
       const filled = await recover().catch(() => null);
       if (!current()) return;
       if (filled) done(filled);
-      else setMessage("AI 채우기 연결이 끊겼어요. 잠시 후 다시 시도해 주세요.");
+      else setMessage(auto ? "" : "AI 채우기 연결이 끊겼어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
       if (current()) setAiFilling(false);

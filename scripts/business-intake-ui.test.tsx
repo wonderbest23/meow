@@ -544,7 +544,9 @@ async function main() {
   assert.match(chatStep, /class="nextStepRow">[\s\S]*사업 방향 정리하기<\/button><button type="button">좀 더 개선하기<\/button><\/div>/, "the details button shares one row with the next step");
   const direction = renderToStaticMarkup(<DesignDirection snapshot={nextSnapshot({}, currentDesign)} />);
   assert.ok(direction.indexOf("다음 행동") < direction.indexOf("<details"), "the optional next action is visible before detailed evidence");
-  for (const text of ["사업 방향 요약 (AI 제안, 검증 전)", "선택 사항", "완료 기준", "사용할 문구"]) assert.ok(direction.includes(text));
+  for (const text of ["사업 방향 요약", "선택 사항", "완료 기준", "사용할 문구", "AI가 만든 초안이에요"]) assert.ok(direction.includes(text), `direction is missing: ${text}`);
+  // AI 표시는 제목 괄호 꼬리표가 아니라 맨 아래 한 줄(대표 요청 2026-10-15)
+  assert.ok(!direction.includes("검증 전"), "the AI notice is not a heading tag");
   assert.equal(renderToStaticMarkup(<DesignDirection snapshot={nextSnapshot({}, { ...currentDesign, documentRevision: 6 })} />), "", "stale directions are not shown as current actions");
   // 코치 채팅 1단계 결과: 이름 추천·직접 수정하기·요약만, AI 아이콘·이름별 이유·상표 안내·펼치기 없음(소유자 피드백 2026-10-09)
   const identityDesign = { ...currentDesign, design: { ...currentDesign.design, identity: { headline: "맞벌이 가정에 반찬을 정기배송하는 동네 반찬가게", pitch: "설명 문장", names: [{ name: "새벽반찬", why: "이유 하나" }, { name: "동네찬방", why: "이유 둘" }] } } } as unknown as Partial<CoachState>;
