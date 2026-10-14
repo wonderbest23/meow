@@ -1,0 +1,21 @@
+{
+  "appId": "com.oneulstart.app",
+  "appName": "오늘창업",
+  "webDir": "www",
+  "server": {
+    "url": "https://oneulstart.com",
+    "cleartext": false,
+    "allowNavigation": [
+      "oneulstart.com",
+      "www.oneulstart.com"
+    ]
+  },
+  "ios": {
+    "contentInset": "always",
+    "limitsNavigationsToAppBoundDomains": false
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "backgroundColor": "#000000"
+}
