@@ -5,7 +5,7 @@
  */
 import { checkDocumentQuality } from "../../lib/plan-builder/document-quality";
 
-export type EvalFacts = { price?: number; unitCost?: number; fixedCost?: number; budget?: number; hoursPerWeek?: number };
+export type EvalFacts = { price?: number; unitCost?: number; fixedCost?: number; budget?: number; hoursPerWeek?: number; premises?: boolean };
 export type EvalOutput = { caseId: string; sections: Record<string, string>; source: string; facts: EvalFacts };
 export type ItemResult = { item: number; name: string; pass: boolean | null; detail: string; value?: number };
 
@@ -75,9 +75,10 @@ const START_ITEMS = [/보증금/, /권리금/, /인테리어|공사/, /설비|�
  * 공간을 빌리지 않는 사업(앱·대행·플랫폼)은 보증금·권리금·인테리어·재고가 없다 — 매장 목록으로 세면 늘 떨어진다(2026-10-12 시뮬레이션).
  * 그런 사업은 준비 기간에 나가는 돈(생활비·고정비)과 도구·개발비를 항목으로 센다.
  */
-const REMOTE_START_ITEMS = [/준비\s*기간에\s*나가는\s*돈|준비\s*기간.*생활비/, /도구|노트북|개발|외주|서버/, /인허가|사업자\s*등록|등록비/, /홍보비|광고비|마케팅\s*비/, /예비비|운영\s*자금|운영\s*예비|버티는\s*기간/];
-export function gradeStartFunds(all: string): ItemResult {
-  const premises = /보증금|임대|월세|인테리어/.test(all);
+const REMOTE_START_ITEMS = [/준비\s*기간에\s*나가는\s*돈|준비\s*기간.*생활비/, /도구|노트북|개발|외주|서버|차량|트럭|장비|설비/, /인허가|사업자\s*등록|등록비/, /홍보비|광고비|마케팅\s*비/, /예비비|운영\s*자금|운영\s*예비|버티는\s*기간/];
+export function gradeStartFunds(all: string, knownPremises?: boolean): ItemResult {
+  // 실제 API(2026-10-14): '트럭 임대'·'카페 대관 월세 없음' 같은 말로 이사·과외가 매장 목록으로 채점됐다 — 공간을 빌리는 사업에만 나오는 말로 가린다
+  const premises = knownPremises ?? /보증금|권리금|인테리어/.test(all);
   const items = premises ? START_ITEMS : REMOTE_START_ITEMS;
   const found = items.filter(pattern => pattern.test(all)).length;
   return { item: 5, name: "시작 자금", pass: found >= THRESHOLDS.startFundItemsMin, value: found, detail: `시작 자금 항목 ${found}/${items.length}개 언급${premises ? "" : "(공간 없는 사업 기준)"}` };
@@ -160,7 +161,7 @@ export function gradeByCode(output: EvalOutput): ItemResult[] {
   return [
     gradeCustomer(all),
     gradeUnitEconomics(all, output.facts),
-    gradeStartFunds(all),
+    gradeStartFunds(all, output.facts.premises),
     gradeCashflow(all),
     gradePersonalLiving(all),
     gradeWeeklyPlan(all, output.facts.hoursPerWeek),
