@@ -202,7 +202,7 @@ export function BusinessClinic0_2385({ overrides, hidden, sectionOrder, onPick, 
     },
     [CLOSING]: () => {
       if (!text("0:2390")) return null;
-      return <section key={CLOSING} data-bw-node={CLOSING} className={styles.closingWrap}>
+      return <section key={CLOSING} data-bw-node={CLOSING} data-bw-closing="" className={styles.closingWrap}>
         <div className={styles.closing}>
           {Text({ id: "0:2390", as: "h2", reveal: { order: 0, kind: "title" } })}
           {Text({ id: "0:2389", className: styles.lead, reveal: 1 })}

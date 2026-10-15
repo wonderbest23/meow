@@ -102,7 +102,7 @@ export function BusinessConsult0_290({ overrides, hidden, sectionOrder, onPick, 
     },
     [CONTACT]: () => {
       if (!text("0:309")) return null;
-      return <section key={CONTACT} data-bw-node={CONTACT} className={styles.contact}>
+      return <section key={CONTACT} data-bw-node={CONTACT} data-bw-closing="" className={styles.contact}>
         <div className={styles.contactCopy}>
           <span className={styles.contactIcon} aria-hidden><MessageCircle size={22} /></span>
           {Text({ id: "0:309", as: "h2", reveal: { order: 0, kind: "title" } })}

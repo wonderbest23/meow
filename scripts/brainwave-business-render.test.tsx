@@ -201,4 +201,6 @@ assert.ok(!bakeryClinicHtml.includes("진료") && bakeryClinicHtml.includes("오
 // 갤러리형: 공개 화면에 사진이 없으면 '작업 사례' 제목만 남기지 않는다
 const bareGalleryHtml = render(createBusinessTemplate({ ...content, businessName: "소금빵집", image: "" }, "0-421"));
 assert.ok(!bareGalleryHtml.includes("작업 사례"), "empty works section hidden publicly");
-console.log(JSON.stringify({ passed: 82 }));
+// 디자인마다 마무리 띠에 표식 — 공개 화면에서 바로 아래 문의 양식과 겹치는 단추·제목을 CSS 로 정리한다(globals.css)
+for (const page of ["0-290", "0-2385", "0-2226", "0-1102", "0-421"]) assert.equal(count(render(createBusinessTemplate(content, page)), "data-bw-closing"), 1, `closing band marker ${page}`);
+console.log(JSON.stringify({ passed: 83 }));

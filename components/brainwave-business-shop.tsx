@@ -110,7 +110,7 @@ export function BusinessShop0_1102({ overrides, hidden, sectionOrder, onPick, de
     [CTA]: () => {
       if (!text("0:1111")) return null;
       const url = photo("0:1108/0/0");
-      return <section key={CTA} data-bw-node={CTA} className={styles.ctaWrap}>
+      return <section key={CTA} data-bw-node={CTA} data-bw-closing="" className={styles.ctaWrap}>
         <div className={`${styles.cta} ${url ? styles.ctaPhoto : ""}`} data-scroll>
           {url ? Photo({ id: "0:1108/0/0", url, className: styles.ctaImage }) : null}
           <div className={styles.ctaShade} aria-hidden />
