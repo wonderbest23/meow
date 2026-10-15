@@ -165,7 +165,8 @@ export function PublicLandingClient({
       )}</>}
 
       <section id="landing-contact" className={`public-lead-section ${config.leadCaptureEnabled ? "" : "brochure"}`} ref={formRef}>
-        <div><small>{config.leadCaptureEnabled ? "신청하기" : "문의하기"}</small><h2>{config.ctaLabel}</h2>{config.leadCaptureEnabled && <p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p>}</div>
+        {/* 제목 위 작은 '신청하기' 꼬리표는 바로 아래 큰 제목('문의하기' 등)과 같은 말이라 뺐다 */}
+        <div><h2>{config.ctaLabel}</h2>{config.leadCaptureEnabled && <p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p>}</div>
         {!config.leadCaptureEnabled ? (
           /* 신청폼이 꺼져 있을 때 — 방문자에게는 사장님용 안내('신청폼을 켤 수 있습니다') 대신 연락할 방법을 보여 준다 */
           (() => {
@@ -200,7 +201,8 @@ export function PublicLandingClient({
           const transaction = config.pageMode === "transaction";
           const rows = ([["대표자", config.businessRepresentative, "등록 전"], ["사업장", config.businessAddress, "등록 전"], ["전화", config.businessPhone || config.businessContact, "등록 전"], ["이메일", config.businessEmail, "등록 전"], ["사업자등록번호", config.businessRegistrationNumber, "등록 전"], ["통신판매업", config.mailOrderSalesNumber, "해당 시 등록"]] as const)
             .filter(([, value]) => transaction || value.trim());
-          if (!rows.some(([, value]) => value.trim())) return <p>사업자 정보는 판매 시작 전에 실제 등록 정보로 공개됩니다.</p>;
+          /* 소개·문의 페이지에서 채운 칸이 없으면 아무것도 안 쓴다 — '판매 시작 전에 공개됩니다'는 손님에게 할 말이 아니었다. 판매 페이지는 위에서 '등록 전'을 드러낸다 */
+          if (!rows.some(([, value]) => value.trim())) return transaction ? <p>사업자 정보는 판매 시작 전에 실제 등록 정보로 공개됩니다.</p> : null;
           return <div className="public-business-information">{rows.map(([label, value, empty]) => <p key={label}>{label} {value || empty}</p>)}</div>;
         })()}
         {config.pageMode === "transaction" && <p>교환·환불: {config.refundPolicy} · <a href={config.termsUrl} target="_blank" rel="noreferrer">거래조건·이용약관</a></p>}
