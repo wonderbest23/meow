@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { X } from "lucide-react";
 import styles from "../intake.module.css";
 
 export type LiveCommentState = { text: string; streaming: boolean } | null;
@@ -66,7 +66,6 @@ export function LiveComment({ comment, onDismiss }: { comment: LiveCommentState;
   if (!comment) return null;
   return <aside className={styles.liveComment} aria-label="AI 참고 의견" aria-live="polite" aria-busy={comment.streaming}>
     <div className={styles.liveCommentHead}>
-      <Sparkles size={15} aria-hidden="true" />
       <strong>AI 참고 의견</strong>
       <small>저장되지 않는 참고용이에요</small>
       <button type="button" className={styles.iconButton} aria-label="AI 참고 의견 닫기" title="닫기" onClick={onDismiss}><X size={15} aria-hidden="true" /></button>

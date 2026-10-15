@@ -209,7 +209,7 @@ export default function DocumentWorkspace(props: Props) {
     <span className={styles.factHint}>노란 부분만 고칠 수 있어요</span>
     <button className={styles.secondary} onClick={() => { setFactMode(false); setFactPick(null); }}>수정 마치기</button>
   </> : <>
-    <button className={styles.secondary} disabled={!grouped.length || isSample || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { setModal("edit"); return; } if (summaryMode) { setSummaryMode(false); setEditing(true); } else setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : summaryMode ? "상세 문서 수정" : editing ? "수정 마치기" : "수정하기"}</button>
+    <button className={styles.secondary} disabled={!grouped.length || isSample || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else { setSummaryMode(false); setFactMode(true); } return; } if (summaryMode) { setSummaryMode(false); setEditing(true); } else setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : summaryMode ? "상세 문서 수정" : editing ? "수정 마치기" : "수정하기"}</button>
     <button className={showNext ? styles.secondary : styles.primary} disabled={!grouped.length} onClick={() => setModal("download")}>{showNext ? "내려받기" : "사업계획서 내려받기"}</button>
     {showNext && planId && <NextStepButton planId={planId} homepage={homepage} />}
   </>;

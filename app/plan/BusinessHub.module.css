@@ -76,3 +76,21 @@
 .careActions a { text-decoration:none; }
 /* PC 폭이 넉넉하지 않을 때(본문이 화면 오른쪽 끝까지 닿을 때) 오른쪽 아래 상담 버튼이 오른쪽 정렬 단추(변경 범위 확인 등)를 덮었다 — 그만큼 비워 둔다 */
 @media (min-width: 901px) and (max-width: 1440px) { .content { padding-right: 96px; } }
+
+/*
+ * 사업 관리 메뉴 — 단추 5개 격자 대신 한 줄 밑줄 탭(대표 요청 2026-10-15: 복잡하다).
+ * 폰에서 넘치면 옆으로 밀어 본다. '대화 이어가기'는 탭이 아니라 오른쪽 작은 링크.
+ */
+.tabs { display: flex; gap: 0; overflow-x: auto; margin-bottom: 24px; padding: 0; border-bottom: 1px solid #e5e8eb; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: none; min-height: 48px; padding: 0 14px; border: 0; border-bottom: 2px solid transparent; border-radius: 0; background: transparent; color: #6b7684; font-size: 15px; font-weight: 600; box-shadow: none; }
+.tabs button:hover { background: transparent; color: #191f28; border-color: transparent; }
+.tabs [aria-pressed=true], .tabs [aria-pressed=true]:hover { background: transparent; border-color: transparent; border-bottom-color: #191f28; color: #191f28; font-weight: 700; box-shadow: none; }
+.tabs a { flex: none; margin-left: auto; min-height: 48px; padding: 0 4px 0 14px; border: 0; background: transparent; color: #3182f6; font-size: 14px; font-weight: 600; }
+.tabs a:hover { background: transparent; border-color: transparent; text-decoration: underline; }
+/* 상태 칩 — 내 사업 목록과 같은 회색 */
+.workspaceTitle .status { border: 0; background: #f2f4f6; color: #4e5968; }
+.workspaceTitleRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+.workspaceTitleRow .status { margin-bottom: 0 !important; }
+.titleAction { border: 0; background: transparent; color: #3182f6; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 6px 0; }
+.titleAction:hover { text-decoration: underline; }

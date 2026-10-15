@@ -215,7 +215,8 @@ export default function PlanMePage() {
 
   return (
     <div className={styles.page}>
-      <h1 className={styles.title}>마이페이지</h1>
+      {/* 큰 제목 '마이페이지'는 위 머리말과 겹쳐 뺐다(대표 요청 2026-10-15) — 읽기 프로그램용 제목만 남긴다 */}
+      <h1 className={styles.srTitle}>마이페이지</h1>
 
       <section className={styles.card}>
         <div className={styles.cardHead}>

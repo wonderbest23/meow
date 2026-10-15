@@ -24,7 +24,7 @@ export default function BusinessBrief({ coach, changed, onEdit, onSave, onDirty,
     const field = coach.fields.find(item => item.key === key);
     if (!field) return null;
     return <div key={key} className={`${styles.fact} ${changed.includes(key) ? styles.changed : ""}`}>
-      <dt><span className={styles.factLabel}>{COACH_FIELD_LABELS[key]}</span><span className={styles.basis}>{field.basis === "user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd><BriefText text={coachFieldDisplay(field.value)} /></dd>
+      <dt><span className={styles.factLabel}>{COACH_FIELD_LABELS[key]}</span>{field.basis === "user" ? null : <span className={styles.basis}>AI 초안</span>}</dt><dd><BriefText text={coachFieldDisplay(field.value)} /></dd>
     </div>;
   });
   if (editing) return <BriefEditor coach={coach} section={section} onDirty={onDirty} onClose={() => setEditing(false)} onSave={async patch => { await onSave(patch); setSaved(true); }} />;

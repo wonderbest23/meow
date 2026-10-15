@@ -497,7 +497,7 @@ async function main() {
   const summary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={summarized} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
   // '좀 더 개선하기'는 2026-10-03에 뺐다(만든 뒤에 고친다)
   assert.ok(!summary.includes("좀 더 개선하기"), "no refine-more button in the summary");
-  for (const text of ["현재까지 작성한 사업정보", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "data-state=\"current\"><span>1</span>사업 방향 요약"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
+  for (const text of ["내 사업 정보", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "data-state=\"current\"><span>1</span>사업 방향 요약"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
   assert.equal((summary.match(/(?:사업 방향 정리하기|사업계획서 문서 작성하기)<\/button>/g) ?? []).length, 1, "the summary offers one creation step");
   assert.ok(summary.includes(`/plan/document?planId=${id}`), "Existing artifacts stay navigable even during AI jobs");
   // 다음 단계는 한 번에 하나, 한 곳에만: 사업안 만들기 → (사업안이 현재 입력 기준이면) 계획서 만들기 → 계획서 열기.
@@ -517,7 +517,7 @@ async function main() {
   const needsDesign = nextMarkup({}, { design: undefined });
   assert.equal(needsDesign.split(STEP1).length - 1, 1, "exactly one next step is marked");
   assert.ok(needsDesign.includes("사업 방향 정리하기</button>") && !needsDesign.includes("문서 작성하기</button>"), "only the design button shows before a design exists");
-  assert.ok(needsDesign.indexOf("기본 질문 입력 완료") < needsDesign.indexOf(STEP1) && needsDesign.indexOf(STEP1) < needsDesign.indexOf("내 사업 구상"), "the next step sits at the top of the summary");
+  assert.ok(needsDesign.indexOf("기본 질문 입력 완료") < needsDesign.indexOf(STEP1) && needsDesign.indexOf(STEP1) < needsDesign.indexOf("처음 적은 설명"), "the next step sits at the top of the summary");
   const needsPlan = nextMarkup({}, currentDesign);
   assert.ok(needsPlan.includes("사업계획서 문서 작성하기</button>") && needsPlan.includes("지금까지 만든 건 사업 방향 요약이에요") && !needsPlan.includes("사업 방향 정리하기</button>"), "with a current design only the plan document button shows");
   const opened = nextMarkup({ hasDocuments: true }, currentDesign);

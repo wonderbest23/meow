@@ -50,7 +50,6 @@ export default async function PlanInfoPage({
   return (
     <div className={styles.page}>
       <div className={styles.head}>
-        <span className={styles.eyebrow}>이용 안내</span>
         <h1 className={styles.title}>{document.title}</h1>
         <p className={styles.summary}>{document.summary}</p>
         <small className={styles.effective}>시행일 {document.effectiveDate || "입력 예정"}</small>
