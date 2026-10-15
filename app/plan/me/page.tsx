@@ -142,13 +142,13 @@ export default function PlanMePage() {
         body: JSON.stringify({ orderId, reason }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message ?? "환불 요청을 접수하지 못했습니다.");
+      if (!response.ok) throw new Error(data.error?.message ?? "환불 요청을 접수하지 못했어요.");
       setRefunds((current) => ({ ...current, [orderId]: { orderId, status: "received" } }));
       setRefundFor(null);
       setRefundReason("");
-      setRefundMessage("환불 요청이 접수됐습니다. 처리 결과는 이 화면에서 확인할 수 있어요.");
+      setRefundMessage("환불 요청이 접수됐어요. 처리 결과는 이 화면에서 확인할 수 있어요.");
     } catch (error) {
-      setRefundMessage(error instanceof Error ? error.message : "환불 요청을 접수하지 못했습니다.");
+      setRefundMessage(error instanceof Error ? error.message : "환불 요청을 접수하지 못했어요.");
     } finally {
       setRefundBusy(false);
     }
@@ -166,12 +166,12 @@ export default function PlanMePage() {
         body: JSON.stringify({ email: deleteEmail.trim() }),
       });
       const data = await response.json();
-      if (!response.ok) throw new Error(data.error?.message ?? "탈퇴 처리에 실패했습니다.");
+      if (!response.ok) throw new Error(data.error?.message ?? "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요.");
       clearLocalState();
       router.push("/");
       router.refresh();
     } catch (error) {
-      setDeleteMessage(error instanceof Error ? error.message : "탈퇴 처리에 실패했습니다.");
+      setDeleteMessage(error instanceof Error ? error.message : "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요.");
     } finally {
       setDeleteBusy(false);
     }
@@ -191,7 +191,7 @@ export default function PlanMePage() {
     const res = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
     if (!res || !res.ok) {
       /* 예전엔 탈퇴 칸 안에 적어서(열려 있을 때만 보임) 실패해도 아무 안내가 없었다 */
-      setLogoutMessage("로그아웃하지 못했습니다. 연결을 확인하고 다시 시도해주세요.");
+      setLogoutMessage("로그아웃하지 못했어요. 연결을 확인하고 다시 시도해 주세요.");
       return;
     }
     // 로컬 플랜 캐시도 함께 비운다 — 로그아웃 후에도 이전 계정 플랜이 보이던 버그
@@ -199,12 +199,12 @@ export default function PlanMePage() {
     router.push("/plan");
   }
 
-  if (account === null && loadFailed) return <div className={styles.page}><h1 className={styles.title}>마이페이지</h1><p>계정 정보를 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p></div>;
+  if (account === null && loadFailed) return <div className={styles.page}><h1 className={styles.title}>내 계정</h1><p>계정 정보를 불러오지 못했어요. 연결을 확인한 뒤 새로고침해 주세요.</p></div>;
   if (account === null) return <div className={styles.page}><PlanLoading variant="rows" count={3} note="계정 정보를 불러오는 중…" /></div>;
   if (!account.authenticated) {
     return (
       <div className={styles.page}>
-        <h1 className={styles.title}>마이페이지</h1>
+        <h1 className={styles.title}>내 계정</h1>
         <PlanGate reason="login_required" />
       </div>
     );
@@ -216,7 +216,7 @@ export default function PlanMePage() {
   return (
     <div className={styles.page}>
       {/* 큰 제목 '마이페이지'는 위 머리말과 겹쳐 뺐다(대표 요청 2026-10-15) — 읽기 프로그램용 제목만 남긴다 */}
-      <h1 className={styles.srTitle}>마이페이지</h1>
+      <h1 className={styles.srTitle}>내 계정</h1>
 
       <section className={styles.card}>
         <div className={styles.cardHead}>
@@ -255,7 +255,7 @@ export default function PlanMePage() {
             ))}
           </dl>
         ) : (
-          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <p className={styles.empty}>아직 시작한 사업이 없습니다. <Link href="/plan/chat?new=1">새 대화로 시작하기</Link></p>
+          plansStale ? <p className={styles.empty} role="alert">사업 목록을 불러오지 못했어요. 새로고침해 다시 확인해 주세요.</p> : <p className={styles.empty}>아직 시작한 사업이 없어요. <Link href="/plan/chat?new=1">새 대화로 시작하기</Link></p>
         )}
       </section>
 
@@ -264,7 +264,7 @@ export default function PlanMePage() {
           <h2 className={styles.cardTitle}>결제 내역</h2>
         </div>
         {payments === null ? null : payments.length === 0 ? (
-          <p className={styles.empty}>{paymentsFailed ? "결제 내역을 불러오지 못했어요. 새로고침해 주세요." : "아직 결제 내역이 없습니다."}</p>
+          <p className={styles.empty}>{paymentsFailed ? "결제 내역을 불러오지 못했어요. 새로고침해 주세요." : "아직 결제 내역이 없어요."}</p>
         ) : (
           <div className={styles.tableWrap}>
             <table className={styles.table}>
@@ -351,7 +351,7 @@ export default function PlanMePage() {
         </div>
         {!showDelete ? (
           <>
-            <p className={styles.empty}>
+            <p className={styles.deleteNote}>
               계정과 작성한 사업·문서가 모두 삭제됩니다. 결제·환불 기록은 법령상 보존 의무가 있어
               사람과 연결되지 않는 형태로만 남습니다.
             </p>

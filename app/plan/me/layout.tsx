@@ -3,5 +3,5 @@ import AppFrame from "../AppFrame";
 
 /* 다른 화면과 같은 틀(← 제목 ☰ · 왼쪽 메뉴) */
 export default function Layout({ children }: { children: ReactNode }) {
-  return <AppFrame title="마이페이지">{children}</AppFrame>;
+  return <AppFrame title="내 계정">{children}</AppFrame>;
 }

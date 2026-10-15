@@ -153,8 +153,9 @@
 }
 
 .empty {
-  padding: 26px 0;
-  text-align: center;
+  margin: 0;
+  padding: 4px 0 2px;
+  text-align: left;
   color: var(--text-muted, var(--app-muted));
   font-size: 13.5px;
 }
@@ -278,6 +279,14 @@
   margin: 10px 0 0;
   font-size: 13px;
   color: var(--blue, var(--app-accent));
+}
+
+/* 회원 탈퇴 — 안내 글은 왼쪽 정렬로 단추 바로 위에(가운데 정렬 + 큰 위아래 여백으로 칸이 비어 보였다) */
+.deleteNote {
+  margin: 0 0 14px;
+  color: var(--text-muted, var(--app-muted));
+  font-size: 13px;
+  line-height: 1.65;
 }
 
 /* 회원 탈퇴 — 되돌릴 수 없는 행동이라 톤을 분명히 한다 */
