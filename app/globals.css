@@ -17133,3 +17133,14 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 @media (max-width: 760px) {
   .hk-phone { overflow: hidden; max-height: 420px; -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent); }
 }
+
+/* 로그인·회원가입 화면은 흰 바탕 — 사이트 바탕(연보라)이 위쪽에 띠처럼 보였다(앱 상태바 자리 포함, 대표 요청 2026-10-15) */
+html:has(main.account-page), body:has(main.account-page) { background: #fff; }
+
+/*
+ * 폰에서 창(dialog)이 열리면 브라우저가 첫 단추(닫기 X)에 초점을 줘 파란 테두리가 생겨, 눌린 것처럼 보였다(대표 요청 2026-10-15).
+ * 터치 화면에서만 창 안의 초점 테두리를 지운다 — 키보드로 쓰는 PC 에서는 그대로 보인다.
+ */
+@media (hover: none) and (pointer: coarse) {
+  dialog :focus-visible { outline: none !important; box-shadow: none !important; }
+}

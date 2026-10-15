@@ -34,12 +34,12 @@ export function BrainwaveTemplatePicker({
         </header>
         <div className="bwtp-body">
           <section>
-            <h4>홈페이지 {pages.length} <small>첫 화면부터 문의까지 한 장에 담긴 홈페이지</small></h4>
+            <h4>디자인 {pages.length}개 <small>첫 화면부터 문의까지 한 장에 담겨요</small></h4>
             <div className="bwtp-grid">
               {pages.map((p) => (
                 <button key={p.id} type="button" aria-pressed={p.id === selected} className={p.id === selected ? "on" : ""} onClick={() => setSelected(p.id)}>
                   <img src={`/brainwave/thumbs/${p.id}.jpg`} alt="" loading="lazy" />
-                  <span><b>{p.ko}</b><small>{BUSINESS_DESIGNED_PAGES.has(p.id) ? "사진·AI 문구가 가득 채워지는 디자인" : "간단한 화면"}</small></span>
+                  <span><b>{p.ko}</b><small>{BUSINESS_DESIGNED_PAGES.has(p.id) ? "사진과 소개 글이 넉넉히 들어가는 디자인" : "간단한 디자인"}</small></span>
                   {p.id === current ? <em>사용 중</em> : null}
                 </button>
               ))}
