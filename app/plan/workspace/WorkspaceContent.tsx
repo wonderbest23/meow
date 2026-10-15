@@ -11,11 +11,12 @@ import type { HomepageStatus } from "../../../lib/plan-builder/journey";
 
 export type WorkspaceView = "summary" | "documents" | "action" | "launch" | "operations";
 
-export function WorkspaceIdentity({ title, status }: { title: string; status: string }) {
-  return <div className={styles.workspaceTitle}><span className={styles.status}>{status}</span><h1>{title}</h1></div>;
+export function WorkspaceIdentity({ title, status, action }: { title: string; status: string; action?: ReactNode }) {
+  /* action — '대화 이어가기' 같은 작은 링크. 탭 줄 끝에 두면 폰에서 잘려 상태 칩 옆으로 옮겼다(대표 요청 2026-10-15) */
+  return <div className={styles.workspaceTitle}><div className={styles.workspaceTitleRow}><span className={styles.status}>{status}</span>{action}</div><h1>{title}</h1></div>;
 }
 
-export function WorkspaceNavigation({ view, onChange, children, operating = false }: { view: WorkspaceView; onChange: (view: WorkspaceView) => void; children: ReactNode; operating?: boolean }) {
+export function WorkspaceNavigation({ view, onChange, children, operating = false }: { view: WorkspaceView; onChange: (view: WorkspaceView) => void; children?: ReactNode; operating?: boolean }) {
   return <nav className={styles.tabs} aria-label="사업 관리 메뉴">
     <button aria-pressed={view === "summary"} onClick={() => onChange("summary")}>사업 요약</button>
     <button data-workspace-documents aria-pressed={view === "documents"} onClick={() => onChange("documents")}>내 자료</button>
@@ -33,7 +34,7 @@ export function WorkspaceSummary({ description, fields, stale, headingRef, child
     <p>{description}</p>
     {stale && <div className={styles.notice}><p>대화에서 바꾼 내용이 기존 문서와 달라요. 내 자료에서 확인해 주세요.</p></div>}
     {fields && <dl className={styles.keyFacts} data-workspace-facts>{fields.filter(field => ["customer", "offer", "price", "budget", "hoursPerWeek"].includes(field.key)).map(field => <div className={styles.fact} key={field.key}>
-      <dt>{COACH_FIELD_LABELS[field.key]}<span>{field.basis === "user" ? "내가 알려준 내용" : "AI 제안"}</span></dt><dd>{coachFieldDisplay(field.value)}</dd>
+      <dt>{COACH_FIELD_LABELS[field.key]}{field.basis === "user" ? null : <span>AI 초안</span>}</dt><dd>{coachFieldDisplay(field.value)}</dd>
     </div>)}</dl>}
     {children}
   </>;

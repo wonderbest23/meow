@@ -834,17 +834,17 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     // 업종 줄은 고른 세부 업종을 크게, 큰 분류와 코드는 아래 작은 줄로
     const ksicLine = ksic ? `${display || shown} · KSIC ${ksic.code}` : null;
     const main = ksic ? ksic.name : display;
-    return <div key={item.id}><dt><span>{item.label}</span><small data-basis={item.basis}>{item.basis === "proposal" ? "AI 제안" : item.basis === "unknown" ? "아직 안 정함" : "내가 입력함"}</small>{editableId && !readOnly && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={main || "아직 정하지 않았어요"} />{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
+    return <div key={item.id}><dt><span>{item.label}</span>{item.basis === "proposal" || item.basis === "unknown" ? <small data-basis={item.basis}>{item.basis === "proposal" ? "AI 초안" : "아직 안 정함"}</small> : null}{editableId && !readOnly && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={main || "아직 정하지 않았어요"} />{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
   };
   return <>
-    <div className={styles.summaryHeading}><p className={styles.eyebrow}>{snapshot.intake.mode === "operating" ? "운영 중인 사업" : "사업 구상"}</p><h2 id="intake-summary-heading">현재까지 작성한 사업정보</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
+    <div className={styles.summaryHeading}><h2 id="intake-summary-heading">{snapshot.intake.mode === "operating" ? "운영 중인 사업 정보" : "내 사업 정보"}</h2><p>{snapshot.coreComplete ? "기본 질문 입력 완료" : `기본 질문 ${snapshot.coreAnswered} / ${snapshot.coreTotal}`}</p></div>
     {snapshot.financialWarning && <div className={styles.financialWarning} role="note">
       <p>{snapshot.financialWarning.message}</p>
       {!readOnly && <div>{snapshot.financialWarning.fields.map(key => { const id = key === "price" ? "price" : key === "unitCost" ? "structure.unitCost" : "structure.cost"; const label = key === "price" ? "가격 다시 입력" : key === "unitCost" ? "변동비 다시 입력" : "고정비 다시 입력"; return <button key={key} type="button" className={styles.presetChip} disabled={disabled} onClick={() => { if (id.startsWith("structure.") && !snapshot.intake.detailsRequested) onDetails(); else onEdit(id); }}><PencilLine size={14} aria-hidden="true" />{label}</button>; })}</div>}
     </div>}
     {nextStep && actions}
     <BusinessIdentityHero snapshot={snapshot} compact />
-    {original && <section className={styles.original}><h3>내 사업 구상</h3><ConversationText text={original} /></section>}
+    {original && <section className={styles.original}><h3>처음 적은 설명</h3><ConversationText text={original} /></section>}
     {highlights.length > 0 && <dl className={styles.summaryFields}>{highlights.map(renderField)}</dl>}
     {(remaining.length > 0 || extraAnswers.length > 0) && <details className={styles.summaryDetails} open><summary>다른 답변 보기 ·{remaining.length + extraAnswers.length}개</summary><dl className={styles.summaryFields}>{remaining.map(renderField)}{extraAnswers.map(question => <div key={question.id}><dt><span>{question.label}</span>{!readOnly && <button type="button" className={styles.iconButton} aria-label={`${question.label} 수정`} title={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={snapshot.intake.answers[question.id].status === "unknown" ? "아직 정하지 않았어요" : plainText(summaryAnswerText(question, snapshot.intake.answers[question.id].value, snapshot.candidateIdeas)) || plainText(answerText(snapshot.intake.answers[question.id].value)) || "아직 정하지 않았어요"} /></dd></div>)}</dl></details>}
     {!snapshot.summary.length && !extraAnswers.length && <p className={styles.muted}>아직 저장한 답변이 없습니다.</p>}

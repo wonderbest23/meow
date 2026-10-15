@@ -1,6 +1,6 @@
 "use client";
 
-import { Check, MessageSquarePlus, Sparkles } from "lucide-react";
+import { Check, MessageSquarePlus, MessageCircle } from "lucide-react";
 import type { IntakeSnapshot } from "../../../../lib/plan-builder/intake-types";
 import styles from "./idea-exploration.module.css";
 import { chatTextPreview } from "./model";
@@ -9,7 +9,7 @@ export function IdeaExploration({snapshot,selectedDraftId,disabled,onRequest,onC
   if(snapshot.intake.mode!=="exploring") return null;
   const ideas=snapshot.intake.generatedIdeas??[];
   return <section className={styles.section} aria-label="새 사업 후보 탐색">
-    <header><h3>다른 사업 방향도 찾아볼까요</h3><button type="button" disabled={disabled} onClick={ideas.length?onCompose:onRequest}><Sparkles size={16} aria-hidden="true" />{ideas.length?"후보 수정 대화":"새 사업 후보 제안"}</button></header>
+    <header><h3>다른 사업 방향도 찾아볼까요</h3><button type="button" disabled={disabled} onClick={ideas.length?onCompose:onRequest}><MessageCircle size={16} aria-hidden="true" />{ideas.length?"후보 수정 대화":"새 사업 후보 제안"}</button></header>
     {!ideas.length&&<p>입력한 관심과 조건으로 아직 정하지 않은 사업을 제안받아요</p>}
     {ideas.length>0&&<p>AI의 미확정 제안이에요 · 독창성·수요·수익성은 검증되지 않았어요</p>}
     <div className={styles.list}>{ideas.map(idea=>{
