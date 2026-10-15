@@ -17151,3 +17151,6 @@ body .support-chat-widget > button.support-chat-toggle.support-chat-toggle {
   border-radius: 50% !important;
   box-shadow: 0 8px 22px rgba(25, 31, 40, .18) !important;
 }
+
+/* 공개 홈페이지 맨 아래 디자인 출처(CC BY 4.0) — 표기는 남기되, 가게 정보보다 눈에 띄던 굵은 강조색 링크를 옅은 작은 글씨로 */
+.public-landing-footer .public-kit-credit a { color: inherit; font-weight: 500; text-decoration: underline; text-underline-offset: 2px; }
