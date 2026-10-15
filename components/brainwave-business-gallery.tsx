@@ -73,7 +73,8 @@ export function BusinessGallery0_421({ overrides, hidden, sectionOrder, onPick, 
     [WORKS]: () => {
       const photos = WORK_PHOTOS.map(id => [id, photo(id)] as const).filter(([, url]) => url);
       const slots = onPick ? WORK_PHOTOS.filter(id => !photo(id)).slice(0, Math.max(0, 4 - photos.length)) : [];
-      if (!photos.length && !slots.length && !text("0:890")) return null;
+      /* 공개 화면에서 사진이 하나도 없으면 '작업 사례' 제목만 덩그러니 남았다 — 사진이 있을 때만 그린다(편집 화면은 사진 넣을 자리를 보여 준다) */
+      if (!photos.length && (!onPick || (!slots.length && !text("0:890")))) return null;
       return <section key={WORKS} data-bw-node={WORKS} className={styles.works}>
         <div className={styles.head}>
           {Text({ id: "0:890", as: "h2", reveal: 0 })}
@@ -163,9 +164,10 @@ export function BusinessGallery0_421({ overrides, hidden, sectionOrder, onPick, 
       if (!text("0:900") && !address && !hours) return null;
       const url = photo("0:958/0/0");
       return <section key={STUDIO} id={onPick ? undefined : "visit"} data-bw-node={STUDIO} className={styles.studio}>
-        <div className={styles.studioMedia} data-scroll>
+        {/* 사진이 없으면 공개 화면에 빈 회색 상자가 남았다 — 사진이 있거나 편집 중일 때만 자리를 둔다 */}
+        {url || onPick ? <div className={styles.studioMedia} data-scroll>
           {url ? Photo({ id: "0:958/0/0", url, className: styles.studioImage }) : PhotoSlot({ id: "0:958/0/0", className: styles.studioSlot })}
-        </div>
+        </div> : null}
         <div className={styles.studioCopy}>
           {Text({ id: "0:900", as: "h2", reveal: 0 })}
           {Text({ id: "0:901", className: styles.lead, reveal: 1 })}

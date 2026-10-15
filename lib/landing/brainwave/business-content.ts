@@ -1,6 +1,7 @@
 import { z } from "zod";
 import manifestJson from "./content-manifest.json";
 import type { BrainwaveData } from "../page-data";
+import { designPageForSector } from "./catalog";
 
 export const businessContentSchema = z.object({
   businessName: z.string().min(1).max(120),
@@ -188,6 +189,16 @@ export function businessTemplateDefaults(content: BusinessContent): Set<string> 
   return new Set(values.map((value) => value.trim()).filter(Boolean));
 }
 
+/*
+ * 템플릿 전용 기본 글. 병원 디자인의 '진료 시간·오시는 길'은 병원일 때만 쓴다 — 빵집이 병원 디자인을
+ * 고르면 '진료 시간'이 손님에게 그대로 보였다. 병원이 아니면 동네 가게와 같은 '오시는 길·영업시간'.
+ */
+function templateLabels(content: BusinessContent, page: string, profile: Profile): Value | undefined {
+  if (page !== "0-2385") return profile.labels;
+  const medical = designPageForSector([content.businessName, content.headline ?? "", content.offer, content.description].join(" ")) === "0-2385";
+  return medical ? profile.labels : undefined;
+}
+
 export function createBusinessTemplate(content: BusinessContent, page: string): BrainwaveData {
   const profile = BUSINESS_TEMPLATE_PROFILES[page];
   const manifest = businessTemplateManifest[page];
@@ -204,7 +215,7 @@ export function createBusinessTemplate(content: BusinessContent, page: string): 
     offerLabel: "제공 내용", customerLabel: "이용 대상", priceLabel: "가격 안내", one: "01", two: "02", three: "03",
     visitTitle: "오시는 길·영업시간", address: LOCAL_ADDRESS_PENDING, hoursLabel: "영업시간", hours: LOCAL_HOURS_PENDING,
     addressLabel: "오시는 길", worksTitle: "작업 사례", servicesTitle: "이런 일을 해요",
-    ...profile.labels,
+    ...templateLabels(content, page, profile),
   };
   // Empty overrides cover every original slot, including sections later restored by the editor.
   const texts = Object.fromEntries(manifest.texts.map(id => [id, ""]));

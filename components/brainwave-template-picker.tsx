@@ -11,6 +11,15 @@ import styles from "./brainwave-template-picker.module.css";
  * 아직 간단한 화면으로만 나오는 템플릿('준비 중')은 보여 주지 않는다 — 지금 쓰고 있는 것만 예외.
  * 홈페이지 화면과 편집기 양쪽에서 같은 창을 쓴다.
  */
+/* 카드마다 같은 설명('사진과 소개 글이 넉넉히…')이 다섯 번 되풀이돼 고르는 데 도움이 안 됐다 — 디자인마다 무엇이 먼저 보이는지로 적는다 */
+const DESIGN_NOTES: Record<string, string> = {
+  "0-290": "상담·문의를 받는 서비스에 맞는 구성",
+  "0-2385": "진료 과목·진료 시간을 먼저 보여 주는 구성",
+  "0-2226": "메뉴·가격·영업시간이 먼저 보이는 가게 구성",
+  "0-1102": "상품을 카드로 나란히 보여 주는 구성",
+  "0-421": "작업 사진을 크게 보여 주는 구성",
+};
+
 export function BrainwaveTemplatePicker({
   current,
   onPick,
@@ -39,7 +48,7 @@ export function BrainwaveTemplatePicker({
               {pages.map((p) => (
                 <button key={p.id} type="button" aria-pressed={p.id === selected} className={p.id === selected ? "on" : ""} onClick={() => setSelected(p.id)}>
                   <img src={`/brainwave/thumbs/${p.id}.jpg`} alt="" loading="lazy" />
-                  <span><b>{p.ko}</b><small>{BUSINESS_DESIGNED_PAGES.has(p.id) ? "사진과 소개 글이 넉넉히 들어가는 디자인" : "간단한 디자인"}</small></span>
+                  <span><b>{p.ko}</b><small>{DESIGN_NOTES[p.id] ?? (BUSINESS_DESIGNED_PAGES.has(p.id) ? "사진과 소개 글이 넉넉히 들어가는 디자인" : "간단한 디자인")}</small></span>
                   {p.id === current ? <em>사용 중</em> : null}
                 </button>
               ))}

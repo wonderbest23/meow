@@ -151,3 +151,6 @@
   .hero::after { opacity: 0; }
   .heroCopy { opacity: 1; }
 }
+
+/* 머리말 가게 이름 — 길면 두 줄로 늘어 머리말이 두꺼워졌다. 한 줄로 두고 넘치면 … (전체 이름은 첫 화면 큰 제목에 있다) */
+.header .brand { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }

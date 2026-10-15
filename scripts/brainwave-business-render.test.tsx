@@ -193,4 +193,12 @@ const warmHtml = renderToStaticMarkup(createElement(PublicLandingClient, { slug:
 assert.equal(publicDraft.pageData?.theme, "warm");
 assert.ok(warmHtml.includes('class="landing-theme"') && warmHtml.includes("--t-accent:#9a5b34"));
 assert.ok(!renderToStaticMarkup(createElement(PublicLandingClient, { slug: "munap", config: { ...publicDraft, pageData: { ...publicDraft.pageData!, theme: undefined } } })).includes("landing-theme"));
-console.log(JSON.stringify({ passed: 79 }));
+// 분위기 색은 디자인 밖(문의 양식·맨 아래)에도 — 페이지 전체가 같은 강조색
+assert.ok(warmHtml.includes("--landing-accent:#9a5b34"), "lead form/footer follow the theme accent");
+// 병원 디자인을 병원이 아닌 가게가 고르면 '진료 시간'이 아니라 '영업시간'
+const bakeryClinicHtml = render(createBusinessTemplate({ ...content, businessName: "소금빵집", offer: "식빵·소금빵", description: "아침마다 굽는 동네 빵집" }, "0-2385"));
+assert.ok(!bakeryClinicHtml.includes("진료") && bakeryClinicHtml.includes("오시는 길·영업시간"), "non-medical business on clinic design");
+// 갤러리형: 공개 화면에 사진이 없으면 '작업 사례' 제목만 남기지 않는다
+const bareGalleryHtml = render(createBusinessTemplate({ ...content, businessName: "소금빵집", image: "" }, "0-421"));
+assert.ok(!bareGalleryHtml.includes("작업 사례"), "empty works section hidden publicly");
+console.log(JSON.stringify({ passed: 82 }));
