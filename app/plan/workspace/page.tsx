@@ -151,7 +151,8 @@ export default function BusinessWorkspace() {
             {/* 다음 단계는 계획서 화면과 같은 답 하나 — 홈페이지 만들기 → 다듬고 공개하기 → 유지보수 */}
             {hub.complete && !hub.stale && (() => { const next = journeyNext(plan, homepage.status); return <div className={styles.nextStep}><span>다음 단계</span><h3>{next.title}</h3><p>{next.note}</p><Link className={styles.secondary} href={next.href} onClick={() => setActivePlan(plan.id)}>{next.title}</Link></div>; })()}
           </>}
-          {view==="launch" && <><button className={styles.textButton} onClick={()=>tab("operations")}>기간별 실적과 개선 리포트 보기</button>{action && <button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}
+          {/* '기간별 실적과 개선 리포트 보기'는 위 '유지보수' 탭과 같은 곳이라 뺐다 — 예전엔 두 링크가 띄어쓰기 없이 한 줄로 붙어 보였다(대표 요청 2026-10-15) */}
+          {view==="launch" && <>{action && <p className={styles.tabLink}><button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button></p>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}
           {view==="action" && <>
             <h2 ref={heading} tabIndex={-1}>{done==="done" ? "하나를 마쳤어요" : done==="skipped" ? "이 일은 나중에 해요" : "지금은 이것 하나만"}</h2>
             <p className={styles.muted}>실행은 선택 사항이에요. 하지 않아도 사업안과 자료는 그대로 남아요.</p>

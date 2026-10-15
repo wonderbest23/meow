@@ -94,3 +94,4 @@
 .workspaceTitleRow .status { margin-bottom: 0 !important; }
 .titleAction { border: 0; background: transparent; color: #3182f6; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 6px 0; }
 .titleAction:hover { text-decoration: underline; }
+.tabLink { margin: -8px 0 8px !important; }

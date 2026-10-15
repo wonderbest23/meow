@@ -46,10 +46,10 @@ export function WorkspaceDocumentStatus({ complete, count, total, stale, onOpen,
   return <>
     <div className={styles.documentState}><p>{complete ? "사업계획서가 완성됐어요." : "사업계획서를 준비하고 있어요."}</p><span className={styles.count}>{count} / {total} 항목</span></div>
     {!complete && <progress className={styles.progress} aria-label="준비된 문서 항목" value={count} max={total} />}
-    <ul className={styles.fileTypes} aria-label="내보내기 형식"><li>PDF</li><li>워드</li>{PPT_GENERATION_VERIFIED && <li>발표자료 PPT</li>}</ul>
     {stale && <div className={styles.notice}><h3>수정 내용 반영 필요</h3><p>현재 사업안과 다른 내용이 문서에 남아 있어요. 기존 문서는 유지되며, 대화에서 반영을 요청할 수 있어요.</p></div>}
     <button className={styles.primary} data-workspace-open-document onClick={onOpen}>사업계획서 열기</button>
-    <p className={styles.downloadNote}>내려받기는 문서에서 · 이용 권한에 따라 결제 필요</p>
+    {/* 예전엔 PDF·워드가 단추처럼 생긴 꼬리표로 있었는데 눌러도 아무 일이 없었다(대표 요청 2026-10-15) — 안내 한 줄로 */}
+    <p className={styles.downloadNote}>{PPT_GENERATION_VERIFIED ? "PDF·워드·발표자료" : "PDF·워드"} 내려받기는 사업계획서 화면에서 할 수 있어요.</p>
   </>;
 }
 
