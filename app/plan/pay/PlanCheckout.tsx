@@ -30,7 +30,7 @@ const SUPPLY: Record<string, string> = {
   bundle: "결제가 승인되면 바로 이 문서의 전체 섹션과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작됩니다.",
   domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작됩니다.",
   "domain-purchase": "결제가 승인되면 1년 호스팅 기간이 시작되고, 아래 명의자 이름으로 도메인을 등록해 연결 준비를 마칩니다(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일).",
-  tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 사용할 수 있습니다.",
+  tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 쓸 수 있어요.",
 };
 
 declare global {
@@ -65,12 +65,12 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   const isBundle = params.get("product") === "bundle";
   const product = isRegen ? "regen" : isHomepage ? "homepage" : isDomain ? "domain" : isDomainPurchase ? "domain-purchase" : isTokens ? "tokens" : isBundle ? "bundle" : "plan";
   const COPY: Record<string, { title: string; desc: string; price: number; unit: string }> = {
-    bundle: { title: "사업계획서 + 홈페이지 함께 열기", desc: `이 문서 전체 섹션과 PDF·Word 내려받기, 그리고 계획서로 만든 홈페이지의 수정·공개가 함께 열립니다. 따로 사면 ${(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원이에요.`, price: BUNDLE_PRODUCT_AMOUNT, unit: "문서 1부 + 홈페이지 1개 · 1회 결제" },
-    domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결합니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.", price: DOMAIN_PRODUCT_AMOUNT, unit: "홈페이지 1개 · 1년" },
-    "domain-purchase": { title: purchaseDomain ? `${purchaseDomain} 사서 연결하기` : "도메인 구매하고 연결하기", desc: `원하는 주소를 이용자 명의로 등록하고 이 홈페이지에 연결합니다. 첫해 등록비(${DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원)와 1년 동안의 호스팅·보안 인증서·연결 관리가 포함됩니다.`, price: DOMAIN_PURCHASE_PRODUCT_AMOUNT, unit: "주소 1개 · 1년" },
+    bundle: { title: "사업계획서 + 홈페이지 함께 열기", desc: `이 문서 전체 섹션과 PDF·Word 내려받기, 그리고 계획서로 만든 홈페이지의 수정·공개가 함께 열려요. 따로 사면 ${(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원이에요.`, price: BUNDLE_PRODUCT_AMOUNT, unit: "문서 1부 + 홈페이지 1개 · 1회 결제" },
+    domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결해요. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드려요.", price: DOMAIN_PRODUCT_AMOUNT, unit: "홈페이지 1개 · 1년" },
+    "domain-purchase": { title: purchaseDomain ? `${purchaseDomain} 사서 연결하기` : "도메인 구매하고 연결하기", desc: `원하는 주소를 이용자 명의로 등록하고 이 홈페이지에 연결해요. 첫해 등록비(${DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원)와 1년 동안의 호스팅·보안 인증서·연결 관리가 포함돼요.`, price: DOMAIN_PURCHASE_PRODUCT_AMOUNT, unit: "주소 1개 · 1년" },
     /* 다시 생성 묶음 — 예전엔 여기 없어서 '이 문서 전체 열기 · 49,000원'이 보였다(실제 결제는 이 금액) */
-    regen: { title: `${REGEN_PACK_NAME} 추가`, desc: `이 문서의 ‘다시 생성’ 횟수가 ${REGEN_PACK_COUNT}회 더해집니다. 대화로 바꾼 내용을 계획서에 다시 반영할 때 씁니다.`, price: REGEN_PACK_AMOUNT, unit: `${REGEN_PACK_COUNT}회 · 이 문서` },
-    tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’ 처럼 말하면 AI 가 페이지 글을 고칩니다. 20만 토큰은 페이지 전체 고치기 25회 안팎입니다.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
+    regen: { title: `${REGEN_PACK_NAME} 추가`, desc: `이 문서의 ‘다시 생성’ 횟수가 ${REGEN_PACK_COUNT}회 더해져요. 대화로 바꾼 내용을 계획서에 다시 반영할 때 써요.`, price: REGEN_PACK_AMOUNT, unit: `${REGEN_PACK_COUNT}회 · 이 문서` },
+    tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’ 처럼 말하면 AI 가 페이지 글을 고쳐요. 20만 토큰은 페이지 전체 고치기 25회 안팎이에요.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
   };
   const extra = COPY[product];
   /* '나중에 하기'는 머리줄 ← 와 같은 곳 — 그 사업의 계획서, 홈페이지 쪽 상품이면 그 사업의 홈페이지 */
@@ -149,7 +149,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       };
       if (!res.ok || !data.clientId || !data.orderId) {
         setPhase("error");
-        setMessage(data.message ?? "결제를 시작하지 못했습니다.");
+        setMessage(data.message ?? "결제를 시작하지 못했어요.");
         started.current = false;
         return;
       }
@@ -168,13 +168,13 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         returnUrl: `${window.location.origin}/api/payments/plan/return`,
         fnError: (result: { errorMsg?: string; resultMsg?: string }) => {
           setPhase("error");
-          setMessage(result?.errorMsg ?? result?.resultMsg ?? "결제가 취소되었습니다.");
+          setMessage(result?.errorMsg ?? result?.resultMsg ?? "결제가 취소됐어요.");
           started.current = false;
         },
       });
     } catch {
       setPhase("error");
-      setMessage("결제창을 여는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.");
+      setMessage("결제창을 여는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.");
       started.current = false;
     }
   }
@@ -189,7 +189,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       const startRes = await fetch("/api/payments/iap/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, product, terms: agreements }) });
       const start = (await startRes.json().catch(() => ({}))) as { productId?: string; appAccountToken?: string; message?: string };
       if (!startRes.ok || !start.productId || !start.appAccountToken) {
-        setPhase("error"); setMessage(start.message ?? "결제를 시작하지 못했습니다."); started.current = false; return;
+        setPhase("error"); setMessage(start.message ?? "결제를 시작하지 못했어요."); started.current = false; return;
       }
       setPhase("opening");
       let purchase: Awaited<ReturnType<typeof nativePurchase>>;
@@ -204,13 +204,13 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       const doneRes = await fetch("/api/payments/iap/complete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ platform: native, product, planId, planType, jws: purchase.jws, purchaseToken: purchase.purchaseToken }) });
       const done = (await doneRes.json().catch(() => ({}))) as { ok?: boolean; message?: string };
       if (!doneRes.ok || !done.ok) {
-        setPhase("error"); setMessage(done.message ?? "결제는 되었지만 반영하지 못했습니다. 앱을 다시 열면 다시 시도합니다."); started.current = false; return;
+        setPhase("error"); setMessage(done.message ?? "결제는 됐지만 반영하지 못했어요. 앱을 다시 열면 다시 시도해요."); started.current = false; return;
       }
       if (native === "ios") await finishNativePurchase(purchase.transactionId).catch(() => undefined);
       window.location.assign(laterHref);
     } catch {
       setPhase("error");
-      setMessage("결제창을 여는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.");
+      setMessage("결제창을 여는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.");
       started.current = false;
     }
   }
@@ -222,7 +222,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>결제 상태를 확인하지 못했어요</h1>
-          <p className={styles.desc}>이미 결제했을 수도 있어요. 잠시 후 다시 확인해 주세요. 결제는 아직 진행되지 않았습니다.</p>
+          <p className={styles.desc}>이미 결제했을 수도 있어요. 잠시 후 다시 확인해 주세요. 결제는 아직 진행되지 않았어요.</p>
           <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 확인하기</button>
           <Link href={planHref} className={styles.back}>← 사업계획서로 돌아가기</Link>
         </div>
@@ -235,8 +235,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       <div className={styles.page}>
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
-          <h1 className={styles.title}>로그인이 필요합니다</h1>
-          <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아옵니다.</p>
+          <h1 className={styles.title}>로그인이 필요해요</h1>
+          <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아와요.</p>
           <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={styles.primary}>로그인 · 회원가입</Link>
           <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
         </div>
@@ -290,8 +290,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       <div className={styles.page}>
         <div className={styles.card}>
           <div className={styles.icon} aria-hidden="true"><CheckCircle2 size={30} strokeWidth={1.8} /></div>
-          <h1 className={styles.title}>{bundleBlocked && bothOwned ? "사업계획서와 홈페이지가 모두 열려 있습니다" : bundleBlocked ? "묶음 대신 남은 상품만 결제해 주세요" : isHomepage ? "홈페이지는 이미 열려 있습니다" : "이 사업계획서는 이미 열려 있습니다"}</h1>
-          <p className={styles.desc}>{bundleBlocked && bothOwned ? "따로 결제할 것이 없어요." : bundleBlocked ? `${info?.paid ? "사업계획서" : "홈페이지"}는 이미 열려 있어요. ${info?.paid ? "홈페이지" : "사업계획서"}만 따로 결제하면 돼요.` : isHomepage ? "결제가 확인되어 사진·글·버튼을 고치고 공개할 수 있습니다." : "결제가 확인되어 전체 항목을 쓸 수 있습니다."}</p>
+          <h1 className={styles.title}>{bundleBlocked && bothOwned ? "사업계획서와 홈페이지가 모두 열려 있어요" : bundleBlocked ? "묶음 대신 남은 상품만 결제해 주세요" : isHomepage ? "홈페이지는 이미 열려 있어요" : "이 사업계획서는 이미 열려 있어요"}</h1>
+          <p className={styles.desc}>{bundleBlocked && bothOwned ? "따로 결제할 것이 없어요." : bundleBlocked ? `${info?.paid ? "사업계획서" : "홈페이지"}는 이미 열려 있어요. ${info?.paid ? "홈페이지" : "사업계획서"}만 따로 결제하면 돼요.` : isHomepage ? "결제가 확인돼서 사진·글·버튼을 고치고 공개할 수 있어요." : "결제가 확인돼서 전체 항목을 쓸 수 있어요."}</p>
           {bundleBlocked && !bothOwned && planId && <Link href={`/plan/pay?${new URLSearchParams({ planId, planType, ...(info?.paid ? { product: "homepage" } : {}) }).toString()}`} className={styles.primary}>{info?.paid ? "홈페이지만 결제하기" : "사업계획서만 결제하기"}</Link>}
           <Link href={isHomepage ? (planId ? homepageHref(planId) : "/plan/homepage") : planHref} className={bundleBlocked ? styles.back : styles.primary}>{isHomepage ? "홈페이지 에디터 열기" : "사업계획서로 돌아가기"}</Link>
         </div>
@@ -307,15 +307,15 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         <p className={styles.desc}>
           {extra ? extra.desc : isHomepage ? (
             <>
-              계획서 내용으로 만든 홈페이지를 직접 고치고 인터넷에 공개할 수 있습니다.
-              신청 폼으로 들어온 문의는 왼쪽 메뉴 ‘내 문의’에서 한곳에 모아 봅니다.
+              계획서 내용으로 만든 홈페이지를 직접 고치고 인터넷에 공개할 수 있어요.
+              신청 폼으로 들어온 문의는 왼쪽 메뉴 ‘내 문의’에서 한곳에 모아 볼 수 있어요.
             </>
           ) : (
             <>
               {/* 문서 종류를 고르는 화면은 없어졌다 — 종류 이름(planType)이나 '다른 유형' 안내 대신 이 사업의 계획서로 말한다 */}
-              이 사업의 사업계획서 전체 항목이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있습니다.
-              {!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 제공 준비 중이며 현재 결제 제공 범위에는 포함되지 않습니다."}
-              {" "}대화로 정리한 내용은 그대로 이어집니다.
+              이 사업의 사업계획서 전체 항목이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있어요.
+              {!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 준비 중이라 이번 결제에는 들어가지 않아요."}
+              {" "}대화로 정리한 내용은 그대로 이어져요.
             </>
           )}
         </p>
@@ -410,7 +410,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           )
         ) : info && !info.payable ? (
           <p className={styles.notice}>
-            결제 준비가 아직 완료되지 않았습니다. 잠시 후 다시 시도해주세요.
+            결제 준비가 아직 끝나지 않았어요. 잠시 후 다시 시도해 주세요.
           </p>
         ) : (
           <button
@@ -428,10 +428,10 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
 
         <p className={styles.note}>
           {/* 결제 뒤 실제로 가는 곳(결제 결과 화면의 단추)과 같은 말 */}
-          {product === "regen" ? "결제가 끝나면 사업계획서로 돌아가 이어서 고칠 수 있습니다."
-            : product === "bundle" ? "결제가 끝나면 바로 사업계획서 작성을 시작해요. 홈페이지 편집·공개도 함께 열립니다."
-            : extra ? "결제가 끝나면 홈페이지 화면으로 돌아갑니다."
-            : "지금까지 답한 내용은 그대로 남아 있습니다. 결제가 끝나면 바로 사업계획서 작성을 시작해요."}
+          {product === "regen" ? "결제가 끝나면 사업계획서로 돌아가 이어서 고칠 수 있어요."
+            : product === "bundle" ? "결제가 끝나면 바로 사업계획서 작성을 시작해요. 홈페이지 편집·공개도 함께 열려요."
+            : extra ? "결제가 끝나면 홈페이지 화면으로 돌아가요."
+            : "지금까지 답한 내용은 그대로 남아 있어요. 결제가 끝나면 바로 사업계획서 작성을 시작해요."}
         </p>
         <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
       </div>

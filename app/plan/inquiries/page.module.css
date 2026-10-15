@@ -22,6 +22,7 @@
 .empty, .placeholder { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; color: #6b7280; text-align: center; }
 .empty strong { color: #161c2d; font-size: 15px; }
 .empty p, .placeholder p { margin: 0; font-size: 13px; line-height: 1.6; }
+.emptyRefresh { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; height: 36px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 18px; background: #fff; color: #4b5161; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .placeholder { align-content: center; height: 100%; }
 .detail { min-height: 0; overflow-y: auto; }
 .thread { display: grid; align-content: start; gap: 16px; max-width: 720px; margin: 0 auto; padding: 0 24px 32px; }

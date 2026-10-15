@@ -96,7 +96,7 @@ try {
   await page.getByRole("button", { name: "확인 중", exact: true }).waitFor();
   assert(await page.getByRole("button", { name: "확인 중", exact: true }).isDisabled());
   answer({ status: "ok" });
-  await page.getByRole("heading", { name: "결제가 완료되었습니다" }).waitFor();
+  await page.getByRole("heading", { name: "결제가 끝났어요" }).waitFor();
   assert.equal(calls, 1);
   checks.push("mocked recovery success changes the view and duplicate clicks send one request");
   await context.unroute(recoveryRoute);
