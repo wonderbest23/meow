@@ -43,19 +43,21 @@ export default function InquiriesPage() {
   return <main className={frame.page}><BusinessAppChrome title="내 문의" active="inquiries">
     {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" /> : <div className={styles.wrap} data-detail={selected ? "" : undefined}>
       <aside className={styles.list} aria-label="문의 목록">
-        <div className={styles.listHead}>
+        {/* 문의가 하나도 없으면 0개짜리 거름 단추는 빼고, 새로 확인하는 단추만 빈 화면 안에 둔다 */}
+        {items?.length === 0 ? null : <div className={styles.listHead}>
           <div className={styles.filters} role="tablist" aria-label="문의 보기">
             <button type="button" role="tab" aria-selected={filter === "all"} onClick={() => setFilter("all")}>전체{items ? ` ${items.length}` : ""}</button>
             <button type="button" role="tab" aria-selected={filter === "open"} onClick={() => setFilter("open")}>답할 것{items ? ` ${open}` : ""}</button>
           </div>
           <button type="button" className={styles.refresh} onClick={() => refresh(true)} aria-label="문의 새로고침" title="새로고침"><RefreshCw size={16} /></button>
-        </div>
+        </div>}
         {error ? <p className={styles.notice} role="alert">{error} <button type="button" className={styles.retry} onClick={() => refresh(true)}>다시 불러오기</button></p> : null}
         {/* 불러오지 못했으면 '문의 없음'이라고 하지 않는다 — 있는 문의를 없다고 믿게 된다 */}
         {items === null ? null : shown.length === 0 ? <div className={styles.empty}>
           <Inbox size={28} aria-hidden />
           <strong>{filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"}</strong>
           <p>홈페이지를 공개하면 손님 문의가 여기로 모여요. 들어오면 알림 받을 번호로 문자도 보내 드려요.</p>
+          {items.length === 0 ? <button type="button" className={styles.emptyRefresh} onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</button> : null}
         </div> : <ul className={styles.rows}>
           {shown.map(item => <li key={item.lead.id}>
             <button type="button" aria-current={item.lead.id === selected?.lead.id ? "true" : undefined} onClick={() => setSelectedId(item.lead.id)}>

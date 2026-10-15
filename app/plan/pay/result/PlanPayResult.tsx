@@ -36,7 +36,7 @@ export default function PlanPayResult() {
       const data = await response.json();
       if (!response.ok || !["ok", "pending", "fail"].includes(data.status)) throw new Error("CHECK_UNAVAILABLE");
       setStatus(data.status); setReason(data.reason ?? null);
-    } catch { setReason("아직 결과를 확인하지 못했습니다. 다시 결제하지 말고 잠시 후 확인해주세요."); }
+    } catch { setReason("아직 결과를 확인하지 못했어요. 다시 결제하지 말고 잠시 후 확인해 주세요."); }
     finally { inFlight.current = false; setChecking(false); }
   }
   // 실패 시 같은 문서로 다시 시도할 수 있게 — 이게 빠지면 재시도 화면이 결제할 문서를 모른다
@@ -58,15 +58,15 @@ export default function PlanPayResult() {
   const startsDocument = (product === "plan" || product === "bundle") && !!planId;
   const doneHref = startsDocument ? `/plan/chat?${new URLSearchParams({ planId: planId!, start: "1" }).toString()}` : homepageProduct ? siteHref : planHref;
   const doneLabel = startsDocument ? "사업계획서 작성 시작하기" : product === "homepage" ? "홈페이지 고치러 가기" : product === "domain" ? "도메인 연결하러 가기" : product === "domain-purchase" ? "진행 상황 보기" : product === "tokens" ? "AI 수정 쓰러 가기" : "사업계획서로 가기";
-  const doneDesc = product === "homepage" ? "홈페이지 편집과 공개가 열렸습니다." : product === "domain" ? "1년 동안 내 도메인을 연결해 쓸 수 있습니다." : product === "domain-purchase" ? ".com 주소는 몇 분 안에 사장님 명의로 등록하고 홈페이지 연결까지 자동으로 해 드려요(끝나면 문자·메일). .kr·.co.kr 은 영업일 1~2일 안에 등록하고 연결 준비를 마쳐 드려요." : product === "tokens" ? "AI 수정 토큰 20만이 충전됐습니다." : product === "regen" ? "다시 생성 10회가 추가됐습니다." : product === "bundle" ? "사업계획서 작성과 홈페이지 편집·공개가 함께 열렸습니다. 이제 사업계획서를 작성해요(몇 분 걸려요)." : "사업계획서 전체 항목이 열렸습니다. 이제 사업계획서를 작성해요(몇 분 걸려요).";
+  const doneDesc = product === "homepage" ? "홈페이지 편집과 공개가 열렸어요." : product === "domain" ? "1년 동안 내 도메인을 연결해 쓸 수 있어요." : product === "domain-purchase" ? ".com 주소는 몇 분 안에 사장님 명의로 등록하고 홈페이지 연결까지 자동으로 해 드려요(끝나면 문자·메일). .kr·.co.kr 은 영업일 1~2일 안에 등록하고 연결 준비를 마쳐 드려요." : product === "tokens" ? "AI 수정 토큰 20만이 충전됐습니다." : product === "regen" ? "다시 생성 10회가 추가됐습니다." : product === "bundle" ? "사업계획서 작성과 홈페이지 편집·공개가 함께 열렸습니다. 이제 사업계획서를 작성해요(몇 분 걸려요)." : "사업계획서 전체 항목이 열렸습니다. 이제 사업계획서를 작성해요(몇 분 걸려요).";
 
   return (
     <div className={styles.page}>
       <div className={styles.card}>
         <div className={`${styles.icon} ${ok ? styles.iconPop : ""}`} aria-hidden="true">{ok ? <CheckCircle2 size={30} strokeWidth={1.8} /> : pending ? <Clock3 size={30} strokeWidth={1.8} /> : <AlertTriangle size={30} strokeWidth={1.8} />}</div>
-        <h1 className={styles.title}>{ok ? "결제가 완료되었습니다" : pending ? "결제 결과를 확인하고 있어요" : "결제를 마치지 못했습니다"}</h1>
+        <h1 className={styles.title}>{ok ? "결제가 끝났어요" : pending ? "결제 결과를 확인하고 있어요" : "결제를 마치지 못했어요"}</h1>
         <p className={styles.desc} aria-live="polite">
-          {ok ? doneDesc : pending ? (reason ?? "승인 결과 확인이 늦어지고 있습니다. 다시 결제하지 말고 이 주문의 결과를 확인해주세요.") : (reason ?? "결제가 취소되었거나 승인되지 않았습니다.")}
+          {ok ? doneDesc : pending ? (reason ?? "승인 결과 확인이 늦어지고 있어요. 다시 결제하지 말고 이 주문의 결과를 확인해 주세요.") : (reason ?? "결제가 취소됐거나 승인되지 않았어요.")}
         </p>
         {pending && orderId && <p className={styles.desc} style={{ overflowWrap: "anywhere" }}>주문번호 {orderId}</p>}
         {ok ? (

@@ -182,7 +182,7 @@ try {
   await restored.route("**/*", (route: any) => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
   page = await restored.newPage();
   await page.goto(checkoutUrl, { waitUntil: "networkidle" });
-  await page.getByRole("heading", { name: "이 문서는 이미 열려 있습니다", exact: true }).waitFor();
+  await page.getByRole("heading", { name: "이 사업계획서는 이미 열려 있어요", exact: true }).waitFor();
   const restoredAccess = await (await restored.request.get(`${origin}/api/plan/access?planId=${planId}`)).json();
   assert.equal(restoredAccess.paid, true);
   const restoredState = await (await restored.request.get(`${origin}/api/plan/state`)).json();

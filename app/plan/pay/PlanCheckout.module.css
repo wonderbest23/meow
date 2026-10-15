@@ -199,3 +199,29 @@
 .registrant legend small { font-weight: 500; color: var(--text-muted, #6b7684); }
 .registrant > small { font-size: 12px; color: var(--text-muted, #6b7684); }
 .registrantRow { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; }
+
+/* 휴대폰 — 회색 바탕에 떠 있던 카드를 걷고 흰 바탕에 바로 놓는다. 100vh 로 잡으면 머리말(68px)
+   만큼 가운데가 아래로 밀려 처져 보였으므로, 머리말을 뺀 높이 안에서 가운데(아래 여백을 더 줘서
+   눈높이로 살짝 위)에 둔다. 내용이 길면 그냥 위에서부터 이어진다. 아이콘의 연한 원 바탕도 뺀다. */
+@media (max-width: 640px) {
+  .page {
+    min-height: calc(100svh - 68px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    place-items: center stretch;
+    padding: 24px 20px 140px;
+    background: var(--surface, #fff);
+  }
+  .card {
+    max-width: none;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+  .icon {
+    width: auto;
+    height: auto;
+    margin-bottom: 14px;
+    background: transparent;
+  }
+  .icon svg { width: 40px; height: 40px; }
+}
