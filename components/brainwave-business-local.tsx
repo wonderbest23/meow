@@ -154,7 +154,7 @@ export function BusinessLocal0_2226({ overrides, hidden, sectionOrder, onPick, d
     },
     [CLOSING]: () => {
       if (!text("0:2237")) return null;
-      return <section key={CLOSING} data-bw-node={CLOSING} className={styles.closingWrap}>
+      return <section key={CLOSING} data-bw-node={CLOSING} data-bw-closing="" className={styles.closingWrap}>
         <div className={styles.closing}>
           {Text({ id: "0:2237", as: "h2", reveal: { order: 0, kind: "title" } })}
           {Text({ id: "0:2235", className: styles.lead, reveal: 1 })}

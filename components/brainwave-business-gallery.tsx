@@ -192,7 +192,7 @@ export function BusinessGallery0_421({ overrides, hidden, sectionOrder, onPick, 
     [CLOSING]: () => {
       if (!text("0:436")) return null;
       const url = photo("0:434/0/0");
-      return <section key={CLOSING} data-bw-node={CLOSING} className={`${styles.closing} ${url ? styles.closingPhoto : ""}`} data-scroll>
+      return <section key={CLOSING} data-bw-node={CLOSING} data-bw-closing="" className={`${styles.closing} ${url ? styles.closingPhoto : ""}`} data-scroll>
         {url ? Photo({ id: "0:434/0/0", url, className: styles.closingImage }) : null}
         <div className={styles.closingShade} aria-hidden />
         <div className={styles.closingCopy}>
