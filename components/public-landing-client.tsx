@@ -8,6 +8,7 @@ import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCir
 import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";
 import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
+import { themeStyle } from "../lib/landing/themes";
 import { BRAINWAVE_CTA_EVENT } from "../lib/landing/brainwave/button-action";
 
 function getVisitorId() {
@@ -110,7 +111,8 @@ export function PublicLandingClient({
     }
   };
 
-  const style = { "--landing-accent": config.accentColor } as CSSProperties;
+  /* 분위기(색 조합)는 디자인 부분에만 걸려 있어, 그 밖의 문의 양식·맨 아래는 다른 색(기본 초록)으로 남았다 — 페이지 전체에 같은 분위기 색을 건다 */
+  const style = { "--landing-accent": config.accentColor, ...(config.pageData?.brainwave ? themeStyle(config.pageData.theme) : undefined) } as CSSProperties;
   const heroStyle = config.heroImageUrl
     ? { backgroundImage: `url(${config.heroImageUrl})` }
     : undefined;

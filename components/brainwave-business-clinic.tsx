@@ -1,8 +1,8 @@
 "use client";
 
-import { Clock, MapPin, Navigation, Stethoscope, UserRound } from "lucide-react";
+import { Clock, MapPin, Navigation, UserRound } from "lucide-react";
 import type { ReactNode } from "react";
-import { CLINIC_HOURS_PENDING, LOCAL_ADDRESS_PENDING } from "../lib/landing/brainwave/business-content";
+import { CLINIC_HOURS_PENDING, LOCAL_ADDRESS_PENDING, LOCAL_HOURS_PENDING } from "../lib/landing/brainwave/business-content";
 import { kitPieces, revealProps, useKitMotion, type BusinessDesignProps } from "./brainwave-business-pieces";
 import motion from "./brainwave-business-motion.module.css";
 import styles from "./brainwave-business-clinic.module.css";
@@ -56,7 +56,7 @@ export function BusinessClinic0_2385({ overrides, hidden, sectionOrder, onPick, 
   const hours = hidden.has(VISIT) ? "" : text("0:2418");
   const address = hidden.has(VISIT) ? "" : text("0:2399");
   const map = mapUrl(address);
-  const knownHours = hours && hours !== CLINIC_HOURS_PENDING ? hours : "";
+  const knownHours = hours && hours !== CLINIC_HOURS_PENDING && hours !== LOCAL_HOURS_PENDING ? hours : "";
 
   const sections: Record<string, () => ReactNode> = {
     [HEADER]: () => <header key={HEADER} data-bw-node={HEADER} className={styles.header}>
@@ -98,7 +98,7 @@ export function BusinessClinic0_2385({ overrides, hidden, sectionOrder, onPick, 
       if (!cards.length) return null;
       return <section key={SERVICES} data-bw-node={SERVICES} className={styles.services}>
         {cards.map(([title, body], index) => <article key={title} className={styles.service} {...revealProps(index)}>
-          <span className={styles.serviceIcon} aria-hidden><Stethoscope size={20} /></span>
+          {/* 칸마다 같은 청진기 그림이 되풀이돼(빵집에도) 뺐다 — 제목·설명만으로 충분하다 */}
           {Text({ id: title, as: "h3" })}
           {Text({ id: body })}
         </article>)}
@@ -173,7 +173,7 @@ export function BusinessClinic0_2385({ overrides, hidden, sectionOrder, onPick, 
           {Text({ id: "0:2419", as: "h2", reveal: 0 })}
           <div className={styles.visitGrid}>
             {hours ? <div className={styles.hoursCard} {...revealProps(1)}>
-              <p className={styles.cardLabel}><Clock size={16} aria-hidden /> 진료 시간</p>
+              <p className={styles.cardLabel}><Clock size={16} aria-hidden /> {text("0:2419").includes("진료") ? "진료 시간" : "영업시간"}</p>
               {onPick || !knownHours
                 ? Text({ id: "0:2418", className: styles.hoursText })
                 : <table className={styles.hours}><tbody>{rows.map(([label, value], index) => <tr key={index}>{label ? <th scope="row">{label}</th> : null}<td colSpan={label ? 1 : 2}>{value}</td></tr>)}</tbody></table>}
