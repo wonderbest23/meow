@@ -9,7 +9,6 @@ export default function NotFound() {
   return (
     <main className={styles.page}>
       <section className={styles.card} aria-labelledby="not-found-title">
-        <p className={styles.code}>404</p>
         <h1 id="not-found-title">페이지를 찾을 수 없어요</h1>
         <p>주소가 바뀌었거나 없는 화면이에요. 아래에서 이어서 진행해 주세요.</p>
         <div className={styles.actions}>
