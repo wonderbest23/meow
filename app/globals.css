@@ -17125,3 +17125,11 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 /* 홈페이지 화면 한 줄 칸 — 미리보기 안의 넓은 PC 화면 때문에 칸이 533px 로 늘어나 폰에서 오른쪽이 잘렸다 */
 .hk { grid-template-columns: minmax(0, 1fr); }
 .hk-url a.hk-url-btn { text-decoration: none; }
+
+/*
+ * 폰의 홈페이지 미리보기 — 안쪽 스크롤을 없앤다(대표 요청 2026-10-15). 미리보기 위를 밀면 미리보기만 움직여
+ * 아래 칸(손님 연락 방법·사업자 정보…)으로 내려가기 어려웠다. 윗부분만 보여 주고 아래는 흐리게, 누르면 에디터가 열린다.
+ */
+@media (max-width: 760px) {
+  .hk-phone { overflow: hidden; max-height: 420px; -webkit-mask-image: linear-gradient(#000 78%, transparent); mask-image: linear-gradient(#000 78%, transparent); }
+}

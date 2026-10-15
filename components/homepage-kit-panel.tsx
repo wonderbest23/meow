@@ -56,7 +56,7 @@ function Fold({ icon, title, badge, hint, children, defaultOpen, id, step }: {
     <details className="hk-fold" open={defaultOpen} id={id}>
       <summary>
         {step ? <b className="hk-step-no" aria-label={`${step}번`}>{step}</b> : null}
-        <span className="hk-fold-ic">{icon}</span>
+        {/* 번호(왼쪽 목차와 같은 순서)만 둔다 — 번호와 아이콘 상자가 둘 다 있어 표시가 겹쳤다(대표 요청 2026-10-15) */}
         <span className="hk-fold-tt">
           <strong>{title} {badge}</strong>
           {hint ? <small>{hint}</small> : null}
@@ -311,7 +311,7 @@ export function HomepageKitPanel({
         icon={<PhoneCall size={18} />}
         title="손님 연락 방법"
         badge={<em className={`hk-badge ${contactReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{contactReady ? contactInfo.label : formOff ? "문의 양식 — 꺼져 있음" : `${contactInfo.label} — 입력 필요`}</em>}
-        hint="홈페이지의 문의·예약 버튼을 누르면 어디로 연결할지 한 번에 정해요"
+        hint="문의·예약 버튼을 누르면 어디로 연결할지 정해요"
       >
         <div className="hk-contact-methods" role="radiogroup" aria-label="연결 방법">
           {CONTACT_METHODS.map((method) => (
@@ -363,9 +363,9 @@ export function HomepageKitPanel({
         /* 문의 양식을 켠 채 개인정보 문의처가 비면 공개가 막힌다(landingPublicationIssues) — '지금도 공개할 수 있어요'라고 하지 않는다 */
         hint={missing.length
           ? (draft.pageMode === "transaction" || missing.includes("개인정보 문의처")
-            ? `공개 전에 채워 주세요: ${missing.join(", ")}`
-            : `지금도 공개할 수 있어요. 결제를 받기 전에는 꼭 채워 주세요: ${missing.join(", ")}`)
-          : "홈페이지 맨 아래에 표시되는 법정 정보입니다."}
+            ? "공개 전에 채워 주세요"
+            : "결제를 받기 전에 채워 주세요")
+          : "홈페이지 맨 아래에 나오는 사업자 정보예요"}
       >
         <div className="hk-grid">
           <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>
@@ -409,7 +409,7 @@ export function HomepageKitPanel({
         icon={<Globe2 size={18} />}
         title="내 도메인 연결"
         badge={site?.customDomain ? <em className={`hk-badge ${domainReady ? "hk-badge-ok" : "hk-badge-warn"}`}>{domainReady ? site.customDomain : `${site.customDomain} · 연결 확인 중`}</em> : null}
-        hint="www.mybrand.com 같은 내 주소 붙이기 · 호스팅 1년"
+        hint="www.mybrand.com 같은 내 주소 붙이기"
       >
         <LandingDomainConnector
           onReadyChange={setDomainReady}
@@ -428,7 +428,7 @@ export function HomepageKitPanel({
         icon={<Inbox size={18} />}
         title="문의 알림 · 내 문의"
         badge={leadsError ? <em className="hk-badge hk-badge-warn">확인 필요</em> : leads === null ? <em className="hk-badge">불러오는 중</em> : <em className={`hk-badge ${leads.length ? "hk-badge-info" : ""}`}>{leads.length}건{openLeads ? ` · 답할 것 ${openLeads}건` : ""}</em>}
-        hint={draft.leadCaptureEnabled ? "새 문의를 문자로 받을 번호를 정해요. 들어온 문의는 왼쪽 메뉴 '내 문의'에서 봐요." : "문의 양식이 꺼져 있습니다. 사업자 정보에서 켜면 접수됩니다."}
+        hint={draft.leadCaptureEnabled ? "새 문의를 문자로 받을 번호를 정해요" : "문의 양식이 꺼져 있어요"}
       >
         <HomepageAlertSettings projectId={projectId} suggestedPhone={draft.businessPhone} />
         {/* 문의 목록은 왼쪽 메뉴 '내 문의'에서 메신저처럼 본다(소유자 요청 2026-10-07). 여기서는 알림 번호만 정한다 */}
