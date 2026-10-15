@@ -1,10 +1,9 @@
 "use client";
 
-import { ArrowLeft, CheckCircle2, ChevronDown, Headphones, LogIn, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, ChevronDown, LogIn, RefreshCw, Send } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
-import { SiteHeader } from "../../../components/site-header";
+import AppFrame from "../../plan/AppFrame";
 import { inquiryCategories, inquiryCategory, inquiryDraftSchema, inquiryPreview, inquirySchema, type InquiryDraft } from "../../../lib/support-chat/inquiry";
 import type { SupportChat } from "../../../lib/support-chat/repository";
 import PlanLoading, { Spinner } from "../../plan/PlanLoading";
@@ -38,7 +37,6 @@ function dateLabel(value: string) {
 }
 
 export default function SupportCenter() {
-  const router = useRouter();
   const [scope, setScope] = useState<string | null>(null);
   const scopeRef = useRef<string | null>(null);
   const [chat, setChat] = useState<SupportChat>(emptyChat);
@@ -144,11 +142,13 @@ export default function SupportCenter() {
   }
 
   const loginHref = `/account?next=${encodeURIComponent(`/account/support${entryCategory !== "other" ? `?category=${entryCategory}` : ""}`)}`;
-  return <main className={`${styles.page} plan-ui`}>
-    <SiteHeader light showAccount={false} onHome={() => router.push("/")} />
+  /*
+   * 다른 화면과 같은 틀(← 고객센터 ☰ · 왼쪽 메뉴)에 담는다(대표 요청 2026-10-15) — 예전엔 사이트 머리말을 따로 그려
+   * 앱에서 로고가 아이폰 상태바에 겹쳤고, 큰 제목·'← 마이페이지'가 머리말과 겹쳤다.
+   */
+  return <AppFrame title="고객센터" backHref="/plan/me"><div className={`${styles.page} ${styles.inFrame} plan-ui`}>
+    <h1 className={styles.srTitle}>고객센터</h1>
     <div className={styles.content}>
-      <Link className={styles.back} href="/plan/me"><ArrowLeft size={18} aria-hidden="true" />마이페이지</Link>
-      <header className={styles.heading}><Headphones size={28} aria-hidden="true" /><h1>고객센터</h1></header>
       {loading ? <PlanLoading variant="compact" note="문의 내역을 불러오고 있어요" /> : loggedOut ? <section className={styles.empty}><h2>로그인 후 문의를 남겨주세요</h2><Link className={styles.primary} href={loginHref}><LogIn size={19} />로그인하기</Link></section> : <>
         {scope && <>
           <nav className={styles.tabs} aria-label="고객센터 메뉴">
@@ -176,5 +176,5 @@ export default function SupportCenter() {
         {error && <div className={styles.error} role="alert"><p>{error}</p>{!scope && !loggedOut && <button className={styles.secondary} onClick={() => void load()}><RefreshCw size={18} />다시 불러오기</button>}</div>}
       </>}
     </div>
-  </main>;
+  </div></AppFrame>;
 }
