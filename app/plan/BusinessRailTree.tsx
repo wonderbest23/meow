@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
@@ -51,6 +52,10 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
   const homepage = useHomepageStatus(plan.id);
   const steps = journeySteps(plan, homepage);
   const [locked, setLocked] = useState<{ message: string; href: string; label: string } | null>(null);
+  // 앱에서는 홈페이지 화면에 '내 도메인 연결' 칸이 없다(웹 전용 상품) — 목차에서도 뺀다
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => { setInApp(nativePlatform() !== null); }, []);
+  const homepageParts = inApp ? HOMEPAGE_PARTS.filter(([id]) => id !== "hk-domain") : HOMEPAGE_PARTS;
   const lockDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (locked && lockDialog.current && !lockDialog.current.open) lockDialog.current.showModal(); }, [locked]);
   const openLocked = (id: JourneyStepId) => {
@@ -78,7 +83,7 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
           <li><button type="button" aria-current={documentToc.current === "all" ? "true" : undefined} onClick={() => documentToc.onSelect("all")}>전체 이어 읽기</button></li>
         </ul>}
         {step.id === "homepage" && current && pathname.startsWith("/plan/homepage") && <ul className={styles.parts} aria-label="홈페이지 목차">
-          {HOMEPAGE_PARTS.map(([id, name], part) => <li key={id}><button type="button" onClick={() => jump(id)}><b>{part + 1}</b>{name}</button></li>)}
+          {homepageParts.map(([id, name], part) => <li key={id}><button type="button" onClick={() => jump(id)}><b>{part + 1}</b>{name}</button></li>)}
         </ul>}
       </li>;
     })}
