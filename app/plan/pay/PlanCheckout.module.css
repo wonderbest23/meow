@@ -200,12 +200,14 @@
 .registrant > small { font-size: 12px; color: var(--text-muted, #6b7684); }
 .registrantRow { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 8px; }
 
-/* 휴대폰 — 회색 바탕 한가운데(머리말 아래로 밀려 화면 아래쪽) 떠 있던 카드를 걷고,
-   흰 바탕 위쪽부터 바로 읽히게 한다. 아이콘의 연한 원 바탕도 뺀다. */
+/* 휴대폰 — 회색 바탕에 떠 있던 카드를 걷고 흰 바탕에 바로 놓는다. 100vh 로 잡으면 머리말(68px)
+   만큼 가운데가 아래로 밀려 처져 보였으므로, 머리말을 뺀 높이 안에서 가운데(아래 여백을 더 줘서
+   눈높이로 살짝 위)에 둔다. 내용이 길면 그냥 위에서부터 이어진다. 아이콘의 연한 원 바탕도 뺀다. */
 @media (max-width: 640px) {
   .page {
-    place-items: start stretch;
-    padding: 36px 20px 120px;
+    min-height: calc(100svh - 68px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    place-items: center stretch;
+    padding: 24px 20px 140px;
     background: var(--surface, #fff);
   }
   .card {
