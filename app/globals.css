@@ -17195,3 +17195,7 @@ html body [tabindex="-1"]:focus, html body [tabindex="-1"]:focus-visible { outli
 
 /* 문의 알림 번호 동의 — 공용 동의 목록. 휴대폰 칸·저장 단추 줄 사이 한 줄을 다 쓴다 */
 .hk-alerts form > .hk-alerts-consent { grid-column: 1 / -1; }
+
+/* 결제 화면 아래 고정 결제 줄 위로 상담 단추를 올린다(겹치지 않게) */
+body:has([data-pay-bar]) .support-chat-widget { bottom: calc(150px + env(safe-area-inset-bottom)) !important; }
+@media (min-width: 641px) { body:has([data-pay-bar]) .support-chat-widget { bottom: calc(100px + env(safe-area-inset-bottom)) !important; } }

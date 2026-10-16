@@ -105,11 +105,12 @@ try {
   await page.goto(checkoutUrl, { waitUntil: "networkidle" });
   const accessBefore = await (await context.request.get(`${origin}/api/plan/access?planId=${planId}`)).json();
   assert.equal(accessBefore.paid, false); assert.equal(accessBefore.payable, true);
-  // 결제 전 필수 확인: 동의 전에는 결제 버튼이 꺼져 있다.
-  assert.equal(await page.getByRole("button", { name: "카드로 결제하기", exact: true }).isDisabled(), true, "pay button stays off until the required agreements");
+  // 결제 전 필수 확인: 동의 전에 아래 결제 줄을 누르면 결제를 시작하지 않고 동의 목록으로 데려가 알린다.
+  await page.getByRole("button", { name: /카드로 결제하기$/ }).click();
+  await page.getByText("필수 항목에 모두 동의해 주세요").waitFor();
   await page.getByText("필수 항목 전체동의").click();
   const prepared = page.waitForResponse((response: any) => response.url() === `${origin}/api/payments/plan/prepare` && response.request().method() === "POST");
-  await page.getByRole("button", { name: "카드로 결제하기", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
+  await page.getByRole("button", { name: /카드로 결제하기$/ }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   const response = await prepared; assert.equal(response.status(), 200);
   const order = await response.json(); assert.equal(order.clientId, pg.clientKey); assert.equal(order.sdkUrl, pg.sdk);
   orderId = order.orderId; amount = order.amount;
