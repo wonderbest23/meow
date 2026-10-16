@@ -3,7 +3,7 @@
 import { appendixFromDraft, PublicAppendixPreview } from "./public-appendix-preview";
 import { useEffect, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, LoaderCircle, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck } from "lucide-react";
+import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, Palette, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
 import { unansweredCount, useInquiries } from "../app/plan/inquiries/use-inquiries";
@@ -16,7 +16,7 @@ import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave/business-content";
 import { applyBusinessContent } from "../lib/landing/page-data";
 import { LANDING_THEMES } from "../lib/landing/themes";
-import PlanLoading from "../app/plan/PlanLoading";
+import PlanLoading, { Spinner } from "../app/plan/PlanLoading";
 import { AddressSearchButton } from "./address-search";
 import { nativePlatform } from "../lib/native-app";
 
@@ -247,8 +247,8 @@ export function HomepageKitPanel({
           ) : <p className="hk-url">첫 공개 후 주소가 생깁니다</p>}
         </div>
         {!inChrome && <div className="hk-actions">
-          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />} 저장</button>
-          <button type="button" className="hk-primary" disabled={busy} onClick={onPublish}>{action === "publishing" ? <LoaderCircle className="spin" size={15} /> : <Rocket size={15} />} {published ? "새 버전 공개" : "공개하기"}</button>
+          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={15} />} 저장</button>
+          <button type="button" className="hk-primary" disabled={busy} onClick={onPublish}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />} {published ? "새 버전 공개" : "공개하기"}</button>
         </div>}
       </header>
       {message ? <p className="hk-msg">{message}</p> : null}
@@ -356,7 +356,7 @@ export function HomepageKitPanel({
           ) : null}
         </div>
         <div className="hk-fold-save">
-          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <LoaderCircle className="spin" size={14} /> : <Save size={14} />} 연락 방법 저장</button>
+          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={14} />} 연락 방법 저장</button>
         </div>
       </Fold>
 
@@ -405,7 +405,7 @@ export function HomepageKitPanel({
         </div>
         {/* 이 칸에서 고친 것을 바로 저장 — 위로 스크롤해 전체 저장을 찾지 않게 */}
         <div className="hk-fold-save">
-          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <LoaderCircle className="spin" size={14} /> : <Save size={14} />} 사업자 정보 저장</button>
+          <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={14} />} 사업자 정보 저장</button>
         </div>
       </Fold>
 

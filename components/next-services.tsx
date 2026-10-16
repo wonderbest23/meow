@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { ArrowRight, BadgeCheck, Building2, Camera, Check, CheckCircle2, ChevronRight, Clock3, LoaderCircle, Megaphone, Newspaper, PenLine, ShieldCheck, ShoppingBag, X, type LucideIcon } from "lucide-react";
+import { ArrowRight, BadgeCheck, Building2, Camera, Check, CheckCircle2, ChevronRight, Clock3, Megaphone, Newspaper, PenLine, ShieldCheck, ShoppingBag, X, type LucideIcon } from "lucide-react";
 import { formatKoreanPhone, normalizeMobilePhone } from "../lib/contact-links";
 import { findService, findServiceRecord, SERVICE_CATALOG, SERVICE_GROUPS, servicePriceLabel, type ServiceGroupId, type ServiceIcon, type ServiceItem } from "../lib/services/catalog";
 import { EMPTY_SIGNALS, orderServices, serviceBadges, serviceSignalsFromPlan } from "../lib/services/recommend";
@@ -12,6 +12,7 @@ import { businessStateLabel, formatBusinessNumber, mailOrderStateLabel, normaliz
 import type { ServiceBadge } from "../lib/services/recommend";
 import { loadState, type Plan } from "../lib/plan-builder/plan-store";
 import styles from "./next-services.module.css";
+import { Spinner } from "../app/plan/PlanLoading";
 
 /*
  * '다음 단계' — 홈페이지 다음으로 맡길 수 있는 일(마케팅).
@@ -160,7 +161,7 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
       <div className={styles.verifyHead}><BadgeCheck size={18} aria-hidden /><strong>이미 등록·신고하셨나요?</strong><small>번호만 넣으면 국세청·공정위에서 바로 확인해요</small></div>
       <div className={styles.verifyRow}>
         <input inputMode="numeric" autoComplete="off" value={bno} onChange={(event) => setBno(event.target.value)} placeholder="사업자등록번호 10자리" aria-label="사업자등록번호" />
-        <button type="submit" disabled={checking}>{checking ? <LoaderCircle className="spin" size={16} aria-hidden /> : null} 확인</button>
+        <button type="submit" disabled={checking}>{checking ? <Spinner /> : null} 확인</button>
       </div>
       {checkError ? <p className={styles.error} role="alert">{checkError}</p> : null}
       {check ? <ul className={styles.verifyResult}>
@@ -223,7 +224,7 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
               </div>
               <label><span>남길 말 <small>(선택)</small></span><input value={memo} maxLength={500} onChange={(event) => setMemo(event.target.value)} placeholder="예: 다음 주 안에 하고 싶어요" /></label>
               {formError ? <p className={styles.error} role="alert">{formError}</p> : null}
-              <button type="submit" className={styles.cta} disabled={sending || !state}>{sending ? <LoaderCircle className="spin" size={18} aria-hidden /> : null} 신청하기</button>
+              <button type="submit" className={styles.cta} disabled={sending || !state}>{sending ? <Spinner /> : null} 신청하기</button>
               <small className={styles.note}>신청은 무료예요. 상담 후 진행 여부를 정하시면 돼요.</small>
             </form>}
         </div>

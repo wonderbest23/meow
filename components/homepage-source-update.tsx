@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Check, LoaderCircle, RefreshCw, X } from "lucide-react";
+import { Check, RefreshCw, X } from "lucide-react";
 import type { LandingDraft, LandingSiteRecord } from "../lib/landing/domain";
 import type { ArtifactPreview } from "../lib/plan-builder/artifact-updates";
 import { landingDraftFingerprint } from "../lib/landing/save-contract";
 import styles from "./homepage-source-update.module.css";
+import { Spinner } from "../app/plan/PlanLoading";
 
 export function HomepageSourceUpdate({ projectId, draft, site, disabled, onApplied }: {
   projectId: string; draft: LandingDraft; site: LandingSiteRecord; disabled: boolean;
@@ -100,7 +101,7 @@ export function HomepageSourceUpdate({ projectId, draft, site, disabled, onAppli
     <dialog ref={dialog} className={styles.dialog} onCancel={event => { event.preventDefault(); close(); }} aria-labelledby="homepage-source-title">
       <header className={styles.header}><div><h3 id="homepage-source-title">최신 사업정보 비교</h3><p>선택한 내용만 초안에 반영됩니다. 공개 페이지는 바뀌지 않습니다</p></div><button type="button" aria-label="비교 닫기" title="비교 닫기" disabled={busy} onClick={close}><X size={20} /></button></header>
       <div className={styles.body}>
-        {busy && !preview ? <p role="status"><LoaderCircle size={18} className="spin" /> 최신 정보를 확인하고 있습니다</p> : null}
+        {busy && !preview ? <p role="status"><Spinner /> 최신 정보를 확인하고 있습니다</p> : null}
         {preview && !changes.length ? <p>현재 사업정보와 동일합니다</p> : null}
         {changes.map(change => <label className={styles.change} key={change.id}>
           <div className={styles.changeTitle}><input type="checkbox" checked={choices[change.id] === "replace"} disabled={busy || stale || Boolean(pending.current)} onChange={event => setChoices(value => ({ ...value, [change.id]: event.target.checked ? "replace" : "keep" }))} /><strong>{change.label}</strong>{change.conflict ? <span>직접 수정됨</span> : null}</div>
@@ -110,7 +111,7 @@ export function HomepageSourceUpdate({ projectId, draft, site, disabled, onAppli
         {stale ? <p role="alert" className={styles.error}>초안이 바뀌었습니다. 현재 내용을 저장한 뒤 다시 비교해주세요</p> : null}
         {message ? <p role="alert" className={styles.error}>{message}</p> : null}
       </div>
-      <footer className={styles.footer}><button type="button" disabled={busy} onClick={close}>닫기</button><button type="button" className={styles.primary} disabled={busy || stale || !selected || disabled} onClick={apply}>{busy ? <LoaderCircle size={16} className="spin" /> : <Check size={16} />}{pending.current ? "같은 요청 다시 확인" : `${selected}개 초안에 반영`}</button></footer>
+      <footer className={styles.footer}><button type="button" disabled={busy} onClick={close}>닫기</button><button type="button" className={styles.primary} disabled={busy || stale || !selected || disabled} onClick={apply}>{busy ? <Spinner /> : <Check size={16} />}{pending.current ? "같은 요청 다시 확인" : `${selected}개 초안에 반영`}</button></footer>
     </dialog>
   </>;
 }

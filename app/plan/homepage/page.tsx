@@ -21,13 +21,13 @@ import { persistLandingDraft } from "../../../lib/landing/save-client";
 import { hasUnpublishedEdits, landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import Link from "next/link";
 import styles from "./page.module.css";
-import PlanLoading from "../PlanLoading";
+import PlanLoading, { Spinner } from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import { careHref, homepageHref } from "../../../lib/plan-builder/journey";
 import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
-import { Rocket, Save, LoaderCircle } from "lucide-react";
+import { Rocket, Save } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 
 /*
@@ -452,8 +452,8 @@ export default function PlanHomepagePage() {
   /* AI 채우기 중에도 머리줄 저장·공개를 잠근다 — 예전엔 눌러도 '저장할 수 없는 상태' 안내만 나오거나 아무 반응이 없었다 */
   const busy = action === "saving" || action === "publishing" || aiFilling;
   const headerActions = kitEditing ? <div className={styles.headerActions}>
-    <button type="button" disabled={busy} onClick={() => void save()}>{action === "saving" ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}<span>저장</span></button>
-    <button type="button" className={styles.headerPrimary} disabled={busy} onClick={() => void publish()}>{action === "publishing" ? <LoaderCircle className="spin" size={15} /> : <Rocket size={15} />}<span>{site?.status === "published" ? "새 버전 공개" : "공개하기"}</span></button>
+    <button type="button" disabled={busy} onClick={() => void save()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span>저장</span></button>
+    <button type="button" className={styles.headerPrimary} disabled={busy} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />}<span>{site?.status === "published" ? "새 버전 공개" : "공개하기"}</span></button>
   </div> : undefined;
   const back = screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
 

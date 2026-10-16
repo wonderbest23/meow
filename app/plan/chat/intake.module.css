@@ -753,3 +753,6 @@
 
 /* AI 결과 표시 — 작은 회색 한 줄 */
 .complete .direction p.aiNote, .direction p.aiNote, .aiNote { margin: 14px 0 0; color: #8b95a1; font-size: 12.5px; line-height: 1.5; }
+
+/* 사업계획서 준비(결제 화면으로 이동) 동안 화면을 덮는 로딩 — 다른 단추를 또 누르지 않게 */
+.prepareCover { position: fixed; inset: 0; z-index: 60; background: rgba(255, 255, 255, .86); }
