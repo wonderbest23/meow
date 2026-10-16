@@ -177,6 +177,13 @@ function mail() {
     assert.deepEqual(await notifyPaymentComplete(ORDER, true, paymentDeps(broken, relay(), mail(), [])), { claimed: "skipped" });
   }
   assert.match(buildPaymentReceiptEmail("a@x", "b@x", order() as never).subject, /결제가 완료됐어요/);
+  // 애플 시험 결제: 제목에 [시험 결제], 청구 안 됨 안내, 영수증은 애플이(나이스페이 매출전표 아님)
+  const sandboxMail = buildPaymentReceiptEmail("a@x", "b@x", { ...(order() as object), method: "APPLE_IAP", provider_status: "APPLE_SANDBOX" } as never);
+  assert.match(sandboxMail.subject, /\[시험 결제\]/);
+  assert.ok(sandboxMail.text.includes("청구되지 않았어요") && sandboxMail.text.includes("Apple") && !sandboxMail.text.includes("나이스페이"));
+  // 실제 애플 결제: 시험 표시 없음, 영수증은 애플
+  const appleMail = buildPaymentReceiptEmail("a@x", "b@x", { ...(order() as object), method: "APPLE_IAP", provider_status: "APPLE_PRODUCTION" } as never);
+  assert.ok(!appleMail.subject.includes("시험") && appleMail.text.includes("Apple") && !appleMail.text.includes("나이스페이"));
 
   /* ---- 홈페이지 문의: 사장님께 이름·연락처, 예전 중계면 v3 고정 문구 ---- */
   assert.deepEqual(leadContactParams(" 김철수 ", "010-9999-8888"), { name: "김철수", phone: "01099998888" });
