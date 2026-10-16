@@ -8,6 +8,7 @@ import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCir
 import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";
 import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
+import { ConsentList } from "./consent-list";
 import { themeStyle } from "../lib/landing/themes";
 import { BRAINWAVE_CTA_EVENT } from "../lib/landing/brainwave/button-action";
 
@@ -188,9 +189,12 @@ export function PublicLandingClient({
             {config.collectPhone && <label><span>전화번호</span><input name="phone" type="tel" required={!config.collectEmail} maxLength={30} placeholder="010-0000-0000" /></label>}
             {config.collectMessage && <label><span>문의 내용</span><textarea name="message" maxLength={2000} placeholder="현재 상황과 궁금한 점을 알려주세요." /></label>}
             <input name="website" className="landing-honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" />
-            <label className="public-consent"><input type="checkbox" checked={privacyAgreed} onChange={(event) => setPrivacyAgreed(event.target.checked)} /><span><Check /></span><p><strong>[필수] 개인정보 수집·이용 동의</strong><small>처리 주체: {config.privacyController}<br />수집 항목: {landingCollectedItems(config).join(", ")}<br />목적: {config.privacyPurpose}<br />보유기간: {config.privacyRetentionPeriod}<br />거부 안내: {config.privacyRefusalNotice}</small></p></label>
+            {/* 동의 — 공용 동의 목록(동그란 체크·(필수)/(선택)). 법으로 알려야 하는 수집 항목·목적·보유기간은 줄 아래에 그대로 */}
+            <ConsentList className="public-consent-list" allLabel="전체 동의" items={[
+              { key: "privacy", label: "개인정보 수집·이용 동의", note: <>처리 주체: {config.privacyController}<br />수집 항목: {landingCollectedItems(config).join(", ")}<br />목적: {config.privacyPurpose}<br />보유기간: {config.privacyRetentionPeriod}<br />거부 안내: {config.privacyRefusalNotice}</> },
+              ...(config.marketingOptInEnabled ? [{ key: "marketing", label: "홍보 정보 수신 동의", required: false, note: "새로운 서비스와 혜택 안내를 받을 수 있어요." }] : []),
+            ]} values={{ privacy: privacyAgreed, marketing: marketingAgreed }} onChange={(next) => { setPrivacyAgreed(Boolean(next.privacy)); setMarketingAgreed(Boolean(next.marketing)); }} />
             <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{privacyPolicyWithContact(config.privacyPolicy, config.privacyContact)}</p><small>문의: {config.privacyContact}</small></details>
-            {config.marketingOptInEnabled && <label className="public-consent"><input type="checkbox" checked={marketingAgreed} onChange={(event) => setMarketingAgreed(event.target.checked)} /><span><Check /></span><p><strong>[선택] 홍보 정보 수신 동의</strong><small>새로운 서비스와 혜택 안내를 받을 수 있습니다.</small></p></label>}
             {error && <p className="public-form-error">{error}</p>}
             <button type="submit" disabled={!privacyAgreed || submitting}>{submitting ? <LoaderCircle className="spin" /> : config.ctaLabel}<ArrowRight /></button>
           </form>

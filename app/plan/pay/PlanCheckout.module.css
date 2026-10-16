@@ -225,3 +225,6 @@
   }
   .icon svg { width: 40px; height: 40px; }
 }
+
+/* 약관 동의 — 공용 동의 목록 */
+.consentList { margin: 6px 0 4px; }

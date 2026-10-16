@@ -7,6 +7,7 @@ import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { finishNativePurchase, nativePlatform, nativePurchase } from "../../../lib/native-app";
 import { CheckCircle2, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
+import { ConsentList } from "../../../components/consent-list";
 import { documentHref } from "../../../lib/plan-builder/business-hub";
 import { homepageHref, payBackHref } from "../../../lib/plan-builder/journey";
 import { Spinner } from "../PlanLoading";
@@ -78,7 +79,6 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   const [phase, setPhase] = useState<Phase>("idle");
   const [agreements, setAgreements] = useState<Agreements>(NO_AGREEMENTS);
   const agreed = AGREEMENT_KEYS.every(key => agreements[key]);
-  const toggle = (key: keyof Agreements) => setAgreements(current => ({ ...current, [key]: !current[key] }));
   const [message, setMessage] = useState<string | null>(null);
   /* 결제 안내 문자 받을 휴대폰(선택) — 비우면 계정 이메일로만 안내한다 */
   const [noticePhone, setNoticePhone] = useState("");
@@ -373,30 +373,25 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
               <input type="tel" inputMode="numeric" autoComplete="tel" placeholder="01012345678" maxLength={13} value={noticePhone} onChange={event => setNoticePhone(event.target.value)} aria-invalid={phoneInvalid} />
               <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : `적으면 결제 완료를 문자로 한 번 알려 드려요.${receiptByEmail ? " 영수증은 가입한 이메일로도 가요." : ""}`}</small>
             </label>}
-            <label className={styles.agreeAll}>
-              <input type="checkbox" checked={agreed} onChange={event => setAgreements(Object.fromEntries(AGREEMENT_KEYS.map(key => [key, event.target.checked])) as Agreements)} />
-              <span><strong>필수 항목에 모두 동의합니다.</strong><small>각 문서를 열어 실제 제공 조건을 확인할 수 있습니다.</small></span>
-            </label>
-            <div className={styles.agreeList}>
-              <label><input type="checkbox" checked={agreements.service} onChange={() => toggle("service")} /><span><a href="/terms" target="_blank" rel="noreferrer">이용약관</a> 동의</span></label>
-              <label><input type="checkbox" checked={agreements.privacy} onChange={() => toggle("privacy")} /><span><a href="/privacy" target="_blank" rel="noreferrer">개인정보처리방침</a> 동의</span></label>
-              <label><input type="checkbox" checked={agreements.aiLimitations} onChange={() => toggle("aiLimitations")} /><span><a href="/ai-notice" target="_blank" rel="noreferrer">인공지능·국외 처리 안내</a> 확인</span></label>
-              <label><input type="checkbox" checked={agreements.refund} onChange={() => toggle("refund")} /><span><a href="/refund" target="_blank" rel="noreferrer">취소·환불 기준</a> 동의</span></label>
-              <label><input type="checkbox" checked={agreements.digitalSupply} onChange={() => toggle("digitalSupply")} /><span>결제 승인 즉시 디지털 콘텐츠 제공이 시작됨을 확인</span></label>
-              <label className={styles.noRefund}><input type="checkbox" checked={agreements.personalizedDigitalNoRefund} onChange={() => toggle("personalizedDigitalNoRefund")} /><span>
-                {product === "regen" ? (
-                  <><strong>추가 횟수 환불 기준에 동의</strong><small>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</small></>
+            {/* 약관 동의 — 공용 동의 목록(동그란 체크·(필수)·›, 대표 요청 2026-10-16). 환불 제한처럼 꼭 읽어야 할 설명은 그 줄 아래에 그대로 */}
+            <ConsentList className={styles.consentList} allLabel="필수 항목 전체동의" items={[
+              { key: "service", label: "이용약관 동의", href: "/terms" },
+              { key: "privacy", label: "개인정보 수집·이용 동의", href: "/privacy" },
+              { key: "aiLimitations", label: "인공지능·국외 처리 안내 확인", href: "/ai-notice" },
+              { key: "refund", label: "취소·환불 기준 동의", href: "/refund" },
+              { key: "digitalSupply", label: "결제 즉시 디지털 콘텐츠 제공 시작 확인" },
+              { key: "personalizedDigitalNoRefund", ...(product === "regen" ? (
+                  { label: "추가 횟수 환불 기준에 동의", note: <>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</> }
                 ) : product === "domain-purchase" ? (
-                  <><strong>도메인 구매·연결 환불 기준에 동의</strong><small>도메인을 등록하기 전에는 전액 환불합니다. 등록한 뒤에는 첫해 등록비 {DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원을 뺀 {DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 연결·호스팅 환불 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다. 등록한 도메인은 이용자 명의이며, 환불하거나 해지해도 도메인은 이용자에게 남습니다. 등록을 위해 등록 명의자 이름·이메일·연락처·주소를 도메인 등록기관(.com 은 Cloudflare, Inc.(미국), .kr·.co.kr 은 ㈜가비아 등)에 제공하는 데 동의합니다.</small></>
+                  { label: "도메인 구매·연결 환불 기준에 동의", note: <>도메인을 등록하기 전에는 전액 환불합니다. 등록한 뒤에는 첫해 등록비 {DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원을 뺀 {DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 연결·호스팅 환불 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다. 등록한 도메인은 이용자 명의이며, 환불하거나 해지해도 도메인은 이용자에게 남습니다. 등록을 위해 등록 명의자 이름·이메일·연락처·주소를 도메인 등록기관(.com 은 Cloudflare, Inc.(미국), .kr·.co.kr 은 ㈜가비아 등)에 제공하는 데 동의합니다.</> }
                 ) : product === "domain" ? (
-                  <><strong>도메인 연결 환불 기준에 동의</strong><small>연결을 완료하기 전이나 연결 완료 후 7일 이내에는 전액 환불하고, 그 이후에는 남은 개월 수만큼 월할로 환불합니다(사용한 달은 한 달로 계산, 수수료 없음). 가비아 등에서 직접 구매한 도메인 등록비는 환불 대상이 아닙니다.</small></>
+                  { label: "도메인 연결 환불 기준에 동의", note: <>연결을 완료하기 전이나 연결 완료 후 7일 이내에는 전액 환불하고, 그 이후에는 남은 개월 수만큼 월할로 환불합니다(사용한 달은 한 달로 계산, 수수료 없음). 가비아 등에서 직접 구매한 도메인 등록비는 환불 대상이 아닙니다.</> }
                 ) : product === "tokens" ? (
-                  <><strong>AI 수정 토큰 유효기간·환불 기준에 동의</strong><small>토큰은 충전일부터 1년 동안 이 홈페이지에서 사용할 수 있고, 기간이 지나면 남은 토큰은 소멸합니다. 사용하지 않았다면 7일 이내 전액 환불하고, 일부 사용했다면 유효기간 안에서 남은 토큰 비율만큼 환불합니다.</small></>
+                  { label: "AI 수정 토큰 유효기간·환불 기준에 동의", note: <>토큰은 충전일부터 1년 동안 이 홈페이지에서 사용할 수 있고, 기간이 지나면 남은 토큰은 소멸합니다. 사용하지 않았다면 7일 이내 전액 환불하고, 일부 사용했다면 유효기간 안에서 남은 토큰 비율만큼 환불합니다.</> }
                 ) : (
-                  <><strong>제공 시작 후 단순 변심 환불 제한에 동의</strong><small>결제가 승인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한됩니다. 제공된 내용에 하자가 있거나 표시·광고와 다르게 제공된 경우에는 관계 법령에 따라 환불받을 수 있습니다.</small></>
-                )}
-              </span></label>
-            </div>
+                  { label: "제공 시작 후 단순 변심 환불 제한에 동의", note: <>결제가 승인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한됩니다. 제공된 내용에 하자가 있거나 표시·광고와 다르게 제공된 경우에는 관계 법령에 따라 환불받을 수 있습니다.</> }
+                )) },
+            ]} values={agreements} onChange={(next) => setAgreements({ ...NO_AGREEMENTS, ...next } as Agreements)} />
             <p className={styles.disclaimer}>제공 자료는 사업 기획과 실행 준비를 돕는 초안이며 사업 성공, 수익, 투자 유치나 지원사업 선정을 보장하지 않습니다. <a href="/business-info" target="_blank" rel="noreferrer">판매자·사업자 정보</a></p>
           </section>
         )}
