@@ -30,7 +30,7 @@ export default function AdminNav({ title, subtitle }: { title: string; subtitle?
     { href: "/admin/refunds", label: "환불", Icon: RotateCcw },
     { href: "/admin/services", label: "서비스 신청", Icon: BriefcaseBusiness },
     { href: "/admin/legal", label: "운영 설정", Icon: Settings },
-    { href: "/admin/homepage", label: "홈 문구", Icon: PanelsTopLeft },
+    { href: "/admin/homepage", label: "메인 홈페이지", Icon: PanelsTopLeft },
     { href: "/admin/schema", label: "DB 준비 상태", Icon: Database },
   ];
 

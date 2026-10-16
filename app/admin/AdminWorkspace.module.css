@@ -48,3 +48,13 @@
   .admin main > .header small { font-size: 12px; }
   .admin :global(.admin-home-editor) { height: auto; min-height: 100dvh; }
 }
+
+/* 휴대폰 관리자 메뉴 — 열한 개 단추가 세 칸씩 네 줄(약 180px)을 모든 화면 위에 차지했다. 한 줄로 두고 옆으로 밀어 고른다 */
+@media(max-width:1000px) {
+  .rail { padding: 10px 0; gap: 0; }
+  .rail nav { display: flex; gap: 6px; overflow-x: auto; padding: 0 12px; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+  .rail nav::-webkit-scrollbar { display: none; }
+  .rail nav a { flex: none; min-height: 38px; padding: 8px 12px; border-color: var(--app-line); border-radius: 999px; font-size: 13px; white-space: nowrap; box-shadow: none; }
+  .rail nav a[aria-current=page] { box-shadow: none; }
+  .rail nav svg { width: 15px; height: 15px; }
+}
