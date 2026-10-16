@@ -228,3 +228,22 @@
 
 /* 약관 동의 — 공용 동의 목록 */
 .consentList { margin: 6px 0 4px; }
+
+/* ── 아래 고정 결제 줄(네이버페이처럼) — 동의 줄 수·가격이 적힌 결제 단추가 화면 아래에 늘 보인다 ── */
+.page:has(.payBar) { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
+.payBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--app-line, #e5e8eb); background: rgba(255, 255, 255, .97); box-shadow: 0 -6px 20px rgba(20, 32, 64, .06); }
+/* PC 에서 왼쪽 메뉴(208px)가 보이면 본문 쪽에만 */
+@media (min-width: 901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .payBar { left: 208px; } }
+.payBarInner { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 920px; margin: 0 auto; }
+.payBarNote { margin: 0; color: var(--text-muted, #6b7684); font-size: 14px; line-height: 1.5; }
+.payBarButton { flex: 0 1 380px; min-height: 56px; padding: 0 20px; border: 0; border-radius: 12px; background: var(--blue, var(--app-primary, #3182f6)); color: #fff; font: inherit; font-size: 17px; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.payBarButton:disabled { opacity: .6; cursor: default; }
+.payBarButton:active:not(:disabled) { transform: scale(.98); }
+@media (max-width: 640px) {
+  .payBarInner { flex-direction: column; align-items: stretch; gap: 8px; }
+  .payBarNote { text-align: center; font-size: 13px; }
+  .payBarButton { flex: none; width: 100%; }
+}
+/* 동의 전에 결제를 누르면 데려가는 곳 */
+.consentAnchor { scroll-margin: 120px; }
+.nudge { margin: 0 0 4px; padding: 10px 12px; border-radius: 10px; background: #fff4f4; color: #c0392b; font-size: 13px; font-weight: 700; }

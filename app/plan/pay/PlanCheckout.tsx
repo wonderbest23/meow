@@ -79,6 +79,11 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   const [phase, setPhase] = useState<Phase>("idle");
   const [agreements, setAgreements] = useState<Agreements>(NO_AGREEMENTS);
   const agreed = AGREEMENT_KEYS.every(key => agreements[key]);
+  const agreedCount = AGREEMENT_KEYS.filter(key => agreements[key]).length;
+  /* 아래 고정 결제 줄 — 동의 전에 누르면 동의 목록으로 데려가 알려 준다(예전엔 단추가 꺼져 있어 왜 안 눌리는지 몰랐다) */
+  const consentRef = useRef<HTMLDivElement | null>(null);
+  const [nudge, setNudge] = useState(false);
+  const askAgree = () => { setNudge(true); consentRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }); };
   const [message, setMessage] = useState<string | null>(null);
   /* 결제 안내 문자 받을 휴대폰(선택) — 비우면 계정 이메일로만 안내한다 */
   const [noticePhone, setNoticePhone] = useState("");
@@ -299,6 +304,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
     );
   }
 
+  const payAmount: number | null = extra ? extra.price : isHomepage ? (homepageInfo?.price ?? HOMEPAGE_PRODUCT_AMOUNT) : info ? info.price : null;
   return (
     <div className={styles.page}>
       <div className={styles.card}>
@@ -374,6 +380,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
               <small>{phoneInvalid ? "010으로 시작하는 11자리로 적어 주세요." : `적으면 결제 완료를 문자로 한 번 알려 드려요.${receiptByEmail ? " 영수증은 가입한 이메일로도 가요." : ""}`}</small>
             </label>}
             {/* 약관 동의 — 공용 동의 목록(동그란 체크·(필수)·›, 대표 요청 2026-10-16). 환불 제한처럼 꼭 읽어야 할 설명은 그 줄 아래에 그대로 */}
+            <div ref={consentRef} className={styles.consentAnchor}>
+            {nudge && !agreed ? <p className={styles.nudge} role="alert">필수 항목에 모두 동의해 주세요</p> : null}
             <ConsentList className={styles.consentList} allLabel="필수 항목 전체동의" items={[
               { key: "service", label: "이용약관 동의", href: "/terms" },
               { key: "privacy", label: "개인정보 수집·이용 동의", href: "/privacy" },
@@ -392,34 +400,33 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
                   { label: "제공 시작 후 단순 변심 환불 제한에 동의", note: <>결제가 승인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한됩니다. 제공된 내용에 하자가 있거나 표시·광고와 다르게 제공된 경우에는 관계 법령에 따라 환불받을 수 있습니다.</> }
                 )) },
             ]} values={agreements} onChange={(next) => setAgreements({ ...NO_AGREEMENTS, ...next } as Agreements)} />
+            </div>
             <p className={styles.disclaimer}>제공 자료는 사업 기획과 실행 준비를 돕는 초안이며 사업 성공, 수익, 투자 유치나 지원사업 선정을 보장하지 않습니다. <a href="/business-info" target="_blank" rel="noreferrer">판매자·사업자 정보</a></p>
           </section>
         )}
 
-        {native ? (
-          appSellable ? (
-            <button type="button" className={styles.primary} onClick={startAppPayment} disabled={!agreed || phase === "preparing" || phase === "opening"}>
-              {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : "앱에서 결제하기"}
-            </button>
-          ) : (
-            <p className={styles.notice}>이 상품은 앱에서 결제할 수 없어요.</p>
-          )
-        ) : info && !info.payable ? (
+        {/* 결제 단추는 화면 아래에 늘 붙여 둔다(네이버페이처럼) — 동의 항목이 길어 단추를 찾으려면 한참 내려야 했다(대표 요청 2026-10-16) */}
+        {native && !appSellable ? (
+          <p className={styles.notice}>이 상품은 앱에서 결제할 수 없어요.</p>
+        ) : !native && info && !info.payable ? (
           <p className={styles.notice}>
             결제 준비가 아직 끝나지 않았어요. 잠시 후 다시 시도해 주세요.
           </p>
         ) : (
-          <button
-            type="button"
-            className={styles.primary}
-            onClick={startPayment}
-            disabled={!agreed || phase === "preparing" || phase === "opening" || (registrantCheck !== null && !registrantCheck.ok)}
-          >
-            {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : "카드로 결제하기"}
-          </button>
+          <div className={styles.payBar} data-pay-bar>
+            <div className={styles.payBarInner}>
+              <p className={styles.payBarNote}>{agreed ? "약관과 결제 내용을 확인했어요" : `필수 항목 ${agreedCount}/${AGREEMENT_KEYS.length} 동의`}</p>
+              <button
+                type="button"
+                className={styles.payBarButton}
+                onClick={!agreed ? askAgree : native ? startAppPayment : startPayment}
+                disabled={phase === "preparing" || phase === "opening" || (agreed && !native && registrantCheck !== null && !registrantCheck.ok)}
+              >
+                {phase === "preparing" ? <><Spinner /> 결제 준비 중…</> : phase === "opening" ? <><Spinner /> 결제창을 여는 중…</> : <>{payAmount !== null ? `${payAmount.toLocaleString("ko-KR")}원 ` : ""}{native ? "결제하기" : "카드로 결제하기"}</>}
+              </button>
+            </div>
+          </div>
         )}
-
-        {!agreed && (native ? appSellable : !(info && !info.payable)) ? <p className={styles.help}>필수 항목에 모두 동의하면 결제 버튼이 켜집니다.</p> : null}
         {message ? <p className={styles.error}>{message}</p> : null}
 
         <p className={styles.note}>
