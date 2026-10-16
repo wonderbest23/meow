@@ -53,9 +53,11 @@
 .body :global(.tiptap[contenteditable=false]) :is(p,li) > strong { color:var(--app-body); background:var(--app-soft); border:1px solid var(--app-line); border-radius:4px; padding:1px 4px; -webkit-box-decoration-break:clone; box-decoration-break:clone; }
 .body :global(.tiptap) :is(h1,h2,h3,h4) { font-size:17px; line-height:1.6; color:var(--app-text); font-weight:600; }
 .body :global(.tiptap) table { width:100%; font-size:14px; }
+/* 표가 옆으로 밀리도록 block 으로 두면 줄이 글자 폭만큼만 차서 화면 절반에서 끝났다 — 줄 묶음은 표 폭을 다 채운다(넓으면 그대로 넘쳐 밀어 본다) */
+.body :global(.tiptap) table > tbody { display:table; width:100%; }
 /* 폰: 읽기 중인 표 위에 밀어 보기·크게 보기 안내, 오른쪽에 더 있으면 그림자 */
 @media (max-width:640px) {
-  .body :global(.tiptap[contenteditable=false]) :global(.tableWrapper)::before { content:"← 옆으로 밀어 보기 · 누르면 크게 보기"; display:block; margin:0 0 6px; color:var(--app-muted); font-size:12px; }
+  .body :global(.tiptap[contenteditable=false]) :global(.tableWrapper)::before { content:"표를 누르면 크게 볼 수 있어요"; display:block; margin:0 0 6px; color:var(--app-muted); font-size:12px; }
   .body :global(.tiptap[contenteditable=false]) table { cursor:zoom-in; background:linear-gradient(to right, #fff 30%, rgba(255,255,255,0)) left center / 24px 100% no-repeat local, linear-gradient(to left, #fff 30%, rgba(255,255,255,0)) right center / 24px 100% no-repeat local, radial-gradient(farthest-side at 0 50%, rgba(16,24,40,.16), transparent) left center / 10px 100% no-repeat scroll, radial-gradient(farthest-side at 100% 50%, rgba(16,24,40,.16), transparent) right center / 10px 100% no-repeat scroll; }
 }
 /* 표 크게 보기 — 전체 화면, 표는 상하좌우로 스크롤 */

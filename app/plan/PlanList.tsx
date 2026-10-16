@@ -10,6 +10,7 @@ import { businessHubState, businessEntryHref } from "../../lib/plan-builder/busi
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";
+import { loadAuthSession } from "../../lib/client/auth-session";
 import PlanLoading from "./PlanLoading";
 import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
@@ -36,6 +37,9 @@ export default function PlanList() {
     window.addEventListener("focus", refresh); document.addEventListener("visibilitychange", visible);
     return () => { alive = false; window.removeEventListener("focus", refresh); document.removeEventListener("visibilitychange", visible); };
   }, []);
+  // 로그인 여부 — 확인하지 못했으면(null) 예전처럼 둔다
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
+  useEffect(() => { let alive = true; loadAuthSession().then(d => { if (alive) setSignedIn(!!d.authenticated); }).catch(() => {}); return () => { alive = false; }; }, []);
   const allPlans = state?.plans.filter(p => !isSamplePlan(p.id)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt)) ?? [];
   const plans = allPlans;
   const samples = state?.plans.filter(p => isSamplePlan(p.id) && LISTED_SAMPLE_IDS.has(p.id)) ?? [];
@@ -50,7 +54,7 @@ export default function PlanList() {
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
   return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="plans" backHref="/">
     {!state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
-        {plans.length === 0 && error ? <p role="alert" className={styles.error}>사업 목록을 불러오지 못했어요. 연결을 확인하고 새로고침해 주세요.</p> : plans.length === 0 ? <BusinessEmptyState kind="plans" /> : <>
+        {plans.length === 0 && error ? <p role="alert" className={styles.error}>사업 목록을 불러오지 못했어요. 연결을 확인하고 새로고침해 주세요.</p> : plans.length === 0 ? <BusinessEmptyState kind={signedIn === false ? "loggedOut" : "plans"} /> : <>
           {/*
             목록만 보여 준다(대표 요청 2026-10-14: '내 사업인데 새 대화 단추가 왜 있나', 꾸밈이 AI 같고 복잡하다).
             예전에 있던 것 — 머리말과 겹치던 '내 사업' 제목·한 줄 소개, 새 대화 단추(메뉴에 있음), 상태 필터 4개, 가짜 문서 그림.
