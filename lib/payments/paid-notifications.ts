@@ -21,10 +21,20 @@ import { notifyOperator } from "../ops-alerts";
  */
 
 const PRODUCTS: PlanProduct[] = ["plan", "homepage", "bundle", "regen", "domain", "domain-purchase", "tokens"];
-const COLUMNS = "order_id, amount, order_name, opportunity, customer_email, confirmed_at";
+const COLUMNS = "order_id, amount, order_name, opportunity, customer_email, confirmed_at, method, provider_status";
 const NOTICE_WINDOW_MS = 24 * 60 * 60_000;
 
-export type PaidOrderRow = { order_id: string; amount: number; order_name: string; opportunity: Record<string, unknown> | null; customer_email: string | null; confirmed_at: string | null };
+export type PaidOrderRow = { order_id: string; amount: number; order_name: string; opportunity: Record<string, unknown> | null; customer_email: string | null; confirmed_at: string | null; method?: string | null; provider_status?: string | null };
+
+/** 애플·구글 시험 결제(TestFlight·샌드박스, 앱 심사 포함) — 청구되지 않는다. 알림에 '시험'을 붙여 실제 매출과 헷갈리지 않게 */
+export const isSandboxOrder = (row: Pick<PaidOrderRow, "provider_status">) => /_SANDBOX$/i.test(row.provider_status ?? "");
+
+/* 영수증 안내 — 앱 결제는 애플·구글이 영수증을 보낸다(예전엔 모든 결제에 '나이스페이먼츠 매출전표'라고 적었다) */
+function receiptNote(row: Pick<PaidOrderRow, "method">) {
+  if (row.method === "APPLE_IAP") return "결제 영수증은 Apple이 Apple 계정 이메일로 따로 보내 드려요.";
+  if (row.method === "GOOGLE_IAP") return "결제 영수증은 Google Play가 Google 계정 이메일로 따로 보내 드려요.";
+  return "카드 매출전표는 카드사·나이스페이먼츠에서 따로 보내 드려요.";
+}
 
 /** 주문의 상품 열쇠 — opportunity.product 가 먼저, 옛 주문은 상품명으로 */
 export function paidProduct(row: Pick<PaidOrderRow, "order_name" | "opportunity">): PlanProduct {
@@ -45,9 +55,10 @@ export function buildPaymentReceiptEmail(from: string, to: string, row: PaidOrde
   const paidAt = row.confirmed_at ? new Date(row.confirmed_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "";
   return {
     from, to,
-    subject: `[오늘창업] 결제가 완료됐어요 · ${row.order_name}`,
+    subject: `[오늘창업] ${isSandboxOrder(row) ? "[시험 결제] " : ""}결제가 완료됐어요 · ${row.order_name}`,
     text: [
       "오늘창업 결제가 완료됐어요.",
+      ...(isSandboxOrder(row) ? ["(TestFlight·심사용 시험 결제라 실제로 청구되지 않았어요.)"] : []),
       "",
       `상품: ${row.order_name}`,
       `금액: ${won(row.amount)} (부가세 포함)`,
@@ -57,7 +68,7 @@ export function buildPaymentReceiptEmail(from: string, to: string, row: PaidOrde
       "결제 내역 보기: https://oneulstart.com/account",
       "취소·환불 기준: https://oneulstart.com/refund",
       "",
-      "카드 매출전표는 카드사·나이스페이먼츠에서 따로 보내 드려요.",
+      receiptNote(row),
     ].join("\n"),
   };
 }
@@ -110,6 +121,12 @@ export async function notifyPaymentComplete(orderId: string, firstCompletion: bo
     const result: PaymentNoticeResult = { claimed };
 
     const operatorTask = async () => {
+      // 시험 결제(앱 심사·TestFlight)는 문자 없이 '시험'을 붙인 메일로만 — 실제 매출처럼 '결제 완료 49,000원' 문자가 오면 헷갈린다
+      if (isSandboxOrder(paid)) {
+        await deps.operatorEmail(`시험 결제 · ${paid.order_name} ${won(paid.amount)}`, [`상품: ${paid.order_name}`, `금액: ${won(paid.amount)} (청구 안 됨)`, `주문번호: ${paid.order_id}`, "", "애플·구글 시험 결제(TestFlight·앱 심사)예요. 실제 매출이 아니에요."]);
+        result.operator = "sandbox:email";
+        return;
+      }
       if (!deps.operator) {
         result.operator = "disabled";
         // 문자 설정이 꺼져 있어도 결제는 알아야 한다 — 도메인 구매는 등록 안내 메일(notifyDomainPurchasePaid)이 따로 간다
