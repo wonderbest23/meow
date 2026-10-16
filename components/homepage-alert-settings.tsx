@@ -2,6 +2,7 @@
 
 import { apiMessage, userErrorMessage } from "../lib/client/user-error";
 import { useEffect, useRef, useState } from "react";
+import { ConsentList } from "./consent-list";
 
 type Settings = { phone: string | null; phoneReady: boolean; weeklyEnabled: boolean | null; published: boolean; smsReady: boolean; emailReady: boolean };
 
@@ -65,7 +66,8 @@ export function HomepageAlertSettings({ projectId, suggestedPhone }: { projectId
         <label className="hk-alerts-phone"><span>문의 알림 문자 받을 휴대폰</span>
           <input value={phone} onChange={(event) => { touched.current = true; setPhone(event.target.value); setMessage(""); }} inputMode="tel" placeholder="010-1234-5678" autoComplete="tel" />
         </label>
-        {changed && typed ? <label className="hk-alerts-agree"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span>새 문의(문의자 이름·연락처 포함), 주간 리포트, 세금 신고 마감·도메인 연결 안내를 이 번호로 문자로 받는 데 동의합니다. 번호는 알림에만 쓰고 홈페이지에 공개하지 않아요.</span></label> : null}
+        {/* 동의 — 공용 동의 목록(동그란 체크·(필수)), 대표 요청 2026-10-16 */}
+        {changed && typed ? <ConsentList className="hk-alerts-consent" items={[{ key: "sms", label: "문의 알림 문자 수신 동의", note: <>새 문의(문의자 이름·연락처 포함), 주간 리포트, 세금 신고 마감·도메인 연결 안내를 이 번호로 문자로 받는 데 동의합니다. 번호는 알림에만 쓰고 홈페이지에 공개하지 않아요.</> }]} values={{ sms: agreed }} onChange={(next) => setAgreed(Boolean(next.sms))} /> : null}
         <button type="submit" disabled={busy || !changed || (Boolean(typed) && !agreed)}>{typed ? "저장" : "문자 끄기"}</button>
       </form>
       <small>{!settings.smsReady ? "문자 발송 준비가 끝나면 이 번호로 알림이 가요. 지금 들어온 문의는 왼쪽 메뉴 ‘내 문의’에 그대로 쌓여요."
