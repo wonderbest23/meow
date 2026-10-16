@@ -83,7 +83,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   /* 아래 고정 결제 줄 — 동의 전에 누르면 동의 목록으로 데려가 알려 준다(예전엔 단추가 꺼져 있어 왜 안 눌리는지 몰랐다) */
   const consentRef = useRef<HTMLDivElement | null>(null);
   const [nudge, setNudge] = useState(false);
-  const askAgree = () => { setNudge(true); consentRef.current?.scrollIntoView({ block: "center", behavior: "smooth" }); };
+  // 안내 글이 들어간 뒤(다음 그림)에 옮긴다 — 같은 순간에 옮기면 글이 끼어들며 스크롤이 중간에 멈춰 목록이 아래 결제 줄에 가렸다
+  const askAgree = () => { setNudge(true); requestAnimationFrame(() => requestAnimationFrame(() => consentRef.current?.scrollIntoView({ block: "start", behavior: "smooth" }))); };
   const [message, setMessage] = useState<string | null>(null);
   /* 결제 안내 문자 받을 휴대폰(선택) — 비우면 계정 이메일로만 안내한다 */
   const [noticePhone, setNoticePhone] = useState("");

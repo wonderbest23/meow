@@ -245,5 +245,5 @@
   .payBarButton { flex: none; width: 100%; }
 }
 /* 동의 전에 결제를 누르면 데려가는 곳 */
-.consentAnchor { scroll-margin: 120px; }
+.consentAnchor { scroll-margin-top: 96px; }
 .nudge { margin: 0 0 4px; padding: 10px 12px; border-radius: 10px; background: #fff4f4; color: #c0392b; font-size: 13px; font-weight: 700; }
