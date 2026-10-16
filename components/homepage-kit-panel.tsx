@@ -18,6 +18,7 @@ import { applyBusinessContent } from "../lib/landing/page-data";
 import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading from "../app/plan/PlanLoading";
 import { AddressSearchButton } from "./address-search";
+import { nativePlatform } from "../lib/native-app";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -116,6 +117,12 @@ export function HomepageKitPanel({
   /** 앱 머리줄(← 홈페이지 · 저장 · 공개) 안에 놓일 때 — 이 패널의 뒤로가기·제목·저장/공개 줄을 빼고 주소 상태만 남긴다 */
   inChrome?: boolean;
 }) {
+  /*
+   * 앱 안에서는 '내 도메인 연결'(웹에서만 파는 상품 — 앱 결제 상품이 아니다)을 보이지 않는다. 앱에서 결제 단추를 누르면
+   * '앱에서 결제할 수 없어요'로 막혔다. 연결된 도메인은 그대로 동작하고, 관리는 웹에서 한다. 뒤 단계 번호는 하나씩 당긴다.
+   */
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => { setInApp(nativePlatform() !== null); }, []);
   /*
    * 사업 정보 칸(상호·소개·가격·버튼 문구·대표 사진)을 고치면 홈페이지 글에 바로 넣는다 — 예전엔 '사업 정보 적용' 단추를 따로 눌러야 했다.
    * 직접 고친 글과 사진은 그대로 둔다(applyBusinessContent). 랜딩 템플릿일 때만.
@@ -403,7 +410,7 @@ export function HomepageKitPanel({
       </Fold>
 
       {/* 3. 도메인 — 접이식. 카드 안의 자체 제목은 CSS 로 숨긴다(요약 줄과 중복) */}
-      <Fold
+      {!inApp && <Fold
         step={4}
         id="hk-domain"
         icon={<Globe2 size={18} />}
@@ -419,11 +426,11 @@ export function HomepageKitPanel({
           demo={false}
           onSiteUpdated={onSiteUpdated}
         />
-      </Fold>
+      </Fold>}
 
       {/* 5. 문의 알림 번호 — 문의 목록은 '내 문의' 화면에 */}
       <Fold
-        step={5}
+        step={inApp ? 4 : 5}
         id="hk-leads"
         icon={<Inbox size={18} />}
         title="문의 알림 · 내 문의"
@@ -439,7 +446,7 @@ export function HomepageKitPanel({
       </Fold>
 
       {/* 6. 전문가 상담 — 담당자가 직접 고쳐 주는 개별 상담. 신청하면 운영자에게 문자가 간다 */}
-      <Fold step={6} id="hk-expert" icon={<PhoneCall size={18} />} title="전문가 상담" hint="담당자가 사진·문구·디자인을 직접 다듬어 드려요">
+      <Fold step={inApp ? 5 : 6} id="hk-expert" icon={<PhoneCall size={18} />} title="전문가 상담" hint="담당자가 사진·문구·디자인을 직접 다듬어 드려요">
         <HomepageExpertConsult planId={planId ?? null} />
       </Fold>
       </fieldset>

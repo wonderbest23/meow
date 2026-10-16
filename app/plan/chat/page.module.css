@@ -206,3 +206,5 @@
   .viewTabs button[aria-pressed=true] { background: var(--app-selected); color: var(--app-selected-text); border-color: var(--app-line-strong); }
   .briefScroll { padding-top: 24px; }.readyNotice { padding: 18px; }
 }
+/* 터치 화면에서는 누른 뒤에도 :hover 가 남아 뒤로·메뉴 단추 뒤에 회색 동그라미가 붙어 있었다 — 마우스가 있을 때만 */
+@media (hover: none) { .menuToggle:hover, .back:hover { background: transparent; } }

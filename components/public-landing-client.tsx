@@ -179,7 +179,8 @@ export function PublicLandingClient({
                 : <p>지금은 사업 소개만 공개되어 있어요. 곧 신청을 받을 수 있게 준비하고 있습니다.</p>}</div>;
           })()
         ) : submitted ? (
-          <div className="public-lead-success"><Check /><h3>신청이 접수되었습니다</h3><p>입력하신 연락처로 안내드리겠습니다.</p></div>
+          /* 문의·예약 모두 받는 양식이라 '신청' 대신 '문의', 가게가 손님에게 하는 말투로 */
+          <div className="public-lead-success"><Check /><h3>문의가 접수됐어요</h3><p>남겨 주신 연락처로 곧 연락드릴게요.</p></div>
         ) : (
           <form onSubmit={submit}>
             <label><span>이름</span><input name="name" required maxLength={100} placeholder="성함 또는 닉네임" /></label>

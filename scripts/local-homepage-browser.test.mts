@@ -94,7 +94,7 @@ try {
     publicPage.locator('#landing-contact button[type="submit"]').click(),
   ]);
   assert.equal(leadResponse.status(), 201);
-  await publicPage.getByRole("heading", { name: "신청이 접수되었습니다" }).waitFor();
+  await publicPage.getByRole("heading", { name: "문의가 접수됐어요" }).waitFor();
   checks.push("the public browser form accepts a synthetic inquiry with consent");
   const desktopPath = `${root}${fixture.runId}-public-desktop.png`;
   await publicPage.screenshot({ path: desktopPath, fullPage: true }); screenshotPaths.push(desktopPath);

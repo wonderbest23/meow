@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, Inbox, RefreshCw } from "lucide-react";
+import { Inbox, RefreshCw } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import frame from "../chat/page.module.css";
@@ -39,8 +39,18 @@ export default function InquiriesPage() {
     setSelectedId(items[0].lead.id);
   }, [items, selectedId]);
   const open = items ? unansweredCount(items) : 0;
+  // 휴대폰(목록·상세가 한 화면씩)인지 — 머리말 뒤로 단추가 상세에서 목록으로 돌아가게 할 때만 쓴다
+  const [phone, setPhone] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia("(max-width: 760px)");
+    const sync = () => setPhone(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
-  return <main className={frame.page}><BusinessAppChrome title="내 문의" active="inquiries">
+  return <main className={frame.page}>{/* 휴대폰에서 문의를 열어 둔 동안 머리말 뒤로 단추는 목록으로 — 상세 안의 두 번째 뒤로 단추는 뺐다(뒤로가 두 개였다) */}
+    <BusinessAppChrome title="내 문의" active="inquiries" onBack={selected && phone ? () => setSelectedId(null) : undefined}>
     {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" /> : <div className={styles.wrap} data-detail={selected ? "" : undefined}>
       <aside className={styles.list} aria-label="문의 목록">
         {/* 문의가 하나도 없으면 0개짜리 거름 단추는 빼고, 새로 확인하는 단추만 빈 화면 안에 둔다 */}
@@ -73,18 +83,17 @@ export default function InquiriesPage() {
         </ul>}
       </aside>
       <section className={styles.detail} aria-label="문의 내용">
-        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} onBack={() => setSelectedId(null)} /> : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>왼쪽에서 문의를 골라 주세요</p></div>}
+        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} /> : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>왼쪽에서 문의를 골라 주세요</p></div>}
       </section>
     </div>}
   </BusinessAppChrome></main>;
 }
 
-function InquiryDetail({ item, notifications, onBack }: { item: Inquiry; notifications: ReturnType<typeof useHomepageLeadNotifications>; onBack: () => void }) {
+function InquiryDetail({ item, notifications }: { item: Inquiry; notifications: ReturnType<typeof useHomepageLeadNotifications> }) {
   const [lead, setLead] = useState(item.lead);
   const at = new Date(lead.createdAt).toLocaleString("ko-KR", { month: "long", day: "numeric", weekday: "short", hour: "numeric", minute: "2-digit" });
   return <div className={styles.thread}>
     <header className={styles.threadHead}>
-      <button type="button" className={styles.back} onClick={onBack} aria-label="문의 목록으로"><ChevronLeft size={22} /></button>
       <i aria-hidden>{lead.name.slice(0, 1)}</i>
       <div><strong>{lead.name}</strong><Link href={homepageHref(item.planId)}>{item.businessName} 홈페이지</Link></div>
       {lead.handledAt ? <em className={styles.done}>처리 완료</em> : <em className={styles.open}>답할 문의</em>}
@@ -96,8 +105,6 @@ function InquiryDetail({ item, notifications, onBack }: { item: Inquiry; notific
     <dl className={styles.info}>
       {lead.phone ? <div><dt>전화</dt><dd>{formatKoreanPhone(lead.phone)}</dd></div> : null}
       {lead.email ? <div><dt>이메일</dt><dd>{lead.email}</dd></div> : null}
-      <div><dt>받은 시각</dt><dd>{new Date(lead.createdAt).toLocaleString("ko-KR")}</dd></div>
-      <div><dt>사업</dt><dd>{item.businessName}</dd></div>
       <div><dt>홍보 수신</dt><dd>{lead.marketingAgreed ? "동의함" : "동의 안 함"}</dd></div>
     </dl>
     <div className={styles.actions}>

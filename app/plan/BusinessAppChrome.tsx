@@ -11,8 +11,10 @@ import RailMenu from "./RailMenu";
 import type { DocumentToc } from "./BusinessRailTree";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", showRail = true, documentToc }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new" | "inquiries"; backHref?: string; showRail?: boolean;
+  /** 화면 안에서 한 단계 되돌리기(예: 내 문의 상세 → 목록) — 있으면 머리말 뒤로 단추가 주소 이동 대신 이것을 부른다 */
+  onBack?: () => void;
   /** 문서 화면의 목차 — 왼쪽 메뉴의 그 사업 아래에 붙는다 */
   documentToc?: DocumentToc;
 }) {
@@ -48,7 +50,9 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     </aside>}
     <div className={styles.appSurface}>
       <header className={styles.header}>
-        <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>
+        {onBack
+          ? <button type="button" className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} onClick={onBack} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></button>
+          : <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>}
         {/* 부제는 화면이 따로 줄 때만(예: 질문 3/12) — 늘 붙던 '오늘창업'·'오늘창업 AI 파트너'는 왼쪽 로고와 겹쳐 뺐다 */}
         <div className={styles.headerTitle}><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</div>
         {actions && <div className={styles.headerActions}>{actions}</div>}
