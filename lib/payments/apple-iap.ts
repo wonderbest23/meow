@@ -80,7 +80,9 @@ export function verifyAppleTransaction(jws: string, expect: { bundleId: string; 
   if (!hasOid(leaf, OID_RECEIPT_SIGNER) || !hasOid(intermediate, OID_WWDR_INTERMEDIATE)) throw new AppleIapError("APPLE_CERT_PURPOSE", "인앱결제용 인증서가 아닙니다.");
 
   // 2) 서명: ES256 은 r‖s(64바이트) 그대로 붙어 있다
-  const signed = verify("sha256", Buffer.from(`${headerPart}.${payloadPart}`), { key: leaf.publicKey, dsaEncoding: "ieee-p1363" }, b64url(signaturePart));
+  // 키는 PEM 글자로 넘긴다 — 운영(Cloudflare workerd)의 verify 는 KeyObject 를 받지 않아(ERR_INVALID_ARG_TYPE) 모든 영수증이 500 으로 막혔다(2026-10-16 TestFlight 결제)
+  const leafKeyPem = leaf.publicKey.export({ type: "spki", format: "pem" }) as string;
+  const signed = verify("sha256", Buffer.from(`${headerPart}.${payloadPart}`), { key: leafKeyPem, dsaEncoding: "ieee-p1363" }, b64url(signaturePart));
   if (!signed) throw new AppleIapError("APPLE_SIGNATURE_INVALID", "영수증 서명이 맞지 않습니다.");
 
   // 3) 내용: 우리 앱·주문한 상품·구매한 사람·환불되지 않음
