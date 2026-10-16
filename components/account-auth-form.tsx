@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ConsentList } from "./consent-list";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { googleClientId } from "../lib/google-client-id";
 import { nativeIdToken, nativePlatform } from "../lib/native-app";
@@ -296,7 +297,11 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           {(mode === "register" || mode === "reset") && passwordField("비밀번호 확인", passwordConfirm, setPasswordConfirm, "new-password")}
         </div>
         {passwordConfirm && password !== passwordConfirm && <small className={styles.fieldError}>비밀번호가 서로 달라요.</small>}
-        {mode === "register" && <div className={styles.consents}>{/* 모두 동의 — 세 개를 한 번에(대표 요청 2026-10-15). 하나씩 고르는 것도 그대로 */}<label className={styles.consentAll}><input type="checkbox" checked={terms && privacy && aiNotice} onChange={(event) => { setTerms(event.target.checked); setPrivacy(event.target.checked); setAiNotice(event.target.checked); }} /><span>모두 동의합니다</span></label><label><input type="checkbox" checked={terms} onChange={(event) => setTerms(event.target.checked)} /><span><Link href="/terms" target="_blank">이용약관</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={privacy} onChange={(event) => setPrivacy(event.target.checked)} /><span><Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의합니다.</span></label><label><input type="checkbox" checked={aiNotice} onChange={(event) => setAiNotice(event.target.checked)} /><span><Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인했습니다.</span></label></div>}
+        {mode === "register" && <ConsentList className={styles.consentList} items={[
+          { key: "terms", label: "이용약관 동의", href: "/terms" },
+          { key: "privacy", label: "개인정보 수집·이용 동의", href: "/privacy" },
+          { key: "aiNotice", label: "인공지능·국외 처리 안내 확인", href: "/ai-notice" },
+        ]} values={{ terms, privacy, aiNotice }} onChange={(next) => { setTerms(Boolean(next.terms)); setPrivacy(Boolean(next.privacy)); setAiNotice(Boolean(next.aiNotice)); }} />}
         {message && <p role={messageError ? "alert" : "status"} className={messageError ? accountStyles.error : accountStyles.message}>{message}</p>}
         <button className={styles.primary} disabled={!valid || busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
         <nav className={styles.links} aria-label="계정 메뉴">

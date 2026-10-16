@@ -107,7 +107,7 @@ try {
   assert.equal(accessBefore.paid, false); assert.equal(accessBefore.payable, true);
   // 결제 전 필수 확인: 동의 전에는 결제 버튼이 꺼져 있다.
   assert.equal(await page.getByRole("button", { name: "카드로 결제하기", exact: true }).isDisabled(), true, "pay button stays off until the required agreements");
-  await page.getByText("필수 항목에 모두 동의합니다.").click();
+  await page.getByText("필수 항목 전체동의").click();
   const prepared = page.waitForResponse((response: any) => response.url() === `${origin}/api/payments/plan/prepare` && response.request().method() === "POST");
   await page.getByRole("button", { name: "카드로 결제하기", exact: true }).evaluate((button: HTMLButtonElement) => { button.click(); button.click(); });
   const response = await prepared; assert.equal(response.status(), 200);
