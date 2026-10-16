@@ -350,7 +350,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           </div>
         )}
 
-        {!(info && !info.payable) && (
+        {/* 앱 결제(애플·구글)는 웹 카드 결제(나이스페이) 설정과 상관없다 — 웹 결제가 꺼져 있어도 앱에서는 동의 항목을 보여야 '앱에서 결제하기'가 켜진다 */}
+        {(native ? appSellable : !(info && !info.payable)) && (
           <section className={styles.terms} aria-label="결제 전 필수 확인">
             <p className={styles.supply}><strong>제공 시점</strong>{SUPPLY[product]}</p>
             {isDomainPurchase ? <fieldset className={styles.registrant}>

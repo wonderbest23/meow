@@ -20,7 +20,7 @@ export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { planId?: unknown; product?: unknown; terms?: Record<string, unknown> };
   const product = iapProduct(body.product);
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
-  if (!product) return NextResponse.json({ error: "product_unavailable", message: "앱에서는 살 수 없는 상품입니다. 웹사이트에서 결제해 주세요." }, { status: 400 });
+  if (!product) return NextResponse.json({ error: "product_unavailable", message: "앱에서는 구매할 수 없는 상품이에요." }, { status: 400 });
   if (!planId) return NextResponse.json({ error: "plan_required", message: "결제할 사업 정보가 없습니다. 사업계획서 화면에서 다시 시도해 주세요." }, { status: 400 });
   // 결제 전 필수 확인은 카드 결제와 같다(약관·개인정보·AI 안내·환불 기준·제공 시점·청약철회 제한)
   if (!TERMS_KEYS.every((key) => body.terms?.[key] === true)) {
