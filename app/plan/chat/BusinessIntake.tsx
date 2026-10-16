@@ -480,6 +480,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     {liveIntent.canAnswer && question && <button type="button" className={styles.secondaryButton} disabled={blocked} onClick={() => void send({ action: "answer", questionId: question.id === "candidate" && questionDraft.custom ? "business" : question.id, value: liveIntent.text }, { answer: questionDraft, composer: captureComposer() })}>{question.label} 답변으로 저장</button>}
     <button type="button" className={styles.secondaryButton} disabled={blocked || aiBusy} onClick={() => void send({ action: "help", message: liveIntent.text }, { composer: captureComposer() })}><MessageCircle size={16} aria-hidden="true" />AI에게 질문</button>
     <button type="button" className={styles.secondaryButton} disabled={blocked} onClick={() => storeComposerNote("memo")}>메모로 남기기</button>
+    {/* 이 확인이 뜨면 원래 질문(선택지)이 가려져 돌아갈 길이 없었다 — 질문으로 돌아가 고르게 한다 */}
+    {question && <button type="button" className={styles.textLink} onClick={() => setIntentPrompt(null)}><ChevronLeft size={15} aria-hidden="true" />질문으로 돌아가기</button>}
   </div></section>;
   const lastMessage = plan?.coach.messages.filter(message => message.role === "user").at(-1);
   const questionNote = lastMessage && plan?.intake.notes.find(note => note.intent === "question" && note.id === `${lastMessage.id}:0`);

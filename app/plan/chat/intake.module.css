@@ -756,3 +756,6 @@
 
 /* 사업계획서 준비(결제 화면으로 이동) 동안 화면을 덮는 로딩 — 다른 단추를 또 누르지 않게 */
 .prepareCover { position: fixed; inset: 0; z-index: 60; background: rgba(255, 255, 255, .86); }
+
+/* 확인 안의 "질문으로 돌아가기" — 단추 모양이 아니라 글자 링크로 */
+.intentActions > button.textLink { min-height: 40px; padding: 0 4px; border: 0 !important; background: none !important; box-shadow: none !important; color: var(--intake-muted); font-weight: 500; }
