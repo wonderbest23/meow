@@ -17192,3 +17192,6 @@ body .support-chat-widget > button.support-chat-toggle.support-chat-toggle {
 /* 화면이 다음 단계로 넘어갈 때 읽기 프로그램을 위해 제목 등에 옮겨 주는 초점(tabindex=-1)에는 테두리를 그리지 않는다 —
    누를 수 있는 것이 아닌데 파란 네모가 생겨 깨진 것처럼 보였다(사업 시작하기 질문 제목). 단추·입력칸의 초점 표시는 그대로 */
 html body [tabindex="-1"]:focus, html body [tabindex="-1"]:focus-visible { outline: none !important; }
+
+/* 문의 알림 번호 동의 — 공용 동의 목록. 휴대폰 칸·저장 단추 줄 사이 한 줄을 다 쓴다 */
+.hk-alerts form > .hk-alerts-consent { grid-column: 1 / -1; }
