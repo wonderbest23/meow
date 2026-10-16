@@ -22,3 +22,6 @@
   .open { min-height: 78px; padding: 16px 52px 16px 16px; }
   .title { font-size: 16px; }
 }
+
+/* ⋯ 단추가 운영(합쳐진 CSS 순서)에서 BusinessHub 의 .rowMenu{position:relative} 에 밀려 카드 아래 왼쪽으로 떨어졌다 — 더 센 선택자로 오른쪽 위에 고정 */
+.row > .menu { position: absolute; top: 10px; right: 8px; }
