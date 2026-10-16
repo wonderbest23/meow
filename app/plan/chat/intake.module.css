@@ -596,7 +596,8 @@
 @media (max-width: 480px) {
   .identity { padding: 18px 16px; }
   .identityChoices { grid-template-columns: 1fr; }
-  .identityChoices button { grid-template-columns: auto minmax(0, 1fr); align-items: baseline; column-gap: 10px; padding: 11px 12px; }
+  /* 이름 옆에 설명을 붙였더니 설명이 좁은 칸에서 두세 줄로 꺾였다 — 이름 아래에 설명 */
+  .identityChoices button { gap: 3px; padding: 12px 14px; }
 }
 @media (prefers-reduced-motion: reduce) { .identityChoices button { transition: none; } }
 
