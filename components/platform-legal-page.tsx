@@ -1,5 +1,6 @@
-import { ArrowLeft, ExternalLink, ShieldCheck } from "lucide-react";
+import { ExternalLink, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { LegalBackLink } from "./legal-back-link";
 import { createLegalDocument, evaluatePlatformLaunchReadiness, type LegalDocumentType } from "../lib/platform-legal/domain";
 import { paymentsEnabled } from "../lib/payments/config";
 import { manualTransferPaymentConfigured } from "../lib/payments/manual-transfer";
@@ -33,7 +34,7 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
     <main className="platform-legal-page">
       <header className="platform-legal-header">
         <Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026.png" alt="오늘창업" /></Link>
-        <Link href="/"><ArrowLeft /> 홈으로</Link>
+        <LegalBackLink />
       </header>
       <div className="platform-legal-layout">
         <aside>
