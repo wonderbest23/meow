@@ -17167,3 +17167,11 @@ body .support-chat-widget > button.support-chat-toggle.support-chat-toggle {
 .public-landing .public-lead-section .public-lead-success { min-height: 0; padding: 40px 24px; background: color-mix(in srgb, var(--landing-accent, #3272db) 8%, #fff); }
 .public-landing .public-lead-section .public-lead-success h3 { color: #191f28; }
 .public-landing.brainwave:has([data-bw-closing]:last-child) #landing-contact:has(.public-lead-success) > div:first-child { display: none; }
+
+/* 휴대폰 에디터 위 단추 — 일곱 칸 격자에 단추가 여섯 개면(숨긴 것 없음) 오른쪽 한 칸이 비었다. 단추 수만큼 고르게 채운다.
+   휴대폰에서 PC/모바일 보기 전환은 쓸 일이 없어 빼고, '디자인 바꾸기'·'미리보기'가 한 줄을 반씩 쓴다 */
+@media (max-width: 640px) {
+  .bw-editor-right { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
+  .bw-editor-left .bw-editor-views { display: none; }
+  .bw-editor-left > .bw-editor-pick, .bw-editor-left > .bw-editor-preview { flex: 1 1 0; justify-content: center; }
+}
