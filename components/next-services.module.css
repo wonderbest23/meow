@@ -145,3 +145,21 @@
 .verifyResult li small { color: #8a96a8; font-size: 12px; }
 .ribbon[data-tone="done"] { background: #16a34a; color: #fff; }
 .product[data-badge="done"] { opacity: .78; }
+
+/*
+ * 휴대폰 — 두 칸 카드는 좁아 글이 잘리고, 칸마다 색이 다른 아이콘 상자와 '가격 상담 · 자세히' 줄이 되풀이돼 어수선했다.
+ * 한 줄 목록으로: 왼쪽에 이름·설명·기간, 오른쪽에 가격과 › 만. 아이콘 상자는 뺀다(자세히 판에는 그대로).
+ */
+@media (max-width: 640px) {
+  .shop { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .product { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 12px; row-gap: 5px; align-items: center; padding: 14px 14px 14px 16px; }
+  .product:hover { transform: none; }
+  .product > .icon { display: none; }
+  .product > .ribbon { position: static; grid-column: 1; justify-self: start; }
+  .product > strong, .product > .tagline, .product > .meta { grid-column: 1; }
+  .product > .meta { justify-self: start; }
+  .product > .buy { grid-column: 2; grid-row: 1 / span 4; flex-direction: column; align-items: flex-end; justify-content: center; width: auto; margin: 0; padding: 0; border: 0; gap: 4px; }
+  .product > .buy b { font-size: 12.5px; font-weight: 600; color: var(--app-muted, #6d7b8e); }
+  .product > .buy i { font-size: 0; color: #9aa6b5; }
+  .product > .buy i svg { width: 18px; height: 18px; }
+}
