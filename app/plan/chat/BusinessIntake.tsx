@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
 import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, Bookmark, ChevronLeft, FileText, FolderOpen, LoaderCircle, LogIn, PencilLine, RefreshCw, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
@@ -109,6 +109,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   // '사업계획서 만들기' 대기 표시 — 결제 화면으로 넘어가는 동안(주소 이동은 몇 초 걸린다)에도 유지한다(대표 지적 2026-10-16: 눌러도 멈춘 것 같았다)
   const [preparing, setPreparing] = useState(false);
   const leavingForPay = useRef(false);
+  /* 결제 여부를 '사업계획서 만들기'가 보일 때 미리 알아 둔다 — 결제 전이면 누르는 즉시 결제 화면으로(서버 왕복 두 번을 건너뛴다). 작성 여부는 서버가 다시 막는다 */
+  const [payAccess, setPayAccess] = useState<{ planId: string; paid: boolean; authenticated: boolean } | null>(null);
+  const router = useRouter();
   const busyRef = useRef(false);
   const conflictRef = useRef(false);
   const [error, setError] = useState("");
@@ -363,7 +366,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       if (response.status === 402 && data?.code === "payment_required" && pending.command.action === "prepare" && planRef.current) {
         writeDraft({ ...draftRef.current, pending: null });
         leavingForPay.current = true;
-        window.location.assign(`/plan/pay?${new URLSearchParams({ planId: planRef.current.planId, planType: planRef.current.planType }).toString()}`);
+        router.push(payHref(planRef.current));
         return;
       }
       if (!response.ok || data?.login) {
@@ -446,7 +449,17 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const answerQueueOpen = coach && busy && draft.pending?.command.action === "answer" && !replyTurn && status !== "conflict" && !loadFailed && !ownerChanged;
   const answerBlocked = blocked && !answerQueueOpen;
   const aiBusy = ["queued", "running"].includes(plan?.intake.job?.status ?? "");
-  const startPrepare = () => { setPreparing(true); void send({ action: "prepare" }).finally(() => { if (!leavingForPay.current) setPreparing(false); }); };
+  const payHref = (target: IntakeSnapshot) => `/plan/pay?${new URLSearchParams({ planId: target.planId, planType: target.planType }).toString()}`;
+  const startPrepare = () => {
+    setPreparing(true);
+    const current = planRef.current;
+    if (current && payAccess?.planId === current.planId && payAccess.authenticated && !payAccess.paid) {
+      leavingForPay.current = true;
+      router.push(payHref(current));
+      return;
+    }
+    void send({ action: "prepare" }).finally(() => { if (!leavingForPay.current) setPreparing(false); });
+  };
   const job = plan?.intake.job;
   const lastIntake = !plan && loaded && !newEntry ? readLastIntake() : null;
   const loginHref = `/account?next=${encodeURIComponent(`/plan/chat${plan ? `?planId=${encodeURIComponent(plan.planId)}` : "?new=1"}`)}`;
@@ -588,6 +601,21 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   // 작성 중에는 아직 안 쓴 항목이 있어도 '이어서 작성' 대신 진행 중으로 본다
   const started = prepared || generating;
   const nextStep = plan ? intakeNextStep(plan, started) : null;
+  const prepareVisible = nextStep === "prepare" && !!plan && !plan.hasDocuments;
+  useEffect(() => {
+    if (!prepareVisible || !plan) return;
+    let alive = true;
+    router.prefetch(payHref(plan));
+    fetch(`/api/plan/access?${new URLSearchParams({ planType: plan.planType, planId: plan.planId }).toString()}`, { cache: "no-store" })
+      .then(response => response.ok ? response.json() : null)
+      .then((data: { paid?: unknown; authenticated?: unknown; unavailable?: unknown } | null) => {
+        // 확인하지 못했으면(unavailable·오류) 예전처럼 서버에 물어 본다
+        if (alive && data && data.unavailable !== true && typeof data.paid === "boolean") setPayAccess({ planId: plan.planId, paid: data.paid, authenticated: data.authenticated === true });
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 사업이 바뀌거나 단계가 보일 때만
+  }, [prepareVisible, plan?.planId]);
   /* 결제 직후(?start=1)에는 손님이 다시 누르지 않아도 사업계획서 작성을 한 번 시작한다 — 결제 결과 화면이 여기로 보낸다 */
   const autoStarted = useRef(false);
   useEffect(() => {
