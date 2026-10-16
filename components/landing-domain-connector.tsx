@@ -16,6 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { LandingDomainConnection } from "../lib/landing/custom-domain";
 import type { LandingSiteRecord } from "../lib/landing/domain";
 import type { DomainAvailability, DomainRequestStatus } from "../lib/landing/domain-purchase";
+import { Spinner } from "../app/plan/PlanLoading";
 
 type DomainPurchase = { domain: string; status: DomainRequestStatus; orderId: string; paidAt: string };
 type DomainEntitlement = { active: boolean; expiresAt: string | null; required: boolean; planId: string; price: number; purchasePrice?: number; purchase?: DomainPurchase | null };
@@ -207,7 +208,7 @@ export function LandingDomainConnector({
       {!connectedHostname ? (
         <div className="domain-connect-form">
           <label><span>{purchase ? "연결할 주소" : "구매한 도메인"}</span><input value={hostname} onChange={(event) => setHostname(event.target.value)} placeholder="www.mybrand.com" autoCapitalize="none" autoCorrect="off" /></label>
-          <button disabled={!published || busy || hostname.trim().length < 4 || (waitingRegistration && hostname.trim().toLowerCase() === purchasedHostname)} onClick={() => void connect()}>{action === "connecting" ? <LoaderCircle className="spin" /> : <Globe2 />} 연결 시작</button>
+          <button disabled={!published || busy || hostname.trim().length < 4 || (waitingRegistration && hostname.trim().toLowerCase() === purchasedHostname)} onClick={() => void connect()}>{action === "connecting" ? <Spinner /> : <Globe2 />} 연결 시작</button>
           {!published && <small>먼저 위의 ‘공개하기’를 눌러 홈페이지를 공개해주세요.</small>}
         </div>
       ) : (
@@ -220,7 +221,7 @@ export function LandingDomainConnector({
           </ol>}
           {connection && !connection.configured && <div className="domain-service-note"><CircleAlert /><p>자동 연결 서버의 마지막 보안 설정을 준비하고 있습니다. 입력한 주소는 저장되지 않았습니다.</p></div>}
           {connection?.errors.length ? <div className="domain-service-note"><CircleAlert /><p>{connection.errors[0]}</p></div> : null}
-          <div className="domain-progress-actions"><button disabled={busy} onClick={() => void load()}><RefreshCw className={action === "loading" ? "spin" : ""} /> 연결 확인</button><button className="remove" disabled={busy} onClick={() => void remove()}>{action === "removing" ? <LoaderCircle className="spin" /> : <Trash2 />} 연결 해제</button></div>
+          <div className="domain-progress-actions"><button disabled={busy} onClick={() => void load()}><RefreshCw className={action === "loading" ? "spin" : ""} /> 연결 확인</button><button className="remove" disabled={busy} onClick={() => void remove()}>{action === "removing" ? <Spinner /> : <Trash2 />} 연결 해제</button></div>
         </div>
       )}
 
@@ -261,7 +262,7 @@ export function DomainPurchaseForm({ planQuery, price, initial }: { planQuery: s
       <p>원하는 주소를 적으면 사장님 명의로 등록하고 연결까지 해 드려요. 첫해 등록비 포함, .com·.kr·.co.kr 주소만 가능해요.</p>
       <form className="domain-connect-form" onSubmit={(event) => { event.preventDefault(); void check(); }}>
         <label><span>원하는 주소</span><input value={value} onChange={(event) => { setValue(event.target.value); setResult(null); setError(""); }} placeholder="mybrand.co.kr" autoCapitalize="none" autoCorrect="off" inputMode="url" /></label>
-        <button type="submit" disabled={checking || value.trim().length < 4}>{checking ? <LoaderCircle className="spin" /> : <Search />} 비어 있는지 확인</button>
+        <button type="submit" disabled={checking || value.trim().length < 4}>{checking ? <Spinner /> : <Search />} 비어 있는지 확인</button>
       </form>
       {error ? <p className="domain-purchase-result taken" role="alert">{error}</p> : null}
       {result ? (

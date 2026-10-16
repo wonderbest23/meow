@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { Check, LoaderCircle } from "lucide-react";
+import { Check } from "lucide-react";
 import { HOMEPAGE_EXPERT_SERVICE_ID } from "../lib/services/catalog";
+import { Spinner } from "../app/plan/PlanLoading";
 
 /*
  * 홈페이지 6번 '전문가 상담' — 담당자가 직접 손봐 주는 고퀄리티 개선 상담 신청(소유자 요청 2026-10-09).
@@ -49,7 +50,7 @@ export function HomepageExpertConsult({ planId }: { planId: string | null }) {
     }
   };
 
-  if (state === "loading") return <p className="hk-expert-note"><LoaderCircle size={15} className="hk-spin" aria-hidden /> 확인하고 있어요</p>;
+  if (state === "loading") return <p className="hk-expert-note"><Spinner /> 확인하고 있어요</p>;
   if (state === "done") return <p className="hk-expert-done" role="status"><Check size={16} aria-hidden /> 상담을 신청했어요. 담당자가 곧 전화드릴게요.</p>;
   return (
     <form className="hk-expert" onSubmit={submit}>

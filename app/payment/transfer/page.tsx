@@ -1,9 +1,10 @@
 "use client";
 
-import { ArrowRight, Building2, CheckCircle2, Clipboard, Clock3, FileCheck2, Home, LoaderCircle, ShieldCheck } from "lucide-react";
+import { ArrowRight, Building2, CheckCircle2, Clipboard, Clock3, FileCheck2, Home, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import PlanLoading, { Spinner } from "../../plan/PlanLoading";
 
 type TransferOrder = {
   orderId: string;
@@ -75,7 +76,7 @@ function TransferStatus() {
     } catch (error) { setMessage(error instanceof Error ? error.message : "입금 확인을 요청하지 못했습니다."); } finally { setReporting(false); }
   };
 
-  if (loading) return <main className="manual-payment-page loading"><LoaderCircle className="spin" /><strong>주문을 확인하고 있어요</strong></main>;
+  if (loading) return <main className="manual-payment-page"><PlanLoading fullPage note="주문을 확인하고 있어요" /></main>;
   if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해주세요."}</p><Link href="/account">로그인 확인</Link><Link href="/"><Home /> 홈으로</Link></main>;
   const copy = statusCopy[order.status] ?? statusCopy.awaiting_deposit;
   const expired = Date.parse(order.expiresAt) <= Date.now() && order.status === "awaiting_deposit";
@@ -87,7 +88,7 @@ function TransferStatus() {
       {["awaiting_deposit", "deposit_reported"].includes(order.status) && !expired && <>
         <section className="manual-bank-account"><div><Building2 /><span><small>{bank.bankName}</small><strong>{bank.accountNumber}</strong><em>예금주 {bank.accountHolder}</em></span></div><button onClick={() => void copyAccount()}><Clipboard /> {copied ? "복사했어요" : "계좌 복사"}</button></section>
         <dl><div><dt>입금 금액</dt><dd>{order.amount.toLocaleString("ko-KR")}원</dd></div><div><dt>입금자명</dt><dd>{order.depositorName}</dd></div><div><dt>입금 기한</dt><dd>{new Date(order.expiresAt).toLocaleString("ko-KR")}</dd></div></dl>
-        {order.status === "awaiting_deposit" ? <button className="manual-deposit-report" disabled={reporting} onClick={() => void report()}>{reporting ? <LoaderCircle className="spin" /> : <CheckCircle2 />} 입금했어요</button> : <div className="manual-deposit-waiting"><LoaderCircle className="spin" /><span><strong>관리자가 확인하고 있어요</strong><small>화면을 닫아도 주문 상태는 저장됩니다.</small></span></div>}
+        {order.status === "awaiting_deposit" ? <button className="manual-deposit-report" disabled={reporting} onClick={() => void report()}>{reporting ? <Spinner /> : <CheckCircle2 />} 입금했어요</button> : <div className="manual-deposit-waiting"><Spinner /><span><strong>관리자가 확인하고 있어요</strong><small>화면을 닫아도 주문 상태는 저장됩니다.</small></span></div>}
       </>}
       {order.status === "done" && order.projectId && <Link className="manual-project-start" href={`/?view=project&project=${encodeURIComponent(order.projectId)}`}>내 사업 자료 확인하기 <ArrowRight /></Link>}
       <section className="manual-receipt-status"><FileCheck2 /><span><strong>현금영수증</strong><small>{order.cashReceiptStatus === "issued" ? "발급 완료" : order.cashReceiptType === "NONE" ? "구매자 번호 없이 발급 예정" : "입금 확인 후 발급 예정"}</small></span></section>
@@ -98,5 +99,5 @@ function TransferStatus() {
 }
 
 export default function ManualTransferPage() {
-  return <Suspense fallback={<main className="manual-payment-page loading"><LoaderCircle className="spin" /><strong>주문을 불러오고 있어요</strong></main>}><TransferStatus /></Suspense>;
+  return <Suspense fallback={<main className="manual-payment-page"><PlanLoading fullPage note="주문을 불러오고 있어요" /></main>}><TransferStatus /></Suspense>;
 }

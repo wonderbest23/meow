@@ -6,7 +6,7 @@ import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
 import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
-import { LoadingStatus } from "../../PlanLoading";
+import { LoadingStatus, Spinner } from "../../PlanLoading";
 import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
@@ -660,8 +660,10 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서 다시 �
   </>;
 }
 
-export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false }: {
+export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign, onPrepare, secondary, announce = false, minimal = false, preparing = false }: {
   snapshot: IntakeSnapshot; prepared: boolean; disabled: boolean; aiBusy: boolean; onDesign: () => void; onPrepare: () => void; secondary?: ReactNode; announce?: boolean;
+  /** '사업계획서 만들기'를 눌러 서버 확인·결제 화면 이동을 기다리는 중 — 단추가 그냥 흐려지기만 해 멈춘 줄 알았다(대표 지적 2026-10-16) */
+  preparing?: boolean;
   /** 코치 채팅 결과 화면: 단계 표시·긴 설명 없이 버튼과 한 줄만(DesignResult 아래) */
   minimal?: boolean;
 }) {
@@ -682,9 +684,9 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
   // 바뀐 내용은 없고 아직 안 쓴 항목만 남았으면(예전 무료 체험으로 앞 2개만 있음, 작성 중 실패) 남은 항목만 이어서 쓴다 — 다시 생성 횟수를 쓰지 않는다
   if (step === "prepare" && snapshot.hasDocuments && !reapply && snapshot.missingSections) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />남은 {snapshot.missingSections}개 항목 이어서 작성하기</button>}</div>;
   if (minimal && !jobActive && (step === "prepare" && !snapshot.hasDocuments || step === "open")) return <div className={styles.resultAction} data-step={step}>
-    {step === "prepare" ? <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />사업계획서 만들기</button>
+    {step === "prepare" ? <button type="button" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />사업계획서 만들기</>}</button>
       : <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 열기</Link>}
-    {step === "prepare" && <small className={styles.nextStepHint}>결제하면 바로 작성을 시작해요. 몇 분 걸려요.</small>}
+    {step === "prepare" && <small className={styles.nextStepHint} role={preparing ? "status" : undefined}>{preparing ? "잠시만요. 결제 화면을 여는 중이에요." : "결제하면 바로 작성을 시작해요. 몇 분 걸려요."}</small>}
   </div>;
   // 계획서가 이미 있으면 단계 표시·설명·이전 계획서 링크 없이 버튼 하나만(확인창에서 안내).
   if (step === "prepare" && snapshot.hasDocuments) return <div className={styles.rewriteAction} data-step={step}>{jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <RewriteConfirm snapshot={snapshot} disabled={locked} onConfirm={onPrepare} />}</div>;
@@ -695,7 +697,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     </ol>
     {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
       {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}>사업 방향 정리하기</button>}
-      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onPrepare}><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "바뀐 내용으로 사업계획서 다시 작성하기" : "사업계획서 문서 작성하기"}</button>}
+      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "바뀐 내용으로 사업계획서 다시 작성하기" : "사업계획서 문서 작성하기"}</>}</button>}
       {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
       {secondary}
     </div>}

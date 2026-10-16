@@ -4,13 +4,14 @@ import { FormEvent, useEffect, useRef, useState, type CSSProperties } from "reac
 import { isLandingKit, landingKitCredit } from "../lib/landing/kits";
 import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 import type { BrainwavePageData } from "./brainwave-page";
-import { ArrowRight, CalendarCheck, Check, ChevronDown, LoaderCircle, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
+import { ArrowRight, CalendarCheck, Check, ChevronDown, MessageCircle, PencilLine, Phone, ShieldCheck, ShoppingBag } from "lucide-react";
 import { draftPhone, quickActions, withContactLinks } from "../lib/landing/contact-method";
 import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } from "../lib/landing/domain";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { ConsentList } from "./consent-list";
 import { themeStyle } from "../lib/landing/themes";
 import { BRAINWAVE_CTA_EVENT } from "../lib/landing/brainwave/button-action";
+import { Spinner } from "../app/plan/PlanLoading";
 
 function getVisitorId() {
   const key = "venture-landing-visitor";
@@ -196,7 +197,7 @@ export function PublicLandingClient({
             ]} values={{ privacy: privacyAgreed, marketing: marketingAgreed }} onChange={(next) => { setPrivacyAgreed(Boolean(next.privacy)); setMarketingAgreed(Boolean(next.marketing)); }} />
             <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{privacyPolicyWithContact(config.privacyPolicy, config.privacyContact)}</p><small>문의: {config.privacyContact}</small></details>
             {error && <p className="public-form-error">{error}</p>}
-            <button type="submit" disabled={!privacyAgreed || submitting}>{submitting ? <LoaderCircle className="spin" /> : config.ctaLabel}<ArrowRight /></button>
+            <button type="submit" disabled={!privacyAgreed || submitting}>{submitting ? <Spinner /> : config.ctaLabel}<ArrowRight /></button>
           </form>
         )}
       </section>
