@@ -38,7 +38,7 @@ export function BrainwaveTemplatePicker({
     <dialog ref={dialog} className={styles.dialog} aria-label="템플릿 선택" onCancel={event => { event.preventDefault(); onClose(); }}>
       <div className={`bwtp-sheet ${styles.sheet}`}>
         <header>
-          <div><strong>템플릿 선택</strong><small>이미지는 디자인 예시입니다. 사업 내용에 맞춰 문구와 표시 섹션이 달라집니다.</small></div>
+          <div><strong>템플릿 선택</strong><small>이미지는 디자인 예시입니다. 사업 내용에 맞춰 문구와 보이는 구역이 달라져요.</small></div>
           <button type="button" onClick={onClose} aria-label="닫기"><X size={18} /></button>
         </header>
         <div className="bwtp-body">

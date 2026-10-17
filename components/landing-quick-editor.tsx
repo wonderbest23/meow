@@ -128,7 +128,7 @@ export function LandingQuickEditor({
             <span><PanelsTopLeft /></span>
             {draft.pageData?.brainwave
               ? <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong><p>다른 디자인으로 바꿀 수도 있습니다.</p></div>
-              : <div><small>더 자유롭게 만들기</small><strong>섹션을 직접 추가하고 순서를 바꾸세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있습니다.</p></div>}
+              : <div><small>더 자유롭게 만들기</small><strong>구역을 직접 넣고 순서를 바꿔 보세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있습니다.</p></div>}
             <button type="button" onClick={() => (onOpenEditor ? onOpenEditor() : setBuilderOpen(true))}>자유 편집 열기 <PanelsTopLeft /></button>
           </section>
           <div className="landing-media-grid">

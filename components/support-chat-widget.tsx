@@ -77,7 +77,8 @@ export function SupportChatWidget() {
    */
   const [onPublicSite, setOnPublicSite] = useState(false);
   useEffect(() => { setOnPublicSite(Boolean(document.querySelector(".public-landing"))); }, [pathname]);
-  const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
+  /* 결제 화면은 동의 목록의 › 를 덮었고 아래 결제 줄과 겹쳤다 · 고객센터 화면에서는 같은 기능이 두 번이다(메뉴의 '고객센터'로 갈 수 있다) */
+  const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal" || pathname === "/plan/pay" || pathname === "/account/support" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"consult" | "support">("support");
   /* 메신저형 탭 — 버튼으로 열면 홈부터, 다른 화면이 질문을 들고 열면 바로 대화 */
