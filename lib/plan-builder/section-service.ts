@@ -36,7 +36,7 @@ import { betaApiBoundary } from "../staging/beta-boundary";
 import { verifyBody } from "./section-signature";
 import { PLAN_SECTION_INTERNAL_PATH, PLAN_SECTION_API_PATH, type PlanSectionJob, type PlanOutlineJob } from "./section-protocol";
 import { intakeScenarioInputs, planFinancialReference, readIntake } from "./intake-core";
-import { cashflowFromFields, cashflowMarkdown, cashflowScenariosEnabled } from "./cashflow-scenarios";
+import { cashflowFromFields, cashflowMarkdown, cashflowScenariosEnabled, operatingFlowMarkdown } from "./cashflow-scenarios";
 export type { PlanSectionJob, PlanOutlineJob } from "./section-protocol";
 export { callPlanSectionService, callPlanOutlineService, callCoachService, callDeckService, callProposalUpdateService, callArtifactChunkService, callIntakeService } from "./section-transport";
 
@@ -63,6 +63,12 @@ export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answer
     if (!partial.unit) return undefined;
     const goal = partial.breakEven ? ` 한 달에 ${partial.breakEven.units.toLocaleString("ko-KR")}건 이상 팔면 고정비를 넘어 이익이 나요. 이 숫자를 첫 판매 목표로 삼아 보세요.` : "";
     return `${financialsToMarkdown(partial)}\n\n판매량을 아직 정하지 않아 12개월 손익표는 넣지 않았어요.${goal}`;
+  }
+  // 운영 중 사업: 같은 판매량을 12달 복사한 손익표 대신 '지금 그대로'와 '목표까지 가는 길'(2026-10-13 5차 검토)
+  if (intake?.mode === "operating") {
+    const get = (fieldKey: string) => coach.fields.find(field => field.key === fieldKey)?.value;
+    const table = operatingFlowMarkdown({ unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost, volume: scenario.volume, livingCost: get("livingCost"), goal: get("goal") });
+    return scenario.notes.length ? `${table}\n\n판매량 기준: ${scenario.notes.join(" / ")}` : table;
   }
   const result = calculateFinancials({ unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost, startingVolume: scenario.volume, monthlyGrowthPct: 0 });
   const table = financialsToMarkdown(result, { growthLabel: null, growthPct: 0 });

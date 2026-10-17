@@ -115,7 +115,7 @@ const { loadPlanState, savePlanState } = await import("../../lib/plan-builder/pl
 const { generatePlanOutline, generateAndSaveSection, intakeFinancialTable } = await import("../../lib/plan-builder/section-service");
 const { chaptersForType, financialTableOwner } = await import("../../lib/plan-builder/blueprint");
 const { readCoach, coachContext } = await import("../../lib/plan-builder/coach");
-const { planFinancialReference } = await import("../../lib/plan-builder/intake-core");
+const { planFinancialReference, readIntake, intakeScenarioInputs } = await import("../../lib/plan-builder/intake-core");
 const { sectionWaves, SECTION_CONCURRENCY } = await import("../../lib/plan-builder/section-waves");
 const { setLlmUsageListener } = await import("../../lib/llm/usage");
 const { rowCostUsd, krwPerUsd } = await import("../../lib/llm/cost");
@@ -195,7 +195,9 @@ async function runCase(c: Case) {
   const tableKey = financialTableOwner(final.planType);
   const source = [coachContext(coach, planFinancialReference(coach, final.answers)), tableKey ? intakeFinancialTable(final, coach, tableKey) ?? "" : ""].join("\n");
   const num = (key: string) => typeof c.answers[key] === "number" ? c.answers[key] as number : undefined;
-  const facts = { price: num("price"), unitCost: num("structure.unitCost"), fixedCost: num("structure.cost"), budget: num("budget"), hoursPerWeek: num("hoursPerWeek") };
+  // 공간을 빌려 여는 사업인지는 계산과 같은 판정으로 넘긴다(2026-10-14: 본문 낱말로 가려 이사·과외가 매장 목록으로 채점됐다)
+  const intakeState = readIntake(final.answers), shape = intakeState ? intakeScenarioInputs(coach, intakeState) : null;
+  const facts = { price: num("price"), unitCost: num("structure.unitCost"), fixedCost: num("structure.cost"), budget: num("budget"), hoursPerWeek: num("hoursPerWeek"), ...(shape && "premises" in shape ? { premises: shape.premises } : {}) };
   const code = gradeByCode({ caseId: c.id, sections, source, facts });
   const factsText = Object.entries(c.answers).map(([key, value]) => `${key}: ${value}`).join("\n");
   const graded = flag("no-ai-grade") || !spend || capture ? null : await gradeByAi({ provider: "anthropic", apiKey: process.env.ANTHROPIC_API_KEY!, model: "claude-sonnet-5-5" }, { caseLabel: c.label, facts: factsText, sections });
@@ -215,6 +217,8 @@ for (const c of cases) {
   if (spend && costOf(calls).krw >= MAX_KRW) { stoppedAt = c.id; console.log(`[plan-eval] 상한 ${MAX_KRW.toLocaleString()}원에 닿아 ${c.id}부터 멈춤`); break; }
   const started = Date.now(), before = calls.length;
   offlineCase = c.id; offlineCall = 0;
+  // 사업마다 새로 모은다 — 앞 사업의 장(예: 운영 계획서에 없는 유통 장)이 섞이지 않게
+  for (const key of Object.keys(captured)) delete captured[key];
   let entry;
   try { entry = await runCase(c); }
   catch (error) { entry = { id: c.id, label: c.label, tags: c.tags, error: error instanceof Error ? error.message : String(error) }; }

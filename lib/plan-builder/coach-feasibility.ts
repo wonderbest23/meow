@@ -15,16 +15,20 @@ export function coachAmount(value: string | undefined): number | undefined {
   return amount != null && Number.isSafeInteger(amount) && amount >= 0 ? amount : undefined;
 }
 
-const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "한 달": 1 };
+// '월 12곳'처럼 직접 적은 답도 한 달로 읽고, '하루 매칭 20건'처럼 사이에 낀 말 하나는 건너뛴다(2026-10-12 시뮬레이션: 처리 한도가 계산에서 빠졌다)
+// '주 40개'처럼 '주' 한 글자로 적은 일주일도 읽는다(2026-10-13 업종 점검: 캔들·출장 사진의 처리 한도가 계산에서 빠졌다)
+const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "주": 4.3, "한 달": 1, "월": 1 };
 /** 처리량 답변("대표자 혼자 / 하루 20건")을 월 판매량으로 환산한다. 하루는 월 26일 영업, 일주일은 4.3주 가정이며 기간이 없으면 환산하지 않는다. */
 export function monthlyVolumeFromCapacity(text: string | null | undefined): { volume: number; unit: string; note: string } | null {
-  const match = text?.match(/(하루|일주일|한 달)\s*([\d,]+)\s*([가-힣·]*)/);
+  // '누가 / 얼마나' 형식이면 '/' 뒤(양)를 먼저 읽는다 — '주 2회 수업 / 월 40명'에서 앞의 '주 2회'를 처리량으로 읽지 않게
+  const amount = text?.includes("/") ? text.split("/").pop() : text;
+  const match = (amount?.match(/(하루|일주일|한 달|(?<![가-힣])월|(?<![가-힣])주(?![가-힣]))\s*(?:[가-힣]+\s+)?([\d,]+)\s*([가-힣·]*)/) ?? text?.match(/(하루|일주일|한 달|(?<![가-힣])월|(?<![가-힣])주(?![가-힣]))\s*(?:[가-힣]+\s+)?([\d,]+)\s*([가-힣·]*)/));
   if (!match) return null;
   const count = Number(match[2].replace(/,/g, ""));
   if (!Number.isFinite(count) || count < 0) return null;
   const factor = CAPACITY_MONTH_FACTOR[match[1]], unit = match[3] || "건", volume = Math.round(count * factor);
   const shown = (n: number) => n.toLocaleString("ko-KR");
-  return { volume, unit, note: factor === 1 ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1]} ${shown(count)}${unit} × ${factor === 26 ? "월 26일 영업" : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
+  return { volume, unit, note: factor === 1 ? `월 ${shown(count)}${unit} 감당 기준` : `${match[1] === "주" ? "일주일" : match[1]} ${shown(count)}${unit} × ${factor === 26 ? "월 26일 영업(주 6일 가정)" : "월 4.3주"} = 월 ${shown(volume)}${unit}` };
 }
 
 /** These are arithmetic checks on supplied/proposed inputs, not a business viability score. */

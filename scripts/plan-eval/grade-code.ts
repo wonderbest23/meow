@@ -5,7 +5,7 @@
  */
 import { checkDocumentQuality } from "../../lib/plan-builder/document-quality";
 
-export type EvalFacts = { price?: number; unitCost?: number; fixedCost?: number; budget?: number; hoursPerWeek?: number };
+export type EvalFacts = { price?: number; unitCost?: number; fixedCost?: number; budget?: number; hoursPerWeek?: number; premises?: boolean };
 export type EvalOutput = { caseId: string; sections: Record<string, string>; source: string; facts: EvalFacts };
 export type ItemResult = { item: number; name: string; pass: boolean | null; detail: string; value?: number };
 
@@ -71,9 +71,17 @@ export function gradeUnitEconomics(all: string, facts: EvalFacts): ItemResult {
 
 // 5. 시작 자금 — 항목별 금액(보증금·권리금·인테리어·설비·재고·인허가·홍보·예비비) 중 몇 개가 나오는지
 const START_ITEMS = [/보증금/, /권리금/, /인테리어|공사/, /설비|장비|집기/, /초기\s*재고|재료\s*구입|첫\s*재고/, /인허가|사업자\s*등록|등록비/, /홍보비|광고비|마케팅\s*비/, /예비비|운영\s*자금|운영\s*예비/];
-export function gradeStartFunds(all: string): ItemResult {
-  const found = START_ITEMS.filter(pattern => pattern.test(all)).length;
-  return { item: 5, name: "시작 자금", pass: found >= THRESHOLDS.startFundItemsMin, value: found, detail: `시작 자금 항목 ${found}/${START_ITEMS.length}개 언급` };
+/*
+ * 공간을 빌리지 않는 사업(앱·대행·플랫폼)은 보증금·권리금·인테리어·재고가 없다 — 매장 목록으로 세면 늘 떨어진다(2026-10-12 시뮬레이션).
+ * 그런 사업은 준비 기간에 나가는 돈(생활비·고정비)과 도구·개발비를 항목으로 센다.
+ */
+const REMOTE_START_ITEMS = [/준비\s*기간에\s*나가는\s*돈|준비\s*기간.*생활비/, /도구|노트북|개발|외주|서버|차량|트럭|장비|설비/, /인허가|사업자\s*등록|등록비/, /홍보비|광고비|마케팅\s*비/, /예비비|운영\s*자금|운영\s*예비|버티는\s*기간/];
+export function gradeStartFunds(all: string, knownPremises?: boolean): ItemResult {
+  // 실제 API(2026-10-14): '트럭 임대'·'카페 대관 월세 없음' 같은 말로 이사·과외가 매장 목록으로 채점됐다 — 공간을 빌리는 사업에만 나오는 말로 가린다
+  const premises = knownPremises ?? /보증금|권리금|인테리어/.test(all);
+  const items = premises ? START_ITEMS : REMOTE_START_ITEMS;
+  const found = items.filter(pattern => pattern.test(all)).length;
+  return { item: 5, name: "시작 자금", pass: found >= THRESHOLDS.startFundItemsMin, value: found, detail: `시작 자금 항목 ${found}/${items.length}개 언급${premises ? "" : "(공간 없는 사업 기준)"}` };
 }
 
 // 6. 12개월 돈 흐름 — 통장(현금) 흐름을 다룬 12개월 표가 있는지(손익표와 별개)
@@ -87,7 +95,8 @@ export function gradeCashflow(all: string): ItemResult {
 export function gradePersonalLiving(all: string): ItemResult {
   const living = /생활비/.test(all);
   // 생활비 질문(2026-10-10) 뒤로 계획서는 대표 몫을 '사업에서 생활비를 가져간다'로 쓴다
-  const salary = /내\s*월급|대표(?:자)?\s*(?:인건비|월급|급여)|가져갈\s*돈|사장님?\s*월급|생활비를?\s*가져(?:가|갈|올)/.test(all);
+  // '생활비까지 버는 선'도 대표 몫을 계산한 말이다(2026-10-12: 이 말만 있는 계획서가 모두 떨어졌다)
+  const salary = /내\s*월급|대표(?:자)?\s*(?:인건비|월급|급여)|가져갈\s*돈|사장님?\s*월급|생활비를?\s*가져(?:가|갈|올)|생활비까지\s*(?:버는|벌)|생활비선/.test(all);
   return { item: 7, name: "내 생활비와 내 월급", pass: living && salary, detail: `생활비 ${living ? "있음" : "없음"} · 대표 월급 ${salary ? "있음" : "없음"}` };
 }
 
@@ -98,7 +107,9 @@ export function gradeWeeklyPlan(all: string, hoursPerWeek?: number): ItemResult 
     const weekCol = table[0].findIndex(cell => /주차|주$|기간/.test(cell));
     const hourCol = table[0].findIndex(cell => /시간/.test(cell));
     if (weekCol < 0) continue;
-    const rows = table.slice(1).filter(row => /\d+\s*주/.test(row[weekCol] ?? ""));
+    // '주차' 칸이면 '1'처럼 숫자만 적은 줄도 주차다(2026-10-13 실제 API: 한국어 과외의 12주 표를 못 읽었다)
+    const bare = /주차/.test(table[0][weekCol] ?? "");
+    const rows = table.slice(1).filter(row => /\d+\s*주/.test(row[weekCol] ?? "") || (bare && /^\d{1,2}$/.test((row[weekCol] ?? "").trim())));
     if (rows.length < THRESHOLDS.weeklyRowsMin) continue;
     if (hourCol < 0) return { item: 9, name: "주차별 할 일", pass: false, value: rows.length, detail: `주차 ${rows.length}줄 표 있음 · 시간 칸 없음(${head})` };
     const byWeek = new Map<string, number>();
@@ -150,7 +161,7 @@ export function gradeByCode(output: EvalOutput): ItemResult[] {
   return [
     gradeCustomer(all),
     gradeUnitEconomics(all, output.facts),
-    gradeStartFunds(all),
+    gradeStartFunds(all, output.facts.premises),
     gradeCashflow(all),
     gradePersonalLiving(all),
     gradeWeeklyPlan(all, output.facts.hoursPerWeek),
