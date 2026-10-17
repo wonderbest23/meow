@@ -309,6 +309,7 @@
 .headerActions button { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid var(--app-line); border-radius: 8px; background: var(--app-surface); color: var(--app-text); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .headerActions button:disabled { opacity: .5; cursor: default; }
 .headerActions .headerPrimary { border-color: #3272db; background: #3272db; color: #fff; }
+.headerActions .headerPrimary[data-done] { border-color: #dbe7fb; background: #eef4fe; color: #3272db; opacity: 1 !important; cursor: default !important; }
 @media (max-width: 480px) { .headerActions button { padding: 0 10px; } .headerActions button:not(.headerPrimary) span { display: none; } }
 
 /* 공개한 뒤 다음 단계 — 계획서 화면의 '다음 단계' 버튼과 같은 자리(본문 끝), 같은 모양 */

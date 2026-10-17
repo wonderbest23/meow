@@ -10,7 +10,7 @@ import { landingCollectedItems, privacyPolicyWithContact, type LandingDraft } fr
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { ConsentList } from "./consent-list";
 import { themeStyle } from "../lib/landing/themes";
-import { BRAINWAVE_CTA_EVENT } from "../lib/landing/brainwave/button-action";
+import { BRAINWAVE_CTA_EVENT, scrollToContact } from "../lib/landing/brainwave/button-action";
 import { Spinner } from "../app/plan/PlanLoading";
 
 function getVisitorId() {
@@ -78,7 +78,7 @@ export function PublicLandingClient({
 
   const moveToForm = () => {
     void record("cta_click");
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToContact();
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {

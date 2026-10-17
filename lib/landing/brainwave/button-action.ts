@@ -32,12 +32,24 @@ export function brainwaveSections(root: ParentNode = document): HTMLElement[] {
 /* 공개 페이지가 '버튼 누름'을 세게 알린다(public-landing-client 가 동의한 방문만 기록) — 킷 버튼은 세지 않아 늘 0이었다 */
 export const BRAINWAVE_CTA_EVENT = "oneul:cta-click";
 
+/*
+ * 문의 양식으로 스크롤. 휴대폰에서 양식 바로 위에 디자인의 마무리 띠('○○에 문의해 보세요')가 있으면 양식의 큰 제목을 숨기고
+ * 띠가 제목 역할을 한다(globals.css). 그때 양식 꼭대기로 가면 제목 없이 입력칸만 보였다 → 띠부터 보이게 한다.
+ */
+export function scrollToContact() {
+  const section = document.getElementById("landing-contact");
+  if (!section) return;
+  const heading = section.querySelector("h2");
+  const band = heading && getComputedStyle(heading).display === "none" ? document.querySelector<HTMLElement>("[data-bw-closing]:last-child") : null;
+  (band ?? section).scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 export function runBrainwaveButton(links: Record<string, string> | undefined, id: string) {
   const action = links?.[id] ?? "contact";
   if (action === "none") return;
   if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(BRAINWAVE_CTA_EVENT, { detail: { id } }));
   if (action === "contact") {
-    document.getElementById("landing-contact")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    scrollToContact();
     return;
   }
   const sec = action.match(/^sec:(\d+)$/);

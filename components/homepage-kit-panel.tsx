@@ -7,7 +7,7 @@ import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, 
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
 import { unansweredCount, useInquiries } from "../app/plan/inquiries/use-inquiries";
-import { hasUnpublishedEdits } from "../lib/landing/save-contract";
+import { hasUnpublishedEdits, isLiveUpToDate } from "../lib/landing/save-contract";
 import { LandingBlocksRenderer } from "./landing-blocks";
 import { LandingDomainConnector } from "./landing-domain-connector";
 import { HomepageAlertSettings } from "./homepage-alert-settings";
@@ -155,6 +155,7 @@ export function HomepageKitPanel({
   const published = site?.status === "published";
   /* 저장은 됐지만 아직 '새 버전 공개'를 안 누른 고친 내용 — '공개 중'만 보고 손님 화면도 바뀐 줄 알기 쉽다 */
   const unpublishedEdits = hasUnpublishedEdits(site);
+  const liveUpToDate = isLiveUpToDate(site);
   const [domainReady, setDomainReady] = useState(false);
   /*
    * 주소 끝의 #hk-… 로 왔으면(내 문의의 '번호 등록하러 가기' 등) 그 칸을 펼쳐 내려 준다 —
@@ -249,7 +250,7 @@ export function HomepageKitPanel({
         </div>
         {!inChrome && <div className="hk-actions">
           <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={15} />} 저장</button>
-          <button type="button" className="hk-primary" disabled={busy} onClick={onPublish}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />} {published ? "새 버전 공개" : "공개하기"}</button>
+          <button type="button" className="hk-primary" data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={onPublish}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />} {liveUpToDate ? "공개됨" : published ? "새 버전 공개" : "공개하기"}</button>
         </div>}
       </header>
       {message ? <p className="hk-msg">{message}</p> : null}

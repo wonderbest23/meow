@@ -17199,3 +17199,6 @@ html body [tabindex="-1"]:focus, html body [tabindex="-1"]:focus-visible { outli
 /* 결제 화면 아래 고정 결제 줄 위로 상담 단추를 올린다(겹치지 않게) */
 body:has([data-pay-bar]) .support-chat-widget { bottom: calc(150px + env(safe-area-inset-bottom)) !important; }
 @media (min-width: 641px) { body:has([data-pay-bar]) .support-chat-widget { bottom: calc(100px + env(safe-area-inset-bottom)) !important; } }
+
+/* 홈페이지 공개 단추 — 고친 게 없어 손님 화면과 같을 때는 옅은 파랑 "공개됨"(눌러야 하는 단추처럼 보이지 않게, 흐리게 지우지도 않게) */
+.hk-actions .hk-primary[data-done] { border-color: #dbe7fb; background: #eef4fe; color: #3272db; opacity: 1 !important; cursor: default !important; }

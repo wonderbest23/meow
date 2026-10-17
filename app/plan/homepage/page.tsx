@@ -18,7 +18,7 @@ import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import type { LandingDraft, LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, lastHydrationFailed, loadState, isSamplePlan, planOwnerEpoch, setActivePlan, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { persistLandingDraft } from "../../../lib/landing/save-client";
-import { hasUnpublishedEdits, landingDraftFingerprint } from "../../../lib/landing/save-contract";
+import { hasUnpublishedEdits, isLiveUpToDate, landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import Link from "next/link";
 import styles from "./page.module.css";
 import PlanLoading, { Spinner } from "../PlanLoading";
@@ -27,7 +27,7 @@ import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import { careHref, homepageHref } from "../../../lib/plan-builder/journey";
 import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
-import { Rocket, Save } from "lucide-react";
+import { Check, Rocket, Save } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 import { askConfirm } from "../../../components/confirm-dialog";
 
@@ -148,7 +148,7 @@ export default function PlanHomepagePage() {
       requestRef.current = null;
       setBuilderOpen(false); setFullscreen(false); setEditable(false);
       setDraft(null); setSite(null); setProjectId(null); setAction("idle"); setMessage("");
-      setBlocked({ title: "계정이 변경됐습니다", detail: "현재 계정으로 홈페이지를 다시 열어주세요.", missing: [], cta: "login" });
+      setBlocked({ title: "계정이 바뀌었어요", detail: "현재 계정으로 홈페이지를 다시 열어주세요.", missing: [], cta: "login" });
       setPhase("blocked");
     };
     const unsubscribe = subscribePlanOwnerChange(invalidate);
@@ -301,7 +301,7 @@ export default function PlanHomepagePage() {
       if (res.status === 401) {
         setBlocked({ title: "로그인이 필요합니다", detail: "홈페이지는 내 계정에 저장됩니다.", missing: [], cta: "login" });
       } else if (res.status === 402) {
-        setBlocked({ title: "결제 후 이용할 수 있습니다", detail: "홈페이지 편집·공개는 결제 후 열려요. 사업계획서를 결제했다면 홈페이지만, 아직이라면 사업계획서 + 홈페이지로 함께 결제할 수 있어요.", missing: [], cta: "pay" });
+        setBlocked({ title: "결제 후 이용할 수 있어요", detail: "홈페이지 편집·공개는 결제 후 열려요. 사업계획서를 결제했다면 홈페이지만, 아직이라면 사업계획서 + 홈페이지로 함께 결제할 수 있어요.", missing: [], cta: "pay" });
       } else if (error.error === "plan_incomplete") {
         setBlocked({
           title: "홈페이지에 실을 내용이 조금 부족해요",
@@ -313,17 +313,17 @@ export default function PlanHomepagePage() {
         // 서버에 이 플랜이 없다 — 로그인 전이라 아직 계정에 저장되지 않은 경우가 대부분이다
         setBlocked({
           title: "이 계획서가 아직 계정에 저장되지 않았어요",
-          detail: "로그인하면 지금까지 쓴 내용이 저장되고, 그 내용으로 홈페이지를 만들 수 있습니다.",
+          detail: "로그인하면 지금까지 쓴 내용이 저장되고, 그 내용으로 홈페이지를 만들 수 있어요.",
           missing: [],
           cta: "login",
         });
       } else {
-        setBlocked({ title: "홈페이지를 준비하지 못했습니다", detail: error.message ?? "잠시 후 다시 시도해주세요.", missing: [], cta: "plan" });
+        setBlocked({ title: "홈페이지를 준비하지 못했어요", detail: error.message ?? "잠시 후 다시 시도해주세요.", missing: [], cta: "plan" });
       }
       setPhase("blocked");
     })().catch(() => {
       if (!alive || loadEpoch !== planOwnerEpoch()) return;
-      setBlocked({ title: "홈페이지를 불러오지 못했습니다", detail: "연결 상태를 확인하고 다시 열어주세요.", missing: [], cta: "plan" });
+      setBlocked({ title: "홈페이지를 불러오지 못했어요", detail: "연결 상태를 확인하고 다시 열어주세요.", missing: [], cta: "plan" });
       setPhase("blocked");
     });
     return () => {
@@ -347,9 +347,9 @@ export default function PlanHomepagePage() {
       setSite(saved);
       setDraft(value => value === next ? saved.draft : value);
       setAction("saved");
-      setMessage("서버에 저장했습니다.");
+      setMessage("저장했어요.");
     } catch (error) {
-      if (current()) { setAction("idle"); setMessage(userErrorMessage(error, "저장하지 못했습니다.")); }
+      if (current()) { setAction("idle"); setMessage(userErrorMessage(error, "저장하지 못했어요.")); }
       throw error;
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
@@ -381,13 +381,13 @@ export default function PlanHomepagePage() {
       const res = await fetch(`/api/projects/${projectId}/landing/publish`, { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt: saved.updatedAt }) });
       const data = await res.json();
       // 화면이 바뀌어도 서버 공개는 이미 끝났을 수 있다 — 결과는 그대로 알려 준다.
-      if (!current()) return res.ok && data.site ? { ok: true, site: data.site as LandingSiteRecord } : { ok: false, message: data.error?.message ?? "공개 결과를 확인하지 못했습니다." };
-      if (!res.ok || !data.site) throw new Error(data.error?.message ?? "공개 결과를 확인하지 못했습니다.");
+      if (!current()) return res.ok && data.site ? { ok: true, site: data.site as LandingSiteRecord } : { ok: false, message: data.error?.message ?? "공개 결과를 확인하지 못했어요." };
+      if (!res.ok || !data.site) throw new Error(data.error?.message ?? "공개 결과를 확인하지 못했어요.");
       siteRef.current = data.site; setSite(data.site);
-      setMessage("홈페이지를 공개했습니다.");
+      setMessage("홈페이지를 공개했어요. 손님 화면에 바로 보여요.");
       return { ok: true, site: data.site as LandingSiteRecord };
     } catch (error) {
-      const message = `${draftSaved ? "초안은 서버에 저장됐습니다. 공개는 확인하지 못했습니다. " : ""}${userErrorMessage(error, "연결을 확인하고 다시 시도해주세요.")}`;
+      const message = `${draftSaved ? "고친 내용은 저장됐지만 공개는 확인하지 못했어요. " : ""}${userErrorMessage(error, "연결을 확인하고 다시 시도해주세요.")}`;
       if (current()) setMessage(message);
       return { ok: false, message };
     } finally {
@@ -399,7 +399,7 @@ export default function PlanHomepagePage() {
 
   const updateDraft = (next: LandingDraft) => {
     if (requestRef.current) { setMessage(aiFilling ? "AI가 내용을 채우는 중이에요. 끝난 뒤에 고쳐 주세요." : "저장·공개하는 중이에요. 끝난 뒤에 고쳐 주세요."); return; }
-    setDraft(next); setAction("idle"); setMessage("저장되지 않은 변경사항이 있습니다.");
+    setDraft(next); setAction("idle"); setMessage("저장하지 않은 수정이 있어요.");
   };
   const updateSite = (next: LandingSiteRecord) => {
     /*
@@ -409,7 +409,7 @@ export default function PlanHomepagePage() {
     const held = siteRef.current;
     if (held && held.id === next.id && next.updatedAt < held.updatedAt) return;
     if (site && landingDraftFingerprint(site.draft) !== landingDraftFingerprint(next.draft)) {
-      setMessage("다른 화면에서 초안이 변경됐습니다. 현재 수정 내용은 유지했어요. 최신 내용을 확인해주세요.");
+      setMessage("다른 화면에서 초안이 바뀌었어요. 지금 수정한 내용은 그대로 두었어요. 최신 내용을 확인해 주세요.");
       return;
     }
     siteRef.current = next; setSite(next);
@@ -417,11 +417,11 @@ export default function PlanHomepagePage() {
   const applySourceSite = (next: LandingSiteRecord, expectedUpdatedAt: string) => {
     if (!mounted.current || requestRef.current || next.projectId !== projectId || siteRef.current?.updatedAt !== expectedUpdatedAt
       || !draft || landingDraftFingerprint(draft) !== landingDraftFingerprint(siteRef.current.draft)) {
-      setMessage("초안 반영 후 현재 화면이 변경됐습니다. 저장되지 않은 수정은 유지했어요. 최신 초안을 다시 확인해주세요.");
+      setMessage("초안을 반영하는 동안 화면이 바뀌었어요. 저장하지 않은 수정은 그대로 두었어요. 최신 초안을 다시 확인해 주세요.");
       return;
     }
     siteRef.current = next; setSite(next); setDraft(next.draft); setAction("saved");
-    setMessage("선택한 사업정보를 초안에 반영했습니다. 공개 중인 홈페이지는 바뀌지 않았습니다.");
+    setMessage("고른 사업 정보를 초안에 반영했어요. 공개 중인 홈페이지는 아직 그대로예요.");
   };
 
   const publicPath = site ? `/launch/${site.publishedSlug ?? site.slug}` : "";
@@ -456,9 +456,11 @@ export default function PlanHomepagePage() {
   const kitEditing = phase === "ready" && !!draft && editable && !!draft.pageData?.brainwave;
   /* AI 채우기 중에도 머리줄 저장·공개를 잠근다 — 예전엔 눌러도 '저장할 수 없는 상태' 안내만 나오거나 아무 반응이 없었다 */
   const busy = action === "saving" || action === "publishing" || aiFilling;
+  const liveUpToDate = isLiveUpToDate(site, draft ?? undefined);
   const headerActions = kitEditing ? <div className={styles.headerActions}>
     <button type="button" disabled={busy} onClick={() => void save()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span>저장</span></button>
-    <button type="button" className={styles.headerPrimary} disabled={busy} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : <Rocket size={15} />}<span>{site?.status === "published" ? "새 버전 공개" : "공개하기"}</span></button>
+    {/* 고친 게 없으면 손님 화면과 같다 — '새 버전 공개'를 늘 파랗게 켜 두면 눌러야 하는 줄 안다 */}
+    <button type="button" className={styles.headerPrimary} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />}<span>{liveUpToDate ? "공개됨" : site?.status === "published" ? "새 버전 공개" : "공개하기"}</span></button>
   </div> : undefined;
   const back = screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
 
