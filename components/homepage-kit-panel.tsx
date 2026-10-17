@@ -19,6 +19,7 @@ import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading, { Spinner } from "../app/plan/PlanLoading";
 import { AddressSearchButton } from "./address-search";
 import { nativePlatform } from "../lib/native-app";
+import { showCopyText } from "./confirm-dialog";
 
 /*
  * 킷 페이지 홈페이지 화면.
@@ -182,7 +183,7 @@ export function HomepageKitPanel({
   const [copied, setCopied] = useState(false);
   const publicUrl = typeof window !== "undefined" && publicPath ? `${window.location.origin}${publicPath}` : publicPath;
   const copyUrl = async () => {
-    try { await navigator.clipboard.writeText(publicUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { window.prompt("주소를 복사해 주세요", publicUrl); }
+    try { await navigator.clipboard.writeText(publicUrl); setCopied(true); window.setTimeout(() => setCopied(false), 1800); } catch { void showCopyText(publicUrl); }
   };
   const shareUrl = async () => {
     if (typeof navigator.share === "function") { try { await navigator.share({ title: draft.businessName, text: `${draft.businessName} 홈페이지`, url: publicUrl }); return; } catch { return; } }

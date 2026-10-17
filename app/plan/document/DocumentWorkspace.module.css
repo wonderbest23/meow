@@ -297,3 +297,9 @@
   .actions[data-next] > button { padding:8px 14px; }
   .actions[data-next] .nextButton span { display:none; }
 }
+/* 폭이 좁은 폰(400px 이하) — 한 줄에 세 단추가 들어가도록 여백·글자를 조금 줄이고 › 는 뺀다(예전엔 '유지보수 하기'가 두 줄로 꺾였다) */
+@media (max-width:400px) and (max-height:760px) {
+  .actions[data-next] { gap:6px; }
+  .actions[data-next] > button, .actions[data-next] .nextButton { padding:8px 10px; font-size:14px; }
+  .actions[data-next] .nextButton svg { display:none; }
+}

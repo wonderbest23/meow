@@ -38,6 +38,7 @@ import {
   Users,
 } from "lucide-react";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { askConfirm } from "../components/confirm-dialog";
 import { BRAINWAVE_CREDIT } from "../lib/landing/brainwave/catalog";
 import { HOME_LOGO, HOME_LOGO_FILTER } from "../lib/landing/home-logo";
 import { hasUnpublishedEdits } from "../lib/landing/save-contract";
@@ -2165,7 +2166,7 @@ function ProjectWorkspace({
 
   const deleteCurrentProject = async () => {
     if (!serverProject || deletingProject) return;
-    if (!window.confirm("이 프로젝트와 생성한 문서를 모두 삭제할까요? 삭제 후에는 되돌릴 수 없습니다.")) return;
+    if (!await askConfirm({ title: "이 프로젝트를 삭제할까요?", message: "생성한 문서도 모두 삭제되고 되돌릴 수 없어요.", confirmLabel: "삭제", danger: true })) return;
     setDeletingProject(true);
     setServiceError("");
     try {

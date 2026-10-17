@@ -19,6 +19,7 @@ import { readEditorRecovery, type EditorRecovery } from "../lib/landing/editor-r
 import LandingImageCrop from "./landing-image-crop";
 import { photoSetContaining, photoSetFor } from "../lib/landing/photo-library";
 import { sectionNameKo } from "../lib/landing/brainwave/section-names";
+import { askConfirm, showCopyText } from "./confirm-dialog";
 
 type KitNode = { id?: string; name?: string; ch?: KitNode[] };
 function findNode(node: KitNode | undefined, id: string): KitNode | null {
@@ -725,7 +726,7 @@ export function BrainwaveEditor({
     } else setSavePopup({ phase: "error", message: result.error });
   };
   const copyLink = async (url: string) => {
-    try { await navigator.clipboard.writeText(url); setCopied(true); } catch { setCopied(false); window.prompt("아래 주소를 복사해 주세요", url); }
+    try { await navigator.clipboard.writeText(url); setCopied(true); } catch { setCopied(false); void showCopyText(url); }
   };
 
   /*
@@ -756,10 +757,10 @@ export function BrainwaveEditor({
     const link = document.createElement("a"); link.href = url; link.download = "homepage-recovery.json"; link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
-  const close = () => {
+  const close = async () => {
     if (persistence.saving) return;
     const final = finishText();
-    if ((btn || menu || uploading || ai.busy || pendingPatchRef.current) && !window.confirm("진행 중인 작업을 마치지 않고 닫을까요?")) return;
+    if ((btn || menu || uploading || ai.busy || pendingPatchRef.current) && !await askConfirm({ message: "진행 중인 작업을 마치지 않고 닫을까요?", confirmLabel: "닫기" })) return;
     const dirty = initial.current !== landingDraftFingerprint({ page, ...final });
     // 고친 것이 남았으면 닫으면서 저장한다 — 저장이 실패하면 닫지 않고 오류를 보여 준다
     if (dirty && !btn && !menu && !uploading && !ai.busy && !pendingPatchRef.current) {
@@ -771,7 +772,7 @@ export function BrainwaveEditor({
       });
       return;
     }
-    if (dirty && !window.confirm("수정 내용을 저장하지 않고 닫을까요?")) return;
+    if (dirty && !await askConfirm({ message: "수정 내용을 저장하지 않고 닫을까요?", confirmLabel: "닫기" })) return;
     invalidateAsync();
     onClose();
   };

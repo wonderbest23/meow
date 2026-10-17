@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { ExternalLink, LoaderCircle, RefreshCw, Search } from "lucide-react";
 import styles from "./MarketEvidencePanel.module.css";
+import { askConfirm } from "../../components/confirm-dialog";
 
 /*
  * 공식 시장자료 자동검색 — 질문 화면의 관련 섹션(문제와 해결·시장 세그먼트·경쟁 분석)에 붙는다.
@@ -61,7 +62,7 @@ export default function MarketEvidencePanel({ planId, disabled }: { planId: stri
   async function run() {
     if (!planId || busy) return;
     if (readiness && !readiness.ok) { setNote({ kind: "warn", text: readiness.message }); return; }
-    if (evidence?.length && !window.confirm(`이미 공식자료 ${evidence.length}건이 있습니다. 다시 검색하면 새로 찾은 자료가 더해집니다(기존 자료는 유지). 계속할까요?`)) return;
+    if (evidence?.length && !await askConfirm({ message: `이미 공식자료 ${evidence.length}건이 있어요. 다시 검색하면 새로 찾은 자료가 더해져요(기존 자료는 유지). 계속할까요?`, confirmLabel: "다시 검색" })) return;
     setBusy(true); setNote(null);
     try {
       const res = await fetch("/api/plan/market-research", {

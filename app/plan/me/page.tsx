@@ -10,6 +10,7 @@ import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
 import PlanLoading from "../PlanLoading";
 import { loadAuthSession } from "../../../lib/client/auth-session";
+import { askConfirm } from "../../../components/confirm-dialog";
 
 /*
  * /plan/me — 마이페이지.
@@ -156,7 +157,7 @@ export default function PlanMePage() {
 
   async function deleteAccount() {
     if (deleteBusy) return;
-    if (!window.confirm("정말 탈퇴하시겠어요?\n작성한 사업과 문서가 모두 삭제되며 되돌릴 수 없습니다.")) return;
+    if (!await askConfirm({ title: "정말 탈퇴하시겠어요?", message: "작성한 사업과 문서가 모두 삭제되며 되돌릴 수 없어요.", confirmLabel: "탈퇴하기", danger: true })) return;
     setDeleteBusy(true);
     setDeleteMessage("");
     try {

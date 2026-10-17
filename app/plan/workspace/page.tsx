@@ -21,6 +21,7 @@ import { useHomepage } from "../use-homepage";
 import { NextServices } from "../../../components/next-services";
 import { WorkspaceDocumentStatus, WorkspaceHomepageCare, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
 import { loadAuthSession } from "../../../lib/client/auth-session";
+import { askConfirm } from "../../../components/confirm-dialog";
 
 type View = WorkspaceView;
 export default function BusinessWorkspace() {
@@ -81,9 +82,9 @@ export default function BusinessWorkspace() {
 
   useEffect(() => { if (pendingNavigation) navigationDialog.current?.showModal(); else navigationDialog.current?.close(); }, [pendingNavigation]);
 
-  function tab(next: View) {
+  async function tab(next: View) {
     if (next !== view && operatingDirty) { setPendingNavigation({ view: next }); return; }
-    if (next !== view && expertDirty && !window.confirm("저장하지 않은 수정안을 버리고 이동할까요?")) return;
+    if (next !== view && expertDirty && !await askConfirm({ message: "저장하지 않은 수정안을 버리고 이동할까요?", confirmLabel: "이동" })) return;
     setView(next);
     const query=new URLSearchParams(window.location.search); query.set("tab",next);
     window.history.replaceState(null,"",`/plan/workspace?${query}`);
@@ -132,7 +133,7 @@ export default function BusinessWorkspace() {
         {/* 유지보수 화면에는 유지보수만 — 사업 요약·내 자료 탭과 '대화 이어가기'는 헷갈린다(소유자 지적 2026-10-07). 대화는 왼쪽 목록의 '대화'로 */}
         <WorkspaceIdentity title={plan.title} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>기존 작업 열기</button>} />
         {view !== "operations" && <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"} />}
-        {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={()=>{ if (!expertDirty || window.confirm("저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?")) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
+        {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ message: "저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?", confirmLabel: "돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
           {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} />}
           {/* 다음 단계 — 홈페이지 다음으로 맡길 일(마케팅) 상담 신청 */}

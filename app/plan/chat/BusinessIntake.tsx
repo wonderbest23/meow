@@ -710,7 +710,15 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
+               * 이 브라우저에서 만든 기록이 아예 없으면(처음 온 사람) '찾지 못했어요'는 맞지 않는 말이라 새로 시작하기를 앞에 둔다.
                */
+              : !lastIntake ? <section className={styles.empty}>
+                <div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>
+                <h1>아직 이어서 할 사업이 없어요</h1>
+                <p>새 사업을 기획해 보세요. 다른 기기에서 만든 사업이 있다면 로그인하면 그대로 보여요.</p>
+                <Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link>
+                <Link href={`/account?next=${encodeURIComponent("/plan/chat")}`} className={styles.textLink}>로그인하고 이어가기</Link>
+              </section>
               : <section className={styles.empty}>
                 <div className={styles.emptyIcon} aria-hidden="true">{lastIntake?.signedIn ? <LogIn size={28} strokeWidth={1.8} /> : <FolderOpen size={28} strokeWidth={1.8} />}</div>
                 <h1>{lastIntake?.signedIn ? "로그인이 풀려서 사업을 불러오지 못했어요" : "이 브라우저에서 저장한 사업을 찾지 못했어요"}</h1>

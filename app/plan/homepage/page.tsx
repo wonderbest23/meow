@@ -29,6 +29,7 @@ import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
 import { Rocket, Save } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
+import { askConfirm } from "../../../components/confirm-dialog";
 
 /*
  * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
@@ -85,6 +86,7 @@ export default function PlanHomepagePage() {
   const [message, setMessage] = useState("");
   const requestRef = useRef<AbortController | null>(null);
   const mounted = useRef(true);
+  const leaving = useRef(false);
   const siteRef = useRef(site); siteRef.current = site;
   const [aiFilling, setAiFilling] = useState(false);
   /*
@@ -166,7 +168,10 @@ export default function PlanHomepagePage() {
       if (!(link instanceof HTMLAnchorElement) || link.target === "_blank" || link.hasAttribute("download")) return;
       const target = new URL(link.href, location.href);
       if (target.origin === location.origin && target.pathname === location.pathname && target.search === location.search) return;
-      if (!window.confirm("저장되지 않은 수정 내용이 있을 수 있습니다. 이 화면을 나갈까요?")) { event.preventDefault(); event.stopPropagation(); }
+      // 일단 멈추고 확인창 — '나가기'를 고르면 같은 링크를 다시 누른다(이때는 묻지 않는다)
+      if (leaving.current) { leaving.current = false; return; }
+      event.preventDefault(); event.stopPropagation();
+      void askConfirm({ message: "저장되지 않은 수정 내용이 있을 수 있어요. 이 화면을 나갈까요?", confirmLabel: "나가기" }).then(ok => { if (ok) { leaving.current = true; link.click(); } });
     };
     window.addEventListener("beforeunload", warn);
     document.addEventListener("click", confirmLink, true);

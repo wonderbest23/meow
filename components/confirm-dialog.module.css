@@ -1,0 +1,26 @@
+/* 확인창 — 가운데 흰 카드 · 아래 단추 두 개(취소 · 확인) */
+.dialog { width: min(360px, calc(100% - 48px)); max-height: 80dvh; margin: auto; padding: 0; border: 0; border-radius: 16px; background: #fff; color: #191f28; box-shadow: 0 16px 60px #191f2833; overflow: auto; }
+.dialog::backdrop { background: #191f2866; }
+.dialog[open] { animation: confirm-in .16s ease-out; }
+
+.body { display: grid; gap: 8px; padding: 26px 24px 20px; text-align: center; }
+.body h2 { margin: 0; font-size: 18px; font-weight: 700; line-height: 1.4; }
+.body p { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.55; white-space: pre-line; word-break: keep-all; }
+.field { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; border: 1px solid #d1d6db; border-radius: 10px; background: #fff; color: #191f28; font: inherit; font-size: 16px; text-align: left; }
+.field:focus { outline: none; border-color: #3182f6; box-shadow: 0 0 0 3px #3182f622; }
+.field[readonly] { background: #f9fafb; color: #4e5968; font-size: 14.5px; }
+.body h2 + p { color: #6b7684; font-size: 14.5px; }
+
+.actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px 16px; }
+.actions[data-single] { grid-template-columns: 1fr; }
+.actions button { min-height: 50px; padding: 0 12px; border: 0; border-radius: 12px; font: inherit; font-size: 16px; font-weight: 600; cursor: pointer; }
+.cancel { background: #f2f4f6; color: #4e5968; }
+.cancel:hover { background: #e5e8eb; }
+.confirm { background: #3182f6; color: #fff; }
+.confirm:hover { background: #1b64da; }
+.confirm[data-danger] { background: #f04452; }
+.confirm[data-danger]:hover { background: #d22030; }
+.actions button:focus-visible { outline: 2px solid #3182f6; outline-offset: 2px; }
+
+@keyframes confirm-in { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .dialog[open] { animation: none; } }

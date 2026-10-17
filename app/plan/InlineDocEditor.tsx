@@ -9,6 +9,7 @@ import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table
 import { ChartFigure } from "./chart-node";
 import styles from "./InlineDocEditor.module.css";
 import { Spinner } from "./PlanLoading";
+import { askText } from "../../components/confirm-dialog";
 
 export interface InlineDocEditorProps {
   /** 초기 본문 (서버에서 렌더한 HTML) */
@@ -136,9 +137,9 @@ export default function InlineDocEditor({ html, onChange, onDraft, status = "idl
         <button type="button" className={styles.tbBtn}
           onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()} title="표 넣기">표</button>
         <button type="button" className={btn(editor.isActive("link"))}
-          onClick={() => {
+          onClick={async () => {
             const prev = editor.getAttributes("link").href as string | undefined;
-            const url = window.prompt("링크 주소", prev ?? "https://");
+            const url = await askText({ title: "링크 넣기", message: "연결할 주소를 넣어 주세요. 비우면 링크를 없애요.", label: "링크 주소", value: prev ?? "https://", type: "url", confirmLabel: "넣기" });
             if (url === null) return;
             if (!url.trim()) editor.chain().focus().unsetLink().run();
             else editor.chain().focus().setLink({ href: url.trim() }).run();
