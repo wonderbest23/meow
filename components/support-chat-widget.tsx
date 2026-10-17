@@ -78,7 +78,7 @@ export function SupportChatWidget() {
   const [onPublicSite, setOnPublicSite] = useState(false);
   useEffect(() => { setOnPublicSite(Boolean(document.querySelector(".public-landing"))); }, [pathname]);
   /* 결제 화면은 동의 목록의 › 를 덮었고 아래 결제 줄과 겹쳤다 · 고객센터 화면에서는 같은 기능이 두 번이다(메뉴의 '고객센터'로 갈 수 있다) */
-  const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal" || pathname === "/plan/pay" || pathname === "/account/support" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
+  const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal" || pathname === "/plan/pay" || pathname === "/account" || pathname === "/account/support" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<"consult" | "support">("support");
   /* 메신저형 탭 — 버튼으로 열면 홈부터, 다른 화면이 질문을 들고 열면 바로 대화 */
@@ -630,7 +630,7 @@ export function SupportChatWidget() {
   const hiddenMessageCount = chat.messages.length;
 
   return (
-    <div ref={widgetRef} className={`support-chat-widget ${open ? "open" : ""}`}>
+    <div ref={widgetRef} className={`support-chat-widget ${open ? "open" : ""}`} data-phone-hide={pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/inquiries") ? "" : undefined}>
       {open && (
         <section className={`support-chat-panel mode-${mode} tab-${tab}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
           {/* 홈·설정 화면에도 닫기 — 대화 화면은 머리줄에 이미 있다 */}
@@ -641,7 +641,7 @@ export function SupportChatWidget() {
           <header>
             <span><img src="/support-agent-avatar-2026.png" alt="" width="48" height="48" /></span>
             <div>
-              <strong>{mode === "consult" ? "무료 창업 상담" : "서비스 이용 문의"}</strong>
+              <strong>{mode === "consult" ? "AI 창업 상담" : "서비스 이용 문의"}</strong>
               <small><i /> {mode === "consult" ? "뭘 할지 몰라도 괜찮아요" : "결제·환불·이용 방법을 물어보세요"}</small>
             </div>
             {mode === "consult" && consultTurns.length > 0 && (

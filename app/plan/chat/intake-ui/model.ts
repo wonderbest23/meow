@@ -665,11 +665,12 @@ function composedSelection(question: Pick<IntakeQuestion, "id" | "options">, pie
       const period = inGroup(CHIP_GROUPS.period).find(option => option.label !== "기간 미정" && piece.startsWith(option.label));
       const rest = period ? piece.slice(period.label.length).trim() : piece;
       for (const metric of inGroup(CHIP_GROUPS.metric)) {
-        const pattern = new RegExp(`^${escapeRegExp(metric.label).replace("N원", "(.+?원)").replace("N건", "(\\d[\\d,]*)건")}$`);
+        const pattern = new RegExp(`^${escapeRegExp(metric.label).replace("N원", "(.+?원)").replace("N건", "(\\d[\\d,]*|N)건")}$`);
         const match = rest.match(pattern);
         if (!match) continue;
         const amount = metricNeedsAmount(metric.label) ? inGroup(CHIP_GROUPS.amount).find(option => option.label === match[1]) : undefined;
-        const count = metricNeedsCount(metric.label) && match[1] ? [`${COUNT_PREFIX}${match[1].replace(/,/g, "")}`] : [];
+        /* 수를 아직 안 고른 중간 글('월 주문·계약 N건')도 보기로 알아본다 — 예전엔 덧붙인 글로 잘못 읽어 입력창에 겹쳐 붙고 보내기가 막혔다 */
+        const count = metricNeedsCount(metric.label) && match[1] && match[1] !== "N" ? [`${COUNT_PREFIX}${match[1].replace(/,/g, "")}`] : [];
         return [...(period ? [period.value] : []), metric.value, ...(amount ? [amount.value] : []), ...count];
       }
     }

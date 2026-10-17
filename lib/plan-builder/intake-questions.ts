@@ -41,7 +41,7 @@ const customer = fieldQuestion("customer", "주로 누가 이용하나요? (최�
 const problem = fieldQuestion("problem", "그 고객의 어떤 불편을 해결하나요? (최대 2개)");
 const offer = fieldQuestion("offer", "대표 상품이나 서비스는 무엇인가요?", { hint: "유형을 고른 뒤 상품명을 덧붙일 수 있어요." });
 const channel = fieldQuestion("channel", "처음 고객을 만날 곳은 어디인가요? (최대 3개)");
-const price = fieldQuestion("price", pricePrompt(PRICE_DEFAULT_PERIOD), { kind: "number", unit: "원", period: PRICE_DEFAULT_PERIOD, hint: "범위를 고른 뒤 하한·상한·정확한 금액 중 아는 값만 저장해요." });
+const price = fieldQuestion("price", pricePrompt(PRICE_DEFAULT_PERIOD), { kind: "number", unit: "원", period: PRICE_DEFAULT_PERIOD, hint: "범위를 고른 뒤 적게·많게 잡은 금액이나 정확한 금액 중 아는 것을 골라 주세요." });
 type RevenueModel = BusinessStructure["revenue"];
 const STRUCTURE_UNIT: Record<RevenueModel, string> = { per_unit: "판매 1건", per_hour: "1시간", subscription: "구독자 1명(월)", rental: "대여·이용 1건", commission: "거래 1건", project: "프로젝트 1건", advertising: "활성 이용자 1명(월)", freemium: "유료 이용자 1명(월)", lead_fee: "전달 문의 1건", listing_fee: "입점 업체 1곳(월)", mixed: "판매 1건" };
 const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({

@@ -5,6 +5,7 @@ import { createLegalDocument, evaluatePlatformLaunchReadiness, type LegalDocumen
 import { paymentsEnabled } from "../lib/payments/config";
 import { manualTransferPaymentConfigured } from "../lib/payments/manual-transfer";
 import { getPlatformLegalSettings } from "../lib/platform-legal/repository";
+import { LegalTabScroll } from "./legal-tab-scroll";
 
 const labels: Record<LegalDocumentType, string> = {
   business: "사업자·통신판매 정보",
@@ -40,6 +41,7 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
         <aside>
           <strong>이용 안내</strong>
           <nav>{(Object.keys(labels) as LegalDocumentType[]).map((item) => <Link className={item === type ? "active" : ""} key={item} href={paths[item]}>{labels[item]}</Link>)}</nav>
+          <LegalTabScroll />
         </aside>
         <article className="platform-legal-document">
           <header>

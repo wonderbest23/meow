@@ -79,7 +79,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
         <li><MessagesSquare aria-hidden="true" /><span><b>서비스 문의</b> 결제·환불·이용 방법은 남겨 주시면 담당자가 순서대로 답변해요</span></li>
       </ul>
       <button type="button" className={styles.primary} onClick={onInquiry}>문의하기<Send aria-hidden="true" /></button>
-      <button type="button" className={styles.secondary} onClick={onConsult}>무료 창업 상담 시작하기</button>
+      <button type="button" className={styles.secondary} onClick={onConsult}>AI 창업 상담 시작하기</button>
     </section>
 
     {session?.authenticated && plans !== undefined && <section className={styles.card} aria-label="내 사업 진행">

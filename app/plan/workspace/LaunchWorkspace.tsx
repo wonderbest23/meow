@@ -45,7 +45,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
     const saved = loadState().plans.find(p => p.id === plan.id); if (saved) onSaved(saved);
     const synced = await pushToServer();
     setSyncFailed(!synced);
-    setMessage(synced ? "저장했어요." : "기기에 저장했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해주세요.");
+    setMessage(synced ? "저장했어요." : "기기에 저장했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해 주세요.");
     setBusy(false); return synced;
   }
   async function saveStep(status: "pending" | "done" | "skipped", advance: boolean, preserveReview = false) {
@@ -60,7 +60,8 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   }
   async function selectStep(id: string) {
     if ((note !== null || material !== null) && current && !await saveStep("pending", false)) return;
-    setSelected(id); setNote(null); setMaterial(null); top();
+    /* '저장했어요'가 다른 단계로 옮겨도 남아 있었다 */
+    setSelected(id); setNote(null); setMaterial(null); setMessage(""); top();
   }
   async function switchToImprovement() {
     if (busy) return;

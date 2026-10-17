@@ -4,7 +4,7 @@ import { nicepayEnvironment } from "./nicepay-environment";
 import { getPlanOrder } from "./plan-orders";
 
 export type ReconciliationResult = { status: "ok" | "pending" | "fail"; reason?: string };
-const pending = (): ReconciliationResult => ({ status: "pending", reason: "결제 결과를 확인하고 있습니다. 다시 결제하지 말고 이 주문의 결과를 확인해주세요." });
+const pending = (): ReconciliationResult => ({ status: "pending", reason: "카드사 승인 결과가 아직 오지 않았어요. 다시 결제하지 말고 잠시 뒤 아래 단추로 다시 확인해 주세요." });
 const failed = (): ReconciliationResult => ({ status: "fail", reason: "완료되지 않은 결제입니다. 주문 내역을 확인해주세요." });
 
 function verified(result: NicepayApproveResult | null, orderId: string, tid: string, amount: number) {

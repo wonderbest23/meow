@@ -172,7 +172,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     draftRef.current = next; setDraft(next);
     conflictRef.current = !!next.pending?.conflict;
     setStatus(next.pending?.conflict ? "conflict" : next.pending ? "failed" : hasLocalInput(next) ? "draft" : "saved");
-    if (next.pending) setError(next.pending.conflict ? "저장된 내용과 충돌했습니다. 입력은 이 기기에 남아 있어요." : "이전 요청의 저장 결과를 확인하지 못했어요. 같은 요청으로 다시 확인해 주세요.");
+    if (next.pending) setError(next.pending.conflict ? "저장된 내용과 충돌했습니다. 입력은 이 기기에 남아 있어요." : "방금 보낸 내용이 저장됐는지 확인하지 못했어요. '다시 시도'를 눌러 주세요.");
   }, []);
 
   const freezeForOwnerChange = useCallback(() => {
@@ -298,7 +298,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       if (conflictRef.current) { writeDraft({ ...draftRef.current, pending: null }); conflictRef.current = false; }
       if (!newEntry && data.plan) { installPlan(data.plan, true); updateUrl(data.plan.planId); }
       setStatus(draftRef.current.pending ? "failed" : hasLocalInput(draftRef.current) ? "draft" : "saved");
-      setError(draftRef.current.pending ? "확인하지 못한 저장 요청이 있어요. 같은 요청으로 재시도해 주세요." : ""); setConnectionError(false); setLoadFailed(false); setLoaded(true);
+      setError(draftRef.current.pending ? "방금 보낸 내용이 저장됐는지 확인하지 못했어요. '다시 시도'를 눌러 주세요." : ""); setConnectionError(false); setLoadFailed(false); setLoaded(true);
     } catch (caught) { if (epoch === routeEpoch.current) setError(!controller.signal.aborted && friendlyError(caught) || "사업 정보를 불러오지 못했어요. 입력은 그대로 남아 있어요."); }
     finally { window.clearTimeout(timeout); controllers.current.delete(controller); if (epoch === routeEpoch.current) { busyRef.current = false; setBusy(false); } }
   };
@@ -684,7 +684,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const showComposer = !loginGate && !showReview && !locked && (editTurn || !showCompletion || !nextStep || !!draft.pending || nextStep === "design" && (!!composerText.trim() || !!draft.memo.trim() || !!draft.help.trim()));
   // Problems read as a coach message at the end of the thread in coach chat, as a banner otherwise.
   const notices = (error || connectionError || storageError) && <div className={styles.notices} data-coach-notices={coach || undefined}>
-      {error && <div className={styles.notice} role="alert"><p>{error}</p><div className={styles.noticeActions}>{status === "conflict" || loadFailed ? <button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />최신 내용 불러오기</button> : draft.pending && <button type="button" disabled={busy} onClick={() => void send()}><RefreshCw size={16} aria-hidden="true" />같은 요청 다시 확인</button>}{login && <Link href={loginHref}>로그인하고 이어가기<ArrowRight size={16} aria-hidden="true" /></Link>}</div></div>}
+      {error && <div className={styles.notice} role="alert"><p>{error}</p><div className={styles.noticeActions}>{status === "conflict" || loadFailed ? <button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />최신 내용 불러오기</button> : draft.pending && <button type="button" disabled={busy} onClick={() => void send()}><RefreshCw size={16} aria-hidden="true" />다시 시도</button>}{login && <Link href={loginHref}>로그인하고 이어가기<ArrowRight size={16} aria-hidden="true" /></Link>}</div></div>}
       {connectionError && <div className={styles.notice} role="status"><p>정리 상태를 갱신하지 못했어요. 입력은 계속할 수 있습니다.</p><button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />상태 새로고침</button></div>}
       {storageError && <p className={styles.notice} role="status">이 기기에 임시 저장하지 못했어요. 서버에 저장하기 전에는 이 화면을 닫지 말아 주세요.</p>}
     </div>;

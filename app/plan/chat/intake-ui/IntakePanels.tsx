@@ -272,7 +272,7 @@ function HybridChips({ question, draft, disabled, groups, revealed, extraPicked 
     const picked = group.options.filter(option => draft.selected.includes(option.value)).length + (filter ? 0 : extraPicked);
     const title = groupTitle(group.name);
     return <div key={group.name ?? index} className={styles.chipStep} role="group" aria-label={title || question.label} data-step={groups.length > 1 ? index + 1 : undefined}>
-      {(title || stepLimit > 1) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{coach ? `${stepLimit}개를 고르면 바로 넘어가요 · ${picked}/${stepLimit}` : `최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}</p>}
+      {(title || stepLimit > 1) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}</p>}
       <div className={styles.chipRow}>{group.options.map(option => {
         const selected = draft.selected.includes(option.value);
         return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{option.label}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
@@ -352,6 +352,8 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
   const openKeypad = (start: number | null) => {
     if (start !== null && start > 0) { const scale = start % 10000 === 0 ? 10000 : 1; setUnitScale(scale); setAmountText(String(start / scale)); } else setAmountText("");
     setKeypad(true);
+    /* 범위 하한을 미리 넣어 두면 그 뒤에 이어 쳐서 30006000 처럼 되기 쉬웠다 — 열자마자 전체 선택해 바로 덮어쓰게 */
+    window.requestAnimationFrame(() => { const input = document.getElementById(`intake-exact-${question.id}`) as HTMLInputElement | null; input?.focus(); input?.select(); });
   };
   const pick = (index: number) => {
     const item = ranges[index];
@@ -370,8 +372,8 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
     {range && <div className={styles.chipStep} role="group" aria-label={`${range.label} 안에서 고르기`}>
       <p className={styles.stepLegend}>{range.label}<button type="button" className={styles.textButton} disabled={disabled} onClick={() => { setRangeIndex(null); setKeypad(false); }}>범위 다시 고르기</button></p>
       <div className={styles.chipRow}>
-        {range.min !== null && range.min > 0 && <button type="button" className={styles.chip} disabled={disabled} onClick={() => onCommit(wonAnswer(range.min!))}>하한 {wonLabel(range.min)}</button>}
-        {range.max !== null && <button type="button" className={styles.chip} disabled={disabled} onClick={() => onCommit(wonAnswer(range.max!))}>상한 {wonLabel(range.max)}</button>}
+        {range.min !== null && range.min > 0 && <button type="button" className={styles.chip} disabled={disabled} onClick={() => onCommit(wonAnswer(range.min!))}>적게 잡아 {wonLabel(range.min)}</button>}
+        {range.max !== null && <button type="button" className={styles.chip} disabled={disabled} onClick={() => onCommit(wonAnswer(range.max!))}>많게 잡아 {wonLabel(range.max)}</button>}
         {logChips.slice(1).map(value => <button key={value} type="button" className={styles.chip} disabled={disabled} onClick={() => onCommit(wonAnswer(value))}>{wonLabel(value)}</button>)}
         {!keypad && <button type="button" className={styles.chip} disabled={disabled} onClick={() => openKeypad(range.min)}>{exactLabel}</button>}
       </div>
@@ -802,7 +804,7 @@ export function DesignDirection({ snapshot }: { snapshot: IntakeSnapshot }) {
       {design.assumptions.length > 0 && <><h4>아직 확인할 내용</h4><ul>{design.assumptions.map((item, index) => <li key={index}>{item.statement}<p>{item.howToCheck}</p></li>)}</ul></>}
     </details>
     {/* AI 결과 표시(인공지능기본법) — 제목 괄호 대신 맨 아래 한 줄로(대표 요청 2026-10-15: 'AI 제안, 검증 전' 꼬리표가 AI 같고 어색하다) */}
-    <p className={styles.aiNote}>AI가 만든 초안이에요. 내 상황과 다르면 대화로 고쳐 주세요.</p>
+    <p className={styles.aiNote}>AI가 만든 초안이에요. 내 상황과 다르면 위의 내 답(연필)을 눌러 고쳐 주세요.</p>
   </section>;
 }
 

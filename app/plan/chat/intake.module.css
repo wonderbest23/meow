@@ -759,3 +759,6 @@
 
 /* 확인 안의 "질문으로 돌아가기" — 단추 모양이 아니라 글자 링크로 */
 .intentActions > button.textLink { min-height: 40px; padding: 0 4px; border: 0 !important; background: none !important; box-shadow: none !important; color: var(--intake-muted); font-weight: 500; }
+
+/* 고른 이름 카드 — 다시 누를 수 없게 막아 둔 탓에 공통 규칙(꺼진 단추 흐리게)이 걸려 고장 난 단추처럼 보였다 */
+.identityChoices button[aria-pressed="true"]:disabled { opacity: 1 !important; cursor: default !important; }

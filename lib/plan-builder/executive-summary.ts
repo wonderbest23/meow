@@ -102,10 +102,10 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const unresolved = [customer, offer, price].filter(item => item.basis === "missing").map(item => item.label);
   const attention = coach ? checkCoachFeasibility(coach.fields).filter(check => check.status === "attention").map(check => check.detail) : context.conflicts.map(conflict => conflict.detail);
   const note = [
-    "사용자 입력은 외부 검증된 실적이 아닙니다. 제안과 계획 계산은 실제 실적과 구분합니다.",
-    firstMonth ? "계획 손익은 세금·운전자금 차감 후 현금잔액이 아닙니다." : "미입력 비용은 0원이 아닙니다.",
-    baseline && period && periodDays(baseline) !== periodDays(period) ? "비교 기간 길이가 달라 합계 차이를 성과 개선으로 판단할 수 없습니다." : "",
-    "내용을 줄여 표시한 항목은 상세 계획서와 원본 사업 정보를 확인하세요.",
+    "직접 입력한 숫자는 아직 실제 실적으로 확인된 값이 아니에요. 계획 계산과 실제 실적은 나눠서 봐 주세요.",
+    firstMonth ? "계획 손익은 세금·운전자금을 빼기 전 금액이에요." : "입력하지 않은 비용은 0원으로 계산하지 않았어요.",
+    baseline && period && periodDays(baseline) !== periodDays(period) ? "비교 기간 길이가 달라 합계 차이만으로 나아졌다고 보기 어려워요." : "",
+    "줄여서 보여 준 항목은 상세 계획서에서 전체 내용을 확인해 주세요.",
   ].filter(Boolean).join(" ");
   const blocks = [
       { id: "business", title: "사업과 고객", lines: [businessLine, customer] },

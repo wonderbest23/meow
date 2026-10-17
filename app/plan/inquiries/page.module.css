@@ -3,9 +3,9 @@
 .list { min-height: 0; overflow-y: auto; border-right: 1px solid #e6e8ee; background: #fbfbfd; }
 .listHead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 14px 14px 10px; background: #fbfbfd; border-bottom: 1px solid #eef0f4; }
 .filters { display: flex; gap: 6px; }
-.filters button { height: 32px; padding: 0 12px; border: 1px solid #dfe3ea; border-radius: 16px; background: #fff; color: #4b5161; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
+.filters button { height: 38px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 16px; background: #fff; color: #4b5161; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .filters button[aria-selected="true"] { border-color: #161c2d; background: #161c2d; color: #fff; }
-.refresh { display: grid; place-items: center; width: 32px; height: 32px; border: 1px solid #dfe3ea; border-radius: 16px; background: #fff; color: #4b5161; cursor: pointer; }
+.refresh { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid #dfe3ea; border-radius: 16px; background: #fff; color: #4b5161; cursor: pointer; }
 .notice { margin: 10px 14px; padding: 10px 12px; border-radius: 10px; background: #fff4f4; color: #ad343d; font-size: 13px; }
 .rows { margin: 0; padding: 6px; list-style: none; }
 .rows button { width: 100%; display: flex; align-items: flex-start; gap: 10px; padding: 12px 10px; border: 0; border-radius: 12px; background: transparent; color: #161c2d; text-align: left; font: inherit; cursor: pointer; }

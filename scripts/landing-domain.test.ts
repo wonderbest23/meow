@@ -44,6 +44,8 @@ const publishable = createLandingDraft({
 assert.equal(landingPublicationIssues({ ...publishable, privacyContact: "privacy@sample.kr" }).length, 0);
 assert.equal(inferLandingTemplate("온라인 교육"), "class");
 assert.equal(inferLandingTemplate("동네 미용실"), "local");
+assert.equal(inferLandingTemplate("동네 빵집 · 식빵 판매"), "local", "빵집은 판매가 섞여도 매장 디자인");
+assert.equal(inferLandingTemplate("반찬 정기 배달"), "local");
 assert.equal(inferLandingTemplate("화장품 제조 판매"), "product");
 assert.equal(inferLandingTemplate("인공지능 구독 플랫폼"), "tech");
 assert.equal(inferLandingTemplate("작가 포트폴리오"), "creator");

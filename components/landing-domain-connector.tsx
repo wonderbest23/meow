@@ -180,12 +180,14 @@ export function LandingDomainConnector({
   if (needsPurchase && !connectedHostname) {
     return (
       <section className="landing-domain-connector">
-        <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>www.우리가게.com 처럼 내 주소로 홈페이지를 엽니다. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드립니다.</p></span></div>
+        <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>www.우리가게.com 처럼 내 주소로 홈페이지를 열어요.</p></span></div>
         {/* 도메인 대신 사 드리기는 오픈 범위 밖(2026-10-08) — 이미 가진 도메인 연결만 받는다. 갱신은 아래 '1년 갱신' 링크로 */}
         <div className="domain-own-option">
           <strong>이미 도메인이 있어요</strong>
-          <p>가비아 등에서 산 주소를 이 홈페이지에 연결만 합니다.</p>
+          {/* 무엇을 해 주는지(포함 내용)가 숨겨져 59,000원 단추만 보였다 · 도메인이 없는 사람의 길도 없었다 */}
+          <p>가비아 등에서 산 주소를 이 홈페이지에 연결해 드려요. 1년 동안 호스팅·보안 인증서(https)·연결 관리를 맡아요.</p>
           <a className="domain-buy-cta secondary" href={payHref}>{(entitlement?.price ?? 59000).toLocaleString("ko-KR")}원 · 1년 — 결제하고 연결하기</a>
+          <small className="domain-own-hint">아직 도메인이 없다면 가비아 같은 도메인 판매처에서 먼저 사 주세요. 산 뒤에 여기서 연결하면 돼요.</small>
         </div>
       </section>
     );

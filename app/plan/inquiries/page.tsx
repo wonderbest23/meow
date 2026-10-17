@@ -83,7 +83,8 @@ export default function InquiriesPage() {
         </ul>}
       </aside>
       <section className={styles.detail} aria-label="문의 내용">
-        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} /> : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>왼쪽에서 문의를 골라 주세요</p></div>}
+        {/* 문의가 하나도 없으면 '왼쪽에서 골라 주세요'는 맞지 않는 말이다 */}
+        {selected ? <InquiryDetail key={selected.lead.id} item={selected} notifications={notifications} /> : <div className={styles.placeholder}><Inbox size={30} aria-hidden /><p>{items && items.length === 0 ? "들어온 문의가 여기에 보여요" : "왼쪽에서 문의를 골라 주세요"}</p></div>}
       </section>
     </div>}
   </BusinessAppChrome></main>;

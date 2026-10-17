@@ -226,6 +226,8 @@ export function inferLandingTemplate(sector: string): LandingTemplateId {
   if (/(콘텐츠|디자인|작가|사진|영상|크리에이터|마케팅)/.test(sector)) return "creator";
   if (/(뷰티|웰니스|건강|헬스|피부|테라피|마사지)/.test(sector)) return "wellness";
   if (/(브랜드|스튜디오|에이전시|제작)/.test(sector)) return "editorial";
+  /* 동네 먹거리·가게는 '판매'·'제조'가 섞여 있어도 매장 디자인으로 — 빵집이 '상담 서비스' 디자인을 받아 메뉴·영업시간·오시는 길이 없었다(2026-10-17 점검) */
+  if (/(빵집|제과|베이커리|디저트|케이크|떡집|반찬|도시락|정육|꽃집|플라워|분식|한식|카페|커피|식당|음식점|주점|밀키트)/.test(sector)) return "local";
   if (/(쇼핑|상품|유통|커머스|제조|판매)/.test(sector)) return "product";
   if (/(교육|수업|체험|클래스|코칭)/.test(sector)) return "class";
   if (/(매장|공방|외식|카페|지역|방문|미용|네일|식당|음식점|베이커리|숙박|스튜디오|세탁|수리|운동|피트니스|필라테스|요가)/.test(sector)) return "local";

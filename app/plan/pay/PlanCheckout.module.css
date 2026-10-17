@@ -231,7 +231,7 @@
 
 /* ── 아래 고정 결제 줄(네이버페이처럼) — 동의 줄 수·가격이 적힌 결제 단추가 화면 아래에 늘 보인다 ── */
 .page:has(.payBar) { padding-bottom: calc(120px + env(safe-area-inset-bottom)); }
-.payBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--app-line, #e5e8eb); background: rgba(255, 255, 255, .97); box-shadow: 0 -6px 20px rgba(20, 32, 64, .06); }
+.payBar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; padding: 12px 16px calc(12px + env(safe-area-inset-bottom)); border-top: 1px solid var(--app-line, #e5e8eb); background: #fff; box-shadow: 0 -6px 20px rgba(20, 32, 64, .06); }
 /* PC 에서 왼쪽 메뉴(208px)가 보이면 본문 쪽에만 */
 @media (min-width: 901px) { :global(body:has([data-app-rail]):not(:has([data-rail-hidden]))) .payBar { left: 208px; } }
 .payBarInner { display: flex; align-items: center; justify-content: space-between; gap: 16px; max-width: 920px; margin: 0 auto; }

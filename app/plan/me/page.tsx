@@ -363,7 +363,7 @@ export default function PlanMePage() {
         ) : (
           <div className={styles.deleteForm}>
             <p>
-              되돌릴 수 없습니다. 계속하려면 로그인한 이메일 <b>{account.email}</b>을(를) 입력해 주세요.
+              되돌릴 수 없어요. 계속하려면 로그인한 이메일 <b>{account.email}</b> 을 그대로 적어 주세요.
             </p>
             <input
               aria-label="탈퇴 확인용 이메일"

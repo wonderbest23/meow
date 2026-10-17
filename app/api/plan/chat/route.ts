@@ -77,8 +77,8 @@ type PrepareGeneration = z.infer<typeof prepareGenerationSchema>;
 type PrepareWorkflow = NonNullable<Awaited<ReturnType<typeof binding>>>;
 const nextPlanTimestamp = (at: string) => new Date(Math.max(Date.now(), (Date.parse(at) || 0) + 1)).toISOString();
 const readGeneration = (plan: ServerPlan) => plan.answers.__coach_generation ? prepareGenerationSchema.parse(plan.answers.__coach_generation) : null;
-const prepareConflict = () => json({ code: "revision_conflict", message: "사업정보나 제작 요청이 바뀌었어요. 최신 내용을 확인해주세요." }, 409);
-const prepareUnavailable = () => json({ code: "prepare_unavailable", message: "제작 접수 상태를 확인하지 못했어요. 같은 요청으로 다시 확인해주세요." }, 503);
+const prepareConflict = () => json({ code: "revision_conflict", message: "사업 정보가 바뀌었어요. 최신 내용을 불러와 확인해 주세요." }, 409);
+const prepareUnavailable = () => json({ code: "prepare_unavailable", message: "사업계획서 작성을 시작하지 못했어요. 잠시 뒤 '다시 시도'를 눌러 주세요." }, 503);
 
 async function generationStatus(workflow: PrepareWorkflow, runId: string) {
   try { return (await (await workflow.get(runId)).status()).status; } catch { return null; }

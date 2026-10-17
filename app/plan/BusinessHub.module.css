@@ -92,6 +92,12 @@
 .workspaceTitle .status { border: 0; background: #f2f4f6; color: #4e5968; }
 .workspaceTitleRow { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
 .workspaceTitleRow .status { margin-bottom: 0 !important; }
-.titleAction { border: 0; background: transparent; color: #3182f6; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 6px 0; }
+.titleAction { border: 0; background: transparent; color: #3182f6; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; text-decoration: none; padding: 10px 0; }
 .titleAction:hover { text-decoration: underline; }
 .tabLink { margin: -8px 0 8px !important; }
+
+/* 휴대폰 — 네 탭이 한 줄에 다 보이게(375 에서 '유지보수'가 반쯤 잘리고 320 에서는 화면 밖이었다) */
+@media (max-width: 480px) {
+  .tabs button { flex: 1 1 0; min-width: 0; padding: 0 4px; font-size: 14px; white-space: nowrap; }
+}
+@media (max-width: 340px) { .tabs button { font-size: 13px; } }
