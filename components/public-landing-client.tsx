@@ -83,10 +83,21 @@ export function PublicLandingClient({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!privacyAgreed || submitting) return;
+    if (submitting) return;
+    const data = new FormData(event.currentTarget);
+    /*
+     * 보내기 전에 화면에서 먼저 확인한다 — 예전엔 동의 전에는 단추만 흐리게 꺼져 이유를 몰랐고,
+     * 빈 이름은 브라우저 기본 말풍선, 연락처 빠짐은 '이름과 연락처…' 같은 두루뭉술한 서버 안내뿐이었다.
+     */
+    const text = (key: string) => String(data.get(key) ?? "").trim();
+    const missing = !text("name") ? "이름을 적어 주세요."
+      : (config.collectEmail || config.collectPhone) && !text("email") && !text("phone") ? (config.collectEmail && config.collectPhone ? "이메일이나 전화번호 중 하나는 꼭 적어 주세요." : config.collectPhone ? "전화번호를 적어 주세요." : "이메일을 적어 주세요.")
+      : text("email") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text("email")) ? "이메일 주소를 다시 확인해 주세요."
+      : !privacyAgreed ? "개인정보 수집·이용에 동의해 주세요."
+      : "";
+    if (missing) { setError(missing); return; }
     setSubmitting(true);
     setError("");
-    const data = new FormData(event.currentTarget);
     try {
       const response = await fetch(`/api/public/landing/${slug}/lead`, {
         method: "POST",
@@ -170,7 +181,7 @@ export function PublicLandingClient({
 
       <section id="landing-contact" className={`public-lead-section ${config.leadCaptureEnabled ? "" : "brochure"}`} ref={formRef}>
         {/* 제목 위 작은 '신청하기' 꼬리표는 바로 아래 큰 제목('문의하기' 등)과 같은 말이라 뺐다 */}
-        <div><h2>{config.ctaLabel}</h2>{config.leadCaptureEnabled && <p>남겨주신 정보를 확인한 뒤 다음 절차를 안내합니다.</p>}</div>
+        <div><h2>{config.ctaLabel}</h2>{config.leadCaptureEnabled && <p>남겨 주시면 확인하고 연락드릴게요.</p>}</div>
         {!config.leadCaptureEnabled ? (
           /* 신청폼이 꺼져 있을 때 — 방문자에게는 사장님용 안내('신청폼을 켤 수 있습니다') 대신 연락할 방법을 보여 준다 */
           (() => {
@@ -178,17 +189,17 @@ export function PublicLandingClient({
             const email = config.businessEmail.trim();
             return <div className="public-lead-ready"><ShieldCheck /><h3>{phone || email ? "아래 연락처로 문의해 주세요" : "온라인 신청은 준비 중이에요"}</h3>
               {phone || email ? <p>{phone && <a href={`tel:${phone}`}>{config.businessPhone || config.businessContact || phone}</a>}{phone && email ? " · " : ""}{email && <a href={`mailto:${email}`}>{email}</a>}</p>
-                : <p>지금은 사업 소개만 공개되어 있어요. 곧 신청을 받을 수 있게 준비하고 있습니다.</p>}</div>;
+                : <p>지금은 사업 소개만 공개되어 있어요. 곧 신청을 받을 수 있게 준비하고 있어요.</p>}</div>;
           })()
         ) : submitted ? (
           /* 문의·예약 모두 받는 양식이라 '신청' 대신 '문의', 가게가 손님에게 하는 말투로 */
           <div className="public-lead-success"><Check /><h3>문의가 접수됐어요</h3><p>남겨 주신 연락처로 곧 연락드릴게요.</p></div>
         ) : (
-          <form onSubmit={submit}>
+          <form onSubmit={submit} noValidate>
             <label><span>이름</span><input name="name" required maxLength={100} placeholder="성함 또는 닉네임" /></label>
-            {config.collectEmail && <label><span>이메일</span><input name="email" type="email" required={!config.collectPhone} maxLength={200} placeholder="name@company.kr" /></label>}
+            {config.collectEmail && <label><span>이메일</span><input name="email" type="email" required={!config.collectPhone} maxLength={200} placeholder="example@email.com" /></label>}
             {config.collectPhone && <label><span>전화번호</span><input name="phone" type="tel" required={!config.collectEmail} maxLength={30} placeholder="010-0000-0000" /></label>}
-            {config.collectMessage && <label><span>문의 내용</span><textarea name="message" maxLength={2000} placeholder="현재 상황과 궁금한 점을 알려주세요." /></label>}
+            {config.collectMessage && <label><span>문의 내용</span><textarea name="message" maxLength={2000} placeholder="궁금한 점이나 원하는 내용을 적어 주세요." /></label>}
             <input name="website" className="landing-honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" />
             {/* 동의 — 공용 동의 목록(동그란 체크·(필수)/(선택)). 법으로 알려야 하는 수집 항목·목적·보유기간은 줄 아래에 그대로 */}
             <ConsentList className="public-consent-list" allLabel="전체 동의" items={[
@@ -196,8 +207,8 @@ export function PublicLandingClient({
               ...(config.marketingOptInEnabled ? [{ key: "marketing", label: "홍보 정보 수신 동의", required: false, note: "새로운 서비스와 혜택 안내를 받을 수 있어요." }] : []),
             ]} values={{ privacy: privacyAgreed, marketing: marketingAgreed }} onChange={(next) => { setPrivacyAgreed(Boolean(next.privacy)); setMarketingAgreed(Boolean(next.marketing)); }} />
             <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{privacyPolicyWithContact(config.privacyPolicy, config.privacyContact)}</p><small>문의: {config.privacyContact}</small></details>
-            {error && <p className="public-form-error">{error}</p>}
-            <button type="submit" disabled={!privacyAgreed || submitting}>{submitting ? <Spinner /> : config.ctaLabel}<ArrowRight /></button>
+            {error && <p className="public-form-error" role="alert">{error}</p>}
+            <button type="submit" disabled={submitting}>{submitting ? <Spinner /> : config.ctaLabel}<ArrowRight /></button>
           </form>
         )}
       </section>

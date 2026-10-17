@@ -31,14 +31,15 @@ export function BrainwaveTemplatePicker({
 }) {
   const [selected, setSelected] = useState(current);
   const dialog = useRef<HTMLDialogElement>(null);
-  useEffect(() => { dialog.current?.showModal(); }, []);
+  /* 열면 지금 쓰는 템플릿이 보이게 — 맨 아래에 있으면 다른 카드를 보는 동안 '사용 중' 안내만 떠 헷갈렸다 */
+  useEffect(() => { dialog.current?.showModal(); dialog.current?.querySelector(".bwtp-grid button.on")?.scrollIntoView({ block: "center" }); }, []);
   const pages = BRAINWAVE_PAGES.filter((p) => p.group === "landing" && BUSINESS_TEMPLATE_IDS.includes(p.id)
     && (BUSINESS_DESIGNED_PAGES.has(p.id) || p.id === current));
   return (
     <dialog ref={dialog} className={styles.dialog} aria-label="템플릿 선택" onCancel={event => { event.preventDefault(); onClose(); }}>
       <div className={`bwtp-sheet ${styles.sheet}`}>
         <header>
-          <div><strong>템플릿 선택</strong><small>이미지는 디자인 예시입니다. 사업 내용에 맞춰 문구와 보이는 구역이 달라져요.</small></div>
+          <div><strong>템플릿 선택</strong><small>그림은 디자인 예시예요. 내 사업 내용에 맞춰 문구와 보이는 구역이 달라져요.</small></div>
           <button type="button" onClick={onClose} aria-label="닫기"><X size={18} /></button>
         </header>
         <div className="bwtp-body">
@@ -56,7 +57,7 @@ export function BrainwaveTemplatePicker({
           </section>
         </div>
         <footer className={styles.footer}>
-          <p>{selected === current ? "현재 사용 중인 템플릿입니다." : "사업 정보는 유지되며 직접 고친 글과 사진, 배치는 초기화됩니다."}</p>
+          <p>{selected === current ? "지금 쓰고 있는 템플릿이에요." : "사업 정보는 그대로지만, 직접 고친 글·사진·배치는 처음 상태로 돌아가요."}</p>
           <button type="button" onClick={onClose}>취소</button>
           <button type="button" className={styles.apply} disabled={selected === current} onClick={() => onPick(selected)}>이 템플릿 적용</button>
         </footer>

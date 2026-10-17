@@ -347,6 +347,13 @@ export function BrainwaveEditor({
     placeSel(el);
   };
   const deselect = () => { setSel(null); setSelPos(null); setPhotoFor(null); };
+  /* 떠 있는 줄은 폭이 340px 라고 보고 자리를 잡아, 사진(다섯 칸)처럼 더 넓으면 휴대폰에서 양옆이 잘렸다 — 그려진 뒤 실제 폭으로 화면 안에 넣는다 */
+  const clampToolbar = (node: HTMLDivElement | null) => {
+    if (!node || !selPos) return;
+    const half = node.offsetWidth / 2;
+    const x = Math.min(Math.max(selPos.x, half + 8), window.innerWidth - half - 8);
+    node.style.left = `${Math.round(x)}px`;
+  };
   useEffect(() => {
     if (!sel) return;
     const follow = () => placeSel(sel.el);
@@ -435,7 +442,9 @@ export function BrainwaveEditor({
     const { id, el } = editing;
     el.contentEditable = "false";
     el.oninput = null;
-    const text = el.innerText;
+    /* 판에서 글을 다 지우면 화면의 글 요소가 사라졌다가 새로 생긴다 — 그때 잡아 둔 옛 요소를 읽으면 고친 글이 옛 글로 돌아갔다.
+       요소가 화면에서 떨어졌으면 판의 값(draftText)을 쓴다 */
+    const text = el.isConnected ? el.innerText : draftText;
     const original = meta?.slots.text.find((t) => t.id === id)?.text ?? "";
     const current = overRef.current;
     const next = { ...current, texts: { ...current.texts } };
@@ -447,6 +456,13 @@ export function BrainwaveEditor({
     return current;
   };
   finishTextRef.current = finishText;
+  /* Esc — 글 판·단추 판·떠 있는 줄을 닫는다(예전엔 Esc 로 닫히지 않았다) */
+  useEffect(() => {
+    if (!sel && !editing && !btn) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key !== "Escape") return; finishTextRef.current?.(); setBtn(null); deselect(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   /*
    * 버튼 자리 — 판을 열어 글자와 '누르면 어디로'를 한 번에 고친다.
@@ -808,10 +824,10 @@ export function BrainwaveEditor({
         <div className="bw-editor-right">
           {/* 휴대폰에서도 아이콘만 남지 않게 — 짧은 이름(bw-bar-label)을 아이콘 아래에 둔다 */}
           <button type="button" className={`bw-editor-hiddenbtn ${photoList ? "on" : ""}`} onClick={openPhotoList} title="이 페이지 사진 바꾸기">
-            <ImageIcon /> <span className="bw-bar-label">사진 바꾸기</span>
+            <ImageIcon /> <span className="bw-bar-label">사진<span className="bw-bar-long"> 바꾸기</span></span>
           </button>
           <button type="button" className={`bw-editor-hiddenbtn ${secPanel ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setHiddenOpen(false); setPhotoFor(null); setPhotoList(null); setSecPanel((v) => !v); }} title="구역 순서 바꾸기">
-            <Rows3 /> <span className="bw-bar-label">순서 바꾸기</span>
+            <Rows3 /> <span className="bw-bar-label">순서<span className="bw-bar-long"> 바꾸기</span></span>
           </button>
           {userHidden.length ? (
             <button type="button" className={`bw-editor-hiddenbtn ${hiddenOpen ? "on" : ""}`} onClick={() => { finishText(); setMenu(null); setBtn(null); setSecPanel(false); setPhotoFor(null); setPhotoList(null); setHiddenOpen((v) => !v); }} title="숨긴 것 보기·되살리기">
@@ -820,7 +836,7 @@ export function BrainwaveEditor({
           ) : null}
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /><span className="bw-bar-label bw-bar-mobile">되돌리기</span></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /><span className="bw-bar-label bw-bar-mobile">다시</span></button>
-          <button type="button" className="bw-editor-save" title="저장" onClick={() => save(true)} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : currentFingerprint === savedFingerprint && !editing ? "저장됨" : "저장"}</span></button>
+          <button type="button" className="bw-editor-save" data-saved={!persistence.saving && currentFingerprint === savedFingerprint && !editing ? "" : undefined} title="저장" onClick={() => save(true)} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : currentFingerprint === savedFingerprint && !editing ? "저장됨" : "저장"}</span></button>
           <button type="button" onClick={close} disabled={persistence.saving} title="닫기"><X /><span className="bw-bar-label bw-bar-mobile">닫기</span></button>
         </div>
       </header>
@@ -866,8 +882,8 @@ export function BrainwaveEditor({
         </div>)}
       </section> : null}
       {/* 선택 툴바 — 누른 요소 바로 위에 뜨는 액션 줄(Wix 식). 숨기기는 우클릭 없이 여기서 */}
-      {!previewMode && sel && selPos ? (
-        <div className={`bw-eltool ${selPos.below ? "below" : ""}`} role="toolbar" aria-label={`선택: ${sel.kind}`} style={{ left: selPos.x, top: selPos.y }} onMouseDown={(e) => e.preventDefault()}>
+      {!previewMode && sel && selPos && !photoFor ? (
+        <div ref={clampToolbar} className={`bw-eltool ${selPos.below ? "below" : ""}`} role="toolbar" aria-label={`선택: ${sel.kind}`} style={{ left: selPos.x, top: selPos.y }} onMouseDown={(e) => e.preventDefault()}>
           <span className="bw-eltool-kind">{sel.kind}</span>
           {/* 사진은 누르자마자 파일 창을 띄우지 않는다 — 내 사진과 추천 사진 중에서 고르게 */}
           {sel.kind === "사진" ? <button type="button" onClick={() => { pendingImage.current = sel.id; fileRef.current?.click(); }}><Upload size={13} /> 내 사진 올리기</button> : null}
@@ -884,7 +900,7 @@ export function BrainwaveEditor({
         <aside className="bw-inspector" role="dialog" aria-label="텍스트 편집">
           <header>
             <strong><Type size={15} /> 텍스트</strong>
-            <button type="button" onClick={finishText} title="닫기"><X size={16} /></button>
+            <button type="button" onClick={() => { finishText(); deselect(); }} title="닫기" aria-label="닫기"><X size={16} /></button>
           </header>
           <label className="bw-ins-field">
             <span>내용</span>
@@ -894,7 +910,7 @@ export function BrainwaveEditor({
               maxLength={2000}
               onChange={(e) => typeInPanel(e.target.value)}
             />
-            <small>화면의 글자를 직접 눌러 고쳐도 됩니다.</small>
+            <small>화면의 글자를 직접 눌러 고쳐도 돼요.</small>
           </label>
           <div className="bw-ins-field">
             {/* 슬라이더(70~150%)와 단추 넷이 같이 있어 무엇을 쓸지 헷갈렸다 — 단추만 */}
@@ -910,7 +926,7 @@ export function BrainwaveEditor({
               ))}
             </div>
           </div>
-          <button type="button" className="bw-ins-done" onClick={finishText}>완료</button>
+          <button type="button" className="bw-ins-done" onClick={() => { finishText(); deselect(); }}>완료</button>
         </aside>
       ) : null}
       {/* 메뉴 판 — 머리글 가로 메뉴를 누르면 항목별 이름·링크를 정한다(Wix 메뉴 관리 식) */}
@@ -1013,9 +1029,10 @@ export function BrainwaveEditor({
         <aside className="bw-inspector bw-sec-panel" role="dialog" aria-label="구역 순서">
           <header>
             <strong><Rows3 size={15} /> 구역 순서 바꾸기</strong>
-            <button type="button" onClick={() => setSecPanel(false)} title="닫기"><X size={16} /></button>
+            <button type="button" onClick={() => setSecPanel(false)} title="닫기" aria-label="닫기"><X size={16} /></button>
           </header>
-          <p className="bw-menu-hint">홈페이지는 위에서 아래로 여러 구역으로 나뉘어 있어요. 끌거나 화살표로 순서를 바꿔요. 첫 화면과 맨 아래 정보는 고정이에요.</p>
+          {/* 움직일 수 있는 구역이 하나뿐이면 화살표가 모두 꺼져 할 일이 없다 — 그렇다고 알려 준다 */}
+          <p className="bw-menu-hint">{sectionSeq().length - 2 < 2 ? "이 디자인은 구역 순서가 정해져 있어요. 보이고 싶지 않은 구역은 숨길 수 있어요." : "홈페이지는 위에서 아래로 여러 구역으로 나뉘어 있어요. 끌거나 화살표로 순서를 바꿔요. 첫 화면과 맨 아래 정보는 고정이에요."}</p>
           <ul className="bw-sec-list">
             {sectionSeq().map((b, i, seq) => {
               const locked = i === 0 || i === seq.length - 1;
@@ -1145,9 +1162,9 @@ export function BrainwaveEditor({
       ) : null}
       {btn ? (
         <div className="bw-btn-panel" role="dialog" aria-label="버튼 설정">
-          <strong>이 버튼을 누르면</strong>
+          <header className="bw-btn-head"><strong>이 버튼을 누르면</strong><button type="button" onClick={() => setBtn(null)} aria-label="닫기"><X size={16} /></button></header>
           <div className="bw-btn-opts" role="radiogroup">
-            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "contact"} onChange={() => setBtn({ ...btn, mode: "contact" })} /> 문의·신청 양식으로 <small>페이지 아래 양식으로 내려갑니다</small></label>
+            <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "contact"} onChange={() => setBtn({ ...btn, mode: "contact" })} /> 문의·신청 양식으로 <small>페이지 아래 양식으로 내려가요</small></label>
             {secCount > 1 ? (
               <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "sec"} onChange={() => { setBtn({ ...btn, mode: "sec" }); jumpToSection(btn.sec); }} /> 이 페이지의 다른 구역으로 <small>이 페이지 안의 다른 칸으로 내려갑니다</small></label>
             ) : null}

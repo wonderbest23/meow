@@ -58,7 +58,7 @@ const requestSchema = z.object({
 function fallback(): ConsultReply {
   return {
     message:
-      "지금은 상담을 이어가지 못했습니다. 잠시 후 다시 말씀해 주세요.\n급하시면 화면 오른쪽 아래 문의로 남겨주시면 사람이 확인합니다.",
+      "지금은 상담을 이어가지 못했어요. 잠시 후 다시 말씀해 주세요.\n급하시면 아래 '담당자에게 남기기'를 누르면 사람이 확인해요.",
     profile: {},
     choices: [],
     summary: [],

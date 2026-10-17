@@ -310,7 +310,9 @@
 .headerActions button:disabled { opacity: .5; cursor: default; }
 .headerActions .headerPrimary { border-color: #3272db; background: #3272db; color: #fff; }
 .headerActions .headerPrimary[data-done] { border-color: #dbe7fb; background: #eef4fe; color: #3272db; opacity: 1 !important; cursor: default !important; }
-@media (max-width: 480px) { .headerActions button { padding: 0 10px; } .headerActions button:not(.headerPrimary) span { display: none; } }
+@media (max-width: 480px) { .headerActions button { padding: 0 10px; } }
+/* 아주 좁은 폰(340px 이하)에서만 저장 글자를 빼고 아이콘만 — 이름은 aria-label 로 남는다 */
+@media (max-width: 340px) { .headerActions button:not(.headerPrimary) span { display: none; } }
 
 /* 공개한 뒤 다음 단계 — 계획서 화면의 '다음 단계' 버튼과 같은 자리(본문 끝), 같은 모양 */
 .nextCare { display:grid; gap:2px; margin:24px 0 8px; padding:16px 18px; border-radius:12px; background:#246bd1; color:#fff; text-decoration:none; }

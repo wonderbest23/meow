@@ -1,4 +1,4 @@
-import { createLandingDraft, heroImageForSector, type LandingDraft } from "./domain";
+import { createLandingDraft, heroImageForSector, inferLandingTemplate, type LandingDraft } from "./domain";
 import { createLandingPageData } from "./page-data";
 import { applyPhotoSet, photoSetFor } from "./photo-library";
 import { designPageForSector } from "./brainwave/catalog";
@@ -118,7 +118,8 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
     oneLiner: mainOffer,
     customer: firstTarget,
     model: offerTypes.join("·"),
-    sector: industry,
+    /* 업종 칸이 비었거나 업종 이름만으로 못 알아보면(→ '상담 서비스') 상호·소개·대표 상품 글로 한 번 더 본다 — 빵집이 상담 디자인을 받던 문제 */
+    sector: inferLandingTemplate(industry) === "service" && sectorText ? sectorText : industry,
   });
 
   /*

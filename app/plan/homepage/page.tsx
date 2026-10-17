@@ -55,7 +55,7 @@ type Action = "idle" | "saving" | "saved" | "publishing";
 export default function PlanHomepagePage() {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("loading");
-  const [blocked, setBlocked] = useState<{ title: string; detail: string; missing: string[]; cta: "pay" | "plan" | "login" }>({
+  const [blocked, setBlocked] = useState<{ title: string; detail: string; missing: string[]; cta: "pay" | "plan" | "login" | "retry" }>({
     title: "",
     detail: "",
     missing: [],
@@ -296,7 +296,8 @@ export default function PlanHomepagePage() {
         return;
       }
 
-      const error = (await res.json().catch(() => ({}))) as { error?: string; message?: string; missing?: string[] };
+      const error = (await res.json().catch(() => ({}))) as { error?: string | { message?: string }; message?: string; missing?: string[] };
+      const errorMessage = error.message ?? (typeof error.error === "object" ? error.error?.message : undefined);
       if (!alive || epoch !== planOwnerEpoch()) return;
       if (res.status === 401) {
         setBlocked({ title: "로그인이 필요합니다", detail: "홈페이지는 내 계정에 저장됩니다.", missing: [], cta: "login" });
@@ -318,12 +319,13 @@ export default function PlanHomepagePage() {
           cta: "login",
         });
       } else {
-        setBlocked({ title: "홈페이지를 준비하지 못했어요", detail: error.message ?? "잠시 후 다시 시도해주세요.", missing: [], cta: "plan" });
+        /* 잠깐의 오류(요청이 몰림 429 등)에 '계획서 이어 쓰기'로 보내면 막다른 길이다 — 다시 시도 */
+        setBlocked({ title: "홈페이지를 준비하지 못했어요", detail: res.status === 429 ? "잠시 요청이 많았어요. 조금 뒤 다시 시도해 주세요." : errorMessage ?? "잠시 후 다시 시도해 주세요.", missing: [], cta: "retry" });
       }
       setPhase("blocked");
     })().catch(() => {
       if (!alive || loadEpoch !== planOwnerEpoch()) return;
-      setBlocked({ title: "홈페이지를 불러오지 못했어요", detail: "연결 상태를 확인하고 다시 열어주세요.", missing: [], cta: "plan" });
+      setBlocked({ title: "홈페이지를 불러오지 못했어요", detail: "연결 상태를 확인하고 다시 시도해 주세요.", missing: [], cta: "retry" });
       setPhase("blocked");
     });
     return () => {
@@ -399,7 +401,9 @@ export default function PlanHomepagePage() {
 
   const updateDraft = (next: LandingDraft) => {
     if (requestRef.current) { setMessage(aiFilling ? "AI가 내용을 채우는 중이에요. 끝난 뒤에 고쳐 주세요." : "저장·공개하는 중이에요. 끝난 뒤에 고쳐 주세요."); return; }
-    setDraft(next); setAction("idle"); setMessage("저장하지 않은 수정이 있어요.");
+    /* 바꿨다가 원래대로 되돌리면(분위기 색 등) 저장된 것과 같다 — '저장하지 않은 수정' 안내를 남기지 않는다 */
+    const sameAsSaved = !!siteRef.current && landingDraftFingerprint(next) === landingDraftFingerprint(siteRef.current.draft);
+    setDraft(next); setAction("idle"); setMessage(sameAsSaved ? "" : "저장하지 않은 수정이 있어요.");
   };
   const updateSite = (next: LandingSiteRecord) => {
     /*
@@ -433,7 +437,7 @@ export default function PlanHomepagePage() {
   }, [screenPlanId, site?.status, site?.slug, site?.publishedSlug]); // eslint-disable-line react-hooks/exhaustive-deps
 
   /** 막힌 이유마다 다음 행동이 다르다 — 결제·로그인·계획서 이어쓰기 */
-  function blockedHref(cta: "pay" | "plan" | "login"): string {
+  function blockedHref(cta: "pay" | "plan" | "login" | "retry"): string {
     /* 로그인하고 돌아올 곳도 그 사업의 홈페이지 — 사업 정보를 빠뜨리면 다른 사업이 열릴 수 있다 */
     if (cta === "login") return `/account?next=${encodeURIComponent(screenPlanId ? homepageHref(screenPlanId) : "/plan/homepage")}`;
     /* 계획서를 마저 쓸 곳은 그 사업의 대화 — 옛 '플랜 개요'로 보내지 않는다 */
@@ -458,7 +462,7 @@ export default function PlanHomepagePage() {
   const busy = action === "saving" || action === "publishing" || aiFilling;
   const liveUpToDate = isLiveUpToDate(site, draft ?? undefined);
   const headerActions = kitEditing ? <div className={styles.headerActions}>
-    <button type="button" disabled={busy} onClick={() => void save()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span>저장</span></button>
+    <button type="button" aria-label="저장" disabled={busy} onClick={() => void save()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span>저장</span></button>
     {/* 고친 게 없으면 손님 화면과 같다 — '새 버전 공개'를 늘 파랗게 켜 두면 눌러야 하는 줄 안다 */}
     <button type="button" className={styles.headerPrimary} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />}<span>{liveUpToDate ? "공개됨" : site?.status === "published" ? "새 버전 공개" : "공개하기"}</span></button>
   </div> : undefined;
@@ -493,8 +497,8 @@ export default function PlanHomepagePage() {
               ))}
             </ul>
           )}
-          <button type="button" className={styles.cta} onClick={() => router.push(blockedHref(blocked.cta))}>
-            {blocked.cta === "pay" ? "결제하러 가기 →" : blocked.cta === "login" ? "로그인하기 →" : screenPlanId ? "계획서 이어 쓰기 →" : "대화로 사업 시작하기 →"}
+          <button type="button" className={styles.cta} onClick={() => { if (blocked.cta === "retry") window.location.reload(); else router.push(blockedHref(blocked.cta)); }}>
+            {blocked.cta === "retry" ? "다시 시도" : blocked.cta === "pay" ? "결제하러 가기 →" : blocked.cta === "login" ? "로그인하기 →" : screenPlanId ? "계획서 이어 쓰기 →" : "대화로 사업 시작하기 →"}
           </button>
         </div>
       )}

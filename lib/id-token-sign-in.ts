@@ -34,7 +34,7 @@ export async function signInWithProviderIdToken(provider: "google" | "apple", to
           error: {
             code,
             message: notConfigured
-              ? `${label} 로그인이 아직 준비되지 않았습니다. 이메일로 로그인해 주세요.`
+              ? `${label} 로그인은 아직 준비 중이에요. 이메일로 로그인해 주세요.`
               : `${label} 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.`,
           },
         },

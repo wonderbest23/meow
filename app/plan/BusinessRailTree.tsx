@@ -23,7 +23,8 @@ function stepFor(pathname: string): JourneyStepId | null {
   if (pathname.startsWith("/plan/chat")) return "chat";
   if (pathname.startsWith("/plan/document")) return "document";
   if (pathname.startsWith("/plan/homepage")) return "homepage";
-  if (pathname.startsWith("/plan/workspace")) return "care";
+  /* 사업 관리 화면은 탭이 여럿이다 — '유지보수' 탭일 때만 유지보수를 표시한다(예전엔 사업 요약·사업 시작하기에서도 유지보수가 켜졌다) */
+  if (pathname.startsWith("/plan/workspace")) return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "operations" ? "care" : null;
   return null;
 }
 

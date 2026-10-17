@@ -19,7 +19,7 @@ type SessionState = { authenticated: boolean; email: string | null; projects: Ac
 
 async function payload<T>(response: Response): Promise<T> {
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했습니다.");
+  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
   return data as T;
 }
 
@@ -55,7 +55,7 @@ export default function AccountPage() {
     /* 카카오 리디렉트가 실패로 돌아온 경우 — 설정이 빠졌을 때다 */
     if (new URL(window.location.href).searchParams.get("social_error") === "kakao") {
       window.history.replaceState({}, "", "/account");
-      setMessage("카카오 로그인이 아직 준비되지 않았습니다. 이메일로 로그인해 주세요.");
+      setMessage("카카오 로그인은 아직 준비 중이에요. 이메일로 로그인해 주세요.");
     }
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const accessToken = hash.get("access_token");

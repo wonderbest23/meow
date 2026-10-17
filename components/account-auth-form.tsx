@@ -57,7 +57,7 @@ export type AuthMode = "login" | "register" | "recover" | "reset";
 
 async function payload<T>(response: Response): Promise<T> {
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했습니다.");
+  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
   return data as T;
 }
 
@@ -103,7 +103,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialMessage);
   const [messageError, setMessageError] = useState(false);
-  const switchMode = (next: AuthMode) => { setMode(next); setMessage(""); setMessageError(false); };
+  const switchMode = (next: AuthMode) => { setMode(next); setMessage(""); setMessageError(false); setAskedProblem(false); };
   const [googleReady, setGoogleReady] = useState(false);
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
   /* 구글 버튼이 그려질 자리 — GIS 가 이 안에 iframe 버튼을 그린다 */
@@ -221,24 +221,38 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
     }
   }, []);
 
-  const valid = useMemo(() => {
-    if (mode === "recover") return email.includes("@");
-    if (mode === "reset") return password.length >= 8 && password === passwordConfirm && Boolean(recoveryTokens);
-    if (mode === "register") return email.includes("@") && password.length >= 8 && password === passwordConfirm && terms && privacy && aiNotice;
-    return email.includes("@") && password.length >= 8;
+  /*
+   * 모자란 것 — 예전엔 단추만 흐리게 꺼져 왜 안 눌리는지 알 수 없었다(비밀번호 5자, 약관 미동의 등).
+   * 단추는 늘 누를 수 있게 두고, 누르면 첫 번째로 모자란 것을 알려 준다(결제 화면 동의 안내와 같은 방식).
+   */
+  const problem = useMemo(() => {
+    const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+    if (mode !== "reset" && !email.trim()) return "이메일을 입력해 주세요.";
+    if (mode !== "reset" && !emailOk) return "이메일 주소를 다시 확인해 주세요.";
+    if (mode === "recover") return "";
+    if (!password) return mode === "login" ? "비밀번호를 입력해 주세요." : "비밀번호를 정해 주세요.";
+    if (mode !== "login" && password.length < 8) return "비밀번호를 8자 이상으로 정해 주세요.";
+    if (mode !== "login" && password !== passwordConfirm) return "비밀번호가 서로 달라요. 확인 칸을 다시 입력해 주세요.";
+    if (mode === "reset" && !recoveryTokens) return "재설정 링크가 만료됐어요. 메일을 다시 받아 주세요.";
+    if (mode === "register" && !(terms && privacy && aiNotice)) return "필수 항목에 모두 동의해 주세요.";
+    return "";
   }, [aiNotice, email, mode, password, passwordConfirm, privacy, recoveryTokens, terms]);
+  const valid = !problem;
+  /* 한 번 눌러 본 뒤에는 모자란 것을 고칠 때마다 안내가 바로 바뀐다(다 채우면 사라짐) */
+  const [askedProblem, setAskedProblem] = useState(false);
 
   const submit = async (event: FormEvent) => {
-    event.preventDefault(); if (!valid || busy) return;
+    event.preventDefault(); if (busy) return;
+    if (problem) { setAskedProblem(true); return; }
     setBusy(true); setMessage(""); setMessageError(false);
     try {
       if (mode !== "recover") await prepareAccountSignIn();
       if (mode === "recover") {
         await payload(await fetch("/api/auth/recover", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) }));
-        setMessage("비밀번호 재설정 메일을 보냈습니다. 메일의 링크를 열어주세요.");
+        setMessage("비밀번호 재설정 메일을 보냈어요. 메일의 링크를 열어 주세요.");
       } else if (mode === "reset") {
         await payload(await fetch("/api/auth/reset", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...recoveryTokens, password }) }));
-        setPassword(""); setPasswordConfirm(""); setMessage("새 비밀번호를 저장했습니다."); await onReset?.();
+        setPassword(""); setPasswordConfirm(""); setMessage("새 비밀번호를 저장했어요."); await onReset?.();
       } else if (mode === "register") {
         const result = await payload<{ authenticated: boolean; confirmationRequired?: boolean; message?: string }>(await fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, terms, privacy, aiNotice }) }));
         if (result.confirmationRequired) {
@@ -250,7 +264,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           return;
         } else {
           setMode("login"); setPassword(""); setPasswordConfirm("");
-          setMessage(result.message ?? "계정을 만들었습니다. 로그인해 주세요.");
+          setMessage(result.message ?? "계정을 만들었어요. 로그인해 주세요.");
         }
       } else {
         await payload(await fetch("/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password, remember }) }));
@@ -260,7 +274,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         goNext();
         return;
       }
-    } catch (error) { setMessageError(true); setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했습니다."); } finally { setBusy(false); }
+    } catch (error) { setMessageError(true); setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요."); } finally { setBusy(false); }
   };
 
   const entry = mode === "login" || mode === "register";
@@ -277,7 +291,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   return (
     /* plan-ui: 홈처럼 옛 전역 규칙(버튼 속 아이콘 숨김·모서리 강제)이 남은 화면에서 팝업으로 떠도 카카오·구글 아이콘이 보이게 */
     <div className={`${styles.root} plan-ui`}>
-      <form className={styles.form} onSubmit={submit} aria-busy={busy} aria-labelledby={titleId}>
+      <form className={styles.form} onSubmit={submit} noValidate aria-busy={busy} aria-labelledby={titleId}>
         <header className={styles.header}>
           <Link href="/" className={styles.logoLink} aria-label="오늘창업 홈">
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -302,8 +316,9 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           { key: "privacy", label: "개인정보 수집·이용 동의", href: "/privacy" },
           { key: "aiNotice", label: "인공지능·국외 처리 안내 확인", href: "/ai-notice" },
         ]} values={{ terms, privacy, aiNotice }} onChange={(next) => { setTerms(Boolean(next.terms)); setPrivacy(Boolean(next.privacy)); setAiNotice(Boolean(next.aiNotice)); }} />}
+        {askedProblem && problem ? <p role="alert" className={accountStyles.error}>{problem}</p> : null}
         {message && <p role={messageError ? "alert" : "status"} className={messageError ? accountStyles.error : accountStyles.message}>{message}</p>}
-        <button className={styles.primary} disabled={!valid || busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
+        <button className={styles.primary} data-incomplete={!valid || undefined} disabled={busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
         <nav className={styles.links} aria-label="계정 메뉴">
           {mode === "login"
             ? <><button type="button" onClick={() => switchMode("recover")}>비밀번호 재설정</button><button type="button" onClick={() => switchMode("register")}>회원가입</button></>

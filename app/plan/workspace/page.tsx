@@ -82,6 +82,7 @@ export default function BusinessWorkspace() {
 
   useEffect(() => { if (pendingNavigation) navigationDialog.current?.showModal(); else navigationDialog.current?.close(); }, [pendingNavigation]);
 
+  const leavingExpert = useRef(false);
   async function tab(next: View) {
     if (next !== view && operatingDirty) { setPendingNavigation({ view: next }); return; }
     if (next !== view && expertDirty && !await askConfirm({ message: "저장하지 않은 수정안을 버리고 이동할까요?", confirmLabel: "이동" })) return;
@@ -122,10 +123,14 @@ export default function BusinessWorkspace() {
     setNotice(synced ? "기록을 저장했어요." : "기기에 기록했어요. 서버 저장은 연결을 확인한 뒤 다시 시도해 주세요.");setSaving(false);
   }
   return <main className={frame.page} onClickCapture={event => {
-    if (!operatingDirty) return;
+    if (!operatingDirty && !expertDirty) return;
     const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
     if (!anchor || anchor.hasAttribute("download") || anchor.target === "_blank") return;
-    event.preventDefault(); event.stopPropagation(); setPendingNavigation({ href: anchor.href });
+    if (leavingExpert.current) { leavingExpert.current = false; return; }
+    event.preventDefault(); event.stopPropagation();
+    if (operatingDirty) { setPendingNavigation({ href: anchor.href }); return; }
+    /* 전문가 모드 수정안 — 탭 이동·'기본'에서는 물었지만 '대화 이어가기'·메뉴·뒤로 링크로는 그냥 사라졌다 */
+    void askConfirm({ message: "저장하지 않은 수정안을 버리고 이동할까요?", confirmLabel: "이동" }).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
   }}><BusinessAppChrome title={view === "operations" ? "유지보수" : "내 사업 관리"}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기</Link> : <Link className={styles.primary} href="/plan">내 사업으로</Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>

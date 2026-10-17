@@ -5356,7 +5356,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .admin-support-header small { color: #5f5c7f; font-size: 9px; }
 .admin-support-header > button { height: 36px; padding: 0 11px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
 .admin-support-header > button svg { width: 14px; }
-.admin-support-workspace { height: calc(100vh - 68px); display: grid; grid-template-columns: 330px minmax(0, 1fr); }
+.admin-support-workspace { height: calc(100dvh - 100px); display: grid; grid-template-columns: 330px minmax(0, 1fr); }
 .admin-conversation-list { min-width: 0; border-right: 1px solid #cccae3; background: white; display: flex; flex-direction: column; }
 .admin-conversation-list > header { min-height: 60px; padding: 0 17px; border-bottom: 1px solid #dfdef1; display: flex; align-items: center; justify-content: space-between; }
 .admin-conversation-list > header strong { font-size: 13px; }
@@ -10075,7 +10075,7 @@ body {
 .admin-dash-cards small { font-size: 11.5px; font-weight: 800; color: #8b95a1; letter-spacing: 0.04em; }
 .admin-dash-cards strong { font-size: 17px; font-weight: 800; color: #0d0a2c; letter-spacing: -0.3px; font-variant-numeric: tabular-nums; }
 .admin-dash-cards em { font-style: normal; font-size: 11.5px; color: #8b95a1; }
-.admin-dash-columns { max-width: 1080px; margin: 14px auto 0; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.admin-dash-columns { max-width: 1080px; margin: 14px auto 0; padding: 0 20px; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
 .admin-dash-panel { background: #fff; border: 1px solid #dfdef1; border-radius: 14px; padding: 16px; }
 .admin-dash-panel > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
 .admin-dash-panel > header strong { font-size: 14px; font-weight: 800; color: #0d0a2c; }
@@ -14601,7 +14601,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-editor-right button { min-height: 36px; min-width: 36px; padding: 0 10px; border: 1px solid #dfe3ea; border-radius: 6px; background: #fff; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
 .bw-editor-right button:disabled { opacity: .4; cursor: default; }
 .bw-editor-right button svg { width: 16px; height: 16px; }
-.bw-editor-right .bw-editor-save { background: #473bf0; border-color: #473bf0; color: #fff; font-weight: 700; }
+.bw-editor-right .bw-editor-save { background: #3182f6; border-color: #3182f6; color: #fff; font-weight: 700; }
 .bw-editor-error { margin: 0; padding: 8px 16px; background: #fff1f1; color: #b91c1c; font-size: 13px; }
 .bw-editor-conflicts, .bw-editor-recovery { z-index: 94; position: fixed; inset: 80px 16px auto auto; width: min(420px, calc(100vw - 32px)); max-height: 60dvh; overflow: auto; padding: 18px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 32px #17223224; color: #172232; font-size: 14px; }
 .bw-editor-conflicts > div { padding-block: 14px; border-bottom: 1px solid #e5e7eb; }
@@ -14613,10 +14613,10 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-editor-stage { overflow: auto; padding: 20px; }
 .bw-editor-canvas { position: relative; max-width: 1600px; margin: 0 auto; box-shadow: 0 20px 60px rgba(22, 28, 45, .12); }
 .bw-editor-canvas [data-bw-text] { cursor: text; outline: 1px dashed transparent; outline-offset: 2px; transition: outline-color .12s; }
-.bw-editor-canvas [data-bw-text]:hover { outline-color: #473bf0aa; }
-.bw-editor-canvas [data-bw-text][contenteditable="plaintext-only"] { outline: 2px solid #473bf0; background: #473bf012; }
+.bw-editor-canvas [data-bw-text]:hover { outline-color: #3182f6aa; }
+.bw-editor-canvas [data-bw-text][contenteditable="plaintext-only"] { outline: 2px solid #3182f6; background: #3182f612; }
 .bw-editor-canvas [data-bw-image] { cursor: pointer; }
-.bw-editor-canvas [data-bw-image]:hover { outline: 3px solid #473bf0; outline-offset: -3px; }
+.bw-editor-canvas [data-bw-image]:hover { outline: 3px solid #3182f6; outline-offset: -3px; }
 /* 버튼 자리 — 누르면 글자·이동을 정하는 판이 열린다 */
 .bw-editor-canvas [data-bw-btn] { cursor: pointer; }
 .bw-editor-canvas [data-bw-btn]:hover { outline: 3px solid #68d585; outline-offset: 2px; border-radius: 6px; }
@@ -14625,6 +14625,11 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-btn-panel { position: fixed; top: 64px; right: 14px; z-index: 90; width: min(320px, calc(100vw - 28px)); max-height: calc(100dvh - 130px); overflow: auto; padding: 16px; border-radius: 14px; background: #fff; border: 1px solid #e3e6ee; box-shadow: 0 18px 60px rgba(22, 28, 45, .22); display: grid; gap: 12px; animation: bwInsIn .18s ease backwards; }
 @media (max-width: 640px) { .bw-btn-panel { top: auto; right: 10px; left: 10px; bottom: 10px; width: auto; max-height: 60dvh; } }
 .bw-btn-panel > strong { font-size: 15px; }
+/* 머리(제목 + 닫기)와 맨 아래 취소·적용 — 휴대폰 시트에서 단추가 아래로 잘려 스크롤해야 보였다 */
+.bw-btn-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.bw-btn-head strong { font-size: 15px; }
+.bw-btn-head button { display: grid; place-items: center; width: 36px; height: 36px; margin: -6px -6px -6px 0; border: 0; border-radius: 8px; background: transparent; color: #5e5e72; cursor: pointer; }
+.bw-btn-panel .bw-btn-actions { position: sticky; bottom: -16px; margin: 0 -16px -16px; padding: 12px 16px 16px; background: #fff; border-top: 1px solid #eef0f4; }
 .bw-btn-opts { display: grid; gap: 8px; }
 /* 선택지 이름은 한 줄, 설명은 그 아래 줄 — 좁은 칸에서 이름이 두세 줄로 꺾이던 문제 */
 .bw-btn-opts label { display: grid; grid-template-columns: auto 1fr; column-gap: 8px; align-items: center; font-size: 14px; font-weight: 700; cursor: pointer; }
@@ -14634,7 +14639,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-btn-label { display: grid; gap: 5px; font-size: 12.5px; color: #5e5e72; }
 .bw-btn-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .bw-btn-actions button { min-height: 38px; padding: 0 16px; border: 1px solid #dfe3ea; border-radius: 8px; background: #fff; font-size: 13.5px; font-weight: 700; cursor: pointer; }
-.bw-btn-actions .bw-btn-apply { background: #473bf0; border-color: #473bf0; color: #fff; }
+.bw-btn-actions .bw-btn-apply { background: #3182f6; border-color: #3182f6; color: #fff; }
 
 /* 등장 애니메이션 — 공개 화면·미리보기. 숨김은 JS 가 .bw-anim 을 붙일 때만 생긴다 */
 .bw-anim { opacity: 0; transform: translateY(16px); transition: opacity .55s ease, transform .55s ease; }
@@ -14718,12 +14723,12 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-ai { padding: 10px 16px 12px; background: #fff; border-bottom: 1px solid #e3e6ee; display: grid; gap: 8px; }
 .bw-ai-row { display: flex; gap: 8px; }
 .bw-ai-row input { flex: 1; min-height: 42px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 8px; font-size: 14px; }
-.bw-ai-row input:focus { outline: 2px solid #473bf0; border-color: transparent; }
-.bw-ai-row button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: #473bf0; color: #fff; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
+.bw-ai-row input:focus { outline: 2px solid #3182f6; border-color: transparent; }
+.bw-ai-row button { min-height: 42px; padding: 0 16px; border: 0; border-radius: 8px; background: #3182f6; color: #fff; font-weight: 700; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; white-space: nowrap; }
 .bw-ai-row button:disabled { opacity: .45; cursor: default; }
 .bw-ai-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; font-size: 12.5px; color: #5d6270; }
 .bw-ai-meta b { color: #161c2d; }
-.bw-ai-meta a { color: #473bf0; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+.bw-ai-meta a { color: #3182f6; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .bw-ai-meta em { font-style: normal; color: #161c2d; }
 .builder-switch-kit { position: fixed; right: 16px; bottom: 92px; z-index: 70; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border: 0; border-radius: 10px; background: #161c2d; color: #fff; font-size: 13px; font-weight: 700; box-shadow: 0 10px 30px rgba(22,28,45,.3); cursor: pointer; }
 
@@ -14839,7 +14844,7 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .hk-contact-hint { margin: 0 0 12px; color: #5e5e72; font-size: 12.5px; line-height: 1.6; }
 .hk-contact-warn { margin: 10px 0 0; padding: 8px 12px; border-radius: 8px; background: #fff6e5; color: #9a5b00; font-size: 12.5px; }
 .hk-contact-quick { display: grid; gap: 12px; margin-top: 16px; padding-top: 14px; border-top: 1px solid #f0f0f5; }
-.hk-url-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 26px; padding: 0 10px; border: 1px solid #e3e3ec; border-radius: 999px; background: #fff; color: #1c1d21; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.hk-url-btn { display: inline-flex; align-items: center; gap: 4px; min-height: 34px; padding: 0 12px; border: 1px solid #e3e3ec; border-radius: 999px; background: #fff; color: #1c1d21; font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
 .hk .hk-url-btn svg { display: inline-block !important; }
 .hk-url { flex-wrap: wrap; }
 .hk-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 14px; }
@@ -16323,7 +16328,7 @@ button.account-kakao-btn svg { display: inline-block !important; }
 .bw-inspector > header button:hover { background: #f1f3f8; color: #161c2d; }
 .bw-ins-field { display: grid; gap: 7px; }
 .bw-ins-field > span { font-size: 12.5px; font-weight: 700; color: #5d6270; display: flex; justify-content: space-between; align-items: baseline; }
-.bw-ins-field > span b { color: #473bf0; font-size: 12.5px; }
+.bw-ins-field > span b { color: #3182f6; font-size: 12.5px; }
 .bw-ins-field textarea {
   width: 100%;
   resize: vertical;
@@ -16335,9 +16340,9 @@ button.account-kakao-btn svg { display: inline-block !important; }
   line-height: 1.5;
   color: #161c2d;
 }
-.bw-ins-field textarea:focus { outline: 2px solid #473bf0; outline-offset: -1px; }
+.bw-ins-field textarea:focus { outline: 2px solid #3182f6; outline-offset: -1px; }
 .bw-ins-field small { color: #8e93a4; font-size: 11.5px; }
-.bw-ins-field input[type="range"] { width: 100%; accent-color: #473bf0; }
+.bw-ins-field input[type="range"] { width: 100%; accent-color: #3182f6; }
 .bw-ins-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
 .bw-ins-steps button {
   min-height: 30px;
@@ -16351,7 +16356,7 @@ button.account-kakao-btn svg { display: inline-block !important; }
   cursor: pointer;
   white-space: nowrap;
 }
-.bw-ins-steps button.on { border-color: #473bf0; background: #473bf0; color: #fff; }
+.bw-ins-steps button.on { border-color: #3182f6; background: #3182f6; color: #fff; }
 .bw-ins-done {
   min-height: 38px;
   border: 0;
@@ -16405,6 +16410,9 @@ button.account-kakao-btn svg { display: inline-block !important; }
 /* 선택 툴바 — 누른 요소 바로 위에 뜨는 액션 줄(Wix 식) */
 .bw-eltool {
   position: fixed;
+  max-width: calc(100vw - 16px);
+  overflow-x: auto;
+  scrollbar-width: none;
   transform: translate(-50%, calc(-100% - 10px));
   z-index: 95;
   display: flex;
@@ -16421,7 +16429,7 @@ button.account-kakao-btn svg { display: inline-block !important; }
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 28px;
+  min-height: 34px;
   padding: 0 11px;
   border: 0;
   border-radius: 999px;
@@ -17042,7 +17050,7 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 
 /* 홈페이지 에디터: 모바일 보기는 실제 휴대폰 크기(390×844) 화면 안에서 페이지가 스크롤된다 — 아래가 잘려 실제 모습을 알 수 없던 문제(2026-10-07) */
 .bw-editor-stage:has(> .bw-editor-canvas.view-mobile) { display: flex; align-items: center; justify-content: center; min-height: 0; overflow: hidden; }
-.bw-editor-canvas.view-mobile { width: 390px; flex: none; height: min(864px, 100%); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; margin: 0 auto; }
+.bw-editor-canvas.view-mobile { width: min(390px, 100%); flex: none; height: min(864px, 100%); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; margin: 0 auto; }
 .bw-editor-canvas.view-mobile::-webkit-scrollbar { display: none; }
 /* 저장 팝업: 주소 · 링크 복사 · 새 탭에서 보기 */
 .bw-save-backdrop { position: fixed; inset: 0; z-index: 120; display: grid; place-items: center; padding: 16px; background: rgba(15, 23, 42, .36); }
@@ -17202,3 +17210,31 @@ body:has([data-pay-bar]) .support-chat-widget { bottom: calc(150px + env(safe-ar
 
 /* 홈페이지 공개 단추 — 고친 게 없어 손님 화면과 같을 때는 옅은 파랑 "공개됨"(눌러야 하는 단추처럼 보이지 않게, 흐리게 지우지도 않게) */
 .hk-actions .hk-primary[data-done] { border-color: #dbe7fb; background: #eef4fe; color: #3272db; opacity: 1 !important; cursor: default !important; }
+
+/* 편집기 '저장됨' — 고친 게 없을 때 진한 파랑이면 눌러야 하는 단추처럼 보였다. 옅은 파랑으로 */
+.bw-editor-right .bw-editor-save[data-saved] { background: #eef4fe; border-color: #dbe7fb; color: #3182f6; }
+/* 휴대폰 편집기 위 도구줄 — 단추가 일곱 개가 되면 '사진 바꾸기'·'순서 바꾸기' 글자가 칸을 넘었다. 휴대폰에서는 '사진'·'순서'만 */
+@media (max-width: 640px) { .bw-editor-bar .bw-bar-long { display: none; } }
+/* 도메인 연결 — 도메인이 아직 없는 사람에게 갈 길 */
+.landing-domain-connector .domain-own-hint { display: block; margin: 8px 0 10px; color: #6b7684; font-size: 12px; line-height: 1.55; }
+
+/*
+ * 떠 있는 상담 창 글자 크기 — 옛 규칙이 여러 겹 쌓여 설명 9px · 질문 말풍선 10~11px 로 읽기 어려웠다(PC 는 더).
+ * 맨 끝에서 최소 크기를 한 번에 정한다. 입력칸은 16px(작으면 아이폰이 화면을 확대한다).
+ */
+.support-chat-widget .support-chat-panel > header small { font-size: 12px !important; }
+.support-chat-widget .support-chat-bot-message strong { font-size: 14px; }
+.support-chat-widget .support-chat-bot-message p,
+.support-chat-widget .support-chat-welcome p,
+.support-chat-widget .support-chat-home-intro p { font-size: 13px !important; line-height: 1.55; }
+.support-chat-widget .support-chat-welcome strong { font-size: 14px !important; }
+.support-chat-widget .support-chat-choice-bubbles button { font-size: 14px !important; line-height: 1.4; }
+.support-chat-widget .support-chat-messages article > p { font-size: 14px !important; line-height: 1.6; }
+.support-chat-widget .support-chat-messages article > span { font-size: 11px !important; }
+.support-chat-widget .support-chat-form-heading > span { font-size: 12px !important; }
+.support-chat-widget .support-chat-home .support-category-list button strong { font-size: 14px !important; }
+.support-chat-widget .support-chat-error { font-size: 13px !important; }
+.support-chat-widget .support-chat-panel .support-chat-input-row textarea { font-size: 16px !important; }
+
+/* 휴대폰 사업 관리·내 문의 — 아래 고정 단추 줄·처리 단추를 떠 있는 상담 버튼이 가렸다. 이 화면들에서는 휴대폰일 때 숨긴다(메뉴의 '고객센터'로 갈 수 있다) */
+@media (max-width: 760px) { .support-chat-widget[data-phone-hide]:not(.open) { display: none; } }

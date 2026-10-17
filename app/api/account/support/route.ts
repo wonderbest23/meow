@@ -6,6 +6,7 @@ import { notifyOwnerByEmail } from "../../../../lib/notify/owner-email";
 import { notifyOwnerBySms } from "../../../../lib/notify/owner-sms";
 import { inquiryBody, inquiryMessageId, inquirySchema } from "../../../../lib/support-chat/inquiry";
 import { getCustomerChat, sendCustomerMessageOnce } from "../../../../lib/support-chat/repository";
+import { isPaymentSameOrigin } from "../../../../lib/payments/request-origin";
 
 function json(body: unknown, status = 200) {
   return NextResponse.json(body, { status, headers: { "Cache-Control": "private, no-store, max-age=0", Vary: "Cookie" } });
@@ -39,7 +40,8 @@ export async function POST(request: Request) {
   try {
     const identity = await requireAuthenticatedIdentity();
     const origin = request.headers.get("origin");
-    if (origin && origin !== new URL(request.url).origin) return json({ error: { code: "INVALID_ORIGIN", message: "고객센터를 다시 열어주세요." } }, 403);
+    /* 로컬에서는 Next 가 127.0.0.1 을 localhost 로 바꿔 같은 사이트인데도 막혔다 — 결제와 같은 기준(Host 맞춤)도 받는다 */
+    if (origin && origin !== new URL(request.url).origin && !isPaymentSameOrigin(request)) return json({ error: { code: "INVALID_ORIGIN", message: "화면을 새로고침한 뒤 다시 접수해 주세요." } }, 403);
     if (request.headers.get("x-support-owner") !== identity.hash) {
       return json({ error: { code: "ACCOUNT_CHANGED", message: "로그인 계정이 바뀌었어요. 고객센터를 다시 열어주세요." } }, 409);
     }

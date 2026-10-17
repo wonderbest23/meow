@@ -34,8 +34,8 @@ export async function POST(request: Request) {
     const linking = accountLinkError(error);
     if (linking) return NextResponse.json({ error: { code: linking.code, message: linking.message } }, { status: linking.status });
     const message = error instanceof Error && error.message.includes("not configured")
-      ? "로그인 서버가 아직 설정되지 않았습니다."
-      : "이메일 또는 비밀번호가 올바르지 않습니다.";
+      ? "지금은 로그인할 수 없어요. 잠시 후 다시 시도해 주세요."
+      : "이메일 또는 비밀번호가 맞지 않아요. 다시 확인해 주세요.";
     return NextResponse.json({ error: { code: "LOGIN_FAILED", message } }, { status: 401 });
   }
 }

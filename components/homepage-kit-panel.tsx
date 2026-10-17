@@ -246,7 +246,7 @@ export function HomepageKitPanel({
                   <button type="button" className="hk-url-btn" onClick={shareUrl}><Share2 size={13} /> 공유</button></>
                 : <em className="hk-url-pending">공개하면 주소가 생겨요</em>}
             </p>
-          ) : <p className="hk-url">첫 공개 후 주소가 생깁니다</p>}
+          ) : <p className="hk-url">처음 공개하면 주소가 생겨요</p>}
         </div>
         {!inChrome && <div className="hk-actions">
           <button type="button" disabled={busy} onClick={onSave}>{action === "saving" ? <Spinner /> : <Save size={15} />} 저장</button>
@@ -387,7 +387,7 @@ export function HomepageKitPanel({
           <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>
           <label className="wide hk-switch">
             <input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(e) => update({ leadCaptureEnabled: e.target.checked })} />
-            <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 들어온 문의는 왼쪽 메뉴 ‘내 문의’에 쌓입니다.</small></span>
+            <span>고객 문의 양식 받기 <small>홈페이지 아래에 이름·연락처 양식이 붙고, 들어온 문의는 메뉴의 ‘내 문의’에 쌓여요.</small></span>
           </label>
           {/*
            * 받을 연락처 — 예전 편집 화면에 있던 토글이 사라져 휴대폰 칸을 켤 방법이 없었다. 그래서 '문의자 이름·연락처 문자',

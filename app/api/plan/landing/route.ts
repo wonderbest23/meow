@@ -75,8 +75,9 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
+  /* 홈페이지 화면을 열 때마다 부른다(이미 있으면 그대로 돌려줌) — 홈페이지·유지보수를 자주 오가면 20번에 막혔다 */
   const limited = await enforceRateLimit("plan-landing-create", request, {
-    limit: 20,
+    limit: 60,
     windowMs: 10 * 60_000,
     message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
   });

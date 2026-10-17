@@ -20,6 +20,7 @@ import { journeyNext, type HomepageStatus } from "../../../lib/plan-builder/jour
 import { loadState } from "../../../lib/plan-builder/plan-store";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { FactCard, FactPopover, highlightFacts, useFactEdit } from "./FactEdit";
+import { askConfirm } from "../../../components/confirm-dialog";
 
 /** Chat edits after the plan exists (phase B); the choice stays hidden until the server side is live. */
 const EDIT_CHAT = process.env.NEXT_PUBLIC_INTAKE_EDIT_CHAT === "1";
@@ -205,9 +206,15 @@ export default function DocumentWorkspace(props: Props) {
     <button className={styles.continuous} aria-current={continuous && !summaryMode ? "page" : undefined} onClick={readAll}>전체 이어 읽기</button>
   </nav>;
 
+  /* 고친 내용이 아직 계획서에 반영되지 않았는지 — 예전엔 '계획서에 반영하기'가 화면 위 카드에만 있어 아래 '수정 마치기'로 그냥 끝내기 쉬웠다 */
+  const factsUnapplied = factMode && facts.snapshot?.documentStatus === "stale";
   const actionButtons = factMode ? <>
-    <span className={styles.factHint}>노란 부분만 고칠 수 있어요</span>
-    <button className={styles.secondary} onClick={() => { setFactMode(false); setFactPick(null); }}>수정 마치기</button>
+    {factsUnapplied ? null : <span className={styles.factHint}>노란 부분만 고칠 수 있어요</span>}
+    <button className={styles.secondary} onClick={async () => {
+      if (factsUnapplied && !await askConfirm({ message: "고친 내용을 아직 계획서에 반영하지 않았어요. 반영하지 않고 마칠까요?", confirmLabel: "그냥 마치기", cancelLabel: "계속 고치기" })) return;
+      setFactMode(false); setFactPick(null);
+    }}>수정 마치기</button>
+    {factsUnapplied && <button className={styles.primary} onClick={() => { const target = document.querySelector<HTMLElement>("[data-fact-reflect]"); target?.scrollIntoView({ block: "center" }); target?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true }); }}>계획서에 반영하기</button>}
   </> : <>
     {/* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 · 내려받기는 문서 위 '작성 완료' 옆으로 옮겼다(대표 요청 2026-10-17) */}
     {!summaryMode && <button className={styles.secondary} disabled={!grouped.length || isSample || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : editing ? "수정 마치기" : "수정하기"}</button>}
@@ -236,7 +243,8 @@ export default function DocumentWorkspace(props: Props) {
           {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요. 준비되면 <b>다음 단계</b> 버튼을 눌러 이어가세요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
-              <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} />
+              {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
+              <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
                             {arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기 →</button>}
               {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
@@ -252,7 +260,8 @@ export default function DocumentWorkspace(props: Props) {
                     {props.editStates[section.key]?.status === "failed" ? <><p role="alert">{props.editStates[section.key].message}</p><button onClick={() => props.onRetrySave(section.key)}><RefreshCw size={15} />다시 저장</button><button onClick={() => props.onDiscardDraft(section.key)}>서버 내용 불러오기</button></> : !editing && props.editStates[section.key] && <span role="status">{props.editStates[section.key].status === "saving" ? "서버에 저장 중…" : "서버에 저장됨"}</span>}
                     {editing && props.restoreKeys.includes(section.key) && !["saving", "failed"].includes(props.editStates[section.key]?.status ?? "") && <button onClick={() => props.onRestore(section.key)}><RotateCcw size={15} />직전 내용으로 되돌리기</button>}
                   </div>}
-                  {!isSample && planId && props.reviewSource?.sections[section.key] && props.onReviewed && <DocumentSourceReview key={`${section.key}:${props.reviewSource.revision}:${props.reviewSource.sections[section.key]}`} planId={planId} sectionKey={section.key} source={props.reviewSource} disabled={editing || ["saving", "failed"].includes(props.editStates[section.key]?.status ?? "")} onReviewed={props.onReviewed} />}
+                  {/* 고치는 중에는 항목마다 붙는 '이전 조건으로 작성됨' 검토 묶음을 숨긴다 — 반영하기 전부터 문서 열 곳에 같은 상자가 붙어 어지러웠다 */}
+                  {!factMode && !isSample && planId && props.reviewSource?.sections[section.key] && props.onReviewed && <DocumentSourceReview key={`${section.key}:${props.reviewSource.revision}:${props.reviewSource.sections[section.key]}`} planId={planId} sectionKey={section.key} source={props.reviewSource} disabled={editing || ["saving", "failed"].includes(props.editStates[section.key]?.status ?? "")} onReviewed={props.onReviewed} />}
                 </section>)}
               </div>)}
               {!summaryMode && !continuous && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
