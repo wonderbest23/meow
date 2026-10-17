@@ -18,6 +18,7 @@ import type { DocumentReviewSource } from "./DocumentSourceReview";
 import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../lib/plan-builder/executive-summary";
 import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { businessHubState } from "../../../lib/plan-builder/business-hub";
+import { showNotice } from "../../../components/confirm-dialog";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 /** 이 장이 이번 제작(__coach_generation.revision) 기준으로 써졌는지 — 직접 고치거나 잠근 장은 다시 쓰지 않으니 써진 것으로 본다 */
@@ -236,7 +237,7 @@ export default function PlanDocumentPage() {
         }),
       });
       if (res.status === 402) {
-        alert("PDF·Word 내려받기는 결제 후 이용할 수 있습니다. 결제 화면으로 이동합니다.");
+        await showNotice("PDF·Word 내려받기는 결제 후 이용할 수 있어요. 결제 화면으로 이동할게요.", { confirmLabel: "결제 화면으로" });
         goPay();
         return;
       }

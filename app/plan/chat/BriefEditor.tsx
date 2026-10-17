@@ -6,6 +6,7 @@ import { type ExpertPatch } from "../../../lib/plan-builder/coach-expert";
 import { COACH_FIELD_LABELS } from "../../../lib/plan-builder/coach-presentation";
 import { planOwnerEpoch } from "../../../lib/plan-builder/plan-store";
 import styles from "./page.module.css";
+import { askConfirm } from "../../../components/confirm-dialog";
 
 const groups: Record<string, CoachField["key"][]> = {
   intro: ["business", "problem", "goal"],
@@ -31,6 +32,7 @@ export default function BriefEditor({ coach, section, onSave, onClose, onDirty }
   const requestPending = useRef(false);
   const ownerEpoch = useRef(planOwnerEpoch());
   const form = useRef<HTMLFormElement>(null);
+  const leaving = useRef(false);
   const dirty = Object.keys(values).some(key => values[key].trim() !== (initial[key] ?? "").trim());
   useEffect(() => { onDirty(dirty || busy); return () => onDirty(false); }, [dirty, busy, onDirty]);
   useEffect(() => { form.current?.querySelector<HTMLInputElement>("input,textarea")?.focus(); }, []);
@@ -38,14 +40,19 @@ export default function BriefEditor({ coach, section, onSave, onClose, onDirty }
     if (!dirty && !busy) return;
     const warn = (event: BeforeUnloadEvent) => { if (ownerEpoch.current === planOwnerEpoch()) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("beforeunload", warn);
+    // 링크를 누르면 일단 멈추고 확인창을 띄운다 — '나가기'를 고르면 같은 링크를 다시 누른다(이때는 묻지 않는다)
     const navigate = (event: MouseEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest("a[href]")) return;
-      if (busy || !window.confirm("저장하지 않은 수정이 있어요. 이 화면을 나갈까요?")) { event.preventDefault(); event.stopPropagation(); }
+      const link = event.target instanceof Element ? event.target.closest("a[href]") : null;
+      if (!(link instanceof HTMLElement)) return;
+      if (leaving.current) { leaving.current = false; return; }
+      event.preventDefault(); event.stopPropagation();
+      if (busy) return;
+      void askConfirm({ message: "저장하지 않은 수정이 있어요. 이 화면을 나갈까요?", confirmLabel: "나가기" }).then(ok => { if (ok) { leaving.current = true; link.click(); } });
     };
     document.addEventListener("click", navigate, true);
     return () => { window.removeEventListener("beforeunload", warn); document.removeEventListener("click", navigate, true); };
   }, [dirty, busy]);
-  function cancel() { if (!busy && (!dirty || window.confirm("저장하지 않은 수정을 취소할까요?"))) onClose(); }
+  async function cancel() { if (!busy && (!dirty || await askConfirm({ message: "저장하지 않은 수정을 취소할까요?", confirmLabel: "수정 취소", cancelLabel: "계속 고치기" }))) onClose(); }
   async function save(event: React.FormEvent) {
     event.preventDefault();
     if (ownerEpoch.current !== planOwnerEpoch() || requestPending.current || !dirty) return;

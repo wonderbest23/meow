@@ -11,6 +11,7 @@ import { BRAINWAVE_DEFAULT_FOR_TEMPLATE } from "../lib/landing/brainwave/catalog
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { useLandingEditorSave } from "./use-landing-editor-save";
 import { landingDraftFingerprint } from "../lib/landing/save-contract";
+import { askConfirm } from "./confirm-dialog";
 
 const useLandingPuck = createUsePuck();
 
@@ -166,9 +167,9 @@ function BuilderBar({
 }) {
   const data = useLandingPuck((state) => state.appState.data);
   const history = useLandingPuck((state) => state.history);
-  const close = () => {
+  const close = async () => {
     if (persistence.saving) return;
-    if (initialFingerprint !== landingDraftFingerprint(data) && !window.confirm("수정 내용을 저장하지 않고 편집기를 닫을까요?")) return;
+    if (initialFingerprint !== landingDraftFingerprint(data) && !await askConfirm({ message: "수정 내용을 저장하지 않고 편집기를 닫을까요?", confirmLabel: "닫기" })) return;
     onClose();
   };
   return (
@@ -230,8 +231,8 @@ export function LandingVisualBuilder({
   if (current.brainwave) {
     return <BrainwaveEditor data={current} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} published={published} liveUrl={liveUrl} onPublish={onPublish} appendix={appendix} />;
   }
-  const switchToKit = () => {
-    if (!window.confirm("10가지 홈페이지 템플릿을 사용하는 편집기로 바꿉니다. 지금 블록으로 꾸민 내용은 사라지고 사업 정보로 새 초안을 만듭니다. 바꿀까요?")) return;
+  const switchToKit = async () => {
+    if (!await askConfirm({ title: "템플릿 편집기로 바꿀까요?", message: "지금 블록으로 꾸민 내용은 사라지고 사업 정보로 새 초안을 만들어요.", confirmLabel: "바꾸기" })) return;
     const businessContent = data.businessContent ?? { businessName: businessName || "내 사업", offer: businessSummary ?? "", description: businessSummary ?? "", customer: "", price: "문의 후 안내", cta: "문의하기", image: "" };
     setSwitched({ businessContent, brainwave: createBusinessTemplate(businessContent, BRAINWAVE_DEFAULT_FOR_TEMPLATE.service), root: { props: { title: businessName } }, content: [] });
   };

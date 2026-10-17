@@ -15,6 +15,7 @@ import PlanLoading from "./PlanLoading";
 import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
 import mine from "./MyBusinessList.module.css";
+import { askConfirm } from "../../components/confirm-dialog";
 
 /*
  * 내 사업 목록 하나. 예전엔 '사업 기획'(/plan/planning, 대화로 만든 사업만)과 '내 사업'(/plan, 전체)이
@@ -47,8 +48,8 @@ export default function PlanList() {
     if (!name.trim()) { setError("사업 이름을 입력해 주세요."); return; }
     renamePlan(id, name.trim()); setState(loadState()); setEditing(null); setError("");
   }
-  function remove(id: string, title: string) {
-    if (!window.confirm(`‘${title}’ 사업을 삭제할까요? 대화·사업계획서와 이 사업의 홈페이지(공개 중인 사이트·받은 문의 포함)도 함께 삭제되고 되돌릴 수 없어요.`)) return;
+  async function remove(id: string, title: string) {
+    if (!await askConfirm({ title: `‘${title}’ 사업을 삭제할까요?`, message: "대화·사업계획서와 이 사업의 홈페이지(공개 중인 사이트·받은 문의 포함)도 함께 삭제되고 되돌릴 수 없어요.", confirmLabel: "삭제", danger: true })) return;
     deletePlan(id); setState(loadState());
   }
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
@@ -61,7 +62,7 @@ export default function PlanList() {
           */}
           <div className={mine.list}>
             {plans.map(p => { const status=businessHubState(p); const introduction = (status.coach && currentBusinessDesign(status.coach)?.startingPlan.scope) || status.coach?.business.description || ""; return <article key={p.id} className={mine.row}>
-              {editing===p.id ? <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><input aria-label="사업 이름" value={name} maxLength={100} autoFocus onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")setEditing(null);}} /><button className={styles.secondary}>저장</button><button type="button" onClick={()=>{setEditing(null);setError("");}}>취소</button></form> : <Link className={mine.open} href={businessEntryHref(p)} aria-label={`${p.title} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "기존 사업 관리로 이동"}`}>
+              {editing===p.id ? <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><input aria-label="사업 이름" value={name} maxLength={100} autoFocus onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")setEditing(null);}} /><button className={styles.primary}>저장</button><button type="button" onClick={()=>{setEditing(null);setError("");}}>취소</button></form> : <Link className={mine.open} href={businessEntryHref(p)} aria-label={`${p.title} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "기존 사업 관리로 이동"}`}>
                 <strong className={mine.title}>{p.title}</strong>
                 {introduction && <span className={mine.desc}>{introduction}</span>}
                 <span className={mine.meta}><span className={mine.stage}>{status.status}</span><time dateTime={p.updatedAt}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</time></span>

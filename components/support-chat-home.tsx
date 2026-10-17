@@ -8,6 +8,7 @@ import { businessEntryHref, businessHubState } from "../lib/plan-builder/busines
 import { openLogin } from "./login-dialog";
 import styles from "./support-chat-home.module.css";
 import { loadAuthSession } from "../lib/client/auth-session";
+import { askConfirm } from "./confirm-dialog";
 
 /*
  * 상담 창의 홈·설정 탭과 아래 탭 막대 — 메신저형(홈 · 대화 · 설정) 상담 창.
@@ -142,8 +143,8 @@ export function SupportSettings({ open, badge, onBadge, onClearConsult, onClose 
 
     <section className={styles.card} aria-label="상담 기록">
       <div className={styles.cardHead}><b>상담 기록</b></div>
-      <button type="button" className={styles.listButton} disabled={cleared} onClick={() => {
-        if (!window.confirm("AI 창업 상담에서 나눈 대화와 파악한 조건을 지울까요?")) return;
+      <button type="button" className={styles.listButton} disabled={cleared} onClick={async () => {
+        if (!await askConfirm({ message: "AI 창업 상담에서 나눈 대화와 파악한 조건을 지울까요?", confirmLabel: "지우기", danger: true })) return;
         onClearConsult(); setCleared(true);
       }}>{cleared ? "AI 창업 상담 기록을 지웠어요" : "AI 창업 상담 기록 지우기"}</button>
       <Link className={styles.listButton} href="/account/support" onClick={onClose}>지난 문의 내역 보기<ChevronRight aria-hidden="true" /></Link>

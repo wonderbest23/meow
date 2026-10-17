@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { cacheDocumentSection, planOwnerEpoch, subscribePlanOwnerChange, type Plan, type StoredSection } from "../../../lib/plan-builder/plan-store";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
+import { askConfirm } from "../../../components/confirm-dialog";
 
 type Draft = { id: string; html: string; baseGeneratedAt: string };
 export type EditState = { status: "saving" | "saved" | "failed"; message?: string };
@@ -89,13 +90,15 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
       queue.current = queue.current.then(() => send(key, restoreAttempts.current[key], "restore"));
     }
   }
-  function discard(key: string) {
-    if (!plan.current || !window.confirm("이 기기에 보관한 수정 초안을 버리고 서버 내용을 불러올까요?")) return;
+  async function discard(key: string) {
+    if (!plan.current || !await askConfirm({ message: "이 기기에 보관한 수정 초안을 버리고 저장된 내용을 불러올까요?", confirmLabel: "불러오기" })) return;
     localStorage.removeItem(storageKey(plan.current.id, key)); delete drafts.current[key]; window.location.reload();
   }
-  function restore(key: string) {
+  async function restore(key: string) {
     const section = plan.current?.sections[key];
-    if (!section?.previous || drafts.current[key] || restoring.current.has(key) || !window.confirm("직전 저장 내용으로 되돌릴까요? 현재 내용도 이전 버전으로 보관됩니다.")) return;
+    if (!section?.previous || drafts.current[key] || restoring.current.has(key)) return;
+    if (!await askConfirm({ message: "직전 저장 내용으로 되돌릴까요? 현재 내용도 이전 버전으로 보관돼요.", confirmLabel: "되돌리기" })) return;
+    if (drafts.current[key] || restoring.current.has(key)) return;
     restoring.current.add(key); state(key, { status: "saving" });
     const draft = { id: crypto.randomUUID(), html: section.previous.html, baseGeneratedAt: section.generatedAt };
     restoreAttempts.current[key] = draft;
