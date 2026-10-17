@@ -73,7 +73,7 @@ try {
     assert(await page.getByLabel("한 장 사업 요약", { exact: true }).innerText().then((value: string) => value.includes("5,400,000원") && value.includes("지출 미입력")));
     assert(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.screenshot({ path: join(output, `summary-${width}.png`) });
-    await page.getByRole("button", { name: "사업계획서 내려받기", exact: true }).click();
+    await page.getByRole("button", { name: "내려받기", exact: true }).click();
     const dialog = page.getByRole("dialog");
     assert.equal(await dialog.getByRole("button", { name: /한 장 요약/ }).count(), 0, "the one-page summary is read on screen, not downloaded");
     await dialog.getByRole("button", { name: "PDF 인쇄하거나 공유할 때", exact: true }).click();
@@ -87,7 +87,8 @@ try {
     await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
     await page.reload({ waitUntil: "networkidle" });
     await page.getByLabel("한 장 사업 요약", { exact: true }).waitFor();
-    assert(await page.getByRole("button", { name: "사업계획서 내려받기", exact: true }).isDisabled(), "nothing to download before detailed sections exist");
+    assert.equal(await page.getByRole("button", { name: "내려받기", exact: true }).count(), 0, "nothing to download before detailed sections exist");
+    assert.equal(await page.locator("footer button", { hasText: "수정" }).count(), 0, "the one-page summary has no edit button");
     assert.deepEqual(errors, []);
     checks.push(`${width}px: summary on screen, detailed-only download, reload, summary before detailed generation, no overflow/errors`);
     await context.close();
