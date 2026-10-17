@@ -48,7 +48,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
       {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
-    <div className={styles.appSurface}>
+    <div className={styles.appSurface} data-app-surface="">
       <header className={styles.header}>
         {onBack
           ? <button type="button" className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} onClick={onBack} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></button>

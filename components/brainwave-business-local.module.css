@@ -103,7 +103,7 @@
 
 /* 마무리 — 보라 띠 */
 .closingWrap { padding: 12px 12px 56px; }
-.closing { display: grid; justify-items: center; gap: 18px; padding: 64px 22px; border-radius: 12px; color: #fff; background: radial-gradient(80% 90% at 50% 100%, rgba(104, 213, 133, .28) 0%, rgba(104, 213, 133, 0) 60%), var(--accent); text-align: center; }
+.closing { display: grid; justify-items: center; gap: 18px; padding: 64px 22px; border-radius: 12px; color: #fff; background: radial-gradient(80% 90% at 50% 100%, color-mix(in srgb, var(--mint) 28%, transparent) 0%, transparent 60%), var(--accent); text-align: center; }
 .closing h2 { max-width: 640px; font-size: 30px; line-height: 1.3; font-weight: 700; }
 .closing .lead { max-width: 560px; opacity: .85; }
 .closingButton { margin-top: 8px; }

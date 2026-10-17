@@ -17238,3 +17238,7 @@ body:has([data-pay-bar]) .support-chat-widget { bottom: calc(150px + env(safe-ar
 
 /* 휴대폰 사업 관리·내 문의 — 아래 고정 단추 줄·처리 단추를 떠 있는 상담 버튼이 가렸다. 이 화면들에서는 휴대폰일 때 숨긴다(메뉴의 '고객센터'로 갈 수 있다) */
 @media (max-width: 760px) { .support-chat-widget[data-phone-hide]:not(.open) { display: none; } }
+
+/* 앱(아이폰) 위 시계 줄·아래 홈 막대 자리는 페이지 바탕색을 따라 칠해진다(AppDelegate). 바탕이 연보라라 흰 머리줄·흰 화면과 띠처럼 어긋났다 —
+   앱 화면 틀(BusinessAppChrome)이 있는 화면은 바탕을 흰색으로 */
+html:has([data-app-surface]) { background: #fff; }
