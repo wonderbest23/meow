@@ -41,7 +41,9 @@
 .hero { position: relative; overflow: hidden; display: grid; align-content: end; min-height: 620px; color: #fff; background: #2a2826; }
 .heroImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .heroShade { position: absolute; inset: 0; pointer-events: none; }
-.heroPhoto .heroShade { background: linear-gradient(180deg, rgba(0, 0, 0, .05) 30%, rgba(0, 0, 0, .62) 100%); }
+/* 제목이 길면 사진의 밝은 위쪽까지 올라가 흰 글씨가 묻혔다(창문 사진 등) — 위쪽부터 조금씩 어둡게, 글자에 옅은 그림자 */
+.heroPhoto .heroShade { background: linear-gradient(180deg, rgba(0, 0, 0, .18) 0%, rgba(0, 0, 0, .38) 35%, rgba(0, 0, 0, .74) 100%); }
+.heroPhoto .heroCopy h1, .heroPhoto .heroLead { text-shadow: 0 1px 12px rgba(0, 0, 0, .35); }
 .heroCopy { position: relative; z-index: 1; display: grid; justify-items: start; gap: 16px; padding: 40px 22px 56px; }
 .heroCopy h1 { font-size: 44px; line-height: 1.12; font-weight: 700; }
 .heroLead { max-width: 560px; font-size: 18px; line-height: 1.6; opacity: .92; white-space: pre-wrap; }
@@ -175,3 +177,6 @@
 .header .brand { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 /* 사진 없이 글만 남으면(공개 화면) 두 칸 대신 한 칸으로 */
 .desktop .studio:not(:has(.studioMedia)) { grid-template-columns: minmax(0, 720px); }
+
+/* 작은 폰(380px 이하) — 44px 제목이 한 줄에 한두 낱말씩 꺾여 화면을 다 차지하고 문의 단추가 아래로 밀렸다 */
+@media (max-width: 380px) { .page:not(.desktop) .heroCopy h1 { font-size: 34px; line-height: 1.18; } .page:not(.desktop) .heroCopy { padding-bottom: 40px; } }

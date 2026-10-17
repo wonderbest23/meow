@@ -85,7 +85,7 @@
 
 /* 마무리 — 사진 위 가운데 흰 글 + 초록 버튼 */
 .ctaWrap { padding: 12px 12px 56px; }
-.cta { position: relative; overflow: hidden; display: grid; place-items: center; min-height: 360px; border-radius: 12px; color: #fff; text-align: center; background: radial-gradient(80% 70% at 50% 100%, rgba(104, 213, 133, .22) 0%, rgba(104, 213, 133, 0) 60%), #232838; }
+.cta { position: relative; overflow: hidden; display: grid; place-items: center; min-height: 360px; border-radius: 12px; color: #fff; text-align: center; background: radial-gradient(80% 70% at 50% 100%, color-mix(in srgb, var(--mint) 22%, transparent) 0%, transparent 60%), var(--ink); } /* 분위기 색을 따른다 — 예전엔 늘 남색 + 초록빛이라 따뜻한 갈색 페이지에서 혼자 튀었다 */
 .ctaImage { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .ctaShade { position: absolute; inset: 0; pointer-events: none; }
 .ctaPhoto .ctaShade { background: rgba(22, 28, 45, .6); }
