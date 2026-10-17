@@ -209,10 +209,12 @@ export default function DocumentWorkspace(props: Props) {
     <span className={styles.factHint}>노란 부분만 고칠 수 있어요</span>
     <button className={styles.secondary} onClick={() => { setFactMode(false); setFactPick(null); }}>수정 마치기</button>
   </> : <>
-    <button className={styles.secondary} disabled={!grouped.length || isSample || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else { setSummaryMode(false); setFactMode(true); } return; } if (summaryMode) { setSummaryMode(false); setEditing(true); } else setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : summaryMode ? "상세 문서 수정" : editing ? "수정 마치기" : "수정하기"}</button>
-    <button className={showNext ? styles.secondary : styles.primary} disabled={!grouped.length} onClick={() => setModal("download")}>{showNext ? "내려받기" : "사업계획서 내려받기"}</button>
+    {/* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 · 내려받기는 문서 위 '작성 완료' 옆으로 옮겼다(대표 요청 2026-10-17) */}
+    {!summaryMode && <button className={styles.secondary} disabled={!grouped.length || isSample || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : editing ? "수정 마치기" : "수정하기"}</button>}
     {showNext && planId && <NextStepButton planId={planId} homepage={homepage} />}
   </>;
+  const hasActions = factMode || !summaryMode || Boolean(showNext && planId);
+  const singleAction = !factMode && !(!summaryMode && showNext && planId);
 
   return <main className={`${frame.page} ${styles.page}`}>
     <BusinessAppChrome title="사업계획서" backHref={back} showRail={!isSample} documentToc={documentToc}>
@@ -228,13 +230,13 @@ export default function DocumentWorkspace(props: Props) {
               <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
             </div>}
             <span className={styles.pageCount}>{summaryMode ? props.summary ? "" : "한 장 요약" : continuous ? "전체 이어 읽기" : grouped.length ? `${chapter + 1} / ${grouped.length}장` : "사업계획서"}</span>
-            <div className={styles.toolbarActions} data-next={showNext || undefined}>{actionButtons}</div>
+            {hasActions && <div className={styles.toolbarActions} data-next={showNext || undefined}>{actionButtons}</div>}
           </div>
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
           {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어보세요. 준비되면 <b>다음 단계</b> 버튼을 눌러 이어가세요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
-              <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} />
+              <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} />
                             {props.writing && <WritingStatus {...props.writing} />}
                             {arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기 →</button>}
               {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
@@ -256,7 +258,7 @@ export default function DocumentWorkspace(props: Props) {
               {!summaryMode && !continuous && <nav className={styles.paging} aria-label="문서 장 이동"><button disabled={chapter === 0} onClick={() => selectChapter(chapter - 1)}><ChevronLeft size={18} />이전 장</button><button disabled={chapter === grouped.length - 1} onClick={() => selectChapter(chapter + 1)}>다음 장<ChevronRight size={18} /></button></nav>}
                           </article>}
           </div>
-          <footer className={styles.actions} data-next={showNext || undefined}>{actionButtons}</footer>
+          {hasActions && <footer className={styles.actions} data-next={showNext || undefined} data-single={singleAction || undefined}>{actionButtons}</footer>}
         </div>
       </div>}
     </BusinessAppChrome>

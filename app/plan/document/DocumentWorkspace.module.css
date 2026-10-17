@@ -21,7 +21,8 @@
 .completionNotice > div { flex:1; min-width:0; }.completionNotice strong { font-size:15px; font-weight:600; color:var(--app-text); }.completionNotice p { font-size:13px; line-height:1.6; margin:4px 0 0; color:var(--app-body); word-break:keep-all; overflow-wrap:anywhere; }
 .completeMark { display:grid; place-items:center; flex-shrink:0; width:38px; height:38px; border-radius:50%; background:var(--app-success); color:#fff; animation:checkPop .55s ease-out; }.completeMark svg { stroke-dasharray:60; stroke-dashoffset:0; animation:checkDraw .7s ease-out; }
 .completionNotice > button { display:grid; place-items:center; flex-shrink:0; width:40px; height:40px; border:0; background:transparent; border-radius:8px; color:var(--app-body); }
-.completedBadge { display:inline-flex; align-items:center; gap:6px; margin-bottom:18px; border:1px solid var(--app-line); border-radius:6px; padding:5px 9px; color:var(--app-body); font-size:12px; font-weight:600; }
+.badgeRow { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:18px; }
+.completedBadge { display:inline-flex; align-items:center; gap:6px; margin-bottom:0; border:1px solid var(--app-line); border-radius:6px; padding:5px 9px; color:var(--app-body); font-size:12px; font-weight:600; }
 @keyframes completionEnter { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
 @keyframes checkPop { 0% { transform:scale(.6); } 65% { transform:scale(1.08); } 100% { transform:scale(1); } }
 @keyframes checkDraw { from { stroke-dashoffset:60; } to { stroke-dashoffset:0; } }
@@ -200,15 +201,12 @@
 
 /* 다 만든 뒤 — 홈페이지·시작 준비로 이어지는 다음 단계 */
 /* 다음 단계 — 맨 아래 줄 오른쪽, 가장 눈에 띄는 버튼 하나 */
-.actions[data-next] { grid-template-columns:1fr 1fr 1.6fr; }
+.actions[data-next] { grid-template-columns:1fr 1.6fr; }
+.actions[data-single] { grid-template-columns:1fr; }
 .nextButton { display:flex; align-items:center; justify-content:center; gap:8px; min-height:54px; padding:8px 16px; border-radius:8px; background:var(--app-primary); color:#fff; text-decoration:none; font-size:16px; font-weight:600; word-break:keep-all; }
 .nextButton:hover { background:#246cd4; }
 .nextButton span { font-size:13px; font-weight:500; opacity:.85; }
 .nextButton span::after { content:"·"; margin-left:8px; }
-@media(max-width:760px) {
-  .actions[data-next] { grid-template-columns:1fr 1fr; }
-  .actions[data-next] .nextButton { grid-column:1 / -1; }
-}
 
 /* 왼쪽 메뉴가 숨는 폭(900px 이하)에서는 목차 단추로 연다 — PC에서는 왼쪽 메뉴에 목차가 있다 */
 @media(max-width:900px) { .tocToggle { display:flex; } }
@@ -292,7 +290,8 @@
   .completeMark { width:26px; height:26px; }
   .actions { gap:8px; padding-top:10px; padding-bottom:max(10px, env(safe-area-inset-bottom)); }
   .actions button, .actions .nextButton { min-height:46px; font-size:15px; }
-  .actions[data-next] { grid-template-columns:auto auto minmax(0,1fr); }
+  .actions[data-next] { grid-template-columns:auto minmax(0,1fr); }
+  .actions[data-single] { grid-template-columns:1fr; }
   .actions[data-next] .nextButton { grid-column:auto; padding:8px 12px; }
   .actions[data-next] > button { padding:8px 14px; }
   .actions[data-next] .nextButton span { display:none; }
@@ -303,3 +302,7 @@
   .actions[data-next] > button, .actions[data-next] .nextButton { padding:8px 10px; font-size:14px; }
   .actions[data-next] .nextButton svg { display:none; }
 }
+
+/* 내려받기 — '작성 완료'와 같은 작은 칩, 누를 수 있는 것만 파란 글씨 */
+.badgeRow .downloadBadge { background:var(--app-surface, #fff); color:var(--app-accent, #3182f6); font-size:12px; font-weight:600; line-height:normal; cursor:pointer; }
+.badgeRow .downloadBadge:hover { border-color:var(--app-line-strong); background:var(--app-panel-fill, #f9fafb); }
