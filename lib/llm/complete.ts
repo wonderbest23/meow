@@ -226,12 +226,29 @@ async function openaiComplete(config: LLMConfig, params: LLMCompleteParams): Pro
  */
 export const THINKING_HEADROOM = { low: 2_048, medium: 4_096, high: 8_192, xhigh: 16_384, max: 32_000 } as const;
 
+/*
+ * Claude 구조화 출력이 받지 않는 JSON 스키마 조건을 뺀다 — 배열의 maxItems, 1보다 큰 minItems.
+ * zod 의 .max(n) 이 maxItems 로 들어가 '메모 정리'·'채팅으로 고치기' 요청이 매번 400(invalid_request_error)으로 실패했다(2026-10-18 실제 AI 시험).
+ * 개수 제한은 응답을 받은 뒤 각 호출부의 validateJson(zod)이 그대로 검사한다.
+ */
+export function anthropicCompatibleSchema(schema: unknown): unknown {
+  if (Array.isArray(schema)) return schema.map(anthropicCompatibleSchema);
+  if (!schema || typeof schema !== "object") return schema;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(schema as Record<string, unknown>)) {
+    if (key === "maxItems") continue;
+    if (key === "minItems" && typeof value === "number" && value > 1) { out.minItems = 1; continue; }
+    out[key] = anthropicCompatibleSchema(value);
+  }
+  return out;
+}
+
 function anthropicOutputParams(config: LLMConfig, params: LLMCompleteParams) {
   const effortCapable = !/haiku/i.test(config.model);
   const effort = params.effort ?? "medium";
   const outputConfig = {
     ...(effortCapable ? { effort } : {}),
-    ...(params.anthropicJsonSchema && params.jsonSchema ? { format: { type: "json_schema", schema: params.jsonSchema.schema } } : {}),
+    ...(params.anthropicJsonSchema && params.jsonSchema ? { format: { type: "json_schema", schema: anthropicCompatibleSchema(params.jsonSchema.schema) } } : {}),
   };
   return {
     max_tokens: Math.min(64_000, params.maxOutputTokens + (effortCapable ? THINKING_HEADROOM[effort] : 0)),
