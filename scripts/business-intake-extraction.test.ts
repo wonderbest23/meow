@@ -66,7 +66,9 @@ function assertRequest(config: LLMConfig, name: "intake_extract" | "intake_help"
   assert.equal(schema.additionalProperties, false);
   if (name === "intake_extract") {
     assert.deepEqual(schema.required, ["candidates"]);
-    assert.equal(schema.properties.candidates.maxItems, 12);
+    // Claude 구조화 출력은 배열 maxItems 를 받지 않는다(받으면 400) — Claude 쪽에는 빼고 보내고, 12개 제한은 응답 검증(zod)이 지킨다(2026-10-18 실제 AI 시험)
+    if (body.output_config) assert.equal(schema.properties.candidates.maxItems, undefined, "Claude 요청에는 maxItems 를 보내지 않는다");
+    else assert.equal(schema.properties.candidates.maxItems, 12);
     const item = schema.properties.candidates.items;
     assert.equal(item.additionalProperties, false);
     assert.deepEqual(item.required, ["fieldKey", "value", "quote", "noteId"]);
