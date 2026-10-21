@@ -109,6 +109,7 @@ try {
     assert.ok(resumeSummary(snapshot).includes(snapshot.nextQuestion!.label));
     snapshot.nextQuestion = null;
     assert.match(resumeSummary(snapshot), /마무리 단계/);
+    assert.equal(resumeSummary({ ...snapshot, hasDocuments: true }), "", "a plan that already has documents gets no resume notice");
   });
   check("mobile Return, IME and Shift+Enter never submit; desktop Enter still does", () => {
     const enter = { key: "Enter", shiftKey: false };

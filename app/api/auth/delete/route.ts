@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("account-delete", request, {
     limit: 5,
     windowMs: 60 * 60_000,
-    message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
 
@@ -30,7 +30,7 @@ export async function POST(request: Request) {
     const input = schema.parse(await request.json());
     if (input.email.toLowerCase() !== (user.email ?? "").toLowerCase()) {
       return NextResponse.json(
-        { error: { code: "EMAIL_MISMATCH", message: "로그인한 계정의 이메일과 다릅니다." } },
+        { error: { code: "EMAIL_MISMATCH", message: "로그인한 계정의 이메일과 달라요." } },
         { status: 400 },
       );
     }
@@ -48,7 +48,7 @@ export async function POST(request: Request) {
           code: "ACCOUNT_DELETE_FAILED",
           message: badInput
             ? "이메일을 다시 확인해주세요."
-            : "탈퇴 처리에 실패했습니다. 잠시 후 다시 시도하거나 1:1 문의로 알려주세요.",
+            : "탈퇴를 마치지 못했어요. 잠시 후 다시 시도하거나 고객센터로 알려 주세요.",
         },
       },
       { status: badInput ? 400 : 500 },

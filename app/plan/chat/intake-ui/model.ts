@@ -113,13 +113,28 @@ export type ComposerRoute =
   | { kind: "note"; intent: "memo" | "question" }
   | { kind: "clarify"; canAnswer: boolean };
 
+/** '잘 몰라요', '글쎄요'처럼 모른다는 말 — '잘 모르겠어요'와 같이 미정으로 남긴다. */
+const unknownReply = /^(?:아직\s*|잘\s*|정말\s*|솔직히\s*)*(?:미정|모름|몰라|몰라요|모르겠어요|모르겠습니다|모르겠네요|글쎄|글쎄요|정하지\s*못했어요|안\s*정했어요)[.!~\s…]*$/;
+/**
+ * 뜻 없는 짧은 말('음', 'ㅇㅇ', 'ㅋㅋ', 'ㅎ')은 답으로 저장하지 않고 '어떻게 남길까요'로 묻는다 — 예전엔 그대로 답이 되어 다음 질문으로 넘어갔다.
+ * 두 글자 답이라도 '카페'·'학생'처럼 낱말이거나 '30'처럼 숫자면 답이다.
+ */
+export function fillerReply(text: string): boolean {
+  const value = text.normalize("NFC").trim();
+  if (!value) return false;
+  if (/^[\u3131-\u318E\s.,!?~…^;:ㅡ\-]+$/.test(value)) return true;
+  if (/^(?:음+|흠+|으+음*|어+|아+|에+|엥|헐|흐음|그냥|ok|오케이)[.!?~\s…]*$/i.test(value)) return true;
+  return [...value.replace(/\s+/g, "")].length === 1 && !/\d/.test(value);
+}
+
 /** Explicit question context or exact options become answers. Ambiguous prose never silently triggers AI. */
 export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQuestion | null, text: string): ComposerRoute {
   const value = text.trim();
-  if (question && /^(?:아직\s*)?(?:미정|모르겠어요|모르겠습니다|정하지\s*못했어요)[.!\s]*$/.test(value)) return { kind: "answer", questionId: question.id, value: null, unknown: true };
+  if (question && unknownReply.test(value)) return { kind: "answer", questionId: question.id, value: null, unknown: true };
   if (questionIntent.test(value)) return { kind: "note", intent: "question" };
   const canAnswer = !!question && ["text", "number"].includes(question.kind);
-  if (/[?？]/.test(value) || acknowledgement.test(value) || (value.match(compoundFields)?.length ?? 0) > 1) return { kind: "clarify", canAnswer };
+  if (fillerReply(value)) return { kind: "clarify", canAnswer: false };
+  if (/[?？]/.test(value) || acknowledgement.test(value) || (value.match(compoundFields)?.length ?? 0) > 1) return { kind: "clarify", canAnswer: canAnswer && !/[?？]\s*$/.test(value) };
   if (!question) return { kind: "note", intent: "memo" };
   if (["single", "multi"].includes(question.kind)) {
     const choice = question.kind === "multi" && hasExclusiveOptions(question) ? undefined : typedChoiceAnswer(snapshot, question, value);
@@ -678,6 +693,22 @@ function composedSelection(question: Pick<IntakeQuestion, "id" | "options">, pie
   return [];
 }
 
+/**
+ * 실적 기간 표시 — 저장은 '2026-07-01 / 2026-09-30'이지만 화면에는 '2026년 7월~9월'처럼 보인다.
+ * 달의 첫날부터 마지막 날까지면 달로, 아니면 날짜로 쓴다. 형식이 다르면 그대로 둔다.
+ */
+export function periodDisplay(value: string): string {
+  const dates = periodDates(value);
+  if (!dates) return value;
+  const [[sy, sm, sd], [ey, em, ed]] = dates.map(date => date.split("-").map(Number));
+  const lastDay = new Date(Date.UTC(ey, em, 0)).getUTCDate();
+  if (sd === 1 && ed === lastDay) {
+    if (sy === ey && sm === em) return `${sy}년 ${sm}월`;
+    return sy === ey ? `${sy}년 ${sm}월~${em}월` : `${sy}년 ${sm}월~${ey}년 ${em}월`;
+  }
+  return sy === ey ? `${sy}년 ${sm}월 ${sd}일~${em}월 ${ed}일` : `${sy}년 ${sm}월 ${sd}일~${ey}년 ${em}월 ${ed}일`;
+}
+
 /** Display formatting for stored amounts: "3000000원" / "300만원" → "3,000,000원"; anything unparsable stays as written. */
 export function displayAmount(value: string) {
   const amount = coachAmount(value);
@@ -687,6 +718,7 @@ export function displayAmount(value: string) {
 /** Summary value for a question: candidate title, amounts formatted, numbers with unit and period ("30건 / 시간"), choices as labels. */
 export function summaryAnswerText(question: Pick<IntakeQuestion, "id" | "kind" | "options" | "unit" | "period">, value: IntakeValue, candidateIdeas: IntakeSnapshot["candidateIdeas"] = []): string {
   if (value === null) return "";
+  if (question.id === "period" && typeof value === "string") return periodDisplay(value);
   if (question.id === "candidate") return candidateIdeas.find(idea => idea.id === value)?.title ?? String(value);
   if (question.kind === "number") {
     const number = numericAnswer(question, value);

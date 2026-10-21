@@ -180,3 +180,6 @@
 
 /* 작은 폰(380px 이하) — 44px 제목이 한 줄에 한두 낱말씩 꺾여 화면을 다 차지하고 문의 단추가 아래로 밀렸다 */
 @media (max-width: 380px) { .page:not(.desktop) .heroCopy h1 { font-size: 34px; line-height: 1.18; } .page:not(.desktop) .heroCopy { padding-bottom: 40px; } }
+
+/* 편집 화면 전용 — 비어 있는 마무리 띠 사진 자리(공개 화면에는 없다) */
+.closingSlot { position: relative; z-index: 1; width: auto; height: auto; min-height: 44px; padding: 8px 16px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }

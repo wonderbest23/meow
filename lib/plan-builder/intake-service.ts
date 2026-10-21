@@ -142,6 +142,9 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       // 사업 이름만 바꾼다. 내용이 바뀐 게 아니므로 정리한 사업 방향과 계획서를 '변경됨'으로 만들지 않는다.
       const name = typeof command.value === "string" ? command.value.replace(/\s+/g, " ").trim() : "";
       if (!name || name.length > 40) throw new IntakeError("name_invalid", "사업 이름은 40자 안으로 적어 주세요");
+      // 처음 이름(답변에서 온 이름)을 남겨 둔다 — 추천 이름을 눌렀다가 되돌릴 수 있게 결과 화면에 칩으로 보인다.
+      const previousName = coach.business.name.trim();
+      if (!coach.business.nameConfirmed && previousName && previousName !== name && !["새 사업 구상", "새 사업 진단", "새 사업"].includes(previousName)) intake.originalName = previousName;
       coach.business.name = name; coach.business.nameConfirmed = true;
       before = intakeBusinessFingerprint(coach, plan.answers);
     }
@@ -172,12 +175,12 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         const alreadyStored = !!lastUser && lastUser.text === command.message && intake.notes.some(note => note.id === `${lastUser.id}:0` && note.intent === "question");
         if (!alreadyStored) storeDeferredNote(coach, intake, { ...command, noteIntent: "question" }, at);
       }
-      if (command.action === "design" && !coach.ready) throw new IntakeError("business_required", "사업 후보를 선택하거나 생각한 사업을 먼저 입력해 주세요");
+      if (command.action === "design" && !coach.ready) throw new IntakeError("business_required", "살펴볼 사업을 고르거나 생각한 사업을 먼저 적어 주세요");
       if (command.action === "ideas") {
-        if (intake.mode !== "exploring") throw new IntakeError("exploration_only", "새 후보 탐색은 아이디어 탐색 대화에서 요청해 주세요. 현재 사업은 유지됩니다");
-        if (!command.message?.trim() || command.message.length > 1200) throw new IntakeError("idea_request_required", "원하는 후보 방향을 1,200자 이내로 적어 주세요");
-        if ((intake.ideaTurns?.length ?? 0) >= IDEA_MAX_TURNS) throw new IntakeError("idea_history_limit", "이 탐색의 요청 한도에 도달했어요. 기존 후보를 선택하거나 새 탐색 대화를 시작해 주세요");
-        if ((command.rejectIds??[]).some(id=>!intake.generatedIdeas?.some(idea=>idea.id===id && idea.planId===plan!.id))) throw new IntakeError("candidate_unknown", "이 사업에서 제안한 후보만 제외할 수 있어요", 404);
+        if (intake.mode !== "exploring") throw new IntakeError("exploration_only", "새 사업 제안은 아이디어 탐색 대화에서 받을 수 있어요. 지금 사업은 그대로예요");
+        if (!command.message?.trim() || command.message.length > 1200) throw new IntakeError("idea_request_required", "원하는 사업 방향을 1,200자 안으로 적어 주세요");
+        if ((intake.ideaTurns?.length ?? 0) >= IDEA_MAX_TURNS) throw new IntakeError("idea_history_limit", "이 대화에서 받을 수 있는 제안 횟수를 다 썼어요. 받은 제안 중에서 고르거나 새 탐색 대화를 시작해 주세요");
+        if ((command.rejectIds??[]).some(id=>!intake.generatedIdeas?.some(idea=>idea.id===id && idea.planId===plan!.id))) throw new IntakeError("candidate_unknown", "이 사업에서 받은 제안만 뺄 수 있어요", 404);
       }
       created = newIntakeJob(coach, intake, command.action === "extract-pending" ? "extract" : command.action as IntakeJob["kind"], at, command.message);
       if (created?.kind === "ideas") {
@@ -272,14 +275,14 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
     if (job.kind === "ideas") {
       if ((claimed.intake.ideaInputRevision ?? 0) !== job.baseIdeaRevision) throw new IntakeError("idea_source_changed", "대기 중 조건이 바뀌었어요. 최신 조건으로 다시 요청해 주세요", 409);
       const deadline = Date.parse(job.createdAt ?? job.updatedAt) + IDEA_RESULT_DEADLINE_MS;
-      if (Date.now() >= deadline) throw new IntakeError("idea_timeout", "후보 제안 시간이 지났어요. 요청은 보관되어 있으니 다시 요청해 주세요");
+      if (Date.now() >= deadline) throw new IntakeError("idea_timeout", "제안을 받는 시간이 지났어요. 요청은 보관해 뒀으니 다시 요청해 주세요");
       const prompt = ideasPrompt(claimed.coach, claimed.intake, confirmedIntakeContext(claimed.plan.answers), intakeSnapshot(claimed.plan,claimed.coach,claimed.intake).candidateIdeas);
-      if (prompt.length > 64_000) throw new IntakeError("idea_context_limit", "탐색 자료가 많아요. 기존 후보와 요청은 보관되어 있어요. 새 탐색 대화에서 이어가 주세요");
+      if (prompt.length > 64_000) throw new IntakeError("idea_context_limit", "탐색 내용이 많아요. 받은 제안과 요청은 보관해 뒀어요. 새 탐색 대화에서 이어가 주세요");
       const raw = await completeJson(config,{system:IDEA_RULES,user:prompt,jsonSchema:{name:"intake_ideas",schema:z.toJSONSchema(ideaReplySchema)},validateJson:value=>ideaReplySchema.safeParse(value).success,kind:"intake-ideas",timeoutMs:Math.min(IDEA_CALL_TIMEOUT_MS,deadline-Date.now()),maxOutputTokens:2400,effort:"low",allowFallback:false});
       const parsed = ideaReplySchema.safeParse(raw);
-      if (!parsed.success) throw new IntakeError("ideas_failed", "새 후보를 생성하지 못했어요. 요청을 보관했으며 다시 요청할 수 있어요");
+      if (!parsed.success) throw new IntakeError("ideas_failed", "새 사업 제안을 받지 못했어요. 요청은 보관해 뒀으니 다시 요청할 수 있어요");
       const signatures = new Set((claimed.intake.generatedIdeas??[]).map(ideaSignature));
-      for (const idea of parsed.data.ideas) { const key=ideaSignature(idea); if(signatures.has(key)) throw new IntakeError("ideas_duplicate", "이름만 다르거나 같은 구성의 후보가 돌아왔어요. 다른 방향을 적어 다시 요청해 주세요"); signatures.add(key); }
+      for (const idea of parsed.data.ideas) { const key=ideaSignature(idea); if(signatures.has(key)) throw new IntakeError("ideas_duplicate", "앞서 받은 제안과 거의 같은 제안이 왔어요. 다른 방향을 적어 다시 요청해 주세요"); signatures.add(key); }
       await updateIntakeJob(request,(_plan,coach,intake,current)=>{
         if(current.status!=="running" || (intake.ideaInputRevision??0)!==job.baseIdeaRevision || Date.now()>=deadline) throw new IntakeError("idea_source_changed","제안 중 조건이 바뀌었거나 시간이 지났어요. 최신 조건으로 다시 요청해 주세요",409);
         const generated = parsed.data.ideas.map((idea,index)=>({id:`${job.id}:idea:${index}`,title:idea.title,description:idea.description,sector:"general" as const,reasons:[idea.differences],cautions:["독창성·수요·수익성 미검증","자원 적합성 확인 필요"],source:"ai-generated" as const,planId:request.planId,baseInputRevision:job.baseIdeaRevision!,generatedAt:new Date().toISOString(),customer:idea.customer,problem:idea.problem,offering:idea.offering,delivery:idea.delivery,revenue:idea.revenue,differences:idea.differences,unknowns:idea.unknowns,proposedStructure:Object.fromEntries(Object.entries(idea.structure).filter(([,value])=>value!==null))}));

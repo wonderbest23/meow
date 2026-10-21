@@ -11,7 +11,9 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
-import { supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
+import { faqAnswer, supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
+import { nativePlatform } from "../lib/native-app";
+import tap from "./support-chat-tap.module.css";
 import type { SupportChat } from "../lib/support-chat/repository";
 import { trackFunnel } from "../lib/funnel/client";
 import { escalationReason } from "../lib/consult/escalation";
@@ -77,6 +79,9 @@ export function SupportChatWidget() {
    */
   const [onPublicSite, setOnPublicSite] = useState(false);
   useEffect(() => { setOnPublicSite(Boolean(document.querySelector(".public-landing"))); }, [pathname]);
+  /* 앱 안이면 결제·환불 답을 앱 기준(스토어 결제)으로 — 앱 안에서 카드·웹 결제를 안내하지 않는다(App Store 3.1.1) */
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => { setInApp(nativePlatform() !== null); }, []);
   /* 결제 화면은 동의 목록의 › 를 덮었고 아래 결제 줄과 겹쳤다 · 고객센터 화면에서는 같은 기능이 두 번이다(메뉴의 '고객센터'로 갈 수 있다) */
   const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal" || pathname === "/plan/pay" || pathname === "/account" || pathname === "/account/support" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
   const [open, setOpen] = useState(false);
@@ -315,7 +320,7 @@ export function SupportChatWidget() {
     setQuickMessages((current) => [
       ...current,
       { id: crypto.randomUUID(), sender: "customer", body: customerText, createdAt: new Date(now).toISOString() },
-      { id: crypto.randomUUID(), sender: "assistant", body: faq.answer, createdAt: new Date(now + 1).toISOString(), faq },
+      { id: crypto.randomUUID(), sender: "assistant", body: faqAnswer(faq, inApp), createdAt: new Date(now + 1).toISOString(), faq },
     ]);
     setShowQuickMenu(false);
     setOperatorMode(false);
@@ -634,7 +639,7 @@ export function SupportChatWidget() {
       {open && (
         <section className={`support-chat-panel mode-${mode} tab-${tab}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
           {/* 홈·설정 화면에도 닫기 — 대화 화면은 머리줄에 이미 있다 */}
-          {tab !== "chat" && <button type="button" className="support-pane-close" onClick={() => setOpen(false)} aria-label="상담 창 닫기" title="닫기"><X aria-hidden="true" /></button>}
+          {tab !== "chat" && <button type="button" className={`support-pane-close ${tap.target}`} onClick={() => setOpen(false)} aria-label="상담 창 닫기" title="닫기"><X aria-hidden="true" /></button>}
           {tab === "home" && <SupportHome open={open} onClose={() => setOpen(false)} onInquiry={() => { setMode("support"); setTab("chat"); }} onConsult={() => { setMode("consult"); setTab("chat"); }} />}
           {tab === "settings" && <SupportSettings open={open} badge={badge} onBadge={changeBadge} onClearConsult={resetConsult} onClose={() => setOpen(false)} />}
           {tab === "chat" && <>
@@ -651,7 +656,7 @@ export function SupportChatWidget() {
                 onClick={resetConsult}
               >새 상담</button>
             )}
-            <button type="button" className="chat-close" onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기"><X aria-hidden="true" /></button>
+            <button type="button" className={`chat-close ${tap.target}`} onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기"><X aria-hidden="true" /></button>
           </header>
 
           <div className="support-chat-body">

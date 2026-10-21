@@ -38,7 +38,16 @@ export function highlightFacts(html: string, facts: Pick<EditableFact, "question
   while (walker.nextNode()) texts.push(walker.currentNode as Text);
   for (const node of texts) {
     const text = node.textContent ?? "";
-    const ranges = findFactRanges(text, facts);
+    // 표·그래프 안의 금액은 계산된 값이라 표시하지 않는다. 문장 속 금액은 같은 문단의 앞말로 어느 사실인지 가린다(fact-highlight amountOwner).
+    const parent = node.parentElement;
+    let before: string | null = null;
+    if (parent && !parent.closest("table, figure, svg, pre, code")) {
+      const block = parent.closest("p, li, h1, h2, h3, h4, h5, h6, blockquote, div") ?? root;
+      const range = doc.createRange();
+      range.setStart(block, 0); range.setEnd(node, 0);
+      before = range.toString();
+    }
+    const ranges = findFactRanges(text, facts, before);
     if (!ranges.length) continue;
     const fragment = doc.createDocumentFragment();
     let cursor = 0;
@@ -53,6 +62,13 @@ export function highlightFacts(html: string, facts: Pick<EditableFact, "question
     if (cursor < text.length) fragment.append(text.slice(cursor));
     node.replaceWith(fragment);
   }
+  // 넓은 표는 옆으로 밀어 보게 감싼다(점검 2026-10-21: 고치기 화면에서 표가 잘리고 칸이 어긋났다)
+  root.querySelectorAll("table").forEach(table => {
+    const scroller = doc.createElement("div");
+    scroller.className = "fact-table-scroll";
+    table.replaceWith(scroller);
+    scroller.append(table);
+  });
   return root.innerHTML;
 }
 
@@ -156,6 +172,6 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
         onChange={(answer, submit) => { setDraft(answer); if (submit) void save(answer); }}
         onAnswer={value => void save({ ...emptyAnswer(), text: String(value ?? "") })} onCancel={onClose} />
     </div>}
-    <footer><small>{amount ? "금액은 계획서 본문에 바로 바뀌어요. 계산된 다른 숫자는 \"계획서에 반영하기\"로 맞춰요" : "바꾼 내용은 \"계획서에 반영하기\"를 누르면 계획서에 들어가요"}</small><button type="button" className={styles.primary} disabled={edit.busy || (amount ? won === null : !draftSubmission(fact.question, draft))} onClick={() => void (amount ? saveAmount() : save(draft))}>바꾸기</button></footer>
+    <footer><small>{amount ? "노란 금액은 바로 바뀌어요. 표와 계산된 숫자는 \"계획서에 반영하기\"로 맞춰요" : "바꾼 내용은 \"계획서에 반영하기\"를 누르면 계획서에 들어가요"}</small><button type="button" className={styles.primary} disabled={edit.busy || (amount ? won === null : !draftSubmission(fact.question, draft))} onClick={() => void (amount ? saveAmount() : save(draft))}>바꾸기</button></footer>
   </div>;
 }

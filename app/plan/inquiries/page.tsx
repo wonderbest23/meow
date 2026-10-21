@@ -50,7 +50,7 @@ export default function InquiriesPage() {
   }, []);
 
   return <main className={frame.page}>{/* 휴대폰에서 문의를 열어 둔 동안 머리말 뒤로 단추는 목록으로 — 상세 안의 두 번째 뒤로 단추는 뺐다(뒤로가 두 개였다) */}
-    <BusinessAppChrome title="내 문의" active="inquiries" onBack={selected && phone ? () => setSelectedId(null) : undefined}>
+    <BusinessAppChrome title="손님 문의" active="inquiries" onBack={selected && phone ? () => setSelectedId(null) : undefined}>
     {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" /> : <div className={styles.wrap} data-detail={selected ? "" : undefined}>
       <aside className={styles.list} aria-label="문의 목록">
         {/* 문의가 하나도 없으면 0개짜리 거름 단추는 빼고, 새로 확인하는 단추만 빈 화면 안에 둔다 */}

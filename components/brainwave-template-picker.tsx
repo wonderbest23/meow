@@ -36,10 +36,10 @@ export function BrainwaveTemplatePicker({
   const pages = BRAINWAVE_PAGES.filter((p) => p.group === "landing" && BUSINESS_TEMPLATE_IDS.includes(p.id)
     && (BUSINESS_DESIGNED_PAGES.has(p.id) || p.id === current));
   return (
-    <dialog ref={dialog} className={styles.dialog} aria-label="템플릿 선택" onCancel={event => { event.preventDefault(); onClose(); }}>
+    <dialog ref={dialog} className={styles.dialog} aria-label="디자인 바꾸기" onCancel={event => { event.preventDefault(); onClose(); }}>
       <div className={`bwtp-sheet ${styles.sheet}`}>
         <header>
-          <div><strong>템플릿 선택</strong><small>그림은 디자인 예시예요. 내 사업 내용에 맞춰 문구와 보이는 구역이 달라져요.</small></div>
+          <div><strong>디자인 바꾸기</strong><small>그림은 디자인 예시예요. 내 사업 내용에 맞춰 문구와 보이는 구역이 달라져요.</small></div>
           <button type="button" onClick={onClose} aria-label="닫기"><X size={18} /></button>
         </header>
         <div className="bwtp-body">
@@ -57,9 +57,9 @@ export function BrainwaveTemplatePicker({
           </section>
         </div>
         <footer className={styles.footer}>
-          <p>{selected === current ? "지금 쓰고 있는 템플릿이에요." : "사업 정보는 그대로지만, 직접 고친 글·사진·배치는 처음 상태로 돌아가요."}</p>
+          <p>{selected === current ? "지금 쓰고 있는 디자인이에요." : "사업 정보는 그대로지만, 직접 고친 글·사진·배치는 처음 상태로 돌아가요."}</p>
           <button type="button" onClick={onClose}>취소</button>
-          <button type="button" className={styles.apply} disabled={selected === current} onClick={() => onPick(selected)}>이 템플릿 적용</button>
+          <button type="button" className={styles.apply} disabled={selected === current} onClick={() => onPick(selected)}>이 디자인으로 바꾸기</button>
         </footer>
       </div>
     </dialog>

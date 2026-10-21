@@ -136,7 +136,8 @@ export function chartToSvg(spec: ChartSpec): string {
   const H = 300;
   const padL = 74;
   const padR = 18;
-  const padT = 40;
+  /* 맨 위 줄은 그래프 이름·단위 — 폰에서 앞 소제목이 안 보이면 무슨 그래프인지 몰랐다(점검 2026-10-21) */
+  const padT = 54;
   const padB = 40;
   const plotW = W - padL - padR;
   const plotH = H - padT - padB;
@@ -256,6 +257,7 @@ export function chartToSvg(spec: ChartSpec): string {
   return [
     `<svg class="plan-chart" role="img" aria-label="${escapeXml(spec.title)}" viewBox="0 0 ${W} ${H}" width="100%" xmlns="http://www.w3.org/2000/svg">`,
     `<rect x="0" y="0" width="${W}" height="${H}" fill="#ffffff"/>`,
+    `<text x="4" y="20" text-anchor="start" font-size="14" font-weight="700" fill="#1c1d21">${escapeXml(spec.title)} <tspan font-weight="400" fill="${AXIS}">(단위: 원)</tspan></text>`,
     gridLines,
     series,
     zeroLine,

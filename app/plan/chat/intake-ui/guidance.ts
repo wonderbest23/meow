@@ -65,6 +65,8 @@ export function resultUpdateNotice(snapshot: IntakeSnapshot): string | null {
 }
 
 export function resumeSummary(snapshot: IntakeSnapshot): string {
+  // 계획서를 이미 만든 사업은 대화가 기록이다 — '마무리 단계부터 이어가면 돼요'는 맞지 않는 말이고 다른 안내와 겹쳐 쌓였다
+  if (snapshot.hasDocuments) return "";
   if (["queued", "running"].includes(snapshot.intake.job?.status ?? "")) return "답변은 저장돼 있어요. 진행 중인 작업의 상태를 이어서 확인하고 있어요.";
   if (!snapshot.nextQuestion) return "저장한 답변을 불러왔어요. 마무리 단계부터 이어가면 돼요.";
   const latest = [...snapshot.coach.messages].reverse().find(message => message.role === "user" && snapshot.questions.some(question => snapshot.intake.answers[question.id]?.messageId === message.id));

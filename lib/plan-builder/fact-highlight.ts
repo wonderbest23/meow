@@ -35,11 +35,54 @@ export function factNeedles(display: string): string[] {
   return [...needles].sort((a, b) => b.length - a.length);
 }
 
-/** Non-overlapping [start, end, questionId] ranges of fact needles inside one text run. */
-export function findFactRanges(text: string, facts: Pick<EditableFact, "questionId" | "needles">[]): Array<[number, number, string]> {
+/*
+ * 금액은 글자만 같다고 그 사실이 아니다(운영 점검 2026-10-21: 가격 4,500원을 4,000원으로 고치자 우연히 4,500원이던
+ * 12개월 통장 누적 칸까지 바뀌어 숫자가 엉켰다). 금액 바로 앞(같은 문장, 몇 글자 안)에 그 사실을 가리키는 말이 있을 때만
+ * 그 사실의 금액으로 본다. 매출·누적·이익처럼 계산된 값을 가리키는 말이 더 가까우면 어느 사실도 아니다.
+ */
+const AMOUNT_OWNER_WORDS: ReadonlyArray<readonly [string, string]> = [
+  ...["판매가", "판매 가격", "가격", "객단가", "판매 단가", "단가", "요금", "이용료", "수강료", "회비", "1회", "회당", "1인당", "개당", "한 잔", "한 개", "1개", "한 그릇", "세트", "한 벌", "한 상자", "한 박스", "1인", "1명", "한 명", "시간당", "1시간", "한 시간", "한 번에"].map(word => [word, "price"] as const),
+  ...["원가", "변동비", "재료비", "매입가", "건당 비용", "한 건당 비용", "들어가는 비용", "들어가는 돈"].map(word => [word, "structure.unitCost"] as const),
+  ...["고정비", "고정 비용", "매달 나가는", "매달 드는", "한 달 고정"].map(word => [word, "structure.cost"] as const),
+  ...["예산", "준비 자금", "초기 자금", "창업 자금", "자기자금", "가진 돈", "준비한 돈", "모아 둔"].map(word => [word, "budget"] as const),
+  // 계산된 값 — 이 말이 더 가까우면 어느 사실의 금액도 아니다
+  ...["매출", "누적", "잔고", "이익", "손익", "남는", "남습", "남아", "남기", "모자라", "부족", "합계", "공헌", "차이", "적자", "흑자", "본전", "빼면", "더하면", "곱하면", "나누면", "합치면", "×", "÷", "="].map(word => [word, ""] as const),
+];
+/** Facts whose amounts are matched only with an owner word in front. */
+export const OWNED_AMOUNT_IDS = ["price", "structure.unitCost", "structure.cost", "budget"] as const;
+const OWNER_WINDOW = 30;
+
+/**
+ * Which fact the amount right after `before` belongs to: a fact id, "" for a computed value, or null when nothing says.
+ * Only the same sentence and the last few characters count; the word ending closest to the amount wins.
+ */
+export function amountOwner(before: string): string | null {
+  const sentence = before.split(/[.!?](?=\s|$)|\n/).pop() ?? "";
+  const near = sentence.slice(-OWNER_WINDOW);
+  let best: { end: number; length: number; id: string } | null = null;
+  for (const [word, id] of AMOUNT_OWNER_WORDS) {
+    const at = near.lastIndexOf(word);
+    if (at < 0) continue;
+    const end = at + word.length;
+    if (!best || end > best.end || (end === best.end && word.length > best.length)) best = { end, length: word.length, id };
+  }
+  return best ? best.id : null;
+}
+
+const plainAmount = (needle: string) => /^[\d,.]+(?:만\s?)?원$/.test(needle);
+
+/**
+ * Non-overlapping [start, end, questionId] ranges of fact needles inside one text run.
+ * `before` is the text in front of this run in the same paragraph; null means the run is in a table or chart,
+ * where amounts are computed values and never marked.
+ */
+export function findFactRanges(text: string, facts: Pick<EditableFact, "questionId" | "needles">[], before: string | null = ""): Array<[number, number, string]> {
   const ranges: Array<[number, number, string]> = [];
+  const owned = new Set<string>(OWNED_AMOUNT_IDS);
   const all = facts.flatMap(fact => fact.needles.map(needle => ({ needle, id: fact.questionId }))).sort((a, b) => b.needle.length - a.needle.length);
   for (const { needle, id } of all) {
+    const checkOwner = owned.has(id) && plainAmount(needle);
+    if (checkOwner && before === null) continue;
     let from = 0;
     for (;;) {
       const at = text.indexOf(needle, from);
@@ -47,7 +90,8 @@ export function findFactRanges(text: string, facts: Pick<EditableFact, "question
       const end = at + needle.length;
       // An amount must stand alone: "50,000원" inside "-2,950,000원" is a different number.
       const glued = /^\d/.test(needle) && /[\d,.]/.test(text[at - 1] ?? "");
-      if (!glued && !ranges.some(([start, stop]) => at < stop && end > start)) ranges.push([at, end, id]);
+      const ownedHere = !checkOwner || amountOwner(`${before ?? ""}${text.slice(0, at)}`) === id;
+      if (!glued && ownedHere && !ranges.some(([start, stop]) => at < stop && end > start)) ranges.push([at, end, id]);
       from = end;
     }
   }

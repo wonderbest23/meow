@@ -24,7 +24,10 @@ const legacy = render(createBusinessTemplate(content, "0-290"));
 assert.match(legacy, /<h1[^>]*>카페피드<\/h1>/);
 assert.ok(legacy.includes(">카페피드에 문의해 보세요<"), "contact band invites the visitor by name");
 assert.equal(count(legacy, 'src="/qa-light-photo.png"'), 1, "public page shows one photo once");
-assert.ok(count(render(createBusinessTemplate(content, "0-290"), () => {}), 'src="/qa-light-photo.png"') > 1, "editor shows every photo slot");
+// 편집 화면도 공개 화면과 같게 — 같은 사진은 처음 자리에만, 나머지 자리는 '사진 넣기' 칸(예전엔 편집 화면만 첫 화면 사진을 되풀이했다)
+const editorWithPhoto = render(createBusinessTemplate(content, "0-290"), () => {});
+assert.equal(count(editorWithPhoto, 'src="/qa-light-photo.png"'), 1, "editor shows the repeated photo once, like the public page");
+assert.ok(count(editorWithPhoto, "사진 넣기") >= 1, "editor turns repeated photo slots into add-photo slots");
 assert.ok(!/Brainwave|Get started|consult|Easy Booking|1M\+/i.test(legacy), "no raw kit copy");
 const titled = render(createBusinessTemplate({ ...content, headline: "동네 카페 인스타, 매달 대신 채워 드려요" }, "0-290"));
 // 첫 화면: 큰 제목은 사업 이름, 그 아래 한 줄 소개, 그리고 버튼
@@ -63,8 +66,9 @@ const picks: string[] = [];
 const editorHtml = renderToStaticMarkup(createElement(BrainwaveBusinessMobile, { pageId: "0-290", overrides: noPhoto, hidden: new Set(noPhoto.hidden), sectionOrder: businessTemplateManifest["0-290"].sections.map(section => section.id), onPick: (_kind, id) => { picks.push(id); }, desktop: true }));
 assert.ok(count(editorHtml, "사진 넣기") >= 1, "editor offers a place to add a photo");
 assert.equal(count(editorHtml, "사진 넣기"), count(editorHtml, "data-bw-image="), "each slot button targets a real image slot");
-// 사진이 있는 칸에는 '사진 넣기'가 붙지 않는다
-assert.ok(!render(createBusinessTemplate(content, "0-290"), () => {}).includes("사진 넣기"));
+// 사진이 있는 칸(첫 화면)에는 '사진 넣기'가 붙지 않는다
+assert.match(editorWithPhoto, /<img[^>]*data-bw-image="0:411\/0"/);
+assert.doesNotMatch(editorWithPhoto, /<button[^>]*data-bw-image="0:411\/0"/);
 // 예전 페이지에 남은 킷 견본 사진(/brainwave/…)은 공개 화면에 나오지 않고, 편집 화면은 '사진 넣기'
 for (const pageId of Object.keys(BUSINESS_TEMPLATE_PROFILES)) {
   const sample = createBusinessTemplate({ ...content, image: `/brainwave/${pageId}/imgSample.jpg` }, pageId);

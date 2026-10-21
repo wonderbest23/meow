@@ -51,7 +51,7 @@ const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({
 const structureCost: IntakeQuestion = { id: "structure.cost", fieldKey: "cost", label: COACH_FIELD_LABELS.cost, prompt: "한 달 고정비는 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true, hint: "임차료·고정 인건비·구독 도구처럼 매출이 없어도 나가는 돈이에요." };
 const budget = fieldQuestion("budget", "준비에 쓸 수 있는 돈은 얼마인가요?", { kind: "number", unit: "원", hint: "필요한 비용 추정치가 아니라 실제로 쓸 수 있는 금액이에요." });
 const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있나요?", { kind: "number", unit: "시간", period: "주" });
-const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "인력을 고른 뒤 하루·주·월 처리량을 정해요." });
+const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." });
 const goal = fieldQuestion("goal", "언제까지 무엇을 이루고 싶나요?", { hint: "목표는 현재 실적과 따로 기록돼요." });
 /*
  * 대표 생활비(품질기준 7번) — 소상공인은 사업이 대표 생활비까지 감당해야 하는 경우가 많다(Start Up Loans '개인 생활비 예산').
@@ -64,7 +64,7 @@ import { START_CONDITIONS, candidateConditionFit, candidateTemplateFacts, select
 export { START_CONDITIONS } from "./intake-candidate-constraints";
 const conditions: IntakeQuestion = {
   id: "conditions", label: "시작 조건", prompt: "어떤 조건으로 시작하고 싶나요? (최대 4개)", kind: "multi", options: [{ ...chip(START_CONDITIONS[0]), hint: "사무실·매장 없이" }, ...chips(START_CONDITIONS.slice(1))], optional: true,
-  hint: "고른 조건에 맞는 업종 후보를 표준산업분류 지도에서 찾아요. 정한 게 없으면 넘어가도 돼요.",
+  hint: "고른 조건에 맞는 업종을 찾아 드려요. 정한 게 없으면 넘어가도 돼요.",
 };
 const industry: IntakeQuestion = {
   id: "industry", label: "업종", prompt: "어떤 업종에 가까운가요?",
@@ -79,7 +79,7 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     hours,
     budget,
     conditions,
-    { id: "candidate", label: "사업 후보", prompt: "어떤 사업 후보를 더 살펴보고 싶나요? 직접 생각한 아이디어도 이야기할 수 있어요.", kind: "single", options: [], optional: true },
+    { id: "candidate", label: "살펴볼 사업", prompt: "어떤 사업을 더 살펴볼까요? 생각해 둔 사업이 있으면 직접 적어도 돼요.", kind: "single", options: [], optional: true },
     customer, problem, offer, channel, price, structureUnitCost("per_unit"), structureCost, goal,
   ],
   // 가격·변동비·고정비가 모두 있어야 손익(손익분기·12개월)을 계산하므로 변동비·고정비도 기본 질문에서 묻는다(예전엔 선택형 추가 질문에만 있었다).
@@ -94,9 +94,9 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     structureUnitCost("per_unit"),
     fieldQuestion("problem", "지금 가장 개선하고 싶은 문제는 무엇인가요? (최대 2개)"),
     { id: "period", label: "실적 기간 (시작일 / 종료일)", prompt: "살펴볼 실적 기간은 언제인가요?", kind: "text", optional: true, hint: "기간을 고르거나 날짜를 직접 선택해요." },
-    fieldQuestion("sales", "정한 시작일부터 종료일까지의 실제 매출 합계는 얼마였나요?", { kind: "number", unit: "원", period: "입력한 시작일~종료일", hint: "예상 매출·목표·총 거래액과는 구분해요." }),
-    { ...fieldQuestion("cost", "한 달 고정비는 대략 얼마인가요? 월 고정비(임차료·고정 인건비 등)만 넣고 건당 변동비나 실적 기간 전체 비용과는 구분해 주세요.", { kind: "number", unit: "원", period: "월" }), label: `${COACH_FIELD_LABELS.cost} (월 고정비)` },
-    fieldQuestion("capacity", "지금은 누가, 얼마나 감당하나요?", { hint: "인력을 고른 뒤 하루·주·월 처리량을 정해요." }),
+    fieldQuestion("sales", "이 기간 실제 매출은 모두 얼마였나요?", { kind: "number", unit: "원", period: "실적 기간 합계", hint: "실제로 들어온 매출만 넣어요. 예상 매출이나 목표는 빼요." }),
+    { ...fieldQuestion("cost", "한 달 고정비는 대략 얼마인가요? 월 고정비만 넣고 건당 변동비와는 구분해 주세요.", { kind: "number", unit: "원", period: "월", hint: "임차료·고정 인건비처럼 매달 나가는 돈이에요." }), label: `${COACH_FIELD_LABELS.cost} (월 고정비)` },
+    fieldQuestion("capacity", "지금은 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." }),
     fieldQuestion("channel", "지금 고객을 만나거나 판매하는 주요 경로는 어디인가요? (최대 3개)"),
     goal,
   ],
@@ -279,36 +279,36 @@ type CandidateIdea = Pick<Candidate, "id" | "title" | "description" | "sector"> 
 // Two to three ideas per sector. Tags are matched as substrings of the interest/experience text, so a tag must belong to one sector only
 // (the experience chips in intake-options.ts rely on this: 청소·수납 → local_service, 영업·마케팅 → b2b_service, 미용·뷰티·운동 → local_service).
 const CANDIDATE_IDEAS: CandidateIdea[] = [
-  { id: "workflow-support", sector: "b2b_service", title: "소규모 팀 업무 정리 서비스", description: "반복 업무를 정리하고 바로 사용할 문서·작업 절차를 제공하는 사업 후보입니다.", tags: ["문서", "사무", "업무", "정리", "기획"], caution: "고객의 자료 접근 권한과 납품·추가 요청 범위를 먼저 확인해야 합니다." },
-  { id: "marketing-support", sector: "b2b_service", title: "소상공인 마케팅·홍보 실행 대행", description: "매장이나 작은 회사의 홍보 글·광고·고객 응대를 대신 실행하는 사업 후보입니다.", tags: ["영업", "마케팅", "홍보", "고객 응대", "제안서"], caution: "성과 보장 표현을 피하고 수행 범위·보고 주기·광고비 부담 주체를 먼저 정해야 합니다." },
-  { id: "focused-software", sector: "software", title: "한 가지 작업을 돕는 소프트웨어", description: "고객의 반복 작업 하나를 끝낼 수 있는 작은 도구를 만드는 사업 후보입니다.", tags: ["개발", "코딩", "자동화", "소프트웨어", "앱", "코드", "coding", "software"], caution: "실제 구현 범위와 데이터 처리·유지보수 비용을 확인해야 합니다." },
-  { id: "booking-management", sector: "software", title: "소규모 매장 예약·주문 관리 앱", description: "예약·주문·고객 기록을 한곳에서 관리하는 작은 매장용 앱을 만드는 사업 후보입니다.", tags: ["예약 관리", "주문 관리", "관리 앱", "웹 서비스", "saas"], caution: "결제·개인정보 처리 방식과 기존 도구 대비 차이를 확인해야 합니다." },
-  { id: "preorder-menu", sector: "food_beverage", title: "사전 주문형 소량 메뉴 판매", description: "정해진 메뉴를 예약 주문받아 준비하는 음식 판매 사업 후보입니다.", tags: ["요리", "음식", "카페", "커피", "베이킹", "식음료"], caution: "판매 전 조리 공간·식품 취급·관련 요건과 재료 폐기 비용을 확인해야 합니다." },
-  { id: "side-dish-mealkit", sector: "food_beverage", title: "반찬·도시락 소량 정기 판매", description: "가정이나 직장인에게 반찬·도시락·밀키트를 정기적으로 만들어 판매하는 사업 후보입니다.", tags: ["반찬", "도시락", "밀키트", "정기 배송 음식"], caution: "식품 제조·판매 요건과 보관 기한·배송 중 온도 관리를 확인해야 합니다." },
-  { id: "small-cafe-dessert", sector: "food_beverage", title: "소규모 카페·디저트 매장", description: "대표 음료와 디저트 몇 가지로 시작하는 작은 매장 사업 후보입니다.", tags: ["디저트", "베이커리", "매장 운영", "바리스타"], caution: "임차료·피크 시간 처리량·재료 폐기를 계산해야 하며 상권 수요를 임의로 가정하지 않습니다." },
-  { id: "curated-commerce", sector: "retail_commerce", title: "주제별 소량 상품 판매", description: "한 고객군의 사용 목적에 맞춘 상품을 골라 판매하는 사업 후보입니다.", tags: ["판매", "유통", "쇼핑", "상품", "온라인몰", "커머스"], caution: "공급 조건과 최소 발주량·재고·배송·반품 부담을 확인해야 합니다." },
-  { id: "goods-smartstore", sector: "retail_commerce", title: "굿즈·문구 스마트스토어 판매", description: "직접 기획하거나 사입한 굿즈·문구를 스마트스토어와 오픈마켓에서 판매하는 사업 후보입니다.", tags: ["굿즈", "문구", "스마트스토어", "소싱", "오픈마켓"], caution: "플랫폼 수수료·배송비·반품 규정과 저작권 문제가 없는 디자인인지 확인해야 합니다." },
-  { id: "resale-collectibles", sector: "retail_commerce", title: "수집품·리셀 상품 판매", description: "중고·수집품이나 한정 상품을 매입해 되파는 사업 후보입니다.", tags: ["리셀", "중고", "수집품", "빈티지"], caution: "정품 확인·매입가 변동·재고 회전 기간을 확인해야 하며 시세 상승을 전제로 계산하지 않습니다." },
-  { id: "small-batch-product", sector: "manufacturing", title: "맞춤 소량 제품 제작", description: "구체적인 사용 불편을 해결할 제품을 소량 제작하는 사업 후보입니다.", tags: ["제조", "공예", "설계", "가공", "제품", "3d"], caution: "시제품과 양산을 구분하고 설비·품질·시험·최소 생산량을 확인해야 합니다." },
-  { id: "parts-supply", sector: "manufacturing", title: "산업용 부품·소재 소량 납품", description: "다른 제조사나 기업에 부품·소재를 소량 가공해 납품하는 사업 후보입니다.", tags: ["부품", "소재", "납품", "반도체", "금형"], caution: "고객사 품질 승인·납기·단가 협상 조건과 설비 투자 범위를 확인해야 합니다." },
-  { id: "lifestyle-goods-maker", sector: "manufacturing", title: "생활 소품 자체 제작·판매", description: "직접 만든 생활 소품이나 인테리어 소품을 소량 생산해 판매하는 사업 후보입니다.", tags: ["소품", "핸드메이드", "인테리어 소품", "목공"], caution: "재료비·제작 시간 대비 가격과 안전 인증 필요 여부를 확인해야 합니다." },
-  { id: "practical-class", sector: "education", title: "경험 기반 소규모 실습 수업", description: "직접 해본 활동을 작은 실습 수업으로 제공하는 사업 후보입니다.", tags: ["교육", "수업", "강의", "가르", "코칭", "학습"], caution: "가르칠 수 있는 범위와 준비 시간을 확인해야 하며 학습 결과를 보장하지 않습니다." },
-  { id: "online-tutoring", sector: "education", title: "온라인 1:1 과외·회화 수업", description: "화상으로 학습자와 1:1로 진행하는 과외나 언어 회화 수업 사업 후보입니다.", tags: ["과외", "회화", "영어", "튜터", "온라인 수업"], caution: "학습자 수준 확인 방식과 취소·환불 조건을 정해야 하며 성적·합격을 보장하지 않습니다." },
-  { id: "recorded-course", sector: "education", title: "녹화 강의·워크숍 특강", description: "한 주제를 녹화 강의나 단기 워크숍으로 제공하는 사업 후보입니다.", tags: ["워크숍", "특강", "녹화", "강좌"], caution: "제작 시간·플랫폼 수수료와 수강생 질문 대응 범위를 확인해야 합니다." },
-  { id: "local-organization", sector: "local_service", title: "예약형 생활 정리 서비스", description: "방문 가능한 지역에서 생활 공간 정리를 돕는 사업 후보입니다.", tags: ["청소", "정리", "방문", "생활", "지역", "수납"], caution: "이동 시간과 작업 범위·현장 안전·물품 취급 책임을 확인해야 합니다." },
-  { id: "beauty-wellness", sector: "local_service", title: "예약제 뷰티·건강 관리 서비스", description: "네일·피부·헤어 관리나 운동 코칭처럼 예약을 받아 제공하는 관리 서비스 후보입니다.", tags: ["네일", "미용", "뷰티", "헤어", "피부", "마사지", "운동", "건강"], caution: "필요한 자격·위생 요건과 노쇼·취소 조건을 확인해야 하며 효과를 확정적으로 표현하지 않습니다." },
-  { id: "moving-transport", sector: "local_service", title: "소형 이사·짐 운반 서비스", description: "1인 가구나 소규모 사무실의 이사와 짐 운반을 맡는 사업 후보입니다.", tags: ["이사", "포장 이사", "입주 청소", "짐 정리"], caution: "차량·인력 확보와 파손 책임·보험, 관련 운송 요건을 확인해야 합니다." },
-  { id: "reserved-space", sector: "space_hospitality", title: "목적별 예약 공간 운영", description: "특정 모임이나 작업 목적에 맞는 공간을 예약제로 제공하는 사업 후보입니다.", tags: ["공간", "숙박", "대관", "공유", "모임"], caution: "공간 확보·이용 용도·시설 관리·임차 비용을 확인해야 합니다." },
-  { id: "shared-office", sector: "space_hospitality", title: "소규모 공유오피스·스터디룸 운영", description: "1인 창업자나 학습자에게 좌석·룸을 시간 또는 월 단위로 제공하는 사업 후보입니다.", tags: ["공유오피스", "스터디룸", "사무 공간", "좌석"], caution: "임차 계약의 재임대 허용 여부와 공실 시 고정비를 확인해야 합니다." },
-  { id: "studio-partyroom", sector: "space_hospitality", title: "촬영 스튜디오·파티룸 대관", description: "촬영·모임 목적의 공간을 시간 단위로 대관하는 사업 후보입니다.", tags: ["스튜디오", "파티룸", "촬영 공간", "행사 공간"], caution: "소음·안전·파손 규정과 비수기 가동률을 확인해야 합니다." },
-  { id: "local-delivery", sector: "logistics", title: "지역 정기 배송 서비스", description: "정해진 지역과 구간의 반복 배송을 맡는 사업 후보입니다.", tags: ["물류", "배송", "운송", "운전", "배달"], caution: "운송 자원·관련 요건·회송 비용·분실 및 파손 책임을 확인해야 합니다." },
-  { id: "quick-courier", sector: "logistics", title: "당일 퀵·소상공인 배달 대행", description: "지역 매장의 당일 배송과 서류·샘플 퀵을 맡는 사업 후보입니다.", tags: ["퀵", "배달 대행", "당일 배송", "오토바이"], caution: "운송 관련 요건과 사고·보험, 건당 요금 대비 이동 시간을 확인해야 합니다." },
-  { id: "freight-moving", sector: "logistics", title: "용달·화물 운송", description: "용달 차량으로 소형 화물과 이사 짐을 운송하는 사업 후보입니다.", tags: ["용달", "화물", "트럭", "운반"], caution: "화물 운송 허가·차량 비용·비수기 물량과 파손 책임을 확인해야 합니다." },
-  { id: "small-content", sector: "content_media", title: "소규모 브랜드 콘텐츠 제작", description: "한 가지 형식의 사진·영상·글을 제작해 납품하는 사업 후보입니다.", tags: ["콘텐츠", "사진", "영상", "글쓰기", "디자인", "편집", "미디어"], caution: "자료의 사용 권리와 촬영·제작 범위·수정 횟수를 확인해야 합니다." },
-  { id: "photo-studio", sector: "content_media", title: "제품·프로필 사진 촬영 서비스", description: "온라인 셀러의 제품 사진이나 개인 프로필 사진을 촬영해 납품하는 사업 후보입니다.", tags: ["촬영", "프로필", "제품 사진", "카메라"], caution: "촬영 장소·장비 비용과 원본 인계·초상권 조건을 확인해야 합니다." },
-  { id: "sns-management", sector: "content_media", title: "소상공인 SNS 콘텐츠 운영 대행", description: "매장의 인스타그램·블로그·숏폼 콘텐츠를 대신 기획하고 올리는 사업 후보입니다.", tags: ["sns", "숏폼", "인스타그램", "블로그", "유튜브"], caution: "게시 주기·수정 범위·계정 접근 권한을 먼저 정하고 조회수를 매출로 바꿔 말하지 않습니다." },
-  { id: "personal-archive", sector: "general", title: "개인 기록 정리 서비스", description: "고객의 기록을 원하는 방식으로 정리해 전달하는 새로운 서비스 후보입니다.", tags: ["기록", "아카이브", "취미", "새로운", "미분류"], caution: "기존 업종에 맞추기보다 원하는 결과와 개인정보·기록 사용 권한부터 확인해야 합니다." },
-  { id: "subscription-experiment", sector: "general", title: "새로운 구독형 서비스 실험", description: "아직 업종이 정해지지 않은 구상을 소수 고객에게 구독형으로 작게 실험하는 사업 후보입니다.", tags: ["구독", "실험", "아이디어", "새로운 방식"], caution: "무엇을 제공하고 무엇은 제공하지 않는지 먼저 정하고, 반응을 확인할 기준을 정해야 합니다." },
+  { id: "workflow-support", sector: "b2b_service", title: "소규모 팀 업무 정리 서비스", description: "반복 업무를 정리하고 바로 사용할 문서·작업 절차를 제공하는 사업", tags: ["문서", "사무", "업무", "정리", "기획"], caution: "고객의 자료 접근 권한과 납품·추가 요청 범위를 먼저 확인해야 해요." },
+  { id: "marketing-support", sector: "b2b_service", title: "소상공인 마케팅·홍보 실행 대행", description: "매장이나 작은 회사의 홍보 글·광고·고객 응대를 대신 실행하는 사업", tags: ["영업", "마케팅", "홍보", "고객 응대", "제안서"], caution: "성과 보장 표현을 피하고 수행 범위·보고 주기·광고비 부담 주체를 먼저 정해야 해요." },
+  { id: "focused-software", sector: "software", title: "한 가지 작업을 돕는 소프트웨어", description: "고객의 반복 작업 하나를 끝낼 수 있는 작은 도구를 만드는 사업", tags: ["개발", "코딩", "자동화", "소프트웨어", "앱", "코드", "coding", "software"], caution: "실제 구현 범위와 데이터 처리·유지보수 비용을 확인해야 해요." },
+  { id: "booking-management", sector: "software", title: "소규모 매장 예약·주문 관리 앱", description: "예약·주문·고객 기록을 한곳에서 관리하는 작은 매장용 앱을 만드는 사업", tags: ["예약 관리", "주문 관리", "관리 앱", "웹 서비스", "saas"], caution: "결제·개인정보 처리 방식과 기존 도구 대비 차이를 확인해야 해요." },
+  { id: "preorder-menu", sector: "food_beverage", title: "사전 주문형 소량 메뉴 판매", description: "정해진 메뉴를 예약 주문받아 준비하는 음식 판매 사업", tags: ["요리", "음식", "카페", "커피", "베이킹", "식음료"], caution: "판매 전 조리 공간·식품 취급·관련 요건과 재료 폐기 비용을 확인해야 해요." },
+  { id: "side-dish-mealkit", sector: "food_beverage", title: "반찬·도시락 소량 정기 판매", description: "가정이나 직장인에게 반찬·도시락·밀키트를 정기적으로 만들어 판매하는 사업", tags: ["반찬", "도시락", "밀키트", "정기 배송 음식"], caution: "식품 제조·판매 요건과 보관 기한·배송 중 온도 관리를 확인해야 해요." },
+  { id: "small-cafe-dessert", sector: "food_beverage", title: "소규모 카페·디저트 매장", description: "대표 음료와 디저트 몇 가지로 시작하는 작은 매장 사업", tags: ["디저트", "베이커리", "매장 운영", "바리스타"], caution: "임차료·피크 시간 처리량·재료 폐기를 계산해야 하며 상권 수요를 임의로 가정하지 않아요." },
+  { id: "curated-commerce", sector: "retail_commerce", title: "주제별 소량 상품 판매", description: "한 고객군의 사용 목적에 맞춘 상품을 골라 판매하는 사업", tags: ["판매", "유통", "쇼핑", "상품", "온라인몰", "커머스"], caution: "공급 조건과 최소 발주량·재고·배송·반품 부담을 확인해야 해요." },
+  { id: "goods-smartstore", sector: "retail_commerce", title: "굿즈·문구 스마트스토어 판매", description: "직접 기획하거나 사입한 굿즈·문구를 스마트스토어와 오픈마켓에서 판매하는 사업", tags: ["굿즈", "문구", "스마트스토어", "소싱", "오픈마켓"], caution: "플랫폼 수수료·배송비·반품 규정과 저작권 문제가 없는 디자인인지 확인해야 해요." },
+  { id: "resale-collectibles", sector: "retail_commerce", title: "수집품·리셀 상품 판매", description: "중고·수집품이나 한정 상품을 매입해 되파는 사업", tags: ["리셀", "중고", "수집품", "빈티지"], caution: "정품 확인·매입가 변동·재고 회전 기간을 확인해야 하며 시세 상승을 전제로 계산하지 않아요." },
+  { id: "small-batch-product", sector: "manufacturing", title: "맞춤 소량 제품 제작", description: "구체적인 사용 불편을 해결할 제품을 소량 제작하는 사업", tags: ["제조", "공예", "설계", "가공", "제품", "3d"], caution: "시제품과 양산을 구분하고 설비·품질·시험·최소 생산량을 확인해야 해요." },
+  { id: "parts-supply", sector: "manufacturing", title: "산업용 부품·소재 소량 납품", description: "다른 제조사나 기업에 부품·소재를 소량 가공해 납품하는 사업", tags: ["부품", "소재", "납품", "반도체", "금형"], caution: "고객사 품질 승인·납기·단가 협상 조건과 설비 투자 범위를 확인해야 해요." },
+  { id: "lifestyle-goods-maker", sector: "manufacturing", title: "생활 소품 자체 제작·판매", description: "직접 만든 생활 소품이나 인테리어 소품을 소량 생산해 판매하는 사업", tags: ["소품", "핸드메이드", "인테리어 소품", "목공"], caution: "재료비·제작 시간 대비 가격과 안전 인증 필요 여부를 확인해야 해요." },
+  { id: "practical-class", sector: "education", title: "경험 기반 소규모 실습 수업", description: "직접 해본 활동을 작은 실습 수업으로 제공하는 사업", tags: ["교육", "수업", "강의", "가르", "코칭", "학습"], caution: "가르칠 수 있는 범위와 준비 시간을 확인해야 하며 학습 결과를 보장하지 않아요." },
+  { id: "online-tutoring", sector: "education", title: "온라인 1:1 과외·회화 수업", description: "화상으로 학습자와 1:1로 진행하는 과외나 언어 회화 수업 사업", tags: ["과외", "회화", "영어", "튜터", "온라인 수업"], caution: "학습자 수준 확인 방식과 취소·환불 조건을 정해야 하며 성적·합격을 보장하지 않아요." },
+  { id: "recorded-course", sector: "education", title: "녹화 강의·워크숍 특강", description: "한 주제를 녹화 강의나 단기 워크숍으로 제공하는 사업", tags: ["워크숍", "특강", "녹화", "강좌"], caution: "제작 시간·플랫폼 수수료와 수강생 질문 대응 범위를 확인해야 해요." },
+  { id: "local-organization", sector: "local_service", title: "예약형 생활 정리 서비스", description: "방문 가능한 지역에서 생활 공간 정리를 돕는 사업", tags: ["청소", "정리", "방문", "생활", "지역", "수납"], caution: "이동 시간과 작업 범위·현장 안전·물품 취급 책임을 확인해야 해요." },
+  { id: "beauty-wellness", sector: "local_service", title: "예약제 뷰티·건강 관리 서비스", description: "네일·피부·헤어 관리나 운동 코칭처럼 예약을 받아 제공하는 관리 서비스", tags: ["네일", "미용", "뷰티", "헤어", "피부", "마사지", "운동", "건강"], caution: "필요한 자격·위생 요건과 노쇼·취소 조건을 확인해야 하며 효과를 확정적으로 표현하지 않아요." },
+  { id: "moving-transport", sector: "local_service", title: "소형 이사·짐 운반 서비스", description: "1인 가구나 소규모 사무실의 이사와 짐 운반을 맡는 사업", tags: ["이사", "포장 이사", "입주 청소", "짐 정리"], caution: "차량·인력 확보와 파손 책임·보험, 관련 운송 요건을 확인해야 해요." },
+  { id: "reserved-space", sector: "space_hospitality", title: "목적별 예약 공간 운영", description: "특정 모임이나 작업 목적에 맞는 공간을 예약제로 제공하는 사업", tags: ["공간", "숙박", "대관", "공유", "모임"], caution: "공간 확보·이용 용도·시설 관리·임차 비용을 확인해야 해요." },
+  { id: "shared-office", sector: "space_hospitality", title: "소규모 공유오피스·스터디룸 운영", description: "1인 창업자나 학습자에게 좌석·룸을 시간 또는 월 단위로 제공하는 사업", tags: ["공유오피스", "스터디룸", "사무 공간", "좌석"], caution: "임차 계약의 재임대 허용 여부와 공실 시 고정비를 확인해야 해요." },
+  { id: "studio-partyroom", sector: "space_hospitality", title: "촬영 스튜디오·파티룸 대관", description: "촬영·모임 목적의 공간을 시간 단위로 대관하는 사업", tags: ["스튜디오", "파티룸", "촬영 공간", "행사 공간"], caution: "소음·안전·파손 규정과 비수기 가동률을 확인해야 해요." },
+  { id: "local-delivery", sector: "logistics", title: "지역 정기 배송 서비스", description: "정해진 지역과 구간의 반복 배송을 맡는 사업", tags: ["물류", "배송", "운송", "운전", "배달"], caution: "운송 자원·관련 요건·회송 비용·분실 및 파손 책임을 확인해야 해요." },
+  { id: "quick-courier", sector: "logistics", title: "당일 퀵·소상공인 배달 대행", description: "지역 매장의 당일 배송과 서류·샘플 퀵을 맡는 사업", tags: ["퀵", "배달 대행", "당일 배송", "오토바이"], caution: "운송 관련 요건과 사고·보험, 건당 요금 대비 이동 시간을 확인해야 해요." },
+  { id: "freight-moving", sector: "logistics", title: "용달·화물 운송", description: "용달 차량으로 소형 화물과 이사 짐을 운송하는 사업", tags: ["용달", "화물", "트럭", "운반"], caution: "화물 운송 허가·차량 비용·비수기 물량과 파손 책임을 확인해야 해요." },
+  { id: "small-content", sector: "content_media", title: "소규모 브랜드 콘텐츠 제작", description: "한 가지 형식의 사진·영상·글을 제작해 납품하는 사업", tags: ["콘텐츠", "사진", "영상", "글쓰기", "디자인", "편집", "미디어"], caution: "자료의 사용 권리와 촬영·제작 범위·수정 횟수를 확인해야 해요." },
+  { id: "photo-studio", sector: "content_media", title: "제품·프로필 사진 촬영 서비스", description: "온라인 셀러의 제품 사진이나 개인 프로필 사진을 촬영해 납품하는 사업", tags: ["촬영", "프로필", "제품 사진", "카메라"], caution: "촬영 장소·장비 비용과 원본 인계·초상권 조건을 확인해야 해요." },
+  { id: "sns-management", sector: "content_media", title: "소상공인 SNS 콘텐츠 운영 대행", description: "매장의 인스타그램·블로그·숏폼 콘텐츠를 대신 기획하고 올리는 사업", tags: ["sns", "숏폼", "인스타그램", "블로그", "유튜브"], caution: "게시 주기·수정 범위·계정 접근 권한을 먼저 정하고 조회수를 매출로 바꿔 말하지 않아요." },
+  { id: "personal-archive", sector: "general", title: "개인 기록 정리 서비스", description: "고객의 기록을 원하는 방식으로 정리해 전달하는 새로운 서비스", tags: ["기록", "아카이브", "취미", "새로운", "미분류"], caution: "기존 업종에 맞추기보다 원하는 결과와 개인정보·기록 사용 권한부터 확인해야 해요." },
+  { id: "subscription-experiment", sector: "general", title: "새로운 구독형 서비스 실험", description: "아직 업종이 정해지지 않은 구상을 소수 고객에게 구독형으로 작게 실험하는 사업", tags: ["구독", "실험", "아이디어", "새로운 방식"], caution: "무엇을 제공하고 무엇은 제공하지 않는지 먼저 정하고, 반응을 확인할 기준을 정해야 해요." },
 ];
 
 function answerText(value: string | string[] | number | null | undefined): string[] {
@@ -330,16 +330,16 @@ function hasAnswer(value: string | string[] | number | null | undefined): boolea
 
 export function intakeCandidates(answers: Record<string, string | string[] | number | null>, limit = 3): Array<{ id: string; title: string; description: string; sector: ProposalSector; reasons: string[]; cautions: string[] }> {
   const constraints = [
-    hasAnswer(answers.hoursPerWeek) ? "입력한 주당 시간과 실제 준비·영업·운영 시간을 따로 비교해야 합니다." : "주당 가능한 시간은 미입력 상태이며 0시간으로 보지 않습니다.",
-    hasAnswer(answers.budget) ? "입력한 예산과 실제 초기 비용·운영비를 따로 비교해야 합니다." : "준비 예산은 미입력 상태이며 0원으로 보지 않습니다.",
-    "후보는 검토할 제안이며 시장 수요·수익성·성공 가능성을 검증한 결과가 아닙니다.",
+    hasAnswer(answers.hoursPerWeek) ? "적어 주신 주당 시간과 실제 준비·영업에 드는 시간을 따로 견줘 봐야 해요." : "주당 쓸 수 있는 시간은 아직 안 적으셨어요. 0시간으로 보지 않아요.",
+    hasAnswer(answers.budget) ? "적어 주신 예산과 실제로 처음 드는 돈·운영비를 따로 견줘 봐야 해요." : "준비 예산은 아직 안 적으셨어요. 0원으로 보지 않아요.",
+    "함께 살펴볼 예시예요. 실제로 찾는 사람이 있는지, 돈이 되는지는 아직 알 수 없어요.",
   ];
   const custom = typeof answers.business === "string" && answers.business.trim() ? answers.business : undefined;
   if (custom !== undefined) {
     const sector = PROPOSAL_SECTORS.find(value => value === answers.industry) ?? "general";
     return [{ id: "custom-business", title: custom, description: custom, sector,
-      reasons: ["직접 입력한 사업 구상을 그대로 유지했습니다."],
-      cautions: [...constraints, ...(sector === "general" ? ["업종은 임의로 추정하지 않았습니다. 새로운 사업 구상도 그대로 구체화할 수 있습니다."] : [])],
+      reasons: ["직접 적어 주신 사업을 그대로 썼어요."],
+      cautions: [...constraints, ...(sector === "general" ? ["업종은 짐작해서 정하지 않았어요. 새로운 사업도 그대로 구체화할 수 있어요."] : [])],
     }];
   }
   const interest = answerText(answers.interest);
@@ -353,8 +353,8 @@ export function intakeCandidates(answers: Record<string, string | string[] | num
     const interestSector = Number(matchesTag(interest, idea.sector) || matchesTag(interest, SECTOR_PROFILES[idea.sector].label));
     const readable = (matched: string[]) => [...new Set(matched.map(tag => tag === idea.sector ? SECTOR_PROFILES[idea.sector].label : tag))].join(", ");
     const reasons = [
-      ...(interestTags.length ? [`관심 분야 입력과 일치한 태그: ${readable(interestTags)}`] : []),
-      ...(experienceTags.length ? [`경험 입력과 일치한 태그: ${readable(experienceTags)}`] : []),
+      ...(interestTags.length ? [`고르신 관심 분야(${readable(interestTags)})와 이어져요`] : []),
+      ...(experienceTags.length ? [`적어 주신 경험(${readable(experienceTags)})과 이어져요`] : []),
     ];
     return { idea, index, interestSector, matches: Number(interestTags.length > 0) + Number(experienceTags.length > 0), reasons };
   }).filter(({ idea, matches }) => {
@@ -362,7 +362,7 @@ export function intakeCandidates(answers: Record<string, string | string[] | num
     return !fit.conflict && (!conditions.length || matches > 0 || !fit.unknown.length);
   }).sort((a, b) => b.interestSector - a.interestSector || b.matches - a.matches || a.index - b.index).slice(0, limit).flatMap(({ idea, reasons }) => filterCandidateConditions({
     id: idea.id, title: idea.title, description: idea.description, sector: idea.sector,
-    reasons: reasons.length ? reasons : ["일치한 관심·경험 태그가 없어 고정된 목록 순서의 예시로 제시합니다."],
+    reasons: reasons.length ? reasons : ["관심·경험과 딱 맞는 게 없어 자주 찾는 예시로 보여 드려요."],
     cautions: [idea.caution, ...constraints],
   }, candidateTemplateFacts(idea.id), conditions));
 }

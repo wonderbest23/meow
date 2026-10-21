@@ -54,7 +54,7 @@ export function BusinessShop0_1102({ overrides, hidden, sectionOrder, onPick, de
         {cards.map(([title, value, imageId], index) => {
           const url = photo(imageId);
           return <article key={title} className={`${styles.card} ${url ? styles.cardWithPhoto : ""}`} {...revealProps(index % 3)}>
-            {url ? Photo({ id: imageId, url, className: styles.cardImage }) : null}
+            {url ? Photo({ id: imageId, url, className: styles.cardImage }) : PhotoSlot({ id: imageId, className: styles.cardSlot })}
             <div className={styles.cardBody}>
               {Text({ id: title, as: "h3" })}
               {Text({ id: value })}
@@ -117,6 +117,8 @@ export function BusinessShop0_1102({ overrides, hidden, sectionOrder, onPick, de
           <div className={styles.ctaCopy}>
             {Text({ id: "0:1111", as: "h2", reveal: { order: 0, kind: "title" } })}
             {Button({ buttonId: "0:1110", textId: "I0:1110;0:4626", className: styles.greenButton, reveal: 2 })}
+            {/* 편집 화면에만 — 마무리 띠 사진이 비었을 때 넣을 곳 */}
+            {!url ? PhotoSlot({ id: "0:1108/0/0", className: styles.ctaSlot }) : null}
           </div>
         </div>
       </section>;

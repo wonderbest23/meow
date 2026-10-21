@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
+import { z, ZodError } from "zod";
 import { requireGuestIdentity } from "../../../../../lib/api-auth";
 import { createLandingDraft, landingDraftSchema } from "../../../../../lib/landing/domain";
 import {
@@ -81,16 +81,26 @@ export async function PUT(
     const site = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt });
     return NextResponse.json({ site });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "랜딩페이지를 저장하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "홈페이지를 저장하지 못했어요.";
     if (message === "LANDING_DRAFT_CONFLICT") {
       return NextResponse.json({ error: { code: message, message: LANDING_CONFLICT_MESSAGE } }, { status: 409 });
     }
-    const code = message === "SLUG_TAKEN" ? message : "LANDING_DRAFT_INVALID";
+    /*
+     * 주소(무료 주소 끝부분) 문제는 따로 알린다 — 화면이 그 칸 바로 아래에 이유를 보여 준다.
+     * 예전엔 'ab' 를 넣으면 이유 없이 '랜딩페이지를 저장하지 못했습니다.'만 맨 위에 떴다.
+     */
+    if (error instanceof ZodError) {
+      const slugIssue = error.issues.find(issue => ["draft.slug", "slug"].includes(issue.path.join(".")));
+      if (slugIssue) return NextResponse.json({ error: { code: "LANDING_SLUG_INVALID", field: "slug", message: slugIssue.message } }, { status: 400 });
+    }
+    if (message === "SLUG_TAKEN") {
+      return NextResponse.json({ error: { code: message, field: "slug", message: "이 주소는 다른 홈페이지가 쓰고 있어요. 다른 주소를 적어 주세요." } }, { status: 400 });
+    }
     return NextResponse.json(
       {
         error: {
-          code,
-          message: publicErrorMessage(error, "랜딩페이지를 저장하지 못했습니다.", { SLUG_TAKEN: "이미 사용 중인 공개 주소입니다." }),
+          code: "LANDING_DRAFT_INVALID",
+          message: publicErrorMessage(error, "홈페이지를 저장하지 못했어요. 적은 내용을 확인하고 다시 저장해 주세요."),
         },
       },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
