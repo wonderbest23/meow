@@ -3,6 +3,14 @@ import type { CoachField, CoachState } from "../lib/plan-builder/coach";
 import type { IntakeMode, IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import type { IntakeCandidate, IntakeCommand, IntakeState, IntakeValue } from "../lib/plan-builder/intake-types";
 import type { ServerPlan } from "../lib/plan-builder/plan-server-store";
+import { coachAmount } from "../lib/plan-builder/coach-feasibility";
+// 한글 숫자·어림 표현(실제 AI 시험 2026-10-21) — 단위를 알 수 없는 작은 한글 숫자와 금액이 둘인 글은 읽지 않는다
+assert.equal(coachAmount("삼천오백 원쯤"), 3500);
+assert.equal(coachAmount("이천만 원"), 20_000_000);
+assert.equal(coachAmount("만오천"), 15_000);
+assert.equal(coachAmount("약 3,500원쯤"), 3500);
+assert.equal(coachAmount("백오십"), undefined, "'월세 백오십'은 보통 150만 원 — 150원으로 읽지 않는다");
+assert.equal(coachAmount("소짜 삼만오천 대짜 오만 정도"), undefined);
 
 const AT = "2026-09-16T00:00:00.000Z";
 const LATER = "2026-09-16T00:01:00.000Z";

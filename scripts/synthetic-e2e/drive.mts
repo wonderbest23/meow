@@ -1,6 +1,9 @@
 // 합성 사업으로 새 대화(intake)를 끝까지 진행해 보는 드라이버 — 안전 미리보기(메모리 DB, AI 키 없음) 전용
 import { randomUUID } from "node:crypto";
 import { writeFileSync } from "node:fs";
+import { Agent, setGlobalDispatcher } from "undici";
+// 실제 AI로 계획서를 만들면 개발용 생성 요청이 5분을 넘긴다 — 기본 응답 대기(5분)에 끊기지 않게 늘린다
+setGlobalDispatcher(new Agent({ headersTimeout: 30 * 60_000, bodyTimeout: 30 * 60_000 }));
 const origin = process.argv[2]; const only = process.argv[3];
 if (!/^http:\/\/127\.0\.0\.1:\d+$/.test(origin)) throw new Error("synthetic preview origin only");
 type Biz = { id: string; desc: string; price: number; customer: string; offer: string; channel: string };
@@ -57,7 +60,7 @@ async function run(biz: Biz, index: number) {
   res = await req("POST", "/api/plan/chat", { action: "prepare", planId, revision: plan.coach.revision, requestId: randomUUID() });
   log.push(`prepare -> ${res.status} started=${res.json?.started} paid=${res.json?.paid} login=${res.json?.login} msg=${res.json?.message ?? ""}`);
   // 로컬엔 Cloudflare Workflow가 없어 503 — 같은 섹션 생성 함수를 개발용 경로로 직접 부른다
-  const gen = await req("POST", "/api/dev/synthetic-generate", { planId });
+  const gen = await req("POST", `/api/dev/synthetic-generate${process.env.SYNTH_GENERATE_LIMIT ? `?limit=${process.env.SYNTH_GENERATE_LIMIT}` : ""}`, { planId });
   log.push(`generate -> ${gen.status} ${JSON.stringify(gen.json?.results?.map((r: any) => r.ok ? "ok" : (r.skipped ?? r.error)) ?? gen.text.slice(0, 120))}`);
   let sections = 0, total = 0;
   for (let i = 0; i < 90; i++) {

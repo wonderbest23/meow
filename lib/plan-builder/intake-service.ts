@@ -303,7 +303,14 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
       const editable = new Set<string>(EDITABLE_FACT_IDS);
       const questions = snapshot.questions.filter(question => editable.has(question.id));
       const shown = (value: unknown) => Array.isArray(value) ? value.join(", ") : value === null || value === undefined ? "" : String(value);
-      const facts = questions.map(question => ({ questionId: question.id, label: question.label, current: shown(claimed.intake.answers[question.id]?.value), ...(question.options?.length ? { choices: question.options.map(option => option.label).slice(0, 24) } : {}) }));
+      /*
+       * 보기 중에서만 고르는 질문(single·multi)만 choices 로 묶는다. 주 고객처럼 보기 + 직접 입력인 질문까지 choices 로 주면
+       * AI가 보기에 없는 '아이 있는 동네 엄마들' 같은 값을 못 내고 "찾지 못했어요"로 끝났다(실제 AI 시험 2026-10-21) — 그런 질문은 examples 로만 보여 준다.
+       */
+      const facts = questions.map(question => {
+        const labels = question.options?.length ? question.options.map(option => option.label).slice(0, 24) : null;
+        return { questionId: question.id, label: question.label, current: shown(claimed.intake.answers[question.id]?.value), ...(labels ? ["single", "multi"].includes(question.kind) ? { choices: labels } : { examples: labels } : {}) };
+      });
       const result = await editIntake(config, facts, job.request ?? "");
       if (!result.ok) throw new IntakeError(result.reason, "바꿀 내용을 정리하지 못했어요. 바꿀 항목과 값을 함께 적어 다시 보내 주세요");
       const toValue = (questionId: string, text: string) => {
