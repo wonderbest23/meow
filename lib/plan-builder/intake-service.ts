@@ -333,7 +333,20 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         }
       });
     } else if (job.kind === "help") {
-      const context = JSON.stringify({ stage: claimed.coach.stage, business: claimed.coach.business.name, fields: claimed.coach.fields.map(field => ({ key: field.key, value: field.value.slice(0, 180), basis: field.basis })), excerpted: true });
+      /*
+       * 손님이 남긴 메모도 함께 — 실제 AI 시험(2026-10-21): 월세·강사비 같은 숫자를 메모로 다 적고 "몇 명이면 적자가 안 나요?"라고 물었는데,
+       * 메모는 항목 칸으로 아직 옮겨지지 않아 AI가 "지금 나온 숫자는 회원 목표뿐"이라고 답했다. 최근 메모(최대 5개, 합계 3,000자)를 참고 자료로 넘긴다.
+       */
+      const base = { stage: claimed.coach.stage, business: claimed.coach.business.name, fields: claimed.coach.fields.map(field => ({ key: field.key, value: field.value.slice(0, 180), basis: field.basis })), excerpted: true };
+      // 질문과 합쳐 8,000자(helpIntake 한도)를 넘지 않게 남는 만큼만
+      const room = Math.min(3000, 7600 - JSON.stringify(base).length - (job.request ?? "").length);
+      const recentNotes: string[] = []; let noteChars = 0;
+      for (const note of [...claimed.intake.notes].reverse()) {
+        if (recentNotes.length >= 5 || noteChars >= room - 50) break;
+        const text = note.text.slice(0, Math.min(1200, room - noteChars - 50)); if (!text) break;
+        recentNotes.unshift(text); noteChars += text.length + 10;
+      }
+      const context = JSON.stringify(recentNotes.length ? { ...base, ownerNotes: recentNotes } : base);
       const result = await helpIntake(config, context, job.request ?? "");
       if (!result.ok) throw new IntakeError(result.reason, "AI 답변을 완료하지 못했어요. 질문을 짧게 나눠 다시 요청할 수 있고 사업정보는 그대로 보관되어 있어요");
       await updateIntakeJob(request, (_plan, coach, _intake, current) => {
@@ -362,6 +375,8 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         if (current.status !== "running" || coachDocumentRevision(coach) !== job.baseDocumentRevision) throw new IntakeError("source_changed", "생성 중 사업정보가 바뀌었어요. 현재 입력을 확인한 뒤 다시 요청해 주세요", 409);
         coach.documentRevision = coachDocumentRevision(coach) + 1; coach.revision += 1;
         coach.design = { ...design, status: "proposal", sourceRevision: coach.documentRevision };
+        /* 상호를 아직 정하지 않았으면 첫 답 문장('그냥 치킨집이요. 질문 좀 그만…') 대신 짧은 이름표로 목록에 보인다 — 실제 AI 시험 2026-10-21 */
+        if (!coach.business.nameConfirmed && design.identity?.label) { coach.business.name = design.identity.label; _plan.title = design.identity.label; }
         current.reply = businessDesignReply(design); current.status = "complete";
       });
     }

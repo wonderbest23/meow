@@ -14,7 +14,8 @@ type Step =
   | { memo: string }
   | { help: string }
   | { reanswer: string; value: unknown }
-  | { ideas: string; rejectFirst?: boolean };
+  | { ideas: string; rejectFirst?: boolean }
+  | { design: true };
 type Persona = {
   id: string; label: string; mode: "startup" | "operating" | "exploring";
   desc: string; customer: string; offer: string; price: number; channel: string;
@@ -49,6 +50,31 @@ const PERSONAS: Persona[] = [
     after: [{ ideas: "퇴근하고 저녁에 2~3시간, 주말에 할 수 있는 부업 찾아요. 초기 비용은 200만 원 안쪽이었으면 좋겠고, 사람 상대하는 건 조금 부담돼요." }, { ideas: "앞에 거 말고 손으로 만드는 쪽이면 좋겠어요", rejectFirst: true }] },
   { id: "p10-operating", label: "이미 운영 중인 사장님", mode: "operating", desc: "3년째 운영 중인 동네 세탁소. 요즘 무인 빨래방이 생기면서 매출이 30% 줄었어요", customer: "아파트 주민", offer: "드라이클리닝·수선", price: 8000, channel: "단골 위주",
     during: { 3: [{ memo: "작년 월매출은 평균 900만 원이었는데 올해는 600만 원대예요. 월세 150, 재료비 100, 아르바이트 1명 월 120 나가요." }, { help: "무인 빨래방이랑 어떻게 경쟁해야 할까요? 수거 배달을 해 볼까 하는데 괜찮을까요?" }] } },
+
+  // ---- 2차 패턴(2026-10-21) ----
+  { id: "p11-english", label: "영어로 쓰는 외국인 손님", mode: "startup", desc: "I want to open a small Mexican taco food truck near universities in Seoul", customer: "university students and foreigners", offer: "tacos and burritos", price: 9000, channel: "Instagram",
+    during: { 2: [{ help: "Do I need a special license to run a food truck in Korea as a foreigner with an F-2 visa?" }] } },
+  { id: "p12-pii", label: "메모에 개인정보를 적는 손님", mode: "startup", desc: "동네 반찬가게", customer: "1인 가구", offer: "국·반찬 세트", price: 15000, channel: "당근마켓",
+    during: { 2: [{ memo: "제 이름은 김민지, 주민번호 900101-2345678, 연락처 010-1234-5678이에요. 사업자 통장은 국민은행 123456-01-234567로 받을 거예요. 반찬 세트 원가는 6천원 정도예요." }] } },
+  { id: "p13-angry", label: "화난 손님", mode: "startup", desc: "그냥 치킨집이요. 질문 좀 그만하고 빨리 계획서나 줘요", customer: "몰라요 그냥 동네 사람", offer: "치킨", price: 20000, channel: "배달앱",
+    during: { 1: [{ help: "AI가 뭘 알아요? 질문만 계속하고. 돈 낸 거 환불되죠? 지금 당장 환불해 줘요" }], 3: [{ memo: "아 짜증나 그냥 알아서 다 채워요" }] } },
+  { id: "p14-noise", label: "의미 없는 입력을 하는 손님", mode: "startup", desc: "ㅋㅋㅋㅋ", customer: "asdf", offer: "...", price: 1, channel: "ㅇㅇ",
+    during: { 1: [{ memo: "ㅋㅋㅋㅋㅋㅋㅋ ㅎㅎ 1234 asdf qwer" }, { help: "?" }] } },
+  { id: "p15-long", label: "아주 긴 글을 쓰는 손님", mode: "startup", desc: "제주 못난이 귤로 만든 잼·청 온라인 판매", customer: "건강한 간식을 찾는 30~40대", offer: "감귤잼·감귤청", price: 18000, channel: "스마트스토어",
+    during: { 2: [{ memo: "저는 지금 마흔다섯 살이고 제주에서 감귤 농사를 짓는 부모님 일을 돕다가, 못난이 귤로 잼과 청을 만들어 온라인으로 팔아 보고 싶다는 생각을 하게 됐어요. 제주에서 감귤 농사를 짓는 부모님 일을 돕다가, 못난이 귤로 잼과 청을 만들어 온라인으로 팔아 보고 싶다는 생각을 하게 됐어요. 제주에서 감귤 농사를 짓는 부모님 일을 돕다가, 못난이 귤로 잼과 청을 만들어 온라인으로 팔아 보고 싶다는 생각을 하게 됐어요. 작년 겨울에는 지인들한테 50병 정도 팔아 봤는데 반응이 좋았어요. 다만 식품 제조 허가를 어떻게 받아야 하는지, 택배로 보내도 상하지 않는지, 가격은 얼마가 적당한지, 스마트스토어가 나은지 자사몰이 나은지 하나도 모르겠어요. 작년 겨울에는 지인들한테 50병 정도 팔아 봤는데 반응이 좋았어요. 다만 식품 제조 허가를 어떻게 받아야 하는지, 택배로 보내도 상하지 않는지, 가격은 얼마가 적당한지, 스마트스토어가 나은지 자사몰이 나은지 하나도 모르겠어요. 작년 겨울에는 지인들한테 50병 정도 팔아 봤는데 반응이 좋았어요. 다만 식품 제조 허가를 어떻게 받아야 하는지, 택배로 보내도 상하지 않는지, 가격은 얼마가 적당한지, 스마트스토어가 나은지 자사몰이 나은지 하나도 모르겠어요. 작년 겨울에는 지인들한테 50병 정도 팔아 봤는데 반응이 좋았어요. 다만 식품 제조 허가를 어떻게 받아야 하는지, 택배로 보내도 상하지 않는지, 가격은 얼마가 적당한지, 스마트스토어가 나은지 자사몰이 나은지 하나도 모르겠어요. 작년 겨울에는 지인들한테 50병 정도 팔아 봤는데 반응이 좋았어요. 다만 식품 제조 허가를 어떻게 받아야 하는지, 택배로 보내도 상하지 않는지, 가격은 얼마가 적당한지, 스마트스토어가 나은지 자사몰이 나은지 하나도 모르겠어요. 작년 겨울에는 지인들한테 50병 정도 팔아 봤는데 반응이 좋았어요. 다만 식품 제조 허가를 어떻게 받아야 하는지, 택배로 보내도 상하지 않는지, 가격은 얼마가 적당한지, 스마트스토어가 나은지 자사몰이 나은지 하나도 모르겠어요. " }] } },
+  { id: "p16-numbers", label: "숫자가 아주 많은 메모를 쓰는 손님", mode: "startup", desc: "역세권 1층 24평 필라테스 스튜디오", customer: "30~40대 직장인 여성", offer: "그룹 레슨 월 8회권", price: 180000, channel: "네이버 플레이스",
+    during: { 3: [{ memo: "보증금 3천만 원, 월세 280만 원, 관리비 25만 원, 인테리어 4500만 원, 리포머 6대 대당 450만 원, 강사 2명 각 월 250만 원, 회원 목표 첫 달 40명 → 6개월 차 120명, 회원 1명당 월 18만 원, 카드 수수료 2.5%, 대출 5천만 원 연 6%." }, { help: "이 숫자로 보면 몇 명이 돼야 적자가 안 나요?" }] } },
+  { id: "p17-regulated", label: "규제가 큰 업종 손님", mode: "startup", desc: "해외 직구 다이어트 보조제와 한약을 온라인으로 소분해서 파는 쇼핑몰", customer: "다이어트 중인 20대 여성", offer: "다이어트 보조제 소분 판매", price: 39000, channel: "인스타그램 공동구매",
+    during: { 2: [{ help: "효과 좋다고 광고해도 되죠? 후기에 '한 달 5kg 빠짐' 이렇게 써도 돼요?" }] } },
+  { id: "p18-b2b", label: "무형 서비스 B2B 프리랜서", mode: "startup", desc: "중소기업 대상 영상 편집 외주 프리랜서", customer: "유튜브 채널을 운영하는 중소기업 마케팅 담당자", offer: "월 4편 영상 편집 패키지", price: 1200000, channel: "크몽·지인 소개",
+    during: { 4: [{ help: "세금계산서 발행하려면 뭐가 필요해요? 프리랜서 3.3% 떼는 거랑 뭐가 달라요?" }] } },
+  { id: "p19-novel", label: "새로운 개념의 사업", mode: "startup", desc: "AI가 반려식물 사진을 보고 병충해를 진단해 주고 식물 집사를 연결해 주는 앱", customer: "식물 키우다 자주 죽이는 1인 가구", offer: "식물 진단 + 출장 관리 매칭", price: 9900, channel: "앱스토어·인스타그램" },
+  { id: "p20-redesign", label: "사업 방향을 두 번 정리하는 손님", mode: "startup", desc: "동네 꽃집", customer: "기념일 꽃을 사는 30대 남성", offer: "꽃다발", price: 45000, channel: "네이버 플레이스",
+    after: [{ design: true }, { reanswer: "offer", value: "정기 꽃 구독(격주 배송)" }, { reanswer: "price", value: 39000 }] },
+  { id: "p21-teen", label: "고등학생 손님", mode: "startup", desc: "고등학생인데 수제 키링 만들어서 용돈 벌고 싶어요", customer: "또래 친구들", offer: "비즈 키링", price: 5000, channel: "인스타 DM",
+    during: { 1: [{ help: "미성년자도 사업자등록 할 수 있어요? 부모님 허락 꼭 받아야 해요?" }] } },
+  { id: "p22-gov", label: "정부지원금부터 묻는 손님", mode: "startup", desc: "청년 창업으로 친환경 세제 리필 스테이션", customer: "제로웨이스트에 관심 있는 20~30대", offer: "세제 리필 판매", price: 8000, channel: "동네 매장",
+    during: { 1: [{ help: "예비창업패키지 같은 지원금 받을 수 있어요? 이 대화로 사업계획서 쓰면 그대로 제출해도 돼요?" }] } },
 ];
 
 const H = { "content-type": "application/json", "x-business-intake": "2", origin } as Record<string, string>;
@@ -108,6 +134,11 @@ async function runPersona(p: Persona, index: number) {
     } else if ("reanswer" in step) {
       await cmd({ action: "answer", questionId: step.reanswer, value: step.value });
       log.push({ reanswer: step.reanswer });
+    } else if ("design" in step) {
+      await cmd({ action: "design" });
+      await waitJob("사업 방향 정리(1차)");
+      const d = plan.coach?.design;
+      result.ai[result.ai.length - 1].design = d ? { headline: d.identity?.headline, pitch: d.identity?.pitch, names: d.identity?.names } : null;
     } else if ("ideas" in step) {
       const rejectIds = step.rejectFirst ? (plan?.intake?.generatedIdeas ?? []).slice(0, 3).map((i: any) => i.id) : undefined;
       await cmd({ action: "ideas", message: step.ideas, ...(rejectIds?.length ? { rejectIds } : {}) });

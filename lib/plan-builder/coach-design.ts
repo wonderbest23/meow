@@ -10,12 +10,15 @@ const identityGuideSchema = z.object({
   headline: z.string().min(1).max(40),
   pitch: z.string().min(1).max(120),
   names: z.array(z.object({ name: z.string().min(1).max(20), why: z.string().min(1).max(80) })).min(2).max(3),
+  label: z.string().min(1).max(16),
 });
 /** 저장·검증 기준. 목표보다 조금 넘치는 답은 받아 준다(정리 함수가 한도까지 자른다) */
 export const businessIdentitySchema = z.object({
   headline: z.string().min(1).max(60),
   pitch: z.string().min(1).max(200),
   names: z.array(z.object({ name: z.string().min(1).max(24), why: z.string().min(1).max(120) })).min(1).max(3),
+  /** 상호를 정하기 전 '내 사업' 목록·머리줄에 보일 짧은 이름표(예: 동네 디저트 가게). 예전 설계에는 없다 */
+  label: z.string().min(1).max(20).optional(),
 });
 export type BusinessIdentity = z.infer<typeof businessIdentitySchema>;
 export const businessDesignSchema = z.object({
@@ -54,7 +57,8 @@ function normalizeIdentity(input: unknown): BusinessIdentity | undefined {
     : [];
   const headline = clip(oneLine(value.headline), 60), pitch = clip(oneLine(value.pitch), 200);
   if (!headline || !pitch || !names.length) return undefined;
-  return { headline, pitch, names };
+  const label = clip(oneLine(value.label), 20);
+  return { headline, pitch, names, ...(label ? { label } : {}) };
 }
 
 /*
@@ -118,6 +122,7 @@ nextAction은 선택적으로 해볼 행동 하나, 완료 기준, 바로 사용
 identity는 설계 결과 첫 화면에 크게 보이는 문구입니다. 사용자가 읽자마자 "아, 이 사업!" 하고 알아보게 씁니다.
 - headline: 40자 안의 한 줄. 고객이 얻는 변화나 장면을 구체적으로 씁니다. 추상어(혁신·솔루션·플랫폼 등)만 나열하지 않고, 수치·최상급(최고·1위)·보장 표현과 사업명 반복을 쓰지 않습니다.
 - pitch: 120자 안. "[누구]에게 [무엇]을 [어떻게] 제공하는 [사업 형태]" 순서로 사업을 한 문장으로 설명합니다. 사용자가 말한 고객·상품·방식을 그대로 반영합니다.
+- label: 상호를 정하기 전에 목록·머리줄에 보일 짧은 이름표(16자 안). 업종과 특징을 담은 보통 명사구로 씁니다(예: '동네 디저트 가게', '1인 네일샵', '대학가 타코 푸드트럭'). 사용자의 말·감탄사·영어 문장을 그대로 옮기지 않고 한국어로 씁니다.
 - names: 부르기 쉬운 사업명 후보 2~3개(2~10자 권장, 20자 이내)와 짧은 이유. fields.business에 사용자가 정한 고유한 상호(예: '소금빵집 하루')가 있으면 그 이름을 첫 후보로 둡니다. '카페요', '반려견 산책 대행 서비스'처럼 업종을 말한 답이나 사업 설명 문장은 상호가 아니므로 후보에 그대로 넣지 않습니다. 유명 브랜드·기존 상표와 같은 이름, 지역명만으로 된 이름은 피합니다.
 말투: 화면에서 사장님이 직접 읽는 글입니다. 해요체로, 사장님에게 직접 말하듯 씁니다("말씀하신", "입력하신"). '사용자'라고 3인칭으로 부르지 않습니다. feasibility·attention·unknown·within-inputs·산술 검사·fields·intake 같은 내부 이름과 영어 상태값을 문장에 쓰지 않고 "숫자로 따져 보면", "아직 알 수 없어요", "예산이 빠듯해요"처럼 풀어 씁니다.
 모든 design 내용은 AI 제안입니다. 시장 수치·실적·계약·인허가 확인·성공 가능성은 새로 만들지 않습니다. 계산되지 않은 손익·매출 예측도 넣지 않습니다.
