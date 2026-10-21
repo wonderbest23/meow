@@ -16,7 +16,6 @@ import LaunchWorkspace from "./LaunchWorkspace";
 import ExpertEditor from "./ExpertEditor";
 import launchStyles from "./LaunchWorkspace.module.css";
 import OperatingWorkspace from "./OperatingWorkspace";
-import operatingStyles from "./OperatingWorkspace.module.css";
 import { useHomepage } from "../use-homepage";
 import { NextServices } from "../../../components/next-services";
 import { WorkspaceDocumentStatus, WorkspaceHomepageCare, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
@@ -36,8 +35,6 @@ export default function BusinessWorkspace() {
   const [expert, setExpert] = useState(false);
   const [expertDirty, setExpertDirty] = useState(false);
   const [operatingDirty, setOperatingDirty] = useState(false);
-  const [pendingNavigation, setPendingNavigation] = useState<{ view: View } | { href: string } | null>(null);
-  const navigationDialog = useRef<HTMLDialogElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -80,12 +77,15 @@ export default function BusinessWorkspace() {
     return () => { alive=false;window.clearInterval(interval);document.removeEventListener("visibilitychange",visible); };
   }, [router]);
 
-  useEffect(() => { if (pendingNavigation) navigationDialog.current?.showModal(); else navigationDialog.current?.close(); }, [pendingNavigation]);
+  /* 저장하지 않고 떠날 때 묻는 창 — 유지보수 기록·전문가 수정안 모두 같은 모양으로(예전엔 세 가지 모양이었다) */
+  const confirmLeave = (message: string) => askConfirm({ title: "저장하지 않고 이동할까요?", message, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 이동" });
+  const OPERATING_LEAVE = "입력 중인 기록이 사라져요. 저장 중이라면 끝날 때까지 기다려 주세요.";
+  const EXPERT_LEAVE = "저장하지 않은 수정안이 사라져요.";
 
   const leavingExpert = useRef(false);
   async function tab(next: View) {
-    if (next !== view && operatingDirty) { setPendingNavigation({ view: next }); return; }
-    if (next !== view && expertDirty && !await askConfirm({ message: "저장하지 않은 수정안을 버리고 이동할까요?", confirmLabel: "이동" })) return;
+    if (next !== view && operatingDirty) { if (!await confirmLeave(OPERATING_LEAVE)) return; setOperatingDirty(false); }
+    else if (next !== view && expertDirty && !await confirmLeave(EXPERT_LEAVE)) return;
     setView(next);
     const query=new URLSearchParams(window.location.search); query.set("tab",next);
     window.history.replaceState(null,"",`/plan/workspace?${query}`);
@@ -128,9 +128,10 @@ export default function BusinessWorkspace() {
     if (!anchor || anchor.hasAttribute("download") || anchor.target === "_blank") return;
     if (leavingExpert.current) { leavingExpert.current = false; return; }
     event.preventDefault(); event.stopPropagation();
-    if (operatingDirty) { setPendingNavigation({ href: anchor.href }); return; }
+    const href = anchor.href;
+    if (operatingDirty) { void confirmLeave(OPERATING_LEAVE).then(ok => { if (ok) { setOperatingDirty(false); router.push(href); } }); return; }
     /* 전문가 모드 수정안 — 탭 이동·'기본'에서는 물었지만 '대화 이어가기'·메뉴·뒤로 링크로는 그냥 사라졌다 */
-    void askConfirm({ message: "저장하지 않은 수정안을 버리고 이동할까요?", confirmLabel: "이동" }).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
+    void confirmLeave(EXPERT_LEAVE).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
   }}><BusinessAppChrome title={view === "operations" ? "유지보수" : "내 사업 관리"}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기</Link> : <Link className={styles.primary} href="/plan">내 사업으로</Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
@@ -138,7 +139,7 @@ export default function BusinessWorkspace() {
         {/* 유지보수 화면에는 유지보수만 — 사업 요약·내 자료 탭과 '대화 이어가기'는 헷갈린다(소유자 지적 2026-10-07). 대화는 왼쪽 목록의 '대화'로 */}
         <WorkspaceIdentity title={plan.title} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>기존 작업 열기</button>} />
         {view !== "operations" && <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"} />}
-        {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ message: "저장하지 않은 수정안을 버리고 기본 모드로 돌아갈까요?", confirmLabel: "돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
+        {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ title: "기본 모드로 돌아갈까요?", message: EXPERT_LEAVE, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
           {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} />}
           {/* 다음 단계 — 홈페이지 다음으로 맡길 일(마케팅) 상담 신청 */}
@@ -168,9 +169,5 @@ export default function BusinessWorkspace() {
         </section>
       </>}
     </div></div>}
-  </BusinessAppChrome><dialog ref={navigationDialog} className={operatingStyles.dialog} onCancel={() => setPendingNavigation(null)}><h3>저장하지 않은 기록이 있어요</h3><p>이동하면 입력 중인 내용이 사라져요. 저장 중이라면 완료될 때까지 기다려 주세요.</p><div className={styles.actions}><button className={styles.secondary} autoFocus onClick={() => setPendingNavigation(null)}>계속 작성</button><button className={styles.primary} onClick={() => {
-    const next = pendingNavigation; setPendingNavigation(null); setOperatingDirty(false);
-    if (next && "view" in next) { setView(next.view); const query = new URLSearchParams(window.location.search); query.set("tab",next.view); window.history.replaceState(null,"",`/plan/workspace?${query}`); }
-    else if (next) router.push(next.href);
-  }}>저장하지 않고 이동</button></div></dialog></main>;
+  </BusinessAppChrome></main>;
 }

@@ -42,7 +42,7 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false 
   </section>;
 }
 
-export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange: change, onAnswer, onCancel, inChat = false, refining = false, suggestions, coach = false, ksicQuery: composerQuery }: {
+export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange: change, onAnswer, onCancel, inChat = false, refining = false, suggestions, coach = false, ksicQuery: composerQuery, onCarry }: {
   question: IntakeQuestion; snapshot: IntakeSnapshot; draft: AnswerDraft; editing: boolean; disabled: boolean;
   /** `submit`: in coach chat a finished pick is sent right away, as if the send button were pressed. */
   onChange: (value: AnswerDraft, submit?: boolean) => void; onAnswer: (value: IntakeValue, unknown?: boolean, questionId?: string, extra?: { ksic?: string }) => void;
@@ -51,6 +51,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   suggestions?: QuestionSuggestions;
   /** Coach chat: chips send on their own, and the composer doubles as the industry search box. */
   coach?: boolean; ksicQuery?: string;
+  /** 원가 계산기에서 넣은 1개당 원가를 다음 변동비 질문의 입력칸에 미리 채워 둔다(보내기 전까지는 답변이 아니다). */
+  onCarry?: (questionId: string, text: string) => void;
 }) {
   const onChange = (value: AnswerDraft) => change(value);
   const send = (value: AnswerDraft) => change(value, coach);
@@ -157,7 +159,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
           const idea = candidate ? snapshot.candidateIdeas.find(item => item.id === option.value) : undefined;
           return <div key={option.value} className={idea ? styles.ideaOption : undefined} data-selected={draft.selected.includes(option.value)}><label className={styles.option} data-selected={draft.selected.includes(option.value)}>
             <input type={question.kind === "multi" ? "checkbox" : "radio"} name={`intake-${question.id}`} value={option.value} checked={draft.selected.includes(option.value)} disabled={inChat && disabled} onChange={() => choose(option.value)} />
-            <span><strong>{option.label}</strong>{option.hint && <small className={styles.optionHint}>{option.hint}</small>}{idea && <><span className={styles.optionDescription}>{chatTextPreview(idea.description) ?? idea.description}</span><ResourceFitDetails fit={idea.resourceFit} compact />{idea.retained && <small>선택한 사업 유지 · 변경된 조건 검토 필요</small>}</>}</span>
+            <span><strong>{option.label}</strong>{option.hint && <small className={styles.optionHint}>{option.hint}</small>}{idea && <><span className={styles.optionDescription}>{chatTextPreview(idea.description) ?? idea.description}</span><ResourceFitDetails fit={idea.resourceFit} compact />{idea.retained && <small>앞서 고른 사업이에요 · 바뀐 조건에 맞는지 한 번 더 봐 주세요</small>}</>}</span>
           </label>{idea && <details className={styles.disclosure}><summary>{option.label} 자세히 보기</summary><p>{idea.description}</p>{idea.reasons.length > 0 && <p className={styles.optionReason}>{idea.reasons.join(" · ")}</p>}{idea.cautions.length > 0 && <p className={styles.optionCaution}>확인할 점: {idea.cautions.join(" · ")}</p>}<ResourceFitDetails fit={idea.resourceFit} /></details>}</div>;
         })}
       </fieldset>)}
@@ -175,7 +177,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         <p className={styles.stepLegend}>가격 기준</p>
         <div className={styles.chipRow}>{basisOptions.map(option => <button key={option.value} type="button" className={styles.chip} aria-pressed={draft.selected.includes(option.value)} data-selected={draft.selected.includes(option.value) || undefined} disabled={disabled} onClick={() => onChange({ ...draft, custom: false, unknown: false, selected: [option.value] })}>{option.label}</button>)}</div>
       </div>}
-      {numeric && question.id === "price" && snapshot.intake.mode !== "operating" && <CostPriceHelper disabled={disabled} onCommit={commit} />}
+      {numeric && question.id === "price" && snapshot.intake.mode !== "operating" && <CostPriceHelper disabled={disabled} onCommit={(price, unitCost) => { onCarry?.("structure.unitCost", formatWon(unitCost)); commit(price); }} />}
       {numeric && !candidate && (question.unit === "원"
         ? (!basisOptions.length || basis) && <AmountLadder key={basis ?? "ladder"} quick={coach} question={question} ranges={ranges} legend={months && months > 1 ? `${months}개월 합계 기준` : undefined} disabled={disabled} staging={inChat} onCommit={commit} />
         : <NumberQuick question={question} draft={draft} presets={numberPresets(question)} disabled={disabled} staging={inChat} onChange={onChange} onCommit={commit} />)}
@@ -319,8 +321,8 @@ function NumberQuick({ question, draft, presets, disabled, staging, onChange, on
 }
 
 /** range_chips_with_exact (spec §2): a won ladder, then lower / upper / exact (만원 keypad with a 원 toggle). Only "0원" sends from step 1. */
-/** 원가로 판매가 계산 — 1개당 원가와 원가 비율을 고르면 판매가를 제안하고, 누르면 가격 답으로 넣는다 */
-function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: (value: IntakeValue) => void }) {
+/** 원가로 판매가 계산 — 1개당 원가와 원가 비율을 고르면 판매가를 제안하고, 누르면 가격 답으로 넣는다. 넣은 원가는 다음 변동비 질문에 미리 채운다. */
+function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: (price: IntakeValue, unitCost: number) => void }) {
   const [costText, setCostText] = useState("");
   const [ratio, setRatio] = useState<number>(30);
   const cost = /^\d+$/.test(costText.replace(/,/g, "")) ? Number(costText.replace(/,/g, "")) : null;
@@ -332,7 +334,7 @@ function CostPriceHelper({ disabled, onCommit }: { disabled: boolean; onCommit: 
     <div className={styles.chipRow} role="group" aria-label="원가 비율">{COST_RATIO_PRESETS.map(value => <button key={value} type="button" className={styles.chip} aria-pressed={ratio === value} data-selected={ratio === value || undefined} disabled={disabled} onClick={() => setRatio(value)}>원가 {value}%</button>)}</div>
     {result && <div className={styles.costHelperResult}>
       <p>제안 판매가 <strong>{formatWon(result.price)}</strong> · 1개 팔 때마다 원가를 빼고 {formatWon(result.margin)}이 남아요 (원가 {ratio}% 기준).</p>
-      <button type="button" className={styles.secondaryButton} disabled={disabled} onClick={() => onCommit(wonAnswer(result.price))}>이 가격으로 입력<Check size={17} aria-hidden="true" /></button>
+      <button type="button" className={styles.secondaryButton} disabled={disabled} onClick={() => cost && onCommit(formatWon(result.price), cost)}>이 가격으로 입력<Check size={17} aria-hidden="true" /></button>
     </div>}
   </details>;
 }
@@ -456,6 +458,18 @@ export function ConversationText({ text }: { text: string }) {
   </div>;
 }
 
+/** businessDesignReply()가 만든 사업 방향 요약 글인지 — 이 두 소제목이 함께 있는 글은 설계 결과뿐이다. */
+/** 답 말풍선 표기 — +/− 단추·연필로 넣은 숫자만 있는 답('25', '6000')도 요약 패널처럼 단위를 붙인다('25시간', '6,000원'). */
+function bubbleAnswerText(question: IntakeQuestion | undefined, text: string) {
+  if (/^\d{4,}원$/.test(text)) return formatWon(Number(text.slice(0, -1)));
+  if (question?.kind !== "number" || !question.unit || !/^\d[\d,]*(\.\d+)?$/.test(text)) return text;
+  const number = Number(text.replace(/,/g, ""));
+  if (!Number.isFinite(number)) return text;
+  return question.unit === "원" ? formatWon(number) : `${number.toLocaleString("ko-KR")}${question.unit}`;
+}
+
+const isDesignReplyText = (text: string) => text.includes("\n\n이렇게 제안한 이유\n") && text.includes("\n\n먼저 해볼 일 하나 · 선택 사항\n");
+
 export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = false }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string; readOnly?: boolean }) {
   const lastUserId = [...snapshot.coach.messages].reverse().find(message => message.role === "user")?.id;
   const mode = { exploring: "아이디어를 찾고 있어요", startup: "생각한 사업이 있어요", operating: "사업을 운영 중이에요" }[snapshot.intake.mode];
@@ -464,6 +478,8 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
     <article className={styles.userMessage} data-coach-message="user"><p>{mode}</p></article>
     {snapshot.coach.messages.map(message => {
       if (snapshot.intake.job?.kind === "design" && message.id === `${snapshot.intake.job.id}:reply` && snapshot.coach.design?.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
+      // 사업 방향 요약 글(businessDesignReply)은 대화에 쌓지 않는다 — 앞 답을 고칠 때마다 한 벌씩 늘었다. 최신 방향은 아래 카드 한 곳에만 보인다.
+      if (message.role === "assistant" && isDesignReplyText(message.text)) return null;
       const answerEntry = Object.entries(snapshot.intake.answers).find(([, answer]) => answer.messageId === message.id);
       const notes = snapshot.intake.notes.filter(note => note.id.startsWith(`${message.id}:`) && /^\d+$/.test(note.id.slice(message.id.length + 1)));
       // Older message labels are display-only; edits always use the current stable question ID.
@@ -472,7 +488,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       return <div key={message.id} className={styles.chatTurn}>
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{question.prompt}</p></div>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{/^\d{4,}원$/.test(text) ? formatWon(Number(text.slice(0, -1))) : text}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{bubbleAnswerText(question, text)}</p>}
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
         {receipt && message.id === lastUserId && !notes.length && <p className={styles.messageStatus} data-receipt>{receipt}</p>}
@@ -789,12 +805,13 @@ export function DesignResult({ snapshot, disabled, onName }: { snapshot: IntakeS
   </section>;
 }
 
-export function DesignDirection({ snapshot }: { snapshot: IntakeSnapshot }) {
+/** `continued`: 바로 위에 사업 방향 카드(BusinessIdentityHero)가 있으면 같은 '사업 방향 요약' 머리말을 한 번 더 달지 않는다. */
+export function DesignDirection({ snapshot, continued = false }: { snapshot: IntakeSnapshot; continued?: boolean }) {
   const design = snapshot.coach.design;
   if (!design || design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
   return <section className={styles.direction} aria-label="정리한 사업 방향">
-    <p className={styles.eyebrow}>사업 방향 요약</p>
-    <h3>이렇게 시작해 볼까요?</h3>
+    {!continued && <p className={styles.eyebrow}>사업 방향 요약</p>}
+    <h3>{continued ? "이렇게 시작해요" : "이렇게 시작해 볼까요?"}</h3>
     <ConversationText text={design.startingPlan.scope} />
     <div className={styles.nextAction}><h3>먼저 해볼 일 하나 <small>선택 사항</small></h3><ConversationText text={design.nextAction.action} /></div>
     <details className={styles.disclosure}><summary>제안 이유와 실행 예시 보기</summary>
