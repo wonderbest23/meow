@@ -94,4 +94,12 @@ assert.ok(INDUSTRY_PLAYBOOKS.find(item => item.id === "rental-room")!.steps.some
 // 설명으로 찾은 가이드는 그렇다고 밝혀, 사업과 다르면 쓰지 않게 한다
 assert.match(playbookContext(playbookForText("빵집")!, "description").matchedBy ?? "", /사업 설명으로 찾은 업종/);
 assert.equal(playbookContext(playbookForText("빵집")!).matchedBy, undefined);
+// 실제 API 8건(2026-10-13): 단계 설명까지 넘긴다 — 이사의 '새 허가는 나오지 않아 넘겨받는다'가 빠졌었다
+assert.ok(playbookContext(INDUSTRY_PLAYBOOKS.find(p => p.id === "moving-truck")!).steps.some(step => /넘겨받고 양도·양수 신고/.test(step)));
+// 대표 결정(2026-10-14): '오늘창업 홈페이지'가 나오는 가이드는 무엇인지 한 줄 설명을 함께 넘긴다
+const withHomepage = INDUSTRY_PLAYBOOKS.filter(p => p.steps.some(step => step.where.includes("오늘창업 홈페이지")));
+assert.ok(withHomepage.length > 50);
+assert.ok(withHomepage.every(p => /가게 소개 홈페이지.*예약이나 결제를 직접 받지는 않습니다/.test((playbookContext(p) as { ownService?: string }).ownService ?? "")));
+const moving = INDUSTRY_PLAYBOOKS.find(p => p.id === "moving-truck")!;
+assert.equal((playbookContext({ ...moving, steps: moving.steps.filter(step => !step.where.includes("오늘창업 홈페이지")) }) as { ownService?: string }).ownService, undefined, "no homepage step → no note");
 console.log(`industry-playbooks: ${INDUSTRY_PLAYBOOKS.length} guides, ${expect.length} code mappings, ${described.length} descriptions, launch checklist passed`);

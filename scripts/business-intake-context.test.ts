@@ -212,14 +212,14 @@ async function main() {
   }
 
   const oversized = structuredClone(answers);
-  oversized["intake/details"] = Object.fromEntries(detailQuestions("b2b_service").map((question, index) => [question.id, { value: `Complete value ${index}: ${"x".repeat(3000)}`, unit: null, period: null, quote: "" }]));
+  oversized["intake/details"] = Object.fromEntries(detailQuestions("b2b_service").map((question, index) => [question.id, { value: `Complete value ${index}: ${"x".repeat(6000)}`, unit: null, period: null, quote: "" }]));
   oversized["intake/details"]["b2b_service.decisionMaker"] = { value: "Do not partially include this value".repeat(1000), quote: "" };
   const bounded = confirmedIntakeContext(oversized), boundedData = parse(bounded);
-  assert(bounded.length <= 8000); assert(boundedData.omitted); assert(boundedData.details.length > 0);
+  assert(bounded.length <= INTAKE_CONTEXT_MAX_LENGTH); assert(boundedData.omitted); assert(boundedData.details.length > 0);
   assert.equal(boundedData.reportingPeriod?.value, reportingPeriod, "The reporting period has priority over optional detail volume");
   assert(!boundedData.details.some(detail => detail.questionId === "b2b_service.decisionMaker"));
   for (const detail of boundedData.details) assert.equal(detail.value, (oversized["intake/details"][detail.questionId] as { value: string }).value, "No factual value is truncated");
-  assert.throws(() => boundedIntakeContext("x".repeat(8001)), /INTAKE_CONTEXT_INVALID/);
+  assert.throws(() => boundedIntakeContext("x".repeat(INTAKE_CONTEXT_MAX_LENGTH + 1)), /INTAKE_CONTEXT_INVALID/);
 
   const chapter = PLAN_BLUEPRINT[0], section = chapter.sections[0];
   const baseInput: SectionGenInput = { chapter, section, answers: {}, business: coach.business, coachContext: coachContext(coach) };
@@ -291,7 +291,7 @@ async function main() {
   await assert.rejects(() => runtime.generate(payload), /review_failed/, "The same number remains unsupported without confirmed intake");
   await assert.rejects(() => runtime.generate(withConfirmedIntakeContext(payload, quoteOnly)), /review_failed/, "Refresh validation also ignores quote-only amounts");
   const priorCalls = captured.length;
-  const oversizedPayload = { ...contextualPayload, intakeContext: "x".repeat(8001) };
+  const oversizedPayload = { ...contextualPayload, intakeContext: "x".repeat(INTAKE_CONTEXT_MAX_LENGTH + 1) };
   await assert.rejects(() => runtime.generate(oversizedPayload), /INTAKE_CONTEXT_INVALID/);
   assert.equal(captured.length, priorCalls, "Oversized forwarded context fails before any model invocation");
   assert.deepEqual(answers, before);
@@ -340,7 +340,7 @@ async function main() {
   assert.equal(parse(confirmedIntakeContext(withKsic)).ksic ?? null, null);
   const onlyKsic: Record<string, Record<string, unknown>> = { __business_intake: { state: { ksic: "58222" } } };
   assert.equal(parse(confirmedIntakeContext(onlyKsic)).ksic?.code, "58222", "A confirmed KSIC alone is enough to produce a context");
-  console.log(JSON.stringify({ passed: ["confirmed-only canonical input", "active-sector-only context with archived answers preserved", "all sector labels", "operating reporting period", "unknown versus explicit zero", "UI and transport invariance", "whole-entry 8000-character bound", "section and streaming prompt capture", "review prompt capture", "refresh numeric evidence", "unsupported-number rejection", "payload-builder source assertions", "refresh consent snapshot and runtime handoff", "artifact document chunk handoff"], mockRequests: captured.length, paidCalls: 0, externalCalls: 0 }));
+  console.log(JSON.stringify({ passed: ["confirmed-only canonical input", "active-sector-only context with archived answers preserved", "all sector labels", "operating reporting period", "unknown versus explicit zero", "UI and transport invariance", "whole-entry character bound", "section and streaming prompt capture", "review prompt capture", "refresh numeric evidence", "unsupported-number rejection", "payload-builder source assertions", "refresh consent snapshot and runtime handoff", "artifact document chunk handoff"], mockRequests: captured.length, paidCalls: 0, externalCalls: 0 }));
 }
 
 void main().catch(error => { console.error(error); process.exitCode = 1; });

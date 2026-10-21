@@ -179,7 +179,8 @@ async function main() {
         const f = fixture(mode);
         const coreIds = coreQuestions(mode).map(question => question.id);
         // 변동비·고정비가 기본 질문에 들어왔다(운영 중은 가격·변동비). 탐색은 시작 조건 단계가 하나 더 있다. 신규는 대표 생활비 질문이 하나 더 있다(2026-10-10).
-        assert.equal(coreIds.length, mode === "operating" ? 13 : 14, "exploring adds the start-conditions step; startup adds the owner's living-cost question");
+        // 운영 중도 대표(가족)가 가져갈 생활비를 묻는다(2026-10-13) — 모든 모드가 14개
+        assert.equal(coreIds.length, 14, "every mode asks the owner's living cost; exploring adds the start-conditions step");
         const visited: string[] = [];
         for (let index = 0; index < coreIds.length; index++) {
           const state = snapshot(f);
