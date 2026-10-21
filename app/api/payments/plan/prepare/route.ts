@@ -42,7 +42,7 @@ export async function POST(request: Request) {
    * 홈페이지에서 여는 도메인·토큰 결제는 종류를 모르고 오므로, 예전처럼 모든 상품에 요구하면 결제가 늘 막혔다.
    */
   if (!planId || (product === "plan" && !planType)) {
-    return NextResponse.json({ error: "plan_required", message: "결제할 사업 정보가 없습니다. 사업계획서 화면에서 다시 시도해 주세요." }, { status: 400 });
+    return NextResponse.json({ error: "plan_required", message: "결제할 사업 정보가 없어요. 사업계획서 화면에서 다시 시도해 주세요." }, { status: 400 });
   }
   /* 도메인 구매 대행은 살 주소가 있어야 한다(.com·.kr·.co.kr) */
   const purchaseDomain = product === "domain-purchase" ? normalizePurchaseDomain(typeof body.domain === "string" ? body.domain : "") : null;
@@ -58,12 +58,12 @@ export async function POST(request: Request) {
   try {
     identity = await requireAuthenticatedIdentity();
   } catch {
-    return NextResponse.json({ error: "login_required", message: "로그인 후 결제할 수 있습니다." }, { status: 401 });
+    return NextResponse.json({ error: "login_required", message: "로그인한 뒤에 결제할 수 있어요." }, { status: 401 });
   }
 
   if (!nicepayConfigured()) {
     return NextResponse.json(
-      { error: "payments_unavailable", message: "결제 준비가 아직 완료되지 않았습니다. 잠시 후 다시 시도해주세요." },
+      { error: "payments_unavailable", message: "지금은 결제를 받을 수 없어요. 잠시 후 다시 시도해 주세요." },
       { status: 503 },
     );
   }
@@ -72,18 +72,18 @@ export async function POST(request: Request) {
   const readiness = evaluatePlatformLaunchReadiness(await getPlatformLegalSettings(), { authConfigured: authConfigured(), paymentsConfigured: true });
   if (!readiness.paymentAllowed) {
     return NextResponse.json(
-      { error: "paid_launch_blocked", message: "정식 결제 준비가 아직 완료되지 않았습니다. 잠시 후 다시 시도해주세요." },
+      { error: "paid_launch_blocked", message: "지금은 결제를 받을 수 없어요. 잠시 후 다시 시도해 주세요." },
       { status: 503 },
     );
   }
 
   if (!identity.userId) {
-    return NextResponse.json({ error: "login_required", message: "로그인 후 결제할 수 있습니다." }, { status: 401 });
+    return NextResponse.json({ error: "login_required", message: "로그인한 뒤에 결제할 수 있어요." }, { status: 401 });
   }
 
   if (product === "domain" || product === "domain-purchase") {
     if (!(await paidHomepagePlanIds(identity.userId)).has(planId)) {
-      return NextResponse.json({ error: "homepage_required", message: "홈페이지를 먼저 열어야 도메인을 연결할 수 있습니다." }, { status: 409 });
+      return NextResponse.json({ error: "homepage_required", message: "홈페이지를 먼저 열어야 도메인을 연결할 수 있어요." }, { status: 409 });
     }
     const ent = await domainEntitlement(identity.userId, planId);
     // 이미 사 드린 주소를 다시 결제하면 갱신 — 새로 등록하지 않고(자동 등록·연결 알림 건너뜀) 운영자에게 '갱신'으로 알린다
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
     }
     /* 만료 30일 전부터 갱신을 받는다 — 그 전에는 이미 산 것 */
     if (ent.active && ent.expiresAt && new Date(ent.expiresAt).getTime() - Date.now() > 30 * 86_400_000) {
-      return NextResponse.json({ error: "already_paid", message: `이미 연결 중입니다 (${ent.expiresAt.slice(0, 10)}까지). 만료 30일 전부터 갱신할 수 있습니다.` }, { status: 409 });
+      return NextResponse.json({ error: "already_paid", message: `이미 연결해 쓰고 있어요(${ent.expiresAt.slice(0, 10)}까지). 끝나기 30일 전부터 갱신할 수 있어요.` }, { status: 409 });
     }
     /* 새로 살 주소가 이미 남의 것이면 받지 않는다(우리가 사 준 주소의 갱신은 예외) */
     if (purchaseDomain && ent.purchase?.domain !== purchaseDomain && (await checkDomainAvailability(purchaseDomain)) === "taken") {
@@ -134,6 +134,6 @@ export async function POST(request: Request) {
       { headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   } catch {
-    return NextResponse.json({ error: "order_failed", message: "결제를 시작하지 못했습니다." }, { status: 500 });
+    return NextResponse.json({ error: "order_failed", message: "결제를 시작하지 못했어요. 잠시 후 다시 시도해 주세요." }, { status: 500 });
   }
 }

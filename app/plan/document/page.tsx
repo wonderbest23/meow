@@ -106,7 +106,7 @@ export default function PlanDocumentPage() {
     setAllWritten(!isSamplePlan(plan.id) && businessHubState(plan).complete);
     setReviewSource(coach ? { revision: coachDocumentRevision(coach), fields: coach.fields, sections: Object.fromEntries(Object.entries(plan.sections).filter(([, section]) => section.coachRevision !== coachDocumentRevision(coach)).map(([key, section]) => [key, section.generatedAt])) } : null);
     /* 예시는 읽기 전용 — 갱신·검토 안내를 띄우지 않는다 */
-    setContextNotice(isSamplePlan(plan.id) ? "" : snapshot?.stale.length ? "공통 사업 조건이 바뀌었어요. 문서를 갱신하거나 각 항목을 확인해 주세요" : snapshot?.manualReview.length ? "직접 수정한 항목을 최신 사업 조건과 비교해 검토해 주세요" : "");
+    setContextNotice(isSamplePlan(plan.id) ? "" : snapshot?.stale.length ? "바꾼 답이 아직 계획서에 들어가지 않았어요" : snapshot?.manualReview.length ? "직접 고친 항목이 있어요. 바꾼 답과 맞는지 한 번 확인해 주세요" : "");
   }
   // PPT 자동 생성이 꺼져 있으면 제작 상태를 묻지 않는다(오픈 범위 밖 — lib/launch-scope.ts)
   const deck = useDeckExport(documentPlanId, PPT_GENERATION_VERIFIED && !isSample && !!access?.paid, title);
@@ -216,8 +216,9 @@ export default function PlanDocumentPage() {
     if (sections.length) await deck.startOrDownload();
   }
 
-  async function handleExport(format: "pdf" | "docx", view: "summary" | "detailed" = "detailed") {
-    if (!sections.length && view !== "summary") return;
+  /** 파일을 받았으면 true — 화면이 내려받기 창을 닫고 '내려받았어요'를 보인다 */
+  async function handleExport(format: "pdf" | "docx", view: "summary" | "detailed" = "detailed"): Promise<boolean> {
+    if (!sections.length && view !== "summary") return false;
     setExporting(format);
     try {
       const context = documentContext(loadState(), documentPlanId);
@@ -239,11 +240,11 @@ export default function PlanDocumentPage() {
       if (res.status === 402) {
         await showNotice("PDF·Word 내려받기는 결제 후 이용할 수 있어요. 결제 화면으로 이동할게요.", { confirmLabel: "결제 화면으로" });
         goPay();
-        return;
+        return false;
       }
       if (!res.ok) {
         const failure = await res.json().catch(() => ({}));
-        throw new Error(failure.message || "파일을 만들지 못했습니다. 저장된 문서는 유지되어 있습니다.");
+        throw new Error(failure.message || "파일을 만들지 못했어요. 저장된 문서는 그대로 있어요.");
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -254,8 +255,10 @@ export default function PlanDocumentPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      return true;
     } catch (error) {
-      setDeckError(userErrorMessage(error, "파일을 만들지 못했습니다. 저장된 문서는 유지되어 있습니다."));
+      setDeckError(userErrorMessage(error, "파일을 만들지 못했어요. 저장된 문서는 그대로 있어요."));
+      return false;
     } finally {
       setExporting(null);
     }
@@ -328,12 +331,13 @@ export default function PlanDocumentPage() {
     exporting={exporting} locked={locked} accessPending={!isSample && access === null}
     accessError={accessError} onRetryAccess={() => void retryAccess()}
     deckStatus={isSample ? "" : deck.message} deckLabel={isSample ? "PPT 샘플 내려받기" : deck.label}
-    error={deckError || deck.error} onDownload={(format, view) => {
+    error={deckError || deck.error} onDownload={async (format, view) => {
       const file = sampleFile(format);
-      if (file) { window.open(file, "_blank", "noopener"); return; }
-      if (edits.hasPending()) { setDeckError("수정 내용을 먼저 저장한 뒤 파일을 받아주세요."); return; }
+      if (file) { window.open(file, "_blank", "noopener"); return true; }
+      if (edits.hasPending()) { setDeckError("고친 내용을 먼저 저장한 뒤 파일을 받아 주세요."); return false; }
       setDeckError(null);
-      if (locked) { goPay(); return; }
-      if (format === "pptx") void handleDeck(); else void handleExport(format, view);
+      if (locked) { goPay(); return false; }
+      if (format === "pptx") { void handleDeck(); return false; }
+      return handleExport(format, view);
     }} canDownload={(format, view) => !!sampleFile(format) || (view === "summary" ? !!summary && exporting === null && !isSample && !edits.pending && format !== "pptx" : !busy && (format !== "pptx" || (!deck.busy && deck.canRequest)))} />;
 }

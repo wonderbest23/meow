@@ -202,7 +202,10 @@ export function LandingVisualBuilder({
   liveUrl = null,
   onPublish,
   appendix,
+  kit,
 }: {
+  /** 킷 편집기(BrainwaveEditor)에만 넘기는 것 — 손님 화면이 최신인지·홈페이지 화면의 저장 전 수정·공개 뒤 '주소 바꾸기' */
+  kit?: { liveUpToDate?: boolean; pendingOutside?: boolean; onEditAddress?: () => void };
   /** 공개 페이지에 자동으로 붙는 문의 양식 모양(에디터 맨 아래에 보여 준다) */
   appendix?: PublicAppendix;
   /** 공개 중이면 킷 에디터의 '저장 완료'에 '새 버전 공개 후 반영'을 붙인다 */
@@ -210,7 +213,7 @@ export function LandingVisualBuilder({
   /** 손님이 보는 주소(공개 중일 때) — 저장 팝업에 보여 준다 */
   liveUrl?: string | null;
   /** 저장 팝업의 '공개하고 주소 받기' */
-  onPublish?: () => Promise<{ url: string } | { error: string }>;
+  onPublish?: () => Promise<{ url: string } | { error: string } | { cancelled: true }>;
   data: LandingPageData;
   businessName: string;
   /** AI 수정(토큰)에 쓴다 — 없으면 AI 단추가 숨는다 */
@@ -229,7 +232,7 @@ export function LandingVisualBuilder({
   const current = switched ?? data;
   /* Brainwave.io 킷 페이지는 블록 편집기(Puck)가 아니라 자리 편집기로 고친다 */
   if (current.brainwave) {
-    return <BrainwaveEditor data={current} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} published={published} liveUrl={liveUrl} onPublish={onPublish} appendix={appendix} />;
+    return <BrainwaveEditor data={current} onClose={onClose} onSave={onSave} projectId={projectId ?? null} business={{ name: businessName, summary: businessSummary ?? "" }} published={published} liveUrl={liveUrl} onPublish={onPublish} appendix={appendix} {...kit} />;
   }
   const switchToKit = async () => {
     if (!await askConfirm({ title: "템플릿 편집기로 바꿀까요?", message: "지금 블록으로 꾸민 내용은 사라지고 사업 정보로 새 초안을 만들어요.", confirmLabel: "바꾸기" })) return;

@@ -461,6 +461,33 @@ export async function publishLanding(
   return (await getLandingForProject(projectId, guestTokenHash))!;
 }
 
+/*
+ * 공개 멈추기 — 손님 주소(/launch/…·내 도메인)로 더는 열리지 않게 한다. 초안·버전·주소(published_slug)는 그대로 남겨,
+ * '다시 공개'(publishLanding)하면 같은 주소로 다시 열린다. 이미 멈춘 홈페이지면 그대로 돌려준다(두 번 눌러도 안전).
+ */
+export async function unpublishLanding(
+  projectId: string,
+  guestTokenHash: string,
+): Promise<LandingSiteRecord> {
+  const site = await getLandingForProject(projectId, guestTokenHash);
+  if (!site) throw new Error("LANDING_NOT_FOUND");
+  if (site.status !== "published") return site;
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.sites.get(site.id)!;
+    stored.status = "unpublished";
+    stored.updatedAt = new Date(Math.max(Date.now(), Date.parse(stored.updatedAt) + 1)).toISOString();
+    return demoWithMetrics(stored);
+  }
+  const { error } = await supabase
+    .from("landing_sites")
+    .update({ status: "unpublished" })
+    .eq("id", site.id)
+    .eq("status", "published");
+  if (error) throw error;
+  return (await getLandingForProject(projectId, guestTokenHash))!;
+}
+
 export async function setLandingCustomDomain(
   projectId: string,
   guestTokenHash: string,

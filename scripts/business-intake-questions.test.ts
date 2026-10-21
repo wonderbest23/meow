@@ -113,7 +113,7 @@ async function main() {
     assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /월 고정비/);
     assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /건당 변동비.*구분/);
     assert.match(getIntakeQuestion("operating", null, "sales")!.prompt, /실제 매출/);
-    assert.equal(getIntakeQuestion("operating", null, "sales")!.period, "입력한 시작일~종료일");
+    assert.equal(getIntakeQuestion("operating", null, "sales")!.period, "실적 기간 합계");
     assert.equal(getIntakeQuestion("startup", null, "price")!.period, "판매 1건");
     // 운영 중에도 가격을 묻는다: 실적 매출 ÷ 가격으로 실제 판매량을 잡고 손익분기를 계산하기 위해서다(2026-09-28).
     assert.match(getIntakeQuestion("operating", null, "price")!.prompt, /지금 받는 .* 평균 가격/);
@@ -274,7 +274,7 @@ async function main() {
     options.EXPERIENCE_CHIPS.forEach((label, index) => {
       const first = intakeCandidates({ experience: label })[0];
       assert.equal(first.sector, experienceSectors[index], `experience chip "${label}" → ${experienceSectors[index]} (got ${first.sector})`);
-      assert.match(first.reasons[0], /경험 입력과 일치한 태그/);
+      assert.match(first.reasons[0], /적어 주신 경험\(.+\)과 이어져요/);
     });
     assert.equal(intakeCandidates({ experience: "청소·수납·방문 서비스, 요리·카페·베이킹" })[0].sector, "food_beverage", "ties fall back to catalogue order");
     assert.equal(intakeCandidates({ interest: ["local_service"], experience: "청소·수납·방문 서비스, 요리·카페·베이킹" })[0].sector, "local_service", "interest sector is the first sort key");
@@ -297,26 +297,26 @@ async function main() {
     assert.deepEqual(baseline, intakeCandidates({}));
     assert.deepEqual(baseline, intakeCandidates({ interest: null, experience: null, hoursPerWeek: null, budget: null }));
     assert.deepEqual(baseline, intakeCandidates({ interest: [], experience: "  ", hoursPerWeek: "", budget: [] }));
-    assert.ok(baseline.every(candidate => candidate.reasons.some(reason => reason.includes("고정된 목록 순서"))));
+    assert.ok(baseline.every(candidate => candidate.reasons.some(reason => reason.includes("자주 찾는 예시"))));
     assert.ok(baseline.every(candidate => candidate.cautions.some(caution => caution.includes("0원으로 보지"))));
     assert.ok(baseline.every(candidate => candidate.cautions.some(caution => caution.includes("0시간으로 보지"))));
     const zero = intakeCandidates({ budget: 0, hoursPerWeek: 0 });
     assert.deepEqual(zero.map(candidate => candidate.id), baseline.map(candidate => candidate.id), "Budget/time do not produce fabricated suitability rankings");
-    assert.ok(zero.every(candidate => candidate.cautions.some(caution => caution.includes("입력한 예산"))));
-    assert.ok(zero.every(candidate => candidate.cautions.some(caution => caution.includes("입력한 주당 시간"))));
+    assert.ok(zero.every(candidate => candidate.cautions.some(caution => caution.includes("적어 주신 예산"))));
+    assert.ok(zero.every(candidate => candidate.cautions.some(caution => caution.includes("적어 주신 주당 시간"))));
     assert.notDeepEqual(zero, baseline, "Explicit zero is not missing");
     assert.deepEqual(baseline, intakeCandidates({ budget: Number.NaN, hoursPerWeek: Number.POSITIVE_INFINITY }));
 
     for (const sector of PROPOSAL_SECTORS) {
       const byValue = intakeCandidates({ interest: [sector] });
       assert.equal(byValue[0].sector, sector);
-      assert.match(byValue[0].reasons[0], /관심 분야 입력과 일치한 태그/);
+      assert.match(byValue[0].reasons[0], /고르신 관심 분야\(.+\)와 이어져요/);
       assert.ok(byValue[0].reasons[0].includes(SECTOR_PROFILES[sector].label), "사용자에게 보이는 근거는 내부 값이 아닌 업종 라벨");
       assert.ok(!byValue[0].reasons[0].includes(sector) || SECTOR_PROFILES[sector].label.includes(sector), "내부 업종 값은 근거 문구에 노출하지 않음");
       assert.equal(intakeCandidates({ interest: SECTOR_PROFILES[sector].label })[0].sector, sector);
       const byExperience = intakeCandidates({ experience: [sector] });
       assert.equal(byExperience[0].sector, sector);
-      assert.match(byExperience[0].reasons[0], /경험 입력과 일치한 태그/);
+      assert.match(byExperience[0].reasons[0], /적어 주신 경험\(.+\)과 이어져요/);
       for (const candidate of byValue) {
         assert.deepEqual(Object.keys(candidate).sort(), ["id", "title", "description", "sector", "reasons", "cautions"].sort());
         assert.ok(candidate.title && candidate.description && candidate.reasons.length && candidate.cautions.length);

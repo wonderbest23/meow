@@ -26,7 +26,7 @@
 .button span, .linkButton span, .greenButton span, .heroButton span { min-width: 0; overflow-wrap: anywhere; }
 .button { min-height: 52px; padding: 10px 22px; border-radius: 6px; color: #fff; background: var(--accent); }
 .linkButton { justify-self: start; min-height: 44px; padding: 0; color: #fff; background: none; font-size: 16px; }
-.greenButton { justify-content: center; min-height: 52px; padding: 10px 28px; border-radius: 6px; color: var(--ink); background: var(--mint); font-size: 16px; }
+.greenButton { justify-content: center; min-height: 52px; padding: 10px 28px; border-radius: 6px; color: var(--t-on-pop, var(--ink)); background: var(--t-pop, var(--mint)); font-size: 16px; }
 .button:focus-visible, .linkButton:focus-visible, .greenButton:focus-visible, .heroButton:focus-visible { outline: 3px solid #b7b1ff; outline-offset: 3px; }
 
 /* 머리글 */
@@ -44,7 +44,7 @@
 .heroCopy { position: relative; display: grid; justify-items: center; gap: 18px; padding: 72px 22px 96px; }
 .heroCopy h1 { max-width: 760px; font-size: 40px; line-height: 1.2; font-weight: 700; }
 .heroLead { max-width: 640px; font-size: 18px; line-height: 1.6; font-weight: 500; opacity: .95; white-space: pre-wrap; }
-.heroButton { justify-content: center; white-space: nowrap; min-height: 52px; margin-top: 8px; padding: 10px 26px; border-radius: 6px; color: var(--ink); background: var(--mint); font-size: 16px; }
+.heroButton { justify-content: center; white-space: nowrap; min-height: 52px; margin-top: 8px; padding: 10px 26px; border-radius: 6px; color: var(--t-on-pop, var(--ink)); background: var(--t-pop, var(--mint)); font-size: 16px; }
 .page .heroButton svg { display: block !important; flex: 0 0 18px; }
 .heroSlot { position: relative; justify-self: center; width: min(420px, calc(100% - 40px)); min-height: 72px; margin: -64px auto 40px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }
 
@@ -154,3 +154,7 @@
 
 /* 머리말 가게 이름 — 길면 두 줄로 늘어 머리말이 두꺼워졌다. 한 줄로 두고 넘치면 … (전체 이름은 첫 화면 큰 제목에 있다) */
 .header .brand { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+
+/* 편집 화면 전용 — 비어 있는 카드 사진·마무리 띠 사진 자리(공개 화면에는 없다) */
+.cardSlot { aspect-ratio: 16 / 10; border-width: 0 0 1.5px; border-radius: 0; }
+.ctaSlot { position: relative; z-index: 1; width: auto; min-height: 44px; padding: 8px 16px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }

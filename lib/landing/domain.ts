@@ -26,10 +26,11 @@ export const landingTemplateIds = [
 export type LandingTemplateId = (typeof landingTemplateIds)[number];
 
 export const landingDraftSchema = z.object({
-  slug: z.string().trim().toLowerCase().min(3).max(60).regex(
-    /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
-    "주소는 영문 소문자, 숫자, 하이픈만 사용할 수 있습니다.",
-  ),
+  /* 안내 문구는 화면 칸 아래에 그대로 보인다 — 무엇을 고치면 되는지 이유별로(landingSlugIssue) */
+  slug: z.string().trim().toLowerCase().superRefine((value, context) => {
+    const issue = landingSlugIssue(value);
+    if (issue) context.addIssue({ code: "custom", message: issue });
+  }),
   businessName: shortText,
   pageMode: z.enum(["lead_validation", "transaction"]).default("lead_validation"),
   templateId: z.enum(landingTemplateIds).default("service"),
@@ -347,6 +348,36 @@ export function romanizeHangul(value: string): string {
   });
 }
 
+/*
+ * 무료 주소 끝부분(/launch/…)에서 고칠 점 — 없으면 null. 화면(입력 칸 아래)과 서버 저장이 같은 문구를 쓴다.
+ * 예전엔 '영문 소문자, 숫자, 하이픈만…' 한 문장뿐이라 'ab'(짧음)·'-bad-'(맨 앞뒤 -)에서 무엇이 틀렸는지 몰랐다.
+ */
+export function landingSlugIssue(raw: string): string | null {
+  const value = raw.trim().toLowerCase();
+  if (!value) return "주소 끝부분을 적어 주세요";
+  if (/[\u3131-\u318E\uAC00-\uD7A3\s]/.test(value)) return "한글·띄어쓰기는 쓸 수 없어요 · 영어 소문자와 숫자로 적어 주세요";
+  if (/[^a-z0-9-]/.test(value)) return "영어 소문자, 숫자, - 만 쓸 수 있어요";
+  if (value.length < 3) return "3글자 이상 적어 주세요";
+  if (value.length > 60) return "60글자까지 쓸 수 있어요";
+  if (/^-|-$/.test(value)) return "맨 앞·뒤에는 - 를 쓸 수 없어요";
+  if (/--/.test(value)) return "- 를 두 번 이어 쓸 수 없어요";
+  return null;
+}
+
+/*
+ * 주소는 짧게 — 계획서 제목이 길면 'cheot-dal-sibeom-unyeong-gijunui-hapseon-24bf' 처럼 손님에게 보내기 힘든 주소가 됐다.
+ * 앞에서부터 낱말을 이어 붙이되 글자 수(한글 20·영문 30) 안에서 멈춘다. 첫 낱말이 길면 그 안에서 자른다.
+ */
+function shortSlug(latin: string, budget: number) {
+  let short = "";
+  for (const word of latin.split("-").filter(Boolean)) {
+    const next = short ? `${short}-${word}` : word;
+    if (short && next.length > budget) break;
+    short = next;
+  }
+  return (short.length >= 3 ? short : latin).slice(0, budget).replace(/-+$/, "");
+}
+
 function slugify(value: string) {
   const hangul = /[\uAC00-\uD7A3]/.test(value);
   const latin = romanizeHangul(value)
@@ -362,7 +393,7 @@ function slugify(value: string) {
    * 한글 상호는 같은 이름이 흔하다("새벽커피"만 해도 여럿). 소리만 옮긴 주소는
    * 겹치기 쉬우니 짧은 꼬리를 붙여 둔다. 사장님은 '무료 주소 끝부분'에서 바꿀 수 있다.
    */
-  return hangul ? `${latin.slice(0, 40).replace(/-$/, "")}-${crypto.randomUUID().slice(0, 4)}` : latin.slice(0, 50);
+  return hangul ? `${shortSlug(latin, 20)}-${crypto.randomUUID().slice(0, 4)}` : shortSlug(latin, 30);
 }
 
 export function landingCollectedItems(value: LandingDraft) {

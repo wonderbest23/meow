@@ -17242,3 +17242,51 @@ body:has([data-pay-bar]) .support-chat-widget { bottom: calc(150px + env(safe-ar
 /* 앱(아이폰) 위 시계 줄·아래 홈 막대 자리는 페이지 바탕색을 따라 칠해진다(AppDelegate). 바탕이 연보라라 흰 머리줄·흰 화면과 띠처럼 어긋났다 —
    앱 화면 틀(BusinessAppChrome)이 있는 화면은 바탕을 흰색으로 */
 html:has([data-app-surface]) { background: #fff; }
+
+/* ── 홈페이지 편집 점검(2026-10-21) ─────────────────────────────────────────── */
+
+/* 떠 있는 줄 — 휴대폰(359·304px)에서 484px 줄이 옆으로 잘려 '구역 통째로 숨기기'·이동 화살표가 안 보였다. 두 줄로 접는다 */
+@media (max-width: 640px) {
+  .bw-eltool { flex-wrap: wrap; justify-content: center; overflow: visible; width: max-content; max-width: calc(100vw - 16px); border-radius: 20px; row-gap: 2px; }
+}
+
+/* 누르는 자리 40px — 모양은 거의 그대로, 높이·폭만 넓힌다 */
+.bw-eltool button { min-height: 40px; }
+.bw-inspector > header button { min-width: 40px; min-height: 40px; }
+.bw-btn-head button { min-width: 40px; min-height: 40px; }
+.bw-sec-arrows button { width: 40px; height: 40px; }
+.hk-themes button, .hk-tools .hk-themes button { min-height: 40px; }
+.hk-tool-row > button, .hk-tool-btn { min-height: 40px; }
+.hk-url-btn { min-height: 40px; }
+
+/* 저장 안내 — 화면 아래 안내 줄 오른쪽에(예전엔 떠 있어 안내 줄을 덮었다) */
+.bw-editor-hint { flex-wrap: wrap; }
+.bw-editor-hint .bw-editor-saved { position: static; margin-left: auto; padding: 4px 10px; pointer-events: none; }
+
+/* 편집 화면 — 공개 화면에서는 숨는 마무리 띠의 문의 단추(바로 아래 문의 양식이 같은 일을 한다)에 표시 */
+.bw-editor-canvas[data-lead-form]:not(.previewing) [data-bw-closing]:last-child [data-bw-btn] { position: relative; opacity: .55; outline: 2px dashed currentColor; outline-offset: 4px; }
+.bw-editor-canvas[data-lead-form]:not(.previewing) [data-bw-closing]:last-child [data-bw-btn]::after {
+  content: "공개 화면에는 안 보여요 · 아래 문의 양식이 대신해요"; position: absolute; left: 50%; top: calc(100% + 10px); transform: translateX(-50%);
+  padding: 3px 8px; border-radius: 6px; background: #161c2d; color: #fff; font-size: 11.5px; font-weight: 600; line-height: 1.4; white-space: nowrap; pointer-events: none;
+}
+/* 미리보기는 손님 화면과 같게 — 그 단추를 감춘다 */
+.bw-editor-canvas.previewing[data-lead-form] [data-bw-closing]:last-child [data-bw-btn] { display: none !important; }
+
+/* 공개 직후 팝업의 '주소 바꾸기' — 작은 글자 단추 */
+.bw-save-popup .bw-save-url .bw-save-address { justify-self: start; height: auto; min-height: 40px; padding: 0 4px; border: 0; background: none; color: #3272db; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+
+/* 무료 주소 끝부분 — 칸 바로 아래 안내·오류 */
+.hk-grid .hk-slug-field { grid-column: 1 / -1; display: grid; gap: 5px; }
+.hk-grid .hk-slug-field > label { font-size: 12.5px; color: #5e5e72; }
+.hk-grid .slug-input[data-invalid] { border-color: #e5484d; box-shadow: 0 0 0 2px rgba(229, 72, 77, .14); }
+.hk-slug-hint { color: #6b6f7d; font-size: 12.5px; line-height: 1.5; }
+.hk-slug-error { color: #c0282d; font-size: 13px; font-weight: 600; line-height: 1.5; }
+
+/* 공개 멈추기 — 다른 주소 단추와 같은 모양, 글자만 옅은 빨강 */
+.hk-url-btn.hk-url-stop { color: #b42318; }
+
+/* 공개 홈페이지 맨 아래 — 11·10px 글씨가 휴대폰에서 읽기 힘들었다. 방침 전문 여닫기도 누르기 쉽게 */
+.public-landing .public-privacy-policy summary { display: flex; align-items: center; min-height: 40px; font-size: 13px; }
+.public-landing .public-landing-footer p { font-size: 13px; }
+.public-landing .public-landing-footer small { font-size: 12px; }
+.public-landing .public-landing-footer .public-kit-credit a { display: inline-block; padding: 10px 0; }

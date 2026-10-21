@@ -15,6 +15,7 @@ import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availabi
 import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, REGEN_PACK_NAME } from "../../../lib/payments/domain";
 import { normalizePurchaseDomain, validateRegistrant } from "../../../lib/landing/domain-purchase";
 import { AddressSearchButton } from "../../../components/address-search";
+import { DocLink } from "../../../components/doc-sheet";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -306,6 +307,14 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   }
 
   const payAmount: number | null = extra ? extra.price : isHomepage ? (homepageInfo?.price ?? HOMEPAGE_PRODUCT_AMOUNT) : info ? info.price : null;
+  /*
+   * 지금 이 화면에서 결제할 수 없는 경우 — 결제 줄·결제 뒤 안내를 빼고 짧은 안내와 돌아가기만 둔다.
+   * 앱에서 팔지 않는 상품(도메인·토큰)은 '다른 곳에서 사라'고 안내하지 않는다(App Store 3.1.1).
+   */
+  const notSoldInApp = native !== null && !appSellable;
+  const paymentsOff = native === null && info !== null && !info.payable;
+  const blocked = notSoldInApp || paymentsOff;
+  const storeName = native === "android" ? "Google Play" : "Apple(App Store)";
   return (
     <div className={styles.page}>
       <div className={styles.card}>
@@ -315,7 +324,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           {extra ? extra.desc : isHomepage ? (
             <>
               계획서 내용으로 만든 홈페이지를 직접 고치고 인터넷에 공개할 수 있어요.
-              신청 폼으로 들어온 문의는 왼쪽 메뉴 ‘내 문의’에서 한곳에 모아 볼 수 있어요.
+              신청 폼으로 들어온 문의는 왼쪽 메뉴 ‘손님 문의’에서 한곳에 모아 볼 수 있어요.
             </>
           ) : (
             <>
@@ -327,8 +336,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           )}
         </p>
 
-        {(product === "plan" || product === "homepage" || product === "bundle") && <p className={styles.launchTag}>{LAUNCH_PRICE_LABEL}</p>}
-        {extra ? (
+        {!notSoldInApp && (product === "plan" || product === "homepage" || product === "bundle") && <p className={styles.launchTag}>{LAUNCH_PRICE_LABEL}</p>}
+        {notSoldInApp ? null : extra ? (
           <div className={styles.price}>
             {extra.price.toLocaleString("ko-KR")}원
             <span>{extra.unit} · 부가세 포함</span>
@@ -389,7 +398,12 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
               { key: "aiLimitations", label: "인공지능·국외 처리 안내 확인", href: "/ai-notice" },
               { key: "refund", label: "취소·환불 기준 동의", href: "/refund" },
               { key: "digitalSupply", label: "결제 즉시 디지털 콘텐츠 제공 시작 확인" },
-              { key: "personalizedDigitalNoRefund", ...(product === "regen" ? (
+              { key: "personalizedDigitalNoRefund", ...(native && (product === "plan" || product === "bundle" || product === "homepage") ? (
+                  /* 앱 결제 — 환불은 스토어가 한다. 직접 환불을 약속하지 않는다 */
+                  { label: "제공 시작 후 단순 변심 환불 제한에 동의", note: <>결제가 확인되면 바로 내 사업에 맞춘 디지털 콘텐츠 제공이 시작되므로, 전자상거래법 제17조 제2항에 따라 단순 변심에 따른 청약철회가 제한돼요. 앱에서 결제한 주문의 환불은 {storeName}에 신청해요.</> }
+                ) : native && product === "regen" ? (
+                  { label: "추가 횟수 환불 기준에 동의", note: <>앱에서 결제한 주문의 환불은 {storeName}에 신청해요. 환불 여부는 스토어 기준에 따라요.</> }
+                ) : product === "regen" ? (
                   { label: "추가 횟수 환불 기준에 동의", note: <>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</> }
                 ) : product === "domain-purchase" ? (
                   { label: "도메인 구매·연결 환불 기준에 동의", note: <>도메인을 등록하기 전에는 전액 환불합니다. 등록한 뒤에는 첫해 등록비 {DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원을 뺀 {DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 연결·호스팅 환불 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다. 등록한 도메인은 이용자 명의이며, 환불하거나 해지해도 도메인은 이용자에게 남습니다. 등록을 위해 등록 명의자 이름·이메일·연락처·주소를 도메인 등록기관(.com 은 Cloudflare, Inc.(미국), .kr·.co.kr 은 ㈜가비아 등)에 제공하는 데 동의합니다.</> }
@@ -402,19 +416,20 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
                 )) },
             ]} values={agreements} onChange={(next) => setAgreements({ ...NO_AGREEMENTS, ...next } as Agreements)} />
             </div>
-            <p className={styles.disclaimer}>제공 자료는 사업 기획과 실행 준비를 돕는 초안이며 사업 성공, 수익, 투자 유치나 지원사업 선정을 보장하지 않습니다. <a href="/business-info" target="_blank" rel="noreferrer">판매자·사업자 정보</a></p>
+            <p className={styles.disclaimer}>제공 자료는 사업 기획과 실행 준비를 돕는 초안이며 사업 성공, 수익, 투자 유치나 지원사업 선정을 보장하지 않습니다. <DocLink className={styles.infoLink} href="/business-info" title="판매자·사업자 정보">판매자·사업자 정보</DocLink></p>
           </section>
         )}
 
         {/* 결제 단추는 화면 아래에 늘 붙여 둔다(네이버페이처럼) — 동의 항목이 길어 단추를 찾으려면 한참 내려야 했다(대표 요청 2026-10-16) */}
-        {native && !appSellable ? (
-          <p className={styles.notice}>이 상품은 앱에서 결제할 수 없어요.</p>
-        ) : !native && info && !info.payable ? (
-          <p className={styles.notice}>
-            결제 준비가 아직 끝나지 않았어요. 잠시 후 다시 시도해 주세요.
-          </p>
+        {blocked ? (
+          <>
+            <p className={styles.notice} role="status">{notSoldInApp ? "이 상품은 앱에서 결제할 수 없어요." : "지금은 결제를 받을 수 없어요. 잠시 후 다시 시도해 주세요."}</p>
+            <Link href={laterHref} className={`${styles.primary} ${styles.blockedBack}`}>돌아가기</Link>
+          </>
         ) : (
           <div className={styles.payBar} data-pay-bar>
+            {/* 결제를 시작하지 못한 이유 — 아래 고정 줄 안에 보여야 눌렀는데 아무 일도 없는 것처럼 보이지 않는다 */}
+            {message ? <p className={styles.payBarError} role="alert">{message}</p> : null}
             <div className={styles.payBarInner}>
               <p className={styles.payBarNote}>{agreed ? "약관과 결제 내용을 확인했어요" : `필수 항목 ${agreedCount}/${AGREEMENT_KEYS.length} 동의`}</p>
               <button
@@ -428,16 +443,20 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
             </div>
           </div>
         )}
-        {message ? <p className={styles.error}>{message}</p> : null}
 
-        <p className={styles.note}>
-          {/* 결제 뒤 실제로 가는 곳(결제 결과 화면의 단추)과 같은 말 */}
-          {product === "regen" ? "결제가 끝나면 사업계획서로 돌아가 이어서 고칠 수 있어요."
-            : product === "bundle" ? "결제가 끝나면 바로 사업계획서 작성을 시작해요. 홈페이지 편집·공개도 함께 열려요."
-            : extra || product === "homepage" ? "결제가 끝나면 홈페이지 화면으로 돌아가 바로 고치고 공개할 수 있어요."
-            : "지금까지 답한 내용은 그대로 남아 있어요. 결제가 끝나면 바로 사업계획서 작성을 시작해요."}
-        </p>
-        <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
+        {blocked ? null : <>
+          <p className={styles.note}>
+            {/* 결제 뒤 실제로 가는 곳(결제 결과 화면의 단추)과 같은 말 */}
+            {product === "regen" ? "결제가 끝나면 사업계획서로 돌아가 이어서 고칠 수 있어요."
+              : product === "bundle" ? "결제가 끝나면 바로 사업계획서 작성을 시작해요. 홈페이지 편집·공개도 함께 열려요."
+              : product === "domain" ? "결제가 끝나면 홈페이지 화면에서 가지고 있는 도메인의 www 주소를 넣고 ‘연결 시작’을 눌러요(홈페이지를 먼저 공개해야 해요). 도메인을 산 곳에서 안내대로 한 줄(CNAME)만 설정하면 보통 몇 분 안에 연결돼요."
+              : product === "domain-purchase" ? "결제가 끝나면 적어 주신 명의자 이름으로 도메인을 등록해요(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일). 진행 상황은 홈페이지 화면에서 볼 수 있어요."
+              : product === "tokens" ? "결제가 끝나면 홈페이지 화면으로 돌아가 바로 AI 수정을 쓸 수 있어요."
+              : product === "homepage" ? "결제가 끝나면 홈페이지 화면으로 돌아가 바로 고치고 공개할 수 있어요."
+              : "지금까지 답한 내용은 그대로 남아 있어요. 결제가 끝나면 바로 사업계획서 작성을 시작해요."}
+          </p>
+          <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
+        </>}
       </div>
     </div>
   );

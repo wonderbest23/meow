@@ -24,14 +24,18 @@ export default function DocumentSourceReview({ planId, sectionKey, source, disab
       const data = await response.json(); if (!response.ok) throw new Error(apiMessage(data, ""));
       if (epoch !== planOwnerEpoch()) return;
       onReviewed(sectionKey, data.section, data.updatedAt);
-    } catch (e) { setError(userErrorMessage(e, "검토 저장을 확인하지 못했어요. 새로고침 후 상태를 확인해 주세요")); }
+    } catch (e) { setError(userErrorMessage(e, "확인한 것을 저장하지 못했어요. 새로고침한 뒤 다시 확인해 주세요")); }
     finally { setBusy(false); }
   }
-  return <div className={styles.sourceReview} aria-label="최신 사업 조건 검토">
-    <strong>이 항목은 이전 사업 조건으로 작성됐어요</strong>
-    <details><summary>현재 사업 조건 확인</summary><dl>{source.fields.map(field => <div key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}</dt><dd>{coachFieldDisplay(field.value)}</dd></div>)}</dl></details>
-    <label><input type="checkbox" disabled={busy || disabled} checked={checked} onChange={event => setChecked(event.target.checked)} />위 본문과 현재 조건을 비교했고 필요한 수정을 마쳤습니다</label>
-    <button disabled={!checked || disabled || busy} onClick={() => void review()}>{busy ? <LoaderCircle size={15} /> : <Check size={15} />}현재 조건으로 검토 완료</button>
+  /*
+   * 항목마다 커다란 검토 상자가 붙어 열 개 넘게 되풀이됐다(점검 2026-10-21) — 한 줄로 접어 두고, 누르면 펼친다.
+   * 바꾼 답을 계획서에 넣는 일은 위 안내의 '계획서에 반영하기'가 한 번에 한다. 여기는 이 항목만 그대로 두고 싶을 때 쓴다.
+   */
+  return <details className={styles.sourceReview} aria-label="바꾼 답 확인">
+    <summary>이 항목은 바꾸기 전 답으로 썼어요</summary>
+    <dl>{source.fields.map(field => <div key={field.key}><dt>{COACH_FIELD_LABELS[field.key]}</dt><dd>{coachFieldDisplay(field.value)}</dd></div>)}</dl>
+    <label><input type="checkbox" disabled={busy || disabled} checked={checked} onChange={event => setChecked(event.target.checked)} />지금 답과 비교했고, 이 항목은 이대로 둬도 괜찮아요</label>
+    <button disabled={!checked || disabled || busy} onClick={() => void review()}>{busy ? <LoaderCircle size={15} /> : <Check size={15} />}확인했어요</button>
     {error && <p role="alert">{error}</p>}
-  </div>;
+  </details>;
 }

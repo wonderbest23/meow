@@ -5,6 +5,7 @@ import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { resolveTextLLMConfig } from "../../../../lib/llm/config";
 import { completeJson } from "../../../../lib/llm/complete";
 import {
+  faqAnswer,
   findSupportFaq,
   findSupportFaqCandidates,
   findSupportFaqKeywordMatches,
@@ -32,7 +33,7 @@ const ASSISTANT_LINKS = {
   "plan-document": { href: "/plan", label: "내 사업에서 계획서 열기" },
   "plan-me": { href: "/plan/me", label: "마이페이지 열기" },
   "refund-info": { href: "/plan/info?doc=refund", label: "취소·환불 기준 보기" },
-  inquiries: { href: "/plan/inquiries", label: "내 문의 열기" },
+  inquiries: { href: "/plan/inquiries", label: "손님 문의 열기" },
 } as const;
 
 type AssistantLinkId = keyof typeof ASSISTANT_LINKS;
@@ -58,16 +59,16 @@ function privateJson(body: unknown, init?: ResponseInit) {
   return response;
 }
 
-function fallbackAnswer(message: string) {
+function fallbackAnswer(message: string, inApp = false) {
   const exact = findSupportFaq(message);
   const normalizedQuestion = message.replace(/\s+/g, " ").trim().replace(/[?.!]+$/g, "");
   if (exact && exact.question.replace(/[?.!]+$/g, "") === normalizedQuestion) {
-    return { answer: exact.answer, needsOperator: false, link: exact.link ?? null, source: "faq" as const };
+    return { answer: faqAnswer(exact, inApp), needsOperator: false, link: exact.link ?? null, source: "faq" as const };
   }
   const keywordMatches = findSupportFaqKeywordMatches(message, 3);
   if (keywordMatches.length > 0) {
     return {
-      answer: keywordMatches.map((item) => item.answer).join(" "),
+      answer: keywordMatches.map((item) => faqAnswer(item, inApp)).join(" "),
       needsOperator: false,
       /* 여러 항목이 섞이면 첫(가장 잘 맞는) 항목의 링크만 — 칩이 줄지어 서면 아무것도 안 눌린다 */
       link: keywordMatches.find((item) => item.link)?.link ?? null,
@@ -77,7 +78,7 @@ function fallbackAnswer(message: string) {
   const candidates = findSupportFaqCandidates(message, 1);
   if (candidates.length > 0) {
     return {
-      answer: `${candidates[0].answer} 이 답변이 질문과 다르면 현재 화면 주소와 하려던 작업을 운영자에게 남겨주세요.`,
+      answer: `${faqAnswer(candidates[0], inApp)} 이 답변이 질문과 다르면 현재 화면 주소와 하려던 작업을 운영자에게 남겨주세요.`,
       needsOperator: true,
       link: candidates[0].link ?? null,
       source: "faq" as const,
@@ -132,8 +133,10 @@ export async function POST(request: Request) {
     }
     recentRequests.set(identity.hash, Date.now());
 
+    /* 앱(아이폰·안드로이드) 안 질문이면 결제·환불을 앱 기준으로 답한다 — 앱은 User-Agent 끝에 OneulstartApp 을 붙인다(mobile/capacitor.config.json) */
+    const inApp = request.headers.get("user-agent")?.includes("OneulstartApp") === true;
     const config = resolveTextLLMConfig(identity.hash);
-    if (!config) return privateJson(fallbackAnswer(input.message));
+    if (!config) return privateJson(fallbackAnswer(input.message, inApp));
 
     const parsed = await completeJson(config, {
       kind: "support-assistant",
@@ -144,6 +147,7 @@ export async function POST(request: Request) {
         "질문이 여러 개면 각 질문에 빠짐없이 답하되 초보자가 이해하는 쉬운 한국어로 2~5문장만 쓰세요.",
         "가능하면 사용자가 지금 할 다음 행동을 정확한 화면 이름이나 버튼 문구와 함께 알려주세요.",
         "세무·법률·투자 판단은 대행하거나 확정하지 말고 서비스 지원 범위를 설명하세요.",
+        ...(inApp ? ["이 질문은 아이폰·안드로이드 앱 안에서 왔습니다. 결제는 앱의 스토어 결제(App Store·Google Play)로만 안내하고, 카드 결제·웹사이트 결제·다른 곳에서 사는 방법은 안내하지 마세요. 앱에서 결제한 주문의 환불은 결제한 스토어에 신청한다고 안내하세요."] : []),
         "서비스 지식으로 확정할 수 없거나 실제 주문·계정·프로젝트 확인이 필요하면 needsOperator를 true로 하세요.",
         "답의 다음 행동이 아래 화면 중 하나면 link에 그 id를 넣으세요. 해당 없으면 link를 생략하세요.",
         "- plan-start: 새 대화로 사업 시작하기",
@@ -151,11 +155,11 @@ export async function POST(request: Request) {
         "- plan-document: 사업계획서 보기·내려받기",
         "- plan-me: 마이페이지(결제 내역·계정)",
         "- refund-info: 취소·환불 기준 안내",
-        "- inquiries: 내 문의(홈페이지로 들어온 손님 문의 모아 보기)",
+        "- inquiries: 손님 문의(홈페이지로 들어온 손님 문의 모아 보기)",
         "JSON 객체 {answer, needsOperator, link?}만 출력하세요.",
         "",
         "오늘창업 서비스 지식:",
-        supportKnowledgeText(input.message),
+        supportKnowledgeText(input.message, { inApp }),
       ].join("\n"),
       user: JSON.stringify({
         question: input.message,
@@ -166,7 +170,7 @@ export async function POST(request: Request) {
       timeoutMs: 45_000,
     });
     const checked = parsed ? responseSchema.safeParse(parsed) : null;
-    if (!checked?.success) return privateJson(fallbackAnswer(input.message));
+    if (!checked?.success) return privateJson(fallbackAnswer(input.message, inApp));
     const result = checked.data;
     return privateJson({
       answer: result.answer,

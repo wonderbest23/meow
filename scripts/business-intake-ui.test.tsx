@@ -12,7 +12,7 @@ import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCan
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
-import { needsEntryConfirmation, routeComposerInput } from "../app/plan/chat/intake-ui/model";
+import { needsEntryConfirmation, periodDisplay, routeComposerInput } from "../app/plan/chat/intake-ui/model";
 import { readChatResponse } from "../lib/http/read-chat-response";
 import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption } from "../app/plan/chat/intake-ui/model";
 
@@ -39,6 +39,14 @@ async function main() {
   assert.deepEqual(routeComposerInput(original, customer, "아직 미정"), { kind: "answer", questionId: "customer", value: null, unknown: true });
   assert.equal(routeComposerInput(original, original.nextQuestion!, "세상에 없는 복합 사업").kind, "clarify");
   assert.deepEqual(routeComposerInput(original, original.nextQuestion!, "카페"), { kind: "answer", questionId: "industry", value: "food_beverage" });
+  // 뜻 없는 짧은 말은 답으로 저장하지 않고 '어떻게 남길까요'로 묻는다. 모른다는 말은 '잘 모르겠어요'와 같다.
+  for (const text of ["음", "음...", "ㅇㅇ", "ㅋㅋ", "ㅎ", "ㅠㅠ", "흠"]) assert.deepEqual(routeComposerInput(original, customer, text), { kind: "clarify", canAnswer: false }, text);
+  for (const text of ["몰라요", "잘 몰라요", "글쎄요", "잘 모르겠어요", "모름"]) assert.deepEqual(routeComposerInput(original, customer, text), { kind: "answer", questionId: "customer", value: null, unknown: true }, text);
+  assert.deepEqual(routeComposerInput(original, customer, "학생"), { kind: "answer", questionId: "customer", value: "학생" }, "a short real word is still an answer");
+  const weeklyHours = original.questions.find(q => q.id === "hoursPerWeek")!;
+  assert.equal(routeComposerInput(original, weeklyHours, "30").kind, "answer", "a two-digit number is still an answer");
+  // 물음표로 끝나는 글은 답으로 저장하자고 먼저 권하지 않는다
+  assert.deepEqual(routeComposerInput(original, customer, "이거 꼭 골라야 해요?"), { kind: "clarify", canAnswer: false });
   for (const response of [new Response("", { status: 500 }), new Response("<html>proxy failed</html>", { status: 502 }), new Response("{"), new Response("null")]) {
     await assert.rejects(readChatResponse(response), error => error instanceof Error && /입력은 그대로/.test(error.message) && !/Unexpected|JSON|proxy/.test(error.message));
   }
@@ -57,6 +65,9 @@ async function main() {
   assert.equal(periodPresetRange("year", new Date("2026-09-15T16:00:00Z")), "2026-01-01 / 2026-09-16", "16:00Z is already the 16th in Seoul");
   assert.deepEqual(periodDates("2026-01-01 / 2026-06-30"), ["2026-01-01", "2026-06-30"]);
   assert.equal(periodDates("지난달"), null);
+  assert.equal(periodDisplay("2026-07-01 / 2026-09-30"), "2026년 7월~9월", "a period reads as months, not raw dates");
+  assert.equal(periodDisplay("2025-10-01 / 2026-09-30"), "2025년 10월~2026년 9월");
+  assert.equal(periodDisplay("2026-01-01 / 2026-09-16"), "2026년 1월 1일~9월 16일");
   assert.equal(intakeValueLabel(original.nextQuestion!, ["b2b_service", "software"]), "기업 서비스, 소프트웨어 · 플랫폼", "복수 선택은 라벨로 표시");
   assert.equal(intakeValueLabel(original.nextQuestion!, "food_beverage"), "카페 · 음식점");
   assert.equal(intakeValueLabel({ options: undefined }, "자유 답변"), "자유 답변");
@@ -455,6 +466,11 @@ async function main() {
   assert.ok(contextHistory.includes("온라인으로만 제공하고 싶어요"), "the raw supplemental note stays in the conversation");
   const undecided = previewIntakeAnswer(original, command({ questionId: "industry", value: null, unknown: true }))!;
   assert.ok(renderToStaticMarkup(<ConversationHistory snapshot={undecided} onEdit={noop} />).includes("아직 정하지 않았어요"));
+  // 탐색 중 '직접 적을래요'로 쓴 사업 소개: 손님이 쓴 적 없는 '사업 소개: ' 머리말 없이 보인다
+  const exploringBase = fixture("exploring");
+  const typedIdea = { ...exploringBase, coach: { ...exploringBase.coach, messages: [{ id: "typed-idea", role: "user" as const, text: "사업 소개: 어르신 댁 정리 서비스", at }] }, intake: { ...exploringBase.intake, answers: { ...exploringBase.intake.answers, business: { status: "answered" as const, value: "어르신 댁 정리 서비스", messageId: "typed-idea", at } } } };
+  const typedHistory = renderToStaticMarkup(<ConversationHistory snapshot={typedIdea} onEdit={noop} />);
+  assert.ok(typedHistory.includes(">어르신 댁 정리 서비스<") && !typedHistory.includes("사업 소개: "), "the stored label prefix is not shown in the bubble");
   const review = renderToStaticMarkup(<ExtractionReview snapshot={{ ...withBusiness, intake: { ...withBusiness.intake, candidates: [candidate] } }} disabled={false} onCommand={noop} />);
   for (const text of ["현재 값", "직접 수정한 값", "추출한 새 값", "현재 값을 이 내용으로 바꾸기", "반영하지 않기", "이 내용 반영"]) assert.ok(review.includes(text));
   assert.match(review, /<button[^>]*disabled=""[^>]*>[\s\S]*이 내용 반영<\/button>/, "overwriting still requires explicit consent");
@@ -551,7 +567,15 @@ async function main() {
   // 코치 채팅 1단계 결과: 이름 추천·직접 수정하기·요약만, AI 아이콘·이름별 이유·상표 안내·펼치기 없음(소유자 피드백 2026-10-09)
   const identityDesign = { ...currentDesign, design: { ...currentDesign.design, identity: { headline: "맞벌이 가정에 반찬을 정기배송하는 동네 반찬가게", pitch: "설명 문장", names: [{ name: "새벽반찬", why: "이유 하나" }, { name: "동네찬방", why: "이유 둘" }] } } } as unknown as Partial<CoachState>;
   const result = renderToStaticMarkup(<DesignResult snapshot={nextSnapshot({}, identityDesign)} onName={noop} />);
-  for (const text of ["사업 이름", "새벽반찬", "동네찬방", "직접 수정하기", "1단계 결과 요약", "맞벌이 가정에 반찬을 정기배송하는 동네 반찬가게", "이렇게 시작해요", "먼저 해볼 일"]) assert.ok(result.includes(text), `result is missing: ${text}`);
+  for (const text of ["사업 이름", "새벽반찬", "동네찬방", "직접 수정하기", "결과 요약", "맞벌이 가정에 반찬을 정기배송하는 동네 반찬가게", "이렇게 시작해요", "먼저 해볼 일"]) assert.ok(result.includes(text), `result is missing: ${text}`);
+  assert.ok(!result.includes("1단계"), "the result does not read like step one of a startup");
+  // 추천 이름을 고른 뒤에도 처음 이름으로 되돌릴 수 있다
+  const renamed = nextSnapshot({}, { ...identityDesign, business: { ...summarized.coach.business, name: "새벽반찬", nameConfirmed: true } } as Partial<CoachState>);
+  const undo = renderToStaticMarkup(<DesignResult snapshot={{ ...renamed, intake: { ...renamed.intake, originalName: "맞벌이 반찬 정기배송" } }} onName={noop} />);
+  assert.ok(undo.includes("맞벌이 반찬 정기배송") && undo.includes("처음 이름"), "the original name stays as a chip");
+  // 운영 중인 사업: 새 이름을 앞세우지 않고, 운영에 맞는 머리말
+  const operatingResult = renderToStaticMarkup(<DesignResult snapshot={{ ...nextSnapshot({}, identityDesign), intake: { ...summarized.intake, mode: "operating" } }} onName={noop} />);
+  assert.ok(operatingResult.includes("이렇게 바꿔 봐요") && !operatingResult.includes("이렇게 시작해요") && operatingResult.includes("새 이름 추천 보기") && !operatingResult.includes("동네찬방"), "operating results keep the current name first");
   for (const text of ["AI 제안", "이유 하나", "키프리스", "<details", "설명 문장"]) assert.ok(!result.includes(text), `result should not include: ${text}`);
   const minimalPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal onDesign={noop} onPrepare={noop} />);
   assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("결제하면 바로 작성을 시작해요") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");

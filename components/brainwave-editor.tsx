@@ -40,6 +40,10 @@ function findNode(node: KitNode | undefined, id: string): KitNode | null {
  * 칸을 옮기거나 색을 바꾸는 기능은 없다 — 킷 구조를 그대로 지키기 위해서다.
  */
 type Over = EditorOverrides;
+/* 디자인 바꾸기도 되돌릴 수 있게 — 그 전의 디자인·글 묶음을 함께 기억한다(되돌리기 기록에만 붙고 저장되지 않는다) */
+type PageSnap = { page: string; contentMode: NonNullable<LandingPageData["brainwave"]>["contentMode"]; businessContent: LandingPageData["businessContent"]; sourceSnapshot: LandingPageData["sourceSnapshot"] };
+type HistoryEntry = Over & { restore?: PageSnap };
+const stripRestore = (entry: HistoryEntry): Over => { const { restore: _restore, ...rest } = entry; void _restore; return rest; };
 
 /* 버튼 판에서 고르는 이동 — contact(기본)·none 은 그대로, url 은 주소, sec 는 "sec:N"(섹션 스크롤) */
 type LinkMode = "contact" | "url" | "none" | "sec" | "tel" | "sms";
@@ -79,15 +83,24 @@ export function BrainwaveEditor({
   liveUrl = null,
   onPublish,
   appendix,
+  liveUpToDate = false,
+  pendingOutside = false,
+  onEditAddress,
 }: {
   /** 공개 페이지 맨 아래에 자동으로 붙는 문의 양식 — 에디터에도 같은 자리에 보여 준다 */
   appendix?: PublicAppendix;
+  /** 손님 화면이 지금 저장본과 같은지(방금 공개했으면 true) — 저장 안내 문구를 고른다 */
+  liveUpToDate?: boolean;
+  /** 홈페이지 화면에서 고치고 아직 저장하지 않은 것(분위기 색·사업자 정보 등)이 있는지 — 있으면 '저장됨'이라 하지 않고 함께 저장한다 */
+  pendingOutside?: boolean;
+  /** 공개 뒤 팝업의 '주소 바꾸기' — 편집기를 닫고 무료 주소 칸으로 간다 */
+  onEditAddress?: () => void;
   /** 공개 중인 홈페이지 — 저장만으로는 손님 화면이 안 바뀐다('새 버전 공개' 필요) */
   published?: boolean;
   /** 손님이 보는 주소(공개 중일 때) */
   liveUrl?: string | null;
-  /** 저장 팝업에서 바로 공개 — 성공하면 손님 주소 */
-  onPublish?: () => Promise<{ url: string } | { error: string }>;
+  /** 저장 팝업에서 바로 공개 — 성공하면 손님 주소. 사장님이 확인 창에서 멈추면 cancelled */
+  onPublish?: () => Promise<{ url: string } | { error: string } | { cancelled: true }>;
   data: LandingPageData;
   onClose: () => void;
   onSave: (data: LandingPageData) => void | Promise<void>;
@@ -161,8 +174,8 @@ export function BrainwaveEditor({
     setRecoveryReady(true);
   }, [recoveryKey]);
   const persistence = useLandingEditorSave(onSave);
-  const [history, setHistory] = useState<Over[]>([]);
-  const [future, setFuture] = useState<Over[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [future, setFuture] = useState<HistoryEntry[]>([]);
   const [meta, setMeta] = useState<BrainwavePageData | null>(null);
   const [editing, setEditing] = useState<{ id: string; el: HTMLElement } | null>(null);
   const [uploading, setUploading] = useState<string | null>(null);
@@ -238,6 +251,14 @@ export function BrainwaveEditor({
     setOver(next);
   };
   const finishTextRef = useRef<() => Over>(() => overRef.current);
+  const snapPage = (): PageSnap => ({ page, contentMode, businessContent, sourceSnapshot });
+  const applySnap = (snap: PageSnap) => {
+    setBusinessContent(snap.businessContent);
+    setSourceSnapshot(snap.sourceSnapshot);
+    setContentMode(snap.contentMode);
+    setSizeTarget(null);
+    setPage(snap.page);
+  };
   const undo = () => {
     const before = overRef.current;
     const current = finishTextRef.current();
@@ -246,8 +267,10 @@ export function BrainwaveEditor({
     if (!prev) return;
     invalidateAsync();
     setHistory(pendingText ? history : history.slice(0, -1));
-    setFuture((f) => [current, ...f]);
-    setOver(prev);
+    const restore = !pendingText && "restore" in prev ? (prev as HistoryEntry).restore : undefined;
+    setFuture((f) => [restore ? { ...current, restore: snapPage() } : current, ...f]);
+    if (restore) { setMenu(null); setBtn(null); deselect(); applySnap(restore); }
+    setOver(stripRestore(prev));
   };
   const redo = () => {
     const before = overRef.current;
@@ -256,8 +279,9 @@ export function BrainwaveEditor({
     if (!next) return;
     invalidateAsync();
     setFuture((f) => f.slice(1));
-    setHistory((h) => [...h, before]);
-    setOver(next);
+    setHistory((h) => [...h, next.restore ? { ...before, restore: snapPage() } : before]);
+    if (next.restore) { setMenu(null); setBtn(null); deselect(); applySnap(next.restore); }
+    setOver(stripRestore(next));
   };
   const receivePatch = (patch: EditorAsyncPatch) => {
     if (!mounted.current || patch.session !== session.current) {
@@ -312,7 +336,9 @@ export function BrainwaveEditor({
       seen.add(id);
       const img = el.tagName === "IMG" ? (el as HTMLImageElement) : el.querySelector("img");
       const bg = getComputedStyle(el).backgroundImage.match(/url\(["']?(.*?)["']?\)/)?.[1];
-      items.push({ id, src: over.images[id] || img?.currentSrc || img?.src || bg || "" });
+      /* 사진 없이 '사진 넣기' 칸으로 그려진 자리는 빈 자리로 — 저장된 값이 첫 화면 사진과 같아(되풀이) 화면에 안 보이는 경우다 */
+      const rendered = img?.currentSrc || img?.src || bg || "";
+      items.push({ id, src: rendered ? over.images[id] || rendered : "" });
     });
     setPhotoList(items);
   };
@@ -329,7 +355,8 @@ export function BrainwaveEditor({
   const placeSel = (el: HTMLElement) => {
     const r = el.getBoundingClientRect();
     const top = document.querySelector(".bw-editor-bar")?.getBoundingClientRect().bottom ?? 64;
-    const below = r.top - 56 < top;
+    /* 휴대폰에서는 떠 있는 줄이 두 줄로 접힌다(globals.css) — 그만큼 위 자리가 더 있어야 위에 띄운다 */
+    const below = r.top - (window.innerWidth <= 640 ? 100 : 56) < top;
     setSelPos({ x: Math.min(Math.max(r.left + r.width / 2, 170), window.innerWidth - 170), y: below ? r.bottom : r.top, below });
   };
   /* 이 요소가 든 최상위 섹션 id — 킷 트리 최상위 그룹을 조상 data-bw-node 에서 찾는다 */
@@ -353,6 +380,11 @@ export function BrainwaveEditor({
     const half = node.offsetWidth / 2;
     const x = Math.min(Math.max(selPos.x, half + 8), window.innerWidth - half - 8);
     node.style.left = `${Math.round(x)}px`;
+    /* 아래에 띄웠는데 고른 것(큰 첫 화면 사진)의 아래 끝이 화면 밖이면 줄도 잘렸다 — 화면 아래 끝 안으로 올린다 */
+    node.style.top = `${selPos.y}px`;
+    const rect = node.getBoundingClientRect();
+    const overflow = rect.bottom - (window.innerHeight - 8);
+    if (overflow > 0) node.style.top = `${Math.round(selPos.y - overflow)}px`;
   };
   useEffect(() => {
     if (!sel) return;
@@ -392,11 +424,14 @@ export function BrainwaveEditor({
     setEditing({ id, el });
     setSizeTarget(id);
     setDraftText(el.innerText);
+    editStartText.current = el.innerText;
     histPushed.current = false;
     el.oninput = () => setDraftText(el.innerText);
   };
   /* 텍스트 판의 내용 칸 — 화면의 글자와 같은 값을 비춘다 */
   const [draftText, setDraftText] = useState("");
+  /* 글을 누른 순간의 글 — 누르기만 하고 안 고쳤으면 '저장' 단추를 고친 것처럼 바꾸지 않는다 */
+  const editStartText = useRef("");
   useEffect(() => {
     if (!recoveryKey || !recoveryReady || recovery) return;
     const local = editing ? { ...over, texts: { ...over.texts, [editing.id]: draftText } } : over;
@@ -579,13 +614,37 @@ export function BrainwaveEditor({
     commit({ ...over, order: next.map((b) => b.id) });
   };
   const [hiddenOpen, setHiddenOpen] = useState(false);
+  /*
+   * 구역 이름 — 화면에 보이는 그 구역의 첫 제목(예: '우리 빵이 특별한 이유')을 쓴다. 디자인 파일 이름을 옮긴 '특징'·'소개 글 2'는
+   * 화면 어디에도 없는 말이라 어느 구역인지 몰랐다. 제목을 못 찾으면(숨긴 채로 연 구역 등) 예전 이름으로.
+   * 숨기면 화면에서 사라지므로, 한 번 읽은 제목은 기억해 둔다.
+   */
+  const secTitles = useRef<Record<string, string>>({});
+  const [, setSecTitleTick] = useState(0);
+  useEffect(() => {
+    const canvas = document.querySelector(".bw-editor-canvas");
+    if (!canvas || !meta) return;
+    let changed = false;
+    for (const node of meta.root.ch ?? []) {
+      if (!node.id) continue;
+      const band = canvas.querySelector(`[data-bw-node="${CSS.escape(node.id)}"]`);
+      const heading = band?.querySelector("h1, h2, h3");
+      const title = (heading?.textContent ?? "").replace(/\s+/g, " ").trim();
+      if (title && secTitles.current[node.id] !== title) { secTitles.current[node.id] = title; changed = true; }
+    }
+    if (changed) setSecTitleTick((n) => n + 1);
+  }, [secPanel, hiddenOpen, meta, over, page, view]);
+  const sectionLabel = (id: string, name?: string | null) => {
+    const title = secTitles.current[id];
+    return title ? (title.length > 22 ? `${title.slice(0, 21)}…` : title) : sectionNameKo(name);
+  };
   /* 숨긴 id 가 뭐였는지 사람이 읽게 — 글 미리보기·사진·섹션 이름 */
   const hiddenLabel = (id: string): string => {
     const slot = meta?.slots.text.find((s) => s.id === id);
     if (slot) return `글 — ${(over.texts[id] ?? slot.text).slice(0, 24)}`;
     if (meta?.slots.image.some((s) => s.id === id)) return "사진";
     const sec = meta?.root.ch?.find((n) => n.id === id);
-    if (sec) return `구역 — ${sectionNameKo(sec.name)}`;
+    if (sec) return `구역 — ${sectionLabel(sec.id!, sec.name)}`;
     // 이름 없는 자리는 대부분 버튼이다 — '자리 0:295' 같은 내부 번호를 보이지 않는다
     return /button/i.test(findNode(meta?.root, id)?.name ?? "") ? "버튼" : "작은 장식";
   };
@@ -694,7 +753,7 @@ export function BrainwaveEditor({
 
   const changePage = (next: string) => {
     if (next === page) return;
-    finishText();
+    const before: HistoryEntry = { ...finishText(), restore: snapPage() };
     invalidateAsync();
     setMenu(null);
     setBtn(null);
@@ -704,7 +763,8 @@ export function BrainwaveEditor({
     setBusinessContent(source);
     setSourceSnapshot(undefined);
     setOver(generated);
-    setHistory([]); setFuture([]);
+    /* 예전엔 기록을 비워, 고친 글이 사라진 뒤 되돌릴 길이 없었다 — 바꾸기 전 모습을 한 번 되돌릴 수 있게 남긴다 */
+    setHistory((h) => [...h.slice(-40), before]); setFuture([]);
     setContentMode("business");
     setSizeTarget(null);
     setPage(next);
@@ -736,6 +796,7 @@ export function BrainwaveEditor({
     setSavePopup({ phase: "publishing" });
     const result = await onPublish();
     if (!mounted.current) return;
+    if ("cancelled" in result) { setSavePopup({ phase: "saved", url: liveUrl ?? undefined }); return; }
     if ("url" in result) {
       const tab = window.open(result.url, "_blank");
       if (tab) tab.opener = null;
@@ -754,12 +815,15 @@ export function BrainwaveEditor({
   const saveRef = useRef(save);
   saveRef.current = save;
   const currentFingerprint = landingDraftFingerprint({ page, ...over });
+  /* 저장본과 같은지 — 글을 누르기만 한 것(내용 그대로)은 고친 게 아니다. 홈페이지 화면에서 고친 것(분위기 색 등)이 남았으면 아직 저장 전 */
+  const typedNow = !!editing && draftText !== editStartText.current;
+  const isSaved = currentFingerprint === savedFingerprint && !typedNow && !pendingOutside;
   const autoSaveBlocked = !recoveryReady || !!recovery || !!editing || !!btn || !!menu || uploading || ai.busy || persistence.saving || !!persistence.error;
   useEffect(() => {
-    if (autoSaveBlocked || currentFingerprint === savedFingerprint) return;
+    if (autoSaveBlocked || (currentFingerprint === savedFingerprint && !pendingOutside)) return;
     const timer = window.setTimeout(() => saveRef.current(), 2500);
     return () => window.clearTimeout(timer);
-  }, [autoSaveBlocked, currentFingerprint, savedFingerprint]);
+  }, [autoSaveBlocked, currentFingerprint, savedFingerprint, pendingOutside]);
   const restoreRecovery = () => {
     if (!recovery?.draft.brainwave || recovery.base !== initial.current) return;
     invalidateAsync();
@@ -804,12 +868,12 @@ export function BrainwaveEditor({
     + over.hidden.filter((id) => !opened.hidden.includes(id)).length + opened.hidden.filter((id) => !over.hidden.includes(id)).length + (over.order.join() !== opened.order.join() ? 1 : 0);
 
   return (
-    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 에디터" aria-busy={persistence.saving}
+    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 고치기" aria-busy={persistence.saving}
       onClickCapture={(event) => { if (persistence.saving) { event.preventDefault(); event.stopPropagation(); } }}
       onKeyDownCapture={(event) => { if (persistence.saving && event.key !== "Tab") { event.preventDefault(); event.stopPropagation(); } }}>
       <header className="bw-editor-bar">
         <div className="bw-editor-left">
-          <strong>에디터</strong>
+          <strong>홈페이지 고치기</strong>
           {/* 템플릿 이름(예: '상담 서비스')을 단추에 쓰면 꽃집 사장님이 무슨 단추인지 몰랐다 — 하는 일로 */}
           <button type="button" className="bw-editor-pick" onClick={() => setPicking(true)} title={`지금 디자인: ${BRAINWAVE_PAGES.find((p) => p.id === page)?.ko ?? "기본"}`}>
             <LayoutTemplate size={15} /> 디자인 바꾸기
@@ -837,7 +901,7 @@ export function BrainwaveEditor({
           ) : null}
           <button type="button" onClick={undo} disabled={!history.length} title="되돌리기"><Undo2 /><span className="bw-bar-label bw-bar-mobile">되돌리기</span></button>
           <button type="button" onClick={redo} disabled={!future.length} title="다시"><Redo2 /><span className="bw-bar-label bw-bar-mobile">다시</span></button>
-          <button type="button" className="bw-editor-save" data-saved={!persistence.saving && currentFingerprint === savedFingerprint && !editing ? "" : undefined} title="저장" onClick={() => save(true)} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : currentFingerprint === savedFingerprint && !editing ? "저장됨" : "저장"}</span></button>
+          <button type="button" className="bw-editor-save" data-saved={!persistence.saving && isSaved ? "" : undefined} title="저장" onClick={() => save(true)} disabled={persistence.saving || !!uploading || ai.busy || !!pendingPatch}>{persistence.saving ? <LoaderCircle className="spin" /> : <Save />} <span className="bw-bar-label">{persistence.saving ? "저장 중" : isSaved ? "저장됨" : "저장"}</span></button>
           <button type="button" onClick={close} disabled={persistence.saving} title="닫기"><X /><span className="bw-bar-label bw-bar-mobile">닫기</span></button>
         </div>
       </header>
@@ -852,7 +916,7 @@ export function BrainwaveEditor({
         <div className="bw-save-backdrop" onClick={() => savePopup.phase !== "publishing" && setSavePopup(null)}>
           <div className="bw-save-popup" role="dialog" aria-modal="true" aria-labelledby="bw-save-title" onClick={(event) => event.stopPropagation()}>
             <h2 id="bw-save-title">{savePopup.phase === "live" ? "공개했어요" : savePopup.phase === "publishing" ? "공개하는 중이에요" : savePopup.phase === "error" ? "공개하지 못했어요" : "저장했어요"}</h2>
-            {savePopup.phase === "saved" && <p>{published ? "방금 고친 내용은 '새 버전 공개'를 눌러야 손님 화면에 보여요." : "아직 공개 전이에요. 공개하면 손님이 볼 수 있는 주소가 생겨요."}</p>}
+            {savePopup.phase === "saved" && <p>{published ? (liveUpToDate ? "손님 화면도 지금 모습 그대로예요." : "방금 고친 내용은 '새 버전 공개'를 눌러야 손님 화면에 보여요.") : "아직 공개 전이에요. 공개하면 손님이 볼 수 있는 주소가 생겨요."}</p>}
             {savePopup.phase === "live" && <p>{savePopup.message ?? "새 탭에서 손님이 보는 화면을 열었어요. 주소를 복사해 손님에게 보내 보세요."}</p>}
             {savePopup.phase === "error" && <p role="alert">{savePopup.message}</p>}
             {savePopup.url && savePopup.phase !== "publishing" ? (
@@ -863,17 +927,18 @@ export function BrainwaveEditor({
                   <button type="button" onClick={() => void copyLink(savePopup.url!)}>{copied ? "복사했어요" : "링크 복사"}</button>
                   <a href={savePopup.url} target="_blank" rel="noopener noreferrer">새 탭에서 보기</a>
                 </div>
+                {/* 처음 공개하면 주소가 저절로 정해진다 — 손님에게 보내기 전에 바꿀 수 있게 주소 칸으로 바로 데려간다 */}
+                {savePopup.phase === "live" && onEditAddress ? <button type="button" className="bw-save-address" onClick={() => { setSavePopup(null); invalidateAsync(); onEditAddress(); }}>주소 바꾸기</button> : null}
               </div>
             ) : null}
             <div className="bw-save-actions">
               <button type="button" className="secondary" disabled={savePopup.phase === "publishing"} onClick={() => setSavePopup(null)}>{savePopup.phase === "live" ? "닫기" : "계속 고치기"}</button>
-              {onPublish && (savePopup.phase === "saved" || savePopup.phase === "error") ? <button type="button" className="primary" onClick={() => void publishFromPopup()}>{published ? "새 버전 공개하기" : "공개하고 주소 받기"}</button> : null}
+              {onPublish && (savePopup.phase === "error" || (savePopup.phase === "saved" && !(published && liveUpToDate))) ? <button type="button" className="primary" onClick={() => void publishFromPopup()}>{published ? "새 버전 공개하기" : "공개하고 주소 받기"}</button> : null}
               {savePopup.phase === "publishing" ? <button type="button" className="primary" disabled><LoaderCircle className="spin" /> 공개하는 중</button> : null}
             </div>
           </div>
         </div>
       ) : null}
-      {persistence.savedAt && !persistence.saving && !persistence.error ? <span className="bw-editor-saved" role="status">{landingDraftFingerprint({ page, ...over }) === savedFingerprint && !editing ? (published ? "저장 완료 · 손님 화면은 ‘새 버전 공개’ 후 바뀌어요" : "저장 완료") : "저장하지 않은 수정"}</span> : null}
       {pendingPatch ? <section className="bw-editor-conflicts" aria-label="변경 내용 비교" aria-live="polite">
         <strong>기다리는 동안 같은 내용을 수정했어요</strong>
         {Object.entries(pendingPatch.changes).map(([id, incoming]) => <div key={id}>
@@ -1047,7 +1112,7 @@ export function BrainwaveEditor({
                   onDrop={() => dropSection(b.id)}
                 >
                   {locked ? <em>고정</em> : <GripVertical size={14} aria-hidden />}
-                  <span>{i + 1}. {sectionNameKo(b.name)}</span>
+                  <span>{i + 1}. {sectionLabel(b.id, b.name)}</span>
                   {!locked ? (
                     <span className="bw-sec-arrows">
                       <button type="button" disabled={!canMoveSec(b.id).up} onClick={() => moveSection(b.id, -1)} title="위로"><ArrowUp size={13} /></button>
@@ -1115,7 +1180,8 @@ export function BrainwaveEditor({
         if (under) pickImage(under.dataset.bwImage!, under); else deselect();
       }}>
         {/* 분위기(색 조합)도 편집 화면에 그대로 */}
-        <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} style={{ maxWidth: VIEW_W[view], ...themeStyle(data.theme) }}>
+        {/* data-lead-form — 공개 화면은 문의 양식이 바로 아래 붙으면 마무리 띠의 문의 단추를 숨긴다(globals.css). 편집 화면은 그 단추에 '공개 화면에는 안 보여요'를 단다 */}
+        <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} data-lead-form={appendix?.leadCaptureEnabled ? "" : undefined} style={{ maxWidth: VIEW_W[view], ...themeStyle(data.theme) }}>
           <BrainwavePage
             pageId={page}
             overrides={{ ...over, contentMode }}
@@ -1224,8 +1290,11 @@ export function BrainwaveEditor({
       <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => void onFile(e.target.files?.[0])} />
       <LandingImageCrop file={imageCrop?.file ?? null} onApply={file => void uploadCroppedImage(file)} onCancel={() => setImageCrop(null)} />
       <p className="bw-editor-hint">
-        {previewMode ? <><Eye /> 손님이 보는 그대로입니다.</> : <><Pencil /> 글이나 사진을 누르면 고칠 수 있어요. 떠 있는 줄에서 숨기기도 할 수 있어요.</>}
+        {previewMode ? <><Eye /> 손님에게 보이는 모습이에요. 맨 아래 문의 양식은 모양만 보여요.</> : <><Pencil /> 글이나 사진을 누르면 고칠 수 있어요. 떠 있는 줄에서 숨기기도 할 수 있어요.</>}
         {changed ? <b> 고친 곳 {changed}개</b> : null}
+        {/* 저장 안내 — 예전엔 화면 오른쪽 아래에 떠서 이 안내 줄을 덮었다. 같은 줄 오른쪽에 둔다.
+            공개 중이어도 방금 공개해 손님 화면이 저장본과 같으면 '새 버전 공개 후'라고 하지 않는다 */}
+        {persistence.savedAt && !persistence.saving && !persistence.error ? <span className="bw-editor-saved" role="status">{isSaved ? (published ? (liveUpToDate ? "저장 완료 · 손님 화면에도 반영됐어요" : "저장 완료 · 손님 화면은 ‘새 버전 공개’ 후 바뀌어요") : "저장 완료") : "저장하지 않은 수정"}</span> : null}
       </p>
     </div>
   );

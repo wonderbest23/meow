@@ -48,6 +48,11 @@ export async function POST(request: Request) {
     if (order.status !== "done") {
       return privateJson({ error: { code: "ORDER_NOT_REFUNDABLE", message: "결제 완료된 주문만 환불을 요청할 수 있습니다." } }, { status: 400 });
     }
+    // 앱(스토어)에서 결제한 주문은 우리가 돈을 돌려줄 수 없다 — 환불은 Apple·Google이 처리한다
+    if (order.method === "APPLE_IAP" || order.method === "GOOGLE_IAP") {
+      const store = order.method === "APPLE_IAP" ? "Apple(App Store)" : "Google Play";
+      return privateJson({ error: { code: "STORE_REFUND_ONLY", message: `앱에서 결제한 주문은 ${store}에서 환불을 신청해 주세요.` } }, { status: 400 });
+    }
     const created = await createRefundRequest({
       ownerId: user.id,
       customerEmail: user.email ?? "",

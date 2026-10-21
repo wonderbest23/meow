@@ -8,9 +8,9 @@ import { calculateFinancials, financialsToReference } from "./financials";
 import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
-import { KSIC_SYNONYMS, ksicAncestors, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
+import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
 import { START_CONDITIONS } from "./intake-questions";
-import { candidateTemplateFacts, filterCandidateConditions, selectedStartConditions } from "./intake-candidate-constraints";
+import { CONDITION_DIFFERS_NOTE, candidateTemplateFacts, filterCandidateConditions, selectedStartConditions } from "./intake-candidate-constraints";
 import { capacityUnitOrder, licenseHint, revenueBasis, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, STRUCTURE_LABELS, structureFieldLabels, structureSummary, type BusinessStructure, type StructureAxis } from "./business-structure";
 import { PROPOSAL_SECTORS, type ProposalSector } from "./proposal-blueprint";
 import { INTAKE_KEY, INTAKE_VERSION, type IntakeCandidate, type IntakeCommand, type IntakeJob, type IntakeSnapshot, type IntakeState, type IntakeValue } from "./intake-types";
@@ -85,6 +85,20 @@ function matchedSynonym(code: string, text: string): string | undefined {
   return Object.keys(KSIC_SYNONYMS).filter(key => KSIC_SYNONYMS[key].includes(code) && normalizeKsic(key).length >= 2 && q.includes(normalizeKsic(key))).sort((a, b) => b.length - a.length)[0];
 }
 
+/** 같은 세분류(코드 앞 4자리) 안에서 이름의 앞이나 뒤 두 낱말 이상이 같으면 거의 같은 업종으로 보고 앞(순위가 높은) 것만 남긴다. */
+function nearDuplicateKsic(a: string, b: string): boolean {
+  const left = a.split(/[\s,]+/).filter(Boolean), right = b.split(/[\s,]+/).filter(Boolean);
+  let prefix = 0, suffix = 0;
+  while (prefix < Math.min(left.length, right.length) && left[prefix] === right[prefix]) prefix++;
+  while (suffix < Math.min(left.length, right.length) && left[left.length - 1 - suffix] === right[right.length - 1 - suffix]) suffix++;
+  return prefix >= 2 || suffix >= 2;
+}
+function distinctKsic<T extends { entry: { code: string; name: string } }>(items: T[]): T[] {
+  const kept: T[] = [];
+  for (const item of items) if (!kept.some(other => other.entry.code.slice(0, 4) === item.entry.code.slice(0, 4) && nearDuplicateKsic(other.entry.name, item.entry.name))) kept.push(item);
+  return kept;
+}
+
 /**
  * 표준산업분류 지도에서 고른 사업 후보(탐색 모드). 관심 업종의 중분류 안에서, 시작 조건을 전부 만족하는 세세분류를
  * 경험 문장 일치 → 구어 표현이 있는 흔한 창업 업종 → 코드 순으로 고른다. 관심·경험·조건 중 하나도 없으면 비어 있다(추측하지 않는다).
@@ -110,21 +124,20 @@ export function ksicCandidateIdeas(intake: IntakeState, coach: CoachState, entir
   }).sort((a, b) => b.score - a.score || a.entry.code.localeCompare(b.entry.code));
   // 경험과 이어진 분류가 있으면 그것이 목록의 중심이고 채움 후보는 2개까지만. 채움은 부르는 말이 있는 흔한 업종을 먼저 쓰고, 하나도 없을 때만 나머지 분류로 채운다.
   const matched = ranked.filter(item => item.match), common = ranked.filter(item => !item.match && item.terms.length), rest = ranked.filter(item => !item.match && !item.terms.length);
-  const fillers = (common.length ? common : rest).slice(0, matched.length ? KSIC_FILLER_LIMIT_WITH_MATCHES : KSIC_CANDIDATE_LIMIT);
-  const scored = entirePool ? [...matched, ...common, ...rest] : [...matched, ...fillers].slice(0, KSIC_CANDIDATE_LIMIT);
+  // 이름만 조금 다른 같은 업종(유선·모바일·기타 게임 소프트웨어 개발 및 공급업)은 하나만 보인다 — 비슷한 카드가 줄지어 있으면 고를 게 없어 보인다.
+  const scored = entirePool ? distinctKsic([...matched, ...common, ...rest]) : distinctKsic([...matched, ...distinctKsic(common.length ? common : rest).slice(0, matched.length ? KSIC_FILLER_LIMIT_WITH_MATCHES : KSIC_CANDIDATE_LIMIT)]).slice(0, KSIC_CANDIDATE_LIMIT);
   return scored.map(({ entry, structure, match, terms }) => {
-    const group = ksicAncestors(entry.code).find(ancestor => ancestor.level === 3)?.name ?? ksicPath(entry.code);
     const sector = sectorForKsic(entry.code) ?? "general";
     const term = match ? matchedSynonym(entry.code, experience) : undefined;
     const reasons = [
-      ...(match ? [term ? `경험 입력의 "${term}"과 이어지는 분류` : "경험 입력과 이름이 맞는 분류"] : []),
-      ...(sectors.includes(sector) ? [`관심 분야: ${intakeSectorOptions.find(option => option.value === sector)?.label ?? sector}`] : []),
-      ...(chosen.length ? [`조건 일치: ${chosen.join(", ")}`] : []),
+      ...(match ? [term ? `적어 주신 경험의 "${term}"과 이어지는 업종이에요` : "적어 주신 경험과 이름이 비슷한 업종이에요"] : []),
+      ...(sectors.includes(sector) ? [`고르신 관심 분야: ${intakeSectorOptions.find(option => option.value === sector)?.label ?? sector}`] : []),
+      ...(chosen.length ? [`고르신 조건에 맞아요: ${chosen.join(", ")}`] : []),
       // 공식 이름이 낯설어서 흔히 부르는 말을 함께 보여 준다(예: 기타 미용업 ← 네일, 왁싱).
       ...(terms.length ? [`흔히 부르는 말: ${terms.slice(0, 3).join(", ")}`] : []),
     ];
-    return { id: `ksic:${entry.code}`, title: entry.name, sector, description: `표준산업분류 ${entry.code} · ${group} · ${structureSummary(structure).join(" · ")}`, reasons,
-      cautions: [licenseHint(structure, entry.code) ?? "인허가는 관할 기관 기준으로 확인이 필요합니다.", "표준산업분류 세세분류 기준 후보이며 수요·수익성을 검증한 결과가 아닙니다."] };
+    return { id: `ksic:${entry.code}`, title: entry.name, sector, description: structureSummary(structure).join(" · "), reasons,
+      cautions: [licenseHint(structure, entry.code) ?? "필요한 신고·허가는 구청 등 담당 기관에 확인해 보세요.", "업종 목록에서 고른 예시예요. 실제로 찾는 사람이 있는지, 돈이 되는지는 아직 알 수 없어요."] };
   });
 }
 
@@ -141,8 +154,11 @@ export function evaluateIntakeCandidates(intake: IntakeState, coach: CoachState,
   const templates = intakeCandidates(candidateAnswers(intake, coach), Infinity);
   const generated = (intake.generatedIdeas ?? []).filter(idea => !idea.rejected && idea.baseInputRevision === (intake.ideaInputRevision ?? 0));
   const collected: CandidateIdea[] = [...templates, ...ksicCandidateIdeas(intake, coach, true), ...generated];
-  const pool = collected.flatMap(idea =>
-    filterCandidateConditions(idea, idea.source === "ai-generated" ? idea.proposedStructure ?? {} : idea.id.startsWith("ksic:") ? ksicStructure(idea.id.slice(5)) ?? {} : candidateTemplateFacts(idea.id), conditions));
+  const pool = collected.flatMap(idea => {
+    const kept = filterCandidateConditions(idea, idea.source === "ai-generated" ? idea.proposedStructure ?? {} : idea.id.startsWith("ksic:") ? ksicStructure(idea.id.slice(5)) ?? {} : candidateTemplateFacts(idea.id), conditions);
+    // 이 사업을 위해 AI가 만든 제안은 화면에 보이는 한 고를 수 있어야 한다(예전엔 시작 조건과 다르면 보기에서 빠져 '저장 실패'만 떴다). 다르다는 것만 알린다.
+    return kept.length || idea.source !== "ai-generated" ? kept : [{ ...idea, cautions: [...idea.cautions, CONDITION_DIFFERS_NOTE] }];
+  });
   const limits = resourceLimitsFor(intake, coach);
   const data = loadResourceRecords([...records, ...intake.resourceQuotes ?? []]).filter(r => r.candidateId !== "custom-business" || r.businessDescription === coach.business.description);
   const structure = effectiveStructure(intake).values, business = resourceBusinessAssumptions(coach);
@@ -152,7 +168,8 @@ export function evaluateIntakeCandidates(intake: IntakeState, coach: CoachState,
     return { ...idea, resourceFit: evaluateCandidateResources(idea.id, limits, intake.resourceContext, asOf, data, unselected ? generatedIdeaStructure(proposal) : structure, unselected ? { description: proposal.description, customer: proposal.customer, offer: proposal.offering, channel: proposal.delivery } : business) };
   };
   const evaluated = pool.map(assess);
-  const available = evaluated.filter(i => i.resourceFit?.status !== "exceeded");
+  // AI 제안은 예산·시간을 넘어도 목록에서 빼지 않는다 — 카드가 보이는데 고를 수 없으면 안 된다. 넘는다는 안내는 카드에 그대로 보인다.
+  const available = evaluated.filter(i => i.resourceFit?.status !== "exceeded" || i.source === "ai-generated");
   // Preserve interest/experience order within each source; unknown data is not a ranking bonus or penalty.
   const mapIdeas = available.filter(i => i.id.startsWith("ksic:"));
   const matched = mapIdeas.filter(i => i.reasons.some(reason => reason.includes("경험")));
@@ -163,7 +180,7 @@ export function evaluateIntakeCandidates(intake: IntakeState, coach: CoachState,
   const selectedBase = custom ?? intake.selectedCandidate ?? evaluated.find(i => i.id === selectedId) ?? (typeof selectedId === "string" ? { id: selectedId, title: coach.business.name, description: coach.business.description, sector: intake.sector, reasons: [], cautions: [] } : undefined);
   const selected = selectedBase ? { ...assess(selectedBase), retained: !available.some(i => i.id === selectedBase.id) } : undefined;
   if (selected && !ideas.some(i => i.id === selected.id)) ideas.push(selected);
-  const excluded = evaluated.filter(i => i.resourceFit?.status === "exceeded");
+  const excluded = evaluated.filter(i => !available.includes(i));
   return { ideas, assessment: { version: RESOURCE_DATA_VERSION, asOf, total: evaluated.length, excluded: excluded.slice(0, 8), excludedCount: excluded.length, selected, allUnknown: available.length > 0 && available.every(i => i.resourceFit?.checked === 0) } };
 }
 export function allCandidateIdeas(intake: IntakeState, coach: CoachState): CandidateIdea[] {
@@ -183,7 +200,7 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
         // Empty means no candidate survived the same conditions, not an AI success fallback.
         const chosenConditions = intake.answers.conditions?.value;
         const mapEmpty = Array.isArray(chosenConditions) && chosenConditions.length > 0 && !ideas.some(idea => idea.id.startsWith("ksic:"));
-        return { ...question, options: ideas.map(idea => ({ value: idea.id, label: idea.title })), ...(!ideas.length ? { hint: "현재 조건에 맞는 후보가 없어요. 시작 조건에서 선택을 다시 확인하거나 생각한 사업을 직접 입력해 주세요." } : mapEmpty ? { hint: "분류 검색에서 조건을 모두 만족하는 후보를 찾지 못했어요. 아래 예시의 확인 필요 조건을 검토해 주세요." } : {}) };
+        return { ...question, options: ideas.map(idea => ({ value: idea.id, label: idea.title })), ...(!ideas.length ? { hint: "고르신 조건에 맞는 사업을 찾지 못했어요. 시작 조건을 바꾸거나 생각한 사업을 직접 적어 주세요." } : mapEmpty ? { hint: "고르신 조건에 딱 맞는 업종은 찾지 못했어요. 아래 예시 중 가까운 걸 고르거나 생각한 사업을 직접 적어 주세요." } : {}) };
       }
       if (question.id === "industry") return { ...question, options: question.options?.map(option => ({ ...option, hint: INDUSTRY_HINTS[option.value as ProposalSector] ?? option.hint })) };
       if (question.id === "price") {
@@ -585,11 +602,11 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
     return `${dates[0]} / ${dates[1]}`;
   }
   if (question.kind === "single") {
-    if (!question.options?.some(option => option.value === value)) throw new IntakeError("invalid_option", "현재 질문의 선택지를 골라 주세요");
+    if (!question.options?.some(option => option.value === value)) throw new IntakeError("invalid_option", "보기에 있는 것 중에서 다시 골라 주세요");
     return value;
   }
   if (question.kind === "multi") {
-    if (!Array.isArray(value) || !value.length || value.some(item => !question.options?.some(option => option.value === item))) throw new IntakeError("invalid_option", "현재 질문의 선택지를 골라 주세요");
+    if (!Array.isArray(value) || !value.length || value.some(item => !question.options?.some(option => option.value === item))) throw new IntakeError("invalid_option", "보기에 있는 것 중에서 다시 골라 주세요");
     return [...new Set(value)];
   }
   if (question.kind === "number") {
@@ -637,8 +654,8 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   const id = command.questionId;
   if (id === "candidate" && typeof command.value === "string" && command.value.includes(":idea:")) {
     const proposal = intake.generatedIdeas?.find(idea => idea.id === command.value && idea.planId === plan.id);
-    if (!proposal) throw new IntakeError("candidate_unknown", "이 사업에서 생성한 후보를 다시 확인해 주세요", 404);
-    if (proposal.rejected || proposal.baseInputRevision !== (intake.ideaInputRevision ?? 0)) throw new IntakeError("candidate_stale", "후보 생성 후 입력 조건이 바뀌었어요. 최신 조건으로 제안을 다시 요청해 주세요", 409);
+    if (!proposal) throw new IntakeError("candidate_unknown", "이 사업에서 받은 제안이 맞는지 다시 확인해 주세요", 404);
+    if (proposal.rejected || proposal.baseInputRevision !== (intake.ideaInputRevision ?? 0)) throw new IntakeError("candidate_stale", "제안을 받은 뒤 조건이 바뀌었어요. 바뀐 조건으로 다시 제안받아 주세요", 409);
   }
   const questions = intakeQuestions(intake, coach);
   const question = questions.find(item => item.id === id)
@@ -662,7 +679,7 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   }
   if (question.id === "candidate" && value !== null) {
     const idea = allCandidateIdeas(intake, coach).find(item => item.id === value);
-    if (!idea) throw new IntakeError("candidate_unknown", "현재 사업 후보를 다시 확인해 주세요");
+    if (!idea) throw new IntakeError("candidate_unknown", "고른 사업을 다시 확인해 주세요");
     // 지도 후보는 공식 이름이 사업 소개가 되고 코드가 업종·구조의 근거가 된다. 템플릿 후보는 설명 문장이 사업 소개다.
     const ksicCode = idea.id.startsWith("ksic:") ? idea.id.slice(5) : null;
     setField(coach, "business", ksicCode ? idea.title : idea.description, command.requestId, `선택한 구상: ${idea.title}`);

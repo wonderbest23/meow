@@ -201,7 +201,7 @@ try {
   const collision = page.waitForResponse((response: any) => response.url().includes("/api/plan/chat") && response.request().method() === "POST");
   await page.getByRole("button", { name: "보내기", exact: true }).click();
   assert.equal((await collision).status(), 409);
-  await page.getByText("저장 충돌", { exact: true }).waitFor();
+  await page.getByText("다른 곳에서 바뀌었어요", { exact: true }).waitFor();
   await page.locator('[data-reply-typing]').waitFor({ state: "hidden" });
   assert.equal(await page.locator("#intake-answer-customer").inputValue(), "첫 화면에서 고친 고객 정보");
   await page.getByRole("button", { name: "최신 내용 불러오기", exact: true }).click();
@@ -223,7 +223,7 @@ try {
     await route.fetch(); return route.abort("failed");
   });
   await page.getByRole("button", { name: "보내기", exact: true }).click();
-  await page.getByText("저장 실패", { exact: true }).waitFor();
+  await page.getByText("저장하지 못했어요", { exact: true }).waitFor();
   await page.locator('[data-reply-typing]').waitFor({ state: "hidden" });
   await page.unroute("**/api/plan/chat");
   await page.reload({ waitUntil: "networkidle" });

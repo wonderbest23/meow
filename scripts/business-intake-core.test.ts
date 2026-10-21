@@ -416,6 +416,22 @@ async function main() {
       assert.equal(snapshot(f).candidateIdeas[0].description, idea);
       rejected(f, { questionId: "candidate", value: "focused-software" }, "question_unknown");
     });
+    check("an AI idea that differs from the chosen start conditions stays selectable and saves", () => {
+      const f = fixture("exploring");
+      answer(f, "conditions", ["무점포로 시작"]);
+      // 매장에서 제공하는 제안은 '무점포로 시작'과 맞지 않는다 — 예전엔 보기에서 빠져 '저장 실패'만 떴다
+      f.intake.generatedIdeas = [{ id: "plan-intake-core:idea:store", source: "ai-generated", planId: f.plan.id, baseInputRevision: f.intake.ideaInputRevision ?? 0, generatedAt: AT,
+        title: "동네 원데이 클래스 공방", description: "매장에서 여는 원데이 클래스", sector: "general", reasons: [], cautions: [],
+        customer: "동네 주민", problem: "주말에 할 일이 없음", offering: "원데이 클래스", delivery: "매장", revenue: "수업료", differences: "소규모", unknowns: [],
+        proposedStructure: { capital: "storefront", delivery: "store", offering: "service", payer: "b2c", revenue: "per_unit" } }];
+      const shown = snapshot(f);
+      const idea = shown.candidateIdeas.find(item => item.id === "plan-intake-core:idea:store");
+      assert.ok(idea, "the generated idea is still an option");
+      assert.ok(idea!.cautions.some(caution => caution.includes("시작 조건과 다른")), idea!.cautions.join(" | "));
+      assert.ok(shown.questions.find(question => question.id === "candidate")!.options!.some(option => option.value === idea!.id));
+      answer(f, "candidate", idea!.id);
+      assert.equal(f.coach.business.name, "동네 원데이 클래스 공방");
+    });
     check("unknown candidate clears the business derived from that selection", () => {
       const f = fixture("exploring");
       answer(f, "candidate", snapshot(f).candidateIdeas[0].id);

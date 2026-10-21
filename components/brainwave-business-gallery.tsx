@@ -200,6 +200,8 @@ export function BusinessGallery0_421({ overrides, hidden, sectionOrder, onPick, 
           {Text({ id: "0:457", className: styles.lead, reveal: 1 })}
           {/* 킷 맨 아래에는 글이 든 버튼이 없다 — 첫 화면의 문의 버튼을 한 번 더 둔다(글·이동이 함께 바뀐다) */}
           {Button({ buttonId: "0:1090", textId: "I0:1090;0:4557", className: styles.closingButton, reveal: 2 })}
+          {/* 편집 화면에만 — 마무리 띠 사진이 비었을 때 넣을 곳 */}
+          {!url ? PhotoSlot({ id: "0:434/0/0", className: styles.closingSlot }) : null}
         </div>
       </section>;
     },

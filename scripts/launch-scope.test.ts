@@ -11,7 +11,7 @@ for (const path of ["/api/dev/business-journeys", "/api/plan/market-research", "
 // 핵심 흐름은 열려 있다
 for (const path of ["/", "/plan", "/plan/chat", "/plan/document", "/plan/homepage", "/plan/workspace", "/plan/inquiries", "/plan/me", "/plan/pay", "/account", "/launch/abc", "/customer-site", "/admin", "/admin/schema",
   "/api/plan/state", "/api/plan/chat", "/api/plan/chat/comment", "/api/plan/chat/suggestions", "/api/plan/landing", "/api/plan/inquiries", "/api/plan/artifact-updates", "/api/plan/expert", "/api/plan/operations", "/api/plan/operations/analysis",
-  "/api/projects/abc/landing", "/api/projects/abc/landing/ai-fill", "/api/projects/abc/landing/publish", "/api/projects/abc/landing/domain", "/api/projects/abc/landing/alerts", "/api/projects/abc/landing/leads", "/api/projects/abc/landing/notifications",
+  "/api/projects/abc/landing", "/api/projects/abc/landing/ai-fill", "/api/projects/abc/landing/publish", "/api/projects/abc/landing/unpublish", "/api/projects/abc/landing/domain", "/api/projects/abc/landing/alerts", "/api/projects/abc/landing/leads", "/api/projects/abc/landing/notifications",
   "/api/payments/plan/prepare", "/api/payments/plan/return", "/api/public/landing/abc/lead", "/api/public/weekly-report/unsubscribe", "/api/health/persistence", "/api/support/chat", "/api/consult", "/api/plan/deckish", "/api/devices", "/development"]) assert.equal(closed(path), null, path);
 
 // 스테이징·프리런치·개발에서는 모두 열려 있다

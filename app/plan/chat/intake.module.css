@@ -238,7 +238,7 @@
 /* Messenger bubbles: the coach's short lines sit in a soft grey bubble, the user's in solid blue. */
 .assistantMessage > p, .assistantMessage > .conversationText { width: fit-content; max-width: 88%; margin: 0; padding: 10px 16px; border-radius: 20px; background: #f2f5fa; color: var(--intake-ink); line-height: 1.7; }
 .userMessage { position: relative; width: fit-content; max-width: 88%; margin: 0 0 32px auto; padding: 10px 16px; border-radius: 20px; background: var(--intake-blue); color: #fff; font-size: 16px; line-height: 1.7; transform-origin: 100% 100%; }
-.messageEdit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 32px; height: 32px; margin: -6px -10px -6px 0; border: 0; border-radius: 50%; background: transparent; color: #ffffffd9; }
+.messageEdit { display: inline-flex; flex-shrink: 0; align-items: center; justify-content: center; width: 40px; height: 40px; margin: -10px -14px -10px -4px; border: 0; border-radius: 50%; background: transparent; color: #ffffffd9; }
 .userMessage:has(.messageEdit) { display: flex; align-items: center; gap: 4px; }
 .messageStatus { margin: -26px 0 28px auto !important; max-width: 88%; text-align: right; font-size: 11px; color: var(--intake-muted); transform-origin: 100% 0; animation: intake-receipt .4s ease; }
 .speakerStatus { color: transparent; background: linear-gradient(90deg, #8a96a8 0 35%, #2b3340 50%, #8a96a8 65% 100%) 0 0 / 300% 100% no-repeat; -webkit-background-clip: text; background-clip: text; font-weight: 500; animation: intake-status-shimmer 2s ease infinite; }
@@ -393,7 +393,7 @@
   .inputContent { padding: 20px 16px 32px; }
   .summaryPane { padding: 22px 18px 32px; }
   .summaryToggle span, .summaryToggle b { display: none; }
-  .summaryToggle { padding: 8px 9px; }
+  .summaryToggle { padding: 8px 9px; min-width: 40px; justify-content: center; }
   .saveStatus, .progressLabel { font-size: 11px; }
   .modeSwitch { margin-bottom: 22px; }
   .modeSwitch button { gap: 5px; font-size: 12px; }
@@ -647,7 +647,7 @@
 .page[data-coach] .chatQuestion form { margin-top: 10px; }
 /* Choices: small pills under the coach's question, visibly lighter than the chat bubbles. */
 .page[data-coach] .chatQuestion .options, .page[data-coach] .ksicChips, .page[data-coach] .chipRow { display: flex; flex-wrap: wrap; gap: 6px; }
-.page[data-coach] .chatQuestion .option, .page[data-coach] .chip, .page[data-coach] .ksicChip, .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial, .page[data-coach] .presetChip { display: inline-flex; flex-direction: row; align-items: center; width: auto; min-height: 34px; padding: 7px 13px; border: 1px solid #d5dae0; border-radius: 17px; background: #fff; color: #2b3036; font-size: 13px; font-weight: 400; line-height: 18px; cursor: pointer; }
+.page[data-coach] .chatQuestion .option, .page[data-coach] .chip, .page[data-coach] .ksicChip, .page[data-coach] .unknownChoice, .page[data-coach] .sendPartial, .page[data-coach] .presetChip { display: inline-flex; flex-direction: row; align-items: center; width: auto; min-height: 40px; padding: 7px 13px; border: 1px solid #d5dae0; border-radius: 17px; background: #fff; color: #2b3036; font-size: 13px; font-weight: 400; line-height: 18px; cursor: pointer; }
 .page[data-coach] .chatQuestion .option strong, .page[data-coach] .chip, .page[data-coach] .ksicChip strong, .page[data-coach] .unknownChoice strong { font-size: 13px; font-weight: 400; line-height: 18px; color: inherit; white-space: normal; }
 .page[data-coach] .chatQuestion .option:hover, .page[data-coach] .chip:hover:not(:disabled), .page[data-coach] .ksicChip:hover { background: #f5f6f8; border-color: #9ca3af; }
 .page[data-coach] .chatQuestion .option[data-selected="true"], .page[data-coach] .chip[aria-pressed="true"], .page[data-coach] .chip[data-selected="true"], .page[data-coach] .ksicChip[aria-pressed="true"] { border-color: #111418; background: #111418; color: #fff; }
@@ -667,7 +667,7 @@
 .page[data-coach] .composerRow { align-items: center; gap: 6px; }
 .page[data-coach] .composerRow textarea { min-height: 44px; padding: 11px 0; color: #111418; }
 .page[data-coach] .composerRow textarea::placeholder { color: #8b929c; }
-.page[data-coach] .sendButton { flex-basis: 38px; width: 38px; height: 38px; background: #4b5563; }
+.page[data-coach] .sendButton { flex-basis: 40px; width: 40px; height: 40px; background: #4b5563; }
 .page[data-coach] .sendButton:disabled { background: #d1d5db; color: #fff; }
 /* PC: chat alone while answering; the summary slides in when asked for or when the result is ready. */
 @media (min-width: 901px) {
@@ -736,7 +736,7 @@
 .page[data-coach] .chip.chipStrong { background: #111418; border-color: #111418; color: #fff; }
 
 /* 계획서가 있을 때 다시 쓰기는 버튼 하나, 안내는 확인창에서 */
-.rewriteAction { display: grid; }
+.rewriteAction { display: grid; margin-top: 12px; }
 .rewriteAction > button { width: 100%; margin-bottom: 0; }
 .confirmBackdrop { position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 16px; background: rgba(15, 23, 42, .32); animation: intake-confirm-fade .16s ease-out; }
 .confirmBox { width: min(400px, 100%); display: grid; gap: 10px; padding: 22px; border-radius: 18px; background: #fff; box-shadow: 0 18px 48px rgba(15, 23, 42, .18); animation: intake-confirm-pop .2s cubic-bezier(.2, .8, .2, 1); }
@@ -762,3 +762,13 @@
 
 /* 고른 이름 카드 — 다시 누를 수 없게 막아 둔 탓에 공통 규칙(꺼진 단추 흐리게)이 걸려 고장 난 단추처럼 보였다 */
 .identityChoices button[aria-pressed="true"]:disabled { opacity: 1 !important; cursor: default !important; }
+
+/* 여러 개 고르는 질문: 보내는 곳은 입력창 하나 — 그 길을 한 줄로 알려 준다 */
+.multiSendHint { margin: 8px 0 0 6px; color: #6b7280; font-size: 12.5px; line-height: 1.5; }
+/* 예산·시간 안내는 사업 카드 목록 위에 한 번만 */
+.fitNote { margin: 0 0 8px 6px; color: #6b7280; font-size: 12.5px; line-height: 1.5; }
+/* 입력창 위 한 줄: 보내기가 흐린 이유(○○ 자리), 글자 수 */
+.composerHint { margin: 2px 0 4px; padding: 0 2px; color: #b45309; font-size: 12.5px; line-height: 1.5; }
+/* 확인이 떠도 원래 질문이 보이게 */
+.intentQuestion { color: #4b5563; font-size: 14px; }
+.chipNote { margin-left: 4px; color: #8b929c; font-size: 11.5px; }

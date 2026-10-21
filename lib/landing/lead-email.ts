@@ -23,7 +23,7 @@ export function buildLandingLeadEmail(from: string, to: string, planId?: string 
   return {
     from, to,
     subject: "오늘창업 홈페이지에 새 문의가 접수됐습니다",
-    text: `홈페이지에 새 문의가 접수되어 안전하게 저장됐습니다.\n\n오늘창업에 로그인한 뒤 왼쪽 메뉴 '내 문의'에서 확인해 주세요.\n${INQUIRIES_URL}\n\n이 메일에는 문의자의 개인정보를 포함하지 않습니다.`,
+    text: `홈페이지에 새 문의가 접수되어 안전하게 저장됐습니다.\n\n오늘창업에 로그인한 뒤 왼쪽 메뉴 '손님 문의'에서 확인해 주세요.\n${INQUIRIES_URL}\n\n이 메일에는 문의자의 개인정보를 포함하지 않습니다.`,
   };
 }
 
