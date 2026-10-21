@@ -5,6 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Archive, Download, FileText, Pencil, Plus, Save, X } from "lucide-react";
 import { METRICS, comparePeriods, metricValue, oldInput, periodDays, periodInputSchema, periodLabel, previousPeriod, referenceFor, reportIsCurrent, type OperatingCommand, type OperatingPeriod, type OperatingReport, type OperatingState, type PeriodInput } from "../../../lib/plan-builder/operating-records";
 import styles from "./OperatingWorkspace.module.css";
+import { askConfirm } from "../../../components/confirm-dialog";
 import PlanLoading from "../PlanLoading";
 import OperatingAnalysisPanel, { OperatingAnalysisResult } from "./OperatingAnalysisPanel";
 import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysis-contract";
@@ -43,8 +44,6 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [reportRequest, setReportRequest] = useState<{ id: string; reference: ReturnType<typeof referenceFor> } | null>(null);
-  const [confirm, setConfirm] = useState<"discard" | "archive" | null>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
   /* 이 기간 홈페이지 문의 수 — 문의 칸이 비었거나 앞서 자동으로 넣은 값이면 채운다 */
   const [homepage, setHomepage] = useState<HomepageInquiries | null>(null);
   const autoInquiries = useRef<string | null>(null);
@@ -61,7 +60,6 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     window.addEventListener("beforeunload", before);
     return () => window.removeEventListener("beforeunload", before);
   }, [dirty, analysisDirty]);
-  useEffect(() => { if (confirm) dialog.current?.showModal(); else dialog.current?.close(); }, [confirm]);
   useEffect(() => {
     setHomepage(null);
     if (!editor || !draft.start || !draft.end || draft.start > draft.end) return;
@@ -126,8 +124,16 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
   function requestArchive() {
     if (!period) return;
     const reference = referenceFor(period, baseline);
-    if (!reportRequest || JSON.stringify(reportRequest.reference) !== JSON.stringify(reference)) setReportRequest({ id: crypto.randomUUID(), reference });
-    setConfirm("archive");
+    const request = reportRequest && JSON.stringify(reportRequest.reference) === JSON.stringify(reference) ? reportRequest : { id: crypto.randomUUID(), reference };
+    if (request !== reportRequest) setReportRequest(request);
+    void askConfirm({ title: "지금 기록으로 리포트를 보관할까요?", message: "이번 기간과 이전 기간의 수치, 개선 행동이 지금 내용 그대로 남아요. 나중에 기록을 고쳐도 보관한 리포트는 바뀌지 않아요.", cancelLabel: "돌아가기", confirmLabel: "보관하기" })
+      .then(ok => { if (ok) void run({ action: "report", ...request }); });
+  }
+  /* 저장하지 않은 수정 버리기 — 다른 확인창과 같은 모양으로 */
+  function closeEditor() {
+    if (!dirty) { setEditor(null); return; }
+    void askConfirm({ title: "수정을 취소할까요?", message: "저장하지 않은 수정은 사라져요. 마지막으로 저장한 기록은 그대로 남아요.", cancelLabel: "계속 작성", confirmLabel: "수정 취소" })
+      .then(ok => { if (ok) setEditor(null); });
   }
   return <div className={styles.root}>
     <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{state ? <p>운영 기록 {state.periods.length}개 <span aria-hidden="true">·</span> 개선 리포트 {state.reports.length}개</p> : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{state && !editor && mode === "periods" && <button className={styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
@@ -136,7 +142,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     {notice && <p role="status" className={styles.success}>{notice}</p>}
     {!state && !error && <PlanLoading note="운영 기록을 불러오고 있어요" />}
     {editor && <form className={styles.editor} onSubmit={event => { event.preventDefault(); void save(); }}>
-      <div className={styles.editorHeading}><h3>{editor.revision === null ? "새 기간 기록" : "기간 기록 수정"}</h3><button type="button" aria-label="기간 편집 닫기" title="기간 편집 닫기" disabled={busy} onClick={() => dirty ? setConfirm("discard") : setEditor(null)}><X size={20} /></button></div>
+      <div className={styles.editorHeading}><h3>{editor.revision === null ? "새 기간 기록" : "기간 기록 수정"}</h3><button type="button" aria-label="기간 편집 닫기" title="기간 편집 닫기" disabled={busy} onClick={closeEditor}><X size={20} /></button></div>
       <fieldset disabled={busy}><legend>기록 기간</legend><div className={styles.twoColumns}><label>시작일<input type="date" required value={draft.start} onChange={e => setDraft({ ...draft, start: e.target.value })} /></label><label>종료일<input type="date" required min={draft.start} value={draft.end} onChange={e => setDraft({ ...draft, end: e.target.value })} /></label></div></fieldset>
       <fieldset disabled={busy}><legend>실제 실적</legend><p className={styles.note}>알 수 없는 값은 비워 두세요. 발생하지 않았다면 0을 입력하세요.</p><div className={styles.twoColumns}>{METRICS.map(m => <label key={m.key}>{m.label} ({m.unit})<input type="number" inputMode="numeric" min={0} step={1} max={m.unit === "원" ? 1_000_000_000_000 : 10_000_000} value={draft.metrics[m.key]} onChange={e => setDraft({ ...draft, metrics: { ...draft.metrics, [m.key]: e.target.value } })} /></label>)}</div>
         {homepage?.linked && <p className={styles.note} role="status">
@@ -147,7 +153,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
       <fieldset disabled={busy}><legend>돌아보기와 다음 행동</legend>{([
         ["feedback", "고객 반응", 3000], ["keep", "유지할 점", 1500], ["change", "바꿀 점", 1500], ["nextAction", "다음 개선 행동", 1500], ["successCriterion", "확인 기준", 1000],
       ] as const).map(([key, label, max]) => <label key={key}>{label}<textarea value={draft[key]} maxLength={max} rows={key === "feedback" ? 3 : 2} onChange={e => setDraft({ ...draft, [key]: e.target.value })} /></label>)}</fieldset>
-      <div className={styles.actions}><button type="submit" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</button><button type="button" disabled={busy} onClick={() => dirty ? setConfirm("discard") : setEditor(null)}>취소</button></div>
+      <div className={styles.actions}><button type="submit" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</button><button type="button" disabled={busy} onClick={closeEditor}>취소</button></div>
     </form>}
     {state && !editor && mode === "periods" && (period ? <>
       <div className={styles.selectRow}><label>기록 기간<select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id}>{periodLabel(p)}</option>)}</select></label><button disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</button></div>
@@ -169,6 +175,5 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
         <a className={styles.download} href={`/api/plan/operations?planId=${encodeURIComponent(planId)}&reportId=${report.id}`} download><Download size={18} />리포트 내려받기 (.md)</a>
       </article>
     </> : <div className={styles.empty}><Archive size={30} /><h3>보관한 리포트가 없어요</h3><p>기간 기록에서 다음 개선 행동을 정한 뒤 보관하세요</p></div>)}
-    <dialog ref={dialog} className={styles.dialog} onCancel={() => setConfirm(null)}><h3>{confirm === "archive" ? "현재 기록으로 리포트를 보관할까요" : "저장하지 않은 수정을 취소할까요"}</h3><p>{confirm === "archive" ? "이번 기간과 이전 기간의 수치, 개선 행동이 이 시점의 내용으로 남아요. 원본을 수정해도 보관한 리포트는 바뀌지 않아요." : "마지막으로 서버에 저장한 기록은 그대로 남아요."}</p><div className={styles.actions}><button autoFocus onClick={() => setConfirm(null)}>돌아가기</button><button className={styles.primary} onClick={() => { setConfirm(null); if (confirm === "archive" && reportRequest) void run({ action: "report", ...reportRequest }); else setEditor(null); }}>{confirm === "archive" ? "보관하기" : "수정 취소"}</button></div></dialog>
   </div>;
 }

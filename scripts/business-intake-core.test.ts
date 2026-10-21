@@ -4,6 +4,7 @@ import type { IntakeMode, IntakeQuestion } from "../lib/plan-builder/intake-ques
 import type { IntakeCandidate, IntakeCommand, IntakeState, IntakeValue } from "../lib/plan-builder/intake-types";
 import type { ServerPlan } from "../lib/plan-builder/plan-server-store";
 import { coachAmount } from "../lib/plan-builder/coach-feasibility";
+import { parseIntakeNote, summedUnitCostCandidates } from "../lib/plan-builder/intake-note-parser";
 // 한글 숫자·어림 표현(실제 AI 시험 2026-10-21) — 단위를 알 수 없는 작은 한글 숫자와 금액이 둘인 글은 읽지 않는다
 assert.equal(coachAmount("삼천오백 원쯤"), 3500);
 assert.equal(coachAmount("이천만 원"), 20_000_000);
@@ -11,6 +12,27 @@ assert.equal(coachAmount("만오천"), 15_000);
 assert.equal(coachAmount("약 3,500원쯤"), 3500);
 assert.equal(coachAmount("백오십"), undefined, "'월세 백오십'은 보통 150만 원 — 150원으로 읽지 않는다");
 assert.equal(coachAmount("소짜 삼만오천 대짜 오만 정도"), undefined);
+
+// 변동비를 항목별로만 적은 메모 — 같은 단위 기준(1개당·잔당…)이 적힌 문장에서만 합계를 후보로, 인용은 그 항목들이 든 원문 문장
+{
+  const summed = summedUnitCostCandidates("케이크 1개당 재료비 4,000원, 포장비 500원 들어요.", "memo-1");
+  assert.deepEqual(summed, [{ fieldKey: "unitCost", value: "4,500원", quote: "케이크 1개당 재료비 4,000원, 포장비 500원 들어요.", noteId: "memo-1" }]);
+  assert.ok(summed[0].quote.includes("재료비 4,000원") && summed[0].quote.includes("포장비 500원"), "합계 후보는 더한 항목을 인용해야 한다");
+  assert.equal(coachAmount(summed[0].value), 4500);
+  assert.equal(summedUnitCostCandidates("한 잔에 재료비 4천원, 용기비 300원, 카드 수수료 200원", "memo-2")[0]?.value, "4,500원");
+  assert.ok(parseIntakeNote("1개당 재료비 4,000원, 포장비 500원이에요", "memo-3").candidates.some(candidate => candidate.fieldKey === "unitCost" && candidate.value === "4,500원"));
+  for (const text of [
+    "재료비 4,000원, 포장비 500원", // 단위 기준이 없다
+    "한 달 재료비 40만원, 포장비 5만원", // 월 단위
+    "1개당 재료비 4,000원~5,000원, 포장비 500원", // 범위
+    "1개당 재료비 4,000원, 재료비 5,000원", // 같은 항목이 둘
+    "1개당 재료비 4,000원, 포장비 500원, 합계 4,500원", // 합계를 이미 적음 — 그대로 옮기는 건 AI 추출 몫
+    "아마 1개당 재료비 4,000원, 포장비 500원?", // 불확실
+    "1개당 재료비 4,000원", // 항목 하나
+    "1개당 재료비 4,000원, 포장비 10%", // 원 단위가 아닌 항목
+  ]) assert.deepEqual(summedUnitCostCandidates(text, "memo-x"), [], text);
+  assert.deepEqual(parseIntakeNote("건당 변동비: 5,000원\n1개당 재료비 4,000원, 포장비 500원", "memo-4").candidates.filter(candidate => candidate.fieldKey === "unitCost").map(candidate => candidate.value), ["5,000원"], "직접 적은 변동비가 있으면 합계를 따로 내지 않는다");
+}
 
 const AT = "2026-09-16T00:00:00.000Z";
 const LATER = "2026-09-16T00:01:00.000Z";

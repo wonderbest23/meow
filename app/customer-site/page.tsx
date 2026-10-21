@@ -18,7 +18,7 @@ async function currentHostname() {
 export async function generateMetadata(): Promise<Metadata> {
   const hostname = await currentHostname();
   const published = await getPublishedLandingByCustomDomain(hostname);
-  if (!published) return { title: "연결된 홈페이지를 찾을 수 없습니다" };
+  if (!published) return { title: "이 홈페이지는 지금 볼 수 없어요", description: "주소가 바뀌었거나 잠시 닫아 둔 홈페이지예요.", robots: { index: false }, openGraph: null };
   // /launch 주소와 같은 카톡·검색 카드(대표 사진·소개 문구) — 내 도메인으로 공유해도 사진이 보이게
   return landingShareMetadata(published.config, `https://${hostname}`);
 }

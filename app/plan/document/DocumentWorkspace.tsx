@@ -215,12 +215,15 @@ export default function DocumentWorkspace(props: Props) {
       setFactMode(false); setFactPick(null);
     }}>수정 마치기</button>
     {factsUnapplied && <button className={styles.primary} onClick={() => { const target = document.querySelector<HTMLElement>("[data-fact-reflect]"); target?.scrollIntoView({ block: "center" }); target?.querySelector<HTMLButtonElement>("button")?.focus({ preventScroll: true }); }}>계획서에 반영하기</button>}
+  </> : isSample ? <>
+    {/* 예시 계획서 — 예전엔 누를 수 없는 회색 '예시 · 읽기 전용'만 있어 고장 난 것처럼 보였고 다음으로 갈 길이 없었다. 예시라는 표시는 문서 제목 위에 있다 */}
+    <Link className={styles.nextButton} href="/plan/chat?new=1">내 사업 시작하기</Link>
   </> : <>
     {/* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 · 내려받기는 문서 위 '작성 완료' 옆으로 옮겼다(대표 요청 2026-10-17) */}
-    {!summaryMode && <button className={styles.secondary} disabled={!grouped.length || isSample || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{isSample ? "예시 · 읽기 전용" : editing ? "수정 마치기" : "수정하기"}</button>}
+    {!summaryMode && <button className={styles.secondary} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{editing ? "수정 마치기" : "수정하기"}</button>}
     {showNext && planId && <NextStepButton planId={planId} homepage={homepage} />}
   </>;
-  const hasActions = factMode || !summaryMode || Boolean(showNext && planId);
+  const hasActions = factMode || isSample || !summaryMode || Boolean(showNext && planId);
   const singleAction = !factMode && !(!summaryMode && showNext && planId);
 
   return <main className={`${frame.page} ${styles.page}`}>

@@ -40,7 +40,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   async function persist(next: LaunchState) {
     setBusy(true); setMessage("");
     const ok = saveAnswers(LAUNCH_KEY, next as unknown as Record<string, unknown>, plan.id);
-    if (!ok) { setMessage("기록하지 못했어요. 사업을 다시 열어주세요."); setBusy(false); return false; }
+    if (!ok) { setMessage("기록하지 못했어요. 사업을 다시 열어 주세요."); setBusy(false); return false; }
     setState(next);
     const saved = loadState().plans.find(p => p.id === plan.id); if (saved) onSaved(saved);
     const synced = await pushToServer();
@@ -53,7 +53,8 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
     const next = { ...state, records: { ...state.records, [current.id]: { status, signature: preserveReview && record ? record.signature : current.signature, note: effectiveNote, material: effectiveMaterial, at: new Date().toISOString() } } };
     if (await persist(next)) {
       setNote(null); setMaterial(null);
-      if (advance) { setSelected(launchSteps(plan, next).find(s => ["pending", "review"].includes(launchStatus(next, s)))?.id ?? null); top(); }
+      /* 다음 단계로 넘어가면 앞 단계의 '저장했어요.'를 지운다 — 새 단계 화면에 그대로 남아 헷갈렸다 */
+      if (advance) { setSelected(launchSteps(plan, next).find(s => ["pending", "review"].includes(launchStatus(next, s)))?.id ?? null); setMessage(""); top(); }
       return true;
     }
     return false;
@@ -93,12 +94,12 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
       {current ? <>
         <span className={styles.eyebrow}>{steps.findIndex(s => s.id === current.id) + 1} / {steps.length}</span>
         <h2 ref={heading} tabIndex={-1}>{current.title}</h2><p>{current.task}</p>
-        {launchStatus(state, current) === "review" && <div className={styles.notice}>사업 정보가 바뀌었어요. 이전 기록은 유지했으니 지금 사업에 맞는지 다시 확인해주세요.</div>}
-        <details className={styles.material} key={current.id}><summary>{current.materialTitle}</summary><label className={styles.field}>직접 수정할 수 있어요<textarea aria-label="단계 자료 수정" rows={10} maxLength={20000} value={effectiveMaterial} onChange={e => setMaterial(e.target.value)} /></label><div className={styles.editActions}><button className={styles.secondary} onClick={async () => { try { await navigator.clipboard.writeText(effectiveMaterial); setMessage("내용을 복사했어요."); } catch { setMessage("복사하지 못했어요. 내용을 선택해 복사해주세요."); } }}>내용 복사</button><button className={styles.secondary} onClick={() => setMaterial(current.material)}>현재 사업 정보로 초안 다시 채우기</button></div><small>저장된 정보로 구성한 초안이며, 미정 항목과 AI 제안은 확인 후 사용하세요.</small></details>
-        <label className={styles.field}>메모 <small>선택 사항</small><textarea aria-label="실행 메모" rows={3} maxLength={10000} value={effectiveNote} onChange={e => setNote(e.target.value)} placeholder="정한 내용이나 실제로 확인한 내용을 남겨주세요." /></label>
+        {launchStatus(state, current) === "review" && <div className={styles.notice}>사업 정보가 바뀌었어요. 이전 기록은 유지했으니 지금 사업에 맞는지 다시 확인해 주세요.</div>}
+        <details className={styles.material} key={current.id}><summary>{current.materialTitle}</summary><label className={styles.field}>직접 수정할 수 있어요<textarea aria-label="단계 자료 수정" rows={10} maxLength={20000} value={effectiveMaterial} onChange={e => setMaterial(e.target.value)} /></label><div className={styles.editActions}><button className={styles.secondary} onClick={async () => { try { await navigator.clipboard.writeText(effectiveMaterial); setMessage("내용을 복사했어요."); } catch { setMessage("복사하지 못했어요. 내용을 선택해 복사해 주세요."); } }}>내용 복사</button><button className={styles.secondary} onClick={() => setMaterial(current.material)}>현재 사업 정보로 초안 다시 채우기</button></div><small>저장된 정보로 구성한 초안이며, 미정 항목과 AI 제안은 확인 후 사용하세요.</small></details>
+        <label className={styles.field}>메모 <small>선택 사항</small><textarea aria-label="실행 메모" rows={3} maxLength={10000} value={effectiveNote} onChange={e => setNote(e.target.value)} placeholder="정한 내용이나 실제로 확인한 내용을 남겨 주세요." /></label>
         {current.id === "workplace" && <details><summary>받은 견적 비교하기</summary><p>가격은 직접 받은 견적만 입력하세요. 부가세 포함 기준을 맞춰 비교하며, 적정 시세를 판정하지 않아요.</p>{(state.quotes.length ? state.quotes : [{ name: "", monthly: "", deposit: "", initial: "" }, { name: "", monthly: "", deposit: "", initial: "" }]).map((quote, index, quotes) => <div className={styles.quote} key={index}><h3>견적 {index + 1}</h3>{([['name', '업체 이름'], ['monthly', '월 비용 합계'], ['deposit', '보증금'], ['initial', '초기 비용']] as const).map(([key, label]) => <label className={styles.field} key={key}>{label}<input aria-label={`견적 ${index + 1} ${label}`} inputMode={key === "name" ? "text" : "numeric"} value={quote[key]} maxLength={key === "name" ? 100 : 20} placeholder={key === "name" ? "견적을 받은 업체" : "원 · 없으면 0"} onChange={e => { const value = key === "name" ? e.target.value : e.target.value.replace(/[^\d]/g, "").replace(/\B(?=(\d{3})+(?!\d))/g, ","); setState({ ...state, quotes: quotes.map((q, i) => i === index ? { ...q, [key]: value } : q) }); }} /></label>)}{quoteTotals(quote) ? <p>12개월 지출: {quoteTotals(quote)!.outflow.toLocaleString("ko-KR")}원<br />보증금 제외 비용: {quoteTotals(quote)!.fees.toLocaleString("ko-KR")}원</p> : <p>비용을 모두 입력하면 계산해요. 모르는 비용은 0원이 아니에요.</p>}</div>)}<small>월 비용이 12개월 동안 같다는 가정이며 보증금 회수 가능성은 별도 확인해야 해요.</small></details>}
-        {current.service === "website" && <div className={styles.services}><button className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push(homepageHref(plan.id)); }}>내 사업 홈페이지 열기</button><Link className={styles.secondary} href="/account/support?category=website" target="_blank" rel="noopener noreferrer" aria-label="디자인·개발 견적 문의 (새 탭)">디자인·개발 견적 문의</Link><small>고객센터에 필요한 내용을 남겨주세요. 문의만으로 결제되지는 않아요.</small></div>}
-        {current.links && <div className={styles.resources}>{current.links.map(link => <a href={link.url} target="_blank" rel="noopener noreferrer" key={link.url}>{link.title}</a>)}<small>공식 안내 확인: 2026. 9. 9. · 기관 화면에서 최신 내용을 확인해주세요.</small></div>}
+        {current.service === "website" && <div className={styles.services}><button className={styles.secondary} onClick={() => { setActivePlan(plan.id); router.push(homepageHref(plan.id)); }}>내 사업 홈페이지 열기</button><Link className={styles.secondary} href="/account/support?category=website" target="_blank" rel="noopener noreferrer" aria-label="디자인·개발 견적 문의 (새 탭)">디자인·개발 견적 문의</Link><small>고객센터에 필요한 내용을 남겨 주세요. 문의만으로 결제되지는 않아요.</small></div>}
+        {current.links && <div className={styles.resources}>{current.links.map(link => <a href={link.url} target="_blank" rel="noopener noreferrer" key={link.url}>{link.title}</a>)}<small>공식 안내 확인: 2026. 9. 9. · 기관 화면에서 최신 내용을 확인해 주세요.</small></div>}
         {current.id === "marketing" && <MarketingKitPanel plan={plan} onSaved={onSaved} />}
         {current.id === "tax" && <details><summary>근처 세무사 찾아보기</summary><label className={styles.field}>희망 지역<input aria-label="세무사 희망 지역" maxLength={100} value={state.region} placeholder="예: 서울 마포구" onChange={e => setState({ ...state, region: e.target.value })} /></label>{state.region.trim() && <a className={styles.textLink} target="_blank" rel="noopener noreferrer" href={`https://map.naver.com/p/search/${encodeURIComponent(`${state.region.trim()} 세무사`)}`}>지도에서 직접 찾아보기</a>}<p>외부 검색이며 제휴·추천·예약 서비스가 아니에요.</p></details>}
         {current.caution && <p className={styles.caution}>{current.caution}</p>}

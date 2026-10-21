@@ -8,7 +8,13 @@ import { existsSync } from "node:fs";
 import { homedir } from "node:os";
 
 const base = process.argv[2] ?? "http://localhost:8083";
-const IDS = ["0-290", "0-2226", "0-1102", "0-2555", "0-2385", "0-181", "0-421", "0-2", "0-1371", "0-1950", "0-3347", "0-3446", "0-3558", "0-3659", "0-3728", "0-3745", "0-3763", "0-3777", "0-3807", "0-3853", "0-3890", "0-3919", "0-4032", "0-4065", "0-4259", "0-4339"];
+/*
+ * 손님이 고르는 사업 디자인 넷(0-2226 동네 가게·0-1102 온라인 상점·0-421 갤러리형·0-2385 병원·클리닉)은 빠진다.
+ * 킷 그대로 찍으면 영어 앱 화면·사무실 사진·가구 상품이 나와(커피 스탠드 글 뒤 공유 오피스, 꽃집 글 아래 의자),
+ * 그 업종 디자인을 본뜬 그림을 Unsplash 사진(lib/landing/photo-library.ts 의 카페·꽃·인테리어·병원 한 벌)으로 따로 만들어 두었다.
+ * 다시 찍으면 그 그림이 지워진다.
+ */
+const IDS = ["0-290", "0-2555", "0-181", "0-2", "0-1371", "0-1950", "0-3347", "0-3446", "0-3558", "0-3659", "0-3728", "0-3745", "0-3763", "0-3777", "0-3807", "0-3853", "0-3890", "0-3919", "0-4032", "0-4065", "0-4259", "0-4339"];
 const chrome = [
   `${homedir()}/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`,
   "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",

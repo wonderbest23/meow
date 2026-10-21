@@ -650,11 +650,12 @@ export function BrainwaveEditor({
   /* 업종에 맞는 추천 사진(lib/landing/photo-library.ts) — 업종을 못 알아보면 비어 있다 */
   const suggestedPhotos = useMemo(() => {
     /*
-     * 홈페이지에 이미 깔린 사진의 업종 모음을 먼저 쓴다(만들 때 업종으로 고른 것).
-     * 없으면 상호·대표 상품으로 찾는다 — 설명·손님 글까지 섞으면 꽃집의 '카페·공방 손님'이 카페 사진을 불렀다.
+     * 상호·대표 상품으로 업종 모음을 먼저 찾는다 — 설명·손님 글까지 섞으면 꽃집의 '카페·공방 손님'이 카페 사진을 불렀다.
+     * 못 알아보면 홈페이지에 이미 깔린 사진의 업종 모음(만들 때 업종으로 고른 것)을 쓴다.
+     * 깔린 사진을 먼저 보면, 업종 모음이 나뉘기 전에 만든 홈페이지(빵집에 깔린 카페 사진)가 계속 커피 사진을 추천했다.
      */
-    const set = photoSetContaining(Object.values(init.images ?? {}))
-      ?? photoSetFor([businessContent?.businessName ?? business.name, businessContent?.offer].filter(Boolean).join(" "));
+    const set = photoSetFor([businessContent?.businessName ?? business.name, businessContent?.offer].filter(Boolean).join(" "))
+      ?? photoSetContaining(Object.values(init.images ?? {}));
     return set ? [...new Set([set.hero, ...set.cards, set.band, set.closing])] : [];
   }, [init.images, business.name, businessContent?.businessName, businessContent?.offer]);
   const usePhoto = (id: string, url: string) => {

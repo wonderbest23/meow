@@ -3,7 +3,10 @@ import { applyPhotoSet, PHOTO_SET_KEYS, photoSetFor } from "../lib/landing/photo
 
 // 업종 글 → 사진 한 벌. 겹치는 말은 더 구체적인 업종이 먼저(애견 미용 → 반려동물, 필라테스 스튜디오 → 운동)
 const cases: Array<[string, string | null]> = [
-  ["브런치 카페", "cafe"], ["동네 반찬가게", "food"], ["꽃집", "flower"],
+  ["브런치 카페", "cafe"], ["커피 로스터리", "cafe"], ["동네 반찬가게", "food"], ["꽃집", "flower"],
+  // 빵집·디저트 가게는 커피 사진이 아니라 빵·케이크 사진(예전엔 카페 한 벌이라 커피 사진이 나왔다)
+  ["동네 빵집", "bakery"], ["베이커리 카페", "bakery"], ["수제 케이크 주문 제작", "bakery"], ["디저트 카페", "bakery"],
+  ["제과점", "bakery"], ["마카롱 가게", "bakery"], ["소금빵 전문점", "bakery"],
   ["애견 미용", "pet"], ["동물병원", "pet"], ["고양이 호텔", "pet"],
   ["치과", "medical"], ["한의원", "medical"], ["피부과 의원", "medical"],
   ["헤어 살롱", "beauty"], ["피부관리실", "beauty"], ["네일", "beauty"],
@@ -29,6 +32,8 @@ const mixed: Array<[string, string]> = [
   [" 수학공방 학원 중학생 수학 과외와 스터디카페", "education"],
   [" 냥이호텔 고양이 호텔", "pet"],
   ["모던스타일 헤어", "beauty"],
+  [" 새벽빵집 바게트와 아메리카노", "bakery"],
+  [" 새벽커피 아메리카노와 크루아상", "cafe"],
 ];
 for (const [text, key] of mixed) assert.equal(photoSetFor(text)?.key, key, text);
 
