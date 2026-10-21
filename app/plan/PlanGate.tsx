@@ -38,13 +38,13 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
         <div className={styles.icon} aria-hidden="true"><KeyRound size={26} strokeWidth={1.8} /></div>
         <h2 className={styles.title}>로그인이 필요해요</h2>
         <p className={styles.desc}>
-          작성한 내용을 계정에 저장해 어느 기기에서든 이어서 쓸 수 있습니다.
+          작성한 내용을 계정에 저장해 어느 기기에서든 이어서 쓸 수 있어요.
         </p>
         <Link href={backTo} className={styles.primary}>
           로그인 · 회원가입
         </Link>
         <Link href="/plan" className={styles.secondary}>
-          완성 샘플 먼저 보기
+          완성 예시 보기
         </Link>
       </section>
     );
@@ -54,17 +54,17 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
     <section className={styles.wrap} aria-label="결제 필요">
       <div className={styles.icon} aria-hidden="true"><Lock size={26} strokeWidth={1.8} /></div>
       <h2 className={styles.title}>
-        {sectionTitle ? `'${sectionTitle}'부터는 유료입니다` : "여기부터는 유료입니다"}
+        {sectionTitle ? `'${sectionTitle}'부터는 유료예요` : "여기부터는 유료예요"}
       </h2>
       <p className={styles.desc}>
         {freeLabels.length > 0 ? (
           <>
-            <b>{freeLabels.join(", ")}</b>까지는 무료로 써보실 수 있습니다.
+            <b>{freeLabels.join(", ")}</b>까지는 무료로 써 보실 수 있어요.
             <br />
-            이어서 나머지 섹션을 작성하려면 결제가 필요합니다.
+            이어서 나머지 섹션을 작성하려면 결제가 필요해요.
           </>
         ) : (
-          <>사업계획서 문서는 결제한 뒤에 작성합니다.</>
+          <>사업계획서 문서는 결제한 뒤에 작성해요.</>
         )}
       </p>
       {price ? (
@@ -83,7 +83,7 @@ export default function PlanGate({ reason, freeLabels = [], price, sectionTitle 
         이 문서 결제하고 계속하기
       </Link>
       <p className={styles.note}>
-        지금까지 답한 내용은 그대로 남아 있습니다. 결제 후 이 화면으로 돌아오면 이어서 작성됩니다.
+        지금까지 답한 내용은 그대로 남아 있어요. 결제 후 이 화면으로 돌아오면 이어서 작성돼요.
       </p>
     </section>
   );

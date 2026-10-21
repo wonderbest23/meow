@@ -19,6 +19,7 @@ import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummar
 import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { businessHubState } from "../../../lib/plan-builder/business-hub";
 import { showNotice } from "../../../components/confirm-dialog";
+import { saveFile, saveUrl, SAVE_UNSUPPORTED_MESSAGE } from "../../../lib/save-file";
 
 /** 화면의 장별 읽기와 관계없이 전체 문서를 같은 배치로 내보낸다. */
 /** 이 장이 이번 제작(__coach_generation.revision) 기준으로 써졌는지 — 직접 고치거나 잠근 장은 다시 쓰지 않으니 써진 것으로 본다 */
@@ -99,7 +100,7 @@ export default function PlanDocumentPage() {
       setSummary(isSamplePlan(plan.id) || !hasExecutiveSummaryContent(nextSummary) ? null : nextSummary);
       setSummaryError("");
     } catch {
-      setSummary(null); setSummaryError("저장된 실적 기록을 읽지 못해 한 장 요약을 표시하지 않았습니다. 기존 문서는 유지되어 있습니다.");
+      setSummary(null); setSummaryError("저장된 실적 기록을 읽지 못해 한 장 요약은 보여 드리지 않았어요. 기존 문서는 그대로 있어요.");
     }
     const coach = readCoach(plan.answers), snapshot = coachDocumentSnapshot(plan);
     setCompletionKey(isSamplePlan(plan.id) ? null : completedDocumentKey(plan));
@@ -247,15 +248,10 @@ export default function PlanDocumentPage() {
         throw new Error(failure.message || "파일을 만들지 못했어요. 저장된 문서는 그대로 있어요.");
       }
       const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${title}${view === "summary" ? " 한 장 요약" : ""}.${format}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-      return true;
+      // 앱 안에서는 <a download> 가 아무 일도 하지 않는다 — 휴대폰 공유 창으로 건넨다(lib/save-file.ts)
+      const saved = await saveFile(blob, `${title}${view === "summary" ? " 한 장 요약" : ""}.${format}`);
+      if (saved === "unsupported") { setDeckError(SAVE_UNSUPPORTED_MESSAGE); return false; }
+      return saved !== "cancelled";
     } catch (error) {
       setDeckError(userErrorMessage(error, "파일을 만들지 못했어요. 저장된 문서는 그대로 있어요."));
       return false;
@@ -333,7 +329,14 @@ export default function PlanDocumentPage() {
     deckStatus={isSample ? "" : deck.message} deckLabel={isSample ? "PPT 샘플 내려받기" : deck.label}
     error={deckError || deck.error} onDownload={async (format, view) => {
       const file = sampleFile(format);
-      if (file) { window.open(file, "_blank", "noopener"); return true; }
+      if (file) {
+        // 예시 파일도 앱 안에서는 새 창 대신 공유 창으로 — 새 창으로 열면 앱 안에 PDF만 뜨고 돌아갈 길이 없다
+        try {
+          const saved = await saveUrl(file, `${title}.${format}`);
+          if (saved === "unsupported") { setDeckError(SAVE_UNSUPPORTED_MESSAGE); return false; }
+          return saved !== "cancelled";
+        } catch (error) { setDeckError(userErrorMessage(error, "파일을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.")); return false; }
+      }
       if (edits.hasPending()) { setDeckError("고친 내용을 먼저 저장한 뒤 파일을 받아 주세요."); return false; }
       setDeckError(null);
       if (locked) { goPay(); return false; }

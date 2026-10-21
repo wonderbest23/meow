@@ -58,7 +58,11 @@ export function HomeConversationEntry({ onStart }: { onStart: () => void }) {
     if (entering) return;
     startTransition(onStart);
   };
+  /*
+   * 입력칸처럼 보이지만 단추다 — 누르면 새 대화가 열린다. 지금 대화 화면(BusinessIntake)은 첫 메시지를
+   * 미리 채우는 주소 값을 받지 않으므로, 글자가 '예시'이고 단추가 '대화 시작하기'임을 분명히 적는다(2026-10-21 점검).
+   */
   return <div className={styles.entry}><button className={styles.ring} type="button" onClick={enter} disabled={entering} aria-busy={entering} aria-label="대화로 사업 기획 시작하기">
-    <span className={styles.inner}><span className={styles.prompt} data-entry-prompt aria-hidden="true"><span className={styles.typed}>{typed}<i/></span></span><span className={styles.send} data-entry-send>{entering ? <LoaderCircle className={styles.spinner} aria-hidden="true" /> : "보내기"}</span></span>
+    <span className={styles.inner}><span className={styles.prompt} data-entry-prompt aria-hidden="true"><span className={styles.example}>예</span><span className={styles.typed}>{typed}<i/></span></span><span className={styles.send} data-entry-send>{entering ? <LoaderCircle className={styles.spinner} aria-hidden="true" /> : "대화 시작하기"}</span></span>
   </button></div>;
 }

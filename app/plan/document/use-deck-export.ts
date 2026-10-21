@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DECK_PHASE_LABELS, type PublicDeckJob } from "../../../lib/plan-builder/deck-job-types";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import { deckExportState } from "../../../lib/plan-builder/deck-export-state";
+import { saveFile, SAVE_UNSUPPORTED_MESSAGE } from "../../../lib/save-file";
 
 export function useDeckExport(planId: string | null, enabled: boolean, title: string) {
   const [job, setJob] = useState<PublicDeckJob | null>(null);
@@ -106,9 +107,9 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
       if (ready) {
         const blob = await response.blob();
         if (!current() || controller.signal.aborted) return;
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a"); link.href = url; link.download = `${title} 사업 제안서.pptx`; link.click();
-        window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        // 앱 안에서는 <a download> 가 아무 일도 하지 않는다 — 휴대폰 공유 창으로 건넨다
+        const saved = await saveFile(blob, `${title} 사업 제안서.pptx`);
+        if (saved === "unsupported") throw new Error(SAVE_UNSUPPORTED_MESSAGE);
       } else {
         const data = await response.json();
         if (!current() || controller.signal.aborted) return;

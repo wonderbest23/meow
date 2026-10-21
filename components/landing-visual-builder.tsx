@@ -205,7 +205,7 @@ export function LandingVisualBuilder({
   kit,
 }: {
   /** 킷 편집기(BrainwaveEditor)에만 넘기는 것 — 손님 화면이 최신인지·홈페이지 화면의 저장 전 수정·공개 뒤 '주소 바꾸기' */
-  kit?: { liveUpToDate?: boolean; pendingOutside?: boolean; onEditAddress?: () => void };
+  kit?: { liveUpToDate?: boolean; pendingOutside?: boolean; onEditAddress?: () => void; onReloadLatest?: () => void };
   /** 공개 페이지에 자동으로 붙는 문의 양식 모양(에디터 맨 아래에 보여 준다) */
   appendix?: PublicAppendix;
   /** 공개 중이면 킷 에디터의 '저장 완료'에 '새 버전 공개 후 반영'을 붙인다 */

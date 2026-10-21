@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { headers } from "next/headers";
 import { createLegalDocument, evaluatePlatformLaunchReadiness, type LegalDocumentType } from "../../../lib/platform-legal/domain";
@@ -5,6 +6,8 @@ import { paymentsEnabled } from "../../../lib/payments/config";
 import { manualTransferPaymentConfigured } from "../../../lib/payments/manual-transfer";
 import { getPlatformLegalSettings } from "../../../lib/platform-legal/repository";
 import styles from "./PlanInfo.module.css";
+
+export const metadata: Metadata = { title: "이용 안내 | 오늘창업" };
 
 export const dynamic = "force-dynamic";
 

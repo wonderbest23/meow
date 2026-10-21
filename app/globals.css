@@ -7159,7 +7159,8 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 
 .landing-block-page { width: 100%; overflow: clip; background: #fff; color: #191f28; }
 .landing-block-page :where(h1, h2, h3, p, figure) { margin-top: 0; letter-spacing: 0; }
-.landing-block-page :where(h1, h2, h3, p) { word-break: keep-all; overflow-wrap: break-word; }
+/* anywhere — 띄어쓰기 없는 긴 이름(예: 가게 이름)도 화면 폭 안에서 줄을 바꾼다. break-word 는 최소 폭 계산에 안 들어가 칸을 밀어낸다. */
+.landing-block-page :where(h1, h2, h3, p) { word-break: keep-all; overflow-wrap: anywhere; }
 .landing-block { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 112px 0; }
 .landing-block > header > span, .landing-block > div > span, .landing-block-hero-copy > span, .landing-block-cta > span { color: var(--landing-accent, #1b64da); font-size: 12px; font-weight: 900; }
 /*
@@ -14603,6 +14604,10 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-editor-right button svg { width: 16px; height: 16px; }
 .bw-editor-right .bw-editor-save { background: #3182f6; border-color: #3182f6; color: #fff; font-weight: 700; }
 .bw-editor-error { margin: 0; padding: 8px 16px; background: #fff1f1; color: #b91c1c; font-size: 13px; }
+.bw-editor-error p { margin: 0; }
+.bw-editor-error-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.bw-editor-error-actions a, .bw-editor-error-actions button { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid #f0b4b4; border-radius: 8px; background: #fff; color: #b91c1c; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.bw-editor-error-actions a:first-child, .bw-editor-error-actions button:first-child { border-color: #b91c1c; background: #b91c1c; color: #fff; }
 .bw-editor-conflicts, .bw-editor-recovery { z-index: 94; position: fixed; inset: 80px 16px auto auto; width: min(420px, calc(100vw - 32px)); max-height: 60dvh; overflow: auto; padding: 18px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 32px #17223224; color: #172232; font-size: 14px; }
 .bw-editor-conflicts > div { padding-block: 14px; border-bottom: 1px solid #e5e7eb; }
 .bw-editor-conflicts p, .bw-editor-recovery p { margin: 0 0 12px; overflow-wrap: anywhere; }
@@ -14686,7 +14691,8 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 /* 홈 예시 띠 — 킷 페이지 첫 화면 스크린샷 */
 .home-peek-track li .peek-shot { display: block; width: 100%; aspect-ratio: 640 / 559; object-fit: cover; object-position: top; background: #f4f7fa; }
 /* 한글은 띄어쓰기 단위로 줄을 바꾼다 — 킷의 break-word 는 글자 중간을 자른다("같|이") */
-.bw-canvas [style], .bw-mobile [style] { word-break: keep-all !important; overflow-wrap: break-word; }
+/* 띄어쓰기 없는 긴 상호(행복한소금빵베이커리…)는 화면을 넘겼다 — 넘칠 때만 글자 사이에서 바꾼다(anywhere, 점검 2026-10-21) */
+.bw-canvas [style], .bw-mobile [style] { word-break: keep-all !important; overflow-wrap: anywhere; }
 
 /* 도메인 상품 결제 유도 */
 .landing-domain-connector .domain-buy-cta { display: flex; justify-content: center; align-items: center; min-height: 48px; margin: 12px 0; border-radius: 8px; background: #3272db; color: #fff; font-weight: 700; font-size: 14px; text-decoration: none; }
@@ -17290,3 +17296,8 @@ html:has([data-app-surface]) { background: #fff; }
 .public-landing .public-landing-footer p { font-size: 13px; }
 .public-landing .public-landing-footer small { font-size: 12px; }
 .public-landing .public-landing-footer .public-kit-credit a { display: inline-block; padding: 10px 0; }
+
+/* 본문 바로가기 — 평소엔 화면 밖, Tab 으로 닿으면 왼쪽 위에 보인다(app/plan/SkipLink.tsx) */
+.plan-skip-link { position: fixed; top: 8px; left: 8px; z-index: 1000; padding: 10px 16px; border-radius: 8px; background: #191f28; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; transform: translateY(-150%); transition: transform .15s; }
+.plan-skip-link:focus, .plan-skip-link:focus-visible { transform: none; outline: 3px solid #9ec5ff; outline-offset: 2px; }
+.plan-content-anchor { display: block; width: 0; height: 0; overflow: hidden; outline: none; }

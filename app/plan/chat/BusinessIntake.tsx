@@ -9,6 +9,7 @@ import BusinessAppChrome from "../BusinessAppChrome";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
+import { loadAuthSession } from "../../../lib/client/auth-session";
 import { AnswerHistory, BusinessIdentityHero, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
@@ -124,6 +125,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const [login, setLogin] = useState(false);
   // 서버가 알려 준 로그인 여부. 모르는 동안은 로그인한 것으로 두어 경고를 미리 띄우지 않는다.
   const [signedIn, setSignedIn] = useState(true);
+  const signedInRef = useRef(signedIn);
+  signedInRef.current = signedIn;
+  /* 로그인이 풀려 저장을 멈췄는지 — '최신 내용 불러오기'(손님 계정으로 바뀌어 입력이 안 보인다) 대신 다시 로그인하는 길만 둔다 */
+  const [sessionLost, setSessionLost] = useState(false);
   // 사업 기획은 로그인 후에만 시작한다. 서버가 loginRequired 로 알려 주면 질문 대신 로그인 안내를 보여 준다.
   const [loginGate, setLoginGate] = useState(false);
   const [preparedRevision, setPreparedRevision] = useState<number | null>(null);
@@ -176,7 +181,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     draftRef.current = next; setDraft(next);
     conflictRef.current = !!next.pending?.conflict;
     setStatus(next.pending?.conflict ? "conflict" : next.pending ? "failed" : hasLocalInput(next) ? "draft" : "saved");
-    if (next.pending) setError(next.pending.conflict ? "저장된 내용과 충돌했습니다. 입력은 이 기기에 남아 있어요." : "방금 보낸 내용이 저장됐는지 확인하지 못했어요. '다시 시도'를 눌러 주세요.");
+    if (next.pending) setError(next.pending.conflict ? "저장된 내용과 겹쳐 저장하지 못했어요. 입력은 이 기기에 남아 있어요." : "방금 보낸 내용이 저장됐는지 확인하지 못했어요. '다시 시도'를 눌러 주세요.");
   }, []);
 
   const freezeForOwnerChange = useCallback(() => {
@@ -185,7 +190,17 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     for (const controller of controllers.current) controller.abort();
     busyRef.current = false; setBusy(false); setLoaded(true);
     conflictRef.current = true; setOwnerChanged(true); setPreview(null); setStatus("conflict");
-    setError("계정이 변경되어 저장을 멈췄어요. 이전 계정의 입력은 따로 보관했습니다. 현재 계정으로 다시 불러와 주세요.");
+    setError("계정이 바뀌어 저장을 멈췄어요. 입력한 내용은 이 기기에 따로 보관해 뒀어요. 지금 계정으로 다시 불러와 주세요.");
+    /*
+     * 로그인해 쓰던 중 로그인이 풀렸으면(세션 만료·다른 탭에서 로그아웃) 다시 로그인하는 길을 연다.
+     * 같은 계정으로 돌아오면 보관한 입력(계정별로 따로 보관)이 그대로 이어진다. 확인하지 못하면 위 안내를 그대로 둔다.
+     */
+    const epoch = routeEpoch.current;
+    if (signedInRef.current) void loadAuthSession().then(session => {
+      if (epoch !== routeEpoch.current || session.authenticated) return;
+      setSessionLost(true); setLogin(true);
+      setError("로그인이 풀렸어요. 다시 로그인하면 이어서 할 수 있어요. 입력한 내용은 이 기기에 보관해 뒀어요.");
+    }).catch(() => {});
   }, [resetReply]);
 
   const updateUrl = useCallback((id: string) => {
@@ -210,9 +225,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     const response = await fetch(`/api/plan/chat${id ? `?planId=${encodeURIComponent(id)}` : ""}`, { headers: HEADERS, cache: "no-store", signal });
     const value = readIntakePayload(await readChatResponse(response));
     if (!response.ok) throw new Error(value?.message || "사업 정보를 불러오지 못했어요. 다시 시도해 주세요.");
-    if (!value || !value.enabled) throw new Error("새 입력 화면을 사용할 수 없습니다. 잠시 후 다시 불러와 주세요.");
-    if (!value.ownerScope) throw new Error("계정별 저장 정보를 확인하지 못했어요. 입력을 전송하지 않고 보관합니다.");
-    if (id && value.plan && value.plan.planId !== id) throw new Error("요청한 사업과 다른 응답을 받았습니다. 다시 불러와 주세요.");
+    if (!value || !value.enabled) throw new Error("지금은 입력 화면을 쓸 수 없어요. 잠시 후 다시 불러와 주세요.");
+    if (!value.ownerScope) throw new Error("계정별 저장 정보를 확인하지 못했어요. 입력은 보내지 않고 보관해 둘게요.");
+    if (id && value.plan && value.plan.planId !== id) throw new Error("요청한 사업과 다른 응답을 받았어요. 다시 불러와 주세요.");
     return value;
   }, []);
 
@@ -228,7 +243,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     const controller = new AbortController();
     controllers.current.add(controller);
     const timeout = window.setTimeout(() => controller.abort(), 20000);
-    setLoaded(false); setLoadFailed(false); setNewEntry(startNew); setError(""); setLogin(false); setPreparedRevision(null); setResume(""); setConnectionError(false); setView("input"); setOwnerChanged(false);
+    setLoaded(false); setLoadFailed(false); setNewEntry(startNew); setError(""); setLogin(false); setPreparedRevision(null); setResume(""); setConnectionError(false); setView("input"); setOwnerChanged(false); setSessionLost(false);
     busyRef.current = false; setBusy(false); planRef.current = null; setPlan(null); setPreview(null); ownerScope.current = null; lastDesign.current = ""; setIntentPrompt(null);
     draftRef.current = emptyDraft(); setDraft(draftRef.current); conflictRef.current = false;
     void getSnapshot(startNew ? null : id, controller.signal).then(data => {
@@ -298,7 +313,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
         setOwnerChanged(false); setPreview(null); planRef.current = null; setPlan(null);
       } else if (!id && !newEntry && data.plan) restoreDraft(data.plan.planId, data.ownerScope!);
       if (!data.plan && !newEntry && id) {
-        setLoaded(true); setLoadFailed(false); setError("현재 계정에서 이 사업을 찾을 수 없습니다. 이전 계정의 입력은 별도로 보관되어 있어요."); return;
+        setLoaded(true); setLoadFailed(false); setError("지금 계정에서는 이 사업을 찾지 못했어요. 이전 계정에서 입력한 내용은 따로 보관돼 있어요."); return;
       }
       if (conflictRef.current) { writeDraft({ ...draftRef.current, pending: null }); conflictRef.current = false; }
       if (!newEntry && data.plan) { installPlan(data.plan, true); updateUrl(data.plan.planId); }
@@ -486,7 +501,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const job = plan?.intake.job;
   const lastIntake = !plan && loaded && !newEntry ? readLastIntake() : null;
   const loginHref = `/account?next=${encodeURIComponent(`/plan/chat${plan ? `?planId=${encodeURIComponent(plan.planId)}` : "?new=1"}`)}`;
-  const saveLabel = !plan && newEntry && status === "saved" ? "시작 전" : { saved: "저장됨", draft: "입력 중 · 이 기기에 보관", saving: "저장 중", failed: "저장하지 못했어요", conflict: "다른 곳에서 바뀌었어요" }[status];
+  const saveLabel = !plan && newEntry && status === "saved" ? "시작 전" : { saved: "저장됨", draft: "입력 중 · 이 기기에 보관", saving: "저장 중", failed: "저장하지 못했어요", conflict: sessionLost ? "로그인이 풀렸어요" : "다른 곳에서 바뀌었어요" }[status];
   const choiceQuestion = !!question && !questionDraft.custom && ["single", "multi"].includes(question.kind);
   const directAnswer = !!plan && draft.mode === "answer" && !!question && !choiceQuestion && !questionDraft.unknown;
   const choiceSubmission = draft.mode === "answer" ? choiceDraftSubmission(question ?? null, questionDraft) : null;
@@ -713,11 +728,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const showComposer = !loginGate && !showReview && !locked && (editTurn || !showCompletion || !nextStep || !!draft.pending || nextStep === "design" && (!!composerText.trim() || !!draft.memo.trim() || !!draft.help.trim()));
   // Problems read as a coach message at the end of the thread in coach chat, as a banner otherwise.
   const notices = (error && !ideaError || connectionError || storageError) && <div className={styles.notices} data-coach-notices={coach || undefined}>
-      {error && !ideaError && <div className={styles.notice} role="alert"><p>{error}</p><div className={styles.noticeActions}>{status === "conflict" || loadFailed ? <button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />최신 내용 불러오기</button> : draft.pending && <button type="button" disabled={busy} onClick={() => void send()}><RefreshCw size={16} aria-hidden="true" />다시 시도</button>}{login && <Link href={loginHref}>로그인하고 이어가기<ArrowRight size={16} aria-hidden="true" /></Link>}</div></div>}
+      {error && !ideaError && <div className={styles.notice} role="alert"><p>{error}</p><div className={styles.noticeActions}>{sessionLost ? null : status === "conflict" || loadFailed ? <button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />최신 내용 불러오기</button> : draft.pending && <button type="button" disabled={busy} onClick={() => void send()}><RefreshCw size={16} aria-hidden="true" />다시 시도</button>}{login && <Link href={loginHref}>{sessionLost ? "다시 로그인하기" : "로그인하고 이어가기"}<ArrowRight size={16} aria-hidden="true" /></Link>}</div></div>}
       {connectionError && <div className={styles.notice} role="status"><p>정리 상태를 갱신하지 못했어요. 입력은 계속할 수 있습니다.</p><button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />상태 새로고침</button></div>}
       {storageError && <p className={styles.notice} role="status">이 기기에 임시 저장하지 못했어요. 서버에 저장하기 전에는 이 화면을 닫지 말아 주세요.</p>}
     </div>;
-  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={coach && !plan ? busy || replyTurn ? "생각 중…" : "답을 기다리는 중" : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={plan && (plan.coreAnswered > 0 || plan.coach.fields.length > 0) ? <button type="button" className={styles.summaryToggle} aria-label={`사업 요약${plan.coreAnswered > 0 ? ` (답변 ${plan.coreAnswered}개)` : ""}`} aria-controls="intake-summary-panel" aria-expanded={coachLayout ? coachLayout === "split" : view === "summary"} onClick={() => { setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }}><FileText size={17} aria-hidden="true" /><span aria-hidden="true">요약</span>{plan.coreAnswered > 0 && <b aria-hidden="true">{plan.coreAnswered}</b>}</button> : undefined}>
+  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : "답을 기다리는 중" : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={plan && (plan.coreAnswered > 0 || plan.coach.fields.length > 0) ? <button type="button" className={styles.summaryToggle} aria-label={`사업 요약${plan.coreAnswered > 0 ? ` (답변 ${plan.coreAnswered}개)` : ""}`} aria-controls="intake-summary-panel" aria-expanded={coachLayout ? coachLayout === "split" : view === "summary"} onClick={() => { setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }}><FileText size={17} aria-hidden="true" /><span aria-hidden="true">요약</span>{plan.coreAnswered > 0 && <b aria-hidden="true">{plan.coreAnswered}</b>}</button> : undefined}>
     {plan && <>
       <div className={styles.progressLine} aria-hidden="true"><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div>
       {/* 코치 채팅에서 답 저장은 뒤에서 조용히 한다 — 매 답마다 '저장 중'을 띄우지 않고, 실패·충돌만 보인다(소유자 피드백 2026-10-09) */}

@@ -61,6 +61,8 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
         </div>
       </header>
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}
+      {/* 본문 바로가기(SkipLink)가 데려오는 자리 — 머리줄 바로 아래 */}
+      <span id="plan-content" tabIndex={-1} className="plan-content-anchor" />
       {children}
     </div>
   </>;

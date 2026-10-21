@@ -20,6 +20,15 @@ export const JOURNEY_LABELS: Record<JourneyStepId, string> = {
 
 export function homepageHref(id: string) { return `/plan/homepage?planId=${encodeURIComponent(id)}`; }
 export function careHref(id: string) { return `${workspaceHref(id)}&tab=operations`; }
+/** 사업 시작하기(운영 중이면 운영 개선하기) — 사업 관리의 준비 과정·홍보 키트 */
+export function launchHref(id: string) { return `${workspaceHref(id)}&tab=launch`; }
+/** 사업 관리 화면이 탭을 바꿀 때 보내는 신호 — 왼쪽 목록이 지금 탭을 다시 표시한다 */
+export const WORKSPACE_TAB_EVENT = "oneulstart:workspace-tab";
+/**
+ * 왼쪽 목록이 사업 관리 화면에게 탭을 바꿔 달라고 보내는 신호 — 이미 사업 관리 화면에 있으면 링크로 주소만 바뀌고
+ * 화면은 처음 연 탭 그대로였다(점검 2026-10-21). 화면이 받아서 자기 탭 바꾸기(저장 안 한 수정 확인 포함)로 처리한다.
+ */
+export const WORKSPACE_TAB_REQUEST = "oneulstart:workspace-tab-request";
 
 /* 결제 화면에서 '나중에 하기'·← 가 돌아갈 곳 — 홈페이지 쪽 상품은 그 사업의 홈페이지, 나머지는 그 사업의 계획서 */
 const PAY_HOMEPAGE_PRODUCTS = ["homepage", "domain", "domain-purchase", "tokens", "bundle"];

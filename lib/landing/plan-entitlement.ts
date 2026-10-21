@@ -38,17 +38,17 @@ export async function checkLandingEditAccess(
 
 export function landingEditErrorResponse(reason: Exclude<LandingEditReason, "ok">) {
   if (reason === "not_found") {
-    return { status: 404, body: { error: { code: "PROJECT_NOT_FOUND", message: "홈페이지를 찾을 수 없습니다." } } };
+    return { status: 404, body: { error: { code: "PROJECT_NOT_FOUND", message: "홈페이지를 찾지 못했어요." } } };
   }
   if (reason === "login_required") {
-    return { status: 401, body: { error: { code: "LOGIN_REQUIRED", message: "로그인 후 이용할 수 있습니다." } } };
+    return { status: 401, body: { error: { code: "LOGIN_REQUIRED", message: "로그인한 뒤 이용할 수 있어요." } } };
   }
   return {
     status: 402,
     body: {
       error: {
         code: "HOMEPAGE_PAYMENT_REQUIRED",
-        message: "홈페이지 수정과 공개는 결제 후 이용할 수 있습니다.",
+        message: "홈페이지 수정과 공개는 결제한 뒤 이용할 수 있어요.",
       },
     },
   };

@@ -13,6 +13,7 @@ import { BrainwavePage, loadBrainwavePage, menuItemsOf, orderedSections, section
 import { brainwaveSections } from "../lib/landing/brainwave/button-action";
 import { resizeImage, uploadEditorImage, discardEditorImage, type EditorImageUpload } from "./landing-media-field";
 import { useLandingEditorSave } from "./use-landing-editor-save";
+import { useDialogFocus } from "./use-dialog-focus";
 import { landingDraftFingerprint } from "../lib/landing/save-contract";
 import { mergeEditorAsyncPatch, type EditorAsyncPatch, type EditorOverrides } from "../lib/landing/editor-async";
 import { readEditorRecovery, type EditorRecovery } from "../lib/landing/editor-recovery";
@@ -86,7 +87,10 @@ export function BrainwaveEditor({
   liveUpToDate = false,
   pendingOutside = false,
   onEditAddress,
+  onReloadLatest,
 }: {
+  /** 다른 화면에서 먼저 저장돼 저장이 막혔을 때 — 이 편집기의 수정을 버리고 서버의 최신 내용으로 다시 연다 */
+  onReloadLatest?: () => void;
   /** 공개 페이지 맨 아래에 자동으로 붙는 문의 양식 — 에디터에도 같은 자리에 보여 준다 */
   appendix?: PublicAppendix;
   /** 손님 화면이 지금 저장본과 같은지(방금 공개했으면 true) — 저장 안내 문구를 고른다 */
@@ -818,7 +822,14 @@ export function BrainwaveEditor({
   /* 저장본과 같은지 — 글을 누르기만 한 것(내용 그대로)은 고친 게 아니다. 홈페이지 화면에서 고친 것(분위기 색 등)이 남았으면 아직 저장 전 */
   const typedNow = !!editing && draftText !== editStartText.current;
   const isSaved = currentFingerprint === savedFingerprint && !typedNow && !pendingOutside;
-  const autoSaveBlocked = !recoveryReady || !!recovery || !!editing || !!btn || !!menu || uploading || ai.busy || persistence.saving || !!persistence.error;
+  /*
+   * 다른 화면에서 먼저 저장된 뒤에는 저절로 저장하지 않는다 — '계속 고치기'를 골라도 남의 저장을 몰래 덮지 않게.
+   * (저장 단추를 누르면 서버가 다시 충돌을 알려 준다. 최신 내용을 불러오면 편집기가 새로 열려 풀린다)
+   */
+  const [conflictHeld, setConflictHeld] = useState(false);
+  useEffect(() => { if (persistence.errorCode === "LANDING_DRAFT_CONFLICT") setConflictHeld(true); }, [persistence.errorCode]);
+  useEffect(() => { if (persistence.savedAt) setConflictHeld(false); }, [persistence.savedAt]);
+  const autoSaveBlocked = !recoveryReady || !!recovery || !!editing || !!btn || !!menu || uploading || ai.busy || persistence.saving || !!persistence.error || conflictHeld;
   useEffect(() => {
     if (autoSaveBlocked || (currentFingerprint === savedFingerprint && !pendingOutside)) return;
     const timer = window.setTimeout(() => saveRef.current(), 2500);
@@ -867,8 +878,27 @@ export function BrainwaveEditor({
   const changed = page !== init.page ? 1 : edits(over.texts, opened.texts) + edits(over.images, opened.images) + edits(over.links, opened.links) + edits(over.sizes, opened.sizes)
     + over.hidden.filter((id) => !opened.hidden.includes(id)).length + opened.hidden.filter((id) => !over.hidden.includes(id)).length + (over.order.join() !== opened.order.join() ? 1 : 0);
 
+  /*
+   * 키보드 — 열면 편집기 안으로 초점을 옮기고 Tab 이 뒤 화면으로 빠지지 않게 한다. Esc 는 떠 있는 판부터 하나씩 닫고,
+   * 아무것도 없으면 닫기 단추와 같은 길(close)로 닫는다 — 고친 것이 있으면 저장하고 닫거나 확인을 묻는다.
+   */
+  const dialogRef = useDialogFocus<HTMLDivElement>(true, {
+    onEscape: () => {
+      // 글·단추 판·선택 줄은 위쪽 Esc 처리(window)가 닫는다
+      if (persistence.saving || sel || editing || btn || menu || ctx || imageCrop || pendingPatch) return;
+      if (savePopup) { if (savePopup.phase !== "publishing") setSavePopup(null); return; }
+      if (picking) { setPicking(false); return; }
+      if (photoFor) { setPhotoFor(null); return; }
+      if (photoList) { setPhotoList(null); return; }
+      if (secPanel) { setSecPanel(false); return; }
+      if (hiddenOpen) { setHiddenOpen(false); return; }
+      if (previewMode) { setPreviewMode(false); return; }
+      void close();
+    },
+  });
+
   return (
-    <div className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 고치기" aria-busy={persistence.saving}
+    <div ref={dialogRef} className={`landing-visual-builder bw-editor ${projectId && ai.open ? "with-ai" : ""}`} role="dialog" aria-modal="true" aria-label="홈페이지 고치기" aria-busy={persistence.saving}
       onClickCapture={(event) => { if (persistence.saving) { event.preventDefault(); event.stopPropagation(); } }}
       onKeyDownCapture={(event) => { if (persistence.saving && event.key !== "Tab") { event.preventDefault(); event.stopPropagation(); } }}>
       <header className="bw-editor-bar">
@@ -905,7 +935,17 @@ export function BrainwaveEditor({
           <button type="button" onClick={close} disabled={persistence.saving} title="닫기"><X /><span className="bw-bar-label bw-bar-mobile">닫기</span></button>
         </div>
       </header>
-      {error || persistence.error ? <p className="bw-editor-error" role="alert">{error || persistence.error}</p> : null}
+      {error || persistence.error ? <div className="bw-editor-error" role="alert">
+        <p>{error || persistence.error}</p>
+        {/* 다음에 할 일 — 로그인이 풀렸으면 다시 로그인(고친 내용은 이 탭에 보관돼 돌아오면 복구할 수 있다), 먼저 저장된 내용이 있으면 고르게 */}
+        {!error && persistence.errorCode === "LOGIN_REQUIRED" ? <div className="bw-editor-error-actions">
+          <a href={`/account?next=${encodeURIComponent(typeof window === "undefined" ? "/plan/homepage" : `${window.location.pathname}${window.location.search}`)}`}>다시 로그인하기</a>
+        </div> : null}
+        {!error && persistence.errorCode === "LANDING_DRAFT_CONFLICT" ? <div className="bw-editor-error-actions">
+          {onReloadLatest ? <button type="button" onClick={onReloadLatest}>최신 내용 불러오기</button> : null}
+          <button type="button" onClick={persistence.clearError}>계속 고치기</button>
+        </div> : null}
+      </div> : null}
       {recoveryError ? <p className="bw-editor-error" role="status">{recoveryError}</p> : null}
       {recovery ? <section className="bw-editor-recovery" aria-label="저장하지 않은 편집 복구">
         <p>{recovery.base === initial.current ? "이 탭에 저장하지 않은 수정 내용이 있어요" : "서버에 새 버전이 있어요. 이전 수정본을 보관한 뒤 필요한 내용을 옮겨 주세요"}</p>

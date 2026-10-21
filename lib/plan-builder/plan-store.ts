@@ -4,6 +4,7 @@
 import { chaptersForType, sectionKey, type PlanSectionStatus } from "./blueprint";
 import { SAMPLE_DOCS, isSampleId } from "./samples";
 import { filterQuarantinedCache, readQuarantineNotice } from "./quarantine-cache";
+import { fetchWithTimeout } from "../client/user-error";
 
 export function isSamplePlan(planId: string | null | undefined): boolean {
   return isSampleId(planId ?? null);
@@ -914,7 +915,8 @@ export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
   if (typeof window === "undefined") return loadState();
   const request = ++hydrationRequest;
   try {
-    const res = await fetch("/api/plan/state", { cache: "no-store" });
+    // 서버가 답을 주지 않으면 20초 뒤 끊는다 — 실패로 보고 기기 저장본을 보여 준다(화면이 '불러오고 있어요'에 멈추지 않게)
+    const res = await fetchWithTimeout("/api/plan/state", { cache: "no-store" });
     if (res.ok) {
       const payload = (await res.json()) as Record<string, unknown>;
       if (request !== hydrationRequest) return loadState();

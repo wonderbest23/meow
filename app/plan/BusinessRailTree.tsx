@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, setActivePlan, subscribePlanState, type Plan } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
-import { journeySteps, type JourneyStepId } from "../../lib/plan-builder/journey";
+import { journeySteps, launchHref, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
+import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
+import { launchStatus, launchSteps, readLaunch } from "../../lib/plan-builder/business-launch";
+import { readCoach } from "../../lib/plan-builder/coach";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
@@ -18,13 +21,15 @@ export type DocumentToc = { planId: string; chapters: string[]; current: number 
 
 const LIST_OPEN_KEY = "oneulstart:rail-plans-open";
 
-/** 지금 화면이 네 단계 중 어디인지 */
-function stepFor(pathname: string): JourneyStepId | null {
+/** 왼쪽 목록에서 표시할 수 있는 자리 — 네 단계 + 사업 관리의 '사업 시작하기' */
+type RailHere = JourneyStepId | "launch";
+/** 지금 화면이 어디인지(사업 관리 화면은 주소의 tab 으로) */
+function stepFor(pathname: string, tab: string | null): RailHere | null {
   if (pathname.startsWith("/plan/chat")) return "chat";
   if (pathname.startsWith("/plan/document")) return "document";
   if (pathname.startsWith("/plan/homepage")) return "homepage";
   /* 사업 관리 화면은 탭이 여럿이다 — '유지보수' 탭일 때만 유지보수를 표시한다(예전엔 사업 요약·사업 시작하기에서도 유지보수가 켜졌다) */
-  if (pathname.startsWith("/plan/workspace")) return typeof window !== "undefined" && new URLSearchParams(window.location.search).get("tab") === "operations" ? "care" : null;
+  if (pathname.startsWith("/plan/workspace")) return tab === "operations" ? "care" : tab === "launch" || tab === "action" ? "launch" : null;
   return null;
 }
 
@@ -45,13 +50,26 @@ function jump(id: string) {
 const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: string; back: number; label: string }> = {
   document: { message: "사업 방향 정리를 마쳐야 사업계획서를 만들 수 있어요.", back: 0, label: "대화로 가기" },
   homepage: { message: "사업계획서를 완성해야 홈페이지를 만들 수 있어요.", back: 1, label: "사업계획서로 가기" },
-  care: { message: "홈페이지를 제작해 공개해야 유지보수를 진행할 수 있어요.", back: 2, label: "홈페이지로 가기" },
+  /* 유지보수(실적 기록·홈페이지 관리)는 홈페이지가 없어도 쓸 수 있다 — 사업 관리 화면과 같은 규칙. 막히는 건 사업 방향을 정하기 전뿐 */
+  care: { message: "사업 방향 정리를 마쳐야 유지보수를 쓸 수 있어요.", back: 0, label: "대화로 가기" },
 };
 
 /** 사업 하나를 펼친 목차 — 대화 · 사업계획서 · 홈페이지 · 유지보수 */
-function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: JourneyStepId | null; documentToc?: DocumentToc; pathname: string }) {
+function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: RailHere | null; documentToc?: DocumentToc; pathname: string }) {
   const homepage = useHomepageStatus(plan.id);
   const steps = journeySteps(plan, homepage);
+  /*
+   * 사업 관리 화면(사업 요약·사업 시작하기·유지보수)이 열리는지 — 대화가 끝나기 전에는 화면이 대화로 되돌려 보낸다.
+   * 예전엔 '사업 시작하기'로 가는 길이 대화 화면의 링크 하나뿐이라 9단계 준비 과정과 홍보 키트를 다시 찾기 어려웠다.
+   */
+  const workspaceOpen = !shouldResumeBusinessChat(plan);
+  const launch = useMemo(() => {
+    if (!workspaceOpen) return null;
+    const state = readLaunch(plan);
+    const all = launchSteps(plan, state);
+    const finished = state.configured && all.every(step => ["done", "skipped"].includes(launchStatus(state, step)));
+    return { label: readCoach(plan.answers)?.stage === "operating" ? "운영 개선하기" : "사업 시작하기", state: finished ? "done" : state.configured ? "active" : "todo" };
+  }, [plan, workspaceOpen]);
   const [locked, setLocked] = useState<{ message: string; href: string; label: string } | null>(null);
   // 앱에서는 홈페이지 화면에 '내 도메인 연결' 칸이 없다(웹 전용 상품) — 목차에서도 뺀다
   const [inApp, setInApp] = useState(false);
@@ -69,14 +87,23 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
   return <><ol className={styles.steps}>
     {steps.map((step, index) => {
       const current = here === step.id;
-      const reachable = step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
+      const reachable = step.id === "care" ? workspaceOpen : step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
+      /* '사업 시작하기'를 홈페이지와 유지보수 사이에 끼우면 유지보수 번호가 하나 밀린다 */
+      const number = step.id === "care" && launch ? index + 2 : index + 1;
       const body = <>
-        <i aria-hidden="true" data-state={step.state}>{step.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>
+        <i aria-hidden="true" data-state={step.state}>{step.state === "done" ? <Check size={11} strokeWidth={3} /> : number}</i>
         <span>{step.label}</span>
       </>;
-      return <li key={step.id}>
+      return <Fragment key={step.id}>
+        {step.id === "care" && launch && <li>
+          <Link className={styles.step} href={launchHref(plan.id)} aria-current={here === "launch" ? "page" : undefined} onClick={event => { setActivePlan(plan.id); sameWorkspaceTab(event, plan.id, "launch"); }}>
+            <i aria-hidden="true" data-state={launch.state}>{launch.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>
+            <span>{launch.label}</span>
+          </Link>
+        </li>}
+        <li>
         {reachable
-          ? <Link className={styles.step} href={step.href} aria-current={current ? "page" : undefined} onClick={() => setActivePlan(plan.id)}>{body}</Link>
+          ? <Link className={styles.step} href={step.href} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); }}>{body}</Link>
           : <button type="button" className={styles.step} aria-disabled="true" title="앞 단계를 마치면 열려요" onClick={() => openLocked(step.id)}>{body}</button>}
         {/* 문서를 보고 있으면 그 문서의 목차를 바로 아래에 */}
         {step.id === "document" && current && documentToc?.planId === plan.id && documentToc.chapters.length > 0 && <ul className={styles.parts} aria-label="사업계획서 목차">
@@ -86,7 +113,7 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: J
         {step.id === "homepage" && current && pathname.startsWith("/plan/homepage") && <ul className={styles.parts} aria-label="홈페이지 목차">
           {homepageParts.map(([id, name], part) => <li key={id}><button type="button" onClick={() => jump(id)}><b>{part + 1}</b>{name}</button></li>)}
         </ul>}
-      </li>;
+      </li></Fragment>;
     })}
   </ol>
   <dialog ref={lockDialog} className={styles.lockDialog} onClose={() => setLocked(null)}>
@@ -113,6 +140,18 @@ const onClient = () => true;
 const onServer = () => false;
 const readPlanId = () => new URLSearchParams(window.location.search).get("planId");
 const noPlanId = () => null;
+/* 사업 관리 화면의 탭 — 화면이 탭을 바꿀 때 보내는 신호와 뒤로 가기에 맞춰 다시 읽는다 */
+const subscribeTab = (onChange: () => void) => {
+  window.addEventListener(WORKSPACE_TAB_EVENT, onChange); window.addEventListener("popstate", onChange);
+  return () => { window.removeEventListener(WORKSPACE_TAB_EVENT, onChange); window.removeEventListener("popstate", onChange); };
+};
+const readTab = () => new URLSearchParams(window.location.search).get("tab");
+/* 이미 같은 사업의 사업 관리 화면이면 주소 이동 대신 화면에 탭을 바꿔 달라고 한다(화면이 주소·목록 표시도 맞춘다) */
+const sameWorkspaceTab = (event: { preventDefault: () => void }, planId: string, tab: string) => {
+  if (window.location.pathname !== "/plan/workspace" || new URLSearchParams(window.location.search).get("planId") !== planId) return;
+  event.preventDefault();
+  window.dispatchEvent(new CustomEvent(WORKSPACE_TAB_REQUEST, { detail: tab }));
+};
 
 export default function BusinessRailTree({ documentToc, onPlanCount }: {
   documentToc?: DocumentToc;
@@ -129,6 +168,7 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
   const [tickPlanId, setUrlPlanId] = useState<string | null>(null);
   const livePlanId = useSyncExternalStore(noSubscribe, readPlanId, noPlanId);
   const urlPlanId = tickPlanId ?? livePlanId;
+  const workspaceTab = useSyncExternalStore(subscribeTab, readTab, noPlanId);
   useEffect(() => {
     try { if (localStorage.getItem(LIST_OPEN_KEY) === "0") setListOpen(false); } catch { /* 기본은 펼침 */ }
     const refresh = () => setTick(n => n + 1);
@@ -147,6 +187,8 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
    */
   const [remote, setRemote] = useState<Plan[] | null>(null);
   const [remoteFailed, setRemoteFailed] = useState(false);
+  /* 로그인하지 않았으면 '사업이 없어요' 대신 로그인 안내 — 본문은 '로그인하면 내 사업이 보여요'라고 하는데 왼쪽만 달랐다(2026-10-21 점검) */
+  const [signedOut, setSignedOut] = useState(false);
   const [remoteTick, setRemoteTick] = useState(0);
   const askedFor = useRef<string | null>(null);
   useEffect(() => {
@@ -154,7 +196,7 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
     let alive = true;
     fetch("/api/plan/state", { cache: "no-store" })
       .then(response => { if (!response.ok) throw new Error("PLAN_STATE_UNAVAILABLE"); return response.json(); })
-      .then((data: { plans?: Plan[] }) => { if (!alive) return; setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); setRemoteFailed(false); })
+      .then((data: { plans?: Plan[]; authenticated?: boolean }) => { if (!alive) return; setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); setSignedOut(data?.authenticated === false); setRemoteFailed(false); })
       .catch(() => { if (alive) setRemoteFailed(true); });
     return () => { alive = false; };
   }, [mounted, remoteTick]);
@@ -168,7 +210,7 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
   }, [local, remote]);
   const checked = remote !== null || (remoteFailed && local.length > 0);
   useEffect(() => { if (checked) onPlanCount?.(plans.length); }, [checked, plans.length, onPlanCount]);
-  const step = stepFor(pathname);
+  const step = stepFor(pathname, workspaceTab);
   /* 지금 화면이 보여 주는 사업 — 주소에 있으면 그것, 홈페이지처럼 주소에 없으면 작업 중인 사업 */
   const currentId = urlPlanId ?? (step ? state?.activePlanId ?? null : null);
   // 지금 보는 사업이 목록에 없으면(다른 기기·방금 대화에서 만든 사업) 서버 목록을 한 번 더 읽는다
@@ -203,7 +245,7 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
     </div>
     {listOpen && mounted && <div className={styles.list}>
       {remoteFailed && plans.length === 0 ? <p className={styles.empty}>사업 목록을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.</p>
-        : checked && plans.length === 0 && <p className={styles.empty}>아직 사업이 없어요. 새 대화로 시작해 보세요.</p>}
+        : checked && plans.length === 0 && <p className={styles.empty}>{signedOut ? "로그인하면 내 사업이 보여요." : "아직 사업이 없어요. 새 대화로 시작해 보세요."}</p>}
       {plans.map(plan => {
         const isCurrent = plan.id === currentId;
         const open = openId === undefined ? isCurrent : openId === plan.id;

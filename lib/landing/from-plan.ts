@@ -58,6 +58,9 @@ function clamp(value: string, max: number): string {
  * 있거나 연도·수량처럼 금액이 아닌 숫자는 건드리지 않는다.
  */
 export function formatPriceText(value: string): string {
+  /* 0원은 손님 화면에 '가격 안내 0원'으로 보여 이상했다 — 값이 0뿐이면 '무료'로 쓴다(앞의 '제안 가격 · ' 같은 말은 그대로) */
+  const zero = value.match(/^(.*?·\s*)?\s*(?:₩\s*)?0+(?:[.,]0+)?\s*(?:원)?\s*$/);
+  if (zero) return `${zero[1] ?? ""}무료`;
   return value.replace(/(?<![\d,.])(\d{4,})(?=\s*(?:원|만\s*원|천\s*원))/g, (digits) => Number(digits).toLocaleString("ko-KR"));
 }
 
