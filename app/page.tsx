@@ -424,9 +424,9 @@ function Home({
             <div aria-labelledby="footer-notes-heading">
               <strong className="home-footer-title" id="footer-notes-heading">이용 안내</strong>
               <ul className="home-footer-notes">
-                <li>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해야 합니다.</li>
-                <li>사진과 화면 예시는 AI로 만든 브랜드 이미지와 가상 사업 예시이며 실제 고객이나 실적이 아닙니다.</li>
-                <li>전체 문서 생성과 파일 내려받기는 결제 후 이용할 수 있습니다.</li>
+                <li>인공지능 생성 내용은 반드시 원문과 현장 자료로 확인해 주세요.</li>
+                <li>사진과 화면 예시는 AI로 만든 브랜드 이미지와 가상 사업 예시이며 실제 고객이나 실적이 아니에요.</li>
+                <li>전체 문서 생성과 파일 내려받기는 결제 후 이용할 수 있어요.</li>
               </ul>
             </div>
             <p className="home-footer-credits">

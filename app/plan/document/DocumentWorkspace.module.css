@@ -330,8 +330,8 @@
   .body :global(figure.plan-chart-figure)::before { content:"그래프는 옆으로 밀어 볼 수 있어요"; position:sticky; left:0; display:block; margin:0 0 6px; color:var(--app-muted); font-size:12px; }
 }
 
-/* 폰(400px 이하) — 아래 '다음 단계 · 홈페이지 다듬고 공개하기'가 네 줄로 꺾였다. 앞의 '다음 단계' 머리말은 빼고 이름만 두 줄 안에 */
-@media (max-width:400px) {
+/* 폰(480px 이하 — 아이폰 17 Pro 402·Pro Max 440 포함) — 아래 '다음 단계 · 홈페이지 다듬고 공개하기'가 네 줄로 꺾였다. 앞의 '다음 단계' 머리말은 빼고 이름만 두 줄 안에 */
+@media (max-width:480px) {
   .actions[data-next] .nextButton span { display:none; }
   .actions[data-next] .nextButton { padding:8px 12px; font-size:15px; line-height:1.35; }
   .actions[data-next] .nextButton svg { display:none; }

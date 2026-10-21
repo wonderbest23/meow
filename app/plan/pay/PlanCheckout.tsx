@@ -360,7 +360,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           </div>
         ) : (
           /* 가격 확인 전 — 자리를 비워두면 화면이 덜컥거린다 */
-          <div className={styles.price} aria-busy="true">
+          <div className={styles.price} aria-busy="true" role="status">
             <Spinner />
             <span>결제 정보를 확인하는 중…</span>
           </div>

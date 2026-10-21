@@ -191,5 +191,12 @@ const RETIRED = ["business-registration", "mail-order-report", "industry-license
   assert.equal(mine[0].planId, "plan_two");
   assert.equal(mine[0].projectId, second.id);
   assert.equal((await listOwnerInquiries("nobody")).length, 0);
+
+  // 9) 같은 손님이 같은 문의를 방금 또 보냈는지 — 단추 연타로 같은 문의가 여러 개 쌓이지 않게
+  const { findRecentDuplicateLead } = await import("../lib/landing/repository");
+  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }), newer.id, "60초 안의 같은 문의는 찾는다");
+  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "다른 질문" }), null, "내용이 다르면 새 문의");
+  assert.equal(await findRecentDuplicateLead(otherSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }), null, "다른 홈페이지 문의와 섞이지 않는다");
+  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }, 0), null, "시간이 지나면 새 문의");
   console.log("service-requests: ok");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

@@ -179,11 +179,28 @@
 .preview {
   position: relative; /* 전체 화면 버튼의 기준 */
   overflow: hidden;
+  /*
+   * 전체 화면 버튼 자리 — 홈페이지 맨 위(가게 이름·머리 단추) 위에 얹으면 휴대폰에서 가게 이름이 버튼 밑에 가려졌다.
+   * 미리보기 카드 위쪽에 버튼만 놓는 얇은 줄을 둔다.
+   */
+  padding-top: 58px;
   border: 1px solid var(--line, var(--app-line));
   border-radius: 14px;
   background: var(--app-surface);
   pointer-events: none;
   user-select: none;
+}
+.preview::before {
+  content: "미리보기";
+  position: absolute;
+  top: 0;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  height: 58px;
+  color: var(--text-2, var(--app-muted));
+  font-size: 13px;
+  font-weight: 600;
 }
 
 @media (max-width: 640px) {
@@ -330,4 +347,5 @@
 /* 처음 AI 채우기가 실패했을 때 한 줄 안내 + 다시 채우기 */
 .aiFillNotice { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; padding: 10px 14px; border: 1px solid #f3d9a4; border-radius: 10px; background: #fff8e8; color: #6b4a0f; font-size: 13.5px; line-height: 1.5; }
 .aiFillNotice span { flex: 1 1 220px; }
+.troubleLink { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 8px; background: #6b4a0f; color: #fff; font-weight: 700; text-decoration: none; }
 .aiFillNotice button { min-height: 40px; padding: 0 14px; border: 1px solid #e2b85c; border-radius: 8px; background: #fff; color: #6b4a0f; font: inherit; font-weight: 700; cursor: pointer; }

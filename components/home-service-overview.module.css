@@ -80,3 +80,19 @@
   .chatDemo { padding: 22px 16px 18px; border-radius: 16px; }
   .chatChoices { margin-left: 0; }
 }
+
+/* 이용 요금 — FAQ 위에 늘 보이는 작은 상자. 머리말 '가격 안내'(#price)가 여기로 온다 */
+.priceBox { max-width: 760px; margin: 0 auto 40px; padding: 28px 28px 24px; border: 1px solid var(--home-line-2, rgba(255, 255, 255, .22)); border-radius: 12px; background: var(--home-card, #131317); scroll-margin-top: 96px; }
+.overview .priceBox h3 { margin: 0 0 16px; color: #fff; font-size: 20px; font-weight: 700; line-height: 1.5; }
+.priceBox dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.priceBox dl > div { min-width: 0; padding: 16px; border-radius: 8px; background: rgba(255, 255, 255, .05); }
+.priceBox dt { color: var(--home-fg-2, #b6b8bf); font-size: 14px; line-height: 1.5; word-break: keep-all; }
+.priceBox dd { margin: 6px 0 0; color: #fff; font-size: 22px; font-weight: 700; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.overview .priceBox p { margin-top: 16px; font-size: 13px; color: var(--home-fg-3, #82848d); }
+@media (max-width: 700px) {
+  .priceBox { padding: 22px 18px 18px; margin-bottom: 28px; }
+  .priceBox dl { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+  .priceBox dl > div { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 14px 16px; }
+  .priceBox dd { margin: 0; flex: none; font-size: 18px; }
+  .overview .priceBox p { font-size: 12px; }
+}

@@ -36,7 +36,7 @@ function Document() {
     <div className={styles.backPage} aria-hidden="true"><span>02 / 고객과 상품</span><div className={styles.rule} /><strong>사진이 필요한<br />동네 음식점</strong><div className={styles.lines} /><div className={styles.lines} /></div>
     <div className={styles.cover}>
       <div className={styles.coverTop}><span>오늘창업</span><FileText aria-hidden="true" /></div>
-      <span className={styles.coverLabel}>BUSINESS PLAN</span>
+      <span className={styles.coverLabel}>사업계획서</span>
       <h4>작은 시작을 위한<br />내 사업계획서</h4>
       <p>{business}</p>
       <img src="/home-media/oneulstart-team.png" width="1942" height="809" alt="함께 사업을 구체화하는 사람들" loading="lazy" />
@@ -56,7 +56,7 @@ function MorphingProduct() {
   return <div className={styles.product} aria-hidden="true" data-morph-product>
     <div className={styles.paperRear}><span>03 / 실행 계획</span><h4>작게 시작하고,<br />직접 확인하기.</h4><div className={styles.paperTasks}>{["샘플 준비", "첫 고객 제안", "반응 기록"].map((item, i) => <div key={item}><b>0{i + 1}</b><span>{item}</span></div>)}</div></div>
     <div className={styles.surface}>
-      <div className={styles.productBar}><img src="/icon.svg" alt="" width="22" height="22" /><span>오늘창업</span><span className={styles.productState}><span>사업 기획</span><span>내 사업안</span><span>사업계획서</span></span></div>
+      <div className={styles.productBar}><img src="/today-startup-mark-2026.png" alt="" width="22" height="22" /><span>오늘창업</span><span className={styles.productState}><span>사업 기획</span><span>내 사업안</span><span>사업계획서</span></span></div>
       <div className={styles.sentMessage}><span>사진 찍는 걸 좋아해요.<br />퇴근 후에 할 수 있는 사업이 있을까요?</span><Check /></div>
       <div className={styles.answerLead}><span>오늘창업 AI</span><p>좋아하는 일에서 시작해 볼게요.<br />이런 작은 사업은 어떨까요?</p></div>
       <h4 className={styles.sharedTitle}>동네 가게<br className={styles.mobileBreak} /> 메뉴 사진 제작</h4>
@@ -66,7 +66,7 @@ function MorphingProduct() {
       <div className={styles.typingComposer}><span className={styles.typingText}>{Array.from(message).map((letter, index) => <span key={index} style={{ "--character": index } as React.CSSProperties}>{letter}</span>)}</span><span className={styles.sendButton}><ArrowUp /></span></div>
       <div className={styles.paperFooter}><span>사업 소개 · 고객과 상품 · 실행 계획</span><span>02</span></div>
     </div>
-    <div className={styles.frontCover}><div className={styles.frontInner}><div className={styles.frontLogo}><img src="/icon.svg" width="20" height="20" alt="" /><span>오늘창업</span></div><span className={styles.frontEyebrow}>BUSINESS PLAN</span><h4>작은 시작을 위한<br />내 사업계획서</h4><p>동네 가게 메뉴 사진 제작</p><img className={styles.frontPhoto} src="/home-media/oneulstart-team.png" width="1942" height="809" loading="lazy" alt="" /><div className={styles.frontBottom}><span>고객과 상품, 시작 방법까지.</span><span>01</span></div></div></div>
+    <div className={styles.frontCover}><div className={styles.frontInner}><div className={styles.frontLogo}><img src="/today-startup-mark-2026.png" width="20" height="20" alt="" /><span>오늘창업</span></div><span className={styles.frontEyebrow}>사업계획서</span><h4>작은 시작을 위한<br />내 사업계획서</h4><p>동네 가게 메뉴 사진 제작</p><img className={styles.frontPhoto} src="/home-media/oneulstart-team.png" width="1942" height="809" loading="lazy" alt="" /><div className={styles.frontBottom}><span>고객과 상품, 시작 방법까지.</span><span>01</span></div></div></div>
     <div className={styles.finishLabel}><Check /><span>이제, 꺼내 쓸 수 있는 계획으로.</span></div>
   </div>;
 }

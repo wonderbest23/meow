@@ -101,7 +101,7 @@ export function HomeWebsiteDemo() {
       <div className={styles.composition} aria-hidden="true" inert>
         <div className={styles.browser}>
           <div className={styles.toolbar}><span className={styles.dots}><i /><i /><i /></span><span className={styles.address}><LockKeyhole />새벽커피 홈페이지</span><Monitor /></div>
-          <div className={styles.editorBar}><strong>내 사업 홈페이지</strong><span><Pencil />에디터</span><span className={styles.saved}><Check />수정 반영</span></div>
+          <div className={styles.editorBar}><strong>내 사업 홈페이지</strong><span><Pencil />편집</span><span className={styles.saved}><Check />수정 반영</span></div>
           <div className={styles.canvas}>
             <div className={styles.page}>
               {renderPreview ? <WebsitePreview edited={view.edited} /> : <img className={styles.fallback} src="/brainwave/thumbs/0-2226.jpg" width="640" height="560" loading="lazy" alt="" />}

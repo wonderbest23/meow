@@ -14,7 +14,10 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
-.page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; }
+.page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; overflow-wrap: anywhere; }
+/* 띄어쓰기 없는 긴 이름이 와도 첫 화면 칸이 화면 밖으로 밀리지 않게 — 칸 폭을 내용이 아니라 화면 폭에 맞춘다 */
+.hero, .heroCopy { grid-template-columns: minmax(0, 1fr); }
+.heroCopy > * { min-width: 0; max-width: 100%; }
 
 /* 편집 화면 전용 — 사진 넣기 */
 .photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 100%; min-height: 120px; border: 1.5px dashed #a9c7c2; border-radius: 14px; color: #3f6360; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
@@ -33,7 +36,7 @@
 
 /* 머리글 — 끝까지 위에 붙는 불투명 띠, 오른쪽에 예약 버튼 */
 .header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 64px; padding: 12px 20px; background: #fff; box-shadow: 0 1px 0 rgba(16, 35, 61, .07); }
-.brand { min-width: 0; font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
+.brand { min-width: 0; overflow-wrap: anywhere; font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
 
 /* 첫 화면 — 글과 사진(휴대폰은 사진이 위) */
 .hero { display: grid; gap: 28px; padding: 20px 20px 48px; background: linear-gradient(180deg, #fff 0%, var(--soft) 100%); }

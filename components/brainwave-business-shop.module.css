@@ -13,7 +13,10 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
-.page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; }
+.page h1, .page h2, .page h3, .page p { margin: 0; letter-spacing: 0 !important; overflow-wrap: anywhere; }
+/* 띄어쓰기 없는 긴 이름이 와도 첫 화면 칸이 화면 밖으로 밀리지 않게 — 칸 폭을 내용이 아니라 화면 폭에 맞춘다 */
+.hero, .heroCopy { grid-template-columns: minmax(0, 1fr); }
+.heroCopy > * { min-width: 0; max-width: 100%; }
 
 /* 편집 화면 전용 — 사진 넣기 — 자리별 규칙이 이 기본값을 덮도록 맨 앞에 둔다 */
 .photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; border: 1.5px dashed #b9c3cf; border-radius: 10px; color: #536273; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
@@ -31,7 +34,7 @@
 
 /* 머리글 */
 .header { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 18px 20px; background: #fff; }
-.brand { font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
+.brand { min-width: 0; overflow-wrap: anywhere; font-family: var(--bw-rubik), Pretendard, sans-serif; font-size: 20px; font-weight: 700; }
 
 /* 첫 화면 — 둥근 사진 판, 가운데 흰 큰 제목 */
 .heroWrap { padding: 0 12px; }
@@ -42,7 +45,7 @@
 .heroPhoto .heroShade { background: radial-gradient(70% 60% at 50% 48%, rgba(22, 28, 45, .72) 0%, rgba(22, 28, 45, .5) 60%, rgba(22, 28, 45, .38) 100%); }
 .heroPhoto .heroCopy h1, .heroPhoto .heroLead { text-shadow: 0 2px 18px rgba(0, 0, 0, .35); }
 .heroCopy { position: relative; display: grid; justify-items: center; gap: 18px; padding: 72px 22px 96px; }
-.heroCopy h1 { max-width: 760px; font-size: 40px; line-height: 1.2; font-weight: 700; }
+.heroCopy h1 { max-width: min(760px, 100%); font-size: 40px; line-height: 1.2; font-weight: 700; }
 .heroLead { max-width: 640px; font-size: 18px; line-height: 1.6; font-weight: 500; opacity: .95; white-space: pre-wrap; }
 .heroButton { justify-content: center; white-space: nowrap; min-height: 52px; margin-top: 8px; padding: 10px 26px; border-radius: 6px; color: var(--t-on-pop, var(--ink)); background: var(--t-pop, var(--mint)); font-size: 16px; }
 .page .heroButton svg { display: block !important; flex: 0 0 18px; }

@@ -75,7 +75,7 @@ export async function PUT(
     }
     const body = await request.json();
     if (!body || !Object.hasOwn(body, "expectedUpdatedAt")) {
-      return NextResponse.json({ error: { code: "LANDING_VERSION_REQUIRED", message: "저장 기준 정보가 없습니다. 새로고침 후 다시 편집해주세요." } }, { status: 428 });
+      return NextResponse.json({ error: { code: "LANDING_VERSION_REQUIRED", message: "저장 기준 정보가 없어요. 새로고침한 뒤 다시 고쳐 주세요." } }, { status: 428 });
     }
     const { draft, expectedUpdatedAt } = saveRequestSchema.parse(body);
     const site = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt });

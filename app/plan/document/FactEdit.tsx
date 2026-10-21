@@ -121,7 +121,7 @@ export function FactCard({ edit, onPick, onReflect }: { edit: ReturnType<typeof 
   const stale = edit.snapshot?.documentStatus === "stale";
   return <section className={styles.factCard} aria-label="고칠 수 있는 내용" data-fact-card>
     <strong>고칠 수 있는 곳만 표시했어요</strong>
-    {!edit.snapshot && !edit.error && <p>사업 정보를 불러오고 있어요…</p>}
+    {!edit.snapshot && !edit.error && <p role="status">사업 정보를 불러오고 있어요…</p>}
     {edit.facts.length > 0 && <div className={styles.factChips}>{edit.facts.map(fact => <button key={fact.questionId} type="button" data-fact-chip={fact.questionId} disabled={edit.busy} onClick={event => onPick(fact.questionId, event.currentTarget.getBoundingClientRect())}><small>{fact.label}</small>{fact.display}</button>)}</div>}
     <p>노란 부분을 누르면 고칠 수 있어요. 여러 곳을 고친 뒤 한 번에 계획서에 반영해요.</p>
     {stale && edit.snapshot && <div className={styles.factReflect} data-fact-reflect><RewriteConfirm snapshot={edit.snapshot} disabled={edit.busy} label="계획서에 반영하기" className={styles.primary} onConfirm={onReflect} /></div>}

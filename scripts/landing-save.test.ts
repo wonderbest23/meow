@@ -41,6 +41,16 @@ async function main() {
     assert.equal(calls, 1);
     globalThis.fetch = async () => Response.json({ error: { code: "LANDING_DRAFT_CONFLICT" } }, { status: 409 });
     await assert.rejects(persistLandingDraft(project.id, draft, saved.updatedAt), error => error instanceof LandingSaveError && error.code === "LANDING_DRAFT_CONFLICT");
+    // 로그인이 풀리면(401) 다시 로그인하라는 코드, 404 인데 로그인도 풀렸으면 같은 안내 — '찾을 수 없다'로 겁주지 않는다
+    globalThis.fetch = async () => Response.json({ error: { code: "LOGIN_REQUIRED", message: "로그인한 뒤 이용할 수 있어요." } }, { status: 401 });
+    await assert.rejects(persistLandingDraft(project.id, draft, saved.updatedAt), error => error instanceof LandingSaveError && error.code === "LOGIN_REQUIRED" && /로그인이 풀렸어요/.test(error.message));
+    globalThis.fetch = async (url) => String(url).includes("/api/auth/session") ? Response.json({ authenticated: false }) : Response.json({ error: { code: "PROJECT_NOT_FOUND" } }, { status: 404 });
+    await assert.rejects(persistLandingDraft(project.id, draft, saved.updatedAt), error => error instanceof LandingSaveError && error.code === "LOGIN_REQUIRED");
+    globalThis.fetch = async (url) => String(url).includes("/api/auth/session") ? Response.json({ authenticated: true }) : Response.json({ error: { code: "PROJECT_NOT_FOUND" } }, { status: 404 });
+    await assert.rejects(persistLandingDraft(project.id, draft, saved.updatedAt), error => error instanceof LandingSaveError && error.code === "PROJECT_NOT_FOUND" && /찾지 못했어요/.test(error.message));
+    // 서버 원문(영어 코드)은 그대로 보이지 않는다
+    globalThis.fetch = async () => Response.json({ error: { code: "INTERNAL", message: "internal" } }, { status: 500 });
+    await assert.rejects(persistLandingDraft(project.id, draft, saved.updatedAt), error => error instanceof LandingSaveError && !/internal/.test(error.message) && /저장하지 못했어요/.test(error.message));
     globalThis.fetch = async () => { throw new TypeError("offline"); };
     await assert.rejects(persistLandingDraft(project.id, draft, saved.updatedAt), /수정 내용은 유지/);
     globalThis.fetch = async () => Response.json({ site: { ...saved, projectId: "another" } });

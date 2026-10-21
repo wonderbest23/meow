@@ -2,7 +2,8 @@
 
 import { announceHomepageStatus } from "../use-homepage";
 import { appendixFromDraft } from "../../../components/public-appendix-preview";
-import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
+import { apiMessage, fetchWithTimeout, isTimeoutError, koreanText, userErrorMessage } from "../../../lib/client/user-error";
+import { loadAuthSession } from "../../../lib/client/auth-session";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
@@ -17,7 +18,7 @@ import { SAMPLE_DOCS } from "../../../lib/plan-builder/samples";
 import { koTextsFor } from "../../../lib/landing/brainwave/ko";
 import { landingSlugIssue, type LandingDraft, type LandingSiteRecord } from "../../../lib/landing/domain";
 import { hydrateFromServer, activePlan, lastHydrationFailed, loadState, isSamplePlan, planOwnerEpoch, setActivePlan, subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
-import { LandingSaveError, persistLandingDraft } from "../../../lib/landing/save-client";
+import { LANDING_LOGIN_REQUIRED, LANDING_LOGIN_MESSAGE, LandingSaveError, persistLandingDraft } from "../../../lib/landing/save-client";
 import { hasUnpublishedEdits, isLiveUpToDate, landingDraftFingerprint } from "../../../lib/landing/save-contract";
 import Link from "next/link";
 import styles from "./page.module.css";
@@ -30,6 +31,7 @@ import frame from "../chat/page.module.css";
 import { Check, Rocket, Save } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 import { askConfirm } from "../../../components/confirm-dialog";
+import { useDialogFocus } from "../../../components/use-dialog-focus";
 
 /*
  * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
@@ -70,13 +72,8 @@ export default function PlanHomepagePage() {
   const [screenPlanId, setScreenPlanId] = useState<string | null>(null);
   /** 앱 껍데기를 걷어내고 홈페이지만 화면 가득 — 실제로 어떻게 보이는지 확인용 */
   const [fullscreen, setFullscreen] = useState(false);
-  /* 전체 화면 미리보기는 Esc 로도 닫는다 */
-  useEffect(() => {
-    if (!fullscreen) return;
-    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setFullscreen(false); };
-    window.addEventListener("keydown", close);
-    return () => window.removeEventListener("keydown", close);
-  }, [fullscreen]);
+  /* 전체 화면 미리보기 — 열면 닫기 단추로 초점을 옮기고, Tab 은 안에서만 돌고, Esc 로 닫으면 연 단추로 돌아간다 */
+  const fullscreenRef = useDialogFocus<HTMLDivElement>(fullscreen, { onEscape: () => setFullscreen(false) });
   /** 섹션 배치 편집기 — 결제한 사람만 연다 */
   const [builderOpen, setBuilderOpen] = useState(false);
   const [price, setPrice] = useState(HOMEPAGE_PRODUCT_AMOUNT);
@@ -84,6 +81,13 @@ export default function PlanHomepagePage() {
   const [planPaid, setPlanPaid] = useState(true);
   const [action, setAction] = useState<Action>("idle");
   const [message, setMessage] = useState("");
+  /*
+   * 저장이 막힌 이유 — 로그인이 풀렸거나(login) 다른 화면에서 먼저 저장됐을 때(conflict).
+   * 예전엔 '홈페이지를 찾을 수 없습니다'·'변경됐습니다…편집해주세요' 글만 떠 다음에 할 일이 없었다. 단추를 함께 둔다.
+   */
+  const [saveTrouble, setSaveTrouble] = useState<null | "login" | "conflict">(null);
+  /* 편집기를 새로 열 때마다 바뀐다 — 최신 내용을 불러오면 편집기를 그 내용으로 다시 연다 */
+  const [builderKey, setBuilderKey] = useState(0);
   const requestRef = useRef<AbortController | null>(null);
   const mounted = useRef(true);
   const leaving = useRef(false);
@@ -135,7 +139,7 @@ export default function PlanHomepagePage() {
       if (filled) done(filled);
       /* 처음 자동 채우기가 실패하면 위쪽 안내 대신 미리보기 위 한 줄로 알린다(다시 채우기 단추). 다음에 열 때도 한 번 더 저절로 채운다(needsAutoAiFill) */
       else if (auto) setAiFillFailed(true);
-      else setMessage(data.error?.message ?? "AI 채우기를 하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      else setMessage(apiMessage(data, "AI 채우기를 하지 못했어요. 잠시 후 다시 시도해 주세요."));
     } catch {
       if (controller.signal.aborted || !current()) return;
       const filled = await recover().catch(() => null);
@@ -157,8 +161,13 @@ export default function PlanHomepagePage() {
       requestRef.current = null;
       setBuilderOpen(false); setFullscreen(false); setEditable(false);
       setDraft(null); setSite(null); setProjectId(null); setAction("idle"); setMessage("");
-      setBlocked({ title: "계정이 바뀌었어요", detail: "현재 계정으로 홈페이지를 다시 열어주세요.", missing: [], cta: "login" });
+      setBlocked({ title: "계정이 바뀌었어요", detail: "지금 계정으로 홈페이지를 다시 열어 주세요.", missing: [], cta: "login" });
       setPhase("blocked");
+      /* 로그인이 풀린 것이면(세션 만료·다른 탭에서 로그아웃) 그렇게 알린다 — 편집기에서 고친 내용은 이 탭에 보관돼 다시 로그인하면 복구할 수 있다 */
+      void loadAuthSession().then(session => {
+        if (!mounted.current || session.authenticated) return;
+        setBlocked({ title: "로그인이 풀렸어요", detail: "다시 로그인하면 이어서 할 수 있어요. 편집기에서 고친 내용은 이 탭에 보관해 뒀어요.", missing: [], cta: "login" });
+      }).catch(() => {});
     };
     const unsubscribe = subscribePlanOwnerChange(invalidate);
     return () => { mounted.current = false; requestRef.current?.abort(); unsubscribe(); };
@@ -211,7 +220,7 @@ export default function PlanHomepagePage() {
       if (!alive) return;
       setScreenPlanId(plan?.id ?? null);
       if (!plan) {
-        setBlocked({ title: "먼저 사업계획서를 만들어주세요", detail: "홈페이지는 계획서에 답한 내용으로 만듭니다.", missing: [], cta: "plan" });
+        setBlocked({ title: "먼저 사업계획서를 만들어 주세요", detail: "홈페이지는 계획서에 답한 내용으로 만들어요.", missing: [], cta: "plan" });
         setPhase("blocked");
         return;
       }
@@ -272,7 +281,8 @@ export default function PlanHomepagePage() {
         setPhase("ready");
         return;
       }
-      const res = await fetch("/api/plan/landing", {
+      // 서버가 답을 주지 않으면 20초 뒤 끊고 '늦어지고 있어요'와 다시 시도를 보여 준다
+      const res = await fetchWithTimeout("/api/plan/landing", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ planId: plan.id }),
@@ -309,13 +319,13 @@ export default function PlanHomepagePage() {
       const errorMessage = error.message ?? (typeof error.error === "object" ? error.error?.message : undefined);
       if (!alive || epoch !== planOwnerEpoch()) return;
       if (res.status === 401) {
-        setBlocked({ title: "로그인이 필요합니다", detail: "홈페이지는 내 계정에 저장됩니다.", missing: [], cta: "login" });
+        setBlocked({ title: "로그인이 필요해요", detail: "홈페이지는 내 계정에 저장돼요. 로그인하면 이어서 할 수 있어요.", missing: [], cta: "login" });
       } else if (res.status === 402) {
         setBlocked({ title: "결제 후 이용할 수 있어요", detail: "홈페이지 편집·공개는 결제 후 열려요. 사업계획서를 결제했다면 홈페이지만, 아직이라면 사업계획서 + 홈페이지로 함께 결제할 수 있어요.", missing: [], cta: "pay" });
       } else if (error.error === "plan_incomplete") {
         setBlocked({
           title: "홈페이지에 실을 내용이 조금 부족해요",
-          detail: "아래 질문에 답하면 그 내용으로 홈페이지를 만들어 드립니다.",
+          detail: "아래 질문에 답하면 그 내용으로 홈페이지를 만들어 드려요.",
           missing: error.missing ?? [],
           cta: "plan",
         });
@@ -329,12 +339,14 @@ export default function PlanHomepagePage() {
         });
       } else {
         /* 잠깐의 오류(요청이 몰림 429 등)에 '계획서 이어 쓰기'로 보내면 막다른 길이다 — 다시 시도 */
-        setBlocked({ title: "홈페이지를 준비하지 못했어요", detail: res.status === 429 ? "잠시 요청이 많았어요. 조금 뒤 다시 시도해 주세요." : errorMessage ?? "잠시 후 다시 시도해 주세요.", missing: [], cta: "retry" });
+        setBlocked({ title: "홈페이지를 준비하지 못했어요", detail: res.status === 429 ? "잠시 요청이 많았어요. 조금 뒤 다시 시도해 주세요." : koreanText(errorMessage, "잠시 후 다시 시도해 주세요."), missing: [], cta: "retry" });
       }
       setPhase("blocked");
-    })().catch(() => {
+    })().catch((error: unknown) => {
       if (!alive || loadEpoch !== planOwnerEpoch()) return;
-      setBlocked({ title: "홈페이지를 불러오지 못했어요", detail: "연결 상태를 확인하고 다시 시도해 주세요.", missing: [], cta: "retry" });
+      setBlocked(isTimeoutError(error)
+        ? { title: "불러오기가 늦어지고 있어요", detail: "연결이 느리거나 서버가 잠시 바빠요. 다시 시도해 주세요.", missing: [], cta: "retry" }
+        : { title: "홈페이지를 불러오지 못했어요", detail: "연결 상태를 확인하고 다시 시도해 주세요.", missing: [], cta: "retry" });
       setPhase("blocked");
     });
     return () => {
@@ -343,7 +355,7 @@ export default function PlanHomepagePage() {
   }, []);
 
   const saveDraft = useCallback(async (next: LandingDraft) => {
-    if (!projectId || !editable || requestRef.current) throw new Error("저장할 수 없는 상태입니다. 잠시 후 다시 시도해주세요.");
+    if (!projectId || !editable || requestRef.current) throw new Error("지금은 저장할 수 없어요. 잠시 후 다시 시도해 주세요.");
     /* 주소 칸이 틀렸으면 서버에 보내기 전에 그 칸에서 알린다 */
     const slugProblem = landingSlugIssue(next.slug);
     if (slugProblem) {
@@ -360,23 +372,48 @@ export default function PlanHomepagePage() {
     setMessage("");
     try {
       const saved = await persistLandingDraft(projectId, next, siteRef.current?.updatedAt ?? null, { signal: controller.signal });
-      if (!current()) throw new Error("계정이 변경되어 저장 결과를 표시하지 않습니다.");
+      if (!current()) throw new Error("계정이 바뀌어 저장 결과를 보여 드리지 않았어요.");
       siteRef.current = saved;
       setSite(saved);
       setDraft(value => value === next ? saved.draft : value);
       setAction("saved");
       setMessage("저장했어요.");
+      setSaveTrouble(null);
     } catch (error) {
       if (current()) {
         setAction("idle");
         if (error instanceof LandingSaveError && (error.code === "SLUG_TAKEN" || error.code === "LANDING_SLUG_INVALID")) { setMessage(""); showSlugError(error.message); }
         else setMessage(userErrorMessage(error, "저장하지 못했어요."));
+        if (error instanceof LandingSaveError) setSaveTrouble(error.code === LANDING_LOGIN_REQUIRED ? "login" : error.code === "LANDING_DRAFT_CONFLICT" ? "conflict" : null);
       }
       throw error;
     } finally {
       if (requestRef.current === controller) requestRef.current = null;
     }
   }, [projectId, editable]);
+
+  /*
+   * 다른 화면(탭·기기)에서 먼저 저장했을 때 — 이 화면의 수정을 버리고 서버의 최신 내용으로 바꾼다.
+   * 몰래 덮어쓰지 않는다: 사장님이 고르기 전까지는 어느 쪽도 저장하지 않는다.
+   */
+  const reloadLatest = useCallback(async () => {
+    if (!projectId || requestRef.current) return;
+    if (!await askConfirm({ title: "최신 내용을 불러올까요?", message: "이 화면에서 고치고 저장하지 못한 내용은 사라져요.", confirmLabel: "최신 내용 불러오기", cancelLabel: "계속 고치기" })) return;
+    const epoch = planOwnerEpoch();
+    try {
+      const res = await fetchWithTimeout(`/api/projects/${encodeURIComponent(projectId)}/landing`, { cache: "no-store" });
+      const data = await res.json().catch(() => ({})) as { site?: LandingSiteRecord | null };
+      if (!mounted.current || epoch !== planOwnerEpoch()) return;
+      if (!res.ok || !data.site) { setMessage(apiMessage(data, "최신 내용을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.")); return; }
+      // 편집기가 이 탭에 보관한 옛 수정본도 버린다 — 다시 열 때 '복구할까요?'가 뜨지 않게
+      try { sessionStorage.removeItem(`oneul:homepage-editor:${projectId}`); } catch { /* 보관본이 없거나 막힌 브라우저 */ }
+      siteRef.current = data.site; setSite(data.site); setDraft(data.site.draft);
+      setSaveTrouble(null); setAction("idle"); setMessage("최신 내용을 불러왔어요.");
+      setBuilderKey(key => key + 1);
+    } catch {
+      if (mounted.current) setMessage("최신 내용을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.");
+    }
+  }, [projectId]);
 
   const save = useCallback(async () => {
     if (!draft) return;
@@ -412,12 +449,13 @@ export default function PlanHomepagePage() {
       siteRef.current = saved; setSite(saved);
       setDraft(value => value === draft ? saved.draft : value);
       const res = await fetch(`/api/projects/${projectId}/landing/publish`, { method: "POST", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ expectedUpdatedAt: saved.updatedAt }) });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({})) as { site?: LandingSiteRecord; error?: { code?: string; message?: string } };
       // 화면이 바뀌어도 서버 공개는 이미 끝났을 수 있다 — 결과는 그대로 알려 준다.
-      if (!current()) return res.ok && data.site ? { ok: true, site: data.site as LandingSiteRecord } : { ok: false, message: data.error?.message ?? "공개 결과를 확인하지 못했어요." };
+      if (!current()) return res.ok && data.site ? { ok: true, site: data.site as LandingSiteRecord } : { ok: false, message: apiMessage(data, "공개 결과를 확인하지 못했어요.") };
       if (!res.ok || !data.site) {
         if (data.error?.code === "SLUG_TAKEN") showSlugError("이 주소는 다른 홈페이지가 쓰고 있어요. 다른 주소를 적어 주세요.");
-        throw new Error(data.error?.message ?? "공개 결과를 확인하지 못했어요.");
+        if (res.status === 401) { setSaveTrouble("login"); throw new Error(LANDING_LOGIN_MESSAGE); }
+        throw new Error(apiMessage(data, "공개 결과를 확인하지 못했어요."));
       }
       siteRef.current = data.site; setSite(data.site);
       setMessage("홈페이지를 공개했어요. 손님 화면에 바로 보여요.");
@@ -428,6 +466,7 @@ export default function PlanHomepagePage() {
         if (current()) { setMessage(""); showSlugError(error.message); }
         return { ok: false, message: `무료 주소 끝부분을 고쳐 주세요 · ${error.message}` };
       }
+      if (error instanceof LandingSaveError && current()) setSaveTrouble(error.code === LANDING_LOGIN_REQUIRED ? "login" : error.code === "LANDING_DRAFT_CONFLICT" ? "conflict" : null);
       if (current()) setMessage(message);
       return { ok: false, message };
     } finally {
@@ -460,7 +499,7 @@ export default function PlanHomepagePage() {
       const res = await fetch(`/api/projects/${projectId}/landing/unpublish`, { method: "POST", signal: controller.signal });
       const data = await res.json().catch(() => ({})) as { site?: LandingSiteRecord; error?: { message?: string } };
       if (!current()) return;
-      if (!res.ok || !data.site) { setMessage(data.error?.message ?? "공개를 멈추지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
+      if (!res.ok || !data.site) { if (res.status === 401) setSaveTrouble("login"); setMessage(res.status === 401 ? LANDING_LOGIN_MESSAGE : apiMessage(data, "공개를 멈추지 못했어요. 잠시 후 다시 시도해 주세요.")); return; }
       siteRef.current = data.site; setSite(data.site);
       setMessage("공개를 멈췄어요. 손님 주소로는 열리지 않아요. ‘다시 공개’를 누르면 같은 주소로 다시 열려요.");
     } catch (error) {
@@ -546,7 +585,7 @@ export default function PlanHomepagePage() {
     <div className={styles.frameScroll}><div className={styles.frameInner}>
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (
-        <div className={styles.fullscreen} role="dialog" aria-modal="true" aria-label="홈페이지 전체 화면">
+        <div ref={fullscreenRef} className={styles.fullscreen} role="dialog" aria-modal="true" aria-label="홈페이지 전체 화면">
           <button type="button" className={styles.fullscreenClose} onClick={() => setFullscreen(false)}>
             닫기 ✕
           </button>
@@ -619,6 +658,7 @@ export default function PlanHomepagePage() {
       {/* 섹션 배치 편집기 — 화면을 덮고 열린다. 저장하면 초안의 pageData가 바뀐다 */}
       {builderOpen && draft && editable && (
         <LandingVisualBuilder
+          key={builderKey}
           data={draft.pageData ?? createLandingPageData(draft, draft.templateId)}
           businessName={draft.businessName}
           projectId={projectId}
@@ -631,6 +671,7 @@ export default function PlanHomepagePage() {
             /* 홈페이지 화면에서 고치고 아직 저장 안 한 것(분위기 색 등) — 편집기가 '저장됨'이라 하지 않고 함께 저장한다 */
             pendingOutside: !!site && landingDraftFingerprint(draft) !== landingDraftFingerprint(site.draft),
             onEditAddress: () => { setBuilderOpen(false); setSlugFocus(n => n + 1); },
+            onReloadLatest: () => void reloadLatest(),
           }}
           onPublish={async () => {
             const result = await publish();
@@ -664,6 +705,16 @@ export default function PlanHomepagePage() {
           </span>
           <ArrowRight size={16} />
         </button>
+      )}
+
+      {/* 저장이 막혔을 때 다음 할 일 — 로그인이 풀렸으면 다시 로그인, 다른 화면에서 먼저 저장됐으면 최신 내용 불러오기/계속 고치기 */}
+      {phase === "ready" && draft && editable && saveTrouble && !builderOpen && (
+        <div className={styles.aiFillNotice} role="alert">
+          <span>{saveTrouble === "login" ? LANDING_LOGIN_MESSAGE : "다른 화면에서 먼저 저장된 내용이 있어요. 최신 내용을 불러오거나, 지금 고친 내용으로 계속 고칠 수 있어요."}</span>
+          {saveTrouble === "login"
+            ? <Link className={styles.troubleLink} href={blockedHref("login")}>다시 로그인하기</Link>
+            : <><button type="button" disabled={busy} onClick={() => void reloadLatest()}>최신 내용 불러오기</button><button type="button" onClick={() => setSaveTrouble(null)}>계속 고치기</button></>}
+        </div>
       )}
 
       {/* 처음 저절로 채우기가 실패했을 때 — 한 줄 안내와 다시 채우기(누를 때만 다시 돈다) */}
