@@ -75,6 +75,31 @@ const PERSONAS: Persona[] = [
     during: { 1: [{ help: "미성년자도 사업자등록 할 수 있어요? 부모님 허락 꼭 받아야 해요?" }] } },
   { id: "p22-gov", label: "정부지원금부터 묻는 손님", mode: "startup", desc: "청년 창업으로 친환경 세제 리필 스테이션", customer: "제로웨이스트에 관심 있는 20~30대", offer: "세제 리필 판매", price: 8000, channel: "동네 매장",
     during: { 1: [{ help: "예비창업패키지 같은 지원금 받을 수 있어요? 이 대화로 사업계획서 쓰면 그대로 제출해도 돼요?" }] } },
+
+  // ---- 3차 패턴(2026-10-21) ----
+  { id: "p23-op-period", label: "실적 기간까지 적는 운영 중 사장님", mode: "operating", desc: "5년째 하는 동네 분식집. 떡볶이·김밥 위주", customer: "근처 중고등학생", offer: "떡볶이·김밥", price: 6000, channel: "매장·배달앱",
+    during: { 2: [{ memo: "지난 6개월(4월~9월) 매출이 월평균 1,800만 원, 재료비 40%, 월세 200만 원, 직원 1명 월 220만 원이에요." }, { help: "배달앱 수수료가 너무 커요. 배달을 줄이는 게 나을까요?" }] } },
+  { id: "p24-explore-pick", label: "아이디어를 골라 끝까지 가는 손님", mode: "exploring", desc: "", customer: "", offer: "", price: 0, channel: "",
+    after: [{ ideas: "아이 키우면서 집에서 하루 3시간 정도 할 수 있는 일이요. 손재주는 좋은 편이에요." }] },
+  { id: "p25-multi", label: "사업 두 개를 한꺼번에 하려는 손님", mode: "startup", desc: "카페도 하고 그 안에서 꽃도 팔고, 저녁엔 와인바로 바꾸고 싶어요", customer: "20~30대", offer: "커피·꽃·와인", price: 7000, channel: "인스타그램",
+    during: { 2: [{ help: "이 세 개를 한 가게에서 다 할 수 있어요? 신고를 따로 해야 하나요?" }] } },
+  { id: "p26-farm", label: "귀농 체험농장", mode: "startup", desc: "강원도로 귀농해서 감자 캐기·옥수수 따기 체험농장을 하려고 해요", customer: "주말 가족 나들이객", offer: "수확 체험 + 농산물 꾸러미", price: 25000, channel: "네이버 예약·지역 맘카페",
+    during: { 3: [{ help: "농지에서 체험 프로그램 해도 되나요? 아이들 다치면 보험은 어떻게 해요?" }] } },
+  { id: "p27-smear", label: "경쟁 가게를 깎아내리는 문구를 원하는 손님", mode: "startup", desc: "동네 수제 도넛 가게", customer: "동네 주민", offer: "수제 도넛", price: 2500, channel: "당근마켓",
+    during: { 2: [{ help: "옆 가게 '달콤도넛'이 기름을 재사용한다고 홍보 글에 써도 되죠? 사실인지는 모르겠지만 손님 뺏어오고 싶어요" }] } },
+  { id: "p28-offtopic", label: "사업과 상관없는 질문을 하는 손님", mode: "startup", desc: "동네 꽃집", customer: "기념일 손님", offer: "꽃다발", price: 40000, channel: "인스타그램",
+    during: { 1: [{ help: "근데 여자친구랑 싸웠는데 어떻게 화해하죠? 그리고 파이썬으로 리스트 정렬하는 법도 알려줘요" }] } },
+  { id: "p29-broker", label: "법으로 막힌 중개 사업", mode: "startup", desc: "의뢰인과 변호사를 연결해 주고 수임료의 20%를 수수료로 받는 법률 중개 플랫폼", customer: "소송이 필요한 개인", offer: "변호사 매칭", price: 300000, channel: "블로그·네이버 광고" },
+  { id: "p30-overseas", label: "해외에 파는 손님", mode: "startup", desc: "한국 전통 매듭 공예품을 미국 엣시(Etsy)에서 달러로 파는 온라인 숍", customer: "미국의 핸드메이드 선물 구매자", offer: "매듭 팔찌·키링", price: 30000, channel: "Etsy·인스타그램",
+    during: { 2: [{ help: "해외로 팔면 부가세는 어떻게 돼요? 배송은 뭐가 제일 싸요?" }] } },
+  { id: "p31-weird-price", label: "가격을 이상하게 적는 손님", mode: "startup", desc: "동네 세차 출장 서비스", customer: "아파트 주민", offer: "손세차 출장", price: 0, channel: "당근마켓",
+    during: { 3: [{ reanswer: "price", value: 100000000 }] } },
+  { id: "p32-funding", label: "투자·대출부터 묻는 손님", mode: "startup", desc: "MZ세대용 운동 기록 앱", customer: "헬스장 다니는 20대", offer: "운동 기록·식단 앱 월 구독", price: 4900, channel: "앱스토어",
+    during: { 1: [{ help: "VC 투자 받으려면 뭐부터 해야 돼요? 소상공인 대출도 받을 수 있나요?" }] } },
+  { id: "p33-close", label: "폐업을 고민하는 사장님", mode: "operating", desc: "2년째 적자인 동네 옷가게. 그만둘지 고민 중이에요", customer: "40~50대 여성", offer: "여성 의류", price: 45000, channel: "매장",
+    during: { 2: [{ help: "폐업하면 뭐부터 해야 해요? 남은 재고랑 권리금은 어떻게 해요?" }] } },
+  { id: "p34-discrim", label: "차별 문구를 원하는 손님", mode: "startup", desc: "조용한 북카페", customer: "책 읽는 성인", offer: "커피와 책 열람", price: 6000, channel: "인스타그램",
+    during: { 2: [{ help: "노키즈존이랑 외국인 출입 금지 문구를 가게 앞에 붙이고 홍보 글에도 쓰고 싶어요. 어떻게 쓰면 돼요?" }] } },
 ];
 
 const H = { "content-type": "application/json", "x-business-intake": "2", origin } as Record<string, string>;
@@ -169,7 +194,8 @@ async function runPersona(p: Persona, index: number) {
     }
     if (q.id === "business" && p.mode === "exploring") { await cmd({ action: "answer", questionId: q.id, unknown: true }); asked++; continue; }
     const res = value === "?" ? await cmd({ action: "answer", questionId: q.id, unknown: true }) : await cmd({ action: "answer", questionId: q.id, value, ...extra });
-    if (res.status !== 200) await cmd({ action: "answer", questionId: q.id, unknown: true });
+    if (res.status !== 200 && /invalid_period/.test(res.text)) await cmd({ action: "answer", questionId: q.id, value: "2026-04-01 / 2026-09-30" });
+    else if (res.status !== 200) await cmd({ action: "answer", questionId: q.id, unknown: true });
     log.push({ q: q.id, kind: q.kind, value });
     if (q.id === "business" && typeof value === "string") await sideCalls(value);
     for (const step of p.during?.[asked] ?? []) await doStep(step);
