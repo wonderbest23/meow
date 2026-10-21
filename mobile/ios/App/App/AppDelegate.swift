@@ -65,6 +65,10 @@ class MainViewController: CAPBridgeViewController {
             webView.backgroundColor = color
             webView.scrollView.backgroundColor = color
             self?.view.backgroundColor = color
+            // 키보드가 뜨면 화면(웹뷰)이 키보드 위까지 줄어든다(Keyboard 플러그인 resize: native).
+            // 그 뒤로 드러나는 창 바탕이 검은색이라 키보드 둥근 모서리에 검은 틈이 보였다 — 창도 같은 색으로
+            webView.superview?.backgroundColor = color
+            webView.window?.backgroundColor = color
         }
         showLoadingCover(over: webView)
         loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in
