@@ -8,8 +8,29 @@ export type FeasibilityCheck = {
   inputs: CoachField[];
 };
 
+const KOREAN_DIGITS: Record<string, number> = { 영: 0, 일: 1, 이: 2, 삼: 3, 사: 4, 오: 5, 육: 6, 칠: 7, 팔: 8, 구: 9 };
+const KOREAN_SMALL_UNITS: Record<string, number> = { 십: 10, 백: 100, 천: 1000 };
+const KOREAN_BIG_UNITS: Record<string, number> = { 만: 10_000, 억: 100_000_000 };
+/** 한글로 쓴 금액("백오십", "삼천오백", "이천만", "만오천")을 숫자로 — 손님 메모·답에 흔하다(실제 AI 시험 2026-10-21). 한글 숫자가 아니면 undefined */
+export function koreanNumberWords(text: string): number | undefined {
+  if (!/^[영일이삼사오육칠팔구십백천만억]+$/.test(text)) return undefined;
+  let total = 0, section = 0, digit: number | null = null;
+  for (const ch of text) {
+    if (ch in KOREAN_DIGITS) { if (digit !== null) return undefined; digit = KOREAN_DIGITS[ch]; }
+    else if (ch in KOREAN_SMALL_UNITS) { section += (digit ?? 1) * KOREAN_SMALL_UNITS[ch]; digit = null; }
+    else { const big = KOREAN_BIG_UNITS[ch]; total += (section + (digit ?? 0) || 1) * big; section = 0; digit = null; }
+  }
+  return total + section + (digit ?? 0);
+}
+
 export function coachAmount(value: string | undefined): number | undefined {
-  const normalized = value?.replace(/\s/g, "") ?? "";
+  // '약 3,500원쯤', '삼천오백 원 정도'처럼 어림 표현은 떼고 읽는다. 금액이 둘 이상인 글('소짜 삼만오천 대짜 오만')은 그대로 읽지 않는다.
+  let normalized = value?.replace(/\s/g, "").replace(/^약/, "").replace(/(쯤|정도|가량|내외|선)$/, "") ?? "";
+  const words = normalized.match(/^([영일이삼사오육칠팔구십백천만억]+)(원)?$/);
+  const spoken = words ? koreanNumberWords(words[1]) : undefined;
+  // '월세 백오십'은 보통 150만 원이라는 뜻이다 — 1,000보다 작은 한글 숫자에 '원'이 없으면 단위를 알 수 없어 읽지 않는다
+  if (spoken !== undefined && (spoken >= 1000 || words?.[2])) normalized = String(spoken);
+  else if (spoken !== undefined) return undefined;
   if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?(?:억원?|천만원?|백만원?|만원?|천원?|백원?|원)?$/.test(normalized)) return undefined;
   const amount = /^0(?:\.0+)?(?:억원?|천만원?|백만원?|만원?|천원?|백원?|원)?$/.test(normalized) ? 0 : parseAmount(normalized);
   return amount != null && Number.isSafeInteger(amount) && amount >= 0 ? amount : undefined;

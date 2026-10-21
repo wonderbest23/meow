@@ -21,7 +21,9 @@ export async function POST(request: Request) {
   const outline = await generatePlanOutline({ ownerHash: identity.hash, planId, sections });
   const results: Array<{ key: string; ok: boolean; skipped?: string; error?: string }> = [];
   const delay = Number(new URL(request.url).searchParams.get("delayMs") ?? 0);
-  for (const s of sections) {
+  // ?limit=1 — 실제 AI 시험에서 '채팅으로 고치기'처럼 계획서가 있기만 하면 되는 경우 앞 몇 장만 만들어 비용을 줄인다
+  const limit = Number(new URL(request.url).searchParams.get("limit") ?? 0);
+  for (const s of limit > 0 ? sections.slice(0, limit) : sections) {
     if (delay) await new Promise(r => setTimeout(r, delay));
     try { results.push({ key: `${s.chapterId}/${s.sectionId}`, ...(await generateAndSaveSection({ ownerHash: identity.hash, planId, ...s, outline: outline.outline })) }); }
     catch (error) { results.push({ key: `${s.chapterId}/${s.sectionId}`, ok: false, error: error instanceof Error ? error.message : String(error) }); }
