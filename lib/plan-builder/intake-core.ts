@@ -8,6 +8,8 @@ import { calculateFinancials, financialsToReference } from "./financials";
 import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
 import { INDUSTRY_HINTS, PRICE_BASIS, periodMonths, sectorChipOptions } from "./intake-options";
 import { descriptionSector } from "./intake-sector";
+import { playbookForKsic, playbookForText } from "./industry-playbooks";
+import { businessTypeFor } from "./business-types";
 import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
 import { START_CONDITIONS } from "./intake-questions";
 import { CONDITION_DIFFERS_NOTE, candidateTemplateFacts, filterCandidateConditions, selectedStartConditions } from "./intake-candidate-constraints";
@@ -280,6 +282,7 @@ export function intakeSnapshot(plan: ServerPlan, coach: CoachState, intake: Inta
     questions, coreComplete: answered === core.length, coreAnswered: answered, coreTotal: core.length,
     summary, financialSummary: intakeFinancialReference(coach, intake), financialWarning: intakeFinancialWarning(coach, intake), hasDocuments: Object.keys(plan.sections).length > 0, documentStatus: intakeDocumentStatus(plan, coach), rewriteCount: staleRewriteCount(plan.sections, coachDocumentRevision(coach)), freeReflects: freeReflectsLeft(plan.answers.__coach_generation), missingSections: missingSectionCount(plan),
     ksic: intakeKsic(intake), ksicCandidates: intakeKsicCandidates(coach, intake), structure: intakeStructureSnapshot(coach, intake),
+    sectorSuggestion: intakeSectorSuggestion(plan, coach, intake),
     candidateIdeas: resources.ideas,
     resourceAssessment: resources.assessment,
     pendingExtraction: intake.notes.some(note => ["queued", "processing"].includes(note.status)) || intake.candidates.some(candidate => candidate.status === "pending"),
@@ -350,7 +353,29 @@ function structureNumber(intake: IntakeState, id: string): number | null {
 export type IntakeScenarioInputs = {
   structure: ReturnType<typeof effectiveStructure>["values"]; labels: Record<string, string>;
   unitPrice: number; unitVariableCost: number; monthlyFixedCost: number; volume: number | undefined; notes: string[];
+  /**
+   * 판매량이 어디서 왔는지. "capacity"는 감당할 수 있는 최대치라 판매 예상이 아니다 —
+   * 새로 시작하는 사업의 요약·첫 달 문장에 판매량으로 쓰지 않는다(2026-10-22 캔들 스토어: 하루 20개 × 26일 = 520건을 첫 달 판매로 적음).
+   */
+  volumeSource?: "volume" | "actual" | "hours" | "capacity" | "occupancy";
+  /** 온라인으로 파는 사업인지 — 돈 장이 '스토어 공개 전/후'로 쓴다 */
+  online: boolean;
 };
+
+/**
+ * 온라인으로 파는 사업인지(택배 판매·앱·중개). business-launch.ts의 businessProfile과 같은 규칙:
+ * 업종 코드 또는 사업 설명으로 업종 가이드를 찾고, 직접 고른 구조 → 설명 → 가이드 → 기본 구조 순으로 사업 유형을 정한다.
+ */
+export function intakeSellsOnline(coach: Pick<CoachState, "business" | "fields">, intake: Pick<IntakeState, "ksic" | "sector" | "structure">): boolean {
+  const value = (key: string) => coach.fields.find(field => field.key === key)?.value ?? "";
+  const described = [coach.business.description, value("business"), value("offer")].filter(Boolean).join(" ");
+  const customer = value("customer") || null;
+  const playbook = intake.ksic ? playbookForKsic(intake.ksic) : playbookForText(described, { customer });
+  const effective = effectiveStructure(intake);
+  const chosen = Object.fromEntries(STRUCTURE_AXES.flatMap(axis => effective.basis[axis] === "user" && effective.values[axis] ? [[axis, effective.values[axis]]] : [])) as Partial<BusinessStructure>;
+  const typed = businessTypeFor({ chosen, description: described, customer: customer ?? undefined, playbookId: playbook?.id, structure: effective.values });
+  return !!typed && ["ship", "app", "platform"].includes(typed.type.id);
+}
 /**
  * 손익 계산 입력(가격·변동비·고정비·월 판매량)을 한 곳에서 정한다. 문서 요약·AI 사업안·질문 화면이 같은 숫자를 쓰게 하는 단일 원천.
  * 판매량 우선순위: volume 필드 → (운영 중) 실적 매출 ÷ 기간 ÷ 가격 → (시간제) 주당 청구 시간 → 처리량(최대치, 대여는 이용률 반영).
@@ -367,14 +392,15 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
   if (unitPrice == null || unitVariableCost == null || monthlyFixedCost == null) return { missing, labels };
   const notes: string[] = [];
   let volume: number | undefined;
+  let volumeSource: IntakeScenarioInputs["volumeSource"];
   const rawVolume = fields.get("volume") ?? "";
-  if (/^[\d,]+$/.test(rawVolume)) volume = Number(rawVolume.replace(/,/g, ""));
+  if (/^[\d,]+$/.test(rawVolume)) { volume = Number(rawVolume.replace(/,/g, "")); volumeSource = "volume"; }
   // 운영 중 사업: 실적 매출 ÷ 기간(개월) ÷ 가격으로 실제 월 판매량을 잡는다. 처리량(감당 가능한 최대치)을 판매량으로 쓰지 않는다.
   if (volume === undefined && intake.mode === "operating") {
     const sales = amount("sales"), periodValue = intake.answers.period?.value, months = periodMonths(typeof periodValue === "string" ? periodValue : null);
     if (sales != null && months && unitPrice > 0) {
       const perMonth = sales / months;
-      volume = Math.round(perMonth / unitPrice);
+      volume = Math.round(perMonth / unitPrice); volumeSource = "actual";
       notes.push(`실적 기준 판매량: 매출 ${won(sales)} ÷ ${Math.round(months * 10) / 10}개월 ÷ ${labels.price} ${won(unitPrice)} = 월 약 ${volume.toLocaleString("ko-KR")}건`);
       const capacity = monthlyVolumeFromCapacity(fields.get("capacity"));
       if (capacity && capacity.volume > 0) notes.push(volume > capacity.volume
@@ -383,7 +409,7 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
     }
   }
   const billable = structure.revenue === "per_hour" ? structureNumber(intake, "structure.billableHours") : null;
-  if (volume === undefined && billable != null) { volume = Math.round(billable * 4.3); notes.push(`주 ${billable}시간 청구 × 4.3주 = 월 ${volume}시간`); }
+  if (volume === undefined && billable != null) { volume = Math.round(billable * 4.3); volumeSource = "hours"; notes.push(`주 ${billable}시간 청구 × 4.3주 = 월 ${volume}시간`); }
   const occupancy = structure.revenue === "rental" ? structureNumber(intake, "structure.occupancy") : null;
   if (volume === undefined) {
     const capacity = monthlyVolumeFromCapacity(fields.get("capacity"));
@@ -392,16 +418,16 @@ export function intakeScenarioInputs(coach: CoachState, intake: IntakeState): In
       if (structure.revenue === "rental") {
         if (occupancy == null) notes.push("이용률 미정: 최대 수용량을 예상 판매량으로 확정하지 않습니다. 이용률 또는 월 예상 판매량을 확인해 주세요.");
         else {
-          volume = Math.round(capacity.volume * occupancy / 100);
+          volume = Math.round(capacity.volume * occupancy / 100); volumeSource = "occupancy";
           notes.push(`이용률 ${occupancy}% 반영: 월 ${capacity.volume.toLocaleString("ko-KR")}${capacity.unit} 감당 중 ${volume.toLocaleString("ko-KR")}${capacity.unit} 판매 가정`);
         }
       } else {
-        volume = capacity.volume;
+        volume = capacity.volume; volumeSource = "capacity";
         notes.push("판매량은 감당할 수 있는 최대치로 잡았습니다. 실제 판매가 이보다 적으면 이익도 줄어듭니다.");
       }
     }
   } else if (structure.revenue === "rental") notes.push(`입력한 월 예상 판매량 ${volume.toLocaleString("ko-KR")}건 사용: 이용률은 다시 곱하지 않습니다.`);
-  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes };
+  return { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, volumeSource, online: intakeSellsOnline(coach, intake) };
 }
 
 /**
@@ -485,10 +511,10 @@ export function intakeFinancialWarning(coach: CoachState, intake: IntakeState): 
 export function intakeFinancialReference(coach: CoachState, intake: IntakeState): string {
   const inputs = intakeScenarioInputs(coach, intake);
   if ("missing" in inputs) return [`세 값(${inputs.labels.price}, ${inputs.labels.unitCost}, ${inputs.labels.cost})이 모두 정해진 뒤 손익을 계산합니다. 아직 없는 값: ${inputs.missing.join(", ")}. 미입력 비용은 0원이 아닙니다.`, ...intakeDetailChecks(coach, intake, null)].join("\n");
-  const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes } = inputs;
+  const { structure, labels, unitPrice, unitVariableCost, monthlyFixedCost, volume, notes, online } = inputs;
   const won = (value: number) => `${Math.round(value).toLocaleString("ko-KR")}원`;
   // 돈 장 시험판(cashflow-scenarios.ts): 신규 사업은 최대치 판매량 대신 세 경우의 결론 숫자를 넘긴다
-  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost }) : null;
+  const flow = cashflowScenariosEnabled() && intake.mode !== "operating" ? cashflowFromFields(coach.fields, { unitPrice, unitVariableCost, monthlyFixedCost, online }) : null;
   const result = calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, startingVolume: volume, monthlyGrowthPct: 0 });
   const lines = flow ? [cashflowReference(flow, { basis: `${STRUCTURE_LABELS.revenue[structure.revenue]} 기준`, unitLines: financialsToReference(calculateFinancials({ unitPrice, unitVariableCost, monthlyFixedCost, monthlyGrowthPct: 0 })) })] : [
     `계획 시나리오 계산(실적 아님). ${STRUCTURE_LABELS.revenue[structure.revenue]} 기준으로 판매량은 매월 동일하다고 가정합니다. 세금·운전자금은 별도 확인 대상이며 아래 영업손익을 현금잔액으로 표현하지 않습니다.`,
@@ -513,8 +539,9 @@ export function intakeFinancialReference(coach: CoachState, intake: IntakeState)
   else if (structure.sides === "two") lines.push("- 양면 시장: 공급자 목표가 정해지지 않았습니다. 공급자 1곳당 거래 수를 확인하기 전까지 판매량은 공급 측이 받쳐 준다는 가정입니다.");
   const cycle = structure.revenue === "project" ? structureNumber(intake, "structure.salesCycleDays") : null;
   if (cycle != null) lines.push(`- 문의→계약 ${cycle}일: 첫 입금은 영업 시작 후 약 ${cycle}일 뒤부터 잡습니다.`);
-  const shownNotes = flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치")) : notes;
-  return [...lines, ...shownNotes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined ? null : { volume, actual: notes.some(note => note.startsWith("실적 기준 판매량")) })].filter(Boolean).join("\n");
+  // 온라인 판매는 '영업일'이 아니라 만드는·보내는 날 — 처리량 환산 문구를 맞춘다(2026-10-22 캔들 스토어 '월 26일 영업')
+  const shownNotes = (flow ? notes.filter(note => !note.startsWith("판매량은 감당할 수 있는 최대치")) : notes).map(note => online ? note.replace(/월 26일 영업/g, "월 26일 작업") : note);
+  return [...lines, ...shownNotes.map(note => `- ${note}`), ...intakeDetailChecks(coach, intake, volume === undefined || inputs.volumeSource === "capacity" ? null : { volume, actual: inputs.volumeSource === "actual" })].filter(Boolean).join("\n");
 }
 
 export function applyIntakeStructure(plan: ServerPlan, coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
@@ -562,6 +589,21 @@ export function intakeStructureFallback(coach: CoachState, intake: IntakeState):
     if (sectors.size >= 2) return "compound";
   }
   return !intake.ksic && intake.sector === "general" && (intake.mode === "exploring" || !!intake.answers.industry) ? "unclassified" : null;
+}
+
+/**
+ * 고른 업종과 사업 설명이 어긋나는지(규칙, AI 0회). 설명이 다른 업종 말(스마트스토어·쇼핑몰, 카페, 학원 …)을 분명히 담고 있고,
+ * 사용자가 표준산업분류를 직접 고르지 않았고, 이 설명으로 아직 확인하지 않았을 때만 제안한다. 계획서를 만든 뒤에는 묻지 않는다.
+ */
+export function intakeSectorSuggestion(plan: Pick<ServerPlan, "sections">, coach: CoachState, intake: IntakeState): IntakeSnapshot["sectorSuggestion"] {
+  const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim() ?? "";
+  const industry = intake.answers.industry;
+  if (!business || industry?.status !== "answered" || intake.ksic || intake.sector === "general" || Object.keys(plan.sections).length) return null;
+  if (intake.sectorCheck?.business === business) return null;
+  const suggested = descriptionSector(business);
+  if (suggested === "general" || suggested === intake.sector) return null;
+  const label = (sector: ProposalSector) => intakeSectorOptions.find(option => option.value === sector)?.label ?? sector;
+  return { sector: suggested, label: label(suggested), current: label(intake.sector) };
 }
 
 export function displayIntakeValue(value: IntakeValue): string {
@@ -676,6 +718,9 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
     intake.ksic = ksic && value !== null ? ksic.code : null;
     coach.business.industry = value === null ? "" : intakeSectorOptions.find(option => option.value === sector)?.label ?? String(sector);
     if (ksic && value !== null) intake.answers[question.id] = { ...intake.answers[question.id], value: sector, quote: `${ksic.name} (KSIC ${ksic.code})` };
+    // 사업 설명을 안 뒤에 업종을 다시 고르면 그것이 확인이다 — 같은 설명으로 다시 묻지 않는다
+    const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim();
+    if (business) intake.sectorCheck = { business, decision: "changed" };
   }
   if (question.id === "candidate" && value !== null) {
     const idea = allCandidateIdeas(intake, coach).find(item => item.id === value);

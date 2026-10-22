@@ -7,6 +7,7 @@ import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 import { formatPriceText } from "./from-plan";
 import { applyContactMethod, ctaButtons, DEFAULT_CONTACT, draftPhone } from "./contact-method";
 import type { BrainwaveData } from "./page-data";
+import { homepageSalesMode } from "../plan-builder/business-launch";
 
 /*
  * 계획서로 홈페이지 채우기(AI).
@@ -127,8 +128,40 @@ export function withKnownPrice(copy: HomepageCopy, price: string): HomepageCopy 
 /* 손님에게 할 말이 들어 있는 계획서 장 — 재무·위험 분석은 싣지 않는다 */
 const CUSTOMER_SECTIONS = ["summary/executive", "market/products", "overview/problem", "strategy/price", "strategy/distribution", "strategy/promotion", "market/personas"];
 
+/*
+ * 판매 방식에 맞춰 AI 글을 바로잡는다(규칙, AI 0회).
+ * - 스토어에서만 파는 사업: 주문 단계를 '홈페이지의 문의 버튼'이 아니라 스토어 주문으로, 버튼 글은 '스토어에서 주문하기'로.
+ * - 1개 단위로 파는 상품: 가격 카드의 '가격 기준(1회·월 등)은 문의 주시면…' 문장을 빼고 금액 앞에 '1개'를 붙인다.
+ * 2026-10-22 캔들 스토어: '② 주문하기 — 홈페이지의 문의 버튼으로 향과 개수를 남겨 주세요', '25,000원이에요. 가격 기준(1회·월 등)은 문의 주시면 안내해 드려요'.
+ */
+const PRICE_BASIS_ASK = /[^.!?\n]*가격\s*기준[^.!?\n]*(?:문의|안내)[^.!?\n]*[.!?]?/g;
+const ORDER_BY_INQUIRY = /(문의\s*(?:버튼|양식|하기|주시|남겨)|문의로|연락\s*주)/;
+export function fitHomepageSalesMode(copy: HomepageCopy, mode: { storeOnly: boolean; perItem: boolean }): HomepageCopy {
+  let next = copy;
+  if (mode.perItem) {
+    const fixPrice = (body: string) => {
+      const without = body.replace(PRICE_BASIS_ASK, "").replace(/\s{2,}/g, " ").trim();
+      if (without === body) return body;
+      // 금액 앞에 개수·단위가 없으면 '1개'를 붙인다('선물 상자 25,000원' → '선물 상자 1개 25,000원')
+      return /(?:\d\s*(?:개|세트|박스|병|팩|회|권)|1개|개당|월|주\s*\d|회당)\s*\d[\d,]*\s*원/.test(without) ? without : without.replace(/(\d[\d,]*\s*원)/, "1개 $1");
+    };
+    next = { ...next, cards: next.cards.map(card => ({ ...card, body: fixPrice(card.body) })), menu: { ...next.menu, intro: next.menu.intro.replace(PRICE_BASIS_ASK, "").trim() } };
+  }
+  if (mode.storeOnly) {
+    const steps = next.process.steps.map(step => {
+      if (!/(주문|구매|신청)/.test(step) || !ORDER_BY_INQUIRY.test(step)) return step;
+      const number = step.match(/^(?:[\u2460-\u2473]|\d{1,2}[.)])\s*/)?.[0] ?? "";
+      return `${number}스토어에서 주문하기 — 온라인 스토어에서 상품을 골라 결제해요`;
+    });
+    const cta = !next.cta.trim() || /(문의|주문|구매|신청)/.test(next.cta) ? "스토어에서 주문하기" : next.cta;
+    next = { ...next, process: { ...next.process, steps }, cta };
+  }
+  return next;
+}
+
 export function homepageFillPrompt(plan: PlanLike): { system: string; user: string } {
   const coach = readCoach(plan.answers);
+  const sales = homepageSalesMode(plan);
   const field = (key: string) => coach?.fields.find((item) => item.key === key);
   const design = coach ? currentBusinessDesign(coach) : undefined;
   const price = field("price");
@@ -142,6 +175,8 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
     field("problem") ? `고객이 겪는 문제: ${field("problem")!.value}` : "",
     price ? `가격: ${formatPriceText(price.value)}${price.basis === "proposal" ? " (AI 제안 가격 — 확정 전)" : ""}` : "가격: 정하지 않음",
     field("channel") ? `알리는 곳: ${field("channel")!.value}` : "",
+    sales.storeOnly ? "주문 받는 곳: 온라인 스토어(홈페이지 문의로 주문을 받지 않음)" : "",
+    sales.perItem && price ? "가격 기준: 상품 1개" : "",
     design?.startingPlan ? `시작 범위: ${design.startingPlan.scope}` : "",
     design?.startingPlan?.notIncluded.length ? `이번에 하지 않는 것: ${design.startingPlan.notIncluded.join(" / ")}` : "",
   ].filter(Boolean);
@@ -175,6 +210,8 @@ export function homepageFillPrompt(plan: PlanLike): { system: string; user: stri
     "- 병원·의원·치과·약국이면 cards 는 진료 과목·진료 항목, process 는 접수부터 진료 뒤까지의 순서로 쓰고, 의료진 이름·경력·자격은 쓰지 않습니다(사장님이 직접 적습니다).",
     "- [사업 정보]의 가격이 하나뿐인데 메뉴가 여럿이면 모든 메뉴를 '문의'로 두지 말고, 그 금액을 'N원부터'처럼 씁니다(계획서의 금액 그대로). 메뉴마다 다른 금액을 지어내지 않습니다.",
     "- cta 는 손님이 할 행동입니다('문의하기', '예약 문의하기'처럼). 아직 정하지 않은 것을 묻는 말('영업시간 문의하기', '주소 문의하기')은 쓰지 않습니다.",
+    "- [사업 정보]에 '주문 받는 곳: 온라인 스토어'가 있으면 이용 순서의 주문 단계는 '스토어에서 주문하기 — 스토어에서 골라 결제해요'처럼 스토어 주문으로 쓰고, cta 는 '스토어에서 주문하기'로 씁니다. 홈페이지 문의 버튼으로 주문하라고 쓰지 않습니다. 이 사업은 스토어에서만 주문을 받기 때문에, 이 규칙이 위의 '홈페이지의 문의 버튼으로' 규칙보다 우선합니다.",
+    "- [사업 정보]에 '가격 기준: 상품 1개'가 있으면 가격 카드에 '1개 25,000원'처럼 1개 가격으로 쓰고, 가격 기준을 문의하라는 문장은 쓰지 않습니다.",
     "JSON 객체 하나만 출력합니다:",
     '{"tagline":"","cardsTitle":"","cardsIntro":"","cards":[{"title":"","body":""}],"process":{"title":"","steps":[""]},"closing":"","closingSub":"","cta":"","facts":[{"value":"","label":""}],"menu":{"title":"","intro":"","items":[{"name":"","price":""}]},"faq":[{"question":"","answer":""}]}',
   ].join("\n");

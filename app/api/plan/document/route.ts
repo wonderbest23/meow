@@ -4,6 +4,7 @@ import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { coachDocumentSnapshot } from "../../../../lib/plan-builder/coach-document";
 import { buildExecutiveSummary, hasExecutiveSummaryContent, type ExecutiveSummary } from "../../../../lib/plan-builder/executive-summary";
+import { documentIndustryLabel } from "../../../../lib/plan-builder/business-launch";
 
 export const runtime = "nodejs";
 
@@ -79,7 +80,8 @@ export async function POST(req: Request) {
     const snapshot = coachDocumentSnapshot(plan);
     if (snapshot) {
       if (!summary && (snapshot.stale.length || snapshot.missing.length)) return Response.json({ message: "대화에서 최신 내용을 문서에 반영한 뒤 내려받아 주세요. 기존 내용은 유지되어 있어요." }, { status: 409 });
-      body.title = plan.title; body.planType = plan.planType; body.business = snapshot.business; body.sections = snapshot.sections;
+      // 표지의 업종은 확정한 분류·업종 가이드 이름을 넓은 업종 이름보다 먼저 쓴다
+      body.title = plan.title; body.planType = plan.planType; body.business = { ...snapshot.business, industry: documentIndustryLabel(plan) || snapshot.business.industry }; body.sections = snapshot.sections;
       manualReview = snapshot.manualReview;
     }
   }

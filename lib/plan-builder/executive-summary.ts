@@ -4,6 +4,7 @@ import { coachAmount, checkCoachFeasibility } from "./coach-feasibility";
 import { intakeScenarioInputs, readIntake } from "./intake-core";
 import { buildPlanBusinessContext, type ContextField } from "./context/build";
 import { calculateFinancials, collectFinancialInputs, describeFinancialFields } from "./financials";
+import { cashflowFromFields, cashflowScenariosEnabled } from "./cashflow-scenarios";
 import { comparePeriods, metricValue, periodDays, periodLabel, previousPeriod, readOperatingState } from "./operating-records";
 import type { ServerPlan } from "./plan-server-store";
 
@@ -55,9 +56,17 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   // 진단(intake) 계획은 질문 화면·AI 사업안과 같은 판매량(실적 ÷ 가격, 처리량 등)을 쓴다.
   const intake = coach ? readIntake(plan.answers) : null;
   const scenario = coach && intake ? intakeScenarioInputs(coach, intake) : null;
+  /*
+   * 새로 시작하는 사업(진단 계획, 운영 기록 없음)은 처리량(감당할 수 있는 최대치)을 첫 달 판매로 쓰지 않는다.
+   * 2026-10-22 캔들 스토어: 요약은 '첫 달 520건 판매 / 영업손익 8,540,000원'인데 본문은 '첫 달 9개, 매달 1,647,000원 모자람'이었다.
+   * 문서 돈 장과 같은 계산(cashflow-scenarios)의 첫 달 값을 쓰고, 그 계산이 없으면 판매량을 정하지 않는다.
+   */
+  const startupIntake = !!intake && intake.mode !== "operating" && !period;
+  const flow = startupIntake && coach && scenario && !("missing" in scenario) && cashflowScenariosEnabled() ? cashflowFromFields(coach.fields, scenario) : null;
+  const capacityOnly = startupIntake && !!scenario && !("missing" in scenario) && (scenario.volumeSource === "capacity" || !!flow);
   const inputs = scenario && !("missing" in scenario) ? {
     unitPrice: scenario.unitPrice, unitVariableCost: scenario.unitVariableCost, monthlyFixedCost: scenario.monthlyFixedCost,
-    startingVolume: scenario.volume, monthlyGrowthPct: 0,
+    startingVolume: capacityOnly ? undefined : scenario.volume, monthlyGrowthPct: 0,
   } : coach ? {
     unitPrice: coachAmount(fields.get("price")?.value), unitVariableCost: coachAmount(fields.get("unitCost")?.value),
     monthlyFixedCost: coachAmount(fields.get("cost")?.value),
@@ -70,13 +79,19 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const completeCosts = !!legacyComplete && inputs.unitPrice != null && inputs.unitVariableCost != null && inputs.monthlyFixedCost != null;
   const financials = completeCosts ? calculateFinancials(inputs) : null;
   const firstMonth = financials?.monthly[0];
-  const financialLines = firstMonth ? [
+  const careful = flow?.scenarios[0], goalCase = flow?.scenarios.find(item => item.key === "goal");
+  const signed = (value: number) => `${value > 0 ? "+" : ""}${won(Math.round(value))}`;
+  const flowLines = flow && careful ? [
+    line("첫 달 가정", `조심스러운 경우 ${careful.volumes[0].toLocaleString("ko-KR")}${flow.unit} 판매 / 매출 ${won(careful.volumes[0] * flow.unitPrice)} / 한 달 ${signed(careful.net[0])}${flow.living ? "(생활비 포함)" : ""}${goalCase && flow.goal ? ` · 목표 경우 ${flow.goal.months}개월차 ${goalCase.volumes[Math.min(flow.goal.months, goalCase.volumes.length) - 1].toLocaleString("ko-KR")}${flow.unit}` : ""}`, "calculation", ["cashflow.careful.1"], 115),
+    line("산출 조건", `판매가 ${won(flow.unitPrice)} / 건당 변동비 ${won(flow.unitPrice - flow.contribution)} / 월 고정비 ${won(flow.monthlyFixedCost)}`, "calculation", ["financials.inputs"], 110),
+  ] : null;
+  const financialLines = flowLines ?? (firstMonth ? [
     line(coach?.stage === "operating" || period ? "월 운영 가정" : "첫 달 가정", `${firstMonth.volume.toLocaleString("ko-KR")}건 판매 / 매출 ${won(firstMonth.revenue)} / 영업손익 ${won(firstMonth.operatingProfit)}`, "calculation", ["financials.monthly.1"], 110),
     line("산출 조건", `판매가 ${won(inputs.unitPrice!)} / 건당 변동비 ${won(inputs.unitVariableCost!)} / 월 고정비 ${won(inputs.monthlyFixedCost!)}`, "calculation", ["financials.inputs"], 110),
   ] : [
-    line("계산 상태", completeCosts ? "월 예상 판매량이 없어 월 매출과 손익을 계산하지 않음" : "가격·건당 변동비·인건비를 포함한 월 고정비가 모두 있어야 손익 계산 가능", "missing", ["financials.inputs"]),
+    line("계산 상태", completeCosts ? capacityOnly ? "판매량 미정: 감당할 수 있는 최대치는 판매 예상이 아니라 첫 달 매출과 손익을 계산하지 않음" : "월 예상 판매량이 없어 월 매출과 손익을 계산하지 않음" : "가격·건당 변동비·인건비를 포함한 월 고정비가 모두 있어야 손익 계산 가능", "missing", ["financials.inputs"]),
     ...(coach ? [line("입력 비용", `${cost.label} ${cost.value} / ${unitCost.label} ${unitCost.value}`, cost.basis === "proposal" || unitCost.basis === "proposal" ? "proposal" : "user", ["coach.cost", "coach.unitCost"])] : []),
-  ];
+  ]);
   if (financials?.breakEven) financialLines.push(line("손익분기", `월 ${financials.breakEven.units.toLocaleString("ko-KR")}건 / 매출 ${won(financials.breakEven.revenue)}`, "calculation", ["financials.breakEven"], 80));
   const evidenceLines: SummaryLine[] = [];
   if (period) {
@@ -103,7 +118,7 @@ export function buildExecutiveSummary(plan: Pick<ServerPlan, "id" | "title" | "p
   const attention = coach ? checkCoachFeasibility(coach.fields).filter(check => check.status === "attention").map(check => check.detail) : context.conflicts.map(conflict => conflict.detail);
   const note = [
     "직접 입력한 숫자는 아직 실제 실적으로 확인된 값이 아니에요. 계획 계산과 실제 실적은 나눠서 봐 주세요.",
-    firstMonth ? "계획 손익은 세금·운전자금을 빼기 전 금액이에요." : "입력하지 않은 비용은 0원으로 계산하지 않았어요.",
+    flowLines ? "첫 달 가정은 문서 돈 장의 '조심스러운 경우'와 같은 계산이고, 세금은 빼기 전 금액이에요." : firstMonth ? "계획 손익은 세금·운전자금을 빼기 전 금액이에요." : "입력하지 않은 비용은 0원으로 계산하지 않았어요.",
     baseline && period && periodDays(baseline) !== periodDays(period) ? "비교 기간 길이가 달라 합계 차이만으로 나아졌다고 보기 어려워요." : "",
     "줄여서 보여 준 항목은 상세 계획서에서 전체 내용을 확인해 주세요.",
   ].filter(Boolean).join(" ");

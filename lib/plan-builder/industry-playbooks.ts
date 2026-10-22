@@ -4,6 +4,8 @@
  *
  * 원칙
  * - 순서와 담당 기관, 공식 안내 창구만 쓴다. 조문 번호·면적·교육 시간·수수료처럼 개정되거나 지역마다 다른 값은 넣지 않는다.
+ *   예외(2026-10-22): 온라인 판매의 플랫폼 수수료·택배비는 원가 계산에 꼭 필요해, 정확한 요율 대신 흔한 범위만 '(확인 필요)'를 붙여 둔다.
+ *   청약철회 7일은 전자상거래법 제17조의 기간이다.
  * - 법적 판단이 아니라 출발점이다. 모든 단계는 관할 기관 확인을 전제로 하고, 화면에도 그렇게 표시한다.
  * - 표준산업분류(KSIC) 코드 앞자리로 고른다. 더 긴(구체적인) 코드가 우선한다.
  * 검토일: 2026-10-03(공식 창구: 정부24·식품안전나라·국세청·교육청·법령정보센터 안내 기준). 바뀌면 이 날짜와 내용을 함께 고친다.
@@ -36,6 +38,29 @@ export type IndustryPlaybook = {
 
 export const PLAYBOOK_REVIEWED_AT = "2026-10-11";
 
+/*
+ * 온라인 판매 공통(전자상거래법·통신판매업 신고) — 택배로 파는 사업이면 업종 가이드(예: 캔들 공방)에 더한다(withOnlineSales).
+ * 2026-10-22 캔들 스토어: 반품은 '스마트스토어 정책 확인'뿐이었고, 수수료·택배비는 '확인 필요'만 다섯 번 넘게 반복됐다.
+ * 수수료·택배비는 정확한 현재 요율이 아니라 흔한 범위다 — 판매자 센터·택배 견적으로 확인한다.
+ */
+export const ONLINE_RETURN_PITFALL = "반품(청약철회): 전자상거래법상 손님은 상품을 받은 날부터 7일 안에는 단순 변심이어도 반품할 수 있는 게 원칙이에요. 손님 잘못으로 망가졌거나, 불을 붙이는 등 사용해서 가치가 크게 떨어진 상품, 미리 알리고 동의받은 주문 제작 상품처럼 법이 정한 경우에만 거절할 수 있고, 그런 예외는 상세 페이지에 눈에 띄게 적어 둬야 해요. 단순 변심 반품 배송비는 손님에게 받을 수 있어요.";
+export const ONLINE_FEE_PITFALL = "판매 수수료(확인 필요): 스마트스토어는 결제 수단·사업자 규모에 따른 결제(주문관리) 수수료가 흔히 판매가의 2~4% 안팎이고, 네이버쇼핑 등을 거쳐 들어온 주문에는 판매(매출연동) 수수료가 2~3% 안팎 더 붙을 수 있어요. 오픈마켓은 보통 이보다 높아요. 지금 요율은 판매자 센터 안내로 확인해 원가에 넣어요.";
+export const ONLINE_SHIPPING_PITFALL = "택배비(확인 필요): 작은 상자 한 건에 흔히 3,000~5,000원 안팎이에요(계약 물량·크기·무게·지역에 따라 달라요). 상자·완충재 값은 따로 들어요. 무료배송이면 이 돈이 한 개당 남는 돈에서 빠지니, 택배사 견적을 받아 원가에 넣어요.";
+export const ONLINE_SALES_STEP: IndustryPlaybook["steps"][number] = { title: "통신판매업 신고", where: "관할 시·군·구청 (정부24로도 신청)", detail: "온라인으로 직접 팔면 판매를 시작하기 전에 신고해요. 사업자등록증과 구매안전서비스 이용확인증(스마트스토어·오픈마켓은 판매자 센터에서 발급)이 필요하니 사업자등록 다음에 해요. 직전 해 거래 횟수가 공정거래위원회 고시 기준보다 적거나 간이과세자면 신고하지 않아도 되니 대상인지 먼저 확인하고, 받은 신고번호는 판매 페이지에 적어요." };
+
+/** 택배로 파는 사업 — 업종 가이드에 통신판매업 신고 단계와 온라인 판매 주의점을 더한다(이미 있으면 그대로) */
+export function withOnlineSales(playbook: IndustryPlaybook): IndustryPlaybook {
+  if (playbook.id === "online-store") return playbook;
+  const hasStep = playbook.steps.some(step => /통신판매업/.test(step.title));
+  // 판매 페이지를 여는 마지막 단계 앞에 넣는다 — 신고번호를 판매 페이지에 적어야 하므로
+  const openIndex = playbook.steps.findIndex(step => /판매\s*(?:페이지|창구)|판매 시작|열기/.test(step.title));
+  const at = openIndex >= 0 ? openIndex : playbook.steps.length;
+  const steps = hasStep ? playbook.steps : [...playbook.steps.slice(0, at), ONLINE_SALES_STEP, ...playbook.steps.slice(at)];
+  const pitfalls = [...playbook.pitfalls, ...[ONLINE_RETURN_PITFALL, ONLINE_FEE_PITFALL, ONLINE_SHIPPING_PITFALL].filter(item => !playbook.pitfalls.includes(item))];
+  const links = [...playbook.links, ...ONLINE_SALES_SOURCES.filter(link => !playbook.links.some(item => item.url === link.url))];
+  return { ...playbook, steps, pitfalls, links };
+}
+
 const LINK = {
   gov24: { title: "정부24 · 민원 신청과 안내", url: "https://www.gov.kr" },
   foodsafety: { title: "식품안전나라 · 식품 영업 안내", url: "https://www.foodsafetykorea.go.kr" },
@@ -49,6 +74,8 @@ const LINK = {
   kc: { title: "제품안전정보센터 · KC 인증 대상 확인", url: "https://www.safetykorea.kr" },
   chemp: { title: "한국환경산업기술원 · 생활화학제품 안전확인 신고", url: "https://www.keiti.re.kr" },
 } as const;
+/** 온라인 판매 준비의 공식 창구(통신판매업 신고·전자상거래법 원문) */
+export const ONLINE_SALES_SOURCES: Array<{ title: string; url: string }> = [LINK.ftc, LINK.gov24, { title: "국가법령정보센터 · 전자상거래법 제17조(청약철회)", url: "https://www.law.go.kr/법령/전자상거래등에서의소비자보호에관한법률" }];
 
 /*
  * 음식점·카페·제과점이 같이 쓰는 식품접객업 공통 순서(2026-10-11 원문 대조로 고침):
@@ -154,7 +181,7 @@ const BASE_PLAYBOOKS: IndustryPlaybook[] = [
       { title: "통신판매업 신고", where: "관할 시·군·구청 (정부24로도 신청)", detail: "직전 해 통신판매 거래 횟수가 공정거래위원회 고시 기준보다 적거나 간이과세자면 신고하지 않아도 돼요. 대상인지 먼저 확인해요." },
       { title: "판매 페이지 열기", where: "판매 플랫폼 · 오늘창업 홈페이지", detail: "상호·대표자·주소·전화·이메일·통신판매업 신고번호와 교환·반품 기준을 페이지에 표시해요." },
     ],
-    pitfalls: ["플랫폼 수수료·배송비·반품비를 원가에 넣지 않으면 팔수록 손해일 수 있어요.", "캔들·디퓨저·방향제는 '무독성·친환경·인체에 무해' 같은 말을 포장에도 광고에도 쓸 수 없어요. 향만 바꾼 제품은 먼저 신고한 대표 제품의 파생제품으로 신고할 수 있으니, 처음에는 향 가짓수를 적게 시작하고 원료 성분표를 미리 받아 두세요.", "다른 사람이 찍은 사진·브랜드 로고를 쓰면 권리 침해가 될 수 있어요.", "상품을 받은 뒤 법에서 정한 기간 안에는 단순 변심이어도 반품(청약철회)을 받아 줘야 하는 게 원칙이에요. 소비자 잘못으로 망가졌거나 사용해서 가치가 크게 떨어진 경우처럼 법이 정한 경우에만 거절할 수 있고, 그런 상품은 미리 눈에 띄게 알려야 해요. 단순 변심 반품 배송비는 소비자에게 받을 수 있어요."],
+    pitfalls: ["플랫폼 수수료·배송비·반품비를 원가에 넣지 않으면 팔수록 손해일 수 있어요.", ONLINE_FEE_PITFALL, ONLINE_SHIPPING_PITFALL, "캔들·디퓨저·방향제는 '무독성·친환경·인체에 무해' 같은 말을 포장에도 광고에도 쓸 수 없어요. 향만 바꾼 제품은 먼저 신고한 대표 제품의 파생제품으로 신고할 수 있으니, 처음에는 향 가짓수를 적게 시작하고 원료 성분표를 미리 받아 두세요.", "다른 사람이 찍은 사진·브랜드 로고를 쓰면 권리 침해가 될 수 있어요.", ONLINE_RETURN_PITFALL],
     links: [LINK.ftc, LINK.kc, LINK.chemp, LINK.gov24, LINK.nts],
   },
   {
