@@ -281,6 +281,57 @@ export async function listAdminConversations(): Promise<SupportConversation[]> {
     .filter((item) => (item.lastMessagePreview ?? "").trim().length > 0);
 }
 
+/** 관리자 목록 한 줄 — 서버 안에서만 쓴다(ownerHash 는 화면으로 내보내지 않는다) */
+export type AdminConversationRecord = SupportConversation & {
+  /** 대화 주인의 식별 해시 — 계정 이메일을 찾는 데만 쓴다 */
+  ownerHash: string;
+  /** 손님이 마지막으로 보낸 말 — 미리보기가 관리자 답장으로 덮이면 무엇을 물었는지 안 보였다 */
+  lastCustomerPreview: string;
+};
+
+/*
+ * 관리자 상담함 목록 — 주인 해시와 손님의 마지막 말까지 붙인다.
+ * last_message_preview 는 관리자 답장에도 바뀌어, 답장한 대화는 손님이 무엇을 물었는지 목록에서 안 보였다.
+ */
+export async function listAdminConversationRecords(): Promise<AdminConversationRecord[]> {
+  const supabase = await supportSupabase();
+  if (!supabase) {
+    return [...demoConversations.values()]
+      .filter((item) => item.lastMessagePreview.trim().length > 0)
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .map((item) => {
+        const lastCustomer = [...(demoMessages.get(item.id) ?? [])].reverse().find((message) => message.sender === "customer");
+        return { ...clone(publicConversation(item)), ownerHash: item.guestTokenHash, lastCustomerPreview: lastCustomer?.body.slice(0, 80) ?? "" };
+      });
+  }
+  const { data, error } = await supabase
+    .from("support_conversations")
+    .select("*")
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data ?? [])
+    .map((row) => ({ ...mapConversation(row), ownerHash: String(row.guest_token_hash ?? ""), lastCustomerPreview: "" }))
+    .filter((item) => (item.lastMessagePreview ?? "").trim().length > 0);
+  // 손님의 마지막 말 — 대화 100개씩 최근 메시지를 읽어 대화마다 첫 줄만 쓴다. 못 읽어도 목록은 그대로 보인다
+  const latest = new Map<string, string>();
+  for (let index = 0; index < rows.length; index += 100) {
+    const ids = rows.slice(index, index + 100).map((row) => row.id);
+    const { data: messages, error: messageError } = await supabase
+      .from("support_messages")
+      .select("conversation_id, body, created_at")
+      .eq("sender", "customer")
+      .in("conversation_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(1000);
+    if (messageError) break;
+    for (const message of messages ?? []) {
+      const id = String(message.conversation_id);
+      if (!latest.has(id)) latest.set(id, String(message.body ?? "").slice(0, 80));
+    }
+  }
+  return rows.map((row) => ({ ...row, lastCustomerPreview: latest.get(row.id) ?? "" }));
+}
+
 export async function getAdminChat(conversationId: string): Promise<SupportChat> {
   const supabase = await supportSupabase();
   if (!supabase) {

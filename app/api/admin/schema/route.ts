@@ -15,7 +15,7 @@ function json(body: unknown, status = 200) {
 }
 
 export async function GET() {
-  if (!(await hasAdminSession("support"))) return json({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, 401);
+  if (!(await hasAdminSession("support"))) return json({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요해요." } }, 401);
   let db: ReturnType<typeof getServerSupabase>;
   try { db = getServerSupabase(); } catch { return json({ error: { code: "DB_MISCONFIGURED", message: "DB 연결 설정을 확인해 주세요." } }, 503); }
   // 운영 설정은 있음/없음만(값은 내보내지 않는다)

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { findService, findServiceRecord, SERVICE_CATALOG, SERVICE_GROUPS, SERVICE_PRICE_PENDING, servicePriceLabel, servicesInGroup } from "../lib/services/catalog";
-import { canMoveServiceRequest, SERVICE_REQUEST_NEXT, SERVICE_REQUEST_STATUSES, SERVICE_REQUEST_STATUS_LABELS, validateServiceRequest } from "../lib/services/requests";
+import { ADMIN_SERVICE_REQUEST_STATUS_LABELS, canMoveServiceRequest, SERVICE_REQUEST_NEXT, SERVICE_REQUEST_STATUSES, SERVICE_REQUEST_STATUS_LABELS, validateServiceRequest } from "../lib/services/requests";
 import { createServiceRequest, listAllServiceRequests, listMyServiceRequests, resetServiceRequestMemory, ServiceRequestError, updateServiceRequestStatus } from "../lib/services/request-store";
 import { EMPTY_SIGNALS, orderServices, serviceBadges, serviceSignalsFromPlan } from "../lib/services/recommend";
 import { formatKoreanPhone, leadReplyText, mailtoHref, normalizeMobilePhone, phoneDigits, smsHref, telHref } from "../lib/contact-links";
@@ -61,7 +61,9 @@ const RETIRED = ["business-registration", "mail-order-report", "industry-license
 
 // 3) 상태 — 어드민이 고를 수 있는 다음 상태
 {
-  for (const status of SERVICE_REQUEST_STATUSES) assert.ok(SERVICE_REQUEST_STATUS_LABELS[status] && SERVICE_REQUEST_NEXT[status].length > 0);
+  for (const status of SERVICE_REQUEST_STATUSES) assert.ok(SERVICE_REQUEST_STATUS_LABELS[status] && ADMIN_SERVICE_REQUEST_STATUS_LABELS[status] && SERVICE_REQUEST_NEXT[status].length > 0);
+  // 운영자 화면은 사장님 화면의 '연락드렸어요'를 쓰지 않는다
+  assert.notEqual(ADMIN_SERVICE_REQUEST_STATUS_LABELS.contacted, SERVICE_REQUEST_STATUS_LABELS.contacted);
   assert.ok(canMoveServiceRequest("received", "contacted"));
   assert.ok(canMoveServiceRequest("done", "received"));
   assert.ok(!canMoveServiceRequest("done", "canceled"), "끝난 건은 접수로만 되돌린다");

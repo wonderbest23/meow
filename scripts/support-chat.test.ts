@@ -14,6 +14,7 @@ async function main() {
   const {
     getAdminChat,
     getCustomerChat,
+    listAdminConversationRecords,
     listAdminConversations,
     sendAdminMessage,
     sendCustomerMessage,
@@ -67,6 +68,18 @@ async function main() {
   const customerRead = await getCustomerChat(guest);
   assert.equal(customerRead.messages[1].body, "관리자 답장");
   assert.equal(customerRead.conversation?.unreadByCustomer, 0);
+
+  // 관리자 목록 — 답장 뒤에도 손님이 마지막으로 한 말을 보여 주고, 주인 해시는 서버 안에만 있다
+  const records = await listAdminConversationRecords();
+  const record = records.find((item) => item.id === conversation.id);
+  assert.equal(record?.lastMessagePreview, "관리자 답장");
+  assert.equal(record?.lastCustomerPreview, "첫 상담 메시지");
+  assert.equal(record?.ownerHash, guest);
+  assert.ok(!("ownerHash" in (conversations.find((item) => item.id === conversation.id) ?? {})));
+
+  // DB 없는 데모에서는 계정이 없으니 '로그인 안 한 손님'
+  const { resolveSupportCustomers } = await import("../lib/support-chat/admin-customers");
+  assert.deepEqual((await resolveSupportCustomers([guest])).get(guest), { kind: "guest" });
 
   const closed = await setConversationStatus(conversation.id, "closed");
   assert.equal(closed.status, "closed");

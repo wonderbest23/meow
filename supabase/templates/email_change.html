@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko" style="color-scheme:light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>이메일 주소 변경을 확인해 주세요</title>
+</head>
+<body bgcolor="#f6f7fb" style="margin:0;padding:0;background-color:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Malgun Gothic',sans-serif;color:#191f28;">
+<div style="display:none;max-height:0;overflow:hidden;">아래 버튼을 눌러 이메일 주소 변경을 마쳐 주세요.</div>
+<div style="max-width:480px;margin:0 auto;padding:24px 16px;background-color:#f6f7fb;">
+  <p style="margin:0 0 16px;font-size:16px;font-weight:800;color:#3272db;">오늘창업</p>
+  <div style="padding:24px 20px;background-color:#ffffff;border-radius:14px;">
+    <h1 style="margin:0 0 12px;font-size:20px;line-height:1.4;color:#191f28;">이메일 주소 변경을 확인해 주세요</h1>
+    <p style="margin:0 0 8px;font-size:15px;line-height:1.7;color:#4e5968;">오늘창업 계정의 이메일 주소를 {{ .Email }}에서 {{ .NewEmail }} 주소로 바꾸려고 해요.</p><p style="margin:0 0 8px;font-size:15px;line-height:1.7;color:#4e5968;">아래 버튼을 누르면 변경이 끝나요.</p>
+    <p style="margin:20px 0;">
+      <a href="{{ .ConfirmationURL }}" style="display:block;padding:14px 18px;background-color:#3272db;color:#ffffff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;">이메일 변경 확인하기</a>
+    </p>
+    <p style="margin:0;color:#6b7684;font-size:13px;line-height:1.6;">직접 요청하지 않았다면 이 메일은 무시하고, 고객센터에 알려 주세요.</p>
+    <p style="margin:12px 0 0;color:#8b95a1;font-size:12px;line-height:1.6;word-break:break-all;">버튼이 눌리지 않으면 아래 주소를 복사해 브라우저에 붙여 넣어 주세요.<br>{{ .ConfirmationURL }}</p>
+  </div>
+  <p style="margin:16px 0 0;color:#8b95a1;font-size:12px;line-height:1.6;">궁금한 점은 고객센터에서 물어봐 주세요: <a href="https://oneulstart.com/account/support" style="color:#8b95a1;">https://oneulstart.com/account/support</a><br>이 메일은 보내기 전용이에요.</p>
+</div>
+</body>
+</html>

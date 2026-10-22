@@ -353,6 +353,29 @@ export async function listManualTransferOrders(): Promise<PaymentOrder[]> {
   return (data ?? []).map(mapOrder);
 }
 
+/*
+ * 관리자 '결제 주문' 전체 목록 — 카드(나이스페이)·앱 결제(Apple·Google Play)·계좌이체를 모두.
+ * 예전 관리자 화면은 계좌이체 주문만 보여 대시보드의 '최근 주문'과 목록이 달랐다.
+ * search 는 주문 번호나 이메일 일부. PostgREST 필터 문법에 쓰이는 글자는 빼고 찾는다.
+ */
+export async function listAdminPaymentOrders(search = "", limit = 200): Promise<PaymentOrder[]> {
+  const term = search.trim().replace(/[^0-9A-Za-z@._+\-]/g, "").slice(0, 120);
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const lower = term.toLowerCase();
+    return [...demo.orders.values()]
+      .filter((order) => !lower || order.orderId.toLowerCase().includes(lower) || (order.customerEmail ?? "").toLowerCase().includes(lower))
+      .sort((left, right) => right.createdAt.localeCompare(left.createdAt))
+      .slice(0, limit)
+      .map(clone);
+  }
+  let query = supabase.from("payment_orders").select("*").order("created_at", { ascending: false }).limit(limit);
+  if (term) query = query.or(`order_id.ilike.%${term}%,customer_email.ilike.%${term}%`);
+  const { data, error } = await query;
+  if (error) throw error;
+  return (data ?? []).map(mapOrder);
+}
+
 export async function reportManualTransferDeposit(orderId: string, guestTokenHash: string): Promise<PaymentOrder> {
   const order = await getPaymentOrder(orderId, guestTokenHash);
   if (!order || order.method !== "TRANSFER") throw new Error("PAYMENT_ORDER_NOT_FOUND");

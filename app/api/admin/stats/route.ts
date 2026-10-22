@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "../../../../lib/persistence";
 import { countPendingRefundRequests } from "../../../../lib/payments/refund-requests";
-import { listAdminConversations } from "../../../../lib/support-chat/repository";
+import { listAdminConversationRecords } from "../../../../lib/support-chat/repository";
+import { resolveSupportCustomers } from "../../../../lib/support-chat/admin-customers";
 import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
 
 export const runtime = "nodejs";
@@ -37,7 +38,7 @@ function refundedWon(note: unknown): number {
 
 export async function GET() {
   if (!(await hasAdminSession("support"))) {
-    return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, { status: 401 });
+    return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요해요." } }, { status: 401 });
   }
 
   const supabase = getServerSupabase();
@@ -62,7 +63,7 @@ export async function GET() {
   let paidAmount: number | null = null;
   let paid7d: number | null = null;
   let refundCount: number | null = null;
-  let recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; createdAt: string }> | null = [];
+  let recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; method: string; createdAt: string }> | null = [];
   if (supabase) {
     const paid = await supabase
       .from("payment_orders")
@@ -114,7 +115,7 @@ export async function GET() {
     refundCount = refunded.count ?? null;
     const recent = await supabase
       .from("payment_orders")
-      .select("order_id, order_name, amount, status, created_at")
+      .select("order_id, order_name, amount, status, method, created_at")
       .order("created_at", { ascending: false })
       .limit(5);
     // 못 읽었으면 '주문 없음'이 아니라 모름(null)
@@ -125,6 +126,7 @@ export async function GET() {
         orderName: String(r.order_name ?? ""),
         amount: Number(r.amount ?? 0),
         status: String(r.status ?? ""),
+        method: String(r.method ?? ""),
         createdAt: String(r.created_at ?? ""),
       };
     });
@@ -132,14 +134,18 @@ export async function GET() {
 
   // 문의 — 실제 메시지가 있는 대화만 (repository가 이미 걸러준다)
   // 못 읽었으면 '문의 0건'이 아니라 모름(null) — 안 읽은 고객 메시지를 놓치지 않게
-  const conversations = await listAdminConversations().catch(() => null);
+  const conversations = await listAdminConversationRecords().catch(() => null);
+  const recentConversations = conversations?.slice(0, 5) ?? [];
+  const recentCustomers = await resolveSupportCustomers(recentConversations.map((c) => c.ownerHash));
   const inquiries = conversations === null ? null : {
     open: conversations.filter((c) => c.status === "open").length,
     unread: conversations.reduce((sum, c) => sum + (c.unreadByAdmin ?? 0), 0),
     total: conversations.length,
-    recent: conversations.slice(0, 5).map((c) => ({
+    recent: recentConversations.map((c) => ({
       id: c.id,
-      preview: c.lastMessagePreview,
+      // 손님이 마지막으로 한 말 — 관리자 답장으로 미리보기가 덮이면 무엇을 물었는지 안 보였다
+      preview: c.lastCustomerPreview || c.lastMessagePreview,
+      customer: recentCustomers.get(c.ownerHash) ?? { kind: "unknown" },
       status: c.status,
       updatedAt: c.updatedAt,
       unread: c.unreadByAdmin,

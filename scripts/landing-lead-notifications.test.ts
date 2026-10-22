@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { buildLandingLeadEmail, landingEmailConfiguration, sendLandingLeadEmail } from "../lib/landing/lead-email";
+import { buildLandingLeadEmail, landingEmailConfiguration, resendBody, sendLandingLeadEmail, withSupportReplyTo } from "../lib/landing/lead-email";
 import { notificationIdempotencyExpired, notificationRetryDelay, processLandingLeadNotification, sweepDueLeadNotifications } from "../lib/landing/lead-notifications";
 
 async function main() {
@@ -12,7 +12,21 @@ async function main() {
   assert.ok(notificationIdempotencyExpired(new Date(Date.now() - 24 * 60 * 60_000).toISOString(), true));
   assert.ok(!notificationIdempotencyExpired(new Date().toISOString(), true));
   const payload = buildLandingLeadEmail("alerts@example.com", "owner@example.com");
-  assert.match(buildLandingLeadEmail("alerts@example.com", "owner@example.com", "plan_1").text, /oneulstart\.com\/plan\/inquiries/, "문의 알림 메일은 '내 문의'로 연결");
+  assert.match(buildLandingLeadEmail("alerts@example.com", "owner@example.com", "plan_1").text, /oneulstart\.com\/plan\/inquiries/, "문의 알림 메일은 '손님 문의'로 연결");
+  {
+    const named = buildLandingLeadEmail("alerts@example.com", "owner@example.com", "plan_1", "  햇살 베이커리 ");
+    assert.equal(named.subject, "[오늘창업] 내 홈페이지에 새 문의가 왔어요");
+    assert.ok(named.text.startsWith("햇살 베이커리 홈페이지에 새 문의가 왔어요."), named.text);
+    assert.ok(named.text.includes("궁금한 점은 고객센터에서 물어봐 주세요: https://oneulstart.com/account/support"));
+    assert.ok(!/습니다|됐습니다/.test(named.text), "해요체");
+    assert.ok(payload.text.startsWith("내 홈페이지에 새 문의가 왔어요."), "이름이 없으면 '내 홈페이지'");
+  }
+  // 답장 주소: 고객 문의 이메일이 있으면 reply_to 로, 없으면 싣지 않는다(모르는 칸 replyTo 는 보내지 않는다)
+  assert.equal(landingEmailConfiguration({ RESEND_API_KEY: "k", NOTIFY_FROM_EMAIL: "a@oneulstart.com", PLATFORM_SUPPORT_EMAIL: "help@oneulstart.com" })?.replyTo, "help@oneulstart.com");
+  assert.equal(landingEmailConfiguration({ RESEND_API_KEY: "k", NOTIFY_FROM_EMAIL: "a@oneulstart.com", PLATFORM_SUPPORT_EMAIL: "고객센터" })?.replyTo, undefined);
+  assert.deepEqual(resendBody(withSupportReplyTo(payload, { replyTo: "help@oneulstart.com" })).reply_to, "help@oneulstart.com");
+  assert.ok(!("replyTo" in resendBody(withSupportReplyTo(payload, { replyTo: "help@oneulstart.com" }))));
+  assert.ok(!("reply_to" in resendBody(withSupportReplyTo(payload, null))));
   const calls: Array<{ headers: Headers; body: Record<string, unknown> }> = [];
   const transport = (async (_url: unknown, init?: RequestInit) => {
     calls.push({ headers: new Headers(init?.headers), body: JSON.parse(String(init?.body)) });

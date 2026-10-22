@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
+import { displayOrderName } from "../../../lib/payments/order-display";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
 import PlanLoading from "../PlanLoading";
@@ -283,7 +284,7 @@ export default function PlanMePage() {
                   return (
                   <Fragment key={item.orderId}>
                   <tr>
-                    <td data-label="상품">{item.orderName || "-"}</td>
+                    <td data-label="상품">{displayOrderName(item.orderName) || "-"}</td>
                     <td data-label="금액" className={styles.amount}>{item.amount.toLocaleString("ko-KR")}원</td>
                     <td data-label="상태">
                       <span className={`${styles.status} ${item.status === "done" ? styles.statusDone : BAD_STATUS.has(item.status) ? styles.statusBad : ""}`}>

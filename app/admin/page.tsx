@@ -3,8 +3,10 @@
 import { Banknote, Headphones, LayoutDashboard, RefreshCw, RotateCcw, Users, Zap } from "lucide-react";
 import Link from "next/link";
 import { llmFailureAlert } from "../../lib/llm/alert";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AdminNav from "./AdminNav";
+import AdminLogin from "./AdminLogin";
+import { paymentMethodLabel, paymentStatusLabel, SUPPORT_STATUS_LABELS, supportCustomerLabel, type AdminSupportCustomer } from "./admin-labels";
 
 type SessionState = { authenticated: boolean; configured: boolean };
 
@@ -16,13 +18,13 @@ type Stats = {
     paid7d: number | null;
     refundCount: number | null;
     refundPending: number | null;
-    recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; createdAt: string }> | null;
+    recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; method?: string; createdAt: string }> | null;
   };
   inquiries: {
     open: number;
     unread: number;
     total: number;
-    recent: Array<{ id: string; preview: string; status: string; updatedAt: string; unread: number }>;
+    recent: Array<{ id: string; preview: string; status: "open" | "closed"; updatedAt: string; unread: number; customer?: AdminSupportCustomer }>;
   } | null;
   llm: {
     today: number;
@@ -36,20 +38,10 @@ type Stats = {
   } | null;
 };
 
-const orderStatusText: Record<string, string> = {
-  created: "결제 대기",
-  done: "결제 완료",
-  failed: "결제 실패",
-  refunded: "환불 완료",
-  canceled: "취소",
-  awaiting_deposit: "입금 대기",
-  deposit_reported: "입금 알림",
-  expired: "기한 만료",
-};
 
 async function payload<T>(response: Response): Promise<T> {
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했습니다.");
+  if (!response.ok) throw new Error(data.error?.message ?? "요청을 처리하지 못했어요.");
   return data as T;
 }
 
@@ -67,12 +59,10 @@ function dateLabel(value: string) {
 
 export default function AdminDashboardPage() {
   const [session, setSession] = useState<SessionState | null>(null);
-  const [password, setPassword] = useState("");
   const [stats, setStats] = useState<Stats | null>(null);
   /* 운영 DB에 빠진 마이그레이션 — 상담 저장(0024)이 없어도 화면은 멀쩡해 보였다 */
   const [schema, setSchema] = useState<{ ready: boolean; missing: number; unknown: number; config: number } | null>(null);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
 
   const loadStats = useCallback(async () => {
     const response = await fetch("/api/admin/stats", { cache: "no-store" });
@@ -87,12 +77,12 @@ export default function AdminDashboardPage() {
     void fetch("/api/admin/support/session", { cache: "no-store" })
       .then((response) => payload<SessionState>(response))
       .then((state) => setSession(state))
-      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "관리자 상태를 확인하지 못했습니다."));
+      .catch((loadError) => setError(loadError instanceof Error ? loadError.message : "관리자 상태를 확인하지 못했어요."));
   }, []);
 
   useEffect(() => {
     if (!session?.authenticated) return;
-    void loadStats().catch((loadError) => setError(loadError instanceof Error ? loadError.message : "지표를 불러오지 못했습니다."));
+    void loadStats().catch((loadError) => setError(loadError instanceof Error ? loadError.message : "지표를 불러오지 못했어요."));
     const timer = window.setInterval(() => void loadStats().catch(() => undefined), 30_000);
       return () => window.clearInterval(timer);
   }, [loadStats, session?.authenticated]);
@@ -110,44 +100,12 @@ export default function AdminDashboardPage() {
     return () => { alive = false; };
   }, [session?.authenticated]);
 
-  const login = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      await payload(await fetch("/api/admin/support/session", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      }));
-      setPassword("");
-      setSession({ authenticated: true, configured: true });
-    } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : "로그인하지 못했습니다.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
   if (session === null) {
-    return <main className="admin-support-loading"><RefreshCw /> 관리자 콘솔을 불러오는 중입니다.</main>;
+    return <main className="admin-support-loading"><RefreshCw /> 관리자 콘솔을 불러오는 중이에요.</main>;
   }
 
   if (!session.authenticated) {
-    return (
-      <main className="admin-login-page">
-        <form onSubmit={login}>
-          <span><LayoutDashboard /></span>
-          <h1>관리자 콘솔</h1>
-          <p>한 번 로그인하면 대시보드·상담·입금 주문·운영 설정을 모두 쓸 수 있습니다.</p>
-          {!session.configured && <div className="admin-config-warning">서버에 관리자 비밀번호를 먼저 설정해주세요.</div>}
-          <label><span>관리자 비밀번호</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus autoComplete="current-password" /></label>
-          {error && <p className="admin-login-error">{error}</p>}
-          <button type="submit" disabled={busy || !password || !session.configured}>로그인</button>
-          <a href="/">고객 화면으로 돌아가기</a>
-        </form>
-      </main>
-    );
+    return <AdminLogin title="관리자 콘솔" description="한 번 로그인하면 대시보드·상담·결제 주문·운영 설정을 모두 쓸 수 있어요." Icon={LayoutDashboard} configured={session.configured} onLoggedIn={() => setSession({ authenticated: true, configured: true })} />;
   }
 
   const llmAlert = llmFailureAlert(stats?.llm ?? null);
@@ -163,13 +121,13 @@ export default function AdminDashboardPage() {
       */}
       {schema && ((!schema.ready && (schema.missing > 0 || schema.unknown > 0)) || schema.config > 0) && (
         <div className="admin-dash-alert" role="alert">
-          <strong>{schema.missing > 0 ? `운영 DB에 빠진 마이그레이션이 ${schema.missing}개 있습니다` : schema.unknown > 0 ? `DB 마이그레이션 ${schema.unknown}개를 확인하지 못했습니다` : `오픈 전에 넣어야 할 운영 설정이 ${schema.config}개 있습니다`}</strong>
-          <span>빠진 기능은 오류 없이 조용히 동작하지 않습니다. <Link href="/admin/schema">DB 준비 상태에서 확인하기 →</Link></span>
+          <strong>{schema.missing > 0 ? `운영 DB에 빠진 마이그레이션이 ${schema.missing}개 있어요` : schema.unknown > 0 ? `DB 마이그레이션 ${schema.unknown}개를 확인하지 못했어요` : `오픈 전에 넣어야 할 운영 설정이 ${schema.config}개 있어요`}</strong>
+          <span>빠진 기능은 오류 없이 조용히 멈춰 있어요. <Link href="/admin/schema">DB 준비 상태에서 확인하기 →</Link></span>
         </div>
       )}
       {llmAlert && (
         <div className="admin-dash-alert" role="alert">
-          <strong>AI 호출 실패가 이어지고 있습니다</strong>
+          <strong>AI 호출 실패가 이어지고 있어요</strong>
           <span>{llmAlert}</span>
         </div>
       )}
@@ -190,8 +148,8 @@ export default function AdminDashboardPage() {
         <article>
           <span className="admin-dash-icon refund"><RotateCcw /></span>
           <small>환불</small>
-          <strong>{stats?.payments.refundPending != null ? `대기 ${num(stats.payments.refundPending)}건` : "접수함 준비 중"}</strong>
-          <em><Link href="/admin/refunds">환불 접수함 열기 →</Link>{stats?.payments.refundCount != null ? ` · 완료 ${num(stats.payments.refundCount)}건` : ""}</em>
+          <strong>{stats?.payments.refundPending != null ? `대기 ${num(stats.payments.refundPending)}건` : "환불 요청 표 준비 중"}</strong>
+          <em><Link href="/admin/refunds">환불 요청 열기 →</Link>{stats?.payments.refundCount != null ? ` · 완료 ${num(stats.payments.refundCount)}건` : ""}</em>
         </article>
         <article>
           <span className="admin-dash-icon inquiry"><Headphones /></span>
@@ -216,7 +174,7 @@ export default function AdminDashboardPage() {
               <strong>기록 안 됨</strong>
               <em>
                 Supabase SQL Editor에서 <code>supabase/migrations/0020_llm_usage.sql</code>을
-                실행해야 AI 실패를 감시할 수 있습니다
+                실행해야 AI 실패를 지켜볼 수 있어요
               </em>
             </>
           )}
@@ -232,15 +190,17 @@ export default function AdminDashboardPage() {
           {stats && !stats.inquiries ? (
             <p className="admin-dash-empty" role="alert">문의 목록을 불러오지 못했어요. 문의함에서 직접 확인해 주세요.</p>
           ) : (stats?.inquiries?.recent ?? []).length === 0 ? (
-            <p className="admin-dash-empty">{stats ? "아직 접수된 문의가 없습니다." : "불러오는 중…"}</p>
+            <p className="admin-dash-empty">{stats ? "아직 들어온 문의가 없어요." : "불러오는 중…"}</p>
           ) : (
             <ul>
               {stats!.inquiries!.recent.map((item) => (
                 <li key={item.id}>
-                  <span className={`admin-dash-badge ${item.status}`}>{item.status === "open" ? "진행 중" : "완료"}</span>
-                  <p>{item.preview || "새 상담"}</p>
-                  <time>{dateLabel(item.updatedAt)}</time>
-                  {item.unread > 0 && <em>{item.unread}</em>}
+                  <Link href={`/admin/support?c=${encodeURIComponent(item.id)}`}>
+                    <span className={`admin-dash-badge ${item.status}`}>{SUPPORT_STATUS_LABELS[item.status] ?? item.status}</span>
+                    <p><strong>{supportCustomerLabel(item.customer)}</strong> {item.preview || "새 상담"}</p>
+                    <time>{dateLabel(item.updatedAt)}</time>
+                    {item.unread > 0 && <em aria-label={`안 읽은 메시지 ${item.unread}개`}>{item.unread}</em>}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -249,21 +209,23 @@ export default function AdminDashboardPage() {
 
         <section className="admin-dash-panel">
           <header>
-            <strong>최근 주문</strong>
+            <strong>최근 결제 주문</strong>
             <Link href="/admin/payments">전체 보기 →</Link>
           </header>
           {stats && stats.payments.recentOrders === null ? (
             <p className="admin-dash-empty" role="alert">최근 주문을 불러오지 못했어요.</p>
           ) : (stats?.payments.recentOrders ?? []).length === 0 ? (
-            <p className="admin-dash-empty">{stats ? "아직 주문이 없습니다." : "불러오는 중…"}</p>
+            <p className="admin-dash-empty">{stats ? "아직 주문이 없어요." : "불러오는 중…"}</p>
           ) : (
             <ul>
               {stats!.payments.recentOrders!.map((order) => (
                 <li key={order.orderId}>
-                  <span className={`admin-dash-badge ${order.status}`}>{orderStatusText[order.status] ?? order.status}</span>
-                  <p>{order.orderName || order.orderId}</p>
-                  <b>{order.amount.toLocaleString("ko-KR")}원</b>
-                  <time>{dateLabel(order.createdAt)}</time>
+                  <Link href={`/admin/payments?q=${encodeURIComponent(order.orderId)}`}>
+                    <span className={`admin-dash-badge ${order.status}`}>{paymentStatusLabel(order.status)}</span>
+                    <p>{order.orderName || order.orderId}{order.method ? <small> · {paymentMethodLabel(order.method)}</small> : null}</p>
+                    <b>{order.amount.toLocaleString("ko-KR")}원</b>
+                    <time>{dateLabel(order.createdAt)}</time>
+                  </Link>
                 </li>
               ))}
             </ul>

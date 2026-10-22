@@ -2,7 +2,7 @@ import { homepageManageUrl, INQUIRIES_URL } from "./lead-email";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { SnsWeek } from "../marketing/kit";
 import { projectReadTable } from "../plan-builder/quarantine-tables";
-import { landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "./lead-email";
+import { landingEmailConfiguration, sendLandingLeadEmail, withSupportReplyTo, type LeadEmailPayload } from "./lead-email";
 import { sendCustomerSms, stableEventId, type CustomerSmsConfig } from "../notify/customer-sms";
 import { schemaFailureReason } from "../schema-readiness";
 
@@ -68,6 +68,8 @@ export type WeeklyReportInput = {
   manageUrl?: string | null;
 };
 
+const shortName = (name: string) => { const chars = [...name.replace(/\s+/g, " ").trim()]; return chars.length > 15 ? `${chars.slice(0, 15).join("").trim()}…` : chars.join(""); };
+
 export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPayload {
   const { stats } = input;
   const name = input.businessName || "내 사업";
@@ -75,6 +77,8 @@ export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPaylo
   const rows: Array<[string, number, number, string]> = [["홈페이지 문의", stats.leads, stats.prevLeads, "건"], ["방문(동의한 손님)", stats.views, stats.prevViews, "회"], ["버튼 누름", stats.clicks, stats.prevClicks, "회"]];
   const tip = weeklyTip(stats);
   const sns = input.sns ?? null;
+  // 운영표를 다 쓴 주에는 '새 운영표 만들기', 아니면 '올릴 글 보기' — 글 메일과 HTML 메일이 같은 이름을 쓴다
+  const snsLinkLabel = sns && "finished" in sns ? "새 운영표 만들기" : "올릴 글 보기";
   const snsLines = !sns ? [] : "finished" in sns
     ? ["4주 SNS 운영표를 다 썼어요. 지난 4주 반응을 보고 새 운영표를 만들어 보세요."]
     : [`이번 주 SNS 할 일 (${sns.week}주차 · ${sns.theme})`, ...sns.posts.map(post => `· ${post.day} ${post.format}: ${post.idea}`)];
@@ -84,7 +88,7 @@ export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPaylo
     ...rows.map(([label, now, before, unit]) => `· ${label}: ${now.toLocaleString("ko-KR")}${unit} (${change(now, before, unit)})`),
     "",
     `이번 주 해 볼 일: ${tip}`,
-    ...(snsLines.length ? ["", ...snsLines, ...(input.snsUrl ? [`올릴 글 보기: ${input.snsUrl}`] : [])] : []),
+    ...(snsLines.length ? ["", ...snsLines, ...(input.snsUrl ? [`${snsLinkLabel}: ${input.snsUrl}`] : [])] : []),
     ...(input.recordUrl ? ["", `지난주 매출·주문을 아직 안 적으셨어요. 한 칸만 적어 두면 다음 주부터 비교해 드려요: ${input.recordUrl}`] : []),
     "",
     `홈페이지 고치기: ${input.manageUrl ?? homepageManageUrl(null)}`,
@@ -94,23 +98,25 @@ export function buildWeeklyReportEmail(input: WeeklyReportInput): LeadEmailPaylo
     "방문 수는 방문 기록에 동의한 손님만 셉니다. 실제 방문은 이보다 많을 수 있어요.",
     `이 메일을 그만 받으려면: ${input.unsubscribeUrl}`,
   ].join("\n");
-  const cell = "padding:10px 12px;border-bottom:1px solid #eef0f4;font-size:14px;";
-  const html = `<!doctype html><html lang="ko"><body style="margin:0;background:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Malgun Gothic',sans-serif;color:#191f28;">
-<div style="max-width:520px;margin:0 auto;padding:24px 16px;">
+  const cell = "padding:10px 12px;border-bottom:1px solid #eef0f4;font-size:14px;background-color:#ffffff;";
+  /* 밝은 화면 전용 — 메일 앱의 어두운 화면이 배경만 뒤집어 글자가 안 보이지 않게, 배경색을 칸마다 직접 적는다 */
+  const html = `<!doctype html><html lang="ko" style="color-scheme:light;"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light"></head><body bgcolor="#f6f7fb" style="margin:0;background-color:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Malgun Gothic',sans-serif;color:#191f28;">
+<div style="max-width:520px;margin:0 auto;padding:24px 16px;background-color:#f6f7fb;">
 <p style="margin:0 0 4px;color:#6b7684;font-size:13px;">오늘창업 주간 리포트 · ${escapeHtml(range)}</p>
 <h1 style="margin:0 0 16px;font-size:20px;line-height:1.4;">${escapeHtml(name)} 지난주 성적표</h1>
-<table role="presentation" style="width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden;">
+<table role="presentation" bgcolor="#ffffff" style="width:100%;border-collapse:collapse;background-color:#ffffff;border-radius:12px;overflow:hidden;">
 ${rows.map(([label, now, before, unit]) => `<tr><td style="${cell}color:#4e5968;">${escapeHtml(label)}</td><td style="${cell}text-align:right;"><strong style="font-size:18px;">${now.toLocaleString("ko-KR")}</strong>${unit}<br><span style="color:#8b95a1;font-size:12px;">${escapeHtml(change(now, before, unit))}</span></td></tr>`).join("\n")}
 </table>
-<div style="margin:16px 0;padding:14px 16px;background:#eef4ff;border-radius:12px;font-size:14px;line-height:1.6;"><strong>이번 주 해 볼 일</strong><br>${escapeHtml(tip)}</div>
-${snsLines.length ? `<div style="margin:0 0 16px;padding:14px 16px;background:#f3f0ff;border-radius:12px;font-size:14px;line-height:1.7;"><strong>${escapeHtml(snsLines[0])}</strong>${snsLines.slice(1).map(line => `<br>${escapeHtml(line)}`).join("")}${input.snsUrl ? `<br><a href="${escapeHtml(input.snsUrl)}" style="color:#6b4fd8;font-weight:700;">${sns && "finished" in sns ? "새 운영표 만들기" : "올릴 글 보기"} →</a>` : ""}</div>` : ""}
-${input.recordUrl ? `<div style="margin:0 0 16px;padding:14px 16px;background:#fff7e6;border-radius:12px;font-size:14px;line-height:1.6;">지난주 매출·주문을 아직 안 적으셨어요. 한 칸만 적어 두면 다음 주부터 비교해 드려요.<br><a href="${escapeHtml(input.recordUrl)}" style="color:#3272db;font-weight:700;">지난주 기록 적기 →</a></div>` : ""}
-<p style="margin:0 0 20px;"><a href="${escapeHtml(input.manageUrl ?? homepageManageUrl(null))}" style="display:inline-block;padding:12px 18px;background:#3272db;color:#fff;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">홈페이지 고치기</a> <a href="${INQUIRIES_URL}" style="display:inline-block;padding:12px 18px;background:#eef3fd;color:#1d4fa8;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">들어온 문의 보기</a></p>
+<div style="margin:16px 0;padding:14px 16px;background-color:#eef4ff;border-radius:12px;font-size:14px;line-height:1.6;"><strong>이번 주 해 볼 일</strong><br>${escapeHtml(tip)}</div>
+${snsLines.length ? `<div style="margin:0 0 16px;padding:14px 16px;background-color:#f3f0ff;border-radius:12px;font-size:14px;line-height:1.7;"><strong>${escapeHtml(snsLines[0])}</strong>${snsLines.slice(1).map(line => `<br>${escapeHtml(line)}`).join("")}${input.snsUrl ? `<br><a href="${escapeHtml(input.snsUrl)}" style="color:#6b4fd8;font-weight:700;">${snsLinkLabel} →</a>` : ""}</div>` : ""}
+${input.recordUrl ? `<div style="margin:0 0 16px;padding:14px 16px;background-color:#fff7e6;border-radius:12px;font-size:14px;line-height:1.6;">지난주 매출·주문을 아직 안 적으셨어요. 한 칸만 적어 두면 다음 주부터 비교해 드려요.<br><a href="${escapeHtml(input.recordUrl)}" style="color:#3272db;font-weight:700;">지난주 기록 적기 →</a></div>` : ""}
+<p style="margin:0 0 20px;"><a href="${escapeHtml(input.manageUrl ?? homepageManageUrl(null))}" style="display:inline-block;padding:12px 18px;background-color:#3272db;color:#ffffff;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">홈페이지 고치기</a> <a href="${INQUIRIES_URL}" style="display:inline-block;padding:12px 18px;background-color:#eef3fd;color:#1d4fa8;border-radius:10px;text-decoration:none;font-weight:700;font-size:14px;">들어온 문의 보기</a></p>
 <p style="margin:0;color:#8b95a1;font-size:12px;line-height:1.6;">방문 수는 방문 기록에 동의한 손님만 셉니다. 실제 방문은 이보다 많을 수 있어요.<br>내 홈페이지: <a href="${escapeHtml(input.homepageUrl)}" style="color:#8b95a1;">${escapeHtml(input.homepageUrl)}</a><br><a href="${escapeHtml(input.unsubscribeUrl)}" style="color:#8b95a1;">이 메일 그만 받기</a></p>
 </div></body></html>`;
   return {
     from: input.from, to: input.to,
-    subject: `[오늘창업] ${name} 지난주 문의 ${stats.leads}건 · 주간 리포트`,
+    // 숫자가 먼저 — 가게 이름이 길어도 메일 목록에서 '문의 몇 건'이 잘리지 않게 이름은 15자까지
+    subject: `[오늘창업] 지난주 문의 ${stats.leads.toLocaleString("ko-KR")}건 · ${shortName(name)}`,
     text, html,
     // 메일 앱의 '구독 취소' 버튼(RFC 8058) — 누르면 바로 꺼진다
     headers: { "List-Unsubscribe": `<${input.unsubscribeUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
@@ -243,7 +249,7 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
       const planId = String((project.data?.opportunity as { planId?: unknown } | null)?.planId ?? "");
       const ownerHash = String(project.data?.guest_token_hash ?? "");
       const recorded = planId && ownerHash && deps.operatingRecorded ? await deps.operatingRecorded(ownerHash, planId, week.weekStart).catch(() => null) : null;
-      const payload = buildWeeklyReportEmail({
+      const payload = withSupportReplyTo(buildWeeklyReportEmail({
         from: config.from, to: recipient, businessName: site.businessName ?? "", weekStart: week.weekStart, weekEnd: week.weekEnd, stats,
         homepageUrl: site.custom_domain ? `https://${site.custom_domain}` : `https://oneulstart.com/launch/${site.published_slug ?? site.slug}`,
         unsubscribeUrl: await weeklyReportUnsubscribeUrl(site.id, deps.secret),
@@ -252,7 +258,7 @@ export async function runWeeklyReports(deps: WeeklyReportDependencies, limit = 1
         /* 홍보 키트(SNS 운영표)는 '사업 시작하기' 탭에 있다 — 요약 탭으로 열리지 않게 */
         snsUrl: planId ? `https://oneulstart.com/plan/workspace?planId=${encodeURIComponent(planId)}&tab=launch&step=marketing` : null,
         manageUrl: homepageManageUrl(planId || null),
-      });
+      }), config);
       const sent = await sendLandingLeadEmail(payload, config.key, `weekly-report/${site.id}/${week.weekStart}`, deps.transport);
       if (sent.ok) { await finish({ status: "sent", provider_id: sent.providerId, error_code: null }); result.sent += 1; }
       else { await finish({ status: "failed", error_code: sent.code, ...(sent.retryable ? {} : { attempts: WEEKLY_REPORT_MAX_ATTEMPTS }) }); result.failed += 1; }

@@ -3,7 +3,8 @@
 import { ExternalLink, Eye, EyeOff, LockKeyhole, RotateCcw, Save } from "lucide-react";
 import Link from "next/link";
 import AdminNav from "../AdminNav";
-import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import AdminLogin from "../AdminLogin";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { EDIT_SECTIONS, fieldsForSection, type SiteCopy } from "../../../lib/site-copy/domain";
 
 /*
@@ -18,13 +19,12 @@ type SessionState = { authenticated: boolean; configured: boolean };
 
 async function payload<T>(response: Response): Promise<T> {
   const data = await response.json();
-  if (!response.ok) throw new Error((data as { error?: { message?: string } }).error?.message ?? "요청을 처리하지 못했습니다.");
+  if (!response.ok) throw new Error((data as { error?: { message?: string } }).error?.message ?? "요청을 처리하지 못했어요.");
   return data as T;
 }
 
 export default function AdminHomepagePage() {
   const [session, setSession] = useState<SessionState | null>(null);
-  const [password, setPassword] = useState("");
   const [texts, setTexts] = useState<Record<string, string>>({});
   const [hidden, setHidden] = useState<string[]>([]);
   /* 저장된 값 — 저장 후 되돌리기(변경 취소) 기준 */
@@ -45,7 +45,7 @@ export default function AdminHomepagePage() {
     void fetch("/api/admin/support/session", { cache: "no-store" })
       .then((response) => payload<SessionState>(response))
       .then((state) => { setSession(state); if (state.authenticated) void load().catch((error) => setMessage(error.message)); })
-      .catch((error) => setMessage(error instanceof Error ? error.message : "세션을 확인하지 못했습니다."));
+      .catch((error) => setMessage(error instanceof Error ? error.message : "로그인 상태를 확인하지 못했어요."));
   }, []);
 
   /* 미리보기에 초안 보내기 — 고칠 때마다 즉시 */
@@ -89,14 +89,6 @@ export default function AdminHomepagePage() {
     return () => window.removeEventListener("message", onMessage);
   }, [texts, hidden, pushDraft, selected, selectSection]);
 
-  const login = async (event: FormEvent) => {
-    event.preventDefault(); setBusy(true); setMessage("");
-    try {
-      await payload(await fetch("/api/admin/support/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ password }) }));
-      setSession({ authenticated: true, configured: true }); setPassword(""); await load();
-    } catch (error) { setMessage(error instanceof Error ? error.message : "로그인하지 못했습니다."); } finally { setBusy(false); }
-  };
-
   const save = async () => {
     setBusy(true); setMessage("");
     try {
@@ -106,24 +98,22 @@ export default function AdminHomepagePage() {
         body: JSON.stringify({ texts, hidden }),
       }));
       setTexts(data.copy.texts); setHidden(data.copy.hidden); setSaved(data.copy);
-      setMessage("저장했습니다. 홈은 1분 안에 새 화면으로 바뀝니다.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "저장하지 못했습니다."); } finally { setBusy(false); }
+      setMessage("저장했어요. 홈은 1분 안에 새 화면으로 바뀌어요.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "저장하지 못했어요."); } finally { setBusy(false); }
   };
 
   const dirty = JSON.stringify({ texts, hidden }) !== JSON.stringify(saved);
-  const revert = () => { setTexts(saved.texts); setHidden(saved.hidden); setMessage("저장 전 상태로 되돌렸습니다."); };
+  const revert = () => { setTexts(saved.texts); setHidden(saved.hidden); setMessage("저장 전 상태로 되돌렸어요."); };
 
-  if (!session) return <main className="admin-support-loading">홈페이지를 불러오는 중입니다.</main>;
-  if (!session.authenticated) return (
-    <main className="admin-login-page"><form onSubmit={login}><span><LockKeyhole /></span><h1>홈페이지 편집</h1><p>메인 화면을 보면서 글을 고치고 섹션을 지웁니다.</p><label><span>관리자 비밀번호</span><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoFocus /></label>{message && <p className="admin-login-error">{message}</p>}<button disabled={busy || !password || !session.configured}>로그인</button><Link href="/admin">대시보드로 돌아가기</Link></form></main>
-  );
+  if (!session) return <main className="admin-support-loading">홈페이지를 불러오는 중이에요.</main>;
+  if (!session.authenticated) return <AdminLogin title="메인 홈페이지" description="메인 화면을 보면서 글을 고치고 섹션을 지워요." Icon={LockKeyhole} configured={session.configured} onLoggedIn={() => { setSession({ authenticated: true, configured: true }); void load().catch((error) => setMessage(error.message)); }} />;
 
   const current = EDIT_SECTIONS.find((section) => section.id === selected) ?? null;
   const currentHidden = current ? hidden.includes(current.id) : false;
 
   return (
     <main className="admin-home-editor">
-      <AdminNav title="메인 홈페이지" subtitle="홈페이지 문구와 섹션 관리 · 저장 후 반영" />
+      <AdminNav title="메인 홈페이지" subtitle="홈페이지 문구와 섹션 관리 · 저장해야 손님 화면에 나가요" unsaved={dirty} />
 
       <div className="admin-home-body">
         {/* 왼쪽 — 진짜 홈 화면. 섹션 테두리·버튼은 이 안에서 그린다 */}
@@ -166,7 +156,7 @@ export default function AdminHomepagePage() {
                   </button>
                 ) : <em>고정 섹션</em>}
               </header>
-              {currentHidden ? <p className="admin-home-offnote">지금 이 섹션은 손님에게 보이지 않습니다.</p> : null}
+              {currentHidden ? <p className="admin-home-offnote">지금 이 섹션은 손님에게 안 보여요.</p> : null}
               {fieldsForSection(current.id).map((field) => {
                 const fieldOff = hidden.includes(field.id);
                 return (
@@ -184,11 +174,11 @@ export default function AdminHomepagePage() {
                     ) : (
                       <input data-field-input={field.id} disabled={fieldOff} value={texts[field.id] ?? field.def} onChange={(event) => setTexts((c) => ({ ...c, [field.id]: event.target.value }))} />
                     )}
-                    {fieldOff ? <small>지금 이 글은 화면에 나오지 않습니다.</small> : field.hint ? <small>{field.hint}</small> : null}
+                    {fieldOff ? <small>지금 이 글은 화면에 안 나와요.</small> : field.hint ? <small>{field.hint}</small> : null}
                   </label>
                 );
               })}
-              <p className="admin-home-hint">칸을 비우면 기본 문구로 돌아갑니다. 줄바꿈은 그대로 반영됩니다.</p>
+              <p className="admin-home-hint">칸을 비우면 기본 문구로 돌아가요. 줄바꿈도 그대로 나가요.</p>
             </div>
           ) : <p className="admin-home-hint">왼쪽 화면에서 섹션을 골라 주세요.</p>}
 

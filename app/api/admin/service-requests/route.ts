@@ -22,7 +22,7 @@ function privateJson(body: unknown, init?: ResponseInit) {
 
 async function authorize() {
   if (await hasAdminSession("support")) return null;
-  return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, { status: 401 });
+  return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요해요." } }, { status: 401 });
 }
 
 export async function GET() {
@@ -32,7 +32,7 @@ export async function GET() {
     return privateJson({ requests: await listAllServiceRequests() });
   } catch (error) {
     console.error("[admin/service-requests] list failed", error);
-    return privateJson({ error: { code: "SERVICE_REQUEST_LIST_FAILED", message: "신청을 불러오지 못했습니다. 잠시 후 새로고침해 주세요." } }, { status: 503 });
+    return privateJson({ error: { code: "SERVICE_REQUEST_LIST_FAILED", message: "신청을 불러오지 못했어요. 잠시 후 새로고침해 주세요." } }, { status: 503 });
   }
 }
 
@@ -45,10 +45,10 @@ export async function PATCH(request: Request) {
     return privateJson({ request: await updateServiceRequestStatus(parsed.data.id, parsed.data.expected, parsed.data.status) });
   } catch (error) {
     if (error instanceof ServiceRequestError) {
-      const message = error.code === "STATUS_CONFLICT" ? "그새 다른 상태로 바뀌었습니다. 새로고침 후 다시 확인해 주세요." : error.code === "NOT_FOUND" ? "신청을 찾을 수 없습니다." : "신청 테이블이 아직 없습니다. 마이그레이션을 적용해 주세요.";
+      const message = error.code === "STATUS_CONFLICT" ? "그새 다른 상태로 바뀌었어요. 새로고침한 뒤 다시 확인해 주세요." : error.code === "NOT_FOUND" ? "신청을 찾지 못했어요." : "신청 표가 아직 없어요. 마이그레이션을 적용해 주세요.";
       return privateJson({ error: { code: error.code, message } }, { status: error.status });
     }
     console.error("[admin/service-requests] update failed", error);
-    return privateJson({ error: { code: "SERVICE_REQUEST_UPDATE_FAILED", message: "상태를 바꾸지 못했습니다." } }, { status: 500 });
+    return privateJson({ error: { code: "SERVICE_REQUEST_UPDATE_FAILED", message: "상태를 바꾸지 못했어요." } }, { status: 500 });
   }
 }

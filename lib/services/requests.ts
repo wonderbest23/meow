@@ -17,6 +17,14 @@ export const SERVICE_REQUEST_STATUS_LABELS: Record<ServiceRequestStatus, string>
   canceled: "취소",
 };
 
+/* 운영자 화면의 상태 이름 — 사장님 화면은 '연락드렸어요'처럼 받는 쪽 말투, 운영자 화면은 운영자가 한 일로 적는다 */
+export const ADMIN_SERVICE_REQUEST_STATUS_LABELS: Record<ServiceRequestStatus, string> = {
+  received: "새 신청",
+  contacted: "연락함",
+  done: "완료",
+  canceled: "취소",
+};
+
 /* 어드민이 고를 수 있는 다음 상태 — 끝난(완료·취소) 건은 '접수됨'으로만 되돌린다 */
 export const SERVICE_REQUEST_NEXT: Record<ServiceRequestStatus, ServiceRequestStatus[]> = {
   received: ["contacted", "done", "canceled"],

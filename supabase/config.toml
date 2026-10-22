@@ -222,6 +222,21 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# 오늘창업 한국어 인증 메일(로컬 supabase CLI 전용 — 운영 프로젝트에는 적용되지 않는다).
+# 운영(Supabase 대시보드 → Authentication → Emails → Templates)에는 아래 제목과 파일 내용을 직접 붙여 넣어야 한다.
+# 매직 링크(signInWithOtp)·초대는 앱에서 쓰지 않아 템플릿을 두지 않았다.
+[auth.email.template.confirmation]
+subject = "[오늘창업] 이메일 주소를 확인해 주세요"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "[오늘창업] 비밀번호 재설정 링크예요"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "[오늘창업] 이메일 주소 변경을 확인해 주세요"
+content_path = "./supabase/templates/email_change.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"
