@@ -18,7 +18,8 @@ import {
   type IRunOptions,
   type ITableCellOptions,
 } from "docx";
-import { marked, type Token, type Tokens } from "marked";
+import type { Token, Tokens } from "marked";
+import { lexPlanMarkdown } from "../plan-builder/markdown";
 import { CHART_FENCE_LANG, chartScale, parseChartSpec, shortWon, type ChartPoint } from "../plan-builder/chart";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -109,11 +110,15 @@ function docxRuns(tokens: Token[] | undefined, fallback = ""): TextRun[] {
   });
 }
 
-function docxTableCell(text: string, header: boolean): TableCell {
+type CellAlign = "left" | "right" | "center";
+const docxAlign = (align: CellAlign) => align === "right" ? AlignmentType.RIGHT : align === "center" ? AlignmentType.CENTER : AlignmentType.LEFT;
+
+function docxTableCell(text: string, header: boolean, align: CellAlign = "left"): TableCell {
   const options: ITableCellOptions = {
     shading: header ? { type: ShadingType.CLEAR, fill: colors.pale } : undefined,
     margins: { top: 100, bottom: 100, left: 120, right: 120 },
     children: [new Paragraph({
+      alignment: docxAlign(align),
       children: [new TextRun({ text, bold: header, size: header ? 19 : 18, color: header ? colors.ink : "263D34", font: docxFont })],
       spacing: { after: 0 },
     })],
@@ -191,7 +196,7 @@ function chartTable(points: ChartPoint[], breakEvenMonth: number | null): Table 
 
 function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
   const blocks: Array<Paragraph | Table> = [];
-  const tokens = marked.lexer(document.markdown, { gfm: true });
+  const tokens = lexPlanMarkdown(document.markdown);
   let skippedTitle = false;
 
   for (const token of tokens) {
@@ -204,6 +209,9 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
       blocks.push(new Paragraph({
         heading: level,
         children: docxRuns(token.tokens, token.text),
+        // 제목만 쪽 끝에 홀로 남지 않게 다음 문단과 붙여 둔다
+        keepNext: true,
+        keepLines: true,
         spacing: { before: token.depth <= 2 ? 300 : 200, after: 100 },
       }));
       continue;
@@ -241,11 +249,14 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
     if (token.type === "table") {
       const table = token as Tokens.Table;
       const rows = [table.header, ...table.rows];
+      // 숫자 열은 화면처럼 오른쪽에 맞춘다(머리줄 ---:, 없으면 금액 열 — lexPlanMarkdown 이 정해 둔다)
+      const aligns = table.header.map((_, column): CellAlign => table.align[column] === "center" ? "center" : table.align[column] === "right" ? "right" : "left");
       blocks.push(new Table({
         width: { size: 100, type: WidthType.PERCENTAGE },
         rows: rows.map((row, rowIndex) => new TableRow({
           tableHeader: rowIndex === 0,
-          children: row.map((cell) => docxTableCell(inlineText(cell.tokens, cell.text), rowIndex === 0)),
+          cantSplit: true,
+          children: row.map((cell, column) => docxTableCell(inlineText(cell.tokens, cell.text), rowIndex === 0, aligns[column])),
         })),
       }));
       blocks.push(new Paragraph({ text: "", spacing: { after: 140 } }));
@@ -260,6 +271,15 @@ function docxBlocks(document: BusinessDocument): Array<Paragraph | Table> {
         const spec = parseChartSpec(token.text);
         // 형식이 어긋나면 원시 JSON을 문서에 흘리지 않는다
         if (spec) {
+          // 화면 차트와 같은 제목 — 막대표만 있으면 무슨 값인지 알 수 없었다
+          if (spec.title) blocks.push(new Paragraph({
+            keepNext: true,
+            children: [
+              new TextRun({ text: spec.title, bold: true, size: 19, color: colors.ink, font: docxFont }),
+              new TextRun({ text: "  (단위: 원)", size: 16, color: colors.muted, font: docxFont }),
+            ],
+            spacing: { before: 120, after: 80 },
+          }));
           blocks.push(chartTable(spec.points, spec.breakEvenMonth));
           blocks.push(new Paragraph({ text: "", spacing: { after: 160 } }));
         }
@@ -332,7 +352,7 @@ function deliveryFontData(fontData?: DeliveryFontData) {
 function collectDeliveryText(documents: BusinessDocument[], project: DocumentProjectMeta): string {
   const parts: string[] = [
     // 표지·바닥글·메타에서 쓰는 고정 라벨(coverBlocks/footer/Document)
-    "창업 실행 캔버스 프로젝트 목표 고객 수익 방식 문서 버전 생성일 전체 창업 실행 문서 한국 초보 창업자를 위한 실행 문서 년 월 일",
+    "창업 실행 캔버스 프로젝트 목표 고객 수익 방식 문서 버전 생성일 전체 창업 실행 문서 한국 초보 창업자를 위한 실행 문서 년 월 일 (단위: 원) 개월차 월 흑자 전환",
     // 숫자·영문·문장부호 안전망
     "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,·|()[]{}<>-–—:;/%~!?\"'`@#&*+=₩$…“”‘’",
     project.title,

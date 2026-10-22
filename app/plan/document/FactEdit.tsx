@@ -6,6 +6,7 @@ import { X } from "lucide-react";
 import type { IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import type { IntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { EDITABLE_FACT_IDS, factNeedles, findFactRanges, parseWon, type EditableFact } from "../../../lib/plan-builder/fact-highlight";
+import { isShortCell } from "../../../lib/plan-builder/table-cells";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import { QuestionForm, RewriteConfirm } from "../chat/intake-ui/IntakePanels";
 import { choiceDraftSubmission, emptyAnswer, incompleteChoiceText, readIntakePayload, summaryAnswerText, type AnswerDraft } from "../chat/intake-ui/model";
@@ -64,6 +65,8 @@ export function highlightFacts(html: string, facts: Pick<EditableFact, "question
   }
   // 넓은 표는 옆으로 밀어 보게 감싼다(점검 2026-10-21: 고치기 화면에서 표가 잘리고 칸이 어긋났다)
   root.querySelectorAll("table").forEach(table => {
+    // 예전 본문에는 짧은 칸 표시가 없다 — 읽기 화면과 같은 기준으로 붙여 숫자 칸만 한 줄로 둔다
+    table.querySelectorAll("th, td").forEach(cell => { if (!cell.hasAttribute("data-short") && isShortCell(cell.textContent ?? "")) cell.setAttribute("data-short", ""); });
     const scroller = doc.createElement("div");
     scroller.className = "fact-table-scroll";
     table.replaceWith(scroller);

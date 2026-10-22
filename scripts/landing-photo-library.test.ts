@@ -47,6 +47,11 @@ for (const [text] of cases.filter(([, key]) => key)) {
   assert.equal(new Set(urls.map(url => url.split("?")[0])).size, urls.length, `${set.key}: photos repeat`);
 }
 
+// 빵집 첫 화면 사진은 외국 가격표(€)가 보이지 않는 것, 메뉴 카드는 특정 빵(크루아상·티라미수)이 아닌 식사빵(실제 AI 점검 2026-10-22)
+const bakerySet = photoSetFor("동네 빵집")!;
+assert.ok(!bakerySet.hero.includes("1517433670267"));
+assert.ok(!bakerySet.cards.some(url => /1555507036|1571115177098/.test(url)));
+
 // 동네 가게 템플릿에 한 벌을 나눠 넣는다(사장님 사진은 그대로)
 const pet = photoSetFor("애견 미용")!;
 const placed = applyPhotoSet({ "0:2362/0/0": "", "0:2329/0/0": "https://example.com/mine.jpg" }, "0-2226", pet);

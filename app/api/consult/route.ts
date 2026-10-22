@@ -3,7 +3,8 @@ import { z } from "zod";
 import { requireGuestIdentity } from "../../../lib/api-auth";
 import { checkRateLimit, enforceRateLimit } from "../../../lib/rate-limit";
 import { resolveLLMConfig } from "../../../lib/llm/config";
-import { streamText, parseJsonObject } from "../../../lib/llm/complete";
+import { streamText, type LLMFailure } from "../../../lib/llm/complete";
+import { consultRefersToPlan, parseConsultText } from "../../../lib/consult/reply";
 import { loadPlanState } from "../../../lib/plan-builder/plan-server-store";
 import { planDigest } from "../../../lib/consult/plan-digest";
 import { loadPlanEvidence } from "../../../lib/plan-builder/market-research";
@@ -13,6 +14,7 @@ import { loadConsultSession, saveConsultTurn, resetConsultSession, consultLimitF
 import {
   CONSULT_SYSTEM,
   CONSULT_META_SEP,
+  CONSULT_FAILED_REPLY,
   consultReplySchema,
   consultProfileSchema,
   profileLines,
@@ -186,7 +188,11 @@ export async function POST(request: Request) {
    */
   const HISTORY_TURNS = 12;
   const HISTORY_CHARS = 6_000;
-  const serverTurns = (session?.messages ?? []).map((turn) => ({ role: turn.role, text: turn.text }));
+  /* 답을 받지 못한 차례(손님 질문 + 실패 표시)는 모델에게 싣지 않는다 — 손님이 '다시 보내기'로 같은 말을 다시 보낸다 */
+  const storedTurns = session?.messages ?? [];
+  const serverTurns = storedTurns
+    .filter((turn, index) => !(turn.text === CONSULT_FAILED_REPLY || (turn.role === "user" && storedTurns[index + 1]?.text === CONSULT_FAILED_REPLY)))
+    .map((turn) => ({ role: turn.role, text: turn.text }));
   const sourceTurns = serverTurns.length ? serverTurns : input.history;
   const trimmedTurns: Array<{ role: "user" | "assistant"; text: string }> = [];
   let historyBudget = HISTORY_CHARS;
@@ -210,10 +216,17 @@ export async function POST(request: Request) {
   if (input.planId) {
     const state = await loadPlanState(identity.hash).catch(() => null);
     const plan = state?.plans.find((p) => p.id === input.planId);
-    if (plan) {
+    /*
+     * 손님이 이번에 그 계획서(그 사업)를 가리켰을 때만 통째로 싣는다. 아니면 '참고' 한 줄만 —
+     * 예전엔 늘 실어서 "주말 부업 창업이 있을까요?"에 "계획서 속 빵집은…"으로 답하고, 검토 메모까지 상담 카드에 옮겼다.
+     */
+    const recentUser = sourceTurns.filter((turn) => turn.role === "user").map((turn) => turn.text);
+    if (plan && consultRefersToPlan(input.message, recentUser, { title: plan.title, industry: state!.business.industry, name: state!.business.name })) {
       planBlock = `손님의 사업계획서\n${planDigest(plan, state!.business)}`;
       const saved = await loadPlanEvidence(plan.id, identity.hash).catch(() => [] as MarketEvidence[]);
       evidence = pickConsultEvidence(saved, input.profile);
+    } else if (plan) {
+      planBlock = `참고: 손님은 '${plan.title.slice(0, 60)}' 사업계획서도 쓰고 있습니다. 이번 말은 그 계획서 이야기가 아닐 수 있습니다 — 손님이 계획서를 말하지 않으면 꺼내지 말고, 마지막 말에만 답하세요.`;
     }
   }
   const evidenceText = evidenceBlock(evidence);
@@ -258,7 +271,7 @@ export async function POST(request: Request) {
         if (st.mode === "unknown") {
           const head = full.trimStart();
           if (!head) return;
-          st.mode = head.startsWith("{") ? "json" : "text";
+          st.mode = head.startsWith("{") || head.startsWith("```") ? "json" : "text";
         }
         if (st.mode === "json" || sepAt >= 0) return;
         const idx = full.indexOf(`\n${CONSULT_META_SEP}`);
@@ -267,6 +280,7 @@ export async function POST(request: Request) {
         if (found >= 0) { sepAt = found; flushText(found); return; }
         flushText(Math.max(sentLen, full.length - HOLD));
       };
+      const llm = { failure: null as LLMFailure["code"] | null };
       const text = await streamText(config, {
         system: CONSULT_SYSTEM,
         user,
@@ -275,32 +289,47 @@ export async function POST(request: Request) {
         cache: true,
         timeoutMs: 60_000,
         signal: request.signal,
+        onFailure: (event) => { llm.failure = event.code; },
       }, onDelta);
 
+      /*
+       * 답 읽기 — 손님에게 보일 말이 있으면 살린다(넘친 칸은 자르고, 못 고칠 칸만 버린다 · lib/consult/reply.ts).
+       * 예전엔 끝 JSON 의 한 칸만 형식을 넘어도 답 전체를 버리고 '이어가지 못했어요'를 보였다.
+       */
       let reply: ConsultReply | null = null;
-      if (text) {
-        let message = "";
-        let meta: Record<string, unknown> = {};
-        if (st.mode === "json") {
-          const obj = parseJsonObject(text);
-          if (obj) { message = String(obj.message ?? ""); meta = obj; }
-          if (message) send({ t: "delta", v: message });
-        } else {
-          const cut = sepAt >= 0 ? sepAt : text.indexOf(`\n${CONSULT_META_SEP}`);
-          message = (cut >= 0 ? text.slice(0, cut) : text).trim();
-          if (cut >= 0) { flushText(cut); meta = parseJsonObject(text.slice(cut + CONSULT_META_SEP.length + 1)) ?? {}; }
-          else flushText(text.length);
-        }
+      /* 길이 한도에서 끊긴 답은 거기까지 받은 글로 — 손님 말은 대개 앞에 다 있고, 잘린 것은 끝의 JSON 이다 */
+      const received = text ?? (llm.failure === "output_limit" ? full : null);
+      const result = parseConsultText(received);
+      if (result.ok) {
         /* [E#] → (출처 #), 실제로 쓰인 근거만 sources 로 */
-        const cited = applyCitations(message, evidence);
-        const parsed = consultReplySchema.safeParse({ ...meta, message: cited.message, sources: cited.sources });
-        if (parsed.success && parsed.data.message) reply = parsed.data;
+        const cited = applyCitations(result.reply.message, evidence);
+        const parsed = consultReplySchema.safeParse({ ...result.reply, message: cited.message || result.reply.message, sources: cited.sources });
+        if (parsed.success) reply = parsed.data;
+        else reply = { ...result.reply, sources: [] };
+      }
+      // 실패·살린 칸은 이유 코드만 남긴다(대화 내용·개인정보는 남기지 않는다)
+      if (!reply) {
+        console.error("[consult]", JSON.stringify({ event: "reply_failed", reason: result.ok ? "schema" : result.reason, llm: llm.failure, aborted: request.signal.aborted, textLength: received?.length ?? 0, dropped: result.dropped.slice(0, 12) }));
+      } else if (result.dropped.length) {
+        console.error("[consult]", JSON.stringify({ event: "reply_salvaged", dropped: result.dropped.slice(0, 12), textLength: received?.length ?? 0 }));
       }
       if (!reply) {
         const fb = fallback();
+        /*
+         * 손님 질문은 남긴다 — 실패 표시와 함께 저장해, 새로고침하거나 창을 닫았다 와도 질문이 사라지지 않고
+         * '다시 보내기'가 붙는다(예전엔 저장하지 않아 질문이 통째로 사라졌다). 하루 횟수는 세지 않는다.
+         */
+        const at = new Date().toISOString();
+        await saveConsultTurn(identity.hash, {
+          profile: input.profile,
+          appended: [{ role: "user", text: input.message, at }, { role: "assistant", text: CONSULT_FAILED_REPLY, at }],
+          turnsToday: session?.turnsToday ?? 0,
+          /* 같은 질문이 또 실패하면 실패 차례를 하나만 남긴다 */
+          replaceFailed: input.message,
+        }).catch(() => { /* 저장소가 없으면 화면이 질문을 들고 있다 */ });
         if (sentLen === 0) send({ t: "delta", v: fb.message });
-        send({ t: "done", ...fb, profile: input.profile, remainingToday: ownerDay ? ownerDay.remaining : Math.max(0, limit - (session?.turnsToday ?? 0)), isGuest: !identity.userId });
-        controller.close();
+        send({ t: "done", ...fb, failed: true, profile: input.profile, remainingToday: ownerDay ? ownerDay.remaining : Math.max(0, limit - (session?.turnsToday ?? 0)), isGuest: !identity.userId });
+        try { controller.close(); } catch { /* 손님이 창을 닫아 이미 끊긴 흐름 */ }
         return;
       }
 
@@ -321,6 +350,8 @@ export async function POST(request: Request) {
           { role: "assistant", text: reply.message, at },
         ],
         turnsToday: (session?.turnsToday ?? 0) + 1,
+        /* 답을 못 받은 같은 질문을 다시 보낸 것이면 그 실패 차례는 지운다 — 같은 질문이 두 번 남지 않게 */
+        replaceFailed: input.message,
       }).catch((error: unknown) => {
         // 상담은 이어 가되 저장 실패는 남긴다(대화 기록·하루 횟수가 안 남는다)
         console.warn("[consult]", JSON.stringify({ event: "save_failed", code: (error as { code?: string } | null)?.code ?? null, message: String((error as { message?: string } | null)?.message ?? error).slice(0, 160) }));

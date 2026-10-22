@@ -104,6 +104,8 @@ export const landingPageDataSchema = z.object({
     at: z.string().max(40),
     texts: z.record(z.string(), z.string().max(4000)).default({}),
     images: z.record(z.string(), z.string().max(2000)).default({}),
+    /** 같은 글을 디자인과 상관없는 모양으로(lib/landing/ai-fill.ts HomepageCopy) — 디자인을 바꾸면 새 자리에 다시 옮겨 담는다 */
+    copy: z.record(z.string(), z.unknown()).optional(),
   }).optional(),
   sourceSnapshot: z.object({
     version: z.literal(1),

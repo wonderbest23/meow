@@ -10,6 +10,28 @@ import { ChartFigure } from "./chart-node";
 import styles from "./InlineDocEditor.module.css";
 import { Spinner } from "./PlanLoading";
 import { askText } from "../../components/confirm-dialog";
+import { isShortCell } from "../../lib/plan-builder/table-cells";
+import { restoreRangeTildes } from "../../lib/plan-builder/range-tildes";
+
+/*
+ * 표 칸이 지니는 두 가지 — 정렬(마크다운 ---: 에서 온 align, 숫자 열은 오른쪽)과 '짧은 칸' 표시.
+ * 기본 TableCell 은 둘 다 버려서, 화면에서 숫자 열 정렬이 사라지고 폰에서 모든 칸을 한 줄로 늘이는 수밖에 없었다.
+ * 짧은 칸(숫자·짧은 낱말)만 한 줄로 두고 줄글 칸은 줄을 바꾼다(InlineDocEditor.module.css).
+ */
+const cellAttributes = {
+  align: {
+    default: null,
+    parseHTML: (element: HTMLElement) => element.getAttribute("align") || element.style.textAlign || null,
+    renderHTML: (attributes: Record<string, unknown>) => (attributes.align ? { align: attributes.align } : {}),
+  },
+  short: {
+    default: false,
+    parseHTML: (element: HTMLElement) => isShortCell(element.textContent ?? ""),
+    renderHTML: (attributes: Record<string, unknown>) => (attributes.short ? { "data-short": "" } : {}),
+  },
+};
+const PlanTableCell = TableCell.extend({ addAttributes() { return { ...this.parent?.(), ...cellAttributes }; } });
+const PlanTableHeader = TableHeader.extend({ addAttributes() { return { ...this.parent?.(), ...cellAttributes }; } });
 
 export interface InlineDocEditorProps {
   /** 초기 본문 (서버에서 렌더한 HTML) */
@@ -39,7 +61,9 @@ const SAVE_DEBOUNCE = 1500;
  * 버튼을 눌러 '편집 모드'로 들어가지 않고, 그 자리에서 바로 고친다.
  * 글자를 선택하면 그 위에 서식 툴바가 뜬다.
  */
-export default function InlineDocEditor({ html, onChange, onDraft, status = "idle", debounceMs = SAVE_DEBOUNCE, readOnly = false }: InlineDocEditorProps) {
+export default function InlineDocEditor({ html: sourceHtml, onChange, onDraft, status = "idle", debounceMs = SAVE_DEBOUNCE, readOnly = false }: InlineDocEditorProps) {
+  // 예전 본문에 남은 범위 물결 취소선('2<del>3곳 … 2</del>3곳')을 물결로 되돌려 보여 준다
+  const html = restoreRangeTildes(sourceHtml);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pending = useRef<string | null>(null);
   const latest = useRef(onChange);
@@ -58,12 +82,13 @@ export default function InlineDocEditor({ html, onChange, onDraft, status = "idl
   const editor = useEditor({
     immediatelyRender: false, // SSR과 첫 렌더가 어긋나지 않게
     extensions: [
-      StarterKit.configure({ link: false }),
+      // 취소선은 끈다 — '2~3곳 … 각 2~3곳'의 물결이 취소선으로 바뀌어 '23곳'으로 읽혔다(lib/plan-builder/markdown.ts)
+      StarterKit.configure({ link: false, strike: false }),
       Link.configure({ openOnClick: false, autolink: false }),
       Table.configure({ resizable: false }),
       TableRow,
-      TableHeader,
-      TableCell,
+      PlanTableHeader,
+      PlanTableCell,
       ChartFigure,
     ],
     content: html,

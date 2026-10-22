@@ -3,7 +3,8 @@
 import { appendixFromDraft, PublicAppendixPreview } from "./public-appendix-preview";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
-import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, Palette, PauseCircle, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck } from "lucide-react";
+import { withRo } from "../lib/josa";
+import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, Palette, PauseCircle, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles, Undo2 } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
 import { landingSlugIssue, privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
 import { unansweredCount, useInquiries } from "../app/plan/inquiries/use-inquiries";
@@ -13,7 +14,9 @@ import { LandingDomainConnector } from "./landing-domain-connector";
 import { HomepageAlertSettings } from "./homepage-alert-settings";
 import { HomepageExpertConsult } from "./homepage-expert-consult";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
-import { createBusinessTemplate, visitInfoTexts } from "../lib/landing/brainwave/business-content";
+import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
+import { homepageMissingInfo } from "../lib/landing/publish-check";
+import { switchHomepageDesign } from "../lib/landing/ai-fill";
 import { applyBusinessContent } from "../lib/landing/page-data";
 import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading, { Spinner } from "../app/plan/PlanLoading";
@@ -82,17 +85,8 @@ export function contentSourceOf(draft: LandingDraft) {
   return { businessName: draft.businessName, ...(draft.pageData?.businessContent?.headline ? { headline: draft.pageData.businessContent.headline } : {}), offer: draft.offerTitle, description: draft.offerDescription, customer: draft.pageData?.businessContent?.customer ?? "", price: draft.priceLabel, cta: draft.ctaLabel, image: draft.heroImageUrl };
 }
 
-/** 공개 전에 비어 있으면 안 되는 것 — 법정 표기(사업자 정보 칸의 '채울 것 n개'와 공개 확인창이 같은 목록을 쓴다) */
-export function homepageMissingInfo(draft: LandingDraft): string[] {
-  return [
-    !draft.businessRepresentative.trim() && "대표자",
-    !draft.businessAddress.trim() && "사업장 주소",
-    !(draft.businessPhone || draft.businessContact).trim() && "전화번호",
-    !draft.businessEmail.trim() && "이메일",
-    !draft.businessRegistrationNumber.trim() && "사업자등록번호",
-    draft.leadCaptureEnabled && !draft.privacyContact.trim() && "개인정보 문의처",
-  ].filter(Boolean) as string[];
-}
+/* 공개 전 '채울 것' 목록 — 화면 없이 시험할 수 있게 lib 로 옮겼다(공개 확인창도 같은 목록을 쓴다) */
+export { homepageMissingInfo, looksDescriptiveName } from "../lib/landing/publish-check";
 
 /**
  * 가게 이름 바꾸기 — 이름이 들어가는 곳(맨 위 이름 등 자동 문구, 개인정보 '처리 주체')을 함께 바꾼다.
@@ -127,7 +121,10 @@ export function HomepageKitPanel({
   aiFill,
   inChrome = false,
   planId,
+  nameCandidates = false,
 }: {
+  /** 계획서에 가게 이름 후보가 있고 아직 이름을 정하지 않았는지 — '채울 것'에 가게 이름을 넣는다 */
+  nameCandidates?: boolean;
   /** 공개 멈추기 — 손님 주소로 안 열리게(초안·주소는 남는다) */
   onUnpublish?: () => void;
   /** 무료 주소 끝부분 저장 오류(서버·저장 전 확인) — 그 칸 바로 아래에 보인다 */
@@ -250,18 +247,22 @@ export function HomepageKitPanel({
   };
   const page = BRAINWAVE_PAGES.find((p) => p.id === draft.pageData?.brainwave?.page);
   const [picking, setPicking] = useState(false);
+  /* 디자인을 바꾸기 직전 모습 — 바꾼 뒤 '되돌리기'로 한 번 돌아갈 수 있다 */
+  const [beforeSwitch, setBeforeSwitch] = useState<{ draft: LandingDraft; from: string } | null>(null);
   const bw = draft.pageData?.brainwave;
   // 큰 제목(계획서의 한 줄 소개)은 폼에 칸이 없다 — 템플릿을 바꿔도 이어 쓴다
   const contentSource = () => contentSourceOf(draft);
+  /*
+   * 디자인 바꾸기 — AI 가 쓴 글(한 줄 소개·카드·이용 순서·메뉴·마무리)은 새 디자인의 같은 역할 자리로 옮겨 담는다(switchHomepageDesign).
+   * 예전엔 템플릿 기본 글로 새로 만들어 AI 글이 사라지고, 원래 디자인으로 돌아가도 되살아나지 않았다.
+   */
   const pickTemplate = (id: string) => {
     if (!draft.pageData || !bw || busy) return;
     if (id === bw.page) { setPicking(false); return; }
     const businessContent = { ...contentSource(), businessName: draft.businessName.trim() || "내 사업" };
-    // 새 템플릿의 문의 버튼도 지금 연락 방법으로(전화면 전화) — 새로 만든 버튼은 '문의 양식'에서 시작한다
-    const brainwave = createBusinessTemplate(businessContent, id);
-    Object.assign(brainwave.texts, visitInfoTexts(id, { address: draft.businessAddress, hours: draft.openHours }));
-    const next = { ...draft, pageData: { ...draft.pageData, businessContent, brainwave, content: [] } };
-    onChange(applyContactMethod({ ...next, contact: DEFAULT_CONTACT }, next));
+    const base = { ...draft, pageData: { ...draft.pageData, businessContent } };
+    onChange(switchHomepageDesign(base, id, () => createBusinessTemplate(businessContent, id)));
+    setBeforeSwitch({ draft, from: page?.ko ?? "이전 디자인" });
     setPicking(false);
   };
 
@@ -272,7 +273,7 @@ export function HomepageKitPanel({
   const openLeads = leads ? unansweredCount(leads) : 0;
 
   /* 공개 전에 비어 있으면 안 되는 것 — 법정 표기 */
-  const missing = homepageMissingInfo(draft);
+  const missing = homepageMissingInfo(draft, { nameCandidates });
 
   return (
     <section className="hk" aria-busy={busy}>
@@ -364,7 +365,17 @@ export function HomepageKitPanel({
           </div> : null}
         </div>
       </div>
-      {picking && bw ? <BrainwaveTemplatePicker current={bw.page} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}
+      {/* 디자인을 바꾼 바로 뒤 — 되돌리기와 AI로 다시 채우기(채우는 단추는 여기에만 둔다: 늘 보이면 AI 비용만 나간다) */}
+      {beforeSwitch && bw && beforeSwitch.draft.pageData?.brainwave?.page !== bw.page ? (
+        <div className="hk-switch-note" role="status">
+          <span>{draft.pageData?.aiFill ? "디자인을 바꿨어요. AI가 쓴 글은 새 디자인 자리에 옮겨 담았어요. 칸 수가 달라 빠진 글은 되돌리면 그대로 있어요." : "디자인을 바꿨어요. 글은 사업 정보로 새로 채웠어요."}</span>
+          <span className="hk-switch-actions">
+            <button type="button" disabled={busy} onClick={() => { onChange(beforeSwitch.draft); setBeforeSwitch(null); }}><Undo2 size={14} aria-hidden /> {withRo(beforeSwitch.from)} 되돌리기</button>
+            {aiFill ? <button type="button" disabled={busy} onClick={() => { setBeforeSwitch(null); aiFill.run(); }}><Sparkles size={14} aria-hidden /> 이 디자인에 맞게 AI로 다시 채우기</button> : null}
+          </span>
+        </div>
+      ) : null}
+      {picking && bw ? <BrainwaveTemplatePicker current={bw.page} aiFilled={Boolean(draft.pageData?.aiFill)} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}
 
       {/* 손님 연락 방법 — 문의·예약 버튼과 휴대폰 아래 고정 버튼이 어디로 연결될지 */}
       <Fold

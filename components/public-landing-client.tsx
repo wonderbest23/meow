@@ -134,7 +134,8 @@ export function PublicLandingClient({
   const heroStyle = config.heroImageUrl
     ? { backgroundImage: `url(${config.heroImageUrl})` }
     : undefined;
-  const initials = config.businessName.replaceAll(" ", "").slice(0, 2);
+  /* 둥근 로고 글자는 첫 글자 하나 — 두 글자를 자르면 '아파트 상가 아침 빵집'이 '아파'가 됐다(실제 AI 점검 2026-10-22) */
+  const initials = Array.from(config.businessName.trim())[0] ?? "";
   /*
    * 킷 배치(lib/landing/kits.ts)는 블록 안에서 정해지지만, 문의 양식과 상단
    * 메뉴는 블록 밖에 있다 — 껍데기에도 같은 클래스를 붙여 한 벌로 입힌다.
@@ -213,7 +214,7 @@ export function PublicLandingClient({
             ]} values={{ privacy: privacyAgreed, marketing: marketingAgreed }} onChange={(next) => { setPrivacyAgreed(Boolean(next.privacy)); setMarketingAgreed(Boolean(next.marketing)); }} />
             <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{privacyPolicyWithContact(config.privacyPolicy, config.privacyContact)}</p><small>문의: {config.privacyContact}</small></details>
             {error && <p className="public-form-error" role="alert">{error}</p>}
-            <button type="submit" disabled={submitting}>{submitting ? <Spinner /> : config.ctaLabel}<ArrowRight /></button>
+            <button type="submit" disabled={submitting}>{submitting ? <Spinner /> : "문의 보내기"}<ArrowRight /></button>
           </form>
         )}
       </section>

@@ -33,6 +33,7 @@ import frame from "../chat/page.module.css";
 import { Check, Rocket, Save } from "lucide-react";
 import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 import { askConfirm } from "../../../components/confirm-dialog";
+import { withRo } from "../../../lib/josa";
 import { useDialogFocus } from "../../../components/use-dialog-focus";
 
 /*
@@ -94,6 +95,8 @@ export default function PlanHomepagePage() {
   const mounted = useRef(true);
   const leaving = useRef(false);
   const siteRef = useRef(site); siteRef.current = site;
+  /* 공개 확인창이 '가게 이름'을 물을지 — 아래 화면 계산(nameCandidates)을 공개 함수가 읽는다 */
+  const nameCandidatesRef = useRef(false);
   const [aiFilling, setAiFilling] = useState(false);
   /* 처음 저절로 채우기(AI)가 실패했을 때 — 조용히 넘어가면 사장님은 계획서 답이 그대로 들어간 줄 몰랐다. 한 줄로 알리고 다시 채우기를 둔다(저절로 다시 돌리지 않는다) */
   const [aiFillFailed, setAiFillFailed] = useState(false);
@@ -439,9 +442,9 @@ export default function PlanHomepagePage() {
      * 처음 공개(또는 멈췄다 다시 공개)할 때 비어 있는 사업자 정보를 한 번 알린다 — 예전엔 '채울 것 5개'가 있어도 묻지 않고 공개됐다.
      * 그래도 공개할 수 있다(문의 양식을 켠 채 개인정보 문의처가 비면 서버가 공개를 막는다 — 그 경우는 따로 알린다).
      */
-    const missingInfo = siteRef.current?.status === "published" ? [] : homepageMissingInfo(draft);
+    const missingInfo = siteRef.current?.status === "published" ? [] : homepageMissingInfo(draft, { nameCandidates: nameCandidatesRef.current });
     if (missingInfo.length && !await askConfirm({
-      title: "비어 있는 사업자 정보가 있어요",
+      title: "비어 있는 정보가 있어요",
       message: `비어 있는 항목: ${missingInfo.join(", ")}. ${missingInfo.includes("개인정보 문의처") ? "문의 양식을 켜 두었다면 개인정보 문의처는 꼭 적어야 공개할 수 있어요." : "지금 공개해도 되지만, 손님에게 돈을 받기 전에는 채워 주세요."} 채울 곳은 아래 '사업자 정보'예요.`,
       cancelLabel: "채우러 가기",
       confirmLabel: "그래도 공개",
@@ -576,11 +579,11 @@ export default function PlanHomepagePage() {
     const title = heroTitle(draft);
     if (!title || title === opened || title.length > 30 || title === draft.businessName.trim() || askedNames.current.has(title)) return;
     askedNames.current.add(title);
-    void askConfirm({ title: "가게 이름도 바꿀까요?", message: `큰 제목을 '${title}'(으)로 고쳤어요. 가게 이름도 '${title}'(으)로 바꿀까요? 홈페이지 맨 위 이름, 개인정보 처리 주체, 손님 문의·문자 안내에 이 이름이 들어가요.`, cancelLabel: "그대로 두기", confirmLabel: "가게 이름 바꾸기" })
+    void askConfirm({ title: "가게 이름도 바꿀까요?", message: `큰 제목을 ${withRo(`'${title}'`)} 고쳤어요. 가게 이름도 ${withRo(`'${title}'`)} 바꿀까요? 홈페이지 맨 위 이름, 개인정보 처리 주체, 손님 문의·문자 안내에 이 이름이 들어가요.`, cancelLabel: "그대로 두기", confirmLabel: "가게 이름 바꾸기" })
       .then(ok => {
         if (!ok) return;
         const renamed = withBusinessName(draft, title);
-        saveDraft(renamed).then(() => setMessage(`가게 이름을 '${title}'(으)로 바꿨어요. 손님 화면에는 공개하면 반영돼요.`)).catch(() => { setDraft(renamed); setMessage("가게 이름을 바꿨어요. 저장을 눌러 주세요."); });
+        saveDraft(renamed).then(() => setMessage(`가게 이름을 ${withRo(`'${title}'`)} 바꿨어요. 손님 화면에는 공개하면 반영돼요.`)).catch(() => { setDraft(renamed); setMessage("가게 이름을 바꿨어요. 저장을 눌러 주세요."); });
       });
   }, [builderOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -625,6 +628,10 @@ export default function PlanHomepagePage() {
   const back = screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
   /* 이 화면의 사업 — 공개 뒤 다음 단계와 '사업 시작 준비 먼저 하기'에 쓴다(이 기기에 저장된 사업) */
   const screenPlan = phase === "ready" && screenPlanId && !sample ? loadState().plans.find(item => item.id === screenPlanId) ?? null : null;
+  /* 계획서에 가게 이름 후보가 있는데 아직 이름을 정하지 않았는지 — 설명 같은 이름이면 공개 전 '채울 것'에 가게 이름을 넣는다 */
+  const screenCoach = screenPlan ? readCoach(screenPlan.answers) : null;
+  const nameCandidates = Boolean(screenCoach && !screenCoach.business.nameConfirmed && (screenCoach.design?.identity?.names?.length ?? 0) > 0);
+  nameCandidatesRef.current = nameCandidates;
   const screenNext = screenPlan ? journeyNext(screenPlan, "published") : screenPlanId ? { href: launchHref(screenPlanId), title: "사업 시작하기", note: "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요" } : null;
 
   return (
@@ -799,12 +806,17 @@ export default function PlanHomepagePage() {
           onOpenEditor={() => setBuilderOpen(true)}
           onSiteUpdated={updateSite}
           onSourceApplied={applySourceSite}
+          nameCandidates={nameCandidates}
           aiFill={projectId && site && !sample ? {
             running: aiFilling,
-            run: () => {
-              if (draft && landingDraftFingerprint(draft) !== landingDraftFingerprint(site.draft)) { setMessage("저장하지 않은 변경이 있어요. 먼저 저장한 뒤 AI로 채워 주세요."); return; }
-              void runAiFill(projectId, site.updatedAt, false);
-            },
+            /* 디자인을 바꾼 뒤 '이 디자인에 맞게 AI로 다시 채우기' — 바꾼 디자인은 아직 저장 전이라 먼저 저장하고 채운다 */
+            run: () => void (async () => {
+              if (draft && landingDraftFingerprint(draft) !== landingDraftFingerprint(site.draft)) {
+                try { await saveDraft(draft); } catch { return; }
+              }
+              const latest = siteRef.current;
+              if (latest) void runAiFill(projectId, latest.updatedAt, false);
+            })(),
           } : undefined}
         />
       )}

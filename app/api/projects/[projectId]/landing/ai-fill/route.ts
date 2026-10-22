@@ -10,7 +10,7 @@ import { loadPlanState } from "../../../../../../lib/plan-builder/plan-server-st
 import { readCoach } from "../../../../../../lib/plan-builder/coach";
 import { resolveLLMConfig } from "../../../../../../lib/llm/config";
 import { completeJson } from "../../../../../../lib/llm/complete";
-import { applyHomepageCopy, homepageFillPrompt, normalizeHomepageCopy } from "../../../../../../lib/landing/ai-fill";
+import { applyHomepageCopy, homepageFillPrompt, homepageKnownPrice, normalizeHomepageCopy, withKnownPrice } from "../../../../../../lib/landing/ai-fill";
 import { countAiFills, recordAiFill } from "../../../../../../lib/landing/ai-fill-usage";
 
 export const runtime = "nodejs";
@@ -61,7 +61,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   if (!config) return NextResponse.json({ error: { code: "AI_UNAVAILABLE", message: "지금은 AI 채우기를 쓸 수 없어요." } }, { status: 503 });
   const prompt = homepageFillPrompt(plan);
   const raw = await withUsageContext({ planId, ownerHash: identity.hash }, () => completeJson(config, { kind: "landing-ai-fill", system: prompt.system, user: prompt.user, maxOutputTokens: 3000, jsonObject: true, timeoutMs: 120_000 }));
-  const copy = normalizeHomepageCopy(raw);
+  const normalized = normalizeHomepageCopy(raw);
+  /* 사장님이 정한 가격이 하나뿐이면 메뉴의 '문의' 자리에 넣는다(상품이 여럿이면 'N원부터') */
+  const copy = normalized ? withKnownPrice(normalized, homepageKnownPrice(plan)) : null;
   if (!copy) return NextResponse.json({ error: { code: "AI_FAILED", message: "AI 가 홈페이지 글을 만들지 못했어요. 잠시 후 다시 시도해 주세요." } }, { status: 502 });
 
   const draft = applyHomepageCopy(site.draft, copy, { industry: readCoach(plan.answers)?.business.industry ?? "", description: readCoach(plan.answers)?.business.description ?? "" });
