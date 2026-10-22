@@ -19,6 +19,10 @@
 .headerMenu { position:relative; margin-left:auto; }.menuPanel { position:absolute; right:0; top:50px; width:190px; padding:8px; background:var(--app-surface); border:1px solid var(--app-line); border-radius:8px; box-shadow:0 12px 36px #191f2818; animation:arrive .18s ease-out; }
 /* 페이지가 넣는 헤더 버튼(요약 토글 등)은 오른쪽 메뉴 옆에 붙는다. '사업 관리'는 헤더가 아니라 왼쪽 메뉴(모바일은 ⋯ 메뉴)에 있다. */
 .headerActions { display:flex; align-items:center; gap:8px; margin-left:auto; }.headerActions + .headerMenu { margin-left:0; }
+/* 아주 좁은 화면(300px 아래·글자 200% 확대) — 오른쪽 단추(저장·공개하기)가 제목을 '홈'처럼 반쪽으로 밀고 단추도 잘렸다.
+   제목은 반쪽으로 남기지 말고 접고(뒤로·메뉴로 어디인지 안다), 더 좁으면 공개 단추 글자를 숨긴 글자로(읽어 주기에는 남는다) */
+@media (max-width:300px) { .header:has(.headerActions) .headerTitle { display:none; }.header:has(.headerActions) { gap:6px; } }
+@media (max-width:240px) { .headerActions button > span { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; } }
 .appRail nav .railWorkspace { min-height:42px; margin-left:14px; padding:9px 14px; font-size:14px; border-left:2px solid var(--app-line); border-radius:0 8px 8px 0; }
 .syncNotice { padding:10px 24px; background:var(--app-warning-bg); color:var(--app-warning); display:flex; align-items:center; flex-wrap:wrap; gap:12px; font-size:13px; line-height:1.6; flex-shrink:0; }.syncNotice button { border:0; background:transparent; min-height:40px; color:inherit; font-weight:600; }
 .menuPanel a { display:flex; align-items:center; gap:12px; min-height:48px; padding:12px; color:var(--app-text); font-size:15px; text-decoration:none; border-radius:6px; }.menuPanel a:hover { background:var(--app-raised); }
@@ -46,7 +50,7 @@
 .composer form { display:flex; align-items:flex-end; gap:8px; border:1.5px solid transparent; border-radius:20px; padding:10px; background:var(--app-raised); transition:border-color .2s,box-shadow .2s,background .2s; }
 .composer form:focus-within { background:var(--app-surface); border-color:var(--app-primary); box-shadow:0 0 0 4px #3182f60d; }
 .composer textarea { display:block; flex:1; width:100%; min-width:0; resize:none; border:0; padding:10px 0; background:transparent; font:inherit; font-size:16px; line-height:24px; outline:none; height:44px; min-height:44px; max-height:140px; color:var(--app-text); }
-.composer textarea::placeholder { color:var(--app-muted); }
+.composer textarea::placeholder { color:var(--app-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .tool,.send { width:44px; height:44px; flex-shrink:0; display:grid; place-items:center; padding:0; border:0; border-radius:8px; }
 .tool { background:transparent; color:var(--app-muted); }.send { background:var(--app-primary); color:white; border-radius:50%; box-shadow:0 3px 8px #3182f629; transition:transform .15s,background .15s,box-shadow .15s; }
 .send:disabled { background:var(--app-soft); color:#899db8; opacity:1; box-shadow:none; }.send:active:not(:disabled) { transform:scale(.91); background:#1b64da; }.sendReady:not(:disabled) { animation:sendReady .22s ease-out; }
@@ -208,3 +212,5 @@
 }
 /* 터치 화면에서는 누른 뒤에도 :hover 가 남아 뒤로·메뉴 단추 뒤에 회색 동그라미가 붙어 있었다 — 마우스가 있을 때만 */
 @media (hover: none) { .menuToggle:hover, .back:hover { background: transparent; } }
+/* 가로로 눕힌 폰(높이 500px 이하) — 머리줄을 얇게 해 본문 자리를 넓힌다(문서 화면은 본문이 161px 뿐이었다) */
+@media (max-height:500px) and (orientation:landscape) and (max-width:1100px) { .header { height:52px; } }

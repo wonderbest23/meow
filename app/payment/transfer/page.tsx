@@ -82,7 +82,7 @@ function TransferStatus() {
   const expired = Date.parse(order.expiresAt) <= Date.now() && order.status === "awaiting_deposit";
 
   return <main className="manual-payment-page">
-    <header><Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026.png" alt="오늘창업" /></Link><span><ShieldCheck /> 안전한 계좌이체 주문</span></header>
+    <header><Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026-sm.webp" width="384" height="96" alt="오늘창업" /></Link><span><ShieldCheck /> 안전한 계좌이체 주문</span></header>
     <section className={`manual-payment-card status-${expired ? "expired" : order.status}`}>
       <div className="manual-payment-state">{order.status === "done" ? <CheckCircle2 /> : <Clock3 />}<span><small>{order.orderId}</small><h1>{expired ? "입금 기한이 지났어요" : copy.title}</h1><p>{expired ? statusCopy.expired.body : copy.body}</p></span></div>
       {["awaiting_deposit", "deposit_reported"].includes(order.status) && !expired && <>

@@ -37,7 +37,7 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
   return (
     <main className="platform-legal-page">
       <header className="platform-legal-header">
-        <Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026.png" alt="오늘창업" /></Link>
+        <Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026-sm.webp" width="384" height="96" alt="오늘창업" /></Link>
         <LegalBackLink />
       </header>
       <div className="platform-legal-layout">

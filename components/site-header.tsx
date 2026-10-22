@@ -18,7 +18,8 @@ import { loadAuthSession } from "../lib/client/auth-session";
 
 /** 로고 그림 파일 — 화면마다 다른 원본을 쓸 수 있다(홈은 검정 화면용 흰 글자) */
 export type SiteLogoAsset = { src: string; width: number; height: number };
-export const DEFAULT_LOGO: SiteLogoAsset = { src: "/today-startup-logo-2026.png", width: 1288, height: 322 };
+/* 화면에는 최대 32px 높이로만 그린다 — 3배 크기(384×96, 13KB) 작은 파일을 쓴다. 큰 원본(.png)은 공유 그림 등 큰 크기가 필요한 곳용 */
+export const DEFAULT_LOGO: SiteLogoAsset = { src: "/today-startup-logo-2026-sm.webp", width: 384, height: 96 };
 
 /** 로고 단추 — 머리말 말고 바닥글에서도 쓴다 */
 export function SiteLogo({ onClick, logo = DEFAULT_LOGO }: { onClick: () => void; logo?: SiteLogoAsset }) {

@@ -49,7 +49,7 @@ async function main() {
       }), true, '예시 문구와 대화 시작하기 단추가 겹치지 않아야 함');
       assert.equal(await page.$('[aria-label="미리보기 장면 선택"]'), null);
       await page.waitForFunction(() => { const img = document.querySelector<HTMLImageElement>('[data-cinematic-hero] img'); return img && img.complete && img.naturalWidth > 0; });
-      assert.match(await page.$eval(section + ' img', img => (img as HTMLImageElement).src), /oneulstart-team.png/);
+      assert.match(await page.$eval(section + ' img', img => (img as HTMLImageElement).src), /oneulstart-team\.webp/);
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
       await page.screenshot({ path: `artifacts/home-product-preview/${width}-photo-home.png` });
       const first = await page.$eval(section + ' img', img => getComputedStyle(img).transform);

@@ -15,6 +15,7 @@ import { renderBrainwaveMobile } from "./brainwave-mobile";
 import { BrainwaveBusinessMobile } from "./brainwave-business-mobile";
 import { businessNeedsFlow } from "../lib/landing/brainwave/layout-safety";
 import { sectionNameKo } from "../lib/landing/brainwave/section-names";
+import { responsivePhotoProps } from "../lib/landing/responsive-image";
 
 /*
  * 킷 글꼴 Gilroy 는 유료라 못 싣는다. 폭·굵기가 가장 가까운 무료 글꼴 Urbanist 를
@@ -231,6 +232,7 @@ export function BrainwaveNodeView({
     return (
       <img
         alt=""
+        {...(isPhoto ? responsivePhotoProps(src) : {})}
         src={src}
         style={nodeStyle(node.st)}
         draggable={false}

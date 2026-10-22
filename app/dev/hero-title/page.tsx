@@ -8,7 +8,7 @@ export default async function HeroTitlePreview({ searchParams }: { searchParams:
   const value = Number(time ?? 6.4);
   return <main className="new-home simple-home product-home cinematic-home">
     <div className={styles.hero}>
-      <div className={styles.media}><img src="/home-media/oneulstart-team.png" width="1942" height="809" alt="" /></div>
+      <div className={styles.media}><img src="/home-media/oneulstart-team.webp" width="1942" height="809" alt="" /></div>
       <section className={styles.copy}>
         <h1><HomeTitleEditor title="오늘창업" previewTime={Number.isFinite(value) ? value : 6.4} /></h1>
         <h2>가능성은 가볍게 묻고.<br />시작은 구체적으로.</h2>

@@ -5,6 +5,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
 import { isPlaceholderPhoto } from "../lib/landing/domain";
+import { PHOTO_SIZES, responsivePhotoProps } from "../lib/landing/responsive-image";
 
 /*
  * Figma 디자인을 흐름 배치로 옮긴 사업 템플릿들이 함께 쓰는 조각.
@@ -143,7 +144,7 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
   };
   const Photo = ({ id, url, className, kenburns }: { id: string; url: string; className?: string; kenburns?: boolean }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img className={className} src={url} alt="" loading={kenburns ? "eager" : "lazy"} data-kenburns={kenburns ? "" : undefined} data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />
+    <img className={className} {...responsivePhotoProps(url, kenburns ? PHOTO_SIZES.hero : PHOTO_SIZES.full)} src={url} alt="" loading={kenburns ? "eager" : "lazy"} data-kenburns={kenburns ? "" : undefined} data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />
   );
   /* 편집 화면에만 — 사진이 없는 자리에 사진을 넣을 곳 */
   const PhotoSlot = ({ id, className }: { id: string; className?: string }) => onPick

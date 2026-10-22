@@ -18,6 +18,7 @@
  */
 
 import type { ReactNode } from "react";
+import { responsivePhotoProps } from "../lib/landing/responsive-image";
 import { expandHidden, orderedSections, sectionBands, type BrainwavePageData, type BrainwaveOverrides, type BrainwavePick } from "./brainwave-page";
 import { runBrainwaveButton, buttonIdFromTextId } from "../lib/landing/brainwave/button-action";
 import { BrainwaveBusinessMobile } from "./brainwave-business-mobile";
@@ -56,6 +57,7 @@ function Img({ id, src, img, onPick, className, alt = "" }: { id: string; src: s
     // eslint-disable-next-line @next/next/no-img-element
     <img
       className={className}
+      {...responsivePhotoProps(resolved)}
       src={resolved}
       alt={alt}
       loading="lazy"
