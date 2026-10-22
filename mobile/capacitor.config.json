@@ -20,5 +20,11 @@
     "allowMixedContent": false
   },
   "backgroundColor": "#000000",
-  "appendUserAgent": "OneulstartApp"
+  "appendUserAgent": "OneulstartApp",
+  "plugins": {
+    "Keyboard": {
+      "resize": "native",
+      "resizeOnFullScreen": true
+    }
+  }
 }

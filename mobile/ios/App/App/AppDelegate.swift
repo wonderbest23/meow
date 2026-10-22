@@ -55,6 +55,8 @@ class MainViewController: CAPBridgeViewController {
     private var loadingObservation: NSKeyValueObservation?
     private var loadingCover: UIView?
     private var loadingStartedAt = Date()
+    /// 지금 페이지 바탕에 맞는 상태바 글자색 — 로고 덮개가 걷히면 이 색으로 돌아간다
+    private var pageStatusBarStyle: UIStatusBarStyle = .darkContent
 
     override func capacitorDidLoad() {
         super.capacitorDidLoad()
@@ -65,6 +67,15 @@ class MainViewController: CAPBridgeViewController {
             webView.backgroundColor = color
             webView.scrollView.backgroundColor = color
             self?.view.backgroundColor = color
+            // 키보드가 뜨면 화면(웹뷰)이 키보드 위까지 줄어든다(Keyboard 플러그인 resize: native).
+            // 그 뒤로 드러나는 창 바탕이 검은색이라 키보드 둥근 모서리에 검은 틈이 보였다 — 창도 같은 색으로
+            webView.superview?.backgroundColor = color
+            webView.window?.backgroundColor = color
+            // 상태바(시계·배터리) 글자색을 바탕 밝기에 맞춘다 — 기본값은 폰의 라이트/다크 설정을 따라서,
+            // 라이트 모드의 검은 홈 화면이나 다크 모드의 밝은 화면에서 글자가 바탕과 같은 색이 되어 보이지 않았다(점검 2026-10-22)
+            guard let self else { return }
+            self.pageStatusBarStyle = Self.isDark(color) ? .lightContent : .darkContent
+            if self.loadingCover == nil { self.setStatusBarStyle(self.pageStatusBarStyle) }
         }
         showLoadingCover(over: webView)
         loadingObservation = webView.observe(\.isLoading, options: [.new]) { [weak self] webView, _ in
@@ -74,7 +85,15 @@ class MainViewController: CAPBridgeViewController {
         DispatchQueue.main.asyncAfter(deadline: .now() + 12) { [weak self] in self?.hideLoadingCover() }
     }
 
+    /// 밝기(상대 휘도)가 절반보다 어두우면 어두운 바탕
+    private static func isDark(_ color: UIColor) -> Bool {
+        var red: CGFloat = 1, green: CGFloat = 1, blue: CGFloat = 1, alpha: CGFloat = 1
+        guard color.getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return false }
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue < 0.5
+    }
+
     private func showLoadingCover(over host: UIView) {
+        setStatusBarStyle(.lightContent) // 덮개는 검은 바탕
         let cover = UIView(frame: host.bounds)
         cover.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         cover.backgroundColor = .black
@@ -98,13 +117,15 @@ class MainViewController: CAPBridgeViewController {
         pulse.autoreverses = true
         pulse.repeatCount = .infinity
         pulse.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        logo.layer.add(pulse, forKey: "pulse")
+        // '동작 줄이기'를 켠 사람에게는 로고를 움직이지 않는다
+        if !UIAccessibility.isReduceMotionEnabled { logo.layer.add(pulse, forKey: "pulse") }
     }
 
     private func hideLoadingCover() {
         guard let cover = loadingCover else { return }
         loadingCover = nil
         loadingObservation = nil
+        setStatusBarStyle(pageStatusBarStyle)
         // 너무 빨리 뜨면 깜빡이기만 하니 로고가 한 번은 움직이고 사라지게
         let wait = max(0, 0.8 - Date().timeIntervalSince(loadingStartedAt))
         UIView.animate(withDuration: 0.35, delay: wait, options: [.curveEaseOut], animations: {

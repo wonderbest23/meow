@@ -12,6 +12,7 @@
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@capacitor/ios": "^8.5.2",
+    "@capacitor/keyboard": "8.0.6",
     "@capgo/capacitor-social-login": "^8.5.12",
     "@capgo/native-purchases": "^8.8.1"
   },
