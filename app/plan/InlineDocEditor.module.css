@@ -201,19 +201,36 @@
     white-space: normal;
     word-break: keep-all;
     overflow-wrap: anywhere;
-    padding: 7px 9px;
+    padding: 5px 7px;
+    line-height: 1.45;
   }
+  /* 2026-10-22 375px: '세 가지 경우' 표가 1,076px — 줄글 칸 폭을 조금 줄여(14em → 11em) 덜 밀리게 */
   .surface table td:not([data-short]) {
-    width: 14em;
-    min-width: 8em;
+    width: 11em;
+    min-width: 7em;
   }
   .surface table th:not([data-short]) {
-    width: 7em;
-    min-width: 6em;
+    width: 6em;
+    min-width: 5em;
   }
   .surface table :is(th, td)[data-short] {
     white-space: nowrap;
     width: auto;
     min-width: 0;
+  }
+  /*
+   * 세 칸 이하 표(숫자 | 값 | 뜻)는 화면 폭에 맞추고 마지막 줄글 칸이 줄을 바꾼다 —
+   * 예전엔 칸마다 14em 이라 589px 이 되어 '뜻' 칸이 화면 밖으로 밀렸다(2026-10-22 375px).
+   */
+  .surface table:not(:has(tr > :nth-child(4))) {
+    width: 100%;
+  }
+  .surface table:not(:has(tr > :nth-child(4))) td:not([data-short]) {
+    width: auto;
+    min-width: 5em;
+  }
+  .surface table:not(:has(tr > :nth-child(4))) th:not([data-short]) {
+    width: auto;
+    min-width: 4em;
   }
 }

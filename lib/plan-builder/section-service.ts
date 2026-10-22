@@ -54,7 +54,9 @@ export function intakeFinancialTable(plan: Pick<ServerPlan, "planType" | "answer
   const flow = cashflowScenariosEnabled() && intake?.mode !== "operating" ? cashflowFromFields(coach.fields, scenario) : null;
   // 건당 남는 돈·본전 판매량은 세 경우 표 위 한 줄에 있다(따로 표를 두면 같은 숫자가 두 번 나온다)
   if (flow) return cashflowMarkdown(flow);
-  if (!scenario.volume) {
+  // 새로 시작하는 사업에서 처리량(최대치)만 있으면 판매량을 모르는 것과 같다 — 최대치를 매달 판다고 12개월 표를 만들지 않는다
+  const capacityOnly = cashflowScenariosEnabled() && intake?.mode !== "operating" && scenario.volumeSource === "capacity";
+  if (!scenario.volume || capacityOnly) {
     /*
      * 판매량을 아직 모르면 12개월 표는 만들지 않는다(추정치 금지). 다만 건당 이익과 손익분기점은 가격·변동비·고정비만으로
      * 계산되니 넣는다 — 예전엔 판매량 하나가 없다고 재무 숫자가 통째로 빠져, 계획서에 표·숫자가 거의 없었다.

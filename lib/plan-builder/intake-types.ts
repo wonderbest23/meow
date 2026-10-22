@@ -46,8 +46,13 @@ export type IntakeState = {
   generatedIdeas?: GeneratedIntakeIdea[];
   /** 추천 이름을 처음 고르기 전의 사업 이름. 결과 화면에서 원래 이름으로 되돌리는 칩에 쓴다 */
   originalName?: string;
+  /**
+   * 고른 업종과 사업 설명이 어긋날 때 한 번 묻는 확인의 답. business는 확인할 때의 사업 설명이라,
+   * 설명을 바꾸면 다시 한 번만 묻는다(2026-10-22 캔들 스마트스토어를 '기업 서비스'로 골라 '프로젝트 1건 가격'을 물었다).
+   */
+  sectorCheck?: { business: string; decision: "kept" | "changed" };
 };
-export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss"] as const;
+export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss", "sector-keep"] as const;
 export type IntakeCommand = {
   action: (typeof INTAKE_ACTIONS)[number];
   planId?: string; revision: number; requestId: string;
@@ -81,6 +86,8 @@ export type IntakeSnapshot = {
   missingSections?: number;
   /** 확정된 표준산업분류와 그 사업 구조 기본값 */
   ksic: { code: string; name: string; path: string; structure: BusinessStructure | null; summary: string[]; licenseHint: string | null } | null;
+  /** 고른 업종보다 사업 설명에 더 가까운 업종(규칙, AI 0회). 있으면 채팅이 다음 질문 전에 한 번 바꿀지 묻는다 */
+  sectorSuggestion?: { sector: ProposalSector; label: string; current: string } | null;
   /** 사업 설명에서 규칙으로 찾은 KSIC 후보(업종 질문용, AI 0회) */
   ksicCandidates: Array<{ code: string; name: string; path: string; sector: ProposalSector }>;
   /** 실제 적용 중인 사업 구조: KSIC 또는 업종 기본값 위에 사용자 수정을 얹은 값과 축별 출처 */

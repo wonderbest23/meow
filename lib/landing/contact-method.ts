@@ -38,7 +38,7 @@ export const CONTACT_METHOD_INFO: Record<ContactMethod, { label: string; cta: st
   sms: { label: "문자 보내기", cta: "문자로 문의하기", hint: "휴대폰에서 누르면 문자 쓰기 화면이 열려요.", field: "phone", placeholder: "010-1234-5678" },
   kakao: { label: "카카오톡 채널", cta: "카카오톡으로 문의하기", hint: "카카오톡 채널 채팅이 열려요.", field: "kakaoUrl", placeholder: "https://pf.kakao.com/_xxxxx" },
   booking: { label: "예약 페이지", cta: "예약하기", hint: "네이버 예약·캐치테이블 같은 예약 페이지가 열려요.", field: "bookingUrl", placeholder: "https://booking.naver.com/…" },
-  store: { label: "온라인 스토어", cta: "구매하러 가기", hint: "스마트스토어 같은 판매 페이지가 열려요.", field: "storeUrl", placeholder: "https://smartstore.naver.com/…" },
+  store: { label: "온라인 스토어", cta: "스토어에서 주문하기", hint: "스마트스토어 같은 판매 페이지가 열려요.", field: "storeUrl", placeholder: "https://smartstore.naver.com/…" },
   instagram: { label: "인스타그램", cta: "인스타그램으로 문의하기", hint: "인스타그램 계정이 열려요(DM으로 문의).", field: "instagramUrl", placeholder: "https://instagram.com/…" },
 };
 
@@ -116,7 +116,8 @@ export function applyContactMethod<T extends DraftLike>(previous: T, next: T): T
   const oldLabel = CONTACT_METHOD_INFO[before.method].cta;
   const newLabel = CONTACT_METHOD_INFO[after.method].cta;
   /* '전화하기'는 AI 채우기가 동네 가게 버튼에 넣는 기본 글 — 연락 방법을 바꾸면 새 방법의 글로 따라간다 */
-  const autoLabel = (label: string | undefined) => !label || label === "문의하기" || label === oldLabel || label === "전화하기";
+  /* '구매하러 가기'는 예전 온라인 스토어 기본 글(2026-10-22 '스토어에서 주문하기'로 바꿈) — 저장된 초안에서도 자동 글로 본다 */
+  const autoLabel = (label: string | undefined) => !label || label === "문의하기" || label === oldLabel || label === "전화하기" || label === "구매하러 가기";
   const ctaLabel = autoLabel(next.ctaLabel) ? newLabel : next.ctaLabel;
   if (!bw) return { ...next, ctaLabel };
   const links = { ...bw.links };

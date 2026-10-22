@@ -45,7 +45,8 @@ assert.equal(businessProfile(stay).shape, "booking");
 // 결제 준비: 매장은 카드단말기, 온라인은 결제 연동, 숙소는 예약 플랫폼 정산
 const payment = (plan: Plan) => launchSteps(plan, shop).find(step => step.id === "payment")!;
 assert.match(payment(cafe).material, /카드단말기/); assert.doesNotMatch(payment(cafe).material, /결제 제공사/);
-assert.match(payment(candle).material, /결제 제공사/);
+// 스마트스토어에서 파는 캔들은 플랫폼이 결제를 받는다 — PG 연동이 아니라 정산·수수료(2026-10-22)
+assert.doesNotMatch(payment(candle).material, /결제 제공사/); assert.match(payment(candle).material, /판매 플랫폼/); assert.match(payment(candle).material, /정산/);
 assert.match(payment(stay).material, /정산/); assert.match(payment(stay).material, /예약 플랫폼/);
 for (const plan of [cafe, candle, stay]) assert.ok(payment(plan).prompt.startsWith("현재 사업에서 고객 문의부터 주문, 결제, 제공, 사후 문의까지의 흐름과 테스트 시나리오를 작성해 주세요. 실제로 연결되지 않은 결제 기능을 연결 완료라고 표현하지 마세요."), "결제 단계 안전 문장은 그대로");
 

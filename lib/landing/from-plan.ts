@@ -4,6 +4,8 @@ import { applyPhotoSet, photoSetFor } from "./photo-library";
 import { designPageForSector } from "./brainwave/catalog";
 import { themeForSector } from "./themes";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
+import { homepageSalesMode } from "../plan-builder/business-launch";
+import { CONTACT_METHOD_INFO, DEFAULT_CONTACT } from "./contact-method";
 
 /*
  * 사업계획서 → 홈페이지 초안.
@@ -180,8 +182,11 @@ export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
 
   const benefits = benefitPool.length ? benefitPool.slice(0, 3) : base.benefits;
 
+  /* 스마트스토어처럼 스토어에서만 파는 사업은 처음부터 손님 연락 방법을 '온라인 스토어'로 — 문의로 주문받지 않는다(2026-10-22) */
+  const storeOnly = homepageSalesMode({ answers: source.answers as never }).storeOnly;
   const draft: LandingDraft = {
     ...base,
+    ...(storeOnly ? { contact: { ...DEFAULT_CONTACT, method: "store" as const }, ctaLabel: CONTACT_METHOD_INFO.store.cta } : {}),
     businessName,
     headline,
     subheadline,

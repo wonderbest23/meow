@@ -10,7 +10,9 @@ import { loadPlanState } from "../../../../../../lib/plan-builder/plan-server-st
 import { readCoach } from "../../../../../../lib/plan-builder/coach";
 import { resolveLLMConfig } from "../../../../../../lib/llm/config";
 import { completeJson } from "../../../../../../lib/llm/complete";
-import { applyHomepageCopy, homepageFillPrompt, homepageKnownPrice, normalizeHomepageCopy, withKnownPrice } from "../../../../../../lib/landing/ai-fill";
+import { applyHomepageCopy, fitHomepageSalesMode, homepageFillPrompt, homepageKnownPrice, normalizeHomepageCopy, withKnownPrice } from "../../../../../../lib/landing/ai-fill";
+import { homepageSalesMode } from "../../../../../../lib/plan-builder/business-launch";
+import { applyContactMethod, DEFAULT_CONTACT } from "../../../../../../lib/landing/contact-method";
 import { countAiFills, recordAiFill } from "../../../../../../lib/landing/ai-fill-usage";
 
 export const runtime = "nodejs";
@@ -63,10 +65,14 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const raw = await withUsageContext({ planId, ownerHash: identity.hash }, () => completeJson(config, { kind: "landing-ai-fill", system: prompt.system, user: prompt.user, maxOutputTokens: 3000, jsonObject: true, timeoutMs: 120_000 }));
   const normalized = normalizeHomepageCopy(raw);
   /* 사장님이 정한 가격이 하나뿐이면 메뉴의 '문의' 자리에 넣는다(상품이 여럿이면 'N원부터') */
-  const copy = normalized ? withKnownPrice(normalized, homepageKnownPrice(plan)) : null;
+  /* 스토어에서만 파는 사업은 주문을 스토어로, 1개 단위 상품은 '1개 ○원'으로(규칙) */
+  const sales = homepageSalesMode(plan);
+  const copy = normalized ? fitHomepageSalesMode(withKnownPrice(normalized, homepageKnownPrice(plan)), sales) : null;
   if (!copy) return NextResponse.json({ error: { code: "AI_FAILED", message: "AI 가 홈페이지 글을 만들지 못했어요. 잠시 후 다시 시도해 주세요." } }, { status: 502 });
 
-  const draft = applyHomepageCopy(site.draft, copy, { industry: readCoach(plan.answers)?.business.industry ?? "", description: readCoach(plan.answers)?.business.description ?? "" });
+  /* 연락 방법을 아직 고르지 않았으면(문의 양식 기본값) 스토어로 — 스토어 주소를 넣기 전까지 버튼은 문의 양식으로 간다 */
+  const base = sales.storeOnly && (site.draft.contact ?? DEFAULT_CONTACT).method === "form" ? applyContactMethod(site.draft, { ...site.draft, contact: { ...(site.draft.contact ?? DEFAULT_CONTACT), method: "store" } }) : site.draft;
+  const draft = applyHomepageCopy(base, copy, { industry: readCoach(plan.answers)?.business.industry ?? "", description: readCoach(plan.answers)?.business.description ?? "" });
   try {
     const saved = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt: site.updatedAt });
     await recordAiFill(planId, identity.hash);

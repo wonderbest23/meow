@@ -8,6 +8,8 @@ import { intakeJobExpired } from "./intake-timing";
 import { COACH_KEY, COACH_TYPES, coachContext, coachDocumentRevision, readCoach, type CoachState } from "./coach";
 import { emptyCoach } from "./coach-job";
 import { BUSINESS_DESIGN_RULES, businessDesignReply, generatedBusinessDesignSchema, normalizeGeneratedDesign } from "./coach-design";
+import { enforceDesignStepOrder, playbookStepOrder } from "./design-step-order";
+import { businessProfile } from "./business-launch";
 import { loadPlanState, savePlanState, type ServerPlan } from "./plan-server-store";
 import { INTAKE_KEY, type IntakeCommand, type IntakeJob, type IntakeJobRequest, type IntakeState } from "./intake-types";
 import { applyIntakeAnswer, planFinancialReference, applyIntakeCandidates, applyIntakeStructure, createIntake, finishIntakeMutation, IntakeError, intakeBusinessFingerprint, intakeFieldRevision, intakeSnapshot, readIntake, storeIntakeNote as storeDeferredNote } from "./intake-core";
@@ -135,6 +137,12 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
         job.proposalStatus = "dismissed";
         coach.messages.push({ id: `${command.requestId}:reply`, role: "assistant", text: "그대로 둘게요. 다른 바꿀 내용이 있으면 말씀해 주세요.", at });
       }
+    }
+    else if (command.action === "sector-keep") {
+      // 업종 확인에 '그대로 둘게요' — 이 설명으로는 다시 묻지 않는다. 업종·질문은 바꾸지 않는다.
+      const business = coach.fields.find(field => field.key === "business" && field.basis === "user")?.value.trim();
+      if (!business) throw new IntakeError("business_required", "사업 설명을 먼저 적어 주세요");
+      intake.sectorCheck = { business, decision: "kept" };
     }
     else if (command.action === "resources") applyIntakeResources(plan, coach, intake, command, at);
     else if (command.action === "details") intake.detailsRequested = true;
@@ -374,13 +382,20 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
        * 사용자가 '다시 요청'을 눌러야 했다(2026-09-29). 한도·장애·시간 초과는 다시 부르지 않는다.
        */
       let raw: Record<string, unknown> | null = null;
+      // 업종 가이드가 있으면 신고·등록 순서를 따로 넘긴다 — 가이드가 길이 때문에 맥락에서 빠져도 순서는 남게(2026-10-22 사업자등록 순서 어긋남)
+      const guide = businessProfile(claimed.plan).playbook;
+      const stepOrder = guide ? `\n${JSON.stringify({ industryStepOrder: { name: guide.name, steps: playbookStepOrder(guide) } })}` : "";
       for (let designAttempt = 0; designAttempt < 2 && !raw; designAttempt++) {
         let designFailure: string | undefined;
-        raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });
+        raw = await completeJson(config, { system: BUSINESS_DESIGN_RULES, user: `${coachContext(claimed.coach, planFinancialReference(claimed.coach, claimed.plan.answers))}\n${confirmedIntakeContext(claimed.plan.answers)}${stepOrder}`, jsonSchema: { name: "intake_design", schema: z.toJSONSchema(generatedBusinessDesignSchema) }, validateJson: value => normalizeGeneratedDesign(value) !== null, kind: "intake-design", timeoutMs: 60_000, maxOutputTokens: 4200, effort: "low", allowFallback: false , onFailure: event => { designFailure = event.code; } });
         if (!raw && designFailure !== "invalid_json" && designFailure !== "invalid_response") break;
       }
-      const design = normalizeGeneratedDesign(raw);
-      if (!design) throw new IntakeError("design_failed", "사업안 생성을 완료하지 못했어요. 입력 정보는 그대로 보관되어 있어요");
+      const normalized = normalizeGeneratedDesign(raw);
+      if (!normalized) throw new IntakeError("design_failed", "사업안 생성을 완료하지 못했어요. 입력 정보는 그대로 보관되어 있어요");
+      // 업종 가이드와 어긋난 순서(신고번호를 받은 뒤 사업자등록 등)는 그 칸 끝에 바른 순서를 붙인다(규칙)
+      const ordered = enforceDesignStepOrder(normalized, guide);
+      if (ordered.fixed) console.info("[business-intake-job]", JSON.stringify({ event: "design-step-order-fixed", jobId: job.id, fields: ordered.fixed }));
+      const design = ordered.design;
       await updateIntakeJob(request, (_plan, coach, _intake, current) => {
         if (current.status !== "running" || coachDocumentRevision(coach) !== job.baseDocumentRevision) throw new IntakeError("source_changed", "생성 중 사업정보가 바뀌었어요. 현재 입력을 확인한 뒤 다시 요청해 주세요", 409);
         coach.documentRevision = coachDocumentRevision(coach) + 1; coach.revision += 1;
