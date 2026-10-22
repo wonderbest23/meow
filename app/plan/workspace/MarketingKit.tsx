@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Copy, Megaphone, RefreshCw } from "lucide-react";
-import { MARKETING_KIT_KEY, MARKETING_KIT_LABELS, type MarketingKit } from "../../../lib/marketing/kit";
+import { fillKnownPlaceholders, MARKETING_KIT_KEY, MARKETING_KIT_LABELS, marketingKitFacts, type MarketingKit } from "../../../lib/marketing/kit";
 import { businessProfile } from "../../../lib/plan-builder/business-launch";
 import { loadState, pushToServer, saveAnswers, type Plan } from "../../../lib/plan-builder/plan-store";
 import { openLogin } from "../../../components/login-dialog";
@@ -51,9 +51,13 @@ export default function MarketingKitPanel({ plan, onSaved }: { plan: Plan; onSav
     try { await navigator.clipboard.writeText(value); setMessage("복사했어요."); } catch { setMessage("복사하지 못했어요. 글을 선택해 복사해 주세요."); }
   }
 
-  const kit = saved?.kit;
+  /* 예전에 만든 키트도 지금 아는 가격으로 [가격] 자리를 채워 보여 준다 */
+  const kit = saved?.kit ? fillKnownPlaceholders(saved.kit, marketingKitFacts(plan)) : undefined;
   const labels = MARKETING_KIT_LABELS[businessProfile(plan).shape];
-  const block = (title: string, value: string) => <section className={styles.kitBlock}><header><h3>{title}</h3><button type="button" className={styles.textLink} onClick={() => void copy(value)}><Copy size={14} aria-hidden="true" />복사</button></header><p>{value}</p></section>;
+  const block = (title: string, value: string, shown?: ReactNode) => <section className={styles.kitBlock}><header><h3>{title}</h3><button type="button" className={styles.textLink} onClick={() => void copy(value)}><Copy size={14} aria-hidden="true" />복사</button></header>{shown ?? <p>{value}</p>}</section>;
+  /* 해시태그는 하나씩 끊기지 않게 — 휴대폰에서 '#식빵 #'와 '소금빵'으로 갈라져 '#'만 줄 끝에 남았다(재검증 2026-10-22) */
+  const tags = (hashtags: string[]) => hashtags.map(tag => tag.replace(/\s+/g, "")).filter(Boolean);
+  const postShown = (body: string, hashtags: string[]) => <><p>{body}</p>{tags(hashtags).length > 0 && <p className={styles.kitTags}>{tags(hashtags).map((tag, index) => <span key={`${tag}-${index}`}>{tag}</span>)}</p>}</>;
 
   return <div className={styles.kit}>
     <div className={styles.kitHead}>
@@ -68,7 +72,7 @@ export default function MarketingKitPanel({ plan, onSaved }: { plan: Plan; onSav
       {block(labels.placeIntro, kit.placeIntro)}
       {block(labels.openingMessage, kit.openingMessage)}
       {block(labels.flyer, `${kit.flyer.headline}\n${kit.flyer.body}\n${kit.flyer.cta}`)}
-      {kit.posts.map((post, index) => <div key={index}>{block(`첫 게시물 ${index + 1} · ${post.channel}`, `${post.body}\n\n${post.hashtags.join(" ")}`)}</div>)}
+      {kit.posts.map((post, index) => <div key={index}>{block(`첫 게시물 ${index + 1} · ${post.channel}`, `${post.body}\n\n${tags(post.hashtags).join(" ")}`, postShown(post.body, post.hashtags))}</div>)}
       {block(labels.reviewRequest, kit.reviewRequest)}
       <section className={styles.kitBlock}>
         <header><h3>SNS 4주 운영표</h3><button type="button" className={styles.textLink} onClick={() => void copy(kit.calendar.map(week => `${week.week}주차 · ${week.theme}\n${week.posts.map(post => `- ${post.day} (${post.format}) ${post.idea}\n  ${post.caption}`).join("\n")}`).join("\n\n"))}><Copy size={14} aria-hidden="true" />전체 복사</button></header>

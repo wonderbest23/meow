@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { marketingKitPrompt, normalizeMarketingKit } from "../lib/marketing/kit";
+import { fillKnownPlaceholders, kitPriceText, marketingKitPrompt, normalizeMarketingKit } from "../lib/marketing/kit";
 
 /* 홍보 키트: 형식이 맞을 때만 쓰고, 지어낸 후기·보장 표현은 버리며, AI 제안을 사실처럼 넘기지 않는다 */
 const week = (n: number) => ({ week: n, theme: `${n}주차 주제`, posts: [{ day: "월", format: "사진", idea: "오늘 구운 빵 진열대", caption: "오늘 아침에 구운 빵이에요." }, { day: "목", format: "짧은 영상", idea: "반죽하는 손", caption: "새벽 반죽 과정을 보여드려요." }] });
@@ -37,4 +37,19 @@ assert.equal(prompt.business.name, "새벽빵");
 assert.equal(prompt.business.offer, "식빵·샌드위치");
 assert.equal(prompt.business.price, "", "an AI-proposed price is not passed as a fact");
 assert.equal(prompt.business.region, "서울 마포구");
-console.log("marketing-kit: format, banned claims, hashtags, facts-only prompt passed");
+// 가격이 하나뿐일 때(실제 AI 점검 2026-10-22: 식빵·소금빵에 4,500원 하나 → '[가격]'만 남았다) — 사장님이 정한 가격으로 채운다
+assert.equal(kitPriceText("4,500원", "식빵·소금빵"), "4,500원부터", "several products → 'N원부터'");
+assert.equal(kitPriceText("4,500원", "소금빵"), "4,500원", "one product → the price as is");
+assert.equal(kitPriceText("", "식빵·소금빵"), "", "no price → placeholders stay");
+const filledKit = normalizeMarketingKit(kit, { price: "4,500원", offer: "식빵·소금빵" })!;
+assert.equal(filledKit.flyer.body, "아침 7시부터 문을 열어요.\n식빵·샌드위치 4,500원부터");
+assert.ok(!JSON.stringify(filledKit).includes("[가격]"));
+assert.ok(JSON.stringify(filledKit).includes("[주소]"), "unknown address stays a placeholder");
+assert.equal(fillKnownPlaceholders(kit as never, { price: "" }), kit as never, "nothing to fill");
+const userPrice = structuredClone(plan);
+(userPrice.answers.__business_coach.state.fields[1] as { basis: string }).basis = "user";
+const priced = marketingKitPrompt(userPrice as never);
+assert.equal(priced.facts.price, "6,500원");
+assert.ok(priced.system.includes("'N원부터'"), "the prompt tells the model to use a single price");
+assert.ok(priced.system.includes("지어내지 않습니다"), "the no-fabrication rule is kept");
+console.log("marketing-kit: format, banned claims, hashtags, facts-only prompt, single price fills [가격] passed");

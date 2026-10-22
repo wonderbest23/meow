@@ -28,6 +28,10 @@ assert.deepEqual(findFactRanges("4,500원", [{ questionId: "price", needles: ["4
 assert.deepEqual(findFactRanges("고객 맞벌이 부부", [{ questionId: "customer", needles: ["맞벌이 부부"] }], null), [[3, 9, "customer"]], "word facts are still marked anywhere");
 assert.equal(amountOwner("판매가 7,500원에서 비용을 빼면 "), "", "a closer computed word wins");
 assert.equal(amountOwner("월 고정비 "), "structure.cost");
+assert.equal(amountOwner("빵 값은 "), "price", "'값' names the price");
+assert.equal(amountOwner("재료값 "), "structure.unitCost", "a longer word ending at the same place wins");
+assert.equal(amountOwner("빵 값은 사용자가 정한 "), "*", "'사용자가 정한' defers to whichever fact has this amount");
+assert.deepEqual(findFactRanges("4,500원입니다.", [{ questionId: "price", needles: ["4,500원"] }], "빵 값은 사용자가 정한 "), [[0, 6, "price"]], "a value the owner set is marked");
 assert.equal(amountOwner("가격을 정했습니다. 그리고 "), null, "only the same sentence counts");
 for (const [text, value] of [["60000", 60000], ["60,000원", 60000], ["6만", 60000], ["6만 5천", 65000], ["6만5천원", 65000], ["1.5만", 15000], ["300만", 3_000_000], ["1억 2000만", 120_000_000], ["", null], ["abc", null], ["0", null], ["만", null]] as const) assert.equal(parseWon(text), value, text);
 console.log("fact-highlight tests passed");

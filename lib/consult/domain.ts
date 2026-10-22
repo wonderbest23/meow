@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { withEul, withRo } from "../josa";
 
 /*
  * 무료 창업 상담.
@@ -53,8 +54,8 @@ export const PROFILE_LABELS: Record<keyof ConsultProfile, string> = {
 export const consultPickSchema = z.object({
   name: z.string().min(1).max(40),
   fit: z.number().int().min(1).max(5),
-  why: z.array(z.string().max(120)).max(4),
-  watch: z.array(z.string().max(120)).max(4),
+  why: z.array(z.string().max(200)).max(6),
+  watch: z.array(z.string().max(200)).max(6),
 });
 
 export type ConsultPick = z.infer<typeof consultPickSchema>;
@@ -67,7 +68,7 @@ export type ConsultPick = z.infer<typeof consultPickSchema>;
  */
 export const consultReplySchema = z.object({
   /** 사용자에게 보일 말. 짧게. */
-  message: z.string().min(1).max(1200),
+  message: z.string().min(1).max(2000),
   /** 지금까지 알아낸 것 — 매번 통째로 다시 보낸다(덮어쓴다) */
   profile: consultProfileSchema.default({}),
   /** 눌러서 답할 수 있는 보기. 없으면 직접 쓴다 */
@@ -156,6 +157,8 @@ export const CONSULT_SYSTEM = [
   "  직장인에게는 평일 가능한 시간과 온라인 여부를, 이미 아이템이 있는 분에게는 그 아이템의",
   "  지역·투자금·경쟁을 먼저 묻습니다.",
   "- 이미 답한 것을 다시 묻지 마세요.",
+  "- 이미 물은 질문은 손님이 아직 답하지 않았을 때만 다시 묻습니다. 그때도 바로 앞 턴의 질문을 다음 턴에 같은 말로 되풀이하지 마세요 —",
+  "  손님이 다른 이야기로 답했다면 그 말에 먼저 답하고, 남은 질문은 한 턴 뒤에 다른 각도로 한 번만 묻습니다.",
   "",
   "# 업종별로 꼭 짚을 것",
   "손님의 관심 업종이 드러나면 아래에서 해당하는 줄을 골라 그 항목부터 확인하세요.",
@@ -178,6 +181,8 @@ export const CONSULT_SYSTEM = [
   "# 아이템 추천",
   "조건이 충분히 모이면 picks 에 3개까지 담습니다. 업종 이름만 나열하지 말고 왜 맞는지(why)와",
   "주의할 점(watch)을 함께 적습니다. 조건이 아직 부족하면 picks 를 비우고 계속 물으세요.",
+  "picks 한 칸의 모양: {\"name\":\"주말 스냅 촬영\",\"fit\":4,\"why\":[\"주말 하루로 한두 건 촬영할 수 있어요\"],\"watch\":[\"장비가 없으면 첫 비용이 커져요\"]}",
+  "fit 은 손님 조건에 맞는 정도를 1~5 정수로 매기고(추천마다 다르게), why·watch 는 문장 배열로 2~3개씩, 한 문장은 짧게 씁니다.",
   "",
   "# 솔직할 것",
   "손님이 원하는 것이 조건에 맞지 않으면 맞다고 하지 마세요. 어렵다고 말하고, 같은 분야에서",
@@ -200,6 +205,9 @@ export const CONSULT_SYSTEM = [
   "답하세요 — 적힌 조건·수치·검토 지적을 그대로 인용하고, 어느 섹션을 어떻게 고치면 되는지",
   "구체적으로 말하세요. 계획서에 없는 수치는 지어내지 마세요. 계획서가 있는 손님에게 처음부터",
   "아이템을 다시 찾자고 하지 마세요. profile 은 계획서에서 확인되는 것까지 채웁니다.",
+  "단, 손님의 마지막 말이 계획서와 다른 새 질문(다른 업종·부업·새 아이템)이면 계획서를 끌어오지 말고 그 질문에만 답하세요.",
+  "그때는 계획서 내용을 profile 에 넣지 않습니다. '참고' 줄만 있고 계획서 블록이 없으면 손님이 묻기 전에는 계획서를 꺼내지 마세요.",
+  "summary 와 choices 는 손님 화면에 그대로 보입니다. 손님이 말한 조건만 쓰고, 계획서 검토 지적·'수정 필요' 같은 내부 메모는 넣지 않습니다.",
   "",
   "# 공식 근거",
   "아래에 '공식 근거' 블록이 있으면 수치는 거기 있는 것만 말하고, 그 문장 끝에 [E번호]를 붙이세요",
@@ -242,9 +250,28 @@ export function profileLines(profile: ConsultProfile): string[] {
  * 예전엔 모든 시작 단추가 빈 새 대화(/plan/chat?new=1)로 가서, 'N개 항목이 그대로 넘어가요'라는
  * 안내와 달리 아무것도 넘어가지 않았고, 추천 카드마다 단 단추도 고른 아이템을 버렸다.
  */
-export function consultChatHref(profile: ConsultProfile, pick?: string): string {
-  const lines = profileLines(profile);
-  const head = pick ? `상담에서 추천받은 ‘${pick}’(으)로 사업계획서를 만들고 싶어요.` : lines.length ? "상담에서 정리한 조건으로 사업계획서를 만들고 싶어요." : "";
+/*
+ * 사업계획서로 넘길 조건은 이번 상담에서 손님이 한 말에서만 — 예전엔 상담사가 손님의 다른 계획서를 읽고
+ * 채운 '관심 업종: 아파트 상가 아침 빵집'이 사진 부업 상담의 첫 메시지에 섞여 들어갔다(실제 AI 점검 2026-10-22).
+ * 관심 업종은 손님이 상담에서 그 말을 꺼냈을 때만 넘긴다. 손님 말을 모르면(userTurns 없음) 그대로 둔다.
+ */
+export function consultOwnProfile(profile: ConsultProfile, userTurns?: string[]): ConsultProfile {
+  if (!userTurns || !profile.interest) return profile;
+  const said = userTurns.join(" ");
+  const tokens = profile.interest.split(/[\s·,/()]+/).map((token) => token.trim()).filter((token) => token.length >= 2);
+  const mentioned = tokens.some((token) => said.includes(token) || said.includes(token.slice(0, 2)));
+  if (mentioned) return profile;
+  const { interest: _dropped, ...rest } = profile;
+  void _dropped;
+  return rest;
+}
+
+/** 답을 받지 못한 차례 — 서버가 손님 질문 뒤에 이 표시를 남겨, 새로고침해도 질문이 사라지지 않고 '다시 보내기'가 붙는다 */
+export const CONSULT_FAILED_REPLY = "(답을 받지 못했어요 — ‘다시 보내기’를 눌러 주세요)";
+
+export function consultChatHref(profile: ConsultProfile, pick?: string, userTurns?: string[]): string {
+  const lines = profileLines(consultOwnProfile(profile, userTurns));
+  const head = pick ? `상담에서 추천받은 ${withRo(`‘${pick}’`)} 사업계획서를 만들고 싶어요.` : lines.length ? "상담에서 정리한 조건으로 사업계획서를 만들고 싶어요." : "";
   const prompt = [head, ...lines.map((line) => `- ${line}`)].filter(Boolean).join("\n").slice(0, 2500);
   const query = new URLSearchParams({ new: "1" });
   if (prompt) query.set("prompt", prompt);
@@ -275,7 +302,7 @@ export function businessFromConsult(profile: ConsultProfile): {
   /* 설명은 손님이 한 말을 이어 붙이기만 한다. 없는 사실을 만들지 않는다 */
   const parts = [
     profile.region ? `${profile.region}에서` : "",
-    profile.interest ? `${profile.interest}을(를)` : "",
+    profile.interest ? withEul(profile.interest) : "",
     profile.unmanned ? `${profile.unmanned === "선호" ? "무인으로 " : ""}` : "",
     profile.budget ? `${profile.budget} 규모로` : "",
   ].filter(Boolean);

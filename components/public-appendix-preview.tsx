@@ -33,7 +33,8 @@ export function PublicAppendixPreview({ appendix, where = "below" }: { appendix:
               {appendix.collectPhone && <span>전화번호</span>}
               {appendix.collectMessage && <span className="tall">문의 내용</span>}
               <span className="consent">개인정보 수집·이용 동의</span>
-              <b>{appendix.ctaLabel}</b>
+              {/* 보내기 단추는 공개 페이지와 같은 '문의 보내기' — 양식 제목(문의 버튼 글)을 단추에 또 쓰면 같은 말이 세 번 나왔다 */}
+              <b>문의 보내기</b>
             </div>
           </>
         ) : <p>사업자 연락처(전화·이메일)가 보여요.</p>}

@@ -22,6 +22,7 @@ import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availabi
 import { FactCard, FactPopover, highlightFacts, useFactEdit } from "./FactEdit";
 import { RewriteConfirm } from "../chat/intake-ui/IntakePanels";
 import { askConfirm } from "../../../components/confirm-dialog";
+import { restoreRangeTildes } from "../../../lib/plan-builder/range-tildes";
 
 /** Chat edits after the plan exists (phase B); the choice stays hidden until the server side is live. */
 const EDIT_CHAT = process.env.NEXT_PUBLIC_INTAKE_EDIT_CHAT === "1";
@@ -136,16 +137,23 @@ export default function DocumentWorkspace(props: Props) {
   const zoomDialog = useRef<HTMLDialogElement>(null);
   const zoomPressOnBackdrop = useRef(false);
   const zoomBody = useRef<HTMLDivElement>(null);
-  /* PDF처럼 처음엔 표 전체를 화면 폭에 맞춰 줄여 보여 주고, '크게 보기'면 원래 크기로 상하좌우 스크롤 */
+  /*
+   * PDF처럼 처음엔 표 전체를 화면 폭에 맞춰 줄여 보여 주고, '크게 보기'면 원래 크기로 상하좌우 스크롤.
+   * 맞추면 60%보다 작아지는 넓은 표는 글자가 읽히지 않으므로(실제 생성 2026-10-22: '12주 할 일' 표가 4px 글자) 처음부터 크게 보기로 연다.
+   */
   const [zoomFit, setZoomFit] = useState(true);
   const [zoomScale, setZoomScale] = useState(1);
+  const zoomModeChosen = useRef(false);
   useEffect(() => {
     if (!zoomTable) return;
+    zoomModeChosen.current = false;
     const measure = () => {
       const body = zoomBody.current, table = body?.querySelector("table");
       if (!body || !table) return;
       const available = body.clientWidth - 32;
-      setZoomScale(Math.min(1, available / Math.max(1, table.scrollWidth)));
+      const scale = Math.min(1, available / Math.max(1, table.scrollWidth));
+      setZoomScale(scale);
+      if (!zoomModeChosen.current) { zoomModeChosen.current = true; if (scale < 0.6) setZoomFit(false); }
     };
     const frame = requestAnimationFrame(measure);
     window.addEventListener("resize", measure);
@@ -285,7 +293,7 @@ export default function DocumentWorkspace(props: Props) {
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
                   <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}>{factMode
-                    ? <div className={`tiptap ${styles.factBody}`} onClick={event => pickFact(event.target)} onKeyDown={event => { if (event.key === "Enter") pickFact(event.target); }} dangerouslySetInnerHTML={{ __html: highlightFacts(section.html, facts.facts) }} />
+                    ? <div className={`tiptap ${styles.factBody}`} onClick={event => pickFact(event.target)} onKeyDown={event => { if (event.key === "Enter") pickFact(event.target); }} dangerouslySetInnerHTML={{ __html: highlightFacts(restoreRangeTildes(section.html), facts.facts) }} />
                     : <InlineDocEditor html={section.html} readOnly={isSample || !editing} status={props.editStates[section.key]?.status ?? "idle"} onDraft={html => props.onDraft(section.key, html)} onChange={html => onSave(section.key, html)} />}</div>
                   {!isSample && <div className={styles.saveState}>
                     {props.editStates[section.key]?.status === "failed" ? <><p role="alert">{props.editStates[section.key].message}</p><button onClick={() => props.onRetrySave(section.key)}><RefreshCw size={15} />다시 저장</button><button onClick={() => props.onDiscardDraft(section.key)}>서버 내용 불러오기</button></> : !editing && props.editStates[section.key] && <span role="status">{props.editStates[section.key].status === "saving" ? "서버에 저장 중…" : "서버에 저장됨"}</span>}

@@ -19,6 +19,7 @@ import { koreanText, userErrorMessage } from "../lib/client/user-error";
 import type { SupportChat } from "../lib/support-chat/repository";
 import { trackFunnel } from "../lib/funnel/client";
 import { escalationReason } from "../lib/consult/escalation";
+import { withRo } from "../lib/josa";
 import { activePlan, isSamplePlan } from "../lib/plan-builder/plan-store";
 import { SupportHome, SupportSettings, SupportTabs, SUPPORT_BADGE_KEY, type SupportTab } from "./support-chat-home";
 import {
@@ -26,7 +27,7 @@ import {
   SUPPORT_INPUT_EXAMPLES,
   PROFILE_LABELS,
   type ConsultPick,
-  type ConsultProfile, profileLines, consultChatHref } from "../lib/consult/domain";
+  type ConsultProfile, profileLines, consultChatHref, CONSULT_FAILED_REPLY } from "../lib/consult/domain";
 
 /*
  * 이 위젯은 두 가지를 한다.
@@ -41,7 +42,8 @@ import {
  * 들고 있을 이유가 없다. 이 화면이 들고 있다가 매번 함께 보낸다.
  */
 type ConsultSource = { n: number; name: string; url: string; observedAt?: string; verification?: string };
-type ConsultTurn = { id: string; role: "user" | "assistant"; text: string; at: string; sources?: ConsultSource[] };
+/* failed — 답을 받지 못한 손님 질문(지우지 않고 '다시 보내기'를 붙인다) */
+type ConsultTurn = { id: string; role: "user" | "assistant"; text: string; at: string; sources?: ConsultSource[]; failed?: boolean };
 
 type QuickMessage = {
   id: string;
@@ -101,6 +103,8 @@ export function SupportChatWidget() {
   const [consultPicks, setConsultPicks] = useState<ConsultPick[]>([]);
   const [consultReady, setConsultReady] = useState(false);
   const [consultThinking, setConsultThinking] = useState(false);
+  /* 답 글자가 흘러오는 중 — 이때는 '답변 준비 중' 표시를 거둔다(말풍선이 대신한다) */
+  const [consultStreaming, setConsultStreaming] = useState(false);
   /*
    * 하루 상담 한도에 닿았는가.
    *
@@ -174,9 +178,11 @@ export function SupportChatWidget() {
     consultReady || consultPicks.length > 0 || (consultFilled >= 4 && consultUserTurns >= 3);
   const canStartEarly = !canStartPlan && consultFilled >= 2 && consultUserTurns >= 2;
   /* 상담에서 들은 조건을 새 대화의 첫 메시지 칸에 채워서 넘긴다 */
-  const consultHandoffHref = consultChatHref(consultProfile);
+  /* 사업계획서로 넘기는 첫 메시지는 이번 상담에서 손님이 한 말로만 — 다른 계획서에서 온 업종이 섞이지 않게 */
+  const consultUserTexts = consultTurns.filter((t) => t.role === "user").map((t) => t.text);
+  const consultHandoffHref = consultChatHref(consultProfile, undefined, consultUserTexts);
   /* 추천 카드에서 바로 시작 — 고른 아이템 이름까지 함께 넘긴다 */
-  const pickHandoffHref = (name: string) => consultChatHref(consultProfile, name);
+  const pickHandoffHref = (name: string) => consultChatHref(consultProfile, name, consultUserTexts);
 
   /*
    * 저장된 상담 되살리기 — 상담 창을 처음 열 때 한 번.
@@ -200,12 +206,16 @@ export function SupportChatWidget() {
           remainingToday?: number;
           isGuest?: boolean;
         };
-        const restored: ConsultTurn[] = (payload.messages ?? []).map((turn) => ({
-          id: crypto.randomUUID(),
-          role: turn.role,
-          text: turn.text,
-          at: turn.at ?? new Date().toISOString(),
-        }));
+        /* 서버가 남긴 '답을 받지 못한 차례' 표시는 말풍선으로 그리지 않고, 앞의 손님 질문에 '다시 보내기'를 붙인다 */
+        const restored: ConsultTurn[] = [];
+        for (const turn of payload.messages ?? []) {
+          if (turn.role === "assistant" && turn.text === CONSULT_FAILED_REPLY) {
+            const last = restored[restored.length - 1];
+            if (last?.role === "user") restored[restored.length - 1] = { ...last, failed: true };
+            continue;
+          }
+          restored.push({ id: crypto.randomUUID(), role: turn.role, text: turn.text, at: turn.at ?? new Date().toISOString() });
+        }
         /* 그 사이(히어로 검색 등) 대화가 이미 시작됐으면 덮지 않는다 */
         if (restored.length) setConsultTurns((current) => (current.length ? current : restored));
         const restoredProfile = payload.profile ?? {};
@@ -409,9 +419,13 @@ export function SupportChatWidget() {
       let payload: ConsultPayload;
       const isStream = response.ok && (response.headers.get("content-type") ?? "").includes("ndjson") && response.body;
       if (isStream) {
+        /*
+         * 말풍선은 첫 글자가 올 때 연다. 예전엔 연결되자마자 '답변 준비 중'을 끄고 빈 말풍선을 붙여,
+         * 모델이 생각하는 10~20초 동안 질문만 덩그러니 보이고 지난 차례의 정리·보기가 다시 떠 있었다(실제 AI 점검 2026-10-22).
+         * 답이 끝날 때까지 consultThinking 은 켜 둔다 — 그동안 지난 정리·보기·시작 단추를 숨기고 다시 보내기도 막는다.
+         */
         const bubbleId = crypto.randomUUID();
-        setConsultThinking(false);
-        setConsultTurns((current) => [...current, { id: bubbleId, role: "assistant", text: "", at: new Date().toISOString() }]);
+        let bubbleOpen = false;
         const reader = response.body!.getReader();
         const decoder = new TextDecoder();
         let buffered = "";
@@ -430,16 +444,29 @@ export function SupportChatWidget() {
             if (obj.t === "delta" && obj.v) {
               shown += obj.v;
               const text = shown;
-              setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text } : turn)));
+              if (!bubbleOpen) {
+                bubbleOpen = true;
+                setConsultStreaming(true);
+                setConsultTurns((current) => [...current, { id: bubbleId, role: "assistant", text, at: new Date().toISOString() }]);
+              } else setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text } : turn)));
             } else if (obj.t === "done") {
               done = obj;
             }
           }
         }
-        if (!done) throw new Error("상담을 이어가지 못했어요.");
+        if (!done || (done as { failed?: boolean }).failed) {
+          /* 흘려 둔 안내 말풍선은 걷고, 질문에 '다시 보내기'를 붙인다 */
+          setConsultTurns((current) => current.filter((turn) => turn.id !== bubbleId));
+          throw new Error("상담을 이어가지 못했어요.");
+        }
         payload = done;
         /* 서버가 확정한 전체 문장으로 맞춘다(조각이 빠졌을 때 대비) */
-        if (payload.message) { const finalText = payload.message; const sources = payload.sources ?? []; setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text: finalText, sources } : turn))); }
+        if (payload.message) {
+          const finalText = payload.message; const sources = payload.sources ?? [];
+          setConsultTurns((current) => current.some((turn) => turn.id === bubbleId)
+            ? current.map((turn) => (turn.id === bubbleId ? { ...turn, text: finalText, sources } : turn))
+            : [...current, { id: bubbleId, role: "assistant", text: finalText, at: new Date().toISOString(), sources }]);
+        }
         if (typeof payload.remainingToday === "number") setConsultRemaining(payload.remainingToday);
         setConsultIsGuest(Boolean(payload.isGuest));
         if (payload.profile && Object.keys(payload.profile).length) {
@@ -495,20 +522,22 @@ export function SupportChatWidget() {
        */
       if (payload.ready) setConsultReady(true);
     } catch {
-      setConsultTurns((current) => [
-        ...current,
-        {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          text: "지금은 상담을 이어가지 못했어요. 잠시 후 다시 말씀해 주세요.",
-          at: new Date().toISOString(),
-        },
-      ]);
-      /* 쓴 문장을 입력칸에 되돌린다 — 실패했다고 다시 치게 하면 거기서 떠난다 */
-      setMessage(nextMessage);
+      /*
+       * 질문은 지우지 않는다 — 그 말풍선 아래에 '답을 받지 못했어요 · 다시 보내기'를 붙인다.
+       * 다시 치게 하면 거기서 떠난다(예전엔 입력칸에 되돌렸는데, 창을 닫거나 새로고침하면 질문이 사라졌다).
+       */
+      setConsultTurns((current) => current.map((turn) => (turn.id === asked.id ? { ...turn, failed: true } : turn)));
     } finally {
       setConsultThinking(false);
+      setConsultStreaming(false);
     }
+  };
+
+  /* 답을 받지 못한 질문 다시 보내기 — 그 질문 말풍선을 걷고 같은 말로 다시 묻는다 */
+  const resendConsult = (turn: ConsultTurn) => {
+    if (consultThinking || consultLimit) return;
+    setConsultTurns((current) => current.filter((item) => item.id !== turn.id));
+    void askConsult(turn.text);
   };
 
   const askSupportAssistant = async (nextMessage: string) => {
@@ -717,6 +746,12 @@ export function SupportChatWidget() {
                           <span>{turn.role === "user" ? "나" : "상담사"}</span>
                         </header>
                         <p>{turn.text}</p>
+                        {turn.failed && (
+                          <div className="consult-failed" role="status">
+                            <span>답을 받지 못했어요. 잠시 후 다시 보내 주세요.</span>
+                            <button type="button" disabled={consultThinking || Boolean(consultLimit)} onClick={() => resendConsult(turn)}>다시 보내기</button>
+                          </div>
+                        )}
                         {/* 답에 인용된 공식 근거 — (출처 n) 이 가리키는 곳. 실제로 쓰인 것만 온다 */}
                         {turn.sources && turn.sources.length > 0 && (
                           <ul className="consult-sources" aria-label="출처">
@@ -734,7 +769,7 @@ export function SupportChatWidget() {
                       </article>
                     ))}
 
-                    {consultThinking && (
+                    {consultThinking && !consultStreaming && (
                       <div className="consult-planning" role="status" aria-label="답변 준비 중">
                         <span>답변 계획 중…</span>
                         <i /><i /><i />
@@ -773,7 +808,7 @@ export function SupportChatWidget() {
                               href={pickHandoffHref(pick.name)}
                               onClick={() => trackFunnel("consult_cta_click", { variant: "pick", pick: pick.name })}
                             >
-                              ‘{pick.name}’(으)로 사업계획서 시작 <ChevronRight />
+                              {withRo(`‘${pick.name}’`)} 사업계획서 시작 <ChevronRight />
                             </a>
                           </article>
                         ))}

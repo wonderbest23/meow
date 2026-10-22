@@ -36,6 +36,9 @@
 .tabs [aria-pressed=true],.tabs [aria-pressed=true]:hover { background:var(--app-selected); border-color:var(--app-selected); color:#fff; font-weight:700; box-shadow:0 3px 8px #246bd126; }
 .tabs :is(button,a):active { transform:scale(.97); }
 .content :is(button,a,summary):focus-visible { outline:3px solid #90baff; outline-offset:3px; }
+/* 사업 요약의 ①·② 단계 — 한 문단에 붙어 있던 것을 줄마다 나눈다 */
+.summarySteps { list-style:none; margin:0 0 16px; padding:0; display:grid; gap:6px; line-height:1.65; word-break:keep-all; overflow-wrap:anywhere; }
+.summarySteps li { padding-left:1.4em; text-indent:-1.4em; }
 .keyFacts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
 .keyFacts .fact { min-width:0; padding:16px 18px; border:1px solid var(--app-line); border-radius:8px; }
 .keyFacts .fact:last-child:nth-child(odd) { grid-column:1 / -1; }

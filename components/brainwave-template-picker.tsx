@@ -24,7 +24,10 @@ export function BrainwaveTemplatePicker({
   current,
   onPick,
   onClose,
+  aiFilled = false,
 }: {
+  /** AI 로 채운 글이 있는지 — 바꿀 때 무엇이 옮겨지고 무엇이 바뀌는지 알린다 */
+  aiFilled?: boolean;
   current: string;
   onPick: (id: string) => void;
   onClose: () => void;
@@ -57,7 +60,10 @@ export function BrainwaveTemplatePicker({
           </section>
         </div>
         <footer className={styles.footer}>
-          <p>{selected === current ? "지금 쓰고 있는 디자인이에요." : "사업 정보는 그대로지만, 직접 고친 글·사진·배치는 처음 상태로 돌아가요."}</p>
+          {/* AI 글은 새 디자인 자리로 옮겨 담지만 칸 수가 달라 일부는 빠지거나 바뀔 수 있다 — 예전 안내는 '직접 고친 글'만 말해 AI 글이 사라지는 줄 몰랐다 */}
+          <p>{selected === current ? "지금 쓰고 있는 디자인이에요." : aiFilled
+            ? "AI가 쓴 글은 새 디자인 자리에 옮겨 담지만, 칸 수가 달라 일부는 빠지거나 바뀔 수 있어요. 직접 고친 사진·배치는 처음 상태로 돌아가요. 바꾼 뒤 되돌릴 수 있어요."
+            : "사업 정보는 그대로지만, 직접 고친 글·사진·배치는 처음 상태로 돌아가요."}</p>
           <button type="button" onClick={onClose}>취소</button>
           <button type="button" className={styles.apply} disabled={selected === current} onClick={() => onPick(selected)}>이 디자인으로 바꾸기</button>
         </footer>

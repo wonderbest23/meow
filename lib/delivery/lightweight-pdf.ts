@@ -1,4 +1,5 @@
-import { marked, type Token, type Tokens } from "marked";
+import type { Token, Tokens } from "marked";
+import { lexPlanMarkdown } from "../plan-builder/markdown";
 import { summaryBasisLabel, type ExecutiveSummary } from "../plan-builder/executive-summary";
 import { CHART_FENCE_LANG, parseChartSpec, chartScale, chartTicks, shortWon } from "../plan-builder/chart";
 import { subsetTrueType } from "./font-subset";
@@ -27,6 +28,26 @@ const LEFT = 54;
 const CONTENT_WIDTH = PAGE_WIDTH - LEFT * 2;
 const BOTTOM = 72;
 const TOP = 62;
+/** 한 페이지에 들어갈 수 있는 본문 높이 */
+const PAGE_BODY = PAGE_HEIGHT - BOTTOM - TOP;
+/** 줄 머리에 오면 안 되는 글자(닫는 문장부호)와 줄 끝에 남으면 안 되는 글자(여는 괄호) */
+const NO_LINE_START = /^[.,!?;:)\]}%·、。，．！？：；）」』〉》】”’…~]$/;
+const NO_LINE_END = /^[(\[{「『〈《【“‘]$/;
+const TABLE_HEAD_SIZE = 8.2;
+const TABLE_BODY_SIZE = 7.7;
+const TABLE_PAD = 6;
+const CHART_HEIGHT = 168;
+/*
+ * 표는 이 높이(머리줄 포함 대여섯 줄)까지만 한 쪽에 통째로 둔다. 더 큰 표는 쪽을 넘겨 이어 그리고 머리줄을 다시 단다
+ * (재검증 2026-10-22 2차: 12개월 누적 표를 통째로 다음 쪽으로 미느라 12쪽 아래 절반이 비었다).
+ */
+const KEEP_TABLE_WHOLE = 180;
+/** 쪽을 넘겨 나누는 문단은 앞뒤 쪽에 이만큼 줄을 남긴다 */
+const MIN_SPLIT_LINES = 2;
+
+function headingStyle(depth: number) {
+  return { size: depth <= 2 ? 17 : depth === 3 ? 13 : 11, gap: depth <= 2 ? 12 : 7 };
+}
 
 function inlineText(tokens: Token[] | undefined, fallback = ""): string {
   if (!tokens?.length) return fallback.replace(/\s+/g, " ").trim();
@@ -193,42 +214,62 @@ class PdfLayout {
     return output.toUpperCase();
   }
 
-  private textWidth(text: string, size: number) {
+  textWidth(text: string, size: number) {
     let width = 0;
     for (const character of text) width += this.font.width(this.font.glyph(character.codePointAt(0) ?? 32));
     return width * size / this.font.unitsPerEm;
   }
 
+  /**
+   * 줄 나누기 — 한글 문서 규칙. 낱말(띄어쓰기) 단위로 나누고(word-break: keep-all), 한 줄보다 긴 낱말만 글자 단위로 자른다.
+   * 글자 단위로 자를 때도 마침표·쉼표·닫는 괄호는 줄 머리에, 여는 괄호는 줄 끝에 홀로 두지 않는다
+   * (실제 생성 2026-10-22: 줄 끝 '생깁니다' 뒤 마침표가 다음 줄 첫 글자로 내려갔다).
+   */
   wrap(text: string, width: number, size: number) {
     const lines: string[] = [];
+    const fits = (value: string) => this.textWidth(value.trimEnd(), size) <= width;
     for (const explicitLine of text.replace(/\r/g, "").split("\n")) {
       if (!explicitLine) {
         lines.push("");
         continue;
       }
       let line = "";
-      for (const character of explicitLine) {
-        const candidate = line + character;
-        if (line && this.textWidth(candidate, size) > width) {
-          lines.push(line.trimEnd());
-          line = character.trimStart();
-        } else line = candidate;
+      for (const word of explicitLine.split(/(?<= )/)) {
+        if (fits(line + word)) { line += word; continue; }
+        if (line.trim()) { lines.push(line.trimEnd()); line = ""; }
+        if (fits(word)) { line = word; continue; }
+        for (const character of word) {
+          if (!line || fits(line + character)) { line += character; continue; }
+          const chars = [...line];
+          // 닫는 문장부호가 줄 머리에 오거나 여는 괄호가 줄 끝에 남으면 앞 글자를 함께 내린다
+          const carry = NO_LINE_START.test(character) || NO_LINE_END.test(chars.at(-1) ?? "") ? 1 + (NO_LINE_END.test(chars.at(-2) ?? "") ? 1 : 0) : 0;
+          if (carry && chars.length > carry) {
+            lines.push(chars.slice(0, -carry).join("").trimEnd());
+            line = chars.slice(-carry).join("") + character;
+          } else {
+            lines.push(line.trimEnd());
+            line = character.trimStart();
+          }
+        }
       }
-      if (line || lines.length === 0) lines.push(line.trimEnd());
+      if (line.trim() || lines.length === 0) lines.push(line.trimEnd());
     }
     return lines;
   }
 
-  drawText(text: string, x: number, top: number, options: { size: number; color?: string; width?: number; lineHeight?: number; bold?: boolean }) {
+  drawText(text: string, x: number, top: number, options: { size: number; color?: string; width?: number; lineHeight?: number; bold?: boolean; align?: "left" | "right" | "center" }) {
     const size = options.size;
     const lineHeight = options.lineHeight ?? size * 1.55;
-    const lines = this.wrap(text, options.width ?? CONTENT_WIDTH, size);
+    const width = options.width ?? CONTENT_WIDTH;
+    const lines = this.wrap(text, width, size);
     lines.forEach((line, index) => {
       if (!line) return;
       const baseline = PAGE_HEIGHT - top - index * lineHeight - size;
-      const command = `BT /F1 ${size.toFixed(2)} Tf ${rgb(options.color ?? "263D34")} rg 1 0 0 1 ${x.toFixed(2)} ${baseline.toFixed(2)} Tm <${this.encoded(line)}> Tj ET`;
+      const spare = Math.max(0, width - this.textWidth(line, size));
+      const lineX = x + (options.align === "right" ? spare : options.align === "center" ? spare / 2 : 0);
+      const command = `BT /F1 ${size.toFixed(2)} Tf ${rgb(options.color ?? "263D34")} rg 1 0 0 1 ${lineX.toFixed(2)} ${baseline.toFixed(2)} Tm <${this.encoded(line)}> Tj ET`;
       this.page.commands.push(command);
-      if (options.bold) this.page.commands.push(command.replace(`${x.toFixed(2)} ${baseline.toFixed(2)} Tm`, `${(x + 0.22).toFixed(2)} ${baseline.toFixed(2)} Tm`));
+      if (options.bold) this.page.commands.push(command.replace(`${lineX.toFixed(2)} ${baseline.toFixed(2)} Tm`, `${(lineX + 0.22).toFixed(2)} ${baseline.toFixed(2)} Tm`));
     });
     return lines.length * lineHeight;
   }
@@ -237,11 +278,26 @@ class PdfLayout {
     const size = options?.size ?? 10;
     const indent = options?.indent ?? 0;
     const width = options?.width ?? CONTENT_WIDTH - indent;
+    const gap = options?.gap ?? 8;
     const lines = this.wrap(text, width, size);
-    const height = Math.max(1, lines.length) * size * 1.55;
-    this.ensure(height + (options?.gap ?? 8));
-    this.drawText(text, LEFT + indent, this.page.cursor, { size, color: options?.color, width, bold: options?.bold });
-    this.page.cursor += height + (options?.gap ?? 8);
+    const lineHeight = size * 1.55;
+    const height = Math.max(1, lines.length) * lineHeight;
+    const draw = (part: string[]) => this.drawText(part.join("\n"), LEFT + indent, this.page.cursor, { size, color: options?.color, width, bold: options?.bold });
+    if (this.page.cursor + height + gap > PAGE_HEIGHT - BOTTOM) {
+      /* 긴 문단은 통째로 다음 쪽으로 미루지 않고 이어 쓴다 — 앞뒤 쪽에 두 줄 이상씩 남긴다 */
+      const fit = Math.min(Math.floor((PAGE_HEIGHT - BOTTOM - this.page.cursor) / lineHeight), lines.length - MIN_SPLIT_LINES);
+      if (fit >= MIN_SPLIT_LINES) {
+        draw(lines.slice(0, fit));
+        this.newPage();
+        const rest = lines.slice(fit);
+        draw(rest);
+        this.page.cursor += rest.length * lineHeight + gap;
+        return;
+      }
+      this.newPage();
+    }
+    draw(lines);
+    this.page.cursor += height + gap;
   }
 
   rect(x: number, top: number, width: number, height: number, fill: string, stroke?: string) {
@@ -295,19 +351,49 @@ class PdfLayout {
     if (this.pages.length !== firstPageCount) throw new Error("EXECUTIVE_SUMMARY_OVERFLOW");
   }
 
+  private headingHeight(token: Tokens.Heading) {
+    const { size, gap } = headingStyle(token.depth);
+    return gap + this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH, size).length * size * 1.55 + 8;
+  }
+
+  /** tokens[index] 부터 '떼어 놓으면 안 되는 앞부분'의 높이 — 제목이면 다음 덩어리의 첫 부분까지 더한다 */
+  private leadHeight(tokens: Token[], index: number, depth = 0): number {
+    const token = tokens[index];
+    if (!token) return 0;
+    const nextIndex = () => { for (let i = index + 1; i < tokens.length; i += 1) if (tokens[i].type !== "space") return i; return -1; };
+    if (token.type === "heading") {
+      const next = nextIndex();
+      return this.headingHeight(token as Tokens.Heading) + (next >= 0 && depth < 3 ? this.leadHeight(tokens, next, depth + 1) : 0);
+    }
+    // 문단·목록은 쪽을 넘겨 나뉠 수 있으므로 첫 몇 줄만(제목과 함께 둘 만큼)
+    if (token.type === "paragraph") return Math.min(3, this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH, 10).length) * 15.5 + 8;
+    if (token.type === "list") {
+      const first = (token as Tokens.List).items[0];
+      return first ? Math.min(3, this.wrap(`· ${inlineText(first.tokens, first.text)}`, CONTENT_WIDTH - 12, 10).length) * 15.5 + 5 : 0;
+    }
+    if (token.type === "blockquote") return Math.max(38, this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH - 32, 9).length * 14 + 20) + 10;
+    if (token.type === "table") {
+      const { rows, total } = this.measureTable(token as Tokens.Table);
+      // 작은 표는 통째로 옮겨지므로 표 전체, 큰 표는 머리줄과 첫 줄(나머지는 쪽을 넘겨 이어 그린다)
+      return total + 15 <= KEEP_TABLE_WHOLE ? total + 15 : rows.slice(0, 2).reduce((sum, row) => sum + row.height, 0) + 3;
+    }
+    if (token.type === "code") return (token as Tokens.Code).lang === CHART_FENCE_LANG ? CHART_HEIGHT + 34 : this.wrap(token.text, CONTENT_WIDTH - 12, 8).length * 12.4 + 8;
+    return 24;
+  }
+
   blocks(document: PdfDocumentInput) {
-    const tokens = marked.lexer(document.markdown, { gfm: true });
+    const tokens = lexPlanMarkdown(document.markdown);
     let skippedTitle = false;
     for (const [index, token] of tokens.entries()) {
       if (token.type === "heading") {
         if (!skippedTitle && token.depth === 1) { skippedTitle = true; continue; }
-        const size = token.depth <= 2 ? 17 : token.depth === 3 ? 13 : 11;
-        const gap = token.depth <= 2 ? 12 : 7;
-        const headingHeight = this.wrap(inlineText(token.tokens, token.text), CONTENT_WIDTH, size).length * size * 1.55 + gap + 8;
-        const following = tokens.slice(index + 1).find(item => item.type !== "space");
-        const followingHeight = following?.type === "paragraph" ? this.wrap(inlineText(following.tokens, following.text), CONTENT_WIDTH, 10).length * 15.5 + 8 : 24;
-        const together = headingHeight + followingHeight;
-        this.ensure(together <= PAGE_HEIGHT - BOTTOM - TOP ? together : headingHeight + 24);
+        const { size, gap } = headingStyle(token.depth);
+        /*
+         * 제목은 다음 덩어리와 같은 쪽에 둔다 — 제목 바로 뒤가 또 제목(장 → 절)이거나 표면, 그 뒤 첫 덩어리까지 함께 잰다.
+         * (실제 생성 2026-10-22: '2.2 핵심 고객'만 5쪽 맨 아래에 남고 본문은 6쪽에서 시작했다.)
+         */
+        const together = this.leadHeight(tokens, index);
+        this.ensure(together <= PAGE_BODY ? together : this.headingHeight(token as Tokens.Heading) + 24);
         this.page.cursor += gap;
         this.text(inlineText(token.tokens, token.text), { size, color: token.depth <= 2 ? "18342A" : "0B7254", bold: true, gap: 8 });
         continue;
@@ -349,7 +435,7 @@ class PdfLayout {
         if ((token as Tokens.Code).lang === CHART_FENCE_LANG) {
           const spec = parseChartSpec(token.text);
           // 형식이 어긋나면 원시 JSON을 문서에 흘리지 않는다
-          if (spec) this.planChart(spec.points, spec.breakEvenMonth, spec.kind);
+          if (spec) this.planChart(spec.points, spec.breakEvenMonth, spec.kind, spec.title);
           continue;
         }
         this.text(token.text, { size: 8, color: "45544E", indent: 12 });
@@ -365,12 +451,20 @@ class PdfLayout {
     points: Array<{ label: string; value: number }>,
     breakEvenMonth: number | null,
     kind: "cumulative" | "monthly" = "cumulative",
+    title = "",
   ) {
-    const height = 168;
+    const height = CHART_HEIGHT;
     const padL = 54;
     const padT = 16;
     const padB = 20;
-    this.ensure(height + 16);
+    const caption = title ? 18 : 0;
+    this.ensure(caption + height + 16);
+    // 화면 차트와 같은 제목을 단다 — 제목이 없으면 무슨 선인지 알 수 없었다
+    if (caption) {
+      this.drawText(title, LEFT, this.page.cursor, { size: 9, color: "18342A", bold: true, width: CONTENT_WIDTH - 60 });
+      this.drawText("(단위: 원)", LEFT + Math.min(CONTENT_WIDTH - 60, this.textWidth(title, 9) + 6), this.page.cursor + 1, { size: 7.5, color: "8B95A1", width: 60 });
+      this.page.cursor += caption;
+    }
     const top = this.page.cursor;
     const plotW = CONTENT_WIDTH - padL - 8;
     const plotH = height - padT - padB;
@@ -427,34 +521,81 @@ class PdfLayout {
     }
 
     // x축 라벨(격월)
+    // 라벨 가운데를 점에 맞추고 글자 폭만큼 칸을 준다 — 예전엔 폭 24pt 라 '11개월차'가 두 줄로 쪼개졌다
     points.forEach((p, i) => {
       if (i % 2 !== 0 && i !== points.length - 1) return;
-      this.drawText(p.label, px(i) - 8, top + height - padB + 6, { size: 6.6, color: "8B95A1", width: 24 });
+      const labelWidth = this.textWidth(p.label, 6.6) + 1;
+      const x = Math.min(Math.max(px(i) - labelWidth / 2, LEFT + 4), LEFT + CONTENT_WIDTH - labelWidth - 4);
+      this.drawText(p.label, x, top + height - padB + 6, { size: 6.6, color: "8B95A1", width: labelWidth + 1 });
     });
 
     this.page.cursor += height + 14;
   }
 
-  private table(token: Tokens.Table) {
-    const rows = [token.header, ...token.rows];
-    const columnWidth = CONTENT_WIDTH / Math.max(1, token.header.length);
-    const measured = rows.map((row, rowIndex) => {
-      const values = row.map((cell) => inlineText(cell.tokens, cell.text));
-      const lineCounts = values.map((value) => this.wrap(value, columnWidth - 12, rowIndex === 0 ? 8.2 : 7.7).length);
-      const height = Math.max(28, Math.max(...lineCounts) * 12 + 12);
-      return { values, height };
+  /**
+   * 표 칸 폭 — 내용에 맞춘다(브라우저 자동 표 배치와 같은 방식). 예전엔 열마다 같은 폭이라 '월'·'주차' 같은 짧은 열이
+   * 줄글 열만큼 넓고 줄글은 좁은 칸에서 길게 늘어졌다. 숫자 열은 화면처럼 오른쪽에 맞춘다.
+   */
+  private measureTable(token: Tokens.Table) {
+    const rows = [token.header, ...token.rows].map(row => row.map(cell => inlineText(cell.tokens, cell.text)));
+    const columns = token.header.length;
+    const size = (rowIndex: number) => rowIndex === 0 ? TABLE_HEAD_SIZE : TABLE_BODY_SIZE;
+    const minimum: number[] = [], maximum: number[] = [];
+    for (let column = 0; column < columns; column += 1) {
+      let longestWord = 0, longestLine = 0;
+      rows.forEach((row, rowIndex) => {
+        const value = row[column] ?? "";
+        for (const line of value.split("\n")) longestLine = Math.max(longestLine, this.textWidth(line, size(rowIndex)));
+        for (const word of value.split(/\s+/)) longestWord = Math.max(longestWord, this.textWidth(word, size(rowIndex)));
+      });
+      minimum.push(Math.min(CONTENT_WIDTH * 0.45, Math.max(26, longestWord + TABLE_PAD * 2 + 1)));
+      maximum.push(Math.max(minimum[column], longestLine + TABLE_PAD * 2 + 1));
+    }
+    const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
+    let widths: number[];
+    if (sum(maximum) <= CONTENT_WIDTH) {
+      const spare = CONTENT_WIDTH - sum(maximum);
+      widths = maximum.map(value => value + spare * value / sum(maximum));
+    } else if (sum(minimum) >= CONTENT_WIDTH) {
+      widths = minimum.map(value => value * CONTENT_WIDTH / sum(minimum));
+    } else {
+      const spare = CONTENT_WIDTH - sum(minimum);
+      const stretch = sum(maximum.map((value, column) => value - minimum[column])) || 1;
+      widths = minimum.map((value, column) => value + spare * (maximum[column] - minimum[column]) / stretch);
+    }
+    // 정렬은 화면과 같다 — 머리줄 정렬, 없으면 금액 열은 오른쪽(lexPlanMarkdown 이 정해 둔다)
+    const aligns = Array.from({ length: columns }, (_, column) => token.align[column] === "right" ? "right" as const : token.align[column] === "center" ? "center" as const : "left" as const);
+    const measured = rows.map((values, rowIndex) => {
+      const lineCounts = values.map((value, column) => this.wrap(value, widths[column] - TABLE_PAD * 2, size(rowIndex)).length);
+      return { values, height: Math.max(28, Math.max(...lineCounts) * 12 + 12) };
     });
-    const totalHeight = measured.reduce((sum, row) => sum + row.height, 0);
-    if (totalHeight + 15 <= PAGE_HEIGHT - BOTTOM - TOP) this.ensure(totalHeight + 15);
-    measured.forEach(({ values, height }, rowIndex) => {
-      this.ensure(height + 3);
+    return { widths, aligns, rows: measured, total: sum(measured.map(row => row.height)) };
+  }
+
+  /**
+   * 표 — 작은 표는 한 쪽에 통째로, 큰 표는 머리줄과 첫 줄만 붙여 두고 나머지는 쪽을 넘겨 이어 그린다.
+   * 넘어간 쪽 첫머리에는 머리줄을 다시 그린다(무슨 칸인지 알 수 있게).
+   */
+  private table(token: Tokens.Table) {
+    const { widths, aligns, rows, total } = this.measureTable(token);
+    this.ensure(total + 15 <= KEEP_TABLE_WHOLE ? total + 15 : rows.slice(0, 2).reduce((sum, row) => sum + row.height, 0) + 3);
+    const drawRow = ({ values, height }: { values: string[]; height: number }, header: boolean) => {
       const top = this.page.cursor;
+      let x = LEFT;
       values.forEach((value, columnIndex) => {
-        const x = LEFT + columnIndex * columnWidth;
-        this.rect(x, top, columnWidth, height, rowIndex === 0 ? "EFF7F3" : "FFFFFF", "D9E4DF");
-        this.drawText(value, x + 6, top + 5, { size: rowIndex === 0 ? 8.2 : 7.7, color: "263D34", width: columnWidth - 12, lineHeight: 12, bold: rowIndex === 0 });
+        const width = widths[columnIndex];
+        this.rect(x, top, width, height, header ? "EFF7F3" : "FFFFFF", "D9E4DF");
+        this.drawText(value, x + TABLE_PAD, top + 5, { size: header ? TABLE_HEAD_SIZE : TABLE_BODY_SIZE, color: "263D34", width: width - TABLE_PAD * 2, lineHeight: 12, bold: header, align: aligns[columnIndex] });
+        x += width;
       });
       this.page.cursor += height;
+    };
+    rows.forEach((row, rowIndex) => {
+      if (rowIndex > 0 && this.page.cursor + row.height + 3 > PAGE_HEIGHT - BOTTOM) {
+        this.newPage();
+        drawRow(rows[0], true);
+      } else this.ensure(row.height + 3);
+      drawRow(row, rowIndex === 0);
     });
     this.page.cursor += 12;
   }
@@ -521,6 +662,11 @@ class PdfObjects {
     parts.push(Buffer.from(`${lines.join("\n")}\n`, "ascii"));
     return Buffer.concat(parts);
   }
+}
+
+/** 줄 나누기 확인용(테스트) — PDF 본문과 같은 규칙으로 text 를 width(pt) 안에서 나눈 줄들 */
+export function wrapPdfText(fontBytes: Buffer | Uint8Array, text: string, width: number, size = 10): string[] {
+  return new PdfLayout(new TrueTypeFont(Buffer.from(fontBytes))).wrap(text, width, size);
 }
 
 export function renderLightweightPdf(documents: PdfDocumentInput[], project: PdfProjectInput, fontBytes: Buffer | Uint8Array) {

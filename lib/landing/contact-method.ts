@@ -115,7 +115,8 @@ export function applyContactMethod<T extends DraftLike>(previous: T, next: T): T
   const newHref = contactHref(after, phone) ?? "contact";
   const oldLabel = CONTACT_METHOD_INFO[before.method].cta;
   const newLabel = CONTACT_METHOD_INFO[after.method].cta;
-  const autoLabel = (label: string | undefined) => !label || label === "문의하기" || label === oldLabel;
+  /* '전화하기'는 AI 채우기가 동네 가게 버튼에 넣는 기본 글 — 연락 방법을 바꾸면 새 방법의 글로 따라간다 */
+  const autoLabel = (label: string | undefined) => !label || label === "문의하기" || label === oldLabel || label === "전화하기";
   const ctaLabel = autoLabel(next.ctaLabel) ? newLabel : next.ctaLabel;
   if (!bw) return { ...next, ctaLabel };
   const links = { ...bw.links };

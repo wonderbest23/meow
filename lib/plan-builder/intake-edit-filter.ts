@@ -21,10 +21,10 @@ export function classifyEditRequest(text: string): EditRoute {
 
 /** Fixed replies for requests that never reach the AI. */
 export const EDIT_REPLIES: Record<Exclude<EditRoute, "in_scope">, string> = {
-  empty: "바꾸고 싶은 내용을 적어 주세요. 예: 가격을 6만 5천원으로, 주 고객을 1인 가구로",
+  empty: "바꾸고 싶은 내용을 적어 주세요. 예: 주 고객을 1인 가구로, 판매 채널에 인스타그램 추가",
   new_business: "지금 계획서는 이 사업 기준이에요. 다른 사업은 왼쪽 위 \"새 대화\"에서 따로 시작할 수 있어요.",
   style: "말투나 문체는 바꾸지 않아요. 가격·고객·상품·목표처럼 계획서 내용을 바꾸고 싶으면 말씀해 주세요.",
-  off_topic: "이 대화에서는 계획서 내용 수정만 도와드려요. 예: 가격을 6만 5천원으로, 주 고객을 1인 가구로",
+  off_topic: "이 대화에서는 계획서 내용 수정만 도와드려요. 예: 주 고객을 1인 가구로, 판매 채널에 인스타그램 추가",
 };
 
 /** Requests to change the plan's facts per plan per day, on top of the account-wide AI limit. */

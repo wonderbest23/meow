@@ -10516,6 +10516,30 @@ body {
 .support-chat-messages .consult-pane > article.customer > header,
 .support-chat-messages .consult-pane > article.customer > time { align-self: flex-end; }
 
+/* 답을 받지 못한 질문 — 질문 아래에 안내와 '다시 보내기'(질문은 지우지 않는다) */
+.support-chat-messages .consult-pane > article > .consult-failed {
+  align-self: flex-end;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 10px;
+  color: #b42318;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.support-chat-messages .consult-pane > article > .consult-failed button {
+  min-height: 36px;
+  padding: 0 12px;
+  border: 1px solid #f1b8b2;
+  border-radius: 999px;
+  background: #fff;
+  color: #b42318;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .support-chat-messages .consult-pane > article > p {
   margin: 0;
   padding: 10px 13px;
@@ -16980,6 +17004,11 @@ html:has(main.cinematic-home), body:has(main.cinematic-home) { background: #000;
 .hk-tools { display: grid; gap: 0; border-bottom: 1px solid #ecebf3; background: #fbfbfe; }
 .hk-tool-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 10px 14px; }
 .hk-tool-row + .hk-tool-row { border-top: 1px solid #f0eff6; }
+/* 디자인을 바꾼 바로 뒤 안내 — 되돌리기 · AI로 다시 채우기 */
+.hk-switch-note { display: grid; gap: 8px; margin: 10px 0 0; padding: 12px 14px; border: 1px solid #d9e2ff; border-radius: 10px; background: #f5f7ff; color: #2b2f4a; font-size: 14px; line-height: 1.6; }
+.hk-switch-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.hk-switch-actions button { min-height: 40px; padding: 0 12px; border: 1px solid #c9d3f5; border-radius: 8px; background: #fff; color: #2b3a8f; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-size: 13.5px; font-weight: 700; cursor: pointer; }
+.hk-switch-actions button:disabled { opacity: .5; cursor: default; }
 .hk-tool-label { display: inline-flex; align-items: center; gap: 5px; min-width: 92px; color: #55586a; font-size: 12.5px; font-weight: 700; }
 .hk-tool-row > button, .hk-tool-btn { min-height: 32px; padding: 0 11px; border: 1px solid #dfe3ea; border-radius: 8px; background: #fff; color: #3d3a52; display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 .hk-tool-row > button:hover:not(:disabled) { border-color: #b9b6d6; }

@@ -338,7 +338,7 @@ export async function executeIntakeJob(request: IntakeJobRequest, execution: { r
         current.proposal = proposal; current.status = "complete";
         const id = `${current.id}:reply`;
         if (!coach.messages.some(message => message.id === id)) {
-          coach.messages.push({ id, role: "assistant", text: proposal.length ? "바꿀 내용을 정리했어요. 아래에서 확인해 주세요." : "어떤 내용을 어떻게 바꿀지 찾지 못했어요. 예: 가격을 6만 5천원으로, 주 고객을 1인 가구로", at: new Date().toISOString() });
+          coach.messages.push({ id, role: "assistant", text: proposal.length ? "바꿀 내용을 정리했어요. 아래에서 확인해 주세요." : "어떤 내용을 어떻게 바꿀지 찾지 못했어요. 예: 가격을 5,000원으로, 주 고객을 1인 가구로", at: new Date().toISOString() });
           coach.revision += 1;
         }
       });

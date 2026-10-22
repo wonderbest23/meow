@@ -9,6 +9,7 @@ import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
+import { carryCopyToDesign } from "../lib/landing/ai-fill";
 import { BrainwavePage, loadBrainwavePage, menuItemsOf, orderedSections, sectionBands, type BrainwavePageData } from "./brainwave-page";
 import { brainwaveSections } from "../lib/landing/brainwave/button-action";
 import { resizeImage, uploadEditorImage, discardEditorImage, type EditorImageUpload } from "./landing-media-field";
@@ -763,7 +764,8 @@ export function BrainwaveEditor({
     setBtn(null);
     deselect();
     const source = { ...(businessContent ?? { businessName: String(data.root.props?.title || "내 사업"), offer: business.summary, description: business.summary, customer: "", price: "문의 후 안내", cta: "문의하기", image: "" }), ...(business.name ? { businessName: business.name } : {}) };
-    const generated = createBusinessTemplate(source, next);
+    /* AI 가 쓴 글은 새 디자인의 같은 역할 자리로 옮겨 담는다 — 예전엔 템플릿 기본 글로 돌아갔다 */
+    const generated = carryCopyToDesign({ ...data, businessContent: source }, { page, contentMode, texts: before.texts, images: before.images, links: before.links, sizes: before.sizes, hidden: before.hidden, order: before.order }, createBusinessTemplate(source, next));
     setBusinessContent(source);
     setSourceSnapshot(undefined);
     setOver(generated);
@@ -1208,7 +1210,7 @@ export function BrainwaveEditor({
           </div>
         </div>
       ) : null}
-      {picking ? <BrainwaveTemplatePicker current={page} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
+      {picking ? <BrainwaveTemplatePicker current={page} aiFilled={Boolean(data.aiFill)} onPick={(id) => { setPicking(false); changePage(id); }} onClose={() => setPicking(false)} /> : null}
       {/*
         * 빈 곳을 누르면 선택 해제 — 다만 그 아래에 사진이 깔려 있으면(첫 화면 큰 사진 위의 어두운 덮개·글 상자 빈칸) 그 사진을 고른다.
         * 예전엔 PC 화면에서 첫 화면 사진을 아무리 눌러도 잡히지 않았다.

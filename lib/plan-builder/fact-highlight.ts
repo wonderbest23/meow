@@ -40,13 +40,20 @@ export function factNeedles(display: string): string[] {
  * 12개월 통장 누적 칸까지 바뀌어 숫자가 엉켰다). 금액 바로 앞(같은 문장, 몇 글자 안)에 그 사실을 가리키는 말이 있을 때만
  * 그 사실의 금액으로 본다. 매출·누적·이익처럼 계산된 값을 가리키는 말이 더 가까우면 어느 사실도 아니다.
  */
+/** amountOwner 결과 — 앞말이 '정한 값'이라고만 하면 금액이 같은 사실의 것으로 본다 */
+export const OWNER_BY_VALUE = "*";
 const AMOUNT_OWNER_WORDS: ReadonlyArray<readonly [string, string]> = [
-  ...["판매가", "판매 가격", "가격", "객단가", "판매 단가", "단가", "요금", "이용료", "수강료", "회비", "1회", "회당", "1인당", "개당", "한 잔", "한 개", "1개", "한 그릇", "세트", "한 벌", "한 상자", "한 박스", "1인", "1명", "한 명", "시간당", "1시간", "한 시간", "한 번에"].map(word => [word, "price"] as const),
-  ...["원가", "변동비", "재료비", "매입가", "건당 비용", "한 건당 비용", "들어가는 비용", "들어가는 돈"].map(word => [word, "structure.unitCost"] as const),
+  ...["판매가", "판매 가격", "가격", "값", "객단가", "판매 단가", "단가", "요금", "이용료", "수강료", "회비", "1회", "회당", "1인당", "개당", "한 잔", "한 개", "1개", "한 그릇", "세트", "한 벌", "한 상자", "한 박스", "1인", "1명", "한 명", "시간당", "1시간", "한 시간", "한 번에"].map(word => [word, "price"] as const),
+  ...["원가", "변동비", "재료비", "재료값", "재룟값", "매입가", "건당 비용", "한 건당 비용", "들어가는 비용", "들어가는 돈"].map(word => [word, "structure.unitCost"] as const),
   ...["고정비", "고정 비용", "매달 나가는", "매달 드는", "한 달 고정"].map(word => [word, "structure.cost"] as const),
   ...["예산", "준비 자금", "초기 자금", "창업 자금", "자기자금", "가진 돈", "준비한 돈", "모아 둔"].map(word => [word, "budget"] as const),
+  /*
+   * '사용자가 정한 4,500원'처럼 대표가 정한 값이라고만 밝힌 금액 — 어느 사실인지는 금액이 정한다(OWNER_BY_VALUE).
+   * 두 사실이 같은 금액이면 바꿔 넣기 쪽(fact-patch)이 이미 건너뛴다.
+   */
+  ...["사용자가 정한", "대표가 정한", "직접 정한", "정해 둔", "정해둔", "입력한", "적어 주신", "답한"].map(word => [word, OWNER_BY_VALUE] as const),
   // 계산된 값 — 이 말이 더 가까우면 어느 사실의 금액도 아니다
-  ...["매출", "누적", "잔고", "이익", "손익", "남는", "남습", "남아", "남기", "모자라", "부족", "합계", "공헌", "차이", "적자", "흑자", "본전", "빼면", "더하면", "곱하면", "나누면", "합치면", "×", "÷", "="].map(word => [word, ""] as const),
+  ...["계산값", "평균값", "목표값", "기댓값", "누적값", "매출", "누적", "잔고", "이익", "손익", "남는", "남습", "남아", "남기", "모자라", "부족", "합계", "공헌", "차이", "적자", "흑자", "본전", "빼면", "더하면", "곱하면", "나누면", "합치면", "×", "÷", "="].map(word => [word, ""] as const),
 ];
 /** Facts whose amounts are matched only with an owner word in front. */
 export const OWNED_AMOUNT_IDS = ["price", "structure.unitCost", "structure.cost", "budget"] as const;
@@ -90,7 +97,8 @@ export function findFactRanges(text: string, facts: Pick<EditableFact, "question
       const end = at + needle.length;
       // An amount must stand alone: "50,000원" inside "-2,950,000원" is a different number.
       const glued = /^\d/.test(needle) && /[\d,.]/.test(text[at - 1] ?? "");
-      const ownedHere = !checkOwner || amountOwner(`${before ?? ""}${text.slice(0, at)}`) === id;
+      const owner = checkOwner ? amountOwner(`${before ?? ""}${text.slice(0, at)}`) : id;
+      const ownedHere = owner === id || owner === OWNER_BY_VALUE;
       if (!glued && ownedHere && !ranges.some(([start, stop]) => at < stop && end > start)) ranges.push([at, end, id]);
       from = end;
     }

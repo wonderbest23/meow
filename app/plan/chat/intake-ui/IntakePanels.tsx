@@ -20,6 +20,7 @@ import { ksicNameHint } from "../../../../lib/plan-builder/ksic-hints";
 import styles from "../intake.module.css";
 import { chatTextPreview } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
+import { editExamples } from "../../../../lib/plan-builder/edit-examples";
 
 export function EntryChoices({ disabled, onStart, initialMessage, coach = false }: { disabled: boolean; onStart: (mode: IntakeMode) => void; initialMessage?: string | null; coach?: boolean }) {
   const choices = [
@@ -403,7 +404,6 @@ function AmountLadder({ question, ranges, legend, disabled, staging, exactLabel 
   </div>;
 }
 
-const EDIT_EXAMPLES = ["가격을 6만 5천원으로 바꿔줘", "주 고객을 1인 가구로 바꿔줘", "목표를 1년 안에 단골 100명으로"];
 
 /**
  * "채팅으로 수정하기" turn: a short intro with examples, the AI's tidy-up while it runs, then the proposed changes
@@ -413,6 +413,8 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }:
   const job = snapshot.intake.job?.kind === "edit" ? snapshot.intake.job : null;
   const running = !!job && ["queued", "running"].includes(job.status);
   const pending = !!job && job.status === "complete" && !!job.proposal?.length && !job.proposalStatus;
+  const price = snapshot.intake.answers.price;
+  const examples = editExamples(price?.status === "answered" ? price.value : null);
   return <section className={styles.editTurn} aria-label="계획서 수정" data-edit-chat>
     {!job && <div className={styles.assistantMessage}><p>계획서에서 바꾸고 싶은 내용을 말씀해 주세요. 이 사업 안의 내용(가격·고객·상품·목표 등)만 고칠 수 있어요.</p></div>}
     {running && <JobProgress snapshot={snapshot} announce variant="chat" />}
@@ -427,7 +429,7 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }:
       })}
       <div className={styles.chipRow}><button type="button" className={`${styles.chip} ${styles.chipStrong}`} disabled={disabled} onClick={onApply}>바꾸기</button><button type="button" className={styles.chip} disabled={disabled} onClick={onDismiss}>취소</button></div>
     </div>}
-    {!running && !pending && <div className={styles.chipRow}>{EDIT_EXAMPLES.map(text => <button key={text} type="button" className={styles.chip} disabled={disabled} onClick={() => onSend(text)}>{text}</button>)}</div>}
+    {!running && !pending && <div className={styles.chipRow}>{examples.map(text => <button key={text} type="button" className={styles.chip} disabled={disabled} onClick={() => onSend(text)}>{text}</button>)}</div>}
   </section>;
 }
 

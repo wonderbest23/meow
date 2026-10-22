@@ -8,6 +8,7 @@ import styles from "../BusinessHub.module.css";
 import Link from "next/link";
 import { homepageHref } from "../../../lib/plan-builder/journey";
 import type { HomepageStatus } from "../../../lib/plan-builder/journey";
+import { splitCircledSteps } from "../../../lib/plan-builder/text-steps";
 
 export type WorkspaceView = "summary" | "documents" | "action" | "launch" | "operations";
 
@@ -31,7 +32,10 @@ export function WorkspaceSummary({ description, fields, stale, headingRef, child
 }) {
   return <>
     <h2 ref={headingRef} tabIndex={-1}>이런 사업이에요</h2>
-    <p>{description}</p>
+    {(() => {
+      const split = splitCircledSteps(description);
+      return split ? <>{split.intro && <p>{split.intro}</p>}<ol className={styles.summarySteps}>{split.steps.map(step => <li key={step}>{step}</li>)}</ol>{split.outro && <p>{split.outro}</p>}</> : <p>{description}</p>;
+    })()}
     {stale && <div className={styles.notice}><p>대화에서 바꾼 내용이 기존 문서와 달라요. 내 자료에서 확인해 주세요.</p></div>}
     {fields && <dl className={styles.keyFacts} data-workspace-facts>{fields.filter(field => ["customer", "offer", "price", "budget", "hoursPerWeek"].includes(field.key)).map(field => <div className={styles.fact} key={field.key}>
       <dt>{COACH_FIELD_LABELS[field.key]}{field.basis === "user" ? null : <span>AI 초안</span>}</dt><dd>{coachFieldDisplay(field.value)}</dd>

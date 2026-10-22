@@ -41,7 +41,8 @@ export async function POST(request: Request) {
       kind: "marketing-kit", system: prompt.system, user: prompt.user, effort: "medium", maxOutputTokens: 8000, timeoutMs: 150_000,
       jsonSchema: MARKETING_KIT_OUTPUT_SCHEMA, anthropicJsonSchema: true,
     }));
-    const kit = normalizeMarketingKit(raw);
+    /* 사장님이 정한 가격이 하나뿐이면 [가격] 자리를 채운다(상품이 여럿이면 'N원부터') */
+    const kit = normalizeMarketingKit(raw, prompt.facts);
     if (!kit) return json({ error: { code: "AI_FAILED", message: "홍보 글을 만들지 못했어요. 잠시 후 다시 시도해 주세요." } }, 502);
     return json({ kit, generatedAt: new Date().toISOString() });
   } catch (error) {

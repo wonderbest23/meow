@@ -38,13 +38,17 @@
 .kit .kitBlock header { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
 .kit .kitBlock h3 { margin: 0; font-size: 14px; line-height: 1.5; }
 .kit .kitBlock > p { margin: 0; white-space: pre-wrap; font-size: 14px; line-height: 1.7; }
+/* 해시태그는 하나씩 통째로 줄바꿈 — '#'만 줄 끝에 남지 않게(재검증 2026-10-22) */
+.kit .kitBlock > p.kitTags { display: flex; flex-wrap: wrap; gap: 2px 8px; white-space: normal; }
+.kit .kitTags > span { display: inline-block; white-space: nowrap; word-break: keep-all; }
 .kit .kitBlock button { display: inline-flex; align-items: center; gap: 4px; flex-shrink: 0; min-height: 36px; padding: 6px 0; line-height: 1.4; }
 .kit details.kitWeek { margin: 0; padding: 4px 0; border-top: 1px solid var(--app-line, #e5e8eb); }
 .kit .kitWeek > summary { cursor: pointer; padding: 10px 0; font-weight: 600; font-size: 14px; line-height: 1.5; color: var(--app-text, #191f28); }
 .kit .kitWeek ol { display: grid; gap: 10px; margin: 4px 0 8px; padding-left: 18px; }
 .kit .kitWeek li { display: grid; gap: 2px; font-size: 13px; line-height: 1.6; }
 .kit .kitWeek li button { justify-self: start; }
-.kit .kitWeek li p { margin: 0; white-space: pre-wrap; color: var(--app-text, #191f28); }
+/* 올릴 글은 위 블록 본문(14px)과 같은 크기로 — 크기를 안 정해 전역 문단 크기(약 19px)를 받아 혼자 커 보였다(실제 AI 점검 2026-10-22) */
+.kit .kitWeek li p { margin: 0; white-space: pre-wrap; font-size: 14px; line-height: 1.7; color: var(--app-text, #191f28); }
 
 /* 업종 준비 체크리스트 — 예전엔 '- [ ]·■'가 섞인 글 덩어리를 접힌 입력칸에 넣어 읽기 어려웠다 */
 .checklist { display:grid; gap:4px; margin:20px 0; padding:16px; border:1px solid var(--app-line); border-radius:12px; background:var(--app-surface); }

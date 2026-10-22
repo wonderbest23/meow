@@ -1,5 +1,5 @@
 import { getServerSupabase } from "../persistence";
-import { consultProfileSchema, type ConsultProfile } from "./domain";
+import { CONSULT_FAILED_REPLY, consultProfileSchema, type ConsultProfile } from "./domain";
 
 /*
  * 상담 보관.
@@ -41,6 +41,22 @@ function normalizeTurns(value: unknown): ConsultTurn[] {
   return out.slice(-MAX_MESSAGES);
 }
 
+/**
+ * 답을 받지 못한 차례(손님 질문 + 실패 표시) 중 같은 질문을 지운다 — '다시 보내기'로 다시 물어 답을 받으면
+ * 같은 질문이 두 번 남지 않게. 다른 질문의 실패 차례는 그대로 둔다.
+ */
+export function withoutFailedTurn(messages: ConsultTurn[], question: string | undefined): ConsultTurn[] {
+  if (!question) return messages;
+  const out: ConsultTurn[] = [];
+  for (let i = 0; i < messages.length; i++) {
+    const turn = messages[i];
+    const next = messages[i + 1];
+    if (turn.role === "user" && turn.text === question && next?.role === "assistant" && next.text === CONSULT_FAILED_REPLY) { i++; continue; }
+    out.push(turn);
+  }
+  return out;
+}
+
 export async function loadConsultSession(ownerHash: string): Promise<ConsultSession> {
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -71,10 +87,10 @@ export async function loadConsultSession(ownerHash: string): Promise<ConsultSess
  */
 export async function saveConsultTurn(
   ownerHash: string,
-  next: { profile: ConsultProfile; appended: ConsultTurn[]; turnsToday: number },
+  next: { profile: ConsultProfile; appended: ConsultTurn[]; turnsToday: number; replaceFailed?: string },
 ): Promise<void> {
   const prev = await loadConsultSession(ownerHash);
-  const messages = [...prev.messages, ...next.appended].slice(-MAX_MESSAGES);
+  const messages = [...withoutFailedTurn(prev.messages, next.replaceFailed), ...next.appended].slice(-MAX_MESSAGES);
   const supabase = getServerSupabase();
   if (!supabase) {
     memory.set(ownerHash, { profile: next.profile, messages, turnsToday: next.turnsToday, day: today() });
