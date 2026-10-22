@@ -81,6 +81,14 @@ a { color: inherit; text-decoration: none; }
 .site-header .header-login { display: flex; align-items: center; min-height: 39px; padding: 0 8px; color: inherit; font-size: 15px; font-weight: 600; text-decoration: none; white-space: nowrap; }
 .site-header .header-signup { display: flex; align-items: center; min-height: 39px; padding: 0 16px; border-radius: 10px; background: #1f2125; color: #fff; font-size: 15px; font-weight: 700; text-decoration: none; white-space: nowrap; }
 .site-header.light .header-signup { background: #fff; color: #111; }
+/* 아주 좁은 화면(폭 300px 아래·글자 200% 확대) — '회원가입' 단추가 화면 밖으로 잘렸다. 여백부터 줄이고,
+   더 좁으면 '로그인'만 남긴다(로그인 창 안에서 회원가입으로 넘어갈 수 있다) */
+@media (max-width: 300px) {
+  .site-header .header-actions { gap: 4px; min-width: 0; }
+  .site-header .header-login { padding: 0 4px; font-size: 14px; }
+  .site-header .header-signup { padding: 0 10px; font-size: 14px; }
+}
+@media (max-width: 240px) { .site-header .header-actions .header-signup { display: none; } }
 .login-status { color: inherit; opacity: .7; font-size: 12px; font-weight: 700; }
 .openai-settings-trigger { width: 39px; height: 39px; padding: 0; border: 1px solid #cccae3; border-radius: 8px; background: white; color: #333d4b; display: grid; place-items: center; position: relative; cursor: pointer; }
 .openai-settings-trigger.light { border-color: #ffffff3d; background: #ffffff12; color: white; }
@@ -5007,7 +5015,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .delivery-ai-disclosure.fallback strong, .delivery-ai-disclosure.mixed strong { color: #5f4819; }
 
 .admin-support-header > div:last-child { display: flex; align-items: center; gap: 8px; }
-.admin-support-header > div:last-child > button, .admin-settings-link { height: 36px; padding: 0 11px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.admin-support-header > div:last-child > button, .admin-settings-link { height: 36px; padding: 0 11px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .admin-support-header > div:last-child svg, .admin-settings-link svg { width: 14px; }
 .admin-legal-page { min-height: 100vh; padding-bottom: 80px; background: #f6f5ff; }
 .admin-legal-page > header { height: var(--topbar-h); flex: none; padding: 0 max(24px, calc((100vw - 1040px) / 2)); border-bottom: 1px solid #cccae3; background: white; display: flex; align-items: center; justify-content: space-between; }
@@ -5015,35 +5023,35 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .admin-legal-page > header img { height: var(--topbar-logo-h); width: auto; display: block; }
 .admin-legal-page > header span { padding-left: 13px; border-left: 1px solid #cccae3; display: grid; gap: 2px; }
 .admin-legal-page > header strong { font-size: 13px; }
-.admin-legal-page > header small { color: #5f5c7f; font-size: 9px; }
+.admin-legal-page > header small { color: #5f5c7f; font-size: 12px; }
 .admin-legal-page > header nav { display: flex; gap: 5px; }
-.admin-legal-page > header nav a { min-height: 34px; padding: 0 10px; border-radius: 6px; color: #585667; display: flex; align-items: center; font-size: 10px; font-weight: 700; }
+.admin-legal-page > header nav a { min-height: 34px; padding: 0 10px; border-radius: 6px; color: #585667; display: flex; align-items: center; font-size: 12px; font-weight: 700; }
 .admin-legal-page > header nav a.active { background: #dfdef1; color: #3272db; }
 .admin-readiness { width: min(1040px, calc(100% - 48px)); margin: 34px auto 18px; padding: 18px 20px; border: 1px solid; border-radius: 8px; display: flex; gap: 12px; align-items: flex-start; }
 .admin-readiness.ready { border-color: #b0b8c1; background: #eef6ff; color: #3272db; }
 .admin-readiness.blocked { border-color: #e5d6aa; background: #fffbee; color: #75643a; }
 .admin-readiness > svg { width: 22px; flex: 0 0 auto; }
 .admin-readiness strong { font-size: 14px; }
-.admin-readiness p { margin: 5px 0 0; font-size: 11px; line-height: 1.55; }
+.admin-readiness p { margin: 5px 0 0; font-size: 12px; line-height: 1.55; }
 .admin-legal-page > form { width: min(1040px, calc(100% - 48px)); margin: auto; display: grid; gap: 14px; }
 .admin-legal-page > form > section { border: 1px solid #cccae3; border-radius: 8px; background: white; overflow: hidden; }
 .admin-legal-page > form > section > header { padding: 20px 22px 15px; border-bottom: 1px solid #dfdef1; }
 .admin-legal-page > form > section > header h2 { margin: 0; font-size: 16px; }
-.admin-legal-page > form > section > header p { margin: 5px 0 0; color: #5f5c7f; font-size: 10px; }
+.admin-legal-page > form > section > header p { margin: 5px 0 0; color: #5f5c7f; font-size: 12px; }
 .admin-legal-page > form > section > div { padding: 20px 22px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
 .admin-legal-page > form label { min-width: 0; display: grid; gap: 7px; }
 .admin-legal-page > form label.wide { grid-column: 1 / -1; }
-.admin-legal-page > form label > span { color: #585667; font-size: 10px; font-weight: 800; }
+.admin-legal-page > form label > span { color: #585667; font-size: 12px; font-weight: 800; }
 .admin-legal-page input:not([type="checkbox"]), .admin-legal-page textarea { width: 100%; padding: 10px 11px; border: 1px solid #b0b8c1; border-radius: 6px; outline: 0; resize: vertical; font: inherit; font-size: 12px; line-height: 1.55; }
 .admin-legal-page input:not([type="checkbox"]) { min-height: 44px; }
 .admin-legal-page input:focus, .admin-legal-page textarea:focus { border-color: #3272db; box-shadow: 0 0 0 3px #3272db12; }
-.admin-legal-page label small { color: #5f5c7f; font-size: 9px; }
+.admin-legal-page label small { color: #5f5c7f; font-size: 12px; }
 .admin-commerce-status { grid-column: 1 / -1; margin: 0; padding: 0; border: 0; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-.admin-commerce-status legend { margin-bottom: 7px; color: #585667; font-size: 10px; font-weight: 800; }
-.admin-commerce-status button { min-height: 44px; padding: 0 10px; border: 1px solid #b0b8c1; border-radius: 6px; background: white; color: #585667; font-size: 11px; font-weight: 800; cursor: pointer; }
+.admin-commerce-status legend { margin-bottom: 7px; color: #585667; font-size: 12px; font-weight: 800; }
+.admin-commerce-status button { min-height: 44px; padding: 0 10px; border: 1px solid #b0b8c1; border-radius: 6px; background: white; color: #585667; font-size: 12px; font-weight: 800; cursor: pointer; }
 .admin-commerce-status button.active { border-color: #3272db; background: #eef6ff; color: #3272db; box-shadow: inset 0 0 0 1px #3272db; }
 .admin-commerce-links { grid-column: 1 / -1; padding: 12px !important; border-radius: 6px; background: #f6f5ff; display: flex !important; align-items: center; justify-content: space-between; gap: 12px; }
-.admin-commerce-links a { color: #3272db; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 800; }
+.admin-commerce-links a { color: #3272db; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; }
 .admin-commerce-links svg { width: 12px; }
 .admin-legal-confirm > label { min-height: 64px; padding: 14px 22px; border-bottom: 1px solid #dfdef1; display: flex !important; grid-template-columns: none; align-items: flex-start; gap: 10px !important; }
 .admin-legal-confirm > label input { width: 18px; height: 18px; flex: 0 0 auto; accent-color: #3272db; }
@@ -5053,10 +5061,10 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .admin-legal-confirm a svg { width: 11px; }
 .admin-legal-actions { padding: 16px 18px; border: 1px solid #cccae3; border-radius: 8px; background: white; display: flex; align-items: center; justify-content: space-between; gap: 20px; position: sticky; bottom: 12px; box-shadow: 0 15px 40px #0d0a2c12; }
 .admin-legal-actions > div { display: grid; gap: 4px; }
-.admin-legal-actions p { margin: 0; color: #3272db; font-size: 11px; }
-.admin-legal-actions a { color: #585667; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; }
+.admin-legal-actions p { margin: 0; color: #3272db; font-size: 12px; }
+.admin-legal-actions a { color: #585667; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 700; }
 .admin-legal-actions a svg { width: 11px; }
-.admin-legal-actions > button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 7px; background: #0d0a2c; color: white; display: flex; align-items: center; gap: 7px; font-size: 11px; font-weight: 800; cursor: pointer; }
+.admin-legal-actions > button { min-height: 44px; padding: 0 16px; border: 0; border-radius: 7px; background: #0d0a2c; color: white; display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .admin-legal-actions > button svg { width: 15px; }
 
 @media (max-width: 640px) {
@@ -5339,13 +5347,13 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .admin-login-page h1 { margin: 18px 0 7px; font-size: 24px; }
 .admin-login-page form > p { margin: 0 0 24px; color: #5f5c7f; font-size: 12px; }
 .admin-login-page label { display: grid; gap: 7px; text-align: left; }
-.admin-login-page label span { font-size: 11px; font-weight: 800; }
+.admin-login-page label span { font-size: 12px; font-weight: 800; }
 .admin-login-page input { height: 48px; padding: 0 12px; border: 1px solid #b0b8c1; border-radius: 7px; font: inherit; outline: none; }
 .admin-login-page input:focus { border-color: #3272db; box-shadow: 0 0 0 3px #3272db14; }
 .admin-login-page button { width: 100%; height: 48px; margin-top: 12px; border: 0; border-radius: 7px; background: #0d0a2c; color: white; font-weight: 800; cursor: pointer; }
 .admin-login-page button:disabled { opacity: .45; }
-.admin-login-page a { margin-top: 18px; color: #585667; display: inline-block; font-size: 11px; }
-.admin-login-error, .admin-config-warning { margin: 10px 0 !important; padding: 9px; border-radius: 6px; background: #fff0f1; color: #a12e3e !important; font-size: 10px !important; }
+.admin-login-page a { margin-top: 18px; color: #585667; display: inline-block; font-size: 12px; }
+.admin-login-error, .admin-config-warning { margin: 10px 0 !important; padding: 9px; border-radius: 6px; background: #fff0f1; color: #a12e3e !important; font-size: 12px !important; }
 .admin-support-page { min-height: 100vh; background: #f6f5ff; color: #0d0a2c; }
 .admin-support-header { height: var(--topbar-h); flex: none; padding: 0 24px; border-bottom: 1px solid #cccae3; background: white; display: flex; align-items: center; justify-content: space-between; }
 .admin-support-header > div { display: flex; align-items: center; gap: 10px; }
@@ -5353,42 +5361,42 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .admin-support-header > div > span svg { width: 19px; }
 .admin-support-header > div > div { display: grid; gap: 2px; }
 .admin-support-header strong { font-size: 15px; }
-.admin-support-header small { color: #5f5c7f; font-size: 9px; }
-.admin-support-header > button { height: 36px; padding: 0 11px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 700; cursor: pointer; }
+.admin-support-header small { color: #5f5c7f; font-size: 12px; }
+.admin-support-header > button { height: 36px; padding: 0 11px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; cursor: pointer; }
 .admin-support-header > button svg { width: 14px; }
 .admin-support-workspace { height: calc(100dvh - 100px); display: grid; grid-template-columns: 330px minmax(0, 1fr); }
 .admin-conversation-list { min-width: 0; border-right: 1px solid #cccae3; background: white; display: flex; flex-direction: column; }
 .admin-conversation-list > header { min-height: 60px; padding: 0 17px; border-bottom: 1px solid #dfdef1; display: flex; align-items: center; justify-content: space-between; }
 .admin-conversation-list > header strong { font-size: 13px; }
-.admin-conversation-list > header em { color: #5f5c7f; font-size: 9px; font-style: normal; }
+.admin-conversation-list > header em { color: #5f5c7f; font-size: 12px; font-style: normal; }
 .admin-conversation-list > div { flex: 1; min-height: 0; overflow-y: auto; }
 .admin-conversation-list > div > button { width: 100%; min-height: 94px; padding: 15px 17px; border: 0; border-bottom: 1px solid #dfdef1; background: white; color: inherit; display: grid; grid-template-columns: 1fr auto; gap: 7px 10px; text-align: left; cursor: pointer; position: relative; }
 .admin-conversation-list > div > button:hover, .admin-conversation-list > div > button.selected { background: #f6f5ff; }
 .admin-conversation-list > div > button.selected:before { content: ""; width: 3px; position: absolute; inset: 0 auto 0 0; background: #3272db; }
 .admin-conversation-list button > span { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
 .admin-conversation-list button strong { font-size: 12px; }
-.admin-conversation-list button time { color: #5f5c7f; font-size: 8px; }
-.admin-conversation-list button p { min-width: 0; margin: 0; overflow: hidden; color: #585667; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.admin-conversation-list button small { padding: 4px 6px; border-radius: 4px; background: #eef6ff; color: #3272db; font-size: 8px; }
+.admin-conversation-list button time { color: #5f5c7f; font-size: 12px; }
+.admin-conversation-list button p { min-width: 0; margin: 0; overflow: hidden; color: #585667; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-conversation-list button small { padding: 4px 6px; border-radius: 4px; background: #eef6ff; color: #3272db; font-size: 12px; }
 .admin-conversation-list button small.closed { background: #f6f5ff; color: #5f5c7f; }
-.admin-conversation-list button > em { min-width: 18px; height: 18px; position: absolute; right: 12px; top: 11px; border-radius: 9px; background: #b3a8ff; color: #0d0a2c; display: grid; place-items: center; font-size: 8px; font-style: normal; font-weight: 900; }
-.admin-empty-list { margin: 0; padding: 80px 28px; color: #5f5c7f; display: grid; justify-items: center; gap: 10px; text-align: center; font-size: 11px; }
+.admin-conversation-list button > em { min-width: 18px; height: 18px; position: absolute; right: 12px; top: 11px; border-radius: 9px; background: #b3a8ff; color: #0d0a2c; display: grid; place-items: center; font-size: 12px; font-style: normal; font-weight: 900; }
+.admin-empty-list { margin: 0; padding: 80px 28px; color: #5f5c7f; display: grid; justify-items: center; gap: 10px; text-align: center; font-size: 12px; }
 .admin-empty-list svg { width: 22px; }
 .admin-chat-room { min-width: 0; background: #f6f5ff; display: flex; flex-direction: column; }
 .admin-chat-room > header { min-height: 60px; padding: 0 20px; border-bottom: 1px solid #cccae3; background: white; display: flex; align-items: center; justify-content: space-between; }
 .admin-chat-room > header > div { display: grid; gap: 3px; }
 .admin-chat-room > header strong { font-size: 13px; }
-.admin-chat-room > header small { color: #5f5c7f; font-size: 8px; }
-.admin-chat-room > header button { height: 34px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; cursor: pointer; }
+.admin-chat-room > header small { color: #5f5c7f; font-size: 12px; }
+.admin-chat-room > header button { height: 34px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .admin-chat-room > header button svg { width: 14px; }
 .admin-chat-messages { flex: 1; min-height: 0; padding: 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
 .admin-chat-messages article { max-width: min(560px, 74%); display: grid; gap: 4px; }
 .admin-chat-messages article.admin { align-self: flex-end; justify-items: end; }
-.admin-chat-messages article span, .admin-chat-messages article time { padding: 0 3px; color: #5f5c7f; font-size: 8px; }
+.admin-chat-messages article span, .admin-chat-messages article time { padding: 0 3px; color: #5f5c7f; font-size: 12px; }
 .admin-chat-messages article p { margin: 0; padding: 11px 13px; border: 1px solid #cccae3; border-radius: 8px; background: white; font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 .admin-chat-messages article.admin p { border-color: #0d0a2c; background: #0d0a2c; color: white; }
 .admin-chat-room > form { padding: 13px 20px 17px; border-top: 1px solid #cccae3; background: white; }
-.admin-chat-room > form > p { margin: 0 0 7px; color: #b23845; font-size: 10px; }
+.admin-chat-room > form > p { margin: 0 0 7px; color: #b23845; font-size: 12px; }
 .admin-chat-room > form > div { display: grid; grid-template-columns: 1fr 44px; gap: 8px; align-items: end; }
 .admin-chat-room textarea { min-height: 62px; max-height: 130px; padding: 11px 12px; border: 1px solid #b0b8c1; border-radius: 7px; resize: vertical; font: inherit; font-size: 12px; outline: none; }
 .admin-chat-room textarea:focus { border-color: #3272db; box-shadow: 0 0 0 3px #3272db14; }
@@ -5398,7 +5406,7 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .admin-chat-placeholder { margin: auto; color: #5f5c7f; display: grid; justify-items: center; gap: 7px; text-align: center; }
 .admin-chat-placeholder svg { width: 28px; }
 .admin-chat-placeholder strong { color: #333d4b; font-size: 14px; }
-.admin-chat-placeholder p { margin: 0; font-size: 10px; }
+.admin-chat-placeholder p { margin: 0; font-size: 12px; }
 
 @media (max-width: 640px) {
   .support-chat-widget { right: 16px; bottom: 24px; left: auto; }
@@ -7159,7 +7167,8 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 
 .landing-block-page { width: 100%; overflow: clip; background: #fff; color: #191f28; }
 .landing-block-page :where(h1, h2, h3, p, figure) { margin-top: 0; letter-spacing: 0; }
-.landing-block-page :where(h1, h2, h3, p) { word-break: keep-all; overflow-wrap: break-word; }
+/* anywhere — 띄어쓰기 없는 긴 이름(예: 가게 이름)도 화면 폭 안에서 줄을 바꾼다. break-word 는 최소 폭 계산에 안 들어가 칸을 밀어낸다. */
+.landing-block-page :where(h1, h2, h3, p) { word-break: keep-all; overflow-wrap: anywhere; }
 .landing-block { width: min(1180px, calc(100% - 48px)); margin: 0 auto; padding: 112px 0; }
 .landing-block > header > span, .landing-block > div > span, .landing-block-hero-copy > span, .landing-block-cta > span { color: var(--landing-accent, #1b64da); font-size: 12px; font-weight: 900; }
 /*
@@ -7642,66 +7651,66 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
 
 .admin-payment-page { min-height: 100dvh; padding-bottom: 50px; background: #f6f5ff; color: #0d0a2c; }
 .admin-payment-page .admin-support-header > div:last-child > a,
-.admin-payment-page .admin-support-header > div:last-child > button { min-height: 36px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 800; cursor: pointer; }
+.admin-payment-page .admin-support-header > div:last-child > button { min-height: 36px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .admin-payment-page .admin-support-header > div:last-child > a.active { border-color: #b0b8c1; background: #eef6ff; color: #3272db; }
 .admin-payment-summary { width: min(1180px, calc(100% - 40px)); min-height: 74px; margin: 24px auto 14px; padding: 14px 16px; border: 1px solid #cccae3; border-radius: 8px; background: white; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 20px; }
 .admin-payment-summary > div { display: flex; align-items: center; gap: 9px; }
 .admin-payment-summary > div > svg { width: 20px; color: #3272db; }
 .admin-payment-summary > div span { display: grid; }
-.admin-payment-summary small { color: #5f5c7f; font-size: 9px; }
+.admin-payment-summary small { color: #5f5c7f; font-size: 12px; }
 .admin-payment-summary strong { font-size: 16px; }
-.admin-payment-summary > p { margin: 0; color: #585667; font-size: 10px; line-height: 1.55; }
-.admin-payment-summary > button { min-height: 36px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; cursor: pointer; }
+.admin-payment-summary > p { margin: 0; color: #585667; font-size: 12px; line-height: 1.55; }
+.admin-payment-summary > button { min-height: 36px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; background: white; color: #585667; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .admin-payment-summary > button svg { width: 14px; }
 .admin-payment-workspace { width: min(1180px, calc(100% - 40px)); min-height: 620px; margin: auto; border: 1px solid #cccae3; border-radius: 8px; background: white; overflow: hidden; display: grid; grid-template-columns: 340px minmax(0, 1fr); }
 .admin-payment-orders { min-width: 0; border-right: 1px solid #cccae3; background: #f9f9ff; }
 .admin-payment-orders > header { height: 54px; padding: 0 15px; border-bottom: 1px solid #cccae3; display: flex; align-items: center; justify-content: space-between; }
 .admin-payment-orders > header strong { font-size: 12px; }
-.admin-payment-orders > header span { color: #5f5c7f; font-size: 9px; }
+.admin-payment-orders > header span { color: #5f5c7f; font-size: 12px; }
 .admin-payment-orders > div { max-height: 650px; overflow-y: auto; }
-.admin-payment-orders > div > p { padding: 30px 16px; color: #5f5c7f; font-size: 10px; text-align: center; }
+.admin-payment-orders > div > p { padding: 30px 16px; color: #5f5c7f; font-size: 12px; text-align: center; }
 .admin-payment-orders > div > button { width: 100%; min-height: 92px; padding: 13px 15px; border: 0; border-bottom: 1px solid #dfdef1; background: transparent; text-align: left; cursor: pointer; }
 .admin-payment-orders > div > button:hover { background: white; }
 .admin-payment-orders > div > button.selected { background: #eef6ff; box-shadow: inset 3px 0 #3272db; }
 .admin-payment-orders button > span { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.admin-payment-orders button strong { min-width: 0; overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
-.admin-payment-orders button em, .admin-payment-detail .status-awaiting_deposit, .admin-payment-detail .status-deposit_reported, .admin-payment-detail .status-done, .admin-payment-detail .status-refunded, .admin-payment-detail .status-canceled { padding: 4px 6px; border-radius: 5px; background: #dfdef1; color: #585667; font-size: 8px; font-style: normal; white-space: nowrap; }
+.admin-payment-orders button strong { min-width: 0; overflow: hidden; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-payment-orders button em, .admin-payment-detail .status-awaiting_deposit, .admin-payment-detail .status-deposit_reported, .admin-payment-detail .status-done, .admin-payment-detail .status-refunded, .admin-payment-detail .status-canceled { padding: 4px 6px; border-radius: 5px; background: #dfdef1; color: #585667; font-size: 12px; font-style: normal; white-space: nowrap; }
 .admin-payment-orders button em.status-deposit_reported, .admin-payment-detail .status-deposit_reported { background: #fff1c9; color: #755812; }
 .admin-payment-orders button em.status-done, .admin-payment-detail .status-done { background: #efeefb; color: #3272db; }
 .admin-payment-orders button em.status-refunded, .admin-payment-detail .status-refunded { background: #f2e8e8; color: #844b4b; }
-.admin-payment-orders button p { margin: 7px 0 4px; overflow: hidden; color: #585667; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-.admin-payment-orders button small { color: #5f5c7f; font-size: 8px; }
+.admin-payment-orders button p { margin: 7px 0 4px; overflow: hidden; color: #585667; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.admin-payment-orders button small { color: #5f5c7f; font-size: 12px; }
 .admin-payment-detail { min-width: 0; padding: 26px 30px 30px; }
 .admin-payment-detail > header { padding-bottom: 18px; border-bottom: 1px solid #dfdef1; display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
 .admin-payment-detail > header > div { min-width: 0; }
-.admin-payment-detail > header small { color: #5f5c7f; font-size: 8px; overflow-wrap: anywhere; }
+.admin-payment-detail > header small { color: #5f5c7f; font-size: 12px; overflow-wrap: anywhere; }
 .admin-payment-detail h1 { margin: 5px 0 9px; font-size: 22px; overflow-wrap: anywhere; }
-.admin-payment-detail > header > a { min-height: 36px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; color: #333d4b; display: flex; align-items: center; gap: 5px; font-size: 9px; font-weight: 800; white-space: nowrap; }
+.admin-payment-detail > header > a { min-height: 36px; padding: 0 10px; border: 1px solid #cccae3; border-radius: 6px; color: #333d4b; display: flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 800; white-space: nowrap; }
 .admin-payment-detail > header > a svg { width: 13px; }
 .admin-payment-amount { padding: 23px 0 20px; display: grid; gap: 4px; }
-.admin-payment-amount small { color: #5f5c7f; font-size: 9px; }
+.admin-payment-amount small { color: #5f5c7f; font-size: 12px; }
 .admin-payment-amount strong { color: #3272db; font-size: 31px; }
-.admin-payment-amount span { color: #585667; font-size: 10px; }
+.admin-payment-amount span { color: #585667; font-size: 12px; }
 .admin-payment-detail > dl { margin: 0; border-top: 1px solid #dfdef1; display: grid; grid-template-columns: 1fr 1fr; }
 .admin-payment-detail > dl > div { min-width: 0; min-height: 52px; padding: 9px 0; border-bottom: 1px solid #dfdef1; display: grid; align-content: center; gap: 3px; }
 .admin-payment-detail > dl > div:nth-child(odd) { padding-right: 18px; }
-.admin-payment-detail dt { color: #5f5c7f; font-size: 8px; }
-.admin-payment-detail dd { margin: 0; color: #333d4b; font-size: 10px; font-weight: 750; overflow-wrap: anywhere; }
+.admin-payment-detail dt { color: #5f5c7f; font-size: 12px; }
+.admin-payment-detail dd { margin: 0; color: #333d4b; font-size: 12px; font-weight: 750; overflow-wrap: anywhere; }
 .admin-cash-receipt { margin-top: 18px; padding: 15px; border: 1px solid #cccae3; border-radius: 7px; background: #f9f9ff; }
 .admin-cash-receipt > header { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; align-items: center; gap: 9px; }
 .admin-cash-receipt svg { width: 18px; color: #3272db; }
 .admin-cash-receipt header > div { display: grid; gap: 2px; }
-.admin-cash-receipt strong { font-size: 10px; }
-.admin-cash-receipt small { color: #5f5c7f; font-size: 8px; }
-.admin-cash-receipt em { color: #585667; font-size: 8px; font-style: normal; font-weight: 800; }
+.admin-cash-receipt strong { font-size: 12px; }
+.admin-cash-receipt small { color: #5f5c7f; font-size: 12px; }
+.admin-cash-receipt em { color: #585667; font-size: 12px; font-style: normal; font-weight: 800; }
 .admin-cash-receipt > p { margin: 11px 0 0 29px; color: #333d4b; font-size: 12px; font-weight: 800; }
 .admin-payment-note { margin-top: 18px; display: grid; gap: 6px; }
-.admin-payment-note > span { color: #585667; font-size: 9px; font-weight: 800; }
-.admin-payment-note textarea { width: 100%; padding: 10px 11px; border: 1px solid #cccae3; border-radius: 6px; resize: vertical; font: inherit; font-size: 10px; line-height: 1.5; outline: none; }
+.admin-payment-note > span { color: #585667; font-size: 12px; font-weight: 800; }
+.admin-payment-note textarea { width: 100%; padding: 10px 11px; border: 1px solid #cccae3; border-radius: 6px; resize: vertical; font: inherit; font-size: 12px; line-height: 1.5; outline: none; }
 .admin-payment-note textarea:focus { border-color: #3272db; box-shadow: 0 0 0 3px #3272db12; }
-.admin-payment-message { margin: 12px 0 0; padding: 10px 11px; border-radius: 6px; background: #eef6ff; color: #3272db; font-size: 10px; }
+.admin-payment-message { margin: 12px 0 0; padding: 10px 11px; border-radius: 6px; background: #eef6ff; color: #3272db; font-size: 12px; }
 .admin-payment-detail > footer { margin-top: 18px; display: flex; flex-wrap: wrap; gap: 8px; }
-.admin-payment-detail > footer button { min-height: 42px; padding: 0 12px; border: 1px solid #cccae3; border-radius: 7px; background: white; color: #333d4b; display: flex; align-items: center; gap: 6px; font-size: 10px; font-weight: 800; cursor: pointer; }
+.admin-payment-detail > footer button { min-height: 42px; padding: 0 12px; border: 1px solid #cccae3; border-radius: 7px; background: white; color: #333d4b; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; cursor: pointer; }
 .admin-payment-detail > footer button.confirm { border-color: #3272db; background: #3272db; color: white; }
 .admin-payment-detail > footer button.refund { border-color: #d6bcbc; color: #8c4141; }
 .admin-payment-detail > footer button:disabled { opacity: .5; cursor: wait; }
@@ -7736,7 +7745,7 @@ body:has(.checkout-page) .support-chat-widget:not(.open) { bottom: 86px; }
   .admin-payment-page .admin-support-header > div:first-child > div { display: none; }
   .admin-payment-page .admin-support-header > div:last-child { flex-wrap: wrap; justify-content: flex-end; gap: 5px; }
   .admin-payment-page .admin-support-header > div:last-child > a,
-  .admin-payment-page .admin-support-header > div:last-child > button { min-height: 34px; padding: 0 8px; font-size: 8px; }
+  .admin-payment-page .admin-support-header > div:last-child > button { min-height: 34px; padding: 0 8px; font-size: 12px; }
   .admin-payment-summary { width: calc(100% - 24px); margin-top: 12px; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; }
   .admin-payment-summary > p { grid-column: 1 / -1; grid-row: 2; }
   .admin-payment-workspace { width: calc(100% - 24px); min-height: 0; grid-template-columns: 1fr; }
@@ -10093,7 +10102,7 @@ body {
 .admin-dash-badge.failed, .admin-dash-badge.expired { background: #fdecef; color: #c33d55; }
 .admin-dash-empty { margin: 6px 0 2px; font-size: 12.5px; color: #8b95a1; }
 @media (max-width: 640px) {
-  .admin-dash-columns { grid-template-columns: 1fr; }
+  .admin-dash-columns { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* ── 히어로 시인성 다듬기 — 라벨은 칩으로, 본문은 짧게 + 굵기 강약 ── */
@@ -14603,6 +14612,10 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 .bw-editor-right button svg { width: 16px; height: 16px; }
 .bw-editor-right .bw-editor-save { background: #3182f6; border-color: #3182f6; color: #fff; font-weight: 700; }
 .bw-editor-error { margin: 0; padding: 8px 16px; background: #fff1f1; color: #b91c1c; font-size: 13px; }
+.bw-editor-error p { margin: 0; }
+.bw-editor-error-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.bw-editor-error-actions a, .bw-editor-error-actions button { display: inline-flex; align-items: center; min-height: 36px; padding: 0 14px; border: 1px solid #f0b4b4; border-radius: 8px; background: #fff; color: #b91c1c; font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.bw-editor-error-actions a:first-child, .bw-editor-error-actions button:first-child { border-color: #b91c1c; background: #b91c1c; color: #fff; }
 .bw-editor-conflicts, .bw-editor-recovery { z-index: 94; position: fixed; inset: 80px 16px auto auto; width: min(420px, calc(100vw - 32px)); max-height: 60dvh; overflow: auto; padding: 18px; background: #fff; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 8px 32px #17223224; color: #172232; font-size: 14px; }
 .bw-editor-conflicts > div { padding-block: 14px; border-bottom: 1px solid #e5e7eb; }
 .bw-editor-conflicts p, .bw-editor-recovery p { margin: 0 0 12px; overflow-wrap: anywhere; }
@@ -14686,7 +14699,8 @@ body:has(.plan-ui) .support-chat-widget:not(.open) { bottom: 20px; right: 18px; 
 /* 홈 예시 띠 — 킷 페이지 첫 화면 스크린샷 */
 .home-peek-track li .peek-shot { display: block; width: 100%; aspect-ratio: 640 / 559; object-fit: cover; object-position: top; background: #f4f7fa; }
 /* 한글은 띄어쓰기 단위로 줄을 바꾼다 — 킷의 break-word 는 글자 중간을 자른다("같|이") */
-.bw-canvas [style], .bw-mobile [style] { word-break: keep-all !important; overflow-wrap: break-word; }
+/* 띄어쓰기 없는 긴 상호(행복한소금빵베이커리…)는 화면을 넘겼다 — 넘칠 때만 글자 사이에서 바꾼다(anywhere, 점검 2026-10-21) */
+.bw-canvas [style], .bw-mobile [style] { word-break: keep-all !important; overflow-wrap: anywhere; }
 
 /* 도메인 상품 결제 유도 */
 .landing-domain-connector .domain-buy-cta { display: flex; justify-content: center; align-items: center; min-height: 48px; margin: 12px 0; border-radius: 8px; background: #3272db; color: #fff; font-weight: 700; font-size: 14px; text-decoration: none; }
@@ -17011,6 +17025,10 @@ body:has([aria-label="홈페이지 전체 화면"]) .support-chat-widget { displ
 /* 편집기 머리 줄 이름 — 되돌리기·다시·닫기 이름은 PC 에서는 아이콘만(널리 아는 모양), 폰에서만 글자 */
 .bw-editor-right .bw-bar-mobile { display: none; }
 @media (max-width: 640px) { .bw-editor-right .bw-bar-mobile { display: block; } }
+/* 아주 좁은 폰·글자 확대(300px 아래) — 일곱 칸이 좁아 '되돌리기'와 '다시' 글자가 옆 칸까지 넘쳐 붙었다.
+   칸 안에서 말줄임하고, 누구나 아는 되돌리기·다시·닫기 모양은 아이콘만 남긴다(이름은 title 로 남는다) */
+@media (max-width: 640px) { .bw-editor-right .bw-bar-label { max-width: 100%; overflow: hidden; text-overflow: ellipsis; } }
+@media (max-width: 300px) { .bw-editor-right .bw-bar-mobile { display: none; } }
 /* 떠 있는 줄 — 위에 자리가 없으면 고른 것 아래에 */
 .bw-eltool.below { transform: translate(-50%, 10px); }
 /* 추천 사진 판 */
@@ -17242,3 +17260,171 @@ body:has([data-pay-bar]) .support-chat-widget { bottom: calc(150px + env(safe-ar
 /* 앱(아이폰) 위 시계 줄·아래 홈 막대 자리는 페이지 바탕색을 따라 칠해진다(AppDelegate). 바탕이 연보라라 흰 머리줄·흰 화면과 띠처럼 어긋났다 —
    앱 화면 틀(BusinessAppChrome)이 있는 화면은 바탕을 흰색으로 */
 html:has([data-app-surface]) { background: #fff; }
+
+/* ── 홈페이지 편집 점검(2026-10-21) ─────────────────────────────────────────── */
+
+/* 떠 있는 줄 — 휴대폰(359·304px)에서 484px 줄이 옆으로 잘려 '구역 통째로 숨기기'·이동 화살표가 안 보였다. 두 줄로 접는다 */
+@media (max-width: 640px) {
+  .bw-eltool { flex-wrap: wrap; justify-content: center; overflow: visible; width: max-content; max-width: calc(100vw - 16px); border-radius: 20px; row-gap: 2px; }
+}
+
+/* 누르는 자리 40px — 모양은 거의 그대로, 높이·폭만 넓힌다 */
+.bw-eltool button { min-height: 40px; }
+.bw-inspector > header button { min-width: 40px; min-height: 40px; }
+.bw-btn-head button { min-width: 40px; min-height: 40px; }
+.bw-sec-arrows button { width: 40px; height: 40px; }
+.hk-themes button, .hk-tools .hk-themes button { min-height: 40px; }
+.hk-tool-row > button, .hk-tool-btn { min-height: 40px; }
+.hk-url-btn { min-height: 40px; }
+
+/* 저장 안내 — 화면 아래 안내 줄 오른쪽에(예전엔 떠 있어 안내 줄을 덮었다) */
+.bw-editor-hint { flex-wrap: wrap; }
+.bw-editor-hint .bw-editor-saved { position: static; margin-left: auto; padding: 4px 10px; pointer-events: none; }
+
+/* 편집 화면 — 공개 화면에서는 숨는 마무리 띠의 문의 단추(바로 아래 문의 양식이 같은 일을 한다)에 표시 */
+.bw-editor-canvas[data-lead-form]:not(.previewing) [data-bw-closing]:last-child [data-bw-btn] { position: relative; opacity: .55; outline: 2px dashed currentColor; outline-offset: 4px; }
+.bw-editor-canvas[data-lead-form]:not(.previewing) [data-bw-closing]:last-child [data-bw-btn]::after {
+  content: "공개 화면에는 안 보여요 · 아래 문의 양식이 대신해요"; position: absolute; left: 50%; top: calc(100% + 10px); transform: translateX(-50%);
+  padding: 3px 8px; border-radius: 6px; background: #161c2d; color: #fff; font-size: 11.5px; font-weight: 600; line-height: 1.4; white-space: nowrap; pointer-events: none;
+}
+/* 미리보기는 손님 화면과 같게 — 그 단추를 감춘다 */
+.bw-editor-canvas.previewing[data-lead-form] [data-bw-closing]:last-child [data-bw-btn] { display: none !important; }
+
+/* 공개 직후 팝업의 '주소 바꾸기' — 작은 글자 단추 */
+.bw-save-popup .bw-save-url .bw-save-address { justify-self: start; height: auto; min-height: 40px; padding: 0 4px; border: 0; background: none; color: #3272db; font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+
+/* 무료 주소 끝부분 — 칸 바로 아래 안내·오류 */
+.hk-grid .hk-slug-field { grid-column: 1 / -1; display: grid; gap: 5px; }
+.hk-grid .hk-slug-field > label { font-size: 12.5px; color: #5e5e72; }
+.hk-grid .slug-input[data-invalid] { border-color: #e5484d; box-shadow: 0 0 0 2px rgba(229, 72, 77, .14); }
+.hk-slug-hint { color: #6b6f7d; font-size: 12.5px; line-height: 1.5; }
+.hk-slug-error { color: #c0282d; font-size: 13px; font-weight: 600; line-height: 1.5; }
+
+/* 공개 멈추기 — 다른 주소 단추와 같은 모양, 글자만 옅은 빨강 */
+.hk-url-btn.hk-url-stop { color: #b42318; }
+
+/* 공개 홈페이지 맨 아래 — 11·10px 글씨가 휴대폰에서 읽기 힘들었다. 방침 전문 여닫기도 누르기 쉽게 */
+.public-landing .public-privacy-policy summary { display: flex; align-items: center; min-height: 40px; font-size: 13px; }
+.public-landing .public-landing-footer p { font-size: 13px; }
+.public-landing .public-landing-footer small { font-size: 12px; }
+.public-landing .public-landing-footer .public-kit-credit a { display: inline-block; padding: 10px 0; }
+
+/* 본문 바로가기 — 평소엔 화면 밖, Tab 으로 닿으면 왼쪽 위에 보인다(app/plan/SkipLink.tsx) */
+.plan-skip-link { position: fixed; top: 8px; left: 8px; z-index: 1000; padding: 10px 16px; border-radius: 8px; background: #191f28; color: #fff; font-size: 14px; font-weight: 700; text-decoration: none; transform: translateY(-150%); transition: transform .15s; }
+.plan-skip-link:focus, .plan-skip-link:focus-visible { transform: none; outline: 3px solid #9ec5ff; outline-offset: 2px; }
+.plan-content-anchor { display: block; width: 0; height: 0; overflow: hidden; outline: none; }
+
+/* ── 관리자 화면 점검(2026-10-22) ─────────────────────────────────────────── */
+
+/* 대시보드 — 휴대폰에서 긴 문의 줄이 칸을 밀어 화면이 955px 로 넓어졌다. 줄은 눌러서 그 문의·주문으로 간다 */
+.admin-dash-columns > .admin-dash-panel { min-width: 0; }
+.admin-dash-panel li { padding: 0; }
+.admin-dash-panel li > a { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; padding: 10px 4px; border-radius: 8px; color: inherit; text-decoration: none; }
+.admin-dash-panel li > a:hover { background: var(--app-hover, #f6f5ff); }
+.admin-dash-panel li p strong { margin-right: 4px; font-weight: 700; }
+.admin-dash-panel li p small { color: #8b95a1; font-size: 12px; }
+.admin-dash-cards small, .admin-dash-cards em, .admin-dash-panel li time, .admin-dash-badge, .admin-dash-panel li em { font-size: 12px; }
+
+/* 1:1 상담 — 진행 중/완료 칸, 안 읽음 표시는 시간 옆에(시간 위에 겹쳤다), 손님 계정과 그 손님 결제·환불로 가는 길 */
+.admin-conversation-list > header { gap: 8px; }
+.admin-support-tabs { display: flex; gap: 4px; padding: 3px; border-radius: 8px; background: var(--app-raised, #f6f5ff); }
+.admin-support-tabs button { min-height: 34px !important; padding: 0 12px; border: 0; border-radius: 6px; background: transparent; color: var(--app-muted, #5f5c7f); font-size: 13px; font-weight: 700; cursor: pointer; }
+.admin-support-tabs button[aria-selected="true"] { background: var(--app-surface, #fff); color: var(--app-text, #0d0a2c); box-shadow: 0 1px 3px #0d0a2c14; }
+.admin-conversation-list button > span { gap: 8px; }
+.admin-conversation-list button > span > strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.admin-conversation-meta { flex: none; display: inline-flex; align-items: center; gap: 6px; }
+.admin-conversation-meta em { min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: #3272db; color: #fff; display: inline-grid; place-items: center; font-size: 12px; font-style: normal; font-weight: 800; }
+.admin-conversation-list button small, .admin-conversation-list > header em { font-size: 12px; }
+.admin-chat-room > header { gap: 12px; padding-top: 10px; padding-bottom: 10px; }
+.admin-chat-room > header > div { min-width: 0; }
+.admin-chat-room > header strong { font-size: 15px; overflow-wrap: anywhere; }
+.admin-chat-room > header small { font-size: 12px; line-height: 1.5; }
+.admin-chat-room > header button { flex: none; font-size: 13px; }
+.admin-chat-customer-links { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.admin-chat-customer-links a { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px; border: 1px solid var(--app-line, #cccae3); border-radius: 6px; color: #3272db; font-size: 13px; font-weight: 700; text-decoration: none; }
+.admin-chat-customer-links svg { width: 14px; }
+.admin-chat-messages article p { font-size: 14px; }
+.admin-chat-messages article span, .admin-chat-messages article time { font-size: 12px; }
+.admin-chat-room textarea { font-size: 15px; }
+.admin-chat-room form button { font-size: 13px; }
+.admin-chat-placeholder strong { font-size: 15px; }
+.admin-chat-placeholder p { font-size: 13px; }
+.admin-empty-list { font-size: 13px; }
+/* 문의가 하나도 없으면 오른쪽 '문의를 골라 주세요' 칸을 그리지 않는다 */
+.admin-support-workspace[data-empty] { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 640px) {
+  .admin-support-workspace[data-empty] { height: auto; grid-template-rows: auto; }
+  .admin-conversation-list > div > button { width: 260px; min-width: 260px; }
+}
+
+/* 결제 주문·환불 요청 — 보기 칸·찾기, 읽을 수 있는 글자(8~10px 였다), 되돌릴 수 없는 단추는 빨갛게 */
+.admin-payment-tabs { width: min(1180px, calc(100% - 40px)); margin: 20px auto 0; display: flex; gap: 6px; }
+.admin-payment-tabs button { min-height: 40px; padding: 0 16px; border: 1px solid var(--app-line, #cccae3); border-radius: 999px; background: var(--app-surface, #fff); color: var(--app-body, #585667); font-size: 14px; font-weight: 700; cursor: pointer; }
+.admin-payment-tabs button[aria-selected="true"] { border-color: #3272db; background: #eef6ff; color: #3272db; }
+.admin-payment-tabs + .admin-payment-summary { margin-top: 12px; }
+.admin-payment-summary:has(.admin-payment-search) { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) auto; }
+.admin-payment-search { min-width: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.admin-payment-search label { flex: 1 1 220px; min-width: 0; display: flex; align-items: center; gap: 6px; padding: 0 10px; border: 1px solid var(--app-line-strong, #b0b8c1); border-radius: 6px; background: var(--app-surface, #fff); }
+.admin-payment-search label svg { width: 16px; flex: none; color: var(--app-muted, #5f5c7f); }
+.admin-payment-search input { flex: 1; min-width: 0; min-height: 40px; border: 0 !important; outline: none; background: transparent; font-size: 15px; }
+.admin-payment-search button, .admin-payment-filter button { min-height: 40px; padding: 0 14px; border: 1px solid var(--app-line, #cccae3); border-radius: 6px; background: var(--app-surface, #fff); color: var(--app-body, #585667); font-size: 13px; font-weight: 700; cursor: pointer; }
+.admin-payment-filter { width: min(1180px, calc(100% - 40px)); margin: 0 auto 12px; display: flex; gap: 6px; }
+.admin-payment-filter input { flex: 1; min-width: 0; min-height: 42px; padding: 0 12px; border: 1px solid var(--app-line-strong, #b0b8c1); border-radius: 6px; font-size: 15px; }
+.admin-payment-summary > p { font-size: 13px; }
+.admin-payment-summary > button { font-size: 13px; }
+.admin-payment-orders > header strong { font-size: 14px; }
+.admin-payment-orders > header span, .admin-payment-orders > div > p { font-size: 13px; }
+.admin-payment-orders button strong { font-size: 14px; }
+.admin-payment-orders button p { font-size: 13px; }
+.admin-payment-orders button small, .admin-payment-orders button em { font-size: 12px; }
+.admin-payment-detail > header small, .admin-payment-detail dt, .admin-payment-amount small { font-size: 12px; }
+.admin-payment-detail > header span[class^="status-"] { display: inline-block; padding: 4px 8px; border-radius: 5px; background: #dfdef1; color: #585667; font-size: 12px; }
+.admin-payment-detail dd { font-size: 14px; }
+.admin-payment-detail dd a { color: #3272db; }
+.admin-payment-amount span { font-size: 14px; }
+.admin-payment-note > span { font-size: 13px; }
+.admin-payment-note textarea { font-size: 15px; }
+.admin-payment-note input:not([type="checkbox"]) { width: 100%; min-height: 42px; padding: 0 11px; border: 1px solid #cccae3; border-radius: 6px; font-size: 15px; }
+.admin-cash-receipt strong { font-size: 14px; }
+.admin-cash-receipt small, .admin-cash-receipt em { font-size: 12px; }
+.admin-cash-receipt > p { font-size: 13px; line-height: 1.55; }
+.admin-payment-message, .admin-payment-hint { font-size: 13px; }
+.admin-payment-hint { margin: 8px 0 0; color: var(--app-muted, #5f5c7f); }
+.admin-payment-detail > footer button { font-size: 14px; }
+.admin-payment-detail > footer .admin-payment-link { min-height: 42px; padding: 0 12px; border: 1px solid #cccae3; border-radius: 7px; color: #3272db; display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 800; text-decoration: none; }
+.admin-payment-detail > footer .admin-payment-link svg { width: 15px; }
+.admin-payment-detail > footer button.refund { border-color: #e8b4b4; color: #b42318; }
+.admin-payment-detail > footer button.confirm.danger { border-color: #d92d20; background: #d92d20; color: #fff; }
+/* 목록이 비면 오른쪽 '골라 주세요' 칸을 그리지 않는다 */
+.admin-payment-workspace[data-empty] { min-height: 0; grid-template-columns: minmax(0, 1fr); }
+.admin-payment-workspace[data-empty] .admin-payment-orders { border-right: 0; }
+@media (max-width: 640px) {
+  .admin-payment-tabs, .admin-payment-filter { width: calc(100% - 24px); }
+  .admin-payment-tabs button { flex: 1; padding: 0 8px; }
+  .admin-payment-summary .admin-payment-search { grid-column: 1 / -1; }
+  .admin-payment-detail > footer .admin-payment-link { justify-content: center; }
+}
+
+/* 운영 설정·로그인 — 칸 이름·입력 글자가 10~12px 였다 */
+.admin-legal-page > form label > span, .admin-commerce-status legend { font-size: 13px; }
+.admin-legal-page input:not([type="checkbox"]), .admin-legal-page textarea { font-size: 15px; }
+.admin-legal-page > form > section > header p, .admin-readiness p { font-size: 13px; }
+.admin-legal-confirm > label strong { font-size: 14px; }
+.admin-commerce-status button, .admin-commerce-links a, .admin-legal-actions > button { font-size: 14px; }
+.admin-legal-actions p, .admin-legal-actions a { font-size: 13px; }
+.admin-login-page form > p { font-size: 14px; }
+.admin-login-page label span { font-size: 13px; }
+.admin-login-page a { font-size: 13px; }
+.admin-login-error, .admin-config-warning { font-size: 13px !important; }
+
+/* 홈 편집 껍데기 — 섹션·글 조각 줄이 제목 글자와 머리 메뉴를 덮었다(2026-10-22 점검).
+   평소엔 이름표만 작게 두고, 마우스를 대거나 눌렀을 때만 단추를 펼친다 */
+.sc-box-bar { opacity: .85; }
+.sc-box-bar > button:not(.sc-box-name), .sc-box-bar > .sc-box-fixed { display: none; }
+.sc-box-bar:hover, .sc-box-bar:focus-within { opacity: 1; z-index: 3; }
+.sc-box-bar:hover > button, .sc-box-bar:focus-within > button, .sc-box-bar:hover > .sc-box-fixed, .sc-box-bar:focus-within > .sc-box-fixed { display: inline-flex; align-items: center; }
+.sc-field-bar { opacity: .8; }
+.sc-field-bar > button:not(.sc-field-name) { display: none; }
+.sc-field-bar:hover, .sc-field-bar:focus-within { opacity: 1; z-index: 3; }
+.sc-field-bar:hover > button, .sc-field-bar:focus-within > button { display: inline-flex; align-items: center; }
+.sc-field-bar > button.sc-field-name { padding: 0 8px; color: #e3b3bd; font-weight: 800; }

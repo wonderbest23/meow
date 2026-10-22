@@ -63,7 +63,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
   return <div className={`${styles.pane} plan-ui`}>
     <header className={styles.brand}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/today-startup-mark-2026.png" alt="" width="52" height="52" />
+      <img src="/today-startup-mark-2026-128.webp" alt="" width="52" height="52" />
       <strong>오늘창업</strong>
     </header>
 
@@ -84,7 +84,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
 
     {session?.authenticated && plans !== undefined && <section className={styles.card} aria-label="내 사업 진행">
       <div className={styles.cardHead}><b>내 사업 진행</b><Link href="/plan" onClick={onClose}>전체 보기</Link></div>
-      {plans === null ? <p className={styles.muted}>불러오고 있어요…</p>
+      {plans === null ? <p className={styles.muted} role="status">불러오고 있어요…</p>
         : plans.length === 0 ? <div className={styles.emptyPlans}><p className={styles.muted}>아직 시작한 사업이 없어요.</p><Link href="/plan/chat?new=1" onClick={onClose}>새 대화로 시작하기</Link></div>
         : <ul className={styles.plans}>{plans.map(plan => {
           const state = businessHubState(plan);

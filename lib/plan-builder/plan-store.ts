@@ -3,7 +3,8 @@
 
 import { chaptersForType, sectionKey, type PlanSectionStatus } from "./blueprint";
 import { SAMPLE_DOCS, isSampleId } from "./samples";
-import { filterQuarantinedCache, readQuarantineNotice } from "./quarantine-cache";
+import { filterQuarantinedCache, parseQuarantineNotice, quarantineChangesCache, readQuarantineNotice } from "./quarantine-cache";
+import { fetchWithTimeout } from "../client/user-error";
 
 export function isSamplePlan(planId: string | null | undefined): boolean {
   return isSampleId(planId ?? null);
@@ -42,7 +43,8 @@ function applyQuarantineNotice(value: unknown) {
   if (!q) return;
   const key = stateCacheKey();
   const encoded = JSON.stringify(q);
-  if (localStorage.getItem(`${key}:quarantine`) === encoded) return;
+  const previousRaw = localStorage.getItem(`${key}:quarantine`);
+  if (previousRaw === encoded) return;
   const raw = localStorage.getItem(key);
   // Preserve the original local draft before hiding it; never clear an owner's storage.
   if (raw && (q.profileBlocked || q.blockedPlanIds.length)) {
@@ -50,7 +52,8 @@ function applyQuarantineNotice(value: unknown) {
     if (!localStorage.getItem(backup)) localStorage.setItem(backup, raw);
   }
   localStorage.setItem(`${key}:quarantine`, encoded);
-  invalidateMountedOwner();
+  // 가리는 대상이 그대로면(첫 방문의 빈 안내 포함) 화면을 다시 불러오지 않는다 — PlanShell 이 이 신호에 새로고침한다
+  if (quarantineChangesCache(parseQuarantineNotice(previousRaw), q)) invalidateMountedOwner();
 }
 
 export interface StoredSection {
@@ -818,6 +821,8 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
   window.addEventListener("pagehide", flush);
   window.addEventListener("storage", (event: StorageEvent) => {
     if (event.key === `${stateCacheKey()}:quarantine` && event.oldValue !== event.newValue) {
+      // 다른 탭이 빈 안내를 처음 적은 것처럼 가리는 대상이 같으면 이 탭은 그대로 둔다
+      if (!quarantineChangesCache(parseQuarantineNotice(event.oldValue), parseQuarantineNotice(event.newValue))) return;
       invalidateMountedOwner();
       cancelPendingSync();
       ownerVerified = false;
@@ -914,7 +919,8 @@ export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
   if (typeof window === "undefined") return loadState();
   const request = ++hydrationRequest;
   try {
-    const res = await fetch("/api/plan/state", { cache: "no-store" });
+    // 서버가 답을 주지 않으면 20초 뒤 끊는다 — 실패로 보고 기기 저장본을 보여 준다(화면이 '불러오고 있어요'에 멈추지 않게)
+    const res = await fetchWithTimeout("/api/plan/state", { cache: "no-store" });
     if (res.ok) {
       const payload = (await res.json()) as Record<string, unknown>;
       if (request !== hydrationRequest) return loadState();

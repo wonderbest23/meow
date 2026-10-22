@@ -121,7 +121,8 @@ export function HomeCopyChrome({ hidden, selected }: { hidden: string[]; selecte
             style={{ top: field.top, left: field.left, width: field.width, height: field.height }}
           >
             <div className="sc-field-bar">
-              <span>{field.label}</span>
+              {/* 평소엔 이름표만 — 줄 전체가 바로 위 제목 글자를 덮었다(2026-10-22 점검). 누르거나 마우스를 대면 단추가 펼쳐진다 */}
+              <button type="button" className="sc-field-name" onClick={() => send({ type: "sc-field", id: field.id })}>{field.label}</button>
               <button type="button" onClick={() => send({ type: "sc-field", id: field.id })}>고치기</button>
               {off
                 ? <button type="button" className="restore" onClick={() => send({ type: "sc-show", id: field.id })}>되살리기</button>

@@ -1,7 +1,7 @@
 .ring { position: relative; isolation: isolate; display: block; width: min(580px, 100%); padding: 2px; border: 0; border-radius: 36px; background: #1a2740; cursor: pointer; overflow: hidden; box-shadow: 0 4px 22px #3182f626; transition: transform .3s, box-shadow .3s; }
 .ring::before { content: ""; position: absolute; z-index: -1; width: 160%; aspect-ratio: 1; top: 50%; left: 50%; background: conic-gradient(from 0deg, #1e3a6b, #3182f6, #67bcea, #6f6bd6, #1e3a6b, #3182f6, #1e3a6b); animation: ringOrbit 5s linear infinite; }
-.ring .inner { --send-width: 64px; display: grid; grid-template-columns: var(--send-width) minmax(0, 1fr) var(--send-width); align-items: center; gap: 4px; padding: 8px; min-height: 62px; border-radius: 34px; background: #0f1013; color: #e6e7eb; font-size: 16px; font-weight: 600; letter-spacing: 0; }
-.ring .send { grid-column: 3; grid-row: 1; display: grid; place-items: center; width: var(--send-width); height: 42px; border-radius: 24px; background: var(--home-btn-bg, #ededee); color: var(--home-btn-fg, #0a0a0b); font-size: 14px; font-weight: 650; white-space: nowrap; transition: background .2s; }
+.ring .inner { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 4px; padding: 8px; min-height: 62px; border-radius: 34px; background: #0f1013; color: #e6e7eb; font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.ring .send { grid-column: 2; grid-row: 1; display: grid; place-items: center; min-width: 64px; padding: 0 18px; height: 42px; border-radius: 24px; background: var(--home-btn-bg, #ededee); color: var(--home-btn-fg, #0a0a0b); font-size: 14px; font-weight: 650; white-space: nowrap; transition: background .2s; }
 .ring:hover .send { background: var(--home-btn-bg-hover, #fff); }
 .ring .send svg { display: block !important; width: 18px; height: 18px; color: currentColor; }
 .spinner { animation: sending 1s linear infinite; }
@@ -9,12 +9,15 @@
 .ring:hover { transform: translateY(-3px); box-shadow: 0 10px 34px #3182f640; }.ring:active { transform: scale(.985); }.ring:focus-visible { outline: 3px solid #3182f6; outline-offset: 5px; }
 @keyframes ringOrbit { from { transform: translate(-50%,-50%) rotate(0); } to { transform: translate(-50%,-50%) rotate(360deg); } }
 @keyframes sending { to { transform: rotate(360deg); } }
-@media(max-width:600px) { .ring .inner { --send-width: 52px; min-height: 56px; padding: 6px; font-size: 14px; }.ring .send { height: 40px; font-size: 13px; } }
-@media(max-width:360px) { .ring .inner { --send-width: 46px; font-size: 13px; }.ring .send { font-size: 12px; } }
+@media(max-width:600px) { .ring .inner { min-height: 56px; padding: 6px; font-size: 14px; }.ring .send { height: 40px; padding: 0 14px; font-size: 13px; } }
+@media(max-width:360px) { .ring .inner { font-size: 13px; }.ring .send { padding: 0 12px; font-size: 12px; } }
 @media(prefers-reduced-motion:reduce) { .ring::before, .spinner { animation: none; }.ring { transition: none; }.ring:hover { transform: none; } }
 .entry { width: min(580px, 100%); margin: 0 auto; min-width: 0; }
 :global(.simple-home.product-home .home-hero-actions) .entry button.ring { border-radius: 36px !important; padding: 2px !important; }
-.ring .prompt { grid-column: 2; grid-row: 1; min-width: 0; display: flex; align-items: center; justify-content: center; min-height: 24px; text-align: center; }
+.ring .prompt { grid-column: 1; grid-row: 1; min-width: 0; display: flex; align-items: center; justify-content: flex-start; gap: 8px; min-height: 24px; padding-left: 14px; text-align: left; overflow: hidden; }
+/* 입력칸이 아니라 예시 문구임을 알리는 작은 꼬리표 */
+.prompt .example { flex: none; padding: 1px 7px; border: 1px solid #ffffff38; border-radius: 6px; color: #9a9ca5; font-size: 12px; font-weight: 600; line-height: 1.5; }
+@media(max-width:360px) { .ring .prompt { padding-left: 8px; gap: 6px; }.prompt .example { padding: 0 5px; font-size: 11px; } }
 .prompt .typed { position: relative; white-space: nowrap; line-height: 1.5; }
 .typed i { position: absolute; left: calc(100% + 3px); top: 50%; transform: translateY(-50%); width: 2px; height: 1.15em; background: #fff; animation: caretBlink 1s steps(1) infinite; }
 @keyframes caretBlink { 50% { opacity: 0; } }

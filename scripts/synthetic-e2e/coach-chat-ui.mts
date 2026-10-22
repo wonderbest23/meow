@@ -46,7 +46,8 @@ for (const view of viewports) {
         const rows = [...question.querySelectorAll("[role=group], fieldset")].filter(row => [...row.querySelectorAll("button, label")].some(usable));
         const row = rows.find(candidate => ![...candidate.querySelectorAll("button, label")].some(picked));
         const target = row && [...row.querySelectorAll<HTMLElement>("button, label")].find(el => usable(el) && !picked(el));
-        if (!target) { [...question.querySelectorAll<HTMLButtonElement>("button")].find(el => /이대로 보내기|다 골랐어요/.test(el.innerText))?.click(); break; }
+        // 여러 개 고르는 질문은 입력창의 보내기 하나로 보낸다(칩 옆 '다 골랐어요'는 없앴다)
+        if (!target) { document.querySelector<HTMLButtonElement>("footer form button[type=submit]:not(:disabled)")?.click(); break; }
         target.click(); await wait(900);
       }
       await wait(1500); await idle();

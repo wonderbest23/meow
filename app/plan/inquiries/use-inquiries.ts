@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { LandingLeadRecord } from "../../../lib/landing/domain";
+import { fetchWithTimeout } from "../../../lib/client/user-error";
 
 /*
  * 내 문의 — 모든 사업의 홈페이지 문의를 한곳에 모은다(소유자 요청 2026-10-07: 홈페이지 화면 5번 칸 대신
@@ -22,6 +23,8 @@ const overrides = new Map<string, { handledAt: string | null; at: number }>();
 export const INQUIRIES_EVENT = "oneulstart:inquiries-changed";
 const FRESH_MS = 180_000;
 const LOAD_ERROR = "문의를 불러오지 못했어요. 잠시 후 다시 확인해 주세요.";
+const SLOW_ERROR = "불러오기가 늦어지고 있어요. 연결을 확인하고 다시 시도해 주세요.";
+export const AUTH_ERROR = "로그인이 풀렸어요. 다시 로그인하면 이어서 볼 수 있어요.";
 
 function applyOverrides(items: Inquiry[], startedAt: number): Inquiry[] {
   // 목록 요청이 출발한 뒤에 바꾼 것만 얹는다 — 그 전에 바꾼 것은 서버 목록에 이미 들어 있다
@@ -34,7 +37,9 @@ function applyOverrides(items: Inquiry[], startedAt: number): Inquiry[] {
 
 async function fetchAll(): Promise<Loaded> {
   const startedAt = Date.now();
-  const response = await fetch("/api/plan/inquiries", { cache: "no-store" });
+  // 서버가 답을 주지 않으면 20초 뒤 끊는다 — '문의를 불러오고 있어요'가 끝없이 돌지 않게
+  const response = await fetchWithTimeout("/api/plan/inquiries", { cache: "no-store" });
+  if (response.status === 401) throw new Error("INQUIRIES_AUTH_REQUIRED");
   const data = await response.json().catch(() => null) as { items?: Inquiry[] } | null;
   // 실패를 '문의 없음'으로 바꾸지 않는다 — 예전엔 연결이 끊기면 '아직 들어온 문의가 없어요'가 3분 동안 남았다
   if (!response.ok || !Array.isArray(data?.items)) throw new Error("INQUIRIES_LOAD_FAILED");
@@ -70,7 +75,11 @@ export function useInquiries(enabled = true) {
     if (!enabled) return;
     loadInquiries(force)
       .then(value => setState({ items: value.items, error: "" }))
-      .catch(() => setState(current => ({ items: current.items, error: LOAD_ERROR })));
+      .catch((error: unknown) => {
+        const name = error instanceof Error ? error.name : "";
+        const message = error instanceof Error && error.message === "INQUIRIES_AUTH_REQUIRED" ? AUTH_ERROR : name === "TimeoutError" || name === "AbortError" ? SLOW_ERROR : LOAD_ERROR;
+        setState(current => ({ items: current.items, error: message }));
+      });
   }, [enabled]);
   useEffect(() => {
     if (!enabled) return;

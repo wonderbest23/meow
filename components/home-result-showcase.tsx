@@ -62,7 +62,7 @@ function AnimatedGraphic({ name, alt, caption }: { name: "business-plan" | "pres
   }, []);
 
   return <div className={styles.visual} ref={ref} data-graphic={name} role="img" aria-label={alt}>
-    <div className={styles.sampleMeta} aria-hidden="true"><span>{name === "business-plan" ? "PDF · 16 PAGES" : "PPT · 10 SLIDES"}</span><span>새벽커피</span></div>
+    <div className={styles.sampleMeta} aria-hidden="true"><span>{name === "business-plan" ? "PDF · 16쪽" : "PPT · 10장"}</span><span>새벽커피</span></div>
     <div className={styles.graphicEntrance} aria-hidden="true">
       {name === "business-plan" ? <DocumentLayers /> : <PresentationLayers />}
     </div>
@@ -77,15 +77,15 @@ export function HomeResultShowcase() {
     <div className={styles.panels} data-count={PPT_GENERATION_VERIFIED ? 3 : 2}>
       <article className={styles.panel}>
         <AnimatedGraphic name="business-plan" alt="새벽커피 공개 PDF의 실제 표지, 사업 개요와 표, 12개월 손익 추정과 그래프 페이지" />
-        <div className={styles.panelCopy} data-home-copy><span>사업계획서</span><h3>내 사업을 설명하는<br />한 권의 계획</h3><p>사업 소개부터 고객과 비용 운영까지<br />PDF와 수정 가능한 Word로</p><HomeAction href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer">PDF 샘플 열기</HomeAction></div>
+        <div className={styles.panelCopy} data-home-copy><span>사업계획서</span><h3>내 사업을 설명하는<br />한 권의 계획</h3><p>사업 소개부터 고객과 비용 운영까지<br />PDF와 수정 가능한 Word로</p><HomeAction href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer">완성 예시 PDF 열기</HomeAction></div>
       </article>
       {PPT_GENERATION_VERIFIED && <article className={`${styles.panel} ${styles.presentation}`}>
         <AnimatedGraphic name="presentation" alt="새벽커피 공개 PPT의 실제 사업 제안서 표지, 문제 정의, 재무 계획 슬라이드" />
-        <div className={styles.panelCopy} data-home-copy><span>발표자료{!PPT_GENERATION_VERIFIED && <span className={styles.availability}>제공 준비 중</span>}</span><h3>이야기는 짧게<br />핵심은 선명하게</h3><p>{PPT_GENERATION_VERIFIED ? <>정리한 사업계획서를 바탕으로<br />발표용 PPT를 만들어요</> : <>PPT 자동 생성은 준비 중이에요<br />공개 샘플을 먼저 확인해 보세요</>}</p><HomeAction href="/samples/sample_coffee.pptx" download>PPT 샘플 받기</HomeAction></div>
+        <div className={styles.panelCopy} data-home-copy><span>발표자료{!PPT_GENERATION_VERIFIED && <span className={styles.availability}>제공 준비 중</span>}</span><h3>이야기는 짧게<br />핵심은 선명하게</h3><p>{PPT_GENERATION_VERIFIED ? <>정리한 사업계획서를 바탕으로<br />발표용 PPT를 만들어요</> : <>PPT 자동 생성은 준비 중이에요<br />완성 예시를 먼저 확인해 보세요</>}</p><HomeAction href="/samples/sample_coffee.pptx" download>완성 예시 PPT 받기</HomeAction></div>
       </article>}
       <article className={styles.panel}>
         <HomeWorkspaceDemo />
-        <div className={styles.panelCopy} data-home-copy><span>내 사업 관리</span><h3>계획 다음의 일도<br />끊기지 않도록</h3><p>사업안과 문서 대화와 다음 할 일을<br />사업별로 이어가요</p><HomeAction href="/plan">내 사업 열기</HomeAction></div>
+        <div className={styles.panelCopy} data-home-copy><span>내 사업 관리</span><h3>계획 다음의 일도<br />끊기지 않도록</h3><p>사업 요약과 문서, 대화, 다음 할 일을<br />사업마다 한곳에서 이어가요</p><HomeAction href="/plan">내 사업 열기</HomeAction></div>
       </article>
     </div>
   </section>;

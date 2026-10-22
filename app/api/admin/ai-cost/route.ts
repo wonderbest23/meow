@@ -30,9 +30,9 @@ function rangeStart(range: string): string | null {
 }
 
 export async function GET(request: Request) {
-  if (!(await hasAdminSession("support"))) return json({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, 401);
+  if (!(await hasAdminSession("support"))) return json({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요해요." } }, 401);
   const db = getServerSupabase();
-  if (!db) return json({ message: "DB가 연결되어 있지 않습니다." }, 503);
+  if (!db) return json({ message: "DB가 연결되어 있지 않아요." }, 503);
   const url = new URL(request.url);
   const range = url.searchParams.get("range") ?? "7d";
   const fromParam = url.searchParams.get("from"), toParam = url.searchParams.get("to");
@@ -67,5 +67,5 @@ export async function GET(request: Request) {
       return json({ summary: summarizeUsage(rows), rows: rows.length, truncated, from, to, planId, checkedAt: new Date().toISOString(), cacheColumns: columns.includes("cache_read_tokens") });
     }
   }
-  return json({ message: "AI 사용 기록을 읽지 못했습니다. llm_usage 마이그레이션(0020·0023·0029·0037)을 확인해 주세요." }, 503);
+  return json({ message: "AI 사용 기록을 읽지 못했어요. llm_usage 마이그레이션(0020·0023·0029·0037)을 확인해 주세요." }, 503);
 }

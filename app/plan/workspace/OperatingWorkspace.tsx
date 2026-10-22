@@ -5,15 +5,26 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Archive, Download, FileText, Pencil, Plus, Save, X } from "lucide-react";
 import { METRICS, comparePeriods, metricValue, oldInput, periodDays, periodInputSchema, periodLabel, previousPeriod, referenceFor, reportIsCurrent, type OperatingCommand, type OperatingPeriod, type OperatingReport, type OperatingState, type PeriodInput } from "../../../lib/plan-builder/operating-records";
 import styles from "./OperatingWorkspace.module.css";
+import { askConfirm, showNotice } from "../../../components/confirm-dialog";
+import { saveFile, SAVE_UNSUPPORTED_MESSAGE } from "../../../lib/save-file";
 import PlanLoading from "../PlanLoading";
 import OperatingAnalysisPanel, { OperatingAnalysisResult } from "./OperatingAnalysisPanel";
 import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysis-contract";
 import { autoInquiriesValue, type HomepageInquiries } from "../../../lib/plan-builder/operating-homepage";
 
 type Draft = Omit<PeriodInput, "metrics"> & { metrics: Record<typeof METRICS[number]["key"], string> };
+/* 금액 칸은 1,500,000처럼 쉼표를 넣어 보여 주고, 저장할 때 쉼표를 뺀다 */
+const withCommas = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+const metricText = (unit: string, value: number | null | undefined) => value == null ? "" : unit === "원" ? withCommas(String(value)) : String(value);
+/* 날짜·시각은 초 없이 */
+const stamp = (iso: string) => new Date(iso).toLocaleString("ko-KR", { dateStyle: "medium", timeStyle: "short" });
 function draftFor(period?: OperatingPeriod): Draft {
-  const today = new Date().toLocaleDateString("en-CA");
-  return { ...(period ? oldInput(period) : { start: today, end: today, feedback: "", keep: "", change: "", nextAction: "", successCriterion: "" }), metrics: Object.fromEntries(METRICS.map(m => [m.key, period?.metrics[m.key]?.toString() ?? ""])) as Draft["metrics"] };
+  /* 새 기록은 오늘까지 최근 7일 — 예전엔 오늘 하루(오늘~오늘)로 열려 매번 시작일을 고쳐야 했다 */
+  const day = new Date();
+  const today = day.toLocaleDateString("en-CA");
+  day.setDate(day.getDate() - 6);
+  const weekAgo = day.toLocaleDateString("en-CA");
+  return { ...(period ? oldInput(period) : { start: weekAgo, end: today, feedback: "", keep: "", change: "", nextAction: "", successCriterion: "" }), metrics: Object.fromEntries(METRICS.map(m => [m.key, metricText(m.unit, period?.metrics[m.key])])) as Draft["metrics"] };
 }
 function Comparison({ period, baseline }: { period: OperatingPeriod; baseline: OperatingPeriod | null }) {
   return <div className={styles.comparison}>
@@ -41,10 +52,10 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
   const [draft, setDraft] = useState<Draft>(() => draftFor());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  /* input — 입력을 고치면 되는 오류(안내만), conflict — 다른 곳에서 먼저 고친 기록, other — 연결·서버 문제(다시 불러오기) */
+  const [errorKind, setErrorKind] = useState<"input" | "conflict" | "other">("other");
   const [notice, setNotice] = useState("");
   const [reportRequest, setReportRequest] = useState<{ id: string; reference: ReturnType<typeof referenceFor> } | null>(null);
-  const [confirm, setConfirm] = useState<"discard" | "archive" | null>(null);
-  const dialog = useRef<HTMLDialogElement>(null);
   /* 이 기간 홈페이지 문의 수 — 문의 칸이 비었거나 앞서 자동으로 넣은 값이면 채운다 */
   const [homepage, setHomepage] = useState<HomepageInquiries | null>(null);
   const autoInquiries = useRef<string | null>(null);
@@ -61,7 +72,6 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     window.addEventListener("beforeunload", before);
     return () => window.removeEventListener("beforeunload", before);
   }, [dirty, analysisDirty]);
-  useEffect(() => { if (confirm) dialog.current?.showModal(); else dialog.current?.close(); }, [confirm]);
   useEffect(() => {
     setHomepage(null);
     if (!editor || !draft.start || !draft.end || draft.start > draft.end) return;
@@ -88,7 +98,7 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
   }, [homepage]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { alive.current = true; void reload(); return () => { alive.current = false; }; }, [planId]); // eslint-disable-line react-hooks/exhaustive-deps
   async function reload() {
-    setError("");
+    setError(""); setErrorKind("other");
     try {
       const response = await fetch(`/api/plan/operations?planId=${encodeURIComponent(planId)}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
       const data = await response.json();
@@ -108,10 +118,15 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     try {
       const response = await fetch("/api/plan/operations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, command }), signal: AbortSignal.timeout(20000) });
       const data = await response.json();
-      if (!response.ok) throw new Error(apiMessage(data, ""));
+      if (!response.ok) {
+        /* 입력 확인 오류(400·422)는 입력만 고치면 된다 — 예전엔 '서버 기록 다시 확인'과 충돌 안내까지 같이 떠 헷갈렸다 */
+        if ((response.status === 400 || response.status === 422) && alive.current) { setErrorKind("input"); setError(apiMessage(data, "") || "입력 내용을 확인해 주세요."); return false; }
+        setErrorKind(response.status === 409 ? "conflict" : "other");
+        throw new Error(apiMessage(data, ""));
+      }
       if (!alive.current) return false;
       acceptState(data.records);
-      if (command.action === "save") { setSelected(command.id); setEditor(null); setNotice("기간 기록을 서버에 저장했어요"); }
+      if (command.action === "save") { setSelected(command.id); setEditor(null); setNotice("저장했어요"); }
       else { setReportId(command.id); setMode("reports"); setReportRequest(null); setNotice("이 시점의 기록과 개선 계획을 리포트로 보관했어요"); }
       return true;
     } catch (e) { if (alive.current) setError(userErrorMessage(e, "저장 응답을 확인하지 못했어요. 입력은 그대로 남아 있어요. 다시 저장해도 기록이 중복되지 않아요.")); return false; }
@@ -119,26 +134,51 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
   }
   async function save() {
     if (!editor) return;
-    const parsed = periodInputSchema.safeParse({ ...draft, metrics: Object.fromEntries(METRICS.map(m => [m.key, draft.metrics[m.key] === "" ? null : Number(draft.metrics[m.key])])) });
-    if (!parsed.success) { setError(parsed.error.issues[0]?.message || "입력 내용을 확인해 주세요."); return; }
+    const parsed = periodInputSchema.safeParse({ ...draft, metrics: Object.fromEntries(METRICS.map(m => [m.key, draft.metrics[m.key] === "" ? null : Number(draft.metrics[m.key].replaceAll(",", ""))])) });
+    if (!parsed.success) { setErrorKind("input"); setError(parsed.error.issues[0]?.message || "입력 내용을 확인해 주세요."); return; }
     await run({ action: "save", id: editor.id, expectedRevision: editor.revision, input: parsed.data });
   }
   function requestArchive() {
     if (!period) return;
     const reference = referenceFor(period, baseline);
-    if (!reportRequest || JSON.stringify(reportRequest.reference) !== JSON.stringify(reference)) setReportRequest({ id: crypto.randomUUID(), reference });
-    setConfirm("archive");
+    const request = reportRequest && JSON.stringify(reportRequest.reference) === JSON.stringify(reference) ? reportRequest : { id: crypto.randomUUID(), reference };
+    if (request !== reportRequest) setReportRequest(request);
+    void askConfirm({ title: "지금 기록으로 리포트를 보관할까요?", message: "이번 기간과 이전 기간의 수치, 개선 행동이 지금 내용 그대로 남아요. 나중에 기록을 고쳐도 보관한 리포트는 바뀌지 않아요.", cancelLabel: "돌아가기", confirmLabel: "보관하기" })
+      .then(ok => { if (ok) void run({ action: "report", ...request }); });
+  }
+  /* 저장하지 않은 수정 버리기 — 다른 확인창과 같은 모양으로 */
+  function closeEditor() {
+    if (!dirty) { setEditor(null); return; }
+    void askConfirm({ title: "수정을 취소할까요?", message: "저장하지 않은 수정은 사라져요. 마지막으로 저장한 기록은 그대로 남아요.", cancelLabel: "계속 작성", confirmLabel: "수정 취소" })
+      .then(ok => { if (ok) setEditor(null); });
+  }
+  /*
+   * 리포트 내려받기 — 앱(아이폰) 안에서는 <a download>가 아무 일도 하지 않아 공유 창(파일에 저장)으로 건넨다(lib/save-file.ts)
+   */
+  const [downloading, setDownloading] = useState(false);
+  async function downloadReport(target: OperatingReport) {
+    if (downloading) return;
+    setDownloading(true); setNotice("");
+    try {
+      const response = await fetch(`/api/plan/operations?planId=${encodeURIComponent(planId)}&reportId=${encodeURIComponent(target.id)}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
+      if (!response.ok) throw new Error(apiMessage(await response.json().catch(() => null), "리포트를 받지 못했어요. 잠시 후 다시 시도해 주세요."));
+      const blob = await response.blob();
+      const name = `${target.businessTitle || "운영"} 개선 리포트 ${target.period.start}.md`.replace(/[\\/:*?"<>|]+/g, " ");
+      const result = await saveFile(new Blob([blob], { type: "text/markdown;charset=utf-8" }), name);
+      if (result === "unsupported") await showNotice(SAVE_UNSUPPORTED_MESSAGE, { title: "파일 받기" });
+    } catch (e) { void showNotice(userErrorMessage(e, "리포트를 받지 못했어요. 잠시 후 다시 시도해 주세요."), { title: "파일 받기" }); }
+    finally { setDownloading(false); }
   }
   return <div className={styles.root}>
     <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{state ? <p>운영 기록 {state.periods.length}개 <span aria-hidden="true">·</span> 개선 리포트 {state.reports.length}개</p> : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{state && !editor && mode === "periods" && <button className={styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
     <div className={styles.tabs} role="group" aria-label="운영 기록 보기"><button aria-pressed={mode === "periods"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("periods")}>기간별 실적</button><button aria-pressed={mode === "reports"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("reports")}>리포트 보관함</button></div>
-    {error && <div role="alert" className={styles.error}><p>{error}</p><button type="button" disabled={busy} onClick={() => void reload()}>서버 기록 다시 확인</button>{editor && <p>입력 중인 내용은 유지됩니다. 충돌한 기록은 취소 후 다시 열어 수정해 주세요.</p>}</div>}
+    {error && <div role="alert" className={styles.error}><p>{error}</p>{errorKind !== "input" && <><button type="button" disabled={busy} onClick={() => void reload()}>기록 다시 불러오기</button>{editor && <p>{errorKind === "conflict" ? "다른 곳에서 먼저 고친 기록이 있어요. 입력 중인 내용은 그대로 있으니 복사해 두고, 취소한 뒤 다시 열어 고쳐 주세요." : "입력 중인 내용은 그대로 있어요."}</p>}</>}</div>}
     {notice && <p role="status" className={styles.success}>{notice}</p>}
     {!state && !error && <PlanLoading note="운영 기록을 불러오고 있어요" />}
     {editor && <form className={styles.editor} onSubmit={event => { event.preventDefault(); void save(); }}>
-      <div className={styles.editorHeading}><h3>{editor.revision === null ? "새 기간 기록" : "기간 기록 수정"}</h3><button type="button" aria-label="기간 편집 닫기" title="기간 편집 닫기" disabled={busy} onClick={() => dirty ? setConfirm("discard") : setEditor(null)}><X size={20} /></button></div>
+      <div className={styles.editorHeading}><h3>{editor.revision === null ? "새 기간 기록" : "기간 기록 수정"}</h3><button type="button" aria-label="기간 편집 닫기" title="기간 편집 닫기" disabled={busy} onClick={closeEditor}><X size={20} /></button></div>
       <fieldset disabled={busy}><legend>기록 기간</legend><div className={styles.twoColumns}><label>시작일<input type="date" required value={draft.start} onChange={e => setDraft({ ...draft, start: e.target.value })} /></label><label>종료일<input type="date" required min={draft.start} value={draft.end} onChange={e => setDraft({ ...draft, end: e.target.value })} /></label></div></fieldset>
-      <fieldset disabled={busy}><legend>실제 실적</legend><p className={styles.note}>알 수 없는 값은 비워 두세요. 발생하지 않았다면 0을 입력하세요.</p><div className={styles.twoColumns}>{METRICS.map(m => <label key={m.key}>{m.label} ({m.unit})<input type="number" inputMode="numeric" min={0} step={1} max={m.unit === "원" ? 1_000_000_000_000 : 10_000_000} value={draft.metrics[m.key]} onChange={e => setDraft({ ...draft, metrics: { ...draft.metrics, [m.key]: e.target.value } })} /></label>)}</div>
+      <fieldset disabled={busy}><legend>실제 실적</legend><p className={styles.note}>알 수 없는 값은 비워 두세요. 발생하지 않았다면 0을 입력하세요.</p><div className={styles.twoColumns}>{METRICS.map(m => <label key={m.key}>{m.label} ({m.unit})<input type="text" inputMode="numeric" autoComplete="off" maxLength={m.unit === "원" ? 17 : 8} value={draft.metrics[m.key]} onChange={e => { const digits = e.target.value.replace(/[^\d]/g, "").replace(/^0+(?=\d)/, ""); setDraft({ ...draft, metrics: { ...draft.metrics, [m.key]: m.unit === "원" ? withCommas(digits) : digits } }); }} /></label>)}</div>
         {homepage?.linked && <p className={styles.note} role="status">
           홈페이지로 들어온 문의 {homepage.inquiries.toLocaleString("ko-KR")}건(이 기간){draft.metrics.inquiries === String(homepage.inquiries) ? " — 문의 칸에 넣어 두었어요. 전화·방문 문의가 더 있으면 더해서 고쳐 주세요." : ""}
           {draft.metrics.inquiries !== String(homepage.inquiries) && <> <button type="button" className={styles.inlineButton} onClick={() => { autoInquiries.current = String(homepage.inquiries); setDraft({ ...draft, metrics: { ...draft.metrics, inquiries: String(homepage.inquiries) } }); }}>{homepage.inquiries}건으로 넣기</button></>}
@@ -147,11 +187,11 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
       <fieldset disabled={busy}><legend>돌아보기와 다음 행동</legend>{([
         ["feedback", "고객 반응", 3000], ["keep", "유지할 점", 1500], ["change", "바꿀 점", 1500], ["nextAction", "다음 개선 행동", 1500], ["successCriterion", "확인 기준", 1000],
       ] as const).map(([key, label, max]) => <label key={key}>{label}<textarea value={draft[key]} maxLength={max} rows={key === "feedback" ? 3 : 2} onChange={e => setDraft({ ...draft, [key]: e.target.value })} /></label>)}</fieldset>
-      <div className={styles.actions}><button type="submit" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</button><button type="button" disabled={busy} onClick={() => dirty ? setConfirm("discard") : setEditor(null)}>취소</button></div>
+      <div className={styles.actions}><button type="submit" className={styles.primary} disabled={busy}><Save size={18} />{busy ? "저장 중" : "기록 저장"}</button><button type="button" disabled={busy} onClick={closeEditor}>취소</button></div>
     </form>}
     {state && !editor && mode === "periods" && (period ? <>
       <div className={styles.selectRow}><label>기록 기간<select value={selected} disabled={busy || analysisDirty} onChange={e => { setSelected(e.target.value); setNotice(""); }}>{state.periods.map(p => <option key={p.id} value={p.id}>{periodLabel(p)}</option>)}</select></label><button disabled={busy || analysisDirty} onClick={() => edit(period)}><Pencil size={17} />수정</button></div>
-      <p className={styles.meta}>{periodDays(period)}일 기록 · 기록 버전 {period.revision}</p>
+      <p className={styles.meta}>{periodDays(period)}일 기록 · 마지막 저장 {stamp(period.updatedAt)}</p>
       <Comparison period={period} baseline={baseline} /><PeriodNotes period={period} />
       <div className={styles.actions}><button className={styles.primary} disabled={busy || analysisDirty || !period.nextAction || !period.successCriterion || state.reports.some(r => r.source === "user-records" && JSON.stringify(referenceFor(r.period, r.baseline)) === JSON.stringify(referenceFor(period, baseline)))} onClick={requestArchive}><Archive size={18} />리포트 보관</button></div>
       {(!period.nextAction || !period.successCriterion) && <p className={styles.note}>다음 개선 행동과 확인 기준을 적으면 리포트로 보관할 수 있어요.</p>}
@@ -159,16 +199,15 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
       {analysisTarget && <OperatingAnalysisPanel key={period.id} planId={planId} period={period} baseline={baseline} records={state} target={analysisTarget} onState={acceptState} onArchive={run} onDirtyChange={setAnalysisDirty} />}
     </> : <div className={styles.empty}><FileText size={30} /><h3>아직 기간 기록이 없어요</h3><p>첫 실적과 고객 반응을 남겨 보세요</p></div>)}
     {state && !editor && mode === "reports" && (report ? <>
-      <label className={styles.reportSelect}>보관한 리포트<select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map((r, i) => <option key={r.id} value={r.id}>{periodLabel(r.period)} · 보관 {state.reports.length - i}</option>)}</select></label>
+      <label className={styles.reportSelect}>보관한 리포트<select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map(r => <option key={r.id} value={r.id}>{periodLabel(r.period)} · {new Date(r.createdAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 보관</option>)}</select></label>
       <article className={styles.report} aria-label="보관된 개선 리포트">
-        <header><h3>{report.businessTitle} 운영 개선 리포트</h3><p>{periodLabel(report.period)} · {periodDays(report.period)}일</p><p className={styles.meta}>{new Date(report.createdAt).toLocaleString("ko-KR")} 보관</p></header>
-        <p className={styles.note}>{report.source === "ai-assisted" ? "사용자 입력과 AI 가설과 선택한 행동을 구분해 보관했어요. 실적이나 원인을 검증한 결과는 아니에요" : "사용자 입력과 기간 비교를 보관한 기록이에요. AI 분석이나 실적 검증 결과는 아니에요."}</p>
+        <header><h3>{report.businessTitle} 운영 개선 리포트</h3><p>{periodLabel(report.period)} · {periodDays(report.period)}일</p><p className={styles.meta}>{stamp(report.createdAt)} 보관</p></header>
+        <p className={styles.note}>{report.source === "ai-assisted" ? "직접 적은 실적, AI가 짐작한 원인, 고른 행동을 나눠 보관했어요. 실적이나 원인을 따로 확인한 결과는 아니에요." : "직접 적은 실적과 기간 비교를 보관한 기록이에요. AI 분석이나 실적을 따로 확인한 결과는 아니에요."}</p>
         {!reportIsCurrent(state, report) && <p className={styles.warning}>보관 이후 원본이나 비교 기간이 바뀌었어요. 이 리포트는 보관 당시 내용을 유지해요.</p>}
         <Comparison period={report.period} baseline={report.baseline} /><PeriodNotes period={report.period} archivedAnalysis={report.source === "ai-assisted"} />
         {report.analysis && <OperatingAnalysisResult analysis={report.analysis} chosenAction={report.chosenAction} />}
-        <a className={styles.download} href={`/api/plan/operations?planId=${encodeURIComponent(planId)}&reportId=${report.id}`} download><Download size={18} />리포트 내려받기 (.md)</a>
+        <button type="button" className={styles.download} disabled={downloading} onClick={() => void downloadReport(report)}><Download size={18} />{downloading ? "준비 중…" : "리포트 내려받기"}</button>
       </article>
     </> : <div className={styles.empty}><Archive size={30} /><h3>보관한 리포트가 없어요</h3><p>기간 기록에서 다음 개선 행동을 정한 뒤 보관하세요</p></div>)}
-    <dialog ref={dialog} className={styles.dialog} onCancel={() => setConfirm(null)}><h3>{confirm === "archive" ? "현재 기록으로 리포트를 보관할까요" : "저장하지 않은 수정을 취소할까요"}</h3><p>{confirm === "archive" ? "이번 기간과 이전 기간의 수치, 개선 행동이 이 시점의 내용으로 남아요. 원본을 수정해도 보관한 리포트는 바뀌지 않아요." : "마지막으로 서버에 저장한 기록은 그대로 남아요."}</p><div className={styles.actions}><button autoFocus onClick={() => setConfirm(null)}>돌아가기</button><button className={styles.primary} onClick={() => { setConfirm(null); if (confirm === "archive" && reportRequest) void run({ action: "report", ...reportRequest }); else setEditor(null); }}>{confirm === "archive" ? "보관하기" : "수정 취소"}</button></div></dialog>
   </div>;
 }

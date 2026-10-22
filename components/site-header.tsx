@@ -18,7 +18,8 @@ import { loadAuthSession } from "../lib/client/auth-session";
 
 /** 로고 그림 파일 — 화면마다 다른 원본을 쓸 수 있다(홈은 검정 화면용 흰 글자) */
 export type SiteLogoAsset = { src: string; width: number; height: number };
-export const DEFAULT_LOGO: SiteLogoAsset = { src: "/today-startup-logo-2026.png", width: 1288, height: 322 };
+/* 화면에는 최대 32px 높이로만 그린다 — 3배 크기(384×96, 13KB) 작은 파일을 쓴다. 큰 원본(.png)은 공유 그림 등 큰 크기가 필요한 곳용 */
+export const DEFAULT_LOGO: SiteLogoAsset = { src: "/today-startup-logo-2026-sm.webp", width: 384, height: 96 };
 
 /** 로고 단추 — 머리말 말고 바닥글에서도 쓴다 */
 export function SiteLogo({ onClick, logo = DEFAULT_LOGO }: { onClick: () => void; logo?: SiteLogoAsset }) {
@@ -29,7 +30,7 @@ export function SiteLogo({ onClick, logo = DEFAULT_LOGO }: { onClick: () => void
   );
 }
 
-/** 머리말 오른쪽 — 로그인했으면 마이페이지 아이콘, 아니면 '로그인 · 회원가입' 두 단추(헷갈리지 않게 글자로) */
+/** 머리말 오른쪽 — 로그인했으면 내 계정 아이콘, 아니면 '로그인 · 회원가입' 두 단추(헷갈리지 않게 글자로) */
 function AccountActions() {
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   useEffect(() => {
@@ -42,7 +43,7 @@ function AccountActions() {
   }, []);
   /* 확인 전에는 비워 둔다 — 로그인 단추가 잠깐 보였다 바뀌지 않게 */
   if (signedIn === null) return null;
-  if (signedIn) return <a className="account-link" href="/account" aria-label="마이페이지" title="마이페이지"><UserRound /></a>;
+  if (signedIn) return <a className="account-link" href="/account" aria-label="내 계정" title="내 계정"><UserRound /></a>;
   /* /account?next= 링크는 로그인 팝업(login-dialog)이 받아 이 화면에서 연다 */
   return <>
     <a className="header-login" href="/account?next=%2Fplan">로그인</a>
@@ -89,7 +90,7 @@ export function SiteHeader({
           <a href="#how">진행 방식</a>
           <a href="#deliverables">결과물</a>
           <a href="#difference">오늘창업의 차이</a>
-          <a href="#price">이용 안내</a>
+          <a href="#price">가격 안내</a>
         </nav>
       ) : null}
       <div className="header-actions">

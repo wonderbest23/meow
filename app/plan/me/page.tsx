@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
 import { businessEntryHref, businessHubState } from "../../../lib/plan-builder/business-hub";
 import type { PaymentHistoryItem } from "../../../lib/payments/plan-orders";
+import { displayOrderName } from "../../../lib/payments/order-display";
 import PlanGate from "../PlanGate";
 import styles from "./PlanMe.module.css";
 import PlanLoading from "../PlanLoading";
@@ -157,7 +158,12 @@ export default function PlanMePage() {
 
   async function deleteAccount() {
     if (deleteBusy) return;
-    if (!await askConfirm({ title: "정말 탈퇴하시겠어요?", message: "작성한 사업과 문서가 모두 삭제되며 되돌릴 수 없어요.", confirmLabel: "탈퇴하기", danger: true })) return;
+    /* 이메일이 다르면 마지막 확인창을 띄우지 않고 바로 알린다 — 예전엔 확인창까지 간 뒤 서버에서 거절됐다 */
+    if (!account?.email || deleteEmail.trim().toLowerCase() !== account.email.toLowerCase()) {
+      setDeleteMessage("로그인한 이메일과 달라요. 위에 보이는 이메일을 그대로 적어 주세요.");
+      return;
+    }
+    if (!await askConfirm({ title: "정말 탈퇴할까요?", message: "작성한 사업과 문서, 공개한 홈페이지가 모두 지워지고 되돌릴 수 없어요.", confirmLabel: "탈퇴하기", danger: true })) return;
     setDeleteBusy(true);
     setDeleteMessage("");
     try {
@@ -278,7 +284,7 @@ export default function PlanMePage() {
                   return (
                   <Fragment key={item.orderId}>
                   <tr>
-                    <td data-label="상품">{item.orderName || "-"}</td>
+                    <td data-label="상품">{displayOrderName(item.orderName) || "-"}</td>
                     <td data-label="금액" className={styles.amount}>{item.amount.toLocaleString("ko-KR")}원</td>
                     <td data-label="상태">
                       <span className={`${styles.status} ${item.status === "done" ? styles.statusDone : BAD_STATUS.has(item.status) ? styles.statusBad : ""}`}>
@@ -304,6 +310,9 @@ export default function PlanMePage() {
                         </>
                       ) : item.status !== "done" ? (
                         <span className={styles.refundNa}>—</span>
+                      ) : item.method === "APPLE_IAP" || item.method === "GOOGLE_IAP" ? (
+                        /* 앱에서 결제한 주문은 스토어가 환불한다 — 여기서 접수하면 처리할 수 없다 */
+                        <small style={{ color: "var(--text-soft, #667085)" }}>{item.method === "APPLE_IAP" ? "App Store에서 환불 신청" : "Google Play에서 환불 신청"}</small>
                       ) : refundsFailed ? (
                         /* 환불 상태를 못 읽었으면 '환불 요청'을 다시 보이지 않는다(이미 접수했을 수 있다) */
                         <small style={{ color: "var(--text-soft, #667085)" }}>환불 상태를 확인하지 못했어요</small>
@@ -323,7 +332,7 @@ export default function PlanMePage() {
                             rows={2}
                             value={refundReason}
                             onChange={(event) => setRefundReason(event.target.value)}
-                            placeholder="환불 사유를 적어주세요 (5자 이상). 문서 생성 시작 후 단순 변심 환불은 제한될 수 있습니다."
+                            placeholder="환불 사유를 적어 주세요(5자 이상). 문서 작성이 시작된 뒤에는 단순 변심 환불이 제한될 수 있어요."
                             maxLength={1000}
                           />
                           <div>
@@ -353,8 +362,8 @@ export default function PlanMePage() {
         {!showDelete ? (
           <>
             <p className={styles.deleteNote}>
-              계정과 작성한 사업·문서가 모두 삭제됩니다. 결제·환불 기록은 법령상 보존 의무가 있어
-              사람과 연결되지 않는 형태로만 남습니다.
+              계정과 작성한 사업·문서가 모두 지워져요. 공개한 홈페이지도 함께 지워져 그 주소로 더는 열리지 않고,
+              연결한 내 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.
             </p>
             <button type="button" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
               탈퇴 진행하기
@@ -369,11 +378,11 @@ export default function PlanMePage() {
               aria-label="탈퇴 확인용 이메일"
               type="email"
               value={deleteEmail}
-              onChange={(event) => setDeleteEmail(event.target.value)}
+              onChange={(event) => { setDeleteEmail(event.target.value); setDeleteMessage(""); }}
               placeholder="이메일 입력"
               autoComplete="off"
             />
-            {deleteMessage && <p className={styles.deleteError}>{deleteMessage}</p>}
+            {deleteMessage && <p className={styles.deleteError} role="alert">{deleteMessage}</p>}
             <div>
               <button
                 type="button"

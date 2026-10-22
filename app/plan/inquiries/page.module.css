@@ -12,11 +12,11 @@
 .rows button:hover { background: #f1f3f7; }
 .rows button[aria-current="true"] { background: #eaf1fd; }
 .rows i, .threadHead i { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #dfe8f8; color: #1d3f72; font-style: normal; font-weight: 700; }
-.rowMain { flex: 1; min-width: 0; display: grid; gap: 2px; }
-.rowTop { display: flex; justify-content: space-between; gap: 8px; }
-.rowTop strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.rowMain { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
+.rowTop { min-width: 0; display: flex; justify-content: space-between; gap: 8px; }
+.rowTop strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
 .rowTop small { flex: none; color: #8a909c; font-size: 12px; }
-.rowBiz { color: #3272db; font-size: 12px; font-weight: 600; }
+.rowBiz { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #3272db; font-size: 12px; font-weight: 600; }
 .rowText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #5d6270; font-size: 13px; }
 .dot { flex: none; align-self: center; width: 9px; height: 9px; border-radius: 50%; background: #e5484d; }
 .empty, .placeholder { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; color: #6b7280; text-align: center; }
@@ -25,11 +25,11 @@
 .emptyRefresh { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; height: 36px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 18px; background: #fff; color: #4b5161; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .placeholder { align-content: center; height: 100%; }
 .detail { min-height: 0; overflow-y: auto; }
-.thread { display: grid; align-content: start; gap: 16px; max-width: 720px; margin: 0 auto; padding: 0 24px 32px; }
+.thread { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 16px; max-width: 720px; margin: 0 auto; padding: 0 24px 32px; }
 .threadHead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 14px 0; background: #fff; border-bottom: 1px solid #eef0f4; }
 .threadHead div { flex: 1; min-width: 0; display: grid; }
-.threadHead strong { font-size: 16px; }
-.threadHead a { color: #3272db; font-size: 13px; text-decoration: none; }
+.threadHead strong { font-size: 16px; overflow-wrap: anywhere; }
+.threadHead a { overflow-wrap: anywhere; color: #3272db; font-size: 13px; text-decoration: none; }
 .back { display: none; place-items: center; width: 36px; height: 36px; border: 0; border-radius: 50%; background: transparent; color: #161c2d; cursor: pointer; }
 .done, .open { flex: none; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-style: normal; font-weight: 600; }
 .done { background: #e8f5ec; color: #236b3d; }
@@ -46,7 +46,7 @@
 .privacy { margin: 0; color: #8a909c; font-size: 12px; }
 
 @media (max-width: 760px) {
-  .wrap { grid-template-columns: 1fr; }
+  .wrap { grid-template-columns: minmax(0, 1fr); }
   .list { border-right: 0; }
   .detail { display: none; }
   .wrap[data-detail] .list { display: none; }
@@ -57,3 +57,4 @@
 
 .retry { margin-left: 6px; padding: 2px 8px; border: 1px solid currentColor; border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 12px; font-weight: 700; cursor: pointer; }
 .notifyError { display: block; margin-top: 6px; color: #ad343d; font-size: 12px; }
+a.retry { display: inline-block; text-decoration: none; }

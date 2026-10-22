@@ -1,7 +1,7 @@
 import { getServerSupabase } from "../persistence";
 import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { getLandingForProject } from "./repository";
-import { buildLandingLeadEmail, landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "./lead-email";
+import { buildLandingLeadEmail, landingEmailConfiguration, sendLandingLeadEmail, withSupportReplyTo, type LeadEmailPayload } from "./lead-email";
 import { LEAD_NOTIFICATION_MAX_ATTEMPTS, type LeadNotificationError, type LeadNotificationStatus, type LeadNotificationSummary } from "./lead-notification-types";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { customerSmsConfig, normalizeAlertPhone, relayUnsupported, sendCustomerSms, sendRelayV4, stableEventId, type CustomerSmsConfig, type CustomerSmsResult } from "../notify/customer-sms";
@@ -123,7 +123,7 @@ export async function processLandingLeadNotification(leadId: string, force = fal
   }
   let payload = row.payload;
   if (!payload) {
-    const site = await db.from("landing_sites").select("project_id").eq("id", row.site_id).maybeSingle();
+    const site = await db.from("landing_sites").select("project_id, businessName:draft->>businessName").eq("id", row.site_id).maybeSingle();
     if (site.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
     const project = site.data ? await db.from(projectReadTable()).select("owner_id, opportunity").eq("id", site.data.project_id).maybeSingle() : null;
     if (project?.error) throw new Error("LANDING_NOTIFICATION_OWNER_READ_FAILED");
@@ -132,7 +132,8 @@ export async function processLandingLeadNotification(leadId: string, force = fal
     const recipient = owner?.data?.user?.email;
     if (!recipient || !owner?.data?.user?.email_confirmed_at) { await finish({ status: "blocked", error_code: "recipient_missing", next_attempt_at: null }); return; }
     const planId = (project?.data?.opportunity as { planId?: unknown } | null)?.planId;
-    payload = buildLandingLeadEmail(config.from, recipient, typeof planId === "string" ? planId : null);
+    const businessName = (site.data as { businessName?: unknown } | null)?.businessName;
+    payload = withSupportReplyTo(buildLandingLeadEmail(config.from, recipient, typeof planId === "string" ? planId : null, typeof businessName === "string" ? businessName : null), config);
   }
   const attempts = row.attempts + 1;
   // Persist the immutable request before sending, so every retry uses exactly the same content.

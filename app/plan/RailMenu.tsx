@@ -63,7 +63,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className={menu.logoFull} src={DEFAULT_LOGO.src} alt="" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className={menu.logoMark} src="/today-startup-mark-2026.png" alt="" width="38" height="38" />
+      <img className={menu.logoMark} src="/today-startup-mark-2026-128.webp" alt="" width="38" height="38" loading="lazy" />
     </Link>
     {/*
       주 메뉴 세 칸(새 대화 · 내 사업 · 내 문의)은 같은 모양·같은 크기로(대표 요청 2026-10-14: 새 대화만 테두리가 있어 튀고, 글씨가 작았다).
@@ -73,14 +73,14 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
     </Link>
     {/* 내 사업 — 누르면 사업 목록이, 사업을 누르면 그 사업의 목차가 바로 아래 펼쳐진다 */}
     <BusinessRailTree documentToc={documentToc} onPlanCount={setPlanCount} />
-    {/* 내 문의 — 홈페이지로 들어온 손님 문의를 메신저처럼(소유자 요청 2026-10-07). 사업이 하나도 없으면 받을 문의가 없으니 막아 둔다 */}
+    {/* 손님 문의(예전 이름 '내 문의' — 고객센터의 '문의 내역'(내가 오늘창업에 한 문의)과 헷갈려 바꿨다, 2026-10-21) — 홈페이지로 들어온 손님 문의를 메신저처럼(소유자 요청 2026-10-07). 사업이 하나도 없으면 받을 문의가 없으니 막아 둔다 */}
     {planCount === 0 && !openInquiries ? (
       <span className={item(`${menu.main} ${menu.disabled}`)} aria-disabled="true" title="사업을 시작하면 열려요">
-        <MessagesSquare /><span className={`${styles.railLabel} ${menu.disabledText}`}>내 문의<small>사업을 시작하면 열려요</small></span>
+        <MessagesSquare /><span className={`${styles.railLabel} ${menu.disabledText}`}>손님 문의<small>사업을 시작하면 열려요</small></span>
       </span>
     ) : (
-      <Link href="/plan/inquiries" className={item(menu.main)} title="내 문의" aria-current={here("inquiries")}>
-        <MessagesSquare /><span className={styles.railLabel}>내 문의</span>{openInquiries ? <b className={menu.count} aria-label={`답할 문의 ${openInquiries}건`}>{openInquiries}</b> : null}
+      <Link href="/plan/inquiries" className={item(menu.main)} title="손님 문의" aria-current={here("inquiries")}>
+        <MessagesSquare /><span className={styles.railLabel}>손님 문의</span>{openInquiries ? <b className={menu.count} aria-label={`답할 문의 ${openInquiries}건`}>{openInquiries}</b> : null}
       </Link>
     )}
     {/* 플랜을 열어 둔 화면이면 그 목차가 여기 붙는다 */}

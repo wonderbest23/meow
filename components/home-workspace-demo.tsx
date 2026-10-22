@@ -122,10 +122,11 @@ export function HomeWorkspaceDemo({ previewProgress }: { previewProgress?: numbe
         <div className={styles.browserBar}><span className={styles.browserDots}><i /><i /><i /></span><span><LockKeyhole size={11} />oneulstart.com</span><MoreHorizontal size={17} /></div>
         <div className={styles.screen} data-workspace-screen>
           <div className={styles.world}>
-            <div className={styles.appHeader}><ChevronLeft size={24} /><div><strong>내 사업 관리</strong><span>오늘창업</span></div><img src="/today-startup-mark-2026.png" width="28" height="28" alt="" /></div>
+            <div className={styles.appHeader}><ChevronLeft size={24} /><div><strong>내 사업 관리</strong><span>오늘창업</span></div><img src="/today-startup-mark-2026-128.webp" width="28" height="28" loading="lazy" alt="" /></div>
             <div className={`${workspace.content} ${styles.content}`}>
-              <WorkspaceIdentity title="새벽커피" status="문서 완성" />
-              <WorkspaceNavigation view={step === 0 ? "summary" : "documents"} onChange={noop}><button>대화 이어가기</button></WorkspaceNavigation>
+              {/* 실제 내 사업 관리와 같게 — 탭은 네 개, '대화 이어가기'는 상태 칩 옆(2026-10-15 이동) */}
+              <WorkspaceIdentity title="새벽커피" status="문서 완성" action={<span className={workspace.titleAction}>대화 이어가기</span>} />
+              <WorkspaceNavigation view={step === 0 ? "summary" : "documents"} onChange={noop} />
               <div className={styles.pages}>
                 <section className={`${workspace.section} ${styles.summary}`} data-workspace-page>
                   <WorkspaceSummary description={sample.description} fields={sampleFields}>

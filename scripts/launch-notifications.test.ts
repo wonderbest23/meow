@@ -5,7 +5,9 @@ import { buildPaymentReceiptEmail, noticePhoneOf, notifyPaymentComplete, paidPro
 import { leadContactParams, leadStoreName, processLandingLeadNotification, sendLeadVisitorConfirmation } from "../lib/landing/lead-notifications";
 import { startRegisteredDomainConnection, type DomainAutoConnectDependencies } from "../lib/landing/domain-auto-connect";
 import { dueTaxReminders, taxDeadlines } from "../lib/operations/tax-calendar";
-import { runTaxReminders } from "../lib/operations/tax-reminders";
+import { runTaxReminders, taxReminderFit, combineTaxFit } from "../lib/operations/tax-reminders";
+import { displayOrderName } from "../lib/payments/order-display";
+import { HOMEPAGE_PRODUCT_NAME, PLAN_PRODUCT_NAME } from "../lib/payments/plan-orders";
 
 /*
  * 출시 전 알림(중계 v4) — 결제 완료(운영자·구매자), 문의자 이름·연락처, 방문자 확인, 도메인 자동 연결, 세금 마감.
@@ -40,6 +42,7 @@ function fakeDb(tables: Record<string, Row[]>, options: { keys?: Record<string, 
         is: (column: string, v: unknown) => { filters.push((row) => (value(row, column) ?? null) === v); return chain; },
         gte: (column: string, v: string) => { filters.push((row) => String(value(row, column) ?? "") >= v); return chain; },
         not: (column: string, _op: string, _v: null) => { filters.push((row) => value(row, column) != null); return chain; },
+        in: (column: string, values: unknown[]) => { filters.push((row) => values.map(String).includes(String(value(row, column)))); return chain; },
         update: (values: Row) => { action = "update"; patch = values; return chain; },
         insert: (values: Row) => { action = "insert"; patch = values; return chain; },
         delete: () => { action = "delete"; return chain; },
@@ -177,6 +180,21 @@ function mail() {
     assert.deepEqual(await notifyPaymentComplete(ORDER, true, paymentDeps(broken, relay(), mail(), [])), { claimed: "skipped" });
   }
   assert.match(buildPaymentReceiptEmail("a@x", "b@x", order() as never).subject, /결제가 완료됐어요/);
+  {
+    // 손님이 읽는 상품 이름·한국 시간·결제 내역 링크·고객센터 — 저장된 상품 이름(권한 판정)은 그대로
+    const receipt = buildPaymentReceiptEmail("a@x", "b@x", { ...(order() as object), order_name: "사업계획서 플랜 빌더", confirmed_at: "2026-10-21T15:30:00Z" } as never);
+    assert.equal(receipt.subject, "[오늘창업] 결제가 완료됐어요 · 사업계획서");
+    assert.ok(receipt.text.includes("상품: 사업계획서\n") && !receipt.text.includes("플랜 빌더"), receipt.text);
+    assert.ok(receipt.text.includes("결제 시각: 2026년 10월 22일 00:30 (한국 시간)"), receipt.text);
+    assert.ok(receipt.text.includes("결제 내역 보기: https://oneulstart.com/plan/me"));
+    assert.ok(receipt.text.includes("궁금한 점은 고객센터에서 물어봐 주세요: https://oneulstart.com/account/support"));
+    assert.equal(buildPaymentReceiptEmail("a@x", "b@x", { ...(order() as object), order_name: "사업계획서 홈페이지" } as never).subject, "[오늘창업] 결제가 완료됐어요 · 홈페이지 수정·공개");
+    assert.equal(displayOrderName(PLAN_PRODUCT_NAME), "사업계획서");
+    assert.equal(displayOrderName(HOMEPAGE_PRODUCT_NAME), "홈페이지 수정·공개");
+    assert.equal(displayOrderName(`${PLAN_PRODUCT_NAME} · 간단 · 사업계획서`), "사업계획서 · 간단 · 사업계획서");
+    assert.equal(displayOrderName("사업계획서 + 홈페이지"), "사업계획서 + 홈페이지", "모르는 이름은 그대로");
+    assert.equal(displayOrderName(null), "");
+  }
   // 애플 시험 결제: 제목에 [시험 결제], 청구 안 됨 안내, 영수증은 애플이(나이스페이 매출전표 아님)
   const sandboxMail = buildPaymentReceiptEmail("a@x", "b@x", { ...(order() as object), method: "APPLE_IAP", provider_status: "APPLE_SANDBOX" } as never);
   assert.match(sandboxMail.subject, /\[시험 결제\]/);
@@ -254,6 +272,7 @@ function mail() {
     assert.equal(tables.landing_sites[0].custom_domain, "www.mybrand.com");
     assert.deepEqual([s.bodies[0].eventType, s.bodies[0].params], ["domain-connect-started", { domain: "www.mybrand.com" }]);
     assert.equal(m.sent[0].key, `domain-connect/${ORDER}`);
+    assert.ok(m.sent[0].body.text.includes("www.mybrand.com 주소로 홈페이지가 열려요") && m.sent[0].body.text.includes("https://oneulstart.com/account/support"), m.sent[0].body.text);
   }
   {
     const s = relay(), m = mail();
@@ -263,6 +282,8 @@ function mail() {
     assert.equal(s.bodies.length + m.sent.length, 0, "연결이 안 되면 '시작했어요'를 보내지 않는다");
     const draft = await startRegisteredDomainConnection(ORDER, domainDeps(domainTables({ status: "draft" }), (async () => ({})) as never, s, m));
     assert.match(String(draft.warning), /공개 전/);
+    const draftMail = m.sent.find((item) => item.key === `domain-registered-unpublished/${ORDER}`);
+    assert.ok(draftMail?.body.text.startsWith("mybrand.com 주소를 사장님 명의로 등록했어요.") && !draftMail.body.text.includes("을(를)"), draftMail?.body.text);
     const other = await startRegisteredDomainConnection(ORDER, domainDeps(domainTables({ custom_domain: "www.other.com" }), (async () => ({})) as never, s, m));
     assert.match(String(other.warning), /www\.other\.com/, "다른 도메인이 붙어 있으면 바꾸지 않는다");
     const oldRelay = relay("old");
@@ -308,6 +329,43 @@ function mail() {
     const stopped = await runTaxReminders({ db: fakeDb(oldTables), sms, transport: relay("old").transport, now: at("2027-05-30T09:00:00") });
     assert.equal(stopped.reason, "relay_upgrade_required");
     assert.equal(oldTables.tax_reminder_sends.length, 0);
+  }
+
+  /* ---- 세금 마감: 사업 정보로 해당 없는 마감은 빼고, 모르면 보낸다 ---- */
+  {
+    const income = { kind: "income" as const, date: "2027-05-31" }, january = { kind: "vat" as const, date: "2027-01-25" }, july = { kind: "vat" as const, date: "2027-07-26" };
+    assert.equal(taxReminderFit(null, income), "unknown");
+    assert.equal(taxReminderFit({ legalForm: "corporation" }, income), "skip", "법인은 종합소득세 없음");
+    assert.equal(taxReminderFit({ businessNumber: "1238112345" }, income), "skip", "사업자번호 가운데 81 = 법인");
+    assert.equal(taxReminderFit({ legalForm: "corporation", taxType: "부가가치세 일반과세자" }, july), "send", "법인도 부가세 확정신고");
+    assert.equal(taxReminderFit({ legalForm: "sole_proprietor" }, income), "send");
+    assert.equal(taxReminderFit({ taxType: "부가가치세 면세사업자" }, january), "skip");
+    assert.equal(taxReminderFit({ taxType: "부가가치세 간이과세자" }, july), "skip", "간이과세자는 7월 신고 없음");
+    assert.equal(taxReminderFit({ taxType: "부가가치세 간이과세자" }, january), "send");
+    assert.equal(taxReminderFit({ taxType: "부가가치세 간이과세자(세금계산서 발급사업자)" }, july), "send", "세금계산서 발급 간이는 7월 예정신고");
+    assert.equal(taxReminderFit({ businessState: "unregistered" }, income), "skip", "아직 등록 전");
+    assert.deepEqual([combineTaxFit(["skip", "unknown"]), combineTaxFit(["skip", "skip"]), combineTaxFit(["skip", "send"]), combineTaxFit([])], ["unknown", "skip", "send", "unknown"]);
+    const site = (phone: string, project: string) => ({ alert_phone: phone, project_id: project, published_version: 1, status: "published", weekly_report_opt_out: false });
+    const tables: Record<string, Row[]> = {
+      landing_sites: [site("01011110001", "p-corp"), site("01011110002", "p-sole"), site("01011110003", "p-none"), site("01011110004", "p-unreg")],
+      projects: [
+        { id: "p-corp", owner_id: "u1", opportunity: { planId: "a" }, business_setup: { legalForm: "corporation" } },
+        { id: "p-sole", owner_id: "u2", opportunity: { planId: "b" }, business_setup: { legalForm: "sole_proprietor" } },
+        { id: "p-none", owner_id: "u3", opportunity: { planId: "c" }, business_setup: null },
+        { id: "p-unreg", owner_id: "u4", opportunity: { planId: "d" }, business_setup: { legalForm: "undecided" } },
+      ],
+      business_checks: [{ owner_id: "u4", plan_id: "d", business_number: "1234567890", business_state: "unregistered", tax_type: "" }],
+      tax_reminder_sends: [],
+    };
+    const s = relay();
+    const run = await runTaxReminders({ db: fakeDb(tables, { keys: { tax_reminder_sends: ["recipient_key", "deadline", "days_before"] } }), sms, transport: s.transport, now: at("2027-05-24T09:05:00") });
+    assert.deepEqual(s.bodies.map((body) => body.recipient).sort(), ["01011110002", "01011110003"], "법인·등록 전은 종합소득세 문자 없음");
+    assert.deepEqual([run.sent, run.notApplicable, run.unconfirmed], [2, 2, 1], "정보 없는 사업은 보내고 '모름'으로 센다");
+    // 사업 정보 표를 못 읽어도 멈추지 않고 모두 보낸다
+    const fallback = { landing_sites: tables.landing_sites, tax_reminder_sends: [] as Row[] };
+    const s2 = relay();
+    const unknownRun = await runTaxReminders({ db: fakeDb(fallback), sms, transport: s2.transport, now: at("2027-05-24T09:05:00") });
+    assert.deepEqual([unknownRun.sent, unknownRun.notApplicable, unknownRun.unconfirmed], [4, 0, 4]);
   }
 
   console.log("launch-notifications: v4 request shape, payment once per order + fallbacks, lead contact + v3 fallback, visitor receipt, domain auto-connect, tax reminders dedupe");

@@ -34,7 +34,10 @@ const ICONS: Record<ServiceIcon, LucideIcon> = { badge: BadgeCheck, cart: Shoppi
 /* 연락 시간 — 직접 쓰지 않고 누르기만 */
 const TIME_CHOICES = ["아무 때나", "오전", "오후", "저녁"];
 
-export function NextServices({ plan, homepagePublished }: { plan: Plan; homepagePublished: boolean }) {
+/** hasHomepage — 만든 홈페이지(초안 포함)가 없으면 '홈페이지 개선' 묶음은 뺀다(고칠 홈페이지가 없다) */
+export function NextServices({ plan, homepagePublished, hasHomepage = true }: { plan: Plan; homepagePublished: boolean; hasHomepage?: boolean }) {
+  const groups = SERVICE_GROUPS.filter((group) => group.id !== "homepage" || hasHomepage);
+  const catalog = SERVICE_CATALOG.filter((item) => item.group !== "homepage" || hasHomepage);
   const [state, setState] = useState<LoadState | null>(null);
   const [openId, setOpenId] = useState<string | null>(null);
   const [tab, setTab] = useState<"all" | ServiceGroupId>("all");
@@ -140,7 +143,7 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
   }
 
   const detail = detailId ? findService(detailId) : undefined;
-  const shown = orderServices(SERVICE_CATALOG, badges).filter((item) => tab === "all" || item.group === tab);
+  const shown = orderServices(catalog, badges).filter((item) => tab === "all" || item.group === tab);
   useEffect(() => {
     if (!detailId) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setDetailId(null); };
@@ -171,8 +174,8 @@ export function NextServices({ plan, homepagePublished }: { plan: Plan; homepage
       </ul> : null}
     </form> : null}
 
-    {SERVICE_GROUPS.length > 1 && <div className={styles.tabs} role="tablist" aria-label="서비스 종류">
-      {[{ id: "all" as const, title: "전체" }, ...SERVICE_GROUPS].map((group) => <button key={group.id} type="button" role="tab" aria-selected={tab === group.id} className={tab === group.id ? styles.tabOn : ""} onClick={() => setTab(group.id)}>{group.title}</button>)}
+    {groups.length > 1 && <div className={styles.tabs} role="tablist" aria-label="서비스 종류">
+      {[{ id: "all" as const, title: "전체" }, ...groups].map((group) => <button key={group.id} type="button" role="tab" aria-selected={tab === group.id} className={tab === group.id ? styles.tabOn : ""} onClick={() => setTab(group.id)}>{group.title}</button>)}
     </div>}
 
     <ul className={styles.shop}>

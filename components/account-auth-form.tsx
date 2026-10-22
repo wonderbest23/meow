@@ -10,6 +10,8 @@ import { Spinner } from "../app/plan/PlanLoading";
 import { DEFAULT_LOGO } from "./site-header";
 import accountStyles from "../app/account/Account.module.css";
 import styles from "./account-auth-form.module.css";
+import { DocLink } from "./doc-sheet";
+import { Eye, EyeOff } from "lucide-react";
 
 /*
  * 로그인·회원가입·비밀번호 찾기 폼 — /account 화면과 로그인 팝업(login-dialog)이 같이 쓴다.
@@ -279,10 +281,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
 
   const entry = mode === "login" || mode === "register";
   const kakao = () => window.location.assign(`/api/auth/kakao${next ? `?next=${encodeURIComponent(next)}` : ""}`);
-  const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string) => <label className={styles.cell}>
-    <span className={styles.srOnly}>{label}</span>
-    <input className={styles.input} type="password" required disabled={busy} minLength={8} placeholder={label} value={value} onChange={(event) => set(event.target.value)} autoComplete={autoComplete} />
-  </label>;
+  const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string) => <PasswordField label={label} value={value} onChange={set} autoComplete={autoComplete} disabled={busy} />;
 
   /*
    * 레퍼런스(오늘의집 로그인): 로고 → 이메일·비밀번호를 한 상자로 → 로그인 → 비밀번호 재설정 · 회원가입
@@ -343,10 +342,26 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           </div>
           {!native && googleUnavailable && <p className={styles.note}>구글 연결이 지연돼요. 이메일이나 카카오로 로그인해 주세요.</p>}
           {/* 로그인 탭에서도 보인다 — 처음 쓰는 SNS 계정은 로그인 버튼으로 바로 가입된다 */}
-          <p className={styles.note}>SNS로 계속하면 <Link href="/terms" target="_blank">이용약관</Link>·<Link href="/privacy" target="_blank">개인정보처리방침</Link>에 동의하고 <Link href="/ai-notice" target="_blank">인공지능·국외 처리 안내</Link>를 확인한 것으로 봅니다.</p>
+          {/* 문서 링크 — 웹은 새 창, 앱 안은 화면 위에 띄운다(앱에서 새 창은 앱 밖으로 나갔다) */}
+          <p className={styles.note}>SNS로 계속하면 <DocLink href="/terms" title="이용약관">이용약관</DocLink>·<DocLink href="/privacy" title="개인정보처리방침">개인정보처리방침</DocLink>에 동의하고 <DocLink href="/ai-notice" title="인공지능·국외 처리 안내">인공지능·국외 처리 안내</DocLink>를 확인한 것으로 봐요.</p>
         </section>}
-        <footer className={styles.footer}><Link href="/terms" target="_blank">이용약관</Link><Link href="/privacy" target="_blank">개인정보처리방침</Link></footer>
+        <footer className={styles.footer}><DocLink href="/terms" title="이용약관">이용약관</DocLink><DocLink href="/privacy" title="개인정보처리방침">개인정보처리방침</DocLink></footer>
       </form>
     </div>
   );
+}
+
+/*
+ * 비밀번호 칸 — 오른쪽 눈 아이콘을 누르면 친 글자를 보여 준다(대표 요청 2026-10-22: 휴대폰에서 무엇을 쳤는지 확인할 수 없었다).
+ * 칸마다 따로 켜고 끈다. 아이콘을 눌러도 입력 칸의 커서는 그대로 둔다.
+ */
+function PasswordField({ label, value, onChange, autoComplete, disabled }: { label: string; value: string; onChange: (value: string) => void; autoComplete: string; disabled: boolean }) {
+  const [shown, setShown] = useState(false);
+  return <label className={`${styles.cell} ${styles.passwordCell}`}>
+    <span className={styles.srOnly}>{label}</span>
+    <input className={styles.input} type={shown ? "text" : "password"} required disabled={disabled} minLength={8} placeholder={label} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+    <button type="button" className={styles.reveal} aria-label={shown ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={shown} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => setShown((current) => !current)}>
+      {shown ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
+    </button>
+  </label>;
 }

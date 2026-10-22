@@ -15,7 +15,10 @@
   word-break: keep-all;
   overflow-wrap: anywhere;
 }
-.page h1, .page h2, .page h3, .page p, .page figure { margin: 0; letter-spacing: 0 !important; }
+.page h1, .page h2, .page h3, .page p, .page figure { margin: 0; letter-spacing: 0 !important; overflow-wrap: anywhere; }
+/* 띄어쓰기 없는 긴 이름이 와도 첫 화면 칸이 화면 밖으로 밀리지 않게 — 칸 폭을 내용이 아니라 화면 폭에 맞춘다 */
+.hero, .heroCopy { grid-template-columns: minmax(0, 1fr); }
+.heroCopy > * { min-width: 0; max-width: 100%; }
 
 /* 편집 화면 전용 — 사진 넣기 */
 .photoSlot { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; height: 100%; min-height: 120px; border: 1.5px dashed #c9c2b9; border-radius: 4px; color: #6e6a66; background: #fff; font: inherit; font-weight: 650; cursor: pointer; }
@@ -35,7 +38,7 @@
 
 /* 머리글 — 끝까지 위에 붙는 불투명 띠 */
 .header { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 62px; padding: 12px 20px; background: var(--paper); box-shadow: 0 1px 0 var(--line); }
-.brand { min-width: 0; font-size: 19px; font-weight: 700; }
+.brand { min-width: 0; overflow-wrap: anywhere; font-size: 19px; font-weight: 700; }
 
 /* 첫 화면 — 화면을 꽉 채운 사진 위 아래쪽 흰 글 */
 .hero { position: relative; overflow: hidden; display: grid; align-content: end; min-height: 620px; color: #fff; background: #2a2826; }
@@ -180,3 +183,6 @@
 
 /* 작은 폰(380px 이하) — 44px 제목이 한 줄에 한두 낱말씩 꺾여 화면을 다 차지하고 문의 단추가 아래로 밀렸다 */
 @media (max-width: 380px) { .page:not(.desktop) .heroCopy h1 { font-size: 34px; line-height: 1.18; } .page:not(.desktop) .heroCopy { padding-bottom: 40px; } }
+
+/* 편집 화면 전용 — 비어 있는 마무리 띠 사진 자리(공개 화면에는 없다) */
+.closingSlot { position: relative; z-index: 1; width: auto; height: auto; min-height: 44px; padding: 8px 16px; border-color: rgba(255, 255, 255, .45); color: #fff; background: rgba(255, 255, 255, .06); }

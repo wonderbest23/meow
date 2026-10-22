@@ -1,6 +1,6 @@
 import type { LandingDraft } from "./domain";
 
-export const LANDING_CONFLICT_MESSAGE = "다른 화면에서 홈페이지가 변경됐습니다. 현재 수정 내용은 유지했어요. 최신 내용을 확인한 뒤 다시 편집해주세요.";
+export const LANDING_CONFLICT_MESSAGE = "다른 화면에서 먼저 저장된 내용이 있어요. 최신 내용을 불러오거나, 지금 고친 내용으로 계속 고칠 수 있어요.";
 
 export function landingDraftFingerprint(value: unknown): string {
   return JSON.stringify(value, (_key, item) =>

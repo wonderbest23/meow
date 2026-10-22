@@ -17,9 +17,9 @@ export function applyIntakeResources(plan: ServerPlan, coach: CoachState, intake
   if (command.resourceContext) intake.resourceContext = command.resourceContext;
   if (command.resourceQuote) {
     const q = command.resourceQuote;
-    if (q.candidateId.includes(":idea:") && intake.selectedCandidate?.id !== q.candidateId) throw new IntakeError("candidate_not_selected", "AI 후보를 먼저 선택한 뒤 실제 확인한 견적을 연결해 주세요");
+    if (q.candidateId.includes(":idea:") && intake.selectedCandidate?.id !== q.candidateId) throw new IntakeError("candidate_not_selected", "AI 제안을 먼저 고른 뒤 실제로 받은 견적을 연결해 주세요");
     const known = q.candidateId === "custom-business" && !!coach.business.description || q.candidateId === intake.selectedCandidate?.id || intakeCandidates({}, Infinity).some(i => i.id === q.candidateId) || q.candidateId.startsWith("ksic:") && ksicByCode(q.candidateId.slice(5))?.level === 5;
-    if (!known) throw new IntakeError("candidate_unknown", "견적을 연결할 사업 후보를 확인해 주세요");
+    if (!known) throw new IntakeError("candidate_unknown", "견적을 연결할 사업을 확인해 주세요");
     const parsed = parseResourceLimit(q.raw, q.metric);
     if (parsed.status !== "known") throw new IntakeError("resource_quote_invalid", "견적의 단위와 범위를 확인해 주세요");
     const record = resourceRecordSchema.safeParse({ schemaVersion: 1, candidateId: q.candidateId, ...(q.candidateId === "custom-business" ? { businessDescription: coach.business.description } : {}), context: q.context, metric: q.metric, unit: RESOURCE_UNITS[q.metric], lower: parsed.lower, upper: parsed.upper, complete: q.complete, includedItems: q.includedItems.split(/[,\n]/).map(s => s.trim()).filter(Boolean), excludedItems: q.excludedItems.split(/[,\n]/).map(s => s.trim()).filter(Boolean), source: { kind: "user-confirmed", reference: q.reference, reviewedAt: at, validFrom: at, expiresAt: q.expiresAt } });

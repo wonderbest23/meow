@@ -11,7 +11,7 @@ import { HomepageLeadActions } from "../../../components/homepage-lead-actions";
 import { HomepageLeadNotification, useHomepageLeadNotifications } from "../../../components/homepage-lead-notifications";
 import { formatKoreanPhone } from "../../../lib/contact-links";
 import { homepageHref } from "../../../lib/plan-builder/journey";
-import { markInquiryHandled, unansweredCount, useInquiries, type Inquiry } from "./use-inquiries";
+import { AUTH_ERROR, markInquiryHandled, unansweredCount, useInquiries, type Inquiry } from "./use-inquiries";
 
 /** 받은 시각을 짧게 — 오늘이면 시:분, 아니면 월.일 */
 function shortTime(iso: string) {
@@ -50,8 +50,8 @@ export default function InquiriesPage() {
   }, []);
 
   return <main className={frame.page}>{/* 휴대폰에서 문의를 열어 둔 동안 머리말 뒤로 단추는 목록으로 — 상세 안의 두 번째 뒤로 단추는 뺐다(뒤로가 두 개였다) */}
-    <BusinessAppChrome title="내 문의" active="inquiries" onBack={selected && phone ? () => setSelectedId(null) : undefined}>
-    {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" /> : <div className={styles.wrap} data-detail={selected ? "" : undefined}>
+    <BusinessAppChrome title="손님 문의" active="inquiries" onBack={selected && phone ? () => setSelectedId(null) : undefined}>
+    {items === null && !error ? <PlanLoading fill variant="compact" note="문의를 불러오고 있어요" onRetry={() => refresh(true)} /> : <div className={styles.wrap} data-detail={selected ? "" : undefined}>
       <aside className={styles.list} aria-label="문의 목록">
         {/* 문의가 하나도 없으면 0개짜리 거름 단추는 빼고, 새로 확인하는 단추만 빈 화면 안에 둔다 */}
         {items?.length === 0 ? null : <div className={styles.listHead}>
@@ -61,7 +61,7 @@ export default function InquiriesPage() {
           </div>
           <button type="button" className={styles.refresh} onClick={() => refresh(true)} aria-label="문의 새로고침" title="새로고침"><RefreshCw size={16} /></button>
         </div>}
-        {error ? <p className={styles.notice} role="alert">{error} <button type="button" className={styles.retry} onClick={() => refresh(true)}>다시 불러오기</button></p> : null}
+        {error ? <p className={styles.notice} role="alert">{error} {error === AUTH_ERROR ? <Link className={styles.retry} href={`/account?next=${encodeURIComponent("/plan/inquiries")}`}>다시 로그인</Link> : <button type="button" className={styles.retry} onClick={() => refresh(true)}>다시 시도</button>}</p> : null}
         {/* 불러오지 못했으면 '문의 없음'이라고 하지 않는다 — 있는 문의를 없다고 믿게 된다 */}
         {items === null ? null : shown.length === 0 ? <div className={styles.empty}>
           <Inbox size={28} aria-hidden />

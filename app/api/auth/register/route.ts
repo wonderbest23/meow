@@ -4,6 +4,7 @@ import { createServerAuthClient, emailConfirmationEnabled } from "../../../../li
 import { getServerSupabase } from "../../../../lib/persistence";
 import { PLATFORM_POLICY_VERSION } from "../../../../lib/platform-legal/domain";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
+import { AUTH_MESSAGES } from "../../../../lib/auth-error-message";
 
 const schema = z.object({
   email: z.string().trim().email().max(200),
@@ -45,6 +46,10 @@ export async function POST(request: Request) {
 
     if (created.error) {
       if (["user_already_exists", "email_exists"].includes(created.error.code ?? "")) return confirmationPending();
+      // 같은 주소로 1분 안에 다시 누르면(Supabase 'For security purposes, … after N seconds.') — 원문 대신 기다릴 시간을 알려 준다
+      if (/request this after \d+ seconds?/i.test(created.error.message ?? "")) {
+        return NextResponse.json({ error: { code: "EMAIL_RATE_LIMITED", message: AUTH_MESSAGES.emailFrequency } }, { status: 429 });
+      }
       if (["email_address_not_authorized", "over_email_send_rate_limit", "unexpected_failure"].includes(created.error.code ?? "")) {
         return NextResponse.json({ error: { code: "EMAIL_DELIVERY_UNAVAILABLE", message: "확인 메일을 발송하지 못했습니다. 잠시 후 다시 시도하거나 다른 로그인 방법을 이용해 주세요." } }, { status: 503 });
       }

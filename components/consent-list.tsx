@@ -3,6 +3,7 @@
 import { Check, ChevronRight } from "lucide-react";
 import type { ReactNode } from "react";
 import styles from "./consent-list.module.css";
+import { DocLink } from "./doc-sheet";
 
 /*
  * 약관 동의 목록 — 앱에서 흔히 보는 모양(대표 요청 2026-10-16: 스타벅스 앱처럼, 지금은 인위적이다).
@@ -15,7 +16,7 @@ export type ConsentItem = {
   /** 항목 이름 — 문서 보기 단추의 읽기 이름에도 쓴다 */
   label: string;
   required?: boolean;
-  /** › 를 누르면 여는 문서(새 창) */
+  /** › 를 누르면 여는 문서(웹은 새 창, 앱 안은 화면 위) */
   href?: string;
   /** 줄 아래 작은 설명 */
   note?: ReactNode;
@@ -47,7 +48,8 @@ export function ConsentList({ items, values, onChange, allLabel = "약관 전체
             {item.note ? <small>{item.note}</small> : null}
           </span>
         </label>
-        {item.href ? <a className={styles.view} href={item.href} target="_blank" rel="noreferrer" aria-label={`${item.label} 내용 보기`}><ChevronRight /></a> : null}
+        {/* 웹은 새 창, 앱 안은 화면 위에 문서를 띄운다 — 앱에서 새 창은 앱 밖으로 나가 동의하던 화면을 잃었다 */}
+        {item.href ? <DocLink className={styles.view} href={item.href} title={item.label} aria-label={`${item.label} 내용 보기`}><ChevronRight /></DocLink> : null}
       </li>)}
     </ul>
   </div>;

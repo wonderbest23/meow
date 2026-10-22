@@ -11,7 +11,11 @@ import {
 } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
-import { supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
+import { faqAnswer, supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
+import { nativePlatform } from "../lib/native-app";
+import tap from "./support-chat-tap.module.css";
+import { useDialogFocus } from "./use-dialog-focus";
+import { koreanText, userErrorMessage } from "../lib/client/user-error";
 import type { SupportChat } from "../lib/support-chat/repository";
 import { trackFunnel } from "../lib/funnel/client";
 import { escalationReason } from "../lib/consult/escalation";
@@ -52,8 +56,9 @@ type QuickMessage = {
 };
 
 async function readPayload(response: Response) {
-  const payload = await response.json();
-  if (!response.ok) throw new Error(payload.error?.message ?? "상담 서버에 연결하지 못했습니다.");
+  // 서버 원문(영어 코드·HTML 오류 페이지)을 그대로 보이지 않는다 — 한국어 안내만 통과
+  const payload = await response.json().catch(() => null) as { error?: { message?: unknown } } | null;
+  if (!response.ok || !payload) throw new Error(koreanText(payload?.error?.message, "상담 서버에 연결하지 못했어요. 잠시 후 다시 시도해 주세요."));
   return payload as { chat: SupportChat };
 }
 
@@ -77,6 +82,9 @@ export function SupportChatWidget() {
    */
   const [onPublicSite, setOnPublicSite] = useState(false);
   useEffect(() => { setOnPublicSite(Boolean(document.querySelector(".public-landing"))); }, [pathname]);
+  /* 앱 안이면 결제·환불 답을 앱 기준(스토어 결제)으로 — 앱 안에서 카드·웹 결제를 안내하지 않는다(App Store 3.1.1) */
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => { setInApp(nativePlatform() !== null); }, []);
   /* 결제 화면은 동의 목록의 › 를 덮었고 아래 결제 줄과 겹쳤다 · 고객센터 화면에서는 같은 기능이 두 번이다(메뉴의 '고객센터'로 갈 수 있다) */
   const hiddenHere = pathname.startsWith("/admin") || pathname === "/plan/chat" || pathname === "/plan/proposal" || pathname === "/plan/pay" || pathname === "/account" || pathname === "/account/support" || pathname.startsWith("/launch") || pathname.startsWith("/customer-site") || onPublicSite;
   const [open, setOpen] = useState(false);
@@ -244,7 +252,7 @@ export function SupportChatWidget() {
       setChat(payload.chat);
       setError("");
     } catch (loadError) {
-      if (markRead) setError(loadError instanceof Error ? loadError.message : "상담 내용을 불러오지 못했습니다.");
+      if (markRead) setError(userErrorMessage(loadError, "상담 내용을 불러오지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       setLoading(false);
     }
@@ -287,13 +295,20 @@ export function SupportChatWidget() {
     setShowAllHistory(false);
   }, [quickMessages.length]);
 
+  /*
+   * 키보드 — 열면 창 안으로 초점을 옮기고 Tab 은 창 안에서만 돈다. Esc 로 닫으면 '이용 문의' 단추로 초점을 돌려준다.
+   * (예전엔 초점이 뒤 화면에 남았고, Esc 로 닫으면 초점이 문서 맨 앞으로 떨어졌다)
+   */
+  const panelRef = useDialogFocus<HTMLElement>(open, { onEscape: () => setOpen(false) });
+  const toggleRef = useRef<HTMLButtonElement | null>(null);
+  const wasOpen = useRef(false);
   useEffect(() => {
-    const closeOnEscape = (event: globalThis.KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, []);
+    if (open) { wasOpen.current = true; return; }
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
+    const active = document.activeElement;
+    if (!active || active === document.body) toggleRef.current?.focus({ preventScroll: true });
+  }, [open]);
 
   /*
    * 창 밖을 누르면 닫는다. 예전엔 홈·설정 화면에 닫기 단추가 없어, 열고 나면 Esc 말고는 닫을 방법이 없었다.
@@ -315,7 +330,7 @@ export function SupportChatWidget() {
     setQuickMessages((current) => [
       ...current,
       { id: crypto.randomUUID(), sender: "customer", body: customerText, createdAt: new Date(now).toISOString() },
-      { id: crypto.randomUUID(), sender: "assistant", body: faq.answer, createdAt: new Date(now + 1).toISOString(), faq },
+      { id: crypto.randomUUID(), sender: "assistant", body: faqAnswer(faq, inApp), createdAt: new Date(now + 1).toISOString(), faq },
     ]);
     setShowQuickMenu(false);
     setOperatorMode(false);
@@ -421,7 +436,7 @@ export function SupportChatWidget() {
             }
           }
         }
-        if (!done) throw new Error("상담을 이어가지 못했습니다.");
+        if (!done) throw new Error("상담을 이어가지 못했어요.");
         payload = done;
         /* 서버가 확정한 전체 문장으로 맞춘다(조각이 빠졌을 때 대비) */
         if (payload.message) { const finalText = payload.message; const sources = payload.sources ?? []; setConsultTurns((current) => current.map((turn) => (turn.id === bubbleId ? { ...turn, text: finalText, sources } : turn))); }
@@ -455,7 +470,7 @@ export function SupportChatWidget() {
         trackFunnel("consult_limit_view", { needsLogin });
         return;
       }
-      if (!response.ok || !payload.message) throw new Error("상담을 이어가지 못했습니다.");
+      if (!response.ok || !payload.message) throw new Error("상담을 이어가지 못했어요.");
       if (typeof payload.remainingToday === "number") setConsultRemaining(payload.remainingToday);
       setConsultIsGuest(Boolean(payload.isGuest));
       setConsultTurns((current) => [...current, { id: crypto.randomUUID(), role: "assistant", text: payload.message!, at: new Date().toISOString() }]);
@@ -485,7 +500,7 @@ export function SupportChatWidget() {
         {
           id: crypto.randomUUID(),
           role: "assistant",
-          text: "지금은 상담을 이어가지 못했습니다. 잠시 후 다시 말씀해 주세요.",
+          text: "지금은 상담을 이어가지 못했어요. 잠시 후 다시 말씀해 주세요.",
           at: new Date().toISOString(),
         },
       ]);
@@ -521,7 +536,7 @@ export function SupportChatWidget() {
         link?: { href: string; label: string } | null;
         error?: { message?: string };
       };
-      if (!response.ok || !payload.answer) throw new Error(payload.error?.message ?? "답변을 만들지 못했습니다.");
+      if (!response.ok || !payload.answer) throw new Error(koreanText(payload.error?.message, "답변을 만들지 못했어요."));
       setQuickMessages((current) => [
         ...current,
         {
@@ -540,7 +555,7 @@ export function SupportChatWidget() {
         {
           id: crypto.randomUUID(),
           sender: "assistant",
-          body: "이 질문은 자동 답변만으로 확정하기 어렵습니다. 현재 화면과 하려던 작업을 함께 적어 운영자에게 남겨주세요.",
+          body: "이 질문은 자동 답변만으로 정하기 어려워요. 지금 보고 있는 화면과 하려던 일을 함께 적어 운영자에게 남겨 주세요.",
           createdAt: new Date().toISOString(),
           allowOperator: true,
         },
@@ -582,7 +597,7 @@ export function SupportChatWidget() {
       setShowAllHistory(true);
       textareaRef.current?.focus();
     } catch (sendError) {
-      setError(sendError instanceof Error ? sendError.message : "메시지를 보내지 못했습니다.");
+      setError(userErrorMessage(sendError, "메시지를 보내지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       setSending(false);
     }
@@ -632,9 +647,9 @@ export function SupportChatWidget() {
   return (
     <div ref={widgetRef} className={`support-chat-widget ${open ? "open" : ""}`} data-phone-hide={pathname.startsWith("/plan/workspace") || pathname.startsWith("/plan/inquiries") ? "" : undefined}>
       {open && (
-        <section className={`support-chat-panel mode-${mode} tab-${tab}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
+        <section ref={panelRef} className={`support-chat-panel mode-${mode} tab-${tab}`} role="dialog" aria-label="오늘창업 상담 도우미" aria-modal="true">
           {/* 홈·설정 화면에도 닫기 — 대화 화면은 머리줄에 이미 있다 */}
-          {tab !== "chat" && <button type="button" className="support-pane-close" onClick={() => setOpen(false)} aria-label="상담 창 닫기" title="닫기"><X aria-hidden="true" /></button>}
+          {tab !== "chat" && <button type="button" className={`support-pane-close ${tap.target}`} onClick={() => setOpen(false)} aria-label="상담 창 닫기" title="닫기"><X aria-hidden="true" /></button>}
           {tab === "home" && <SupportHome open={open} onClose={() => setOpen(false)} onInquiry={() => { setMode("support"); setTab("chat"); }} onConsult={() => { setMode("consult"); setTab("chat"); }} />}
           {tab === "settings" && <SupportSettings open={open} badge={badge} onBadge={changeBadge} onClearConsult={resetConsult} onClose={() => setOpen(false)} />}
           {tab === "chat" && <>
@@ -651,7 +666,7 @@ export function SupportChatWidget() {
                 onClick={resetConsult}
               >새 상담</button>
             )}
-            <button type="button" className="chat-close" onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기"><X aria-hidden="true" /></button>
+            <button type="button" className={`chat-close ${tap.target}`} onClick={() => setOpen(false)} aria-label="문의창 닫기" title="닫기"><X aria-hidden="true" /></button>
           </header>
 
           <div className="support-chat-body">
@@ -874,7 +889,7 @@ export function SupportChatWidget() {
                   </section>
                 ) : null}
 
-                {mode === "support" && loading && chat.messages.length === 0 && quickMessages.length === 0 && <p className="support-chat-loading">이전 문의를 불러오는 중입니다.</p>}
+                {mode === "support" && loading && chat.messages.length === 0 && quickMessages.length === 0 && <p className="support-chat-loading" role="status">이전 문의를 불러오고 있어요.</p>}
                 {mode === "support" && hiddenMessageCount > 0 && (
                   <button type="button" className="support-chat-history-toggle" onClick={() => setShowAllHistory((current) => !current)}>
                     {showAllHistory ? "최신 대화만 보기" : `이전 대화 ${hiddenMessageCount}개 보기`}
@@ -1011,6 +1026,7 @@ export function SupportChatWidget() {
       )}
       {!open && (
         <button
+          ref={toggleRef}
           type="button"
           className="support-chat-toggle"
           onClick={() => { setMode("support"); setTab("home"); setOpen(true); }}

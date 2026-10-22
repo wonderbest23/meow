@@ -55,7 +55,7 @@
 .body :global(.tiptap) :is(h1,h2,h3,h4) { font-size:17px; line-height:1.6; color:var(--app-text); font-weight:600; }
 .body :global(.tiptap) table { width:100%; font-size:14px; }
 /* 표가 옆으로 밀리도록 block 으로 두면 줄이 글자 폭만큼만 차서 화면 절반에서 끝났다 — 줄 묶음은 표 폭을 다 채운다(넓으면 그대로 넘쳐 밀어 본다) */
-.body :global(.tiptap) table > tbody { display:table; width:100%; }
+.body :global(.tiptap):not(.factBody) table > tbody { display:table; width:100%; }
 /* 폰: 읽기 중인 표 위에 밀어 보기·크게 보기 안내, 오른쪽에 더 있으면 그림자 */
 @media (max-width:640px) {
   .body :global(.tiptap[contenteditable=false]) :global(.tableWrapper)::before { content:"표를 누르면 크게 볼 수 있어요"; display:block; margin:0 0 6px; color:var(--app-muted); font-size:12px; }
@@ -133,10 +133,11 @@
 .saveState button { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 7px 10px; border: 1px solid #d6dce5; border-radius: 6px; background: #f8f9fb; color: #334155; cursor: pointer; }
 .saveState button:hover { background: #edf1f5; }
 .saveState button:focus-visible { outline: 2px solid #3182f6; outline-offset: 2px; }
-.sourceReview { margin-top: 20px; padding: 18px 0; border-top: 1px solid #dbe4ef; border-bottom: 1px solid #dbe4ef; font-size: 13px; line-height: 1.7; color: #46576d; }
-.sourceReview > strong { font-size: 14px; }
-.sourceReview details { margin: 12px 0; }
-.sourceReview summary { cursor: pointer; color: #2867ca; }
+/* 바꾸기 전 답으로 쓴 항목 — 한 줄로 접힌 안내(누르면 지금 답·확인 단추) */
+.sourceReview { margin-top: 16px; padding: 4px 0; border-top: 1px dashed #dbe4ef; font-size: 13px; line-height: 1.7; color: #46576d; }
+.sourceReview > summary { display: flex; align-items: center; min-height: 40px; cursor: pointer; color: #5b6b80; font-size: 13px; }
+.sourceReview > summary::after { content: "펼치기"; margin-left: 8px; color: #2867ca; font-size: 12px; }
+.sourceReview[open] > summary::after { content: "접기"; }
 .sourceReview dl { margin: 12px 0; }
 .sourceReview dl > div { display: grid; grid-template-columns: minmax(70px, .3fr) minmax(0, 1fr); gap: 12px; padding: 8px 0; }
 .sourceReview dt { color: #718096; }
@@ -277,7 +278,7 @@
 /* 바뀐 사업 조건 안내: 글은 왼쪽, 할 일은 오른쪽 버튼으로(소유자 피드백 2026-10-07: 글씨처럼 보여 누르는 곳인지 몰랐음) */
 .noticeRow { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
 .noticeRow > span { flex:1; min-width:200px; }
-.noticeAction { flex:none; display:inline-flex; align-items:center; justify-content:center; min-height:36px; padding:7px 14px; border:1px solid var(--app-primary); border-radius:8px; background:var(--app-primary); color:#fff !important; font-size:13px; font-weight:600; line-height:1; text-decoration:none; cursor:pointer; }
+.noticeAction { flex:none; display:inline-flex; align-items:center; justify-content:center; gap:6px; min-height:40px; padding:7px 14px; border:1px solid var(--app-primary); border-radius:8px; background:var(--app-primary); color:#fff !important; font-size:13px; font-weight:600; line-height:1; text-decoration:none; cursor:pointer; }
 .noticeAction:hover { filter:brightness(.95); }
 
 /*
@@ -313,3 +314,56 @@
 .badgeRow .doneBadge { border-color: transparent; background: #e9f7ef; color: #1b7f4b; }
 /* 눌리는 칩은 손가락 크기로 */
 .badgeRow .downloadBadge { min-height: 34px; padding: 6px 12px; }
+
+/* 노란 부분 고치기 화면의 표 — 머리줄(thead)과 본문 줄이 한 표로 맞게 보통 표로 그리고, 넓으면 옆으로 밀어 본다(점검 2026-10-21) */
+.body .factBody :global(.fact-table-scroll) { overflow-x:auto; -webkit-overflow-scrolling:touch; margin:0 0 14px; }
+.body .factBody table { display:table; width:max-content; min-width:100%; border-collapse:collapse; table-layout:auto; font-size:13px; }
+.body .factBody :is(th,td) { min-width:0; padding:8px 10px; border:1px solid var(--app-line); white-space:nowrap; }
+.body .factBody :is(th,td):first-child { white-space:normal; min-width:90px; }
+@media (max-width:640px) {
+  .body .factBody :global(.fact-table-scroll)::before { content:"표는 옆으로 밀어 볼 수 있어요"; position:sticky; left:0; display:block; margin:0 0 6px; color:var(--app-muted); font-size:12px; }
+}
+
+/* 그래프 — 폰에서는 원래 크기(440px)로 두고 옆으로 밀어 본다는 안내를 붙인다(점검 2026-10-21: 잘린 채 밀 수 있는지 몰랐다) */
+@media (max-width:500px) {
+  .body :global(figure.plan-chart-figure) { position:relative; overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .body :global(figure.plan-chart-figure)::before { content:"그래프는 옆으로 밀어 볼 수 있어요"; position:sticky; left:0; display:block; margin:0 0 6px; color:var(--app-muted); font-size:12px; }
+}
+
+/* 폰(480px 이하 — 아이폰 17 Pro 402·Pro Max 440 포함) — 아래 '다음 단계 · 홈페이지 다듬고 공개하기'가 네 줄로 꺾였다. 앞의 '다음 단계' 머리말은 빼고 이름만 두 줄 안에 */
+@media (max-width:480px) {
+  .actions[data-next] .nextButton span { display:none; }
+  .actions[data-next] .nextButton { padding:8px 12px; font-size:15px; line-height:1.35; }
+  .actions[data-next] .nextButton svg { display:none; }
+}
+.noticeAction svg { flex:none; width:16px; height:16px; }
+.noticeRow .factError { flex-basis:100%; font-size:13px; }
+
+/* 내려받기 창 — 어떤 문서를 받는지 한 줄로 */
+.downloadWhich { margin:0 0 4px; color:var(--app-body); font-size:14px; }
+/* 내려받은 뒤 잠깐 보이는 알림 — 아래 단추 줄 위 가운데 */
+.toast { position:fixed; left:50%; bottom:calc(96px + env(safe-area-inset-bottom)); z-index:60; transform:translateX(-50%); margin:0; padding:10px 18px; border-radius:999px; background:#191f28; color:#fff; font-size:14px; font-weight:600; box-shadow:0 8px 24px #11141833; animation:factRise .18s ease-out; }
+@media (prefers-reduced-motion: reduce) { .toast { animation:none; } }
+
+/* 상세 계획서·한 장 요약 고르기 — 보이는 크기는 그대로, 누르는 자리는 40px 이상(예전 32px) */
+.readingBar .viewSelector button { position:relative; }
+.readingBar .viewSelector button::after { content:""; position:absolute; inset:-5px -2px; }
+
+/*
+ * 가로로 눕힌 폰(높이 500px 이하) — 머리줄 68 + 도구줄 58 + 아래 단추 87 이 375px 중 214px 을 차지해 본문이 161px 뿐이었다.
+ * 완료 알림은 제목 한 줄, 도구줄·아래 단추는 한 줄로 얇게(단추 높이 40px — 손가락 자리는 유지).
+ */
+@media (max-height:500px) and (orientation:landscape) {
+  .completionNotice { padding-block:6px; gap:10px; animation:none; }
+  .completionNotice p { display:none; }
+  .completionNotice strong { font-size:14px; }
+  .completeMark { width:24px; height:24px; }
+  .completeMark svg { width:16px; height:16px; }
+  .completionNotice > button { width:36px; height:36px; }
+  .readingBar { min-height:44px; padding-block:4px; }
+  .actions { gap:8px; padding-top:6px; padding-bottom:max(6px, env(safe-area-inset-bottom)); }
+  .actions button, .actions .nextButton { min-height:40px; padding-block:6px; font-size:14px; }
+  .actions[data-next] { grid-template-columns:auto minmax(0,1fr); }
+  .actions[data-single] { grid-template-columns:1fr; }
+  .actions[data-next] .nextButton span { display:none; }
+}

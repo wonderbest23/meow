@@ -58,6 +58,17 @@ for (const expected of ["5년 (전자상거래", "3개월 (통신비밀보호법
 assert.ok(JSON.stringify(ai).includes("anthropic_privacy@kimchang.com"));
 const terms = JSON.stringify(createLegalDocument("terms", complete));
 for (const expected of ["충전일부터 1년", "도메인 등록(구매)은 이용자가"]) assert.ok(terms.includes(expected), expected);
+// 약관 4항에 AI 수정 토큰 가격이 있다(새로 팔지 않는 상품이라 이미 충전한 토큰의 기준으로) — 사업자 정보의 판매 목록에는 없다
+assert.ok(terms.includes("AI 수정 토큰: 지금은 새로 판매하지 않습니다. 이미 충전한 토큰은 20만 토큰 9,900원(부가세 포함) 기준"), "terms state the token price");
+assert.ok(!businessText.includes("AI 수정 토큰: 지금은"), "the business-info sales list does not list tokens");
+// 앱 안에서 여는 안내는 스토어 결제만 말한다(App Store 3.1.1 — 앱 안에서 카드·웹 결제를 안내하지 않는다)
+const appBusiness = JSON.stringify(createLegalDocument("business", complete, { inApp: true }));
+const appTerms = JSON.stringify(createLegalDocument("terms", complete, { inApp: true }));
+for (const text of [appBusiness, appTerms]) {
+  assert.ok(text.includes("App Store"), "app documents name the store payment");
+  assert.ok(!/결제 방법: [^"]*(카드|나이스)/.test(text), "app documents do not list card payment as a way to pay");
+}
+assert.ok(terms.includes("Google Play"), "the web terms also say how the apps take payment");
 const refund = createLegalDocument("refund", complete);
 assert.match(refund.summary, /단순 변심 환불이 제한/);
 assert.ok(refund.sections.some((section) => section.paragraphs?.some((paragraph) => paragraph.includes("표시·광고 또는 계약 내용과 다르게"))));

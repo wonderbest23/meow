@@ -44,6 +44,8 @@ export type IntakeState = {
   ideaInputRevision?: number;
   ideaTurns?: IdeaTurn[];
   generatedIdeas?: GeneratedIntakeIdea[];
+  /** 추천 이름을 처음 고르기 전의 사업 이름. 결과 화면에서 원래 이름으로 되돌리는 칩에 쓴다 */
+  originalName?: string;
 };
 export const INTAKE_ACTIONS = ["start", "answer", "message", "note", "confirm-extraction", "details", "extract", "extract-pending", "help", "design", "ideas", "prepare", "structure", "resources", "name", "edit", "edit-apply", "edit-dismiss"] as const;
 export type IntakeCommand = {

@@ -210,7 +210,14 @@ const TOKEN_REFUND_EXAMPLE = Math.floor((TOKEN_PACK_AMOUNT * TOKEN_REFUND_EXAMPL
 const TOKEN_VALIDITY = TOKEN_VALIDITY_DAYS === 365 ? "1년" : `${TOKEN_VALIDITY_DAYS}일`;
 
 /* 지금 결제 화면은 카드만 받는다 — 받지 않는 결제 수단을 법적 안내에 적지 않는다 */
-const PAYMENT_METHODS = "신용·체크카드(결제대행: 나이스페이먼츠 NicePay)";
+const PAYMENT_METHODS = "신용·체크카드(결제대행: 나이스페이먼츠 NicePay). 아이폰·안드로이드 앱 안에서는 스토어 결제(App Store·Google Play)";
+/*
+ * 앱(아이폰·안드로이드) 안에서 여는 안내 — 앱 안에서는 스토어 결제로만 판다. 카드·웹 결제를 안내하지 않는다(App Store 3.1.1).
+ * 화면(서버)은 요청의 User-Agent 에 붙은 앱 표시(OneulstartApp)로 앱인지 안다.
+ */
+const APP_PAYMENT_METHODS = "앱 안 스토어 결제(아이폰은 App Store, 안드로이드는 Google Play)";
+export type LegalDocumentOptions = { inApp?: boolean };
+const paymentMethods = (options: LegalDocumentOptions) => options.inApp ? APP_PAYMENT_METHODS : PAYMENT_METHODS;
 
 const PRODUCT_ITEMS = [
   `사업계획서(문서 1부): ${won(PACKAGE_AMOUNT)}(부가세 포함)`,
@@ -220,6 +227,12 @@ const PRODUCT_ITEMS = [
   `${DOMAIN_PURCHASE_PRODUCT_NAME}: ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. .com·.kr·.co.kr 주소의 첫해 등록비 ${won(DOMAIN_PURCHASE_REGISTRATION_AMOUNT)} 포함)`,
   `다시 생성 ${REGEN_PACK_COUNT}회 추가: ${won(REGEN_PACK_AMOUNT)}(부가세 포함)`,
 ];
+/*
+ * AI 수정 토큰 — 오픈 범위(2026-10-08)에서 새로 팔지 않는다. 그래서 판매 목록(PRODUCT_ITEMS, 사업자 정보의 '판매 사이트 정보')에는
+ * 넣지 않고, 약관 '4. 상품, 가격과 결제'에만 이미 충전한 토큰의 가격 기준으로 적는다 — 약관 4·9항과 환불 기준이 토큰을 말하는데
+ * 가격이 없었다(2026-10-21 점검).
+ */
+const TOKEN_PRICE_ITEM = `AI 수정 토큰: 지금은 새로 판매하지 않습니다. 이미 충전한 토큰은 ${tokenCount(TOKEN_PACK_TOKENS)} 토큰 ${won(TOKEN_PACK_AMOUNT)}(부가세 포함) 기준이며, 사용 기간(충전일부터 ${TOKEN_VALIDITY})과 환불은 '9. AI 수정 토큰'을 따릅니다.`;
 
 const DOMAIN_REFUND_ITEMS = [
   "도메인 연결을 완료하기 전에 요청하면 전액 환불합니다.",
@@ -255,7 +268,7 @@ function shown(value: string, fallback = "정식 출시 전 입력 예정") {
   return value.trim() || fallback;
 }
 
-function businessDocument(settings: PlatformLegalSettings): LegalDocument {
+function businessDocument(settings: PlatformLegalSettings, options: LegalDocumentOptions = {}): LegalDocument {
   const mailOrderStatus = mailOrderStatusLabels[settings.mailOrderStatus];
   const supportChannels = [settings.supportPhone, settings.supportEmail].filter((value) => value.trim()).join(" / ");
   return {
@@ -287,7 +300,7 @@ function businessDocument(settings: PlatformLegalSettings): LegalDocument {
         // 오픈 범위(2026-10-08): AI 수정 토큰·맞춤 홈페이지 제작은 팔지 않는다(이미 산 토큰의 환불 기준은 아래 그대로)
         "취급 품목: 맞춤 사업계획서 등 디지털 문서, 홈페이지 자동 제작과 도메인 연결·호스팅",
         ...PRODUCT_ITEMS,
-        `결제 방법: ${PAYMENT_METHODS}`,
+        `결제 방법: ${paymentMethods(options)}`,
         `서비스 제공 시기: ${settings.serviceSupplyTiming}`,
       ],
     }, {
@@ -504,7 +517,7 @@ function aiDocument(settings: PlatformLegalSettings): LegalDocument {
   };
 }
 
-function termsDocument(settings: PlatformLegalSettings): LegalDocument {
+function termsDocument(settings: PlatformLegalSettings, options: LegalDocumentOptions = {}): LegalDocument {
   return {
     title: "이용약관",
     summary: `${settings.serviceName}의 계정, 사업 설계, 디지털 결과물과 판매 페이지 이용 조건입니다.`,
@@ -512,8 +525,8 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
     sections: [
       { title: "1. 목적과 적용", paragraphs: ["이 약관은 운영자와 이용자 사이의 서비스 이용 조건, 권리와 책임을 정합니다. 결제 화면에 별도로 표시한 상품명, 금액, 제공 시기와 환불 조건도 계약 내용에 포함됩니다."] },
       { title: "2. 계정", items: ["이용자는 정확한 이메일로 가입하고 자신의 계정을 안전하게 관리해야 합니다.", "타인의 계정을 사용하거나 계정을 양도할 수 없습니다.", "계정 분실 시 이메일 계정 복구 절차를 이용할 수 있습니다."] },
-      { title: "3. 서비스 제공", items: ["아이디어 탐색과 사업 방향 정리는 사업자등록 여부와 관계없이 무료로 이용할 수 있습니다. 사업계획서 문서 작성은 결제한 뒤에 시작하며, 문서를 무료로 써 보는 체험은 제공하지 않습니다.", `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "카드 결제 승인이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
-      { title: "4. 상품, 가격과 결제", items: [...PRODUCT_ITEMS, `결제 방법: ${PAYMENT_METHODS}. 카드 결제는 결제대행사 화면에서 이뤄지며 오늘창업은 카드번호를 받지 않습니다.`, "도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 결제한 문서 또는 홈페이지에서만 사용할 수 있고 다른 문서·홈페이지나 다른 계정으로 옮길 수 없습니다."] },
+      { title: "3. 서비스 제공", items: ["아이디어 탐색과 사업 방향 정리는 사업자등록 여부와 관계없이 무료로 이용할 수 있습니다. 사업계획서 문서 작성은 결제한 뒤에 시작하며, 문서를 무료로 써 보는 체험은 제공하지 않습니다.", `유료 결과물 제공 시기: ${settings.serviceSupplyTiming}`, "결제 승인(앱 안 결제는 스토어 결제 확인)이 맞춤 디지털 결과물 제공 개시 시점이며, 결제 화면에서 이용자의 별도 동의를 받습니다.", "사용자의 입력과 승인에 따라 추천, 보고서, 사업계획서, 판매 페이지와 실행 안내를 제공합니다.", "베타 기능은 예고 후 변경될 수 있으나 이미 결제한 상품의 핵심 제공 범위를 일방적으로 축소하지 않습니다."] },
+      { title: "4. 상품, 가격과 결제", items: [...PRODUCT_ITEMS, TOKEN_PRICE_ITEM, options.inApp ? `결제 방법: ${APP_PAYMENT_METHODS}. 결제수단 정보는 Apple·Google이 직접 처리하며 오늘창업은 받지 않습니다.` : `결제 방법: ${PAYMENT_METHODS}. 카드 결제는 결제대행사 화면에서, 앱 안 결제는 스토어 화면에서 이뤄지며 오늘창업은 카드번호 등 결제수단 정보를 받지 않습니다.`, "도메인 연결·호스팅, AI 수정 토큰, 다시 생성 추가 횟수는 결제한 문서 또는 홈페이지에서만 사용할 수 있고 다른 문서·홈페이지나 다른 계정으로 옮길 수 없습니다."] },
       { title: "5. 인공지능 결과", paragraphs: ["일부 결과는 생성형 인공지능이 작성한 초안입니다. 이용자는 실제 사업에 사용하기 전에 사실관계, 수치, 권리침해 여부와 관계 법령을 확인해야 합니다. 운영자는 고의 또는 중대한 과실이 없는 한 이용자가 확인 없이 결과를 사용해 발생한 손해를 책임지지 않습니다."] },
       { title: "6. 맞춤 제작과 환불 제한(사업계획서·홈페이지)", paragraphs: [settings.refundAfterSupply, "결제 전 완성 결과 예시와 제공 항목을 확인할 수 있습니다. 결제 화면에서는 제작 시작 시점과 단순 변심 환불 제한을 별도로 알리고 전자적 동의를 받습니다."] },
       {
@@ -537,7 +550,7 @@ function termsDocument(settings: PlatformLegalSettings): LegalDocument {
   };
 }
 
-function refundDocument(settings: PlatformLegalSettings): LegalDocument {
+function refundDocument(settings: PlatformLegalSettings, options: LegalDocumentOptions = {}): LegalDocument {
   return {
     title: "취소·환불 기준",
     summary: "사업계획서·홈페이지는 맞춤 제작 시작 전에는 전액 환불하며, 제작 시작 후에는 단순 변심 환불이 제한됩니다. 도메인 연결·AI 수정 토큰·다시 생성 추가 횟수는 남은 기간·수량만큼 환불합니다. 미제공·계약 불일치·중대한 하자 등 법정 권리는 그대로 보장합니다.",
@@ -566,7 +579,7 @@ function refundDocument(settings: PlatformLegalSettings): LegalDocument {
           "주문번호, 결제일과 신청 사유를 알려주세요. 이전에 계좌이체로 결제한 주문은 입금자명도 함께 알려주세요.",
           "환불이 확정되면 3영업일 이내에 처리합니다.",
           "아이폰·안드로이드 앱 안에서 결제한 주문은 결제를 처리한 스토어에 환불을 신청합니다. 아이폰은 Apple 문제 신고 페이지(reportaproblem.apple.com), 안드로이드는 Google Play 주문 내역에서 신청할 수 있으며, 환불 여부와 시기는 각 스토어가 정합니다. 이 기준에 따라 환불받아야 하는데 스토어에서 거절되면 위 연락처로 알려주세요.",
-          "카드 결제는 결제대행사(나이스페이먼츠)를 통해 승인 취소하며, 일부 환불은 부분 취소로 처리합니다. 카드사 사정에 따라 청구 내역과 한도에 반영되기까지 영업일 기준 3~7일이 더 걸릴 수 있습니다.",
+          ...(options.inApp ? [] : ["카드 결제는 결제대행사(나이스페이먼츠)를 통해 승인 취소하며, 일부 환불은 부분 취소로 처리합니다. 카드사 사정에 따라 청구 내역과 한도에 반영되기까지 영업일 기준 3~7일이 더 걸릴 수 있습니다."]),
           "이전에 계좌이체로 결제한 주문은 본인 확인이 가능한 환급 계좌를 안내받아 송금합니다. 운영자가 환급 완료를 기록한 뒤에도 은행 처리 시간에 따라 계좌 반영이 늦어질 수 있습니다.",
           "중복 결제나 금액 착오가 확인되면 실제 결제액을 기준으로 정산합니다.",
         ],
@@ -576,10 +589,26 @@ function refundDocument(settings: PlatformLegalSettings): LegalDocument {
   };
 }
 
-export function createLegalDocument(type: LegalDocumentType, settings: PlatformLegalSettings): LegalDocument {
-  if (type === "business") return businessDocument(settings);
-  if (type === "privacy") return privacyDocument(settings);
-  if (type === "ai") return aiDocument(settings);
-  if (type === "terms") return termsDocument(settings);
-  return refundDocument(settings);
+/*
+ * 앱 안에서 여는 안내는 카드(나이스페이) 결제 문장을 스토어 결제 기준으로 바꾼다 — 앱에서는 스토어 결제만 받는다(App Store 3.1.1, 점검 2026-10-21).
+ * 운영자가 고친 문구(settings)가 카드로 시작하면 그 앞부분만 바꾸고, 나머지 뜻은 그대로 둔다.
+ */
+function inAppSettings(settings: PlatformLegalSettings): PlatformLegalSettings {
+  return {
+    ...settings,
+    serviceSupplyTiming: settings.serviceSupplyTiming.replace(/^신용·체크카드 결제는 NicePay\(나이스페이먼츠\) 결제 승인 즉시, 앱 안 결제\(App Store·Google Play\)는/, "앱 안 결제(App Store·Google Play)는"),
+    refundBeforeSupply: /^카드 결제/.test(settings.refundBeforeSupply)
+      ? "앱 안에서 결제한 주문은 결제를 처리한 스토어(App Store·Google Play)에 취소·환불을 신청합니다. 맞춤 결과물 생성이 실제로 시작되지 않았다면 전액 환불 대상입니다."
+      : settings.refundBeforeSupply,
+    refundAfterSupply: settings.refundAfterSupply.replace(/^카드 결제가 승인되어/, "결제가 확인되어"),
+  };
+}
+
+export function createLegalDocument(type: LegalDocumentType, settings: PlatformLegalSettings, options: LegalDocumentOptions = {}): LegalDocument {
+  const shownSettings = options.inApp ? inAppSettings(settings) : settings;
+  if (type === "business") return businessDocument(shownSettings, options);
+  if (type === "privacy") return privacyDocument(shownSettings);
+  if (type === "ai") return aiDocument(shownSettings);
+  if (type === "terms") return termsDocument(shownSettings, options);
+  return refundDocument(shownSettings, options);
 }

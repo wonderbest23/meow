@@ -17,30 +17,30 @@ export const runtime = "nodejs";
  * 같은 영수증을 다시 보내면 이미 반영된 것으로 성공을 돌려준다 — 앱이 응답을 못 받아 다시 보내도 안전하다.
  */
 export async function POST(request: Request) {
-  const limited = await enforceRateLimit("iap-complete", request, { limit: 20, windowMs: 5 * 60_000, message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  const limited = await enforceRateLimit("iap-complete", request, { limit: 20, windowMs: 5 * 60_000, message: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
   const body = (await request.json().catch(() => ({}))) as { platform?: unknown; product?: unknown; planId?: unknown; planType?: unknown; jws?: unknown; purchaseToken?: unknown };
   const platform = body.platform === "ios" || body.platform === "android" ? body.platform : null;
   const product = iapProduct(body.product);
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
   const planType = typeof body.planType === "string" ? body.planType.slice(0, 120) : "";
-  if (!platform || !product || !planId) return NextResponse.json({ error: "bad_request", message: "결제 정보가 올바르지 않습니다." }, { status: 400 });
+  if (!platform || !product || !planId) return NextResponse.json({ error: "bad_request", message: "결제 정보가 올바르지 않아요." }, { status: 400 });
 
   let identity: Awaited<ReturnType<typeof requireAuthenticatedIdentity>>;
   try {
     identity = await requireAuthenticatedIdentity();
   } catch {
-    return NextResponse.json({ error: "login_required", message: "로그인 후 결제를 반영할 수 있습니다." }, { status: 401 });
+    return NextResponse.json({ error: "login_required", message: "로그인한 뒤에 결제를 반영할 수 있어요." }, { status: 401 });
   }
   // 내 사업에만 반영한다 — 남의 사업 번호로 결제를 넣을 수 없다
   const state = await loadPlanState(identity.hash);
-  if (!state.plans.some((plan) => plan.id === planId)) return NextResponse.json({ error: "not_found", message: "이 사업을 찾을 수 없습니다." }, { status: 404 });
+  if (!state.plans.some((plan) => plan.id === planId)) return NextResponse.json({ error: "not_found", message: "이 사업을 찾지 못했어요." }, { status: 404 });
 
   const accountToken = appAccountTokenFor(identity.userId);
   const productId = IAP_PRODUCT_IDS[product];
   try {
     if (platform === "ios") {
-      if (typeof body.jws !== "string" || body.jws.length > 20_000) return NextResponse.json({ error: "bad_request", message: "영수증이 없습니다." }, { status: 400 });
+      if (typeof body.jws !== "string" || body.jws.length > 20_000) return NextResponse.json({ error: "bad_request", message: "결제 확인 정보(영수증)가 없어요." }, { status: 400 });
       const transaction = verifyAppleTransaction(body.jws, { bundleId: APP_BUNDLE_ID, productId, appAccountToken: accountToken });
       const recorded = await recordIapPurchase({
         platform, storeTransactionId: transaction.transactionId, product, planId, planType, userId: identity.userId, guestTokenHash: identity.hash, email: identity.email,
@@ -49,7 +49,7 @@ export async function POST(request: Request) {
       if (recorded.firstCompletion) await notifyPaymentComplete(recorded.orderId, true).catch(() => undefined);
       return NextResponse.json({ ok: true, orderId: recorded.orderId, transactionId: transaction.transactionId });
     }
-    if (typeof body.purchaseToken !== "string" || body.purchaseToken.length > 4_000) return NextResponse.json({ error: "bad_request", message: "영수증이 없습니다." }, { status: 400 });
+    if (typeof body.purchaseToken !== "string" || body.purchaseToken.length > 4_000) return NextResponse.json({ error: "bad_request", message: "결제 확인 정보(영수증)가 없어요." }, { status: 400 });
     const purchase = await verifyGooglePurchase({ packageName: APP_BUNDLE_ID, productId, purchaseToken: body.purchaseToken, accountId: accountToken });
     const recorded = await recordIapPurchase({
       platform, storeTransactionId: purchase.transactionId, product, planId, planType, userId: identity.userId, guestTokenHash: identity.hash, email: identity.email,
@@ -68,6 +68,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: error.code, message: error.message }, { status: error.status });
     }
     console.error("[iap-complete] 오류:", error instanceof Error ? error.message : error);
-    return NextResponse.json({ error: "iap_failed", message: "결제를 반영하지 못했습니다. 앱을 다시 열면 자동으로 다시 시도합니다." }, { status: 500 });
+    return NextResponse.json({ error: "iap_failed", message: "결제를 반영하지 못했어요. 앱을 다시 열면 자동으로 다시 시도해요." }, { status: 500 });
   }
 }

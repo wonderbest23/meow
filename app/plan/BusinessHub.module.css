@@ -25,6 +25,10 @@
 .rename { display:flex; gap:8px; flex-wrap:wrap; }.rename input { min-width:0; width:100%; padding:14px; border:1px solid var(--app-line); border-radius:8px; font:inherit; }.rename > button:not(.secondary):not(.primary) { background:none; border:0; padding:12px; }
 .samples { border-top:1px solid var(--app-line); margin-top:40px; padding-top:8px; }.samples summary { cursor:pointer; padding:20px 0; color:var(--app-muted); font-size:15px; font-weight:600; }.sampleRow { width:100%; display:flex; align-items:center; justify-content:space-between; gap:16px; padding:18px; min-height:60px; background:var(--app-raised); border:0; border-radius:8px; text-align:left; margin:10px 0; color:var(--app-text); }
 .content .muted { font-size:14px; color:var(--app-muted); }.content .error { color:var(--app-danger); font-size:14px; }
+/* 불러오기 실패 — 다시 시도 단추 */
+.content div.error { display:grid; justify-items:start; gap:12px; }
+.content div.error p { margin:0; }
+.inlineRetry { margin-left:6px; padding:0; border:0; background:none; color:var(--app-primary); font:inherit; font-weight:600; text-decoration:underline; cursor:pointer; }
 .workspaceTitle { margin-bottom:28px; }.workspaceTitle .status { margin-bottom:16px; }
 .tabs { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; margin-bottom:32px; }
 .tabs button,.tabs a { min-width:0; min-height:52px; display:flex; align-items:center; justify-content:center; border:1px solid var(--app-line); border-radius:8px; background:var(--app-surface); color:var(--app-body); font-size:15px; font-weight:600; line-height:1.5; padding:12px 8px; text-align:center; transition:background .16s,border-color .16s,box-shadow .16s,transform .16s; -webkit-tap-highlight-color:transparent; }
@@ -96,8 +100,15 @@
 .titleAction:hover { text-decoration: underline; }
 .tabLink { margin: -8px 0 8px !important; }
 
-/* 휴대폰 — 네 탭이 한 줄에 다 보이게(375 에서 '유지보수'가 반쯤 잘리고 320 에서는 화면 밖이었다) */
+/*
+ * 휴대폰 — 네 탭이 한 줄에 다 보이게(375 에서 '유지보수'가 반쯤 잘리고 320 에서는 화면 밖이었다).
+ * 넓이는 나눠 갖되 글자 폭 아래로는 줄지 않는다(flex: 1 0 auto) — 예전 flex:1 1 0 + min-width:0 은
+ * 320px·글자 확대에서 칸이 글자보다 좁아져 탭 글자끼리 겹쳤다. 모자라면 탭 줄이 옆으로 밀린다(overflow-x:auto).
+ */
 @media (max-width: 480px) {
-  .tabs button { flex: 1 1 0; min-width: 0; padding: 0 4px; font-size: 14px; white-space: nowrap; }
+  .tabs button { flex: 1 0 auto; min-width: max-content; padding: 0 6px; font-size: 14px; white-space: nowrap; }
 }
 @media (max-width: 340px) { .tabs button { font-size: 13px; } }
+
+/* 태블릿·폰(손가락) — '대화 이어가기' 같은 작은 글자 링크도 누를 자리를 44px 이상으로 */
+@media (pointer: coarse) { .titleAction { display: inline-flex; align-items: center; min-height: 44px; } }

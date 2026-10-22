@@ -1,7 +1,7 @@
 import { spawnSync } from "node:child_process";
 
 // Each suite runs in memory with credentials removed and external fetch disabled.
-const suites = ["deck-job", "coach-deck-context", "coach-review-fallback", "llm", "llm-cache", "plan-section-service", "section-save-race", "document-edit", "document-table-roundtrip", "document-context", "coach-job-status", "plan-guest-persist", "plan-sync", "plan-account-linking", "plan-demo-store", "auth-session-input", "plan-cache-owner", "payment-security", "plan-payment-status", "business-hub", "business-journeys", "operating-records", "operating-analysis", "business-navigation", "launch-missions", "landing-from-plan", "plan-landing-chain", "landing-save", "landing-business-content"];
+const suites = ["deck-job", "coach-deck-context", "coach-review-fallback", "llm", "llm-cache", "plan-section-service", "section-save-race", "document-edit", "document-table-roundtrip", "document-context", "coach-job-status", "plan-guest-persist", "plan-sync", "plan-account-linking", "plan-demo-store", "auth-session-input", "plan-cache-owner", "plan-quarantine-cache", "payment-security", "plan-payment-status", "business-hub", "business-journeys", "operating-records", "operating-analysis", "business-navigation", "launch-missions", "landing-from-plan", "plan-landing-chain", "landing-save", "landing-business-content"];
 suites.push("synthetic-ai-budget", "admin-jobs", "llm-usage", "llm-alert", "llm-stability", "landing-publication");
 suites.push("staging-safety");
 suites.push("prelaunch-db-safety");
@@ -26,8 +26,8 @@ suites.push("business-intake-questions", "business-intake-core", "business-intak
 suites.push("business-intake-prepare", "business-intake-ui");
 suites.push("ksic", "business-intake-coverage");
 suites.push("intake-live-comment", "intake-answer-suggestions", "financial-engine-unify", "safe-next");
-suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "plan-cost-cap", "fact-patch", "plan-eval", "cashflow-scenarios", "section-prompt-v3", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render", "landing-ai-fill", "landing-contact-method", "landing-share-card", "landing-photo-library", "landing-themes", "llm-cost", "operating-homepage", "domain-purchase", "weekly-report", "customer-sms", "parallel-sections", "industry-playbooks", "business-types", "big-industry-paths", "marketing-kit", "plan-section-guard");
-suites.push("launch-notifications");
+suites.push("platform-legal", "token-expiry", "intake-login", "launch-pricing", "plan-cost-cap", "fact-patch", "fact-highlight", "plan-eval", "cashflow-scenarios", "section-prompt-v3", "stream-usage", "operator-account", "design-normalize", "pending-sections", "review-keep-unresolved", "confirmed-name", "brainwave-business-render", "landing-ai-fill", "landing-contact-method", "landing-share-card", "landing-photo-library", "landing-themes", "llm-cost", "operating-homepage", "domain-purchase", "weekly-report", "customer-sms", "parallel-sections", "industry-playbooks", "business-types", "big-industry-paths", "marketing-kit", "plan-section-guard");
+suites.push("launch-notifications", "auth-email-confirmation");
 suites.push("apple-iap", "google-play-iap");
 suites.push("service-requests");
 suites.push("public-data");
@@ -35,6 +35,8 @@ suites.push("domain-registrar");
 suites.push("lead-retention");
 suites.push("schema-readiness");
 suites.push("launch-scope");
+suites.push("business-design");
+suites.push("business-launch-shape");
 const env = Object.fromEntries(Object.entries(process.env).filter(([key]) => !/KEY|TOKEN|SECRET|PASSWORD|SUPABASE|DATABASE_URL/.test(key)));
 Object.assign(env, { NODE_ENV: "test", PERSISTENCE_MODE: "demo-memory", SUPABASE_URL: "", SUPABASE_SERVICE_ROLE_KEY: "", OPENAI_API_KEY: "", ANTHROPIC_API_KEY: "" });
 let failures = 0;

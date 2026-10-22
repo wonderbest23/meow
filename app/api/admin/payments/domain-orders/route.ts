@@ -17,7 +17,7 @@ function privateJson(body: unknown, init?: ResponseInit) {
 
 async function authorize() {
   if (await hasAdminSession("payments")) return null;
-  return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, { status: 401 });
+  return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요해요." } }, { status: 401 });
 }
 
 export async function GET() {
@@ -26,7 +26,7 @@ export async function GET() {
   try {
     return privateJson({ orders: await listDomainPurchaseOrders(), cnameTarget: process.env.CLOUDFLARE_SAAS_CNAME_TARGET?.trim() || "connect.oneulstart.com" });
   } catch {
-    return privateJson({ error: { code: "DOMAIN_ORDERS_FAILED", message: "도메인 주문을 불러오지 못했습니다." } }, { status: 503 });
+    return privateJson({ error: { code: "DOMAIN_ORDERS_FAILED", message: "도메인 주문을 불러오지 못했어요." } }, { status: 503 });
   }
 }
 
@@ -46,21 +46,21 @@ export async function PATCH(request: Request) {
     try {
       const orders = await listDomainPurchaseOrders();
       const order = orders.find((item) => item.orderId === parsed.data.orderId);
-      if (!order) return privateJson({ error: { code: "NOT_FOUND", message: "결제된 도메인 구매 주문을 찾을 수 없습니다." } }, { status: 404 });
+      if (!order) return privateJson({ error: { code: "NOT_FOUND", message: "결제된 도메인 구매 주문을 찾지 못했어요." } }, { status: 404 });
       await refundOrderByAdmin(order.orderId, { amount: order.amount, note: parsed.data.note });
       return privateJson({ orders: await listDomainPurchaseOrders() });
     } catch (error) {
       if (error instanceof RefundError) return privateJson({ error: { code: "DOMAIN_REFUND_FAILED", message: error.message } }, { status: error.status });
       console.error("[admin/domain-orders] refund failed", error);
-      return privateJson({ error: { code: "DOMAIN_REFUND_FAILED", message: "환불을 처리하지 못했습니다. 환불 접수함에서 상태를 확인해 주세요." } }, { status: 500 });
+      return privateJson({ error: { code: "DOMAIN_REFUND_FAILED", message: "환불을 처리하지 못했어요. 환불 요청에서 상태를 확인해 주세요." } }, { status: 500 });
     }
   }
   try {
-    if (!(await markDomainRegistered(parsed.data.orderId))) return privateJson({ error: { code: "NOT_FOUND", message: "결제된 도메인 구매 주문을 찾을 수 없습니다." } }, { status: 404 });
+    if (!(await markDomainRegistered(parsed.data.orderId))) return privateJson({ error: { code: "NOT_FOUND", message: "결제된 도메인 구매 주문을 찾지 못했어요." } }, { status: 404 });
     // 등록 완료와 함께 연결도 시작하고 사장님께 알린다 — 실패해도 등록 완료는 그대로, 경고만 보인다
     const connection = await startRegisteredDomainConnection(parsed.data.orderId);
     return privateJson({ orders: await listDomainPurchaseOrders(), connection: { connected: connection.connected, hostname: connection.hostname, notified: connection.notified }, warning: connection.warning });
   } catch {
-    return privateJson({ error: { code: "DOMAIN_ORDER_UPDATE_FAILED", message: "등록 완료로 바꾸지 못했습니다." } }, { status: 503 });
+    return privateJson({ error: { code: "DOMAIN_ORDER_UPDATE_FAILED", message: "등록 완료로 바꾸지 못했어요." } }, { status: 503 });
   }
 }

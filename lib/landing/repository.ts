@@ -461,6 +461,33 @@ export async function publishLanding(
   return (await getLandingForProject(projectId, guestTokenHash))!;
 }
 
+/*
+ * 공개 멈추기 — 손님 주소(/launch/…·내 도메인)로 더는 열리지 않게 한다. 초안·버전·주소(published_slug)는 그대로 남겨,
+ * '다시 공개'(publishLanding)하면 같은 주소로 다시 열린다. 이미 멈춘 홈페이지면 그대로 돌려준다(두 번 눌러도 안전).
+ */
+export async function unpublishLanding(
+  projectId: string,
+  guestTokenHash: string,
+): Promise<LandingSiteRecord> {
+  const site = await getLandingForProject(projectId, guestTokenHash);
+  if (!site) throw new Error("LANDING_NOT_FOUND");
+  if (site.status !== "published") return site;
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.sites.get(site.id)!;
+    stored.status = "unpublished";
+    stored.updatedAt = new Date(Math.max(Date.now(), Date.parse(stored.updatedAt) + 1)).toISOString();
+    return demoWithMetrics(stored);
+  }
+  const { error } = await supabase
+    .from("landing_sites")
+    .update({ status: "unpublished" })
+    .eq("id", site.id)
+    .eq("status", "published");
+  if (error) throw error;
+  return (await getLandingForProject(projectId, guestTokenHash))!;
+}
+
 export async function setLandingCustomDomain(
   projectId: string,
   guestTokenHash: string,
@@ -590,6 +617,27 @@ export async function getPublishedLandingByCustomDomain(
     site: await mapSupabaseSite(supabase, data),
     config: parseLandingDraft(version.config),
   };
+}
+
+/*
+ * 같은 손님이 같은 내용을 방금(기본 60초 안에) 보냈는지 — 단추를 여러 번 누르거나 느린 연결에서 다시 보내도
+ * 사장님에게 같은 문의가 여러 개 쌓이고 문자가 여러 번 가지 않게 한다. 있으면 그 문의 번호를 돌려준다.
+ */
+export async function findRecentDuplicateLead(siteId: string, input: Pick<LandingLeadInput, "name" | "email" | "phone" | "message">, withinMs = 60_000): Promise<string | null> {
+  const since = new Date(Date.now() - withinMs).toISOString();
+  const same = (a: string | null | undefined, b: string | null | undefined) => (a ?? "") === (b ?? "");
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const found = demo.leads.find(lead => lead.siteId === siteId && lead.createdAt >= since && same(lead.name, input.name) && same(lead.email, input.email) && same(lead.phone, input.phone) && same(lead.message, input.message));
+    return found?.id ?? null;
+  }
+  let query = supabase.from("landing_leads").select("id").eq("site_id", siteId).eq("name", input.name).gte("created_at", since);
+  query = input.email ? query.eq("email", input.email) : query.is("email", null);
+  query = input.phone ? query.eq("phone", input.phone) : query.is("phone", null);
+  query = query.eq("message", input.message ?? "");
+  const { data, error } = await query.order("created_at", { ascending: false }).limit(1);
+  if (error) throw error;
+  return data?.[0]?.id ?? null;
 }
 
 export async function createLandingLead(

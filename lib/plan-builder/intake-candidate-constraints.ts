@@ -19,6 +19,8 @@ const TEMPLATE_FACTS: Record<string, Facts> = {
   "studio-partyroom": { capital: "storefront", offering: "space", revenue: "rental", delivery: "store" },
   "subscription-experiment": { revenue: "subscription" },
 };
+/** AI 제안이 고른 시작 조건과 다를 때 카드에 붙는 안내. 그래도 고를 수 있다. */
+export const CONDITION_DIFFERS_NOTE = "고르신 시작 조건과 다른 부분이 있어요. 그래도 고를 수 있어요.";
 export const candidateTemplateFacts = (id: string): Facts => TEMPLATE_FACTS[id] ?? {};
 export function selectedStartConditions(value: unknown): StartCondition[] {
   return Array.isArray(value) ? value.filter((item): item is StartCondition => START_CONDITIONS.includes(item)) : [];
@@ -50,6 +52,6 @@ export function candidateConditionFit(facts: Facts, conditions: StartCondition[]
 export function filterCandidateConditions<T extends { cautions: string[] }>(candidate: T, facts: Facts, conditions: StartCondition[]): T[] {
   const fit = candidateConditionFit(facts, conditions);
   if (fit.conflict) return [];
-  const warning = fit.unknown.length ? `조건 적합성 확인 필요(자료 없음): ${fit.unknown.join(", ")}` : null;
+  const warning = fit.unknown.length ? `고르신 조건(${fit.unknown.join(", ")})에 맞는지는 아직 몰라요. 한 번 확인해 보세요.` : null;
   return [{ ...candidate, cautions: warning && !candidate.cautions.includes(warning) ? [...candidate.cautions, warning] : candidate.cautions }];
 }

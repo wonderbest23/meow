@@ -33,21 +33,23 @@ async function main() {
       await page.$eval('#difference', el => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
       await page.screenshot({ path: `artifacts/home-product-preview/${width}-difference.png` });
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
-      await page.$eval('#price details:nth-child(2) summary', el => (el as HTMLElement).click());
-      assert.equal(await page.$eval('#price details:nth-child(2)', el => el.hasAttribute('open')), true);
-      await page.$eval('#price', el => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
+      // 가격은 접힌 질문 밖 '이용 요금' 상자에 늘 보이고, 머리말 '가격 안내'(#price)가 그 상자로 온다
+      assert.match(await page.$eval('#price', el => el.textContent ?? ''), /무료[\s\S]*49,000원[\s\S]*59,000원/);
+      await page.$eval('#faq details:nth-child(2) summary', el => (el as HTMLElement).click());
+      assert.equal(await page.$eval('#faq details:nth-child(2)', el => el.hasAttribute('open')), true);
+      await page.$eval('#faq', el => el.scrollIntoView({ block: 'start', behavior: 'instant' }));
       await page.screenshot({ path: `artifacts/home-product-preview/${width}-usage.png` });
       await page.$eval(ring, el => el.scrollIntoView({ block: 'center', behavior: 'instant' }));
       assert.equal(await page.$(ring + ' svg'), null, "링에 아이콘이 없어야 함");
-      assert.equal(await page.$eval(ring + ' [data-entry-send]', el => el.textContent), '보내기');
+      assert.equal(await page.$eval(ring + ' [data-entry-send]', el => el.textContent), '대화 시작하기');
       assert.equal(await page.$eval(ring, el => {
         const prompt = el.querySelector('[data-entry-prompt]')!;
         const send = el.querySelector('[data-entry-send]')!;
         return prompt.getBoundingClientRect().right <= send.getBoundingClientRect().left;
-      }), true, '타이핑 문구와 보내기 영역이 겹치지 않아야 함');
+      }), true, '예시 문구와 대화 시작하기 단추가 겹치지 않아야 함');
       assert.equal(await page.$('[aria-label="미리보기 장면 선택"]'), null);
       await page.waitForFunction(() => { const img = document.querySelector<HTMLImageElement>('[data-cinematic-hero] img'); return img && img.complete && img.naturalWidth > 0; });
-      assert.match(await page.$eval(section + ' img', img => (img as HTMLImageElement).src), /oneulstart-team.png/);
+      assert.match(await page.$eval(section + ' img', img => (img as HTMLImageElement).src), /oneulstart-team\.webp/);
       await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
       await page.screenshot({ path: `artifacts/home-product-preview/${width}-photo-home.png` });
       const first = await page.$eval(section + ' img', img => getComputedStyle(img).transform);

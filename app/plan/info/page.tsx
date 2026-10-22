@@ -1,9 +1,13 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { createLegalDocument, evaluatePlatformLaunchReadiness, type LegalDocumentType } from "../../../lib/platform-legal/domain";
 import { paymentsEnabled } from "../../../lib/payments/config";
 import { manualTransferPaymentConfigured } from "../../../lib/payments/manual-transfer";
 import { getPlatformLegalSettings } from "../../../lib/platform-legal/repository";
 import styles from "./PlanInfo.module.css";
+
+export const metadata: Metadata = { title: "이용 안내 | 오늘창업" };
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +45,9 @@ export default async function PlanInfoPage({
 }) {
   const type = resolveDoc((await searchParams).doc);
   const settings = await getPlatformLegalSettings();
-  const document = createLegalDocument(type, settings);
+  // 앱 안에서 열면 결제 방법을 앱 기준(스토어 결제)으로 보인다 — 앱은 User-Agent 끝에 OneulstartApp 을 붙인다
+  const inApp = (await headers()).get("user-agent")?.includes("OneulstartApp") === true;
+  const document = createLegalDocument(type, settings, { inApp });
   const readiness = evaluatePlatformLaunchReadiness(settings, {
     authConfigured: Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
     paymentsConfigured: paymentsEnabled() && manualTransferPaymentConfigured(),

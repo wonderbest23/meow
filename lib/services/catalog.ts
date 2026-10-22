@@ -45,7 +45,7 @@ export type ServiceIcon = "badge" | "cart" | "shield" | "building" | "pen" | "ne
 
 const ALL_SERVICE_GROUPS: readonly ServiceGroup[] = [
   { id: "admin", title: "창업 행정", note: "등록·신고처럼 한 번은 꼭 해야 하는 일" },
-  { id: "marketing", title: "마케팅", note: "손님이 가게를 찾아오게 하는 일" },
+  { id: "marketing", title: "마케팅", note: "손님이 내 사업을 찾아오게 하는 일" },
   { id: "homepage", title: "홈페이지 개선", note: "담당자가 직접 손봐 드리는 일" },
 ];
 
@@ -87,17 +87,17 @@ const ALL_SERVICES: readonly ServiceItem[] = [
     includes: ["원하는 지역의 저렴한 주소지 추천", "사업자등록에 쓸 수 있는지 확인", "계약과 우편물 받기 안내"],
     steps: ["지역·예산 확인", "주소지 추천·계약", "계약서 전달"], prepare: ["원하는 지역", "신분증"] },
   { id: "blog-distribution", group: "marketing", title: "블로그 배포", short: "블로그 배포", icon: "pen", tone: "orange", duration: "보통 1~2주",
-    summary: "가게를 소개하는 블로그 글을 써서 여러 곳에 올려 드려요.", who: "네이버에서 가게 이름을 검색해도 잘 안 나오는 분",
-    includes: ["가게 소개 글 작성", "여러 블로그에 나눠 올리기", "올라간 글 주소 정리해 드림"],
-    steps: ["가게 정보·사진 받기", "글 작성·확인", "배포 후 결과 전달"], prepare: ["가게 사진 5장 이상", "자랑하고 싶은 점"] },
+    summary: "내 사업을 소개하는 블로그 글을 써서 여러 곳에 올려 드려요.", who: "네이버에서 상호를 검색해도 잘 안 나오는 분",
+    includes: ["사업 소개 글 작성", "여러 블로그에 나눠 올리기", "올라간 글 주소 정리해 드림"],
+    steps: ["사업 정보·사진 받기", "글 작성·확인", "배포 후 결과 전달"], prepare: ["상품·공간·작업 사진 5장 이상", "자랑하고 싶은 점"] },
   { id: "press-release", group: "marketing", title: "언론보도", short: "언론보도", icon: "news", tone: "indigo", duration: "보통 1주",
-    summary: "가게 소식을 기사로 만들어 인터넷 언론에 내 드려요.", who: "오픈·신메뉴·수상 소식을 널리 알리고 싶은 분",
+    summary: "내 사업 소식을 기사로 만들어 인터넷 언론에 내 드려요.", who: "오픈·새 상품·새 서비스 소식을 널리 알리고 싶은 분",
     includes: ["보도자료(기사) 작성", "인터넷 언론사에 배포", "실린 기사 주소 전달"],
     steps: ["알릴 소식 확인", "기사 작성·확인", "배포 후 결과 전달"], prepare: ["알리고 싶은 소식", "대표 사진"] },
   { id: "sns-management", group: "marketing", title: "SNS 운영 관리", short: "SNS 운영", icon: "camera", tone: "pink", duration: "월 단위",
     summary: "인스타그램 같은 SNS 게시물을 대신 만들고 올려 드려요.", who: "SNS를 할 시간이 없는 분",
     includes: ["한 달 게시물 계획", "사진·글 만들어 올리기", "월말 반응 정리"],
-    steps: ["계정·분위기 확인", "게시물 만들고 올리기", "월말 보고"], prepare: ["SNS 계정", "가게 사진"] },
+    steps: ["계정·분위기 확인", "게시물 만들고 올리기", "월말 보고"], prepare: ["SNS 계정", "상품·공간 사진"] },
   { id: "full-marketing", group: "marketing", title: "종합 마케팅", short: "종합 마케팅", icon: "megaphone", tone: "amber", duration: "월 단위",
     summary: "블로그·SNS·광고를 묶어 한 달 계획을 세우고 운영해 드려요.", who: "무엇부터 할지 모르겠고 한 번에 맡기고 싶은 분",
     includes: ["예산에 맞춘 한 달 계획", "블로그·SNS·광고 함께 운영", "매달 결과와 다음 할 일"],

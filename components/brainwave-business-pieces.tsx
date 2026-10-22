@@ -5,6 +5,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
 import { isPlaceholderPhoto } from "../lib/landing/domain";
+import { PHOTO_SIZES, responsivePhotoProps } from "../lib/landing/responsive-image";
 
 /*
  * Figma 디자인을 흐름 배치로 옮긴 사업 템플릿들이 함께 쓰는 조각.
@@ -96,13 +97,19 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
     const url = hidden.has(id) ? "" : overrides.images?.[id] ?? "";
     return isPlaceholderPhoto(url) ? "" : url;
   };
-  /* 같은 사진은 공개 화면에서 한 번만 — 편집 화면은 자리마다 보여 줘 바꿀 수 있게 */
-  const shown = new Set<string>();
+  /*
+   * 같은 사진은 한 번만 — 처음 나온 자리만 사진을 보이고, 같은 사진을 받은 다른 자리는 비운다.
+   * 편집 화면도 공개 화면과 같게 한다: 예전엔 편집 화면만 빈 자리마다 첫 화면 사진을 되풀이해(온라인 상점 카드 셋·작업 사진 여덟)
+   * 공개하면 사라지는 사진을 보여 줬다. 편집 화면의 빈 자리는 '사진 넣기' 칸으로 나온다.
+   * 같은 자리를 두 번 물어도 같은 답이 나오게 자리 id 로 기억한다.
+   */
+  const owner = new Map<string, string>();
   const photo = (id: string) => {
     const url = image(id);
-    if (!url || (!onPick && shown.has(url))) return "";
-    shown.add(url);
-    return url;
+    if (!url) return "";
+    const first = owner.get(url);
+    if (first === undefined) { owner.set(url, id); return url; }
+    return first === id ? url : "";
   };
   /*
    * 아래 조각들은 컴포넌트가 아니라 함수로 부른다. 렌더 안에서 만든 컴포넌트는
@@ -137,7 +144,7 @@ export function kitPieces({ overrides, hidden, onPick }: BusinessDesignProps, cl
   };
   const Photo = ({ id, url, className, kenburns }: { id: string; url: string; className?: string; kenburns?: boolean }) => (
     // eslint-disable-next-line @next/next/no-img-element
-    <img className={className} src={url} alt="" loading={kenburns ? "eager" : "lazy"} data-kenburns={kenburns ? "" : undefined} data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />
+    <img className={className} {...responsivePhotoProps(url, kenburns ? PHOTO_SIZES.hero : PHOTO_SIZES.full)} src={url} alt="" loading={kenburns ? "eager" : "lazy"} data-kenburns={kenburns ? "" : undefined} data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />
   );
   /* 편집 화면에만 — 사진이 없는 자리에 사진을 넣을 곳 */
   const PhotoSlot = ({ id, className }: { id: string; className?: string }) => onPick

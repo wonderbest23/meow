@@ -12,6 +12,7 @@ import { ConsentList } from "./consent-list";
 import { themeStyle } from "../lib/landing/themes";
 import { BRAINWAVE_CTA_EVENT, scrollToContact } from "../lib/landing/brainwave/button-action";
 import { Spinner } from "../app/plan/PlanLoading";
+import { koreanText } from "../lib/client/user-error";
 
 function getVisitorId() {
   const key = "venture-landing-visitor";
@@ -35,6 +36,7 @@ export function PublicLandingClient({
   const formRef = useRef<HTMLDivElement>(null);
   const viewed = useRef(false);
   const [submitting, setSubmitting] = useState(false);
+  const sendingRef = useRef(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
@@ -83,7 +85,8 @@ export function PublicLandingClient({
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (submitting) return;
+    /* 단추를 빠르게 여러 번 눌러도 한 번만 보낸다 — submitting 상태는 다음 그리기 전까지 바뀌지 않아 연타를 못 막았다 */
+    if (submitting || sendingRef.current || submitted) return;
     const data = new FormData(event.currentTarget);
     /*
      * 보내기 전에 화면에서 먼저 확인한다 — 예전엔 동의 전에는 단추만 흐리게 꺼져 이유를 몰랐고,
@@ -96,6 +99,7 @@ export function PublicLandingClient({
       : !privacyAgreed ? "개인정보 수집·이용에 동의해 주세요."
       : "";
     if (missing) { setError(missing); return; }
+    sendingRef.current = true;
     setSubmitting(true);
     setError("");
     try {
@@ -115,11 +119,12 @@ export function PublicLandingClient({
       });
       /* 방문자에게는 서버가 준 한국어 안내만 — 연결 끊김·HTML 오류 페이지의 영어 원문(Failed to fetch 등)은 보이지 않는다 */
       const payload = await response.json().catch(() => null) as { error?: { message?: string } } | null;
-      if (!response.ok) { setError(payload?.error?.message ?? "신청을 접수하지 못했어요. 잠시 후 다시 시도해 주세요."); return; }
+      if (!response.ok) { setError(koreanText(payload?.error?.message, "신청을 접수하지 못했어요. 잠시 후 다시 시도해 주세요.")); return; }
       setSubmitted(true);
     } catch {
       setError("연결이 불안정해 신청을 보내지 못했어요. 인터넷 연결을 확인한 뒤 다시 보내 주세요.");
     } finally {
+      sendingRef.current = false;
       setSubmitting(false);
     }
   };

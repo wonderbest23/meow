@@ -29,6 +29,36 @@ assert.equal(patchDocumentAmounts(shared, { price: { value: 10000 }, "structure.
 // Ranges or unknowns are not plain amounts.
 assert.equal(patchDocumentAmounts(shared, { price: { value: "8000~12000" } }, { price: { value: 9000 } }, at), 0);
 
+// Only amounts in prose that name the fact are swapped (audit 2026-10-21: a 4,500원 price change also rewrote a
+// 12-month cumulative table cell that happened to be 4,500원). Tables, chart fences and computed values are left alone.
+const mixedMarkdown = [
+  "판매가 4,500원에서 한 건당 비용 1,000원을 빼면 한 건에 3,500원이 남습니다.",
+  "첫 달 통장 누적은 4,500원이고, 하루 매출은 4,500원 안팎입니다.",
+  "",
+  "| 월 | 통장 누적 |",
+  "| --- | ---: |",
+  "| 1개월차 | 4,050원 |",
+  "| 2개월차 | 4,500원 |",
+  "",
+  "```plan-chart",
+  "{\"title\":\"4,500원\"}",
+  "```",
+  "가격은 **4,500원**으로 정했습니다.",
+].join("\n");
+const mixedHtml = "<p>판매가 <strong>4,500원</strong>에서 시작합니다. 누적 4,500원.</p><table><tbody><tr><td>판매가</td><td>4,500원</td></tr></tbody></table><figure class=\"plan-chart-figure\" data-chart-spec=\"{}\"><svg><text>4,500원</text></svg></figure><p>하루 매출 4,500원</p>";
+const mixed = { sections: { m: { markdown: mixedMarkdown, html: mixedHtml, generatedAt: "2026-10-07T01:00:00.000Z" } } } as never as Parameters<typeof patchDocumentAmounts>[0];
+assert.equal(patchDocumentAmounts(mixed, { price: { value: 4500 } }, { price: { value: 4000 } }, at), 1);
+const patched = mixed.sections.m as { markdown: string; html: string };
+assert.equal(patched.markdown.split("\n")[0], "판매가 4,000원에서 한 건당 비용 1,000원을 빼면 한 건에 3,500원이 남습니다.", "the price named in prose is swapped");
+assert.equal(patched.markdown.split("\n")[1], "첫 달 통장 누적은 4,500원이고, 하루 매출은 4,500원 안팎입니다.", "computed values equal to the old price stay");
+assert.ok(patched.markdown.includes("| 2개월차 | 4,500원 |"), "table cells are never patched");
+assert.ok(patched.markdown.includes("{\"title\":\"4,500원\"}"), "chart fences are never patched");
+assert.ok(patched.markdown.endsWith("가격은 **4,000원**으로 정했습니다."), "bold amounts after the fact word are swapped");
+assert.equal(patched.html, "<p>판매가 <strong>4,000원</strong>에서 시작합니다. 누적 4,500원.</p><table><tbody><tr><td>판매가</td><td>4,500원</td></tr></tbody></table><figure class=\"plan-chart-figure\" data-chart-spec=\"{}\"><svg><text>4,500원</text></svg></figure><p>하루 매출 4,500원</p>", "html: prose only, tables and charts untouched");
+// An amount with no word naming the fact is not guessed at.
+const bare = { sections: { b: section("4,500원짜리 메뉴를 팝니다.") } } as never as Parameters<typeof patchDocumentAmounts>[0];
+assert.equal(patchDocumentAmounts(bare, { price: { value: 4500 } }, { price: { value: 4000 } }, at), 0);
+
 // Free reflects: two per plan for plans paid under the 2026-10-09 terms, five for older plans, kept inside the protected generation record.
 assert.equal(FREE_REFLECTS_TOTAL, 2);
 assert.equal(LEGACY_FREE_REFLECTS_TOTAL, 5);

@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Copy, Megaphone, RefreshCw } from "lucide-react";
-import { MARKETING_KIT_KEY, type MarketingKit } from "../../../lib/marketing/kit";
+import { MARKETING_KIT_KEY, MARKETING_KIT_LABELS, type MarketingKit } from "../../../lib/marketing/kit";
+import { businessProfile } from "../../../lib/plan-builder/business-launch";
 import { loadState, pushToServer, saveAnswers, type Plan } from "../../../lib/plan-builder/plan-store";
 import { openLogin } from "../../../components/login-dialog";
 import styles from "./LaunchWorkspace.module.css";
@@ -16,7 +17,8 @@ function readSaved(plan: Plan): Saved | null {
 }
 
 /*
- * 홍보 키트 — 사업 관리 '첫 홍보' 단계 안에서 지도 소개·시작 안내 문자·전단지·첫 게시물·리뷰 요청·4주 SNS 운영표를 만든다.
+ * 홍보 키트 — 사업 관리 '첫 홍보' 단계 안에서 소개 글·시작 안내 문자·홍보물 문구·첫 게시물·후기 요청·4주 SNS 운영표를 만든다.
+ * 칸 이름은 사업 모양에 맞춘다(온라인 가게는 '스토어 소개·상세페이지 첫 문구', 매장은 '지도 소개·전단지').
  * 만든 글은 이 사업 기록에 저장되고, 그대로 복사해 쓸 수 있다.
  */
 export default function MarketingKitPanel({ plan, onSaved }: { plan: Plan; onSaved: (plan: Plan) => void }) {
@@ -50,23 +52,24 @@ export default function MarketingKitPanel({ plan, onSaved }: { plan: Plan; onSav
   }
 
   const kit = saved?.kit;
+  const labels = MARKETING_KIT_LABELS[businessProfile(plan).shape];
   const block = (title: string, value: string) => <section className={styles.kitBlock}><header><h3>{title}</h3><button type="button" className={styles.textLink} onClick={() => void copy(value)}><Copy size={14} aria-hidden="true" />복사</button></header><p>{value}</p></section>;
 
   return <div className={styles.kit}>
     <div className={styles.kitHead}>
       <Megaphone size={20} aria-hidden="true" />
-      <div><strong>홍보 키트 · SNS 4주 운영표</strong><p>계획서의 상품·고객·채널로 지도 소개, 시작 안내 문자, 전단지 문구, 첫 게시물 3개, 리뷰 요청 문구, 4주 SNS 운영표를 한 번에 만들어요.</p></div>
+      <div><strong>홍보 키트 · SNS 4주 운영표</strong><p>계획서의 상품·고객·채널로 {labels.placeIntro}, {labels.openingMessage}, {labels.flyer}, 첫 게시물 3개, {labels.reviewRequest}, 4주 SNS 운영표를 한 번에 만들어요.</p></div>
     </div>
     <button type="button" className={kit ? styles.secondary : styles.primary} disabled={busy} onClick={() => void generate()}>{busy ? "만드는 중… (1분 안팎)" : kit ? <><RefreshCw size={16} aria-hidden="true" />다시 만들기</> : "홍보 키트 만들기"}</button>
     {needsPayment && <Link className={styles.textLink} href={`/plan/pay?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=plan`}>사업계획서 결제하고 홍보 키트 열기</Link>}
     {message && <p role="status">{message}</p>}
     {kit && <>
       <small>만든 날 {new Date(saved!.generatedAt).toLocaleDateString("ko-KR")} · [가격]·[주소]처럼 대괄호는 직접 채워 주세요. 후기·실적은 넣지 않았어요.</small>
-      {block("지도·플레이스 소개", kit.placeIntro)}
-      {block("시작 안내 문자", kit.openingMessage)}
-      {block("전단지·배너", `${kit.flyer.headline}\n${kit.flyer.body}\n${kit.flyer.cta}`)}
+      {block(labels.placeIntro, kit.placeIntro)}
+      {block(labels.openingMessage, kit.openingMessage)}
+      {block(labels.flyer, `${kit.flyer.headline}\n${kit.flyer.body}\n${kit.flyer.cta}`)}
       {kit.posts.map((post, index) => <div key={index}>{block(`첫 게시물 ${index + 1} · ${post.channel}`, `${post.body}\n\n${post.hashtags.join(" ")}`)}</div>)}
-      {block("리뷰 요청 문구", kit.reviewRequest)}
+      {block(labels.reviewRequest, kit.reviewRequest)}
       <section className={styles.kitBlock}>
         <header><h3>SNS 4주 운영표</h3><button type="button" className={styles.textLink} onClick={() => void copy(kit.calendar.map(week => `${week.week}주차 · ${week.theme}\n${week.posts.map(post => `- ${post.day} (${post.format}) ${post.idea}\n  ${post.caption}`).join("\n")}`).join("\n\n"))}><Copy size={14} aria-hidden="true" />전체 복사</button></header>
         {kit.calendar.map(week => <details key={week.week} className={styles.kitWeek} open={week.week === 1}>

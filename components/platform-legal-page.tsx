@@ -1,5 +1,6 @@
 import { ExternalLink, ShieldCheck } from "lucide-react";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { LegalBackLink } from "./legal-back-link";
 import { createLegalDocument, evaluatePlatformLaunchReadiness, type LegalDocumentType } from "../lib/platform-legal/domain";
 import { paymentsEnabled } from "../lib/payments/config";
@@ -25,7 +26,9 @@ const paths: Record<LegalDocumentType, string> = {
 
 export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
   const settings = await getPlatformLegalSettings();
-  const document = createLegalDocument(type, settings);
+  // 앱 안에서 열면 결제 방법을 앱 기준(스토어 결제)으로 보인다 — 앱은 User-Agent 끝에 OneulstartApp 을 붙인다
+  const inApp = (await headers()).get("user-agent")?.includes("OneulstartApp") === true;
+  const document = createLegalDocument(type, settings, { inApp });
   const readiness = evaluatePlatformLaunchReadiness(settings, {
     authConfigured: Boolean(process.env.SUPABASE_URL?.trim() && process.env.SUPABASE_SERVICE_ROLE_KEY?.trim()),
     paymentsConfigured: paymentsEnabled() && manualTransferPaymentConfigured(),
@@ -34,7 +37,7 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
   return (
     <main className="platform-legal-page">
       <header className="platform-legal-header">
-        <Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026.png" alt="오늘창업" /></Link>
+        <Link href="/" aria-label="오늘창업 홈"><img src="/today-startup-logo-2026-sm.webp" width="384" height="96" alt="오늘창업" /></Link>
         <LegalBackLink />
       </header>
       <div className="platform-legal-layout">

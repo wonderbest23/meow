@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Coins } from "lucide-react";
 import AdminNav from "../AdminNav";
+import AdminLogin from "../AdminLogin";
 import { USAGE_KIND_LABELS, type CostSummary } from "../../../lib/llm/cost";
 import styles from "../generation/page.module.css";
 
@@ -49,29 +49,29 @@ export default function AiCostAdminPage() {
       const value = await response.json();
       if (controller.signal.aborted) return;
       setLogin(response.status === 401);
-      if (!response.ok) throw new Error(value.message ?? value.error?.message ?? "조회하지 못했습니다");
+      if (!response.ok) throw new Error(value.message ?? value.error?.message ?? "조회하지 못했어요");
       setData(value);
-    }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "조회하지 못했습니다"); }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
+    }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "조회하지 못했어요"); }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
   }, [range, applied, refresh]);
 
   const summary = data?.summary;
   const rate = summary?.krwPerUsd ?? 1400;
+  if (login) return <AdminLogin title="AI 비용" description="기능·날짜·사업별 AI 사용 비용을 봐요." Icon={Coins} onLoggedIn={() => { setLogin(false); setError(""); setRefresh(value => value + 1); }} />;
   return <main className={styles.page}>
-    {!login && <AdminNav title="AI 비용" subtitle="기록된 토큰 × 모델 요금으로 계산한 AI 사용 비용" />}
+    <AdminNav title="AI 비용" subtitle="기록된 토큰 × 모델 요금으로 계산한 AI 사용 비용" />
     <div className={styles.content}>
       <div className={styles.toolbar}>
         <label>기간<select value={range} onChange={event => setRange(event.target.value)}>{RANGES.map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select></label>
-        <form onSubmit={event => { event.preventDefault(); setApplied(planId.trim()); }} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <label>사업 ID<input value={planId} onChange={event => setPlanId(event.target.value)} placeholder="plan_… (비우면 전체)" style={{ minWidth: 260 }} /></label>
-          <button type="submit" disabled={busy}>보기</button>
+        <form className={styles.inlineForm} onSubmit={event => { event.preventDefault(); setApplied(planId.trim()); }}>
+          <label>사업 ID<input value={planId} onChange={event => setPlanId(event.target.value)} placeholder="plan_… (비우면 전체)" autoCapitalize="off" spellCheck={false} /></label>
+          <button type="submit" className={styles.textButton} disabled={busy}>보기</button>
         </form>
         <button title="새로고침" aria-label="새로고침" disabled={busy} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={18} /></button>
         {data && <small>{date(data.from)} ~ {data.to ? date(data.to) : "지금"} · 조회 {date(data.checkedAt)}</small>}
       </div>
       {error && <p role="alert" className={styles.error}>{error}</p>}
-      {login && <Link href="/admin">관리자 로그인</Link>}
-      {busy && <p role="status">비용을 계산하고 있습니다</p>}
+      {busy && <p role="status">비용을 계산하고 있어요</p>}
       {data && summary && <>
         <section className={styles.section}>
           <header>
@@ -83,7 +83,7 @@ export default function AiCostAdminPage() {
               {data.truncated ? " · 기록이 많아 최근 5만 건까지만 계산" : ""}
             </p>
           </header>
-          <p style={{ margin: 0, fontSize: 13, opacity: .7 }}>실제 청구액은 Anthropic 콘솔(결제 화면)이 기준입니다. 이 화면은 서버가 남긴 토큰 기록으로 계산한 값이라, 기록이 빠진 호출(예: 기록 실패)만큼 적게 나올 수 있어요.</p>
+          <p style={{ margin: 0, fontSize: 13, opacity: .7 }}>실제 청구액은 Anthropic 콘솔(결제 화면)이 기준이에요. 이 화면은 서버가 남긴 토큰 기록으로 계산한 값이라, 기록이 빠진 호출(예: 기록 실패)만큼 적게 나올 수 있어요.</p>
         </section>
         <Table title="기능별" note="어떤 기능에 돈이 드는지" head="기능" rows={summary.byKind.map(item => <Row key={item.kind} name={USAGE_KIND_LABELS[item.kind] ?? item.kind} sub={item.kind} bucket={item} rate={rate} />)} />
         <Table title="날짜별" note="한국 시간 기준" head="날짜" rows={summary.byDay.map(item => <Row key={item.day} name={item.day} bucket={item} rate={rate} />)} />
@@ -92,7 +92,7 @@ export default function AiCostAdminPage() {
           {summary.unattributed.calls ? <Row name="사업 미기록" sub="예전 기록 · 사업 밖의 호출(고객센터 AI 등)" bucket={summary.unattributed} rate={rate} /> : null}
         </>} />}
         <Table title="모델별" head="모델" rows={summary.byModel.map(item => <Row key={item.model} name={item.model} bucket={item} rate={rate} />)} />
-        {summary.total.calls === 0 && <p className={styles.empty}>이 기간에 기록된 AI 호출이 없습니다</p>}
+        {summary.total.calls === 0 && <p className={styles.empty}>이 기간에 기록된 AI 호출이 없어요</p>}
       </>}
     </div>
   </main>;

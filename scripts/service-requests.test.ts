@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { findService, findServiceRecord, SERVICE_CATALOG, SERVICE_GROUPS, SERVICE_PRICE_PENDING, servicePriceLabel, servicesInGroup } from "../lib/services/catalog";
-import { canMoveServiceRequest, SERVICE_REQUEST_NEXT, SERVICE_REQUEST_STATUSES, SERVICE_REQUEST_STATUS_LABELS, validateServiceRequest } from "../lib/services/requests";
+import { ADMIN_SERVICE_REQUEST_STATUS_LABELS, canMoveServiceRequest, SERVICE_REQUEST_NEXT, SERVICE_REQUEST_STATUSES, SERVICE_REQUEST_STATUS_LABELS, validateServiceRequest } from "../lib/services/requests";
 import { createServiceRequest, listAllServiceRequests, listMyServiceRequests, resetServiceRequestMemory, ServiceRequestError, updateServiceRequestStatus } from "../lib/services/request-store";
 import { EMPTY_SIGNALS, orderServices, serviceBadges, serviceSignalsFromPlan } from "../lib/services/recommend";
 import { formatKoreanPhone, leadReplyText, mailtoHref, normalizeMobilePhone, phoneDigits, smsHref, telHref } from "../lib/contact-links";
@@ -61,7 +61,9 @@ const RETIRED = ["business-registration", "mail-order-report", "industry-license
 
 // 3) 상태 — 어드민이 고를 수 있는 다음 상태
 {
-  for (const status of SERVICE_REQUEST_STATUSES) assert.ok(SERVICE_REQUEST_STATUS_LABELS[status] && SERVICE_REQUEST_NEXT[status].length > 0);
+  for (const status of SERVICE_REQUEST_STATUSES) assert.ok(SERVICE_REQUEST_STATUS_LABELS[status] && ADMIN_SERVICE_REQUEST_STATUS_LABELS[status] && SERVICE_REQUEST_NEXT[status].length > 0);
+  // 운영자 화면은 사장님 화면의 '연락드렸어요'를 쓰지 않는다
+  assert.notEqual(ADMIN_SERVICE_REQUEST_STATUS_LABELS.contacted, SERVICE_REQUEST_STATUS_LABELS.contacted);
   assert.ok(canMoveServiceRequest("received", "contacted"));
   assert.ok(canMoveServiceRequest("done", "received"));
   assert.ok(!canMoveServiceRequest("done", "canceled"), "끝난 건은 접수로만 되돌린다");
@@ -191,5 +193,12 @@ const RETIRED = ["business-registration", "mail-order-report", "industry-license
   assert.equal(mine[0].planId, "plan_two");
   assert.equal(mine[0].projectId, second.id);
   assert.equal((await listOwnerInquiries("nobody")).length, 0);
+
+  // 9) 같은 손님이 같은 문의를 방금 또 보냈는지 — 단추 연타로 같은 문의가 여러 개 쌓이지 않게
+  const { findRecentDuplicateLead } = await import("../lib/landing/repository");
+  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }), newer.id, "60초 안의 같은 문의는 찾는다");
+  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "다른 질문" }), null, "내용이 다르면 새 문의");
+  assert.equal(await findRecentDuplicateLead(otherSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }), null, "다른 홈페이지 문의와 섞이지 않는다");
+  assert.equal(await findRecentDuplicateLead(secondSite.id, { name: "두번째 손님", email: "b@example.com", phone: "", message: "몇 시까지 해요?" }, 0), null, "시간이 지나면 새 문의");
   console.log("service-requests: ok");
 })().catch((error) => { console.error(error); process.exitCode = 1; });

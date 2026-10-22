@@ -67,16 +67,16 @@ export function capacityUnitOrder(structure: BusinessStructure): string[] | null
 
 /** 시작 전 행정 절차 안내 한 줄. 인허가가 없으면 null. 법적 판단이 아니라 업종 분류 기준의 기본 안내다. */
 /** 금융·보험(KSIC 64·65·66)은 구청·세무서가 아니라 금융위원회·금융감독원 소관이다. 인허가 등급(분류)은 그대로 두고 안내 문구만 바꾼다. */
-export const FINANCE_LICENSE_HINT = "금융·보험 업종은 금융위원회·금융감독원의 인가·등록 대상인 경우가 많습니다. 여러 사람의 돈을 모으거나 대신 운용·중개하는 구조라면 시작 전에 금융감독원 기준과 전문가 확인이 필요합니다.";
+export const FINANCE_LICENSE_HINT = "금융·보험 업종은 금융위원회·금융감독원의 인가·등록 대상인 경우가 많아요. 여러 사람의 돈을 모으거나 대신 운용·중개하는 구조라면 시작 전에 금융감독원 기준과 전문가 확인이 필요해요.";
 export const isFinanceKsic = (code: string | null | undefined) => !!code && ["64", "65", "66"].includes(code.slice(0, 2));
 
 export function licenseHint(structure: BusinessStructure, ksicCode?: string | null): string | null {
   if (isFinanceKsic(ksicCode) && structure.license !== "none") return FINANCE_LICENSE_HINT;
   switch (structure.license) {
-    case "registration": return "이 업종은 시작 전 영업 신고·등록이 필요한 편입니다. 관할 구청·세무서 기준으로 확인해 주세요.";
-    case "permit": return "이 업종은 시작 전 영업 허가가 필요한 편입니다. 관할 기관 기준으로 확인해 주세요.";
-    case "professional": return "이 업종은 자격·면허가 있어야 열 수 있는 편입니다. 면허 보유 여부와 개설 신고·등록 절차를 관할 기관 기준으로 확인해 주세요.";
-    case "varies": return "세부 업종에 따라 인허가가 다릅니다. 시작 전에 해당 업종 기준을 확인해 주세요.";
+    case "registration": return "이 업종은 시작 전 영업 신고·등록이 필요한 편이에요. 관할 구청·세무서 기준으로 확인해 주세요.";
+    case "permit": return "이 업종은 시작 전 영업 허가가 필요한 편이에요. 관할 기관 기준으로 확인해 주세요.";
+    case "professional": return "이 업종은 자격·면허가 있어야 열 수 있는 편이에요. 면허 보유 여부와 개설 신고·등록 절차를 관할 기관 기준으로 확인해 주세요.";
+    case "varies": return "세부 업종에 따라 인허가가 달라요. 시작 전에 해당 업종 기준을 확인해 주세요.";
     default: return null;
   }
 }

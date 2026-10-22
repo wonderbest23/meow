@@ -2,7 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { getServerSupabase } from "../persistence";
 import { productName, type PlanProduct } from "./plan-orders";
 import { DOMAIN_PURCHASE_PRODUCT_NAME } from "./domain";
-import { landingEmailConfiguration, sendLandingLeadEmail, type LeadEmailPayload } from "../landing/lead-email";
+import { landingEmailConfiguration, sendLandingLeadEmail, SUPPORT_FOOTER, withSupportReplyTo, type LeadEmailPayload } from "../landing/lead-email";
+import { displayOrderName } from "./order-display";
 import { customerSmsConfig, operatorRelayConfig, relayUnsupported, sendRelayV4, stableEventId, type CustomerSmsConfig, type CustomerSmsResult } from "../notify/customer-sms";
 import { notifyOperator } from "../ops-alerts";
 
@@ -51,24 +52,40 @@ export function noticePhoneOf(row: Pick<PaidOrderRow, "opportunity">): string | 
 
 const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
 
+/** '2026년 10월 22일 00:30 (한국 시간)' — 예전엔 '2026. 10. 22. 오전 12:30:00'(자정이 '오전 12시'로 읽혔다) */
+export function formatKoreanDateTime(iso: string | null | undefined): string {
+  const time = iso ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(time)) return "";
+  const kst = new Date(time + 9 * 60 * 60_000);
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${kst.getUTCFullYear()}년 ${kst.getUTCMonth() + 1}월 ${kst.getUTCDate()}일 ${pad(kst.getUTCHours())}:${pad(kst.getUTCMinutes())} (한국 시간)`;
+}
+
+/** 결제 내역은 마이페이지(/plan/me)에 있다 — /account 는 로그인 화면이라 내역이 없다 */
+export const PAYMENT_HISTORY_URL = "https://oneulstart.com/plan/me";
+
 export function buildPaymentReceiptEmail(from: string, to: string, row: PaidOrderRow): LeadEmailPayload {
-  const paidAt = row.confirmed_at ? new Date(row.confirmed_at).toLocaleString("ko-KR", { timeZone: "Asia/Seoul" }) : "";
+  const paidAt = formatKoreanDateTime(row.confirmed_at);
+  // 저장된 상품 이름(권한 판정용)은 그대로 두고, 손님이 읽는 이름만 바꾼다
+  const name = displayOrderName(row.order_name);
   return {
     from, to,
-    subject: `[오늘창업] ${isSandboxOrder(row) ? "[시험 결제] " : ""}결제가 완료됐어요 · ${row.order_name}`,
+    subject: `[오늘창업] ${isSandboxOrder(row) ? "[시험 결제] " : ""}결제가 완료됐어요 · ${name}`,
     text: [
       "오늘창업 결제가 완료됐어요.",
       ...(isSandboxOrder(row) ? ["(TestFlight·심사용 시험 결제라 실제로 청구되지 않았어요.)"] : []),
       "",
-      `상품: ${row.order_name}`,
+      `상품: ${name}`,
       `금액: ${won(row.amount)} (부가세 포함)`,
       `주문번호: ${row.order_id}`,
       ...(paidAt ? [`결제 시각: ${paidAt}`] : []),
       "",
-      "결제 내역 보기: https://oneulstart.com/account",
+      `결제 내역 보기: ${PAYMENT_HISTORY_URL}`,
       "취소·환불 기준: https://oneulstart.com/refund",
       "",
       receiptNote(row),
+      "",
+      SUPPORT_FOOTER,
     ].join("\n"),
   };
 }
@@ -151,7 +168,7 @@ export async function notifyPaymentComplete(orderId: string, firstCompletion: bo
     const buyerEmailTask = async () => {
       const to = paid.customer_email?.trim();
       if (!to || !deps.email) { result.buyerEmail = to ? "disabled" : "no_email"; return; }
-      const sent = await sendLandingLeadEmail(buildPaymentReceiptEmail(deps.email.from, to, paid), deps.email.key, `payment-receipt/${paid.order_id}`, deps.emailTransport);
+      const sent = await sendLandingLeadEmail(withSupportReplyTo(buildPaymentReceiptEmail(deps.email.from, to, paid), deps.email), deps.email.key, `payment-receipt/${paid.order_id}`, deps.emailTransport);
       result.buyerEmail = sent.ok ? "sent" : sent.code;
     };
     const settled = await Promise.allSettled([operatorTask(), buyerSmsTask(), buyerEmailTask()]);
