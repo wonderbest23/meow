@@ -8,6 +8,7 @@ import { BusinessLocal0_2226 } from "./brainwave-business-local";
 import { BusinessClinic0_2385 } from "./brainwave-business-clinic";
 import { BusinessGallery0_421 } from "./brainwave-business-gallery";
 import { isPlaceholderPhoto } from "../lib/landing/domain";
+import { responsivePhotoProps } from "../lib/landing/responsive-image";
 import { runBrainwaveButton } from "../lib/landing/brainwave/button-action";
 import type { BrainwaveOverrides, BrainwavePick } from "./brainwave-page";
 import styles from "./brainwave-business-mobile.module.css";
@@ -106,7 +107,7 @@ export function BrainwaveBusinessMobile({ pageId, overrides, hidden, sectionOrde
           }}><span style={overrides.sizes?.[textId] ? { fontSize: 16 * overrides.sizes[textId] } : undefined}>{text(textId)}</span><ArrowRight size={18} aria-hidden /></button>;
         })}
         {emptySlot ? <button type="button" className={styles.photoSlot} data-bw-image={emptySlot} onClick={event => { event.stopPropagation(); onPick!("image", emptySlot, event.currentTarget); }}><ImagePlus size={20} aria-hidden /> 사진 넣기</button> : null}
-        {imageIds.map(id => <img key={id} className={styles.photo} src={overrides.images![id]} alt="" data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />)}
+        {imageIds.map(id => <img key={id} className={styles.photo} {...responsivePhotoProps(overrides.images![id])} src={overrides.images![id]} alt="" data-bw-image={onPick ? id : undefined} onClick={onPick ? event => { event.stopPropagation(); onPick("image", id, event.currentTarget); } : undefined} />)}
       </section>;
     })}
   </div>;

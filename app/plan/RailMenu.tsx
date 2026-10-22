@@ -63,7 +63,7 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className={menu.logoFull} src={DEFAULT_LOGO.src} alt="" width={DEFAULT_LOGO.width} height={DEFAULT_LOGO.height} />
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className={menu.logoMark} src="/today-startup-mark-2026.png" alt="" width="38" height="38" />
+      <img className={menu.logoMark} src="/today-startup-mark-2026-128.webp" alt="" width="38" height="38" loading="lazy" />
     </Link>
     {/*
       주 메뉴 세 칸(새 대화 · 내 사업 · 내 문의)은 같은 모양·같은 크기로(대표 요청 2026-10-14: 새 대화만 테두리가 있어 튀고, 글씨가 작았다).

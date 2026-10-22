@@ -9,9 +9,9 @@ import type { SiteLogoAsset } from "../../components/site-header";
  * 홈 밖(사업 관리·약관 화면)은 이 값을 읽지 않고 기존 파란 로고를 그대로 쓴다.
  */
 export const HOME_LOGO: SiteLogoAsset & { white: boolean } = {
-  src: "/today-startup-logo-2026.png",
-  width: 1288,
-  height: 322,
+  src: "/today-startup-logo-2026-sm.webp",
+  width: 384,
+  height: 96,
   white: false,
 };
 

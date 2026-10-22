@@ -102,7 +102,19 @@ export default function InlineDocEditor({ html, onChange, onDraft, status = "idl
     };
   }, []);
 
-  if (!editor) return <div className={styles.wrap} />;
+  /*
+   * 편집기가 준비되기 전(첫 그림)에도 같은 본문을 같은 모양으로 그려 둔다.
+   * 예전에는 빈 칸이었다가 글이 한꺼번에 들어와 아래 항목을 통째로 밀어냈다(문서 화면 CLS 0.55).
+   * html 은 편집기에 넣는 것과 같은 서버 렌더 본문이다(사실 고치기 화면도 같은 값을 그대로 그린다).
+   */
+  if (!editor) return (
+    <div className={styles.wrap}>
+      <div>
+        <div className={`tiptap ProseMirror ${styles.surface}`} {...(readOnly ? { contentEditable: false } : {})} dangerouslySetInnerHTML={{ __html: html }} />
+      </div>
+      {!readOnly && <div className={styles.status} aria-hidden="true">글을 눌러 바로 고칠 수 있어요</div>}
+    </div>
+  );
 
   const btn = (active: boolean) => `${styles.tbBtn} ${active ? styles.tbOn : ""}`;
 

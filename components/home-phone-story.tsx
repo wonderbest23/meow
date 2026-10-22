@@ -48,7 +48,7 @@ function PhoneScreen() {
     </div>
     <div className={styles.documentView}>
       <div className={styles.documentTop}><span>사업계획서</span><span><Check />생성 완료</span></div>
-      <div className={styles.paper}><div className={styles.paperBrand}>오늘창업<span>01</span></div><span className={styles.paperEyebrow}>사업계획서</span><h3>작은 시작을 위한<br />내 사업계획서</h3><p>{business}</p><img src="/home-media/oneulstart-team.png" width="1942" height="809" alt="" /><dl><div><dt>01</dt><dd>사업 소개</dd><Check /></div><div><dt>02</dt><dd>고객과 상품</dd><Check /></div><div><dt>03</dt><dd>비용과 운영</dd><Check /></div><div><dt>04</dt><dd>시작 방법</dd><Check /></div></dl><small>확인하고 다듬어 사용할 수 있는 초안</small></div>
+      <div className={styles.paper}><div className={styles.paperBrand}>오늘창업<span>01</span></div><span className={styles.paperEyebrow}>사업계획서</span><h3>작은 시작을 위한<br />내 사업계획서</h3><p>{business}</p><img src="/home-media/oneulstart-team-800.webp" srcSet="/home-media/oneulstart-team-800.webp 800w, /home-media/oneulstart-team-1200.webp 1200w" sizes="320px" width="1942" height="809" loading="lazy" decoding="async" alt="" /><dl><div><dt>01</dt><dd>사업 소개</dd><Check /></div><div><dt>02</dt><dd>고객과 상품</dd><Check /></div><div><dt>03</dt><dd>비용과 운영</dd><Check /></div><div><dt>04</dt><dd>시작 방법</dd><Check /></div></dl><small>확인하고 다듬어 사용할 수 있는 초안</small></div>
       <div className={styles.download}><ArrowDownToLine />내려받기</div>
       <div className={styles.saved}><FolderOpen /><div><strong>내 사업에 저장했어요</strong><span>대화와 문서를 한곳에서 이어가세요.</span></div><Check /></div>
     </div>

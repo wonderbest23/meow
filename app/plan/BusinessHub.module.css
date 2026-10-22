@@ -100,9 +100,13 @@
 .titleAction:hover { text-decoration: underline; }
 .tabLink { margin: -8px 0 8px !important; }
 
-/* 휴대폰 — 네 탭이 한 줄에 다 보이게(375 에서 '유지보수'가 반쯤 잘리고 320 에서는 화면 밖이었다) */
+/*
+ * 휴대폰 — 네 탭이 한 줄에 다 보이게(375 에서 '유지보수'가 반쯤 잘리고 320 에서는 화면 밖이었다).
+ * 넓이는 나눠 갖되 글자 폭 아래로는 줄지 않는다(flex: 1 0 auto) — 예전 flex:1 1 0 + min-width:0 은
+ * 320px·글자 확대에서 칸이 글자보다 좁아져 탭 글자끼리 겹쳤다. 모자라면 탭 줄이 옆으로 밀린다(overflow-x:auto).
+ */
 @media (max-width: 480px) {
-  .tabs button { flex: 1 1 0; min-width: 0; padding: 0 4px; font-size: 14px; white-space: nowrap; }
+  .tabs button { flex: 1 0 auto; min-width: max-content; padding: 0 6px; font-size: 14px; white-space: nowrap; }
 }
 @media (max-width: 340px) { .tabs button { font-size: 13px; } }
 

@@ -348,3 +348,22 @@
 /* 상세 계획서·한 장 요약 고르기 — 보이는 크기는 그대로, 누르는 자리는 40px 이상(예전 32px) */
 .readingBar .viewSelector button { position:relative; }
 .readingBar .viewSelector button::after { content:""; position:absolute; inset:-5px -2px; }
+
+/*
+ * 가로로 눕힌 폰(높이 500px 이하) — 머리줄 68 + 도구줄 58 + 아래 단추 87 이 375px 중 214px 을 차지해 본문이 161px 뿐이었다.
+ * 완료 알림은 제목 한 줄, 도구줄·아래 단추는 한 줄로 얇게(단추 높이 40px — 손가락 자리는 유지).
+ */
+@media (max-height:500px) and (orientation:landscape) {
+  .completionNotice { padding-block:6px; gap:10px; animation:none; }
+  .completionNotice p { display:none; }
+  .completionNotice strong { font-size:14px; }
+  .completeMark { width:24px; height:24px; }
+  .completeMark svg { width:16px; height:16px; }
+  .completionNotice > button { width:36px; height:36px; }
+  .readingBar { min-height:44px; padding-block:4px; }
+  .actions { gap:8px; padding-top:6px; padding-bottom:max(6px, env(safe-area-inset-bottom)); }
+  .actions button, .actions .nextButton { min-height:40px; padding-block:6px; font-size:14px; }
+  .actions[data-next] { grid-template-columns:auto minmax(0,1fr); }
+  .actions[data-single] { grid-template-columns:1fr; }
+  .actions[data-next] .nextButton span { display:none; }
+}

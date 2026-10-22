@@ -63,7 +63,7 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
   return <div className={`${styles.pane} plan-ui`}>
     <header className={styles.brand}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/today-startup-mark-2026.png" alt="" width="52" height="52" />
+      <img src="/today-startup-mark-2026-128.webp" alt="" width="52" height="52" />
       <strong>오늘창업</strong>
     </header>
 
