@@ -3,6 +3,7 @@ import { authSessionInput } from "../../../../lib/auth-session-input";
 import { claimGuestProjects, createServerAuthClient, currentGuestHash, getAuthenticatedUser, listAccountProjects, setAccountSession } from "../../../../lib/account-auth";
 import { accountLinkError } from "../../../../lib/plan-builder/account-linking";
 import { isSameOriginRequest } from "../../../../lib/http/same-origin";
+import { authErrorMessage } from "../../../../lib/auth-error-message";
 
 function privateJson(body: unknown, init?: ResponseInit) {
   const response = NextResponse.json(body, init);
@@ -24,7 +25,7 @@ export async function POST(request: Request) {
     const previousGuestHash = await currentGuestHash();
     const auth = createServerAuthClient();
     const result = await auth.auth.setSession({ access_token: input.accessToken, refresh_token: input.refreshToken });
-    if (!result.data.session || !result.data.user || result.error) throw result.error ?? new Error("이메일 인증 정보를 확인하지 못했습니다.");
+    if (!result.data.session || !result.data.user || result.error) throw result.error ?? Object.assign(new Error("AUTH_SESSION_MISSING"), { code: "session_not_found" });
     if (result.data.user.email && !result.data.user.email_confirmed_at) {
       return privateJson({ error: { code: "EMAIL_NOT_CONFIRMED", message: "확인 메일의 링크로 이메일을 인증해 주세요." } }, { status: 403 });
     }
@@ -34,6 +35,6 @@ export async function POST(request: Request) {
   } catch (error) {
     const linking = accountLinkError(error);
     if (linking) return privateJson({ error: { code: linking.code, message: linking.message } }, { status: linking.status });
-    return privateJson({ error: { code: "AUTH_SESSION_FAILED", message: error instanceof Error ? error.message : "로그인을 완료하지 못했습니다." } }, { status: 400 });
+    return privateJson({ error: { code: "AUTH_SESSION_FAILED", message: authErrorMessage(error, "session") } }, { status: 400 });
   }
 }

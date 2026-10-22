@@ -25,7 +25,11 @@ assert.match(weeklyTip({ ...base, leads: 1, prevLeads: 2, views: 30 }), /사진 
 
 // 메일 본문
 const email = buildWeeklyReportEmail({ from: "알림 <alerts@oneulstart.com>", to: "owner@example.com", businessName: "퇴근길<script>", weekStart: "2026-09-28", weekEnd: "2026-10-04", stats: { ...base, leads: 2, prevLeads: 1, views: 12, prevViews: 20 }, homepageUrl: "https://oneulstart.com/launch/x", unsubscribeUrl: "https://oneulstart.com/u?x=1&y=2", recordUrl: "https://oneulstart.com/plan/workspace?planId=p&tab=operations" });
-assert.equal(email.subject, "[오늘창업] 퇴근길<script> 지난주 문의 2건 · 주간 리포트");
+assert.equal(email.subject, "[오늘창업] 지난주 문의 2건 · 퇴근길<script>");
+// 숫자가 먼저, 긴 가게 이름은 15자에서 자른다
+assert.equal(buildWeeklyReportEmail({ from: "a", to: "b", businessName: "햇살가득 수제 디저트 & 브런치 카페 성수점", weekStart: "2026-09-28", weekEnd: "2026-10-04", stats: { ...base, leads: 12 }, homepageUrl: "h", unsubscribeUrl: "u", recordUrl: null }).subject, "[오늘창업] 지난주 문의 12건 · 햇살가득 수제 디저트 & 브…");
+// 메일 앱의 어두운 화면에서도 밝게 — color-scheme 과 칸마다 배경색
+assert.ok(email.html?.includes('<meta name="color-scheme" content="light">') && email.html.includes("background-color:#ffffff"));
 assert.ok(email.text.includes("09/28~10/04") && email.text.includes("홈페이지 문의: 2건 (지난주보다 1건 늘었어요)") && email.text.includes("방문(동의한 손님): 12회 (지난주보다 8회 줄었어요)"));
 assert.ok(email.text.includes("지난주 매출·주문을 아직 안 적으셨어요"));
 assert.ok(email.html?.includes("퇴근길&lt;script&gt;") && !email.html.includes("<script>"), "사업 이름은 이스케이프");
@@ -50,7 +54,8 @@ assert.ok(!buildWeeklyReportEmail({ ...{ from: "a", to: "b", businessName: "", w
   const withSns = buildWeeklyReportEmail({ ...common, sns: snsWeekFor(saved, start + 8 * day) });
   assert.ok(withSns.text.includes("이번 주 SNS 할 일 (2주차 · 주제2)") && withSns.text.includes("월 사진: 아이디어2"), withSns.text);
   assert.ok(withSns.html?.includes("올릴 글 보기"));
-  assert.ok(buildWeeklyReportEmail({ ...common, sns: { finished: true } }).html?.includes("새 운영표 만들기"));
+  const finished = buildWeeklyReportEmail({ ...common, sns: { finished: true } });
+  assert.ok(finished.html?.includes("새 운영표 만들기") && finished.text.includes("새 운영표 만들기: https://oneulstart.com/plan/workspace?planId=p") && !finished.text.includes("올릴 글 보기"), "글 메일도 HTML 과 같은 링크 이름");
   assert.ok(!buildWeeklyReportEmail({ ...common, sns: null }).text.includes("SNS"), "no kit → no SNS block");
 }
 
@@ -137,7 +142,7 @@ function fakeDb(data: { sites: Row[]; leads: Row[]; events: Row[]; projects: Row
   assert.equal(sent.length, 1);
   assert.equal(sent[0].headers.get("Idempotency-Key"), "weekly-report/active/2026-09-28");
   assert.deepEqual(sent[0].body.to, ["active@example.com"]);
-  assert.match(String(sent[0].body.subject), /사업 active 지난주 문의 2건/, "지난주(9/28~10/4) 문의만 — 그 전 주·이번 주 월요일 새벽 문의는 빼고");
+  assert.match(String(sent[0].body.subject), /지난주 문의 2건 · 사업 active$/, "지난주(9/28~10/4) 문의만 — 그 전 주·이번 주 월요일 새벽 문의는 빼고");
   assert.ok(String(sent[0].body.text).includes("지난주보다 1건 늘었어요"));
   assert.ok(String(sent[0].body.text).includes("plan/workspace?planId=plan-active&tab=operations"), "운영 기록 안내");
   assert.ok(String((sent[0].body.headers as Row)["List-Unsubscribe"]).includes("site=active&token="));

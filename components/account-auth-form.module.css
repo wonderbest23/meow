@@ -81,3 +81,12 @@
 
 /* 약관 동의 — 공용 동의 목록(동그란 체크·(필수)·›). 예전 회색 상자·밑줄 링크 대신 */
 .root .form .consentList { margin: 18px 0 4px; }
+/* 비밀번호 보기 단추 — 칸 오른쪽 안쪽, 누르는 자리 44px */
+.root .form .passwordCell { position: relative; }
+.root .form .passwordCell .input { padding-right: 52px; }
+.root .form .reveal { position: absolute; top: 50%; right: 3px; z-index: 2; display: grid; place-items: center; width: 44px; height: 44px; margin: 0; padding: 0; border: 0; border-radius: 6px; background: transparent; color: #8b95a1; cursor: pointer; transform: translateY(-50%); }
+.root .form .cell + .cell.passwordCell .reveal { margin-top: -1px; }
+.root .form .reveal:hover { color: #4e5968; }
+.root .form .reveal[aria-pressed="true"] { color: #246bd1; }
+.root .form .reveal:focus-visible { outline: 2px solid #246bd1; outline-offset: -2px; }
+.root .form .reveal svg { display: block !important; width: 20px; height: 20px; }

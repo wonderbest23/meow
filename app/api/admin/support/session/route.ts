@@ -33,26 +33,26 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   // 공유 관리자 비밀번호를 무차별 대입하지 못하게 IP당 시도 횟수를 제한한다(Access 밖 경로에서도 막힌다).
-  const limited = await enforceRateLimit("admin-login", request, { limit: 10, windowMs: 15 * 60_000, message: "로그인 시도가 너무 많습니다. 15분 뒤 다시 시도해주세요." });
+  const limited = await enforceRateLimit("admin-login", request, { limit: 10, windowMs: 15 * 60_000, message: "로그인 시도가 너무 많아요. 15분 뒤 다시 해 주세요." });
   if (limited) return limited;
   let input: z.infer<typeof loginSchema>;
   try {
     input = loginSchema.parse(await request.json());
   } catch {
     return privateJson(
-      { error: { code: "ADMIN_LOGIN_FAILED", message: "로그인 정보를 확인해주세요." } },
+      { error: { code: "ADMIN_LOGIN_FAILED", message: "로그인 정보를 확인해 주세요." } },
       { status: 400 },
     );
   }
   if (!isScopeConfigured(resolveScope(input.scope))) {
     return privateJson(
-      { error: { code: "ADMIN_CHAT_NOT_CONFIGURED", message: "관리자 비밀번호가 설정되지 않았습니다." } },
+      { error: { code: "ADMIN_CHAT_NOT_CONFIGURED", message: "관리자 비밀번호가 아직 설정되지 않았어요." } },
       { status: 503 },
     );
   }
   if (!verifyAdminPassword(input.password, input.scope)) {
     return privateJson(
-      { error: { code: "ADMIN_LOGIN_FAILED", message: "비밀번호가 올바르지 않습니다." } },
+      { error: { code: "ADMIN_LOGIN_FAILED", message: "비밀번호가 맞지 않아요." } },
       { status: 401 },
     );
   }

@@ -13,12 +13,12 @@ export async function GET(request: Request) {
   if (!parsed.success) return json({ message: "조회 범위를 확인해 주세요" }, 400);
   try {
     const db = getServerSupabase();
-    if (!db) return json({ message: "영구 DB가 연결되지 않았습니다" }, 503);
+    if (!db) return json({ message: "영구 DB가 연결되지 않았어요" }, 503);
     const { offset, status } = parsed.data;
     const result = await db.rpc("admin_generation_jobs", { p_offset: offset, p_limit: 21, p_status: status });
     if (result.error) throw new Error("jobs_unavailable");
     const jobs = z.array(adminJobSchema).parse(result.data);
     const usage = await db.from("llm_usage").select("id,kind,provider,ok,model,elapsed_ms,failure_code,input_tokens,output_tokens,created_at").order("created_at", { ascending: false }).limit(25);
     return json({ jobs: jobs.slice(0, 20), nextOffset: jobs.length > 20 ? offset + 20 : null, usage: usage.error ? null : usage.data, checkedAt: new Date().toISOString() });
-  } catch { return json({ message: "생성 작업을 조회하지 못했습니다. DB 연결과 운영 관측 마이그레이션 0029를 확인해 주세요" }, 503); }
+  } catch { return json({ message: "생성 작업을 읽지 못했어요. DB 연결과 운영 관측 마이그레이션 0029를 확인해 주세요" }, 503); }
 }

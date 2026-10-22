@@ -4,7 +4,7 @@ import { projectReadTable } from "../plan-builder/quarantine-tables";
 import { DOMAIN_PURCHASE_PRODUCT_NAME } from "../payments/domain";
 import { readDomainRequest } from "./domain-purchase";
 import { cloudflareSaasConfigured, createLandingDomainConnection, deleteLandingDomainConnection } from "./custom-domain";
-import { homepageManageUrl, landingEmailConfiguration, sendLandingLeadEmail } from "./lead-email";
+import { homepageManageUrl, landingEmailConfiguration, sendLandingLeadEmail, SUPPORT_FOOTER, withSupportReplyTo } from "./lead-email";
 import { customerSmsConfig, sendRelayV4, stableEventId, type CustomerSmsConfig } from "../notify/customer-sms";
 
 /*
@@ -72,16 +72,19 @@ export async function startRegisteredDomainConnection(orderId: string, dependenc
       const to = await ownerEmail();
       let mailed = false;
       if (to && deps.email) {
-        const sent = await sendLandingLeadEmail({
+        const sent = await sendLandingLeadEmail(withSupportReplyTo({
           from: deps.email.from, to,
           subject: `[오늘창업] 도메인 ${request.domain} 등록을 마쳤어요`,
           text: [
-            `${request.domain} 을(를) 사장님 명의로 등록했어요.`,
+            // '을(를)'은 주소 끝 글자를 읽는 법에 따라 달라 — '주소를'로 조사를 고정한다
+            `${request.domain} 주소를 사장님 명의로 등록했어요.`,
             "",
-            `홈페이지를 공개한 뒤, 홈페이지 화면 아래 '내 도메인 연결'에서 '연결 시작'을 누르면 ${hostname} 으로 열려요.`,
+            `홈페이지를 공개한 뒤, 홈페이지 화면 아래 '내 도메인 연결'에서 '연결 시작'을 누르면 ${hostname} 주소로 열려요.`,
             homepageManageUrl(planId),
+            "",
+            SUPPORT_FOOTER,
           ].join("\n"),
-        }, deps.email.key, `domain-registered-unpublished/${orderId}`, deps.emailTransport);
+        }, deps.email), deps.email.key, `domain-registered-unpublished/${orderId}`, deps.emailTransport);
         mailed = sent.ok;
         if (sent.ok) result.notified.push("email");
       }
@@ -95,7 +98,7 @@ export async function startRegisteredDomainConnection(orderId: string, dependenc
       const saved = await db.from("landing_sites").update({ custom_domain: hostname }).eq("id", row.id);
       if (saved.error) {
         await deps.disconnect(hostname).catch(() => undefined);
-        return warn(saved.error.code === "23505" ? `${hostname} 은(는) 이미 다른 홈페이지에 연결돼 있어요.` : "연결을 만들었지만 홈페이지에 저장하지 못해 되돌렸어요.");
+        return warn(saved.error.code === "23505" ? `${hostname} 주소는 이미 다른 홈페이지에 연결돼 있어요.` : "연결을 만들었지만 홈페이지에 저장하지 못해 되돌렸어요.");
       }
     }
     result.connected = true;
@@ -109,17 +112,19 @@ export async function startRegisteredDomainConnection(orderId: string, dependenc
     }
     const to = await ownerEmail();
     if (to && deps.email) {
-      const sent = await sendLandingLeadEmail({
+      const sent = await sendLandingLeadEmail(withSupportReplyTo({
         from: deps.email.from, to,
         subject: `[오늘창업] 도메인 ${hostname} 연결을 시작했어요`,
         text: [
           `${request.domain} 등록을 마치고 홈페이지 연결을 시작했어요.`,
           "",
-          `보안 인증서가 발급되면 ${hostname} 으로 홈페이지가 열려요. 보통 몇 분에서 하루 안에 끝나요.`,
+          `보안 인증서가 발급되면 ${hostname} 주소로 홈페이지가 열려요. 보통 몇 분에서 하루 안에 끝나요.`,
           "따로 하실 일은 없어요. 진행 상황은 홈페이지 화면 아래 '내 도메인 연결'에서 볼 수 있어요.",
           homepageManageUrl(planId),
+          "",
+          SUPPORT_FOOTER,
         ].join("\n"),
-      }, deps.email.key, `domain-connect/${orderId}`, deps.emailTransport);
+      }, deps.email), deps.email.key, `domain-connect/${orderId}`, deps.emailTransport);
       if (sent.ok) result.notified.push("email"); else problems.push(`메일 ${sent.code}`);
     }
     if (!result.notified.length && !problems.length) problems.push("알림 받을 휴대폰·메일(발송 설정) 없음");

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Database } from "lucide-react";
 import AdminNav from "../AdminNav";
+import AdminLogin from "../AdminLogin";
 import type { MigrationReport, MigrationStatus, ReadinessReport } from "../../../lib/schema-readiness";
 import type { ConfigCheck } from "../../../lib/ops-config-readiness";
 import styles from "../generation/page.module.css";
@@ -47,9 +47,9 @@ export default function SchemaAdminPage() {
       const value = await response.json();
       if (controller.signal.aborted) return;
       setLogin(response.status === 401);
-      if (!response.ok) throw new Error(value.error?.message ?? "확인하지 못했습니다");
+      if (!response.ok) throw new Error(value.error?.message ?? "확인하지 못했어요");
       setData(value);
-    }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "확인하지 못했습니다"); }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
+    }).catch(e => { if (!controller.signal.aborted) setError(e instanceof Error ? e.message : "확인하지 못했어요"); }).finally(() => { if (!controller.signal.aborted) setBusy(false); });
     return () => controller.abort();
   }, [refresh]);
 
@@ -57,16 +57,16 @@ export default function SchemaAdminPage() {
   const attention = sorted.filter(item => ["missing", "partial", "unknown"].includes(item.status));
   const rest = sorted.filter(item => !attention.includes(item));
   const toRun = data ? data.migrations.filter(item => item.status === "missing").map(item => item.file) : [];
+  if (login) return <AdminLogin title="DB 준비 상태" description="운영 DB에 빠진 마이그레이션과 설정을 확인해요." Icon={Database} onLoggedIn={() => { setLogin(false); setError(""); setRefresh(value => value + 1); }} />;
   return <main className={styles.page}>
-    {!login && <AdminNav title="DB 준비 상태" subtitle="운영 DB에 빠진 마이그레이션을 파일 이름으로 보여 줘요" />}
+    <AdminNav title="DB 준비 상태" subtitle="운영 DB에 빠진 마이그레이션을 파일 이름으로 보여 줘요" />
     <div className={styles.content}>
       <div className={styles.toolbar}>
         <button title="다시 확인" aria-label="다시 확인" disabled={busy} onClick={() => setRefresh(value => value + 1)}><RefreshCw size={18} /></button>
         {data && <small>확인 {new Date(data.checkedAt).toLocaleString("ko-KR")} · {data.source === "openapi" ? "DB 스키마 목록으로 확인" : data.source === "probe" ? "테이블을 하나씩 읽어 확인(함수는 확인 못 함)" : "DB가 연결되어 있지 않아요"}</small>}
       </div>
       {error && <p role="alert" className={styles.error}>{error}</p>}
-      {login && <Link href="/admin">관리자 로그인</Link>}
-      {busy && !data && <p role="status">DB를 확인하고 있습니다</p>}
+      {busy && !data && <p role="status">DB를 확인하고 있어요</p>}
       {data && <>
         <section className={styles.section}>
           <header>

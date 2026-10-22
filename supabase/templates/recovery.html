@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko" style="color-scheme:light;">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="supported-color-schemes" content="light">
+<title>비밀번호를 다시 정해 주세요</title>
+</head>
+<body bgcolor="#f6f7fb" style="margin:0;padding:0;background-color:#f6f7fb;font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Pretendard','Malgun Gothic',sans-serif;color:#191f28;">
+<div style="display:none;max-height:0;overflow:hidden;">아래 버튼을 눌러 새 비밀번호를 정해 주세요.</div>
+<div style="max-width:480px;margin:0 auto;padding:24px 16px;background-color:#f6f7fb;">
+  <p style="margin:0 0 16px;font-size:16px;font-weight:800;color:#3272db;">오늘창업</p>
+  <div style="padding:24px 20px;background-color:#ffffff;border-radius:14px;">
+    <h1 style="margin:0 0 12px;font-size:20px;line-height:1.4;color:#191f28;">비밀번호를 다시 정해 주세요</h1>
+    <p style="margin:0 0 8px;font-size:15px;line-height:1.7;color:#4e5968;">{{ .Email }} 계정의 비밀번호 재설정을 요청하셨어요.</p><p style="margin:0 0 8px;font-size:15px;line-height:1.7;color:#4e5968;">아래 버튼을 눌러 새 비밀번호를 정해 주세요. 링크는 한 번만 쓸 수 있고, 시간이 지나면 만료돼요.</p>
+    <p style="margin:20px 0;">
+      <a href="{{ .ConfirmationURL }}" style="display:block;padding:14px 18px;background-color:#3272db;color:#ffffff;border-radius:10px;text-decoration:none;font-weight:700;font-size:15px;text-align:center;">새 비밀번호 정하기</a>
+    </p>
+    <p style="margin:0;color:#6b7684;font-size:13px;line-height:1.6;">직접 요청하지 않았다면 이 메일은 무시해 주세요. 지금 비밀번호는 그대로예요.</p>
+    <p style="margin:12px 0 0;color:#8b95a1;font-size:12px;line-height:1.6;word-break:break-all;">버튼이 눌리지 않으면 아래 주소를 복사해 브라우저에 붙여 넣어 주세요.<br>{{ .ConfirmationURL }}</p>
+  </div>
+  <p style="margin:16px 0 0;color:#8b95a1;font-size:12px;line-height:1.6;">궁금한 점은 고객센터에서 물어봐 주세요: <a href="https://oneulstart.com/account/support" style="color:#8b95a1;">https://oneulstart.com/account/support</a><br>이 메일은 보내기 전용이에요.</p>
+</div>
+</body>
+</html>

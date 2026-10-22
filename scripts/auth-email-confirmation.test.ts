@@ -16,6 +16,8 @@ async function main() {
   let settings = true, sent = 0, claims = 0, sessions = 0, consentWrites = 0, adminCreates = 0, logins = 0;
   let signUpInput: Record<string, unknown> | undefined;
   let signupError: { code: string; message: string } | null = null;
+  let recoverError: { code?: string; status?: number; message: string } | null = null;
+  let updateError: { code?: string; status?: number; message: string } | null = null;
   let duplicate = false, immediateSession = false, confirmed = false, invalidSession = false;
   const user = () => ({ id: "synthetic-user", email: "synthetic@example.invalid", email_confirmed_at: confirmed ? "2026-09-22T00:00:00Z" : undefined, identities: duplicate ? [] : [{ id: "synthetic-identity" }] });
   mock("../lib/account-auth", {
@@ -25,6 +27,8 @@ async function main() {
       signInWithPassword: async () => { logins++; return { data: { user: user(), session: {} }, error: null }; },
       signUp: async (input: Record<string, unknown>) => { sent++; signUpInput = input; return { data: { user: user(), session: immediateSession ? {} : null }, error: signupError }; },
       setSession: async () => ({ data: { user: user(), session: invalidSession ? null : {} }, error: invalidSession ? { message: "invalid" } : null }),
+      resetPasswordForEmail: async () => ({ data: {}, error: recoverError }),
+      updateUser: async () => ({ data: { user: user() }, error: updateError }),
     } }),
     currentGuestHash: async () => "synthetic-guest",
     claimGuestProjects: async () => { claims++; },
@@ -35,6 +39,10 @@ async function main() {
   const register = require("../app/api/auth/register/route") as typeof import("../app/api/auth/register/route");
   const session = require("../app/api/auth/session/route") as typeof import("../app/api/auth/session/route");
   const login = require("../app/api/auth/login/route") as typeof import("../app/api/auth/login/route");
+  const recover = require("../app/api/auth/recover/route") as typeof import("../app/api/auth/recover/route");
+  const reset = require("../app/api/auth/reset/route") as typeof import("../app/api/auth/reset/route");
+  const recoverRequest = (email = "synthetic@example.invalid") => new Request("https://beta.example.invalid/api/auth/recover", { method: "POST", body: JSON.stringify({ email }) });
+  const resetRequest = () => new Request("https://beta.example.invalid/api/auth/reset", { method: "POST", body: JSON.stringify({ accessToken: "synthetic-access", refreshToken: "synthetic-refresh", password: "synthetic-password-2" }) });
   const input = { email: "synthetic@example.invalid", password: "synthetic-password-only", terms: true, privacy: true, aiNotice: true };
   const registerRequest = () => new Request("https://beta.example.invalid/api/auth/register", { method: "POST", body: JSON.stringify(input) });
   const sessionRequest = () => new Request("https://beta.example.invalid/api/auth/session", { method: "POST", body: JSON.stringify({ accessToken: "synthetic-access", refreshToken: "synthetic-refresh" }) });
@@ -42,7 +50,7 @@ async function main() {
   let passed = 0;
   async function check(name: string, run: () => Promise<void>) {
     settings = true; sent = claims = sessions = consentWrites = adminCreates = logins = 0;
-    signupError = null; duplicate = immediateSession = confirmed = invalidSession = false;
+    signupError = recoverError = updateError = null; duplicate = immediateSession = confirmed = invalidSession = false;
     try { await run(); passed++; console.log(`PASS ${name}`); }
     catch (e) { failures.push(name); console.error(`FAIL ${name}: ${e instanceof Error ? e.message : String(e)}`); }
   }
@@ -92,6 +100,38 @@ async function main() {
     await check("existing confirmed password login remains available", async () => {
       confirmed = true; const response = await login.POST(registerRequest());
       assert.equal(response.status, 200); assert.equal(claims, 1); assert.equal(sessions, 1);
+    });
+    await check("password recovery never shows raw Supabase text (rate limit, quota, unknown)", async () => {
+      const ok = await recover.POST(recoverRequest());
+      assert.equal(ok.status, 200); assert.deepEqual(await ok.json(), { sent: true });
+      recoverError = { code: "over_email_send_rate_limit", status: 429, message: "For security purposes, you can only request this after 60 seconds." };
+      const limited = await recover.POST(recoverRequest()); const limitedBody = await limited.json();
+      assert.equal(limited.status, 429);
+      assert.equal(limitedBody.error.message, "잠시 후 다시 시도해 주세요. 메일은 1분에 한 번 보낼 수 있어요.");
+      recoverError = { code: "over_email_send_rate_limit", status: 429, message: "Email rate limit exceeded" };
+      assert.equal((await (await recover.POST(recoverRequest())).json()).error.message, "지금은 메일을 보낼 수 없어요. 잠시 후 다시 시도해 주세요.");
+      recoverError = { code: "unexpected_failure", status: 500, message: "Error sending recovery email" };
+      const failed = await (await recover.POST(recoverRequest())).json();
+      assert.equal(failed.error.message, "비밀번호 재설정 메일을 보내지 못했어요. 잠시 후 다시 시도해 주세요.");
+      assert.ok(!/[A-Za-z]{4,}/.test(failed.error.message), "영어 원문이 섞이지 않는다");
+      recoverError = null;
+      assert.equal((await (await recover.POST(recoverRequest("not-an-email"))).json()).error.message, "이메일 주소를 다시 확인해 주세요.");
+    });
+    await check("password reset maps provider errors to fixed Korean text", async () => {
+      updateError = { code: "same_password", status: 422, message: "New password should be different from the old password." };
+      assert.equal((await (await reset.POST(resetRequest())).json()).error.message, "지금 쓰는 비밀번호와 다른 비밀번호를 입력해 주세요.");
+      updateError = { code: "weak_password", status: 422, message: "Password should contain at least one character of each: abc" };
+      assert.match((await (await reset.POST(resetRequest())).json()).error.message, /비밀번호가 너무 쉬워요/);
+      updateError = null; invalidSession = true;
+      assert.equal((await (await reset.POST(resetRequest())).json()).error.message, "비밀번호를 바꾸지 못했어요. 잠시 후 다시 시도해 주세요.");
+      assert.equal(claims + sessions, 0);
+    });
+    await check("signup resend within a minute explains the wait instead of provider text", async () => {
+      signupError = { code: "over_email_send_rate_limit", message: "For security purposes, you can only request this after 42 seconds." };
+      const response = await register.POST(registerRequest()); const body = await response.json();
+      assert.equal(response.status, 429); assert.equal(body.error.code, "EMAIL_RATE_LIMITED");
+      assert.ok(!JSON.stringify(body).includes("security purposes"));
+      assert.equal(consentWrites, 0);
     });
     await check("confirmation pending UI distinguishes email confirmation from login", async () => {
       // 로그인 폼은 로그인 화면과 팝업이 같이 쓰는 컴포넌트로 옮겼다

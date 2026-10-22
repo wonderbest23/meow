@@ -28,7 +28,7 @@ function privateJson(body: unknown, init?: ResponseInit) {
 
 async function authorize() {
   if (await hasAdminSession("support")) return null;
-  return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요합니다." } }, { status: 401 });
+  return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요해요." } }, { status: 401 });
 }
 
 export async function GET(request: Request) {
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
     return privateJson({ requests: await listAllRefundRequests() });
   } catch (error) {
     console.error("[admin/refunds] list failed", error);
-    return privateJson({ error: { code: "REFUND_LIST_FAILED", message: "환불 요청을 불러오지 못했습니다. 잠시 후 새로고침해 주세요." } }, { status: 503 });
+    return privateJson({ error: { code: "REFUND_LIST_FAILED", message: "환불 요청을 불러오지 못했어요. 잠시 후 새로고침해 주세요." } }, { status: 503 });
   }
 }
 
@@ -63,6 +63,6 @@ export async function PATCH(request: Request) {
   } catch (error) {
     if (error instanceof RefundError) return privateJson({ error: { code: "REFUND_UPDATE_FAILED", message: error.message } }, { status: error.status });
     console.error("[admin/refunds] update failed", error);
-    return privateJson({ error: { code: "REFUND_UPDATE_FAILED", message: "환불을 처리하지 못했습니다. 새로고침 후 상태를 확인해 주세요." } }, { status: 500 });
+    return privateJson({ error: { code: "REFUND_UPDATE_FAILED", message: "환불을 처리하지 못했어요. 새로고침한 뒤 상태를 확인해 주세요." } }, { status: 500 });
   }
 }
