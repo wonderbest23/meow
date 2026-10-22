@@ -11,6 +11,7 @@ import { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
 import { applyIntakeResources } from "../../../../lib/plan-builder/intake-resource-update";
 import { RESOURCE_ANSWER_IDS, RESOURCE_KEYS, resourceLimitsSchema, resourceQuoteSchema, type ResourceKey, type ResourceContext, type ResourceQuote } from "../../../../lib/plan-builder/intake-candidate-resources";
 import { parseResourceLimit } from "../../../../lib/plan-builder/intake-candidate-fit";
+import { stripAnswerPeriod } from "../../../../lib/plan-builder/answer-number";
 import { z } from "zod";
 import { ideaInputFingerprint } from "../../../../lib/plan-builder/intake-ideas";
 export { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
@@ -82,7 +83,9 @@ export function typedEntryCommand(text: string): Pick<IntakeCommand, "action" | 
 }
 
 export function entryMessage(draft: Pick<IntakeDraft, "memo" | "introMessage">) {
-  const previous = draft.introMessage?.trim() ?? "", current = draft.memo.trim();
+  // 폭 없는 공백(U+200B~U+200D, U+FEFF)만 있으면 빈 입력이다
+  const visible = (text: string) => text.replace(/[\u200B-\u200D\uFEFF]/g, "").trim();
+  const previous = visible(draft.introMessage ?? ""), current = visible(draft.memo);
   return previous && current && previous !== current ? `${previous}\n${current}` : current || previous;
 }
 
@@ -111,7 +114,23 @@ export function confirmedEntryCommand(mode: "exploring" | "startup" | "operating
 export type ComposerRoute =
   | { kind: "answer"; questionId: string; value: IntakeValue; unknown?: boolean }
   | { kind: "note"; intent: "memo" | "question" }
-  | { kind: "clarify"; canAnswer: boolean };
+  | { kind: "clarify"; canAnswer: boolean }
+  | { kind: "invalid"; hint: string };
+
+/**
+ * 숫자 질문에 숫자처럼 적었지만 읽을 수 없으면('20~30만원', '-5000') 예시와 함께 다시 적어 달라고 한다.
+ * 예전엔 서버가 '단위에 맞는 0 이상의 숫자…'로 막거나 '어떻게 남길까요'만 떠서 무엇이 틀렸는지 몰랐다. 글이 섞이면 기존 흐름(메모·질문)으로 둔다.
+ */
+export function numberInputHint(question: Pick<IntakeQuestion, "kind" | "unit" | "period">, text: string): string {
+  if (question.kind !== "number") return "";
+  const value = stripAnswerPeriod(text.trim(), question.period);
+  if (!/\d/.test(value) || !/^[\d\s,.~～〜–+\-−억만천백십원%시간분개명건회일좌석룸]+$/.test(value)) return "";
+  if (numericAnswer(question, value) !== undefined) return "";
+  const example = question.unit === "원" ? "25000, 2만5천원" : `20${question.unit ?? ""}`;
+  if (/^[-−]/.test(value.trim())) return `0 이상의 숫자만 적어 주세요 (예: ${example})`;
+  if (/[~～〜–]/.test(value)) return `범위 대신 숫자 하나만 적어 주세요 (예: ${example})`;
+  return `숫자만 적어 주세요 (예: ${example})`;
+}
 
 /** '잘 몰라요', '글쎄요'처럼 모른다는 말 — '잘 모르겠어요'와 같이 미정으로 남긴다. */
 const unknownReply = /^(?:아직\s*|잘\s*|정말\s*|솔직히\s*)*(?:미정|모름|몰라|몰라요|모르겠어요|모르겠습니다|모르겠네요|글쎄|글쎄요|정하지\s*못했어요|안\s*정했어요)[.!~\s…]*$/;
@@ -142,9 +161,13 @@ export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQue
   }
   if (question.id === "budget" || question.id === "hoursPerWeek") {
     const parsed = parseResourceLimit(value, question.id === "budget" ? "initialCost" : "weeklyOperatingHours");
-    return parsed.status === "known" ? { kind: "answer", questionId: question.id, value } : { kind: "clarify", canAnswer: false };
+    const hint = parsed.status === "known" ? "" : numberInputHint({ kind: "number", unit: question.id === "budget" ? "원" : "시간" }, value.replace(/[~～〜–]/g, ""));
+    return parsed.status === "known" ? { kind: "answer", questionId: question.id, value } : hint ? { kind: "invalid", hint } : { kind: "clarify", canAnswer: false };
   }
-  if (question.kind === "number" && !/^[\d\s,.억만천백십원%시간분개명건회좌석룸]+$/.test(value)) return { kind: "clarify", canAnswer: false };
+  const numberHint = numberInputHint(question, value);
+  if (numberHint) return { kind: "invalid", hint: numberHint };
+  // '월 30만'·'30만원/월'처럼 질문 기간을 붙여 써도 숫자 답으로 받는다
+  if (question.kind === "number" && !/^[\d\s,.억만천백십원%시간분개명건회좌석룸]+$/.test(stripAnswerPeriod(value, question.period))) return { kind: "clarify", canAnswer: false };
   if (/\n.+|그리고|그런데|하지만/.test(value) || /\d\s*만원.*\d\s*시간/.test(value)) return { kind: "clarify", canAnswer };
   return { kind: "answer", questionId: question.id, value };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft, Menu, X } from "lucide-react";
 import { usePathname } from "next/navigation";
@@ -10,13 +10,16 @@ import shell from "./PlanShell.module.css";
 import RailMenu from "./RailMenu";
 import type { DocumentToc } from "./BusinessRailTree";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
+import { useDialogFocus } from "../../components/use-dialog-focus";
 
-export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc }: {
+export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new" | "inquiries"; backHref?: string; showRail?: boolean;
   /** 화면 안에서 한 단계 되돌리기(예: 내 문의 상세 → 목록) — 있으면 머리말 뒤로 단추가 주소 이동 대신 이것을 부른다 */
   onBack?: () => void;
   /** 문서 화면의 목차 — 왼쪽 메뉴의 그 사업 아래에 붙는다 */
   documentToc?: DocumentToc;
+  /** 머리줄 제목을 이 화면의 h1로 둔다. 본문이 따로 h1을 갖는 화면(계획서의 사업명)은 false. */
+  titleHeading?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
@@ -30,8 +33,24 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     document.addEventListener("keydown", escape);
     return () => document.removeEventListener("keydown", escape);
   }, [open]);
+  /*
+   * 서랍은 화면을 덮는 창이다 — 열면 '메뉴 닫기'로 초점을 옮기고, Tab은 서랍 안에서만 돌고, 뒤 화면은 inert로 막는다.
+   * 닫히면 메뉴 단추로 초점을 돌려준다(예전엔 초점이 뒤 화면에 남아 낭독기가 서랍을 지나쳤다 · 접근성 점검 2026-10-22).
+   */
+  const toggle = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const drawerRef = useDialogFocus<HTMLElement>(open, { onEscape: () => setOpen(false), initialFocus: () => closeButton.current });
+  const wasOpen = useRef(false);
+  useEffect(() => {
+    if (open) { wasOpen.current = true; return; }
+    if (!wasOpen.current) return;
+    wasOpen.current = false;
+    // Safari처럼 누른 단추에 초점을 주지 않는 브라우저에서도 body에 떨어지지 않게
+    const active = document.activeElement;
+    if (!active || active === document.body) toggle.current?.focus({ preventScroll: true });
+  }, [open]);
   return <>
-    {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost} ${drawer.wideOnly}`} aria-label="작업 메뉴">
+    {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open}>
       <RailMenu active={active} documentToc={documentToc} />
     </aside>}
     {/*
@@ -40,24 +59,24 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     */}
     {open && <div className={drawer.scrim} onClick={() => setOpen(false)} aria-hidden="true" />}
     {/* 서랍 안에서 다른 화면·사업으로 가는 링크나 홈페이지 칸 이동을 누르면 닫는다 — 같은 주소에 사업만 바뀌면 예전엔 서랍이 그대로 덮고 있었다 */}
-    {open && <aside id="app-drawer" className={`${shell.rail} ${shell.railOpen} ${drawer.drawer}`} data-rail-open="" aria-label="메뉴" onClickCapture={event => {
+    {open && <aside ref={drawerRef} id="app-drawer" className={`${shell.rail} ${shell.railOpen} ${drawer.drawer}`} data-rail-open="" role="dialog" aria-modal="true" aria-label="메뉴" onClickCapture={event => {
       const target = event.target as Element;
       if (target.closest("a[href]") || target.closest('ul[aria-label="홈페이지 목차"] button')) setOpen(false);
     }}>
-      <button type="button" className={drawer.close} aria-label="메뉴 닫기" onClick={() => setOpen(false)}><X size={22} /></button>
+      <button ref={closeButton} type="button" className={drawer.close} aria-label="메뉴 닫기" onClick={() => setOpen(false)}><X size={22} /></button>
       {/* 서랍에서 장을 고르면 서랍을 닫고 그 장을 보여 준다 */}
       <RailMenu active={active} documentToc={documentToc && { ...documentToc, onSelect: index => { setOpen(false); documentToc.onSelect(index); } }} />
     </aside>}
-    <div className={styles.appSurface} data-app-surface="">
+    <div className={styles.appSurface} data-app-surface="" inert={open}>
       <header className={styles.header}>
         {onBack
           ? <button type="button" className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} onClick={onBack} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></button>
           : <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>}
         {/* 부제는 화면이 따로 줄 때만(예: 질문 3/12) — 늘 붙던 '오늘창업'·'오늘창업 AI 파트너'는 왼쪽 로고와 겹쳐 뺐다 */}
-        <div className={styles.headerTitle}><strong>{title}</strong>{subtitle && <span>{subtitle}</span>}</div>
+        <div className={styles.headerTitle}>{titleHeading ? <h1><strong>{title}</strong></h1> : <strong>{title}</strong>}{subtitle && <span>{subtitle}</span>}</div>
         {actions && <div className={styles.headerActions}>{actions}</div>}
         <div className={`${styles.headerMenu} ${showRail ? drawer.narrowOnly : ""}`}>
-          <button className={styles.menuToggle} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls="app-drawer" onClick={() => setOpen(!open)}><Menu size={24} /></button>
+          <button ref={toggle} type="button" className={styles.menuToggle} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls="app-drawer" onClick={() => setOpen(!open)}><Menu size={24} /></button>
         </div>
       </header>
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}

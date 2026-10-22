@@ -6,11 +6,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
 import { AlertCircle, ArrowDown, ArrowRight, ArrowUp, Bookmark, ChevronLeft, FileText, FolderOpen, LoaderCircle, LogIn, PencilLine, RefreshCw, X, MessageCircle } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
+import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import type { IntakeCommand, IntakePayload, IntakeSnapshot, IntakeValue } from "../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion } from "../../../lib/plan-builder/intake-questions";
 import { subscribePlanOwnerChange } from "../../../lib/plan-builder/plan-store";
 import { loadAuthSession } from "../../../lib/client/auth-session";
-import { AnswerHistory, BusinessIdentityHero, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
+import { AnswerHistory, BusinessIdentityHero, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, BusinessSummary, ChatSpeaker, ConversationHistory, ConversationText, currentIdentity, DesignDirection, EntryChoices, ExtractionReview, isDesignReplyText, JobProgress, NextStepAction, QuestionForm, ReplyTyping } from "./intake-ui/IntakePanels";
 import { useChatSplit } from "./useChatSplit";
 import { useReplyTransition } from "./intake-ui/use-reply-transition";
 import { LiveComment, useLiveComment } from "./intake-ui/LiveComment";
@@ -25,7 +26,7 @@ import { InlineLogin } from "../../../components/login-dialog";
 import { ResourcePanel } from "./intake-ui/ResourcePanel";
 import { IdeaExploration } from "./intake-ui/IdeaExploration";
 import { incompleteChoiceText, nextRefinementQuestion } from "./intake-ui/model";
-import { composerEnterSends, resultUpdateNotice, resumeSummary } from "./intake-ui/guidance";
+import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummary, visibleComposerText } from "./intake-ui/guidance";
 import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 
@@ -105,6 +106,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const [ideaPick, setIdeaPick] = useState<string | null>(null);
   // 붙여 넣은 글이 1,200자를 넘어 잘렸는지(조용히 잘리면 뒤쪽이 사라진 줄 모른다)
   const [pasteCut, setPasteCut] = useState(false);
+  // 숫자 질문에 읽을 수 없는 숫자를 보냈을 때 예시와 함께 보여 줄 한 줄(새로 입력하면 지운다)
+  const [inputHint, setInputHint] = useState("");
   const draftRef = useRef<IntakeDraft>(draft);
   const memoryDrafts = useRef(new Map<string, IntakeDraft>());
   const storageKey = useRef(draftKey());
@@ -131,6 +134,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   signedInRef.current = signedIn;
   /* 로그인이 풀려 저장을 멈췄는지 — '최신 내용 불러오기'(손님 계정으로 바뀌어 입력이 안 보인다) 대신 다시 로그인하는 길만 둔다 */
   const [sessionLost, setSessionLost] = useState(false);
+  /* 사업 수 한도(20개)에 닿음 — 시작 단추를 막고 '내 사업으로' 길을 보인다 */
+  const [planLimit, setPlanLimit] = useState(false);
   // 사업 기획은 로그인 후에만 시작한다. 서버가 loginRequired 로 알려 주면 질문 대신 로그인 안내를 보여 준다.
   const [loginGate, setLoginGate] = useState(false);
   const [preparedRevision, setPreparedRevision] = useState<number | null>(null);
@@ -245,7 +250,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     const controller = new AbortController();
     controllers.current.add(controller);
     const timeout = window.setTimeout(() => controller.abort(), 20000);
-    setLoaded(false); setLoadFailed(false); setNewEntry(startNew); setError(""); setLogin(false); setPreparedRevision(null); setResume(""); setConnectionError(false); setView("input"); setOwnerChanged(false); setSessionLost(false);
+    setLoaded(false); setLoadFailed(false); setNewEntry(startNew); setError(""); setLogin(false); setPreparedRevision(null); setResume(""); setConnectionError(false); setView("input"); setOwnerChanged(false); setSessionLost(false); setPlanLimit(false);
     busyRef.current = false; setBusy(false); planRef.current = null; setPlan(null); setPreview(null); ownerScope.current = null; lastDesign.current = ""; setIntentPrompt(null);
     draftRef.current = emptyDraft(); setDraft(draftRef.current); conflictRef.current = false;
     void getSnapshot(startNew ? null : id, controller.signal).then(data => {
@@ -393,6 +398,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       }
       if (!response.ok || data?.login) {
         setLogin(!!data?.login || response.status === 401);
+        if (data?.code === "plan_limit") setPlanLimit(true);
         if (response.status >= 400 && response.status < 500 || data?.code && ["ai_unavailable", "ai_limit", "business_required", "disabled"].includes(data.code)) writeDraft({ ...draftRef.current, pending: null });
         if (data?.login && data.plan && data.plan.planId === planRef.current?.planId) installPlan(data.plan);
         const aiUnavailable = ["help", "design", "extract", "extract-pending"].includes(pending.command.action) && !!data?.code && ["ai_unavailable", "ai_limit", "business_required"].includes(data.code);
@@ -484,7 +490,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const question = plan ? draft.editingId ? plan.questions.find(item => item.id === draft.editingId) ?? getIntakeQuestion("startup", plan.intake.sector, draft.editingId, plan.structure?.values) : plan.nextQuestion : null;
   const questionDraft = question ? draft.answers[question.id] ?? emptyAnswer() : emptyAnswer();
   const ideaError = !!ideaPick && !!error && (status === "failed" || status === "conflict") && question?.id === "candidate" && questionDraft.selected[0] === ideaPick ? error : "";
-  const blocked = busy || !!replyTurn || !!draft.pending || status === "conflict" || loadFailed || ownerChanged;
+  const blocked = busy || !!replyTurn || !!draft.pending || status === "conflict" || loadFailed || ownerChanged || planLimit;
   // 앞 답을 저장하는 동안에도 다음 질문에는 답할 수 있다(queuedAnswers) — 질문 칸과 보내기만 연다
   const answerQueueOpen = coach && busy && draft.pending?.command.action === "answer" && !replyTurn && status !== "conflict" && !loadFailed && !ownerChanged;
   const answerBlocked = blocked && !answerQueueOpen;
@@ -510,13 +516,16 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const choiceText = choiceSubmission && question && plan ? choiceSubmission.unknown ? "아직 정하지 않았어요" : question.id === "candidate" ? plan.intake.generatedIdeas?.find(idea => idea.id === choiceSubmission.value)?.title ?? summaryAnswerText(question, choiceSubmission.value, plan.candidateIdeas) : summaryAnswerText(question, choiceSubmission.value, plan.candidateIdeas) : "";
   const questionComposer = !!plan && draft.mode === "answer" && !!question;
   const composerText = questionComposer ? questionDraft.text || (choiceQuestion ? draft.memo : "") : draft.mode === "help" ? draft.help : draft.memo;
+  // 폭 없는 공백만 있으면 빈 입력으로 본다
+  const composerVisible = visibleComposerText(composerText);
   const unfinishedText = directAnswer && incompleteChoiceText(question, questionDraft);
   // 보내기가 흐린 이유와 글자 수 한도를 입력창 바로 위 한 줄로 알려 준다
-  const composerNote = unfinishedText && /○○|〇〇|◯◯/.test(composerText) ? "○○ 자리를 채워 주세요"
+  const composerNote = inputHint ? inputHint
+    : unfinishedText && /○○|〇〇|◯◯/.test(composerText) ? "○○ 자리를 채워 주세요"
     : unfinishedText && /N원|N건/.test(composerText) ? "N 자리를 숫자로 바꿔 주세요"
     : pasteCut && composerText.length >= 1200 ? "1,200자까지만 넣었어요. 나머지는 나눠서 보내 주세요."
-    : composerText.length > 1000 ? `${composerText.length.toLocaleString("ko-KR")} / 1,200자` : "";
-  const composerRoute = plan && !choiceSubmission && composerText.trim() ? routeComposerInput(plan, question ?? null, composerText) : null;
+    : composerLimitNote(composerText.length, 1200);
+  const composerRoute = plan && !choiceSubmission && composerVisible ? routeComposerInput(plan, question ?? null, composerText) : null;
   const askingAI = draft.mode !== "ideas" && !choiceSubmission && (draft.mode === "help" || composerRoute?.kind === "note" && composerRoute.intent === "question");
   const sendLabel = askingAI ? "AI에게 질문" : "보내기";
   const captureComposer = (): PendingRequest["composer"] => ({ text: composerText, mode: draft.mode, ...(questionComposer && question ? { questionId: question.id } : {}) });
@@ -548,9 +557,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     void send(confirmedEntryCommand(mode, text), { text: draftRef.current.memo, intro: draftRef.current.introMessage });
   };
   const storeComposerNote = (intent: "memo" | "question") => {
-    if (!composerText.trim()) return;
+    if (!composerVisible) return;
     follow.current = true;
-    void send({ action: "note", message: composerText.trim(), noteIntent: intent }, { composer: captureComposer() });
+    void send({ action: "note", message: composerVisible, noteIntent: intent }, { composer: captureComposer() });
   };
   const answerQuestion = (value: IntakeValue, unknown = false, questionId = question?.id, extra?: { ksic?: string }) => {
     if (!questionId || !question) return;
@@ -576,21 +585,23 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       return;
     }
     if (draft.mode === "ideas" && plan.intake.mode === "exploring") {
-      if (!aiBusy && composerText.trim()) void send({ action: "ideas", message: composerText.trim(), rejectIds: ideaRejectIds }, { composer: captureComposer() });
+      if (!aiBusy && composerVisible) void send({ action: "ideas", message: composerVisible, rejectIds: ideaRejectIds }, { composer: captureComposer() });
       return;
     }
     if (choiceSubmission && question) {
-      void send({ action: "answer", questionId: question.id, value: choiceSubmission.value, ...(choiceSubmission.unknown ? { unknown: true } : {}), ...(choiceSubmission.ksic ? { ksic: choiceSubmission.ksic } : {}), ...(composerText.trim() ? { message: composerText.trim() } : {}) }, { answer: questionDraft, text: composerText });
+      void send({ action: "answer", questionId: question.id, value: choiceSubmission.value, ...(choiceSubmission.unknown ? { unknown: true } : {}), ...(choiceSubmission.ksic ? { ksic: choiceSubmission.ksic } : {}), ...(composerVisible ? { message: composerVisible } : {}) }, { answer: questionDraft, text: composerText });
       return;
     }
-    if (!composerText.trim()) return;
+    if (!composerVisible) return;
     // Plan edit chat: every message is an edit request; the server filters it before any AI call.
-    if (editTurn) { void send({ action: "edit", message: composerText.trim() }, { composer: captureComposer() }); return; }
+    if (editTurn) { void send({ action: "edit", message: composerVisible }, { composer: captureComposer() }); return; }
     // In coach chat the composer is the industry search box on the industry turn; results appear as chips to tap.
-    if (coach && question?.id === "industry" && !askingAI) return;
-    if (askingAI) { if (!aiBusy) void send({ action: "help", message: composerText.trim() }, { composer: captureComposer() }); return; }
+    // 보내기를 눌러도 아무 일이 없던 문제(2026-10-22) — 찾은 업종을 누르라고 한 줄로 알려 준다
+    if (coach && question?.id === "industry" && !askingAI) { setInputHint("찾은 업종 중 가까운 걸 눌러 주세요. 없으면 다른 이름으로 찾거나 아래 보기에서 골라도 돼요."); return; }
+    if (askingAI) { if (!aiBusy) void send({ action: "help", message: composerVisible }, { composer: captureComposer() }); return; }
     const target = question?.id === "candidate" && questionDraft.custom ? getIntakeQuestion("startup", plan.intake.sector, "business", plan.structure?.values) ?? null : question;
     const route = routeComposerInput(plan, target ?? null, composerText);
+    if (route.kind === "invalid") { setInputHint(route.hint); return; }
     if (route.kind === "clarify") { setIntentPrompt({ text: composerText, questionId: question?.id ?? null, revision: plan.coach.revision, canAnswer: route.canAnswer }); follow.current = true; return; }
     if (route.kind === "note") { storeComposerNote(route.intent); return; }
     void send({ action: "answer", questionId: route.questionId, value: route.value, ...(route.unknown ? { unknown: true } : {}) }, { answer: questionDraft, composer: captureComposer() });
@@ -738,6 +749,33 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   // Receipt under the newest answer: in flight → saved → the next turn is on screen.
   // 답 저장은 뒤에서 하므로(answerQueueOpen) '보내는 중'으로 붙잡지 않는다 — 실패하면 오류 안내가 따로 뜬다
   const receipt = busy && !answerQueueOpen ? "보내는 중" : replyTurn ? "전달됨" : "읽음";
+  /*
+   * 화면 낭독기 알림 — 늘 붙어 있는 알림 칸 하나에 새 질문과 다 받은 AI 답만 넣는다(받는 중인 글은 넣지 않는다).
+   * 예전엔 '저장됨'만 읽히고 다음 질문은 읽히지 않았다(접근성 점검 2026-10-22). 처음 불러온 대화는 다시 읽지 않는다.
+   * 답한 칩·질문 칸이 사라져 포커스를 잃었으면 새 질문 제목으로 옮긴다 — 그때 제목은 포커스로 읽히니 알림에는 넣지 않는다.
+   */
+  const [announcement, setAnnouncement] = useState("");
+  const spoken = useRef<{ planId: string | null; question: string | null; message: string | null } | null>(null);
+  const lastAssistant = plan?.coach.messages.filter(message => message.role === "assistant").at(-1);
+  useEffect(() => {
+    if (!loaded) return;
+    if (replyTurn) { setAnnouncement("다음 질문을 준비하고 있어요"); return; }
+    const current = { planId: plan?.planId ?? null, question: question?.id ?? null, message: lastAssistant?.id ?? null };
+    const before = spoken.current;
+    spoken.current = current;
+    if (!before || before.planId && before.planId !== current.planId) return;
+    const parts: string[] = [];
+    if (lastAssistant && current.message !== before.message) parts.push(isDesignReplyText(lastAssistant.text) ? "사업 방향을 정리했어요. 아래 카드에서 확인해 주세요." : lastAssistant.text.length > 400 ? `${lastAssistant.text.slice(0, 400)}…` : lastAssistant.text);
+    if (question && current.question !== before.question) {
+      const active = document.activeElement;
+      if (!active || active === document.body || !active.isConnected) focusQuestion();
+      // 답 고치기는 editQuestion이 이미 제목으로 포커스를 옮긴다
+      else if (!draft.editingId) parts.push(question.prompt);
+    }
+    setAnnouncement(parts.join(" "));
+    // focusQuestion은 렌더마다 새로 만들어지지만 ref와 DOM만 쓴다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loaded, plan?.planId, lastAssistant?.id, question?.id, replyTurn]);
   useEffect(() => {
     if (!plan || nextStep !== "design" || !showCompletion || blocked || aiBusy || loginGate || designFailed) return;
     const key = `${plan.planId}:${plan.coach.documentRevision ?? plan.coach.revision}`;
@@ -749,20 +787,21 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   }, [plan, nextStep, showCompletion, blocked, aiBusy, loginGate, designFailed]);
   // Keep unsent text and failed requests visible; otherwise the completed step is a choice, not another chat turn.
   // 로그인 안내 화면에서는 입력창을 두지 않는다(보내도 서버가 로그인 필요로 거절한다)
-  const showComposer = !loginGate && !showReview && !locked && (editTurn || !showCompletion || !nextStep || !!draft.pending || nextStep === "design" && (!!composerText.trim() || !!draft.memo.trim() || !!draft.help.trim()));
+  const showComposer = !loginGate && !showReview && !locked && (editTurn || !showCompletion || !nextStep || !!draft.pending || nextStep === "design" && (!!composerVisible || !!draft.memo.trim() || !!draft.help.trim()));
   // Problems read as a coach message at the end of the thread in coach chat, as a banner otherwise.
   const notices = (error && !ideaError && !staleFailure || connectionError || storageError) && <div className={styles.notices} data-coach-notices={coach || undefined}>
-      {error && !ideaError && !staleFailure && <div className={styles.notice} role="alert"><p>{error}</p><div className={styles.noticeActions}>{sessionLost ? null : status === "conflict" || loadFailed ? <button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />최신 내용 불러오기</button> : draft.pending && <button type="button" disabled={busy} onClick={() => void send()}><RefreshCw size={16} aria-hidden="true" />다시 시도</button>}{login && <Link href={loginHref}>{sessionLost ? "다시 로그인하기" : "로그인하고 이어가기"}<ArrowRight size={16} aria-hidden="true" /></Link>}</div></div>}
+      {error && !ideaError && !staleFailure && <div className={styles.notice} role="alert"><p>{error}</p><div className={styles.noticeActions}>{sessionLost ? null : status === "conflict" || loadFailed ? <button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />최신 내용 불러오기</button> : draft.pending && <button type="button" disabled={busy} onClick={() => void send()}><RefreshCw size={16} aria-hidden="true" />다시 시도</button>}{planLimit && <Link href="/plan">내 사업으로<ArrowRight size={16} aria-hidden="true" /></Link>}{login && <Link href={loginHref}>{sessionLost ? "다시 로그인하기" : "로그인하고 이어가기"}<ArrowRight size={16} aria-hidden="true" /></Link>}</div></div>}
       {connectionError && <div className={styles.notice} role="status"><p>정리 상태를 갱신하지 못했어요. 입력은 계속할 수 있습니다.</p><button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />상태 새로고침</button></div>}
       {storageError && <p className={styles.notice} role="status">이 기기에 임시 저장하지 못했어요. 서버에 저장하기 전에는 이 화면을 닫지 말아 주세요.</p>}
     </div>;
-  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : "답을 기다리는 중" : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={plan && (plan.coreAnswered > 0 || plan.coach.fields.length > 0) ? <button type="button" className={styles.summaryToggle} aria-label={`사업 요약${plan.coreAnswered > 0 ? ` (답변 ${plan.coreAnswered}개)` : ""}`} aria-controls="intake-summary-panel" aria-expanded={coachLayout ? coachLayout === "split" : view === "summary"} onClick={() => { setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }}><FileText size={17} aria-hidden="true" /><span aria-hidden="true">요약</span>{plan.coreAnswered > 0 && <b aria-hidden="true">{plan.coreAnswered}</b>}</button> : undefined}>
+  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={plan && (plan.coreAnswered > 0 || plan.coach.fields.length > 0) ? <button type="button" className={styles.summaryToggle} aria-label={`사업 요약${plan.coreAnswered > 0 ? ` (답변 ${plan.coreAnswered}개)` : ""}`} aria-controls="intake-summary-panel" aria-expanded={coachLayout ? coachLayout === "split" : view === "summary"} onClick={() => { setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }}><FileText size={17} aria-hidden="true" /><span aria-hidden="true">요약</span>{plan.coreAnswered > 0 && <b aria-hidden="true">{plan.coreAnswered}</b>}</button> : undefined}>
     {plan && <>
       <div className={styles.progressLine} aria-hidden="true"><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div>
       {/* 코치 채팅에서 답 저장은 뒤에서 조용히 한다 — 매 답마다 '저장 중'을 띄우지 않고, 실패·충돌만 보인다(소유자 피드백 2026-10-09) */}
       <div className={!loaded || status === "saving" && !coach || status === "failed" && !staleFailure || status === "conflict" ? styles.statusLine : styles.srOnly} data-status={status} role="status" aria-live="polite">{status === "failed" && !staleFailure || status === "conflict" ? <AlertCircle size={15} aria-hidden="true" /> : !loaded || status === "saving" && !coach ? <LoaderCircle className={styles.spinner} size={15} aria-hidden="true" /> : null}{loaded ? status === "failed" && staleFailure ? "" : saveLabel : "불러오는 중"}</div>
     </>}
     {!coach && notices}
+    <div className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true" data-intake-announcer>{announcement}</div>
     <div ref={split.ref} style={plan ? split.style : undefined} data-loading={!loaded || undefined} data-coach-layout={coachLayout} className={`${styles.workspace} ${plan ? styles.withSummary : ""} ${split.dragging ? styles.resizing : ""}`}>
       <main ref={inputPane} id="intake-input-panel" aria-label="사업 기획 대화" className={`${styles.inputPane} ${view !== "input" ? styles.mobileHidden : ""}`}>
         <div ref={conversation} data-intake-conversation className={styles.conversation}
@@ -774,7 +813,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
           {/* '사업계획서 만들기'를 누른 뒤 — 단추가 화면 밖으로 밀려도 알 수 있게 화면 전체에 같은 로딩(얇은 원)을 덮는다 */}
           {preparing && <div className={styles.prepareCover}><PlanLoading fill note="사업계획서를 준비하고 있어요" /></div>}
-          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div><h1>저장한 사업이 없습니다</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></section>
+          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><Link href="/plan" className={styles.primaryButton}>내 사업으로<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
@@ -846,6 +885,9 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
                 setPasteCut(pasted.length > 1200 - (input.value.length - (input.selectionEnd - input.selectionStart)));
               }} onChange={event => {
                 setIntentPrompt(null);
+                // 새로 입력하기 시작하면 지난 입력에 대한 안내·오류 말풍선은 지운다(저장 실패·충돌·로그인처럼 다시 시도가 필요한 오류는 남긴다)
+                setInputHint("");
+                if (error && !draftRef.current.pending && status === "failed" && !login && !sessionLost && !loadFailed) setError("");
                 const typed = event.target.value;
                 if (typed.length < 1200) setPasteCut(false);
                 const label = (value: string) => (question?.options ?? []).find(option => option.value === value)?.label;
@@ -853,7 +895,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
                 if (questionComposer && question) editDraft({ ...draftRef.current, ...(choiceQuestion ? { memo: "" } : {}), answers: { ...draftRef.current.answers, [question.id]: { ...questionDraft, selected, text: typed, label: question.label } } });
                 else editDraft({ ...draftRef.current, [draft.mode === "help" ? "help" : "memo"]: event.target.value });
               }} onKeyDown={event => { if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); submitComposer(); } }} />
-              <button type="submit" className={styles.sendButton} aria-label={sendLabel} title={sendLabel} disabled={!loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerText.trim() || choiceSubmission : entryMessage(draft))}>{busy && !answerQueueOpen || replyTurn ? <LoaderCircle size={20} className={styles.spinner} /> : askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>
+              <button type="submit" className={styles.sendButton} aria-label={sendLabel} title={sendLabel} disabled={!loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{busy && !answerQueueOpen || replyTurn ? <LoaderCircle size={20} className={styles.spinner} /> : askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>
             </div>
           </form>
         </footer>}

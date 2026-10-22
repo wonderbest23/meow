@@ -21,7 +21,7 @@ import {
   landingTemplateOptions,
   type LandingDraft,
 } from "../lib/landing/domain";
-import type { LandingSiteRecord } from "../lib/landing/domain";
+import { landingEmailIssue, type LandingSiteRecord } from "../lib/landing/domain";
 import { createLandingPageData, syncLandingPageData } from "../lib/landing/page-data";
 import { LandingDomainConnector } from "./landing-domain-connector";
 import { LandingMediaField } from "./landing-media-field";
@@ -74,6 +74,9 @@ export function LandingQuickEditor({
 }) {
   const [step, setStep] = useState<EditorStep>("design");
   const [builderOpen, setBuilderOpen] = useState(false);
+  // 이메일 형식 안내는 칸을 떠난 뒤에만 보인다
+  const [emailLeft, setEmailLeft] = useState(false);
+  const emailMessage = emailLeft ? landingEmailIssue(draft.businessEmail) : "";
   const busy = action === "saving" || action === "publishing";
   const update = (patch: Partial<LandingDraft>) => {
     const next = { ...draft, ...patch };
@@ -180,9 +183,9 @@ export function LandingQuickEditor({
           <label className="landing-lead-switch"><input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(event) => update({ leadCaptureEnabled: event.target.checked })} /><span><i /></span><p><strong>고객 신청폼 사용</strong><small>켜면 이름과 연락처를 안전하게 접수해요.</small></p></label>
           <div className="landing-business-form">
             <label><span>대표자 이름</span><input value={draft.businessRepresentative} onChange={(event) => update({ businessRepresentative: event.target.value })} placeholder="사업자등록증과 같은 이름" /></label>
-            <label><span>전화번호</span><input value={draft.businessPhone} onChange={(event) => update({ businessPhone: event.target.value, businessContact: event.target.value })} placeholder="고객 문의 전화" /></label>
-            <label><span>이메일</span><input type="email" value={draft.businessEmail} onChange={(event) => update({ businessEmail: event.target.value })} placeholder="hello@mybusiness.kr" /></label>
-            <label><span>사업자등록번호</span><input value={draft.businessRegistrationNumber} onChange={(event) => update({ businessRegistrationNumber: event.target.value })} placeholder="000-00-00000" /></label>
+            <label><span>전화번호</span><input type="tel" inputMode="tel" autoComplete="tel" value={draft.businessPhone} onChange={(event) => update({ businessPhone: event.target.value, businessContact: event.target.value })} placeholder="고객 문의 전화" /></label>
+            <label><span>이메일</span><input type="email" autoComplete="email" value={draft.businessEmail} onChange={(event) => update({ businessEmail: event.target.value })} onBlur={() => setEmailLeft(true)} placeholder="hello@mybusiness.kr" aria-invalid={emailMessage ? true : undefined} aria-describedby={emailMessage ? "quick-email-error" : undefined} />{emailMessage && <small id="quick-email-error" className="hk-slug-error" role="alert">{emailMessage}</small>}</label>
+            <label><span>사업자등록번호</span><input inputMode="numeric" value={draft.businessRegistrationNumber} onChange={(event) => update({ businessRegistrationNumber: event.target.value })} placeholder="000-00-00000" /></label>
             <div className="wide address-field"><label><span>사업장 주소</span><input value={draft.businessAddress} onChange={(event) => update({ businessAddress: event.target.value })} placeholder="고객 불만을 처리할 수 있는 실제 주소" /></label><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
             {/* 영업시간 — 계획서에는 묻지 않는다. 동네 매장은 방문자가 가장 먼저 찾는 정보라 여기서 채운다 */}
             <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(event) => update({ openHours: event.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무 (비워 두면 홈페이지에 표시하지 않아요)" /></label>

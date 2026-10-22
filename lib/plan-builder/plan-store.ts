@@ -28,6 +28,22 @@ function invalidateMountedOwner() {
 function cachedOwnerKey(): string | null {
   try { return localStorage.getItem(OWNER_KEY); } catch { return null; }
 }
+
+/*
+ * 이 기기 저장본이 어느 로그인 계정의 것인지(서버가 준 accountKey).
+ * 계정 연결 기능(ownerKey)이 꺼진 운영에서도 늘 남긴다 — 로그아웃 없이 다른 계정으로 로그인하면
+ * 이전 계정의 사업이 새 계정 화면에 보이고 서버에까지 올라가던 문제를 막는다. 비회원 저장본에는 남기지 않는다.
+ */
+const ACCOUNT_KEY = "oneul-plan-cache-account";
+function cachedAccountKey(): string | null {
+  try { return localStorage.getItem(ACCOUNT_KEY); } catch { return null; }
+}
+function writeCachedAccountKey(value: string | null) {
+  try {
+    if (value) localStorage.setItem(ACCOUNT_KEY, value);
+    else localStorage.removeItem(ACCOUNT_KEY);
+  } catch { /* 무해 */ }
+}
 function stateCacheKey() {
   const owner = cachedOwnerKey();
   return owner ? `${KEY}:${owner}` : KEY;
@@ -267,9 +283,11 @@ export function clearLocalState() {
   hydrationRequest++;
   ownerVerified = false;
   verifiedOwnerKey = null;
+  verifiedAccountKey = null;
   try {
     localStorage.removeItem(KEY);
     localStorage.removeItem(OWNER_KEY);
+    localStorage.removeItem(ACCOUNT_KEY);
     writeAuthFlag(false);
     for (let index = localStorage.length - 1; index >= 0; index--) {
       const key = localStorage.key(index);
@@ -394,6 +412,24 @@ export function setActivePlan(planId: string) {
 const LOCAL_DELETED_KEY = "plan-builder-deleted-ids";
 function localDeletedIds(): string[] {
   try { const value = JSON.parse(localStorage.getItem(LOCAL_DELETED_KEY) || "[]"); return Array.isArray(value) ? value.filter((id): id is string => typeof id === "string").slice(-50) : []; } catch { return []; }
+}
+/** 이 기기(다른 탭 포함)에서 지운 사업 번호 — 왼쪽 목록이 서버의 옛 목록으로 지운 사업을 되살리지 않게 */
+export function locallyDeletedPlanIds(): string[] {
+  return localDeletedIds();
+}
+/*
+ * 이 사업이 지워졌는지 — 이 기기·다른 탭에서 지웠거나 서버가 지운 사업 번호로 알고 있을 때만 true.
+ * 목록에 없을 뿐이면(다른 기기에서 만든 사업, 연결 실패) 지웠다고 하지 않는다.
+ */
+export async function planWasDeleted(planId: string): Promise<boolean> {
+  if (isSamplePlan(planId)) return false;
+  if (localDeletedIds().includes(planId)) return true;
+  try {
+    const res = await fetchWithTimeout("/api/plan/state", { cache: "no-store" });
+    if (!res.ok) return false;
+    const body = (await res.json()) as { deletedPlanIds?: unknown };
+    return Array.isArray(body.deletedPlanIds) && body.deletedPlanIds.includes(planId);
+  } catch { return false; }
 }
 function rememberDeleted(planId: string) {
   try { localStorage.setItem(LOCAL_DELETED_KEY, JSON.stringify([...localDeletedIds().filter(id => id !== planId), planId].slice(-50))); } catch { /* 이번 화면에서만 */ }
@@ -682,6 +718,8 @@ let syncEpoch = 0;
 let activePush: AbortController | null = null;
 let ownerVerified = false;
 let verifiedOwnerKey: string | null = null;
+/** 마지막으로 확인한 로그인 계정 — 다른 탭이 다른 계정으로 바꿨으면 이 탭은 올리지 않는다 */
+let verifiedAccountKey: string | null = null;
 let hydrationRequest = 0;
 const syncListeners = new Set<() => void>();
 
@@ -747,12 +785,15 @@ export async function pushToServer(): Promise<boolean> {
   const epoch = syncEpoch;
   setSync("saving");
   try {
+    // 다른 탭에서 다른 계정으로 로그인했으면 이 탭의 옛 화면 내용을 새 계정에 올리지 않는다 — 먼저 지금 계정을 다시 확인한다
+    if (cachedAccountKey() !== verifiedAccountKey) ownerVerified = false;
     if (!ownerVerified) {
       await hydrateFromServer(false);
       if (epoch !== syncEpoch) return false;
       if (!ownerVerified) throw new Error("PLAN_OWNER_UNVERIFIED");
     }
     if (cachedOwnerKey() !== verifiedOwnerKey) throw new Error("PLAN_OWNER_CHANGED");
+    if (cachedAccountKey() !== verifiedAccountKey) { ownerVerified = false; throw new Error("PLAN_ACCOUNT_CHANGED"); }
     activePush = new AbortController();
     const res = await fetch("/api/plan/state", {
       method: "PUT",
@@ -808,7 +849,7 @@ export async function pushToServer(): Promise<boolean> {
 if (typeof window !== "undefined" && typeof window.addEventListener === "function") {
   const flush = () => {
     if (syncStatus === "saved" || syncStatus === "idle") return;
-    if (!ownerVerified || cachedOwnerKey() !== verifiedOwnerKey) return;
+    if (!ownerVerified || cachedOwnerKey() !== verifiedOwnerKey || cachedAccountKey() !== verifiedAccountKey) return;
     try {
       navigator.sendBeacon?.(
         "/api/plan/state?beacon=1",
@@ -829,7 +870,8 @@ if (typeof window !== "undefined" && typeof window.addEventListener === "functio
       void hydrateFromServer(false);
       return;
     }
-    if (event.key !== null && (event.key !== OWNER_KEY || event.oldValue === event.newValue)) return;
+    // 다른 탭이 계정(OWNER_KEY·ACCOUNT_KEY)을 바꾸면 이 탭도 지금 계정으로 다시 불러온다
+    if (event.key !== null && ((event.key !== OWNER_KEY && event.key !== ACCOUNT_KEY) || event.oldValue === event.newValue)) return;
     invalidateMountedOwner();
     cancelPendingSync();
     ownerVerified = false;
@@ -924,6 +966,20 @@ export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
     if (res.ok) {
       const payload = (await res.json()) as Record<string, unknown>;
       if (request !== hydrationRequest) return loadState();
+      /*
+       * 로그인 계정 확인 — 계정 연결 기능(ownerKey)이 꺼져 있으면 저장본이 계정별로 나뉘지 않는다.
+       * 그래서 로그아웃 없이 다른 계정으로 로그인하면 이전 계정의 사업이 새 계정에 합쳐져 올라갔다.
+       * 저장본에 남긴 계정과 지금 계정이 다르면 합치지도 올리지도 않고 비운다(이전 계정 내용은 그 계정 서버에 있다).
+       * 비회원 저장본(표식 없음 + 로그인한 적 없음)은 처음 로그인하는 계정으로 이어 준다 — 의도한 동작이다.
+       */
+      const nextAccount = payload.authenticated === true && typeof payload.accountKey === "string" ? payload.accountKey : null;
+      const cacheAccount = cachedAccountKey();
+      let unknownAccountCache = false;
+      if (nextAccount && typeof payload.ownerKey !== "string") {
+        if (cacheAccount && cacheAccount !== nextAccount) clearLocalState();
+        // 표식이 생기기 전에 로그인해 쓰던 저장본 — 누구 것인지 모르니 서버에 있는 사업만 이어 쓴다
+        else if (!cacheAccount && readAuthFlag()) unknownAccountCache = true;
+      }
       const nextOwner = typeof payload.ownerKey === "string" ? payload.ownerKey : null;
       const previousOwner = cachedOwnerKey();
       const wasAuthenticated = readAuthFlag();
@@ -961,9 +1017,15 @@ export async function hydrateFromServer(autoPush = true): Promise<PlanState> {
       } else if (payload.authenticated === true) {
         writeAuthFlag(true);
       }
+      writeCachedAccountKey(nextAccount);
+      verifiedAccountKey = nextAccount;
       const server = migrate(payload);
       applyQuarantineNotice(payload.quarantine);
-      const local = loadState();
+      const cached = loadState();
+      const serverIds = new Set(server.plans.map(plan => plan.id));
+      const local = unknownAccountCache
+        ? { ...cached, business: server.business, plans: cached.plans.filter(plan => isSamplePlan(plan.id) || serverIds.has(plan.id)) }
+        : cached;
       /*
        * 예전에는 서버 응답으로 로컬을 통째로 덮어썼다.
        * 방금 생성한 섹션이 아직 업로드되지 않았으면 그 순간 화면에서 사라졌다가

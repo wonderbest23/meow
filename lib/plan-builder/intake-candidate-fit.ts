@@ -1,4 +1,5 @@
 import { coachAmount } from "./coach-feasibility";
+import { stripAnswerPeriod } from "./answer-number";
 import { RESOURCE_KEYS, RESOURCE_LABELS, type ResourceKey, type ResourceRecord, type ResourceContext, sameResourceContext, loadResourceRecords, resourceAssumptionsMatch } from "./intake-candidate-resources";
 import type { BusinessStructure } from "./business-structure";
 
@@ -14,7 +15,9 @@ export function parseResourceLimit(value: unknown, metric: ResourceKey): Resourc
   if (money && /시간|분|주당|매주/.test(raw) || !money && /원|만원|억|월|매달/.test(raw)) return invalid();
   if (metric === "initialCost" && /월|매달/.test(raw) || metric === "preparationHours" && /주|매주/.test(raw)) return invalid();
   if (metric === "weeklyOperatingHours" && /준비|총/.test(raw) || metric === "monthlyOperatingCost" && /초기|일회/.test(raw)) return invalid();
-  const compact = raw.replace(/초기|총|준비|주당|매주|매월|월당|매달|일회성|일회|운영|예산|한도/g, "").replace(/\/월|\/주|원\/월|시간\/주/g, "").replace(/^월/, "").replace(/\s/g, "");
+  // '주 20시간'·'주20'·'20시간/주'처럼 기간을 붙여 써도 읽는다(예전엔 '주당'·'매주'만 뗐다)
+  const periodFree = metric === "weeklyOperatingHours" ? stripAnswerPeriod(raw, "주") : metric === "monthlyOperatingCost" ? stripAnswerPeriod(raw, "월") : raw;
+  const compact = periodFree.replace(/초기|총|준비|주당|매주|매월|월당|매달|일회성|일회|운영|예산|한도/g, "").replace(/\/월|\/주|원\/월|시간\/주/g, "").replace(/^월/, "").replace(/\s/g, "");
   const parts = compact.split(/[~～〜–]/);
   if (!parts.length || parts.length > 2 || parts.some(p => !p)) return invalid();
   const lastSuffix = parts.at(-1)!.match(money ? /(억원?|천만원?|백만원?|만원?|천원?|백원?|원)$/ : /(시간)$/)?.[1] ?? "";

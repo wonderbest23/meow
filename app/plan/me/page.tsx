@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { hydrateFromServer, lastHydrationFailed, clearLocalState, isSamplePlan, loadState, type PlanState } from "../../../lib/plan-builder/plan-store";
@@ -84,6 +84,8 @@ export default function PlanMePage() {
   };
   /** 회원 탈퇴 — 실수 방지를 위해 이메일을 다시 입력받는다 */
   const [showDelete, setShowDelete] = useState(false);
+  // 탈퇴 칸을 열면 이메일 칸으로, 취소하면 '탈퇴 진행하기'로 초점을 옮긴다 — 예전엔 누른 단추가 사라져 초점이 body로 떨어졌다
+  const deleteOpener = useRef<HTMLButtonElement>(null);
   const [deleteEmail, setDeleteEmail] = useState("");
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [deleteMessage, setDeleteMessage] = useState("");
@@ -365,7 +367,7 @@ export default function PlanMePage() {
               계정과 작성한 사업·문서가 모두 지워져요. 공개한 홈페이지도 함께 지워져 그 주소로 더는 열리지 않고,
               연결한 내 도메인도 끊어져요. 결제·환불 기록은 법령상 보존 의무가 있어 사람과 연결되지 않는 형태로만 남아요.
             </p>
-            <button type="button" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
+            <button ref={deleteOpener} type="button" className={styles.dangerBtn} onClick={() => { setShowDelete(true); setDeleteMessage(""); }}>
               탈퇴 진행하기
             </button>
           </>
@@ -377,6 +379,7 @@ export default function PlanMePage() {
             <input
               aria-label="탈퇴 확인용 이메일"
               type="email"
+              autoFocus
               value={deleteEmail}
               onChange={(event) => { setDeleteEmail(event.target.value); setDeleteMessage(""); }}
               placeholder="이메일 입력"
@@ -392,7 +395,7 @@ export default function PlanMePage() {
               >
                 {deleteBusy ? "처리 중…" : "탈퇴하기"}
               </button>
-              <button type="button" className={styles.refundCancel} onClick={() => setShowDelete(false)}>취소</button>
+              <button type="button" className={styles.refundCancel} onClick={() => { setShowDelete(false); window.requestAnimationFrame(() => deleteOpener.current?.focus()); }}>취소</button>
             </div>
           </div>
         )}

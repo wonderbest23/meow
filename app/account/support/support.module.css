@@ -18,7 +18,7 @@
 .page .form :is(input,select,textarea) { width:100%; min-width:0; padding:13px 14px; border:1px solid #dce1e8; border-radius:8px; background:#fff; color:#191f28; font-size:16px; line-height:1.6; font-family:inherit; box-shadow:none; }
 .form :is(input,select) { min-height:52px; }
 .form textarea { resize:vertical; min-height:180px; max-height:560px; }
-.form :is(input,textarea)::placeholder { color:#8b95a1; font-weight:400; }
+.form :is(input,textarea)::placeholder { color:#6b7684; font-weight:400; }
 .form :is(input,select,textarea):disabled { background:#f9fafb; color:#6b7684; }
 .fieldFooter { display:flex; justify-content:space-between; gap:16px; margin-top:-12px; color:#6b7684; font-size:12px; line-height:1.7; }
 .fieldFooter small { font-size:12px; }

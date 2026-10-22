@@ -28,6 +28,8 @@ export default function PlanList() {
   const [editing, setEditing] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [error, setError] = useState("");
+  /* 삭제처럼 화면에서 사라지는 일을 짧게 알린다(role=status) */
+  const [notice, setNotice] = useState("");
   const retry = useRef<() => void>(() => {});
   useEffect(() => {
     let alive = true;
@@ -57,11 +59,20 @@ export default function PlanList() {
   }
   async function remove(id: string, title: string) {
     if (!await askConfirm({ title: `‘${title}’ 사업을 삭제할까요?`, message: "대화·사업계획서와 이 사업의 홈페이지(공개 중인 사이트·받은 문의 포함)도 함께 삭제되고 되돌릴 수 없어요.", confirmLabel: "삭제", danger: true })) { focusMenu(id); return; }
-    deletePlan(id); setState(loadState());
+    /* 지운 뒤 초점은 다음 사업 카드로(없으면 앞 카드, 하나도 없으면 '시작하기') — 예전엔 초점이 문서 맨 앞으로 떨어졌다 */
+    const order = plans.map(plan => plan.id);
+    const at = order.indexOf(id);
+    const next = order[at + 1] ?? order[at - 1] ?? null;
+    deletePlan(id); setState(loadState()); setNotice("삭제했어요");
+    window.requestAnimationFrame(() => {
+      const target = next ? document.querySelector<HTMLElement>(`[data-plan-open="${CSS.escape(next)}"]`) : document.querySelector<HTMLElement>('[data-business-empty] a[href="/plan/chat?new=1"]');
+      target?.focus();
+    });
   }
   function sample(id: string) { setActivePlan(id); router.push(`/plan/document?planId=${encodeURIComponent(id)}`); }
   return <main className={frame.page} data-plan-view="plans"><BusinessAppChrome title="내 사업" active="plans" backHref="/">
     {!state ? <PlanLoading fill variant="compact" note="내 사업을 불러오고 있어요" onRetry={() => retry.current()} /> : <div className={styles.scroll}><div className={styles.content}>
+        <p role="status" className={mine.status} data-empty={notice ? undefined : ""}>{notice}</p>
         {plans.length === 0 && error ? <div role="alert" className={styles.error}><p>사업 목록을 불러오지 못했어요. 연결을 확인하고 다시 시도해 주세요.</p><button type="button" className={styles.primary} onClick={() => { setError(""); setState(null); retry.current(); }}>다시 시도</button></div> : plans.length === 0 ? <BusinessEmptyState kind={signedIn === false ? "loggedOut" : "plans"} /> : <>
           {/*
             목록만 보여 준다(대표 요청 2026-10-14: '내 사업인데 새 대화 단추가 왜 있나', 꾸밈이 AI 같고 복잡하다).
@@ -69,12 +80,19 @@ export default function PlanList() {
           */}
           <div className={mine.list}>
             {plans.map(p => { const status=businessHubState(p); const introduction = (status.coach && currentBusinessDesign(status.coach)?.startingPlan.scope) || status.coach?.business.description || ""; return <article key={p.id} className={mine.row}>
-              {editing===p.id ? <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><input aria-label="사업 이름" value={name} maxLength={100} autoFocus onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><button className={styles.primary}>저장</button><button type="button" onClick={()=>cancelRename(p.id)}>취소</button></form> : <Link className={mine.open} href={businessEntryHref(p)} aria-label={`${p.title} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "기존 사업 관리로 이동"}`}>
+              {editing===p.id ? <form className={`${styles.rename} ${mine.rename}`} onSubmit={e=>{e.preventDefault();rename(p.id);}}><input aria-label="사업 이름" aria-describedby={`rename-hint-${p.id}`} value={name} maxLength={100} autoFocus onFocus={e=>e.currentTarget.select()} onChange={e=>setName(e.target.value)} onKeyDown={e=>{if(e.key==="Escape")cancelRename(p.id);}} /><button className={styles.primary}>저장</button><button type="button" onClick={()=>cancelRename(p.id)}>취소</button>
+                {/* 열면 기존 이름을 골라 둔다(바로 새로 쓰게). 100자에 닿으면 더 써지지 않는 이유를 알린다. 홈페이지 이름은 따로 바뀐다 */}
+                <p id={`rename-hint-${p.id}`} className={mine.renameHint} aria-live="polite">{name.length >= 100 ? "이름은 100자까지 쓸 수 있어요. " : ""}홈페이지 이름은 홈페이지 화면에서 따로 바꿔요.</p></form> : <Link className={mine.open} href={businessEntryHref(p)} data-plan-open={p.id} aria-label={`${p.title} ${status.complete ? "사업계획서 보기" : status.coach || status.job ? "대화 이어가기" : "기존 사업 관리로 이동"}`}>
                 <strong className={mine.title}>{p.title}</strong>
                 {introduction && <span className={mine.desc}>{introduction}</span>}
                 <span className={mine.meta}><span className={mine.stage}>{status.status}</span><time dateTime={p.updatedAt}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</time></span>
               </Link>}
-              {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }}><summary aria-label={`${p.title} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(p.title);}}>이름 변경</button><button onClick={() => remove(p.id,p.title)}>삭제</button></div></details>}
+              {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
+                /* Esc로 닫고 ⋯ 단추로 초점을 돌려준다(접근성 점검 2026-10-22) */
+                const menu = event.currentTarget as HTMLDetailsElement;
+                if (event.key !== "Escape" || !menu.open) return;
+                event.preventDefault(); menu.open = false; menu.querySelector("summary")?.focus();
+              }}><summary aria-label={`${p.title} 관리`} data-plan-menu={p.id}><MoreHorizontal size={20} /></summary><div><button onClick={() => {setEditing(p.id);setName(p.title);setNotice("");}}>이름 변경</button><button onClick={() => remove(p.id,p.title)}>삭제</button></div></details>}
             </article>; })}
           </div>
         </>}

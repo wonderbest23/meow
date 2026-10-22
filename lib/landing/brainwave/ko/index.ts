@@ -7,6 +7,7 @@
  */
 import { KO_0_2226 } from "./0-2226";
 import { KO_0_1102 } from "./0-1102";
+import { KO_0_2226_PILATES } from "./0-2226-pilates";
 
 const NAV = (items: [string, string, string, string]) => items.join("            ");
 
@@ -230,6 +231,14 @@ export const KO_TOP: Record<string, Record<string, string>> = {
 export const KO_FULL: Record<string, (name?: string, town?: string) => Record<string, string>> = {
   "0-2226": KO_0_2226,
   "0-1102": KO_0_1102,
+};
+
+/*
+ * 예시 사업별 문구 — 같은 킷을 여러 예시가 쓰면 킷 문구(KO_FULL)가 다른 업종 이야기가 된다.
+ * 퇴근필라(필라테스)는 새벽커피와 같은 동네 가게 킷(0-2226)을 쓰되 글은 필라테스로.
+ */
+export const KO_SAMPLE: Record<string, { page: string; texts: (name?: string, town?: string) => Record<string, string> }> = {
+  sample_pilates: { page: "0-2226", texts: KO_0_2226_PILATES },
 };
 
 export function koTextsFor(pageId: string, name?: string, town?: string): Record<string, string> {

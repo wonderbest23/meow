@@ -6,7 +6,7 @@ import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { withRo } from "../lib/josa";
 import { Check, ChevronDown, Copy, ExternalLink, Globe2, Inbox, LayoutTemplate, Palette, PauseCircle, Pencil, PhoneCall, RefreshCw, Rocket, Save, Share2, ShieldCheck, Sparkles, Undo2 } from "lucide-react";
 import { applyContactMethod, CONTACT_METHOD_INFO, CONTACT_METHODS, contactHref, DEFAULT_CONTACT, draftPhone, normalizeWebUrl, quickActions, type LandingContact } from "../lib/landing/contact-method";
-import { landingSlugIssue, privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
+import { landingEmailIssue, landingSlugIssue, privacyPolicyWithContact, type LandingDraft, type LandingSiteRecord } from "../lib/landing/domain";
 import { unansweredCount, useInquiries } from "../app/plan/inquiries/use-inquiries";
 import { hasUnpublishedEdits, isLiveUpToDate } from "../lib/landing/save-contract";
 import { LandingBlocksRenderer } from "./landing-blocks";
@@ -102,6 +102,8 @@ export function withBusinessName(draft: LandingDraft, name: string): LandingDraf
   return next.pageData && landing && name.trim() ? { ...next, pageData: applyBusinessContent(next.pageData, contentSourceOf(next)) } : next;
 }
 
+const SR_ONLY = { position: "absolute", width: 1, height: 1, margin: -1, padding: 0, overflow: "hidden", clip: "rect(0 0 0 0)", whiteSpace: "nowrap", border: 0 } as const;
+
 export function HomepageKitPanel({
   draft,
   site,
@@ -109,6 +111,7 @@ export function HomepageKitPanel({
   publicPath,
   action,
   message,
+  messageAlert = false,
   onChange,
   onSave,
   onPublish,
@@ -139,6 +142,8 @@ export function HomepageKitPanel({
   publicPath: string;
   action: Action;
   message: string;
+  /** message가 실패·충돌 안내인지 — 낭독기에 alert로 바로 읽힌다(나머지는 status) */
+  messageAlert?: boolean;
   onChange: (draft: LandingDraft) => void;
   onSave: () => void;
   onPublish: () => void;
@@ -194,6 +199,9 @@ export function HomepageKitPanel({
    * 한글·기호처럼 바로 알 수 있는 것은 적는 동안, 길이·맨 앞뒤 - 는 칸을 떠날 때 알린다.
    */
   const [slugLeft, setSlugLeft] = useState(false);
+  // 이메일 형식 안내는 칸을 떠난 뒤에만 보인다(입력 중 'hello@'에서 미리 혼내지 않게)
+  const [emailLeft, setEmailLeft] = useState(false);
+  const emailMessage = emailLeft ? landingEmailIssue(draft.businessEmail) : "";
   const slugIssue = landingSlugIssue(draft.slug);
   const slugMessage = slugError || (slugIssue && (slugLeft || /[^a-z0-9-]/.test(draft.slug)) ? slugIssue : "");
   const liveSlug = published ? site?.publishedSlug ?? null : null;
@@ -308,6 +316,9 @@ export function HomepageKitPanel({
         </div>}
       </header>
       {message ? <p className="hk-msg">{message}</p> : null}
+      {/* 낭독기 알림 — 늘 붙어 있는 칸에 넣어야 빠짐없이 읽힌다(내용과 같이 생기는 칸은 놓칠 때가 있다). 실패·충돌은 alert로 */}
+      <span style={SR_ONLY} role="status" aria-live="polite">{messageAlert ? "" : message}</span>
+      <span style={SR_ONLY} role="alert">{messageAlert ? message : ""}</span>
 
       {/*
         미리보기 — 예전엔 가짜 브라우저 창(신호등 점 + 주소창)에 담았는데 꾸밈이 많고 폰에서 옆으로 밀렸다(대표 요청 2026-10-15).
@@ -356,9 +367,10 @@ export function HomepageKitPanel({
         </div>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-busy={aiFill?.running || undefined} className={`hk-preview-body ${view === "mobile" ? "hk-preview-phone" : ""}`} onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="홈페이지 고치기">
+          {/* 미리보기 속 단추·입력칸은 진짜가 아니다 — inert로 Tab·낭독기에서 빼고, 바깥 '홈페이지 고치기' 단추 하나만 남긴다(휴대폰 틀은 스크롤되게 틀 안쪽에만) */}
           {view === "mobile"
-            ? <div className="hk-phone"><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></div>
-            : <><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></>}
+            ? <div className="hk-phone"><div inert aria-hidden="true"><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></div></div>
+            : <div inert aria-hidden="true"><LandingBlocksRenderer data={draft.pageData!} /><PublicAppendixPreview appendix={appendixFromDraft(draft)} /></div>}
           {/* AI가 채우는 동안 — 다른 화면과 같은 로딩 모양으로, 몇 초째인지 함께 */}
           {aiFill?.running ? <div className="hk-preview-loading">
             <PlanLoading note={`AI가 계획서를 읽고 홈페이지를 채우고 있어요. 보통 30초쯤 걸려요 · ${fillSeconds}초`} />
@@ -443,9 +455,9 @@ export function HomepageKitPanel({
         <div className="hk-grid">
           <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(e) => update({ businessName: e.target.value })} /></label>
           <label><span>대표자</span><input value={draft.businessRepresentative} onChange={(e) => update({ businessRepresentative: e.target.value })} placeholder="사업자등록증과 같은 이름" /></label>
-          <label><span>전화번호</span><input value={draft.businessPhone} onChange={(e) => update({ businessPhone: e.target.value, businessContact: e.target.value })} placeholder="010-0000-0000" /></label>
-          <label><span>이메일</span><input type="email" value={draft.businessEmail} onChange={(e) => update({ businessEmail: e.target.value })} placeholder="hello@mybusiness.kr" /></label>
-          <label><span>사업자등록번호</span><input value={draft.businessRegistrationNumber} onChange={(e) => update({ businessRegistrationNumber: e.target.value })} placeholder="000-00-00000" /></label>
+          <label><span>전화번호</span><input type="tel" inputMode="tel" autoComplete="tel" value={draft.businessPhone} onChange={(e) => update({ businessPhone: e.target.value, businessContact: e.target.value })} placeholder="010-0000-0000" /></label>
+          <label><span>이메일</span><input type="email" autoComplete="email" value={draft.businessEmail} onChange={(e) => update({ businessEmail: e.target.value })} onBlur={() => setEmailLeft(true)} placeholder="hello@mybusiness.kr" aria-invalid={emailMessage ? true : undefined} aria-describedby={emailMessage ? "hk-email-error" : undefined} />{emailMessage && <small id="hk-email-error" className="hk-slug-error" role="alert">{emailMessage}</small>}</label>
+          <label><span>사업자등록번호</span><input inputMode="numeric" value={draft.businessRegistrationNumber} onChange={(e) => update({ businessRegistrationNumber: e.target.value })} placeholder="000-00-00000" /></label>
           <label><span>통신판매업 신고번호</span><input value={draft.mailOrderSalesNumber} onChange={(e) => update({ mailOrderSalesNumber: e.target.value })} placeholder="없으면 비워 두세요" /></label>
           <div className="wide address-field"><label><span>사업장 주소</span><input value={draft.businessAddress} onChange={(e) => update({ businessAddress: e.target.value })} placeholder="고객 문의를 처리할 수 있는 실제 주소" /></label><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
           <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(e) => update({ openHours: e.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무" /></label>

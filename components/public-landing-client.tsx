@@ -202,9 +202,9 @@ export function PublicLandingClient({
           <div className="public-lead-success"><Check /><h3>문의가 접수됐어요</h3><p>남겨 주신 연락처로 곧 연락드릴게요.</p></div>
         ) : (
           <form onSubmit={submit} noValidate>
-            <label><span>이름</span><input name="name" required maxLength={100} placeholder="성함 또는 닉네임" /></label>
-            {config.collectEmail && <label><span>이메일</span><input name="email" type="email" required={!config.collectPhone} maxLength={200} placeholder="example@email.com" /></label>}
-            {config.collectPhone && <label><span>전화번호</span><input name="phone" type="tel" required={!config.collectEmail} maxLength={30} placeholder="010-0000-0000" /></label>}
+            <label><span>이름</span><input name="name" required maxLength={100} autoComplete="name" placeholder="성함 또는 닉네임" /></label>
+            {config.collectEmail && <label><span>이메일</span><input name="email" type="email" autoComplete="email" required={!config.collectPhone} maxLength={200} placeholder="example@email.com" /></label>}
+            {config.collectPhone && <label><span>전화번호</span><input name="phone" type="tel" inputMode="tel" autoComplete="tel" required={!config.collectEmail} maxLength={30} placeholder="010-0000-0000" /></label>}
             {config.collectMessage && <label><span>문의 내용</span><textarea name="message" maxLength={2000} placeholder="궁금한 점이나 원하는 내용을 적어 주세요." /></label>}
             <input name="website" className="landing-honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" />
             {/* 동의 — 공용 동의 목록(동그란 체크·(필수)/(선택)). 법으로 알려야 하는 수집 항목·목적·보유기간은 줄 아래에 그대로 */}

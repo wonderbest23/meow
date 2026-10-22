@@ -14,6 +14,7 @@ import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
 import { changedResourceLimits, needsEntryConfirmation, periodDisplay, routeComposerInput } from "../app/plan/chat/intake-ui/model";
 import { readChatResponse } from "../lib/http/read-chat-response";
+import { coachAmount } from "../lib/plan-builder/coach-feasibility";
 import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption } from "../app/plan/chat/intake-ui/model";
 
 const scope = "test-owner-guest";
@@ -45,6 +46,28 @@ async function main() {
   assert.deepEqual(routeComposerInput(original, customer, "학생"), { kind: "answer", questionId: "customer", value: "학생" }, "a short real word is still an answer");
   const weeklyHours = original.questions.find(q => q.id === "hoursPerWeek")!;
   assert.equal(routeComposerInput(original, weeklyHours, "30").kind, "answer", "a two-digit number is still an answer");
+  // 2026-10-22 입력 감사: 기간을 붙여 쓴 답('주 20시간', '월 30만', '30만원/월')과 겹친 단위('2만5천원')도 답으로 받는다
+  for (const text of ["주 20시간", "주20", "20시간/주", "일주일에 20시간"]) assert.equal(routeComposerInput(original, weeklyHours, text).kind, "answer", text);
+  const price = original.questions.find(q => q.id === "price")!;
+  const living = original.questions.find(q => q.id === "livingCost")!;
+  assert.equal(living.period, "월");
+  for (const text of ["월 30만", "30만원/월", "매달 30만원", "30만원"]) assert.deepEqual(routeComposerInput(original, living, text), { kind: "answer", questionId: "livingCost", value: text }, text);
+  for (const text of ["2만5천원", "2만 5천원", "3만5천", "4.500"]) assert.equal(routeComposerInput(original, price, text).kind, "answer", text);
+  // 읽을 수 없는 숫자는 예시와 함께 다시 적어 달라고 한다(예전엔 서버 400 또는 '어떻게 남길까요')
+  assert.deepEqual(routeComposerInput(original, price, "20~30만원"), { kind: "invalid", hint: "범위 대신 숫자 하나만 적어 주세요 (예: 25000, 2만5천원)" });
+  assert.deepEqual(routeComposerInput(original, price, "-5000"), { kind: "invalid", hint: "0 이상의 숫자만 적어 주세요 (예: 25000, 2만5천원)" });
+  assert.equal(routeComposerInput(original, price, "3만원 정도인데 확실치 않아요").kind, "clarify", "글이 섞이면 기존 확인 흐름");
+  assert.equal(routeComposerInput(original, weeklyHours, "-5").kind, "invalid");
+  // 서버와 같은 규칙(intake-core validatedAnswer)으로 저장된다
+  const answered = (questionId: string, value: string) => { const saved = previewIntakeAnswer(original, command({ questionId, value }))!.intake.answers[questionId]?.value; return typeof saved === "number" ? saved : coachAmount(String(saved)); };
+  assert.equal(answered("price", "2만5천원"), 25000);
+  assert.equal(answered("price", "1억5천만원"), 150_000_000);
+  assert.equal(answered("price", "4.500"), 4500, "점 뒤 세 자리는 천 단위 구분");
+  assert.equal(answered("livingCost", "월 30만"), 300000);
+  assert.equal(answered("livingCost", "30만원/월"), 300000);
+  const hoursSaved = (value: string) => previewIntakeAnswer(original, command({ questionId: "hoursPerWeek", value }))!.intake.answers.hoursPerWeek?.value;
+  assert.equal(hoursSaved("주 20시간"), "20시간");
+  assert.equal(hoursSaved("주20"), "20시간");
   // 물음표로 끝나는 글은 답으로 저장하자고 먼저 권하지 않는다
   assert.deepEqual(routeComposerInput(original, customer, "이거 꼭 골라야 해요?"), { kind: "clarify", canAnswer: false });
   for (const response of [new Response("", { status: 500 }), new Response("<html>proxy failed</html>", { status: 502 }), new Response("{"), new Response("null")]) {
@@ -458,8 +481,8 @@ async function main() {
   assert.ok(recommendedQuestion.includes("업종 이름으로 찾기"), "The industry step offers a name search field without leaving the chat");
   assert.ok(original.structure && original.structure.basis.revenue === "sector" && original.structure.values.sector === "general", "Without KSIC the structure falls back to the sector default");
   const typing = renderToStaticMarkup(<ReplyTyping />);
-  assert.ok(typing.includes('role="status"'));
-  assert.ok(typing.includes("다음 질문을 준비하고 있어요"));
+  // 낭독 안내는 BusinessIntake의 늘 붙어 있는 알림 칸이 맡는다(내용과 같이 생기는 칸은 읽히지 않을 때가 있다)
+  assert.ok(!typing.includes('role="status"'), "the typing bubble no longer mounts its own live region");
   assert.equal((typing.match(/<i>/g) ?? []).length, 3);
   const chatHistory = renderToStaticMarkup(<ConversationHistory snapshot={preview} onEdit={noop} />);
   const sending = renderToStaticMarkup(<ConversationHistory snapshot={preview} onEdit={noop} receipt="보내는 중" />);
@@ -655,6 +678,8 @@ async function main() {
   assert.match(source, /finishReply\(pending.command.requestId, saved\)/, "Failed saves must cancel question reveal");
   assert.match(source, /Math\.min\(bottom, Math\.max\(0, turnTop\)\)/, "Auto-scroll follows to the latest content but never hides the current question heading");
   assert.match(source, /observer\.observe\(container\.firstElementChild\)/, "Auto-scroll keeps following while the conversation content grows");
+  assert.match(source, /data-intake-announcer/, "One always-mounted live region announces new questions and AI replies");
+  assert.ok(source.includes('setAnnouncement("다음 질문을 준비하고 있어요")'), "The typing state is announced through the persistent live region");
   const transition = readFileSync(new URL("../app/plan/chat/intake-ui/use-reply-transition.ts", import.meta.url), "utf8");
   assert.match(transition, /prefers-reduced-motion: reduce/);
   assert.match(transition, /active.current\?\.requestId !== requestId/);

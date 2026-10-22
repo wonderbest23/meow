@@ -9,7 +9,7 @@
  * - 목표 경우: 대표가 입력한 목표(예: '6개월 안에 월 매출 1,200만원')까지 첫 달 조심스러운 경우에서 매달 같은 폭으로 늘어난다고 가정
  * 모든 경우는 처리량 최대치를 넘지 않는다. 숫자는 여기서만 계산하고 AI는 인용·해석만 한다.
  */
-import { coachAmount, monthlyVolumeFromCapacity } from "./coach-feasibility";
+import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 
 export const cashflowScenariosEnabled = () => process.env.PLAN_CASHFLOW_SCENARIOS !== "0";
 
@@ -124,7 +124,8 @@ export function buildCashflowScenarios(input: CashflowInputs): CashflowScenarios
     const ramp = Array.from({ length: MONTHS }, (_, i) => (i + 1 >= goal.months || goal.months <= 1 ? target : cap(careful + (target - careful) * i / (goal.months - 1))));
     scenarios.push(make("goal", "목표 경우", ramp));
   }
-  const budget = coachAmount(input.budget) ?? null, setupCost = coachAmount(input.setupCost) ?? null;
+  // 예산을 범위로 남겼으면 적은 쪽으로 계산한다(보수적)
+  const budget = coachAmountLower(input.budget) ?? null, setupCost = coachAmount(input.setupCost) ?? null;
   const carefulWorst = Math.min(0, ...scenarios[0].cumulative);
   // 2026-10-10 진단: 문 열기 전 약 3개월은 수입 없이 생활비만 나간다 — 빼지 않으면 초기 지출 한도가 그만큼 느슨해진다
   const prepLiving = (living ?? 0) * PREP_MONTHS;

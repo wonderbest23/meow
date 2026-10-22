@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
-import { hydrateFromServer, lastHydrationFailed, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
+import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
+import BusinessKeyed from "../BusinessKeyed";
 import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { isCoachJobActive, readCoachJob } from "../../../lib/plan-builder/coach-job-types";
 import { journeyNext } from "../../../lib/plan-builder/journey";
@@ -25,7 +26,12 @@ import { askConfirm } from "../../../components/confirm-dialog";
 import { WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST } from "../../../lib/plan-builder/journey";
 
 type View = WorkspaceView;
-export default function BusinessWorkspace() {
+/* 왼쪽 목록에서 다른 사업을 고르면(주소의 planId 가 바뀌면) 본문을 그 사업으로 새로 그린다 — 같은 사업의 탭 바꾸기는 그대로(BusinessKeyed) */
+export default function BusinessWorkspacePage() {
+  return <BusinessKeyed fallback={<main className={frame.page}><PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /></main>}><BusinessWorkspace /></BusinessKeyed>;
+}
+
+function BusinessWorkspace() {
   const router = useRouter();
   const [plan, setPlan] = useState<Plan | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -45,7 +51,18 @@ export default function BusinessWorkspace() {
     const query = new URLSearchParams(window.location.search);
     const id = query.get("planId");
     if (["summary","documents","action","launch","operations"].includes(query.get("tab") ?? "")) setView(query.get("tab") as View);
-    if (!id) { setLoaded(true); return; }
+    if (!id) {
+      /* 주소에 사업이 없으면 '먼저 선택해 주세요' 대신 가장 최근에 쓴 사업으로 연다(사업이 없을 때만 안내) */
+      let alive = true;
+      hydrateFromServer().catch(() => loadState()).then(state => {
+        if (!alive) return;
+        const own = state.plans.filter(p => !isSamplePlan(p.id));
+        const recent = own.find(p => p.id === state.activePlanId) ?? [...own].sort((a, b) => (b.updatedAt || "").localeCompare(a.updatedAt || ""))[0];
+        if (recent) { const tab = query.get("tab"); router.replace(`/plan/workspace?planId=${encodeURIComponent(recent.id)}${tab ? `&tab=${encodeURIComponent(tab)}` : ""}`); return; }
+        setLoaded(true); setLoadError(lastHydrationFailed());
+      });
+      return () => { alive = false; };
+    }
     setRequested(true);
     /*
      * 10초마다 다시 읽는 것은 문서를 만드는 중이거나 불러오지 못했을 때만 — 예전엔 화면을 열어 둔 내내
@@ -153,7 +170,7 @@ export default function BusinessWorkspace() {
     if (operatingDirty) { void confirmLeave(OPERATING_LEAVE).then(ok => { if (ok) { setOperatingDirty(false); router.push(href); } }); return; }
     /* 전문가 모드 수정안 — 탭 이동·'기본'에서는 물었지만 '대화 이어가기'·메뉴·뒤로 링크로는 그냥 사라졌다 */
     void confirmLeave(EXPERT_LEAVE).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
-  }}><BusinessAppChrome title="내 사업 관리">
+  }}><BusinessAppChrome title="내 사업 관리" titleHeading={false}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</button> : signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기</Link> : <Link className={styles.primary} href="/plan">내 사업으로</Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인할게요.</p>}

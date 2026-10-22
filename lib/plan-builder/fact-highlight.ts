@@ -3,6 +3,8 @@
  * built from — are editable from the document. Each fact carries the strings it is likely to appear as in the text,
  * so the document can mark those spots. Matching is best-effort; the fact list itself is always shown.
  */
+import { parseWonAmount } from "./answer-number";
+
 export const EDITABLE_FACT_IDS = ["customer", "problem", "offer", "channel", "price", "structure.unitCost", "structure.cost", "budget", "hoursPerWeek", "capacity", "goal"] as const;
 
 export type EditableFact = { questionId: string; label: string; display: string; needles: string[] };
@@ -111,12 +113,7 @@ export function findFactRanges(text: string, facts: Pick<EditableFact, "question
  * 구간 버튼만 있어 정확한 금액을 넣을 수 없었고, 가격은 기준을 다시 골라야 해서 원래 기준을 지킬 수 없었다).
  */
 export function parseWon(text: string): number | null {
-  const plain = text.replace(/[\s,원]/g, "");
-  if (!plain) return null;
-  if (/^\d+$/.test(plain)) return Number(plain) || null;
-  const match = plain.match(/^(?:(\d+(?:\.\d+)?)억)?(?:(\d+(?:\.\d+)?)만)?(?:(\d+(?:\.\d+)?)천)?(\d+)?$/);
-  if (!match || !match.slice(1).some(Boolean)) return null;
-  const [, eok, man, cheon, rest] = match;
-  const value = Math.round(Number(eok ?? 0) * 100_000_000 + Number(man ?? 0) * 10_000 + Number(cheon ?? 0) * 1_000 + Number(rest ?? 0));
-  return value > 0 ? value : null;
+  // 대화 답과 같은 규칙으로 읽는다(answer-number.ts) — 0원은 고칠 값이 아니라 null
+  const value = parseWonAmount(text);
+  return value ? value : null;
 }

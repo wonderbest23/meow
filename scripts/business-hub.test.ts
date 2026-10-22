@@ -15,6 +15,11 @@ const ready=fixture();
 assert.equal(businessNextStep(ready).href, `/plan/workspace?planId=${ready.id}&tab=launch`, "다음 준비 단계도 선택한 사업에 연결");
 assert.equal(businessNextStep(ready).title, "내 사업의 시작 순서 정하기");
 assert.equal(businessHubState(ready).status,"사업안 준비됨");
+{
+  // 질문 몇 개만 답해 coach.ready 가 켜졌어도 사업안이 아직 없으면 '대화 중'
+  const coach={...(ready.answers[COACH_KEY] as {state:Record<string,unknown>}).state,design:undefined};
+  assert.equal(businessHubState({...ready,answers:{[COACH_KEY]:{state:coach}}}).status,"대화 중","사업안이 없으면 '사업안 준비됨'이 아니다");
+}
 const keys=businessHubState(ready).keys;
 const complete={...ready,sections:Object.fromEntries(keys.map(key=>[key,{markdown:"실제 내용",html:"<p>실제 내용</p>",generatedAt:new Date().toISOString(),coachRevision:businessHubState(ready).revision!}]))};
 assert.equal(businessHubState(complete).status,"문서 완성");

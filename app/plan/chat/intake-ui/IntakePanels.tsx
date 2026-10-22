@@ -3,7 +3,7 @@ import { ResourceFitDetails, resourceFitLine } from "./ResourcePanel";
 import { INTAKE_JOB_TIMING } from "../../../../lib/plan-builder/intake-timing";
 import { chaptersForType } from "../../../../lib/plan-builder/blueprint";
 
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as ReactKeyboardEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LoadingStatus, Spinner } from "../../PlanLoading";
@@ -17,6 +17,7 @@ import { mentionedAnswer, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
 import { ksicNameHint } from "../../../../lib/plan-builder/ksic-hints";
+import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 import styles from "../intake.module.css";
 import { chatTextPreview } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
@@ -43,6 +44,9 @@ export function EntryChoices({ disabled, onStart, initialMessage, coach = false 
     <div className={styles.entryChoices} aria-label="대화 시작 선택지">{choices.map(({ mode, label, Icon }) => <button type="button" key={mode} disabled={disabled} onClick={() => onStart(mode)}><Icon size={23} aria-hidden="true" /><span>{label}</span><ChevronRight size={20} aria-hidden="true" /></button>)}</div>
   </section>;
 }
+
+/** 업종 검색은 두 글자부터, 한 글자는 완성된 한글('빵'·'꽃'·'떡')일 때만 — 조합 중인 자모('ㅂ')로는 찾지 않는다 */
+const ksicSearchable = (query: string) => query.length >= 2 || /^[가-힣]$/.test(query);
 
 export function QuestionForm({ question, snapshot, draft, editing, disabled, onChange: change, onAnswer, onCancel, inChat = false, refining = false, suggestions, coach = false, ksicQuery: composerQuery, onCarry, onComposer }: {
   question: IntakeQuestion; snapshot: IntakeSnapshot; draft: AnswerDraft; editing: boolean; disabled: boolean;
@@ -80,7 +84,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const [ksicSearch, setKsicSearch] = useState<{ query: string; items: IntakeSnapshot["ksicCandidates"]; failed: boolean }>({ query: "", items: [], failed: false });
   useEffect(() => {
     const query = ksicQuery.trim();
-    if (!inChat || question.id !== "industry" || query.length < 2) { setKsicSearch({ query: "", items: [], failed: false }); return; }
+    if (!inChat || question.id !== "industry" || !ksicSearchable(query)) { setKsicSearch({ query: "", items: [], failed: false }); return; }
     const controller = new AbortController();
     const timer = setTimeout(() => {
       fetch(`/api/plan/chat?ksic=${encodeURIComponent(query)}`, { headers: { "x-business-intake": "2" }, cache: "no-store", signal: controller.signal })
@@ -91,14 +95,27 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
     return () => { clearTimeout(timer); controller.abort(); };
   }, [ksicQuery, inChat, question.id]);
   const ksicSearched = ksicSearch.query !== "" && ksicSearch.query === ksicQuery.trim();
-  const ksicShown = ksicQuery.trim().length >= 2 ? ksicSearch.items : ksicCandidates;
+  const ksicShown = ksicSearchable(ksicQuery.trim()) ? ksicSearch.items : ksicCandidates;
   const candidate = question.id === "candidate";
   const options = candidate ? snapshot.candidateIdeas.map(idea => ({ value: idea.id, label: idea.title })) : question.options ?? [];
   const stage = (value: IntakeValue) => send({ ...draft, text: String(value ?? ""), unknown: false });
   const commit = (value: IntakeValue) => { if (!disabled) { if (inChat) stage(value); else onAnswer(value, false, question.id); } };
+  /*
+   * 하나만 고르는 질문에서 화살표로 옮긴 선택은 고르기만 하고 보내지 않는다 — 보내기는 누르기·Enter·Space로.
+   * 예전엔 화살표 한 번에 바로 보내져 다른 답을 살펴볼 수 없었다(접근성 점검 2026-10-22).
+   */
+  const arrowPick = useRef(false);
   const choose = (value: string) => {
     const selected = question.kind === "multi" ? toggleChip(question, draft.selected, value) : [value];
-    (question.kind === "multi" ? onChange : send)({ ...draft, custom: false, selected, unknown: false, ksic: undefined });
+    const keyed = arrowPick.current;
+    arrowPick.current = false;
+    (question.kind === "multi" || keyed ? onChange : send)({ ...draft, custom: false, selected, unknown: false, ksic: undefined });
+  };
+  const sendPicked = (value: string) => send({ ...draft, custom: false, selected: [value], unknown: false, ksic: undefined });
+  const radioKey = (event: ReactKeyboardEvent<HTMLInputElement>, value: string) => {
+    if (event.key.startsWith("Arrow")) { arrowPick.current = true; return; }
+    // 이미 고른 보기에서 Space 는 브라우저가 click 을 내지 않는다 — Enter 처럼 직접 보낸다
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); sendPicked(value); }
   };
   const choice = !draft.custom && ["single", "multi"].includes(question.kind);
   const hybrid = isHybridQuestion(question);
@@ -146,8 +163,8 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       <div hidden={showMention}>
       {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
         {!coach && <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>}
-        {ksicShown.length > 0 && <p className={styles.ksicLead}>{coach && ksicQuery.trim().length >= 2 ? "찾은 업종이에요. 가까운 걸 눌러 주세요." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
-        {ksicQuery.trim().length >= 2 && ksicSearched && ksicShown.length === 0 && <p className={styles.ksicLead}>{ksicSearch.failed ? "업종 검색이 잠시 연결되지 않았어요. 아래에서 골라 주시거나 잠시 후 다시 입력해 주세요." : coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
+        {ksicShown.length > 0 && <p className={styles.ksicLead}>{coach && ksicSearchable(ksicQuery.trim()) ? "찾은 업종이에요. 가까운 걸 눌러 주세요." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
+        {ksicSearchable(ksicQuery.trim()) && ksicSearched && ksicShown.length === 0 && <p className={styles.ksicLead}>{ksicSearch.failed ? "업종 검색이 잠시 연결되지 않았어요. 아래에서 골라 주시거나 잠시 후 다시 입력해 주세요." : coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
         <div className={styles.ksicChips}>{ksicShown.map(item => <button key={item.code} type="button" className={styles.ksicChip} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>)}</div>
       </div>}
       {showSuggested && <div className={styles.industrySuggestion} role="group" aria-label="추천 업종">
@@ -165,7 +182,13 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         {group.options.map(option => {
           const idea = candidate ? snapshot.candidateIdeas.find(item => item.id === option.value) : undefined;
           return <div key={option.value} className={idea ? styles.ideaOption : undefined} data-selected={draft.selected.includes(option.value)}><label className={styles.option} data-selected={draft.selected.includes(option.value)}>
-            <input type={question.kind === "multi" ? "checkbox" : "radio"} name={`intake-${question.id}`} value={option.value} checked={draft.selected.includes(option.value)} disabled={inChat && disabled} onChange={() => choose(option.value)} />
+            <input type={question.kind === "multi" ? "checkbox" : "radio"} name={`intake-${question.id}`} value={option.value} checked={draft.selected.includes(option.value)} disabled={inChat && disabled} onChange={() => choose(option.value)}
+              {...coach && question.kind === "single" ? {
+                onKeyDown: (event: ReactKeyboardEvent<HTMLInputElement>) => radioKey(event, option.value),
+                onKeyUp: () => { arrowPick.current = false; },
+                // 이미 골라 둔 답을 다시 누르거나 Space를 누르면 바뀌는 게 없어 change가 오지 않는다 — 그때 보낸다
+                onClick: () => { if (!arrowPick.current && draft.selected.includes(option.value)) sendPicked(option.value); },
+              } : {}} />
             <span><strong>{option.label}</strong>{option.hint && <small className={styles.optionHint}>{option.hint}</small>}{idea && <><span className={styles.optionDescription}>{chatTextPreview(idea.description) ?? idea.description}</span>{idea.resourceFit?.status !== "unknown" && <ResourceFitDetails fit={idea.resourceFit} compact />}{idea.retained && <small>앞서 고른 사업이에요 · 바뀐 조건에 맞는지 한 번 더 봐 주세요</small>}</>}</span>
           </label>{idea && <details className={styles.disclosure}><summary>{option.label} 자세히 보기</summary><p>{idea.description}</p>{idea.reasons.length > 0 && <p className={styles.optionReason}>{idea.reasons.join(" · ")}</p>}{idea.cautions.length > 0 && <p className={styles.optionCaution}>미리 알아 둘 점: {idea.cautions.join(" ")}</p>}<ResourceFitDetails fit={idea.resourceFit} /></details>}</div>;
         })}
@@ -456,8 +479,9 @@ function TypingBubble() {
   return <span className={styles.typingBubble} aria-hidden="true"><i /><i /><i /></span>;
 }
 
+/** 화면 낭독기 안내('다음 질문을 준비하고 있어요')는 BusinessIntake의 늘 붙어 있는 알림 칸이 맡는다 — 내용과 같이 생기는 칸은 읽히지 않을 때가 있다. */
 export function ReplyTyping() {
-  return <div className={styles.replyTyping} data-reply-typing><ChatSpeaker /><TypingBubble /><span className={styles.srOnly} role="status" aria-live="polite">다음 질문을 준비하고 있어요</span></div>;
+  return <div className={styles.replyTyping} data-reply-typing><ChatSpeaker /><TypingBubble /></div>;
 }
 
 export function ConversationText({ text }: { text: string }) {
@@ -476,12 +500,13 @@ function bubbleAnswerText(question: IntakeQuestion | undefined, text: string) {
   if (question?.id === "period") return periodDisplay(text);
   if (/^\d{4,}원$/.test(text)) return formatWon(Number(text.slice(0, -1)));
   if (question?.kind !== "number" || !question.unit || !/^\d[\d,]*(\.\d+)?$/.test(text)) return text;
-  const number = Number(text.replace(/,/g, ""));
+  // 원은 서버와 같은 규칙으로 읽는다 — '4.500'은 4,500원(4.5를 반올림한 '5원'이 아니다)
+  const number = question.unit === "원" ? parseWonAmount(text) ?? NaN : Number(text.replace(/,/g, ""));
   if (!Number.isFinite(number)) return text;
   return question.unit === "원" ? formatWon(number) : `${number.toLocaleString("ko-KR")}${question.unit}`;
 }
 
-const isDesignReplyText = (text: string) => text.includes("\n\n이렇게 제안한 이유\n") && text.includes("\n\n먼저 해볼 일 하나 · 선택 사항\n");
+export const isDesignReplyText = (text: string) => text.includes("\n\n이렇게 제안한 이유\n") && text.includes("\n\n먼저 해볼 일 하나 · 선택 사항\n");
 
 export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = false }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string; readOnly?: boolean }) {
   const lastUserId = [...snapshot.coach.messages].reverse().find(message => message.role === "user")?.id;

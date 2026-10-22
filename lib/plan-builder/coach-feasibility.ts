@@ -1,5 +1,5 @@
 import type { CoachField } from "./coach";
-import { parseAmount } from "./financials";
+import { parseWonAmount, rangeLowerText } from "./answer-number";
 
 export type FeasibilityCheck = {
   code: "startup-budget" | "unit-margin" | "workload";
@@ -31,9 +31,14 @@ export function coachAmount(value: string | undefined): number | undefined {
   // '월세 백오십'은 보통 150만 원이라는 뜻이다 — 1,000보다 작은 한글 숫자에 '원'이 없으면 단위를 알 수 없어 읽지 않는다
   if (spoken !== undefined && (spoken >= 1000 || words?.[2])) normalized = String(spoken);
   else if (spoken !== undefined) return undefined;
-  if (!/^(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?(?:억원?|천만원?|백만원?|만원?|천원?|백원?|원)?$/.test(normalized)) return undefined;
-  const amount = /^0(?:\.0+)?(?:억원?|천만원?|백만원?|만원?|천원?|백원?|원)?$/.test(normalized) ? 0 : parseAmount(normalized);
-  return amount != null && Number.isSafeInteger(amount) && amount >= 0 ? amount : undefined;
+  // '2만5천원'·'1억5천만원' 같은 겹친 단위와 '4.500'(천 단위 점)까지 공용 규칙으로 읽는다
+  return parseWonAmount(normalized);
+}
+
+/** 범위로 남긴 금액('20~30만원')은 적은 쪽으로 읽는다 — 예산을 크게 잡으면 현금 계산이 느슨해진다. 범위가 아니면 coachAmount와 같다. */
+export function coachAmountLower(value: string | undefined): number | undefined {
+  const lower = rangeLowerText(value);
+  return coachAmount(lower ?? value);
 }
 
 const CAPACITY_MONTH_FACTOR: Record<string, number> = { "하루": 26, "일주일": 4.3, "한 달": 1 };
@@ -55,11 +60,13 @@ export function checkCoachFeasibility(fields: CoachField[]): FeasibilityCheck[] 
   const inputs = (...keys: CoachField["key"][]) => keys.flatMap(key => map.has(key) ? [map.get(key)!] : []);
   const format = (n: number) => new Intl.NumberFormat("ko-KR", { maximumFractionDigits: 1 }).format(n);
   const quantity = (key: CoachField["key"], pattern: RegExp) => {
-    const match = map.get(key)?.value.replace(/\s|,/g, "").match(pattern);
+    const text = map.get(key)?.value;
+    const match = (rangeLowerText(text) ?? text)?.replace(/\s|,/g, "").match(pattern);
     const value = match ? Number(match[1]) : NaN;
     return Number.isFinite(value) && value >= 0 ? value : undefined;
   };
-  const budget = money("budget"), setup = money("setupCost"), price = money("price"), unit = money("unitCost"), fixed = money("cost");
+  // 예산은 범위('20~30만원')면 적은 쪽으로 비교한다
+  const budget = coachAmountLower(map.get("budget")?.value), setup = money("setupCost"), price = money("price"), unit = money("unitCost"), fixed = money("cost");
   const volume = quantity("volume", /^(\d+(?:\.\d+)?)$/);
   const hours = quantity("hoursPerWeek", /^(?:주)?(\d+(?:\.\d+)?)(?:시간)?$/);
   const minutes = quantity("minutesPerSale", /^(?:건당)?(\d+(?:\.\d+)?)(?:분)?$/);

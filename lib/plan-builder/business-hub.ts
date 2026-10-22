@@ -25,7 +25,11 @@ export function businessHubState(plan: Plan, runStatus?: string | null) {
   const complete = keys.length > 0 && documents.length === keys.length;
   const generation = plan.answers.__coach_generation;
   const running = !!generation?.runId && ["queued", "running", "waiting"].includes(runStatus ?? "");
-  let status = coach?.ready ? "사업안 준비됨" : coach ? "대화 중" : "작성 중";
+  /*
+   * '사업안 준비됨'은 사업안(design)이 실제로 만들어졌을 때만 — coach.ready 는 질문 3~4개만 답해도 켜져서,
+   * 14개 중 몇 개만 답한 사업이 목록에서 '사업안 준비됨'으로 보였다(내 정보 화면은 '진행 중' — 점검 2026-10-22).
+   */
+  let status = coach?.ready && coach.design ? "사업안 준비됨" : coach ? "대화 중" : "작성 중";
   if (documents.length) status = complete ? "문서 완성" : "자료 일부 준비됨";
   if (stale) status = "수정 내용 반영 필요";
   if (running) status = "문서 제작 중";

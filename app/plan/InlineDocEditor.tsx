@@ -4,6 +4,9 @@ import { useEffect, useRef } from "react";
 import { EditorContent, useEditor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
+import { Extension } from "@tiptap/core";
+import { Plugin } from "@tiptap/pm/state";
+import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import Link from "@tiptap/extension-link";
 import { Table, TableRow, TableCell, TableHeader } from "@tiptap/extension-table";
 import { ChartFigure } from "./chart-node";
@@ -30,6 +33,29 @@ const cellAttributes = {
     renderHTML: (attributes: Record<string, unknown>) => (attributes.short ? { "data-short": "" } : {}),
   },
 };
+/*
+ * 본문 안 소제목(마크다운 ## 등)은 항목 제목(h3) 아래 단계로 읽히게 한다 — 예전엔 장(h2)·항목(h3) 아래 본문에 h2가 나와
+ * 낭독기의 제목 목록이 뒤엉켰다(접근성 점검 2026-10-22). 저장하는 HTML·마크다운은 그대로 두고 화면의 aria-level만 바꾼다.
+ */
+const SECTION_HEADING_LEVEL = 3;
+export function bodyHeadingLevel(level: number) { return Math.min(6, level + SECTION_HEADING_LEVEL); }
+/** 서버 렌더 본문(편집기 준비 전·사실 고치기 화면)에도 같은 단계를 붙인다. 보여 주기 전용 — 저장하지 않는다. */
+export function withBodyHeadingLevels(html: string) {
+  return html.replace(/<h([1-6])(?=[\s>])(?![^>]*\baria-level=)/g, (_tag, level: string) => `<h${level} aria-level="${bodyHeadingLevel(Number(level))}"`);
+}
+const BodyHeadingLevels = Extension.create({
+  name: "bodyHeadingLevels",
+  addProseMirrorPlugins() {
+    return [new Plugin({ props: { decorations: state => {
+      const items: Decoration[] = [];
+      state.doc.descendants((node, pos) => {
+        if (node.type.name === "heading") items.push(Decoration.node(pos, pos + node.nodeSize, { "aria-level": String(bodyHeadingLevel(Number(node.attrs.level) || 1)) }));
+      });
+      return DecorationSet.create(state.doc, items);
+    } } })];
+  },
+});
+
 const PlanTableCell = TableCell.extend({ addAttributes() { return { ...this.parent?.(), ...cellAttributes }; } });
 const PlanTableHeader = TableHeader.extend({ addAttributes() { return { ...this.parent?.(), ...cellAttributes }; } });
 
@@ -90,6 +116,7 @@ export default function InlineDocEditor({ html: sourceHtml, onChange, onDraft, s
       PlanTableHeader,
       PlanTableCell,
       ChartFigure,
+      BodyHeadingLevels,
     ],
     content: html,
     editable: !readOnly,
@@ -135,7 +162,7 @@ export default function InlineDocEditor({ html: sourceHtml, onChange, onDraft, s
   if (!editor) return (
     <div className={styles.wrap}>
       <div>
-        <div className={`tiptap ProseMirror ${styles.surface}`} {...(readOnly ? { contentEditable: false } : {})} dangerouslySetInnerHTML={{ __html: html }} />
+        <div className={`tiptap ProseMirror ${styles.surface}`} {...(readOnly ? { contentEditable: false } : {})} dangerouslySetInnerHTML={{ __html: withBodyHeadingLevels(html) }} />
       </div>
       {!readOnly && <div className={styles.status} aria-hidden="true">글을 눌러 바로 고칠 수 있어요</div>}
     </div>

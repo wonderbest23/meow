@@ -137,6 +137,11 @@ assert.equal(ksicStructure("47912")?.sector, "retail_commerce", "쇼핑몰은 �
 // 자주 쓰는 말인데 공식 이름에 없어 검색이 비던 표현
 for (const text of ["캔들", "향초", "디퓨저", "수제 비누", "캔들 공방", "PT", "무인 매장", "애견미용", "공부방"]) assert.ok(searchKsic(text, { limit: 3, minLevel: 5 }).length > 0, `${text} has candidates`);
 assert.equal(first("네일"), "96119");
+// 2026-10-22 입력 감사: 한 글자 검색, 붙여 쓴 학원·가게 이름, 출장·방문 앞말, '앱 개발'
+for (const [text, code] of [["빵", "56150"], ["꽃", "47851"], ["떡", "10601"], ["빵집", "56150"], ["코딩학원", "85691"], ["코딩", "85691"], ["컴퓨터학원", "85691"], ["피아노학원", "85621"], ["출장사진", "73301"], ["방문세차", "95213"], ["앱 개발", "58222"], ["애견미용", "96995"]] as const) assert.equal(first(text), code, `${text} → ${top(text)}`);
+assert.deepEqual(searchKsic("꽃게", { limit: 3, minLevel: 5 }), [], "한 글자 키는 가게 꼬리말만 허용('꽃게'는 꽃집이 아니다)");
+assert.ok(!top("앱 개발").slice(0, 2).some(code => code.startsWith("5821")), `앱 개발은 게임이 앞서지 않는다: ${top("앱 개발")}`);
+assert.match(ksicNameHint("96995") ?? "", /미용/, "애견미용 후보(반려동물 장묘 및 보호 서비스업)에 미용 포함을 보여 준다");
 assert.equal(first("속눈썹 연장"), "96119");
 assert.equal(first("도시락 가게"), "56199");
 // 캔들·향초는 공식 분류 '연소물 제조(33992)' — 생활화학제품 안전확인 신고 안내가 붙은 코드

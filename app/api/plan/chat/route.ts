@@ -296,7 +296,7 @@ async function postLegacyChat(request: Request) {
   if (!resolvePlanningLLMConfig(identity.hash)) return json({ message: "사업 기획 AI 연결을 준비 중이에요. 잠시 후 다시 시도해 주세요." }, 503);
   if ((previous?.messages.length ?? 0) >= 160) return json({ message: "대화가 길어졌어요. 작성한 문서에서 이어서 수정해 주세요." }, 400);
   if ((previous?.messages.reduce((total, m) => total + m.text.length, 0) ?? 0) + input.message.length > 240000) return json({ message: "첨부한 대화 자료가 많아요. 필요한 부분만 나누어 새 대화에서 이어가 주세요." }, 413);
-  if (!plan && state.plans.filter(p => readCoach(p.answers)).length >= 20) return json({ message: "기존 사업 대화에서 이어가거나 사용하지 않는 사업을 삭제해 주세요." }, 400);
+  if (!plan && state.plans.filter(p => readCoach(p.answers)).length >= 20) return json({ message: "사업은 최대 20개까지 만들 수 있어요. 내 사업에서 쓰지 않는 사업을 정리하거나 기존 사업 대화에서 이어가 주세요." }, 400);
   const at = new Date().toISOString();
   const previousUpdatedAt = plan?.updatedAt ?? null;
   const workflow = await binding();

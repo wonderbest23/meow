@@ -1,7 +1,7 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BUSINESS_DESIGNED_PAGES, BUSINESS_TEMPLATE_IDS } from "../lib/landing/brainwave/business-content";
 import styles from "./brainwave-template-picker.module.css";
@@ -35,15 +35,28 @@ export function BrainwaveTemplatePicker({
   const [selected, setSelected] = useState(current);
   const dialog = useRef<HTMLDialogElement>(null);
   /* 열면 지금 쓰는 템플릿이 보이게 — 맨 아래에 있으면 다른 카드를 보는 동안 '사용 중' 안내만 떠 헷갈렸다 */
-  useEffect(() => { dialog.current?.showModal(); dialog.current?.querySelector(".bwtp-grid button.on")?.scrollIntoView({ block: "center" }); }, []);
+  /*
+   * 닫힐 때는 dialog.close()를 먼저 불러 브라우저가 연 단추로 초점을 돌려주게 한다 — 예전엔 창을 DOM에서 바로 떼어 초점이 body로 떨어졌다.
+   * 고르기(onPick)처럼 부모가 창을 바로 없애는 경우도 떼기 직전(layout 정리)에 닫고, 그래도 body면 연 단추로 옮긴다.
+   */
+  useLayoutEffect(() => {
+    const node = dialog.current;
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    node?.showModal(); node?.querySelector(".bwtp-grid button.on")?.scrollIntoView({ block: "center" });
+    return () => {
+      if (node?.open) node.close();
+      window.requestAnimationFrame(() => { const active = document.activeElement; if (opener?.isConnected && (!active || active === document.body)) opener.focus({ preventScroll: true }); });
+    };
+  }, []);
+  const close = () => { dialog.current?.close(); onClose(); };
   const pages = BRAINWAVE_PAGES.filter((p) => p.group === "landing" && BUSINESS_TEMPLATE_IDS.includes(p.id)
     && (BUSINESS_DESIGNED_PAGES.has(p.id) || p.id === current));
   return (
-    <dialog ref={dialog} className={styles.dialog} aria-label="디자인 바꾸기" onCancel={event => { event.preventDefault(); onClose(); }}>
+    <dialog ref={dialog} className={styles.dialog} aria-label="디자인 바꾸기" onCancel={event => { event.preventDefault(); close(); }}>
       <div className={`bwtp-sheet ${styles.sheet}`}>
         <header>
           <div><strong>디자인 바꾸기</strong><small>그림은 디자인 예시예요. 내 사업 내용에 맞춰 문구와 보이는 구역이 달라져요.</small></div>
-          <button type="button" onClick={onClose} aria-label="닫기"><X size={18} /></button>
+          <button type="button" onClick={close} aria-label="닫기"><X size={18} /></button>
         </header>
         <div className="bwtp-body">
           <section>
@@ -64,7 +77,7 @@ export function BrainwaveTemplatePicker({
           <p>{selected === current ? "지금 쓰고 있는 디자인이에요." : aiFilled
             ? "AI가 쓴 글은 새 디자인 자리에 옮겨 담지만, 칸 수가 달라 일부는 빠지거나 바뀔 수 있어요. 직접 고친 사진·배치는 처음 상태로 돌아가요. 바꾼 뒤 되돌릴 수 있어요."
             : "사업 정보는 그대로지만, 직접 고친 글·사진·배치는 처음 상태로 돌아가요."}</p>
-          <button type="button" onClick={onClose}>취소</button>
+          <button type="button" onClick={close}>취소</button>
           <button type="button" className={styles.apply} disabled={selected === current} onClick={() => onPick(selected)}>이 디자인으로 바꾸기</button>
         </footer>
       </div>

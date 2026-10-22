@@ -16,6 +16,8 @@ import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_A
 import { normalizePurchaseDomain, validateRegistrant } from "../../../lib/landing/domain-purchase";
 import { AddressSearchButton } from "../../../components/address-search";
 import { DocLink } from "../../../components/doc-sheet";
+import { hydrateFromServer, isSamplePlan, lastHydrationFailed } from "../../../lib/plan-builder/plan-store";
+import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 
 type Phase = "idle" | "preparing" | "opening" | "error";
 
@@ -102,6 +104,16 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   /* 결제 정보를 아예 받지 못함 — 예전엔 '확인하는 중…'에서 영원히 돌았다. 다시 확인 단추를 보인다 */
   const [infoFailed, setInfoFailed] = useState(false);
   const [infoAttempt, setInfoAttempt] = useState(0);
+  /* 주소의 사업이 내 사업 목록에 있는지 — 목록을 못 불러왔으면 없다고 하지 않는다 */
+  const [missingPlan, setMissingPlan] = useState(false);
+  useEffect(() => {
+    if (!planId || isSamplePlan(planId)) return;
+    let alive = true;
+    hydrateFromServer(false).then(state => {
+      if (alive && !lastHydrationFailed() && !state.plans.some(plan => plan.id === planId)) setMissingPlan(true);
+    }).catch(() => { /* 확인하지 못했으면 결제 화면을 그대로 둔다(서버가 결제 때 다시 확인한다) */ });
+    return () => { alive = false; };
+  }, [planId]);
   /*
    * 앱(아이폰·안드로이드) 안에서는 스토어 결제(인앱결제)로만 판다 — 스토어 규칙상 앱 안 디지털 상품은 카드 결제창을 띄울 수 없다.
    * 도메인은 앱에서 팔지 않는다(lib/payments/iap-products.ts).
@@ -246,6 +258,20 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
           <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아와요.</p>
           <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={styles.primary}>로그인 · 회원가입</Link>
           <Link href={laterHref} className={styles.back}>← 나중에 하기</Link>
+        </div>
+      </div>
+    );
+  }
+
+  /* 주소의 사업이 내 사업 목록에 없다(지웠거나 다른 계정 것) — '이미 열려 있어요'·결제 대신 다른 화면과 같은 말로 */
+  if (missingPlan) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.card}>
+          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <h1 className={styles.title}>{MISSING_BUSINESS_TITLE}</h1>
+          <p className={styles.desc}>{MISSING_BUSINESS_DETAIL} 결제는 진행되지 않았어요.</p>
+          <Link href="/plan" className={styles.primary}>내 사업으로</Link>
         </div>
       </div>
     );

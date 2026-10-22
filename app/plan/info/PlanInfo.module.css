@@ -48,16 +48,25 @@
 .tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 5px;
+  gap: 0 6px;
+  padding: 0 5px;
   margin-bottom: 28px;
   background: var(--app-raised);
   border-radius: 12px;
 }
 
+/*
+ * 누르는 자리 44px(예전 33px) — 위아래에 투명 테두리를 두고 배경은 안쪽(padding-box)에만 칠해 보이는 알약 크기는 그대로 둔다.
+ * 바깥 틀의 위아래 여백은 그 투명 테두리가 대신한다.
+ */
 .tab {
-  padding: 8px 14px;
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 3px 14px;
+  border-block: 5.5px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px / 13.5px;
   font-size: 13.5px;
   font-weight: 600;
   color: var(--app-muted);
@@ -70,9 +79,10 @@
 }
 
 .tabOn {
-  background: var(--app-surface);
+  background-color: var(--app-surface); /* 묶음 표기는 위의 background-clip 을 되돌려 알약이 커졌다 */
   color: var(--app-text);
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+  /* 그림자는 칠한 알약 모양을 따라가게(box-shadow는 투명 테두리까지 감싼다) */
+  filter: drop-shadow(0 1px 1px rgba(16, 24, 40, 0.08));
 }
 
 .notice {
@@ -151,20 +161,27 @@
 .sourceList {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 0 8px;
 }
 
+/* 누르는 자리 44px(예전 32px) — 위아래 투명 테두리로 넓히고, 보이는 테두리는 안쪽 그림자로 그려 칩 크기는 그대로 */
 .sourceList a {
-  padding: 7px 12px;
-  border: 1px solid var(--app-line);
-  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-block-width: 6px;
+  background-clip: padding-box;
+  box-shadow: inset 0 0 0 1px var(--app-line);
+  border-radius: 8px / 14px;
   font-size: 12.5px;
   color: var(--app-body);
   text-decoration: none;
 }
 
 .sourceList a:hover {
-  border-color: var(--app-line);
+  box-shadow: inset 0 0 0 1px var(--app-line);
   color: var(--app-text);
 }
 
