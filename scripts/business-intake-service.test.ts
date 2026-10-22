@@ -270,6 +270,22 @@ async function main() {
       assert.equal(calls.length, 0);
     });
 
+    await check("a making-code business sold online is labelled 제조 · 온라인 판매, and a 0원 price is still saved", async () => {
+      // 캔들 공방(33992 연소물 제조)은 판매 방식을 따라 온라인 판매 업종으로 묶는다 — 대화 말풍선에는 '…제조업 (유통 · 온라인 판매)' 대신 제조로 보인다
+      const ownerHash = `intake-ksic-candle-${randomUUID()}`;
+      const initial = await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: "직접 만든 캔들을 스마트스토어에서 팔고 싶어요", revision: 0, requestId: randomUUID() });
+      const session = { ownerHash, planId: initial.plan.id };
+      const picked = await send(session, { action: "answer", questionId: "industry", value: "retail_commerce", ksic: "33992" });
+      assert.equal(picked.snapshot.intake.sector, "retail_commerce", "the stored sector is unchanged");
+      assert.equal(picked.snapshot.coach.business.industry, "유통 · 온라인 판매", "the stored industry label keeps mapping back to the sector");
+      const bubble = (await load(session)).coach.messages.filter(message => message.role === "user").at(-1)?.text ?? "";
+      assert.ok(bubble.includes("(제조 · 온라인 판매)") && !bubble.includes("유통"), bubble);
+      // 0원은 서버가 그대로 받는다(무료 상품) — 확인은 보내기 전에 화면이 한 번 묻는다
+      const priced = await send(session, { action: "answer", questionId: "price", value: "0원" });
+      assert.equal(priced.snapshot.intake.answers.price?.status, "answered");
+      assert.match(String(priced.snapshot.intake.answers.price?.value), /^0(원)?$/);
+    });
+
     await check("industry answer with a KSIC code stores the code, derives the sector and labels the message", async () => {
       configureAI(true);
       const ownerHash = `intake-ksic-${randomUUID()}`;

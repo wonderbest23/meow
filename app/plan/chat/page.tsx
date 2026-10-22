@@ -10,7 +10,7 @@ import { readCoach, type CoachField, type CoachState } from "../../../lib/plan-b
 import type { BriefPatch } from "./BriefEditor";
 import type { CoachJob } from "../../../lib/plan-builder/coach-job-types";
 import { changedCoachFields } from "../../../lib/plan-builder/coach-presentation";
-import { hydrateFromServer, setActivePlan } from "../../../lib/plan-builder/plan-store";
+import { announcePlanTitle, hydrateFromServer, setActivePlan } from "../../../lib/plan-builder/plan-store";
 import BusinessBrief from "./BusinessBrief";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { businessChatHref, chatEntryIntent } from "../../../lib/plan-builder/business-hub";
@@ -85,6 +85,8 @@ function BusinessCoach() {
     if (before && data.plan?.planId === before.planId && (data.plan.coach.revision < before.coach.revision || (data.plan.coach.revision === before.coach.revision && data.plan.updatedAt && before.updatedAt && data.plan.updatedAt < before.updatedAt))) return;
     if (data.plan && before && before.coach.revision !== data.plan.coach.revision) setChanged(changedCoachFields(before.coach, data.plan.coach));
     planRef.current = data.plan ?? null; setPlan(data.plan ?? null);
+    // 사업 이름이 바뀌면 왼쪽 목록에 알린다(대화는 서버에만 저장해 목록이 옛 이름을 보였다)
+    if (data.plan && (before?.planId !== data.plan.planId || before.title !== data.plan.title)) announcePlanTitle({ planId: data.plan.planId, title: data.plan.title, updatedAt: data.plan.updatedAt ?? "" });
     if (data.authenticated !== undefined) setAuthenticated(data.authenticated);
     if (data.paid !== undefined) setPaid(data.paid);
     if (data.runStatus !== undefined) setRunStatus(data.runStatus);

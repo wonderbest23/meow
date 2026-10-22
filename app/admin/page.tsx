@@ -14,7 +14,12 @@ type Stats = {
   users: { total: number | null; active7d: number | null };
   payments: {
     paidCount: number | null;
+    /** 순매출(매출 − 환불) */
     paidAmount: number | null;
+    grossAmount?: number | null;
+    refundedAmount?: number | null;
+    /** 환불 중 앱 스토어(Apple·Google) 환불 */
+    storeRefundedAmount?: number | null;
     paid7d: number | null;
     refundCount: number | null;
     refundPending: number | null;
@@ -142,8 +147,9 @@ export default function AdminDashboardPage() {
         <article>
           <span className="admin-dash-icon pay"><Banknote /></span>
           <small>결제</small>
-          <strong>{num(stats?.payments.paidCount ?? null)}건 · {won(stats?.payments.paidAmount ?? null)}</strong>
-          <em>최근 7일 {num(stats?.payments.paid7d ?? null)}건 · 금액은 환불을 뺀 값</em>
+          <strong>{num(stats?.payments.paidCount ?? null)}건 · 순매출 {won(stats?.payments.paidAmount ?? null)}</strong>
+          {/* 순매출만 보이면 앱 환불이 빠졌는지 알 수 없다 — 매출·환불(그중 앱)을 나눠 적는다 */}
+          <em>매출 {won(stats?.payments.grossAmount ?? null)} − 환불 {won(stats?.payments.refundedAmount ?? null)}{stats?.payments.storeRefundedAmount ? `(앱 ${won(stats.payments.storeRefundedAmount)})` : ""} · 최근 7일 {num(stats?.payments.paid7d ?? null)}건</em>
         </article>
         <article>
           <span className="admin-dash-icon refund"><RotateCcw /></span>

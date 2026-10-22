@@ -12,7 +12,7 @@ import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCan
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
-import { changedResourceLimits, needsEntryConfirmation, periodDisplay, routeComposerInput } from "../app/plan/chat/intake-ui/model";
+import { changedResourceLimits, intakeChipSector, needsEntryConfirmation, periodDisplay, routeComposerInput, zeroPriceAnswer } from "../app/plan/chat/intake-ui/model";
 import { readChatResponse } from "../lib/http/read-chat-response";
 import { coachAmount } from "../lib/plan-builder/coach-feasibility";
 import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption } from "../app/plan/chat/intake-ui/model";
@@ -38,6 +38,21 @@ async function main() {
   assert.equal(routeComposerInput(original, customer, "고객: 직장인 가격: 3만원").kind, "clarify");
   assert.equal(routeComposerInput(original, customer, "네").kind, "clarify");
   assert.deepEqual(routeComposerInput(original, customer, "아직 미정"), { kind: "answer", questionId: "customer", value: null, unknown: true });
+  // 범위 칩 이름·'정도'를 붙여 적어도 숫자 답으로 받는다 — 예전엔 '이 내용은 어떻게 남길까요?'로 빠졌다(소유자 제보 2026-10-22)
+  const fixedCost = { id: "structure.cost", fieldKey: "cost", label: "고정비", prompt: "한 달 고정비는 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true } as IntakeQuestion;
+  const firstRange = amountRanges(intakeChipSector(original), "structure.cost", "startup")[0];
+  const typedRange = routeComposerInput(original, fixedCost, firstRange.label.replace(/\s+/g, ""));
+  assert.equal(typedRange.kind, "answer", firstRange.label);
+  assert.equal(routeComposerInput(original, fixedCost, `${firstRange.label} (예상)`).kind, "answer");
+  assert.deepEqual(routeComposerInput(original, fixedCost, "30만원 정도"), { kind: "answer", questionId: "structure.cost", value: "30만원" });
+  assert.deepEqual(routeComposerInput(original, fixedCost, "약 2만5천원"), { kind: "answer", questionId: "structure.cost", value: "25000원" });
+  assert.equal(routeComposerInput(original, fixedCost, "임대료가 아직 미정이라 모르겠네요 30만원?").kind, "clarify");
+  // 판매 가격 0원은 보내기 전에 한 번 확인한다(무료 상품이면 그대로 저장) — 다른 금액 질문·0이 아닌 금액·미정은 묻지 않는다
+  const priceQuestion = coreQuestions("startup").find(question => question.id === "price")!;
+  for (const zero of ["0", "0원", " 0 원 ", 0, "0만원"]) assert.equal(zeroPriceAnswer(priceQuestion, zero), true, String(zero));
+  for (const priced of ["1000", "3만원", 25000, null, "무료일 수도"]) assert.equal(zeroPriceAnswer(priceQuestion, priced), false, String(priced));
+  assert.equal(zeroPriceAnswer(coreQuestions("startup").find(question => question.id === "budget")!, "0"), false, "a zero budget is a real answer, not a price slip");
+  assert.equal(zeroPriceAnswer(customer, "0"), false);
   assert.equal(routeComposerInput(original, original.nextQuestion!, "세상에 없는 복합 사업").kind, "clarify");
   assert.deepEqual(routeComposerInput(original, original.nextQuestion!, "카페"), { kind: "answer", questionId: "industry", value: "food_beverage" });
   // 뜻 없는 짧은 말은 답으로 저장하지 않고 '어떻게 남길까요'로 묻는다. 모른다는 말은 '잘 모르겠어요'와 같다.
@@ -497,6 +512,13 @@ async function main() {
   assert.ok(contextHistory.includes("온라인으로만 제공하고 싶어요"), "the raw supplemental note stays in the conversation");
   const undecided = previewIntakeAnswer(original, command({ questionId: "industry", value: null, unknown: true }))!;
   assert.ok(renderToStaticMarkup(<ConversationHistory snapshot={undecided} onEdit={noop} />).includes("아직 정하지 않았어요"));
+  // 업종을 바꾸면(업종 확인 [바꾸기]) 마지막 업종 답만 보이고, 그 아래에 '업종을 바꿨어요'가 붙는다 — 예전엔 두 업종이 같은 질문과 함께 두 번 쌓였다
+  const changedIndustry = previewIntakeAnswer(preview, command({ questionId: "industry", value: "education", requestId: "4c3a1f0e-6b2d-4e8a-9f1c-2d7b5a9e0c11", revision: preview.coach.revision }))!;
+  const changedHistory = renderToStaticMarkup(<ConversationHistory snapshot={changedIndustry} onEdit={noop} />);
+  assert.ok(changedHistory.includes("교육 · 코칭") && !changedHistory.includes("소프트웨어 · 플랫폼"), "the replaced industry answer is not shown next to the new one");
+  assert.equal(changedHistory.split(original.nextQuestion!.prompt).length - 1, 1, "the industry question is asked once in the history");
+  assert.ok(changedHistory.includes("업종을 바꿨어요") && !chatHistory.includes("업종을 바꿨어요"), "only a changed industry carries the note");
+  assert.equal((changedHistory.match(/data-coach-message="user"/g) ?? []).length, 2);
   // 탐색 중 '직접 적을래요'로 쓴 사업 소개: 손님이 쓴 적 없는 '사업 소개: ' 머리말 없이 보인다
   const exploringBase = fixture("exploring");
   const typedIdea = { ...exploringBase, coach: { ...exploringBase.coach, messages: [{ id: "typed-idea", role: "user" as const, text: "사업 소개: 어르신 댁 정리 서비스", at }] }, intake: { ...exploringBase.intake, answers: { ...exploringBase.intake.answers, business: { status: "answered" as const, value: "어르신 댁 정리 서비스", messageId: "typed-idea", at } } } };

@@ -11,6 +11,7 @@ import { descriptionSector } from "./intake-sector";
 import { playbookForKsic, playbookForText } from "./industry-playbooks";
 import { businessTypeFor } from "./business-types";
 import { KSIC_SYNONYMS, ksicByCode, ksicEntries, ksicPath, ksicStructure, normalize as normalizeKsic, searchKsic, sectorForKsic } from "./ksic";
+import { ksicSectorLabel } from "./ksic-hints";
 import { START_CONDITIONS } from "./intake-questions";
 import { CONDITION_DIFFERS_NOTE, candidateTemplateFacts, filterCandidateConditions, selectedStartConditions } from "./intake-candidate-constraints";
 import { capacityUnitOrder, licenseHint, revenueBasis, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, STRUCTURE_LABELS, structureFieldLabels, structureSummary, type BusinessStructure, type StructureAxis } from "./business-structure";
@@ -769,7 +770,7 @@ export function applyIntakeAnswer(plan: ServerPlan, coach: CoachState, intake: I
   const shown = question.id === "industry" && intake.answers[question.id]?.status === "answered" ? intake.answers[question.id].value : value;
   const selected = question.options && shown !== null ? intakeValueLabel(question, shown) : undefined;
   const ksicName = question.id === "industry" && intake.ksic ? ksicByCode(intake.ksic)?.name : undefined;
-  coach.messages.push({ id: command.requestId, role: "user", text: `${question.label}: ${command.unknown ? "아직 미정" : ksicName ? `${ksicName} (${selected ?? quote})` : selected ?? quote}`, at });
+  coach.messages.push({ id: command.requestId, role: "user", text: `${question.label}: ${command.unknown ? "아직 미정" : ksicName ? `${ksicName} (${ksicSectorLabel(intake.ksic, intake.sector, selected ?? quote)})` : selected ?? quote}`, at });
   // Supplementary prose stays an unconfirmed note, in the same atomic answer save.
   if (command.message?.trim()) storeIntakeNote(coach, intake, { ...command, requestId: `${command.requestId}:context`, noteIntent: "memo" }, at);
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "../../../../lib/persistence";
 import { countPendingRefundRequests } from "../../../../lib/payments/refund-requests";
+import { loadRevenueSummary, type RevenueSummary } from "../../../../lib/payments/revenue-stats";
 import { listAdminConversationRecords } from "../../../../lib/support-chat/repository";
 import { resolveSupportCustomers } from "../../../../lib/support-chat/admin-customers";
 import { hasAdminSession } from "../../../../lib/support-chat/admin-auth";
@@ -27,15 +28,6 @@ function todayStartIso() {
   return new Date(kst.getTime() - 9 * 60 * 60_000).toISOString();
 }
 
-const PAGE = 1000;
-const MAX_PAID_ROWS = 100_000;
-
-/** 환불 처리 메모의 맨 앞 금액 — completeRefundRequest 가 '12,000원 …' 으로 남긴다 */
-function refundedWon(note: unknown): number {
-  const match = /^\s*([\d,]+)원/.exec(String(note ?? ""));
-  return match ? Number(match[1].replace(/,/g, "")) || 0 : 0;
-}
-
 export async function GET() {
   if (!(await hasAdminSession("support"))) {
     return privateJson({ error: { code: "ADMIN_AUTH_REQUIRED", message: "관리자 로그인이 필요해요." } }, { status: 401 });
@@ -58,11 +50,12 @@ export async function GET() {
     usersActive7d = active.count ?? null;
   }
 
-  // 결제 — 완료(done) 주문 수·금액, 환불 완료 수
+  // 결제 — 완료(done) 주문 수, 순매출(환불을 뺀 금액)과 매출·환불 나눠 보기, 환불 완료 수
   let paidCount: number | null = null;
   let paidAmount: number | null = null;
   let paid7d: number | null = null;
   let refundCount: number | null = null;
+  let revenue: RevenueSummary | null = null;
   let recentOrders: Array<{ orderId: string; orderName: string; amount: number; status: string; method: string; createdAt: string }> | null = [];
   if (supabase) {
     const paid = await supabase
@@ -70,38 +63,9 @@ export async function GET() {
       .select("order_id", { count: "exact", head: true })
       .eq("status", "done");
     paidCount = paid.count ?? null;
-    // Supabase는 한 번에 최대 1000행만 돌려준다 — 그대로 합치면 1000건 이후 매출이 빠진다.
-    // 페이지 단위로 끝까지 읽어 합산하고, 중간에 실패하면 틀린 숫자 대신 null로 둔다.
-    let sum = 0;
-    let complete = true;
-    for (let offset = 0; offset < MAX_PAID_ROWS; offset += PAGE) {
-      // 부분 환불분도 받은 돈이다 — done·partial_canceled·refunded 를 모두 더하고 실제로 돌려준 금액을 아래에서 뺀다
-      const { data, error } = await supabase
-        .from("payment_orders")
-        .select("amount")
-        .in("status", ["done", "partial_canceled", "refunded"])
-        .order("order_id", { ascending: true })
-        .range(offset, offset + PAGE - 1);
-      if (error) { complete = false; break; }
-      const rows = data ?? [];
-      sum += rows.reduce((acc, row) => acc + Number((row as { amount?: number }).amount ?? 0), 0);
-      if (rows.length < PAGE) break;
-    }
-    // 돌려준 금액은 환불 요청의 처리 메모 맨 앞('12,000원 카드 취소 …')에만 남는다 — 그것을 읽어 뺀다
-    let refundedSum = 0;
-    for (let offset = 0; complete && offset < MAX_PAID_ROWS; offset += PAGE) {
-      const { data, error } = await supabase
-        .from("refund_requests")
-        .select("admin_note")
-        .eq("status", "done")
-        .order("id", { ascending: true })
-        .range(offset, offset + PAGE - 1);
-      if (error) { complete = false; break; }
-      const rows = data ?? [];
-      refundedSum += rows.reduce((acc, row) => acc + refundedWon((row as { admin_note?: string }).admin_note), 0);
-      if (rows.length < PAGE) break;
-    }
-    paidAmount = complete ? Math.max(0, sum - refundedSum) : null;
+    // 매출·환불·순매출 — 웹 결제 환불(요청 처리 메모 금액)과 앱 결제 환불(스토어 알림으로 refunded)을 모두 뺀다(lib/payments/revenue-stats.ts)
+    revenue = await loadRevenueSummary(supabase).catch(() => null);
+    paidAmount = revenue?.net ?? null;
     const paidRecent = await supabase
       .from("payment_orders")
       .select("order_id", { count: "exact", head: true })
@@ -221,7 +185,7 @@ export async function GET() {
 
   return privateJson({
     users: { total: usersTotal, active7d: usersActive7d },
-    payments: { paidCount, paidAmount, paid7d, refundCount, refundPending, recentOrders },
+    payments: { paidCount, paidAmount, grossAmount: revenue?.gross ?? null, refundedAmount: revenue?.refunded ?? null, storeRefundedAmount: revenue?.storeRefunded ?? null, paid7d, refundCount, refundPending, recentOrders },
     inquiries,
     llm,
   });

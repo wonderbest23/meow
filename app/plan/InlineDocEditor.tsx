@@ -13,7 +13,7 @@ import { ChartFigure } from "./chart-node";
 import styles from "./InlineDocEditor.module.css";
 import { Spinner } from "./PlanLoading";
 import { askText } from "../../components/confirm-dialog";
-import { isShortCell } from "../../lib/plan-builder/table-cells";
+import { isShortCell, tableHeaderLabels, withTableCellLabels } from "../../lib/plan-builder/table-cells";
 import { restoreRangeTildes } from "../../lib/plan-builder/range-tildes";
 
 /*
@@ -50,6 +50,34 @@ const BodyHeadingLevels = Extension.create({
       const items: Decoration[] = [];
       state.doc.descendants((node, pos) => {
         if (node.type.name === "heading") items.push(Decoration.node(pos, pos + node.nodeSize, { "aria-level": String(bodyHeadingLevel(Number(node.attrs.level) || 1)) }));
+      });
+      return DecorationSet.create(state.doc, items);
+    } } })];
+  },
+});
+
+/*
+ * 폰에서 네 칸 이상 표를 줄마다 카드('열 이름: 값')로 쌓도록 칸마다 머리줄 글자를 data-label 로 붙인다(DocumentWorkspace.module.css).
+ * 꾸밈(decoration)이라 저장하는 HTML 에는 들어가지 않는다 — 서버 렌더 본문은 withTableCellLabels 가 같은 규칙으로 붙인다.
+ */
+const TableCellLabels = Extension.create({
+  name: "tableCellLabels",
+  addProseMirrorPlugins() {
+    return [new Plugin({ props: { decorations: state => {
+      const items: Decoration[] = [];
+      state.doc.descendants((node, pos) => {
+        if (node.type.name !== "table") return true;
+        let labels: string[] | null | undefined;
+        node.forEach((row, rowOffset) => {
+          const cells: Array<{ node: typeof row; pos: number }> = [];
+          row.forEach((cell, cellOffset) => cells.push({ node: cell, pos: pos + 1 + rowOffset + 1 + cellOffset }));
+          if (labels === undefined) { labels = tableHeaderLabels(cells.map(cell => ({ header: cell.node.type.name === "tableHeader", text: cell.node.textContent }))); return; }
+          cells.forEach((cell, column) => {
+            const label = labels?.[column];
+            if (label) items.push(Decoration.node(cell.pos, cell.pos + cell.node.nodeSize, { "data-label": label }));
+          });
+        });
+        return false;
       });
       return DecorationSet.create(state.doc, items);
     } } })];
@@ -117,6 +145,7 @@ export default function InlineDocEditor({ html: sourceHtml, onChange, onDraft, s
       PlanTableCell,
       ChartFigure,
       BodyHeadingLevels,
+      TableCellLabels,
     ],
     content: html,
     editable: !readOnly,
@@ -162,7 +191,7 @@ export default function InlineDocEditor({ html: sourceHtml, onChange, onDraft, s
   if (!editor) return (
     <div className={styles.wrap}>
       <div>
-        <div className={`tiptap ProseMirror ${styles.surface}`} {...(readOnly ? { contentEditable: false } : {})} dangerouslySetInnerHTML={{ __html: withBodyHeadingLevels(html) }} />
+        <div className={`tiptap ProseMirror ${styles.surface}`} {...(readOnly ? { contentEditable: false } : {})} dangerouslySetInnerHTML={{ __html: withBodyHeadingLevels(withTableCellLabels(html)) }} />
       </div>
       {!readOnly && <div className={styles.status} aria-hidden="true">글을 눌러 바로 고칠 수 있어요</div>}
     </div>

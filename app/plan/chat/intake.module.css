@@ -565,12 +565,11 @@
 @media (prefers-reduced-motion: reduce) { .liveCaret { animation: none; } }
 
 /* 이 사업에 맞춘 AI 추천(시험 기능): 업종 칩과 구분되도록 점선 테두리와 보라 계열로 표시한다. */
-.suggestionStep { margin-bottom: 14px; padding: 12px 12px 10px; border: 1px solid #e5e8eb; border-radius: 14px; background: #f9fafb; }
-.suggestionStep .stepLegend { color: #5b4fc4; }
-.suggestionStep .stepLegend > span { color: var(--intake-muted); }
-.suggestionChip { border-color: #ddd8f7; background: #fff; }
-.suggestionChip:hover:not(:disabled) { background: #f3f1ff; border-color: #bdb3f0; }
-.suggestionChip[aria-pressed="true"] { border-color: #8f80e6; background: #efecff; color: #4b3fb3; }
+/* 맞춤 추천 칩 — 일반 선택지와 같은 모양에 ✨ 표시만 다르다(따로 상자에 두면 두 목록이 겹쳐 보여 헷갈렸다) */
+.suggestionLabel { display: inline-flex; align-items: center; gap: 6px; }
+.suggestionChip svg { color: #6b5bd2; flex-shrink: 0; }
+.suggestionChip[aria-pressed="true"] svg { color: currentColor; }
+.suggestionNote { display: inline-flex; align-items: center; gap: 4px; color: #5b4fc4; }
 .suggestionSkeleton { display: block; max-width: 100%; height: 44px; border-radius: 22px; background: linear-gradient(90deg, #f0eefc 0%, #faf9ff 50%, #f0eefc 100%); background-size: 200% 100%; animation: suggestionShimmer 1.4s ease-in-out infinite; }
 @keyframes suggestionShimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 @media (prefers-reduced-motion: reduce) { .suggestionSkeleton { animation: none; } }
@@ -629,11 +628,13 @@
 /* 원가로 판매가 계산 */
 .costHelper { margin: 4px 0 12px; padding: 12px 14px; border: 1px solid #e5e8eb; border-radius: 10px; background: #f9fafb; }
 .costHelper > summary { cursor: pointer; font-size: 14px; font-weight: 600; color: #246bd1; }
-.costHelper[open] { display: grid; gap: 10px; }
+.costHelper[open] { display: grid; gap: 12px; }
 .costHelperInput { display: flex; align-items: center; gap: 8px; }
 .costHelperInput span { font-size: 13px; font-weight: 600; color: #333d4b; min-width: 72px; }
 .costHelperInput input { flex: 1; min-width: 0; height: 40px; padding: 0 10px; border: 1px solid #dce1e8; border-radius: 8px; font-size: 15px; }
 .costHelperInput em { font-style: normal; color: #6b7684; }
+/* 바깥으로 6px 나가는 공통 초점 테두리가 아래 원가 비율 칩을 덮었다(소유자 제보 2026-10-22) — 칸 안쪽에서만 표시 */
+.page .costHelperInput input:focus-visible { outline: none; border-color: #3182f6; box-shadow: inset 0 0 0 1px #3182f6; }
 .costHelperResult { display: grid; gap: 8px; }
 .costHelperResult p { margin: 0; font-size: 14px; line-height: 1.6; }
 

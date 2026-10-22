@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import JSZip from "jszip";
 import { lexPlanMarkdown, renderPlanMarkdown } from "../lib/plan-builder/markdown";
 import { restoreRangeTildes } from "../lib/plan-builder/range-tildes";
-import { isAmountCell, isShortCell } from "../lib/plan-builder/table-cells";
+import { isAmountCell, isShortCell, tableHeaderLabels, withTableCellLabels } from "../lib/plan-builder/table-cells";
 import { splitCircledSteps } from "../lib/plan-builder/text-steps";
 import { editExamples } from "../lib/plan-builder/edit-examples";
 import { renderDocx, renderPdf } from "../lib/delivery/document-renderer";
@@ -67,6 +67,24 @@ async function main() {
   assert.ok(amounts.includes('<td align="right" data-short><strong>450원</strong></td>'), "amount column is right-aligned on screen too");
   assert.ok(amounts.includes("<td data-short>1개월차</td>"), "the label column stays left");
 
+  // 4. Phone card tables: every body cell carries its column name (data-label) so 4+ column tables stack as cards at 375px.
+  const money = withTableCellLabels(await renderPlanMarkdown("| 월 | 매출 | 비용 | 통장 누적 |\n| --- | --- | --- | --- |\n| 1개월차 | 1,350,000원 | 1,800,000원 | **-450,000원** |"));
+  assert.ok(money.includes('<th data-short>월</th>'), "the header row keeps no label");
+  assert.ok(money.includes('<td data-short data-label="월">1개월차</td>'));
+  assert.ok(money.includes('<td align="right" data-short data-label="매출">1,350,000원</td>'), "alignment and short marks stay");
+  assert.ok(money.includes('<td align="right" data-label="통장 누적"><strong>-450,000원</strong></td>'));
+  // Editor HTML (no thead, <p> inside cells) and header text with markup/quotes/entities.
+  const edited = withTableCellLabels('<table style="min-width: 100px"><colgroup><col></colgroup><tbody><tr><th><p><strong>항목</strong></p></th><th><p>"예상" 금액 &amp; 근거</p></th></tr><tr><td><p>월세</p></td><td data-short><p>90만 원</p></td></tr></tbody></table><p>표 밖 <td>는 그대로</p>');
+  assert.ok(edited.includes('<td data-label="항목"><p>월세</p></td>'));
+  assert.ok(edited.includes('<td data-short data-label="&quot;예상&quot; 금액 &amp; 근거"><p>90만 원</p></td>'), "quotes are escaped, entities kept");
+  assert.ok(edited.endsWith("<p>표 밖 <td>는 그대로</p>"), "only table contents change");
+  assert.equal(withTableCellLabels(edited), edited, "running twice changes nothing");
+  // A table whose first row is not a header row gets no labels (it keeps the sideways-scroll table on phones).
+  const headless = "<table><tbody><tr><td>가</td><td>나</td></tr><tr><td>1</td><td>2</td></tr></tbody></table>";
+  assert.equal(withTableCellLabels(headless), headless);
+  assert.deepEqual(tableHeaderLabels([{ header: true, text: " 주차 " }, { header: true, text: "할\n일" }]), ["주차", "할 일"]);
+  assert.equal(tableHeaderLabels([{ header: true, text: "월" }, { header: false, text: "매출" }]), null);
+
   // 6. Workspace summary steps.
   const split = splitCircledSteps("소량 굽는 안이에요. 운영 순서는 ① 단지 직장인이 몇 시에 사는지 확인 ② 원가 시험 ③ 네이버 플레이스에 가게 등록이에요.");
   assert.deepEqual(split, { intro: "소량 굽는 안이에요. 운영 순서예요.", steps: ["① 단지 직장인이 몇 시에 사는지 확인", "② 원가 시험", "③ 네이버 플레이스에 가게 등록"], outro: "" });
@@ -82,6 +100,6 @@ async function main() {
   assert.equal(editExamples(4500)[0], "가격을 5,000원으로 바꿔줘");
   assert.equal(editExamples(65000)[0], "가격을 72,000원으로 바꿔줘");
   assert.ok(!editExamples(null).some(text => text.includes("가격")), "no made-up price when the plan has none");
-  console.log("document render: ranges, legacy tildes, Word/PDF output, Korean line breaks, table cells, summary steps and edit examples passed");
+  console.log("document render: ranges, legacy tildes, Word/PDF output, Korean line breaks, table cells, phone card labels, summary steps and edit examples passed");
 }
 void main().catch(error => { console.error(error); process.exitCode = 1; });

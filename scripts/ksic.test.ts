@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { KSIC_DIVISION_STRUCTURES, KSIC_STRUCTURE_OVERRIDES, KSIC_SYNONYMS, SECTOR_DIVISIONS, capacityUnitOrder, ksicAncestors, ksicByCode, ksicChildren, ksicDivision, ksicEntries, ksicPath, ksicStructure, licenseHint, isFinanceKsic, FINANCE_LICENSE_HINT, revenueBasis, searchKsic, structureFieldLabels, structureSummary } from "../lib/plan-builder/ksic";
+import { KSIC_DIVISION_STRUCTURES, KSIC_STRUCTURE_OVERRIDES, KSIC_SYNONYMS, SECTOR_DIVISIONS, capacityUnitOrder, ksicAncestors, ksicByCode, ksicChildren, ksicDivision, ksicEntries, ksicPath, ksicStructure, licenseHint, isFinanceKsic, FINANCE_LICENSE_HINT, revenueBasis, searchKsic, sectorForKsic, structureFieldLabels, structureSummary } from "../lib/plan-builder/ksic";
 import { STRUCTURE_LABELS } from "../lib/plan-builder/business-structure";
-import { KSIC_NAME_HINTS, ksicNameHint } from "../lib/plan-builder/ksic-hints";
+import { KSIC_NAME_HINTS, ksicNameHint, ksicSectorLabel } from "../lib/plan-builder/ksic-hints";
 
 // 1) 색인 무결성 — KSIC 11차 공표 개수
 assert.deepEqual([1, 2, 3, 4, 5].map(l => ksicEntries(l as 1 | 2 | 3 | 4 | 5).length), [21, 77, 234, 501, 1205], "대/중/소/세/세세 개수");
@@ -160,5 +160,16 @@ assert.equal(cafe[0].via, "synonym");
   assert.equal(searchKsic("우리 동네 맞벌이 가정을 위한 반찬 정기배송 서비스", { limit: 1, minLevel: 5 })[0]?.entry.code, "47223", "the business part still decides");
   assert.equal(searchKsic("카페를 운영하고 싶어요", { limit: 1, minLevel: 5 })[0]?.entry.code, "56221", "without a customer phrase nothing changes");
   assert.ok(searchKsic("카페 사장님 대상으로 SNS 대행", { limit: 2, minLevel: 5 }).some(m => m.entry.code === "75995"));
+}
+// 직접 만들어 파는 분류(제조업 C: 중분류 10~34)가 온라인 판매로 묶이면 큰 분류 이름을 '제조 · 온라인 판매'로 — 공식 이름 '…제조업' 옆에 '유통'이 붙지 않게
+{
+  const retail = "유통 · 온라인 판매";
+  for (const code of ["33992", "20424", "20422"]) {
+    assert.equal(sectorForKsic(code), "retail_commerce", `${code} is grouped as online sales`);
+    assert.equal(ksicSectorLabel(code, sectorForKsic(code), retail), "제조 · 온라인 판매", code);
+  }
+  for (const code of ["47813", "47912"]) assert.equal(ksicSectorLabel(code, sectorForKsic(code), retail), retail, `${code} is a real retail code`);
+  assert.equal(ksicSectorLabel("20423", "manufacturing", "제조 · 제품"), "제조 · 제품", "other sectors keep their label");
+  assert.equal(ksicSectorLabel(null, "retail_commerce", retail), retail, "without a code nothing changes");
 }
 console.log(`ksic: ${ksicEntries().length} entries, ${Object.keys(KSIC_DIVISION_STRUCTURES).length} division structures, ${Object.keys(KSIC_SYNONYMS).length} synonyms, sample searches passed`);

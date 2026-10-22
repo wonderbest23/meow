@@ -23,6 +23,7 @@ import { FactCard, FactPopover, highlightFacts, useFactEdit } from "./FactEdit";
 import { RewriteConfirm } from "../chat/intake-ui/IntakePanels";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { restoreRangeTildes } from "../../../lib/plan-builder/range-tildes";
+import { withTableCellLabels } from "../../../lib/plan-builder/table-cells";
 
 /** Chat edits after the plan exists (phase B); the choice stays hidden until the server side is live. */
 const EDIT_CHAT = process.env.NEXT_PUBLIC_INTAKE_EDIT_CHAT === "1";
@@ -295,7 +296,7 @@ export default function DocumentWorkspace(props: Props) {
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
                   <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}>{factMode
-                    ? <div className={`tiptap ${styles.factBody}`} onClick={event => pickFact(event.target)} onKeyDown={event => { if (event.key === "Enter") pickFact(event.target); }} dangerouslySetInnerHTML={{ __html: withBodyHeadingLevels(highlightFacts(restoreRangeTildes(section.html), facts.facts)) }} />
+                    ? <div className={`tiptap ${styles.factBody}`} onClick={event => pickFact(event.target)} onKeyDown={event => { if (event.key === "Enter") pickFact(event.target); }} dangerouslySetInnerHTML={{ __html: withBodyHeadingLevels(highlightFacts(withTableCellLabels(restoreRangeTildes(section.html)), facts.facts)) }} />
                     : <InlineDocEditor html={section.html} readOnly={isSample || !editing} status={props.editStates[section.key]?.status ?? "idle"} onDraft={html => props.onDraft(section.key, html)} onChange={html => onSave(section.key, html)} />}</div>
                   {!isSample && <div className={styles.saveState}>
                     {props.editStates[section.key]?.status === "failed" ? <><p role="alert">{props.editStates[section.key].message}</p><button onClick={() => props.onRetrySave(section.key)}><RefreshCw size={15} />다시 저장</button><button onClick={() => props.onDiscardDraft(section.key)}>서버 내용 불러오기</button></> : !editing && props.editStates[section.key] && <span role="status">{props.editStates[section.key].status === "saving" ? "서버에 저장 중…" : "서버에 저장됨"}</span>}
