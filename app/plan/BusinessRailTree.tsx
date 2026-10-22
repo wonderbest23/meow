@@ -5,7 +5,7 @@ import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
-import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, type Plan } from "../../lib/plan-builder/plan-store";
+import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
@@ -198,6 +198,11 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
       .catch(() => { if (alive) setRemoteFailed(true); });
     return () => { alive = false; };
   }, [mounted, remoteTick]);
+  /*
+   * 대화 화면이 알려 준 새 이름 — 대화는 서버에만 저장해 이 기기 저장본도, 처음 읽은 서버 목록도 옛 이름('새 사업 구상')이다.
+   * 알림을 받으면 바로 이름을 바꿔 보이고 서버 목록도 다시 읽는다. 목록 쪽이 더 새 저장이면 그쪽 이름을 따른다.
+   */
+  const [titles, setTitles] = useState<Record<string, PlanTitleNotice>>({});
   const plans = useMemo(() => {
     /* 지운 사업은 서버 목록을 처음 읽은 뒤라도 뺀다 — 예전엔 지운 사업이 새로고침 전까지 남았고, 다 지워도 셋이 보였다 */
     const deleted = new Set([...remoteDeleted, ...(mounted ? locallyDeletedPlanIds() : [])]);
@@ -207,8 +212,20 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
       const held = byId.get(plan.id);
       if (!held || plan.updatedAt.localeCompare(held.updatedAt) > 0) byId.set(plan.id, plan);
     }
+    for (const notice of Object.values(titles)) {
+      const plan = byId.get(notice.planId);
+      if (plan && plan.title !== notice.title && notice.updatedAt.localeCompare(plan.updatedAt) >= 0) byId.set(plan.id, { ...plan, title: notice.title, updatedAt: notice.updatedAt });
+    }
     return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [local, remote, remoteDeleted, mounted]);
+  }, [local, remote, remoteDeleted, mounted, titles]);
+  const shownTitles = useRef(new Map<string, string>());
+  shownTitles.current = new Map(plans.map(plan => [plan.id, plan.title]));
+  useEffect(() => subscribePlanTitle(notice => {
+    // 이미 같은 이름으로 보이고 있으면 서버를 다시 읽지 않는다(대화 화면은 저장할 때마다 알린다)
+    if (shownTitles.current.get(notice.planId) === notice.title) return;
+    setTitles(previous => ({ ...previous, [notice.planId]: notice }));
+    setRemoteTick(n => n + 1);
+  }), []);
   /* 이 기기의 사업 구성이 바뀌면(새로 만들거나 지움) 서버 목록도 다시 읽어 맞춘다 — 저장 때마다가 아니라 사업 번호가 바뀔 때만 */
   const localIds = useMemo(() => local.map(plan => plan.id).sort().join("|"), [local]);
   const firstLocalIds = useRef<string | null>(null);

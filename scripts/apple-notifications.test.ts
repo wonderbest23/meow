@@ -51,6 +51,8 @@ const db: Record<string, Row[]> = {
   plan_regenerations: Array.from({ length: 13 }, (_, i) => ({ id: `r${i}`, plan_id: "plan-2", ok: true })),
   projects: [{ id: "project-3", owner_id: "owner-1", opportunity: { planId: "plan-3" } }],
   landing_sites: [{ id: "site-3", project_id: "project-3", status: "published", custom_domain: null }],
+  // 웹 결제 환불 요청 기록 — 어드민 매출 집계(12)가 앱 환불과 함께 읽는다
+  refund_requests: [],
 };
 const field = (row: Row, key: string) => {
   const [column, nested] = key.split("->>");
@@ -249,7 +251,30 @@ async function main() {
   assert.equal((await routed.json()).error, "APPLE_ROOT_MISMATCH");
   assert.equal(orderRow("IAP-A-1002").status, "done");
 
-  console.log("apple-notifications: signed REFUND/REVOKE revoke once (plan·regen·bundle), forged/wrong-app/env-mismatch rejected, unknown order alerts once, TEST/CONSUMPTION_REQUEST recorded");
+  // 12) 어드민 매출 — 앱 환불(refunded, 환불 요청 기록 없음)은 전액 환불로 빠지고, 웹 환불은 처리 메모 금액만 빠진다
+  const { getServerSupabase } = await import("../lib/persistence");
+  const { loadRevenueSummary, summarizeRevenue } = await import("../lib/payments/revenue-stats");
+  const appRefunded = db.payment_orders.filter((row) => row.status === "refunded").reduce((sum, row) => sum + Number(row.amount), 0);
+  const appGross = db.payment_orders.filter((row) => ["done", "partial_canceled", "refunded"].includes(String(row.status))).reduce((sum, row) => sum + Number(row.amount), 0);
+  assert(appRefunded > 0, "fixture has refunded app orders by now");
+  db.payment_orders.push(order("WEB-CARD-1", { method: "CARD", status: "partial_canceled", amount: 30000, provider_status: "NICEPAY_live" }));
+  db.payment_orders.push(order("WEB-CARD-2", { method: "CARD", status: "canceled", amount: 30000 }));
+  db.refund_requests.push({ id: "rr-1", order_id: "WEB-CARD-1", status: "done", admin_note: "12,000원 카드 부분 취소 · 고객 요청" });
+  db.refund_requests.push({ id: "rr-2", order_id: "WEB-CARD-9", status: "received", admin_note: "" });
+  const revenue = await loadRevenueSummary(getServerSupabase()!);
+  assert.deepEqual(revenue, { gross: appGross + 30000, refunded: appRefunded + 12000, storeRefunded: appRefunded, net: appGross + 30000 - appRefunded - 12000 });
+  // 메모가 있으면 메모 금액(주문 금액을 넘지 않게), 없고 refunded 면 전액(계좌이체 바로 환불), 취소·실패 주문은 매출 아님
+  assert.deepEqual(summarizeRevenue([
+    { order_id: "A", amount: 59000, status: "refunded", method: "APPLE_IAP" },
+    { order_id: "G", amount: 9900, status: "refunded", method: "GOOGLE_IAP" },
+    { order_id: "T", amount: 50000, status: "refunded", method: "TRANSFER" },
+    { order_id: "B", amount: 89000, status: "done", method: "CARD" },
+    { order_id: "C", amount: 20000, status: "refunded", method: "CARD" },
+    { order_id: "X", amount: 70000, status: "canceled", method: "CARD" },
+  ], [{ order_id: "B", admin_note: "30,000원 카드 부분 취소" }, { order_id: "C", admin_note: "99,000원 카드 전액 취소" }, { order_id: "X", admin_note: "70,000원 카드 전액 취소" }]),
+  { gross: 227900, refunded: 168900, storeRefunded: 68900, net: 59000 });
+
+  console.log("apple-notifications: signed REFUND/REVOKE revoke once (plan·regen·bundle), forged/wrong-app/env-mismatch rejected, unknown order alerts once, TEST/CONSUMPTION_REQUEST recorded, admin revenue subtracts app and web refunds");
 }
 
 main().catch((error) => { console.error(error); process.exit(1); });

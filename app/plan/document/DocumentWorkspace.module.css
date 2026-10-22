@@ -61,9 +61,35 @@
    * 줄 묶음이 표 폭을 다 채우게 한다(width:100% 면 줄글 칸이 최소 폭으로 눌리므로 max-content + min-width). 넓은 화면에서는 표가 원래 table 이라 이 규칙을 쓰면 안 된다:
    * 표 안에 표가 하나 더 생겨 첫 열 칸에 갇히고, 1280 화면에서 표가 본문 폭의 1/3 로 줄었다(실제 생성 2026-10-22).
    */
-  .body :global(.tiptap):not(.factBody) table > tbody { display:table; width:max-content; min-width:100%; }
+  .body :global(.tiptap):not(.factBody) table:has(tr > :nth-child(4)) > tbody { display:table; width:max-content; min-width:100%; }
+  /* 세 칸 이하 표는 밀지 않고 화면 폭에 맞춘다 — 위 max-content 가 InlineDocEditor 의 '폭 맞춤'을 이겨 1,066~3,521px 로 늘어났다(실제 생성 2026-10-22 375px) */
+  .body :global(.tiptap):not(.factBody) table:not(:has(tr > :nth-child(4))) > tbody { display:table; width:100%; }
   .body :global(.tiptap[contenteditable=false]) :global(.tableWrapper)::before { content:"표를 누르면 크게 볼 수 있어요"; display:block; margin:0 0 6px; color:var(--app-muted); font-size:12px; }
   .body :global(.tiptap[contenteditable=false]) table { cursor:zoom-in; background:linear-gradient(to right, #fff 30%, rgba(255,255,255,0)) left center / 24px 100% no-repeat local, linear-gradient(to left, #fff 30%, rgba(255,255,255,0)) right center / 24px 100% no-repeat local, radial-gradient(farthest-side at 0 50%, rgba(16,24,40,.16), transparent) left center / 10px 100% no-repeat scroll, radial-gradient(farthest-side at 100% 50%, rgba(16,24,40,.16), transparent) right center / 10px 100% no-repeat scroll; }
+}
+/*
+ * 폰: 네 칸 이상 표는 줄마다 카드로 쌓는다 — 첫 칸은 카드 제목, 나머지 칸은 '열 이름(data-label) + 값'.
+ * 세 칸 이하 표는 화면 폭에 맞췄지만(InlineDocEditor.module.css) 네 칸 이상은 375px 에서 옆으로 밀어야만 읽혀,
+ * 12개월 돈 흐름·12주 할 일 표를 밀면서 머리줄을 기억해야 했다(2026-10-22 375px).
+ * 숫자 열(오른쪽 정렬)·짧은 칸은 이름표와 한 줄에 두고 값을 오른쪽에 맞춘다(돈 표가 PC·PDF 처럼 오른쪽 정렬로 읽힌다). 줄글 칸은 이름표 아래에서 줄을 바꾼다.
+ * 이름표는 보여 주기 전용(편집기 꾸밈·withTableCellLabels)이라 이름표가 없는 표는 예전처럼 밀어 본다.
+ * 고치는 중(contenteditable=true)에는 칸을 그대로 고칠 수 있게 원래 표로 두고, 인쇄(screen 아님)·PDF·Word·PC 화면도 그대로다.
+ * 편집기가 표에 직접 다는 min-width(열마다 25px)는 인라인 스타일이라 !important 로만 풀린다. 안내 줄은 :has 를 겹쳐 쓸 수 없어 둘로 나눠 건다.
+ */
+@media screen and (max-width:640px) {
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) { display:block; width:100%; max-width:100%; min-width:0 !important; overflow:visible; border:0; background:none; font-size:14px; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) > colgroup, .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) thead, .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) tr:not(:has(> td)) { display:none; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) > tbody { display:block; width:auto; min-width:0; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) tr { display:block; margin:0 0 10px; padding:10px 14px; border:1px solid var(--app-line); border-radius:10px; background:var(--app-surface, #fff); }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) :is(th,td) { display:block; width:auto; min-width:0; padding:6px 0; border:0; border-top:1px solid var(--app-line); background:none; text-align:left; white-space:normal; line-height:1.6; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) :is(th,td) > p { margin:0; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) tr > :first-child { padding:0 0 8px; border-top:0; color:var(--app-text); font-size:15px; font-weight:600; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) :is(th,td):not(:first-child)[data-label]::before { content:attr(data-label); display:block; margin:0 0 2px; color:var(--app-muted); font-size:12.5px; font-weight:600; line-height:1.5; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) :is(th,td):is([data-short],[align="right"]):not(:first-child) { display:flow-root; text-align:right; }
+  .body :global(.tiptap):is([contenteditable=false], .factBody) table:has(tr > :nth-child(4)):has(td[data-label]) :is(th,td):is([data-short],[align="right"]):not(:first-child)[data-label]::before { float:left; max-width:60%; margin:0 12px 0 0; text-align:left; line-height:22px; }
+  /* 카드는 밀 필요가 없다 — 안내는 '원래 표 모양으로 크게 보기'로(누르면 예전처럼 크게 보기 창), 고치기 화면의 '밀어 보기' 안내는 뺀다 */
+  .body :global(.tiptap[contenteditable=false]) :global(.tableWrapper):has(> table tr > :nth-child(4)):has(> table td[data-label])::before { content:"표를 누르면 원래 표 모양으로 크게 볼 수 있어요"; }
+  .body .factBody :global(.fact-table-scroll):has(> table tr > :nth-child(4)):has(> table td[data-label])::before { display:none; }
 }
 /* 표 크게 보기 — 전체 화면, 표는 상하좌우로 스크롤 */
 .tableZoom { width:100vw; max-width:100vw; height:100dvh; max-height:100dvh; margin:0; padding:0; border:0; background:#fff; }

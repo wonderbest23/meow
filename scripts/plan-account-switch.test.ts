@@ -105,7 +105,17 @@ async function main() {
     // 로그아웃하면 계정 표식도 지운다
     api.clearLocalState();
     assert.equal(local.getItem(ACCOUNT), null);
-    console.log("plan-account-switch: account switch isolation, guest carry-over, legacy cache and cross-tab assertions passed");
+    // 대화 화면이 서버에 저장한 새 사업 이름은 같은 탭의 왼쪽 목록에 알린다(예시 사업·빈 이름은 알리지 않는다)
+    const notices: Array<{ planId: string; title: string }> = [];
+    const offTitle = api.subscribePlanTitle(notice => notices.push({ planId: notice.planId, title: notice.title }));
+    api.announcePlanTitle({ planId: "plan_candle", title: "향기로운 캔들 공방", updatedAt: "2026-10-22T01:00:00.000Z" });
+    api.announcePlanTitle({ planId: "plan_candle", title: "  ", updatedAt: "2026-10-22T01:00:01.000Z" });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    offTitle();
+    api.announcePlanTitle({ planId: "plan_candle", title: "다른 이름", updatedAt: "2026-10-22T01:00:02.000Z" });
+    await new Promise(resolve => setTimeout(resolve, 0));
+    assert.deepEqual(notices, [{ planId: "plan_candle", title: "향기로운 캔들 공방" }], "구독을 끊은 뒤에는 알림을 받지 않는다");
+    console.log("plan-account-switch: account switch isolation, guest carry-over, legacy cache, cross-tab and title notice assertions passed");
   } finally {
     unsubscribe();
     api.clearLocalState();

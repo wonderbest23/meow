@@ -19,11 +19,12 @@ export function useAnswerSuggestions(planId: string | null | undefined) {
     if (planId) setState(current => current && !current.planId ? { ...current, planId } : current);
   }, [planId]);
 
-  const request = useCallback(async (text: string, stage: "startup" | "operating") => {
+  /** planId: 이미 열린 사업에서 사업 설명에 답할 때('생각한 사업이 있어요' 카드로 시작) — 첫 사업을 기다리지 않고 바로 붙인다 */
+  const request = useCallback(async (text: string, stage: "startup" | "operating", planId?: string) => {
     controllerRef.current?.abort();
     const controller = new AbortController();
     controllerRef.current = controller;
-    setState({ planId: null, suggestions: {}, pending: true });
+    setState({ planId: planId ?? null, suggestions: {}, pending: true });
     try {
       const response = await fetch("/api/plan/chat/suggestions", {
         method: "POST",

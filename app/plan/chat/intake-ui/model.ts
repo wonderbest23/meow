@@ -6,7 +6,7 @@ import type { ServerPlan } from "../../../../lib/plan-builder/plan-server-store"
 import type { IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { SECTOR_PROFILES, type ProposalSector } from "../../../../lib/plan-builder/proposal-blueprint";
 import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
-import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS } from "../../../../lib/plan-builder/intake-options";
+import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, wonAnswer } from "../../../../lib/plan-builder/intake-options";
 import { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
 import { applyIntakeResources } from "../../../../lib/plan-builder/intake-resource-update";
 import { RESOURCE_ANSWER_IDS, RESOURCE_KEYS, resourceLimitsSchema, resourceQuoteSchema, type ResourceKey, type ResourceContext, type ResourceQuote } from "../../../../lib/plan-builder/intake-candidate-resources";
@@ -164,12 +164,36 @@ export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQue
     const hint = parsed.status === "known" ? "" : numberInputHint({ kind: "number", unit: question.id === "budget" ? "원" : "시간" }, value.replace(/[~～〜–]/g, ""));
     return parsed.status === "known" ? { kind: "answer", questionId: question.id, value } : hint ? { kind: "invalid", hint } : { kind: "clarify", canAnswer: false };
   }
+  const typed = typedAmountAnswer(snapshot, question, value);
+  if (typed !== undefined) return { kind: "answer", questionId: question.id, value: typed };
   const numberHint = numberInputHint(question, value);
   if (numberHint) return { kind: "invalid", hint: numberHint };
   // '월 30만'·'30만원/월'처럼 질문 기간을 붙여 써도 숫자 답으로 받는다
   if (question.kind === "number" && !/^[\d\s,.억만천백십원%시간분개명건회좌석룸]+$/.test(stripAnswerPeriod(value, question.period))) return { kind: "clarify", canAnswer: false };
   if (/\n.+|그리고|그런데|하지만/.test(value) || /\d\s*만원.*\d\s*시간/.test(value)) return { kind: "clarify", canAnswer };
   return { kind: "answer", questionId: question.id, value };
+}
+
+/** 대략을 뜻하는 말 — 떼고 숫자만 읽는다('50만원 정도', '약 30만원', '20만원 이하') */
+const APPROX_WORDS = /^(?:약|대략|대충|한)\s*|\s*(?:정도|쯤|내외|안팎|가량|이하|이내|미만|이상|초과|넘게|안쪽|선)$/g;
+/**
+ * 원 단위 숫자 질문에 범위 칩 이름('50만원 미만')이나 '50만원 정도'처럼 적어 보낸 답을 숫자 답으로 바꾼다.
+ * 예전엔 글자('미만'·'정도')가 섞였다며 '이 내용은 어떻게 남길까요?'로 빠져, 답이 저장되지 않은 것처럼 보였다(소유자 제보 2026-10-22).
+ * 칩 이름과 같으면 칩을 누른 것과 같은 값(범위 가운데)을, 아니면 적은 숫자를 쓴다. 읽지 못하면 undefined(기존 흐름).
+ */
+export function typedAmountAnswer(snapshot: IntakeSnapshot, question: IntakeQuestion, text: string): string | undefined {
+  if (question.kind !== "number" || question.unit !== "원" || question.options?.length) return undefined;
+  const normalize = (value: string) => value.replace(/\s+/g, "").replace(/\(예상\)$/, "");
+  const value = normalize(stripAnswerPeriod(text.trim(), question.period));
+  if (!/\d/.test(value)) return undefined;
+  const months = question.id === "sales" ? periodMonths(answerText(snapshot.intake.answers.period?.value ?? null)) : null;
+  const ladder = amountRanges(intakeChipSector(snapshot), question.id, snapshot.intake.mode);
+  const range = (months && months > 1 ? scaledAmountRanges(ladder, months) : ladder).find(item => normalize(item.label) === value);
+  if (range) return range.max === 0 ? "0원" : wonAnswer(rangeMidpoint(range));
+  const stripped = value.replace(APPROX_WORDS, "");
+  if (stripped === value || !/^[\d,.억만천백십원]+$/.test(stripped)) return undefined;
+  const amount = numericAnswer(question, stripped);
+  return amount === undefined || amount < 0 ? undefined : wonAnswer(amount);
 }
 
 export function typedChoiceAnswer(snapshot: IntakeSnapshot, question: IntakeQuestion, text: string): IntakeValue | undefined {
@@ -667,6 +691,16 @@ export function unfinishedAnswerText(text: string) {
   if (/N원|N건/.test(trimmed)) return true; // goal metric placeholder not yet filled
   // Trailing " / ", ", ", " — " or ":" means a step or a supplement was started but not filled.
   return [STEP_SEPARATOR.trim(), LIST_SEPARATOR.trim(), "—", "–", ":"].some(separator => trimmed.endsWith(separator));
+}
+
+/*
+ * 판매 가격에 0원을 적었는지 — 보내기 전에 한 번만 묻는다(실수로 0을 적어도 그대로 저장돼 계산이 모두 0이 됐다, 점검 2026-10-22).
+ * 무료로 주는 상품도 있어 막지는 않는다. 서버(validatedAnswer)와 같은 규칙으로 읽는다: 질문 기간 말을 떼고 원 단위로.
+ */
+export function zeroPriceAnswer(question: Pick<IntakeQuestion, "fieldKey" | "unit" | "period"> | null | undefined, value: IntakeValue): boolean {
+  if (!question || question.fieldKey !== "price" || question.unit !== "원" || value === null) return false;
+  if (typeof value === "number") return value === 0;
+  return typeof value === "string" && coachAmount(stripAnswerPeriod(value.trim(), question.period)) === 0;
 }
 
 /** Number text for a stepper/keypad: JS number, "10시간", "12,000원" or "120만원" → digits; prose stays undefined. */

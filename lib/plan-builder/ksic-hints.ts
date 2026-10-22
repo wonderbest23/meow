@@ -32,3 +32,13 @@ export const KSIC_NAME_HINTS: Record<string, string> = {
 export function ksicNameHint(code: string | null | undefined): string | undefined {
   return code ? KSIC_NAME_HINTS[code] : undefined;
 }
+
+/*
+ * 세부 업종 옆에 붙이는 큰 분류 이름 — 직접 만들어 파는 분류(캔들·디퓨저·비누 공방)는 판매 방식을 따라 '유통 · 온라인 판매'로 묶었는데,
+ * 공식 이름이 '…제조업'인 분류 옆에 '유통'이 붙어 다른 업종을 고른 것처럼 보였다(점검 2026-10-22).
+ * 표준산업분류 대분류 C(제조업)는 중분류 10~34 — 이 분류가 온라인 판매로 묶였으면 '제조 · 온라인 판매'로 보인다. 저장값(업종 구분)은 그대로다.
+ */
+export function ksicSectorLabel(code: string | null | undefined, sector: string | null | undefined, label: string): string {
+  const division = Number(code?.slice(0, 2));
+  return sector === "retail_commerce" && /^\d{2}/.test(code ?? "") && division >= 10 && division <= 34 ? "제조 · 온라인 판매" : label;
+}

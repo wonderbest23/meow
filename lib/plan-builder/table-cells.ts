@@ -41,3 +41,43 @@ export function isNumericColumn(cells: string[], align: string | null | undefine
   const filled = cells.map(cell => cell.trim()).filter(cell => cell && cell !== "-" && cell !== "—");
   return filled.length > 0 && filled.every(isAmountCell);
 }
+
+/*
+ * 폰에서 네 칸 이상 표는 줄마다 카드로 쌓는다 — 옆으로 밀지 않고 '열 이름: 값'으로 읽게(DocumentWorkspace.module.css).
+ * 칸마다 머리줄 글자를 data-label 로 붙여 두면 CSS 가 그 이름표를 칸 앞에 그린다. 보여 주기 전용이라 저장하는 HTML·PDF·Word 는 그대로다.
+ */
+
+/** 머리줄 칸들 → 열 이름표. 첫 줄이 모두 머리 칸(th)일 때만 이름표로 쓰고, 아니면 null(카드로 바꾸지 않는다). */
+export function tableHeaderLabels(cells: Array<{ header: boolean; text: string }>): string[] | null {
+  if (!cells.length || !cells.every(cell => cell.header)) return null;
+  return cells.map(cell => cell.text.replace(/\s+/g, " ").trim());
+}
+
+const TABLE_HTML = /<table\b[\s\S]*?<\/table>/gi;
+const ROW_HTML = /<tr\b[\s\S]*?<\/tr>/gi;
+const CELL_HTML = /<(t[hd])\b([^>]*)>([\s\S]*?)<\/\1>/gi;
+const escapeLabel = (text: string) => text.replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+/**
+ * 서버 렌더 본문(편집기 준비 전·사실 고치기 화면)의 표 칸에 열 이름표(data-label)를 붙인다.
+ * 편집기 안에서는 같은 규칙을 ProseMirror 꾸밈으로 붙인다(InlineDocEditor). 글자 사이 엔티티(&amp; 등)는 속성에서도 그대로 풀린다.
+ */
+export function withTableCellLabels(html: string): string {
+  return html.replace(TABLE_HTML, table => {
+    let labels: string[] | null | undefined;
+    return table.replace(ROW_HTML, row => {
+      if (labels === undefined) {
+        labels = tableHeaderLabels([...row.matchAll(CELL_HTML)].map(([, tag, , inner]) => ({ header: tag.toLowerCase() === "th", text: inner.replace(/<[^>]*>/g, "") })));
+        return row;
+      }
+      const names = labels;
+      if (!names) return row;
+      let column = 0;
+      return row.replace(CELL_HTML, (cell, tag: string, attributes: string, inner: string) => {
+        const label = names[column++];
+        if (!label || /\sdata-label=/.test(attributes)) return cell;
+        return `<${tag}${attributes} data-label="${escapeLabel(label)}">${inner}</${tag}>`;
+      });
+    });
+  });
+}

@@ -226,6 +226,21 @@ export function subscribePlanState(fn: () => void): () => void {
   return () => void stateListeners.delete(fn);
 }
 
+/*
+ * 서버에서 사업 이름이 바뀌었다고 알린다(같은 탭 안) — 대화 화면은 이 기기 저장본을 거치지 않고 서버에 바로 저장해서,
+ * 사업 방향이 정리돼 이름이 '새 사업 구상'에서 바뀌어도 왼쪽 목록은 처음 읽은 서버 목록의 옛 이름을 새로고침 전까지 보였다(점검 2026-10-22).
+ */
+export type PlanTitleNotice = { planId: string; title: string; updatedAt: string };
+const titleListeners = new Set<(notice: PlanTitleNotice) => void>();
+export function announcePlanTitle(notice: PlanTitleNotice) {
+  if (!notice.planId || !notice.title.trim() || isSamplePlan(notice.planId)) return;
+  queueMicrotask(() => { for (const fn of titleListeners) fn(notice); });
+}
+export function subscribePlanTitle(fn: (notice: PlanTitleNotice) => void): () => void {
+  titleListeners.add(fn);
+  return () => void titleListeners.delete(fn);
+}
+
 /** Cache an acknowledged server version without launching another whole-state autosave. */
 export function cacheDocumentSection(planId: string, key: string, section: StoredSection, updatedAt: string) {
   const state = loadState();

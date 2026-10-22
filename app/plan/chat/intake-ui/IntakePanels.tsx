@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type FormEvent, type KeyboardEvent as Reac
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { LoadingStatus, Spinner } from "../../PlanLoading";
-import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Store, X } from "lucide-react";
+import { ArrowRight, Check, CheckCircle2, ChevronRight, FileText, Lightbulb, ListFilter, LoaderCircle, PencilLine, Plus, Sparkles, Store, X } from "lucide-react";
 import type { IntakeCommand, IntakeSnapshot, IntakeValue } from "../../../../lib/plan-builder/intake-types";
 import { getIntakeQuestion, type IntakeMode, type IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
@@ -16,7 +16,7 @@ import { answerText, assembleHybridText, hybridComplete, incompleteChoiceText, C
 import { mentionedAnswer, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
-import { ksicNameHint } from "../../../../lib/plan-builder/ksic-hints";
+import { ksicNameHint, ksicSectorLabel } from "../../../../lib/plan-builder/ksic-hints";
 import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 import styles from "../intake.module.css";
 import { chatTextPreview } from "./model";
@@ -198,9 +198,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       {candidate && (inChat
         ? <div className={styles.chipRow}><button type="button" className={styles.chip} aria-pressed={draft.custom} data-selected={draft.custom || undefined} disabled={disabled} onClick={() => { onChange({ ...draft, custom: !draft.custom, selected: [], unknown: false, ksic: undefined }); if (!draft.custom) onComposer?.(); }}>직접 적을래요</button></div>
         : <label className={styles.customToggle}><input type="checkbox" checked={draft.custom} onChange={event => onChange({ ...draft, custom: event.target.checked, selected: [], unknown: false, ksic: undefined })} />직접 생각한 사업 적기</label>)}
-      {hybrid && inChat && suggestions?.pending && <SuggestionPlaceholder />}
-      {hybrid && inChat && suggestions && !suggestions.pending && <SuggestionChips question={question} draft={draft} disabled={disabled} suggestions={suggestions.items} groups={groups} onChange={onChange} />}
-      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} extraPicked={suggestions && !suggestions.pending ? pickedSuggestions(question, draft, suggestions.items) : 0} onChange={onChange} coach={coach} onSend={send} />}
+      {hybrid && <HybridChips question={question} draft={draft} disabled={disabled} groups={groups} revealed={revealed} suggestions={inChat ? suggestions : undefined} onChange={onChange} coach={coach} onSend={send} />}
       {ticket && <AmountLadder question={question} ranges={ticketRanges} disabled={disabled} staging={inChat} exactLabel="정확한 금액 알아요 (기록 있음)" onCommit={commit} onRange={range => stage(`${range.label} (예상)`)} onExact={amount => stage(`${formatWon(amount)} (실제 기록)`)} />}
       {prefill && <div className={styles.chipStep} role="group" aria-label="문장 시작 선택">
         <div className={styles.chipRow}>{options.map(option => <button key={option.value} type="button" className={styles.chip} data-selected={draft.text.trim() === option.label || undefined} disabled={disabled} onClick={() => { onChange({ ...draft, custom: false, selected: [], unknown: false, text: option.label }); onComposer?.("○○"); }}>{option.label}</button>)}</div>
@@ -246,50 +244,28 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
 }
 
 /** hybrid_text_chips (spec §2): step chips write the assembled sentence into `draft.text`; the composer only supplements it. */
-/** 이 사업에 맞춘 AI 추천 칩. 업종 칩과 같은 답변에 자유 문장 조각으로 합쳐지고, 다시 누르면 빠진다. */
-const pickedSuggestions = (question: IntakeQuestion, draft: AnswerDraft, suggestions: string[] | undefined) => {
-  const pieces = unmatchedPieces(question, draft.text);
-  return suggestions?.filter(suggestion => pieces.includes(suggestion)).length ?? 0;
-};
-
-/** 추천이 아직 오는 중일 때 같은 자리를 잡아 둔다. 도착하면 칩으로 바뀌어 아래 선택지가 밀리지 않는다. */
-function SuggestionPlaceholder() {
-  return <div className={`${styles.chipStep} ${styles.suggestionStep}`} role="status" aria-label="이 사업에 맞춘 추천 준비 중">
-    <p className={styles.stepLegend}>이 사업에 맞춘 추천<span>준비하고 있어요…</span></p>
-    <div className={styles.chipRow} aria-hidden="true">{[300, 240, 270].map(width => <span key={width} className={styles.suggestionSkeleton} style={{ width }} />)}</div>
-  </div>;
-}
-
-function SuggestionChips({ question, draft, disabled, suggestions, groups, onChange }: {
-  question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; suggestions: string[]; groups: ReturnType<typeof optionGroups>; onChange: (value: AnswerDraft) => void;
-}) {
-  const pieces = unmatchedPieces(question, draft.text);
-  // "최대 N개" 질문은 업종 칩과 추천을 합쳐 N개까지. 한 개만 고르는 질문은 추천끼리 바꿔 끼운다.
-  const limit = chipLimit(question.id);
-  const chipPicks = groups.filter(group => !isFilterGroup(group.name)).reduce((sum, group) => sum + group.options.filter(option => draft.selected.includes(option.value)).length, 0);
-  const full = limit > 1 && chipPicks + pickedSuggestions(question, draft, suggestions) >= limit;
-  const toggle = (suggestion: string) => {
-    const next = pieces.includes(suggestion) ? pieces.filter(piece => piece !== suggestion) : [...(limit > 1 ? pieces : pieces.filter(piece => !suggestions.includes(piece))), suggestion];
-    onChange({ ...draft, custom: false, unknown: false, text: assembleHybridText(question, draft.selected, next) });
-  };
-  return <div className={`${styles.chipStep} ${styles.suggestionStep}`} role="group" aria-label="이 사업에 맞춘 추천">
-    <p className={styles.stepLegend}>이 사업에 맞춘 추천<span>AI 초안 · 누르면 입력칸에 들어가요</span></p>
-    <div className={styles.chipRow}>{suggestions.map(suggestion => {
-      const selected = pieces.includes(suggestion);
-      return <button key={suggestion} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && full} onClick={() => toggle(suggestion)}>{suggestion}</button>;
-    })}</div>
-  </div>;
-}
-
-function HybridChips({ question, draft, disabled, groups, revealed, extraPicked = 0, onChange, coach = false, onSend }: {
+function HybridChips({ question, draft, disabled, groups, revealed, suggestions, onChange, coach = false, onSend }: {
   question: IntakeQuestion; draft: AnswerDraft; disabled: boolean; groups: ReturnType<typeof optionGroups>; revealed: (index: number) => boolean;
-  /** 같은 한도에 포함되는 맞춤 추천 선택 수 */
-  extraPicked?: number; onChange: (value: AnswerDraft) => void;
+  /**
+   * 이 사업에 맞춘 AI 추천 — 따로 상자에 두면 아래 선택지와 겹쳐 보여 무엇을 골라야 할지 헷갈렸다(소유자 피드백 2026-10-22).
+   * 첫 선택지 줄 맨 앞에 ✨ 표시를 단 칩으로 섞어 두고, 같은 한도(최대 N개)로 함께 센다. 고르면 답 문장 조각으로 합쳐진다.
+   */
+  suggestions?: QuestionSuggestions; onChange: (value: AnswerDraft) => void;
   /** Coach chat: send as soon as every step is filled; a partial pick is sent from the composer, where the picked chips appear as text. */
   coach?: boolean; onSend?: (value: AnswerDraft) => void;
 }) {
   const limit = chipLimit(question.id);
-  const next = (selected: string[]): AnswerDraft => ({ ...draft, custom: false, unknown: false, selected, text: assembleHybridText(question, selected, unmatchedPieces(question, draft.text)) });
+  const aiItems = suggestions && !suggestions.pending ? suggestions.items : [];
+  const pieces = unmatchedPieces(question, draft.text);
+  const extraPicked = aiItems.filter(item => pieces.includes(item)).length;
+  // 추천은 첫 선택지 줄(필터가 아닌 첫 단계)에 붙는다
+  const aiGroup = groups.findIndex(group => !isFilterGroup(group.name));
+  // 한 개만 고르는 질문은 추천끼리 바꿔 끼운다
+  const toggleSuggestion = (item: string) => {
+    const nextPieces = pieces.includes(item) ? pieces.filter(piece => piece !== item) : [...(limit > 1 ? pieces : pieces.filter(piece => !aiItems.includes(piece))), item];
+    onChange({ ...draft, custom: false, unknown: false, text: assembleHybridText(question, draft.selected, nextPieces) });
+  };
+  const next = (selected: string[]): AnswerDraft => ({ ...draft, custom: false, unknown: false, selected, text: assembleHybridText(question, selected, pieces) });
   const update = (selected: string[]) => {
     const value = next(selected);
     (coach && onSend && !extraPicked && hybridComplete(question, selected) ? onSend : onChange)(value);
@@ -306,9 +282,13 @@ function HybridChips({ question, draft, disabled, groups, revealed, extraPicked 
     const stepLimit = filter ? 1 : limit;
     const picked = group.options.filter(option => draft.selected.includes(option.value)).length + (filter ? 0 : extraPicked);
     const title = groupTitle(group.name);
+    const withAi = index === aiGroup && !!suggestions;
     return <div key={group.name ?? index} className={styles.chipStep} role="group" aria-label={title || question.label} data-step={groups.length > 1 ? index + 1 : undefined}>
-      {(title || stepLimit > 1) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}</p>}
-      <div className={styles.chipRow}>{group.options.map(option => {
+      {(title || stepLimit > 1 || withAi) && <p className={styles.stepLegend}>{title}{stepLimit > 1 && <span>{`최대 ${stepLimit}개 · ${picked}/${stepLimit}`}</span>}{withAi && <span className={styles.suggestionNote} role="status"><Sparkles size={12} aria-hidden="true" />{suggestions?.pending ? "이 사업에 맞춘 추천을 고르고 있어요" : "표시는 이 사업에 맞춘 추천이에요"}</span>}</p>}
+      <div className={styles.chipRow}>{withAi && suggestions?.pending && [180, 140].map(width => <span key={`ai-wait-${width}`} className={styles.suggestionSkeleton} style={{ width }} aria-hidden="true" />)}{index === aiGroup && aiItems.map(item => {
+        const selected = pieces.includes(item);
+        return <button key={`ai-${item}`} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => toggleSuggestion(item)}><span className={styles.suggestionLabel}><Sparkles size={13} aria-hidden="true" />{item}<span className={styles.srOnly}> (맞춤 추천)</span></span></button>;
+      })}{group.options.map(option => {
         const selected = draft.selected.includes(option.value);
         return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{option.label}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
       })}</div>
@@ -511,6 +491,14 @@ export const isDesignReplyText = (text: string) => text.includes("\n\n이렇게 
 export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = false }: { snapshot: IntakeSnapshot; onEdit: (id: string) => void; receipt?: string; readOnly?: boolean }) {
   const lastUserId = [...snapshot.coach.messages].reverse().find(message => message.role === "user")?.id;
   const mode = { exploring: "아이디어를 찾고 있어요", startup: "생각한 사업이 있어요", operating: "사업을 운영 중이에요" }[snapshot.intake.mode];
+  /*
+   * 업종을 바꾸면(업종 확인의 [바꾸기]·연필로 다시 고르기) 마지막 업종 답만 보인다 — 예전엔 바꾸기 전 업종과 새 업종이
+   * 같은 질문과 함께 두 번 쌓여 어느 쪽이 지금 업종인지 헷갈렸다(점검 2026-10-22). 바뀐 답 아래에 '업종을 바꿨어요'를 남긴다.
+   */
+  const industryLabel = `${getIntakeQuestion(snapshot.intake.mode, snapshot.intake.sector, "industry")?.label ?? "업종"}: `;
+  const industryAnswerId = snapshot.intake.answers.industry?.messageId;
+  const replacedIndustry = new Set(industryAnswerId && snapshot.coach.messages.some(message => message.id === industryAnswerId)
+    ? snapshot.coach.messages.filter(message => message.role === "user" && message.id !== industryAnswerId && message.text.startsWith(industryLabel) && !snapshot.intake.notes.some(note => note.id.startsWith(`${message.id}:`))).map(message => message.id) : []);
   return <div className={styles.chatHistory} aria-label="지금까지의 대화">
     <div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div>
     <article className={styles.userMessage} data-coach-message="user"><p>{mode}</p></article>
@@ -518,6 +506,7 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       if (snapshot.intake.job?.kind === "design" && message.id === `${snapshot.intake.job.id}:reply` && snapshot.coach.design?.sourceRevision === (snapshot.coach.documentRevision ?? snapshot.coach.revision)) return null;
       // 사업 방향 요약 글(businessDesignReply)은 대화에 쌓지 않는다 — 앞 답을 고칠 때마다 한 벌씩 늘었다. 최신 방향은 아래 카드 한 곳에만 보인다.
       if (message.role === "assistant" && isDesignReplyText(message.text)) return null;
+      if (replacedIndustry.has(message.id)) return null;
       const answerEntry = Object.entries(snapshot.intake.answers).find(([, answer]) => answer.messageId === message.id);
       const notes = snapshot.intake.notes.filter(note => note.id.startsWith(`${message.id}:`) && /^\d+$/.test(note.id.slice(message.id.length + 1)));
       // Older message labels are display-only; edits always use the current stable question ID.
@@ -531,7 +520,8 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
           {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{bubbleAnswerText(labelled, text)}</p>}
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
-        {receipt && message.id === lastUserId && !notes.length && <p className={styles.messageStatus} data-receipt>{receipt}</p>}
+        {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
+          : message.id === industryAnswerId && replacedIndustry.size > 0 && <p className={styles.messageStatus}>업종을 바꿨어요</p>}
         {/* 질문으로 남긴 글은 아래 'AI 답변 받기'가 따로 안내한다 — 질문 말풍선에 '입력은 저장됨'을 붙이지 않는다 */}
         {notes.length > 0 && !notes.every(note => note.intent === "question") && <p className={styles.messageStatus}>{notes.some(note => note.status === "failed") ? "입력은 저장됨 · 자동 정리는 미완료" : notes.some(note => note.status === "queued" || note.status === "processing") ? "입력은 저장됨 · 자동 정리 중" : notes.some(note => note.status === "review") ? "입력은 저장됨 · 정리한 내용 확인 필요" : "입력은 저장됨"}</p>}
       </div>;
@@ -548,7 +538,7 @@ export function AnswerHistory({ snapshot, drafts, onEdit, onKeepAsMemo, readOnly
     const answer = snapshot.intake.answers[question.id];
     const labelled = answer && answer.status !== "unknown" ? Array.isArray(answer.value) ? answer.value.map(item => question.options?.find(option => option.value === item)?.label ?? item).join(", ") : question.options?.find(option => option.value === answer.value)?.label ?? (summaryAnswerText(question, answer.value, snapshot.candidateIdeas) || answerText(answer.value)) : "";
     /* 업종은 고른 세부 업종(화초 및 식물 소매업)을 앞에 — 큰 분류만 보이면 다른 걸 고른 줄 안다 */
-    const value = answer ? answer.status === "unknown" ? "아직 정하지 않았어요" : question.id === "industry" && snapshot.ksic ? `${snapshot.ksic.name} · ${labelled}` : labelled : coachFieldDisplay(snapshot.coach.fields.find(field => field.key === question.fieldKey)?.value ?? "");
+    const value = answer ? answer.status === "unknown" ? "아직 정하지 않았어요" : question.id === "industry" && snapshot.ksic ? `${snapshot.ksic.name} · ${ksicSectorLabel(snapshot.ksic.code, snapshot.intake.sector, labelled)}` : labelled : coachFieldDisplay(snapshot.coach.fields.find(field => field.key === question.fieldKey)?.value ?? "");
     return <li key={question.id}><div><strong>{question.label}</strong><p>{plainText(value) || "아직 저장하지 않은 답변"}</p>{draftIds.includes(question.id) && <small>이 기기에 입력 중인 내용이 있어요</small>}</div>{!readOnly && <button className={styles.iconButton} type="button" title={`${question.label} 수정`} aria-label={`${question.label} 수정`} onClick={() => onEdit(question.id)}><PencilLine size={17} /></button>}</li>;
   })}</ul></details>}</>;
 }
@@ -931,7 +921,7 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     const ksic = item.id === "industry" && snapshot.ksic ? snapshot.ksic : null;
     // 업종 줄은 고른 세부 업종을 크게, 큰 분류와 코드는 아래 작은 줄로
     // 분류 코드는 보이지 않는다(손님에게 뜻 없는 숫자) — 큰 분류 이름만 작은 줄로
-    const ksicLine = ksic && (display || shown) && (display || shown) !== ksic.name ? display || shown : null;
+    const ksicLine = ksic && (display || shown) && (display || shown) !== ksic.name ? ksicSectorLabel(ksic.code, snapshot.intake.sector, display || shown) : null;
     const main = ksic ? ksic.name : display;
     return <div key={item.id}><dt><span>{item.label}</span>{item.basis === "proposal" || item.basis === "unknown" ? <small data-basis={item.basis}>{item.basis === "proposal" ? "AI 초안" : "아직 안 정함"}</small> : null}{editableId && !readOnly && <button type="button" className={styles.iconButton} aria-label={`${item.label} 수정`} title={`${item.label} 수정`} onClick={() => onEdit(editableId)}><PencilLine size={15} /></button>}</dt><dd><ConversationText text={main || "아직 정하지 않았어요"} />{ksicLine && <small className={styles.ksicNote}>{ksicLine}</small>}</dd></div>;
   };
