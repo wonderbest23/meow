@@ -473,6 +473,38 @@ export async function refundManualTransferOrder(orderId: string, adminNote: stri
   return mapOrder(data);
 }
 
+/**
+ * 스토어(애플·구글)가 환불·취소를 알려 온 앱 결제 주문을 refunded 로 바꾼다.
+ * '완료(done)'인 앱 결제 주문만 바꾸고(조건부 갱신), 이번 호출에서 실제로 바뀌었을 때만 주문을 돌려준다 —
+ * 같은 알림이 두 번 와도, 두 요청이 동시에 와도 한 번만 바뀌므로 권한 닫기도 한 번만 한다. 이미 바뀌었거나 대상이 아니면 null.
+ * 이용 권한(paidPlanEntitlement·paidHomepagePlanIds)은 done 주문만 보므로 이것만으로 계획서·홈페이지 결제 확인이 닫힌다.
+ */
+export async function markStoreOrderRefunded(order: PaymentOrder, note: string): Promise<PaymentOrder | null> {
+  // 앱 결제 방법(APPLE_IAP·GOOGLE_IAP)은 결제 요청 스키마(PaymentMethod)에 없다 — 앱 결제 기록에만 쓰인다(iap-orders.ts)
+  const method = order.method as string;
+  if (method !== "APPLE_IAP" && method !== "GOOGLE_IAP") return null;
+  const adminNote = (order.adminNote ? `${order.adminNote} · ${note}` : note).slice(0, 2000);
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    const stored = demo.orders.get(order.orderId);
+    if (!stored || stored.status !== "done" || stored.method !== method) return null;
+    stored.status = "refunded";
+    stored.adminNote = adminNote;
+    stored.updatedAt = new Date().toISOString();
+    if (stored.projectId) await updateProjectPaymentStatus(stored.projectId, "refunded");
+    return clone(stored);
+  }
+  const { data, error } = await supabase.from("payment_orders").update({
+    status: "refunded",
+    admin_note: adminNote,
+  }).eq("order_id", order.orderId).eq("method", method).eq("status", "done").select().maybeSingle();
+  if (error) throw error;
+  if (!data) return null;
+  const updated = mapOrder(data);
+  if (updated.projectId) await updateProjectPaymentStatus(updated.projectId, "refunded");
+  return updated;
+}
+
 export async function markManualCashReceiptIssued(orderId: string, adminNote: string): Promise<PaymentOrder> {
   const order = await getPaymentOrder(orderId);
   if (!order || order.method !== "TRANSFER") throw new Error("PAYMENT_ORDER_NOT_FOUND");

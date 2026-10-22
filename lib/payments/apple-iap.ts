@@ -7,6 +7,7 @@ import { X509Certificate, createHash, verify } from "node:crypto";
  * 2) 잎 인증서 키로 JWS 서명이 맞는지(ES256)
  * 3) 우리 앱(번들 ID)·상품·구매자(appAccountToken)·환불 여부
  * 를 차례로 본다. 하나라도 어긋나면 결제를 반영하지 않는다.
+ * 1)·2)는 verifyAppleJws 로 나눠 두어 App Store 서버 알림(apple-notifications.ts)도 같은 확인을 쓴다.
  */
 
 /** Apple Root CA - G3 의 SHA-256 지문(https://www.apple.com/certificateauthority/AppleRootCA-G3.cer 에서 확인, 2039-04-30 만료) */
@@ -56,23 +57,31 @@ function validAt(cert: X509Certificate, at: Date) {
 }
 
 /**
- * JWS 를 확인하고 거래 내용을 돌려준다. 확인에 실패하면 AppleIapError 를 던진다.
+ * 애플이 서명한 JWS(거래 영수증·App Store 서버 알림 모두)를 확인하고 본문을 돌려준다 — 내용은 보지 않는다.
+ * 인증서 사슬(고정한 애플 루트) · 인증서 용도(OID) · 유효 기간 · ES256 서명 중 하나라도 어긋나면 AppleIapError 를 던진다.
  * now·rootFingerprint 는 시험용 — 인증서 유효 기간을 이 시각으로 보고(애플 권장: 거래 시각이 아니라 지금), 시험 인증서 사슬을 쓴다.
  */
-export function verifyAppleTransaction(jws: string, expect: { bundleId: string; productId?: string; appAccountToken?: string }, now = new Date(), rootFingerprint = APPLE_ROOT_G3_SHA256): AppleTransaction {
-  const [headerPart, payloadPart, signaturePart] = jws.split(".");
-  if (!headerPart || !payloadPart || !signaturePart) throw new AppleIapError("APPLE_JWS_MALFORMED", "영수증 형식이 올바르지 않습니다.");
+export function verifyAppleJws<T = Record<string, unknown>>(jws: string, now = new Date(), rootFingerprint = APPLE_ROOT_G3_SHA256): T {
+  const parts = typeof jws === "string" ? jws.split(".") : [];
+  const [headerPart, payloadPart, signaturePart] = parts;
+  if (parts.length !== 3 || !headerPart || !payloadPart || !signaturePart) throw new AppleIapError("APPLE_JWS_MALFORMED", "영수증 형식이 올바르지 않습니다.");
   let header: { alg?: string; x5c?: string[] };
-  let payload: AppleTransaction;
+  let payload: T;
   try {
     header = JSON.parse(b64url(headerPart).toString("utf8"));
     payload = JSON.parse(b64url(payloadPart).toString("utf8"));
   } catch {
     throw new AppleIapError("APPLE_JWS_MALFORMED", "영수증 형식이 올바르지 않습니다.");
   }
-  if (header.alg !== "ES256" || !Array.isArray(header.x5c) || header.x5c.length !== 3) throw new AppleIapError("APPLE_JWS_HEADER", "영수증 서명 정보가 올바르지 않습니다.");
+  if (!header || typeof header !== "object" || !payload || typeof payload !== "object" || Array.isArray(payload)) throw new AppleIapError("APPLE_JWS_MALFORMED", "영수증 형식이 올바르지 않습니다.");
+  if (header.alg !== "ES256" || !Array.isArray(header.x5c) || header.x5c.length !== 3 || !header.x5c.every((der) => typeof der === "string")) throw new AppleIapError("APPLE_JWS_HEADER", "영수증 서명 정보가 올바르지 않습니다.");
 
-  const [leaf, intermediate, root] = header.x5c.map((der) => new X509Certificate(Buffer.from(der, "base64")));
+  let leaf: X509Certificate, intermediate: X509Certificate, root: X509Certificate;
+  try {
+    [leaf, intermediate, root] = header.x5c.map((der) => new X509Certificate(Buffer.from(der, "base64")));
+  } catch {
+    throw new AppleIapError("APPLE_JWS_HEADER", "영수증 서명 정보가 올바르지 않습니다.");
+  }
   // 1) 인증서 사슬: 루트는 애플 G3, 중간은 루트가, 잎은 중간이 서명했고 모두 지금 유효해야 한다
   if (root.fingerprint256 !== rootFingerprint) throw new AppleIapError("APPLE_ROOT_MISMATCH", "애플이 발급한 영수증이 아닙니다.");
   if (!intermediate.verify(root.publicKey) || !leaf.verify(intermediate.publicKey)) throw new AppleIapError("APPLE_CHAIN_INVALID", "영수증 인증서가 올바르지 않습니다.");
@@ -82,9 +91,22 @@ export function verifyAppleTransaction(jws: string, expect: { bundleId: string; 
   // 2) 서명: ES256 은 r‖s(64바이트) 그대로 붙어 있다
   // 키는 PEM 글자로 넘긴다 — 운영(Cloudflare workerd)의 verify 는 KeyObject 를 받지 않아(ERR_INVALID_ARG_TYPE) 모든 영수증이 500 으로 막혔다(2026-10-16 TestFlight 결제)
   const leafKeyPem = leaf.publicKey.export({ type: "spki", format: "pem" }) as string;
-  const signed = verify("sha256", Buffer.from(`${headerPart}.${payloadPart}`), { key: leafKeyPem, dsaEncoding: "ieee-p1363" }, b64url(signaturePart));
+  let signed = false;
+  try {
+    signed = verify("sha256", Buffer.from(`${headerPart}.${payloadPart}`), { key: leafKeyPem, dsaEncoding: "ieee-p1363" }, b64url(signaturePart));
+  } catch {
+    signed = false;
+  }
   if (!signed) throw new AppleIapError("APPLE_SIGNATURE_INVALID", "영수증 서명이 맞지 않습니다.");
+  return payload;
+}
 
+/**
+ * 거래 영수증(StoreKit 2 JWS)을 확인하고 거래 내용을 돌려준다. 확인에 실패하면 AppleIapError 를 던진다.
+ * now·rootFingerprint 는 시험용(verifyAppleJws 와 같다).
+ */
+export function verifyAppleTransaction(jws: string, expect: { bundleId: string; productId?: string; appAccountToken?: string }, now = new Date(), rootFingerprint = APPLE_ROOT_G3_SHA256): AppleTransaction {
+  const payload = verifyAppleJws<AppleTransaction>(jws, now, rootFingerprint);
   // 3) 내용: 우리 앱·주문한 상품·구매한 사람·환불되지 않음
   if (payload.bundleId !== expect.bundleId) throw new AppleIapError("APPLE_BUNDLE_MISMATCH", "다른 앱의 영수증입니다.");
   if (expect.productId && payload.productId !== expect.productId) throw new AppleIapError("APPLE_PRODUCT_MISMATCH", "결제한 상품이 다릅니다.");
