@@ -1,6 +1,7 @@
 // 재무 자동 계산 — 사용자가 입력한 숫자로 단위경제·손익분기·12개월 손익표를 계산한다.
 // 추정이 아니라 산식으로만 계산하며, 입력이 없으면 계산하지 않고 '추가 정의 필요'로 남긴다.
 
+import { parseWonAmount, rangeLowerText } from "./answer-number";
 import { buildCumulativeChart, buildMonthlyProfitChart, chartFence } from "./chart";
 
 export interface FinancialInputs {
@@ -97,8 +98,12 @@ function parseSubUnit(s: string): number {
 export function parseAmount(raw: unknown): number | undefined {
   if (typeof raw === "number" && Number.isFinite(raw)) return raw > 0 ? raw : undefined;
   if (typeof raw !== "string") return undefined;
-  const s = raw.trim();
-  if (!s) return undefined;
+  const trimmed = raw.trim();
+  if (!trimmed) return undefined;
+  // '20~30만원'은 적은 쪽(20만원)으로 — 예전엔 숫자를 이어 붙여 20,300,000원으로 읽었다
+  const s = rangeLowerText(trimmed) ?? trimmed;
+  const exact = parseWonAmount(s);
+  if (exact !== undefined) return exact > 0 ? exact : undefined;
 
   // 한글 단위가 없으면 숫자만 추출
   if (!/[억만천백]/.test(s)) {

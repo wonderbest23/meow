@@ -7,6 +7,7 @@ import {
 } from "./page-data";
 
 const shortText = z.string().trim().min(1).max(120);
+const LANDING_EMAIL_MESSAGE = "사업자 이메일 형식을 확인해 주세요 (예: hello@mybusiness.kr)";
 const bodyText = z.string().trim().min(1).max(1000);
 const landingImage = z.string().trim().max(900_000).refine(
   (value) => !value || /^https:\/\//.test(value) || /^data:image\/(?:png|jpeg|webp);base64,/.test(value),
@@ -76,12 +77,13 @@ export const landingDraftSchema = z.object({
   openHours: z.string().trim().max(200).default(""),
   businessContact: z.string().trim().max(200).default(""),
   businessPhone: z.string().trim().max(50).default(""),
-  businessEmail: z.string().trim().email().or(z.literal("")).default(""),
+  // 형식이 틀리면 '홈페이지를 저장하지 못했어요'만 떴다 — 어느 칸이 틀렸는지 한국어로 알린다(publicErrorMessage가 첫 안내를 그대로 보여 준다)
+  businessEmail: z.string().trim().refine(value => !landingEmailIssue(value), LANDING_EMAIL_MESSAGE).default(""),
   businessRegistrationNumber: z.string().trim().max(50).default(""),
   mailOrderSalesNumber: z.string().trim().max(100).default(""),
   hostingProvider: z.string().trim().max(120).default("오늘창업"),
   refundPolicy: z.string().trim().max(2000).default(""),
-  termsUrl: z.string().url().or(z.literal("")).default(""),
+  termsUrl: z.string().refine(value => !value || z.string().url().safeParse(value).success, "이용약관 주소는 https://로 시작하는 전체 주소로 적어 주세요").default(""),
   /* 손님 연락 방법 — 문의·예약 버튼이 어디로 가는지(전화·카톡·예약 페이지…). 예전 초안에는 없다 */
   contact: landingContactSchema.optional(),
 }).superRefine((value, context) => {
@@ -352,6 +354,12 @@ export function romanizeHangul(value: string): string {
  * 무료 주소 끝부분(/launch/…)에서 고칠 점 — 없으면 null. 화면(입력 칸 아래)과 서버 저장이 같은 문구를 쓴다.
  * 예전엔 '영문 소문자, 숫자, 하이픈만…' 한 문장뿐이라 'ab'(짧음)·'-bad-'(맨 앞뒤 -)에서 무엇이 틀렸는지 몰랐다.
  */
+/** 사업자 이메일 칸 바로 아래 안내 — 비어 있으면 괜찮다(선택 칸) */
+export function landingEmailIssue(raw: string): string {
+  const value = raw.trim();
+  return value && !z.string().email().safeParse(value).success ? LANDING_EMAIL_MESSAGE : "";
+}
+
 export function landingSlugIssue(raw: string): string | null {
   const value = raw.trim().toLowerCase();
   if (!value) return "주소 끝부분을 적어 주세요";

@@ -1,11 +1,11 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Fragment, Suspense, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { nativePlatform } from "../../lib/native-app";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
-import { isSamplePlan, loadState, setActivePlan, subscribePlanState, type Plan } from "../../lib/plan-builder/plan-store";
+import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, type Plan } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
@@ -127,6 +127,16 @@ const onClient = () => true;
 const onServer = () => false;
 const readPlanId = () => new URLSearchParams(window.location.search).get("planId");
 const noPlanId = () => null;
+/*
+ * 주소의 사업 번호를 따라간다 — 예전엔 화면 경로(pathname)가 바뀔 때만 다시 읽어, 같은 화면에서 사업만 바뀌면
+ * (새 대화로 만든 사업, 다른 사업 고르기) 목록이 이전 사업을 표시했다(점검 2026-10-22).
+ * useSearchParams 는 정적 빌드에서 Suspense 가 필요해 이 작은 조각만 감싼다(그동안은 아래 readPlanId 로 읽는다).
+ */
+function UrlPlanWatcher({ onChange }: { onChange: (planId: string | null) => void }) {
+  const planId = useSearchParams().get("planId");
+  useEffect(() => { onChange(planId); }, [planId, onChange]);
+  return null;
+}
 /* 사업 관리 화면의 탭 — 화면이 탭을 바꿀 때 보내는 신호와 뒤로 가기에 맞춰 다시 읽는다 */
 const subscribeTab = (onChange: () => void) => {
   window.addEventListener(WORKSPACE_TAB_EVENT, onChange); window.addEventListener("popstate", onChange);
@@ -152,9 +162,9 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
   const [listOpen, setListOpen] = useState(true);
   /* 한 번에 한 사업만 펼친다(소유자 피드백 2026-10-07: 여러 개가 열려 헷갈림). undefined = 지금 보는 사업 */
   const [openId, setOpenId] = useState<string | null | undefined>(undefined);
-  const [tickPlanId, setUrlPlanId] = useState<string | null>(null);
+  const [watchedPlanId, setUrlPlanId] = useState<string | null | undefined>(undefined);
   const livePlanId = useSyncExternalStore(noSubscribe, readPlanId, noPlanId);
-  const urlPlanId = tickPlanId ?? livePlanId;
+  const urlPlanId = watchedPlanId === undefined ? livePlanId : watchedPlanId;
   const workspaceTab = useSyncExternalStore(subscribeTab, readTab, noPlanId);
   useEffect(() => {
     try { if (localStorage.getItem(LIST_OPEN_KEY) === "0") setListOpen(false); } catch { /* 기본은 펼침 */ }
@@ -162,7 +172,6 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
     const offState = subscribePlanState(refresh), offGeneration = subscribeGeneration(refresh);
     return () => { offState(); offGeneration(); };
   }, []);
-  useEffect(() => { setUrlPlanId(new URLSearchParams(window.location.search).get("planId")); }, [pathname, tick]);
 
   const state = useMemo(() => (mounted ? loadState() : null), [mounted, tick, pathname]);
   const local = useMemo(() => (state?.plans ?? []).filter(plan => !isSamplePlan(plan.id)), [state]);
@@ -173,6 +182,8 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
    * 못 불러오면 '사업 없음' 대신 안내를 보이고, 다음 화면 이동 때 다시 읽는다.
    */
   const [remote, setRemote] = useState<Plan[] | null>(null);
+  /* 서버가 지운 사업 번호 — 다른 기기·탭에서 지운 사업이 옛 서버 목록으로 되살아나지 않게 */
+  const [remoteDeleted, setRemoteDeleted] = useState<string[]>([]);
   const [remoteFailed, setRemoteFailed] = useState(false);
   /* 로그인하지 않았으면 '사업이 없어요' 대신 로그인 안내 — 본문은 '로그인하면 내 사업이 보여요'라고 하는데 왼쪽만 달랐다(2026-10-21 점검) */
   const [signedOut, setSignedOut] = useState(false);
@@ -183,23 +194,39 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
     let alive = true;
     fetch("/api/plan/state", { cache: "no-store" })
       .then(response => { if (!response.ok) throw new Error("PLAN_STATE_UNAVAILABLE"); return response.json(); })
-      .then((data: { plans?: Plan[]; authenticated?: boolean }) => { if (!alive) return; setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); setSignedOut(data?.authenticated === false); setRemoteFailed(false); })
+      .then((data: { plans?: Plan[]; authenticated?: boolean; deletedPlanIds?: unknown }) => { if (!alive) return; setRemote((data?.plans ?? []).filter(plan => !isSamplePlan(plan.id))); setRemoteDeleted(Array.isArray(data?.deletedPlanIds) ? data.deletedPlanIds.filter((id): id is string => typeof id === "string") : []); setSignedOut(data?.authenticated === false); setRemoteFailed(false); })
       .catch(() => { if (alive) setRemoteFailed(true); });
     return () => { alive = false; };
   }, [mounted, remoteTick]);
   const plans = useMemo(() => {
+    /* 지운 사업은 서버 목록을 처음 읽은 뒤라도 뺀다 — 예전엔 지운 사업이 새로고침 전까지 남았고, 다 지워도 셋이 보였다 */
+    const deleted = new Set([...remoteDeleted, ...(mounted ? locallyDeletedPlanIds() : [])]);
     const byId = new Map<string, Plan>();
     for (const plan of [...(remote ?? []), ...local]) {
+      if (deleted.has(plan.id)) continue;
       const held = byId.get(plan.id);
       if (!held || plan.updatedAt.localeCompare(held.updatedAt) > 0) byId.set(plan.id, plan);
     }
     return [...byId.values()].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
-  }, [local, remote]);
+  }, [local, remote, remoteDeleted, mounted]);
+  /* 이 기기의 사업 구성이 바뀌면(새로 만들거나 지움) 서버 목록도 다시 읽어 맞춘다 — 저장 때마다가 아니라 사업 번호가 바뀔 때만 */
+  const localIds = useMemo(() => local.map(plan => plan.id).sort().join("|"), [local]);
+  const firstLocalIds = useRef<string | null>(null);
+  useEffect(() => {
+    if (!mounted) return;
+    if (firstLocalIds.current === null) { firstLocalIds.current = localIds; return; }
+    if (firstLocalIds.current === localIds) return;
+    firstLocalIds.current = localIds;
+    setRemoteTick(n => n + 1);
+  }, [mounted, localIds]);
   const checked = remote !== null || (remoteFailed && local.length > 0);
   useEffect(() => { if (checked) onPlanCount?.(plans.length); }, [checked, plans.length, onPlanCount]);
   const step = stepFor(pathname, workspaceTab);
-  /* 지금 화면이 보여 주는 사업 — 주소에 있으면 그것, 홈페이지처럼 주소에 없으면 작업 중인 사업 */
-  const currentId = urlPlanId ?? (step ? state?.activePlanId ?? null : null);
+  /*
+   * 지금 화면이 보여 주는 사업 — 주소에 있으면 그것, 홈페이지처럼 주소에 없으면 작업 중인 사업.
+   * 대화 화면은 주소에 사업이 없으면 새 대화다 — 작업 중이던 다른 사업의 '대화'를 표시하지 않는다(사업이 만들어지면 주소에 붙는다).
+   */
+  const currentId = urlPlanId ?? (step && step !== "chat" ? state?.activePlanId ?? null : null);
   // 지금 보는 사업이 목록에 없으면(다른 기기·방금 대화에서 만든 사업) 서버 목록을 한 번 더 읽는다
   useEffect(() => {
     if (!mounted || !currentId || isSamplePlan(currentId) || plans.some(plan => plan.id === currentId) || askedFor.current === currentId) return;
@@ -218,6 +245,7 @@ export default function BusinessRailTree({ documentToc, onPlanCount }: {
   }
 
   return <div className={styles.tree}>
+    <Suspense fallback={null}><UrlPlanWatcher onChange={setUrlPlanId} /></Suspense>
     {/*
       '내 사업'은 누르면 사업 목록 화면으로 간다. 펼치기·접기는 오른쪽 화살표로만(대표 요청 2026-10-14) —
       예전엔 '내 사업'이 펼치기 단추여서 목록 화면으로 가는 '모든 사업 한눈에 보기' 링크가 따로 있었고, 둘이 겹쳐 보였다.

@@ -29,6 +29,17 @@ export { intakeCommandSchema } from "./intake-command";
 function nextTimestamp(previous?: string) { return new Date(Math.max(Date.now(), (Date.parse(previous ?? "") || 0) + 1)).toISOString(); }
 function active(job: IntakeJob | null) { return !!job && ["queued", "running"].includes(job.status); }
 function fields(coach: CoachState) { return Object.fromEntries(coach.fields.map(field => [field.key, field.value])); }
+/** 한 계정이 만들 수 있는 사업 수 */
+export const PLAN_LIMIT = 20;
+/** 아무것도 답하지 않은 빈 사업(대화만 열어 둔 것) — 새 대화가 이 자리를 다시 쓴다. 문서·답·메모·진행 중 작업이 하나라도 있으면 아니다 */
+function untouchedIntakePlan(plan: ServerPlan, mode: IntakeCommand["mode"]) {
+  const coach = readCoach(plan.answers), intake = readIntake(plan.answers);
+  if (!coach || !intake || Object.keys(plan.sections).length) return false;
+  if (Object.keys(plan.answers).some(key => key !== COACH_KEY && key !== INTAKE_KEY)) return false;
+  if (mode && intake.mode !== mode) return false;
+  return !coach.fields.length && !coach.messages.some(message => message.role === "user") && !coach.design
+    && !Object.keys(intake.answers).length && !intake.notes.length && !intake.candidates.length && !intake.job && !(intake.ideaTurns ?? []).length;
+}
 function commandSignature(command: IntakeCommand) { return createHash("sha256").update(JSON.stringify(command)).digest("hex"); }
 
 export function newIntakeJob(coach: CoachState, intake: IntakeState, kind: IntakeJob["kind"], at: string, request?: string): IntakeJob | null {
@@ -56,6 +67,17 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
   for (let attempt = 0; attempt < 5; attempt++) {
     const state = await loadPlanState(ownerHash);
     let plan = state.plans.find(item => item.id === (command.planId ?? `plan_${command.requestId}`));
+    let reused = false, reusedRevision = 0;
+    /*
+     * 새 대화를 '생각한 사업이 있어요'처럼 아무 답 없이 시작할 때, 이미 아무것도 답하지 않은 빈 사업이 있으면 그 자리를 다시 쓴다.
+     * 예전엔 누를 때마다 똑같은 '새 사업 구상'이 하나씩 생겨 20개까지 쌓였다(점검 2026-10-22). 같은 요청을 다시 보내면 그 사업을 그대로 찾는다.
+     */
+    if (!plan && !command.planId && command.action === "start" && !command.message && command.questionId === undefined && command.value === undefined) {
+      plan = state.plans.find(item => readIntake(item.answers)?.receipts.some(receipt => receipt.id === command.requestId));
+      const untouched = plan ? undefined : state.plans.find(item => untouchedIntakePlan(item, command.mode));
+      // 저장 확인(CAS)은 비우기 전 서버 기록의 판(revision)으로 한다
+      if (untouched) { reusedRevision = readCoach(untouched.answers)?.revision ?? 0; untouched.answers = {}; untouched.title = "새 사업"; plan = untouched; reused = true; }
+    }
     if (command.planId && !plan) throw new IntakeError("not_found", "사업을 찾을 수 없어요", 404);
     if (!plan && command.action !== "start") throw new IntakeError("start_required", "먼저 사업 진단을 시작해 주세요");
     const previous = plan && readCoach(plan.answers), savedIntake = plan && readIntake(plan.answers);
@@ -65,9 +87,9 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
       return { plan: plan!, snapshot: intakeSnapshot(plan!, previous!, savedIntake!), job: savedIntake!.job?.status === "queued" && !savedIntake!.job.dispatched ? savedIntake!.job : null, duplicate: true };
     }
     if ((previous?.revision ?? 0) !== command.revision) throw new IntakeError("revision_conflict", "다른 화면에서 수정됐어요. 입력은 보관하고 최신 내용과 비교해 주세요", 409);
-    if (plan && !previous) throw new IntakeError("legacy_plan", "이 문서는 기존 사업 편집 화면에서 계속할 수 있어요", 409);
+    if (plan && !previous && !reused) throw new IntakeError("legacy_plan", "이 문서는 기존 사업 편집 화면에서 계속할 수 있어요", 409);
     if (previous?.messages.some(message => message.id === command.requestId)) throw new IntakeError("request_reused", "이미 사용한 요청 번호예요", 409);
-    if (!plan && state.plans.filter(item => readCoach(item.answers)).length >= 20) throw new IntakeError("plan_limit", "기존 사업에서 이어가거나 사용하지 않는 사업을 정리해 주세요", 429);
+    if (!plan && state.plans.filter(item => readCoach(item.answers)).length >= PLAN_LIMIT) throw new IntakeError("plan_limit", `사업은 최대 ${PLAN_LIMIT}개까지 만들 수 있어요. 내 사업에서 쓰지 않는 사업을 정리하거나 기존 사업에서 이어가 주세요`, 429);
     const oldAt = plan?.updatedAt ?? null, at = nextTimestamp(oldAt ?? undefined);
     const coach = structuredClone(previous ?? emptyCoach());
     if (!plan) {
@@ -208,7 +230,7 @@ export async function saveIntakeCommand(ownerHash: string, input: IntakeCommand,
     plan.title = coach.business.name; plan.updatedAt = at;
     if (!Object.keys(plan.sections).length) plan.planType = intake.mode === "operating" ? COACH_TYPES.operating : COACH_TYPES.startup;
     state.activePlanId = plan.id;
-    try { await savePlanState(ownerHash, state, { planId: plan.id, coachRevision: previous?.revision ?? 0, planUpdatedAt: oldAt }); }
+    try { await savePlanState(ownerHash, state, { planId: plan.id, coachRevision: reused ? reusedRevision : previous?.revision ?? 0, planUpdatedAt: oldAt }); }
     catch (error) { if (error instanceof Error && error.message === "PLAN_VERSION_CONFLICT" && attempt < 4) continue; throw error; }
     const snapshot = intakeSnapshot(plan, coach, intake);
     console.info("[business-intake]", JSON.stringify({ event: "saved", command: command.action, mode: intake.mode, coreAnswered: snapshot.coreAnswered, coreTotal: snapshot.coreTotal, complete: snapshot.coreComplete, sourceChanged: before !== intakeBusinessFingerprint(coach, plan.answers), aiQueued: !!created }));

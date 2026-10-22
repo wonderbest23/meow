@@ -33,8 +33,10 @@
 .progressLine > span { display: block; height: 100%; background: var(--intake-blue); transition: width .3s ease; }
 .statusLine { display: flex; align-items: center; gap: 7px; flex-shrink: 0; padding: 8px 28px; font-size: 12px; color: var(--intake-muted); border-bottom: 1px solid var(--intake-line); }
 .statusLine[data-status="failed"], .statusLine[data-status="conflict"] { color: var(--intake-danger); }
-.summaryToggle { display: none; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid #d4dbe4; border-radius: 8px; background: white; color: #245fc2; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.summaryToggle { position: relative; display: none; align-items: center; gap: 6px; min-height: 40px; padding: 8px 12px; border: 1px solid #d4dbe4; border-radius: 8px; background: white; color: #245fc2; font-size: 13px; font-weight: 600; white-space: nowrap; }
 .summaryToggle[aria-expanded="true"] { background: #edf4ff; border-color: #7daaf0; }
+/* 보이는 단추는 40px 그대로, 누르는 자리만 44px로 */
+.summaryToggle::after { content: ""; position: absolute; inset: -3px; }
 .summaryToggle b { min-width: 20px; padding: 0 6px; border-radius: 10px; background: #edf4ff; font-size: 12px; line-height: 20px; text-align: center; }
 .summarySheetHeader { display: none; }
 .intentPrompt { padding: 20px 0; border-top: 1px solid var(--intake-line); }
@@ -755,7 +757,7 @@
 @media (prefers-reduced-motion: reduce) { .confirmBackdrop, .confirmBox { animation: none; } }
 
 /* AI 결과 표시 — 작은 회색 한 줄 */
-.complete .direction p.aiNote, .direction p.aiNote, .aiNote { margin: 14px 0 0; color: #8b95a1; font-size: 12.5px; line-height: 1.5; }
+.complete .direction p.aiNote, .direction p.aiNote, .aiNote { margin: 14px 0 0; color: #6b7684; font-size: 12.5px; line-height: 1.5; }
 
 /* 사업계획서 준비(결제 화면으로 이동) 동안 화면을 덮는 로딩 — 다른 단추를 또 누르지 않게 */
 .prepareCover { position: fixed; inset: 0; z-index: 60; background: rgba(255, 255, 255, .86); }

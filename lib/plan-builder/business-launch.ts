@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { parseWonAmount } from "./answer-number";
 import { coachFieldDisplay } from "./coach-presentation";
 import { coachDocumentRevision, readCoach } from "./coach";
 import { effectiveStructure, readIntake } from "./intake-core";
@@ -237,8 +238,14 @@ export function launchStatus(state: LaunchState, step: LaunchStep) {
   return record.status;
 }
 
+/** 견적 칸 금액: '3,000,000'·'300만'·'1억 2천만' → 원. 읽을 수 없으면 null(예전엔 숫자만 남겨 '300만'이 300원이 됐다) */
+export function quoteAmount(value: string): number | null {
+  const amount = parseWonAmount(value);
+  return amount !== undefined && amount <= 1e12 ? amount : null;
+}
+
 export function quoteTotals(quote: LaunchState["quotes"][number]) {
-  const amount = (value: string) => /^(?:\d+|\d{1,3}(?:,\d{3})+)$/.test(value) && Number.isSafeInteger(Number(value.replaceAll(",", ""))) && Number(value.replaceAll(",", "")) <= 1e12 ? Number(value.replaceAll(",", "")) : null;
+  const amount = quoteAmount;
   const monthly = amount(quote.monthly), initial = amount(quote.initial), deposit = amount(quote.deposit);
   if (monthly === null || initial === null || deposit === null) return null;
   return { outflow: deposit + initial + monthly * 12, fees: initial + monthly * 12, deposit };

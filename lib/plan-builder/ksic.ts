@@ -278,6 +278,11 @@ export const KSIC_SYNONYMS: Record<string, string[]> = {
   "무인매장": ["47991", "47229"], "무인카페": ["47991", "56221"],
   "애견미용": ["96995", "96999"], "펫미용": ["96995", "96999"], "펫호텔": ["96995"], "애견카페": ["56221", "96995"],
   "보습학원": ["85632"], "수학학원": ["85632"], "입시학원": ["85632"], "공부방": ["85632"],
+  // 2026-10-22 입력 감사: 한 글자 검색('빵'·'꽃'·'떡')과 '코딩학원'·'출장사진'·'앱 개발'이 결과 0개거나 게임으로 잡혔다
+  "빵": ["56150", "47221", "10602"], "꽃": ["47851"], "떡": ["10601"], "옷": ["47419"], "펫": ["47852", "96995"],
+  "코딩": ["85691", "62010"], "코딩학원": ["85691"], "컴퓨터학원": ["85691"], "it학원": ["85691"], "코딩교실": ["85691"],
+  "출장사진": ["73301"], "출장촬영": ["73301"], "스냅사진": ["73301"], "스냅촬영": ["73301"], "프로필사진": ["73301"],
+  "앱개발": ["58222", "62010"], "어플개발": ["58222", "62010"], "앱제작": ["58222", "62010"], "어플제작": ["58222", "62010"], "웹개발": ["62010"], "프로그램개발": ["62010", "58222"], "외주개발": ["62010"],
   "그림": ["47841", "90132"], "미술품": ["47841"], "예술품": ["47841"], "보험비교": ["66202"], "보험대리": ["66202"], "보험설계": ["66202"], "여행가이드": ["75290"],
 };
 
@@ -373,6 +378,11 @@ export function searchKsic(text: string, options: { limit?: number; minLevel?: K
   return [...merged.values()].sort((a, b) => b.score - a.score || b.entry.level - a.entry.level || a.entry.code.localeCompare(b.entry.code)).slice(0, limit);
 }
 
+const SHOP_SUFFIX = /^(.+?)(학원|교실|교습소|공부방|전문점|가게|스튜디오|센터|공방|샵|숍)$/u;
+const VISIT_PREFIX = /^(출장|방문)(.+)$/u;
+const ONE_CHAR_SHOP = /^(?:집|방|가게|샵|숍|전문점)?$/u;
+const STRICT_ONE_CHAR = new Set(["빵", "꽃", "떡", "옷", "펫"]);
+
 function searchKsicText(text: string, options: { limit?: number; minLevel?: KsicLevel } = {}): KsicMatch[] {
   const { limit = 8, minLevel = 3 } = options;
   const q = normalize(text); if (!q) return [];
@@ -383,17 +393,26 @@ function searchKsicText(text: string, options: { limit?: number; minLevel?: Ksic
   };
   // 토큰: 문장을 공백·구분자로 나누고 조사·어미를 떼어 낸다. 짧은 동의어 키(2글자 이하)와 이름 매칭에 쓴다.
   const tokens = new Set<string>();
+  // 붙여 쓴 가게 꼬리말('피아노학원'·'애견미용샵')과 '출장·방문' 앞말은 떼어 낸 말도 토큰으로 더한다(꼬리말만으로는 찾지 않는다)
   for (const part of text.normalize("NFKC").split(/[\s,·/()]+/).filter(Boolean)) {
     const n = normalize(part.replace(/(을|를|이|가|은|는|의|로|으로|에서|하고|해서|하는|할|하려고|하고싶어요|하고싶어|해요|입니다|이에요|예요)$/u, ""));
-    if (n.length >= 2) tokens.add(n);
+    if (n.length < 2) continue;
+    tokens.add(n);
+    const split = n.match(SHOP_SUFFIX) ?? n.match(VISIT_PREFIX);
+    const stem = split?.[1], rest = split?.[2];
+    if (stem && rest && [...stem].length >= 2 && [...rest].length >= 2) tokens.add(SHOP_SUFFIX.test(n) ? stem : rest);
   }
   // 1) 동의어: 긴 표현부터. 3글자 이상은 문장 안 포함으로, 2글자 이하는 토큰 전체 일치로만 맞춘다("책"이 "산책"에 걸리지 않게).
   const keys = Object.keys(KSIC_SYNONYMS).sort((a, b) => b.length - a.length);
   for (const key of keys) {
     const k = normalize(key); if (!k) continue;
     // 짧은 키는 토큰이 그 키로 시작하고 두 글자 이내로만 길 때 허용("출판사"←"출판", "퀵배송"←"퀵"은 통과, "산책"←"책"은 제외)
-    const hit = k.length >= 3 ? q.includes(k) : q === k || [...tokens].some(t => t === k || (t.startsWith(k) && t.length <= k.length + 2));
-    if (hit) for (const code of KSIC_SYNONYMS[key]) add(code, 100 + k.length * 2, "synonym");
+    // 먹거리·물건 한 글자 키('빵'·'꽃')는 그 글자만 적었거나 '빵집'·'꽃가게'처럼 가게 꼬리말만 붙었을 때만 맞춘다('꽃게'가 꽃집이 되지 않게)
+    const hit = k.length >= 3 ? q.includes(k)
+      : STRICT_ONE_CHAR.has(k) ? q === k || [...tokens].some(t => t.startsWith(k) && ONE_CHAR_SHOP.test(t.slice(k.length)))
+      : q === k || [...tokens].some(t => t === k || (t.startsWith(k) && t.length <= k.length + 2));
+    // 같은 키 안에서는 먼저 적은 코드가 앞에 온다('빵'은 제과점부터)
+    if (hit) KSIC_SYNONYMS[key].forEach((code, index) => add(code, 100 + k.length * 2 - index * 0.01, "synonym"));
   }
   // 2) 이름 토큰: 일반 단어는 제외하고 공식 이름과 대조
   for (const t of [...tokens]) if (NAME_STOPWORDS.has(t)) tokens.delete(t);
@@ -402,7 +421,8 @@ function searchKsicText(text: string, options: { limit?: number; minLevel?: Ksic
     if (e.level < minLevel || !nameMatchAllowed(e.code, text)) continue;
     const words = normalized.get(e.code)!; let score = 0;
     // 두 글자 낱말은 이름 낱말의 앞부분에서만 맞춘다("공장"이 "공공장소"에 걸리지 않게).
-    for (const t of tokens) if (words.some(word => word.startsWith(t) || t.length >= 3 && word.includes(t))) score += 10 + Math.min(t.length, 6) * 3;
+    // 붙여 쓴 이름('컴퓨터학원')은 공식 이름 낱말을 이어 붙인 것과도 대조한다
+    for (const t of tokens) if (words.some(word => word.startsWith(t) || t.length >= 3 && word.includes(t)) || t.length >= 4 && words.join("").includes(t)) score += 10 + Math.min(t.length, 6) * 3;
     if (score) add(e.code, score + e.level, "name");
   }
   return [...scores.values()].sort((a, b) => b.score - a.score || b.entry.level - a.entry.level || a.entry.code.localeCompare(b.entry.code)).slice(0, limit);

@@ -20,6 +20,7 @@ import type { SupportChat } from "../lib/support-chat/repository";
 import { trackFunnel } from "../lib/funnel/client";
 import { escalationReason } from "../lib/consult/escalation";
 import { withRo } from "../lib/josa";
+import { composerEnterSends, composerLimitNote, visibleComposerText } from "../app/plan/chat/intake-ui/guidance";
 import { activePlan, isSamplePlan } from "../lib/plan-builder/plan-store";
 import { SupportHome, SupportSettings, SupportTabs, SUPPORT_BADGE_KEY, type SupportTab } from "./support-chat-home";
 import {
@@ -596,7 +597,7 @@ export function SupportChatWidget() {
 
   const sendMessage = async (event?: FormEvent) => {
     event?.preventDefault();
-    const nextMessage = message.trim();
+    const nextMessage = visibleComposerText(message);
     if (!nextMessage || sending || assistantThinking || consultThinking) return;
 
     if (mode === "consult") {
@@ -633,7 +634,8 @@ export function SupportChatWidget() {
   };
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === "Enter" && !event.shiftKey) {
+    // 한글 조합 중 Enter는 글자 확정이라 보내지 않는다(마지막 글자가 입력창에 남던 문제) — 모바일은 Enter가 줄바꿈
+    if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) {
       event.preventDefault();
       void sendMessage();
     }
@@ -1024,6 +1026,8 @@ export function SupportChatWidget() {
                   {mode === "support" && !showQuickMenu && <button type="button" onClick={openQuestionMenu}><ClipboardList /> 질문 다시 고르기</button>}
                 </div>
                 {error && <p className="support-chat-error">{error}</p>}
+                {/* 2,000자 한도의 90%부터 남은 글자 수를 알려 준다 — 조용히 잘리면 뒤쪽이 사라진 줄 모른다 */}
+                {composerLimitNote(message.length, 2000) && <p className="support-chat-limit" aria-live="polite">{composerLimitNote(message.length, 2000)}</p>}
                 <div className="support-chat-input-row">
                   <textarea
                     ref={textareaRef}
@@ -1048,7 +1052,7 @@ export function SupportChatWidget() {
                     * 한 줄만 쓰고 만다. 안으로 넣으면 쓰는 자리는 넓어지고 버튼은
                     * 손가락이 가는 자리(오른쪽 아래)에 온다.
                     */}
-                  <button type="submit" disabled={!message.trim() || sending || assistantThinking || consultThinking || (mode === "consult" && Boolean(consultLimit))} aria-label="메시지 보내기" title="보내기"><ArrowUp aria-hidden="true" /></button>
+                  <button type="submit" disabled={!visibleComposerText(message) || sending || assistantThinking || consultThinking || (mode === "consult" && Boolean(consultLimit))} aria-label="메시지 보내기" title="보내기"><ArrowUp aria-hidden="true" /></button>
                 </div>
                 <small><ShieldCheck /> 비밀번호나 주민등록번호는 입력하지 마세요.</small>
                 <small className="ai-caution">AI 답변에는 정확하지 않은 정보가 포함될 수 있어요.</small>

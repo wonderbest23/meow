@@ -154,6 +154,28 @@ async function main() {
       return { value: values[question.id] };
     }
 
+    await check("plain new chat reuses an untouched business instead of piling up empty ones", async () => {
+      const first = await start();
+      const requestId = randomUUID();
+      const again = await saveIntakeCommand(first.ownerHash, { action: "start", mode: "startup", revision: 0, requestId });
+      assert.equal(again.plan.id, first.planId, "아무것도 답하지 않은 사업 자리를 다시 쓴다");
+      const replay = await saveIntakeCommand(first.ownerHash, { action: "start", mode: "startup", revision: 0, requestId });
+      assert.equal(replay.plan.id, first.planId, "같은 요청을 다시 보내도 같은 사업");
+      assert.equal(replay.duplicate, true);
+      assert.equal((await loadPlanState(first.ownerHash)).plans.length, 1, "빈 '새 사업'이 쌓이지 않는다");
+      await send(first, { action: "answer", questionId: "business", value: "직장인 프로필 촬영 사업" });
+      const fresh = await saveIntakeCommand(first.ownerHash, { action: "start", mode: "startup", revision: 0, requestId: randomUUID() });
+      assert.notEqual(fresh.plan.id, first.planId, "답을 시작한 사업은 다시 쓰지 않는다");
+      const operating = await saveIntakeCommand(first.ownerHash, { action: "start", mode: "operating", revision: 0, requestId: randomUUID() });
+      assert.notEqual(operating.plan.id, fresh.plan.id, "다른 유형으로 시작하면 빈 사업을 가져가지 않는다");
+    });
+
+    await check("plan limit names the limit", async () => {
+      const ownerHash = `intake-limit-${randomUUID()}`;
+      for (let index = 0; index < 20; index++) await saveIntakeCommand(ownerHash, { action: "start", mode: "startup", questionId: "business", value: `동네 사업 ${index + 1}`, revision: 0, requestId: randomUUID() });
+      await assert.rejects(saveIntakeCommand(ownerHash, { action: "start", mode: "startup", revision: 0, requestId: randomUUID() }), (error: unknown) => error instanceof IntakeError && error.code === "plan_limit" && error.status === 429 && /최대 20개/.test(error.message));
+    });
+
     await check("unified start stores an unclassified question atomically without AI or confirmed facts", async () => {
       configureAI(true);
       const ownerHash = `intake-note-start-${randomUUID()}`;

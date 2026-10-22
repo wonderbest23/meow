@@ -110,6 +110,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
   /* 구글 버튼이 그려질 자리 — GIS 가 이 안에 iframe 버튼을 그린다 */
   const googleButtonRef = useRef<HTMLDivElement>(null);
+  const emailInput = useRef<HTMLInputElement>(null);
   /* 앱(아이폰·안드로이드) 안이면 휴대폰 로그인 창을 쓴다 — 구글은 앱 안 웹 화면 로그인을 막는다 */
   const [native, setNative] = useState<"ios" | "android" | null>(null);
   useEffect(() => { setNative(nativePlatform()); }, []);
@@ -276,11 +277,16 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         goNext();
         return;
       }
-    } catch (error) { setMessageError(true); setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요."); } finally { setBusy(false); }
+    } catch (error) {
+      setMessageError(true); setMessage(error instanceof Error ? error.message : "요청을 처리하지 못했어요. 잠시 후 다시 시도해 주세요.");
+      // 실패하면 초점을 이메일 칸으로 — 어디에도 초점이 없으면(body) 키보드·낭독기 사용자가 다시 고칠 곳을 잃는다
+      window.requestAnimationFrame(() => { const active = document.activeElement; if (!active || active === document.body) emailInput.current?.focus(); });
+    } finally { setBusy(false); }
   };
 
   const entry = mode === "login" || mode === "register";
   const kakao = () => window.location.assign(`/api/auth/kakao${next ? `?next=${encodeURIComponent(next)}` : ""}`);
+  /* 보내는 동안 칸·로그인 단추는 disabled 대신 readOnly·aria-disabled로 둔다 — disabled면 누른 자리의 초점이 body로 떨어졌다(접근성 점검 2026-10-22). 다시 보내기는 submit의 busy가 막는다 */
   const passwordField = (label: string, value: string, set: (value: string) => void, autoComplete: string) => <PasswordField label={label} value={value} onChange={set} autoComplete={autoComplete} disabled={busy} />;
 
   /*
@@ -301,7 +307,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
           {mode === "reset" && <p className={styles.sub}>8자 이상으로 정해 주세요.</p>}
         </header>
         <div className={styles.group}>
-          {mode !== "reset" && <label className={styles.cell}><span className={styles.srOnly}>이메일</span><input className={styles.input} type="email" required disabled={busy} placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>}
+          {mode !== "reset" && <label className={styles.cell}><span className={styles.srOnly}>이메일</span><input ref={emailInput} className={styles.input} type="email" required readOnly={busy} placeholder="이메일" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="email" autoCapitalize="none" spellCheck={false} /></label>}
           {/*
             * "8자 이상"은 새로 정할 때만 지켜야 하는 규칙이다. 로그인 칸에 적어 두면
             * 이미 쓰고 있는 비밀번호를 두고 조건을 따지는 말이 된다. 규칙이 필요한 화면에서만 칸 아래 안내로 붙인다.
@@ -317,7 +323,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         ]} values={{ terms, privacy, aiNotice }} onChange={(next) => { setTerms(Boolean(next.terms)); setPrivacy(Boolean(next.privacy)); setAiNotice(Boolean(next.aiNotice)); }} />}
         {askedProblem && problem ? <p role="alert" className={accountStyles.error}>{problem}</p> : null}
         {message && <p role={messageError ? "alert" : "status"} className={messageError ? accountStyles.error : accountStyles.message}>{message}</p>}
-        <button className={styles.primary} data-incomplete={!valid || undefined} disabled={busy}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
+        <button className={styles.primary} data-incomplete={!valid || undefined} aria-disabled={busy || undefined}>{busy ? <><Spinner />{mode === "login" ? "로그인하고 있어요" : mode === "recover" ? "메일을 보내고 있어요" : "저장하고 있어요"}</> : mode === "register" ? "회원가입" : mode === "recover" ? "재설정 메일 보내기" : mode === "reset" ? "새 비밀번호 저장" : "로그인"}</button>
         <nav className={styles.links} aria-label="계정 메뉴">
           {mode === "login"
             ? <><button type="button" onClick={() => switchMode("recover")}>비밀번호 재설정</button><button type="button" onClick={() => switchMode("register")}>회원가입</button></>
@@ -359,7 +365,7 @@ function PasswordField({ label, value, onChange, autoComplete, disabled }: { lab
   const [shown, setShown] = useState(false);
   return <label className={`${styles.cell} ${styles.passwordCell}`}>
     <span className={styles.srOnly}>{label}</span>
-    <input className={styles.input} type={shown ? "text" : "password"} required disabled={disabled} minLength={8} placeholder={label} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+    <input className={styles.input} type={shown ? "text" : "password"} required readOnly={disabled} minLength={8} placeholder={label} value={value} onChange={(event) => onChange(event.target.value)} autoComplete={autoComplete} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
     <button type="button" className={styles.reveal} aria-label={shown ? "비밀번호 숨기기" : "비밀번호 보기"} aria-pressed={shown} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={() => setShown((current) => !current)}>
       {shown ? <EyeOff size={20} aria-hidden="true" /> : <Eye size={20} aria-hidden="true" />}
     </button>

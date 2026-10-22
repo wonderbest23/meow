@@ -33,5 +33,5 @@ assert.equal(amountOwner("재료값 "), "structure.unitCost", "a longer word end
 assert.equal(amountOwner("빵 값은 사용자가 정한 "), "*", "'사용자가 정한' defers to whichever fact has this amount");
 assert.deepEqual(findFactRanges("4,500원입니다.", [{ questionId: "price", needles: ["4,500원"] }], "빵 값은 사용자가 정한 "), [[0, 6, "price"]], "a value the owner set is marked");
 assert.equal(amountOwner("가격을 정했습니다. 그리고 "), null, "only the same sentence counts");
-for (const [text, value] of [["60000", 60000], ["60,000원", 60000], ["6만", 60000], ["6만 5천", 65000], ["6만5천원", 65000], ["1.5만", 15000], ["300만", 3_000_000], ["1억 2000만", 120_000_000], ["", null], ["abc", null], ["0", null], ["만", null]] as const) assert.equal(parseWon(text), value, text);
+for (const [text, value] of [["60000", 60000], ["60,000원", 60000], ["6만", 60000], ["6만 5천", 65000], ["6만5천원", 65000], ["1.5만", 15000], ["300만", 3_000_000], ["1억 2000만", 120_000_000], ["", null], ["abc", null], ["0", null], ["만", null], ["2만5천원", 25000], ["1억5천만원", 150_000_000], ["4.500", 4500], ["20~30만원", null]] as const) assert.equal(parseWon(text), value, text);
 console.log("fact-highlight tests passed");

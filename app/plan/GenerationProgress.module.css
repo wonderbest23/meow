@@ -13,7 +13,7 @@
 .meter progress::-webkit-progress-value { background: #246bd1; border-radius: 8px; transition: width .4s ease; }
 .meter progress::-moz-progress-bar { background: #246bd1; }
 .list { display: grid; gap: 2px; margin: 0 0 20px; padding: 0; list-style: none; }
-.list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: #8b95a1; font-size: 14px; }
+.list li { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 0 4px; color: #6b7684; font-size: 14px; }
 .list li small { margin-left: auto; font-size: 12px; color: #b0b8c1; }
 .list li[data-state="done"] { color: #191f28; }
 .list li[data-state="done"] small { color: #246bd1; }

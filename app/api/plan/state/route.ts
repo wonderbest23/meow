@@ -18,7 +18,9 @@ export async function GET() {
   // 지운 사업 번호 — 다른 기기에 남은 옛 사본을 화면이 지우게(읽지 못하면 빈 목록: 지우지 않을 뿐 해는 없다)
   const deletedPlanIds = await loadDeletedPlanIds(identity.hash).catch(() => [] as string[]);
   // 클라이언트가 로그아웃·세션 만료를 감지해 로컬 캐시를 비울 수 있게 인증 여부를 함께 준다
-  return NextResponse.json({ ...state, deletedPlanIds, quarantine, authenticated: identity.userId !== null, ...(planAccountLinkingEnabled() ? { ownerKey: planOwnerKey(identity.hash) } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
+  // accountKey: 로그인한 계정의 캐시 구분값(자격 증명이 아님) — 계정 연결 기능이 꺼져 있어도 준다.
+  // 로그아웃 없이 다른 계정으로 로그인했을 때 이전 계정의 기기 저장본을 새 계정에 올리지 않게 화면이 비교한다.
+  return NextResponse.json({ ...state, deletedPlanIds, quarantine, authenticated: identity.userId !== null, ...(identity.userId !== null ? { accountKey: planOwnerKey(identity.hash) } : {}), ...(planAccountLinkingEnabled() ? { ownerKey: planOwnerKey(identity.hash) } : {}) }, { headers: { "Cache-Control": "private, no-store" } });
 }
 
 function ownerConflict(ownerHash: string, expected: unknown) {

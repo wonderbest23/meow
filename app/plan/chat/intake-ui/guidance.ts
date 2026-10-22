@@ -77,3 +77,15 @@ export function resumeSummary(snapshot: IntakeSnapshot): string {
 export function composerEnterSends(event: { key: string; shiftKey: boolean; isComposing?: boolean; keyCode?: number }, coarsePointer: boolean): boolean {
   return event.key === "Enter" && !event.shiftKey && !event.isComposing && event.keyCode !== 229 && !coarsePointer;
 }
+
+/** 보이지 않는 글자(폭 없는 공백 U+200B~U+200D, U+FEFF)만 넣어도 보내기가 켜졌다 — 지우고 앞뒤 공백을 자른 실제 내용 */
+export function visibleComposerText(value: string): string {
+  return value.replace(/[​-‍﻿]/g, "").trim();
+}
+
+/** 글자 수 한도의 90%부터 남은 글자 수를 알려 준다(입력창 바로 위 한 줄). 그 전에는 빈 문자열 */
+export function composerLimitNote(length: number, max: number): string {
+  if (length < max * 0.9) return "";
+  const left = Math.max(0, max - length), n = (value: number) => value.toLocaleString("ko-KR");
+  return left ? `${n(left)}자 더 쓸 수 있어요 (${n(length)} / ${n(max)}자)` : `${n(max)}자를 다 채웠어요. 나머지는 나눠서 보내 주세요.`;
+}

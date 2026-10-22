@@ -2,7 +2,7 @@ import { freeReflectsLeft } from "./free-reflect";
 import { chaptersForType, sectionKey } from "./blueprint";
 import { cashflowFromFields, cashflowReference, cashflowScenariosEnabled } from "./cashflow-scenarios";
 import { COACH_FIELD_LABELS } from "./coach-presentation";
-import { coachAmount, monthlyVolumeFromCapacity } from "./coach-feasibility";
+import { coachAmount, coachAmountLower, monthlyVolumeFromCapacity } from "./coach-feasibility";
 import { coachDocumentRevision, coachFinancialReference, type CoachField, type CoachState } from "./coach";
 import { calculateFinancials, financialsToReference } from "./financials";
 import { coreQuestions, detailQuestions, getIntakeQuestion, intakeCandidates, intakeSectorOptions, pricePrompt, structureQuestions, structureUnitCostQuestion, type IntakeMode, type IntakeQuestion } from "./intake-questions";
@@ -19,6 +19,7 @@ import { INTAKE_KEY, INTAKE_VERSION, type IntakeCandidate, type IntakeCommand, t
 import type { ServerPlan } from "./plan-server-store";
 import { loadResourceRecords, RESOURCE_DATA_VERSION, RESOURCE_ANSWER_IDS, resourceBusinessAssumptions, type ResourceRecord } from "./intake-candidate-resources";
 import { evaluateCandidateResources, parseResourceLimit } from "./intake-candidate-fit";
+import { rangeLowerText, stripAnswerPeriod } from "./answer-number";
 import { generatedIdeaStructure } from "./intake-ideas";
 import { INTAKE_JOB_TIMING } from "./intake-timing";
 export { INTAKE_JOB_TIMING } from "./intake-timing";
@@ -441,9 +442,11 @@ export function intakeDetailChecks(coach: CoachState, intake: IntakeState, scena
   const volume = scenario?.volume ?? capacity?.volume ?? null;
   const basis = scenario ? (scenario.actual ? "실적 기준" : "계획 판매량 기준") : "처리량 최대치 기준";
   const volumeLabel = scenario ? "판매량" : "처리량";
-  const hoursMatch = field("hoursPerWeek")?.replace(/\s|,/g, "").match(/^(?:주)?(\d+(?:\.\d+)?)(?:시간)?$/);
+  // 예산·시간을 범위로 남겼으면 적은 쪽으로 계산한다(보수적)
+  const hoursText = field("hoursPerWeek");
+  const hoursMatch = (rangeLowerText(hoursText) ?? hoursText)?.replace(/\s|,/g, "").match(/^(?:주)?(\d+(?:\.\d+)?)(?:시간)?$/);
   const monthlyHours = hoursMatch ? Number(hoursMatch[1]) * 52 / 12 : null;
-  const budget = coachAmount(field("budget")), unitCost = coachAmount(field("unitCost"));
+  const budget = coachAmountLower(field("budget")), unitCost = coachAmount(field("unitCost"));
   const n = (value: number) => Math.round(value).toLocaleString("ko-KR");
   const won = (value: number) => `${n(value)}원`;
   const share = (part: number, whole: number) => `${Math.round(part / whole * 100)}%`;
@@ -652,7 +655,8 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
     return [...new Set(value)];
   }
   if (question.kind === "number") {
-    const raw = String(value).trim();
+    // 질문 기간과 같은 말('월 30만', '30만원/월')은 떼고 읽는다
+    const raw = stripAnswerPeriod(String(value).trim(), question.period);
     const number = question.unit === "원" ? coachAmount(raw) : new RegExp(`^\\d+(?:\\.\\d+)?(?:\\s*${question.unit ?? ""})?$`).test(raw) ? Number.parseFloat(raw) : undefined;
     if (number === undefined || !Number.isFinite(number) || number < 0 || number > 1e14 || question.unit === "%" && number > 100 || question.fieldKey === "hoursPerWeek" && number > 168) throw new IntakeError("invalid_number", "단위에 맞는 0 이상의 숫자를 입력해 주세요. 모르는 값은 미정으로 남겨 주세요");
     if (question.id.startsWith("structure.") && !validStructureNumber(question.id, number)) throw new IntakeError("invalid_number", question.id === "structure.retentionMonths" ? "평균 구독 유지 기간은 0보다 큰 개월 수로 입력해 주세요" : "해당 지표의 범위에 맞는 숫자를 입력해 주세요");
@@ -661,13 +665,22 @@ function validatedAnswer(question: IntakeQuestion, value: IntakeValue | undefine
   return String(value).trim();
 }
 
+/** 사업 설명으로 만든 임시 이름은 60자 안에서 낱말 경계로 자르고 '…'을 붙인다 — 글자 가운데(이모지 반쪽)에서 끊기지 않게 글자 단위로 센다 */
+export function autoBusinessName(value: string, limit = 60): string {
+  const chars = Array.from(value.trim());
+  if (chars.length <= limit) return chars.join("");
+  const head = chars.slice(0, limit - 1).join("");
+  const space = head.search(/\s\S*$/);
+  return `${(space > limit / 2 ? head.slice(0, space) : head).trimEnd()}…`;
+}
+
 function setField(coach: CoachState, key: CoachField["key"], value: string | null, messageId: string, quote: string) {
   const fields = coach.fields.filter(field => field.key !== key);
   if (value !== null) fields.push({ key, value, basis: "user", messageId, quote });
   coach.fields = fields;
   if (key === "business") {
     coach.business.description = value ?? "";
-    if (value && (!coach.business.name || ["새 사업 구상", "새 사업 진단", "새 사업"].includes(coach.business.name))) coach.business.name = value.slice(0, 60);
+    if (value && (!coach.business.name || ["새 사업 구상", "새 사업 진단", "새 사업"].includes(coach.business.name))) coach.business.name = autoBusinessName(value);
     if (value && !coach.ideaOrigin) coach.ideaOrigin = { text: value, messageId };
   }
 }

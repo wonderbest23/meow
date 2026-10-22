@@ -12,7 +12,7 @@
 .railCaption { margin-top:auto; padding:20px 10px 0; color:var(--app-muted); font-size:12px; line-height:1.6; }
 .appSurface { display:flex; flex-direction:column; flex:1; min-width:0; min-height:0; }
 .header { height:80px; flex-shrink:0; display:flex; align-items:center; gap:12px; padding:0 36px; background:var(--app-surface); z-index:3; }
-.headerTitle { min-width:0; display:flex; flex-direction:column; gap:3px; }.headerTitle strong { font-size:17px; font-weight:700; line-height:1.4; }.headerTitle > span { font-size:12px; color:var(--app-muted); }.headerTitle strong,.headerTitle > span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.headerTitle { min-width:0; display:flex; flex-direction:column; gap:3px; }.headerTitle strong { font-size:17px; font-weight:700; line-height:1.4; }/* 대화 화면의 .page h1(26px·아래 28px) 규칙보다 앞서게 한 단계 더 좁힌다 — 머리줄 제목이 커지고 위로 밀려 잘렸다 */.header .headerTitle h1 { margin:0; min-width:0; font:inherit; letter-spacing:inherit; }.headerTitle h1 strong { display:block; }.headerTitle > span { font-size:12px; color:var(--app-muted); }.headerTitle strong,.headerTitle > span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .back { display:none; }.back,.menuToggle { width:44px; height:44px; align-items:center; justify-content:center; flex-shrink:0; border:0; background:transparent; border-radius:50%; color:var(--app-text); }
 .backVisible { display:flex; }
 .menuToggle { display:flex; }.menuToggle:hover,.back:hover { background:var(--app-raised); }.page :is(.back,.menuToggle,.appRail,.menuPanel) svg { display:block; flex-shrink:0; }

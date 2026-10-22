@@ -21,6 +21,7 @@ import styles from "./page.module.css";
 import { CoachMessage, CoachResultCard, CoachSpeaker, CoachWelcome } from "../../../components/coach-chat-ui";
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import BusinessIntake from "./BusinessIntake";
+import DeletedBusinessGuard from "../DeletedBusinessGuard";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import type { ServerPlan } from "../../../lib/plan-builder/plan-server-store";
 
@@ -32,7 +33,8 @@ const PHASES = { queued: "요청을 접수했어요", understanding: "말씀하�
 const activeJob = (job?: CoachJob | null) => !!job && ["queued", "running"].includes(job.status);
 
 export default function BusinessCoachPage() {
-  return <Suspense fallback={<ChatLoading />}>{process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 === "1" ? <BusinessIntake /> : <BusinessCoach />}</Suspense>;
+  /* 지운 사업의 대화를 뒤로 가기·다른 탭으로 다시 쓰지 못하게 — DeletedBusinessGuard */
+  return <Suspense fallback={<ChatLoading />}>{process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 === "1" ? <BusinessIntake /> : <BusinessCoach />}<DeletedBusinessGuard /></Suspense>;
 }
 
 function BusinessCoach() {

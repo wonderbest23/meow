@@ -13,7 +13,7 @@
 .tree .caret[data-open] { transform:rotate(90deg); }
 
 .list { display:flex; flex-direction:column; gap:2px; min-height:0; overflow-y:auto; overscroll-behavior:contain; scrollbar-width:thin; padding:2px 0 6px 10px; }
-.empty { margin:4px 8px 8px; color:#8b95a1; font-size:12px; line-height:1.5; }
+.empty { margin:4px 8px 8px; color:#6b7684; font-size:12px; line-height:1.5; }
 
 .plan { display:flex; flex-direction:column; }
 .tree .planRow { display:flex; align-items:center; gap:6px; width:100%; min-height:36px; padding:0 8px; border:0; border-radius:8px; background:transparent; color:#4e5968; font:inherit; font-size:13px; font-weight:600; text-align:left; cursor:pointer; }
@@ -38,7 +38,7 @@ button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
 .lockDialog button, .lockDialog a { min-height:40px; padding:0 16px; border-radius:10px; font:inherit; font-size:14px; font-weight:600; display:inline-flex; align-items:center; text-decoration:none; cursor:pointer; }
 .lockDialog button { border:1px solid #d1d6db; background:#fff; color:#4e5968; }
 .lockDialog a { border:0; background:#246bd1; color:#fff; }
-.step i { display:grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid #d1d6db; font-style:normal; font-size:10px; font-weight:700; color:#8b95a1; background:#fff; }
+.step i { display:grid; place-items:center; flex:none; width:18px; height:18px; border-radius:50%; border:1.5px solid #d1d6db; font-style:normal; font-size:10px; font-weight:700; color:#6b7684; background:#fff; }
 .step i[data-state="done"] { border-color:#246bd1; background:#246bd1; color:#fff; }
 .step i[data-state="active"] { border-color:#246bd1; color:#246bd1; }
 .step[aria-current="page"] i { border-color:#246bd1; background:#246bd1; color:#fff; }
@@ -47,7 +47,7 @@ button.step[aria-disabled="true"]:hover { background:#f7f8fa; }
 .tree .parts button { display:flex; align-items:baseline; gap:8px; width:100%; min-height:30px; padding:6px 8px; border:0; border-radius:6px; background:transparent; color:#4e5968; font:inherit; font-size:12.5px; line-height:1.45; text-align:left; cursor:pointer; word-break:keep-all; }
 .tree .parts button:hover { background:#f2f4f6; color:#191f28; }
 .tree .parts button[aria-current="true"] { color:#1b4f9c; font-weight:700; background:#f2f6fd; }
-.parts b { flex:none; font-size:11px; font-weight:600; color:#8b95a1; font-variant-numeric:tabular-nums; }
+.parts b { flex:none; font-size:11px; font-weight:600; color:#6b7684; font-variant-numeric:tabular-nums; }
 
 /* 폰의 아이콘 띠(PlanShell) — 목록은 서랍을 열었을 때만 */
 @media (max-width:640px) {

@@ -5,6 +5,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useGenerationProgress } from "../GenerationProgress";
 import { useRouter } from "next/navigation";
 import DocumentWorkspace from "./DocumentWorkspace";
+import BusinessKeyed from "../BusinessKeyed";
+import PlanLoading from "../PlanLoading";
+import MissingBusinessScreen from "../MissingBusiness";
 import { hydrateFromServer, lastHydrationFailed, assembleSections, activePlan, loadState, isSamplePlan, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
 import { chaptersForType, documentArrangement } from "../../../lib/plan-builder/blueprint";
 import { htmlToMarkdown } from "../../../lib/plan-builder/html-to-markdown";
@@ -30,7 +33,12 @@ function writtenForCurrentRun(plan: Plan, key: string): boolean {
   return revision == null || section.coachRevision === revision || !!section.edited || !!section.locked;
 }
 
+/* 왼쪽 목록에서 다른 사업을 고르면(주소의 planId 가 바뀌면) 본문을 그 사업으로 새로 그린다 — BusinessKeyed */
 export default function PlanDocumentPage() {
+  return <BusinessKeyed adoptFirst fallback={<PlanLoading fill note="사업계획서를 불러오고 있어요" />}><PlanDocumentBody /></BusinessKeyed>;
+}
+
+function PlanDocumentBody() {
   const router = useRouter();
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
   const [title, setTitle] = useState("사업계획서");
@@ -41,6 +49,8 @@ export default function PlanDocumentPage() {
   const [ready, setReady] = useState(false);
   /* 주소의 사업을 못 찾았는데 서버 목록도 못 불러왔을 때 — 목록으로 보내지 않고 다시 시도하게 */
   const [loadFailed, setLoadFailed] = useState(false);
+  /* 주소의 사업이 없다(지웠거나 다른 계정 것) */
+  const [missing, setMissing] = useState(false);
   const [isSample, setIsSample] = useState(false);
   /** 이 문서의 결제 상태 — null이면 확인 중. 잠겨 있으면 버튼에 미리 보여준다 */
   const [access, setAccess] = useState<{ paid: boolean; price: number } | null>(null);
@@ -126,7 +136,8 @@ export default function PlanDocumentPage() {
       const requested = new URLSearchParams(window.location.search).get("planId");
       if (requested) {
         // 서버 목록을 못 불러와서 못 찾은 것이면 목록으로 보내지 않는다(목록도 비어 보인다) — 다시 시도하게
-        if (!s.plans.some(p => p.id === requested)) { if (lastHydrationFailed()) { setLoadFailed(true); setReady(true); return; } router.replace("/plan"); return; }
+        // 못 찾은 사업은 말없이 목록으로 보내지 않는다 — 다른 화면과 같은 '사업을 찾지 못했어요'(MissingBusiness)
+        if (!s.plans.some(p => p.id === requested)) { if (lastHydrationFailed()) { setLoadFailed(true); setReady(true); return; } setMissing(true); setReady(true); return; }
         s = { ...s, activePlanId: requested }; setActivePlan(requested);
       }
       setSections(assembleSections(s));
@@ -311,6 +322,7 @@ export default function PlanDocumentPage() {
       updateSourceStatus(plan);
     }).catch(() => undefined);
   };
+  if (missing) return <MissingBusinessScreen chromeTitle="사업계획서" />;
   if (loadFailed) return <main style={{ minHeight: "60vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
     <div><h1 style={{ fontSize: 20, margin: "0 0 8px" }}>사업계획서를 불러오지 못했어요</h1><p style={{ color: "#667085", margin: "0 0 16px" }}>연결을 확인하고 다시 불러와 주세요. 작성한 내용은 서버에 그대로 있어요.</p><button type="button" onClick={() => window.location.reload()} style={{ padding: "10px 18px", borderRadius: 10, border: 0, background: "#236be5", color: "#fff", fontWeight: 700 }}>다시 불러오기</button></div>
   </main>;

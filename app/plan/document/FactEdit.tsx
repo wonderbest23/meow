@@ -167,9 +167,10 @@ export function FactPopover({ edit, questionId, anchor, onClose, onSaved }: { ed
   return <div ref={box} className={styles.factPopover} style={{ top: position.top, left: position.left }} role="dialog" aria-label={`${fact.label} 바꾸기`} data-fact-popover>
     <header><div><b>{fact.label} 바꾸기</b><small>지금: {fact.display}</small></div><button type="button" aria-label="닫기" onClick={onClose}><X size={16} /></button></header>
     {amount ? <form className={styles.factAmount} onSubmit={event => { event.preventDefault(); void saveAmount(); }}>
+      {/* 휴대폰은 숫자 자판이 뜬다 — 예시도 숫자로 둔다('6만'은 숫자 자판으로 칠 수 없다). 키보드로 '6만'을 적어도 읽는다 */}
       <label htmlFor="fact-amount">새 금액</label>
-      <div><input id="fact-amount" autoFocus inputMode="numeric" autoComplete="off" maxLength={20} placeholder="예: 60000 또는 6만" value={amountText} disabled={edit.busy} onChange={event => setAmountText(event.target.value)} /><span>원</span></div>
-      <small aria-live="polite">{won !== null ? `${new Intl.NumberFormat("ko-KR").format(won)}원으로 바꿔요` : amountText.trim() ? "숫자로 적어 주세요" : "\u00a0"}</small>
+      <div><input id="fact-amount" autoFocus inputMode="numeric" autoComplete="off" maxLength={20} placeholder="예: 60000" value={amountText} disabled={edit.busy} onChange={event => setAmountText(event.target.value)} /><span>원</span></div>
+      <small aria-live="polite">{won !== null ? `${new Intl.NumberFormat("ko-KR").format(won)}원으로 바꿔요` : amountText.trim() ? "숫자로 적어 주세요 (예: 60000, 6만5천)" : "\u00a0"}</small>
     </form> : <div className={`${intake.page} ${intake.factScope}`} data-coach>
       <QuestionForm question={fact.question} snapshot={edit.snapshot} draft={draft} editing={false} disabled={edit.busy} inChat coach
         onChange={(answer, submit) => { setDraft(answer); if (submit) void save(answer); }}
