@@ -14,7 +14,7 @@ export async function POST(
   const limited = await enforceRateLimit("public-event", request, {
     limit: 120,
     windowMs: 60_000,
-    message: "요청이 너무 잦습니다.",
+    message: "요청이 너무 잦아요.",
   });
   if (limited) return limited;
   try {
@@ -26,7 +26,7 @@ export async function POST(
     await recordLandingEvent(published.site.id, event);
     return NextResponse.json({ ok: true, recorded: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "이벤트를 기록하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "이벤트를 기록하지 못했어요.";
     return NextResponse.json(
       { error: { code: message, message } },
       { status: message === "LANDING_NOT_FOUND" ? 404 : 400 },

@@ -14,6 +14,7 @@ export const KSIC_LEVEL_LABELS: Record<KsicLevel, string> = { 1: "대분류", 2:
 export const KSIC_ATTRIBUTION = "출처: 국가데이터처 국가데이터연구원, 한국표준산업분류(KSIC) 11차 / 공공데이터포털";
 
 import { type BusinessStructure } from "./business-structure";
+export { ksicNameHint, KSIC_NAME_HINTS } from "./ksic-hints";
 export { STRUCTURE_LABELS, structureSummary, revenueBasis, capacityUnitOrder, licenseHint, isFinanceKsic, FINANCE_LICENSE_HINT, structureFieldLabels, SECTOR_DEFAULT_STRUCTURE, STRUCTURE_AXES, type BusinessStructure } from "./business-structure";
 
 const S = (sector: ProposalSector, payer: BusinessStructure["payer"], offering: BusinessStructure["offering"], revenue: BusinessStructure["revenue"], delivery: BusinessStructure["delivery"], capital: BusinessStructure["capital"], license: BusinessStructure["license"], smallBusiness: boolean): BusinessStructure => ({ sector, payer, offering, revenue, delivery, capital, license, smallBusiness });
@@ -101,6 +102,9 @@ export const KSIC_DIVISION_STRUCTURES: Record<string, BusinessStructure> = {
 
 /** 소분류·세세분류 단위로 중분류 기본값을 덮어쓰는 예외(공식 이름과 실제 창업 형태가 다른 곳). */
 export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>> = {
+  // 캔들·디퓨저·수제 비누는 대부분 1인 공방이 손님(개인)에게 판다 — 기본 '혼합' 고객이면 유통사·OEM 같은 B2B 보기가 나왔다(여정 점검 2026-10-22)
+  // 대화 보기는 업종 묶음(sector)으로 정해지므로 손님에게 파는 판매 묶음으로 둔다 — 안전확인 신고 안내는 코드로 붙어 그대로 나온다
+  "33992": { sector: "retail_commerce", payer: "b2c" }, "20424": { sector: "retail_commerce", payer: "b2c" }, "20422": { sector: "retail_commerce", payer: "b2c" },
   "5822": { sector: "software", offering: "software", revenue: "subscription", license: "none" },   // 소프트웨어 개발·공급(출판업 아래)
   "5811": { sector: "content_media", offering: "content", revenue: "per_unit", license: "registration" },
   "639": { sector: "content_media", offering: "content", revenue: "mixed", license: "varies" },
@@ -136,7 +140,7 @@ export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>
   // 소매
   "4711": { license: "registration", smallBusiness: false },                                        // 백화점·대형마트는 대규모점포 등록
   "4512": { smallBusiness: false, license: "registration" },                                                                  // 중고차 매매업 등록에 전시장·사무실 요건
-  "47223": { license: "registration" },                                                              // 반찬 조리·판매는 즉석판매제조·가공업 신고
+  "47223": { sector: "food_beverage", delivery: "store", capital: "storefront", license: "registration" }, // 반찬 조리·판매는 즉석판매제조·가공업 신고. 음식 업종으로 본다(아래 2026-10-22 주석)
   "47212": { license: "registration" },                                                              // 정육점은 식육판매업 신고
   "473": { license: "none" }, "474": { license: "none" }, "475": { license: "none" }, "476": { license: "none" }, // 가전·의류·생활용품·문화용품 소매는 인허가 없음
   "47822": { license: "professional" },                                                              // 안경업소는 안경사 면허
@@ -205,6 +209,12 @@ export const KSIC_STRUCTURE_OVERRIDES: Record<string, Partial<BusinessStructure>
   "59141": { smallBusiness: false },                                                                // 영화관
   "55101": { smallBusiness: false }, "55103": { smallBusiness: false },                             // 호텔·콘도
   "35114": { smallBusiness: true },                                                                 // 태양력 발전업은 소규모 창업이 흔하다(35 기본값은 false)
+  // ── 2026-10-22 여정 점검: 가게에서 만들어 파는 먹거리는 음식 업종으로 본다. 소매·제조 분류라 '유통·온라인 판매'로 잡혀
+  //    스마트스토어·패션·잡화 칩이 따라 나왔다(반찬가게 → 반려동물 가구·큐레이션). 즉석판매제조·가공업으로 매장에서 만들어 판다.
+  "47221": { sector: "food_beverage", delivery: "store", capital: "storefront" },                   // 빵·과자류 소매(빵·과자 가게)
+  "10601": { sector: "food_beverage", payer: "b2c", delivery: "store", capital: "storefront" },     // 떡집 — 매장에서 빚어 파는 떡
+  "10701": { sector: "food_beverage" },                                                             // 도시락 — 공장 납품도 있어 판매 방식은 제조 기본값 유지
+  "10709": { sector: "food_beverage" },                                                             // 밀키트·식사용 조리식품
 };
 
 /**
@@ -218,7 +228,7 @@ export const KSIC_SYNONYMS: Record<string, string[]> = {
   "한식": ["56111"], "식당": ["56111"], "밥집": ["56111"], "국수": ["56112"], "칼국수": ["56112"], "고깃집": ["56113"], "삼겹살": ["56113"], "횟집": ["56114"], "해산물": ["56114"],
   "중식": ["56121"], "중국집": ["56121"], "치킨": ["56162"], "피자": ["56161"], "햄버거": ["56161"], "샌드위치": ["56161"], "분식": ["56191"], "김밥": ["56191"], "떡볶이": ["56191"], "포장전문": ["56199"], "배달전문": ["56199"],
   "술집": ["5621"], "주점": ["5621"], "맥주집": ["56213"], "생맥주": ["56213"], "포차": ["5621"],
-  "반찬가게": ["47223"], "반찬": ["47223"], "도시락": ["10701", "56199"], "밀키트": ["10701"],
+  "반찬가게": ["47223"], "반찬": ["47223"], "도시락": ["56199", "10701"], "도시락가게": ["56199"], "밀키트": ["10709", "47223"], "즉석판매": ["47223", "56199"], "즉석식품": ["47223"], "떡가게": ["10601"], "방앗간": ["10601"], "빵가게": ["56150", "47221"],
   "편의점": ["47122"], "슈퍼": ["47121"], "마트": ["47121"], "정육점": ["47212"], "과일가게": ["47215"], "채소": ["47215"], "건강식품": ["47222"],
   "화장품": ["47813"], "안경": ["47822"], "안경원": ["47822"], "문구": ["47612"], "문구점": ["47612"], "옷가게": ["47419"], "의류": ["47419"], "신발": ["47430"], "가구": ["47520"], "중고가구": ["47861"],
   "꽃집": ["47851"], "플라워": ["47851"], "화훼": ["47851"], "반려용품": ["47852"], "펫샵": ["47852"], "운동용품": ["47631"], "자전거": ["47632"], "골동품": ["47841"],
@@ -259,6 +269,15 @@ export const KSIC_SYNONYMS: Record<string, string[]> = {
   "강아지산책": ["96995"], "산책대행": ["96995"], "도그워커": ["96995"], "반려견": ["96995", "47852"], "강아지": ["96995", "47852"], "애견": ["96995", "47852"],
   "신발세탁": ["96912"], "운동화세탁": ["96912"], "옷공장": ["14199"], "옷만드": ["14199"], "의류제조": ["14199"], "봉제": ["14199"], "운동기록": ["58222"], "운동앱": ["58222"], "헬스앱": ["58222"],
   "투자교육": ["85503", "85669"], "주식교육": ["85503", "85669"], "재테크교육": ["85503", "85669"], "재테크강의": ["85503"],
+  // 2026-10-22 여정 점검: 자주 쓰는 말인데 공식 이름에 없어 검색이 비던 표현(캔들·향초는 결과 0개, PT·무인 매장 등)
+  // 캔들·향초는 공식 분류로 '연소물 제조(33992)' — 생활화학제품 안전확인 신고 안내(industry-playbooks household-chemical)가 이 코드에 붙어 있다
+  "캔들": ["33992", "47813"], "향초": ["33992", "47813"], "양초": ["33992", "47813"], "디퓨저": ["20424", "47813"], "방향제": ["47813", "20424"], "비누": ["20422", "47813"], "수제비누": ["20422", "47813"],
+  "공방": ["33999", "85629"], "원데이클래스": ["85629", "85699"], "공예": ["33999", "85629"],
+  "속눈썹연장": ["96119"], "반영구": ["96119"], "눈썹": ["96119"],
+  "pt": ["91132", "85612"], "피티": ["91132", "85612"], "퍼스널트레이닝": ["91132"], "크로스핏": ["91132"],
+  "무인매장": ["47991", "47229"], "무인카페": ["47991", "56221"],
+  "애견미용": ["96995", "96999"], "펫미용": ["96995", "96999"], "펫호텔": ["96995"], "애견카페": ["56221", "96995"],
+  "보습학원": ["85632"], "수학학원": ["85632"], "입시학원": ["85632"], "공부방": ["85632"],
   "그림": ["47841", "90132"], "미술품": ["47841"], "예술품": ["47841"], "보험비교": ["66202"], "보험대리": ["66202"], "보험설계": ["66202"], "여행가이드": ["75290"],
 };
 

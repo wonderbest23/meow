@@ -53,10 +53,10 @@ const VIEWPORTS = [
  * 값은 블록의 motion 속성 하나뿐이다 — 따로 저장하지 않는다.
  */
 const MOTION_TEMPLATES = [
-  { value: "none", label: "없음", detail: "움직이지 않습니다" },
-  { value: "fade", label: "서서히", detail: "옅게 있다가 또렷해집니다" },
-  { value: "up", label: "아래에서 위로", detail: "살짝 올라오며 나타납니다" },
-  { value: "side", label: "좌우에서", detail: "옆에서 밀려 들어옵니다" },
+  { value: "none", label: "없음", detail: "움직이지 않아요" },
+  { value: "fade", label: "서서히", detail: "옅게 있다가 또렷해져요" },
+  { value: "up", label: "아래에서 위로", detail: "살짝 올라오며 나타나요" },
+  { value: "side", label: "좌우에서", detail: "옆에서 밀려 들어와요" },
 ];
 
 /*
@@ -90,7 +90,7 @@ function MotionPanel() {
   const getPuck = useGetPuck();
   const selected = useLandingPuck((state) => state.selectedItem);
   if (!selected) {
-    return <p className="landing-motion-empty">먼저 화면에서 칸을 하나 누르세요. 그 칸이 어떻게 나타날지 여기서 정합니다.</p>;
+    return <p className="landing-motion-empty">먼저 화면에서 칸을 하나 누르세요. 그 칸이 어떻게 나타날지 여기서 정해요.</p>;
   }
   const current = (selected.props as { motion?: string }).motion ?? "none";
   return (
@@ -140,7 +140,7 @@ function BuilderHint() {
     <p className="landing-builder-hint">
       <MousePointerClick />
       <span>
-        왼쪽 <b>블록 넣기</b>에서 원하는 칸을 끌어다 놓으세요. 칸을 누르면 오른쪽에서 글과 사진을 고칩니다.
+        왼쪽 <b>블록 넣기</b>에서 원하는 칸을 끌어다 놓으세요. 칸을 누르면 오른쪽에서 글과 사진을 고쳐요.
       </span>
     </p>
   );
@@ -240,7 +240,7 @@ export function LandingVisualBuilder({
     setSwitched({ businessContent, brainwave: createBusinessTemplate(businessContent, BRAINWAVE_DEFAULT_FOR_TEMPLATE.service), root: { props: { title: businessName } }, content: [] });
   };
   return (
-    <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="판매 페이지 자유 편집" inert={persistence.saving} aria-busy={persistence.saving}>
+    <div className="landing-visual-builder" role="dialog" aria-modal="true" aria-label="홈페이지 자유 편집" inert={persistence.saving} aria-busy={persistence.saving}>
       <BuilderHint />
       <button type="button" className="builder-switch-kit" onClick={switchToKit}>
         <Sparkles size={15} /> 홈페이지 템플릿으로 바꾸기
@@ -248,7 +248,7 @@ export function LandingVisualBuilder({
       <Puck
         config={landingBlockConfig}
         data={data as Data<LandingBlockProps>}
-        headerTitle="판매 페이지 자유 편집"
+        headerTitle="홈페이지 자유 편집"
         headerPath={businessName}
         /* 안내줄이 위를 차지한다 — 남은 높이만 편집기가 쓴다 */
         height="calc(100dvh - var(--builder-hint-h, 44px))"
@@ -263,7 +263,7 @@ export function LandingVisualBuilder({
            */
           header: () => (
             <div className="landing-builder-head">
-              <strong>{businessName || "판매 페이지"}</strong>
+              <strong>{businessName || "홈페이지"}</strong>
               <BuilderBar onClose={onClose} persistence={persistence} initialFingerprint={initialFingerprint.current} />
             </div>
           ),

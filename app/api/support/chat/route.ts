@@ -8,7 +8,7 @@ import { notifyOwnerBySms } from "../../../../lib/notify/owner-sms";
 import { publicErrorMessage } from "../../../../lib/api-errors";
 
 const messageSchema = z.object({
-  message: z.string().trim().min(1, "메시지를 입력해주세요.").max(2000, "메시지는 2,000자까지 입력할 수 있습니다."),
+  message: z.string().trim().min(1, "메시지를 입력해 주세요.").max(2000, "메시지는 2,000자까지 입력할 수 있어요."),
 });
 
 function privateJson(body: unknown, init?: ResponseInit) {
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     return privateJson({ chat: await getCustomerChat(identity.hash, markRead) });
   } catch (error) {
     return privateJson(
-      { error: { code: "SUPPORT_CHAT_LOAD_FAILED", message: publicErrorMessage(error, "상담 내용을 불러오지 못했습니다.") } },
+      { error: { code: "SUPPORT_CHAT_LOAD_FAILED", message: publicErrorMessage(error, "상담 내용을 불러오지 못했어요.") } },
       { status: 400 },
     );
   }
@@ -35,7 +35,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("support-chat", request, {
     limit: 20,
     windowMs: 10 * 60_000,
-    message: "메시지를 너무 자주 보내고 있습니다. 잠시 후 다시 보내주세요.",
+    message: "메시지를 너무 자주 보내고 있어요. 잠시 후 다시 보내 주세요.",
   });
   if (limited) return limited;
 
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
     return privateJson({ chat }, { status: 201 });
   } catch (error) {
     // 입력 검증 안내(한국어)만 그대로 보이고, DB 오류 원문은 서버 로그로 돌린다
-    const message = publicErrorMessage(error, "메시지를 보내지 못했습니다.");
+    const message = publicErrorMessage(error, "메시지를 보내지 못했어요.");
     return privateJson(
       { error: { code: "SUPPORT_MESSAGE_FAILED", message } },
       { status: 400 },

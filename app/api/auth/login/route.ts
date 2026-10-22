@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("auth-login", request, {
     limit: 10,
     windowMs: 5 * 60_000,
-    message: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "로그인 시도가 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
   try {
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
     if (result.error?.code === "email_not_confirmed" || (result.data.user?.email && !result.data.user.email_confirmed_at)) {
       return NextResponse.json({ error: { code: "EMAIL_NOT_CONFIRMED", message: "확인 메일의 링크로 이메일을 인증한 후 로그인해 주세요." } }, { status: 403 });
     }
-    if (result.error || !result.data.session || !result.data.user) throw result.error ?? new Error("로그인 정보를 확인해주세요.");
+    if (result.error || !result.data.session || !result.data.user) throw result.error ?? new Error("로그인 정보를 확인해 주세요.");
     await claimGuestProjects(result.data.user.id, previousGuestHash);
     await setAccountSession(result.data.session, remember);
     return NextResponse.json({ authenticated: true, email: result.data.user.email });

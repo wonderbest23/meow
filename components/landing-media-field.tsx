@@ -5,19 +5,19 @@ import { useEffect, useRef, useState } from "react";
 import LandingImageCrop from "./landing-image-crop";
 
 export async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Blob> {
-  if (!file.type.startsWith("image/")) throw new Error("이미지 파일만 올릴 수 있습니다.");
-  if (file.size > 12 * 1024 * 1024) throw new Error("12MB 이하 이미지를 선택해주세요.");
+  if (!file.type.startsWith("image/")) throw new Error("이미지 파일만 올릴 수 있어요.");
+  if (file.size > 12 * 1024 * 1024) throw new Error("12MB 이하 이미지를 선택해 주세요.");
 
   const source = await new Promise<string>((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(new Error("이미지를 읽지 못했습니다."));
+    reader.onerror = () => reject(new Error("이미지를 읽지 못했어요."));
     reader.readAsDataURL(file);
   });
   const image = await new Promise<HTMLImageElement>((resolve, reject) => {
     const element = new window.Image();
     element.onload = () => resolve(element);
-    element.onerror = () => reject(new Error("이미지를 열지 못했습니다."));
+    element.onerror = () => reject(new Error("이미지를 열지 못했어요."));
     element.src = source;
   });
   const limit = kind === "logo" ? 600 : 1600;
@@ -26,13 +26,13 @@ export async function resizeImage(file: File, kind: "logo" | "hero"): Promise<Bl
   canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
   canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("이미지를 처리하지 못했습니다.");
+  if (!context) throw new Error("이미지를 처리하지 못했어요.");
   context.drawImage(image, 0, 0, canvas.width, canvas.height);
   const type = kind === "logo" ? "image/png" : "image/jpeg";
   const blob = await new Promise<Blob | null>((resolve) =>
     canvas.toBlob(resolve, type, kind === "logo" ? 0.92 : 0.82),
   );
-  if (!blob) throw new Error("이미지를 처리하지 못했습니다.");
+  if (!blob) throw new Error("이미지를 처리하지 못했어요.");
   return blob;
 }
 
@@ -59,7 +59,7 @@ export async function uploadEditorImage(blob: Blob, kind: "logo" | "hero", edito
   const res = await fetch("/api/uploads", { method: "POST", body: form });
   const data = (await res.json().catch(() => ({}))) as { url?: string; message?: string; cleanupToken?: string };
   if (!res.ok || !data.url) {
-    throw new Error(data.message ?? "사진을 올리지 못했습니다. 잠시 후 다시 시도해주세요.");
+    throw new Error(data.message ?? "사진을 올리지 못했어요. 잠시 후 다시 시도해 주세요.");
   }
   return { url: data.url, cleanupToken: data.cleanupToken };
 }
@@ -122,7 +122,7 @@ export function LandingMediaField({
         setPending(receipt);
       } else latest.current.onChange(receipt.url);
     } catch (cause) {
-      if (active.current && operation.current === request) setError(cause instanceof Error ? cause.message : "이미지를 처리하지 못했습니다.");
+      if (active.current && operation.current === request) setError(cause instanceof Error ? cause.message : "이미지를 처리하지 못했어요.");
     } finally {
       if (active.current && operation.current === request) {
         setLoading(false);

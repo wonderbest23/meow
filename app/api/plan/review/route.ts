@@ -19,7 +19,7 @@ export const runtime = "nodejs";
  * 저장은 화면이 기존 동기화 경로로 한다(생성 API 와 같은 태도).
  */
 export async function POST(req: Request) {
-  const limited = await enforceRateLimit("plan-review", req, { limit: 10, windowMs: 10 * 60_000, message: "검토 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  const limited = await enforceRateLimit("plan-review", req, { limit: 10, windowMs: 10 * 60_000, message: "검토 요청이 너무 많아요. 잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
 
   let identity: { hash: string };

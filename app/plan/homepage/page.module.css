@@ -211,6 +211,18 @@
 }
 
 /* 안내 옆 행동 두 가지 — 전체 화면으로 보기 / 다음 단계 */
+/* 결제 옆의 건너뛰는 길 — 글자 단추(결제 단추보다 약하게) */
+.ctaSecondary {
+  margin-top: 8px;
+  min-height: 44px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  color: var(--app-accent, #3272db);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+}
 .payActions {
   display: flex;
   align-items: center;

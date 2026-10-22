@@ -32,7 +32,7 @@ export async function POST(req: Request) {
   const limited = await enforceRateLimit("upload-image", req, {
     limit: 40,
     windowMs: 10 * 60_000,
-    message: "사진 업로드가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "사진 업로드가 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
 
@@ -49,28 +49,28 @@ export async function POST(req: Request) {
    */
   if (!isEditorPreviewAccount(user.email)) {
     const paid = await supabase.from("payment_orders").select("order_id").eq("owner_id", user.id).eq("status", "done").limit(1);
-    if (paid.error) return NextResponse.json({ error: "storage_unavailable", message: "잠시 후 다시 시도해주세요." }, { status: 503 });
+    if (paid.error) return NextResponse.json({ error: "storage_unavailable", message: "잠시 후 다시 시도해 주세요." }, { status: 503 });
     if (!paid.data?.length) return NextResponse.json({ error: "payment_required", message: "사진은 홈페이지를 연 뒤에 올릴 수 있어요." }, { status: 402 });
   }
-  const daily = await enforceRateLimit("upload-image-day", req, { key: user.id, limit: 200, windowMs: 24 * 60 * 60_000, message: "오늘은 사진을 더 올릴 수 없어요. 내일 다시 시도해주세요." });
+  const daily = await enforceRateLimit("upload-image-day", req, { key: user.id, limit: 200, windowMs: 24 * 60 * 60_000, message: "오늘은 사진을 더 올릴 수 없어요. 내일 다시 시도해 주세요." });
   if (daily) return daily;
 
   const form = await req.formData().catch(() => null);
   const file = form?.get("file");
   if (!(file instanceof File)) {
-    return NextResponse.json({ error: "file_required", message: "사진을 선택해주세요." }, { status: 400 });
+    return NextResponse.json({ error: "file_required", message: "사진을 선택해 주세요." }, { status: 400 });
   }
 
   const ext = ALLOWED[file.type];
   if (!ext) {
     return NextResponse.json(
-      { error: "unsupported_type", message: "PNG, JPG, WEBP 형식만 올릴 수 있습니다." },
+      { error: "unsupported_type", message: "PNG·JPG·WebP 파일만 올릴 수 있어요." },
       { status: 400 },
     );
   }
   if (file.size > MAX_BYTES) {
     return NextResponse.json(
-      { error: "too_large", message: "사진은 5MB까지 올릴 수 있습니다." },
+      { error: "too_large", message: "사진은 5MB까지 올릴 수 있어요." },
       { status: 413 },
     );
   }
@@ -89,7 +89,7 @@ export async function POST(req: Request) {
   if (error) {
     console.error("[upload] 실패:", error.message);
     return NextResponse.json(
-      { error: "upload_failed", message: "사진을 올리지 못했습니다. 잠시 후 다시 시도해주세요." },
+      { error: "upload_failed", message: "사진을 올리지 못했어요. 잠시 후 다시 시도해 주세요." },
       { status: 502 },
     );
   }
@@ -97,7 +97,7 @@ export async function POST(req: Request) {
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(name);
   if (!data?.publicUrl) {
     await supabase.storage.from(BUCKET).remove([name]);
-    return NextResponse.json({ error: "url_failed", message: "사진 주소를 만들지 못했습니다." }, { status: 502 });
+    return NextResponse.json({ error: "url_failed", message: "사진 주소를 만들지 못했어요." }, { status: 502 });
   }
   const secret = process.env.AUTH_PROJECT_SECRET?.trim() || process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const cleanupToken = form?.get("editorDraft") === "true" && secret ? issueUploadCleanupToken(name, user.id, secret) : undefined;

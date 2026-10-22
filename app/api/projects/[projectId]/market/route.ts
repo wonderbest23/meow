@@ -25,12 +25,12 @@ export async function PUT(
     );
     return NextResponse.json({ project, analysis });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "시장·입지 정보를 저장하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "시장·입지 정보를 저장하지 못했어요.";
     return NextResponse.json(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "MARKET_WORKSPACE_INVALID",
-          message: publicErrorMessage(error, "시장·입지 정보를 저장하지 못했습니다."),
+          message: publicErrorMessage(error, "시장·입지 정보를 저장하지 못했어요."),
           retryable: false,
         },
       },

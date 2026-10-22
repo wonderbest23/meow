@@ -95,7 +95,7 @@ export function useFactEdit(planId: string | null, active: boolean) {
       const response = await fetch("/api/plan/chat", { method: "POST", headers: { ...HEADERS, "Content-Type": "application/json", "x-business-intake-owner": owner }, body: JSON.stringify({ planId, revision: snapshot.coach.revision, requestId: crypto.randomUUID(), ...command }) });
       const data = await readChatResponse(response) as { plan?: IntakeSnapshot; message?: string; code?: string; login?: boolean } | null;
       if (response.status === 409) { await load(); setError({ message: "다른 곳에서 먼저 바뀐 내용이 있어요. 최신 내용으로 다시 불러왔어요." }); return null; }
-      if (response.status === 402) { setError({ message: data?.message || "다시 쓰기 횟수가 모자라요.", href: `/plan/pay?planId=${encodeURIComponent(planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`, label: "횟수 추가하기" }); return null; }
+      if (response.status === 402) { setError({ message: data?.message || "다시 생성 횟수가 모자라요.", href: `/plan/pay?planId=${encodeURIComponent(planId)}&planType=${encodeURIComponent(snapshot.planType)}&product=regen`, label: "횟수 추가하기" }); return null; }
       if (response.status === 401 || data?.login) { setError({ message: "로그인하면 계획서에 반영할 수 있어요.", href: `/account?next=${encodeURIComponent(`/plan/document?planId=${planId}&edit=facts`)}`, label: "로그인" }); return null; }
       if (!response.ok || !data?.plan) { setError({ message: data?.message || "저장하지 못했어요. 잠시 후 다시 시도해 주세요." }); return null; }
       setSnapshot(data.plan);

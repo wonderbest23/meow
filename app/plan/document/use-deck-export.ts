@@ -43,7 +43,7 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
       }
     } catch (failure) {
       if (current() && (!controller.signal.aborted || controller.signal.reason === "timeout")) {
-        setStatusError(failure instanceof Error && !controller.signal.aborted ? failure.message : "접수 상태를 확인하지 못했어요. 연결되면 다시 확인합니다.");
+        setStatusError(failure instanceof Error && !controller.signal.aborted ? failure.message : "접수 상태를 확인하지 못했어요. 연결되면 다시 확인해요.");
       }
     } finally {
       window.clearTimeout(timer);
@@ -74,7 +74,7 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
       if (document.hidden) return;
       if (uncertainUntil && Date.now() >= uncertainUntil) {
         setUncertainUntil(0);
-        setError("접수 결과를 확정하지 못했어요. 상태를 다시 확인한 후 재시도해주세요. 이미 접수된 작업은 중복 생성하지 않습니다.");
+        setError("접수 결과를 확정하지 못했어요. 상태를 다시 확인한 후 다시 시도해 주세요. 이미 접수된 작업은 중복 생성하지 않아요.");
       }
       void refresh();
     }, statusError ? 12000 : 4000);
@@ -119,7 +119,7 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
       }
     } catch (failure) {
       if (current() && (!controller.signal.aborted || controller.signal.reason === "timeout")) {
-        setError(failure instanceof Error && !controller.signal.aborted ? failure.message : ready ? "내려받기 연결이 끊겼어요. 완성된 자료는 유지되어 있으니 다시 내려받아주세요." : "서버 접수 여부를 확인하고 있어요. 다시 생성하지 않고 상태부터 확인합니다.");
+        setError(failure instanceof Error && !controller.signal.aborted ? failure.message : ready ? "내려받기 연결이 끊겼어요. 완성된 자료는 유지되어 있으니 다시 내려받아 주세요." : "서버 접수 여부를 확인하고 있어요. 다시 생성하지 않고 상태부터 확인해요.");
         // A lost POST response does not mean the server rejected the job.
         if (!ready && !accepted && !rejected) { setUncertainUntil(Date.now() + 30000); void refresh(); }
       }
@@ -128,8 +128,8 @@ export function useDeckExport(planId: string | null, enabled: boolean, title: st
       if (current()) { action.current = null; setSubmitting(false); setDownloading(false); }
     }
   }
-  const message = busy ? `${DECK_PHASE_LABELS[job!.phase]} · ${job!.resumable ? "슬라이드 초안이 저장됐어요. " : "원본 계획서는 저장되어 있어요. "}화면을 나가도 서버에서 계속 진행해요.`
-    : uncertainUntil ? "제작 접수 상태를 확인하고 있어요. 중복 요청은 보내지 않습니다."
+  const message = busy ? `${DECK_PHASE_LABELS[job!.phase]} · ${job!.resumable ? "슬라이드 초안이 저장됐어요. " : "원본 계획서는 저장되어 있어요. "}창을 닫아도 계속 만들어요.`
+    : uncertainUntil ? "제작 접수 상태를 확인하고 있어요. 중복 요청은 보내지 않아요."
     : view.message;
   return { busy: busy || submitting || downloading || refreshing || !!uncertainUntil, canRequest: enabled, message, error: error || statusError, refresh, startOrDownload,
     label: downloading ? "PPT 파일을 준비하고 있어요" : busy || submitting ? "발표자료 제작 중" : uncertainUntil ? "PPT 접수 확인 중" : refreshing ? "PPT 상태를 확인하고 있어요" : view.label };

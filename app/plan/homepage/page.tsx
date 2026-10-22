@@ -9,7 +9,8 @@ import { useRouter } from "next/navigation";
 import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
 import { LandingQuickEditor } from "../../../components/landing-quick-editor";
-import { HomepageKitPanel } from "../../../components/homepage-kit-panel";
+import { HomepageKitPanel, homepageMissingInfo, withBusinessName } from "../../../components/homepage-kit-panel";
+import { BUSINESS_TEMPLATE_PROFILES } from "../../../lib/landing/brainwave/business-content";
 import { LandingBlocksRenderer } from "../../../components/landing-blocks";
 import { createLandingPageData } from "../../../lib/landing/page-data";
 import { landingDraftFromPlan } from "../../../lib/landing/from-plan";
@@ -25,7 +26,8 @@ import styles from "./page.module.css";
 import PlanLoading, { Spinner } from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
-import { careHref, homepageHref } from "../../../lib/plan-builder/journey";
+import { homepageHref, journeyNext, launchHref } from "../../../lib/plan-builder/journey";
+import { readCoach } from "../../../lib/plan-builder/coach";
 import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
 import { Check, Rocket, Save } from "lucide-react";
@@ -433,6 +435,21 @@ export default function PlanHomepagePage() {
       confirmLabel: "바꾸고 공개",
       danger: true,
     })) return { ok: false, message: "", cancelled: true };
+    /*
+     * 처음 공개(또는 멈췄다 다시 공개)할 때 비어 있는 사업자 정보를 한 번 알린다 — 예전엔 '채울 것 5개'가 있어도 묻지 않고 공개됐다.
+     * 그래도 공개할 수 있다(문의 양식을 켠 채 개인정보 문의처가 비면 서버가 공개를 막는다 — 그 경우는 따로 알린다).
+     */
+    const missingInfo = siteRef.current?.status === "published" ? [] : homepageMissingInfo(draft);
+    if (missingInfo.length && !await askConfirm({
+      title: "비어 있는 사업자 정보가 있어요",
+      message: `비어 있는 항목: ${missingInfo.join(", ")}. ${missingInfo.includes("개인정보 문의처") ? "문의 양식을 켜 두었다면 개인정보 문의처는 꼭 적어야 공개할 수 있어요." : "지금 공개해도 되지만, 손님에게 돈을 받기 전에는 채워 주세요."} 채울 곳은 아래 '사업자 정보'예요.`,
+      cancelLabel: "채우러 가기",
+      confirmLabel: "그래도 공개",
+    })) {
+      const fold = document.getElementById("hk-business");
+      if (fold instanceof HTMLDetailsElement) { fold.open = true; fold.scrollIntoView({ behavior: "smooth", block: "start" }); }
+      return { ok: false, message: "", cancelled: true };
+    }
     if (requestRef.current) return { ok: false, message: "지금은 공개할 수 없어요. 잠시 후 다시 시도해 주세요." };
     const controller = new AbortController();
     requestRef.current = controller;
@@ -461,7 +478,7 @@ export default function PlanHomepagePage() {
       setMessage("홈페이지를 공개했어요. 손님 화면에 바로 보여요.");
       return { ok: true, site: data.site as LandingSiteRecord };
     } catch (error) {
-      const message = `${draftSaved ? "고친 내용은 저장됐지만 공개는 확인하지 못했어요. " : ""}${userErrorMessage(error, "연결을 확인하고 다시 시도해주세요.")}`;
+      const message = `${draftSaved ? "고친 내용은 저장됐지만 공개는 확인하지 못했어요. " : ""}${userErrorMessage(error, "연결을 확인하고 다시 시도해 주세요.")}`;
       if (error instanceof LandingSaveError && (error.code === "SLUG_TAKEN" || error.code === "LANDING_SLUG_INVALID")) {
         if (current()) { setMessage(""); showSlugError(error.message); }
         return { ok: false, message: `무료 주소 끝부분을 고쳐 주세요 · ${error.message}` };
@@ -540,6 +557,33 @@ export default function PlanHomepagePage() {
     setMessage("고른 사업 정보를 초안에 반영했어요. 공개 중인 홈페이지는 아직 그대로예요.");
   };
 
+  /*
+   * 편집기에서 큰 제목을 고치면 닫을 때 한 번 묻는다 — "가게 이름도 '…'로 바꿀까요?" 예전엔 큰 제목만 바뀌고 머리줄 이름·개인정보 처리 주체·
+   * 문의·문자 안내에는 옛 이름이 남았다(여정 점검 2026-10-22). 같은 이름은 다시 묻지 않는다. 편집 중에 묻지 않는 건 편집기가 따로 저장하기 때문이다.
+   */
+  const heroTitle = (value: LandingDraft | null) => {
+    const bw = value?.pageData?.brainwave;
+    const profile = bw ? BUSINESS_TEMPLATE_PROFILES[bw.page] : undefined;
+    return bw && profile ? (bw.texts[profile.headline] ?? "").replace(/\s+/g, " ").trim() : "";
+  };
+  const openedTitle = useRef<string | null>(null);
+  const askedNames = useRef(new Set<string>());
+  useEffect(() => {
+    if (builderOpen) { openedTitle.current = heroTitle(draft); return; }
+    const opened = openedTitle.current;
+    openedTitle.current = null;
+    if (opened === null || !draft || !editable) return;
+    const title = heroTitle(draft);
+    if (!title || title === opened || title.length > 30 || title === draft.businessName.trim() || askedNames.current.has(title)) return;
+    askedNames.current.add(title);
+    void askConfirm({ title: "가게 이름도 바꿀까요?", message: `큰 제목을 '${title}'(으)로 고쳤어요. 가게 이름도 '${title}'(으)로 바꿀까요? 홈페이지 맨 위 이름, 개인정보 처리 주체, 손님 문의·문자 안내에 이 이름이 들어가요.`, cancelLabel: "그대로 두기", confirmLabel: "가게 이름 바꾸기" })
+      .then(ok => {
+        if (!ok) return;
+        const renamed = withBusinessName(draft, title);
+        saveDraft(renamed).then(() => setMessage(`가게 이름을 '${title}'(으)로 바꿨어요. 손님 화면에는 공개하면 반영돼요.`)).catch(() => { setDraft(renamed); setMessage("가게 이름을 바꿨어요. 저장을 눌러 주세요."); });
+      });
+  }, [builderOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const publicPath = site ? `/launch/${site.publishedSlug ?? site.slug}` : "";
   /* 공개·공개 중지가 끝나면 왼쪽 목록(유지보수 단계)에 바로 알린다 — 새로 고침 없이 '유지보수'가 열린다 */
   useEffect(() => {
@@ -579,6 +623,9 @@ export default function PlanHomepagePage() {
     <button type="button" className={styles.headerPrimary} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />}<span>{liveUpToDate ? "공개됨" : site?.status === "published" ? "새 버전 공개" : site?.status === "unpublished" ? "다시 공개" : "공개하기"}</span></button>
   </div> : undefined;
   const back = screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
+  /* 이 화면의 사업 — 공개 뒤 다음 단계와 '사업 시작 준비 먼저 하기'에 쓴다(이 기기에 저장된 사업) */
+  const screenPlan = phase === "ready" && screenPlanId && !sample ? loadState().plans.find(item => item.id === screenPlanId) ?? null : null;
+  const screenNext = screenPlan ? journeyNext(screenPlan, "published") : screenPlanId ? { href: launchHref(screenPlanId), title: "사업 시작하기", note: "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요" } : null;
 
   return (
     <main className={frame.page}><BusinessAppChrome title="홈페이지" backHref={back} actions={headerActions}>
@@ -639,6 +686,10 @@ export default function PlanHomepagePage() {
                   {planPaid ? "결제하고 홈페이지 고치기 →" : "함께 결제하기 →"}
                 </button>
               )}
+              {/* 홈페이지는 나중에 해도 된다 — 결제 단추 하나뿐이라 사업 시작하기로 넘어갈 길이 없었다(여정 점검 2026-10-22) */}
+              {!sample && screenPlanId && <Link className={styles.ctaSecondary} href={launchHref(screenPlanId)} onClick={() => setActivePlan(screenPlanId)}>
+                {screenPlan && readCoach(screenPlan.answers)?.stage === "operating" ? "운영 개선 먼저 하기 →" : "사업 시작 준비 먼저 하기 →"}
+              </Link>}
             </div>
           </div>
           {/*
@@ -782,11 +833,12 @@ export default function PlanHomepagePage() {
 
       {/* 공개한 뒤의 다음 단계는 하나 — 유지보수(홈페이지 고치기, 문의·실적 관리) */}
       {/* 다음 단계 두 개를 나란히 — 예전엔 화면 끝까지 넓은 띠 두 개라 글씨만 작아 보였다(소유자 지적 2026-10-07) */}
-      {phase === "ready" && site?.status === "published" && screenPlanId && !sample && <div className={styles.nextRow}>
-        <Link className={styles.nextCare} href={careHref(screenPlanId)}>
+      {/* 다음 단계는 단계 순서(journey.ts)대로 — 사업 시작하기를 아직 안 했으면 그것부터, 했으면 유지보수(예전엔 4단계를 건너뛰었다) */}
+      {phase === "ready" && site?.status === "published" && screenPlanId && !sample && screenNext && <div className={styles.nextRow}>
+        <Link className={styles.nextCare} href={screenNext.href} onClick={() => setActivePlan(screenPlanId)}>
           <span>다음 단계</span>
-          <strong>유지보수 하기 →</strong>
-          <small>홈페이지를 고치고, 들어온 문의와 실적을 관리해요</small>
+          <strong>{screenNext.title} →</strong>
+          <small>{screenNext.note}</small>
         </Link>
         {/* 그다음 — 홍보 상담(목록은 유지보수 화면 한 곳에) */}
         <NextServicesCard planId={screenPlanId} className={styles.nextCard} />

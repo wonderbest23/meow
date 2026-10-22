@@ -24,9 +24,9 @@ export async function GET(
       logs,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "서비스 감사 로그를 불러오지 못했습니다.";
+    const message = error instanceof Error ? error.message : "서비스 감사 로그를 불러오지 못했어요.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "SERVICE_AUDIT_FAILED", message: publicErrorMessage(error, "서비스 감사 로그를 불러오지 못했습니다.") } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "SERVICE_AUDIT_FAILED", message: publicErrorMessage(error, "서비스 감사 로그를 불러오지 못했어요.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }

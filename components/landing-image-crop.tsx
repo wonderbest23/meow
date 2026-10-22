@@ -52,14 +52,14 @@ export default function LandingImageCrop({ file, onApply, onCancel, initialAspec
     void Promise.resolve().then(() => loadCropImage(file, run.controller.signal)).then(loaded => {
       if (!run.active || currentFile.current !== file) { loaded.dispose(); return; }
       run.dispose = loaded.dispose; setImage(loaded.image);
-    }).catch(cause => { if (run.active && currentFile.current === file) setError(cause instanceof Error ? cause.message : "이미지를 열지 못했습니다."); });
+    }).catch(cause => { if (run.active && currentFile.current === file) setError(cause instanceof Error ? cause.message : "이미지를 열지 못했어요."); });
     return () => { run.active = false; run.controller.abort(); run.dispose?.(); dialog.current?.close(); };
   }, [file, initialAspect, maxOutputEdge]);
 
   useEffect(() => {
     if (!canvas.current || !image || !rect) return;
     try { drawImageCrop(canvas.current, image, rect, 1000); }
-    catch (cause) { setError(cause instanceof Error ? cause.message : "미리보기를 표시하지 못했습니다."); }
+    catch (cause) { setError(cause instanceof Error ? cause.message : "미리보기를 표시하지 못했어요."); }
   }, [image, ratio, position]);
 
   const cancel = () => {
@@ -75,7 +75,7 @@ export default function LandingImageCrop({ file, onApply, onCancel, initialAspec
     let result: File;
     try { result = await cropImageFile(run.file, image, rect, { maxEdge: maxOutputEdge, signal: run.controller.signal }); }
     catch (cause) {
-      if (run.active && run.file === currentFile.current) { run.encoding = false; setBusy(false); setError(cause instanceof Error ? cause.message : "이미지를 처리하지 못했습니다."); }
+      if (run.active && run.file === currentFile.current) { run.encoding = false; setBusy(false); setError(cause instanceof Error ? cause.message : "이미지를 처리하지 못했어요."); }
       return;
     }
     if (!run.active || session.current !== run || run.file !== currentFile.current) return;

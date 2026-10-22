@@ -5,15 +5,29 @@ import { applyIntakeAnswer, effectiveStructure, IntakeError } from "./intake-cor
 import { intakeCandidates } from "./intake-questions";
 import { ksicByCode } from "./ksic";
 import { parseResourceLimit } from "./intake-candidate-fit";
-import { RESOURCE_KEYS, RESOURCE_ANSWER_IDS, RESOURCE_UNITS, resourceRecordSchema, resourceBusinessAssumptions } from "./intake-candidate-resources";
+import { RESOURCE_KEYS, RESOURCE_ANSWER_IDS, RESOURCE_LABELS, RESOURCE_UNITS, resourceRecordSchema, resourceBusinessAssumptions } from "./intake-candidate-resources";
 
+/*
+ * 예산·시간 고치기. 빈 칸은 '바꾸지 않음'이다 — 예전엔 빈 칸이 '아직 미정'으로 저장되고(답하지 않은 질문까지),
+ * 저장할 때마다 대화 끝에 "준비에 쓸 수 있는 돈은 얼마인가요? 아직 미정" 같은 질문·답이 순서 없이 다시 붙었다(여정 점검 2026-10-22).
+ * 이제 바뀐 값만 답을 고치고, 대화에는 고친 내용을 한 줄로만 남긴다. 직접 '미정'이라고 적은 값은 그대로 미정이다.
+ */
 export function applyIntakeResources(plan: ServerPlan, coach: CoachState, intake: IntakeState, command: IntakeCommand, at: string) {
+  const messageCount = coach.messages.length;
+  const changed: string[] = [];
   for (const key of RESOURCE_KEYS) if (command.resourceLimits && Object.hasOwn(command.resourceLimits, key)) {
-    const raw = command.resourceLimits[key] ?? null, id = RESOURCE_ANSWER_IDS[key];
+    const raw = command.resourceLimits[key]?.trim() || null, id = RESOURCE_ANSWER_IDS[key];
+    if (raw === null) continue;
+    const previous = intake.answers[id];
+    if (previous && (previous.quote || String(previous.value ?? "")).trim() === raw) continue;
     const parsed = parseResourceLimit(raw, key), unknown = parsed.status === "missing" || parsed.status === "unknown";
     if (id === "budget" || id === "hoursPerWeek") applyIntakeAnswer(plan, coach, intake, { ...command, requestId: `${command.requestId}:${key}`, action: "answer", questionId: id, value: raw, unknown }, at);
-    else intake.answers[id] = { status: unknown ? "unknown" : "answered", value: raw, quote: raw ?? "", messageId: command.requestId, at };
+    else intake.answers[id] = { status: unknown ? "unknown" : "answered", value: raw, quote: raw, messageId: command.requestId, at };
+    changed.push(`${RESOURCE_LABELS[key]} ${unknown ? "아직 미정" : raw}`);
   }
+  // 질문·답 말풍선(applyIntakeAnswer 가 붙인 것)은 빼고, 고친 내용 한 줄만 남긴다
+  coach.messages.splice(messageCount);
+  if (changed.length) coach.messages.push({ id: command.requestId, role: "user", text: `예산·시간을 고쳤어요: ${changed.join(" · ")}`, at });
   if (command.resourceContext) intake.resourceContext = command.resourceContext;
   if (command.resourceQuote) {
     const q = command.resourceQuote;

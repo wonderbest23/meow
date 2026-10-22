@@ -26,11 +26,11 @@ const NO_AGREEMENTS: Agreements = { service: false, privacy: false, aiLimitation
 
 /** 상품별 제공 시점. 카드 결제는 승인 즉시 열린다(계좌이체처럼 관리자 확인을 기다리지 않는다). */
 const SUPPLY: Record<string, string> = {
-  plan: "결제가 승인되면 바로 이 문서의 전체 항목이 열리고 이용이 시작됩니다.",
-  homepage: "결제가 승인되면 바로 홈페이지 수정·공개 기능이 열리고 이용이 시작됩니다.",
-  regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해집니다.`,
-  bundle: "결제가 승인되면 바로 이 문서의 전체 항목과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작됩니다.",
-  domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작됩니다.",
+  plan: "결제가 승인되면 바로 이 문서의 전체 항목이 열리고 이용이 시작돼요.",
+  homepage: "결제가 승인되면 바로 홈페이지 수정·공개 기능이 열리고 이용이 시작돼요.",
+  regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해져요.`,
+  bundle: "결제가 승인되면 바로 이 문서의 전체 항목과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작돼요.",
+  domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작돼요.",
   "domain-purchase": "결제가 승인되면 1년 호스팅 기간이 시작되고, 아래 명의자 이름으로 도메인을 등록해 연결 준비를 마칩니다(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일).",
   tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 쓸 수 있어요.",
 };
@@ -404,7 +404,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
                 ) : native && product === "regen" ? (
                   { label: "추가 횟수 환불 기준에 동의", note: <>앱에서 결제한 주문의 환불은 {storeName}에 신청해요. 환불 여부는 스토어 기준에 따라요.</> }
                 ) : product === "regen" ? (
-                  { label: "추가 횟수 환불 기준에 동의", note: <>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환급을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환급합니다.</> }
+                  { label: "추가 횟수 환불 기준에 동의", note: <>사용하지 않은 횟수는 결제일부터 7일 이내에 전액 환불을 요청할 수 있고, 일부라도 사용했다면 남은 횟수에 해당하는 금액을 환불합니다.</> }
                 ) : product === "domain-purchase" ? (
                   { label: "도메인 구매·연결 환불 기준에 동의", note: <>도메인을 등록하기 전에는 전액 환불합니다. 등록한 뒤에는 첫해 등록비 {DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원을 뺀 {DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원에 연결·호스팅 환불 기준(연결 완료 후 7일 이내 전액, 그 뒤 남은 개월 수만큼 월할)을 적용합니다. 등록한 도메인은 이용자 명의이며, 환불하거나 해지해도 도메인은 이용자에게 남습니다. 등록을 위해 등록 명의자 이름·이메일·연락처·주소를 도메인 등록기관(.com 은 Cloudflare, Inc.(미국), .kr·.co.kr 은 ㈜가비아 등)에 제공하는 데 동의합니다.</> }
                 ) : product === "domain" ? (

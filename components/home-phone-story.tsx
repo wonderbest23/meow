@@ -59,7 +59,7 @@ function PhoneScreen() {
 const chapters = [
   { number: "01", title: ["당신의 한마디가", "사업의 시작이 되도록"], text: <>좋아하는 일과 할 수 있는 만큼<br />편하게 이야기해 주세요</>, mobileText: "관심 있는 일부터 편하게 이야기하세요" },
   { number: "02", title: ["막연했던 생각을", "시작할 수 있는 크기로"], text: <>고객과 상품 그리고 필요한 비용까지<br />대화에서 나온 조건을 놓치지 않아요</>, mobileText: "고객과 상품 그리고 시작 조건을 함께 정리해요" },
-  { number: "03", title: ["대화는 계획으로", "계획은 다음 행동으로"], text: <>읽고 고치고 꺼내 쓸 수 있도록<br />내 사업의 자료로 이어집니다</>, mobileText: "수정 가능한 계획서로 다음을 준비하세요" },
+  { number: "03", title: ["대화는 계획으로", "계획은 다음 행동으로"], text: <>읽고 고치고 꺼내 쓸 수 있도록<br />내 사업의 자료로 이어져요</>, mobileText: "수정 가능한 계획서로 다음을 준비하세요" },
 ];
 
 export function HomePhoneStory({ previewProgress }: { previewProgress?: number } = {}) {

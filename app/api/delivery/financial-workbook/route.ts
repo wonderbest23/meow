@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("delivery-financial-workbook", request, {
     limit: 20,
     windowMs: 5 * 60_000,
-    message: "손익 엑셀 생성 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.",
+    message: "손익 엑셀 생성 요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
   try {
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     // 내부 오류 원문은 응답에 싣지 않고 서버 로그에만 남긴다
     console.error("[financial-workbook]", error);
     return NextResponse.json(
-      { error: { code: "FINANCIAL_WORKBOOK_FAILED", message: publicErrorMessage(error, "12개월 손익 엑셀을 만들지 못했습니다.") } },
+      { error: { code: "FINANCIAL_WORKBOOK_FAILED", message: publicErrorMessage(error, "12개월 손익 엑셀을 만들지 못했어요.") } },
       { status: 400 },
     );
   }

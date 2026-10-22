@@ -14,7 +14,7 @@ export const runtime = "nodejs";
  * 실패(키 없음·타임아웃·JSON·검증)는 전부 {ok:false} — 화면은 기존 위저드로 안내한다.
  */
 export async function POST(req: Request) {
-  const limited = await enforceRateLimit("plan-analyze", req, { limit: 20, windowMs: 10 * 60_000, message: "분석 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  const limited = await enforceRateLimit("plan-analyze", req, { limit: 20, windowMs: 10 * 60_000, message: "분석 요청이 너무 많아요. 잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
 
   let identity: { hash: string };

@@ -15,7 +15,7 @@ import styles from "../BusinessHub.module.css";
 import LaunchWorkspace from "./LaunchWorkspace";
 import ExpertEditor from "./ExpertEditor";
 import launchStyles from "./LaunchWorkspace.module.css";
-import OperatingWorkspace from "./OperatingWorkspace";
+import OperatingWorkspace, { chatRecordFrom } from "./OperatingWorkspace";
 import { useHomepage } from "../use-homepage";
 import { NextServices } from "../../../components/next-services";
 import { WorkspaceDocumentStatus, WorkspaceHomepageCare, WorkspaceIdentity, WorkspaceNavigation, WorkspaceSummary, type WorkspaceView } from "./WorkspaceContent";
@@ -153,20 +153,19 @@ export default function BusinessWorkspace() {
     if (operatingDirty) { void confirmLeave(OPERATING_LEAVE).then(ok => { if (ok) { setOperatingDirty(false); router.push(href); } }); return; }
     /* 전문가 모드 수정안 — 탭 이동·'기본'에서는 물었지만 '대화 이어가기'·메뉴·뒤로 링크로는 그냥 사라졌다 */
     void confirmLeave(EXPERT_LEAVE).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
-  }}><BusinessAppChrome title={view === "operations" ? "유지보수" : "내 사업 관리"}>
+  }}><BusinessAppChrome title="내 사업 관리">
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : <div className={styles.scroll}><div className={styles.content}>
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</button> : signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기</Link> : <Link className={styles.primary} href="/plan">내 사업으로</Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인할게요.</p>}
         {/* 유지보수 화면에는 유지보수만 — 사업 요약·내 자료 탭과 '대화 이어가기'는 헷갈린다(소유자 지적 2026-10-07). 대화는 왼쪽 목록의 '대화'로 */}
         <WorkspaceIdentity title={plan.title} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>기존 작업 열기</button>} />
-        {view !== "operations" && <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"} />}
-        {/* 유지보수 화면에는 탭 줄을 두지 않지만(위 소유자 지적), 사업 요약·시작 준비로 돌아갈 길은 남긴다 — 예전엔 여기서 9단계 준비 과정·홍보 키트를 다시 찾을 수 없었다 */}
-        {view === "operations" && <p className={styles.tabLink}><button type="button" className={styles.textButton} onClick={() => void tab("launch")}>{hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기"} · 사업 요약 보기</button></p>}
+        {/* 탭 줄은 유지보수에서도 그대로 둔다 — 유지보수로 오면 탭 줄이 사라지고 제목까지 바뀌어 다른 화면으로 넘어간 줄 알았다(여정 점검 2026-10-22) */}
+        <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"} />
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ title: "기본 모드로 돌아갈까요?", message: EXPERT_LEAVE, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
         <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
           {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} />}
           {/* 실적 기록이 먼저, 맡길 일(마케팅) 상담 신청은 그 아래 — 예전엔 서비스 판매 카드가 기록보다 위에 있었다 */}
-          {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} />}
+          {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} chatRecord={hub.coach?.stage === "operating" ? chatRecordFrom(plan.answers as Record<string, Record<string, unknown>>) : null} />}
           {view==="operations" && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} hasHomepage={homepage.status === "draft" || homepage.status === "published"} />}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
           {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "기존에 작성한 사업계획서를 이어서 확인할 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
@@ -179,7 +178,13 @@ export default function BusinessWorkspace() {
             </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지 나눈 대화를 그대로 써요.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button>}</>}
             {hub.coach && !!hub.documents.length && <Link className={styles.secondary} href={chat}>{hub.stale ? "수정 내용 반영하러 가기" : "자료를 더 다듬기"}</Link>}
             {/* 다음 단계는 계획서 화면과 같은 답 하나 — 홈페이지 만들기 → 다듬고 공개하기 → 유지보수 */}
-            {hub.complete && !hub.stale && (() => { const next = journeyNext(plan, homepage.status); return <div className={styles.nextStep}><span>다음 단계</span><h3>{next.title}</h3><p>{next.note}</p><Link className={styles.secondary} href={next.href} onClick={() => setActivePlan(plan.id)}>{next.title}</Link></div>; })()}
+            {hub.complete && !hub.stale && (() => {
+              const next = journeyNext(plan, homepage.status);
+              /* 같은 화면의 다른 탭(사업 시작하기·유지보수)이면 주소 이동 대신 탭을 바꾼다 — 링크로는 주소만 바뀌고 화면은 그대로였다 */
+              const sameTab = (href: string): View | null => href.includes(`planId=${encodeURIComponent(plan.id)}`) && href.startsWith("/plan/workspace") ? href.includes("tab=launch") ? "launch" : href.includes("tab=operations") ? "operations" : null : null;
+              const go = (href: string, label: string, className: string) => { const target = sameTab(href); return target ? <button type="button" className={className} onClick={() => void tab(target)}>{label}</button> : <Link className={className} href={href} onClick={() => setActivePlan(plan.id)}>{label}</Link>; };
+              return <div className={styles.nextStep}><span>다음 단계</span><h3>{next.title}</h3><p>{next.note}</p>{go(next.href, next.title, styles.secondary)}{next.secondary && go(next.secondary.href, `${next.secondary.title} →`, styles.textButton)}</div>;
+            })()}
           </>}
           {/* '기간별 실적과 개선 리포트 보기'는 위 '유지보수' 탭과 같은 곳이라 뺐다 — 예전엔 두 링크가 띄어쓰기 없이 한 줄로 붙어 보였다(대표 요청 2026-10-15) */}
           {view==="launch" && <>{action && <p className={styles.tabLink}><button className={styles.textButton} onClick={()=>tab("action")}>대화에서 정한 할 일 보기</button></p>}<LaunchWorkspace key={plan.id} plan={plan} onSaved={setPlan} /></>}

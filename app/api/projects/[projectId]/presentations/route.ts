@@ -15,7 +15,7 @@ const slideOverrideSchema = z.object({
 
 const deckDraftSchema = z.object({
   slides: z.record(z.string().regex(/^[a-z0-9-]+$/), slideOverrideSchema)
-    .refine((slides) => Object.keys(slides).length <= 20, "슬라이드 수정값이 너무 많습니다."),
+    .refine((slides) => Object.keys(slides).length <= 20, "슬라이드 수정값이 너무 많아요."),
   updatedAt: z.string().datetime(),
 });
 
@@ -41,14 +41,14 @@ export async function GET(
     const identity = await requireGuestIdentity();
     const project = await getProject(projectId, identity.hash);
     if (!project) {
-      return privateJson({ error: { code: "PROJECT_NOT_FOUND", message: "프로젝트를 찾을 수 없습니다." } }, { status: 404 });
+      return privateJson({ error: { code: "PROJECT_NOT_FOUND", message: "프로젝트를 찾을 수 없어요." } }, { status: 404 });
     }
     return privateJson({ decks: project.presentationDecks ?? {} });
   } catch (error) {
     return privateJson({
       error: {
         code: "PRESENTATION_LOAD_FAILED",
-        message: publicErrorMessage(error, "발표자료 수정본을 불러오지 못했습니다."),
+        message: publicErrorMessage(error, "발표자료 수정본을 불러오지 못했어요."),
       },
     }, { status: 500 });
   }
@@ -65,11 +65,11 @@ export async function PUT(
     const decks = await savePresentationDecks(projectId, identity.hash, input.decks);
     return privateJson({ decks, savedAt: new Date().toISOString() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "발표자료 수정본을 저장하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "발표자료 수정본을 저장하지 못했어요.";
     return privateJson({
       error: {
         code: message === "PROJECT_NOT_FOUND" ? message : "PRESENTATION_SAVE_FAILED",
-        message: publicErrorMessage(error, "발표자료 수정본을 저장하지 못했습니다."),
+        message: publicErrorMessage(error, "발표자료 수정본을 저장하지 못했어요."),
       },
     }, { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 });
   }

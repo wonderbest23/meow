@@ -57,10 +57,10 @@ async function ownedPlan(planId: string, hash: string) {
 
 export async function GET(request: Request) {
   const planId = new URL(request.url).searchParams.get("planId") ?? "";
-  if (!planId) return privateJson({ error: { code: "PLAN_REQUIRED", message: "플랜 정보가 없습니다." } }, { status: 400 });
+  if (!planId) return privateJson({ error: { code: "PLAN_REQUIRED", message: "사업계획서 정보가 없어요." } }, { status: 400 });
   const identity = await requireGuestIdentity();
   const owned = await ownedPlan(planId, identity.hash);
-  if (!owned) return privateJson({ error: { code: "PLAN_NOT_FOUND", message: "플랜을 찾을 수 없습니다." } }, { status: 404 });
+  if (!owned) return privateJson({ error: { code: "PLAN_NOT_FOUND", message: "사업계획서를 찾을 수 없어요." } }, { status: 404 });
   const context = planResearchContext(owned.plan, owned.state.business);
   const readiness = researchReadiness(context);
   const project = isSampleId(planId) ? null : await projectForPlan(planId, identity.hash).catch(() => null);
@@ -75,17 +75,17 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   /* 검색 비용이 드는 호출 — 화면 제어와 별개로 서버가 빈도를 제한한다 */
-  const limited = await enforceRateLimit("plan-market-research", request, { limit: 12, windowMs: 10 * 60_000, message: "시장조사 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  const limited = await enforceRateLimit("plan-market-research", request, { limit: 12, windowMs: 10 * 60_000, message: "시장조사 요청이 너무 많아요. 잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
 
   const body = (await request.json().catch(() => ({}))) as { planId?: string };
   const planId = typeof body.planId === "string" ? body.planId.slice(0, 60) : "";
-  if (!planId) return privateJson({ error: { code: "PLAN_REQUIRED", message: "플랜 정보가 없습니다." } }, { status: 400 });
-  if (isSampleId(planId)) return privateJson({ error: { code: "SAMPLE_PLAN", message: "예시 문서에는 시장조사를 실행하지 않습니다." } }, { status: 400 });
+  if (!planId) return privateJson({ error: { code: "PLAN_REQUIRED", message: "사업계획서 정보가 없어요." } }, { status: 400 });
+  if (isSampleId(planId)) return privateJson({ error: { code: "SAMPLE_PLAN", message: "예시 문서에는 시장조사를 실행하지 않아요." } }, { status: 400 });
 
   const identity = await requireGuestIdentity();
   const owned = await ownedPlan(planId, identity.hash);
-  if (!owned) return privateJson({ error: { code: "PLAN_NOT_FOUND", message: "플랜을 찾을 수 없습니다." } }, { status: 404 });
+  if (!owned) return privateJson({ error: { code: "PLAN_NOT_FOUND", message: "사업계획서를 찾을 수 없어요." } }, { status: 404 });
 
   const context = planResearchContext(owned.plan, owned.state.business);
   const readiness = researchReadiness(context);
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
   const config = resolveTextLLMConfig(identity.hash);
   if (!config) {
     return privateJson({
-      error: { code: "OPENAI_NOT_CONNECTED", message: "공식 시장 근거 자동 탐색에 필요한 인공지능 연결이 준비되지 않았습니다." },
+      error: { code: "OPENAI_NOT_CONNECTED", message: "공식 시장 근거 자동 탐색에 필요한 AI 연결이 준비되지 않았어요." },
     }, { status: 409 });
   }
 
@@ -123,31 +123,31 @@ export async function POST(request: Request) {
       addedCount: added.length,
       citedSourceCount: research.citedSourceCount,
       model: research.model,
-      notice: "공식 원문 링크가 검색 응답에 실제 인용된 항목만 저장했습니다. 수치와 기준일은 외부 제출 전에 원문을 한 번 더 확인하세요.",
+      notice: "공식 원문 링크가 검색 응답에 실제 인용된 항목만 저장했어요. 수치와 기준일은 외부 제출 전에 원문을 한 번 더 확인하세요.",
     });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "";
     const map: Record<string, { status: number; message: string }> = {
-      OPENAI_429: { status: 429, message: "AI 사용 한도 또는 검색 요청 제한에 걸렸습니다. 잠시 후 다시 시도해주세요." },
-      MARKET_RESEARCH_TIMEOUT: { status: 504, message: "시장 근거 탐색 시간이 초과되었습니다. 이미 저장된 근거는 그대로 있습니다. 잠시 뒤 다시 시도해주세요." },
+      OPENAI_429: { status: 429, message: "AI 사용 한도 또는 검색 요청 제한에 걸렸어요. 잠시 후 다시 시도해 주세요." },
+      MARKET_RESEARCH_TIMEOUT: { status: 504, message: "시장 근거 탐색 시간이 초과되었어요. 이미 저장된 근거는 그대로 있어요. 잠시 뒤 다시 시도해 주세요." },
       /*
        * 아래 네 가지는 사용자에게는 사실상 같은 상황("공식 자료를 찾지 못했다")이지만
        * 운영 로그에서는 구분돼야 한다 — 어디서 끊겼는지 모르면 고칠 수가 없다.
        * 검색이 안 돌았는지, 응답을 못 읽었는지, 인용에 남은 공식 근거가 없었는지.
        */
-      MARKET_RESEARCH_NO_CITED_EVIDENCE: { status: 404, message: "공식 근거를 찾지 못했습니다. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해주세요." },
-      WEB_SEARCH_NO_CITED_EVIDENCE: { status: 404, message: "공식 근거를 찾지 못했습니다. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해주세요." },
-      WEB_SEARCH_NO_SOURCES: { status: 404, message: "공식 자료를 찾지 못했어요. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해주세요." },
+      MARKET_RESEARCH_NO_CITED_EVIDENCE: { status: 404, message: "공식 근거를 찾지 못했어요. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해 주세요." },
+      WEB_SEARCH_NO_CITED_EVIDENCE: { status: 404, message: "공식 근거를 찾지 못했어요. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해 주세요." },
+      WEB_SEARCH_NO_SOURCES: { status: 404, message: "공식 자료를 찾지 못했어요. 사업 지역이나 고객 범위를 조금 더 구체적으로 입력한 뒤 다시 시도해 주세요." },
       WEB_SEARCH_PARSE_FAILED: { status: 502, message: "공식 자료를 정리하지 못했어요. 잠시 후 다시 시도해 주세요." },
-      WEB_SEARCH_API_REJECTED: { status: 502, message: "검색 서비스가 요청을 거부했습니다. 잠시 뒤 다시 시도해주세요." },
-      WEB_SEARCH_OUTPUT_TRUNCATED: { status: 502, message: "공식 자료를 정리하다가 응답이 끊겼습니다. 잠시 후 다시 시도해 주세요." },
-      MARKET_RESEARCH_EMPTY: { status: 502, message: "검색 응답이 비어 있었습니다. 잠시 뒤 다시 시도해주세요." },
-      MARKET_RESEARCH_UNAVAILABLE: { status: 502, message: "검색 서비스에 연결하지 못했습니다. 잠시 뒤 다시 시도해주세요." },
+      WEB_SEARCH_API_REJECTED: { status: 502, message: "검색 서비스가 요청을 거부했어요. 잠시 뒤 다시 시도해 주세요." },
+      WEB_SEARCH_OUTPUT_TRUNCATED: { status: 502, message: "공식 자료를 정리하다가 응답이 끊겼어요. 잠시 후 다시 시도해 주세요." },
+      MARKET_RESEARCH_EMPTY: { status: 502, message: "검색 응답이 비어 있었어요. 잠시 뒤 다시 시도해 주세요." },
+      MARKET_RESEARCH_UNAVAILABLE: { status: 502, message: "검색 서비스에 연결하지 못했어요. 잠시 뒤 다시 시도해 주세요." },
     };
     const hit = map[detail.split(":")[0]];
     console.error("[plan-market-research]", detail);
     return privateJson(
-      { error: { code: hit ? detail.split(":")[0] : "MARKET_RESEARCH_FAILED", message: hit?.message ?? "공식 시장 근거를 자동 탐색하지 못했습니다. 잠시 뒤 다시 시도해주세요." } },
+      { error: { code: hit ? detail.split(":")[0] : "MARKET_RESEARCH_FAILED", message: hit?.message ?? "공식 시장 근거를 자동 탐색하지 못했어요. 잠시 뒤 다시 시도해 주세요." } },
       { status: hit?.status ?? 400 },
     );
   }

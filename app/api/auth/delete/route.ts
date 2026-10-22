@@ -23,7 +23,7 @@ export async function POST(request: Request) {
 
   const user = await getAuthenticatedUser();
   if (!user) {
-    return NextResponse.json({ error: { code: "AUTH_REQUIRED", message: "로그인이 필요합니다." } }, { status: 401 });
+    return NextResponse.json({ error: { code: "AUTH_REQUIRED", message: "로그인이 필요해요." } }, { status: 401 });
   }
 
   try {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
         error: {
           code: "ACCOUNT_DELETE_FAILED",
           message: badInput
-            ? "이메일을 다시 확인해주세요."
+            ? "이메일을 다시 확인해 주세요."
             : "탈퇴를 마치지 못했어요. 잠시 후 다시 시도하거나 고객센터로 알려 주세요.",
         },
       },

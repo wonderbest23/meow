@@ -611,7 +611,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("delivery-deck", request, {
     limit: 15,
     windowMs: 5 * 60_000,
-    message: "발표자료 생성 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.",
+    message: "발표자료 생성 요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
   try {
@@ -636,7 +636,7 @@ export async function POST(request: Request) {
       {
         error: {
           code: "DECK_GENERATION_FAILED",
-          message: publicErrorMessage(error, "파워포인트 파일(PPTX)을 만들지 못했습니다."),
+          message: publicErrorMessage(error, "파워포인트 파일(PPTX)을 만들지 못했어요."),
         },
       },
       { status: 400 },

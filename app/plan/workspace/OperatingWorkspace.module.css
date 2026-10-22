@@ -63,3 +63,7 @@
   .actions > button, .actions > a { flex: 1 1 auto; }
 }
 .empty svg { display: block; margin: 0 auto 12px; }
+
+/* 대화에서 말한 실적으로 첫 기록 만들기(빈 화면) */
+.empty .primary { margin: 16px auto 8px; }
+.empty small { display: block; }

@@ -59,7 +59,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("delivery-document", request, {
     limit: 30,
     windowMs: 5 * 60_000,
-    message: "문서 생성 요청이 너무 잦습니다. 잠시 후 다시 시도해주세요.",
+    message: "문서 생성 요청이 너무 잦아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
   try {
@@ -73,7 +73,7 @@ export async function POST(request: Request) {
     const totalMarkdown = payload.documents.reduce((sum, document) => sum + document.markdown.length, 0);
     if (totalMarkdown > 3_000_000) {
       return NextResponse.json(
-        { error: { code: "DOCUMENT_TOO_LARGE", message: "문서 전체 분량이 너무 커 생성할 수 없습니다. 문서 수나 길이를 줄여주세요." } },
+        { error: { code: "DOCUMENT_TOO_LARGE", message: "문서 전체 분량이 너무 커 생성할 수 없어요. 문서 수나 길이를 줄여 주세요." } },
         { status: 413 },
       );
     }
@@ -125,8 +125,8 @@ export async function POST(request: Request) {
     const message = error instanceof z.ZodError
       ? error.issues.map((issue) => issue.message).join(", ")
       : retryable
-        ? (console.error("[delivery-document]", error), "문서 파일을 나눠 만드는 중 문제가 생겼습니다. 잠시 후 다시 시도해주세요.")
-        : publicErrorMessage(error, "문서를 만들지 못했습니다.");
+        ? (console.error("[delivery-document]", error), "문서 파일을 나눠 만드는 중 문제가 생겼어요. 잠시 후 다시 시도해 주세요.")
+        : publicErrorMessage(error, "문서를 만들지 못했어요.");
     return NextResponse.json({ error: { code: "DOCUMENT_GENERATION_FAILED", message } }, { status: retryable ? 503 : 400 });
   }
 }

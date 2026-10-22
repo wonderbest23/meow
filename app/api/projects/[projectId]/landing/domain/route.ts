@@ -20,15 +20,15 @@ import {
 const requestSchema = z.object({ hostname: z.string().trim().min(4).max(253) });
 
 const messages: Record<string, string> = {
-  ACCOUNT_LOGIN_REQUIRED: "로그인 후 도메인을 연결할 수 있습니다.",
-  PROJECT_NOT_FOUND: "사업 프로젝트를 찾을 수 없습니다.",
-  LANDING_NOT_FOUND: "홈페이지를 먼저 공개해주세요.",
-  LANDING_NOT_PUBLISHED: "홈페이지를 먼저 공개한 뒤 도메인을 연결해주세요.",
-  CUSTOM_DOMAIN_INVALID: "올바른 도메인 주소를 입력해주세요.",
-  CUSTOM_DOMAIN_WWW_REQUIRED: "구매한 도메인의 www 주소를 입력해주세요. 예: www.mybrand.com",
-  CUSTOM_DOMAIN_TAKEN: "이미 다른 홈페이지에 연결된 도메인입니다.",
-  DOMAIN_SERVICE_NOT_CONFIGURED: "도메인 자동 연결을 준비하고 있습니다. 잠시 후 다시 시도해주세요.",
-  DOMAIN_PAYMENT_REQUIRED: "도메인 연결은 '내 도메인 연결 + 호스팅 1년' 또는 '도메인 구매 + 연결·호스팅 1년' 결제 후 쓸 수 있습니다.",
+  ACCOUNT_LOGIN_REQUIRED: "로그인 후 도메인을 연결할 수 있어요.",
+  PROJECT_NOT_FOUND: "사업 프로젝트를 찾을 수 없어요.",
+  LANDING_NOT_FOUND: "홈페이지를 먼저 공개해 주세요.",
+  LANDING_NOT_PUBLISHED: "홈페이지를 먼저 공개한 뒤 도메인을 연결해 주세요.",
+  CUSTOM_DOMAIN_INVALID: "올바른 도메인 주소를 입력해 주세요.",
+  CUSTOM_DOMAIN_WWW_REQUIRED: "구매한 도메인의 www 주소를 입력해 주세요. 예: www.mybrand.com",
+  CUSTOM_DOMAIN_TAKEN: "이미 다른 홈페이지에 연결된 도메인이에요.",
+  DOMAIN_SERVICE_NOT_CONFIGURED: "도메인 자동 연결을 준비하고 있어요. 잠시 후 다시 시도해 주세요.",
+  DOMAIN_PAYMENT_REQUIRED: "도메인 연결은 '내 도메인 연결 + 호스팅 1년' 또는 '도메인 구매 + 연결·호스팅 1년' 결제 후 쓸 수 있어요.",
 };
 
 /* 플랜에서 만든 홈페이지면 도메인 상품 결제가 있어야 연결·변경할 수 있다 */
@@ -48,7 +48,7 @@ function errorResponse(error: unknown) {
     {
       error: {
         code,
-        message: messages[code] ?? (cloudflareDetail || "도메인을 연결하지 못했습니다. 잠시 후 다시 시도해주세요."),
+        message: messages[code] ?? (cloudflareDetail || "도메인을 연결하지 못했어요. 잠시 후 다시 시도해 주세요."),
       },
     },
     { status: code === "PROJECT_NOT_FOUND" || code === "LANDING_NOT_FOUND" ? 404 : code === "DOMAIN_SERVICE_NOT_CONFIGURED" ? 503 : code === "DOMAIN_PAYMENT_REQUIRED" ? 402 : 400 },

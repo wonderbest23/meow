@@ -55,7 +55,7 @@ function privateJson(body: unknown, init?: ResponseInit) {
 
 export async function POST(request: Request) {
   // 로그인 없이 AI를 부르는 경로: 쿠키를 지워도 우회되지 않게 IP 기준으로 횟수를 제한한다.
-  const limited = await enforceRateLimit("presentation-assist", request, { limit: 20, windowMs: 10 * 60_000, message: "발표자료 도움 요청이 너무 잦습니다. 10분 뒤 다시 시도해주세요." });
+  const limited = await enforceRateLimit("presentation-assist", request, { limit: 20, windowMs: 10 * 60_000, message: "발표자료 도움 요청이 너무 잦아요. 10분 뒤 다시 시도해 주세요." });
   if (limited) return limited;
   try {
     const identity = await requireGuestIdentity();
@@ -65,7 +65,7 @@ export async function POST(request: Request) {
     }
     const previous = recentRequests.get(identity.hash) ?? 0;
     if (Date.now() - previous < 3_000) {
-      return privateJson({ error: { code: "ASSIST_RATE_LIMITED", message: "문장을 검토하고 있습니다. 3초 뒤 다시 눌러주세요." } }, { status: 429 });
+      return privateJson({ error: { code: "ASSIST_RATE_LIMITED", message: "문장을 검토하고 있어요. 3초 뒤 다시 눌러 주세요." } }, { status: 429 });
     }
     const input = requestSchema.parse(await request.json());
     recentRequests.set(identity.hash, Date.now());
@@ -99,8 +99,8 @@ export async function POST(request: Request) {
     return privateJson({ result: { ...result, fields }, model: config.model });
   } catch (error) {
     const message = error instanceof Error && error.name === "TimeoutError"
-      ? "문장 검토 시간이 초과되었습니다. 잠시 후 다시 시도해주세요."
-      : error instanceof Error ? error.message : "문장을 검토하지 못했습니다.";
+      ? "문장 검토 시간이 초과되었어요. 잠시 후 다시 시도해 주세요."
+      : error instanceof Error ? error.message : "문장을 검토하지 못했어요.";
     return privateJson({ error: { code: "PRESENTATION_ASSIST_FAILED", message } }, { status: 400 });
   }
 }

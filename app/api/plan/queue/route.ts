@@ -51,7 +51,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("plan-queue", request, {
     limit: 30,
     windowMs: 10 * 60_000,
-    message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
 
@@ -70,7 +70,7 @@ export async function POST(request: Request) {
 
   const access = await resolvePlanAccess(plan.planType, plan.id);
   if (!access.authenticated) {
-    return NextResponse.json({ error: "login_required", message: "로그인 후 이용할 수 있습니다." }, { status: 401 });
+    return NextResponse.json({ error: "login_required", message: "로그인 후 이용할 수 있어요." }, { status: 401 });
   }
 
   /*
@@ -93,7 +93,7 @@ export async function POST(request: Request) {
 
   if (allowed.length === 0) {
     return NextResponse.json(
-      { error: "payment_required", message: "이어서 쓰려면 결제가 필요합니다.", blocked },
+      { error: "payment_required", message: "사업계획서 작성은 결제한 뒤에 시작해요. 결제를 마치면 바로 이어서 쓸 수 있어요.", blocked },
       { status: 402 },
     );
   }

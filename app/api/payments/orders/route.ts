@@ -23,7 +23,7 @@ export async function GET(request: Request) {
     const identity = await requireAuthenticatedIdentity();
     const order = await getPaymentOrder(orderId, identity.hash);
     if (!order) {
-      return NextResponse.json({ error: { code: "PAYMENT_ORDER_NOT_FOUND", message: "주문을 찾을 수 없습니다." } }, { status: 404 });
+      return NextResponse.json({ error: { code: "PAYMENT_ORDER_NOT_FOUND", message: "주문을 찾을 수 없어요." } }, { status: 404 });
     }
     return NextResponse.json({
       order: {
@@ -43,8 +43,8 @@ export async function GET(request: Request) {
     }, { headers: { "Cache-Control": "private, no-store, max-age=0" } });
   } catch (error) {
     if (error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED") {
-      return NextResponse.json({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "주문을 확인하려면 로그인해주세요." } }, { status: 401 });
+      return NextResponse.json({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "주문을 확인하려면 로그인해 주세요." } }, { status: 401 });
     }
-    return NextResponse.json({ error: { code: "PAYMENT_ORDER_LOAD_FAILED", message: publicErrorMessage(error, "주문을 불러오지 못했습니다.") } }, { status: 400 });
+    return NextResponse.json({ error: { code: "PAYMENT_ORDER_LOAD_FAILED", message: publicErrorMessage(error, "주문을 불러오지 못했어요.") } }, { status: 400 });
   }
 }

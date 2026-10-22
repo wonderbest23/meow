@@ -13,6 +13,17 @@ import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysi
 import { autoInquiriesValue, type HomepageInquiries } from "../../../lib/plan-builder/operating-homepage";
 
 type Draft = Omit<PeriodInput, "metrics"> & { metrics: Record<typeof METRICS[number]["key"], string> };
+/** 운영 중인 사업 대화에서 말한 실적(기간·실제 매출) — 첫 기록을 채우는 데만 쓴다(저장은 사장님이 누를 때) */
+export type ChatRecord = { start: string; end: string; revenue: number | null };
+export function chatRecordFrom(answers: Record<string, Record<string, unknown>> | undefined): ChatRecord | null {
+  const period = answers?.["intake/period"]?.value;
+  const [start, end] = typeof period === "string" ? period.match(/\d{4}-\d{2}-\d{2}/g) ?? [] : [];
+  if (!start || !end || start > end) return null;
+  const intake = answers?.["__business_intake"]?.state as { answers?: Record<string, { status?: string; value?: unknown }> } | undefined;
+  const sales = intake?.answers?.sales;
+  const revenue = sales?.status === "answered" && typeof sales.value === "number" && Number.isSafeInteger(sales.value) && sales.value >= 0 ? sales.value : null;
+  return { start, end, revenue };
+}
 /* 금액 칸은 1,500,000처럼 쉼표를 넣어 보여 주고, 저장할 때 쉼표를 뺀다 */
 const withCommas = (digits: string) => digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 const metricText = (unit: string, value: number | null | undefined) => value == null ? "" : unit === "원" ? withCommas(String(value)) : String(value);
@@ -40,7 +51,7 @@ function PeriodNotes({ period, archivedAnalysis = false }: { period: OperatingPe
     ["고객 반응", period.feedback], ["유지할 점", period.keep], ["바꿀 점", period.change], [archivedAnalysis ? "입력 당시 개선 행동" : "다음 개선 행동", period.nextAction], [archivedAnalysis ? "입력 당시 확인 기준" : "확인 기준", period.successCriterion],
   ] as const).map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value || "미입력"}</dd></div>)}</dl>;
 }
-export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: string; onDirtyChange: (dirty: boolean) => void }) {
+export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord = null }: { planId: string; onDirtyChange: (dirty: boolean) => void; chatRecord?: ChatRecord | null }) {
   const [state, setState] = useState<OperatingState | null>(null);
   const [analysisTarget, setAnalysisTarget] = useState<AnalysisTarget | null>(null);
   const [analysisDirty, setAnalysisDirty] = useState(false);
@@ -111,6 +122,17 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
     autoInquiries.current = null;
     setDraft(next); setEditor({ id: target?.id ?? crypto.randomUUID(), revision: target?.revision ?? null, original: JSON.stringify(next) });
     setError(""); setNotice("");
+  }
+  /*
+   * 대화에서 말한 실적(예: 2026년 9월 · 실제 매출 600만원)으로 첫 기록 칸을 채운다 — 예전엔 대화에서 말한 것을 여기서 다시 적어야 했다
+   * (여정 점검 2026-10-22). 저장은 하지 않는다. 열어 본 사장님이 확인하고 '기록 저장'을 누른다.
+   */
+  function editFromChat(record: ChatRecord) {
+    const blank = draftFor();
+    const next: Draft = { ...blank, start: record.start, end: record.end, metrics: { ...blank.metrics, revenue: record.revenue === null ? "" : withCommas(String(record.revenue)) } };
+    autoInquiries.current = null;
+    setDraft(next); setEditor({ id: crypto.randomUUID(), revision: null, original: JSON.stringify(blank) });
+    setError(""); setNotice("대화에서 말한 실적을 채웠어요. 확인하고 '기록 저장'을 눌러 주세요.");
   }
   async function run(command: OperatingCommand) {
     if (pending.current) return false;
@@ -197,7 +219,9 @@ export default function OperatingWorkspace({ planId, onDirtyChange }: { planId: 
       {(!period.nextAction || !period.successCriterion) && <p className={styles.note}>다음 개선 행동과 확인 기준을 적으면 리포트로 보관할 수 있어요.</p>}
       {/* AI 개선안은 운영에서 AI 분석을 켰을 때만(꺼져 있으면 '준비 중'만 보였다) */}
       {analysisTarget && <OperatingAnalysisPanel key={period.id} planId={planId} period={period} baseline={baseline} records={state} target={analysisTarget} onState={acceptState} onArchive={run} onDirtyChange={setAnalysisDirty} />}
-    </> : <div className={styles.empty}><FileText size={30} /><h3>아직 기간 기록이 없어요</h3><p>첫 실적과 고객 반응을 남겨 보세요</p></div>)}
+    </> : <div className={styles.empty}><FileText size={30} /><h3>아직 기간 기록이 없어요</h3><p>첫 실적과 고객 반응을 남겨 보세요</p>
+      {chatRecord && <><button type="button" className={styles.primary} disabled={busy || analysisDirty} onClick={() => editFromChat(chatRecord)}><FileText size={18} />대화에서 말한 실적으로 첫 기록 만들기</button><small className={styles.note}>{`${chatRecord.start} ~ ${chatRecord.end}`}{chatRecord.revenue !== null ? ` · 실제 매출 ${chatRecord.revenue.toLocaleString("ko-KR")}원` : ""} · 저장 전에 고칠 수 있어요</small></>}
+    </div>)}
     {state && !editor && mode === "reports" && (report ? <>
       <label className={styles.reportSelect}>보관한 리포트<select value={reportId} onChange={e => setReportId(e.target.value)}>{state.reports.map(r => <option key={r.id} value={r.id}>{periodLabel(r.period)} · {new Date(r.createdAt).toLocaleDateString("ko-KR", { month: "long", day: "numeric" })} 보관</option>)}</select></label>
       <article className={styles.report} aria-label="보관된 개선 리포트">

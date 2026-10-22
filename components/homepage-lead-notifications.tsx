@@ -35,9 +35,9 @@ export function useHomepageLeadNotifications(projectId: string | null, refresh: 
 /** phoneHref — 알림 받을 번호가 없을 때 번호를 등록하는 곳(홈페이지 화면 5번 '문의 알림') */
 export function HomepageLeadNotification({ value, busy, onRetry, phoneHref }: { value: LeadNotificationSummary | undefined; busy: boolean; onRetry: () => void; phoneHref?: string }) {
   if (!value) return <small>알림 기록 없음</small>;
-  const message = value.errorCode === "missing_email_config" ? "알림 발송 준비 전이라 문의 목록에만 저장됐습니다"
+  const message = value.errorCode === "missing_email_config" ? "알림 발송 준비 전이라 문의 목록에만 저장됐어요"
     : value.errorCode === "recipient_missing" ? "문자 받을 휴대폰이 아직 없어요"
-    : value.errorCode === "delivery_unknown" ? "발송 여부 확인이 필요합니다"
+    : value.errorCode === "delivery_unknown" ? "발송 여부 확인이 필요해요"
     : value.errorCode === "provider_rejected" ? "발송 서비스에서 거절했습니다(하루 한도 등)" : "";
   const canRetry = value.attempts < LEAD_NOTIFICATION_MAX_ATTEMPTS && ["pending", "retry", "blocked"].includes(value.status);
   return <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>

@@ -19,7 +19,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   // 다른 사이트에서 이 사이트로 로그인 정보를 밀어 넣는 요청은 거절한다(로그인 CSRF 방어의 한 겹).
-  if (!isSameOriginRequest(request)) return privateJson({ error: { code: "CROSS_ORIGIN", message: "허용되지 않은 요청입니다." } }, { status: 403 });
+  if (!isSameOriginRequest(request)) return privateJson({ error: { code: "CROSS_ORIGIN", message: "허용되지 않은 요청이에요." } }, { status: 403 });
   try {
     const input = authSessionInput.parse(await request.json());
     const previousGuestHash = await currentGuestHash();

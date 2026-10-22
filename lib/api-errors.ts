@@ -15,21 +15,21 @@ const HANGUL = /[가-힣]/;
 
 /** 여러 라우트가 공통으로 던지는 코드 → 고객용 문구 */
 export const COMMON_ERROR_MESSAGES: Record<string, string> = {
-  PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없습니다.",
-  ACCOUNT_LOGIN_REQUIRED: "로그인이 필요합니다.",
-  STAGE_NOT_FOUND: "단계를 찾을 수 없습니다.",
-  ARTIFACT_NOT_FOUND: "결과물을 찾을 수 없습니다.",
-  GENERATION_RETRY_NOT_ALLOWED: "다시 만들 수 있는 실패 작업이 없습니다. 화면을 새로 열어주세요.",
-  GENERATION_RETRY_LIMIT: "다시 만들기는 세 번까지 할 수 있습니다.",
-  OPENAI_401: "AI 연결키가 유효하지 않습니다.",
-  OPENAI_429: "AI 사용 한도에 도달했어요. 잠시 후 다시 시도해주세요.",
-  OPENAI_TIMEOUT: "AI 응답 시간이 초과되었어요. 잠시 후 다시 시도해주세요.",
-  OPENAI_UNAVAILABLE: "AI 응답을 받지 못했어요. 잠시 후 다시 시도해주세요.",
-  OPENAI_EMPTY_OUTPUT: "AI 응답을 받지 못했어요. 잠시 후 다시 시도해주세요.",
-  OPENAI_GENERATION_FAILED: "AI 가 결과물을 만들지 못했어요. 잠시 후 다시 시도해주세요.",
-  OPENAI_INVALID_OUTPUT: "AI 결과를 정리하지 못했어요. 다시 시도해주세요.",
-  OPENAI_QUALITY_GATE_FAILED: "AI 결과가 품질 기준을 통과하지 못했어요. 다시 시도해주세요.",
-  OPENAI_REALITY_GATE_FAILED: "AI 결과에 확인되지 않은 내용이 있어 저장하지 않았어요. 다시 시도해주세요.",
+  PROJECT_NOT_FOUND: "프로젝트를 찾을 수 없어요.",
+  ACCOUNT_LOGIN_REQUIRED: "로그인이 필요해요.",
+  STAGE_NOT_FOUND: "단계를 찾을 수 없어요.",
+  ARTIFACT_NOT_FOUND: "결과물을 찾을 수 없어요.",
+  GENERATION_RETRY_NOT_ALLOWED: "다시 생성할 수 있는 실패 작업이 없어요. 화면을 새로 열어 주세요.",
+  GENERATION_RETRY_LIMIT: "다시 생성은 세 번까지 할 수 있어요.",
+  OPENAI_401: "AI 연결키가 유효하지 않아요.",
+  OPENAI_429: "AI 사용 한도에 도달했어요. 잠시 후 다시 시도해 주세요.",
+  OPENAI_TIMEOUT: "AI 응답 시간이 초과되었어요. 잠시 후 다시 시도해 주세요.",
+  OPENAI_UNAVAILABLE: "AI 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요.",
+  OPENAI_EMPTY_OUTPUT: "AI 응답을 받지 못했어요. 잠시 후 다시 시도해 주세요.",
+  OPENAI_GENERATION_FAILED: "AI 가 결과물을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
+  OPENAI_INVALID_OUTPUT: "AI 결과를 정리하지 못했어요. 다시 시도해 주세요.",
+  OPENAI_QUALITY_GATE_FAILED: "AI 결과가 품질 기준을 통과하지 못했어요. 다시 시도해 주세요.",
+  OPENAI_REALITY_GATE_FAILED: "AI 결과에 확인되지 않은 내용이 있어 저장하지 않았어요. 다시 시도해 주세요.",
 };
 
 /** PostgrestError 는 code·details·hint 를 함께 갖는다 — 한글이 섞여 있어도(입력값 반사) 내보내지 않는다 */

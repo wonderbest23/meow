@@ -7,7 +7,7 @@ import { publicErrorMessage } from "../../../../lib/api-errors";
 const updateSchema = z.object({
   customer: z.string().trim().min(2).max(300).optional(),
   oneLiner: z.string().trim().min(10).max(1000).optional(),
-}).refine((value) => Boolean(value.customer || value.oneLiner), "수정할 내용을 입력해주세요.");
+}).refine((value) => Boolean(value.customer || value.oneLiner), "수정할 내용을 입력해 주세요.");
 
 export async function GET(
   _request: Request,
@@ -19,7 +19,7 @@ export async function GET(
     const project = await getProject(projectId, identity.hash);
     if (!project) {
       return NextResponse.json(
-        { error: { code: "PROJECT_NOT_FOUND", message: "프로젝트를 찾을 수 없습니다.", retryable: false } },
+        { error: { code: "PROJECT_NOT_FOUND", message: "프로젝트를 찾을 수 없어요.", retryable: false } },
         { status: 404 },
       );
     }
@@ -29,7 +29,7 @@ export async function GET(
       {
         error: {
           code: "PROJECT_LOAD_FAILED",
-          message: publicErrorMessage(error, "프로젝트를 불러오지 못했습니다."),
+          message: publicErrorMessage(error, "프로젝트를 불러오지 못했어요."),
           retryable: true,
         },
       },
@@ -48,7 +48,7 @@ export async function DELETE(
     const deleted = await deleteProject(projectId, identity.hash);
     if (!deleted) {
       return NextResponse.json(
-        { error: { code: "PROJECT_NOT_FOUND", message: "삭제할 프로젝트를 찾을 수 없습니다.", retryable: false } },
+        { error: { code: "PROJECT_NOT_FOUND", message: "삭제할 프로젝트를 찾을 수 없어요.", retryable: false } },
         { status: 404 },
       );
     }
@@ -58,7 +58,7 @@ export async function DELETE(
       {
         error: {
           code: "PROJECT_DELETE_FAILED",
-          message: publicErrorMessage(error, "프로젝트를 삭제하지 못했습니다."),
+          message: publicErrorMessage(error, "프로젝트를 삭제하지 못했어요."),
           retryable: true,
         },
       },
@@ -78,12 +78,12 @@ export async function PATCH(
     const project = await updateProjectOpportunity(projectId, identity.hash, input);
     return NextResponse.json({ project, updatedAt: project.updatedAt });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "사업 기본정보를 수정하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "사업 기본정보를 수정하지 못했어요.";
     return NextResponse.json(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "PROJECT_UPDATE_FAILED",
-          message: publicErrorMessage(error, "사업 기본정보를 수정하지 못했습니다."),
+          message: publicErrorMessage(error, "사업 기본정보를 수정하지 못했어요."),
           retryable: message !== "PROJECT_NOT_FOUND",
         },
       },

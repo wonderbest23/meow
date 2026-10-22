@@ -34,8 +34,8 @@ export async function signInWithProviderIdToken(provider: "google" | "apple", to
           error: {
             code,
             message: notConfigured
-              ? `${label} 로그인은 아직 준비 중이에요. 이메일로 로그인해 주세요.`
-              : `${label} 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.`,
+              ? `지금은 ${label} 로그인을 쓸 수 없어요. 이메일로 로그인해 주세요.`
+              : `${label} 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.`,
           },
         },
         { status: 401 },
@@ -75,7 +75,7 @@ export async function signInWithProviderIdToken(provider: "google" | "apple", to
     if (linking) return NextResponse.json({ error: { code: linking.code, message: linking.message } }, { status: linking.status });
     console.error(`${tag} 오류:`, error instanceof Error ? error.message : error);
     return NextResponse.json(
-      { error: { code, message: `${label} 로그인에 실패했습니다. 잠시 후 다시 시도해주세요.` } },
+      { error: { code, message: `${label} 로그인에 실패했어요. 잠시 후 다시 시도해 주세요.` } },
       { status: 401 },
     );
   }

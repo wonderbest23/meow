@@ -153,7 +153,8 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
   const openDetail = (item: ServiceItem) => { setDetailId(item.id); start(item); };
 
   return <section className={styles.root} id={NEXT_SERVICES_ANCHOR} aria-labelledby="next-services-title">
-    <span className={styles.eyebrow}>다음 단계</span>
+    {/* '다음 단계'는 여정 단계(사업 시작하기 등)와 헷갈렸다 — 맡길 수 있는 일 목록이다(여정 점검 2026-10-22) */}
+    <span className={styles.eyebrow}>맡길 수 있는 일</span>
     <h2 id="next-services-title">필요한 일, 골라서 맡기세요</h2>
     <p className={styles.lead}>눌러서 무엇을 해 주는지 보고 바로 신청하세요. 담당자가 전화로 안내해요.</p>
     {done ? <p className={styles.done} role="status"><CheckCircle2 size={18} aria-hidden /> {done}</p> : null}
@@ -259,7 +260,7 @@ export function NextServicesCard({ planId, className }: { planId: string; classN
     setHighlights(orderServices(SERVICE_CATALOG, badges).filter((item) => badges[item.id] && badges[item.id].tone !== "suggest").slice(0, 2).map((item) => item.title));
   }, [planId]);
   return <Link className={`${styles.card2} ${className ?? ""}`} href={`${careHref(planId)}#${NEXT_SERVICES_ANCHOR}`}>
-    <span>다음 단계</span>
+    <span>맡길 수 있는 일</span>
     <strong>홍보 맡기기 <ArrowRight size={16} aria-hidden /></strong>
     <small>{highlights.length ? `이 사업에 먼저 필요해 보여요: ${highlights.join(", ")}` : "블로그·SNS·언론보도 같은 홍보를 상담 신청할 수 있어요"}</small>
   </Link>;

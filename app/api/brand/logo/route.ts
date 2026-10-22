@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     const identity = await requireAuthenticatedIdentity();
     const config = getOpenAIRuntimeConfig(identity.hash);
     if (!config) {
-      return response({ error: { code: "OPENAI_NOT_CONNECTED", message: "먼저 상단의 OpenAI 연결에서 연결키를 등록해주세요. 기본 로고 시안은 연결 없이 사용할 수 있습니다." } }, { status: 409 });
+      return response({ error: { code: "OPENAI_NOT_CONNECTED", message: "먼저 상단의 OpenAI 연결에서 연결키를 등록해 주세요. 기본 로고 시안은 연결 없이 사용할 수 있어요." } }, { status: 409 });
     }
     const input = requestSchema.parse(await request.json());
     // 예전 메모리 30초 제한은 쿠키 없이 오면 매번 새 사람으로 보여 뚫렸다 — 계정 단위로 시간당 5번
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
       limit: 5,
       windowMs: 60 * 60_000,
       key: identity.userId,
-      message: "이미지 생성 비용을 보호하기 위해 한 시간에 5번까지 만들 수 있습니다. 잠시 후 다시 시도해주세요.",
+      message: "이미지 생성 비용을 보호하기 위해 한 시간에 5번까지 만들 수 있어요. 잠시 후 다시 시도해 주세요.",
     });
     if (limited) return limited;
     const prompt = [
@@ -62,10 +62,10 @@ export async function POST(request: Request) {
     const payload = await openAIResponse.json() as { data?: Array<{ b64_json?: string }>; error?: { code?: string; message?: string } };
     if (!openAIResponse.ok) {
       const message = openAIResponse.status === 401
-        ? "OpenAI 연결키가 유효하지 않습니다."
+        ? "OpenAI 연결키가 유효하지 않아요."
         : openAIResponse.status === 429
-          ? "OpenAI 이미지 생성 한도 또는 사용 잔액을 확인해주세요."
-          : "인공지능 로고를 만들지 못했습니다. 잠시 후 다시 시도해주세요.";
+          ? "OpenAI 이미지 생성 한도 또는 사용 잔액을 확인해 주세요."
+          : "AI 로고를 만들지 못했어요. 잠시 후 다시 시도해 주세요.";
       // OpenAI 원문 오류(모델명·정책 문구 등)는 고객에게 보이지 않고 서버 로그에만 남긴다
       if (openAIResponse.status !== 401 && openAIResponse.status !== 429) {
         console.error("[brand-logo] OpenAI image generation failed", openAIResponse.status, payload.error);
@@ -73,15 +73,15 @@ export async function POST(request: Request) {
       return response({ error: { code: payload.error?.code ?? "LOGO_GENERATION_FAILED", message } }, { status: openAIResponse.status });
     }
     const image = payload.data?.[0]?.b64_json;
-    if (!image) return response({ error: { code: "LOGO_IMAGE_MISSING", message: "생성된 로고 이미지를 받지 못했습니다." } }, { status: 502 });
+    if (!image) return response({ error: { code: "LOGO_IMAGE_MISSING", message: "생성된 로고 이미지를 받지 못했어요." } }, { status: 502 });
     return response({ imageDataUrl: `data:image/png;base64,${image}`, model: process.env.OPENAI_IMAGE_MODEL?.trim() || "gpt-image-2" });
   } catch (error) {
     if (error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED") {
-      return response({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "로그인 후 인공지능 로고를 만들 수 있습니다." } }, { status: 401 });
+      return response({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "로그인 후 AI 로고를 만들 수 있어요." } }, { status: 401 });
     }
     const message = error instanceof Error && error.name === "TimeoutError"
-      ? "로고 생성 시간이 초과되었습니다. 잠시 후 다시 시도해주세요."
-      : publicErrorMessage(error, "인공지능 로고를 만들지 못했습니다.");
+      ? "로고 생성 시간이 초과되었어요. 잠시 후 다시 시도해 주세요."
+      : publicErrorMessage(error, "AI 로고를 만들지 못했어요.");
     return response({ error: { code: "LOGO_GENERATION_FAILED", message } }, { status: 400 });
   }
 }

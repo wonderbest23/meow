@@ -55,10 +55,10 @@ export async function POST(req: Request) {
    */
   const access = await resolvePlanAccess(body.planType, typeof body.planId === "string" ? body.planId : undefined);
   if (!access.authenticated) {
-    return new Response(JSON.stringify({ error: "login_required", message: "로그인 후 이용할 수 있습니다." }), { status: 401, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "login_required", message: "로그인 후 이용할 수 있어요." }), { status: 401, headers: { "Content-Type": "application/json" } });
   }
   if (!access.paid) {
-    return new Response(JSON.stringify({ error: "payment_required", message: "PDF·Word 내려받기는 결제 후 이용할 수 있습니다." }), { status: 402, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "payment_required", message: "PDF·Word 내려받기는 결제 후 이용할 수 있어요." }), { status: 402, headers: { "Content-Type": "application/json" } });
   }
 
   let manualReview: string[] = [];
@@ -68,17 +68,17 @@ export async function POST(req: Request) {
     const identity = await requireGuestIdentity();
     const state = await loadPlanState(identity.hash);
     const plan = state.plans.find(p => p.id === body.planId);
-    if (!plan) return Response.json({ message: "문서를 찾을 수 없습니다." }, { status: 404 });
+    if (!plan) return Response.json({ message: "문서를 찾을 수 없어요." }, { status: 404 });
     if (body.view === "summary") {
       try { summary = buildExecutiveSummary(plan, state.business); }
-      catch { return Response.json({ message: "저장된 실적 기록을 읽지 못했습니다. 원본은 변경하지 않았습니다." }, { status: 409 }); }
-      if (!hasExecutiveSummaryContent(summary)) return Response.json({ message: "사업 내용이나 고객을 먼저 정리한 뒤 요약을 받아주세요." }, { status: 422 });
-      if (body.sourceVersion && body.sourceVersion !== summary.sourceVersion) return Response.json({ message: "사업 정보가 바뀌었습니다. 문서를 다시 열어 최신 요약을 확인해 주세요." }, { status: 409 });
+      catch { return Response.json({ message: "저장된 실적 기록을 읽지 못했어요. 원본은 변경하지 않았어요." }, { status: 409 }); }
+      if (!hasExecutiveSummaryContent(summary)) return Response.json({ message: "사업 내용이나 고객을 먼저 정리한 뒤 요약을 받아 주세요." }, { status: 422 });
+      if (body.sourceVersion && body.sourceVersion !== summary.sourceVersion) return Response.json({ message: "사업 정보가 바뀌었어요. 문서를 다시 열어 최신 요약을 확인해 주세요." }, { status: 409 });
       body.title = plan.title; body.planType = plan.planType; body.business = state.business;
     }
     const snapshot = coachDocumentSnapshot(plan);
     if (snapshot) {
-      if (!summary && (snapshot.stale.length || snapshot.missing.length)) return Response.json({ message: "대화에서 최신 내용을 문서에 반영한 뒤 내려받아주세요. 기존 내용은 유지되어 있습니다." }, { status: 409 });
+      if (!summary && (snapshot.stale.length || snapshot.missing.length)) return Response.json({ message: "대화에서 최신 내용을 문서에 반영한 뒤 내려받아 주세요. 기존 내용은 유지되어 있어요." }, { status: 409 });
       body.title = plan.title; body.planType = plan.planType; body.business = snapshot.business; body.sections = snapshot.sections;
       manualReview = snapshot.manualReview;
     }
@@ -164,7 +164,7 @@ export async function POST(req: Request) {
     // 큰 문서에서만 재현되는 렌더 실패를 추적하려고 원인은 서버 로그에 남긴다 — 응답에는 내부 오류 원문을 싣지 않는다
     const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     console.error("plan document render failed", { format, sections: sections.length, chars: assembled.length, detail });
-    return new Response(JSON.stringify({ error: "render_failed", message: "문서 파일을 만들지 못했습니다. 잠시 후 다시 시도해주세요." }), { status: 500, headers: { "Content-Type": "application/json" } });
+    return new Response(JSON.stringify({ error: "render_failed", message: "문서 파일을 만들지 못했어요. 잠시 후 다시 시도해 주세요." }), { status: 500, headers: { "Content-Type": "application/json" } });
   }
   const safe = `${title}${summary ? " 한 장 요약" : ""}`.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, "-").slice(0, 60);
   // 헤더는 Latin-1만 허용 → ASCII 폴백 + RFC 5987(UTF-8)로 한글 파일명 전달

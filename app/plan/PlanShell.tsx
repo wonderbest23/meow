@@ -23,12 +23,12 @@ function backTarget(pathname: string): { href: string; label: string } | null {
    * 제목 위에 56px 이 빈다. 화면을 열면 회색 여백부터 보였다.
    */
   if (pathname === "/plan/overview" || pathname === "/plan/overview/") return null;
-  if (pathname.startsWith("/plan/overview/")) return { href: "/plan/overview", label: "플랜 개요" };
+  if (pathname.startsWith("/plan/overview/")) return { href: "/plan/overview", label: "계획서 개요" };
   if (pathname.startsWith("/plan/info")) return { href: "/plan", label: "내 사업" };
   if (pathname.startsWith("/plan/me")) return { href: "/plan", label: "내 사업" };
-  if (pathname.startsWith("/plan/document")) return { href: "/plan/overview", label: "플랜 개요" };
-  if (pathname.startsWith("/plan/pay")) return { href: "/plan/overview", label: "플랜 개요" };
-  return { href: "/plan/overview", label: "플랜 개요" }; // 섹션 위저드 등
+  if (pathname.startsWith("/plan/document")) return { href: "/plan/overview", label: "계획서 개요" };
+  if (pathname.startsWith("/plan/pay")) return { href: "/plan/overview", label: "계획서 개요" };
+  return { href: "/plan/overview", label: "계획서 개요" }; // 섹션 위저드 등
 }
 
 /** /plan 이하 모든 화면이 공유하는 고정 레일 셸 */
@@ -80,7 +80,7 @@ export default function PlanShell({ children }: { children: React.ReactNode }) {
     <div className={styles.shell}>
       {sync === "offline" && (
         <div className={styles.syncWarn} role="status">
-          <span>저장하지 못했습니다 — 연결을 확인해 주세요. 쓰던 내용은 남아 있습니다.</span>
+          <span>저장하지 못했어요 — 연결을 확인해 주세요. 쓰던 내용은 남아 있어요.</span>
           <button type="button" onClick={() => void pushToServer()}>다시 저장</button>
         </div>
       )}

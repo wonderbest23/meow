@@ -11,7 +11,7 @@ export async function PATCH(request: Request) {
   const limited = await enforceRateLimit("business-expert", request, { limit: 30, windowMs: 600000 });
   if (limited) return limited;
   const parsed = expertPatchSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return json({ message: "수정할 항목을 다시 확인해주세요." }, 400);
+  if (!parsed.success) return json({ message: "수정할 항목을 다시 확인해 주세요." }, 400);
   const identity = await requireGuestIdentity();
   try {
     return json(await saveBusinessConditions(identity.hash, parsed.data));

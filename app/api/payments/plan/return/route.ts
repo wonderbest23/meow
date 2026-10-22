@@ -17,7 +17,7 @@ function redirect(request: Request, params: Record<string, string>) {
 export async function POST(request: Request) {
   let form: FormData;
   try { form = await request.formData(); }
-  catch { return redirect(request, { status: "fail", reason: "잘못된 응답을 받았습니다." }); }
+  catch { return redirect(request, { status: "fail", reason: "잘못된 응답을 받았어요." }); }
   const get = (key: string) => typeof form.get(key) === "string" ? String(form.get(key)) : "";
   if (get("authResultCode") !== "0000") {
     /*
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
      */
     const cancelled = get("orderId") ? await getPlanOrder(get("orderId")).catch(() => null) : null;
     return redirect(request, {
-      status: "fail", reason: "결제가 취소되었거나 인증되지 않았습니다.",
+      status: "fail", reason: "결제가 취소되었거나 인증되지 않았어요.",
       ...(cancelled?.planId ? { planId: cancelled.planId } : {}), ...(cancelled?.planType ? { planType: cancelled.planType } : {}),
       ...(cancelled?.product ? { product: cancelled.product } : {}), ...(cancelled?.domain ? { domain: cancelled.domain } : {}),
     });
@@ -35,10 +35,10 @@ export async function POST(request: Request) {
   if (!tid || tid.length > 128 || !orderId || orderId.length > 128 || !get("authToken")
     || clientId !== nicepayClientKey()
     || !verifyAuthSignature({ authToken: get("authToken"), clientId, amount, signature: get("signature") })) {
-    return redirect(request, { status: "fail", reason: "결제 정보를 확인하지 못했습니다." });
+    return redirect(request, { status: "fail", reason: "결제 정보를 확인하지 못했어요." });
   }
   const order = await getPlanOrder(orderId).catch(() => null);
-  if (!order || !/^\d+$/.test(amount) || Number(amount) !== order.amount) return redirect(request, { status: "fail", reason: "주문 정보를 확인하지 못했습니다." });
+  if (!order || !/^\d+$/.test(amount) || Number(amount) !== order.amount) return redirect(request, { status: "fail", reason: "주문 정보를 확인하지 못했어요." });
   const context = { orderId, ...(order.planId ? { planId: order.planId } : {}), ...(order.planType ? { planType: order.planType } : {}), product: order.product, ...(order.domain ? { domain: order.domain } : {}) };
   const result = await reconcileNicepayOrder({ orderId, tid, allowApproval: true }).catch(() => ({ status: "pending" as const }));
   /*

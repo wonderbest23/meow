@@ -12,7 +12,7 @@ import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCan
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
-import { needsEntryConfirmation, periodDisplay, routeComposerInput } from "../app/plan/chat/intake-ui/model";
+import { changedResourceLimits, needsEntryConfirmation, periodDisplay, routeComposerInput } from "../app/plan/chat/intake-ui/model";
 import { readChatResponse } from "../lib/http/read-chat-response";
 import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption } from "../app/plan/chat/intake-ui/model";
 
@@ -54,6 +54,14 @@ async function main() {
   const noteDraft = { ...emptyDraft(), answers: { customer: { ...emptyAnswer(), text: "누구부터 공략할까요?" } } };
   const notePending = { command: command({ action: "note", message: "누구부터 공략할까요?" }), composer: { text: "누구부터 공략할까요?", mode: "answer" as const, questionId: "customer" } };
   assert.equal(settleDraft(noteDraft, notePending).answers.customer, undefined);
+  // 예산·시간 고치기: 바뀐 칸만, 빈 칸은 보내지 않는다(빈 칸이 '아직 미정'으로 저장되던 문제)
+  assert.deepEqual(changedResourceLimits({ initialCost: "1000만원", weeklyOperatingHours: "" }, { initialCost: "1000만원", weeklyOperatingHours: "", monthlyOperatingCost: "  " }), {}, "nothing changed → nothing to send");
+  assert.deepEqual(changedResourceLimits({ initialCost: "1000만원" }, { initialCost: "1500만원", weeklyOperatingHours: "" }), { initialCost: "1500만원" });
+  {
+    const editing = { ...emptyDraft(), ownerScope: "synthetic-owner", resourceEditor: { limits: { initialCost: "1500만원", weeklyOperatingHours: "" } } };
+    const sent: IntakeCommand = { action: "resources", planId: id, revision: 2, requestId: "e72bf3c0-70de-49f3-9cb7-c322290f530b", resourceLimits: { initialCost: "1500만원" } };
+    assert.equal(settleDraft(editing, { command: sent }).resourceEditor?.limits, undefined, "a saved partial edit clears the editor draft");
+  }
   assert.equal(settleDraft({ ...noteDraft, answers: { customer: { ...emptyAnswer(), text: "저장 중 추가 입력" } } }, notePending).answers.customer.text, "저장 중 추가 입력");
   // Spec §3.3: month presets cover completed months only; "올해" runs to today; dates are Asia/Seoul.
   assert.equal(periodPresetRange("3m", new Date(2026, 8, 16)), "2026-06-01 / 2026-08-31");
@@ -513,7 +521,7 @@ async function main() {
   const summary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={summarized} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
   // '좀 더 개선하기'는 2026-10-03에 뺐다(만든 뒤에 고친다)
   assert.ok(!summary.includes("좀 더 개선하기"), "no refine-more button in the summary");
-  for (const text of ["내 사업 정보", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "data-state=\"current\"><span>1</span>사업 방향 요약"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
+  for (const text of ["사업 요약", "소규모 매장의 예약 업무를 돕는 소프트웨어", "AI가 제안한 시작 범위", "data-state=\"current\"><span>1</span>사업 방향 요약"]) assert.ok(summary.includes(text), `summary is missing: ${text}`);
   assert.equal((summary.match(/(?:사업 방향 정리하기|사업계획서 문서 작성하기)<\/button>/g) ?? []).length, 1, "the summary offers one creation step");
   assert.ok(summary.includes(`/plan/document?planId=${id}`), "Existing artifacts stay navigable even during AI jobs");
   // 다음 단계는 한 번에 하나, 한 곳에만: 사업안 만들기 → (사업안이 현재 입력 기준이면) 계획서 만들기 → 계획서 열기.
@@ -576,7 +584,10 @@ async function main() {
   // 운영 중인 사업: 새 이름을 앞세우지 않고, 운영에 맞는 머리말
   const operatingResult = renderToStaticMarkup(<DesignResult snapshot={{ ...nextSnapshot({}, identityDesign), intake: { ...summarized.intake, mode: "operating" } }} onName={noop} />);
   assert.ok(operatingResult.includes("이렇게 바꿔 봐요") && !operatingResult.includes("이렇게 시작해요") && operatingResult.includes("새 이름 추천 보기") && !operatingResult.includes("동네찬방"), "operating results keep the current name first");
+  assert.ok(operatingResult.includes("지금 가게 이름") && operatingResult.includes('aria-label="지금 가게 이름"'), "operating results ask the current shop name in a plain input");
   for (const text of ["AI 제안", "이유 하나", "키프리스", "<details", "설명 문장"]) assert.ok(!result.includes(text), `result should not include: ${text}`);
+  const pricedPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal payNote="49,000원 결제 후 작성 · 홈페이지까지 59,000원" onDesign={noop} onPrepare={noop} />);
+  assert.ok(pricedPrepare.includes("49,000원 결제 후 작성 · 홈페이지까지 59,000원"), "the plan button shows the price before payment");
   const minimalPrepare = renderToStaticMarkup(<NextStepAction snapshot={nextSnapshot({}, currentDesign)} prepared={false} disabled={false} aiBusy={false} minimal onDesign={noop} onPrepare={noop} />);
   assert.ok(minimalPrepare.includes("사업계획서 만들기</button>") && minimalPrepare.includes("결제하면 바로 작성을 시작해요") && !minimalPrepare.includes("진행 단계"), "the result screen ends with one plan button");
   // 사업 방향 정리 중: 마지막 답을 보낸 순간부터 막대와 단계가 보인다(작업 접수 전에도)

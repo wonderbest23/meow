@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export async function GET() {
   const user = await getAuthenticatedUser();
   if (!user) {
-    return NextResponse.json({ error: { code: "AUTH_REQUIRED", message: "로그인이 필요합니다." } }, { status: 401 });
+    return NextResponse.json({ error: { code: "AUTH_REQUIRED", message: "로그인이 필요해요." } }, { status: 401 });
   }
   try {
     return NextResponse.json(
@@ -21,7 +21,7 @@ export async function GET() {
      * 실패는 실패로 알린다 — 마이페이지는 이 내역 칸만 '불러오지 못했어요'로 바꾸고 나머지는 그대로 쓴다.
      */
     return NextResponse.json(
-      { error: { code: "PAYMENTS_UNAVAILABLE", message: "결제 내역을 불러오지 못했습니다. 잠시 후 다시 시도해주세요." } },
+      { error: { code: "PAYMENTS_UNAVAILABLE", message: "결제 내역을 불러오지 못했어요. 잠시 후 다시 시도해 주세요." } },
       { status: 503, headers: { "Cache-Control": "private, no-store, max-age=0" } },
     );
   }

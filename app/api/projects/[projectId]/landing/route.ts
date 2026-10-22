@@ -52,9 +52,9 @@ export async function GET(
     }
     return NextResponse.json({ site, suggestedDraft }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "랜딩페이지를 불러오지 못했습니다.";
+    const message = error instanceof Error ? error.message : "홈페이지를 불러오지 못했어요.";
     return NextResponse.json(
-      { error: { code: publicErrorCode(error, "LANDING_LOAD_FAILED"), message: publicErrorMessage(error, "랜딩페이지를 불러오지 못했습니다.") } },
+      { error: { code: publicErrorCode(error, "LANDING_LOAD_FAILED"), message: publicErrorMessage(error, "홈페이지를 불러오지 못했어요.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

@@ -9,7 +9,7 @@ import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
 import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS } from "../../../../lib/plan-builder/intake-options";
 import { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
 import { applyIntakeResources } from "../../../../lib/plan-builder/intake-resource-update";
-import { resourceLimitsSchema, resourceQuoteSchema, type ResourceKey, type ResourceContext, type ResourceQuote } from "../../../../lib/plan-builder/intake-candidate-resources";
+import { RESOURCE_ANSWER_IDS, RESOURCE_KEYS, resourceLimitsSchema, resourceQuoteSchema, type ResourceKey, type ResourceContext, type ResourceQuote } from "../../../../lib/plan-builder/intake-candidate-resources";
 import { parseResourceLimit } from "../../../../lib/plan-builder/intake-candidate-fit";
 import { z } from "zod";
 import { ideaInputFingerprint } from "../../../../lib/plan-builder/intake-ideas";
@@ -229,12 +229,36 @@ export function sameAnswer(a: AnswerDraft | undefined, b: AnswerDraft | undefine
   return !!a && !!b && a.text === b.text && a.custom === b.custom && !!a.unknown === !!b.unknown && a.ksic === b.ksic && a.selected.length === b.selected.length && a.selected.every((item, index) => item === b.selected[index]);
 }
 
+/** 예산·시간 칸의 저장된 값 — 답이 없으면 빈 칸(미정으로 채우지 않는다) */
+export function savedResourceLimits(snapshot: IntakeSnapshot): Record<ResourceKey, string> {
+  return Object.fromEntries(RESOURCE_KEYS.map(key => {
+    const answer = snapshot.intake.answers[RESOURCE_ANSWER_IDS[key]];
+    return [key, answer ? answer.status === "unknown" ? answer.quote ?? "" : answer.quote || String(answer.value ?? "") : snapshot.coach.fields.find(field => field.key === RESOURCE_ANSWER_IDS[key])?.value ?? ""];
+  })) as Record<ResourceKey, string>;
+}
+
+/**
+ * '예산·시간 고치기'에서 실제로 바뀐 칸만 고른다. 빈 칸은 보내지 않는다 — 예전엔 아무것도 안 고치고 '저장하기'만 눌러도
+ * 비어 있던 칸이 '아직 미정'으로 저장되고, 누를 때마다 대화 끝에 질문·답이 다시 붙었다(여정 점검 2026-10-22).
+ */
+export function changedResourceLimits(saved: Partial<Record<ResourceKey, string>>, edited: Partial<Record<ResourceKey, string | null>> | undefined): Partial<Record<ResourceKey, string>> {
+  const changed: Partial<Record<ResourceKey, string>> = {};
+  for (const key of RESOURCE_KEYS) {
+    const next = (edited?.[key] ?? "").trim();
+    if (next && next !== (saved[key] ?? "").trim()) changed[key] = next;
+  }
+  return changed;
+}
+
 export function settleDraft(draft: IntakeDraft, pending: PendingRequest): IntakeDraft {
   const next = { ...draft, answers: { ...draft.answers }, pending: null };
   const command = pending.command;
   if (command.action === "resources" && next.resourceEditor) {
     next.resourceEditor = { ...next.resourceEditor };
-    if (command.resourceLimits && JSON.stringify(next.resourceEditor.limits) === JSON.stringify(command.resourceLimits)) delete next.resourceEditor.limits;
+    // 바뀐 칸만 보낸다(changedResourceLimits) — 보낸 칸이 지금 입력과 모두 같으면 입력을 비워 저장된 값을 보인다
+    const sentLimits = command.resourceLimits;
+    if (sentLimits && JSON.stringify(next.resourceEditor.limits) === JSON.stringify(sentLimits)) delete next.resourceEditor.limits;
+    else if (sentLimits && Object.keys(sentLimits).length > 0 && Object.entries(sentLimits).every(([key, value]) => (next.resourceEditor?.limits?.[key as ResourceKey] ?? "").trim() === (value ?? "").trim())) delete next.resourceEditor.limits;
     if (command.resourceContext && JSON.stringify(next.resourceEditor.context) === JSON.stringify(command.resourceContext)) delete next.resourceEditor.context;
     const quote = next.resourceEditor.quote;
     if (command.resourceQuote && quote && Object.entries(command.resourceQuote).every(([key, value]) => {

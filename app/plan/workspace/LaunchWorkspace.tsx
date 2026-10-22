@@ -11,6 +11,17 @@ import { loadState, pushToServer, saveAnswers, setActivePlan, type Plan } from "
 import styles from "./LaunchWorkspace.module.css";
 import MarketingKitPanel from "./MarketingKit";
 
+/* 시작 방법 세 가지 — 확인 화면과 바꾸기 화면이 같은 이름을 쓴다 */
+const SETUP_CHOICES = {
+  purpose: [["ideas", "아이디어만 검토할게요"], ["launch", "새 사업을 시작할게요"], ["improve", "운영 중인 사업을 개선할게요"]],
+  workplace: [["remote", "별도 사무실은 필요 없어요"], ["shared", "소호·공유사무실을 알아볼래요"], ["shop", "매장이나 작업장이 필요해요"], ["unknown", "아직 모르겠어요"]],
+  registered: [["yes", "이미 등록했어요"], ["no", "아직 등록하지 않았어요"], ["unknown", "나중에 확인할게요"]],
+} as const;
+const SETUP_KEYS = ["purpose", "workplace", "registered"] as const;
+const SETUP_TITLES = ["어디까지 도와드릴까요?", "일할 공간이 필요한가요?", "사업자등록은 하셨나요?"];
+const SETUP_SHORT = { purpose: "도움 받을 일", workplace: "일할 곳", registered: "사업자등록" } as const;
+function setupLabel(key: typeof SETUP_KEYS[number], value: string) { return (SETUP_CHOICES[key] as ReadonlyArray<readonly [string, string]>).find(([v]) => v === value)?.[1] ?? value; }
+
 export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved: (plan: Plan) => void }) {
   const router = useRouter();
   const [state, setState] = useState(() => readLaunch(plan));
@@ -20,7 +31,11 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
     const step = new URLSearchParams(window.location.search).get("step");
     return step && launchSteps(plan, readLaunch(plan)).some(s => s.id === step) ? step : null;
   });
-  const [config, setConfig] = useState<number | null>(state.configured || requestedStep ? null : 0);
+  /*
+   * 처음 열면 대화에서 들은 내용으로 채운 값(launchDefaults)을 한 번 확인만 받는다 — 예전엔 세 질문을 처음부터 다시 물었다.
+   * 'confirm' 확인 화면 · 0~2 바꾸기 화면 · null 준비 과정
+   */
+  const [config, setConfig] = useState<number | "confirm" | null>(state.configured || requestedStep ? null : "confirm");
   const [selected, setSelected] = useState<string | null>(() => requestedStep ?? launchSteps(plan, state).find(s => ["pending", "review"].includes(launchStatus(state, s)))?.id ?? null);
   const [note, setNote] = useState<string | null>(null);
   const [material, setMaterial] = useState<string | null>(null);
@@ -86,12 +101,18 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   const aiPrompt = current ? `${current.prompt}\n\n현재 단계 메모: ${effectiveNote.slice(0, 600) || "없음"}\n현재 자료: ${effectiveMaterial.slice(0, 600)}\n이전에 기록한 내용(사용자 제공, 외부 검증 아님):\n${steps.filter(s => s.id !== current.id && state.records[s.id]?.note).map(s => `${s.title}: ${state.records[s.id].note.slice(0, 100)}`).join("\n").slice(0, 700)}` : "";
 
   return <div className={styles.launch}>
-    {config !== null ? <div className={styles.setup}>
+    {config === "confirm" ? <div className={styles.setup}>
+      <span className={styles.eyebrow}>{readCoach(plan.answers)?.stage === "operating" ? "운영 개선하기" : "사업 시작하기"}</span>
+      <h2 ref={heading} tabIndex={-1}>대화에서 들은 내용으로 준비 과정을 맞췄어요</h2>
+      <dl className={styles.confirmList}>{SETUP_KEYS.filter(key => key === "purpose" || state.purpose !== "ideas").map(key => <div key={key}><dt>{SETUP_SHORT[key]}</dt><dd>{setupLabel(key, state[key])}</dd></div>)}</dl>
+      <p className={styles.confirmNote}>맞으면 바로 시작해요. 다르면 바꿀 수 있고, 나중에 &lsquo;진행 방식 변경&rsquo;에서도 고칠 수 있어요.</p>
+      <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => { setConfig(0); top(); }}>바꾸기</button><button className={styles.primary} disabled={busy} onClick={async () => { if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{busy ? "저장 중…" : "이대로 시작하기"}</button></div>
+    </div> : config !== null ? <div className={styles.setup}>
       <span className={styles.eyebrow}>시작 방법 {config + 1} / 3</span>
       <progress value={config + 1} max={3} aria-label="시작 방법 선택" />
-      <h2 ref={heading} tabIndex={-1}>{["어디까지 도와드릴까요?", "일할 공간이 필요한가요?", "사업자등록은 하셨나요?"][config]}</h2>
+      <h2 ref={heading} tabIndex={-1}>{SETUP_TITLES[config]}</h2>
       <div className={styles.choices}>
-        {(config === 0 ? [["ideas", "아이디어만 검토할게요"], ["launch", "새 사업을 시작할게요"], ["improve", "운영 중인 사업을 개선할게요"]] : config === 1 ? [["remote", "별도 사무실은 필요 없어요"], ["shared", "소호·공유사무실을 알아볼래요"], ["shop", "매장이나 작업장이 필요해요"], ["unknown", "아직 모르겠어요"]] : [["yes", "이미 등록했어요"], ["no", "아직 등록하지 않았어요"], ["unknown", "나중에 확인할게요"]]).map(([value, label]) => <button key={value} aria-pressed={value === (config === 0 ? state.purpose : config === 1 ? state.workplace : state.registered)} onClick={() => setState({ ...state, [config === 0 ? "purpose" : config === 1 ? "workplace" : "registered"]: value })}>{label}</button>)}
+        {SETUP_CHOICES[SETUP_KEYS[config]].map(([value, label]) => <button key={value} aria-pressed={value === state[SETUP_KEYS[config]]} onClick={() => setState({ ...state, [SETUP_KEYS[config]]: value })}>{label}</button>)}
       </div>
       <div className={styles.stepActions}>{config > 0 && <button className={styles.secondary} onClick={() => { setConfig(config - 1); top(); }}>이전</button>}<button className={styles.primary} disabled={busy} onClick={async () => { if (config < 2 && state.purpose !== "ideas") { setConfig(config + 1); top(); } else if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{config === 2 || state.purpose === "ideas" ? "내 과정 보기" : "다음"}</button></div>
     </div> : <>

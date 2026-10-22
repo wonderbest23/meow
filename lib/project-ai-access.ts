@@ -32,10 +32,10 @@ export async function requireProjectAiAccess(
       ? await checkLandingEditAccess(project.id, identity.hash, identity.userId, identity.email ?? null)
       : await planEntitlement(planId, identity.userId, identity.email ?? null);
     if (reason === "login_required") {
-      return NextResponse.json({ error: { code: "LOGIN_REQUIRED", message: "로그인 후 이용할 수 있습니다." } }, { status: 401 });
+      return NextResponse.json({ error: { code: "LOGIN_REQUIRED", message: "로그인 후 이용할 수 있어요." } }, { status: 401 });
     }
     if (reason === "not_found") {
-      return NextResponse.json({ error: { code: "PROJECT_NOT_FOUND", message: "프로젝트를 찾을 수 없습니다." } }, { status: 404 });
+      return NextResponse.json({ error: { code: "PROJECT_NOT_FOUND", message: "프로젝트를 찾을 수 없어요." } }, { status: 404 });
     }
     if (reason !== "ok") {
       return NextResponse.json({ error: { code: "PROJECT_PAYMENT_REQUIRED", message: PAYMENT_REQUIRED_MESSAGE } }, { status: 402 });
@@ -49,7 +49,7 @@ export async function requireProjectAiAccess(
     limit: 20,
     windowMs: 60 * 60_000,
     key: identity.userId ?? identity.hash,
-    message: "AI 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "AI 요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
 }
 

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("auth-google", request, {
     limit: 10,
     windowMs: 5 * 60_000,
-    message: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "로그인 시도가 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
 
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
   try {
     input = schema.parse(await request.json());
   } catch {
-    return NextResponse.json({ error: { code: "GOOGLE_LOGIN_FAILED", message: "구글 로그인에 실패했습니다. 잠시 후 다시 시도해주세요." } }, { status: 401 });
+    return NextResponse.json({ error: { code: "GOOGLE_LOGIN_FAILED", message: "구글 로그인에 실패했어요. 잠시 후 다시 시도해 주세요." } }, { status: 401 });
   }
   return signInWithProviderIdToken("google", input.credential, input.remember);
 }
