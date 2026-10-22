@@ -29,7 +29,7 @@ export async function GET() {
       {
         error: {
           code: "PREFERENCES_LOAD_FAILED",
-          message: error instanceof Error ? error.message : "저장한 사업을 불러오지 못했습니다.",
+          message: error instanceof Error ? error.message : "저장한 사업을 불러오지 못했어요.",
         },
       },
       { status: 500 },
@@ -55,10 +55,10 @@ export async function PUT(request: Request) {
         error: {
           code: validation ? "PREFERENCE_INVALID" : "PREFERENCE_SAVE_FAILED",
           message: validation
-            ? "저장할 사업 정보가 올바르지 않습니다."
+            ? "저장할 사업 정보가 올바르지 않아요."
             : error instanceof Error
               ? error.message
-              : "사업을 저장하지 못했습니다.",
+              : "사업을 저장하지 못했어요.",
         },
       },
       { status: validation ? 400 : 500 },
@@ -84,10 +84,10 @@ export async function DELETE(request: Request) {
         error: {
           code: validation ? "PREFERENCE_INVALID" : "PREFERENCE_DELETE_FAILED",
           message: validation
-            ? "삭제할 사업을 확인하지 못했습니다."
+            ? "삭제할 사업을 확인하지 못했어요."
             : error instanceof Error
               ? error.message
-              : "저장 상태를 변경하지 못했습니다.",
+              : "저장 상태를 변경하지 못했어요.",
         },
       },
       { status: validation ? 400 : 500 },

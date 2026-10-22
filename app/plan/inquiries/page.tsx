@@ -77,7 +77,8 @@ export default function InquiriesPage() {
                 <span className={styles.rowBiz}>{item.businessName}</span>
                 <span className={styles.rowText}>{item.lead.message || "내용 없이 연락처만 남겼어요"}</span>
               </span>
-              {item.lead.handledAt === null ? <b className={styles.dot} aria-label="답할 문의" /> : null}
+              {/* 처리한 문의는 '전체'에서도 알아보게 — 예전엔 점이 없을 뿐이라 처리했는지 알 수 없었다(여정 점검 2026-10-22) */}
+              {item.lead.handledAt === null ? <b className={styles.dot} aria-label="답할 문의" /> : <em className={styles.handledBadge}>처리 완료</em>}
             </button>
           </li>)}
         </ul>}

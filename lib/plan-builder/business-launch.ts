@@ -89,9 +89,27 @@ const MARKETING_WHERE: Record<BusinessShape, string> = {
   b2b: "문의: [연락 방법 입력]",
   general: "문의: [연락 방법 입력]",
 };
+/*
+ * 처음 여는 준비 과정의 기본값 — 대화에서 이미 들은 것으로 채운다. 예전엔 대화에서 답한 것을 다시 물었다
+ * ('어디까지 도와드릴까요?', 운영 중인 가게에 '일할 공간이 필요한가요?'·'사업자등록은 하셨나요?' — 여정 점검 2026-10-22).
+ * 운영 중이면 이미 등록한 사업이고 일하는 곳이 있다(업종이 무점포면 사무실 없이). 새로 시작하면 고른 업종(또는 직접 고른 구조)이
+ * 매장형인지 무점포인지로 일할 곳을 짐작하고, 사업자등록은 아직 모르는 것으로 둔다. 화면은 이 값을 한 번 확인받는다.
+ */
+export function launchDefaults(plan: Pick<Plan, "answers">): LaunchState {
+  const operating = readCoach(plan.answers)?.stage === "operating";
+  const intake = readIntake(plan.answers as Record<string, Record<string, unknown>>);
+  const effective = intake ? effectiveStructure(intake) : null;
+  // 업종(분류 코드)을 골랐거나 제공 방식을 직접 골랐을 때만 짐작한다 — 큰 분류 기본값만으로는 짐작하지 않는다
+  const known = !!effective && (!!intake?.ksic || effective.basis.delivery === "user");
+  const values = known ? effective!.values : null;
+  const workplace: LaunchState["workplace"] = values && (values.capital === "storefront" || values.delivery === "store") ? "shop"
+    : values && values.capital === "remote" && (values.delivery === "online" || values.delivery === "visit") ? "remote"
+    : operating ? "shop" : "unknown";
+  return launchSchema.parse({ purpose: operating ? "improve" : "launch", workplace, registered: operating ? "yes" : "unknown" });
+}
 export function readLaunch(plan: Plan): LaunchState {
   const parsed = launchSchema.safeParse(plan.answers[LAUNCH_KEY]);
-  return parsed.success ? parsed.data : launchSchema.parse({ purpose: readCoach(plan.answers)?.stage === "operating" ? "improve" : "launch" });
+  return parsed.success ? parsed.data : launchDefaults(plan);
 }
 export function useOperatingWorkflow(state: LaunchState): LaunchState {
   return { ...state, purpose: "improve" };
@@ -113,7 +131,7 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
   if (settings.purpose === "ideas") return result;
   result.push({ ...base, id: "operations", title: improving ? "현재 운영에서 바꿀 일을 정해요" : "작게 시작할 범위를 정해요", task: improving ? "현재 문제와 비용을 확인하고 유지할 일과 바꿔볼 일을 나눠요." : "처음 제공할 범위와 감당할 수 있는 비용을 확인해요.", materialTitle: "운영 범위 메모", material: improving
     ? `${context}\n\n현재 문제: ${field("problem")}\n현재 매출(제공된 정보): ${field("sales")}\n매달 나가는 비용: ${field("cost")}\n운영 범위: ${field("capacity")}\n개선 목표: ${field("goal")}\n\n유지할 일:\n이번에 바꿔볼 일:\n확인할 기간과 실제 결과:`
-    : `${context}\n\n준비 예산: ${field("budget")}\n처음 드는 비용: ${field("setupCost")}\n매달 나가는 비용: ${field("cost")}\n운영 범위: ${field("capacity")}\n주당 가능한 시간: ${field("hoursPerWeek")}\n\n이번에 하지 않을 일:\n추가로 필요한 준비물:`, prompt: improving
+    : `${context}\n\n준비 예산: ${field("budget")}\n처음 드는 비용: ${field("setupCost")}\n매달 나가는 비용: ${field("cost")}\n운영 범위: ${field("capacity")}\n일주일에 쓸 수 있는 시간: ${field("hoursPerWeek")}\n\n이번에 하지 않을 일:\n추가로 필요한 준비물:`, prompt: improving
     ? "현재 운영 중인 사업의 문제와 제공된 매출·비용을 바탕으로 유지할 일, 바꿀 일, 다음 실험 하나와 확인 기준을 정해 주세요. 기록하지 않은 실적은 만들지 말고 원인 가설과 실제 결과를 구분해 주세요. 새 창업 준비로 되돌리지 마세요."
     : "현재 사업의 첫 운영 범위를 작게 정하고, 이미 알려준 예산과 시간으로 가능한 준비물·작업 순서·보류할 일을 구체적으로 제안해 주세요. 모르는 비용을 0원이나 실제 견적으로 확정하지 마세요." });
   /*
@@ -136,10 +154,11 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
     prompt: "이 업종을 시작하기 전에 필요한 신고·허가·자격을 관할 기관 기준으로 정리해 주세요. 확인되지 않은 항목은 확인 필요로 남깁니다.", caution: "인허가 요건은 지역·규모·세부 업태에 따라 달라요. 여기 안내는 업종 분류로 정리한 출발점이고, 최종 확인은 관할 기관에서 해요.",
     links: [{ title: "정부24", url: "https://www.gov.kr" }] });
   if (settings.workplace === "unknown") result.push({ ...base, id: "workspace-choice", title: "일할 공간이 필요한지 알아봐요", task: "사무실을 먼저 계약하지 않아도 돼요. 현재 사업에 필요한 공간부터 검토해요.", materialTitle: "작업 공간 검토 메모", material: `${context}\n\n고객이 직접 방문해야 하는지:\n장비·재고를 보관할 공간이 필요한지:\n집이나 온라인에서 할 수 있는 작업:\n별도 확인이 필요한 주소·시설 조건:`, prompt: "현재 사업에 사무실·점포가 실제로 필요한지 검토해 주세요. 온라인 운영, 집에서 작업, 소호·공유사무실, 점포 중 적용 가능한 선택지를 비교하고, 확인되지 않은 주소 사용·인허가 적합성을 확정하지 마세요." });
-  if (settings.workplace === "shared" || settings.workplace === "shop") result.push({ ...base, id: "workplace", title: settings.workplace === "shared" ? "소호·공유사무실을 비교해요" : lodging ? "숙소 건물과 계약 조건을 확인해요" : "사업장 계약 조건을 확인해요", task: "받은 견적과 이용 조건을 비교하고 계약 전 질문을 준비해요.", materialTitle: "사업장 문의 초안", material: `안녕하세요. ${business} 사업을 준비하고 있습니다.\n${settings.region ? `희망 지역은 ${settings.region}입니다.\n` : ""}다음 조건을 포함한 서면 견적을 받고 싶습니다.\n\n${settings.workplace === "shared" ? "1. 상주 좌석 이용인지, 비상주 주소 이용인지\n2. 보증금·월 이용료·관리비·초기 비용 및 부가세 포함 여부\n3. 우편 수령·회의실·추가 인원 비용" : lodging ? "1. 객실 수·면적과 숙박 영업(민박·숙박업)에 쓸 수 있는 건물 용도인지\n2. 보증금·월세·관리비 및 부가세 포함 여부\n3. 소방 설비·전기·가스·급배수 조건과 고칠 수 있는 범위" : "1. 전용 면적과 간판·인테리어 가능 범위\n2. 보증금·월세·관리비·권리금 및 부가세 포함 여부\n3. 전기 용량·급배수·환기 등 설비 조건"}\n4. 제 업종의 사업자등록과 실제 영업에 적합한 공간인지\n5. 계약 당사자와 공간 제공 권한을 확인할 서류\n6. 이용 기간·중도 해지·자동 연장·보증금 반환 조건\n7. 주소 변경 및 폐업 시 필요한 절차\n\n계약서 초안과 전체 비용 내역을 함께 부탁드립니다.`, caution: settings.workplace === "shared" ? "소호오피스도 상주형과 비상주형이 달라요. 저렴하다는 이유만으로 고르지 말고, 등록 가능 여부와 계약은 관할 기관·전문가에게 확인해 주세요. 위 초안은 문의용이지 계약서가 아니에요." : lodging ? "숙소는 운영 형태(농어촌민박·외국인관광 도시민박·숙박업)에 따라 쓸 수 있는 건물과 소방 기준이 달라요. 계약 전에 관할 시·군·구청과 소방서에 확인해 주세요. 위 초안은 문의용이지 계약서가 아니에요." : "매장·작업장은 업종에 따라 영업 신고가 되는 건물인지(용도), 설비 조건이 맞는지가 달라요. 계약 전에 관할 기관·전문가에게 확인해 주세요. 위 초안은 문의용이지 계약서가 아니에요.", links: lodging ? [LAUNCH_SOURCES.registration] : [LAUNCH_SOURCES.lease, LAUNCH_SOURCES.registration], prompt: "현재 사업의 사무실 견적과 계약 전 확인할 질문을 정리해 주세요. 법적 적합성·권리관계·등록 가능 여부를 확인했다고 단정하지 말고, 실제 견적이 없으면 임대료 시세를 만들지 마세요." });
+  // 이미 운영 중인 가게(운영 개선하기)는 이미 공간이 있다 — '사업장 계약 조건 확인' 단계를 주지 않는다(여정 점검 2026-10-22)
+  if (!improving && (settings.workplace === "shared" || settings.workplace === "shop")) result.push({ ...base, id: "workplace", title: settings.workplace === "shared" ? "소호·공유사무실을 비교해요" : lodging ? "숙소 건물과 계약 조건을 확인해요" : "사업장 계약 조건을 확인해요", task: "받은 견적과 이용 조건을 비교하고 계약 전 질문을 준비해요.", materialTitle: "사업장 문의 초안", material: `안녕하세요. ${business} 사업을 준비하고 있습니다.\n${settings.region ? `희망 지역은 ${settings.region}입니다.\n` : ""}다음 조건을 포함한 서면 견적을 받고 싶습니다.\n\n${settings.workplace === "shared" ? "1. 상주 좌석 이용인지, 비상주 주소 이용인지\n2. 보증금·월 이용료·관리비·초기 비용 및 부가세 포함 여부\n3. 우편 수령·회의실·추가 인원 비용" : lodging ? "1. 객실 수·면적과 숙박 영업(민박·숙박업)에 쓸 수 있는 건물 용도인지\n2. 보증금·월세·관리비 및 부가세 포함 여부\n3. 소방 설비·전기·가스·급배수 조건과 고칠 수 있는 범위" : "1. 전용 면적과 간판·인테리어 가능 범위\n2. 보증금·월세·관리비·권리금 및 부가세 포함 여부\n3. 전기 용량·급배수·환기 등 설비 조건"}\n4. 제 업종의 사업자등록과 실제 영업에 적합한 공간인지\n5. 계약 당사자와 공간 제공 권한을 확인할 서류\n6. 이용 기간·중도 해지·자동 연장·보증금 반환 조건\n7. 주소 변경 및 폐업 시 필요한 절차\n\n계약서 초안과 전체 비용 내역을 함께 부탁드립니다.`, caution: settings.workplace === "shared" ? "소호오피스도 상주형과 비상주형이 달라요. 저렴하다는 이유만으로 고르지 말고, 등록 가능 여부와 계약은 관할 기관·전문가에게 확인해 주세요. 위 초안은 문의용이지 계약서가 아니에요." : lodging ? "숙소는 운영 형태(농어촌민박·외국인관광 도시민박·숙박업)에 따라 쓸 수 있는 건물과 소방 기준이 달라요. 계약 전에 관할 시·군·구청과 소방서에 확인해 주세요. 위 초안은 문의용이지 계약서가 아니에요." : "매장·작업장은 업종에 따라 영업 신고가 되는 건물인지(용도), 설비 조건이 맞는지가 달라요. 계약 전에 관할 기관·전문가에게 확인해 주세요. 위 초안은 문의용이지 계약서가 아니에요.", links: lodging ? [LAUNCH_SOURCES.registration] : [LAUNCH_SOURCES.lease, LAUNCH_SOURCES.registration], prompt: "현재 사업의 사무실 견적과 계약 전 확인할 질문을 정리해 주세요. 법적 적합성·권리관계·등록 가능 여부를 확인했다고 단정하지 말고, 실제 견적이 없으면 임대료 시세를 만들지 마세요." });
   if (settings.registered !== "yes") result.push({ ...base, id: "registration", title: "사업자등록 준비를 확인해요", task: "실제로 판매를 시작할 시점에 맞춰 필요한 서류와 업종을 공식 안내에서 확인해요.", materialTitle: "등록 상담용 사업 설명", material: `${context}\n\n사업장 방식: ${settings.workplace === "remote" ? "별도 사무실 없이 운영 검토" : settings.workplace === "shared" ? "소호·공유사무실 검토" : settings.workplace === "shop" ? "점포·사업장 검토" : "미정"}\n\n확인하고 싶은 내용:\n- 사업 내용에 맞는 업종과 신청 서류\n- 주소 사용과 임차 관련 제출 자료\n- 해당 업종의 별도 인허가·신고 여부\n- 실제 개업 예정일에 맞는 신청 일정`, caution: "사업 아이디어를 확인하는 것과 실제 영업은 달라요. 여기서 준비 완료를 눌러도 사업자등록이 신청되지는 않아요.", links: [LAUNCH_SOURCES.registration], prompt: "현재 사업으로 관할 세무서에 물어볼 등록 상담 질문지를 작성해 주세요. 업종코드·허가 여부·신청 완료를 임의로 확정하지 마세요." });
   result.push({ ...base, id: "tax", title: "세금 관리 방법을 정해요", task: "직접 관리할지 세무 상담을 받을지 결정할 수 있도록 사업 정보를 정리해요.", materialTitle: "세무 상담 요청 초안", material: `안녕하세요. 아래 사업의 세무 상담을 받고 싶습니다.\n\n${context}\n현재 매출(제공된 정보): ${field("sales")}\n월 비용: ${field("cost")}\n\n1. 제 사업에 필요한 신고 종류와 실제 신고 일정\n2. 직접 신고할 때 준비할 매출·매입·인건비 자료\n3. 기장료와 별도 신고 수수료, 포함 업무\n4. 증빙 전달 방식과 상담 범위\n5. 계약 해지와 자료 반환 조건\n\n상담 후 업무 범위와 비용을 서면으로 안내 부탁드립니다.`, caution: "세무사 자동 배정·예약은 아직 제공하지 않아요. 신고 종류와 일정은 사업 형태에 따라 확인해야 하며, 이 화면에서 신고가 처리되지는 않아요.", links: [LAUNCH_SOURCES.tax], prompt: "현재 사업의 세무 상담용 설명과 자료 준비 목록을 구체화해 주세요. 세율·신고기한은 검증된 자료가 없으면 확정하지 말고, 현재 매출과 예상 매출을 구별해 주세요." });
-  result.push({ ...base, id: "website", title: "홈페이지를 준비해요", task: "사업계획서로 홈페이지를 만들거나 디자인·개발 상담을 요청할 수 있어요.", materialTitle: "홈페이지 제작 요청서", material: `${context}\n\n홈페이지의 목적: 상품 소개와 문의 접수\n필요한 내용: 상품 설명, 가격, 신청 방법, 운영자 정보\n추가로 원하는 기능:\n보유한 사진·로고:\n연결하려는 도메인:\n희망 일정:`, service: "website", caution: "디자인·개발 대행은 별도 견적과 동의 후 진행해요. 도메인 구매나 외부 서비스 개통은 자동 완료되지 않아요.", prompt: "현재 사업의 홈페이지에 넣을 제목, 상품 설명, 문의 유도 문구와 섹션 구성을 작성해 주세요. 보유하지 않은 인증·후기·실적은 넣지 마세요." });
+  result.push({ ...base, id: "website", title: "홈페이지 공개를 확인해요", task: "홈페이지는 왼쪽 목록의 3단계 '홈페이지'에서 만들고 공개해요. 여기서는 공개했는지 확인하고, 직접 만들기 어렵다면 디자인·개발 상담을 요청할 수 있어요.", materialTitle: "홈페이지 제작 요청서", material: `${context}\n\n홈페이지의 목적: 상품 소개와 문의 접수\n필요한 내용: 상품 설명, 가격, 신청 방법, 운영자 정보\n추가로 원하는 기능:\n보유한 사진·로고:\n연결하려는 도메인:\n희망 일정:`, service: "website", caution: "디자인·개발 대행은 별도 견적과 동의 후 진행해요. 도메인 구매나 외부 서비스 개통은 자동 완료되지 않아요.", prompt: "현재 사업의 홈페이지에 넣을 제목, 상품 설명, 문의 유도 문구와 섹션 구성을 작성해 주세요. 보유하지 않은 인증·후기·실적은 넣지 마세요." });
   const pay = PAYMENT_BY_SHAPE[shape];
   result.push({ ...base, id: "payment", title: "주문·결제 흐름을 점검해요", task: pay.task, materialTitle: "판매 준비 점검표", material: `판매할 상품: ${offer}\n검토 중인 가격: ${price}\n주문·문의 경로: ${channel}\n\n확인할 내용:\n${pay.checks.map(item => `- ${item}`).join("\n")}\n\n${pay.fill.join("\n")}`, caution: pay.caution, prompt: `현재 사업에서 고객 문의부터 주문, 결제, 제공, 사후 문의까지의 흐름과 테스트 시나리오를 작성해 주세요. 실제로 연결되지 않은 결제 기능을 연결 완료라고 표현하지 마세요.${pay.hint ? ` ${pay.hint}` : ""}` });
   result.push({ ...base, id: "marketing", title: "첫 홍보를 준비해요", task: "고객이 있는 채널 하나를 정하고 첫 게시물을 다듬어요.", materialTitle: "첫 홍보 글 초안", material: `${plan.title}\n\n${business}\n\n준비한 것: ${offer}\n${customer === "아직 정하지 않음" ? "" : `이런 분께 맞아요: ${customer}\n`}가격: ${price === "아직 정하지 않음" ? "[가격 입력]" : price}\n${MARKETING_WHERE[shape]}\n\n게시할 채널: ${channel}\n게시 예정일: [날짜 입력]`, caution: "저장된 사업 정보로 구성한 초안이에요. 가격·효과·이미지 사용 권한을 확인한 뒤 공개해 주세요. 직접 하기 어렵다면 유지보수 탭에서 블로그·SNS 운영을 신청할 수 있어요.", prompt: "현재 고객과 상품에 맞는 1주일 마케팅 계획과 바로 쓸 게시물 3개를 작성해 주세요. 채널별 작업시간, 적은 예산의 테스트 방법, 확인할 지표를 포함하고 성과를 보장하지 마세요." });

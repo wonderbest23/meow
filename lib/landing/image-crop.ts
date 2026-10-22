@@ -17,19 +17,19 @@ export const IMAGE_CROP_ASPECTS = [
 export type ImageCropAspect = typeof IMAGE_CROP_ASPECTS[number]["id"];
 
 export function clampCropValue(value: number, min: number, max: number) {
-  if (!Number.isFinite(value)) throw new Error("자르기 값이 올바르지 않습니다.");
+  if (!Number.isFinite(value)) throw new Error("자르기 값이 올바르지 않아요.");
   return Math.min(max, Math.max(min, value));
 }
 
 function validDimensions(size: ImageDimensions) {
-  if (![size.width, size.height].every(value => Number.isFinite(value) && value > 0)) throw new Error("이미지 크기가 올바르지 않습니다.");
+  if (![size.width, size.height].every(value => Number.isFinite(value) && value > 0)) throw new Error("이미지 크기가 올바르지 않아요.");
 }
 
 /** Position is normalized over the available travel, not over the whole source. */
 export function imageCropRect(size: ImageDimensions, ratio: number | null, position: ImageCropPosition): ImageCropRect {
   validDimensions(size);
   const aspect = ratio ?? size.width / size.height;
-  if (!Number.isFinite(aspect) || aspect <= 0) throw new Error("자르기 비율이 올바르지 않습니다.");
+  if (!Number.isFinite(aspect) || aspect <= 0) throw new Error("자르기 비율이 올바르지 않아요.");
   const zoom = clampCropValue(position.zoom, 1, IMAGE_CROP_MAX_ZOOM);
   const width = Math.min(size.width, size.height * aspect) / zoom;
   const height = Math.min(size.height, size.width / aspect) / zoom;
@@ -38,7 +38,7 @@ export function imageCropRect(size: ImageDimensions, ratio: number | null, posit
 
 export function imageCropOutputSize(rect: ImageDimensions, maxEdge = 1600): ImageDimensions {
   validDimensions(rect);
-  if (!Number.isFinite(maxEdge) || maxEdge < 1 || maxEdge > 4096) throw new Error("출력 크기는 1~4096px이어야 합니다.");
+  if (!Number.isFinite(maxEdge) || maxEdge < 1 || maxEdge > 4096) throw new Error("출력 크기는 1~4096px이어야 해요.");
   const scale = Math.min(1, Math.floor(maxEdge) / Math.max(rect.width, rect.height));
   return { width: Math.max(1, Math.round(rect.width * scale)), height: Math.max(1, Math.round(rect.height * scale)) };
 }
@@ -66,7 +66,7 @@ export function loadCropImage(file: File, signal?: AbortSignal): Promise<{ image
       if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth * image.naturalHeight > IMAGE_CROP_MAX_PIXELS) return fail(new Error("4천만 화소 이하 이미지를 선택해 주세요."));
       settled = true; cleanup(); resolve({ image, dispose });
     };
-    image.onerror = () => fail(new Error("이미지를 열지 못했습니다. 다른 파일을 선택해 주세요."));
+    image.onerror = () => fail(new Error("이미지를 열지 못했어요. 다른 파일을 선택해 주세요."));
     signal?.addEventListener("abort", cancel, { once: true });
     image.src = url;
   });
@@ -75,10 +75,10 @@ export function loadCropImage(file: File, signal?: AbortSignal): Promise<{ image
 export function drawImageCrop(canvas: HTMLCanvasElement, image: HTMLImageElement, rect: ImageCropRect, maxEdge = 1600) {
   const dimensions = imageCropOutputSize(rect, maxEdge);
   const epsilon = 0.00001;
-  if (![rect.x, rect.y].every(value => Number.isFinite(value) && value >= 0) || rect.x + rect.width > image.naturalWidth + epsilon || rect.y + rect.height > image.naturalHeight + epsilon) throw new Error("자르기 영역이 원본 이미지 밖에 있습니다.");
+  if (![rect.x, rect.y].every(value => Number.isFinite(value) && value >= 0) || rect.x + rect.width > image.naturalWidth + epsilon || rect.y + rect.height > image.naturalHeight + epsilon) throw new Error("자르기 영역이 원본 이미지 밖에 있어요.");
   canvas.width = dimensions.width; canvas.height = dimensions.height;
   const context = canvas.getContext("2d");
-  if (!context) throw new Error("이 브라우저에서 이미지를 처리하지 못했습니다.");
+  if (!context) throw new Error("이 브라우저에서 이미지를 처리하지 못했어요.");
   context.imageSmoothingEnabled = true; context.imageSmoothingQuality = "high";
   context.clearRect(0, 0, canvas.width, canvas.height);
   context.drawImage(image, rect.x, rect.y, rect.width, rect.height, 0, 0, canvas.width, canvas.height);
@@ -103,7 +103,7 @@ export async function cropImageFile(file: File, image: HTMLImageElement, rect: I
         finished = true;
         if (options.signal?.aborted) reject(new DOMException("Image crop cancelled", "AbortError"));
         else if (value) resolve(value);
-        else reject(new Error("이미지를 처리하지 못했습니다. 다시 적용해 주세요."));
+        else reject(new Error("이미지를 처리하지 못했어요. 다시 적용해 주세요."));
       }, type, 0.9);
     } catch (error) { options.signal?.removeEventListener("abort", cancel); reject(error); }
   });

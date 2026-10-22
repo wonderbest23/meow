@@ -147,7 +147,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
       })
       .catch((error) => {
         setMessageError(true);
-        setMessage(error instanceof Error ? error.message : `${provider === "apple" ? "애플" : "구글"} 로그인에 실패했습니다.`);
+        setMessage(error instanceof Error ? error.message : `${provider === "apple" ? "애플" : "구글"} 로그인에 실패했어요.`);
         setBusy(false);
       });
   };
@@ -164,7 +164,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
         if (/cancel|취소|error 1001/i.test(text)) return;
         setMessageError(true);
         /* 휴대폰이 주는 영어 오류문은 그대로 보이지 않는다 */
-        setMessage(/[가-힣]/.test(text) ? text : `${provider === "apple" ? "애플" : "구글"} 로그인을 마치지 못했습니다. 잠시 후 다시 시도하거나 이메일로 로그인해 주세요.`);
+        setMessage(/[가-힣]/.test(text) ? text : `${provider === "apple" ? "애플" : "구글"} 로그인을 마치지 못했어요. 잠시 후 다시 시도하거나 이메일로 로그인해 주세요.`);
       });
   };
   const nativeGoogle = native === "android" ? Boolean(GOOGLE_CLIENT_ID) : native === "ios" ? Boolean(GOOGLE_IOS_CLIENT_ID) : false;

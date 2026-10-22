@@ -367,3 +367,6 @@
   .actions[data-single] { grid-template-columns:1fr; }
   .actions[data-next] .nextButton span { display:none; }
 }
+/* 완료 알림 안의 건너뛰는 길(사업 시작 준비 먼저 하기) — 글 링크, 누르는 자리 40px */
+.secondaryNext { margin: 6px 0 0; }
+.secondaryNext a { display: inline-flex; align-items: center; min-height: 40px; color: var(--app-accent, #236be5); font-weight: 700; font-size: 14px; text-decoration: none; }

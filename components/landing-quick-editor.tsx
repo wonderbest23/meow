@@ -99,7 +99,7 @@ export function LandingQuickEditor({
       <div className="landing-included-banner">
         <span><Check /></span>
         {/* 내 도메인 연결은 따로 파는 상품이다 — '도메인만 사 오면 된다'고 하면 연결비를 숨기는 셈이 된다 */}
-        <div><strong>결제 금액에 홈페이지 제작과 무료 주소가 포함됩니다.</strong><p>별도 제작비 없이 무료 주소로 바로 공개됩니다. 내 도메인(예: mybusiness.kr)으로 연결하려면 도메인 연결 상품({DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원/1년)을 따로 신청해요.</p></div>
+        <div><strong>결제 금액에 홈페이지 제작과 무료 주소가 포함돼요.</strong><p>별도 제작비 없이 무료 주소로 바로 공개돼요. 내 도메인(예: mybusiness.kr)으로 연결하려면 도메인 연결 상품({DOMAIN_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원/1년)을 따로 신청해요.</p></div>
         <em>{published || demo ? (unpublishedEdits ? "공개 중 · 고친 내용은 아직 공개 전" : "공개 중") : "공개 전"}</em>
       </div>
 
@@ -114,7 +114,7 @@ export function LandingQuickEditor({
 
       {step === "design" && (
         <div className="landing-easy-panel">
-          <header><small>업종에 맞는 틀</small><h4>마음에 드는 디자인 하나만 고르세요</h4><p>문구는 그대로 두고 배치, 대표색과 기본 사진을 한 번에 바꿉니다.</p></header>
+          <header><small>업종에 맞는 틀</small><h4>마음에 드는 디자인 하나만 고르세요</h4><p>문구는 그대로 두고 배치, 대표색과 기본 사진을 한 번에 바꿔요.</p></header>
           <div className="landing-template-grid">
             {landingTemplateOptions.map((template) => (
               <button key={template.id} className={draft.templateId === template.id ? "active" : ""} onClick={() => onChange(applyLandingTemplate(draft, template.id))}>
@@ -127,13 +127,13 @@ export function LandingQuickEditor({
           <section className="landing-advanced-edit-callout">
             <span><PanelsTopLeft /></span>
             {draft.pageData?.brainwave
-              ? <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong><p>다른 디자인으로 바꿀 수도 있습니다.</p></div>
-              : <div><small>더 자유롭게 만들기</small><strong>구역을 직접 넣고 순서를 바꿔 보세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있습니다.</p></div>}
+              ? <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿔요</strong><p>다른 디자인으로 바꿀 수도 있어요.</p></div>
+              : <div><small>더 자유롭게 만들기</small><strong>구역을 직접 넣고 순서를 바꿔 보세요</strong><p>첫 화면, 장점, 사진, 이용 과정, 상품과 신청 안내를 끌어다 놓고 선택한 글과 이미지만 바꿀 수 있어요.</p></div>}
             <button type="button" onClick={() => (onOpenEditor ? onOpenEditor() : setBuilderOpen(true))}>자유 편집 열기 <PanelsTopLeft /></button>
           </section>
           <div className="landing-media-grid">
-            <LandingMediaField key={`hero:${projectId}:${draft.templateId}`} label="대표 이미지" description="첫 화면을 채우는 사진입니다." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => update({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} />
-            <LandingMediaField key={`logo:${projectId}:${draft.templateId}`} label="로고" description="없으면 사업 이름으로 깔끔하게 표시합니다." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => update({ logoImageUrl })} />
+            <LandingMediaField key={`hero:${projectId}:${draft.templateId}`} label="대표 이미지" description="첫 화면을 채우는 사진이에요." value={draft.heroImageUrl} kind="hero" onChange={(heroImageUrl) => update({ heroImageUrl, heroImageAlt: `${draft.businessName} 대표 이미지` })} />
+            <LandingMediaField key={`logo:${projectId}:${draft.templateId}`} label="로고" description="없으면 사업 이름으로 깔끔하게 표시해요." value={draft.logoImageUrl} kind="logo" onChange={(logoImageUrl) => update({ logoImageUrl })} />
           </div>
           <div className="landing-simple-style"><strong>대표색</strong><div>{["#176b4d", "#2457a6", "#a04435", "#6d4ca3", "#222222"].map((color) => <button key={color} title={color} aria-label={`대표색 ${color}`} className={draft.accentColor === color ? "active" : ""} style={{ background: color }} onClick={() => update({ accentColor: color })} />)}<label title="직접 색상 선택"><input type="color" value={draft.accentColor} onChange={(event) => update({ accentColor: event.target.value })} /></label></div></div>
         </div>
@@ -141,14 +141,14 @@ export function LandingQuickEditor({
 
       {step === "content" && draft.pageData?.brainwave && (
         <div className="landing-easy-panel">
-          <header><small>고객이 보는 내용</small><h4>글과 사진은 페이지 위에서 직접 고칩니다</h4><p>킷 페이지는 이 폼의 문구를 받아 쓰지 않습니다. 아래 두 값은 문의 양식과 상단 버튼에 쓰입니다.</p></header>
+          <header><small>고객이 보는 내용</small><h4>글과 사진은 페이지 위에서 직접 고쳐요</h4><p>이 홈페이지는 아래 칸의 문구를 화면 글로 쓰지 않아요. 아래 두 값은 문의 양식과 상단 버튼에 쓰여요.</p></header>
           <div className="landing-essential-form">
             <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(event) => update({ businessName: event.target.value })} /></label>
             <label><span>문의 버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(event) => update({ ctaLabel: event.target.value })} /></label>
           </div>
           <section className="landing-advanced-edit-callout">
             <span><PanelsTopLeft /></span>
-            <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿉니다</strong></div>
+            <div><small>페이지 위에서 바로 고치기</small><strong>글을 누르면 그 자리에서 고치고, 사진을 누르면 바꿔요</strong></div>
             <button type="button" onClick={() => (onOpenEditor ? onOpenEditor() : setBuilderOpen(true))}>자유 편집 열기 <PanelsTopLeft /></button>
           </section>
         </div>
@@ -156,7 +156,7 @@ export function LandingQuickEditor({
 
       {step === "content" && !draft.pageData?.brainwave && (
         <div className="landing-easy-panel">
-          <header><small>고객이 보는 내용</small><h4>추천 문구를 읽고 틀린 부분만 고치세요</h4><p>어려운 용어 없이 고객, 제공 내용과 가격이 바로 보이게 구성했습니다.</p></header>
+          <header><small>고객이 보는 내용</small><h4>추천 문구를 읽고 틀린 부분만 고치세요</h4><p>어려운 용어 없이 고객, 제공 내용과 가격이 바로 보이게 구성했어요.</p></header>
           <div className="landing-essential-form">
             <label><span>사업 이름</span><input value={draft.businessName} maxLength={120} onChange={(event) => update({ businessName: event.target.value })} /></label>
             <label><span>버튼 문구</span><input value={draft.ctaLabel} maxLength={40} onChange={(event) => update({ ctaLabel: event.target.value })} /></label>
@@ -172,12 +172,12 @@ export function LandingQuickEditor({
 
       {step === "business" && (
         <div className="landing-easy-panel">
-          <header><small>신뢰와 인터넷 주소</small><h4>사업자 하단 정보와 도메인을 준비하세요</h4><p>등록 전이면 비워둘 수 있지만, 홈페이지에서 직접 판매받기 전에는 실제 정보로 채워야 합니다.</p></header>
+          <header><small>신뢰와 인터넷 주소</small><h4>사업자 하단 정보와 도메인을 준비하세요</h4><p>등록 전이면 비워 둘 수 있지만, 홈페이지에서 직접 판매받기 전에는 실제 정보로 채워야 해요.</p></header>
           <div className="landing-page-purpose">
             <button className={draft.pageMode === "lead_validation" ? "active" : ""} onClick={() => update({ pageMode: "lead_validation" })}><Store /><span><b>상담·예약 받기</b><small>문의 후 조건을 안내하는 사업</small></span></button>
             <button className={draft.pageMode === "transaction" ? "active" : ""} onClick={() => update({ pageMode: "transaction" })}><ShieldCheck /><span><b>홈페이지에서 바로 판매</b><small>가격·환불·통신판매 정보 필요</small></span></button>
           </div>
-          <label className="landing-lead-switch"><input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(event) => update({ leadCaptureEnabled: event.target.checked })} /><span><i /></span><p><strong>고객 신청폼 사용</strong><small>켜면 이름과 연락처를 안전하게 접수합니다.</small></p></label>
+          <label className="landing-lead-switch"><input type="checkbox" checked={draft.leadCaptureEnabled} onChange={(event) => update({ leadCaptureEnabled: event.target.checked })} /><span><i /></span><p><strong>고객 신청폼 사용</strong><small>켜면 이름과 연락처를 안전하게 접수해요.</small></p></label>
           <div className="landing-business-form">
             <label><span>대표자 이름</span><input value={draft.businessRepresentative} onChange={(event) => update({ businessRepresentative: event.target.value })} placeholder="사업자등록증과 같은 이름" /></label>
             <label><span>전화번호</span><input value={draft.businessPhone} onChange={(event) => update({ businessPhone: event.target.value, businessContact: event.target.value })} placeholder="고객 문의 전화" /></label>
@@ -185,7 +185,7 @@ export function LandingQuickEditor({
             <label><span>사업자등록번호</span><input value={draft.businessRegistrationNumber} onChange={(event) => update({ businessRegistrationNumber: event.target.value })} placeholder="000-00-00000" /></label>
             <div className="wide address-field"><label><span>사업장 주소</span><input value={draft.businessAddress} onChange={(event) => update({ businessAddress: event.target.value })} placeholder="고객 불만을 처리할 수 있는 실제 주소" /></label><AddressSearchButton onPick={(picked) => update({ businessAddress: picked.address })} /></div>
             {/* 영업시간 — 계획서에는 묻지 않는다. 동네 매장은 방문자가 가장 먼저 찾는 정보라 여기서 채운다 */}
-            <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(event) => update({ openHours: event.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무 (비워 두면 홈페이지에 표시하지 않습니다)" /></label>
+            <label className="wide"><span>영업시간</span><input value={draft.openHours} onChange={(event) => update({ openHours: event.target.value })} placeholder="예: 평일 09:00–19:00 · 일요일 휴무 (비워 두면 홈페이지에 표시하지 않아요)" /></label>
             <label><span>통신판매업 신고번호</span><input value={draft.mailOrderSalesNumber} onChange={(event) => update({ mailOrderSalesNumber: event.target.value })} placeholder="신고번호 또는 면제 근거" /></label>
             {draft.leadCaptureEnabled && <label><span>개인정보 문의</span><input value={draft.privacyContact} onChange={(event) => update({ privacyContact: event.target.value })} placeholder="이메일 또는 전화번호" /></label>}
             {draft.pageMode === "transaction" && <label className="wide"><span>교환·환불 조건</span><textarea value={draft.refundPolicy} onChange={(event) => update({ refundPolicy: event.target.value })} placeholder="취소 가능 시점, 환불 금액과 처리 기간" /></label>}
@@ -203,7 +203,7 @@ export function LandingQuickEditor({
       )}
 
       <footer className="landing-quick-actions">
-        <p><ImageIcon /> 수정 전에도 추천 디자인으로 홈페이지가 준비되어 있습니다.</p>
+        <p><ImageIcon /> 수정 전에도 추천 디자인으로 홈페이지가 준비되어 있어요.</p>
         <button disabled={busy} onClick={onSave}><Save /> {action === "saving" ? "저장 중" : "초안 저장"}</button>
         <button disabled={busy} onClick={onPublish}><Rocket /> {action === "publishing" ? "공개 중" : "저장하고 공개"}</button>
       </footer>

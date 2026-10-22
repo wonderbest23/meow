@@ -21,12 +21,12 @@ export async function POST(
       return NextResponse.json(body, { status });
     }
     const body = await request.json().catch(() => ({}));
-    if (!body || !Object.hasOwn(body, "expectedUpdatedAt")) return NextResponse.json({ error: { code: "LANDING_VERSION_REQUIRED", message: "공개할 저장 버전을 확인해주세요. 새로고침 후 다시 시도해주세요." } }, { status: 428 });
+    if (!body || !Object.hasOwn(body, "expectedUpdatedAt")) return NextResponse.json({ error: { code: "LANDING_VERSION_REQUIRED", message: "공개할 저장 버전을 확인해 주세요. 새로고침 후 다시 시도해 주세요." } }, { status: 428 });
     const { expectedUpdatedAt } = schema.parse(body);
     const site = await publishLanding(projectId, identity.hash, expectedUpdatedAt);
     return NextResponse.json({ site, publicPath: `/launch/${site.publishedSlug ?? site.slug}` });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "랜딩페이지를 공개하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "홈페이지를 공개하지 못했어요.";
     if (message === "LANDING_DRAFT_CONFLICT") return NextResponse.json({ error: { code: message, message: LANDING_CONFLICT_MESSAGE } }, { status: 409 });
     // 'LANDING_COMPLIANCE_BLOCKED:항목 / 항목' — 코드 문자열이 화면에 그대로 보이지 않게 한국어 안내로
     if (message.startsWith("LANDING_COMPLIANCE_BLOCKED:")) {
@@ -35,7 +35,7 @@ export async function POST(
     }
     if (message === "SLUG_TAKEN") return NextResponse.json({ error: { code: message, message: "이 공개 주소는 다른 홈페이지가 쓰고 있어요. 주소를 바꿔 다시 공개해 주세요." } }, { status: 409 });
     return NextResponse.json(
-      { error: { code: publicErrorCode(error, "LANDING_PUBLISH_FAILED"), message: publicErrorMessage(error, "랜딩페이지를 공개하지 못했습니다.", { LANDING_NOT_FOUND: "홈페이지를 찾을 수 없습니다." }) } },
+      { error: { code: publicErrorCode(error, "LANDING_PUBLISH_FAILED"), message: publicErrorMessage(error, "홈페이지를 공개하지 못했어요.", { LANDING_NOT_FOUND: "홈페이지를 찾을 수 없어요." }) } },
       { status: message === "PROJECT_NOT_FOUND" || message === "LANDING_NOT_FOUND" ? 404 : 400 },
     );
   }

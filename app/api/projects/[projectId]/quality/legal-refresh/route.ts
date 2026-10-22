@@ -20,9 +20,9 @@ export async function POST(
     const snapshots = await refreshLegalSources();
     return NextResponse.json({ snapshots, checkedAt: new Date().toISOString() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "법령 원문을 확인하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "법령 원문을 확인하지 못했어요.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "LEGAL_REFRESH_FAILED", message: publicErrorMessage(error, "법령 원문을 확인하지 못했습니다.") } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "LEGAL_REFRESH_FAILED", message: publicErrorMessage(error, "법령 원문을 확인하지 못했어요.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }

@@ -78,8 +78,34 @@ function leadPolicyItems(policy: string, phone: boolean, email: boolean): string
 
 /** 홈페이지 글에 바로 들어가는 사업 정보 칸 — 고치면 applyBusinessContent 로 곧바로 반영한다 */
 const BUSINESS_CONTENT_KEYS: Array<keyof LandingDraft> = ["businessName", "offerTitle", "offerDescription", "priceLabel", "ctaLabel", "heroImageUrl"];
-function contentSourceOf(draft: LandingDraft) {
+export function contentSourceOf(draft: LandingDraft) {
   return { businessName: draft.businessName, ...(draft.pageData?.businessContent?.headline ? { headline: draft.pageData.businessContent.headline } : {}), offer: draft.offerTitle, description: draft.offerDescription, customer: draft.pageData?.businessContent?.customer ?? "", price: draft.priceLabel, cta: draft.ctaLabel, image: draft.heroImageUrl };
+}
+
+/** 공개 전에 비어 있으면 안 되는 것 — 법정 표기(사업자 정보 칸의 '채울 것 n개'와 공개 확인창이 같은 목록을 쓴다) */
+export function homepageMissingInfo(draft: LandingDraft): string[] {
+  return [
+    !draft.businessRepresentative.trim() && "대표자",
+    !draft.businessAddress.trim() && "사업장 주소",
+    !(draft.businessPhone || draft.businessContact).trim() && "전화번호",
+    !draft.businessEmail.trim() && "이메일",
+    !draft.businessRegistrationNumber.trim() && "사업자등록번호",
+    draft.leadCaptureEnabled && !draft.privacyContact.trim() && "개인정보 문의처",
+  ].filter(Boolean) as string[];
+}
+
+/**
+ * 가게 이름 바꾸기 — 이름이 들어가는 곳(맨 위 이름 등 자동 문구, 개인정보 '처리 주체')을 함께 바꾼다.
+ * 처리 주체는 예전 이름과 같았을 때만 따라 바꾼다(사장님이 따로 적은 법인명 등은 그대로). 직접 고친 홈페이지 글은 그대로 둔다.
+ * 예전엔 큰 제목이나 사업 이름 칸을 고쳐도 머리줄·처리 주체·문의 문자에 옛 이름이 남았다(여정 점검 2026-10-22).
+ */
+export function withBusinessName(draft: LandingDraft, name: string): LandingDraft {
+  const old = draft.businessName.trim();
+  const controller = draft.privacyController.trim();
+  const next: LandingDraft = { ...draft, businessName: name, ...(!controller || controller === old ? { privacyController: name } : {}) };
+  const brainwave = next.pageData?.brainwave;
+  const landing = Boolean(brainwave && BRAINWAVE_PAGES.some(page => page.id === brainwave.page && page.group === "landing"));
+  return next.pageData && landing && name.trim() ? { ...next, pageData: applyBusinessContent(next.pageData, contentSourceOf(next)) } : next;
 }
 
 export function HomepageKitPanel({
@@ -139,6 +165,8 @@ export function HomepageKitPanel({
    */
   const update = (patch: Partial<LandingDraft>) => {
     const next = { ...draft, ...patch };
+    /* 사업 이름을 고치면 개인정보 '처리 주체'도 같은 이름이었을 때 따라간다 */
+    if (patch.businessName !== undefined && (!draft.privacyController.trim() || draft.privacyController.trim() === draft.businessName.trim())) next.privacyController = patch.businessName;
     const brainwave = next.pageData?.brainwave;
     const landing = Boolean(brainwave && BRAINWAVE_PAGES.some(page => page.id === brainwave.page && page.group === "landing"));
     if (next.pageData && landing && next.businessName.trim() && BUSINESS_CONTENT_KEYS.some(key => key in patch)) {
@@ -244,14 +272,7 @@ export function HomepageKitPanel({
   const openLeads = leads ? unansweredCount(leads) : 0;
 
   /* 공개 전에 비어 있으면 안 되는 것 — 법정 표기 */
-  const missing = [
-    !draft.businessRepresentative.trim() && "대표자",
-    !draft.businessAddress.trim() && "사업장 주소",
-    !(draft.businessPhone || draft.businessContact).trim() && "전화번호",
-    !draft.businessEmail.trim() && "이메일",
-    !draft.businessRegistrationNumber.trim() && "사업자등록번호",
-    draft.leadCaptureEnabled && !draft.privacyContact.trim() && "개인정보 문의처",
-  ].filter(Boolean) as string[];
+  const missing = homepageMissingInfo(draft);
 
   return (
     <section className="hk" aria-busy={busy}>
@@ -270,8 +291,9 @@ export function HomepageKitPanel({
                 긴 주소(/launch/영문-이름-번호)는 글자로 늘어놓지 않는다(대표 요청 2026-10-15: URL 이 과하게 보인다).
                 공개 뒤에는 열기·주소 복사·공유 단추만, 공개 전에는 한 줄 안내만(그 주소는 아직 없어서 404).
               */}
+              {/* 공개 뒤에는 주소를 글로도 보여 준다 — 단추만 있으니 어떤 주소인지 몰라 손님에게 말로 알려 줄 수 없었다(여정 점검 2026-10-22). 길면 말줄임 */}
               {published
-                ? <><a className="hk-url-btn" href={publicPath} target="_blank" rel="noreferrer"><ExternalLink size={13} /> 홈페이지 열기</a>
+                ? <><em className="hk-url-pending" title={publicUrl}>{publicUrl.replace(/^https?:\/\//, "")}</em><a className="hk-url-btn" href={publicPath} target="_blank" rel="noreferrer"><ExternalLink size={13} /> 홈페이지 열기</a>
                   <button type="button" className="hk-url-btn" onClick={copyUrl}>{copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "복사됨" : "주소 복사"}</button>
                   <button type="button" className="hk-url-btn" onClick={shareUrl}><Share2 size={13} /> 공유</button>
                   {onUnpublish ? <button type="button" className="hk-url-btn hk-url-stop" disabled={busy} onClick={onUnpublish}>{action === "unpublishing" ? <Spinner /> : <PauseCircle size={13} />} 공개 멈추기</button> : null}</>

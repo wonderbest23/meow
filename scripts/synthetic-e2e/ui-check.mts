@@ -45,7 +45,7 @@ for (const [index, r] of results.entries()) {
       await page.screenshot({ path: `${out}${r.biz}-marketing.png`, fullPage: false });
     }
     // 홈페이지 단계 버튼
-    await clickText("홈페이지를 준비해요");
+    await clickText("홈페이지 공개를 확인해요");
     await new Promise(x => setTimeout(x, 600));
     row.websiteStep = (await text()).includes("내 사업으로 홈페이지 만들기");
     // 실적과 개선 기록 탭

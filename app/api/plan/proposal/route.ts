@@ -39,7 +39,7 @@ function failure(error: unknown) {
   if (error instanceof RequestBodyError) return json({ code: error.code, message: error.message }, error.status);
   if (error instanceof ProposalError) return json({ code: error.code, message: error.message }, error.status);
   if (error instanceof Error && error.message === "PLAN_OWNER_CHANGED") return json({ code: "owner_changed", message: "로그인 상태가 바뀌었어요. 현재 계정에서 다시 열어 주세요" }, 409);
-  if (error instanceof Error && (error.message === "proposal_layout_review_required" || error.message.startsWith("proposal_layout_review_required:"))) return json({ code: "proposal_layout_review_required", message: "슬라이드의 글자 넘침이나 요소 겹침, 차트 입력을 확인해 주세요. 편집기에서 표시된 항목의 문구·판형·배치를 수정한 뒤 다시 내려받을 수 있어요. 저장된 편집본은 그대로 유지됩니다" }, 422);
+  if (error instanceof Error && (error.message === "proposal_layout_review_required" || error.message.startsWith("proposal_layout_review_required:"))) return json({ code: "proposal_layout_review_required", message: "슬라이드의 글자 넘침이나 요소 겹침, 차트 입력을 확인해 주세요. 편집기에서 표시된 항목의 문구·판형·배치를 수정한 뒤 다시 내려받을 수 있어요. 저장된 편집본은 그대로 유지돼요" }, 422);
   return json({ code: "unavailable", message: "서버에 연결하지 못했어요. 편집 내용은 화면에 남아 있으니 다시 시도해 주세요" }, 503);
 }
 export async function GET(request: Request) {

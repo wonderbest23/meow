@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   const limited = await enforceRateLimit("auth-kakao", request, {
     limit: 20,
     windowMs: 5 * 60_000,
-    message: "로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "로그인 시도가 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
 

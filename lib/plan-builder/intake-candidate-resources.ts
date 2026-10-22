@@ -5,7 +5,8 @@ import type { CoachState } from "./coach";
 export const RESOURCE_DATA_VERSION = "2026-09-20.2";
 export const RESOURCE_KEYS = ["initialCost", "monthlyOperatingCost", "preparationHours", "weeklyOperatingHours"] as const;
 export type ResourceKey = typeof RESOURCE_KEYS[number];
-export const RESOURCE_LABELS: Record<ResourceKey, string> = { initialCost: "초기 투자 예산", monthlyOperatingCost: "월 운영비 한도", preparationHours: "총 준비 시간", weeklyOperatingHours: "주당 운영 시간" };
+/* 짧은 이름 — 대화 질문(준비에 쓸 수 있는 돈은 얼마인가요? 등)과 같은 항목을 화면마다 같은 말로 부른다(여정 점검 2026-10-22) */
+export const RESOURCE_LABELS: Record<ResourceKey, string> = { initialCost: "준비 예산", monthlyOperatingCost: "월 운영비 한도", preparationHours: "총 준비 시간", weeklyOperatingHours: "일주일에 쓸 수 있는 시간" };
 export const RESOURCE_UNITS = { initialCost: "KRW", monthlyOperatingCost: "KRW/month", preparationHours: "hour", weeklyOperatingHours: "hour/week" } as const;
 export const RESOURCE_ANSWER_IDS: Record<ResourceKey, string> = { initialCost: "budget", monthlyOperatingCost: "resource.monthlyBudget", preparationHours: "resource.preparationHours", weeklyOperatingHours: "hoursPerWeek" };
 export const resourceContextSchema = z.object({ variant: z.string().trim().min(1).max(160), region: z.string().trim().min(1).max(100), scale: z.string().trim().min(1).max(160) }).strict();

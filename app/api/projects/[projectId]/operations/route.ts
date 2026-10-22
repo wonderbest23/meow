@@ -29,9 +29,9 @@ export async function GET(
       project.operationsPackage ?? generateOperationsPackage(project, workspace, assessment);
     return NextResponse.json({ workspace, assessment, operationsPackage });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "운영 준비 정보를 불러오지 못했습니다.";
+    const message = error instanceof Error ? error.message : "운영 준비 정보를 불러오지 못했어요.";
     return NextResponse.json(
-      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "OPERATIONS_LOAD_FAILED", message: publicErrorMessage(error, "운영 준비 정보를 불러오지 못했습니다.") } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "OPERATIONS_LOAD_FAILED", message: publicErrorMessage(error, "운영 준비 정보를 불러오지 못했어요.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }
@@ -75,12 +75,12 @@ export async function PUT(
       operationsPackage,
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "운영 준비 정보를 저장하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "운영 준비 정보를 저장하지 못했어요.";
     return NextResponse.json(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "OPERATIONS_WORKSPACE_INVALID",
-          message: publicErrorMessage(error, "운영 준비 정보를 저장하지 못했습니다."),
+          message: publicErrorMessage(error, "운영 준비 정보를 저장하지 못했어요."),
         },
       },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },

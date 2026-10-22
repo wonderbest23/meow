@@ -24,9 +24,9 @@ async function state(site: { id: string; published: boolean }) {
 }
 function failure(error: unknown) {
   const login = error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED";
-  return NextResponse.json({ error: { code: login ? "ACCOUNT_LOGIN_REQUIRED" : "ALERT_SETTINGS_UNAVAILABLE", message: login ? "로그인 후 이용해주세요." : "알림 설정을 불러오지 못했습니다." } }, { status: login ? 401 : 503, headers });
+  return NextResponse.json({ error: { code: login ? "ACCOUNT_LOGIN_REQUIRED" : "ALERT_SETTINGS_UNAVAILABLE", message: login ? "로그인 후 이용해 주세요." : "알림 설정을 불러오지 못했어요." } }, { status: login ? 401 : 503, headers });
 }
-const notFound = () => NextResponse.json({ error: { code: "LANDING_NOT_FOUND", message: "홈페이지를 찾을 수 없습니다." } }, { status: 404, headers });
+const notFound = () => NextResponse.json({ error: { code: "LANDING_NOT_FOUND", message: "홈페이지를 찾을 수 없어요." } }, { status: 404, headers });
 
 export async function GET(_request: Request, context: { params: Promise<{ projectId: string }> }) {
   try {
@@ -43,7 +43,7 @@ const bodySchema = z.object({
 }).strict();
 
 export async function PUT(request: Request, context: { params: Promise<{ projectId: string }> }) {
-  const limited = await enforceRateLimit("landing-alert-settings", request, { limit: 20, windowMs: 10 * 60_000, message: "잠시 후 다시 시도해주세요." });
+  const limited = await enforceRateLimit("landing-alert-settings", request, { limit: 20, windowMs: 10 * 60_000, message: "잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: { code: "INVALID_REQUEST", message: "요청을 확인해 주세요." } }, { status: 400, headers });

@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 const requestSchema = z.object({
-  message: z.string().trim().min(1, "질문을 입력해주세요.").max(2000, "질문은 2,000자까지 입력할 수 있습니다."),
+  message: z.string().trim().min(1, "질문을 입력해 주세요.").max(2000, "질문은 2,000자까지 입력할 수 있어요."),
   page: z.string().trim().max(500).optional(),
 });
 
@@ -78,14 +78,14 @@ function fallbackAnswer(message: string, inApp = false) {
   const candidates = findSupportFaqCandidates(message, 1);
   if (candidates.length > 0) {
     return {
-      answer: `${faqAnswer(candidates[0], inApp)} 이 답변이 질문과 다르면 현재 화면 주소와 하려던 작업을 운영자에게 남겨주세요.`,
+      answer: `${faqAnswer(candidates[0], inApp)} 이 답변이 질문과 다르면 현재 화면 주소와 하려던 작업을 고객센터에 남겨 주세요.`,
       needsOperator: true,
       link: candidates[0].link ?? null,
       source: "faq" as const,
     };
   }
   return {
-    answer: "사이트에 확인된 내용만으로는 이 질문을 정확히 답하기 어렵습니다. 현재 화면 주소와 하려던 작업을 함께 적어 운영자에게 문의해주세요.",
+    answer: "사이트에 확인된 내용만으로는 이 질문을 정확히 답하기 어려워요. 현재 화면 주소와 하려던 작업을 함께 적어 고객센터에 문의해 주세요.",
     needsOperator: true,
     source: "fallback" as const,
   };
@@ -103,13 +103,13 @@ export async function POST(request: Request) {
   const burstLimited = await enforceRateLimit("support-assistant", request, {
     limit: 20,
     windowMs: 10 * 60_000,
-    message: "질문이 너무 잦습니다. 잠시 후 다시 질문해주세요.",
+    message: "질문이 너무 잦아요. 잠시 후 다시 질문해 주세요.",
   });
   if (burstLimited) return burstLimited;
   const dayLimited = await enforceRateLimit("support-assistant-day", request, {
     limit: 200,
     windowMs: 24 * 60 * 60_000,
-    message: "오늘은 자동 답변을 더 드리기 어렵습니다. 운영자 문의로 남겨주세요.",
+    message: "오늘은 자동 답변을 더 드리기 어려워요. 고객센터로 문의해 주세요.",
   });
   if (dayLimited) return dayLimited;
   // 서비스 전체 하루 상한 — IP 를 바꿔 가며 부르면 IP 한도만으로는 비용이 끝없이 나간다
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
     key: "all",
     limit: 3000,
     windowMs: 24 * 60 * 60_000,
-    message: "오늘은 자동 답변을 더 드리기 어렵습니다. 운영자 문의로 남겨주세요.",
+    message: "오늘은 자동 답변을 더 드리기 어려워요. 고객센터로 문의해 주세요.",
   });
   if (allLimited) return allLimited;
 
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
     const previous = recentRequests.get(identity.hash) ?? 0;
     if (Date.now() - previous < 2_000) {
       return privateJson(
-        { error: { code: "SUPPORT_ASSISTANT_RATE_LIMITED", message: "답변을 확인하고 있습니다. 잠시 후 다시 질문해주세요." } },
+        { error: { code: "SUPPORT_ASSISTANT_RATE_LIMITED", message: "답변을 확인하고 있어요. 잠시 후 다시 질문해 주세요." } },
         { status: 429 },
       );
     }
@@ -182,12 +182,12 @@ export async function POST(request: Request) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return privateJson(
-        { error: { code: "SUPPORT_ASSISTANT_INPUT_INVALID", message: error.issues[0]?.message ?? "질문을 확인해주세요." } },
+        { error: { code: "SUPPORT_ASSISTANT_INPUT_INVALID", message: error.issues[0]?.message ?? "질문을 확인해 주세요." } },
         { status: 400 },
       );
     }
     return privateJson({
-      answer: "지금은 자동 답변을 불러오지 못했습니다. 현재 화면 주소와 하려던 작업을 함께 적어 운영자에게 문의해주세요.",
+      answer: "지금은 자동 답변을 불러오지 못했어요. 현재 화면 주소와 하려던 작업을 함께 적어 고객센터에 문의해 주세요.",
       needsOperator: true,
       source: "fallback",
     });

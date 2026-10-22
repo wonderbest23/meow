@@ -1,8 +1,8 @@
 "use client";
-import { RESOURCE_ANSWER_IDS, RESOURCE_KEYS, RESOURCE_LABELS, type ResourceKey, type ResourceContext } from "../../../../lib/plan-builder/intake-candidate-resources";
+import { RESOURCE_KEYS, RESOURCE_LABELS, type ResourceKey, type ResourceContext } from "../../../../lib/plan-builder/intake-candidate-resources";
 import { parseResourceLimit, type ResourceFit } from "../../../../lib/plan-builder/intake-candidate-fit";
 import type { IntakeCommand, IntakeSnapshot } from "../../../../lib/plan-builder/intake-types";
-import type { IntakeDraft } from "./model";
+import { changedResourceLimits, savedResourceLimits, type IntakeDraft } from "./model";
 import styles from "./resource-panel.module.css";
 
 /*
@@ -34,9 +34,13 @@ export function ResourceFitDetails({ fit, compact = false }: { fit?: ResourceFit
 }
 
 export function ResourcePanel({ snapshot, draft, disabled, onDraft, onCommand }: { snapshot: IntakeSnapshot; draft: IntakeDraft["resourceEditor"]; disabled: boolean; onDraft: (draft: NonNullable<IntakeDraft["resourceEditor"]>) => void; onCommand: (command: Omit<IntakeCommand, "revision" | "requestId" | "planId">) => void }) {
-  const savedLimits = Object.fromEntries(RESOURCE_KEYS.map(key => { const a = snapshot.intake.answers[RESOURCE_ANSWER_IDS[key]]; return [key, a ? a.status === "unknown" ? a.quote ?? "" : a.quote || String(a.value ?? "") : snapshot.coach.fields.find(f => f.key === RESOURCE_ANSWER_IDS[key])?.value ?? ""]; }));
-  const limits = draft?.limits ?? savedLimits;
-  const context: ResourceContext = draft?.context ?? snapshot.intake.resourceContext ?? { variant: "", region: "", scale: "" };
+  const savedLimits = savedResourceLimits(snapshot);
+  const limits: Partial<Record<ResourceKey, string | null>> = draft?.limits ?? savedLimits;
+  const savedContext: ResourceContext = snapshot.intake.resourceContext ?? { variant: "", region: "", scale: "" };
+  const context: ResourceContext = draft?.context ?? savedContext;
+  // 바뀐 칸만 보낸다. 아무것도 안 바꿨으면 '저장하기'를 누를 수 없다
+  const changedLimits = changedResourceLimits(savedLimits, limits);
+  const contextChanged = JSON.stringify(context) !== JSON.stringify(savedContext);
   const assessment = snapshot.resourceAssessment;
   const candidates = [...new Map([...snapshot.candidateIdeas, ...assessment?.excluded ?? []].map(i => [i.id, i])).values()];
   const quote = draft?.quote;
@@ -49,10 +53,10 @@ export function ResourcePanel({ snapshot, draft, disabled, onDraft, onCommand }:
     <details>
     <summary>예산·시간 고치기</summary>
     <div className={styles.editor}>
-      <form onSubmit={e => { e.preventDefault(); onCommand({ action: "resources", resourceLimits: limits, ...(completeContext ? { resourceContext: context } : {}) }); }}>
+      <form onSubmit={e => { e.preventDefault(); const sendContext = completeContext && contextChanged; if (!Object.keys(changedLimits).length && !sendContext) return; onCommand({ action: "resources", ...(Object.keys(changedLimits).length ? { resourceLimits: changedLimits } : {}), ...(sendContext ? { resourceContext: context } : {}) }); }}>
         <fieldset disabled={disabled} className={styles.fields}><legend className={styles.srOnly}>예산과 시간</legend>{RESOURCE_KEYS.map(key => { const parsed = parseResourceLimit(limits[key], key); return <label key={key}>{RESOURCE_LABELS[key]}<input aria-label={RESOURCE_LABELS[key]} value={limits[key] ?? ""} placeholder={key.includes("Cost") ? "예: 1000만원 (모르면 비워 두기)" : "예: 25시간 (모르면 비워 두기)"} maxLength={120} onChange={e => onDraft({ ...draft, limits: { ...limits, [key]: e.target.value } })} /><small>{parsed.status === "invalid" ? "숫자와 단위를 다시 확인해 주세요" : key === "initialCost" ? "원 · 처음 한 번 준비하는 돈" : key === "monthlyOperatingCost" ? "원 · 한 달 운영비" : key === "preparationHours" ? "시간 · 문 열기까지 준비하는 시간" : "시간 · 일주일에 일할 수 있는 시간"}</small></label>; })}</fieldset>
         <fieldset disabled={disabled} className={styles.fields}><legend>어떻게 할지 (선택)</legend>{([['variant','운영 방식'],['region','지역'],['scale','규모']] as const).map(([key,label]) => <label key={key}>{label}<input aria-label={label} value={context[key]} maxLength={key === 'region' ? 100 : 160} onChange={e => onDraft({ ...draft, context: { ...context, [key]: e.target.value } })} /></label>)}</fieldset>
-        <button type="submit" disabled={disabled || Object.values(context).some(v => v.trim()) && !completeContext}>저장하기</button>
+        <button type="submit" disabled={disabled || Object.values(context).some(v => v.trim()) && !completeContext || !Object.keys(changedLimits).length && !(completeContext && contextChanged)}>저장하기</button>
       </form>
     </div>
     {assessment?.excludedCount ? <div className={styles.candidate}><strong>예산·시간을 넘어서 뺀 사업 {assessment.excludedCount}개</strong>{assessment.excluded.map(i => <small key={i.id}>{i.title}</small>)}</div> : null}

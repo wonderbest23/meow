@@ -79,7 +79,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("plan-landing-create", request, {
     limit: 60,
     windowMs: 10 * 60_000,
-    message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
 
@@ -92,7 +92,7 @@ export async function POST(request: Request) {
   // 화면만 가려서는 우회할 수 있으므로 서버에서 막는다 — PDF·PPT와 같은 기준
   const access = await resolvePlanAccess(plan.planType, plan.id);
   if (!access.authenticated) {
-    return NextResponse.json({ error: "login_required", message: "로그인 후 이용할 수 있습니다." }, { status: 401 });
+    return NextResponse.json({ error: "login_required", message: "로그인 후 이용할 수 있어요." }, { status: 401 });
   }
 
   /*
@@ -113,7 +113,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         error: "plan_incomplete",
-        message: "홈페이지에 실을 내용이 아직 부족합니다.",
+        message: "홈페이지에 실을 내용이 아직 부족해요.",
         missing: readiness.missing,
       },
       { status: 400 },

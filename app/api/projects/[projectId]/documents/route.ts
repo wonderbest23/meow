@@ -48,8 +48,8 @@ export async function GET(
     if (!drafts) throw new Error("PROJECT_NOT_FOUND");
     return privateJson({ drafts });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "문서 수정본을 불러오지 못했습니다.";
-    return privateJson({ error: { code: message === "PROJECT_NOT_FOUND" ? message : "DOCUMENT_DRAFT_LOAD_FAILED", message: publicErrorMessage(error, "문서 수정본을 불러오지 못했습니다.") } }, { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 });
+    const message = error instanceof Error ? error.message : "문서 수정본을 불러오지 못했어요.";
+    return privateJson({ error: { code: message === "PROJECT_NOT_FOUND" ? message : "DOCUMENT_DRAFT_LOAD_FAILED", message: publicErrorMessage(error, "문서 수정본을 불러오지 못했어요.") } }, { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 });
   }
 }
 
@@ -94,16 +94,16 @@ export async function PUT(
     const saved = await saveDocumentDrafts(projectId, identity.hash, drafts);
     return privateJson({ drafts: saved, draft: saved[input.documentId] ?? null, savedAt: new Date().toISOString() });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "문서 수정본을 저장하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "문서 수정본을 저장하지 못했어요.";
     const status = message === "PROJECT_NOT_FOUND" || message === "DOCUMENT_NOT_FOUND"
       ? 404
       : message === "DOCUMENT_NOT_READY" || message === "DOCUMENT_VERSION_NOT_FOUND" ? 409 : 400;
     // 코드 자리에도 DB 오류 원문이 실리지 않도록 알려진 코드만 그대로 둔다
     const knownCodes = ["PROJECT_NOT_FOUND", "DOCUMENT_NOT_FOUND", "DOCUMENT_NOT_READY", "DOCUMENT_VERSION_NOT_FOUND"];
-    const userMessage = publicErrorMessage(error, "문서 수정본을 저장하지 못했습니다.", {
-      DOCUMENT_NOT_FOUND: "문서를 찾을 수 없습니다.",
-      DOCUMENT_NOT_READY: "먼저 이 문서의 기본 초안을 만들어주세요.",
-      DOCUMENT_VERSION_NOT_FOUND: "되돌릴 판을 찾지 못했습니다. 화면을 새로 열어주세요.",
+    const userMessage = publicErrorMessage(error, "문서 수정본을 저장하지 못했어요.", {
+      DOCUMENT_NOT_FOUND: "문서를 찾을 수 없어요.",
+      DOCUMENT_NOT_READY: "먼저 이 문서의 기본 초안을 만들어 주세요.",
+      DOCUMENT_VERSION_NOT_FOUND: "되돌릴 판을 찾지 못했어요. 화면을 새로 열어 주세요.",
     });
     return privateJson({ error: { code: knownCodes.includes(message) ? message : "DOCUMENT_DRAFT_SAVE_FAILED", message: userMessage } }, { status });
   }

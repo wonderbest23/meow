@@ -66,15 +66,15 @@ export function LandingDomainConnector({
       const response = await fetch(`/api/projects/${projectId}/landing/domain`, { cache: "no-store", signal: controller.signal });
       const payload = await response.json() as DomainPayload;
       if (controller.signal.aborted) return;
-      if (!response.ok) throw new Error(payload.error?.message ?? "도메인 상태를 확인하지 못했습니다.");
+      if (!response.ok) throw new Error(payload.error?.message ?? "도메인 상태를 확인하지 못했어요.");
       setConnection(payload.connection ?? null);
       setEntitlement(payload.entitlement ?? null);
       // 대신 사 드린 주소는 연결 칸을 미리 채워 둔다(등록이 끝나면 '연결 시작'만 누르면 된다)
       setHostname(payload.site.customDomain ?? (payload.entitlement?.purchase ? `www.${payload.entitlement.purchase.domain}` : ""));
       siteUpdatedRef.current(payload.site);
-      if (!quiet) setMessage(payload.connection?.ready ? "도메인 연결이 완료되었습니다." : "");
+      if (!quiet) setMessage(payload.connection?.ready ? "도메인 연결이 완료되었어요." : "");
     } catch (error) {
-      if (!quiet && !controller.signal.aborted) setMessage(userErrorMessage(error, "도메인 상태를 확인하지 못했습니다."));
+      if (!quiet && !controller.signal.aborted) setMessage(userErrorMessage(error, "도메인 상태를 확인하지 못했어요."));
     } finally {
       if (loadRequestRef.current === controller) {
         loadRequestRef.current = null;
@@ -109,15 +109,15 @@ export function LandingDomainConnector({
         body: JSON.stringify({ hostname }),
       });
       const payload = await response.json() as DomainPayload;
-      if (!response.ok) throw new Error(payload.error?.message ?? "도메인을 연결하지 못했습니다.");
+      if (!response.ok) throw new Error(payload.error?.message ?? "도메인을 연결하지 못했어요.");
       setConnection(payload.connection ?? null);
       setHostname(payload.site.customDomain ?? hostname);
       onSiteUpdated(payload.site);
       setMessage(payload.connection?.ready
-        ? "도메인 연결이 완료되었습니다."
-        : "연결 신청을 완료했습니다. 아래 DNS 설정 한 줄만 추가해주세요.");
+        ? "도메인 연결이 완료되었어요."
+        : "연결 신청을 완료했어요. 아래 DNS 설정 한 줄만 추가해 주세요.");
     } catch (error) {
-      setMessage(userErrorMessage(error, "도메인을 연결하지 못했습니다."));
+      setMessage(userErrorMessage(error, "도메인을 연결하지 못했어요."));
     } finally {
       setAction("idle");
     }
@@ -131,13 +131,13 @@ export function LandingDomainConnector({
     try {
       const response = await fetch(`/api/projects/${projectId}/landing/domain`, { method: "DELETE" });
       const payload = await response.json() as DomainPayload;
-      if (!response.ok) throw new Error(payload.error?.message ?? "도메인 연결을 해제하지 못했습니다.");
+      if (!response.ok) throw new Error(payload.error?.message ?? "도메인 연결을 해제하지 못했어요.");
       setConnection(null);
       setHostname("");
       onSiteUpdated(payload.site);
-      setMessage("개인 도메인 연결을 해제했습니다. 무료 주소는 그대로 사용할 수 있습니다.");
+      setMessage("개인 도메인 연결을 해제했어요. 무료 주소는 그대로 사용할 수 있어요.");
     } catch (error) {
-      setMessage(userErrorMessage(error, "도메인 연결을 해제하지 못했습니다."));
+      setMessage(userErrorMessage(error, "도메인 연결을 해제하지 못했어요."));
     } finally {
       setAction("idle");
     }
@@ -153,7 +153,7 @@ export function LandingDomainConnector({
   if (demo) {
     return (
       <section className="landing-domain-connector demo">
-        <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>결제 후 구매한 도메인의 www 주소를 연결할 수 있습니다.</p></span></div>
+        <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>결제 후 구매한 도메인의 www 주소를 연결할 수 있어요.</p></span></div>
         <div className="domain-demo-row"><span>www.mybrand.com</span><em>연결 예시</em></div>
         <nav className="domain-buy-links"><span>아직 도메인이 없다면</span><a href="https://domain.gabia.com/" target="_blank" rel="noreferrer">가비아 <ExternalLink /></a><a href="https://www.hosting.kr/domain" target="_blank" rel="noreferrer">호스팅케이알 <ExternalLink /></a><a href="https://www.cafe24.com/?controller=product_domain" target="_blank" rel="noreferrer">카페24 <ExternalLink /></a></nav>
       </section>
@@ -196,32 +196,32 @@ export function LandingDomainConnector({
     <section className="landing-domain-connector">
       {entitlement?.required && entitlement.expiresAt ? (
         <p className={`domain-term ${needsPurchase ? "expired" : expiresSoon ? "soon" : ""}`}>
-          {needsPurchase ? "호스팅 기간이 끝났습니다. 연결은 유지되지만 변경하려면 갱신이 필요합니다." : `호스팅 ${entitlement.expiresAt.slice(0, 10)}까지`}
+          {needsPurchase ? "호스팅 기간이 끝났어요. 연결은 유지되지만 변경하려면 갱신이 필요해요." : `호스팅 ${entitlement.expiresAt.slice(0, 10)}까지`}
           {(needsPurchase || expiresSoon) && renewHref ? <a href={renewHref}> 1년 갱신 {renewPrice.toLocaleString("ko-KR")}원</a> : null}
         </p>
       ) : null}
-      <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>{purchase ? "대신 사 드린 주소를 이 홈페이지에 연결합니다." : "구매한 주소의 www 주소만 입력하면 됩니다."}</p></span>{connection?.ready ? <em className="ready"><CheckCircle2 /> 연결 완료</em> : connectedHostname ? <em><LoaderCircle /> 연결 확인 중</em> : null}</div>
+      <div className="domain-connector-title"><Globe2 /><span><strong>내 도메인 연결</strong><p>{purchase ? "대신 사 드린 주소를 이 홈페이지에 연결해요." : "구매한 주소의 www 주소만 입력하면 돼요."}</p></span>{connection?.ready ? <em className="ready"><CheckCircle2 /> 연결 완료</em> : connectedHostname ? <em><LoaderCircle /> 연결 확인 중</em> : null}</div>
 
       {purchase && !connectedHostname && entitlement?.active ? (
         <div className="domain-service-note purchase" role="status"><CheckCircle2 /><p>{purchase.status === "registered"
           ? <><strong>{purchase.domain}</strong> 등록을 마쳤어요. 연결 설정(DNS)도 해 두었으니 아래 ‘연결 시작’만 눌러 주세요.</>
-          : <><strong>{purchase.domain}</strong> 등록을 진행하고 있어요. .com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일 걸려요. 결제 때 적어 주신 명의자 이름으로 등록해요. 끝나면 이 화면에서 ‘연결 시작’만 누르면 됩니다.</>}</p></div>
+          : <><strong>{purchase.domain}</strong> 등록을 진행하고 있어요. .com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일 걸려요. 결제 때 적어 주신 명의자 이름으로 등록해요. 끝나면 이 화면에서 ‘연결 시작’만 누르면 돼요.</>}</p></div>
       ) : null}
       {!connectedHostname ? (
         <div className="domain-connect-form">
           <label><span>{purchase ? "연결할 주소" : "구매한 도메인"}</span><input value={hostname} onChange={(event) => setHostname(event.target.value)} placeholder="www.mybrand.com" autoCapitalize="none" autoCorrect="off" /></label>
           <button disabled={!published || busy || hostname.trim().length < 4 || (waitingRegistration && hostname.trim().toLowerCase() === purchasedHostname)} onClick={() => void connect()}>{action === "connecting" ? <Spinner /> : <Globe2 />} 연결 시작</button>
-          {!published && <small>먼저 위의 ‘공개하기’를 눌러 홈페이지를 공개해주세요.</small>}
+          {!published && <small>먼저 위의 ‘공개하기’를 눌러 홈페이지를 공개해 주세요.</small>}
         </div>
       ) : (
         <div className="domain-connection-progress">
           <div className="domain-connected-address"><span><small>연결할 주소</small><strong>{connectedHostname}</strong></span>{connection?.ready && <a href={`https://${connectedHostname}`} target="_blank" rel="noreferrer">열기 <ExternalLink /></a>}</div>
-          {!connection?.ready && connectedHostname === purchasedHostname ? <p className="domain-managed-dns">연결 설정(DNS)은 오늘창업이 해 두었어요. 보통 몇 분 안에 보안 인증서까지 자동으로 연결됩니다.</p> : !connection?.ready && <ol>
-            <li><span>1</span><div><strong>도메인을 구매한 사이트의 DNS 관리로 이동</strong><p>가비아·호스팅케이알·카페24 등 구매한 곳에서 설정합니다.</p></div></li>
+          {!connection?.ready && connectedHostname === purchasedHostname ? <p className="domain-managed-dns">연결 설정(DNS)은 오늘창업이 해 두었어요. 보통 몇 분 안에 보안 인증서까지 자동으로 연결돼요.</p> : !connection?.ready && <ol>
+            <li><span>1</span><div><strong>도메인을 구매한 사이트의 DNS 관리로 이동</strong><p>가비아·호스팅케이알·카페24 등 구매한 곳에서 설정해요.</p></div></li>
             <li><span>2</span><div><strong>CNAME 한 줄 추가</strong><p>이름은 www, 값은 아래 주소를 입력하세요.</p><button className="domain-copy-target" onClick={() => void copyTarget()}><code>{connection?.cnameTarget || "connect.oneulstart.com"}</code><em>{copied ? <CheckCircle2 /> : <Copy />}{copied ? "복사됨" : "복사"}</em></button></div></li>
-            <li><span>3</span><div><strong>저장한 뒤 연결 확인</strong><p>보통 몇 분 안에 보안 인증서까지 자동으로 연결됩니다.</p></div></li>
+            <li><span>3</span><div><strong>저장한 뒤 연결 확인</strong><p>보통 몇 분 안에 보안 인증서까지 자동으로 연결돼요.</p></div></li>
           </ol>}
-          {connection && !connection.configured && <div className="domain-service-note"><CircleAlert /><p>자동 연결 서버의 마지막 보안 설정을 준비하고 있습니다. 입력한 주소는 저장되지 않았습니다.</p></div>}
+          {connection && !connection.configured && <div className="domain-service-note"><CircleAlert /><p>자동 연결 서버의 마지막 보안 설정을 준비하고 있어요. 입력한 주소는 저장되지 않았어요.</p></div>}
           {connection?.errors.length ? <div className="domain-service-note"><CircleAlert /><p>{connection.errors[0]}</p></div> : null}
           <div className="domain-progress-actions"><button disabled={busy} onClick={() => void load()}><RefreshCw className={action === "loading" ? "spin" : ""} /> 연결 확인</button><button className="remove" disabled={busy} onClick={() => void remove()}>{action === "removing" ? <Spinner /> : <Trash2 />} 연결 해제</button></div>
         </div>

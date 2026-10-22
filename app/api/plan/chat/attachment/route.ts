@@ -23,5 +23,5 @@ export async function POST(request: Request) {
     for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
     const text = await extractCoachAttachment(bytes);
     return Response.json({ text }, { headers: { "Cache-Control": "no-store" } });
-  } catch { return Response.json({ message: "문서를 읽지 못했습니다. 1MB·18,000자 이내의 워드 문서 또는 텍스트를 사용해주세요." }, { status: 400 }); }
+  } catch { return Response.json({ message: "문서를 읽지 못했어요. 1MB·18,000자 이내의 Word 문서 또는 텍스트 파일을 사용해 주세요." }, { status: 400 }); }
 }

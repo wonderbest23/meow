@@ -15,7 +15,7 @@ export async function POST(request: Request) {
         {
           error: {
             code: "PAYMENT_REQUIRED",
-            message: "프로젝트는 서버에서 결제가 승인된 주문으로만 생성할 수 있습니다.",
+            message: "프로젝트는 서버에서 결제가 승인된 주문으로만 생성할 수 있어요.",
             retryable: false,
           },
         },
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
       {
         error: {
           code: "PROJECT_CREATE_FAILED",
-          message: publicErrorMessage(error, "프로젝트 생성에 실패했습니다."),
+          message: publicErrorMessage(error, "프로젝트 생성에 실패했어요."),
           retryable: true,
         },
       },

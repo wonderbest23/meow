@@ -52,9 +52,9 @@ function safeWorkflowMessage(status: WorkflowStatus) {
   if (status.status === "errored" || status.status === "terminated") {
     const technical = status.error?.message ?? "";
     if (technical.includes("OPENAI_NOT_CONNECTED")) {
-      return "AI 사업 기획 연결이 준비되지 않았어요. 운영자에게 문의해주세요.";
+      return "AI 사업 기획 연결이 준비되지 않았어요. 고객센터에 문의해 주세요.";
     }
-    return "사업 초안 제작이 잠시 멈췄어요. 다시 시작해주세요.";
+    return "사업 초안 제작이 잠시 멈췄어요. 다시 시작해 주세요.";
   }
   return "";
 }
@@ -105,7 +105,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   // 로그인 없이 AI를 부르는 경로: 쿠키를 지워도 우회되지 않게 IP 기준으로 횟수를 제한한다.
-  const limited = await enforceRateLimit("opportunity-direct-plan", request, { limit: 5, windowMs: 10 * 60_000, message: "사업안 만들기 요청이 너무 잦습니다. 10분 뒤 다시 시도해주세요." });
+  const limited = await enforceRateLimit("opportunity-direct-plan", request, { limit: 5, windowMs: 10 * 60_000, message: "사업안 만들기 요청이 너무 잦아요. 10분 뒤 다시 시도해 주세요." });
   if (limited) return limited;
   try {
     const identity = await requireGuestIdentity();
@@ -117,7 +117,7 @@ export async function POST(request: Request) {
         return privateJson({
           error: {
             code: "OPENAI_NOT_CONNECTED",
-            message: "AI 사업 기획 연결이 준비되지 않았어요. 운영자에게 문의해주세요.",
+            message: "AI 사업 기획 연결이 준비되지 않았어요. 고객센터에 문의해 주세요.",
           },
         }, { status: 503 });
       }
@@ -140,7 +140,7 @@ export async function POST(request: Request) {
       return privateJson({
         error: {
           code: "OPENAI_NOT_CONNECTED",
-          message: "AI 사업 기획 연결이 준비되지 않았어요. 운영자에게 문의해주세요.",
+          message: "AI 사업 기획 연결이 준비되지 않았어요. 고객센터에 문의해 주세요.",
         },
       }, { status: 503 });
     }
@@ -156,14 +156,14 @@ export async function POST(request: Request) {
       return privateJson({
         error: {
           code: "DIRECT_PLAN_INPUT_INVALID",
-          message: "아이디어, 예산과 시간을 다시 확인해주세요.",
+          message: "아이디어, 예산과 시간을 다시 확인해 주세요.",
         },
       }, { status: 400 });
     }
     return privateJson({
       error: {
         code: "DIRECT_PLAN_FAILED",
-        message: "사업 초안을 만들지 못했어요. 잠시 후 다시 시도해주세요.",
+        message: "사업 초안을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
       },
     }, { status: 500 });
   }

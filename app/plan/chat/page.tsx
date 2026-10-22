@@ -288,7 +288,7 @@ function BusinessCoach() {
           <form className={chatUi.composerShell} aria-busy={busy || working} onClick={e => { if (e.target === e.currentTarget) input.current?.focus(); }} onSubmit={e => { e.preventDefault(); void submit(); }}>
             <input hidden ref={file} type="file" accept=".txt,.md,.docx" onChange={e => { const selected = e.target.files?.[0]; if (selected) void attach(selected); e.target.value = ""; }} />
             <button type="button" className={styles.tool} aria-label="기존 문서 첨부" title="기존 문서 첨부" disabled={!loaded || blocked} onClick={() => file.current?.click()}><Paperclip size={20} /></button>
-            <textarea ref={input} aria-label="사업에 대해 말씀해주세요" placeholder={started ? "메시지를 입력하세요" : "생각을 들려주세요"} value={text} maxLength={2500} rows={1} disabled={blocked} onChange={e => { setText(e.target.value); pendingId.current = null; }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia("(max-width: 900px)").matches) { e.preventDefault(); void submit(); } }} />
+            <textarea ref={input} aria-label="사업에 대해 말씀해 주세요" placeholder={started ? "메시지를 입력하세요" : "생각을 들려주세요"} value={text} maxLength={2500} rows={1} disabled={blocked} onChange={e => { setText(e.target.value); pendingId.current = null; }} onKeyDown={e => { if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && !window.matchMedia("(max-width: 900px)").matches) { e.preventDefault(); void submit(); } }} />
             <button type="submit" className={`${styles.send} ${chatUi.sendButton} ${text.trim() || attachment ? styles.sendReady : ""}`} aria-label="보내기" title="보내기" disabled={!loaded || blocked || (!text.trim() && !attachment)}><ArrowUp size={22} /></button>
           </form>
         </footer>

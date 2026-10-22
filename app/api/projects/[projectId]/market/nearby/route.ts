@@ -41,7 +41,7 @@ export async function POST(
         sourceName: result.sourceName,
         sourceUrl: result.sourceUrl,
         observedAt: result.observedAt,
-        note: "업종코드 필터를 지정하지 않았다면 전체 업소 수이며, 목표 업종 경쟁점 수로 해석하면 안 됩니다.",
+        note: "업종코드 필터를 지정하지 않았다면 전체 업소 수이며, 목표 업종 경쟁점 수로 해석하면 안 돼요.",
         verification: "verified" as const,
         verificationMethod: "official_api" as const,
         sourceExcerpt: result.sourceExcerpt,
@@ -54,9 +54,9 @@ export async function POST(
     }
     return NextResponse.json({ result, evidence });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "주변 상가를 조회하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "주변 상가를 조회하지 못했어요.";
     return NextResponse.json(
-      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "NEARBY_LOOKUP_INVALID", message: publicErrorMessage(error, "주변 상가를 조회하지 못했습니다.") } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "NEARBY_LOOKUP_INVALID", message: publicErrorMessage(error, "주변 상가를 조회하지 못했어요.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

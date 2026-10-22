@@ -782,7 +782,7 @@ export function BrainwaveEditor({
   const [copied, setCopied] = useState(false);
   const save = (manual = false) => {
     if (persistence.saving || uploading || ai.busy || pendingPatchRef.current) return;
-    if (btn || menu) { setError("열려 있는 버튼이나 메뉴 설정을 먼저 적용해주세요."); return; }
+    if (btn || menu) { setError("열려 있는 버튼이나 메뉴 설정을 먼저 적용해 주세요."); return; }
     setError("");
     const final = finishText();
     void persistence.save({ ...data, businessContent, sourceSnapshot, brainwave: { page, contentMode, texts: final.texts, images: final.images, links: final.links, sizes: final.sizes, hidden: final.hidden, order: final.order }, content: [] }).then(saved => {
@@ -1228,7 +1228,7 @@ export function BrainwaveEditor({
             mode={view === "mobile" ? "mobile" : "desktop"}
             onPick={previewMode ? undefined : (kind, id, el) => (kind === "text" ? pickText(id, el) : kind === "image" ? pickImage(id, el) : kind === "restore" ? restore(id) : pickButton(id, el))}
           />
-          {appendix ? <PublicAppendixPreview appendix={appendix} /> : null}
+          {appendix ? <PublicAppendixPreview appendix={appendix} where="editor" /> : null}
           {uploading ? <div className="bw-editor-uploading" role="status"><LoaderCircle className="spin" aria-hidden /> 사진 올리는 중</div> : null}
         </div>
       </div>

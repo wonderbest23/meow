@@ -23,17 +23,17 @@ type TransferOrder = {
 type BankAccount = { bankName: string; accountNumber: string; accountHolder: string };
 
 const statusCopy: Record<string, { title: string; body: string }> = {
-  awaiting_deposit: { title: "입금을 기다리고 있어요", body: "아래 계좌로 정확한 금액을 입금한 뒤 ‘입금했어요’를 눌러주세요." },
-  deposit_reported: { title: "입금 확인을 요청했어요", body: "관리자가 카카오뱅크 거래내역과 입금자명을 확인하고 있습니다." },
-  done: { title: "입금 확인이 완료됐어요", body: "내 사업 프로젝트가 생성되었습니다. 지금 바로 결과물 제작을 시작할 수 있어요." },
-  canceled: { title: "취소된 주문입니다", body: "입금했다면 상담창에 주문번호를 남겨주세요." },
-  refunded: { title: "환불이 완료됐어요", body: "실제 계좌 반영 시점은 은행 처리 시간에 따라 달라질 수 있습니다." },
-  expired: { title: "입금 기한이 지났어요", body: "홈으로 돌아가 새 주문을 만들어주세요." },
+  awaiting_deposit: { title: "입금을 기다리고 있어요", body: "아래 계좌로 정확한 금액을 입금한 뒤 ‘입금했어요’를 눌러 주세요." },
+  deposit_reported: { title: "입금 확인을 요청했어요", body: "관리자가 카카오뱅크 거래내역과 입금자명을 확인하고 있어요." },
+  done: { title: "입금 확인이 완료됐어요", body: "내 사업 프로젝트가 생성되었어요. 지금 바로 결과물 제작을 시작할 수 있어요." },
+  canceled: { title: "취소된 주문이에요", body: "입금했다면 고객센터에 주문번호를 남겨 주세요." },
+  refunded: { title: "환불이 완료됐어요", body: "실제 계좌 반영 시점은 은행 처리 시간에 따라 달라질 수 있어요." },
+  expired: { title: "입금 기한이 지났어요", body: "홈으로 돌아가 새 주문을 만들어 주세요." },
 };
 
 async function responsePayload<T>(response: Response): Promise<T> {
   const data = await response.json();
-  if (!response.ok) throw new Error(data.error?.message ?? "주문을 확인하지 못했습니다.");
+  if (!response.ok) throw new Error(data.error?.message ?? "주문을 확인하지 못했어요.");
   return data as T;
 }
 
@@ -48,7 +48,7 @@ function TransferStatus() {
   const [copied, setCopied] = useState(false);
 
   const load = useCallback(async () => {
-    if (!orderId) throw new Error("주문번호가 없습니다.");
+    if (!orderId) throw new Error("주문번호가 없어요.");
     const data = await responsePayload<{ order: TransferOrder; bankAccount: BankAccount }>(await fetch(`/api/payments/orders?orderId=${encodeURIComponent(orderId)}`, { cache: "no-store" }));
     setOrder(data.order); setBank(data.bankAccount); setLoading(false);
     if (data.order.status === "done" && data.order.projectId) window.localStorage.removeItem("venture-pending-order");
@@ -72,12 +72,12 @@ function TransferStatus() {
     setReporting(true); setMessage("");
     try {
       await responsePayload(await fetch("/api/payments/manual", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.orderId }) }));
-      await load(); setMessage("입금 확인 요청을 접수했습니다.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "입금 확인을 요청하지 못했습니다."); } finally { setReporting(false); }
+      await load(); setMessage("입금 확인 요청을 접수했어요.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "입금 확인을 요청하지 못했어요."); } finally { setReporting(false); }
   };
 
   if (loading) return <main className="manual-payment-page"><PlanLoading fullPage note="주문을 확인하고 있어요" /></main>;
-  if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해주세요."}</p><Link href="/account">로그인 확인</Link><Link href="/"><Home /> 홈으로</Link></main>;
+  if (!order || !bank) return <main className="manual-payment-page error"><ShieldCheck /><h1>주문을 확인할 수 없어요</h1><p>{message || "로그인 상태와 주문번호를 확인해 주세요."}</p><Link href="/account">로그인 확인</Link><Link href="/"><Home /> 홈으로</Link></main>;
   const copy = statusCopy[order.status] ?? statusCopy.awaiting_deposit;
   const expired = Date.parse(order.expiresAt) <= Date.now() && order.status === "awaiting_deposit";
 
@@ -88,12 +88,12 @@ function TransferStatus() {
       {["awaiting_deposit", "deposit_reported"].includes(order.status) && !expired && <>
         <section className="manual-bank-account"><div><Building2 /><span><small>{bank.bankName}</small><strong>{bank.accountNumber}</strong><em>예금주 {bank.accountHolder}</em></span></div><button onClick={() => void copyAccount()}><Clipboard /> {copied ? "복사했어요" : "계좌 복사"}</button></section>
         <dl><div><dt>입금 금액</dt><dd>{order.amount.toLocaleString("ko-KR")}원</dd></div><div><dt>입금자명</dt><dd>{order.depositorName}</dd></div><div><dt>입금 기한</dt><dd>{new Date(order.expiresAt).toLocaleString("ko-KR")}</dd></div></dl>
-        {order.status === "awaiting_deposit" ? <button className="manual-deposit-report" disabled={reporting} onClick={() => void report()}>{reporting ? <Spinner /> : <CheckCircle2 />} 입금했어요</button> : <div className="manual-deposit-waiting"><Spinner /><span><strong>관리자가 확인하고 있어요</strong><small>화면을 닫아도 주문 상태는 저장됩니다.</small></span></div>}
+        {order.status === "awaiting_deposit" ? <button className="manual-deposit-report" disabled={reporting} onClick={() => void report()}>{reporting ? <Spinner /> : <CheckCircle2 />} 입금했어요</button> : <div className="manual-deposit-waiting"><Spinner /><span><strong>관리자가 확인하고 있어요</strong><small>화면을 닫아도 주문 상태는 저장돼요.</small></span></div>}
       </>}
       {order.status === "done" && order.projectId && <Link className="manual-project-start" href={`/?view=project&project=${encodeURIComponent(order.projectId)}`}>내 사업 자료 확인하기 <ArrowRight /></Link>}
       <section className="manual-receipt-status"><FileCheck2 /><span><strong>현금영수증</strong><small>{order.cashReceiptStatus === "issued" ? "발급 완료" : order.cashReceiptType === "NONE" ? "구매자 번호 없이 발급 예정" : "입금 확인 후 발급 예정"}</small></span></section>
       {message && <p className="manual-payment-message" role="status">{message}</p>}
-      <footer><p><strong>관리자 입금 확인 전에는 제작이 시작되지 않습니다.</strong> 확인 후 맞춤 제작이 시작되면 단순 변심 환불이 제한됩니다. 결과물 미제공·계약 불일치·중대한 하자 등 법정 권리는 보장됩니다.</p><nav><Link href="/refund">취소·환불 기준</Link><Link href="/terms">이용약관</Link><Link href="/">홈으로</Link></nav></footer>
+      <footer><p><strong>관리자 입금 확인 전에는 제작이 시작되지 않아요.</strong> 확인 후 맞춤 제작이 시작되면 단순 변심 환불이 제한됩니다. 결과물 미제공·계약 불일치·중대한 하자 등 법정 권리는 보장됩니다.</p><nav><Link href="/refund">취소·환불 기준</Link><Link href="/terms">이용약관</Link><Link href="/">홈으로</Link></nav></footer>
     </section>
   </main>;
 }

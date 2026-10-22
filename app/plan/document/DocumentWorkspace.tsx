@@ -73,6 +73,17 @@ function WritingStatus({ done, total, current }: { done: number; total: number; 
  * 다음 단계 버튼 — 화면 맨 아래, 수정·내려받기 옆 늘 같은 자리에 하나만 둔다.
  * 오른쪽 칸·문서 위 카드·완료 알림에 흩어져 있던 다음 단계 안내를 여기 하나로 모았다(사용자 피드백 2026-10).
  */
+/*
+ * 건너뛰는 길 — 홈페이지보다 영업신고·사업자등록이 급한 사장님이 '사업 시작하기'를 바로 찾게(여정 점검 2026-10-22).
+ * 아래 단추 줄은 두 개로 두고(대표 요청: 아래 단추 세 개는 이상하다), 완료 알림 안에 글 링크로 둔다.
+ */
+function SecondaryNext({ planId, homepage }: { planId: string; homepage: HomepageStatus }) {
+  const plan = loadState().plans.find(item => item.id === planId);
+  const secondary = plan ? journeyNext(plan, homepage).secondary : undefined;
+  if (!secondary) return null;
+  return <p className={styles.secondaryNext}><Link href={secondary.href}>{secondary.title} →</Link></p>;
+}
+
 function NextStepButton({ planId, homepage }: { planId: string; homepage: HomepageStatus }) {
   const plan = loadState().plans.find(item => item.id === planId);
   if (!plan) return null;
@@ -258,8 +269,8 @@ export default function DocumentWorkspace(props: Props) {
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
-            {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어 보세요. 준비되면 화면 아래 버튼으로 다음 단계를 이어가요.</p></div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
-            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
+            {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>내용을 확인하고 필요한 부분만 다듬어 보세요. 준비되면 화면 아래 버튼으로 다음 단계를 이어가요.</p>{planId && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
+            {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}><h1>아직 만든 문서가 없어요</h1><p>사업 이야기를 이어서 계획서를 만들어 보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
@@ -307,7 +318,7 @@ export default function DocumentWorkspace(props: Props) {
           .filter(({ format }) => format !== "pptx" || (PPT_GENERATION_VERIFIED && !(summaryMode && props.summary))).map(({ format, name, description, Icon }) => <button key={format} disabled={props.exporting !== null || props.accessPending || !props.canDownload(format, summaryMode && props.summary ? "summary" : "detailed")} onClick={() => void download(format)}><Icon size={24} /><span><strong>{props.exporting === format ? "파일을 준비하고 있어요…" : name}</strong><small>{description}</small></span><ChevronRight size={20} /></button>)}
         {PPT_GENERATION_VERIFIED && props.deckStatus && <p role="status" aria-live="polite">{props.deckStatus}</p>}
         {PPT_GENERATION_VERIFIED && !isSample && planId && <Link href={`/plan/proposal?planId=${encodeURIComponent(planId)}`}>제안서 편집·제작 상태 확인</Link>}
-        {Object.values(props.editStates).some(state => state.status !== "saved") && <p role="status">저장이 끝난 뒤 파일을 받을 수 있어요. 저장에 실패한 항목은 본문에서 확인해주세요.</p>}
+        {Object.values(props.editStates).some(state => state.status !== "saved") && <p role="status">저장이 끝난 뒤 파일을 받을 수 있어요. 저장에 실패한 항목은 본문에서 확인해 주세요.</p>}
         {props.error && <p role="alert">{props.error}</p>}
       </div>}
     </dialog>

@@ -14,15 +14,15 @@ function json(body: unknown, status = 200) {
 
 function failed(error: unknown) {
   if (error instanceof Error && error.message === "ACCOUNT_LOGIN_REQUIRED") {
-    return json({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "로그인 후 문의를 확인해주세요." } }, 401);
+    return json({ error: { code: "ACCOUNT_LOGIN_REQUIRED", message: "로그인 후 문의를 확인해 주세요." } }, 401);
   }
   if (error instanceof Error && error.message === "SUPPORT_REQUEST_CONFLICT") {
-    return json({ error: { code: "SUPPORT_REQUEST_CONFLICT", message: "이미 접수된 요청과 내용이 달라요. 문의 내역을 확인해주세요." } }, 409);
+    return json({ error: { code: "SUPPORT_REQUEST_CONFLICT", message: "이미 접수된 요청과 내용이 달라요. 문의 내역을 확인해 주세요." } }, 409);
   }
   if (error instanceof z.ZodError || error instanceof SyntaxError) {
-    return json({ error: { code: "INVALID_INQUIRY", message: error instanceof z.ZodError ? error.issues[0]?.message : "문의 내용을 확인해주세요." } }, 400);
+    return json({ error: { code: "INVALID_INQUIRY", message: error instanceof z.ZodError ? error.issues[0]?.message : "문의 내용을 확인해 주세요." } }, 400);
   }
-  return json({ error: { code: "SUPPORT_UNAVAILABLE", message: "고객센터에 연결하지 못했어요. 잠시 후 다시 시도해주세요." } }, 503);
+  return json({ error: { code: "SUPPORT_UNAVAILABLE", message: "고객센터에 연결하지 못했어요. 잠시 후 다시 시도해 주세요." } }, 503);
 }
 
 export async function GET() {
@@ -43,10 +43,10 @@ export async function POST(request: Request) {
     /* 로컬에서는 Next 가 127.0.0.1 을 localhost 로 바꿔 같은 사이트인데도 막혔다 — 결제와 같은 기준(Host 맞춤)도 받는다 */
     if (origin && origin !== new URL(request.url).origin && !isPaymentSameOrigin(request)) return json({ error: { code: "INVALID_ORIGIN", message: "화면을 새로고침한 뒤 다시 접수해 주세요." } }, 403);
     if (request.headers.get("x-support-owner") !== identity.hash) {
-      return json({ error: { code: "ACCOUNT_CHANGED", message: "로그인 계정이 바뀌었어요. 고객센터를 다시 열어주세요." } }, 409);
+      return json({ error: { code: "ACCOUNT_CHANGED", message: "로그인 계정이 바뀌었어요. 고객센터를 다시 열어 주세요." } }, 409);
     }
     const limited = await enforceRateLimit("support-chat", request, {
-      limit: 20, windowMs: 10 * 60_000, message: "문의를 너무 자주 보내고 있어요. 잠시 후 다시 접수해주세요.",
+      limit: 20, windowMs: 10 * 60_000, message: "문의를 너무 자주 보내고 있어요. 잠시 후 다시 접수해 주세요.",
     });
     if (limited) return limited;
     const text = await request.text();

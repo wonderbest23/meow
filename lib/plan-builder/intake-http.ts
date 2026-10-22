@@ -124,6 +124,6 @@ export async function intakePost(request: Request, prepare: (request: Request) =
   } catch (error) {
     if (error instanceof IntakeError) return json({ code: error.code, message: error.message }, error.status);
     const conflict = error instanceof Error && ["PLAN_VERSION_CONFLICT", "PLAN_OWNER_CHANGED"].includes(error.message);
-    return json({ code: conflict ? "revision_conflict" : "save_failed", message: conflict ? "계정 또는 사업정보가 바뀌었어요. 입력은 보관한 뒤 최신 내용과 비교해 주세요" : "저장하지 못했어요. 입력한 내용은 그대로 두고 다시 시도해 주세요" }, conflict ? 409 : 503);
+    return json({ code: conflict ? "revision_conflict" : "save_failed", message: conflict ? "계정 또는 사업 정보가 바뀌었어요. 입력은 보관한 뒤 최신 내용과 비교해 주세요" : "저장하지 못했어요. 입력한 내용은 그대로 두고 다시 시도해 주세요" }, conflict ? 409 : 503);
   }
 }

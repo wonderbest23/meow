@@ -94,6 +94,7 @@ async function main() {
     assert.equal(readCoach(server.plans[0].answers)!.fields.find(f => f.key === "price")!.value, "120,000원");
     await page.screenshot({ path: `artifacts/business-launch/expert-${width}.png` });
     await click(page, "사업 시작하기");
+    await click(page, "바꾸기"); // 처음에는 대화에서 들은 내용으로 채운 확인 화면이 먼저 뜬다
     await click(page, "새 사업을 시작할게요"); await click(page, "다음");
     await click(page, "별도 사무실은 필요 없어요"); await click(page, "다음");
     await click(page, "이미 등록했어요"); await click(page, "내 과정 보기");

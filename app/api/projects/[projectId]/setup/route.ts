@@ -23,12 +23,12 @@ export async function PUT(
     return NextResponse.json({ project, assessment });
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : "사업 설정을 저장하지 못했습니다.";
+      error instanceof Error ? error.message : "사업 설정을 저장하지 못했어요.";
     return NextResponse.json(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "BUSINESS_SETUP_INVALID",
-          message: publicErrorMessage(error, "사업 설정을 저장하지 못했습니다."),
+          message: publicErrorMessage(error, "사업 설정을 저장하지 못했어요."),
           retryable: false,
         },
       },

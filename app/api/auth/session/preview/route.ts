@@ -18,17 +18,17 @@ function privateJson(body: unknown, init?: ResponseInit) {
  * (남이 만든 로그인 링크로 그 사람 계정에 억지로 로그인되는 것을 막기 위한 확인 단계)
  */
 export async function POST(request: Request) {
-  if (!isSameOriginRequest(request)) return privateJson({ error: { code: "CROSS_ORIGIN", message: "허용되지 않은 요청입니다." } }, { status: 403 });
+  if (!isSameOriginRequest(request)) return privateJson({ error: { code: "CROSS_ORIGIN", message: "허용되지 않은 요청이에요." } }, { status: 403 });
   const limited = await enforceRateLimit("auth-session-preview", request, { limit: 30, windowMs: 10 * 60_000 });
   if (limited) return limited;
   const parsed = input.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return privateJson({ error: { code: "INVALID_INPUT", message: "로그인 정보를 확인하지 못했습니다." } }, { status: 400 });
+  if (!parsed.success) return privateJson({ error: { code: "INVALID_INPUT", message: "로그인 정보를 확인하지 못했어요." } }, { status: 400 });
   try {
     const { data, error } = await createServerAuthClient().auth.getUser(parsed.data.accessToken);
     if (error || !data.user) throw error ?? new Error("no user");
     const provider = typeof data.user.app_metadata?.provider === "string" ? data.user.app_metadata.provider : null;
     return privateJson({ email: data.user.email ?? null, provider });
   } catch {
-    return privateJson({ error: { code: "LINK_INVALID", message: "로그인 링크가 만료되었거나 올바르지 않습니다. 다시 로그인해 주세요." } }, { status: 400 });
+    return privateJson({ error: { code: "LINK_INVALID", message: "로그인 링크가 만료되었거나 올바르지 않아요. 다시 로그인해 주세요." } }, { status: 400 });
   }
 }

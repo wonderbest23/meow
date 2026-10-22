@@ -105,7 +105,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("consult", request, {
     limit: 40,
     windowMs: 10 * 60_000,
-    message: "상담 요청이 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "상담 요청이 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
   /*
@@ -116,7 +116,7 @@ export async function POST(request: Request) {
   const dayLimited = await enforceRateLimit("consult-day", request, {
     limit: 80,
     windowMs: 24 * 60 * 60_000,
-    message: "오늘 상담 요청이 많았습니다. 내일 다시 이용해주세요.",
+    message: "오늘 상담 요청이 많았어요. 내일 다시 이용해 주세요.",
   });
   if (dayLimited) return dayLimited;
   // 서비스 전체 하루 상한 — 쿠키·IP 를 바꿔 가며 부르면 위 한도로는 비용이 끝없이 나간다
@@ -124,7 +124,7 @@ export async function POST(request: Request) {
     key: "all",
     limit: 1500,
     windowMs: 24 * 60 * 60_000,
-    message: "오늘 상담 요청이 많아 잠시 쉬어요. 내일 다시 이용해주세요.",
+    message: "오늘 상담 요청이 많아 잠시 쉬어요. 내일 다시 이용해 주세요.",
   });
   if (allLimited) return allLimited;
 
@@ -154,7 +154,7 @@ export async function POST(request: Request) {
         needsLogin: !identity.userId,
         message: identity.userId
           ? `오늘 상담을 ${limit}번 하셨어요. 내일 다시 이어서 하실 수 있고, 지금까지 정리된 내용으로 바로 사업계획서를 만들어 보셔도 좋아요.`
-          : `상담을 ${CONSULT_FREE_TURNS_GUEST}번 해보셨어요. 로그인하시면 이어서 상담하고, 지금까지 정리된 내용도 그대로 보관됩니다.`,
+          : `상담을 ${CONSULT_FREE_TURNS_GUEST}번 해 보셨어요. 로그인하시면 이어서 상담하고, 지금까지 정리된 내용도 그대로 보관돼요.`,
       },
       { status: 429, headers: { "Cache-Control": "private, no-store" } },
     );
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
 
   const parsed = requestSchema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) {
-    return NextResponse.json({ error: "bad_request", message: "요청을 읽지 못했습니다." }, { status: 400 });
+    return NextResponse.json({ error: "bad_request", message: "요청을 읽지 못했어요." }, { status: 400 });
   }
   const input = parsed.data;
 

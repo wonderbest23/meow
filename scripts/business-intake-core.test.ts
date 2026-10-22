@@ -53,6 +53,7 @@ async function main() {
       intakeFinancialReference, intakeFinancialWarning,
     } = await import("../lib/plan-builder/intake-core");
     const { intakeStructureBrief } = await import("../lib/plan-builder/intake-structure-brief");
+    const { applyIntakeResources } = await import("../lib/plan-builder/intake-resource-update");
 
     let serial = 0;
     let passed = 0;
@@ -125,6 +126,20 @@ async function main() {
     }
 
     // 2026-09-28 질문 빈틈 보완: 기본 질문만으로 손익이 계산되고, 운영 중은 실적(매출 ÷ 기간 ÷ 가격)으로 판매량을 잡는다.
+    check("resource edits never turn empty fields into '미정' and add at most one chat note", () => {
+      const f = fixture("startup");
+      const before = f.coach.messages.length;
+      applyIntakeResources(f.plan, f.coach, f.intake, command(f, { action: "resources", resourceLimits: { initialCost: "", weeklyOperatingHours: "" } }), AT);
+      assert.equal(f.intake.answers.budget, undefined, "empty budget stays unanswered");
+      assert.equal(f.intake.answers.hoursPerWeek, undefined, "empty hours stay unanswered");
+      assert.equal(f.coach.messages.length, before, "no chat turns for an empty save");
+      applyIntakeResources(f.plan, f.coach, f.intake, command(f, { action: "resources", resourceLimits: { initialCost: "1000만원" } }), LATER);
+      assert.equal((f.intake.answers as unknown as Record<string, { status?: string } | undefined>).budget?.status, "answered");
+      assert.equal(f.coach.messages.length, before + 1, "one concise note, not a question-and-answer pair");
+      assert.match(f.coach.messages.at(-1)!.text, /^예산·시간을 고쳤어요: 준비 예산 1000만원$/);
+      applyIntakeResources(f.plan, f.coach, f.intake, command(f, { action: "resources", resourceLimits: { initialCost: "1000만원" } }), LATER);
+      assert.equal(f.coach.messages.length, before + 1, "saving the same value again adds nothing");
+    });
     check("operating volume comes from actual sales ÷ period ÷ price; capacity stays a ceiling", () => {
       const f = fixture("operating");
       answer(f, "business", "동네 반찬 가게");

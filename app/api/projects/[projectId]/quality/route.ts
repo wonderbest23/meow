@@ -29,9 +29,9 @@ export async function GET(
     const audit = await auditProject(projectId, identity.hash);
     return NextResponse.json({ audit });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "품질 감사를 실행하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "품질 감사를 실행하지 못했어요.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message: publicErrorMessage(error, "품질 감사를 실행하지 못했습니다.") } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message: publicErrorMessage(error, "품질 감사를 실행하지 못했어요.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }
@@ -48,9 +48,9 @@ export async function POST(
     const project = await saveQualityAudit(projectId, identity.hash, audit);
     return NextResponse.json({ audit, project });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "품질 감사를 저장하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "품질 감사를 저장하지 못했어요.";
     return NextResponse.json(
-      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message: publicErrorMessage(error, "품질 감사를 저장하지 못했습니다.") } },
+      { error: { code: message.endsWith("_NOT_FOUND") ? message : "QUALITY_AUDIT_FAILED", message: publicErrorMessage(error, "품질 감사를 저장하지 못했어요.") } },
       { status: message.endsWith("_NOT_FOUND") ? 404 : 400 },
     );
   }

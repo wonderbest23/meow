@@ -31,7 +31,7 @@ const MIN_TOKENS = 2_000;
 
 export async function POST(request: Request, context: { params: Promise<{ projectId: string }> }) {
   // 토큰 잔액이 남아 있어도 연타·스크립트 반복으로 모델 호출이 몰리지 않도록 묶는다(ai-fill 과 같은 방식)
-  const limited = await enforceRateLimit("landing-ai-edit", request, { limit: 30, windowMs: 10 * 60_000, message: "요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  const limited = await enforceRateLimit("landing-ai-edit", request, { limit: 30, windowMs: 10 * 60_000, message: "요청이 너무 많아요. 잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
   const { projectId } = await context.params;
   const identity = await requireGuestIdentity();
@@ -42,7 +42,7 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   }
   const project = await getProject(projectId, identity.hash);
   const planId = String((project?.opportunity as { planId?: string } | null)?.planId ?? "");
-  if (!planId) return NextResponse.json({ error: { code: "PLAN_REQUIRED", message: "계획서에서 만든 홈페이지만 AI 수정을 쓸 수 있습니다." } }, { status: 400 });
+  if (!planId) return NextResponse.json({ error: { code: "PLAN_REQUIRED", message: "계획서에서 만든 홈페이지만 AI 수정을 쓸 수 있어요." } }, { status: 400 });
 
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: { code: "BAD_REQUEST", message: "지시문을 확인해 주세요." } }, { status: 400 });
@@ -51,16 +51,16 @@ export async function POST(request: Request, context: { params: Promise<{ projec
   const balance = await resolveTokenBalance(identity.userId, planId).catch(() => null);
   if (!balance) return NextResponse.json({ error: { code: "TOKENS_UNAVAILABLE", message: "토큰 잔액을 확인하지 못했어요. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
   if (balance.remaining < MIN_TOKENS) {
-    return NextResponse.json({ error: { code: "TOKENS_REQUIRED", message: "AI 수정 토큰이 부족합니다. 토큰을 충전해 주세요." }, balance }, { status: 402 });
+    return NextResponse.json({ error: { code: "TOKENS_REQUIRED", message: "AI 수정 토큰이 부족해요. 토큰을 충전해 주세요." }, balance }, { status: 402 });
   }
 
   const page = await loadBrainwavePageServer(body.page);
-  if (!page) return NextResponse.json({ error: { code: "PAGE_NOT_FOUND", message: "페이지를 찾을 수 없습니다." } }, { status: 404 });
+  if (!page) return NextResponse.json({ error: { code: "PAGE_NOT_FOUND", message: "페이지를 찾을 수 없어요." } }, { status: 404 });
 
   /* 글 자리 목록: id → 지금 글(고친 값이 있으면 그것, 없으면 킷 원문) */
   const slots = page.slots.text.map((t) => ({ id: t.id, text: body.texts[t.id] ?? t.text }));
   const config = resolveLLMConfig(identity.hash, "anthropic");
-  if (!config) return NextResponse.json({ error: { code: "AI_UNAVAILABLE", message: "지금은 AI 수정을 쓸 수 없습니다." } }, { status: 503 });
+  if (!config) return NextResponse.json({ error: { code: "AI_UNAVAILABLE", message: "지금은 AI 수정을 쓸 수 없어요." } }, { status: 503 });
 
   let usage = { inputTokens: 0, outputTokens: 0, provider: config.provider as string };
   const result = await completeJson(config, {
@@ -90,8 +90,8 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
   const ok = Boolean(result);
   const recorded = await recordAiEditUsage({ planId, ownerHash: identity.hash, provider: usage.provider, ok, inputTokens: usage.inputTokens, outputTokens: usage.outputTokens });
-  if (!ok) return NextResponse.json({ error: { code: "AI_FAILED", message: "AI 가 답을 만들지 못했습니다. 토큰은 차감되지 않았습니다." } }, { status: 502 });
-  if (!recorded) return NextResponse.json({ error: { code: "USAGE_NOT_RECORDED", message: "사용량을 기록하지 못해 결과를 적용하지 않았습니다. 잠시 후 다시 시도해 주세요." } }, { status: 500 });
+  if (!ok) return NextResponse.json({ error: { code: "AI_FAILED", message: "AI 가 답을 만들지 못했어요. 토큰은 차감되지 않았어요." } }, { status: 502 });
+  if (!recorded) return NextResponse.json({ error: { code: "USAGE_NOT_RECORDED", message: "사용량을 기록하지 못해 결과를 적용하지 않았어요. 잠시 후 다시 시도해 주세요." } }, { status: 500 });
 
   /* 아는 자리만, 글만 받는다 — AI 가 엉뚱한 키를 만들어도 새 자리가 생기지 않는다 */
   const known = new Set(slots.map((s) => s.id));

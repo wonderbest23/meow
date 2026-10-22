@@ -39,7 +39,7 @@ const startSchema = z.object({
   refinement: refinementSchema.optional(),
   refinementSource: z.enum(["edit", "restore"]).default("edit"),
 }).refine((value) => !value.force || Boolean(value.refinement), {
-  message: "전체 수정에 반영할 기본정보가 필요합니다.",
+  message: "전체 수정에 반영할 기본정보가 필요해요.",
 });
 
 function packageReady(project: ProjectRecord) {
@@ -76,7 +76,7 @@ export async function GET(
         const status = await instance.status();
         workflowStatus = status.status;
         if (status.status === "errored" || status.status === "terminated") {
-          const message = status.error?.message || "서버 제작 작업이 중단되었습니다.";
+          const message = status.error?.message || "서버 제작 작업이 중단되었어요.";
           run = await updateDraftPackageRun(
             projectId,
             identity.hash,
@@ -98,12 +98,12 @@ export async function GET(
 
     return NextResponse.json({ run, packageReady: packageReady(project), workflowStatus });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "제작 상태를 불러오지 못했습니다.";
+    const message = error instanceof Error ? error.message : "제작 상태를 불러오지 못했어요.";
     return NextResponse.json(
       {
         error: {
           code: message === "PROJECT_NOT_FOUND" ? message : "DRAFT_PACKAGE_STATUS_FAILED",
-          message: publicErrorMessage(error, "제작 상태를 불러오지 못했습니다."),
+          message: publicErrorMessage(error, "제작 상태를 불러오지 못했어요."),
         },
       },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 500 },
@@ -170,9 +170,9 @@ export async function POST(
     }
     return NextResponse.json({ run, packageReady: false }, { status: 202 });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "자료 제작을 시작하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "자료 제작을 시작하지 못했어요.";
     // 실패 기록(run)도 고객 화면에 그대로 보이므로 내부 오류 원문 대신 고객용 문구를 남긴다
-    const publicMessage = publicErrorMessage(error, "자료 제작을 시작하지 못했습니다.");
+    const publicMessage = publicErrorMessage(error, "자료 제작을 시작하지 못했어요.");
     if (run && identityHash && projectId) {
       run = failDraftPackageRun(run, publicMessage);
       await saveDraftPackageRun(projectId, identityHash, run).catch(() => undefined);

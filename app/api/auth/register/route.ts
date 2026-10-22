@@ -18,19 +18,19 @@ function confirmationPending() {
   return NextResponse.json({
     authenticated: false,
     confirmationRequired: true,
-    message: "확인 메일을 확인해 주세요. 메일의 링크로 인증한 후 로그인할 수 있습니다. 이미 가입했다면 로그인해 주세요.",
+    message: "확인 메일을 확인해 주세요. 메일의 링크로 인증한 후 로그인할 수 있어요. 이미 가입했다면 로그인해 주세요.",
   }, { status: 202, headers: { "Cache-Control": "private, no-store" } });
 }
 
 function confirmationUnavailable() {
-  return NextResponse.json({ error: { code: "EMAIL_CONFIRMATION_UNAVAILABLE", message: "이메일 확인 설정을 확인하지 못했습니다. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
+  return NextResponse.json({ error: { code: "EMAIL_CONFIRMATION_UNAVAILABLE", message: "이메일 확인 설정을 확인하지 못했어요. 잠시 후 다시 시도해 주세요." } }, { status: 503 });
 }
 
 export async function POST(request: Request) {
   const limited = await enforceRateLimit("auth-register", request, {
     limit: 5,
     windowMs: 60 * 60_000,
-    message: "가입 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.",
+    message: "가입 시도가 너무 많아요. 잠시 후 다시 시도해 주세요.",
   });
   if (limited) return limited;
 
@@ -51,7 +51,7 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: { code: "EMAIL_RATE_LIMITED", message: AUTH_MESSAGES.emailFrequency } }, { status: 429 });
       }
       if (["email_address_not_authorized", "over_email_send_rate_limit", "unexpected_failure"].includes(created.error.code ?? "")) {
-        return NextResponse.json({ error: { code: "EMAIL_DELIVERY_UNAVAILABLE", message: "확인 메일을 발송하지 못했습니다. 잠시 후 다시 시도하거나 다른 로그인 방법을 이용해 주세요." } }, { status: 503 });
+        return NextResponse.json({ error: { code: "EMAIL_DELIVERY_UNAVAILABLE", message: "확인 메일을 발송하지 못했어요. 잠시 후 다시 시도하거나 다른 로그인 방법을 이용해 주세요." } }, { status: 503 });
       }
       return NextResponse.json({ error: { code: "REGISTER_FAILED", message: "가입 정보를 확인해 주세요." } }, { status: 400 });
     }
@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     return confirmationPending();
   } catch {
     return NextResponse.json(
-      { error: { code: "REGISTER_FAILED", message: "가입 처리를 완료하지 못했습니다. 확인 메일이 도착했다면 먼저 이메일을 인증해 주세요." } },
+      { error: { code: "REGISTER_FAILED", message: "가입 처리를 완료하지 못했어요. 확인 메일이 도착했다면 먼저 이메일을 인증해 주세요." } },
       { status: 400 },
     );
   }

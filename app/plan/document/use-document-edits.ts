@@ -35,7 +35,7 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
         if (!draft || typeof draft.id !== "string" || typeof draft.html !== "string" || typeof draft.baseGeneratedAt !== "string") continue;
         if (htmlToMarkdown(draft.html) === section.markdown) { localStorage.removeItem(storageKey(value.id, key)); continue; }
         drafts.current[key] = draft; recovered[key] = draft.html;
-        state(key, { status: "failed", message: "저장하지 못한 초안을 복구했어요. 내용을 확인한 뒤 다시 저장해주세요." });
+        state(key, { status: "failed", message: "저장하지 못한 초안을 복구했어요. 내용을 확인한 뒤 다시 저장해 주세요." });
       } catch { /* An unreadable local draft must not replace the server document. */ }
     }
     return recovered;
@@ -52,7 +52,7 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
       const response = await fetch("/api/plan/document/section", { method: "PATCH", signal: controller.signal, headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId: target.id, key, baseGeneratedAt: draft.baseGeneratedAt, action, ...(action === "save" ? { markdown: htmlToMarkdown(draft.html) } : {}) }) });
       const data = await response.json();
       if (!current()) return;
-      if (!response.ok) throw new Error(data.message || "저장하지 못했어요. 초안은 이 기기에 남아 있습니다.");
+      if (!response.ok) throw new Error(data.message || "저장하지 못했어요. 초안은 이 기기에 남아 있어요.");
       const section = data.section as StoredSection;
       target.sections[key] = section;
       delete restoreAttempts.current[key];
@@ -67,7 +67,7 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
     } catch (error) {
       if (!current()) return;
       const backedUp = drafts.current[key] ? remember(key, drafts.current[key]) : true;
-      state(key, { status: "failed", message: backedUp ? (error instanceof Error ? error.message : "저장하지 못했어요.") : "서버와 기기에 저장하지 못했어요. 이 화면을 닫지 말고 다시 저장해주세요." });
+      state(key, { status: "failed", message: backedUp ? (error instanceof Error ? error.message : "저장하지 못했어요.") : "서버와 기기에 저장하지 못했어요. 이 화면을 닫지 말고 다시 저장해 주세요." });
     } finally { requests.current.delete(controller); if (current()) restoring.current.delete(key); }
   }
   function stage(key: string, html: string) {

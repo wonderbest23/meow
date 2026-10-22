@@ -7,10 +7,8 @@ import { usePathname } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, setActivePlan, subscribePlanState, type Plan } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
-import { journeySteps, launchHref, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
+import { journeySteps, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
-import { launchStatus, launchSteps, readLaunch } from "../../lib/plan-builder/business-launch";
-import { readCoach } from "../../lib/plan-builder/coach";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
@@ -21,8 +19,8 @@ export type DocumentToc = { planId: string; chapters: string[]; current: number 
 
 const LIST_OPEN_KEY = "oneulstart:rail-plans-open";
 
-/** 왼쪽 목록에서 표시할 수 있는 자리 — 네 단계 + 사업 관리의 '사업 시작하기' */
-type RailHere = JourneyStepId | "launch";
+/** 왼쪽 목록에서 표시할 수 있는 자리 — 다섯 단계(journey.ts 의 JOURNEY_ORDER) */
+type RailHere = JourneyStepId;
 /** 지금 화면이 어디인지(사업 관리 화면은 주소의 tab 으로) */
 function stepFor(pathname: string, tab: string | null): RailHere | null {
   if (pathname.startsWith("/plan/chat")) return "chat";
@@ -52,24 +50,20 @@ const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: string; ba
   homepage: { message: "사업계획서를 완성해야 홈페이지를 만들 수 있어요.", back: 1, label: "사업계획서로 가기" },
   /* 유지보수(실적 기록·홈페이지 관리)는 홈페이지가 없어도 쓸 수 있다 — 사업 관리 화면과 같은 규칙. 막히는 건 사업 방향을 정하기 전뿐 */
   care: { message: "사업 방향 정리를 마쳐야 유지보수를 쓸 수 있어요.", back: 0, label: "대화로 가기" },
+  launch: { message: "사업 방향 정리를 마쳐야 사업 시작 준비를 쓸 수 있어요.", back: 0, label: "대화로 가기" },
 };
 
-/** 사업 하나를 펼친 목차 — 대화 · 사업계획서 · 홈페이지 · 유지보수 */
+/** 사업 하나를 펼친 목차 — 대화 · 사업계획서 · 홈페이지 · 사업 시작하기 · 유지보수 */
 function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: RailHere | null; documentToc?: DocumentToc; pathname: string }) {
   const homepage = useHomepageStatus(plan.id);
-  const steps = journeySteps(plan, homepage);
   /*
    * 사업 관리 화면(사업 요약·사업 시작하기·유지보수)이 열리는지 — 대화가 끝나기 전에는 화면이 대화로 되돌려 보낸다.
    * 예전엔 '사업 시작하기'로 가는 길이 대화 화면의 링크 하나뿐이라 9단계 준비 과정과 홍보 키트를 다시 찾기 어려웠다.
    */
   const workspaceOpen = !shouldResumeBusinessChat(plan);
-  const launch = useMemo(() => {
-    if (!workspaceOpen) return null;
-    const state = readLaunch(plan);
-    const all = launchSteps(plan, state);
-    const finished = state.configured && all.every(step => ["done", "skipped"].includes(launchStatus(state, step)));
-    return { label: readCoach(plan.answers)?.stage === "operating" ? "운영 개선하기" : "사업 시작하기", state: finished ? "done" : state.configured ? "active" : "todo" };
-  }, [plan, workspaceOpen]);
+  /* 단계 목록은 journey.ts 한 곳에서 — '사업 시작하기'는 사업 관리 화면이 열릴 때만 보인다(번호는 보이는 순서대로) */
+  const allSteps = useMemo(() => journeySteps(plan, homepage), [plan, homepage]);
+  const steps = useMemo(() => allSteps.filter(step => step.id !== "launch" || workspaceOpen), [allSteps, workspaceOpen]);
   const [locked, setLocked] = useState<{ message: string; href: string; label: string } | null>(null);
   // 앱에서는 홈페이지 화면에 '내 도메인 연결' 칸이 없다(웹 전용 상품) — 목차에서도 뺀다
   const [inApp, setInApp] = useState(false);
@@ -82,28 +76,21 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
     // 홈페이지 공개 여부를 아직 모르면(불러오는 중·실패) 막혔다고 말하지 않는다
     if (id === "care" && homepage === null) return;
     const guide = LOCKED_GUIDE[id];
-    setLocked({ message: guide.message, href: steps[guide.back].href, label: guide.label });
+    setLocked({ message: guide.message, href: allSteps[guide.back].href, label: guide.label });
   };
   return <><ol className={styles.steps}>
     {steps.map((step, index) => {
       const current = here === step.id;
-      const reachable = step.id === "care" ? workspaceOpen : step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
-      /* '사업 시작하기'를 홈페이지와 유지보수 사이에 끼우면 유지보수 번호가 하나 밀린다 */
-      const number = step.id === "care" && launch ? index + 2 : index + 1;
+      /* 사업 시작하기·유지보수는 홈페이지 없이도 쓸 수 있다(사업 관리 화면과 같은 규칙) */
+      const reachable = step.id === "care" || step.id === "launch" ? workspaceOpen : step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
       const body = <>
-        <i aria-hidden="true" data-state={step.state}>{step.state === "done" ? <Check size={11} strokeWidth={3} /> : number}</i>
+        <i aria-hidden="true" data-state={step.state}>{step.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>
         <span>{step.label}</span>
       </>;
       return <Fragment key={step.id}>
-        {step.id === "care" && launch && <li>
-          <Link className={styles.step} href={launchHref(plan.id)} aria-current={here === "launch" ? "page" : undefined} onClick={event => { setActivePlan(plan.id); sameWorkspaceTab(event, plan.id, "launch"); }}>
-            <i aria-hidden="true" data-state={launch.state}>{launch.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>
-            <span>{launch.label}</span>
-          </Link>
-        </li>}
         <li>
         {reachable
-          ? <Link className={styles.step} href={step.href} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); }}>{body}</Link>
+          ? <Link className={styles.step} href={step.href} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); else if (step.id === "launch") sameWorkspaceTab(event, plan.id, "launch"); }}>{body}</Link>
           : <button type="button" className={styles.step} aria-disabled="true" title="앞 단계를 마치면 열려요" onClick={() => openLocked(step.id)}>{body}</button>}
         {/* 문서를 보고 있으면 그 문서의 목차를 바로 아래에 */}
         {step.id === "document" && current && documentToc?.planId === plan.id && documentToc.chapters.length > 0 && <ul className={styles.parts} aria-label="사업계획서 목차">

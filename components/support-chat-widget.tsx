@@ -70,7 +70,7 @@ function topicChoiceLabel(label: string) {
   const lastCharacter = label.at(-1);
   const code = lastCharacter ? lastCharacter.charCodeAt(0) - 0xac00 : -1;
   const hasFinalConsonant = code >= 0 && code <= 11171 && code % 28 !== 0;
-  return `${label}${hasFinalConsonant ? "이" : "가"} 궁금해요.`;
+  return `${label}${hasFinalConsonant ? "이" : "가"} 궁금해요`;
 }
 
 export function SupportChatWidget() {
@@ -555,7 +555,7 @@ export function SupportChatWidget() {
         {
           id: crypto.randomUUID(),
           sender: "assistant",
-          body: "이 질문은 자동 답변만으로 정하기 어려워요. 지금 보고 있는 화면과 하려던 일을 함께 적어 운영자에게 남겨 주세요.",
+          body: "이 질문은 자동 답변만으로 정하기 어려워요. 지금 보고 있는 화면과 하려던 일을 함께 적어 고객센터에 남겨 주세요.",
           createdAt: new Date().toISOString(),
           allowOperator: true,
         },
@@ -896,10 +896,10 @@ export function SupportChatWidget() {
                   </button>
                 )}
                 {mode === "support" && showAllHistory && (
-                  <div className="support-chat-saved-history" aria-label="이전 운영자 상담">
+                  <div className="support-chat-saved-history" aria-label="이전 고객센터 상담">
                     {chat.messages.map((item) => (
                       <article key={item.id} className={item.sender === "customer" ? "customer" : "admin"}>
-                        <span>{item.sender === "customer" ? "나" : "운영자"}</span>
+                        <span>{item.sender === "customer" ? "나" : "고객센터"}</span>
                         <p>{item.body}</p>
                         <time dateTime={item.createdAt}>{messageTime(item.createdAt)}</time>
                       </article>
@@ -940,7 +940,7 @@ export function SupportChatWidget() {
                   <section className="support-chat-home" aria-label="자주 묻는 질문">
                     <div className="support-chat-bot-message">
                       <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span>
-                      <div><strong>무엇을 도와드릴까요?</strong><p>가까운 내용을 말풍선에서 골라주세요.</p></div>
+                      <div><strong>무엇을 도와드릴까요?</strong><p>가까운 내용을 말풍선에서 골라 주세요.</p></div>
                     </div>
                     {!selectedCategory ? (
                       <div className="support-chat-choice-bubbles" aria-label="문의 종류 선택">
@@ -950,7 +950,7 @@ export function SupportChatWidget() {
                           </button>
                         ))}
                         <button type="button" className="operator" onClick={() => startOperatorInquiry()}>
-                          운영자에게 직접 문의할게요.
+                          고객센터에 직접 문의할게요
                         </button>
                       </div>
                     ) : (
@@ -966,9 +966,9 @@ export function SupportChatWidget() {
                               {item.question}
                             </button>
                           ))}
-                          <button type="button" className="back" onClick={() => setSelectedCategoryId(null)}>다른 내용을 고를게요.</button>
+                          <button type="button" className="back" onClick={() => setSelectedCategoryId(null)}>다른 내용을 고를게요</button>
                           <button type="button" className="operator" onClick={() => startOperatorInquiry()}>
-                            운영자에게 직접 문의할게요.
+                            고객센터에 직접 문의할게요
                           </button>
                         </div>
                       </>
@@ -978,14 +978,14 @@ export function SupportChatWidget() {
                 ) : mode === "support" && chat.messages.length === 0 && quickMessages.length === 0 ? (
                   <div className="support-chat-bot-message">
                     <span><img src="/support-agent-avatar-2026.png" alt="" width="34" height="34" /></span>
-                    <div><strong>{operatorMode ? "문의 내용을 남겨주세요." : "무엇이 궁금한가요?"}</strong><p>{operatorMode ? "확인 후 이 대화창으로 답변해 드릴게요." : "예) 결제한 문서를 다시 내려받고 싶어요 — 이렇게 한 줄로 적어주세요."}</p></div>
+                    <div><strong>{operatorMode ? "문의 내용을 남겨 주세요." : "무엇이 궁금한가요?"}</strong><p>{operatorMode ? "확인 후 이 대화창으로 답변해 드릴게요." : "예) 결제한 문서를 다시 내려받고 싶어요 — 이렇게 한 줄로 적어 주세요."}</p></div>
                   </div>
                 ) : null}
               </div>
 
               <form className="support-chat-form" onSubmit={sendMessage}>
                 <div className="support-chat-form-heading">
-                  <span>{mode === "consult" ? "상담사에게 이야기하기" : operatorMode ? "운영자에게 전달됩니다" : "직접 질문하기"}</span>
+                  <span>{mode === "consult" ? "상담사에게 이야기하기" : operatorMode ? "고객센터에 전달돼요" : "직접 질문하기"}</span>
                   {mode === "support" && !showQuickMenu && <button type="button" onClick={openQuestionMenu}><ClipboardList /> 질문 다시 고르기</button>}
                 </div>
                 {error && <p className="support-chat-error">{error}</p>}

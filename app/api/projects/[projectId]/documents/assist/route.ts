@@ -55,7 +55,7 @@ export async function POST(
     }
     const previous = recentRequests.get(identity.hash) ?? 0;
     if (Date.now() - previous < 3_000) {
-      return privateJson({ error: { code: "ASSIST_RATE_LIMITED", message: "문장을 검토하고 있습니다. 3초 뒤 다시 눌러주세요." } }, { status: 429 });
+      return privateJson({ error: { code: "ASSIST_RATE_LIMITED", message: "문장을 검토하고 있어요. 3초 뒤 다시 눌러 주세요." } }, { status: 429 });
     }
     recentRequests.set(identity.hash, Date.now());
 
@@ -112,12 +112,12 @@ export async function POST(
     return privateJson({ result, model: config.model });
   } catch (error) {
     const message = error instanceof Error && error.name === "TimeoutError"
-      ? "문장 검토 시간이 초과되었습니다. 잠시 후 다시 시도해주세요."
+      ? "문장 검토 시간이 초과되었어요. 잠시 후 다시 시도해 주세요."
       : error instanceof z.ZodError
-        ? "인공지능 검토 결과를 정리하지 못했습니다. 다시 눌러주세요."
-        : error instanceof Error ? error.message : "문장을 검토하지 못했습니다.";
+        ? "AI 검토 결과를 정리하지 못했어요. 다시 눌러 주세요."
+        : error instanceof Error ? error.message : "문장을 검토하지 못했어요.";
     return privateJson(
-      { error: { code: "DOCUMENT_ASSIST_FAILED", message: publicErrorMessage(error, "문장을 검토하지 못했습니다.", { DOCUMENT_NOT_FOUND: "문서를 찾을 수 없습니다." }) } },
+      { error: { code: "DOCUMENT_ASSIST_FAILED", message: publicErrorMessage(error, "문장을 검토하지 못했어요.", { DOCUMENT_NOT_FOUND: "문서를 찾을 수 없어요." }) } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

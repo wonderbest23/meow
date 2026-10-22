@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { KSIC_DIVISION_STRUCTURES, KSIC_STRUCTURE_OVERRIDES, KSIC_SYNONYMS, SECTOR_DIVISIONS, capacityUnitOrder, ksicAncestors, ksicByCode, ksicChildren, ksicDivision, ksicEntries, ksicPath, ksicStructure, licenseHint, isFinanceKsic, FINANCE_LICENSE_HINT, revenueBasis, searchKsic, structureFieldLabels, structureSummary } from "../lib/plan-builder/ksic";
 import { STRUCTURE_LABELS } from "../lib/plan-builder/business-structure";
+import { KSIC_NAME_HINTS, ksicNameHint } from "../lib/plan-builder/ksic-hints";
 
 // 1) 색인 무결성 — KSIC 11차 공표 개수
 assert.deepEqual([1, 2, 3, 4, 5].map(l => ksicEntries(l as 1 | 2 | 3 | 4 | 5).length), [21, 77, 234, 501, 1205], "대/중/소/세/세세 개수");
@@ -127,6 +128,21 @@ assert.ok(!all("옷 만드는 공장").includes("74212"), "'공장'이 '공공�
 assert.ok(all("집을 짓는 건축 회사").some(code => code.startsWith("41")), "짓는·건축이 있으면 건설업 허용");
 assert.ok(top("반도체 부품 제조").some(code => code.startsWith("26")), "제조가 있으면 제조업 허용");
 for (const [text, code] of [["중고차를 사고파는 앱", "45120"], ["옷을 수선해주는 가게", "95391"], ["휴대폰 수리점", "95120"], ["차를 빌려주는 서비스", "76110"], ["강아지 산책을 대신해주는 앱", "96995"], ["와인 수입", "46331"], ["옷 대여 서비스", "76292"], ["노인 방문 요양", "87293"], ["보험 비교 사이트", "63120"], ["여행 가이드 앱", "75290"]] as const) assert.equal(all(text)[0], code, `${text} → ${all(text)}`);
+// 2026-10-22 여정 점검: 가게에서 만들어 파는 먹거리는 음식 업종 — 반찬가게가 '유통·온라인 판매'로 잡혀 스마트스토어 칩이 따라 나왔다
+for (const code of ["47223", "47221", "10601", "10701", "10709"]) assert.equal(ksicStructure(code)?.sector, "food_beverage", `${code} is food_beverage`);
+assert.equal(ksicStructure("47223")?.license, "registration", "반찬가게는 즉석판매제조·가공업 신고 그대로");
+assert.equal(ksicStructure("47223")?.capital, "storefront");
+assert.equal(ksicStructure("47222")?.sector, "retail_commerce", "건강기능식품 판매는 소매 그대로");
+assert.equal(ksicStructure("47912")?.sector, "retail_commerce", "쇼핑몰은 소매 그대로");
+// 자주 쓰는 말인데 공식 이름에 없어 검색이 비던 표현
+for (const text of ["캔들", "향초", "디퓨저", "수제 비누", "캔들 공방", "PT", "무인 매장", "애견미용", "공부방"]) assert.ok(searchKsic(text, { limit: 3, minLevel: 5 }).length > 0, `${text} has candidates`);
+assert.equal(first("네일"), "96119");
+assert.equal(first("속눈썹 연장"), "96119");
+assert.equal(first("도시락 가게"), "56199");
+// 캔들·향초는 공식 분류 '연소물 제조(33992)' — 생활화학제품 안전확인 신고 안내가 붙은 코드
+assert.ok(top("향초 만들어 팔기").includes("33992") && top("향초 만들어 팔기").includes("47813"), `향초 → ${top("향초 만들어 팔기")}`);
+assert.equal(ksicNameHint("96119"), "네일·속눈썹·왁싱 포함");
+for (const code of Object.keys(KSIC_NAME_HINTS)) assert.ok(ksicByCode(code)?.level === 5, `hint code exists: ${code}`);
 assert.deepEqual(searchKsic(""), []);
 assert.deepEqual(searchKsic("ㅋㅋㅋ"), [], "무의미 입력은 후보 없음");
 const cafe = searchKsic("카페");

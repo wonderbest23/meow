@@ -17,7 +17,7 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("funnel", request, {
     limit: 120,
     windowMs: 10 * 60_000,
-    message: "요청이 너무 많습니다.",
+    message: "요청이 너무 많아요.",
   });
   if (limited) return limited;
 

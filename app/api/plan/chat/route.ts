@@ -88,8 +88,8 @@ async function prepareQuota(plan: ServerPlan, keys: string[], revision: number) 
   const count = staleRewriteCount(plan.sections, revision, keys);
   if (!count) return null;
   const quota = await resolveRegenQuota(plan.id);
-  if (quota.unavailable) return json({ code: "quota_unavailable", message: "재작성 이용량을 확인하지 못했어요. 기존 문서는 보관되어 있고 제작은 시작하지 않았어요." }, 503);
-  return quota.remaining < count ? json({ message: `수정 내용 반영에 ${count}회 재작성이 필요합니다. 문서 화면에서 남은 횟수를 확인해주세요.` }, 402) : null;
+  if (quota.unavailable) return json({ code: "quota_unavailable", message: "다시 생성 횟수를 확인하지 못했어요. 기존 문서는 그대로 있고 작성은 시작하지 않았어요." }, 503);
+  return quota.remaining < count ? json({ message: `바뀐 내용을 반영하려면 다시 생성 ${count}회가 필요해요. 문서 화면에서 남은 횟수를 확인해 주세요.` }, 402) : null;
 }
 
 async function markPrepareDispatch(ownerHash: string, planId: string, runId: string, accepted: boolean, token?: string) {
@@ -117,7 +117,7 @@ async function dispatchPreparedPlan(ownerHash: string, planId: string, runId: st
     const status = await generationStatus(workflow, runId);
     if (status !== null) {
       const saved = await markPrepareDispatch(ownerHash, planId, runId, true).catch(() => null);
-      if (["errored", "terminated"].includes(status)) return json({ plan: publicPlan(saved ?? plan), code: "generation_failed", message: "기존 제작 작업이 중단됐어요. 자동으로 다시 생성하지 않았습니다.", started: false }, 502);
+      if (["errored", "terminated"].includes(status)) return json({ plan: publicPlan(saved ?? plan), code: "generation_failed", message: "기존 제작 작업이 중단됐어요. 자동으로 다시 생성하지 않았어요.", started: false }, 502);
       return json({ plan: publicPlan(saved ?? plan), started: true, paid: generation.paid });
     }
     if (generation.dispatchState === "dispatched") return json({ plan: publicPlan(plan), started: true, paid: generation.paid }, 202);
@@ -146,7 +146,7 @@ async function dispatchPreparedPlan(ownerHash: string, planId: string, runId: st
         return prepareUnavailable();
       }
       const saved = await markPrepareDispatch(ownerHash, planId, runId, true, token).catch(() => null);
-      if (["errored", "terminated"].includes(recovered)) return json({ plan: publicPlan(saved ?? plan), code: "generation_failed", message: "기존 제작 작업이 중단됐어요. 자동으로 다시 생성하지 않았습니다.", started: false }, 502);
+      if (["errored", "terminated"].includes(recovered)) return json({ plan: publicPlan(saved ?? plan), code: "generation_failed", message: "기존 제작 작업이 중단됐어요. 자동으로 다시 생성하지 않았어요.", started: false }, 502);
       return json({ plan: publicPlan(saved ?? plan), started: true, paid: generation.paid });
     }
     const saved = await markPrepareDispatch(ownerHash, planId, runId, true, token).catch(() => null);
@@ -156,22 +156,22 @@ async function dispatchPreparedPlan(ownerHash: string, planId: string, runId: st
 }
 
 async function preparePlan(ownerHash: string, planId: string | undefined, input: z.infer<typeof requestSchema>) {
-  if (!planId) return json({ message: "먼저 어떤 사업인지 대화로 알려주세요." }, 400);
+  if (!planId) return json({ message: "먼저 어떤 사업인지 대화로 알려 주세요." }, 400);
   const signature = createHash("sha256").update(JSON.stringify({ action: "prepare", planId, revision: input.revision, message: input.message, retry: input.retry })).digest("hex");
   try {
     for (let attempt = 0; attempt < 5; attempt++) {
       const state = await loadPlanState(ownerHash), plan = state.plans.find(item => item.id === planId);
       const coach = plan && readCoach(plan.answers);
-      if (!plan || !coach) return json({ message: "이 사업을 찾을 수 없습니다." }, 404);
+      if (!plan || !coach) return json({ message: "이 사업을 찾을 수 없어요." }, 404);
       const existing = readGeneration(plan), receipt = existing?.receipts.find(item => item.id === input.requestId);
       if (receipt && receipt.signature !== signature || coach.messages.some(message => message.id === input.requestId)) return json({ code: "request_reused", message: "같은 요청 번호로 다른 작업을 시작할 수 없어요." }, 409);
       const access = await resolvePlanAccess(plan.planType, plan.id);
-      if (!access.authenticated) return json({ message: "대화는 보관했습니다. 로그인 후 초안을 만들 수 있습니다.", login: true }, 401);
+      if (!access.authenticated) return json({ message: "대화는 보관했어요. 로그인 후 초안을 만들 수 있어요.", login: true }, 401);
       if (receipt?.accepted) return json({ plan: publicPlan(plan), started: true, paid: receipt.paid });
       // 무료 체험은 없다(소유자 결정 2026-10-09) — 사업계획서 본문은 결제한 계획서만 쓴다. 화면은 이 응답을 받으면 결제 화면으로 보낸다.
       if (!access.paid) return json({ code: "payment_required", message: "사업계획서 문서는 결제 후에 작성해요. 결제 화면으로 이동할게요.", pay: true }, 402);
       if (coach.revision !== input.revision) return prepareConflict();
-      if (!coach.ready) return json({ message: "먼저 어떤 사업인지 대화로 알려주세요." }, 400);
+      if (!coach.ready) return json({ message: "먼저 어떤 사업인지 대화로 알려 주세요." }, 400);
       const coachJob = readCoachJob(plan.answers);
       if (isCoachJobActive(coachJob) && !isCoachJobStale(coachJob!)) return prepareConflict();
       const keys = chaptersForType(plan.planType).flatMap(chapter => chapter.sections.map(section => `${chapter.id}/${section.id}`)).filter(key => checkSectionAccess(access, key) === "ok");
@@ -189,7 +189,7 @@ async function preparePlan(ownerHash: string, planId: string | undefined, input:
         if (status === null) return prepareUnavailable();
         if (status === "complete") reusable = false;
       }
-      if ((existing?.receipts.length ?? 0) >= 128) return json({ code: "prepare_limit", message: "제작 요청 보관 한도에 도달했어요. 기존 요청과 문서를 확인해주세요." }, 429);
+      if ((existing?.receipts.length ?? 0) >= 128) return json({ code: "prepare_limit", message: "제작 요청 보관 한도에 도달했어요. 기존 요청과 문서를 확인해 주세요." }, 429);
       // A reservation with no dispatch claim can be superseded without paid work.
       if (existing && !reusable && existing.dispatchState !== "reserved") {
         const status = await generationStatus(workflow, existing.runId);
@@ -234,7 +234,7 @@ export async function GET(request: Request) {
   const id = new URL(request.url).searchParams.get("planId");
   let plan = id ? state.plans.find(p => p.id === id) : state.plans.filter(p => readCoach(p.answers)).sort((a,b) => b.updatedAt.localeCompare(a.updatedAt))[0];
   if (!plan) return json({ plan: null, authenticated: !!identity.userId });
-  if (!readCoach(plan.answers)) return json({ message: "이 문서는 내 사업 목록의 기존 편집 화면에서 확인해주세요." }, 404);
+  if (!readCoach(plan.answers)) return json({ message: "이 문서는 내 사업 목록의 기존 편집 화면에서 확인해 주세요." }, 404);
   const visible = await visiblePlan(plan, identity.hash);
   plan = visible.plan;
   const access = await resolvePlanAccess(plan.planType, plan.id);
@@ -259,12 +259,12 @@ async function postLegacyChat(request: Request) {
   const limited = await enforceRateLimit("business-coach", request, { limit: 24, windowMs: 10 * 60000 });
   if (limited) return limited;
   const parsed = requestSchema.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return json({ message: "메시지를 다시 확인해주세요." }, 400);
+  if (!parsed.success) return json({ message: "메시지를 다시 확인해 주세요." }, 400);
   const input = parsed.data;
   const identity = await requireGuestIdentity();
   const state = await loadPlanState(identity.hash);
   let plan = state.plans.find(p => p.id === (input.planId ?? `plan_${input.requestId}`));
-  if (input.planId && !plan) return json({ message: "이 사업을 찾을 수 없습니다." }, 404);
+  if (input.planId && !plan) return json({ message: "이 사업을 찾을 수 없어요." }, 404);
   const visible = plan ? await visiblePlan(plan, identity.hash) : null;
   if (visible) {
     const index = state.plans.findIndex(p => p.id === visible.plan.id);
@@ -272,10 +272,10 @@ async function postLegacyChat(request: Request) {
     plan = visible.plan;
   }
   const previous = plan ? readCoach(plan.answers) : null;
-  if (plan && !previous) return json({ message: "기존 문서를 바꾸려면 내 사업 목록에서 해당 문서를 열어주세요." }, 400);
+  if (plan && !previous) return json({ message: "기존 문서를 바꾸려면 내 사업 목록에서 해당 문서를 열어 주세요." }, 400);
   if (input.action === "prepare") return preparePlan(identity.hash, plan?.id, input);
   if (previous?.messages.some(m => m.id === input.requestId)) return json({ plan: publicPlan(plan!), authenticated: !!identity.userId });
-  if ((previous?.revision ?? 0) !== input.revision) return json({ message: "다른 화면에서 수정됐습니다. 최신 대화를 불러와주세요." }, 409);
+  if ((previous?.revision ?? 0) !== input.revision) return json({ message: "다른 화면에서 수정됐어요. 최신 대화를 불러와 주세요." }, 409);
 
   const oldJob = plan ? readCoachJob(plan.answers) : null;
   const shownJob = visible?.job ?? null;
@@ -285,18 +285,18 @@ async function postLegacyChat(request: Request) {
 
   const retry = !!input.retry && !!plan && !!oldJob && oldJob.message.id === input.requestId && shownJob?.status === "failed";
   if (input.retry && !retry) return json({ message: "다시 시도할 작업을 찾지 못했어요. 대화를 새로 불러와 주세요." }, 409);
-  if (retry && oldJob!.attempt >= 3) return json({ message: "여러 번 완성하지 못했어요. 잠시 후 내용을 짧게 정리해 다시 보내주세요." }, 429);
-  if (!retry && !input.message) return json({ message: "메시지를 입력해주세요." }, 400);
+  if (retry && oldJob!.attempt >= 3) return json({ message: "여러 번 완성하지 못했어요. 잠시 후 내용을 짧게 정리해 다시 보내 주세요." }, 429);
+  if (!retry && !input.message) return json({ message: "메시지를 입력해 주세요." }, 400);
   // 상담 기록(하루 횟수)을 못 읽어도 사업 기획 대화는 막지 않는다 — 횟수 저장은 아래에서 건너뛴다
   const session = await loadConsultSession(identity.hash).catch(() => null);
   const limit = consultLimitFor(identity.userId);
   // 상담 저장소를 못 읽으면 요청 수로 센다(/api/consult 와 같은 한도 칸) — 한도를 건너뛰지 않게
   const overLimit = !retry && (session ? session.turnsToday >= limit : !(await checkRateLimit("consult-owner-day", identity.hash, { limit, windowMs: 24 * 60 * 60_000 })).ok);
-  if (overLimit) return json({ message: identity.userId ? "오늘 대화 이용량을 모두 사용했습니다. 저장된 계획은 계속 확인할 수 있습니다." : "로그인하면 지금 대화에서 이어갈 수 있습니다.", login: !identity.userId }, 429);
-  if (!resolvePlanningLLMConfig(identity.hash)) return json({ message: "사업 기획 AI 연결을 준비 중입니다. 잠시 후 다시 시도해주세요." }, 503);
-  if ((previous?.messages.length ?? 0) >= 160) return json({ message: "대화가 길어졌습니다. 작성한 문서에서 이어서 수정해주세요." }, 400);
-  if ((previous?.messages.reduce((total, m) => total + m.text.length, 0) ?? 0) + input.message.length > 240000) return json({ message: "첨부한 대화 자료가 많습니다. 필요한 부분만 나누어 새 대화에서 이어가주세요." }, 413);
-  if (!plan && state.plans.filter(p => readCoach(p.answers)).length >= 20) return json({ message: "기존 사업 대화에서 이어가거나 사용하지 않는 사업을 삭제해주세요." }, 400);
+  if (overLimit) return json({ message: identity.userId ? "오늘 대화 이용량을 모두 사용했어요. 저장된 계획은 계속 확인할 수 있어요." : "로그인하면 지금 대화에서 이어갈 수 있어요.", login: !identity.userId }, 429);
+  if (!resolvePlanningLLMConfig(identity.hash)) return json({ message: "사업 기획 AI 연결을 준비 중이에요. 잠시 후 다시 시도해 주세요." }, 503);
+  if ((previous?.messages.length ?? 0) >= 160) return json({ message: "대화가 길어졌어요. 작성한 문서에서 이어서 수정해 주세요." }, 400);
+  if ((previous?.messages.reduce((total, m) => total + m.text.length, 0) ?? 0) + input.message.length > 240000) return json({ message: "첨부한 대화 자료가 많아요. 필요한 부분만 나누어 새 대화에서 이어가 주세요." }, 413);
+  if (!plan && state.plans.filter(p => readCoach(p.answers)).length >= 20) return json({ message: "기존 사업 대화에서 이어가거나 사용하지 않는 사업을 삭제해 주세요." }, 400);
   const at = new Date().toISOString();
   const previousUpdatedAt = plan?.updatedAt ?? null;
   const workflow = await binding();

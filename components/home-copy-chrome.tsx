@@ -107,7 +107,7 @@ export function HomeCopyChrome({ hidden, selected }: { hidden: string[]; selecte
                   : <button type="button" className="danger" onClick={() => send({ type: "sc-hide", id: box.id })}>삭제</button>
               ) : <span className="sc-box-fixed">고정</span>}
             </div>
-            {isHidden ? <span className="sc-box-off-tag">숨김 — 손님에게 보이지 않습니다</span> : null}
+            {isHidden ? <span className="sc-box-off-tag">숨김 — 손님에게 보이지 않아요</span> : null}
           </div>
         );
       })}

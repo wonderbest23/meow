@@ -58,7 +58,7 @@ export function undecidedHelp(question: IntakeQuestion) {
 
 export function resultUpdateNotice(snapshot: IntakeSnapshot): string | null {
   const staleDesign = !!snapshot.coach.design && snapshot.coach.design.sourceRevision !== (snapshot.coach.documentRevision ?? snapshot.coach.revision);
-  if (snapshot.documentStatus === "stale") return "사업정보는 저장됐어요. 기존 계획서에는 아직 변경 전 내용이 남아 있어요.";
+  if (snapshot.documentStatus === "stale") return "사업 정보는 저장됐어요. 기존 계획서에는 아직 변경 전 내용이 남아 있어요.";
   if (staleDesign) return "답변은 저장됐어요. 이전에 정리한 사업 방향은 아직 변경 전 내용이에요.";
   if (snapshot.hasDocuments && snapshot.documentStatus === "unverified") return "저장된 계획서가 있어요. 현재 답변까지 반영됐는지는 확인이 필요해요.";
   return null;

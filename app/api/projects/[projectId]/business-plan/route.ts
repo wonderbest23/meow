@@ -32,9 +32,9 @@ export async function POST(
     const updatedProject = await saveBusinessPlan(projectId, identity.hash, enrichedPlan);
     return NextResponse.json({ project: updatedProject, plan: enrichedPlan });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "사업계획서를 생성하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "사업계획서를 생성하지 못했어요.";
     return NextResponse.json(
-      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "BUSINESS_PLAN_FAILED", message: publicErrorMessage(error, "사업계획서를 생성하지 못했습니다.") } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "BUSINESS_PLAN_FAILED", message: publicErrorMessage(error, "사업계획서를 생성하지 못했어요.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

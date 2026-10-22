@@ -25,9 +25,9 @@ export async function GET(
     });
     return NextResponse.json({ report });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "지역 데이터 커버리지를 계산하지 못했습니다.";
+    const message = error instanceof Error ? error.message : "지역 데이터 커버리지를 계산하지 못했어요.";
     return NextResponse.json(
-      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "REGIONAL_COVERAGE_FAILED", message: publicErrorMessage(error, "지역 데이터 커버리지를 계산하지 못했습니다.") } },
+      { error: { code: message === "PROJECT_NOT_FOUND" ? message : "REGIONAL_COVERAGE_FAILED", message: publicErrorMessage(error, "지역 데이터 커버리지를 계산하지 못했어요.") } },
       { status: message === "PROJECT_NOT_FOUND" ? 404 : 400 },
     );
   }

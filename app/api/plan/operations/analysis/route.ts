@@ -29,6 +29,6 @@ export async function POST(request: Request) {
     return json(result, result.records.analyses.find(a => a.id === result.analysisId)?.status === "running" ? 202 : 200);
   } catch (error) {
     if (error instanceof OperatingError) return json({ message: error.message, code: error.code }, error.status);
-    return json({ message: "분석 상태를 확인하지 못했어요. 기존 기록은 유지됩니다. 저장 상태를 확인한 뒤 다시 시도해 주세요." }, 503);
+    return json({ message: "분석 상태를 확인하지 못했어요. 기존 기록은 유지돼요. 저장 상태를 확인한 뒤 다시 시도해 주세요." }, 503);
   }
 }

@@ -40,6 +40,6 @@ export function HomeProductPreview() {
       </video>
       {(reduced || failed) && <picture><source media="(max-width: 600px)" srcSet="/home-film/mobile-poster-v2.png"/><img src="/home-film/desktop-poster-v2.png" alt="가상 사업 예시: 메뉴 사진 제작 사업의 계획서, 운영 계획, 첫 실행 자료"/></picture>}
     </div>
-    <p className={styles.caption}>가상 사업 예시입니다. 실제 계획은 대화에 따라 달라집니다.</p>
+    <p className={styles.caption}>가상 사업 예시예요. 실제 계획은 대화에 따라 달라져요.</p>
   </section>;
 }

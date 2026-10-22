@@ -7,7 +7,7 @@ import { readCoach, coachContext } from "../../../../lib/plan-builder/coach";
 import { collectFinancialInputs, calculateFinancials, financialsToMarkdown, financialsToReference, projectYears, yearsToMarkdown } from "../../../../lib/plan-builder/financials";
 import { findConsistencyIssues, issuesForSection } from "../../../../lib/plan-builder/consistency";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
-import { resolvePlanAccess, checkSectionAccess, FREE_SECTION_COUNT, FREE_PLAN_LIMIT, freePlanLimitReached } from "../../../../lib/plan-builder/access";
+import { resolvePlanAccess, checkSectionAccess, freePlanLimitReached } from "../../../../lib/plan-builder/access";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 import { loadPlanState } from "../../../../lib/plan-builder/plan-server-store";
 import { resolveRegenQuota, recordRegen } from "../../../../lib/plan-builder/regen-quota";
@@ -27,7 +27,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   // AI·렌더 비용이 드는 호출 — 화면 제어와 별개로 서버에서 빈도를 제한한다
-  const limited = await enforceRateLimit("generate-section", req, { limit: 40, windowMs: 10 * 60_000, message: "본문 생성 요청이 너무 많습니다. 잠시 후 다시 시도해주세요." });
+  const limited = await enforceRateLimit("generate-section", req, { limit: 40, windowMs: 10 * 60_000, message: "본문 생성 요청이 너무 많아요. 잠시 후 다시 시도해 주세요." });
   if (limited) return limited;
   const body = (await req.json().catch(() => ({}))) as {
     chapterId?: string;
@@ -135,8 +135,8 @@ export async function POST(req: Request) {
         error: reason,
         message:
           reason === "login_required"
-            ? "로그인 후 이용할 수 있습니다."
-            : `무료로는 앞 ${FREE_SECTION_COUNT}개 섹션까지 작성할 수 있습니다. 이어서 쓰려면 결제가 필요합니다.`,
+            ? "로그인 후 이용할 수 있어요."
+            : "사업계획서 작성은 결제한 뒤에 시작해요. 결제를 마치면 바로 이어서 쓸 수 있어요.",
       },
       { status: reason === "login_required" ? 401 : 402 },
     );
@@ -157,7 +157,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error: "free_plan_limit",
-          message: `결제 없이 본문을 써 볼 수 있는 문서는 ${FREE_PLAN_LIMIT}개까지입니다. 기존 문서를 결제하거나 지운 뒤 이어서 만들 수 있습니다.`,
+          message: "사업계획서 작성은 결제한 뒤에 시작해요. 이 문서를 결제하면 바로 이어서 쓸 수 있어요.",
         },
         { status: 402 },
       );
@@ -187,7 +187,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             error: "regen_quota_exceeded",
-            message: `이 문서에 포함된 다시 생성 ${quota.allowed}회를 모두 썼습니다. ${REGEN_PACK_COUNT}회를 ${REGEN_PACK_AMOUNT.toLocaleString("ko-KR")}원에 추가할 수 있습니다.`,
+            message: `이 문서에 포함된 다시 생성 ${quota.allowed}회를 모두 썼어요. ${REGEN_PACK_COUNT}회를 ${REGEN_PACK_AMOUNT.toLocaleString("ko-KR")}원에 추가할 수 있어요.`,
             quota,
           },
           { status: 402 },
@@ -210,7 +210,7 @@ export async function POST(req: Request) {
   if (coach && body.planId) {
     const savedPlan = savedState.plans.find(p => p.id === body.planId)!;
     const actualAccess = await resolvePlanAccess(savedPlan.planType, savedPlan.id);
-    if (checkSectionAccess(actualAccess, sectionKey) !== "ok") return NextResponse.json({ message: "이 항목은 제작 신청 후 사용할 수 있습니다." }, { status: 402 });
+    if (checkSectionAccess(actualAccess, sectionKey) !== "ok") return NextResponse.json({ message: "사업계획서 작성은 결제한 뒤에 시작해요. 결제를 마치면 바로 이어서 쓸 수 있어요." }, { status: 402 });
     try {
       await generateAndSaveSection({ ownerHash: identity.hash, planId: savedPlan.id, chapterId: chapter.id, sectionId: section.id });
       const saved = (await loadPlanState(identity.hash)).plans.find(p => p.id === savedPlan.id)?.sections[sectionKey];
@@ -220,7 +220,7 @@ export async function POST(req: Request) {
         ? new Response(JSON.stringify({ t: "done", ...payload }) + "\n", { headers: { "Content-Type": "application/x-ndjson; charset=utf-8", "Cache-Control": "no-store" } })
         : NextResponse.json(payload);
     } catch {
-      return NextResponse.json({ message: "검토를 마치지 못했습니다. 저장된 문서는 유지됩니다. 다시 시도해주세요." }, { status: 502 });
+      return NextResponse.json({ message: "검토를 마치지 못했어요. 저장된 문서는 유지돼요. 다시 시도해 주세요." }, { status: 502 });
     }
   }
   const config = coach ? resolvePlanningLLMConfig(identity.hash) : resolveLLMConfig(identity.hash, "anthropic");
@@ -346,7 +346,7 @@ export async function POST(req: Request) {
     return NextResponse.json(
       {
         error: "generation_failed",
-        message: "본문을 만들지 못했습니다. 잠시 후 다시 시도해주세요.",
+        message: "본문을 만들지 못했어요. 잠시 후 다시 시도해 주세요.",
       },
       { status: 502 },
     );

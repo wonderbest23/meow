@@ -52,10 +52,10 @@ export default function AccountPage() {
   };
 
   useEffect(() => {
-    /* 카카오 리디렉트가 실패로 돌아온 경우 — 설정이 빠졌을 때다 */
+    /* 카카오 리디렉트가 실패로 돌아온 경우 — 인증 주소를 만들지 못했거나 오류가 났을 때다 */
     if (new URL(window.location.href).searchParams.get("social_error") === "kakao") {
       window.history.replaceState({}, "", "/account");
-      setMessage("카카오 로그인은 아직 준비 중이에요. 이메일로 로그인해 주세요.");
+      setMessage("카카오 로그인을 마치지 못했어요. 다시 시도하거나 이메일로 로그인해 주세요.");
     }
     const hash = new URLSearchParams(window.location.hash.slice(1));
     const accessToken = hash.get("access_token");
@@ -114,7 +114,7 @@ export default function AccountPage() {
               <span className={styles.eyebrow}>오늘창업 계정</span>
               <h1 id="link-confirm-title">이 계정으로 로그인할까요?</h1>
               <p className={styles.linkAccount}>{linkSignIn.email ?? (linkSignIn.provider === "kakao" ? "카카오 계정" : "이메일 없는 계정")}{linkSignIn.provider && linkSignIn.provider !== "email" ? <small>{linkSignIn.provider === "kakao" ? "카카오" : linkSignIn.provider === "google" ? "구글" : linkSignIn.provider}로 연결된 계정</small> : null}</p>
-              <p className={styles.linkNote}>내 계정이 맞을 때만 로그인하세요. 로그인하면 이 기기에서 작성 중인 기획이 이 계정으로 옮겨집니다. 내가 보낸 적 없는 링크라면 취소해 주세요.</p>
+              <p className={styles.linkNote}>내 계정이 맞을 때만 로그인하세요. 로그인하면 이 기기에서 작성 중인 기획이 이 계정으로 옮겨져요. 내가 보낸 적 없는 링크라면 취소해 주세요.</p>
               <button type="button" className="account-submit" disabled={busy} onClick={confirmLinkSignIn}>{busy ? <><Spinner />로그인하고 있어요</> : "이 계정으로 로그인"}</button>
               <button type="button" className={styles.linkCancel} disabled={busy} onClick={cancelLinkSignIn}>취소</button>
               {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
