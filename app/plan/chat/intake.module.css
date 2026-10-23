@@ -819,3 +819,26 @@
 .page[data-embedded] .paneBar .summaryToggle b { min-width: 18px; padding: 0 5px; font-size: 11.5px; line-height: 18px; }
 /* 보이는 단추는 30px, 누르는 자리는 44px */
 .page[data-embedded] .paneBar .summaryToggle::after { inset: -7px -3px; }
+/*
+ * 작업실 3단계 — 대화로 고치기. 입력창 위 대상 칩('홈페이지 고치기 ✕'), 대화 끝의 고치기 기록(손님 말 + "이렇게 바꿀게요" 카드),
+ * 계획서를 쓰는 동안 보낸 요청(대기 중 · 취소). 모두 작업실 칸 안에서만 나온다.
+ */
+.composerTarget { display: flex; align-items: center; gap: 6px; padding: 2px 2px 4px; }
+.composerTarget > span { display: inline-flex; align-items: center; gap: 4px; min-height: 28px; padding: 2px 4px 2px 12px; border-radius: 999px; background: #eaf1fd; color: #1f4f9c; font-size: 12.5px; font-weight: 600; }
+.composerTarget button { display: inline-grid; place-items: center; position: relative; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 999px; background: transparent; color: inherit; cursor: pointer; }
+.composerTarget button::after { content: ""; position: absolute; inset: -10px; }
+.composerTarget button:hover { background: rgba(31, 79, 156, .1); }
+.composerTarget small { color: #6b7280; font-size: 12px; }
+.studioEdits { display: grid; gap: 4px; margin-top: 18px; }
+.studioEditTurn { display: grid; }
+.studioEditTurn > .messageStatus { margin-top: -12px !important; }
+.studioEditTurn .changeCard { margin-top: 6px; }
+.studioEditTurn .changeCard .chipRow { margin-top: 6px; }
+.changeCard p.studioEditSummary { display: block; color: #374151; }
+.studioEditButton { display: inline-flex; flex-direction: row; align-items: center; gap: 5px; }
+.studioSuggest { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.studioQueue { display: grid; gap: 2px; margin-top: 18px; }
+.studioQueued > .userMessage { margin-bottom: 4px; opacity: .78; }
+.studioQueuedStatus { display: flex; align-items: center; justify-content: flex-end; gap: 6px; margin: 0 0 14px; color: #6b7280; font-size: 12px; }
+.studioQueuedCancel { display: inline-flex; align-items: center; gap: 2px; position: relative; min-height: 28px; padding: 2px 8px; border: 1px solid #e3e6ea; border-radius: 999px; background: #fff; color: #374151; font-size: 12px; cursor: pointer; }
+.studioQueuedCancel::after { content: ""; position: absolute; inset: -8px -2px; }

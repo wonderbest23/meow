@@ -374,3 +374,5 @@
 /* 2단계 작업실 좁은 화면 — 머리줄 대신 칸 맨 위 오른쪽에 저장·공개 */
 .studioNarrowBar { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
 .studioNarrowBar > :first-child { margin-right:auto; }
+/* 휴대폰 작업실 — 홈페이지를 대화로 고치기(대화 탭으로 가서 입력창을 홈페이지 고치기로 연다) */
+.studioChatEdit { min-height:44px; width:100%; margin:0 0 12px; border:1px solid var(--app-line, #e5e8eb); border-radius:12px; background:#fff; color:#191f28; font:inherit; font-size:15px; font-weight:700; cursor:pointer; }

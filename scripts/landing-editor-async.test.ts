@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import { mergeEditorAsyncPatch, type EditorOverrides, type EditorAsyncPatch } from "../lib/landing/editor-async";
 import { issueUploadCleanupToken, readUploadCleanupToken, containsUploadReference } from "../lib/landing/upload-cleanup";
 import { readEditorRecovery } from "../lib/landing/editor-recovery";
+import { readFileSync } from "node:fs";
+import { aiEditChanges, aiEditCostLine, aiEditErrorMessage, aiEditSlotInfo, aiEditSummary, applyAiEditPatch, currentSlotText, undoAiEditPatch } from "../lib/landing/ai-edit-proposal";
+import type { BrainwavePageData } from "../components/brainwave-page";
 
 const base: EditorOverrides = { texts: { title: "기존 제목", price: "100만원" }, images: { hero: "old.jpg" }, links: {}, sizes: {}, hidden: [], order: [] };
 const patch: EditorAsyncPatch = { session: 1, kind: "texts", before: { ...base.texts }, changes: { title: "새 제목", price: "180만원" } };
@@ -41,4 +44,57 @@ const hiddenPhoto = mergeEditorAsyncPatch({ ...base, images: {}, hidden: ["hero"
 assert.equal(hiddenPhoto.state.images.hero, "mine.jpg");
 assert.deepEqual(hiddenPhoto.state.hidden, ["section-b"]);
 assert.deepEqual(mergeEditorAsyncPatch({ ...base, hidden: ["title"] }, 1, patch).state.hidden, ["title"], "text patches never unhide");
-console.log("landing editor async: selective merge, element conflicts, session invalidation, cleanup ownership/signature/expiry, saved-reference guard and recovery validation passed");
+// 작업실 '대화로 홈페이지 고치기' — AI 결과 → 이름 붙은 바뀌는 곳 목록 · 적용(편집기와 같은 규칙) · 되돌리기
+const kit = JSON.parse(readFileSync(new URL("../lib/landing/brainwave/pages/0-290.json", import.meta.url), "utf8")) as BrainwavePageData;
+const kitInfo = aiEditSlotInfo(kit, "0-290");
+assert.equal(kitInfo["0:414"].label, "첫 화면 제목");
+assert.equal(kitInfo["I0:416;0:4460"].label, "첫 화면 버튼 글");
+assert.equal(kitInfo["0:418"].label, "가게 이름");
+assert.equal(Object.keys(kitInfo).length, kit.slots.text.length, "every kit text slot gets a label");
+const kitTexts = { "0:414": "동네 세무 상담" };
+assert.equal(currentSlotText("0:414", kitTexts, kit), "동네 세무 상담");
+assert.equal(currentSlotText("0:415", kitTexts, kit), kit.slots.text.find(slot => slot.id === "0:415")!.text, "unsaved overrides first, kit original otherwise");
+const kitChanges = aiEditChanges({ texts: kitTexts, page: kit, patch: { "I0:416;0:4460": "상담 예약하기", "0:414": "우리 동네 세무 상담", "0:415": kit.slots.text.find(slot => slot.id === "0:415")!.text, "ghost": "새 글", "0:419": "  " } });
+assert.deepEqual(kitChanges.map(change => change.label), ["첫 화면 제목", "첫 화면 버튼 글", "글 1"], "top-to-bottom, unchanged/blank dropped, unknown slot falls back to 글 n");
+assert.equal(kitChanges[0].before, "동네 세무 상담");
+assert.equal(kitChanges[0].after, "우리 동네 세무 상담");
+assert.equal(kitChanges[2].before, "");
+// 같은 이름이 둘이면 번호를 붙인다(손님 후기 내용 1·2)
+const tiny: BrainwavePageData = { id: "9-9", w: 100, h: 100, slots: { text: [{ id: "a", text: "후기 하나" }, { id: "b", text: "후기 둘" }, { id: "h", text: "안녕하세요" }], image: [] }, root: { tag: "div", ch: [
+  { tag: "div", id: "s2", name: "Testimonial", st: { top: "500px" }, ch: [{ tag: "p", id: "a", name: "" }, { tag: "p", id: "b", name: "" }] },
+  { tag: "div", id: "s1", name: "Hero", st: { top: "0px" }, ch: [{ tag: "div", name: "Title", ch: [{ tag: "p", id: "h" }] }] },
+] } };
+const tinyChanges = aiEditChanges({ texts: {}, page: tiny, patch: { b: "새 후기 둘", a: "새 후기 하나", h: "반가워요" } });
+assert.deepEqual(tinyChanges.map(change => change.label), ["첫 화면 제목", "손님 후기 내용 1", "손님 후기 내용 2"]);
+assert.deepEqual(aiEditChanges({ texts: {}, page: null, patch: { x: "가", y: "나" } }).map(change => change.label), ["글 1", "글 2"], "no page metadata still yields labels");
+assert.equal(aiEditSummary([{ label: "첫 화면 제목" }]), "첫 화면 제목을 바꿔요");
+assert.equal(aiEditSummary([{ label: "첫 화면 제목" }, { label: "버튼 글" }]), "첫 화면 제목과 버튼 글을 바꿔요");
+assert.equal(aiEditSummary([{ label: "가격" }, { label: "이용 순서 2" }]), "가격과 이용 순서 2를 바꿔요");
+assert.equal(aiEditSummary([{ label: "가게 이름" }, { label: "가격" }, { label: "주소" }]), "가게 이름 외 2곳을 바꿔요");
+assert.equal(aiEditCostLine({ inputTokens: 1000, outputTokens: 240 }, { remaining: 198760 }), "AI 수정 토큰 1,240개 사용 · 남은 토큰 198,760개");
+assert.equal(aiEditCostLine({ inputTokens: 10, outputTokens: 5 }, null), "AI 수정 토큰 15개 사용");
+assert.equal(aiEditCostLine(null, null), undefined);
+assert.match(aiEditErrorMessage(402, "TOKENS_REQUIRED", "AI 수정 토큰이 부족해요."), /토큰.*충전/);
+assert.match(aiEditErrorMessage(402, "HOMEPAGE_PAYMENT_REQUIRED"), /결제 후 쓸 수 있어요/);
+assert.match(aiEditErrorMessage(404, "NOT_FOUND", "없는 주소입니다."), /준비 중/, "launch-closed route explains itself");
+assert.equal(aiEditErrorMessage(502, "AI_FAILED", "AI 가 답을 만들지 못했어요. 토큰은 차감되지 않았어요."), "AI 가 답을 만들지 못했어요. 토큰은 차감되지 않았어요.");
+assert.match(aiEditErrorMessage(500, "X", "internal error"), /[가-힣]/, "never shows English server text");
+// 적용 — 제안 뒤에 사장님이 직접 고친 자리는 덮지 않는다. 스냅숏은 적용 전 값(없던 자리는 null)
+const proposedFrom = { title: "옛 제목", price: "1만원" };
+const nowTexts = { title: "옛 제목", price: "직접 고친 가격", note: "다른 글" };
+const applied = applyAiEditPatch(nowTexts, proposedFrom, { title: "새 제목", price: "2만원", cta: "예약하기" });
+assert.deepEqual(applied.applied.sort(), ["cta", "title"]);
+assert.deepEqual(applied.conflicts, ["price"]);
+assert.deepEqual(applied.texts, { title: "새 제목", price: "직접 고친 가격", note: "다른 글", cta: "예약하기" });
+assert.deepEqual(applied.snapshot, { title: "옛 제목", cta: null });
+assert.equal(nowTexts.title, "옛 제목", "input untouched");
+// 되돌리기 — 적용한 값이 그대로인 자리만. 없던 자리는 지워 킷 원문으로, 그 뒤에 또 고친 자리는 그대로
+const appliedValues = { title: "새 제목", cta: "예약하기" };
+const undone = undoAiEditPatch(applied.texts, applied.snapshot, appliedValues);
+assert.deepEqual(undone.texts, { title: "옛 제목", price: "직접 고친 가격", note: "다른 글" });
+assert.deepEqual(undone.restored.sort(), ["cta", "title"]);
+const editedAfter = undoAiEditPatch({ ...applied.texts, title: "또 고친 제목" }, applied.snapshot, appliedValues);
+assert.deepEqual(editedAfter.kept, ["title"]);
+assert.equal(editedAfter.texts.title, "또 고친 제목");
+assert.equal("cta" in editedAfter.texts, false);
+console.log("landing editor async: selective merge, element conflicts, session invalidation, cleanup ownership/signature/expiry, saved-reference guard, recovery validation and chat AI-edit proposal/apply/undo passed");

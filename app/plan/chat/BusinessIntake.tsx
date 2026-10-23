@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useReducer, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import PlanLoading from "../PlanLoading";
@@ -31,9 +31,12 @@ import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummar
 import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
-import { STUDIO_PATH, studioHref } from "../../../lib/plan-builder/studio";
+import { STUDIO_PATH, studioHref, type StudioTab } from "../../../lib/plan-builder/studio";
 import { homepageHref } from "../../../lib/plan-builder/journey";
-import { useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { useStudioNav, useStudioPane, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget } from "../studio/StudioContext";
+import { QueuedStudioRequests, StudioEditTurns } from "./intake-ui/StudioEditTurns";
+import { planSectionEditMessage } from "../../../lib/plan-builder/studio-plan-edit";
+import { STUDIO_QUEUE_LIMIT, editTurnBusy, editTurnsKey, enqueueRequest, queuedRequestRoute, readRequestQueue, requestQueueKey, restoreEditTurns, sectionHint, studioEditError, studioEditReducer, studioTargetChipText, type QueuedStudioRequest, type StudioEditTurn } from "./intake-ui/studio-edit";
 
 type SaveStatus = "saved" | "draft" | "saving" | "failed" | "conflict";
 type CommandInput = Omit<IntakeCommand, "requestId" | "revision" | "planId">;
@@ -77,6 +80,18 @@ function withoutStudioTab(query: string): string {
  */
 const STUDIO_WIDE_QUERY = "(min-width: 1024px)";
 
+/** 작업실 3단계 기록(고치기 카드 · 기다리는 요청)용 세션 저장소 — 막힌 브라우저에서는 이 화면에서만 보인다 */
+function readSession(key: string): string | null {
+  try { return window.sessionStorage.getItem(key); } catch { return null; }
+}
+function writeSession(key: string, value: string | null) {
+  try { if (value === null) window.sessionStorage.removeItem(key); else window.sessionStorage.setItem(key, value); } catch { /* 저장소를 못 쓰면 새로 고칠 때 사라질 뿐이다 */ }
+}
+/* 홈페이지 칸을 처음 열고 고치기 처리기가 등록되기를 기다리는 시간 — 홈페이지 칸은 처음 열 때 만든다 */
+const HANDLER_WAIT_MS = 10_000;
+/* 작업실 대화 칸의 작성 진행 카드 안내 — 쓰는 동안 보낸 요청은 대기열에 두었다가 다 쓰면 보낸다 */
+const STUDIO_RUN_NOTE = "다른 탭을 보거나 창을 닫아도 계속 만들어져요. 기다리는 동안 요청을 보내도 돼요 — 다 쓰면 반영할게요.";
+
 function readLastIntake(): { planId: string; signedIn: boolean } | null {
   try {
     const value = JSON.parse(window.localStorage.getItem(LAST_INTAKE_KEY) ?? "null");
@@ -86,6 +101,8 @@ function readLastIntake(): { planId: string; signedIn: boolean } | null {
 export type BusinessIntakeProps = {
   onPrepared?: (payload: IntakePayload) => void;
   onDesignComplete?: (snapshot: IntakeSnapshot) => void;
+  /** 작업실 PC 에서 오른쪽에 보이는 열린 칸 — '홈페이지를 대화로 고치기' 제안에 쓴다. 작업실 밖·휴대폰은 없음 */
+  studioSide?: StudioTab | null;
 };
 const HEADERS = { "x-business-intake": "2" };
 /** Browser network failures ("Failed to fetch", "Load failed") become plain Korean; our own messages pass through. */
@@ -107,7 +124,7 @@ export default function BusinessIntake(props: BusinessIntakeProps) {
   return <Suspense fallback={<ChatLoading />}><IntakeWorkspace {...props} /></Suspense>;
 }
 
-function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) {
+function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: BusinessIntakeProps) {
   const searchParams = useSearchParams();
   // 랜딩 아이디어(idea)는 주소에서 지워도 대화를 다시 불러오지 않게 뺀 값으로 본다 — 지우는 순간 보내던 첫 메시지가 끊기지 않게
   const queryString = withoutLandingIdea(searchParams);
@@ -163,6 +180,16 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   /* 작업실: 이 화면에서 지켜본 계획서 작성이 방금 끝났는지 — 진행 카드 자리에 마무리 말(계획서 보기 · 홈페이지 만들기)을 남긴다 */
   const [justFinished, setJustFinished] = useState(false);
   const sawGenerating = useRef(false);
+  /*
+   * 작업실 3단계 — 대화로 고치기 대상(입력창 위 칩 '홈페이지 고치기 ✕'), 그때의 입력, 이 화면에서 연 채팅 수정(계획서 한 장 고치기를
+   * 예전 채팅 수정으로 보낼 때 — 주소의 edit=chat 과 같은 화면), 고치기 기록, 계획서를 쓰는 동안 보낸 요청(사업마다 세션 저장소).
+   */
+  const [editTarget, setEditTarget] = useState<StudioComposeRequest | null>(null);
+  const [studioText, setStudioText] = useState("");
+  const [chatEditLocal, setChatEditLocal] = useState(false);
+  const [editState, dispatchEdit] = useReducer(studioEditReducer, { planId: null, turns: [] });
+  const [requestQueue, setRequestQueue] = useState<{ planId: string | null; items: QueuedStudioRequest[] }>({ planId: null, items: [] });
+  const studioTail = useRef<HTMLDivElement>(null);
   /* 결제 여부를 '사업계획서 만들기'가 보일 때 미리 알아 둔다 — 결제 전이면 누르는 즉시 결제 화면으로(서버 왕복 두 번을 건너뛴다). 작성 여부는 서버가 다시 막는다 */
   const [payAccess, setPayAccess] = useState<{ planId: string; paid: boolean; authenticated: boolean } | null>(null);
   const router = useRouter();
@@ -307,6 +334,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     const timeout = window.setTimeout(() => controller.abort(), 20000);
     setLoaded(false); setLoadFailed(false); setNewEntry(startNew); setError(""); setLogin(false); setPreparedRevision(null); setResume(""); setConnectionError(false); setView("input"); setOwnerChanged(false); setSessionLost(false); setPlanLimit(false);
     busyRef.current = false; setBusy(false); planRef.current = null; setPlan(null); setPreview(null); ownerScope.current = null; lastDesign.current = ""; setIntentPrompt(null); setZeroPrice(null); setJustFinished(false); sawGenerating.current = false;
+    setEditTarget(null); setStudioText(""); setChatEditLocal(false);
     draftRef.current = emptyDraft(); setDraft(draftRef.current); conflictRef.current = false;
     void getSnapshot(startNew ? null : id, controller.signal).then(data => {
       if (epoch !== routeEpoch.current || controller.signal.aborted) return;
@@ -491,6 +519,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       setStatus(hasLocalInput(settled) ? "draft" : "saved");
       // 작업실 안에서는 팝업 대신 대화 안 진행 카드 + 계획서 칸 보여 주기(revealGeneration), 밖에서는 예전처럼 팝업
       if (pending.command.action === "prepare" && data.started) { setPreparedRevision(data.plan.coach.documentRevision ?? data.plan.coach.revision); setJustFinished(false); if (embedded) revealGeneration(); else setGenerationOpen(true); generation.restart(); try { onPrepared?.(data); } catch { /* The saved document workflow is independent of parent navigation. */ } }
+      /* 작업실: 채팅 수정을 적용했으면 계획서 칸이 바뀐 내용을 다시 읽게 한다(보이는 칸도 다시 읽고, 숨어 있으면 점) */
+      if (pending.command.action === "edit-apply" && embedded) studioNav?.markActivity?.("plan");
       if (pending.command.action === "details") { writeDraft({ ...draftRef.current, mode: "answer", editingId: null }); setView("input"); }
     } catch (caught) {
       if (epoch === routeEpoch.current) { setStatus("failed"); setError(!controller.signal.aborted && friendlyError(caught) || "저장 결과를 확인하지 못했어요. 입력을 보관했으니 같은 요청으로 다시 시도해 주세요."); }
@@ -761,6 +791,14 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       const cardBottom = cardTop + card.offsetHeight;
       top = Math.min(bottom, Math.max(top, Math.min(cardTop - 16, cardBottom + 16 - container.clientHeight)));
     }
+    /* 작업실 3단계: 대화 끝의 고치기 카드 · 기다리는 요청 — 가장 마지막 것이 다 보이게(길면 그 머리가 맨 위에 오는 데까지) */
+    const items = studioTail.current?.querySelectorAll<HTMLElement>("[data-studio-item]");
+    const tail = items?.length ? items[items.length - 1] : null;
+    if (tail && !draftRef.current.editingId) {
+      const tailTop = container.scrollTop + tail.getBoundingClientRect().top - containerTop;
+      const tailBottom = tailTop + tail.offsetHeight;
+      top = Math.min(bottom, Math.max(top, Math.min(tailTop - 16, tailBottom + 16 - container.clientHeight)));
+    }
     manualScroll.current = false;
     // 처음 불러온 직후(분할 너비가 자리 잡는 동안 포함)에는 긴 대화를 천천히 훑지 않고 바로 최신 위치로 간다. 그 뒤의 이동만 부드럽게 한다.
     if (!settleUntil.current) settleUntil.current = performance.now() + 1200;
@@ -788,7 +826,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   useEffect(() => {
     const input = composerInput.current;
     if (input) { input.style.height = "auto"; input.style.height = `${Math.min(128, input.scrollHeight)}px`; }
-  }, [composerText, view]);
+  }, [composerText, studioText, view]);
 
   // 마지막 정리 화면이 보일 때는 진행 게이지를 방금 누른 '다음 단계' 자리에 보여 준다(그 밖에는 대화 흐름의 작업 상태 자리).
   const reviewCandidates = plan?.intake.candidates.filter(candidate => candidate.status === "pending") ?? [];
@@ -855,7 +893,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   // Coach chat on PC: chat only while answering; the summary slides open on request or once there is a result to read.
   const resultReady = nextStep === "prepare" || nextStep === "open";
   // Once the plan document exists (and is not being written), the chat is a record. ?edit=chat reopens it for edit requests only.
-  const chatEditMode = coach && searchParams.get("edit") === "chat";
+  // 작업실에서 계획서 한 장 고치기를 예전 채팅 수정으로 보냈으면(chatEditLocal) 같은 화면을 연다
+  const chatEditMode = coach && (searchParams.get("edit") === "chat" || chatEditLocal);
   const locked = coach && !!plan?.hasDocuments && !generating && !chatEditMode && !draft.editingId;
   // Once the plan exists, facts change only through the document's edit choices, not the summary pencils.
   const documentFixed = coach && !!plan?.hasDocuments;
@@ -960,7 +999,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   }, [embedded, plan?.planId, generating, generation.state]);
   /* 작업실 대화 칸의 작성 진행 카드(팝업 대신) · 끝난 뒤 마무리 말 — 작업실 밖에서는 둘 다 없다 */
   const studioRun = embedded && plan && generation.state && (generating || runStalled)
-    ? <div ref={runCard}><GenerationCard state={generation.state} onRetry={startPrepare} retryDisabled={blocked || aiBusy || preparing} onOpen={() => showPlan(plan.planId)} /></div> : null;
+    ? <div ref={runCard}><GenerationCard state={generation.state} onRetry={startPrepare} retryDisabled={blocked || aiBusy || preparing} onOpen={() => showPlan(plan.planId)} note={STUDIO_RUN_NOTE} /></div> : null;
   /* 진행 카드가 처음 나타나면(방금 '사업계획서 만들기'를 눌렀다) 따라 내려가 카드 전체를 보인다 — 그 뒤 진행으로 카드 키가 바뀌면 ResizeObserver 가 따라간다 */
   const runShown = !!studioRun;
   useEffect(() => {
@@ -971,6 +1010,187 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   }, [runShown, scrollToCurrent]);
   const studioTurn = studioRun ?? (embedded && plan && justFinished
     ? <GenerationFinishedTurn planId={plan.planId} onPlan={() => showPlan(plan.planId)} onHomepage={() => navigate(homepageHref(plan.planId))} /> : null);
+
+  /*
+   * ── 작업실 3단계: 대화로 고치기 · 계획서를 쓰는 동안 보낸 요청 ──────────
+   * 고치기 기록과 기다리는 요청은 사업 답변이 아니라 이 기기에서만 그리는 대화라 서버에 보내지 않고 사업마다 세션 저장소에 둔다
+   * (탭을 바꾸거나 새로 고쳐도 이 세션 동안 남는다). 작업실 밖(예전 화면)에서는 모두 없다.
+   */
+  const studioPlanId = embedded ? plan?.planId ?? null : null;
+  useEffect(() => {
+    if (!studioPlanId) return;
+    dispatchEdit({ type: "load", planId: studioPlanId, turns: restoreEditTurns(readSession(editTurnsKey(studioPlanId))) });
+    setRequestQueue({ planId: studioPlanId, items: readRequestQueue(readSession(requestQueueKey(studioPlanId))) });
+  }, [studioPlanId]);
+  useEffect(() => { if (editState.planId) writeSession(editTurnsKey(editState.planId), editState.turns.length ? JSON.stringify(editState.turns) : null); }, [editState]);
+  useEffect(() => { if (requestQueue.planId) writeSession(requestQueueKey(requestQueue.planId), requestQueue.items.length ? JSON.stringify(requestQueue.items) : null); }, [requestQueue]);
+  const editTurns = studioPlanId && editState.planId === studioPlanId ? editState.turns : [];
+  const queuedRequests = studioPlanId && requestQueue.planId === studioPlanId ? requestQueue.items : [];
+  /* 고치기 카드 하나가 만드는 중 · 바꾸는 중 · 되돌리는 중이면 다음 요청과 다른 카드의 단추를 잠시 막는다 */
+  const editWorking = editTurns.some(editTurnBusy);
+  /* 보이면 알림 칸으로 읽어 주고, 대화 칸이 숨어 있으면(휴대폰의 다른 탭) 대화 탭에 점을 찍는다 */
+  const announceEdit = (text: string) => { if (paneVisible.current) setAnnouncement(text); else studioNav?.markActivity?.("chat"); };
+  /*
+   * 고치기 처리기 찾기 — 홈페이지 칸은 그 탭을 처음 열 때 만들어지므로(AI 자동 채우기도 그때) 아직 없으면 한 번 열고 등록을 기다린다.
+   * 휴대폰은 한 칸씩 보이니 기다린 뒤 카드가 있는 대화로 돌아온다(한 번 만든 칸은 숨겨도 남는다).
+   */
+  const waitForHandler = async (target: StudioEditTarget): Promise<StudioEditHandler | null> => {
+    const find = () => studioNav?.editHandler?.(target) ?? null;
+    let handler = find();
+    if (handler || target !== "homepage" || !studioNav?.showTab) return handler;
+    const narrow = !window.matchMedia(STUDIO_WIDE_QUERY).matches;
+    studioNav.showTab("homepage");
+    const until = Date.now() + HANDLER_WAIT_MS;
+    while (!handler && Date.now() < until) {
+      await new Promise(resolve => window.setTimeout(resolve, 200));
+      handler = find();
+    }
+    if (narrow) studioNav.showTab("chat");
+    return handler;
+  };
+  const missingHandler = (target: StudioEditTarget) => new Error(target === "homepage" ? "홈페이지를 아직 열지 못했어요. 홈페이지 탭을 한 번 연 뒤 다시 시도해 주세요." : "이 장을 고칠 준비가 아직 안 됐어요. 계획서 탭을 연 뒤 다시 시도해 주세요.");
+  const runPropose = async (turn: Pick<StudioEditTurn, "id" | "target" | "instruction" | "sectionId">) => {
+    try {
+      const handler = await waitForHandler(turn.target);
+      if (!handler) throw missingHandler(turn.target);
+      const proposal = await handler.propose(turn.instruction, turn.sectionId ? { sectionId: turn.sectionId } : undefined);
+      dispatchEdit({ type: "proposed", id: turn.id, proposal });
+      announceEdit(`바꿀 내용을 정리했어요. ${proposal.summary}`);
+    } catch (caught) {
+      const error = studioEditError(caught, "바꿀 내용을 만들지 못했어요. 다시 시도해 주세요.");
+      dispatchEdit({ type: "failed", id: turn.id, error, retry: "propose" });
+      announceEdit(error);
+    }
+  };
+  const startProposal = (target: StudioEditTarget, label: string, instruction: string, sectionId?: string) => {
+    const turn = { id: crypto.randomUUID(), target, label, instruction, at: Date.now(), ...(sectionId ? { sectionId } : {}) };
+    follow.current = true;
+    dispatchEdit({ type: "propose", turn });
+    void runPropose(turn);
+  };
+  const runApply = async (turn: StudioEditTurn) => {
+    if (!turn.proposal) return;
+    try {
+      const handler = await waitForHandler(turn.target);
+      if (!handler) throw missingHandler(turn.target);
+      await handler.apply(turn.proposal.id);
+      dispatchEdit({ type: "applied", id: turn.id });
+      announceEdit("바꿨어요. 되돌리려면 되돌리기를 눌러 주세요.");
+    } catch (caught) {
+      const error = studioEditError(caught, "바꾸지 못했어요. 다시 시도해 주세요.");
+      dispatchEdit({ type: "failed", id: turn.id, error, retry: "apply" });
+      announceEdit(error);
+    }
+  };
+  const runUndo = async (turn: StudioEditTurn) => {
+    if (!turn.proposal) return;
+    try {
+      const handler = await waitForHandler(turn.target);
+      if (!handler) throw missingHandler(turn.target);
+      await handler.undo(turn.proposal.id);
+      dispatchEdit({ type: "undone", id: turn.id });
+      announceEdit("바꾸기 전으로 되돌렸어요.");
+    } catch (caught) {
+      const error = studioEditError(caught, "되돌리지 못했어요. 다시 시도해 주세요.");
+      dispatchEdit({ type: "failed", id: turn.id, error, retry: "undo" });
+      announceEdit(error);
+    }
+  };
+  const applyTurn = (turn: StudioEditTurn) => { dispatchEdit({ type: "apply", id: turn.id }); void runApply(turn); };
+  const undoTurn = (turn: StudioEditTurn) => { dispatchEdit({ type: "undo", id: turn.id }); void runUndo(turn); };
+  const dismissTurn = (turn: StudioEditTurn) => {
+    try { if (turn.proposal) studioNav?.editHandler?.(turn.target)?.dismiss(turn.proposal.id); } catch { /* 카드만 접으면 된다 — 적용하지 않은 제안이다 */ }
+    dispatchEdit({ type: "dismiss", id: turn.id });
+  };
+  const retryTurn = (turn: StudioEditTurn) => {
+    dispatchEdit({ type: "retry", id: turn.id });
+    if (turn.retry === "apply") void runApply(turn);
+    else if (turn.retry === "undo") void runUndo(turn);
+    else void runPropose(turn);
+  };
+
+  /*
+   * 대화 입력창의 작업실 모드 — 대상 칩이 있으면(홈페이지 · 계획서 한 장) 그 대상을 고치고, 칩이 없어도 계획서를 쓰는 동안이면
+   * 보낸 말을 대기열에 둔다(쓰는 중에는 계획서가 바뀌는 중이라 바로 고칠 수 없다). 남은 질문에 답하는 중이면 예전 입력창 그대로.
+   */
+  const queueMode = embedded && !!plan && generating && !question && !draft.editingId;
+  const studioComposer = embedded && !!plan && loaded && !loginGate && !loadFailed && !ownerChanged && (!!editTarget || queueMode);
+  const studioRoute: "homepage" | "queue" | "section" | null = !studioComposer ? null : editTarget?.target === "homepage" ? "homepage" : queueMode ? "queue" : "section";
+  const editChatReady = COACH_EDIT_CHAT && !!plan?.hasDocuments;
+  const studioSendDisabled = studioRoute === "homepage" ? editWorking
+    : studioRoute === "queue" ? queuedRequests.length >= STUDIO_QUEUE_LIMIT
+    : studioRoute === "section" ? editWorking || blocked || aiBusy : true;
+  const studioPlaceholder = studioRoute === "queue" ? "기다리는 동안 바꿀 내용을 적어 두세요"
+    : studioRoute === "homepage" ? "홈페이지에서 바꿀 내용을 적어 주세요 (예: 첫 화면 제목을 더 짧게)"
+    : editTarget ? `${sectionHint(editTarget.label) || "이 장"}에서 바꿀 내용을 적어 주세요` : "";
+  const studioNote = inputHint || composerLimitNote(studioText.length, 1200);
+  const enterEditTarget = (request: StudioComposeRequest) => {
+    setEditTarget(request); setStudioText(request.text ?? ""); setInputHint("");
+    follow.current = true;
+  };
+  /* 다른 칸의 '대화로 고치기'(composeInChat) — 작업실이 휴대폰이면 대화 탭으로 바꾼 뒤 여기로 넘긴다 */
+  useEffect(() => studioNav?.onComposeRequest?.(enterEditTarget),
+    // enterEditTarget 은 상태 설정과 ref 만 쓴다 — 받는 곳은 작업실 이동 정보가 바뀔 때만 다시 등록한다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [studioNav]);
+  useEffect(() => { if (editTarget) focusComposer(); },
+    // 대상 칩이 생기거나 바뀔 때만 입력창으로 — focusComposer 는 ref 만 쓴다
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [editTarget]);
+  const leaveEditTarget = () => {
+    setEditTarget(null); setStudioText(""); setInputHint("");
+    /* 예전 채팅 수정으로 보낸 요청이 아직 정리 중이거나 확인을 기다리면 그 화면은 그대로 둔다 */
+    const job = planRef.current?.intake.job;
+    const editOpen = job?.kind === "edit" && (["queued", "running"].includes(job.status) || job.status === "complete" && !!job.proposal?.length && !job.proposalStatus);
+    if (!editOpen) setChatEditLocal(false);
+  };
+  /* 계획서 한 장 고치기 — 그 장의 처리기가 있으면 카드로, 없으면 예전 채팅 수정(장 이름을 앞에 붙여 · 하루 한도 · 거르기 그대로), 그것도 꺼져 있으면 메모로 */
+  const sendSectionEdit = (label: string, text: string, sectionId?: string) => {
+    if (studioNav?.editHandler?.("plan-section")) { startProposal("plan-section", label, text, sectionId); return; }
+    if (editChatReady) { setChatEditLocal(true); follow.current = true; void send({ action: "edit", message: planSectionEditMessage(label, text) }); return; }
+    follow.current = true;
+    dispatchEdit({ type: "note", turn: { id: crypto.randomUUID(), target: "plan-section", label: label || "계획서", instruction: text, at: Date.now(), ...(sectionId ? { sectionId } : {}) } });
+  };
+  const submitStudio = () => {
+    const text = visibleComposerText(studioText);
+    if (!text || !studioRoute || studioSendDisabled) return;
+    if (studioRoute === "homepage") startProposal("homepage", editTarget?.label || "홈페이지", text);
+    else if (studioRoute === "queue") {
+      const section = editTarget?.target === "plan-section" ? { label: editTarget.label, ...(editTarget.sectionId ? { sectionId: editTarget.sectionId } : {}) } : undefined;
+      const result = enqueueRequest(queuedRequests, { id: crypto.randomUUID(), text, ...(section ? { section } : {}), at: Date.now() });
+      if (!result.ok) { setInputHint(queuedRequests.length >= STUDIO_QUEUE_LIMIT ? `기다리는 요청은 ${STUDIO_QUEUE_LIMIT}개까지예요. 다 쓴 뒤에 이어서 보내 주세요.` : "같은 요청이 이미 기다리고 있어요."); return; }
+      setRequestQueue({ planId: studioPlanId, items: result.queue });
+      follow.current = true;
+      announceEdit("요청을 받아 뒀어요. 계획서를 다 쓰면 반영할게요.");
+    } else sendSectionEdit(editTarget?.label ?? "", text, editTarget?.sectionId);
+    setStudioText(""); setInputHint("");
+  };
+  const cancelQueued = (id: string) => setRequestQueue(current => ({ ...current, items: current.items.filter(item => item.id !== id) }));
+  /*
+   * 계획서를 다 쓰면 기다리던 요청을 하나씩 보낸다 — 채팅 수정은 앞 요청의 "이렇게 바꿀게요"를 손님이 고르기 전에는 다음을 보내지 않는다
+   * (서버의 수정 작업은 하나뿐이라 다음 요청이 앞 제안을 덮는다). 멈춘 작성 · 실패 · 다른 일 중이면 기다린다.
+   */
+  const editProposalOpen = job?.kind === "edit" && job.status === "complete" && !!job.proposal?.length && !job.proposalStatus;
+  useEffect(() => {
+    if (!studioPlanId || !plan || !queuedRequests.length || generating || runStalled || !plan.hasDocuments) return;
+    if (!loaded || loginGate || ownerChanged || blocked || aiBusy || editWorking || editProposalOpen || status === "failed") return;
+    const [next, ...rest] = queuedRequests;
+    setRequestQueue({ planId: studioPlanId, items: rest });
+    const route = queuedRequestRoute(next, { sectionHandler: !!studioNav?.editHandler?.("plan-section"), editChat: editChatReady });
+    if (route === "section") startProposal("plan-section", next.section!.label, next.text, next.section!.sectionId);
+    else if (route === "edit") { setChatEditLocal(true); follow.current = true; void send({ action: "edit", message: next.section ? planSectionEditMessage(next.section.label, next.text) : next.text }); }
+    else { follow.current = true; dispatchEdit({ type: "note", turn: { id: next.id, target: "plan-section", label: next.section?.label || "계획서", instruction: next.text, at: Date.now() } }); }
+  });
+  /* 고치기 카드 · 기다리는 요청이 늘거나 바뀌면 따라 내려가 마지막 것을 보인다 */
+  const studioSignature = `${editTurns.map(turn => `${turn.id}:${turn.status}`).join(",")}|${queuedRequests.map(item => item.id).join(",")}`;
+  useEffect(() => {
+    if (!embedded || studioSignature === "|") return;
+    follow.current = true;
+    const frame = requestAnimationFrame(scrollToCurrent);
+    return () => cancelAnimationFrame(frame);
+  }, [embedded, studioSignature, scrollToCurrent]);
+  /* PC 에서 오른쪽에 홈페이지가 보이면 '홈페이지를 대화로 고치기' 제안 — 누르면 입력창이 홈페이지 고치기로 바뀐다 */
+  const homepageSuggest = embedded && studioSide === "homepage" && !!plan && loaded && !loginGate && studioNav?.editHandler?.("homepage")?.available?.() !== false && !!studioNav?.editHandler?.("homepage") && editTarget?.target !== "homepage";
   useEffect(() => {
     if (!plan || nextStep !== "design" || !showCompletion || blocked || aiBusy || loginGate || designFailed) return;
     const key = `${plan.planId}:${plan.coach.documentRevision ?? plan.coach.revision}`;
@@ -982,7 +1202,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   }, [plan, nextStep, showCompletion, blocked, aiBusy, loginGate, designFailed]);
   // Keep unsent text and failed requests visible; otherwise the completed step is a choice, not another chat turn.
   // 로그인 안내 화면에서는 입력창을 두지 않는다(보내도 서버가 로그인 필요로 거절한다)
-  const showComposer = !loginGate && !showReview && !locked && (editTurn || !showCompletion || !nextStep || !!draft.pending || nextStep === "design" && (!!composerVisible || !!draft.memo.trim() || !!draft.help.trim()));
+  // 작업실: 대화로 고치기 대상이 있거나 계획서를 쓰는 중이면(대기열) 계획서가 있어도 입력창을 연다
+  const showComposer = studioComposer || !loginGate && !showReview && !locked && (editTurn || !showCompletion || !nextStep || !!draft.pending || nextStep === "design" && (!!composerVisible || !!draft.memo.trim() || !!draft.help.trim()));
   // Problems read as a coach message at the end of the thread in coach chat, as a banner otherwise.
   const notices = (error && !ideaError && !staleFailure || connectionError || storageError) && <div className={styles.notices} data-coach-notices={coach || undefined}>
       {error && !ideaError && !staleFailure && <div className={styles.notice} role="alert"><p>{error}</p><div className={styles.noticeActions}>{sessionLost ? null : status === "conflict" || loadFailed ? <button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />최신 내용 불러오기</button> : draft.pending && <button type="button" disabled={busy} onClick={() => void send()}><RefreshCw size={16} aria-hidden="true" />다시 시도</button>}{planLimit && <Link href="/plan">내 사업으로<ArrowRight size={16} aria-hidden="true" /></Link>}{login && <Link href={loginHref}>{sessionLost ? "다시 로그인하기" : "로그인하고 이어가기"}<ArrowRight size={16} aria-hidden="true" /></Link>}</div></div>}
@@ -1063,6 +1284,12 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
                 <button type="button" className={styles.editLink} onClick={() => setView("summary")}><PencilLine size={14} aria-hidden="true" />지금까지 답변 보기</button>
               </section>)}
             </div>
+            {/* 작업실 3단계: 대화로 고치기 기록 · 쓰는 동안 보낸 요청 · 홈페이지 고치기 제안 — 기존 대화 뒤에 이 기기에서만 그린다 */}
+            {embedded && <div ref={studioTail}>
+              <StudioEditTurns turns={editTurns} disabled={editWorking} onApply={applyTurn} onDismiss={dismissTurn} onUndo={undoTurn} onRetry={retryTurn} />
+              <QueuedStudioRequests items={queuedRequests} generating={generating} onCancel={cancelQueued} />
+              {homepageSuggest && <div className={styles.studioSuggest} data-studio-item><button type="button" className={styles.chip} onClick={() => enterEditTarget({ target: "homepage", label: "홈페이지" })}>홈페이지를 대화로 고치기</button></div>}
+            </div>}
           </>}
           {!showReview && !locked && shouldShowIdeaExploration(plan, question) && <IdeaExploration snapshot={plan!} selectedDraftId={questionDraft.selected[0]} disabled={blocked || aiBusy} rejected={ideaRejectIds} onReject={setIdeaRejectIds} onRequest={() => { writeDraft({ ...draftRef.current, mode: "ideas" }); void send({ action: "ideas", message: "현재 입력한 관심과 조건을 반영해 목록에 없는 사업 방향도 제안해 주세요" }); }} onCompose={() => { editDraft({ ...draftRef.current, mode: "ideas" }); requestAnimationFrame(() => composerInput.current?.focus()); }} error={ideaError} onSelect={id => {
             const current = draftRef.current.answers.candidate ?? emptyAnswer();
@@ -1076,17 +1303,27 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
         </div></div>
         {unseen && <button type="button" className={styles.newMessage} onClick={() => { follow.current = true; scrollToCurrent(); }}><ArrowDown size={15} aria-hidden="true" />이어서 대화하기</button>}
         {(plan || newEntry) && showComposer && <footer className={styles.composer} aria-label="대화 입력창">
-          <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); submitComposer(); }}>
-            {draft.mode === "ideas" && plan?.intake.mode === "exploring" && <div className={styles.composerContext}>AI에게 다른 사업 제안 요청<button type="button" className={styles.textButton} onClick={() => editDraft({ ...draftRef.current, mode: "answer" })}>질문으로 돌아가기</button></div>}
-            {directAnswer && !coach && <div className={styles.composerContext}>{draft.editingId ? "답변 수정 · " : ""}{question?.label}{question?.unit && <span>{question.unit}{question.period ? ` · ${question.period}` : ""}</span>}</div>}
-            {choiceSubmission && !coach && <div className={styles.composerSelection}><span>{questionDraft.ksic && questionDraft.ksicName ? `${questionDraft.ksicName} · ${ksicSectorLabel(questionDraft.ksic, questionDraft.selected[0], choiceText)}` : choiceText}</span><button type="button" className={styles.iconButton} title="선택 취소" aria-label="선택 취소" disabled={blocked} onClick={() => editDraft({ ...draftRef.current, answers: { ...draftRef.current.answers, [question!.id]: { ...questionDraft, selected: [], unknown: false, ksic: undefined, ksicName: undefined } } })}><X size={16} aria-hidden="true" /></button></div>}
-            {askingAI && <div className={styles.composerContext}><MessageCircle size={14} aria-hidden="true" />AI에게 질문<button type="button" className={styles.textButton} disabled={blocked} onClick={() => storeComposerNote("memo")}><Bookmark size={14} aria-hidden="true" />메모로 저장</button></div>}
-            {composerNote && <p className={styles.composerHint} role="status" aria-live="polite">{composerNote}</p>}
+          <form className={styles.composerShell} onSubmit={event => { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); }}>
+            {/* 작업실: 무엇을 고치는지 칩으로 — ✕ 로 그만두면 예전 입력창으로 돌아간다. 쓰는 중이면 다 쓴 뒤 반영한다고 알린다 */}
+            {studioRoute && <div className={styles.composerTarget} data-studio-target={editTarget?.target ?? "queue"}>
+              {editTarget && <span>{studioTargetChipText(editTarget.label)}<button type="button" aria-label={`${studioTargetChipText(editTarget.label)} 그만두기`} title="그만두기" onClick={leaveEditTarget}><X size={14} aria-hidden="true" /></button></span>}
+              {/* 꽉 차면 보내기 단추만 꺼지고 이유가 안 보였다 — 이유를 그 자리에 적는다 */}
+              {studioRoute === "queue" && <small>{queuedRequests.length >= STUDIO_QUEUE_LIMIT ? `기다리는 요청은 ${STUDIO_QUEUE_LIMIT}개까지예요 · 하나를 취소하면 더 적을 수 있어요` : "계획서를 다 쓰면 반영할게요"}</small>}
+              {/* 장 처리기가 없으면 예전 채팅 수정 — 사업 내용(가격·고객 등)만 바뀌고 장의 문장을 직접 다듬지는 않는다 */}
+              {studioRoute === "section" && !studioNav?.editHandler?.("plan-section") && <small>가격·고객 같은 사업 내용을 바꿔요 · 문장은 계획서에서 직접 고쳐요</small>}
+            </div>}
+            {!studioRoute && draft.mode === "ideas" && plan?.intake.mode === "exploring" && <div className={styles.composerContext}>AI에게 다른 사업 제안 요청<button type="button" className={styles.textButton} onClick={() => editDraft({ ...draftRef.current, mode: "answer" })}>질문으로 돌아가기</button></div>}
+            {!studioRoute && directAnswer && !coach && <div className={styles.composerContext}>{draft.editingId ? "답변 수정 · " : ""}{question?.label}{question?.unit && <span>{question.unit}{question.period ? ` · ${question.period}` : ""}</span>}</div>}
+            {!studioRoute && choiceSubmission && !coach && <div className={styles.composerSelection}><span>{questionDraft.ksic && questionDraft.ksicName ? `${questionDraft.ksicName} · ${ksicSectorLabel(questionDraft.ksic, questionDraft.selected[0], choiceText)}` : choiceText}</span><button type="button" className={styles.iconButton} title="선택 취소" aria-label="선택 취소" disabled={blocked} onClick={() => editDraft({ ...draftRef.current, answers: { ...draftRef.current.answers, [question!.id]: { ...questionDraft, selected: [], unknown: false, ksic: undefined, ksicName: undefined } } })}><X size={16} aria-hidden="true" /></button></div>}
+            {!studioRoute && askingAI && <div className={styles.composerContext}><MessageCircle size={14} aria-hidden="true" />AI에게 질문<button type="button" className={styles.textButton} disabled={blocked} onClick={() => storeComposerNote("memo")}><Bookmark size={14} aria-hidden="true" />메모로 저장</button></div>}
+            {(studioRoute ? studioNote : composerNote) && <p className={styles.composerHint} role="status" aria-live="polite">{studioRoute ? studioNote : composerNote}</p>}
             <div className={styles.composerRow}>
-              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" placeholder={coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!!replyTurn} disabled={!loaded || loadFailed || ownerChanged} rows={1} enterKeyHint="enter" maxLength={1200} value={composerShown} onPaste={event => {
+              <textarea ref={composerInput} id={directAnswer ? `intake-answer-${question!.id}` : "intake-memo"} aria-label="대화 내용" placeholder={studioRoute ? studioPlaceholder : coach ? coachPlaceholder : replyTurn ? "다음 질문을 준비하고 있어요" : choiceSubmission ? "덧붙일 설명 (선택 · 메모로 보관)" : !plan ? "생각을 들려주세요" : "답변이나 궁금한 점을 적어 주세요"} readOnly={!studioRoute && !!replyTurn} disabled={!loaded || loadFailed || ownerChanged} rows={1} enterKeyHint="enter" maxLength={1200} value={studioRoute ? studioText : composerShown} onPaste={event => {
                 const input = event.currentTarget, pasted = event.clipboardData.getData("text");
                 setPasteCut(pasted.length > 1200 - (input.value.length - (input.selectionEnd - input.selectionStart)));
               }} onChange={event => {
+                /* 작업실 고치기 · 대기열 입력은 질문 답과 따로 둔다(답변 임시 저장과 섞이지 않게) */
+                if (studioRoute) { setInputHint(""); setStudioText(event.target.value); if (event.target.value.length < 1200) setPasteCut(false); return; }
                 setIntentPrompt(null); setZeroPrice(null);
                 // 새로 입력하기 시작하면 지난 입력에 대한 안내·오류 말풍선은 지운다(저장 실패·충돌·로그인처럼 다시 시도가 필요한 오류는 남긴다)
                 setInputHint("");
@@ -1097,8 +1334,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
                 const selected = coachHybrid ? questionDraft.selected.filter(value => value.startsWith(COUNT_PREFIX) || !!label(value) && typed.includes(label(value)!)) : questionDraft.selected;
                 if (questionComposer && question) editDraft({ ...draftRef.current, ...(choiceQuestion ? { memo: "" } : {}), answers: { ...draftRef.current.answers, [question.id]: { ...questionDraft, selected, text: typed, label: question.label } } });
                 else editDraft({ ...draftRef.current, [draft.mode === "help" ? "help" : "memo"]: event.target.value });
-              }} onKeyDown={event => { if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); submitComposer(); } }} />
-              <button type="submit" className={styles.sendButton} aria-label={sendLabel} title={sendLabel} disabled={!loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{busy && !answerQueueOpen || replyTurn ? <LoaderCircle size={20} className={styles.spinner} /> : askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>
+              }} onKeyDown={event => { if (composerEnterSends({ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode }, window.matchMedia("(pointer: coarse)").matches)) { event.preventDefault(); if (studioRoute) submitStudio(); else submitComposer(); } }} />
+              <button type="submit" className={styles.sendButton} aria-label={studioRoute ? studioRoute === "queue" ? "기다리는 요청으로 보내기" : "보내기" : sendLabel} title={studioRoute ? "보내기" : sendLabel} disabled={studioRoute ? studioSendDisabled || !visibleComposerText(studioText) : !loaded || answerBlocked || ((draft.mode === "ideas" || askingAI) && aiBusy) || unfinishedText || !(plan ? composerVisible || choiceSubmission : entryMessage(draft))}>{!studioRoute && (busy && !answerQueueOpen || replyTurn) ? <LoaderCircle size={20} className={styles.spinner} /> : !studioRoute && askingAI ? <MessageCircle size={21} /> : <ArrowUp size={21} />}</button>
             </div>
           </form>
         </footer>}

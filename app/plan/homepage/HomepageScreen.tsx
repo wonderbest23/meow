@@ -36,9 +36,15 @@ import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { withRo } from "../../../lib/josa";
 import { useDialogFocus } from "../../../components/use-dialog-focus";
-import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane, type StudioEditHandler } from "../studio/StudioContext";
+import { loadBrainwavePage } from "../../../components/brainwave-page";
+import { aiEditChanges, aiEditCostLine, aiEditErrorMessage, aiEditSummary, applyAiEditPatch, undoAiEditPatch } from "../../../lib/landing/ai-edit-proposal";
 import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "../document/pane-link";
+import { closedForLaunch } from "../../../lib/launch-scope";
+
+/* 운영에서는 홈페이지 AI 수정 주소가 아직 닫혀 있다(lib/launch-scope) — 닫혀 있으면 대화로 고치기 권유·단추를 보이지 않는다 */
+const HOMEPAGE_CHAT_EDIT_OPEN = closedForLaunch("/api/projects/_/landing/ai-edit") === null;
 
 /*
  * 섹션을 넣고 빼고 끌어서 순서를 바꾸는 편집기.
@@ -671,7 +677,152 @@ export function HomepageScreen() {
     </div>;
   }, [studioHeader, kitEditing, liveUpToDate, siteStatus, previewView, busy, action]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로만 바뀐다
   useStudioHeaderActions(studioActions);
-  const back = screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
+
+  /*
+   * 3단계: 대화로 홈페이지 고치기 — 작업실 대화 칸이 이 핸들러로 "이렇게 바꿀게요" 카드를 만들고 적용·되돌린다.
+   * 편집기의 AI 수정과 같은 유료 경로(POST …/landing/ai-edit, 토큰 차감)를 쓰고, 적용은 편집기가 AI 결과를 받을 때와 같은 규칙,
+   * 저장은 이 화면의 저장(saveDraft — 다른 화면에서 먼저 저장됐으면 막힌다)으로 한다. 공개는 하지 않는다(사장님이 [새 버전 공개]를 누른다).
+   * 핸들러는 칸이 살아 있는 동안 한 번만 등록하고, 지금 값은 live 에서 읽는다(다시 그릴 때마다 등록이 되풀이되지 않게).
+   */
+  const live = useRef({ phase, blocked, draft, editable, sample, planPaid, builderOpen, aiFilling, projectId, saveDraft, screenPlanId, site });
+  live.current = { phase, blocked, draft, editable, sample, planPaid, builderOpen, aiFilling, projectId, saveDraft, screenPlanId, site };
+  type ChatEdit = { projectId: string; page: string; before: Record<string, string>; patch: Record<string, string>; status: "proposed" | "applied"; snapshot?: Record<string, string | null>; appliedValues?: Record<string, string> };
+  const chatEdits = useRef(new Map<string, ChatEdit>());
+  const chatEditBusy = useRef(false);
+  /* 토큰이 모자라 대화로 고치지 못했을 때 — 홈페이지 칸에 [토큰 충전하기]를 띄운다 */
+  const [tokenShortage, setTokenShortage] = useState(false);
+  /* 바뀐 글을 미리보기에서 잠깐 반짝인다 — 글 자리를 못 찾으면(휴대폰 모양 미리보기) 미리보기 전체를 */
+  const flashPreview = useCallback((ids: string[]) => {
+    window.setTimeout(() => {
+      const root = document.getElementById("hk-preview");
+      if (!root) return;
+      const frames: Keyframe[] = [{ outline: "3px solid rgba(37, 99, 235, 0.9)", outlineOffset: "2px", backgroundColor: "rgba(37, 99, 235, 0.12)" }, { outline: "3px solid rgba(37, 99, 235, 0)", outlineOffset: "2px", backgroundColor: "rgba(37, 99, 235, 0)" }];
+      const hits = ids.flatMap(id => [...root.querySelectorAll<HTMLElement>(`[data-bw-text="${CSS.escape(id)}"]`)]);
+      const targets = hits.length ? hits : [root.querySelector<HTMLElement>(".hk-preview-body")].filter((el): el is HTMLElement => !!el);
+      // 바뀐 글이 미리보기 아래쪽이면 반짝임이 화면 밖에서 일어나 무엇이 바뀌었는지 안 보였다 — 처음 바뀐 곳을 가운데로
+      hits[0]?.scrollIntoView?.({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      for (const el of targets) el.animate?.(frames, { duration: 2200, easing: "ease-out" });
+    }, 150);
+  }, []);
+  useEffect(() => {
+    if (!embedded || !nav?.registerEditHandler) return;
+    const edits = chatEdits.current;
+    /* 지금 대화로 고칠 수 있는지 — 안 되면 다음에 할 일을 담은 한국어 문장으로 멈춘다 */
+    const usable = (forSave: boolean) => {
+      const now = live.current;
+      if (now.phase === "loading") throw new Error("홈페이지를 아직 불러오고 있어요. 잠시 후 다시 말씀해 주세요.");
+      if (now.phase === "blocked") {
+        const cta = now.blocked.cta;
+        throw new Error(cta === "pay" ? "홈페이지 결제 후 쓸 수 있어요 — 홈페이지 칸의 [결제하러 가기]를 눌러 주세요."
+          : cta === "plan" ? "먼저 사업계획서를 만들어 주세요 — 홈페이지는 계획서에 답한 내용으로 만들어요."
+          : cta === "login" ? "로그인한 뒤 쓸 수 있어요 — 홈페이지 칸의 [로그인하기]를 눌러 주세요."
+          : `${now.blocked.title}. 홈페이지 칸을 확인해 주세요.`);
+      }
+      if (now.sample) throw new Error("예시 홈페이지는 고칠 수 없어요. 내 사업으로 만들면 대화로 고칠 수 있어요.");
+      if (!now.draft || !now.projectId) throw new Error("홈페이지를 아직 불러오지 못했어요. 홈페이지 칸을 확인해 주세요.");
+      if (!now.editable) throw new Error(now.planPaid ? "홈페이지 결제 후 쓸 수 있어요 — 홈페이지 칸의 [결제하고 홈페이지 고치기]를 눌러 주세요." : "홈페이지는 사업계획서와 함께 결제한 뒤 쓸 수 있어요 — 홈페이지 칸의 [함께 결제하기]를 눌러 주세요.");
+      const bw = now.draft.pageData?.brainwave;
+      if (!now.draft.pageData || !bw) throw new Error("이 홈페이지는 대화로 고칠 수 없어요. 홈페이지 칸의 편집기에서 직접 고쳐 주세요.");
+      if (now.aiFilling) throw new Error("AI가 계획서로 홈페이지를 채우는 중이에요. 끝난 뒤 다시 말씀해 주세요.");
+      if (now.builderOpen) throw new Error("홈페이지 편집기가 열려 있어요. 편집기를 닫은 뒤 다시 말씀해 주세요.");
+      if (forSave && (chatEditBusy.current || requestRef.current)) throw new Error("저장하는 중이에요. 끝난 뒤 다시 눌러 주세요.");
+      return { draft: now.draft, pageData: now.draft.pageData, bw, projectId: now.projectId, saveDraft: now.saveDraft, published: now.site?.status === "published" };
+    };
+    /* 글 묶음을 바꿔 저장한다 — 실패하면 화면의 초안을 바꾸기 전으로 돌리고(카드는 그대로라 다시 누를 수 있다) 이유를 알린다 */
+    const saveTexts = async (texts: Record<string, string>, failVerb: string) => {
+      const { draft: previous, pageData, bw, saveDraft: save } = usable(true);
+      const next = { ...previous, pageData: { ...pageData, brainwave: { ...bw, texts } } };
+      chatEditBusy.current = true;
+      try { await save(next); }
+      catch (error) {
+        if (mounted.current) setDraft(value => value === next ? previous : value);
+        if (error instanceof LandingSaveError && error.code === "LANDING_DRAFT_CONFLICT") throw new Error(`다른 화면에서 먼저 저장된 내용이 있어 ${failVerb}지 못했어요. 홈페이지 칸에서 [최신 내용 불러오기]를 누른 뒤 다시 말씀해 주세요.`);
+        if (error instanceof LandingSaveError && error.code === LANDING_LOGIN_REQUIRED) throw new Error(`로그인이 풀려 ${failVerb}지 못했어요. 다시 로그인한 뒤 다시 눌러 주세요.`);
+        throw new Error(`저장하지 못해 ${failVerb}지 않았어요. ${userErrorMessage(error, "잠시 후 다시 눌러 주세요.")}`);
+      } finally { chatEditBusy.current = false; }
+    };
+    const handler: StudioEditHandler = {
+      /* 결제 전·로그인 전·불러오는 중에는 대화 칸이 "대화로 고치기" 권유를 띄우지 않게 */
+      available: () => HOMEPAGE_CHAT_EDIT_OPEN && live.current.phase !== "blocked" && live.current.phase !== "loading",
+      async propose(instruction) {
+        const text = instruction.trim();
+        if (text.length < 2) throw new Error("무엇을 어떻게 바꿀지 조금 더 적어 주세요.");
+        if (text.length > 1000) throw new Error("지시가 너무 길어요 — 1,000자 안으로 줄여 주세요.");
+        const { draft: current, bw, projectId: target } = usable(false);
+        const before = { ...bw.texts };
+        const epoch = planOwnerEpoch();
+        const business = { name: current.businessName.slice(0, 120), summary: (current.subheadline || current.offerDescription || "").slice(0, 600) };
+        const meta = loadBrainwavePage(bw.page).catch(() => null);
+        let res: Response;
+        try {
+          // AI 는 1분 안에 답한다(서버 시간 제한) — 조금 넉넉히 기다린다
+          res = await fetchWithTimeout(`/api/projects/${encodeURIComponent(target)}/landing/ai-edit`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ instruction: text, page: bw.page, texts: before, business }) }, 75_000);
+        } catch (error) {
+          throw new Error(isTimeoutError(error) ? "AI 답이 늦어 기다리기를 멈췄어요. 잠시 후 다시 말씀해 주세요." : "연결이 끊겼어요. 연결을 확인하고 다시 말씀해 주세요.");
+        }
+        const data = await res.json().catch(() => ({})) as { texts?: Record<string, string>; usage?: { inputTokens?: number; outputTokens?: number }; balance?: { remaining?: number } | null; error?: { code?: string; message?: string } };
+        if (!mounted.current || epoch !== planOwnerEpoch()) throw new Error("계정이나 화면이 바뀌어 결과를 보여 드리지 않았어요. 다시 말씀해 주세요.");
+        if (!res.ok) {
+          if (data.error?.code === "TOKENS_REQUIRED") setTokenShortage(true);
+          throw new Error(aiEditErrorMessage(res.status, data.error?.code, data.error?.message));
+        }
+        setTokenShortage(false);
+        const changes = aiEditChanges({ patch: data.texts ?? {}, texts: before, page: await meta });
+        const cost = aiEditCostLine(data.usage, data.balance);
+        if (!changes.length) throw new Error(`AI가 바꿀 글을 찾지 못했어요. 어느 부분을 어떻게 바꿀지 조금 더 구체적으로 말씀해 주세요.${cost ? ` (${cost})` : ""}`);
+        const id = `homepage-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+        edits.set(id, { projectId: target, page: bw.page, before, patch: Object.fromEntries(changes.map(change => [change.id, change.after])), status: "proposed" });
+        /* 오래된 카드는 잊는다(적용한 것은 되돌리기를 위해 남긴다) */
+        for (const [key, value] of edits) if (edits.size > 30 && value.status === "proposed" && key !== id) edits.delete(key);
+        return { id, target: "homepage", summary: aiEditSummary(changes), changes: changes.map(({ label, before: was, after }) => ({ label, before: was, after })), cost };
+      },
+      async apply(proposalId) {
+        const edit = edits.get(proposalId);
+        if (!edit) throw new Error("이 제안은 더 이상 쓸 수 없어요. 다시 말씀해 주세요.");
+        if (edit.status === "applied") return;
+        const { bw, projectId: target, published } = usable(true);
+        if (target !== edit.projectId || bw.page !== edit.page) throw new Error("제안을 만든 뒤 홈페이지 디자인이 바뀌었어요. 다시 말씀해 주시면 지금 디자인으로 새로 만들어 드려요.");
+        const result = applyAiEditPatch(bw.texts, edit.before, edit.patch);
+        if (!result.applied.length && result.conflicts.length) throw new Error("제안을 만든 뒤 같은 글을 직접 고치셔서 바꾸지 않았어요. 다시 말씀해 주시면 지금 글로 새로 만들어 드려요.");
+        if (result.applied.length) await saveTexts(result.texts, "바꾸");
+        edit.status = "applied";
+        edit.snapshot = result.snapshot;
+        edit.appliedValues = Object.fromEntries(result.applied.map(id => [id, result.texts[id]]));
+        if (mounted.current) {
+          setMessage(`대화로 고친 글을 저장했어요${result.conflicts.length ? ` · 직접 고친 ${result.conflicts.length}곳은 그대로 두었어요` : ""}.${published ? " 손님 화면에는 [새 버전 공개]를 눌러야 반영돼요." : ""}`);
+          flashPreview(result.applied);
+        }
+      },
+      dismiss(proposalId) {
+        if (edits.get(proposalId)?.status !== "applied") edits.delete(proposalId);
+      },
+      async undo(proposalId) {
+        const edit = edits.get(proposalId);
+        if (!edit || edit.status !== "applied" || !edit.snapshot || !edit.appliedValues) throw new Error("되돌릴 수 있는 바꾸기가 없어요.");
+        const { bw, projectId: target } = usable(true);
+        if (target !== edit.projectId || bw.page !== edit.page) throw new Error("바꾼 뒤 홈페이지 디자인이 바뀌어 되돌릴 수 없어요. 홈페이지 칸의 편집기에서 직접 고쳐 주세요.");
+        const result = undoAiEditPatch(bw.texts, edit.snapshot, edit.appliedValues);
+        if (!result.restored.length && Object.keys(edit.snapshot).length) throw new Error("바꾼 뒤 같은 글을 직접 고치셔서 되돌릴 곳이 없어요.");
+        if (result.restored.length) await saveTexts(result.texts, "되돌리");
+        /* 되돌린 카드는 다시 [바꾸기]할 수 있다 */
+        edit.status = "proposed"; edit.snapshot = undefined; edit.appliedValues = undefined;
+        if (mounted.current) {
+          setMessage(`바꾸기 전으로 되돌렸어요${result.kept.length ? ` · 그 뒤에 직접 고친 ${result.kept.length}곳은 그대로 두었어요` : ""}.`);
+          flashPreview(result.restored);
+        }
+      },
+    };
+    return nav.registerEditHandler("homepage", handler);
+  }, [embedded, nav, flashPreview]);
+  /* 계정이 바뀌거나 칸이 닫히면 이전 카드는 쓸 수 없다 — 등록을 다시 하는 것과는 따로(다시 등록해도 카드는 살아 있게) */
+  useEffect(() => {
+    const edits = chatEdits.current;
+    const unsubscribe = subscribePlanOwnerChange(() => edits.clear());
+    return () => { unsubscribe(); edits.clear(); };
+  }, []);
+  const tokenPayHref = screenPlanId ? `/plan/pay?planId=${encodeURIComponent(screenPlanId)}&product=tokens` : "";
+
+  const back =screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
   /* 이 화면의 사업 — 공개 뒤 다음 단계와 '사업 시작 준비 먼저 하기'에 쓴다(이 기기에 저장된 사업) */
   const screenPlan = phase === "ready" && screenPlanId && !sample ? loadState().plans.find(item => item.id === screenPlanId) ?? null : null;
   /* 계획서에 가게 이름 후보가 있는데 아직 이름을 정하지 않았는지 — 설명 같은 이름이면 공개 전 '채울 것'에 가게 이름을 넣는다 */
@@ -687,6 +838,8 @@ export function HomepageScreen() {
     <div className={styles.frameScroll}><div className={styles.frameInner}>
       {/* 작업실 좁은 화면 — 머리줄 대신 칸 맨 위에 저장·공개(넓은 화면에서는 머리줄 단추가 같은 일을 한다) */}
       {studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
+      {/* 휴대폰에서는 오른쪽 칸이 없어 대화 칸이 '홈페이지를 대화로 고치기'를 권하지 못한다 — 여기서 대화로 보낸다(결제 전·불러오는 중이면 숨김) */}
+      {embedded && HOMEPAGE_CHAT_EDIT_OPEN && nav?.composeInChat && draft && editable && phase !== "blocked" && phase !== "loading" && <div className={paneHeader.narrowOnly}><button type="button" className={styles.studioChatEdit} onClick={() => nav.composeInChat?.({ target: "homepage", label: "홈페이지" })}>대화로 고치기</button></div>}
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (
         <div ref={fullscreenRef} className={styles.fullscreen} role="dialog" aria-modal="true" aria-label="홈페이지 전체 화면">
@@ -824,6 +977,15 @@ export function HomepageScreen() {
             ? <Link className={styles.troubleLink} href={blockedHref("login")}>다시 로그인하기</Link>
             : <><button type="button" disabled={busy} onClick={() => void reloadLatest()}>최신 내용 불러오기</button><button type="button" onClick={() => setSaveTrouble(null)}>계속 고치기</button></>}
         </div>
+      )}
+
+      {/* 대화로 고치려다 AI 수정 토큰이 모자랐을 때 — 충전하러 가는 단추(대화 칸의 안내가 이 단추를 가리킨다) */}
+      {phase === "ready" && draft && editable && tokenShortage && tokenPayHref && (
+        <p className={styles.aiFillNotice} role="status">
+          <span>AI 수정 토큰이 부족해 대화로 홈페이지를 고치지 못했어요. 충전한 뒤 대화에서 다시 말씀해 주세요.</span>
+          <button type="button" onClick={() => go(tokenPayHref)}>토큰 충전하기</button>
+          <button type="button" onClick={() => setTokenShortage(false)}>닫기</button>
+        </p>
       )}
 
       {/* 처음 저절로 채우기가 실패했을 때 — 한 줄 안내와 다시 채우기(누를 때만 다시 돈다) */}

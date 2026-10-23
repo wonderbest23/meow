@@ -336,6 +336,30 @@ export function PlanDocumentBody() {
    */
   const paneRefresh = pane?.refresh ?? 0;
   const seenRefresh = useRef(paneRefresh);
+  /*
+   * 3단계: 작성 중이 아니면 보이던 장도 서버 내용이 달라졌을 때 바꿔 끼운다 — 대화 칸의 채팅 수정(edit-apply)이 금액을 본문에
+   * 바로 바꿔 넣으면(patchDocumentAmounts) 숨어 있던 계획서 칸이 예전 금액을 그대로 보여 줬다. 고치는 중인 장(초안·저장 중)은 그대로 둔다.
+   * 작성 중에는 예전처럼 아직 없는 장만 붙인다(새 장은 진행 확인이 문단 나타나기와 함께 붙인다).
+   */
+  const lastSync = useRef(0);
+  const sectionsRef = useRef(sections);
+  sectionsRef.current = sections;
+  function syncFromServer(id: string, state: Awaited<ReturnType<typeof hydrateFromServer>>) {
+    lastSync.current = Date.now();
+    const plan = state.plans.find(item => item.id === id);
+    if (!plan) return;
+    const fresh = assembleSections({ ...state, activePlanId: id });
+    /* 바꿔 끼울 장을 먼저 고른다(고치기 상태 맞추기는 그리기 밖에서) — 고치는 중인 장은 syncServer 가 false */
+    const replace = new Set(generation.state?.active ? [] : fresh.filter(item => {
+      const shown = sectionsRef.current.find(section => section.key === item.key);
+      const stored = plan.sections[item.key];
+      return shown && (shown.markdown || shown.html) && (shown.markdown !== item.markdown || shown.html !== item.html) && stored && edits.syncServer(id, item.key, stored);
+    }).map(item => item.key));
+    setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !replace.has(item.key) ? shown : item; }));
+    for (const key of Object.keys(plan.sections)) if (writtenForCurrentRun(plan, key)) appliedKeys.current.add(key);
+    setTitle(plan.title);
+    updateSourceStatus(plan);
+  }
   useEffect(() => {
     if (seenRefresh.current === paneRefresh) return;
     seenRefresh.current = paneRefresh;
@@ -344,16 +368,22 @@ export function PlanDocumentBody() {
     if (!id || isSample) return;
     generation.restart();
     if (syncing.current) return;
-    hydrateFromServer(false).then(state => {
-      const plan = state.plans.find(item => item.id === id);
-      if (!plan) return;
-      const fresh = assembleSections({ ...state, activePlanId: id });
-      setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) ? shown : item; }));
-      for (const key of Object.keys(plan.sections)) if (writtenForCurrentRun(plan, key)) appliedKeys.current.add(key);
-      setTitle(plan.title);
-      updateSourceStatus(plan);
-    }).catch(() => { /* 진행 확인이 다음 차례에 다시 받는다 */ });
+    hydrateFromServer(false).then(state => syncFromServer(id, state)).catch(() => { /* 진행 확인이 다음 차례에 다시 받는다 */ });
   }, [paneRefresh, documentPlanId, isSample]); // eslint-disable-line react-hooks/exhaustive-deps
+  /*
+   * 숨어 있던 계획서 칸이 다시 보일 때(휴대폰 탭 · 오른쪽 탭 바꾸기) — 대화 칸이 새로 읽기 번호를 올리지 않은 채 사실을 바꿨어도
+   * (채팅 수정 적용 등) 보이는 순간 한 번 서버 내용과 맞춘다. 탭을 자주 오가도 15초에 한 번만 묻는다.
+   */
+  const paneVisible = pane?.active ?? true;
+  const wasVisible = useRef(paneVisible);
+  useEffect(() => {
+    const shown = paneVisible && !wasVisible.current;
+    wasVisible.current = paneVisible;
+    if (!shown || !pane || !documentPlanId || isSample || syncing.current || Date.now() - lastSync.current < 15000) return;
+    const id = documentPlanId;
+    lastSync.current = Date.now();
+    hydrateFromServer(false).then(state => syncFromServer(id, state)).catch(() => { /* 다음에 보일 때 다시 받는다 */ });
+  }, [paneVisible, documentPlanId, isSample]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 문서에서 금액을 고치면 서버가 본문 금액을 바로 바꿔 넣는다 — 새로고침 없이 보이게 다시 불러온다.
   const reloadSections = () => {

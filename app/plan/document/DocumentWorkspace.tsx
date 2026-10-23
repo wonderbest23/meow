@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, List, X, FileDown, FileText, Presentation, Check, RotateCcw, RefreshCw, Download, MessageSquare, PenLine } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import InlineDocEditor, { withBodyHeadingLevels } from "../InlineDocEditor";
 import PlanLoading from "../PlanLoading";
@@ -27,6 +27,7 @@ import { withTableCellLabels } from "../../../lib/plan-builder/table-cells";
 import { useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "./pane-link";
+import { planChapterComposeRequest } from "../../../lib/plan-builder/studio-plan-edit";
 
 /** Chat edits after the plan exists (phase B); the choice stays hidden until the server side is live. */
 const EDIT_CHAT = process.env.NEXT_PUBLIC_INTAKE_EDIT_CHAT === "1";
@@ -275,6 +276,23 @@ export default function DocumentWorkspace(props: Props) {
   const factsUnapplied = factMode && facts.snapshot?.documentStatus === "stale";
   /* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 */
   const editButton = summaryMode ? null : <button className={styles.secondary} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{editing ? "수정 마치기" : "수정하기"}</button>;
+  /*
+   * 3단계(작업실 안): 장마다 '이 장을 대화로 고치기' — 대화 칸 입력창을 그 장 고치기로 연다(nav.composeInChat).
+   * 고치기는 대화 칸의 기존 채팅 수정(바꿀 사실 카드 → 바꾸기/그대로 두기)이 맡는다 — 계획서 칸은 plan-section 처리기를 등록하지 않는다.
+   * 채팅 수정이 꺼져 있거나(EDIT_CHAT) 작업실 밖·예시·작성 중이면 단추가 없다. '직접 고치기'는 예전 수정하기(사실 고치기 · 본문 고치기)와 같다.
+   */
+  const chatEdit = EDIT_CHAT && factEditable && !!nav?.composeInChat && !props.writing;
+  const askChatEdit = (index: number) => {
+    const entry = grouped[index];
+    if (!entry || !nav?.composeInChat) return;
+    nav.composeInChat(planChapterComposeRequest(index + 1, entry[0], entry[1].map(section => section.key)));
+  };
+  const directEdit = () => { if (factEditable) { setSummaryMode(false); setFactMode(true); } else setEditing(true); };
+  const directEditable = !(factEditable && props.writing);
+  const chapterActions = (index: number, name: string) => !pane || isSample || !planId || factMode || editing || !(chatEdit || directEditable) ? undefined : <>
+    {chatEdit && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 이 장을 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />이 장을 대화로 고치기</button>}
+    {directEditable && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</button>}
+  </>;
   const actionButtons = factMode ? <>
     {factsUnapplied ? null : <span className={styles.factHint}>노란 부분만 고칠 수 있어요</span>}
     <button className={styles.secondary} onClick={async () => {
@@ -331,6 +349,8 @@ export default function DocumentWorkspace(props: Props) {
               <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
             </div>}
             <span className={styles.pageCount}>{summaryMode ? props.summary ? "" : "한 장 요약" : continuous ? "전체 이어 읽기" : grouped.length ? `${chapter + 1} / ${grouped.length}장` : "사업계획서"}</span>
+            {/* 휴대폰(좁은 화면)의 도구 줄 — 장 머리가 위로 밀려 올라가도 지금 보는 장을 대화로 고칠 수 있게. 넓은 화면은 장 머리 단추만 */}
+            {chatEdit && !factMode && !editing && !summaryMode && !continuous && grouped[chapter] && <button type="button" className={styles.chapterChatEdit} aria-label={`${chapter + 1}장 ${grouped[chapter][0]} — 대화로 고치기`} onClick={() => askChatEdit(chapter)}><MessageSquare size={15} aria-hidden="true" />대화로 고치기</button>}
             {toolbarHas && <div className={styles.toolbarActions} data-next={(showNext && !studioHeader) || undefined}>{toolbarButtons}</div>}
           </div>
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
@@ -348,7 +368,7 @@ export default function DocumentWorkspace(props: Props) {
                 ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
                 : factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>고칠 곳 보기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 수정하기</Link>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}</span>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
-                <DocumentChapterHeading number={index + 1} title={name} />
+                <DocumentChapterHeading number={index + 1} title={name} actions={chapterActions(index, name)} />
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
                   <DocumentSectionHeading number={props.numbering.get(section.key)?.num} title={section.sectionTitle} />
                   <div className={styles.body} data-fresh={props.freshKeys?.has(section.key) || undefined}>{factMode
