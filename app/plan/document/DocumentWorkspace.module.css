@@ -427,3 +427,29 @@
   .page[data-embedded] .article { padding:32px 28px 48px; }
   .page[data-embedded] :is(.readingBar, .completionNotice) { padding-inline:max(24px, calc((100% - 1020px) / 2 + 28px)); }
 }
+
+/*
+ * 2단계 작업실 — 머리줄이 사업명·상태와 '다음 단계'·'내려받기'를 보여 준다.
+ * 문서 머리는 계획서 종류 한 줄 + 사업 설명 카드만(사업명은 낭독기용 제목으로만 남긴다), 여백도 줄인다.
+ * 내려받기 칩은 머리줄 단추가 숨는 좁은 화면(900px 이하)에서만 보인다.
+ */
+.srOnly { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+.page[data-embedded] .studioHeading { padding-bottom:20px; margin-bottom:28px; }
+.page[data-embedded] .studioHeading > p { margin:0 0 10px; }
+.page[data-embedded] .studioHeading .identity strong { font-size:16px; }
+@media (min-width:901px) { .page[data-embedded] .narrowOnly { display:none; } }
+/* 보기 바꾸기·장 번호 줄은 칸이 어떻게 스크롤되든 칸 맨 위에 붙어 있게 */
+.page[data-embedded] .readingBar { position:sticky; top:0; z-index:2; }
+/*
+ * PC 작업실의 오른쪽 칸이 좁을 때(화면 1024~1279px → 칸 약 560~860px) — 왼쪽 목차(190px)가 본문을 350px 남짓으로 눌러
+ * 네 칸 표가 찌그러졌다. 이 폭에서는 목차를 '목차' 단추(창)로 접고 본문에 폭을 준다.
+ */
+@media (min-width:1024px) and (max-width:1279px) {
+  .page[data-embedded] .sidebar { display:none; }
+  .page[data-embedded] .tocToggle { display:flex; }
+}
+/* 휴대폰 작업실 — 칸 위에 작업실 탭 줄이 따로 있어 문서 여백을 조금 줄인다 */
+@media (max-width:760px) {
+  .page[data-embedded] .article { padding:20px 16px 36px; }
+  .page[data-embedded] .studioHeading { padding-bottom:16px; margin-bottom:22px; }
+}

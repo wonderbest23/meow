@@ -450,6 +450,21 @@ export function DocumentLockedTurn({ planId, chatEdit }: { planId: string; chatE
   </section>;
 }
 
+/*
+ * 작업실 대화 칸: 이번에 사업계획서 작성이 끝나면 진행 카드 자리에 남기는 마무리 말 — 다음에 할 일 두 가지를 바로 고르게 한다.
+ * '계획서 보기'는 오른쪽(휴대폰은 계획서 탭)을 보여 주고, '홈페이지 만들기'는 홈페이지 탭으로 간다.
+ */
+export function GenerationFinishedTurn({ planId, onPlan, onHomepage }: { planId: string; onPlan: () => void; onHomepage: () => void }) {
+  return <section className={styles.lockedTurn} aria-label="사업계획서 작성 완료" data-generation-finished>
+    <div className={styles.assistantMessage}><p>사업계획서를 다 만들었어요. 계획서를 확인해 보시고, 이 내용으로 홈페이지도 바로 만들 수 있어요.</p></div>
+    <div className={styles.chipRow}>
+      <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={onPlan}>계획서 보기</button>
+      <button type="button" className={styles.chip} onClick={onHomepage}>홈페이지 만들기</button>
+      <Link className={styles.chip} href={`/plan/document?planId=${encodeURIComponent(planId)}&edit=facts`}>문장에서 바로 고치기</Link>
+    </div>
+  </section>;
+}
+
 export function ChatSpeaker({ status }: { status?: string }) {
   return <span className={styles.chatSpeaker}><img src="/support-agent-avatar-2026.png" alt="" width="28" height="28" /><span>오늘창업</span>{status && <span className={styles.speakerStatus}>{status}</span>}</span>;
 }

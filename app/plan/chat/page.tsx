@@ -22,6 +22,7 @@ import { CoachMessage, CoachResultCard, CoachSpeaker, CoachWelcome } from "../..
 import chatUi from "../../../components/coach-chat-ui.module.css";
 import BusinessIntake from "./BusinessIntake";
 import DeletedBusinessGuard from "../DeletedBusinessGuard";
+import StudioRedirect from "../studio/StudioRedirect";
 import { readChatResponse } from "../../../lib/http/read-chat-response";
 import type { ServerPlan } from "../../../lib/plan-builder/plan-server-store";
 
@@ -33,8 +34,11 @@ const PHASES = { queued: "요청을 접수했어요", understanding: "말씀하�
 const activeJob = (job?: CoachJob | null) => !!job && ["queued", "running"].includes(job.status);
 
 export default function BusinessCoachPage() {
-  /* 지운 사업의 대화를 뒤로 가기·다른 탭으로 다시 쓰지 못하게 — DeletedBusinessGuard */
-  return <Suspense fallback={<ChatLoading />}>{process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 === "1" ? <BusinessIntake /> : <BusinessCoach />}<DeletedBusinessGuard /></Suspense>;
+  /*
+   * 지운 사업의 대화를 뒤로 가기·다른 탭으로 다시 쓰지 못하게 — DeletedBusinessGuard
+   * 작업실이 켜져 있으면 작업실 대화 칸으로 보낸다 — 새 대화(new=1 · 랜딩 idea · prompt)도 작업실 새 대화로, 결제 뒤 start=1 도 그대로(?classic=1 이면 그대로) — StudioRedirect
+   */
+  return <Suspense fallback={<ChatLoading />}><StudioRedirect fallback={<ChatLoading />}>{process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 === "1" ? <BusinessIntake /> : <BusinessCoach />}</StudioRedirect><DeletedBusinessGuard /></Suspense>;
 }
 
 function BusinessCoach() {

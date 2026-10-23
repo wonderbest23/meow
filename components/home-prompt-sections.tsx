@@ -11,12 +11,14 @@ import { useEffect, useRef, useState } from "react";
 import { BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
 import { PPT_GENERATION_VERIFIED } from "../lib/plan-builder/deck-availability";
 import { landingIdeaHref, rememberLandingIdea } from "./home-prompt-hero";
+import { newChatHref } from "../lib/plan-builder/studio";
 import styles from "./home-prompt-sections.module.css";
 
 const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
 const SAMPLE_PLAN = "/plan/document?planId=sample_coffee";
 const SAMPLE_HOMEPAGE = "/plan/homepage?planId=sample_coffee";
-const NEW_CHAT = "/plan/chat?new=1";
+/* 새 대화 — 작업실이 켜져 있으면 작업실의 새 대화로(newChatHref) */
+const NEW_CHAT = newChatHref();
 
 const FEATURES = [
   { label: "실행용 사업계획서", href: SAMPLE_PLAN },

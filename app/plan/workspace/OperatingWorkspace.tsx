@@ -1,7 +1,7 @@
 "use client";
 
 import { apiMessage, userErrorMessage } from "../../../lib/client/user-error";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, Download, FileText, Pencil, Plus, Save, X } from "lucide-react";
 import { METRICS, comparePeriods, metricValue, oldInput, periodDays, periodInputSchema, periodLabel, previousPeriod, referenceFor, reportIsCurrent, type OperatingCommand, type OperatingPeriod, type OperatingReport, type OperatingState, type PeriodInput } from "../../../lib/plan-builder/operating-records";
 import styles from "./OperatingWorkspace.module.css";
@@ -11,6 +11,8 @@ import PlanLoading from "../PlanLoading";
 import OperatingAnalysisPanel, { OperatingAnalysisResult } from "./OperatingAnalysisPanel";
 import type { AnalysisTarget } from "../../../lib/plan-builder/operating-analysis-contract";
 import { autoInquiriesValue, type HomepageInquiries } from "../../../lib/plan-builder/operating-homepage";
+import { useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import paneHeader from "./PaneHeaderActions.module.css";
 
 type Draft = Omit<PeriodInput, "metrics"> & { metrics: Record<typeof METRICS[number]["key"], string> };
 /** 운영 중인 사업 대화에서 말한 실적(기간·실제 매출) — 첫 기록을 채우는 데만 쓴다(저장은 사장님이 누를 때) */
@@ -191,8 +193,23 @@ export default function OperatingWorkspace({ planId, onDirtyChange, chatRecord =
     } catch (e) { void showNotice(userErrorMessage(e, "리포트를 받지 못했어요. 잠시 후 다시 시도해 주세요."), { title: "파일 받기" }); }
     finally { setDownloading(false); }
   }
+  /*
+   * 작업실 안(머리줄이 있는 작업실) — 이 칸에서 먼저 할 일 '기간 기록 추가'를 머리줄 오른쪽 파란 단추로 올린다(넓은 화면).
+   * 좁은 화면은 머리줄이 좁아 예전처럼 제목 옆 단추를 쓴다. 단추 묶음은 바뀔 때만 새로 만든다(작업실이 다시 그려질 때 되풀이 등록 방지).
+   */
+  const pane = useStudioPane();
+  const studioNav = useStudioNav();
+  const studioHeader = !!pane && !!studioNav?.setHeaderActions;
+  const canAddPeriod = !!state && !editor && mode === "periods";
+  const addDisabled = busy || analysisDirty;
+  const editRef = useRef(edit); editRef.current = edit;
+  const headerNode = useMemo(() => studioHeader && canAddPeriod
+    ? <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}><button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} disabled={addDisabled} onClick={() => editRef.current()}><Plus size={16} aria-hidden="true" />기간 기록 추가</button></div>
+    : null, [studioHeader, canAddPeriod, addDisabled]);
+  useStudioHeaderActions(headerNode);
+
   return <div className={styles.root}>
-    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{state ? <p>운영 기록 {state.periods.length}개 <span aria-hidden="true">·</span> 개선 리포트 {state.reports.length}개</p> : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{state && !editor && mode === "periods" && <button className={styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
+    <header className={styles.heading}><div><h2 tabIndex={-1}>실적과 개선 기록</h2>{/* 불러오기 전·실패했을 때 '0개'라고 하지 않는다 */}{state ? <p>운영 기록 {state.periods.length}개 <span aria-hidden="true">·</span> 개선 리포트 {state.reports.length}개</p> : <p>{error ? "기록 수를 확인하지 못했어요" : "기록을 확인하고 있어요"}</p>}</div>{state && !editor && mode === "periods" && <button className={studioHeader ? `${styles.primary} ${paneHeader.narrowOnly}` : styles.primary} onClick={() => edit()} disabled={busy || analysisDirty}><Plus size={18} />기간 기록</button>}</header>
     <div className={styles.tabs} role="group" aria-label="운영 기록 보기"><button aria-pressed={mode === "periods"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("periods")}>기간별 실적</button><button aria-pressed={mode === "reports"} disabled={!!editor || busy || analysisDirty} onClick={() => setMode("reports")}>리포트 보관함</button></div>
     {error && <div role="alert" className={styles.error}><p>{error}</p>{errorKind !== "input" && <><button type="button" disabled={busy} onClick={() => void reload()}>기록 다시 불러오기</button>{editor && <p>{errorKind === "conflict" ? "다른 곳에서 먼저 고친 기록이 있어요. 입력 중인 내용은 그대로 있으니 복사해 두고, 취소한 뒤 다시 열어 고쳐 주세요." : "입력 중인 내용은 그대로 있어요."}</p>}</>}</div>}
     {notice && <p role="status" className={styles.success}>{notice}</p>}

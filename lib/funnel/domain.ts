@@ -12,6 +12,8 @@ import { z } from "zod";
  *  consult_login_click  한도 안내에서 로그인을 눌렀다
  *  consult_handoff_arrive  상담 값을 들고 /plan/start 에 실제로 도착했다 (filled: 항목 수)
  *  support_link_click   문의 답변에 붙은 화면 링크를 눌렀다 (href, source: faq | ai)
+ *  studio_open          사업 작업실을 열었다 (tab, entry: new | business, layout: wide | narrow)
+ *  studio_tab_view      작업실에서 다른 탭을 봤다 (tab, source: click | link | auto, layout)
  */
 export const funnelEventNames = [
   "consult_cta_view",
@@ -21,6 +23,8 @@ export const funnelEventNames = [
   "consult_handoff_human",
   "consult_handoff_arrive",
   "support_link_click",
+  "studio_open",
+  "studio_tab_view",
 ] as const;
 
 export type FunnelEventName = (typeof funnelEventNames)[number];

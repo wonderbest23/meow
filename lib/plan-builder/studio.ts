@@ -5,6 +5,7 @@
  * 화면 코드에 기대지 않는 순수 함수만 둔다 — 테스트: scripts/studio-navigation.test.ts
  */
 import type { JourneyStepId } from "./journey-steps";
+import type { HomepageStatus, JourneyState } from "./journey";
 
 export const STUDIO_TABS = ["chat", "plan", "homepage", "launch", "operations"] as const;
 export type StudioTab = typeof STUDIO_TABS[number];
@@ -13,6 +14,15 @@ export type StudioTab = typeof STUDIO_TABS[number];
 export const STUDIO_ENABLED = process.env.NEXT_PUBLIC_STUDIO === "1";
 
 export const STUDIO_PATH = "/plan/studio";
+
+/*
+ * 예전 화면(/plan/chat · /plan/document · /plan/homepage · /plan/workspace)을 작업실로 보내는지 — 플래그와 새 대화 화면(V2)이
+ * 둘 다 켜졌을 때만. 새 대화 화면이 꺼져 있으면 작업실이 예전 대화로 되돌려 보내므로(Studio.tsx) 둘 다 봐야 서로 보내는 고리가 없다.
+ */
+export const STUDIO_REDIRECT = STUDIO_ENABLED && process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 === "1";
+
+/** 예전 화면 그대로 보기 — 주소에 ?classic=1 이 있으면 작업실로 보내지 않는다 */
+export const STUDIO_CLASSIC_PARAM = "classic";
 
 /** 탭 이름 — PC 오른쪽 탭과 칸 제목에 쓴다(휴대폰 탭은 더 짧게: Studio.tsx) */
 export const STUDIO_TAB_LABELS: Record<StudioTab, string> = {
@@ -61,7 +71,8 @@ export function studioTarget(href: string, planId: string, origin = "https://one
   const target = url.searchParams.get("planId");
   if (!target || !planId || target !== planId) return null;
   const params: Record<string, string> = {};
-  url.searchParams.forEach((value, key) => { if (key !== "planId" && key !== "tab") params[key] = value; });
+  /* classic(예전 화면 그대로 보기)은 작업실에서 뜻이 없어 싣지 않는다 */
+  url.searchParams.forEach((value, key) => { if (key !== "planId" && key !== "tab" && key !== STUDIO_CLASSIC_PARAM) params[key] = value; });
   const hash = url.hash;
   const path = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : url.pathname;
   switch (path) {
@@ -110,4 +121,142 @@ export function studioEntryHref(href: string, origin = "https://oneulstart.com")
   if (!planId) return null;
   const target = studioTarget(href, planId, origin);
   return target ? studioHref(planId, target.tab, target.params, target.hash) : null;
+}
+
+/** 새 대화를 작업실에서 여는 주소 — 사업이 아직 없어 대화 칸만 열린다. extra 는 랜딩 아이디어(idea) · prompt · start 등 */
+export function studioNewHref(extra: Record<string, string> = {}): string {
+  const params = new URLSearchParams({ new: "1" });
+  for (const [key, value] of Object.entries(extra)) if (key !== "planId" && key !== "tab" && key !== "new" && value) params.set(key, value);
+  return `${STUDIO_PATH}?${params.toString()}`;
+}
+
+/** 새 대화 주소 — 작업실이 켜져 있으면 작업실의 새 대화, 아니면 예전 대화 화면(랜딩 입력칸 · '대화로 시작하기') */
+export function newChatHref(idea = "", studio = STUDIO_REDIRECT): string {
+  if (studio) return studioNewHref(idea ? { idea } : {});
+  return idea ? `/plan/chat?new=1&idea=${encodeURIComponent(idea)}` : "/plan/chat?new=1";
+}
+
+/**
+ * 예전 화면 주소 → 그 화면 감싸기가 router.replace 로 보낼 작업실 주소. 보내지 않을 주소면 null.
+ * - ?classic=1 이면 예전 화면 그대로(null)
+ * - 사업 없는 /plan/chat(새 대화 · 이어 하기 · 랜딩 아이디어)은 작업실 새 대화로 — idea · prompt · start 등은 그대로 싣는다
+ * - /plan/workspace 는 사업 시작하기 · 유지보수(tab=launch|operations|action)만. 탭 없는 주소는 사업 요약이 기본이라 보내지 않는다
+ * - 결제 · 결과 · 메일 링크(start=1 · step=marketing · edit=facts · #sec-)는 해당 탭으로 그대로 이어진다(studioEntryHref)
+ */
+export function studioRedirectHref(href: string, origin = "https://oneulstart.com"): string | null {
+  let url: URL;
+  try { url = new URL(href, origin); } catch { return null; }
+  if (url.searchParams.get(STUDIO_CLASSIC_PARAM) === "1") return null;
+  const path = url.pathname.length > 1 ? url.pathname.replace(/\/+$/, "") : url.pathname;
+  if (path === "/plan/chat" && !url.searchParams.get("planId")) {
+    const params = new URLSearchParams();
+    url.searchParams.forEach((value, key) => { if (key !== "tab" && key !== "planId" && key !== STUDIO_CLASSIC_PARAM) params.set(key, value); });
+    const query = params.toString();
+    return `${STUDIO_PATH}${query ? `?${query}` : ""}${url.hash}`;
+  }
+  if (path === "/plan/workspace" && !["launch", "operations", "action"].includes(url.searchParams.get("tab") ?? "")) return null;
+  if (!["/plan/chat", "/plan/document", "/plan/homepage", "/plan/workspace"].includes(path)) return null;
+  return studioEntryHref(url.href, origin);
+}
+
+/* ── 작업실의 대화 완료와 막힌 탭 ───────────────────────── */
+
+export type StudioChatInput = {
+  /** 사업안(coach.design)이 만들어졌다 */
+  design: boolean;
+  /** 써 둔 계획서 장 수 */
+  documents: number;
+  /** 계획서를 쓰는 중이다 */
+  running?: boolean;
+  /** 핵심 질문을 다 답했다(대화 칸의 coreComplete) — 모르면 undefined */
+  coreComplete?: boolean;
+};
+
+/**
+ * 작업실에서 대화 단계를 '끝남'으로 보는 기준 — 사업안이 만들어졌거나, 계획서 장이 있거나(쓰는 중 포함), 핵심 질문을 다 답했을 때.
+ * coach.ready 는 첫 답(사업)만 와도 켜져서(intake-core) 그것만 보면 질문 1/14 에서 '사업 방향 정리됨'·대화 ✓·계획서 탭이 열렸다
+ * (점검 2026-10-23). 사업 목록의 '사업안 준비됨'(business-hub)과 같은 생각이다. 왼쪽 메뉴·예전 화면(journeySteps)은 그대로 둔다.
+ */
+export function studioChatComplete(input: StudioChatInput): boolean {
+  return input.design || input.documents > 0 || !!input.running || !!input.coreComplete;
+}
+
+/** journeySteps 에 작업실의 대화 완료를 얹는다 — 끝났으면 대화 done(쓰는 중이면 계획서 active), 아니면 대화 active */
+export function studioSteps<T extends { id: JourneyStepId; state: JourneyState }>(steps: readonly T[], chatComplete: boolean, running = false): T[] {
+  return steps.map(step => {
+    if (step.id === "chat") return { ...step, state: chatComplete ? "done" : "active" };
+    if (running && step.id === "document" && step.state !== "done") return { ...step, state: "active" };
+    return step;
+  });
+}
+
+/**
+ * 작업실 오른쪽 탭이 아직 막혔는지 — 막혔으면 안내할 단계(왼쪽 메뉴 LOCKED_GUIDE 의 키), 열렸으면 null.
+ * 계획서·홈페이지는 앞 단계를 마쳐야(왼쪽 메뉴와 같은 규칙, steps 는 studioSteps 를 얹은 것), 사업 시작하기·유지보수는
+ * 사업 관리 화면이 열려야(workspaceOpen — 작업실은 대화를 마쳤는지까지 함께 본다) 열린다.
+ */
+export function studioLockedStep(tab: StudioTab, steps: ReadonlyArray<{ id: JourneyStepId; state: JourneyState }>, workspaceOpen: boolean): Exclude<JourneyStepId, "chat"> | null {
+  const step = stepForStudioTab(tab);
+  if (step === "chat") return null;
+  if (step === "care" || step === "launch") return workspaceOpen ? null : step;
+  const index = steps.findIndex(item => item.id === step);
+  if (index <= 0) return null;
+  return steps[index].state !== "todo" || steps[index - 1].state === "done" ? null : step;
+}
+
+/* ── 머리줄 진행 단계와 부제 ───────────────────────────── */
+
+/** 머리줄 진행 단계 — 대화 → 계획서 → 홈페이지 → 개업 준비(운영 중이면 운영 개선). 유지보수는 끝나는 단계가 아니라 넣지 않는다 */
+export const STUDIO_PROGRESS_STEPS = ["chat", "document", "homepage", "launch"] as const satisfies readonly JourneyStepId[];
+export type StudioProgressStep = typeof STUDIO_PROGRESS_STEPS[number];
+export type StudioChip = { step: StudioProgressStep; tab: StudioTab; label: string; state: "done" | "current" | "upcoming" };
+
+/**
+ * 단계 칩 — 끝난 단계는 done, 지금 하는 단계(진행 중인 첫 단계, 없으면 아직 안 한 첫 단계)는 current, 나머지는 upcoming.
+ * steps 가 없으면(새 대화 · 사업을 아직 못 불러옴) 대화가 지금 단계다.
+ */
+export function studioChips(steps: ReadonlyArray<{ id: JourneyStepId; state: JourneyState }> | null, operating = false): StudioChip[] {
+  const state = (step: StudioProgressStep): JourneyState => steps?.find(item => item.id === step)?.state ?? (step === "chat" ? "active" : "todo");
+  const current = STUDIO_PROGRESS_STEPS.find(step => state(step) === "active") ?? STUDIO_PROGRESS_STEPS.find(step => state(step) === "todo") ?? null;
+  const labels: Record<StudioProgressStep, string> = { chat: "대화", document: "계획서", homepage: "홈페이지", launch: operating ? "운영 개선" : "개업 준비" };
+  return STUDIO_PROGRESS_STEPS.map(step => ({ step, tab: studioTabForStep(step), label: labels[step], state: state(step) === "done" ? "done" : step === current ? "current" : "upcoming" }));
+}
+
+export type StudioStatusInput = {
+  /** 새 대화 — 아직 사업이 없다 */
+  fresh?: boolean;
+  steps: ReadonlyArray<{ id: JourneyStepId; state: JourneyState }> | null;
+  /** 대화 질문 진행(핵심 질문 몇 개 중 몇 개) — 모르면 null */
+  intake?: { answered: number; total: number; complete: boolean } | null;
+  /** 이번 계획서 작성 — active 는 아직 쓸 장이 남음, stalled 는 남은 채로 작업이 멈춤 */
+  generation?: { done: number; total: number; active: boolean; stalled: boolean } | null;
+  /** 이 기기 저장본의 계획서 장 수(작성 중이 아닐 때) */
+  documents?: { done: number; total: number } | null;
+  homepage: HomepageStatus;
+  /** 개업 준비(운영 개선) — 진행 방식을 정했으면 configured */
+  launch?: { done: number; total: number; configured: boolean } | null;
+  operating?: boolean;
+};
+
+/**
+ * 머리줄 부제(지금 무엇을 하고 있는지) — 예: '대화 중 · 질문 6/14', '사업계획서 만드는 중 · 6/10장', '홈페이지 · 공개 전',
+ * '개업 준비 3/9'. AI 를 부르지 않고 이미 있는 상태(journeySteps · 작성 진행 · 홈페이지 공개 여부)로만 정한다.
+ */
+export function studioStatusText(input: StudioStatusInput): string {
+  const { generation, intake, documents, homepage, launch } = input;
+  if (input.fresh || !input.steps) return "대화 중";
+  if (generation?.active && !generation.stalled) return `사업계획서 만드는 중 · ${generation.done}/${generation.total}장`;
+  if (generation?.active && generation.stalled) return `사업계획서 · ${generation.done}/${generation.total}장에서 멈춤`;
+  const state = (id: JourneyStepId) => input.steps!.find(step => step.id === id)?.state ?? "todo";
+  if (state("chat") !== "done") {
+    if (!intake || intake.total <= 0) return "대화 중";
+    return intake.complete ? "대화 중 · 마무리" : `대화 중 · 질문 ${Math.min(intake.answered, intake.total)}/${intake.total}`;
+  }
+  if (state("document") !== "done") return documents && documents.done > 0 ? `사업계획서 · ${documents.done}/${documents.total}장` : "사업 방향 정리됨 · 계획서 만들 차례";
+  const launchName = input.operating ? "운영 개선" : "개업 준비";
+  const launchRunning = !!launch?.configured && state("launch") !== "done";
+  if (homepage === "draft") return "홈페이지 · 공개 전";
+  if (launchRunning) return `${launchName} ${launch!.done}/${launch!.total}`;
+  if (homepage === "published") return "홈페이지 · 공개 중";
+  return "사업계획서 완성";
 }

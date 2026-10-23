@@ -7,10 +7,11 @@ import { ChevronRight, MoreHorizontal } from "lucide-react";
 import { currentBusinessDesign } from "../../lib/plan-builder/coach";
 import { hydrateFromServer, lastHydrationFailed, setActivePlan, deletePlan, renamePlan, loadState, isSamplePlan, type PlanState } from "../../lib/plan-builder/plan-store";
 import { businessHubState, businessEntryHref } from "../../lib/plan-builder/business-hub";
-import { STUDIO_ENABLED, studioEntryHref } from "../../lib/plan-builder/studio";
+import { STUDIO_REDIRECT, studioEntryHref } from "../../lib/plan-builder/studio";
 
 /* 작업실을 켰으면 같은 자리(대화·계획서·사업 관리)를 작업실 탭으로 연다 — 작업실 탭이 없는 화면이면 예전 주소 그대로 */
-const openHref = (plan: Parameters<typeof businessEntryHref>[0]) => { const href = businessEntryHref(plan); return (STUDIO_ENABLED && studioEntryHref(href)) || href; };
+/* 작업실이 켜져 있으면 바로 작업실로 — 예전 화면을 거쳐 다시 보내지 않게(새 대화 화면이 꺼져 있으면 작업실이 열리지 않아 예전 화면) */
+const openHref = (plan: Parameters<typeof businessEntryHref>[0]) => { const href = businessEntryHref(plan); return (STUDIO_REDIRECT && studioEntryHref(href)) || href; };
 import { LISTED_SAMPLE_IDS } from "../../lib/plan-builder/samples";
 import BusinessAppChrome from "./BusinessAppChrome";
 import BusinessEmptyState from "./BusinessEmptyState";

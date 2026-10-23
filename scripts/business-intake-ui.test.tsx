@@ -14,6 +14,7 @@ import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
 import { changedResourceLimits, intakeChipSector, needsEntryConfirmation, periodDisplay, routeComposerInput, zeroPriceAnswer } from "../app/plan/chat/intake-ui/model";
 import { readChatResponse } from "../lib/http/read-chat-response";
+import { generationEta } from "../lib/plan-builder/generation-progress";
 import { coachAmount } from "../lib/plan-builder/coach-feasibility";
 import { incompleteChoiceText, nextRefinementQuestion, chatTextPreview, hybridComplete, isExclusiveOption } from "../app/plan/chat/intake-ui/model";
 
@@ -712,6 +713,48 @@ async function main() {
   assert.match(css, /\.page\[data-embedded\] > \.workspace \{ flex: 1 1 0; min-height: 0; \}/);
   assert.match(css, /\.page\[data-embedded\] \.mobileHidden \{ display: none; \}/);
   assert.match(css, /\.page\[data-embedded\] \.summaryToggle \{ display: inline-flex; \}/);
+  // 2단계: 작업실 안에서는 작성 팝업 대신 대화 안 진행 카드 — 시작하면 넓은 화면은 계획서 탭을 보이고 좁은 화면은 점만 찍는다
+  assert.match(source, /if \(embedded\) revealGeneration\(\); else setGenerationOpen\(true\);/);
+  assert.match(source, /\{plan && !embedded && <GenerationDialog planId/, "작업실에서는 팝업을 그리지 않는다");
+  assert.match(source, /studioNav\.showTab && window\.matchMedia\(STUDIO_WIDE_QUERY\)\.matches\) studioNav\.showTab\("plan"\);\s*else studioNav\.markActivity\?\.\("plan"\);/);
+  assert.match(source, /const STUDIO_WIDE_QUERY = "\(min-width: 1024px\)";/);
+  const studioSource = readFileSync(new URL("../app/plan/studio/Studio.tsx", import.meta.url), "utf8");
+  assert.ok(studioSource.includes(`WIDE_QUERY = "(min-width: 1024px)"`), "대화 칸의 넓은 화면 기준은 작업실과 같아야 한다");
+  assert.match(source, /\{studioTurn \?\? <NextStepAction /, "작성 중·방금 끝남이면 진행 카드·마무리 말이 다음 단계 단추 자리를 대신한다");
+  assert.match(source, /\{studioTurn \?\? <DocumentLockedTurn /);
+  assert.match(source, /onHomepage=\{\(\) => navigate\(homepageHref\(plan\.planId\)\)\}/);
+  assert.match(source, /if \(studioNav\?\.showTab\) studioNav\.showTab\("plan"\);/);
+  // 숨은 대화 칸: 알림 칸 대신 대화 탭에 점, 숨은 칸으로 초점을 옮기지 않는다
+  assert.match(source, /if \(!visible\) \{ if \(arrived\) studioNav\?\.markActivity\?\.\("chat"\); setAnnouncement\(""\); return; \}/);
+  assert.match(source, /paneVisible\.current = studioPane \? studioPane\.active : true;/);
+  // 답이 저장될 때마다(보이는 채로도) 작업실 머리줄의 질문 수를 바로 다시 묻게 한다 — 숨어 있으면 점은 위 알림 효과가
+  assert.match(source, /const savedRevision = savedPlan \? `\$\{savedPlan\.planId\}:\$\{savedPlan\.coach\.revision\}` : null;/);
+  assert.match(source, /if \(!embedded \|\| !savedRevision \|\| !before \|\| before === savedRevision \|\| !paneVisible\.current\) return;\n\s*studioNav\?\.markActivity\?\.\("chat"\);/);
+  // 작성 진행 카드가 나타나면 카드 전체가 보이게 내린다(사업안 카드 아래에서 반쯤 잘렸다)
+  assert.match(source, /\? <div ref=\{runCard\}><GenerationCard /);
+  assert.match(source, /top = Math\.min\(bottom, Math\.max\(top, Math\.min\(cardTop - 16, cardBottom \+ 16 - container\.clientHeight\)\)\);/);
+  assert.match(source, /if \(!runShown\) return;\n\s*follow\.current = true;/);
+  // 요약 단추: 작업실 안에서는 칸 단추 줄(actions)로 넘기지 않고 진행 막대와 한 줄(paneBar)에 둔다
+  assert.match(source, /actions=\{embedded \? undefined : summaryToggle\}/);
+  assert.match(source, /<div className=\{styles\.paneBar\}><div className=\{styles\.paneProgress\} aria-hidden="true">/);
+  assert.match(css, /\.page\[data-embedded\] \.paneBar \{ display: flex;/);
+  // 새 사업(주소에 planId 없음)을 작업실에서 시작해도 로그인 뒤 작업실로 돌아온다 · planId 는 지금 경로에 붙인다(tab 유지)
+  assert.match(source, /embedded \? plan \? studioHref\(plan\.planId, "chat"\) : `\$\{STUDIO_PATH\}\?new=1`/);
+  assert.match(source, /url\.searchParams\.set\("planId", id\); url\.searchParams\.delete\("new"\);\s*const target = `\$\{url\.pathname\}\$\{url\.search\}\$\{url\.hash\}`;/);
+  const generationSource = readFileSync(new URL("../app/plan/GenerationProgress.tsx", import.meta.url), "utf8");
+  assert.match(generationSource, /export function GenerationCard\(/);
+  assert.match(generationSource, /남은 장 이어서 쓰기/);
+  assert.match(generationSource, /useEffect\(\(\) => \{ setEta\(generationEta\(state, Date\.now\(\)\)\); \}, \[state\]\);/, "렌더 중에 시계를 읽지 않는다");
+  {
+    const startedAt = "2026-10-23T00:00:00.000Z", t0 = Date.parse(startedAt);
+    assert.equal(generationEta({ done: 0, total: 10, startedAt }, t0 + 60_000), null, "한 장도 못 썼으면 평균을 모른다");
+    assert.equal(generationEta({ done: 2, total: 10, startedAt: null }, t0), null);
+    assert.equal(generationEta({ done: 10, total: 10, startedAt }, t0 + 60_000), null);
+    assert.equal(generationEta({ done: 2, total: 10, startedAt }, t0 + 60_000), "약 4분 남음", "한 장 30초 × 8장 = 4분");
+    assert.equal(generationEta({ done: 5, total: 6, startedAt }, t0 + 100_000), "곧 끝나요");
+    assert.equal(generationEta({ done: 3, total: 10, startedAt }, t0 + 100_000), "약 4분 남음", "233초는 4분으로 올림");
+    assert.equal(generationEta({ done: 2, total: 10, startedAt: "엉뚱한 값" }, t0), null);
+  }
   const loadingSource = readFileSync(new URL("../app/plan/chat/loading.tsx", import.meta.url), "utf8");
   assert.ok(loadingSource.indexOf("if (pane) return <PlanLoading") > 0 && loadingSource.indexOf("if (pane) return <PlanLoading") < loadingSource.indexOf("<main"), "작업실 칸 안의 로딩은 자기 main 을 그리지 않는다");
   assert.ok(!conversationMarkup.includes("<AnswerHistory"), "Answer history belongs in the summary, not below the next chat question");

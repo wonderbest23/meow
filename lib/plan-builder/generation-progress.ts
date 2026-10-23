@@ -22,3 +22,15 @@ export function generationProgress(
   const done = list.filter(item => item.done).length;
   return { total: list.length, done, active: list.length > 0 && done < list.length, startedAt: generation?.dispatchAt ?? null, sections: list };
 }
+
+/*
+ * 남은 시간 — 시작 시각과 지금까지 쓴 장 수로 한 장에 걸린 평균을 내어 남은 장 수만큼 곱한다.
+ * 아직 한 장도 못 썼으면(평균을 모름) null — 화면은 '보통 5분 안팎'으로 둔다. 분 단위로 올림.
+ */
+export function generationEta(state: Pick<GenerationProgress, "done" | "total" | "startedAt"> | null | undefined, now: number): string | null {
+  if (!state?.startedAt || state.done <= 0 || state.done >= state.total) return null;
+  const elapsed = now - Date.parse(state.startedAt);
+  if (!Number.isFinite(elapsed) || elapsed <= 0) return null;
+  const left = elapsed / state.done * (state.total - state.done);
+  return left < 60_000 ? "곧 끝나요" : `약 ${Math.ceil(left / 60_000)}분 남음`;
+}

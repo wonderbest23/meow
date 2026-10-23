@@ -2,13 +2,22 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, X } from "lucide-react";
-import type { GenerationProgress } from "../../lib/plan-builder/generation-progress";
+import { Check, RefreshCw, X } from "lucide-react";
+import { generationEta, type GenerationProgress } from "../../lib/plan-builder/generation-progress";
 import styles from "./GenerationProgress.module.css";
 
 export type GenerationState = GenerationProgress & { runStatus: string | null };
 // "complete" here means the run ended with sections still missing (the route only asks while done < total): a section failed twice and was skipped.
 const FAILED = ["errored", "terminated", "complete"];
+
+/** 작성이 멈췄는지 — 아직 안 쓴 장이 남았는데 작업이 끝났거나(건너뜀) 오류로 멈췄다 */
+export function generationStalled(state: GenerationState | null | undefined): boolean {
+  return !!state?.active && FAILED.includes(state.runStatus ?? "");
+}
+/** 이번 작성이 다 끝났는지 — 맡은 장을 모두 썼다 */
+export function generationFinished(state: GenerationState | null | undefined): boolean {
+  return !!state && !state.active && state.total > 0 && state.done >= state.total;
+}
 
 /*
  * 사업계획서 제작 진행을 몇 초마다 묻는다. 다 됐거나 작업이 멈췄으면 더 묻지 않는다.
@@ -76,4 +85,43 @@ export function GenerationDialog({ planId, open, state, onClose }: { planId: str
       <Link className={styles.primary} href={`/plan/document?planId=${encodeURIComponent(planId)}`} aria-disabled={!done} onClick={event => { if (!done) event.preventDefault(); }}>{finished ? "사업계획서 열기" : "작성된 부분 보기"}</Link>
     </footer>
   </dialog>;
+}
+
+/*
+ * 작업실(사업 작업실) 대화 칸 안의 진행 카드 — 팝업(GenerationDialog) 대신 대화 흐름 안에 둔다.
+ * 오른쪽 계획서 칸에서 장이 채워지는 동안 왼쪽 대화에서는 다 쓴 장 · 쓰는 장 · 기다리는 장과 남은 시간을 본다.
+ * 멈췄으면(일부 장을 못 씀) '남은 장 이어서 쓰기'로 다시 시작한다 — 이미 쓴 장은 다시 쓰지 않는다.
+ */
+export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen }: {
+  state: GenerationState;
+  onRetry: () => void;
+  retryDisabled?: boolean;
+  /** 다 쓴 장이 있으면 '쓴 부분 보기' — 작업실에서는 계획서 탭을 보여 준다 */
+  onOpen?: () => void;
+}) {
+  const total = state.total, done = state.done;
+  const stalled = generationStalled(state);
+  const pending = state.sections.filter(section => !section.done);
+  const current = stalled ? null : pending[0] ?? null;
+  const waiting = stalled ? pending : pending.slice(1);
+  const finished = state.sections.filter(section => section.done);
+  // 남은 시간은 장이 하나 끝날 때마다 다시 잰다(렌더 중에 시계를 읽지 않게 효과에서)
+  const [eta, setEta] = useState<string | null>(null);
+  useEffect(() => { setEta(generationEta(state, Date.now())); }, [state]);
+  return <section className={styles.card} aria-label="사업계획서 작성 진행" data-generation-card data-state={stalled ? "stalled" : "running"}>
+    <header>
+      <strong>{stalled ? "일부 장을 만들지 못했어요" : "사업계획서 만드는 중"}</strong>
+      <span>{stalled ? `${done}/${total}장 완성` : eta ?? "보통 5분 안팎"}</span>
+    </header>
+    <progress value={done} max={total || 1} aria-label={`작성한 장 ${done}/${total}`} />
+    {finished.length > 0 && <p className={styles.cardDone}><Check size={14} aria-hidden="true" />{finished.map(section => section.title).join(" · ")}</p>}
+    {/* 쓰는 장이 바뀔 때만 읽힌다(몇 초마다 오는 확인에는 글이 그대로라 다시 읽지 않는다) */}
+    {current && <p className={styles.cardCurrent} role="status" aria-live="polite"><i aria-hidden="true" />{current.title} 쓰는 중</p>}
+    {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 장" : "대기"}: {waiting.map(section => section.title).join(" · ")}</p>}
+    <p className={styles.cardNote}>{stalled ? "다 쓴 장은 저장돼 있어요. 남은 장만 이어서 쓸 수 있어요." : "다른 탭을 보거나 창을 닫아도 계속 만들어져요. 다 되면 여기에서 알려 드릴게요."}</p>
+    {(stalled || onOpen && done > 0) && <div className={styles.cardActions}>
+      {stalled && <button type="button" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 장 이어서 쓰기</button>}
+      {onOpen && done > 0 && <button type="button" className={styles.cardSecondary} onClick={onOpen}>쓴 부분 보기</button>}
+    </div>}
+  </section>;
 }

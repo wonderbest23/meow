@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent, type MouseEvent, type ReactNode } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { Check } from "lucide-react";
 import BusinessAppChrome from "../BusinessAppChrome";
 import PlanLoading from "../PlanLoading";
 import { MissingBusinessBody } from "../MissingBusiness";
@@ -11,14 +12,18 @@ import { PlanDocumentBody } from "../document/PlanDocumentBody";
 import { HomepageScreen } from "../homepage/HomepageScreen";
 import { BusinessWorkspace } from "../workspace/BusinessWorkspace";
 import { useHomepageStatus } from "../use-homepage";
+import { useGenerationProgress } from "../GenerationProgress";
 import frame from "../chat/page.module.css";
 import hub from "../BusinessHub.module.css";
 import styles from "./Studio.module.css";
 import { StudioNavContext, StudioPaneContext, type StudioNav, type StudioPane } from "./StudioContext";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan } from "../../../lib/plan-builder/plan-store";
-import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type HomepageStatus } from "../../../lib/plan-builder/journey";
-import { businessChatHref, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
-import { isStudioTab, stepForStudioTab, studioSwitchUrl, studioTabForStep, studioTarget, STUDIO_TAB_LABELS, type StudioTab, type StudioTarget } from "../../../lib/plan-builder/studio";
+import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
+import { businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
+import { launchStatus, launchSteps, readLaunch } from "../../../lib/plan-builder/business-launch";
+import { readCoach } from "../../../lib/plan-builder/coach";
+import { isStudioTab, studioChatComplete, studioChips, studioLockedStep, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget, STUDIO_REDIRECT, STUDIO_TAB_LABELS, type StudioChip, type StudioTab, type StudioTarget } from "../../../lib/plan-builder/studio";
+import { trackFunnel } from "../../../lib/funnel/client";
 import { askConfirm } from "../../../components/confirm-dialog";
 import StudioLoading from "./loading";
 
@@ -30,19 +35,32 @@ import StudioLoading from "./loading";
  * 대화 입력이나 홈페이지에서 고치던 내용이 탭을 바꿔도 남는다. display:none 이면 크기가 0이 되어 홈페이지 편집기와
  * 대화 자동 스크롤(ResizeObserver)의 크기 계산이 깨진다.
  * 홈페이지 칸은 그 탭을 처음 열 때까지 만들지 않는다 — 열리는 순간 홈페이지를 만들고 AI 자동 채우기를 시작한다.
+ *
+ * 2단계: 머리줄 하나(사업명 + 지금 하는 일 · 진행 단계 칩 · 보이는 칸의 단추), 새 대화도 작업실에서(주소에 사업 없음 → 대화 칸만,
+ * 대화가 사업을 만들면 그 사업을 주소에 적고 그대로 이어 간다 — BusinessKeyed adoptFirst), 숨은 칸의 새 소식 점.
  */
 
 type RightTab = Exclude<StudioTab, "chat">;
 type PrepTab = "launch" | "operations";
 type Lock = { message: string; back: StudioTab; label: string };
 type SelectOptions = { focus?: "heading"; link?: { params: Record<string, string>; hash: string } };
+type TabSource = "click" | "link" | "auto";
+type IntakeCount = { answered: number; total: number; complete: boolean };
 
 const RIGHT_TABS: RightTab[] = ["plan", "homepage", "launch", "operations"];
 /* 휴대폰 탭은 짧게 — '준비' 안에서 시작하기·유지보수를 고른다 */
 const NARROW_TABS = ["chat", "plan", "homepage", "prep"] as const;
 type NarrowTab = typeof NARROW_TABS[number];
 const NARROW_LABELS: Record<NarrowTab, string> = { chat: "대화", plan: "계획서", homepage: "홈페이지", prep: "준비" };
+/* 휴대폰 탭 ↔ 머리줄 진행 단계(완료 표시) */
+const NARROW_STEP: Record<NarrowTab, StudioChip["step"]> = { chat: "chat", plan: "document", homepage: "homepage", prep: "launch" };
 const LEAVE_MESSAGE = "저장하지 않은 수정이 있어요. 이 화면을 나가면 고친 내용이 사라져요. 나갈까요?";
+/* 작성이 멈춘 상태(아직 안 쓴 장이 남았는데 작업이 끝남) — GenerationProgress 와 같은 기준 */
+const GENERATION_FAILED = ["errored", "terminated", "complete"];
+/* 대화 질문 진행(질문 6/14)을 다시 묻는 간격 — 대화 칸이 따로 자주 묻고 있어 머리줄은 느리게. AI 를 부르지 않는 읽기 요청 */
+const INTAKE_POLL_MS = 15_000;
+/* 새 대화 — 아직 사업이 없어 오른쪽 칸은 모두 막는다 */
+const FRESH_LOCK: Lock = { message: "먼저 대화로 사업 방향을 정해 주세요. 방향이 정해지면 사업계획서 · 홈페이지 · 개업 준비가 차례로 열려요.", back: "chat", label: "대화로 가기" };
 
 /* 화면 폭 — CSS 의 1024px 기준과 같다(칸을 만들고 inert 를 거는 판단에 쓴다) */
 const WIDE_QUERY = "(min-width: 1024px)";
@@ -55,19 +73,19 @@ const readWide = () => window.matchMedia(WIDE_QUERY).matches;
 const serverWide = () => false;
 
 /*
- * 아직 갈 수 없는 단계 — 왼쪽 메뉴(BusinessRailTree)와 같은 규칙·같은 문구. 막힌 탭은 칸을 만들지 않고 안내만 보인다
+ * 아직 갈 수 없는 단계 — 왼쪽 메뉴(BusinessRailTree)와 같은 문구(LOCKED_GUIDE). 막힌 탭은 칸을 만들지 않고 안내만 보인다
  * (막힌 홈페이지 칸을 만들면 쓰지도 않을 홈페이지와 AI 비용이 생긴다).
+ * 작업실은 대화가 끝났는지를 studioChatComplete(사업안이 있거나 핵심 질문을 다 답함)로 본다 — 첫 답만으로는 계획서 · 사업 시작하기 ·
+ * 유지보수가 열리지 않는다. 문서가 이미 있으면 대화는 늘 끝난 것이라 막히지 않는다. 대화 없이 쓴 예전 사업(코치 없음)은 예전 규칙 그대로.
+ * pending — 새 대화로 시작해 아직 사업이 없다(또는 대화가 막 만든 사업을 아직 못 불러옴): 오른쪽 칸은 모두 대화로 안내한다.
  */
-function lockFor(tab: StudioTab, plan: Plan | null, homepage: HomepageStatus): Lock | null {
-  if (tab === "chat" || !plan || isSamplePlan(plan.id)) return null;
-  const step = stepForStudioTab(tab);
-  if (step === "chat") return null;
-  const steps = journeySteps(plan, homepage);
-  const index = steps.findIndex(item => item.id === step);
-  const reachable = step === "care" || step === "launch"
-    ? !shouldResumeBusinessChat(plan)
-    : steps[index].state !== "todo" || index === 0 || steps[index - 1].state === "done";
-  if (reachable) return null;
+function lockFor(tab: StudioTab, plan: Plan | null, steps: ReadonlyArray<{ id: JourneyStepId; state: JourneyState }> | null, chatComplete: boolean, pending: boolean): Lock | null {
+  if (tab === "chat") return null;
+  if (!plan || !steps) return pending ? FRESH_LOCK : null;
+  if (isSamplePlan(plan.id)) return null;
+  const workspaceOpen = !shouldResumeBusinessChat(plan) && (chatComplete || !readCoach(plan.answers));
+  const step = studioLockedStep(tab, steps, workspaceOpen);
+  if (!step) return null;
   const guide = LOCKED_GUIDE[step];
   return { message: guide.message, back: studioTabForStep(JOURNEY_ORDER[guide.back]), label: guide.label };
 }
@@ -85,21 +103,33 @@ export default function Studio() {
   const planId = searchParams.get("planId") ?? "";
   const urlTab = searchParams.get("tab");
   const intakeV2 = process.env.NEXT_PUBLIC_BUSINESS_INTAKE_V2 === "1";
+  /*
+   * 새 대화 — 주소에 사업이 없다. 대화 칸만 열고 오른쪽 탭은 막아 둔다. 대화가 사업을 만들면 주소에 사업이 적히고
+   * (BusinessIntake 의 updateUrl) 작업실은 다시 그려지지 않은 채 그 사업을 이어 받는다(BusinessKeyed adoptFirst).
+   */
+  const fresh = !planId;
+  const [startedFresh] = useState(fresh);
+  const newIntent = searchParams.get("new") === "1" || !!searchParams.get("idea") || !!searchParams.get("prompt");
 
-  /* 주소에 사업이 없으면 새 대화로(새 대화를 작업실에서 시작하는 것은 2단계), 새 대화 화면이 꺼져 있으면 예전 대화로 */
+  /*
+   * 새 대화 화면이 꺼져 있으면 예전 대화로 — 그때는 예전 화면이 작업실로 보내지 않으므로(STUDIO_REDIRECT) 서로 보내는 고리가 없다.
+   * 결제 결과의 작성 시작(start=1)은 그대로 싣는다 — 빠지면 결제하고도 작성이 시작되지 않는다.
+   */
   useEffect(() => {
-    if (!intakeV2) router.replace(planId ? businessChatHref(planId) : "/plan/chat");
-    else if (!planId) router.replace("/plan/chat?new=1");
+    const start = intakeV2 ? null : new URLSearchParams(window.location.search).get("start");
+    if (!intakeV2) router.replace(planId ? `${businessChatHref(planId)}${start ? `&start=${encodeURIComponent(start)}` : ""}` : `/plan/chat${window.location.search}`);
   }, [intakeV2, planId, router]);
 
   /* ── 탭 ─────────────────────────────────────────────── */
+  /* 탭을 왜 바꿨는지(눌렀다 · 링크 · 칸이 요청) — 깔때기 이벤트(studio_tab_view)에 싣는다 */
+  const tabSource = useRef<TabSource>("click");
   const [tab, setTab] = useState<StudioTab>(() => (isStudioTab(urlTab) ? urlTab : "chat"));
   /* 주소의 탭이 바뀌면(뒤로 가기·다른 곳의 replaceState) 따라간다 — 탭이 빠진 주소는 지금 탭 그대로 */
   const seenUrlTab = useRef(urlTab);
   useEffect(() => {
     if (seenUrlTab.current === urlTab) return;
     seenUrlTab.current = urlTab;
-    if (isStudioTab(urlTab)) setTab(urlTab);
+    if (isStudioTab(urlTab)) { tabSource.current = "link"; setTab(urlTab); }
   }, [urlTab]);
   /* PC 에서 주소 탭이 '대화'일 때 오른쪽에 보일 칸 — 마지막으로 연 오른쪽 탭(처음엔 사업계획서) */
   const [lastRight, setLastRight] = useState<RightTab>(() => (isStudioTab(urlTab) && urlTab !== "chat" ? urlTab : "plan"));
@@ -116,6 +146,12 @@ export default function Studio() {
 
   /* 링크로 칸을 열 때마다 그 칸의 이동 번호를 올린다 — 이미 보이는 칸도 주소의 edit · #sec- 를 다시 읽는다(useStudioPane().nav) */
   const [navSeq, setNavSeq] = useState<Partial<Record<StudioTab, number>>>({});
+  /*
+   * 칸에 새 소식이 있다고 알릴 때마다(showTab · markActivity) 그 칸의 새로 읽기 번호를 올린다(useStudioPane().refresh) —
+   * 이미 보이는 계획서 칸은 작성이 시작돼도 스스로 진행을 다시 묻지 않아(처음 물었을 때 쉬고 있으면 멈춤) 창을 다시 눌러야 장이 보였다.
+   */
+  const [refreshSeq, setRefreshSeq] = useState<Partial<Record<StudioTab, number>>>({});
+  const bumpRefresh = useCallback((target: StudioTab) => setRefreshSeq(seq => ({ ...seq, [target]: (seq[target] ?? 0) + 1 })), []);
 
   const selectTab = useCallback((next: StudioTab, options: SelectOptions = {}) => {
     /*
@@ -129,6 +165,7 @@ export default function Studio() {
       if (options.link?.hash) window.dispatchEvent(new HashChangeEvent("hashchange"));
     }
     if (options.link) setNavSeq(seq => ({ ...seq, [next]: (seq[next] ?? 0) + 1 }));
+    tabSource.current = options.link ? "link" : "click";
     setTab(next);
     /* 왼쪽 메뉴(서랍)가 지금 탭을 다시 표시한다 */
     window.dispatchEvent(new Event(WORKSPACE_TAB_EVENT));
@@ -157,11 +194,12 @@ export default function Studio() {
       if (found) setActivePlan(planId);
       setPlan(found);
       setTitle(found?.title ?? "");
-      setMissing(!found && !lastHydrationFailed() && !isSamplePlan(planId));
+      /* 새 대화가 막 만든 사업은 서버 목록에 늦게 보일 수 있다 — 못 찾았다고 대화까지 덮지 않고 막힌 탭에서 다시 확인한다 */
+      setMissing(!found && !lastHydrationFailed() && !isSamplePlan(planId) && !startedFresh);
       setReady(true);
     });
     return () => { alive = false; };
-  }, [planId, intakeV2]);
+  }, [planId, intakeV2, startedFresh]);
   /* 다른 칸이 이 기기 저장본을 고치면 다시 읽는다(잠김 판단·제목) */
   useEffect(() => subscribePlanState(() => {
     const found = loadState().plans.find(item => item.id === planId) ?? null;
@@ -182,6 +220,7 @@ export default function Studio() {
         const found = data?.plans?.find(item => item.id === planId) ?? null;
         if (!found) return;
         setPlan(current => newer(current, found));
+        setTitle(current => current || found.title);
         setMissing(false);
       })
       .catch(() => { /* 다음에 다시 확인한다 */ })
@@ -189,11 +228,78 @@ export default function Studio() {
   }, [planId]);
 
   const homepage = useHomepageStatus(planId || null);
+  const pending = fresh || startedFresh;
+
+  /* ── 머리줄 상태 — 작성 진행 · 대화 질문 진행 · 개업 준비(AI 를 부르지 않는 읽기만) ── */
+  const generationRecord = plan?.answers.__coach_generation as { runId?: unknown } | undefined;
+  const generationKey = typeof generationRecord?.runId === "string" ? generationRecord.runId : "";
+  /* 작성이 시작됐다고 칸이 알려 오면(계획서 탭 보이기 · 점) 이 기기 저장본에 작업 번호가 오기 전에도 진행을 묻는다 */
+  const [generationWanted, setGenerationWanted] = useState(false);
+  const { state: generation, restart: restartGeneration } = useGenerationProgress(planId || null, ready && (!!generationKey || generationWanted));
+  const restartGenerationRef = useRef(restartGeneration);
+  useEffect(() => { restartGenerationRef.current = restartGeneration; });
+  /* 다시 쓰기처럼 작업 번호가 바뀌면 다시 묻기 시작한다(처음 생긴 번호는 위 enabled 가 켜지며 묻는다) */
+  const seenGenerationKey = useRef(generationKey);
+  useEffect(() => {
+    const before = seenGenerationKey.current;
+    seenGenerationKey.current = generationKey;
+    if (before && generationKey && before !== generationKey) restartGenerationRef.current();
+  }, [generationKey]);
+  const generationStalled = !!generation?.active && GENERATION_FAILED.includes(generation.runStatus ?? "");
+  const generationRunning = !!generation?.active && !generationStalled;
+  /* 작성이 끝나면 서버 것을 다시 읽어 계획서 단계를 '완료'로 */
+  const wasGenerating = useRef(false);
+  useEffect(() => {
+    if (wasGenerating.current && !generationRunning) refreshPlan();
+    wasGenerating.current = generationRunning;
+  }, [generationRunning, refreshPlan]);
+
+  const operating = readCoach(plan?.answers ?? {})?.stage === "operating";
+
+  /* 대화 질문 진행(질문 6/14) — 대화 단계일 때만, 화면이 보일 때만 느리게 묻는다. 대화 칸이 답을 저장하거나 새 소식을 알리면 바로 다시 묻는다 */
+  const [intake, setIntake] = useState<IntakeCount | null>(null);
+  const [intakeTick, setIntakeTick] = useState(0);
+  /* 다른 사업으로 바뀌면(새 대화 → 사업, 다른 사업 링크) 앞 사업의 질문 수를 쓰지 않는다 — 그리는 중에 맞춘다 */
+  const [intakePlanId, setIntakePlanId] = useState(planId);
+  if (intakePlanId !== planId) { setIntakePlanId(planId); setIntake(null); }
+  /*
+   * 작업실의 대화 완료 — 사업안이 있거나 · 계획서 장이 있거나(쓰는 중 포함) · 핵심 질문을 다 답했을 때(studioChatComplete).
+   * coach.ready(첫 답만 와도 켜짐)로 보지 않는다 — 칩 ✓ · 휴대폰 탭 ✓ · 부제 · 질문 수 묻기 · 오른쪽 탭 잠김이 모두 이 값을 쓴다.
+   */
+  const hubState = useMemo(() => (plan ? businessHubState(plan) : null), [plan]);
+  const chatComplete = !!plan && studioChatComplete({ design: !!hubState?.coach?.design, documents: hubState?.documents.length ?? 0, running: generationRunning, coreComplete: intake?.complete });
+  const steps = useMemo(() => {
+    if (!plan) return null;
+    /* 작성 중이면 이 기기 저장본에 작업 번호가 아직 없어도 대화는 끝났고 계획서는 진행 중이다 */
+    return studioSteps(journeySteps(plan, homepage, generationRunning ? "running" : generationStalled ? generation?.runStatus : null), chatComplete, generationRunning);
+  }, [plan, homepage, chatComplete, generationRunning, generationStalled, generation?.runStatus]);
+  const chatDone = steps?.find(step => step.id === "chat")?.state === "done";
+  useEffect(() => {
+    if (!planId || !ready || chatDone || !intakeV2) return;
+    let alive = true, timer = 0;
+    const load = async () => {
+      if (document.visibilityState === "visible") {
+        try {
+          const response = await fetch(`/api/plan/chat?planId=${encodeURIComponent(planId)}`, { cache: "no-store", headers: { "x-business-intake": "2" } });
+          const data = response.ok ? await response.json() as { plan?: { coreAnswered?: unknown; coreTotal?: unknown; coreComplete?: unknown } | null } : null;
+          const snapshot = data?.plan;
+          if (alive && snapshot && typeof snapshot.coreAnswered === "number" && typeof snapshot.coreTotal === "number") {
+            const next = { answered: snapshot.coreAnswered, total: snapshot.coreTotal, complete: snapshot.coreComplete === true };
+            setIntake(current => current && current.answered === next.answered && current.total === next.total && current.complete === next.complete ? current : next);
+          }
+        } catch { /* 다음 차례에 다시 묻는다 */ }
+      }
+      if (alive) timer = window.setTimeout(load, INTAKE_POLL_MS);
+    };
+    void load();
+    return () => { alive = false; window.clearTimeout(timer); };
+  }, [planId, ready, chatDone, intakeV2, intakeTick]);
+
   const locks = useMemo(() => {
     const result: Partial<Record<StudioTab, Lock | null>> = {};
-    for (const id of RIGHT_TABS) result[id] = lockFor(id, plan, homepage);
+    for (const id of RIGHT_TABS) result[id] = lockFor(id, plan, steps, chatComplete, pending);
     return result;
-  }, [plan, homepage]);
+  }, [plan, steps, chatComplete, pending]);
 
   /* 막힌 탭을 보고 있으면 서버 것을 다시 확인한다(대화로 방향을 정한 직후 등) */
   const visibleRight: RightTab | null = wide || tab !== "chat" ? rightTab : null;
@@ -203,6 +309,79 @@ export default function Studio() {
   /* 처음 보이는 칸만 만든다 — 한 번 만든 칸은 지우지 않는다(한 번에 한 칸씩 만들어져 사업 관리 칸 둘이 동시에 불러오지 않는다) */
   const [mounted, setMounted] = useState<RightTab[]>([]);
   if (ready && !missing && visibleRight && !locks[visibleRight] && !mounted.includes(visibleRight)) setMounted([...mounted, visibleRight]);
+
+  const statusText = useMemo(() => {
+    const launchState = plan ? readLaunch(plan) : null;
+    const launchList = plan && launchState ? launchSteps(plan, launchState) : [];
+    return studioStatusText({
+      fresh: !plan && pending,
+      steps,
+      intake,
+      generation: generation ? { done: generation.done, total: generation.total, active: generation.active, stalled: generationStalled } : null,
+      documents: hubState ? { done: hubState.documents.length, total: hubState.keys.length } : null,
+      homepage,
+      launch: launchState ? { configured: launchState.configured, total: launchList.length, done: launchList.filter(step => ["done", "skipped"].includes(launchStatus(launchState, step))).length } : null,
+      operating,
+    });
+  }, [plan, hubState, pending, steps, intake, generation, generationStalled, homepage, operating]);
+  const chips = useMemo(() => studioChips(steps, operating), [steps, operating]);
+  const chipFor = (step: StudioChip["step"]) => chips.find(chip => chip.step === step);
+
+  /* ── 숨은 칸의 새 소식 점 · 칸 단추(머리줄) ───────────── */
+  const visibleTabs = useMemo<StudioTab[]>(() => (wide ? ["chat", rightTab] : [tab]), [wide, rightTab, tab]);
+  const visibleRef = useRef(visibleTabs);
+  useEffect(() => { visibleRef.current = visibleTabs; }, [visibleTabs]);
+  const [unread, setUnread] = useState<StudioTab[]>([]);
+  /* 보이게 된 칸의 점은 지운다(그리는 중에 맞추기 — 효과에서 지우면 한 번 더 그려진다) */
+  if (unread.some(item => visibleTabs.includes(item))) setUnread(unread.filter(item => !visibleTabs.includes(item)));
+  /* 대화 칸은 답을 저장할 때마다 보이는 채로도 부른다(질문 수를 바로 다시 묻기) — 보이는 칸에는 점을 찍지 않는다 */
+  const markActivity = useCallback((target: StudioTab) => {
+    if (target === "chat") setIntakeTick(value => value + 1);
+    else bumpRefresh(target);
+    if (target === "plan") { setGenerationWanted(true); restartGenerationRef.current(); }
+    if (visibleRef.current.includes(target)) return;
+    setUnread(list => (list.includes(target) ? list : [...list, target]));
+  }, [bumpRefresh]);
+  const showTab = useCallback((next: StudioTab) => {
+    /* 주소의 다른 값(edit · start 등)은 그대로 두고 탭만 바꾼다 — 칸이 요청한 것이라 초점은 옮기지 않는다 */
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("tab") !== next) {
+      url.searchParams.set("tab", next);
+      seenUrlTab.current = next;
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    if (next === "plan") { setGenerationWanted(true); restartGenerationRef.current(); }
+    if (next !== "chat") bumpRefresh(next);
+    tabSource.current = "auto";
+    setTab(next);
+    window.dispatchEvent(new Event(WORKSPACE_TAB_EVENT));
+  }, [bumpRefresh]);
+  /* 칸 단추 — 칸마다 하나씩 보관하고 보이는 칸의 것만 머리줄에 그린다. 같은 것을 다시 주면 무시한다(칸이 단추를 memo 한다) */
+  const [headerNodes, setHeaderNodes] = useState<Partial<Record<StudioTab, ReactNode>>>({});
+  const setHeaderActions = useCallback((target: StudioTab, node: ReactNode | null) => {
+    setHeaderNodes(current => {
+      const next = node ?? null;
+      if ((current[target] ?? null) === next) return current;
+      const copy = { ...current };
+      if (next === null) delete copy[target]; else copy[target] = next;
+      return copy;
+    });
+  }, []);
+
+  /* ── 깔때기 — 작업실을 열었다 · 다른 탭을 봤다(측정만, 실패해도 조용히) ── */
+  const opened = useRef(false);
+  useEffect(() => {
+    if (!intakeV2 || opened.current) return;
+    opened.current = true;
+    trackFunnel("studio_open", { tab, entry: planId ? "business" : "new", layout: window.matchMedia(WIDE_QUERY).matches ? "wide" : "narrow" });
+    /* 처음 한 번만 — 주소에서 사업을 이어 받아도(새 대화 → 사업) 다시 보내지 않는다(그래서 tab · planId 는 기다리지 않는다) */
+  }, [intakeV2]); // eslint-disable-line react-hooks/exhaustive-deps
+  const seenTab = useRef(tab);
+  useEffect(() => {
+    if (seenTab.current === tab) return;
+    seenTab.current = tab;
+    trackFunnel("studio_tab_view", { tab, source: tabSource.current, layout: window.matchMedia(WIDE_QUERY).matches ? "wide" : "narrow" });
+  }, [tab]);
 
   /* ── 저장 안 한 수정과 이동 ───────────────────────────── */
   const dirty = useRef(new Map<string, string | undefined>());
@@ -225,7 +404,9 @@ export default function Studio() {
     const go = (href: string, mode: "push" | "replace") => {
       const target = studioTarget(href, planId, window.location.origin);
       if (target) { openTarget(target); return; }
-      void confirmLeave().then(ok => { if (ok) (mode === "push" ? router.push(href) : router.replace(href)); });
+      /* 다른 사업 · 새 대화의 예전 주소는 예전 화면을 거치지 않고 바로 작업실로 */
+      const destination = (STUDIO_REDIRECT && studioRedirectHref(href, window.location.origin)) || href;
+      void confirmLeave().then(ok => { if (ok) (mode === "push" ? router.push(destination) : router.replace(destination)); });
     };
     return {
       push: href => go(href, "push"),
@@ -234,13 +415,16 @@ export default function Studio() {
         if (isDirty) dirty.current.set(id, message);
         else dirty.current.delete(id);
       },
+      setHeaderActions,
+      markActivity,
+      showTab,
     };
-  }, [planId, openTarget, confirmLeave, router]);
+  }, [planId, openTarget, confirmLeave, router, setHeaderActions, markActivity, showTab]);
 
   /*
    * 이 사업의 다른 화면으로 가는 링크는 이동 대신 탭 바꾸기 — 대화·계획서 안의 고정 링크를 하나하나 고치지 않아도 된다.
    * 캡처 단계에서 기본 동작을 막으면 Next 의 Link 는 이동하지 않는다. 작업실 밖으로 나가는 링크(뒤로·서랍·내 사업)는
-   * 저장 안 한 수정이 있으면 한 번만 묻는다.
+   * 저장 안 한 수정이 있으면 한 번만 묻는다. 다른 사업 · 새 대화의 예전 주소는 바로 작업실로(예전 화면을 거쳐 다시 보내지 않게).
    */
   const onClickCapture = (event: MouseEvent<HTMLElement>) => {
     if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
@@ -254,9 +438,10 @@ export default function Studio() {
     if (url.pathname === here.pathname && url.search === here.search && url.hash) return;
     const target = studioTarget(url.href, planId, here.origin);
     if (target) { event.preventDefault(); openTarget(target); return; }
-    if (!dirty.current.size) return;
+    const redirect = STUDIO_REDIRECT ? studioRedirectHref(url.href, here.origin) : null;
+    if (!redirect && !dirty.current.size) return;
     event.preventDefault();
-    const href = `${url.pathname}${url.search}${url.hash}`;
+    const href = redirect ?? `${url.pathname}${url.search}${url.hash}`;
     void confirmLeave().then(ok => { if (ok) router.push(href); });
   };
 
@@ -280,16 +465,17 @@ export default function Studio() {
   /* 칸을 가리키는 탭 — PC 는 칸마다 탭, 휴대폰은 시작하기·유지보수가 '준비' 하나 */
   const labelledBy = (id: StudioTab) => (wide ? (id === "chat" ? undefined : tabId(id)) : tabId(id === "launch" || id === "operations" ? "prep" : id));
 
-  if (!intakeV2 || !planId) return <StudioLoading />;
+  if (!intakeV2) return <StudioLoading />;
 
   const chatVisible = wide || tab === "chat";
   const rightVisible = wide || tab !== "chat";
-  const businessTitle = title || plan?.title || "사업 작업실";
+  const businessTitle = title || plan?.title || (fresh && newIntent ? "새 대화" : "사업 작업실");
   const headingRef = (id: StudioTab) => (node: HTMLHeadingElement | null) => { headings.current[id] = node; };
+  const isVisible = (id: StudioTab) => (id === "chat" ? chatVisible : rightVisible && rightTab === id);
 
   const rightBody = (id: RightTab): ReactNode => {
     const lock = locks[id];
-    if (!ready) return <PlanLoading variant="compact" note="사업을 불러오고 있어요" />;
+    if (!ready && !(fresh && lock)) return <PlanLoading variant="compact" note="사업을 불러오고 있어요" />;
     if (!mounted.includes(id)) {
       if (lock) return <div className={styles.locked}>
         <p>{lock.message}</p>
@@ -302,19 +488,49 @@ export default function Studio() {
     return <BusinessWorkspace view={id} />;
   };
 
+  /* 칸 단추 — 그 칸의 작업실 정보(useStudioPane)를 그대로 받게 감싼다(머리줄은 칸 밖이다) */
+  const headerSlot = (id: StudioTab) => {
+    const node = headerNodes[id];
+    if (!node || !isVisible(id)) return null;
+    return <StudioPaneContext.Provider key={id} value={{ planId, tab: id, active: true, nav: navSeq[id] ?? 0, refresh: refreshSeq[id] ?? 0 }}><div className={styles.headerSlot}>{node}</div></StudioPaneContext.Provider>;
+  };
+
+  /* 진행 단계 칩(PC) — 끝난 단계 ✓ · 지금 단계 · 다음 단계. 열린 단계는 누르면 그 탭으로. 사업을 못 찾았으면 그리지 않는다 */
+  const progress = wide && !missing ? <ol key="progress" className={styles.progress} aria-label="진행 단계">
+    {chips.map(chip => {
+      const open = chip.tab === "chat" || (!locks[chip.tab] && !missing);
+      const label = <>{chip.state === "done" && <Check size={14} strokeWidth={3} aria-hidden="true" />}{chip.label}<span className={styles.srOnly}>{chip.state === "done" ? " (완료)" : chip.state === "current" ? " (지금 단계)" : ""}</span></>;
+      return <li key={chip.step}>
+        {open
+          ? <button type="button" className={styles.chip} data-state={chip.state} aria-current={chip.state === "current" ? "step" : undefined} onClick={() => selectTab(chip.tab, { focus: "heading" })}>{label}</button>
+          : <span className={styles.chip} data-state={chip.state} data-locked="" aria-current={chip.state === "current" ? "step" : undefined} title="앞 단계를 마치면 열려요">{label}</span>}
+      </li>;
+    })}
+  </ol> : null;
+  /* 머리줄 오른쪽 — PC: 대화 칸 단추 · 진행 단계 · 오른쪽 칸 단추, 휴대폰: 보이는 칸의 단추만(진행 단계는 아래 탭 줄의 ✓) */
+  const side = wide ? [headerSlot("chat"), progress, headerSlot(rightTab)].filter(Boolean) : [headerSlot(tab)].filter(Boolean);
+  const headerSide = side.length ? <>{side}</> : undefined;
+
+  const dot = (on: boolean) => (on ? <i className={styles.dot} aria-hidden="true" /> : null);
+  const unreadLabel = (on: boolean) => (on ? <span className={styles.srOnly}> (새 소식)</span> : null);
+
   return <StudioNavContext.Provider value={nav}>
     <main className={`${frame.page} ${styles.page}`} onClickCapture={onClickCapture}>
-      <BusinessAppChrome title={businessTitle} showRail={false} backHref="/plan" active="plans">
+      <BusinessAppChrome title={businessTitle} subtitle={missing ? undefined : statusText} actions={headerSide} showRail={false} backHref="/plan" active={fresh ? "new" : "plans"}>
         {/* 주소의 사업을 찾지 못했으면 칸마다 따로 알리지 않고(왼쪽·오른쪽 두 번 보였다) 작업실에서 한 번만 */}
         {missing ? <div className={hub.scroll}><div className={hub.content}><MissingBusinessBody /></div></div> : <div className={styles.studio} data-wide={wide || undefined}>
           {!wide && <div className={styles.narrowTabs} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, NARROW_TABS, narrowSelected, item => narrowTarget(item as NarrowTab))}>
             {NARROW_TABS.map(item => {
               const selected = narrowSelected === item;
-              return <button key={item} ref={node => { tabButtons.current[item] = node; }} type="button" role="tab" id={tabId(item)} aria-selected={selected} aria-controls={panelId(narrowTarget(item))} tabIndex={selected ? 0 : -1} onClick={() => selectTab(narrowTarget(item), { focus: "heading" })}>{NARROW_LABELS[item]}</button>;
+              const done = chipFor(NARROW_STEP[item])?.state === "done";
+              const news = (item === "prep" ? unread.includes("launch") || unread.includes("operations") : unread.includes(item)) && !selected;
+              return <button key={item} ref={node => { tabButtons.current[item] = node; }} type="button" role="tab" id={tabId(item)} aria-selected={selected} aria-controls={panelId(narrowTarget(item))} tabIndex={selected ? 0 : -1} data-done={done || undefined} onClick={() => selectTab(narrowTarget(item), { focus: "heading" })}>
+                {done && <Check className={styles.tabCheck} size={13} strokeWidth={3} aria-hidden="true" />}{NARROW_LABELS[item]}{done && <span className={styles.srOnly}> (완료)</span>}{unreadLabel(news)}{dot(news)}
+              </button>;
             })}
           </div>}
 
-          <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} className={styles.chatCol} role={wide ? undefined : "tabpanel"} labelledBy={labelledBy("chat")} headingRef={headingRef("chat")}>
+          <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} role={wide ? undefined : "tabpanel"} labelledBy={labelledBy("chat")} headingRef={headingRef("chat")}>
             <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} />
           </Pane>
 
@@ -322,14 +538,15 @@ export default function Studio() {
             {wide && <div className={styles.wideTabs} role="tablist" aria-label="작업실 보기" onKeyDown={event => onTabKey(event, RIGHT_TABS, rightTab, item => item as RightTab)}>
               {RIGHT_TABS.map(item => {
                 const selected = rightTab === item;
-                return <button key={item} ref={node => { tabButtons.current[item] = node; }} type="button" role="tab" id={tabId(item)} aria-selected={selected} aria-controls={panelId(item)} tabIndex={selected ? 0 : -1} onClick={() => selectTab(item, { focus: "heading" })}>{item === "launch" && plan ? launchLabel(plan) : STUDIO_TAB_LABELS[item]}</button>;
+                const news = unread.includes(item) && !selected;
+                return <button key={item} ref={node => { tabButtons.current[item] = node; }} type="button" role="tab" id={tabId(item)} aria-selected={selected} aria-controls={panelId(item)} tabIndex={selected ? 0 : -1} onClick={() => selectTab(item, { focus: "heading" })}>{item === "launch" && plan ? launchLabel(plan) : STUDIO_TAB_LABELS[item]}{unreadLabel(news)}{dot(news)}</button>;
               })}
             </div>}
             {!wide && (rightTab === "launch" || rightTab === "operations") && <div className={styles.prepSwitch} role="group" aria-label="준비 보기">
               {(["launch", "operations"] as const).map(item => <button key={item} type="button" aria-pressed={rightTab === item} onClick={() => selectTab(item, { focus: "heading" })}>{item === "launch" ? (plan ? launchLabel(plan) : "사업 시작하기") : "유지보수"}</button>)}
             </div>}
             <div className={styles.panes}>
-              {RIGHT_TABS.map(id => <Pane key={id} id={id} planId={planId} visible={rightVisible && rightTab === id} nav={navSeq[id] ?? 0} className={styles.pane} role="tabpanel" labelledBy={labelledBy(id)} headingRef={headingRef(id)}>
+              {RIGHT_TABS.map(id => <Pane key={id} id={id} planId={planId} visible={rightVisible && rightTab === id} nav={navSeq[id] ?? 0} refresh={refreshSeq[id] ?? 0} className={styles.pane} role="tabpanel" labelledBy={labelledBy(id)} headingRef={headingRef(id)}>
                 {rightBody(id)}
               </Pane>)}
             </div>
@@ -346,11 +563,11 @@ function launchLabel(plan: Plan): string {
 }
 
 /** 칸 하나 — 칸 제목(낭독기용, 탭을 바꾸면 초점이 온다)과 이 칸의 작업실 정보(useStudioPane) */
-function Pane({ id, planId, visible, nav, className, role, labelledBy, headingRef, children }: {
-  id: StudioTab; planId: string; visible: boolean; nav: number; className: string; role?: "tabpanel"; labelledBy?: string;
+function Pane({ id, planId, visible, nav, refresh, className, role, labelledBy, headingRef, children }: {
+  id: StudioTab; planId: string; visible: boolean; nav: number; refresh: number; className: string; role?: "tabpanel"; labelledBy?: string;
   headingRef: (node: HTMLHeadingElement | null) => void; children: ReactNode;
 }) {
-  const value = useMemo<StudioPane>(() => ({ planId, tab: id, active: visible, nav }), [planId, id, visible, nav]);
+  const value = useMemo<StudioPane>(() => ({ planId, tab: id, active: visible, nav, refresh }), [planId, id, visible, nav, refresh]);
   return <section className={className} id={`studio-panel-${id}`} role={role} aria-labelledby={role ? labelledBy : undefined} aria-label={role ? undefined : STUDIO_TAB_LABELS[id]} data-visible={visible || undefined} inert={!visible}>
     <h2 ref={headingRef} className={styles.paneHeading} tabIndex={-1}>{STUDIO_TAB_LABELS[id]}</h2>
     {/* 칸 본문 자리 — 이것만 칸 높이를 채운다(안의 아무 요소나 늘리면 단추·안내가 칸 높이만큼 늘어났다) */}

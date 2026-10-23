@@ -3,7 +3,7 @@
 /*
  * 첫 화면(2026-10-23 승인 디자인) — 큰 제목, 내 말로 적는 입력 카드, 결과물 진열 띠.
  *
- * 입력 카드는 진짜 입력칸이다. 적고 보내면 새 대화(/plan/chat?new=1&idea=…)로 가서 적은 말이 첫 메시지로 이어진다.
+ * 입력 카드는 진짜 입력칸이다. 적고 보내면 새 대화(작업실이 켜져 있으면 /plan/studio?new=1&idea=…, 아니면 /plan/chat?new=1&idea=…)로 가서 적은 말이 첫 메시지로 이어진다.
  * 로그인 화면을 거치며 주소의 idea 가 빠질 수 있어 같은 글을 sessionStorage('oneul-landing-idea', {text, at})에도 잠깐 맡긴다.
  * 비어 있으면 지금처럼 새 대화만 연다.
  *
@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
+import { newChatHref } from "../lib/plan-builder/studio";
 import { LANDING_IDEA_MAX, normalizeLandingIdea, stashLandingIdea } from "../lib/plan-builder/landing-idea";
 import styles from "./home-prompt-hero.module.css";
 
@@ -82,10 +83,9 @@ function speechRecognition(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
-/** 보낼 주소 — 비어 있으면 새 대화만 연다 */
+/** 보낼 주소 — 비어 있으면 새 대화만 연다. 작업실이 켜져 있으면 작업실의 새 대화(/plan/studio?new=1&idea=…)로 — newChatHref */
 export function landingIdeaHref(text: string) {
-  const idea = normalizeLandingIdea(text);
-  return idea ? `/plan/chat?new=1&idea=${encodeURIComponent(idea)}` : "/plan/chat?new=1";
+  return newChatHref(normalizeLandingIdea(text));
 }
 
 /** 로그인을 거치며 주소의 idea 가 빠져도 이어지게 — 대화 화면이 5분 안에 한 번만 읽고 지운다(lib/plan-builder/landing-idea.ts) */
