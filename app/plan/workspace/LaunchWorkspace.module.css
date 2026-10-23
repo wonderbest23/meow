@@ -68,3 +68,8 @@
 /* 작업실 칸 안 — 확인 화면 맨 위 '사업 시작하기'는 작업실 탭 이름과 같아 빼고, 제목을 칸 위에 바로 붙인다 */
 [data-embedded] .tabEyebrow { display:none; }
 [data-embedded] .setup > .tabEyebrow + h2 { margin-top:4px; }
+/*
+ * 단계로 옮겨 갈 때 제목으로 스크롤하면(top()) 그 위의 진행 줄(n개 완료 · 막대 · 1 / 10)이 칸 위로 올라가 가려졌다(여정 점검 2026-10-23).
+ * 제목 위에 진행 줄 자리만큼 남긴다.
+ */
+.launch h2[tabindex] { scroll-margin-top:120px; }

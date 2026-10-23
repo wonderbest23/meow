@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { STUDIO_TABS, isStudioTab, newChatHref, stepForStudioTab, studioChatComplete, studioChips, studioEntryHref, studioHref, studioLockedStep, studioNewHref, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget } from "../lib/plan-builder/studio";
+import { STUDIO_TABS, STUDIO_TAB_LABELS, isEntryMode, isStudioTab, newChatEntryHref, newChatHref, stepForStudioTab, studioChatComplete, studioChips, studioEntryHref, studioHref, studioLockedStep, studioNewHref, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget } from "../lib/plan-builder/studio";
 import { businessChatHref, documentHref, workspaceHref } from "../lib/plan-builder/business-hub";
 import { careHref, homepageHref, launchHref } from "../lib/plan-builder/journey";
 import { JOURNEY_ORDER } from "../lib/plan-builder/journey-steps";
@@ -32,7 +32,7 @@ assert.deepEqual(studioTarget(documentHref(id), id, origin), { tab: "plan", para
 assert.deepEqual(studioTarget(homepageHref(id), id, origin), { tab: "homepage", params: {}, hash: "" });
 assert.deepEqual(studioTarget(launchHref(id), id, origin), { tab: "launch", params: {}, hash: "" });
 assert.deepEqual(studioTarget(careHref(id), id, origin), { tab: "operations", params: {}, hash: "" });
-assert.equal(studioTarget(workspaceHref(id), id, origin)?.tab, "launch", "탭 없는 사업 관리 주소는 사업 시작하기");
+assert.equal(studioTarget(workspaceHref(id), id, origin)?.tab, "launch", "탭 없는 사업 관리 주소는 개업 준비");
 assert.equal(studioTarget(`${workspaceHref(id)}&tab=action`, id, origin)?.tab, "launch");
 assert.equal(studioTarget(`${workspaceHref(id)}&tab=summary`, id, origin), null, "작업실에 없는 사업 요약 탭은 예전 화면으로");
 assert.equal(studioTarget(`${workspaceHref(id)}&tab=documents`, id, origin), null);
@@ -180,6 +180,16 @@ assert.equal(new URL(newChatHref("무인 김밥 판매점", true), origin).pathn
 assert.equal(newChatHref("", false), "/plan/chat?new=1");
 assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encodeURIComponent("무인 김밥")}`);
 
+/* 첫 화면 '어떤 사업이든' 카드 — 시작 방식(entry)을 실어 새 대화로. start=1(결제 뒤 작성 시작)과 이름이 겹치지 않는다 */
+assert.equal(newChatEntryHref("operating", true), "/plan/studio?new=1&entry=operating");
+assert.equal(newChatEntryHref("exploring", false), "/plan/chat?new=1&entry=exploring");
+assert.equal(studioRedirectHref("/plan/chat?new=1&entry=startup", origin), "/plan/studio?new=1&entry=startup", "예전 대화 주소로 와도 시작 방식이 이어진다");
+assert.ok(isEntryMode("startup") && !isEntryMode("1") && !isEntryMode(null));
+
+/* 단계 이름은 한 곳(journey-steps) — 작업실 탭 · 머리줄 칩 · 부제가 같은 이름 */
+assert.equal(STUDIO_TAB_LABELS.launch, "개업 준비");
+assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
+
 /* 2단계: 머리줄 진행 단계 칩 · 부제 */
 {
   type S = "done" | "active" | "todo";
@@ -199,6 +209,8 @@ assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encod
 
   const base = { homepage: null as "none" | "draft" | "published" | null };
   assert.equal(studioStatusText({ ...base, fresh: true, steps: null }), "대화 중");
+  assert.equal(studioStatusText({ ...base, loading: true, steps: null }), "불러오는 중", "사업을 불러오는 동안 '대화 중'으로 미리 말하지 않는다");
+  assert.equal(studioStatusText({ ...base, fresh: true, loading: true, steps: null }), "대화 중");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 6, total: 14, complete: false } }), "대화 중 · 질문 6/14");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo"), intake: { answered: 14, total: 14, complete: true } }), "대화 중 · 마무리");
   assert.equal(studioStatusText({ ...base, steps: steps("active", "todo", "todo", "todo") }), "대화 중", "질문 진행을 모르면 숫자 없이");
@@ -210,7 +222,17 @@ assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encod
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "todo", "active") }), "홈페이지 · 공개 중");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true } }), "개업 준비 3/9");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true }, operating: true }), "운영 개선 3/9");
-  assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo") }), "사업계획서 완성");
+  assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo") }), "문서 완성", "사업 목록 카드와 같은 말");
+  // 여정 점검 2026-10-23 — 사업안 유무 · 다시 쓰기 · 보고 있는 칸
+  assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo"), design: false, designRunning: true }), "사업 방향 정리 중", "정리하는 중에 '정리됨'이 아니다");
+  assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo"), design: false }), "대화 중 · 마무리");
+  assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo"), design: true }), "사업 방향 정리됨 · 계획서 만들 차례");
+  assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true }), "수정 내용 반영 필요");
+  assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true, generation: { done: 0, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 0/10장", "다시 쓰는 중");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "launch" }), "개업 준비 · 시작 전", "개업 준비 칸에서 홈페이지 상태를 말하지 않는다");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "개업 준비 2/9");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "plan" }), "문서 완성");
+  assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), tab: "homepage" }), "홈페이지 · 만들기 전");
 
   /* 작업실의 대화 완료 — 첫 답(coach.ready)만으로는 끝나지 않는다: 사업안 · 계획서 장 · 쓰는 중 · 핵심 질문 모두 답함 중 하나 */
   assert.equal(studioChatComplete({ design: false, documents: 0 }), false, "첫 답만 한 사업");
@@ -227,7 +249,7 @@ assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encod
   assert.deepEqual(studioSteps(steps("active", "todo", "todo", "todo"), true).map(step => step.state), ["done", "todo", "todo", "todo", "todo"]);
   assert.equal(studioStatusText({ ...base, steps: studioSteps(steps("done", "todo", "todo", "todo"), true) }), "사업 방향 정리됨 · 계획서 만들 차례");
   assert.deepEqual(studioSteps(steps("active", "todo", "todo", "todo"), true, true).map(step => step.state).slice(0, 2), ["done", "active"], "쓰는 중이면 계획서 진행 중");
-  // 막힌 탭 — 대화가 안 끝났으면 계획서는 막히고(왼쪽 메뉴 문구), 사업 시작하기 · 유지보수는 사업 관리가 열려야
+  // 막힌 탭 — 대화가 안 끝났으면 계획서는 막히고(왼쪽 메뉴 문구), 개업 준비 · 유지보수는 사업 관리가 열려야
   assert.equal(studioLockedStep("plan", readyOnly, false), "document");
   assert.equal(studioLockedStep("homepage", readyOnly, false), "homepage");
   assert.equal(studioLockedStep("launch", readyOnly, false), "launch");
@@ -255,7 +277,9 @@ assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encod
   assert.ok(!studio.includes(`router.replace("/plan/chat?new=1")`), "작업실 새 대화를 예전 대화로 되돌리지 않는다");
   assert.match(studio, /if \(!intakeV2\) router\.replace\(/);
   // 대화가 막 만든 사업을 못 찾았다고 대화까지 덮지 않는다
-  assert.match(studio, /!isSamplePlan\(planId\) && !startedFresh\);/);
+  assert.match(studio, /const lost = !found && !lastHydrationFailed\(\) && !isSamplePlan\(planId\) && !startedFresh;/);
+  // 로그인이 풀려 못 찾았으면 '찾지 못했어요' 대신 다시 로그인하는 길(로그인 상태를 확인하지 못하면 예전처럼)
+  assert.match(studio, /const loggedOut = lost && await loadAuthSession\(\)\.then\(session => session\.authenticated === false, \(\) => false\);/);
   // 칸 단추: 같은 것을 다시 주면 상태를 바꾸지 않는다(되풀이 등록 막기) · 보이는 칸의 것만 머리줄에
   assert.match(studio, /if \(\(current\[target\] \?\? null\) === next\) return current;/);
   assert.match(studio, /if \(!node \|\| !isVisible\(id\)\) return null;/);
@@ -274,7 +298,8 @@ assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encod
   assert.match(studio, /return studioSteps\(journeySteps\(plan, homepage,/);
   assert.match(studio, /result\[id\] = lockFor\(id, plan, steps, chatComplete, pending\);/);
   assert.match(studio, /const workspaceOpen = !shouldResumeBusinessChat\(plan\) && \(chatComplete \|\| !readCoach\(plan\.answers\)\);/);
-  assert.match(studio, /if \(!planId \|\| !ready \|\| chatDone \|\| !intakeV2\) return;/, "대화가 끝나기 전까지 질문 수를 묻는다");
+  assert.match(studio, /if \(!planId \|\| !ready \|\| !watchIntake \|\| !intakeV2\) return;/, "대화가 끝나기 전까지(사업 방향을 정리하는 동안도) 질문 수를 묻는다");
+  assert.match(studio, /const watchIntake = !chatDone \|\| designPending;/);
   // 대화 칸이 알리면(보이는 채로도) 질문 수를 바로 다시 묻고, 보이는 칸에는 점을 찍지 않는다
   assert.ok(studio.indexOf(`if (target === "chat") setIntakeTick(`) < studio.indexOf("if (visibleRef.current.includes(target)) return;"));
   // 계획서 칸 새로 읽기 — 탭 보여 주기 · 새 소식마다 그 칸의 번호를 올리고, 계획서 칸은 진행을 다시 묻고 문서를 다시 받는다
@@ -286,8 +311,9 @@ assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encod
   assert.match(planBody, /generation\.restart\(\);\n\s*if \(syncing\.current\) return;\n\s*hydrateFromServer\(false\)/);
   assert.match(planBody, /if \(arrived\.length \|\| finished\) \{/, "작성이 끝나면 새 장이 없어도 한 번 맞춘다");
   assert.match(read("../app/plan/document/DocumentWorkspace.tsx"), /else if \(\(grouped\.length \|\| props\.writing\) && autoSummary\.current\)/, "저절로 띄운 요약은 작성이 시작되면 '쓰는 중'으로 돌아온다");
-  // 사업을 못 찾았으면 진행 단계 칩을 그리지 않는다
-  assert.match(studio, /const progress = wide && !missing \?/);
+  // 사업을 못 찾았거나 아직 못 불러왔으면(칩 없음) 진행 단계 칩을 그리지 않는다
+  assert.match(studio, /const progress = wide && !missing && chips\.length \?/);
+  assert.match(studio, /const chips = useMemo\(\(\) => \(steps \|\| pending \? studioChips\(steps, operating\) : \[\]\)/);
   // 작업실에서는 상담 버튼을 띄우지 않는다(대화 입력칸 · 마무리 단추와 겹쳤다)
   assert.match(read("../components/support-chat-widget.tsx"), /pathname === "\/plan\/studio"/);
   // 결제 결과의 작성 시작 — 작업실로 보낼 수 있을 때만 작업실, 아니면 예전 대화의 start=1(작업실이 예전 대화로 되돌릴 때도 start=1 을 싣는다)

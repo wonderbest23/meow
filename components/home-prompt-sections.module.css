@@ -3,7 +3,7 @@
 
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.section { width: 100%; max-width: 1180px; margin-top: 120px; display: flex; flex-direction: column; gap: 28px; }
+.section { width: 100%; max-width: 1180px; margin-top: 120px; display: flex; flex-direction: column; gap: 28px; scroll-margin-top: 88px; }
 
 /* 등장 — 스크립트가 붙은 뒤(data-armed)에만 숨겨 둔다 */
 .sections[data-armed] [data-reveal] { transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1); }
@@ -17,8 +17,10 @@
   font-weight: 900;
   letter-spacing: -0.03em;
   word-break: keep-all;
+  /* 마지막 줄에 한 낱말만 남지 않게 */
+  text-wrap: balance;
 }
-.lead { margin: 0; max-width: 720px; color: #333d4b; font-size: 18px; line-height: 1.7; word-break: keep-all; }
+.lead { margin: 0; max-width: 720px; color: #333d4b; font-size: 18px; line-height: 1.7; word-break: keep-all; text-wrap: balance; }
 .sectionHead { display: flex; flex-direction: column; gap: 12px; }
 .center { align-items: center; text-align: center; }
 .centerText { text-align: center; }
@@ -49,6 +51,7 @@
 .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
 .grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; }
 .panel {
+  position: relative;
   padding: 28px;
   border-radius: 16px;
   background: #fff;
@@ -104,6 +107,9 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 
 /* 이용 요금 */
 .priceName { font-size: 19px !important; font-weight: 700 !important; }
+/* 출시 기념가 — 결제 화면과 같은 표시. 카드 오른쪽 위에 얹어 세 카드의 가격 줄 높이가 같게 둔다 */
+.launchTag { position: absolute; top: 24px; right: 24px; padding: 3px 10px; border-radius: 999px; background: #e8f3ff; color: var(--brand-primary-hover, #1260d9); font-size: 12px; font-weight: 700; line-height: 1.5; }
+.panel:has(.launchTag) .priceName { padding-right: 84px; }
 .price { color: #191f28; font-size: 36px; line-height: 1.2; font-weight: 900; letter-spacing: -0.02em; }
 .panel .price + p { font-size: 15px; }
 .featured { outline: 2px solid #191f28; outline-offset: -2px; }
@@ -137,11 +143,12 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 
 /* 마지막 */
 .closing { margin-top: 140px; align-items: center; gap: 22px; text-align: center; }
-.closingTitle { margin: 0; color: #191f28; font-size: clamp(40px, 6vw, 84px); line-height: 1.1; font-weight: 900; letter-spacing: -0.04em; word-break: keep-all; }
+.closingTitle { margin: 0; color: #191f28; font-size: clamp(40px, 6vw, 84px); line-height: 1.1; font-weight: 900; letter-spacing: -0.04em; word-break: keep-all; text-wrap: balance; }
+/* 마지막 단추는 승인 디자인의 검정 강조 그대로 — 모서리만 공통 값(--brand-radius) */
 .closingAction {
   min-height: 52px;
   padding: 0 26px;
-  border-radius: 12px;
+  border-radius: var(--brand-radius, 10px);
   background: #191f28;
   color: #fff;
   display: inline-flex;

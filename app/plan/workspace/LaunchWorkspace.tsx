@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { readLaunch, launchSteps, launchStatus, LAUNCH_KEY, quoteAmount, quoteTotals, useOperatingWorkflow, type LaunchState } from "../../../lib/plan-builder/business-launch";
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
-import { homepageHref, journeyNext } from "../../../lib/plan-builder/journey";
+import { homepageHref, journeyLabel, journeyNext } from "../../../lib/plan-builder/journey";
 import { loadState, pushToServer, saveAnswers, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
 import styles from "./LaunchWorkspace.module.css";
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
@@ -130,8 +130,8 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
 
   return <div className={styles.launch}>
     {config === "confirm" ? <div className={styles.setup}>
-      {/* 작업실 안에서는 탭 이름(사업 시작하기)과 같아 숨긴다(CSS) */}
-      <span className={`${styles.eyebrow} ${styles.tabEyebrow}`}>{readCoach(plan.answers)?.stage === "operating" ? "운영 개선하기" : "사업 시작하기"}</span>
+      {/* 작업실 안에서는 탭 이름(개업 준비)과 같아 숨긴다(CSS) */}
+      <span className={`${styles.eyebrow} ${styles.tabEyebrow}`}>{journeyLabel("launch", readCoach(plan.answers)?.stage === "operating")}</span>
       <h2 ref={heading} tabIndex={-1}>대화에서 들은 내용으로 준비 과정을 맞췄어요</h2>
       <dl className={styles.confirmList}>{SETUP_KEYS.filter(key => key === "purpose" || state.purpose !== "ideas").map(key => <div key={key}><dt>{SETUP_SHORT[key]}</dt><dd>{setupLabel(key, state[key])}</dd></div>)}</dl>
       <p className={styles.confirmNote}>맞으면 바로 시작해요. 다르면 바꿀 수 있고, 나중에 &lsquo;진행 방식 변경&rsquo;에서도 고칠 수 있어요.</p>
@@ -154,6 +154,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
       {current ? <>
         <span className={styles.eyebrow}>{steps.findIndex(s => s.id === current.id) + 1} / {steps.length}</span>
         <h2 ref={heading} tabIndex={-1}>{current.title}</h2><p>{current.task}</p>
+        {current.decided && !record && <div className={styles.notice}>대화에서 이미 정한 내용이에요. 고칠 것이 없으면 넘어가도 돼요.</div>}
         {launchStatus(state, current) === "review" && <div className={styles.notice}>사업 정보가 바뀌었어요. 이전 기록은 유지했으니 지금 사업에 맞는지 다시 확인해 주세요.</div>}
         {current.checklist && <div className={styles.checklist} key={`check-${current.id}`}>
           <h3>준비할 것</h3>
@@ -182,7 +183,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
         <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => void saveStep("skipped", true)}>나중에 할게요</button><button className={styles.primary} disabled={busy} onClick={() => void saveStep("done", true)}>{busy ? "저장 중…" : "준비했어요 · 다음"}</button></div>
         <button className={styles.textLink} disabled={busy} onClick={() => void saveStep("pending", false)}>진행 중으로 저장</button>
       </> : <div className={styles.finish}><h2 ref={heading} tabIndex={-1}>{state.purpose === "ideas" ? "아이디어를 정리했어요" : "선택한 준비 과정을 확인했어요"}</h2><p>{skipped ? `${skipped}개는 나중에 하기로 남겼어요. 아래 과정에서 언제든 이어갈 수 있어요.` : "필요한 단계는 다시 열어 수정할 수 있어요."}</p><p>이 기록은 준비 상태이며, 실제 계약·등록·연결 완료를 대신하지 않아요.</p><Link className={styles.primary} href={businessChatHref(plan.id, "현재 사업의 다음 개선 방향을 함께 정하고 싶어요.")}>대화로 다음 방향 정하기</Link></div>}
-      <details><summary>전체 과정과 지난 기록</summary><div className={styles.stepList}>{steps.map(step => <button key={step.id} disabled={busy} onClick={() => void selectStep(step.id)}><span>{step.title}</span><small>{{ done: "준비 완료", skipped: "나중에", pending: "진행 전", review: "다시 확인" }[launchStatus(state, step)]}</small></button>)}</div><p>실행 메모와 자료는 사업계획서와 따로 저장돼요. AI 대화로 구체화한 내용은 확인한 뒤 사업안에 반영할 수 있어요. 준비를 다 하지 않아도 사업계획서는 그대로 쓸 수 있어요.</p></details>
+      <details><summary>전체 과정과 지난 기록</summary><div className={styles.stepList}>{steps.map(step => <button key={step.id} disabled={busy} onClick={() => void selectStep(step.id)}><span>{step.title}</span><small>{step.decided && !state.records[step.id] ? "대화에서 정함" : { done: "준비 완료", skipped: "나중에", pending: "진행 전", review: "다시 확인" }[launchStatus(state, step)]}</small></button>)}</div><p>실행 메모와 자료는 사업계획서와 따로 저장돼요. AI 대화로 구체화한 내용은 확인한 뒤 사업안에 반영할 수 있어요. 준비를 다 하지 않아도 사업계획서는 그대로 쓸 수 있어요.</p></details>
     </>}
     {message && <p role="status">{message}</p>}
     {syncFailed && <button className={styles.secondary} disabled={busy} onClick={() => void persist(state)}>서버 저장 다시 시도</button>}

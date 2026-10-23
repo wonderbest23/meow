@@ -14,11 +14,11 @@ import { JOURNEY_ORDER, journeyLabel, type JourneyStepId } from "./journey-steps
 export type JourneyState = "done" | "active" | "todo";
 /** 홈페이지 상태 — 서버에서 확인하기 전이면 null */
 export type HomepageStatus = "none" | "draft" | "published" | null;
-export { JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, journeyLabel, journeyStepsText, type JourneyStepId } from "./journey-steps";
+export { JOURNEY_LABELS, JOURNEY_ORDER, JOURNEY_SHORT_LABELS, OPERATING_LAUNCH_LABEL, journeyLabel, journeyShortLabel, journeyStepsText, type JourneyStepId } from "./journey-steps";
 
 export function homepageHref(id: string) { return `/plan/homepage?planId=${encodeURIComponent(id)}`; }
 export function careHref(id: string) { return `${workspaceHref(id)}&tab=operations`; }
-/** 사업 시작하기(운영 중이면 운영 개선하기) — 사업 관리의 준비 과정·홍보 키트 */
+/** 개업 준비(운영 중이면 운영 개선) — 사업 관리의 준비 과정·홍보 키트 */
 export function launchHref(id: string) { return `${workspaceHref(id)}&tab=launch`; }
 /** 사업 관리 화면이 탭을 바꿀 때 보내는 신호 — 왼쪽 목록이 지금 탭을 다시 표시한다 */
 export const WORKSPACE_TAB_EVENT = "oneulstart:workspace-tab";
@@ -40,7 +40,7 @@ export function payBackHref(product: string | null | undefined, planId: string |
 /** 결제 결과 화면(/plan/pay/result)에서 돌아갈 곳 — 묶음 상품은 결제가 끝나면 계획서부터 */
 export function payResultBackHref(product: string | null | undefined, planId: string | null | undefined) { return payReturn(RESULT_HOMEPAGE_PRODUCTS.includes(product ?? ""), planId); }
 
-/** 4단계(사업 시작하기·운영 개선하기) 진행 — 진행 방식을 정하면 진행 중, 모든 단계를 마치거나 미뤄 두면 완료 */
+/** 4단계(개업 준비·운영 개선) 진행 — 진행 방식을 정하면 진행 중, 모든 단계를 마치거나 미뤄 두면 완료 */
 export function launchProgress(plan: Plan): JourneyState {
   const state = readLaunch(plan);
   if (!state.configured) return "todo";
@@ -72,16 +72,16 @@ export type JourneyNext = { step: JourneyStepId; title: string; note: string; hr
 
 /**
  * 계획서를 다 만든 뒤 크게 보여 줄 다음 할 일 하나(+ 건너뛰는 길 하나).
- * 홈페이지가 다음 단계지만 결제 없이도 사업 시작 준비로 넘어갈 수 있다 — 예전엔 홈페이지 결제 화면에서 막혔다.
- * 홈페이지를 공개했으면 순서대로 4단계(사업 시작하기)부터, 그것까지 마쳤으면 유지보수.
+ * 홈페이지가 다음 단계지만 결제 없이도 개업 준비로 넘어갈 수 있다 — 예전엔 홈페이지 결제 화면에서 막혔다.
+ * 홈페이지를 공개했으면 순서대로 4단계(개업 준비)부터, 그것까지 마쳤으면 유지보수.
  */
 export function journeyNext(plan: Plan, homepage: HomepageStatus): JourneyNext {
   const operating = readCoach(plan.answers)?.stage === "operating";
-  const launchTitle = operating ? "운영 개선 먼저 하기" : "사업 시작 준비 먼저 하기";
+  const launchTitle = `${journeyLabel("launch", operating)} 먼저 하기`;
   const launchDone = launchProgress(plan) === "done";
   const skipToLaunch = launchDone ? undefined : { title: launchTitle, href: launchHref(plan.id) };
   if (homepage === "published") {
-    if (!launchDone) return { step: "launch", title: operating ? "운영 개선하기" : "사업 시작하기", note: operating ? "지금 운영에서 바꿀 일과 홍보를 차례로 정리해요" : "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요", href: launchHref(plan.id), secondary: { title: "유지보수하기", href: careHref(plan.id) } };
+    if (!launchDone) return { step: "launch", title: `${journeyLabel("launch", operating)}하기`, note: operating ? "지금 운영에서 바꿀 일과 홍보를 차례로 정리해요" : "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요", href: launchHref(plan.id), secondary: { title: "유지보수하기", href: careHref(plan.id) } };
     return { step: "care", title: "유지보수하기", note: "홈페이지를 고치고, 문의와 실적을 관리해요", href: careHref(plan.id) };
   }
   if (homepage === "draft") return { step: "homepage", title: "홈페이지 다듬고 공개하기", note: "만들어 둔 홈페이지를 고쳐서 인터넷에 공개해요", href: homepageHref(plan.id), secondary: skipToLaunch };

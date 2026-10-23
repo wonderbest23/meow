@@ -78,7 +78,7 @@ async function main(){
     await page.waitForSelector(`a[href="/plan/workspace?planId=${ready.id}"]`);
     assert.ok(await page.$eval("main",e=>e.textContent?.includes("수정 내용 반영 필요")));
     assert.equal(await page.$eval("main", e => e.textContent?.includes("사업 열기")), false, "목록 열기 동작은 화살표 하나로 표시");
-    assert.ok(await page.$eval(`a[href="/plan/workspace?planId=${ready.id}"]`, e => !!e.getAttribute("aria-label")?.includes("사업 관리로 이동") && !!e.querySelector('[aria-hidden="true"] strong')?.textContent?.includes("동네 가게")), "미리보기는 저장된 사업 제목을 사용하고 링크에는 접근 가능한 이름을 제공");
+    assert.ok(await page.$eval(`a[href="/plan/workspace?planId=${ready.id}"]`, e => !!e.getAttribute("aria-label")?.includes("내 사업 화면 열기") && !!e.querySelector('[aria-hidden="true"] strong')?.textContent?.includes("동네 가게")), "미리보기는 저장된 사업 제목을 사용하고 링크에는 접근 가능한 이름을 제공");
     assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
     await page.screenshot({path:`artifacts/business-hub/list-${width}.png`});
     await page.click(`a[href="/plan/workspace?planId=${ready.id}"]`);
@@ -91,7 +91,7 @@ async function main(){
     assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).backgroundColor), "rgb(227, 237, 252)", "선택 메뉴를 옅은 색상으로 구분");
     assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).color), "rgb(36, 78, 132)", "밝은 선택 배경에는 진한 글씨");
     assert.ok(await page.$eval('[aria-label="내 자료"]',e=>e.textContent?.includes("사업안 확인하고 자료 만들기")));
-    await click(page,"사업 시작하기",'[aria-label="사업 관리 메뉴"]');
+    await click(page,"개업 준비",'[aria-label="사업 관리 메뉴"]');
     await click(page,"대화에서 정한 할 일 보기");
     await click(page,"완료했어요");
     await page.waitForFunction(()=>document.body.innerText.includes("기록을 저장했어요"));

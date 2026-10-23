@@ -10,11 +10,13 @@
  * 움직임 값은 base44 첫 화면에서 잰 것: 글자 치기 45ms·지우기 25ms·다 친 뒤 2초 쉼·다음 예시 전 0.4초·시작 0.5초 뒤,
  * 진열 띠는 4초마다 다음 탭, 카드마다 90ms 차이로 '끊어 바꾸기'(사라짐 60ms → 나타남 160ms).
  * 움직임 줄이기 설정이면 예시 문장을 그대로 두고 띠도 저절로 넘기지 않는다.
+ * 입력칸에 초점이 있거나 진열 띠 위에 마우스가 있는 동안에도 저절로 넘기지 않는다(글을 쓰거나 그림을 보는 중에 바뀌지 않게).
  */
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
 import { newChatHref } from "../lib/plan-builder/studio";
+import { nativePlatform } from "../lib/native-app";
 import { LANDING_IDEA_MAX, normalizeLandingIdea, stashLandingIdea } from "../lib/plan-builder/landing-idea";
 import styles from "./home-prompt-hero.module.css";
 
@@ -61,7 +63,7 @@ const SHOWCASE: Array<{ label: string; items: ShowcaseItem[] }> = [
   ] },
   { label: "개업 준비", items: [
     sq(`${S}/launch.webp`, "빵집 개업까지 할 일 10단계 목록 — 상품, 신고 순서, 사업자등록, 세금, 첫 홍보"),
-    tall(`${S}/launch-m.webp`, "휴대폰에서 보는 사업 시작하기 단계 목록"),
+    tall(`${S}/launch-m.webp`, "휴대폰에서 보는 개업 준비 단계 목록"),
     tall(`${S}/ops-m.webp`, "문을 연 뒤 홈페이지 관리와 실적 기록 화면"),
     sq(`${S}/ops.webp`, "유지보수 화면 — 홈페이지 관리, 실적과 개선 기록"),
   ] },
@@ -83,6 +85,14 @@ function speechRecognition(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+/*
+ * 앱(아이폰·안드로이드) 안에서는 마이크 단추를 숨긴다 — 앱 설정(Info.plist)에 마이크·음성 인식 사용 설명이 없어
+ * 눌러도 쓸 수 없다. 앱은 User-Agent 끝에 OneulstartApp 을 붙인다(mobile/capacitor.config.json).
+ */
+function inNativeApp() {
+  return nativePlatform() !== null || (typeof navigator !== "undefined" && navigator.userAgent.includes("OneulstartApp"));
+}
+
 /** 보낼 주소 — 비어 있으면 새 대화만 연다. 작업실이 켜져 있으면 작업실의 새 대화(/plan/studio?new=1&idea=…)로 — newChatHref */
 export function landingIdeaHref(text: string) {
   return newChatHref(normalizeLandingIdea(text));
@@ -95,7 +105,8 @@ export function rememberLandingIdea(text: string) {
   stashLandingIdea(storage, text, Date.now());
 }
 
-export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string; subtitle: ReactNode; hidden?: string[] }) {
+/** signedIn — 로그인 안 했으면 false(입력칸 아래 '로그인해도 이어져요' 안내를 보인다), 로그인했거나 확인 전이면 숨긴다 */
+export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }: { title: string; subtitle: ReactNode; hidden?: string[]; signedIn?: boolean | null }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [reduced, setReduced] = useState(false);
@@ -104,11 +115,14 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
   const [typed, setTyped] = useState("");
   const [tab, setTab] = useState(0);
   const [playing, setPlaying] = useState(true);
+  /* 진열 띠·탭 줄 위에 마우스가 있는 동안 — 저절로 넘기지 않는다(멈춤 단추의 상태와는 따로) */
+  const [hovering, setHovering] = useState(false);
   const [slots, setSlots] = useState<Slot[]>(() => SHAPES.map(() => ({ set: 0, phase: "hold" })));
   const [micReady, setMicReady] = useState(false);
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState("");
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const form = useRef<HTMLFormElement>(null);
   const recognition = useRef<SpeechRecognitionLike | null>(null);
   const timers = useRef(new Set<number>());
   /** 마지막으로 친 예시 번호 — 입력칸을 비우고 나가면 처음이 아니라 다음 예시부터 친다 */
@@ -127,11 +141,42 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     setMounted(true);
     setReduced(media.matches);
     if (media.matches) setPlaying(false);
-    setMicReady(!!speechRecognition());
+    setMicReady(!!speechRecognition() && !inNativeApp());
     const onChange = () => { setReduced(media.matches); if (media.matches) setPlaying(false); };
     media.addEventListener("change", onChange);
     const pending = timers.current;
     return () => { media.removeEventListener("change", onChange); pending.forEach(id => window.clearTimeout(id)); pending.clear(); recognition.current?.stop(); };
+  }, []);
+
+  /*
+   * 상담 떠 있는 단추(support-chat-widget)가 입력 카드의 보내기 단추를 덮으면 그동안만 숨긴다 — 낮은 화면(640×450 등)에서
+   * 보내기 단추 위에 겹쳤다(점검 2026-10-23). 겹치는지는 실제 위치로 재고, 표시는 html 의 data-compose-covered 로(globals.css).
+   */
+  useEffect(() => {
+    const card = form.current;
+    if (!card) return;
+    const root = document.documentElement;
+    let frame = 0;
+    const check = () => {
+      frame = 0;
+      const widget = document.querySelector<HTMLElement>(".support-chat-widget:not(.open)");
+      const a = card.getBoundingClientRect();
+      const b = widget?.getBoundingClientRect();
+      const covered = !!b && b.width > 0 && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+      if (covered) root.setAttribute("data-compose-covered", ""); else root.removeAttribute("data-compose-covered");
+    };
+    const schedule = () => { if (!frame) frame = window.requestAnimationFrame(check); };
+    /* 상담 단추는 화면이 붙은 뒤 조금 늦게 그려진다 — 몇 번 더 잰다 */
+    const timers = [0, 400, 1500, 4000].map(ms => window.setTimeout(schedule, ms));
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      timers.forEach(id => window.clearTimeout(id));
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+      root.removeAttribute("data-compose-covered");
+    };
   }, []);
 
   /* 다른 탭 사진을 미리 받아 둔다 — 바꾸는 순간 빈 칸이 보이지 않게 */
@@ -176,14 +221,16 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     later((SHAPES.length - 1) * 90 + 220, () => { cutting.current = false; });
   }, [later, reduced]);
 
+  const autoAdvance = playing && !reduced && !focused && !hovering;
   useEffect(() => {
-    if (!playing || reduced) return;
+    if (!autoAdvance) return;
     const id = window.setInterval(() => {
       if (cutting.current || document.hidden) return;
       cutTo((tabRef.current + 1) % SHOWCASE.length);
     }, 4000);
     return () => window.clearInterval(id);
-  }, [playing, reduced, cutTo]);
+  }, [autoAdvance, cutTo]);
+  const hoverProps = { onPointerEnter: (event: PointerEvent) => { if (event.pointerType === "mouse") setHovering(true); }, onPointerLeave: () => setHovering(false) };
 
   const submit = () => {
     const idea = normalizeLandingIdea(text);
@@ -237,7 +284,7 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
     </h1>
     {hidden.includes("promptHome.subtitle") ? null : <p className={styles.subtitle} data-sc-field="promptHome.subtitle">{subtitle}</p>}
 
-    <form className={styles.card} aria-label="사업 아이디어로 대화 시작" onSubmit={event => { event.preventDefault(); submit(); }}>
+    <form ref={form} className={styles.card} aria-label="사업 아이디어로 대화 시작" onSubmit={event => { event.preventDefault(); submit(); }}>
       <label htmlFor="home-idea" className={styles.srOnly}>어떤 사업을 생각하고 계세요?</label>
       <div className={styles.field}>
         <textarea
@@ -268,9 +315,10 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
         </button>
       </div>
     </form>
-    <p className={styles.hint}>로그인해도 적은 내용은 그대로 이어져요</p>
+    {/* 로그인 전인 사람에게만 보이는 안내 — 로그인했거나 아직 모르면 자리만 남겨 아래가 밀리지 않게 한다 */}
+    <p className={styles.hint} data-pending={signedIn !== false || undefined} aria-hidden={signedIn !== false || undefined}>로그인해도 적은 내용은 그대로 이어져요</p>
 
-    <div className={styles.tabsRow}>
+    <div className={styles.tabsRow} {...hoverProps}>
       <div role="tablist" aria-label="만들어지는 결과물" className={styles.tabs}>
         {SHOWCASE.map((set, index) => <span key={set.label} className={styles.tabItem}>
           {index > 0 && <i className={styles.tabDot} aria-hidden="true" />}
@@ -284,17 +332,21 @@ export function HomePromptHero({ title, subtitle, hidden = [] }: { title: string
             className={styles.tab}
             onClick={() => pickTab(index)}
             onKeyDown={event => onTabKey(event, index)}
-          >{index === tab ? <><span aria-hidden="true">[</span>{set.label}<span aria-hidden="true">]</span></> : set.label}</button>
+          >
+            {/* 괄호와 굵은 글자 폭을 늘 잡아 두어 고른 탭이 바뀌어도 탭 줄이 옆으로 밀리지 않는다 */}
+            <span className={styles.bracket} aria-hidden="true">[</span><span className={styles.tabText} data-text={set.label}>{set.label}</span><span className={styles.bracket} aria-hidden="true">]</span>
+          </button>
         </span>)}
       </div>
-      <button type="button" className={styles.play} aria-pressed={!playing} aria-label={playing ? "예시 넘김 멈추기" : "예시 넘김 다시 시작"} onClick={() => setPlaying(value => !value)}>
+      {/* 이름은 그대로 두고 눌림 상태(aria-pressed)만 바뀐다 — 이름까지 바뀌면 낭독기가 다른 단추로 읽었다 */}
+      <button type="button" className={styles.play} aria-pressed={!playing} aria-label="예시 넘김 멈추기" title={playing ? "예시 넘김 멈추기" : "예시 넘김 다시 시작"} onClick={() => setPlaying(value => !value)}>
         {playing
           ? <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="6" y="5" width="4" height="14" /><rect x="14" y="5" width="4" height="14" /></svg>
           : <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 5l12 7-12 7z" /></svg>}
       </button>
     </div>
 
-    <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.strip}>
+    <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.strip} {...hoverProps}>
       {SHAPES.map((shape, index) => {
         const slot = slots[index];
         const item = SHOWCASE[slot.set].items[index];

@@ -50,7 +50,7 @@ import {
   type RankedOpportunity,
 } from "../lib/opportunity-engine";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
-import { SiteHeader, SiteLogo } from "../components/site-header";
+import { SiteHeader, SiteLogo, useSignedIn } from "../components/site-header";
 import { HomePromptHero } from "../components/home-prompt-hero";
 import { HomePromptSections } from "../components/home-prompt-sections";
 import { HomeCopyChrome } from "../components/home-copy-chrome";
@@ -122,7 +122,7 @@ import {
   PACKAGE_AMOUNT,
   PACKAGE_NAME,
 } from "../lib/payments/domain";
-import { mailOrderStatusLabels, type MailOrderStatus } from "../lib/platform-legal/domain";
+import { LEGAL_PENDING_TEXT, mailOrderStatusLabels, type MailOrderStatus } from "../lib/platform-legal/domain";
 import { SITE_COPY_FIELDS } from "../lib/site-copy/domain";
 
 type Screen = "home" | "start" | "project";
@@ -289,19 +289,28 @@ function Home({
 }: {
   onStart: () => void;
 }) {
+  /*
+   * 바닥글 사업자 정보 — 불러오지 못한 것(failed)과 아직 비어 있는 값을 나눈다. 빈 값은 /business-info 와 같은 말(LEGAL_PENDING_TEXT)로
+   * 적는다 — 예전엔 값이 비어 있어도 '불러오지 못했어요'로 보였다(점검 2026-10-23).
+   */
   const [businessInfo, setBusinessInfo] = useState<{
     operatorName: string; representativeName: string; businessRegistrationNumber: string; mailOrderSalesNumber: string;
     mailOrderStatus: MailOrderStatus; internetDomainName: string;
     businessAddress: string; supportEmail: string; supportPhone: string; hostingProvider: string;
-  } | null>(null);
+  } | "loading" | "failed">("loading");
   useEffect(() => {
     void fetch("/api/platform/readiness", { cache: "no-store" })
       .then((response) => response.json())
       .then((data) => {
-        setBusinessInfo(data.business ?? null);
+        setBusinessInfo(data?.business && typeof data.business === "object" ? data.business : "failed");
       })
-      .catch(() => undefined);
+      .catch(() => setBusinessInfo("failed"));
   }, []);
+  const business = typeof businessInfo === "object" ? businessInfo : null;
+  /** 빈 값은 사업자 정보 화면과 같은 말로 */
+  const legalValue = (value: string | null | undefined) => value?.trim() || LEGAL_PENDING_TEXT;
+  /* 로그인했으면 첫 화면의 '로그인해도 이어져요'·'로그인·계정 복구'를 빼고, 머리말은 '내 사업'을 보인다 */
+  const signedIn = useSignedIn();
   /*
    * 어드민이 고친 홈 문구(/admin/homepage). 코드의 기본 문구로 먼저 그려지고,
    * 오버라이드가 오면 바꿔 끼운다 — 실패하면 그냥 기본 문구다.
@@ -367,8 +376,8 @@ function Home({
         <Header homeNav logo={HOME_LOGO} onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
       </div>
       <div className={homeLanding.content}>
-        <HomePromptHero title={sc("promptHome.title")} subtitle={scBr("promptHome.subtitle")} hidden={siteCopy.hidden} />
-        <HomePromptSections />
+        <HomePromptHero title={sc("promptHome.title")} subtitle={scBr("promptHome.subtitle")} hidden={siteCopy.hidden} signedIn={signedIn} />
+        <HomePromptSections signedIn={signedIn} />
       </div>
       {copyEdit ? <HomeCopyChrome hidden={siteCopy.hidden} selected={copySelected} /> : null}
 
@@ -387,7 +396,7 @@ function Home({
             <a href="/ai-notice">인공지능·국외 처리</a>
             <a href="/terms">이용약관</a>
             <a href="/refund">취소·환불 기준</a>
-            <a href="/account">로그인·계정 복구</a>
+            {signedIn === true ? null : <a href="/account">로그인·계정 복구</a>}
           </nav>
         </div>
         <details className="home-footer-details">
@@ -398,21 +407,23 @@ function Home({
           <div className="home-footer-body">
             <div aria-labelledby="footer-business-heading">
               <strong className="home-footer-title" id="footer-business-heading">사업자 정보</strong>
-              {businessInfo?.operatorName ? (
+              {business ? (
                 <dl className="home-footer-info">
-                  <dt>상호</dt><dd>{businessInfo.operatorName}</dd>
-                  <dt>대표</dt><dd>{businessInfo.representativeName}</dd>
-                  <dt>사업자등록번호</dt><dd>{businessInfo.businessRegistrationNumber}</dd>
+                  <dt>상호</dt><dd>{legalValue(business.operatorName)}</dd>
+                  <dt>대표</dt><dd>{legalValue(business.representativeName)}</dd>
+                  <dt>사업자등록번호</dt><dd>{legalValue(business.businessRegistrationNumber)}</dd>
                   {/* 상태 문구가 '통신판매업 신고 완료'처럼 항목명을 되풀이하므로 값에서는 뗀다 */}
-                  <dt>통신판매업</dt><dd>{mailOrderStatusLabels[businessInfo.mailOrderStatus].replace(/^통신판매업\s*/, "")}{businessInfo.mailOrderSalesNumber ? ` · ${businessInfo.mailOrderSalesNumber}` : ""}</dd>
-                  <dt>주소</dt><dd>{businessInfo.businessAddress}</dd>
-                  {businessInfo.supportPhone && <><dt>전화</dt><dd><a href={`tel:${businessInfo.supportPhone.replace(/[^\d+]/g, "")}`}>{businessInfo.supportPhone}</a></dd></>}
-                  {businessInfo.supportEmail && <><dt>이메일</dt><dd><a href={`mailto:${businessInfo.supportEmail}`}>{businessInfo.supportEmail}</a></dd></>}
-                  <dt>사이트</dt><dd>{businessInfo.internetDomainName}</dd>
-                  <dt>호스팅</dt><dd>{businessInfo.hostingProvider}</dd>
+                  <dt>통신판매업</dt><dd>{(mailOrderStatusLabels[business.mailOrderStatus] ?? mailOrderStatusLabels.preparing).replace(/^통신판매업\s*/, "")}{business.mailOrderSalesNumber ? ` · ${business.mailOrderSalesNumber}` : ""}</dd>
+                  <dt>주소</dt><dd>{legalValue(business.businessAddress)}</dd>
+                  {business.supportPhone && <><dt>전화</dt><dd><a href={`tel:${business.supportPhone.replace(/[^\d+]/g, "")}`}>{business.supportPhone}</a></dd></>}
+                  {business.supportEmail && <><dt>이메일</dt><dd><a href={`mailto:${business.supportEmail}`}>{business.supportEmail}</a></dd></>}
+                  <dt>사이트</dt><dd>{legalValue(business.internetDomainName)}</dd>
+                  <dt>호스팅</dt><dd>{legalValue(business.hostingProvider)}</dd>
                 </dl>
-              ) : (
+              ) : businessInfo === "failed" ? (
                 <p className="home-footer-empty">사업자 정보를 불러오지 못했어요. <a href="/business-info">사업자 정보 보기</a></p>
+              ) : (
+                <p className="home-footer-empty">사업자 정보를 불러오고 있어요.</p>
               )}
             </div>
             <div aria-labelledby="footer-notes-heading">
@@ -424,7 +435,8 @@ function Home({
               </ul>
             </div>
             <p className="home-footer-credits">
-              디자인 출처 · BRIX Templates의 Website Wireframes UI Kit · Khoa (JAK)의 Neuros Lite · <a href={BRAINWAVE_CREDIT.url} target="_blank" rel="noopener noreferrer">{BRAINWAVE_CREDIT.text}</a> · <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">CC BY 4.0</a>
+              {/* 화면 골격 값(Neuros Lite, CC BY 4.0)과 홈페이지 틀(Brainwave)은 지금도 쓰고 있어 출처 표기는 남긴다 */}
+              디자인 출처 · BRIX Templates의 ‘Website Wireframes UI Kit’ · Khoa(JAK)의 ‘Neuros Lite’ · <a href={BRAINWAVE_CREDIT.url} target="_blank" rel="noopener noreferrer">{BRAINWAVE_CREDIT.text}</a> · <a href="https://creativecommons.org/licenses/by/4.0/deed.ko" target="_blank" rel="noopener noreferrer">저작자표시 4.0 국제 라이선스(CC BY 4.0)</a>
             </p>
           </div>
         </details>

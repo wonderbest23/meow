@@ -10,6 +10,8 @@ import type { StudioEditProposal, StudioEditTarget } from "../../studio/StudioCo
 export type StudioEditTurnStatus = "proposing" | "proposed" | "applying" | "applied" | "undoing" | "undone" | "dismissed" | "failed" | "note";
 /** 실패했을 때 [다시 시도]가 다시 할 일 */
 export type StudioEditRetry = "propose" | "apply" | "undo";
+/** 실패 카드의 다음 행동 단추 — 칸이 던진 오류에 붙어 온다(href 는 작업실 안 주소이거나 결제 화면) */
+export type StudioEditFailAction = { label: string; href: string };
 
 export type StudioEditTurn = {
   id: string;
@@ -23,6 +25,8 @@ export type StudioEditTurn = {
   proposal?: StudioEditProposal;
   error?: string;
   retry?: StudioEditRetry;
+  /** 다시 시도로는 풀리지 않는 실패(결제 전 등)에 [다시 시도] 대신 보일 단추 — 예: 함께 결제하기 */
+  action?: StudioEditFailAction;
   /**
    * 새로 고침으로 되살린 카드 — 제안 내용·되돌릴 값은 홈페이지 칸의 메모리에만 있어 새로 고치면 사라진다.
    * 그래서 단추 없는 기록으로만 보여 준다(누르면 "더 이상 쓸 수 없어요"만 반복됐다, 3단계 점검 2026-10-23).
@@ -43,7 +47,7 @@ export type StudioEditAction =
   | { type: "undo"; id: string }
   | { type: "undone"; id: string }
   | { type: "dismiss"; id: string }
-  | { type: "failed"; id: string; error: string; retry: StudioEditRetry }
+  | { type: "failed"; id: string; error: string; retry: StudioEditRetry; action?: StudioEditFailAction }
   | { type: "retry"; id: string };
 
 /** 한 사업에 남겨 두는 고치기 기록 수 — 오래된 것부터 지운다(세션 저장소가 무한히 커지지 않게) */
@@ -94,8 +98,8 @@ export function studioEditReducer(state: StudioEditState, action: StudioEditActi
     case "undo": next = patch(turns, action.id, ["applied"], turn => ({ ...turn, status: "undoing", error: undefined, retry: undefined })); break;
     case "undone": next = patch(turns, action.id, ["undoing"], turn => ({ ...turn, status: "undone" })); break;
     case "dismiss": next = patch(turns, action.id, ["proposed"], turn => ({ ...turn, status: "dismissed" })); break;
-    case "failed": next = patch(turns, action.id, ["proposing", "applying", "undoing"], turn => ({ ...turn, status: "failed", error: action.error, retry: action.retry })); break;
-    case "retry": next = patch(turns, action.id, ["failed"], turn => ({ ...turn, status: RETRY_STATUS[turn.retry ?? "propose"], error: undefined })); break;
+    case "failed": next = patch(turns, action.id, ["proposing", "applying", "undoing"], turn => ({ ...turn, status: "failed", error: action.error, retry: action.retry, action: action.action })); break;
+    case "retry": next = patch(turns, action.id, ["failed"], turn => ({ ...turn, status: RETRY_STATUS[turn.retry ?? "propose"], error: undefined, action: undefined })); break;
   }
   return next === turns ? state : { ...state, turns: next };
 }
@@ -140,6 +144,7 @@ export function restoreEditTurns(raw: string | null): StudioEditTurn[] {
       ...(proposal ? { proposal } : {}),
       ...(!interrupted && (status === "proposed" || status === "applied") ? { archived: true } : {}),
       ...(interrupted ? { error: STUDIO_EDIT_INTERRUPTED, retry } : status === "failed" ? { error: typeof item.error === "string" && item.error ? item.error : STUDIO_EDIT_INTERRUPTED, retry: retry ?? "propose" } : {}),
+      ...(!interrupted && status === "failed" && studioEditAction(item) ? { action: studioEditAction(item) } : {}),
       at: typeof item.at === "number" ? item.at : 0,
     });
   }
@@ -152,6 +157,14 @@ export function studioEditError(caught: unknown, fallback: string): string {
   if (caught.name === "TypeError" || /failed to fetch|load failed|networkerror|network request failed/i.test(caught.message)) return "인터넷 연결이 잠시 끊겼어요. 다시 시도해 주세요.";
   if (caught.name === "AbortError") return "응답이 늦어 멈췄어요. 다시 시도해 주세요.";
   return /[가-힣]/.test(caught.message) ? caught.message : fallback;
+}
+
+/** 칸이 던진 오류에 붙은 다음 행동(결제하기 등) — 없거나 모양이 틀리면 undefined */
+export function studioEditAction(caught: unknown): StudioEditFailAction | undefined {
+  const action = caught && typeof caught === "object" ? (caught as { action?: unknown }).action : undefined;
+  if (!action || typeof action !== "object") return undefined;
+  const { label, href } = action as Record<string, unknown>;
+  return typeof label === "string" && label && typeof href === "string" && href.startsWith("/") && !href.startsWith("//") ? { label, href } : undefined;
 }
 
 /** 입력창 위 대상 칩의 글 — "홈페이지 고치기", "3장 사업 전략 고치기" */

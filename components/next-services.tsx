@@ -34,6 +34,16 @@ const ICONS: Record<ServiceIcon, LucideIcon> = { badge: BadgeCheck, cart: Shoppi
 /* 연락 시간 — 직접 쓰지 않고 누르기만 */
 const TIME_CHOICES = ["아무 때나", "오전", "오후", "저녁"];
 
+/*
+ * 연결이 끊겨 요청 자체가 실패하면(fetch 의 TypeError) 브라우저 말 'Failed to fetch'가 그대로 보였다(점검 2026-10-23) — 우리 말로 바꾼다.
+ * 서버가 준 안내(throw new Error(서버 메시지))는 그대로 보인다.
+ */
+const NETWORK_MESSAGE = "연결을 확인하고 다시 시도해 주세요.";
+function errorText(error: unknown, fallback: string): string {
+  if (error instanceof TypeError) return NETWORK_MESSAGE;
+  return error instanceof Error && error.message ? error.message : fallback;
+}
+
 /** hasHomepage — 만든 홈페이지(초안 포함)가 없으면 '홈페이지 개선' 묶음은 뺀다(고칠 홈페이지가 없다) */
 export function NextServices({ plan, homepagePublished, hasHomepage = true }: { plan: Plan; homepagePublished: boolean; hasHomepage?: boolean }) {
   const groups = SERVICE_GROUPS.filter((group) => group.id !== "homepage" || hasHomepage);
@@ -91,10 +101,12 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error?.message ?? "확인하지 못했어요.");
       setCheck(data.check);
-    } catch (error) { setCheckError(error instanceof Error ? error.message : "확인하지 못했어요."); }
+    } catch (error) { setCheckError(errorText(error, "확인하지 못했어요.")); }
     finally { setChecking(false); }
   }
 
+  /* 신청 내역을 못 불러왔을 때 '다시 시도' — 올리면 아래 불러오기를 다시 한다 */
+  const [reload, setReload] = useState(0);
   useEffect(() => {
     setLoginNext(`${window.location.pathname}${window.location.search}#${NEXT_SERVICES_ANCHOR}`);
     const controller = new AbortController();
@@ -106,9 +118,9 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
         setState({ requests: data.requests ?? [], suggestedPhone: data.suggestedPhone ?? "", login: false, error: "" });
         setPhone((current) => current || (data.suggestedPhone ? formatKoreanPhone(data.suggestedPhone) : ""));
       })
-      .catch((error) => { if (!controller.signal.aborted) setState({ requests: [], suggestedPhone: "", login: false, error: error instanceof Error ? error.message : "신청 내역을 불러오지 못했어요." }); });
+      .catch((error) => { if (!controller.signal.aborted) setState({ requests: [], suggestedPhone: "", login: false, error: errorText(error, "신청 내역을 불러오지 못했어요.") }); });
     return () => controller.abort();
-  }, [plan.id]);
+  }, [plan.id, reload]);
 
   /* 홈페이지 화면의 '다음 단계' 카드에서 왔으면 이 칸으로 내려 준다 — 유지보수 화면은 늦게 그려져 브라우저가 스스로 못 찾는다 */
   useEffect(() => {
@@ -138,7 +150,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
       setOpenId(null); setDetailId(null); setMemo(""); setPreferredTime("");
       setDone(`${item.title} 신청됐어요. 담당자가 연락드릴게요.`);
     } catch (error) {
-      setFormError(error instanceof Error ? error.message : "신청하지 못했어요.");
+      setFormError(errorText(error, "신청하지 못했어요."));
     } finally { setSending(false); }
   }
 
@@ -153,12 +165,12 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
   const openDetail = (item: ServiceItem) => { setDetailId(item.id); start(item); };
 
   return <section className={styles.root} id={NEXT_SERVICES_ANCHOR} aria-labelledby="next-services-title">
-    {/* '다음 단계'는 여정 단계(사업 시작하기 등)와 헷갈렸다 — 맡길 수 있는 일 목록이다(여정 점검 2026-10-22) */}
+    {/* '다음 단계'는 여정 단계(개업 준비 등)와 헷갈렸다 — 맡길 수 있는 일 목록이다(여정 점검 2026-10-22) */}
     <span className={styles.eyebrow}>맡길 수 있는 일</span>
     <h2 id="next-services-title">필요한 일, 골라서 맡기세요</h2>
     <p className={styles.lead}>눌러서 무엇을 해 주는지 보고 바로 신청하세요. 담당자가 전화로 안내해요.</p>
     {done ? <p className={styles.done} role="status"><CheckCircle2 size={18} aria-hidden /> {done}</p> : null}
-    {state?.error ? <p className={styles.error} role="alert">{state.error}</p> : null}
+    {state?.error ? <div className={styles.loadError} role="alert"><p className={styles.error}>{state.error}</p><button type="button" onClick={() => { setState(null); setReload((value) => value + 1); }}>다시 시도</button></div> : null}
 
     {/* 등록·신고 확인은 창업 행정 서비스를 받을 때만 의미가 있다 — 지금은 마케팅만 받는다 */}
     {checkAvailable && adminOffered ? <form className={styles.verify} onSubmit={(event) => void runCheck(event)}>

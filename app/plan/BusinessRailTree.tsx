@@ -7,7 +7,7 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
-import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
+import { journeySteps, JOURNEY_LABELS, JOURNEY_ORDER, OPERATING_LAUNCH_LABEL, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
 import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
 import { useHomepageStatus } from "./use-homepage";
@@ -29,7 +29,7 @@ function stepFor(pathname: string, tab: string | null): RailHere | null {
   if (pathname.startsWith("/plan/chat")) return "chat";
   if (pathname.startsWith("/plan/document")) return "document";
   if (pathname.startsWith("/plan/homepage")) return "homepage";
-  /* 사업 관리 화면은 탭이 여럿이다 — '유지보수' 탭일 때만 유지보수를 표시한다(예전엔 사업 요약·사업 시작하기에서도 유지보수가 켜졌다) */
+  /* 사업 관리 화면은 탭이 여럿이다 — '유지보수' 탭일 때만 유지보수를 표시한다(예전엔 사업 요약·개업 준비에서도 유지보수가 켜졌다) */
   if (pathname.startsWith("/plan/workspace")) return tab === "operations" ? "care" : tab === "launch" || tab === "action" ? "launch" : null;
   return null;
 }
@@ -53,18 +53,24 @@ export const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: str
   homepage: { message: "사업계획서를 완성해야 홈페이지를 만들 수 있어요.", back: 1, label: "사업계획서로 가기" },
   /* 유지보수(실적 기록·홈페이지 관리)는 홈페이지가 없어도 쓸 수 있다 — 사업 관리 화면과 같은 규칙. 막히는 건 사업 방향을 정하기 전뿐 */
   care: { message: "사업 방향 정리를 마쳐야 유지보수를 쓸 수 있어요.", back: 0, label: "대화로 가기" },
-  launch: { message: "사업 방향 정리를 마쳐야 사업 시작 준비를 쓸 수 있어요.", back: 0, label: "대화로 가기" },
+  /* 단계 이름은 journey-steps.ts 한 곳에서 — 운영 중인 사업은 lockedGuide 가 '운영 개선'으로 바꾼다 */
+  launch: { message: `사업 방향 정리를 마쳐야 ${JOURNEY_LABELS.launch}를 쓸 수 있어요.`, back: 0, label: "대화로 가기" },
 };
+/** 막힌 단계 안내 — 운영 중인 사업은 4단계 이름이 '운영 개선'이라 문구도 그 이름으로 */
+export function lockedGuide(step: Exclude<JourneyStepId, "chat">, operating = false) {
+  const guide = LOCKED_GUIDE[step];
+  return step === "launch" && operating ? { ...guide, message: `사업 방향 정리를 마쳐야 ${OPERATING_LAUNCH_LABEL}을 쓸 수 있어요.` } : guide;
+}
 
-/** 사업 하나를 펼친 목차 — 대화 · 사업계획서 · 홈페이지 · 사업 시작하기 · 유지보수 */
+/** 사업 하나를 펼친 목차 — 대화 · 사업계획서 · 홈페이지 · 개업 준비 · 유지보수 */
 function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: RailHere | null; documentToc?: DocumentToc; pathname: string }) {
   const homepage = useHomepageStatus(plan.id);
   /*
-   * 사업 관리 화면(사업 요약·사업 시작하기·유지보수)이 열리는지 — 대화가 끝나기 전에는 화면이 대화로 되돌려 보낸다.
-   * 예전엔 '사업 시작하기'로 가는 길이 대화 화면의 링크 하나뿐이라 9단계 준비 과정과 홍보 키트를 다시 찾기 어려웠다.
+   * 사업 관리 화면(사업 요약·개업 준비·유지보수)이 열리는지 — 대화가 끝나기 전에는 화면이 대화로 되돌려 보낸다.
+   * 예전엔 '개업 준비'로 가는 길이 대화 화면의 링크 하나뿐이라 9단계 준비 과정과 홍보 키트를 다시 찾기 어려웠다.
    */
   const workspaceOpen = !shouldResumeBusinessChat(plan);
-  /* 단계 목록은 journey.ts 한 곳에서 — '사업 시작하기'는 사업 관리 화면이 열릴 때만 보인다(번호는 보이는 순서대로) */
+  /* 단계 목록은 journey.ts 한 곳에서 — '개업 준비'는 사업 관리 화면이 열릴 때만 보인다(번호는 보이는 순서대로) */
   const allSteps = useMemo(() => journeySteps(plan, homepage), [plan, homepage]);
   const steps = useMemo(() => allSteps.filter(step => step.id !== "launch" || workspaceOpen), [allSteps, workspaceOpen]);
   const [locked, setLocked] = useState<{ message: string; href: string; label: string } | null>(null);
@@ -85,13 +91,13 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
     if (id === "chat") return;
     // 홈페이지 공개 여부를 아직 모르면(불러오는 중·실패) 막혔다고 말하지 않는다
     if (id === "care" && homepage === null) return;
-    const guide = LOCKED_GUIDE[id];
+    const guide = lockedGuide(id, allSteps.find(step => step.id === "launch")?.label === OPERATING_LAUNCH_LABEL);
     setLocked({ message: guide.message, href: stepHref(JOURNEY_ORDER[guide.back], allSteps[guide.back].href), label: guide.label });
   };
   return <><ol className={styles.steps}>
     {steps.map((step, index) => {
       const current = here === step.id;
-      /* 사업 시작하기·유지보수는 홈페이지 없이도 쓸 수 있다(사업 관리 화면과 같은 규칙) */
+      /* 개업 준비·유지보수는 홈페이지 없이도 쓸 수 있다(사업 관리 화면과 같은 규칙) */
       const reachable = step.id === "care" || step.id === "launch" ? workspaceOpen : step.state !== "todo" || index === 0 || steps[index - 1].state === "done";
       const body = <>
         <i aria-hidden="true" data-state={step.state}>{step.state === "done" ? <Check size={11} strokeWidth={3} /> : index + 1}</i>

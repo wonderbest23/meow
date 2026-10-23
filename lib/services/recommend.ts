@@ -8,13 +8,13 @@ import { SERVICE_CATALOG, type ServiceItem } from "./catalog";
 /*
  * '다음 단계'에서 이 사업에 맞는 서비스에 배지를 단다.
  *
- * AI 를 부르지 않는다 — 사업 시작하기 화면(business-launch)에서 사장님이 고른 값(사업자등록 여부·일할 곳)과
+ * AI 를 부르지 않는다 — 개업 준비 화면(business-launch)에서 사장님이 고른 값(사업자등록 여부·일할 곳)과
  * 확정한 업종(KSIC)의 구조, 대화에서 정한 판매 경로 글자만 본다. 같은 사업이면 늘 같은 배지가 나온다.
  * 법적 판단이 아니라 '먼저 살펴보세요'라는 안내다 — 그래서 '필요해요'는 온라인 판매처럼 분명한 경우에만 쓴다.
  */
 
 export type ServiceSignals = {
-  /** 사업자등록을 했는지 — 사업 시작하기 화면에서 고른 값 */
+  /** 사업자등록을 했는지 — 개업 준비 화면에서 고른 값 */
   registered: "yes" | "no" | "unknown";
   /** 일할 곳 — remote(사무실 없이)·shared(소호·공유)·shop(점포) */
   workplace: "unknown" | "remote" | "shared" | "shop";

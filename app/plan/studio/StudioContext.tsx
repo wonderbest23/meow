@@ -41,7 +41,7 @@ export type StudioNav = {
    */
   registerEditHandler?: (target: StudioEditTarget, handler: StudioEditHandler) => () => void;
   editHandler?: (target: StudioEditTarget) => StudioEditHandler | null;
-  /** 3단계: 다른 칸이 대화 입력창을 특정 대상 고치기로 열어 달라고 한다(예: 계획서의 '이 장을 대화로 고치기') */
+  /** 3단계: 다른 칸이 대화 입력창을 특정 대상 고치기로 열어 달라고 한다(예: 계획서 장 머리의 '대화로 고치기') */
   composeInChat?: (request: StudioComposeRequest) => void;
   /**
    * 3단계: 대화 칸만 쓴다 — composeInChat 요청을 받을 곳을 등록한다(대화 칸은 하나). 등록 전에 온 요청은 하나만 보관했다가

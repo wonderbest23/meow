@@ -12,7 +12,8 @@ import { assembleHybridText, candidateConflict, choiceDraftSubmission, customCan
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, numberPresets, sectorChipOptions } from "../lib/plan-builder/intake-options";
 import type { IntakeQuestion } from "../lib/plan-builder/intake-questions";
 import { intakeValueLabel } from "../lib/plan-builder/intake-core";
-import { changedResourceLimits, intakeChipSector, needsEntryConfirmation, periodDisplay, routeComposerInput, zeroPriceAnswer } from "../app/plan/chat/intake-ui/model";
+import { changedResourceLimits, intakeChipSector, needsEntryConfirmation, numberInSentence, periodDisplay, routeComposerInput, unitCostRanges, withRo, zeroPriceAnswer } from "../app/plan/chat/intake-ui/model";
+import { budgetSentence, mentionedAnswer, mentionsSolo } from "../app/plan/chat/intake-ui/guidance";
 import { readChatResponse } from "../lib/http/read-chat-response";
 import { generationEta } from "../lib/plan-builder/generation-progress";
 import { coachAmount } from "../lib/plan-builder/coach-feasibility";
@@ -47,7 +48,28 @@ async function main() {
   assert.equal(routeComposerInput(original, fixedCost, `${firstRange.label} (예상)`).kind, "answer");
   assert.deepEqual(routeComposerInput(original, fixedCost, "30만원 정도"), { kind: "answer", questionId: "structure.cost", value: "30만원" });
   assert.deepEqual(routeComposerInput(original, fixedCost, "약 2만5천원"), { kind: "answer", questionId: "structure.cost", value: "25000원" });
-  assert.equal(routeComposerInput(original, fixedCost, "임대료가 아직 미정이라 모르겠네요 30만원?").kind, "clarify");
+  // 물음표로 끝나면 '어떻게 남길까요' 없이 AI 질문으로(여정 점검 2026-10-23)
+  assert.deepEqual(routeComposerInput(original, fixedCost, "임대료가 아직 미정이라 모르겠네요 30만원?"), { kind: "note", intent: "question" });
+  // 글과 섞인 숫자 하나는 '○원으로 답하기'로 함께 내민다 — 숫자가 둘 이상이면 고르지 않는다
+  assert.deepEqual(routeComposerInput(original, fixedCost, "재료비랑 용기 합쳐서 3500원 정도요"), { kind: "clarify", canAnswer: false, suggested: { value: "3500원", label: "3,500원" } });
+  assert.deepEqual(routeComposerInput(original, fixedCost, "월세 80만원에 관리비 10만원이요"), { kind: "clarify", canAnswer: false });
+  assert.equal(numberInSentence({ kind: "number", unit: "원" }, "1인분 2개에 9,500원")?.label, "9,500원", "단위 없는 작은 수는 금액으로 보지 않는다");
+  assert.equal(numberInSentence({ kind: "number", unit: "원" }, "모아 둔 돈은 2천만원 정도예요")?.value, "2,000만원");
+  assert.equal(numberInSentence({ kind: "number", unit: "시간" }, "주말 포함 주 20시간쯤요")?.value, "20시간");
+  assert.equal(withRo("3,500원"), "3,500원으로");
+  assert.equal(withRo("5개"), "5개로");
+  // 건당 비용 칩은 판매 가격보다 큰 범위를 뺀다(9,500원 메뉴에 '300,000원 이상'이 나오지 않게)
+  {
+    const ladder = amountRanges("food_beverage", "structure.unitCost", "startup");
+    const capped = unitCostRanges(ladder, { intake: { ...original.intake, answers: { ...original.intake.answers, price: { status: "answered", value: "9500원", messageId: "m", at: "2026-10-23T00:00:00.000Z" } } } });
+    assert.ok(capped.length < ladder.length && capped.every(range => (range.min ?? 0) < 9500), capped.map(range => range.label).join(" · "));
+    assert.deepEqual(unitCostRanges(ladder, original), ladder, "가격을 모르면 그대로");
+  }
+  // 첫 설명에서 말한 예산·혼자 운영은 다시 묻지 않고 미리 보여 준다
+  assert.deepEqual(budgetSentence("점심 도시락 가게를 하고 싶어요. 모아 둔 돈은 2천만원 정도예요."), { value: "2천만원", quote: "모아 둔 돈은 2천만원 정도예요." });
+  assert.equal(budgetSentence("가격은 9,500원으로 하려고요."), null, "예산이라는 말이 없으면 보지 않는다");
+  assert.equal(budgetSentence("2천만원으로 1인 반찬가게를 차리려고 해요")?.value, "2천만원", "금액으로 차린다고 말하면 준비 예산이다");
+  assert.equal(budgetSentence("보증금 3천만원으로 가게를 열어요"), null, "보증금·매출 같은 다른 돈은 예산으로 보지 않는다");
   // 판매 가격 0원은 보내기 전에 한 번 확인한다(무료 상품이면 그대로 저장) — 다른 금액 질문·0이 아닌 금액·미정은 묻지 않는다
   const priceQuestion = coreQuestions("startup").find(question => question.id === "price")!;
   for (const zero of ["0", "0원", " 0 원 ", 0, "0만원"]) assert.equal(zeroPriceAnswer(priceQuestion, zero), true, String(zero));
@@ -85,7 +107,7 @@ async function main() {
   assert.equal(hoursSaved("주 20시간"), "20시간");
   assert.equal(hoursSaved("주20"), "20시간");
   // 물음표로 끝나는 글은 답으로 저장하자고 먼저 권하지 않는다
-  assert.deepEqual(routeComposerInput(original, customer, "이거 꼭 골라야 해요?"), { kind: "clarify", canAnswer: false });
+  assert.deepEqual(routeComposerInput(original, customer, "이거 꼭 골라야 해요?"), { kind: "note", intent: "question" });
   for (const response of [new Response("", { status: 500 }), new Response("<html>proxy failed</html>", { status: 502 }), new Response("{"), new Response("null")]) {
     await assert.rejects(readChatResponse(response), error => error instanceof Error && /입력은 그대로/.test(error.message) && !/Unexpected|JSON|proxy/.test(error.message));
   }
@@ -370,7 +392,7 @@ async function main() {
   const css = readFileSync(new URL("../app/plan/chat/intake.module.css", import.meta.url), "utf8");
   const cssClasses = Object.fromEntries([...css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(match => [match[1], match[1]]));
   require.extensions[".css"] = module => { module.exports = cssClasses; };
-  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, DesignProgress, DesignResult, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
+  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, DesignProgress, DesignResult, DocumentLockedTurn, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
   const noop = () => {};
   const entry = renderToStaticMarkup(<EntryChoices disabled={false} onStart={noop} />);
   assert.equal((entry.match(/<button/g) ?? []).length, 3);
@@ -485,7 +507,11 @@ async function main() {
     assert.ok(!chat(q).includes("지금은 모르겠어요 · 다음 질문"));
   }
   const recommendedQuestion = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={suggestedBusiness} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
-  for (const text of ["이 업종으로 정리할까요", "입력하신 사업 내용을 보면", "기업 서비스", "이 업종 선택", "직접 선택하기"]) assert.ok(recommendedQuestion.includes(text));
+  // 세부 업종 후보가 있으면 한 목록으로 — 큰 분류 카드('이 업종 선택')는 숨기고 첫 후보에 '추천'(여정 점검 2026-10-23: 두 추천이 서로 달랐다)
+  for (const text of ["이 업종으로 정리할까요", "추천</em>", "직접 선택하기"]) assert.ok(recommendedQuestion.includes(text), text);
+  for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택"]) assert.ok(!recommendedQuestion.includes(text), text);
+  const cardOnly = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={{ ...suggestedBusiness, ksicCandidates: [] }} draft={emptyAnswer()} editing={false} disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
+  for (const text of ["입력하신 사업 내용을 보면", "이 업종 선택", "직접 선택하기"]) assert.ok(cardOnly.includes(text), `후보가 없으면 큰 분류 카드: ${text}`);
   assert.ok(!recommendedQuestion.includes('type="radio"'), "The long industry list is collapsed until explicitly opened");
   const industryEdit = renderToStaticMarkup(<QuestionForm inChat question={original.nextQuestion!} snapshot={suggestedBusiness} draft={{ ...emptyAnswer(), selected: ["education"] }} editing disabled={false} onChange={noop} onAnswer={noop} onCancel={noop} />);
   assert.ok(industryEdit.includes('type="radio"'));
@@ -493,6 +519,15 @@ async function main() {
   assert.ok(suggestedBusiness.ksicCandidates.length > 0, "KSIC candidates are derived from the confirmed business text without AI");
   assert.ok(recommendedQuestion.includes("표준산업분류 후보") && recommendedQuestion.includes(suggestedBusiness.ksicCandidates[0].name), "The industry step offers KSIC candidates as chips");
   assert.ok(!industryEdit.includes("표준산업분류 후보"), "Editing an existing industry shows the full list instead of candidates");
+  // 첫 설명에서 말한 준비 예산 · 혼자 운영은 다시 묻지 않는다 — 예산은 '앞서 말한 내용'으로 한 번에, 운영 범위는 '대표자 혼자'를 미리 골라 둔다(여정 점검 2026-10-23)
+  {
+    const said = businessSnapshot("회사 많은 동네에서 점심 도시락을 배달하는 1인 도시락 가게를 하고 싶어요. 모아 둔 돈은 2천만원 정도예요.");
+    const budgetQ = coreQuestions("startup").find(item => item.id === "budget")!;
+    assert.equal(mentionedAnswer(said, budgetQ)?.value, "2천만원");
+    assert.ok(mentionsSolo(said));
+    assert.ok(!mentionsSolo(businessSnapshot("1인 가구에 반찬 정기배송")), "'1인 가구'는 고객 이야기");
+    assert.ok(sectorChipOptions("food_beverage", "capacity", "startup").some(option => option.group === CHIP_GROUPS.people && option.label === "대표자 혼자"), "미리 고를 '대표자 혼자' 칩이 있다");
+  }
   assert.equal(original.ksicCandidates.length, 0, "No business text yet → no candidates");
   assert.ok(recommendedQuestion.includes("업종 이름으로 찾기"), "The industry step offers a name search field without leaving the chat");
   assert.ok(original.structure && original.structure.basis.revenue === "sector" && original.structure.values.sector === "general", "Without KSIC the structure falls back to the sector default");
@@ -511,6 +546,21 @@ async function main() {
   const contextHistory = renderToStaticMarkup(<ConversationHistory snapshot={withContext} onEdit={noop} />);
   assert.ok(contextHistory.includes("업종 답변 수정") && contextHistory.includes("소프트웨어 · 플랫폼"), "a supplemental note must not swallow the selected answer or its edit action");
   assert.ok(contextHistory.includes("온라인으로만 제공하고 싶어요"), "the raw supplemental note stays in the conversation");
+  // 대화로 고치기의 [바꾸기]가 적용한 답은 손님 말풍선이 아니라 '바꾼 내용' 한 줄 · 예전 답의 '계획서 다시 작성하기'는 지금 단추 이름으로
+  {
+    const at = "2026-10-23T00:00:00.000Z";
+    const applied = { ...preview, coach: { ...preview.coach, messages: [...preview.coach.messages, { id: "edit-1:0", role: "user" as const, text: "주 고객을 1인 가구로", at }, { id: "edit-1:reply", role: "assistant" as const, text: "바꿨어요. 아래 \"계획서 다시 작성하기\"를 누르면 바뀐 내용으로 다시 써요.", at }] } };
+    const appliedHistory = renderToStaticMarkup(<ConversationHistory snapshot={applied} onEdit={noop} />);
+    assert.ok(appliedHistory.includes("data-change-note") && appliedHistory.includes("바꾼 내용 · 주 고객을 1인 가구로"));
+    assert.equal((appliedHistory.match(/data-coach-message="user"/g) ?? []).length, 2, "적용한 답은 손님 말풍선으로 쌓지 않는다");
+    assert.ok(appliedHistory.includes("계획서에 반영하기") && !appliedHistory.includes("계획서 다시 작성하기"));
+    // 다 만든 뒤 고치는 길의 이름은 '대화로 고치기' · '직접 고치기' 둘뿐
+    const lockedStudio = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit onChatEdit={noop} />);
+    assert.ok(lockedStudio.includes("대화로 고치기</button>") && lockedStudio.includes("직접 고치기</a>") && lockedStudio.includes("아래 입력창"));
+    const lockedOld = renderToStaticMarkup(<DocumentLockedTurn planId="p1" chatEdit />);
+    assert.ok(lockedOld.includes("edit=chat") && lockedOld.includes("대화로 고치기</a>"));
+    for (const markup of [lockedStudio, lockedOld]) assert.ok(!/채팅으로 수정하기|문장에서 바로 고치기/.test(markup));
+  }
   const undecided = previewIntakeAnswer(original, command({ questionId: "industry", value: null, unknown: true }))!;
   assert.ok(renderToStaticMarkup(<ConversationHistory snapshot={undecided} onEdit={noop} />).includes("아직 정하지 않았어요"));
   // 업종을 바꾸면(업종 확인 [바꾸기]) 마지막 업종 답만 보이고, 그 아래에 '업종을 바꿨어요'가 붙는다 — 예전엔 두 업종이 같은 질문과 함께 두 번 쌓였다
@@ -593,10 +643,10 @@ async function main() {
   const opened = nextMarkup({ hasDocuments: true }, currentDesign);
   assert.ok(opened.includes("사업계획서 문서 열기</a>") && !opened.includes("작성하기</button>") && !opened.includes("정리하기</button>"), "after the documents exist the step is opening them");
   const resumeMissing = nextMarkup({ hasDocuments: true, missingSections: 8 }, currentDesign);
-  assert.ok(resumeMissing.includes("남은 8개 항목 이어서 작성하기</button>") && !resumeMissing.includes("계획서 다시 작성하기") && !resumeMissing.includes("다시 생성 횟수"), "unwritten sections resume without a rewrite confirm");
+  assert.ok(resumeMissing.includes("남은 8개 항목 이어서 작성하기</button>") && !resumeMissing.includes("계획서에 반영하기") && !resumeMissing.includes("다시 생성 횟수"), "unwritten sections resume without a rewrite confirm");
   assert.ok(needsPlan.includes("결제한 뒤에 작성을 시작해요") && !needsPlan.includes("무료로 만들어요"), "the first document step says it starts after payment (no free trial)");
   const staleDocument = nextMarkup({ hasDocuments: true, documentStatus: "stale" }, currentDesign);
-  assert.ok(staleDocument.includes("계획서 다시 작성하기</button>") && !staleDocument.includes("이전 계획서 보기") && !staleDocument.includes("진행 단계") && !staleDocument.includes("다시 생성 횟수"), "a stale document shows one rewrite button; the cost note waits for the confirm popup");
+  assert.ok(staleDocument.includes("계획서에 반영하기</button>") && !staleDocument.includes("이전 계획서 보기") && !staleDocument.includes("진행 단계") && !staleDocument.includes("다시 생성 횟수"), "a stale document shows one rewrite button; the cost note waits for the confirm popup");
   // 반영하기 전에 비용을 먼저 보여 준다(다시 쓸 항목 수 · 대화는 무료)
   // 횟수 안내는 버튼을 누른 뒤 확인창(RewriteCost)에서 보여 준다
   const staleCost = renderToStaticMarkup(<RewriteCost snapshot={nextSnapshot({ hasDocuments: true, documentStatus: "stale", rewriteCount: 4, freeReflects: 0 }, currentDesign)} />);
@@ -769,7 +819,7 @@ async function main() {
   assert.match(transition, /saved \? Math.max\(0, readyAt.current - performance.now\(\)\) : 0/);
   /* 작업실 3단계 — 대화로 고치기 카드 상태 · 세션 저장 되살리기 · 쓰는 동안 보낸 요청 대기열(순수 함수) */
   {
-    const { studioEditReducer, restoreEditTurns, studioEditError, studioTargetChipText, sectionHint, editTurnBusy, editTurnsKey, requestQueueKey, enqueueRequest, cancelQueuedRequest, readRequestQueue, queuedRequestRoute, queuedRequestStatus, STUDIO_EDIT_TURN_LIMIT, STUDIO_QUEUE_LIMIT, STUDIO_EDIT_INTERRUPTED } = await import("../app/plan/chat/intake-ui/studio-edit");
+    const { studioEditReducer, restoreEditTurns, studioEditError, studioEditAction, studioTargetChipText, sectionHint, editTurnBusy, editTurnsKey, requestQueueKey, enqueueRequest, cancelQueuedRequest, readRequestQueue, queuedRequestRoute, queuedRequestStatus, STUDIO_EDIT_TURN_LIMIT, STUDIO_QUEUE_LIMIT, STUDIO_EDIT_INTERRUPTED } = await import("../app/plan/chat/intake-ui/studio-edit");
     const proposal = { id: "p1", target: "homepage" as const, summary: "첫 화면 제목을 짧게 바꿔요", changes: [{ label: "첫 화면 제목", before: "맞벌이 가정을 위한 반찬 정기배송", after: "반찬 정기배송" }], cost: "AI 수정 토큰 1,240개 사용" };
     const base = { id: "t1", target: "homepage" as const, label: "홈페이지", instruction: "제목을 짧게", at: 1 };
     let state = studioEditReducer({ planId: null, turns: [] }, { type: "load", planId: "a", turns: [] });
@@ -832,6 +882,10 @@ async function main() {
     assert.deepEqual(restoreEditTurns(JSON.stringify({ turns: [] })), []);
 
     assert.equal(studioEditError(new Error("홈페이지 결제 후 쓸 수 있어요."), "기본"), "홈페이지 결제 후 쓸 수 있어요.", "칸이 던진 한국어 문장은 그대로");
+    // 칸이 오류에 붙인 다음 행동(결제하기) — 작업실 안 주소만 받는다
+    assert.deepEqual(studioEditAction(Object.assign(new Error("결제 후"), { action: { label: "함께 결제하기", href: "/plan/pay?product=bundle" } })), { label: "함께 결제하기", href: "/plan/pay?product=bundle" });
+    assert.equal(studioEditAction(Object.assign(new Error("x"), { action: { label: "가기", href: "https://evil.example" } })), undefined);
+    assert.equal(studioEditAction(new Error("x")), undefined);
     assert.equal(studioEditError(new TypeError("Failed to fetch"), "기본"), "인터넷 연결이 잠시 끊겼어요. 다시 시도해 주세요.");
     assert.equal(studioEditError(new Error("Internal Server Error"), "기본"), "기본", "영어 오류는 손님에게 보이지 않는다");
     assert.equal(studioEditError("문자열", "기본"), "기본");
@@ -885,6 +939,9 @@ async function main() {
     const failed = card({ ...base, status: "failed", error: "홈페이지를 아직 불러오고 있어요.", retry: "propose" });
     assert.match(failed, /홈페이지를 아직 불러오고 있어요\./);
     assert.match(failed, /다시 시도/);
+    // 결제 전처럼 다시 해도 같은 실패면 [다시 시도] 대신 다음 행동 단추
+    const payFailed = renderToStaticMarkup(<StudioEditTurns turns={[{ ...base, status: "failed", error: "홈페이지는 사업계획서와 함께 결제한 뒤 대화로 고칠 수 있어요.", retry: "propose", action: { label: "함께 결제하기", href: "/plan/pay?product=bundle" } }]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} onAction={noop} />);
+    assert.ok(payFailed.includes("함께 결제하기</button>") && !payFailed.includes("다시 시도"));
     assert.match(card({ ...base, status: "proposing" }), /data-reply-typing/);
     assert.match(card({ ...base, status: "note", target: "plan-section", label: "3장 시장과 고객 고치기" }), /메모로 남겨 뒀어요/);
     assert.equal(renderToStaticMarkup(<StudioEditTurns turns={[]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} />), "");
@@ -922,6 +979,15 @@ async function main() {
     // 채팅 수정을 적용하면 계획서 칸을 다시 읽게 한다 · 장 고치기는 사업 내용만 바뀐다고 알린다
     assert.match(intake, /if \(pending\.command\.action === "edit-apply" && embedded\) studioNav\?\.markActivity\?\.\("plan"\);/);
     assert.match(intake, /가격·고객 같은 사업 내용을 바꿔요/);
+    // 작업실에서는 입력창이 늘 보인다 — 다 만든 사업을 다시 열어도, 사업 방향 정리가 끝난 뒤에도. 보낸 말은 뜻을 보고 나눈다
+    assert.match(intake, /const studioChatMode = embedded && !!plan && !showReview && !replyTurn && !draft\.editingId && \(locked \|\| showCompletion && \(nextStep === "prepare" \|\| nextStep === "open"\)\);/);
+    assert.match(intake, /if \(isConsultationText\(text\)\) \{ void send\(\{ action: "help", message: text \}\); return; \}/);
+    // 쓰는 동안 받아 둔 요청으로 채팅 수정 화면이 되어도 마무리 말이 먼저 남는다
+    assert.match(intake, /\{editTurn && !replyTurn \? <>\{studioTurn\}<EditChatTurn /);
+    // 메신저식 '읽음'은 달지 않는다
+    assert.ok(!intake.includes(': "읽음"'));
+    // 다른 칸을 보면 대상 칩을 거둔다(적던 글이 있으면 둔다)
+    assert.match(intake, /if \(sideChanged \|\| before\.pane && !paneActive\) leaveEditTarget\(\);/);
     assert.equal(studioEditError(new Error("아직 준비 중이에요. 조금만 기다려 주세요."), "기본"), "아직 준비 중이에요. 조금만 기다려 주세요.", "홈페이지 칸의 준비 중 문장은 그대로");
   }
   console.log(`business-intake-ui: ownership, pending retries, optimistic rollback inputs, choice composer, hybrid chips, number stepper, amount ladder, period presets, seeds, extraction consent, source summary, artifact links passed; local next-question p95 ${p95.toFixed(2)}ms`);

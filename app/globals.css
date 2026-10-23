@@ -19,6 +19,14 @@
   --font-sans: -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", Pretendard, "Pretendard Variable", "Noto Sans KR", "Malgun Gothic", sans-serif;
   --font-serif: ui-serif, "New York", Georgia, "Nanum Myeongjo", "Noto Serif KR", serif;
   --font-mono: ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  /*
+   * 첫 화면과 앱 화면이 함께 쓰는 단추 색·모서리(점검 2026-10-23) — 앱 주 색(workspace-theme 의 --app-primary)과 같은 값이다.
+   * 예전엔 첫 화면 보내기 #1b64da, 앱 #3182f6 으로 파랑이 둘이었다. 첫 화면의 검정 단추(머리말 '시작하기'·마지막 '대화로 시작하기')는
+   * 승인 디자인의 강조라 그대로 둔다.
+   */
+  --brand-primary: #3182f6;
+  --brand-primary-hover: #1260d9;
+  --brand-radius: 10px;
 }
 
 * { box-sizing: border-box; }
@@ -5293,6 +5301,8 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 
 /* Customer support chat */
 .support-chat-widget { position: fixed; z-index: 120; right: 28px; bottom: 38px; display: grid; justify-items: end; }
+/* 첫 화면 입력 카드와 겹치는 동안은 숨긴다 — 겹치는지는 HomePromptHero 가 재서 html[data-compose-covered] 로 알린다 */
+html[data-compose-covered] .support-chat-widget:not(.open) { visibility: hidden; pointer-events: none; }
 .support-chat-toggle { width: 58px; min-width: 58px; height: 58px; padding: 0; border: 1px solid #ffffff47; border-radius: 50%; background: #0d0a2c; color: white; box-shadow: 0 14px 36px #10131852; display: grid; place-items: center; cursor: pointer; position: relative; transition: transform .18s ease, background .18s ease, box-shadow .18s ease, opacity .18s ease; opacity: 0.62; }
 .support-chat-toggle:hover, .support-chat-toggle:focus-visible { opacity: 1; }
 /* 플랜 화면에서는 본문·버튼을 가리지 않게 작게 */

@@ -13,13 +13,13 @@ import { getIntakeQuestion, type IntakeMode, type IntakeQuestion } from "../../.
 import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../../lib/plan-builder/coach-presentation";
 import { amountRanges, rangeMidpoint, CHIP_GROUPS, COST_RATIO_PRESETS, suggestPriceFromCost, formatWon, numberAnswer, numberPresetLabel, numberPresets, openEndPresets, periodMonths, scaledAmountRanges, stepFor, wonAnswer, wonLabel, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { answerText, assembleHybridText, hybridComplete, incompleteChoiceText, COUNT_PREFIX, candidateConflict, chipLimit, groupTitle, intakeChipSector, isFilterGroup, isHybridQuestion, isPrefillQuestion, metricNeedsCount, optionGroups, PERIOD_PRESETS, periodDates, periodDisplay, periodPresetRange, plainText, readableFinancialSummary, selectedCount, stepVisible, suggestedIntakeIndustry, summaryAnswerText, toggleChip, unmatchedPieces, withCount, type AnswerDraft, jobProgress, intakeNextStep } from "./model";
-import { mentionedAnswer, undecidedHelp } from "./guidance";
+import { mentionedAnswer, mentionsSolo, undecidedHelp } from "./guidance";
 import { CoachWelcome } from "../../../../components/coach-chat-ui";
 import { STRUCTURE_AXES, STRUCTURE_LABELS, type BusinessStructure, type StructureAxis } from "../../../../lib/plan-builder/business-structure";
 import { ksicNameHint, ksicSectorLabel } from "../../../../lib/plan-builder/ksic-hints";
 import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 import styles from "../intake.module.css";
-import { chatTextPreview } from "./model";
+import { chatTextPreview, unitCostRanges } from "./model";
 import type { QuestionSuggestions } from "./AnswerSuggestions";
 import { editExamples } from "../../../../lib/plan-builder/edit-examples";
 
@@ -75,6 +75,25 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const showMention = !!mention && draft.dismissedMention !== mention.key && !draft.text && !draft.selected.length && !draft.unknown;
   const undecided = undecidedHelp(question);
   const ksicCandidates = inChat && question.id === "industry" && !manualIndustry ? snapshot.ksicCandidates : [];
+  /*
+   * 업종 추천은 한 목록으로 — 예전엔 세부 업종 후보(펫시터·돌봄)와 큰 분류 카드('기업 서비스 · 이 업종 선택')가 함께 나와
+   * 둘이 다른 답을 권했다(여정 점검 2026-10-23). 후보가 있으면 큰 카드는 숨기고 첫 후보를 추천으로 표시한다.
+   */
+  const suggestionCard = showSuggested && ksicCandidates.length === 0;
+  const recommendFirst = showSuggested && ksicCandidates.length > 0;
+  /*
+   * 운영 범위: 첫 설명에 '1인 ○○ 가게'처럼 혼자 한다고 했으면 '대표자 혼자'를 미리 골라 둔다(보내지는 않는다).
+   * 예전엔 이미 말한 내용을 처음부터 다시 물었다(여정 점검 2026-10-23).
+   */
+  const soloOption = inChat && coach && !editing && question.id === "capacity" ? (question.options ?? []).find(option => option.group === CHIP_GROUPS.people && option.label === "대표자 혼자") : undefined;
+  const [soloSeeded, setSoloSeeded] = useState(false);
+  useEffect(() => {
+    if (soloSeeded || !soloOption || draft.selected.length || draft.text.trim() || draft.unknown || !mentionsSolo(snapshot)) return;
+    setSoloSeeded(true);
+    onChange({ ...draft, custom: false, unknown: false, selected: [soloOption.value], text: assembleHybridText(question, [soloOption.value]) });
+    // 질문이 처음 보일 때 한 번만
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [soloOption?.value]);
   const [ownKsicQuery, setKsicQuery] = useState("");
   const ksicQuery = coach ? composerQuery ?? "" : ownKsicQuery;
   /*
@@ -82,6 +101,14 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
    * 검색이 끝나기 전에도 같은 말이 잠깐 보였다.
    */
   const [ksicSearch, setKsicSearch] = useState<{ query: string; items: IntakeSnapshot["ksicCandidates"]; failed: boolean }>({ query: "", items: [], failed: false });
+  /* 연결이 끊겨 검색이 실패했으면 다시 연결되는 순간 같은 검색어로 한 번 더 찾는다 — 예전엔 연결된 뒤에도 실패 안내가 남았다(점검 2026-10-23) */
+  const [ksicRetry, setKsicRetry] = useState(0);
+  useEffect(() => {
+    if (!ksicSearch.failed) return;
+    const retry = () => setKsicRetry(count => count + 1);
+    window.addEventListener("online", retry);
+    return () => window.removeEventListener("online", retry);
+  }, [ksicSearch.failed]);
   useEffect(() => {
     const query = ksicQuery.trim();
     if (!inChat || question.id !== "industry" || !ksicSearchable(query)) { setKsicSearch({ query: "", items: [], failed: false }); return; }
@@ -93,7 +120,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
         .catch(() => { if (!controller.signal.aborted) setKsicSearch({ query, items: [], failed: true }); });
     }, 300);
     return () => { clearTimeout(timer); controller.abort(); };
-  }, [ksicQuery, inChat, question.id]);
+  }, [ksicQuery, inChat, question.id, ksicRetry]);
   const ksicSearched = ksicSearch.query !== "" && ksicSearch.query === ksicQuery.trim();
   const ksicShown = ksicSearchable(ksicQuery.trim()) ? ksicSearch.items : ksicCandidates;
   const candidate = question.id === "candidate";
@@ -140,7 +167,9 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
   const basisOptions = numeric && question.options?.length ? options : [];
   const basis = basisOptions.find(option => draft.selected.includes(option.value))?.label;
   const months = question.id === "sales" ? periodMonths(answerText(snapshot.intake.answers.period?.value ?? null)) : null;
-  const ladder = numeric && question.unit === "원" && (!basisOptions.length || basis) ? amountRanges(sector, question.id, snapshot.intake.mode, basis) : [];
+  const fullLadder = numeric && question.unit === "원" && (!basisOptions.length || basis) ? amountRanges(sector, question.id, snapshot.intake.mode, basis) : [];
+  // 건당 비용 칩은 판매 가격보다 큰 범위를 뺀다(9,500원 메뉴에 '300,000원 이상'이 나왔다)
+  const ladder = question.id === "structure.unitCost" ? unitCostRanges(fullLadder, snapshot) : fullLadder;
   const ranges = months && months > 1 ? scaledAmountRanges(ladder, months) : ladder;
   return <section className={`${styles.question} ${inChat ? styles.chatQuestion : ""}`} aria-labelledby="intake-question-heading" data-chat-question={inChat || undefined}>
     {inChat && <ChatSpeaker />}
@@ -151,6 +180,7 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
     <h2 id="intake-question-heading" tabIndex={-1}>{showMention ? `${question.label}, 앞서 말한 내용으로 이어갈까요?` : showSuggested ? "이 업종으로 정리할까요?" : question.prompt}</h2>
     {question.hint && !showSuggested && !showMention && <p className={styles.questionHint}>{coach && numeric && question.unit === "원" && ladder.length > 0 ? "대략 고르면 가운데 값으로 계산해요. 정확히 알면 입력창에 적어 주세요." : question.hint}</p>}
     {draft.hint && <p className={styles.draftHint}>이전 답변: {draft.hint}</p>}
+    {soloSeeded && soloOption && draft.selected.includes(soloOption.value) && <p className={styles.draftHint}>앞서 혼자 한다고 하셔서 &apos;{soloOption.label}&apos;를 골라 뒀어요. 다르면 바꿔 주세요.</p>}
     <form onSubmit={submit}>
       {showMention && <div className={styles.mention} aria-label="이전 대화에서 찾은 답변">
         <blockquote>{mention.quote}</blockquote>
@@ -163,11 +193,16 @@ export function QuestionForm({ question, snapshot, draft, editing, disabled, onC
       <div hidden={showMention}>
       {inChat && question.id === "industry" && !manualIndustry && <div className={styles.ksicCandidates} role="group" aria-label="표준산업분류 후보">
         {!coach && <label className={styles.ksicSearch}><span className={styles.srOnly}>업종 이름으로 찾기</span><input type="search" value={ksicQuery} placeholder="업종 이름으로 찾기 (예: 네일, 반찬, 학원)" maxLength={80} disabled={disabled} onChange={event => setKsicQuery(event.target.value)} /></label>}
-        {ksicShown.length > 0 && <p className={styles.ksicLead}>{coach && ksicSearchable(ksicQuery.trim()) ? "찾은 업종이에요. 가까운 걸 눌러 주세요." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
+        {ksicShown.length > 0 && <p className={styles.ksicLead}>{coach && ksicSearchable(ksicQuery.trim()) ? "찾은 업종이에요. 가까운 걸 눌러 주세요." : snapshot.structure?.fallback === "compound" ? "여러 업종이 섞여 있어요. 가장 가까운 업종을 먼저 정할까요?" : recommendFirst ? "이야기해 주신 내용과 가까운 업종이에요. 맞는 걸 눌러 주세요." : "이야기해 주신 내용과 가까운 업종이에요."}</p>}
         {ksicSearchable(ksicQuery.trim()) && ksicSearched && ksicShown.length === 0 && <p className={styles.ksicLead}>{ksicSearch.failed ? "업종 검색이 잠시 연결되지 않았어요. 아래에서 골라 주시거나 잠시 후 다시 입력해 주세요." : coach ? "맞는 업종을 못 찾았어요. 다른 이름으로 찾거나 아래에서 골라 주세요." : "맞는 업종이 없으면 아래 11개 중에서 골라도 됩니다."}</p>}
-        <div className={styles.ksicChips}>{ksicShown.map(item => <button key={item.code} type="button" className={styles.ksicChip} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>)}</div>
+        <div className={styles.ksicChips}>{ksicShown.map((item, index) => {
+          // 검색 결과가 아니라 처음 추천한 후보 목록이면 첫 후보에 '추천'을 단다
+          const recommended = recommendFirst && index === 0 && !ksicSearchable(ksicQuery.trim());
+          return <button key={item.code} type="button" className={styles.ksicChip} data-recommended={recommended || undefined} aria-pressed={draft.ksic === item.code} disabled={disabled} onClick={() => send({ ...draft, ...(coach ? { text: "" } : {}), custom: false, selected: [item.sector], unknown: false, ksic: item.code, ksicName: item.name })}><strong>{recommended && <em className={styles.ksicBadge}>추천</em>}{item.name}{ksicNameHint(item.code) && <small className={styles.ksicHint}> ({ksicNameHint(item.code)})</small>}</strong><span>{item.path.split(" › ").slice(0, 2).map(part => part.replace(/;.*$/, "")).join(" › ")}</span></button>;
+        })}</div>
+        {recommendFirst && <button className={styles.textButton} type="button" disabled={disabled} aria-expanded="false" aria-controls="intake-industry-options" onClick={() => setManualIndustry(true)}><ListFilter size={16} aria-hidden="true" />목록에 없으면 직접 선택하기</button>}
       </div>}
-      {showSuggested && <div className={styles.industrySuggestion} role="group" aria-label="추천 업종">
+      {suggestionCard && <div className={styles.industrySuggestion} role="group" aria-label="추천 업종">
         <p className={styles.suggestionReason}>입력하신 사업 내용을 보면 이 업종에 가까워 보여요. 맞는지 확인해 주세요.</p>
         <div className={styles.suggestedIndustry}><CheckCircle2 size={23} aria-hidden="true" /><strong>{suggested.label}</strong></div>
         <div className={styles.suggestionActions}>
@@ -290,11 +325,17 @@ function HybridChips({ question, draft, disabled, groups, revealed, suggestions,
         return <button key={`ai-${item}`} type="button" className={`${styles.chip} ${styles.suggestionChip}`} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => toggleSuggestion(item)}><span className={styles.suggestionLabel}><Sparkles size={13} aria-hidden="true" />{item}<span className={styles.srOnly}> (맞춤 추천)</span></span></button>;
       })}{group.options.map(option => {
         const selected = draft.selected.includes(option.value);
-        return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{option.label}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
+        return <button key={option.value} type="button" className={styles.chip} aria-pressed={selected} data-selected={selected || undefined} disabled={disabled || !selected && stepLimit > 1 && picked >= stepLimit} onClick={() => tap(option.value)}>{goalChipLabel(question.id, option.label)}{option.hint && <small className={styles.chipHint}>{option.hint}</small>}</button>;
       })}</div>
     </div>;
   }), countUnit !== undefined && <CountStep key="count" question={question} unit={countUnit} count={count} disabled={disabled} onCount={value => update(withCount(draft.selected, value))} />]}</div>;
 }
+
+/**
+ * 목표 칩의 'N원'·'N건' 자리표는 칩에서 감춘다 — 금액·건수는 바로 다음 단계에서 고른다('월 매출 N원' → '목표 월 매출').
+ * 값(답 문장 조립)은 그대로 'N원'을 쓴다.
+ */
+const goalChipLabel = (questionId: string, label: string) => questionId !== "goal" ? label : label === "월 매출 N원" ? "목표 월 매출" : label.replace(/\s*N원/, "").replace(/\s*N건/, " 건수");
 
 /** Preset chips + stepper for a count inside a hybrid answer; the composer sends the final answer. */
 function CountStep({ question, unit, count, disabled, onCount }: { question: IntakeQuestion; unit: string; count: number | undefined; disabled: boolean; onCount: (value: number | undefined) => void }) {
@@ -419,7 +460,8 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }:
   const price = snapshot.intake.answers.price;
   const examples = editExamples(price?.status === "answered" ? price.value : null);
   return <section className={styles.editTurn} aria-label="계획서 수정" data-edit-chat>
-    {!job && <div className={styles.assistantMessage}><p>계획서에서 바꾸고 싶은 내용을 말씀해 주세요. 이 사업 안의 내용(가격·고객·상품·목표 등)만 고칠 수 있어요.</p></div>}
+    {/* 장의 문장을 다시 쓰는 게 아니라 사업 내용(답변)을 바꾼다 — 약속과 하는 일이 같게(여정 점검 2026-10-23) */}
+    {!job && <div className={styles.assistantMessage}><p>바꾸고 싶은 사업 내용(가격·고객·상품·목표 등)을 말씀해 주세요. 바꾼 뒤 &apos;계획서에 반영하기&apos;를 누르면 계획서를 다시 써요.</p></div>}
     {running && <JobProgress snapshot={snapshot} announce variant="chat" />}
     {pending && <div className={styles.changeCard} data-edit-proposal>
       <b>이렇게 바꿀게요</b>
@@ -436,16 +478,20 @@ export function EditChatTurn({ snapshot, disabled, onSend, onApply, onDismiss }:
   </section>;
 }
 
-/** After the plan document exists the chat is a record: no new questions or free chat, edits happen from the document. */
-export function DocumentLockedTurn({ planId, chatEdit }: { planId: string; chatEdit: boolean }) {
+/**
+ * After the plan document exists the chat is a record of the questions. 작업실에서는 입력창이 늘 열려 있어(onChatEdit)
+ * 바꿀 내용·궁금한 점을 바로 적으면 되고, 예전 화면에서는 대화로 고치기 화면으로 보낸다.
+ * 고치는 길의 이름은 '대화로 고치기' · '직접 고치기' 두 가지로만 부른다(계획서 칸과 같다).
+ */
+export function DocumentLockedTurn({ planId, chatEdit, onChatEdit }: { planId: string; chatEdit: boolean; onChatEdit?: () => void }) {
   const id = encodeURIComponent(planId);
   return <section className={styles.lockedTurn} aria-label="사업계획서 완성" data-document-locked>
-    <div className={styles.assistantMessage}><p>사업계획서를 만들었어요. 이 대화는 기록으로 남겨 두고, 고칠 내용은 계획서에서 바꿀 수 있어요.</p></div>
+    <div className={styles.assistantMessage}><p>{onChatEdit ? "사업계획서를 만들었어요. 바꿀 사업 내용이나 궁금한 점은 아래 입력창에 적어 주세요." : "사업계획서를 만들었어요. 이 대화는 기록으로 남겨 두고, 고칠 내용은 계획서에서 바꿀 수 있어요."}</p></div>
     {/* 다 만든 뒤 할 일은 '계획서 보기'가 먼저다 — 예전엔 세 단추가 같은 무게라 무엇을 누를지 몰랐다(여정 점검 2026-10-22) */}
     <div className={styles.chipRow}>
       <Link className={`${styles.chip} ${styles.chipStrong}`} href={`/plan/document?planId=${id}`}>계획서 보기</Link>
-      <Link className={styles.chip} href={`/plan/document?planId=${id}&edit=facts`}>문장에서 바로 고치기</Link>
-      {chatEdit && <Link className={styles.chip} href={`/plan/chat?planId=${id}&edit=chat`}>채팅으로 수정하기</Link>}
+      {chatEdit && (onChatEdit ? <button type="button" className={styles.chip} onClick={onChatEdit}>대화로 고치기</button> : <Link className={styles.chip} href={`/plan/chat?planId=${id}&edit=chat`}>대화로 고치기</Link>)}
+      <Link className={styles.chip} href={`/plan/document?planId=${id}&edit=facts`}>직접 고치기</Link>
     </div>
   </section>;
 }
@@ -460,7 +506,7 @@ export function GenerationFinishedTurn({ planId, onPlan, onHomepage }: { planId:
     <div className={styles.chipRow}>
       <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={onPlan}>계획서 보기</button>
       <button type="button" className={styles.chip} onClick={onHomepage}>홈페이지 만들기</button>
-      <Link className={styles.chip} href={`/plan/document?planId=${encodeURIComponent(planId)}&edit=facts`}>문장에서 바로 고치기</Link>
+      <Link className={styles.chip} href={`/plan/document?planId=${encodeURIComponent(planId)}&edit=facts`}>직접 고치기</Link>
     </div>
   </section>;
 }
@@ -514,6 +560,8 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
   const industryAnswerId = snapshot.intake.answers.industry?.messageId;
   const replacedIndustry = new Set(industryAnswerId && snapshot.coach.messages.some(message => message.id === industryAnswerId)
     ? snapshot.coach.messages.filter(message => message.role === "user" && message.id !== industryAnswerId && message.text.startsWith(industryLabel) && !snapshot.intake.notes.some(note => note.id.startsWith(`${message.id}:`))).map(message => message.id) : []);
+  // 대화로 고치기의 [바꾸기]가 적용한 답 — 메시지 번호가 '편집 요청 번호:순번'이고 같은 요청의 '바꿨어요' 답이 있다
+  const appliedEdit = (id: string) => /:\d+$/.test(id) && snapshot.coach.messages.some(other => other.role === "assistant" && other.id === `${id.replace(/:\d+$/, "")}:reply` && other.text.startsWith("바꿨어요"));
   return <div className={styles.chatHistory} aria-label="지금까지의 대화">
     <div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div>
     <article className={styles.userMessage} data-coach-message="user"><p>{mode}</p></article>
@@ -529,10 +577,17 @@ export function ConversationHistory({ snapshot, onEdit, receipt, readOnly = fals
       // 목록에 없는 질문의 답(탐색 중 '직접 적을래요'로 쓴 사업 소개 등)도 저장할 때 붙인 '사업 소개: ' 머리말은 떼고 보인다 — 손님이 쓴 적 없는 말이다
       const labelled = question ?? (message.role === "user" && !notes.length && answerEntry ? getIntakeQuestion(snapshot.intake.mode, snapshot.intake.sector, answerEntry[0], snapshot.structure?.values) : undefined);
       const text = answerEntry?.[1].status === "unknown" ? "아직 정하지 않았어요" : labelled && message.text.startsWith(`${labelled.label}: `) ? message.text.slice(labelled.label.length + 2) : message.text;
+      /*
+       * 대화로 고치기에서 [바꾸기]로 적용한 사실(편집 요청 번호:순번)은 손님이 쓴 말이 아니다 — 질문과 내 말풍선으로 다시 쌓지 않고
+       * '바꾼 내용' 한 줄로 남긴다(여정 점검 2026-10-23: 적용하면 '주로 누가 이용하나요?'와 새 답 말풍선이 생겼다).
+       */
+      if (message.role === "user" && appliedEdit(message.id)) return <div key={message.id} className={styles.chatTurn}>
+        <p className={styles.changeNote} data-change-note>바꾼 내용 · {labelled ? `${labelled.label}: ${bubbleAnswerText(labelled, text)}` : text}</p>
+      </div>;
       return <div key={message.id} className={styles.chatTurn}>
         {question && <div className={styles.assistantMessage}><ChatSpeaker /><p>{question.prompt}</p></div>}
         <article className={message.role === "user" ? styles.userMessage : styles.assistantMessage} data-coach-message={message.role}>
-          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text} /></> : <p>{bubbleAnswerText(labelled, text)}</p>}
+          {message.role === "assistant" ? <><ChatSpeaker /><ConversationText text={text.replace("\"계획서 다시 작성하기\"", "\"계획서에 반영하기\"")} /></> : <p>{bubbleAnswerText(labelled, text)}</p>}
           {answerEntry && question && !readOnly && <button type="button" className={styles.messageEdit} title="이 답변 수정" aria-label={`${question.label} 답변 수정`} onClick={() => onEdit(question.id)}><PencilLine size={14} /></button>}
         </article>
         {receipt && message.id === lastUserId && !notes.length ? <p className={styles.messageStatus} data-receipt>{receipt}</p>
@@ -594,7 +649,14 @@ export function SavedNotes({ snapshot, disabled, onExtract }: { snapshot: Intake
   return <section className={styles.notes} aria-labelledby="intake-notes-heading"><div className={styles.sectionHeading}><h3 id="intake-notes-heading">저장한 메모</h3>{notes.some(note => ["failed", "queued"].includes(note.status)) && <button type="button" className={styles.textButton} disabled={disabled} onClick={onExtract}>메모 정리</button>}</div><ul>{[...notes].reverse().map(note => <li key={note.id}><div className={styles.noteMeta}><span data-failed={note.status === "failed"}>{labels[note.status]}</span><time dateTime={note.at}>{new Date(note.at).toLocaleDateString("ko-KR", { month: "short", day: "numeric" })}</time></div><p>{note.text}</p>{note.status === "failed" && <small>메모 원문은 저장되어 있습니다.</small>}</li>)}</ul></section>;
 }
 
-const STRUCTURE_AXIS_LABEL: Record<StructureAxis, string> = { payer: "고객·지불자", offering: "제공하는 것", delivery: "전달 방식", revenue: "수익 방식", sides: "시장 구조", license: "인허가" };
+// 요약 칸의 사업 구조 이름 — '고객·지불자'·'시장 구조' 같은 말 대신 쉬운 말로(여정 점검 2026-10-23). 저장 값과 문서 쪽 이름(STRUCTURE_LABELS)은 그대로다
+const STRUCTURE_AXIS_LABEL: Record<StructureAxis, string> = { payer: "돈을 내는 고객", offering: "파는 것", delivery: "고객에게 전하는 방식", revenue: "돈 버는 방식", sides: "고객 종류", license: "신고·허가" };
+const STRUCTURE_VALUE_LABEL: Partial<Record<StructureAxis, Record<string, string>>> = {
+  sides: { one: "고객 한 종류", two: "파는 쪽·사는 쪽 둘 다" },
+  offering: { mixed: "여러 가지 섞음" },
+  delivery: { mixed: "여러 방식 섞음" },
+  revenue: { mixed: "여러 방식 섞음" },
+};
 
 const JOB_TITLES: Record<"extract" | "help" | "design" | "ideas" | "edit", string> = { edit: "바꿀 내용 정리 중", extract: "저장한 메모 정리 중", design: "사업 방향 정리 중", help: "AI 답변 작성 중", ideas: "새 사업 제안 받는 중" };
 const monotonicNow = () => typeof performance !== "undefined" ? performance.now() : Date.now();
@@ -703,7 +765,7 @@ export function RewriteCost({ snapshot }: { snapshot: IntakeSnapshot }) {
  * 계획서를 다시 쓰는 버튼 하나. 횟수·안내는 누른 뒤 확인창에서만 보여 준다 —
  * 버튼 옆에 설명을 늘어놓으면 헷갈린다는 소유자 피드백(2026-10-07).
  */
-export function RewriteConfirm({ snapshot, disabled, label = "계획서 다시 작성하기", className, onConfirm }: { snapshot: IntakeSnapshot; disabled: boolean; label?: string; className?: string; onConfirm: () => void }) {
+export function RewriteConfirm({ snapshot, disabled, label = "계획서에 반영하기", className, onConfirm }: { snapshot: IntakeSnapshot; disabled: boolean; label?: string; className?: string; onConfirm: () => void }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (!open) return;
@@ -718,7 +780,7 @@ export function RewriteConfirm({ snapshot, disabled, label = "계획서 다시 �
         <h3 id="rewrite-confirm-title">바뀐 내용으로 다시 쓸까요?</h3>
         <RewriteCost snapshot={snapshot} />
         <p>다 쓸 때까지 지금 계획서는 그대로 남아 있어요.</p>
-        <div className={styles.confirmActions}><button type="button" onClick={() => setOpen(false)}>취소</button><button type="button" autoFocus onClick={() => { setOpen(false); onConfirm(); }}>다시 작성하기</button></div>
+        <div className={styles.confirmActions}><button type="button" onClick={() => setOpen(false)}>취소</button><button type="button" autoFocus onClick={() => { setOpen(false); onConfirm(); }}>반영하기</button></div>
       </div>
     </div>, document.body)}
   </>;
@@ -763,7 +825,7 @@ export function NextStepAction({ snapshot, prepared, disabled, aiBusy, onDesign,
     </ol>
     {jobActive ? <JobProgress snapshot={snapshot} announce={announce} /> : <div className={styles.nextStepRow}>
       {step === "design" && <button type="button" className={styles.primaryButton} disabled={locked} onClick={onDesign}>사업 방향 정리하기</button>}
-      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "바뀐 내용으로 사업계획서 다시 작성하기" : "사업계획서 문서 작성하기"}</>}</button>}
+      {step === "prepare" && <button type="button" className={styles.primaryButton} disabled={locked || preparing} aria-busy={preparing || undefined} onClick={onPrepare}>{preparing ? <><Spinner />사업계획서 준비하고 있어요</> : <><FileText size={18} aria-hidden="true" />{snapshot.documentStatus === "stale" ? "계획서에 반영하기" : "사업계획서 문서 작성하기"}</>}</button>}
       {step === "open" && <Link className={styles.primaryButton} href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={18} aria-hidden="true" />사업계획서 문서 열기</Link>}
       {secondary}
     </div>}
@@ -956,10 +1018,10 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
       <summary>고객·제공 방식 바꾸기</summary>
       <p className={styles.muted}>고르신 업종으로 짐작한 내용이에요. 직접 고른 내용은 따로 표시했어요.</p>
       {snapshot.structure.fallback === "unclassified" && <p className={styles.muted}>업종을 아직 정하지 않아 넓게 잡혀 있어요. 아래 항목을 직접 고르면 질문과 계산이 그대로 따라가요.</p>}
-      {snapshot.structure.fallback === "compound" && <p className={styles.muted}>여러 업종이 섞인 사업으로 보여요. 매출이 가장 큰 업종을 기준으로 두고, 섞인 축은 복합을 골라 주세요.</p>}
+      {snapshot.structure.fallback === "compound" && <p className={styles.muted}>여러 업종이 섞인 사업으로 보여요. 매출이 가장 큰 업종을 기준으로 두고, 섞인 항목은 '여러 … 섞음'을 골라 주세요.</p>}
       <dl className={styles.summaryFields}>{STRUCTURE_AXES.map(axis => {
         const value = snapshot.structure!.values[axis] as string;
-        const labels = STRUCTURE_LABELS[axis] as Record<string, string>;
+        const labels = { ...STRUCTURE_LABELS[axis] as Record<string, string>, ...STRUCTURE_VALUE_LABEL[axis] };
         const basis = snapshot.structure!.basis[axis];
         const open = structureEdit === axis;
         return <div key={axis}><dt><span>{STRUCTURE_AXIS_LABEL[axis]}</span><small>{basis === "user" ? "직접 선택" : "업종 기준"}</small>{onStructure && !readOnly && <button type="button" className={styles.iconButton} aria-label={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} title={`${STRUCTURE_AXIS_LABEL[axis]} 수정`} aria-expanded={open} disabled={disabled} onClick={() => setStructureEdit(open ? null : axis)}><PencilLine size={15} /></button>}</dt>
@@ -978,6 +1040,6 @@ export function BusinessSummary({ snapshot, disabled, aiBusy, prepared, onEdit, 
     </div>}
     {design && <details className={styles.design}><summary>AI 사업안{staleDesign ? " · 이전 입력 기준" : " · 제안"}</summary><h3>시작할 범위</h3><p>{design.startingPlan.scope}</p><p>{design.startingPlan.connectionToVision}</p><h3>제안 이유</h3><p>{design.startingPlan.whyThis}</p><h3>확인할 가정</h3><ul>{design.assumptions.map((assumption, index) => <li key={index}>{assumption.statement}<p>{assumption.howToCheck}</p></li>)}</ul></details>}
     {showActions && !nextStep && <small className={styles.nextStepHint}>{snapshot.coreComplete ? "사업 소개를 정하면 사업 방향을 정리할 수 있어요." : "기본 질문을 마치면 사업 방향을 정리할 수 있어요."}</small>}
-    {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물">{showActions || nextStep !== "open" ? <Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link> : null}<Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>사업 관리<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
+    {(snapshot.hasDocuments || prepared) && <nav className={styles.artifactLinks} aria-label="저장한 결과물">{showActions || nextStep !== "open" ? <Link href={`/plan/document?planId=${encodeURIComponent(snapshot.planId)}`}><FileText size={17} aria-hidden="true" />계획서 열기<ArrowRight size={16} aria-hidden="true" /></Link> : null}<Link href={`/plan/workspace?planId=${encodeURIComponent(snapshot.planId)}`}>내 사업<ArrowRight size={16} aria-hidden="true" /></Link></nav>}
   </>;
 }

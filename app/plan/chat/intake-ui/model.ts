@@ -6,12 +6,12 @@ import type { ServerPlan } from "../../../../lib/plan-builder/plan-server-store"
 import type { IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { SECTOR_PROFILES, type ProposalSector } from "../../../../lib/plan-builder/proposal-blueprint";
 import { coachAmount } from "../../../../lib/plan-builder/coach-feasibility";
-import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, wonAnswer } from "../../../../lib/plan-builder/intake-options";
+import { formatWon, splitAssembledAnswer, STEP_SEPARATOR, LIST_SEPARATOR, assembleAnswer, CHIP_LIMITS, CHIP_GROUPS, amountRanges, periodMonths, rangeMidpoint, scaledAmountRanges, wonAnswer, type AmountRange } from "../../../../lib/plan-builder/intake-options";
 import { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
 import { applyIntakeResources } from "../../../../lib/plan-builder/intake-resource-update";
 import { RESOURCE_ANSWER_IDS, RESOURCE_KEYS, resourceLimitsSchema, resourceQuoteSchema, type ResourceKey, type ResourceContext, type ResourceQuote } from "../../../../lib/plan-builder/intake-candidate-resources";
 import { parseResourceLimit } from "../../../../lib/plan-builder/intake-candidate-fit";
-import { stripAnswerPeriod } from "../../../../lib/plan-builder/answer-number";
+import { parseWonAmount, stripAnswerPeriod } from "../../../../lib/plan-builder/answer-number";
 import { z } from "zod";
 import { ideaInputFingerprint } from "../../../../lib/plan-builder/intake-ideas";
 export { descriptionSector } from "../../../../lib/plan-builder/intake-sector";
@@ -111,11 +111,59 @@ export function confirmedEntryCommand(mode: "exploring" | "startup" | "operating
   return { action: "start", mode, ...(text ? { message: text, noteIntent: isConsultationText(text) ? "question" as const : "memo" as const } : {}) };
 }
 
+/** 글 속에서 읽은 숫자 답 하나 — '이 내용은 어떻게 남길까요' 확인에 '3,500원으로 답하기'로 붙는다 */
+export type SuggestedNumber = { value: string; label: string };
 export type ComposerRoute =
   | { kind: "answer"; questionId: string; value: IntakeValue; unknown?: boolean }
   | { kind: "note"; intent: "memo" | "question" }
-  | { kind: "clarify"; canAnswer: boolean }
+  | { kind: "clarify"; canAnswer: boolean; suggested?: SuggestedNumber }
   | { kind: "invalid"; hint: string };
+
+/**
+ * 숫자 질문에 글과 함께 적은 숫자('재료비랑 용기 합쳐서 3500원 정도요')를 읽는다 — 서로 다른 값이 하나뿐일 때만.
+ * 예전엔 글이 섞이면 'AI에게 질문 · 메모로 남기기'만 떠서 답할 길이 없었다(여정 점검 2026-10-23).
+ * 원은 공용 규칙(parseWonAmount)으로 읽고, 단위 없는 작은 수('2개', '1인분'의 2·1)는 금액으로 보지 않는다.
+ */
+export function numberInSentence(question: Pick<IntakeQuestion, "kind" | "unit">, text: string): SuggestedNumber | undefined {
+  if (question.kind !== "number" || !question.unit) return undefined;
+  const found = new Set<number>();
+  if (question.unit === "원") {
+    for (const match of text.matchAll(/(?:\d[\d,.]*\s*(?:억|천만|백만|만|천|백)?\s*)+원?/g)) {
+      const token = match[0].trim().replace(/[.,]$/, "");
+      const amount = parseWonAmount(token);
+      if (amount === undefined || !/[억만천백원]/.test(token) && amount < 100) continue;
+      found.add(amount);
+    }
+    const [amount] = [...found];
+    return found.size === 1 ? { value: wonAnswer(amount), label: formatWon(amount) } : undefined;
+  }
+  for (const match of text.matchAll(new RegExp(`(\\d[\\d,]*(?:\\.\\d+)?)\\s*${escapeRegExp(question.unit)}`, "g"))) {
+    const number = Number(match[1].replace(/,/g, ""));
+    if (Number.isFinite(number) && number >= 0) found.add(number);
+  }
+  const [number] = [...found];
+  return found.size === 1 ? { value: `${number}${question.unit}`, label: `${number.toLocaleString("ko-KR")}${question.unit}` } : undefined;
+}
+
+/** '3,500원으로' · '5개로' — 받침이 없거나 ㄹ 받침이면 '로' */
+export function withRo(word: string): string {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  if (code < 0 || code > 11171) return `${word}(으)로`;
+  const final = code % 28;
+  return `${word}${final === 0 || final === 8 ? "로" : "으로"}`;
+}
+
+/**
+ * 건당 비용(변동비) 범위 칩을 판매 가격에 맞춘다 — 9,500원 메뉴에 '300,000원 이상' 같은 칩이 나왔다(여정 점검 2026-10-23).
+ * 하한이 판매 가격 이상인 범위만 뺀다(0원·'○원 미만'은 남는다). 가격을 모르면 그대로.
+ */
+export function unitCostRanges(ranges: AmountRange[], snapshot: Pick<IntakeSnapshot, "intake">): AmountRange[] {
+  const answer = snapshot.intake.answers.price;
+  const price = answer?.status === "answered" ? coachAmount(answerText(answer.value).replace(/\s*\((?:예상|실제 기록)\)$/, "")) : undefined;
+  if (!price || price <= 0) return ranges;
+  const kept = ranges.filter(range => (range.min ?? 0) < price);
+  return kept.length >= 2 ? kept : ranges;
+}
 
 /**
  * 숫자 질문에 숫자처럼 적었지만 읽을 수 없으면('20~30만원', '-5000') 예시와 함께 다시 적어 달라고 한다.
@@ -152,8 +200,15 @@ export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQue
   if (question && unknownReply.test(value)) return { kind: "answer", questionId: question.id, value: null, unknown: true };
   if (questionIntent.test(value)) return { kind: "note", intent: "question" };
   const canAnswer = !!question && ["text", "number"].includes(question.kind);
+  // 숫자 질문이면 글 속 숫자 하나를 '○원으로 답하기'로 함께 내민다
+  const clarify = (answerable: boolean): ComposerRoute => {
+    const suggested = question ? numberInSentence(question, value) : undefined;
+    return suggested ? { kind: "clarify", canAnswer: answerable, suggested } : { kind: "clarify", canAnswer: answerable };
+  };
   if (fillerReply(value)) return { kind: "clarify", canAnswer: false };
-  if (/[?？]/.test(value) || acknowledgement.test(value) || (value.match(compoundFields)?.length ?? 0) > 1) return { kind: "clarify", canAnswer: canAnswer && !/[?？]\s*$/.test(value) };
+  // 물음표로 끝나면 질문이다 — '어떻게 남길까요'를 거치지 않고 AI에게 바로 묻는다(여정 점검 2026-10-23)
+  if (/[?？]\s*$/.test(value)) return { kind: "note", intent: "question" };
+  if (/[?？]/.test(value) || acknowledgement.test(value) || (value.match(compoundFields)?.length ?? 0) > 1) return clarify(canAnswer);
   if (!question) return { kind: "note", intent: "memo" };
   if (["single", "multi"].includes(question.kind)) {
     const choice = question.kind === "multi" && hasExclusiveOptions(question) ? undefined : typedChoiceAnswer(snapshot, question, value);
@@ -162,15 +217,15 @@ export function routeComposerInput(snapshot: IntakeSnapshot, question: IntakeQue
   if (question.id === "budget" || question.id === "hoursPerWeek") {
     const parsed = parseResourceLimit(value, question.id === "budget" ? "initialCost" : "weeklyOperatingHours");
     const hint = parsed.status === "known" ? "" : numberInputHint({ kind: "number", unit: question.id === "budget" ? "원" : "시간" }, value.replace(/[~～〜–]/g, ""));
-    return parsed.status === "known" ? { kind: "answer", questionId: question.id, value } : hint ? { kind: "invalid", hint } : { kind: "clarify", canAnswer: false };
+    return parsed.status === "known" ? { kind: "answer", questionId: question.id, value } : hint ? { kind: "invalid", hint } : clarify(false);
   }
   const typed = typedAmountAnswer(snapshot, question, value);
   if (typed !== undefined) return { kind: "answer", questionId: question.id, value: typed };
   const numberHint = numberInputHint(question, value);
   if (numberHint) return { kind: "invalid", hint: numberHint };
   // '월 30만'·'30만원/월'처럼 질문 기간을 붙여 써도 숫자 답으로 받는다
-  if (question.kind === "number" && !/^[\d\s,.억만천백십원%시간분개명건회좌석룸]+$/.test(stripAnswerPeriod(value, question.period))) return { kind: "clarify", canAnswer: false };
-  if (/\n.+|그리고|그런데|하지만/.test(value) || /\d\s*만원.*\d\s*시간/.test(value)) return { kind: "clarify", canAnswer };
+  if (question.kind === "number" && !/^[\d\s,.억만천백십원%시간분개명건회좌석룸]+$/.test(stripAnswerPeriod(value, question.period))) return clarify(false);
+  if (/\n.+|그리고|그런데|하지만/.test(value) || /\d\s*만원.*\d\s*시간/.test(value)) return clarify(canAnswer);
   return { kind: "answer", questionId: question.id, value };
 }
 

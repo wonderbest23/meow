@@ -9,13 +9,15 @@ import { queuedRequestStatus, sectionHint, studioTargetChipText, type QueuedStud
  * 작업실 대화 칸 끝에 붙는 '대화로 고치기' 기록 — 손님 말 하나와 "이렇게 바꿀게요" 카드 하나가 한 묶음이다.
  * 카드의 단추는 오른쪽 칸의 처리기(StudioEditHandler)를 부르고, 결과는 BusinessIntake 가 상태로 바꿔 다시 그린다.
  */
-export function StudioEditTurns({ turns, disabled = false, onApply, onDismiss, onUndo, onRetry }: {
+export function StudioEditTurns({ turns, disabled = false, onApply, onDismiss, onUndo, onRetry, onAction }: {
   turns: StudioEditTurn[];
   disabled?: boolean;
   onApply: (turn: StudioEditTurn) => void;
   onDismiss: (turn: StudioEditTurn) => void;
   onUndo: (turn: StudioEditTurn) => void;
   onRetry: (turn: StudioEditTurn) => void;
+  /** 실패 카드의 다음 행동 단추(결제하기 등) — 주소로 이동한다 */
+  onAction?: (href: string) => void;
 }) {
   if (!turns.length) return null;
   return <div className={styles.studioEdits} data-studio-edits>
@@ -23,16 +25,19 @@ export function StudioEditTurns({ turns, disabled = false, onApply, onDismiss, o
     {turns.map(turn => <section key={turn.id} data-studio-item className={styles.studioEditTurn} aria-label={studioTargetChipText(turn.label)} data-studio-edit={turn.status}>
       <article className={styles.userMessage} data-coach-message="user"><p>{turn.instruction}</p></article>
       <p className={styles.messageStatus}>{studioTargetChipText(turn.label)}</p>
-      <EditReply turn={turn} disabled={disabled} onApply={onApply} onDismiss={onDismiss} onUndo={onUndo} onRetry={onRetry} />
+      <EditReply turn={turn} disabled={disabled} onApply={onApply} onDismiss={onDismiss} onUndo={onUndo} onRetry={onRetry} onAction={onAction} />
     </section>)}
   </div>;
 }
 
-function EditReply({ turn, disabled, onApply, onDismiss, onUndo, onRetry }: { turn: StudioEditTurn; disabled: boolean; onApply: (turn: StudioEditTurn) => void; onDismiss: (turn: StudioEditTurn) => void; onUndo: (turn: StudioEditTurn) => void; onRetry: (turn: StudioEditTurn) => void }) {
+function EditReply({ turn, disabled, onApply, onDismiss, onUndo, onRetry, onAction }: { turn: StudioEditTurn; disabled: boolean; onApply: (turn: StudioEditTurn) => void; onDismiss: (turn: StudioEditTurn) => void; onUndo: (turn: StudioEditTurn) => void; onRetry: (turn: StudioEditTurn) => void; onAction?: (href: string) => void }) {
   if (turn.status === "proposing") return <ReplyTyping />;
   if (turn.status === "note") return <div className={styles.assistantMessage}><ChatSpeaker /><p>이 요청은 메모로 남겨 뒀어요. 지금은 대화로 바로 고칠 수 없어서, 계획서에서 문장을 눌러 직접 고칠 수 있어요.</p></div>;
+  /* 결제 전처럼 다시 해도 같은 실패면 [다시 시도] 대신 다음 행동 단추(함께 결제하기 등)를 둔다 — 예전엔 눌러도 같은 말만 반복됐다 */
   if (turn.status === "failed") return <div className={styles.assistantMessage}><ChatSpeaker /><p>{turn.error || "바꾸지 못했어요. 다시 시도해 주세요."}</p>
-    <div className={styles.chipRow}><button type="button" className={styles.chip} disabled={disabled} onClick={() => onRetry(turn)}><span className={styles.studioEditButton}><RefreshCw size={14} aria-hidden="true" />다시 시도</span></button></div>
+    <div className={styles.chipRow}>{turn.action && onAction
+      ? <button type="button" className={`${styles.chip} ${styles.chipStrong}`} onClick={() => onAction(turn.action!.href)}>{turn.action.label}</button>
+      : <button type="button" className={styles.chip} disabled={disabled} onClick={() => onRetry(turn)}><span className={styles.studioEditButton}><RefreshCw size={14} aria-hidden="true" />다시 시도</span></button>}</div>
   </div>;
   const proposal = turn.proposal;
   if (!proposal) return null;

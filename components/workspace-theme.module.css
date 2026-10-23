@@ -10,7 +10,7 @@
   --app-body: #465365;
   --app-muted: #6d7b8e;
   --app-accent: #35669c;
-  --app-primary: #3182f6;
+  --app-primary: var(--brand-primary, #3182f6);
   --app-selected: #e3edfc;
   --app-selected-text: #244e84;
   --app-danger: #b23b47;
@@ -20,7 +20,7 @@
   --app-success: #267959;
   --app-success-bg: #eef8f2;
   --app-panel-fill: #ffffff;
-  --app-primary-fill: #3182f6;
+  --app-primary-fill: var(--brand-primary, #3182f6);
   --surface: var(--app-surface);
   --surface-2: var(--app-raised);
   --surface-soft: var(--app-raised);

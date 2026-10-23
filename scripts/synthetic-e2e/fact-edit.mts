@@ -24,7 +24,7 @@ const clickText = (text: string) => page.evaluate((label: string) => { const el 
 log.openChoice = await clickText("수정하기"); await wait(500);
 log.choiceText = await page.evaluate(() => document.querySelector("dialog[open]")?.textContent?.slice(0, 120) ?? null);
 await page.screenshot({ path: `${out}fact-1-choice.png` });
-log.pickFacts = await clickText("문장에서 바로 고치기"); await wait(2500);
+log.pickFacts = await clickText("직접 고치기"); await wait(2500);
 log.factMode = await page.evaluate(() => ({ chips: [...document.querySelectorAll("[data-fact-chip]")].map(el => el.textContent), marks: document.querySelectorAll("mark[data-fact]").length, editable: document.querySelectorAll("[contenteditable=true]").length }));
 await page.screenshot({ path: `${out}fact-2-mode.png` });
 log.openPopover = await page.evaluate(() => { const chip = document.querySelector<HTMLElement>("[data-fact-chip=customer]"); chip?.click(); return !!chip; }); await wait(800);
@@ -41,7 +41,7 @@ await page.screenshot({ path: `${out}fact-4-stale.png` });
 log.reflect = await clickText("계획서에 반영하기"); await wait(800);
 log.reflectPopup = await page.evaluate(() => document.querySelector("[data-rewrite-confirm]")?.textContent ?? null);
 await page.screenshot({ path: `${out}fact-4b-free-popup.png` });
-log.confirm = await page.evaluate(() => { const button = [...document.querySelectorAll<HTMLButtonElement>("[data-rewrite-confirm] button")].find(b => b.innerText === "다시 작성하기"); button?.click(); return !!button; }); await wait(2500);
+log.confirm = await page.evaluate(() => { const button = [...document.querySelectorAll<HTMLButtonElement>("[data-rewrite-confirm] button")].find(b => b.innerText === "반영하기"); button?.click(); return !!button; }); await wait(2500);
 log.afterReflect = await page.evaluate(() => ({ factMode: !!document.querySelector("[data-fact-card]"), error: document.querySelector("[data-fact-card] [role=alert]")?.textContent ?? null }));
 
 await page.goto(`${origin}/plan/chat?planId=${encodeURIComponent(planId)}`, { waitUntil: "networkidle0", timeout: 120000 }); await wait(3000);
@@ -49,7 +49,7 @@ log.chat = await page.evaluate(() => ({ locked: !!document.querySelector("[data-
 await page.screenshot({ path: `${out}fact-5-chat-locked.png` });
 
 // 채팅으로 수정하기: 범위 밖 요청은 바로 정해진 답, 사실 변경 요청은 정리 → 변경 카드 → 바꾸기
-log.chatEditLink = await page.evaluate(() => { const link = [...document.querySelectorAll<HTMLAnchorElement>("[data-document-locked] a")].find(a => a.innerText.includes("채팅으로 수정하기")); link?.click(); return !!link; });
+log.chatEditLink = await page.evaluate(() => { const link = [...document.querySelectorAll<HTMLAnchorElement>("[data-document-locked] a")].find(a => a.innerText.includes("대화로 고치기")); link?.click(); return !!link; });
 await wait(4000);
 const sendText = async (text: string) => {
   await page.evaluate((value: string) => {
@@ -72,7 +72,7 @@ log.proposal = await page.evaluate(() => document.querySelector("[data-edit-prop
 await page.screenshot({ path: `${out}fact-6-edit-proposal.png` });
 log.apply = await page.evaluate(() => { const button = [...document.querySelectorAll<HTMLButtonElement>("[data-edit-proposal] button")].find(b => b.innerText === "바꾸기"); button?.click(); return !!button; });
 await wait(3000);
-log.afterApply = await page.evaluate(() => ({ reply: [...document.querySelectorAll("[data-coach-message=assistant]")].at(-1)?.textContent ?? null, reapply: [...document.querySelectorAll("button")].some(b => b.innerText.includes("다시 작성하기")) }));
+log.afterApply = await page.evaluate(() => ({ reply: [...document.querySelectorAll("[data-coach-message=assistant]")].at(-1)?.textContent ?? null, reapply: [...document.querySelectorAll("button")].some(b => b.innerText.includes("계획서에 반영하기")) }));
 await page.screenshot({ path: `${out}fact-7-edit-applied.png` });
 console.log(JSON.stringify({ ...log, pageErrors: errors }, null, 1));
 await browser.close();

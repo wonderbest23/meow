@@ -162,7 +162,7 @@ async function main() {
       const questions = intakeQuestions(f.intake, f.coach);
       const price = questions.find(question => question.id === "price")!, unitCost = questions.find(question => question.id === "structure.unitCost")!;
       assert.equal(unitCost.period, price.period, `${price.period} vs ${unitCost.period}`);
-      assert.ok(unitCost.prompt.startsWith(`${price.period}에 들어가는 변동비`), unitCost.prompt);
+      assert.ok(unitCost.prompt.startsWith(`${price.period}에 드는 재료비`), unitCost.prompt);
     });
     check("startup core answers alone produce the scenario; capacity is labelled as the maximum", () => {
       const f = fixture("startup");

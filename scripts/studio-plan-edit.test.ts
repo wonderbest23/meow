@@ -35,12 +35,13 @@ import { PLAN_EDIT_MAX_LENGTH, planChapterComposeRequest, planChapterEditLabel, 
   assert.equal(planSectionEditMessage("", "가격을 올려줘"), "가격을 올려줘", "이름표가 없으면 그대로");
 }
 
-/* 계획서 칸 — 작업실 안에서만 장 머리에 '이 장을 대화로 고치기'·'직접 고치기', 휴대폰 도구 줄에도 */
+/* 계획서 칸 — 작업실 안에서만 장 머리에 '대화로 고치기'·'직접 고치기', 휴대폰 도구 줄에도 */
 {
   const workspace = readFileSync(new URL("../app/plan/document/DocumentWorkspace.tsx", import.meta.url), "utf8");
   assert.match(workspace, /planChapterComposeRequest\(/, "장 머리 단추가 같은 요청 모양을 쓴다");
   assert.match(workspace, /nav\?\.composeInChat/, "작업실 밖(composeInChat 없음)에서는 단추가 없다");
-  assert.match(workspace, /이 장을 대화로 고치기/);
+  assert.match(workspace, />대화로 고치기</, "고치기 단추 이름은 '대화로 고치기' · '직접 고치기' 둘뿐");
+  assert.doesNotMatch(workspace, /문장에서 바로 고치기|채팅으로 수정하기|이 장을 대화로 고치기/);
   assert.match(workspace, /직접 고치기/);
   assert.match(workspace, /styles\.chapterChatEdit/, "휴대폰 도구 줄의 대화로 고치기");
   assert.doesNotMatch(workspace, /registerEditHandler\(\s*["']plan-section/, "plan-section 처리기는 등록하지 않는다(대화 칸의 기존 채팅 수정을 쓴다)");
