@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Check, Download } from "lucide-react";
 import styles from "./DocumentWorkspace.module.css";
 
@@ -29,8 +30,9 @@ export function DocumentReadHeading({ title, planType, isSample, completed, iden
   </header>;
 }
 
-export function DocumentChapterHeading({ number, title }: { number: number; title: string }) {
-  return <header className={styles.chapterHeading}><span>{number}장</span><h2>{title}</h2></header>;
+/** actions — 작업실 안에서 장 머리 오른쪽 위에 붙는 작은 단추들(이 장을 대화로 고치기 · 직접 고치기). 없으면 예전 그대로 */
+export function DocumentChapterHeading({ number, title, actions }: { number: number; title: string; actions?: ReactNode }) {
+  return <header className={styles.chapterHeading}>{actions ? <div className={styles.chapterHeadingTop}><span>{number}장</span><div className={styles.chapterActions} role="group" aria-label={`${number}장 고치기`}>{actions}</div></div> : <span>{number}장</span>}<h2>{title}</h2></header>;
 }
 
 export function DocumentSectionHeading({ number, title }: { number?: string; title: string }) {

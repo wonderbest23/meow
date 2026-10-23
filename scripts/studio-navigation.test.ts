@@ -295,4 +295,21 @@ assert.equal(newChatHref("무인 김밥", false), `/plan/chat?new=1&idea=${encod
   assert.match(studio, /`\$\{businessChatHref\(planId\)\}\$\{start \? `&start=\$\{encodeURIComponent\(start\)\}` : ""\}`/);
 }
 
+/* 3단계 — 대화로 고치기 처리기 보관함 · 대화 입력창 열기(소스 점검) */
+{
+  const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
+  const studio = read("../app/plan/studio/Studio.tsx");
+  const context = read("../app/plan/studio/StudioContext.tsx");
+  // 등록하면 내리는 함수를 돌려주고, 늦게 내린 앞 처리기가 새 처리기를 지우지 않는다(같은 것일 때만 지운다)
+  assert.match(studio, /editHandlers\.current\.set\(target, handler\);\n\s*return \(\) => \{ if \(editHandlers\.current\.get\(target\) === handler\) editHandlers\.current\.delete\(target\); \};/);
+  assert.match(studio, /const editHandler = useCallback\(\(target: StudioEditTarget\) => editHandlers\.current\.get\(target\) \?\? null, \[\]\);/);
+  // 대화 입력창 열기 — 휴대폰은 대화 탭으로, 받는 곳이 아직 없으면 하나만 보관했다가 등록할 때 넘긴다
+  assert.match(studio, /if \(!readWide\(\)\) showTab\("chat"\);\n\s*if \(composeListener\.current\) composeListener\.current\(request\);\n\s*else pendingCompose\.current = request;/);
+  assert.match(studio, /pendingCompose\.current = null;\n\s*if \(waiting\) listener\(waiting\);/);
+  for (const name of ["registerEditHandler", "editHandler", "composeInChat", "onComposeRequest"]) assert.match(studio, new RegExp(`\\n\\s*${name},\\n`), `nav 에 ${name}`);
+  assert.match(context, /onComposeRequest\?: \(listener: \(request: StudioComposeRequest\) => void\) => \(\) => void;/);
+  // PC 에서 오른쪽에 보이는 열린 칸을 대화 칸에 알린다(막힌 칸이면 null) — '홈페이지를 대화로 고치기' 제안
+  assert.match(studio, /studioSide=\{wide && !locks\[rightTab\] \? rightTab : null\}/);
+}
+
 console.log("studio navigation ok");

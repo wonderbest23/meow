@@ -35,6 +35,51 @@ export type StudioNav = {
   markActivity?: (tab: StudioTab) => void;
   /** 2단계: 칸이 다른 탭을 보여 달라고 한다(예: 계획서 작성이 시작되면 계획서 탭으로) — 주소의 값은 건드리지 않는다 */
   showTab?: (tab: StudioTab) => void;
+  /**
+   * 3단계: 대화로 고치기 — 오른쪽 칸(홈페이지 등)이 "대화로 받은 지시를 이렇게 바꿀게요"를 만들고 적용·되돌리는 일을 맡는다.
+   * 칸이 처음 열릴 때 registerEditHandler 로 등록하고, 대화 칸은 editHandler(target) 로 찾아 쓴다.
+   */
+  registerEditHandler?: (target: StudioEditTarget, handler: StudioEditHandler) => () => void;
+  editHandler?: (target: StudioEditTarget) => StudioEditHandler | null;
+  /** 3단계: 다른 칸이 대화 입력창을 특정 대상 고치기로 열어 달라고 한다(예: 계획서의 '이 장을 대화로 고치기') */
+  composeInChat?: (request: StudioComposeRequest) => void;
+  /**
+   * 3단계: 대화 칸만 쓴다 — composeInChat 요청을 받을 곳을 등록한다(대화 칸은 하나). 등록 전에 온 요청은 하나만 보관했다가
+   * 등록하는 순간 넘긴다. 돌려준 함수로 내린다.
+   */
+  onComposeRequest?: (listener: (request: StudioComposeRequest) => void) => () => void;
+};
+
+/** 대화로 고칠 수 있는 대상 — plan-section 은 계획서의 한 장, homepage 는 홈페이지 글 */
+export type StudioEditTarget = "homepage" | "plan-section";
+
+/** 대화 입력창을 특정 대상 고치기로 여는 요청 */
+export type StudioComposeRequest = { target: StudioEditTarget; label: string; sectionId?: string; text?: string };
+
+/** "이렇게 바꿀게요" 카드 한 장 — 대화 칸이 그대로 그린다 */
+export type StudioEditProposal = {
+  id: string;
+  target: StudioEditTarget;
+  /** 한 줄 요약(예: "첫 화면 제목과 버튼 글을 바꿔요") */
+  summary: string;
+  /** 바뀌는 곳마다 이름 · 지금 · 바꿀 글 */
+  changes: { label: string; before: string; after: string }[];
+  /** 비용 안내(예: "AI 수정 토큰 1,240개 사용") — 없으면 숨긴다 */
+  cost?: string;
+};
+
+/** 오른쪽 칸이 맡는 고치기 — 실패하면 throw new Error("손님에게 보여 줄 한국어 문장") */
+export type StudioEditHandler = {
+  /** 바꿀 내용을 만들되 아직 적용하지 않는다 */
+  propose: (instruction: string, context?: { sectionId?: string }) => Promise<StudioEditProposal>;
+  /** 카드의 [바꾸기] — 적용하고 저장한다 */
+  apply: (proposalId: string) => Promise<void>;
+  /** 카드의 [그대로 두기] */
+  dismiss: (proposalId: string) => void;
+  /** 적용한 뒤 [되돌리기] — 바꾸기 전으로 돌리고 저장한다 */
+  undo: (proposalId: string) => Promise<void>;
+  /** 지금 대화로 고칠 수 있는지(결제 전·로그인 전 등이면 false) — 대화 칸이 "대화로 고치기" 권유를 띄울지 정한다 */
+  available?: () => boolean;
 };
 
 export const StudioPaneContext = createContext<StudioPane | null>(null);

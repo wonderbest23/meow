@@ -767,6 +767,163 @@ async function main() {
   assert.match(transition, /prefers-reduced-motion: reduce/);
   assert.match(transition, /active.current\?\.requestId !== requestId/);
   assert.match(transition, /saved \? Math.max\(0, readyAt.current - performance.now\(\)\) : 0/);
+  /* 작업실 3단계 — 대화로 고치기 카드 상태 · 세션 저장 되살리기 · 쓰는 동안 보낸 요청 대기열(순수 함수) */
+  {
+    const { studioEditReducer, restoreEditTurns, studioEditError, studioTargetChipText, sectionHint, editTurnBusy, editTurnsKey, requestQueueKey, enqueueRequest, cancelQueuedRequest, readRequestQueue, queuedRequestRoute, queuedRequestStatus, STUDIO_EDIT_TURN_LIMIT, STUDIO_QUEUE_LIMIT, STUDIO_EDIT_INTERRUPTED } = await import("../app/plan/chat/intake-ui/studio-edit");
+    const proposal = { id: "p1", target: "homepage" as const, summary: "첫 화면 제목을 짧게 바꿔요", changes: [{ label: "첫 화면 제목", before: "맞벌이 가정을 위한 반찬 정기배송", after: "반찬 정기배송" }], cost: "AI 수정 토큰 1,240개 사용" };
+    const base = { id: "t1", target: "homepage" as const, label: "홈페이지", instruction: "제목을 짧게", at: 1 };
+    let state = studioEditReducer({ planId: null, turns: [] }, { type: "load", planId: "a", turns: [] });
+    state = studioEditReducer(state, { type: "propose", turn: base });
+    assert.equal(state.turns[0].status, "proposing");
+    assert.ok(editTurnBusy(state.turns[0]), "만드는 중에는 다음 요청을 막는다");
+    assert.equal(studioEditReducer(state, { type: "propose", turn: base }), state, "같은 id 는 두 번 넣지 않는다");
+    assert.equal(studioEditReducer(state, { type: "applied", id: "t1" }), state, "순서가 틀린 알림(만드는 중에 '바꿨어요')은 무시한다");
+    assert.equal(studioEditReducer(state, { type: "proposed", id: "other", proposal }), state, "다른 사업으로 바뀐 뒤 온 결과는 무시한다");
+    state = studioEditReducer(state, { type: "proposed", id: "t1", proposal });
+    assert.equal(state.turns[0].status, "proposed");
+    assert.equal(state.turns[0].proposal?.cost, proposal.cost);
+    assert.ok(!editTurnBusy(state.turns[0]));
+    const dismissed = studioEditReducer(state, { type: "dismiss", id: "t1" });
+    assert.equal(dismissed.turns[0].status, "dismissed");
+    assert.equal(studioEditReducer(dismissed, { type: "apply", id: "t1" }), dismissed, "그대로 둔 카드는 바꿀 수 없다");
+    state = studioEditReducer(state, { type: "apply", id: "t1" });
+    assert.equal(state.turns[0].status, "applying");
+    state = studioEditReducer(state, { type: "failed", id: "t1", error: "저장하지 못했어요", retry: "apply" });
+    assert.deepEqual([state.turns[0].status, state.turns[0].retry, state.turns[0].error], ["failed", "apply", "저장하지 못했어요"]);
+    assert.ok(state.turns[0].proposal, "바꾸다 실패해도 카드는 남는다(다시 시도)");
+    state = studioEditReducer(state, { type: "retry", id: "t1" });
+    assert.equal(state.turns[0].status, "applying", "다시 시도는 실패한 일로 돌아간다");
+    state = studioEditReducer(state, { type: "applied", id: "t1" });
+    assert.equal(state.turns[0].status, "applied");
+    state = studioEditReducer(state, { type: "undo", id: "t1" });
+    assert.equal(state.turns[0].status, "undoing");
+    state = studioEditReducer(state, { type: "undone", id: "t1" });
+    assert.equal(state.turns[0].status, "undone");
+    const failedPropose = studioEditReducer(studioEditReducer(state, { type: "propose", turn: { ...base, id: "t2" } }), { type: "failed", id: "t2", error: "x", retry: "propose" });
+    assert.equal(studioEditReducer(failedPropose, { type: "retry", id: "t2" }).turns[1].status, "proposing");
+    const noted = studioEditReducer(state, { type: "note", turn: { ...base, id: "n1", target: "plan-section", label: "3장 시장과 고객 고치기" } });
+    assert.equal(noted.turns.at(-1)?.status, "note");
+    let many = studioEditReducer({ planId: "a", turns: [] }, { type: "load", planId: "a", turns: [] });
+    for (let index = 0; index < STUDIO_EDIT_TURN_LIMIT + 5; index++) many = studioEditReducer(many, { type: "propose", turn: { ...base, id: `m${index}` } });
+    assert.equal(many.turns.length, STUDIO_EDIT_TURN_LIMIT, "오래된 기록부터 지운다");
+    assert.equal(many.turns[0].id, "m5");
+
+    // 세션 저장소에서 되살리기 — 하던 중이던 카드는 '멈췄어요 · 다시 시도', 틀린 모양은 버린다
+    const stored = JSON.stringify([
+      { ...base, status: "proposing" },
+      { ...base, id: "t2", status: "applying", proposal },
+      { ...base, id: "t3", status: "applied", proposal },
+      { ...base, id: "t4", status: "undoing", proposal },
+      { ...base, id: "t5", status: "proposed" },
+      { ...base, id: "t6", status: "failed", error: "홈페이지를 아직 불러오고 있어요.", retry: "propose" },
+      { ...base, id: "t7", target: "elsewhere", status: "proposed", proposal },
+      { id: "t8" }, null, "글",
+      { ...base, id: "t9", status: "applied", proposal: { ...proposal, changes: [{ label: "제목", before: 1, after: "x" }, { label: "버튼", before: "", after: "예약하기" }] } },
+    ]);
+    const restored = restoreEditTurns(stored);
+    assert.deepEqual(restored.map(turn => turn.id), ["t1", "t2", "t3", "t4", "t5", "t6", "t9"]);
+    assert.deepEqual(restored.map(turn => turn.status), ["failed", "failed", "applied", "failed", "failed", "failed", "applied"]);
+    assert.deepEqual(restored.map(turn => turn.retry), ["propose", "apply", undefined, "undo", "propose", "propose", undefined]);
+    assert.equal(restored[0].error, STUDIO_EDIT_INTERRUPTED);
+    assert.equal(restored[5].error, "홈페이지를 아직 불러오고 있어요.", "저장해 둔 실패 문장은 그대로");
+    assert.deepEqual(restored[6].proposal?.changes, [{ label: "버튼", before: "", after: "예약하기" }], "모양이 틀린 바뀌는 곳은 뺀다");
+    assert.deepEqual(restoreEditTurns("{깨진"), []);
+    assert.deepEqual(restoreEditTurns(null), []);
+    assert.deepEqual(restoreEditTurns(JSON.stringify({ turns: [] })), []);
+
+    assert.equal(studioEditError(new Error("홈페이지 결제 후 쓸 수 있어요."), "기본"), "홈페이지 결제 후 쓸 수 있어요.", "칸이 던진 한국어 문장은 그대로");
+    assert.equal(studioEditError(new TypeError("Failed to fetch"), "기본"), "인터넷 연결이 잠시 끊겼어요. 다시 시도해 주세요.");
+    assert.equal(studioEditError(new Error("Internal Server Error"), "기본"), "기본", "영어 오류는 손님에게 보이지 않는다");
+    assert.equal(studioEditError("문자열", "기본"), "기본");
+    assert.equal(studioTargetChipText("홈페이지"), "홈페이지 고치기");
+    assert.equal(studioTargetChipText("3장 시장과 고객 고치기"), "3장 시장과 고객 고치기", "이미 '고치기'로 끝나면 두 번 붙이지 않는다");
+    assert.equal(studioTargetChipText(" "), "내용 고치기");
+    assert.equal(sectionHint("3장  시장과 고객 고치기"), "3장 시장과 고객");
+    assert.notEqual(editTurnsKey("a"), editTurnsKey("b"), "사업마다 따로 저장한다");
+    assert.notEqual(editTurnsKey("a"), requestQueueKey("a"));
+
+    // 대기열 — 넣기 · 같은 글 막기 · 한도 · 취소 · 되살리기 · 보낼 곳
+    const item = (id: string, text: string, section?: { label: string; sectionId?: string }) => ({ id, text, ...(section ? { section } : {}), at: 1 });
+    let queue = enqueueRequest([], item("q1", "  가격을 2만원으로  ")).queue;
+    assert.equal(queue[0].text, "가격을 2만원으로", "앞뒤 공백은 지운다");
+    assert.equal(enqueueRequest(queue, item("q2", "가격을 2만원으로")).ok, false, "같은 요청은 한 번만");
+    assert.equal(enqueueRequest(queue, item("q2", "가격을 2만원으로", { label: "3장 고치기" })).ok, true, "다른 장의 같은 말은 따로");
+    assert.equal(enqueueRequest(queue, item("q2", "   ")).ok, false);
+    for (let index = 2; index <= STUDIO_QUEUE_LIMIT; index++) queue = enqueueRequest(queue, item(`q${index}`, `요청 ${index}`)).queue;
+    assert.equal(queue.length, STUDIO_QUEUE_LIMIT);
+    assert.equal(enqueueRequest(queue, item("q9", "하나 더")).ok, false, "한도를 넘으면 받지 않는다");
+    assert.deepEqual(cancelQueuedRequest(queue, "q2").map(entry => entry.id), queue.map(entry => entry.id).filter(id => id !== "q2"));
+    assert.equal(cancelQueuedRequest(queue, "없음"), queue);
+    assert.deepEqual(readRequestQueue(JSON.stringify([...queue, { id: "x", text: "" }, { text: "id 없음" }, { id: "s", text: "장 요청", section: { label: "3장 고치기", sectionId: "market/size" } }])).map(entry => entry.id), queue.map(entry => entry.id), "한도까지만, 빈 글·id 없는 것은 버린다");
+    assert.deepEqual(readRequestQueue(JSON.stringify([{ id: "s", text: "장 요청", section: { label: "3장 고치기", sectionId: "market/size" } }]))[0].section, { label: "3장 고치기", sectionId: "market/size" });
+    assert.deepEqual(readRequestQueue("깨진"), []);
+    assert.equal(queuedRequestRoute(item("a", "x", { label: "3장" }), { sectionHandler: true, editChat: true }), "section");
+    assert.equal(queuedRequestRoute(item("a", "x", { label: "3장" }), { sectionHandler: false, editChat: true }), "edit", "장 처리기가 없으면 예전 채팅 수정");
+    assert.equal(queuedRequestRoute(item("a", "x"), { sectionHandler: true, editChat: true }), "edit", "장이 없는 요청은 채팅 수정");
+    assert.equal(queuedRequestRoute(item("a", "x"), { sectionHandler: false, editChat: false }), "note", "채팅 수정도 없으면 메모로");
+    assert.equal(queuedRequestStatus(true), "대기 중 · 다 쓰면 반영할게요");
+    assert.match(queuedRequestStatus(false), /^대기 중 · /);
+
+    // 카드 모양 — 이렇게 바꿀게요(지금 글은 줄 긋고 → 바꿀 글) · 비용 · [바꾸기] [그대로 두기] / 바꿨어요 + [되돌리기] / 실패 + [다시 시도]
+    const { StudioEditTurns, QueuedStudioRequests } = await import("../app/plan/chat/intake-ui/StudioEditTurns");
+    const card = (turn: Parameters<typeof StudioEditTurns>[0]["turns"][number]) => renderToStaticMarkup(<StudioEditTurns turns={[turn]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} />);
+    const proposed = card({ ...base, status: "proposed", proposal });
+    assert.match(proposed, /이렇게 바꿀게요/);
+    assert.match(proposed, /<s>맞벌이 가정을 위한 반찬 정기배송<\/s><strong>반찬 정기배송<\/strong>/);
+    assert.match(proposed, /AI 수정 토큰 1,240개 사용/);
+    assert.match(proposed, />바꾸기<\/button>/);
+    assert.match(proposed, />그대로 두기<\/button>/);
+    assert.match(proposed, /제목을 짧게/, "손님 말이 카드 위에 남는다");
+    assert.match(proposed, /홈페이지 고치기/);
+    assert.ok(!card({ ...base, status: "proposed", proposal: { ...proposal, cost: undefined } }).includes("<small>"), "비용이 없으면 줄을 숨긴다");
+    const applied = card({ ...base, status: "applied", proposal });
+    assert.match(applied, /바꿨어요/);
+    assert.match(applied, /되돌리기/);
+    assert.ok(!applied.includes(">바꾸기</button>"));
+    assert.match(card({ ...base, status: "undone", proposal }), /되돌렸어요/);
+    assert.ok(!card({ ...base, status: "dismissed", proposal }).includes("<s>"), "그대로 둔 카드는 요약만 남긴다");
+    const failed = card({ ...base, status: "failed", error: "홈페이지를 아직 불러오고 있어요.", retry: "propose" });
+    assert.match(failed, /홈페이지를 아직 불러오고 있어요\./);
+    assert.match(failed, /다시 시도/);
+    assert.match(card({ ...base, status: "proposing" }), /data-reply-typing/);
+    assert.match(card({ ...base, status: "note", target: "plan-section", label: "3장 시장과 고객 고치기" }), /메모로 남겨 뒀어요/);
+    assert.equal(renderToStaticMarkup(<StudioEditTurns turns={[]} onApply={noop} onDismiss={noop} onUndo={noop} onRetry={noop} />), "");
+    const queued = renderToStaticMarkup(<QueuedStudioRequests items={[item("q1", "가격을 2만원으로", { label: "3장 시장과 고객 고치기" })]} generating onCancel={noop} />);
+    assert.match(queued, /\[3장 시장과 고객\] 가격을 2만원으로/);
+    assert.match(queued, /대기 중 · 다 쓰면 반영할게요/);
+    assert.match(queued, />취소<\/button>/);
+
+    // 화면 연결 — 소스 점검
+    const intake = readFileSync(new URL("../app/plan/chat/BusinessIntake.tsx", import.meta.url), "utf8");
+    // 쓰는 동안 보낸 요청: 남은 질문이 없을 때만 대기열(질문 답은 예전 입력창 그대로) · 진행 카드가 그걸 알린다
+    assert.match(intake, /const queueMode = embedded && !!plan && generating && !question && !draft\.editingId;/);
+    assert.match(intake, /onOpen=\{\(\) => showPlan\(plan\.planId\)\} note=\{STUDIO_RUN_NOTE\}/);
+    assert.match(intake, /기다리는 동안 요청을 보내도 돼요/);
+    assert.match(generationSource, /note \?\? "다른 탭을 보거나 창을 닫아도 계속 만들어져요\./, "작업실 밖 안내는 그대로");
+    // 다 쓴 뒤 하나씩: 채팅 수정의 확인을 기다리는 동안 · 멈춘 작성 · 실패 중에는 보내지 않는다
+    assert.match(intake, /if \(!studioPlanId \|\| !plan \|\| !queuedRequests\.length \|\| generating \|\| runStalled \|\| !plan\.hasDocuments\) return;/);
+    assert.match(intake, /editWorking \|\| editProposalOpen \|\| status === "failed"\) return;/);
+    // 계획서 한 장: 처리기 → 예전 채팅 수정(장 이름 붙이기 · 거르기 그대로) → 메모
+    assert.match(intake, /if \(studioNav\?\.editHandler\?\.\("plan-section"\)\) \{ startProposal\("plan-section"/);
+    assert.match(intake, /void send\(\{ action: "edit", message: planSectionEditMessage\(label, text\) \}\)/);
+    // 홈페이지 처리기가 없으면 홈페이지 칸을 한 번 열고(처음 열 때 만든다) 기다린다 — 휴대폰은 대화로 돌아온다
+    assert.match(intake, /studioNav\.showTab\("homepage"\);\n\s*const until = Date\.now\(\) \+ HANDLER_WAIT_MS;/);
+    assert.match(intake, /if \(narrow\) studioNav\.showTab\("chat"\);/);
+    assert.match(intake, /const HANDLER_WAIT_MS = 10_000;/);
+    // 고치기 입력은 질문 답 임시 저장과 섞이지 않는다 · 한글 조합 중 Enter 는 그대로(같은 composerEnterSends)
+    assert.match(intake, /if \(studioRoute\) \{ setInputHint\(""\); setStudioText\(event\.target\.value\);/);
+    assert.match(intake, /event\.preventDefault\(\); if \(studioRoute\) submitStudio\(\); else submitComposer\(\);/);
+    // 고치기 기록 · 대기열은 사업마다 세션 저장소에
+    assert.match(intake, /writeSession\(editTurnsKey\(editState\.planId\)/);
+    assert.match(intake, /writeSession\(requestQueueKey\(requestQueue\.planId\)/);
+    // 다른 칸의 '대화로 고치기'를 받는다
+    assert.match(intake, /useEffect\(\(\) => studioNav\?\.onComposeRequest\?\.\(enterEditTarget\),/);
+    assert.ok(css.includes(".composerTarget"), "입력창 위 대상 칩");
+    // 채팅 수정을 적용하면 계획서 칸을 다시 읽게 한다 · 장 고치기는 사업 내용만 바뀐다고 알린다
+    assert.match(intake, /if \(pending\.command\.action === "edit-apply" && embedded\) studioNav\?\.markActivity\?\.\("plan"\);/);
+    assert.match(intake, /가격·고객 같은 사업 내용을 바꿔요/);
+    assert.equal(studioEditError(new Error("아직 준비 중이에요. 조금만 기다려 주세요."), "기본"), "아직 준비 중이에요. 조금만 기다려 주세요.", "홈페이지 칸의 준비 중 문장은 그대로");
+  }
   console.log(`business-intake-ui: ownership, pending retries, optimistic rollback inputs, choice composer, hybrid chips, number stepper, amount ladder, period presets, seeds, extraction consent, source summary, artifact links passed; local next-question p95 ${p95.toFixed(2)}ms`);
 }
 

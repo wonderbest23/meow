@@ -92,12 +92,14 @@ export function GenerationDialog({ planId, open, state, onClose }: { planId: str
  * 오른쪽 계획서 칸에서 장이 채워지는 동안 왼쪽 대화에서는 다 쓴 장 · 쓰는 장 · 기다리는 장과 남은 시간을 본다.
  * 멈췄으면(일부 장을 못 씀) '남은 장 이어서 쓰기'로 다시 시작한다 — 이미 쓴 장은 다시 쓰지 않는다.
  */
-export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen }: {
+export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, note }: {
   state: GenerationState;
   onRetry: () => void;
   retryDisabled?: boolean;
   /** 다 쓴 장이 있으면 '쓴 부분 보기' — 작업실에서는 계획서 탭을 보여 준다 */
   onOpen?: () => void;
+  /** 쓰는 중 안내를 바꾼다 — 작업실 대화 칸은 기다리는 동안 보낸 요청을 받아 두므로 그 말을 덧붙인다 */
+  note?: string;
 }) {
   const total = state.total, done = state.done;
   const stalled = generationStalled(state);
@@ -118,7 +120,7 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen }
     {/* 쓰는 장이 바뀔 때만 읽힌다(몇 초마다 오는 확인에는 글이 그대로라 다시 읽지 않는다) */}
     {current && <p className={styles.cardCurrent} role="status" aria-live="polite"><i aria-hidden="true" />{current.title} 쓰는 중</p>}
     {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 장" : "대기"}: {waiting.map(section => section.title).join(" · ")}</p>}
-    <p className={styles.cardNote}>{stalled ? "다 쓴 장은 저장돼 있어요. 남은 장만 이어서 쓸 수 있어요." : "다른 탭을 보거나 창을 닫아도 계속 만들어져요. 다 되면 여기에서 알려 드릴게요."}</p>
+    <p className={styles.cardNote}>{stalled ? "다 쓴 장은 저장돼 있어요. 남은 장만 이어서 쓸 수 있어요." : note ?? "다른 탭을 보거나 창을 닫아도 계속 만들어져요. 다 되면 여기에서 알려 드릴게요."}</p>
     {(stalled || onOpen && done > 0) && <div className={styles.cardActions}>
       {stalled && <button type="button" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 장 이어서 쓰기</button>}
       {onOpen && done > 0 && <button type="button" className={styles.cardSecondary} onClick={onOpen}>쓴 부분 보기</button>}

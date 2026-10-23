@@ -16,7 +16,7 @@ import { useGenerationProgress } from "../GenerationProgress";
 import frame from "../chat/page.module.css";
 import hub from "../BusinessHub.module.css";
 import styles from "./Studio.module.css";
-import { StudioNavContext, StudioPaneContext, type StudioNav, type StudioPane } from "./StudioContext";
+import { StudioNavContext, StudioPaneContext, type StudioComposeRequest, type StudioEditHandler, type StudioEditTarget, type StudioNav, type StudioPane } from "./StudioContext";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan } from "../../../lib/plan-builder/plan-store";
 import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, type JourneyState, type JourneyStepId } from "../../../lib/plan-builder/journey";
 import { businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
@@ -368,6 +368,34 @@ export default function Studio() {
     });
   }, []);
 
+  /*
+   * ── 3단계: 대화로 고치기 — 오른쪽 칸의 고치기 처리기 보관함 · 대화 입력창 열기 ──
+   * 처리기는 칸이 처음 그려질 때 등록하고 칸이 사라지면 내린다(늦게 내린 앞 처리기가 새 처리기를 지우지 않게 같은 것일 때만).
+   * 상태가 아니라 ref 로 둔다 — 등록할 때마다 작업실 전체를 다시 그리지 않고, 대화 칸은 보낼 때 editHandler 로 그때그때 찾는다.
+   */
+  const editHandlers = useRef(new Map<StudioEditTarget, StudioEditHandler>());
+  const registerEditHandler = useCallback((target: StudioEditTarget, handler: StudioEditHandler) => {
+    editHandlers.current.set(target, handler);
+    return () => { if (editHandlers.current.get(target) === handler) editHandlers.current.delete(target); };
+  }, []);
+  const editHandler = useCallback((target: StudioEditTarget) => editHandlers.current.get(target) ?? null, []);
+  /* 대화 칸이 등록한 받는 곳 — 대화 칸은 늘 있지만 첫 그리기 전에 온 요청은 하나만 보관했다가 넘긴다 */
+  const composeListener = useRef<((request: StudioComposeRequest) => void) | null>(null);
+  const pendingCompose = useRef<StudioComposeRequest | null>(null);
+  const onComposeRequest = useCallback((listener: (request: StudioComposeRequest) => void) => {
+    composeListener.current = listener;
+    const waiting = pendingCompose.current;
+    pendingCompose.current = null;
+    if (waiting) listener(waiting);
+    return () => { if (composeListener.current === listener) composeListener.current = null; };
+  }, []);
+  const composeInChat = useCallback((request: StudioComposeRequest) => {
+    /* 휴대폰은 한 칸씩 보이므로 대화 탭으로 — PC 는 대화 칸이 늘 보인다 */
+    if (!readWide()) showTab("chat");
+    if (composeListener.current) composeListener.current(request);
+    else pendingCompose.current = request;
+  }, [showTab]);
+
   /* ── 깔때기 — 작업실을 열었다 · 다른 탭을 봤다(측정만, 실패해도 조용히) ── */
   const opened = useRef(false);
   useEffect(() => {
@@ -418,8 +446,12 @@ export default function Studio() {
       setHeaderActions,
       markActivity,
       showTab,
+      registerEditHandler,
+      editHandler,
+      composeInChat,
+      onComposeRequest,
     };
-  }, [planId, openTarget, confirmLeave, router, setHeaderActions, markActivity, showTab]);
+  }, [planId, openTarget, confirmLeave, router, setHeaderActions, markActivity, showTab, registerEditHandler, editHandler, composeInChat, onComposeRequest]);
 
   /*
    * 이 사업의 다른 화면으로 가는 링크는 이동 대신 탭 바꾸기 — 대화·계획서 안의 고정 링크를 하나하나 고치지 않아도 된다.
@@ -531,7 +563,8 @@ export default function Studio() {
           </div>}
 
           <Pane id="chat" planId={planId} visible={chatVisible} nav={navSeq.chat ?? 0} refresh={refreshSeq.chat ?? 0} className={styles.chatCol} role={wide ? undefined : "tabpanel"} labelledBy={labelledBy("chat")} headingRef={headingRef("chat")}>
-            <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} />
+            {/* PC 에서 오른쪽에 보이는 열린 칸 — 대화 칸이 '홈페이지를 대화로 고치기' 같은 제안을 고른다(막힌 칸이면 null) */}
+            <BusinessIntake onPrepared={refreshPlan} onDesignComplete={refreshPlan} studioSide={wide && !locks[rightTab] ? rightTab : null} />
           </Pane>
 
           <div className={styles.rightCol} data-visible={rightVisible || undefined} inert={!rightVisible}>

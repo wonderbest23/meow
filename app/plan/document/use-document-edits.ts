@@ -111,6 +111,16 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
     cacheDocumentSection(planId, key, section, updatedAt);
     latestSaved.current(key, section); state(key, { status: "saved" });
   }
+  /*
+   * 서버에서 이 장이 바뀌었다(대화 칸의 채팅 수정이 금액을 본문에 바꿔 넣는 등) — 고치는 중(초안·저장 중·되돌리는 중·저장 실패)이 아니면
+   * 저장 기준(baseGeneratedAt)을 새 내용으로 맞추고 true. 고치는 중이면 손대지 않고 false(화면도 그 장은 그대로 둔다).
+   */
+  function syncServer(planId: string, key: string, section: StoredSection) {
+    if (plan.current?.id !== planId || drafts.current[key] || restoring.current.has(key) || restoreAttempts.current[key]) return false;
+    plan.current.sections[key] = section;
+    setRestoreKeys(current => section.previous ? current.includes(key) ? current : [...current, key] : current.filter(item => item !== key));
+    return true;
+  }
   useEffect(() => {
     const epoch = planOwnerEpoch();
     const invalidate = () => {
@@ -126,5 +136,5 @@ export function useDocumentEdits(onSaved: (key: string, section: StoredSection) 
     window.addEventListener("beforeunload", warn);
     return () => { unsubscribe(); invalidate(); window.removeEventListener("beforeunload", warn); };
   }, []);
-  return { states, restoreKeys, initialize, stage, save, retry, discard, restore, acceptReviewed, hasPending, pending: Object.values(states).some(s => s.status === "saving" || s.status === "failed") };
+  return { states, restoreKeys, initialize, stage, save, retry, discard, restore, acceptReviewed, syncServer, hasPending, pending: Object.values(states).some(s => s.status === "saving" || s.status === "failed") };
 }
