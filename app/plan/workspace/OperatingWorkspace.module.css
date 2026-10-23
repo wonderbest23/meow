@@ -18,7 +18,7 @@
 .root fieldset { padding: 0; border: 0; margin: 0 0 28px; display: grid; gap: 16px; min-width: 0; }
 .root legend { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
 .root .note, .root .meta { font-size: 13px; line-height: 1.7; color: #687589; margin: 10px 0; }
-.twoColumns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; }
+.twoColumns { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; align-items: start; }
 .editorHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 24px; }
 .editorHeading h3 { margin: 0; font-size: 18px; }
 .editorHeading button { width: 42px; padding: 0; }

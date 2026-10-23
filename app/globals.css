@@ -3399,6 +3399,10 @@ body:has(.document-editor-studio) .support-chat-widget.open { inset: 0; bottom: 
 .public-lead-section form > button:disabled { opacity: .45; cursor: not-allowed; }
 .public-lead-section form > button svg { width: 17px; }
 .public-form-error { margin: 0; color: #a0493d; font-size: 12px; }
+/* 칸 바로 아래 오류 안내 — 커서가 간 칸에서 이유가 보이게(감사 r36). 빨간 테두리와 초점 테두리를 함께 준다 */
+.public-form-field-error { display: block; margin-top: 6px; color: #a0493d; font-size: 13px; font-weight: 600; }
+.public-landing input[aria-invalid="true"], .public-landing textarea[aria-invalid="true"] { border-color: #c2483a !important; box-shadow: 0 0 0 3px rgba(194, 72, 58, .16) !important; }
+.public-landing input:focus-visible, .public-landing textarea:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
 .public-lead-success { min-height: 320px; border-radius: 15px; background: #eef6ff; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
 .public-lead-success > svg { width: 46px; height: 46px; padding: 11px; border-radius: 50%; background: var(--landing-accent, #3272db); color: white; }
 .public-lead-success h3 { margin: 14px 0 5px; font-size: 22px; }

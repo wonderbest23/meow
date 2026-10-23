@@ -39,6 +39,8 @@ export function PublicLandingClient({
   const sendingRef = useRef(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
+  /* 오류가 난 칸 — 그 칸 바로 아래에 안내를 붙여, 커서가 간 자리에서 이유가 보이게 한다 */
+  const [errorField, setErrorField] = useState<"name" | "email" | "phone" | null>(null);
   const [privacyAgreed, setPrivacyAgreed] = useState(false);
   const [marketingAgreed, setMarketingAgreed] = useState(false);
   const [analyticsAgreed, setAnalyticsAgreed] = useState(false);
@@ -100,9 +102,10 @@ export function PublicLandingClient({
       : "";
     /* 고칠 칸으로 커서를 옮긴다 — 예전엔 맨 아래 빨간 글만 떠 휴대폰에서는 어느 칸인지 찾아 올라가야 했다(감사 r36) */
     if (missing) {
-      setError(missing);
       const form = event.currentTarget;
       const field = !text("name") ? "name" : missing.includes("동의") ? null : text("email") && missing.includes("이메일 주소") ? "email" : config.collectEmail ? "email" : "phone";
+      setError(missing);
+      setErrorField(field);
       const target = field ? form.elements.namedItem(field) : form.querySelector(".public-consent-list input, .public-consent-list button");
       if (target instanceof HTMLElement) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: "center", behavior: "smooth" }); }
       return;
@@ -110,6 +113,7 @@ export function PublicLandingClient({
     sendingRef.current = true;
     setSubmitting(true);
     setError("");
+    setErrorField(null);
     try {
       const response = await fetch(`/api/public/landing/${slug}/lead`, {
         method: "POST",
@@ -210,9 +214,9 @@ export function PublicLandingClient({
           <div className="public-lead-success"><Check /><h3>문의가 접수됐어요</h3><p>남겨 주신 연락처로 곧 연락드릴게요.</p></div>
         ) : (
           <form onSubmit={submit} noValidate>
-            <label><span>이름</span><input name="name" required maxLength={100} autoComplete="name" placeholder="성함 또는 닉네임" /></label>
-            {config.collectEmail && <label><span>이메일</span><input name="email" type="email" autoComplete="email" required={!config.collectPhone} maxLength={200} placeholder="example@email.com" /></label>}
-            {config.collectPhone && <label><span>전화번호</span><input name="phone" type="tel" inputMode="tel" autoComplete="tel" required={!config.collectEmail} maxLength={30} placeholder="010-0000-0000" /></label>}
+            <label><span>이름</span><input name="name" required maxLength={100} autoComplete="name" placeholder="성함 또는 닉네임" aria-invalid={errorField === "name" || undefined} aria-describedby={errorField === "name" ? "public-form-field-error" : undefined} onInput={() => { if (errorField === "name") { setErrorField(null); setError(""); } }} />{errorField === "name" && <span id="public-form-field-error" className="public-form-field-error" role="alert">{error}</span>}</label>
+            {config.collectEmail && <label><span>이메일</span><input name="email" type="email" autoComplete="email" required={!config.collectPhone} maxLength={200} placeholder="example@email.com" aria-invalid={errorField === "email" || undefined} aria-describedby={errorField === "email" ? "public-form-field-error" : undefined} onInput={() => { if (errorField === "email") { setErrorField(null); setError(""); } }} />{errorField === "email" && <span id="public-form-field-error" className="public-form-field-error" role="alert">{error}</span>}</label>}
+            {config.collectPhone && <label><span>전화번호</span><input name="phone" type="tel" inputMode="tel" autoComplete="tel" required={!config.collectEmail} maxLength={30} placeholder="010-0000-0000" aria-invalid={errorField === "phone" || undefined} aria-describedby={errorField === "phone" ? "public-form-field-error" : undefined} onInput={() => { if (errorField === "phone") { setErrorField(null); setError(""); } }} />{errorField === "phone" && <span id="public-form-field-error" className="public-form-field-error" role="alert">{error}</span>}</label>}
             {config.collectMessage && <label><span>문의 내용</span><textarea name="message" maxLength={2000} placeholder="궁금한 점이나 원하는 내용을 적어 주세요." /></label>}
             <input name="website" className="landing-honeypot" tabIndex={-1} autoComplete="off" aria-hidden="true" />
             {/* 동의 — 공용 동의 목록(동그란 체크·(필수)/(선택)). 법으로 알려야 하는 수집 항목·목적·보유기간은 줄 아래에 그대로 */}
@@ -221,7 +225,7 @@ export function PublicLandingClient({
               ...(config.marketingOptInEnabled ? [{ key: "marketing", label: "홍보 정보 수신 동의", required: false, note: "새로운 서비스와 혜택 안내를 받을 수 있어요." }] : []),
             ]} values={{ privacy: privacyAgreed, marketing: marketingAgreed }} onChange={(next) => { setPrivacyAgreed(Boolean(next.privacy)); setMarketingAgreed(Boolean(next.marketing)); }} />
             <details className="public-privacy-policy"><summary>개인정보처리방침 전문</summary><p>{privacyPolicyWithContact(config.privacyPolicy, config.privacyContact)}</p><small>문의: {config.privacyContact}</small></details>
-            {error && <p className="public-form-error" role="alert">{error}</p>}
+            {error && !errorField && <p className="public-form-error" role="alert">{error}</p>}
             <button type="submit" disabled={submitting}>{submitting ? <Spinner /> : "문의 보내기"}<ArrowRight /></button>
           </form>
         )}
