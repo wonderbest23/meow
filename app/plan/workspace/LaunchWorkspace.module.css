@@ -63,3 +63,5 @@
 .checklist .pitfalls { list-style:disc; padding-left:20px; }
 .checklist .pitfalls li { font-size:14px; line-height:1.7; padding:4px 0; }
 .checklist > small { margin-top:8px; color:var(--app-muted); font-size:12px; line-height:1.7; }
+/* 작업실 칸 안(data-embedded) — 휴대폰에서 화면 아래에 고정하던 단계 단추 줄을 칸 스크롤 안의 아래 붙임으로. 고정하면 작업실 아래 탭 줄을 덮는다 */
+@media(max-width:760px) { [data-embedded] .stepActions { position:sticky; left:auto; right:auto; bottom:0; margin:0; } [data-embedded] .launch { padding-bottom:0; } }

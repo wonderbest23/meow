@@ -778,3 +778,32 @@
 /* 확인이 떠도 원래 질문이 보이게 */
 .intentQuestion { color: #4b5563; font-size: 14px; }
 .chipNote { margin-left: 4px; color: #8b929c; font-size: 11.5px; }
+/*
+ * 작업실(사업 작업실)의 왼쪽 대화 칸 — 화면 폭이 넓어도 칸은 좁다(420~460px). 화면 폭 기준(@media) 대신
+ * data-embedded 로 늘 휴대폰처럼 한 칸으로 두고, 요약은 '요약' 단추로 여는 시트로 번갈아 보인다.
+ * 운영 빌드에서 CSS 로드 순서가 바뀌어도 이기도록 모두 .page[data-embedded] 로 시작한다(작업실 CSS 에서 덮어쓰지 않는다).
+ */
+/*
+ * 작업실 칸 안에서는 머리줄 틀(appSurface)이 없어 칸 단추 줄(요약) · 진행 줄 · 저장 상태 · 안내가 .page 바로 아래 형제가 된다.
+ * 예전 .page 는 가로(flex row)라 이것들이 대화 옆에 나란히 서서 대화가 좁아졌다 — 세로로 쌓고 대화 영역만 남은 높이를 채운다(안에서 스크롤).
+ */
+.page[data-embedded] { height: 100%; flex-direction: column; }
+.page[data-embedded] > * { min-width: 0; flex-shrink: 0; }
+.page[data-embedded] > .workspace { flex: 1 1 0; min-height: 0; }
+.page[data-embedded] .workspace, .page[data-embedded] .withSummary { grid-template-columns: minmax(0, 1fr); transition: none; }
+.page[data-embedded] .splitHandle { display: none; }
+.page[data-embedded] .mobileHidden { display: none; }
+.page[data-embedded] .summaryToggle { display: inline-flex; }
+.page[data-embedded] .summarySheetHeader { display: flex; margin: -8px 0 10px -10px; }
+.page[data-embedded] .summarySheetHeader button { display: inline-flex; align-items: center; gap: 4px; min-height: 40px; padding: 8px 10px; border: 0; background: transparent; color: #245fc2; font-size: 14px; font-weight: 600; }
+.page[data-embedded] .complete .editLink { display: flex; align-items: center; gap: 5px; margin: -8px 0 0 auto; padding: 6px 2px; border: 0; background: transparent; color: #245fc2; font-size: 13px; font-weight: 600; }
+.page[data-embedded] .mobileSummaryButton { display: inline-flex; border-color: #d4dbe4; background: white; color: #245fc2; margin-right: 10px; }
+.page[data-embedded] .statusLine { padding-inline: 20px; }
+.page[data-embedded] .inputContent { max-width: 640px; padding: 24px 20px 20px; }
+.page[data-embedded] .workspace[data-loading] .inputContent { padding: 0; }
+.page[data-embedded] .composer { padding: 8px 16px max(16px, env(safe-area-inset-bottom)); }
+.page[data-embedded] .summaryPane { border-left: 0; padding: 24px 20px 40px; }
+/* PC 두 칸에서 숨기던 요약 속 사업 한 줄 정리 — 칸 안 시트에서는 대화 카드와 나란히 보이지 않으니 다시 보인다 */
+.page[data-embedded][data-coach] .summaryPane .identityCompact { display: grid; }
+/* '사업계획서 만들기' 대기 덮개 — 화면 전체(position: fixed) 대신 대화 칸만 덮는다(오른쪽 칸은 그대로 보인다) */
+.page[data-embedded] .prepareCover { position: absolute; display: flex; }

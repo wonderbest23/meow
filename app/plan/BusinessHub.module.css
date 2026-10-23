@@ -115,3 +115,13 @@
 
 /* 태블릿·폰(손가락) — '대화 이어가기' 같은 작은 글자 링크도 누를 자리를 44px 이상으로 */
 @media (pointer: coarse) { .titleAction { display: inline-flex; align-items: center; min-height: 44px; } }
+
+/*
+ * 작업실 칸 안의 사업 관리(사업 시작하기·유지보수) — data-embedded.
+ * 화면 높이(100dvh)가 아니라 칸 높이를 채우고 본문을 세로로 쌓는다. 운영 빌드에서 CSS 순서가 달라도 이기도록 속성 선택자를 붙인다.
+ */
+.embeddedRoot[data-embedded] { height: 100%; min-height: 0; flex-direction: column; }
+.embeddedRoot[data-embedded] .scroll { flex: 1; min-height: 0; }
+/* 탭 줄·사업명 줄이 없으니 위 여백을 줄인다. PC 작업실의 오른쪽 칸은 화면보다 좁아(약 560~1000px) 좌우 여백도 900px 이하 화면 값으로 */
+.embeddedRoot[data-embedded] .content { padding-top: 24px; }
+@media (min-width: 1024px) { .embeddedRoot[data-embedded] .content { padding: 24px 28px 96px; } }

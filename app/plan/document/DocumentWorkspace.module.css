@@ -34,9 +34,9 @@
 .article { max-width:840px; margin:auto; padding:42px 44px 56px; }
 .heading { padding-bottom:28px; border-bottom:1px solid var(--app-line); margin-bottom:36px; }
 .heading p { font-size:13px; color:var(--app-muted); margin:0 0 10px; }
-.heading h1 { font-size:26px; font-weight:700; line-height:1.45; margin:0; color:var(--app-text); word-break:keep-all; overflow-wrap:anywhere; text-wrap:balance; }
+.heading :is(h1, .headingTitle) { font-size:26px; font-weight:700; line-height:1.45; margin:0; color:var(--app-text); word-break:keep-all; overflow-wrap:anywhere; text-wrap:balance; }
 .fieldLabel { display:block; margin:0 0 6px; font-size:12px; font-weight:600; color:var(--app-muted); }
-.heading h1 + .fieldLabel { margin-top:20px; }
+.heading :is(h1, .headingTitle) + .fieldLabel { margin-top:20px; }
 .identity { display:grid; gap:6px; margin-top:0; padding:14px 16px; border-radius:12px; background:var(--app-raised); border-left:3px solid var(--app-accent); }
 .identity strong { font-size:17px; line-height:1.45; color:var(--app-text); word-break:keep-all; }
 .identity span { font-size:14px; line-height:1.6; color:var(--app-muted); word-break:keep-all; }
@@ -124,7 +124,7 @@
 .actions button { min-height:54px; padding:12px; border:0; border-radius:8px; font-size:16px; font-weight:600; word-break:keep-all; }
 .primary { background:var(--app-primary); color:#fff; }.primary:hover { background:#2272eb; }
 .secondary { background:var(--app-soft); color:var(--app-accent); }
-.empty { padding:60px 24px; text-align:center; }.empty h1 { font-size:23px; }.empty p { color:var(--app-muted); }.empty a { display:inline-block; padding:16px; color:var(--app-accent); }
+.empty { padding:60px 24px; text-align:center; }.empty :is(h1,h2) { font-size:23px; }.empty p { color:var(--app-muted); }.empty a { display:inline-block; padding:16px; color:var(--app-accent); }
 .dialog { width:min(440px,calc(100% - 32px)); max-height:80dvh; padding:24px; border:0; border-radius:8px; color:var(--app-text); box-shadow:0 16px 70px #191f2826; }
 .dialog::backdrop { background:#191f2870; }
 .dialogHeader { display:flex; align-items:center; gap:16px; justify-content:space-between; margin-bottom:24px; }
@@ -132,7 +132,7 @@
 .downloads { display:grid; gap:10px; }.downloads > button { display:flex; align-items:center; gap:16px; padding:20px 16px; background:var(--app-raised); border:0; border-radius:8px; color:var(--app-accent); text-align:left; }
 .downloads > button span { flex:1; min-width:0; }.downloads strong { display:block; font-size:16px; color:var(--app-text); }.downloads small { display:block; margin-top:5px; font-size:13px; color:var(--app-muted); }.downloads svg { flex-shrink:0; }.downloads p { font-size:13px; line-height:1.7; }
 @media(max-width:1100px) { .sidebar { flex-basis:190px; }.article { padding:32px 28px 48px; } }
-@media(max-width:760px) { .sidebar { display:none; }.readingBar { padding:8px 20px; min-height:58px; }.article { padding:28px 20px 40px; }.heading h1 { font-size:23px; }.heading { margin-bottom:28px; padding-bottom:24px; }.chapterHeading h2 { font-size:21px; }.section h3 { font-size:17px; }.body :global(.tiptap) { font-size:15px; line-height:1.85; }.actions { padding:12px 16px max(12px,env(safe-area-inset-bottom)); gap:10px; }.actions button { font-size:16px; min-height:54px; }.dialog { padding:22px; }.dialog .toc button { min-height:52px; } }
+@media(max-width:760px) { .sidebar { display:none; }.readingBar { padding:8px 20px; min-height:58px; }.article { padding:28px 20px 40px; }.heading :is(h1, .headingTitle) { font-size:23px; }.heading { margin-bottom:28px; padding-bottom:24px; }.chapterHeading h2 { font-size:21px; }.section h3 { font-size:17px; }.body :global(.tiptap) { font-size:15px; line-height:1.85; }.actions { padding:12px 16px max(12px,env(safe-area-inset-bottom)); gap:10px; }.actions button { font-size:16px; min-height:54px; }.dialog { padding:22px; }.dialog .toc button { min-height:52px; } }
 @media(prefers-reduced-motion:reduce) { .page button { transition:none; }.page button:active:not(:disabled) { transform:none; } }
 .layout { border-top: 1px solid var(--app-line); }
 .sidebar { background: var(--app-bg); border-color: var(--app-line); }
@@ -414,3 +414,16 @@
 /* 완료 알림 안의 건너뛰는 길(사업 시작 준비 먼저 하기) — 글 링크, 누르는 자리 40px */
 .secondaryNext { margin: 6px 0 0; }
 .secondaryNext a { display: inline-flex; align-items: center; min-height: 40px; color: var(--app-accent, #236be5); font-weight: 700; font-size: 14px; text-decoration: none; }
+
+/*
+ * 작업실 칸 안(data-embedded) — 화면 높이(100dvh)가 아니라 칸 높이를 채우고, 머리줄 없이 본문을 세로로 쌓는다.
+ * 운영 빌드(Turbopack)는 CSS 모듈 순서가 개발 서버와 달라질 수 있어 속성 선택자로 한 단계 높여 둔다.
+ */
+.page[data-embedded] { height:100%; min-height:0; flex-direction:column; }
+.page[data-embedded] .layout { flex:1; min-height:0; }
+/* PC 작업실의 오른쪽 칸은 화면보다 좁다(약 560~1000px) — 화면 폭 기준 규칙 대신 1100px 이하 화면의 목차 폭·본문 여백을 쓴다 */
+@media (min-width:1024px) {
+  .page[data-embedded] .sidebar { flex-basis:190px; padding:20px 12px; }
+  .page[data-embedded] .article { padding:32px 28px 48px; }
+  .page[data-embedded] :is(.readingBar, .completionNotice) { padding-inline:max(24px, calc((100% - 1020px) / 2 + 28px)); }
+}

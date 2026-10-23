@@ -31,6 +31,8 @@ import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummar
 import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
+import { studioHref } from "../../../lib/plan-builder/studio";
+import { useStudioNav, useStudioPane } from "../studio/StudioContext";
 
 type SaveStatus = "saved" | "draft" | "saving" | "failed" | "conflict";
 type CommandInput = Omit<IntakeCommand, "requestId" | "revision" | "planId">;
@@ -56,6 +58,16 @@ function sessionStore(): Storage | null {
 /** 랜딩에서 넘겨받을 아이디어가 있는지(주소의 idea 또는 5분 안의 보관본) — 지우지 않고 보기만 한다 */
 function pendingLandingIdea() {
   return readLandingIdea(window.location.search, sessionStore(), Date.now());
+}
+
+/**
+ * 작업실 탭(tab)은 대화와 상관없는 값이다 — 작업실에서 탭을 바꿀 때마다 주소의 tab 만 바뀌는데,
+ * 이 값까지 보면 대화를 다시 불러오며 입력·대기열이 초기화될 수 있다. 랜딩 아이디어(idea)를 빼는 것과 같은 방식으로 뺀다.
+ */
+function withoutStudioTab(query: string): string {
+  const params = new URLSearchParams(query);
+  params.delete("tab");
+  return params.toString();
 }
 
 function readLastIntake(): { planId: string; signedIn: boolean } | null {
@@ -84,7 +96,7 @@ function hasLocalInput(draft: IntakeDraft) {
 }
 
 export default function BusinessIntake(props: BusinessIntakeProps) {
-  /* 바깥 로딩(ChatLoading)과 같은 틀 — 왼쪽 메뉴가 사라졌다 나타나지 않게 */
+  /* 바깥 로딩(ChatLoading)과 같은 틀 — 왼쪽 메뉴가 사라졌다 나타나지 않게. 작업실 칸 안에서는 ChatLoading 이 칸 안의 작은 로딩만 그린다 */
   return <Suspense fallback={<ChatLoading />}><IntakeWorkspace {...props} /></Suspense>;
 }
 
@@ -92,6 +104,11 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const searchParams = useSearchParams();
   // 랜딩 아이디어(idea)는 주소에서 지워도 대화를 다시 불러오지 않게 뺀 값으로 본다 — 지우는 순간 보내던 첫 메시지가 끊기지 않게
   const queryString = withoutLandingIdea(searchParams);
+  const routeQuery = withoutStudioTab(queryString);
+  /* 작업실(사업 작업실)의 왼쪽 대화 칸 안이면 값이 있다 — 밖(/plan/chat)에서는 null 이라 예전과 똑같이 동작한다 */
+  const studioPane = useStudioPane();
+  const studioNav = useStudioNav();
+  const embedded = !!studioPane;
   const [savedPlan, setPlan] = useState<IntakeSnapshot | null>(null);
   const [preview, setPreview] = useState<IntakeSnapshot | null>(null);
   const previewRef = useRef<IntakeSnapshot | null>(null);
@@ -136,6 +153,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   /* 결제 여부를 '사업계획서 만들기'가 보일 때 미리 알아 둔다 — 결제 전이면 누르는 즉시 결제 화면으로(서버 왕복 두 번을 건너뛴다). 작성 여부는 서버가 다시 막는다 */
   const [payAccess, setPayAccess] = useState<{ planId: string; paid: boolean; authenticated: boolean } | null>(null);
   const router = useRouter();
+  /* 화면 안 이동 — 작업실 안에서는 같은 사업의 화면이면 탭만 바꾸고(나머지는 작업실이 실제로 이동), 밖에서는 예전처럼 router */
+  const navigate = (href: string) => { if (studioNav) studioNav.push(href); else router.push(href); };
   const busyRef = useRef(false);
   const conflictRef = useRef(false);
   const [error, setError] = useState("");
@@ -258,7 +277,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   }, []);
 
   useEffect(() => {
-    const query = new URLSearchParams(queryString);
+    const query = new URLSearchParams(routeQuery);
     const id = query.get("planId");
     // 랜딩 아이디어가 있으면 새 대화로 연다 — 로그인을 거치며 주소가 /plan/chat 으로만 돌아와도 보관본으로 이어 받는다
     const startNew = query.get("new") === "1" || !id && !!pendingLandingIdea();
@@ -292,7 +311,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       if (epoch === routeEpoch.current) setLoaded(true);
     });
     return () => { controller.abort(); window.clearTimeout(timeout); controllers.current.delete(controller); };
-  }, [queryString, getSnapshot, installPlan, restoreDraft, updateUrl, resetReply]);
+  }, [routeQuery, getSnapshot, installPlan, restoreDraft, updateUrl, resetReply]);
 
   useEffect(() => () => { routeEpoch.current += 1; for (const controller of controllers.current) controller.abort(); }, []);
 
@@ -332,7 +351,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     const controller = new AbortController(); controllers.current.add(controller);
     const timeout = window.setTimeout(() => controller.abort(), 20000);
     try {
-      const id = planRef.current?.planId ?? new URLSearchParams(queryString).get("planId");
+      const id = planRef.current?.planId ?? new URLSearchParams(routeQuery).get("planId");
       const data = await getSnapshot(id, controller.signal);
       if (epoch !== routeEpoch.current) return;
       setSignedIn(!!data.authenticated); setLoginGate(!!data.loginRequired);
@@ -414,7 +433,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       if (response.status === 402 && data?.code === "payment_required" && pending.command.action === "prepare" && planRef.current) {
         writeDraft({ ...draftRef.current, pending: null });
         leavingForPay.current = true;
-        router.push(payHref(planRef.current));
+        navigate(payHref(planRef.current));
         return;
       }
       if (!response.ok || data?.login) {
@@ -522,14 +541,15 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     const current = planRef.current;
     if (current && payAccess?.planId === current.planId && payAccess.authenticated && !payAccess.paid) {
       leavingForPay.current = true;
-      router.push(payHref(current));
+      navigate(payHref(current));
       return;
     }
     void send({ action: "prepare" }).finally(() => { if (!leavingForPay.current) setPreparing(false); });
   };
   const job = plan?.intake.job;
   const lastIntake = !plan && loaded && !newEntry ? readLastIntake() : null;
-  const loginHref = `/account?next=${encodeURIComponent(`/plan/chat${plan ? `?planId=${encodeURIComponent(plan.planId)}` : "?new=1"}`)}`;
+  // 로그인한 뒤 돌아올 곳 — 작업실 안이면 작업실 대화 탭으로(예전 대화 화면으로 빠지지 않게)
+  const loginHref = `/account?next=${encodeURIComponent(embedded && plan ? studioHref(plan.planId, "chat") : `/plan/chat${plan ? `?planId=${encodeURIComponent(plan.planId)}` : "?new=1"}`)}`;
   const saveLabel = !plan && newEntry && status === "saved" ? "시작 전" : { saved: "저장됨", draft: "입력 중 · 이 기기에 보관", saving: "저장 중", failed: "저장하지 못했어요", conflict: sessionLost ? "로그인이 풀렸어요" : "다른 곳에서 바뀌었어요" }[status];
   const choiceQuestion = !!question && !questionDraft.custom && ["single", "multi"].includes(question.kind);
   const directAnswer = !!plan && draft.mode === "answer" && !!question && !choiceQuestion && !questionDraft.unknown;
@@ -811,7 +831,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
    */
   const coachHybrid = coach && questionComposer && !!question && isHybridQuestion(question) && questionDraft.selected.length > 0;
   const composerShown = composerText;
-  const coachLayout = coach && plan ? deskSummary || resultReady ? "split" : "chat" : undefined;
+  // 작업실 칸 안에서는 PC 두 칸 배치를 쓰지 않는다 — 칸이 좁아 늘 휴대폰처럼 대화와 요약(시트)을 번갈아 보인다
+  const coachLayout = coach && plan && !embedded ? deskSummary || resultReady ? "split" : "chat" : undefined;
+  // 작업실 안에서는 작업실 루트가 페이지의 하나뿐인 main 이다 — 대화 칸은 section 으로 그린다
+  const InputPane = embedded ? "section" : "main";
   // The header reads like a chat partner: who you're talking to and what they're doing right now (all real states).
   const coachStatus = !plan ? undefined
     : aiBusy && job ? ({ extract: "메모 정리 중", design: "사업 방향 정리 중", help: "답변 쓰는 중", ideas: "새 사업 찾는 중", edit: "바꿀 내용 정리 중" } as const)[job.kind]
@@ -866,7 +889,7 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
       {connectionError && <div className={styles.notice} role="status"><p>정리 상태를 갱신하지 못했어요. 입력은 계속할 수 있습니다.</p><button type="button" disabled={busy} onClick={() => void reload()}><RefreshCw size={16} aria-hidden="true" />상태 새로고침</button></div>}
       {storageError && <p className={styles.notice} role="status">이 기기에 임시 저장하지 못했어요. 서버에 저장하기 전에는 이 화면을 닫지 말아 주세요.</p>}
     </div>;
-  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={plan && (plan.coreAnswered > 0 || plan.coach.fields.length > 0) ? <button type="button" className={styles.summaryToggle} aria-label={`사업 요약${plan.coreAnswered > 0 ? ` (답변 ${plan.coreAnswered}개)` : ""}`} aria-controls="intake-summary-panel" aria-expanded={coachLayout ? coachLayout === "split" : view === "summary"} onClick={() => { setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }}><FileText size={17} aria-hidden="true" /><span aria-hidden="true">요약</span>{plan.coreAnswered > 0 && <b aria-hidden="true">{plan.coreAnswered}</b>}</button> : undefined}>
+  return <div className={`${styles.page} ${chatUi.theme}`} data-coach={coach || undefined} data-embedded={embedded || undefined}><BusinessAppChrome title={coach ? "오늘창업 코치" : !plan && newEntry ? "새 대화" : plan ? "오늘창업 코치" : "사업 기획"} active={newEntry ? "new" : "chat"} backHref="/plan" subtitle={!loaded ? "불러오는 중" : coach && !plan ? busy || replyTurn ? "생각 중…" : newEntry ? "답을 기다리는 중" : undefined : locked ? "사업계획서 완성 · 대화 기록" : editTurn && !aiBusy ? "계획서 수정 중 · 이 사업 내용만" : coachStatus} actions={plan && (plan.coreAnswered > 0 || plan.coach.fields.length > 0) ? <button type="button" className={styles.summaryToggle} aria-label={`사업 요약${plan.coreAnswered > 0 ? ` (답변 ${plan.coreAnswered}개)` : ""}`} aria-controls="intake-summary-panel" aria-expanded={coachLayout ? coachLayout === "split" : view === "summary"} onClick={() => { setView(view === "summary" ? "input" : "summary"); setDeskSummary(open => !open); }}><FileText size={17} aria-hidden="true" /><span aria-hidden="true">요약</span>{plan.coreAnswered > 0 && <b aria-hidden="true">{plan.coreAnswered}</b>}</button> : undefined}>
     {plan && <>
       <div className={styles.progressLine} aria-hidden="true"><span style={{ width: `${plan.coreTotal ? Math.round(plan.coreAnswered / plan.coreTotal * 100) : 0}%` }} /></div>
       {/* 코치 채팅에서 답 저장은 뒤에서 조용히 한다 — 매 답마다 '저장 중'을 띄우지 않고, 실패·충돌만 보인다(소유자 피드백 2026-10-09) */}
@@ -874,8 +897,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     </>}
     {!coach && notices}
     <div className={styles.srOnly} role="status" aria-live="polite" aria-atomic="true" data-intake-announcer>{announcement}</div>
-    <div ref={split.ref} style={plan ? split.style : undefined} data-loading={!loaded || undefined} data-coach-layout={coachLayout} className={`${styles.workspace} ${plan ? styles.withSummary : ""} ${split.dragging ? styles.resizing : ""}`}>
-      <main ref={inputPane} id="intake-input-panel" aria-label="사업 기획 대화" className={`${styles.inputPane} ${view !== "input" ? styles.mobileHidden : ""}`}>
+    <div ref={split.ref} style={plan && !embedded ? split.style : undefined} data-loading={!loaded || undefined} data-coach-layout={coachLayout} className={`${styles.workspace} ${plan ? styles.withSummary : ""} ${split.dragging ? styles.resizing : ""}`}>
+      <InputPane ref={inputPane} id="intake-input-panel" aria-label="사업 기획 대화" className={`${styles.inputPane} ${view !== "input" ? styles.mobileHidden : ""}`}>
         <div ref={conversation} data-intake-conversation className={styles.conversation}
           onWheel={event => { manualScroll.current = true; if (event.deltaY < 0) follow.current = false; }}
           onTouchStart={event => { touchY.current = event.touches[0]?.clientY ?? 0; }}
@@ -884,8 +907,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
           onKeyDown={event => { if (["PageUp", "PageDown", "Home", "End", "ArrowUp", "ArrowDown"].includes(event.key)) { manualScroll.current = true; if (["PageUp", "Home", "ArrowUp"].includes(event.key)) follow.current = false; } }}
           onScroll={event => { if (!manualScroll.current) return; const node = event.currentTarget; follow.current = node.scrollHeight - node.scrollTop - node.clientHeight < 80; if (follow.current) setUnseen(false); }}><div className={styles.inputContent}>
           {/* '사업계획서 만들기'를 누른 뒤 — 단추가 화면 밖으로 밀려도 알 수 있게 화면 전체에 같은 로딩(얇은 원)을 덮는다 */}
-          {preparing && <div className={styles.prepareCover}><PlanLoading fill note="사업계획서를 준비하고 있어요" /></div>}
-          {!loaded ? <PlanLoading fill note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><Link href="/plan" className={styles.primaryButton}>내 사업으로<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
+          {preparing && <div className={styles.prepareCover}><PlanLoading fill={!embedded} note="사업계획서를 준비하고 있어요" /></div>}
+          {!loaded ? <PlanLoading fill={!embedded} note="대화를 불러오고 있어요" /> : loginGate ? <LoginGate /> : !plan ? replyTurn ? <><div className={styles.assistantMessage}><ChatSpeaker /><p>어떤 사업을 생각하고 계세요?</p></div><article className={styles.userMessage} data-coach-message="user"><p>{replyTurn.initialText}</p></article><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /><div ref={currentTurn}><ReplyTyping /></div></> : newEntry ? <><EntryChoices disabled={blocked} initialMessage={draft.introMessage} onStart={startFromCard} coach={coach} /><LiveComment comment={liveComment.comment} onDismiss={liveComment.dismiss} /></> : !loadFailed && (signedIn ? <section className={styles.empty}><div className={styles.emptyIcon} aria-hidden="true"><FolderOpen size={28} strokeWidth={1.8} /></div>{/* 주소의 사업을 못 찾았으면 다른 화면과 같은 말과 '내 사업으로'(MissingBusiness) — 예전엔 '저장한 사업이 없습니다'(합니다체)였다 */}{searchParams.get("planId") ? <><h1>{MISSING_BUSINESS_TITLE}</h1><p>{MISSING_BUSINESS_DETAIL}</p><Link href="/plan" className={styles.primaryButton}>내 사업으로<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan/chat?new=1" className={styles.textLink}>새 대화 시작하기</Link></> : <><h1>저장한 사업이 없어요</h1><Link href="/plan/chat?new=1" className={styles.primaryButton}>새 사업 기획<ArrowRight size={18} aria-hidden="true" /></Link><Link href="/plan" className={styles.textLink}>내 사업으로</Link></>}</section>
               /*
                * 로그인이 풀린 채 돌아오면 서버는 '새 방문자'로 보고 빈 목록을 준다. 예전엔 여기서 "저장한 사업이 없습니다"만 보여 줘서
                * 사업이 지워진 줄 알았다(사용자 피드백). 사업은 계정·브라우저에 그대로 있으니 이유와 되찾는 방법을 알린다.
@@ -971,8 +994,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
             </div>
           </form>
         </footer>}
-      </main>
-      {plan && <div {...split.separator} aria-controls="intake-input-panel" className={styles.splitHandle} title="드래그해서 너비 조절 · 두 번 누르면 기본 너비"><span /></div>}
+      </InputPane>
+      {plan && !embedded && <div {...split.separator} aria-controls="intake-input-panel" className={styles.splitHandle} title="드래그해서 너비 조절 · 두 번 누르면 기본 너비"><span /></div>}
       {plan && <aside id="intake-summary-panel" aria-labelledby="intake-summary-heading" className={`${styles.summaryPane} ${view !== "summary" ? styles.mobileHidden : ""}`}><div className={styles.summarySheetHeader}><button type="button" onClick={() => setView("input")}><ChevronLeft size={18} aria-hidden="true" />대화로 돌아가기</button></div><BusinessSummary snapshot={plan} showActions={false} readOnly={documentFixed} disabled={blocked} onStructure={patch => void send({ action: "structure", structure: patch })} aiBusy={aiBusy} prepared={started} onEdit={editQuestion} onDetails={() => void send({ action: "details" })} onDesign={() => void send({ action: "design" })} onPrepare={startPrepare} /><ResourcePanel snapshot={plan} draft={draft.resourceEditor} disabled={blocked} onDraft={resourceEditor => editDraft({ ...draftRef.current, resourceEditor })} onCommand={command => void send(command)} /><AnswerHistory snapshot={plan} readOnly={documentFixed} drafts={draft.answers} onEdit={editQuestion} onKeepAsMemo={keepDraftAsMemo} /></aside>}
     </div>
   {plan && <GenerationDialog planId={plan.planId} open={generationOpen} state={generation.state} onClose={() => setGenerationOpen(false)} />}

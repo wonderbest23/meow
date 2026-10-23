@@ -24,6 +24,38 @@
         "8093"
       ],
       "port": 8093
+    },
+    {
+      "name": "dev-studio",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "NEXT_TELEMETRY_DISABLED=1",
+        "PERSISTENCE_MODE=demo-memory",
+        "ANTHROPIC_API_KEY=synthetic-not-a-real-key",
+        "SYNTHETIC_AUTH=1",
+        "AUTH_PROJECT_SECRET=synthetic-preview-only-secret",
+        "BUSINESS_JOURNEY_LAB=true",
+        "HOMEPAGE_EDITOR_PREVIEW_EMAILS=syn-1@synthetic.invalid",
+        "LLM_TEXT_PROVIDER=anthropic",
+        "NODE_OPTIONS=--import /Users/juhong/Developer/meow-main/.claude/worktrees/app-store/scripts/synthetic-e2e/fake-anthropic.mjs",
+        "PAYMENTS_ENABLED=false",
+        "PROPOSAL_AI_ENABLED=false",
+        "OPERATING_AI_ENABLED=false",
+        "NEXT_PUBLIC_BUSINESS_INTAKE_V2=1",
+        "APP_ENV=prelaunch",
+        "NEXT_PUBLIC_APP_ENV=prelaunch",
+        "INTAKE_LIVE_COMMENT=1",
+        "INTAKE_ANSWER_SUGGESTIONS=1",
+        "NEXT_PUBLIC_INTAKE_COACH_CHAT=1",
+        "NEXT_PUBLIC_INTAKE_EDIT_CHAT=1",
+        "NEXT_PUBLIC_STUDIO=1",
+        "npx",
+        "next",
+        "dev",
+        "-p",
+        "8096"
+      ],
+      "port": 8096
     }
   ]
 }

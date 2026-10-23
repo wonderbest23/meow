@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ChevronLeft, Menu, X } from "lucide-react";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import drawer from "./AppDrawer.module.css";
 import styles from "./chat/page.module.css";
 import shell from "./PlanShell.module.css";
@@ -11,6 +11,20 @@ import RailMenu from "./RailMenu";
 import type { DocumentToc } from "./BusinessRailTree";
 import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } from "../../lib/plan-builder/plan-store";
 import { useDialogFocus } from "../../components/use-dialog-focus";
+import { useStudioPane } from "./studio/StudioContext";
+import studio from "./studio/Studio.module.css";
+import { STUDIO_ENABLED, studioEntryHref } from "../../lib/plan-builder/studio";
+
+/* 예전 4개 화면(대화·계획서·홈페이지·사업 관리)에서 같은 사업의 작업실로 가는 작은 링크 — 플래그를 켰을 때만 */
+const STUDIO_ENTRY_PATHS = ["/plan/chat", "/plan/document", "/plan/homepage", "/plan/workspace"];
+/* withActions — 머리줄에 저장·공개 같은 단추가 함께 있으면 좁은 화면(560px 이하)에서는 접는다(제목 자리가 0이 되었다) */
+function StudioEntryLink({ withActions }: { withActions: boolean }) {
+  const pathname = (usePathname() || "").replace(/\/$/, "");
+  const query = useSearchParams().toString();
+  if (!STUDIO_ENTRY_PATHS.includes(pathname)) return null;
+  const href = studioEntryHref(`${pathname}?${query}`);
+  return href ? <Link className={studio.entryLink} href={href} data-with-actions={withActions || undefined}>작업실에서 보기</Link> : null;
+}
 
 export default function BusinessAppChrome({ children, title, subtitle, actions, active, backHref = "/plan", onBack, showRail = true, documentToc, titleHeading = true }: {
   children: ReactNode; title: string; subtitle?: string; actions?: ReactNode; active?: "plans" | "chat" | "new" | "inquiries"; backHref?: string; showRail?: boolean;
@@ -21,6 +35,8 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
   /** 머리줄 제목을 이 화면의 h1로 둔다. 본문이 따로 h1을 갖는 화면(계획서의 사업명)은 false. */
   titleHeading?: boolean;
 }) {
+  /* 작업실 칸 안이면 머리줄·서랍·왼쪽 메뉴는 작업실이 한 번만 그린다 — 여기서는 칸 단추 줄(actions)과 본문만 */
+  const pane = useStudioPane();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const [sync, setSync] = useState<PlanSyncStatus>("idle");
@@ -49,6 +65,10 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
     const active = document.activeElement;
     if (!active || active === document.body) toggle.current?.focus({ preventScroll: true });
   }, [open]);
+  if (pane) return <>
+    {actions && <div className={studio.paneToolbar}>{actions}</div>}
+    {children}
+  </>;
   return <>
     {showRail && <aside className={`${shell.rail} ${shell.railStatic} ${styles.railHost} ${drawer.wideOnly}`} aria-label="작업 메뉴" inert={open}>
       <RailMenu active={active} documentToc={documentToc} />
@@ -74,6 +94,7 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
           : <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>}
         {/* 부제는 화면이 따로 줄 때만(예: 질문 3/12) — 늘 붙던 '오늘창업'·'오늘창업 AI 파트너'는 왼쪽 로고와 겹쳐 뺐다 */}
         <div className={styles.headerTitle}>{titleHeading ? <h1><strong>{title}</strong></h1> : <strong>{title}</strong>}{subtitle && <span>{subtitle}</span>}</div>
+        {STUDIO_ENABLED && <Suspense fallback={null}><StudioEntryLink withActions={!!actions} /></Suspense>}
         {actions && <div className={styles.headerActions}>{actions}</div>}
         <div className={`${styles.headerMenu} ${showRail ? drawer.narrowOnly : ""}`}>
           <button ref={toggle} type="button" className={styles.menuToggle} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls="app-drawer" onClick={() => setOpen(!open)}><Menu size={24} /></button>
