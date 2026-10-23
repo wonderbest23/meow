@@ -71,6 +71,8 @@ function pendingLandingIdea() {
 function withoutStudioTab(query: string): string {
   const params = new URLSearchParams(query);
   params.delete("tab");
+  // 첫 화면 카드가 실어 보낸 시작 길(entry)도 같다 — 첫 선택지를 대신 누른 뒤 주소에서 지우는데, 그때 다시 불러오면 보내던 시작 요청이 끊긴다
+  params.delete(ENTRY_PARAM);
   return params.toString();
 }
 

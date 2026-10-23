@@ -68,6 +68,8 @@ async function main() {
   // 첫 설명에서 말한 예산·혼자 운영은 다시 묻지 않고 미리 보여 준다
   assert.deepEqual(budgetSentence("점심 도시락 가게를 하고 싶어요. 모아 둔 돈은 2천만원 정도예요."), { value: "2천만원", quote: "모아 둔 돈은 2천만원 정도예요." });
   assert.equal(budgetSentence("가격은 9,500원으로 하려고요."), null, "예산이라는 말이 없으면 보지 않는다");
+  assert.equal(budgetSentence("2천만원으로 1인 반찬가게를 차리려고 해요")?.value, "2천만원", "금액으로 차린다고 말하면 준비 예산이다");
+  assert.equal(budgetSentence("보증금 3천만원으로 가게를 열어요"), null, "보증금·매출 같은 다른 돈은 예산으로 보지 않는다");
   // 판매 가격 0원은 보내기 전에 한 번 확인한다(무료 상품이면 그대로 저장) — 다른 금액 질문·0이 아닌 금액·미정은 묻지 않는다
   const priceQuestion = coreQuestions("startup").find(question => question.id === "price")!;
   for (const zero of ["0", "0원", " 0 원 ", 0, "0만원"]) assert.equal(zeroPriceAnswer(priceQuestion, zero), true, String(zero));

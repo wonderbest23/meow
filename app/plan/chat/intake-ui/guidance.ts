@@ -45,9 +45,12 @@ export function mentionedAnswer(snapshot: IntakeSnapshot, question: IntakeQuesti
 
 /** 준비 예산을 말한 문장 하나('모아 둔 돈은 2천만원 정도예요') → 그 금액. 예산을 뜻하는 말과 금액이 한 문장에 있을 때만 */
 const BUDGET_WORDS = /(?:모아\s*(?:둔|놓은)|모은|가진|갖고\s*있는|준비(?:한|된|해\s*둔)|쓸\s*수\s*있는|여유)\s*돈|예산|창업\s*자금|자본금|종잣돈|시드\s*머니/;
+/** '2천만원으로 반찬가게를 차리려고요'처럼 금액 + (으)로 + 시작한다는 말 — 월세·매출 같은 다른 돈 이야기는 뺀다 */
+const BUDGET_START = /(?:억|천만|백만|만)\s*원?\s*(?:정도|쯤|가량)?\s*(?:으로|로)\s*(?:\S+\s*){0,6}?(?:창업|시작|차리|차릴|열|오픈|준비)/;
+const OTHER_MONEY = /월\s*(?:세|매출|수입|수익)|매출|보증금|권리금|대출|빚/;
 export function budgetSentence(text: string): { value: string; quote: string } | null {
   for (const sentence of text.split(/(?<=[.!。！\n])/)) {
-    if (!BUDGET_WORDS.test(sentence)) continue;
+    if (!BUDGET_WORDS.test(sentence) && !(BUDGET_START.test(sentence) && !OTHER_MONEY.test(sentence))) continue;
     const amounts = [...sentence.matchAll(/(?:\d[\d,.]*\s*(?:억|천만|백만|만|천)\s*)+원?/g)].map(match => match[0].replace(/\s+/g, "")).map(token => /원$/.test(token) ? token : `${token}원`);
     const values = new Set(amounts.map(token => parseWonAmount(token)).filter((value): value is number => value !== undefined && value > 0));
     if (values.size !== 1) continue;
