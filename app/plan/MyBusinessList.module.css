@@ -11,10 +11,11 @@
 .desc { display: -webkit-box; overflow: hidden; color: #6b7684; font-size: 14px; line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 1; }
 .meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: #6b7684; font-size: 13px; }
 .stage { padding: 3px 8px; border-radius: 6px; background: #f2f4f6; color: #4e5968; font-size: 12px; font-weight: 600; }
+.stage[data-homepage="published"] { background: #e8f3ee; color: #1f6b46; }
 
 /* ⋯ 단추 — 카드 오른쪽 위 */
 .menu { position: absolute; top: 10px; right: 8px; }
-.menu summary { width: 40px !important; height: 40px !important; }
+.menu summary { width: 44px !important; height: 44px !important; } /* 누르는 자리 44px(감사 r36) */
 
 .rename { padding: 16px 20px; }
 

@@ -39,6 +39,9 @@
 .root .warning { color: #80561a; background: #fff7e9; padding: 12px; font-size: 13px; line-height: 1.7; border-left: 3px solid #d7a24d; }
 .error { border-left: 3px solid #bd464b; padding: 12px; background: #fff3f3; margin: 16px 0; }
 .error p { font-size: 14px; line-height: 1.6; margin: 0 0 10px; }
+/* 칸 아래 입력 확인 안내 — 고칠 칸 바로 밑에(예전엔 폼 위에 떠 어느 칸인지 몰랐다) */
+.root .fieldError { color: #b3363c; font-size: 13px; font-weight: 600; line-height: 1.5; }
+.root input[aria-invalid=true], .root textarea[aria-invalid=true] { border-color: #bd464b; box-shadow: 0 0 0 1px #bd464b; }
 .root .success { color: #227353; font-size: 14px; line-height: 1.6; }
 .empty { padding: 52px 16px; text-align: center; color: #77859a; }
 .empty h3 { font-size: 18px; color: #394759; }

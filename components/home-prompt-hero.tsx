@@ -8,7 +8,7 @@
  * 비어 있으면 지금처럼 새 대화만 연다.
  *
  * 움직임 값은 base44 첫 화면에서 잰 것: 글자 치기 45ms·지우기 25ms·다 친 뒤 2초 쉼·다음 예시 전 0.4초·시작 0.5초 뒤,
- * 진열 띠는 4초마다 다음 탭, 카드마다 90ms 차이로 '끊어 바꾸기'(사라짐 60ms → 나타남 160ms).
+ * 진열 띠는 4초마다 다음 탭, 화면(브라우저 틀·휴대폰 틀)마다 90ms 차이로 '끊어 바꾸기'(사라짐 60ms → 나타남 160ms).
  * 움직임 줄이기 설정이면 예시 문장을 그대로 두고 띠도 저절로 넘기지 않는다.
  * 입력칸에 초점이 있거나 진열 띠 위에 마우스가 있는 동안에도 저절로 넘기지 않는다(글을 쓰거나 그림을 보는 중에 바뀌지 않게).
  */
@@ -30,46 +30,51 @@ const PROMPTS = [
   "아파트 상가에 초등 공부방을 열고 싶어요.",
 ];
 
-type Shape = "sq" | "tall";
 type ShowcaseItem = { src: string; alt: string; width: number; height: number };
-const SHAPES: Shape[] = ["sq", "tall", "tall", "sq"];
-const sq = (src: string, alt: string): ShowcaseItem => ({ src, alt, width: 640, height: 640 });
-const tall = (src: string, alt: string): ShowcaseItem => ({ src, alt, width: 480, height: 678 });
-const report = (page: string, alt: string): ShowcaseItem => ({ src: `/home-media/results/report-${page}.webp`, alt, width: 1132, height: 1600 });
+/* 화면 두 칸 — 컴퓨터 화면(브라우저 틀)과 휴대폰 화면. 휴대폰 너비에서는 휴대폰 화면 한 장만 크게 */
+type ShowcaseSlot = "screen" | "phone";
+const SLOTS: ShowcaseSlot[] = ["screen", "phone"];
 const S = "/home-media/showcase";
+const screen = (name: string, alt: string, width = 1600, height = 1000): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width, height });
+const phone = (name: string, alt: string): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 780, height: 1200 });
 
 /*
- * 진열 띠 — 실제 화면과 실제 예시 문서만 쓴다(새벽커피 예시 계획서·예시 홈페이지, 로컬 시험 서버의 빵집 사업 화면).
+ * 진열 띠 — 실제 AI로 끝까지 만든 예시 사업('망원 골목반찬', 동네 1인 반찬가게)의 실제 화면만 쓴다(2026-10-23, 로컬 시험 서버·실제 AI).
+ * 대화로 답한 가격 12,900원·재료비 4,800원·월 고정비 190만 원·예산 3,000만 원으로 계획서·한 장 요약·홈페이지·개업 준비를 만든 그대로다.
+ * 휴대폰에서 작은 카드 여러 장은 글자가 안 읽혀서(사장님 의견) 한 번에 한 화면을 크게 보여 주고 아래에 한 줄 설명을 붙인다.
  * 발표 자료(PPT)는 결제 제공 범위가 아니라서 탭에 두지 않는다(lib/plan-builder/deck-availability.ts).
  */
-const SHOWCASE: Array<{ label: string; items: ShowcaseItem[] }> = [
-  { label: "계획서", items: [
-    sq(`${S}/plan-cover.webp`, "사업계획서 표지와 본문 페이지를 겹쳐 놓은 그림"),
-    report("01", "새벽커피 예시 사업계획서 PDF 표지"),
-    report("03", "예시 사업계획서의 사업 개요와 정리 표 페이지"),
-    sq(`${S}/plan.webp`, "화면에서 읽는 예시 사업계획서 본문"),
-  ] },
-  { label: "한 장 요약", items: [
-    sq(`${S}/summary.webp`, "사업과 고객, 상품과 가격을 한 장에 정리한 요약 화면"),
-    tall(`${S}/summary-m.webp`, "휴대폰에서 보는 한 장 요약 — 사업, 고객, 거래 조건, 계획 계산"),
-    report("15", "예시 사업계획서의 12개월 손익 추정 그래프 페이지"),
-    sq(`${S}/numbers.webp`, "판매가, 건당 비용, 월 고정비로 계산한 손익분기 화면"),
-  ] },
-  { label: "홈페이지", items: [
-    sq(`${S}/homepage.webp`, "새벽커피 예시 홈페이지 첫 화면"),
-    tall(`${S}/homepage-m.webp`, "휴대폰으로 본 새벽커피 예시 홈페이지"),
-    tall(`${S}/homepage-page-m.webp`, "예시 홈페이지를 미리보는 오늘창업 화면"),
-    sq(`${S}/homepage-rooms.webp`, "예시 홈페이지의 숫자 소개와 공간 안내 구간"),
-  ] },
-  { label: "개업 준비", items: [
-    sq(`${S}/launch.webp`, "빵집 개업까지 할 일 10단계 목록 — 상품, 신고 순서, 사업자등록, 세금, 첫 홍보"),
-    tall(`${S}/launch-m.webp`, "휴대폰에서 보는 개업 준비 단계 목록"),
-    tall(`${S}/ops-m.webp`, "문을 연 뒤 홈페이지 관리와 실적 기록 화면"),
-    sq(`${S}/ops.webp`, "유지보수 화면 — 홈페이지 관리, 실적과 개선 기록"),
-  ] },
+const SHOWCASE: Array<{ label: string; caption: string } & Record<ShowcaseSlot, ShowcaseItem>> = [
+  {
+    label: "계획서",
+    caption: "대화에서 답한 가격과 비용으로, 하루 몇 세트를 팔아야 하는지까지 계산해 써요.",
+    screen: screen("real-plan", "망원 골목반찬 사업계획서 작업실 — 왼쪽은 창업자가 답한 대화, 오른쪽은 세트 가격 12,900원, 생활비까지 버는 판매량 하루 약 19세트, 버티는 기간 약 6개월을 정리한 숫자 표"),
+    phone: phone("real-plan-m", "휴대폰으로 본 사업계획서의 숫자 표 — 세트 가격 12,900원, 하루 약 19세트, 초기 지출 600만 원일 때 약 6개월"),
+  },
+  {
+    label: "한 장 요약",
+    caption: "누구에게 무엇을 얼마에 팔지, 손익분기가 어디인지 한 장으로 봐요.",
+    screen: screen("real-summary", "한 장 요약의 수익 구조와 계획 계산 — 판매가 12,900원, 건당 변동비 4,800원, 월 고정비 1,900,000원, 손익분기 월 235건", 1400, 875),
+    phone: phone("real-summary-m", "휴대폰으로 본 한 장 요약 — 한 줄 소개 '퇴근길에 들러 오늘 만든 반찬 3종으로 저녁 끝'과 사업, 고객 정리"),
+  },
+  {
+    label: "홈페이지",
+    caption: "계획서 내용으로 가게 홈페이지 초안을 바로 만들어요.",
+    screen: screen("real-homepage", "계획서로 만든 망원 골목반찬 홈페이지 첫 화면 — 반찬 사진 위에 가게 이름, '퇴근길에 들러 오늘 만든 반찬 3종으로 저녁 끝', 문의하기 단추"),
+    phone: phone("real-homepage-m", "휴대폰으로 본 망원 골목반찬 홈페이지 첫 화면"),
+  },
+  {
+    label: "개업 준비",
+    caption: "반찬가게에 맞춘 신고·등록 순서를 할 일 목록으로 안내해요.",
+    screen: screen("real-launch", "개업 준비 할 일 목록 — 팔고 싶은 상품 정하기, 작게 시작할 범위, 반찬·도시락 가게 준비물과 신고 순서, 사업장 계약 조건, 사업자등록 준비", 1400, 875),
+    phone: phone("real-launch-m", "휴대폰으로 본 개업 준비 10단계 목록 — 반찬·도시락 가게 신고 순서, 사업자등록, 세금 관리, 주문·결제 점검, 첫 홍보"),
+  },
 ];
 
 type Slot = { set: number; phase: "hold" | "gone" | "enter" };
+
+/** 진열 띠가 다음 탭으로 넘어가는 간격 — 진행 막대도 이 시간 동안 찬다 */
+const ADVANCE_MS = 4000;
 
 type SpeechRecognitionLike = {
   lang: string; interimResults: boolean; continuous: boolean;
@@ -117,7 +122,9 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
   const [playing, setPlaying] = useState(true);
   /* 진열 띠·탭 줄 위에 마우스가 있는 동안 — 저절로 넘기지 않는다(멈춤 단추의 상태와는 따로) */
   const [hovering, setHovering] = useState(false);
-  const [slots, setSlots] = useState<Slot[]>(() => SHAPES.map(() => ({ set: 0, phase: "hold" })));
+  /* 저절로 넘기는 한 번(4초)마다 하나씩 올라간다 — 고른 탭 아래 진행 막대를 그 박자에 맞춰 처음부터 다시 채운다 */
+  const [cycle, setCycle] = useState(0);
+  const [slots, setSlots] = useState<Slot[]>(() => SLOTS.map(() => ({ set: 0, phase: "hold" })));
   const [micReady, setMicReady] = useState(false);
   const [listening, setListening] = useState(false);
   const [micNote, setMicNote] = useState("");
@@ -179,10 +186,44 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     };
   }, []);
 
-  /* 다른 탭 사진을 미리 받아 둔다 — 바꾸는 순간 빈 칸이 보이지 않게 */
+  /*
+   * 휴대폰(480px 이하)에서는 아래로 읽어 내려가는 동안 상담 단추를 비켜 둔다 — 아래 구간 카드 글의 끝 글자를 덮었다(점검 r36, 360px).
+   * 조금이라도 위로 올리거나 첫 화면 근처로 돌아오면 다시 보인다. 표시는 html 의 data-support-tucked 로(globals.css — 키보드로 닿으면 보인다).
+   */
+  useEffect(() => {
+    const root = document.documentElement;
+    const narrow = window.matchMedia("(max-width: 480px)");
+    let last = window.scrollY;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const y = window.scrollY;
+      const moved = y - last;
+      if (!narrow.matches || y < window.innerHeight * 0.6) root.removeAttribute("data-support-tucked");
+      else if (moved > 8) root.setAttribute("data-support-tucked", "");
+      else if (moved < -8) root.removeAttribute("data-support-tucked");
+      /* 아주 조금 움직인 것은 모아 두었다가 함께 본다 */
+      else return;
+      last = y;
+    };
+    const schedule = () => { if (!frame) frame = window.requestAnimationFrame(update); };
+    window.addEventListener("scroll", schedule, { passive: true });
+    narrow.addEventListener("change", schedule);
+    return () => {
+      if (frame) window.cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      narrow.removeEventListener("change", schedule);
+      root.removeAttribute("data-support-tucked");
+    };
+  }, []);
+
+  /* 다른 탭 사진을 미리 받아 둔다 — 바꾸는 순간 빈 칸이 보이지 않게. 휴대폰 너비에서는 보이는 휴대폰 화면만 받는다 */
   useEffect(() => {
     if (!mounted) return;
-    const id = window.setTimeout(() => { for (const set of SHOWCASE.slice(1)) for (const item of set.items) { const image = new Image(); image.src = item.src; } }, 1200);
+    const id = window.setTimeout(() => {
+      const kinds: ShowcaseSlot[] = window.matchMedia("(max-width: 640px)").matches ? ["phone"] : SLOTS;
+      for (const set of SHOWCASE.slice(1)) for (const kind of kinds) { const image = new Image(); image.src = set[kind].src; }
+    }, 1200);
     return () => window.clearTimeout(id);
   }, [mounted]);
 
@@ -209,25 +250,26 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
   const cutTo = useCallback((next: number) => {
     if (next === tabRef.current) return;
     setTab(next);
-    if (reduced) { setSlots(SHAPES.map(() => ({ set: next, phase: "hold" }))); return; }
+    if (reduced) { setSlots(SLOTS.map(() => ({ set: next, phase: "hold" }))); return; }
     cutting.current = true;
     const setSlot = (index: number, patch: Partial<Slot>) => setSlots(current => current.map((slot, k) => k === index ? { ...slot, ...patch } : slot));
-    SHAPES.forEach((_, index) => {
+    SLOTS.forEach((_, index) => {
       const at = index * 90;
       later(at, () => setSlot(index, { phase: "gone" }));
       later(at + 60, () => setSlot(index, { set: next, phase: "enter" }));
       later(at + 60 + 160, () => setSlot(index, { phase: "hold" }));
     });
-    later((SHAPES.length - 1) * 90 + 220, () => { cutting.current = false; });
+    later((SLOTS.length - 1) * 90 + 220, () => { cutting.current = false; });
   }, [later, reduced]);
 
   const autoAdvance = playing && !reduced && !focused && !hovering;
   useEffect(() => {
     if (!autoAdvance) return;
     const id = window.setInterval(() => {
+      setCycle(value => value + 1);
       if (cutting.current || document.hidden) return;
       cutTo((tabRef.current + 1) % SHOWCASE.length);
-    }, 4000);
+    }, ADVANCE_MS);
     return () => window.clearInterval(id);
   }, [autoAdvance, cutTo]);
   const hoverProps = { onPointerEnter: (event: PointerEvent) => { if (event.pointerType === "mouse") setHovering(true); }, onPointerLeave: () => setHovering(false) };
@@ -319,24 +361,27 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     <p className={styles.hint} data-pending={signedIn !== false || undefined} aria-hidden={signedIn !== false || undefined}>로그인해도 적은 내용은 그대로 이어져요</p>
 
     <div className={styles.tabsRow} {...hoverProps}>
+      {/*
+        * 알약 모양 탭(2026-10-23 사장님: base44 의 [괄호]·네모 점 말고 우리 모양으로) — 옅은 회색 통 안에서 고른 탭만 흰 알약으로 떠오른다.
+        * 저절로 넘기는 동안에는 고른 알약 아래 얇은 막대가 4초에 걸쳐 차서 다음 탭까지 남은 시간을 보여 준다(멈추거나 마우스를 올리면 사라진다).
+        */}
       <div role="tablist" aria-label="만들어지는 결과물" className={styles.tabs}>
-        {SHOWCASE.map((set, index) => <span key={set.label} className={styles.tabItem}>
-          {index > 0 && <i className={styles.tabDot} aria-hidden="true" />}
-          <button
-            type="button"
-            role="tab"
-            id={`home-showcase-tab-${index}`}
-            aria-selected={index === tab}
-            aria-controls="home-showcase"
-            tabIndex={index === tab ? 0 : -1}
-            className={styles.tab}
-            onClick={() => pickTab(index)}
-            onKeyDown={event => onTabKey(event, index)}
-          >
-            {/* 괄호와 굵은 글자 폭을 늘 잡아 두어 고른 탭이 바뀌어도 탭 줄이 옆으로 밀리지 않는다 */}
-            <span className={styles.bracket} aria-hidden="true">[</span><span className={styles.tabText} data-text={set.label}>{set.label}</span><span className={styles.bracket} aria-hidden="true">]</span>
-          </button>
-        </span>)}
+        {SHOWCASE.map((set, index) => <button
+          key={set.label}
+          type="button"
+          role="tab"
+          id={`home-showcase-tab-${index}`}
+          aria-selected={index === tab}
+          aria-controls="home-showcase"
+          tabIndex={index === tab ? 0 : -1}
+          className={styles.tab}
+          onClick={() => pickTab(index)}
+          onKeyDown={event => onTabKey(event, index)}
+        >
+          {/* 굵은 글자 폭을 늘 잡아 두어 고른 탭이 바뀌어도 탭 줄이 옆으로 밀리지 않는다 */}
+          <span className={styles.tabText} data-text={set.label}>{set.label}</span>
+          {index === tab && mounted && autoAdvance && <span key={cycle} className={styles.progress} style={{ animationDuration: `${ADVANCE_MS}ms` }} aria-hidden="true" />}
+        </button>)}
       </div>
       {/* 이름은 그대로 두고 눌림 상태(aria-pressed)만 바뀐다 — 이름까지 바뀌면 낭독기가 다른 단추로 읽었다 */}
       <button type="button" className={styles.play} aria-pressed={!playing} aria-label="예시 넘김 멈추기" title={playing ? "예시 넘김 멈추기" : "예시 넘김 다시 시작"} onClick={() => setPlaying(value => !value)}>
@@ -346,14 +391,24 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
       </button>
     </div>
 
-    <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.strip} {...hoverProps}>
-      {SHAPES.map((shape, index) => {
-        const slot = slots[index];
-        const item = SHOWCASE[slot.set].items[index];
-        return <figure key={index} className={`${styles.cardImage} ${styles[shape]} ${index === 3 ? styles.desktopOnly : ""}`} data-phase={slot.phase}>
-          <img src={item.src} alt={item.alt} width={item.width} height={item.height} loading={index < 3 ? "eager" : "lazy"} decoding="async" />
-        </figure>;
-      })}
+    {/*
+      * 컴퓨터: 큰 브라우저 틀 한 장 + 오른쪽 아래에 걸친 휴대폰 틀 한 장. 휴대폰 너비: 휴대폰 화면 한 장만 꽉 차게.
+      * 자리는 그림 비율(aspect-ratio)과 설명 두 줄 높이로 미리 잡아 두어 넘길 때 아래가 밀리지 않는다.
+      * 브라우저 틀 그림은 휴대폰 너비에서 숨겨지므로 늦게 받기(lazy) — 숨긴 그림은 받지 않는다.
+      */}
+    <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.showcase} {...hoverProps}>
+      <div className={styles.stage}>
+        {SLOTS.map((kind, index) => {
+          const slot = slots[index];
+          const item = SHOWCASE[slot.set][kind];
+          return <figure key={kind} className={kind === "screen" ? styles.browser : styles.phone} data-phase={slot.phase}>
+            {kind === "screen" && <span className={styles.browserBar} aria-hidden="true"><i /><i /><i /></span>}
+            <img src={item.src} alt={item.alt} width={item.width} height={item.height} loading={kind === "screen" ? "lazy" : "eager"} decoding="async" />
+          </figure>;
+        })}
+      </div>
+      <p className={styles.caption} data-phase={slots[SLOTS.length - 1].phase}>{SHOWCASE[slots[SLOTS.length - 1].set].caption}</p>
+      <p className={styles.note}>실제 AI로 만든 예시 반찬가게 ‘망원 골목반찬’ 화면이에요</p>
     </div>
   </section>;
 }

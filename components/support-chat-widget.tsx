@@ -14,7 +14,7 @@ import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } fr
 import { faqAnswer, supportFaqCategories, type SupportFaqItem } from "../lib/support-chat/faq";
 import { nativePlatform } from "../lib/native-app";
 import tap from "./support-chat-tap.module.css";
-import { useDialogFocus } from "./use-dialog-focus";
+import { focusableIn, useDialogFocus } from "./use-dialog-focus";
 import { koreanText, userErrorMessage } from "../lib/client/user-error";
 import type { SupportChat } from "../lib/support-chat/repository";
 import { trackFunnel } from "../lib/funnel/client";
@@ -36,7 +36,7 @@ import {
  * 창업 상담 — 열면 처음 보이는 것. "뭘 해야 할지 모르겠다"는 사람에게 되물어
  *   조건에 맞는 아이템을 같이 찾는다. 공짜로 주는 것이고, 여기서 잡은 조건이
  *   그대로 사업계획서로 넘어간다.
- * 서비스 문의 — 결제·환불처럼 우리 서비스 자체를 묻는 것. 예전부터 있던 기능이라
+ * 고객센터 — 결제·환불처럼 우리 서비스 자체를 묻는 것(이름은 화면 어디서나 '고객센터' 하나로 통일, 감사 2026-10-23). 예전부터 있던 기능이라
  *   그대로 두고 아래 줄로 내렸다.
  *
  * 상담 대화는 서버에 저장하지 않는다. 로그인 전에도 쓰고, 남의 창업 고민을 우리가
@@ -80,7 +80,7 @@ export function SupportChatWidget() {
   const pathname = usePathname();
   /*
    * 사장님이 공개한 홈페이지(/launch/…, 내 도메인)에는 오늘창업 상담 버튼을 띄우지 않는다.
-   * 그 손님들에게 우리 '이용 문의'가 보이고, 폰에서는 홈페이지의 전화·카톡 버튼을 가렸다.
+   * 그 손님들에게 우리 '고객센터' 단추가 보이고, 폰에서는 홈페이지의 전화·카톡 버튼을 가렸다.
    * 내 도메인은 주소로 알 수 없어서 공개 홈페이지 본문(.public-landing)이 있는지로 본다.
    */
   const [onPublicSite, setOnPublicSite] = useState(false);
@@ -310,10 +310,24 @@ export function SupportChatWidget() {
   }, [quickMessages.length]);
 
   /*
-   * 키보드 — 열면 창 안으로 초점을 옮기고 Tab 은 창 안에서만 돈다. Esc 로 닫으면 '이용 문의' 단추로 초점을 돌려준다.
+   * 키보드 — 열면 창 안으로 초점을 옮기고 Tab 은 창 안에서만 돈다. Esc 로 닫으면 '고객센터' 단추로 초점을 돌려준다.
    * (예전엔 초점이 뒤 화면에 남았고, Esc 로 닫으면 초점이 문서 맨 앞으로 떨어졌다)
    */
   const panelRef = useDialogFocus<HTMLElement>(open, { onEscape: () => setOpen(false) });
+  /*
+   * 탭이 바뀌면 새 화면 안으로 초점을 옮긴다 — 홈의 '문의하기'를 누르면 그 단추가 사라져 초점이 body 로 떨어졌고,
+   * 그다음 Tab·Esc 가 창 밖에서 헤맸다(감사 2026-10-23). 초점이 이미 창 안(아래 탭 막대 등)이면 그대로 둔다.
+   */
+  useEffect(() => {
+    if (!open) return;
+    const frame = window.requestAnimationFrame(() => {
+      const panel = panelRef.current;
+      if (!panel || panel.contains(document.activeElement)) return;
+      const composer = tab === "chat" && textareaRef.current && !textareaRef.current.disabled ? textareaRef.current : null;
+      (composer ?? focusableIn(panel)[0])?.focus({ preventScroll: true });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [open, tab, mode, panelRef]);
   const toggleRef = useRef<HTMLButtonElement | null>(null);
   const wasOpen = useRef(false);
   useEffect(() => {
@@ -690,7 +704,7 @@ export function SupportChatWidget() {
           <header>
             <span><img src="/support-agent-avatar-2026.png" alt="" width="48" height="48" /></span>
             <div>
-              <strong>{mode === "consult" ? "AI 창업 상담" : "서비스 이용 문의"}</strong>
+              <strong>{mode === "consult" ? "AI 창업 상담" : "고객센터"}</strong>
               <small><i /> {mode === "consult" ? "뭘 할지 몰라도 괜찮아요" : "결제·환불·이용 방법을 물어보세요"}</small>
             </div>
             {mode === "consult" && consultTurns.length > 0 && (
@@ -737,7 +751,7 @@ export function SupportChatWidget() {
                           */}
                           <a className="welcome-start" href="/plan/chat?new=1" onClick={() => trackFunnel("consult_cta_click", { variant: "welcome" })}>바로 시작하기</a>
                           <button type="button" className="welcome-support" onClick={() => { setMode("support"); setShowQuickMenu(true); }}>
-                            <MessageCircleQuestion /> 서비스 이용 문의는 여기
+                            <MessageCircleQuestion /> 결제·이용 문의는 고객센터로
                           </button>
                         </div>
                       </div>
@@ -923,7 +937,7 @@ export function SupportChatWidget() {
                     )}
                     {consultTurns.length > 0 && !consultEscalate && (
                       <button type="button" className="consult-to-support" onClick={handoffFromConsult}>
-                        <MessageCircleQuestion /> 담당자에게 남기기 · 서비스 문의
+                        <MessageCircleQuestion /> 담당자에게 남기기 · 고객센터
                       </button>
                     )}
                   </section>
@@ -1073,11 +1087,11 @@ export function SupportChatWidget() {
           className="support-chat-toggle"
           onClick={() => { setMode("support"); setTab("home"); setOpen(true); }}
           aria-expanded="false"
-          aria-label="서비스 이용 문의 열기"
-          title="서비스 이용 문의"
+          aria-label="고객센터 열기"
+          title="고객센터"
         >
           <img src="/support-agent-avatar-2026.png" alt="" width="54" height="54" />
-          <span>이용 문의</span>
+          <span>고객센터</span>
           {shownUnread > 0 && <em>{shownUnread > 9 ? "9+" : shownUnread}</em>}
         </button>
       )}

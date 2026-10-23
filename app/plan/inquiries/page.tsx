@@ -11,6 +11,7 @@ import { HomepageLeadActions } from "../../../components/homepage-lead-actions";
 import { HomepageLeadNotification, useHomepageLeadNotifications } from "../../../components/homepage-lead-notifications";
 import { formatKoreanPhone } from "../../../lib/contact-links";
 import { homepageHref } from "../../../lib/plan-builder/journey";
+import { isSamplePlan, loadState } from "../../../lib/plan-builder/plan-store";
 import { AUTH_ERROR, markInquiryHandled, unansweredCount, useInquiries, type Inquiry } from "./use-inquiries";
 
 /** 받은 시각을 짧게 — 오늘이면 시:분, 아니면 월.일 */
@@ -39,6 +40,12 @@ export default function InquiriesPage() {
     setSelectedId(items[0].lead.id);
   }, [items, selectedId]);
   const open = items ? unansweredCount(items) : 0;
+  /* 빈 화면의 다음 할 일 — 가장 최근에 손댄 내 사업의 홈페이지·알림 번호 설정으로(감사 2026-10-23: 빈 화면에 갈 곳이 없었다) */
+  const [recentPlanId, setRecentPlanId] = useState<string | null>(null);
+  useEffect(() => {
+    const recent = loadState().plans.filter(plan => !isSamplePlan(plan.id)).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    setRecentPlanId(recent?.id ?? null);
+  }, []);
   // 휴대폰(목록·상세가 한 화면씩)인지 — 머리말 뒤로 단추가 상세에서 목록으로 돌아가게 할 때만 쓴다
   const [phone, setPhone] = useState(false);
   useEffect(() => {
@@ -67,6 +74,10 @@ export default function InquiriesPage() {
           <Inbox size={28} aria-hidden />
           <strong>{filter === "open" && items?.length ? "답할 문의가 없어요" : "아직 들어온 문의가 없어요"}</strong>
           <p>홈페이지를 공개하면 손님 문의가 여기로 모여요. 들어오면 알림 받을 번호로 문자도 보내 드려요.</p>
+          {items.length === 0 && recentPlanId ? <div className={styles.emptyActions}>
+            <Link className={styles.emptyLink} href={homepageHref(recentPlanId)}>홈페이지 보기</Link>
+            <Link className={styles.emptyLink} href={`${homepageHref(recentPlanId)}#hk-leads`}>알림 번호 설정</Link>
+          </div> : null}
           {items.length === 0 ? <button type="button" className={styles.emptyRefresh} onClick={() => refresh(true)}><RefreshCw size={14} aria-hidden /> 새로 확인</button> : null}
         </div> : <ul className={styles.rows}>
           {shown.map(item => <li key={item.lead.id}>
@@ -74,11 +85,11 @@ export default function InquiriesPage() {
               <i aria-hidden>{item.lead.name.slice(0, 1)}</i>
               <span className={styles.rowMain}>
                 <span className={styles.rowTop}><strong>{item.lead.name}</strong><small>{shortTime(item.lead.createdAt)}</small></span>
-                <span className={styles.rowBiz}>{item.businessName}</span>
+                {/* 처리한 문의는 '전체'에서도 알아보게 — 예전엔 점이 없을 뿐이라 처리했는지 알 수 없었다(여정 점검 2026-10-22).
+                    표시는 둘째 줄 오른쪽에 — 줄 끝에 두면 '처리 완료' 글자 폭만큼 위 시각이 안쪽으로 밀려 줄마다 어긋났다(감사 2026-10-23) */}
+                <span className={styles.rowMeta}><span className={styles.rowBiz}>{item.businessName}</span>{item.lead.handledAt === null ? <b className={styles.dot} aria-label="답할 문의" /> : <em className={styles.handledBadge}>처리 완료</em>}</span>
                 <span className={styles.rowText}>{item.lead.message || "내용 없이 연락처만 남겼어요"}</span>
               </span>
-              {/* 처리한 문의는 '전체'에서도 알아보게 — 예전엔 점이 없을 뿐이라 처리했는지 알 수 없었다(여정 점검 2026-10-22) */}
-              {item.lead.handledAt === null ? <b className={styles.dot} aria-label="답할 문의" /> : <em className={styles.handledBadge}>처리 완료</em>}
             </button>
           </li>)}
         </ul>}

@@ -10,6 +10,8 @@ import styles from "./not-found.module.css";
 export default function AppError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
     <main className={styles.page}>
+      {/* 404 화면과 같이 위에 로고(누르면 처음 화면) — 카드만 떠 있으면 어느 사이트인지 알기 어려웠다 */}
+      <Link href="/" className={styles.brand} aria-label="오늘창업 처음 화면"><img src="/today-startup-logo-2026-sm.webp" width="384" height="96" alt="오늘창업" /></Link>
       <section className={styles.card} aria-labelledby="app-error-title">
         <p className={styles.code}>잠시 문제가 생겼어요</p>
         <h1 id="app-error-title">화면을 불러오지 못했어요</h1>

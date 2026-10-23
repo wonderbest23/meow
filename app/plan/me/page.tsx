@@ -37,6 +37,9 @@ const STATUS_LABEL: Record<string, string> = {
 
 const BAD_STATUS = new Set(["canceled", "partial_canceled", "aborted", "expired", "failed"]);
 
+/** 이메일 없는 계정이 탈퇴할 때 적는 확인 문구 — 서버(app/api/auth/delete)와 같은 값 */
+const NO_EMAIL_CONFIRM = "탈퇴";
+
 type RefundInfo = { orderId: string; status: "received" | "processing" | "done" | "rejected"; adminNote?: string };
 
 const REFUND_LABEL: Record<RefundInfo["status"], string> = {
@@ -161,8 +164,9 @@ export default function PlanMePage() {
   async function deleteAccount() {
     if (deleteBusy) return;
     /* 이메일이 다르면 마지막 확인창을 띄우지 않고 바로 알린다 — 예전엔 확인창까지 간 뒤 서버에서 거절됐다 */
-    if (!account?.email || deleteEmail.trim().toLowerCase() !== account.email.toLowerCase()) {
-      setDeleteMessage("로그인한 이메일과 달라요. 위에 보이는 이메일을 그대로 적어 주세요.");
+    if (!account) return;
+    if (account.email ? deleteEmail.trim().toLowerCase() !== account.email.toLowerCase() : deleteEmail.trim() !== NO_EMAIL_CONFIRM) {
+      setDeleteMessage(account.email ? "로그인한 이메일과 달라요. 위에 보이는 이메일을 그대로 적어 주세요." : `확인 칸에 '${NO_EMAIL_CONFIRM}'를 그대로 적어 주세요.`);
       return;
     }
     if (!await askConfirm({ title: "정말 탈퇴할까요?", message: "작성한 사업과 문서, 공개한 홈페이지가 모두 지워지고 되돌릴 수 없어요.", confirmLabel: "탈퇴하기", danger: true })) return;
@@ -172,7 +176,7 @@ export default function PlanMePage() {
       const response = await fetch("/api/auth/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: deleteEmail.trim() }),
+        body: JSON.stringify(account.email ? { email: deleteEmail.trim() } : { confirm: deleteEmail.trim() }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message ?? "탈퇴하지 못했어요. 잠시 후 다시 시도해 주세요.");
@@ -373,24 +377,29 @@ export default function PlanMePage() {
           </>
         ) : (
           <div className={styles.deleteForm}>
-            <p>
-              되돌릴 수 없어요. 계속하려면 로그인한 이메일 <b>{account.email}</b> 을 그대로 적어 주세요.
+            {/* 이메일 없는 계정(카카오 등)은 다시 적을 이메일이 없어 탈퇴할 수 없었다 — '탈퇴'를 적게 한다(감사 2026-10-23) */}
+            <p id="delete-guide">
+              {account.email
+                ? <>되돌릴 수 없어요. 계속하려면 로그인한 이메일 <b>{account.email}</b> 을 그대로 적어 주세요.</>
+                : <>되돌릴 수 없어요. 계속하려면 아래 칸에 <b>{NO_EMAIL_CONFIRM}</b> 를 그대로 적어 주세요.</>}
             </p>
             <input
-              aria-label="탈퇴 확인용 이메일"
-              type="email"
+              aria-label={account.email ? "탈퇴 확인용 이메일" : "탈퇴 확인 문구"}
+              type={account.email ? "email" : "text"}
               autoFocus
               value={deleteEmail}
               onChange={(event) => { setDeleteEmail(event.target.value); setDeleteMessage(""); }}
-              placeholder="이메일 입력"
+              placeholder={account.email ? "이메일 입력" : NO_EMAIL_CONFIRM}
               autoComplete="off"
+              aria-invalid={deleteMessage ? true : undefined}
+              aria-describedby={deleteMessage ? "delete-guide delete-error" : "delete-guide"}
             />
-            {deleteMessage && <p className={styles.deleteError} role="alert">{deleteMessage}</p>}
+            {deleteMessage && <p id="delete-error" className={styles.deleteError} role="alert">{deleteMessage}</p>}
             <div>
               <button
                 type="button"
                 className={styles.dangerBtn}
-                disabled={deleteBusy || deleteEmail.trim().length < 5}
+                disabled={deleteBusy || deleteEmail.trim().length < (account.email ? 5 : NO_EMAIL_CONFIRM.length)}
                 onClick={() => void deleteAccount()}
               >
                 {deleteBusy ? "처리 중…" : "탈퇴하기"}

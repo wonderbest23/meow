@@ -98,7 +98,15 @@ export function PublicLandingClient({
       : text("email") && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text("email")) ? "이메일 주소를 다시 확인해 주세요."
       : !privacyAgreed ? "개인정보 수집·이용에 동의해 주세요."
       : "";
-    if (missing) { setError(missing); return; }
+    /* 고칠 칸으로 커서를 옮긴다 — 예전엔 맨 아래 빨간 글만 떠 휴대폰에서는 어느 칸인지 찾아 올라가야 했다(감사 r36) */
+    if (missing) {
+      setError(missing);
+      const form = event.currentTarget;
+      const field = !text("name") ? "name" : missing.includes("동의") ? null : text("email") && missing.includes("이메일 주소") ? "email" : config.collectEmail ? "email" : "phone";
+      const target = field ? form.elements.namedItem(field) : form.querySelector(".public-consent-list input, .public-consent-list button");
+      if (target instanceof HTMLElement) { target.focus({ preventScroll: true }); target.scrollIntoView({ block: "center", behavior: "smooth" }); }
+      return;
+    }
     sendingRef.current = true;
     setSubmitting(true);
     setError("");

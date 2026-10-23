@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { applyPhotoSet, PHOTO_SET_KEYS, photoSetFor } from "../lib/landing/photo-library";
+import { applyPhotoSet, businessPhotoSet, PHOTO_SET_KEYS, photoSetFor } from "../lib/landing/photo-library";
 
 // 업종 글 → 사진 한 벌. 겹치는 말은 더 구체적인 업종이 먼저(애견 미용 → 반려동물, 필라테스 스튜디오 → 운동)
 const cases: Array<[string, string | null]> = [
@@ -36,6 +36,25 @@ const mixed: Array<[string, string]> = [
   [" 새벽커피 아메리카노와 크루아상", "cafe"],
 ];
 for (const [text, key] of mixed) assert.equal(photoSetFor(text)?.key, key, text);
+
+// 업종 코드 이름(표준산업분류)도 알아본다 — 업종을 확정한 사업은 이 이름이 사진 글 맨 앞에 온다
+const ksicNames: Array<[string, string]> = [
+  ["조리 반찬류 소매업", "food"], ["김밥 및 기타 간이 음식점업", "food"], ["한식 일반 음식점업", "food"], ["치킨 전문점", "food"], ["중식 음식점업", "food"],
+  ["간이 음식 포장 판매 전문점", "food"], ["커피 전문점", "cafe"], ["기타 비알코올 음료점업", "cafe"], ["제과점업", "bakery"],
+  ["반찬·도시락 가게", "food"], ["분식·간이음식점", "food"], ["카페(휴게음식점)", "cafe"], ["빵집(제과점)", "bakery"], ["음식점(일반음식점)", "food"],
+];
+for (const [text, key] of ksicNames) assert.equal(photoSetFor(text)?.key, key, text);
+// 그 사업을 가리키는 글이 먼저, 넓은 업종 이름은 못 알아볼 때만 — 넓은 '카페 · 음식점'의 '카페'는 보지 않는다(망원 골목반찬이 카페 사진을 받던 문제)
+assert.equal(businessPhotoSet("망원 골목반찬 매일 무치는 나물", "카페 · 음식점")?.key, "food");
+assert.equal(businessPhotoSet("망원 김밥 참치김밥과 라면", "카페 · 음식점")?.key, "food");
+assert.equal(businessPhotoSet("새벽 베이커리 소금빵", "카페 · 음식점")?.key, "bakery");
+assert.equal(businessPhotoSet("망원 한잔 핸드드립 커피", "카페 · 음식점")?.key, "cafe");
+assert.equal(businessPhotoSet("골목 브런치 카페", "카페 · 음식점")?.key, "cafe");
+assert.equal(businessPhotoSet("망원 골목 주 2회 정기배송", "카페 · 음식점")?.key, "food", "broad label alone: food, not cafe");
+assert.equal(businessPhotoSet("플로라 마포", "꽃집")?.key, "flower", "broad text still used when the detail says nothing");
+assert.equal(businessPhotoSet("알 수 없는 사업", "유통 · 온라인 판매"), null);
+// '문의 양식'의 '양식'은 음식 말이 아니다
+assert.equal(photoSetFor("세무 사무소 문의 양식"), photoSetFor("세무 사무소"));
 
 // 모든 한 벌: 무료 Unsplash 사진(images.unsplash.com), 한 벌 안에서 같은 사진이 두 번 나오지 않는다
 assert.ok(PHOTO_SET_KEYS.length >= 15);

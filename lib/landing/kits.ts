@@ -59,6 +59,7 @@ export function isLandingKit(value: unknown): value is LandingKitId {
 
 /** 공개 페이지 푸터에 적는 출처 — CC BY 4.0 조건 */
 export const landingKitCredit = {
-  text: "디자인 Brainwave.io Landing Page UI Kit by Seju_ui_ux (CC BY 4.0)",
+  /* 손님에게 보이는 글이라 한국어로 — 저작자·이름·라이선스(CC BY 4.0) 표기는 그대로 남긴다 */
+  text: "디자인 틀: Seju_ui_ux의 ‘Brainwave.io Landing Page UI Kit’ (CC BY 4.0)",
   url: "https://www.figma.com/design/AeGTjTTByOZTjZv7Pt8Ehd",
 };

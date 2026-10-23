@@ -160,25 +160,50 @@
 /* 로그인했거나 확인 전 — 자리만 잡아 둔다 */
 .hint[data-pending] { visibility: hidden; }
 
-/* 탭 줄 */
-.tabsRow { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
-.tabs { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
-.tabItem { display: inline-flex; align-items: center; gap: 8px; }
-.tabDot { width: 6px; height: 6px; background: #6b7684; flex: 0 0 auto; }
+/*
+ * 탭 줄 — 알약 모양 묶음 탭(2026-10-23 사장님: base44 식 [괄호]·네모 점 대신 우리 모양).
+ * 옅은 회색 통(#eef1f4, 얇은 테두리) 안에 탭을 나란히 두고, 고른 탭만 흰 알약 + 옅은 그림자 + 진한 글자(#191f28).
+ * 안 고른 탭 글자 #4e5968 은 통 바탕 위에서 약 6.4:1. 고른 탭 아래 파란 막대가 4초(ADVANCE_MS)에 걸쳐 찬다.
+ */
+.tabsRow { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 6px; max-width: 100%; }
+.tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  padding: 4px;
+  border: 1px solid #e5e8eb;
+  border-radius: 999px;
+  background: #eef1f4;
+  white-space: nowrap;
+}
 .tab {
+  position: relative;
   min-height: 44px;
-  padding: 0 4px;
+  padding: 0 18px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: #4e5968;
   font: inherit;
-  font-size: 17px;
-  font-weight: 400;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
+  transition: background-color 160ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1), color 160ms ease;
 }
-.tab[aria-selected="true"] { color: #191f28; font-weight: 700; }
-/* 괄호는 고른 탭에만 보이지만 자리는 늘 잡는다 */
-.tab[aria-selected="false"] .bracket { visibility: hidden; }
+/*
+ * 전역 단추 규칙(globals.css 'button:not(.brand)…' — 모서리·굵기·그림자를 !important 로 고정)이 알약 모양을 덮어서
+ * 이 화면 안에서만 더 구체적인 선택자 + !important 로 되돌린다.
+ */
+.hero .tabs .tab.tab { border-radius: 999px !important; font-weight: 500 !important; }
+.tab:hover { color: #191f28; }
+.hero .tabs .tab.tab[aria-selected="true"] {
+  background: #fff;
+  color: #191f28;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 2px rgba(25, 31, 40, .08), 0 2px 8px rgba(25, 31, 40, .06) !important;
+}
 /* 굵은 글자 폭을 미리 잡아 두는 보이지 않는 사본 — 낭독기에는 읽히지 않게 대체 글을 비운다 */
 .tabText { display: inline-flex; flex-direction: column; align-items: center; }
 .tabText::after {
@@ -191,44 +216,100 @@
   pointer-events: none;
   user-select: none;
 }
+/* 다음 탭까지 남은 시간 — 고른 알약 아래쪽 안에 얇게. 자리를 차지하지 않아(absolute) 나타나고 사라져도 줄이 밀리지 않는다 */
+.progress {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 5px;
+  height: 2px;
+  border-radius: 2px;
+  background: #1b64da;
+  transform: scaleX(0);
+  transform-origin: left center;
+  opacity: .85;
+  animation: tab-progress linear forwards;
+  pointer-events: none;
+}
+@keyframes tab-progress { to { transform: scaleX(1); } }
 .play {
   width: 44px;
   height: 44px;
   flex: 0 0 auto;
-  border: 0;
-  background: transparent;
+  border: 1px solid #e5e8eb;
+  border-radius: 50%;
+  background: #fff;
   color: #4e5968;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: color 160ms ease, border-color 160ms ease;
 }
+.play:hover { color: #191f28; border-color: #d1d6db; }
+.hero .tabsRow .play.play { border-radius: 50% !important; }
 
-/* 진열 띠 — 네 장(정사각·세로·세로·정사각), 휴대폰에서는 앞 세 장만 */
-.strip { width: 100%; margin-top: 4px; display: flex; justify-content: center; align-items: flex-end; gap: 14px; }
-.cardImage {
+/*
+ * 진열 띠 — 한 번에 한 화면을 크게(2026-10-23 사장님: 작은 카드 여러 장은 휴대폰에서 글자가 안 읽힌다).
+ * 컴퓨터: 브라우저 틀 한 장(그림 16:10) + 오른쪽 아래에 걸친 휴대폰 틀 한 장(그림 13:20).
+ * 휴대폰 너비(640px 이하): 브라우저 틀은 숨기고 휴대폰 화면 한 장을 거의 꽉 찬 너비로 — 390px 화면 그림을 그 크기 그대로 보여 주므로 글자가 읽힌다.
+ * 자리는 aspect-ratio 로 미리 잡고, 설명은 두 줄 높이를 늘 잡아 탭이 넘어가도 아래가 밀리지 않는다.
+ */
+.showcase { width: 100%; max-width: 980px; margin-top: 4px; display: flex; flex-direction: column; align-items: center; }
+.stage { position: relative; width: 100%; padding: 0 168px 28px 0; }
+.browser, .phone {
   margin: 0;
-  flex: 0 0 auto;
-  padding: 5px;
-  border: 1px solid #191f28;
-  background: #fff;
   transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1), transform 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.cardImage[data-phase="gone"] { opacity: 0; transform: scale(.96); }
-.cardImage[data-phase="enter"] { opacity: 1; transform: scale(1.02); }
-.cardImage img { display: block; object-fit: cover; object-position: top; background: #f2f4f6; }
-.sq img { width: 220px; height: 220px; }
-.tall img { width: 170px; height: 240px; }
+.browser[data-phase="gone"], .phone[data-phase="gone"] { opacity: 0; transform: scale(.98); }
+.browser[data-phase="enter"], .phone[data-phase="enter"] { opacity: 1; transform: scale(1.01); }
+.browser {
+  overflow: hidden;
+  border: 1px solid #d1d6db;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 14px 36px rgba(25, 31, 40, .08);
+}
+.browserBar { display: flex; align-items: center; gap: 6px; height: 30px; padding: 0 14px; border-bottom: 1px solid #e5e8eb; background: #f2f4f6; }
+.browserBar i { width: 10px; height: 10px; border-radius: 50%; background: #d1d6db; }
+.browser img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; object-fit: cover; object-position: top; background: #f2f4f6; }
+.phone {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 236px;
+  padding: 8px;
+  border-radius: 34px;
+  background: #191f28;
+  box-shadow: 0 18px 44px rgba(25, 31, 40, .24);
+}
+.phone img { display: block; width: 100%; height: auto; aspect-ratio: 13 / 20; border-radius: 26px; object-fit: cover; object-position: top; background: #fff; }
+.caption {
+  margin: 18px 0 0;
+  max-width: 640px;
+  /* 두 줄 자리를 늘 잡는다 — 설명 길이가 달라도 아래가 밀리지 않게 */
+  min-height: 3.2em;
+  color: #333d4b;
+  font-size: 17px;
+  line-height: 1.6;
+  word-break: keep-all;
+  text-wrap: balance;
+  transition: opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.caption[data-phase="gone"] { opacity: 0; }
+.note { margin: 2px 0 0; color: #6b7684; font-size: 13px; line-height: 1.5; word-break: keep-all; }
 
 @media (prefers-reduced-motion: reduce) {
-  .card, .cardImage, .send { transition: none; }
+  .card, .browser, .phone, .caption, .send, .tab, .play { transition: none; }
   .caret { animation: none; }
+  /* 움직임 줄이기 — 띠도 저절로 넘기지 않으니 차오르는 막대도 그리지 않는다 */
+  .progress { display: none; }
 }
 
 @media (max-width: 900px) {
-  .strip { gap: 10px; }
-  .sq img { width: 160px; height: 160px; }
-  .tall img { width: 124px; height: 175px; }
+  .stage { padding: 0 120px 24px 0; }
+  .phone { width: 176px; padding: 6px; border-radius: 26px; }
+  .phone img { border-radius: 20px; }
 }
 
 @media (max-width: 640px) {
@@ -236,19 +317,36 @@
   .subtitle { font-size: 17px; }
   .card { padding: 16px 12px 12px 16px; gap: 18px; }
   .textarea, .typing { font-size: 17px; }
-  .tabsRow { margin-top: 14px; gap: 2px; }
-  .tabs { gap: 4px; }
-  .tabItem { gap: 4px; }
-  /* 괄호 자리를 늘 잡는 만큼(점검 2026-10-23) 탭 안쪽 여백과 괄호 바깥을 줄여 375px 에서도 한 줄에 들어가게 */
-  .tab { font-size: 15px; padding: 0 1px; }
-  .bracket { display: inline-block; margin: 0 -1.5px; }
-  .strip { gap: 8px; }
-  .desktopOnly { display: none; }
-  .sq img { width: 110px; height: 110px; }
-  .tall img { width: 84px; height: 118px; }
+  .tabsRow { margin-top: 14px; gap: 4px; }
+  .tab { font-size: 15px; padding: 0 12px; }
+  .progress { left: 10px; right: 10px; }
+  /* 휴대폰 화면 한 장만 크게 — 얇은 테두리 카드로(검은 휴대폰 틀은 화면이 작아 보여서 쓰지 않는다) */
+  .stage { padding: 0; }
+  .browser { display: none; }
+  .phone {
+    position: static;
+    width: 100%;
+    max-width: 420px;
+    margin: 0 auto;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid #d1d6db;
+    border-radius: 16px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .04), 0 10px 28px rgba(25, 31, 40, .08);
+  }
+  .phone img { border-radius: 0; }
+  .caption { margin-top: 14px; font-size: 16px; }
 }
 
-@media (max-width: 360px) {
-  .tab { font-size: 14px; }
-  .tabDot { width: 4px; height: 4px; }
+/* 400px 이하 — 탭 넷과 멈춤 단추가 360px 에서도 한 줄에 들어가게 글자와 안쪽 여백을 줄인다 */
+@media (max-width: 400px) {
+  .tabsRow { gap: 4px; }
+  .tabs { padding: 3px; gap: 0; }
+  .tab { font-size: 14px; padding: 0 9px; }
+  .progress { left: 8px; right: 8px; bottom: 4px; }
+}
+@media (max-width: 340px) {
+  .tab { padding: 0 6px; }
+  .progress { left: 6px; right: 6px; }
 }

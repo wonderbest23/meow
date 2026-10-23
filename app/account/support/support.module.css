@@ -39,7 +39,14 @@
 .historyHeading { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:14px; }
 .historyHeading h2 { font-size:18px; margin:0; }
 .iconButton { display:grid; place-items:center; flex-shrink:0; width:44px; height:44px; border:1px solid #e5e8eb; border-radius:8px; color:#4e5968; background:#fff; }
-.inquiry,.reply { border:0; border-bottom:1px solid #e5e8eb; border-radius:0; background:transparent; margin:0; padding:20px 0; }
+.inquiry,.reply { border:0; border-radius:0; background:transparent; margin:0; padding:20px 0; }
+/* 문의 하나와 그 답변을 한 묶음으로 — 구분선은 묶음 사이에만 */
+.thread { border-bottom:1px solid #e5e8eb; padding-bottom:4px; }
+.thread > .reply { margin:0 0 16px; padding:16px 0 16px 16px; }
+.itemHeading small { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.statusWaiting,.statusDone { display:inline-flex; align-items:center; min-height:22px; padding:0 8px; border-radius:4px; font-size:12px; font-weight:600; }
+.statusWaiting { background:#fff4e5; color:#8a4b00; }
+.statusDone { background:#e6f6ef; color:#05704f; }
 .inquiry summary { display:flex; align-items:center; gap:16px; list-style:none; }
 .inquiry summary::-webkit-details-marker { display:none; }
 .inquiry summary > svg { flex-shrink:0; color:#8b95a1; }
@@ -48,7 +55,7 @@
 .itemHeading small { font-size:12px; color:#6b7684; }
 .itemHeading strong { font-size:16px; line-height:1.6; color:#191f28; }
 .history time { color:#6b7684; font-size:12px; line-height:1.6; }
-.history p { white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; margin:18px 0 0; font-size:15px; color:#333d4b; line-height:1.8; }
+.history p { white-space:pre-wrap; word-break:keep-all; overflow-wrap:anywhere; margin:18px 0 0; font-size:15px; color:#333d4b; line-height:1.8; }
 .reply { border-left:3px solid #b9e2d2; padding-left:16px; }
 .reply > div { display:grid; gap:8px; }
 .reply strong { font-size:15px; color:#087f5b; }

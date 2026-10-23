@@ -944,11 +944,26 @@ function IntakeWorkspace({ onPrepared, onDesignComplete, studioSide = null }: Bu
   const designRunning = nextStep === "design" && aiBusy && plan?.intake.job?.kind === "design";
   // 코치 채팅: 마지막 답을 보낸 순간(정리 작업이 서버에 접수되기 전)부터 진행 화면을 보인다 — 자동 정리가 곧 시작되는 경우만
   const designStarting = coach && nextStep === "design" && !designFailed && !aiBusy && !loginGate && status !== "failed" && status !== "conflict";
+  /*
+   * 작업실: 정리 진행 카드(DesignProgress)가 보이기 시작하고 사라지는 순간 머리줄에 바로 알린다 — 머리줄은 질문 수를 15초마다 묻기만 해서
+   * 카드는 '정리하고 있어요'인데 부제는 '대화 중 · 마무리', 칩은 '대화 ✓ · 계획서(지금)'로 최대 15초 어긋났다. 같은 값은 작업실이 거른다.
+   */
+  const designActive = embedded && !!plan && (designRunning || designStarting);
+  useEffect(() => { studioNav?.setDesignRunning?.(designActive); }, [studioNav, designActive]);
+  const studioNavRef = useRef(studioNav);
+  useEffect(() => { studioNavRef.current = studioNav; }, [studioNav]);
+  useEffect(() => () => studioNavRef.current?.setDesignRunning?.(false), []);
   // Coach chat on PC: chat only while answering; the summary slides open on request or once there is a result to read.
   const resultReady = nextStep === "prepare" || nextStep === "open";
   // Once the plan document exists (and is not being written), the chat is a record. ?edit=chat reopens it for edit requests only.
   // 작업실에서 계획서 한 장 고치기를 예전 채팅 수정으로 보냈으면(chatEditLocal) 같은 화면을 연다
-  const chatEditMode = coach && (searchParams.get("edit") === "chat" || chatEditLocal);
+  /*
+   * 서버에 아직 끝나지 않은 채팅 수정(정리 중이거나 '이렇게 바꿀게요'를 고르기 전)이 있으면 새로고침한 뒤에도 같은 화면을 연다 —
+   * chatEditLocal 은 새로고침하면 사라져, 대화에는 '아래에서 확인해 주세요'만 남고 바꾸기·취소 카드가 없었다(실제 AI 점검 2026-10-23).
+   */
+  const editJob = plan?.intake.job?.kind === "edit" ? plan.intake.job : null;
+  const editJobOpen = !!editJob && (["queued", "running"].includes(editJob.status) || editJob.status === "complete" && !!editJob.proposal?.length && !editJob.proposalStatus);
+  const chatEditMode = coach && (searchParams.get("edit") === "chat" || chatEditLocal || editJobOpen);
   const locked = coach && !!plan?.hasDocuments && !generating && !chatEditMode && !draft.editingId;
   // Once the plan exists, facts change only through the document's edit choices, not the summary pencils.
   const documentFixed = coach && !!plan?.hasDocuments;

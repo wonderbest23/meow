@@ -5,7 +5,7 @@ import { landingDraftSchema, type LandingDraft } from "../lib/landing/domain";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { COACH_KEY, COACH_VERSION, type CoachState } from "../lib/plan-builder/coach";
 import { photoSetFor } from "../lib/landing/photo-library";
-import { homepageMissingInfo, looksDescriptiveName } from "../lib/landing/publish-check";
+import { DESCRIPTIVE_NAME_ITEM, homepageMissingInfo, looksDescriptiveName } from "../lib/landing/publish-check";
 
 /*
  * 실제 AI 점검(2026-10-22) 빵집 사례 — 디자인을 바꾸면 AI 글이 사라지고, 가격 4,500원이 메뉴에 안 나오고,
@@ -201,7 +201,7 @@ assert.ok(!homepageMissingInfo({ ...filled, openHours: "매일 07:00–11:00" })
 assert.ok(!homepageMissingInfo(toShop).includes("영업시간"), "designs without an hours section do not ask");
 assert.equal(looksDescriptiveName("아파트 상가 아침 빵집"), true);
 assert.equal(looksDescriptiveName("소금빵집 하루"), false);
-assert.ok(homepageMissingInfo(filled, { nameCandidates: true }).includes("가게 이름"));
-assert.ok(!homepageMissingInfo(filled).includes("가게 이름"), "without name candidates the name is not flagged");
+assert.ok(homepageMissingInfo(filled, { nameCandidates: true }).includes(DESCRIPTIVE_NAME_ITEM));
+assert.ok(!homepageMissingInfo(filled).includes(DESCRIPTIVE_NAME_ITEM), "without name candidates the name is not flagged");
 
 console.log("homepage-design-carry: AI copy carried across designs and back, known price on menu, walk-in CTA, bakery photos, pre-publish checks");

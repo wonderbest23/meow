@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireGuestIdentity } from "../../../../lib/api-auth";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
-import { OperatingError, operatingCommandSchema, reportMarkdown } from "../../../../lib/plan-builder/operating-records";
+import { OperatingError, operatingCommandSchema, periodIssue, reportMarkdown } from "../../../../lib/plan-builder/operating-records";
 import { loadOperatingRecords, saveOperatingRecords } from "../../../../lib/plan-builder/operating-records-service";
 import { analysisRuntime } from "../../../../lib/plan-builder/operating-analysis-service";
 
@@ -32,7 +32,8 @@ export async function POST(request: Request) {
   const limited = await enforceRateLimit("operating-records", request, { limit: 60, windowMs: 60000 });
   if (limited) return limited;
   const parsed = z.object({ planId: z.string().min(1).max(60), command: operatingCommandSchema }).strict().safeParse(await request.json().catch(() => null));
-  if (!parsed.success) return json({ message: parsed.error.issues[0]?.message ?? "입력 내용을 확인해 주세요." }, 400);
+  /* zod 원문(영어)은 내보내지 않는다 — 한국어 안내와 고칠 칸 이름(field)만 */
+  if (!parsed.success) { const { message, field } = periodIssue(parsed.error); return json({ message, field }, 400); }
   try {
     const identity = await requireGuestIdentity();
     return json(await saveOperatingRecords(identity.hash, parsed.data.planId, parsed.data.command));

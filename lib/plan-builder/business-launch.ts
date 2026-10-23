@@ -59,8 +59,16 @@ export function businessProfile(plan: Pick<Plan, "answers">): { ksicEntry: Retur
  * 2026-10-22: 캔들 스마트스토어 표지에 '업종 기업 서비스'가 찍혔다(잘못 고른 넓은 업종).
  */
 export function documentIndustryLabel(plan: Pick<Plan, "answers">): string {
+  return specificIndustryLabel(plan) || (readCoach(plan.answers)?.business.industry ?? "");
+}
+
+/**
+ * 이 사업 하나를 가리키는 업종 이름 — 확정한 표준산업분류 이름, 없으면 사업 설명으로 찾은 업종 가이드 이름. 못 찾으면 빈 글.
+ * 넓은 업종 이름(업종 고르기의 큰 분류, 예: '카페 · 음식점')은 넣지 않는다 — 반찬가게·김밥집도 같은 칸을 고른다.
+ */
+export function specificIndustryLabel(plan: Pick<Plan, "answers">): string {
   const { ksicEntry, playbook } = businessProfile(plan);
-  return ksicEntry?.name ?? playbook?.name ?? readCoach(plan.answers)?.business.industry ?? "";
+  return ksicEntry?.name ?? playbook?.name ?? "";
 }
 
 /** 스마트스토어·쇼핑몰처럼 판매 플랫폼에서 주문받는다는 말 */

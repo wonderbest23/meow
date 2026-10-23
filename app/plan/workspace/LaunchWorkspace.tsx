@@ -7,7 +7,8 @@ import { readLaunch, launchSteps, launchStatus, LAUNCH_KEY, quoteAmount, quoteTo
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
 import { homepageHref, journeyLabel, journeyNext } from "../../../lib/plan-builder/journey";
-import { loadState, pushToServer, saveAnswers, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
+import { isSamplePlan, loadState, pushToServer, saveAnswers, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
+import { newChatHref } from "../../../lib/plan-builder/studio";
 import styles from "./LaunchWorkspace.module.css";
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
 import MarketingKitPanel from "./MarketingKit";
@@ -50,6 +51,11 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   const [message, setMessage] = useState("");
   const [syncFailed, setSyncFailed] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
+  /*
+   * 예시 사업 — 이 기기에 없는 사업이라 저장(saveAnswers)이 실패해 '기록하지 못했어요. 사업을 다시 열어 주세요.'가 떴다(감사 r36).
+   * 저장하지 않고 화면에서만 넘겨 보게 하고, 위에 '예시라 저장되지 않아요'와 내 사업 시작하기 링크를 둔다.
+   */
+  const sample = isSamplePlan(plan.id);
   const steps = launchSteps(plan, state);
   const remaining = steps.find(s => ["pending", "review"].includes(launchStatus(state, s)));
   const current = steps.find(s => s.id === selected) ?? remaining;
@@ -67,6 +73,7 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
    */
   const SYNC_PENDING = "이 기기에 저장했어요. 서버 저장은 연결을 확인한 뒤 아래 '서버 저장 다시 시도'를 눌러 주세요.";
   async function persist(next: LaunchState) {
+    if (sample) { setState(next); setMessage(""); return { saved: true, synced: true }; }
     setBusy(true); setMessage("");
     const ok = saveAnswers(LAUNCH_KEY, next as unknown as Record<string, unknown>, plan.id);
     if (!ok) { setMessage("기록하지 못했어요. 사업을 다시 열어 주세요."); setBusy(false); return { saved: false, synced: false }; }
@@ -129,13 +136,15 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   useStudioHeaderActions(headerNode);
 
   return <div className={styles.launch}>
+    {sample && <p className={styles.notice} role="note">예시라 저장되지 않아요. 단계를 넘겨 보며 어떻게 준비하는지 살펴보세요. <a className={styles.textLink} href={newChatHref()}>대화로 내 사업 시작하기</a></p>}
     {config === "confirm" ? <div className={styles.setup}>
       {/* 작업실 안에서는 탭 이름(개업 준비)과 같아 숨긴다(CSS) */}
       <span className={`${styles.eyebrow} ${styles.tabEyebrow}`}>{journeyLabel("launch", readCoach(plan.answers)?.stage === "operating")}</span>
-      <h2 ref={heading} tabIndex={-1}>대화에서 들은 내용으로 준비 과정을 맞췄어요</h2>
-      <dl className={styles.confirmList}>{SETUP_KEYS.filter(key => key === "purpose" || state.purpose !== "ideas").map(key => <div key={key}><dt>{SETUP_SHORT[key]}</dt><dd>{setupLabel(key, state[key])}</dd></div>)}</dl>
-      <p className={styles.confirmNote}>맞으면 바로 시작해요. 다르면 바꿀 수 있고, 나중에 &lsquo;진행 방식 변경&rsquo;에서도 고칠 수 있어요.</p>
-      <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => { setConfig(0); top(); }}>바꾸기</button><button className={styles.primary} disabled={busy} onClick={async () => { if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{busy ? "저장 중…" : "이대로 시작하기"}</button></div>
+      {/* 예시 가게는 이미 문을 연 가게라 '새 사업을 시작할게요'가 어색했다 — 예시에는 둘러보기 문구로 */}
+      <h2 ref={heading} tabIndex={-1}>{sample ? "예시 사업의 준비 과정이에요" : "대화에서 들은 내용으로 준비 과정을 맞췄어요"}</h2>
+      <dl className={styles.confirmList}>{SETUP_KEYS.filter(key => key === "purpose" || state.purpose !== "ideas").map(key => <div key={key}><dt>{SETUP_SHORT[key]}</dt><dd>{sample && key === "purpose" ? "예시로 살펴보기" : setupLabel(key, state[key])}</dd></div>)}</dl>
+      <p className={styles.confirmNote}>{sample ? "내 사업에서는 대화에서 들은 내용으로 이 과정을 맞춰 드려요." : <>맞으면 바로 시작해요. 다르면 바꿀 수 있고, 나중에 &lsquo;진행 방식 변경&rsquo;에서도 고칠 수 있어요.</>}</p>
+      <div className={styles.stepActions}><button className={styles.secondary} disabled={busy} onClick={() => { setConfig(0); top(); }}>바꾸기</button><button className={styles.primary} disabled={busy} onClick={async () => { if ((await persist({ ...state, configured: true })).saved) { setConfig(null); setSelected(null); top(); } }}>{busy ? "저장 중…" : sample ? "준비 과정 둘러보기" : "이대로 시작하기"}</button></div>
     </div> : config !== null ? <div className={styles.setup}>
       <span className={styles.eyebrow}>시작 방법 {config + 1} / 3</span>
       <progress value={config + 1} max={3} aria-label="시작 방법 선택" />

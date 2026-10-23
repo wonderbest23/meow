@@ -21,6 +21,7 @@ import frame from "./chat/page.module.css";
 import styles from "./BusinessHub.module.css";
 import mine from "./MyBusinessList.module.css";
 import { askConfirm } from "../../components/confirm-dialog";
+import { useHomepageStatus } from "./use-homepage";
 
 /*
  * 내 사업 목록 하나. 예전엔 '사업 기획'(/plan/planning, 대화로 만든 사업만)과 '내 사업'(/plan, 전체)이
@@ -91,7 +92,7 @@ export default function PlanList() {
                 <strong className={mine.title}>{p.title}</strong>
                 {/* 소개가 사업 이름과 같으면(첫 답을 그대로 이름으로 쓴 사업) 같은 줄을 두 번 보이지 않는다 */}
                 {introduction && introduction.trim() !== p.title.trim() && <span className={mine.desc}>{introduction}</span>}
-                <span className={mine.meta}><span className={mine.stage}>{status.status}</span><time dateTime={p.updatedAt}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</time></span>
+                <span className={mine.meta}><span className={mine.stage}>{status.status}</span><HomepageStage planId={p.id} /><time dateTime={p.updatedAt}>{new Date(p.updatedAt).toLocaleDateString("ko-KR")} 수정</time></span>
               </Link>}
               {editing!==p.id && <details className={`${styles.rowMenu} ${mine.menu}`} onClick={event => { if ((event.target as Element).closest("div button")) (event.currentTarget as HTMLDetailsElement).open = false; }} onKeyDown={event => {
                 /* Esc로 닫고 ⋯ 단추로 초점을 돌려준다(접근성 점검 2026-10-22) */
@@ -106,4 +107,14 @@ export default function PlanList() {
         {!!samples.length && <details className={styles.samples}><summary>완성 예시 보기</summary><p className={styles.muted}>예시 자료예요. 내 사업과는 별도로 볼 수 있어요.</p>{samples.map(p=><button className={styles.sampleRow} key={p.id} onClick={()=>sample(p.id)}><span>{p.title.replace(/^샘플 · /,"")}</span><ChevronRight size={18}/></button>)}</details>}
     </div></div>}
   </BusinessAppChrome></main>;
+}
+
+/*
+ * 카드의 홈페이지 상태 — 문서 상태('문서 완성')만 보여 홈페이지를 공개했는지 목록에서 알 수 없었다(감사 r36).
+ * 공개 상태 확인은 사업마다 한 번(같은 사업은 요청을 나눠 쓴다 — use-homepage). 아직 모르거나 홈페이지가 없으면 아무것도 안 쓴다.
+ */
+function HomepageStage({ planId }: { planId: string }) {
+  const status = useHomepageStatus(isSamplePlan(planId) ? null : planId);
+  if (status !== "published" && status !== "draft") return null;
+  return <span className={mine.stage} data-homepage={status}>{status === "published" ? "홈페이지 공개 중" : "홈페이지 공개 전"}</span>;
 }

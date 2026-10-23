@@ -1,10 +1,10 @@
 import { createLandingDraft, heroImageForSector, inferLandingTemplate, type LandingDraft } from "./domain";
 import { createLandingPageData } from "./page-data";
-import { applyPhotoSet, photoSetFor } from "./photo-library";
+import { applyPhotoSet, businessPhotoSet } from "./photo-library";
 import { designPageForSector } from "./brainwave/catalog";
 import { themeForSector } from "./themes";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
-import { homepageSalesMode } from "../plan-builder/business-launch";
+import { homepageSalesMode, specificIndustryLabel } from "../plan-builder/business-launch";
 import { CONTACT_METHOD_INFO, DEFAULT_CONTACT } from "./contact-method";
 
 /*
@@ -78,6 +78,8 @@ export function resolvePlanLandingContent(source: PlanLandingSource) {
     industry: text(business?.industry),
     // 사진·색·디자인을 고를 업종 글 — 업종 칸, 상호, 사업 설명(상호가 '플로라 마포'처럼 업종 말이 없을 때), 대표 상품 순
     sectorText: [text(business?.industry), text(business?.name), text(business?.description).slice(0, 200), text(field("offer")?.value) || text(get("market/products", "main_offer"))].filter(Boolean).join(" "),
+    // 사진을 고를 글 — 넓은 업종 이름 대신 이 사업의 업종(업종 코드·가이드 이름)을 앞에 둔다('카페 · 음식점' 반찬가게가 카페 사진을 받던 문제)
+    photoText: [coach ? specificIndustryLabel({ answers: source.answers }) : "", text(business?.name), text(business?.description).slice(0, 200), text(field("offer")?.value) || text(get("market/products", "main_offer"))].filter(Boolean).join(" "),
     city: text(business?.region) || text(get("overview/summary", "city")),
     mainOffer: text(field("offer")?.value) || text(get("market/products", "main_offer")),
     firstTarget: text(field("customer")?.value) || text(get("market/segments", "first_target")),
@@ -112,10 +114,10 @@ function identityCopy(identity: { headline: string; pitch: string; names: Array<
 }
 
 export function landingDraftFromPlan(source: PlanLandingSource): LandingDraft {
-  const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry, sectorText, identityHeadline, identityPitch } = resolvePlanLandingContent(source);
+  const { businessName, mainOffer, offerDetail, firstTarget, whyFirst, problems, solutions, whyBetter, offerTypes, priceValue, city, buyerTypes, industry, sectorText, photoText, identityHeadline, identityPitch } = resolvePlanLandingContent(source);
   const contactEmail = text(source.contactEmail);
   // 업종 사진 한 벌 — 업종 이름만으로는 넓어서('유통·온라인 판매') 상호·대표 상품 글까지 함께 본다
-  const photos = photoSetFor(sectorText);
+  const photos = businessPhotoSet(photoText, industry);
 
   // 기본 골격은 기존 템플릿이 만들고, 계획서에서 확인된 값만 덮어쓴다
   const base = createLandingDraft({

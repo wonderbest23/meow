@@ -94,7 +94,7 @@ const ALL_SERVICES: readonly ServiceItem[] = [
     summary: "내 사업 소식을 기사로 만들어 인터넷 언론에 내 드려요.", who: "오픈·새 상품·새 서비스 소식을 널리 알리고 싶은 분",
     includes: ["보도자료(기사) 작성", "인터넷 언론사에 배포", "실린 기사 주소 전달"],
     steps: ["알릴 소식 확인", "기사 작성·확인", "배포 후 결과 전달"], prepare: ["알리고 싶은 소식", "대표 사진"] },
-  { id: "sns-management", group: "marketing", title: "SNS 운영 관리", short: "SNS 운영", icon: "camera", tone: "pink", duration: "월 단위",
+  { id: "sns-management", group: "marketing", title: "SNS 운영 관리", short: "SNS 운영 관리", icon: "camera", tone: "pink", duration: "월 단위",
     summary: "인스타그램 같은 SNS 게시물을 대신 만들고 올려 드려요.", who: "SNS를 할 시간이 없는 분",
     includes: ["한 달 게시물 계획", "사진·글 만들어 올리기", "월말 반응 정리"],
     steps: ["계정·분위기 확인", "게시물 만들고 올리기", "월말 보고"], prepare: ["SNS 계정", "상품·공간 사진"] },

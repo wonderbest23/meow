@@ -9,6 +9,7 @@ import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, saveAn
 import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { isCoachJobActive, readCoachJob } from "../../../lib/plan-builder/coach-job-types";
 import { journeyLabel, journeyNext } from "../../../lib/plan-builder/journey";
+import { JOURNEY_LABELS } from "../../../lib/plan-builder/journey-steps";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
 import frame from "../chat/page.module.css";
 import styles from "../BusinessHub.module.css";
@@ -219,26 +220,26 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
       {!plan || !hub ? <section className={styles.empty}><h1>{loadError ? "사업을 불러오지 못했어요" : requested ? "사업을 찾지 못했어요" : "먼저 사업을 선택해 주세요"}</h1><p>{loadError ? "연결을 확인해 주세요. 저장한 사업은 목록에서 다시 열 수 있어요." : requested ? "지웠거나 다른 계정에서 만든 사업일 수 있어요. 내 사업 목록에서 다시 골라 주세요." : "내 사업에서 관리할 사업을 선택하거나 새 대화를 시작해 주세요."}</p>{loadError && !signedOut ? <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 시도</button> : signedOut ? <Link className={styles.primary} href={`/account?next=${encodeURIComponent(currentPath)}`}>로그인하고 이어서 보기</Link> : <Link className={styles.primary} href="/plan">내 사업으로</Link>}<Link className={styles.textButton} href="/plan/chat?new=1">새 대화 시작하기</Link></section> : <>
         {loadError && <p role="status" className={styles.notice}>최신 상태를 확인하지 못했어요. 연결되면 다시 확인할게요.</p>}
         {/* 유지보수 화면에는 유지보수만 — 사업 요약·내 자료 탭과 '대화 이어가기'는 헷갈린다(소유자 지적 2026-10-07). 대화는 왼쪽 목록의 '대화'로 */}
-        {!embedded && <WorkspaceIdentity title={plan.title} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>기존 작업 열기</button>} />}
+        {!embedded && <WorkspaceIdentity title={plan.title} status={hub.status} action={view === "operations" ? undefined : hub.coach ? <Link className={styles.titleAction} href={chat}>대화 이어가기</Link> : <button type="button" className={styles.titleAction} onClick={openLegacy}>사업계획서 열기</button>} />}
         {/* 탭 줄은 유지보수에서도 그대로 둔다 — 유지보수로 오면 탭 줄이 사라지고 제목까지 바뀌어 다른 화면으로 넘어간 줄 알았다(여정 점검 2026-10-22) */}
         {/* 작업실 칸에는 탭 줄·사업명 줄이 없다(작업실 탭이 대신한다) — 칸 안에서 다른 화면을 열었으면 돌아가는 단추 하나 */}
         {!embedded && <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"} />}
         {embedded && paneView && view !== paneView && <p className={styles.tabLink}><button type="button" className={styles.textButton} onClick={() => void tab(paneView)}>← {paneView === "operations" ? "유지보수" : journeyLabel("launch", hub.coach?.stage === "operating")}로 돌아가기</button></p>}
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ title: "기본 모드로 돌아갈까요?", message: EXPERT_LEAVE, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
-        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? journeyLabel("launch", hub.coach?.stage === "operating") : "다음 할 일"}>
-          {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} />}
+        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? JOURNEY_LABELS.document : view==="operations" ? "유지보수" : view==="launch" ? journeyLabel("launch", hub.coach?.stage === "operating") : "다음 할 일"}>
+          {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} sample={isSamplePlan(plan.id)} />}
           {/* 실적 기록이 먼저, 맡길 일(마케팅) 상담 신청은 그 아래 — 예전엔 서비스 판매 카드가 기록보다 위에 있었다 */}
           {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} chatRecord={hub.coach?.stage === "operating" ? chatRecordFrom(plan.answers as Record<string, Record<string, unknown>>) : null} />}
           {view==="operations" && <NextServices key={`services-${plan.id}`} plan={plan} homepagePublished={homepage.status === "published"} hasHomepage={homepage.status === "draft" || homepage.status === "published"} />}
           {view==="summary" && expert && hub.coach && <ExpertEditor key={plan.id} plan={plan} onSaved={setPlan} onDirtyChange={setExpertDirty} />}
-          {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "기존에 작성한 사업계획서를 이어서 확인할 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
-            {hub.coach ? <><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>기존 사업계획서 이어보기</button>}
+          {view==="summary" && (!expert || !hub.coach) && <WorkspaceSummary headingRef={heading} description={design?.startingPlan.scope || hub.coach?.business.description || "만들어 둔 사업계획서를 이어서 볼 수 있어요."} stale={hub.stale} fields={hub.coach?.fields}>
+            {hub.coach ? <><Link className={styles.primary} href={chat}>{hub.coach.ready ? "대화로 수정하기" : "이어서 이야기하기"}</Link>{design && <details><summary>이렇게 제안한 이유</summary><p>{design.startingPlan.whyThis}</p><p>{design.startingPlan.connectionToVision}</p></details>}</> : <button className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</button>}
           </WorkspaceSummary>}
           {view==="documents" && <>
-            <h2 ref={heading} tabIndex={-1}>내 사업 자료</h2>
+            <h2 ref={heading} tabIndex={-1}>{JOURNEY_LABELS.document}</h2>
             {hub.documents.length ? <>
               <WorkspaceDocumentStatus businessId={plan.id} complete={hub.complete} count={hub.documents.length} total={hub.keys.length} stale={hub.stale} onOpen={openDocument} />
-            </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지 나눈 대화를 그대로 써요.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button>}</>}
+            </> : <><p>사업안을 확인한 뒤 계획서를 만들 수 있어요. 지금까지 나눈 대화를 그대로 써요.</p>{hub.coach ? <Link className={styles.primary} href={chat}>사업안 확인하고 자료 만들기</Link> : <button className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</button>}</>}
             {hub.coach && !!hub.documents.length && <Link className={styles.secondary} href={chat}>{hub.stale ? "수정 내용 반영하러 가기" : "자료를 더 다듬기"}</Link>}
             {/* 다음 단계는 계획서 화면과 같은 답 하나 — 홈페이지 만들기 → 다듬고 공개하기 → 유지보수 */}
             {hub.complete && !hub.stale && (() => {
@@ -254,7 +255,7 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
           {view==="action" && <>
             <h2 ref={heading} tabIndex={-1}>{done==="done" ? "하나를 마쳤어요" : done==="skipped" ? "이 일은 나중에 해요" : "지금은 이것 하나만"}</h2>
             <p className={styles.muted}>실행은 선택 사항이에요. 하지 않아도 사업안과 자료는 그대로 남아요.</p>
-            {action ? <><h3>{action.action}</h3>{done==="pending" ? <><p>{action.doneWhen}</p>{action.usableText && <details><summary>바로 쓸 내용 보기</summary><blockquote>{action.usableText}</blockquote></details>}<div className={styles.actions}><button className={styles.primary} disabled={saving} onClick={()=>void mark("done")}>완료했어요</button><button className={styles.secondary} disabled={saving} onClick={()=>void mark("skipped")}>지금은 건너뛰기</button></div><Link className={styles.textButton} href={businessChatHref(plan.id,`현재 할 일 ‘${action.action}’이 어려워요. 더 쉬운 행동 하나로 바꿔 주세요.`)}>더 쉬운 방법 물어보기</Link></> : <><Link className={styles.primary} href={businessChatHref(plan.id,`‘${action.action}’을 ${done==="done" ? "완료했어요" : "지금은 건너뛰고 싶어요"}. 현재 사업안에 맞게 다음 할 일 하나를 제안해 주세요.`)}>다음 할 일 정하기</Link><button className={styles.textButton} disabled={saving} onClick={()=>void mark("pending")}>이전 할 일 다시 보기</button></>}</> : hub.coach ? <><p>아직 정해진 할 일이 없어요. 사업을 조금 더 이야기한 뒤 필요한 행동 하나를 정해볼까요?</p><Link className={styles.primary} href={businessChatHref(plan.id,"현재 사업에서 가장 먼저 할 수 있는 일 하나만 정해 주세요.")}>대화로 정하기</Link></> : <><p>기존 방식으로 작성한 사업이에요. 저장된 계획서의 실행 내용을 확인할 수 있어요.</p><button className={styles.primary} onClick={openLegacy}>기존 작업 이어가기</button></>}
+            {action ? <><h3>{action.action}</h3>{done==="pending" ? <><p>{action.doneWhen}</p>{action.usableText && <details><summary>바로 쓸 내용 보기</summary><blockquote>{action.usableText}</blockquote></details>}<div className={styles.actions}><button className={styles.primary} disabled={saving} onClick={()=>void mark("done")}>완료했어요</button><button className={styles.secondary} disabled={saving} onClick={()=>void mark("skipped")}>지금은 건너뛰기</button></div><Link className={styles.textButton} href={businessChatHref(plan.id,`현재 할 일 ‘${action.action}’이 어려워요. 더 쉬운 행동 하나로 바꿔 주세요.`)}>더 쉬운 방법 물어보기</Link></> : <><Link className={styles.primary} href={businessChatHref(plan.id,`‘${action.action}’을 ${done==="done" ? "완료했어요" : "지금은 건너뛰고 싶어요"}. 현재 사업안에 맞게 다음 할 일 하나를 제안해 주세요.`)}>다음 할 일 정하기</Link><button className={styles.textButton} disabled={saving} onClick={()=>void mark("pending")}>이전 할 일 다시 보기</button></>}</> : hub.coach ? <><p>아직 정해진 할 일이 없어요. 사업을 조금 더 이야기한 뒤 필요한 행동 하나를 정해볼까요?</p><Link className={styles.primary} href={businessChatHref(plan.id,"현재 사업에서 가장 먼저 할 수 있는 일 하나만 정해 주세요.")}>대화로 정하기</Link></> : <><p>기존 방식으로 작성한 사업이에요. 저장된 계획서의 실행 내용을 확인할 수 있어요.</p><button className={styles.primary} onClick={openLegacy}>사업계획서 이어보기</button></>}
             {notice && <p role="status" className={styles.muted}>{notice}</p>}
           </>}
         </section>

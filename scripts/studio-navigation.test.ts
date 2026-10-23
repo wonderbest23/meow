@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { STUDIO_TABS, STUDIO_TAB_LABELS, isEntryMode, isStudioTab, newChatEntryHref, newChatHref, stepForStudioTab, studioChatComplete, studioChips, studioEntryHref, studioHref, studioLockedStep, studioNewHref, studioRedirectHref, studioStatusText, studioSteps, studioSwitchUrl, studioTabForStep, studioTarget } from "../lib/plan-builder/studio";
 import { businessChatHref, documentHref, workspaceHref } from "../lib/plan-builder/business-hub";
 import { careHref, homepageHref, launchHref } from "../lib/plan-builder/journey";
-import { JOURNEY_ORDER } from "../lib/plan-builder/journey-steps";
+import { JOURNEY_ORDER, journeyPrepLabel } from "../lib/plan-builder/journey-steps";
 import { readLandingIdea } from "../lib/plan-builder/landing-idea";
 
 const id = "business / 1";
@@ -188,6 +188,8 @@ assert.ok(isEntryMode("startup") && !isEntryMode("1") && !isEntryMode(null));
 
 /* 단계 이름은 한 곳(journey-steps) — 작업실 탭 · 머리줄 칩 · 부제가 같은 이름 */
 assert.equal(STUDIO_TAB_LABELS.launch, "개업 준비");
+assert.equal(journeyPrepLabel(), "개업·운영", "휴대폰 넷째 탭은 개업 준비와 유지보수를 함께 담는다");
+assert.equal(journeyPrepLabel(true), "운영");
 assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
 
 /* 2단계: 머리줄 진행 단계 칩 · 부제 */
@@ -219,7 +221,8 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "todo", "todo", "todo") }), "사업 방향 정리됨 · 계획서 만들 차례");
   assert.equal(studioStatusText({ ...base, steps: steps("done", "active", "todo", "todo"), documents: { done: 3, total: 10 } }), "사업계획서 · 3/10장");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo") }), "홈페이지 · 공개 전");
-  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "todo", "active") }), "홈페이지 · 공개 중");
+  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "todo", "active") }), "홈페이지 공개 중 · 다음은 개업 준비", "공개 뒤에는 진행 단계 칩의 지금 단계(개업 준비)와 같게");
+  assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "done", "active") }), "홈페이지 · 공개 중", "개업 준비까지 마쳤으면 공개 상태만");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true } }), "개업 준비 3/9");
   assert.equal(studioStatusText({ homepage: "published", steps: steps("done", "done", "done", "active", "active"), launch: { done: 3, total: 9, configured: true }, operating: true }), "운영 개선 3/9");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo") }), "문서 완성", "사업 목록 카드와 같은 말");
@@ -230,7 +233,7 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true }), "수정 내용 반영 필요");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), stale: true, generation: { done: 0, total: 10, active: true, stalled: false } }), "사업계획서 만드는 중 · 0/10장", "다시 쓰는 중");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "launch" }), "개업 준비 · 시작 전", "개업 준비 칸에서 홈페이지 상태를 말하지 않는다");
-  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "개업 준비 2/9");
+  assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "active"), launch: { done: 2, total: 9, configured: true }, tab: "operations" }), "유지보수 · 실적과 개선 기록", "유지보수 칸에서 개업 준비 진행을 말하지 않는다");
   assert.equal(studioStatusText({ homepage: "draft", steps: steps("done", "done", "active", "todo"), tab: "plan" }), "문서 완성");
   assert.equal(studioStatusText({ homepage: "none", steps: steps("done", "done", "todo", "todo"), tab: "homepage" }), "홈페이지 · 만들기 전");
 
@@ -241,6 +244,13 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.equal(studioChatComplete({ design: false, documents: 2 }), true, "계획서 장이 있다");
   assert.equal(studioChatComplete({ design: false, documents: 0, running: true }), true, "쓰는 중");
   assert.equal(studioChatComplete({ design: false, documents: 0, coreComplete: true }), true, "핵심 질문을 다 답했다");
+  // 사업 방향을 정리하는 동안은 아직 대화 단계 — 칩 '대화(지금)' · 부제 '사업 방향 정리 중'이 대화 칸의 정리 카드와 같다
+  assert.equal(studioChatComplete({ design: false, documents: 0, coreComplete: true, designRunning: true }), false, "정리하는 중");
+  assert.equal(studioChatComplete({ design: true, documents: 0, coreComplete: true, designRunning: true }), true, "사업안이 오면 정리 중 표시가 늦게 꺼져도 끝남");
+  const designing = studioSteps(steps("done", "todo", "todo", "todo"), studioChatComplete({ design: false, documents: 0, coreComplete: true, designRunning: true }));
+  assert.deepEqual(states(studioChips(designing)), ["current", "upcoming", "upcoming", "upcoming"], "정리하는 중에 대화 ✓ 가 없다");
+  assert.equal(studioStatusText({ ...base, steps: designing, intake: { answered: 14, total: 14, complete: true }, design: false, designRunning: true }), "사업 방향 정리 중", "정리하는 중에 '대화 중 · 마무리'가 아니다");
+  assert.equal(studioStatusText({ ...base, steps: designing, intake: { answered: 14, total: 14, complete: true }, design: false }), "대화 중 · 마무리");
   // journeySteps 가 coach.ready 로 대화를 done 으로 봐도 작업실은 대화 active — 부제는 질문 수, 칩·휴대폰 탭 ✓ 없음
   const readyOnly = studioSteps(steps("done", "todo", "todo", "todo"), false);
   assert.deepEqual(readyOnly.map(step => step.state), ["active", "todo", "todo", "todo", "todo"]);
@@ -269,6 +279,9 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   const read = (path: string) => readFileSync(new URL(path, import.meta.url), "utf8");
   const studio = read("../app/plan/studio/Studio.tsx");
   const redirect = read("../app/plan/studio/StudioRedirect.tsx");
+  // 휴대폰 넷째 탭 이름은 journey-steps.ts 한 곳에서(예전 '준비'는 유지보수가 든 줄 몰랐다)
+  assert.match(studio, /item === "prep" \? journeyPrepLabel\(operating\)/);
+  assert.ok(!studio.includes('prep: "준비"'), "휴대폰 탭 이름 '준비'를 다시 쓰지 않는다");
   // 예전 4개 화면 감싸기는 모두 StudioRedirect 로 — 보낼 때는 본문을 그리지 않는다(홈페이지 자동 생성 · AI 비용 방지)
   for (const page of ["chat", "document", "homepage", "workspace"]) assert.match(read(`../app/plan/${page}/page.tsx`), /<StudioRedirect fallback=/, page);
   assert.match(redirect, /const target = STUDIO_REDIRECT \? studioRedirectHref\(/);
@@ -300,6 +313,13 @@ assert.equal(STUDIO_TAB_LABELS.plan, "사업계획서");
   assert.match(studio, /const workspaceOpen = !shouldResumeBusinessChat\(plan\) && \(chatComplete \|\| !readCoach\(plan\.answers\)\);/);
   assert.match(studio, /if \(!planId \|\| !ready \|\| !watchIntake \|\| !intakeV2\) return;/, "대화가 끝나기 전까지(사업 방향을 정리하는 동안도) 질문 수를 묻는다");
   assert.match(studio, /const watchIntake = !chatDone \|\| designPending;/);
+  // 사업 방향 정리 — 대화 칸이 시작 · 끝을 바로 알리고(15초 질문 수 묻기를 기다리지 않음), 칩 · 부제 · 대화 완료가 같은 값을 쓴다
+  const intakeSource = read("../app/plan/chat/BusinessIntake.tsx");
+  assert.match(intakeSource, /useEffect\(\(\) => \{ studioNav\?\.setDesignRunning\?\.\(designActive\); \}, \[studioNav, designActive\]\);/);
+  assert.match(studio, /const designRunning = !hubState\?\.coach\?\.design && \(chatDesign !== null \|\| !!intake\?\.designRunning\);/);
+  assert.match(studio, /coreComplete: intake\?\.complete, designRunning \}\);/);
+  assert.match(studio, /\n\s*designRunning,\n\s*stale: !!hubState\?\.stale,/);
+  assert.match(studio, /\n\s*setDesignRunning,\n/, "nav 에 setDesignRunning");
   // 대화 칸이 알리면(보이는 채로도) 질문 수를 바로 다시 묻고, 보이는 칸에는 점을 찍지 않는다
   assert.ok(studio.indexOf(`if (target === "chat") setIntakeTick(`) < studio.indexOf("if (visibleRef.current.includes(target)) return;"));
   // 계획서 칸 새로 읽기 — 탭 보여 주기 · 새 소식마다 그 칸의 번호를 올리고, 계획서 칸은 진행을 다시 묻고 문서를 다시 받는다

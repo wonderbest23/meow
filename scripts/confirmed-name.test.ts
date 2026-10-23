@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { sectionSystemPrompt } from "../lib/plan-builder/section-generator";
+import { buildUserPrompt, sectionReviewSource, sectionSystemPrompt } from "../lib/plan-builder/section-generator";
 import { PLAN_BLUEPRINT } from "../lib/plan-builder/blueprint";
 
 const chapter = PLAN_BLUEPRINT[0], section = chapter.sections[0];
@@ -12,4 +12,13 @@ const working = sectionSystemPrompt({ ...base, business: { name: "동네 카페 
 assert.match(working, /사업명: 동네 카페 인스타 대행\n/);
 assert.doesNotMatch(working, /확정한 이름/);
 
-console.log(JSON.stringify({ passed: 3 }));
+// 섹션 검토도 확정한 이름을 원천 자료로 받는다 — 사업 정보가 시스템 지시문에만 있어 검토가 본문의 확정 상호를
+// 디자인의 이름 후보 목록에 맞춰 '상호 미정, 제안 후보: …'로 고쳤다(실제 AI 점검 2026-10-23 망원 골목반찬)
+const coachInput = { ...base, coachContext: JSON.stringify({ design: { identity: { label: "망원 반찬가게", names: [{ name: "망원 골목반찬", why: "동네" }, { name: "오늘반찬", why: "매일" }] } } }), business: { name: "망원 골목반찬", nameConfirmed: true } };
+assert.ok(!buildUserPrompt(coachInput).includes("확정한 이름"), "the writer's user prompt carries no business block (it is in the cached system prompt)");
+const reviewSource = sectionReviewSource(coachInput);
+assert.match(reviewSource, /사업명: 망원 골목반찬 \(사용자가 확정한 이름입니다/);
+assert.ok(reviewSource.includes(buildUserPrompt(coachInput)), "the review still sees everything the writer's user prompt had");
+assert.equal(sectionReviewSource({ ...coachInput, business: undefined }), buildUserPrompt(coachInput), "no business info: same source as before");
+
+console.log(JSON.stringify({ passed: 7 }));

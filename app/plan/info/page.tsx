@@ -7,15 +7,16 @@ import { manualTransferPaymentConfigured } from "../../../lib/payments/manual-tr
 import { getPlatformLegalSettings } from "../../../lib/platform-legal/repository";
 import styles from "./PlanInfo.module.css";
 
-export const metadata: Metadata = { title: "이용 안내 | 오늘창업" };
+export const metadata: Metadata = { title: "약관·정책 | 오늘창업" };
 
 export const dynamic = "force-dynamic";
 
 /*
- * 이용 안내 — 플랜 셸 안에서 열린다.
+ * 약관·정책(예전 이름 '이용 안내') — 플랜 셸 안에서 열린다.
  * 예전에는 레일의 이 항목이 /business-info로 나가서 자체 헤더와 '홈으로'가 있는
  * 바깥 페이지가 떴고, 작업하던 흐름에서 튕겨 나가는 느낌이었다.
  * 내용은 같은 고지 문서를 쓰되 셸 안에서 탭으로 오간다.
+ * 탭 순서는 바깥 고지 화면(components/platform-legal-page)과 같게 둔다.
  */
 
 const DOCS: Array<{ id: LegalDocumentType; label: string }> = [
@@ -61,7 +62,7 @@ export default async function PlanInfoPage({
         <small className={styles.effective}>시행일 {document.effectiveDate || "입력 예정"}</small>
       </div>
 
-      <nav className={styles.tabs} aria-label="이용 안내 문서">
+      <nav className={styles.tabs} aria-label="약관·정책 문서">
         {DOCS.map((doc) => (
           <Link
             key={doc.id}

@@ -23,6 +23,9 @@ async function payload<T>(response: Response): Promise<T> {
   return data as T;
 }
 
+/* 브라우저 탭 제목 — 레이아웃 제목은 '로그인' 하나라, 회원가입·비밀번호 재설정으로 바꾸면 여기서 맞춘다 */
+const MODE_TITLES: Record<AuthMode, string> = { login: "로그인", register: "회원가입", recover: "비밀번호 재설정", reset: "새 비밀번호" };
+
 export default function AccountPage() {
   const router = useRouter();
   /* 머리말 '회원가입'은 /account?mode=register 로 온다(팝업이 없을 때) */
@@ -55,9 +58,25 @@ export default function AccountPage() {
     /* 카카오 리디렉트가 실패로 돌아온 경우 — 인증 주소를 만들지 못했거나 오류가 났을 때다 */
     if (new URL(window.location.href).searchParams.get("social_error") === "kakao") {
       window.history.replaceState({}, "", "/account");
+      setMessageError(true);
       setMessage("카카오 로그인을 마치지 못했어요. 다시 시도하거나 이메일로 로그인해 주세요.");
     }
     const hash = new URLSearchParams(window.location.hash.slice(1));
+    /*
+     * 만료됐거나 이미 쓴 인증 링크·카카오 로그인 실패 — Supabase 가 #error=…&error_code=otp_expired(또는 ?error=…)를 붙여 돌려보낸다.
+     * 예전엔 이 값을 읽지 않아 아무 안내 없는 빈 로그인 폼만 보였다(감사 2026-10-23). 주소를 지우고 왜 그런지 알려 준다.
+     */
+    const query = new URL(window.location.href).searchParams;
+    const linkError = hash.get("error_code") ?? hash.get("error") ?? query.get("error_code") ?? query.get("error");
+    if (linkError) {
+      const url = new URL(window.location.href); url.hash = "";
+      ["error", "error_code", "error_description"].forEach((key) => url.searchParams.delete(key));
+      window.history.replaceState({}, "", `${url.pathname}${url.search}`);
+      setMessageError(true);
+      setMessage(/expired|otp|invalid|flow_state/i.test(linkError)
+        ? "링크가 만료됐거나 이미 사용한 링크예요. 아래에서 다시 로그인하거나, 메일 인증이라면 확인 메일을 다시 받아 주세요."
+        : "링크로 로그인하지 못했어요. 다시 시도하거나 아래에서 직접 로그인해 주세요.");
+    }
     const accessToken = hash.get("access_token");
     const refreshToken = hash.get("refresh_token");
     const recovery = hash.get("type") === "recovery" || new URL(window.location.href).searchParams.get("mode") === "reset";
@@ -120,7 +139,8 @@ export default function AccountPage() {
               {message && <p role={messageError ? "alert" : "status"} className={messageError ? styles.error : styles.message}>{message}</p>}
             </div>
           ) : (
-            <AccountAuthForm key={mode} next={nextPath} initialMode={mode} initialMessage={message} recoveryTokens={recoveryTokens}
+            <AccountAuthForm key={mode} next={nextPath} initialMode={mode} initialMessage={message} initialMessageError={messageError} recoveryTokens={recoveryTokens}
+              onModeChange={(current) => { document.title = `${MODE_TITLES[current]} | 오늘창업`; }}
               onReset={async () => { window.history.replaceState({}, "", "/account"); setRecoveryTokens(null); await loadSession(); }} />
           )}
         </section>

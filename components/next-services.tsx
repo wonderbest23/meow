@@ -10,7 +10,8 @@ import { SERVICE_REQUEST_STATUS_LABELS, type MyServiceRequest } from "../lib/ser
 import { careHref } from "../lib/plan-builder/journey";
 import { businessStateLabel, formatBusinessNumber, mailOrderStateLabel, normalizeBusinessNumber, type BusinessCheck } from "../lib/public-data/business-check";
 import type { ServiceBadge } from "../lib/services/recommend";
-import { loadState, type Plan } from "../lib/plan-builder/plan-store";
+import { isSamplePlan, loadState, type Plan } from "../lib/plan-builder/plan-store";
+import { newChatHref } from "../lib/plan-builder/studio";
 import styles from "./next-services.module.css";
 import { Spinner } from "../app/plan/PlanLoading";
 
@@ -59,6 +60,8 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
   const [formError, setFormError] = useState("");
   const [done, setDone] = useState("");
   const [loginNext, setLoginNext] = useState("/plan");
+  /* 예시 사업 — 서버에 없는 사업이라 신청 내역·사업자 확인을 부르지 않고(부르면 '사업을 찾을 수 없어요'), 신청 대신 내 사업 만들기로 안내한다 */
+  const sample = isSamplePlan(plan.id);
 
   const baseBadges = useMemo(() => serviceBadges(serviceSignalsFromPlan(plan, homepagePublished)), [plan, homepagePublished]);
   /* 내 사업자 확인 — 국세청·공정위 조회로 이미 끝난 일은 '완료'로(그 카드는 뒤로) */
@@ -70,7 +73,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
   /* 등록·신고 확인은 창업 행정 서비스를 받을 때만 쓴다 — 마케팅만 받는 동안은 부르지 않는다 */
   const adminOffered = SERVICE_GROUPS.some((group) => group.id === "admin");
   useEffect(() => {
-    if (!adminOffered) return;
+    if (!adminOffered || sample) return;
     const controller = new AbortController();
     fetch(`/api/plan/business-check?planId=${encodeURIComponent(plan.id)}`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
@@ -81,7 +84,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
       })
       .catch(() => undefined);
     return () => controller.abort();
-  }, [plan.id, adminOffered]);
+  }, [plan.id, adminOffered, sample]);
   const badges = useMemo(() => {
     const merged: Record<string, ServiceBadge> = { ...baseBadges };
     if (check?.business?.state === "active") {
@@ -109,6 +112,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
   const [reload, setReload] = useState(0);
   useEffect(() => {
     setLoginNext(`${window.location.pathname}${window.location.search}#${NEXT_SERVICES_ANCHOR}`);
+    if (sample) { setState({ requests: [], suggestedPhone: "", login: false, error: "" }); return; }
     const controller = new AbortController();
     fetch(`/api/plan/services?planId=${encodeURIComponent(plan.id)}`, { cache: "no-store", signal: controller.signal })
       .then(async (response) => {
@@ -120,7 +124,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
       })
       .catch((error) => { if (!controller.signal.aborted) setState({ requests: [], suggestedPhone: "", login: false, error: errorText(error, "신청 내역을 불러오지 못했어요.") }); });
     return () => controller.abort();
-  }, [plan.id, reload]);
+  }, [plan.id, reload, sample]);
 
   /* 홈페이지 화면의 '다음 단계' 카드에서 왔으면 이 칸으로 내려 준다 — 유지보수 화면은 늦게 그려져 브라우저가 스스로 못 찾는다 */
   useEffect(() => {
@@ -232,6 +236,7 @@ export function NextServices({ plan, homepagePublished, hasHomepage = true }: { 
           <ol className={styles.steps}>{detail.steps.map((line, index) => <li key={line}><b>{index + 1}</b><span>{line}</span></li>)}</ol>
           <p className={styles.prepare}><strong>준비하면 빨라요</strong> {detail.prepare.join(" · ")}</p>
           {pending ? <p className={styles.requestedBox}>이미 신청했어요 · {SERVICE_REQUEST_STATUS_LABELS[pending.status]}</p>
+            : sample ? <><p className={styles.prepare} style={{ marginBottom: 12 }}>예시 사업이라 신청할 수 없어요. 내 사업을 만든 뒤 신청해 주세요.</p><Link className={styles.cta} href={newChatHref()}>대화로 내 사업 시작하기</Link></>
             : state?.login ? <Link className={styles.cta} href={`/account?next=${encodeURIComponent(loginNext)}`}>로그인하고 신청하기</Link>
             : <form className={styles.form} onSubmit={(event) => void submit(event, detail)}>
               <label><span>연락받을 휴대폰</span><input inputMode="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="010-1234-5678" /></label>

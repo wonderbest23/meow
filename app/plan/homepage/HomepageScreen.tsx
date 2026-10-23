@@ -604,11 +604,11 @@ export function HomepageScreen() {
     const title = heroTitle(draft);
     if (!title || title === opened || title.length > 30 || title === draft.businessName.trim() || askedNames.current.has(title)) return;
     askedNames.current.add(title);
-    void askConfirm({ title: "가게 이름도 바꿀까요?", message: `큰 제목을 ${withRo(`'${title}'`)} 고쳤어요. 가게 이름도 ${withRo(`'${title}'`)} 바꿀까요? 홈페이지 맨 위 이름, 개인정보 처리 주체, 손님 문의·문자 안내에 이 이름이 들어가요.`, cancelLabel: "그대로 두기", confirmLabel: "가게 이름 바꾸기" })
+    void askConfirm({ title: "사업 이름도 바꿀까요?", message: `큰 제목을 ${withRo(`'${title}'`)} 고쳤어요. 사업 이름도 ${withRo(`'${title}'`)} 바꿀까요? 홈페이지 맨 위 이름, 개인정보 처리 주체, 손님 문의·문자 안내에 이 이름이 들어가요.`, cancelLabel: "그대로 두기", confirmLabel: "사업 이름 바꾸기" })
       .then(ok => {
         if (!ok) return;
         const renamed = withBusinessName(draft, title);
-        saveDraft(renamed).then(() => setMessage(`가게 이름을 ${withRo(`'${title}'`)} 바꿨어요. 손님 화면에는 공개하면 반영돼요.`)).catch(() => { setDraft(renamed); setMessage("가게 이름을 바꿨어요. 저장을 눌러 주세요."); });
+        saveDraft(renamed).then(() => setMessage(`사업 이름을 ${withRo(`'${title}'`)} 바꿨어요. 손님 화면에는 공개하면 반영돼요.`)).catch(() => { setDraft(renamed); setMessage("사업 이름을 바꿨어요. 저장을 눌러 주세요."); });
       });
   }, [builderOpen]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -777,7 +777,7 @@ export function HomepageScreen() {
           const planId = live.current.screenPlanId;
           if (data.error?.code === "TOKENS_REQUIRED") {
             setTokenShortage(true);
-            if (planId) throw withAction(message, "토큰 충전하기", `/plan/pay?planId=${encodeURIComponent(planId)}&product=tokens`);
+            if (planId) throw withAction(message, "AI 수정 충전하기", `/plan/pay?planId=${encodeURIComponent(planId)}&product=tokens`);
           }
           if (data.error?.code === "HOMEPAGE_PAYMENT_REQUIRED" || res.status === 402 && !data.error?.code) throw withAction(message, "결제하러 가기", payLink(live.current));
           throw new Error(message);
@@ -899,22 +899,23 @@ export function HomepageScreen() {
               <strong className={styles.payTitle}>{sample ? "예시 홈페이지" : planPaid ? "홈페이지 고치기·공개" : "사업계획서 + 홈페이지"}</strong>
               <p className={styles.payNote}>
                 {sample
-                  ? "예시 홈페이지입니다. 내 사업으로 만들면 이 페이지의 글과 사진을 바꿔 쓰게 됩니다."
+                  ? "예시 홈페이지예요. 내 사업으로 만들면 이 페이지의 글과 사진을 바꿔 쓸 수 있어요."
                   : planPaid ? `사진·글·버튼을 직접 고치고 인터넷에 공개하려면 결제가 필요해요. ${price.toLocaleString("ko-KR")}원.`
                     : `홈페이지는 사업계획서와 함께 열어요. 둘 다 ${price.toLocaleString("ko-KR")}원.`}
               </p>
             </div>
             <div className={styles.payActions}>
               {sample ? (
-                <a className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기 →</a>
+                <a className={styles.cta} href="/plan/chat?new=1">내 사업으로 만들기{"\u00a0"}→</a>
               ) : (
                 <button type="button" className={styles.cta} onClick={() => go(blockedHref("pay"))}>
-                  {planPaid ? "결제하고 홈페이지 고치기 →" : "함께 결제하기 →"}
+                  {/* 화살표만 다음 줄로 떨어지지 않게 마지막 낱말과 붙인다(줄바꿈 없는 빈칸, 감사 r36) */}
+                  {planPaid ? "결제하고 홈페이지 고치기\u00a0→" : "함께 결제하기\u00a0→"}
                 </button>
               )}
               {/* 홈페이지는 나중에 해도 된다 — 결제 단추 하나뿐이라 개업 준비로 넘어갈 길이 없었다(여정 점검 2026-10-22) */}
               {!sample && screenPlanId && <Link className={styles.ctaSecondary} href={launchHref(screenPlanId)} onClick={() => setActivePlan(screenPlanId)}>
-                {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저 하기 →
+                {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저 하기{"\u00a0"}→
               </Link>}
             </div>
           </div>
@@ -998,8 +999,8 @@ export function HomepageScreen() {
       {/* 대화로 고치려다 AI 수정 토큰이 모자랐을 때 — 충전하러 가는 단추(대화 칸의 안내가 이 단추를 가리킨다) */}
       {phase === "ready" && draft && editable && tokenShortage && tokenPayHref && (
         <p className={styles.aiFillNotice} role="status">
-          <span>AI 수정 토큰이 부족해 대화로 홈페이지를 고치지 못했어요. 충전한 뒤 대화에서 다시 말씀해 주세요.</span>
-          <button type="button" onClick={() => go(tokenPayHref)}>토큰 충전하기</button>
+          <span>AI 수정 횟수를 다 써서 대화로 홈페이지를 고치지 못했어요. 충전한 뒤 대화에서 다시 말씀해 주세요.</span>
+          <button type="button" onClick={() => go(tokenPayHref)}>AI 수정 충전하기</button>
           <button type="button" onClick={() => setTokenShortage(false)}>닫기</button>
         </p>
       )}

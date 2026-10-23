@@ -5,14 +5,14 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { loadNicepaySdk } from "../../../lib/payments/nicepay-sdk";
 import { finishNativePurchase, nativePlatform, nativePurchase } from "../../../lib/native-app";
-import { CheckCircle2, Unlock } from "lucide-react";
+import { AlertCircle, CheckCircle2, LogIn, Unlock } from "lucide-react";
 import styles from "./PlanCheckout.module.css";
 import { ConsentList } from "../../../components/consent-list";
 import { documentHref } from "../../../lib/plan-builder/business-hub";
 import { homepageHref, payBackHref } from "../../../lib/plan-builder/journey";
 import { Spinner } from "../PlanLoading";
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
-import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, REGEN_PACK_NAME } from "../../../lib/payments/domain";
+import { BUNDLE_PRODUCT_AMOUNT, DOMAIN_PRODUCT_AMOUNT, DOMAIN_PURCHASE_PRODUCT_AMOUNT, DOMAIN_PURCHASE_REGISTRATION_AMOUNT, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED, REGEN_PACK_AMOUNT, REGEN_PACK_COUNT, REGEN_PACK_NAME } from "../../../lib/payments/domain";
 import { normalizePurchaseDomain, validateRegistrant } from "../../../lib/landing/domain-purchase";
 import { AddressSearchButton } from "../../../components/address-search";
 import { DocLink } from "../../../components/doc-sheet";
@@ -28,10 +28,10 @@ const NO_AGREEMENTS: Agreements = { service: false, privacy: false, aiLimitation
 
 /** 상품별 제공 시점. 카드 결제는 승인 즉시 열린다(계좌이체처럼 관리자 확인을 기다리지 않는다). */
 const SUPPLY: Record<string, string> = {
-  plan: "결제가 승인되면 바로 이 문서의 전체 항목이 열리고 이용이 시작돼요.",
+  plan: "결제가 승인되면 바로 이 사업계획서의 전체 항목이 열리고 이용이 시작돼요.",
   homepage: "결제가 승인되면 바로 홈페이지 수정·공개 기능이 열리고 이용이 시작돼요.",
-  regen: `결제가 승인되면 바로 이 문서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해져요.`,
-  bundle: "결제가 승인되면 바로 이 문서의 전체 항목과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작돼요.",
+  regen: `결제가 승인되면 바로 이 사업계획서에 ‘다시 생성’ ${REGEN_PACK_COUNT}회가 더해져요.`,
+  bundle: "결제가 승인되면 바로 이 사업계획서의 전체 항목과 홈페이지 수정·공개 기능이 함께 열리고 이용이 시작돼요.",
   domain: "결제가 승인되면 바로 도메인 연결 기능이 열리고 1년 호스팅 기간이 시작돼요.",
   "domain-purchase": "결제가 승인되면 1년 호스팅 기간이 시작되고, 아래 명의자 이름으로 도메인을 등록해 연결 준비를 마칩니다(.com 은 보통 몇 분, .kr·.co.kr 은 영업일 1~2일).",
   tokens: "결제가 승인되면 바로 AI 수정 토큰이 충전되며, 충전일부터 1년 동안 쓸 수 있어요.",
@@ -69,11 +69,11 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   const isBundle = params.get("product") === "bundle";
   const product = isRegen ? "regen" : isHomepage ? "homepage" : isDomain ? "domain" : isDomainPurchase ? "domain-purchase" : isTokens ? "tokens" : isBundle ? "bundle" : "plan";
   const COPY: Record<string, { title: string; desc: string; price: number; unit: string }> = {
-    bundle: { title: "사업계획서 + 홈페이지 함께 열기", desc: `이 문서 전체 항목과 PDF·Word 내려받기, 그리고 계획서로 만든 홈페이지의 수정·공개가 함께 열려요. 따로 사면 ${(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원이에요.`, price: BUNDLE_PRODUCT_AMOUNT, unit: "문서 1부 + 홈페이지 1개 · 1회 결제" },
+    bundle: { title: "사업계획서 + 홈페이지 함께 열기", desc: `이 사업의 사업계획서 전체 항목과 PDF·Word 내려받기(항목별 ‘다시 생성’ ${REGEN_INCLUDED}회 포함), 그리고 계획서로 만든 홈페이지의 수정·공개가 함께 열려요. 따로 사면 ${(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원이에요.`, price: BUNDLE_PRODUCT_AMOUNT, unit: "사업계획서 1부 + 홈페이지 1개 · 1회 결제" },
     domain: { title: "내 도메인 연결하고 1년 호스팅", desc: "가비아 등에서 산 도메인(예: mybusiness.kr)을 이 홈페이지에 연결해요. 1년 동안 호스팅·보안 인증서·연결 관리를 맡아 드려요.", price: DOMAIN_PRODUCT_AMOUNT, unit: "홈페이지 1개 · 1년" },
     "domain-purchase": { title: purchaseDomain ? `${purchaseDomain} 사서 연결하기` : "도메인 구매하고 연결하기", desc: `원하는 주소를 이용자 명의로 등록하고 이 홈페이지에 연결해요. 첫해 등록비(${DOMAIN_PURCHASE_REGISTRATION_AMOUNT.toLocaleString("ko-KR")}원)와 1년 동안의 호스팅·보안 인증서·연결 관리가 포함돼요.`, price: DOMAIN_PURCHASE_PRODUCT_AMOUNT, unit: "주소 1개 · 1년" },
     /* 다시 생성 묶음 — 예전엔 여기 없어서 '이 문서 전체 열기 · 49,000원'이 보였다(실제 결제는 이 금액) */
-    regen: { title: `${REGEN_PACK_NAME} 추가`, desc: `이 문서의 ‘다시 생성’ 횟수가 ${REGEN_PACK_COUNT}회 더해져요. 대화로 바꾼 내용을 계획서에 다시 반영할 때 써요.`, price: REGEN_PACK_AMOUNT, unit: `${REGEN_PACK_COUNT}회 · 이 문서` },
+    regen: { title: `${REGEN_PACK_NAME} 추가`, desc: `이 사업계획서의 ‘다시 생성’ 횟수가 ${REGEN_PACK_COUNT}회 더해져요. 대화로 바꾼 내용을 계획서에 다시 반영할 때 써요.`, price: REGEN_PACK_AMOUNT, unit: `${REGEN_PACK_COUNT}회 · 이 사업계획서` },
     tokens: { title: "AI 수정 토큰 20만 충전", desc: "‘전부 우리 가게 말투로’, ‘가격을 25,000원으로’처럼 말하면 AI가 페이지 글을 고쳐요. 20만 토큰은 페이지 전체 고치기 25회 안팎이에요.", price: 9900, unit: "20만 토큰 · 쓴 만큼 차감" },
   };
   const extra = COPY[product];
@@ -89,6 +89,13 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   // 부드러운 스크롤·다음 그림 기다리기는 화면이 가려진 탭 등에서 멈춘다 — 안내 글이 들어간 직후 바로 옮긴다
   const askAgree = () => { setNudge(true); window.setTimeout(() => consentRef.current?.scrollIntoView({ block: "start" }), 0); };
   const [message, setMessage] = useState<string | null>(null);
+  /* 결제를 아직 열지 않아 거절된 경우 — 안내 옆에 고객센터 길을 붙인다(서버 오류 코드는 그대로 둔다) */
+  const [paymentsClosed, setPaymentsClosed] = useState(false);
+  /* 결제를 시작하지 못하면 초점을 안내 글로 — 아래 고정 줄의 글은 화면 낭독기·키보드 사용자가 놓쳤다(감사 2026-10-23) */
+  const errorRef = useRef<HTMLParagraphElement | null>(null);
+  useEffect(() => {
+    if (phase === "error" && message) errorRef.current?.focus({ preventScroll: true });
+  }, [phase, message]);
   /* 결제 안내 문자 받을 휴대폰(선택) — 비우면 계정 이메일로만 안내한다 */
   const [noticePhone, setNoticePhone] = useState("");
   const phoneDigits = noticePhone.replace(/[\s-]/g, "");
@@ -156,6 +163,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
     started.current = true;
     setPhase("preparing");
     setMessage(null);
+    setPaymentsClosed(false);
     try {
       const res = await fetch("/api/payments/plan/prepare", {
         method: "POST",
@@ -168,6 +176,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
       };
       if (!res.ok || !data.clientId || !data.orderId) {
         setPhase("error");
+        setPaymentsClosed(data.error === "payments_unavailable" || data.error === "paid_launch_blocked");
         setMessage(data.message ?? "결제를 시작하지 못했어요.");
         started.current = false;
         return;
@@ -204,11 +213,12 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
     started.current = true;
     setPhase("preparing");
     setMessage(null);
+    setPaymentsClosed(false);
     try {
       const startRes = await fetch("/api/payments/iap/start", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ planId, product, terms: agreements }) });
-      const start = (await startRes.json().catch(() => ({}))) as { productId?: string; appAccountToken?: string; message?: string };
+      const start = (await startRes.json().catch(() => ({}))) as { productId?: string; appAccountToken?: string; message?: string; error?: string };
       if (!startRes.ok || !start.productId || !start.appAccountToken) {
-        setPhase("error"); setMessage(start.message ?? "결제를 시작하지 못했어요."); started.current = false; return;
+        setPhase("error"); setPaymentsClosed(start.error === "paid_launch_blocked"); setMessage(start.message ?? "결제를 시작하지 못했어요."); started.current = false; return;
       }
       setPhase("opening");
       let purchase: Awaited<ReturnType<typeof nativePurchase>>;
@@ -239,7 +249,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>결제 상태를 확인하지 못했어요</h1>
           <p className={styles.desc}>이미 결제했을 수도 있어요. 잠시 후 다시 확인해 주세요. 결제는 아직 진행되지 않았어요.</p>
           <button type="button" className={styles.primary} onClick={() => window.location.reload()}>다시 확인하기</button>
@@ -253,7 +263,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <div className={styles.icon} aria-hidden="true"><LogIn size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>로그인이 필요해요</h1>
           <p className={styles.desc}>결제 내역을 계정에 남기기 위해 먼저 로그인해 주세요. 로그인하면 이 화면으로 돌아와요.</p>
           <Link href={`/account?next=${encodeURIComponent(`/plan/pay?${params.toString()}`)}`} className={styles.primary}>로그인 · 회원가입</Link>
@@ -263,12 +273,16 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
     );
   }
 
-  /* 주소의 사업이 내 사업 목록에 없다(지웠거나 다른 계정 것) — '이미 열려 있어요'·결제 대신 다른 화면과 같은 말로 */
-  if (missingPlan) {
+  /*
+   * 주소의 사업이 내 사업 목록에 없다(지웠거나 다른 계정 것) — '이미 열려 있어요'·결제 대신 다른 화면과 같은 말로.
+   * 사업 번호(planId) 없이 들어온 경우도 같다 — 예전엔 '이 사업계획서는 이미 열려 있어요'가 떴다(감사 2026-10-23).
+   * 잠긴 자물쇠가 열린 그림 대신 알림 그림을 쓴다(결제로 열린 게 아니다).
+   */
+  if (missingPlan || !planId) {
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>{MISSING_BUSINESS_TITLE}</h1>
           <p className={styles.desc}>{MISSING_BUSINESS_DETAIL} 결제는 진행되지 않았어요.</p>
           <Link href="/plan" className={styles.primary}>내 사업으로</Link>
@@ -309,7 +323,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
     return (
       <div className={styles.page}>
         <div className={styles.card}>
-          <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
+          <div className={styles.icon} aria-hidden="true"><AlertCircle size={30} strokeWidth={1.8} /></div>
           <h1 className={styles.title}>살 주소를 먼저 골라 주세요</h1>
           <p className={styles.desc}>홈페이지 화면 아래 ‘내 도메인 연결’에서 원하는 주소(.com·.kr·.co.kr)가 비어 있는지 확인한 뒤 결제할 수 있어요.</p>
           <Link href={laterHref} className={styles.primary}>홈페이지로 돌아가기</Link>
@@ -344,8 +358,8 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <div className={styles.icon} aria-hidden="true"><Unlock size={30} strokeWidth={1.8} /></div>
-        <h1 className={styles.title}>{extra ? extra.title : isHomepage ? "홈페이지 수정하고 공개하기" : "이 문서 전체 열기"}</h1>
+        <div className={styles.icon} aria-hidden="true">{blocked ? <AlertCircle size={30} strokeWidth={1.8} /> : <Unlock size={30} strokeWidth={1.8} />}</div>
+        <h1 className={styles.title}>{extra ? extra.title : isHomepage ? "홈페이지 수정하고 공개하기" : "사업계획서 전체 열기"}</h1>
         <p className={styles.desc}>
           {extra ? extra.desc : isHomepage ? (
             <>
@@ -357,7 +371,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
               {/* 문서 종류를 고르는 화면은 없어졌다 — 종류 이름(planType)이나 '다른 유형' 안내 대신 이 사업의 계획서로 말한다 */}
               이 사업의 사업계획서 전체 항목이 열리고, 완성 후 {PPT_GENERATION_VERIFIED ? "PDF·Word·발표용 PPT" : "PDF·Word"}로 내려받을 수 있어요.
               {!PPT_GENERATION_VERIFIED && " PPT 자동 생성은 준비 중이라 이번 결제에는 들어가지 않아요."}
-              {" "}대화로 정리한 내용은 그대로 이어져요.
+              {" "}항목별 ‘다시 생성’ {REGEN_INCLUDED}회가 포함돼요. 대화로 정리한 내용은 그대로 이어져요.
             </>
           )}
         </p>
@@ -376,7 +390,7 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         ) : info ? (
           <div className={styles.price}>
             {info.price.toLocaleString("ko-KR")}원
-            <span>문서 1부 · 1회 결제 · 부가세 포함</span>
+            <span>사업계획서 1부 · 1회 결제 · 부가세 포함</span>
             {!info.paid && homepageInfo?.editable !== true && <Link className={styles.upsell} href={`/plan/pay?${new URLSearchParams({ planId, planType, product: "bundle" }).toString()}`}>홈페이지까지 함께 열면 {BUNDLE_PRODUCT_AMOUNT.toLocaleString("ko-KR")}원 <small>따로 사면 {(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT).toLocaleString("ko-KR")}원</small> →</Link>}
           </div>
         ) : infoFailed ? (
@@ -449,13 +463,14 @@ export default function PlanCheckout({ receiptByEmail = false }: { receiptByEmai
         {/* 결제 단추는 화면 아래에 늘 붙여 둔다(네이버페이처럼) — 동의 항목이 길어 단추를 찾으려면 한참 내려야 했다(대표 요청 2026-10-16) */}
         {blocked ? (
           <>
-            <p className={styles.notice} role="status">{notSoldInApp ? "이 상품은 앱에서 결제할 수 없어요." : "지금은 결제를 받을 수 없어요. 잠시 후 다시 시도해 주세요."}</p>
+            {/* 결제를 아직 열지 않았을 때(출시 전·결제 설정 전) — '잠시 후 다시'는 기다리면 될 것처럼 읽혔다(감사 2026-10-23) */}
+            <p className={styles.notice} role="status">{notSoldInApp ? "이 상품은 앱에서 결제할 수 없어요." : <>아직 결제를 열기 전이에요. 결제가 열리면 이 화면에서 바로 결제할 수 있어요. 궁금한 점은 <Link href="/account/support">고객센터</Link>로 남겨 주세요.</>}</p>
             <Link href={laterHref} className={`${styles.primary} ${styles.blockedBack}`}>돌아가기</Link>
           </>
         ) : (
           <div className={styles.payBar} data-pay-bar>
             {/* 결제를 시작하지 못한 이유 — 아래 고정 줄 안에 보여야 눌렀는데 아무 일도 없는 것처럼 보이지 않는다 */}
-            {message ? <p className={styles.payBarError} role="alert">{message}</p> : null}
+            {message ? <p ref={errorRef} tabIndex={-1} className={styles.payBarError} role="alert">{message}{paymentsClosed ? <> <Link href="/account/support">고객센터</Link></> : null}</p> : null}
             <div className={styles.payBarInner}>
               <p className={styles.payBarNote}>{agreed ? "약관과 결제 내용을 확인했어요" : `필수 항목 ${agreedCount}/${AGREEMENT_KEYS.length} 동의`}</p>
               <button

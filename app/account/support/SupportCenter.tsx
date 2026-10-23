@@ -32,6 +32,24 @@ async function readReply(response: Response): Promise<Reply> {
   return data as Reply;
 }
 
+type SupportMessage = SupportChat["messages"][number];
+type InquiryThread = { inquiry: SupportMessage | null; replies: SupportMessage[] };
+
+/*
+ * 문의마다 답변을 묶는다 — 메시지에는 어느 문의에 대한 답인지 표시가 없어서, 보낸 순서대로 읽어
+ * 답변을 바로 앞 문의에 붙인다. 예전엔 전체를 최신순으로 한 줄로 늘어놓아 답변이 다른 문의 밑에 보였다(감사 2026-10-23).
+ * 묶음은 문의를 보낸 시각 기준 최신순으로 놓는다.
+ */
+function inquiryThreads(messages: SupportMessage[]): InquiryThread[] {
+  const threads: InquiryThread[] = [];
+  for (const message of [...messages].sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt))) {
+    if (message.sender === "customer") threads.push({ inquiry: message, replies: [] });
+    else if (threads.length) threads[threads.length - 1].replies.push(message);
+    else threads.push({ inquiry: null, replies: [message] });
+  }
+  return threads.reverse();
+}
+
 function dateLabel(value: string) {
   return new Date(value).toLocaleString("ko-KR", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" });
 }
@@ -164,12 +182,18 @@ export default function SupportCenter() {
             <button className={styles.primary} type="submit" disabled={busy || !draft.subject.trim() || !draft.message.trim()}>{busy ? <Spinner /> : <Send size={18} aria-hidden="true" />}{busy ? "접수 중" : "문의 접수"}</button>
           </form> : view === "history" && <section className={styles.history} aria-label="문의와 답변">
             <div className={styles.historyHeading}><h2>내 문의와 답변</h2><button type="button" className={styles.iconButton} aria-label="문의 내역 새로고침" title="문의 내역 새로고침" onClick={() => void load()}><RefreshCw size={20} /></button></div>
-            {chat.messages.length === 0 ? <div className={styles.empty}><p>아직 접수한 문의가 없어요.</p><button className={styles.secondary} onClick={() => setView("write")}>문의 남기기</button></div> : [...chat.messages].reverse().map(message => {
-              const inquiry = inquiryPreview(message.body);
-              return message.sender === "customer" ? <details className={styles.inquiry} key={message.id}>
-                <summary><span className={styles.itemHeading}><small>보낸 문의 · {inquiry.category}</small><strong>{inquiry.subject}</strong><time dateTime={message.createdAt}>{dateLabel(message.createdAt)}</time></span><ChevronDown size={20} aria-hidden="true" /></summary>
-                <p>{inquiry.message}</p>
-              </details> : <article className={styles.reply} key={message.id}><div><strong>고객센터 답변</strong><time dateTime={message.createdAt}>{dateLabel(message.createdAt)}</time></div><p>{message.body}</p></article>;
+            {chat.messages.length === 0 ? <div className={styles.empty}><p>아직 접수한 문의가 없어요.</p><button className={styles.secondary} onClick={() => setView("write")}>문의 남기기</button></div> : inquiryThreads(chat.messages).map(thread => {
+              const replies = thread.replies.map(message => <article className={styles.reply} key={message.id}><div><strong>고객센터 답변</strong><time dateTime={message.createdAt}>{dateLabel(message.createdAt)}</time></div><p>{message.body}</p></article>);
+              if (!thread.inquiry) return <div className={styles.thread} key={thread.replies[0]?.id}>{replies}</div>;
+              const inquiry = inquiryPreview(thread.inquiry.body);
+              const answered = thread.replies.length > 0;
+              return <div className={styles.thread} key={thread.inquiry.id}>
+                <details className={styles.inquiry}>
+                  <summary><span className={styles.itemHeading}><small><span className={answered ? styles.statusDone : styles.statusWaiting}>{answered ? "답변 완료" : "답변 대기"}</span>보낸 문의 · {inquiry.category}</small><strong>{inquiry.subject}</strong><time dateTime={thread.inquiry.createdAt}>{dateLabel(thread.inquiry.createdAt)}</time></span><ChevronDown size={20} aria-hidden="true" /></summary>
+                  <p>{inquiry.message}</p>
+                </details>
+                {replies}
+              </div>;
             })}
           </section>}
         </>}

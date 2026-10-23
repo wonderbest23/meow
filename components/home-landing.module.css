@@ -1,22 +1,30 @@
 /*
- * 첫 화면 틀(2026-10-23 승인 디자인) — 밝은 점 무늬 바탕, 머리말, 바닥글.
+ * 첫 화면 틀(2026-10-23 승인 디자인) — 밝은 바탕, 머리말, 바닥글.
+ * 바탕(2026-10-23 사장님 요청): 점 무늬가 base44 와 닮아 걷어냈다. 첫 화면 뒤에만 주 색(파랑) 계열의 옅고 큰 빛 두세 개를 깔고,
+ * 첫 화면이 끝날 즈음 사라져 아래 구간은 차가운 아주 옅은 회색(흰 카드가 떠 보이게) 위에 놓인다. 움직임 없음.
  * 예전 첫 화면의 검정 규칙(globals.css 의 .simple-home·.cinematic-home, .home-footer 검정 바탕)을 쓰지 않으려고
  * 그 클래스를 붙이지 않고, 같이 쓰는 머리말(SiteHeader)·바닥글(.home-footer)만 여기서 밝게 덮는다.
  */
 .page {
-  --landing-bg: #f3f3f1;
+  --landing-bg: #f5f7fa;
   min-height: 100vh;
   overflow-x: hidden;
   overflow-x: clip;
   color: #191f28;
   background-color: var(--landing-bg);
-  background-image: radial-gradient(#d6d6d2 1px, transparent 1px);
-  background-size: 22px 22px;
+  /* 빛 크기·위치는 위쪽 1200px 상자 기준 — 쪽 길이와 상관없이 첫 화면 뒤에만 머문다 */
+  background-image:
+    radial-gradient(ellipse 52% 46% at 18% 10%, rgba(49, 130, 246, .13), transparent 72%),
+    radial-gradient(ellipse 44% 40% at 86% 20%, rgba(44, 201, 180, .10), transparent 72%),
+    radial-gradient(ellipse 70% 38% at 50% 0%, rgba(120, 186, 255, .16), transparent 74%),
+    linear-gradient(180deg, #fafbfe 0, #f8fafd 40%, var(--landing-bg) 92%);
+  background-repeat: no-repeat;
+  background-size: 100% 1200px;
   font-family: var(--font-sans);
   word-break: keep-all;
 }
 /* 아이폰 끝까지 당겼을 때 위아래로 보이는 바탕도 같은 색 */
-:global(html):has(.page), :global(body):has(.page) { background: #f3f3f1; }
+:global(html):has(.page), :global(body):has(.page) { background: #f5f7fa; }
 
 .content {
   width: 100%;
@@ -35,7 +43,7 @@
   top: 0;
   z-index: 40;
   padding-top: env(safe-area-inset-top);
-  background: rgba(243, 243, 241, calc(var(--frost) * .88));
+  background: rgba(255, 255, 255, calc(var(--frost) * .9));
   -webkit-backdrop-filter: blur(calc(var(--frost) * 14px));
   backdrop-filter: blur(calc(var(--frost) * 14px));
   box-shadow: 0 1px 0 rgba(201, 205, 210, var(--frost));

@@ -269,7 +269,7 @@
   top: 14px;
   right: 14px;
   z-index: 81;
-  height: 38px;
+  height: 44px; /* 누르는 자리 44px(감사 r36) */
   padding: 0 15px;
   border: 1px solid var(--line, var(--app-line));
   border-radius: 999px;

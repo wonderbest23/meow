@@ -74,10 +74,11 @@ assert.equal(aiEditSummary([{ label: "가게 이름" }, { label: "가격" }, { l
 assert.equal(aiEditCostLine({ inputTokens: 1000, outputTokens: 240 }, { remaining: 198760 }), "AI 수정 토큰 1,240개 사용 · 남은 토큰 198,760개");
 assert.equal(aiEditCostLine({ inputTokens: 10, outputTokens: 5 }, null), "AI 수정 토큰 15개 사용");
 assert.equal(aiEditCostLine(null, null), undefined);
-assert.match(aiEditErrorMessage(402, "TOKENS_REQUIRED", "AI 수정 토큰이 부족해요."), /토큰.*충전/);
-assert.match(aiEditErrorMessage(402, "HOMEPAGE_PAYMENT_REQUIRED"), /결제 후 쓸 수 있어요/);
+assert.match(aiEditErrorMessage(402, "TOKENS_REQUIRED", "AI 수정 토큰이 부족해요."), /AI 수정 횟수.*충전/);
+assert.ok(!/토큰|\[/.test(aiEditErrorMessage(402, "TOKENS_REQUIRED")) && !/\[/.test(aiEditErrorMessage(402, "HOMEPAGE_PAYMENT_REQUIRED")), "no token jargon or raw [brackets]");
+assert.match(aiEditErrorMessage(402, "HOMEPAGE_PAYMENT_REQUIRED"), /결제한 뒤 쓸 수 있어요/);
 assert.match(aiEditErrorMessage(404, "NOT_FOUND", "없는 주소입니다."), /준비 중/, "launch-closed route explains itself");
-assert.equal(aiEditErrorMessage(502, "AI_FAILED", "AI 가 답을 만들지 못했어요. 토큰은 차감되지 않았어요."), "AI 가 답을 만들지 못했어요. 토큰은 차감되지 않았어요.");
+assert.equal(aiEditErrorMessage(502, "AI_FAILED", "AI 가 답을 만들지 못했어요. 토큰은 차감되지 않았어요."), "AI가 답을 만들지 못했어요. AI 수정 횟수는 줄지 않았어요. 다시 말씀해 주세요.");
 assert.match(aiEditErrorMessage(500, "X", "internal error"), /[가-힣]/, "never shows English server text");
 // 적용 — 제안 뒤에 사장님이 직접 고친 자리는 덮지 않는다. 스냅숏은 적용 전 값(없던 자리는 null)
 const proposedFrom = { title: "옛 제목", price: "1만원" };

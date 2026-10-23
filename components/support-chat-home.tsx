@@ -11,8 +11,8 @@ import { loadAuthSession } from "../lib/client/auth-session";
 import { askConfirm } from "./confirm-dialog";
 
 /*
- * 상담 창의 홈·설정 탭과 아래 탭 막대 — 메신저형(홈 · 대화 · 설정) 상담 창.
- * 대화 탭은 예전부터 있던 상담·문의 화면(support-chat-widget)을 그대로 쓴다.
+ * 상담 창의 홈·설정 탭과 아래 탭 막대 — 메신저형(홈 · 문의 · 설정) 상담 창.
+ * 문의 탭(예전 이름 '대화')은 예전부터 있던 상담·문의 화면(support-chat-widget)을 그대로 쓴다.
  *
  * 홈: 인사와 상담 방법, 문의하기, 그리고 로그인했으면 내 사업이 어디까지 왔는지.
  * 설정: 계정, 알림 배지, 상담 기록 지우기, 도움말 링크.
@@ -71,12 +71,12 @@ export function SupportHome({ open, onInquiry, onConsult, onClose }: { open: boo
       <div className={styles.greeting}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/support-agent-avatar-2026.png" alt="" width="40" height="40" />
-        <div><b>오늘창업 고객센터</b><p>안녕하세요, 오늘창업입니다.</p></div>
+        <div><b>고객센터</b><p>안녕하세요, 오늘창업입니다.</p></div>
       </div>
       <ul className={styles.ways}>
         {session && !session.authenticated && <li className={styles.notice}><CircleUserRound aria-hidden="true" /><span>내 사업 진행을 확인하려면 <button type="button" onClick={() => { onClose(); openLogin(); }}>로그인</button>해 주세요</span></li>}
         <li><Bot aria-hidden="true" /><span><b>AI 창업 상담</b> 언제든 바로 답변해요</span></li>
-        <li><MessagesSquare aria-hidden="true" /><span><b>서비스 문의</b> 결제·환불·이용 방법은 남겨 주시면 담당자가 순서대로 답변해요</span></li>
+        <li><MessagesSquare aria-hidden="true" /><span><b>고객센터 문의</b> 결제·환불·이용 방법은 남겨 주시면 담당자가 순서대로 답변해요</span></li>
       </ul>
       <button type="button" className={styles.primary} onClick={onInquiry}>문의하기<Send aria-hidden="true" /></button>
       <button type="button" className={styles.secondary} onClick={onConsult}>AI 창업 상담 시작하기</button>
@@ -151,7 +151,7 @@ export function SupportSettings({ open, badge, onBadge, onClearConsult, onClose 
     </section>
 
     <section className={styles.card} aria-label="도움말">
-      <Link className={styles.listButton} href="/plan/info" onClick={onClose}>이용 안내<ChevronRight aria-hidden="true" /></Link>
+      <Link className={styles.listButton} href="/plan/info" onClick={onClose}>약관·정책<ChevronRight aria-hidden="true" /></Link>
       <Link className={styles.listButton} href="/terms" onClick={onClose}>이용약관<ChevronRight aria-hidden="true" /></Link>
       <Link className={styles.listButton} href="/privacy" onClick={onClose}>개인정보처리방침<ChevronRight aria-hidden="true" /></Link>
     </section>
@@ -159,7 +159,7 @@ export function SupportSettings({ open, badge, onBadge, onClearConsult, onClose 
 }
 
 export function SupportTabs({ tab, onTab, unread }: { tab: SupportTab; onTab: (tab: SupportTab) => void; unread: number }) {
-  const items: Array<[SupportTab, string, typeof Home]> = [["home", "홈", Home], ["chat", "대화", MessageCircle], ["settings", "설정", Settings]];
+  const items: Array<[SupportTab, string, typeof Home]> = [["home", "홈", Home], ["chat", "문의", MessageCircle], ["settings", "설정", Settings]];
   return <nav className={`${styles.tabs} plan-ui`} aria-label="상담 창 메뉴">
     {items.map(([id, label, Icon]) => <button key={id} type="button" aria-current={tab === id ? "page" : undefined} onClick={() => onTab(id)}>
       <span className={styles.tabIcon}><Icon aria-hidden="true" />{id === "chat" && unread > 0 && <em>{unread > 9 ? "9+" : unread}</em>}</span>{label}

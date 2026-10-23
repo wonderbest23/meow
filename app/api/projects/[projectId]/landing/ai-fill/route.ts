@@ -11,7 +11,7 @@ import { readCoach } from "../../../../../../lib/plan-builder/coach";
 import { resolveLLMConfig } from "../../../../../../lib/llm/config";
 import { completeJson } from "../../../../../../lib/llm/complete";
 import { applyHomepageCopy, fitHomepageSalesMode, homepageFillPrompt, homepageKnownPrice, normalizeHomepageCopy, withKnownPrice } from "../../../../../../lib/landing/ai-fill";
-import { homepageSalesMode } from "../../../../../../lib/plan-builder/business-launch";
+import { homepageSalesMode, specificIndustryLabel } from "../../../../../../lib/plan-builder/business-launch";
 import { applyContactMethod, DEFAULT_CONTACT } from "../../../../../../lib/landing/contact-method";
 import { countAiFills, recordAiFill } from "../../../../../../lib/landing/ai-fill-usage";
 
@@ -72,7 +72,9 @@ export async function POST(request: Request, context: { params: Promise<{ projec
 
   /* 연락 방법을 아직 고르지 않았으면(문의 양식 기본값) 스토어로 — 스토어 주소를 넣기 전까지 버튼은 문의 양식으로 간다 */
   const base = sales.storeOnly && (site.draft.contact ?? DEFAULT_CONTACT).method === "form" ? applyContactMethod(site.draft, { ...site.draft, contact: { ...(site.draft.contact ?? DEFAULT_CONTACT), method: "store" } }) : site.draft;
-  const draft = applyHomepageCopy(base, copy, { industry: readCoach(plan.answers)?.business.industry ?? "", description: readCoach(plan.answers)?.business.description ?? "" });
+  /* 사진은 넓은 업종 이름('카페 · 음식점')보다 이 사업의 업종(업종 코드·가이드 이름)과 설명으로 고른다 — 반찬가게가 카페 사진을 받던 문제 */
+  const coach = readCoach(plan.answers);
+  const draft = applyHomepageCopy(base, copy, { industry: coach?.business.industry ?? "", businessType: specificIndustryLabel(plan), description: coach?.business.description ?? "" });
   try {
     const saved = await saveLandingDraft(projectId, identity.hash, draft, { expectedUpdatedAt: site.updatedAt });
     await recordAiFill(planId, identity.hash);

@@ -252,6 +252,11 @@
 
 /* 결제를 시작하지 못한 이유 — 아래 고정 결제 줄 안, 단추 바로 위 */
 .payBarError { max-width: 920px; margin: 0 auto 8px; color: var(--app-danger, #d22030); font-size: 13px; font-weight: 600; line-height: 1.5; text-align: center; }
+/* 오류 글은 초점만 받고(낭독기가 읽게) 테두리는 그리지 않는다 — 누르는 것이 아니다 */
+.payBarError:focus { outline: none; }
+/* 결제를 아직 열지 않았을 때 붙는 고객센터 길 */
+.payBarError a,
+.notice a { color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 /* 결제할 수 없을 때 — 안내 아래 돌아가기 */
 .blockedBack { margin-top: 14px; }
 /* 판매자·사업자 정보 — 글줄 안 링크, 누르는 자리만 위아래로 넓힌다 */

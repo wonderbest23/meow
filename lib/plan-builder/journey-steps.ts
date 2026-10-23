@@ -21,6 +21,11 @@ export const JOURNEY_SHORT_LABELS: Record<JourneyStepId, string> = { ...JOURNEY_
 export const OPERATING_LAUNCH_LABEL = "운영 개선";
 export function journeyLabel(id: JourneyStepId, operating = false) { return id === "launch" && operating ? OPERATING_LAUNCH_LABEL : JOURNEY_LABELS[id]; }
 export function journeyShortLabel(id: JourneyStepId, operating = false) { return id === "launch" && operating ? OPERATING_LAUNCH_LABEL : JOURNEY_SHORT_LABELS[id]; }
+/*
+ * 휴대폰 작업실의 넷째 탭 — 개업 준비와 유지보수를 한 탭에 담는다. 예전 이름 '준비'는 유지보수가 들어 있는 줄 몰랐다(감사 r36).
+ * 운영 중인 사업은 둘 다 운영 일이라 '운영'.
+ */
+export function journeyPrepLabel(operating = false) { return operating ? "운영" : "개업·운영"; }
 /** 글로 순서를 설명할 때(고객센터 안내 등) 쓰는 말 */
 const JOURNEY_PHRASES: Record<JourneyStepId, string> = {
   chat: "대화로 사업안 정리",
