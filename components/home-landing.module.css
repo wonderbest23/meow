@@ -1,0 +1,144 @@
+/*
+ * 첫 화면 틀(2026-10-23 승인 디자인) — 밝은 점 무늬 바탕, 머리말, 바닥글.
+ * 예전 첫 화면의 검정 규칙(globals.css 의 .simple-home·.cinematic-home, .home-footer 검정 바탕)을 쓰지 않으려고
+ * 그 클래스를 붙이지 않고, 같이 쓰는 머리말(SiteHeader)·바닥글(.home-footer)만 여기서 밝게 덮는다.
+ */
+.page {
+  --landing-bg: #f3f3f1;
+  min-height: 100vh;
+  overflow-x: hidden;
+  overflow-x: clip;
+  color: #191f28;
+  background-color: var(--landing-bg);
+  background-image: radial-gradient(#d6d6d2 1px, transparent 1px);
+  background-size: 22px 22px;
+  font-family: var(--font-sans);
+  word-break: keep-all;
+}
+/* 아이폰 끝까지 당겼을 때 위아래로 보이는 바탕도 같은 색 */
+:global(html):has(.page), :global(body):has(.page) { background: #f3f3f1; }
+
+.content {
+  width: 100%;
+  max-width: 1220px;
+  margin: 0 auto;
+  padding: 0 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 머리말 — 맨 위에서는 바탕이 비치고, 내리면(--frost 0→1) 흐린 밝은 띠가 깔린다 */
+.headerShell {
+  --frost: 0;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding-top: env(safe-area-inset-top);
+  background: rgba(243, 243, 241, calc(var(--frost) * .88));
+  -webkit-backdrop-filter: blur(calc(var(--frost) * 14px));
+  backdrop-filter: blur(calc(var(--frost) * 14px));
+  box-shadow: 0 1px 0 rgba(201, 205, 210, var(--frost));
+}
+.headerShell :global(.site-header) {
+  height: 64px;
+  min-height: 64px;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 20px;
+  border: 0;
+  background: transparent;
+  color: #191f28;
+  gap: 12px;
+}
+.headerShell :global(.site-header) :global(.brand) { min-height: 44px; flex: 0 0 auto; }
+.headerShell :global(.site-header) :global(.brand-logo) { height: 32px; width: auto; filter: none; }
+.headerShell :global(.site-header) :global(.home-header-nav) { margin-left: auto; display: flex; gap: 4px; font-size: 15px; }
+.headerShell :global(.site-header) :global(.home-header-nav) a {
+  min-height: 44px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  color: #4e5968;
+  font-size: 15px;
+  font-weight: 500;
+  opacity: 1;
+  text-decoration: none;
+}
+.headerShell :global(.site-header) :global(.home-header-nav) a:hover { color: #191f28; }
+.headerShell :global(.site-header) :global(.header-actions) { gap: 4px; flex: 0 0 auto; }
+.headerShell :global(.site-header) :global(.header-login) { min-height: 44px; padding: 0 12px; color: #191f28; font-size: 15px; font-weight: 700; }
+/* 회원가입은 로그인 창에서 고를 수 있다 — 승인 목업처럼 로그인 · 시작하기 둘만 둔다 */
+.headerShell :global(.site-header) :global(.header-signup) { display: none; }
+.headerShell :global(.site-header) :global(.account-link) {
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 1px solid #d1d6db;
+  border-radius: 10px;
+  background: #fff;
+  color: #191f28;
+}
+.headerShell :global(.site-header) :global(.account-link) svg { display: block !important; width: 18px; color: #191f28; }
+/* 전역 :where(.small-start) 가 파란 바탕을 !important 로 칠하고, 휴대폰 폭에서는 숨긴다 — 목업의 검정 단추로 덮고 휴대폰에서도 둔다 */
+.headerShell :global(.site-header) :global(.small-start) {
+  min-height: 44px !important;
+  height: 44px;
+  padding: 0 18px !important;
+  border: 0 !important;
+  border-radius: 10px !important;
+  background: #191f28 !important;
+  color: #fff !important;
+  display: inline-flex;
+  align-items: center;
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  white-space: nowrap;
+}
+.headerShell :global(.site-header) :global(.small-start):hover { background: #000 !important; }
+.headerShell :global(.site-header) :global(.small-start) svg { display: none; }
+.headerShell :global(.site-header) a:focus-visible,
+.headerShell :global(.site-header) button:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
+
+@media (max-width: 900px) {
+  .headerShell :global(.site-header) :global(.home-header-nav) { display: none; }
+  .headerShell :global(.site-header) :global(.header-actions) { margin-left: auto; }
+}
+@media (max-width: 640px) {
+  .content { padding: 0 16px; }
+  .headerShell :global(.site-header) { height: 60px; min-height: 60px; padding: 0 16px; }
+  .headerShell :global(.site-header) :global(.brand-logo) { height: 28px; }
+  .headerShell :global(.site-header) :global(.header-login) { padding: 0 10px; }
+  .headerShell :global(.site-header) :global(.small-start) { padding: 0 14px !important; font-size: 15px !important; }
+}
+
+/* 바닥글 — 같은 구조(사업자 정보·이용 안내·출처)를 밝은 바탕 색으로 */
+.page :global(.home-footer) {
+  margin-top: 120px;
+  padding: 32px 20px calc(96px + env(safe-area-inset-bottom));
+  border-top: 1px solid #c9cdd2;
+  background: transparent;
+  color: #4e5968;
+}
+.page :global(.home-footer) a:hover { color: #191f28; }
+.page :global(.home-footer) :global(.brand) { min-height: 44px; }
+.page :global(.home-footer) :global(.brand-logo) { height: 24px; filter: none; }
+.page :global(.home-footer-head) { border-bottom-color: #d1d6db; }
+.page :global(.home-footer-head) nav a { color: #4e5968; }
+.page :global(.home-footer-details) { border-bottom-color: #d1d6db; }
+.page :global(.home-footer-details) > summary { min-height: 44px; color: #333d4b; }
+.page :global(.home-footer-details) > summary:hover { color: #191f28; }
+.page :global(.home-footer-details) > summary svg { color: #6b7684; }
+.page :global(.home-footer-title) { color: #191f28; }
+.page :global(.home-footer-info) dt { color: #6b7684; }
+.page :global(.home-footer-info) dd { color: #333d4b; }
+.page :global(.home-footer-empty), .page :global(.home-footer-notes) { color: #4e5968; }
+.page :global(.home-footer-notes) li::before { background: #8b95a1; }
+.page :global(.home-footer-credits) { border-top-color: #d1d6db; color: #6b7684; }
+.page :global(.home-footer-credits) a { color: #4e5968; text-decoration-color: rgba(78, 89, 104, .4); }
+.page :global(.home-footer-credits) a:hover { color: #191f28; }
+.page :global(.home-footer-legal) { color: #6b7684; }
+@media (max-width: 640px) {
+  .page :global(.home-footer) { margin-top: 88px; padding: 28px 16px calc(96px + env(safe-area-inset-bottom)); }
+}

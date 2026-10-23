@@ -87,9 +87,9 @@ export function SiteHeader({
         </button>
       ) : homeNav ? (
         <nav className="home-header-nav" aria-label="메인 안내">
+          {/* 첫 화면(2026-10-23) 구간으로 바로 간다 — #how 계획부터 개업까지 · #deliverables 결과물 · #price 이용 요금 */}
           <a href="#how">진행 방식</a>
           <a href="#deliverables">결과물</a>
-          <a href="#difference">오늘창업의 차이</a>
           <a href="#price">가격 안내</a>
         </nav>
       ) : null}

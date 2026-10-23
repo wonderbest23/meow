@@ -20,9 +20,13 @@ export type SiteCopyField = {
 };
 
 export const SITE_COPY_FIELDS: SiteCopyField[] = [
-  { id: "chatHome.title", group: "첫 화면", label: "큰 제목", def: "오늘창업" },
-  /* 제목 아래 굵은 두 줄(h2). 예전 기본값은 화면에 없는 문장이라 고쳐도 아무 데도 안 나왔다 */
-  { id: "chatHome.subtitle", group: "첫 화면", label: "제목 아래 문구", def: "가능성은 가볍게 묻고\n시작은 구체적으로", multiline: true },
+  /*
+   * 2026-10-23 새 첫 화면(입력 카드 위 큰 제목·문단). 예전 검정 첫 화면의 자리(chatHome.*)와 키를 나눴다 —
+   * 그 자리에 저장해 둔 옛 문구('오늘창업'·'가능성은 가볍게 묻고…')가 새 제목을 덮었기 때문이다.
+   * 옛 키는 더 읽지 않고, 어드민에서 한 번 저장하면 정리된다(sanitizeSiteCopy 가 모르는 키를 버린다).
+   */
+  { id: "promptHome.title", group: "첫 화면", label: "큰 제목", def: "생각이 사업이\n되는 순간", multiline: true, hint: "줄바꿈은 제목의 줄바꿈이 돼요" },
+  { id: "promptHome.subtitle", group: "첫 화면", label: "제목 아래 문구", def: "어떤 사업이든 내 말로 적어 주세요. 사업계획서와 홈페이지, 개업 준비까지 대화로 이어서 만들어 드려요.", multiline: true },
 ];
 
 /** 이용 조건과 기능 안내는 구현에 맞춰 코드에서 관리한다. */
