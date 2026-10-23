@@ -13,15 +13,19 @@ import { planSyncStatus, subscribePlanSync, pushToServer, type PlanSyncStatus } 
 import { useDialogFocus } from "../../components/use-dialog-focus";
 import { useStudioPane } from "./studio/StudioContext";
 import studio from "./studio/Studio.module.css";
-import { STUDIO_ENABLED, studioEntryHref } from "../../lib/plan-builder/studio";
+import { STUDIO_CLASSIC_PARAM, STUDIO_ENABLED, studioEntryHref } from "../../lib/plan-builder/studio";
 
-/* 예전 4개 화면(대화·계획서·홈페이지·사업 관리)에서 같은 사업의 작업실로 가는 작은 링크 — 플래그를 켰을 때만 */
+/*
+ * 예전 4개 화면(대화·계획서·홈페이지·사업 관리)에서 같은 사업의 작업실로 가는 작은 링크 — 플래그를 켰을 때, 예전 화면을
+ * 일부러 연 경우(?classic=1)에만. 그 밖에는 예전 화면 감싸기가 작업실로 바로 보내므로(StudioRedirect) 링크가 필요 없다.
+ */
 const STUDIO_ENTRY_PATHS = ["/plan/chat", "/plan/document", "/plan/homepage", "/plan/workspace"];
 /* withActions — 머리줄에 저장·공개 같은 단추가 함께 있으면 좁은 화면(560px 이하)에서는 접는다(제목 자리가 0이 되었다) */
 function StudioEntryLink({ withActions }: { withActions: boolean }) {
   const pathname = (usePathname() || "").replace(/\/$/, "");
-  const query = useSearchParams().toString();
-  if (!STUDIO_ENTRY_PATHS.includes(pathname)) return null;
+  const params = useSearchParams();
+  const query = params.toString();
+  if (!STUDIO_ENTRY_PATHS.includes(pathname) || params.get(STUDIO_CLASSIC_PARAM) !== "1") return null;
   const href = studioEntryHref(`${pathname}?${query}`);
   return href ? <Link className={studio.entryLink} href={href} data-with-actions={withActions || undefined}>작업실에서 보기</Link> : null;
 }

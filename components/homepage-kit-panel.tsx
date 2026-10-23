@@ -125,6 +125,7 @@ export function HomepageKitPanel({
   inChrome = false,
   planId,
   nameCandidates = false,
+  previewView,
 }: {
   /** 계획서에 가게 이름 후보가 있고 아직 이름을 정하지 않았는지 — '채울 것'에 가게 이름을 넣는다 */
   nameCandidates?: boolean;
@@ -154,6 +155,8 @@ export function HomepageKitPanel({
   aiFill?: { running: boolean; run: () => void };
   /** 앱 머리줄(← 홈페이지 · 저장 · 공개) 안에 놓일 때 — 이 패널의 뒤로가기·제목·저장/공개 줄을 빼고 주소 상태만 남긴다 */
   inChrome?: boolean;
+  /** 작업실 안 — 미리보기 모양(휴대폰/컴퓨터)을 작업실 머리줄이 정한다. 주면 패널 안의 모양 단추는 숨긴다 */
+  previewView?: "mobile" | "pc";
 }) {
   /*
    * 앱 안에서는 '내 도메인 연결'(웹에서만 파는 상품 — 앱 결제 상품이 아니다)을 보이지 않는다. 앱에서 결제 단추를 누르면
@@ -182,7 +185,8 @@ export function HomepageKitPanel({
    * 미리보기는 휴대폰 모양이 먼저 — PC 모양은 화면에 다 안 들어와 '눌러서 고치는 건지' 헷갈렸다(사용자 지적).
    * 휴대폰 틀(390px) 안에서는 템플릿이 폭을 보고 스스로 모바일 배치로 그린다.
    */
-  const [view, setView] = useState<"mobile" | "pc">("mobile");
+  const [ownView, setView] = useState<"mobile" | "pc">("mobile");
+  const view = previewView ?? ownView;
   /* AI 채우기 진행 — 보통 30초. 몇 초째인지 보여 줘야 언제까지 기다릴지 안다 */
   const [fillSeconds, setFillSeconds] = useState(0);
   useEffect(() => {
@@ -360,10 +364,10 @@ export function HomepageKitPanel({
         </div>
         <div className="hk-preview-hint">
           <span><Pencil size={14} aria-hidden /> 미리보기를 누르면 고칠 수 있어요</span>
-          <span className="hk-view-switch" role="radiogroup" aria-label="미리보기 모양">
+          {previewView ? null : <span className="hk-view-switch" role="radiogroup" aria-label="미리보기 모양">
             <button type="button" role="radio" aria-checked={view === "mobile"} className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")}>휴대폰</button>
             <button type="button" role="radio" aria-checked={view === "pc"} className={view === "pc" ? "on" : ""} onClick={() => setView("pc")}>PC</button>
-          </span>
+          </span>}
         </div>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
         <div role="button" tabIndex={busy ? -1 : 0} aria-disabled={busy} aria-busy={aiFill?.running || undefined} className={`hk-preview-body ${view === "mobile" ? "hk-preview-phone" : ""}`} onClick={() => { if (!busy) onOpenEditor(); }} onKeyDown={(e) => { if (!busy && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); onOpenEditor(); } }} aria-label="홈페이지 고치기">

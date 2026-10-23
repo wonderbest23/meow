@@ -8,7 +8,7 @@ import { Check, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
 import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
-import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH } from "../../lib/plan-builder/studio";
+import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH, STUDIO_REDIRECT } from "../../lib/plan-builder/studio";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
@@ -72,9 +72,13 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
   const [inApp, setInApp] = useState(false);
   useEffect(() => { setInApp(nativePlatform() !== null); }, []);
   const homepageParts = inApp ? HOMEPAGE_PARTS.filter(([id]) => id !== "hk-domain") : HOMEPAGE_PARTS;
-  /* 작업실 안이면 단계 링크도 작업실 주소로 — 같은 사업이면 작업실이 이동 대신 탭을 바꾸고, 다른 사업이면 그 사업의 작업실로 */
+  /*
+   * 작업실 안이면 단계 링크도 작업실 주소로 — 같은 사업이면 작업실이 이동 대신 탭을 바꾸고, 다른 사업이면 그 사업의 작업실로.
+   * 작업실이 켜져 있으면(STUDIO_REDIRECT) 작업실 밖(내 사업 · 예전 화면)에서도 작업실로 바로 — 예전 화면을 거쳐 다시 보내지 않게
+   */
   const inStudio = pathname.startsWith(STUDIO_PATH);
-  const stepHref = (id: JourneyStepId, href: string) => (inStudio ? studioHref(plan.id, studioTabForStep(id)) : href);
+  const toStudio = inStudio || STUDIO_REDIRECT;
+  const stepHref = (id: JourneyStepId, href: string) => (toStudio ? studioHref(plan.id, studioTabForStep(id)) : href);
   const lockDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (locked && lockDialog.current && !lockDialog.current.open) lockDialog.current.showModal(); }, [locked]);
   const openLocked = (id: JourneyStepId) => {
@@ -96,7 +100,7 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
       return <Fragment key={step.id}>
         <li>
         {reachable
-          ? <Link className={styles.step} href={stepHref(step.id, step.href)} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (inStudio) return; if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); else if (step.id === "launch") sameWorkspaceTab(event, plan.id, "launch"); }}>{body}</Link>
+          ? <Link className={styles.step} href={stepHref(step.id, step.href)} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (toStudio) return; if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); else if (step.id === "launch") sameWorkspaceTab(event, plan.id, "launch"); }}>{body}</Link>
           : <button type="button" className={styles.step} aria-disabled="true" title="앞 단계를 마치면 열려요" onClick={() => openLocked(step.id)}>{body}</button>}
         {/* 문서를 보고 있으면 그 문서의 목차를 바로 아래에 */}
         {step.id === "document" && current && documentToc?.planId === plan.id && documentToc.chapters.length > 0 && <ul className={styles.parts} aria-label="사업계획서 목차">

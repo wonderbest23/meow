@@ -22,7 +22,7 @@ import { PACKAGE_AMOUNT } from "../../../lib/payments/domain";
 import { businessHubState } from "../../../lib/plan-builder/business-hub";
 import { showNotice } from "../../../components/confirm-dialog";
 import { saveFile, saveUrl, SAVE_UNSUPPORTED_MESSAGE } from "../../../lib/save-file";
-import { useStudioDirty, useStudioPane } from "../studio/StudioContext";
+import { useStudioDirty, useStudioNav, useStudioPane } from "../studio/StudioContext";
 import { MissingBusinessBody } from "../MissingBusiness";
 import hub from "../BusinessHub.module.css";
 import frame from "../chat/page.module.css";
@@ -42,6 +42,13 @@ export function PlanDocumentBody() {
   /* 작업실 안이면 그 칸의 사업 — 주소를 고쳐 쓰지 않고(작업실 주소가 망가진다), 사업은 작업실이 정해 준다 */
   const pane = useStudioPane();
   const panePlanId = pane?.planId ?? null;
+  /*
+   * 작업실에서 계획서 칸이 숨겨져 있는 동안(대화·홈페이지 탭을 보는 중) 새 장이 써지거나 작성이 끝나면 그 탭에 점을 찍는다.
+   * 이미 4초마다 묻는 진행(아래)에서 새로 붙인 장이 있을 때만 — 따로 묻지 않는다. 작업실 밖에서는 아무 일도 없다.
+   */
+  const studioNav = useStudioNav();
+  const activityRef = useRef<{ mark?: (tab: "plan") => void; active: boolean }>({ active: true });
+  activityRef.current = { mark: pane ? studioNav?.markActivity : undefined, active: pane?.active ?? true };
   const [sections, setSections] = useState<ReturnType<typeof assembleSections>>([]);
   const [title, setTitle] = useState("사업계획서");
   const [identity, setIdentity] = useState<{ headline: string; pitch: string } | undefined>(undefined);
@@ -69,6 +76,8 @@ export function PlanDocumentBody() {
    * 끝나면(진행 중 → 끝) 한 번 더 맞추고 완료 안내·다음 단계를 띄운다(updateSourceStatus).
    */
   const appliedKeys = useRef<Set<string>>(new Set());
+  /* 이 칸이 스스로 새 소식을 알렸다 — 그 알림으로 오르는 새로 읽기 번호(pane.refresh)에는 다시 받지 않는다(방금 받았다) */
+  const selfMarked = useRef(false);
   const wasActive = useRef(false);
   const syncing = useRef(false);
   const [freshKeys, setFreshKeys] = useState<ReadonlySet<string>>(new Set());
@@ -85,13 +94,16 @@ export function PlanDocumentBody() {
       const plan = state.plans.find(item => item.id === documentPlanId);
       if (!plan) return;
       const arrived = pending.filter(key => writtenForCurrentRun(plan, key));
-      if (arrived.length) {
+      /* 작성이 끝났으면 새 장이 없어도 한 번 맞춘다 — 보이던 장은 그대로, 아직 안 붙은 장만 붙어 내려받기 · 다음 단계 단추가 바로 생긴다 */
+      if (arrived.length || finished) {
         const fresh = assembleSections({ ...state, activePlanId: documentPlanId });
         setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) && !arrived.includes(item.key) ? shown : item; }));
         for (const key of arrived) appliedKeys.current.add(key);
-        setFreshKeys(new Set(arrived));
+        if (arrived.length) setFreshKeys(new Set(arrived));
       }
       if (arrived.length || finished) updateSourceStatus(plan);
+      /* 만드는 중에 새로 붙은 장·작성 끝만 — 처음 열 때 이미 써 있던 장을 붙이는 것은 새 소식이 아니다 */
+      if (((arrived.length && progress.active) || finished) && !activityRef.current.active && activityRef.current.mark) { selfMarked.current = true; activityRef.current.mark("plan"); }
       if (finished) wasActive.current = false;
     }).catch(() => { /* 다음 차례에 다시 받는다 */ }).finally(() => { syncing.current = false; });
   }, [generation.state, documentPlanId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -316,6 +328,32 @@ export function PlanDocumentBody() {
       setAccess({ paid: !!data.paid, price: Number(data.price) || PACKAGE_AMOUNT });
     } catch { setAccessError(true); }
   }
+
+  /*
+   * 작업실이 이 칸에 새 소식을 알리면(작성 시작 → 계획서 탭 보여 주기 · 점, useStudioPane().refresh) — 칸이 이미 보이고 있어도
+   * 진행을 다시 묻고(처음 물었을 때 쉬고 있었으면 멈춰 있다) 문서를 다시 받는다. 예전엔 창을 다시 눌러야(focus) '쓰는 중'과 새 장이 보였다.
+   * 보이던 장(보거나 고치는 중일 수 있다)은 건드리지 않고 아직 없는 장 · 제목 · 완료 상태만 맞춘다.
+   */
+  const paneRefresh = pane?.refresh ?? 0;
+  const seenRefresh = useRef(paneRefresh);
+  useEffect(() => {
+    if (seenRefresh.current === paneRefresh) return;
+    seenRefresh.current = paneRefresh;
+    if (selfMarked.current) { selfMarked.current = false; return; }
+    const id = documentPlanId;
+    if (!id || isSample) return;
+    generation.restart();
+    if (syncing.current) return;
+    hydrateFromServer(false).then(state => {
+      const plan = state.plans.find(item => item.id === id);
+      if (!plan) return;
+      const fresh = assembleSections({ ...state, activePlanId: id });
+      setSections(current => fresh.map(item => { const shown = current.find(section => section.key === item.key); return shown && (shown.markdown || shown.html) ? shown : item; }));
+      for (const key of Object.keys(plan.sections)) if (writtenForCurrentRun(plan, key)) appliedKeys.current.add(key);
+      setTitle(plan.title);
+      updateSourceStatus(plan);
+    }).catch(() => { /* 진행 확인이 다음 차례에 다시 받는다 */ });
+  }, [paneRefresh, documentPlanId, isSample]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 문서에서 금액을 고치면 서버가 본문 금액을 바로 바꿔 넣는다 — 새로고침 없이 보이게 다시 불러온다.
   const reloadSections = () => {

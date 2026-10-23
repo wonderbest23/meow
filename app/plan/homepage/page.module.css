@@ -370,3 +370,7 @@
 .page[data-embedded] .frameScroll { flex: 1; min-height: 0; }
 /* PC 작업실의 오른쪽 칸은 화면보다 좁다 — 넓은 화면 여백(28px) 대신 조금 좁게 */
 @media (min-width: 1024px) { .page[data-embedded] .frameInner { padding: 20px 20px 64px; } }
+
+/* 2단계 작업실 좁은 화면 — 머리줄 대신 칸 맨 위 오른쪽에 저장·공개 */
+.studioNarrowBar { display:flex; align-items:center; justify-content:flex-end; gap:8px; flex-wrap:wrap; margin:0 0 12px; }
+.studioNarrowBar > :first-child { margin-right:auto; }

@@ -1,16 +1,20 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { readLaunch, launchSteps, launchStatus, LAUNCH_KEY, quoteAmount, quoteTotals, useOperatingWorkflow, type LaunchState } from "../../../lib/plan-builder/business-launch";
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
-import { homepageHref } from "../../../lib/plan-builder/journey";
+import { homepageHref, journeyNext } from "../../../lib/plan-builder/journey";
 import { loadState, pushToServer, saveAnswers, setActivePlan, type Plan } from "../../../lib/plan-builder/plan-store";
 import styles from "./LaunchWorkspace.module.css";
 import { wonLabel } from "../../../lib/plan-builder/intake-options";
 import MarketingKitPanel from "./MarketingKit";
+import { useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { useHomepageStatus } from "../use-homepage";
+import paneHeader from "./PaneHeaderActions.module.css";
+import { ChevronRight } from "lucide-react";
 
 /* 시작 방법 세 가지 — 확인 화면과 바꾸기 화면이 같은 이름을 쓴다 */
 const SETUP_CHOICES = {
@@ -101,9 +105,33 @@ export default function LaunchWorkspace({ plan, onSaved }: { plan: Plan; onSaved
   }
   const aiPrompt = current ? `${current.prompt}\n\n현재 단계 메모: ${effectiveNote.slice(0, 600) || "없음"}\n현재 자료: ${effectiveMaterial.slice(0, 600)}\n이전에 기록한 내용(사용자 제공, 외부 검증 아님):\n${steps.filter(s => s.id !== current.id && state.records[s.id]?.note).map(s => `${s.title}: ${state.records[s.id].note.slice(0, 100)}`).join("\n").slice(0, 700)}` : "";
 
+  /*
+   * 작업실 안(머리줄이 있는 작업실) — 모든 단계를 마쳤으면 다음 단계(홈페이지·유지보수)를 머리줄 오른쪽 파란 단추로 둔다(넓은 화면).
+   * 단계마다의 '준비했어요 · 다음'은 체크·메모와 함께 저장하므로 칸 안 그 자리에 두고, 진행 수도 칸 안에 이미 있어 머리줄에 되풀이하지 않는다.
+   * 머리줄은 칸 밖이라 링크는 작업실 탭 바꾸기(nav.push)로 보낸다. 단추 묶음은 바뀔 때만 새로 만든다.
+   */
+  const pane = useStudioPane();
+  const studioNav = useStudioNav();
+  const studioHeader = !!pane && !!studioNav?.setHeaderActions;
+  const homepageStatus = useHomepageStatus(studioHeader ? plan.id : null);
+  const finished = config === null && !current;
+  const next = studioHeader && finished ? journeyNext(plan, homepageStatus) : null;
+  const nextHref = next?.href ?? null, nextTitle = next?.title ?? null;
+  const headerNode = useMemo(() => {
+    if (!studioHeader || !nextHref || !nextTitle) return null;
+    return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}>
+      <a className={`${paneHeader.btn} ${paneHeader.primary}`} href={nextHref} onClick={event => {
+        if (!studioNav || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+        event.preventDefault(); setActivePlan(plan.id); studioNav.push(nextHref);
+      }}><small>다음 단계</small>{nextTitle}<ChevronRight size={16} aria-hidden="true" /></a>
+    </div>;
+  }, [studioHeader, nextHref, nextTitle, studioNav, plan.id]);
+  useStudioHeaderActions(headerNode);
+
   return <div className={styles.launch}>
     {config === "confirm" ? <div className={styles.setup}>
-      <span className={styles.eyebrow}>{readCoach(plan.answers)?.stage === "operating" ? "운영 개선하기" : "사업 시작하기"}</span>
+      {/* 작업실 안에서는 탭 이름(사업 시작하기)과 같아 숨긴다(CSS) */}
+      <span className={`${styles.eyebrow} ${styles.tabEyebrow}`}>{readCoach(plan.answers)?.stage === "operating" ? "운영 개선하기" : "사업 시작하기"}</span>
       <h2 ref={heading} tabIndex={-1}>대화에서 들은 내용으로 준비 과정을 맞췄어요</h2>
       <dl className={styles.confirmList}>{SETUP_KEYS.filter(key => key === "purpose" || state.purpose !== "ideas").map(key => <div key={key}><dt>{SETUP_SHORT[key]}</dt><dd>{setupLabel(key, state[key])}</dd></div>)}</dl>
       <p className={styles.confirmNote}>맞으면 바로 시작해요. 다르면 바꿀 수 있고, 나중에 &lsquo;진행 방식 변경&rsquo;에서도 고칠 수 있어요.</p>

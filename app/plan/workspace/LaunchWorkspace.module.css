@@ -65,3 +65,6 @@
 .checklist > small { margin-top:8px; color:var(--app-muted); font-size:12px; line-height:1.7; }
 /* 작업실 칸 안(data-embedded) — 휴대폰에서 화면 아래에 고정하던 단계 단추 줄을 칸 스크롤 안의 아래 붙임으로. 고정하면 작업실 아래 탭 줄을 덮는다 */
 @media(max-width:760px) { [data-embedded] .stepActions { position:sticky; left:auto; right:auto; bottom:0; margin:0; } [data-embedded] .launch { padding-bottom:0; } }
+/* 작업실 칸 안 — 확인 화면 맨 위 '사업 시작하기'는 작업실 탭 이름과 같아 빼고, 제목을 칸 위에 바로 붙인다 */
+[data-embedded] .tabEyebrow { display:none; }
+[data-embedded] .setup > .tabEyebrow + h2 { margin-top:4px; }

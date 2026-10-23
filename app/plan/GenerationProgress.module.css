@@ -33,3 +33,27 @@ li[data-state="current"] .mark i { width: 10px; height: 10px; border: 2px solid 
   .dialog { width: 100vw; max-width: 100vw; margin: auto 0 0; border-radius: 20px 20px 0 0; padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); }
 }
 @media (prefers-reduced-motion: reduce) { li[data-state="current"] .mark i { animation-duration: 2s; } }
+
+/* 작업실 대화 칸 안의 진행 카드 — 대화 말풍선 흐름 안에 놓이는 흰 카드(팝업 대신) */
+.card { display: grid; gap: 10px; width: min(100%, 520px); margin: 4px 0 14px; padding: 16px 18px; border: 1px solid #e3e6ea; border-radius: 18px; background: #fff; color: #191f28; }
+.card > header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.card > header strong { font-size: 15px; font-weight: 700; }
+.card > header span { flex-shrink: 0; color: #8b95a1; font-size: 13px; }
+.card progress { width: 100%; height: 6px; border: 0; border-radius: 6px; overflow: hidden; appearance: none; background: #e5e8eb; }
+.card progress::-webkit-progress-bar { background: #e5e8eb; border-radius: 6px; }
+.card progress::-webkit-progress-value { background: #246bd1; border-radius: 6px; transition: width .4s ease; }
+.card progress::-moz-progress-bar { background: #246bd1; }
+.card p { margin: 0; font-size: 13.5px; line-height: 1.6; word-break: keep-all; }
+.cardDone { display: flex; align-items: flex-start; gap: 6px; color: #4e5968; }
+.cardDone svg { margin-top: 3px; color: #246bd1; }
+.cardCurrent { display: flex; align-items: center; gap: 8px; color: #191f28; font-weight: 700; }
+.cardCurrent i { flex: none; width: 12px; height: 12px; border: 2px solid #246bd1; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+.cardWaiting { color: #8b95a1; }
+.cardNote { color: #6b7684; font-size: 12.5px !important; }
+.card[data-state="stalled"] > header strong { color: #ad343d; }
+.cardActions { display: flex; flex-wrap: wrap; gap: 6px; }
+.cardPrimary, .cardSecondary { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border-radius: 20px; font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.cardPrimary { border: 0; background: #111418; color: #fff; }
+.cardPrimary:disabled { opacity: .45; cursor: default; }
+.cardSecondary { border: 1px solid #d5dae0; background: #fff; color: #2b3036; }
+@media (prefers-reduced-motion: reduce) { .cardCurrent i { animation-duration: 2s; } }

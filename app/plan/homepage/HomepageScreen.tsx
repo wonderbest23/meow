@@ -4,7 +4,7 @@ import { announceHomepageStatus } from "../use-homepage";
 import { appendixFromDraft } from "../../../components/public-appendix-preview";
 import { apiMessage, fetchWithTimeout, isTimeoutError, koreanText, userErrorMessage } from "../../../lib/client/user-error";
 import { loadAuthSession } from "../../../lib/client/auth-session";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutTemplate, Maximize2, ArrowRight } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -36,7 +36,8 @@ import { HOMEPAGE_PRODUCT_AMOUNT } from "../../../lib/payments/domain";
 import { askConfirm } from "../../../components/confirm-dialog";
 import { withRo } from "../../../lib/josa";
 import { useDialogFocus } from "../../../components/use-dialog-focus";
-import { useStudioDirty, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import { useStudioDirty, useStudioHeaderActions, useStudioNav, useStudioPane } from "../studio/StudioContext";
+import paneHeader from "../workspace/PaneHeaderActions.module.css";
 import { paneLinkCapture } from "../document/pane-link";
 
 /*
@@ -644,6 +645,32 @@ export function HomepageScreen() {
     {/* 고친 게 없으면 손님 화면과 같다 — '새 버전 공개'를 늘 파랗게 켜 두면 눌러야 하는 줄 안다 */}
     <button type="button" className={styles.headerPrimary} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publish()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />}<span>{liveUpToDate ? "공개됨" : site?.status === "published" ? "새 버전 공개" : site?.status === "unpublished" ? "다시 공개" : "공개하기"}</span></button>
   </div> : undefined;
+  /*
+   * 작업실 안 — 저장·공개를 칸 위 도구 줄이 아니라 작업실 머리줄 오른쪽으로 올린다(시안: '홈페이지 공개하기'가 오른쪽 위 파란 단추).
+   * 미리보기 모양(휴대폰/컴퓨터)도 머리줄에서 고른다. 머리줄이 없는 작업실(예전 틀)이면 예전처럼 칸 도구 줄(actions)로 그린다.
+   * 단추 묶음은 바뀔 때만 새로 만든다 — 매번 새로 만들면 작업실이 다시 그려질 때마다 등록이 되풀이된다.
+   */
+  const studioHeader = embedded && !!nav?.setHeaderActions;
+  const [previewView, setPreviewView] = useState<"mobile" | "pc">("mobile");
+  const saveRef = useRef(save); saveRef.current = save;
+  const publishRef = useRef(publish); publishRef.current = publish;
+  const siteStatus = site?.status;
+  /* 미리보기 크기 — 넓은 화면은 머리줄, 좁은 화면(태블릿)은 칸 맨 위 줄에 같은 단추. 아주 좁은 폰(560px 이하)은 휴대폰 모양만 */
+  const previewSwitch = <span className={paneHeader.segment} role="radiogroup" aria-label="미리보기 크기">
+    <button type="button" role="radio" aria-checked={previewView === "mobile"} onClick={() => setPreviewView("mobile")}>휴대폰</button>
+    <button type="button" role="radio" aria-checked={previewView === "pc"} onClick={() => setPreviewView("pc")}>컴퓨터</button>
+  </span>;
+  const studioActions = useMemo(() => {
+    if (!studioHeader || !kitEditing) return null;
+    const label = liveUpToDate ? "공개됨" : siteStatus === "published" ? "새 버전 공개" : siteStatus === "unpublished" ? "다시 공개" : "공개하기";
+    return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`}>
+      {previewSwitch}
+      <button type="button" className={paneHeader.btn} aria-label="저장" disabled={busy} onClick={() => void saveRef.current()}>{action === "saving" ? <Spinner /> : <Save size={15} />}<span className={paneHeader.label}>저장</span></button>
+      {/* 처음 공개는 '홈페이지 공개하기' — 무엇을 공개하는지 머리줄에서도 읽히게(좁은 화면은 '공개하기'만) */}
+      <button type="button" className={`${paneHeader.btn} ${paneHeader.primary}`} data-done={liveUpToDate || undefined} disabled={busy || liveUpToDate} onClick={() => void publishRef.current()}>{action === "publishing" ? <Spinner /> : liveUpToDate ? <Check size={15} /> : <Rocket size={15} />}<span>{label === "공개하기" && <span className={paneHeader.longLabel}>홈페이지 </span>}{label}</span></button>
+    </div>;
+  }, [studioHeader, kitEditing, liveUpToDate, siteStatus, previewView, busy, action]); // eslint-disable-line react-hooks/exhaustive-deps -- previewSwitch 는 previewView 로만 바뀐다
+  useStudioHeaderActions(studioActions);
   const back = screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
   /* 이 화면의 사업 — 공개 뒤 다음 단계와 '사업 시작 준비 먼저 하기'에 쓴다(이 기기에 저장된 사업) */
   const screenPlan = phase === "ready" && screenPlanId && !sample ? loadState().plans.find(item => item.id === screenPlanId) ?? null : null;
@@ -655,9 +682,11 @@ export function HomepageScreen() {
 
   const Root = embedded ? "div" : "main";
   return (
-    /* 작업실 안이면 main 대신 칸 본문(div) — 저장·공개 단추(headerActions)는 작업실이 칸 위 도구 줄로 그린다 */
-    <Root className={`${frame.page} ${styles.page}`} data-embedded={embedded ? "" : undefined} onClickCapture={paneLinkCapture(nav, screenPlanId)}><BusinessAppChrome title="홈페이지" backHref={back} actions={headerActions}>
+    /* 작업실 안이면 main 대신 칸 본문(div) — 저장·공개 단추는 작업실 머리줄(넓은 화면)·칸 맨 위 줄(좁은 화면)에. 머리줄이 없는 작업실이면 예전처럼 칸 위 도구 줄(actions) */
+    <Root className={`${frame.page} ${styles.page}`} data-embedded={embedded ? "" : undefined} onClickCapture={paneLinkCapture(nav, screenPlanId)}><BusinessAppChrome title="홈페이지" backHref={back} actions={studioHeader ? undefined : headerActions}>
     <div className={styles.frameScroll}><div className={styles.frameInner}>
+      {/* 작업실 좁은 화면 — 머리줄 대신 칸 맨 위에 저장·공개(넓은 화면에서는 머리줄 단추가 같은 일을 한다) */}
+      {studioHeader && headerActions && <div className={`${styles.studioNarrowBar} ${paneHeader.narrowOnly}`}>{previewSwitch}{headerActions}</div>}
       {/* 전체 화면 — 방문자가 보는 그대로 */}
       {fullscreen && draft && (
         <div ref={fullscreenRef} className={styles.fullscreen} role="dialog" aria-modal="true" aria-label="홈페이지 전체 화면">
@@ -830,6 +859,7 @@ export function HomepageScreen() {
           onSiteUpdated={updateSite}
           onSourceApplied={applySourceSite}
           nameCandidates={nameCandidates}
+          previewView={studioHeader ? previewView : undefined}
           aiFill={projectId && site && !sample ? {
             running: aiFilling,
             /* 디자인을 바꾼 뒤 '이 디자인에 맞게 AI로 다시 채우기' — 바꾼 디자인은 아직 저장 전이라 먼저 저장하고 채운다 */
