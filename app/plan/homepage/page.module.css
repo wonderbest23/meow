@@ -361,3 +361,12 @@
 .aiFillNotice span { flex: 1 1 220px; }
 .troubleLink { display: inline-flex; align-items: center; min-height: 40px; padding: 0 14px; border-radius: 8px; background: #6b4a0f; color: #fff; font-weight: 700; text-decoration: none; }
 .aiFillNotice button { min-height: 40px; padding: 0 14px; border: 1px solid #e2b85c; border-radius: 8px; background: #fff; color: #6b4a0f; font: inherit; font-weight: 700; cursor: pointer; }
+
+/*
+ * 작업실 칸 안(data-embedded) — 화면 높이(100dvh)가 아니라 칸 높이를 채우고, 칸 위 도구 줄(저장·공개)과 본문을 세로로 쌓는다.
+ * 운영 빌드(Turbopack)는 CSS 모듈 순서가 달라질 수 있어 속성 선택자로 한 단계 높여 둔다(.page 는 이 규칙에만 쓴다).
+ */
+.page[data-embedded] { height: 100%; min-height: 0; flex-direction: column; }
+.page[data-embedded] .frameScroll { flex: 1; min-height: 0; }
+/* PC 작업실의 오른쪽 칸은 화면보다 좁다 — 넓은 화면 여백(28px) 대신 조금 좁게 */
+@media (min-width: 1024px) { .page[data-embedded] .frameInner { padding: 20px 20px 64px; } }

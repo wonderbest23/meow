@@ -7,6 +7,7 @@ import { CheckCircle2, AlertTriangle, Clock3, RefreshCw } from "lucide-react";
 import styles from "../PlanCheckout.module.css";
 import { documentHref } from "../../../../lib/plan-builder/business-hub";
 import { homepageHref } from "../../../../lib/plan-builder/journey";
+import { STUDIO_ENABLED, studioHref } from "../../../../lib/plan-builder/studio";
 
 /**
  * 결제 결과 안내.
@@ -56,7 +57,9 @@ export default function PlanPayResult() {
   const siteHref = planId ? homepageHref(planId) : "/plan/homepage";
   /* 계획서·묶음은 결제해야 작성을 시작한다(무료 체험 없음) — 상담 화면으로 돌아가 바로 작성을 시작한다(?start=1, BusinessIntake) */
   const startsDocument = (product === "plan" || product === "bundle") && !!planId;
-  const doneHref = startsDocument ? `/plan/chat?${new URLSearchParams({ planId: planId!, start: "1" }).toString()}` : homepageProduct ? siteHref : planHref;
+  /* 작업실을 켰으면 작업실 대화 칸에서 작성을 시작한다(?start=1 은 그대로) */
+  const startHref = startsDocument ? (STUDIO_ENABLED ? studioHref(planId!, "chat", { start: "1" }) : `/plan/chat?${new URLSearchParams({ planId: planId!, start: "1" }).toString()}`) : null;
+  const doneHref = startHref ?? (homepageProduct ? siteHref : planHref);
   const doneLabel = startsDocument ? "사업계획서 작성 시작하기" : product === "homepage" ? "홈페이지 고치러 가기" : product === "domain" ? "도메인 연결하러 가기" : product === "domain-purchase" ? "진행 상황 보기" : product === "tokens" ? "AI 수정 쓰러 가기" : "사업계획서로 가기";
   const doneDesc = product === "homepage" ? "홈페이지 편집과 공개가 열렸어요." : product === "domain" ? "1년 동안 내 도메인을 연결해 쓸 수 있어요." : product === "domain-purchase" ? ".com 주소는 몇 분 안에 사장님 명의로 등록하고 홈페이지 연결까지 자동으로 해 드려요(끝나면 문자·메일). .kr·.co.kr 은 영업일 1~2일 안에 등록하고 연결 준비를 마쳐 드려요." : product === "tokens" ? "AI 수정 토큰 20만이 충전됐어요." : product === "regen" ? "다시 생성 10회가 추가됐어요." : product === "bundle" ? "사업계획서 작성과 홈페이지 편집·공개가 함께 열렸어요. 이제 사업계획서를 작성해요(몇 분 걸려요)." : "사업계획서 전체 항목이 열렸어요. 이제 사업계획서를 작성해요(몇 분 걸려요).";
 

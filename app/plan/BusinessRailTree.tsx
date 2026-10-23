@@ -7,7 +7,8 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { Check, ChevronRight, FolderClosed } from "lucide-react";
 import { isSamplePlan, loadState, locallyDeletedPlanIds, setActivePlan, subscribePlanState, subscribePlanTitle, type Plan, type PlanTitleNotice } from "../../lib/plan-builder/plan-store";
 import { subscribeGeneration } from "../../lib/plan-builder/generation-queue";
-import { journeySteps, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
+import { journeySteps, JOURNEY_ORDER, WORKSPACE_TAB_EVENT, WORKSPACE_TAB_REQUEST, type JourneyStepId } from "../../lib/plan-builder/journey";
+import { isStudioTab, stepForStudioTab, studioHref, studioTabForStep, STUDIO_PATH } from "../../lib/plan-builder/studio";
 import { shouldResumeBusinessChat } from "../../lib/plan-builder/business-hub";
 import { useHomepageStatus } from "./use-homepage";
 import shell from "./PlanShell.module.css";
@@ -23,6 +24,8 @@ const LIST_OPEN_KEY = "oneulstart:rail-plans-open";
 type RailHere = JourneyStepId;
 /** 지금 화면이 어디인지(사업 관리 화면은 주소의 tab 으로) */
 function stepFor(pathname: string, tab: string | null): RailHere | null {
+  /* 작업실은 주소의 tab 이 지금 칸(작업실이 탭을 바꿀 때 WORKSPACE_TAB_EVENT 를 보낸다) */
+  if (pathname.startsWith(STUDIO_PATH)) return isStudioTab(tab) ? stepForStudioTab(tab) : "chat";
   if (pathname.startsWith("/plan/chat")) return "chat";
   if (pathname.startsWith("/plan/document")) return "document";
   if (pathname.startsWith("/plan/homepage")) return "homepage";
@@ -45,7 +48,7 @@ function jump(id: string) {
  * 아직 열리지 않은 단계를 누르면 왜 막혔는지와 갈 곳을 안내창으로 보여 준다 — 예전엔 마우스를 올려야 뜨는 말풍선뿐이라
  * 휴대폰에서는 눌러도 아무 일이 없었다(소유자 피드백 2026-10-09).
  */
-const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: string; back: number; label: string }> = {
+export const LOCKED_GUIDE: Record<Exclude<JourneyStepId, "chat">, { message: string; back: number; label: string }> = {
   document: { message: "사업 방향 정리를 마쳐야 사업계획서를 만들 수 있어요.", back: 0, label: "대화로 가기" },
   homepage: { message: "사업계획서를 완성해야 홈페이지를 만들 수 있어요.", back: 1, label: "사업계획서로 가기" },
   /* 유지보수(실적 기록·홈페이지 관리)는 홈페이지가 없어도 쓸 수 있다 — 사업 관리 화면과 같은 규칙. 막히는 건 사업 방향을 정하기 전뿐 */
@@ -69,6 +72,9 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
   const [inApp, setInApp] = useState(false);
   useEffect(() => { setInApp(nativePlatform() !== null); }, []);
   const homepageParts = inApp ? HOMEPAGE_PARTS.filter(([id]) => id !== "hk-domain") : HOMEPAGE_PARTS;
+  /* 작업실 안이면 단계 링크도 작업실 주소로 — 같은 사업이면 작업실이 이동 대신 탭을 바꾸고, 다른 사업이면 그 사업의 작업실로 */
+  const inStudio = pathname.startsWith(STUDIO_PATH);
+  const stepHref = (id: JourneyStepId, href: string) => (inStudio ? studioHref(plan.id, studioTabForStep(id)) : href);
   const lockDialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { if (locked && lockDialog.current && !lockDialog.current.open) lockDialog.current.showModal(); }, [locked]);
   const openLocked = (id: JourneyStepId) => {
@@ -76,7 +82,7 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
     // 홈페이지 공개 여부를 아직 모르면(불러오는 중·실패) 막혔다고 말하지 않는다
     if (id === "care" && homepage === null) return;
     const guide = LOCKED_GUIDE[id];
-    setLocked({ message: guide.message, href: allSteps[guide.back].href, label: guide.label });
+    setLocked({ message: guide.message, href: stepHref(JOURNEY_ORDER[guide.back], allSteps[guide.back].href), label: guide.label });
   };
   return <><ol className={styles.steps}>
     {steps.map((step, index) => {
@@ -90,14 +96,14 @@ function PlanBranch({ plan, here, documentToc, pathname }: { plan: Plan; here: R
       return <Fragment key={step.id}>
         <li>
         {reachable
-          ? <Link className={styles.step} href={step.href} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); else if (step.id === "launch") sameWorkspaceTab(event, plan.id, "launch"); }}>{body}</Link>
+          ? <Link className={styles.step} href={stepHref(step.id, step.href)} aria-current={current ? "page" : undefined} onClick={event => { setActivePlan(plan.id); if (inStudio) return; if (step.id === "care") sameWorkspaceTab(event, plan.id, "operations"); else if (step.id === "launch") sameWorkspaceTab(event, plan.id, "launch"); }}>{body}</Link>
           : <button type="button" className={styles.step} aria-disabled="true" title="앞 단계를 마치면 열려요" onClick={() => openLocked(step.id)}>{body}</button>}
         {/* 문서를 보고 있으면 그 문서의 목차를 바로 아래에 */}
         {step.id === "document" && current && documentToc?.planId === plan.id && documentToc.chapters.length > 0 && <ul className={styles.parts} aria-label="사업계획서 목차">
           {documentToc.chapters.map((name, chapter) => <li key={name}><button type="button" aria-current={documentToc.current === chapter ? "true" : undefined} onClick={() => documentToc.onSelect(chapter)}><b>{String(chapter + 1).padStart(2, "0")}</b>{name}</button></li>)}
           <li><button type="button" aria-current={documentToc.current === "all" ? "true" : undefined} onClick={() => documentToc.onSelect("all")}>전체 이어 읽기</button></li>
         </ul>}
-        {step.id === "homepage" && current && pathname.startsWith("/plan/homepage") && <ul className={styles.parts} aria-label="홈페이지 목차">
+        {step.id === "homepage" && current && (pathname.startsWith("/plan/homepage") || inStudio) && <ul className={styles.parts} aria-label="홈페이지 목차">
           {homepageParts.map(([id, name], part) => <li key={id}><button type="button" onClick={() => jump(id)}><b>{part + 1}</b>{name}</button></li>)}
         </ul>}
       </li></Fragment>;

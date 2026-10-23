@@ -695,7 +695,25 @@ async function main() {
   assert.match(source, /enterKeyHint="enter"/);
   assert.match(source, /composerEnterSends\(\{ key: event.key, shiftKey: event.shiftKey, isComposing: event.nativeEvent.isComposing, keyCode: event.nativeEvent.keyCode \}, window.matchMedia\("\(pointer: coarse\)"\).matches\)/);
   assert.ok(!source.includes('window.matchMedia("(min-width:901px)").matches'), "Sending with Enter must not depend on the viewport width");
-  const conversationMarkup = source.slice(source.indexOf('<main ref={inputPane}'), source.indexOf('</main>'));
+  // 대화 칸은 작업실 밖에서는 main, 작업실 안에서는 section(작업실 루트가 하나뿐인 main) — 같은 InputPane 태그로 그린다
+  assert.match(source, /const InputPane = embedded \? "section" : "main";/);
+  assert.ok(source.indexOf("<InputPane ref={inputPane}") > 0 && source.indexOf("</InputPane>") > source.indexOf("<InputPane ref={inputPane}"));
+  const conversationMarkup = source.slice(source.indexOf('<InputPane ref={inputPane}'), source.indexOf('</InputPane>'));
+  // 작업실 탭(tab)이 바뀌어도 대화를 다시 불러오지 않는다 — 불러오기 기준에서 tab 을 뺀다
+  assert.match(source, /const routeQuery = withoutStudioTab\(queryString\);/);
+  assert.match(source, /\}, \[routeQuery, getSnapshot, installPlan, restoreDraft, updateUrl, resetReply\]\);/);
+  assert.match(source, /params\.delete\("tab"\)/);
+  // 작업실 칸 안: 늘 한 칸(PC 두 칸 배치·분할 손잡이 없음), 높이는 칸을 채운다
+  assert.match(source, /const coachLayout = coach && plan && !embedded \?/);
+  assert.match(source, /\{plan && !embedded && <div \{\.\.\.split\.separator\}/);
+  assert.match(source, /data-embedded=\{embedded \|\| undefined\}/);
+  // 칸 단추 줄(요약)·진행 줄·저장 상태·안내는 대화 위에 가로로 꽉 찬 줄로 쌓고, 대화 영역만 남은 높이를 채운다(예전엔 가로로 나란히 서서 대화가 좁아졌다)
+  assert.match(css, /\.page\[data-embedded\] \{ height: 100%; flex-direction: column; \}/);
+  assert.match(css, /\.page\[data-embedded\] > \.workspace \{ flex: 1 1 0; min-height: 0; \}/);
+  assert.match(css, /\.page\[data-embedded\] \.mobileHidden \{ display: none; \}/);
+  assert.match(css, /\.page\[data-embedded\] \.summaryToggle \{ display: inline-flex; \}/);
+  const loadingSource = readFileSync(new URL("../app/plan/chat/loading.tsx", import.meta.url), "utf8");
+  assert.ok(loadingSource.indexOf("if (pane) return <PlanLoading") > 0 && loadingSource.indexOf("if (pane) return <PlanLoading") < loadingSource.indexOf("<main"), "작업실 칸 안의 로딩은 자기 main 을 그리지 않는다");
   assert.ok(!conversationMarkup.includes("<AnswerHistory"), "Answer history belongs in the summary, not below the next chat question");
   assert.match(source, /finishReply\(pending.command.requestId, saved\)/, "Failed saves must cancel question reveal");
   assert.match(source, /Math\.min\(bottom, Math\.max\(0, turnTop\)\)/, "Auto-scroll follows to the latest content but never hides the current question heading");

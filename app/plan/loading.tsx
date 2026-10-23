@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useSyncExternalStore } from "react";
 import PlanLoading from "./PlanLoading";
 import ChatLoading from "./chat/loading";
+import StudioLoading from "./studio/loading";
 import BusinessAppChrome from "./BusinessAppChrome";
 import frame from "./chat/page.module.css";
 
@@ -21,6 +22,8 @@ export default function Loading() {
   const pathname = usePathname();
   const care = useSyncExternalStore(noop, readCareTab, () => false);
   if (pathname === "/plan/chat" || pathname === "/plan/chat/") return <ChatLoading />;
+  /* 작업실은 왼쪽 메뉴 없이 머리줄만 — 들어가는 동안 예전 화면 틀이 잠깐 보이지 않게 */
+  if (pathname === "/plan/studio" || pathname === "/plan/studio/") return <StudioLoading />;
   const path = pathname.replace(/\/$/, "");
   const titles: Record<string, string> = { "/plan": "내 사업", "/plan/workspace": care ? "유지보수" : "내 사업 관리", "/plan/document": "사업계획서", "/plan/homepage": "홈페이지", "/plan/inquiries": "손님 문의" };
   if (titles[path]) return <main className={frame.page}><BusinessAppChrome title={titles[path]} active={path === "/plan/inquiries" ? "inquiries" : "plans"}><PlanLoading fill variant="compact" note="화면을 불러오고 있어요" /></BusinessAppChrome></main>;

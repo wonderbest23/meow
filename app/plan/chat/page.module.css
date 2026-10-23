@@ -1,4 +1,6 @@
 .page { height:var(--chat-height,100dvh); display:flex; overflow:hidden; background:var(--app-surface); color:var(--app-text); letter-spacing:0; }
+/* 작업실 칸 안에서는 화면 높이(100dvh) 대신 칸 높이를 채운다 — 운영 빌드 CSS 순서에 흔들리지 않게 이 모듈 안에 둔다 */
+.page[data-embedded] { height:100%; }
 .page * { box-sizing:border-box; }
 .page button,.page a,.page textarea { -webkit-tap-highlight-color:transparent; letter-spacing:0; }
 .page button { font-family:inherit; cursor:pointer; }
@@ -22,6 +24,8 @@
 /* 아주 좁은 화면(300px 아래·글자 200% 확대) — 오른쪽 단추(저장·공개하기)가 제목을 '홈'처럼 반쪽으로 밀고 단추도 잘렸다.
    제목은 반쪽으로 남기지 말고 접고(뒤로·메뉴로 어디인지 안다), 더 좁으면 공개 단추 글자를 숨긴 글자로(읽어 주기에는 남는다) */
 @media (max-width:300px) { .header:has(.headerActions) .headerTitle { display:none; }.header:has(.headerActions) { gap:6px; } }
+/* 제목은 단추·링크에 밀려도 0으로 접히지 않게 — 작업실 입구 링크와 저장·공개가 함께 서면 제목 폭이 0이 됐다(예전 홈페이지 390~430px) */
+.header > .headerTitle { min-width:24px; }
 @media (max-width:240px) { .headerActions button > span { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; } }
 .appRail nav .railWorkspace { min-height:42px; margin-left:14px; padding:9px 14px; font-size:14px; border-left:2px solid var(--app-line); border-radius:0 8px 8px 0; }
 .syncNotice { padding:10px 24px; background:var(--app-warning-bg); color:var(--app-warning); display:flex; align-items:center; flex-wrap:wrap; gap:12px; font-size:13px; line-height:1.6; flex-shrink:0; }.syncNotice button { border:0; background:transparent; min-height:40px; color:inherit; font-weight:600; }

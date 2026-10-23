@@ -27,7 +27,7 @@ assert.equal(sample.planType, SAMPLE.planType);
 assert.ok(!/<script|\bon\w+=|javascript:/i.test(sample.html), "baked trusted sample is static document markup");
 
 const source = readFileSync("components/home-workspace-demo.tsx", "utf8");
-const page = readFileSync("app/plan/workspace/page.tsx", "utf8");
+const page = readFileSync("app/plan/workspace/BusinessWorkspace.tsx", "utf8");
 for (const component of ["WorkspaceIdentity", "WorkspaceNavigation", "WorkspaceSummary", "WorkspaceDocumentStatus"]) {
   assert.ok(source.includes(`<${component}`) && page.includes(`<${component}`), `${component} is shared with the actual app`);
 }
