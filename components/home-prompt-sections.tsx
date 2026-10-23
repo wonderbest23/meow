@@ -19,8 +19,9 @@ import styles from "./home-prompt-sections.module.css";
 const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
 const SAMPLE_PLAN = "/plan/document?planId=sample_coffee";
 const SAMPLE_HOMEPAGE = "/plan/homepage?planId=sample_coffee";
-/* 예시 사업의 개업 준비 — 작업실에서 로그인 없이 열린다(유지보수 탭은 예시 사업의 실적 기록을 불러오지 못해 예시로 쓰지 않는다) */
+/* 예시 사업의 개업 준비·유지보수 — 작업실에서 로그인 없이 열린다(유지보수는 예시 실적 기록을 보기 전용으로 보여 준다, sample-operations.ts) */
 const SAMPLE_LAUNCH = studioHref("sample_coffee", "launch");
+const SAMPLE_OPERATIONS = studioHref("sample_coffee", "operations");
 /* 새 대화 — 작업실이 켜져 있으면 작업실의 새 대화로(newChatHref) */
 const NEW_CHAT = newChatHref();
 
@@ -44,23 +45,24 @@ const STARTS: Array<{ title: string; body: string; action: string; entry: EntryM
 const INDUSTRIES = ["카페 창업", "음식점 창업", "배송 사업", "온라인 쇼핑몰", "공방 창업", "꽃집 창업", "앱 개발", "반려동물 돌봄", "가구 제작", "프리랜서 창업"];
 const industryIdea = (label: string) => `${label}을 해 보고 싶어요.`;
 
+/* 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('망원 골목반찬', 실제 AI로 만든 화면). 카드 그림 칸은 3:4로 위쪽부터 보인다 */
 const RESULTS = [
-  { src: "/home-media/results/report-01.webp", width: 1132, height: 1600, alt: "새벽커피 예시 사업계획서 표지", title: "실행용 사업계획서", body: "사업 소개부터 고객, 돈, 12주 할 일까지. PDF와 수정 가능한 Word로 받아요." },
-  { src: "/home-media/showcase/numbers.webp", width: 640, height: 640, alt: "판매가와 비용으로 계산한 손익분기 화면", title: "내 조건으로 계산한 숫자", body: "시작 예산과 쓸 수 있는 시간으로 손익분기, 버틸 수 있는 기간을 계산해요." },
-  { src: "/home-media/showcase/summary.webp", width: 640, height: 640, alt: "사업과 고객, 상품과 가격을 정리한 한 장 요약 화면", title: "한 장 요약", body: "누구에게 무엇을 얼마에 팔고, 첫 달에 무엇을 할지 한 장으로 봐요." },
-  { src: "/home-media/showcase/chat-edit.webp", width: 640, height: 640, alt: "대화로 계획서 내용을 고치는 화면", title: "대화로 고치기", body: "“가격을 9,000원으로 바꿔 줘”처럼 말하면 바뀔 내용을 먼저 보여 주고, 계획서에 반영해요." },
+  { src: "/home-media/showcase/real-plan-top.webp", width: 600, height: 800, alt: "망원 골목반찬 사업계획서 첫 장 — 한 줄 소개와 '망원동 수제 반찬가게가 퇴근길 저녁 반찬 세트를 12,900원에 팝니다' 사업 개요", title: "실행용 사업계획서", body: "사업 소개부터 고객, 돈, 12주 할 일까지. PDF와 수정 가능한 Word로 받아요." },
+  { src: "/home-media/showcase/real-plan-m.webp", width: 780, height: 1200, alt: "사업계획서의 숫자 표 — 세트 가격 12,900원, 생활비까지 버는 판매량 하루 약 19세트, 초기 지출 600만 원일 때 버티는 기간 약 6개월", title: "내 조건으로 계산한 숫자", body: "시작 예산과 쓸 수 있는 시간으로 손익분기, 버틸 수 있는 기간을 계산해요." },
+  { src: "/home-media/showcase/real-summary-m.webp", width: 780, height: 1200, alt: "한 장 요약 — 한 줄 소개 '퇴근길에 들러 오늘 만든 반찬 3종으로 저녁 끝'과 사업, 고객 정리", title: "한 장 요약", body: "누구에게 무엇을 얼마에 팔고, 첫 달에 무엇을 할지 한 장으로 봐요." },
+  { src: "/home-media/showcase/real-chat-edit.webp", width: 600, height: 800, alt: "대화로 '세트 가격을 13,900원으로 올려 줘'라고 하자 판매 가격 12,900원을 13,900원으로 바꾸는 확인 카드가 뜬 화면", title: "대화로 고치기", body: "“세트 가격을 13,900원으로 올려 줘”처럼 말하면 바뀔 내용을 먼저 보여 주고, 계획서에 반영해요." },
 ];
 
 /*
  * 로그인 전에는 '내 사업 열기'가 로그인 안내로만 가서 무엇인지 볼 수 없었다(점검 2026-10-23) — 예시 사업으로 보여 준다.
- * 유지보수는 예시 사업으로 볼 수 있는 화면이 없어(실적 기록을 불러오지 못함) 로그인 전에는 새 대화로 보낸다.
+ * 유지보수도 예시 사업의 기록을 보기 전용으로 보여 줄 수 있게 되어(점검 r36) 개업 준비와 같이 예시로 보낸다.
  */
 function afterCards(signedIn: boolean | null) {
   const mine = signedIn === true;
   return [
     { id: "after-homepage", href: SAMPLE_HOMEPAGE, title: "내 사업 홈페이지", body: "사업계획서 내용으로 홈페이지 초안을 자동으로 만들어요. 초안 만들기 → 문구 다듬기 → 미리보기.", action: "예시 홈페이지 보기" },
     { id: "after-launch", href: mine ? "/plan" : SAMPLE_LAUNCH, title: JOURNEY_LABELS.launch, body: "업종에 맞는 신고·등록 순서와 결제·홍보 준비를 할 일 목록으로 안내해요.", action: mine ? "내 사업 열기" : "예시 보기" },
-    { id: "after-ops", href: mine ? "/plan" : NEW_CHAT, title: JOURNEY_LABELS.care, body: "문을 연 뒤에는 매출과 할 일을 기록하고, 막힐 때 대화로 바로 물어봐요.", action: mine ? "내 사업 열기" : "대화로 시작하기" },
+    { id: "after-ops", href: mine ? "/plan" : SAMPLE_OPERATIONS, title: JOURNEY_LABELS.care, body: "문을 연 뒤에는 매출과 할 일을 기록하고, 막힐 때 대화로 바로 물어봐요.", action: mine ? "내 사업 열기" : "예시 보기" },
   ];
 }
 

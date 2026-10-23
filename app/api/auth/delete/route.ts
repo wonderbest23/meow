@@ -7,10 +7,17 @@ import { enforceRateLimit } from "../../../../lib/rate-limit";
 export const runtime = "nodejs";
 
 // 회원 탈퇴 — 본인 확인(이메일 재입력) 후 계정과 개인 데이터를 지운다.
+// 이메일이 없는 계정(이메일 제공에 동의하지 않은 카카오 등)은 다시 적을 이메일이 없어 탈퇴할 수 없었다 —
+// 그런 계정만 '탈퇴' 두 글자를 적게 한다. 이메일이 있는 계정은 예전처럼 이메일이 맞아야 한다(감사 2026-10-23).
+
+/** 이메일 없는 계정이 적는 확인 문구 — 화면(app/plan/me)과 같은 값 */
+const NO_EMAIL_CONFIRM = "탈퇴";
 
 const schema = z.object({
   /** 오조작 방지 — 화면에 보이는 본인 이메일을 그대로 입력해야 한다 */
-  email: z.string().trim().email().max(200),
+  email: z.string().trim().email().max(200).optional(),
+  /** 이메일 없는 계정만 — '탈퇴'를 그대로 적어야 한다 */
+  confirm: z.string().trim().max(20).optional(),
 });
 
 export async function POST(request: Request) {
@@ -28,9 +35,17 @@ export async function POST(request: Request) {
 
   try {
     const input = schema.parse(await request.json());
-    if (input.email.toLowerCase() !== (user.email ?? "").toLowerCase()) {
+    const accountEmail = (user.email ?? "").trim().toLowerCase();
+    if (accountEmail) {
+      if (!input.email || input.email.toLowerCase() !== accountEmail) {
+        return NextResponse.json(
+          { error: { code: "EMAIL_MISMATCH", message: "로그인한 계정의 이메일과 달라요." } },
+          { status: 400 },
+        );
+      }
+    } else if (input.confirm !== NO_EMAIL_CONFIRM) {
       return NextResponse.json(
-        { error: { code: "EMAIL_MISMATCH", message: "로그인한 계정의 이메일과 달라요." } },
+        { error: { code: "EMAIL_MISMATCH", message: "확인 칸에 '탈퇴'를 그대로 적어 주세요." } },
         { status: 400 },
       );
     }

@@ -8,11 +8,12 @@ import { manualTransferPaymentConfigured } from "../lib/payments/manual-transfer
 import { getPlatformLegalSettings } from "../lib/platform-legal/repository";
 import { LegalTabScroll } from "./legal-tab-scroll";
 
+/* 탭 순서 — 앱 안 약관·정책 화면(/plan/info)과 같게(감사 2026-10-23: 두 화면 순서가 달랐다) */
 const labels: Record<LegalDocumentType, string> = {
   business: "사업자·통신판매 정보",
+  terms: "이용약관",
   privacy: "개인정보처리방침",
   ai: "인공지능·국외 처리",
-  terms: "이용약관",
   refund: "취소·환불",
 };
 
@@ -42,7 +43,7 @@ export async function PlatformLegalPage({ type }: { type: LegalDocumentType }) {
       </header>
       <div className="platform-legal-layout">
         <aside>
-          <strong>이용 안내</strong>
+          <strong>약관·정책</strong>
           <nav>{(Object.keys(labels) as LegalDocumentType[]).map((item) => <Link className={item === type ? "active" : ""} key={item} href={paths[item]}>{labels[item]}</Link>)}</nav>
           <LegalTabScroll />
         </aside>

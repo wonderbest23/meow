@@ -57,7 +57,7 @@
 .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px; min-height: 60dvh; padding: 32px 24px; text-align: center; }
 .empty h2 { font-size: 26px; margin: 0; }
 .empty p { color: #677384; font-size: 15px; line-height: 1.8; max-width: 520px; margin: 0; }
-.empty a { color: #2867ca; }
+.empty a { color: #2867ca; display: inline-flex; align-items: center; min-height: 44px; padding: 0 8px; } /* 누르는 자리 44px — 글자 높이(20px)뿐이었다(감사 r36) */
 .empty > button:not(.primary) { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 10px 16px; border: 1px solid #d7dee8; border-radius: 6px; background: #fff; color: #334155; font-size: 14px; font-weight: 600; }
 .empty > button:not(.primary):hover { background: #eaf0f8; }
 .spin { animation: spin 1s linear infinite; }

@@ -159,6 +159,13 @@
   color: var(--text-muted, var(--app-muted));
   font-size: 13.5px;
 }
+/* '새 대화로 시작하기' — 글 속 링크라도 누르는 자리 44px(감사 2026-10-23) */
+.empty a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 2px;
+}
 
 .logout {
   margin-left: auto;
@@ -334,10 +341,15 @@
   display: flex;
   gap: 8px;
 }
+/* .deleteForm > p 가 더 구체적이라 오류 글자가 회색으로 덮였다(감사 2026-10-23) — 같은 구체성으로 뒤에 둔다 */
+.deleteForm > .deleteError,
 .deleteError {
   margin: 0;
   font-size: 13px;
   color: var(--app-danger);
+}
+.deleteForm input[aria-invalid="true"] {
+  border-color: var(--app-danger);
 }
 
 /* 폰: 결제 내역 표를 한 건씩 카드로 — 다섯 칸을 한 줄에 두면 환불 단추가 화면 밖으로 밀렸다 */

@@ -9,7 +9,7 @@ import type { LandingPageData } from "../lib/landing/page-data";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { BrainwaveTemplatePicker } from "./brainwave-template-picker";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
-import { carryCopyToDesign } from "../lib/landing/ai-fill";
+import { carryCopyToDesign, carryEditedTexts } from "../lib/landing/ai-fill";
 import { BrainwavePage, loadBrainwavePage, menuItemsOf, orderedSections, sectionBands, type BrainwavePageData } from "./brainwave-page";
 import { brainwaveSections } from "../lib/landing/brainwave/button-action";
 import { resizeImage, uploadEditorImage, discardEditorImage, type EditorImageUpload } from "./landing-media-field";
@@ -22,6 +22,7 @@ import LandingImageCrop from "./landing-image-crop";
 import { photoSetContaining, photoSetFor } from "../lib/landing/photo-library";
 import { sectionNameKo } from "../lib/landing/brainwave/section-names";
 import { askConfirm, showCopyText } from "./confirm-dialog";
+import { koreanText, userErrorMessage } from "../lib/client/user-error";
 
 type KitNode = { id?: string; name?: string; ch?: KitNode[] };
 function findNode(node: KitNode | undefined, id: string): KitNode | null {
@@ -235,14 +236,14 @@ export function BrainwaveEditor({
       const j = (await res.json().catch(() => ({}))) as { texts?: Record<string, string>; changed?: number; balance?: TokenBalance; error?: { code?: string; message?: string } };
       if (!mounted.current || requestSession !== session.current) return;
       if (!res.ok) {
-        setAi((s) => ({ ...s, busy: false, note: j.error?.message ?? "AI 수정에 실패했습니다.", balance: j.balance ?? s.balance }));
+        setAi((s) => ({ ...s, busy: false, note: koreanText(j.error?.message, "AI로 고치지 못했어요. 잠시 후 다시 시도해 주세요."), balance: j.balance ?? s.balance }));
         return;
       }
       const applied = j.texts && Object.keys(j.texts).length ? receivePatch({ session: requestSession, kind: "texts", before: snapshot.texts, changes: j.texts, versions }) : null;
       setAi((s) => ({ ...s, busy: false, instruction: "", note: applied?.conflicts.length ? `${applied.applied.length}개 반영 · ${applied.conflicts.length}개 변경 내용 확인 필요` : `${applied?.applied.length ?? 0}개 반영`, balance: j.balance ?? s.balance }));
     } catch {
       if (!mounted.current || requestSession !== session.current) return;
-      setAi((s) => ({ ...s, busy: false, note: "연결이 끊겼습니다. 다시 시도해 주세요." }));
+      setAi((s) => ({ ...s, busy: false, note: "연결이 끊겼어요. 다시 시도해 주세요." }));
     } finally {
       if (aiRequest.current === controller) aiRequest.current = null;
     }
@@ -359,7 +360,8 @@ export function BrainwaveEditor({
    */
   const placeSel = (el: HTMLElement) => {
     const r = el.getBoundingClientRect();
-    const top = document.querySelector(".bw-editor-bar")?.getBoundingClientRect().bottom ?? 64;
+    /* 오류 줄(사진을 올리지 못했어요 등)이 있으면 그 아래부터 — 떠 있는 줄이 오류 줄을 덮어 안 보였다(감사 r36) */
+    const top = Math.max(document.querySelector(".bw-editor-bar")?.getBoundingClientRect().bottom ?? 64, document.querySelector(".bw-editor-error")?.getBoundingClientRect().bottom ?? 0);
     /* 휴대폰에서는 떠 있는 줄이 두 줄로 접힌다(globals.css) — 그만큼 위 자리가 더 있어야 위에 띄운다 */
     const below = r.top - (window.innerWidth <= 640 ? 100 : 56) < top;
     setSelPos({ x: Math.min(Math.max(r.left + r.width / 2, 170), window.innerWidth - 170), y: below ? r.bottom : r.top, below });
@@ -374,6 +376,8 @@ export function BrainwaveEditor({
     return null;
   };
   const select = (kind: "글" | "메뉴" | "사진" | "버튼", id: string, el: HTMLElement) => {
+    /* 다른 것을 고르면(다음 동작) 지난 오류 줄은 지운다 — 사진을 다시 올려 성공한 뒤에도 실패 안내가 남아 있었다 */
+    setError("");
     setPhotoFor((current) => (current === id ? current : null));
     setSel({ kind, id, el, secId: secIdOf(el) });
     placeSel(el);
@@ -519,6 +523,28 @@ export function BrainwaveEditor({
     setSecCount(brainwaveSections(document.querySelector(".bw-editor-canvas") ?? document).length);
     setBtn({ id, textId: textSlot?.id ?? null, label, ...parseLink(over.links[id] ?? "contact") });
   };
+  /*
+   * 휴대폰에서는 버튼 판이 화면 아래 60%를 덮는 시트라, 고른 버튼이 시트 밑에 가려 무엇을 고치는지 안 보였다(감사 r36).
+   * 판이 열리면 고른 버튼을 시트 위 남은 자리 가운데로 올린다(캔버스 아래 여백은 CSS — data-sheet-open).
+   */
+  const btnOpen = Boolean(btn);
+  useEffect(() => {
+    if (!btnOpen || !sel?.el || !window.matchMedia("(max-width: 640px)").matches) return;
+    const frame = window.requestAnimationFrame(() => {
+      const panel = document.querySelector<HTMLElement>(".bw-btn-panel");
+      const el = sel.el;
+      if (!panel || !el.isConnected) return;
+      const limit = panel.getBoundingClientRect().top - 12;
+      const rect = el.getBoundingClientRect();
+      let box: HTMLElement | null = el.parentElement;
+      while (box && !(box.scrollHeight > box.clientHeight && /(auto|scroll)/.test(getComputedStyle(box).overflowY))) box = box.parentElement;
+      const areaTop = Math.max(box?.getBoundingClientRect().top ?? 0, document.querySelector(".bw-editor-bar")?.getBoundingClientRect().bottom ?? 0) + 8;
+      if (rect.top >= areaTop && rect.bottom <= limit) return;
+      const desired = areaTop + Math.max(0, (limit - areaTop - rect.height) / 2);
+      (box ?? document.scrollingElement)?.scrollBy({ top: rect.top - desired, behavior: "smooth" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [btnOpen, sel?.el]);
   const applyBtn = () => {
     if (!btn) return;
     const texts = { ...over.texts };
@@ -747,7 +773,7 @@ export function BrainwaveEditor({
       receivePatch({ session: requestSession, kind: "images", before: snapshot.images, changes: { [id]: receipt.url }, versions });
     } catch (e) {
       if (!mounted.current || requestSession !== session.current) return;
-      setError(e instanceof Error ? e.message : "사진을 올리지 못했습니다.");
+      setError(userErrorMessage(e, "사진을 올리지 못했어요. 잠시 후 다시 시도해 주세요."));
     } finally {
       if (mounted.current && requestSession === session.current) {
         setUploading(null);
@@ -765,7 +791,9 @@ export function BrainwaveEditor({
     deselect();
     const source = { ...(businessContent ?? { businessName: String(data.root.props?.title || "내 사업"), offer: business.summary, description: business.summary, customer: "", price: "문의 후 안내", cta: "문의하기", image: "" }), ...(business.name ? { businessName: business.name } : {}) };
     /* AI 가 쓴 글은 새 디자인의 같은 역할 자리로 옮겨 담는다 — 예전엔 템플릿 기본 글로 돌아갔다 */
-    const generated = carryCopyToDesign({ ...data, businessContent: source }, { page, contentMode, texts: before.texts, images: before.images, links: before.links, sizes: before.sizes, hidden: before.hidden, order: before.order }, createBusinessTemplate(source, next));
+    const carried = carryCopyToDesign({ ...data, businessContent: source }, { page, contentMode, texts: before.texts, images: before.images, links: before.links, sizes: before.sizes, hidden: before.hidden, order: before.order }, createBusinessTemplate(source, next));
+    /* 직접 고친 글(큰 제목 등)도 새 디자인의 같은 역할 자리로 — 예전엔 고친 큰 제목이 사업 이름으로 돌아갔다(감사 r36). 옮길 자리가 없으면 되돌리기로 */
+    const generated = contentMode === "business" && businessContent ? { ...carried, texts: carryEditedTexts(page, before.texts, businessContent, data.aiFill?.texts ?? {}, next, carried.texts).texts } : carried;
     setBusinessContent(source);
     setSourceSnapshot(undefined);
     setOver(generated);
@@ -911,8 +939,8 @@ export function BrainwaveEditor({
             <LayoutTemplate size={15} /> 디자인 바꾸기
           </button>
           <div className="bw-editor-views" role="group" aria-label="보는 폭">
-            <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="PC 화면"><Monitor size={15} /> PC</button>
-            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="모바일 화면"><Smartphone size={15} /> 모바일</button>
+            <button type="button" className={view === "pc" ? "on" : ""} onClick={() => setView("pc")} title="컴퓨터 화면"><Monitor size={15} /> 컴퓨터</button>
+            <button type="button" className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")} title="휴대폰 화면"><Smartphone size={15} /> 휴대폰</button>
           </div>
           <button type="button" className={`bw-editor-preview ${previewMode ? "on" : ""}`} title={previewMode ? "편집으로" : "미리보기"} onClick={() => { finishText(); setMenu(null); deselect(); setPreviewMode((v) => !v); }}>
             {previewMode ? <><Pencil size={14} /> 편집으로</> : <><Eye size={14} /> 미리보기</>}
@@ -940,6 +968,8 @@ export function BrainwaveEditor({
       {error || persistence.error ? <div className="bw-editor-error" role="alert">
         <p>{error || persistence.error}</p>
         {/* 다음에 할 일 — 로그인이 풀렸으면 다시 로그인(고친 내용은 이 탭에 보관돼 돌아오면 복구할 수 있다), 먼저 저장된 내용이 있으면 고르게 */}
+        {/* 편집기 안 오류(사진 올리기 등)는 닫을 수 있다 — 다른 것을 고르거나 다시 올리면 저절로도 지워진다 */}
+        {error ? <div className="bw-editor-error-actions"><button type="button" onClick={() => setError("")}>닫기</button></div> : null}
         {!error && persistence.errorCode === "LOGIN_REQUIRED" ? <div className="bw-editor-error-actions">
           <a href={`/account?next=${encodeURIComponent(typeof window === "undefined" ? "/plan/homepage" : `${window.location.pathname}${window.location.search}`)}`}>다시 로그인하기</a>
         </div> : null}
@@ -1044,7 +1074,7 @@ export function BrainwaveEditor({
             <strong><List size={15} /> 메뉴 관리</strong>
             <button type="button" onClick={() => setMenu(null)} title="닫기"><X size={16} /></button>
           </header>
-          <p className="bw-menu-hint">항목 이름(8자까지)과 누르면 갈 곳을 정합니다. 모바일 화면에는 가로 메뉴가 표시되지 않습니다.</p>
+          <p className="bw-menu-hint">항목 이름(8자까지)과 누르면 갈 곳을 정해요. 휴대폰 화면에는 가로 메뉴가 보이지 않아요.</p>
           {menu.items.map((m, i) => (
             <div className="bw-menu-item" key={i}>
               <div className="bw-menu-row">
@@ -1066,7 +1096,7 @@ export function BrainwaveEditor({
                 </select>
                 <button
                   type="button"
-                  title={menu.items.length <= 3 ? "메뉴는 3개까지 줄일 수 있습니다" : "삭제"}
+                  title={menu.items.length <= 3 ? "메뉴는 3개까지 줄일 수 있어요" : "삭제"}
                   disabled={menu.items.length <= 3}
                   onClick={() => setMenu({ ...menu, items: menu.items.filter((_, j) => j !== i) })}
                 ><Trash2 size={14} /></button>
@@ -1200,7 +1230,7 @@ export function BrainwaveEditor({
             {ai.balance ? (
               <span>
                 남은 토큰 <b>{ai.balance.remaining.toLocaleString("ko-KR")}</b>
-                {ai.balance.remaining < 2000 ? " — 충전이 필요합니다" : ` (페이지 전체 고치기 약 ${Math.max(0, Math.floor(ai.balance.remaining / 8000))}회)`}
+                {ai.balance.remaining < 2000 ? " — 충전이 필요해요" : ` (페이지 전체 고치기 약 ${Math.max(0, Math.floor(ai.balance.remaining / 8000))}회)`}
                 {/* 충전일부터 1년 유효 — 먼저 사라지는 충전분의 만료일 */}
                 {ai.balance.remaining > 0 && ai.balance.expiresAt ? ` · ${new Date(ai.balance.expiresAt).toLocaleDateString("ko-KR")}까지 사용` : ""}
               </span>
@@ -1223,7 +1253,7 @@ export function BrainwaveEditor({
       }}>
         {/* 분위기(색 조합)도 편집 화면에 그대로 */}
         {/* data-lead-form — 공개 화면은 문의 양식이 바로 아래 붙으면 마무리 띠의 문의 단추를 숨긴다(globals.css). 편집 화면은 그 단추에 '공개 화면에는 안 보여요'를 단다 */}
-        <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} data-lead-form={appendix?.leadCaptureEnabled ? "" : undefined} style={{ maxWidth: VIEW_W[view], ...themeStyle(data.theme) }}>
+        <div className={`bw-editor-canvas view-${view} ${previewMode ? "previewing" : ""}`} data-lead-form={appendix?.leadCaptureEnabled ? "" : undefined} data-sheet-open={btn || menu ? "" : undefined} style={{ maxWidth: VIEW_W[view], ...themeStyle(data.theme) }}>
           <BrainwavePage
             pageId={page}
             overrides={{ ...over, contentMode }}
@@ -1275,7 +1305,7 @@ export function BrainwaveEditor({
           <div className="bw-btn-opts" role="radiogroup">
             <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "contact"} onChange={() => setBtn({ ...btn, mode: "contact" })} /> 문의·신청 양식으로 <small>페이지 아래 양식으로 내려가요</small></label>
             {secCount > 1 ? (
-              <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "sec"} onChange={() => { setBtn({ ...btn, mode: "sec" }); jumpToSection(btn.sec); }} /> 이 페이지의 다른 구역으로 <small>이 페이지 안의 다른 칸으로 내려갑니다</small></label>
+              <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "sec"} onChange={() => { setBtn({ ...btn, mode: "sec" }); jumpToSection(btn.sec); }} /> 이 페이지의 다른 구역으로 <small>이 페이지 안의 다른 칸으로 내려가요</small></label>
             ) : null}
             <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "tel"} onChange={() => setBtn({ ...btn, mode: "tel", url: btn.mode === "sms" ? btn.url : "" })} /> 전화 걸기 <small>휴대폰에서 누르면 바로 전화가 걸려요</small></label>
             <label><input type="radio" name="bw-btn-dest" checked={btn.mode === "sms"} onChange={() => setBtn({ ...btn, mode: "sms", url: btn.mode === "tel" ? btn.url : "" })} /> 문자 보내기 <small>휴대폰에서 누르면 문자 쓰기 화면이 열려요</small></label>
@@ -1336,7 +1366,8 @@ export function BrainwaveEditor({
         {changed ? <b> 고친 곳 {changed}개</b> : null}
         {/* 저장 안내 — 예전엔 화면 오른쪽 아래에 떠서 이 안내 줄을 덮었다. 같은 줄 오른쪽에 둔다.
             공개 중이어도 방금 공개해 손님 화면이 저장본과 같으면 '새 버전 공개 후'라고 하지 않는다 */}
-        {persistence.savedAt && !persistence.saving && !persistence.error ? <span className="bw-editor-saved" role="status">{isSaved ? (published ? (liveUpToDate ? "저장 완료 · 손님 화면에도 반영됐어요" : "저장 완료 · 손님 화면은 ‘새 버전 공개’ 후 바뀌어요") : "저장 완료") : "저장하지 않은 수정"}</span> : null}
+        {/* 버튼·메뉴 판이 열려 있으면 감춘다 — 휴대폰에서 판의 [적용] 위에 겹쳤다(감사 r36) */}
+        {persistence.savedAt && !persistence.saving && !persistence.error && !btn && !menu ? <span className="bw-editor-saved" role="status">{isSaved ? (published ? (liveUpToDate ? "저장 완료 · 손님 화면에도 반영됐어요" : "저장 완료 · 손님 화면은 ‘새 버전 공개’ 후 바뀌어요") : "저장 완료") : "저장하지 않은 수정"}</span> : null}
       </p>
     </div>
   );

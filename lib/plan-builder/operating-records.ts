@@ -9,15 +9,30 @@ export const METRICS = [
   { key: "expenses", label: "지출", unit: "원" },
 ] as const;
 export type MetricKey = typeof METRICS[number]["key"];
-const count = z.number().int().min(0).max(10_000_000).nullable();
-const money = z.number().int().min(0).max(1_000_000_000_000).nullable();
+/*
+ * 칸마다 한국어 안내를 붙인다 — 예전엔 13자리 금액을 넣으면 zod 원문 "Too big: expected number to be <=1000000000000"이
+ * 기록 칸 위에 그대로 떴다(감사 r36). 화면은 이 안내와 칸 위치(issue.path)로 해당 칸에 바로 데려간다.
+ */
+const count = z.number({ error: "건수는 숫자로 적어 주세요" }).int("건수는 정수로 적어 주세요").min(0, "건수는 0 이상으로 적어 주세요").max(10_000_000, "건수는 1천만 건 이하로 적어 주세요").nullable();
+const money = z.number({ error: "금액은 숫자로 적어 주세요" }).int("금액은 원 단위 정수로 적어 주세요").min(0, "금액은 0원 이상으로 적어 주세요").max(1_000_000_000_000, "금액은 1조 원 이하로 적어 주세요").nullable();
+const note = (label: string, max: number) => z.string({ error: `${label}을 다시 적어 주세요` }).trim().max(max, `${label}은 ${max.toLocaleString("ko-KR")}자 이하로 적어 주세요`);
 const periodShape = {
-  start: z.string().date(), end: z.string().date(),
+  start: z.string({ error: "시작일을 골라 주세요" }).date("시작일을 다시 골라 주세요"), end: z.string({ error: "종료일을 골라 주세요" }).date("종료일을 다시 골라 주세요"),
   metrics: z.object({ inquiries: count, orders: count, revenue: money, expenses: money }).strict(),
-  feedback: z.string().trim().max(3000), keep: z.string().trim().max(1500),
-  change: z.string().trim().max(1500), nextAction: z.string().trim().max(1500),
-  successCriterion: z.string().trim().max(1000),
+  feedback: note("고객 반응", 3000), keep: note("유지할 점", 1500),
+  change: note("바꿀 점", 1500), nextAction: note("다음 개선 행동", 1500),
+  successCriterion: note("확인 기준", 1000),
 };
+/** 입력 확인 실패를 사람용 안내와 칸 이름으로 — 한국어가 아닌 원문(zod 기본 문구)은 내보내지 않는다 */
+export function periodIssue(error: z.ZodError): { message: string; field: string | null } {
+  const issue = error.issues[0];
+  const message = issue?.message && /[가-힣]/.test(issue.message) ? issue.message : "입력 내용을 확인해 주세요.";
+  const path = (issue?.path ?? []).map(String);
+  const index = path.lastIndexOf("metrics");
+  const field = index >= 0 ? path[index + 1] ?? null : ["start", "end", "feedback", "keep", "change", "nextAction", "successCriterion"].find(key => path.includes(key)) ?? null;
+  /* 종료일·기간 길이 확인(refine)은 칸 이름이 없다 — 종료일 칸으로 */
+  return { message, field: field ?? (issue?.code === "custom" ? "end" : null) };
+}
 export const periodInputSchema = z.object(periodShape).strict().refine(p => p.start <= p.end, "종료일은 시작일 이후여야 해요").refine(p => periodDays(p) <= 366, "한 기록은 최대 366일까지 저장할 수 있어요");
 export type PeriodInput = z.infer<typeof periodInputSchema>;
 const periodSchema = z.object({ ...periodShape, id: z.string().uuid(), revision: z.number().int().positive(), createdAt: z.string(), updatedAt: z.string() });

@@ -29,7 +29,7 @@ function failure(error: unknown) {
       PLAN_NOT_FOUND: "사업을 찾을 수 없어요. 내 사업에서 다시 열어 주세요.",
       SERVICE_NOT_FOUND: "없는 서비스예요. 새로고침 후 다시 골라 주세요.",
       ALREADY_REQUESTED: "이미 신청하신 서비스예요. 담당자가 곧 연락드릴게요.",
-      SERVICE_STORE_UNAVAILABLE: "신청 접수가 아직 준비되지 않았어요. 1:1 상담으로 남겨 주세요.",
+      SERVICE_STORE_UNAVAILABLE: "신청 접수가 아직 준비되지 않았어요. 고객센터에 남겨 주세요.",
       STATUS_CONFLICT: "상태가 바뀌었어요. 새로고침해 주세요.",
       NOT_FOUND: "신청을 찾을 수 없어요.",
     };

@@ -186,15 +186,18 @@ export type StudioChatInput = {
   running?: boolean;
   /** 핵심 질문을 다 답했다(대화 칸의 coreComplete) — 모르면 undefined */
   coreComplete?: boolean;
+  /** 사업 방향을 정리하는 중(대화 칸이 알려 온 것 · 질문 수 묻기의 정리 작업) */
+  designRunning?: boolean;
 };
 
 /**
  * 작업실에서 대화 단계를 '끝남'으로 보는 기준 — 사업안이 만들어졌거나, 계획서 장이 있거나(쓰는 중 포함), 핵심 질문을 다 답했을 때.
  * coach.ready 는 첫 답(사업)만 와도 켜져서(intake-core) 그것만 보면 질문 1/14 에서 '사업 방향 정리됨'·대화 ✓·계획서 탭이 열렸다
  * (점검 2026-10-23). 사업 목록의 '사업안 준비됨'(business-hub)과 같은 생각이다. 왼쪽 메뉴·예전 화면(journeySteps)은 그대로 둔다.
+ * 핵심 질문을 다 답했어도 사업 방향을 정리하는 중이면 아직 대화 단계다 — 대화 칸은 '정리하고 있어요'인데 칩은 '대화 ✓ · 계획서(지금)'였다.
  */
 export function studioChatComplete(input: StudioChatInput): boolean {
-  return input.design || input.documents > 0 || !!input.running || !!input.coreComplete;
+  return input.design || input.documents > 0 || !!input.running || !!input.coreComplete && !input.designRunning;
 }
 
 /** journeySteps 에 작업실의 대화 완료를 얹는다 — 끝났으면 대화 done(쓰는 중이면 계획서 active), 아니면 대화 active */
@@ -281,6 +284,8 @@ export function studioStatusText(input: StudioStatusInput): string {
   if (generation?.active && generation.stalled) return `사업계획서 · ${generation.done}/${generation.total}장에서 멈춤`;
   const state = (id: JourneyStepId) => input.steps!.find(step => step.id === id)?.state ?? "todo";
   if (state("chat") !== "done") {
+    /* 질문을 다 답해 정리를 시작했다 — 대화 단계는 정리가 끝날 때까지(studioChatComplete) 이어진다 */
+    if (input.designRunning && !input.design) return "사업 방향 정리 중";
     if (!intake || intake.total <= 0) return "대화 중";
     return intake.complete ? "대화 중 · 마무리" : `대화 중 · 질문 ${Math.min(intake.answered, intake.total)}/${intake.total}`;
   }
@@ -296,14 +301,16 @@ export function studioStatusText(input: StudioStatusInput): string {
   const launchText = launchDone ? `${launchName} 완료` : launchRunning ? `${launchName} ${launch!.done}/${launch!.total}` : `${launchName} · 시작 전`;
   const documentText = input.stale ? "수정 내용 반영 필요" : "문서 완성";
   const homepageText = homepage === "draft" ? "홈페이지 · 공개 전" : homepage === "published" ? "홈페이지 · 공개 중" : "홈페이지 · 만들기 전";
-  /* 보고 있는 칸의 진행 */
-  if (tab === "launch" || tab === "operations") return launchText;
+  /* 보고 있는 칸의 진행 — 유지보수 칸에서 '개업 준비 · 시작 전'이 보였다(감사 r36). 유지보수는 그 칸이 하는 일을 말한다 */
+  if (tab === "operations") return `${JOURNEY_LABELS.care} · 실적과 개선 기록`;
+  if (tab === "launch") return launchText;
   if (tab === "homepage") return homepageText;
   if (tab === "plan") return documentText;
   /* 전체 진행(휴대폰 대화 탭 등) — 고칠 것이 남았으면 먼저, 그다음 지금 하는 단계 */
   if (input.stale) return documentText;
   if (homepage === "draft") return homepageText;
   if (launchRunning) return launchText;
-  if (homepage === "published") return homepageText;
+  /* 공개한 뒤에는 진행 단계 칩의 '지금 단계'(개업 준비)와 같게 다음 할 일을 함께 말한다 */
+  if (homepage === "published") return launchDone ? homepageText : `홈페이지 공개 중 · 다음은 ${launchName}`;
   return documentText;
 }

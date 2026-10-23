@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CircleHelp, Headphones, MessagesSquare, SquarePen } from "lucide-react";
+import { FileText, Headphones, MessagesSquare, SquarePen } from "lucide-react";
 import { unansweredCount, useInquiries } from "./inquiries/use-inquiries";
 import styles from "./PlanShell.module.css";
 import menu from "./RailMenu.module.css";
@@ -85,10 +85,11 @@ export default function RailMenu({ active, children, documentToc }: { active?: R
     )}
     {/* 플랜을 열어 둔 화면이면 그 목차가 여기 붙는다 */}
     {children}
-    {/* 이용 안내·고객센터 — 맨 아래로 떨어뜨리지 않고 주 메뉴 바로 밑에, 같은 크기로(대표 요청 2026-10-14). 맨 아래에는 내 계정만 */}
+    {/* 약관·정책·고객센터 — 맨 아래로 떨어뜨리지 않고 주 메뉴 바로 밑에, 같은 크기로(대표 요청 2026-10-14). 맨 아래에는 내 계정만.
+        예전 이름 '이용 안내'는 사용법 안내처럼 읽혔는데 열면 약관·고지 문서라 이름을 바꿨다(감사 2026-10-23) */}
     <div className={menu.divider} />
-    <Link href="/plan/info" className={item(menu.main)} title="이용 안내" aria-current={here("info")}>
-      <CircleHelp /><span className={styles.railLabel}>이용 안내</span>
+    <Link href="/plan/info" className={item(menu.main)} title="약관·정책" aria-current={here("info")}>
+      <FileText /><span className={styles.railLabel}>약관·정책</span>
     </Link>
     <Link href="/account/support" className={item(menu.main)} title="고객센터" aria-current={here("support")}>
       <Headphones /><span className={styles.railLabel}>고객센터</span>

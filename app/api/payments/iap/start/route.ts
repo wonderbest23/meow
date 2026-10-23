@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
   const readiness = evaluatePlatformLaunchReadiness(await getPlatformLegalSettings(), { authConfigured: authConfigured(), paymentsConfigured: true });
   if (!readiness.paymentAllowed) {
-    return NextResponse.json({ error: "paid_launch_blocked", message: "지금은 결제를 받을 수 없어요. 잠시 후 다시 시도해 주세요." }, { status: 503 });
+    return NextResponse.json({ error: "paid_launch_blocked", message: "아직 결제를 열기 전이에요. 결제가 열리면 바로 결제할 수 있어요. 궁금한 점은 고객센터로 남겨 주세요." }, { status: 503 });
   }
 
   const blocked = await purchaseBlocked(product, planId, { userId: identity.userId, hash: identity.hash });

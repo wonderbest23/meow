@@ -3,11 +3,18 @@
 
 .srOnly { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-.section { width: 100%; max-width: 1180px; margin-top: 120px; display: flex; flex-direction: column; gap: 28px; scroll-margin-top: 88px; }
+/* --anchor-top — 머리말 링크로 왔을 때 제목 위 여백(머리줄 높이 + 24px). 머리줄이 넓은 화면 64px, 휴대폰 60px */
+.section { --anchor-top: 88px; width: 100%; max-width: 1180px; margin-top: 120px; display: flex; flex-direction: column; gap: 28px; scroll-margin-top: var(--anchor-top); }
 
 /* 등장 — 스크립트가 붙은 뒤(data-armed)에만 숨겨 둔다 */
 .sections[data-armed] [data-reveal] { transition: opacity 600ms cubic-bezier(0.16, 1, 0.3, 1), transform 600ms cubic-bezier(0.16, 1, 0.3, 1); }
 .sections[data-armed] [data-reveal]:not([data-seen]) { opacity: 0; transform: translateY(24px); }
+/*
+ * 머리말 링크(#how·#deliverables·#price)로 내려갈 때 브라우저는 출발 순간의 위치로 도착점을 정한다 — 그때 구간은 아직 24px 아래로
+ * 밀려 있어(위 transform) 등장이 끝나면 제목이 머리줄에 붙었다(88 → 64px, 점검 r36). 숨겨 둔 동안은 밀린 만큼 여백을 더한다.
+ */
+.sections[data-armed] [data-reveal]:not([data-seen]) { scroll-margin-top: calc(var(--anchor-top, 88px) + 24px); }
+.sections[data-armed] [data-reveal]:not([data-seen]) .panelAnchor { scroll-margin-top: calc(96px + 24px); }
 
 .heading {
   margin: 0;
@@ -177,7 +184,7 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 }
 
 @media (max-width: 640px) {
-  .section { margin-top: 88px; gap: 24px; }
+  .section { --anchor-top: 84px; margin-top: 88px; gap: 24px; }
   .features { margin-top: 72px; }
   .lead { font-size: 16px; }
   .linkList a { min-height: 58px; font-size: 17px; }

@@ -77,17 +77,21 @@ function rememberLocally(remember: boolean, email: string) {
   }
 }
 
-export default function AccountAuthForm({ next, initialMode = "login", initialMessage = "", recoveryTokens = null, onReset, titleId }: {
+export default function AccountAuthForm({ next, initialMode = "login", initialMessage = "", initialMessageError = false, recoveryTokens = null, onReset, onModeChange, titleId }: {
   /** 로그인 뒤 돌아갈 내부 경로(검증된 값만). 없으면 내 사업 목록 */
   next: string | null;
   initialMode?: AuthMode;
   initialMessage?: string;
+  /** initialMessage 가 오류 안내인지(그러면 role=alert 로 바로 읽어 준다) */
+  initialMessageError?: boolean;
   /** 비밀번호 재설정 메일 링크로 돌아왔을 때만 있다(reset 모드) */
   recoveryTokens?: { accessToken: string; refreshToken: string } | null;
   /** 새 비밀번호를 저장한 뒤 */
   onReset?: () => void | Promise<void>;
   /** 팝업이 제목으로 이름을 붙일 수 있게 */
   titleId?: string;
+  /** 로그인·회원가입 등 모드가 바뀔 때(계정 화면이 탭 제목을 맞춘다) */
+  onModeChange?: (mode: AuthMode) => void;
 }) {
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState("");
@@ -104,7 +108,16 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   const [aiNotice, setAiNotice] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(initialMessage);
-  const [messageError, setMessageError] = useState(false);
+  const [messageError, setMessageError] = useState(initialMessageError);
+  /*
+   * 바깥(계정 화면)이 안내를 늦게 넘겨도 보여 준다 — 만료된 인증 링크·카카오 링크 확인 실패는 폼이 그려진 뒤에 알게 된다.
+   * 예전엔 첫 렌더 값만 읽어 빈 폼만 남았다(감사 2026-10-23).
+   */
+  useEffect(() => {
+    if (!initialMessage) return;
+    setMessage(initialMessage);
+    setMessageError(initialMessageError);
+  }, [initialMessage, initialMessageError]);
   const switchMode = (next: AuthMode) => { setMode(next); setMessage(""); setMessageError(false); setAskedProblem(false); };
   const [googleReady, setGoogleReady] = useState(false);
   const [googleUnavailable, setGoogleUnavailable] = useState(false);
@@ -116,6 +129,8 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
   useEffect(() => { setNative(nativePlatform()); }, []);
 
   useEffect(() => { setMode(initialMode); }, [initialMode]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { onModeChange?.(mode); }, [mode]);
 
   /*
    * 로그인 뒤 갈 곳.
@@ -330,7 +345,7 @@ export default function AccountAuthForm({ next, initialMode = "login", initialMe
             : <button type="button" onClick={() => switchMode("login")}>{mode === "register" ? "이미 계정이 있어요 · 로그인" : "로그인으로 돌아가기"}</button>}
         </nav>
         {entry && <section className={styles.sns} aria-label="SNS 간편 로그인">
-          <p className={styles.snsTitle}>SNS계정으로 간편 로그인/회원가입</p>
+          <p className={styles.snsTitle}>SNS 계정으로 간편 로그인/회원가입</p>
           <div className={styles.snsRow}>
             {/* 구글은 공식 원형 아이콘 버튼(GIS)을 그대로 쓴다. 카카오는 노란 바탕 원형 */}
             {native === "ios" && <button type="button" className={styles.apple} disabled={busy} onClick={() => nativeLogin("apple")} aria-label="애플로 로그인">

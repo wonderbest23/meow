@@ -54,10 +54,24 @@ export function LoginDialogHost() {
   const [next, setNext] = useState<string | null>(null);
   const [opened, setOpened] = useState(0);
   const [mode, setMode] = useState<AuthMode>("login");
+  /*
+   * 닫으면 연 단추로 초점을 돌려준다 — 작업실 '다시 로그인하기'·대화의 로그인 풀림 단추로 열고 닫으면 초점이 문서 맨 앞('본문 바로가기')으로 가
+   * 키보드·화면 낭독 사용자가 있던 자리를 잃었다. Safari 는 누른 단추에 초점을 주지 않아, 방금 누른 단추(lastPressed)를 대신 쓴다.
+   */
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const lastPressed = useRef<{ element: HTMLElement; at: number } | null>(null);
 
   useEffect(() => {
     hostMounted = true;
+    /* 열 때 한 번만 — 이미 열린 창을 다시 열라고 하면(겹친 요청) 처음 연 단추를 그대로 둔다 */
+    const remember = (fallback: HTMLElement | null) => {
+      if (dialog.current?.open) return;
+      const active = document.activeElement;
+      const pressed = lastPressed.current && Date.now() - lastPressed.current.at < 1000 ? lastPressed.current.element : null;
+      returnFocus.current = active instanceof HTMLElement && active !== document.body && !dialog.current?.contains(active) ? active : fallback ?? pressed;
+    };
     const open = (event: Event) => {
+      remember(null);
       const detail = (event as CustomEvent<{ next?: string; mode?: AuthMode }>).detail;
       setNext(detail?.next ?? null);
       setMode(detail?.mode === "register" ? "register" : "login");
@@ -69,6 +83,9 @@ export function LoginDialogHost() {
      * next 가 없는 /account(머리말 계정 아이콘)는 로그인 상태에 따라 내 계정으로 가야 해서 건드리지 않는다.
      */
     const intercept = (event: globalThis.MouseEvent) => {
+      /* 누른 단추를 적어 둔다(캡처 단계라 그 단추의 openLogin() 보다 먼저) — 창 안에서 누른 것은 빼고 */
+      const control = (event.target as Element | null)?.closest?.("button, a[href], [role='button'], summary");
+      if (control instanceof HTMLElement && !dialog.current?.contains(control)) lastPressed.current = { element: control, at: Date.now() };
       if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
       const anchor = (event.target as Element | null)?.closest?.("a[href]") as HTMLAnchorElement | null;
       if (!anchor || anchor.target === "_blank") return;
@@ -77,6 +94,7 @@ export function LoginDialogHost() {
       if (window.location.pathname === "/account") return;
       event.preventDefault();
       event.stopPropagation();
+      remember(anchor);
       setNext(safeNextPath(url.searchParams.get("next")) ?? "/plan");
       setMode(url.searchParams.get("mode") === "register" ? "register" : "login");
       setOpened(count => count + 1);
@@ -92,11 +110,18 @@ export function LoginDialogHost() {
   }, [opened]);
 
   const close = () => dialog.current?.close();
+  /* 닫히면(닫기 단추 · Esc · 바깥 누르기) 연 단추로 — 그 단추가 사라졌거나(로그인돼 화면이 바뀜) 막힌 칸 안이면 두지 않는다 */
+  const restoreFocus = () => {
+    const target = returnFocus.current;
+    returnFocus.current = null;
+    if (!target?.isConnected || target.closest("[inert]")) return;
+    target.focus({ preventScroll: true });
+  };
   /* 바깥 클릭으로 닫는 것은 '누르기 시작'도 바깥이었을 때만 — 글자를 끌어 선택하다 밖에서 놓으면 닫히던 문제 */
   const pressedOnBackdrop = useRef(false);
 
   return (
-    <dialog ref={dialog} className={styles.dialog} aria-labelledby="login-dialog-title" onPointerDown={event => { pressedOnBackdrop.current = event.target === dialog.current; }} onClick={event => { if (pressedOnBackdrop.current && event.target === dialog.current) close(); pressedOnBackdrop.current = false; }}>
+    <dialog ref={dialog} className={styles.dialog} aria-labelledby="login-dialog-title" onClose={restoreFocus} onPointerDown={event => { pressedOnBackdrop.current = event.target === dialog.current; }} onClick={event => { if (pressedOnBackdrop.current && event.target === dialog.current) close(); pressedOnBackdrop.current = false; }}>
       {opened > 0 && (
         <div className={`${accountStyles.page} ${styles.scope}`}>
           <button type="button" className={styles.close} onClick={close} aria-label="로그인 닫기"><X size={20} /></button>

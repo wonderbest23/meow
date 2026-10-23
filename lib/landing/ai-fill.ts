@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { LandingDraft } from "./domain";
 import { landingPageDataSchema, type LandingPageData } from "./page-data";
 import { BUSINESS_TEMPLATE_PROFILES, businessTemplateDefaults, businessTemplateManifest, createBusinessTemplate, visitInfoTexts } from "./brainwave/business-content";
-import { applyPhotoSet, photoSetFor } from "./photo-library";
+import { applyPhotoSet, businessPhotoSet } from "./photo-library";
 import { currentBusinessDesign, readCoach } from "../plan-builder/coach";
 import { formatPriceText } from "./from-plan";
 import { applyContactMethod, ctaButtons, DEFAULT_CONTACT, draftPhone } from "./contact-method";
@@ -387,7 +387,7 @@ const formTitleLike = (label: string) => /(문의|신청|예약|상담)/.test(la
  * 기본으로 숨겨 둔 섹션은 채우면서 연다 — 사장님이 직접 숨긴 섹션은 그대로 둔다.
  * 쓴 글은 디자인과 상관없는 모양(copy)으로도 남긴다 — 디자인을 바꾸면 새 디자인 자리에 다시 옮겨 담는다.
  */
-export function applyHomepageCopy(draft: LandingDraft, rawCopy: HomepageCopy, options: { industry?: string; description?: string; now?: string } = {}): LandingDraft {
+export function applyHomepageCopy(draft: LandingDraft, rawCopy: HomepageCopy, options: { industry?: string; businessType?: string; description?: string; now?: string } = {}): LandingDraft {
   const now = options.now ?? new Date().toISOString();
   const data = draft.pageData;
   const bw = data?.brainwave;
@@ -422,7 +422,8 @@ export function applyHomepageCopy(draft: LandingDraft, rawCopy: HomepageCopy, op
     written[id] = value;
   }
   // 사진 — 업종 사진 한 벌(빈 자리·첫 화면 사진이 복사된 자리·템플릿 기본 사진만 바꾼다)
-  const photos = photoSetFor(`${options.industry ?? ""} ${data.businessContent.businessName} ${(options.description ?? "").slice(0, 200)} ${data.businessContent.offer}`);
+  // 그 사업을 가리키는 글(업종 코드·가이드 이름, 상호, 설명, 대표 상품)을 먼저 보고, 넓은 업종 이름(industry)은 못 알아볼 때만
+  const photos = businessPhotoSet(`${options.businessType ?? ""} ${data.businessContent.businessName} ${(options.description ?? "").slice(0, 200)} ${data.businessContent.offer}`, options.industry ?? "");
   const nextImages = photos ? applyPhotoSet(bw.images, bw.page, photos) : bw.images;
   const writtenImages = Object.fromEntries(Object.entries(nextImages).filter(([id, url]) => url !== bw.images[id]));
   /*
@@ -608,6 +609,39 @@ export function switchHomepageDesign(draft: LandingDraft, page: string, build: (
   const linked = applyContactMethod({ ...fresh, contact: DEFAULT_CONTACT }, fresh);
   if (!copy) return linked;
   return applyHomepageCopy(linked, copy, { now: data.aiFill?.at, description: draft.offerDescription });
+}
+
+/*
+ * 직접 고친 글 — 디자인을 바꾸면 사업 정보로 새로 만들어 큰 제목처럼 사장님이 고친 글이 사라졌다(감사 r36).
+ * 지금 글 가운데 사업 정보로 만든 글(템플릿 기본)과도, AI 가 쓴 글과도 다른 칸을 '직접 고친 칸'으로 본다.
+ * 칸마다 역할(큰 제목·소개·제공 내용…)이 있어(BUSINESS_TEMPLATE_PROFILES.fields) 새 디자인의 같은 역할 자리로 옮겨 담는다.
+ * 이름·주소·영업시간·버튼 글은 사업 정보·연락 방법에서 따로 채우므로 옮기지 않는다. 옮길 자리가 없는 칸 수는 lost 로 알린다.
+ */
+const DERIVED_FIELDS = new Set(["businessName", "address", "hours", "cta"]);
+export function editedTextFields(page: string, texts: Record<string, string>, content: Parameters<typeof createBusinessTemplate>[0], aiTexts: Record<string, string> = {}): { fields: Record<string, string>; ids: string[] } {
+  const profile = BUSINESS_TEMPLATE_PROFILES[page];
+  if (!profile) return { fields: {}, ids: [] };
+  let base: Record<string, string>;
+  try { base = { ...createBusinessTemplate(content, page).texts }; } catch { return { fields: {}, ids: [] }; }
+  // 이름·주소·영업시간·버튼 칸은 사업 정보·연락 방법이 바꿔 넣어 기본 글과 늘 다를 수 있다 — 고친 칸으로 세지 않는다
+  const ids = Object.entries(texts).filter(([id, text]) => id in base && !(id in aiTexts) && !DERIVED_FIELDS.has(profile.fields[id] ?? "") && text.trim() && text !== base[id]).map(([id]) => id);
+  const fields: Record<string, string> = {};
+  for (const id of ids) {
+    const field = profile.fields[id];
+    if (field && fields[field] === undefined) fields[field] = texts[id];
+  }
+  return { fields, ids };
+}
+/** 고친 글을 새 디자인(next)의 같은 역할 자리에 넣는다 — 옮기지 못한 칸 수(lost)도 함께 */
+export function carryEditedTexts(page: string, texts: Record<string, string>, content: Parameters<typeof createBusinessTemplate>[0], aiTexts: Record<string, string>, nextPage: string, nextTexts: Record<string, string>): { texts: Record<string, string>; carried: number; lost: number } {
+  const { fields, ids } = editedTextFields(page, texts, content, aiTexts);
+  const nextProfile = BUSINESS_TEMPLATE_PROFILES[nextPage];
+  const out = { ...nextTexts };
+  const placed = new Set<string>();
+  if (nextProfile) for (const [id, field] of Object.entries(nextProfile.fields)) if (fields[field] !== undefined) { out[id] = fields[field]; placed.add(field); }
+  const profile = BUSINESS_TEMPLATE_PROFILES[page];
+  const lost = ids.filter(id => { const field = profile?.fields[id]; return !field || !placed.has(field); }).length;
+  return { texts: out, carried: ids.length - lost, lost };
 }
 
 const BUSINESS_HERO_SLOT: Record<string, string> = { "0-1102": "0:1325/0/0", "0-290": "0:411/0", "0-2226": "0:2362/0/0", "0-2385": "0:2550/0/0", "0-421": "0:1082/0/0" };

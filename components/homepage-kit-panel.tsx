@@ -16,7 +16,8 @@ import { HomepageExpertConsult } from "./homepage-expert-consult";
 import { BRAINWAVE_PAGES } from "../lib/landing/brainwave/catalog";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { homepageMissingInfo } from "../lib/landing/publish-check";
-import { switchHomepageDesign } from "../lib/landing/ai-fill";
+import { carryEditedTexts, switchHomepageDesign } from "../lib/landing/ai-fill";
+import { askConfirm } from "./confirm-dialog";
 import { applyBusinessContent } from "../lib/landing/page-data";
 import { LANDING_THEMES } from "../lib/landing/themes";
 import PlanLoading, { Spinner } from "../app/plan/PlanLoading";
@@ -260,7 +261,7 @@ export function HomepageKitPanel({
   const page = BRAINWAVE_PAGES.find((p) => p.id === draft.pageData?.brainwave?.page);
   const [picking, setPicking] = useState(false);
   /* 디자인을 바꾸기 직전 모습 — 바꾼 뒤 '되돌리기'로 한 번 돌아갈 수 있다 */
-  const [beforeSwitch, setBeforeSwitch] = useState<{ draft: LandingDraft; from: string } | null>(null);
+  const [beforeSwitch, setBeforeSwitch] = useState<{ draft: LandingDraft; from: string; carried: number } | null>(null);
   const bw = draft.pageData?.brainwave;
   // 큰 제목(계획서의 한 줄 소개)은 폼에 칸이 없다 — 템플릿을 바꿔도 이어 쓴다
   const contentSource = () => contentSourceOf(draft);
@@ -268,14 +269,22 @@ export function HomepageKitPanel({
    * 디자인 바꾸기 — AI 가 쓴 글(한 줄 소개·카드·이용 순서·메뉴·마무리)은 새 디자인의 같은 역할 자리로 옮겨 담는다(switchHomepageDesign).
    * 예전엔 템플릿 기본 글로 새로 만들어 AI 글이 사라지고, 원래 디자인으로 돌아가도 되살아나지 않았다.
    */
-  const pickTemplate = (id: string) => {
+  /*
+   * 직접 고친 글(큰 제목 등)은 새 디자인의 같은 역할 자리로 옮긴다(carryEditedTexts) — 예전엔 디자인을 바꾸면 고친 큰 제목이 사업 이름으로 돌아갔다(감사 r36).
+   * 옮길 자리가 없는 글이 있으면 바꾸기 전에 몇 곳인지 묻는다. 바꾼 뒤에도 아래 '되돌리기'는 다른 디자인으로 다시 바꾸기 전까지 남는다.
+   */
+  const pickTemplate = async (id: string) => {
     if (!draft.pageData || !bw || busy) return;
-    if (id === bw.page) { setPicking(false); return; }
+    setPicking(false);
+    if (id === bw.page) return;
     const businessContent = { ...contentSource(), businessName: draft.businessName.trim() || "내 사업" };
     const base = { ...draft, pageData: { ...draft.pageData, businessContent } };
-    onChange(switchHomepageDesign(base, id, () => createBusinessTemplate(businessContent, id)));
-    setBeforeSwitch({ draft, from: page?.ko ?? "이전 디자인" });
-    setPicking(false);
+    const switched = switchHomepageDesign(base, id, () => createBusinessTemplate(businessContent, id));
+    const nextBw = switched.pageData?.brainwave;
+    const carry = nextBw ? carryEditedTexts(bw.page, bw.texts, businessContent, draft.pageData.aiFill?.texts ?? {}, id, nextBw.texts) : null;
+    if (carry?.lost && !await askConfirm({ title: `직접 고친 글 ${carry.lost}곳이 바뀌어요`, message: "새 디자인에는 그 글을 옮겨 담을 자리가 없어 디자인 기본 글로 바뀌어요. 바꾼 뒤에도 '되돌리기'로 지금 모습으로 돌아올 수 있어요.", cancelLabel: "그대로 두기", confirmLabel: "디자인 바꾸기" })) return;
+    onChange(carry && nextBw && switched.pageData ? { ...switched, pageData: { ...switched.pageData, brainwave: { ...nextBw, texts: carry.texts } } } : switched);
+    setBeforeSwitch({ draft, from: page?.ko ?? "이전 디자인", carried: carry?.carried ?? 0 });
   };
 
   /* 접수된 문의 수 — '내 문의'와 같은 목록을 함께 쓴다(따로 무거운 landing API 를 다시 부르지 않는다) */
@@ -366,7 +375,7 @@ export function HomepageKitPanel({
           <span><Pencil size={14} aria-hidden /> 미리보기를 누르면 고칠 수 있어요</span>
           {previewView ? null : <span className="hk-view-switch" role="radiogroup" aria-label="미리보기 모양">
             <button type="button" role="radio" aria-checked={view === "mobile"} className={view === "mobile" ? "on" : ""} onClick={() => setView("mobile")}>휴대폰</button>
-            <button type="button" role="radio" aria-checked={view === "pc"} className={view === "pc" ? "on" : ""} onClick={() => setView("pc")}>PC</button>
+            <button type="button" role="radio" aria-checked={view === "pc"} className={view === "pc" ? "on" : ""} onClick={() => setView("pc")}>컴퓨터</button>
           </span>}
         </div>
         {/* 미리보기 안에 킷 템플릿의 <button>·<input> 이 있어서 <button> 으로 감싸면 invalid HTML(하이드레이션 오류) */}
@@ -384,14 +393,14 @@ export function HomepageKitPanel({
       {/* 디자인을 바꾼 바로 뒤 — 되돌리기와 AI로 다시 채우기(채우는 단추는 여기에만 둔다: 늘 보이면 AI 비용만 나간다) */}
       {beforeSwitch && bw && beforeSwitch.draft.pageData?.brainwave?.page !== bw.page ? (
         <div className="hk-switch-note" role="status">
-          <span>{draft.pageData?.aiFill ? "디자인을 바꿨어요. AI가 쓴 글은 새 디자인 자리에 옮겨 담았어요. 칸 수가 달라 빠진 글은 되돌리면 그대로 있어요." : "디자인을 바꿨어요. 글은 사업 정보로 새로 채웠어요."}</span>
+          <span>{draft.pageData?.aiFill ? "디자인을 바꿨어요. AI가 쓴 글은 새 디자인 자리에 옮겨 담았어요. 칸 수가 달라 빠진 글은 되돌리면 그대로 있어요." : "디자인을 바꿨어요. 글은 사업 정보로 새로 채웠어요."}{beforeSwitch.carried ? ` 직접 고친 글 ${beforeSwitch.carried}곳은 새 디자인의 같은 자리로 옮겼어요.` : ""}</span>
           <span className="hk-switch-actions">
             <button type="button" disabled={busy} onClick={() => { onChange(beforeSwitch.draft); setBeforeSwitch(null); }}><Undo2 size={14} aria-hidden /> {withRo(beforeSwitch.from)} 되돌리기</button>
             {aiFill ? <button type="button" disabled={busy} onClick={() => { setBeforeSwitch(null); aiFill.run(); }}><Sparkles size={14} aria-hidden /> 이 디자인에 맞게 AI로 다시 채우기</button> : null}
           </span>
         </div>
       ) : null}
-      {picking && bw ? <BrainwaveTemplatePicker current={bw.page} aiFilled={Boolean(draft.pageData?.aiFill)} onPick={pickTemplate} onClose={() => setPicking(false)} /> : null}
+      {picking && bw ? <BrainwaveTemplatePicker current={bw.page} aiFilled={Boolean(draft.pageData?.aiFill)} onPick={(id) => void pickTemplate(id)} onClose={() => setPicking(false)} /> : null}
 
       {/* 손님 연락 방법 — 문의·예약 버튼과 휴대폰 아래 고정 버튼이 어디로 연결될지 */}
       <Fold

@@ -5,6 +5,7 @@ import { landingDraftSchema } from "../lib/landing/domain";
 import { createBusinessTemplate } from "../lib/landing/brainwave/business-content";
 import { COACH_KEY, COACH_VERSION, coachDocumentRevision, type CoachState } from "../lib/plan-builder/coach";
 import { photoSetFor } from "../lib/landing/photo-library";
+import { specificIndustryLabel } from "../lib/plan-builder/business-launch";
 import { aiFillLanded, aiFillMark, needsAutoAiFill } from "../lib/landing/ai-fill-auto";
 
 // 계획서 — 반찬 정기배송(운영에서 쓰는 테스트 계획서와 같은 모양)
@@ -250,5 +251,36 @@ assert.equal(aiFillLanded("2026-09-30T13:40:00.000Z", refilled), true, "refill l
 assert.equal(aiFillLanded("2026-09-30T13:50:57.019Z", refilled), false, "same fill as before");
 assert.equal(aiFillLanded("", site(created)), false, "not filled yet");
 assert.equal(aiFillLanded("", null), false);
+
+// 넓은 업종 '카페 · 음식점'을 고른 반찬가게 — 카페 사진이 아니라 음식 사진(실제 AI 점검 2026-10-23 망원 골목반찬)
+// 홈페이지를 만들 때(landingDraftFromPlan)도, AI 로 채울 때(applyHomepageCopy)도 그 사업의 업종·상호·설명을 먼저 본다
+const foodSet = photoSetFor("반찬")!, cafeSet = photoSetFor("카페")!;
+const broadPlan = (name: string, description: string, offer: string) => {
+  const state: CoachState = { ...structuredClone(coach), business: { ...coach.business, name, description, industry: "카페 · 음식점" } };
+  state.fields = state.fields.map(field => field.key === "offer" ? { ...field, value: offer, quote: offer } : field);
+  return { title: name, answers: { [COACH_KEY]: { state } } as Record<string, Record<string, unknown>> };
+};
+const sideDish = broadPlan("망원 골목반찬", "망원동 골목에서 매일 만드는 반찬가게", "매일 아침 무치는 나물과 조림");
+assert.equal(landingDraftFromPlan({ planTitle: sideDish.title, business: {}, answers: sideDish.answers }).heroImageUrl, foodSet.hero, "side-dish shop gets food photos at creation");
+const cafePlan = broadPlan("망원 한잔", "망원동 골목의 작은 커피집", "핸드드립 커피와 라떼");
+assert.equal(landingDraftFromPlan({ planTitle: cafePlan.title, business: {}, answers: cafePlan.answers }).heroImageUrl, cafeSet.hero, "an actual cafe still gets cafe photos");
+// 업종 말이 하나도 없으면 넓은 업종 이름으로 — '카페 · 음식점'의 카페는 보지 않고 음식으로
+const vague = broadPlan("망원 골목", "", "주 2회 정기배송");
+assert.equal(landingDraftFromPlan({ planTitle: vague.title, business: {}, answers: vague.answers }).heroImageUrl, foodSet.hero, "broad label alone falls back to food, not cafe");
+// AI 채우기: 상호에 업종 말이 없어도 업종 코드·가이드 이름(businessType)이 넓은 업종 이름보다 먼저
+const namelessDraft = structuredClone(created);
+namelessDraft.pageData!.businessContent!.businessName = "망원 골목";
+namelessDraft.pageData!.businessContent!.offer = "주 2회 정기배송";
+namelessDraft.pageData!.brainwave!.images = {};
+namelessDraft.heroImageUrl = "";
+const fillWith = (businessType: string) => applyHomepageCopy(namelessDraft, copy!, { industry: "카페 · 음식점", businessType }).pageData!.brainwave!.images["0:1325/0/0"];
+assert.equal(fillWith("조리 반찬류 소매업"), foodSet.hero, "KSIC side-dish name picks food");
+assert.equal(fillWith("김밥 및 기타 간이 음식점업"), foodSet.hero);
+assert.equal(fillWith("커피 전문점"), cafeSet.hero, "KSIC coffee shop picks cafe");
+assert.equal(fillWith(""), foodSet.hero, "only the broad label: food, not cafe");
+assert.equal(applyHomepageCopy(namelessDraft, copy!, { industry: "카페 · 음식점", description: "골목 브런치 카페" }).pageData!.brainwave!.images["0:1325/0/0"], cafeSet.hero, "description saying cafe picks cafe");
+// 업종 코드·가이드 이름 — 넓은 업종 이름은 넣지 않는다
+assert.equal(specificIndustryLabel(sideDish), "반찬·도시락 가게");
+assert.equal(specificIndustryLabel(vague), "");
 
 console.log("landing-ai-fill: prompt, normalize, shop and consult fill, owner edits kept, identity kept");

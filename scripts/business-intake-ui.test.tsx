@@ -392,7 +392,7 @@ async function main() {
   const css = readFileSync(new URL("../app/plan/chat/intake.module.css", import.meta.url), "utf8");
   const cssClasses = Object.fromEntries([...css.matchAll(/\.([a-zA-Z][a-zA-Z0-9_-]*)/g)].map(match => [match[1], match[1]]));
   require.extensions[".css"] = module => { module.exports = cssClasses; };
-  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, DesignProgress, DesignResult, DocumentLockedTurn, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
+  const { EntryChoices, QuestionForm, BusinessSummary, ConversationHistory, ConversationText, DesignDirection, DesignProgress, DesignResult, DocumentLockedTurn, EditChatTurn, ExtractionReview, SavedNotes, AnswerHistory, ReplyTyping, JobProgress, NextStepAction, RewriteCost } = await import("../app/plan/chat/intake-ui/IntakePanels");
   const noop = () => {};
   const entry = renderToStaticMarkup(<EntryChoices disabled={false} onStart={noop} />);
   assert.equal((entry.match(/<button/g) ?? []).length, 3);
@@ -710,6 +710,14 @@ async function main() {
   const slowChatJob = renderToStaticMarkup(<JobProgress variant="chat" snapshot={{ ...summarized, intake: { ...summarized.intake, job: runningJob }, jobClock: { elapsedMs: 41_000, expectedMs: 25_000, limitMs: 60_000 } }} />);
   assert.ok(slowChatJob.includes("평소보다 오래 걸리고 있어요 · 41초") && !slowChatJob.includes('role="status"'), "elapsed time appears only once the job runs long");
   assert.equal(renderToStaticMarkup(<JobProgress variant="chat" snapshot={summarized} />), "", "no chat reply bubble without an active job");
+  // 채팅 수정: 서버에 고르기 전인 '이렇게 바꿀게요'가 있으면 카드와 바꾸기·취소가 다시 그려진다(새로고침해도 서버 상태만으로) — 고른 뒤에는 카드가 없다
+  const editQuestion = summarized.questions.find(question => question.kind === "text") ?? summarized.questions[0];
+  const editJob = { ...runningJob, kind: "edit" as const, status: "complete" as const, request: "바꿔 주세요", proposal: [{ questionId: editQuestion.id, value: "새 값으로" }] };
+  const editCard = (job: typeof editJob & { proposalStatus?: "applied" | "dismissed" }) => renderToStaticMarkup(<EditChatTurn snapshot={{ ...summarized, intake: { ...summarized.intake, job } }} disabled={false} onSend={noop} onApply={noop} onDismiss={noop} />);
+  const pendingEdit = editCard(editJob);
+  assert.ok(pendingEdit.includes("data-edit-proposal") && pendingEdit.includes("이렇게 바꿀게요") && pendingEdit.includes("새 값으로") && pendingEdit.includes(">바꾸기</button>") && pendingEdit.includes(">취소</button>"), pendingEdit);
+  assert.ok(!editCard({ ...editJob, proposalStatus: "applied" }).includes("data-edit-proposal"), "applied proposals are not offered again");
+  assert.ok(!editCard({ ...editJob, proposalStatus: "dismissed" }).includes("data-edit-proposal"), "dismissed proposals are not offered again");
   const busySummary = renderToStaticMarkup(<BusinessSummary onStructure={noop} snapshot={{ ...nextSnapshot({}, { design: undefined }), intake: { ...summarized.intake, job: runningJob }, jobClock: { elapsedMs: 5_000, expectedMs: 25_000, limitMs: 60_000 } }} disabled aiBusy prepared={false} onEdit={noop} onDetails={noop} onDesign={noop} onPrepare={noop} />);
   assert.ok(busySummary.includes('role="progressbar"') && !busySummary.includes("aria-valuenow") && !busySummary.includes("사업 방향 정리하기</button>"), "while the job runs its state indicator takes the button's place");
   let numbered = previewIntakeAnswer(original, command({ questionId: "budget", value: "200만원" }))!;
@@ -984,6 +992,9 @@ async function main() {
     assert.match(intake, /if \(isConsultationText\(text\)\) \{ void send\(\{ action: "help", message: text \}\); return; \}/);
     // 쓰는 동안 받아 둔 요청으로 채팅 수정 화면이 되어도 마무리 말이 먼저 남는다
     assert.match(intake, /\{editTurn && !replyTurn \? <>\{studioTurn\}<EditChatTurn /);
+    // 새로고침해도 서버에 남은 채팅 수정(정리 중 · 고르기 전 제안)이 있으면 채팅 수정 화면을 다시 연다 — 대화에 '아래에서 확인해 주세요'만 남던 문제
+    assert.match(intake, /const editJobOpen = !!editJob && \(\["queued", "running"\]\.includes\(editJob\.status\) \|\| editJob\.status === "complete" && !!editJob\.proposal\?\.length && !editJob\.proposalStatus\);/);
+    assert.match(intake, /const chatEditMode = coach && \(searchParams\.get\("edit"\) === "chat" \|\| chatEditLocal \|\| editJobOpen\);/);
     // 메신저식 '읽음'은 달지 않는다
     assert.ok(!intake.includes(': "읽음"'));
     // 다른 칸을 보면 대상 칩을 거둔다(적던 글이 있으면 둔다)

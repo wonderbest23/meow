@@ -143,8 +143,9 @@ export function aiEditCostLine(usage?: { inputTokens?: number; outputTokens?: nu
  */
 export function aiEditErrorMessage(status: number, code?: string | null, message?: string | null): string {
   const korean = typeof message === "string" && /[가-힣]/.test(message) && message.length <= 300 ? message.trim() : "";
-  if (code === "TOKENS_REQUIRED") return "AI 수정 토큰이 부족해요 — 홈페이지 화면의 [토큰 충전하기]로 충전한 뒤 다시 말씀해 주세요.";
-  if (code === "HOMEPAGE_PAYMENT_REQUIRED" || (status === 402 && !code)) return "홈페이지 결제 후 쓸 수 있어요 — 홈페이지 화면의 [결제하고 홈페이지 고치기]를 눌러 주세요.";
+  /* '토큰'·[대괄호 단추 이름]은 사장님에게 낯설었다(감사 r36) — 'AI 수정 횟수'와, 이 안내 아래에 붙는 단추 이름으로 말한다 */
+  if (code === "TOKENS_REQUIRED") return "AI 수정 횟수를 다 썼어요. 아래 ‘AI 수정 충전하기’로 충전한 뒤 다시 말씀해 주세요.";
+  if (code === "HOMEPAGE_PAYMENT_REQUIRED" || (status === 402 && !code)) return "홈페이지를 결제한 뒤 쓸 수 있어요. 아래 ‘결제하러 가기’를 눌러 주세요.";
   if (code === "LOGIN_REQUIRED" || status === 401) return "로그인이 풀렸어요. 다시 로그인한 뒤 말씀해 주세요.";
   if (code === "PLAN_REQUIRED") return "계획서에서 만든 홈페이지만 대화로 고칠 수 있어요. 먼저 대화로 사업계획서를 만들어 주세요.";
   if (code === "BAD_REQUEST") return "무엇을 어떻게 바꿀지 조금 더 적어 주세요(2~1,000자).";
@@ -153,7 +154,7 @@ export function aiEditErrorMessage(status: number, code?: string | null, message
   if (code === "PROJECT_NOT_FOUND") return "홈페이지를 찾지 못했어요. 홈페이지 화면을 새로 고친 뒤 다시 말씀해 주세요.";
   if (code === "PAGE_NOT_FOUND") return "이 디자인은 대화로 고칠 수 없어요. 홈페이지 화면의 편집기에서 직접 고쳐 주세요.";
   if (status === 429) return korean || "요청이 너무 많아요. 잠시 후 다시 말씀해 주세요.";
-  if (code === "AI_FAILED") return korean || "AI 가 답을 만들지 못했어요. 토큰은 차감되지 않았어요. 다시 말씀해 주세요.";
+  if (code === "AI_FAILED") return "AI가 답을 만들지 못했어요. AI 수정 횟수는 줄지 않았어요. 다시 말씀해 주세요.";
   return korean || "홈페이지를 고치지 못했어요. 잠시 후 다시 말씀해 주세요.";
 }
 

@@ -509,6 +509,16 @@ export function fallbackSection(input: SectionGenInput): string {
  * 예전에는 실패해도 fallback을 200으로 돌려줬고, 화면은 그걸 그대로 저장해
  * '완료'로 표시했다. 결제한 사람이 AI가 쓴 글 대신 표를 받고도 알 수 없었다.
  */
+/*
+ * 섹션 검토가 대조하는 원천 자료 — 작성자가 받은 사업 정보(확정한 사업명 포함)도 함께 준다.
+ * 사업 정보는 캐시 때문에 시스템 지시문에만 있어서, 검토는 본문의 확정 상호('망원 골목반찬')를 원천에 없는 말로 보고
+ * 디자인의 이름 후보 목록에 맞춰 '상호 미정, 제안 후보: …'로 고쳤다(실제 AI 점검 2026-10-23, 모든 장이 repair_patched).
+ */
+export function sectionReviewSource(input: SectionGenInput): string {
+  const biz = formatBusiness(input.business);
+  return [biz ? `[사업 정보]\n${biz}` : "", buildUserPrompt(input)].filter(Boolean).join("\n");
+}
+
 /** 섹션 검토에서 지적이 남았거나 검토가 실패한 경우를 운영 로그로 남긴다(본문 내용은 남기지 않는다) */
 function logSectionReview(event: CoachReviewEvent) {
   if (event === "reviewing" || event === "repairing") return;
@@ -539,7 +549,7 @@ export async function generateSection(
     // 키가 있는데 못 받았다 = 사고. 표를 본문인 척 내주지 않는다
     return { markdown: "", source: "failed" };
   }
-  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
+  const checked = input.coachContext ? await reviewCoachSection(config, sectionReviewSource(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
   if (!checked) return { markdown: "", source: "failed" };
   const passed = await passQualityCheck(config, checked, input);
   if (!passed) return { markdown: "", source: "failed" };
@@ -603,7 +613,7 @@ export async function streamSection(
     onDelta,
   );
   if (!text || text.trim().length < 40) return { markdown: "", source: "failed" };
-  const checked = input.coachContext ? await reviewCoachSection(config, buildUserPrompt(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
+  const checked = input.coachContext ? await reviewCoachSection(config, sectionReviewSource(input), text.trim(), "markdown", logSectionReview, undefined, { keepUnresolved: true }) : text.trim();
   const passed = checked ? await passQualityCheck(config, checked, input) : null;
   if (!passed) return { markdown: "", source: "failed" };
   /*

@@ -86,11 +86,11 @@ async function main(){
     assert.equal(await page.$eval("h1",e=>e.textContent),ready.title,"활성 사업이 달라도 URL로 지정한 사업을 표시");
     await new Promise(resolve=>setTimeout(resolve,250));
     await page.screenshot({path:`artifacts/business-hub/summary-${width}.png`});
-    await click(page,"내 자료",'[aria-label="사업 관리 메뉴"]');
-    await page.waitForFunction(()=>{const el=document.querySelector('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]');return el?.textContent==="내 자료" && getComputedStyle(el).backgroundColor==="rgb(227, 237, 252)";});
+    await click(page,"사업계획서",'[aria-label="사업 관리 메뉴"]');
+    await page.waitForFunction(()=>{const el=document.querySelector('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]');return el?.textContent==="사업계획서" && getComputedStyle(el).backgroundColor==="rgb(227, 237, 252)";});
     assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).backgroundColor), "rgb(227, 237, 252)", "선택 메뉴를 옅은 색상으로 구분");
     assert.equal(await page.$eval('[aria-label="사업 관리 메뉴"] [aria-pressed="true"]', el=>getComputedStyle(el).color), "rgb(36, 78, 132)", "밝은 선택 배경에는 진한 글씨");
-    assert.ok(await page.$eval('[aria-label="내 자료"]',e=>e.textContent?.includes("사업안 확인하고 자료 만들기")));
+    assert.ok(await page.$eval('[aria-label="사업계획서"]',e=>e.textContent?.includes("사업안 확인하고 자료 만들기")));
     await click(page,"개업 준비",'[aria-label="사업 관리 메뉴"]');
     await click(page,"대화에서 정한 할 일 보기");
     await click(page,"완료했어요");
@@ -123,8 +123,8 @@ async function main(){
       await page.waitForFunction(()=>!document.body.innerText.includes("수정한 사진 사업"));
       assert.ok(await page.$('a[href="/plan/workspace?planId=hub-test-stale"]'),"다른 사업은 삭제하지 않음");
       await page.click('a[href="/plan/workspace?planId=hub-test-stale"]');
-      await page.waitForSelector('[aria-label="사업 관리 메뉴"]');await click(page,"내 자료",'[aria-label="사업 관리 메뉴"]');
-      assert.ok(await page.$eval('[aria-label="내 자료"]',el=>el.textContent?.includes("수정 내용 반영 필요")));
+      await page.waitForSelector('[aria-label="사업 관리 메뉴"]');await click(page,"사업계획서",'[aria-label="사업 관리 메뉴"]');
+      assert.ok(await page.$eval('[aria-label="사업계획서"]',el=>el.textContent?.includes("수정 내용 반영 필요")));
       assert.ok(await page.$('[aria-label="내보내기 형식"]'));
       await page.screenshot({path:`artifacts/business-hub/documents-${width}.png`});
       await click(page,"사업계획서 열기");

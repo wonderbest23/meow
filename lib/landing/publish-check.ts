@@ -22,11 +22,13 @@ export function looksDescriptiveName(name: string): boolean {
 
 /**
  * 공개 전에 비어 있으면 안 되는 것 — 법정 표기(사업자 정보 칸의 '채울 것 n개'와 공개 확인창이 같은 목록을 쓴다).
- * 손님이 찾아오는 디자인이면 영업시간도, 이름 후보가 있는데 이름이 설명 문장이면 '가게 이름'도 넣는다.
+ * 손님이 찾아오는 디자인이면 영업시간도, 이름 후보가 있는데 이름이 설명 문장이면 '사업 이름'도 넣는다.
  */
+export const DESCRIPTIVE_NAME_ITEM = "사업 이름(지금은 설명 문장처럼 길어요)";
 export function homepageMissingInfo(draft: LandingDraft, options: { nameCandidates?: boolean } = {}): string[] {
   return [
-    options.nameCandidates && looksDescriptiveName(draft.businessName) && "가게 이름",
+    /* 칸은 채워져 있는데 '비어 있는 항목: 가게 이름'이라 해서 헷갈렸다(감사 r36) — 칸 이름(사업 이름)과 까닭을 함께 */
+    options.nameCandidates && looksDescriptiveName(draft.businessName) && DESCRIPTIVE_NAME_ITEM,
     !draft.businessRepresentative.trim() && "대표자",
     !draft.businessAddress.trim() && "사업장 주소",
     !(draft.businessPhone || draft.businessContact).trim() && "전화번호",

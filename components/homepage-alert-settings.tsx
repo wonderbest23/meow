@@ -70,7 +70,7 @@ export function HomepageAlertSettings({ projectId, suggestedPhone }: { projectId
         {changed && typed ? <ConsentList className="hk-alerts-consent" items={[{ key: "sms", label: "문의 알림 문자 수신 동의", note: <>새 문의(문의자 이름·연락처 포함), 주간 리포트, 세금 신고 마감·도메인 연결 안내를 이 번호로 문자로 받는 데 동의합니다. 번호는 알림에만 쓰고 홈페이지에 공개하지 않아요.</> }]} values={{ sms: agreed }} onChange={(next) => setAgreed(Boolean(next.sms))} /> : null}
         <button type="submit" disabled={busy || !changed || (Boolean(typed) && !agreed)}>{typed ? "저장" : "문자 끄기"}</button>
       </form>
-      <small>{!settings.smsReady ? "문자 발송 준비가 끝나면 이 번호로 알림이 가요. 지금 들어온 문의는 왼쪽 메뉴 ‘손님 문의’에 그대로 쌓여요."
+      <small>{!settings.smsReady ? "문자 발송 준비가 끝나면 이 번호로 알림이 가요. 지금 들어온 문의는 메뉴의 ‘손님 문의’에 그대로 쌓여요."
         : settings.phone ? `새 문의가 들어오면 ${pretty(settings.phone)}로 문의자 이름·연락처를 바로 문자로 보내 드려요.` : "번호를 등록하면 새 문의가 들어올 때 바로 문자를 보내 드려요."}</small>
       {settings.weeklyEnabled !== null ? (
         <label className="hk-alerts-weekly">

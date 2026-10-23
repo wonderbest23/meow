@@ -45,7 +45,7 @@ export function buildLandingLeadEmail(from: string, to: string, planId?: string 
     text: [
       `${name ? `${name} 홈페이지` : "내 홈페이지"}에 새 문의가 왔어요. 문의 내용은 안전하게 저장해 뒀어요.`,
       "",
-      "오늘창업에 로그인한 뒤 왼쪽 메뉴 '손님 문의'에서 확인해 주세요.",
+      "오늘창업에 로그인한 뒤 메뉴의 '손님 문의'에서 확인해 주세요.",
       INQUIRIES_URL,
       "",
       "개인정보를 지키려고 이 메일에는 문의한 손님의 이름·연락처를 넣지 않았어요.",

@@ -15,8 +15,9 @@
 .rowMain { flex: 1; min-width: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; }
 .rowTop { min-width: 0; display: flex; justify-content: space-between; gap: 8px; }
 .rowTop strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
-.rowTop small { flex: none; color: #8a909c; font-size: 12px; }
-.rowBiz { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #3272db; font-size: 12px; font-weight: 600; }
+.rowTop small { flex: none; color: #5f6673; font-size: 12px; } /* 고른 줄(#eaf1fd) 위에서도 4.5:1 이상 */
+.rowMeta { min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.rowBiz { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #3272db; font-size: 12px; font-weight: 600; }
 .rowText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #5d6270; font-size: 13px; }
 .dot { flex: none; align-self: center; width: 9px; height: 9px; border-radius: 50%; background: #e5484d; }
 .empty, .placeholder { display: grid; justify-items: center; gap: 8px; padding: 48px 24px; color: #6b7280; text-align: center; }
@@ -24,6 +25,10 @@
 .empty p, .placeholder p { margin: 0; font-size: 13px; line-height: 1.6; }
 .emptyRefresh { display: inline-flex; align-items: center; gap: 6px; margin-top: 8px; height: 36px; padding: 0 14px; border: 1px solid #dfe3ea; border-radius: 18px; background: #fff; color: #4b5161; font: inherit; font-size: 13px; font-weight: 600; cursor: pointer; }
 .placeholder { align-content: center; height: 100%; }
+/* 빈 화면의 다음 할 일 */
+.emptyActions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 8px; }
+.emptyLink { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border-radius: 22px; background: #161c2d; color: #fff; font-size: 13px; font-weight: 600; text-decoration: none; }
+.emptyLink + .emptyLink { border: 1px solid #dfe3ea; background: #fff; color: #161c2d; }
 .detail { min-height: 0; overflow-y: auto; }
 .thread { display: grid; grid-template-columns: minmax(0, 1fr); align-content: start; gap: 16px; max-width: 720px; margin: 0 auto; padding: 0 24px 32px; }
 .threadHead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 10px; padding: 14px 0; background: #fff; border-bottom: 1px solid #eef0f4; }
@@ -35,7 +40,7 @@
 .done { background: #e8f5ec; color: #236b3d; }
 .open { background: #fdecec; color: #ad343d; }
 .messages { display: grid; gap: 8px; }
-.day { justify-self: center; margin: 0; padding: 4px 10px; border-radius: 10px; background: #f1f3f7; color: #6b7280; font-size: 12px; }
+.day { justify-self: center; margin: 0; padding: 4px 10px; border-radius: 10px; background: #f1f3f7; color: #5f6673; font-size: 12px; }
 .bubble { justify-self: start; max-width: min(520px, 90%); padding: 12px 14px; border-radius: 4px 16px 16px 16px; background: #f1f3f7; color: #161c2d; font-size: 15px; line-height: 1.6; white-space: pre-wrap; word-break: keep-all; overflow-wrap: anywhere; }
 .info { display: grid; gap: 0; margin: 0; border: 1px solid #e6e8ee; border-radius: 12px; overflow: hidden; }
 .info div { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; padding: 11px 14px; border-top: 1px solid #eef0f4; font-size: 14px; }
@@ -43,7 +48,7 @@
 .info dt { color: #6b7280; }
 .info dd { margin: 0; color: #161c2d; overflow-wrap: anywhere; }
 .actions { display: grid; gap: 10px; }
-.privacy { margin: 0; color: #8a909c; font-size: 12px; }
+.privacy { margin: 0; color: #6b7280; font-size: 12px; } /* 흰 바탕 4.5:1 이상(예전 #8a909c 은 3.2:1) */
 
 @media (max-width: 760px) {
   .wrap { grid-template-columns: minmax(0, 1fr); }

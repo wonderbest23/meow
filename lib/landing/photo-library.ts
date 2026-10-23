@@ -41,11 +41,12 @@ const LIBRARY: Array<{ test: RegExp; set: PhotoSet }> = [
     set: set("bakery", "1608198093002-ad4e005484ec", ["1509440159596-0249088772ff", "1549931319-a545dcf3bc73", "1586444248902-2f64eddc13df"], "1517686469429-8bdb88b9f907", "1483695028939-5bb13f8648b0"),
   },
   {
-    test: /(카페|커피|로스터|브런치)/,
+    test: /(카페|커피|로스터|브런치|음료점)/,
     set: set("cafe", "1648462908676-8305f0eff8e0", ["1579265898841-79c7890d69cf", "1511920170033-f8396924c348", "1621135177072-57c9b6242e7a"], "1601065700897-d9fa1c093f3e", "1544031064-9de80864ade5"),
   },
   {
-    test: /(반찬|도시락|밀키트|식당|음식|요리|한식|분식|국밥|찌개|김치|집밥|배달 ?음식|케이터링)/,
+    // 업종 코드 이름('조리 반찬류 소매업'·'김밥 및 기타 간이 음식점업'·'치킨 전문점')도 여기서 알아본다
+    test: /(반찬|도시락|밀키트|식당|음식|요리|한식|중식|일식|분식|김밥|떡볶이|국밥|국수|냉면|찌개|김치|집밥|백반|덮밥|밥집|고깃집|치킨|족발|보쌈|배달 ?음식|케이터링)/,
     set: set("food", "1498654896293-37aacf113fd9", ["1590301157890-4810ed352733", "1562571708-527276a391ac", "1683225757624-86943fb48966"], "1661366394743-fe30fe478ef7", "1718777791262-c66d11baaa3b"),
   },
   {
@@ -110,6 +111,17 @@ const LIBRARY: Array<{ test: RegExp; set: PhotoSet }> = [
 export function photoSetFor(text: string): PhotoSet | null {
   const value = text.replace(/\s+/g, " ");
   return firstSectorMatch(LIBRARY, value, (entry) => entry.test)?.set ?? null;
+}
+
+/*
+ * 사업 하나에 맞는 사진 한 벌 — 그 사업을 가리키는 글(detail)을 먼저 보고, 못 알아볼 때만 넓은 업종 이름(broad)으로 고른다.
+ * detail: 업종 코드·업종 가이드 이름, 상호, 사업 설명, 대표 상품.
+ * 넓은 업종 이름 '카페 · 음식점'은 반찬가게·김밥집·식당도 고르는 칸인데, 글 맨 앞에 두면 '카페'가 먼저 나와
+ * 반찬가게 홈페이지에 커피 사진이 깔렸다(실제 AI 점검 2026-10-23 망원 골목반찬).
+ * 그래서 넓은 업종 이름의 '카페'는 보지 않는다 — 카페는 업종 코드('커피 전문점')·상호·설명에 '카페·커피'가 드러난다.
+ */
+export function businessPhotoSet(detail: string, broad = ""): PhotoSet | null {
+  return photoSetFor(detail) ?? photoSetFor(broad.replace(/카페/g, " "));
 }
 
 export const PHOTO_SET_KEYS = LIBRARY.map((entry) => entry.set.key);
