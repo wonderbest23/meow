@@ -1,0 +1,127 @@
+/*
+ * 아이폰 모양 틀 — 모든 치수는 틀 너비 기준(cqw). 바깥(.device)에 너비만 주면 된다.
+ * 테두리 1.4cqw(티타늄) + 베젤 2.6cqw(검정) → 화면 너비 92cqw, 화면 비율 390:844.
+ * 모서리: 바깥 14.5cqw · 베젤 13.1cqw · 화면 10.6cqw(너비 340px일 때 바깥 약 49px).
+ */
+.device {
+  container-type: inline-size;
+  position: relative;
+  width: 100%;
+  /* 옆 단추가 틀 밖으로 0.9cqw 나와도 잘리지 않게 */
+  padding: 0;
+}
+
+.frame {
+  position: relative;
+  padding: 1.4cqw;
+  border-radius: 14.5cqw;
+  /* 짙은 티타늄 — 모서리 쪽이 조금 밝고 가운데가 어두운 금속 띠 */
+  background: linear-gradient(150deg, #9ea1a6 0%, #4b4e53 9%, #2c2e32 30%, #24262a 55%, #3c3f44 82%, #8d9095 100%);
+  box-shadow:
+    inset 0 0 0 0.25cqw rgba(255, 255, 255, .22),
+    inset 0 0 0 0.6cqw rgba(0, 0, 0, .35),
+    0 0.6cqw 1.2cqw rgba(16, 20, 26, .14),
+    0 8cqw 14cqw -4cqw rgba(16, 20, 26, .34),
+    0 18cqw 26cqw -12cqw rgba(16, 20, 26, .22);
+}
+
+.bezel {
+  position: relative;
+  padding: 2.6cqw;
+  border-radius: 13.1cqw;
+  background: #050506;
+  box-shadow: inset 0 0 0 0.2cqw rgba(255, 255, 255, .06);
+}
+
+.screen {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 390 / 844;
+  border-radius: 10.6cqw;
+  background: #fff;
+  /* 둥근 모서리 밖으로 그림이 새지 않게(사파리) */
+  isolation: isolate;
+}
+/* 유리에 비친 옅은 빛 */
+.screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: linear-gradient(118deg, rgba(255, 255, 255, .10) 0%, rgba(255, 255, 255, 0) 32%);
+}
+
+/* 상태 표시줄 — 위 54pt */
+.statusBar {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 390 / 54;
+  background: #fff;
+  color: #000;
+  fill: currentColor;
+}
+.clock {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  fill: currentColor;
+}
+
+/* 화면 그림 — 상태 표시줄 아래 790pt */
+.shot {
+  position: absolute;
+  z-index: 1;
+  top: calc(54 / 844 * 100%);
+  left: 0;
+  display: block;
+  width: 100%;
+  height: calc(790 / 844 * 100%);
+  object-fit: cover;
+  object-position: top;
+  background: #fff;
+}
+
+.island {
+  position: absolute;
+  z-index: 3;
+  top: calc(11 / 844 * 100%);
+  left: 50%;
+  width: calc(125 / 390 * 100%);
+  height: calc(37 / 844 * 100%);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: #000;
+}
+
+.homeBar {
+  position: absolute;
+  z-index: 3;
+  bottom: calc(8 / 844 * 100%);
+  left: 50%;
+  width: calc(135 / 390 * 100%);
+  height: calc(5 / 844 * 100%);
+  transform: translateX(-50%);
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .82);
+}
+
+/* 옆 단추 — 틀 밖으로 살짝 나온 금속 막대 */
+.button {
+  position: absolute;
+  width: 1.1cqw;
+  border-radius: 0.6cqw;
+  background: linear-gradient(90deg, #3a3d42, #7c7f84 45%, #2e3034);
+}
+.action, .volumeUp, .volumeDown { left: -0.8cqw; }
+.power { right: -0.8cqw; }
+.action { top: 18.5%; height: 6%; }
+.volumeUp { top: 28%; height: 10%; }
+.volumeDown { top: 40%; height: 10%; }
+.power { top: 31%; height: 15%; }

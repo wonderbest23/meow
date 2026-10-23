@@ -11,9 +11,9 @@
 import { useEffect, useRef, useState } from "react";
 import { BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
 import { PPT_GENERATION_VERIFIED } from "../lib/plan-builder/deck-availability";
-import { landingIdeaHref, rememberLandingIdea } from "./home-prompt-hero";
 import { newChatEntryHref, newChatHref, studioHref, type EntryMode } from "../lib/plan-builder/studio";
 import { JOURNEY_LABELS } from "../lib/plan-builder/journey-steps";
+import { IphoneMockup } from "./iphone-mockup";
 import styles from "./home-prompt-sections.module.css";
 
 const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
@@ -36,21 +36,20 @@ const FEATURES = [
 
 /* 새 대화의 첫 선택지(생각한 사업이 있어요 · 사업을 운영 중이에요 · 아이디어를 찾고 있어요)를 카드가 미리 골라 준다(?entry=) */
 const STARTS: Array<{ title: string; body: string; action: string; entry: EntryMode }> = [
-  { title: "처음 창업해요", body: "관심 있는 일이나 해 본 일을 이야기하면, 고객과 상품부터 시작 방법까지 함께 정리해요.", action: "아이디어로 시작하기", entry: "startup" },
-  { title: "이미 사업 중이에요", body: "지금 사업에서 바꾸고 싶은 점을 이야기하면, 실제 매출과 비용으로 다음 계획을 세워요.", action: "내 사업 개선하기", entry: "operating" },
-  { title: "아이디어가 아직 없어요", body: "쓸 수 있는 시간과 돈, 잘하는 것을 알려 주시면 나에게 맞는 사업안 몇 가지를 골라 드려요.", action: "사업안 추천받기", entry: "exploring" },
+  { title: "처음 창업해요", body: "관심 있는 일로 고객과 상품부터 정리해요.", action: "아이디어로 시작하기", entry: "startup" },
+  { title: "이미 사업 중이에요", body: "실제 매출과 비용으로 다음 계획을 세워요.", action: "내 사업 개선하기", entry: "operating" },
+  { title: "아이디어가 아직 없어요", body: "시간·돈·잘하는 것으로 맞는 사업안을 골라 드려요.", action: "사업안 추천받기", entry: "exploring" },
 ];
 
-/* 업종 칩 — 누르면 그 말을 첫 메시지로 들고 새 대화를 연다(모두 받침으로 끝나 '을'로 잇는다) */
-const INDUSTRIES = ["카페 창업", "음식점 창업", "배송 사업", "온라인 쇼핑몰", "공방 창업", "꽃집 창업", "앱 개발", "반려동물 돌봄", "가구 제작", "프리랜서 창업"];
-const industryIdea = (label: string) => `${label}을 해 보고 싶어요.`;
-
-/* 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('망원 골목반찬', 실제 AI로 만든 화면). 카드 그림 칸은 3:4로 위쪽부터 보인다 */
+/*
+ * 결과물 그림 — 첫 화면 진열 띠와 같은 예시 사업('성수 쿠키공방', 실제 AI로 만든 화면). 카드 그림 칸은 3:4.
+ * 휴대폰 화면(phone)은 390×844로 따로 찍은 화면을 작은 아이폰 틀(iphone-mockup)에 넣고, 나머지는 컴퓨터 화면에서 문서 부분만 잘라 쓴다.
+ */
 const RESULTS = [
-  { src: "/home-media/showcase/real-plan-top.webp", width: 600, height: 800, alt: "망원 골목반찬 사업계획서 첫 장 — 한 줄 소개와 '망원동 수제 반찬가게가 퇴근길 저녁 반찬 세트를 12,900원에 팝니다' 사업 개요", title: "실행용 사업계획서", body: "사업 소개부터 고객, 돈, 12주 할 일까지. PDF와 수정 가능한 Word로 받아요." },
-  { src: "/home-media/showcase/real-plan-m.webp", width: 780, height: 1200, alt: "사업계획서의 숫자 표 — 세트 가격 12,900원, 생활비까지 버는 판매량 하루 약 19세트, 초기 지출 600만 원일 때 버티는 기간 약 6개월", title: "내 조건으로 계산한 숫자", body: "시작 예산과 쓸 수 있는 시간으로 손익분기, 버틸 수 있는 기간을 계산해요." },
-  { src: "/home-media/showcase/real-summary-m.webp", width: 780, height: 1200, alt: "한 장 요약 — 한 줄 소개 '퇴근길에 들러 오늘 만든 반찬 3종으로 저녁 끝'과 사업, 고객 정리", title: "한 장 요약", body: "누구에게 무엇을 얼마에 팔고, 첫 달에 무엇을 할지 한 장으로 봐요." },
-  { src: "/home-media/showcase/real-chat-edit.webp", width: 600, height: 800, alt: "대화로 '세트 가격을 13,900원으로 올려 줘'라고 하자 판매 가격 12,900원을 13,900원으로 바꾸는 확인 카드가 뜬 화면", title: "대화로 고치기", body: "“세트 가격을 13,900원으로 올려 줘”처럼 말하면 바뀔 내용을 먼저 보여 주고, 계획서에 반영해요." },
+  { src: "/home-media/showcase/cookie-plan-card.webp", width: 600, height: 800, phone: false, alt: "성수 쿠키공방 사업계획서 첫 장 — 한 줄 소개 '퇴근길에 미리 주문한 쿠키 선물상자를 바로 찾아가요'와 '성수동 직장인에게 쿠키 선물 상자를 예약받아 팝니다' 사업 개요", title: "실행용 사업계획서" },
+  { src: "/home-media/showcase/cookie-plan-m.webp", width: 780, height: 1580, phone: true, alt: "휴대폰으로 본 사업계획서의 숫자 — 상자 18,000원에 한 건 비용 6,500원, 본전 판매량 월 192건, 조심스러운 경우 월 96건이면 3,096,000원 부족", title: "내 조건으로 계산한 숫자" },
+  { src: "/home-media/showcase/cookie-summary-card.webp", width: 600, height: 800, phone: false, alt: "성수 쿠키공방 한 장 요약 — 한 줄 소개와 사업·고객, 제공안과 판매(6개입 선물 상자 18,000원), 수익 구조와 계획 계산", title: "한 장 요약" },
+  { src: "/home-media/showcase/cookie-chat-m.webp", width: 780, height: 1580, phone: true, alt: "휴대폰 대화에서 '선물 상자 가격을 19,000원으로 올려 줘'라고 하자 판매 가격 18,000원을 19,000원으로 바꾸는 확인 카드가 뜬 화면", title: "대화로 고치기" },
 ];
 
 /*
@@ -60,9 +59,9 @@ const RESULTS = [
 function afterCards(signedIn: boolean | null) {
   const mine = signedIn === true;
   return [
-    { id: "after-homepage", href: SAMPLE_HOMEPAGE, title: "내 사업 홈페이지", body: "사업계획서 내용으로 홈페이지 초안을 자동으로 만들어요. 초안 만들기 → 문구 다듬기 → 미리보기.", action: "예시 홈페이지 보기" },
-    { id: "after-launch", href: mine ? "/plan" : SAMPLE_LAUNCH, title: JOURNEY_LABELS.launch, body: "업종에 맞는 신고·등록 순서와 결제·홍보 준비를 할 일 목록으로 안내해요.", action: mine ? "내 사업 열기" : "예시 보기" },
-    { id: "after-ops", href: mine ? "/plan" : SAMPLE_OPERATIONS, title: JOURNEY_LABELS.care, body: "문을 연 뒤에는 매출과 할 일을 기록하고, 막힐 때 대화로 바로 물어봐요.", action: mine ? "내 사업 열기" : "예시 보기" },
+    { id: "after-homepage", href: SAMPLE_HOMEPAGE, title: "내 사업 홈페이지", body: "사업계획서로 홈페이지 초안을 바로 만들어요.", action: "예시 홈페이지 보기" },
+    { id: "after-launch", href: mine ? "/plan" : SAMPLE_LAUNCH, title: JOURNEY_LABELS.launch, body: "신고·등록부터 홍보까지 할 일 목록으로 안내해요.", action: mine ? "내 사업 열기" : "예시 보기" },
+    { id: "after-ops", href: mine ? "/plan" : SAMPLE_OPERATIONS, title: JOURNEY_LABELS.care, body: "문을 연 뒤 매출과 할 일을 기록해요.", action: mine ? "내 사업 열기" : "예시 보기" },
   ];
 }
 
@@ -106,7 +105,6 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
     <section id="how" className={`${styles.section} ${styles.features}`} aria-labelledby="home-how-title" data-reveal>
       <div className={styles.featureCopy}>
         <h2 id="home-how-title" className={styles.heading}>계획부터 개업까지.<br />따로 찾지 않아도 돼요.</h2>
-        <p className={styles.lead}>대화로 정한 내용이 사업계획서, 홈페이지, 개업 준비로 그대로 이어져요. 처음부터 다시 적을 필요가 없어요.</p>
         <img
           className={styles.teamPhoto}
           src="/home-media/oneulstart-team.webp"
@@ -127,7 +125,6 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
     <section id="who" className={styles.section} aria-labelledby="home-who-title" data-reveal>
       <header className={`${styles.sectionHead} ${styles.center}`}>
         <h2 id="home-who-title" className={styles.heading}>어떤 사업이든 시작할 수 있어요</h2>
-        <p className={styles.lead}>완벽한 아이디어가 아니어도 괜찮아요. 내 경험과 조건에서 사업의 가능성을 찾아요.</p>
       </header>
       <div className={styles.grid3}>
         {STARTS.map(card => <article key={card.title} className={styles.panel}>
@@ -136,21 +133,18 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
           <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action} <span aria-hidden="true">→</span></a>
         </article>)}
       </div>
-      <ul className={styles.chips} aria-label="업종 예시로 대화 시작">
-        {INDUSTRIES.map(label => <li key={label}><a href={landingIdeaHref(industryIdea(label))} onClick={() => rememberLandingIdea(industryIdea(label))}>{label}</a></li>)}
-      </ul>
     </section>
 
     <section id="deliverables" className={styles.section} aria-labelledby="home-result-title" data-reveal>
       <header className={styles.sectionHead}>
         <h2 id="home-result-title" className={styles.heading}>읽고, 고치고, 바로 쓰는 결과물</h2>
-        <p className={styles.lead}>내 조건으로 계산한 숫자와 할 일이 들어간 문서예요. 고칠 곳은 대화로 말하면 돼요.</p>
       </header>
       <div className={styles.grid4}>
         {RESULTS.map(item => <article key={item.title} className={styles.result}>
-          <img src={item.src} width={item.width} height={item.height} loading="lazy" decoding="async" alt={item.alt} />
+          {item.phone
+            ? <div className={styles.resultPhone}><IphoneMockup src={item.src} alt={item.alt} width={item.width} height={item.height} /></div>
+            : <img src={item.src} width={item.width} height={item.height} loading="lazy" decoding="async" alt={item.alt} />}
           <h3>{item.title}</h3>
-          <p>{item.body}</p>
         </article>)}
       </div>
       <a className={styles.outlineAction} href="/samples/sample_coffee.pdf" target="_blank" rel="noopener noreferrer">완성 예시 PDF 열기<span className={styles.srOnly}> (새 창)</span> <span aria-hidden="true">↗</span></a>
@@ -159,7 +153,6 @@ export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | n
     <section id="after" className={styles.section} aria-labelledby="home-after-title" data-reveal>
       <header className={styles.sectionHead}>
         <h2 id="home-after-title" className={styles.heading}>계획 다음의 일도 끊기지 않게</h2>
-        <p className={styles.lead}>사업 요약과 문서, 대화, 다음 할 일을 사업마다 한곳에서 이어가요.</p>
       </header>
       <div className={styles.grid3}>
         {afterCards(signedIn).map(card => <a key={card.id} id={card.id} href={card.href} className={`${styles.panel} ${styles.panelAnchor}`}>

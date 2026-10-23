@@ -93,7 +93,10 @@ a.panelLink:hover, .panelAnchor:hover .panelLink { text-decoration: underline; t
 
 /* 결과물 */
 .result { display: flex; flex-direction: column; gap: 12px; }
-.result img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: top; border-radius: 6px; background: #fff; box-shadow: 0 0 0 1px #e5e8eb; }
+.result > img { display: block; width: 100%; height: auto; aspect-ratio: 3 / 4; object-fit: cover; object-position: top; border-radius: 6px; background: #fff; box-shadow: 0 0 0 1px #e5e8eb; }
+/* 휴대폰 화면 카드 — 같은 3:4 칸 안 옅은 바탕 위에 작은 아이폰 틀(components/iphone-mockup)을 통째로 */
+.resultPhone { display: flex; align-items: center; justify-content: center; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 6px; background: linear-gradient(180deg, #f2f4f6, #e8ebee); box-shadow: 0 0 0 1px #e5e8eb; }
+.resultPhone > * { width: 56%; }
 .result h3 { margin: 4px 0 0; color: #191f28; font-size: 19px; font-weight: 800; }
 .result p { margin: 0; color: #4e5968; font-size: 15px; line-height: 1.7; word-break: keep-all; }
 .outlineAction {

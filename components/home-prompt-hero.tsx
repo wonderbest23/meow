@@ -18,6 +18,7 @@ import { composerEnterSends } from "../app/plan/chat/intake-ui/guidance";
 import { newChatHref } from "../lib/plan-builder/studio";
 import { nativePlatform } from "../lib/native-app";
 import { LANDING_IDEA_MAX, normalizeLandingIdea, stashLandingIdea } from "../lib/plan-builder/landing-idea";
+import { IphoneMockup } from "./iphone-mockup";
 import styles from "./home-prompt-hero.module.css";
 
 /** 대화 첫 입력 한도와 같다 */
@@ -31,43 +32,43 @@ const PROMPTS = [
 ];
 
 type ShowcaseItem = { src: string; alt: string; width: number; height: number };
-/* 화면 두 칸 — 컴퓨터 화면(브라우저 틀)과 휴대폰 화면. 휴대폰 너비에서는 휴대폰 화면 한 장만 크게 */
+/* 화면 두 칸 — 컴퓨터 화면(브라우저 틀)과 휴대폰 화면(아이폰 틀). 휴대폰 너비에서는 아이폰 틀 한 장만 크게 */
 type ShowcaseSlot = "screen" | "phone";
 const SLOTS: ShowcaseSlot[] = ["screen", "phone"];
 const S = "/home-media/showcase";
-const screen = (name: string, alt: string, width = 1600, height = 1000): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width, height });
-const phone = (name: string, alt: string): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 780, height: 1200 });
+/* 컴퓨터 화면 — 1280×800 화면을 찍어 1600×1000 으로 */
+const screen = (name: string, alt: string): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 1600, height: 1000 });
+/* 휴대폰 화면 — 390×844 화면을 그대로 찍어 위 390×790만(상태 표시줄 자리 54pt를 뺀 나머지) 780×1580 으로. 컴퓨터 화면을 줄여 넣지 않는다 */
+const phone = (name: string, alt: string): ShowcaseItem => ({ src: `${S}/${name}.webp`, alt, width: 780, height: 1580 });
 
 /*
- * 진열 띠 — 실제 AI로 끝까지 만든 예시 사업('망원 골목반찬', 동네 1인 반찬가게)의 실제 화면만 쓴다(2026-10-23, 로컬 시험 서버·실제 AI).
- * 대화로 답한 가격 12,900원·재료비 4,800원·월 고정비 190만 원·예산 3,000만 원으로 계획서·한 장 요약·홈페이지·개업 준비를 만든 그대로다.
- * 휴대폰에서 작은 카드 여러 장은 글자가 안 읽혀서(사장님 의견) 한 번에 한 화면을 크게 보여 주고 아래에 한 줄 설명을 붙인다.
+ * 진열 띠 — 실제 AI로 만든 예시 사업('성수 쿠키공방', 성수동 1인 수제 쿠키 가게)의 실제 화면만 쓴다(2026-10-23, 로컬 시험 서버·실제 AI).
+ * 대화로 답한 선물 상자 18,000원·상자 비용 6,500원·월 고정비 220만 원·예산 2,500만 원으로 만든 계획서·한 장 요약·공개 홈페이지·개업 준비 그대로다.
+ * 탭마다 컴퓨터 화면과 '같은 탭'의 휴대폰 화면(390×844로 따로 찍은 것)을 함께 보여 준다.
+ * 설명 문장·출처 안내 줄은 두지 않는다(2026-10-23 사장님: 군더더기) — 무엇을 보여 주는지는 그림의 대체 글에 적는다.
  * 발표 자료(PPT)는 결제 제공 범위가 아니라서 탭에 두지 않는다(lib/plan-builder/deck-availability.ts).
  */
-const SHOWCASE: Array<{ label: string; caption: string } & Record<ShowcaseSlot, ShowcaseItem>> = [
+const EXAMPLE = "실제 AI로 만든 예시 가게 ‘성수 쿠키공방’";
+const SHOWCASE: Array<{ label: string } & Record<ShowcaseSlot, ShowcaseItem>> = [
   {
     label: "계획서",
-    caption: "대화에서 답한 가격과 비용으로, 하루 몇 세트를 팔아야 하는지까지 계산해 써요.",
-    screen: screen("real-plan", "망원 골목반찬 사업계획서 작업실 — 왼쪽은 창업자가 답한 대화, 오른쪽은 세트 가격 12,900원, 생활비까지 버는 판매량 하루 약 19세트, 버티는 기간 약 6개월을 정리한 숫자 표"),
-    phone: phone("real-plan-m", "휴대폰으로 본 사업계획서의 숫자 표 — 세트 가격 12,900원, 하루 약 19세트, 초기 지출 600만 원일 때 약 6개월"),
+    screen: screen("cookie-plan", `${EXAMPLE}의 사업계획서 작업실 — 왼쪽 대화에는 '선물 상자 가격을 19,000원으로 올려 줘' 요청과 바꿀 내용 확인 카드, 오른쪽에는 재무 계획의 '초기 지출에 따라 버티는 기간' 표(초기 지출 500만 원이면 약 4개월)`),
+    phone: phone("cookie-plan-m", `${EXAMPLE}의 사업계획서를 휴대폰으로 본 화면 — '세 가지 경우로 본 한 달': 상자 18,000원에 한 건 비용 6,500원, 본전 판매량 월 192건(하루 약 7건), 조심스러운 경우 월 96건이면 3,096,000원 부족`),
   },
   {
     label: "한 장 요약",
-    caption: "누구에게 무엇을 얼마에 팔지, 손익분기가 어디인지 한 장으로 봐요.",
-    screen: screen("real-summary", "한 장 요약의 수익 구조와 계획 계산 — 판매가 12,900원, 건당 변동비 4,800원, 월 고정비 1,900,000원, 손익분기 월 235건", 1400, 875),
-    phone: phone("real-summary-m", "휴대폰으로 본 한 장 요약 — 한 줄 소개 '퇴근길에 들러 오늘 만든 반찬 3종으로 저녁 끝'과 사업, 고객 정리"),
+    screen: screen("cookie-summary", `${EXAMPLE}의 한 장 요약 — '퇴근길에 미리 주문한 쿠키 선물상자를 바로 찾아가요', 사업과 고객, 제공안과 판매, 수익 구조와 계획 계산`),
+    phone: phone("cookie-summary-m", `${EXAMPLE}의 한 장 요약을 휴대폰으로 본 화면 — 수제 쿠키 6종 6개입 선물 상자 18,000원, 손익분기 월 192건 / 매출 3,456,000원`),
   },
   {
     label: "홈페이지",
-    caption: "계획서 내용으로 가게 홈페이지 초안을 바로 만들어요.",
-    screen: screen("real-homepage", "계획서로 만든 망원 골목반찬 홈페이지 첫 화면 — 반찬 사진 위에 가게 이름, '퇴근길에 들러 오늘 만든 반찬 3종으로 저녁 끝', 문의하기 단추"),
-    phone: phone("real-homepage-m", "휴대폰으로 본 망원 골목반찬 홈페이지 첫 화면"),
+    screen: screen("cookie-homepage", `계획서로 만들어 공개한 ${EXAMPLE} 홈페이지 첫 화면 — 빵 사진 위에 가게 이름, '퇴근길에 미리 주문한 쿠키 선물상자를 바로 찾아가요', 예약 문의하기 단추`),
+    phone: phone("cookie-homepage-m", `손님이 휴대폰으로 보는 ${EXAMPLE} 공개 홈페이지 — 예약 문의하기 단추와 쿠키 6종 · 6개입 · 픽업 오후 12시~8시 안내`),
   },
   {
     label: "개업 준비",
-    caption: "반찬가게에 맞춘 신고·등록 순서를 할 일 목록으로 안내해요.",
-    screen: screen("real-launch", "개업 준비 할 일 목록 — 팔고 싶은 상품 정하기, 작게 시작할 범위, 반찬·도시락 가게 준비물과 신고 순서, 사업장 계약 조건, 사업자등록 준비", 1400, 875),
-    phone: phone("real-launch-m", "휴대폰으로 본 개업 준비 10단계 목록 — 반찬·도시락 가게 신고 순서, 사업자등록, 세금 관리, 주문·결제 점검, 첫 홍보"),
+    screen: screen("cookie-launch", `${EXAMPLE}의 개업 준비 전체 과정 10단계 — 팔고 싶은 상품 정하기, 작게 시작할 범위, 식품 제조·가공 시작 준비와 신고 순서, 일할 공간, 사업자등록, 세금 관리, 홈페이지 공개, 주문·결제 점검, 첫 홍보`),
+    phone: phone("cookie-launch-m", `${EXAMPLE}의 개업 준비 목록을 휴대폰으로 본 화면 — 식품 제조·가공 신고 순서, 사업자등록, 세금 관리, 주문·결제 점검, 첫 홍보`),
   },
 ];
 
@@ -111,6 +112,14 @@ export function rememberLandingIdea(text: string) {
 }
 
 /** signedIn — 로그인 안 했으면 false(입력칸 아래 '로그인해도 이어져요' 안내를 보인다), 로그인했거나 확인 전이면 숨긴다 */
+/* 제목에서 처음 나오는 '사업'에만 옅은 파랑 그라데이션을 천천히 흘린다(대표 요청 2026-10-23, 토스처럼 모던하게) — 문구는 운영 화면에서 바뀔 수 있어 낱말을 찾아 감싼다 */
+const ACCENT_WORD = "사업";
+function accentLine(line: string, active: boolean): ReactNode {
+  const at = active ? line.indexOf(ACCENT_WORD) : -1;
+  if (at < 0) return line;
+  return <>{line.slice(0, at)}<span className={styles.accent}>{ACCENT_WORD}</span>{line.slice(at + ACCENT_WORD.length)}</>;
+}
+
 export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }: { title: string; subtitle: ReactNode; hidden?: string[]; signedIn?: boolean | null }) {
   const router = useRouter();
   const [mounted, setMounted] = useState(false);
@@ -322,7 +331,7 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
   return <section className={styles.hero} data-sc-section="promptHome" aria-labelledby="home-hero-title">
     {/* 어드민에서 제목을 숨겨도 문서 제목(h1)은 화면 낭독기에 남긴다 */}
     <h1 id="home-hero-title" className={hidden.includes("promptHome.title") ? styles.srOnly : styles.title} data-sc-field="promptHome.title">
-      {titleLines.map((line, index) => <span key={index}>{line}{index < titleLines.length - 1 ? <br /> : null}</span>)}
+      {titleLines.map((line, index) => <span key={index}>{accentLine(line, index === titleLines.findIndex(text => text.includes(ACCENT_WORD)))}{index < titleLines.length - 1 ? <br /> : null}</span>)}
     </h1>
     {hidden.includes("promptHome.subtitle") ? null : <p className={styles.subtitle} data-sc-field="promptHome.subtitle">{subtitle}</p>}
 
@@ -392,8 +401,8 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
     </div>
 
     {/*
-      * 컴퓨터: 큰 브라우저 틀 한 장 + 오른쪽 아래에 걸친 휴대폰 틀 한 장. 휴대폰 너비: 휴대폰 화면 한 장만 꽉 차게.
-      * 자리는 그림 비율(aspect-ratio)과 설명 두 줄 높이로 미리 잡아 두어 넘길 때 아래가 밀리지 않는다.
+      * 컴퓨터: 큰 브라우저 틀(컴퓨터 화면) + 오른쪽 아래에 걸친 아이폰 틀(같은 탭의 휴대폰 화면). 휴대폰 너비: 아이폰 틀 한 장만 가운데 크게.
+      * 자리는 그림 비율(aspect-ratio)로 미리 잡아 두어 넘길 때 아래가 밀리지 않는다.
       * 브라우저 틀 그림은 휴대폰 너비에서 숨겨지므로 늦게 받기(lazy) — 숨긴 그림은 받지 않는다.
       */}
     <div id="home-showcase" role="tabpanel" aria-labelledby={`home-showcase-tab-${tab}`} className={styles.showcase} {...hoverProps}>
@@ -401,14 +410,13 @@ export function HomePromptHero({ title, subtitle, hidden = [], signedIn = null }
         {SLOTS.map((kind, index) => {
           const slot = slots[index];
           const item = SHOWCASE[slot.set][kind];
-          return <figure key={kind} className={kind === "screen" ? styles.browser : styles.phone} data-phase={slot.phase}>
-            {kind === "screen" && <span className={styles.browserBar} aria-hidden="true"><i /><i /><i /></span>}
-            <img src={item.src} alt={item.alt} width={item.width} height={item.height} loading={kind === "screen" ? "lazy" : "eager"} decoding="async" />
+          if (kind === "phone") return <IphoneMockup key={kind} className={styles.phone} data-phase={slot.phase} src={item.src} alt={item.alt} width={item.width} height={item.height} loading="eager" />;
+          return <figure key={kind} className={styles.browser} data-phase={slot.phase}>
+            <span className={styles.browserBar} aria-hidden="true"><i /><i /><i /></span>
+            <img src={item.src} alt={item.alt} width={item.width} height={item.height} loading="lazy" decoding="async" />
           </figure>;
         })}
       </div>
-      <p className={styles.caption} data-phase={slots[SLOTS.length - 1].phase}>{SHOWCASE[slots[SLOTS.length - 1].set].caption}</p>
-      <p className={styles.note}>실제 AI로 만든 예시 반찬가게 ‘망원 골목반찬’ 화면이에요</p>
     </div>
   </section>;
 }
