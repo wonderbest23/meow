@@ -111,6 +111,14 @@
   .headerShell :global(.site-header) :global(.brand-logo) { height: 28px; }
   .headerShell :global(.site-header) :global(.header-login) { padding: 0 10px; }
   .headerShell :global(.site-header) :global(.small-start) { padding: 0 14px !important; font-size: 15px !important; }
+  /* 휴대폰 폭에서 내 계정 아이콘은 ☰ 메뉴(내 사업 · 내 계정) 안으로 — 머리말에는 '내 사업' · 시작하기 · ☰ 만 */
+  .headerShell :global(.site-header) :global(.account-link) { display: none; }
+}
+@media (max-width: 360px) {
+  .headerShell :global(.site-header) { gap: 6px; }
+  .headerShell :global(.site-header) :global(.brand-logo) { height: 24px; }
+  .headerShell :global(.site-header) :global(.header-login) { padding: 0 6px; }
+  .headerShell :global(.site-header) :global(.small-start) { padding: 0 10px !important; }
 }
 
 /* 바닥글 — 같은 구조(사업자 정보·이용 안내·출처)를 밝은 바탕 색으로 */
@@ -139,6 +147,17 @@
 .page :global(.home-footer-credits) a { color: #4e5968; text-decoration-color: rgba(78, 89, 104, .4); }
 .page :global(.home-footer-credits) a:hover { color: #191f28; }
 .page :global(.home-footer-legal) { color: #6b7684; }
+/* 글 사이 링크(출처·전화·이메일·사업자 정보 보기)도 누르는 자리를 44px 로 — 줄 높이는 그대로 두고 위아래로만 넓힌다 */
+.page :global(.home-footer-credits) a,
+.page :global(.home-footer-info) a,
+.page :global(.home-footer-empty) a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin: -12px 0;
+  vertical-align: middle;
+}
+.page :global(.home-footer-credits) { line-height: 2; }
 @media (max-width: 640px) {
   .page :global(.home-footer) { margin-top: 88px; padding: 28px 16px calc(96px + env(safe-area-inset-bottom)); }
 }

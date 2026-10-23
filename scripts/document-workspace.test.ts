@@ -56,7 +56,7 @@ async function main() {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false, "화면 전체 가로 스크롤 없음");
       assert.ok(await page.$eval("footer", el => { const r = el.getBoundingClientRect(); return r.bottom <= innerHeight + 1 && r.top > innerHeight - 120; }), "하단 버튼 고정");
       await page.screenshot({ path: `artifacts/document-workspace/read-${width}.png` });
-      await click(page, "수정하기");
+      await click(page, "직접 고치기");
       await page.waitForSelector('.tiptap[contenteditable="true"]');
       await new Promise(r => setTimeout(r, 50));
       assert.equal(Object.values(state.plans[0].sections).some(s => s.edited), false, "모드 전환만으로 수동 수정 표시하지 않음");

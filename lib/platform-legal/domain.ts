@@ -221,7 +221,7 @@ const paymentMethods = (options: LegalDocumentOptions) => options.inApp ? APP_PA
 
 const PRODUCT_ITEMS = [
   `사업계획서(문서 1부): ${won(PACKAGE_AMOUNT)}(부가세 포함)`,
-  `사업계획서 홈페이지 수정·공개: ${won(HOMEPAGE_PRODUCT_AMOUNT)}(부가세 포함, 홈페이지 1개. 같은 사업의 사업계획서를 결제한 경우에만 구매할 수 있습니다)`,
+  `홈페이지 수정·공개(사업계획서로 만든 홈페이지): ${won(HOMEPAGE_PRODUCT_AMOUNT)}(부가세 포함, 홈페이지 1개. 같은 사업의 사업계획서를 결제한 경우에만 구매할 수 있습니다)`,
   `${BUNDLE_PRODUCT_NAME}: ${won(BUNDLE_PRODUCT_AMOUNT)}(부가세 포함, 같은 사업의 문서 1부와 홈페이지 1개를 함께 제공)`,
   `${DOMAIN_PRODUCT_NAME}: ${won(DOMAIN_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. 도메인 등록비는 별도)`,
   `${DOMAIN_PURCHASE_PRODUCT_NAME}: ${won(DOMAIN_PURCHASE_PRODUCT_AMOUNT)}(부가세 포함, 결제일부터 1년. .com·.kr·.co.kr 주소의 첫해 등록비 ${won(DOMAIN_PURCHASE_REGISTRATION_AMOUNT)} 포함)`,
@@ -264,7 +264,9 @@ const TOKEN_REFUND_ITEMS = [
   "환불 수수료는 받지 않습니다. 유효기간이 지나 소멸한 토큰은 환불 대상이 아닙니다.",
 ];
 
-function shown(value: string, fallback = "정식 출시 전 입력 예정") {
+/** 아직 비어 있는 사업자 정보 값 — 사업자 정보 화면과 첫 화면 바닥글이 같은 말을 쓴다 */
+export const LEGAL_PENDING_TEXT = "정식 출시 전 입력 예정";
+function shown(value: string, fallback = LEGAL_PENDING_TEXT) {
   return value.trim() || fallback;
 }
 

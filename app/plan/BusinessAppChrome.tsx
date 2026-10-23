@@ -97,11 +97,12 @@ export default function BusinessAppChrome({ children, title, subtitle, actions, 
           ? <button type="button" className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} onClick={onBack} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></button>
           : <Link className={`${styles.back} ${!showRail ? styles.backVisible : ""}`} href={backHref} aria-label="이전 화면으로" title="이전 화면으로"><ChevronLeft size={24} /></Link>}
         {/* 부제는 화면이 따로 줄 때만(예: 질문 3/12) — 늘 붙던 '오늘창업'·'오늘창업 AI 파트너'는 왼쪽 로고와 겹쳐 뺐다 */}
-        <div className={styles.headerTitle}>{titleHeading ? <h1><strong>{title}</strong></h1> : <strong>{title}</strong>}{subtitle && <span>{subtitle}</span>}</div>
+        {/* 긴 사업명은 말줄임으로 잘린다 — 마우스를 올리면 전체 이름(title) */}
+        <div className={styles.headerTitle}>{titleHeading ? <h1><strong title={title}>{title}</strong></h1> : <strong title={title}>{title}</strong>}{subtitle && <span>{subtitle}</span>}</div>
         {STUDIO_ENABLED && <Suspense fallback={null}><StudioEntryLink withActions={!!actions} /></Suspense>}
         {actions && <div className={styles.headerActions}>{actions}</div>}
         <div className={`${styles.headerMenu} ${showRail ? drawer.narrowOnly : ""}`}>
-          <button ref={toggle} type="button" className={styles.menuToggle} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls="app-drawer" onClick={() => setOpen(!open)}><Menu size={24} /></button>
+          <button ref={toggle} type="button" className={styles.menuToggle} aria-label={open ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={open} aria-controls={open ? "app-drawer" : undefined} onClick={() => setOpen(!open)}><Menu size={24} /></button>
         </div>
       </header>
       {sync === "offline" && <div className={styles.syncNotice} role="status">변경한 내용을 서버에 저장하지 못했어요.<button onClick={()=>void pushToServer()}>다시 저장</button></div>}

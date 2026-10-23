@@ -218,7 +218,9 @@ export function intakeQuestions(intake: IntakeState, coach: CoachState, ideas = 
         const base = structureUnitCostQuestion(structure?.revenue);
         // 건당 판매 모델은 바로 앞 가격 질문과 같은 기준(대표 메뉴 1개·상품 1개…)으로 묻는다. 구독·시간제 등은 수익 방식 단위를 따른다.
         const basis = !structure || structure.revenue === "per_unit" || structure.revenue === "mixed" ? (structure ? revenueBasis(structure) : null) ?? PRICE_BASIS[sector] : null;
-        return { ...base, ...(basis ? { period: basis, prompt: `${basis}에 들어가는 변동비는 얼마쯤인가요?` } : {}), ...(question.options ? { options: question.options } : {}) };
+        // 화면 질문은 '변동비' 대신 쉬운 말로 — 메뉴·상품을 파는 업종은 재료비·포장비, 그 밖은 재료비·외주비(여정 점검 2026-10-23)
+        const costWords = ["food_beverage", "retail_commerce", "manufacturing"].includes(sector) ? "재료비·포장비" : "재료비·외주비";
+        return { ...base, ...(basis ? { period: basis, prompt: `${basis}에 드는 ${costWords} 같은 비용은 얼마쯤인가요?` } : {}), ...(question.options ? { options: question.options } : {}) };
       }
       if (question.kind !== "text" || question.options?.length) return question;
       const options = sectorChipOptions(sector, question.id, intake.mode);

@@ -27,7 +27,7 @@ import PlanLoading, { Spinner } from "../PlanLoading";
 import BusinessAppChrome from "../BusinessAppChrome";
 import { MISSING_BUSINESS_DETAIL, MISSING_BUSINESS_TITLE } from "../../../lib/plan-builder/missing-business";
 import { businessChatHref } from "../../../lib/plan-builder/business-hub";
-import { homepageHref, journeyNext, launchHref } from "../../../lib/plan-builder/journey";
+import { homepageHref, journeyLabel, journeyNext, launchHref } from "../../../lib/plan-builder/journey";
 import { readCoach } from "../../../lib/plan-builder/coach";
 import { NextServicesCard } from "../../../components/next-services";
 import frame from "../chat/page.module.css";
@@ -708,21 +708,31 @@ export function HomepageScreen() {
     if (!embedded || !nav?.registerEditHandler) return;
     const edits = chatEdits.current;
     /* 지금 대화로 고칠 수 있는지 — 안 되면 다음에 할 일을 담은 한국어 문장으로 멈춘다 */
+    /*
+     * 결제·로그인이 먼저면 대화 카드에 [다시 시도] 대신 그 단추를 붙여 던진다(대화 칸이 studioEditAction 으로 읽는다) —
+     * 예전엔 결제 전에 보내면 '홈페이지 칸의 [결제…]를 눌러 주세요'와 뜻 없는 [다시 시도]만 나왔다(여정 점검 2026-10-23).
+     * 이 처리기는 한 번만 등록되므로 결제 주소는 그때그때 live 값으로 만든다(blockedHref 는 첫 화면 값에 묶인다).
+     */
+    const withAction = (message: string, label: string, href: string) => Object.assign(new Error(message), { action: { label, href } });
+    const payLink = (now: typeof live.current) => {
+      const state = loadState();
+      const plan = (now.screenPlanId ? state.plans.find(item => item.id === now.screenPlanId) : null) ?? activePlan(state);
+      return plan ? `/plan/pay?planId=${encodeURIComponent(plan.id)}&planType=${encodeURIComponent(plan.planType)}&product=${now.planPaid ? "homepage" : "bundle"}` : "/plan/pay?product=homepage";
+    };
     const usable = (forSave: boolean) => {
       const now = live.current;
       if (now.phase === "loading") throw new Error("홈페이지를 아직 불러오고 있어요. 잠시 후 다시 말씀해 주세요.");
       if (now.phase === "blocked") {
         const cta = now.blocked.cta;
-        throw new Error(cta === "pay" ? "홈페이지 결제 후 쓸 수 있어요 — 홈페이지 칸의 [결제하러 가기]를 눌러 주세요."
-          : cta === "plan" ? "먼저 사업계획서를 만들어 주세요 — 홈페이지는 계획서에 답한 내용으로 만들어요."
-          : cta === "login" ? "로그인한 뒤 쓸 수 있어요 — 홈페이지 칸의 [로그인하기]를 눌러 주세요."
-          : `${now.blocked.title}. 홈페이지 칸을 확인해 주세요.`);
+        if (cta === "pay") throw withAction("홈페이지는 결제한 뒤 대화로 고칠 수 있어요.", "결제하러 가기", payLink(now));
+        if (cta === "login") throw withAction("로그인한 뒤 대화로 고칠 수 있어요.", "로그인하기", `/account?next=${encodeURIComponent(now.screenPlanId ? homepageHref(now.screenPlanId) : "/plan/homepage")}`);
+        throw new Error(cta === "plan" ? "먼저 사업계획서를 만들어 주세요 — 홈페이지는 계획서에 답한 내용으로 만들어요." : `${now.blocked.title}. 홈페이지 화면을 확인해 주세요.`);
       }
       if (now.sample) throw new Error("예시 홈페이지는 고칠 수 없어요. 내 사업으로 만들면 대화로 고칠 수 있어요.");
-      if (!now.draft || !now.projectId) throw new Error("홈페이지를 아직 불러오지 못했어요. 홈페이지 칸을 확인해 주세요.");
-      if (!now.editable) throw new Error(now.planPaid ? "홈페이지 결제 후 쓸 수 있어요 — 홈페이지 칸의 [결제하고 홈페이지 고치기]를 눌러 주세요." : "홈페이지는 사업계획서와 함께 결제한 뒤 쓸 수 있어요 — 홈페이지 칸의 [함께 결제하기]를 눌러 주세요.");
+      if (!now.draft || !now.projectId) throw new Error("홈페이지를 아직 불러오지 못했어요. 홈페이지 화면을 확인해 주세요.");
+      if (!now.editable) throw now.planPaid ? withAction("홈페이지 결제 후 대화로 고칠 수 있어요.", "결제하고 홈페이지 고치기", payLink(now)) : withAction("홈페이지는 사업계획서와 함께 결제한 뒤 대화로 고칠 수 있어요.", "함께 결제하기", payLink(now));
       const bw = now.draft.pageData?.brainwave;
-      if (!now.draft.pageData || !bw) throw new Error("이 홈페이지는 대화로 고칠 수 없어요. 홈페이지 칸의 편집기에서 직접 고쳐 주세요.");
+      if (!now.draft.pageData || !bw) throw new Error("이 홈페이지는 대화로 고칠 수 없어요. 홈페이지 화면의 편집기에서 직접 고쳐 주세요.");
       if (now.aiFilling) throw new Error("AI가 계획서로 홈페이지를 채우는 중이에요. 끝난 뒤 다시 말씀해 주세요.");
       if (now.builderOpen) throw new Error("홈페이지 편집기가 열려 있어요. 편집기를 닫은 뒤 다시 말씀해 주세요.");
       if (forSave && (chatEditBusy.current || requestRef.current)) throw new Error("저장하는 중이에요. 끝난 뒤 다시 눌러 주세요.");
@@ -736,14 +746,14 @@ export function HomepageScreen() {
       try { await save(next); }
       catch (error) {
         if (mounted.current) setDraft(value => value === next ? previous : value);
-        if (error instanceof LandingSaveError && error.code === "LANDING_DRAFT_CONFLICT") throw new Error(`다른 화면에서 먼저 저장된 내용이 있어 ${failVerb}지 못했어요. 홈페이지 칸에서 [최신 내용 불러오기]를 누른 뒤 다시 말씀해 주세요.`);
+        if (error instanceof LandingSaveError && error.code === "LANDING_DRAFT_CONFLICT") throw new Error(`다른 화면에서 먼저 저장된 내용이 있어 ${failVerb}지 못했어요. 홈페이지 화면에서 [최신 내용 불러오기]를 누른 뒤 다시 말씀해 주세요.`);
         if (error instanceof LandingSaveError && error.code === LANDING_LOGIN_REQUIRED) throw new Error(`로그인이 풀려 ${failVerb}지 못했어요. 다시 로그인한 뒤 다시 눌러 주세요.`);
         throw new Error(`저장하지 못해 ${failVerb}지 않았어요. ${userErrorMessage(error, "잠시 후 다시 눌러 주세요.")}`);
       } finally { chatEditBusy.current = false; }
     };
     const handler: StudioEditHandler = {
-      /* 결제 전·로그인 전·불러오는 중에는 대화 칸이 "대화로 고치기" 권유를 띄우지 않게 */
-      available: () => HOMEPAGE_CHAT_EDIT_OPEN && live.current.phase !== "blocked" && live.current.phase !== "loading",
+      /* 결제 전(편집 불가)·예시·로그인 전·불러오는 중에는 대화 칸이 "대화로 고치기" 권유를 띄우지 않게 — 예전엔 결제 전에도 권했다 */
+      available: () => HOMEPAGE_CHAT_EDIT_OPEN && live.current.phase !== "blocked" && live.current.phase !== "loading" && !live.current.sample && live.current.editable,
       async propose(instruction) {
         const text = instruction.trim();
         if (text.length < 2) throw new Error("무엇을 어떻게 바꿀지 조금 더 적어 주세요.");
@@ -763,8 +773,14 @@ export function HomepageScreen() {
         const data = await res.json().catch(() => ({})) as { texts?: Record<string, string>; usage?: { inputTokens?: number; outputTokens?: number }; balance?: { remaining?: number } | null; error?: { code?: string; message?: string } };
         if (!mounted.current || epoch !== planOwnerEpoch()) throw new Error("계정이나 화면이 바뀌어 결과를 보여 드리지 않았어요. 다시 말씀해 주세요.");
         if (!res.ok) {
-          if (data.error?.code === "TOKENS_REQUIRED") setTokenShortage(true);
-          throw new Error(aiEditErrorMessage(res.status, data.error?.code, data.error?.message));
+          const message = aiEditErrorMessage(res.status, data.error?.code, data.error?.message);
+          const planId = live.current.screenPlanId;
+          if (data.error?.code === "TOKENS_REQUIRED") {
+            setTokenShortage(true);
+            if (planId) throw withAction(message, "토큰 충전하기", `/plan/pay?planId=${encodeURIComponent(planId)}&product=tokens`);
+          }
+          if (data.error?.code === "HOMEPAGE_PAYMENT_REQUIRED" || res.status === 402 && !data.error?.code) throw withAction(message, "결제하러 가기", payLink(live.current));
+          throw new Error(message);
         }
         setTokenShortage(false);
         const changes = aiEditChanges({ patch: data.texts ?? {}, texts: before, page: await meta });
@@ -800,7 +816,7 @@ export function HomepageScreen() {
         const edit = edits.get(proposalId);
         if (!edit || edit.status !== "applied" || !edit.snapshot || !edit.appliedValues) throw new Error("되돌릴 수 있는 바꾸기가 없어요.");
         const { bw, projectId: target } = usable(true);
-        if (target !== edit.projectId || bw.page !== edit.page) throw new Error("바꾼 뒤 홈페이지 디자인이 바뀌어 되돌릴 수 없어요. 홈페이지 칸의 편집기에서 직접 고쳐 주세요.");
+        if (target !== edit.projectId || bw.page !== edit.page) throw new Error("바꾼 뒤 홈페이지 디자인이 바뀌어 되돌릴 수 없어요. 홈페이지 화면의 편집기에서 직접 고쳐 주세요.");
         const result = undoAiEditPatch(bw.texts, edit.snapshot, edit.appliedValues);
         if (!result.restored.length && Object.keys(edit.snapshot).length) throw new Error("바꾼 뒤 같은 글을 직접 고치셔서 되돌릴 곳이 없어요.");
         if (result.restored.length) await saveTexts(result.texts, "되돌리");
@@ -823,13 +839,13 @@ export function HomepageScreen() {
   const tokenPayHref = screenPlanId ? `/plan/pay?planId=${encodeURIComponent(screenPlanId)}&product=tokens` : "";
 
   const back =screenPlanId && !sample ? `/plan/document?planId=${encodeURIComponent(screenPlanId)}` : "/plan";
-  /* 이 화면의 사업 — 공개 뒤 다음 단계와 '사업 시작 준비 먼저 하기'에 쓴다(이 기기에 저장된 사업) */
+  /* 이 화면의 사업 — 공개 뒤 다음 단계와 '개업 준비 먼저 하기'에 쓴다(이 기기에 저장된 사업) */
   const screenPlan = phase === "ready" && screenPlanId && !sample ? loadState().plans.find(item => item.id === screenPlanId) ?? null : null;
   /* 계획서에 가게 이름 후보가 있는데 아직 이름을 정하지 않았는지 — 설명 같은 이름이면 공개 전 '채울 것'에 가게 이름을 넣는다 */
   const screenCoach = screenPlan ? readCoach(screenPlan.answers) : null;
   const nameCandidates = Boolean(screenCoach && !screenCoach.business.nameConfirmed && (screenCoach.design?.identity?.names?.length ?? 0) > 0);
   nameCandidatesRef.current = nameCandidates;
-  const screenNext = screenPlan ? journeyNext(screenPlan, "published") : screenPlanId ? { href: launchHref(screenPlanId), title: "사업 시작하기", note: "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요" } : null;
+  const screenNext = screenPlan ? journeyNext(screenPlan, "published") : screenPlanId ? { href: launchHref(screenPlanId), title: `${journeyLabel("launch")}하기`, note: "업종 신고·사업자등록·결제·첫 홍보를 차례로 준비해요" } : null;
 
   const Root = embedded ? "div" : "main";
   return (
@@ -896,9 +912,9 @@ export function HomepageScreen() {
                   {planPaid ? "결제하고 홈페이지 고치기 →" : "함께 결제하기 →"}
                 </button>
               )}
-              {/* 홈페이지는 나중에 해도 된다 — 결제 단추 하나뿐이라 사업 시작하기로 넘어갈 길이 없었다(여정 점검 2026-10-22) */}
+              {/* 홈페이지는 나중에 해도 된다 — 결제 단추 하나뿐이라 개업 준비로 넘어갈 길이 없었다(여정 점검 2026-10-22) */}
               {!sample && screenPlanId && <Link className={styles.ctaSecondary} href={launchHref(screenPlanId)} onClick={() => setActivePlan(screenPlanId)}>
-                {screenPlan && readCoach(screenPlan.answers)?.stage === "operating" ? "운영 개선 먼저 하기 →" : "사업 시작 준비 먼저 하기 →"}
+                {journeyLabel("launch", !!screenPlan && readCoach(screenPlan.answers)?.stage === "operating")} 먼저 하기 →
               </Link>}
             </div>
           </div>
@@ -1060,7 +1076,7 @@ export function HomepageScreen() {
 
       {/* 공개한 뒤의 다음 단계는 하나 — 유지보수(홈페이지 고치기, 문의·실적 관리) */}
       {/* 다음 단계 두 개를 나란히 — 예전엔 화면 끝까지 넓은 띠 두 개라 글씨만 작아 보였다(소유자 지적 2026-10-07) */}
-      {/* 다음 단계는 단계 순서(journey.ts)대로 — 사업 시작하기를 아직 안 했으면 그것부터, 했으면 유지보수(예전엔 4단계를 건너뛰었다) */}
+      {/* 다음 단계는 단계 순서(journey.ts)대로 — 개업 준비를 아직 안 했으면 그것부터, 했으면 유지보수(예전엔 4단계를 건너뛰었다) */}
       {phase === "ready" && site?.status === "published" && screenPlanId && !sample && screenNext && <div className={styles.nextRow}>
         <Link className={styles.nextCare} href={screenNext.href} onClick={() => setActivePlan(screenPlanId)}>
           <span>다음 단계</span>

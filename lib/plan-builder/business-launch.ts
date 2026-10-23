@@ -26,7 +26,9 @@ export type LaunchState = z.infer<typeof launchSchema>;
 export type LaunchChecklist = { needs: string[]; steps: IndustryPlaybook["steps"]; pitfalls: string[] };
 export type LaunchStep = { id: string; title: string; task: string; materialTitle: string; material: string; prompt: string; caution?: string; links?: Array<{ title: string; url: string }>; service?: "website" | "marketing"; checklist?: LaunchChecklist;
   /** 펼쳐 보이는 확인 목록(체크 표시 가능) — 예전엔 자료 글 안에 접혀 있어 단계가 비어 보였다(2026-10-22 결제 단계) */
-  checks?: string[]; signature: string };
+  checks?: string[]; signature: string;
+  /** 대화에서 이미 정한 단계(예: 상품·가격을 직접 답함) — 기록이 없어도 끝난 것으로 본다(launchStatus). 열어서 다듬을 수는 있다 */
+  decided?: boolean };
 
 /*
  * 사업 모양 — 결제 준비·첫 홍보 글·홍보 키트를 사업에 맞게 고를 때 쓴다(예전엔 모든 사업이 온라인 결제·동네 가게 기준이었다).
@@ -168,7 +170,13 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
   const business = field("business", plan.title), offer = field("offer"), customer = field("customer"), price = field("price"), channel = field("channel");
   const context = `사업: ${plan.title}\n소개: ${business}\n상품: ${offer}\n고객: ${customer}\n가격: ${price}`;
   const base = { signature: JSON.stringify([coach ? coachDocumentRevision(coach) : plan.title, settings.purpose, settings.workplace, settings.registered]) };
-  const result: LaunchStep[] = [{ ...base, id: "offer", title: settings.purpose === "improve" ? "상품을 더 다듬어요" : "팔고 싶은 상품을 정해요", task: "정리된 상품 소개를 읽고 바꾸고 싶은 내용만 남겨 주세요.", materialTitle: "상품 소개 초안", material: `${plan.title}\n\n${business}\n\n제공 내용: ${offer}\n이용 고객: ${customer}\n검토 중인 가격: ${price}\n문의·판매 경로: ${channel}`, prompt: "현재 상품 소개를 고객에게 바로 보여줄 수 있는 문장으로 다듬어 주세요. 정해지지 않은 구성과 가격은 제안으로 표시하고 효과나 실적은 만들지 마세요." }];
+  /*
+   * 대화에서 상품과 가격을 직접 답했으면 '팔고 싶은 상품을 정해요'는 이미 정한 것 — 첫 단계로 다시 묻지 않는다(여정 점검 2026-10-23).
+   * AI 제안(proposal)으로만 채워졌거나 운영 개선 · 아이디어 검토면 그대로 둔다.
+   */
+  const userAnswered = (key: string) => { const item = coach?.fields.find(f => f.key === key); return item?.basis === "user" && item.value != null && String(item.value).trim() !== ""; };
+  const offerDecided = settings.purpose === "launch" && userAnswered("offer") && userAnswered("price");
+  const result: LaunchStep[] = [{ ...base, ...(offerDecided ? { decided: true } : {}), id: "offer", title: settings.purpose === "improve" ? "상품을 더 다듬어요" : "팔고 싶은 상품을 정해요", task: "정리된 상품 소개를 읽고 바꾸고 싶은 내용만 남겨 주세요.", materialTitle: "상품 소개 초안", material: `${plan.title}\n\n${business}\n\n제공 내용: ${offer}\n이용 고객: ${customer}\n검토 중인 가격: ${price}\n문의·판매 경로: ${channel}`, prompt: "현재 상품 소개를 고객에게 바로 보여줄 수 있는 문장으로 다듬어 주세요. 정해지지 않은 구성과 가격은 제안으로 표시하고 효과나 실적은 만들지 마세요." }];
   if (settings.purpose === "ideas") return result;
   result.push({ ...base, id: "operations", title: improving ? "현재 운영에서 바꿀 일을 정해요" : "작게 시작할 범위를 정해요", task: improving ? "현재 문제와 비용을 확인하고 유지할 일과 바꿔볼 일을 나눠요." : "처음 제공할 범위와 감당할 수 있는 비용을 확인해요.", materialTitle: "운영 범위 메모", material: improving
     ? `${context}\n\n현재 문제: ${field("problem")}\n현재 매출(제공된 정보): ${field("sales")}\n매달 나가는 비용: ${field("cost")}\n운영 범위: ${field("capacity")}\n개선 목표: ${field("goal")}\n\n유지할 일:\n이번에 바꿔볼 일:\n확인할 기간과 실제 결과:`
@@ -233,7 +241,7 @@ export function launchSteps(plan: Plan, settings: LaunchState): LaunchStep[] {
 
 export function launchStatus(state: LaunchState, step: LaunchStep) {
   const record = state.records[step.id];
-  if (!record) return "pending";
+  if (!record) return step.decided ? "done" : "pending";
   if (record.signature !== step.signature) return "review";
   return record.status;
 }

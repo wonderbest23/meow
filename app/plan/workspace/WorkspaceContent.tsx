@@ -6,7 +6,7 @@ import { COACH_FIELD_LABELS, coachFieldDisplay } from "../../../lib/plan-builder
 import { PPT_GENERATION_VERIFIED } from "../../../lib/plan-builder/deck-availability";
 import styles from "../BusinessHub.module.css";
 import Link from "next/link";
-import { homepageHref } from "../../../lib/plan-builder/journey";
+import { homepageHref, journeyLabel } from "../../../lib/plan-builder/journey";
 import type { HomepageStatus } from "../../../lib/plan-builder/journey";
 import { splitCircledSteps } from "../../../lib/plan-builder/text-steps";
 
@@ -21,7 +21,7 @@ export function WorkspaceNavigation({ view, onChange, children, operating = fals
   return <nav className={styles.tabs} aria-label="사업 관리 메뉴">
     <button aria-pressed={view === "summary"} onClick={() => onChange("summary")}>사업 요약</button>
     <button data-workspace-documents aria-pressed={view === "documents"} onClick={() => onChange("documents")}>내 자료</button>
-    <button aria-pressed={view === "launch" || view === "action"} onClick={() => onChange("launch")}>{operating ? "운영 개선하기" : "사업 시작하기"}</button>
+    <button aria-pressed={view === "launch" || view === "action"} onClick={() => onChange("launch")}>{journeyLabel("launch", operating)}</button>
     <button aria-pressed={view === "operations"} onClick={() => onChange("operations")}>유지보수</button>
     {children}
   </nav>;

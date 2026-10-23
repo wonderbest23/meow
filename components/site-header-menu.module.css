@@ -1,0 +1,88 @@
+/*
+ * 첫 화면 휴대폰·태블릿 메뉴(SiteHeader 의 HomeMenu) — 900px 이하에서만 ☰ 단추가 보인다(머리말 구간 링크가 숨는 폭과 같다).
+ * 메뉴는 body 바로 아래에 그려지므로 첫 화면 CSS(home-landing.module.css)에 기대지 않고 여기서 색을 다 정한다.
+ */
+.toggle {
+  display: none;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #191f28;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.toggle:hover { background: rgba(25, 31, 40, .06); }
+.toggle:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
+/* 전역 'button:not(.plan-ui *) svg 숨김'(globals.css, 특정도 0,1,2)보다 세게 — 아이콘이 빈칸이 되지 않게 */
+.toggle.toggle > svg, .close.close > svg { display: block !important; flex: 0 0 auto; }
+@media (max-width: 900px) { .toggle { display: inline-flex; } }
+
+.layer { position: fixed; inset: 0; z-index: 1000; }
+.scrim { position: absolute; inset: 0; background: rgba(25, 31, 40, .42); }
+.panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(360px, calc(100vw - 48px));
+  padding: calc(12px + env(safe-area-inset-top)) 16px calc(24px + env(safe-area-inset-bottom));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #fff;
+  color: #191f28;
+  box-shadow: -8px 0 28px rgba(25, 31, 40, .14);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: var(--font-sans);
+  word-break: keep-all;
+}
+.close {
+  align-self: flex-end;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #191f28;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.close:hover { background: #f2f4f6; }
+.group { display: flex; flex-direction: column; gap: 4px; padding: 8px 0; border-top: 1px solid #e5e8eb; }
+.group:first-of-type { border-top: 0; }
+.link, .primary {
+  min-height: 48px;
+  padding: 0 12px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  color: #191f28;
+  font-size: 17px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.link:hover { background: #f2f4f6; }
+/* 계정 줄의 첫 단추(로그인 · 내 사업)는 앱의 주 색 단추 */
+.primary { justify-content: center; background: var(--brand-primary, #3182f6); color: #fff; font-weight: 700; }
+.primary:hover { background: var(--brand-primary-hover, #1b64da); }
+.legal a {
+  min-height: 44px;
+  padding: 0 12px;
+  display: flex;
+  align-items: center;
+  color: #4e5968;
+  font-size: 15px;
+  text-decoration: none;
+}
+.legal a:hover { color: #191f28; }
+.panel a:focus-visible, .close:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }

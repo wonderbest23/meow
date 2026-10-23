@@ -110,8 +110,9 @@ async function main() {
     assert.match(period.label, /종료일/);
     assert.equal(period.fieldKey, undefined);
     assert.equal(getIntakeQuestion("operating", null, "cost")!.period, "월");
-    assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /월 고정비/);
-    assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /건당 변동비.*구분/);
+    // 화면 질문은 '고정비·변동비' 대신 쉬운 말로(여정 점검 2026-10-23) — 매달 나가는 돈만 묻고, 팔 때마다 드는 돈은 빼라고 한다
+    assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /매달 꼭 나가는 돈/);
+    assert.match(getIntakeQuestion("operating", null, "cost")!.prompt, /팔 때마다 드는 재료비는 빼고/);
     assert.match(getIntakeQuestion("operating", null, "sales")!.prompt, /실제 매출/);
     assert.equal(getIntakeQuestion("operating", null, "sales")!.period, "실적 기간 합계");
     assert.equal(getIntakeQuestion("startup", null, "price")!.period, "판매 1건");

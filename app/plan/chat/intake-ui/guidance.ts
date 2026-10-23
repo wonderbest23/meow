@@ -2,6 +2,7 @@ import type { IntakeSnapshot } from "../../../../lib/plan-builder/intake-types";
 import type { IntakeQuestion } from "../../../../lib/plan-builder/intake-questions";
 import { parseIntakeNote } from "../../../../lib/plan-builder/intake-note-parser";
 import { parseResourceLimit } from "../../../../lib/plan-builder/intake-candidate-fit";
+import { parseWonAmount } from "../../../../lib/plan-builder/answer-number";
 
 export type MentionedAnswer = { key: string; value: string; quote: string };
 const uncertainContext = /[?？]|아니|않|말고|제외|모르|미정|아마|일까|할까|라면|가정|예시|예를|친구|지인|다른\s*회사|예전|과거|폐업/;
@@ -19,6 +20,11 @@ export function mentionedAnswer(snapshot: IntakeSnapshot, question: IntakeQuesti
     if (source.text.length > 4000 || uncertainContext.test(source.text)) continue;
     const exact = parseIntakeNote(source.text, `reference-${index}`).candidates.filter(candidate => candidate.fieldKey === question.fieldKey);
     for (const candidate of exact) matches.push({ key: `${question.id}:${source.id}:${candidate.value}`, value: candidate.value, quote: candidate.quote });
+    // 첫 설명의 '모아 둔 돈은 2천만원'처럼 준비 예산을 말한 문장 — 예전엔 같은 걸 다시 물었다(여정 점검 2026-10-23)
+    if (question.fieldKey === "budget" && !exact.length) {
+      const said = budgetSentence(source.text);
+      if (said) matches.push({ key: `${question.id}:${source.id}:${said.value}`, value: said.value, quote: said.quote });
+    }
     // Keep this narrow: a named audience followed by an explicit Korean recipient marker.
     if (question.fieldKey === "customer" && !exact.length) {
       const match = source.text.trim().match(/^(?:저는\s+)?([가-힣A-Za-z0-9·\s]{1,32}?)(?:에게|을\s*위한|를\s*위한|\s+대상으로)\s+[^\n]+$/);
@@ -35,6 +41,31 @@ export function mentionedAnswer(snapshot: IntakeSnapshot, question: IntakeQuesti
     if (parsed.status !== "known") return null;
   }
   return match;
+}
+
+/** 준비 예산을 말한 문장 하나('모아 둔 돈은 2천만원 정도예요') → 그 금액. 예산을 뜻하는 말과 금액이 한 문장에 있을 때만 */
+const BUDGET_WORDS = /(?:모아\s*(?:둔|놓은)|모은|가진|갖고\s*있는|준비(?:한|된|해\s*둔)|쓸\s*수\s*있는|여유)\s*돈|예산|창업\s*자금|자본금|종잣돈|시드\s*머니/;
+export function budgetSentence(text: string): { value: string; quote: string } | null {
+  for (const sentence of text.split(/(?<=[.!。！\n])/)) {
+    if (!BUDGET_WORDS.test(sentence)) continue;
+    const amounts = [...sentence.matchAll(/(?:\d[\d,.]*\s*(?:억|천만|백만|만|천)\s*)+원?/g)].map(match => match[0].replace(/\s+/g, "")).map(token => /원$/.test(token) ? token : `${token}원`);
+    const values = new Set(amounts.map(token => parseWonAmount(token)).filter((value): value is number => value !== undefined && value > 0));
+    if (values.size !== 1) continue;
+    return { value: amounts[0], quote: sentence.trim() };
+  }
+  return null;
+}
+
+/**
+ * 첫 설명에 '1인 ○○ 가게'·'혼자 운영'처럼 혼자 한다고 말했는지 — 운영 범위 질문에서 '대표자 혼자'를 미리 골라 둔다.
+ * '1인 가구'·'1인분'은 고객·양 이야기라 보지 않는다.
+ */
+export function mentionsSolo(snapshot: IntakeSnapshot): boolean {
+  const texts = [
+    ...snapshot.coach.fields.filter(field => field.basis === "user" && field.key === "business").map(field => field.value),
+    snapshot.coach.ideaOrigin?.text ?? "",
+  ];
+  return texts.some(text => /(?:^|[^\d])1인(?!\s*(?:가구|분|용|당|석|실|세대|기준))|(?:혼자|나\s*홀로|홀로)\s*(?:서\s*)?(?:운영|하|할|해|일|시작|창업|꾸려)/.test(text) && !uncertainContext.test(text));
 }
 
 const HELP: Record<string, string> = {

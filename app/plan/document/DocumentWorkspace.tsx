@@ -80,7 +80,7 @@ function WritingStatus({ done, total, current }: { done: number; total: number; 
  * 오른쪽 칸·문서 위 카드·완료 알림에 흩어져 있던 다음 단계 안내를 여기 하나로 모았다(사용자 피드백 2026-10).
  */
 /*
- * 건너뛰는 길 — 홈페이지보다 영업신고·사업자등록이 급한 사장님이 '사업 시작하기'를 바로 찾게(여정 점검 2026-10-22).
+ * 건너뛰는 길 — 홈페이지보다 영업신고·사업자등록이 급한 사장님이 '개업 준비'를 바로 찾게(여정 점검 2026-10-22).
  * 아래 단추 줄은 두 개로 두고(대표 요청: 아래 단추 세 개는 이상하다), 완료 알림 안에 글 링크로 둔다.
  */
 function SecondaryNext({ planId, homepage }: { planId: string; homepage: HomepageStatus }) {
@@ -88,6 +88,12 @@ function SecondaryNext({ planId, homepage }: { planId: string; homepage: Homepag
   const secondary = plan ? journeyNext(plan, homepage).secondary : undefined;
   if (!secondary) return null;
   return <p className={styles.secondaryNext}><Link href={secondary.href}>{secondary.title} →</Link></p>;
+}
+
+/* 다음 단계 이름(홈페이지 만들기 등) — 완료 알림이 단추 이름을 그대로 부른다. 단추는 PC 작업실은 머리줄, 휴대폰은 칸 아래에 있고 이름은 같다 */
+function nextStepTitle(planId: string, homepage: HomepageStatus): string | null {
+  const plan = loadState().plans.find(item => item.id === planId);
+  return plan ? journeyNext(plan, homepage).title : null;
 }
 
 function NextStepButton({ planId, homepage, className = styles.nextButton }: { planId: string; homepage: HomepageStatus; className?: string }) {
@@ -118,7 +124,7 @@ export default function DocumentWorkspace(props: Props) {
   /* 위 '바꾼 답이 아직 계획서에 들어가지 않았어요' 안내의 반영 단추도 같은 확인창을 바로 연다 — 사업 정보를 미리 불러 둔다 */
   const facts = useFactEdit(planId, factEditable && (factMode || Boolean(props.notice)));
   /*
-   * 작업실 안에서는 칸이 살아 있는 채로 주소만 바뀐다(대화 칸의 '문장에서 바로 고치기' 링크 등). 이 칸으로 오는 링크마다
+   * 작업실 안에서는 칸이 살아 있는 채로 주소만 바뀐다(대화 칸의 '직접 고치기' 링크 등). 이 칸으로 오는 링크마다
    * 이동 번호(paneNav)가 오르므로, 칸이 보이는 동안 번호가 바뀌면 주소를 다시 읽는다 — 이미 보이는 칸에서도 고치기가 열린다.
    * 같은 번호로는 한 번만(탭을 오갈 때마다 다시 열리지 않게).
    */
@@ -209,6 +215,8 @@ export default function DocumentWorkspace(props: Props) {
       return;
     }
   }, [props.freshKeys]); // eslint-disable-line react-hooks/exhaustive-deps
+  /* 작성이 끝나면 알림을 거둔다(그리기도 쓰는 중일 때만) — 다 쓴 뒤에도 '새 항목이 써졌어요'가 남아 있었다(여정 점검 2026-10-23) */
+  useEffect(() => { if (!props.writing) setArrival(null); }, [props.writing]);
   const homepage = useHomepageStatus(isSample ? null : planId);
   /* ← 는 내 사업 목록으로 — 예전엔 사업 관리 문서 탭으로 가서, 거기 큰 단추('사업계획서 열기')가 다시 여기로 돌려보냈다 */
   const back = "/plan";
@@ -274,10 +282,15 @@ export default function DocumentWorkspace(props: Props) {
 
   /* 고친 내용이 아직 계획서에 반영되지 않았는지 — 예전엔 '계획서에 반영하기'가 화면 위 카드에만 있어 아래 '수정 마치기'로 그냥 끝내기 쉬웠다 */
   const factsUnapplied = factMode && facts.snapshot?.documentStatus === "stale";
-  /* 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다 */
-  const editButton = summaryMode ? null : <button className={styles.secondary} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (EDIT_CHAT && coachHref) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{editing ? "수정 마치기" : "수정하기"}</button>;
   /*
-   * 3단계(작업실 안): 장마다 '이 장을 대화로 고치기' — 대화 칸 입력창을 그 장 고치기로 연다(nav.composeInChat).
+   * 한 장 요약은 읽기 전용 요약이라 수정 단추를 두지 않는다.
+   * 고치기 단추 이름은 둘뿐 — '대화로 고치기' · '직접 고치기'(여정 점검 2026-10-23: 같은 일을 하는 단추 이름이 네 가지로 섞여 있었다).
+   * 작업실 안에서는 '대화로 고치기'가 장 머리·도구 줄에 따로 있어 이 단추는 바로 직접 고치기를 연다. 예전 화면만 고르는 창(대화로 · 직접)을 연다.
+   */
+  const chooseEdit = EDIT_CHAT && !!coachHref && !pane;
+  const editButton = summaryMode ? null : <button className={styles.secondary} disabled={!grouped.length || (factEditable && !!props.writing)} onClick={() => { if (factEditable) { /* 고를 방법이 하나뿐이면(채팅 수정 꺼짐) 창 없이 바로 문장 고치기로(대표 요청 2026-10-15) */ if (chooseEdit) setModal("edit"); else setFactMode(true); return; } setEditing(!editing); }}>{editing ? "수정 마치기" : factEditable && chooseEdit ? "고치기" : "직접 고치기"}</button>;
+  /*
+   * 3단계(작업실 안): 장마다 '대화로 고치기' — 대화 칸 입력창을 그 장 고치기로 연다(nav.composeInChat).
    * 고치기는 대화 칸의 기존 채팅 수정(바꿀 사실 카드 → 바꾸기/그대로 두기)이 맡는다 — 계획서 칸은 plan-section 처리기를 등록하지 않는다.
    * 채팅 수정이 꺼져 있거나(EDIT_CHAT) 작업실 밖·예시·작성 중이면 단추가 없다. '직접 고치기'는 예전 수정하기(사실 고치기 · 본문 고치기)와 같다.
    */
@@ -290,7 +303,7 @@ export default function DocumentWorkspace(props: Props) {
   const directEdit = () => { if (factEditable) { setSummaryMode(false); setFactMode(true); } else setEditing(true); };
   const directEditable = !(factEditable && props.writing);
   const chapterActions = (index: number, name: string) => !pane || isSample || !planId || factMode || editing || !(chatEdit || directEditable) ? undefined : <>
-    {chatEdit && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 이 장을 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />이 장을 대화로 고치기</button>}
+    {chatEdit && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 대화로 고치기`} onClick={() => askChatEdit(index)}><MessageSquare size={14} aria-hidden="true" />대화로 고치기</button>}
     {directEditable && <button type="button" className={styles.chapterAction} aria-label={`${index + 1}장 ${name} — 직접 고치기`} onClick={directEdit}><PenLine size={14} aria-hidden="true" />직접 고치기</button>}
   </>;
   const actionButtons = factMode ? <>
@@ -322,6 +335,11 @@ export default function DocumentWorkspace(props: Props) {
   /* 내려받기는 문서 머리의 칩과 같은 기준 — 상세 항목이 하나라도 있을 때 */
   const canDownloadDoc = grouped.length > 0;
   const headerNext = showNext && !!planId && !factMode;
+  /*
+   * 작업실의 완료 알림 — 다음 단계는 하나만, 있는 단추 이름으로 부른다(여정 점검 2026-10-23: 휴대폰에 없는 '다음 단계' 단추를 가리켰고
+   * '개업 준비 먼저 하기' 링크까지 있어 다음 할 일이 둘로 보였다). 건너뛰는 길은 작업실 탭으로 언제든 갈 수 있다.
+   */
+  const celebrateNext = celebrate && studioHeader && showNext && planId ? nextStepTitle(planId, homepage) : null;
   const studioActions = useMemo(() => {
     if (!studioHeader || isSample || (!canDownloadDoc && !headerNext)) return null;
     return <div className={`${paneHeader.group} ${paneHeader.wideOnly}`} onClickCapture={paneLinkCapture(nav, planId)}>
@@ -343,7 +361,7 @@ export default function DocumentWorkspace(props: Props) {
         <div className={styles.document}>
           {/* One toolbar: view toggle and page count on the left, actions on the right (PC). Phones keep the actions at the bottom. */}
           <div className={styles.readingBar}>
-            <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} />목차</button>
+            <button className={styles.tocToggle} onClick={() => setModal("toc")} disabled={!grouped.length}><List size={19} aria-hidden="true" /><span className={styles.tocLabel}>목차</span></button>
             {props.summary && <div className={styles.viewSelector} role="group" aria-label="문서 보기 방식">
               <button aria-pressed={!summaryMode} onClick={() => { setSummaryMode(false); scroll.current?.scrollTo({ top: 0 }); }}>상세 계획서</button>
               <button aria-pressed={summaryMode} onClick={() => { setSummaryMode(true); setEditing(false); scroll.current?.scrollTo({ top: 0 }); }}>한 장 요약</button>
@@ -356,17 +374,17 @@ export default function DocumentWorkspace(props: Props) {
           {props.summaryError && <p className={styles.notice} role="alert">{props.summaryError}</p>}
           <div ref={scroll} className={styles.scroll} tabIndex={0} aria-label="사업계획서 본문" data-fact-mode={factMode || undefined} onScroll={() => setFactPick(null)}>
             {/* 완료 알림은 본문과 함께 올라간다(예전엔 위에 고정돼 장마다 85px 를 가렸다) */}
-            {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>{studioHeader ? "내용을 확인하고 필요한 부분만 다듬어 보세요. 준비되면 '다음 단계' 버튼으로 이어가요." : "내용을 확인하고 필요한 부분만 다듬어 보세요. 준비되면 화면 아래 버튼으로 다음 단계를 이어가요."}</p>{planId && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
+            {celebrate && <div className={styles.completionNotice} role="status" aria-live="polite"><span className={styles.completeMark}><Check size={22} aria-hidden="true" /></span><div><strong>사업계획서 작성이 끝났어요</strong><p>{studioHeader ? `내용을 확인하고 필요한 부분만 다듬어 보세요.${celebrateNext ? ` 준비되면 '${celebrateNext}' 단추로 이어가요.` : ""}` : "내용을 확인하고 필요한 부분만 다듬어 보세요. 준비되면 화면 아래 버튼으로 다음 단계를 이어가요."}</p>{planId && !studioHeader && <SecondaryNext planId={planId} homepage={homepage} />}</div><button aria-label="완료 알림 닫기" onClick={() => setCelebrate(false)}><X size={18} /></button></div>}
             {!grouped.length && !(summaryMode && props.summary) && props.writing ? <article className={styles.article}><DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} identity={props.identity} /><WritingStatus {...props.writing} /></article> : !grouped.length && !(summaryMode && props.summary) ? <div className={styles.empty}>{pane ? <h2>아직 만든 문서가 없어요</h2> : <h1>아직 만든 문서가 없어요</h1>}<p>사업 이야기를 이어서 계획서를 만들어 보세요.</p><Link href={coachHref ?? back}>사업안으로 돌아가기</Link></div> : <article className={styles.article}>
               {/* 사업명·설명 머리 묶음은 맨 앞(1장·전체 이어 읽기·한 장 요약)에서만 — 장마다 되풀이돼 휴대폰에서 읽을 칸이 좁았다. 다른 장에서는 작성 완료·내려받기 칩만 */}
               <DocumentReadHeading level={pane ? 2 : 1} studio={studioHeader} title={title} planType={props.planType} isSample={isSample} completed={!!props.completionKey} identity={props.identity} onDownload={grouped.length ? () => setModal("download") : undefined} compact={!summaryMode && !continuous && chapter > 0} />
                             {props.writing && <WritingStatus {...props.writing} />}
-                            {arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기 →</button>}
+                            {props.writing && arrival && arrival.index !== chapter && !continuous && <button type="button" className={styles.arrival} onClick={() => { setChapter(arrival.index); const id = arrival.id; setArrival(null); requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" })); }}>새 항목이 써졌어요 · <b>{arrival.title}</b> 보기 →</button>}
               {factMode && <FactCard edit={facts} onPick={(id, rect) => setFactPick({ id, rect })} onReflect={() => void reflectFacts()} />}
               {props.notice && !props.writing && !factMode && <div className={`${styles.notice} ${styles.noticeRow}`} role="status"><span>{props.notice}</span>{factEditable && facts.snapshot?.documentStatus === "stale"
                 /* 반영 단추는 바로 '다시 쓸까요?' 확인창을 연다 — 예전엔 고치기 화면만 열려 같은 단추를 또 찾아 눌러야 했다 */
                 ? <RewriteConfirm snapshot={facts.snapshot} disabled={facts.busy} label="계획서에 반영하기" className={styles.noticeAction} onConfirm={() => void reflectFacts()} />
-                : factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>고칠 곳 보기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 수정하기</Link>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}</span>}</div>}
+                : factEditable ? <button type="button" className={styles.noticeAction} onClick={() => { setSummaryMode(false); setFactMode(true); }}>직접 고치기</button> : coachHref && <Link className={styles.noticeAction} href={coachHref}>대화로 고치기</Link>}{facts.error && <span className={styles.factError} role="alert">{facts.error.message} {facts.error.href && <Link href={facts.error.href}>{facts.error.label}</Link>}</span>}</div>}
               {summaryMode && props.summary ? <ExecutiveSummaryView summary={props.summary} /> : grouped.map(([name, list], index) => (continuous || chapter === index) && <div key={name} className={styles.chapter}>
                 <DocumentChapterHeading number={index + 1} title={name} actions={chapterActions(index, name)} />
                 {list.map(section => <section className={styles.section} key={section.key} id={`sec-${section.key.replace("/", "-")}`}>
@@ -393,8 +411,8 @@ export default function DocumentWorkspace(props: Props) {
       <header className={styles.dialogHeader}><h2 id="document-dialog-title">{modal === "toc" ? "어디부터 볼까요?" : modal === "edit" ? "어떻게 고칠까요?" : "파일 내려받기"}</h2><button aria-label="닫기" onClick={() => setModal(null)}><X size={22} /></button></header>
       {modal === "edit" ? <div className={styles.editChoices}>
         <p>계획서 내용 중 이 사업에 관한 것만 고칠 수 있어요.</p>
-        {EDIT_CHAT && coachHref && <Link href={`${coachHref}&edit=chat`} onClick={() => setModal(null)}><strong>채팅으로 수정하기</strong><small>“가격을 올려줘”처럼 말하면 바뀔 내용을 정리해 보여 드려요</small></Link>}
-        <button onClick={() => { setModal(null); setSummaryMode(false); setFactMode(true); }}><strong>문장에서 바로 고치기</strong><small>고칠 수 있는 숫자·사실만 표시돼요. 누르고 바꾸면 돼요</small></button>
+        {EDIT_CHAT && coachHref && <Link href={`${coachHref}&edit=chat`} onClick={() => setModal(null)}><strong>대화로 고치기</strong><small>“가격을 올려줘”처럼 말하면 바뀔 내용을 정리해 보여 드려요</small></Link>}
+        <button onClick={() => { setModal(null); setSummaryMode(false); setFactMode(true); }}><strong>직접 고치기</strong><small>고칠 수 있는 숫자·사실만 표시돼요. 누르고 바꾸면 돼요</small></button>
       </div> : modal === "toc" ? toc() : <div className={styles.downloads}>
         {/* 지금 보고 있는 문서를 받는다 — 예전엔 한 장 요약을 보면서도 말없이 상세 계획서 전체가 받아졌다 */}
         <p className={styles.downloadWhich}>{summaryMode && props.summary ? "지금 보고 있는 ‘한 장 요약’을 내려받아요." : "‘상세 계획서’ 전체를 내려받아요."}</p>

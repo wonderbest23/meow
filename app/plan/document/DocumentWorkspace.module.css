@@ -455,7 +455,7 @@
 }
 
 /*
- * 3단계(작업실 안): 장 머리의 작은 단추 — '이 장을 대화로 고치기' · '직접 고치기'. 읽기를 가리지 않게 글자 단추로 장 번호 줄 오른쪽에 둔다.
+ * 3단계(작업실 안): 장 머리의 작은 단추 — '대화로 고치기' · '직접 고치기'. 읽기를 가리지 않게 글자 단추로 장 번호 줄 오른쪽에 둔다.
  * 휴대폰은 도구 줄(목차 · 보기 바꾸기 줄)에도 '대화로 고치기'를 둔다 — 장 머리가 위로 밀려 올라가도 누를 수 있게.
  */
 .chapterHeadingTop { display:flex; align-items:center; justify-content:space-between; gap:4px 8px; flex-wrap:wrap; }
@@ -467,3 +467,27 @@
 .chapterChatEdit { display:inline-flex; align-items:center; gap:6px; margin-left:auto; min-height:38px; padding:7px 12px; border:1px solid var(--app-line-strong); border-radius:8px; background:var(--app-panel-fill); color:var(--app-accent); font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer; }
 @media (min-width:901px) { .chapterChatEdit { display:none; } }
 @media (max-width:400px) { .chapterAction { font-size:12px; padding:4px 6px; } }
+
+/*
+ * 작업실 칸 안의 도구 줄(상세 계획서 · 한 장 요약 · 고치기)이 칸을 내려도 탭 줄 바로 아래 붙어 있게(여정 점검 2026-10-23).
+ * 칸 본문 뿌리(.page — 대화 화면 틀의 overflow:hidden)가 스크롤 상자가 되어 sticky 가 칸 스크롤을 못 보고 같이 올라갔다.
+ * clip 은 넘친 것을 자르기만 하고 스크롤 상자가 되지 않는다(지원하지 않는 브라우저는 visible — 칸이 자르므로 괜찮다).
+ */
+.page[data-embedded] { overflow:visible; overflow:clip; }
+/*
+ * 휴대폰 작업실 — 머리줄 + 탭 줄 + 도구 줄이 두 줄로 접혀 위에 붙은 자리가 245px 쯤이었다. 도구 줄을 한 줄로:
+ * 목차는 아이콘만(이름은 낭독기에 남긴다), 대화로 고치기가 있으면 장 번호는 장 머리에 있어 숨긴다.
+ */
+@media (max-width:480px) {
+  .page[data-embedded] .readingBar { flex-wrap:nowrap; gap:8px; min-height:52px; padding-block:6px; }
+  .page[data-embedded] .tocToggle { padding:8px 10px; min-height:40px; }
+  .page[data-embedded] .tocLabel { position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  .page[data-embedded] .readingBar:has(.chapterChatEdit) .pageCount { display:none; }
+  .page[data-embedded] .chapterChatEdit { padding:7px 10px; }
+}
+/* 아주 좁은 휴대폰(380px 이하, 360px 안드로이드 등) — 한 줄에 들어가게 '대화로 고치기'는 아이콘만(이름은 aria-label 에 있다) */
+@media (max-width:380px) {
+  .page[data-embedded] .chapterChatEdit { font-size:0; gap:0; padding:8px 10px; }
+}
+/* 붙어 있는 도구 줄에 가리지 않게 — 목차·#sec- 링크·새 항목 알림으로 옮겨 갈 때 제목이 도구 줄 아래에서 보인다 */
+.page[data-embedded] :is(.chapter, .section) { scroll-margin-top:64px; }

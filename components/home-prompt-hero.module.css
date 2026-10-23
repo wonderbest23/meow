@@ -1,6 +1,7 @@
 /*
  * 첫 화면 — 큰 제목, 입력 카드, 결과물 진열 띠(2026-10-23 승인 목업 Main.dc.html).
- * 색: 글자 #191f28, 본문 #333d4b, 보조 #4e5968·#6b7684(밝은 바탕에서 4.5:1 이상), 보내기 파랑 #1b64da.
+ * 색: 글자 #191f28, 본문 #333d4b, 보조 #4e5968·#6b7684(밝은 바탕에서 4.5:1 이상).
+ * 보내기 단추는 앱 화면과 같은 주 색(--brand-primary, globals.css) — 예전엔 첫 화면만 다른 파랑(#1b64da)이었다(점검 2026-10-23).
  */
 .hero {
   width: 100%;
@@ -32,6 +33,7 @@
   font-weight: 900;
   letter-spacing: -0.04em;
   word-break: keep-all;
+  text-wrap: balance;
 }
 
 .subtitle {
@@ -41,6 +43,8 @@
   font-size: clamp(18px, 1.7vw, 21px);
   line-height: 1.6;
   word-break: keep-all;
+  /* 마지막 줄에 한 낱말만 남지 않게 */
+  text-wrap: balance;
 }
 
 /* 입력 카드 */
@@ -59,7 +63,7 @@
   text-align: left;
   transition: box-shadow 160ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.card:focus-within { box-shadow: 0 0 0 2px #1b64da, 0 8px 28px rgba(25, 31, 40, .08); }
+.card:focus-within { box-shadow: 0 0 0 2px var(--brand-primary, #3182f6), 0 8px 28px rgba(25, 31, 40, .08); }
 
 .field { position: relative; min-height: 62px; }
 
@@ -126,15 +130,15 @@
   cursor: pointer;
 }
 .iconButton:hover { background: #f2f4f6; }
-.iconButton[data-listening] { background: #e8f3ff; color: #1b64da; }
+.iconButton[data-listening] { background: #e8f3ff; color: var(--brand-primary-hover, #1260d9); }
 
 .send {
   width: 48px;
   height: 48px;
   flex: 0 0 auto;
   border: 0;
-  border-radius: 10px;
-  background: #1b64da;
+  border-radius: var(--brand-radius, 10px);
+  background: var(--brand-primary, #3182f6);
   color: #fff;
   display: inline-flex;
   align-items: center;
@@ -142,7 +146,7 @@
   cursor: pointer;
   transition: background 160ms ease;
 }
-.send:hover { background: #1957c2; }
+.send:hover { background: var(--brand-primary-hover, #1260d9); }
 
 /* 전역 'button svg 숨김'(globals.css) 때문에 아이콘 단추가 빈칸이 됐다 — 이 화면의 아이콘은 되살린다 */
 .hero .iconButton svg, .hero .send svg, .hero .play svg { display: block !important; flex: 0 0 auto; }
@@ -153,6 +157,8 @@
 .play:focus-visible { outline: 2px solid #1b64da; outline-offset: 2px; }
 
 .hint { margin: -6px 0 0; color: #6b7684; font-size: 13px; line-height: 1.5; }
+/* 로그인했거나 확인 전 — 자리만 잡아 둔다 */
+.hint[data-pending] { visibility: hidden; }
 
 /* 탭 줄 */
 .tabsRow { margin-top: 22px; display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
@@ -171,6 +177,20 @@
   cursor: pointer;
 }
 .tab[aria-selected="true"] { color: #191f28; font-weight: 700; }
+/* 괄호는 고른 탭에만 보이지만 자리는 늘 잡는다 */
+.tab[aria-selected="false"] .bracket { visibility: hidden; }
+/* 굵은 글자 폭을 미리 잡아 두는 보이지 않는 사본 — 낭독기에는 읽히지 않게 대체 글을 비운다 */
+.tabText { display: inline-flex; flex-direction: column; align-items: center; }
+.tabText::after {
+  content: attr(data-text);
+  content: attr(data-text) / "";
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-weight: 700;
+  pointer-events: none;
+  user-select: none;
+}
 .play {
   width: 44px;
   height: 44px;
@@ -219,7 +239,9 @@
   .tabsRow { margin-top: 14px; gap: 2px; }
   .tabs { gap: 4px; }
   .tabItem { gap: 4px; }
-  .tab { font-size: 15px; padding: 0 3px; }
+  /* 괄호 자리를 늘 잡는 만큼(점검 2026-10-23) 탭 안쪽 여백과 괄호 바깥을 줄여 375px 에서도 한 줄에 들어가게 */
+  .tab { font-size: 15px; padding: 0 1px; }
+  .bracket { display: inline-block; margin: 0 -1.5px; }
   .strip { gap: 8px; }
   .desktopOnly { display: none; }
   .sq img { width: 110px; height: 110px; }

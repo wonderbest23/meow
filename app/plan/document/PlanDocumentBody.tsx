@@ -403,7 +403,15 @@ export function PlanDocumentBody() {
   if (loadFailed) return pane ? <div data-embedded="" style={{ height: "100%", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>{failedBody}</div> : <main style={{ minHeight: "60vh", display: "grid", placeItems: "center", padding: 24, textAlign: "center" }}>
     {failedBody}
   </main>;
-  return <DocumentWorkspace onReflected={() => generation.restart()} onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
+  /*
+   * 계획서에 반영하기 — 이 칸의 진행을 다시 묻고, 작업실이면 머리줄도 다시 쓰기를 알게 알린다(예전엔 다시 쓰는 동안 머리줄이
+   * '사업계획서 완성'에 머물렀다 — 여정 점검 2026-10-23). 스스로 알린 것이라 이어 오는 새로 읽기 번호에는 다시 받지 않는다.
+   */
+  const onReflected = () => {
+    generation.restart();
+    if (pane && studioNav?.markActivity) { selfMarked.current = true; studioNav.markActivity("plan"); }
+  };
+  return <DocumentWorkspace onReflected={onReflected}onFactsSaved={reloadSections} writing={writing} freshKeys={freshKeys} title={title} identity={identity} planId={documentPlanId} planType={planType} ready={ready}
     summary={summary} summaryError={summaryError}
     reviewSource={reviewSource} onReviewed={(key, section, updatedAt) => {
       if (!documentPlanId) return;

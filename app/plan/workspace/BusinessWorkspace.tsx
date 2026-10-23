@@ -8,7 +8,7 @@ import PlanLoading from "../PlanLoading";
 import { hydrateFromServer, isSamplePlan, lastHydrationFailed, loadState, saveAnswers, setActivePlan, pushToServer, type Plan } from "../../../lib/plan-builder/plan-store";
 import { ACTION_KEY, actionStatus, businessChatHref, businessHubState, shouldResumeBusinessChat } from "../../../lib/plan-builder/business-hub";
 import { isCoachJobActive, readCoachJob } from "../../../lib/plan-builder/coach-job-types";
-import { journeyNext } from "../../../lib/plan-builder/journey";
+import { journeyLabel, journeyNext } from "../../../lib/plan-builder/journey";
 import { currentBusinessDesign, currentNextAction } from "../../../lib/plan-builder/coach";
 import frame from "../chat/page.module.css";
 import styles from "../BusinessHub.module.css";
@@ -29,7 +29,7 @@ import { paneLinkCapture } from "../document/pane-link";
 type View = WorkspaceView;
 /*
  * view 를 주면(작업실 칸) 그 화면 하나만 그린다 — 탭 줄·사업명 줄을 숨기고, 주소를 /plan/workspace 로 덮어쓰지 않고,
- * 왼쪽 메뉴의 탭 신호도 받지 않는다. 작업실은 '사업 시작하기'·'유지보수' 칸을 따로 하나씩 띄운다.
+ * 왼쪽 메뉴의 탭 신호도 받지 않는다. 작업실은 '개업 준비'·'유지보수' 칸을 따로 하나씩 띄운다.
  */
 export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "operations" } = {}) {
   const router = useRouter();
@@ -148,12 +148,12 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
     if (!embedded) {
       const query=new URLSearchParams(window.location.search); query.set("tab",next);
       window.history.replaceState(null,"",`/plan/workspace?${query}`);
-      /* 왼쪽 목록이 지금 탭(사업 시작하기·유지보수)을 표시하도록 알린다 — 주소만 바꿔서는 목록이 다시 그려지지 않는다 */
+      /* 왼쪽 목록이 지금 탭(개업 준비·유지보수)을 표시하도록 알린다 — 주소만 바꿔서는 목록이 다시 그려지지 않는다 */
       window.dispatchEvent(new Event(WORKSPACE_TAB_EVENT));
     }
     window.requestAnimationFrame(() => heading.current?.focus());
   }
-  /* 왼쪽 목록의 '사업 시작하기'·'유지보수'를 이 화면에서 누르면 링크 대신 이 신호가 온다 — 탭 바꾸기와 같은 길로 */
+  /* 왼쪽 목록의 '개업 준비'·'유지보수'를 이 화면에서 누르면 링크 대신 이 신호가 온다 — 탭 바꾸기와 같은 길로 */
   const tabRef = useRef(tab);
   useEffect(() => { tabRef.current = tab; });
   useEffect(() => {
@@ -204,7 +204,7 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
     const anchor = (event.target as HTMLElement).closest<HTMLAnchorElement>("a[href]");
     if (!anchor || anchor.hasAttribute("download") || anchor.target === "_blank") return;
     if (leavingExpert.current) { leavingExpert.current = false; return; }
-    /* 왼쪽 목록의 같은 사업 탭 링크(사업 시작하기·유지보수)는 탭 바꾸기 신호로 오고, tab() 이 한 번만 묻는다 — 여기서 또 물으면 두 번 떴다 */
+    /* 왼쪽 목록의 같은 사업 탭 링크(개업 준비·유지보수)는 탭 바꾸기 신호로 오고, tab() 이 한 번만 묻는다 — 여기서 또 물으면 두 번 떴다 */
     const target = new URL(anchor.href);
     if (target.pathname === "/plan/workspace" && target.searchParams.get("planId") === new URLSearchParams(window.location.search).get("planId")) return;
     event.preventDefault(); event.stopPropagation();
@@ -212,7 +212,7 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
     if (operatingDirty) { void confirmLeave(OPERATING_LEAVE).then(ok => { if (ok) { setOperatingDirty(false); router.push(href); } }); return; }
     /* 전문가 모드 수정안 — 탭 이동·'기본'에서는 물었지만 '대화 이어가기'·메뉴·뒤로 링크로는 그냥 사라졌다 */
     void confirmLeave(EXPERT_LEAVE).then(ok => { if (ok) { leavingExpert.current = true; anchor.click(); } });
-  }}><BusinessAppChrome title="내 사업 관리" titleHeading={false}>
+  }}><BusinessAppChrome title="내 사업" titleHeading={false}>
     {!loaded ? <PlanLoading fill variant="compact" note="사업을 불러오고 있어요" /> : embedded && resumeChat ? <div className={styles.scroll}><div className={styles.content}>
       <section className={styles.empty}><h2>사업 이야기를 먼저 마쳐 주세요</h2><p>대화에서 사업안을 정하면 여기서 이어서 준비할 수 있어요.</p><Link className={styles.primary} href={resumeChat}>대화로 가기</Link></section>
     </div></div> : <div className={styles.scroll}><div className={styles.content}>
@@ -223,9 +223,9 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
         {/* 탭 줄은 유지보수에서도 그대로 둔다 — 유지보수로 오면 탭 줄이 사라지고 제목까지 바뀌어 다른 화면으로 넘어간 줄 알았다(여정 점검 2026-10-22) */}
         {/* 작업실 칸에는 탭 줄·사업명 줄이 없다(작업실 탭이 대신한다) — 칸 안에서 다른 화면을 열었으면 돌아가는 단추 하나 */}
         {!embedded && <WorkspaceNavigation view={view} onChange={tab} operating={hub.coach?.stage === "operating"} />}
-        {embedded && paneView && view !== paneView && <p className={styles.tabLink}><button type="button" className={styles.textButton} onClick={() => void tab(paneView)}>← {paneView === "operations" ? "유지보수" : hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기"}로 돌아가기</button></p>}
+        {embedded && paneView && view !== paneView && <p className={styles.tabLink}><button type="button" className={styles.textButton} onClick={() => void tab(paneView)}>← {paneView === "operations" ? "유지보수" : journeyLabel("launch", hub.coach?.stage === "operating")}로 돌아가기</button></p>}
         {view==="summary" && hub.coach && <div className={launchStyles.mode} role="group" aria-label="사업 편집 모드"><button aria-pressed={!expert} onClick={async ()=>{ if (!expertDirty || await askConfirm({ title: "기본 모드로 돌아갈까요?", message: EXPERT_LEAVE, cancelLabel: "계속 작성", confirmLabel: "저장하지 않고 돌아가기" })) setExpert(false); }}>기본</button><button aria-pressed={expert} onClick={()=>setExpert(true)}>전문가</button></div>}
-        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? (hub.coach?.stage === "operating" ? "운영 개선하기" : "사업 시작하기") : "다음 할 일"}>
+        <section key={view} className={styles.section} aria-label={view==="summary" ? "사업 요약" : view==="documents" ? "내 자료" : view==="operations" ? "유지보수" : view==="launch" ? journeyLabel("launch", hub.coach?.stage === "operating") : "다음 할 일"}>
           {view==="operations" && <WorkspaceHomepageCare planId={plan.id} status={homepage.status} publicPath={homepage.publicPath} />}
           {/* 실적 기록이 먼저, 맡길 일(마케팅) 상담 신청은 그 아래 — 예전엔 서비스 판매 카드가 기록보다 위에 있었다 */}
           {view==="operations" && <OperatingWorkspace key={plan.id} planId={plan.id} onDirtyChange={setOperatingDirty} chatRecord={hub.coach?.stage === "operating" ? chatRecordFrom(plan.answers as Record<string, Record<string, unknown>>) : null} />}
@@ -243,7 +243,7 @@ export function BusinessWorkspace({ view: paneView }: { view?: "launch" | "opera
             {/* 다음 단계는 계획서 화면과 같은 답 하나 — 홈페이지 만들기 → 다듬고 공개하기 → 유지보수 */}
             {hub.complete && !hub.stale && (() => {
               const next = journeyNext(plan, homepage.status);
-              /* 같은 화면의 다른 탭(사업 시작하기·유지보수)이면 주소 이동 대신 탭을 바꾼다 — 링크로는 주소만 바뀌고 화면은 그대로였다 */
+              /* 같은 화면의 다른 탭(개업 준비·유지보수)이면 주소 이동 대신 탭을 바꾼다 — 링크로는 주소만 바뀌고 화면은 그대로였다 */
               const sameTab = (href: string): View | null => embedded ? null : href.includes(`planId=${encodeURIComponent(plan.id)}`) && href.startsWith("/plan/workspace") ? href.includes("tab=launch") ? "launch" : href.includes("tab=operations") ? "operations" : null : null;
               const go = (href: string, label: string, className: string) => { const target = sameTab(href); return target ? <button type="button" className={className} onClick={() => void tab(target)}>{label}</button> : <Link className={className} href={href} onClick={() => setActivePlan(plan.id)}>{label}</Link>; };
               return <div className={styles.nextStep}><span>다음 단계</span><h3>{next.title}</h3><p>{next.note}</p>{go(next.href, next.title, styles.secondary)}{next.secondary && go(next.secondary.href, `${next.secondary.title} →`, styles.textButton)}</div>;

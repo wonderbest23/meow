@@ -23,35 +23,139 @@ export function generationFinished(state: GenerationState | null | undefined): b
  * 사업계획서 제작 진행을 몇 초마다 묻는다. 다 됐거나 작업이 멈췄으면 더 묻지 않는다.
  * 예전엔 단추를 누르면 바로 '문서 열기'로 넘어가고 문서 화면도 새로고침해야 새 장이 보여서,
  * 5분 동안 만들어지는 걸 모르고 단추를 다시 누르게 됐다(사용자 피드백).
+ *
+ * 같은 사업을 보는 곳(작업실 머리줄 · 대화 칸 · 계획서 칸)이 묻기 하나를 나눠 쓴다(사업마다 하나 — 아래 poller).
+ * 예전엔 셋이 따로 3~4초마다 물어, 서버가 500 · 429 · 401 을 돌려줘도 9초에 11번씩 계속 물었다(점검 2026-10-23).
+ * 이제 실패하면 간격을 두 배씩 늘리고(최대 1분), 429 는 서버가 말한 Retry-After 만큼 기다리고, 401(로그인이 풀림)이면 멈춘다 —
+ * 그때는 authLost 로 알려 화면이 로그인 안내를 띄운다. 성공했을 때의 간격 · 멈추는 기준은 예전 그대로다.
  */
+const MAX_BACKOFF_MS = 60_000;
+/* 창으로 돌아올 때 다시 묻기 — 포커스 · 보이기가 한꺼번에 와도 한 번만 */
+const WAKE_GAP_MS = 1_000;
+
+type PollerListener = { interval: number; update: () => void };
+type Poller = {
+  planId: string;
+  state: GenerationState | null;
+  authLost: boolean;
+  listeners: Set<PollerListener>;
+  timer: number;
+  inflight: boolean;
+  /* 묻는 중에 다시 묻기를 요청받았다(새 제작 시작 등) — 끝나면 바로 한 번 더 */
+  again: boolean;
+  failures: number;
+  lastFetch: number;
+};
+const pollers = new Map<string, Poller>();
+
+function pollerFor(planId: string): Poller {
+  let poller = pollers.get(planId);
+  if (!poller) {
+    poller = { planId, state: null, authLost: false, listeners: new Set(), timer: 0, inflight: false, again: false, failures: 0, lastFetch: 0 };
+    pollers.set(planId, poller);
+  }
+  return poller;
+}
+
+/* 보는 곳마다 원한 간격 중 가장 짧은 것(작업실·대화 3초, 계획서 칸 4초) */
+function pollInterval(poller: Poller): number {
+  let interval = Infinity;
+  for (const listener of poller.listeners) interval = Math.min(interval, listener.interval);
+  return Number.isFinite(interval) ? interval : 3000;
+}
+
+/* Retry-After — 초 또는 날짜. 못 읽으면 0 */
+function retryAfterMs(response: Response): number {
+  const value = response.headers.get("retry-after");
+  if (!value) return 0;
+  const seconds = Number(value);
+  if (Number.isFinite(seconds)) return Math.max(0, seconds * 1000);
+  const at = Date.parse(value);
+  return Number.isFinite(at) ? Math.max(0, at - Date.now()) : 0;
+}
+
+function notify(poller: Poller) {
+  for (const listener of poller.listeners) listener.update();
+}
+
+function stopTimer(poller: Poller) {
+  window.clearTimeout(poller.timer);
+  poller.timer = 0;
+}
+
+async function runPoller(poller: Poller) {
+  stopTimer(poller);
+  poller.inflight = true;
+  poller.lastFetch = Date.now();
+  let delay: number | null = null;
+  try {
+    const response = await fetch(`/api/plan/generation?planId=${encodeURIComponent(poller.planId)}`, { cache: "no-store" });
+    if (response.ok) {
+      const data = await response.json() as GenerationState;
+      poller.failures = 0;
+      const wasLost = poller.authLost;
+      poller.authLost = false;
+      // 바뀐 게 없으면 상태를 새로 만들지 않는다 — 몇 초마다 문서 전체가 다시 그려져 버벅이던 원인
+      const changed = !poller.state || JSON.stringify(poller.state) !== JSON.stringify(data);
+      if (changed) poller.state = data;
+      if (changed || wasLost) notify(poller);
+      if (data.active && !FAILED.includes(data.runStatus ?? "")) delay = pollInterval(poller);
+    } else if (response.status === 401) {
+      /* 로그인이 풀렸다 — 다시 로그인하거나 창으로 돌아올 때(wake)까지 묻지 않는다 */
+      if (!poller.authLost) { poller.authLost = true; notify(poller); }
+    } else {
+      poller.failures += 1;
+      delay = Math.max(retryAfterMs(response), Math.min(pollInterval(poller) * 2 ** poller.failures, MAX_BACKOFF_MS));
+    }
+  } catch {
+    /* 연결이 잠깐 끊겨도 다음 차례에 다시 묻는다 — 끊긴 동안은 간격을 늘려 가며 */
+    poller.failures += 1;
+    delay = Math.min(pollInterval(poller) * 2 ** poller.failures, MAX_BACKOFF_MS);
+  }
+  poller.inflight = false;
+  if (!poller.listeners.size) return;
+  if (poller.again) { poller.again = false; void runPoller(poller); return; }
+  if (delay !== null) poller.timer = window.setTimeout(() => void runPoller(poller), delay);
+}
+
+/** 지금 바로 다시 묻는다(새 제작 시작 등) — 묻는 중이면 끝난 뒤 한 번 더 */
+function restartPoller(poller: Poller) {
+  poller.failures = 0;
+  if (poller.inflight) { poller.again = true; return; }
+  void runPoller(poller);
+}
+
 export function useGenerationProgress(planId: string | null | undefined, enabled = true, intervalMs = 3000) {
   const [state, setState] = useState<GenerationState | null>(null);
-  const [tick, setTick] = useState(0);
+  const [authLost, setAuthLost] = useState(false);
   useEffect(() => {
     if (!planId || !enabled) return;
-    let alive = true, timer = 0;
-    const poll = async () => {
-      try {
-        const response = await fetch(`/api/plan/generation?planId=${encodeURIComponent(planId)}`, { cache: "no-store" });
-        // 바뀐 게 없으면 상태를 새로 만들지 않는다 — 몇 초마다 문서 전체가 다시 그려져 버벅이던 원인
-        if (response.ok) { const data = await response.json() as GenerationState; if (!alive) return; setState(current => current && JSON.stringify(current) === JSON.stringify(data) ? current : data); if (!data.active || FAILED.includes(data.runStatus ?? "")) return; }
-      } catch { /* 연결이 잠깐 끊겨도 다음 차례에 다시 묻는다 */ }
-      if (alive) timer = window.setTimeout(poll, intervalMs);
+    const poller = pollerFor(planId);
+    const listener: PollerListener = { interval: intervalMs, update: () => { setState(poller.state); setAuthLost(poller.authLost); } };
+    poller.listeners.add(listener);
+    /* 이미 받아 둔 진행은 바로 보이고, 쉬고 있는 묻기(멈춤 · 다 됨)는 처음 여는 곳이 한 번 다시 묻는다(예전처럼) */
+    if (poller.state || poller.authLost) listener.update();
+    if (!poller.inflight && !poller.timer) void runPoller(poller);
+    return () => {
+      poller.listeners.delete(listener);
+      if (!poller.listeners.size) { stopTimer(poller); poller.again = false; }
     };
-    void poll();
-    return () => { alive = false; window.clearTimeout(timer); };
-  }, [planId, enabled, intervalMs, tick]);
-  // 다른 탭에서 시작한 작성도 이 화면에 돌아오면 다시 확인한다(멈춘 확인을 다시 켠다)
+  }, [planId, enabled, intervalMs]);
+  // 다른 탭에서 시작한 작성도 이 화면에 돌아오면 다시 확인한다(멈춘 확인 · 로그인이 풀려 멈춘 확인을 다시 켠다)
   useEffect(() => {
     if (!planId || !enabled) return;
-    const wake = () => { if (document.visibilityState === "visible") setTick(value => value + 1); };
+    const poller = pollerFor(planId);
+    const wake = () => {
+      if (document.visibilityState !== "visible" || poller.inflight || Date.now() - poller.lastFetch < WAKE_GAP_MS) return;
+      void runPoller(poller);
+    };
     document.addEventListener("visibilitychange", wake);
     window.addEventListener("focus", wake);
     return () => { document.removeEventListener("visibilitychange", wake); window.removeEventListener("focus", wake); };
   }, [planId, enabled]);
   /** 새 제작을 시작한 직후처럼 다시 묻기 시작하게 한다 */
-  const restart = () => setTick(value => value + 1);
-  return { state, restart };
+  const restart = () => { if (planId && enabled) restartPoller(pollerFor(planId)); };
+  return { state, restart, authLost };
 }
 
 /** 만드는 중 팝업 — 장마다 완성 표시가 실시간으로 바뀌고, 닫아도 제작은 계속된다 */
@@ -112,7 +216,7 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
   useEffect(() => { setEta(generationEta(state, Date.now())); }, [state]);
   return <section className={styles.card} aria-label="사업계획서 작성 진행" data-generation-card data-state={stalled ? "stalled" : "running"}>
     <header>
-      <strong>{stalled ? "일부 장을 만들지 못했어요" : "사업계획서 만드는 중"}</strong>
+      <strong>{stalled ? done ? "일부 장을 만들지 못했어요" : "계획서를 만들지 못했어요" : "사업계획서 만드는 중"}</strong>
       <span>{stalled ? `${done}/${total}장 완성` : eta ?? "보통 5분 안팎"}</span>
     </header>
     <progress value={done} max={total || 1} aria-label={`작성한 장 ${done}/${total}`} />
@@ -120,7 +224,7 @@ export function GenerationCard({ state, onRetry, retryDisabled = false, onOpen, 
     {/* 쓰는 장이 바뀔 때만 읽힌다(몇 초마다 오는 확인에는 글이 그대로라 다시 읽지 않는다) */}
     {current && <p className={styles.cardCurrent} role="status" aria-live="polite"><i aria-hidden="true" />{current.title} 쓰는 중</p>}
     {waiting.length > 0 && <p className={styles.cardWaiting}>{stalled ? "남은 장" : "대기"}: {waiting.map(section => section.title).join(" · ")}</p>}
-    <p className={styles.cardNote}>{stalled ? "다 쓴 장은 저장돼 있어요. 남은 장만 이어서 쓸 수 있어요." : note ?? "다른 탭을 보거나 창을 닫아도 계속 만들어져요. 다 되면 여기에서 알려 드릴게요."}</p>
+    <p className={styles.cardNote}>{stalled ? done ? "다 쓴 장은 저장돼 있어요. 남은 장만 이어서 쓸 수 있어요." : "한 장도 쓰지 못하고 멈췄어요. 다시 시작해 보시고, 계속 안 되면 고객센터로 알려 주세요." : note ?? "다른 탭을 보거나 창을 닫아도 계속 만들어져요. 다 되면 여기에서 알려 드릴게요."}</p>
     {(stalled || onOpen && done > 0) && <div className={styles.cardActions}>
       {stalled && <button type="button" className={styles.cardPrimary} disabled={retryDisabled} onClick={onRetry}><RefreshCw size={15} aria-hidden="true" />남은 장 이어서 쓰기</button>}
       {onOpen && done > 0 && <button type="button" className={styles.cardSecondary} onClick={onOpen}>쓴 부분 보기</button>}

@@ -33,6 +33,9 @@
 .formActions { display: flex; justify-content: flex-end; gap: 8px; }
 .root .done { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 12px 14px; border-radius: 10px; background: var(--app-success-bg, #eef8f2); color: var(--app-success, #267959); font-size: 15px; font-weight: 600; }
 .root .error { margin: 0; font-size: 14px; color: var(--app-danger, #b23b47); }
+/* 신청 내역을 못 불러왔을 때 — 안내 + '다시 시도' */
+.loadError { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.loadError button { min-height: 44px; padding: 0 16px; border: 1px solid var(--app-line, #e1e7ef); border-radius: 10px; background: var(--app-surface, #fff); color: var(--app-text, #202632); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; }
 .history { margin-top: 22px; }
 .history h3 { margin: 0 0 10px; font-size: 17px; }
 .history ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }

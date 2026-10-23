@@ -45,10 +45,10 @@ const price = fieldQuestion("price", pricePrompt(PRICE_DEFAULT_PERIOD), { kind: 
 type RevenueModel = BusinessStructure["revenue"];
 const STRUCTURE_UNIT: Record<RevenueModel, string> = { per_unit: "판매 1건", per_hour: "1시간", subscription: "구독자 1명(월)", rental: "대여·이용 1건", commission: "거래 1건", project: "프로젝트 1건", advertising: "활성 이용자 1명(월)", freemium: "유료 이용자 1명(월)", lead_fee: "전달 문의 1건", listing_fee: "입점 업체 1곳(월)", mixed: "판매 1건" };
 const structureUnitCost = (revenue: RevenueModel): IntakeQuestion => ({
-  id: "structure.unitCost", fieldKey: "unitCost", label: structureFieldLabels({ revenue } as BusinessStructure).unitCost ?? COACH_FIELD_LABELS.unitCost, prompt: `${STRUCTURE_UNIT[revenue]}에 들어가는 변동비는 얼마쯤인가요?`, kind: "number", unit: "원", period: STRUCTURE_UNIT[revenue], optional: true,
+  id: "structure.unitCost", fieldKey: "unitCost", label: structureFieldLabels({ revenue } as BusinessStructure).unitCost ?? COACH_FIELD_LABELS.unitCost, prompt: `${STRUCTURE_UNIT[revenue]}에 드는 재료비·수수료 같은 비용은 얼마쯤인가요?`, kind: "number", unit: "원", period: STRUCTURE_UNIT[revenue], optional: true,
   hint: "재료·수수료·외주비처럼 팔 때마다 드는 비용만이에요. 임차료·고정 인건비는 월 고정비에 넣어요. 거의 없으면 0원을 골라요.",
 });
-const structureCost: IntakeQuestion = { id: "structure.cost", fieldKey: "cost", label: COACH_FIELD_LABELS.cost, prompt: "한 달 고정비는 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true, hint: "임차료·고정 인건비·구독 도구처럼 매출이 없어도 나가는 돈이에요." };
+const structureCost: IntakeQuestion = { id: "structure.cost", fieldKey: "cost", label: COACH_FIELD_LABELS.cost, prompt: "매달 꼭 나가는 돈(월세 등)은 대략 얼마인가요?", kind: "number", unit: "원", period: "월", optional: true, hint: "임차료·고정 인건비·구독 도구처럼 매출이 없어도 나가는 돈이에요." };
 const budget = fieldQuestion("budget", "준비에 쓸 수 있는 돈은 얼마인가요?", { kind: "number", unit: "원", hint: "필요한 비용 추정치가 아니라 실제로 쓸 수 있는 금액이에요." });
 const hours = fieldQuestion("hoursPerWeek", "일주일에 몇 시간 쓸 수 있나요?", { kind: "number", unit: "시간", period: "주" });
 const capacity = fieldQuestion("capacity", "처음에는 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." });
@@ -95,7 +95,7 @@ const CORE_QUESTIONS: Record<IntakeMode, IntakeQuestion[]> = {
     fieldQuestion("problem", "지금 가장 개선하고 싶은 문제는 무엇인가요? (최대 2개)"),
     { id: "period", label: "실적 기간 (시작일 / 종료일)", prompt: "살펴볼 실적 기간은 언제인가요?", kind: "text", optional: true, hint: "기간을 고르거나 날짜를 직접 선택해요." },
     fieldQuestion("sales", "이 기간 실제 매출은 모두 얼마였나요?", { kind: "number", unit: "원", period: "실적 기간 합계", hint: "실제로 들어온 매출만 넣어요. 예상 매출이나 목표는 빼요." }),
-    { ...fieldQuestion("cost", "한 달 고정비는 대략 얼마인가요? 월 고정비만 넣고 건당 변동비와는 구분해 주세요.", { kind: "number", unit: "원", period: "월", hint: "임차료·고정 인건비처럼 매달 나가는 돈이에요." }), label: `${COACH_FIELD_LABELS.cost} (월 고정비)` },
+    { ...fieldQuestion("cost", "매달 꼭 나가는 돈(월세·고정 인건비 등)은 대략 얼마인가요? 팔 때마다 드는 재료비는 빼고 적어 주세요.", { kind: "number", unit: "원", period: "월", hint: "임차료·고정 인건비처럼 매달 나가는 돈이에요." }), label: `${COACH_FIELD_LABELS.cost} (월 고정비)` },
     fieldQuestion("capacity", "지금은 누가, 얼마나 감당하나요?", { hint: "누가 일하는지 고른 뒤 하루·주·월에 몇 건까지 할 수 있는지 정해요." }),
     fieldQuestion("channel", "지금 고객을 만나거나 판매하는 주요 경로는 어디인가요? (최대 3개)"),
     goal,

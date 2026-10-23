@@ -4,19 +4,23 @@
  * 첫 화면 아래 구간(2026-10-23 승인 디자인) — 계획부터 개업까지 · 어떤 사업이든 · 결과물 · 계획 다음의 일 · 이용 요금 · 자주 묻는 질문 · 마지막 시작 단추.
  *
  * 링크는 실제로 열리는 곳으로만 보낸다: 예시 계획서·예시 홈페이지(sample_coffee, 로그인 없이 열람), 새 대화, 내 사업.
+ * 단계 이름(개업 준비·유지보수)은 journey-steps.ts 한 곳의 이름을 쓴다.
  * 가격은 lib/payments/domain.ts 값을 그대로 쓴다(화면에 숫자를 적어 두지 않는다).
  * 등장 움직임은 자바스크립트가 붙은 뒤에만 숨김 상태를 얹는다 — 스크립트가 없거나 움직임 줄이기면 처음부터 다 보인다.
  */
 import { useEffect, useRef, useState } from "react";
-import { BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
+import { BUNDLE_PRODUCT_AMOUNT, BUNDLE_PRODUCT_NAME, HOMEPAGE_PRODUCT_AMOUNT, LAUNCH_PRICE_LABEL, PACKAGE_AMOUNT, REGEN_INCLUDED } from "../lib/payments/domain";
 import { PPT_GENERATION_VERIFIED } from "../lib/plan-builder/deck-availability";
 import { landingIdeaHref, rememberLandingIdea } from "./home-prompt-hero";
-import { newChatHref } from "../lib/plan-builder/studio";
+import { newChatEntryHref, newChatHref, studioHref, type EntryMode } from "../lib/plan-builder/studio";
+import { JOURNEY_LABELS } from "../lib/plan-builder/journey-steps";
 import styles from "./home-prompt-sections.module.css";
 
 const won = (amount: number) => `${amount.toLocaleString("ko-KR")}원`;
 const SAMPLE_PLAN = "/plan/document?planId=sample_coffee";
 const SAMPLE_HOMEPAGE = "/plan/homepage?planId=sample_coffee";
+/* 예시 사업의 개업 준비 — 작업실에서 로그인 없이 열린다(유지보수 탭은 예시 사업의 실적 기록을 불러오지 못해 예시로 쓰지 않는다) */
+const SAMPLE_LAUNCH = studioHref("sample_coffee", "launch");
 /* 새 대화 — 작업실이 켜져 있으면 작업실의 새 대화로(newChatHref) */
 const NEW_CHAT = newChatHref();
 
@@ -29,11 +33,11 @@ const FEATURES = [
   { label: "막힐 때 바로 묻는 창업 상담", href: NEW_CHAT },
 ];
 
-/* 새 대화의 첫 화면이 '아이디어가 없어요 · 생각한 사업이 있어요 · 사업을 운영 중이에요'를 고르게 한다 — 같은 곳으로 보낸다 */
-const STARTS = [
-  { title: "처음 창업해요", body: "관심 있는 일이나 해 본 일을 이야기하면, 고객과 상품부터 시작 방법까지 함께 정리해요.", action: "아이디어로 시작하기" },
-  { title: "이미 사업 중이에요", body: "지금 사업에서 바꾸고 싶은 점을 이야기하면, 실제 매출과 비용으로 다음 계획을 세워요.", action: "내 사업 개선하기" },
-  { title: "아이디어가 아직 없어요", body: "쓸 수 있는 시간과 돈, 잘하는 것을 알려 주시면 나에게 맞는 사업안 몇 가지를 골라 드려요.", action: "사업안 추천받기" },
+/* 새 대화의 첫 선택지(생각한 사업이 있어요 · 사업을 운영 중이에요 · 아이디어를 찾고 있어요)를 카드가 미리 골라 준다(?entry=) */
+const STARTS: Array<{ title: string; body: string; action: string; entry: EntryMode }> = [
+  { title: "처음 창업해요", body: "관심 있는 일이나 해 본 일을 이야기하면, 고객과 상품부터 시작 방법까지 함께 정리해요.", action: "아이디어로 시작하기", entry: "startup" },
+  { title: "이미 사업 중이에요", body: "지금 사업에서 바꾸고 싶은 점을 이야기하면, 실제 매출과 비용으로 다음 계획을 세워요.", action: "내 사업 개선하기", entry: "operating" },
+  { title: "아이디어가 아직 없어요", body: "쓸 수 있는 시간과 돈, 잘하는 것을 알려 주시면 나에게 맞는 사업안 몇 가지를 골라 드려요.", action: "사업안 추천받기", entry: "exploring" },
 ];
 
 /* 업종 칩 — 누르면 그 말을 첫 메시지로 들고 새 대화를 연다(모두 받침으로 끝나 '을'로 잇는다) */
@@ -44,14 +48,21 @@ const RESULTS = [
   { src: "/home-media/results/report-01.webp", width: 1132, height: 1600, alt: "새벽커피 예시 사업계획서 표지", title: "실행용 사업계획서", body: "사업 소개부터 고객, 돈, 12주 할 일까지. PDF와 수정 가능한 Word로 받아요." },
   { src: "/home-media/showcase/numbers.webp", width: 640, height: 640, alt: "판매가와 비용으로 계산한 손익분기 화면", title: "내 조건으로 계산한 숫자", body: "시작 예산과 쓸 수 있는 시간으로 손익분기, 버틸 수 있는 기간을 계산해요." },
   { src: "/home-media/showcase/summary.webp", width: 640, height: 640, alt: "사업과 고객, 상품과 가격을 정리한 한 장 요약 화면", title: "한 장 요약", body: "누구에게 무엇을 얼마에 팔고, 첫 달에 무엇을 할지 한 장으로 봐요." },
-  { src: "/home-media/showcase/chat-edit.webp", width: 640, height: 640, alt: "대화로 계획서 내용을 고치는 화면", title: "대화로 고치기", body: "“가격 장에 경쟁 가게 비교를 넣어 줘”처럼 말하면 바꿀 내용을 먼저 보여 주고 고쳐요." },
+  { src: "/home-media/showcase/chat-edit.webp", width: 640, height: 640, alt: "대화로 계획서 내용을 고치는 화면", title: "대화로 고치기", body: "“가격을 9,000원으로 바꿔 줘”처럼 말하면 바뀔 내용을 먼저 보여 주고, 계획서에 반영해요." },
 ];
 
-const AFTER = [
-  { id: "after-homepage", href: SAMPLE_HOMEPAGE, title: "내 사업 홈페이지", body: "사업계획서 내용으로 홈페이지 초안을 자동으로 만들어요. 초안 만들기 → 문구 다듬기 → 미리보기.", action: "예시 홈페이지 보기" },
-  { id: "after-launch", href: "/plan", title: "사업 시작하기", body: "업종에 맞는 신고·등록 순서와 결제·홍보 준비를 할 일 목록으로 안내해요.", action: "내 사업 열기" },
-  { id: "after-ops", href: "/plan", title: "유지보수", body: "문을 연 뒤에는 매출과 할 일을 기록하고, 막힐 때 대화로 바로 물어봐요.", action: "내 사업 열기" },
-];
+/*
+ * 로그인 전에는 '내 사업 열기'가 로그인 안내로만 가서 무엇인지 볼 수 없었다(점검 2026-10-23) — 예시 사업으로 보여 준다.
+ * 유지보수는 예시 사업으로 볼 수 있는 화면이 없어(실적 기록을 불러오지 못함) 로그인 전에는 새 대화로 보낸다.
+ */
+function afterCards(signedIn: boolean | null) {
+  const mine = signedIn === true;
+  return [
+    { id: "after-homepage", href: SAMPLE_HOMEPAGE, title: "내 사업 홈페이지", body: "사업계획서 내용으로 홈페이지 초안을 자동으로 만들어요. 초안 만들기 → 문구 다듬기 → 미리보기.", action: "예시 홈페이지 보기" },
+    { id: "after-launch", href: mine ? "/plan" : SAMPLE_LAUNCH, title: JOURNEY_LABELS.launch, body: "업종에 맞는 신고·등록 순서와 결제·홍보 준비를 할 일 목록으로 안내해요.", action: mine ? "내 사업 열기" : "예시 보기" },
+    { id: "after-ops", href: mine ? "/plan" : NEW_CHAT, title: JOURNEY_LABELS.care, body: "문을 연 뒤에는 매출과 할 일을 기록하고, 막힐 때 대화로 바로 물어봐요.", action: mine ? "내 사업 열기" : "대화로 시작하기" },
+  ];
+}
 
 /** 마지막 단추 — 맨 위 입력칸으로 올라가 커서를 둔다 */
 function focusHeroPrompt() {
@@ -66,7 +77,8 @@ function Arrow() {
   return <svg className={styles.arrow} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>;
 }
 
-export function HomePromptSections() {
+/** signedIn — 로그인했는지(확인 전이면 null). '계획 다음의 일' 카드가 내 사업 또는 예시로 간다 */
+export function HomePromptSections({ signedIn = null }: { signedIn?: boolean | null } = {}) {
   const root = useRef<HTMLDivElement>(null);
   const [armed, setArmed] = useState(false);
   useEffect(() => {
@@ -119,7 +131,7 @@ export function HomePromptSections() {
         {STARTS.map(card => <article key={card.title} className={styles.panel}>
           <h3>{card.title}</h3>
           <p>{card.body}</p>
-          <a className={styles.panelLink} href={NEW_CHAT}>{card.action} <span aria-hidden="true">→</span></a>
+          <a className={styles.panelLink} href={newChatEntryHref(card.entry)}>{card.action} <span aria-hidden="true">→</span></a>
         </article>)}
       </div>
       <ul className={styles.chips} aria-label="업종 예시로 대화 시작">
@@ -148,7 +160,7 @@ export function HomePromptSections() {
         <p className={styles.lead}>사업 요약과 문서, 대화, 다음 할 일을 사업마다 한곳에서 이어가요.</p>
       </header>
       <div className={styles.grid3}>
-        {AFTER.map(card => <a key={card.id} id={card.id} href={card.href} className={`${styles.panel} ${styles.panelAnchor}`}>
+        {afterCards(signedIn).map(card => <a key={card.id} id={card.id} href={card.href} className={`${styles.panel} ${styles.panelAnchor}`}>
           <h3>{card.title}</h3>
           <p>{card.body}</p>
           <span className={styles.panelLink}>{card.action} <span aria-hidden="true">→</span></span>
@@ -156,7 +168,7 @@ export function HomePromptSections() {
       </div>
     </section>
 
-    {/* 머리말 '가격 안내'(#price)가 바로 이 구간으로 온다 */}
+    {/* 머리말 '이용 요금'(#price)이 바로 이 구간으로 온다 */}
     <section id="price" className={styles.section} aria-labelledby="home-price-title" data-reveal>
       <h2 id="home-price-title" className={`${styles.heading} ${styles.centerText}`}>이용 요금</h2>
       <div className={styles.grid3}>
@@ -167,11 +179,14 @@ export function HomePromptSections() {
         </article>
         <article className={`${styles.panel} ${styles.featured}`}>
           <h3 className={styles.priceName}>사업계획서</h3>
+          {/* 결제 화면과 같은 표시(LAUNCH_PRICE_LABEL) — 종전가·할인율은 적지 않는다(lib/payments/domain.ts) */}
+          <span className={styles.launchTag}>{LAUNCH_PRICE_LABEL}</span>
           <strong className={styles.price}>{won(PACKAGE_AMOUNT)}</strong>
           <p>사업계획서 작성, {formats} 내려받기, 항목별 다시 생성 {REGEN_INCLUDED}회</p>
         </article>
         <article className={styles.panel}>
           <h3 className={styles.priceName}>{BUNDLE_PRODUCT_NAME}</h3>
+          <span className={styles.launchTag}>{LAUNCH_PRICE_LABEL}</span>
           <strong className={styles.price}>{won(BUNDLE_PRODUCT_AMOUNT)}</strong>
           <p>따로 사면 {won(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT)}이라 함께 사면 {won(PACKAGE_AMOUNT + HOMEPAGE_PRODUCT_AMOUNT - BUNDLE_PRODUCT_AMOUNT)} 저렴해요</p>
         </article>

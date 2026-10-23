@@ -5,7 +5,7 @@ import { marketingKitPrompt, MARKETING_KIT_LABELS } from "../lib/marketing/kit";
 import type { Plan } from "../lib/plan-builder/plan-store";
 
 /*
- * 사업 시작하기: 업종 코드가 없어도 사업 설명으로 업종 준비 단계를 넣고(카페 → 휴게음식점 신고·위생교육),
+ * 개업 준비: 업종 코드가 없어도 사업 설명으로 업종 준비 단계를 넣고(카페 → 휴게음식점 신고·위생교육),
  * 업종 준비는 사업장 계약 앞에, 결제 준비·첫 홍보 글·홍보 키트는 사업 모양(매장·온라인·숙소)에 맞춘다.
  */
 const at = "2026-10-21T00:00:00.000Z";

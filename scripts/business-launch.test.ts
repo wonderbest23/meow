@@ -43,6 +43,17 @@ remote.records[step.id] = { status: "done", signature: step.signature, material:
 assert.equal(launchStatus(remote, step), "done");
 assert.equal(launchStatus(remote, launchSteps({ ...plan, answers: updated.answers }, remote)[0]), "review");
 assert.equal(remote.records[step.id].note, "메모 유지");
+/* 대화에서 상품·가격을 직접 답했으면 첫 단계(팔고 싶은 상품을 정해요)는 기록이 없어도 끝난 것으로(여정 점검 2026-10-23) */
+{
+  const answered = { ...plan, answers: { ...plan.answers, [COACH_KEY]: { state: { ...coach, fields: coach.fields.map(field => ["offer", "price"].includes(field.key) ? { ...field, basis: "user" as const, quote: String(field.value) } : field) } } } };
+  const fresh = launchSchema.parse({ workplace: "remote", registered: "yes" });
+  const offer = launchSteps(answered, fresh)[0];
+  assert.equal(offer.id, "offer");
+  assert.equal(offer.decided, true);
+  assert.equal(launchStatus(fresh, offer), "done", "대화에서 정한 상품은 다시 묻지 않는다");
+  assert.equal(launchStatus(fresh, launchSteps(plan, fresh)[0]), "pending", "AI 제안뿐이면 그대로 묻는다");
+  assert.equal(launchSteps(answered, launchSchema.parse({ purpose: "ideas" }))[0].decided, undefined, "아이디어 검토는 그대로");
+}
 assert.equal(quoteTotals({ name: "견적", monthly: "50,000", deposit: "100,000", initial: "0" })?.outflow, 700000);
 assert.equal(quoteTotals({ name: "견적", monthly: "", deposit: "0", initial: "0" }), null);
 assert.equal(quoteTotals({ name: "견적", monthly: "1,,2", deposit: "0", initial: "0" }), null);
@@ -93,7 +104,7 @@ async function main() {
     assert.equal(server.plans[0].sections["overview/summary"].markdown, "기존에 직접 수정한 본문");
     assert.equal(readCoach(server.plans[0].answers)!.fields.find(f => f.key === "price")!.value, "120,000원");
     await page.screenshot({ path: `artifacts/business-launch/expert-${width}.png` });
-    await click(page, "사업 시작하기");
+    await click(page, "개업 준비");
     await click(page, "바꾸기"); // 처음에는 대화에서 들은 내용으로 채운 확인 화면이 먼저 뜬다
     await click(page, "새 사업을 시작할게요"); await click(page, "다음");
     await click(page, "별도 사무실은 필요 없어요"); await click(page, "다음");
