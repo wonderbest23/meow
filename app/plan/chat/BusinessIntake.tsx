@@ -30,6 +30,7 @@ import { incompleteChoiceText, nextRefinementQuestion } from "./intake-ui/model"
 import { composerEnterSends, composerLimitNote, resultUpdateNotice, resumeSummary, visibleComposerText } from "./intake-ui/guidance";
 import { nativePlatform } from "../../../lib/native-app";
 import { BUNDLE_PRODUCT_AMOUNT, PACKAGE_AMOUNT } from "../../../lib/payments/domain";
+import { LANDING_IDEA_PARAM, clearLandingIdea, readLandingIdea, stashLandingIdea, withoutLandingIdea } from "../../../lib/plan-builder/landing-idea";
 
 type SaveStatus = "saved" | "draft" | "saving" | "failed" | "conflict";
 type CommandInput = Omit<IntakeCommand, "requestId" | "revision" | "planId">;
@@ -46,6 +47,15 @@ function rememberLastIntake(planId: string, signedIn: boolean) {
 function LoginGate() {
   const next = typeof window === "undefined" ? "/plan/chat?new=1" : `${window.location.pathname}${window.location.search}`;
   return <InlineLogin next={next} />;
+}
+
+/** sessionStorage — 막힌 브라우저(사생활 보호 등)에서는 꺼내기만 해도 오류가 나므로 null로 둔다 */
+function sessionStore(): Storage | null {
+  try { return window.sessionStorage; } catch { return null; }
+}
+/** 랜딩에서 넘겨받을 아이디어가 있는지(주소의 idea 또는 5분 안의 보관본) — 지우지 않고 보기만 한다 */
+function pendingLandingIdea() {
+  return readLandingIdea(window.location.search, sessionStore(), Date.now());
 }
 
 function readLastIntake(): { planId: string; signedIn: boolean } | null {
@@ -80,7 +90,8 @@ export default function BusinessIntake(props: BusinessIntakeProps) {
 
 function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) {
   const searchParams = useSearchParams();
-  const queryString = searchParams.toString();
+  // 랜딩 아이디어(idea)는 주소에서 지워도 대화를 다시 불러오지 않게 뺀 값으로 본다 — 지우는 순간 보내던 첫 메시지가 끊기지 않게
+  const queryString = withoutLandingIdea(searchParams);
   const [savedPlan, setPlan] = useState<IntakeSnapshot | null>(null);
   const [preview, setPreview] = useState<IntakeSnapshot | null>(null);
   const previewRef = useRef<IntakeSnapshot | null>(null);
@@ -164,6 +175,8 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   const touchY = useRef(0);
   const lastDesign = useRef("");
   const completedCallback = useRef(onDesignComplete);
+  // 랜딩 아이디어를 넘겨받는 단계 — idle(아직) · armed(입력창에 넣고 보내기 직전) · gated(로그인 기다림) · done(보냈거나 없음)
+  const landingIdea = useRef<{ phase: "idle" | "armed" | "gated" | "done"; text: string }>({ phase: "idle", text: "" });
   completedCallback.current = onDesignComplete;
 
   const writeDraft = useCallback((next: IntakeDraft) => {
@@ -247,8 +260,10 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
   useEffect(() => {
     const query = new URLSearchParams(queryString);
     const id = query.get("planId");
-    const startNew = query.get("new") === "1";
+    // 랜딩 아이디어가 있으면 새 대화로 연다 — 로그인을 거치며 주소가 /plan/chat 으로만 돌아와도 보관본으로 이어 받는다
+    const startNew = query.get("new") === "1" || !id && !!pendingLandingIdea();
     if (!startNew && id && id === planRef.current?.planId) return;
+    landingIdea.current = { phase: "idle", text: "" };
     resetReply(); follow.current = true;
     const epoch = ++routeEpoch.current;
     for (const controller of controllers.current) controller.abort();
@@ -629,6 +644,46 @@ function IntakeWorkspace({ onPrepared, onDesignComplete }: BusinessIntakeProps) 
     if (!id) return;
     autoSubmit.current = null;
     if (question?.id === id) submitComposer();
+  });
+  /*
+   * 랜딩에서 적은 아이디어 — 새 대화가 준비되면(불러오기 끝·막힘 없음) 입력창에 넣고, 직접 입력하고 보내기를 누른 것과
+   * 같은 길(submitComposer)로 한 번만 보낸다. 막연한 글이면 시작 방식 확인, 구체적이면 맞춤 추천·AI 참고 의견까지 그대로 이어진다.
+   * 로그인이 먼저 필요하면 보내지 않고 주소의 idea와 보관본을 남겨 둔다(로그인하면 화면을 새로 열어 이어 받는다).
+   * 넘겨받는 순간 주소의 idea와 보관본을 지운다 — 새로고침·뒤로 가기·StrictMode 두 번 실행으로 다시 보내지 않게.
+   */
+  useEffect(() => {
+    const state = landingIdea.current;
+    if (!loaded || loadFailed || !newEntry || plan || !ownerScope.current) return;
+    if (loginGate) {
+      if (state.phase === "gated") return;
+      const storage = sessionStore();
+      // 보낸 뒤에 로그인이 필요하다고 돌아왔으면(세션 만료) 입력창에 남은 그 글을 다시 맡겨 둔다
+      const text = state.phase === "idle" ? readLandingIdea(window.location.search, storage, Date.now())?.text : state.text && entryMessage(draftRef.current) === state.text ? state.text : "";
+      if (text) stashLandingIdea(storage, text, Date.now());
+      state.phase = "gated";
+      return;
+    }
+    if (state.phase === "done") return;
+    if (state.phase === "armed") {
+      if (answerBlocked) return;
+      state.phase = "done";
+      if (entryMessage(draftRef.current) === state.text) submitComposer();
+      return;
+    }
+    const storage = sessionStore();
+    const idea = readLandingIdea(window.location.search, storage, Date.now());
+    // 아이디어가 없으면(5분 지난 보관본 포함) 남은 보관본도 지운다
+    if (!idea) { clearLandingIdea(storage); state.phase = "done"; return; }
+    if (answerBlocked) return;
+    clearLandingIdea(storage);
+    const url = new URL(window.location.href);
+    if (url.searchParams.has(LANDING_IDEA_PARAM)) {
+      url.searchParams.delete(LANDING_IDEA_PARAM);
+      window.history.replaceState(null, "", `${url.pathname}${url.search}${url.hash}`);
+    }
+    state.text = idea.text; state.phase = "armed";
+    setPasteCut(false); setInputHint("");
+    editDraft({ ...draftRef.current, memo: idea.text, introMessage: "" });
   });
   const settleUntil = useRef(0);
   /* 로그인 폼이 펼쳐져 있을 땐 채팅처럼 맨 아래로 내려가지 않는다 — 제목부터 보여야 한다 */

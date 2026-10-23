@@ -40,7 +40,7 @@ import {
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { askConfirm } from "../components/confirm-dialog";
 import { BRAINWAVE_CREDIT } from "../lib/landing/brainwave/catalog";
-import { HOME_LOGO, HOME_LOGO_FILTER } from "../lib/landing/home-logo";
+import { HOME_LOGO } from "../lib/landing/home-logo";
 import { hasUnpublishedEdits } from "../lib/landing/save-contract";
 import {
   founderLabels,
@@ -51,11 +51,10 @@ import {
 } from "../lib/opportunity-engine";
 import type { ArtifactRecord, ProjectRecord } from "../lib/service-domain";
 import { SiteHeader, SiteLogo } from "../components/site-header";
-import { HomeOpening } from "../components/home-opening";
-import { HomeServiceOverview } from "../components/home-service-overview";
+import { HomePromptHero } from "../components/home-prompt-hero";
+import { HomePromptSections } from "../components/home-prompt-sections";
 import { HomeCopyChrome } from "../components/home-copy-chrome";
-import homeTypography from "../components/home-typography.module.css";
-import homeCinematic from "../components/home-cinematic-hero.module.css";
+import homeLanding from "../components/home-landing.module.css";
 import { needsPhysicalLocationAnalysis } from "../lib/business/domain";
 import { useRouter } from "next/navigation";
 import { inferBusinessArchetype } from "../lib/business/router";
@@ -124,6 +123,7 @@ import {
   PACKAGE_NAME,
 } from "../lib/payments/domain";
 import { mailOrderStatusLabels, type MailOrderStatus } from "../lib/platform-legal/domain";
+import { SITE_COPY_FIELDS } from "../lib/site-copy/domain";
 
 type Screen = "home" | "start" | "project";
 type SampleView = "summary" | "presentation" | "landing";
@@ -337,8 +337,8 @@ function Home({
     return () => window.removeEventListener("message", onMessage);
   }, []);
   /*
-   * 상단 서리(점진 블러): 맨 위에서는 헤더가 투명하고, 내려가면 헤더 뒤로 겹친 띠 4장이 뒤 배경을 흐리게 한다.
-   * 세기는 스크롤 0~120px 구간에서 0→1로 오르는 --frost 하나로 정한다(띠의 흐림·색·투명도가 모두 이 값을 따른다).
+   * 상단 서리(점진 블러): 맨 위에서는 헤더가 투명하고, 내려가면 헤더 뒤가 밝게 흐려진다.
+   * 세기는 스크롤 0~120px 구간에서 0→1로 오르는 --frost 하나로 정한다(home-landing.module.css).
    */
   const headerShell = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -351,31 +351,25 @@ function Home({
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => { window.removeEventListener("scroll", onScroll); if (frame) window.cancelAnimationFrame(frame); };
   }, []);
-  const sc = (id: string, def: string) => siteCopy.texts[id] ?? def;
+  /* 기본 문구는 lib/site-copy/domain.ts 의 def 와 같다 — 어드민이 고친 값이 있으면 그것으로 */
+  const copyDefault = (id: string) => SITE_COPY_FIELDS.find((field) => field.id === id)?.def ?? "";
+  const sc = (id: string) => siteCopy.texts[id] ?? copyDefault(id);
   /** \n 을 <br/> 로 */
-  const scBr = (id: string, def: string) => sc(id, def).split("\n").map((line, i, all) => <Fragment key={i}>{line}{i < all.length - 1 ? <br /> : null}</Fragment>);
+  const scBr = (id: string) => sc(id).split("\n").map((line, i, all) => <Fragment key={i}>{line}{i < all.length - 1 ? <br /> : null}</Fragment>);
 
-  const openConsult = () => {
-    onStart();
-  };
-
-
-
+  /*
+   * 2026-10-23 새 첫 화면 — 밝은 점 무늬 바탕 위에 '내 말로 적는 입력 카드'와 결과물 진열 띠, 그 아래 안내 구간.
+   * 예전 검정 첫 화면(HomeOpening·HomeServiceOverview)은 여기서 그리지 않는다(다른 시험 화면이 아직 쓴다).
+   */
   return (
-    <main className={`new-home simple-home product-home cinematic-home ${homeTypography.theme} ${homeCinematic.page}`} style={{ "--home-logo-filter": HOME_LOGO_FILTER } as React.CSSProperties}>
-      <div className="home-header-shell" ref={headerShell}>
-        <div className="home-header-frost" aria-hidden="true"><i /><i /><i /><i /></div>
-        {/* 헤더에는 로고·안내·마이페이지만 둔다. 시작 단추는 본문(입력창·행동 버튼)에 있어 겹친다. */}
-        <Header light homeNav logo={HOME_LOGO} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+    <main className={homeLanding.page}>
+      <div className={homeLanding.headerShell} ref={headerShell}>
+        <Header homeNav logo={HOME_LOGO} onStart={onStart} onHome={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
       </div>
-      <HomeOpening
-        title={sc("chatHome.title", "오늘창업")}
-        subtitle={siteCopy.texts["chatHome.subtitle"] ? scBr("chatHome.subtitle", "") : undefined}
-        hidden={siteCopy.hidden}
-        onStart={openConsult}
-      />
-
-      <HomeServiceOverview onStart={onStart} />
+      <div className={homeLanding.content}>
+        <HomePromptHero title={sc("promptHome.title")} subtitle={scBr("promptHome.subtitle")} hidden={siteCopy.hidden} />
+        <HomePromptSections />
+      </div>
       {copyEdit ? <HomeCopyChrome hidden={siteCopy.hidden} selected={copySelected} /> : null}
 
       {/*

@@ -4,8 +4,8 @@ import puppeteer from "puppeteer-core";
 import { sanitizeSiteCopy, EDIT_SECTIONS } from "../lib/site-copy/domain";
 
 async function main() {
-  assert.deepEqual(sanitizeSiteCopy({ texts: { 'hero.title': 'old claim', 'reviews.notice': 'old demo', 'chatHome.title': '새 제목' }, hidden: ['reviews', 'price'] }), { texts: { 'chatHome.title': '새 제목' }, hidden: [] });
-  assert.deepEqual(EDIT_SECTIONS.map(section => section.id), ['chatHome']);
+  assert.deepEqual(sanitizeSiteCopy({ texts: { 'hero.title': 'old claim', 'reviews.notice': 'old demo', 'promptHome.title': '새 제목' }, hidden: ['reviews', 'price'] }), { texts: { 'promptHome.title': '새 제목' }, hidden: [] });
+  assert.deepEqual(EDIT_SECTIONS.map(section => section.id), ['promptHome']);
   const browser = await puppeteer.launch({ executablePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome", headless: true });
   await mkdir("artifacts/home-product-preview", { recursive: true });
   try {

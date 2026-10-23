@@ -50,7 +50,10 @@ const opening = read("components/home-opening.tsx");
 assert.match(opening, /<HomeCinematicHero/);
 assert.match(opening, /<HomePhoneStory/);
 assert.doesNotMatch(read("components/home-service-overview.tsx"), /<HomeScrollStory/);
-assert.match(read("app/page.tsx"), /<HomeOpening/);
+// 2026-10-23 첫 화면은 입력 카드(HomePromptHero)와 안내 구간(HomePromptSections)으로 바뀌었다 — 예전 오프닝은 시험 화면(/dev)에만 남는다
+assert.match(read("app/page.tsx"), /<HomePromptHero/);
+assert.match(read("app/page.tsx"), /<HomePromptSections/);
+assert.doesNotMatch(read("app/page.tsx"), /<HomeOpening|<HomeServiceOverview/);
 assert.match(read("components/home-website-demo.module.css"), /background: transparent !important/);
 assert.match(read("components/home-brand-closing.tsx"), /onClick=\{onStart\}/);
 // AI 이미지 고지는 각 절의 캡션 대신 푸터 한 줄로 모았다(소유자 요청으로 본문 잡글 제거). 고지 자체는 사라지지 않는다.
